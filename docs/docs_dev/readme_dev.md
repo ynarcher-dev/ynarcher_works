@@ -16,7 +16,7 @@
 | **API 계약 및 서버 보안 기준서** | [6_api_contracts.md](./6_api_contracts.md) | API 공통 규격 및 에러 코드, 입력 유효성 검증 표준 명세서 | **작성 완료** |
 | **데이터베이스 설계 및 테이블 통합 가이드라인** | [7_database_design_guidelines.md](./7_database_design_guidelines.md) | 테이블 단편화 방지 원칙, 1:1 관계 통합, 다형적 공통 테이블 및 JSONB 설계 규칙 | **작성 완료** |
 | **Git 브랜치 전략 및 커밋 컨벤션** | [8_git_branch_commit_convention.md](./8_git_branch_commit_convention.md) | 트렁크 기반 브랜치 운영, 커밋 메시지 형식, PR 절차 및 커밋 전 검증 체크리스트 | **작성 완료** |
-| **데이터베이스 물리 스키마 정의** | _(작성 예정)_ | PostgreSQL/Supabase 테이블, 외래키 관계 및 RLS 보안 설정 정의서 | **대기 중** |
+| **데이터베이스 물리 스키마 정의** | [9_database_physical_schema.md](./9_database_physical_schema.md) | Phase 2 공통/NETWORKS 테이블, 열거형, RLS 헬퍼/정책, 감사 트리거 및 ERD | **작성 완료** |
 | **개발 규칙 및 컨벤션** | _(작성 예정)_ | 코딩 표준 규칙, 폴더링 및 파일당 제한 규정 가이드 | **대기 중** |
 | **배포 및 CI/CD 가이드** | _(작성 예정)_ | AWS/Vercel/Supabase 등 운영 환경 배포 파이프라인 가이드 | **대기 중** |
 

@@ -30,7 +30,6 @@
 - [x] ESLint + `no-restricted-imports` 의존성 경계 규칙 설정 (`packages/ui` 내 supabase/react-query 참조 차단)
 - [x] 공통 라이브러리 설치 (TanStack Query, Zustand, React Hook Form + Zod, Day.js, react-router-dom v6)
 - [x] Supabase 프로젝트 생성 및 로컬 개발 환경(supabase CLI) 구성 <!-- 로컬 구성 완료. 클라우드 프로젝트 생성은 계정 필요 → supabase/README.md TODO -->
-
 - [x] 환경 변수 체계 수립 (`VITE_` 공개 변수 / Edge Function Secret 분리)
 - [x] Git 브랜치 전략 및 커밋 컨벤션 문서화 (`docs_dev` 개발 컨벤션 문서 신규 작성)
 
@@ -38,15 +37,15 @@
 
 > **참고 문서**: [7_database_design_guidelines.md](../docs_dev/7_database_design_guidelines.md) (설계 원칙) · [3_database_rls_policy_matrix.md](../docs_dev/3_database_rls_policy_matrix.md) (RLS 매트릭스/헬퍼/테스트) · [2_auth_permissions_architecture.md](../docs_dev/2_auth_permissions_architecture.md) (역할/Scope/감사 로그) · [1_roles_permissions.md](../docs_planning/1_roles_permissions.md) (권한 매트릭스)
 
-- [ ] 공통 기반 테이블 DDL 작성 (users, roles/permissions, audit_logs, system_events, attachments)
-- [ ] NETWORKS 마스터 테이블 DDL 작성 (startups, experts, partners + 임시 마스터/병합 플래그)
-- [ ] RLS 기저 헬퍼 함수 구현 (`current_app_user_id()`, `current_app_role()` + session_version 대조)
-- [ ] RLS 업무 헬퍼 함수 구현 (`is_admin()`, `can_read_workspace()`, `get_scope_type()` 등 8종)
-- [ ] 워크스페이스별 RLS 정책 작성 (3_database_rls_policy_matrix 매트릭스 기준)
-- [ ] 권한 템플릿 시드 데이터 작성 (11개 사용자 유형)
-- [ ] 감사 로그 트리거 구현 (권한 변경/다운로드 사유/민감 액션)
-- [ ] RLS 회귀 테스트 구축 (pgTAP, 테스트 계정 10종 + 보안 케이스 8종)
-- [ ] 문서 갭 해소: `docs_dev` 물리 스키마 정의서(ERD 포함) 작성 완료 처리
+- [x] 공통 기반 테이블 DDL 작성 (users, roles/permissions, audit_logs, system_events, attachments)
+- [x] NETWORKS 마스터 테이블 DDL 작성 (startups, experts, partners + 임시 마스터/병합 플래그)
+- [x] RLS 기저 헬퍼 함수 구현 (`current_app_user_id()`, `current_app_role()` + session_version 대조)
+- [x] RLS 업무 헬퍼 함수 구현 (`is_admin()`, `can_read_workspace()`, `get_scope_type()` 등 8종)
+- [x] 워크스페이스별 RLS 정책 작성 (3_database_rls_policy_matrix 매트릭스 기준)
+- [x] 권한 템플릿 시드 데이터 작성 (11개 사용자 유형)
+- [x] 감사 로그 트리거 구현 (권한 변경/다운로드 사유/민감 액션)
+- [x] RLS 회귀 테스트 구축 (pgTAP, 테스트 계정 10종 + 보안 케이스 8종)
+- [x] 문서 갭 해소: `docs_dev` 물리 스키마 정의서(ERD 포함) 작성 완료 처리
 
 ## Phase 3. 인증 (이원화)
 
