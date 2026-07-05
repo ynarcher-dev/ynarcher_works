@@ -117,16 +117,19 @@ CREATE TABLE evaluation_criteria (
 );
 ```
 
-### 7.3 evaluation_targets (평가 대상 기업 테이블)
+### 7.3 evaluation_targets (평가 대상 테이블)
 ```sql
 CREATE TABLE evaluation_targets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     form_id UUID NOT NULL REFERENCES evaluation_forms(id) ON DELETE CASCADE,
-    startup_id UUID NOT NULL,                   -- HUB 스타트업 마스터 ID 연동
+    target_type VARCHAR(50) NOT NULL,           -- 'STARTUP'(NETWORKS 마스터) 또는 'APPLICATION'(신청서)
+    target_id UUID NOT NULL,                    -- target_type에 따라 startups.id 또는 application_submissions.id
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    UNIQUE(form_id, startup_id)
+    UNIQUE(form_id, target_type, target_id)
 );
 ```
+> [!NOTE]
+> 서면평가처럼 NETWORKS 마스터 매핑 확정 이전 단계에서 평가를 진행하는 모듈은 `target_type = 'APPLICATION'`으로 신청서(`application_submissions`)를 직접 참조하고, 대면평가/데모데이처럼 선발 확정 이후 단계는 `target_type = 'STARTUP'`으로 NETWORKS 스타트업 마스터를 참조합니다. 다형적 관계 통합 원칙은 [7_database_design_guidelines.md](../docs_dev/7_database_design_guidelines.md)를 따릅니다.
 
 ### 7.4 evaluation_assignments (평가자 배정 테이블)
 ```sql

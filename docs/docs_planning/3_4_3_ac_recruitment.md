@@ -6,7 +6,7 @@
 
 ## 1. 목적
 * 코딩 없이 프로그램별 맞춤형 모집 랜딩페이지와 접수 폼을 빠르게 설계하여 외부 공개 모집을 효율화합니다.
-* 유입된 지원서 정보를 works 전사의 `HUB 스타트업 마스터 DB`와 즉시 연결하여 마스터 데이터의 단일성(SSOT)을 확보합니다.
+* 유입된 지원서 정보를 works 전사의 `NETWORKS 스타트업 마스터 DB`와 즉시 연결하여 마스터 데이터의 단일성(SSOT)을 확보합니다.
 * 지원 스타트업이 제출하는 다양한 포맷의 사업소개서, IR 자료, 행정 서류 등을 버전 관리하고, 이를 이후 서면/대면 심사 및 매칭에 단절 없이 공급합니다.
 
 ---
@@ -15,7 +15,7 @@
 * 모집 랜딩페이지 빌더 요건 및 설정 필드 정의
 * 동적 신청서 양식 빌더(Form Builder) 스펙
 * 지원서 DB 및 상태 흐름(DRAFT ~ SELECTED)
-* HUB 스타트업 마스터와의 정규화 매핑 및 병합 프로세스
+* NETWORKS 스타트업 마스터와의 정규화 매핑 및 병합 프로세스
 * GUEST 포털 연동 자료 제출실 및 파일 다운로드 보안 로그 정책
 
 ---
@@ -32,7 +32,7 @@
 [모집 및 신청서 관리 흐름]
  ├── 1. 모집 랜딩 빌더 (설명, 포스터, 기간, FAQ 설정)
  ├── 2. 신청서 폼 빌더 (드래그 앤 드롭으로 텍스트/선택/파일/동의 필드 추가)
- ├── 3. Application DB (필터링 및 HUB 매핑 상태, 서류 누락 검수 상태)
+ ├── 3. Application DB (필터링 및 NETWORKS 매핑 상태, 서류 누락 검수 상태)
  └── 4. 자료 제출실 (스타트업이 업로드한 파일들의 히스토리 및 버전 보존)
 ```
 
@@ -57,14 +57,14 @@
 └───────────────────────────────────────┴────────────────────────┘
 ```
 
-### 5.2 지원자 DB 및 HUB 연동 매핑 인터페이스
+### 5.2 지원자 DB 및 NETWORKS 연동 매핑 인터페이스
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
 │ [A-STREAM 2026] > [지원자 DB 목록]                                      │
 ├────────────────────────────────────────────────────────────────────────┤
 │ [필터: 전체/서류제출완료] [정렬: 제출일자순] [검색: 기업명/대표자]     │
 ├────────────────────────────────────────────────────────────────────────┤
-│ 기업명   | 대표자 | 제출시각 | 상태     | HUB 마스터 연결              | │
+│ 기업명   | 대표자 | 제출시각 | 상태     | NETWORKS 마스터 연결         | │
 │ ────────────────────────────────────────────────────────────────────── │
 │ 에이전트 | 김철수 | 13:02:11 | SUBMIT   | [매핑 완료: 에이전트테크(주)]| │
 │ 스타트B  | 이영희 | 12:45:00 | SUBMIT   | [임시 마스터: 스타트B]       | │
@@ -89,11 +89,11 @@
   * `agreement` (법적 개인정보/민감정보 활용 동의 체크박스)
 * **메타데이터 속성**: 라벨(Label), 설명(Description), Placeholder, 필수 여부(Required), 정렬 순서(Order).
 
-### 6.3 Application DB 및 HUB 마스터 데이터 연동 (HUB Matching Flow)
+### 6.3 Application DB 및 NETWORKS 마스터 데이터 연동 (Master Matching Flow)
 * **정규화 및 매핑 흐름**:
   1. 지원서가 제출(`SUBMITTED`)되면, 시스템은 입력된 `사업자등록증 번호` 또는 `기업명 + 대표자명`을 정규화(공백 제거, 특수문자 제거, 사업자번호 10자리 정형화)합니다.
-  2. 정규화된 키 값을 기준으로 전사 `HUB 스타트업 마스터 DB`를 자동 검색합니다.
-  3. **일치하는 기업이 있는 경우**: 기존 HUB 마스터 ID를 해당 지원자 레코드의 `startup_id`에 자동으로 외래키 연결합니다.
+  2. 정규화된 키 값을 기준으로 전사 `NETWORKS 스타트업 마스터 DB`를 자동 검색합니다.
+  3. **일치하는 기업이 있는 경우**: 기존 NETWORKS 마스터 ID를 해당 지원자 레코드의 `startup_id`에 자동으로 외래키 연결합니다.
   4. **일치하는 기업이 없는 경우**: `임시 스타트업 마스터`를 자동으로 생성하고, 병합 대기 상태(Unmerged) 플래그를 설정하여 `startup_id`에 연결합니다. 전사 관리자는 추후 병합(Merge) 콘솔을 통해 이를 정리할 수 있습니다.
 
 ### 6.4 자료 제출실 (Document Submission Room)
@@ -141,7 +141,7 @@ CREATE TABLE application_form_fields (
 CREATE TABLE application_submissions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     program_id UUID NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
-    startup_id UUID NOT NULL,                   -- HUB 스타트업 마스터 매핑 UUID (임시 마스터 포함)
+    startup_id UUID NOT NULL,                   -- NETWORKS 스타트업 마스터 매핑 UUID (임시 마스터 포함)
     status VARCHAR(50) NOT NULL DEFAULT 'DRAFT',-- DRAFT, SUBMITTED, SCREENING, SELECTED 등
     submitted_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
@@ -172,7 +172,7 @@ stateDiagram-v2
     DRAFT --> SUBMITTED : 제출완료
     SUBMITTED --> UNDER_REVIEW : 심사 대상 분류 (서면/대면평가)
     UNDER_REVIEW --> SELECTED : 최종 선발 (참가자 풀 확정)
-    UNDER_REVIEW --> WAITLIST : 예비 후보군
+    UNDER_REVIEW --> WAITLISTED : 예비 후보군
     UNDER_REVIEW --> REJECTED : 탈락
     SUBMITTED --> WITHDRAWN : 지원 철회
 ```
@@ -185,14 +185,14 @@ stateDiagram-v2
   * 본인 프로그램의 지원서 내역(`application_submissions`, `application_answers`)에 대해 전체 읽기/쓰기 권한을 가집니다.
 * **외부 지원 기업 (guest_startup)**:
   * 본인이 제출한 지원서 레코드에 한해 읽기(`SELECT`) 및 수정(`UPDATE`)이 가능합니다. (상태가 `DRAFT`인 경우에만 수정 가능, `SUBMITTED` 이후에는 조회만 허용)
-  * RLS Policy: `auth.uid() = (SELECT user_id FROM hub_startups WHERE id = startup_id)`
+  * RLS Policy: `auth.uid() = (SELECT user_id FROM startups WHERE id = startup_id)`
 
 ---
 
 ## 10. API/RPC/서버 액션
 
 * **함수명**: `fn_submit_application(p_submission_id uuid)`
-  * **설명**: 임시 저장된 지원서를 최종 제출 상태로 변경하고, HUB 마스터 연동 로직을 트리거합니다.
+  * **설명**: 임시 저장된 지원서를 최종 제출 상태로 변경하고, NETWORKS 마스터 연동 로직을 트리거합니다.
   * **검증 규칙**:
     * 모집 기간 마감 여부를 대조 검증합니다.
     * 필수 폼 필드가 모두 누락 없이 채워졌는지(`application_answers` 레코드 존재 여부) 백엔드 단에서 유효성 검사합니다.
@@ -207,7 +207,7 @@ stateDiagram-v2
 ---
 
 ## 12. HUB/ADMIN/타 워크스페이스 연동
-* **HUB 스타트업 마스터**: `fn_submit_application` 내부에서 사업자등록번호 기반 정규화 쿼리가 작동하여 `hub_startups`의 UUID를 가져옵니다.
+* **NETWORKS 스타트업 마스터**: `fn_submit_application` 내부에서 사업자등록번호 기반 정규화 쿼리가 작동하여 `startups`의 UUID를 가져옵니다.
 
 ---
 
@@ -219,12 +219,12 @@ stateDiagram-v2
 ## 14. 완료 기준 (Definition of Done)
 1. 모집 마감 시각 이후에 지원서 제출 호출 시 차단되는가?
 2. 동적으로 생성된 신청서 폼 필드가 외부 랜딩페이지에 정확히 노출되며 유효성 검증이 작동하는가?
-3. 지원서가 제출되었을 때 사업자번호에 따라 HUB 스타트업 마스터와 매핑되거나 임시 마스터가 정상 자동 생성되는가?
+3. 지원서가 제출되었을 때 사업자번호에 따라 NETWORKS 스타트업 마스터와 매핑되거나 임시 마스터가 정상 자동 생성되는가?
 4. 자료 제출실의 파일 변경 시 이전 버전의 레코드가 유실되지 않고 히스토리 테이블에 보존되는가?
 5. 파일 다운로드 시 사유 입력이 기록되고 보안 로그에 적재되는가?
 
 ---
 
 ## 15. 테스트 기준
-1. **정규화 매핑 테스트**: HUB 마스터에 `123-45-67890`으로 등록된 기업이 있을 때, 외부 게스트가 `1234567890`으로 입력해 지원서를 제출한 경우, DB의 `startup_id` 컬럼에 해당 HUB 기업의 UUID가 정확히 매핑되는지 검증합니다.
+1. **정규화 매핑 테스트**: NETWORKS 마스터에 `123-45-67890`으로 등록된 기업이 있을 때, 외부 게스트가 `1234567890`으로 입력해 지원서를 제출한 경우, DB의 `startup_id` 컬럼에 해당 NETWORKS 기업의 UUID가 정확히 매핑되는지 검증합니다.
 2. **버전 관리 테스트**: 자료 제출실에 최초 A.pdf를 업로드한 후 B.pdf로 교체했을 때, `document_versions` 테이블에 A.pdf 정보가 보존되어 있으며 최신 다운로드 링크는 B.pdf를 반환하는지 확인합니다.

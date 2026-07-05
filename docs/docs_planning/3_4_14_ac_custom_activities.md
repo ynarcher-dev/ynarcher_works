@@ -176,7 +176,7 @@ publish_activity_summary(activity_id, visibility)
 
 ## 12. HUB/ADMIN/타 워크스페이스 연동
 
-* HUB 스타트업 상세에는 활동 이력 요약과 공개 사진을 표시합니다.
+* NETWORKS 스타트업 상세에는 활동 이력 요약과 공개 사진을 표시합니다.
 * ADMIN 감사 로그에는 활동 삭제, 공개 범위 변경, 첨부 다운로드 이력을 남깁니다.
 * Outcomes/KPI는 활동 수, 후속 조치 완료율을 보조 지표로 사용할 수 있습니다.
 

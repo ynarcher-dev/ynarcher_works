@@ -37,13 +37,13 @@
 Program
   -> ProgramModule(DOC_REVIEW)
     -> EvaluationForm(type=DOC_REVIEW)
-      -> EvaluationTarget(application_submission_id)
+      -> EvaluationTarget(target_type='APPLICATION', target_id=application_submission_id)
       -> EvaluationAssignment(reviewer_id, target_id)
       -> EvaluationSubmission
       -> EvaluationAnswer
 ```
 
-서면평가 대상은 HUB 마스터의 기업이 아니라 `application_submissions`를 기준으로 확정합니다. HUB 마스터 연결은 신청 기업이 선발되거나 운영자가 매핑을 확정한 이후에 수행할 수 있습니다.
+서면평가 대상은 NETWORKS 마스터의 기업이 아니라 `application_submissions`를 기준으로 확정합니다(공통 평가 엔진의 `evaluation_targets.target_type = 'APPLICATION'` 사용). NETWORKS 마스터 연결은 신청 기업이 선발되거나 운영자가 매핑을 확정한 이후에 수행할 수 있습니다.
 
 ---
 

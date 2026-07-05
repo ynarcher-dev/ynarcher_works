@@ -35,7 +35,7 @@
       ├── 서면평가 모듈 (DOC_REVIEW): 활성 여부, 평가표 폼, 참여 방식(REVIEWER_ASSIGNMENT)
       ├── 대면평가 모듈 (ONSITE_EVAL): 활성 여부, 시간표, 참여 방식(REVIEWER_ASSIGNMENT)
       ├── OT/출석 모듈 (ORIENTATION): 활성 여부, 참석 조건, 참여 방식(ADMIN_ONLY)
-      ├── N:N 멘토링 모듈 (MENTORING): 활성 여부, 관계 설정, 참여 방식(MANUAL_ALLOCATION / STARTUP_FCFS)
+      ├── N:N 멘토링 모듈 (MENTORING): 활성 여부, 관계 설정, 참여 방식(MANUAL_ALLOCATION)
       ├── 1:1 비즈니스 매칭 모듈 (BUSINESS_MATCHING): 활성 여부, 참여 방식(AI_ALLOCATION / STARTUP_FCFS / MANUAL)
       ├── 데모데이 모듈 (DEMO_DAY): 활성 여부, 스코어보드, 참여 방식(REVIEWER_ASSIGNMENT)
       ├── 성과 KPI 모듈 (OUTCOMES): 활성 여부, 만족도 폼, 다운로더 세팅
@@ -97,7 +97,7 @@
 * **OPEN_APPLICATION**: 누구나 공개 URL을 통해 접근하여 서류 제출 및 지원이 가능한 모드 (모집 모듈 기본값).
 * **REVIEWER_ASSIGNMENT**: 운영자가 매핑한 심사위원/전문가가 배정된 기업을 채점하는 모드 (서면, 대면, 데모데이 평가 기본값).
 * **ADMIN_ONLY**: 일정 등록 및 세션 처리, 출석부 관리를 내부 운영자만 독점 수행하며, 스타트업/전문가는 읽기 전용으로 열람만 하는 모드 (OT 및 공통 세션 기본값).
-* **STARTUP_FCFS**: 스타트업 자율 선착순 예약 모드. 전문가가 열어둔 가용 시간 슬롯을 스타트업이 GUEST 포털에서 선착순 터치 예약하는 모드 (멘토링, 비즈니스 매칭 지원).
+* **STARTUP_FCFS**: 스타트업 자율 선착순 예약 모드. 전문가가 열어둔 가용 시간 슬롯을 스타트업이 GUEST 포털에서 선착순 터치 예약하는 모드 (비즈니스 매칭 전용. N:N 멘토링은 관계 기반 운영이므로 선착순 예약을 사용하지 않습니다).
 * **AI_ALLOCATION**: 선호도 지표 및 부스/시간대 제약조건을 고려한 매칭 배정 알고리즘을 가동하여 일정을 일괄 자동 확정하는 모드 (비즈니스 매칭 지원).
 * **MANUAL_ALLOCATION**: 운영자가 관리자 화면에서 특정 전문가와 특정 기업을 직접 1:1 드래그 앤 드롭하여 배정 관계 및 시간을 수동 확정하는 모드 (멘토링, 비즈니스 매칭 지원).
 
@@ -130,7 +130,7 @@ CREATE TABLE program_modules (
     module_type VARCHAR(50) NOT NULL,          -- RECRUITMENT, MENTORING 등
     enabled BOOLEAN NOT NULL DEFAULT FALSE,     -- 모듈 활성화 여부
     participation_mode VARCHAR(50) NOT NULL,   -- AI_ALLOCATION, STARTUP_FCFS 등
-    manager_id UUID,                           -- 모듈별 담당 심사역 UUID (HUB 전문가/임직원 마스터 연동)
+    manager_id UUID,                           -- 모듈별 담당 심사역 UUID (MANAGEMENT 임직원 마스터 연동)
     settings JSONB DEFAULT '{}'::jsonb,        -- 모듈별 상세 커스텀 JSON (예산, 마감 시각 등)
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
@@ -173,7 +173,7 @@ CREATE TABLE program_modules (
 ---
 
 ## 12. HUB/ADMIN/타 워크스페이스 연동
-* **HUB 스타트업/전문가 마스터 연동**: 프로그램 책임자로 등록되는 담당 임직원은 `HUB 임직원 마스터` 테이블의 UUID와 매핑 검증을 거칩니다.
+* **임직원 마스터 연동**: 프로그램 책임자로 등록되는 담당 임직원은 `MANAGEMENT 임직원 마스터` 테이블의 UUID와 매핑 검증을 거칩니다. 참가 스타트업/전문가는 `NETWORKS` 마스터와 매핑합니다.
 
 ---
 
