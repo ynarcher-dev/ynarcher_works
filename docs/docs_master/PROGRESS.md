@@ -73,11 +73,11 @@
 
 > **참고 문서**: [3_1_workspace_hub.md](../docs_planning/3_1_workspace_hub.md) (화면/데이터 연동 규격/GNB맵) · [2_business_scenarios.md](../docs_planning/2_business_scenarios.md) (교차 참조/권한 필터) · [7_chart_visualization_rules.md](../docs_design/7_chart_visualization_rules.md) (랭킹 차트)
 
-- [ ] 통합 검색 대시보드 (일반 키워드 검색 — 권한 교차 필터 적용)
-- [ ] AI 검색 탭 (Gemini API 연동 — RAG/Text-to-SQL 방식 확정 필요)
-- [ ] 전사 통합 캘린더 (4개 레이어: AC/프로젝트/펀드/사내, system_events 연동)
-- [ ] 전문가 만족도 랭킹 보드 (mentor_satisfaction_records 평균 내림차순)
-- [ ] 임직원 프로필 디렉토리
+- [x] 통합 검색 대시보드 (일반 키워드 검색 — 권한 교차 필터 적용)
+- [ ] AI 검색 탭 (Gemini API 연동 — RAG/Text-to-SQL 방식 확정 필요) <!-- 탭 UI 배치 완료, 연동은 방식 확정 대기(백로그) -->
+- [x] 전사 통합 캘린더 (4개 레이어: AC/프로젝트/펀드/사내, system_events 연동)
+- [ ] 전문가 만족도 랭킹 보드 (mentor_satisfaction_records 평균 내림차순) <!-- 대상 테이블은 AC Phase에서 생성 → 이후 집계 -->
+- [x] 임직원 프로필 디렉토리 (이메일 마스킹)
 
 ## Phase 6. NETWORKS 워크스페이스 (마스터 원장)
 

@@ -1,25 +1,34 @@
-import { createBrowserRouter } from 'react-router-dom'
+import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { RequireAuth } from '@/auth/RequireAuth'
-import { HomePage } from '@/pages/HomePage'
+import { RequireWorkspace } from '@/auth/RequireWorkspace'
+import { WorksLayout } from '@/app/WorksLayout'
+import { HubPage } from '@/features/hub/HubPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { RootLayout } from '@/pages/RootLayout'
 
-/**
- * WORKS 앱 루트 라우터.
- * 워크스페이스별 라우트/가드(RequireWorkspace)는 이후 단계에서 확장한다.
- */
+/** WORKS 앱 루트 라우터. 인증 셸(WorksLayout) 하위에 워크스페이스 라우트를 배치. */
 export const router = createBrowserRouter([
   {
     element: <RootLayout />,
     children: [
       { path: '/login', element: <LoginPage /> },
       {
-        path: '/',
         element: (
           <RequireAuth>
-            <HomePage />
+            <WorksLayout />
           </RequireAuth>
         ),
+        children: [
+          { index: true, element: <Navigate to="/hub" replace /> },
+          {
+            path: 'hub',
+            element: (
+              <RequireWorkspace workspace="hub">
+                <HubPage />
+              </RequireWorkspace>
+            ),
+          },
+        ],
       },
     ],
   },
