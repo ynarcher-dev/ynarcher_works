@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    /* 전체 화면 기본 바탕(gray.50) + 기본 본문(body/gray.900) + 프리텐다드 */
+    @apply bg-gray-50 font-sans text-body text-gray-900;
+    /* 한글 조판 표준: 단어 단위 줄바꿈 + 레이아웃 침범 방지 */
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
