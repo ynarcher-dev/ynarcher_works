@@ -79,7 +79,24 @@ ProgramModule(MENTORING)
 
 * 상담일지는 현황, 이슈, 조언, 액션아이템, 후속 일정으로 구성합니다.
 * 운영자는 미작성 일지를 모니터링하고 알림을 재발송할 수 있습니다.
-* 상담일지는 HUB 스타트업 상세의 성장 이력으로 요약 연동됩니다.
+* 상담일지는 NETWORKS 스타트업 상세의 성장 이력으로 요약 연동됩니다.
+
+### 6.4 양방향 평가 피드백 루프
+
+회차 종료 후 멘토와 스타트업이 서로를 평가하는 양방향 피드백을 수집합니다. 모든 평가는 GUEST 모바일 뷰포트에서 터치 조작으로 제출할 수 있도록 최적화합니다.
+
+* **스타트업 ➔ 멘토 만족도 평가**:
+  1. **멘토링 종합 만족도**: 1~5점 별점 척도 선택 (필수값, 기본값 없음).
+  2. **세부 만족도 피드백**: 자유 서술형 textarea 필드 (선택 입력, 최대 500자 제한).
+  * 회차 상태가 `DONE`으로 변경된 직후 스타트업 GUEST 화면에 알림으로 노출되며, `mentor_satisfaction_records`에 저장합니다.
+* **멘토 ➔ 스타트업 진단 평가 (5대 정량지표)**:
+  1. **기술성 (Technology)**: 기술적 경쟁력 및 독창성 (1~5점 별점).
+  2. **사업 BM 적절성 (Business Model)**: 수익 모델 구체성 및 시장성 (1~5점 별점).
+  3. **신뢰도 (Credibility)**: 팀 역량 및 준비성, 실행 의지 (1~5점 별점).
+  4. **협업 잠재력 (Collaboration Potential)**: 대기업/협력사 및 와이앤아처와의 협업 가능성 (1~5점 별점).
+  5. **매칭 성사율 (Matching Feasibility)**: 향후 후속 투자 유치 또는 M&A 딜 성사 가능성 (1~5점 별점).
+  6. **종합 자문 의견**: 핵심 개선 조언 및 면담 요약 텍스트 필드 (필수 입력, 최소 20자 이상).
+  * 상담일지 작성 화면에서 함께 제출하며, `mentor_feedback_records`에 저장합니다.
 
 ---
 
@@ -110,6 +127,26 @@ mentoring_logs
   - advice
   - action_items
   - next_steps
+  - submitted_at
+
+mentor_satisfaction_records
+  - id
+  - mentoring_session_id
+  - startup_id
+  - score (1~5)
+  - feedback_text
+  - submitted_at
+
+mentor_feedback_records
+  - id
+  - mentoring_session_id
+  - startup_id
+  - score_technology (1~5)
+  - score_business_model (1~5)
+  - score_credibility (1~5)
+  - score_collaboration (1~5)
+  - score_matching_feasibility (1~5)
+  - advisory_comment
   - submitted_at
 ```
 
@@ -163,7 +200,9 @@ request_mentor_feedback(session_id)
 
 ## 12. HUB/ADMIN/타 워크스페이스 연동
 
-* HUB 스타트업 상세에는 멘토링 회차 수, 주요 액션아이템, 최근 상담 요약을 표시합니다.
+* NETWORKS 스타트업 상세에는 멘토링 회차 수, 주요 액션아이템, 최근 상담 요약을 표시합니다.
+* **HUB 전문가 만족도 랭킹 연동**: 스타트업이 제출한 만족도 평점은 `(대상 전문가의 mentor_satisfaction_records 내 score 총합) / (평가 완료된 총 세션 수)` 수식으로 평균 계산되어, HUB 자문단 만족도 랭킹 보드([3_1_workspace_hub.md](./3_1_workspace_hub.md))에 평균 평점 내림차순으로 실시간 반영됩니다.
+* **NETWORKS 성장 지표 연동**: 멘토가 제출한 5대 정량지표는 대상 스타트업의 NETWORKS 마스터 UUID로 매핑되어, 스타트업 상세의 '성장 지표 및 피드백 히스토리' 영역에 **레이더 차트(Radar Chart)** 형태로 평균값이 누적 갱신됩니다.
 * Outcomes/KPI는 멘토링 완료율, 일지 제출률, 멘토별 담당 기업 수를 집계합니다.
 * ADMIN 감사 로그에는 관계 생성/종료, 상담일지 수정 이력을 남깁니다.
 
