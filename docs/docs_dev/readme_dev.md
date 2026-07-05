@@ -15,6 +15,7 @@
 | **백업, 보존 및 개인정보 파기 기준** | [5_backup_retention_privacy.md](./5_backup_retention_privacy.md) | RPO/RTO 기준, 데이터 보존 및 7단계 개인정보 파기 운영 기준 | **작성 완료** |
 | **API 계약 및 서버 보안 기준서** | [6_api_contracts.md](./6_api_contracts.md) | API 공통 규격 및 에러 코드, 입력 유효성 검증 표준 명세서 | **작성 완료** |
 | **데이터베이스 설계 및 테이블 통합 가이드라인** | [7_database_design_guidelines.md](./7_database_design_guidelines.md) | 테이블 단편화 방지 원칙, 1:1 관계 통합, 다형적 공통 테이블 및 JSONB 설계 규칙 | **작성 완료** |
+| **Git 브랜치 전략 및 커밋 컨벤션** | [8_git_branch_commit_convention.md](./8_git_branch_commit_convention.md) | 트렁크 기반 브랜치 운영, 커밋 메시지 형식, PR 절차 및 커밋 전 검증 체크리스트 | **작성 완료** |
 | **데이터베이스 물리 스키마 정의** | _(작성 예정)_ | PostgreSQL/Supabase 테이블, 외래키 관계 및 RLS 보안 설정 정의서 | **대기 중** |
 | **개발 규칙 및 컨벤션** | _(작성 예정)_ | 코딩 표준 규칙, 폴더링 및 파일당 제한 규정 가이드 | **대기 중** |
 | **배포 및 CI/CD 가이드** | _(작성 예정)_ | AWS/Vercel/Supabase 등 운영 환경 배포 파이프라인 가이드 | **대기 중** |
@@ -24,6 +25,7 @@
 ## ✍️ 히스토리 및 진행 예정 사항
 
 ### 2026-07-05 (최신)
+* **Git 브랜치 전략 및 커밋 컨벤션 정의서 작성 완료**: 트렁크 기반 브랜치 운영과 `<type>(<scope>): <제목>` 커밋 규칙, PR 절차를 규격화한 [8_git_branch_commit_convention.md](./8_git_branch_commit_convention.md) 추가.
 * **데이터베이스 설계 및 테이블 통합 가이드라인 작성 완료**: 테이블 무분별 분리 방지 및 마이그레이션 파일 관리 수칙을 포함한 [7_database_design_guidelines.md](./7_database_design_guidelines.md) 추가.
 * **보안 및 운영 상세 가이드라인 분할 작성 완료**: `gemini_security_docs_master_guide.md` 지시에 의거하여, 실제 구현 및 운영 단계 통제를 위한 5대 상세 개발 명세서(2 ~ 6번 문서)를 쪼개어 세부 기술함.
 * **기술 스택 및 아키텍처 의견서 작성**: 사용자가 제안한 React, TS, AWS S3/CloudFront 호스팅 결정을 기반으로 한 분석 및 스타일링/라이브러리 추천 의견서([1_development_stack.md](./1_development_stack.md))를 추가함.
