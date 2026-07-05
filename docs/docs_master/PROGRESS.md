@@ -24,7 +24,7 @@
 
 > **참고 문서**: [1_development_stack.md](../docs_dev/1_development_stack.md) (모노레포/라이브러리/수칙) · [4_color_system_rules.md](../docs_design/4_color_system_rules.md), [3_typography_rules.md](../docs_design/3_typography_rules.md), [6_motion_transition_rules.md](../docs_design/6_motion_transition_rules.md), [8_z_index_system_rules.md](../docs_design/8_z_index_system_rules.md) (Tailwind 토큰 이관 원천)
 
-- [ ] Turborepo 모노레포 스캐폴딩 (`apps/works`, `apps/guest`, `packages/ui`, `packages/master-data`)
+- [x] Turborepo 모노레포 스캐폴딩 (`apps/works`, `apps/guest`, `packages/ui`, `packages/master-data`)
 - [ ] Vite + React + TypeScript 앱 초기화 및 공통 tsconfig/경로 별칭 구성
 - [ ] Tailwind CSS 설치 및 디자인 토큰 이관 (`tailwind.config`: 브랜드/그레이/세만틱 컬러, 타이포 스케일, z-index, 모션 duration)
 - [ ] ESLint + `no-restricted-imports` 의존성 경계 규칙 설정 (`packages/ui` 내 supabase/react-query 참조 차단)

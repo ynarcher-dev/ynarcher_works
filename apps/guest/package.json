@@ -1,0 +1,14 @@
+{
+  "name": "@ynarcher/guest",
+  "version": "0.0.0",
+  "private": true,
+  "description": "외부 참가자용 GUEST 앱 (스타트업/전문가, 모바일 우선)",
+  "type": "module",
+  "scripts": {
+    "dev": "echo \"[guest] Vite 앱 초기화는 Phase 1 후속 항목에서 진행합니다.\"",
+    "build": "echo \"[guest] build placeholder\"",
+    "lint": "echo \"[guest] lint placeholder\"",
+    "typecheck": "echo \"[guest] typecheck placeholder\"",
+    "clean": "rm -rf dist .turbo"
+  }
+}

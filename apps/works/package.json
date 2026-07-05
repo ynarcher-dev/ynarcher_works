@@ -1,0 +1,14 @@
+{
+  "name": "@ynarcher/works",
+  "version": "0.0.0",
+  "private": true,
+  "description": "내부 임직원용 WORKS 앱 (8대 메뉴)",
+  "type": "module",
+  "scripts": {
+    "dev": "echo \"[works] Vite 앱 초기화는 Phase 1 후속 항목에서 진행합니다.\"",
+    "build": "echo \"[works] build placeholder\"",
+    "lint": "echo \"[works] lint placeholder\"",
+    "typecheck": "echo \"[works] typecheck placeholder\"",
+    "clean": "rm -rf dist .turbo"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@ynarcher/master-data",
+  "version": "0.0.0",
+  "private": true,
+  "description": "마스터 데이터 연동 레이어 — Supabase/react-query 결합 Connected UI 및 타입",
+  "type": "module",
+  "scripts": {
+    "build": "echo \"[master-data] build placeholder\"",
+    "lint": "echo \"[master-data] lint placeholder\"",
+    "typecheck": "echo \"[master-data] typecheck placeholder\"",
+    "clean": "rm -rf dist .turbo"
+  }
+}
