@@ -5,10 +5,25 @@
   "description": "내부 임직원용 WORKS 앱 (8대 메뉴)",
   "type": "module",
   "scripts": {
-    "dev": "echo \"[works] Vite 앱 초기화는 Phase 1 후속 항목에서 진행합니다.\"",
-    "build": "echo \"[works] build placeholder\"",
-    "lint": "echo \"[works] lint placeholder\"",
-    "typecheck": "echo \"[works] typecheck placeholder\"",
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "lint": "echo \"[works] lint은 Phase 1 ESLint 설정 항목에서 구성합니다.\"",
+    "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist .turbo"
+  },
+  "dependencies": {
+    "@ynarcher/master-data": "workspace:*",
+    "@ynarcher/ui": "workspace:*",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0"
   }
 }

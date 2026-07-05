@@ -6,5 +6,12 @@
 * **배포**: GUEST 서브도메인 분리
 * **의존성 방향**: `apps/guest → packages/ui`, `packages/master-data` (역방향 금지)
 
+## 로컬 실행
+
+```bash
+pnpm --filter @ynarcher/guest dev       # 개발 서버 (http://localhost:5174)
+pnpm --filter @ynarcher/guest build     # 프로덕션 빌드 (dist/)
+```
+
 > [!NOTE]
-> 본 디렉터리는 모노레포 골격의 자리표시자입니다. Vite + React + TypeScript 앱 초기화는 `PROGRESS.md` Phase 1의 후속 항목에서 진행합니다.
+> Vite + React + TypeScript 초기화와 `@/*` 경로 별칭이 구성되었습니다. Tailwind CSS 토큰 이관과 ESLint 의존성 경계 규칙은 `PROGRESS.md` Phase 1의 후속 항목에서 진행합니다.

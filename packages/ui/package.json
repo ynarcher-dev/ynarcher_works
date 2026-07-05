@@ -4,10 +4,16 @@
   "private": true,
   "description": "순수 UI 레이어 — 디자인 토큰 기반 Atom 컴포넌트 (데이터 결합 금지)",
   "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
-    "build": "echo \"[ui] build placeholder\"",
-    "lint": "echo \"[ui] lint placeholder\"",
-    "typecheck": "echo \"[ui] typecheck placeholder\"",
+    "build": "echo \"[ui] 빌드는 Phase 4 컴포넌트 구현 시 구성합니다.\"",
+    "lint": "echo \"[ui] lint은 Phase 1 ESLint 설정 항목에서 구성합니다.\"",
+    "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist .turbo"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
   }
 }

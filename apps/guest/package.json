@@ -5,10 +5,25 @@
   "description": "외부 참가자용 GUEST 앱 (스타트업/전문가, 모바일 우선)",
   "type": "module",
   "scripts": {
-    "dev": "echo \"[guest] Vite 앱 초기화는 Phase 1 후속 항목에서 진행합니다.\"",
-    "build": "echo \"[guest] build placeholder\"",
-    "lint": "echo \"[guest] lint placeholder\"",
-    "typecheck": "echo \"[guest] typecheck placeholder\"",
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "lint": "echo \"[guest] lint은 Phase 1 ESLint 설정 항목에서 구성합니다.\"",
+    "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist .turbo"
+  },
+  "dependencies": {
+    "@ynarcher/master-data": "workspace:*",
+    "@ynarcher/ui": "workspace:*",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0"
   }
 }
