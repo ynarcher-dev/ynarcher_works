@@ -2,9 +2,12 @@
 
 ## 1. 문서 목적 및 개요
 
-본 문서는 와이앤아처 통합 Works 플랫폼의 클라이언트와 백엔드 간 통신(Next.js Server Actions, Route Handlers, REST API 및 RPC 등) 시 준수해야 하는 API 공통 명세와 보안 규격을 정의한다. 
+본 문서는 와이앤아처 통합 Works 플랫폼의 클라이언트와 백엔드 간 통신(Supabase Edge Functions, PostgreSQL RPC, REST API 등) 시 준수해야 하는 API 공통 명세와 보안 규격을 정의한다. 
 
 모든 백엔드 개발자는 이 기준을 엄격하게 구현에 적용하여 일관된 에러 핸들링과 보안 경계를 확보해야 한다.
+
+> [!NOTE]
+> 본 플랫폼의 프론트엔드는 Vite 기반 SPA로 자체 서버 런타임을 갖지 않는다(`1_development_stack.md` 참조). 따라서 본 문서에서 말하는 **'서버 액션'은 Supabase Edge Function(Deno) 및 DB RPC 함수로 구현되는 서버 사이드 처리 단위**를 지칭한다.
 
 ---
 

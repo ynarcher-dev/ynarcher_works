@@ -58,7 +58,7 @@
 
 ### 5.1 금지 사항 (Strict Prohibition)
 * **Git 커밋 금지**: `.env` 파일이나 하드코딩된 암호화 키를 코드 저장소에 Push하지 않는다. (`.gitignore` 필수 설정)
-* **NEXT_PUBLIC_ 사용 금지**: 브라우저에 환경 변수가 인출되는 Next.js의 `NEXT_PUBLIC_` 접두사를 Secret Key 변수명에 사용하지 않는다.
+* **VITE_ 접두사 Secret 사용 금지**: 브라우저 번들에 환경 변수가 인출되는 Vite의 `VITE_` 접두사를 Secret Key 변수명에 사용하지 않는다. Secret은 오직 Supabase Edge Function 등 서버 사이드 환경 변수로만 주입한다.
 * **브라우저 번들 포함 금지**: 빌드 및 런타임 클라이언트 번들 파일에 `service_role` 키가 삽입되지 않도록 정적 분석 도구를 세팅한다.
 * **서버 로그 노출 금지**: 오류나 디버그 로그 출력 시 `console.log(process.env)` 등으로 전체 암호 키가 노출되는 행위를 원천 금지한다.
 * **문서 기록 금지**: Wiki, README 및 기타 기획 문서에 실제 운영 서버의 암호 키나 비밀번호 값을 작성하지 않는다.

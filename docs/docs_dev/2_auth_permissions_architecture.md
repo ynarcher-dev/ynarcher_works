@@ -125,7 +125,7 @@ User Role + Workspace Permission + Data Scope
 
 개발자는 위 권한 사양에 맞춰 아래 구성 요소를 구현해야 한다.
 1. **공통 권한 Helper**: 현재 세션 사용자 객체를 파싱하여 특정 워크스페이스 권한 및 Scope 정보를 추출하는 유틸리티 함수(예: `checkUserPermission(session, workspace_key)`) 구현.
-2. **API 권한 Guard**: Next.js 서버 액션 또는 Route Handler 진입점 단계에서 API 실행 권한을 사전 검증하여 부적절한 요청에 대해 표준 에러 객체(`permission_denied`) 반환.
+2. **API 권한 Guard**: Supabase Edge Function 또는 RPC 함수 진입점 단계에서 API 실행 권한을 사전 검증하여 부적절한 요청에 대해 표준 에러 객체(`permission_denied`) 반환.
 3. **RLS Helper SQL**: PostgreSQL DB 상에서 현재 JWT 클레임 정보를 기반으로 사용자의 Scope와 권한 레벨을 반환하는 SQL 함수 작성.
 4. **권한 템플릿 Seed**: 최초 데이터베이스 마이그레이션 단계에서 11개 사용자 유형별 권한 매트릭스 정보를 시드 데이터로 주입.
 5. **권한 변경 Audit Log Trigger**: 권한 관련 테이블에 `INSERT` 또는 `UPDATE` 발생 시 자동으로 감사 로그 테이블에 데이터가 적재되도록 RLS 정책 및 트리거 설정.

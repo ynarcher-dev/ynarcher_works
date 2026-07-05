@@ -22,9 +22,12 @@
 
 RLS 정책 선언 시 중복을 방지하고 비즈니스 규칙을 일관되게 처리하기 위해 PostgreSQL 내에 다음과 같은 보안 정의 함수(Security Definer Helpers)를 설계하여 활용한다.
 
+> [!NOTE]
+> **헬퍼 함수의 2계층 구조**: `1_development_stack.md`에서 정의한 **`current_app_user_id()` / `current_app_role()`**은 표준 JWT(임직원)와 커스텀 JWT(외부 게스트)의 클레임 차이 및 `session_version` 대조를 흡수하는 **기저(Base) 헬퍼**이다. 본 문서의 업무 헬퍼(`is_admin()`, `can_read_workspace()` 등)는 `auth.jwt()`를 직접 파싱하지 않고 반드시 이 기저 헬퍼를 경유하여 사용자 식별과 역할을 판정한다.
+
 * **`is_admin()`**:
   * 역할: 현재 요청한 사용자가 `최고 관리자`인지 검증.
-  * SQL 예시: `(auth.jwt() ->> 'role') = 'super_admin'`
+  * SQL 예시: `current_app_role() = 'super_admin'`
 * **`can_read_workspace(workspace_key text)`**:
   * 역할: 현재 로그인한 사용자의 토큰 정보 또는 권한 테이블을 조회하여 해당 워크스페이스에 대한 읽기 권한(`read` 또는 `write`)이 있는지 검증.
 * **`can_write_workspace(workspace_key text)`**:
