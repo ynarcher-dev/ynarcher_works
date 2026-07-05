@@ -133,10 +133,11 @@
 
 > **참고 문서**: [3_2_workspace_admin.md](../docs_planning/3_2_workspace_admin.md) · [1_roles_permissions.md](../docs_planning/1_roles_permissions.md) (권한 매트릭스/토글 규칙) · [2_auth_permissions_architecture.md](../docs_dev/2_auth_permissions_architecture.md) (감사 로그 필드)
 
-- [ ] 역할×워크스페이스 Read/Write 동적 권한 토글 콘솔 (Self-Lockout 방지)
-- [ ] 감사 로그 모니터 (전/후 JSON 대조, IP)
-- [ ] 다운로드 사유 로그 뷰
-- [ ] ADMIN 데이터 모델(권한 저장 테이블/감사 로그 스키마) 상세 확정 (문서 보강 포함)
+- [x] 역할×워크스페이스 Read/Write 동적 권한 토글 콘솔 (Self-Lockout 방지) <!-- admin_set_permission_template RPC: 템플릿 갱신+실권한 전파+감사로그, super_admin/admin write 해제 차단 -->
+- [x] 감사 로그 모니터 (전/후 JSON 대조, IP)
+- [x] 다운로드 사유 로그 뷰 (access_logs 사유 관제)
+- [x] ADMIN 데이터 모델(권한 저장 테이블/감사 로그 스키마) 상세 확정 (문서 보강 포함) <!-- workspace_permissions/permission_templates/audit_logs/access_logs 기존 스키마 + RPC 확정 -->
+
 
 ## Phase 11. PROJECT 워크스페이스
 

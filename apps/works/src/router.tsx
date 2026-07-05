@@ -3,6 +3,7 @@ import { RequireAuth } from '@/auth/RequireAuth'
 import { RequireWorkspace } from '@/auth/RequireWorkspace'
 import { WorksLayout } from '@/app/WorksLayout'
 import { AcDashboardPage } from '@/features/ac/AcDashboardPage'
+import { AdminPage } from '@/features/admin/AdminPage'
 import { ProgramDetailPage } from '@/features/ac/ProgramDetailPage'
 import { FundDetailPage } from '@/features/fund/FundDetailPage'
 import { FundPage } from '@/features/fund/FundPage'
@@ -88,6 +89,14 @@ export const router = createBrowserRouter([
             element: (
               <RequireWorkspace workspace="mna">
                 <MnaDealDetailPage />
+              </RequireWorkspace>
+            ),
+          },
+          {
+            path: 'admin',
+            element: (
+              <RequireWorkspace workspace="admin">
+                <AdminPage />
               </RequireWorkspace>
             ),
           },

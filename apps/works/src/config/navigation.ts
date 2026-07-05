@@ -57,6 +57,16 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       ],
     },
   ],
+  admin: [
+    {
+      group: '시스템 관리',
+      items: [
+        { label: '권한 제어 콘솔', tab: 'permissions' },
+        { label: '감사 로그 모니터', tab: 'audit' },
+        { label: '다운로드 사유 로그', tab: 'downloads' },
+      ],
+    },
+  ],
 }
 
 /** 그룹 목록에서 기본 활성 탭(첫 tab 보유 항목)을 반환. 없으면 undefined. */
