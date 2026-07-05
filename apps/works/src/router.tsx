@@ -1,13 +1,26 @@
 import { createBrowserRouter } from 'react-router-dom'
-import { App } from '@/App'
+import { RequireAuth } from '@/auth/RequireAuth'
+import { HomePage } from '@/pages/HomePage'
+import { LoginPage } from '@/pages/LoginPage'
+import { RootLayout } from '@/pages/RootLayout'
 
 /**
  * WORKS 앱 루트 라우터.
- * 역할 기반 라우팅 가드와 워크스페이스별 라우트는 Phase 3(인증)·이후 단계에서 확장합니다.
+ * 워크스페이스별 라우트/가드(RequireWorkspace)는 이후 단계에서 확장한다.
  */
 export const router = createBrowserRouter([
   {
-    path: '/',
-    element: <App />,
+    element: <RootLayout />,
+    children: [
+      { path: '/login', element: <LoginPage /> },
+      {
+        path: '/',
+        element: (
+          <RequireAuth>
+            <HomePage />
+          </RequireAuth>
+        ),
+      },
+    ],
   },
 ])

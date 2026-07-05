@@ -51,12 +51,12 @@
 
 > **참고 문서**: [2_auth_permissions_architecture.md](../docs_dev/2_auth_permissions_architecture.md) (권한 모델) · [1_development_stack.md](../docs_dev/1_development_stack.md) (이원화 인증/session_version/AuthService) · [1_roles_permissions.md](../docs_planning/1_roles_permissions.md) (게스트 OTP 인증 흐름) · [3_4_4_ac_participant_pool.md](../docs_planning/3_4_4_ac_participant_pool.md) (guest_invitations/매직링크)
 
-- [ ] 임직원 인증: Supabase Auth 이메일/비밀번호 로그인 + 표준 JWT
-- [ ] 게스트 인증: OTP/Magiclink 발급-검증 Edge Function + 커스텀 JWT 서명
-- [ ] `guest_invitations` 초대/만료/사용 처리 플로우 구현
-- [ ] `session_version` 기반 강제 로그아웃(세션 무효화) 구현
-- [ ] `AuthService` 인터페이스 및 `authStore`(Zustand) 추상화 (`currentUser`/`userRole` 단일 관찰)
-- [ ] 라우팅 가드 구현 (역할 기반 접근 제어, GUEST 서브도메인 분리)
+- [x] 임직원 인증: Supabase Auth 이메일/비밀번호 로그인 + 표준 JWT
+- [x] 게스트 인증: OTP/Magiclink 발급-검증 Edge Function + 커스텀 JWT 서명
+- [x] `guest_invitations` 초대/만료/사용 처리 플로우 구현
+- [x] `session_version` 기반 강제 로그아웃(세션 무효화) 구현
+- [x] `AuthService` 인터페이스 및 `authStore`(Zustand) 추상화 (`currentUser`/`userRole` 단일 관찰)
+- [x] 라우팅 가드 구현 (역할 기반 접근 제어, GUEST 서브도메인 분리)
 
 ## Phase 4. 공통 UI 패키지 (packages/ui)
 

@@ -13,6 +13,8 @@
     "clean": "rm -rf dist .turbo"
   },
   "dependencies": {
+    "@hookform/resolvers": "^3.9.0",
+    "@supabase/supabase-js": "^2.47.0",
     "@tanstack/react-query": "^5.62.0",
     "@ynarcher/master-data": "workspace:*",
     "@ynarcher/ui": "workspace:*",

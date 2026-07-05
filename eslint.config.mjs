@@ -19,6 +19,8 @@ export default tseslint.config(
       '**/.turbo/**',
       '**/coverage/**',
       'docs/**',
+      // Supabase Edge Functions은 Deno 런타임/URL 임포트 사용 → 별도 툴체인
+      'supabase/functions/**',
     ],
   },
   js.configs.recommended,
