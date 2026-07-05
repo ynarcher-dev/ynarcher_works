@@ -1,9 +1,12 @@
 # ✅ 와이앤아처 통합 Works 플랫폼 개발 진행현황 체크리스트 (PROGRESS.md)
 
-본 문서는 통합 Works 플랫폼의 개발 작업을 단위별로 분할하여 진행 상태를 추적하는 체크리스트입니다. 각 작업 단위가 완료될 때마다 체크박스를 갱신하고, 갱신 즉시 커밋/푸쉬하는 것을 원칙으로 합니다. (운영 규칙은 [CLAUDE.md](./CLAUDE.md) 참조)
+본 문서는 통합 Works 플랫폼의 개발 작업을 단위별로 분할하여 진행 상태를 추적하는 체크리스트입니다. 각 작업 단위가 완료될 때마다 체크박스를 갱신하고, 갱신 즉시 커밋/푸쉬하는 것을 원칙으로 합니다.
 
-* 개발 우선순위는 [3_0_workspace_overview.md](./docs/docs_planning/3_0_workspace_overview.md) 기준: `HUB → NETWORKS → AC → FUND → M&A → ADMIN → PROJECT → MANAGEMENT → GUEST`
-* 기술 스택은 [1_development_stack.md](./docs/docs_dev/1_development_stack.md) 기준: Turborepo 모노레포 + React/TS Vite SPA + Tailwind CSS + Supabase(PostgreSQL/RLS/Edge Functions) + AWS S3/CloudFront
+> [!NOTE]
+> **작업 규칙 및 시작 절차는 [CLAUDE.md](./CLAUDE.md)**, 서비스 비전은 [readme_master.md](./readme_master.md), 전체 문서 지도는 [0_service_spec_draft.md](./0_service_spec_draft.md)를 참조하십시오.
+
+* 개발 우선순위는 [3_0_workspace_overview.md](../docs_planning/3_0_workspace_overview.md) 기준: `HUB → NETWORKS → AC → FUND → M&A → ADMIN → PROJECT → MANAGEMENT → GUEST`
+* 기술 스택은 [1_development_stack.md](../docs_dev/1_development_stack.md) 기준: Turborepo 모노레포 + React/TS Vite SPA + Tailwind CSS + Supabase(PostgreSQL/RLS/Edge Functions) + AWS S3/CloudFront
 
 ---
 

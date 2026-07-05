@@ -8,6 +8,10 @@
 > **상세 기획 문서 구성 및 파일 인덱스 안내**
 > 본 프로젝트의 각 기획 폴더(`docs_master`, `docs_planning`, `docs_design`, `docs_dev`, `docs_etc`)별 기획서 역할과 개별 파일들의 요약 맵은 **[0_service_spec_draft.md](./0_service_spec_draft.md)**를 통해 종합적으로 안내하고 있습니다. 구체적인 설계 사양을 탐색하고 싶으신 분은 해당 인덱스 문서를 열람해 주시기 바랍니다.
 
+> [!IMPORTANT]
+> **개발 작업 진입점 안내**
+> 실제 개발 작업을 시작할 때는 작업 규칙과 확정 아키텍처 결정, 작업 시작 절차가 담긴 **[CLAUDE.md](./CLAUDE.md)**를 진입점으로 사용하며, 작업 단위별 진행 상태는 **[PROGRESS.md](./PROGRESS.md)** 체크리스트로 추적합니다.
+
 ---
 
 ## 1. 서비스의 배경 및 추진 목적
