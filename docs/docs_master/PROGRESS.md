@@ -31,7 +31,7 @@
 - [x] 공통 라이브러리 설치 (TanStack Query, Zustand, React Hook Form + Zod, Day.js, react-router-dom v6)
 - [x] Supabase 프로젝트 생성 및 로컬 개발 환경(supabase CLI) 구성 <!-- 로컬 구성 완료. 클라우드 프로젝트 생성은 계정 필요 → supabase/README.md TODO -->
 
-- [ ] 환경 변수 체계 수립 (`VITE_` 공개 변수 / Edge Function Secret 분리)
+- [x] 환경 변수 체계 수립 (`VITE_` 공개 변수 / Edge Function Secret 분리)
 - [ ] Git 브랜치 전략 및 커밋 컨벤션 문서화 (`docs_dev` 개발 컨벤션 문서 신규 작성)
 
 ## Phase 2. 데이터베이스 물리 스키마
