@@ -3,6 +3,7 @@ import { RequireAuth } from '@/auth/RequireAuth'
 import { RequireWorkspace } from '@/auth/RequireWorkspace'
 import { WorksLayout } from '@/app/WorksLayout'
 import { HubPage } from '@/features/hub/HubPage'
+import { NetworksPage } from '@/features/networks/NetworksPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { RootLayout } from '@/pages/RootLayout'
 
@@ -25,6 +26,14 @@ export const router = createBrowserRouter([
             element: (
               <RequireWorkspace workspace="hub">
                 <HubPage />
+              </RequireWorkspace>
+            ),
+          },
+          {
+            path: 'networks',
+            element: (
+              <RequireWorkspace workspace="networks">
+                <NetworksPage />
               </RequireWorkspace>
             ),
           },
