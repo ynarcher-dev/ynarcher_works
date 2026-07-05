@@ -1,0 +1,77 @@
+name: Deploy
+
+# main 브랜치 반영 시 WORKS/GUEST SPA를 S3에 업로드하고 CloudFront 캐시를 무효화한다.
+# 필요한 시크릿(Settings → Secrets and variables → Actions):
+#   AWS_ROLE_ARN            OIDC 배포 역할 ARN(권장) 또는 AWS_ACCESS_KEY_ID/SECRET
+#   AWS_REGION              예: ap-northeast-2
+#   S3_BUCKET_WORKS         WORKS 정적 호스팅 버킷
+#   S3_BUCKET_GUEST         GUEST 정적 호스팅 버킷
+#   CF_DISTRIBUTION_WORKS   WORKS CloudFront 배포 ID
+#   CF_DISTRIBUTION_GUEST   GUEST CloudFront 배포 ID
+# 앱 빌드 환경변수(VITE_*)는 Repository Variables로 주입한다.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+permissions:
+  id-token: write # OIDC
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: 의존성 설치
+        run: pnpm install --frozen-lockfile
+
+      - name: 빌드
+        run: pnpm build
+
+      - name: AWS 자격 구성(OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: WORKS 업로드(S3)
+        run: |
+          aws s3 sync apps/works/dist "s3://${{ secrets.S3_BUCKET_WORKS }}" \
+            --delete --cache-control "public,max-age=31536000,immutable" \
+            --exclude index.html
+          aws s3 cp apps/works/dist/index.html "s3://${{ secrets.S3_BUCKET_WORKS }}/index.html" \
+            --cache-control "no-cache"
+
+      - name: GUEST 업로드(S3)
+        run: |
+          aws s3 sync apps/guest/dist "s3://${{ secrets.S3_BUCKET_GUEST }}" \
+            --delete --cache-control "public,max-age=31536000,immutable" \
+            --exclude index.html
+          aws s3 cp apps/guest/dist/index.html "s3://${{ secrets.S3_BUCKET_GUEST }}/index.html" \
+            --cache-control "no-cache"
+
+      - name: CloudFront 캐시 무효화
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ secrets.CF_DISTRIBUTION_WORKS }}" --paths "/*"
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ secrets.CF_DISTRIBUTION_GUEST }}" --paths "/*"

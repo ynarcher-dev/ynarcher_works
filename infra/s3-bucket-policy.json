@@ -1,0 +1,18 @@
+{
+  "_comment": "S3 정적 호스팅 버킷 정책 — CloudFront OAC(Origin Access Control) 전용 접근. 버킷 공개 차단(Block Public Access) 유지, 퍼블릭 버킷 미사용. <BUCKET>/<ACCOUNT_ID>/<DISTRIBUTION_ID> 치환 필요.",
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowCloudFrontServicePrincipalReadOnly",
+      "Effect": "Allow",
+      "Principal": { "Service": "cloudfront.amazonaws.com" },
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::<BUCKET>/*",
+      "Condition": {
+        "StringEquals": {
+          "AWS:SourceArn": "arn:aws:cloudfront::<ACCOUNT_ID>:distribution/<DISTRIBUTION_ID>"
+        }
+      }
+    }
+  ]
+}

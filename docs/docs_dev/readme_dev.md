@@ -18,7 +18,7 @@
 | **Git 브랜치 전략 및 커밋 컨벤션** | [8_git_branch_commit_convention.md](./8_git_branch_commit_convention.md) | 트렁크 기반 브랜치 운영, 커밋 메시지 형식, PR 절차 및 커밋 전 검증 체크리스트 | **작성 완료** |
 | **데이터베이스 물리 스키마 정의** | [9_database_physical_schema.md](./9_database_physical_schema.md) | Phase 2 공통/NETWORKS 테이블, 열거형, RLS 헬퍼/정책, 감사 트리거 및 ERD | **작성 완료** |
 | **개발 규칙 및 컨벤션** | _(작성 예정)_ | 코딩 표준 규칙, 폴더링 및 파일당 제한 규정 가이드 | **대기 중** |
-| **배포 및 CI/CD 가이드** | _(작성 예정)_ | AWS/Vercel/Supabase 등 운영 환경 배포 파이프라인 가이드 | **대기 중** |
+| **배포 및 CI/CD 가이드** | [10_deployment_cicd_guide.md](./10_deployment_cicd_guide.md) | S3/CloudFront 정적 호스팅, SPA 폴백, GitHub Actions CI/CD, 롤백·알림 채널 | **작성 완료** |
 
 ---
 

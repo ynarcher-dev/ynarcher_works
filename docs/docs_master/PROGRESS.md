@@ -173,11 +173,13 @@
 
 > **참고 문서**: [1_development_stack.md](../docs_dev/1_development_stack.md) (S3/CloudFront 배포 팁) · [4_security_privacy_policy.md](../docs_dev/4_security_privacy_policy.md) (Secret/사고 대응) · [5_backup_retention_privacy.md](../docs_dev/5_backup_retention_privacy.md) (RPO/RTO/복구 리허설)
 
-- [ ] AWS S3 + CloudFront 정적 호스팅 구성 (SPA 라우팅 폴백 403/404 → index.html)
-- [ ] CI/CD 파이프라인 구축 (빌드/린트/테스트/배포 자동화)
-- [ ] 백업/복구 절차 검증 (RPO 24h/RTO 4h, 분기 복구 리허설 절차 수립)
-- [ ] 알림 채널 연동 (알림톡/SMS/이메일 프로바이더 확정 및 템플릿)
-- [ ] 문서 갭 해소: 배포·CI/CD 가이드 문서 작성 완료 처리
+- [x] AWS S3 + CloudFront 정적 호스팅 구성 (SPA 라우팅 폴백 403/404 → index.html) <!-- infra/cloudfront/error-responses.json + s3-bucket-policy(OAC). 실제 계정 프로비저닝은 배포 시점 -->
+- [x] CI/CD 파이프라인 구축 (빌드/린트/테스트/배포 자동화) <!-- .github/workflows ci.yml(lint/typecheck/build/test) + deploy.yml(OIDC→S3 sync→CF invalidation) -->
+- [x] 백업/복구 절차 검증 (RPO 24h/RTO 4h, 분기 복구 리허설 절차 수립) <!-- infra/runbooks/restore-drill.md 복구 절차+분기 리허설 체크리스트+결과 기록 양식 -->
+- [x] 알림 채널 연동 (알림톡/SMS/이메일 프로바이더 확정 및 템플릿) <!-- _shared/notifications.ts 디스패처+템플릿 레지스트리, notifications-dispatch 함수, guest-OTP 연동, notification_logs. 프로바이더 키 주입 시 실발송 -->
+- [x] 문서 갭 해소: 배포·CI/CD 가이드 문서 작성 완료 처리 <!-- docs_dev/10_deployment_cicd_guide.md + readme_dev 인덱스 갱신 -->
+
+> _알림톡/SMS/이메일 실제 프로바이더 계약 및 AWS 계정 프로비저닝은 운영 착수 시점 과제(키 주입만으로 활성화되도록 폴백 구조 완비)._
 
 ## 백로그 (우선순위 미정)
 

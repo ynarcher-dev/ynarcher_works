@@ -1,0 +1,20 @@
+{
+  "_comment": "CloudFront 커스텀 오류 응답 — SPA(BrowserRouter) 딥링크 폴백. 403/404를 index.html(200)로 재작성해 클라이언트 라우터가 경로를 처리하게 한다. AWS CLI: aws cloudfront update-distribution 또는 콘솔 Error Pages 탭에 반영.",
+  "CustomErrorResponses": {
+    "Quantity": 2,
+    "Items": [
+      {
+        "ErrorCode": 403,
+        "ResponsePagePath": "/index.html",
+        "ResponseCode": "200",
+        "ErrorCachingMinTTL": 10
+      },
+      {
+        "ErrorCode": 404,
+        "ResponsePagePath": "/index.html",
+        "ResponseCode": "200",
+        "ErrorCachingMinTTL": 10
+      }
+    ]
+  }
+}

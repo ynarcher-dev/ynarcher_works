@@ -3,6 +3,7 @@
 // 응답: 열거(enumeration) 방지를 위해 매칭 여부와 무관하게 중립 응답을 반환한다.
 import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
 import { generateOtp, sha256Hex } from '../_shared/crypto.ts'
+import { sendNotification } from '../_shared/notifications.ts'
 import { supabaseAdmin } from '../_shared/supabaseAdmin.ts'
 
 const OTP_TTL_SEC = 180 // 3분
@@ -48,9 +49,15 @@ Deno.serve(async (req: Request) => {
       })
       .eq('id', inv.id)
 
-    // TODO(계정 필요): 알림톡/SMS/이메일 프로바이더로 실제 OTP 발송.
-    // 현재는 서버 로그로 대체(로컬 개발용).
-    console.log(`[guest-auth-request] OTP for invitation ${inv.id}: ${otp}`)
+    // OTP 발송(알림 채널 디스패처 경유). 프로바이더 미설정 시 로그 폴백.
+    // contact가 이메일이면 EMAIL, 그 외(전화)는 알림톡 채널로 발송한다.
+    const channel = contact.includes('@') ? 'EMAIL' : 'ALIMTALK'
+    await sendNotification({
+      channel,
+      to: contact,
+      templateCode: 'GUEST_OTP',
+      variables: { otp },
+    })
 
     return jsonResponse(NEUTRAL)
   } catch (_e) {
