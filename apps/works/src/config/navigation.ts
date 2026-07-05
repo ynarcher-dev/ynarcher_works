@@ -67,6 +67,7 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       ],
     },
   ],
+  project: [{ group: 'PROJECT 메인', items: [{ label: '프로젝트 대시보드' }] }],
 }
 
 /** 그룹 목록에서 기본 활성 탭(첫 tab 보유 항목)을 반환. 없으면 undefined. */

@@ -143,9 +143,10 @@
 
 > **참고 문서**: [3_8_workspace_project.md](../docs_planning/3_8_workspace_project.md)
 
-- [ ] 프로젝트 통합 대시보드 (유형/부서 필터)
-- [ ] 태스크 칸반 (To-Do → In-Progress → Review → Done)
-- [ ] 간트 마일스톤 로드맵 (글로벌: 다국어/UTC 병기)
+- [x] 프로젝트 통합 대시보드 (유형/부서 필터) <!-- 유형 필터+진척도 카드 그리드. 부서 필터/아바타는 후속 -->
+- [x] 태스크 칸반 (To-Do → In-Progress → Review → Done) <!-- 4열 칸반+상태 이동+마감 UTC 병기·지연 배지. 드래그앤드롭/체크리스트는 후속 -->
+- [x] 간트 마일스톤 로드맵 (글로벌: 다국어/UTC 병기) <!-- 선형 막대 간트+전사 캘린더(system_events) 자동 연계. 드래그 리사이즈는 후속 -->
+
 
 ## Phase 12. MANAGEMENT 워크스페이스
 

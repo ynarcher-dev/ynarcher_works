@@ -16,6 +16,6 @@ export const WORKSPACES: WorkspaceNavItem[] = [
   { key: 'fund', label: 'FUND', path: '/fund', implemented: true },
   { key: 'mna', label: 'M&A', path: '/mna', implemented: true },
   { key: 'admin', label: 'ADMIN', path: '/admin', implemented: true },
-  { key: 'project', label: 'PROJECT', path: '/project', implemented: false },
+  { key: 'project', label: 'PROJECT', path: '/project', implemented: true },
   { key: 'management', label: 'MANAGEMENT', path: '/management', implemented: false },
 ]

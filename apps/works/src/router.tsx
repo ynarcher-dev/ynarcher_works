@@ -11,6 +11,8 @@ import { HubPage } from '@/features/hub/HubPage'
 import { MnaDealDetailPage } from '@/features/mna/MnaDealDetailPage'
 import { MnaPage } from '@/features/mna/MnaPage'
 import { NetworksPage } from '@/features/networks/NetworksPage'
+import { ProjectDetailPage } from '@/features/project/ProjectDetailPage'
+import { ProjectPage } from '@/features/project/ProjectPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { RootLayout } from '@/pages/RootLayout'
 
@@ -97,6 +99,22 @@ export const router = createBrowserRouter([
             element: (
               <RequireWorkspace workspace="admin">
                 <AdminPage />
+              </RequireWorkspace>
+            ),
+          },
+          {
+            path: 'project',
+            element: (
+              <RequireWorkspace workspace="project">
+                <ProjectPage />
+              </RequireWorkspace>
+            ),
+          },
+          {
+            path: 'project/:id',
+            element: (
+              <RequireWorkspace workspace="project">
+                <ProjectDetailPage />
               </RequireWorkspace>
             ),
           },
