@@ -1,5 +1,5 @@
 import { Banner } from '@ynarcher/ui'
-import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { CalendarPanel } from '@/features/hub/CalendarPanel'
 import { EmployeeDirectoryPanel } from '@/features/hub/EmployeeDirectoryPanel'
 import { RankingPanel } from '@/features/hub/RankingPanel'
@@ -7,48 +7,34 @@ import { UnifiedSearchPanel } from '@/features/hub/UnifiedSearchPanel'
 
 type HubTab = 'search' | 'ai' | 'calendar' | 'ranking' | 'directory'
 
-const TABS: { key: HubTab; label: string }[] = [
-  { key: 'search', label: '통합 검색' },
-  { key: 'ai', label: 'AI 검색' },
-  { key: 'calendar', label: '전사 캘린더' },
-  { key: 'ranking', label: '전문가 랭킹' },
-  { key: 'directory', label: '임직원 디렉토리' },
-]
+const TITLE: Record<HubTab, string> = {
+  search: '통합 검색',
+  ai: 'AI 검색',
+  calendar: '전사 캘린더',
+  ranking: '전문가 랭킹',
+  directory: '임직원 디렉토리',
+}
 
-/** HUB 워크스페이스(조회 센터): 통합검색/AI/캘린더/랭킹/디렉토리. */
+/** HUB 워크스페이스(조회 센터). 섹션 전환은 좌측 사이드바(?tab)가 구동한다. */
 export function HubPage() {
-  const [tab, setTab] = useState<HubTab>('search')
+  const [params] = useSearchParams()
+  const tab = (params.get('tab') as HubTab) ?? 'search'
 
   return (
     <div className="space-y-5">
-      <h1 className="text-title-lg font-bold text-gray-900">HUB</h1>
-
-      <nav className="flex gap-1 border-b border-gray-200">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            onClick={() => setTab(t.key)}
-            className={
-              tab === t.key
-                ? 'border-b-2 border-brand px-3 py-2 text-body font-medium text-brand'
-                : 'px-3 py-2 text-body text-gray-500 hover:text-gray-800'
-            }
-          >
-            {t.label}
-          </button>
-        ))}
-      </nav>
+      <h1 className="text-title-lg font-bold text-gray-900">
+        HUB · {TITLE[tab] ?? '통합 검색'}
+      </h1>
 
       {tab === 'search' && <UnifiedSearchPanel />}
       {tab === 'calendar' && <CalendarPanel />}
       {tab === 'directory' && <EmployeeDirectoryPanel />}
+      {tab === 'ranking' && <RankingPanel />}
       {tab === 'ai' && (
         <Banner tone="info">
           AI 검색(Gemini API 연동)은 RAG/Text-to-SQL 방식 확정 후 연결됩니다. (백로그)
         </Banner>
       )}
-      {tab === 'ranking' && <RankingPanel />}
     </div>
   )
 }

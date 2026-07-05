@@ -4,6 +4,8 @@ import { Dropdown, DropdownItem } from '../components/Dropdown'
 export interface WorkspaceOption {
   key: string
   label: string
+  /** 준비 중 등 선택 불가 워크스페이스는 비활성 처리. */
+  disabled?: boolean
 }
 
 export interface WorkspaceSwitcherProps {
@@ -43,17 +45,30 @@ export function WorkspaceSwitcher({
         </button>
       }
     >
-      {options.map((opt) => (
-        <DropdownItem
-          key={opt.key}
-          onClick={() => {
-            onSelect(opt.key)
-            setOpen(false)
-          }}
-        >
-          {opt.label}
-        </DropdownItem>
-      ))}
+      {options.map((opt) => {
+        const isCurrent = opt.key === current
+        return (
+          <DropdownItem
+            key={opt.key}
+            disabled={opt.disabled}
+            onClick={() => {
+              onSelect(opt.key)
+              setOpen(false)
+            }}
+          >
+            <span className="flex w-full items-center justify-between gap-3">
+              <span className={isCurrent ? 'font-semibold text-brand' : undefined}>
+                {opt.label}
+              </span>
+              {isCurrent && (
+                <span className="rounded bg-brand-25 px-1.5 py-0.5 text-caption font-medium text-brand">
+                  현재
+                </span>
+              )}
+            </span>
+          </DropdownItem>
+        )
+      })}
     </Dropdown>
   )
 }
