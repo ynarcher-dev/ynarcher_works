@@ -48,6 +48,15 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
   ],
   ac: [{ group: 'AC 메인', items: [{ label: 'AC 대시보드' }] }],
   fund: [{ group: 'FUND 메인', items: [{ label: '투자 대시보드' }] }],
+  mna: [
+    {
+      group: 'M&A 딜',
+      items: [
+        { label: '딜 소싱 칸반', tab: 'kanban' },
+        { label: '매칭 매트릭스', tab: 'matching' },
+      ],
+    },
+  ],
 }
 
 /** 그룹 목록에서 기본 활성 탭(첫 tab 보유 항목)을 반환. 없으면 undefined. */

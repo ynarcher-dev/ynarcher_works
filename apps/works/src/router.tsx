@@ -7,6 +7,8 @@ import { ProgramDetailPage } from '@/features/ac/ProgramDetailPage'
 import { FundDetailPage } from '@/features/fund/FundDetailPage'
 import { FundPage } from '@/features/fund/FundPage'
 import { HubPage } from '@/features/hub/HubPage'
+import { MnaDealDetailPage } from '@/features/mna/MnaDealDetailPage'
+import { MnaPage } from '@/features/mna/MnaPage'
 import { NetworksPage } from '@/features/networks/NetworksPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { RootLayout } from '@/pages/RootLayout'
@@ -70,6 +72,22 @@ export const router = createBrowserRouter([
             element: (
               <RequireWorkspace workspace="fund">
                 <FundDetailPage />
+              </RequireWorkspace>
+            ),
+          },
+          {
+            path: 'mna',
+            element: (
+              <RequireWorkspace workspace="mna">
+                <MnaPage />
+              </RequireWorkspace>
+            ),
+          },
+          {
+            path: 'mna/:id',
+            element: (
+              <RequireWorkspace workspace="mna">
+                <MnaDealDetailPage />
               </RequireWorkspace>
             ),
           },
