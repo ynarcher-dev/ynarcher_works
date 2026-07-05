@@ -92,10 +92,12 @@
 ## Phase 7. AC 워크스페이스 (Program First 14모듈)
 
 > **참고 문서**: 부모 아키텍처는 [3_4_workspace_ac.md](../docs_planning/3_4_workspace_ac.md)를 먼저 확인하고, 각 항목별 상세 기획서는 아래 링크를 따릅니다.
+>
+> _AC DB 스키마 토대(46테이블 + RLS)는 완료(마이그레이션 20260705150000~150500). 아래 미체크 모듈은 스키마 준비완료·화면 후속._
 
-- [ ] 7-1. 프로그램 개요 및 모듈 보드 (programs/program_modules, participation_mode) — [3_4_2](../docs_planning/3_4_2_ac_program_overview.md)
+- [x] 7-1. 프로그램 개요 및 모듈 보드 (programs/program_modules, participation_mode) — [3_4_2](../docs_planning/3_4_2_ac_program_overview.md)
 - [ ] 7-2. 모집 랜딩 빌더 + 신청서 폼 빌더 + 지원자 DB (NETWORKS 정규화 매핑) — [3_4_3](../docs_planning/3_4_3_ac_recruitment.md)
-- [ ] 7-3. 참가자 풀 및 3계층 역할 관리 (CSV 업로드, 매직링크/OTP 초대) — [3_4_4](../docs_planning/3_4_4_ac_participant_pool.md)
+- [x] 7-3. 참가자 풀 및 3계층 역할 관리 (CSV 업로드, 매직링크/OTP 초대) — [3_4_4](../docs_planning/3_4_4_ac_participant_pool.md)
 - [ ] 7-4. 공통 평가 엔진 (동적 평가표, 다형적 evaluation_targets, 가중치 집계) — [3_4_5](../docs_planning/3_4_5_ac_evaluation_engine.md)
 - [ ] 7-5. 서면평가 모듈 (라운드 운영, 심사위원 배정, Split View) — [3_4_6](../docs_planning/3_4_6_ac_document_review.md)
 - [ ] 7-6. 대면평가 모듈 (시간표/발표 순서, 현장 진행 상태, 최종 선발) — [3_4_7](../docs_planning/3_4_7_ac_onsite_evaluation.md)
@@ -106,7 +108,7 @@
 - [ ] 7-11. 통합 타임라인 및 충돌 방지 (표준 카테고리 10종, system_events 동기화, ICS) — [3_4_12](../docs_planning/3_4_12_ac_program_timeline.md)
 - [ ] 7-12. 성과 KPI 및 통합 다운로더 (export_jobs, 마스킹/사유/감사 로그) — [3_4_13](../docs_planning/3_4_13_ac_outcomes_kpi_export.md)
 - [ ] 7-13. 커스텀 활동/회의록 (Action Item, 공개 범위 4단계) — [3_4_14](../docs_planning/3_4_14_ac_custom_activities.md)
-- [ ] 7-14. AC 통합 대시보드 (전사 KPI 위젯, 오늘의 운영 이슈 보드) — [3_4_1](../docs_planning/3_4_1_ac_dashboard.md)
+- [x] 7-14. AC 통합 대시보드 (전사 KPI 위젯, 오늘의 운영 이슈 보드) — [3_4_1](../docs_planning/3_4_1_ac_dashboard.md)
 
 ## Phase 8. FUND 워크스페이스
 

@@ -2,6 +2,8 @@ import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { RequireAuth } from '@/auth/RequireAuth'
 import { RequireWorkspace } from '@/auth/RequireWorkspace'
 import { WorksLayout } from '@/app/WorksLayout'
+import { AcDashboardPage } from '@/features/ac/AcDashboardPage'
+import { ProgramDetailPage } from '@/features/ac/ProgramDetailPage'
 import { HubPage } from '@/features/hub/HubPage'
 import { NetworksPage } from '@/features/networks/NetworksPage'
 import { LoginPage } from '@/pages/LoginPage'
@@ -34,6 +36,22 @@ export const router = createBrowserRouter([
             element: (
               <RequireWorkspace workspace="networks">
                 <NetworksPage />
+              </RequireWorkspace>
+            ),
+          },
+          {
+            path: 'ac',
+            element: (
+              <RequireWorkspace workspace="ac">
+                <AcDashboardPage />
+              </RequireWorkspace>
+            ),
+          },
+          {
+            path: 'ac/programs/:id',
+            element: (
+              <RequireWorkspace workspace="ac">
+                <ProgramDetailPage />
               </RequireWorkspace>
             ),
           },
