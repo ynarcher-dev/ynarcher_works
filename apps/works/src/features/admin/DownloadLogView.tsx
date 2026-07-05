@@ -32,6 +32,8 @@ export function DownloadLogView() {
       rows={data ?? []}
       rowKey={(r) => r.id}
       emptyText="다운로드 사유 로그가 없습니다."
+      numbered={false}
+      standardColumns={false}
     />
   )
 }

@@ -39,11 +39,11 @@ export default {
           800: '#2F2F2F',
           900: '#1F1F1F',
         },
-        // 상태 신호색 — 텍스트(DEFAULT)/배경(subtle)/보더(border) 3단계
-        success: { DEFAULT: '#1D4ED8', subtle: '#EFF6FF', border: '#BFDBFE' },
-        warning: { DEFAULT: '#92400E', subtle: '#FFFBEB', border: '#FDE68A' },
-        info: { DEFAULT: '#166534', subtle: '#F0FDF4', border: '#BBF7D0' },
-        danger: { DEFAULT: '#9F170D', subtle: '#FFF5F4', border: '#FAD3CF' },
+        // 상태 신호색 — 텍스트(DEFAULT)/배경(subtle)/보더(border) 3단계 (토스 스타일 HSL 계열 튜닝)
+        success: { DEFAULT: '#059669', subtle: '#ECFDF5', border: '#D1FAE5' },
+        warning: { DEFAULT: '#D97706', subtle: '#FFFBEB', border: '#FEF3C7' },
+        info: { DEFAULT: '#0064FF', subtle: '#F0F5FF', border: '#E0EBFF' },
+        danger: { DEFAULT: '#EF4444', subtle: '#FFF5F5', border: '#FFE2E2' },
       },
       fontFamily: {
         sans: [
@@ -86,6 +86,16 @@ export default {
         standard: 'cubic-bezier(0.4, 0, 0.2, 1)',
         decelerate: 'cubic-bezier(0, 0, 0.2, 1)',
         accelerate: 'cubic-bezier(0.4, 0, 1, 1)',
+      },
+      borderRadius: {
+        'radius-sm': '8px',
+        'radius-md': '14px',
+        'radius-lg': '20px',
+      },
+      boxShadow: {
+        'soft': '0 2px 8px rgba(0, 0, 0, 0.04)',
+        'popover': '0 8px 20px rgba(0, 0, 0, 0.06)',
+        'dialog': '0 12px 32px rgba(0, 0, 0, 0.08)',
       },
     },
   },

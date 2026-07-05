@@ -22,7 +22,7 @@ function TaskCard({
   const update = useUpdateTaskStatus(projectId)
   const next = NEXT_TASK_STATUS[task.status]
   return (
-    <div className="rounded border border-gray-200 bg-white p-3 shadow-sm">
+    <div className="rounded-radius-md border border-gray-300 bg-white p-3 shadow-soft">
       <p className="text-body font-medium text-gray-900">{task.title}</p>
       {task.due_date && (
         <p className="mt-1 flex items-center gap-1 text-caption text-gray-500">
@@ -42,7 +42,7 @@ function TaskCard({
           type="button"
           disabled={update.isPending}
           onClick={() => update.mutate({ id: task.id, status: next })}
-          className="mt-2 w-full rounded border border-gray-200 py-1 text-caption text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+          className="mt-2 w-full rounded-radius-md border border-gray-300 py-1 text-caption text-gray-600 transition-all duration-fast hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-info/10 disabled:opacity-50"
         >
           {TASK_COLUMNS.find((c) => c.key === next)?.label}(으)로 →
         </button>
@@ -91,7 +91,7 @@ export function TaskKanban({ projectId }: { projectId: string }) {
         {TASK_COLUMNS.map((col) => {
           const items = tasks.filter((t) => t.status === col.key)
           return (
-            <div key={col.key} className="rounded-lg bg-gray-50 p-2">
+            <div key={col.key} className="rounded-radius-lg bg-gray-50 p-2">
               <div className="flex items-center justify-between px-1 pb-2">
                 <span className="text-body font-semibold text-gray-800">
                   {col.label}

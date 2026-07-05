@@ -41,6 +41,6 @@ export function RankingPanel() {
       : c,
   )
   return (
-    <DataTable columns={ranked} rows={rows} rowKey={(r) => r.expert_id} />
+    <DataTable columns={ranked} rows={rows} rowKey={(r) => r.expert_id} numbered={false} standardColumns={false} />
   )
 }

@@ -35,7 +35,7 @@ export function Modal({
   return createPortal(
     <div className="fixed inset-0 z-overlay flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-gray-900/40 transition-opacity duration-slow ease-decelerate"
+        className="absolute inset-0 bg-gray-900/35 backdrop-blur-[2px] transition-opacity duration-slow ease-decelerate"
         onClick={onClose}
         aria-hidden
       />
@@ -43,18 +43,18 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         className={cn(
-          'relative z-modal w-full rounded-lg bg-white shadow-xl transition-all duration-slow ease-decelerate',
+          'relative z-modal w-full overflow-hidden rounded-radius-lg border border-white/70 bg-white shadow-2xl shadow-gray-900/15 transition-all duration-slow ease-decelerate',
           sizeClass[size],
         )}
       >
         {title && (
-          <header className="border-b border-gray-100 px-5 py-3">
+          <header className="border-b border-gray-200 bg-gray-25/70 px-5 py-3.5">
             <h2 className="text-title-sm font-medium text-gray-900">{title}</h2>
           </header>
         )}
         <div className="px-5 py-4 text-body text-gray-800">{children}</div>
         {footer && (
-          <footer className="flex justify-end gap-2 border-t border-gray-100 px-5 py-3">
+          <footer className="flex justify-end gap-2 border-t border-gray-200 bg-gray-25/70 px-5 py-3.5">
             {footer}
           </footer>
         )}

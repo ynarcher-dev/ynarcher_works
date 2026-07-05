@@ -1,3 +1,4 @@
+import { PageHeader } from '@ynarcher/ui'
 import { useSearchParams } from 'react-router-dom'
 import { ApprovalPanel } from '@/features/management/panels/ApprovalPanel'
 import { AssetsPanel } from '@/features/management/panels/AssetsPanel'
@@ -18,9 +19,7 @@ export function ManagementPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-title-lg font-bold text-gray-900">
-        MANAGEMENT · {HEADINGS[tab] ?? HEADINGS.approval}
-      </h1>
+      <PageHeader title={HEADINGS[tab] ?? HEADINGS.approval} />
       {tab === 'hr' && <HrPanel />}
       {tab === 'finance' && <FinancePanel />}
       {tab === 'assets' && <AssetsPanel />}

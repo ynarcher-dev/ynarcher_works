@@ -39,7 +39,7 @@ export function CriteriaManager({ formId }: { formId: string }) {
           {(data ?? []).map((c) => (
             <li
               key={c.id}
-              className="flex items-center justify-between rounded border border-gray-200 bg-white px-3 py-2 text-body"
+              className="flex items-center justify-between rounded border border-gray-300 bg-white px-3 py-2 text-body"
             >
               <span className="text-gray-800">{c.label}</span>
               <span className="tabular-nums text-caption text-gray-500">

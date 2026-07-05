@@ -32,14 +32,18 @@ export function WorkspaceSwitcher({
     <Dropdown
       open={open}
       onClose={() => setOpen(false)}
+      align="center"
       trigger={
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="inline-flex items-center gap-1 rounded border border-gray-300 bg-white px-3 py-1.5 text-body font-medium text-gray-800 hover:bg-gray-50"
+          className="inline-flex items-center gap-1.5 rounded-radius-md px-2 py-1 text-body-lg font-semibold text-gray-900 transition-colors duration-fast hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-info/10"
         >
           {currentLabel}
-          <span aria-hidden className="text-caption text-gray-400">
+          <span
+            aria-hidden
+            className={`text-caption text-gray-400 transition-transform duration-fast ${open ? 'rotate-180' : ''}`}
+          >
             ▼
           </span>
         </button>
@@ -61,7 +65,7 @@ export function WorkspaceSwitcher({
                 {opt.label}
               </span>
               {isCurrent && (
-                <span className="rounded bg-brand-25 px-1.5 py-0.5 text-caption font-medium text-brand">
+                <span className="rounded-radius-sm bg-brand-25 px-1.5 py-0.5 text-caption font-medium text-brand">
                   현재
                 </span>
               )}

@@ -58,7 +58,7 @@ export function PermissionConsole() {
       {isLoading ? (
         <Spinner />
       ) : (
-        <div className="overflow-hidden rounded border border-gray-200 bg-white">
+        <div className="overflow-hidden rounded-radius-lg border border-gray-300 bg-white shadow-soft">
           <div className="grid grid-cols-[1fr_auto_auto] items-center border-b border-gray-100 bg-gray-50 px-4 py-2 text-caption font-semibold text-gray-500">
             <span>워크스페이스</span>
             <span className="w-20 text-center">읽기</span>

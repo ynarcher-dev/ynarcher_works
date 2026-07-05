@@ -1,4 +1,4 @@
-import { Badge, Button, DataTable, Spinner, type Column } from '@ynarcher/ui'
+import { Badge, Button, DataTable, Spinner, PageHeader, type Column } from '@ynarcher/ui'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ProgramFormModal } from '@/features/ac/ProgramFormModal'
@@ -42,10 +42,10 @@ export function AcDashboardPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <h1 className="text-title-lg font-bold text-gray-900">AC 대시보드</h1>
-        <Button onClick={() => setCreating(true)}>프로그램 등록</Button>
-      </div>
+      <PageHeader
+        title="AC 대시보드"
+        actions={<Button onClick={() => setCreating(true)}>프로그램 등록</Button>}
+      />
 
       <div className="grid grid-cols-3 gap-3">
         {[
@@ -55,7 +55,7 @@ export function AcDashboardPage() {
         ].map((tile) => (
           <div
             key={tile.label}
-            className="rounded border border-gray-200 bg-white px-4 py-3"
+            className="rounded border border-gray-300 bg-white px-4 py-3"
           >
             <p className="text-caption text-gray-500">{tile.label}</p>
             <p className="text-title-md font-bold tabular-nums text-gray-900">

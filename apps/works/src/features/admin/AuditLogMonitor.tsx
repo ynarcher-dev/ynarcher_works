@@ -49,6 +49,8 @@ export function AuditLogMonitor() {
         rows={data ?? []}
         rowKey={(r) => r.id}
         emptyText="감사 로그가 없습니다."
+        numbered={false}
+        standardColumns={false}
       />
       <Modal
         open={Boolean(detail)}

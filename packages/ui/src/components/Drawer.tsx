@@ -31,7 +31,7 @@ export function Drawer({
       />
       <aside
         className={cn(
-          'absolute top-0 z-sidebar h-full w-72 bg-white shadow-xl transition-transform duration-slow ease-decelerate',
+          'absolute top-0 z-sidebar h-full w-60 bg-gray-600 shadow-xl transition-transform duration-slow ease-decelerate',
           side === 'left' ? 'left-0' : 'right-0',
           className,
         )}

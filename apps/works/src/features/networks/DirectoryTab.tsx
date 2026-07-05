@@ -2,7 +2,6 @@ import {
   Badge,
   Button,
   DataTable,
-  Input,
   Spinner,
   type Column,
 } from '@ynarcher/ui'
@@ -11,11 +10,16 @@ import { EntityFormModal } from '@/features/networks/EntityFormModal'
 import { useEntityList, type EntityRow } from '@/features/networks/hooks'
 import type { EntityConfig } from '@/features/networks/config'
 
+interface DirectoryTabProps {
+  config: EntityConfig
+  keyword: string
+  creating: boolean
+  setCreating: (c: boolean) => void
+}
+
 /** 엔티티 디렉토리 탭: 검색 + 목록 + 등록/수정. */
-export function DirectoryTab({ config }: { config: EntityConfig }) {
-  const [keyword, setKeyword] = useState('')
+export function DirectoryTab({ config, keyword, creating, setCreating }: DirectoryTabProps) {
   const [editing, setEditing] = useState<EntityRow | null>(null)
-  const [creating, setCreating] = useState(false)
   const { data, isLoading } = useEntityList(config.table, keyword)
 
   const columns = useMemo<Column<EntityRow>[]>(() => {
@@ -45,17 +49,6 @@ export function DirectoryTab({ config }: { config: EntityConfig }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <Input
-          placeholder={`${config.label} 이름 검색`}
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-          className="max-w-xs"
-        />
-        <div className="flex-1" />
-        <Button onClick={() => setCreating(true)}>{config.label} 등록</Button>
-      </div>
-
       {isLoading ? (
         <Spinner />
       ) : (

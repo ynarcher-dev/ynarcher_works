@@ -64,7 +64,7 @@ export function HrPanel() {
         {dl ? (
           <Spinner />
         ) : tree.length === 0 ? (
-          <p className="rounded border border-dashed border-gray-200 py-6 text-center text-body text-gray-400">
+          <p className="rounded border border-dashed border-gray-300 py-6 text-center text-body text-gray-400">
             등록된 부서가 없습니다.
           </p>
         ) : (
@@ -72,7 +72,7 @@ export function HrPanel() {
             {tree.map((root) => (
               <div
                 key={root.id}
-                className="min-w-48 rounded border border-gray-200 bg-white p-3"
+                className="min-w-48 rounded border border-gray-300 bg-white p-3"
               >
                 <p className="text-body font-semibold text-gray-900">{root.name}</p>
                 <ul className="mt-1 space-y-0.5">

@@ -1,4 +1,4 @@
-import { Button } from '@ynarcher/ui'
+import { Button, PageHeader, Input } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { DirectoryTab } from '@/features/networks/DirectoryTab'
@@ -16,11 +16,16 @@ export function NetworksPage() {
   const [params] = useSearchParams()
   const tab = params.get('tab') ?? 'startups'
   const [importing, setImporting] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [keyword, setKeyword] = useState('')
 
   // 엔티티는 병합/성장 섹션 진입 시에도 유지되도록 내부 상태로 보존한다.
   const [entity, setEntity] = useState<EntityKey>('startups')
   useEffect(() => {
-    if (ENTITY_KEYS.includes(tab as EntityKey)) setEntity(tab as EntityKey)
+    if (ENTITY_KEYS.includes(tab as EntityKey)) {
+      setEntity(tab as EntityKey)
+      setKeyword('')
+    }
   }, [tab])
 
   const mode: Mode = tab === 'merge' ? 'merge' : tab === 'growth' ? 'growth' : 'directory'
@@ -33,20 +38,39 @@ export function NetworksPage() {
         ? '성장 지표'
         : `${config.label} 마스터`
 
+  const searchField = mode === 'directory' ? (
+    <Input
+      placeholder={`${config.label} 이름 검색`}
+      value={keyword}
+      onChange={(e) => setKeyword(e.target.value)}
+    />
+  ) : undefined
+
+  const actions = mode === 'directory' ? (
+    <>
+      <Button variant="outline" onClick={() => setImporting(true)}>
+        대량 등록(CSV)
+      </Button>
+      <Button onClick={() => setCreating(true)}>{config.label} 등록</Button>
+    </>
+  ) : undefined
+
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <h1 className="text-title-lg font-bold text-gray-900">
-          NETWORKS · {heading}
-        </h1>
-        {mode === 'directory' && (
-          <Button variant="outline" size="sm" onClick={() => setImporting(true)}>
-            대량 등록(CSV)
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title={heading}
+        search={searchField}
+        actions={actions}
+      />
 
-      {mode === 'directory' && <DirectoryTab config={config} />}
+      {mode === 'directory' && (
+        <DirectoryTab
+          config={config}
+          keyword={keyword}
+          creating={creating}
+          setCreating={setCreating}
+        />
+      )}
       {mode === 'merge' && <MergeConsole config={config} />}
       {mode === 'growth' && <GrowthHistoryPanel />}
 

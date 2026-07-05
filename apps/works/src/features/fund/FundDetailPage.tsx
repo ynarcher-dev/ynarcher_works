@@ -3,6 +3,7 @@ import {
   Banner,
   DataTable,
   Spinner,
+  PageHeader,
   type BadgeTone,
   type Column,
 } from '@ynarcher/ui'
@@ -85,12 +86,14 @@ export function FundDetailPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <Link to="/fund" className="text-caption text-gray-500 hover:text-gray-800">
-          ← FUND 보드
-        </Link>
-        <h1 className="mt-1 text-title-lg font-bold text-gray-900">{fund.name}</h1>
-      </div>
+      <PageHeader
+        back={
+          <Link to="/fund" className="text-caption font-semibold text-brand hover:text-brand-600">
+            ← FUND 보드
+          </Link>
+        }
+        title={fund.name}
+      />
 
       <nav className="flex gap-1 border-b border-gray-200">
         {[

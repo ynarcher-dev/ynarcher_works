@@ -1,4 +1,4 @@
-import { Badge, Banner, Button, Input, Select, Spinner, useToast } from '@ynarcher/ui'
+import { Badge, Banner, Button, Input, PageHeader, Select, Spinner, useToast } from '@ynarcher/ui'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
@@ -40,7 +40,7 @@ function DocChecklist({ dealId }: { dealId: string }) {
 
   return (
     <div className="space-y-3">
-      <div className="rounded border border-gray-200 bg-white">
+      <div className="rounded border border-gray-300 bg-white">
         {(docs ?? []).map((d) => (
           <div
             key={d.id}
@@ -107,24 +107,27 @@ export function MnaDealDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link to="/mna" className="text-caption text-gray-500 hover:text-gray-800">
-          ← M&amp;A 칸반
-        </Link>
-        <div className="mt-1 flex items-center gap-2">
-          <h1 className="text-title-lg font-bold text-gray-900">
-            {deal.deal_name}
-          </h1>
-          <Badge tone={stageTone[deal.stage]}>{STAGE_LABELS[deal.stage]}</Badge>
-          {deal.on_hold && <Badge tone="danger">보류</Badge>}
-        </div>
-        <p className="text-caption text-gray-500">
-          {deal.target_name ?? '대상 미지정'} ·{' '}
-          {deal.estimated_value != null
-            ? `${(deal.estimated_value / 100_000_000).toLocaleString()}억`
-            : '가액 미정'}
-        </p>
-      </div>
+      <PageHeader
+        back={
+          <Link to="/mna" className="text-caption font-semibold text-brand hover:text-brand-600">
+            ← M&amp;A 칸반
+          </Link>
+        }
+        title={deal.deal_name}
+        titleExtra={
+          <>
+            <Badge tone={stageTone[deal.stage]}>{STAGE_LABELS[deal.stage]}</Badge>
+            {deal.on_hold && <Badge tone="danger">보류</Badge>}
+          </>
+        }
+        description={
+          `${deal.target_name ?? '대상 미지정'} · ${
+            deal.estimated_value != null
+              ? `${(deal.estimated_value / 100_000_000).toLocaleString()}억`
+              : '가액 미정'
+          }`
+        }
+      />
 
       <section>
         <h2 className="mb-2 text-title-sm font-semibold text-gray-900">
@@ -137,7 +140,7 @@ export function MnaDealDetailPage() {
         <h2 className="mb-2 text-title-sm font-semibold text-gray-900">
           단계 전환 타임라인
         </h2>
-        <div className="rounded border border-gray-200 bg-white">
+        <div className="rounded border border-gray-300 bg-white">
           {(logs ?? []).map((l) => (
             <div
               key={l.id}

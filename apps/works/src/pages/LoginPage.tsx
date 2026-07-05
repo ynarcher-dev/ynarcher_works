@@ -46,7 +46,7 @@ export function LoginPage() {
             id="email"
             type="email"
             autoComplete="email"
-            className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-body text-gray-800 focus-visible:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
+            className="mt-1 w-full rounded-radius-md border border-gray-300 px-3 py-2 text-body text-gray-800 shadow-soft transition-all duration-fast hover:border-gray-400 focus-visible:border-info focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-info/10"
             {...register('email')}
           />
           {errors.email && (
@@ -62,7 +62,7 @@ export function LoginPage() {
             id="password"
             type="password"
             autoComplete="current-password"
-            className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-body text-gray-800 focus-visible:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
+            className="mt-1 w-full rounded-radius-md border border-gray-300 px-3 py-2 text-body text-gray-800 shadow-soft transition-all duration-fast hover:border-gray-400 focus-visible:border-info focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-info/10"
             {...register('password')}
           />
           {errors.password && (
@@ -73,7 +73,7 @@ export function LoginPage() {
         </div>
 
         {formError && (
-          <p className="rounded border border-danger-border bg-danger-subtle px-3 py-2 text-caption text-danger">
+          <p className="rounded-radius-md border border-danger-border bg-danger-subtle px-3 py-2 text-caption text-danger shadow-soft">
             {formError}
           </p>
         )}
@@ -81,7 +81,7 @@ export function LoginPage() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full rounded bg-brand px-4 py-2 text-body font-medium text-white transition-colors duration-fast hover:bg-brand-600 active:bg-brand-700 disabled:opacity-60"
+          className="w-full rounded-radius-md bg-brand px-4 py-2 text-body font-medium text-white shadow-sm shadow-brand/20 transition-all duration-fast hover:bg-brand-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10 active:scale-[0.98] active:bg-brand-700 disabled:scale-100 disabled:opacity-60"
         >
           {isSubmitting ? '로그인 중…' : '로그인'}
         </button>

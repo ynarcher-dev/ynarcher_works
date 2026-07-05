@@ -14,7 +14,7 @@ export function ToastItem({ toast }: { toast: ToastMessage }) {
     <div
       role="alert"
       className={cn(
-        'rounded border px-3 py-2 text-body shadow-lg',
+        'rounded-radius-md border px-3 py-2 text-body shadow-popover',
         toneClass[toast.tone],
       )}
     >

@@ -1,4 +1,4 @@
-import { Badge, Banner, Spinner } from '@ynarcher/ui'
+import { Badge, Banner, Spinner, PageHeader } from '@ynarcher/ui'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { EvaluationPanel } from '@/features/ac/EvaluationPanel'
@@ -61,17 +61,19 @@ export function ProgramDetailPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <Link to="/ac" className="text-caption text-gray-500 hover:text-gray-800">
-          ← AC 대시보드
-        </Link>
-        <div className="mt-1 flex items-center gap-3">
-          <h1 className="text-title-lg font-bold text-gray-900">{program.title}</h1>
+      <PageHeader
+        back={
+          <Link to="/ac" className="text-caption font-semibold text-brand hover:text-brand-600">
+            ← AC 대시보드
+          </Link>
+        }
+        title={program.title}
+        titleExtra={
           <Badge tone="info">
             {PROGRAM_STATUS_LABEL[program.status] ?? program.status}
           </Badge>
-        </div>
-      </div>
+        }
+      />
 
       <nav className="flex flex-wrap gap-1 border-b border-gray-200">
         {TABS.map((t) => (

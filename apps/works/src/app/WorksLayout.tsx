@@ -1,4 +1,32 @@
 import {
+  Award,
+  BadgeCheck,
+  BriefcaseBusiness,
+  CalendarDays,
+  ChartNoAxesCombined,
+  Download,
+  Folder,
+  Handshake,
+  LayoutGrid,
+  Lightbulb,
+  Link2,
+  LockKeyhole,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ReceiptText,
+  Rocket,
+  Search,
+  Sparkles,
+  Target,
+  User,
+  Users,
+  WalletCards,
+  Megaphone,
+  FolderOpen,
+  LayoutDashboard,
+} from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import {
   AppShell,
   Avatar,
   Dropdown,
@@ -8,11 +36,59 @@ import {
   WorkspaceSwitcher,
 } from '@ynarcher/ui'
 import { useState } from 'react'
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import logo from '@/assets/logo.png'
 import { hasWorkspaceRead, useAuthStore } from '@/auth/authStore'
 import { employeeAuth } from '@/auth/employeeAuthService'
 import { WORKSPACES } from '@/config/workspaces'
 import { WORKSPACE_SUBNAV, firstTab } from '@/config/navigation'
+
+const sidebarIconByTab: Record<string, LucideIcon> = {
+  // HUB 그룹 1: 메인
+  dashboard: LayoutDashboard,
+  ai: Sparkles,
+  calendar: CalendarDays,
+  notices: Megaphone,
+  files: FolderOpen,
+  insights: Lightbulb,
+
+  // HUB 그룹 2: 마스터 정보
+  managers: Users,
+  startups: Rocket,
+  experts: BriefcaseBusiness,
+  partners: Handshake,
+
+  // HUB 그룹 3: 현황 정보
+  ac: Target,
+  mna: BriefcaseBusiness,
+  project: Folder,
+
+  // HUB 그룹 4: 실적 정보
+  fund: WalletCards,
+  management: ChartNoAxesCombined,
+
+  // 기존 탭 매핑 유지
+  search: Search,
+  ranking: Award,
+  directory: Users,
+  merge: Link2,
+  growth: ChartNoAxesCombined,
+  kanban: BadgeCheck,
+  matching: LayoutGrid,
+  permissions: LockKeyhole,
+  audit: ReceiptText,
+  downloads: Download,
+  approval: BadgeCheck,
+  hr: User,
+  finance: WalletCards,
+  assets: BriefcaseBusiness,
+}
+
+const sidebarIconByWorkspace: Record<string, LucideIcon> = {
+  ac: Target,
+  fund: WalletCards,
+  project: Folder,
+}
 
 /**
  * 인증된 WORKS 셸: 상단바 워크스페이스 전환 드롭다운 + 컨텍스트 사이드바 + 프로필 메뉴.
@@ -23,6 +99,7 @@ export function WorksLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const [profileOpen, setProfileOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   const visible = WORKSPACES.filter((w) => hasWorkspaceRead(user, w.key))
 
@@ -46,29 +123,43 @@ export function WorksLayout() {
     navigate(item.tab ? `${currentWs.path}?tab=${item.tab}` : currentWs.path)
   }
 
+  const getSidebarIcon = (item: { tab?: string }) =>
+    item.tab
+      ? sidebarIconByTab[item.tab]
+      : currentWs
+        ? sidebarIconByWorkspace[currentWs.key]
+        : undefined
+
   const sidebar = (
     <Sidebar
+      collapsed={sidebarCollapsed}
       header={
-        <span className="text-title-sm font-bold text-gray-900">
-          와이앤아처 <span className="text-brand">WORKS</span>
-        </span>
+        <Link to="/hub" className="flex w-full justify-center">
+          <img src={logo} alt="Y&ARCHER" className="h-8 object-contain" />
+        </Link>
       }
     >
       {groups.map((g, gi) => (
-        <div key={g.group ?? gi} className="pb-1">
-          {g.group && (
-            <p className="px-3 pb-1 pt-3 text-caption font-semibold uppercase tracking-wide text-gray-400">
-              {g.group}
-            </p>
+        <div key={g.group ?? gi} className="pb-3 last:pb-0">
+          {gi > 0 && (
+            <div className="mx-3 my-2 border-t border-white/10" />
           )}
-          {g.items.map((item) => (
-            <SidebarItem
-              key={item.label}
-              label={item.label}
-              active={item.tab ? item.tab === activeTab : true}
-              onClick={() => goToSection(item)}
-            />
-          ))}
+          <div className="flex flex-col gap-1">
+            {g.items.map((item) => {
+              const Icon = getSidebarIcon(item)
+
+              return (
+                <SidebarItem
+                  key={item.label}
+                  icon={Icon ? <Icon aria-hidden className="size-4" /> : undefined}
+                  label={item.label}
+                  active={item.tab ? item.tab === activeTab : true}
+                  collapsed={sidebarCollapsed}
+                  onClick={() => goToSection(item)}
+                />
+              )
+            })}
+          </div>
         </div>
       ))}
     </Sidebar>
@@ -76,8 +167,26 @@ export function WorksLayout() {
 
   return (
     <AppShell
+      sidebarCollapsed={sidebarCollapsed}
       sidebar={sidebar}
       topbarLeft={
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="hidden items-center justify-center rounded-radius-md p-1.5 text-gray-500 transition-colors duration-fast hover:bg-gray-100 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-info/10 lg:flex"
+            aria-label={sidebarCollapsed ? '사이드바 열기' : '사이드바 접기'}
+            title={sidebarCollapsed ? '사이드바 열기' : '사이드바 접기'}
+          >
+            {sidebarCollapsed ? (
+              <PanelLeftOpen aria-hidden className="size-5" strokeWidth={1.8} />
+            ) : (
+              <PanelLeftClose aria-hidden className="size-5" strokeWidth={1.8} />
+            )}
+          </button>
+        </div>
+      }
+      topbarCenter={
         currentWs && (
           <WorkspaceSwitcher
             options={switcherOptions}
@@ -99,7 +208,7 @@ export function WorksLayout() {
               type="button"
               aria-label="계정 메뉴"
               onClick={() => setProfileOpen((v) => !v)}
-              className="flex items-center gap-2 rounded p-0.5 hover:bg-gray-100"
+              className="flex items-center gap-2 rounded-radius-md p-0.5 transition-colors duration-fast hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-info/10"
             >
               <span className="hidden text-body text-gray-600 sm:inline">
                 {user?.name}

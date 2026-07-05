@@ -87,7 +87,7 @@ export function ApprovalPanel() {
       {isLoading ? (
         <Spinner />
       ) : docs.length === 0 ? (
-        <p className="rounded border border-dashed border-gray-200 py-8 text-center text-body text-gray-400">
+        <p className="rounded border border-dashed border-gray-300 py-8 text-center text-body text-gray-400">
           해당 문서가 없습니다.
         </p>
       ) : (
@@ -95,7 +95,7 @@ export function ApprovalPanel() {
           {docs.map((doc) => (
             <div
               key={doc.id}
-              className="flex items-center justify-between rounded border border-gray-200 bg-white px-4 py-3"
+              className="flex items-center justify-between rounded border border-gray-300 bg-white px-4 py-3"
             >
               <div>
                 <div className="flex items-center gap-2">

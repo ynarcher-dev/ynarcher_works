@@ -6,7 +6,7 @@ export interface DropdownProps {
   onClose: () => void
   trigger: ReactNode
   children: ReactNode
-  align?: 'left' | 'right'
+  align?: 'left' | 'center' | 'right'
   className?: string
 }
 
@@ -31,8 +31,10 @@ export function Dropdown({
           <div
             role="menu"
             className={cn(
-              'absolute z-dropdown mt-1 min-w-40 rounded-md border border-gray-200 bg-white py-1 shadow-lg',
-              align === 'right' ? 'right-0' : 'left-0',
+              'absolute z-dropdown mt-1.5 min-w-40 overflow-hidden rounded-radius-lg border border-gray-300 bg-white p-1 shadow-popover',
+              align === 'right' && 'right-0',
+              align === 'left' && 'left-0',
+              align === 'center' && 'left-1/2 -translate-x-1/2',
               className,
             )}
           >
@@ -58,7 +60,7 @@ export function DropdownItem({ onClick, children, disabled }: DropdownItemProps)
       role="menuitem"
       disabled={disabled}
       onClick={onClick}
-      className="block w-full px-3 py-1.5 text-left text-body text-gray-800 hover:bg-gray-50 disabled:opacity-50"
+      className="block w-full rounded-radius-md px-3 py-1.5 text-left text-body text-gray-800 transition-colors duration-fast hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-info/10 disabled:opacity-50"
     >
       {children}
     </button>

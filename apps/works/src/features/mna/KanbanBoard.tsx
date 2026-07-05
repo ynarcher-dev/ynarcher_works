@@ -24,7 +24,7 @@ function DealCard({ deal }: { deal: Deal }) {
   const next = NEXT_STAGE[deal.stage]
 
   return (
-    <div className="rounded border border-gray-200 bg-white p-3 shadow-sm">
+    <div className="rounded-radius-md border border-gray-300 bg-white p-3 shadow-soft">
       <button
         type="button"
         onClick={() => navigate(`/mna/${deal.id}`)}
@@ -51,7 +51,7 @@ function DealCard({ deal }: { deal: Deal }) {
           type="button"
           disabled={update.isPending}
           onClick={() => update.mutate({ id: deal.id, stage: next })}
-          className="mt-2 w-full rounded border border-gray-200 py-1 text-caption text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+          className="mt-2 w-full rounded-radius-md border border-gray-300 py-1 text-caption text-gray-600 transition-all duration-fast hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-info/10 disabled:opacity-50"
         >
           {STAGE_LABELS[next]}(으)로 이동 →
         </button>
@@ -62,7 +62,7 @@ function DealCard({ deal }: { deal: Deal }) {
 
 function Column({ stage, deals }: { stage: DealStage; deals: Deal[] }) {
   return (
-    <div className="flex w-64 shrink-0 flex-col rounded-lg bg-gray-50 p-2">
+    <div className="flex w-64 shrink-0 flex-col rounded-radius-lg bg-gray-50 p-2">
       <div className="flex items-center justify-between px-1 pb-2">
         <span className="text-body font-semibold text-gray-800">
           {STAGE_LABELS[stage]}
@@ -97,7 +97,7 @@ export function KanbanBoard() {
       {KANBAN_STAGES.map((s) => (
         <Column key={s} stage={s} deals={byStage(s)} />
       ))}
-      <div className="flex w-64 shrink-0 flex-col rounded-lg bg-gray-50 p-2">
+      <div className="flex w-64 shrink-0 flex-col rounded-radius-lg bg-gray-50 p-2">
         <div className="flex items-center justify-between px-1 pb-2">
           <span className="text-body font-semibold text-gray-800">완료/무산</span>
           <Badge tone="neutral">{terminal.length}</Badge>

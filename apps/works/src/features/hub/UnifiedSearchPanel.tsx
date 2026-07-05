@@ -22,7 +22,7 @@ export function UnifiedSearchPanel() {
         {(data ?? []).map((r) => (
           <li
             key={`${r.kind}-${r.id}`}
-            className="flex items-center justify-between rounded border border-gray-200 bg-white px-3 py-2"
+            className="flex items-center justify-between rounded border border-gray-300 bg-white px-3 py-2"
           >
             <div>
               <p className="text-body font-medium text-gray-900">{r.name}</p>

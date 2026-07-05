@@ -83,11 +83,11 @@ export function GanttRoadmap({ projectId }: { projectId: string }) {
       </div>
 
       {milestones.length === 0 ? (
-        <p className="rounded border border-dashed border-gray-200 py-8 text-center text-body text-gray-400">
+        <p className="rounded border border-dashed border-gray-300 py-8 text-center text-body text-gray-400">
           등록된 마일스톤이 없습니다.
         </p>
       ) : (
-        <div className="space-y-2 rounded border border-gray-200 bg-white p-4">
+        <div className="space-y-2 rounded border border-gray-300 bg-white p-4">
           {milestones.map((m) => (
             <div key={m.id} className="grid grid-cols-[9rem_1fr] items-center gap-3">
               <span className="truncate text-body text-gray-800" title={m.name}>

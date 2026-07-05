@@ -1,3 +1,4 @@
+import { PageHeader } from '@ynarcher/ui'
 import { useSearchParams } from 'react-router-dom'
 import { AuditLogMonitor } from '@/features/admin/AuditLogMonitor'
 import { DownloadLogView } from '@/features/admin/DownloadLogView'
@@ -16,9 +17,7 @@ export function AdminPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-title-lg font-bold text-gray-900">
-        ADMIN · {HEADINGS[tab] ?? HEADINGS.permissions}
-      </h1>
+      <PageHeader title={HEADINGS[tab] ?? HEADINGS.permissions} />
       {tab === 'audit' && <AuditLogMonitor />}
       {tab === 'downloads' && <DownloadLogView />}
       {tab !== 'audit' && tab !== 'downloads' && <PermissionConsole />}

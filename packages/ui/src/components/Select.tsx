@@ -5,23 +5,43 @@ export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   invalid?: boolean
 }
 
-/** 셀렉트 박스(4상태). */
+/** 셀렉트 박스(4상태, 커스텀 화살표, 토스 스타일). */
 export function Select({ invalid, className, children, ...props }: SelectProps) {
   return (
-    <select
-      aria-invalid={invalid}
-      className={cn(
-        'h-10 w-full rounded border bg-white px-3 text-body text-gray-800 transition-colors duration-fast',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30',
-        'disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400',
-        invalid
-          ? 'border-brand-700 focus-visible:border-brand-700'
-          : 'border-gray-300 focus-visible:border-brand',
-        className,
-      )}
-      {...props}
-    >
-      {children}
-    </select>
+    <div className="relative flex w-full items-center">
+      <select
+        aria-invalid={invalid}
+        className={cn(
+          'h-11 w-full appearance-none rounded-radius-md border pl-3.5 pr-10 text-body text-gray-900 transition-all duration-fast shadow-soft',
+          'bg-white border-gray-300',
+          'hover:border-gray-400',
+          'focus-visible:outline-none focus-visible:border-info focus-visible:ring-4 focus-visible:ring-info/10',
+          'disabled:cursor-not-allowed disabled:border-gray-100 disabled:bg-gray-50 disabled:text-gray-400 disabled:shadow-none',
+          invalid
+            ? 'border-danger bg-danger-subtle hover:border-danger focus-visible:border-danger focus-visible:ring-danger/10'
+            : '',
+          className,
+        )}
+        {...props}
+      >
+        {children}
+      </select>
+      {/* 커스텀 화살표 아이콘 */}
+      <span className="absolute right-3.5 pointer-events-none text-gray-400 shrink-0" aria-hidden="true">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </span>
+    </div>
   )
 }

@@ -1,4 +1,4 @@
-import { Badge, Button, Select, Spinner } from '@ynarcher/ui'
+import { Badge, Button, Select, Spinner, PageHeader } from '@ynarcher/ui'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -27,29 +27,30 @@ export function ProjectPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <h1 className="text-title-lg font-bold text-gray-900">PROJECT</h1>
-        <Button onClick={() => setCreating(true)}>프로젝트 개설</Button>
-      </div>
-
-      <div className="max-w-xs">
-        <Select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value as 'ALL' | ProjectType)}
-        >
-          <option value="ALL">전체 유형</option>
-          {Object.entries(TYPE_LABELS).map(([k, v]) => (
-            <option key={k} value={k}>
-              {v}
-            </option>
-          ))}
-        </Select>
-      </div>
+      <PageHeader
+        title="프로젝트 대시보드"
+        search={
+          <Select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value as 'ALL' | ProjectType)}
+          >
+            <option value="ALL">전체 유형</option>
+            {Object.entries(TYPE_LABELS).map(([k, v]) => (
+              <option key={k} value={k}>
+                {v}
+              </option>
+            ))}
+          </Select>
+        }
+        actions={
+          <Button onClick={() => setCreating(true)}>프로젝트 개설</Button>
+        }
+      />
 
       {isLoading ? (
         <Spinner />
       ) : rows.length === 0 ? (
-        <p className="rounded border border-dashed border-gray-200 py-10 text-center text-body text-gray-400">
+        <p className="rounded border border-dashed border-gray-300 py-10 text-center text-body text-gray-400">
           개설된 프로젝트가 없습니다.
         </p>
       ) : (
@@ -59,7 +60,7 @@ export function ProjectPage() {
               key={p.id}
               type="button"
               onClick={() => navigate(`/project/${p.id}`)}
-              className="rounded-lg border border-gray-200 bg-white p-4 text-left hover:border-brand/40 hover:shadow-sm"
+              className="rounded-lg border border-gray-300 bg-white p-4 text-left hover:border-brand/40 hover:shadow-sm"
             >
               <div className="flex items-center gap-2">
                 <Badge tone="info">{TYPE_LABELS[p.project_type]}</Badge>

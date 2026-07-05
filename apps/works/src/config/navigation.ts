@@ -21,11 +21,36 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
   hub: [
     {
       items: [
-        { label: '통합 검색', tab: 'search' },
-        { label: 'AI 검색', tab: 'ai' },
+        { label: '대시보드', tab: 'dashboard' },
+        { label: 'AI 에이전트', tab: 'ai' },
         { label: '전사 캘린더', tab: 'calendar' },
-        { label: '전문가 랭킹', tab: 'ranking' },
-        { label: '임직원 디렉토리', tab: 'directory' },
+        { label: '공지사항', tab: 'notices' },
+        { label: '자료실', tab: 'files' },
+        { label: '인사이트', tab: 'insights' },
+      ],
+    },
+    {
+      group: '마스터 정보',
+      items: [
+        { label: '심사역 정보', tab: 'managers' },
+        { label: '스타트업 정보', tab: 'startups' },
+        { label: '전문가 정보', tab: 'experts' },
+        { label: '협력사 정보', tab: 'partners' },
+      ],
+    },
+    {
+      group: '현황 정보',
+      items: [
+        { label: '사업 현황', tab: 'ac' },
+        { label: 'M&A 현황', tab: 'mna' },
+        { label: '프로젝트 현황', tab: 'project' },
+      ],
+    },
+    {
+      group: '실적 정보',
+      items: [
+        { label: '투자현황', tab: 'fund' },
+        { label: '경영현황', tab: 'management' },
       ],
     },
   ],

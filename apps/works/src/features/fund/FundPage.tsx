@@ -1,4 +1,4 @@
-import { Badge, Button, DataTable, Spinner, type Column } from '@ynarcher/ui'
+import { Badge, Button, DataTable, Spinner, PageHeader, type Column } from '@ynarcher/ui'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FundFormModal } from '@/features/fund/FundFormModal'
@@ -50,10 +50,10 @@ export function FundPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <h1 className="text-title-lg font-bold text-gray-900">FUND</h1>
-        <Button onClick={() => setCreating(true)}>펀드 등록</Button>
-      </div>
+      <PageHeader
+        title="투자 대시보드"
+        actions={<Button onClick={() => setCreating(true)}>펀드 등록</Button>}
+      />
 
       <div className="grid grid-cols-3 gap-3">
         {[
@@ -61,7 +61,7 @@ export function FundPage() {
           { label: '총 결성액', value: won(totalCommit) },
           { label: '총 집행액', value: won(totalDrawn) },
         ].map((t) => (
-          <div key={t.label} className="rounded border border-gray-200 bg-white px-4 py-3">
+          <div key={t.label} className="rounded border border-gray-300 bg-white px-4 py-3">
             <p className="text-caption text-gray-500">{t.label}</p>
             <p className="text-title-md font-bold tabular-nums text-gray-900">{t.value}</p>
           </div>

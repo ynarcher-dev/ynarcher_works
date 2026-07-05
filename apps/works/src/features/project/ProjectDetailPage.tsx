@@ -1,4 +1,4 @@
-import { Badge, Banner, Spinner } from '@ynarcher/ui'
+import { Badge, Banner, Spinner, PageHeader } from '@ynarcher/ui'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
@@ -24,21 +24,25 @@ export function ProjectDetailPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <Link
-          to="/project"
-          className="text-caption text-gray-500 hover:text-gray-800"
-        >
-          ← PROJECT 대시보드
-        </Link>
-        <div className="mt-1 flex items-center gap-2">
-          <h1 className="text-title-lg font-bold text-gray-900">{project.name}</h1>
-          <Badge tone="info">{TYPE_LABELS[project.project_type]}</Badge>
-          <Badge tone={priorityTone[project.priority]}>
-            {PRIORITY_LABELS[project.priority]}
-          </Badge>
-        </div>
-      </div>
+      <PageHeader
+        back={
+          <Link
+            to="/project"
+            className="text-caption font-semibold text-brand hover:text-brand-600"
+          >
+            ← PROJECT 대시보드
+          </Link>
+        }
+        title={project.name}
+        titleExtra={
+          <>
+            <Badge tone="info">{TYPE_LABELS[project.project_type]}</Badge>
+            <Badge tone={priorityTone[project.priority]}>
+              {PRIORITY_LABELS[project.priority]}
+            </Badge>
+          </>
+        }
+      />
 
       <nav className="flex gap-1 border-b border-gray-200">
         {[

@@ -1,5 +1,24 @@
 import { useQuery } from '@tanstack/react-query'
+import { useAuthStore } from '@/auth/authStore'
 import { supabase } from '@/lib/supabase'
+
+/** 현재 로그인 사용자의 입사일(hr_profiles). 프로필이 없으면 null. */
+export function useMyHireDate() {
+  const userId = useAuthStore((s) => s.user?.id)
+  const isUuid = /^[0-9a-f-]{36}$/i.test(userId ?? '')
+  return useQuery({
+    queryKey: ['hub', 'hire-date', userId],
+    enabled: isUuid,
+    queryFn: async (): Promise<string | null> => {
+      const { data } = await supabase
+        .from('hr_profiles')
+        .select('hire_date')
+        .eq('user_id', userId)
+        .maybeSingle()
+      return (data?.hire_date as string) ?? null
+    },
+  })
+}
 
 export interface SearchResult {
   id: string
@@ -85,6 +104,89 @@ export function useExpertRanking() {
       const { data, error } = await supabase.rpc('hub_expert_ranking')
       if (error) throw error
       return (data ?? []) as ExpertRank[]
+    },
+  })
+}
+
+/** HUB 대시보드 좌측 인포 — 각 워크스페이스의 대표 지표 하나씩 집계. */
+export interface HubSummary {
+  ac: { operating: number; total: number }
+  mna: { active: number; totalValue: number }
+  project: { active: number; avgProgress: number }
+  fund: { aum: number; drawn: number }
+  management: { pending: number; total: number }
+  networks: { managers: number; startups: number; experts: number; partners: number }
+}
+
+/**
+ * 8대 메뉴 요약 지표를 병렬 조회한다. 각 테이블 RLS가 열람 권한을 강제하므로
+ * 접근 불가 도메인은 0으로 집계되어 자연히 축소 노출된다.
+ */
+export function useHubSummary() {
+  return useQuery({
+    queryKey: ['hub', 'summary'],
+    staleTime: 60_000,
+    queryFn: async (): Promise<HubSummary> => {
+      const headCount = (table: string) =>
+        supabase
+          .from(table)
+          .select('*', { count: 'exact', head: true })
+          .is('deleted_at', null)
+
+      const [programs, deals, projects, funds, approvals, managers, startups, experts, partners] =
+        await Promise.all([
+          supabase.from('programs').select('status').is('deleted_at', null),
+          supabase.from('ma_deals').select('estimated_value, on_hold').is('deleted_at', null),
+          supabase.from('projects').select('progress_pct').is('deleted_at', null),
+          supabase.from('funds').select('total_commitment, drawn_amount').is('deleted_at', null),
+          supabase.from('approval_documents').select('status').is('deleted_at', null),
+          supabase
+            .from('users')
+            .select('*', { count: 'exact', head: true })
+            .is('deleted_at', null)
+            .not('user_type', 'in', '(external_startup,external_expert,temporary_guest)'),
+          headCount('startups'),
+          headCount('experts'),
+          headCount('partners'),
+        ])
+
+      const pRows = programs.data ?? []
+      const dRows = (deals.data ?? []).filter((d) => !d.on_hold)
+      const prjRows = projects.data ?? []
+      const fRows = funds.data ?? []
+      const aRows = approvals.data ?? []
+
+      const avg = (arr: number[]) =>
+        arr.length ? Math.round(arr.reduce((s, n) => s + n, 0) / arr.length) : 0
+
+      return {
+        ac: {
+          operating: pRows.filter((p) => p.status === 'OPERATING').length,
+          total: pRows.length,
+        },
+        mna: {
+          active: dRows.length,
+          totalValue: dRows.reduce((s, d) => s + Number(d.estimated_value ?? 0), 0),
+        },
+        project: {
+          active: prjRows.length,
+          avgProgress: avg(prjRows.map((p) => Number(p.progress_pct ?? 0))),
+        },
+        fund: {
+          aum: fRows.reduce((s, f) => s + Number(f.total_commitment ?? 0), 0),
+          drawn: fRows.reduce((s, f) => s + Number(f.drawn_amount ?? 0), 0),
+        },
+        management: {
+          pending: aRows.filter((a) => a.status === 'PENDING' || a.status === 'IN_REVIEW').length,
+          total: aRows.length,
+        },
+        networks: {
+          managers: managers.count ?? 0,
+          startups: startups.count ?? 0,
+          experts: experts.count ?? 0,
+          partners: partners.count ?? 0,
+        },
+      }
     },
   })
 }

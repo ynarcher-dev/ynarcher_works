@@ -95,6 +95,8 @@ export function MatchingMatrix() {
           rows={scored}
           rowKey={(r) => r.id}
           emptyText="매칭 후보(NETWORKS 스타트업)가 없습니다."
+          numbered={false}
+          standardColumns={false}
         />
       )}
 

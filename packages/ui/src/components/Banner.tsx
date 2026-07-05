@@ -22,7 +22,7 @@ export function Banner({ tone = 'info', children, className }: BannerProps) {
     <div
       role="status"
       className={cn(
-        'rounded border px-3 py-2 text-body',
+        'rounded-radius-md border px-3 py-2 text-body shadow-soft',
         toneClass[tone],
         className,
       )}

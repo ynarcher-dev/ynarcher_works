@@ -10,12 +10,15 @@ export type ButtonVariant =
 export type ButtonSize = 'sm' | 'md'
 
 const variantClass: Record<ButtonVariant, string> = {
-  primary: 'bg-brand text-white hover:bg-brand-600 active:bg-brand-700',
-  secondary: 'bg-gray-100 text-gray-800 hover:bg-gray-200 active:bg-gray-300',
+  primary:
+    'bg-brand !text-white shadow-sm shadow-brand/20 hover:bg-brand-600 active:bg-brand-700',
+  secondary:
+    'border border-transparent bg-gray-100 text-gray-800 shadow-sm hover:border-gray-300 hover:bg-white active:bg-gray-50',
   outline:
-    'border border-gray-300 bg-white text-gray-800 hover:bg-gray-50 active:bg-gray-100',
+    'border border-gray-300 bg-white text-gray-800 shadow-sm hover:border-gray-400 hover:bg-gray-25 active:bg-gray-50',
   ghost: 'text-gray-700 hover:bg-gray-100 active:bg-gray-200',
-  danger: 'bg-brand-700 text-white hover:bg-brand-800 active:bg-brand-900',
+  danger:
+    'bg-brand-700 !text-white shadow-sm shadow-brand/20 hover:bg-brand-800 active:bg-brand-900',
 }
 
 const sizeClass: Record<ButtonSize, string> = {
@@ -40,9 +43,10 @@ export function Button({
     <button
       type={type}
       className={cn(
-        'inline-flex items-center justify-center gap-1.5 rounded font-medium transition-colors duration-fast',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30',
-        'disabled:cursor-not-allowed disabled:opacity-60',
+        'inline-flex items-center justify-center gap-1.5 rounded-radius-md font-semibold transition-all duration-fast ease-in-out whitespace-nowrap shrink-0',
+        'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10',
+        'active:scale-[0.98] transform-gpu',
+        'disabled:cursor-not-allowed disabled:opacity-55 disabled:shadow-none disabled:scale-100',
         variantClass[variant],
         sizeClass[size],
         className,

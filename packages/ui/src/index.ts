@@ -26,7 +26,7 @@ export type { BadgeTone } from './components/Badge'
 
 // 데이터 테이블
 export { DataTable } from './components/DataTable'
-export type { Column, DataTableProps } from './components/DataTable'
+export type { Column, DataTableProps, DataTableMeta } from './components/DataTable'
 export { Pagination } from './components/Pagination'
 
 // 오버레이
@@ -52,3 +52,5 @@ export { SidebarItem } from './layout/SidebarItem'
 export { Topbar } from './layout/Topbar'
 export { WorkspaceSwitcher } from './layout/WorkspaceSwitcher'
 export type { WorkspaceOption } from './layout/WorkspaceSwitcher'
+export { PageHeader } from './layout/PageHeader'
+export type { PageHeaderProps } from './layout/PageHeader'

@@ -46,7 +46,7 @@ export function ModuleBoard({ programId }: { programId: string }) {
         return (
           <li
             key={def.type}
-            className="flex flex-wrap items-center gap-3 rounded border border-gray-200 bg-white px-4 py-3"
+            className="flex flex-wrap items-center gap-3 rounded border border-gray-300 bg-white px-4 py-3"
           >
             <Switch
               checked={enabled}

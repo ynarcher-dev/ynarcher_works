@@ -40,7 +40,7 @@ export function EvaluationPanel({ programId }: { programId: string }) {
             className={
               selected === f.id
                 ? 'rounded border border-brand bg-brand-25 px-3 py-1.5 text-body text-brand'
-                : 'rounded border border-gray-200 bg-white px-3 py-1.5 text-body text-gray-700 hover:bg-gray-50'
+                : 'rounded border border-gray-300 bg-white px-3 py-1.5 text-body text-gray-700 hover:bg-gray-50'
             }
           >
             <span className="inline-flex items-center gap-2">
