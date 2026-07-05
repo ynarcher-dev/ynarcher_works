@@ -1,13 +1,14 @@
 import { Badge, Banner, Spinner } from '@ynarcher/ui'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { EvaluationPanel } from '@/features/ac/EvaluationPanel'
 import { MentoringPanel } from '@/features/ac/MentoringPanel'
 import { ModuleBoard } from '@/features/ac/ModuleBoard'
 import { ParticipantPool } from '@/features/ac/ParticipantPool'
 import { useProgram } from '@/features/ac/hooks'
 import { PROGRAM_STATUS_LABEL } from '@/features/ac/config'
 
-type Tab = 'modules' | 'participants' | 'mentoring' | 'timeline'
+type Tab = 'modules' | 'participants' | 'evaluation' | 'mentoring' | 'timeline'
 
 /** 프로그램 상세: 모듈 보드 + 참가자 풀. (7-1 / 7-3) */
 export function ProgramDetailPage() {
@@ -38,6 +39,7 @@ export function ProgramDetailPage() {
         {[
           { key: 'modules' as const, label: '모듈 보드' },
           { key: 'participants' as const, label: '참가자 풀' },
+          { key: 'evaluation' as const, label: '평가 엔진' },
           { key: 'mentoring' as const, label: 'N:N 멘토링' },
           { key: 'timeline' as const, label: '통합 타임라인' },
         ].map((t) => (
@@ -58,6 +60,7 @@ export function ProgramDetailPage() {
 
       {tab === 'modules' && <ModuleBoard programId={id} />}
       {tab === 'participants' && <ParticipantPool programId={id} />}
+      {tab === 'evaluation' && <EvaluationPanel programId={id} />}
       {tab === 'mentoring' && <MentoringPanel programId={id} />}
       {tab === 'timeline' && (
         <Banner tone="info">

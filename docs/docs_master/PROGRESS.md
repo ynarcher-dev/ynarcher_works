@@ -98,7 +98,7 @@
 - [x] 7-1. 프로그램 개요 및 모듈 보드 (programs/program_modules, participation_mode) — [3_4_2](../docs_planning/3_4_2_ac_program_overview.md)
 - [ ] 7-2. 모집 랜딩 빌더 + 신청서 폼 빌더 + 지원자 DB (NETWORKS 정규화 매핑) — [3_4_3](../docs_planning/3_4_3_ac_recruitment.md)
 - [x] 7-3. 참가자 풀 및 3계층 역할 관리 (CSV 업로드, 매직링크/OTP 초대) — [3_4_4](../docs_planning/3_4_4_ac_participant_pool.md)
-- [ ] 7-4. 공통 평가 엔진 (동적 평가표, 다형적 evaluation_targets, 가중치 집계) — [3_4_5](../docs_planning/3_4_5_ac_evaluation_engine.md)
+- [x] 7-4. 공통 평가 엔진 (동적 평가표, 다형적 evaluation_targets, 가중치 집계) — [3_4_5](../docs_planning/3_4_5_ac_evaluation_engine.md)
 - [ ] 7-5. 서면평가 모듈 (라운드 운영, 심사위원 배정, Split View) — [3_4_6](../docs_planning/3_4_6_ac_document_review.md)
 - [ ] 7-6. 대면평가 모듈 (시간표/발표 순서, 현장 진행 상태, 최종 선발) — [3_4_7](../docs_planning/3_4_7_ac_onsite_evaluation.md)
 - [ ] 7-7. OT/공통 세션 (QR 출석 체크, 출석 상태 관리) — [3_4_8](../docs_planning/3_4_8_ac_orientation_sessions.md)
