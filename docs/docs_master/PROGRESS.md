@@ -29,7 +29,8 @@
 - [x] Tailwind CSS 설치 및 디자인 토큰 이관 (`tailwind.config`: 브랜드/그레이/세만틱 컬러, 타이포 스케일, z-index, 모션 duration)
 - [x] ESLint + `no-restricted-imports` 의존성 경계 규칙 설정 (`packages/ui` 내 supabase/react-query 참조 차단)
 - [x] 공통 라이브러리 설치 (TanStack Query, Zustand, React Hook Form + Zod, Day.js, react-router-dom v6)
-- [ ] Supabase 프로젝트 생성 및 로컬 개발 환경(supabase CLI) 구성
+- [x] Supabase 프로젝트 생성 및 로컬 개발 환경(supabase CLI) 구성 <!-- 로컬 구성 완료. 클라우드 프로젝트 생성은 계정 필요 → supabase/README.md TODO -->
+
 - [ ] 환경 변수 체계 수립 (`VITE_` 공개 변수 / Edge Function Secret 분리)
 - [ ] Git 브랜치 전략 및 커밋 컨벤션 문서화 (`docs_dev` 개발 컨벤션 문서 신규 작성)
 
