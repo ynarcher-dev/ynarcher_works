@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { Dropdown, DropdownItem } from '../components/Dropdown'
 
 export interface WorkspaceOption {
@@ -6,6 +6,8 @@ export interface WorkspaceOption {
   label: string
   /** 준비 중 등 선택 불가 워크스페이스는 비활성 처리. */
   disabled?: boolean
+  /** 이 항목 위에 구분선을 그린다(예: 시스템 관리 섹션 분리). */
+  dividerBefore?: boolean
 }
 
 export interface WorkspaceSwitcherProps {
@@ -52,25 +54,29 @@ export function WorkspaceSwitcher({
       {options.map((opt) => {
         const isCurrent = opt.key === current
         return (
-          <DropdownItem
-            key={opt.key}
-            disabled={opt.disabled}
-            onClick={() => {
-              onSelect(opt.key)
-              setOpen(false)
-            }}
-          >
-            <span className="flex w-full items-center justify-between gap-3">
-              <span className={isCurrent ? 'font-semibold text-brand' : undefined}>
-                {opt.label}
-              </span>
-              {isCurrent && (
-                <span className="rounded-radius-sm bg-brand-25 px-1.5 py-0.5 text-caption font-medium text-brand">
-                  현재
+          <Fragment key={opt.key}>
+            {opt.dividerBefore && (
+              <div className="my-1 border-t border-gray-200" aria-hidden />
+            )}
+            <DropdownItem
+              disabled={opt.disabled}
+              onClick={() => {
+                onSelect(opt.key)
+                setOpen(false)
+              }}
+            >
+              <span className="flex w-full items-center justify-between gap-3">
+                <span className={isCurrent ? 'font-semibold text-brand' : undefined}>
+                  {opt.label}
                 </span>
-              )}
-            </span>
-          </DropdownItem>
+                {isCurrent && (
+                  <span className="rounded-radius-sm bg-brand-25 px-1.5 py-0.5 text-caption font-medium text-brand">
+                    현재
+                  </span>
+                )}
+              </span>
+            </DropdownItem>
+          </Fragment>
         )
       })}
     </Dropdown>

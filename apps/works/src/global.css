@@ -7,6 +7,65 @@
     -webkit-text-size-adjust: 100%;
   }
 
+  /* 리치 텍스트 에디터(Tiptap) 콘텐츠 조판 — .rte 스코프 */
+  .rte .ProseMirror {
+    @apply min-h-[16rem] text-body leading-relaxed text-gray-800;
+    outline: none;
+  }
+  .rte .ProseMirror:focus {
+    outline: none;
+  }
+  .rte .ProseMirror > * + * {
+    margin-top: 0.65em;
+  }
+  .rte .ProseMirror h1 {
+    @apply text-title-md font-bold text-gray-900;
+  }
+  .rte .ProseMirror h2 {
+    @apply text-title-sm font-bold text-gray-900;
+  }
+  .rte .ProseMirror h3 {
+    @apply text-body font-semibold text-gray-900;
+  }
+  .rte .ProseMirror ul {
+    @apply list-disc pl-5;
+  }
+  .rte .ProseMirror ol {
+    @apply list-decimal pl-5;
+  }
+  .rte .ProseMirror blockquote {
+    @apply border-l-2 border-gray-300 pl-3 text-gray-500;
+  }
+  .rte .ProseMirror a {
+    @apply text-info underline;
+  }
+  .rte .ProseMirror code {
+    @apply rounded bg-gray-100 px-1 py-0.5 text-caption;
+  }
+  .rte .ProseMirror pre {
+    @apply overflow-x-auto rounded-radius-sm bg-gray-900 p-3 text-caption text-gray-0;
+  }
+  .rte .ProseMirror pre code {
+    @apply bg-transparent p-0 text-gray-0;
+  }
+  .rte .ProseMirror img {
+    @apply my-1 max-w-full rounded-radius-sm;
+  }
+  .rte .ProseMirror img.ProseMirror-selectednode {
+    @apply outline outline-2 outline-brand;
+  }
+  .rte .ProseMirror hr {
+    @apply my-3 border-t border-gray-300;
+  }
+  /* placeholder(빈 첫 문단) */
+  .rte .ProseMirror p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    @apply text-gray-400;
+    float: left;
+    height: 0;
+    pointer-events: none;
+  }
+
   body {
     /* 전체 화면 기본 바탕(gray.50) + 기본 본문(body/gray.900) + 프리텐다드 */
     @apply bg-gray-50 font-sans text-body text-gray-900;

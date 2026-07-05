@@ -4,6 +4,8 @@ import {
   BriefcaseBusiness,
   CalendarDays,
   ChartNoAxesCombined,
+  ChevronDown,
+  ClipboardList,
   Download,
   Folder,
   Handshake,
@@ -41,7 +43,10 @@ import logo from '@/assets/logo.png'
 import { hasWorkspaceRead, useAuthStore } from '@/auth/authStore'
 import { employeeAuth } from '@/auth/employeeAuthService'
 import { WORKSPACES } from '@/config/workspaces'
-import { WORKSPACE_SUBNAV, firstTab } from '@/config/navigation'
+import { WORKSPACE_SUBNAV, firstTab, type SubNavItem } from '@/config/navigation'
+import { SidebarFlyout } from '@/app/SidebarFlyout'
+import { useBoardStore } from '@/features/hub/boardStore'
+import { boardIcon } from '@/features/hub/boardIcons'
 
 const sidebarIconByTab: Record<string, LucideIcon> = {
   // HUB 그룹 1: 메인
@@ -76,6 +81,7 @@ const sidebarIconByTab: Record<string, LucideIcon> = {
   kanban: BadgeCheck,
   matching: LayoutGrid,
   permissions: LockKeyhole,
+  boards: ClipboardList,
   audit: ReceiptText,
   downloads: Download,
   approval: BadgeCheck,
@@ -100,6 +106,8 @@ export function WorksLayout() {
   const location = useLocation()
   const [profileOpen, setProfileOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
+  const boards = useBoardStore((s) => s.boards)
 
   const visible = WORKSPACES.filter((w) => hasWorkspaceRead(user, w.key))
 
@@ -116,6 +124,7 @@ export function WorksLayout() {
     key: w.key,
     label: w.implemented ? w.label : `${w.label} (준비 중)`,
     disabled: !w.implemented,
+    dividerBefore: w.key === 'admin',
   }))
 
   const goToSection = (item: { tab?: string }) => {
@@ -129,6 +138,82 @@ export function WorksLayout() {
       : currentWs
         ? sidebarIconByWorkspace[currentWs.key]
         : undefined
+
+  const renderLeaf = (item: SubNavItem, forceExpanded = false) => {
+    const Icon = item.iconKey ? boardIcon(item.iconKey) : getSidebarIcon(item)
+    return (
+      <SidebarItem
+        key={item.label}
+        icon={Icon ? <Icon aria-hidden className="size-4" /> : undefined}
+        label={item.label}
+        active={item.tab ? item.tab === activeTab : true}
+        collapsed={forceExpanded ? false : sidebarCollapsed}
+        onClick={() => goToSection(item)}
+      />
+    )
+  }
+
+  const renderItem = (item: SubNavItem) => {
+    // 고정 게시판: 아코디언 없이 상위 단독 항목으로 나열.
+    if (item.dynamicKey === 'pinnedBoards') {
+      return boards
+        .filter((b) => b.active && b.pinned)
+        .map((b) => renderLeaf({ label: b.label, tab: b.tab, iconKey: b.icon }))
+    }
+
+    // 동적 하위 항목(게시판 레지스트리, 고정 게시판 제외) 주입.
+    const children: SubNavItem[] | undefined =
+      item.dynamicKey === 'boards'
+        ? boards
+            .filter((b) => b.active && !b.pinned)
+            .map((b) => ({ label: b.label, tab: b.tab, iconKey: b.icon }))
+        : item.children
+
+    if (!children) return renderLeaf(item)
+
+    const anyChildActive = children.some((c) => c.tab === activeTab)
+
+    // 접힘 상태: 아이콘 호버 시 우측 플라이아웃으로 하위 메뉴 노출.
+    if (sidebarCollapsed) {
+      return (
+        <SidebarFlyout
+          key={item.label}
+          icon={<ClipboardList aria-hidden className="size-4" />}
+          label={item.label}
+          active={anyChildActive}
+        >
+          {children.map((c) => renderLeaf(c, true))}
+        </SidebarFlyout>
+      )
+    }
+
+    const open = openGroups[item.label] ?? anyChildActive
+    return (
+      <div key={item.label}>
+        <SidebarItem
+          icon={<ClipboardList aria-hidden className="size-4" />}
+          label={item.label}
+          collapsed={false}
+          onClick={() =>
+            setOpenGroups((prev) => ({ ...prev, [item.label]: !open }))
+          }
+          trailing={
+            <ChevronDown
+              aria-hidden
+              className={`size-4 text-white/60 transition-transform duration-fast ${
+                open ? 'rotate-180' : ''
+              }`}
+            />
+          }
+        />
+        {open && (
+          <div className="mt-1 space-y-1 pl-3">
+            {children.map((c) => renderLeaf(c))}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   const sidebar = (
     <Sidebar
@@ -145,20 +230,7 @@ export function WorksLayout() {
             <div className="mx-3 my-2 border-t border-white/10" />
           )}
           <div className="flex flex-col gap-1">
-            {g.items.map((item) => {
-              const Icon = getSidebarIcon(item)
-
-              return (
-                <SidebarItem
-                  key={item.label}
-                  icon={Icon ? <Icon aria-hidden className="size-4" /> : undefined}
-                  label={item.label}
-                  active={item.tab ? item.tab === activeTab : true}
-                  collapsed={sidebarCollapsed}
-                  onClick={() => goToSection(item)}
-                />
-              )
-            })}
+            {g.items.map((item) => renderItem(item))}
           </div>
         </div>
       ))}

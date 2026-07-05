@@ -2,19 +2,33 @@ import { DataTable, type Column } from '@ynarcher/ui'
 import { isNewPost, type BoardPost } from '@/features/hub/boardData'
 import { NewBadge } from '@/features/hub/DashboardPanel'
 
-/** 제목 열: 게시글 제목 + 최근 72시간 이내면 NEW 배지. */
-const columns: Column<BoardPost>[] = [
-  {
-    key: 'title',
-    header: '제목',
-    render: (p) => (
-      <span className="flex min-w-0 items-center gap-1.5">
-        <span className="truncate text-gray-800">{p.title}</span>
-        {isNewPost(p.date) && <NewBadge />}
-      </span>
-    ),
-  },
-]
+/** 제목 열 렌더러. onSelect가 있으면 제목을 클릭 가능한 버튼으로 노출한다. */
+function titleColumn(onSelect?: (post: BoardPost) => void): Column<BoardPost>[] {
+  return [
+    {
+      key: 'title',
+      header: '제목',
+      render: (p) =>
+        onSelect ? (
+          <button
+            type="button"
+            onClick={() => onSelect(p)}
+            className="flex min-w-0 items-center gap-1.5 text-left"
+          >
+            <span className="truncate text-gray-800 hover:text-brand hover:underline">
+              {p.title}
+            </span>
+            {isNewPost(p.date) && <NewBadge />}
+          </button>
+        ) : (
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="truncate text-gray-800">{p.title}</span>
+            {isNewPost(p.date) && <NewBadge />}
+          </span>
+        ),
+    },
+  ]
+}
 
 /**
  * 게시판형 화면(공지사항·자료실·인사이트) 공통 목록.
@@ -24,13 +38,15 @@ const columns: Column<BoardPost>[] = [
 export function BoardPanel({
   posts,
   emptyText = '등록된 게시글이 없습니다.',
+  onSelect,
 }: {
   posts: BoardPost[]
   emptyText?: string
+  onSelect?: (post: BoardPost) => void
 }) {
   return (
     <DataTable
-      columns={columns}
+      columns={titleColumn(onSelect)}
       rows={posts}
       rowKey={(p) => p.id}
       emptyText={emptyText}

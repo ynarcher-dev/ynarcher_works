@@ -15,7 +15,8 @@ export const WORKSPACES: WorkspaceNavItem[] = [
   { key: 'ac', label: 'AC', path: '/ac', implemented: true },
   { key: 'fund', label: 'FUND', path: '/fund', implemented: true },
   { key: 'mna', label: 'M&A', path: '/mna', implemented: true },
-  { key: 'admin', label: 'ADMIN', path: '/admin', implemented: true },
   { key: 'project', label: 'PROJECT', path: '/project', implemented: true },
   { key: 'management', label: 'MANAGEMENT', path: '/management', implemented: true },
+  // 시스템 관리 — 스위처에서 구분선 아래에 별도 노출
+  { key: 'admin', label: 'ADMIN', path: '/admin', implemented: true },
 ]

@@ -7,6 +7,8 @@ export interface SidebarItemProps {
   active?: boolean
   onClick?: () => void
   collapsed?: boolean
+  /** 우측 끝에 표시할 요소(예: 아코디언 chevron). 접힘 상태에서는 표시하지 않는다. */
+  trailing?: ReactNode
 }
 
 /**
@@ -18,6 +20,7 @@ export function SidebarItem({
   active,
   onClick,
   collapsed = false,
+  trailing,
 }: SidebarItemProps) {
   return (
     <button
@@ -50,7 +53,10 @@ export function SidebarItem({
           {icon}
         </span>
       )}
-      {!collapsed && <span className="truncate">{label}</span>}
+      {!collapsed && <span className="min-w-0 flex-1 truncate text-left">{label}</span>}
+      {!collapsed && trailing && (
+        <span className="flex shrink-0 items-center">{trailing}</span>
+      )}
     </button>
   )
 }

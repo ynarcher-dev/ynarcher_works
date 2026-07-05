@@ -5,6 +5,16 @@ export interface SubNavItem {
   label: string
   /** 미지정 시 워크스페이스 루트(단일 대시보드 메뉴)를 의미한다. */
   tab?: string
+  /** 하위 항목(아코디언). 지정 시 이 항목은 펼침/접힘 그룹 헤더가 된다. */
+  children?: SubNavItem[]
+  /**
+   * 하위 항목을 런타임 스토어에서 주입.
+   * - 'boards': 게시판 레지스트리(아코디언, 고정 게시판 제외)
+   * - 'pinnedBoards': 고정 게시판을 상위 단독 항목으로 펼침
+   */
+  dynamicKey?: 'boards' | 'pinnedBoards'
+  /** 동적 항목의 아이콘 키(boardIcons.ts). 지정 시 tab 기반 매핑보다 우선한다. */
+  iconKey?: string
 }
 
 /** 사이드바 메뉴 그룹(그룹명 헤더 + 항목들). */
@@ -24,9 +34,8 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         { label: '대시보드', tab: 'dashboard' },
         { label: 'AI 에이전트', tab: 'ai' },
         { label: '전사 캘린더', tab: 'calendar' },
-        { label: '공지사항', tab: 'notices' },
-        { label: '자료실', tab: 'files' },
-        { label: '인사이트', tab: 'insights' },
+        { label: '고정 게시판', dynamicKey: 'pinnedBoards' },
+        { label: '게시판', dynamicKey: 'boards' },
       ],
     },
     {
@@ -87,6 +96,7 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       group: '시스템 관리',
       items: [
         { label: '권한 제어 콘솔', tab: 'permissions' },
+        { label: '게시판 관리', tab: 'boards' },
         { label: '감사 로그 모니터', tab: 'audit' },
         { label: '다운로드 사유 로그', tab: 'downloads' },
       ],
@@ -106,11 +116,13 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
   ],
 }
 
-/** 그룹 목록에서 기본 활성 탭(첫 tab 보유 항목)을 반환. 없으면 undefined. */
+/** 그룹 목록에서 기본 활성 탭(첫 tab 보유 항목, 하위 항목 포함)을 반환. 없으면 undefined. */
 export function firstTab(groups: SubNavGroup[] | undefined): string | undefined {
   for (const g of groups ?? []) {
     for (const item of g.items) {
       if (item.tab) return item.tab
+      const childTab = item.children?.find((c) => c.tab)?.tab
+      if (childTab) return childTab
     }
   }
   return undefined

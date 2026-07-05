@@ -306,13 +306,13 @@ export function DashboardPanel() {
 
   return (
     <div>
-      <div className="pb-7 pt-2">
+      <div className="pb-5 pt-0">
         <GreetingHeader />
       </div>
 
       <UnifiedSearchPanel />
 
-      <div className="mt-8 grid items-stretch gap-5 lg:grid-cols-3">
+      <div className="mt-6 grid items-stretch gap-5 lg:grid-cols-3">
         {/* 좌: 워크스페이스 인포 */}
         <div className="flex flex-col gap-3 lg:col-span-2">
           <h2 className="text-title-sm font-semibold text-gray-900">오늘까지 와이앤아처는</h2>
