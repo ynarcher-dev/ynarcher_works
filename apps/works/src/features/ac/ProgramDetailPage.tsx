@@ -5,12 +5,50 @@ import { EvaluationPanel } from '@/features/ac/EvaluationPanel'
 import { MentoringPanel } from '@/features/ac/MentoringPanel'
 import { ModuleBoard } from '@/features/ac/ModuleBoard'
 import { ParticipantPool } from '@/features/ac/ParticipantPool'
+import { CustomActivityPanel } from '@/features/ac/panels/CustomActivityPanel'
+import { DemoDayPanel } from '@/features/ac/panels/DemoDayPanel'
+import { DocReviewPanel } from '@/features/ac/panels/DocReviewPanel'
+import { MatchingPanel } from '@/features/ac/panels/MatchingPanel'
+import { OnsitePanel } from '@/features/ac/panels/OnsitePanel'
+import { OrientationPanel } from '@/features/ac/panels/OrientationPanel'
+import { OutcomesPanel } from '@/features/ac/panels/OutcomesPanel'
+import { RecruitmentPanel } from '@/features/ac/panels/RecruitmentPanel'
+import { TimelinePanel } from '@/features/ac/panels/TimelinePanel'
 import { useProgram } from '@/features/ac/hooks'
 import { PROGRAM_STATUS_LABEL } from '@/features/ac/config'
 
-type Tab = 'modules' | 'participants' | 'evaluation' | 'mentoring' | 'timeline'
+type Tab =
+  | 'modules'
+  | 'participants'
+  | 'recruitment'
+  | 'docreview'
+  | 'onsite'
+  | 'evaluation'
+  | 'orientation'
+  | 'mentoring'
+  | 'matching'
+  | 'demoday'
+  | 'timeline'
+  | 'outcomes'
+  | 'custom'
 
-/** 프로그램 상세: 모듈 보드 + 참가자 풀. (7-1 / 7-3) */
+const TABS: { key: Tab; label: string }[] = [
+  { key: 'modules', label: '모듈 보드' },
+  { key: 'participants', label: '참가자 풀' },
+  { key: 'recruitment', label: '모집' },
+  { key: 'evaluation', label: '평가 엔진' },
+  { key: 'docreview', label: '서면평가' },
+  { key: 'onsite', label: '대면평가' },
+  { key: 'orientation', label: 'OT/세션' },
+  { key: 'mentoring', label: '멘토링' },
+  { key: 'matching', label: '매칭' },
+  { key: 'demoday', label: '데모데이' },
+  { key: 'timeline', label: '타임라인' },
+  { key: 'outcomes', label: '성과/KPI' },
+  { key: 'custom', label: '커스텀 활동' },
+]
+
+/** 프로그램 상세: Program First 14모듈 진입. */
 export function ProgramDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { data: program, isLoading } = useProgram(id)
@@ -35,14 +73,8 @@ export function ProgramDetailPage() {
         </div>
       </div>
 
-      <nav className="flex gap-1 border-b border-gray-200">
-        {[
-          { key: 'modules' as const, label: '모듈 보드' },
-          { key: 'participants' as const, label: '참가자 풀' },
-          { key: 'evaluation' as const, label: '평가 엔진' },
-          { key: 'mentoring' as const, label: 'N:N 멘토링' },
-          { key: 'timeline' as const, label: '통합 타임라인' },
-        ].map((t) => (
+      <nav className="flex flex-wrap gap-1 border-b border-gray-200">
+        {TABS.map((t) => (
           <button
             key={t.key}
             type="button"
@@ -60,13 +92,17 @@ export function ProgramDetailPage() {
 
       {tab === 'modules' && <ModuleBoard programId={id} />}
       {tab === 'participants' && <ParticipantPool programId={id} />}
+      {tab === 'recruitment' && <RecruitmentPanel programId={id} />}
       {tab === 'evaluation' && <EvaluationPanel programId={id} />}
+      {tab === 'docreview' && <DocReviewPanel programId={id} />}
+      {tab === 'onsite' && <OnsitePanel programId={id} />}
+      {tab === 'orientation' && <OrientationPanel programId={id} />}
       {tab === 'mentoring' && <MentoringPanel programId={id} />}
-      {tab === 'timeline' && (
-        <Banner tone="info">
-          통합 타임라인·충돌 방지(7-11)는 각 모듈 세션 데이터 연동 후 제공됩니다.
-        </Banner>
-      )}
+      {tab === 'matching' && <MatchingPanel programId={id} />}
+      {tab === 'demoday' && <DemoDayPanel programId={id} />}
+      {tab === 'timeline' && <TimelinePanel programId={id} />}
+      {tab === 'outcomes' && <OutcomesPanel programId={id} />}
+      {tab === 'custom' && <CustomActivityPanel programId={id} />}
     </div>
   )
 }

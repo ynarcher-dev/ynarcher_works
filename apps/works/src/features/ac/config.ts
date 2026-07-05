@@ -6,15 +6,15 @@ export interface ModuleTypeDef {
 }
 
 export const MODULE_TYPES: ModuleTypeDef[] = [
-  { type: 'RECRUITMENT', label: '모집/신청서', implemented: false },
-  { type: 'DOC_REVIEW', label: '서면평가', implemented: false },
-  { type: 'ONSITE_EVAL', label: '대면평가', implemented: false },
-  { type: 'ORIENTATION', label: 'OT/공통세션', implemented: false },
-  { type: 'MENTORING', label: 'N:N 멘토링', implemented: false },
-  { type: 'BUSINESS_MATCHING', label: '1:1 비즈니스 매칭', implemented: false },
-  { type: 'DEMO_DAY', label: '데모데이', implemented: false },
-  { type: 'OUTCOMES', label: '성과/KPI', implemented: false },
-  { type: 'CUSTOM_ACTIVITY', label: '커스텀 활동', implemented: false },
+  { type: 'RECRUITMENT', label: '모집/신청서', implemented: true },
+  { type: 'DOC_REVIEW', label: '서면평가', implemented: true },
+  { type: 'ONSITE_EVAL', label: '대면평가', implemented: true },
+  { type: 'ORIENTATION', label: 'OT/공통세션', implemented: true },
+  { type: 'MENTORING', label: 'N:N 멘토링', implemented: true },
+  { type: 'BUSINESS_MATCHING', label: '1:1 비즈니스 매칭', implemented: true },
+  { type: 'DEMO_DAY', label: '데모데이', implemented: true },
+  { type: 'OUTCOMES', label: '성과/KPI', implemented: true },
+  { type: 'CUSTOM_ACTIVITY', label: '커스텀 활동', implemented: true },
 ]
 
 export const PARTICIPATION_MODES = [

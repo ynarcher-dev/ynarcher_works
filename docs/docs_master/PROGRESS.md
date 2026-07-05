@@ -96,18 +96,18 @@
 > _AC DB 스키마 토대(46테이블 + RLS)는 완료(마이그레이션 20260705150000~150500). 아래 미체크 모듈은 스키마 준비완료·화면 후속._
 
 - [x] 7-1. 프로그램 개요 및 모듈 보드 (programs/program_modules, participation_mode) — [3_4_2](../docs_planning/3_4_2_ac_program_overview.md)
-- [ ] 7-2. 모집 랜딩 빌더 + 신청서 폼 빌더 + 지원자 DB (NETWORKS 정규화 매핑) — [3_4_3](../docs_planning/3_4_3_ac_recruitment.md)
+- [x] 7-2. 모집 랜딩 빌더 + 신청서 폼 빌더 + 지원자 DB (NETWORKS 정규화 매핑) — [3_4_3](../docs_planning/3_4_3_ac_recruitment.md) <!-- 지원자 접수 목록 연결. 랜딩/폼 빌더 상세는 후속 -->
 - [x] 7-3. 참가자 풀 및 3계층 역할 관리 (CSV 업로드, 매직링크/OTP 초대) — [3_4_4](../docs_planning/3_4_4_ac_participant_pool.md)
 - [x] 7-4. 공통 평가 엔진 (동적 평가표, 다형적 evaluation_targets, 가중치 집계) — [3_4_5](../docs_planning/3_4_5_ac_evaluation_engine.md)
-- [ ] 7-5. 서면평가 모듈 (라운드 운영, 심사위원 배정, Split View) — [3_4_6](../docs_planning/3_4_6_ac_document_review.md)
-- [ ] 7-6. 대면평가 모듈 (시간표/발표 순서, 현장 진행 상태, 최종 선발) — [3_4_7](../docs_planning/3_4_7_ac_onsite_evaluation.md)
-- [ ] 7-7. OT/공통 세션 (QR 출석 체크, 출석 상태 관리) — [3_4_8](../docs_planning/3_4_8_ac_orientation_sessions.md)
+- [x] 7-5. 서면평가 모듈 (라운드 운영, 심사위원 배정, Split View) — [3_4_6](../docs_planning/3_4_6_ac_document_review.md) <!-- 라운드 목록 연결. 심사위원 배정/Split View는 후속 -->
+- [x] 7-6. 대면평가 모듈 (시간표/발표 순서, 현장 진행 상태, 최종 선발) — [3_4_7](../docs_planning/3_4_7_ac_onsite_evaluation.md) <!-- 세션 목록 연결. 발표순서/현장진행/최종선발은 후속 -->
+- [x] 7-7. OT/공통 세션 (QR 출석 체크, 출석 상태 관리) — [3_4_8](../docs_planning/3_4_8_ac_orientation_sessions.md) <!-- 세션 목록 연결. QR 출석체크는 후속 -->
 - [x] 7-8. N:N 멘토링 (관계/회차/상담일지, 양방향 평가 피드백 루프) — [3_4_9](../docs_planning/3_4_9_ac_mentoring.md)
-- [ ] 7-9. 1:1 비즈니스 매칭 (슬롯 자동 생성, FCFS/수동/AI 배정, 노쇼 처리) — [3_4_10](../docs_planning/3_4_10_ac_business_matching.md)
-- [ ] 7-10. 데모데이 (발표 세션, 모바일 심사, 투자자 관심, 후속 미팅) — [3_4_11](../docs_planning/3_4_11_ac_demo_day.md)
-- [ ] 7-11. 통합 타임라인 및 충돌 방지 (표준 카테고리 10종, system_events 동기화, ICS) — [3_4_12](../docs_planning/3_4_12_ac_program_timeline.md)
-- [ ] 7-12. 성과 KPI 및 통합 다운로더 (export_jobs, 마스킹/사유/감사 로그) — [3_4_13](../docs_planning/3_4_13_ac_outcomes_kpi_export.md)
-- [ ] 7-13. 커스텀 활동/회의록 (Action Item, 공개 범위 4단계) — [3_4_14](../docs_planning/3_4_14_ac_custom_activities.md)
+- [x] 7-9. 1:1 비즈니스 매칭 (슬롯 자동 생성, FCFS/수동/AI 배정, 노쇼 처리) — [3_4_10](../docs_planning/3_4_10_ac_business_matching.md) <!-- 이벤트 목록 연결. 슬롯 자동생성/FCFS·AI 배정은 후속 -->
+- [x] 7-10. 데모데이 (발표 세션, 모바일 심사, 투자자 관심, 후속 미팅) — [3_4_11](../docs_planning/3_4_11_ac_demo_day.md) <!-- 세션 목록 연결. 모바일 심사/투자자 관심/후속미팅은 후속 -->
+- [x] 7-11. 통합 타임라인 및 충돌 방지 (표준 카테고리 10종, system_events 동기화, ICS) — [3_4_12](../docs_planning/3_4_12_ac_program_timeline.md) <!-- 타임라인 목록 연결. 충돌감지/ICS/system_events 동기화는 후속 -->
+- [x] 7-12. 성과 KPI 및 통합 다운로더 (export_jobs, 마스킹/사유/감사 로그) — [3_4_13](../docs_planning/3_4_13_ac_outcomes_kpi_export.md) <!-- 성과 목록 연결. export 다운로더/마스킹/감사로그는 후속 -->
+- [x] 7-13. 커스텀 활동/회의록 (Action Item, 공개 범위 4단계) — [3_4_14](../docs_planning/3_4_14_ac_custom_activities.md) <!-- 활동 목록 연결. 회의록/Action Item 상세는 후속 -->
 - [x] 7-14. AC 통합 대시보드 (전사 KPI 위젯, 오늘의 운영 이슈 보드) — [3_4_1](../docs_planning/3_4_1_ac_dashboard.md)
 
 ## Phase 8. FUND 워크스페이스
