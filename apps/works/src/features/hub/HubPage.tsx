@@ -2,6 +2,7 @@ import { Banner } from '@ynarcher/ui'
 import { useState } from 'react'
 import { CalendarPanel } from '@/features/hub/CalendarPanel'
 import { EmployeeDirectoryPanel } from '@/features/hub/EmployeeDirectoryPanel'
+import { RankingPanel } from '@/features/hub/RankingPanel'
 import { UnifiedSearchPanel } from '@/features/hub/UnifiedSearchPanel'
 
 type HubTab = 'search' | 'ai' | 'calendar' | 'ranking' | 'directory'
@@ -47,11 +48,7 @@ export function HubPage() {
           AI 검색(Gemini API 연동)은 RAG/Text-to-SQL 방식 확정 후 연결됩니다. (백로그)
         </Banner>
       )}
-      {tab === 'ranking' && (
-        <Banner tone="info">
-          전문가 만족도 랭킹은 `mentor_satisfaction_records` 테이블(AC Phase) 도입 후 집계됩니다.
-        </Banner>
-      )}
+      {tab === 'ranking' && <RankingPanel />}
     </div>
   )
 }

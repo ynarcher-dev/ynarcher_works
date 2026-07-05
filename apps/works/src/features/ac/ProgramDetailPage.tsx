@@ -1,12 +1,13 @@
 import { Badge, Banner, Spinner } from '@ynarcher/ui'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { MentoringPanel } from '@/features/ac/MentoringPanel'
 import { ModuleBoard } from '@/features/ac/ModuleBoard'
 import { ParticipantPool } from '@/features/ac/ParticipantPool'
 import { useProgram } from '@/features/ac/hooks'
 import { PROGRAM_STATUS_LABEL } from '@/features/ac/config'
 
-type Tab = 'modules' | 'participants' | 'timeline'
+type Tab = 'modules' | 'participants' | 'mentoring' | 'timeline'
 
 /** 프로그램 상세: 모듈 보드 + 참가자 풀. (7-1 / 7-3) */
 export function ProgramDetailPage() {
@@ -37,6 +38,7 @@ export function ProgramDetailPage() {
         {[
           { key: 'modules' as const, label: '모듈 보드' },
           { key: 'participants' as const, label: '참가자 풀' },
+          { key: 'mentoring' as const, label: 'N:N 멘토링' },
           { key: 'timeline' as const, label: '통합 타임라인' },
         ].map((t) => (
           <button
@@ -56,6 +58,7 @@ export function ProgramDetailPage() {
 
       {tab === 'modules' && <ModuleBoard programId={id} />}
       {tab === 'participants' && <ParticipantPool programId={id} />}
+      {tab === 'mentoring' && <MentoringPanel programId={id} />}
       {tab === 'timeline' && (
         <Banner tone="info">
           통합 타임라인·충돌 방지(7-11)는 각 모듈 세션 데이터 연동 후 제공됩니다.

@@ -100,6 +100,35 @@ export function useToggleModule(programId: string) {
   })
 }
 
+export interface MentoringRelationship {
+  id: string
+  startup_id: string | null
+  mentor_participant_id: string | null
+  status: string
+}
+
+/** 프로그램의 멘토링 관계 목록(MENTORING 모듈 기준). */
+export function useMentoringRelationships(programId: string | undefined) {
+  return useQuery({
+    queryKey: ['ac', 'mentoring', programId],
+    enabled: Boolean(programId),
+    queryFn: async (): Promise<MentoringRelationship[]> => {
+      const { data: mod } = await supabase
+        .from('program_modules')
+        .select('id')
+        .eq('program_id', programId)
+        .eq('module_type', 'MENTORING')
+        .maybeSingle()
+      if (!mod) return []
+      const { data } = await supabase
+        .from('mentoring_relationships')
+        .select('id, startup_id, mentor_participant_id, status')
+        .eq('program_module_id', (mod as { id: string }).id)
+      return (data ?? []) as MentoringRelationship[]
+    },
+  })
+}
+
 export interface Participant {
   id: string
   role: string

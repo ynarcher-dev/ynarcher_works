@@ -77,6 +77,31 @@ export function useUpdateEntity(table: EntityKey) {
   })
 }
 
+export interface GrowthMetrics {
+  technology: number | null
+  business_model: number | null
+  credibility: number | null
+  collaboration: number | null
+  matching_feasibility: number | null
+  sample_count: number
+}
+
+/** 스타트업 성장 5대 지표 평균(멘토 진단 누적, RPC 집계). */
+export function useStartupGrowth(startupId: string | undefined) {
+  return useQuery({
+    queryKey: ['networks', 'growth', startupId],
+    enabled: Boolean(startupId),
+    queryFn: async (): Promise<GrowthMetrics | null> => {
+      const { data, error } = await supabase.rpc('startup_growth_metrics', {
+        p_startup_id: startupId,
+      })
+      if (error) throw error
+      const row = (data ?? [])[0] as GrowthMetrics | undefined
+      return row ?? null
+    },
+  })
+}
+
 /** 중복 병합: duplicate → primary 로 병합(merged_into_id 지정). */
 export function useMergeEntity(table: EntityKey) {
   const qc = useQueryClient()

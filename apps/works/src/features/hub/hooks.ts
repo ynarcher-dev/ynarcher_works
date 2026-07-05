@@ -70,6 +70,25 @@ export function useSystemEvents() {
   })
 }
 
+export interface ExpertRank {
+  expert_id: string
+  expert_name: string
+  avg_score: number
+  session_count: number
+}
+
+/** 전문가 만족도 랭킹(mentor_satisfaction_records 평균 내림차순, RPC 집계). */
+export function useExpertRanking() {
+  return useQuery({
+    queryKey: ['hub', 'ranking'],
+    queryFn: async (): Promise<ExpertRank[]> => {
+      const { data, error } = await supabase.rpc('hub_expert_ranking')
+      if (error) throw error
+      return (data ?? []) as ExpertRank[]
+    },
+  })
+}
+
 export interface Employee {
   id: string
   name: string

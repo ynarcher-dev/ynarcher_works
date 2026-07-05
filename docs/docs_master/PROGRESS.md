@@ -76,7 +76,7 @@
 - [x] 통합 검색 대시보드 (일반 키워드 검색 — 권한 교차 필터 적용)
 - [ ] AI 검색 탭 (Gemini API 연동 — RAG/Text-to-SQL 방식 확정 필요) <!-- 탭 UI 배치 완료, 연동은 방식 확정 대기(백로그) -->
 - [x] 전사 통합 캘린더 (4개 레이어: AC/프로젝트/펀드/사내, system_events 연동)
-- [ ] 전문가 만족도 랭킹 보드 (mentor_satisfaction_records 평균 내림차순) <!-- 대상 테이블은 AC Phase에서 생성 → 이후 집계 -->
+- [x] 전문가 만족도 랭킹 보드 (mentor_satisfaction_records 평균 내림차순, RPC 집계)
 - [x] 임직원 프로필 디렉토리 (이메일 마스킹)
 
 ## Phase 6. NETWORKS 워크스페이스 (마스터 원장)
@@ -87,7 +87,7 @@
 - [x] 개별 등록/수정 모달 (필수값/중복 검사)
 - [x] 엑셀 대량 임포터 (유효성 검사 + 행 단위 오류 피드백) <!-- CSV 붙여넣기 임포터+행단위 검증 구현. .xlsx 바이너리 파싱은 SheetJS 도입 시 확장 -->
 - [x] 중복 병합(Merge) 콘솔 (임시 마스터 정리, 병합 감사 로그)
-- [ ] 성장 지표 히스토리 패널 (멘토링 5대 지표 레이더 차트) <!-- 지표 테이블은 AC Phase 생성 → 이후 레이더 연동 -->
+- [x] 성장 지표 히스토리 패널 (멘토링 5대 지표 레이더 차트, SVG)
 
 ## Phase 7. AC 워크스페이스 (Program First 14모듈)
 
@@ -102,7 +102,7 @@
 - [ ] 7-5. 서면평가 모듈 (라운드 운영, 심사위원 배정, Split View) — [3_4_6](../docs_planning/3_4_6_ac_document_review.md)
 - [ ] 7-6. 대면평가 모듈 (시간표/발표 순서, 현장 진행 상태, 최종 선발) — [3_4_7](../docs_planning/3_4_7_ac_onsite_evaluation.md)
 - [ ] 7-7. OT/공통 세션 (QR 출석 체크, 출석 상태 관리) — [3_4_8](../docs_planning/3_4_8_ac_orientation_sessions.md)
-- [ ] 7-8. N:N 멘토링 (관계/회차/상담일지, 양방향 평가 피드백 루프) — [3_4_9](../docs_planning/3_4_9_ac_mentoring.md)
+- [x] 7-8. N:N 멘토링 (관계/회차/상담일지, 양방향 평가 피드백 루프) — [3_4_9](../docs_planning/3_4_9_ac_mentoring.md)
 - [ ] 7-9. 1:1 비즈니스 매칭 (슬롯 자동 생성, FCFS/수동/AI 배정, 노쇼 처리) — [3_4_10](../docs_planning/3_4_10_ac_business_matching.md)
 - [ ] 7-10. 데모데이 (발표 세션, 모바일 심사, 투자자 관심, 후속 미팅) — [3_4_11](../docs_planning/3_4_11_ac_demo_day.md)
 - [ ] 7-11. 통합 타임라인 및 충돌 방지 (표준 카테고리 10종, system_events 동기화, ICS) — [3_4_12](../docs_planning/3_4_12_ac_program_timeline.md)
