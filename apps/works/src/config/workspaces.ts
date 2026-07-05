@@ -13,7 +13,7 @@ export const WORKSPACES: WorkspaceNavItem[] = [
   { key: 'hub', label: 'HUB', path: '/hub', implemented: true },
   { key: 'networks', label: 'NETWORKS', path: '/networks', implemented: true },
   { key: 'ac', label: 'AC', path: '/ac', implemented: true },
-  { key: 'fund', label: 'FUND', path: '/fund', implemented: false },
+  { key: 'fund', label: 'FUND', path: '/fund', implemented: true },
   { key: 'mna', label: 'M&A', path: '/mna', implemented: false },
   { key: 'admin', label: 'ADMIN', path: '/admin', implemented: false },
   { key: 'project', label: 'PROJECT', path: '/project', implemented: false },

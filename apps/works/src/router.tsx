@@ -4,6 +4,8 @@ import { RequireWorkspace } from '@/auth/RequireWorkspace'
 import { WorksLayout } from '@/app/WorksLayout'
 import { AcDashboardPage } from '@/features/ac/AcDashboardPage'
 import { ProgramDetailPage } from '@/features/ac/ProgramDetailPage'
+import { FundDetailPage } from '@/features/fund/FundDetailPage'
+import { FundPage } from '@/features/fund/FundPage'
 import { HubPage } from '@/features/hub/HubPage'
 import { NetworksPage } from '@/features/networks/NetworksPage'
 import { LoginPage } from '@/pages/LoginPage'
@@ -52,6 +54,22 @@ export const router = createBrowserRouter([
             element: (
               <RequireWorkspace workspace="ac">
                 <ProgramDetailPage />
+              </RequireWorkspace>
+            ),
+          },
+          {
+            path: 'fund',
+            element: (
+              <RequireWorkspace workspace="fund">
+                <FundPage />
+              </RequireWorkspace>
+            ),
+          },
+          {
+            path: 'fund/:id',
+            element: (
+              <RequireWorkspace workspace="fund">
+                <FundDetailPage />
               </RequireWorkspace>
             ),
           },

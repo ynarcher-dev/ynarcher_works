@@ -114,10 +114,10 @@
 
 > **참고 문서**: [3_5_workspace_fund.md](../docs_planning/3_5_workspace_fund.md) · [2_business_scenarios.md](../docs_planning/2_business_scenarios.md) (자사 투자 배지/보안 메타)
 
-- [ ] 펀드 현황 보드 (결성액/집행액/잔액, LP 지분율 도넛 차트, 자사 투자 배지)
-- [ ] 포트폴리오 집행 기록 및 피투자사 NETWORKS 연동
-- [ ] 캐피탈 콜 스케줄러 (미납 LP 알림 발송)
-- [ ] FUND 데이터 모델/필드 상세 확정 (문서 보강 포함)
+- [x] 펀드 현황 보드 (결성액/집행액/잔액, LP 지분율 도넛 차트, 자사 투자 배지)
+- [x] 포트폴리오 집행 기록 및 피투자사 NETWORKS 연동
+- [x] 캐피탈 콜 스케줄러 (미납 LP 알림 발송) <!-- 콜 일정/상태(OVERDUE 등) 관리 구현. 알림 발송(알림톡/SMS)은 Phase 14 채널 연동 후 -->
+- [x] FUND 데이터 모델/필드 상세 확정 (문서 보강 포함) <!-- 스키마 마이그레이션 20260705170000이 확정 모델(funds/lps/capital_calls/investments/portfolio_financials) -->
 
 ## Phase 9. M&A 워크스페이스
 
