@@ -1,6 +1,7 @@
 import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css'
 import '@/global.css'
 import { QueryClientProvider } from '@tanstack/react-query'
+import { ToastProvider } from '@ynarcher/ui'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router-dom'
@@ -15,7 +16,9 @@ if (!rootElement) {
 createRoot(rootElement).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <ToastProvider>
+        <RouterProvider router={router} />
+      </ToastProvider>
     </QueryClientProvider>
   </StrictMode>,
 )

@@ -62,12 +62,12 @@
 
 > **참고 문서**: [5_component_spec_rules.md](../docs_design/5_component_spec_rules.md) (컴포넌트 규격) · [2_app_layout_navigation.md](../docs_design/2_app_layout_navigation.md) (AppShell/사이드바) · [9_feedback_notification_rules.md](../docs_design/9_feedback_notification_rules.md) (토스트/로딩) · [1_ui_ux_mobile.md](../docs_design/1_ui_ux_mobile.md) (반응형) · [4_color_system_rules.md](../docs_design/4_color_system_rules.md), [3_typography_rules.md](../docs_design/3_typography_rules.md) (토큰)
 
-- [ ] 디자인 토큰 기반 기초 컴포넌트 (Button 5종 variant, Input/Select/TextArea 4상태, Checkbox, Switch, Avatar, Badge)
-- [ ] 데이터 테이블 (헤더 36px/행 44px, tabular-nums, 페이지네이션, 정렬)
-- [ ] 오버레이 컴포넌트 (Modal sm/md/lg, Drawer, Dropdown — z-index 스케일 준수)
-- [ ] 피드백 컴포넌트 (Toast, 인라인 배너, 스피너/스켈레톤, Empty State)
-- [ ] AppShell 레이아웃 (사이드바 240px + 상단바 56px + 1열/2열 콘텐츠 그리드, 1024px 미만 드로어 전환)
-- [ ] 워크스페이스 전환 드롭다운 (PermissionMap 기반 노출 제어)
+- [x] 디자인 토큰 기반 기초 컴포넌트 (Button 5종 variant, Input/Select/TextArea 4상태, Checkbox, Switch, Avatar, Badge)
+- [x] 데이터 테이블 (헤더 36px/행 44px, tabular-nums, 페이지네이션, 정렬)
+- [x] 오버레이 컴포넌트 (Modal sm/md/lg, Drawer, Dropdown — z-index 스케일 준수)
+- [x] 피드백 컴포넌트 (Toast, 인라인 배너, 스피너/스켈레톤, Empty State)
+- [x] AppShell 레이아웃 (사이드바 240px + 상단바 56px + 1열/2열 콘텐츠 그리드, 1024px 미만 드로어 전환)
+- [x] 워크스페이스 전환 드롭다운 (PermissionMap 기반 노출 제어)
 
 ## Phase 5. HUB 워크스페이스
 

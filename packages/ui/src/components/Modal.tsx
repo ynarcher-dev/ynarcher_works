@@ -1,0 +1,65 @@
+import type { ReactNode } from 'react'
+import { createPortal } from 'react-dom'
+import { cn } from '../utils/cn'
+
+export type ModalSize = 'sm' | 'md' | 'lg'
+
+const sizeClass: Record<ModalSize, string> = {
+  sm: 'max-w-sm',
+  md: 'max-w-lg',
+  lg: 'max-w-2xl',
+}
+
+export interface ModalProps {
+  open: boolean
+  onClose: () => void
+  title?: ReactNode
+  size?: ModalSize
+  children: ReactNode
+  footer?: ReactNode
+}
+
+/**
+ * 모달 다이얼로그(sm/md/lg). 딤 레이어 z-overlay, 바디 z-modal.
+ * 근거: 8_z_index_system_rules.md, 6_motion_transition_rules.md §4.2
+ */
+export function Modal({
+  open,
+  onClose,
+  title,
+  size = 'md',
+  children,
+  footer,
+}: ModalProps) {
+  if (!open) return null
+  return createPortal(
+    <div className="fixed inset-0 z-overlay flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-gray-900/40 transition-opacity duration-slow ease-decelerate"
+        onClick={onClose}
+        aria-hidden
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        className={cn(
+          'relative z-modal w-full rounded-lg bg-white shadow-xl transition-all duration-slow ease-decelerate',
+          sizeClass[size],
+        )}
+      >
+        {title && (
+          <header className="border-b border-gray-100 px-5 py-3">
+            <h2 className="text-title-sm font-medium text-gray-900">{title}</h2>
+          </header>
+        )}
+        <div className="px-5 py-4 text-body text-gray-800">{children}</div>
+        {footer && (
+          <footer className="flex justify-end gap-2 border-t border-gray-100 px-5 py-3">
+            {footer}
+          </footer>
+        )}
+      </div>
+    </div>,
+    document.body,
+  )
+}
