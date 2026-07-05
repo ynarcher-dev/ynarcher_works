@@ -8,6 +8,7 @@ import { ProgramDetailPage } from '@/features/ac/ProgramDetailPage'
 import { FundDetailPage } from '@/features/fund/FundDetailPage'
 import { FundPage } from '@/features/fund/FundPage'
 import { HubPage } from '@/features/hub/HubPage'
+import { ManagementPage } from '@/features/management/ManagementPage'
 import { MnaDealDetailPage } from '@/features/mna/MnaDealDetailPage'
 import { MnaPage } from '@/features/mna/MnaPage'
 import { NetworksPage } from '@/features/networks/NetworksPage'
@@ -115,6 +116,14 @@ export const router = createBrowserRouter([
             element: (
               <RequireWorkspace workspace="project">
                 <ProjectDetailPage />
+              </RequireWorkspace>
+            ),
+          },
+          {
+            path: 'management',
+            element: (
+              <RequireWorkspace workspace="management">
+                <ManagementPage />
               </RequireWorkspace>
             ),
           },

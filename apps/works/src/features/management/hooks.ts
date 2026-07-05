@@ -1,0 +1,207 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase'
+import type { ApprovalStatus, AssetStatus } from '@/features/management/config'
+
+export interface ApprovalDoc {
+  id: string
+  title: string
+  form_type: string
+  drafter_id: string | null
+  amount: number | null
+  status: ApprovalStatus
+  created_at: string
+  approval_lines: {
+    id: string
+    approver_id: string | null
+    step_order: number
+    decision: 'PENDING' | 'APPROVED' | 'REJECTED'
+  }[]
+}
+
+export function useApprovalDocs() {
+  return useQuery({
+    queryKey: ['management', 'approvals'],
+    queryFn: async (): Promise<ApprovalDoc[]> => {
+      const { data, error } = await supabase
+        .from('approval_documents')
+        .select(
+          'id, title, form_type, drafter_id, amount, status, created_at, approval_lines(id, approver_id, step_order, decision)',
+        )
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return (data ?? []) as ApprovalDoc[]
+    },
+  })
+}
+
+export function useCreateApproval() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (v: {
+      title: string
+      form_type: string
+      amount: number | null
+      body: string | null
+      approver_ids: string[]
+    }) => {
+      const { data: doc, error } = await supabase
+        .from('approval_documents')
+        .insert({
+          title: v.title,
+          form_type: v.form_type,
+          amount: v.amount,
+          body: v.body,
+          status: 'PENDING',
+        })
+        .select('id')
+        .single()
+      if (error) throw error
+      if (v.approver_ids.length > 0) {
+        const lines = v.approver_ids.map((approver_id, i) => ({
+          document_id: doc.id,
+          approver_id,
+          step_order: i + 1,
+        }))
+        const { error: le } = await supabase.from('approval_lines').insert(lines)
+        if (le) throw le
+      }
+    },
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ['management', 'approvals'] }),
+  })
+}
+
+/** 결재 처리(승인/반려). 최종 단계 승인 시 문서 상태를 확정한다. */
+export function useDecideApproval() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (v: {
+      line_id: string
+      document_id: string
+      decision: 'APPROVED' | 'REJECTED'
+      is_final: boolean
+    }) => {
+      const { error } = await supabase
+        .from('approval_lines')
+        .update({ decision: v.decision, decided_at: new Date().toISOString() })
+        .eq('id', v.line_id)
+      if (error) throw error
+      const nextStatus: ApprovalStatus =
+        v.decision === 'REJECTED' ? 'REJECTED' : v.is_final ? 'APPROVED' : 'IN_REVIEW'
+      const { error: de } = await supabase
+        .from('approval_documents')
+        .update({ status: nextStatus })
+        .eq('id', v.document_id)
+      if (de) throw de
+    },
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ['management', 'approvals'] }),
+  })
+}
+
+export interface Employee {
+  id: string
+  name: string
+  email: string | null
+  user_type: string
+  department_id: string | null
+}
+
+export function useEmployees() {
+  return useQuery({
+    queryKey: ['management', 'employees'],
+    queryFn: async (): Promise<Employee[]> => {
+      const { data } = await supabase
+        .from('users')
+        .select('id, name, email, user_type, department_id')
+        .is('deleted_at', null)
+        .order('name', { ascending: true })
+      return (data ?? []) as Employee[]
+    },
+  })
+}
+
+export interface Department {
+  id: string
+  name: string
+  parent_id: string | null
+}
+
+export function useDepartments() {
+  return useQuery({
+    queryKey: ['management', 'departments'],
+    queryFn: async (): Promise<Department[]> => {
+      const { data } = await supabase
+        .from('departments')
+        .select('id, name, parent_id')
+        .is('deleted_at', null)
+        .order('name', { ascending: true })
+      return (data ?? []) as Department[]
+    },
+  })
+}
+
+export interface Budget {
+  department_id: string | null
+  fiscal_year: number
+  budget_amount: number
+}
+
+export function useBudgets(fiscalYear: number) {
+  return useQuery({
+    queryKey: ['management', 'budgets', fiscalYear],
+    queryFn: async (): Promise<Budget[]> => {
+      const { data } = await supabase
+        .from('dept_budgets')
+        .select('department_id, fiscal_year, budget_amount')
+        .eq('fiscal_year', fiscalYear)
+      return (data ?? []) as Budget[]
+    },
+  })
+}
+
+export interface Kpi {
+  id: string
+  workspace_key: string | null
+  metric_name: string
+  target_value: number | null
+  actual_value: number | null
+  period: string | null
+}
+
+export function useKpis() {
+  return useQuery({
+    queryKey: ['management', 'kpis'],
+    queryFn: async (): Promise<Kpi[]> => {
+      const { data } = await supabase
+        .from('kpi_records')
+        .select('id, workspace_key, metric_name, target_value, actual_value, period')
+        .order('created_at', { ascending: false })
+      return (data ?? []) as Kpi[]
+    },
+  })
+}
+
+export interface Asset {
+  id: string
+  name: string
+  category: string | null
+  status: AssetStatus
+  assigned_to: string | null
+  return_due: string | null
+}
+
+export function useAssets() {
+  return useQuery({
+    queryKey: ['management', 'assets'],
+    queryFn: async (): Promise<Asset[]> => {
+      const { data } = await supabase
+        .from('assets')
+        .select('id, name, category, status, assigned_to, return_due')
+        .is('deleted_at', null)
+        .order('name', { ascending: true })
+      return (data ?? []) as Asset[]
+    },
+  })
+}

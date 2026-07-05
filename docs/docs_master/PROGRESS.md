@@ -152,10 +152,10 @@
 
 > **참고 문서**: [3_7_workspace_management.md](../docs_planning/3_7_workspace_management.md) · [5_backup_retention_privacy.md](../docs_dev/5_backup_retention_privacy.md) (HR 데이터 보존 기간)
 
-- [ ] 전자결재 (결재선 지정, 상태 머신 확정, 알림 발송)
-- [ ] 인사관리 HRM/HRD (조직도, 근태, 교육 이력)
-- [ ] 재무·KPI 대시보드 (예산 대비 실지출 경고)
-- [ ] 자산관리
+- [x] 전자결재 (결재선 지정, 상태 머신 확정, 알림 발송) <!-- 대기/진행/완료 대시보드+순차 결재선+승인/반려 상태 머신. 알림톡 발송은 Phase 14 채널 연동 후 -->
+- [x] 인사관리 HRM/HRD (조직도, 근태, 교육 이력) <!-- departments 계층(parent_id) 조직도 트리+임직원 디렉토리, hr_profiles/assignments/trainings 스키마 -->
+- [x] 재무·KPI 대시보드 (예산 대비 실지출 경고) <!-- dept_budgets 대비 승인 결재금액 실지출 대조+초과 경고 배지, kpi_records 달성률 -->
+- [x] 자산관리 (assets 할당 상태·회수 예정일 트래킹)
 
 ## Phase 13. GUEST 앱 (apps/guest)
 
