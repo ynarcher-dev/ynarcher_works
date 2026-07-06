@@ -24,7 +24,27 @@ export interface EntityField {
   required?: boolean
   /** 개인정보 목록 마스킹 유형(목록 셀에만 적용, 상세/폼은 원본). */
   mask?: MaskKind
+  /**
+   * 저장 위치. `'contact'`면 테이블에 스칼라 컬럼이 없는 인물 필드를 `contact`(jsonb)에 저장한다.
+   * 미지정 시 동명 스칼라 컬럼에 저장한다. 조직 마스터의 인물 중심 필드(소속·부서·직책 등)에 사용.
+   */
+  store?: 'contact'
 }
+
+/**
+ * 조직 마스터(기업·기관·대학·외주/거래·미분류) 공용 인물 중심 필드.
+ * 소속 조직이 아니라 그 조직의 담당자(사람)를 원장으로 관리한다.
+ * `name`(이름)만 스칼라 컬럼이고, 나머지는 스키마에 컬럼이 없어 `contact`(jsonb)에 저장한다.
+ */
+const ORG_PERSON_FIELDS: EntityField[] = [
+  { name: 'name', label: '이름', required: true },
+  { name: 'affiliation', label: '소속', store: 'contact' },
+  { name: 'department', label: '부서명', store: 'contact' },
+  { name: 'position', label: '직책/직급', store: 'contact' },
+  { name: 'email', label: '이메일', mask: 'email', store: 'contact' },
+  { name: 'phone', label: '연락', mask: 'phone', store: 'contact' },
+  { name: 'category', label: '구분', store: 'contact' },
+]
 
 export interface EntityConfig {
   key: EntityKey
@@ -94,60 +114,36 @@ export const ENTITIES: Record<EntityKey, EntityConfig> = {
     key: 'corporates',
     label: '기업',
     table: 'corporates',
-    fields: [
-      { name: 'name', label: '기업명', required: true },
-      { name: 'biz_reg_no', label: '사업자등록번호' },
-      { name: 'representative', label: '대표자' },
-      { name: 'industry', label: '산업' },
-    ],
+    fields: ORG_PERSON_FIELDS,
     listColumns: NETWORK_ORG_COLUMNS,
   },
   institutions: {
     key: 'institutions',
     label: '기관',
     table: 'institutions',
-    fields: [
-      { name: 'name', label: '기관명', required: true },
-      { name: 'institution_type', label: '유형' },
-      { name: 'representative', label: '대표' },
-      { name: 'region', label: '지역' },
-    ],
+    fields: ORG_PERSON_FIELDS,
     listColumns: NETWORK_ORG_COLUMNS,
   },
   universities: {
     key: 'universities',
     label: '대학',
     table: 'universities',
-    fields: [
-      { name: 'name', label: '대학명', required: true },
-      { name: 'university_type', label: '구분' },
-      { name: 'department', label: '학과/부서' },
-      { name: 'region', label: '지역' },
-    ],
+    fields: ORG_PERSON_FIELDS,
     listColumns: NETWORK_ORG_COLUMNS,
   },
   vendors: {
     key: 'vendors',
     label: '외주/거래',
     table: 'vendors',
-    fields: [
-      { name: 'name', label: '거래처명', required: true },
-      { name: 'category', label: '구분' },
-      { name: 'representative', label: '담당자' },
-      { name: 'memo', label: '메모' },
-    ],
+    fields: ORG_PERSON_FIELDS,
     listColumns: NETWORK_ORG_COLUMNS,
   },
   others: {
     key: 'others',
     label: '미분류',
     table: 'others',
-    fields: [
-      { name: 'name', label: '명칭', required: true },
-      { name: 'category', label: '구분' },
-      { name: 'representative', label: '담당자' },
-      { name: 'memo', label: '메모' },
-    ],
+    fields: ORG_PERSON_FIELDS,
+    listColumns: NETWORK_ORG_COLUMNS,
   },
   // 협력사: NETWORKS 화면에서는 은퇴(→ van 이관)했으나 HUB 조회 하위호환을 위해 정의만 유지한다.
   partners: {
@@ -184,6 +180,30 @@ export const PROFILE_ENTITIES: EntityKey[] = ['experts', 'van', 'investors']
 /** 해당 엔티티가 공용 프로필 상세페이지(모달 아님)를 사용하는지 여부. */
 export function isProfileEntity(key: EntityKey): boolean {
   return PROFILE_ENTITIES.includes(key)
+}
+
+/**
+ * 조직 마스터(기업·기관·대학·외주/거래·미분류).
+ * 프로필과 동일한 카드형 상세페이지 형태를 차용하되 약력·멘토링 만족도는 제외한 공용
+ * 상세페이지/등록폼(`EntityDetailPage`·`EntityForm`)을 `config.fields` 기반으로 사용한다.
+ * DB에 `profile`/`photo` 컬럼이 없으므로 사진은 공통 `contact`(jsonb)에 저장한다.
+ */
+export const ORG_ENTITIES: EntityKey[] = [
+  'corporates',
+  'institutions',
+  'universities',
+  'vendors',
+  'others',
+]
+
+/** 해당 엔티티가 공용 조직 상세페이지를 사용하는지 여부. */
+export function isOrgEntity(key: EntityKey): boolean {
+  return ORG_ENTITIES.includes(key)
+}
+
+/** 모달이 아닌 상세페이지에서 등록/수정하는 엔티티(프로필 + 조직 공용). */
+export function usesDetailPage(key: EntityKey): boolean {
+  return isProfileEntity(key) || isOrgEntity(key)
 }
 
 /** 민감정보 접근 로그(access_logs)용 리소스 타입. */

@@ -13,6 +13,8 @@ import { MnaDealDetailPage } from '@/features/mna/MnaDealDetailPage'
 import { MnaPage } from '@/features/mna/MnaPage'
 import { NetworksPage } from '@/features/networks/NetworksPage'
 import { ProfileDetailPage } from '@/features/networks/ProfileDetailPage'
+import { EntityDetailPage } from '@/features/networks/EntityDetailPage'
+import { ORG_ENTITIES } from '@/features/networks/config'
 import { StartupPage } from '@/features/startup/StartupPage'
 import { ProjectDetailPage } from '@/features/project/ProjectDetailPage'
 import { ProjectPage } from '@/features/project/ProjectPage'
@@ -87,6 +89,15 @@ export const router = createBrowserRouter([
               </RequireWorkspace>
             ),
           },
+          // 조직 마스터(기업·기관·대학·외주/거래·미분류) 상세페이지(공용 EntityDetailPage).
+          ...ORG_ENTITIES.map((entity) => ({
+            path: `networks/${entity}/:id`,
+            element: (
+              <RequireWorkspace workspace="networks">
+                <EntityDetailPage entity={entity} />
+              </RequireWorkspace>
+            ),
+          })),
           {
             path: 'startup',
             element: (

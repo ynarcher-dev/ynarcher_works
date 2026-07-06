@@ -3,14 +3,8 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { DirectoryTab } from '@/features/networks/DirectoryTab'
 import { GrowthHistoryPanel } from '@/features/networks/GrowthHistoryPanel'
-import { ImporterModal } from '@/features/networks/ImporterModal'
 import { MergeConsole } from '@/features/networks/MergeConsole'
-import {
-  ENTITIES,
-  ENTITY_ORDER,
-  isProfileEntity,
-  type EntityKey,
-} from '@/features/networks/config'
+import { ENTITIES, ENTITY_ORDER, type EntityKey } from '@/features/networks/config'
 
 type Mode = 'directory' | 'merge' | 'growth'
 
@@ -21,8 +15,6 @@ export function NetworksPage() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const tab = params.get('tab') ?? 'experts'
-  const [importing, setImporting] = useState(false)
-  const [creating, setCreating] = useState(false)
   const [keyword, setKeyword] = useState('')
 
   // 엔티티는 병합/성장 섹션 진입 시에도 유지되도록 내부 상태로 보존한다.
@@ -53,20 +45,9 @@ export function NetworksPage() {
   ) : undefined
 
   const actions = mode === 'directory' ? (
-    <>
-      <Button variant="outline" onClick={() => setImporting(true)}>
-        대량 등록(CSV)
-      </Button>
-      <Button
-        onClick={() =>
-          isProfileEntity(entity)
-            ? navigate(`/networks/${entity}/new`)
-            : setCreating(true)
-        }
-      >
-        {config.label} 등록
-      </Button>
-    </>
+    <Button onClick={() => navigate(`/networks/${entity}/new`)}>
+      {config.label} 등록
+    </Button>
   ) : undefined
 
   return (
@@ -78,21 +59,10 @@ export function NetworksPage() {
       />
 
       {mode === 'directory' && (
-        <DirectoryTab
-          config={config}
-          keyword={keyword}
-          creating={creating}
-          setCreating={setCreating}
-        />
+        <DirectoryTab config={config} keyword={keyword} />
       )}
       {mode === 'merge' && <MergeConsole config={config} />}
       {mode === 'growth' && <GrowthHistoryPanel />}
-
-      <ImporterModal
-        config={config}
-        open={importing}
-        onClose={() => setImporting(false)}
-      />
     </div>
   )
 }

@@ -68,9 +68,11 @@ function ProfileView({ entity, record }: { entity: EntityKey; record: EntityRow 
   )
   const intro = (profile.intro as string) ?? ''
   const affiliation = (record.affiliation as string) ?? ''
+  const department = (profile.department as string) ?? ''
   const position = (profile.position as string) ?? ''
   const category = (profile.category as string) ?? ''
-  const subtitle = [affiliation, position].filter(Boolean).join(' · ')
+  // 부제: 소속 · 부서명 · 직책(부서명은 소속과 직책 사이에 노출).
+  const subtitle = [affiliation, department, position].filter(Boolean).join(' · ')
 
   return (
     <div className="space-y-4">

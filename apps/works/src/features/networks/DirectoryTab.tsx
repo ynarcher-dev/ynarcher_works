@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { EntityFormModal } from '@/features/networks/EntityFormModal'
 import { useEntityPage, useUpdateEntity } from '@/features/networks/hooks'
-import { isProfileEntity, type EntityConfig } from '@/features/networks/config'
+import { usesDetailPage, type EntityConfig } from '@/features/networks/config'
 import { MasterListView } from '@/features/master/MasterListView'
 import type { MasterRow } from '@/features/master/types'
 
@@ -13,14 +13,18 @@ const PAGE_SIZE = 30
 interface DirectoryTabProps {
   config: EntityConfig
   keyword: string
-  creating: boolean
-  setCreating: (c: boolean) => void
+  /**
+   * 상세페이지가 없는 엔티티(스타트업)의 등록 모달 제어.
+   * NETWORKS 8종 마스터는 상세페이지로 등록하므로 전달하지 않는다.
+   */
+  creating?: boolean
+  setCreating?: (c: boolean) => void
 }
 
 /**
  * 엔티티 디렉토리 탭: 목록(공용 리스트뷰) + 등록.
- * 프로필 엔티티(전문가·VAN·투자사)는 행 클릭 시 상세페이지로 진입해 편집한다(모달 미사용).
- * 그 외 엔티티는 등록 모달을 유지한다.
+ * 상세페이지 엔티티(프로필·조직 마스터)는 행 클릭 시 상세페이지로 진입해 등록/편집한다.
+ * 그 외 엔티티(스타트업)는 등록 모달을 사용한다.
  */
 export function DirectoryTab({ config, keyword, creating, setCreating }: DirectoryTabProps) {
   const navigate = useNavigate()
@@ -32,7 +36,7 @@ export function DirectoryTab({ config, keyword, creating, setCreating }: Directo
     setPage(0)
   }, [keyword, config.table])
   const { data, isLoading } = useEntityPage(config.table, keyword, page, PAGE_SIZE)
-  const hasDetailPage = isProfileEntity(config.key)
+  const hasDetailPage = usesDetailPage(config.key)
 
   const deactivate = async (row: MasterRow) => {
     try {
@@ -68,11 +72,11 @@ export function DirectoryTab({ config, keyword, creating, setCreating }: Directo
         }}
       />
 
-      {/* 프로필 엔티티는 상세페이지에서 등록하므로 모달을 렌더하지 않는다. */}
-      {!hasDetailPage && (
+      {/* 상세페이지 엔티티는 상세페이지에서 등록하므로 모달을 렌더하지 않는다. */}
+      {!hasDetailPage && setCreating && (
         <EntityFormModal
           config={config}
-          open={creating}
+          open={Boolean(creating)}
           onClose={() => setCreating(false)}
           initial={null}
         />

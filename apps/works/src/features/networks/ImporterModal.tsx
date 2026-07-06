@@ -43,11 +43,16 @@ export function ImporterModal({
     lines.slice(1).forEach((line, idx) => {
       const cells = line.split(',')
       const row: Record<string, unknown> = {}
+      const contact: Record<string, unknown> = {}
       headers.forEach((h, i) => {
-        if (config.fields.some((f) => f.name === h)) {
-          row[h] = cells[i]?.trim() || null
-        }
+        const field = config.fields.find((f) => f.name === h)
+        if (!field) return
+        const value = cells[i]?.trim() || null
+        // 인물 중심 조직 마스터는 스키마에 컬럼이 없어 contact(jsonb)에 저장한다.
+        if (field.store === 'contact') contact[h] = value
+        else row[h] = value
       })
+      if (Object.keys(contact).length > 0) row.contact = contact
       const missing = config.fields
         .filter((f) => f.required && !row[f.name])
         .map((f) => f.label)
