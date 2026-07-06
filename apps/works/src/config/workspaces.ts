@@ -12,6 +12,7 @@ export interface WorkspaceNavItem {
 export const WORKSPACES: WorkspaceNavItem[] = [
   { key: 'hub', label: 'HUB', path: '/hub', implemented: true },
   { key: 'networks', label: 'NETWORKS', path: '/networks', implemented: true },
+  { key: 'startup', label: 'STARTUP', path: '/startup', implemented: true },
   { key: 'ac', label: 'AC', path: '/ac', implemented: true },
   { key: 'fund', label: 'FUND', path: '/fund', implemented: true },
   { key: 'mna', label: 'M&A', path: '/mna', implemented: true },

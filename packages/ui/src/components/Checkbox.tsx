@@ -1,12 +1,16 @@
-import type { InputHTMLAttributes } from 'react'
+import { forwardRef, type InputHTMLAttributes } from 'react'
 import { cn } from '../utils/cn'
 
 export type CheckboxProps = InputHTMLAttributes<HTMLInputElement>
 
 /** 체크박스(브랜드 강조). */
-export function Checkbox({ className, ...props }: CheckboxProps) {
+export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Checkbox(
+  { className, ...props },
+  ref,
+) {
   return (
     <input
+      ref={ref}
       type="checkbox"
       className={cn(
         'size-4 rounded border-gray-300 text-brand accent-brand shadow-sm',
@@ -17,4 +21,4 @@ export function Checkbox({ className, ...props }: CheckboxProps) {
       {...props}
     />
   )
-}
+})

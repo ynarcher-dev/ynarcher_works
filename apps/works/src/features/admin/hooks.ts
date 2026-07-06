@@ -75,6 +75,70 @@ export function useAuditLogs() {
   })
 }
 
+export interface Tag {
+  id: string
+  name: string
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+/** 태그 목록(미삭제, 표시순). 산업/분야 등 기준정보 태그 테이블 공용. */
+export function useTags(table: string) {
+  return useQuery({
+    queryKey: ['admin', 'tags', table],
+    queryFn: async (): Promise<Tag[]> => {
+      const { data, error } = await supabase
+        .from(table)
+        .select('id, name, sort_order, created_at, updated_at')
+        .is('deleted_at', null)
+        .order('sort_order', { ascending: true })
+        .order('name', { ascending: true })
+      if (error) throw error
+      return (data ?? []) as Tag[]
+    },
+  })
+}
+
+/** 태그 추가. */
+export function useCreateTag(table: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (name: string) => {
+      const { error } = await supabase.from(table).insert({ name })
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'tags', table] }),
+  })
+}
+
+/** 태그명 수정. */
+export function useUpdateTag(table: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      const { error } = await supabase.from(table).update({ name }).eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'tags', table] }),
+  })
+}
+
+/** 태그 삭제(soft delete). */
+export function useDeleteTag(table: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from(table)
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'tags', table] }),
+  })
+}
+
 export interface AccessLog {
   id: string
   user_id: string | null

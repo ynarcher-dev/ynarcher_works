@@ -6,8 +6,8 @@ import { BoardWorkspace } from '@/features/hub/BoardWorkspace'
 import { useBoardStore } from '@/features/hub/boardStore'
 import { CalendarPanel } from '@/features/hub/CalendarPanel'
 import { DashboardPanel } from '@/features/hub/DashboardPanel'
-import { EmployeeDirectoryPanel } from '@/features/hub/EmployeeDirectoryPanel'
-import { RankingPanel } from '@/features/hub/RankingPanel'
+import { HubMasterPanel } from '@/features/hub/HubMasterPanel'
+import type { HubMasterTabKey } from '@/features/hub/masterConfig'
 
 type HubTab =
   | 'dashboard'
@@ -19,7 +19,7 @@ type HubTab =
   | 'managers'
   | 'startups'
   | 'experts'
-  | 'partners'
+  | 'orgs'
   | 'ac'
   | 'mna'
   | 'project'
@@ -33,16 +33,21 @@ const TITLE: Record<HubTab, string> = {
   notices: '공지사항',
   files: '자료실',
   insights: '인사이트',
-  managers: '심사역 정보',
-  startups: '스타트업 정보',
-  experts: '전문가 정보',
-  partners: '협력사 정보',
+  managers: '임직원 정보',
+  startups: '스타트업 네트워크',
+  experts: '투자/전문가 네트워크',
+  orgs: '협력사 네트워크',
   ac: '사업 현황',
-  mna: 'M&A 현황',
-  project: '프로젝트 현황',
+  mna: 'M&A/PE 현황',
+  project: '글로벌/신사업 현황',
   fund: '투자현황',
   management: '경영현황',
 }
+
+/** 마스터 정보 탭(임직원/스타트업/투자·전문가/협력사) — NETWORKS 동형 표로 조회. */
+const MASTER_TABS: HubMasterTabKey[] = ['managers', 'startups', 'experts', 'orgs']
+const isMasterTab = (tab: string): tab is HubMasterTabKey =>
+  (MASTER_TABS as string[]).includes(tab)
 
 /** HUB 워크스페이스(조회 센터). 섹션 전환은 좌측 사이드바(?tab)가 구동한다. */
 export function HubPage() {
@@ -68,14 +73,15 @@ export function HubPage() {
 
   return (
     <div className="flex h-full flex-col gap-5">
-      {tab !== 'ai' && tab !== 'dashboard' && <PageHeader title={TITLE[tab] ?? '대시보드'} />}
+      {tab !== 'ai' && tab !== 'dashboard' && !isMasterTab(tab) && (
+        <PageHeader title={TITLE[tab] ?? '대시보드'} />
+      )}
 
       {tab === 'dashboard' && <DashboardPanel />}
       {tab === 'calendar' && <CalendarPanel />}
-      {tab === 'managers' && <EmployeeDirectoryPanel />}
-      {tab === 'experts' && <RankingPanel />}
+      {isMasterTab(tab) && <HubMasterPanel masterKey={tab} />}
       {tab === 'ai' && <AiAgentPanel />}
-      {['startups', 'partners', 'ac', 'mna', 'project', 'fund', 'management'].includes(tab) && (
+      {['ac', 'mna', 'project', 'fund', 'management'].includes(tab) && (
         <Banner tone="info">
           {TITLE[tab]} 화면은 RAG/데이터 분석 세부 스펙 확정 후 연결됩니다. (백로그)
         </Banner>

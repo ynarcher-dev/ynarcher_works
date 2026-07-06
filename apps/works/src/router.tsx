@@ -12,6 +12,8 @@ import { ManagementPage } from '@/features/management/ManagementPage'
 import { MnaDealDetailPage } from '@/features/mna/MnaDealDetailPage'
 import { MnaPage } from '@/features/mna/MnaPage'
 import { NetworksPage } from '@/features/networks/NetworksPage'
+import { ProfileDetailPage } from '@/features/networks/ProfileDetailPage'
+import { StartupPage } from '@/features/startup/StartupPage'
 import { ProjectDetailPage } from '@/features/project/ProjectDetailPage'
 import { ProjectPage } from '@/features/project/ProjectPage'
 import { LoginPage } from '@/pages/LoginPage'
@@ -39,11 +41,57 @@ export const router = createBrowserRouter([
               </RequireWorkspace>
             ),
           },
+          // HUB 조회 센터 내 프로필 상세(읽기 전용). NETWORKS로 이탈하지 않고 HUB에 머문다.
+          ...(['experts', 'van', 'investors'] as const).map((entity) => ({
+            path: `hub/${entity}/:id`,
+            element: (
+              <RequireWorkspace workspace="hub">
+                <ProfileDetailPage
+                  entity={entity}
+                  readOnly
+                  listPath="/hub?tab=experts"
+                  backLabel="투자/전문가 네트워크"
+                />
+              </RequireWorkspace>
+            ),
+          })),
           {
             path: 'networks',
             element: (
               <RequireWorkspace workspace="networks">
                 <NetworksPage />
+              </RequireWorkspace>
+            ),
+          },
+          {
+            path: 'networks/experts/:id',
+            element: (
+              <RequireWorkspace workspace="networks">
+                <ProfileDetailPage entity="experts" />
+              </RequireWorkspace>
+            ),
+          },
+          {
+            path: 'networks/van/:id',
+            element: (
+              <RequireWorkspace workspace="networks">
+                <ProfileDetailPage entity="van" />
+              </RequireWorkspace>
+            ),
+          },
+          {
+            path: 'networks/investors/:id',
+            element: (
+              <RequireWorkspace workspace="networks">
+                <ProfileDetailPage entity="investors" />
+              </RequireWorkspace>
+            ),
+          },
+          {
+            path: 'startup',
+            element: (
+              <RequireWorkspace workspace="startup">
+                <StartupPage />
               </RequireWorkspace>
             ),
           },

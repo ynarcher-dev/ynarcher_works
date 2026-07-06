@@ -1,5 +1,8 @@
-import type { ReactNode } from 'react'
+import { useContext, useState, type ReactNode } from 'react'
 import { cn } from '../utils/cn'
+import { Checkbox } from './Checkbox'
+import { Pagination } from './Pagination'
+import { ToastContext } from './toast/ToastContext'
 
 export interface Column<T> {
   key: string
@@ -8,6 +11,8 @@ export interface Column<T> {
   align?: 'left' | 'right' | 'center'
   numeric?: boolean
   sortable?: boolean
+  /** 헤더·셀에 함께 적용할 추가 클래스(폭·여백 조정 등). 기본 px-3 등과 twMerge로 충돌 해소된다. */
+  className?: string
 }
 
 /**
@@ -23,6 +28,8 @@ export interface DataTableMeta<T> {
   active?: (row: T) => boolean
   /** 비활성화(소프트 삭제) 실행 핸들러. 미지정 시 버튼은 비활성 상태로 노출된다. */
   onDeactivate?: (row: T) => void
+  /** 복사 버튼 텍스트 생성기. 지정 시 관리 컬럼에 복사 버튼이 노출된다. */
+  copyText?: (row: T) => string
 }
 
 export interface DataTableProps<T> {
@@ -36,8 +43,43 @@ export interface DataTableProps<T> {
   className?: string
   /** 좌측 No. 내림차순 넘버링 컬럼(기본 true). 로그/매트릭스 등은 false로 opt-out. */
   numbered?: boolean
-  /** 우측 표준 컬럼(작성자/수정일/비활성화, 기본 true). 로그/매트릭스/랭킹은 false로 opt-out. */
+  /**
+   * 서버 사이드 페이지네이션(0-base page). 지정 시 표 하단에 페이저를 렌더하고, 넘겨받은
+   * `rows`(해당 페이지 구간)를 전체 건수 기준으로 넘버링한다(예: 총 87건·2페이지면 57부터).
+   * 페이지가 1개뿐이어도 페이저는 노출된다. 미지정 시 페이저 없이 `rows`를 그대로 렌더한다.
+   */
+  pagination?: {
+    /** 현재 페이지(0-base). */
+    page: number
+    /** 페이지당 행 수. */
+    pageSize: number
+    /** 현재 필터(검색 등)에 반영된 건수(count: 'exact'). 페이지 수·No. 넘버링의 기준이 된다. */
+    total: number
+    /** 필터 미적용 전체 건수. 지정 시 좌측에 "필터 반영 수 / 전체 수"로 표기한다. */
+    totalAll?: number
+    /** 페이지 변경 콜백(0-base). */
+    onChange: (page: number) => void
+  }
+  /** 최좌측 선택 체크박스 컬럼(헤더 전체선택 + 행별 선택). 기본 false. */
+  selectable?: boolean
+  /** 선택된 행 키(제어 모드). 미지정 시 컴포넌트 내부 상태로 관리한다. */
+  selectedKeys?: string[]
+  /** 선택 변경 콜백(제어/비제어 공통). */
+  onSelectionChange?: (keys: string[]) => void
+  /** 행 클릭(상세 진입 등). 지정 시 행에 pointer 커서가 적용된다. */
+  onRowClick?: (row: T) => void
+  /**
+   * 레이아웃 모드(기본 'auto'). 'fixed'는 `table-fixed`로 컬럼 폭 비율을 고정하고
+   * 셀 내용이 넘치면 말줄임(…) 처리한다. 컬럼 폭은 각 컬럼 `className`(w-*)이 정한다.
+   */
+  layout?: 'auto' | 'fixed'
+  /** 우측 표준 컬럼(작성자/수정일, 기본 true). 로그/매트릭스/랭킹은 false로 opt-out. */
   standardColumns?: boolean
+  /**
+   * 관리(비활성화) 셀 내용 노출 여부(기본 true). `standardColumns`가 true이면 관리 컬럼 자리는
+   * 항상 유지되며(컬럼 폭 고정), false면 셀을 비워 버튼 없이 표시한다(HUB 등 읽기 전용).
+   */
+  manageable?: boolean
   /** 표준 컬럼 값 접근자(미지정 시 관례 필드에서 자동 추론). */
   meta?: DataTableMeta<T>
 }
@@ -82,7 +124,8 @@ function resolveUpdatedAt<T>(row: T, meta?: DataTableMeta<T>): ReactNode {
 
 /**
  * 데이터 테이블(헤더 36px / 행 44px, 수치 tabular-nums, 정렬 토글).
- * 좌측 No.(내림차순) + 우측 표준 컬럼(작성자/수정일/비활성화)을 기본 탑재한다.
+ * 좌측 No.(내림차순) + 우측 표준 컬럼(작성자/수정일/관리)을 기본 탑재한다.
+ * 관리 컬럼 자리는 항상 유지되며, `manageable=false`면 셀을 비운다(HUB 등 읽기 전용).
  * 근거: 5_component_spec_rules.md §3.1 (테이블 규격·표준 메타 컬럼)
  */
 export function DataTable<T>({
@@ -95,23 +138,83 @@ export function DataTable<T>({
   emptyText = '표시할 데이터가 없습니다.',
   className,
   numbered = true,
+  pagination,
   standardColumns = true,
+  manageable = true,
+  selectable = false,
+  selectedKeys,
+  onSelectionChange,
+  onRowClick,
+  layout = 'auto',
   meta,
 }: DataTableProps<T>) {
-  const colSpan = columns.length + (numbered ? 1 : 0) + (standardColumns ? 3 : 0)
+  // ToastProvider 밖에서도 쓰일 수 있어 컨텍스트를 null-safe로 읽는다(복사 알림용).
+  const toast = useContext(ToastContext)
+  const fixed = layout === 'fixed'
+  const truncate = fixed ? 'truncate' : ''
+  // fixed 레이아웃은 여백을 조금 좁혀(px-2) 각 컬럼 내용 표시 폭을 넓힌다.
+  const pad = fixed ? 'px-2' : ''
+  const colSpan =
+    columns.length +
+    (selectable ? 1 : 0) +
+    (numbered ? 1 : 0) +
+    (standardColumns ? 3 : 0)
 
-  return (
+  // 서버 페이징 시 전체 건수 기준으로 첫 행(index 0)의 No.를 매긴다. 미지정 시 페이지 내 rows 기준.
+  const numberFrom = pagination
+    ? pagination.total - pagination.page * pagination.pageSize
+    : rows.length
+
+  const [internalSelected, setInternalSelected] = useState<string[]>([])
+  const selected = new Set(selectedKeys ?? internalSelected)
+  const allKeys = rows.map(rowKey)
+  const allSelected = rows.length > 0 && allKeys.every((k) => selected.has(k))
+  const someSelected = allKeys.some((k) => selected.has(k))
+
+  const commitSelection = (next: Set<string>) => {
+    const arr = allKeys.filter((k) => next.has(k))
+    if (!selectedKeys) setInternalSelected(arr)
+    onSelectionChange?.(arr)
+  }
+  const toggleRow = (key: string) => {
+    const next = new Set(selected)
+    if (next.has(key)) next.delete(key)
+    else next.add(key)
+    commitSelection(next)
+  }
+  const toggleAll = () => {
+    commitSelection(allSelected ? new Set() : new Set(allKeys))
+  }
+
+  const scroller = (
     <div
       className={cn(
         'w-full overflow-x-auto rounded-radius-md border border-gray-300 bg-white shadow-soft',
         className,
       )}
     >
-      <table className="w-full border-separate border-spacing-0 text-body">
+      <table
+        className={cn(
+          'w-full border-separate border-spacing-0 text-body',
+          fixed && 'table-fixed',
+        )}
+      >
         <thead>
           <tr className="bg-gray-50">
+            {selectable && (
+              <th className={cn('h-9 w-10 border-b border-gray-300 px-3 text-center', pad)}>
+                <Checkbox
+                  aria-label="전체 선택"
+                  checked={allSelected}
+                  ref={(el) => {
+                    if (el) el.indeterminate = someSelected && !allSelected
+                  }}
+                  onChange={toggleAll}
+                />
+              </th>
+            )}
             {numbered && (
-              <th className="h-9 w-14 border-b border-gray-300 px-3 text-right text-caption font-semibold text-gray-500">
+              <th className={cn('h-9 w-12 border-b border-gray-300 px-3 text-right text-caption font-semibold text-gray-500', pad)}>
                 No.
               </th>
             )}
@@ -124,6 +227,9 @@ export function DataTable<T>({
                     'h-9 border-b border-gray-300 px-3 text-caption font-semibold text-gray-500',
                     alignClass[col.align ?? 'left'],
                     col.sortable && 'cursor-pointer select-none hover:bg-gray-100/50',
+                    pad,
+                    truncate,
+                    col.className,
                   )}
                   onClick={col.sortable ? () => onSort?.(col.key) : undefined}
                 >
@@ -148,9 +254,9 @@ export function DataTable<T>({
             })}
             {standardColumns && (
               <>
-                <th className="h-9 border-b border-gray-300 px-3 text-left text-caption font-semibold text-gray-500">작성자</th>
-                <th className="h-9 border-b border-gray-300 px-3 text-left text-caption font-semibold text-gray-500">수정일</th>
-                <th className="h-9 w-20 border-b border-gray-300 px-3 text-center text-caption font-semibold text-gray-500">비활성화</th>
+                <th className={cn('h-9 w-20 border-b border-gray-300 px-3 text-left text-caption font-semibold text-gray-500', pad, truncate)}>작성자</th>
+                <th className={cn('h-9 w-28 border-b border-gray-300 px-3 text-left text-caption font-semibold text-gray-500', pad, truncate)}>수정일</th>
+                <th className={cn('h-9 w-32 border-b border-gray-300 px-3 text-center text-caption font-semibold text-gray-500', pad)}>관리</th>
               </>
             )}
           </tr>
@@ -168,17 +274,33 @@ export function DataTable<T>({
           ) : (
             rows.map((row, index) => {
               const active = standardColumns ? resolveActive(row, meta) : true
+              const key = rowKey(row)
               return (
                 <tr
-                  key={rowKey(row)}
+                  key={key}
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
                   className={cn(
                     'h-11 transition-colors duration-fast hover:bg-gray-25',
                     !active && 'opacity-50',
+                    selected.has(key) && 'bg-brand/5',
+                    onRowClick && 'cursor-pointer',
                   )}
                 >
+                  {selectable && (
+                    <td
+                      className={cn('border-b border-gray-200 px-3 text-center', pad)}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Checkbox
+                        aria-label="행 선택"
+                        checked={selected.has(key)}
+                        onChange={() => toggleRow(key)}
+                      />
+                    </td>
+                  )}
                   {numbered && (
-                    <td className="border-b border-gray-200 px-3 text-right text-gray-500 tabular-nums">
-                      {rows.length - index}
+                    <td className={cn('border-b border-gray-200 px-3 text-right text-gray-500 tabular-nums', pad)}>
+                      {numberFrom - index}
                     </td>
                   )}
                   {columns.map((col) => (
@@ -188,6 +310,9 @@ export function DataTable<T>({
                         'border-b border-gray-200 px-3 font-medium text-gray-800',
                         alignClass[col.align ?? 'left'],
                         col.numeric && 'tabular-nums',
+                        pad,
+                        truncate,
+                        col.className,
                       )}
                     >
                       {col.render ? col.render(row) : (row[col.key as keyof T] as ReactNode)}
@@ -195,33 +320,57 @@ export function DataTable<T>({
                   ))}
                   {standardColumns && (
                     <>
-                      <td className="border-b border-gray-200 px-3 text-gray-500">
+                      <td className={cn('border-b border-gray-200 px-3 text-gray-500', pad, truncate)}>
                         {resolveAuthor(row, meta)}
                       </td>
-                      <td className="border-b border-gray-200 px-3 text-gray-500 tabular-nums">
+                      <td className={cn('border-b border-gray-200 px-3 text-gray-500 tabular-nums', pad, truncate)}>
                         {resolveUpdatedAt(row, meta)}
                       </td>
-                      <td className="border-b border-gray-200 px-3 text-center">
-                        {active ? (
-                          <button
-                            type="button"
-                            aria-label="비활성화"
-                            title="비활성화(소프트 삭제)"
-                            disabled={!meta?.onDeactivate}
-                            onClick={() => {
-                              if (
-                                typeof window !== 'undefined' &&
-                                window.confirm('이 항목을 비활성화하시겠습니까?')
-                              ) {
-                                meta?.onDeactivate?.(row)
-                              }
-                            }}
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-radius-md text-gray-400 transition-colors duration-fast hover:bg-red-50 hover:text-brand disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-gray-400"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>
-                          </button>
-                        ) : (
-                          <span className="text-caption text-gray-400">비활성</span>
+                      <td
+                        className={cn('border-b border-gray-200 px-3 text-center', pad)}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {/* 복사는 읽기 전용 액션이라 manageable과 무관하게 노출(HUB 조회 센터 포함). */}
+                        {(meta?.copyText || manageable) && (
+                          <div className="flex items-center justify-center gap-1 whitespace-nowrap">
+                            {meta?.copyText && (
+                              <button
+                                type="button"
+                                title="복사하기"
+                                onClick={() => {
+                                  void navigator.clipboard
+                                    ?.writeText(meta.copyText!(row))
+                                    .then(() => toast?.show('복사했습니다.', 'success'))
+                                    .catch(() => toast?.show('복사에 실패했습니다.', 'danger'))
+                                }}
+                                className="inline-flex shrink-0 items-center rounded-radius-md border border-gray-300 px-1.5 py-0.5 text-caption text-gray-600 transition-colors duration-fast hover:bg-gray-50"
+                              >
+                                복사
+                              </button>
+                            )}
+                            {/* 비활성화(소프트 삭제)는 편집 권한 컨텍스트(manageable)에서만 노출한다. */}
+                            {manageable &&
+                              (active ? (
+                                <button
+                                  type="button"
+                                  title="비활성화(소프트 삭제)"
+                                  disabled={!meta?.onDeactivate}
+                                  onClick={() => {
+                                    if (
+                                      typeof window !== 'undefined' &&
+                                      window.confirm('이 항목을 비활성화하시겠습니까?')
+                                    ) {
+                                      meta?.onDeactivate?.(row)
+                                    }
+                                  }}
+                                  className="inline-flex shrink-0 items-center rounded-radius-md border border-gray-300 px-1.5 py-0.5 text-caption text-gray-600 transition-colors duration-fast hover:bg-red-50 hover:text-brand disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-gray-600"
+                                >
+                                  비활성화
+                                </button>
+                              ) : (
+                                <span className="text-caption text-gray-400">비활성</span>
+                              ))}
+                          </div>
                         )}
                       </td>
                     </>
@@ -232,6 +381,24 @@ export function DataTable<T>({
           )}
         </tbody>
       </table>
+    </div>
+  )
+
+  if (!pagination) return scroller
+  const { total, totalAll } = pagination
+  return (
+    <div className="w-full">
+      {scroller}
+      <Pagination
+        page={pagination.page + 1}
+        pageCount={Math.max(1, Math.ceil(total / pagination.pageSize))}
+        onChange={(p) => pagination.onChange(p - 1)}
+        info={
+          totalAll != null
+            ? `${total.toLocaleString()} / ${totalAll.toLocaleString()}건`
+            : `${total.toLocaleString()}건`
+        }
+      />
     </div>
   )
 }

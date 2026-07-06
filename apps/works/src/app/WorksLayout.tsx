@@ -26,6 +26,18 @@ import {
   Megaphone,
   FolderOpen,
   LayoutDashboard,
+  Factory,
+  Tags,
+  UserCog,
+  Medal,
+  Shapes,
+  Coins,
+  Building2,
+  Landmark,
+  GraduationCap,
+  Boxes,
+  EyeOff,
+  Truck,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import {
@@ -35,9 +47,10 @@ import {
   DropdownItem,
   Sidebar,
   SidebarItem,
+  SidebarDivider,
   WorkspaceSwitcher,
 } from '@ynarcher/ui'
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import logo from '@/assets/logo.png'
 import { hasWorkspaceRead, useAuthStore } from '@/auth/authStore'
@@ -62,6 +75,16 @@ const sidebarIconByTab: Record<string, LucideIcon> = {
   startups: Rocket,
   experts: BriefcaseBusiness,
   partners: Handshake,
+  orgs: Handshake,
+
+  // NETWORKS 8종 네트워크
+  van: Handshake,
+  investors: Coins,
+  corporates: Building2,
+  institutions: Landmark,
+  universities: GraduationCap,
+  vendors: Truck,
+  others: Boxes,
 
   // HUB 그룹 3: 현황 정보
   ac: Target,
@@ -82,6 +105,12 @@ const sidebarIconByTab: Record<string, LucideIcon> = {
   matching: LayoutGrid,
   permissions: LockKeyhole,
   boards: ClipboardList,
+  industries: Factory,
+  fields: Tags,
+  positions: UserCog,
+  ranks: Medal,
+  categories: Shapes,
+  sensitive: EyeOff,
   audit: ReceiptText,
   downloads: Download,
   approval: BadgeCheck,
@@ -91,6 +120,7 @@ const sidebarIconByTab: Record<string, LucideIcon> = {
 }
 
 const sidebarIconByWorkspace: Record<string, LucideIcon> = {
+  startup: Rocket,
   ac: Target,
   fund: WalletCards,
   project: Folder,
@@ -224,16 +254,20 @@ export function WorksLayout() {
         </Link>
       }
     >
-      {groups.map((g, gi) => (
-        <div key={g.group ?? gi} className="pb-3 last:pb-0">
-          {gi > 0 && (
-            <div className="mx-3 my-2 border-t border-white/10" />
-          )}
-          <div className="flex flex-col gap-1">
-            {g.items.map((item) => renderItem(item))}
-          </div>
-        </div>
-      ))}
+      {/* 그룹 경계·항목 구분선을 하나의 gap-1 리스트에 평탄화해 SidebarDivider가 어디서든 동일 여백을 내도록 한다. */}
+      <div className="flex flex-col gap-1">
+        {groups.map((g, gi) => (
+          <Fragment key={g.group ?? gi}>
+            {gi > 0 && <SidebarDivider />}
+            {g.items.map((item) => (
+              <Fragment key={item.label}>
+                {item.dividerBefore && <SidebarDivider />}
+                {renderItem(item)}
+              </Fragment>
+            ))}
+          </Fragment>
+        ))}
+      </div>
     </Sidebar>
   )
 

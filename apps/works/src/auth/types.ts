@@ -1,6 +1,7 @@
 export type WorkspaceKey =
   | 'hub'
   | 'networks'
+  | 'startup'
   | 'ac'
   | 'fund'
   | 'mna'

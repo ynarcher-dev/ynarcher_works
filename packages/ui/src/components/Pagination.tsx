@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { cn } from '../utils/cn'
 
 export interface PaginationProps {
@@ -5,6 +6,8 @@ export interface PaginationProps {
   pageCount: number
   onChange: (page: number) => void
   className?: string
+  /** 좌측에 노출할 부가 정보(예: "12 / 87건"). 우측 직접 이동 입력창과 좌우 대칭으로 배치된다. */
+  info?: ReactNode
 }
 
 /** 
@@ -16,8 +19,9 @@ export function Pagination({
   pageCount,
   onChange,
   className,
+  info,
 }: PaginationProps) {
-  if (pageCount <= 1) return null
+  // 페이지가 1개뿐이어도 페이저를 노출한다(현재 페이지·전체 페이지 수를 항상 보여주기 위함).
 
   // 렌더링할 페이지 번호 계산 (현재 페이지 기준 좌우 2개씩 노출)
   const getPageNumbers = () => {
@@ -37,6 +41,13 @@ export function Pagination({
       className={cn('relative flex items-center justify-center gap-1.5 text-caption font-semibold py-4 w-full', className)}
       aria-label="페이지네이션"
     >
+      {/* 좌측 부가 정보(필터 반영 수 / 전체 수 등) */}
+      {info != null && (
+        <div className="absolute left-0 hidden items-center font-medium text-gray-500 sm:flex">
+          {info}
+        </div>
+      )}
+
       {/* 맨 앞으로 (⏮) */}
       <button
         type="button"
