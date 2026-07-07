@@ -110,19 +110,19 @@ export function BulkReviewTable({
   onRevive,
 }: Props) {
   const cellText = 'text-gray-600'
-  // 좌측 원본 컬럼은 여백을 좁혀(px-1.5) 폭을 아끼고, 중복 칸만 넓게 쓴다.
-  const tight = 'px-1.5'
+  // 모든 열의 좌우 패딩을 px-2로 통일해 열 간 여백이 들쑥날쑥하지 않게 한다(중복 칸은 폭만 w-72로 넓힘).
+  const pad = 'px-2'
   const columns: Column<ReviewRow>[] = [
-    { key: 'name', header: '이름', className: tight, render: (r) => <span className="font-medium text-gray-800">{r.name || '—'}</span> },
-    { key: 'affiliation', header: '소속', className: tight, render: (r) => <span className={cellText}>{r.affiliation || '-'}</span> },
-    { key: 'department', header: '부서', className: tight, render: (r) => <span className={cellText}>{r.department || '-'}</span> },
-    { key: 'position', header: '직책', className: tight, render: (r) => <span className={cellText}>{r.position || '-'}</span> },
-    { key: 'email', header: '이메일', className: tight, render: (r) => <span className={cellText}>{r.email || '-'}</span> },
-    { key: 'phone', header: '연락처', className: tight, render: (r) => <span className={cellText}>{r.phone || '-'}</span> },
+    { key: 'name', header: '이름', className: pad, render: (r) => <span className="font-medium text-gray-800">{r.name || '—'}</span> },
+    { key: 'affiliation', header: '소속', className: pad, render: (r) => <span className={cellText}>{r.affiliation || '-'}</span> },
+    { key: 'department', header: '부서', className: pad, render: (r) => <span className={cellText}>{r.department || '-'}</span> },
+    { key: 'position', header: '직책', className: pad, render: (r) => <span className={cellText}>{r.position || '-'}</span> },
+    { key: 'email', header: '이메일', className: pad, render: (r) => <span className={cellText}>{r.email || '-'}</span> },
+    { key: 'phone', header: '연락처', className: pad, render: (r) => <span className={cellText}>{r.phone || '-'}</span> },
     {
       key: 'category',
       header: '구분',
-      className: tight,
+      className: pad,
       render: (r) => (
         <InlineSelect
           value={r.categoryLabel}
@@ -146,7 +146,7 @@ export function BulkReviewTable({
       key: 'decision',
       header: '결정',
       align: 'center',
-      className: 'w-24 px-1.5',
+      className: 'w-24 px-2',
       render: (r) =>
         r.match?.deleted ? (
           revivedLines.includes(r.line) ? (
