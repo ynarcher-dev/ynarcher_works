@@ -8,7 +8,7 @@ import {
   type HubMasterTabKey,
 } from '@/features/hub/masterConfig'
 import { useMasterList, useMergedMasterList } from '@/features/hub/hooks'
-import { isProfileEntity, type EntityKey } from '@/features/networks/config'
+import { isHubDetailEntity, type EntityKey } from '@/features/networks/config'
 import { MasterListView } from '@/features/master/MasterListView'
 import { MasterDetailModal } from '@/features/master/MasterDetailModal'
 import type { MasterColumn, MasterRow } from '@/features/master/types'
@@ -97,7 +97,7 @@ function SingleNetworkList({
   const { pageRows, pagination } = usePagedRows(data ?? [], keyword)
 
   // 프로필 엔티티(전문가·VAN·투자사)는 HUB 내 읽기 전용 상세로 이동, 그 외는 조회 모달을 연다.
-  const hasDetailPage = isProfileEntity(entity.key as EntityKey)
+  const hasDetailPage = isHubDetailEntity(entity.key as EntityKey)
   const openRow = (r: MasterRow) =>
     hasDetailPage ? navigate(`/hub/${entity.key}/${r.id}`) : setViewing(r)
 
@@ -150,7 +150,7 @@ function MergedNetworkList({
   // 행의 원본 엔티티가 프로필 엔티티(전문가·VAN·투자사)면 HUB 내 읽기 전용 상세로 이동, 그 외는 조회 모달.
   const openRow = (r: MasterRow) => {
     const key = r._entityKey as EntityKey | undefined
-    if (key && isProfileEntity(key)) navigate(`/hub/${key}/${r.id}`)
+    if (key && isHubDetailEntity(key)) navigate(`/hub/${key}/${r.id}`)
     else setViewing(r)
   }
 

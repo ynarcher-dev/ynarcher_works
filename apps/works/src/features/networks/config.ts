@@ -1,6 +1,5 @@
 import type { MaskKind, MasterColumn } from '@/features/master/types'
 import { NETWORK_PROFILE_COLUMNS } from '@/features/master/networkProfileColumns'
-import { NETWORK_ORG_COLUMNS } from '@/features/master/networkOrgColumns'
 
 /**
  * NETWORKS 마스터 엔티티 키.
@@ -24,26 +23,21 @@ export interface EntityField {
   required?: boolean
   /** 개인정보 목록 마스킹 유형(목록 셀에만 적용, 상세/폼은 원본). */
   mask?: MaskKind
-  /**
-   * 저장 위치. `'contact'`면 테이블에 스칼라 컬럼이 없는 인물 필드를 `contact`(jsonb)에 저장한다.
-   * 미지정 시 동명 스칼라 컬럼에 저장한다. 조직 마스터의 인물 중심 필드(소속·부서·직책 등)에 사용.
-   */
-  store?: 'contact'
 }
 
 /**
- * 조직 마스터(기업·기관·대학·외주/거래·미분류) 공용 인물 중심 필드.
- * 소속 조직이 아니라 그 조직의 담당자(사람)를 원장으로 관리한다.
- * `name`(이름)만 스칼라 컬럼이고, 나머지는 스키마에 컬럼이 없어 `contact`(jsonb)에 저장한다.
+ * 네트워크 8종 공용 인물 중심 필드(업로드 양식 통일).
+ * 소속 조직이 아니라 담당자(사람)를 원장으로 관리한다. 부서/직책/구분은 `profile`(jsonb)에,
+ * 이름·소속·이메일·연락처는 스칼라 컬럼에 저장한다(experts와 동일 스키마).
  */
-const ORG_PERSON_FIELDS: EntityField[] = [
+const PERSON_FIELDS: EntityField[] = [
   { name: 'name', label: '이름', required: true },
-  { name: 'affiliation', label: '소속', store: 'contact' },
-  { name: 'department', label: '부서명', store: 'contact' },
-  { name: 'position', label: '직책/직급', store: 'contact' },
-  { name: 'email', label: '이메일', mask: 'email', store: 'contact' },
-  { name: 'phone', label: '연락', mask: 'phone', store: 'contact' },
-  { name: 'category', label: '구분', store: 'contact' },
+  { name: 'affiliation', label: '소속' },
+  { name: 'profile.department', label: '부서명' },
+  { name: 'profile.position', label: '직책/직급' },
+  { name: 'email', label: '이메일', mask: 'email' },
+  { name: 'phone', label: '연락처', mask: 'phone' },
+  { name: 'profile.category', label: '구분' },
 ]
 
 export interface EntityConfig {
@@ -78,72 +72,57 @@ export const ENTITIES: Record<EntityKey, EntityConfig> = {
     key: 'experts',
     label: '전문가',
     table: 'experts',
-    fields: [
-      { name: 'name', label: '이름', required: true },
-      { name: 'email', label: '이메일', mask: 'email' },
-      { name: 'phone', label: '연락처', mask: 'phone' },
-      { name: 'affiliation', label: '소속' },
-    ],
+    fields: PERSON_FIELDS,
     listColumns: NETWORK_PROFILE_COLUMNS,
   },
   van: {
     key: 'van',
     label: 'VAN',
     table: 'van',
-    fields: [
-      { name: 'name', label: '기관명', required: true },
-      { name: 'category', label: '구분' },
-      { name: 'representative', label: '담당자' },
-      { name: 'memo', label: '메모' },
-    ],
+    fields: PERSON_FIELDS,
     listColumns: NETWORK_PROFILE_COLUMNS,
   },
   investors: {
     key: 'investors',
     label: '투자사',
     table: 'investors',
-    fields: [
-      { name: 'name', label: '투자사명', required: true },
-      { name: 'investor_type', label: '유형' },
-      { name: 'representative', label: '대표자' },
-      { name: 'focus', label: '투자 분야' },
-    ],
+    fields: PERSON_FIELDS,
     listColumns: NETWORK_PROFILE_COLUMNS,
   },
   corporates: {
     key: 'corporates',
     label: '기업',
     table: 'corporates',
-    fields: ORG_PERSON_FIELDS,
-    listColumns: NETWORK_ORG_COLUMNS,
+    fields: PERSON_FIELDS,
+    listColumns: NETWORK_PROFILE_COLUMNS,
   },
   institutions: {
     key: 'institutions',
     label: '기관',
     table: 'institutions',
-    fields: ORG_PERSON_FIELDS,
-    listColumns: NETWORK_ORG_COLUMNS,
+    fields: PERSON_FIELDS,
+    listColumns: NETWORK_PROFILE_COLUMNS,
   },
   universities: {
     key: 'universities',
     label: '대학',
     table: 'universities',
-    fields: ORG_PERSON_FIELDS,
-    listColumns: NETWORK_ORG_COLUMNS,
+    fields: PERSON_FIELDS,
+    listColumns: NETWORK_PROFILE_COLUMNS,
   },
   vendors: {
     key: 'vendors',
     label: '외주/거래',
     table: 'vendors',
-    fields: ORG_PERSON_FIELDS,
-    listColumns: NETWORK_ORG_COLUMNS,
+    fields: PERSON_FIELDS,
+    listColumns: NETWORK_PROFILE_COLUMNS,
   },
   others: {
     key: 'others',
     label: '미분류',
     table: 'others',
-    fields: ORG_PERSON_FIELDS,
-    listColumns: NETWORK_ORG_COLUMNS,
+    fields: PERSON_FIELDS,
+    listColumns: NETWORK_PROFILE_COLUMNS,
   },
   // 협력사: NETWORKS 화면에서는 은퇴(→ van 이관)했으나 HUB 조회 하위호환을 위해 정의만 유지한다.
   partners: {
@@ -172,10 +151,11 @@ export const ENTITY_ORDER: EntityKey[] = [
 
 /**
  * 전문가 프로필 구조(사진·약력·분야·구분·매칭·소개)를 공유하는 엔티티.
- * 공용 프로필 목록(`NETWORK_PROFILE_COLUMNS`) + 공용 상세페이지/등록폼(`ProfileDetailPage`·`ProfileForm`)을
- * 동일 컴포넌트로 사용한다. DB도 experts와 동일한 컬럼(email/phone/affiliation/expertise/profile)을 갖는다.
+ * 업로드 양식 통일(Phase 15)로 8종 전부 experts와 동일한 컬럼
+ * (email/phone/affiliation/expertise/profile)을 가지며, 공용 통합 폼(`NetworkForm`)과
+ * 공용 상세페이지(`NetworkDetailPage`)를 동일 컴포넌트로 사용한다.
  */
-export const PROFILE_ENTITIES: EntityKey[] = ['experts', 'van', 'investors']
+export const PROFILE_ENTITIES: EntityKey[] = [...ENTITY_ORDER]
 
 /** 해당 엔티티가 공용 프로필 상세페이지(모달 아님)를 사용하는지 여부. */
 export function isProfileEntity(key: EntityKey): boolean {
@@ -183,32 +163,64 @@ export function isProfileEntity(key: EntityKey): boolean {
 }
 
 /**
- * 조직 마스터(기업·기관·대학·외주/거래·미분류).
- * 프로필과 동일한 카드형 상세페이지 형태를 차용하되 약력·멘토링 만족도는 제외한 공용
- * 상세페이지/등록폼(`EntityDetailPage`·`EntityForm`)을 `config.fields` 기반으로 사용한다.
- * DB에 `profile`/`photo` 컬럼이 없으므로 사진은 공통 `contact`(jsonb)에 저장한다.
+ * HUB 조회 센터에서 읽기 전용 상세 라우트(`/hub/:entity/:id`)를 갖는 엔티티.
+ * HUB는 마스터를 소유하지 않으므로 전문가·VAN·투자사 프로필 3종만 상세로 진입하고,
+ * 그 외는 조회 모달로 표시한다.
  */
-export const ORG_ENTITIES: EntityKey[] = [
+export const HUB_DETAIL_ENTITIES: EntityKey[] = ['experts', 'van', 'investors']
+
+/** HUB 조회 센터에서 읽기 전용 상세 라우트를 갖는 엔티티인지 여부. */
+export function isHubDetailEntity(key: EntityKey): boolean {
+  return HUB_DETAIL_ENTITIES.includes(key)
+}
+
+/**
+ * 조직 유형(기업·기관·대학·외주/거래) — "구분"이 이들 중 하나이면 통합 폼에서
+ * 매칭 가능여부·전문분야·약력을 숨긴다(요건 2). 미분류(others)는 개인성 유입분을
+ * 담기 위해 전체 필드를 활성 상태로 둔다(요건 2·5 해석).
+ */
+export const COMPACT_ENTITIES: EntityKey[] = [
   'corporates',
   'institutions',
   'universities',
   'vendors',
-  'others',
 ]
 
-/** 해당 엔티티가 공용 조직 상세페이지를 사용하는지 여부. */
-export function isOrgEntity(key: EntityKey): boolean {
-  return ORG_ENTITIES.includes(key)
+/** 통합 폼에서 매칭/전문분야/약력을 숨기는 축약(조직) 유형인지 여부. */
+export function isCompactEntity(key: EntityKey): boolean {
+  return COMPACT_ENTITIES.includes(key)
 }
 
-/** 모달이 아닌 상세페이지에서 등록/수정하는 엔티티(프로필 + 조직 공용). */
+/** 모달이 아닌 상세페이지에서 등록/수정하는 엔티티(8종 전체). */
 export function usesDetailPage(key: EntityKey): boolean {
-  return isProfileEntity(key) || isOrgEntity(key)
+  return ENTITY_ORDER.includes(key)
 }
 
-/** 민감정보 접근 로그(access_logs)용 리소스 타입. */
+/**
+ * "구분" 드롭다운 옵션(라벨 → 엔티티 키). 통합 폼·CSV 임포터가 공유한다.
+ * 선택한 라벨이 저장 대상 테이블을 결정한다.
+ */
+export const CATEGORY_OPTIONS: { key: EntityKey; label: string }[] = ENTITY_ORDER.map(
+  (key) => ({ key, label: ENTITIES[key].label }),
+)
+
+/**
+ * "구분" 값(라벨)으로 저장 대상 엔티티 키를 해석한다.
+ * ENTITY_ORDER 라벨과 매칭되지 않는 값(게스트·스타트업 등)은 미분류(others)로 흡수한다.
+ */
+export function resolveEntityFromCategory(value: string | null | undefined): EntityKey {
+  const found = CATEGORY_OPTIONS.find((o) => o.label === (value ?? '').trim())
+  return found?.key ?? 'others'
+}
+
+/** 민감정보 접근 로그(access_logs)용 리소스 타입(8종 전체). */
 export const PROFILE_RESOURCE_TYPE: Partial<Record<EntityKey, string>> = {
   experts: 'expert',
   van: 'van',
   investors: 'investor',
+  corporates: 'corporate',
+  institutions: 'institution',
+  universities: 'university',
+  vendors: 'vendor',
+  others: 'other',
 }

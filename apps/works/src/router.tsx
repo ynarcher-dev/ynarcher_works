@@ -12,9 +12,8 @@ import { ManagementPage } from '@/features/management/ManagementPage'
 import { MnaDealDetailPage } from '@/features/mna/MnaDealDetailPage'
 import { MnaPage } from '@/features/mna/MnaPage'
 import { NetworksPage } from '@/features/networks/NetworksPage'
-import { ProfileDetailPage } from '@/features/networks/ProfileDetailPage'
-import { EntityDetailPage } from '@/features/networks/EntityDetailPage'
-import { ORG_ENTITIES } from '@/features/networks/config'
+import { NetworkDetailPage } from '@/features/networks/NetworkDetailPage'
+import { ENTITY_ORDER, HUB_DETAIL_ENTITIES } from '@/features/networks/config'
 import { StartupPage } from '@/features/startup/StartupPage'
 import { ProjectDetailPage } from '@/features/project/ProjectDetailPage'
 import { ProjectPage } from '@/features/project/ProjectPage'
@@ -44,11 +43,11 @@ export const router = createBrowserRouter([
             ),
           },
           // HUB 조회 센터 내 프로필 상세(읽기 전용). NETWORKS로 이탈하지 않고 HUB에 머문다.
-          ...(['experts', 'van', 'investors'] as const).map((entity) => ({
+          ...HUB_DETAIL_ENTITIES.map((entity) => ({
             path: `hub/${entity}/:id`,
             element: (
               <RequireWorkspace workspace="hub">
-                <ProfileDetailPage
+                <NetworkDetailPage
                   entity={entity}
                   readOnly
                   listPath="/hub?tab=experts"
@@ -65,36 +64,12 @@ export const router = createBrowserRouter([
               </RequireWorkspace>
             ),
           },
-          {
-            path: 'networks/experts/:id',
-            element: (
-              <RequireWorkspace workspace="networks">
-                <ProfileDetailPage entity="experts" />
-              </RequireWorkspace>
-            ),
-          },
-          {
-            path: 'networks/van/:id',
-            element: (
-              <RequireWorkspace workspace="networks">
-                <ProfileDetailPage entity="van" />
-              </RequireWorkspace>
-            ),
-          },
-          {
-            path: 'networks/investors/:id',
-            element: (
-              <RequireWorkspace workspace="networks">
-                <ProfileDetailPage entity="investors" />
-              </RequireWorkspace>
-            ),
-          },
-          // 조직 마스터(기업·기관·대학·외주/거래·미분류) 상세페이지(공용 EntityDetailPage).
-          ...ORG_ENTITIES.map((entity) => ({
+          // 네트워크 8종 상세페이지(공용 NetworkDetailPage). 구분 변경 시 대상 엔티티로 이동.
+          ...ENTITY_ORDER.map((entity) => ({
             path: `networks/${entity}/:id`,
             element: (
               <RequireWorkspace workspace="networks">
-                <EntityDetailPage entity={entity} />
+                <NetworkDetailPage entity={entity} />
               </RequireWorkspace>
             ),
           })),

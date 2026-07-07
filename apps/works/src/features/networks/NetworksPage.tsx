@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { DirectoryTab } from '@/features/networks/DirectoryTab'
 import { GrowthHistoryPanel } from '@/features/networks/GrowthHistoryPanel'
+import { ImporterModal } from '@/features/networks/ImporterModal'
 import { MergeConsole } from '@/features/networks/MergeConsole'
 import { ENTITIES, ENTITY_ORDER, type EntityKey } from '@/features/networks/config'
 
@@ -16,6 +17,7 @@ export function NetworksPage() {
   const navigate = useNavigate()
   const tab = params.get('tab') ?? 'experts'
   const [keyword, setKeyword] = useState('')
+  const [importing, setImporting] = useState(false)
 
   // 엔티티는 병합/성장 섹션 진입 시에도 유지되도록 내부 상태로 보존한다.
   const [entity, setEntity] = useState<EntityKey>('experts')
@@ -45,9 +47,14 @@ export function NetworksPage() {
   ) : undefined
 
   const actions = mode === 'directory' ? (
-    <Button onClick={() => navigate(`/networks/${entity}/new`)}>
-      {config.label} 등록
-    </Button>
+    <>
+      <Button variant="outline" onClick={() => setImporting(true)}>
+        대량 등록(CSV)
+      </Button>
+      <Button onClick={() => navigate(`/networks/${entity}/new`)}>
+        {config.label} 등록
+      </Button>
+    </>
   ) : undefined
 
   return (
@@ -63,6 +70,14 @@ export function NetworksPage() {
       )}
       {mode === 'merge' && <MergeConsole config={config} />}
       {mode === 'growth' && <GrowthHistoryPanel />}
+
+      {/* 네트워크 대량 등록: '구분' 열로 8종 테이블에 자동 분류 등록. */}
+      <ImporterModal
+        config={config}
+        open={importing}
+        onClose={() => setImporting(false)}
+        routeByCategory
+      />
     </div>
   )
 }

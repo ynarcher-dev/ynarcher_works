@@ -138,6 +138,48 @@ export function useCreateEntity(table: EntityKey) {
   })
 }
 
+/**
+ * 엔티티 이동(구분 변경). `from` 테이블 레코드를 `to` 테이블로 옮긴다.
+ * 물리삭제 금지 규약을 지켜 신규 테이블에 insert한 뒤 기존 레코드를 soft-delete한다.
+ * insert 성공 후 soft-delete가 실패하면 방금 생성한 신규 레코드를 되돌린다(보상 삭제).
+ * 이동으로 생성된 신규 레코드 id를 반환한다.
+ */
+export function useMoveEntity(from: EntityKey, to: EntityKey) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      id,
+      values,
+    }: {
+      id: string
+      values: Record<string, unknown>
+    }): Promise<string> => {
+      const { data, error } = await supabase
+        .from(to)
+        .insert(values)
+        .select('id')
+        .single()
+      if (error) throw error
+      const newId = (data as { id: string }).id
+
+      const { error: delError } = await supabase
+        .from(from)
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id)
+      if (delError) {
+        // 원본 soft-delete 실패 시 신규 레코드를 되돌려 중복 노출을 막는다.
+        await supabase.from(to).delete().eq('id', newId)
+        throw delError
+      }
+      return newId
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['networks', from] })
+      void qc.invalidateQueries({ queryKey: ['networks', to] })
+    },
+  })
+}
+
 /** 엔티티 수정. */
 export function useUpdateEntity(table: EntityKey) {
   const qc = useQueryClient()
