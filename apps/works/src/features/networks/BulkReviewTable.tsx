@@ -42,7 +42,7 @@ function DupCell({ row, match }: { row: ReviewRow; match: ExistingRef }) {
   return (
     <div
       className={cn(
-        'rounded-radius-md border px-2 py-1 text-caption leading-snug',
+        'inline-block whitespace-nowrap rounded-radius-md border px-2 py-0.5 text-[11px] leading-snug',
         match.deleted ? 'border-warning-border bg-warning-subtle' : 'border-info-border bg-info-subtle',
       )}
     >
