@@ -15,7 +15,7 @@ export function InlineSelect({ invalid, className, children, ...props }: InlineS
       <select
         aria-invalid={invalid}
         className={cn(
-          'h-8 w-full appearance-none rounded-radius-sm border pl-2.5 pr-7 text-caption text-gray-900 transition-colors duration-fast',
+          'h-7 w-full appearance-none rounded-radius-sm border pl-2 pr-6 text-caption text-gray-900 transition-colors duration-fast',
           'bg-white border-gray-300',
           'hover:border-gray-400',
           'focus-visible:outline-none focus-visible:border-info focus-visible:ring-2 focus-visible:ring-info/10',
@@ -29,13 +29,13 @@ export function InlineSelect({ invalid, className, children, ...props }: InlineS
       </select>
       {/* 커스텀 화살표 아이콘 */}
       <span
-        className="pointer-events-none absolute right-2 shrink-0 text-gray-400"
+        className="pointer-events-none absolute right-1.5 shrink-0 text-gray-400"
         aria-hidden="true"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          width="14"
-          height="14"
+          width="12"
+          height="12"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
