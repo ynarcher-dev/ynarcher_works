@@ -66,6 +66,10 @@ interface MasterListViewProps {
     /** 이관 처리 중 전체 드롭다운 비활성화(중복 제출 방지). */
     disabled?: boolean
   }
+  /** 행 다중선택 키(controlled). 지정 시 선택 상태를 상위가 소유(일괄 작업용). */
+  selectedKeys?: string[]
+  /** 선택 변경 콜백. 지정 시 selectable 체크박스 선택을 상위로 전달한다. */
+  onSelectionChange?: (keys: string[]) => void
   /**
    * 서버 사이드 페이지네이션(0-base page). 지정 시 표 하단에 페이저를 노출하고 No. 컬럼을
    * 전체 건수 기준으로 매긴다. 미지정 시 페이저 없이 전달된 rows를 그대로 렌더한다(HUB 등).
@@ -88,6 +92,8 @@ export function MasterListView({
   onDeactivate,
   manageable = true,
   categorySelect,
+  selectedKeys,
+  onSelectionChange,
   pagination,
 }: MasterListViewProps) {
   const show = useSensitiveStore((s) => s.show)
@@ -197,6 +203,8 @@ export function MasterListView({
       manageable={manageable}
       onRowClick={onRowClick}
       selectable
+      selectedKeys={selectedKeys}
+      onSelectionChange={onSelectionChange}
       pagination={pagination}
       meta={{
         // 임시: created_by가 UUID로 노출되어 실제 작성자명 연동 전까지 '홍길동'으로 대체한다.

@@ -243,6 +243,27 @@ export function resolveEntityFromCategory(value: string | null | undefined): Ent
   return found?.key ?? 'others'
 }
 
+/**
+ * 소속/이메일 도메인으로 추천 구분(엔티티 키)을 추정한다(미분류 일괄 분류 보조).
+ * 확신이 낮으면 null(미분류 유지). 대학 › 투자사 › 기관 › 기업 순으로 판정한다.
+ */
+export function suggestCategory(
+  affiliation: string | null | undefined,
+  email?: string | null,
+): EntityKey | null {
+  const domain = (email ?? '').split('@')[1] ?? ''
+  const hay = `${affiliation ?? ''} ${domain}`.toLowerCase().trim()
+  if (!hay) return null
+  const has = (words: string[]) => words.some((w) => hay.includes(w))
+  if (has(['대학', 'univ', 'college', '.edu', '연구소', '연구원'])) return 'universities'
+  if (has(['벤처', '인베스트', '캐피탈', '자산운용', '파트너스', 'ventures', 'capital', 'partners', 'invest']))
+    return 'investors'
+  if (has(['진흥원', '재단', '센터', '협회', '공사', '공단', '진흥', 'foundation', 'agency', 'institute', 'go.kr', 'or.kr']))
+    return 'institutions'
+  if (has(['㈜', '주식회사', '(주)', 'inc', 'corp', 'ltd', 'co.,', 'company'])) return 'corporates'
+  return null
+}
+
 /** 민감정보 접근 로그(access_logs)용 리소스 타입(8종 전체). */
 export const PROFILE_RESOURCE_TYPE: Partial<Record<EntityKey, string>> = {
   experts: 'expert',
