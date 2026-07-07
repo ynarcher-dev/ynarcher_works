@@ -128,38 +128,100 @@ function chunk<T>(arr: T[], size: number): T[][] {
 /** URL 길이 한계를 피하기 위한 in() 배치 크기. */
 const IN_CHUNK = 200
 
+/** 확실중복으로 매칭된 기존 레코드 참조(비교·보강·병합 대상). */
+export interface ExistingRef {
+  table: EntityKey
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+  affiliation: string | null
+  profile: Record<string, unknown>
+}
+
+interface ExistingRow {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+  affiliation: string | null
+  profile: Record<string, unknown> | null
+}
+
+function toRef(table: EntityKey, r: ExistingRow): ExistingRef {
+  return {
+    table,
+    id: r.id,
+    name: r.name,
+    email: r.email,
+    phone: r.phone,
+    affiliation: r.affiliation,
+    profile: (r.profile ?? {}) as Record<string, unknown>,
+  }
+}
+
 /**
- * 이미 등록된 이메일/전화 집합을 조회한다(9종 네트워크 테이블, 미삭제만).
- * 확실중복(동일 이메일 또는 전화) 판정용. 없는 테이블(미적용 마이그레이션 등)은 조용히 건너뛴다.
+ * 업로드 행별로 기존 확실중복 레코드(동일 이메일 또는 전화)를 찾아 매칭한다.
+ * 9종 네트워크 테이블(미삭제)을 조회하며, 없는 테이블은 조용히 건너뛴다.
  */
-export async function findExistingContacts(
-  emails: string[],
-  phones: string[],
-): Promise<{ emails: Set<string>; phones: Set<string> }> {
-  const outEmails = new Set<string>()
-  const outPhones = new Set<string>()
-  const uniqEmails = [...new Set(emails.filter(Boolean))]
-  const uniqPhones = [...new Set(phones.filter(Boolean))]
+export async function findExistingMatches(
+  rows: { line: number; email: string; phone: string }[],
+): Promise<Map<number, ExistingRef>> {
+  const emails = [...new Set(rows.map((r) => r.email).filter(Boolean))]
+  const phones = [...new Set(rows.map((r) => r.phone.replace(/\D/g, '')).filter(Boolean))]
+  const byEmail = new Map<string, ExistingRef>()
+  const byPhone = new Map<string, ExistingRef>()
+  const cols = 'id,name,email,phone,affiliation,profile'
 
   await Promise.all(
     DIRECTORY_ENTITIES.flatMap((table) => [
-      ...chunk(uniqEmails, IN_CHUNK).map(async (batch) => {
-        const { data } = await supabase
-          .from(table).select('email').is('deleted_at', null).in('email', batch)
-        for (const r of (data ?? []) as { email: string | null }[]) {
-          if (r.email) outEmails.add(r.email)
+      ...chunk(emails, IN_CHUNK).map(async (batch) => {
+        const { data } = await supabase.from(table).select(cols).is('deleted_at', null).in('email', batch)
+        for (const r of (data ?? []) as ExistingRow[]) {
+          if (r.email) byEmail.set(r.email, toRef(table, r))
         }
       }),
-      ...chunk(uniqPhones, IN_CHUNK).map(async (batch) => {
-        const { data } = await supabase
-          .from(table).select('phone').is('deleted_at', null).in('phone', batch)
-        for (const r of (data ?? []) as { phone: string | null }[]) {
-          if (r.phone) outPhones.add(r.phone)
+      ...chunk(phones, IN_CHUNK).map(async (batch) => {
+        const { data } = await supabase.from(table).select(cols).is('deleted_at', null).in('phone', batch)
+        for (const r of (data ?? []) as ExistingRow[]) {
+          if (r.phone) byPhone.set(String(r.phone), toRef(table, r))
         }
       }),
     ]),
   )
-  return { emails: outEmails, phones: outPhones }
+
+  const out = new Map<number, ExistingRef>()
+  for (const r of rows) {
+    const match = (r.email && byEmail.get(r.email)) || byPhone.get(r.phone.replace(/\D/g, ''))
+    if (match) out.set(r.line, match)
+  }
+  return out
+}
+
+/**
+ * 병합(합치기) 시 기존 레코드의 빈 필드를 업로드 값으로 보강하는 부분 업데이트를 만든다.
+ * 비파괴 원칙: 기존 값이 있는 필드는 건드리지 않는다. 보강할 게 없으면 null.
+ */
+export function buildEnrichment(
+  existing: ExistingRef,
+  row: ParsedRow,
+): Record<string, unknown> | null {
+  const patch: Record<string, unknown> = {}
+  const prof = { ...existing.profile }
+  let profChanged = false
+  if (!existing.email && row.email) patch.email = row.email
+  if (!existing.phone && row.phone) patch.phone = row.phone.replace(/\D/g, '')
+  if (!existing.affiliation && row.affiliation) patch.affiliation = row.affiliation
+  if (!prof.department && row.department) {
+    prof.department = row.department
+    profChanged = true
+  }
+  if (!prof.position && row.position) {
+    prof.position = row.position
+    profChanged = true
+  }
+  if (profChanged) patch.profile = prof
+  return Object.keys(patch).length ? patch : null
 }
 
 /** 파싱 행 + 선택 구분 라벨 → 통일 스키마 페이로드와 저장 대상 테이블. */
