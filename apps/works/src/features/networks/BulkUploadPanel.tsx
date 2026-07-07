@@ -1,4 +1,4 @@
-import { Badge, Banner, Button, cn, InlineSelect, useToast } from '@ynarcher/ui'
+import { Badge, Banner, Button, cn, InlineSelect, Modal, useToast } from '@ynarcher/ui'
 import { useQueryClient } from '@tanstack/react-query'
 import { useState, type DragEvent } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -49,6 +49,8 @@ export function BulkUploadPanel() {
   const [rows, setRows] = useState<ReviewRow[]>([])
   const [selected, setSelected] = useState<number[]>([])
   const [revivedLines, setRevivedLines] = useState<number[]>([])
+  // 복구 확인 모달 대상 행(열림 = 값 존재).
+  const [reviveConfirm, setReviveConfirm] = useState<number | null>(null)
   const [fileName, setFileName] = useState('')
   const [fileHash, setFileHash] = useState('')
   const [priorUpload, setPriorUpload] = useState<{ filename: string | null; created_at: string } | null>(null)
@@ -123,11 +125,12 @@ export function BulkUploadPanel() {
       }),
     )
 
-  // 복구하기: 즉시 활성화하지 않고 '복구 예정'으로만 표시한다. 이후 결정(합치기/미업로드)을
-  // 고르게 하며, 실제 재활성화는 최종 업로드 시 합치기로 처리된 경우에만 일어난다.
-  const onRevive = (line: number) => {
+  // 복구하기: 확인 모달에서 '네'를 눌러야 '복구 예정'으로 바뀐다(즉시 활성화하지 않음).
+  // 이후 다른 중복처럼 결정(합치기/미업로드)을 고르게 하며, 실제 재활성화는 최종 업로드 시 합치기일 때만 일어난다.
+  const applyRevive = (line: number) => {
     setRevivedLines((prev) => (prev.includes(line) ? prev : [...prev, line]))
     setRows((prev) => prev.map((r) => (r.line === line ? { ...r, decision: 'merge' } : r)))
+    setReviveConfirm(null)
   }
   const applyBulkCategory = (label: string) =>
     setRows((prev) => prev.map((r) => (selected.includes(r.line) ? { ...r, categoryLabel: label } : r)))
@@ -339,8 +342,25 @@ export function BulkUploadPanel() {
             onSelectionChange={setSelected}
             onCategory={setCategory}
             onDecision={setDecision}
-            onRevive={(line) => void onRevive(line)}
+            onRevive={(line) => setReviveConfirm(line)}
           />
+
+          <Modal
+            open={reviveConfirm !== null}
+            onClose={() => setReviveConfirm(null)}
+            title="복구 확인"
+            size="sm"
+            footer={
+              <>
+                <Button variant="secondary" onClick={() => setReviveConfirm(null)}>아니오</Button>
+                <Button onClick={() => reviveConfirm !== null && applyRevive(reviveConfirm)}>네, 복구</Button>
+              </>
+            }
+          >
+            <p className="text-body text-gray-700">
+              비활성화된 데이터입니다. 정말 복구하시겠습니까?
+            </p>
+          </Modal>
         </>
       )}
     </div>

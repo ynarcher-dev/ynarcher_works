@@ -1,4 +1,4 @@
-import { Button, cn, DataTable, InlineSelect, type Column } from '@ynarcher/ui'
+import { cn, DataTable, InlineButton, InlineSelect, type Column } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import type { ExistingRef, ParsedRow } from '@/features/networks/bulkUpload'
 
@@ -71,22 +71,20 @@ function Seg({
 }
 
 /**
- * 중복 매칭 셀: 이격된 뱃지로 나눈다. 최소폭으로 행마다 시작점을 정렬한다.
- * - 활성 매칭: 작성자 · 구분 · 중복(앰버)
- * - 비활성 매칭: 비활성화한 사람 · 구분 · 사유 · 중복(레드)
+ * 중복 매칭 셀. 최소폭으로 행마다 시작점을 정렬한다.
+ * - 비활성(미복구): 비활성화한 사람 · 사유만(둘 다 레드). 구분·중복은 숨긴다.
+ * - 활성 매칭 or 복구 확정: 작성자 · 구분 · 중복(앰버).
  */
-function DupCell({ row, match }: { row: ReviewRow; match: ExistingRef }) {
-  const dups = overlapLabels(row, match).join(', ')
-  if (match.deleted) {
+function DupCell({ row, match, revived }: { row: ReviewRow; match: ExistingRef; revived: boolean }) {
+  if (match.deleted && !revived) {
     return (
       <div className="inline-flex items-center gap-2.5 whitespace-nowrap text-[11px] leading-snug">
-        <Seg label="비활성" value={match.deactivatedBy ?? '미상'} widthCls="min-w-[6rem]" />
-        <Seg label="구분" value={match.category} widthCls="min-w-[6.5rem]" />
-        <Seg label="사유" value={match.deactivateReason ?? '-'} />
-        <Seg label="중복" tone="danger" value={dups} />
+        <Seg label="비활성" tone="danger" value={match.deactivatedBy ?? '미상'} widthCls="min-w-[6rem]" />
+        <Seg label="사유" tone="danger" value={match.deactivateReason ?? '-'} />
       </div>
     )
   }
+  const dups = overlapLabels(row, match).join(', ')
   return (
     <div className="inline-flex items-center gap-2.5 whitespace-nowrap text-[11px] leading-snug">
       <Seg label="작성자" value={match.contributor ?? '미상'} widthCls="min-w-[6rem]" />
@@ -126,16 +124,19 @@ export function BulkReviewTable({
   onDecision,
   onRevive,
 }: Props) {
-  const cellText = 'text-gray-600'
   // 모든 열의 좌우 패딩을 px-2로 통일해 열 간 여백이 들쑥날쑥하지 않게 한다(중복 칸은 폭만 w-72로 넓힘).
   const pad = 'px-2'
+  // 비활성(미복구) 상태: 복구하기를 아직 누르지 않은 비활성 매칭 행.
+  const isDeactivated = (r: ReviewRow) => Boolean(r.match?.deleted) && !revivedLines.includes(r.line)
+  // 비활성 행은 원본 데이터 텍스트를 옅게 처리한다.
+  const dim = (r: ReviewRow, normal: string) => (isDeactivated(r) ? 'text-gray-300' : normal)
   const columns: Column<ReviewRow>[] = [
-    { key: 'name', header: '이름', className: pad, render: (r) => <span className="font-medium text-gray-800">{r.name || '—'}</span> },
-    { key: 'affiliation', header: '소속', className: pad, render: (r) => <span className={cellText}>{r.affiliation || '-'}</span> },
-    { key: 'department', header: '부서', className: pad, render: (r) => <span className={cellText}>{r.department || '-'}</span> },
-    { key: 'position', header: '직책', className: pad, render: (r) => <span className={cellText}>{r.position || '-'}</span> },
-    { key: 'email', header: '이메일', className: pad, render: (r) => <span className={cellText}>{r.email || '-'}</span> },
-    { key: 'phone', header: '연락처', className: pad, render: (r) => <span className={cellText}>{r.phone || '-'}</span> },
+    { key: 'name', header: '이름', className: pad, render: (r) => <span className={cn('font-medium', dim(r, 'text-gray-800'))}>{r.name || '—'}</span> },
+    { key: 'affiliation', header: '소속', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.affiliation || '-'}</span> },
+    { key: 'department', header: '부서', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.department || '-'}</span> },
+    { key: 'position', header: '직책', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.position || '-'}</span> },
+    { key: 'email', header: '이메일', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.email || '-'}</span> },
+    { key: 'phone', header: '연락처', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.phone || '-'}</span> },
     {
       key: 'category',
       header: '구분',
@@ -143,7 +144,7 @@ export function BulkReviewTable({
       render: (r) => (
         <InlineSelect
           value={r.categoryLabel}
-          disabled={r.decision === 'skip' || Boolean(r.match?.deleted)}
+          disabled={r.decision === 'skip' || isDeactivated(r)}
           onChange={(e) => onCategory(r.line, e.target.value)}
         >
           {categoryOptions.map((o) => (
@@ -162,8 +163,13 @@ export function BulkReviewTable({
       ),
       // 왼쪽은 좁혀(pl-1) 구분 열에 붙이고, 오른쪽은 키워(pr-8) 주황 '중복' 뱃지가 결정 열에 붙지 않게 한다.
       className: 'w-72 pl-1 pr-8',
-      // 중복이 있는 행만 테두리 박스로 강조. 작성자·구분·겹치는 항목을 한 줄로 보인다.
-      render: (r) => (r.match ? <DupCell row={r} match={r.match} /> : <span className="text-gray-300">중복 없음</span>),
+      // 중복이 있는 행만 표시. 비활성 미복구는 비활성/사유만, 그 외는 작성자·구분·중복.
+      render: (r) =>
+        r.match ? (
+          <DupCell row={r} match={r.match} revived={revivedLines.includes(r.line)} />
+        ) : (
+          <span className="text-gray-300">중복 없음</span>
+        ),
     },
     {
       key: 'decision',
@@ -174,9 +180,9 @@ export function BulkReviewTable({
       // 비활성 매칭은 먼저 '복구하기'로 의사를 밝힌 뒤에야 결정(합치기/미업로드) 드롭다운이 열린다.
       render: (r) =>
         r.match?.deleted && !revivedLines.includes(r.line) ? (
-          <Button size="sm" disabled={busy} onClick={() => onRevive(r.line)}>
+          <InlineButton disabled={busy} onClick={() => onRevive(r.line)}>
             복구하기
-          </Button>
+          </InlineButton>
         ) : (
           <InlineSelect
             value={r.decision}
@@ -198,8 +204,8 @@ export function BulkReviewTable({
       rowKey={(r) => String(r.line)}
       numbered={false}
       standardColumns={false}
-      // 비활성 중복 행은 배경을 회색으로 눌러 표시한다.
-      rowClassName={(r) => (r.match?.deleted ? 'bg-gray-100' : undefined)}
+      // 비활성(미복구) 중복 행은 배경을 회색으로 눌러 표시한다(복구 확정 시 일반 행으로 복귀).
+      rowClassName={(r) => (isDeactivated(r) ? 'bg-gray-100' : undefined)}
       selectable
       selectedKeys={selected.map(String)}
       onSelectionChange={(keys) => onSelectionChange(keys.map(Number))}

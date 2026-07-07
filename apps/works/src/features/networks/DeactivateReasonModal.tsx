@@ -1,7 +1,7 @@
 import { Button, Input, Modal } from '@ynarcher/ui'
 import { useState } from 'react'
 
-const MAX = 20
+const MAX = 30
 
 interface Props {
   open: boolean
@@ -39,7 +39,7 @@ export function DeactivateReasonModal({ open, name, busy, onCancel, onConfirm }:
     >
       <div className="space-y-2">
         <p className="text-caption text-gray-500">
-          {name ? <b>{name}</b> : '이 항목'}을(를) 비활성화합니다. 사유를 20자 이내로 입력하세요.
+          {name ? <b>{name}</b> : '이 항목'}을(를) 비활성화합니다. 사유를 30자 이내로 입력하세요.
         </p>
         <Input
           autoFocus
