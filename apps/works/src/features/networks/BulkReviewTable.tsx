@@ -1,4 +1,5 @@
 import { Badge, Button, cn, DataTable, InlineSelect, type Column } from '@ynarcher/ui'
+import type { ReactNode } from 'react'
 import type { ExistingRef, ParsedRow } from '@/features/networks/bulkUpload'
 
 export type Decision = 'new' | 'merge' | 'skip'
@@ -36,25 +37,36 @@ function overlapLabels(row: ReviewRow, match: ExistingRef): string[] {
   return out
 }
 
-/** 중복 매칭 셀: 「작성자 · 구분 · 겹치는 항목」을 한 줄로 표시한다. */
+/** 중복 셀의 한 덩이(라벨 + 값). tone으로 경각심 단계를 표현한다. */
+function Seg({ label, value, tone = 'plain' }: { label: string; value: ReactNode; tone?: 'plain' | 'warning' | 'danger' }) {
+  const toneCls =
+    tone === 'danger'
+      ? 'bg-danger-subtle text-danger'
+      : tone === 'warning'
+        ? 'bg-warning-subtle text-warning'
+        : 'bg-gray-50 text-gray-600'
+  return (
+    <span className={cn('px-2 py-0.5', toneCls)}>
+      <span className="opacity-60">{label} </span>
+      <span className="font-semibold">{value}</span>
+    </span>
+  )
+}
+
+/** 중복 매칭 셀: 「작성자 · 구분 · 중복」 세 덩이로 나누고, 중복 덩이는 경각심 톤(활성=앰버/비활성=레드). */
 function DupCell({ row, match }: { row: ReviewRow; match: ExistingRef }) {
   const dups = overlapLabels(row, match)
+  const alarm = match.deleted ? 'danger' : 'warning'
   return (
     <div
       className={cn(
-        'inline-block whitespace-nowrap rounded-radius-md border px-2 py-0.5 text-[11px] leading-snug',
-        match.deleted ? 'border-warning-border bg-warning-subtle' : 'border-info-border bg-info-subtle',
+        'inline-flex items-stretch divide-x divide-gray-200 overflow-hidden whitespace-nowrap rounded-radius-md border text-[11px] leading-snug',
+        match.deleted ? 'border-danger-border' : 'border-warning-border',
       )}
     >
-      <span className="text-gray-400">작성자 </span>
-      <span className="font-medium text-gray-700">{match.contributor ?? '미상'}</span>
-      <span className="text-gray-300"> / </span>
-      <span className="text-gray-400">구분 </span>
-      <span className="font-medium text-gray-700">{match.category}</span>
-      <span className="text-gray-300"> / </span>
-      <span className="text-gray-400">중복 </span>
-      <span className="font-medium text-gray-800">{dups.join(', ')}</span>
-      {match.deleted && <span className="ml-1 font-medium text-warning">· 비활성</span>}
+      <Seg label="작성자" value={match.contributor ?? '미상'} />
+      <Seg label="구분" value={match.category} />
+      <Seg label="중복" tone={alarm} value={match.deleted ? `비활성 · ${dups.join(', ')}` : dups.join(', ')} />
     </div>
   )
 }
