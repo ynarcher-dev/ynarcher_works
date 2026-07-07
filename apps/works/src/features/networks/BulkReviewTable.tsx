@@ -21,39 +21,40 @@ function decisionOptions(hasActiveMatch: boolean): { value: Decision; label: str
   return hasActiveMatch ? [{ value: 'merge', label: '합치기' }, ...base] : base
 }
 
-/** 중복 매칭 셀: 작성자·구분 머리글 + 기존 레코드의 6개 필드(이름/소속/부서/직책/이메일/연락처). */
-function DupCell({ match }: { match: ExistingRef }) {
-  const str = (v: unknown) => (v == null || v === '' ? '-' : String(v))
-  const fields: [string, string][] = [
-    ['이름', str(match.name)],
-    ['소속', str(match.affiliation)],
-    ['부서', str(match.profile.department)],
-    ['직책', str(match.profile.position)],
-    ['이메일', str(match.email)],
-    ['연락처', str(match.phone)],
-  ]
+/** 업로드 행과 기존 레코드가 실제로 겹치는 필드 라벨만 추린다(이름/소속/부서/직책/이메일/연락처). */
+function overlapLabels(row: ReviewRow, match: ExistingRef): string[] {
+  const norm = (v: unknown) => String(v ?? '').trim().toLowerCase()
+  const digits = (v: unknown) => String(v ?? '').replace(/\D/g, '')
+  const eq = (a: string, b: string) => a !== '' && a === b
+  const out: string[] = []
+  if (eq(norm(row.name), norm(match.name))) out.push('이름')
+  if (eq(norm(row.affiliation), norm(match.affiliation))) out.push('소속')
+  if (eq(norm(row.department), norm(match.profile.department))) out.push('부서')
+  if (eq(norm(row.position), norm(match.profile.position))) out.push('직책')
+  if (eq(norm(row.email), norm(match.email))) out.push('이메일')
+  if (eq(digits(row.phone), digits(match.phone))) out.push('연락처')
+  return out
+}
+
+/** 중복 매칭 셀: 「작성자 · 구분 · 겹치는 항목」을 한 줄로 표시한다. */
+function DupCell({ row, match }: { row: ReviewRow; match: ExistingRef }) {
+  const dups = overlapLabels(row, match)
   return (
     <div
       className={cn(
-        'rounded-radius-md border px-2 py-1.5 text-caption leading-tight',
+        'rounded-radius-md border px-2 py-1 text-caption leading-snug',
         match.deleted ? 'border-warning-border bg-warning-subtle' : 'border-info-border bg-info-subtle',
       )}
     >
-      <div className="mb-1 flex items-center justify-between gap-2 border-b border-gray-200/70 pb-1">
-        <span className="font-medium text-gray-700">작성자 {match.contributor ?? '미상'}</span>
-        <span className="inline-flex shrink-0 items-center gap-1">
-          {match.deleted && <span className="text-warning">비활성</span>}
-          <Badge tone="neutral" size="sm">{match.category}</Badge>
-        </span>
-      </div>
-      <dl className="grid grid-cols-2 gap-x-3 gap-y-0.5">
-        {fields.map(([k, v]) => (
-          <div key={k} className="flex min-w-0 gap-1">
-            <dt className="shrink-0 text-gray-400">{k}</dt>
-            <dd className="truncate text-gray-700">{v}</dd>
-          </div>
-        ))}
-      </dl>
+      <span className="text-gray-400">작성자 </span>
+      <span className="font-medium text-gray-700">{match.contributor ?? '미상'}</span>
+      <span className="text-gray-300"> / </span>
+      <span className="text-gray-400">구분 </span>
+      <span className="font-medium text-gray-700">{match.category}</span>
+      <span className="text-gray-300"> / </span>
+      <span className="text-gray-400">중복 </span>
+      <span className="font-medium text-gray-800">{dups.join(', ')}</span>
+      {match.deleted && <span className="ml-1 font-medium text-warning">· 비활성</span>}
     </div>
   )
 }
@@ -116,10 +117,10 @@ export function BulkReviewTable({
     },
     {
       key: 'dup',
-      header: '중복',
-      className: 'w-80 px-2',
-      // 중복이 있는 행만 테두리 박스로 강조. 작성자·구분을 머리에 두고 기존 레코드의 6개 필드를 나열한다.
-      render: (r) => (r.match ? <DupCell match={r.match} /> : <span className="text-gray-300">중복 없음</span>),
+      header: '중복 여부',
+      className: 'w-72 px-2',
+      // 중복이 있는 행만 테두리 박스로 강조. 작성자·구분·겹치는 항목을 한 줄로 보인다.
+      render: (r) => (r.match ? <DupCell row={r} match={r.match} /> : <span className="text-gray-300">중복 없음</span>),
     },
     {
       key: 'decision',
