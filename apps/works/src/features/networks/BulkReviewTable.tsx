@@ -138,7 +138,8 @@ export function BulkReviewTable({
     {
       key: 'dup',
       header: '중복 여부',
-      className: 'w-72 px-2',
+      // 왼쪽은 좁혀(pl-1) 구분 열에 붙이고, 오른쪽은 키워(pr-8) 주황 '중복' 뱃지가 결정 열에 붙지 않게 한다.
+      className: 'w-72 pl-1 pr-8',
       // 중복이 있는 행만 테두리 박스로 강조. 작성자·구분·겹치는 항목을 한 줄로 보인다.
       render: (r) => (r.match ? <DupCell row={r} match={r.match} /> : <span className="text-gray-300">중복 없음</span>),
     },
