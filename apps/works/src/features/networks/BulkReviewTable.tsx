@@ -37,33 +37,28 @@ function overlapLabels(row: ReviewRow, match: ExistingRef): string[] {
   return out
 }
 
-/** 중복 셀의 한 덩이(라벨 + 값). tone으로 경각심 단계를 표현한다. */
+/** 중복 셀의 한 덩이(독립 pill 뱃지). tone으로 경각심 단계를 표현한다. */
 function Seg({ label, value, tone = 'plain' }: { label: string; value: ReactNode; tone?: 'plain' | 'warning' | 'danger' }) {
   const toneCls =
     tone === 'danger'
-      ? 'bg-danger-subtle text-danger'
+      ? 'border-danger-border bg-danger-subtle text-danger'
       : tone === 'warning'
-        ? 'bg-warning-subtle text-warning'
-        : 'bg-gray-50 text-gray-600'
+        ? 'border-warning-border bg-warning-subtle text-warning'
+        : 'border-gray-200 bg-gray-50 text-gray-600'
   return (
-    <span className={cn('px-2 py-0.5', toneCls)}>
+    <span className={cn('rounded-radius-sm border px-2 py-0.5', toneCls)}>
       <span className="opacity-60">{label} </span>
       <span className="font-semibold">{value}</span>
     </span>
   )
 }
 
-/** 중복 매칭 셀: 「작성자 · 구분 · 중복」 세 덩이로 나누고, 중복 덩이는 경각심 톤(활성=앰버/비활성=레드). */
+/** 중복 매칭 셀: 「작성자 · 구분 · 중복」을 이격된 세 뱃지로 나누고, 중복은 경각심 톤(활성=앰버/비활성=레드). */
 function DupCell({ row, match }: { row: ReviewRow; match: ExistingRef }) {
   const dups = overlapLabels(row, match)
   const alarm = match.deleted ? 'danger' : 'warning'
   return (
-    <div
-      className={cn(
-        'inline-flex items-stretch divide-x divide-gray-200 overflow-hidden whitespace-nowrap rounded-radius-md border text-[11px] leading-snug',
-        match.deleted ? 'border-danger-border' : 'border-warning-border',
-      )}
-    >
+    <div className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11px] leading-snug">
       <Seg label="작성자" value={match.contributor ?? '미상'} />
       <Seg label="구분" value={match.category} />
       <Seg label="중복" tone={alarm} value={match.deleted ? `비활성 · ${dups.join(', ')}` : dups.join(', ')} />
