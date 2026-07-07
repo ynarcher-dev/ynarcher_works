@@ -144,6 +144,10 @@ export interface ExistingRef {
   contributor: string | null
   /** 비활성(soft-delete) 상태 여부. true면 재업로드 시 '복구' 대상. */
   deleted: boolean
+  /** 비활성화한 사람 이름(가장 최근 deactivated 기여). 비활성 매칭에서만 채워진다. */
+  deactivatedBy: string | null
+  /** 비활성화 사유(가장 최근 deactivated 기여의 note). */
+  deactivateReason: string | null
 }
 
 interface ExistingRow {
@@ -171,6 +175,8 @@ function toRef(table: EntityKey, r: ExistingRow): ExistingRef {
     category: (profile.category as string) || ENTITIES[table].label,
     contributor: null,
     deleted: Boolean(r.deleted_at),
+    deactivatedBy: null,
+    deactivateReason: null,
   }
 }
 
@@ -266,22 +272,37 @@ export async function findExistingMatches(
     if (best) out.set(r.line, best.ref)
   }
 
-  // 선행 작성자(최초 기여자)명을 기여 로그에서 일괄 조회해 매칭에 채운다.
+  // 기여 로그에서 선행 작성자(최초 기여자)와, 비활성 매칭의 비활성화자·사유(가장 최근 deactivated)를 채운다.
   const refs = [...new Set(out.values())]
   const ids = refs.map((r) => r.id)
   if (ids.length) {
     const firstBy = new Map<string, string>()
+    const deactBy = new Map<string, { user: string | null; note: string | null }>()
     for (const batch of chunk(ids, IN_CHUNK)) {
       const { data } = await supabase
         .from('entity_contributions')
-        .select('entity_id, user_name, created_at')
+        .select('entity_id, user_name, action, note, created_at')
         .in('entity_id', batch)
         .order('created_at', { ascending: true })
-      for (const c of (data ?? []) as { entity_id: string; user_name: string | null }[]) {
+      for (const c of (data ?? []) as {
+        entity_id: string
+        user_name: string | null
+        action: string
+        note: string | null
+      }[]) {
         if (c.user_name && !firstBy.has(c.entity_id)) firstBy.set(c.entity_id, c.user_name)
+        // 오름차순 조회라 마지막으로 덮인 값이 가장 최근 deactivated가 된다.
+        if (c.action === 'deactivated') deactBy.set(c.entity_id, { user: c.user_name, note: c.note })
       }
     }
-    for (const ref of refs) ref.contributor = firstBy.get(ref.id) ?? null
+    for (const ref of refs) {
+      ref.contributor = firstBy.get(ref.id) ?? null
+      const d = deactBy.get(ref.id)
+      if (d) {
+        ref.deactivatedBy = d.user
+        ref.deactivateReason = d.note
+      }
+    }
   }
   return out
 }

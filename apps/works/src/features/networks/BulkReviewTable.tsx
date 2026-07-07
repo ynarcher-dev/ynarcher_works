@@ -71,17 +71,27 @@ function Seg({
 }
 
 /**
- * 중복 매칭 셀: 「작성자 · 구분 · 중복」을 이격된 세 뱃지로 나눈다.
- * 작성자·구분에 최소폭을 줘 행마다 중복 뱃지 시작점이 정렬되게 하고, 중복은 경각심 톤(활성=앰버/비활성=레드).
+ * 중복 매칭 셀: 이격된 뱃지로 나눈다. 최소폭으로 행마다 시작점을 정렬한다.
+ * - 활성 매칭: 작성자 · 구분 · 중복(앰버)
+ * - 비활성 매칭: 비활성화한 사람 · 구분 · 사유 · 중복(레드)
  */
 function DupCell({ row, match }: { row: ReviewRow; match: ExistingRef }) {
-  const dups = overlapLabels(row, match)
-  const alarm = match.deleted ? 'danger' : 'warning'
+  const dups = overlapLabels(row, match).join(', ')
+  if (match.deleted) {
+    return (
+      <div className="inline-flex items-center gap-2.5 whitespace-nowrap text-[11px] leading-snug">
+        <Seg label="비활성" value={match.deactivatedBy ?? '미상'} widthCls="min-w-[6rem]" />
+        <Seg label="구분" value={match.category} widthCls="min-w-[6.5rem]" />
+        <Seg label="사유" value={match.deactivateReason ?? '-'} />
+        <Seg label="중복" tone="danger" value={dups} />
+      </div>
+    )
+  }
   return (
     <div className="inline-flex items-center gap-2.5 whitespace-nowrap text-[11px] leading-snug">
       <Seg label="작성자" value={match.contributor ?? '미상'} widthCls="min-w-[6rem]" />
       <Seg label="구분" value={match.category} widthCls="min-w-[6.5rem]" />
-      <Seg label="중복" tone={alarm} value={match.deleted ? `비활성 · ${dups.join(', ')}` : dups.join(', ')} />
+      <Seg label="중복" tone="warning" value={dups} />
     </div>
   )
 }

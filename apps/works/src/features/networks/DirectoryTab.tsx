@@ -2,7 +2,9 @@ import { Button, InlineSelect, useToast } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { EntityFormModal } from '@/features/networks/EntityFormModal'
+import { DeactivateReasonModal } from '@/features/networks/DeactivateReasonModal'
 import {
+  recordContribution,
   useEntityPage,
   useReassignCategory,
   useUpdateEntity,
@@ -47,6 +49,9 @@ export function DirectoryTab({ config, keyword, creating, setCreating }: Directo
   const [selected, setSelected] = useState<string[]>([])
   const [bulkCat, setBulkCat] = useState('')
   const [bulkBusy, setBulkBusy] = useState(false)
+  // 비활성화 사유 입력 모달 대상(열림 = 값 존재).
+  const [deactivateTarget, setDeactivateTarget] = useState<MasterRow | null>(null)
+  const [deactivateBusy, setDeactivateBusy] = useState(false)
   // 검색어·엔티티 전환 시 첫 페이지로 되돌리고 선택을 비운다(빈 페이지·유령 선택 방지).
   useEffect(() => {
     setPage(0)
@@ -137,15 +142,30 @@ export function DirectoryTab({ config, keyword, creating, setCreating }: Directo
       }
     : undefined
 
-  const deactivate = async (row: MasterRow) => {
+  // 비활성화 사유 확정 → 기여 로그(사유·행위자)를 먼저 남기고 soft-delete한다.
+  // 기여를 먼저 기록해 파괴적 가드(기여자 검사)를 통과시키고, 사유·비활성화자를 함께 보존한다.
+  const confirmDeactivate = async (reason: string) => {
+    if (!deactivateTarget) return
+    const target = deactivateTarget
+    setDeactivateBusy(true)
     try {
+      await recordContribution({
+        table: config.table,
+        id: target.id,
+        action: 'deactivated',
+        source: 'manual',
+        note: reason,
+      })
       await update.mutateAsync({
-        id: row.id,
+        id: target.id,
         values: { deleted_at: new Date().toISOString() },
       })
       toast.show(`${config.label}을(를) 비활성화했습니다.`, 'success')
+      setDeactivateTarget(null)
     } catch {
       toast.show('비활성화에 실패했습니다. 권한을 확인하세요.', 'danger')
+    } finally {
+      setDeactivateBusy(false)
     }
   }
 
@@ -184,7 +204,8 @@ export function DirectoryTab({ config, keyword, creating, setCreating }: Directo
             ? (r) => navigate(`/networks/${config.key}/${r.id}`)
             : undefined
         }
-        onDeactivate={deactivate}
+        onDeactivate={(row) => setDeactivateTarget(row)}
+        deactivateWithReason
         categorySelect={categorySelect}
         selectedKeys={isOthers ? selected : undefined}
         onSelectionChange={isOthers ? setSelected : undefined}
@@ -204,6 +225,16 @@ export function DirectoryTab({ config, keyword, creating, setCreating }: Directo
           open={Boolean(creating)}
           onClose={() => setCreating(false)}
           initial={null}
+        />
+      )}
+
+      {deactivateTarget && (
+        <DeactivateReasonModal
+          open
+          name={deactivateTarget.name}
+          busy={deactivateBusy}
+          onCancel={() => setDeactivateTarget(null)}
+          onConfirm={(reason) => void confirmDeactivate(reason)}
         />
       )}
     </div>

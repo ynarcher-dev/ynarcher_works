@@ -28,6 +28,11 @@ export interface DataTableMeta<T> {
   active?: (row: T) => boolean
   /** 비활성화(소프트 삭제) 실행 핸들러. 미지정 시 버튼은 비활성 상태로 노출된다. */
   onDeactivate?: (row: T) => void
+  /**
+   * true면 비활성화 버튼이 내장 confirm 없이 곧바로 `onDeactivate`를 호출한다.
+   * 사유 입력 모달 등 호출 측이 별도 확인 UI를 소유할 때 사용한다.
+   */
+  deactivateWithReason?: boolean
   /** 복사 버튼 텍스트 생성기. 지정 시 관리 컬럼에 복사 버튼이 노출된다. */
   copyText?: (row: T) => string
 }
@@ -360,7 +365,10 @@ export function DataTable<T>({
                                   title="비활성화(소프트 삭제)"
                                   disabled={!meta?.onDeactivate}
                                   onClick={() => {
-                                    if (
+                                    // 사유 모달을 쓰는 경우 내장 confirm 없이 핸들러로 위임한다.
+                                    if (meta?.deactivateWithReason) {
+                                      meta?.onDeactivate?.(row)
+                                    } else if (
                                       typeof window !== 'undefined' &&
                                       window.confirm('이 항목을 비활성화하시겠습니까?')
                                     ) {

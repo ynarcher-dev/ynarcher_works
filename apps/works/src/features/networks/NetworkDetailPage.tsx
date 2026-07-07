@@ -64,6 +64,7 @@ const CONTRIBUTION_ACTION_LABEL: Record<Contribution['action'], string> = {
   merged: '병합',
   enriched: '보강',
   edited: '수정',
+  deactivated: '비활성화',
 }
 
 /** 기여 로그에서 중복 없는 기여자명 목록(최초 기여순). */

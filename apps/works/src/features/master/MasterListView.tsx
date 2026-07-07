@@ -52,6 +52,8 @@ interface MasterListViewProps {
   onRowClick?: (row: MasterRow) => void
   /** 비활성화(소프트 삭제) 핸들러. 지정 시 관리 컬럼의 비활성화 버튼이 활성화된다. */
   onDeactivate?: (row: MasterRow) => void
+  /** true면 비활성화 버튼이 내장 confirm 없이 핸들러를 호출한다(사유 입력 모달 등 사용 시). */
+  deactivateWithReason?: boolean
   /** 관리(비활성화) 컬럼 노출 여부. HUB(조회 센터)는 false, NETWORKS(원장)는 true. 기본 true. */
   manageable?: boolean
   /**
@@ -90,6 +92,7 @@ export function MasterListView({
   onEdit,
   onRowClick,
   onDeactivate,
+  deactivateWithReason,
   manageable = true,
   categorySelect,
   selectedKeys,
@@ -212,6 +215,7 @@ export function MasterListView({
         // 복사 버튼: 이름/소속/직책·직급/이메일/연락처를 텍스트로 복사.
         copyText: buildCopyText,
         onDeactivate,
+        deactivateWithReason,
       }}
       emptyText={`등록된 ${label} 정보가 없습니다.`}
     />
