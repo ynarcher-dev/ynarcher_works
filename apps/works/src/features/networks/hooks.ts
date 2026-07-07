@@ -162,6 +162,15 @@ export function useMoveEntity(from: EntityKey, to: EntityKey) {
       if (error) throw error
       const newId = (data as { id: string }).id
 
+      // 이동은 소스도 soft-delete한다. 파괴적 작업 가드를 통과하도록 이동자를 소스 기여자로
+      // 먼저 기록한다(순수 비활성화와 달리 이동은 데이터를 옮기는 것이라 허용).
+      await recordContribution({
+        table: from,
+        id,
+        action: 'edited',
+        source: 'manual',
+        note: '구분 변경 이관',
+      })
       const { error: delError } = await supabase
         .from(from)
         .update({ deleted_at: new Date().toISOString() })
