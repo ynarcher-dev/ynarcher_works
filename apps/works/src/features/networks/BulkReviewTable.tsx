@@ -72,8 +72,8 @@ function DupCell({ row, match }: { row: ReviewRow; match: ExistingRef }) {
   const alarm = match.deleted ? 'danger' : 'warning'
   return (
     <div className="inline-flex items-center gap-2.5 whitespace-nowrap text-[11px] leading-snug">
-      <Seg label="작성자" value={match.contributor ?? '미상'} widthCls="min-w-[6.5rem]" />
-      <Seg label="구분" value={match.category} widthCls="min-w-[7rem]" />
+      <Seg label="작성자" value={match.contributor ?? '미상'} widthCls="min-w-[6rem]" />
+      <Seg label="구분" value={match.category} widthCls="min-w-[6.5rem]" />
       <Seg label="중복" tone={alarm} value={match.deleted ? `비활성 · ${dups.join(', ')}` : dups.join(', ')} />
     </div>
   )
