@@ -138,9 +138,9 @@ export function BulkReviewTable({
     {
       key: 'dup',
       header: (
-        <span className="inline-flex flex-col leading-tight">
-          <span>중복 여부</span>
-          <span className="font-normal normal-case text-gray-400">이름·전화·이메일 중 2개↑ 일치</span>
+        <span className="whitespace-nowrap">
+          중복 여부{' '}
+          <span className="font-normal normal-case text-gray-400">(이름·전화·이메일 중 2개 이상 일치)</span>
         </span>
       ),
       // 왼쪽은 좁혀(pl-1) 구분 열에 붙이고, 오른쪽은 키워(pr-8) 주황 '중복' 뱃지가 결정 열에 붙지 않게 한다.
