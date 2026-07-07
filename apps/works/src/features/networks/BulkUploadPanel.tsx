@@ -173,6 +173,9 @@ export function BulkUploadPanel() {
   const mergeRows = rows.filter((r) => r.decision === 'merge' && r.match && !r.match.deleted && r.name)
   const skipCount = rows.length - newRows.length - mergeRows.length
   const dupCount = rows.filter((r) => r.match).length
+  // 비활성(soft-delete) 매칭 건수 — '복구하기' 대상. 건너뜀 표시에서 분리한다.
+  const deletedCount = rows.filter((r) => r.match?.deleted).length
+  const displaySkip = skipCount - deletedCount
 
   const commit = async () => {
     if (newRows.length === 0 && mergeRows.length === 0) {
@@ -297,7 +300,9 @@ export function BulkUploadPanel() {
               <Badge tone="neutral" size="sm">전체 {rows.length}</Badge>
               <Badge tone="success" size="sm">신규 {newRows.length}</Badge>
               {mergeRows.length > 0 && <Badge tone="info" size="sm">합치기 {mergeRows.length}</Badge>}
-              {skipCount > 0 && <Badge tone="neutral" size="sm">건너뜀 {skipCount}</Badge>}
+              {deletedCount > 0 && <Badge tone="warning" size="sm">비활성 {deletedCount}</Badge>}
+              {revivedLines.length > 0 && <Badge tone="success" size="sm">복구됨 {revivedLines.length}</Badge>}
+              {displaySkip > 0 && <Badge tone="neutral" size="sm">건너뜀 {displaySkip}</Badge>}
               {dupCount > 0 && <span className="text-gray-400">중복 {dupCount}</span>}
               {checking && <span className="text-gray-400">중복 검사 중…</span>}
             </div>
