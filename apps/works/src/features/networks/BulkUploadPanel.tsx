@@ -113,12 +113,6 @@ export function BulkUploadPanel() {
     setRows((prev) => prev.map((r) => (r.line === line ? { ...r, categoryLabel: label } : r)))
   const setDecision = (line: number, decision: Decision) =>
     setRows((prev) => prev.map((r) => (r.line === line ? { ...r, decision } : r)))
-  const toggle = (line: number) =>
-    setSelected((prev) => (prev.includes(line) ? prev.filter((l) => l !== line) : [...prev, line]))
-  const toggleAll = () => {
-    const lines = rows.filter((r) => r.name).map((r) => r.line)
-    setSelected((prev) => (prev.length >= lines.length ? [] : lines))
-  }
   const applyBulkDecision = (d: Decision) =>
     setRows((prev) =>
       prev.map((r) => {
@@ -332,7 +326,7 @@ export function BulkUploadPanel() {
                   <option value="">결정 일괄</option>
                   <option value="merge">합치기</option>
                   <option value="new">신규 등록</option>
-                  <option value="skip">건너뛰기</option>
+                  <option value="skip">미업로드</option>
                 </InlineSelect>
               </div>
               <div className="w-32">
@@ -353,8 +347,7 @@ export function BulkUploadPanel() {
             selected={selected}
             revivedLines={revivedLines}
             busy={busy}
-            onToggle={toggle}
-            onToggleAll={toggleAll}
+            onSelectionChange={setSelected}
             onCategory={setCategory}
             onDecision={setDecision}
             onRevive={(line) => void onRevive(line)}
