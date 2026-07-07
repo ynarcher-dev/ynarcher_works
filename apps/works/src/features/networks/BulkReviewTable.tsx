@@ -76,7 +76,8 @@ export function BulkReviewTable({
               className={cn(
                 'border-t border-gray-100',
                 r.match && 'bg-info-subtle',
-                (!r.name || r.decision === 'skip') && 'opacity-50',
+                // 비활성 매칭 행은 '복구하기' 버튼으로 처리 가능하므로 흐리지 않는다.
+                (!r.name || (r.decision === 'skip' && !r.match?.deleted)) && 'opacity-50',
               )}
             >
               <td className="px-3 py-1.5">
