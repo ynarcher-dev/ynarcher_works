@@ -136,7 +136,12 @@ export interface ExistingRef {
   email: string | null
   phone: string | null
   affiliation: string | null
+  expertise: unknown[]
   profile: Record<string, unknown>
+  /** 기존 레코드의 현재 구분 라벨(profile.category 우선, 없으면 테이블 라벨). */
+  category: string
+  /** 선행 작성자(최초 기여자)명. 기여 로그에서 조회. */
+  contributor: string | null
 }
 
 interface ExistingRow {
@@ -145,10 +150,12 @@ interface ExistingRow {
   email: string | null
   phone: string | null
   affiliation: string | null
+  expertise: unknown[] | null
   profile: Record<string, unknown> | null
 }
 
 function toRef(table: EntityKey, r: ExistingRow): ExistingRef {
+  const profile = (r.profile ?? {}) as Record<string, unknown>
   return {
     table,
     id: r.id,
@@ -156,7 +163,10 @@ function toRef(table: EntityKey, r: ExistingRow): ExistingRef {
     email: r.email,
     phone: r.phone,
     affiliation: r.affiliation,
-    profile: (r.profile ?? {}) as Record<string, unknown>,
+    expertise: Array.isArray(r.expertise) ? r.expertise : [],
+    profile,
+    category: (profile.category as string) || ENTITIES[table].label,
+    contributor: null,
   }
 }
 
@@ -171,7 +181,7 @@ export async function findExistingMatches(
   const phones = [...new Set(rows.map((r) => r.phone.replace(/\D/g, '')).filter(Boolean))]
   const byEmail = new Map<string, ExistingRef>()
   const byPhone = new Map<string, ExistingRef>()
-  const cols = 'id,name,email,phone,affiliation,profile'
+  const cols = 'id,name,email,phone,affiliation,expertise,profile'
 
   await Promise.all(
     DIRECTORY_ENTITIES.flatMap((table) => [
@@ -194,6 +204,24 @@ export async function findExistingMatches(
   for (const r of rows) {
     const match = (r.email && byEmail.get(r.email)) || byPhone.get(r.phone.replace(/\D/g, ''))
     if (match) out.set(r.line, match)
+  }
+
+  // 선행 작성자(최초 기여자)명을 기여 로그에서 일괄 조회해 매칭에 채운다.
+  const refs = [...new Set(out.values())]
+  const ids = refs.map((r) => r.id)
+  if (ids.length) {
+    const firstBy = new Map<string, string>()
+    for (const batch of chunk(ids, IN_CHUNK)) {
+      const { data } = await supabase
+        .from('entity_contributions')
+        .select('entity_id, user_name, created_at')
+        .in('entity_id', batch)
+        .order('created_at', { ascending: true })
+      for (const c of (data ?? []) as { entity_id: string; user_name: string | null }[]) {
+        if (c.user_name && !firstBy.has(c.entity_id)) firstBy.set(c.entity_id, c.user_name)
+      }
+    }
+    for (const ref of refs) ref.contributor = firstBy.get(ref.id) ?? null
   }
   return out
 }
@@ -222,6 +250,31 @@ export function buildEnrichment(
   }
   if (profChanged) patch.profile = prof
   return Object.keys(patch).length ? patch : null
+}
+
+/**
+ * 합치기+재분류 시 대상 테이블에 insert할 병합 완성 페이로드.
+ * 기존 레코드 값을 기준으로 업로드 값이 빈 필드를 보강하고, 구분(profile.category)을 대상 라벨로 바꾼다.
+ */
+export function buildReclassifyValues(
+  existing: ExistingRef,
+  row: ParsedRow,
+  targetLabel: string,
+): Record<string, unknown> {
+  const patch = buildEnrichment(existing, row) ?? {}
+  const profile = {
+    ...existing.profile,
+    ...((patch.profile as Record<string, unknown>) ?? {}),
+    category: targetLabel,
+  }
+  return {
+    name: existing.name,
+    email: (patch.email as string) ?? existing.email ?? null,
+    phone: (patch.phone as string) ?? existing.phone ?? null,
+    affiliation: (patch.affiliation as string) ?? existing.affiliation ?? null,
+    expertise: existing.expertise,
+    profile,
+  }
 }
 
 /** 파싱 행 + 선택 구분 라벨 → 통일 스키마 페이로드와 저장 대상 테이블. */

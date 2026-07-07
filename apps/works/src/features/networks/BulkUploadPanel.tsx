@@ -2,14 +2,21 @@ import { Badge, Banner, Button, cn, InlineSelect, useToast } from '@ynarcher/ui'
 import { useQueryClient } from '@tanstack/react-query'
 import { useState, type DragEvent } from 'react'
 import { supabase } from '@/lib/supabase'
-import { CATEGORY_OPTIONS, ENTITIES, type EntityKey } from '@/features/networks/config'
+import {
+  CATEGORY_OPTIONS,
+  ENTITIES,
+  resolveEntityFromCategory,
+  type EntityKey,
+} from '@/features/networks/config'
 import {
   createUploadBatch,
   findPriorBatchByHash,
+  mergeReclassify,
   recordContribution,
 } from '@/features/networks/hooks'
 import {
   buildEnrichment,
+  buildReclassifyValues,
   buildTemplateCsv,
   downloadCsv,
   findExistingMatches,
@@ -17,44 +24,30 @@ import {
   rowToPayload,
   sha256Hex,
   type ExistingRef,
-  type ParsedRow,
 } from '@/features/networks/bulkUpload'
+import { BulkReviewTable, type Decision, type ReviewRow } from '@/features/networks/BulkReviewTable'
 
 const MISC_LABEL = '미분류'
+const CATEGORY_SELECT = CATEGORY_OPTIONS.map((o) => ({ value: o.label, label: o.label }))
 
-type Decision = 'new' | 'merge' | 'skip'
-
-interface ReviewRow extends ParsedRow {
-  /** 편집 가능한 저장 대상 구분 라벨(디폴트: CSV값 또는 미분류). */
-  categoryLabel: string
-  /** 확실중복(이메일·전화 일치)으로 매칭된 기존 레코드. 없으면 신규. */
-  match: ExistingRef | null
-  /** 처리 방식. 중복이면 기본 합치기, 아니면 신규. 이름 없으면 건너뛰기 고정. */
-  decision: Decision
-}
-
-/** CSV 구분값이 유효 카테고리면 그대로, 아니면 미분류로 수렴. */
 function normalizeCategory(raw: string): string {
   return CATEGORY_OPTIONS.find((o) => o.label === raw.trim())?.label ?? MISC_LABEL
 }
 
-function decisionOptions(hasMatch: boolean): { value: Decision; label: string }[] {
-  const base: { value: Decision; label: string }[] = [
-    { value: 'new', label: '신규 등록' },
-    { value: 'skip', label: '건너뛰기' },
-  ]
-  return hasMatch ? [{ value: 'merge', label: '합치기' }, ...base] : base
+/** 중복 매칭 시 구분 재결정의 프리셋: 미분류 매칭이면 CSV 구분, 실카테고리 매칭이면 기존 구분(보수적). */
+function presetCategory(csvCategory: string, match: ExistingRef): string {
+  return match.table === 'others' ? csvCategory : match.category
 }
 
 /**
- * 대용량 업로드(미분류 데이터베이스 하위). 드래그앤드랍 → 리뷰(구분·중복 결정) → 최종 업로드.
- * 구분 미지정은 미분류로, 확실중복(이메일·전화)은 행별 합치기/신규/건너뛰기로 결정한다.
- * 합치기는 기존 레코드의 빈 필드만 보강하고 기여 이력을 남긴다(비파괴·공동 관리).
+ * 대용량 업로드(미분류 데이터베이스 하위). 드래그앤드랍 → 리뷰(구분 재결정·중복·결정) → 업로드.
+ * 합치기+같은구분=보강, 합치기+다른구분=재분류 이관+보강, 신규=새 등록, 건너뛰기=무시.
  */
 export function BulkUploadPanel() {
   const toast = useToast()
   const qc = useQueryClient()
   const [rows, setRows] = useState<ReviewRow[]>([])
+  const [selected, setSelected] = useState<number[]>([])
   const [fileName, setFileName] = useState('')
   const [fileHash, setFileHash] = useState('')
   const [priorUpload, setPriorUpload] = useState<{ filename: string | null; created_at: string } | null>(null)
@@ -70,19 +63,20 @@ export function BulkUploadPanel() {
       return
     }
     setFileName(file.name)
+    setSelected([])
     const hash = await sha256Hex(text)
     setFileHash(hash)
     setPriorUpload(await findPriorBatchByHash(hash))
 
-    const initial: ReviewRow[] = parsed.map((r) => ({
-      ...r,
-      categoryLabel: normalizeCategory(r.category),
-      match: null,
-      decision: r.name ? 'new' : 'skip',
-    }))
-    setRows(initial)
+    setRows(
+      parsed.map((r) => ({
+        ...r,
+        categoryLabel: normalizeCategory(r.category),
+        match: null,
+        decision: r.name ? 'new' : 'skip',
+      })),
+    )
 
-    // 확실중복 매칭 후 해당 행을 기본 '합치기'로 전환한다.
     setChecking(true)
     try {
       const matches = await findExistingMatches(
@@ -91,7 +85,13 @@ export function BulkUploadPanel() {
       setRows((prev) =>
         prev.map((r) => {
           const m = matches.get(r.line)
-          return m ? { ...r, match: m, decision: r.name ? 'merge' : 'skip' } : r
+          if (!m) return r
+          return {
+            ...r,
+            match: m,
+            decision: r.name ? 'merge' : 'skip',
+            categoryLabel: presetCategory(normalizeCategory(r.category), m),
+          }
         }),
       )
     } finally {
@@ -110,8 +110,23 @@ export function BulkUploadPanel() {
     setRows((prev) => prev.map((r) => (r.line === line ? { ...r, categoryLabel: label } : r)))
   const setDecision = (line: number, decision: Decision) =>
     setRows((prev) => prev.map((r) => (r.line === line ? { ...r, decision } : r)))
+  const toggle = (line: number) =>
+    setSelected((prev) => (prev.includes(line) ? prev.filter((l) => l !== line) : [...prev, line]))
+  const toggleAll = () => {
+    const lines = rows.filter((r) => r.name).map((r) => r.line)
+    setSelected((prev) => (prev.length >= lines.length ? [] : lines))
+  }
+  const applyBulkDecision = (d: Decision) =>
+    setRows((prev) =>
+      prev.map((r) =>
+        selected.includes(r.line) && !(d === 'merge' && !r.match) ? { ...r, decision: d } : r,
+      ),
+    )
+  const applyBulkCategory = (label: string) =>
+    setRows((prev) => prev.map((r) => (selected.includes(r.line) ? { ...r, categoryLabel: label } : r)))
   const reset = () => {
     setRows([])
+    setSelected([])
     setFileName('')
     setFileHash('')
     setPriorUpload(null)
@@ -139,7 +154,7 @@ export function BulkUploadPanel() {
       })
       const touched = new Set<EntityKey>()
 
-      // 신규 등록: 구분별로 분산 insert 후 업로드 기여 기록.
+      // 신규 등록.
       const byTable = new Map<EntityKey, Record<string, unknown>[]>()
       for (const r of newRows) {
         const { target, payload } = rowToPayload(r, r.categoryLabel)
@@ -157,23 +172,31 @@ export function BulkUploadPanel() {
         )
       }
 
-      // 합치기: 기존 레코드 빈 필드 보강 + 기여 기록(비파괴).
+      // 합치기: 같은 구분이면 제자리 보강, 다른 구분이면 재분류 이관.
       for (const r of mergeRows) {
         if (!r.match) continue
-        const patch = buildEnrichment(r.match, r)
-        if (patch) {
-          const { error } = await supabase.from(r.match.table).update(patch).eq('id', r.match.id)
-          if (error) throw error
+        const target = resolveEntityFromCategory(r.categoryLabel)
+        if (target === r.match.table) {
+          const patch = buildEnrichment(r.match, r)
+          if (patch) {
+            const { error } = await supabase.from(r.match.table).update(patch).eq('id', r.match.id)
+            if (error) throw error
+          }
+          touched.add(r.match.table)
+          await recordContribution({
+            table: r.match.table,
+            id: r.match.id,
+            action: patch ? 'enriched' : 'merged',
+            source: 'upload',
+            batchId,
+            note: patch ? '업로드 병합·보강' : '업로드 재유입',
+          })
+        } else {
+          const values = buildReclassifyValues(r.match, r, ENTITIES[target].label)
+          await mergeReclassify({ from: r.match.table, fromId: r.match.id, to: target, values, batchId })
+          touched.add(r.match.table)
+          touched.add(target)
         }
-        touched.add(r.match.table)
-        await recordContribution({
-          table: r.match.table,
-          id: r.match.id,
-          action: patch ? 'enriched' : 'merged',
-          source: 'upload',
-          batchId,
-          note: patch ? '업로드 병합·보강' : '업로드 재유입',
-        })
       }
 
       for (const table of touched) await qc.invalidateQueries({ queryKey: ['networks', table] })
@@ -193,13 +216,10 @@ export function BulkUploadPanel() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <p className="text-body text-gray-600">
-          CSV를 올리면 각 행의 <b>구분</b>에 맞춰 등록됩니다. 구분이 없으면 미분류로, 기존 인물과
-          같으면 <b>합치기</b>로 이력을 이어붙입니다.
+          CSV를 올리면 각 행의 <b>구분</b>에 맞춰 등록됩니다. 기존 인물과 같으면 <b>합치기</b>로
+          이력을 이어붙이고, 구분을 바꾸면 그 네트워크로 재분류됩니다.
         </p>
-        <Button
-          variant="outline"
-          onClick={() => downloadCsv('네트워크_업로드_템플릿.csv', buildTemplateCsv())}
-        >
+        <Button variant="outline" onClick={() => downloadCsv('네트워크_업로드_템플릿.csv', buildTemplateCsv())}>
           템플릿 다운로드
         </Button>
       </div>
@@ -241,12 +261,11 @@ export function BulkUploadPanel() {
               <Badge tone="success" size="sm">신규 {newRows.length}</Badge>
               {mergeRows.length > 0 && <Badge tone="info" size="sm">합치기 {mergeRows.length}</Badge>}
               {skipCount > 0 && <Badge tone="neutral" size="sm">건너뜀 {skipCount}</Badge>}
+              {dupCount > 0 && <span className="text-gray-400">중복 {dupCount}</span>}
               {checking && <span className="text-gray-400">중복 검사 중…</span>}
             </div>
             <div className="flex gap-2">
-              <Button variant="secondary" onClick={reset} disabled={busy}>
-                다시 선택
-              </Button>
+              <Button variant="secondary" onClick={reset} disabled={busy}>다시 선택</Button>
               <Button onClick={() => void commit()} disabled={busy || checking}>
                 최종 업로드 ({newRows.length + mergeRows.length})
               </Button>
@@ -260,77 +279,41 @@ export function BulkUploadPanel() {
             </Banner>
           )}
 
-          {dupCount > 0 && (
-            <Banner tone="info">
-              파랗게 표시된 <b>{dupCount}건</b>은 기존 인물(이메일·전화 일치)과 같습니다. 기본 <b>합치기</b>
-              (기존 레코드에 빈 값 보강 + 이력 추가)로 처리되며, 다른 인물이면 <b>신규 등록</b>으로 바꾸세요.
-            </Banner>
+          {selected.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 rounded-radius-md border border-gray-200 bg-gray-50 px-3 py-2">
+              <span className="text-caption font-medium text-gray-700">선택 {selected.length}건</span>
+              <div className="w-32">
+                <InlineSelect
+                  value=""
+                  onChange={(e) => e.target.value && applyBulkDecision(e.target.value as Decision)}
+                >
+                  <option value="">결정 일괄</option>
+                  <option value="merge">합치기</option>
+                  <option value="new">신규 등록</option>
+                  <option value="skip">건너뛰기</option>
+                </InlineSelect>
+              </div>
+              <div className="w-32">
+                <InlineSelect value="" onChange={(e) => e.target.value && applyBulkCategory(e.target.value)}>
+                  <option value="">구분 일괄</option>
+                  {CATEGORY_SELECT.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </InlineSelect>
+              </div>
+              <Button size="sm" variant="secondary" onClick={() => setSelected([])}>선택 해제</Button>
+            </div>
           )}
 
-          <div className="overflow-x-auto rounded-radius-lg border border-gray-200">
-            <table className="w-full text-caption">
-              <thead className="bg-gray-50 text-gray-500">
-                <tr>
-                  {['결정', '이름', '소속', '부서', '직책', '이메일', '연락처', '구분', '중복'].map((h) => (
-                    <th key={h} className="px-3 py-2 text-left font-medium">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr
-                    key={r.line}
-                    className={cn(
-                      'border-t border-gray-100',
-                      r.match && 'bg-info-subtle',
-                      (!r.name || r.decision === 'skip') && 'opacity-50',
-                    )}
-                  >
-                    <td className="px-3 py-1.5">
-                      <InlineSelect
-                        value={r.decision}
-                        disabled={!r.name}
-                        onChange={(e) => setDecision(r.line, e.target.value as Decision)}
-                      >
-                        {decisionOptions(Boolean(r.match)).map((o) => (
-                          <option key={o.value} value={o.value}>{o.label}</option>
-                        ))}
-                      </InlineSelect>
-                    </td>
-                    <td className="px-3 py-1.5 text-gray-800">{r.name || '—'}</td>
-                    <td className="px-3 py-1.5 text-gray-600">{r.affiliation || '-'}</td>
-                    <td className="px-3 py-1.5 text-gray-600">{r.department || '-'}</td>
-                    <td className="px-3 py-1.5 text-gray-600">{r.position || '-'}</td>
-                    <td className="px-3 py-1.5 text-gray-600">{r.email || '-'}</td>
-                    <td className="px-3 py-1.5 text-gray-600">{r.phone || '-'}</td>
-                    <td className="px-3 py-1.5">
-                      <InlineSelect
-                        value={r.categoryLabel}
-                        disabled={r.decision === 'merge'}
-                        onChange={(e) => setCategory(r.line, e.target.value)}
-                      >
-                        {CATEGORY_OPTIONS.map((o) => (
-                          <option key={o.key} value={o.label}>{o.label}</option>
-                        ))}
-                      </InlineSelect>
-                    </td>
-                    <td className="px-3 py-1.5">
-                      {r.match ? (
-                        <span className="inline-flex items-center gap-1">
-                          <Badge tone="info" size="sm">중복</Badge>
-                          <span className="text-gray-500">
-                            → {r.match.name} ({ENTITIES[r.match.table].label})
-                          </span>
-                        </span>
-                      ) : (
-                        <Badge tone="success" size="sm">신규</Badge>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <BulkReviewTable
+            rows={rows}
+            categoryOptions={CATEGORY_SELECT}
+            selected={selected}
+            onToggle={toggle}
+            onToggleAll={toggleAll}
+            onCategory={setCategory}
+            onDecision={setDecision}
+          />
         </>
       )}
     </div>

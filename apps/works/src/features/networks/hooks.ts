@@ -381,6 +381,53 @@ export async function createUploadBatch(input: {
   return (data as { id: string }).id
 }
 
+/**
+ * 합치기+재분류: 기존 매칭 레코드를 대상 구분 테이블로 이관한다(미분류→실구분 또는 명시적 override).
+ * useMoveEntity와 동일 규약: 대상에 병합 완성값을 insert 후 원본 soft-delete(실패 시 보상 삭제).
+ * 파괴적 가드 통과를 위해 원본에 기여를 먼저 기록한다. 신규 레코드 id 반환.
+ */
+export async function mergeReclassify(input: {
+  from: EntityKey
+  fromId: string
+  to: EntityKey
+  values: Record<string, unknown>
+  batchId?: string | null
+}): Promise<string> {
+  const { data, error } = await supabase
+    .from(input.to)
+    .insert(input.values)
+    .select('id')
+    .single()
+  if (error) throw error
+  const newId = (data as { id: string }).id
+
+  await recordContribution({
+    table: input.from,
+    id: input.fromId,
+    action: 'edited',
+    source: 'upload',
+    batchId: input.batchId,
+    note: '업로드 재분류',
+  })
+  const { error: delError } = await supabase
+    .from(input.from)
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', input.fromId)
+  if (delError) {
+    await supabase.from(input.to).delete().eq('id', newId)
+    throw delError
+  }
+  await recordContribution({
+    table: input.to,
+    id: newId,
+    action: 'merged',
+    source: 'upload',
+    batchId: input.batchId,
+    note: '업로드 병합·재분류',
+  })
+  return newId
+}
+
 /** 동일 콘텐츠 해시의 이전 업로드 이력(동일 파일 재업로드 경고용). */
 export async function findPriorBatchByHash(
   contentHash: string,
