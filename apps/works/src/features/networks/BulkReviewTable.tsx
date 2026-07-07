@@ -37,8 +37,18 @@ function overlapLabels(row: ReviewRow, match: ExistingRef): string[] {
   return out
 }
 
-/** 중복 셀의 한 덩이(독립 pill 뱃지). tone으로 경각심 단계를 표현한다. */
-function Seg({ label, value, tone = 'plain' }: { label: string; value: ReactNode; tone?: 'plain' | 'warning' | 'danger' }) {
+/** 중복 셀의 한 덩이(독립 pill 뱃지). tone으로 경각심 단계, widthCls로 열 정렬용 최소폭을 준다. */
+function Seg({
+  label,
+  value,
+  tone = 'plain',
+  widthCls,
+}: {
+  label: string
+  value: ReactNode
+  tone?: 'plain' | 'warning' | 'danger'
+  widthCls?: string
+}) {
   const toneCls =
     tone === 'danger'
       ? 'border-danger-border bg-danger-subtle text-danger'
@@ -46,21 +56,24 @@ function Seg({ label, value, tone = 'plain' }: { label: string; value: ReactNode
         ? 'border-warning-border bg-warning-subtle text-warning'
         : 'border-gray-200 bg-gray-50 text-gray-600'
   return (
-    <span className={cn('rounded-radius-sm border px-2 py-0.5', toneCls)}>
-      <span className="opacity-60">{label} </span>
-      <span className="font-semibold">{value}</span>
+    <span className={cn('inline-flex items-center rounded-radius-sm border px-2 py-0.5', widthCls, toneCls)}>
+      <span className="opacity-60">{label}</span>
+      <span className="ml-1 font-semibold">{value}</span>
     </span>
   )
 }
 
-/** 중복 매칭 셀: 「작성자 · 구분 · 중복」을 이격된 세 뱃지로 나누고, 중복은 경각심 톤(활성=앰버/비활성=레드). */
+/**
+ * 중복 매칭 셀: 「작성자 · 구분 · 중복」을 이격된 세 뱃지로 나눈다.
+ * 작성자·구분에 최소폭을 줘 행마다 중복 뱃지 시작점이 정렬되게 하고, 중복은 경각심 톤(활성=앰버/비활성=레드).
+ */
 function DupCell({ row, match }: { row: ReviewRow; match: ExistingRef }) {
   const dups = overlapLabels(row, match)
   const alarm = match.deleted ? 'danger' : 'warning'
   return (
-    <div className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11px] leading-snug">
-      <Seg label="작성자" value={match.contributor ?? '미상'} />
-      <Seg label="구분" value={match.category} />
+    <div className="inline-flex items-center gap-2.5 whitespace-nowrap text-[11px] leading-snug">
+      <Seg label="작성자" value={match.contributor ?? '미상'} widthCls="min-w-[6.5rem]" />
+      <Seg label="구분" value={match.category} widthCls="min-w-[7rem]" />
       <Seg label="중복" tone={alarm} value={match.deleted ? `비활성 · ${dups.join(', ')}` : dups.join(', ')} />
     </div>
   )
