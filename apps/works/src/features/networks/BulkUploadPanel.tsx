@@ -82,7 +82,7 @@ export function BulkUploadPanel() {
     setChecking(true)
     try {
       const matches = await findExistingMatches(
-        parsed.map((r) => ({ line: r.line, email: r.email, phone: r.phone })),
+        parsed.map((r) => ({ line: r.line, name: r.name, email: r.email, phone: r.phone })),
       )
       setRows((prev) =>
         prev.map((r) => {

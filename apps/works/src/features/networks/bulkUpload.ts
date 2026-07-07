@@ -174,45 +174,96 @@ function toRef(table: EntityKey, r: ExistingRow): ExistingRef {
   }
 }
 
+/** 매칭 후보(정규화 필드 포함). 이름/이메일/전화의 정규화 값을 미리 계산해 교차 비교에 쓴다. */
+interface Candidate {
+  ref: ExistingRef
+  nName: string
+  nEmail: string
+  nPhone: string
+}
+
+const normText = (v: unknown) => String(v ?? '').trim().toLowerCase()
+const normPhone = (v: unknown) => String(v ?? '').replace(/\D/g, '')
+
 /**
- * 업로드 행별로 기존 확실중복 레코드(동일 이메일 또는 전화)를 찾아 매칭한다.
- * 9종 네트워크 테이블(미삭제)을 조회하며, 없는 테이블은 조용히 건너뛴다.
+ * 업로드 행별로 기존 중복 레코드를 찾아 매칭한다.
+ * 중복 기준: 이름·전화·이메일 중 **2개 이상 일치**(공용번호/공용메일 단독 일치 오탐 방지).
+ * 9종 네트워크 테이블(비활성 포함)을 조회하며, 없는 테이블은 조용히 건너뛴다.
  */
 export async function findExistingMatches(
-  rows: { line: number; email: string; phone: string }[],
+  rows: { line: number; name: string; email: string; phone: string }[],
 ): Promise<Map<number, ExistingRef>> {
-  const emails = [...new Set(rows.map((r) => r.email).filter(Boolean))]
-  const phones = [...new Set(rows.map((r) => r.phone.replace(/\D/g, '')).filter(Boolean))]
-  const byEmail = new Map<string, ExistingRef>()
-  const byPhone = new Map<string, ExistingRef>()
+  // 후보 조회 키(원값 기준 IN 조회 — DB 저장 형태와 그대로 비교). 정규화는 카운팅 단계에서 수행한다.
+  const names = [...new Set(rows.map((r) => r.name.trim()).filter(Boolean))]
+  const emails = [...new Set(rows.map((r) => r.email.trim()).filter(Boolean))]
+  const phones = [...new Set(rows.map((r) => normPhone(r.phone)).filter(Boolean))]
   const cols = 'id,name,email,phone,affiliation,expertise,profile,deleted_at'
-  // 비활성(soft-delete)도 매칭하되 활성 레코드를 우선한다(둘 다 있으면 활성이 정답).
-  const setPref = (map: Map<string, ExistingRef>, key: string, ref: ExistingRef) => {
-    const prev = map.get(key)
-    if (!prev || (prev.deleted && !ref.deleted)) map.set(key, ref)
-  }
 
-  await Promise.all(
-    DIRECTORY_ENTITIES.flatMap((table) => [
-      ...chunk(emails, IN_CHUNK).map(async (batch) => {
-        const { data } = await supabase.from(table).select(cols).in('email', batch)
-        for (const r of (data ?? []) as ExistingRow[]) {
-          if (r.email) setPref(byEmail, r.email, toRef(table, r))
-        }
+  // 이름/이메일/전화 중 하나라도 걸리는 후보를 테이블+id로 중복 없이 모은다.
+  const byId = new Map<string, Candidate>()
+  const collect = (table: EntityKey, data: ExistingRow[]) => {
+    for (const r of data) {
+      const key = `${table}:${r.id}`
+      if (byId.has(key)) continue
+      byId.set(key, {
+        ref: toRef(table, r),
+        nName: normText(r.name),
+        nEmail: normText(r.email),
+        nPhone: normPhone(r.phone),
+      })
+    }
+  }
+  const queryBy = (field: 'name' | 'email' | 'phone', values: string[]) =>
+    DIRECTORY_ENTITIES.flatMap((table) =>
+      chunk(values, IN_CHUNK).map(async (batch) => {
+        const { data } = await supabase.from(table).select(cols).in(field, batch)
+        collect(table, (data ?? []) as ExistingRow[])
       }),
-      ...chunk(phones, IN_CHUNK).map(async (batch) => {
-        const { data } = await supabase.from(table).select(cols).in('phone', batch)
-        for (const r of (data ?? []) as ExistingRow[]) {
-          if (r.phone) setPref(byPhone, String(r.phone), toRef(table, r))
-        }
-      }),
-    ]),
-  )
+    )
+
+  await Promise.all([
+    ...queryBy('name', names),
+    ...queryBy('email', emails),
+    ...queryBy('phone', phones),
+  ])
+
+  // 후보를 정규화 값으로 색인한다(행별로 관련 후보만 빠르게 추린다).
+  const idxName = new Map<string, Candidate[]>()
+  const idxEmail = new Map<string, Candidate[]>()
+  const idxPhone = new Map<string, Candidate[]>()
+  const push = (m: Map<string, Candidate[]>, k: string, c: Candidate) => {
+    if (!k) return
+    const arr = m.get(k)
+    if (arr) arr.push(c)
+    else m.set(k, [c])
+  }
+  for (const c of byId.values()) {
+    push(idxName, c.nName, c)
+    push(idxEmail, c.nEmail, c)
+    push(idxPhone, c.nPhone, c)
+  }
 
   const out = new Map<number, ExistingRef>()
   for (const r of rows) {
-    const match = (r.email && byEmail.get(r.email)) || byPhone.get(r.phone.replace(/\D/g, ''))
-    if (match) out.set(r.line, match)
+    const rn = normText(r.name)
+    const re = normText(r.email)
+    const rp = normPhone(r.phone)
+    // 이 행과 필드 하나라도 겹치는 후보만 모아 2개 이상 일치를 판정한다.
+    const cands = new Map<string, Candidate>()
+    for (const c of [...(idxName.get(rn) ?? []), ...(idxEmail.get(re) ?? []), ...(idxPhone.get(rp) ?? [])]) {
+      cands.set(`${c.ref.table}:${c.ref.id}`, c)
+    }
+    let best: { ref: ExistingRef; count: number } | null = null
+    for (const c of cands.values()) {
+      const count =
+        (rn && rn === c.nName ? 1 : 0) + (re && re === c.nEmail ? 1 : 0) + (rp && rp === c.nPhone ? 1 : 0)
+      if (count < 2) continue
+      // 일치 수가 많은 후보 우선, 동률이면 활성 레코드를 우선한다.
+      if (!best || count > best.count || (count === best.count && best.ref.deleted && !c.ref.deleted)) {
+        best = { ref: c.ref, count }
+      }
+    }
+    if (best) out.set(r.line, best.ref)
   }
 
   // 선행 작성자(최초 기여자)명을 기여 로그에서 일괄 조회해 매칭에 채운다.
