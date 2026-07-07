@@ -31,3 +31,6 @@ coverage/
 # Supabase 로컬
 supabase/.branches/
 supabase/.temp/
+
+# Claude Code 개인 설정(권한 등) — 커밋 금지
+.claude/settings.local.json

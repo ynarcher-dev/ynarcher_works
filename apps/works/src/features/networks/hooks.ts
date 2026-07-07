@@ -283,3 +283,96 @@ export function useMergeEntity(table: EntityKey) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['networks', table] }),
   })
 }
+
+// ── 대용량 업로드 Phase 2: 기여 이력 / 업로드 배치 데이터 계층 ────────────────
+
+export interface Contribution {
+  id: string
+  entity_table: string
+  entity_id: string
+  user_id: string | null
+  user_name: string | null
+  action: 'created' | 'merged' | 'enriched' | 'edited'
+  source: 'manual' | 'upload'
+  batch_id: string | null
+  note: string | null
+  created_at: string
+}
+
+/** 레코드 기여 이력(연혁, 오래된 순). 공동 관리자 목록·타임라인의 원천. */
+export function useContributions(table: EntityKey, id: string | undefined) {
+  return useQuery({
+    queryKey: ['networks', 'contributions', table, id],
+    enabled: Boolean(id),
+    queryFn: async (): Promise<Contribution[]> => {
+      const { data, error } = await supabase
+        .from('entity_contributions')
+        .select('*')
+        .eq('entity_table', table)
+        .eq('entity_id', id)
+        .order('created_at', { ascending: true })
+      if (error) throw error
+      return (data ?? []) as Contribution[]
+    },
+  })
+}
+
+/**
+ * 기여 1건 기록(user_id·user_name은 서버 트리거가 현재 유저로 스탬프).
+ * 부수 기록이므로 실패해도 본 작업(등록/병합/업로드)을 막지 않는다(에러를 삼킨다).
+ */
+export async function recordContribution(input: {
+  table: EntityKey
+  id: string
+  action: Contribution['action']
+  source: Contribution['source']
+  batchId?: string | null
+  note?: string | null
+}): Promise<void> {
+  await supabase.from('entity_contributions').insert({
+    entity_table: input.table,
+    entity_id: input.id,
+    action: input.action,
+    source: input.source,
+    batch_id: input.batchId ?? null,
+    note: input.note ?? null,
+  })
+}
+
+/** 업로드 배치 이력 생성(uploaded_by는 서버 트리거 스탬프). 배치 id 반환(실패 시 null). */
+export async function createUploadBatch(input: {
+  filename: string
+  contentHash: string
+  total: number
+  inserted: number
+  merged: number
+  skipped: number
+}): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('upload_batches')
+    .insert({
+      filename: input.filename,
+      content_hash: input.contentHash,
+      total_rows: input.total,
+      inserted_count: input.inserted,
+      merged_count: input.merged,
+      skipped_count: input.skipped,
+    })
+    .select('id')
+    .single()
+  if (error) return null
+  return (data as { id: string }).id
+}
+
+/** 동일 콘텐츠 해시의 이전 업로드 이력(동일 파일 재업로드 경고용). */
+export async function findPriorBatchByHash(
+  contentHash: string,
+): Promise<{ filename: string | null; created_at: string } | null> {
+  const { data } = await supabase
+    .from('upload_batches')
+    .select('filename, created_at')
+    .eq('content_hash', contentHash)
+    .order('created_at', { ascending: false })
+    .limit(1)
+  return (data?.[0] as { filename: string | null; created_at: string }) ?? null
+}
