@@ -147,8 +147,8 @@ export function BulkReviewTable({
       key: 'decision',
       header: '결정',
       align: 'center',
-      // 오른쪽 여백을 키워(pr-6) 결정 드롭다운을 우측 끝에서 살짝 왼쪽으로 당긴다.
-      className: 'w-24 pl-2 pr-6',
+      // 드롭다운 글씨가 잘리지 않게 열을 넓히고(w-32) 오른쪽 여백(pr-4)으로 우측 끝에서 살짝 당긴다.
+      className: 'w-32 pl-2 pr-4',
       render: (r) =>
         r.match?.deleted ? (
           revivedLines.includes(r.line) ? (
