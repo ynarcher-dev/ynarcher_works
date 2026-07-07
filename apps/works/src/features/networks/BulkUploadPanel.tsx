@@ -123,34 +123,11 @@ export function BulkUploadPanel() {
       }),
     )
 
-  // 비활성 매칭 행 즉시 복구(활성화 + 빈 필드 보강 + 기여 기록).
-  const onRevive = async (line: number) => {
-    const row = rows.find((r) => r.line === line)
-    if (!row?.match) return
-    const match = row.match
-    setBusy(true)
-    try {
-      const patch = buildEnrichment(match, row) ?? {}
-      const { error } = await supabase
-        .from(match.table)
-        .update({ deleted_at: null, ...patch })
-        .eq('id', match.id)
-      if (error) throw error
-      await recordContribution({
-        table: match.table,
-        id: match.id,
-        action: 'enriched',
-        source: 'upload',
-        note: '재업로드 복구',
-      })
-      await qc.invalidateQueries({ queryKey: ['networks', match.table] })
-      setRevivedLines((prev) => [...prev, line])
-      toast.show(`${match.name}을(를) 복구했습니다.`, 'success')
-    } catch {
-      toast.show('복구에 실패했습니다. 권한을 확인하세요.', 'danger')
-    } finally {
-      setBusy(false)
-    }
+  // 복구하기: 즉시 활성화하지 않고 '복구 예정'으로만 표시한다. 이후 결정(합치기/미업로드)을
+  // 고르게 하며, 실제 재활성화는 최종 업로드 시 합치기로 처리된 경우에만 일어난다.
+  const onRevive = (line: number) => {
+    setRevivedLines((prev) => (prev.includes(line) ? prev : [...prev, line]))
+    setRows((prev) => prev.map((r) => (r.line === line ? { ...r, decision: 'merge' } : r)))
   }
   const applyBulkCategory = (label: string) =>
     setRows((prev) => prev.map((r) => (selected.includes(r.line) ? { ...r, categoryLabel: label } : r)))
@@ -164,12 +141,19 @@ export function BulkUploadPanel() {
   }
 
   const newRows = rows.filter((r) => r.decision === 'new' && r.name)
-  const mergeRows = rows.filter((r) => r.decision === 'merge' && r.match && !r.match.deleted && r.name)
+  // 합치기 대상: 활성 매칭 + 복구 예정(비활성이지만 복구하기를 누른) 매칭.
+  const mergeRows = rows.filter(
+    (r) =>
+      r.decision === 'merge' &&
+      r.match &&
+      r.name &&
+      (!r.match.deleted || revivedLines.includes(r.line)),
+  )
   const skipCount = rows.length - newRows.length - mergeRows.length
   const dupCount = rows.filter((r) => r.match).length
-  // 비활성(soft-delete) 매칭 건수 — '복구하기' 대상. 건너뜀 표시에서 분리한다.
-  const deletedCount = rows.filter((r) => r.match?.deleted).length
-  const displaySkip = skipCount - deletedCount
+  // 아직 복구하기를 누르지 않은 비활성 매칭 — 미업로드(건너뜀) 표시에서 분리해 별도 노출.
+  const deletedPending = rows.filter((r) => r.match?.deleted && !revivedLines.includes(r.line)).length
+  const displaySkip = skipCount - deletedPending
 
   const commit = async () => {
     if (newRows.length === 0 && mergeRows.length === 0) {
@@ -207,23 +191,29 @@ export function BulkUploadPanel() {
       }
 
       // 합치기: 같은 구분이면 제자리 보강, 다른 구분이면 재분류 이관.
+      // 비활성 매칭을 합치기로 처리하면 이때 재활성화(deleted_at=null)한다.
       for (const r of mergeRows) {
         if (!r.match) continue
         const target = resolveEntityFromCategory(r.categoryLabel)
         if (target === r.match.table) {
-          const patch = buildEnrichment(r.match, r)
-          if (patch) {
-            const { error } = await supabase.from(r.match.table).update(patch).eq('id', r.match.id)
+          const patch = buildEnrichment(r.match, r) ?? {}
+          const values = r.match.deleted ? { deleted_at: null, ...patch } : patch
+          if (Object.keys(values).length) {
+            const { error } = await supabase.from(r.match.table).update(values).eq('id', r.match.id)
             if (error) throw error
           }
           touched.add(r.match.table)
           await recordContribution({
             table: r.match.table,
             id: r.match.id,
-            action: patch ? 'enriched' : 'merged',
+            action: 'enriched',
             source: 'upload',
             batchId,
-            note: patch ? '업로드 병합·보강' : '업로드 재유입',
+            note: r.match.deleted
+              ? '재업로드 복구·병합'
+              : Object.keys(patch).length
+                ? '업로드 병합·보강'
+                : '업로드 재유입',
           })
         } else {
           const values = buildReclassifyValues(r.match, r, ENTITIES[target].label)
@@ -235,7 +225,7 @@ export function BulkUploadPanel() {
 
       for (const table of touched) await qc.invalidateQueries({ queryKey: ['networks', table] })
       toast.show(
-        `업로드 완료 — 신규 ${newRows.length} · 합치기 ${mergeRows.length} · 건너뜀 ${skipCount}`,
+        `업로드 완료 — 신규 ${newRows.length} · 합치기 ${mergeRows.length} · 미업로드 ${displaySkip}`,
         'success',
       )
       reset()
@@ -294,9 +284,8 @@ export function BulkUploadPanel() {
               <Badge tone="neutral" size="sm">전체 {rows.length}</Badge>
               <Badge tone="success" size="sm">신규 {newRows.length}</Badge>
               {mergeRows.length > 0 && <Badge tone="info" size="sm">합치기 {mergeRows.length}</Badge>}
-              {deletedCount > 0 && <Badge tone="warning" size="sm">비활성 {deletedCount}</Badge>}
-              {revivedLines.length > 0 && <Badge tone="success" size="sm">복구됨 {revivedLines.length}</Badge>}
-              {displaySkip > 0 && <Badge tone="neutral" size="sm">건너뜀 {displaySkip}</Badge>}
+              {deletedPending > 0 && <Badge tone="warning" size="sm">비활성 {deletedPending}</Badge>}
+              {displaySkip > 0 && <Badge tone="neutral" size="sm">미업로드 {displaySkip}</Badge>}
               {dupCount > 0 && <span className="text-gray-400">중복 {dupCount}</span>}
               {checking && <span className="text-gray-400">중복 검사 중…</span>}
             </div>

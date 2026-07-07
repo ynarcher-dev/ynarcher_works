@@ -1,4 +1,4 @@
-import { Badge, Button, cn, DataTable, InlineSelect, type Column } from '@ynarcher/ui'
+import { Button, cn, DataTable, InlineSelect, type Column } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import type { ExistingRef, ParsedRow } from '@/features/networks/bulkUpload'
 
@@ -13,13 +13,20 @@ export interface ReviewRow extends ParsedRow {
   decision: Decision
 }
 
-/** 활성 매칭/무매칭 행의 결정 옵션(비활성 매칭은 버튼으로 처리하므로 제외). */
-function decisionOptions(hasActiveMatch: boolean): { value: Decision; label: string }[] {
-  const base: { value: Decision; label: string }[] = [
-    { value: 'new', label: '신규 등록' },
-    { value: 'skip', label: '미업로드' },
-  ]
-  return hasActiveMatch ? [{ value: 'merge', label: '합치기' }, ...base] : base
+/**
+ * 결정 옵션. 중복(매칭)이 있으면 합치기/미업로드만 — 중복인데 새로 만드는 신규 등록은 없앤다.
+ * 중복이 없으면 신규 등록/미업로드.
+ */
+function decisionOptions(hasMatch: boolean): { value: Decision; label: string }[] {
+  return hasMatch
+    ? [
+        { value: 'merge', label: '합치기' },
+        { value: 'skip', label: '미업로드' },
+      ]
+    : [
+        { value: 'new', label: '신규 등록' },
+        { value: 'skip', label: '미업로드' },
+      ]
 }
 
 /** 업로드 행과 기존 레코드가 실제로 겹치는 필드 라벨만 추린다(이름/소속/부서/직책/이메일/연락처). */
@@ -154,15 +161,12 @@ export function BulkReviewTable({
       align: 'center',
       // 드롭다운 글씨가 잘리지 않게 열을 넓히고(w-32) 오른쪽 여백(pr-4)으로 우측 끝에서 살짝 당긴다.
       className: 'w-32 pl-2 pr-4',
+      // 비활성 매칭은 먼저 '복구하기'로 의사를 밝힌 뒤에야 결정(합치기/미업로드) 드롭다운이 열린다.
       render: (r) =>
-        r.match?.deleted ? (
-          revivedLines.includes(r.line) ? (
-            <Badge tone="success" size="sm">복구됨</Badge>
-          ) : (
-            <Button size="sm" disabled={busy} onClick={() => onRevive(r.line)}>
-              복구하기
-            </Button>
-          )
+        r.match?.deleted && !revivedLines.includes(r.line) ? (
+          <Button size="sm" disabled={busy} onClick={() => onRevive(r.line)}>
+            복구하기
+          </Button>
         ) : (
           <InlineSelect
             value={r.decision}
@@ -184,6 +188,8 @@ export function BulkReviewTable({
       rowKey={(r) => String(r.line)}
       numbered={false}
       standardColumns={false}
+      // 비활성 중복 행은 배경을 회색으로 눌러 표시한다.
+      rowClassName={(r) => (r.match?.deleted ? 'bg-gray-100' : undefined)}
       selectable
       selectedKeys={selected.map(String)}
       onSelectionChange={(keys) => onSelectionChange(keys.map(Number))}

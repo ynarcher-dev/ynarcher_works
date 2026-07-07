@@ -68,6 +68,8 @@ export interface DataTableProps<T> {
   onSelectionChange?: (keys: string[]) => void
   /** 행 클릭(상세 진입 등). 지정 시 행에 pointer 커서가 적용된다. */
   onRowClick?: (row: T) => void
+  /** 행별 추가 클래스(상태 강조 등). 반환값이 있으면 해당 행 `<tr>`에 병합된다. */
+  rowClassName?: (row: T) => string | undefined
   /**
    * 레이아웃 모드(기본 'auto'). 'fixed'는 `table-fixed`로 컬럼 폭 비율을 고정하고
    * 셀 내용이 넘치면 말줄임(…) 처리한다. 컬럼 폭은 각 컬럼 `className`(w-*)이 정한다.
@@ -145,6 +147,7 @@ export function DataTable<T>({
   selectedKeys,
   onSelectionChange,
   onRowClick,
+  rowClassName,
   layout = 'auto',
   meta,
 }: DataTableProps<T>) {
@@ -284,6 +287,7 @@ export function DataTable<T>({
                     !active && 'opacity-50',
                     selected.has(key) && 'bg-brand/5',
                     onRowClick && 'cursor-pointer',
+                    rowClassName?.(row),
                   )}
                 >
                   {selectable && (
