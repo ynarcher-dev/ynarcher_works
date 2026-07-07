@@ -21,6 +21,43 @@ function decisionOptions(hasActiveMatch: boolean): { value: Decision; label: str
   return hasActiveMatch ? [{ value: 'merge', label: '합치기' }, ...base] : base
 }
 
+/** 중복 매칭 셀: 작성자·구분 머리글 + 기존 레코드의 6개 필드(이름/소속/부서/직책/이메일/연락처). */
+function DupCell({ match }: { match: ExistingRef }) {
+  const str = (v: unknown) => (v == null || v === '' ? '-' : String(v))
+  const fields: [string, string][] = [
+    ['이름', str(match.name)],
+    ['소속', str(match.affiliation)],
+    ['부서', str(match.profile.department)],
+    ['직책', str(match.profile.position)],
+    ['이메일', str(match.email)],
+    ['연락처', str(match.phone)],
+  ]
+  return (
+    <div
+      className={cn(
+        'rounded-radius-md border px-2 py-1.5 text-caption leading-tight',
+        match.deleted ? 'border-warning-border bg-warning-subtle' : 'border-info-border bg-info-subtle',
+      )}
+    >
+      <div className="mb-1 flex items-center justify-between gap-2 border-b border-gray-200/70 pb-1">
+        <span className="font-medium text-gray-700">작성자 {match.contributor ?? '미상'}</span>
+        <span className="inline-flex shrink-0 items-center gap-1">
+          {match.deleted && <span className="text-warning">비활성</span>}
+          <Badge tone="neutral" size="sm">{match.category}</Badge>
+        </span>
+      </div>
+      <dl className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+        {fields.map(([k, v]) => (
+          <div key={k} className="flex min-w-0 gap-1">
+            <dt className="shrink-0 text-gray-400">{k}</dt>
+            <dd className="truncate text-gray-700">{v}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  )
+}
+
 interface Props {
   rows: ReviewRow[]
   categoryOptions: { value: string; label: string }[]
@@ -52,16 +89,19 @@ export function BulkReviewTable({
   onRevive,
 }: Props) {
   const cellText = 'text-gray-600'
+  // 좌측 원본 컬럼은 여백을 좁혀(px-1.5) 폭을 아끼고, 중복 칸만 넓게 쓴다.
+  const tight = 'px-1.5'
   const columns: Column<ReviewRow>[] = [
-    { key: 'name', header: '이름', render: (r) => <span className="font-medium text-gray-800">{r.name || '—'}</span> },
-    { key: 'affiliation', header: '소속', render: (r) => <span className={cellText}>{r.affiliation || '-'}</span> },
-    { key: 'department', header: '부서', render: (r) => <span className={cellText}>{r.department || '-'}</span> },
-    { key: 'position', header: '직책', render: (r) => <span className={cellText}>{r.position || '-'}</span> },
-    { key: 'email', header: '이메일', render: (r) => <span className={cellText}>{r.email || '-'}</span> },
-    { key: 'phone', header: '연락처', render: (r) => <span className={cellText}>{r.phone || '-'}</span> },
+    { key: 'name', header: '이름', className: tight, render: (r) => <span className="font-medium text-gray-800">{r.name || '—'}</span> },
+    { key: 'affiliation', header: '소속', className: tight, render: (r) => <span className={cellText}>{r.affiliation || '-'}</span> },
+    { key: 'department', header: '부서', className: tight, render: (r) => <span className={cellText}>{r.department || '-'}</span> },
+    { key: 'position', header: '직책', className: tight, render: (r) => <span className={cellText}>{r.position || '-'}</span> },
+    { key: 'email', header: '이메일', className: tight, render: (r) => <span className={cellText}>{r.email || '-'}</span> },
+    { key: 'phone', header: '연락처', className: tight, render: (r) => <span className={cellText}>{r.phone || '-'}</span> },
     {
       key: 'category',
       header: '구분',
+      className: tight,
       render: (r) => (
         <InlineSelect
           value={r.categoryLabel}
@@ -77,35 +117,15 @@ export function BulkReviewTable({
     {
       key: 'dup',
       header: '중복',
-      className: 'w-56',
-      // 중복이 있는 행만 테두리 박스로 강조(선행 데이터: 항목명 / 구분 / 작성자).
-      render: (r) =>
-        r.match ? (
-          <div
-            className={cn(
-              'inline-flex flex-col gap-0.5 rounded-radius-md border px-2 py-1 text-caption leading-tight',
-              r.match.deleted
-                ? 'border-warning-border bg-warning-subtle'
-                : 'border-info-border bg-info-subtle',
-            )}
-          >
-            <span className="font-medium text-gray-800">
-              {r.match.name}
-              {r.match.deleted && <span className="ml-1 font-normal text-warning">· 비활성</span>}
-            </span>
-            <span className="text-gray-500">
-              {r.match.category} · {r.match.contributor ?? '작성자 미상'}
-            </span>
-          </div>
-        ) : (
-          <span className="text-gray-300">중복 없음</span>
-        ),
+      className: 'w-80 px-2',
+      // 중복이 있는 행만 테두리 박스로 강조. 작성자·구분을 머리에 두고 기존 레코드의 6개 필드를 나열한다.
+      render: (r) => (r.match ? <DupCell match={r.match} /> : <span className="text-gray-300">중복 없음</span>),
     },
     {
       key: 'decision',
       header: '결정',
       align: 'center',
-      className: 'w-28',
+      className: 'w-24 px-1.5',
       render: (r) =>
         r.match?.deleted ? (
           revivedLines.includes(r.line) ? (
