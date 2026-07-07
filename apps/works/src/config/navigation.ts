@@ -73,10 +73,14 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
   ],
   networks: [
     {
+      items: [{ label: '대시보드', tab: 'dashboard' }],
+    },
+    {
       group: '마스터 네트워크 관리',
       items: [
-        { label: '전문가 네트워크', tab: 'experts' },
         { label: 'VAN 네트워크', tab: 'van' },
+        { label: 'EXP 네트워크', tab: 'exp' },
+        { label: '전문가 네트워크', tab: 'experts', dividerBefore: true },
         { label: '투자사 네트워크', tab: 'investors' },
         { label: '기업 네트워크', tab: 'corporates', dividerBefore: true },
         { label: '기관 네트워크', tab: 'institutions' },
@@ -88,9 +92,10 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
     {
       group: '데이터 관리',
       items: [
-        { label: '미분류 데이터베이스', tab: 'others' },
+        // 글로벌 네트워크: 미분류 데이터베이스 위에 구분선으로 구획(기능은 보류, 메뉴만 제공).
+        { label: '글로벌 네트워크', tab: 'global' },
+        { label: '미분류 데이터베이스', tab: 'others', dividerBefore: true },
         { label: '대용량 업로드', tab: 'bulk' },
-        { label: '중복 병합 검증', tab: 'merge' },
       ],
     },
   ],
@@ -116,7 +121,10 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         { label: '직책태그 관리', tab: 'positions' },
         { label: '직급태그 관리', tab: 'ranks' },
         { label: '구분태그 관리', tab: 'categories' },
+        { label: '권역태그 관리', tab: 'regions' },
+        { label: '국가태그 관리', tab: 'countries' },
         { label: '민감정보 관리', tab: 'sensitive' },
+        { label: '중복 병합 검증', tab: 'merge' },
         { label: '감사 로그 모니터', tab: 'audit' },
         { label: '다운로드 사유 로그', tab: 'downloads' },
       ],

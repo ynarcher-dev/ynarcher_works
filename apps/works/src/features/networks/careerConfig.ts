@@ -78,3 +78,21 @@ export function formatRow(section: CareerSection, row: CareerRow): string {
     .filter(Boolean)
     .join(' · ')
 }
+
+/**
+ * 항목의 대표 연도(정렬 기준). 각 섹션의 마지막 필드(기간/취득일/수상연도)에서
+ * 최대 4자리 연도를 추출한다. 범위값("2015-2020")은 끝 연도, 연도 없음은 최하단(-Infinity).
+ */
+export function rowYear(section: CareerSection, row: CareerRow): number {
+  const last = section.fields[section.fields.length - 1]
+  const years = (last ? (row[last.key] ?? '') : '').match(/\d{4}/g)
+  return years ? Math.max(...years.map(Number)) : -Infinity
+}
+
+/** 항목을 최신 연도가 위로 오도록 내림차순 정렬한 새 배열을 반환한다(원본 불변). */
+export function sortRowsByYearDesc(
+  section: CareerSection,
+  rows: CareerRow[],
+): CareerRow[] {
+  return [...rows].sort((a, b) => rowYear(section, b) - rowYear(section, a))
+}

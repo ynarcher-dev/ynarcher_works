@@ -8,6 +8,7 @@ import {
   ClipboardList,
   Download,
   Folder,
+  Globe,
   Handshake,
   LayoutGrid,
   Lightbulb,
@@ -19,6 +20,7 @@ import {
   Rocket,
   Search,
   Sparkles,
+  Star,
   Target,
   User,
   Users,
@@ -81,6 +83,8 @@ const sidebarIconByTab: Record<string, LucideIcon> = {
 
   // NETWORKS 8종 네트워크
   van: Handshake,
+  exp: Star,
+  global: Globe,
   investors: Coins,
   corporates: Building2,
   institutions: Landmark,

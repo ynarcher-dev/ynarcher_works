@@ -6,11 +6,13 @@ import { useTags } from '@/features/admin/hooks'
 import { supabase } from '@/lib/supabase'
 import { PhotoBox } from '@/features/networks/PhotoBox'
 import { CareerEditor } from '@/features/networks/CareerEditor'
+import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { parseBackground, type CareerData } from '@/features/networks/careerConfig'
 import {
   CATEGORY_OPTIONS,
   ENTITIES,
   isCompactEntity,
+  PROFILE_RESOURCE_TYPE,
   resolveEntityFromCategory,
   type EntityKey,
 } from '@/features/networks/config'
@@ -340,6 +342,14 @@ export function NetworkForm({ entity, recordId, initial, onDone, onCancel }: Pro
           <TextArea rows={4} {...register('intro')} />
         </Field>
       </div>
+
+      {/* 자료 관리: 기존 레코드 수정 시에만 업로드 가능(신규는 저장 후 id 확정되어야 첨부 가능). */}
+      {isEdit && recordId && (
+        <MaterialPanel
+          targetType={PROFILE_RESOURCE_TYPE[entity] ?? entity}
+          targetId={recordId}
+        />
+      )}
 
       <div className="flex justify-end gap-2">
         <Button type="button" variant="secondary" onClick={onCancel}>

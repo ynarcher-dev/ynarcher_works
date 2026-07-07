@@ -58,7 +58,8 @@ export function DirectoryTab({ config, keyword, creating, setCreating }: Directo
     setSelected([])
   }, [keyword, config.table])
   const { data, isLoading } = useEntityPage(config.table, keyword, page, PAGE_SIZE)
-  const hasDetailPage = usesDetailPage(config.key)
+  // 미분류(others)는 분류 전 임시 저장소이므로 상세페이지로 진입하지 않는다(행 클릭 비활성).
+  const hasDetailPage = usesDetailPage(config.key) && config.key !== 'others'
 
   // 미분류(others)는 목록에서 구분을 골라 대상 네트워크로 이관하는 임시 저장소로 동작한다.
   const isOthers = config.key === 'others'

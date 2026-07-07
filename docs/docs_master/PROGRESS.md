@@ -92,6 +92,10 @@
 - [x] 미분류 데이터베이스 분리 + '기타(etc)' 네트워크 신설 <!-- others=분류 전 임시 저장소(미분류 데이터베이스, 목록 인라인 구분 드롭다운으로 대상 네트워크 이관), etc=조직형 신규 카테고리(외주/거래 아래, 마이그레이션 20260707140000). 조직 4종+기타+미분류 compact 표시, 조직 목록 부서 컬럼 노출, 네트워크 등록 버튼 통일, InlineSelect(테이블용 컴팩트 셀렉트) 추가 -->
 - [x] 대용량 업로드 Phase 1 — 드래그앤드랍 CSV → 구분/확실중복 리뷰 → 구분별 라우팅 <!-- BulkUploadPanel/bulkUpload.ts, 템플릿 다운로드, 리멤버 헤더 자동매핑, 이메일·전화 확실중복 색상 표기·기본 제외(건너뛰기), 미지정→미분류. profile.source='bulk_upload' 표식 -->
 - [x] 대용량 업로드 Phase 2 — 동일인물 병합→상세 연혁 타임라인, 공동 관리(작성자 없음) 표시, 파괴적 작업(비활성/병합) 기여자+admin RLS 가드, 업로드 배치 이력(파일 해시 중복 경고), 추천 구분/미분류 일괄 지정 <!-- 마이그레이션 20260707150000(기여/배치)·20260707160000(가드). entity_contributions append-only+이름 비정규화+서버 스탬프, BulkUploadPanel 병합결정(합치기/신규/건너뛰기)+빈필드 보강, DirectoryTab 다중선택 일괄지정+suggestCategory 휴리스틱 -->
+- [x] 글로벌 네트워크 데이터 테이블 — 독립 단일 마스터(global_networks) + 권역·국가 태그(FK 조인) + 링크드인 아이콘 컬럼 + 등록/수정/비활성 <!-- 마이그레이션 20260707220000(global_networks). 국내 8종과 분리된 독립 마스터(구분=기업/기관/투자자 스칼라, 권역/국가=region_tags·country_tags 2뎁스 FK). MasterListView 재활용+link 컬럼 kind 신설(URL 유무 아이콘 색), GlobalNetworkTab/FormModal(권역→국가 캐스케이드)/globalHooks(조인 조회·기여 가드 비활성). 대용량 업로드 국내/글로벌 탭 분리는 후속 -->
+- [x] 상세페이지 2열(2:1) 재구성 + 우측 공용 패널 3종(자료 관리·변동 이력·피드백) 분리 <!-- 좌(2): 프로필 본문 현행 유지. 우(1): MaterialPanel/ChangeHistoryPanel/FeedbackPanel. DetailPanelCard 공용 래퍼, 국내(NetworkDetailPage)·글로벌(GlobalNetworkDetailPage) 공용. "연혁"→"변동 이력" 개칭·우측 이동(기여 로그 타임라인). CONTRIBUTION_ACTION_LABEL·uniqueContributors ChangeHistoryPanel로 통합 -->
+- [x] 자료 관리 실연동 — 비공개 Storage 버킷 + attachments 다형 테이블 업로드/다운로드/소프트삭제 <!-- 마이그레이션 20260707230000(attachments 버킷+uploaded_by 스탬프 트리거+storage.objects RLS). materialHooks(useMaterials/useUploadMaterial/useDeleteMaterial/downloadMaterial=Signed URL), MaterialPanel 드래그앤드랍 업로드·목록·다운로드·삭제. targetType(국내=리소스타입/글로벌=global_network)+targetId 주입 -->
+- [x] 피드백 실연동 — 레코드 단위 댓글형 피드백(테이블+RLS+작성/조회/소프트삭제 훅) <!-- 마이그레이션 20260707240000(entity_feedback: target_type/target_id 다형, author 서버 스탬프, 작성자/admin update RLS). feedbackHooks(useFeedback/useCreateFeedback/useDeleteFeedback), FeedbackPanel 작성(Cmd+Enter)·목록·본인/admin 삭제. 국내/글로벌 공용 -->
 
 
 ## Phase 7. AC 워크스페이스 (Program First 14모듈)

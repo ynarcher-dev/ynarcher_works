@@ -13,6 +13,7 @@ import { MnaDealDetailPage } from '@/features/mna/MnaDealDetailPage'
 import { MnaPage } from '@/features/mna/MnaPage'
 import { NetworksPage } from '@/features/networks/NetworksPage'
 import { NetworkDetailPage } from '@/features/networks/NetworkDetailPage'
+import { GlobalNetworkDetailPage } from '@/features/networks/GlobalNetworkDetailPage'
 import { DIRECTORY_ENTITIES, HUB_DETAIL_ENTITIES } from '@/features/networks/config'
 import { StartupPage } from '@/features/startup/StartupPage'
 import { ProjectDetailPage } from '@/features/project/ProjectDetailPage'
@@ -61,6 +62,15 @@ export const router = createBrowserRouter([
             element: (
               <RequireWorkspace workspace="networks">
                 <NetworksPage />
+              </RequireWorkspace>
+            ),
+          },
+          // 글로벌 네트워크 상세페이지(독립 마스터). id='new'면 등록 모드.
+          {
+            path: 'networks/global/:id',
+            element: (
+              <RequireWorkspace workspace="networks">
+                <GlobalNetworkDetailPage />
               </RequireWorkspace>
             ),
           },

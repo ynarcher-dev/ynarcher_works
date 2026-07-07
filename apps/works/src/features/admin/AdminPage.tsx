@@ -1,5 +1,6 @@
 import { PageHeader } from '@ynarcher/ui'
 import { useSearchParams } from 'react-router-dom'
+import { AdminMergePanel } from '@/features/admin/AdminMergePanel'
 import { AuditLogMonitor } from '@/features/admin/AuditLogMonitor'
 import { BoardAdminPanel } from '@/features/admin/BoardAdminPanel'
 import { DownloadLogView } from '@/features/admin/DownloadLogView'
@@ -16,7 +17,10 @@ const HEADINGS: Record<string, string> = {
   positions: TAG_CONFIGS.positions.heading,
   ranks: TAG_CONFIGS.ranks.heading,
   categories: TAG_CONFIGS.categories.heading,
+  regions: TAG_CONFIGS.regions.heading,
+  countries: TAG_CONFIGS.countries.heading,
   sensitive: '민감정보 관리',
+  merge: '중복 병합 검증',
   audit: '감사 로그 모니터',
   downloads: '다운로드 사유 로그',
 }
@@ -37,7 +41,10 @@ export function AdminPage() {
       {tab === 'positions' && <TagAdminPanel config={TAG_CONFIGS.positions} />}
       {tab === 'ranks' && <TagAdminPanel config={TAG_CONFIGS.ranks} />}
       {tab === 'categories' && <TagAdminPanel config={TAG_CONFIGS.categories} />}
+      {tab === 'regions' && <TagAdminPanel config={TAG_CONFIGS.regions} />}
+      {tab === 'countries' && <TagAdminPanel config={TAG_CONFIGS.countries} />}
       {tab === 'sensitive' && <SensitivePanel />}
+      {tab === 'merge' && <AdminMergePanel />}
       {tab !== 'audit' &&
         tab !== 'downloads' &&
         tab !== 'boards' &&
@@ -46,7 +53,10 @@ export function AdminPage() {
         tab !== 'positions' &&
         tab !== 'ranks' &&
         tab !== 'categories' &&
-        tab !== 'sensitive' && <PermissionConsole />}
+        tab !== 'regions' &&
+        tab !== 'countries' &&
+        tab !== 'sensitive' &&
+        tab !== 'merge' && <PermissionConsole />}
     </div>
   )
 }

@@ -16,6 +16,7 @@ export type MaskKind = 'email' | 'phone'
  * - `rating`: 별점 표기(별 아이콘 + 점수, 값 없음 → 임시 5.0)
  * - `category`: 인라인 구분 드롭다운(미분류 임시 저장소 전용). `categorySelect`가 주입되면
  *   목록에서 바로 구분을 선택해 대상 네트워크로 이관한다. 미주입 시 단일 태그로 폴백한다.
+ * - `link`: URL 값을 아이콘 링크로 렌더(링크드인 등). 값 유무에 따라 아이콘 색이 갈린다.
  * - `placeholder`: 데이터 미연동 컬럼('-' 고정).
  */
 export type MasterColumnKind =
@@ -26,6 +27,7 @@ export type MasterColumnKind =
   | 'count'
   | 'rating'
   | 'category'
+  | 'link'
   | 'placeholder'
 
 export interface MasterColumn {

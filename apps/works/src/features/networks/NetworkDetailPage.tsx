@@ -4,10 +4,14 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { NetworkForm } from '@/features/networks/NetworkForm'
 import { PhotoBox } from '@/features/networks/PhotoBox'
+import { ChangeHistoryPanel, uniqueContributors } from '@/features/networks/ChangeHistoryPanel'
+import { MaterialPanel } from '@/features/networks/MaterialPanel'
+import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import {
   CAREER_SECTIONS,
   formatRow,
   parseBackground,
+  sortRowsByYearDesc,
 } from '@/features/networks/careerConfig'
 import {
   ENTITIES,
@@ -19,7 +23,6 @@ import { SensitiveValue } from '@/features/master/SensitiveValue'
 import {
   useContributions,
   useEntity,
-  type Contribution,
   type EntityRow,
 } from '@/features/networks/hooks'
 
@@ -59,28 +62,6 @@ function formatDate(v: unknown): string {
   return s.length >= 10 ? s.slice(0, 10) : '-'
 }
 
-const CONTRIBUTION_ACTION_LABEL: Record<Contribution['action'], string> = {
-  created: '등록',
-  merged: '병합',
-  enriched: '보강',
-  edited: '수정',
-  deactivated: '비활성화',
-}
-
-/** 기여 로그에서 중복 없는 기여자명 목록(최초 기여순). */
-function uniqueContributors(contributions: Contribution[]): string[] {
-  const seen = new Set<string>()
-  const out: string[] = []
-  for (const c of contributions) {
-    const name = c.user_name?.trim()
-    if (name && !seen.has(name)) {
-      seen.add(name)
-      out.push(name)
-    }
-  }
-  return out
-}
-
 /**
  * 네트워크 통합 상세 뷰(읽기 전용 카드). 8종 전체 공용.
  * 축약(compact) 유형(조직 5종 + 미분류)은 매칭 배지·전문분야·약력·멘토링 만족도 섹션을 숨긴다.
@@ -112,7 +93,9 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
   const contributors = uniqueContributors(contributions ?? [])
 
   return (
-    <div className="space-y-4">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      {/* 좌측(2/3): 프로필 본문 — 현행 유지(약력·메모·멘토링 만족도·매칭 안내). */}
+      <div className="space-y-4 lg:col-span-2">
       <section className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
         <div className="flex items-center gap-5">
           <PhotoBox src={(profile.photo as string) ?? null} />
@@ -188,7 +171,10 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
           {hasCareer ? (
             <div className="space-y-4">
               {CAREER_SECTIONS.map((s) => {
-                const rows = (background[s.key] ?? []).filter((r) => formatRow(s, r))
+                const rows = sortRowsByYearDesc(
+                  s,
+                  (background[s.key] ?? []).filter((r) => formatRow(s, r)),
+                )
                 if (!rows.length) return null
                 return (
                   <div key={s.key}>
@@ -222,30 +208,6 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
         )}
       </SectionCard>
 
-      <SectionCard title="연혁">
-        {contributions && contributions.length > 0 ? (
-          <ul className="space-y-2">
-            {contributions.map((c) => (
-              <li key={c.id} className="flex flex-wrap items-center gap-2 text-body text-gray-800">
-                <span className="text-caption tabular-nums text-gray-400">
-                  {c.created_at.slice(0, 10)}
-                </span>
-                <Badge tone="neutral" size="sm">
-                  {CONTRIBUTION_ACTION_LABEL[c.action]}
-                </Badge>
-                <span className="font-medium">{c.user_name ?? '-'}</span>
-                <span className="text-caption text-gray-400">
-                  {c.source === 'upload' ? '업로드' : '수기'}
-                  {c.note ? ` · ${c.note}` : ''}
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-body text-gray-400">기록된 연혁이 없습니다.</p>
-        )}
-      </SectionCard>
-
       {showMentoring && (
         <SectionCard title="멘토링 만족도">
           <div className="flex items-center gap-6">
@@ -270,6 +232,14 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
           <span className="ml-1">(현재 매칭 상태: {matchOk ? '가능' : '불가능'})</span>
         </Banner>
       )}
+      </div>
+
+      {/* 우측(1/3): 자료 관리 → 변동 이력 → 피드백. 8종 전체 공용 패널. */}
+      <div className="space-y-4 lg:col-span-1">
+        <MaterialPanel targetType={resourceType} targetId={record.id as string} readOnly />
+        <FeedbackPanel targetType={resourceType} targetId={record.id as string} />
+        <ChangeHistoryPanel contributions={contributions} />
+      </div>
     </div>
   )
 }

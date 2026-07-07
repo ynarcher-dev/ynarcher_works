@@ -81,43 +81,70 @@ export interface Tag {
   sort_order: number
   created_at: string
   updated_at: string
+  /** 2뎁스 태그(예: 국가)의 부모 FK. 부모 컬럼을 함께 조회할 때만 채워진다. */
+  region_tag_id?: string | null
 }
 
-/** 태그 목록(미삭제, 표시순). 산업/분야 등 기준정보 태그 테이블 공용. */
-export function useTags(table: string) {
+/** 태그 쓰기 시 부모 FK 지정(2뎁스 태그 전용). */
+export interface TagParentValue {
+  column: string
+  id: string | null
+}
+
+/**
+ * 태그 목록(미삭제, 표시순). 산업/분야 등 기준정보 태그 테이블 공용.
+ * `parentColumn`을 주면 2뎁스 태그의 부모 FK(예: region_tag_id)를 함께 조회한다.
+ */
+export function useTags(table: string, parentColumn?: string, enabled = true) {
   return useQuery({
     queryKey: ['admin', 'tags', table],
+    enabled,
     queryFn: async (): Promise<Tag[]> => {
+      const cols = parentColumn
+        ? `id, name, sort_order, created_at, updated_at, ${parentColumn}`
+        : 'id, name, sort_order, created_at, updated_at'
       const { data, error } = await supabase
         .from(table)
-        .select('id, name, sort_order, created_at, updated_at')
+        .select(cols)
         .is('deleted_at', null)
         .order('sort_order', { ascending: true })
         .order('name', { ascending: true })
       if (error) throw error
-      return (data ?? []) as Tag[]
+      return (data ?? []) as unknown as Tag[]
     },
   })
 }
 
-/** 태그 추가. */
+/** 태그 추가. 2뎁스 태그는 `parent`로 부모 FK를 함께 지정한다. */
 export function useCreateTag(table: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (name: string) => {
-      const { error } = await supabase.from(table).insert({ name })
+    mutationFn: async ({ name, parent }: { name: string; parent?: TagParentValue }) => {
+      const row: Record<string, unknown> = { name }
+      if (parent) row[parent.column] = parent.id
+      const { error } = await supabase.from(table).insert(row)
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'tags', table] }),
   })
 }
 
-/** 태그명 수정. */
+/** 태그명 수정. 2뎁스 태그는 `parent`로 부모 FK도 함께 갱신한다. */
 export function useUpdateTag(table: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, name }: { id: string; name: string }) => {
-      const { error } = await supabase.from(table).update({ name }).eq('id', id)
+    mutationFn: async ({
+      id,
+      name,
+      parent,
+    }: {
+      id: string
+      name: string
+      parent?: TagParentValue
+    }) => {
+      const patch: Record<string, unknown> = { name }
+      if (parent) patch[parent.column] = parent.id
+      const { error } = await supabase.from(table).update(patch).eq('id', id)
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'tags', table] }),

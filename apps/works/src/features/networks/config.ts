@@ -13,6 +13,7 @@ export type EntityKey =
   | 'startups'
   | 'experts'
   | 'van'
+  | 'exp'
   | 'investors'
   | 'corporates'
   | 'institutions'
@@ -87,6 +88,14 @@ export const ENTITIES: Record<EntityKey, EntityConfig> = {
     fields: PERSON_FIELDS,
     listColumns: NETWORK_PROFILE_COLUMNS,
   },
+  exp: {
+    key: 'exp',
+    label: 'EXP',
+    table: 'exp',
+    // 전문가(experts)와 동일한 프로필형 구조: 공용 프로필 컬럼·통합 폼·상세페이지를 공유한다.
+    fields: PERSON_FIELDS,
+    listColumns: NETWORK_PROFILE_COLUMNS,
+  },
   investors: {
     key: 'investors',
     label: '투자사',
@@ -158,8 +167,9 @@ export const ENTITIES: Record<EntityKey, EntityConfig> = {
  * 미분류(others)는 카테고리가 아니라 임시 저장소(미분류 데이터베이스)이므로 여기서 제외한다.
  */
 export const ENTITY_ORDER: EntityKey[] = [
-  'experts',
   'van',
+  'exp',
+  'experts',
   'investors',
   'corporates',
   'institutions',
@@ -268,6 +278,7 @@ export function suggestCategory(
 export const PROFILE_RESOURCE_TYPE: Partial<Record<EntityKey, string>> = {
   experts: 'expert',
   van: 'van',
+  exp: 'exp',
   investors: 'investor',
   corporates: 'corporate',
   institutions: 'institution',

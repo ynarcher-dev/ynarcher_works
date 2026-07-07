@@ -146,6 +146,35 @@ export function MasterListView({
           if (arr.length === 0) return '-'
           return <OverflowTags tags={arr} />
         }
+        if (c.kind === 'link') {
+          // 링크드인 등 URL: 값이 있으면 브랜드 색 아이콘 링크, 없으면 회색 아이콘(비활성).
+          const url = typeof raw === 'string' ? raw.trim() : ''
+          const icon = (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+              <path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.55V9h3.57v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.72v20.56C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.72V1.72C24 .77 23.2 0 22.22 0z" />
+            </svg>
+          )
+          if (!url) {
+            return (
+              <span className="inline-flex text-gray-300" title="링크드인 없음" aria-label="링크드인 없음">
+                {icon}
+              </span>
+            )
+          }
+          return (
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex text-[#0A66C2] hover:opacity-80"
+              title="링크드인 프로필 열기"
+              aria-label="링크드인 프로필 열기"
+            >
+              {icon}
+            </a>
+          )
+        }
         const v = raw as string | null | undefined
         if (c.kind === 'category') {
           // 인라인 구분 드롭다운(미분류 임시 저장소). 핸들러 미주입 시 태그로 폴백한다.
