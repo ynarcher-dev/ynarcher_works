@@ -142,6 +142,8 @@ export interface ExistingRef {
   category: string
   /** 선행 작성자(최초 기여자)명. 기여 로그에서 조회. */
   contributor: string | null
+  /** 비활성(soft-delete) 상태 여부. true면 재업로드 시 '복구' 대상. */
+  deleted: boolean
 }
 
 interface ExistingRow {
@@ -152,6 +154,7 @@ interface ExistingRow {
   affiliation: string | null
   expertise: unknown[] | null
   profile: Record<string, unknown> | null
+  deleted_at: string | null
 }
 
 function toRef(table: EntityKey, r: ExistingRow): ExistingRef {
@@ -167,6 +170,7 @@ function toRef(table: EntityKey, r: ExistingRow): ExistingRef {
     profile,
     category: (profile.category as string) || ENTITIES[table].label,
     contributor: null,
+    deleted: Boolean(r.deleted_at),
   }
 }
 
@@ -181,20 +185,25 @@ export async function findExistingMatches(
   const phones = [...new Set(rows.map((r) => r.phone.replace(/\D/g, '')).filter(Boolean))]
   const byEmail = new Map<string, ExistingRef>()
   const byPhone = new Map<string, ExistingRef>()
-  const cols = 'id,name,email,phone,affiliation,expertise,profile'
+  const cols = 'id,name,email,phone,affiliation,expertise,profile,deleted_at'
+  // 비활성(soft-delete)도 매칭하되 활성 레코드를 우선한다(둘 다 있으면 활성이 정답).
+  const setPref = (map: Map<string, ExistingRef>, key: string, ref: ExistingRef) => {
+    const prev = map.get(key)
+    if (!prev || (prev.deleted && !ref.deleted)) map.set(key, ref)
+  }
 
   await Promise.all(
     DIRECTORY_ENTITIES.flatMap((table) => [
       ...chunk(emails, IN_CHUNK).map(async (batch) => {
-        const { data } = await supabase.from(table).select(cols).is('deleted_at', null).in('email', batch)
+        const { data } = await supabase.from(table).select(cols).in('email', batch)
         for (const r of (data ?? []) as ExistingRow[]) {
-          if (r.email) byEmail.set(r.email, toRef(table, r))
+          if (r.email) setPref(byEmail, r.email, toRef(table, r))
         }
       }),
       ...chunk(phones, IN_CHUNK).map(async (batch) => {
-        const { data } = await supabase.from(table).select(cols).is('deleted_at', null).in('phone', batch)
+        const { data } = await supabase.from(table).select(cols).in('phone', batch)
         for (const r of (data ?? []) as ExistingRow[]) {
-          if (r.phone) byPhone.set(String(r.phone), toRef(table, r))
+          if (r.phone) setPref(byPhone, String(r.phone), toRef(table, r))
         }
       }),
     ]),

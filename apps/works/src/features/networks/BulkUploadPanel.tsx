@@ -89,7 +89,8 @@ export function BulkUploadPanel() {
           return {
             ...r,
             match: m,
-            decision: r.name ? 'merge' : 'skip',
+            // 비활성 중복은 기본 건너뛰기(보수적) — 복구는 명시적으로 선택.
+            decision: !r.name ? 'skip' : m.deleted ? 'skip' : 'merge',
             categoryLabel: presetCategory(normalizeCategory(r.category), m),
           }
         }),
@@ -118,9 +119,13 @@ export function BulkUploadPanel() {
   }
   const applyBulkDecision = (d: Decision) =>
     setRows((prev) =>
-      prev.map((r) =>
-        selected.includes(r.line) && !(d === 'merge' && !r.match) ? { ...r, decision: d } : r,
-      ),
+      prev.map((r) => {
+        if (!selected.includes(r.line)) return r
+        // 합치기=활성 중복만, 복구=비활성 중복만 유효. 그 외는 스킵.
+        if (d === 'merge' && !(r.match && !r.match.deleted)) return r
+        if (d === 'revive' && !(r.match && r.match.deleted)) return r
+        return { ...r, decision: d }
+      }),
     )
   const applyBulkCategory = (label: string) =>
     setRows((prev) => prev.map((r) => (selected.includes(r.line) ? { ...r, categoryLabel: label } : r)))
@@ -133,12 +138,13 @@ export function BulkUploadPanel() {
   }
 
   const newRows = rows.filter((r) => r.decision === 'new' && r.name)
-  const mergeRows = rows.filter((r) => r.decision === 'merge' && r.match && r.name)
-  const skipCount = rows.length - newRows.length - mergeRows.length
+  const mergeRows = rows.filter((r) => r.decision === 'merge' && r.match && !r.match.deleted && r.name)
+  const reviveRows = rows.filter((r) => r.decision === 'revive' && r.match && r.match.deleted && r.name)
+  const skipCount = rows.length - newRows.length - mergeRows.length - reviveRows.length
   const dupCount = rows.filter((r) => r.match).length
 
   const commit = async () => {
-    if (newRows.length === 0 && mergeRows.length === 0) {
+    if (newRows.length === 0 && mergeRows.length === 0 && reviveRows.length === 0) {
       toast.show('처리할 행이 없습니다.', 'warning')
       return
     }
@@ -149,7 +155,7 @@ export function BulkUploadPanel() {
         contentHash: fileHash,
         total: rows.length,
         inserted: newRows.length,
-        merged: mergeRows.length,
+        merged: mergeRows.length + reviveRows.length,
         skipped: skipCount,
       })
       const touched = new Set<EntityKey>()
@@ -199,9 +205,29 @@ export function BulkUploadPanel() {
         }
       }
 
+      // 복구: 비활성 레코드를 되살리고(빈 필드 보강) 기여 기록.
+      for (const r of reviveRows) {
+        if (!r.match) continue
+        const patch = buildEnrichment(r.match, r) ?? {}
+        const { error } = await supabase
+          .from(r.match.table)
+          .update({ deleted_at: null, ...patch })
+          .eq('id', r.match.id)
+        if (error) throw error
+        touched.add(r.match.table)
+        await recordContribution({
+          table: r.match.table,
+          id: r.match.id,
+          action: 'enriched',
+          source: 'upload',
+          batchId,
+          note: '재업로드 복구',
+        })
+      }
+
       for (const table of touched) await qc.invalidateQueries({ queryKey: ['networks', table] })
       toast.show(
-        `업로드 완료 — 신규 ${newRows.length} · 합치기 ${mergeRows.length} · 건너뜀 ${skipCount}`,
+        `업로드 완료 — 신규 ${newRows.length} · 합치기 ${mergeRows.length} · 복구 ${reviveRows.length} · 건너뜀 ${skipCount}`,
         'success',
       )
       reset()
@@ -260,6 +286,7 @@ export function BulkUploadPanel() {
               <Badge tone="neutral" size="sm">전체 {rows.length}</Badge>
               <Badge tone="success" size="sm">신규 {newRows.length}</Badge>
               {mergeRows.length > 0 && <Badge tone="info" size="sm">합치기 {mergeRows.length}</Badge>}
+              {reviveRows.length > 0 && <Badge tone="warning" size="sm">복구 {reviveRows.length}</Badge>}
               {skipCount > 0 && <Badge tone="neutral" size="sm">건너뜀 {skipCount}</Badge>}
               {dupCount > 0 && <span className="text-gray-400">중복 {dupCount}</span>}
               {checking && <span className="text-gray-400">중복 검사 중…</span>}
@@ -267,7 +294,7 @@ export function BulkUploadPanel() {
             <div className="flex gap-2">
               <Button variant="secondary" onClick={reset} disabled={busy}>다시 선택</Button>
               <Button onClick={() => void commit()} disabled={busy || checking}>
-                최종 업로드 ({newRows.length + mergeRows.length})
+                최종 업로드 ({newRows.length + mergeRows.length + reviveRows.length})
               </Button>
             </div>
           </div>
@@ -289,6 +316,7 @@ export function BulkUploadPanel() {
                 >
                   <option value="">결정 일괄</option>
                   <option value="merge">합치기</option>
+                  <option value="revive">복구</option>
                   <option value="new">신규 등록</option>
                   <option value="skip">건너뛰기</option>
                 </InlineSelect>

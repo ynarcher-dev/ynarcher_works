@@ -1,7 +1,7 @@
 import { Badge, cn, InlineSelect } from '@ynarcher/ui'
 import type { ExistingRef, ParsedRow } from '@/features/networks/bulkUpload'
 
-export type Decision = 'new' | 'merge' | 'skip'
+export type Decision = 'new' | 'merge' | 'revive' | 'skip'
 
 export interface ReviewRow extends ParsedRow {
   /** 편집 가능한 저장 대상 구분 라벨. 중복이면 재결정의 출발점(보수적 프리셋). */
@@ -12,12 +12,15 @@ export interface ReviewRow extends ParsedRow {
   decision: Decision
 }
 
-function decisionOptions(hasMatch: boolean): { value: Decision; label: string }[] {
+function decisionOptions(match: ExistingRef | null): { value: Decision; label: string }[] {
   const base: { value: Decision; label: string }[] = [
     { value: 'new', label: '신규 등록' },
     { value: 'skip', label: '건너뛰기' },
   ]
-  return hasMatch ? [{ value: 'merge', label: '합치기' }, ...base] : base
+  if (!match) return base
+  return match.deleted
+    ? [{ value: 'revive', label: '복구' }, ...base]
+    : [{ value: 'merge', label: '합치기' }, ...base]
 }
 
 const HEADERS = [
@@ -97,7 +100,11 @@ export function BulkReviewTable({
               </td>
               <td className="px-3 py-1.5">
                 {r.match ? (
-                  <Badge tone="info" size="sm">Y</Badge>
+                  r.match.deleted ? (
+                    <Badge tone="warning" size="sm">비활성</Badge>
+                  ) : (
+                    <Badge tone="info" size="sm">Y</Badge>
+                  )
                 ) : (
                   <span className="text-gray-400">N</span>
                 )}
@@ -113,7 +120,7 @@ export function BulkReviewTable({
                   disabled={!r.name}
                   onChange={(e) => onDecision(r.line, e.target.value as Decision)}
                 >
-                  {decisionOptions(Boolean(r.match)).map((o) => (
+                  {decisionOptions(r.match).map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </InlineSelect>
