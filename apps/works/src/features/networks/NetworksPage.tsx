@@ -2,14 +2,13 @@ import { Button, PageHeader, Input } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { DirectoryTab } from '@/features/networks/DirectoryTab'
-import { GrowthHistoryPanel } from '@/features/networks/GrowthHistoryPanel'
-import { ImporterModal } from '@/features/networks/ImporterModal'
 import { MergeConsole } from '@/features/networks/MergeConsole'
-import { ENTITIES, ENTITY_ORDER, type EntityKey } from '@/features/networks/config'
+import { BulkUploadPanel } from '@/features/networks/BulkUploadPanel'
+import { ENTITIES, DIRECTORY_ENTITIES, type EntityKey } from '@/features/networks/config'
 
-type Mode = 'directory' | 'merge' | 'growth'
+type Mode = 'directory' | 'merge' | 'bulk'
 
-const ENTITY_KEYS: EntityKey[] = ENTITY_ORDER
+const ENTITY_KEYS: EntityKey[] = DIRECTORY_ENTITIES
 
 /** NETWORKS 워크스페이스(마스터 원장). 섹션 전환은 좌측 사이드바(?tab)가 구동한다. */
 export function NetworksPage() {
@@ -17,9 +16,8 @@ export function NetworksPage() {
   const navigate = useNavigate()
   const tab = params.get('tab') ?? 'experts'
   const [keyword, setKeyword] = useState('')
-  const [importing, setImporting] = useState(false)
 
-  // 엔티티는 병합/성장 섹션 진입 시에도 유지되도록 내부 상태로 보존한다.
+  // 엔티티는 병합 섹션 진입 시에도 유지되도록 내부 상태로 보존한다.
   const [entity, setEntity] = useState<EntityKey>('experts')
   useEffect(() => {
     if (ENTITY_KEYS.includes(tab as EntityKey)) {
@@ -28,15 +26,14 @@ export function NetworksPage() {
     }
   }, [tab])
 
-  const mode: Mode = tab === 'merge' ? 'merge' : tab === 'growth' ? 'growth' : 'directory'
+  const mode: Mode = tab === 'merge' ? 'merge' : tab === 'bulk' ? 'bulk' : 'directory'
   const config = ENTITIES[entity]
 
+  // 미분류(others)는 카테고리가 아닌 임시 저장소이므로 '미분류 데이터베이스'로 표기한다.
+  const directoryHeading =
+    entity === 'others' ? '미분류 데이터베이스' : `${config.label} 네트워크`
   const heading =
-    mode === 'merge'
-      ? '중복 병합 검증'
-      : mode === 'growth'
-        ? '성장 지표'
-        : `${config.label} 네트워크`
+    mode === 'merge' ? '중복 병합 검증' : mode === 'bulk' ? '대용량 업로드' : directoryHeading
 
   const searchField = mode === 'directory' ? (
     <Input
@@ -47,14 +44,9 @@ export function NetworksPage() {
   ) : undefined
 
   const actions = mode === 'directory' ? (
-    <>
-      <Button variant="outline" onClick={() => setImporting(true)}>
-        대량 등록(CSV)
-      </Button>
-      <Button onClick={() => navigate(`/networks/${entity}/new`)}>
-        {config.label} 등록
-      </Button>
-    </>
+    <Button onClick={() => navigate(`/networks/${entity}/new`)}>
+      네트워크 등록
+    </Button>
   ) : undefined
 
   return (
@@ -69,15 +61,7 @@ export function NetworksPage() {
         <DirectoryTab config={config} keyword={keyword} />
       )}
       {mode === 'merge' && <MergeConsole config={config} />}
-      {mode === 'growth' && <GrowthHistoryPanel />}
-
-      {/* 네트워크 대량 등록: '구분' 열로 8종 테이블에 자동 분류 등록. */}
-      <ImporterModal
-        config={config}
-        open={importing}
-        onClose={() => setImporting(false)}
-        routeByCategory
-      />
+      {mode === 'bulk' && <BulkUploadPanel />}
     </div>
   )
 }

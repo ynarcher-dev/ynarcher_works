@@ -1,4 +1,4 @@
-import { Badge, Button, DataTable, Spinner, type Column, type DataTableProps } from '@ynarcher/ui'
+import { Badge, Button, DataTable, InlineSelect, Spinner, type Column, type DataTableProps } from '@ynarcher/ui'
 import { useMemo } from 'react'
 import { maskEmail, maskPhone } from '@/lib/mask'
 import { useSensitiveStore } from '@/features/admin/sensitiveStore'
@@ -55,6 +55,18 @@ interface MasterListViewProps {
   /** 관리(비활성화) 컬럼 노출 여부. HUB(조회 센터)는 false, NETWORKS(원장)는 true. 기본 true. */
   manageable?: boolean
   /**
+   * 인라인 구분 드롭다운(kind: 'category' 컬럼 전용). 미분류 임시 저장소에서 목록에 머문 채
+   * 구분을 선택해 대상 네트워크로 이관할 때 주입한다. 미주입 시 해당 컬럼은 태그로 폴백한다.
+   */
+  categorySelect?: {
+    /** 드롭다운 옵션(value = 저장/이관 기준 구분 라벨). 선두에 빈 값 플레이스홀더 권장. */
+    options: { value: string; label: string }[]
+    /** 선택 시 호출. value가 빈 문자열(플레이스홀더)이면 호출 측에서 무시한다. */
+    onChange: (row: MasterRow, value: string) => void
+    /** 이관 처리 중 전체 드롭다운 비활성화(중복 제출 방지). */
+    disabled?: boolean
+  }
+  /**
    * 서버 사이드 페이지네이션(0-base page). 지정 시 표 하단에 페이저를 노출하고 No. 컬럼을
    * 전체 건수 기준으로 매긴다. 미지정 시 페이저 없이 전달된 rows를 그대로 렌더한다(HUB 등).
    * DataTable로 그대로 전달된다(페이저·넘버링은 공용 컴포넌트가 소유).
@@ -75,6 +87,7 @@ export function MasterListView({
   onRowClick,
   onDeactivate,
   manageable = true,
+  categorySelect,
   pagination,
 }: MasterListViewProps) {
   const show = useSensitiveStore((s) => s.show)
@@ -125,6 +138,31 @@ export function MasterListView({
           return <OverflowTags tags={arr} />
         }
         const v = raw as string | null | undefined
+        if (c.kind === 'category') {
+          // 인라인 구분 드롭다운(미분류 임시 저장소). 핸들러 미주입 시 태그로 폴백한다.
+          if (categorySelect) {
+            const known = categorySelect.options.some((o) => o.value === v)
+            return (
+              <InlineSelect
+                value={known ? (v as string) : ''}
+                disabled={categorySelect.disabled}
+                // 행 클릭(상세 진입)과 분리한다.
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => {
+                  e.stopPropagation()
+                  categorySelect.onChange(r, e.target.value)
+                }}
+              >
+                {categorySelect.options.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </InlineSelect>
+            )
+          }
+          return v ? <Badge tone="neutral" size="sm">{v}</Badge> : '-'
+        }
         if (c.kind === 'tag') return v ? <Badge tone="neutral" size="sm">{v}</Badge> : '-'
         if (c.mask === 'email') return show.email ? (v ?? '-') : maskEmail(v ?? null)
         if (c.mask === 'phone') return show.phone ? (v ?? '-') : maskPhone(v ?? null)
@@ -147,7 +185,7 @@ export function MasterListView({
       })
     }
     return base
-  }, [columns, onEdit, show.email, show.phone])
+  }, [columns, onEdit, show.email, show.phone, categorySelect])
 
   if (isLoading) return <Spinner />
   return (

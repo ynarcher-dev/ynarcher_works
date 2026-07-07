@@ -5,7 +5,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import type { EntityKey } from '@/features/networks/config'
+import { ENTITIES, type EntityKey } from '@/features/networks/config'
 
 export type EntityRow = Record<string, unknown> & {
   id: string
@@ -180,6 +180,71 @@ export function useMoveEntity(from: EntityKey, to: EntityKey) {
   })
 }
 
+/**
+ * 이관 시 대상 테이블로 복제할 공통(통일 스키마) 컬럼.
+ * 8종 네트워크 테이블이 전부 공유하는 experts 동일 컬럼만 복제한다. 원본(others)에만 있는
+ * 레거시 컬럼(category/representative/memo/contact 등)까지 복사하면 대상 테이블에 해당 컬럼이
+ * 없어 insert가 실패하므로, 화이트리스트로 안전하게 좁힌다. (profile은 별도 병합.)
+ */
+const REASSIGN_COPY_KEYS = [
+  'name',
+  'email',
+  'phone',
+  'affiliation',
+  'expertise',
+  'is_provisional',
+] as const
+
+/**
+ * 미분류(others) 임시 저장소에서 구분을 선택해 대상 네트워크로 이관한다.
+ * 목록 인라인 드롭다운 전용. 대상 테이블마다 목적지가 달라 `useMoveEntity`(고정 to)와 달리
+ * 이관 시점에 `to`를 받는다. `useMoveEntity`와 동일 규약으로 대상에 복제 insert 후
+ * 원본을 soft-delete하며, soft-delete 실패 시 신규 레코드를 보상 삭제한다.
+ */
+export function useReassignCategory(from: EntityKey) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      row,
+      to,
+    }: {
+      row: EntityRow
+      to: EntityKey
+    }): Promise<string> => {
+      // 공통 컬럼만 복제하고, 구분(profile.category)을 대상 라벨로 갱신한다.
+      const prevProfile = (row.profile as Record<string, unknown> | undefined) ?? {}
+      const values: Record<string, unknown> = {
+        profile: { ...prevProfile, category: ENTITIES[to].label },
+      }
+      for (const k of REASSIGN_COPY_KEYS) {
+        if (row[k] !== undefined) values[k] = row[k]
+      }
+
+      const { data, error } = await supabase
+        .from(to)
+        .insert(values)
+        .select('id')
+        .single()
+      if (error) throw error
+      const newId = (data as { id: string }).id
+
+      const { error: delError } = await supabase
+        .from(from)
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', row.id)
+      if (delError) {
+        await supabase.from(to).delete().eq('id', newId)
+        throw delError
+      }
+      return newId
+    },
+    onSuccess: (_newId, { to }) => {
+      void qc.invalidateQueries({ queryKey: ['networks', from] })
+      void qc.invalidateQueries({ queryKey: ['networks', to] })
+    },
+  })
+}
+
 /** 엔티티 수정. */
 export function useUpdateEntity(table: EntityKey) {
   const qc = useQueryClient()
@@ -195,31 +260,6 @@ export function useUpdateEntity(table: EntityKey) {
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['networks', table] }),
-  })
-}
-
-export interface GrowthMetrics {
-  technology: number | null
-  business_model: number | null
-  credibility: number | null
-  collaboration: number | null
-  matching_feasibility: number | null
-  sample_count: number
-}
-
-/** 스타트업 성장 5대 지표 평균(멘토 진단 누적, RPC 집계). */
-export function useStartupGrowth(startupId: string | undefined) {
-  return useQuery({
-    queryKey: ['networks', 'growth', startupId],
-    enabled: Boolean(startupId),
-    queryFn: async (): Promise<GrowthMetrics | null> => {
-      const { data, error } = await supabase.rpc('startup_growth_metrics', {
-        p_startup_id: startupId,
-      })
-      if (error) throw error
-      const row = (data ?? [])[0] as GrowthMetrics | undefined
-      return row ?? null
-    },
   })
 }
 

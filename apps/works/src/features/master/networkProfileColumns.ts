@@ -33,3 +33,43 @@ export const NETWORK_PROFILE_COLUMNS: MasterColumn[] = [
   { name: '_satisfaction', label: '만족도', kind: 'rating', className: 'w-16' },
   { name: 'profile.match_available', label: '매칭', kind: 'match', className: 'w-16' },
 ]
+
+/**
+ * 조직 유형(기업·기관·대학·외주/거래) 목록 컬럼.
+ * 이들은 개인 중심 지표인 분야·활동·만족도·매칭이 필요 없으므로, 전체 컬럼에서
+ * 해당 4종을 제외해 파생한다(폼·상세의 `isCompactEntity` 숨김 처리와 대칭).
+ * 전체 컬럼이 바뀌어도 자동으로 동기화되도록 이름 기반 필터로 구성한다.
+ */
+const ORG_OMIT_COLUMNS = new Set([
+  'expertise',
+  '_activity',
+  '_satisfaction',
+  'profile.match_available',
+])
+
+// 조직 유형은 담당자의 부서 식별이 중요하므로 소속 바로 뒤에 부서를 노출한다.
+const ORG_DEPARTMENT_COLUMN: MasterColumn = {
+  name: 'profile.department',
+  label: '부서',
+  className: 'w-32',
+}
+
+export const NETWORK_ORG_COLUMNS: MasterColumn[] = NETWORK_PROFILE_COLUMNS.filter(
+  (c) => !ORG_OMIT_COLUMNS.has(c.name),
+).flatMap((c) => (c.name === 'affiliation' ? [c, ORG_DEPARTMENT_COLUMN] : [c]))
+
+/**
+ * 미분류(others) 목록 컬럼. 분류가 없거나 미분류 상태로 유입된 인물이 모이는 임시 저장소로,
+ * 목록에서 바로 '구분'을 선택해 대상 네트워크로 이관할 수 있도록 구분을 드롭다운(kind: 'category')으로
+ * 노출한다. 분야/활동/만족도/매칭 등 개인 지표는 배정 전이라 표시하지 않는다.
+ * (작성자·수정일·관리 컬럼은 DataTable이 자동 렌더한다.)
+ */
+export const NETWORK_OTHERS_COLUMNS: MasterColumn[] = [
+  { name: 'name', label: '이름', className: 'w-20' },
+  { name: 'affiliation', label: '소속', className: 'w-40' },
+  { name: 'profile.department', label: '부서명', className: 'w-28' },
+  { name: 'profile.position', label: '직책/직급', className: 'w-24' },
+  { name: 'email', label: '이메일', mask: 'email', className: 'w-44' },
+  { name: 'phone', label: '연락처', mask: 'phone', className: 'w-32' },
+  { name: 'profile.category', label: '구분', kind: 'category', className: 'w-36' },
+]

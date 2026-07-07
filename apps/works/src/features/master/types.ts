@@ -14,6 +14,8 @@ export type MaskKind = 'email' | 'phone'
  * - `match`: 매칭 가능/불가능 읽기용 태그(설정은 상세 페이지 드롭다운에서)
  * - `count`: 건수 표기('{n}건', 값 없음 → 임시 999건)
  * - `rating`: 별점 표기(별 아이콘 + 점수, 값 없음 → 임시 5.0)
+ * - `category`: 인라인 구분 드롭다운(미분류 임시 저장소 전용). `categorySelect`가 주입되면
+ *   목록에서 바로 구분을 선택해 대상 네트워크로 이관한다. 미주입 시 단일 태그로 폴백한다.
  * - `placeholder`: 데이터 미연동 컬럼('-' 고정).
  */
 export type MasterColumnKind =
@@ -23,6 +25,7 @@ export type MasterColumnKind =
   | 'match'
   | 'count'
   | 'rating'
+  | 'category'
   | 'placeholder'
 
 export interface MasterColumn {

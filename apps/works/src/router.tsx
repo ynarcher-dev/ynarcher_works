@@ -13,7 +13,7 @@ import { MnaDealDetailPage } from '@/features/mna/MnaDealDetailPage'
 import { MnaPage } from '@/features/mna/MnaPage'
 import { NetworksPage } from '@/features/networks/NetworksPage'
 import { NetworkDetailPage } from '@/features/networks/NetworkDetailPage'
-import { ENTITY_ORDER, HUB_DETAIL_ENTITIES } from '@/features/networks/config'
+import { DIRECTORY_ENTITIES, HUB_DETAIL_ENTITIES } from '@/features/networks/config'
 import { StartupPage } from '@/features/startup/StartupPage'
 import { ProjectDetailPage } from '@/features/project/ProjectDetailPage'
 import { ProjectPage } from '@/features/project/ProjectPage'
@@ -64,8 +64,8 @@ export const router = createBrowserRouter([
               </RequireWorkspace>
             ),
           },
-          // 네트워크 8종 상세페이지(공용 NetworkDetailPage). 구분 변경 시 대상 엔티티로 이동.
-          ...ENTITY_ORDER.map((entity) => ({
+          // 네트워크 상세페이지(공용 NetworkDetailPage). 카테고리 + 미분류 데이터베이스(others).
+          ...DIRECTORY_ENTITIES.map((entity) => ({
             path: `networks/${entity}/:id`,
             element: (
               <RequireWorkspace workspace="networks">

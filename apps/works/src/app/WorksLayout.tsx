@@ -38,6 +38,8 @@ import {
   Boxes,
   EyeOff,
   Truck,
+  Component,
+  Upload,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import {
@@ -84,6 +86,7 @@ const sidebarIconByTab: Record<string, LucideIcon> = {
   institutions: Landmark,
   universities: GraduationCap,
   vendors: Truck,
+  etc: Component,
   others: Boxes,
 
   // HUB 그룹 3: 현황 정보
@@ -100,7 +103,7 @@ const sidebarIconByTab: Record<string, LucideIcon> = {
   ranking: Award,
   directory: Users,
   merge: Link2,
-  growth: ChartNoAxesCombined,
+  bulk: Upload,
   kanban: BadgeCheck,
   matching: LayoutGrid,
   permissions: LockKeyhole,

@@ -2,8 +2,19 @@ import { useToast } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { EntityFormModal } from '@/features/networks/EntityFormModal'
-import { useEntityPage, useUpdateEntity } from '@/features/networks/hooks'
-import { usesDetailPage, type EntityConfig } from '@/features/networks/config'
+import {
+  useEntityPage,
+  useReassignCategory,
+  useUpdateEntity,
+  type EntityRow,
+} from '@/features/networks/hooks'
+import {
+  CATEGORY_OPTIONS,
+  resolveEntityFromCategory,
+  usesDetailPage,
+  ENTITIES,
+  type EntityConfig,
+} from '@/features/networks/config'
 import { MasterListView } from '@/features/master/MasterListView'
 import type { MasterRow } from '@/features/master/types'
 
@@ -38,6 +49,37 @@ export function DirectoryTab({ config, keyword, creating, setCreating }: Directo
   const { data, isLoading } = useEntityPage(config.table, keyword, page, PAGE_SIZE)
   const hasDetailPage = usesDetailPage(config.key)
 
+  // 미분류(others)는 목록에서 구분을 골라 대상 네트워크로 이관하는 임시 저장소로 동작한다.
+  const isOthers = config.key === 'others'
+  const reassign = useReassignCategory(config.table)
+  const categorySelect = isOthers
+    ? {
+        // 선두 플레이스홀더 + 미분류를 제외한 대상 구분들.
+        options: [
+          { value: '', label: '구분 선택' },
+          ...CATEGORY_OPTIONS.filter((o) => o.key !== 'others').map((o) => ({
+            value: o.label,
+            label: o.label,
+          })),
+        ],
+        disabled: reassign.isPending,
+        onChange: (row: MasterRow, value: string) => {
+          const target = resolveEntityFromCategory(value)
+          // 플레이스홀더(빈 값)이거나 동일 엔티티면 무시한다.
+          if (!value || target === config.key) return
+          reassign.mutate(
+            { row: row as EntityRow, to: target },
+            {
+              onSuccess: () =>
+                toast.show(`${ENTITIES[target].label} 네트워크로 이관했습니다.`, 'success'),
+              onError: () =>
+                toast.show('이관에 실패했습니다. 권한을 확인하세요.', 'danger'),
+            },
+          )
+        },
+      }
+    : undefined
+
   const deactivate = async (row: MasterRow) => {
     try {
       await update.mutateAsync({
@@ -63,6 +105,7 @@ export function DirectoryTab({ config, keyword, creating, setCreating }: Directo
             : undefined
         }
         onDeactivate={deactivate}
+        categorySelect={categorySelect}
         pagination={{
           page,
           pageSize: PAGE_SIZE,

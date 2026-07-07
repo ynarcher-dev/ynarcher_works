@@ -56,11 +56,12 @@ function formatDate(v: unknown): string {
 
 /**
  * 네트워크 통합 상세 뷰(읽기 전용 카드). 8종 전체 공용.
- * 조직 4종(compact)은 매칭 배지·전문분야·약력·멘토링 만족도 섹션을 숨긴다.
+ * 축약(compact) 유형(조직 5종 + 미분류)은 매칭 배지·전문분야·약력·멘토링 만족도 섹션을 숨긴다.
  */
 function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow }) {
   const label = ENTITIES[entity].label
   const compact = isCompactEntity(entity)
+  const showMentoring = !compact
   const resourceType = PROFILE_RESOURCE_TYPE[entity] ?? entity
   const profile = (record.profile ?? {}) as Record<string, unknown>
   const expertise = Array.isArray(record.expertise)
@@ -190,7 +191,7 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
         )}
       </SectionCard>
 
-      {!compact && (
+      {showMentoring && (
         <SectionCard title="멘토링 만족도">
           <div className="flex items-center gap-6">
             <span className="inline-flex items-center gap-1.5 text-title-sm font-semibold text-gray-900">

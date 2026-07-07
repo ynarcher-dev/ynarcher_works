@@ -82,14 +82,15 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         { label: '기관 네트워크', tab: 'institutions' },
         { label: '대학 네트워크', tab: 'universities' },
         { label: '외주/거래 네트워크', tab: 'vendors' },
-        { label: '미분류 네트워크', tab: 'others', dividerBefore: true },
+        { label: '기타 네트워크', tab: 'etc' },
       ],
     },
     {
       group: '데이터 관리',
       items: [
+        { label: '미분류 데이터베이스', tab: 'others' },
+        { label: '대용량 업로드', tab: 'bulk' },
         { label: '중복 병합 검증', tab: 'merge' },
-        { label: '성장 지표', tab: 'growth' },
       ],
     },
   ],
