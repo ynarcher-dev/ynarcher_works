@@ -48,6 +48,7 @@ export function BulkUploadPanel() {
   const qc = useQueryClient()
   const [rows, setRows] = useState<ReviewRow[]>([])
   const [selected, setSelected] = useState<number[]>([])
+  const [revivedLines, setRevivedLines] = useState<number[]>([])
   const [fileName, setFileName] = useState('')
   const [fileHash, setFileHash] = useState('')
   const [priorUpload, setPriorUpload] = useState<{ filename: string | null; created_at: string } | null>(null)
@@ -64,6 +65,7 @@ export function BulkUploadPanel() {
     }
     setFileName(file.name)
     setSelected([])
+    setRevivedLines([])
     const hash = await sha256Hex(text)
     setFileHash(hash)
     setPriorUpload(await findPriorBatchByHash(hash))
@@ -121,17 +123,47 @@ export function BulkUploadPanel() {
     setRows((prev) =>
       prev.map((r) => {
         if (!selected.includes(r.line)) return r
-        // 합치기=활성 중복만, 복구=비활성 중복만 유효. 그 외는 스킵.
+        // 합치기는 활성 중복만 유효(비활성은 행별 복구 버튼으로 처리).
         if (d === 'merge' && !(r.match && !r.match.deleted)) return r
-        if (d === 'revive' && !(r.match && r.match.deleted)) return r
         return { ...r, decision: d }
       }),
     )
+
+  // 비활성 매칭 행 즉시 복구(활성화 + 빈 필드 보강 + 기여 기록).
+  const onRevive = async (line: number) => {
+    const row = rows.find((r) => r.line === line)
+    if (!row?.match) return
+    const match = row.match
+    setBusy(true)
+    try {
+      const patch = buildEnrichment(match, row) ?? {}
+      const { error } = await supabase
+        .from(match.table)
+        .update({ deleted_at: null, ...patch })
+        .eq('id', match.id)
+      if (error) throw error
+      await recordContribution({
+        table: match.table,
+        id: match.id,
+        action: 'enriched',
+        source: 'upload',
+        note: '재업로드 복구',
+      })
+      await qc.invalidateQueries({ queryKey: ['networks', match.table] })
+      setRevivedLines((prev) => [...prev, line])
+      toast.show(`${match.name}을(를) 복구했습니다.`, 'success')
+    } catch {
+      toast.show('복구에 실패했습니다. 권한을 확인하세요.', 'danger')
+    } finally {
+      setBusy(false)
+    }
+  }
   const applyBulkCategory = (label: string) =>
     setRows((prev) => prev.map((r) => (selected.includes(r.line) ? { ...r, categoryLabel: label } : r)))
   const reset = () => {
     setRows([])
     setSelected([])
+    setRevivedLines([])
     setFileName('')
     setFileHash('')
     setPriorUpload(null)
@@ -139,12 +171,11 @@ export function BulkUploadPanel() {
 
   const newRows = rows.filter((r) => r.decision === 'new' && r.name)
   const mergeRows = rows.filter((r) => r.decision === 'merge' && r.match && !r.match.deleted && r.name)
-  const reviveRows = rows.filter((r) => r.decision === 'revive' && r.match && r.match.deleted && r.name)
-  const skipCount = rows.length - newRows.length - mergeRows.length - reviveRows.length
+  const skipCount = rows.length - newRows.length - mergeRows.length
   const dupCount = rows.filter((r) => r.match).length
 
   const commit = async () => {
-    if (newRows.length === 0 && mergeRows.length === 0 && reviveRows.length === 0) {
+    if (newRows.length === 0 && mergeRows.length === 0) {
       toast.show('처리할 행이 없습니다.', 'warning')
       return
     }
@@ -155,7 +186,7 @@ export function BulkUploadPanel() {
         contentHash: fileHash,
         total: rows.length,
         inserted: newRows.length,
-        merged: mergeRows.length + reviveRows.length,
+        merged: mergeRows.length,
         skipped: skipCount,
       })
       const touched = new Set<EntityKey>()
@@ -205,29 +236,9 @@ export function BulkUploadPanel() {
         }
       }
 
-      // 복구: 비활성 레코드를 되살리고(빈 필드 보강) 기여 기록.
-      for (const r of reviveRows) {
-        if (!r.match) continue
-        const patch = buildEnrichment(r.match, r) ?? {}
-        const { error } = await supabase
-          .from(r.match.table)
-          .update({ deleted_at: null, ...patch })
-          .eq('id', r.match.id)
-        if (error) throw error
-        touched.add(r.match.table)
-        await recordContribution({
-          table: r.match.table,
-          id: r.match.id,
-          action: 'enriched',
-          source: 'upload',
-          batchId,
-          note: '재업로드 복구',
-        })
-      }
-
       for (const table of touched) await qc.invalidateQueries({ queryKey: ['networks', table] })
       toast.show(
-        `업로드 완료 — 신규 ${newRows.length} · 합치기 ${mergeRows.length} · 복구 ${reviveRows.length} · 건너뜀 ${skipCount}`,
+        `업로드 완료 — 신규 ${newRows.length} · 합치기 ${mergeRows.length} · 건너뜀 ${skipCount}`,
         'success',
       )
       reset()
@@ -286,7 +297,6 @@ export function BulkUploadPanel() {
               <Badge tone="neutral" size="sm">전체 {rows.length}</Badge>
               <Badge tone="success" size="sm">신규 {newRows.length}</Badge>
               {mergeRows.length > 0 && <Badge tone="info" size="sm">합치기 {mergeRows.length}</Badge>}
-              {reviveRows.length > 0 && <Badge tone="warning" size="sm">복구 {reviveRows.length}</Badge>}
               {skipCount > 0 && <Badge tone="neutral" size="sm">건너뜀 {skipCount}</Badge>}
               {dupCount > 0 && <span className="text-gray-400">중복 {dupCount}</span>}
               {checking && <span className="text-gray-400">중복 검사 중…</span>}
@@ -294,7 +304,7 @@ export function BulkUploadPanel() {
             <div className="flex gap-2">
               <Button variant="secondary" onClick={reset} disabled={busy}>다시 선택</Button>
               <Button onClick={() => void commit()} disabled={busy || checking}>
-                최종 업로드 ({newRows.length + mergeRows.length + reviveRows.length})
+                최종 업로드 ({newRows.length + mergeRows.length})
               </Button>
             </div>
           </div>
@@ -316,7 +326,6 @@ export function BulkUploadPanel() {
                 >
                   <option value="">결정 일괄</option>
                   <option value="merge">합치기</option>
-                  <option value="revive">복구</option>
                   <option value="new">신규 등록</option>
                   <option value="skip">건너뛰기</option>
                 </InlineSelect>
@@ -337,10 +346,13 @@ export function BulkUploadPanel() {
             rows={rows}
             categoryOptions={CATEGORY_SELECT}
             selected={selected}
+            revivedLines={revivedLines}
+            busy={busy}
             onToggle={toggle}
             onToggleAll={toggleAll}
             onCategory={setCategory}
             onDecision={setDecision}
+            onRevive={(line) => void onRevive(line)}
           />
         </>
       )}

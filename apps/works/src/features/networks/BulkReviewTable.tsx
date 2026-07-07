@@ -1,26 +1,24 @@
-import { Badge, cn, InlineSelect } from '@ynarcher/ui'
+import { Badge, Button, cn, InlineSelect } from '@ynarcher/ui'
 import type { ExistingRef, ParsedRow } from '@/features/networks/bulkUpload'
 
-export type Decision = 'new' | 'merge' | 'revive' | 'skip'
+export type Decision = 'new' | 'merge' | 'skip'
 
 export interface ReviewRow extends ParsedRow {
   /** 편집 가능한 저장 대상 구분 라벨. 중복이면 재결정의 출발점(보수적 프리셋). */
   categoryLabel: string
   /** 확실중복(이메일·전화 일치)으로 매칭된 기존 레코드. 없으면 신규. */
   match: ExistingRef | null
-  /** 처리 방식. */
+  /** 처리 방식(비활성 매칭은 결정 대신 '복구하기' 버튼 사용). */
   decision: Decision
 }
 
-function decisionOptions(match: ExistingRef | null): { value: Decision; label: string }[] {
+/** 활성 매칭/무매칭 행의 결정 옵션(비활성 매칭은 버튼으로 처리하므로 제외). */
+function decisionOptions(hasActiveMatch: boolean): { value: Decision; label: string }[] {
   const base: { value: Decision; label: string }[] = [
     { value: 'new', label: '신규 등록' },
     { value: 'skip', label: '건너뛰기' },
   ]
-  if (!match) return base
-  return match.deleted
-    ? [{ value: 'revive', label: '복구' }, ...base]
-    : [{ value: 'merge', label: '합치기' }, ...base]
+  return hasActiveMatch ? [{ value: 'merge', label: '합치기' }, ...base] : base
 }
 
 const HEADERS = [
@@ -31,10 +29,15 @@ interface Props {
   rows: ReviewRow[]
   categoryOptions: { value: string; label: string }[]
   selected: number[]
+  /** 이미 복구 처리된(활성화된) 행 번호. 해당 행은 '복구됨'으로 잠긴다. */
+  revivedLines: number[]
+  busy?: boolean
   onToggle: (line: number) => void
   onToggleAll: () => void
   onCategory: (line: number, label: string) => void
   onDecision: (line: number, decision: Decision) => void
+  /** 비활성 매칭 행 즉시 복구(활성화). */
+  onRevive: (line: number) => void
 }
 
 /** 대용량 업로드 리뷰 테이블(체크박스·구분 재결정·중복 데이터·결정). */
@@ -42,10 +45,13 @@ export function BulkReviewTable({
   rows,
   categoryOptions,
   selected,
+  revivedLines,
+  busy,
   onToggle,
   onToggleAll,
   onCategory,
   onDecision,
+  onRevive,
 }: Props) {
   const selectable = rows.filter((r) => r.name)
   const allSelected = selectable.length > 0 && selectable.every((r) => selected.includes(r.line))
@@ -115,15 +121,25 @@ export function BulkReviewTable({
                   : '-'}
               </td>
               <td className="px-3 py-1.5">
-                <InlineSelect
-                  value={r.decision}
-                  disabled={!r.name}
-                  onChange={(e) => onDecision(r.line, e.target.value as Decision)}
-                >
-                  {decisionOptions(r.match).map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </InlineSelect>
+                {r.match?.deleted ? (
+                  revivedLines.includes(r.line) ? (
+                    <Badge tone="success" size="sm">복구됨</Badge>
+                  ) : (
+                    <Button size="sm" disabled={busy} onClick={() => onRevive(r.line)}>
+                      복구하기
+                    </Button>
+                  )
+                ) : (
+                  <InlineSelect
+                    value={r.decision}
+                    disabled={!r.name}
+                    onChange={(e) => onDecision(r.line, e.target.value as Decision)}
+                  >
+                    {decisionOptions(Boolean(r.match)).map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </InlineSelect>
+                )}
               </td>
             </tr>
           ))}
