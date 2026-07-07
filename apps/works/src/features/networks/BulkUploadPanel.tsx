@@ -4,11 +4,17 @@ import { useState, type DragEvent } from 'react'
 import { supabase } from '@/lib/supabase'
 import { CATEGORY_OPTIONS, type EntityKey } from '@/features/networks/config'
 import {
+  createUploadBatch,
+  findPriorBatchByHash,
+  recordContribution,
+} from '@/features/networks/hooks'
+import {
   buildTemplateCsv,
   downloadCsv,
   findExistingContacts,
   parseBulkCsv,
   rowToPayload,
+  sha256Hex,
   type ParsedRow,
 } from '@/features/networks/bulkUpload'
 
@@ -37,17 +43,24 @@ export function BulkUploadPanel() {
   const qc = useQueryClient()
   const [rows, setRows] = useState<ReviewRow[]>([])
   const [fileName, setFileName] = useState('')
+  const [fileHash, setFileHash] = useState('')
+  const [priorUpload, setPriorUpload] = useState<{ filename: string | null; created_at: string } | null>(null)
   const [dragging, setDragging] = useState(false)
   const [checking, setChecking] = useState(false)
   const [busy, setBusy] = useState(false)
 
   const loadFile = async (file: File) => {
-    const parsed = parseBulkCsv(await file.text())
+    const text = await file.text()
+    const parsed = parseBulkCsv(text)
     if (parsed.length === 0) {
       toast.show('헤더와 최소 1개 데이터 행이 필요합니다.', 'warning')
       return
     }
     setFileName(file.name)
+    // 동일 파일(콘텐츠 해시) 재업로드 이력 경고.
+    const hash = await sha256Hex(text)
+    setFileHash(hash)
+    setPriorUpload(await findPriorBatchByHash(hash))
     const initial: ReviewRow[] = parsed.map((r) => ({
       ...r,
       categoryLabel: normalizeCategory(r.category),
@@ -90,6 +103,8 @@ export function BulkUploadPanel() {
   const reset = () => {
     setRows([])
     setFileName('')
+    setFileHash('')
+    setPriorUpload(null)
   }
 
   const includable = rows.filter((r) => r.include && r.name)
@@ -110,10 +125,25 @@ export function BulkUploadPanel() {
     }
     setBusy(true)
     try {
+      // 배치 이력 생성(파일 해시·집계). 이후 등록 행을 업로드 출처 기여로 기록한다.
+      const batchId = await createUploadBatch({
+        filename: fileName,
+        contentHash: fileHash,
+        total: rows.length,
+        inserted: includable.length,
+        merged: 0,
+        skipped: rows.length - includable.length,
+      })
       for (const [table, list] of byTable) {
-        const { error } = await supabase.from(table).insert(list)
+        const { data, error } = await supabase.from(table).insert(list).select('id')
         if (error) throw error
         await qc.invalidateQueries({ queryKey: ['networks', table] })
+        const ids = ((data ?? []) as { id: string }[]).map((d) => d.id)
+        await Promise.all(
+          ids.map((id) =>
+            recordContribution({ table, id, action: 'created', source: 'upload', batchId }),
+          ),
+        )
       }
       toast.show(`${includable.length}건 업로드 완료`, 'success')
       reset()
@@ -186,6 +216,13 @@ export function BulkUploadPanel() {
               </Button>
             </div>
           </div>
+
+          {priorUpload && (
+            <Banner tone="warning">
+              동일한 내용의 파일이 <b>{priorUpload.created_at.slice(0, 10)}</b>에 이미 업로드된 이력이
+              있습니다{priorUpload.filename ? ` (${priorUpload.filename})` : ''}. 중복 업로드가 아닌지 확인하세요.
+            </Banner>
+          )}
 
           {dupCount > 0 && (
             <Banner tone="warning">

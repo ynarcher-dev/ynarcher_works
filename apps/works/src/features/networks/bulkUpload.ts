@@ -111,6 +111,14 @@ export function downloadCsv(filename: string, text: string): void {
   URL.revokeObjectURL(url)
 }
 
+/** 파일 콘텐츠 SHA-256 해시(hex). 동일 파일 재업로드 경고용. */
+export async function sha256Hex(text: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+}
+
 function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = []
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size))

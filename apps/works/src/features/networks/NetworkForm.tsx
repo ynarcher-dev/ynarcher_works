@@ -16,6 +16,7 @@ import {
 } from '@/features/networks/config'
 import {
   checkDuplicateName,
+  recordContribution,
   useCreateEntity,
   useMoveEntity,
   useUpdateEntity,
@@ -188,6 +189,13 @@ export function NetworkForm({ entity, recordId, initial, onDone, onCancel }: Pro
             return
           }
           const newId = await move.mutateAsync({ id: recordId, values: payload })
+          await recordContribution({
+            table: target,
+            id: newId,
+            action: 'created',
+            source: 'manual',
+            note: '구분 변경 이동',
+          })
           toast.show(`${targetLabel} 네트워크로 이동했습니다.`, 'success')
           onDone({ id: newId, targetEntity: target, moved: true })
         }
@@ -202,6 +210,12 @@ export function NetworkForm({ entity, recordId, initial, onDone, onCancel }: Pro
           target === entity
             ? await create.mutateAsync(payload)
             : await insertEntityDirect(target, payload)
+        await recordContribution({
+          table: target,
+          id: newId,
+          action: 'created',
+          source: 'manual',
+        })
         toast.show(`${targetLabel}을(를) 등록했습니다.`, 'success')
         onDone({ id: newId, targetEntity: target, moved: target !== entity })
       }

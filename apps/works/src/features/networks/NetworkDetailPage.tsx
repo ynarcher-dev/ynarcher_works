@@ -16,7 +16,12 @@ import {
   type EntityKey,
 } from '@/features/networks/config'
 import { SensitiveValue } from '@/features/master/SensitiveValue'
-import { useEntity, type EntityRow } from '@/features/networks/hooks'
+import {
+  useContributions,
+  useEntity,
+  type Contribution,
+  type EntityRow,
+} from '@/features/networks/hooks'
 
 /** 상세 카드 섹션 래퍼. */
 function SectionCard({
@@ -54,6 +59,27 @@ function formatDate(v: unknown): string {
   return s.length >= 10 ? s.slice(0, 10) : '-'
 }
 
+const CONTRIBUTION_ACTION_LABEL: Record<Contribution['action'], string> = {
+  created: '등록',
+  merged: '병합',
+  enriched: '보강',
+  edited: '수정',
+}
+
+/** 기여 로그에서 중복 없는 기여자명 목록(최초 기여순). */
+function uniqueContributors(contributions: Contribution[]): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const c of contributions) {
+    const name = c.user_name?.trim()
+    if (name && !seen.has(name)) {
+      seen.add(name)
+      out.push(name)
+    }
+  }
+  return out
+}
+
 /**
  * 네트워크 통합 상세 뷰(읽기 전용 카드). 8종 전체 공용.
  * 축약(compact) 유형(조직 5종 + 미분류)은 매칭 배지·전문분야·약력·멘토링 만족도 섹션을 숨긴다.
@@ -79,6 +105,10 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
   const category = (profile.category as string) ?? ''
   // 부제: 소속 · 부서명 · 직책(부서명은 소속과 직책 사이에 노출).
   const subtitle = [affiliation, department, position].filter(Boolean).join(' · ')
+
+  // 공동 관리(기여자) + 연혁 타임라인. 단일 작성자 없이 기여자 목록으로 표시한다.
+  const { data: contributions } = useContributions(entity, record.id as string)
+  const contributors = uniqueContributors(contributions ?? [])
 
   return (
     <div className="space-y-4">
@@ -147,7 +177,7 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
             />
           )}
           {compact && <Info label="구분" value={category || '-'} />}
-          <Info label="작성자" value="홍길동" />
+          <Info label="공동 관리" value={contributors.length ? contributors.join(', ') : '-'} />
           <Info label="수정일" value={formatDate(record.updated_at)} />
         </div>
       </section>
@@ -188,6 +218,30 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
           <p className="whitespace-pre-wrap text-body text-gray-800">{intro}</p>
         ) : (
           <p className="text-body text-gray-400">등록된 메모 내용이 없습니다.</p>
+        )}
+      </SectionCard>
+
+      <SectionCard title="연혁">
+        {contributions && contributions.length > 0 ? (
+          <ul className="space-y-2">
+            {contributions.map((c) => (
+              <li key={c.id} className="flex flex-wrap items-center gap-2 text-body text-gray-800">
+                <span className="text-caption tabular-nums text-gray-400">
+                  {c.created_at.slice(0, 10)}
+                </span>
+                <Badge tone="neutral" size="sm">
+                  {CONTRIBUTION_ACTION_LABEL[c.action]}
+                </Badge>
+                <span className="font-medium">{c.user_name ?? '-'}</span>
+                <span className="text-caption text-gray-400">
+                  {c.source === 'upload' ? '업로드' : '수기'}
+                  {c.note ? ` · ${c.note}` : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-body text-gray-400">기록된 연혁이 없습니다.</p>
         )}
       </SectionCard>
 

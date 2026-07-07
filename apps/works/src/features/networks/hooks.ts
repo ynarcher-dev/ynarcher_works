@@ -171,6 +171,14 @@ export function useMoveEntity(from: EntityKey, to: EntityKey) {
         await supabase.from(to).delete().eq('id', newId)
         throw delError
       }
+      // 이관 = 대상 테이블에 신규 등록. 현재 유저를 기여자로 기록한다.
+      await recordContribution({
+        table: to,
+        id: newId,
+        action: 'created',
+        source: 'manual',
+        note: '미분류에서 이관',
+      })
       return newId
     },
     onSuccess: () => {
