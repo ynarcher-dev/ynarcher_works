@@ -1,5 +1,5 @@
 import { Button, InlineSelect, Input, cn } from '@ynarcher/ui'
-import { ChevronRight, GripVertical, Pencil, Plus, Trash2, Users } from 'lucide-react'
+import { ChevronRight, Eye, EyeOff, GripVertical, Pencil, Plus, Trash2, Users } from 'lucide-react'
 import type { DragEvent } from 'react'
 import {
   type DeptTreeNode,
@@ -27,6 +27,7 @@ interface DeptTreeRowProps {
   onCommitEdit: () => void
   onCancelEdit: () => void
   onAddChild: (parentId: string) => void
+  onToggleHrHidden: (id: string, hidden: boolean) => void
   onDelete: (id: string) => void
   onDragStartRow: (id: string) => void
   onDragOverRow: (e: DragEvent, id: string) => void
@@ -35,7 +36,7 @@ interface DeptTreeRowProps {
 }
 
 /** 행/헤더 공용 그리드 컬럼: 조직명 | 레벨 | 인원 | 액션. 헤더와 행 정렬을 맞춘다. */
-export const DEPT_GRID = 'grid grid-cols-[minmax(0,20rem)_6rem_1fr_5.5rem]'
+export const DEPT_GRID = 'grid grid-cols-[minmax(0,20rem)_6rem_1fr_7.25rem]'
 
 /** 커서 Y 위치를 행 높이로 나눠 앞(<25%)/뒤(>75%)/안쪽(그 사이)을 판정한다. */
 export function dropPosFromEvent(e: DragEvent): DropPos {
@@ -128,11 +129,20 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
               title="클릭하여 이름 변경"
               className={cn(
                 'truncate rounded px-1 text-left hover:bg-gray-100',
-                isRoot ? 'text-body font-semibold text-gray-900' : 'text-body text-gray-700',
+                isRoot ? 'text-body font-semibold' : 'text-body',
+                node.hrHidden ? 'text-gray-400' : isRoot ? 'text-gray-900' : 'text-gray-700',
               )}
             >
               {node.name}
             </button>
+          )}
+          {node.hrHidden && !isEditing && (
+            <span
+              title="인사관리 컬럼 미노출"
+              className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-gray-100 px-1.5 py-0.5 text-[0.6875rem] text-gray-400"
+            >
+              <EyeOff size={11} /> 인사 미노출
+            </span>
           )}
         </div>
 
@@ -207,6 +217,18 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
                 className="h-7 w-7 px-0 text-gray-500"
               >
                 <Pencil size={14} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                title={node.hrHidden ? '인사관리 컬럼에 노출' : '인사관리 컬럼에서 숨김'}
+                onClick={() => props.onToggleHrHidden(node.id, !node.hrHidden)}
+                className={cn(
+                  'h-7 w-7 px-0',
+                  node.hrHidden ? 'text-info' : 'text-gray-400',
+                )}
+              >
+                {node.hrHidden ? <EyeOff size={14} /> : <Eye size={14} />}
               </Button>
               <Button
                 variant="ghost"

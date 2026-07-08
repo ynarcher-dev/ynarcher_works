@@ -17,6 +17,8 @@ export interface Department {
   version_id: string
   /** 버전 간 동일 부서를 잇는 계보 id. */
   lineage_id: string
+  /** true면 인사관리 조직 컬럼 파생에서 이 부서를 제외(트리엔 유지). */
+  hr_hidden: boolean
   deleted_at?: string | null
 }
 
@@ -36,7 +38,9 @@ export function useDepartments(includeDeleted = false, versionId?: string) {
     queryFn: async (): Promise<Department[]> => {
       let q = supabase
         .from('departments')
-        .select('id, name, parent_id, level_id, sort_order, version_id, lineage_id, deleted_at')
+        .select(
+          'id, name, parent_id, level_id, sort_order, version_id, lineage_id, hr_hidden, deleted_at',
+        )
         .eq('version_id', scopeId as string)
         .order('sort_order', { ascending: true })
       if (!includeDeleted) q = q.is('deleted_at', null)

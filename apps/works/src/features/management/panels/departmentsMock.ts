@@ -49,6 +49,8 @@ export interface DeptNode {
   levelId: string
   /** 형제 내 정렬 순서(sort_order). 가나다순이 아닌 의미 순서. */
   sort: number
+  /** true면 인사관리 조직 컬럼 파생에서 제외(트리엔 유지). */
+  hrHidden: boolean
   /** soft delete 여부. 삭제 시 하위까지 함께 표시 대상에서 제외한다. */
   deleted?: boolean
 }
@@ -79,6 +81,7 @@ export function toNodes(
     parent_id: string | null
     level_id: string | null
     sort_order: number
+    hr_hidden?: boolean
     deleted_at?: string | null
   }[],
 ): DeptNode[] {
@@ -88,6 +91,7 @@ export function toNodes(
     name: r.name,
     levelId: r.level_id ?? '',
     sort: r.sort_order,
+    hrHidden: r.hr_hidden ?? false,
     deleted: r.deleted_at != null,
   }))
 }
@@ -117,7 +121,8 @@ export function resolveByTier(
   const path = deptId ? ancestorPath(nodes, deptId) : []
   const out: Record<number, string> = {}
   for (const t of tiers) {
-    out[t.tier] = path.find((n) => t.levelIds.includes(n.levelId))?.name ?? '-'
+    // 인사관리 미노출(hrHidden) 부서는 컬럼 파생에서 건너뛴다.
+    out[t.tier] = path.find((n) => !n.hrHidden && t.levelIds.includes(n.levelId))?.name ?? '-'
   }
   return out
 }

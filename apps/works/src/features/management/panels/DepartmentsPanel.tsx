@@ -162,6 +162,9 @@ export function DepartmentsPanel() {
   const changeNodeLevel = (id: string, levelId: string) =>
     updateDept.mutate({ id, values: { level_id: levelId } })
 
+  const toggleHrHidden = (id: string, hidden: boolean) =>
+    updateDept.mutate({ id, values: { hr_hidden: hidden } })
+
   const remove = (id: string) => setDeleted.mutate({ ids: [...subtreeIds(nodes, id)], deleted: true })
   const restore = (id: string) =>
     setDeleted.mutate({ ids: [...subtreeIds(nodes, id)], deleted: false })
@@ -294,6 +297,7 @@ export function DepartmentsPanel() {
               onCommitEdit={commitEdit}
               onCancelEdit={() => setEditingId(null)}
               onAddChild={addChild}
+              onToggleHrHidden={toggleHrHidden}
               onDelete={remove}
               onDragStartRow={setDragId}
               onDragOverRow={onDragOverRow}
