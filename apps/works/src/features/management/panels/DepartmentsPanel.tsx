@@ -96,8 +96,10 @@ export function DepartmentsPanel() {
   const [previewOpen, setPreviewOpen] = useState(false)
   const memberDept = memberDeptId ? nodes.find((n) => n.id === memberDeptId) : null
 
-  const onClone = (input: CloneInput) =>
-    cloneVersion.mutate(input, { onSuccess: (newId) => setVersionId(newId) })
+  const onClone = (input: CloneInput): Promise<void> =>
+    cloneVersion.mutateAsync(input).then((newId) => {
+      setVersionId(newId)
+    })
 
   const toggle = (id: string) =>
     setCollapsed((prev) => {

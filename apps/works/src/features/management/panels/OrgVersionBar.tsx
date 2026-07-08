@@ -1,6 +1,6 @@
 import { Badge, Button, Input, Modal, Select } from '@ynarcher/ui'
 import { CopyPlus } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { OrgVersion } from '@/features/management/hooks'
 
 /** 가용기간 표기: 시작 ~ 종료(없으면 무기한). */
@@ -8,16 +8,17 @@ function periodLabel(v: OrgVersion): string {
   return `${v.effective_from} ~ ${v.effective_to ?? '무기한'}`
 }
 
-/** 버전 상태 배지: 활성(오늘 유효) / 예정(미래 발효) / 지난(대체됨) / 초안. */
+const TODAY = () => new Date().toISOString().slice(0, 10)
+
+/** 버전 상태 배지: 현재(오늘 유효) / 예정(미래 발효) / 종료(대체됨) / 초안. */
 function versionState(
   v: OrgVersion,
   activeId: string | null,
 ): { label: string; tone: 'success' | 'info' | 'neutral' } {
   if (v.status === 'DRAFT') return { label: '초안', tone: 'neutral' }
-  if (v.id === activeId) return { label: '활성', tone: 'success' }
-  const today = new Date().toISOString().slice(0, 10)
-  if (v.effective_from > today) return { label: '예정', tone: 'info' }
-  return { label: '지난', tone: 'neutral' }
+  if (v.id === activeId) return { label: '현재', tone: 'success' }
+  if (v.effective_from > TODAY()) return { label: '예정', tone: 'info' }
+  return { label: '종료', tone: 'neutral' }
 }
 
 export interface CloneInput {
@@ -32,13 +33,13 @@ interface OrgVersionBarProps {
   selectedId: string
   activeId: string | null
   onSelect: (id: string) => void
-  onClone: (input: CloneInput) => void
+  onClone: (input: CloneInput) => Promise<void>
   cloning: boolean
 }
 
 /**
- * 조직 버전(가용기간) 툴바 — 버전 선택 드롭다운 + 상태 배지 + "새 버전 복제" 모달.
- * 선택 버전이 오늘의 유효 버전이 아니면 편집 대상이 유효 조직도가 아님을 안내한다.
+ * 조직 버전(가용기간) 툴바 — 버전 선택 드롭다운(현재/예정/종료 그룹) + 상태 배지 + "새 버전 복제".
+ * 활성 = 오늘 이하 시작일 중 가장 최근 PUBLISHED 버전. 선택 버전이 활성이 아니면 안내한다.
  */
 export function OrgVersionBar({
   versions,
@@ -52,11 +53,28 @@ export function OrgVersionBar({
   const state = selected ? versionState(selected, activeId) : null
   const notActive = Boolean(selected && activeId && selected.id !== activeId)
 
+  // 현재 → 예정 → 종료 3그룹(각 그룹은 optgroup 라벨이 구분선 역할).
+  const groups = useMemo(() => {
+    const today = TODAY()
+    const current: OrgVersion[] = []
+    const upcoming: OrgVersion[] = []
+    const ended: OrgVersion[] = []
+    for (const v of versions) {
+      if (v.id === activeId) current.push(v)
+      else if (v.status === 'PUBLISHED' && v.effective_from > today) upcoming.push(v)
+      else ended.push(v)
+    }
+    upcoming.sort((a, b) => a.effective_from.localeCompare(b.effective_from))
+    ended.sort((a, b) => b.effective_from.localeCompare(a.effective_from))
+    return { current, upcoming, ended }
+  }, [versions, activeId])
+
   const [open, setOpen] = useState(false)
   const [label, setLabel] = useState('')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
 
   const openClone = () => {
     setLabel(selected ? `${selected.label} 복제` : '새 조직 버전')
@@ -66,29 +84,61 @@ export function OrgVersionBar({
     setOpen(true)
   }
 
-  const submit = () => {
+  const submit = async () => {
     if (!selected) return
     if (!label.trim()) return setError('버전 이름을 입력하세요.')
     if (!from) return setError('시작일을 입력하세요.')
     if (to && to <= from) return setError('종료일은 시작일보다 뒤여야 합니다.')
-    onClone({
-      srcVersionId: selected.id,
-      label: label.trim(),
-      effectiveFrom: from,
-      effectiveTo: to || null,
-    })
-    setOpen(false)
+    setError(null)
+    setBusy(true)
+    try {
+      await onClone({
+        srcVersionId: selected.id,
+        label: label.trim(),
+        effectiveFrom: from,
+        effectiveTo: to || null,
+      })
+      setOpen(false)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '복제에 실패했습니다.')
+    } finally {
+      setBusy(false)
+    }
   }
+
+  const optionLabel = (v: OrgVersion) => `${v.label} · ${periodLabel(v)}`
 
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
         <Select value={selectedId} onChange={(e) => onSelect(e.target.value)} className="max-w-72">
-          {versions.map((v) => (
-            <option key={v.id} value={v.id}>
-              {v.label} · {periodLabel(v)}
-            </option>
-          ))}
+          {groups.current.length > 0 && (
+            <optgroup label="현재">
+              {groups.current.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {optionLabel(v)}
+                </option>
+              ))}
+            </optgroup>
+          )}
+          {groups.upcoming.length > 0 && (
+            <optgroup label="예정">
+              {groups.upcoming.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {optionLabel(v)}
+                </option>
+              ))}
+            </optgroup>
+          )}
+          {groups.ended.length > 0 && (
+            <optgroup label="종료">
+              {groups.ended.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {optionLabel(v)}
+                </option>
+              ))}
+            </optgroup>
+          )}
         </Select>
         {state && (
           <Badge tone={state.tone} size="sm">
@@ -113,11 +163,11 @@ export function OrgVersionBar({
         title="새 조직 버전 복제"
         footer={
           <div className="flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
+            <Button variant="outline" size="sm" onClick={() => setOpen(false)} disabled={busy}>
               취소
             </Button>
-            <Button size="sm" onClick={submit} disabled={cloning}>
-              복제 생성
+            <Button size="sm" onClick={submit} disabled={busy || cloning}>
+              {busy ? '생성 중…' : '복제 생성'}
             </Button>
           </div>
         }
@@ -153,7 +203,7 @@ export function OrgVersionBar({
           </div>
           {error && <p className="text-caption text-danger">{error}</p>}
           <p className="text-caption text-gray-400">
-            · 가용기간이 다른 발효 버전과 겹치면 저장이 거부됩니다(겹침 금지).
+            · 시작일부터 이 조직도가 유효합니다. 오늘 이하 시작일 중 가장 최근 버전이 '현재'가 됩니다.
           </p>
         </div>
       </Modal>
