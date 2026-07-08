@@ -168,6 +168,24 @@ export function useUpdateDepartment() {
   })
 }
 
+/**
+ * 인사관리 컬럼 노출/미노출 토글. hr_hidden은 논리-조직(계보) 단위 성격이라 같은 lineage_id의
+ * 모든 버전 행에 일괄 적용한다(활성 버전과 편집 버전이 달라도 일관되게 반영).
+ */
+export function useSetDeptHrHidden() {
+  const invalidate = useInvalidateDepartments()
+  return useMutation({
+    mutationFn: async (v: { lineageId: string; hidden: boolean }) => {
+      const { error } = await supabase
+        .from('departments')
+        .update({ hr_hidden: v.hidden })
+        .eq('lineage_id', v.lineageId)
+      if (error) throw error
+    },
+    onSuccess: () => invalidate(),
+  })
+}
+
 /** 다건 부서 정렬/부모 갱신(드래그 이동 결과 반영). 개별 UPDATE(부분 컬럼)로 처리. */
 export function useMoveDepartments() {
   const invalidate = useInvalidateDepartments()

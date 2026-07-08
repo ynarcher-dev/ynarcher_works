@@ -109,13 +109,16 @@ export function EmployeeDetailPage({
   if (isLoading) return <Spinner />
   if (!emp) return <Banner tone="warning">임직원 정보를 찾을 수 없습니다.</Banner>
 
-  // 부서/팀 파생: 소속 부서에 상위가 있으면 상위=부서·자신=팀, 최상위면 자신=부서·팀 없음.
-  const byId: Record<string, { name: string; parent_id: string | null }> = {}
-  for (const d of depts ?? []) byId[d.id] = { name: d.name, parent_id: d.parent_id }
-  const dept = emp.department_id ? byId[emp.department_id] : undefined
-  const parent = dept?.parent_id ? byId[dept.parent_id] : undefined
-  const deptName = parent?.name ?? dept?.name ?? ''
-  const teamName = parent ? dept?.name ?? '' : ''
+  // 부서/팀 파생: 소속→루트 경로에서 인사 미노출(hr_hidden) 부서를 제외하고, 가장 구체적인
+  // 2개(상위=부서·하위=팀)를 취한다. 노출 부서가 1개면 그것을 부서로만 표기.
+  const byId: Record<string, { name: string; parent_id: string | null; hidden: boolean }> = {}
+  for (const d of depts ?? []) byId[d.id] = { name: d.name, parent_id: d.parent_id, hidden: d.hr_hidden }
+  const chain: string[] = []
+  for (let cur = emp.department_id ?? null; cur && byId[cur]; cur = byId[cur]!.parent_id) {
+    if (!byId[cur]!.hidden) chain.push(byId[cur]!.name)
+  }
+  const teamName = chain.length > 1 ? chain[0]! : ''
+  const deptName = chain.length > 1 ? chain[1]! : chain[0] ?? ''
   const subtitle = [deptName, teamName].filter(Boolean).join(' · ') || '-'
 
   const profile = emp.profile ?? {}

@@ -15,6 +15,7 @@ import {
   useOrgLevels,
   useOrgVersions,
   useSetDepartmentsDeleted,
+  useSetDeptHrHidden,
   useUpdateDepartment,
   useUpdateOrgLevel,
 } from '@/features/management/hooks'
@@ -64,6 +65,7 @@ export function DepartmentsPanel() {
   const updateDept = useUpdateDepartment()
   const moveDepts = useMoveDepartments()
   const setDeleted = useSetDepartmentsDeleted()
+  const setHrHidden = useSetDeptHrHidden()
   const createLevel = useCreateOrgLevel()
   const updateLevel = useUpdateOrgLevel()
   const deleteLevel = useDeleteOrgLevel()
@@ -162,8 +164,11 @@ export function DepartmentsPanel() {
   const changeNodeLevel = (id: string, levelId: string) =>
     updateDept.mutate({ id, values: { level_id: levelId } })
 
-  const toggleHrHidden = (id: string, hidden: boolean) =>
-    updateDept.mutate({ id, values: { hr_hidden: hidden } })
+  // 인사 미노출은 계보 단위(전 버전 일괄) — 활성/편집 버전이 달라도 일관 반영.
+  const toggleHrHidden = (id: string, hidden: boolean) => {
+    const node = nodes.find((n) => n.id === id)
+    if (node) setHrHidden.mutate({ lineageId: node.lineageId, hidden })
+  }
 
   const remove = (id: string) => setDeleted.mutate({ ids: [...subtreeIds(nodes, id)], deleted: true })
   const restore = (id: string) =>

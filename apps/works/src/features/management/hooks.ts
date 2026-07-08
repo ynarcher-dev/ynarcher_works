@@ -323,6 +323,7 @@ export {
   useOrgLevels,
   useOrgVersions,
   useSetDepartmentsDeleted,
+  useSetDeptHrHidden,
   useUpdateDepartment,
   useUpdateOrgLevel,
 } from '@/features/management/orgHooks'

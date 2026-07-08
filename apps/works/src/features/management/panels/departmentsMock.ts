@@ -45,6 +45,8 @@ export interface DeptNode {
   id: string
   parentId: string | null
   name: string
+  /** 버전 간 동일 부서를 잇는 계보 id(인사 미노출 등 논리-조직 단위 처리에 사용). */
+  lineageId: string
   /** 이 부서의 조직 레벨(OrgLevel.id). 깊이와 무관하게 노드별로 지정한다. */
   levelId: string
   /** 형제 내 정렬 순서(sort_order). 가나다순이 아닌 의미 순서. */
@@ -81,6 +83,7 @@ export function toNodes(
     parent_id: string | null
     level_id: string | null
     sort_order: number
+    lineage_id?: string
     hr_hidden?: boolean
     deleted_at?: string | null
   }[],
@@ -89,6 +92,7 @@ export function toNodes(
     id: r.id,
     parentId: r.parent_id,
     name: r.name,
+    lineageId: r.lineage_id ?? r.id,
     levelId: r.level_id ?? '',
     sort: r.sort_order,
     hrHidden: r.hr_hidden ?? false,
