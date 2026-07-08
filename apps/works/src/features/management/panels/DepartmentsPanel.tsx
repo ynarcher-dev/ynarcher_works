@@ -122,11 +122,19 @@ export function DepartmentsPanel() {
     setEditingId(null)
   }
 
-  /** 자식 노드 기본 레벨: 부모 레벨의 한 단계 아래(없으면 보정). */
+  /** 자식 노드 기본 레벨: 부모 티어의 "다음 티어" 첫 레벨(없으면 보정). */
   const childLevelId = (parent: DeptNode | null): string | null => {
-    if (!parent) return levels[0]?.id ?? null
-    const pi = levels.findIndex((l) => l.id === parent.levelId)
-    return levels[Math.min(pi + 1, levels.length - 1)]?.id ?? parent.levelId
+    if (!levels.length) return null
+    if (!parent) {
+      const firstTier = Math.min(...levels.map((l) => l.tier))
+      return levels.find((l) => l.tier === firstTier)?.id ?? null
+    }
+    const parentLevel = levels.find((l) => l.id === parent.levelId)
+    const parentTier = parentLevel?.tier ?? Number.NEGATIVE_INFINITY
+    const higher = levels.filter((l) => l.tier > parentTier)
+    if (!higher.length) return parentLevel?.id ?? levels[0]?.id ?? null
+    const nextTier = Math.min(...higher.map((l) => l.tier))
+    return levels.find((l) => l.tier === nextTier)?.id ?? parentLevel?.id ?? null
   }
 
   const addChild = (parentId: string | null) => {
@@ -165,7 +173,13 @@ export function DepartmentsPanel() {
       updateLevel.mutate({ id, name: name.trim() })
     }
   }
-  const addLevel = () => createLevel.mutate({ name: '새 레벨', sort_order: levels.length })
+  /** 새 티어(하위 볼륨): 최대 티어 + 1. */
+  const addTier = () => {
+    const maxTier = levels.reduce((m, l) => Math.max(m, l.tier), -1)
+    createLevel.mutate({ name: '새 레벨', sort_order: maxTier + 1 })
+  }
+  /** 병렬 레벨: 지정 티어와 같은 값(같은 볼륨). */
+  const addParallel = (tier: number) => createLevel.mutate({ name: '새 레벨', sort_order: tier })
   const removeLevel = (id: string) => {
     if (levels.length <= 1) return
     const fallback = levels.find((l) => l.id !== id)?.id ?? null
@@ -241,7 +255,13 @@ export function DepartmentsPanel() {
       </div>
 
       {/* 조직 레벨 정의(= 인사관리 컬럼) */}
-      <OrgLevelEditor levels={levels} onRename={renameLevel} onAdd={addLevel} onRemove={removeLevel} />
+      <OrgLevelEditor
+        levels={levels}
+        onRename={renameLevel}
+        onAddTier={addTier}
+        onAddParallel={addParallel}
+        onRemove={removeLevel}
+      />
 
       {/* 트리-테이블 */}
       <div className="overflow-hidden rounded-radius-md border border-gray-200 bg-white">

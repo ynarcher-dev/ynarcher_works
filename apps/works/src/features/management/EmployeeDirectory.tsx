@@ -10,7 +10,7 @@ import {
   useOrgLevels,
   type Employee,
 } from '@/features/management/hooks'
-import { resolveByLevel, toNodes } from '@/features/management/panels/departmentsMock'
+import { buildTiers, resolveByTier, toNodes } from '@/features/management/panels/departmentsMock'
 
 /** 목록 페이지당 행 수(서버 사이드 페이지네이션). */
 const PAGE_SIZE = 30
@@ -60,27 +60,29 @@ export function EmployeeDirectory({
   const { data, isLoading } = useEmployeesPage(keyword, page, PAGE_SIZE)
 
   const nodes = useMemo(() => toNodes(depts ?? []), [depts])
+  // 병렬 레벨은 티어로 합쳐 컬럼 1개(예: '본부 / 실').
+  const tiers = useMemo(() => buildTiers(levels), [levels])
 
-  // 임직원 소속 부서를 조상 경로로 펼쳐 레벨별 소속명으로 해석(부서당 1회 캐시).
+  // 임직원 소속 부서를 조상 경로로 펼쳐 티어별 소속명으로 해석(부서당 1회 캐시).
   const resolveFor = useMemo(() => {
-    const cache = new Map<string, Record<string, string>>()
-    return (deptId: string | null): Record<string, string> => {
+    const cache = new Map<string, Record<number, string>>()
+    return (deptId: string | null): Record<number, string> => {
       const key = deptId ?? ''
       let v = cache.get(key)
       if (!v) {
-        v = resolveByLevel(nodes, levels, deptId)
+        v = resolveByTier(nodes, tiers, deptId)
         cache.set(key, v)
       }
       return v
     }
-  }, [nodes, levels])
+  }, [nodes, tiers])
 
-  // 회사/부서/팀 하드코딩 → 조직관리에서 정의한 레벨을 컬럼으로 동적 생성.
-  const levelColumns: Column<Employee>[] = levels.map((lv) => ({
-    key: `lvl-${lv.id}`,
-    header: lv.name,
+  // 회사/부서/팀 하드코딩 → 조직관리에서 정의한 티어를 컬럼으로 동적 생성.
+  const levelColumns: Column<Employee>[] = tiers.map((t) => ({
+    key: `tier-${t.tier}`,
+    header: t.label,
     render: (r) => {
-      const v = resolveFor(r.department_id)[lv.id]
+      const v = resolveFor(r.department_id)[t.tier]
       return v && v !== '-' ? v : DASH
     },
     className: 'w-28',
@@ -151,7 +153,7 @@ export function EmployeeDirectory({
         // 작성자명 연동 전까지 임시 표기(작성자 컬럼은 showAuthor=false로 숨김).
         copyText: (r) => {
           const path = resolveFor(r.department_id)
-          const orgLines = levels.map((lv) => `${lv.name}: ${path[lv.id] === '-' ? '' : path[lv.id]}`)
+          const orgLines = tiers.map((t) => `${t.label}: ${path[t.tier] === '-' ? '' : path[t.tier]}`)
           return [`이름: ${r.name}`, ...orgLines, `이메일: ${r.email ?? ''}`].join('\n')
         },
         // 조회 전용(OFFICE)에서는 비활성화 액션을 제공하지 않는다.

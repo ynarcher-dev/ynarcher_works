@@ -93,9 +93,14 @@ export function useOrgVersions() {
 export interface OrgLevel {
   id: string
   name: string
+  /** 티어(같은 볼륨). sort_order를 티어 값으로 쓴다 — 같은 값이면 병렬 레벨. */
+  tier: number
 }
 
-/** 조직 레벨(계층) 정의 조회. 상위→하위 순(sort_order). 이름이 인사관리 컬럼이 된다. */
+/**
+ * 조직 레벨 정의 조회. 상위→하위(sort_order=티어) 순, 같은 티어 내에서는 이름순.
+ * 같은 sort_order를 가진 레벨은 병렬(같은 볼륨)이며 인사관리 컬럼은 티어당 1개로 합쳐진다.
+ */
 export function useOrgLevels() {
   return useQuery({
     queryKey: ['management', 'org-levels'],
@@ -105,8 +110,13 @@ export function useOrgLevels() {
         .select('id, name, sort_order')
         .is('deleted_at', null)
         .order('sort_order', { ascending: true })
+        .order('name', { ascending: true })
       if (error) throw error
-      return (data ?? []).map((l) => ({ id: l.id as string, name: l.name as string }))
+      return (data ?? []).map((l) => ({
+        id: l.id as string,
+        name: l.name as string,
+        tier: l.sort_order as number,
+      }))
     },
   })
 }

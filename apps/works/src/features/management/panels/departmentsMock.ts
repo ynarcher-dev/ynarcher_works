@@ -12,6 +12,33 @@
 export interface OrgLevel {
   id: string
   name: string
+  /** 티어(같은 볼륨). 같은 tier면 병렬 레벨(예: 본부·실). 인사관리 컬럼은 티어당 1개. */
+  tier: number
+}
+
+/** 티어 = 인사관리 컬럼 1개. 같은 tier의 레벨들을 하나로 묶는다. */
+export interface OrgTier {
+  tier: number
+  levelIds: string[]
+  /** 병렬 레벨 이름을 '/'로 이은 컬럼 헤더(예: '본부 / 실'). */
+  label: string
+}
+
+/** 레벨을 티어로 묶어 정렬(상위→하위). 인사관리 컬럼 파생의 단일 기준. */
+export function buildTiers(levels: OrgLevel[]): OrgTier[] {
+  const byTier = new Map<number, OrgLevel[]>()
+  for (const lv of levels) {
+    const list = byTier.get(lv.tier) ?? []
+    list.push(lv)
+    byTier.set(lv.tier, list)
+  }
+  return [...byTier.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([tier, lvs]) => ({
+      tier,
+      levelIds: lvs.map((l) => l.id),
+      label: lvs.map((l) => l.name).join(' / '),
+    }))
 }
 
 export interface DeptNode {
@@ -78,18 +105,19 @@ export function ancestorPath(nodes: DeptNode[], deptId: string): DeptNode[] {
 }
 
 /**
- * 임직원의 소속 부서를 조상 경로로 펼쳐 레벨별 소속명을 만든다(인사관리 컬럼 값).
- * 반환: { [levelId]: 해당 레벨 조상 부서명 | '-' }.
+ * 임직원의 소속 부서를 조상 경로로 펼쳐 티어별 소속명을 만든다(인사관리 컬럼 값).
+ * 병렬 레벨은 한 티어로 합쳐져, 조상 중 그 티어에 속한 부서명을 채운다.
+ * 반환: { [tier]: 해당 티어 조상 부서명 | '-' }.
  */
-export function resolveByLevel(
+export function resolveByTier(
   nodes: DeptNode[],
-  levels: OrgLevel[],
+  tiers: OrgTier[],
   deptId: string | null,
-): Record<string, string> {
+): Record<number, string> {
   const path = deptId ? ancestorPath(nodes, deptId) : []
-  const out: Record<string, string> = {}
-  for (const lv of levels) {
-    out[lv.id] = path.find((n) => n.levelId === lv.id)?.name ?? '-'
+  const out: Record<number, string> = {}
+  for (const t of tiers) {
+    out[t.tier] = path.find((n) => t.levelIds.includes(n.levelId))?.name ?? '-'
   }
   return out
 }

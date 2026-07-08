@@ -1,6 +1,7 @@
 import { Button, Modal } from '@ynarcher/ui'
 import {
-  resolveByLevel,
+  buildTiers,
+  resolveByTier,
   type DeptNode,
   type Employee,
   type OrgLevel,
@@ -19,6 +20,7 @@ interface HrReflectPreviewProps {
  * 각 임직원의 소속 부서를 조상 경로로 펼쳐 레벨별 소속명을 채운다(회사/본부/팀/파트 + 직책·직급은 별도 필드).
  */
 export function HrReflectPreview({ open, onClose, levels, nodes, employees }: HrReflectPreviewProps) {
+  const tiers = buildTiers(levels)
   return (
     <Modal
       open={open}
@@ -40,12 +42,12 @@ export function HrReflectPreview({ open, onClose, levels, nodes, employees }: Hr
             <thead className="sticky top-0 bg-gray-50 text-gray-500">
               <tr>
                 <th className="whitespace-nowrap px-3 py-2 text-left font-semibold">이름</th>
-                {levels.map((lv) => (
+                {tiers.map((t) => (
                   <th
-                    key={lv.id}
+                    key={t.tier}
                     className="whitespace-nowrap px-3 py-2 text-left font-semibold text-info"
                   >
-                    {lv.name}
+                    {t.label}
                   </th>
                 ))}
                 <th className="whitespace-nowrap px-3 py-2 text-left font-semibold text-gray-300">
@@ -55,13 +57,13 @@ export function HrReflectPreview({ open, onClose, levels, nodes, employees }: Hr
             </thead>
             <tbody>
               {employees.map((e) => {
-                const path = resolveByLevel(nodes, levels, e.deptId)
+                const path = resolveByTier(nodes, tiers, e.deptId)
                 return (
                   <tr key={e.id} className="border-t border-gray-100">
                     <td className="whitespace-nowrap px-3 py-1.5 text-gray-800">{e.name}</td>
-                    {levels.map((lv) => (
-                      <td key={lv.id} className="whitespace-nowrap px-3 py-1.5 text-gray-600">
-                        {path[lv.id] === '-' ? <span className="text-gray-300">-</span> : path[lv.id]}
+                    {tiers.map((t) => (
+                      <td key={t.tier} className="whitespace-nowrap px-3 py-1.5 text-gray-600">
+                        {path[t.tier] === '-' ? <span className="text-gray-300">-</span> : path[t.tier]}
                       </td>
                     ))}
                     <td className="px-3 py-1.5 text-gray-300">-</td>
@@ -70,7 +72,7 @@ export function HrReflectPreview({ open, onClose, levels, nodes, employees }: Hr
               })}
               {employees.length === 0 && (
                 <tr>
-                  <td colSpan={levels.length + 2} className="px-3 py-6 text-center text-gray-400">
+                  <td colSpan={tiers.length + 2} className="px-3 py-6 text-center text-gray-400">
                     임직원이 없습니다.
                   </td>
                 </tr>
