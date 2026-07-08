@@ -45,6 +45,14 @@ export const ROLE_OPTIONS: { value: string; label: string }[] = [
   { value: 'read_only', label: '읽기 전용' },
 ]
 
+/**
+ * 계정 생성 시 부여 가능한 역할 — `관리자(super_admin)`·`읽기 전용(read_only)`은 제외한다.
+ * (표시 라벨용 ROLE_OPTIONS/ROLE_LABELS는 기존 계정 표기를 위해 그대로 유지)
+ */
+export const CREATABLE_ROLE_OPTIONS = ROLE_OPTIONS.filter(
+  (o) => o.value !== 'super_admin' && o.value !== 'read_only',
+)
+
 /** user_type → 표시 라벨(배지·상세). ROLE_OPTIONS에서 파생. */
 export const ROLE_LABELS: Record<string, string> = Object.fromEntries(
   ROLE_OPTIONS.map((o) => [o.value, o.label]),

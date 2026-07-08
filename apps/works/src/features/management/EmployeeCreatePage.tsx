@@ -1,7 +1,7 @@
 import { Button, Input, Select, useToast } from '@ynarcher/ui'
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ROLE_OPTIONS } from '@/features/management/config'
+import { CREATABLE_ROLE_OPTIONS } from '@/features/management/config'
 import { HrTagSelect } from '@/features/management/HrTagSelect'
 import { useCreateEmployee } from '@/features/management/hooks'
 
@@ -43,7 +43,9 @@ export function EmployeeCreatePage() {
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
-  const [userType, setUserType] = useState('read_only')
+  const [userType, setUserType] = useState(
+    CREATABLE_ROLE_OPTIONS[0]?.value ?? 'management_support',
+  )
   const [position, setPosition] = useState('')
   const [rank, setRank] = useState('')
   const [payStep, setPayStep] = useState('')
@@ -97,7 +99,7 @@ export function EmployeeCreatePage() {
           </Field>
           <Field label="역할" required>
             <Select value={userType} onChange={(e) => setUserType(e.target.value)}>
-              {ROLE_OPTIONS.map((o) => (
+              {CREATABLE_ROLE_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
                 </option>
