@@ -10,7 +10,7 @@ import { KpiPanel } from '@/features/management/panels/KpiPanel'
 
 const HEADINGS: Record<string, string> = {
   dashboard: '대시보드',
-  departments: '부서 관리',
+  departments: '조직 관리',
   hr: '인사 관리',
   assets: '자산 관리',
   finance: '재무 관리',

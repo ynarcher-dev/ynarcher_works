@@ -142,7 +142,7 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       group: '경영지원',
       items: [
         { label: '대시보드', tab: 'dashboard' },
-        { label: '부서 관리', tab: 'departments' },
+        { label: '조직 관리', tab: 'departments' },
         { label: '인사 관리', tab: 'hr' },
         { label: '자산 관리', tab: 'assets' },
         { label: '재무 관리', tab: 'finance' },
