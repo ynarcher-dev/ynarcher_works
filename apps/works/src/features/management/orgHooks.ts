@@ -12,22 +12,73 @@ export interface Department {
   parent_id: string | null
   level_id: string | null
   sort_order: number
+  /** 소속 조직 버전(org_versions.id). */
+  version_id: string
+  /** 버전 간 동일 부서를 잇는 계보 id. */
+  lineage_id: string
   deleted_at?: string | null
 }
 
-/** 조직 관리 트리 조회. 삭제(soft delete) 포함 여부를 옵션으로 받는다(삭제된 조직 섹션용). */
-export function useDepartments(includeDeleted = false) {
+/**
+ * 조직 관리 트리 조회. 삭제(soft delete) 포함 여부와 버전 스코프를 옵션으로 받는다.
+ * versionId 미지정 시 "오늘의 유효 버전"으로 자동 스코프한다(임직원 화면 등 라이브 조직도 조회).
+ * 조직관리 편집 화면(DepartmentsPanel)은 선택 버전을 명시적으로 넘긴다.
+ * 유효 버전 해석 전(버전 로딩 중)에는 쿼리를 보류해 다른 버전 데이터가 섞이지 않게 한다.
+ */
+export function useDepartments(includeDeleted = false, versionId?: string) {
+  const { data: versions } = useOrgVersions()
+  const activeId = versions ? activeOrgVersionId(versions) : null
+  const scopeId = versionId ?? activeId ?? undefined
   return useQuery({
-    queryKey: ['management', 'departments', includeDeleted],
+    queryKey: ['management', 'departments', includeDeleted, scopeId ?? null],
+    enabled: Boolean(scopeId),
     queryFn: async (): Promise<Department[]> => {
       let q = supabase
         .from('departments')
-        .select('id, name, parent_id, level_id, sort_order, deleted_at')
+        .select('id, name, parent_id, level_id, sort_order, version_id, lineage_id, deleted_at')
+        .eq('version_id', scopeId as string)
         .order('sort_order', { ascending: true })
       if (!includeDeleted) q = q.is('deleted_at', null)
       const { data, error } = await q
       if (error) throw error
       return (data ?? []) as Department[]
+    },
+  })
+}
+
+export interface OrgVersion {
+  id: string
+  label: string
+  effective_from: string
+  effective_to: string | null
+  status: 'DRAFT' | 'PUBLISHED'
+}
+
+/**
+ * 오늘의 유효 버전을 고른다: effective_from <= 오늘 중 "가장 늦게 시작한" PUBLISHED 버전.
+ * 기간 포함/공백을 한 규칙으로 처리(공백 구간엔 직전 버전 유지). 없으면 null.
+ * (마이그레이션 current 규칙과 동일 — 클라이언트 today 기준으로 파생)
+ */
+export function activeOrgVersionId(versions: OrgVersion[]): string | null {
+  const today = new Date().toISOString().slice(0, 10)
+  const active = versions
+    .filter((v) => v.status === 'PUBLISHED' && v.effective_from <= today)
+    .sort((a, b) => b.effective_from.localeCompare(a.effective_from))[0]
+  return active?.id ?? null
+}
+
+/** 조직 버전(가용기간) 목록. 시작일 내림차순(최신 발효가 위). */
+export function useOrgVersions() {
+  return useQuery({
+    queryKey: ['management', 'org-versions'],
+    queryFn: async (): Promise<OrgVersion[]> => {
+      const { data, error } = await supabase
+        .from('org_versions')
+        .select('id, label, effective_from, effective_to, status')
+        .is('deleted_at', null)
+        .order('effective_from', { ascending: false })
+      if (error) throw error
+      return (data ?? []) as OrgVersion[]
     },
   })
 }
@@ -70,6 +121,7 @@ export function useCreateDepartment() {
       parent_id: string | null
       level_id: string | null
       sort_order: number
+      version_id: string
     }): Promise<{ id: string }> => {
       const { data, error } = await supabase
         .from('departments')
@@ -174,6 +226,37 @@ export function useDeleteOrgLevel() {
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: LEVEL_KEY })
+      void qc.invalidateQueries({ queryKey: DEPT_KEY })
+    },
+  })
+}
+
+const VERSION_KEY = ['management', 'org-versions'] as const
+
+/**
+ * 조직 버전 복제. 원본 버전의 부서 트리(레벨 태그·계층·정렬)를 새 가용기간으로 통째 복사한다.
+ * effectiveTo가 비면(무기한) null로 전달한다. 생성된 버전 id를 반환(생성 직후 선택 전환용).
+ */
+export function useCloneOrgVersion() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (v: {
+      srcVersionId: string
+      label: string
+      effectiveFrom: string
+      effectiveTo: string | null
+    }): Promise<string> => {
+      const { data, error } = await supabase.rpc('clone_org_version', {
+        p_src_version: v.srcVersionId,
+        p_label: v.label,
+        p_from: v.effectiveFrom,
+        p_to: v.effectiveTo,
+      })
+      if (error) throw error
+      return data as string
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: VERSION_KEY })
       void qc.invalidateQueries({ queryKey: DEPT_KEY })
     },
   })

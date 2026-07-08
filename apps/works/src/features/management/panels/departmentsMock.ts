@@ -32,12 +32,6 @@ export interface DeptTreeNode extends DeptNode {
   depth: number
 }
 
-/** 조직 버전(스냅샷) 목업. 실제로는 org_versions 테이블. */
-export const MOCK_VERSIONS = [
-  { id: 'v2026', label: '2026 조직', status: 'ACTIVE' as const },
-  { id: 'v2025', label: '2025 조직', status: 'ARCHIVED' as const },
-]
-
 /**
  * 임직원(인사관리 리스트) 목업. 실제로는 인사관리(useEmployees)에서 가져오며,
  * deptId는 hr_assignments의 최신 발령(단일 소속)에 대응한다. 이 관계를 부서 관리와

@@ -1,7 +1,9 @@
-import { Badge, Button, Select, Spinner } from '@ynarcher/ui'
+import { Button, Spinner } from '@ynarcher/ui'
 import { Table2 } from 'lucide-react'
-import { useMemo, useState, type DragEvent } from 'react'
+import { useEffect, useMemo, useState, type DragEvent } from 'react'
 import {
+  activeOrgVersionId,
+  useCloneOrgVersion,
   useCreateDepartment,
   useCreateOrgLevel,
   useDeleteOrgLevel,
@@ -9,6 +11,7 @@ import {
   useEmployees,
   useMoveDepartments,
   useOrgLevels,
+  useOrgVersions,
   useSetDepartmentsDeleted,
   useUpdateDepartment,
   useUpdateEmployee,
@@ -18,13 +21,13 @@ import { DeptMemberModal } from '@/features/management/panels/DeptMemberModal'
 import { DEPT_GRID, DeptTreeRow, dropPosFromEvent } from '@/features/management/panels/DeptTreeRow'
 import { HrReflectPreview } from '@/features/management/panels/HrReflectPreview'
 import { OrgLevelEditor } from '@/features/management/panels/OrgLevelEditor'
+import { OrgVersionBar, type CloneInput } from '@/features/management/panels/OrgVersionBar'
 import {
   buildTree,
   canDrop,
   deletedRoots,
   deptNameMap,
   groupByDept,
-  MOCK_VERSIONS,
   moveNode,
   subtreeIds,
   toEmployees,
@@ -40,10 +43,21 @@ import {
  * 인력 배치는 users.department_id를 갱신한다. 연도 스냅샷(버전)은 후속 슬라이스.
  */
 export function DepartmentsPanel() {
-  const { data: deptRows, isLoading: deptLoading } = useDepartments(true)
+  const { data: versionRows, isLoading: versionLoading } = useOrgVersions()
+  const versions = useMemo(() => versionRows ?? [], [versionRows])
+  const activeVersionId = useMemo(() => activeOrgVersionId(versions), [versions])
+
+  // 편집 대상 버전(기본 = 오늘의 유효 버전). 버전 로드 후 1회 초기화.
+  const [versionId, setVersionId] = useState('')
+  useEffect(() => {
+    if (!versionId && versions.length) setVersionId(activeVersionId ?? versions[0]!.id)
+  }, [versions, activeVersionId, versionId])
+
+  const { data: deptRows, isLoading: deptLoading } = useDepartments(true, versionId || undefined)
   const { data: levelRows, isLoading: levelLoading } = useOrgLevels()
   const { data: empRows, isLoading: empLoading } = useEmployees()
 
+  const cloneVersion = useCloneOrgVersion()
   const createDept = useCreateDepartment()
   const updateDept = useUpdateDepartment()
   const moveDepts = useMoveDepartments()
@@ -70,9 +84,10 @@ export function DepartmentsPanel() {
   const [dropHint, setDropHint] = useState<{ id: string; pos: DropPos } | null>(null)
   const [memberDeptId, setMemberDeptId] = useState<string | null>(null)
   const [previewOpen, setPreviewOpen] = useState(false)
-  const [versionId, setVersionId] = useState(MOCK_VERSIONS[0]!.id)
-  const version = MOCK_VERSIONS.find((v) => v.id === versionId) ?? MOCK_VERSIONS[0]!
   const memberDept = memberDeptId ? nodes.find((n) => n.id === memberDeptId) : null
+
+  const onClone = (input: CloneInput) =>
+    cloneVersion.mutate(input, { onSuccess: (newId) => setVersionId(newId) })
 
   const toggle = (id: string) =>
     setCollapsed((prev) => {
@@ -107,7 +122,13 @@ export function DepartmentsPanel() {
     const siblings = nodes.filter((n) => n.parentId === parentId && !n.deleted)
     const sort = siblings.length ? Math.max(...siblings.map((s) => s.sort)) + 1 : 0
     createDept.mutate(
-      { name: '새 부서', parent_id: parentId, level_id: childLevelId(parent), sort_order: sort },
+      {
+        name: '새 부서',
+        parent_id: parentId,
+        level_id: childLevelId(parent),
+        sort_order: sort,
+        version_id: versionId,
+      },
       {
         onSuccess: ({ id }) => {
           if (parentId) setCollapsed((prev) => new Set([...prev].filter((x) => x !== parentId)))
@@ -169,34 +190,29 @@ export function DepartmentsPanel() {
     setDropHint(null)
   }
 
-  if ((deptLoading && !deptRows) || (levelLoading && !levelRows) || (empLoading && !empRows)) {
+  if (
+    (versionLoading && !versionRows) ||
+    !versionId ||
+    (deptLoading && !deptRows) ||
+    (levelLoading && !levelRows) ||
+    (empLoading && !empRows)
+  ) {
     return <Spinner />
   }
 
   return (
     <div className="space-y-4">
-      {/* 상단 도구막대 */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Select
-            value={versionId}
-            onChange={(e) => setVersionId(e.target.value)}
-            className="max-w-44"
-          >
-            {MOCK_VERSIONS.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.label}
-              </option>
-            ))}
-          </Select>
-          <Badge tone={version.status === 'ACTIVE' ? 'success' : 'neutral'} size="sm">
-            {version.status === 'ACTIVE' ? '활성' : '보관'}
-          </Badge>
-          <Button variant="outline" size="sm" disabled title="연도 스냅샷은 후속 슬라이스">
-            새 연도 버전 복제
-          </Button>
-        </div>
-        <div className="flex items-center gap-2">
+      {/* 상단 도구막대: 조직 버전(가용기간) + 액션 */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <OrgVersionBar
+          versions={versions}
+          selectedId={versionId}
+          activeId={activeVersionId}
+          onSelect={setVersionId}
+          onClone={onClone}
+          cloning={cloneVersion.isPending}
+        />
+        <div className="flex items-center gap-2 pt-0.5">
           <Button variant="outline" size="sm" onClick={() => setPreviewOpen(true)}>
             <Table2 size={14} /> 인사 반영 미리보기
           </Button>

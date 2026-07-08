@@ -294,17 +294,20 @@ export function useDeactivateEmployee() {
 // 조직 관리(조직도 트리 + 조직 레벨) 훅은 파일 길이 상한(500줄) 분리를 위해 orgHooks.ts로 이관했다.
 // 임포트 경로 호환을 위해 그대로 재노출한다.
 export {
+  activeOrgVersionId,
+  useCloneOrgVersion,
   useCreateDepartment,
   useCreateOrgLevel,
   useDeleteOrgLevel,
   useDepartments,
   useMoveDepartments,
   useOrgLevels,
+  useOrgVersions,
   useSetDepartmentsDeleted,
   useUpdateDepartment,
   useUpdateOrgLevel,
 } from '@/features/management/orgHooks'
-export type { Department, OrgLevel } from '@/features/management/orgHooks'
+export type { Department, OrgLevel, OrgVersion } from '@/features/management/orgHooks'
 
 export interface Budget {
   department_id: string | null
