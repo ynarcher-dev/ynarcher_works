@@ -3,18 +3,19 @@ import { Table2 } from 'lucide-react'
 import { useEffect, useMemo, useState, type DragEvent } from 'react'
 import {
   activeOrgVersionId,
+  useAssignDeptMember,
   useCloneOrgVersion,
   useCreateDepartment,
   useCreateOrgLevel,
   useDeleteOrgLevel,
   useDepartments,
+  useDeptMembers,
   useEmployees,
   useMoveDepartments,
   useOrgLevels,
   useOrgVersions,
   useSetDepartmentsDeleted,
   useUpdateDepartment,
-  useUpdateEmployee,
   useUpdateOrgLevel,
 } from '@/features/management/hooks'
 import { DeptMemberModal } from '@/features/management/panels/DeptMemberModal'
@@ -30,7 +31,6 @@ import {
   groupByDept,
   moveNode,
   subtreeIds,
-  toEmployees,
   toNodes,
   type DeptNode,
   type DeptTreeNode,
@@ -40,7 +40,8 @@ import {
 /**
  * 조직 관리 — N-depth 조직도 트리-테이블(실 연동). 서버(react-query)가 원천이며,
  * 편집은 모두 mutation으로 저장한다. 각 부서에 조직 레벨을 태그하고(인사관리 컬럼 파생),
- * 인력 배치는 users.department_id를 갱신한다. 연도 스냅샷(버전)은 후속 슬라이스.
+ * 구조·인력 배치 모두 "선택된 조직 버전(가용기간)" 범위로 편집한다. 인력 배치는 dept_members에
+ * 저장하고(버전별 스냅샷), 선택 버전이 활성 버전이면 users.department_id 미러도 함께 갱신한다.
  */
 export function DepartmentsPanel() {
   const { data: versionRows, isLoading: versionLoading } = useOrgVersions()
@@ -56,6 +57,7 @@ export function DepartmentsPanel() {
   const { data: deptRows, isLoading: deptLoading } = useDepartments(true, versionId || undefined)
   const { data: levelRows, isLoading: levelLoading } = useOrgLevels()
   const { data: empRows, isLoading: empLoading } = useEmployees()
+  const { data: memberRows, isLoading: memberLoading } = useDeptMembers(versionId || undefined)
 
   const cloneVersion = useCloneOrgVersion()
   const createDept = useCreateDepartment()
@@ -65,12 +67,20 @@ export function DepartmentsPanel() {
   const createLevel = useCreateOrgLevel()
   const updateLevel = useUpdateOrgLevel()
   const deleteLevel = useDeleteOrgLevel()
-  const updateEmployee = useUpdateEmployee()
+  const assignMember = useAssignDeptMember()
 
-  // 파생 데이터(서버 원천)
+  // 파생 데이터(서버 원천). 인력 배치는 "선택 버전"의 dept_members 기준.
   const nodes = useMemo(() => toNodes(deptRows ?? []), [deptRows])
   const levels = useMemo(() => levelRows ?? [], [levelRows])
-  const employees = useMemo(() => toEmployees(empRows ?? []), [empRows])
+  const placement = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const r of memberRows ?? []) m.set(r.user_id, r.department_id)
+    return m
+  }, [memberRows])
+  const employees = useMemo(
+    () => (empRows ?? []).map((e) => ({ id: e.id, name: e.name, deptId: placement.get(e.id) ?? null })),
+    [empRows, placement],
+  )
   const tree = useMemo(() => buildTree(nodes), [nodes])
   const removed = useMemo(() => deletedRoots(nodes), [nodes])
   const membersByDept = useMemo(() => groupByDept(employees), [employees])
@@ -161,7 +171,12 @@ export function DepartmentsPanel() {
   }
 
   const assign = (employeeId: string, deptId: string | null) =>
-    updateEmployee.mutate({ id: employeeId, values: { department_id: deptId } })
+    assignMember.mutate({
+      versionId,
+      userId: employeeId,
+      departmentId: deptId,
+      isActive: versionId === activeVersionId,
+    })
 
   // --- 드래그 앤 드롭: 커서 위치로 앞/뒤/안쪽 판정 후 변경분만 저장 ---
   const onDragOverRow = (e: DragEvent, id: string) => {
@@ -195,7 +210,8 @@ export function DepartmentsPanel() {
     !versionId ||
     (deptLoading && !deptRows) ||
     (levelLoading && !levelRows) ||
-    (empLoading && !empRows)
+    (empLoading && !empRows) ||
+    (memberLoading && !memberRows)
   ) {
     return <Spinner />
   }

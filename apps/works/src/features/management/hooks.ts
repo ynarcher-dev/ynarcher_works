@@ -5,6 +5,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { useActivePlacementMap } from '@/features/management/orgHooks'
 import type { ApprovalStatus, AssetStatus } from '@/features/management/config'
 
 export interface ApprovalDoc {
@@ -121,6 +122,7 @@ export interface Employee {
 const EMPLOYEE_COLUMNS = 'id, name, email, user_type, department_id, updated_at, phone, profile'
 
 export function useEmployees() {
+  const { map, ready } = useActivePlacementMap()
   return useQuery({
     queryKey: ['management', 'employees'],
     queryFn: async (): Promise<Employee[]> => {
@@ -131,11 +133,15 @@ export function useEmployees() {
         .order('name', { ascending: true })
       return (data ?? []) as Employee[]
     },
+    // 소속(department_id)은 오늘의 유효 버전 배치로 덮어쓴다(로딩 전에는 users 미러 유지).
+    select: (rows: Employee[]) =>
+      ready ? rows.map((r) => ({ ...r, department_id: map.get(r.id) ?? null })) : rows,
   })
 }
 
 /** 임직원 단건 조회(상세페이지). id 미지정 시 비활성. */
 export function useEmployee(id: string | undefined) {
+  const { map, ready } = useActivePlacementMap()
   return useQuery({
     queryKey: ['management', 'employee', id],
     enabled: Boolean(id),
@@ -149,6 +155,8 @@ export function useEmployee(id: string | undefined) {
       if (error) throw error
       return (data ?? null) as Employee | null
     },
+    select: (row: Employee | null) =>
+      row && ready ? { ...row, department_id: map.get(row.id) ?? null } : row,
   })
 }
 
@@ -166,9 +174,17 @@ export interface EmployeePage {
  * 검색어가 있을 때만 전체 건수(totalAll)를 head 카운트로 추가 조회한다. page는 0-base.
  */
 export function useEmployeesPage(keyword: string, page: number, pageSize: number) {
+  const { map, ready } = useActivePlacementMap()
   return useQuery({
     queryKey: ['management', 'employees-page', keyword, page, pageSize],
     placeholderData: keepPreviousData,
+    select: (pageData: EmployeePage): EmployeePage =>
+      ready
+        ? {
+            ...pageData,
+            rows: pageData.rows.map((r) => ({ ...r, department_id: map.get(r.id) ?? null })),
+          }
+        : pageData,
     queryFn: async (): Promise<EmployeePage> => {
       const from = page * pageSize
       const to = from + pageSize - 1
@@ -295,11 +311,14 @@ export function useDeactivateEmployee() {
 // 임포트 경로 호환을 위해 그대로 재노출한다.
 export {
   activeOrgVersionId,
+  useActivePlacementMap,
+  useAssignDeptMember,
   useCloneOrgVersion,
   useCreateDepartment,
   useCreateOrgLevel,
   useDeleteOrgLevel,
   useDepartments,
+  useDeptMembers,
   useMoveDepartments,
   useOrgLevels,
   useOrgVersions,
@@ -307,7 +326,7 @@ export {
   useUpdateDepartment,
   useUpdateOrgLevel,
 } from '@/features/management/orgHooks'
-export type { Department, OrgLevel, OrgVersion } from '@/features/management/orgHooks'
+export type { Department, DeptMember, OrgLevel, OrgVersion } from '@/features/management/orgHooks'
 
 export interface Budget {
   department_id: string | null

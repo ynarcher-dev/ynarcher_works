@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 
 /**
@@ -258,6 +259,90 @@ export function useCloneOrgVersion() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: VERSION_KEY })
       void qc.invalidateQueries({ queryKey: DEPT_KEY })
+      void qc.invalidateQueries({ queryKey: MEMBER_KEY })
+    },
+  })
+}
+
+const MEMBER_KEY = ['management', 'dept-members'] as const
+
+export interface DeptMember {
+  user_id: string
+  department_id: string
+}
+
+/**
+ * 특정 버전의 인력 배치((임직원)→부서). versionId 미지정 시 보류(활성 버전은 useActivePlacementMap 사용).
+ */
+export function useDeptMembers(versionId?: string) {
+  return useQuery({
+    queryKey: [...MEMBER_KEY, versionId ?? null],
+    enabled: Boolean(versionId),
+    queryFn: async (): Promise<DeptMember[]> => {
+      const { data, error } = await supabase
+        .from('dept_members')
+        .select('user_id, department_id')
+        .eq('version_id', versionId as string)
+        .is('deleted_at', null)
+      if (error) throw error
+      return (data ?? []) as DeptMember[]
+    },
+  })
+}
+
+/**
+ * 오늘의 유효 버전 인력 배치 맵((임직원 id)→부서 id). 임직원 화면의 소속 컬럼 원천.
+ * ready=false(버전/배치 로딩 전)에는 호출부가 users.department_id 미러로 폴백한다.
+ */
+export function useActivePlacementMap(): { map: Map<string, string>; ready: boolean } {
+  const { data: versions } = useOrgVersions()
+  const activeId = versions ? activeOrgVersionId(versions) : null
+  const { data, isSuccess } = useDeptMembers(activeId ?? undefined)
+  return useMemo(() => {
+    const map = new Map<string, string>()
+    for (const r of data ?? []) map.set(r.user_id, r.department_id)
+    return { map, ready: Boolean(activeId) && isSuccess }
+  }, [data, activeId, isSuccess])
+}
+
+/**
+ * 인력 배치 변경(선택 버전 기준). 기존 배치를 soft delete 후 신규 배치 삽입(부서 null=배치 해제).
+ * 편집 버전이 활성 버전이면 users.department_id 미러도 함께 갱신한다(라이브 표시 일관).
+ */
+export function useAssignDeptMember() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (v: {
+      versionId: string
+      userId: string
+      departmentId: string | null
+      isActive: boolean
+    }) => {
+      const { error: delErr } = await supabase
+        .from('dept_members')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('version_id', v.versionId)
+        .eq('user_id', v.userId)
+        .is('deleted_at', null)
+      if (delErr) throw delErr
+      if (v.departmentId) {
+        const { error: insErr } = await supabase
+          .from('dept_members')
+          .insert({ version_id: v.versionId, department_id: v.departmentId, user_id: v.userId })
+        if (insErr) throw insErr
+      }
+      if (v.isActive) {
+        const { error: mirErr } = await supabase
+          .from('users')
+          .update({ department_id: v.departmentId })
+          .eq('id', v.userId)
+        if (mirErr) throw mirErr
+      }
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: MEMBER_KEY })
+      void qc.invalidateQueries({ queryKey: ['management', 'employees'] })
+      void qc.invalidateQueries({ queryKey: ['management', 'employees-page'] })
     },
   })
 }

@@ -94,13 +94,6 @@ export function resolveByLevel(
   return out
 }
 
-/** 실제 임직원 행 → 배치용 Employee(deptId = 최신 소속 department_id). */
-export function toEmployees(
-  rows: { id: string; name: string; department_id: string | null }[],
-): Employee[] {
-  return rows.map((r) => ({ id: r.id, name: r.name, deptId: r.department_id }))
-}
-
 /** 부서 id → 직접 소속 임직원 목록. */
 export function groupByDept(employees: Employee[]): Map<string, Employee[]> {
   const m = new Map<string, Employee[]>()
