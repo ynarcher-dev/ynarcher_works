@@ -111,35 +111,37 @@ export function OrgVersionBar({
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
-        <Select value={selectedId} onChange={(e) => onSelect(e.target.value)} className="max-w-72">
-          {groups.current.length > 0 && (
-            <optgroup label="현재">
-              {groups.current.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {optionLabel(v)}
-                </option>
-              ))}
-            </optgroup>
-          )}
-          {groups.upcoming.length > 0 && (
-            <optgroup label="예정">
-              {groups.upcoming.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {optionLabel(v)}
-                </option>
-              ))}
-            </optgroup>
-          )}
-          {groups.ended.length > 0 && (
-            <optgroup label="종료">
-              {groups.ended.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {optionLabel(v)}
-                </option>
-              ))}
-            </optgroup>
-          )}
-        </Select>
+        <div className="w-72 max-w-full">
+          <Select value={selectedId} onChange={(e) => onSelect(e.target.value)}>
+            {groups.current.length > 0 && (
+              <optgroup label="현재">
+                {groups.current.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {optionLabel(v)}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {groups.upcoming.length > 0 && (
+              <optgroup label="예정">
+                {groups.upcoming.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {optionLabel(v)}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {groups.ended.length > 0 && (
+              <optgroup label="종료">
+                {groups.ended.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {optionLabel(v)}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+          </Select>
+        </div>
         {state && (
           <Badge tone={state.tone} size="sm">
             {state.label}
