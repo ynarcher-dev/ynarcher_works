@@ -56,16 +56,22 @@ export interface OrgVersion {
 }
 
 /**
- * 오늘의 유효 버전을 고른다: effective_from <= 오늘 중 "가장 늦게 시작한" PUBLISHED 버전.
- * 기간 포함/공백을 한 규칙으로 처리(공백 구간엔 직전 버전 유지). 없으면 null.
- * (마이그레이션 current 규칙과 동일 — 클라이언트 today 기준으로 파생)
+ * 오늘의 유효 버전을 고른다.
+ *  1) 오늘을 포함하는 버전([시작, 종료), 종료 null=무기한) 중 가장 늦게 시작한 PUBLISHED 버전.
+ *  2) 없으면(공백 구간) 가장 최근에 종료된 버전을 유지(직전). 그것도 없으면 null.
+ * (서버 current_org_version_id()와 동일 규칙 — 클라이언트 today 기준으로 파생)
  */
 export function activeOrgVersionId(versions: OrgVersion[]): string | null {
   const today = new Date().toISOString().slice(0, 10)
-  const active = versions
-    .filter((v) => v.status === 'PUBLISHED' && v.effective_from <= today)
-    .sort((a, b) => b.effective_from.localeCompare(a.effective_from))[0]
-  return active?.id ?? null
+  const pub = versions.filter((v) => v.status === 'PUBLISHED')
+  const containing = pub
+    .filter((v) => v.effective_from <= today && (v.effective_to == null || today < v.effective_to))
+    .sort((a, b) => b.effective_from.localeCompare(a.effective_from))
+  if (containing.length) return containing[0]!.id
+  const ended = pub
+    .filter((v) => v.effective_to != null && v.effective_to <= today)
+    .sort((a, b) => (b.effective_to as string).localeCompare(a.effective_to as string))
+  return ended[0]?.id ?? null
 }
 
 /** 조직 버전(가용기간) 목록. 시작일 내림차순(최신 발효가 위). */
