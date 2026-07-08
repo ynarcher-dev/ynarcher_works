@@ -1,0 +1,15 @@
+[33mcommit 17484f4685ef109c4851f57a81ff43845324ce8e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: ynarcher-dev <dev@ynarcher.com>
+Date:   Wed Jul 8 17:37:20 2026 +0900
+
+    fix(management): 인사 미노출을 계보 단위 전 버전 적용 + 상세/마이페이지 반영
+    
+    버그: hr_hidden이 버전별 부서 행에 저장돼, 편집 버전에서 숨겨도 인사관리 테이블(활성 버전)엔
+    반영되지 않았다. 인사 미노출은 논리-조직 성격이므로 계보(lineage) 단위로 전 버전 일괄 적용한다.
+    
+    - orgHooks.useSetDeptHrHidden: departments.hr_hidden을 lineage_id로 일괄 UPDATE
+    - departmentsMock: DeptNode.lineageId 추가(toNodes 매핑), 토글이 계보 기준으로 동작
+    - DepartmentsPanel: toggleHrHidden을 계보 단위 mutation으로 교체
+    - EmployeeDetailPage/MyPage: 소속 경로도 미노출 부서를 건너뛰어 부서·팀 표기
+    
+    Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
