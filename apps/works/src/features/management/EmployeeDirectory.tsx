@@ -7,8 +7,10 @@ import {
   useDeactivateEmployee,
   useDepartments,
   useEmployeesPage,
+  useOrgLevels,
   type Employee,
 } from '@/features/management/hooks'
+import { resolveByLevel, toNodes } from '@/features/management/panels/departmentsMock'
 
 /** 목록 페이지당 행 수(서버 사이드 페이지네이션). */
 const PAGE_SIZE = 30
@@ -54,34 +56,39 @@ export function EmployeeDirectory({
   }, [keyword])
 
   const { data: depts } = useDepartments()
+  const { data: levels = [] } = useOrgLevels()
   const { data, isLoading } = useEmployeesPage(keyword, page, PAGE_SIZE)
 
-  const deptById = useMemo(() => {
-    const m: Record<string, { name: string; parent_id: string | null }> = {}
-    for (const d of depts ?? []) m[d.id] = { name: d.name, parent_id: d.parent_id }
-    return m
-  }, [depts])
+  const nodes = useMemo(() => toNodes(depts ?? []), [depts])
 
-  // 소속 부서에 상위가 있으면 상위=부서·자신=팀, 없으면(최상위) 자신=부서·팀 없음('-').
-  const resolveDeptTeam = (e: Employee): { dept: string; team: string } => {
-    const dept = e.department_id ? deptById[e.department_id] : undefined
-    const parent = dept?.parent_id ? deptById[dept.parent_id] : undefined
-    return {
-      dept: parent?.name ?? dept?.name ?? '-',
-      team: parent ? dept?.name ?? '-' : '-',
+  // 임직원 소속 부서를 조상 경로로 펼쳐 레벨별 소속명으로 해석(부서당 1회 캐시).
+  const resolveFor = useMemo(() => {
+    const cache = new Map<string, Record<string, string>>()
+    return (deptId: string | null): Record<string, string> => {
+      const key = deptId ?? ''
+      let v = cache.get(key)
+      if (!v) {
+        v = resolveByLevel(nodes, levels, deptId)
+        cache.set(key, v)
+      }
+      return v
     }
-  }
+  }, [nodes, levels])
+
+  // 회사/부서/팀 하드코딩 → 조직관리에서 정의한 레벨을 컬럼으로 동적 생성.
+  const levelColumns: Column<Employee>[] = levels.map((lv) => ({
+    key: `lvl-${lv.id}`,
+    header: lv.name,
+    render: (r) => {
+      const v = resolveFor(r.department_id)[lv.id]
+      return v && v !== '-' ? v : DASH
+    },
+    className: 'w-28',
+  }))
 
   const columns: Column<Employee>[] = [
     { key: 'name', header: '이름', render: (r) => r.name, className: 'w-24' },
-    {
-      key: 'company',
-      header: '회사',
-      render: (r) => str(r.profile?.company) || DASH,
-      className: 'w-40',
-    },
-    { key: 'dept', header: '부서', render: (r) => resolveDeptTeam(r).dept, className: 'w-32' },
-    { key: 'team', header: '팀', render: (r) => resolveDeptTeam(r).team, className: 'w-20' },
+    ...levelColumns,
     {
       key: 'position',
       header: '직책',
@@ -143,13 +150,9 @@ export function EmployeeDirectory({
       meta={{
         // 작성자명 연동 전까지 임시 표기(작성자 컬럼은 showAuthor=false로 숨김).
         copyText: (r) => {
-          const { dept, team } = resolveDeptTeam(r)
-          return [
-            `이름: ${r.name}`,
-            `부서: ${dept === '-' ? '' : dept}`,
-            `팀: ${team === '-' ? '' : team}`,
-            `이메일: ${r.email ?? ''}`,
-          ].join('\n')
+          const path = resolveFor(r.department_id)
+          const orgLines = levels.map((lv) => `${lv.name}: ${path[lv.id] === '-' ? '' : path[lv.id]}`)
+          return [`이름: ${r.name}`, ...orgLines, `이메일: ${r.email ?? ''}`].join('\n')
         },
         // 조회 전용(OFFICE)에서는 비활성화 액션을 제공하지 않는다.
         onDeactivate: readOnly

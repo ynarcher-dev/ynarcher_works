@@ -14,20 +14,6 @@ export interface OrgLevel {
   name: string
 }
 
-/**
- * 기본 레벨 정의. 회사를 최상위 레벨로 둔다(계열사도 조직도로 관리 → 인사관리 '회사' 컬럼 파생).
- * 현재 시드 데이터는 본부→팀 2단이라 최상위를 '본부'로 앵커링(DATA_TOP_LEVEL_INDEX). +α는 자유 추가.
- */
-export const DEFAULT_LEVELS: OrgLevel[] = [
-  { id: 'lv-company', name: '회사' },
-  { id: 'lv-div', name: '본부' },
-  { id: 'lv-team', name: '팀' },
-  { id: 'lv-part', name: '파트' },
-]
-
-/** 실제 시드 데이터의 최상위(부모 없는) 부서를 매핑할 레벨 인덱스. 회사(0) 아래 본부(1). */
-export const DATA_TOP_LEVEL_INDEX = 1
-
 export interface DeptNode {
   id: string
   parentId: string | null
@@ -64,33 +50,24 @@ export interface Employee {
   deptId: string | null
 }
 
-/**
- * 실제 departments 행 → 트리 노드. 정렬은 조회 순서 인덱스로 부여하고(sort_order 컬럼 도입 전 임시),
- * levelId 초기값은 트리 깊이를 레벨에 매핑하되 최상위를 topLevelIndex에 앵커링(depth n → levels[n+topLevelIndex]).
- * 이후 노드별로 바꿀 수 있다.
- */
+/** 실제 departments 행 → 트리 노드. level_id/sort_order/deleted_at을 그대로 매핑한다. */
 export function toNodes(
-  rows: { id: string; name: string; parent_id: string | null }[],
-  levels: OrgLevel[],
-  topLevelIndex = 0,
+  rows: {
+    id: string
+    name: string
+    parent_id: string | null
+    level_id: string | null
+    sort_order: number
+    deleted_at?: string | null
+  }[],
 ): DeptNode[] {
-  const parentOf = new Map(rows.map((r) => [r.id, r.parent_id]))
-  const depthOf = (id: string): number => {
-    let d = 0
-    let p = parentOf.get(id) ?? null
-    while (p) {
-      d += 1
-      p = parentOf.get(p) ?? null
-    }
-    return d
-  }
-  const fallback = levels[levels.length - 1]?.id ?? ''
-  return rows.map((r, i) => ({
+  return rows.map((r) => ({
     id: r.id,
     parentId: r.parent_id,
     name: r.name,
-    levelId: levels[Math.min(depthOf(r.id) + topLevelIndex, levels.length - 1)]?.id ?? fallback,
-    sort: i,
+    levelId: r.level_id ?? '',
+    sort: r.sort_order,
+    deleted: r.deleted_at != null,
   }))
 }
 
