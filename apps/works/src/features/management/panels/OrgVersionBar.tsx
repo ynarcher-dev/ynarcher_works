@@ -1,4 +1,4 @@
-import { Badge, Button, Input, Modal, Select } from '@ynarcher/ui'
+import { Button, Input, Modal, Select } from '@ynarcher/ui'
 import { CopyPlus } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type { OrgVersion } from '@/features/management/hooks'
@@ -9,17 +9,6 @@ function periodLabel(v: OrgVersion): string {
 }
 
 const TODAY = () => new Date().toISOString().slice(0, 10)
-
-/** 버전 상태 배지: 현재(오늘 유효) / 예정(미래 발효) / 종료(대체됨) / 초안. */
-function versionState(
-  v: OrgVersion,
-  activeId: string | null,
-): { label: string; tone: 'success' | 'info' | 'neutral' } {
-  if (v.status === 'DRAFT') return { label: '초안', tone: 'neutral' }
-  if (v.id === activeId) return { label: '현재', tone: 'success' }
-  if (v.effective_from > TODAY()) return { label: '예정', tone: 'info' }
-  return { label: '종료', tone: 'neutral' }
-}
 
 export interface CloneInput {
   srcVersionId: string
@@ -50,7 +39,6 @@ export function OrgVersionBar({
   cloning,
 }: OrgVersionBarProps) {
   const selected = versions.find((v) => v.id === selectedId)
-  const state = selected ? versionState(selected, activeId) : null
   const notActive = Boolean(selected && activeId && selected.id !== activeId)
 
   // 현재 → 예정 → 종료 3그룹(각 그룹은 optgroup 라벨이 구분선 역할).
@@ -142,11 +130,6 @@ export function OrgVersionBar({
             )}
           </Select>
         </div>
-        {state && (
-          <Badge tone={state.tone} size="sm">
-            {state.label}
-          </Badge>
-        )}
         <Button variant="outline" size="sm" onClick={openClone} disabled={!selected || cloning}>
           <CopyPlus size={14} /> 새 버전 복제
         </Button>
