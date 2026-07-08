@@ -93,6 +93,7 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         { label: '분야태그 관리', tab: 'fields' },
         { label: '직책태그 관리', tab: 'positions' },
         { label: '직급태그 관리', tab: 'ranks' },
+        { label: '호봉태그 관리', tab: 'pay_steps' },
         { label: '구분태그 관리', tab: 'categories' },
         { label: '권역태그 관리', tab: 'regions' },
         { label: '국가태그 관리', tab: 'countries' },

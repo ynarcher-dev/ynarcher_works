@@ -47,6 +47,12 @@ export const TAG_CONFIGS = {
     heading: '직급태그 관리',
     noun: '직급',
   },
+  paySteps: {
+    tab: 'pay_steps',
+    table: 'pay_step_tags',
+    heading: '호봉태그 관리',
+    noun: '호봉',
+  },
   categories: {
     tab: 'categories',
     table: 'category_tags',

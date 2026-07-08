@@ -84,8 +84,20 @@ export function EmployeeDirectory({
     { key: 'team', header: '팀', render: (r) => resolveDeptTeam(r).team, className: 'w-20' },
     {
       key: 'position',
-      header: '직책/직급',
+      header: '직책',
       render: (r) => str(r.profile?.position) || DASH,
+      className: 'w-20',
+    },
+    {
+      key: 'rank',
+      header: '직급',
+      render: (r) => str(r.profile?.rank) || DASH,
+      className: 'w-20',
+    },
+    {
+      key: 'pay_step',
+      header: '호봉',
+      render: (r) => str(r.profile?.pay_step) || DASH,
       className: 'w-20',
     },
     {

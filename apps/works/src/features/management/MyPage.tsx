@@ -87,7 +87,9 @@ export function MyPage() {
             <p className="mt-1 text-body text-gray-500">{affiliation || '-'}</p>
             <div className="mt-4 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-2">
               <Info label="회사" value={str(profile.company)} />
-              <Info label="직책/직급" value={str(profile.position)} />
+              <Info label="직책" value={str(profile.position)} />
+              <Info label="직급" value={str(profile.rank)} />
+              <Info label="호봉" value={str(profile.pay_step)} />
               <Info label="이메일" value={me.email ?? ''} />
               <Info label="연락처" value={me.phone ?? ''} />
             </div>

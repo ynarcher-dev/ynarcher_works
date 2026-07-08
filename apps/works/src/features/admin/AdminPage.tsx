@@ -16,6 +16,7 @@ const HEADINGS: Record<string, string> = {
   fields: TAG_CONFIGS.fields.heading,
   positions: TAG_CONFIGS.positions.heading,
   ranks: TAG_CONFIGS.ranks.heading,
+  pay_steps: TAG_CONFIGS.paySteps.heading,
   categories: TAG_CONFIGS.categories.heading,
   regions: TAG_CONFIGS.regions.heading,
   countries: TAG_CONFIGS.countries.heading,
@@ -40,6 +41,7 @@ export function AdminPage() {
       {tab === 'fields' && <TagAdminPanel config={TAG_CONFIGS.fields} />}
       {tab === 'positions' && <TagAdminPanel config={TAG_CONFIGS.positions} />}
       {tab === 'ranks' && <TagAdminPanel config={TAG_CONFIGS.ranks} />}
+      {tab === 'pay_steps' && <TagAdminPanel config={TAG_CONFIGS.paySteps} />}
       {tab === 'categories' && <TagAdminPanel config={TAG_CONFIGS.categories} />}
       {tab === 'regions' && <TagAdminPanel config={TAG_CONFIGS.regions} />}
       {tab === 'countries' && <TagAdminPanel config={TAG_CONFIGS.countries} />}
@@ -52,6 +54,7 @@ export function AdminPage() {
         tab !== 'fields' &&
         tab !== 'positions' &&
         tab !== 'ranks' &&
+        tab !== 'pay_steps' &&
         tab !== 'categories' &&
         tab !== 'regions' &&
         tab !== 'countries' &&

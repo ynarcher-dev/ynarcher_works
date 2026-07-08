@@ -221,6 +221,8 @@ export interface CreateEmployeeInput {
   department_id?: string | null
   phone?: string | null
   position?: string | null
+  rank?: string | null
+  pay_step?: string | null
 }
 
 /**

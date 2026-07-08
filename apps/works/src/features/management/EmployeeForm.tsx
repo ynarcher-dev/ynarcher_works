@@ -1,6 +1,7 @@
 import { Button, Input, Select, TextArea, useToast } from '@ynarcher/ui'
 import { useMemo, useState, type ReactNode } from 'react'
 import { ROLE_OPTIONS } from '@/features/management/config'
+import { HrTagSelect } from '@/features/management/HrTagSelect'
 import {
   useDepartments,
   useUpdateEmployee,
@@ -56,6 +57,8 @@ export function EmployeeForm({ recordId, initial, onDone, onCancel }: Props) {
   const [company, setCompany] = useState(str(profile.company))
   const [departmentId, setDepartmentId] = useState(initial.department_id ?? '')
   const [position, setPosition] = useState(str(profile.position))
+  const [rank, setRank] = useState(str(profile.rank))
+  const [payStep, setPayStep] = useState(str(profile.pay_step))
   const [phone, setPhone] = useState(initial.phone ?? '')
   const [email, setEmail] = useState(initial.email ?? '')
   const [bio, setBio] = useState(str(profile.bio))
@@ -95,6 +98,8 @@ export function EmployeeForm({ recordId, initial, onDone, onCancel }: Props) {
         ...profile,
         company: company.trim() || null,
         position: position.trim() || null,
+        rank: rank.trim() || null,
+        pay_step: payStep.trim() || null,
         bio: bio.trim() || null,
         note: note.trim() || null,
       },
@@ -143,8 +148,14 @@ export function EmployeeForm({ recordId, initial, onDone, onCancel }: Props) {
               ))}
             </Select>
           </Field>
-          <Field label="직책/직급">
-            <Input value={position} onChange={(e) => setPosition(e.target.value)} />
+          <Field label="직책">
+            <HrTagSelect table="position_tags" value={position} onChange={setPosition} />
+          </Field>
+          <Field label="직급">
+            <HrTagSelect table="rank_tags" value={rank} onChange={setRank} />
+          </Field>
+          <Field label="호봉">
+            <HrTagSelect table="pay_step_tags" value={payStep} onChange={setPayStep} />
           </Field>
           <Field label="연락처">
             <Input value={phone} onChange={(e) => setPhone(e.target.value)} />

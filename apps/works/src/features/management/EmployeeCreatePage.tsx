@@ -2,6 +2,7 @@ import { Button, Input, Select, useToast } from '@ynarcher/ui'
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ROLE_OPTIONS } from '@/features/management/config'
+import { HrTagSelect } from '@/features/management/HrTagSelect'
 import { useCreateEmployee } from '@/features/management/hooks'
 
 /** 필드 래퍼(라벨 + 입력). EmployeeForm과 동일한 페이지 폼 스타일. */
@@ -44,6 +45,8 @@ export function EmployeeCreatePage() {
   const [password, setPassword] = useState('')
   const [userType, setUserType] = useState('read_only')
   const [position, setPosition] = useState('')
+  const [rank, setRank] = useState('')
+  const [payStep, setPayStep] = useState('')
   const [phone, setPhone] = useState('')
 
   const submit = async () => {
@@ -64,6 +67,8 @@ export function EmployeeCreatePage() {
         password,
         user_type: userType,
         position: position.trim() || null,
+        rank: rank.trim() || null,
+        pay_step: payStep.trim() || null,
         phone: phone.trim() || null,
       })
       toast.show('임직원 계정을 생성했습니다.', 'success')
@@ -110,8 +115,14 @@ export function EmployeeCreatePage() {
               autoComplete="new-password"
             />
           </Field>
-          <Field label="직책/직급">
-            <Input value={position} onChange={(e) => setPosition(e.target.value)} />
+          <Field label="직책">
+            <HrTagSelect table="position_tags" value={position} onChange={setPosition} />
+          </Field>
+          <Field label="직급">
+            <HrTagSelect table="rank_tags" value={rank} onChange={setRank} />
+          </Field>
+          <Field label="호봉">
+            <HrTagSelect table="pay_step_tags" value={payStep} onChange={setPayStep} />
           </Field>
           <Field label="연락처">
             <Input value={phone} onChange={(e) => setPhone(e.target.value)} />

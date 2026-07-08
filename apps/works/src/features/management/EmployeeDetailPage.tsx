@@ -121,6 +121,8 @@ export function EmployeeDetailPage({
   const profile = emp.profile ?? {}
   const company = str(profile.company)
   const position = str(profile.position)
+  const rank = str(profile.rank)
+  const payStep = str(profile.pay_step)
   const bio = str(profile.bio)
   const note = str(profile.note)
   const roleLabel = ROLE_LABELS[emp.user_type] ?? emp.user_type
@@ -169,7 +171,9 @@ export function EmployeeDetailPage({
 
               <div className="mt-5 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-3">
                 <Info label="회사" value={company || '-'} />
-                <Info label="직책/직급" value={position || '-'} />
+                <Info label="직책" value={position || '-'} />
+                <Info label="직급" value={rank || '-'} />
+                <Info label="호봉" value={payStep || '-'} />
                 <Info label="연락처" value={phone} />
                 <Info label="이메일" value={email} />
                 <Info label="수정일" value={formatDate(emp.updated_at)} />

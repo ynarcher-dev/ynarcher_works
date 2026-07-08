@@ -40,6 +40,8 @@ Deno.serve(async (req: Request) => {
     const departmentId = body.department_id ? String(body.department_id) : null
     const phone = body.phone ? String(body.phone).trim() : null
     const position = body.position ? String(body.position).trim() : null
+    const rank = body.rank ? String(body.rank).trim() : null
+    const payStep = body.pay_step ? String(body.pay_step).trim() : null
 
     if (!email || !name || !password) {
       return jsonResponse({ error: 'invalid_request', message: '이메일·이름·비밀번호는 필수입니다.' }, 400)
@@ -96,6 +98,8 @@ Deno.serve(async (req: Request) => {
     // 3) public.users 행 생성(auth 연결). 실패 시 auth 계정 롤백. -----------------
     const profile: Record<string, unknown> = {}
     if (position) profile.position = position
+    if (rank) profile.rank = rank
+    if (payStep) profile.pay_step = payStep
 
     const { data: newUser, error: insErr } = await db
       .from('users')
