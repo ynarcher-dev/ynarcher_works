@@ -43,6 +43,10 @@ import {
   Component,
   Upload,
   DoorOpen,
+  Network,
+  Gauge,
+  Building,
+  Layers,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import {
@@ -117,6 +121,7 @@ const sidebarIconByTab: Record<string, LucideIcon> = {
   fields: Tags,
   positions: UserCog,
   ranks: Medal,
+  pay_steps: Layers,
   categories: Shapes,
   sensitive: EyeOff,
   audit: ReceiptText,
@@ -127,6 +132,9 @@ const sidebarIconByTab: Record<string, LucideIcon> = {
   hr: User,
   finance: WalletCards,
   assets: BriefcaseBusiness,
+  departments: Network,
+  branches: Building,
+  kpi: Gauge,
 }
 
 const sidebarIconByWorkspace: Record<string, LucideIcon> = {

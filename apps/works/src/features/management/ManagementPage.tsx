@@ -7,11 +7,17 @@ import { DepartmentsPanel } from '@/features/management/panels/DepartmentsPanel'
 import { FinancePanel } from '@/features/management/panels/FinancePanel'
 import { HrPanel } from '@/features/management/panels/HrPanel'
 import { KpiPanel } from '@/features/management/panels/KpiPanel'
+import { TagAdminPanel } from '@/features/admin/TagAdminPanel'
+import { TAG_CONFIGS } from '@/features/admin/tagConfig'
 
 const HEADINGS: Record<string, string> = {
   dashboard: '대시보드',
   departments: '조직 관리',
+  branches: '지사 관리',
   hr: '인사 관리',
+  positions: TAG_CONFIGS.positions.heading,
+  ranks: TAG_CONFIGS.ranks.heading,
+  pay_steps: TAG_CONFIGS.paySteps.heading,
   assets: '자산 관리',
   finance: '재무 관리',
   kpi: 'KPI 관리',
@@ -53,7 +59,15 @@ export function ManagementPage() {
         actions={actions}
       />
       {tab === 'departments' && <DepartmentsPanel />}
+      {tab === 'branches' && (
+        <p className="rounded border border-dashed border-gray-300 py-12 text-center text-body text-gray-400">
+          지사 관리는 준비 중입니다.
+        </p>
+      )}
       {tab === 'hr' && <HrPanel keyword={keyword} />}
+      {tab === 'positions' && <TagAdminPanel config={TAG_CONFIGS.positions} />}
+      {tab === 'ranks' && <TagAdminPanel config={TAG_CONFIGS.ranks} />}
+      {tab === 'pay_steps' && <TagAdminPanel config={TAG_CONFIGS.paySteps} />}
       {tab === 'assets' && <AssetsPanel />}
       {tab === 'finance' && <FinancePanel />}
       {tab === 'kpi' && <KpiPanel />}
