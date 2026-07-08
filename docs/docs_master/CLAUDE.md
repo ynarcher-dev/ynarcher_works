@@ -23,7 +23,7 @@
 
 ## 프로젝트 개요
 
-AC/VC 업무 통합 플랫폼(내부 WORKS 앱 8대 메뉴 + 외부 GUEST 앱). 현재 기획 문서 단계이며 전체 기획은 [readme_master.md](./readme_master.md), 문서 지도는 [0_service_spec_draft.md](./0_service_spec_draft.md) 참조.
+AC/VC 업무 통합 플랫폼(내부 WORKS 앱 8대 메뉴 + 외부 GUEST 앱). 기존의 프로젝트 진척 관리(PMS) 성격에 인사, 재무, 자산, 전자결재 등 전사 자원 관리(ERP) 개념을 결합한 통합 기업 운영 플랫폼입니다. 현재 기획 문서 단계이며 전체 기획은 [readme_master.md](./readme_master.md), 문서 지도는 [0_service_spec_draft.md](./0_service_spec_draft.md) 참조.
 
 ## 확정된 아키텍처 결정 (변경 시 반드시 사용자 확인)
 

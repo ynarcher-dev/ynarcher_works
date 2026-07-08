@@ -16,6 +16,6 @@
 | **[3-4]** | **[3_4_workspace_ac.md](./3_4_workspace_ac.md)** | **AC (사업부)**: Program First 기반 스타트업 보육 프로그램(모집, 평가, OT, 멘토링, 1:1 비즈니스 매칭, 데모데이, 성과 KPI) 조립형 운영 플랫폼 |
 | **[3-5]** | **[3_5_workspace_fund.md](./3_5_workspace_fund.md)** | **FUND (투자실)**: 조합/펀드 결성액 및 LP 비율 관리, 투자 포트폴리오 집행, 캐피탈 콜 관리 |
 | **[3-6]** | **[3_6_workspace_ma.md](./3_6_workspace_ma.md)** | **M&A (M&A팀)**: 딜 소싱 파이프라인 칸반, 매수/매도 매칭 매트릭스, 비밀문서(NDA) 체크리스트 |
-| **[3-7]** | **[3_7_workspace_management.md](./3_7_workspace_management.md)** | **MANAGEMENT (매니지먼트)**: 인사(HRD/HRM), 재무 실적 및 성과 지표 대시보드, 전자결재 상신/승인선 관리 (기존 OFFICE에서 명칭 변경 및 기능 구체화) |
-| **[3-8]** | **[3_8_workspace_project.md](./3_8_workspace_project.md)** | **PROJECT (프로젝트)**: 신사업 및 글로벌 사업부 통합 프로젝트 발굴, 협업 태스크 보드 및 간트 마일스톤 관리 (기존 신사업에서 명칭 변경 및 범위 확장) |
+| **[3-7]** | **[3_7_workspace_management.md](./3_7_workspace_management.md)** | **MANAGEMENT (매니지먼트)**: 인사(HRD/HRM), 재무 실적 및 성과 지표 대시보드, 전자결재 상신/승인선 관리, 자산 트래킹 등 **전사 자원 관리(ERP)의 핵심 기능** |
+| **[3-8]** | **[3_8_workspace_project.md](./3_8_workspace_project.md)** | **PROJECT (프로젝트)**: 신사업 및 글로벌 사업부 통합 프로젝트 발굴, 협업 태스크 보드 및 간트 마일스톤 관리 등 **프로젝트 진척 관리(PMS)의 핵심 기능** |
 | **[3-9]** | **[3_9_workspace_guest.md](./3_9_workspace_guest.md)** | **GUEST (외부 파트너)**: 스타트업/전문가용 대시보드, 미팅 예약, 만족도/심사 평가지 작성 폼 |
