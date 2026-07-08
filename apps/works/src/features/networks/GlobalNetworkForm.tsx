@@ -272,7 +272,7 @@ export function GlobalNetworkForm({ recordId, initial, onDone, onCancel }: Props
       </div>
 
       <div className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
-        <Field label="메모">
+        <Field label="노트">
           <TextArea rows={4} value={intro} onChange={(e) => setIntro(e.target.value)} />
         </Field>
       </div>

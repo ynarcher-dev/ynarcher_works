@@ -166,6 +166,11 @@
 - [x] 인사관리 HRM/HRD (조직도, 근태, 교육 이력) <!-- departments 계층(parent_id) 조직도 트리+임직원 디렉토리, hr_profiles/assignments/trainings 스키마 -->
 - [x] 재무·KPI 대시보드 (예산 대비 실지출 경고) <!-- dept_budgets 대비 승인 결재금액 실지출 대조+초과 경고 배지, kpi_records 달성률 -->
 - [x] 자산관리 (assets 할당 상태·회수 예정일 트래킹)
+- [x] 임직원 계정 생성 (로그인 가능 계정: 이메일·이름·초기 비밀번호 필수, 직책/직급·연락처 선택) <!-- Edge Function employee-create: 호출자 권한(super_admin/management write) 검증→auth.admin.createUser(초기 비번, email_confirm)→public.users(auth_user_id 연결)→권한 템플릿 프로비저닝→감사로그(ACCOUNT_CREATE), users 행 실패 시 auth 계정 롤백. useCreateEmployee(functions.invoke)+EmployeeCreatePage(/management/hr/new)+인사관리 헤더 '계정 생성' 버튼. 역할 옵션/라벨 config 공용화 -->
+- [x] 마이페이지(내 계정 관리) — 본인 약력·노트 수정 + 자료 업로드 한정 <!-- 마이그레이션 20260708130000: users_update에서 self 절 제거(본인 직접 UPDATE 차단)+public.update_my_profile(bio,note) RPC(SECURITY DEFINER, 컬럼 화이트리스트). MyPage(/me)+약력/노트 편집(RPC)+MaterialPanel(employee) 자료 업로드, WorksLayout '내 계정 관리' 활성화. 계정 필드(이름/역할/부서)는 인사관리에서만 수정 -->
+- [x] OFFICE 임직원 정보 조회 전용 — 인사 데이터 동일 구조 재사용 <!-- OfficePage managers 탭 HubMasterPanel(임시)→EmployeeDirectory readOnly 재사용(비활성화 액션 숨김, 행 클릭 /office/managers/:id 읽기전용 상세). 마이그레이션 20260708140000: users_select 확대(내부 임직원 전원 조회 허용, 외부 게스트 차단)로 M&A팀 포함 전 직원 조회 가능. 이메일·연락처는 앱 계층 마스킹 유지 -->
+- [x] 임직원 프로필 컬럼 확장 (users.phone/profile jsonb) <!-- 마이그레이션 20260708120000: 연락처(phone)+자유 프로필(profile jsonb: company/position/bio/note). EmployeeDirectory/DetailPage/Form 프로필 필드 반영, 부서/팀 2단 조직도 파생 -->
+
 
 ## Phase 13. GUEST 앱 (apps/guest)
 

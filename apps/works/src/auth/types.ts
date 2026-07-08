@@ -7,6 +7,8 @@ export type WorkspaceKey =
   | 'mna'
   | 'project'
   | 'management'
+  | 'office'
+  | 'approval'
   | 'admin'
   | 'guest'
 

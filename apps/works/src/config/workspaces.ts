@@ -11,12 +11,14 @@ export interface WorkspaceNavItem {
 /** WORKS 앱 8대 메뉴 네비게이션 정의(GUEST 제외). */
 export const WORKSPACES: WorkspaceNavItem[] = [
   { key: 'hub', label: 'HUB', path: '/hub', implemented: true },
-  { key: 'networks', label: 'NETWORKS', path: '/networks', implemented: true },
   { key: 'startup', label: 'STARTUP', path: '/startup', implemented: true },
+  { key: 'networks', label: 'NETWORKS', path: '/networks', implemented: true },
   { key: 'ac', label: 'AC', path: '/ac', implemented: true },
-  { key: 'fund', label: 'FUND', path: '/fund', implemented: true },
   { key: 'mna', label: 'M&A', path: '/mna', implemented: true },
   { key: 'project', label: 'PROJECT', path: '/project', implemented: true },
+  { key: 'fund', label: 'FUND', path: '/fund', implemented: true },
+  { key: 'office', label: 'OFFICE', path: '/office', implemented: true },
+  { key: 'approval', label: '전자결재', path: '/approval', implemented: true },
   { key: 'management', label: 'MANAGEMENT', path: '/management', implemented: true },
   // 시스템 관리 — 스위처에서 구분선 아래에 별도 노출
   { key: 'admin', label: 'ADMIN', path: '/admin', implemented: true },

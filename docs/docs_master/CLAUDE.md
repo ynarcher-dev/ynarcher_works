@@ -33,6 +33,7 @@ AC/VC 업무 통합 플랫폼(내부 WORKS 앱 8대 메뉴 + 외부 GUEST 앱). 
 - **모노레포**: Turborepo — `apps/works`, `apps/guest`, `packages/ui`(순수 UI), `packages/master-data`.
 - **AC 문서 체계**: [3_4_workspace_ac.md](../docs_planning/3_4_workspace_ac.md) + `3_4_1`~`3_4_14` 신규 14문서가 정본. 구버전(ac_startups 등 5종)은 삭제됨 — 복원하지 말 것.
 - **RLS 헬퍼**: `current_app_user_id()`/`current_app_role()`이 기저 헬퍼, `is_admin()` 등 업무 헬퍼는 이를 경유.
+- **마이그레이션 보안 게이트**: Supabase 마이그레이션 작성/수정 전 [11_migration_security_gate.md](../docs_dev/11_migration_security_gate.md)를 확인하고, 완료 보고에 체크리스트 통과 여부를 포함한다.
 
 ## 커밋 컨벤션
 
@@ -51,6 +52,7 @@ AC/VC 업무 통합 플랫폼(내부 WORKS 앱 8대 메뉴 + 외부 GUEST 앱). 
 
 - 파일당 500줄 상한 (컴포넌트 250 / 훅 150 / 함수 50).
 - DB 변경은 마이그레이션으로만. 모든 테이블 RLS 필수, Default Deny.
+- 새 테이블/RPC/Storage 정책/`SECURITY DEFINER` 함수는 [11_migration_security_gate.md](../docs_dev/11_migration_security_gate.md)의 보안 게이트를 통과해야 완료로 본다.
 - 물리 삭제 금지(soft delete), 개인정보 목록 마스킹 의무, Secret은 `VITE_` 접두사 금지.
 - UI에서 숨기는 것은 보안이 아니다 — 서버(Edge Function/RPC/RLS)에서 강제한다.
 - 상세 원칙은 [1_development_stack.md](../docs_dev/1_development_stack.md) 및 docs_dev 2~7번 문서를 따른다.

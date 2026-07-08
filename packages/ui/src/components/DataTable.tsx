@@ -82,6 +82,10 @@ export interface DataTableProps<T> {
   layout?: 'auto' | 'fixed'
   /** 우측 표준 컬럼(작성자/수정일, 기본 true). 로그/매트릭스/랭킹은 false로 opt-out. */
   standardColumns?: boolean
+  /** 표준 컬럼 중 작성자 컬럼 노출 여부(기본 true). false면 수정일/관리만 남긴다. */
+  showAuthor?: boolean
+  /** 수정일 값(셀) 정렬(기본 left). 헤더는 항상 좌측. 넓은 표에서 우측 여백을 줄이려면 'right'. */
+  updatedAtAlign?: 'left' | 'right'
   /**
    * 관리(비활성화) 셀 내용 노출 여부(기본 true). `standardColumns`가 true이면 관리 컬럼 자리는
    * 항상 유지되며(컬럼 폭 고정), false면 셀을 비워 버튼 없이 표시한다(HUB 등 읽기 전용).
@@ -147,6 +151,8 @@ export function DataTable<T>({
   numbered = true,
   pagination,
   standardColumns = true,
+  showAuthor = true,
+  updatedAtAlign = 'left',
   manageable = true,
   selectable = false,
   selectedKeys,
@@ -166,7 +172,7 @@ export function DataTable<T>({
     columns.length +
     (selectable ? 1 : 0) +
     (numbered ? 1 : 0) +
-    (standardColumns ? 3 : 0)
+    (standardColumns ? (showAuthor ? 3 : 2) : 0)
 
   // 서버 페이징 시 전체 건수 기준으로 첫 행(index 0)의 No.를 매긴다. 미지정 시 페이지 내 rows 기준.
   const numberFrom = pagination
@@ -262,7 +268,10 @@ export function DataTable<T>({
             })}
             {standardColumns && (
               <>
-                <th className={cn('h-9 w-20 border-b border-gray-300 px-3 text-left text-caption font-semibold text-gray-500', pad, truncate)}>작성자</th>
+                {showAuthor && (
+                  <th className={cn('h-9 w-20 border-b border-gray-300 px-3 text-left text-caption font-semibold text-gray-500', pad, truncate)}>작성자</th>
+                )}
+                {/* 수정일 헤더는 항상 좌측 정렬. 값(셀)만 updatedAtAlign을 따른다. */}
                 <th className={cn('h-9 w-28 border-b border-gray-300 px-3 text-left text-caption font-semibold text-gray-500', pad, truncate)}>수정일</th>
                 <th className={cn('h-9 w-32 border-b border-gray-300 px-3 text-center text-caption font-semibold text-gray-500', pad)}>관리</th>
               </>
@@ -329,10 +338,12 @@ export function DataTable<T>({
                   ))}
                   {standardColumns && (
                     <>
-                      <td className={cn('border-b border-gray-200 px-3 text-gray-500', pad, truncate)}>
-                        {resolveAuthor(row, meta)}
-                      </td>
-                      <td className={cn('border-b border-gray-200 px-3 text-gray-500 tabular-nums', pad, truncate)}>
+                      {showAuthor && (
+                        <td className={cn('border-b border-gray-200 px-3 text-gray-500', pad, truncate)}>
+                          {resolveAuthor(row, meta)}
+                        </td>
+                      )}
+                      <td className={cn('border-b border-gray-200 px-3 text-gray-500 tabular-nums', alignClass[updatedAtAlign], pad, truncate)}>
                         {resolveUpdatedAt(row, meta)}
                       </td>
                       <td

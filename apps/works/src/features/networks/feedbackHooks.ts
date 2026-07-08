@@ -24,7 +24,7 @@ export function useFeedback(targetType: string, targetId: string | undefined) {
         .eq('target_type', targetType)
         .eq('target_id', targetId)
         .is('deleted_at', null)
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
       if (error) throw error
       return (data ?? []) as Feedback[]
     },

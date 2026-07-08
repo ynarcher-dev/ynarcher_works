@@ -9,6 +9,11 @@ import { FundDetailPage } from '@/features/fund/FundDetailPage'
 import { FundPage } from '@/features/fund/FundPage'
 import { HubPage } from '@/features/hub/HubPage'
 import { ManagementPage } from '@/features/management/ManagementPage'
+import { EmployeeCreatePage } from '@/features/management/EmployeeCreatePage'
+import { EmployeeDetailPage } from '@/features/management/EmployeeDetailPage'
+import { MyPage } from '@/features/management/MyPage'
+import { OfficePage } from '@/features/office/OfficePage'
+import { ApprovalPage } from '@/features/approval/ApprovalPage'
 import { MnaDealDetailPage } from '@/features/mna/MnaDealDetailPage'
 import { MnaPage } from '@/features/mna/MnaPage'
 import { NetworksPage } from '@/features/networks/NetworksPage'
@@ -35,6 +40,8 @@ export const router = createBrowserRouter([
         ),
         children: [
           { index: true, element: <Navigate to="/hub" replace /> },
+          // 마이페이지(내 계정 관리): 모든 인증 사용자 접근(워크스페이스 권한 불요).
+          { path: 'me', element: <MyPage /> },
           {
             path: 'hub',
             element: (
@@ -168,6 +175,53 @@ export const router = createBrowserRouter([
             element: (
               <RequireWorkspace workspace="management">
                 <ManagementPage />
+              </RequireWorkspace>
+            ),
+          },
+          // 임직원 계정 생성 페이지(로그인 가능 계정). :id 라우트보다 정적 경로가 우선한다.
+          {
+            path: 'management/hr/new',
+            element: (
+              <RequireWorkspace workspace="management">
+                <EmployeeCreatePage />
+              </RequireWorkspace>
+            ),
+          },
+          // 임직원 상세페이지(조회 전용). 인사 관리 리스트 행 클릭으로 진입한다.
+          {
+            path: 'management/hr/:id',
+            element: (
+              <RequireWorkspace workspace="management">
+                <EmployeeDetailPage />
+              </RequireWorkspace>
+            ),
+          },
+          {
+            path: 'office',
+            element: (
+              <RequireWorkspace workspace="office">
+                <OfficePage />
+              </RequireWorkspace>
+            ),
+          },
+          // 임직원 정보 상세(조회 전용). OFFICE 임직원 정보 목록 행 클릭으로 진입한다.
+          {
+            path: 'office/managers/:id',
+            element: (
+              <RequireWorkspace workspace="office">
+                <EmployeeDetailPage
+                  readOnly
+                  backTo="/office?tab=managers"
+                  backLabel="임직원 정보"
+                />
+              </RequireWorkspace>
+            ),
+          },
+          {
+            path: 'approval',
+            element: (
+              <RequireWorkspace workspace="approval">
+                <ApprovalPage />
               </RequireWorkspace>
             ),
           },

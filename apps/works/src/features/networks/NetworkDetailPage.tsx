@@ -50,7 +50,7 @@ function SectionCard({
 /** 라벨: 값 한 줄. */
 function Info({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="flex gap-2">
+    <div className="flex items-baseline gap-2">
       <span className="shrink-0 text-caption text-gray-400">{label}:</span>
       <span className="text-body text-gray-800">{value ?? '-'}</span>
     </div>
@@ -200,11 +200,11 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
         </SectionCard>
       )}
 
-      <SectionCard title="메모">
+      <SectionCard title="노트">
         {intro ? (
           <p className="whitespace-pre-wrap text-body text-gray-800">{intro}</p>
         ) : (
-          <p className="text-body text-gray-400">등록된 메모 내용이 없습니다.</p>
+          <p className="text-body text-gray-400">등록된 노트 내용이 없습니다.</p>
         )}
       </SectionCard>
 

@@ -8,9 +8,9 @@ export interface SubNavItem {
   /** 하위 항목(아코디언). 지정 시 이 항목은 펼침/접힘 그룹 헤더가 된다. */
   children?: SubNavItem[]
   /**
-   * 하위 항목을 런타임 스토어에서 주입.
-   * - 'boards': 게시판 레지스트리(아코디언, 고정 게시판 제외)
-   * - 'pinnedBoards': 고정 게시판을 상위 단독 항목으로 펼침
+   * 하위 항목을 런타임 스토어에서 주입(둘 다 아코디언 없이 상위 단독 항목으로 평탄 나열).
+   * - 'boards': 일반 게시판 레지스트리(고정 게시판 제외) — OFFICE에 노출
+   * - 'pinnedBoards': 고정 게시판(예: 공지사항) — HUB에 노출
    */
   dynamicKey?: 'boards' | 'pinnedBoards'
   /** 동적 항목의 아이콘 키(boardIcons.ts). 지정 시 tab 기반 매핑보다 우선한다. */
@@ -35,33 +35,6 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       items: [
         { label: '대시보드', tab: 'dashboard' },
         { label: 'AI 에이전트', tab: 'ai' },
-        { label: '전사 캘린더', tab: 'calendar' },
-        { label: '고정 게시판', dynamicKey: 'pinnedBoards' },
-        { label: '게시판', dynamicKey: 'boards' },
-      ],
-    },
-    {
-      group: '마스터 정보',
-      items: [
-        { label: '임직원 정보', tab: 'managers' },
-        { label: '스타트업 네트워크', tab: 'startups' },
-        { label: '투자/전문가 네트워크', tab: 'experts' },
-        { label: '협력사 네트워크', tab: 'orgs' },
-      ],
-    },
-    {
-      group: '현황 정보',
-      items: [
-        { label: '사업 현황', tab: 'ac' },
-        { label: '글로벌/신사업 현황', tab: 'project' },
-        { label: 'M&A/PE 현황', tab: 'mna' },
-      ],
-    },
-    {
-      group: '실적 정보',
-      items: [
-        { label: '투자현황', tab: 'fund' },
-        { label: '경영현황', tab: 'management' },
       ],
     },
   ],
@@ -131,14 +104,48 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
     },
   ],
   project: [{ group: 'PROJECT 메인', items: [{ label: '프로젝트 대시보드' }] }],
+  // OFFICE: 임직원 정보·전사 캘린더 + 게시판(공지사항 고정 + 일반, 아코디언 없이 평탄 나열).
+  // 신규 게시판은 모두 이곳에 생성·노출된다.
+  office: [
+    {
+      items: [
+        { label: '임직원 정보', tab: 'managers' },
+        { label: '전사 캘린더', tab: 'calendar' },
+        { label: '회의실 예약', tab: 'rooms' },
+      ],
+    },
+    {
+      // 고정 게시판(공지사항·공용자료실) — 상단 참조 영역으로 구분선 분리.
+      group: '고정 게시판',
+      items: [{ label: '고정 게시판', dynamicKey: 'pinnedBoards' }],
+    },
+    {
+      // 일반 게시판(인사이트·신규 생성분).
+      group: '게시판',
+      items: [{ label: '게시판', dynamicKey: 'boards' }],
+    },
+  ],
+  // 전자결재: OFFICE에서 분리한 독립 워크스페이스(전자결재 + 거래처 정보). 현재 페이지 골격만.
+  approval: [
+    {
+      items: [
+        { label: '전자결재', tab: 'approval' },
+        { label: '거래처 정보', tab: 'clients' },
+      ],
+    },
+    // 거래처 정보 아래 트레일링 구분선(항목 없는 그룹 → 그룹 경계 SidebarDivider만 렌더).
+    { items: [] },
+  ],
   management: [
     {
       group: '경영지원',
       items: [
-        { label: '전자결재', tab: 'approval' },
+        { label: '대시보드', tab: 'dashboard' },
+        { label: '부서 관리', tab: 'departments' },
         { label: '인사 관리', tab: 'hr' },
-        { label: '재무·KPI', tab: 'finance' },
         { label: '자산 관리', tab: 'assets' },
+        { label: '재무 관리', tab: 'finance' },
+        { label: 'KPI 관리', tab: 'kpi' },
       ],
     },
   ],
@@ -154,4 +161,32 @@ export function firstTab(groups: SubNavGroup[] | undefined): string | undefined 
     }
   }
   return undefined
+}
+
+/** 그룹 목록에 존재하는 모든 탭 키 집합(하위 항목 포함). */
+function allTabs(groups: SubNavGroup[] | undefined): Set<string> {
+  const tabs = new Set<string>()
+  for (const g of groups ?? []) {
+    for (const item of g.items) {
+      if (item.tab) tabs.add(item.tab)
+      for (const c of item.children ?? []) if (c.tab) tabs.add(c.tab)
+    }
+  }
+  return tabs
+}
+
+/**
+ * 상세 라우트 경로에서 활성 탭을 유추한다.
+ * 예: pathname `/networks/global/123`, wsPath `/networks` → 세그먼트 `global`.
+ * 해당 세그먼트가 사이드바 탭으로 존재할 때만 반환하고, 아니면 undefined.
+ */
+export function pathTabOf(
+  pathname: string,
+  wsPath: string,
+  groups: SubNavGroup[] | undefined,
+): string | undefined {
+  const rest = pathname.slice(wsPath.length).replace(/^\/+/, '')
+  const seg = rest.split('/')[0]
+  if (!seg) return undefined
+  return allTabs(groups).has(seg) ? seg : undefined
 }

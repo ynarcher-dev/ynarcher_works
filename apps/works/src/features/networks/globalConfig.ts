@@ -49,6 +49,6 @@ export const GLOBAL_COLUMNS: MasterColumn[] = [
   { name: 'phone', label: '연락처', mask: 'phone', className: 'w-32' },
   { name: 'linkedin_url', label: '링크드인', kind: 'link', align: 'center', className: 'w-20' },
   { name: 'region.name', label: '권역', kind: 'tag', className: 'w-24' },
-  { name: 'country.name', label: '국가', kind: 'tag', className: 'w-24' },
+  { name: 'country.name', label: '국가', kind: 'tag', className: 'w-40' },
   { name: 'category', label: '구분', kind: 'tag', className: 'w-20' },
 ]

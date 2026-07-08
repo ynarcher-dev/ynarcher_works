@@ -36,7 +36,8 @@ export function ChangeHistoryPanel({
 }: {
   contributions: Contribution[] | undefined
 }) {
-  const list = contributions ?? []
+  // 훅은 최초 기여순(오래된 순, uniqueContributors가 의존)으로 조회하므로, 표시만 최신순으로 뒤집는다.
+  const list = [...(contributions ?? [])].reverse()
   const { pageItems, page, setPage, pageCount } = usePaged(list)
 
   return (

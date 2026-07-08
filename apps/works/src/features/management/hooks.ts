@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { ApprovalStatus, AssetStatus } from '@/features/management/config'
 
@@ -106,7 +111,14 @@ export interface Employee {
   email: string | null
   user_type: string
   department_id: string | null
+  updated_at: string | null
+  phone: string | null
+  /** 자유 프로필(jsonb): company / position / bio / note 등. */
+  profile: Record<string, unknown> | null
 }
+
+/** 목록/상세 공용 select 컬럼(프로필 필드 포함). */
+const EMPLOYEE_COLUMNS = 'id, name, email, user_type, department_id, updated_at, phone, profile'
 
 export function useEmployees() {
   return useQuery({
@@ -114,10 +126,165 @@ export function useEmployees() {
     queryFn: async (): Promise<Employee[]> => {
       const { data } = await supabase
         .from('users')
-        .select('id, name, email, user_type, department_id')
+        .select(EMPLOYEE_COLUMNS)
         .is('deleted_at', null)
         .order('name', { ascending: true })
       return (data ?? []) as Employee[]
+    },
+  })
+}
+
+/** 임직원 단건 조회(상세페이지). id 미지정 시 비활성. */
+export function useEmployee(id: string | undefined) {
+  return useQuery({
+    queryKey: ['management', 'employee', id],
+    enabled: Boolean(id),
+    queryFn: async (): Promise<Employee | null> => {
+      const { data, error } = await supabase
+        .from('users')
+        .select(EMPLOYEE_COLUMNS)
+        .eq('id', id)
+        .is('deleted_at', null)
+        .maybeSingle()
+      if (error) throw error
+      return (data ?? null) as Employee | null
+    },
+  })
+}
+
+export interface EmployeePage {
+  rows: Employee[]
+  /** 검색어(필터) 반영 건수 — 페이지 수·No. 넘버링 기준. */
+  total: number
+  /** 필터 미적용 전체 임직원 수. 검색어가 없으면 total과 같다. */
+  totalAll: number
+}
+
+/**
+ * 임직원 목록 서버 사이드 페이지네이션(검색/미삭제). NETWORKS `useEntityPage`와 동일 패턴.
+ * 이름 부분 검색(ilike) + `.range()` 페이지 조회 + `count: 'exact'` 필터 반영 건수.
+ * 검색어가 있을 때만 전체 건수(totalAll)를 head 카운트로 추가 조회한다. page는 0-base.
+ */
+export function useEmployeesPage(keyword: string, page: number, pageSize: number) {
+  return useQuery({
+    queryKey: ['management', 'employees-page', keyword, page, pageSize],
+    placeholderData: keepPreviousData,
+    queryFn: async (): Promise<EmployeePage> => {
+      const from = page * pageSize
+      const to = from + pageSize - 1
+      let q = supabase
+        .from('users')
+        .select(EMPLOYEE_COLUMNS, { count: 'exact' })
+        .is('deleted_at', null)
+        .order('name', { ascending: true })
+        .range(from, to)
+      const trimmed = keyword.trim()
+      if (trimmed) q = q.ilike('name', `%${trimmed}%`)
+      const { data, error, count } = await q
+      if (error) throw error
+      const total = count ?? 0
+
+      let totalAll = total
+      if (trimmed) {
+        const { count: allCount } = await supabase
+          .from('users')
+          .select('id', { count: 'exact', head: true })
+          .is('deleted_at', null)
+        totalAll = allCount ?? total
+      }
+      return { rows: (data ?? []) as Employee[], total, totalAll }
+    },
+  })
+}
+
+/** 임직원 정보 수정. RLS(users_update: admin/management write/self)로 권한이 강제된다. */
+export function useUpdateEmployee() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (v: { id: string; values: Record<string, unknown> }) => {
+      const { error } = await supabase.from('users').update(v.values).eq('id', v.id)
+      if (error) throw error
+    },
+    onSuccess: (_data, v) => {
+      void qc.invalidateQueries({ queryKey: ['management', 'employees-page'] })
+      void qc.invalidateQueries({ queryKey: ['management', 'employees'] })
+      void qc.invalidateQueries({ queryKey: ['management', 'employee', v.id] })
+    },
+  })
+}
+
+export interface CreateEmployeeInput {
+  email: string
+  name: string
+  password: string
+  user_type: string
+  department_id?: string | null
+  phone?: string | null
+  position?: string | null
+}
+
+/**
+ * 임직원 계정 생성. 로그인 가능한 auth 계정 생성은 service_role이 필요하므로
+ * `employee-create` Edge Function을 경유한다(클라이언트 직접 생성 불가).
+ * 세션 Authorization 헤더는 functions.invoke가 자동 첨부한다.
+ */
+export function useCreateEmployee() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: CreateEmployeeInput): Promise<{ id: string }> => {
+      const { data, error } = await supabase.functions.invoke('employee-create', {
+        body: input,
+      })
+      if (error) {
+        // Edge Function이 4xx로 반환한 사유 메시지를 우선 노출한다.
+        const ctx = (error as { context?: Response }).context
+        const detail = ctx ? await ctx.json().catch(() => null) : null
+        throw new Error(detail?.message ?? '계정 생성에 실패했습니다.')
+      }
+      return data as { id: string }
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['management', 'employees-page'] })
+      void qc.invalidateQueries({ queryKey: ['management', 'employees'] })
+    },
+  })
+}
+
+/**
+ * 본인 프로필(약력·노트) 수정. 본인 직접 UPDATE는 RLS로 차단되며, 컬럼을 화이트리스트하는
+ * `update_my_profile` RPC(SECURITY DEFINER)만 profile.bio / profile.note 를 갱신한다.
+ */
+export function useUpdateMyProfile() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (v: { bio: string; note: string }) => {
+      const { error } = await supabase.rpc('update_my_profile', {
+        p_bio: v.bio,
+        p_note: v.note,
+      })
+      if (error) throw error
+    },
+    onSuccess: (_data, _v) => {
+      void qc.invalidateQueries({ queryKey: ['management', 'employee'] })
+      void qc.invalidateQueries({ queryKey: ['management', 'employees-page'] })
+    },
+  })
+}
+
+/** 임직원 비활성화(소프트 삭제): `deleted_at`을 기록한다. 물리 삭제 금지 원칙. */
+export function useDeactivateEmployee() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('users')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['management', 'employees-page'] })
+      void qc.invalidateQueries({ queryKey: ['management', 'employees'] })
     },
   })
 }

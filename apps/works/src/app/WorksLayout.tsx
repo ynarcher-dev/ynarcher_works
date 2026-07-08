@@ -42,6 +42,7 @@ import {
   Truck,
   Component,
   Upload,
+  DoorOpen,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import {
@@ -60,7 +61,7 @@ import logo from '@/assets/logo.png'
 import { hasWorkspaceRead, useAuthStore } from '@/auth/authStore'
 import { employeeAuth } from '@/auth/employeeAuthService'
 import { WORKSPACES } from '@/config/workspaces'
-import { WORKSPACE_SUBNAV, firstTab, type SubNavItem } from '@/config/navigation'
+import { WORKSPACE_SUBNAV, firstTab, pathTabOf, type SubNavItem } from '@/config/navigation'
 import { SidebarFlyout } from '@/app/SidebarFlyout'
 import { useBoardStore } from '@/features/hub/boardStore'
 import { boardIcon } from '@/features/hub/boardIcons'
@@ -121,6 +122,8 @@ const sidebarIconByTab: Record<string, LucideIcon> = {
   audit: ReceiptText,
   downloads: Download,
   approval: BadgeCheck,
+  clients: Handshake,
+  rooms: DoorOpen,
   hr: User,
   finance: WalletCards,
   assets: BriefcaseBusiness,
@@ -154,14 +157,22 @@ export function WorksLayout() {
 
   // 현재 워크스페이스의 세부 메뉴 + 활성 섹션(?tab, 없으면 기본 첫 항목).
   const groups = currentWs ? WORKSPACE_SUBNAV[currentWs.key] ?? [] : []
+  // 상세 라우트(/networks/{entity}/:id)는 ?tab이 없으므로 경로 세그먼트에서 활성 탭을 유추한다.
+  // (엔티티 키 == 사이드바 탭 키) 이렇게 하지 않으면 firstTab 폴백으로 대시보드가 활성화된다.
+  const pathTab = currentWs ? pathTabOf(location.pathname, currentWs.path, groups) : undefined
   const activeTab =
-    new URLSearchParams(location.search).get('tab') ?? firstTab(groups)
+    new URLSearchParams(location.search).get('tab') ?? pathTab ?? firstTab(groups)
 
   const switcherOptions = visible.map((w) => ({
     key: w.key,
     label: w.implemented ? w.label : `${w.label} (준비 중)`,
     disabled: !w.implemented,
-    dividerBefore: w.key === 'admin',
+    // 스위처 구획: 허브 아래(startup 앞), 네트웍스 아래(ac 앞), 오피스 앞, 매니지먼트 앞(매니지먼트·어드민을 하단 묶음)에 구분선을 둔다.
+    dividerBefore:
+      w.key === 'startup' ||
+      w.key === 'ac' ||
+      w.key === 'office' ||
+      w.key === 'management',
   }))
 
   const goToSection = (item: { tab?: string }) => {
@@ -191,21 +202,15 @@ export function WorksLayout() {
   }
 
   const renderItem = (item: SubNavItem) => {
-    // 고정 게시판: 아코디언 없이 상위 단독 항목으로 나열.
-    if (item.dynamicKey === 'pinnedBoards') {
+    // 게시판(고정/일반): 아코디언 없이 상위 단독 항목으로 평탄 나열.
+    if (item.dynamicKey === 'pinnedBoards' || item.dynamicKey === 'boards') {
+      const pinned = item.dynamicKey === 'pinnedBoards'
       return boards
-        .filter((b) => b.active && b.pinned)
+        .filter((b) => b.active && b.pinned === pinned)
         .map((b) => renderLeaf({ label: b.label, tab: b.tab, iconKey: b.icon }))
     }
 
-    // 동적 하위 항목(게시판 레지스트리, 고정 게시판 제외) 주입.
-    const children: SubNavItem[] | undefined =
-      item.dynamicKey === 'boards'
-        ? boards
-            .filter((b) => b.active && !b.pinned)
-            .map((b) => ({ label: b.label, tab: b.tab, iconKey: b.icon }))
-        : item.children
-
+    const children = item.children
     if (!children) return renderLeaf(item)
 
     const anyChildActive = children.some((c) => c.tab === activeTab)
@@ -336,7 +341,14 @@ export function WorksLayout() {
               {user?.email ?? user?.role}
             </p>
           </div>
-          <DropdownItem disabled>내 계정 관리</DropdownItem>
+          <DropdownItem
+            onClick={() => {
+              setProfileOpen(false)
+              navigate('/me')
+            }}
+          >
+            내 계정 관리
+          </DropdownItem>
           <DropdownItem onClick={() => void employeeAuth.signOut()}>
             로그아웃
           </DropdownItem>

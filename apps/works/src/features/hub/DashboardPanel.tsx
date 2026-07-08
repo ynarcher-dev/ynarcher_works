@@ -332,7 +332,7 @@ export function DashboardPanel() {
           <h2 className="text-title-sm font-semibold text-gray-900">알립니다</h2>
           <div className="flex flex-1 flex-col gap-3">
             <BoardCard title="공지사항" icon={Megaphone} tab="notices" posts={HUB_NOTICES} />
-            <BoardCard title="자료실" icon={FolderOpen} tab="files" posts={HUB_FILES} />
+            <BoardCard title="공용자료실" icon={FolderOpen} tab="files" posts={HUB_FILES} />
             <BoardCard title="인사이트" icon={Lightbulb} tab="insights" posts={HUB_INSIGHTS} />
           </div>
         </div>

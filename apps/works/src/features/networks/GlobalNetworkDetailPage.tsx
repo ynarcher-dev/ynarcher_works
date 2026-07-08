@@ -15,7 +15,7 @@ const LIST_PATH = '/networks?tab=global'
 /** 라벨: 값 한 줄. */
 function Info({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="flex gap-2">
+    <div className="flex items-baseline gap-2">
       <span className="shrink-0 text-caption text-gray-400">{label}:</span>
       <span className="text-body text-gray-800">{value ?? '-'}</span>
     </div>
@@ -99,11 +99,11 @@ function GlobalView({ record }: { record: GlobalRow }) {
       </section>
 
       <section className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
-        <h2 className="mb-3 text-body font-semibold text-gray-900">메모</h2>
+        <h2 className="mb-3 text-body font-semibold text-gray-900">노트</h2>
         {intro ? (
           <p className="whitespace-pre-wrap text-body text-gray-800">{intro}</p>
         ) : (
-          <p className="text-body text-gray-400">등록된 메모 내용이 없습니다.</p>
+          <p className="text-body text-gray-400">등록된 노트 내용이 없습니다.</p>
         )}
       </section>
       </div>

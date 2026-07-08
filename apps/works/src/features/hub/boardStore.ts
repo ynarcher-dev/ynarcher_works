@@ -23,7 +23,7 @@ export interface BoardDef {
 
 const DEFAULT_BOARDS: BoardDef[] = [
   { id: 'b-notices', tab: 'notices', label: '공지사항', active: true, system: true, icon: 'megaphone', pinned: true },
-  { id: 'b-files', tab: 'files', label: '자료실', active: true, system: true, icon: 'folder', pinned: false },
+  { id: 'b-files', tab: 'files', label: '공용자료실', active: true, system: true, icon: 'folder', pinned: true },
   { id: 'b-insights', tab: 'insights', label: '인사이트', active: true, system: true, icon: 'lightbulb', pinned: false },
 ]
 
@@ -43,7 +43,8 @@ interface BoardStore {
 }
 
 /**
- * 게시판 레지스트리. ADMIN(게시판 관리)이 편집하고 HUB(사이드바·페이지)가 소비하는 단일 원천.
+ * 게시판 레지스트리. ADMIN(게시판 관리)이 편집하고, 고정 게시판(공지사항)은 HUB가,
+ * 일반 게시판은 OFFICE가 소비하는 단일 원천.
  * 서버 연동 시 이 스토어를 Edge Function/RPC + 테이블로 대체한다.
  */
 export const useBoardStore = create<BoardStore>((set) => ({

@@ -338,7 +338,7 @@ export function NetworkForm({ entity, recordId, initial, onDone, onCancel }: Pro
         </div>
       )}
       <div className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
-        <Field label="메모">
+        <Field label="노트">
           <TextArea rows={4} {...register('intro')} />
         </Field>
       </div>

@@ -19,10 +19,14 @@
 | **데이터베이스 물리 스키마 정의** | [9_database_physical_schema.md](./9_database_physical_schema.md) | Phase 2 공통/NETWORKS 테이블, 열거형, RLS 헬퍼/정책, 감사 트리거 및 ERD | **작성 완료** |
 | **개발 규칙 및 컨벤션** | _(작성 예정)_ | 코딩 표준 규칙, 폴더링 및 파일당 제한 규정 가이드 | **대기 중** |
 | **배포 및 CI/CD 가이드** | [10_deployment_cicd_guide.md](./10_deployment_cicd_guide.md) | S3/CloudFront 정적 호스팅, SPA 폴백, GitHub Actions CI/CD, 롤백·알림 채널 | **작성 완료** |
+| **Supabase 마이그레이션 보안 게이트** | [11_migration_security_gate.md](./11_migration_security_gate.md) | 신규 테이블/RLS/RPC/Storage/SECURITY DEFINER 변경 시 반드시 통과할 보안 체크리스트 | **작성 완료** |
 
 ---
 
 ## ✍️ 히스토리 및 진행 예정 사항
+
+### 2026-07-08
+* **Supabase 마이그레이션 보안 게이트 추가**: Claude/Codex/사람이 작성하는 모든 마이그레이션에 대해 RLS, 권한 Scope, 감사 로그, Storage, `SECURITY DEFINER` 함수 기준을 사전 점검하도록 [11_migration_security_gate.md](./11_migration_security_gate.md)를 추가함.
 
 ### 2026-07-05 (최신)
 * **Git 브랜치 전략 및 커밋 컨벤션 정의서 작성 완료**: 트렁크 기반 브랜치 운영과 `<type>(<scope>): <제목>` 커밋 규칙, PR 절차를 규격화한 [8_git_branch_commit_convention.md](./8_git_branch_commit_convention.md) 추가.
