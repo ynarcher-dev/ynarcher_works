@@ -48,7 +48,7 @@ interface OrgTreeEditorProps {
  */
 export function OrgTreeEditor({ versionId, activeVersionId, editable = true }: OrgTreeEditorProps) {
   const { data: deptRows, isLoading: deptLoading } = useDepartments(true, versionId || undefined)
-  const { data: levelRows, isLoading: levelLoading } = useOrgLevels()
+  const { data: levelRows, isLoading: levelLoading } = useOrgLevels(versionId || undefined)
   const { data: empRows, isLoading: empLoading } = useEmployees()
   const { data: memberRows, isLoading: memberLoading } = useDeptMembers(versionId || undefined)
 
@@ -166,13 +166,14 @@ export function OrgTreeEditor({ versionId, activeVersionId, editable = true }: O
       updateLevel.mutate({ id, name: name.trim() })
     }
   }
-  /** 새 티어(하위 볼륨): 최대 티어 + 1. */
+  /** 새 티어(하위 볼륨): 최대 티어 + 1. 선택 버전 스코프. */
   const addTier = () => {
     const maxTier = levels.reduce((m, l) => Math.max(m, l.tier), -1)
-    createLevel.mutate({ name: '새 레벨', sort_order: maxTier + 1 })
+    createLevel.mutate({ name: '새 레벨', sort_order: maxTier + 1, version_id: versionId })
   }
-  /** 병렬 레벨: 지정 티어와 같은 값(같은 볼륨). */
-  const addParallel = (tier: number) => createLevel.mutate({ name: '새 레벨', sort_order: tier })
+  /** 병렬 레벨: 지정 티어와 같은 값(같은 볼륨). 선택 버전 스코프. */
+  const addParallel = (tier: number) =>
+    createLevel.mutate({ name: '새 레벨', sort_order: tier, version_id: versionId })
   const removeLevel = (id: string) => {
     if (levels.length <= 1) return
     const fallback = levels.find((l) => l.id !== id)?.id ?? null
@@ -237,8 +238,8 @@ export function OrgTreeEditor({ versionId, activeVersionId, editable = true }: O
             onRemove={removeLevel}
           />
           <p className="text-caption text-gray-400">
-            · 조직 레벨은 전사 공통 정의(인사관리 컬럼)로, 전 버전에 즉시 반영되며 개편 취소로
-            되돌아가지 않습니다.
+            · 조직 레벨(인사관리 컬럼)은 이 버전에만 적용되는 스냅샷입니다. 예정 버전에서의 변경은
+            발효 전까지 현재 조직·인사에 영향을 주지 않습니다.
           </p>
         </div>
       )}

@@ -106,16 +106,23 @@ export interface OrgLevel {
 }
 
 /**
- * 조직 레벨 정의 조회. 상위→하위(sort_order=티어) 순, 같은 티어 내에서는 이름순.
+ * 조직 레벨 정의 조회(버전 스코프). 상위→하위(sort_order=티어) 순, 같은 티어 내에서는 이름순.
  * 같은 sort_order를 가진 레벨은 병렬(같은 볼륨)이며 인사관리 컬럼은 티어당 1개로 합쳐진다.
+ * 레벨은 버전별 스냅샷이다 — versionId 미지정 시 "오늘의 유효 버전"으로 자동 스코프(인사 화면 등),
+ * 조직관리 편집/개편 화면은 선택 버전을 명시적으로 넘긴다. 유효 버전 해석 전에는 쿼리를 보류한다.
  */
-export function useOrgLevels() {
+export function useOrgLevels(versionId?: string) {
+  const { data: versions } = useOrgVersions()
+  const activeId = versions ? activeOrgVersionId(versions) : null
+  const scopeId = versionId ?? activeId ?? undefined
   return useQuery({
-    queryKey: ['management', 'org-levels'],
+    queryKey: ['management', 'org-levels', scopeId ?? null],
+    enabled: Boolean(scopeId),
     queryFn: async (): Promise<OrgLevel[]> => {
       const { data, error } = await supabase
         .from('org_levels')
         .select('id, name, sort_order')
+        .eq('version_id', scopeId as string)
         .is('deleted_at', null)
         .order('sort_order', { ascending: true })
         .order('name', { ascending: true })
@@ -224,11 +231,11 @@ export function useSetDepartmentsDeleted() {
 
 const LEVEL_KEY = ['management', 'org-levels'] as const
 
-/** 조직 레벨 생성(맨 아래 순서로). */
+/** 조직 레벨 생성(선택 버전 스코프). version_id 필수 — 레벨은 버전별 스냅샷이다. */
 export function useCreateOrgLevel() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (v: { name: string; sort_order: number }) => {
+    mutationFn: async (v: { name: string; sort_order: number; version_id: string }) => {
       const { error } = await supabase.from('org_levels').insert(v)
       if (error) throw error
     },

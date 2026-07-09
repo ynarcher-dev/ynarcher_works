@@ -40,7 +40,7 @@ export function DepartmentsPanel() {
 
   // 인사 반영 미리보기용 파생 데이터(선택 버전 스코프, react-query 캐시 공유).
   const { data: deptRows } = useDepartments(true, versionId || undefined)
-  const { data: levelRows } = useOrgLevels()
+  const { data: levelRows } = useOrgLevels(versionId || undefined)
   const { data: empRows } = useEmployees()
   const { data: memberRows } = useDeptMembers(versionId || undefined)
   const nodes = useMemo(() => toNodes(deptRows ?? []), [deptRows])
