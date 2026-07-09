@@ -15,7 +15,10 @@ interface OrgReformModalProps {
   activeVersionId: string | null
 }
 
-const TODAY = () => new Date().toISOString().slice(0, 10)
+/** 새 조직 시작 가능한 최소일 = 내일. 오늘·과거는 선택/저장 불가(자정 넘어가면 발효). */
+const TOMORROW = () => dayjs().add(1, 'day').format('YYYY-MM-DD')
+/** 새 조직 시작 전일 = 현재 조직 종료일(핸드오프). */
+const dayBefore = (d: string) => dayjs(d).subtract(1, 'day').format('YYYY-MM-DD')
 
 /** 운영 일수: 시작일 당일을 1일째로 센다(현재 조직이 며칠째 운영 중인지). */
 function operatingDays(from: string): number {
@@ -40,14 +43,14 @@ export function OrgReformModal({ open, onClose, versions, activeVersionId }: Org
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  // 모달을 열 때마다 초기화(현재 조직 종료일 다음 또는 오늘을 기본 시작일로).
+  // 모달을 열 때마다 초기화. 새 조직 시작일 기본값은 내일(오늘·과거 불가).
   useEffect(() => {
     if (!open) return
     setDraftId(null)
     setError(null)
     setBusy(false)
     setLabel(active ? `${active.label} 개편안` : '새 조직')
-    setFrom(active?.effective_to ?? TODAY())
+    setFrom(TOMORROW())
     setTo('')
   }, [open, active])
 
@@ -61,6 +64,7 @@ export function OrgReformModal({ open, onClose, versions, activeVersionId }: Org
     if (!active) return
     if (!label.trim()) return setError('버전 이름을 입력하세요.')
     if (!from) return setError('새 조직 시작일을 입력하세요.')
+    if (from < TOMORROW()) return setError('새 조직 시작일은 내일 이후여야 합니다(오늘·과거 불가).')
     if (to && to <= from) return setError('종료 예정일은 시작일보다 뒤여야 합니다.')
     setError(null)
     setBusy(true)
@@ -85,13 +89,27 @@ export function OrgReformModal({ open, onClose, versions, activeVersionId }: Org
     if (draftId) updateVersion.mutate({ id: draftId, values })
   }
 
-  /** 예약하기: 초안을 PUBLISHED로 확정 → 가용기간 타임라인에 예정 버전으로 편입. */
+  /**
+   * 예약하기: 초안을 PUBLISHED로 확정 → 예정 버전으로 편입.
+   * 동시에 현재 조직의 종료일을 새 조직 시작 전일로 맞춘다(자정 넘어가면 새 조직이 발효·교대).
+   */
   const reserve = async () => {
     if (!draftId) return
+    if (from < TOMORROW()) return setError('새 조직 시작일은 내일 이후여야 합니다(오늘·과거 불가).')
     if (to && to <= from) return setError('종료 예정일은 시작일보다 뒤여야 합니다.')
     setBusy(true)
     try {
-      await updateVersion.mutateAsync({ id: draftId, values: { status: 'PUBLISHED' } })
+      await updateVersion.mutateAsync({
+        id: draftId,
+        values: { status: 'PUBLISHED', effective_from: from, effective_to: to || null },
+      })
+      if (active) {
+        // 현재 조직 종료일 = 새 조직 시작 전일(핸드오프). 겹침 없이 자정 교대.
+        await updateVersion.mutateAsync({
+          id: active.id,
+          values: { effective_to: dayBefore(from) },
+        })
+      }
       resetAndClose()
     } catch (e) {
       setError(e instanceof Error ? e.message : '예약에 실패했습니다.')
@@ -180,10 +198,11 @@ export function OrgReformModal({ open, onClose, versions, activeVersionId }: Org
               </label>
               <div className="grid grid-cols-2 gap-2">
                 <label className="block space-y-1">
-                  <span className="text-caption font-semibold text-gray-600">시작일</span>
+                  <span className="text-caption font-semibold text-gray-600">시작일(내일부터)</span>
                   <Input
                     type="date"
                     value={from}
+                    min={TOMORROW()}
                     onChange={(e) => setFrom(e.target.value)}
                     className="h-9"
                   />
@@ -195,11 +214,20 @@ export function OrgReformModal({ open, onClose, versions, activeVersionId }: Org
                   <Input
                     type="date"
                     value={to}
+                    min={from || TOMORROW()}
                     onChange={(e) => setTo(e.target.value)}
                     className="h-9"
                   />
                 </label>
               </div>
+              {active && from >= TOMORROW() && (
+                <p className="rounded-radius-md border border-info-border bg-info-subtle px-3 py-2 text-caption text-info">
+                  현재 조직 <span className="font-semibold">{active.label}</span> 은{' '}
+                  <span className="font-semibold tabular-nums">{dayBefore(from)}</span> 까지 운영되고,
+                  새 조직이 <span className="font-semibold tabular-nums">{from}</span> 자정부터
+                  발효·교대합니다.
+                </p>
+              )}
               {error && <p className="text-caption text-danger">{error}</p>}
               <div className="flex justify-end">
                 <Button size="sm" onClick={startDraft} disabled={busy || !active}>
@@ -221,13 +249,15 @@ export function OrgReformModal({ open, onClose, versions, activeVersionId }: Org
                   />
                 </label>
                 <label className="block space-y-1">
-                  <span className="text-caption font-semibold text-gray-600">시작일</span>
+                  <span className="text-caption font-semibold text-gray-600">시작일(내일부터)</span>
                   <Input
                     type="date"
                     value={from}
+                    min={TOMORROW()}
                     onChange={(e) => {
                       setFrom(e.target.value)
-                      if (e.target.value) patchDraft({ effective_from: e.target.value })
+                      if (e.target.value && e.target.value >= TOMORROW())
+                        patchDraft({ effective_from: e.target.value })
                     }}
                     className="h-9 bg-white"
                   />
@@ -239,6 +269,7 @@ export function OrgReformModal({ open, onClose, versions, activeVersionId }: Org
                   <Input
                     type="date"
                     value={to}
+                    min={from || TOMORROW()}
                     onChange={(e) => {
                       setTo(e.target.value)
                       patchDraft({ effective_to: e.target.value || null })
@@ -247,6 +278,15 @@ export function OrgReformModal({ open, onClose, versions, activeVersionId }: Org
                   />
                 </label>
               </div>
+
+              {active && from >= TOMORROW() && (
+                <p className="text-caption text-gray-500">
+                  · 예약 시 현재 조직 <span className="font-semibold">{active.label}</span> 종료일이{' '}
+                  <span className="font-semibold tabular-nums">{dayBefore(from)}</span> 로 설정되고,
+                  새 조직이 <span className="font-semibold tabular-nums">{from}</span> 자정부터
+                  발효됩니다.
+                </p>
+              )}
 
               {/* 새 조직 구조 설계 — 조직관리와 동일 기능 */}
               <OrgTreeEditor versionId={draftId} activeVersionId={activeVersionId} editable />

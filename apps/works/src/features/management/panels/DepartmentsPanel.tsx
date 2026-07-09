@@ -57,10 +57,14 @@ export function DepartmentsPanel() {
     setEditMode(false)
   }
 
-  // 예약(예정) 버전 취소 = soft delete. 취소 후 선택을 현재(활성) 버전으로 되돌린다.
+  // 예약(예정) 버전 취소 = soft delete. 예약 시 현재 조직에 걸어둔 종료일(핸드오프)을
+  // 무기한으로 되돌려 현재 조직이 계속 운영되게 한다. 취소 후 선택을 현재(활성) 버전으로 되돌린다.
   const updateVersion = useUpdateOrgVersion()
   const deleteVersion = async (id: string) => {
     await updateVersion.mutateAsync({ id, values: { deleted_at: new Date().toISOString() } })
+    if (activeVersionId) {
+      await updateVersion.mutateAsync({ id: activeVersionId, values: { effective_to: null } })
+    }
     setVersionId(activeVersionId ?? '')
     setEditMode(false)
   }
