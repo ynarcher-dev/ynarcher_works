@@ -22,8 +22,11 @@ interface OrgVersionBarProps {
   selectedId: string
   activeId: string | null
   onSelect: (id: string) => void
-  onClone: (input: CloneInput) => Promise<void>
-  cloning: boolean
+  /** 버전 복제(개편) 콜백. showClone=false면 불필요. */
+  onClone?: (input: CloneInput) => Promise<void>
+  cloning?: boolean
+  /** "새 버전 복제" 버튼 노출 여부. 기본 true. 조직 개편 모달을 쓰는 화면은 false로 숨긴다. */
+  showClone?: boolean
 }
 
 /**
@@ -36,7 +39,8 @@ export function OrgVersionBar({
   activeId,
   onSelect,
   onClone,
-  cloning,
+  cloning = false,
+  showClone = true,
 }: OrgVersionBarProps) {
   const selected = versions.find((v) => v.id === selectedId)
   const notActive = Boolean(selected && activeId && selected.id !== activeId)
@@ -73,7 +77,7 @@ export function OrgVersionBar({
   }
 
   const submit = async () => {
-    if (!selected) return
+    if (!selected || !onClone) return
     if (!label.trim()) return setError('버전 이름을 입력하세요.')
     if (!from) return setError('시작일을 입력하세요.')
     if (to && to <= from) return setError('종료일은 시작일보다 뒤여야 합니다.')
@@ -130,9 +134,11 @@ export function OrgVersionBar({
             )}
           </Select>
         </div>
-        <Button variant="outline" size="sm" onClick={openClone} disabled={!selected || cloning}>
-          <CopyPlus size={14} /> 새 버전 복제
-        </Button>
+        {showClone && (
+          <Button variant="outline" size="sm" onClick={openClone} disabled={!selected || cloning}>
+            <CopyPlus size={14} /> 새 버전 복제
+          </Button>
+        )}
       </div>
 
       {notActive && (

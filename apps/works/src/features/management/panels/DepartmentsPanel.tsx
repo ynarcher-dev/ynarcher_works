@@ -1,48 +1,24 @@
-import { Button, Spinner } from '@ynarcher/ui'
-import { Table2 } from 'lucide-react'
-import { useEffect, useMemo, useState, type DragEvent } from 'react'
+import { Button, Modal, Spinner } from '@ynarcher/ui'
+import { Lock, Pencil, Table2 } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   activeOrgVersionId,
-  useAssignDeptMember,
-  useCloneOrgVersion,
-  useCreateDepartment,
-  useCreateOrgLevel,
-  useDeleteOrgLevel,
   useDepartments,
   useDeptMembers,
   useEmployees,
-  useMoveDepartments,
   useOrgLevels,
   useOrgVersions,
-  useSetDepartmentsDeleted,
-  useSetDeptHrHidden,
-  useUpdateDepartment,
-  useUpdateOrgLevel,
 } from '@/features/management/hooks'
-import { DeptMemberModal } from '@/features/management/panels/DeptMemberModal'
-import { DEPT_GRID, DeptTreeRow, dropPosFromEvent } from '@/features/management/panels/DeptTreeRow'
 import { HrReflectPreview } from '@/features/management/panels/HrReflectPreview'
-import { OrgLevelEditor } from '@/features/management/panels/OrgLevelEditor'
-import { OrgVersionBar, type CloneInput } from '@/features/management/panels/OrgVersionBar'
-import {
-  buildTree,
-  canDrop,
-  deletedRoots,
-  deptNameMap,
-  groupByDept,
-  moveNode,
-  subtreeIds,
-  toNodes,
-  type DeptNode,
-  type DeptTreeNode,
-  type DropPos,
-} from '@/features/management/panels/departmentsMock'
+import { OrgReformModal } from '@/features/management/panels/OrgReformModal'
+import { OrgTreeEditor } from '@/features/management/panels/OrgTreeEditor'
+import { OrgVersionBar } from '@/features/management/panels/OrgVersionBar'
+import { toNodes } from '@/features/management/panels/departmentsMock'
 
 /**
- * 조직 관리 — N-depth 조직도 트리-테이블(실 연동). 서버(react-query)가 원천이며,
- * 편집은 모두 mutation으로 저장한다. 각 부서에 조직 레벨을 태그하고(인사관리 컬럼 파생),
- * 구조·인력 배치 모두 "선택된 조직 버전(가용기간)" 범위로 편집한다. 인력 배치는 dept_members에
- * 저장하고(버전별 스냅샷), 선택 버전이 활성 버전이면 users.department_id 미러도 함께 갱신한다.
+ * 조직 관리 — 조직도 트리 편집기(OrgTreeEditor)를 버전 스코프로 렌더한다.
+ * 운영 중 조직을 실수로 훼손하지 않도록 기본은 읽기전용이며, 구조 변경은 "조직 개편"(초안→예약)
+ * 흐름을 권장한다. 즉시 편집이 필요하면 경고 후 "직접 편집" 모드로 전환한다.
  */
 export function DepartmentsPanel() {
   const { data: versionRows, isLoading: versionLoading } = useOrgVersions()
@@ -55,188 +31,32 @@ export function DepartmentsPanel() {
     if (!versionId && versions.length) setVersionId(activeVersionId ?? versions[0]!.id)
   }, [versions, activeVersionId, versionId])
 
-  const { data: deptRows, isLoading: deptLoading } = useDepartments(true, versionId || undefined)
-  const { data: levelRows, isLoading: levelLoading } = useOrgLevels()
-  const { data: empRows, isLoading: empLoading } = useEmployees()
-  const { data: memberRows, isLoading: memberLoading } = useDeptMembers(versionId || undefined)
+  // 화면 상태
+  const [editMode, setEditMode] = useState(false)
+  const [warnOpen, setWarnOpen] = useState(false)
+  const [reformOpen, setReformOpen] = useState(false)
+  const [previewOpen, setPreviewOpen] = useState(false)
 
-  const cloneVersion = useCloneOrgVersion()
-  const createDept = useCreateDepartment()
-  const updateDept = useUpdateDepartment()
-  const moveDepts = useMoveDepartments()
-  const setDeleted = useSetDepartmentsDeleted()
-  const setHrHidden = useSetDeptHrHidden()
-  const createLevel = useCreateOrgLevel()
-  const updateLevel = useUpdateOrgLevel()
-  const deleteLevel = useDeleteOrgLevel()
-  const assignMember = useAssignDeptMember()
-
-  // 파생 데이터(서버 원천). 인력 배치는 "선택 버전"의 dept_members 기준.
+  // 인사 반영 미리보기용 파생 데이터(선택 버전 스코프, react-query 캐시 공유).
+  const { data: deptRows } = useDepartments(true, versionId || undefined)
+  const { data: levelRows } = useOrgLevels()
+  const { data: empRows } = useEmployees()
+  const { data: memberRows } = useDeptMembers(versionId || undefined)
   const nodes = useMemo(() => toNodes(deptRows ?? []), [deptRows])
   const levels = useMemo(() => levelRows ?? [], [levelRows])
-  const placement = useMemo(() => {
-    const m = new Map<string, string>()
-    for (const r of memberRows ?? []) m.set(r.user_id, r.department_id)
-    return m
-  }, [memberRows])
-  const employees = useMemo(
-    () => (empRows ?? []).map((e) => ({ id: e.id, name: e.name, deptId: placement.get(e.id) ?? null })),
-    [empRows, placement],
-  )
-  const tree = useMemo(() => buildTree(nodes), [nodes])
-  const removed = useMemo(() => deletedRoots(nodes), [nodes])
-  const membersByDept = useMemo(() => groupByDept(employees), [employees])
-  const deptNames = useMemo(() => deptNameMap(nodes), [nodes])
+  const previewEmployees = useMemo(() => {
+    const placement = new Map<string, string>()
+    for (const r of memberRows ?? []) placement.set(r.user_id, r.department_id)
+    return (empRows ?? []).map((e) => ({ id: e.id, name: e.name, deptId: placement.get(e.id) ?? null }))
+  }, [empRows, memberRows])
 
-  // 화면 전용(휘발) 상태
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [draft, setDraft] = useState('')
-  const [dragId, setDragId] = useState<string | null>(null)
-  const [dropHint, setDropHint] = useState<{ id: string; pos: DropPos } | null>(null)
-  const [memberDeptId, setMemberDeptId] = useState<string | null>(null)
-  const [previewOpen, setPreviewOpen] = useState(false)
-  const memberDept = memberDeptId ? nodes.find((n) => n.id === memberDeptId) : null
-
-  const onClone = (input: CloneInput): Promise<void> =>
-    cloneVersion.mutateAsync(input).then((newId) => {
-      setVersionId(newId)
-    })
-
-  const toggle = (id: string) =>
-    setCollapsed((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-
-  const startEdit = (node: DeptTreeNode | DeptNode) => {
-    setEditingId(node.id)
-    setDraft(node.name)
-  }
-  const commitEdit = () => {
-    const name = draft.trim()
-    const cur = editingId ? nodes.find((n) => n.id === editingId) : null
-    if (editingId && cur && name && cur.name !== name) {
-      updateDept.mutate({ id: editingId, values: { name } })
-    }
-    setEditingId(null)
+  // 버전을 바꾸면 편집 모드를 해제(항상 조회 상태로 진입).
+  const selectVersion = (id: string) => {
+    setVersionId(id)
+    setEditMode(false)
   }
 
-  /** 자식 노드 기본 레벨: 부모 티어의 "다음 티어" 첫 레벨(없으면 보정). */
-  const childLevelId = (parent: DeptNode | null): string | null => {
-    if (!levels.length) return null
-    if (!parent) {
-      const firstTier = Math.min(...levels.map((l) => l.tier))
-      return levels.find((l) => l.tier === firstTier)?.id ?? null
-    }
-    const parentLevel = levels.find((l) => l.id === parent.levelId)
-    const parentTier = parentLevel?.tier ?? Number.NEGATIVE_INFINITY
-    const higher = levels.filter((l) => l.tier > parentTier)
-    if (!higher.length) return parentLevel?.id ?? levels[0]?.id ?? null
-    const nextTier = Math.min(...higher.map((l) => l.tier))
-    return levels.find((l) => l.tier === nextTier)?.id ?? parentLevel?.id ?? null
-  }
-
-  const addChild = (parentId: string | null) => {
-    const parent = parentId ? nodes.find((n) => n.id === parentId) ?? null : null
-    const siblings = nodes.filter((n) => n.parentId === parentId && !n.deleted)
-    const sort = siblings.length ? Math.max(...siblings.map((s) => s.sort)) + 1 : 0
-    createDept.mutate(
-      {
-        name: '새 부서',
-        parent_id: parentId,
-        level_id: childLevelId(parent),
-        sort_order: sort,
-        version_id: versionId,
-      },
-      {
-        onSuccess: ({ id }) => {
-          if (parentId) setCollapsed((prev) => new Set([...prev].filter((x) => x !== parentId)))
-          setEditingId(id)
-          setDraft('새 부서')
-        },
-      },
-    )
-  }
-
-  const changeNodeLevel = (id: string, levelId: string) =>
-    updateDept.mutate({ id, values: { level_id: levelId } })
-
-  // 인사 미노출은 계보 단위(전 버전 일괄) — 활성/편집 버전이 달라도 일관 반영.
-  const toggleHrHidden = (id: string, hidden: boolean) => {
-    const node = nodes.find((n) => n.id === id)
-    if (node) setHrHidden.mutate({ lineageId: node.lineageId, hidden })
-  }
-
-  const remove = (id: string) => setDeleted.mutate({ ids: [...subtreeIds(nodes, id)], deleted: true })
-  const restore = (id: string) =>
-    setDeleted.mutate({ ids: [...subtreeIds(nodes, id)], deleted: false })
-
-  // --- 레벨 정의(= 인사관리 컬럼) ---
-  const renameLevel = (id: string, name: string) => {
-    const cur = levels.find((l) => l.id === id)
-    if (cur && name.trim() && cur.name !== name.trim()) {
-      updateLevel.mutate({ id, name: name.trim() })
-    }
-  }
-  /** 새 티어(하위 볼륨): 최대 티어 + 1. */
-  const addTier = () => {
-    const maxTier = levels.reduce((m, l) => Math.max(m, l.tier), -1)
-    createLevel.mutate({ name: '새 레벨', sort_order: maxTier + 1 })
-  }
-  /** 병렬 레벨: 지정 티어와 같은 값(같은 볼륨). */
-  const addParallel = (tier: number) => createLevel.mutate({ name: '새 레벨', sort_order: tier })
-  const removeLevel = (id: string) => {
-    if (levels.length <= 1) return
-    const fallback = levels.find((l) => l.id !== id)?.id ?? null
-    deleteLevel.mutate({ id, fallbackLevelId: fallback })
-  }
-
-  const assign = (employeeId: string, deptId: string | null) =>
-    assignMember.mutate({
-      versionId,
-      userId: employeeId,
-      departmentId: deptId,
-      isActive: versionId === activeVersionId,
-    })
-
-  // --- 드래그 앤 드롭: 커서 위치로 앞/뒤/안쪽 판정 후 변경분만 저장 ---
-  const onDragOverRow = (e: DragEvent, id: string) => {
-    if (!dragId || !canDrop(nodes, dragId, id)) return
-    e.preventDefault()
-    const pos = dropPosFromEvent(e)
-    setDropHint((prev) => (prev?.id === id && prev.pos === pos ? prev : { id, pos }))
-  }
-  const onDropRow = (id: string) => {
-    if (dragId && dropHint?.id === id) {
-      const next = moveNode(nodes, dragId, id, dropHint.pos)
-      const byId = new Map(nodes.map((n) => [n.id, n]))
-      const changed = next
-        .filter((n) => {
-          const o = byId.get(n.id)
-          return o && (o.parentId !== n.parentId || o.sort !== n.sort)
-        })
-        .map((n) => ({ id: n.id, parent_id: n.parentId, sort_order: n.sort }))
-      if (changed.length) moveDepts.mutate(changed)
-    }
-    setDragId(null)
-    setDropHint(null)
-  }
-  const onDragEndRow = () => {
-    setDragId(null)
-    setDropHint(null)
-  }
-
-  if (
-    (versionLoading && !versionRows) ||
-    !versionId ||
-    (deptLoading && !deptRows) ||
-    (levelLoading && !levelRows) ||
-    (empLoading && !empRows) ||
-    (memberLoading && !memberRows)
-  ) {
+  if ((versionLoading && !versionRows) || !versionId) {
     return <Spinner />
   }
 
@@ -248,117 +68,80 @@ export function DepartmentsPanel() {
           versions={versions}
           selectedId={versionId}
           activeId={activeVersionId}
-          onSelect={setVersionId}
-          onClone={onClone}
-          cloning={cloneVersion.isPending}
+          onSelect={selectVersion}
+          showClone={false}
         />
         <div className="flex items-center gap-2 pt-0.5">
           <Button variant="outline" size="sm" onClick={() => setPreviewOpen(true)}>
             <Table2 size={14} /> 인사 반영 미리보기
           </Button>
-          <Button size="sm" onClick={() => addChild(null)} disabled={createDept.isPending}>
-            + 최상위 조직 추가
+          {editMode ? (
+            <Button variant="outline" size="sm" onClick={() => setEditMode(false)}>
+              <Lock size={14} /> 편집 잠금
+            </Button>
+          ) : (
+            <Button variant="outline" size="sm" onClick={() => setWarnOpen(true)}>
+              <Pencil size={14} /> 직접 편집
+            </Button>
+          )}
+          <Button size="sm" onClick={() => setReformOpen(true)}>
+            조직 개편
           </Button>
         </div>
       </div>
 
-      {/* 조직 레벨 정의(= 인사관리 컬럼) */}
-      <OrgLevelEditor
-        levels={levels}
-        onRename={renameLevel}
-        onAddTier={addTier}
-        onAddParallel={addParallel}
-        onRemove={removeLevel}
+      {!editMode && (
+        <p className="rounded-radius-md border border-gray-200 bg-gray-25 px-3 py-2 text-caption text-gray-500">
+          조회 모드입니다. 구조 변경은 상단 <span className="font-semibold">‘조직 개편’</span>(초안 →
+          예약)을 사용하세요. 운영 중 조직을 즉시 수정하려면 ‘직접 편집’을 누르세요.
+        </p>
+      )}
+
+      {/* 조직도 트리(버전 스코프) */}
+      <OrgTreeEditor versionId={versionId} activeVersionId={activeVersionId} editable={editMode} />
+
+      {/* 직접 편집 전환 경고 */}
+      <Modal
+        open={warnOpen}
+        onClose={() => setWarnOpen(false)}
+        size="sm"
+        title="직접 편집으로 전환"
+        footer={
+          <>
+            <Button variant="outline" size="sm" onClick={() => setWarnOpen(false)}>
+              취소
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                setEditMode(true)
+                setWarnOpen(false)
+              }}
+            >
+              직접 편집 시작
+            </Button>
+          </>
+        }
+      >
+        <p className="text-body text-gray-700">
+          운영 중인 현재 조직을 직접 수정합니다. 변경 이력이 별도로 남지 않으니, 구조 개편이
+          필요하면 <span className="font-semibold">‘조직 개편’</span>을 사용하세요.
+        </p>
+      </Modal>
+
+      <OrgReformModal
+        open={reformOpen}
+        onClose={() => setReformOpen(false)}
+        versions={versions}
+        activeVersionId={activeVersionId}
       />
-
-      {/* 트리-테이블 */}
-      <div className="overflow-hidden rounded-radius-md border border-gray-200 bg-white">
-        <div
-          className={`${DEPT_GRID} items-center gap-2 border-b border-gray-200 bg-gray-50 py-2 pr-2 text-caption font-semibold text-gray-500`}
-        >
-          <span className="pl-2">조직명</span>
-          <span>레벨</span>
-          <span>인원</span>
-          <span />
-        </div>
-        {tree.length === 0 ? (
-          <p className="py-8 text-center text-body text-gray-400">등록된 조직이 없습니다.</p>
-        ) : (
-          tree.map((root) => (
-            <DeptTreeRow
-              key={root.id}
-              node={root}
-              collapsed={collapsed}
-              editingId={editingId}
-              draft={draft}
-              dropHint={dropHint}
-              membersByDept={membersByDept}
-              levels={levels}
-              onChangeLevel={changeNodeLevel}
-              onManageMembers={setMemberDeptId}
-              onDraftChange={setDraft}
-              onToggle={toggle}
-              onStartEdit={startEdit}
-              onCommitEdit={commitEdit}
-              onCancelEdit={() => setEditingId(null)}
-              onAddChild={addChild}
-              onToggleHrHidden={toggleHrHidden}
-              onDelete={remove}
-              onDragStartRow={setDragId}
-              onDragOverRow={onDragOverRow}
-              onDropRow={onDropRow}
-              onDragEndRow={onDragEndRow}
-            />
-          ))
-        )}
-      </div>
-
-      {/* 삭제된 조직(soft delete) — 복원만 제공(물리 삭제는 정책상 금지) */}
-      {removed.length > 0 && (
-        <div className="rounded-radius-md border border-dashed border-gray-300 bg-gray-25 p-3">
-          <p className="mb-2 text-caption font-semibold text-gray-500">삭제된 조직</p>
-          <ul className="space-y-1">
-            {removed.map((n) => (
-              <li key={n.id} className="flex items-center gap-2 text-body text-gray-400">
-                <span className="line-through">{n.name}</span>
-                <span className="text-caption">(폐지)</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => restore(n.id)}
-                  className="ml-auto h-7 gap-1 px-2 text-gray-500"
-                >
-                  복원
-                </Button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <p className="text-caption text-gray-400">
-        · 드래그로 순서·소속 변경(위/아래=형제, 가운데=하위 편입), 이름 클릭해 변경, 레벨 셀렉트로 계층
-        지정, 인원 칩으로 인력 배치. 레벨 정의가 인사관리 컬럼이 됩니다. 모든 편집은 즉시 저장됩니다.
-      </p>
-
-      {memberDept && (
-        <DeptMemberModal
-          open={Boolean(memberDept)}
-          onClose={() => setMemberDeptId(null)}
-          deptId={memberDept.id}
-          deptName={memberDept.name}
-          employees={employees}
-          deptNames={deptNames}
-          onAssign={assign}
-        />
-      )}
 
       <HrReflectPreview
         open={previewOpen}
         onClose={() => setPreviewOpen(false)}
         levels={levels}
         nodes={nodes}
-        employees={employees}
+        employees={previewEmployees}
       />
     </div>
   )

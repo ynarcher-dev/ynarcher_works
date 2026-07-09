@@ -326,6 +326,7 @@ export {
   useSetDeptHrHidden,
   useUpdateDepartment,
   useUpdateOrgLevel,
+  useUpdateOrgVersion,
 } from '@/features/management/orgHooks'
 export type { Department, DeptMember, OrgLevel, OrgVersion } from '@/features/management/orgHooks'
 

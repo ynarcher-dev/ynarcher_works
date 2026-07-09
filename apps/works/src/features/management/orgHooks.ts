@@ -78,7 +78,10 @@ export function activeOrgVersionId(versions: OrgVersion[]): string | null {
   return ended[0]?.id ?? null
 }
 
-/** 조직 버전(가용기간) 목록. 시작일 내림차순(최신 발효가 위). */
+/**
+ * 조직 버전(가용기간) 목록. 시작일 내림차순(최신 발효가 위).
+ * DRAFT(개편 초안)는 확정 전까지 타임라인/드롭다운에 노출하지 않는다(조직 개편 모달이 draftId로 직접 다룸).
+ */
 export function useOrgVersions() {
   return useQuery({
     queryKey: ['management', 'org-versions'],
@@ -87,6 +90,7 @@ export function useOrgVersions() {
         .from('org_versions')
         .select('id, label, effective_from, effective_to, status')
         .is('deleted_at', null)
+        .eq('status', 'PUBLISHED')
         .order('effective_from', { ascending: false })
       if (error) throw error
       return (data ?? []) as OrgVersion[]
@@ -293,6 +297,35 @@ export function useCloneOrgVersion() {
       })
       if (error) throw error
       return data as string
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: VERSION_KEY })
+      void qc.invalidateQueries({ queryKey: DEPT_KEY })
+      void qc.invalidateQueries({ queryKey: MEMBER_KEY })
+    },
+  })
+}
+
+/**
+ * 조직 버전 부분 갱신(라벨/가용기간/상태/폐기). 조직 개편 흐름에서 초안화(status='DRAFT'),
+ * 날짜 변경, 예약 확정(status='PUBLISHED'), 폐기(deleted_at)를 모두 이 한 훅으로 처리한다.
+ * 권한은 org_versions UPDATE RLS(admin/management write)로 서버에서 강제된다.
+ */
+export function useUpdateOrgVersion() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (v: {
+      id: string
+      values: Partial<{
+        label: string
+        effective_from: string
+        effective_to: string | null
+        status: 'DRAFT' | 'PUBLISHED'
+        deleted_at: string | null
+      }>
+    }) => {
+      const { error } = await supabase.from('org_versions').update(v.values).eq('id', v.id)
+      if (error) throw error
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: VERSION_KEY })

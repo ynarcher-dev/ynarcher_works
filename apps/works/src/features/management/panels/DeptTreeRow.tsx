@@ -33,6 +33,8 @@ interface DeptTreeRowProps {
   onDragOverRow: (e: DragEvent, id: string) => void
   onDropRow: (id: string) => void
   onDragEndRow: () => void
+  /** false면 읽기전용: 드래그·이름편집·레벨셀렉트·인력배치·액션 버튼을 비활성/숨김. 기본 true. */
+  editable?: boolean
 }
 
 /** 행/헤더 공용 그리드 컬럼: 조직명 | 레벨 | 인원 | 액션. 헤더와 행 정렬을 맞춘다. */
@@ -50,25 +52,28 @@ export function dropPosFromEvent(e: DragEvent): DropPos {
 /** 조직도 트리-테이블의 단일 행(재귀). 들여쓰기는 depth로, 접힘은 collapsed 집합으로 제어한다. */
 export function DeptTreeRow(props: DeptTreeRowProps) {
   const { node, collapsed, editingId, dropHint } = props
+  const editable = props.editable ?? true
   const hasChildren = node.children.length > 0
   const isCollapsed = collapsed.has(node.id)
-  const isEditing = editingId === node.id
+  const isEditing = editable && editingId === node.id
   const isRoot = node.depth === 0
   const hint = dropHint?.id === node.id ? dropHint.pos : null
   const members = props.membersByDept.get(node.id) ?? []
+  const levelName = props.levels.find((lv) => lv.id === node.levelId)?.name ?? '-'
 
   return (
     <>
       <div
-        draggable={!isEditing}
+        draggable={editable && !isEditing}
         onDragStart={(e) => {
+          if (!editable) return
           // Firefox는 setData가 있어야 드래그가 개시된다.
           e.dataTransfer.setData('text/plain', node.id)
           e.dataTransfer.effectAllowed = 'move'
           props.onDragStartRow(node.id)
         }}
-        onDragOver={(e) => props.onDragOverRow(e, node.id)}
-        onDrop={() => props.onDropRow(node.id)}
+        onDragOver={(e) => editable && props.onDragOverRow(e, node.id)}
+        onDrop={() => editable && props.onDropRow(node.id)}
         onDragEnd={props.onDragEndRow}
         className={cn(
           DEPT_GRID,
@@ -89,11 +94,15 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
           className="flex min-w-0 items-center gap-1.5"
           style={{ paddingLeft: `${node.depth * 20 + 8}px` }}
         >
-          <GripVertical
-            size={14}
-            className="shrink-0 cursor-grab text-gray-300 group-hover:text-gray-400"
-            aria-hidden
-          />
+          {editable ? (
+            <GripVertical
+              size={14}
+              className="shrink-0 cursor-grab text-gray-300 group-hover:text-gray-400"
+              aria-hidden
+            />
+          ) : (
+            <span className="w-3.5 shrink-0" />
+          )}
           {hasChildren ? (
             <Button
               variant="ghost"
@@ -122,7 +131,7 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
               onBlur={props.onCommitEdit}
               className="h-7 max-w-56"
             />
-          ) : (
+          ) : editable ? (
             <button
               type="button"
               onClick={() => props.onStartEdit(node)}
@@ -135,6 +144,16 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
             >
               {node.name}
             </button>
+          ) : (
+            <span
+              className={cn(
+                'truncate px-1',
+                isRoot ? 'text-body font-semibold' : 'text-body',
+                node.hrHidden ? 'text-gray-400' : isRoot ? 'text-gray-900' : 'text-gray-700',
+              )}
+            >
+              {node.name}
+            </span>
           )}
           {node.hrHidden && !isEditing && (
             <span
@@ -148,57 +167,81 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
 
         {/* 열2: 조직 레벨(노드별 지정 · 인사관리 컬럼 파생) */}
         <div>
-          {!isEditing && (
-            <InlineSelect
-              value={node.levelId}
-              onChange={(e) => props.onChangeLevel(node.id, e.target.value)}
-              className="w-20"
-              title="조직 레벨"
-            >
-              {props.levels.map((lv) => (
-                <option key={lv.id} value={lv.id}>
-                  {lv.name}
-                </option>
-              ))}
-            </InlineSelect>
-          )}
+          {!isEditing &&
+            (editable ? (
+              <InlineSelect
+                value={node.levelId}
+                onChange={(e) => props.onChangeLevel(node.id, e.target.value)}
+                className="w-20"
+                title="조직 레벨"
+              >
+                {props.levels.map((lv) => (
+                  <option key={lv.id} value={lv.id}>
+                    {lv.name}
+                  </option>
+                ))}
+              </InlineSelect>
+            ) : (
+              <span className="px-1 text-caption text-gray-500">{levelName}</span>
+            ))}
         </div>
 
         {/* 열3: 소속 인원(클릭 시 인력 배치 모달) */}
         <div className="min-w-0">
-          {!isEditing && (
-            <button
-              type="button"
-              onClick={() => props.onManageMembers(node.id)}
-              title="인력 배치"
-              className="flex w-full flex-wrap items-center gap-1 rounded px-1.5 py-0.5 text-left hover:bg-gray-100"
-            >
-              {members.length > 0 ? (
-                <>
-                  {members.slice(0, 6).map((m) => (
-                    <span
-                      key={m.id}
-                      className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-caption text-gray-700"
-                    >
-                      {m.name}
-                    </span>
-                  ))}
-                  {members.length > 6 && (
-                    <span className="text-caption text-gray-500">외 {members.length - 6}명</span>
-                  )}
-                </>
-              ) : (
-                <span className="flex items-center gap-1 text-caption text-gray-400">
-                  <Users size={13} /> 배치
-                </span>
-              )}
-            </button>
-          )}
+          {!isEditing &&
+            (editable ? (
+              <button
+                type="button"
+                onClick={() => props.onManageMembers(node.id)}
+                title="인력 배치"
+                className="flex w-full flex-wrap items-center gap-1 rounded px-1.5 py-0.5 text-left hover:bg-gray-100"
+              >
+                {members.length > 0 ? (
+                  <>
+                    {members.slice(0, 6).map((m) => (
+                      <span
+                        key={m.id}
+                        className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-caption text-gray-700"
+                      >
+                        {m.name}
+                      </span>
+                    ))}
+                    {members.length > 6 && (
+                      <span className="text-caption text-gray-500">외 {members.length - 6}명</span>
+                    )}
+                  </>
+                ) : (
+                  <span className="flex items-center gap-1 text-caption text-gray-400">
+                    <Users size={13} /> 배치
+                  </span>
+                )}
+              </button>
+            ) : (
+              <div className="flex w-full flex-wrap items-center gap-1 px-1.5 py-0.5">
+                {members.length > 0 ? (
+                  <>
+                    {members.slice(0, 6).map((m) => (
+                      <span
+                        key={m.id}
+                        className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-caption text-gray-700"
+                      >
+                        {m.name}
+                      </span>
+                    ))}
+                    {members.length > 6 && (
+                      <span className="text-caption text-gray-500">외 {members.length - 6}명</span>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-caption text-gray-300">-</span>
+                )}
+              </div>
+            ))}
         </div>
 
-        {/* 열4: 액션 메뉴(상시 노출) */}
+        {/* 열4: 액션 메뉴(편집 모드에서만 노출) */}
         <div className="flex items-center justify-end gap-0.5">
-          {!isEditing && (
+          {editable && !isEditing && (
             <>
               <Button
                 variant="ghost"
