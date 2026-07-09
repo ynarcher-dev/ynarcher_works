@@ -44,7 +44,7 @@
 * **[3_7_workspace_management.md](../docs_planning/3_7_workspace_management.md) (MANAGEMENT 워크스페이스 상세 기획서)**
   * **의미**: 인사 관리(HRD/HRM), 재무 실적 및 성과 지표 대시보드, 전자결재 등 경영지원 업무 처리를 위한 대시보드 기획입니다.
 * **[3_7_1_management_performance_kpi.md](../docs_planning/3_7_1_management_performance_kpi.md) (MANAGEMENT 조직 성과·KPI 관리 기획서)**
-  * **의미**: 조직/부서 버전 구조 위에서 부서·개인 KPI를 「지표 카탈로그 / 스코어링 룰(BAND·PER_UNIT_CAP·GRADE_MAP) / KPI 세트」 3층 룰 엔진으로 커스터마이즈하는 성과관리 기획서입니다. 항목별 상이한 점수 규정(구간·음수·상한개방·건당한도·정성등급)을 노코드 빌더로 편집하고, 조직 계보(lineage) 귀속으로 개편 연속성을 보장하며, 실적·증빙→점수 산출→상대평가·정원 배분·조건부 보정·인센티브 지급률까지 15절 정형 템플릿으로 명세합니다.
+  * **의미**: 조직/부서 버전 구조 위에서 부서·개인 KPI를 「지표 카탈로그 / 스코어링 룰(BAND·PER_UNIT_CAP·GRADE_MAP) / KPI 템플릿(조직용·개인용)」 3층 룰 엔진으로 커스터마이즈하는 성과관리 기획서입니다. 항목별 상이한 점수 규정(구간·음수·상한개방·건당한도·정성등급)을 노코드 빌더로 편집하고, 조직용/개인용 템플릿을 조직·임직원에 수동+자동추천으로 할당(복수 겹침)하며, 소속(dept_members) 조인으로 조직↔개인 롤업 뷰를 도출합니다. 조직 계보(lineage) 귀속으로 개편 연속성을 보장하고, 실적·증빙→점수 산출→상대평가·정원 배분·조건부 보정·인센티브 지급률까지 15절 정형 템플릿으로 명세합니다.
 * **[3_8_workspace_project.md](../docs_planning/3_8_workspace_project.md) (PROJECT 워크스페이스 상세 기획서)**
   * **의미**: 신사업 및 글로벌 사업부 통합 프로젝트/태스크 관리 및 간트 차트 기반 마일스톤 화면 요건입니다.
 * **[3_9_workspace_guest.md](../docs_planning/3_9_workspace_guest.md) (GUEST 워크스페이스 상세 기획서)**
