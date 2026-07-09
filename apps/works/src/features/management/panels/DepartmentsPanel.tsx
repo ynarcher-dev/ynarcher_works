@@ -8,6 +8,7 @@ import {
   useEmployees,
   useOrgLevels,
   useOrgVersions,
+  useUpdateOrgVersion,
 } from '@/features/management/hooks'
 import { HrReflectPreview } from '@/features/management/panels/HrReflectPreview'
 import { OrgReformModal } from '@/features/management/panels/OrgReformModal'
@@ -56,6 +57,14 @@ export function DepartmentsPanel() {
     setEditMode(false)
   }
 
+  // 예약(예정) 버전 취소 = soft delete. 취소 후 선택을 현재(활성) 버전으로 되돌린다.
+  const updateVersion = useUpdateOrgVersion()
+  const deleteVersion = async (id: string) => {
+    await updateVersion.mutateAsync({ id, values: { deleted_at: new Date().toISOString() } })
+    setVersionId(activeVersionId ?? '')
+    setEditMode(false)
+  }
+
   if ((versionLoading && !versionRows) || !versionId) {
     return <Spinner />
   }
@@ -70,6 +79,8 @@ export function DepartmentsPanel() {
           activeId={activeVersionId}
           onSelect={selectVersion}
           showClone={false}
+          onDelete={deleteVersion}
+          deleting={updateVersion.isPending}
         />
         <div className="flex items-center gap-2 pt-0.5">
           <Button variant="outline" size="sm" onClick={() => setPreviewOpen(true)}>

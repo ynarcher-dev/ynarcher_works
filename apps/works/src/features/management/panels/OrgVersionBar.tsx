@@ -1,5 +1,5 @@
 import { Button, Input, Modal, Select } from '@ynarcher/ui'
-import { CopyPlus } from 'lucide-react'
+import { CalendarX, CopyPlus } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type { OrgVersion } from '@/features/management/hooks'
 
@@ -27,6 +27,9 @@ interface OrgVersionBarProps {
   cloning?: boolean
   /** "새 버전 복제" 버튼 노출 여부. 기본 true. 조직 개편 모달을 쓰는 화면은 false로 숨긴다. */
   showClone?: boolean
+  /** 예약(예정) 버전 삭제 콜백. 지정하면 '예정' 버전 선택 시 "예약 취소" 버튼을 노출한다. */
+  onDelete?: (id: string) => Promise<void>
+  deleting?: boolean
 }
 
 /**
@@ -41,6 +44,8 @@ export function OrgVersionBar({
   onClone,
   cloning = false,
   showClone = true,
+  onDelete,
+  deleting = false,
 }: OrgVersionBarProps) {
   const selected = versions.find((v) => v.id === selectedId)
   const notActive = Boolean(selected && activeId && selected.id !== activeId)
@@ -61,12 +66,33 @@ export function OrgVersionBar({
     return { current, upcoming, ended }
   }, [versions, activeId])
 
+  // 선택 버전이 '예정'(미래 발효 PUBLISHED) 그룹인지 — 예약 취소 버튼 노출 조건.
+  const selectedUpcoming = groups.upcoming.some((v) => v.id === selectedId)
+
   const [open, setOpen] = useState(false)
   const [label, setLabel] = useState('')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+
+  const [delOpen, setDelOpen] = useState(false)
+  const [delError, setDelError] = useState<string | null>(null)
+  const [delBusy, setDelBusy] = useState(false)
+
+  const confirmDelete = async () => {
+    if (!selected || !onDelete) return
+    setDelError(null)
+    setDelBusy(true)
+    try {
+      await onDelete(selected.id)
+      setDelOpen(false)
+    } catch (e) {
+      setDelError(e instanceof Error ? e.message : '예약 취소에 실패했습니다.')
+    } finally {
+      setDelBusy(false)
+    }
+  }
 
   const openClone = () => {
     setLabel(selected ? `${selected.label} 복제` : '새 조직 버전')
@@ -139,6 +165,20 @@ export function OrgVersionBar({
             <CopyPlus size={14} /> 새 버전 복제
           </Button>
         )}
+        {onDelete && selectedUpcoming && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setDelError(null)
+              setDelOpen(true)
+            }}
+            disabled={deleting}
+            className="text-danger hover:bg-danger-subtle hover:text-danger"
+          >
+            <CalendarX size={14} /> 예약 취소
+          </Button>
+        )}
       </div>
 
       {notActive && (
@@ -196,6 +236,38 @@ export function OrgVersionBar({
           <p className="text-caption text-gray-400">
             · 시작일부터 이 조직도가 유효합니다. 오늘 이하 시작일 중 가장 최근 버전이 '현재'가 됩니다.
           </p>
+        </div>
+      </Modal>
+
+      {/* 예약(예정) 버전 삭제 확인 */}
+      <Modal
+        open={delOpen}
+        onClose={() => setDelOpen(false)}
+        size="sm"
+        title="예약된 조직 개편 취소"
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => setDelOpen(false)} disabled={delBusy}>
+              닫기
+            </Button>
+            <Button
+              size="sm"
+              onClick={confirmDelete}
+              disabled={delBusy || deleting}
+              className="bg-danger hover:bg-danger/90"
+            >
+              {delBusy ? '취소 중…' : '예약 취소'}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-2">
+          <p className="text-body text-gray-700">
+            예정된 조직 <span className="font-semibold text-gray-900">{selected?.label}</span>
+            {selected ? `(${periodLabel(selected)})` : ''} 을 취소합니다. 아직 발효 전인 예약만
+            취소할 수 있으며, 현재 운영 중 조직에는 영향이 없습니다.
+          </p>
+          {delError && <p className="text-caption text-danger">{delError}</p>}
         </div>
       </Modal>
     </div>
