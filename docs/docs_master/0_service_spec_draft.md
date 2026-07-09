@@ -43,6 +43,8 @@
   * **의미**: 투자 유치 및 인수합병 딜 소싱 관리를 위해 매수/매도 희망 조건 기반의 매칭 매트릭스와 협상 진척 사항을 기록하는 명세서입니다.
 * **[3_7_workspace_management.md](../docs_planning/3_7_workspace_management.md) (MANAGEMENT 워크스페이스 상세 기획서)**
   * **의미**: 인사 관리(HRD/HRM), 재무 실적 및 성과 지표 대시보드, 전자결재 등 경영지원 업무 처리를 위한 대시보드 기획입니다.
+* **[3_7_1_management_performance_kpi.md](../docs_planning/3_7_1_management_performance_kpi.md) (MANAGEMENT 조직 성과·KPI 관리 기획서)**
+  * **의미**: 조직/부서 버전 구조 위에서 성과관리 주기(사이클)를 자유 정의하고, 조직 계보(lineage)에 귀속된 하이브리드 KPI(정량 핵심결과 + 정성 목표)와 개인 성과평가 캐스케이드, 전자결재 확정 잠금을 15절 정형 템플릿으로 명세한 성과관리 기획서입니다.
 * **[3_8_workspace_project.md](../docs_planning/3_8_workspace_project.md) (PROJECT 워크스페이스 상세 기획서)**
   * **의미**: 신사업 및 글로벌 사업부 통합 프로젝트/태스크 관리 및 간트 차트 기반 마일스톤 화면 요건입니다.
 * **[3_9_workspace_guest.md](../docs_planning/3_9_workspace_guest.md) (GUEST 워크스페이스 상세 기획서)**
