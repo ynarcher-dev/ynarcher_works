@@ -70,7 +70,7 @@ export function formatKRW(v: number | null | undefined): string {
  */
 export function formatFounded(v: unknown): string {
   const date = v ? String(v).slice(0, 10) : ''
-  if (date.length < 10) return '-'
+  if (date.length < 10) return '정보 없음'
   const founded = new Date(`${date}T00:00:00`)
   if (Number.isNaN(founded.getTime())) return date
   const today = new Date()

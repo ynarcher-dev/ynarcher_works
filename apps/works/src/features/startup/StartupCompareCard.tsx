@@ -24,21 +24,24 @@ function latestInvestment(record: EntityRow | null): GrowthMetric | undefined {
   )
 }
 
-/** 금액(천원 단위, ÷1000 반올림) 텍스트. 값 없으면 '정보 없음'. 음수는 ▼로 표기. */
-function wonK(v?: number | null): { text: string; negative: boolean } {
-  if (v == null || Number.isNaN(Number(v))) return { text: '정보 없음', negative: false }
+/** 금액(천원 단위, ÷1000 반올림) 텍스트. 값 없으면 빈값 문구(empty). 음수는 ▼로 표기. */
+function wonK(v: number | null | undefined, empty: string): { text: string; negative: boolean } {
+  if (v == null || Number.isNaN(Number(v))) return { text: empty, negative: false }
   const n = Math.round(Number(v) / 1000)
   if (n < 0) return { text: `▼${Math.abs(n).toLocaleString()}`, negative: true }
   return { text: n.toLocaleString(), negative: false }
 }
 
-/** 비교 표의 한쪽(A 또는 B) 값 셀. 금액(천원)/인원(명) 단위, 열 내 중앙정렬. */
-function Val({ v, unit }: { v?: number | null; unit: 'won' | 'count' }) {
+/**
+ * 비교 표의 한쪽(A 또는 B) 값 셀. 금액(천원)/인원(명) 단위, 열 내 중앙정렬.
+ * empty: 값이 없을 때 표기 — 데이터 미입력은 '정보 없음', 비교군 미선택 열은 '-'.
+ */
+function Val({ v, unit, empty }: { v?: number | null; unit: 'won' | 'count'; empty: string }) {
   if (unit === 'count') {
-    const text = v == null || Number.isNaN(Number(v)) ? '정보 없음' : `${Number(v).toLocaleString()}명`
+    const text = v == null || Number.isNaN(Number(v)) ? empty : `${Number(v).toLocaleString()}명`
     return <span className="block min-w-0 truncate text-center text-caption tabular-nums text-gray-800">{text}</span>
   }
-  const { text, negative } = wonK(v)
+  const { text, negative } = wonK(v, empty)
   return (
     <span className={`block min-w-0 truncate text-center text-caption tabular-nums ${negative ? 'text-danger' : 'text-gray-800'}`}>
       {text}
@@ -49,28 +52,58 @@ function Val({ v, unit }: { v?: number | null; unit: 'won' | 'count' }) {
 /**
  * A값 · (중앙 항목명) · B값 한 줄. 중앙 항목열은 고정폭(6rem)이라 모든 행의 A/B 값 열이
  * 동일한 크기로 정렬되고, 항목열 양옆 옅은 세로 가이드로 A/B 열을 구분한다.
+ * aEmpty/bEmpty: 각 열의 빈값 문구(비교군 미선택 열은 '-').
  */
-function Row({ label, a, b, unit = 'won' }: { label: string; a?: number | null; b?: number | null; unit?: 'won' | 'count' }) {
+function Row({
+  label,
+  a,
+  b,
+  unit = 'won',
+  aEmpty,
+  bEmpty,
+}: {
+  label: string
+  a?: number | null
+  b?: number | null
+  unit?: 'won' | 'count'
+  aEmpty: string
+  bEmpty: string
+}) {
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_6rem_minmax(0,1fr)] items-center gap-2 py-1.5">
-      <Val v={a} unit={unit} />
+      <Val v={a} unit={unit} empty={aEmpty} />
       <span className="whitespace-nowrap border-x border-gray-100 px-1.5 text-center text-caption text-gray-400">
         {label}
       </span>
-      <Val v={b} unit={unit} />
+      <Val v={b} unit={unit} empty={bEmpty} />
     </div>
   )
 }
 
-/** A · (중앙 항목명) · B 텍스트 한 줄(소개·대표자·설립일·연도·라운드 등). 값 없으면 '정보 없음'. */
-function TextRow({ label, a, b }: { label: string; a?: string; b?: string }) {
+/**
+ * A · (중앙 항목명) · B 텍스트 한 줄(소개·대표자·설립일·연도·라운드 등).
+ * aEmpty/bEmpty: 각 열의 빈값 문구(비교군 미선택 열은 '-').
+ */
+function TextRow({
+  label,
+  a,
+  b,
+  aEmpty,
+  bEmpty,
+}: {
+  label: string
+  a?: string
+  b?: string
+  aEmpty: string
+  bEmpty: string
+}) {
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_6rem_minmax(0,1fr)] items-stretch gap-2 py-1.5">
-      <span className="min-w-0 self-center break-words text-center text-caption text-gray-800">{a || '정보 없음'}</span>
+      <span className="min-w-0 self-center break-words text-center text-caption text-gray-800">{a || aEmpty}</span>
       <span className="flex items-center justify-center whitespace-nowrap border-x border-gray-100 px-1.5 text-center text-caption text-gray-400">
         {label}
       </span>
-      <span className="min-w-0 self-center break-words text-center text-caption text-gray-800">{b || '정보 없음'}</span>
+      <span className="min-w-0 self-center break-words text-center text-caption text-gray-800">{b || bEmpty}</span>
     </div>
   )
 }
@@ -116,7 +149,11 @@ function CompanyHead({ record, year, onClear }: { record: EntityRow; year?: numb
           ))}
         </div>
       )}
-      {year != null && <span className="mt-0.5 text-caption text-gray-400">{year}</span>}
+      {year != null ? (
+        <span className="mt-0.5 text-caption text-gray-400">{year}</span>
+      ) : (
+        <span className="mt-0.5 text-caption text-gray-300">기준연도 정보 없음</span>
+      )}
     </div>
   )
 }
@@ -161,6 +198,11 @@ export function StartupCompareCard({ a, b, bLoading, onSelectB, onClearB }: Prop
   // 투자 현황은 재무연도와 별개로, 투자 정보가 있는 가장 최신 연도를 기준으로 표기한다.
   const ia = latestInvestment(a)
   const ib = latestInvestment(b)
+  // 빈값 문구: 현재 기업(A)은 항상 존재하므로 '정보 없음', 비교기업(B)은 미선택 시 '-'.
+  const aEmpty = '정보 없음'
+  const bEmpty = b ? '정보 없음' : '-'
+  // 설립일은 formatFounded가 자체적으로 '정보 없음'을 반환하므로, B 미선택 시에는 '-'로 대체.
+  const foundedB = b ? formatFounded(b.founded_on) : '-'
 
   return (
     <section className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
@@ -186,33 +228,33 @@ export function StartupCompareCard({ a, b, bLoading, onSelectB, onClearB }: Prop
       {/* 지표 비교 표: A값 · 항목 · B값 (그룹별 밴드로 섹션 구분) */}
       <div className="mt-4 space-y-3">
         <Group title="기업 정보">
-          <TextRow label="소개" a={readBusiness(a).oneLiner} b={b ? readBusiness(b).oneLiner : ''} />
-          <TextRow label="대표자" a={txt(a, 'representative')} b={txt(b, 'representative')} />
-          <TextRow label="설립일" a={formatFounded(a.founded_on)} b={b ? formatFounded(b.founded_on) : ''} />
+          <TextRow label="소개" a={readBusiness(a).oneLiner} b={b ? readBusiness(b).oneLiner : ''} aEmpty={aEmpty} bEmpty={bEmpty} />
+          <TextRow label="대표자" a={txt(a, 'representative')} b={txt(b, 'representative')} aEmpty={aEmpty} bEmpty={bEmpty} />
+          <TextRow label="설립일" a={formatFounded(a.founded_on)} b={foundedB} aEmpty={aEmpty} bEmpty={bEmpty} />
         </Group>
 
         <p className="text-right text-caption text-gray-400">단위: 천원</p>
         <Group title="재무 현황">
-          <Row label="자산" a={ma?.assets} b={mb?.assets} />
-          <Row label="부채" a={ma?.liabilities} b={mb?.liabilities} />
-          <Row label="자본" a={ma?.equity} b={mb?.equity} />
+          <Row label="자산" a={ma?.assets} b={mb?.assets} aEmpty={aEmpty} bEmpty={bEmpty} />
+          <Row label="부채" a={ma?.liabilities} b={mb?.liabilities} aEmpty={aEmpty} bEmpty={bEmpty} />
+          <Row label="자본" a={ma?.equity} b={mb?.equity} aEmpty={aEmpty} bEmpty={bEmpty} />
         </Group>
 
         <Group title="매출 현황">
-          <Row label="매출액" a={ma?.revenue} b={mb?.revenue} />
-          <Row label="영업이익" a={ma?.operatingProfit} b={mb?.operatingProfit} />
-          <Row label="당기순이익" a={ma?.netIncome} b={mb?.netIncome} />
+          <Row label="매출액" a={ma?.revenue} b={mb?.revenue} aEmpty={aEmpty} bEmpty={bEmpty} />
+          <Row label="영업이익" a={ma?.operatingProfit} b={mb?.operatingProfit} aEmpty={aEmpty} bEmpty={bEmpty} />
+          <Row label="당기순이익" a={ma?.netIncome} b={mb?.netIncome} aEmpty={aEmpty} bEmpty={bEmpty} />
         </Group>
 
         <Group title="고용 현황">
-          <Row label="고용 인원" a={ma?.employeeCount} b={mb?.employeeCount} unit="count" />
+          <Row label="고용 인원" a={ma?.employeeCount} b={mb?.employeeCount} unit="count" aEmpty={aEmpty} bEmpty={bEmpty} />
         </Group>
 
         <Group title="투자 현황">
-          <TextRow label="연도" a={ia?.year ? String(ia.year) : ''} b={ib?.year ? String(ib.year) : ''} />
-          <TextRow label="라운드" a={ia?.fundingRound} b={ib?.fundingRound} />
-          <Row label="기업가치(Pre)" a={ia?.valuation} b={ib?.valuation} />
-          <Row label="투자유치액" a={ia?.fundingAmount} b={ib?.fundingAmount} />
+          <TextRow label="연도" a={ia?.year ? String(ia.year) : ''} b={ib?.year ? String(ib.year) : ''} aEmpty={aEmpty} bEmpty={bEmpty} />
+          <TextRow label="라운드" a={ia?.fundingRound} b={ib?.fundingRound} aEmpty={aEmpty} bEmpty={bEmpty} />
+          <Row label="기업가치(Pre)" a={ia?.valuation} b={ib?.valuation} aEmpty={aEmpty} bEmpty={bEmpty} />
+          <Row label="투자유치액" a={ia?.fundingAmount} b={ib?.fundingAmount} aEmpty={aEmpty} bEmpty={bEmpty} />
         </Group>
       </div>
     </section>
