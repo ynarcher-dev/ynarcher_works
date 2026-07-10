@@ -73,4 +73,23 @@ export const TAG_CONFIGS = {
     // 2뎁스: 권역(region_tags)을 부모로 참조한다. 등록 시 권역을 먼저 고르고 국가를 넣는다.
     parent: { table: 'region_tags', column: 'region_tag_id', noun: '권역' },
   },
+  // 스타트업 풀 기준정보 — 단계/구분/현황 컬럼 선택지 원장.
+  investmentStages: {
+    tab: 'investment_stages',
+    table: 'investment_stage_tags',
+    heading: '투자단계태그 관리',
+    noun: '투자단계',
+  },
+  companyCategories: {
+    tab: 'company_categories',
+    table: 'company_category_tags',
+    heading: '기업구분태그 관리',
+    noun: '기업구분',
+  },
+  companyStatuses: {
+    tab: 'company_statuses',
+    table: 'company_status_tags',
+    heading: '기업현황태그 관리',
+    noun: '기업현황',
+  },
 } satisfies Record<string, TagConfig>

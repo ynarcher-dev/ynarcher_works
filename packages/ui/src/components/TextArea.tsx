@@ -1,4 +1,4 @@
-import type { TextareaHTMLAttributes } from 'react'
+import { forwardRef, type TextareaHTMLAttributes } from 'react'
 import { cn } from '../utils/cn'
 
 export interface TextAreaProps
@@ -6,10 +6,14 @@ export interface TextAreaProps
   invalid?: boolean
 }
 
-/** 여러 줄 입력(4상태). */
-export function TextArea({ invalid, className, ...props }: TextAreaProps) {
+/** 여러 줄 입력(4상태). react-hook-form register가 동작하도록 ref를 forward한다. */
+export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(function TextArea(
+  { invalid, className, ...props },
+  ref,
+) {
   return (
     <textarea
+      ref={ref}
       aria-invalid={invalid}
       className={cn(
         'w-full rounded-radius-md border px-3 py-2 text-body text-gray-900 shadow-soft transition-all duration-fast',
@@ -25,4 +29,4 @@ export function TextArea({ invalid, className, ...props }: TextAreaProps) {
       {...props}
     />
   )
-}
+})

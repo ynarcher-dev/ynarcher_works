@@ -24,6 +24,7 @@ export function MaterialPanel({
   targetType,
   targetId,
   readOnly = false,
+  title = '자료 관리',
 }: {
   /** 첨부 대상 유형(예: 'expert' | 'investor' | 'global_network'). */
   targetType: string
@@ -31,6 +32,8 @@ export function MaterialPanel({
   targetId: string
   /** 조회 모드: 목록·다운로드만 노출(업로드/삭제 숨김). */
   readOnly?: boolean
+  /** 패널 제목(기본 '자료 관리'). 한 레코드에 자료 분류가 여러 개일 때 구분용. */
+  title?: string
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
@@ -49,7 +52,7 @@ export function MaterialPanel({
 
   return (
     <DetailPanelCard
-      title="자료 관리"
+      title={title}
       count={list.length}
       action={
         readOnly ? undefined : (

@@ -29,6 +29,11 @@ export interface EntityField {
   required?: boolean
   /** 개인정보 목록 마스킹 유형(목록 셀에만 적용, 상세/폼은 원본). */
   mask?: MaskKind
+  /**
+   * 지정 시 폼에서 자유 입력 대신 해당 태그 원장(*_tags)의 태그를 선택한다(ADMIN 태그 관리 연동).
+   * 예: 'investment_stage_tags'. 목록에 없는 레거시 값은 현재값으로 보존 노출된다.
+   */
+  tagTable?: string
 }
 
 /**
@@ -70,8 +75,11 @@ export const ENTITIES: Record<EntityKey, EntityConfig> = {
       { name: 'name', label: '기업명', required: true },
       { name: 'biz_reg_no', label: '사업자등록번호' },
       { name: 'representative', label: '대표자' },
-      { name: 'industry', label: '산업' },
-      { name: 'stage', label: '성장 단계' },
+      // 산업/단계/구분/현황은 ADMIN 태그 관리 원장에서 선택한다(자유 입력 아님).
+      { name: 'industry', label: '산업', tagTable: 'industry_tags' },
+      { name: 'stage', label: '단계', tagTable: 'investment_stage_tags' },
+      { name: 'management_status', label: '구분', tagTable: 'company_category_tags' },
+      { name: 'pool_status', label: '현황', tagTable: 'company_status_tags' },
     ],
   },
   experts: {

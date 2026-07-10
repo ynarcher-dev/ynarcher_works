@@ -47,6 +47,9 @@ import {
   Gauge,
   Building,
   Layers,
+  Sprout,
+  FileText,
+  ScanLine,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import {
@@ -135,6 +138,13 @@ const sidebarIconByTab: Record<string, LucideIcon> = {
   departments: Network,
   branches: Building,
   kpi: Gauge,
+
+  // STARTUP 워크스페이스
+  invested: Coins,
+  incubated: Sprout,
+  discovered: Rocket,
+  minutes: FileText,
+  archerscan: ScanLine,
 }
 
 const sidebarIconByWorkspace: Record<string, LucideIcon> = {

@@ -21,6 +21,7 @@ import { NetworkDetailPage } from '@/features/networks/NetworkDetailPage'
 import { GlobalNetworkDetailPage } from '@/features/networks/GlobalNetworkDetailPage'
 import { DIRECTORY_ENTITIES, HUB_DETAIL_ENTITIES } from '@/features/networks/config'
 import { StartupPage } from '@/features/startup/StartupPage'
+import { StartupDetailPage } from '@/features/startup/StartupDetailPage'
 import { ProjectDetailPage } from '@/features/project/ProjectDetailPage'
 import { ProjectPage } from '@/features/project/ProjectPage'
 import { LoginPage } from '@/pages/LoginPage'
@@ -95,6 +96,15 @@ export const router = createBrowserRouter([
             element: (
               <RequireWorkspace workspace="startup">
                 <StartupPage />
+              </RequireWorkspace>
+            ),
+          },
+          // 스타트업 풀 상세페이지(모달 아님, 카드 섹션). 발굴기업 목록 행 클릭으로 진입한다.
+          {
+            path: 'startup/discovered/:id',
+            element: (
+              <RequireWorkspace workspace="startup">
+                <StartupDetailPage />
               </RequireWorkspace>
             ),
           },

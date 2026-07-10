@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode } from 'react'
+import { forwardRef, type InputHTMLAttributes, type ReactNode } from 'react'
 import { cn } from '../utils/cn'
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -6,8 +6,11 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   icon?: ReactNode
 }
 
-/** 텍스트 입력(기본/포커스/비활성/오류 4상태, 아이콘 슬롯 지원, 토스 스타일). */
-export function Input({ invalid, icon, className, ...props }: InputProps) {
+/** 텍스트 입력(기본/포커스/비활성/오류 4상태, 아이콘 슬롯 지원, 토스 스타일). ref는 input으로 forward. */
+export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
+  { invalid, icon, className, ...props },
+  ref,
+) {
   return (
     <div className="relative flex w-full items-center">
       {icon && (
@@ -16,6 +19,7 @@ export function Input({ invalid, icon, className, ...props }: InputProps) {
         </span>
       )}
       <input
+        ref={ref}
         aria-invalid={invalid}
         className={cn(
           'h-11 w-full rounded-radius-md border text-body text-gray-900 transition-all duration-fast shadow-soft',
@@ -33,4 +37,4 @@ export function Input({ invalid, icon, className, ...props }: InputProps) {
       />
     </div>
   )
-}
+})

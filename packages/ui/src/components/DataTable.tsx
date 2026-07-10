@@ -84,6 +84,8 @@ export interface DataTableProps<T> {
   standardColumns?: boolean
   /** 표준 컬럼 중 작성자 컬럼 노출 여부(기본 true). false면 수정일/관리만 남긴다. */
   showAuthor?: boolean
+  /** 작성자 컬럼 헤더 라벨(기본 '작성자'). 스타트업 풀 등 담당자 의미일 때 '담당자'로 바꾼다. */
+  authorLabel?: string
   /** 수정일 값(셀) 정렬(기본 left). 헤더는 항상 좌측. 넓은 표에서 우측 여백을 줄이려면 'right'. */
   updatedAtAlign?: 'left' | 'right'
   /**
@@ -152,6 +154,7 @@ export function DataTable<T>({
   pagination,
   standardColumns = true,
   showAuthor = true,
+  authorLabel = '작성자',
   updatedAtAlign = 'left',
   manageable = true,
   selectable = false,
@@ -269,7 +272,7 @@ export function DataTable<T>({
             {standardColumns && (
               <>
                 {showAuthor && (
-                  <th className={cn('h-9 w-20 border-b border-gray-300 px-3 text-left text-caption font-semibold text-gray-500', pad, truncate)}>작성자</th>
+                  <th className={cn('h-9 w-20 border-b border-gray-300 px-3 text-left text-caption font-semibold text-gray-500', pad, truncate)}>{authorLabel}</th>
                 )}
                 {/* 수정일 헤더는 항상 좌측 정렬. 값(셀)만 updatedAtAlign을 따른다. */}
                 <th className={cn('h-9 w-28 border-b border-gray-300 px-3 text-left text-caption font-semibold text-gray-500', pad, truncate)}>수정일</th>

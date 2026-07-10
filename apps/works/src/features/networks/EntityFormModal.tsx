@@ -1,11 +1,12 @@
 import { Button, Input, Modal, useToast } from '@ynarcher/ui'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import {
   checkDuplicateName,
   useCreateEntity,
   useUpdateEntity,
   type EntityRow,
 } from '@/features/networks/hooks'
+import { TagSelect } from '@/features/admin/TagSelect'
 import type { EntityConfig } from '@/features/networks/config'
 
 interface Props {
@@ -29,6 +30,7 @@ export function EntityFormModal({ config, open, onClose, initial }: Props) {
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
@@ -81,13 +83,32 @@ export function EntityFormModal({ config, open, onClose, initial }: Props) {
               {f.label}
               {f.required && <span className="text-brand"> *</span>}
             </label>
-            <Input
-              id={f.name}
-              invalid={Boolean(errors[f.name])}
-              {...register(f.name, {
-                required: f.required ? `${f.label}은(는) 필수입니다.` : false,
-              })}
-            />
+            {f.tagTable ? (
+              // 태그 원장 연동 필드는 자유 입력 대신 ADMIN 태그에서 선택한다.
+              <Controller
+                control={control}
+                name={f.name}
+                rules={{ required: f.required ? `${f.label}은(는) 필수입니다.` : false }}
+                render={({ field }) => (
+                  <TagSelect
+                    id={f.name}
+                    table={f.tagTable!}
+                    invalid={Boolean(errors[f.name])}
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    placeholder={`${f.label} 선택`}
+                  />
+                )}
+              />
+            ) : (
+              <Input
+                id={f.name}
+                invalid={Boolean(errors[f.name])}
+                {...register(f.name, {
+                  required: f.required ? `${f.label}은(는) 필수입니다.` : false,
+                })}
+              />
+            )}
             {errors[f.name] && (
               <p className="mt-1 text-caption text-danger">
                 {errors[f.name]?.message}

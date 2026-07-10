@@ -1,0 +1,174 @@
+import { Badge, Banner, Button, Spinner } from '@ynarcher/ui'
+import { useState, type ReactNode } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import { MaterialPanel } from '@/features/networks/MaterialPanel'
+import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
+import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
+import { PhotoBox } from '@/features/networks/PhotoBox'
+import { useContributions, useEntity } from '@/features/networks/hooks'
+import { StartupDetailForm } from '@/features/startup/StartupDetailForm'
+import {
+  StartupBusinessTeamCard,
+  readBusiness,
+  readTeam,
+} from '@/features/startup/StartupBusinessTeamCard'
+import { StartupGrowthSection } from '@/features/startup/StartupGrowthSection'
+import { StartupBusinessTimeline } from '@/features/startup/StartupBusinessTimeline'
+import { readBusinessStatus, readMetrics } from '@/features/startup/startupGrowth'
+import { StartupShareholderCard } from '@/features/startup/StartupShareholderCard'
+import { readShareholderHistory } from '@/features/startup/startupShareholders'
+import { STARTUP_MATERIAL_SECTIONS } from '@/features/startup/startupMaterials'
+import { SectionHeading } from '@/features/startup/SectionHeading'
+import { PlaceholderCard } from '@/features/startup/PlaceholderCard'
+import { StartupMediaCard } from '@/features/startup/StartupMediaCard'
+import { readMedia } from '@/features/startup/startupMedia'
+
+/** 첨부/피드백/기여 로그 대상 유형(다형 테이블 target_type). */
+const RESOURCE_TYPE = 'startup'
+
+/** 활동 내역 카드 섹션(플랫폼 전반 참여·수행 이력). 현재는 헤드라인만, 내용은 후속 구현. */
+const ACTIVITY_SECTIONS = ['참여 사업', '참여 M&A', '참여 프로젝트', '기업 진단', '멘토링 & 컨설팅']
+
+/** 라벨: 값 한 줄. */
+function Info({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="flex items-baseline gap-2">
+      <span className="shrink-0 text-caption text-gray-400">{label}:</span>
+      <span className="text-body text-gray-800">{value ?? '-'}</span>
+    </div>
+  )
+}
+
+function formatDate(v: unknown): string {
+  const s = v ? String(v) : ''
+  return s.length >= 10 ? s.slice(0, 10) : '-'
+}
+
+/**
+ * 스타트업 풀 상세페이지(모달 아님, NETWORKS와 동일한 카드 섹션 + 좌우 배치).
+ * 좌측: '기본 데이터' 카드(사진 + 이름/배지 + 부제 + 연락처·이메일 정보행) — NETWORKS 헤더 구성과 동일.
+ * 우측: 공용 패널(자료 관리·피드백·변동 이력). '수정'에서 사진 입력 포함 편집한다.
+ */
+export function StartupDetailPage() {
+  const { id } = useParams<{ id: string }>()
+  const { data: record, isLoading } = useEntity('startups', id)
+  const { data: contributions } = useContributions('startups', id)
+  const [editing, setEditing] = useState(false)
+
+  if (isLoading) return <Spinner />
+  if (!record) return <Banner tone="warning">스타트업 정보를 찾을 수 없습니다.</Banner>
+
+  const str = (key: string) => {
+    const v = record[key]
+    return v == null || v === '' ? '-' : String(v)
+  }
+  const logo = record.logo_url ? String(record.logo_url) : null
+  const industry = record.industry ? String(record.industry) : ''
+  // 부제 자리에는 한 줄 소개(business_profile.oneLiner)를 노출한다.
+  const oneLiner = readBusiness(record).oneLiner ?? ''
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <Link
+          to="/startup?tab=discovered"
+          className="text-caption font-semibold text-brand hover:text-brand-600"
+        >
+          ← 발굴기업
+        </Link>
+        {!editing && <Button onClick={() => setEditing(true)}>수정</Button>}
+      </div>
+
+      {editing ? (
+        <StartupDetailForm
+          recordId={record.id}
+          initial={record}
+          onDone={() => setEditing(false)}
+          onCancel={() => setEditing(false)}
+        />
+      ) : (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          {/* 좌측(2/3): 기본 데이터 카드 — 사진 + 이름/배지 + 부제 + 정보행 */}
+          <div className="space-y-4 lg:col-span-2">
+            <section className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+              <div className="flex items-center gap-5">
+                <PhotoBox src={logo} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h1 className="text-title-md font-bold text-gray-900">{record.name}</h1>
+                    {industry && (
+                      <Badge tone="neutral" size="sm">
+                        {industry}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="mt-1 text-body text-gray-500">{oneLiner || '-'}</p>
+                </div>
+              </div>
+
+              {/* 정보 그리드(3열): 단계·구분·현황 / 대표자·이메일·연락처 / 사업자등록번호·수정일 */}
+              <div className="mt-5 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-3">
+                <Info label="단계" value={str('stage')} />
+                <Info label="구분" value={str('management_status')} />
+                <Info label="현황" value={str('pool_status')} />
+                <Info label="대표자" value={str('representative')} />
+                <Info label="이메일" value={str('email')} />
+                <Info label="연락처" value={str('phone')} />
+                <Info label="사업자등록번호" value={str('biz_reg_no')} />
+                <Info label="수정일" value={formatDate(record.updated_at)} />
+              </div>
+
+              {/* 발굴 경로는 길 수 있어 전체 폭을 쓰되, 라벨: 값 한 줄로 표시하고 라벨↔값 간격을 넓힌다. */}
+              <div className="mt-2.5 border-t border-gray-100 pt-3">
+                <div className="flex items-baseline gap-4">
+                  <span className="shrink-0 text-caption text-gray-400">발굴 경로:</span>
+                  <span className="text-body text-gray-800">{str('discovery_source')}</span>
+                </div>
+              </div>
+            </section>
+
+            {/* 담당자 카드(기본 데이터 아래 별도 섹션). 임시: 담당자 필드 연동 전까지 '홍길동' 표기. */}
+            <section className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+              <h2 className="mb-3 text-body font-semibold text-gray-900">담당자</h2>
+              <p className="text-body text-gray-800">홍길동</p>
+            </section>
+
+            {/* 기업 개요 구분선(담당자 아래) */}
+            <SectionHeading title="기업 개요" />
+
+            {/* 기업 개요 첫 카드: 비즈니스 & 팀 역량. 카드 우상단 '수정'으로 편집. */}
+            <StartupBusinessTeamCard business={readBusiness(record)} team={readTeam(record)} />
+
+            {/* 주주 구성(기업 개요 첫 카드 아래): 변경 시점별 이력형(최신 표+도넛 + 과거 이력 모달). 편집은 통합 수정에서. */}
+            <StartupShareholderCard history={readShareholderHistory(record)} />
+
+            {/* 성장 지표(별도 그룹): 재무/매출/고용/투자 표 + 차트. 편집은 통합 수정에서. */}
+            <StartupGrowthSection metrics={readMetrics(record)} />
+
+            {/* 비즈니스 타임라인(성장 지표 고용·투자 현황 아래 맨 끝). 편집은 통합 수정에서. */}
+            <StartupBusinessTimeline businessStatus={readBusinessStatus(record)} />
+
+            {/* 활동 내역: 플랫폼 전반 참여·수행 이력(현재는 헤드라인만, 내용은 후속) */}
+            <SectionHeading title="활동 내역" />
+            {ACTIVITY_SECTIONS.map((title) => (
+              <PlaceholderCard key={title} title={title} />
+            ))}
+
+            {/* 미디어: 언론기사·영상 등 URL + OG 메타데이터. 편집·URL 첨부는 통합 수정에서. */}
+            <SectionHeading title="미디어" />
+            <StartupMediaCard media={readMedia(record)} />
+          </div>
+
+          {/* 우측(1/3): 자료(IR·재무제표·기타) → 피드백 → 변동 이력 (NETWORKS 상세와 동일한 공용 패널) */}
+          <div className="space-y-4 lg:col-span-1">
+            {STARTUP_MATERIAL_SECTIONS.map((s) => (
+              <MaterialPanel key={s.type} targetType={s.type} targetId={record.id} title={s.title} readOnly />
+            ))}
+            <FeedbackPanel targetType={RESOURCE_TYPE} targetId={record.id} />
+            <ChangeHistoryPanel contributions={contributions} />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

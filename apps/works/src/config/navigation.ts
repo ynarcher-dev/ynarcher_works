@@ -40,8 +40,16 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
   ],
   startup: [
     {
-      group: 'STARTUP 메인',
-      items: [{ label: '스타트업 목록' }],
+      items: [
+        { label: '대시보드', tab: 'dashboard' },
+        // 투자/보육/발굴 3분류. 발굴기업이 기존 스타트업 마스터 디렉토리.
+        { label: '투자기업', tab: 'invested', dividerBefore: true },
+        { label: '보육기업', tab: 'incubated' },
+        { label: '발굴기업', tab: 'discovered' },
+        { label: '회의록', tab: 'minutes', dividerBefore: true },
+        { label: '아처스캔', tab: 'archerscan' },
+        { label: '대용량 업로드', tab: 'bulk' },
+      ],
     },
   ],
   networks: [
@@ -94,7 +102,10 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         { label: '구분태그 관리', tab: 'categories' },
         { label: '권역태그 관리', tab: 'regions' },
         { label: '국가태그 관리', tab: 'countries' },
-        { label: '민감정보 관리', tab: 'sensitive' },
+        { label: '투자단계 태그관리', tab: 'investment_stages', dividerBefore: true },
+        { label: '기업구분 태그관리', tab: 'company_categories' },
+        { label: '기업현황 태그관리', tab: 'company_statuses' },
+        { label: '민감정보 관리', tab: 'sensitive', dividerBefore: true },
         { label: '중복 병합 검증', tab: 'merge' },
         { label: '감사 로그 모니터', tab: 'audit' },
         { label: '다운로드 사유 로그', tab: 'downloads' },
