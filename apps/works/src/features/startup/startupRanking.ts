@@ -1,8 +1,17 @@
 import type { EntityRow } from '@/features/networks/hooks'
 import { readIndustries, readMetrics, type GrowthMetric } from '@/features/startup/startupGrowth'
 
-/** 순위 모집단(peer group) 기준. */
-export type RankMode = 'industry' | 'year'
+/**
+ * 순위 모집단(peer group) 기준.
+ * - tag: 특정 산업 태그 하나를 가진 기업들(태그가 여러 개면 태그마다 별도 모드).
+ * - year: 대상과 같은 설립년차 구간의 기업들.
+ */
+export type RankMode = { type: 'tag'; tag: string } | { type: 'year' }
+
+/** 모드 식별 키(탭 활성 비교·React key용). */
+export function modeKey(mode: RankMode): string {
+  return mode.type === 'tag' ? `tag:${mode.tag}` : 'year'
+}
 
 /** 순위 대상 지표(재무/매출/고용/투자 9종). */
 export interface RankMetricDef {
@@ -73,10 +82,18 @@ function latestValue(record: EntityRow, pick: RankMetricDef['pick']): number | n
   return null
 }
 
+/** 정렬 후 중앙값(짝수 개면 가운데 두 값 평균). 빈 배열은 null. */
+function median(nums: number[]): number | null {
+  if (nums.length === 0) return null
+  const sorted = [...nums].sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  return sorted.length % 2 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2
+}
+
 /**
  * 대상 기업이 모집단에서 어떤 순위인지 계산한다.
- * 모집단은 대상을 포함하며, 해당 지표에 값이 있는 기업만 분모(total)로 센다.
- * 내림차순(값이 클수록 1위). 값 없으면 value=null·rank=null.
+ * 모집단은 대상을 포함하며, 해당 지표에 값이 있는 기업만 분모(total)로 세고
+ * 그 값들로 평균·중앙값을 낸다. 내림차순(값이 클수록 1위). 값 없으면 rank=null.
  */
 export interface RankResult {
   value: number | null
@@ -84,6 +101,10 @@ export interface RankResult {
   total: number
   /** 상위 백분위(rank/total, 정수 %). total<2면 null. */
   percentile: number | null
+  /** 모집단 평균값. 값 있는 기업이 없으면 null. */
+  mean: number | null
+  /** 모집단 중앙값. 값 있는 기업이 없으면 null. */
+  median: number | null
 }
 export function rankInGroup(target: EntityRow, group: EntityRow[], def: RankMetricDef): RankResult {
   const values = group
@@ -91,23 +112,23 @@ export function rankInGroup(target: EntityRow, group: EntityRow[], def: RankMetr
     .filter((v): v is number => v != null)
   const value = latestValue(target, def.pick)
   const total = values.length
-  if (value == null) return { value: null, rank: null, total, percentile: null }
+  const mean = total > 0 ? values.reduce((sum, v) => sum + v, 0) / total : null
+  const mid = median(values)
+  if (value == null) return { value: null, rank: null, total, percentile: null, mean, median: mid }
   const rank = values.filter((v) => v > value).length + 1
   const percentile = total >= 2 ? Math.max(1, Math.round((rank / total) * 100)) : null
-  return { value, rank, total, percentile }
+  return { value, rank, total, percentile, mean, median: mid }
 }
 
 /**
  * 모드별 모집단을 구한다. 대상 자신도 포함한다.
- * - industry: 대상과 산업 태그를 하나라도 공유하는 기업.
+ * - tag: 해당 산업 태그를 가진 기업.
  * - year: 대상과 같은 년차 구간에 속하는 기업.
- * 대상이 기준(태그/설립일)을 갖지 못하면 null(계산 불가).
+ * year 모드에서 대상에 설립일이 없으면 null(계산 불가). tag 모드는 항상 배열.
  */
 export function peerGroup(target: EntityRow, pool: EntityRow[], mode: RankMode): EntityRow[] | null {
-  if (mode === 'industry') {
-    const tags = new Set(readIndustries(target))
-    if (tags.size === 0) return null
-    return pool.filter((r) => readIndustries(r).some((i) => tags.has(i)))
+  if (mode.type === 'tag') {
+    return pool.filter((r) => readIndustries(r).includes(mode.tag))
   }
   const bucket = yearBucket(target.founded_on)
   if (!bucket) return null
