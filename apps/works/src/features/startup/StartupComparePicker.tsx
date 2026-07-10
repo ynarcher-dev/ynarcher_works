@@ -2,6 +2,7 @@ import { Input, Modal, Spinner } from '@ynarcher/ui'
 import { useState } from 'react'
 import { PhotoBox } from '@/features/networks/PhotoBox'
 import { useEntityList, type EntityRow } from '@/features/networks/hooks'
+import { readIndustries } from '@/features/startup/startupGrowth'
 
 interface Props {
   open: boolean
@@ -42,7 +43,7 @@ export function StartupComparePicker({ open, onClose, onPick, excludeId }: Props
             <ul className="divide-y divide-gray-100">
               {rows.map((r) => {
                 const logo = r.logo_url ? String(r.logo_url) : null
-                const industry = r.industry ? String(r.industry) : ''
+                const industry = readIndustries(r).join(' · ')
                 return (
                   <li key={r.id}>
                     <button

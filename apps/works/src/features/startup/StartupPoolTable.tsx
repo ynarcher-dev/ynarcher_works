@@ -1,5 +1,6 @@
 import { Badge, DataTable, type Column, type DataTableProps } from '@ynarcher/ui'
 import { useMemo } from 'react'
+import { readIndustries } from '@/features/startup/startupGrowth'
 
 /**
  * 스타트업 풀(발굴·보육·투자) 목록 행. `startups` 테이블 스키마의 표시 컬럼 부분집합이다.
@@ -87,7 +88,7 @@ export function StartupPoolTable({
         key: 'industry',
         header: '산업',
         className: 'min-w-[8rem]',
-        render: (r) => r.industry || '-',
+        render: (r) => readIndustries(r).join(' · ') || '-',
       },
       {
         key: 'stage',

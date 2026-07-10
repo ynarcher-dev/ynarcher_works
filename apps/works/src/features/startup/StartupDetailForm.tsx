@@ -1,9 +1,10 @@
-import { Button, Input, Select, TextArea, useToast } from '@ynarcher/ui'
+import { Button, cn, Input, Select, TextArea, useToast } from '@ynarcher/ui'
 import { useState, type ChangeEvent, type ReactNode } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { PhotoBox } from '@/features/networks/PhotoBox'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { TagSelect } from '@/features/admin/TagSelect'
+import { useTags } from '@/features/admin/hooks'
 import { STARTUP_MATERIAL_SECTIONS } from '@/features/startup/startupMaterials'
 import { recordContribution, useUpdateEntity, type EntityRow } from '@/features/networks/hooks'
 import { StartupBusinessTeamFields } from '@/features/startup/StartupBusinessTeamFields'
@@ -19,9 +20,13 @@ import { StartupShareholderFields } from '@/features/startup/StartupShareholderF
 import { readShareholderHistory, type ShareholderSnapshot } from '@/features/startup/startupShareholders'
 import { StartupMediaFields } from '@/features/startup/StartupMediaFields'
 import { readMedia, type MediaItem } from '@/features/startup/startupMedia'
+import { readIndustries } from '@/features/startup/startupGrowth'
 
 /** 회사 형태 고정 선택지. */
 const COMPANY_FORMS = ['법인', '개인', '예비'] as const
+
+/** 산업 태그 다중 선택 상한(networks 전문 분야와 동일 규칙). */
+const MAX_INDUSTRIES = 3
 
 export interface StartupDetailFormValues {
   name: string
@@ -29,7 +34,6 @@ export interface StartupDetailFormValues {
   company_form: string
   founded_on: string
   biz_reg_no: string
-  industry: string
   stage: string
   management_status: string
   pool_status: string
@@ -91,6 +95,18 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel }: Props
   const [photo, setPhoto] = useState<string>(str('logo_url'))
   // 핵심 역량 태그는 배열 상태로 별도 관리(폼 값과 분리).
   const [capabilities, setCapabilities] = useState<string[]>(t.capabilities ?? [])
+  // 산업 태그: ADMIN 산업 관리(industry_tags)에서 다중 선택(최대 3개), industries(jsonb 배열)에 저장.
+  const { data: industryTags } = useTags('industry_tags')
+  const [industries, setIndustries] = useState<string[]>(readIndustries(initial))
+  const toggleIndustry = (name: string) => {
+    setIndustries((prev) =>
+      prev.includes(name)
+        ? prev.filter((n) => n !== name)
+        : prev.length >= MAX_INDUSTRIES
+          ? prev
+          : [...prev, name],
+    )
+  }
   // 성장 지표·비즈니스 현황도 배열 상태로 관리해 저장 시 jsonb로 통째 반영한다.
   const [metrics, setMetrics] = useState<GrowthMetric[]>(readMetrics(initial))
   const [businessStatus, setBusinessStatus] = useState<BusinessStatusEntry[]>(readBusinessStatus(initial))
@@ -121,7 +137,6 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel }: Props
       company_form: str('company_form'),
       founded_on: str('founded_on').slice(0, 10),
       biz_reg_no: str('biz_reg_no'),
-      industry: str('industry'),
       stage: str('stage'),
       management_status: str('management_status'),
       pool_status: str('pool_status'),
@@ -144,7 +159,9 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel }: Props
       company_form: v.company_form.trim() || null,
       founded_on: v.founded_on || null,
       biz_reg_no: v.biz_reg_no.trim() || null,
-      industry: v.industry.trim() || null,
+      // 산업: industries(배열)가 SSOT. 대표값(첫 번째)은 하위 호환용으로 industry 스칼라에 미러링.
+      industries,
+      industry: industries[0] ?? null,
       stage: v.stage.trim() || null,
       management_status: v.management_status.trim() || null,
       pool_status: v.pool_status.trim() || null,
@@ -203,7 +220,7 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel }: Props
     }
   }
 
-  type TagFieldName = 'industry' | 'stage' | 'management_status' | 'pool_status'
+  type TagFieldName = 'stage' | 'management_status' | 'pool_status'
   const tagField = (name: TagFieldName, table: string, label: string) => (
     <Field label={label}>
       <Controller
@@ -271,7 +288,37 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel }: Props
           <Field label="사업자등록번호">
             <Input {...register('biz_reg_no')} />
           </Field>
-          {tagField('industry', 'industry_tags', '산업')}
+          <Field label="산업" className="sm:col-span-2">
+            <div className="flex flex-wrap gap-1.5">
+              {(industryTags ?? []).map((tag) => {
+                const on = industries.includes(tag.name)
+                const disabled = !on && industries.length >= MAX_INDUSTRIES
+                return (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => toggleIndustry(tag.name)}
+                    className={cn(
+                      'rounded-radius-sm border px-2 py-0.5 text-caption transition-colors',
+                      on
+                        ? 'border-brand bg-brand/10 font-medium text-brand'
+                        : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50',
+                      disabled && 'cursor-not-allowed opacity-40 hover:bg-white',
+                    )}
+                  >
+                    {tag.name}
+                  </button>
+                )
+              })}
+              {(industryTags ?? []).length === 0 && (
+                <span className="text-caption text-gray-400">
+                  등록된 산업 태그가 없습니다. (ADMIN › 산업 관리)
+                </span>
+              )}
+            </div>
+            <p className="mt-1 text-caption text-gray-400">산업 관리 태그에서 최대 {MAX_INDUSTRIES}개 선택</p>
+          </Field>
           {tagField('stage', 'investment_stage_tags', '단계')}
           {tagField('management_status', 'company_category_tags', '구분')}
           {tagField('pool_status', 'company_status_tags', '현황')}

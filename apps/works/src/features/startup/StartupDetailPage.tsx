@@ -14,7 +14,7 @@ import {
 } from '@/features/startup/StartupBusinessTeamCard'
 import { StartupGrowthSection } from '@/features/startup/StartupGrowthSection'
 import { StartupBusinessTimeline } from '@/features/startup/StartupBusinessTimeline'
-import { readBusinessStatus, readMetrics, formatFounded } from '@/features/startup/startupGrowth'
+import { readBusinessStatus, readMetrics, formatFounded, readIndustries } from '@/features/startup/startupGrowth'
 import { StartupShareholderCard } from '@/features/startup/StartupShareholderCard'
 import { readShareholderHistory } from '@/features/startup/startupShareholders'
 import { STARTUP_MATERIAL_SECTIONS } from '@/features/startup/startupMaterials'
@@ -23,6 +23,7 @@ import { PlaceholderCard } from '@/features/startup/PlaceholderCard'
 import { StartupMediaCard } from '@/features/startup/StartupMediaCard'
 import { readMedia } from '@/features/startup/startupMedia'
 import { StartupComparePanel } from '@/features/startup/StartupComparePanel'
+import { StartupRankCard } from '@/features/startup/StartupRankCard'
 
 /** 첨부/피드백/기여 로그 대상 유형(다형 테이블 target_type). */
 const RESOURCE_TYPE = 'startup'
@@ -64,7 +65,7 @@ export function StartupDetailPage() {
     return v == null || v === '' ? '-' : String(v)
   }
   const logo = record.logo_url ? String(record.logo_url) : null
-  const industry = record.industry ? String(record.industry) : ''
+  const industries = readIndustries(record)
   // 부제 자리에는 한 줄 소개(business_profile.oneLiner)를 노출한다.
   const oneLiner = readBusiness(record).oneLiner ?? ''
 
@@ -97,11 +98,11 @@ export function StartupDetailPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h1 className="text-title-md font-bold text-gray-900">{record.name}</h1>
-                    {industry && (
-                      <Badge tone="neutral" size="sm">
-                        {industry}
+                    {industries.map((ind) => (
+                      <Badge key={ind} tone="neutral" size="sm">
+                        {ind}
                       </Badge>
-                    )}
+                    ))}
                   </div>
                   <p className="mt-1 text-body text-gray-500">{oneLiner || '-'}</p>
                 </div>
@@ -169,7 +170,10 @@ export function StartupDetailPage() {
             ))}
             <FeedbackPanel targetType={RESOURCE_TYPE} targetId={record.id} />
             <ChangeHistoryPanel contributions={contributions} />
+            {/* 벤치마크: 동종기업 대비 지표 좌우 비교 카드 + 산업/년차 대비 순위 */}
+            <SectionHeading title="벤치마크" />
             <StartupComparePanel record={record} />
+            <StartupRankCard record={record} />
           </div>
         </div>
       )}

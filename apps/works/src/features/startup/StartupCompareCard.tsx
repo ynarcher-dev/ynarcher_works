@@ -3,7 +3,7 @@ import { Plus, X } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { PhotoBox } from '@/features/networks/PhotoBox'
 import { readBusiness } from '@/features/startup/StartupBusinessTeamCard'
-import { formatFounded, readMetrics, type GrowthMetric } from '@/features/startup/startupGrowth'
+import { formatFounded, readIndustries, readMetrics, type GrowthMetric } from '@/features/startup/startupGrowth'
 import type { EntityRow } from '@/features/networks/hooks'
 
 /** 레코드의 텍스트 필드를 안전하게 문자열로 읽는다(없으면 빈 문자열). */
@@ -24,9 +24,9 @@ function latestInvestment(record: EntityRow | null): GrowthMetric | undefined {
   )
 }
 
-/** 금액(천원 단위, ÷1000 반올림) 텍스트. 값 없으면 '-'. 음수는 ▼로 표기. */
+/** 금액(천원 단위, ÷1000 반올림) 텍스트. 값 없으면 '정보 없음'. 음수는 ▼로 표기. */
 function wonK(v?: number | null): { text: string; negative: boolean } {
-  if (v == null || Number.isNaN(Number(v))) return { text: '-', negative: false }
+  if (v == null || Number.isNaN(Number(v))) return { text: '정보 없음', negative: false }
   const n = Math.round(Number(v) / 1000)
   if (n < 0) return { text: `▼${Math.abs(n).toLocaleString()}`, negative: true }
   return { text: n.toLocaleString(), negative: false }
@@ -35,7 +35,7 @@ function wonK(v?: number | null): { text: string; negative: boolean } {
 /** 비교 표의 한쪽(A 또는 B) 값 셀. 금액(천원)/인원(명) 단위, 열 내 중앙정렬. */
 function Val({ v, unit }: { v?: number | null; unit: 'won' | 'count' }) {
   if (unit === 'count') {
-    const text = v == null || Number.isNaN(Number(v)) ? '-' : `${Number(v).toLocaleString()}명`
+    const text = v == null || Number.isNaN(Number(v)) ? '정보 없음' : `${Number(v).toLocaleString()}명`
     return <span className="block min-w-0 truncate text-center text-caption tabular-nums text-gray-800">{text}</span>
   }
   const { text, negative } = wonK(v)
@@ -62,15 +62,15 @@ function Row({ label, a, b, unit = 'won' }: { label: string; a?: number | null; 
   )
 }
 
-/** A · (중앙 항목명) · B 텍스트 한 줄(소개·대표자·설립일·연도·라운드 등). 값 없으면 '-'. */
+/** A · (중앙 항목명) · B 텍스트 한 줄(소개·대표자·설립일·연도·라운드 등). 값 없으면 '정보 없음'. */
 function TextRow({ label, a, b }: { label: string; a?: string; b?: string }) {
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_6rem_minmax(0,1fr)] items-stretch gap-2 py-1.5">
-      <span className="min-w-0 self-center break-words text-center text-caption text-gray-800">{a || '-'}</span>
+      <span className="min-w-0 self-center break-words text-center text-caption text-gray-800">{a || '정보 없음'}</span>
       <span className="flex items-center justify-center whitespace-nowrap border-x border-gray-100 px-1.5 text-center text-caption text-gray-400">
         {label}
       </span>
-      <span className="min-w-0 self-center break-words text-center text-caption text-gray-800">{b || '-'}</span>
+      <span className="min-w-0 self-center break-words text-center text-caption text-gray-800">{b || '정보 없음'}</span>
     </div>
   )
 }
@@ -90,7 +90,7 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
 /** 기업 헤더(로고·이름·산업·기준연도). 중앙 정렬 스택. onClear 시 썸네일 우상단에 해제(X) 배지. */
 function CompanyHead({ record, year, onClear }: { record: EntityRow; year?: number; onClear?: () => void }) {
   const logo = record.logo_url ? String(record.logo_url) : null
-  const industry = record.industry ? String(record.industry) : ''
+  const industries = readIndustries(record)
   return (
     <div className="flex min-w-0 flex-col items-center text-center">
       <div className="relative">
@@ -107,12 +107,16 @@ function CompanyHead({ record, year, onClear }: { record: EntityRow; year?: numb
         )}
       </div>
       <p className="mt-1.5 w-full truncate text-body font-bold text-gray-900">{record.name}</p>
-      {industry && (
-        <Badge tone="neutral" size="sm">
-          {industry}
-        </Badge>
+      {industries.length > 0 && (
+        <div className="mt-0.5 flex flex-wrap justify-center gap-1">
+          {industries.map((ind) => (
+            <Badge key={ind} tone="neutral" size="sm">
+              {ind}
+            </Badge>
+          ))}
+        </div>
       )}
-      {year != null && <span className="mt-0.5 text-caption text-gray-400">기준 {year}</span>}
+      {year != null && <span className="mt-0.5 text-caption text-gray-400">{year}</span>}
     </div>
   )
 }

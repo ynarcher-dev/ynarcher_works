@@ -30,6 +30,19 @@ function asArray(v: unknown): unknown[] {
   return Array.isArray(v) ? v : []
 }
 
+/**
+ * 산업 태그 배열(다중, 최대 3)을 읽는다. SSOT는 industries(jsonb 배열)이며,
+ * 배열이 비어 있으면 레거시 단일 industry 텍스트를 1개짜리 목록으로 흡수한다.
+ */
+export function readIndustries(record: EntityRow): string[] {
+  const list = asArray(record.industries)
+    .map((v) => String(v).trim())
+    .filter(Boolean)
+  if (list.length > 0) return list
+  const legacy = record.industry ? String(record.industry).trim() : ''
+  return legacy ? [legacy] : []
+}
+
 /** 성장 지표를 연도 내림차순으로 읽는다. */
 export function readMetrics(record: EntityRow): GrowthMetric[] {
   return asArray(record.growth_metrics)
