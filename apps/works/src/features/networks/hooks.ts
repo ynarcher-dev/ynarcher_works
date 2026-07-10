@@ -5,7 +5,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { ENTITIES, type EntityKey } from '@/features/networks/config'
+import { ENTITIES, normalizeEntityRowCategory, type EntityKey } from '@/features/networks/config'
 
 export type EntityRow = Record<string, unknown> & {
   id: string
@@ -29,7 +29,7 @@ export function useEntityList(table: EntityKey, keyword: string) {
       if (keyword.trim()) q = q.ilike('name', `%${keyword.trim()}%`)
       const { data, error } = await q
       if (error) throw error
-      return (data ?? []) as EntityRow[]
+      return ((data ?? []) as EntityRow[]).map((row) => normalizeEntityRowCategory(row, table))
     },
   })
 }
@@ -85,7 +85,11 @@ export function useEntityPage(
         totalAll = allCount ?? total
       }
 
-      return { rows: (data ?? []) as EntityRow[], total, totalAll }
+      return {
+        rows: ((data ?? []) as EntityRow[]).map((row) => normalizeEntityRowCategory(row, table)),
+        total,
+        totalAll,
+      }
     },
   })
 }
@@ -102,7 +106,7 @@ export function useEntity(table: EntityKey, id: string | undefined) {
         .eq('id', id)
         .maybeSingle()
       if (error) throw error
-      return (data ?? null) as EntityRow | null
+      return data ? normalizeEntityRowCategory(data as EntityRow, table) : null
     },
   })
 }

@@ -121,7 +121,7 @@ export function useOrgLevels(versionId?: string) {
     queryFn: async (): Promise<OrgLevel[]> => {
       const { data, error } = await supabase
         .from('org_levels')
-        .select('id, name, sort_order')
+        .select('id, name, sort_order, version_id')
         .eq('version_id', scopeId as string)
         .is('deleted_at', null)
         .order('sort_order', { ascending: true })
@@ -236,7 +236,9 @@ export function useCreateOrgLevel() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (v: { name: string; sort_order: number; version_id: string }) => {
-      const { error } = await supabase.from('org_levels').insert(v)
+      const { error } = await supabase
+        .from('org_levels')
+        .insert({ name: v.name, sort_order: v.sort_order, version_id: v.version_id })
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: LEVEL_KEY }),
@@ -307,6 +309,7 @@ export function useCloneOrgVersion() {
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: VERSION_KEY })
+      void qc.invalidateQueries({ queryKey: LEVEL_KEY })
       void qc.invalidateQueries({ queryKey: DEPT_KEY })
       void qc.invalidateQueries({ queryKey: MEMBER_KEY })
     },
@@ -336,6 +339,7 @@ export function useUpdateOrgVersion() {
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: VERSION_KEY })
+      void qc.invalidateQueries({ queryKey: LEVEL_KEY })
       void qc.invalidateQueries({ queryKey: DEPT_KEY })
       void qc.invalidateQueries({ queryKey: MEMBER_KEY })
     },

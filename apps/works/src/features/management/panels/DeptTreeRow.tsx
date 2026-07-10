@@ -1,5 +1,5 @@
 import { Button, InlineSelect, Input, cn } from '@ynarcher/ui'
-import { ChevronRight, Eye, EyeOff, GripVertical, Pencil, Plus, Trash2, Users } from 'lucide-react'
+import { Check, ChevronRight, Eye, EyeOff, GripVertical, Pencil, Plus, Trash2, Users, X } from 'lucide-react'
 import type { DragEvent } from 'react'
 import {
   type DeptTreeNode,
@@ -35,6 +35,7 @@ interface DeptTreeRowProps {
   onDragEndRow: () => void
   /** false면 읽기전용: 드래그·이름편집·레벨셀렉트·인력배치·액션 버튼을 비활성/숨김. 기본 true. */
   editable?: boolean
+  structureActionsEnabled?: boolean
 }
 
 /** 행/헤더 공용 그리드 컬럼: 조직명 | 레벨 | 인원 | 액션. 헤더와 행 정렬을 맞춘다. */
@@ -53,6 +54,7 @@ export function dropPosFromEvent(e: DragEvent): DropPos {
 export function DeptTreeRow(props: DeptTreeRowProps) {
   const { node, collapsed, editingId, dropHint } = props
   const editable = props.editable ?? true
+  const structureActionsEnabled = props.structureActionsEnabled ?? true
   const hasChildren = node.children.length > 0
   const isCollapsed = collapsed.has(node.id)
   const isEditing = editable && editingId === node.id
@@ -64,16 +66,16 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
   return (
     <>
       <div
-        draggable={editable && !isEditing}
+        draggable={editable && structureActionsEnabled && !isEditing}
         onDragStart={(e) => {
-          if (!editable) return
+          if (!editable || !structureActionsEnabled) return
           // Firefox는 setData가 있어야 드래그가 개시된다.
           e.dataTransfer.setData('text/plain', node.id)
           e.dataTransfer.effectAllowed = 'move'
           props.onDragStartRow(node.id)
         }}
-        onDragOver={(e) => editable && props.onDragOverRow(e, node.id)}
-        onDrop={() => editable && props.onDropRow(node.id)}
+        onDragOver={(e) => editable && structureActionsEnabled && props.onDragOverRow(e, node.id)}
+        onDrop={() => editable && structureActionsEnabled && props.onDropRow(node.id)}
         onDragEnd={props.onDragEndRow}
         className={cn(
           DEPT_GRID,
@@ -94,7 +96,7 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
           className="flex min-w-0 items-center gap-1.5"
           style={{ paddingLeft: `${node.depth * 20 + 8}px` }}
         >
-          {editable ? (
+          {editable && structureActionsEnabled ? (
             <GripVertical
               size={14}
               className="shrink-0 cursor-grab text-gray-300 group-hover:text-gray-400"
@@ -128,7 +130,6 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
                 if (e.key === 'Enter') props.onCommitEdit()
                 if (e.key === 'Escape') props.onCancelEdit()
               }}
-              onBlur={props.onCommitEdit}
               className="h-7 max-w-56"
             />
           ) : editable ? (
@@ -168,7 +169,7 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
         {/* 열2: 조직 레벨(노드별 지정 · 인사관리 컬럼 파생) */}
         <div>
           {!isEditing &&
-            (editable ? (
+            (editable && structureActionsEnabled ? (
               <InlineSelect
                 value={node.levelId}
                 onChange={(e) => props.onChangeLevel(node.id, e.target.value)}
@@ -241,7 +242,29 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
 
         {/* 열4: 액션 메뉴(편집 모드에서만 노출) */}
         <div className="flex items-center justify-end gap-0.5">
-          {editable && !isEditing && (
+          {editable && isEditing && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                title="저장"
+                onClick={props.onCommitEdit}
+                className="h-7 w-7 px-0 text-info"
+              >
+                <Check size={14} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                title="취소"
+                onClick={props.onCancelEdit}
+                className="h-7 w-7 px-0 text-gray-400"
+              >
+                <X size={14} />
+              </Button>
+            </>
+          )}
+          {editable && structureActionsEnabled && !isEditing && (
             <>
               <Button
                 variant="ghost"

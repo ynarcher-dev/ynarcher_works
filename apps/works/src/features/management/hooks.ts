@@ -135,7 +135,7 @@ export function useEmployees() {
     },
     // 소속(department_id)은 오늘의 유효 버전 배치로 덮어쓴다(로딩 전에는 users 미러 유지).
     select: (rows: Employee[]) =>
-      ready ? rows.map((r) => ({ ...r, department_id: map.get(r.id) ?? null })) : rows,
+      ready ? rows.map((r) => ({ ...r, department_id: map.get(r.id) ?? r.department_id ?? null })) : rows,
   })
 }
 
@@ -156,7 +156,7 @@ export function useEmployee(id: string | undefined) {
       return (data ?? null) as Employee | null
     },
     select: (row: Employee | null) =>
-      row && ready ? { ...row, department_id: map.get(row.id) ?? null } : row,
+      row && ready ? { ...row, department_id: map.get(row.id) ?? row.department_id ?? null } : row,
   })
 }
 
@@ -182,7 +182,10 @@ export function useEmployeesPage(keyword: string, page: number, pageSize: number
       ready
         ? {
             ...pageData,
-            rows: pageData.rows.map((r) => ({ ...r, department_id: map.get(r.id) ?? null })),
+            rows: pageData.rows.map((r) => ({
+              ...r,
+              department_id: map.get(r.id) ?? r.department_id ?? null,
+            })),
           }
         : pageData,
     queryFn: async (): Promise<EmployeePage> => {

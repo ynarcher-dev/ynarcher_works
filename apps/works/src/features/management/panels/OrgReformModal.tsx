@@ -75,7 +75,6 @@ export function OrgReformModal({ open, onClose, versions, activeVersionId }: Org
         effectiveFrom: from,
         effectiveTo: to || null,
       })
-      await updateVersion.mutateAsync({ id: newId, values: { status: 'DRAFT' } })
       setDraftId(newId)
     } catch (e) {
       setError(e instanceof Error ? e.message : '초안 생성에 실패했습니다.')
@@ -84,11 +83,7 @@ export function OrgReformModal({ open, onClose, versions, activeVersionId }: Org
     }
   }
 
-  /** 설계 중 날짜/이름 변경은 초안 버전에 바로 반영한다. */
-  const patchDraft = (values: Partial<{ label: string; effective_from: string; effective_to: string | null }>) => {
-    if (draftId) updateVersion.mutate({ id: draftId, values })
-  }
-
+  /** 설계 중 날짜/이름 변경은 예약하기 버튼을 누를 때 함께 저장한다. */
   /**
    * 예약하기: 초안을 PUBLISHED로 확정 → 예정 버전으로 편입.
    * 동시에 현재 조직의 종료일을 새 조직 시작 전일로 맞춘다(자정 넘어가면 새 조직이 발효·교대).
@@ -101,7 +96,12 @@ export function OrgReformModal({ open, onClose, versions, activeVersionId }: Org
     try {
       await updateVersion.mutateAsync({
         id: draftId,
-        values: { status: 'PUBLISHED', effective_from: from, effective_to: to || null },
+        values: {
+          label: label.trim(),
+          status: 'PUBLISHED',
+          effective_from: from,
+          effective_to: to || null,
+        },
       })
       if (active) {
         // 현재 조직 종료일 = 새 조직 시작 전일(핸드오프). 겹침 없이 자정 교대.
@@ -244,7 +244,6 @@ export function OrgReformModal({ open, onClose, versions, activeVersionId }: Org
                   <Input
                     value={label}
                     onChange={(e) => setLabel(e.target.value)}
-                    onBlur={() => label.trim() && patchDraft({ label: label.trim() })}
                     className="h-9 bg-white"
                   />
                 </label>
@@ -254,11 +253,7 @@ export function OrgReformModal({ open, onClose, versions, activeVersionId }: Org
                     type="date"
                     value={from}
                     min={TOMORROW()}
-                    onChange={(e) => {
-                      setFrom(e.target.value)
-                      if (e.target.value && e.target.value >= TOMORROW())
-                        patchDraft({ effective_from: e.target.value })
-                    }}
+                    onChange={(e) => setFrom(e.target.value)}
                     className="h-9 bg-white"
                   />
                 </label>
@@ -270,10 +265,7 @@ export function OrgReformModal({ open, onClose, versions, activeVersionId }: Org
                     type="date"
                     value={to}
                     min={from || TOMORROW()}
-                    onChange={(e) => {
-                      setTo(e.target.value)
-                      patchDraft({ effective_to: e.target.value || null })
-                    }}
+                    onChange={(e) => setTo(e.target.value)}
                     className="h-9 bg-white"
                   />
                 </label>

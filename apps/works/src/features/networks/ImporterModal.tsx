@@ -190,7 +190,7 @@ export function ImporterModal({
         </p>
         {routeByCategory && (
           <p className="text-caption text-gray-500">
-            '구분'은 전문가·VAN·투자사·기업·기관·대학·외주/거래·미분류 중 하나로 저장되며,
+            '구분'은 전문가·BAN·투자사·기업·기관·대학·외주/거래·미분류 중 하나로 저장되며,
             해당하지 않는 값(게스트·스타트업 등)은 미분류로 등록됩니다.
           </p>
         )}

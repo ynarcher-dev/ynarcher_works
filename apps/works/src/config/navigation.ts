@@ -51,7 +51,7 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
     {
       group: '마스터 네트워크 관리',
       items: [
-        { label: 'VAN 네트워크', tab: 'van' },
+        { label: 'BAN 네트워크', tab: 'van' },
         { label: 'EXP 네트워크', tab: 'exp' },
         { label: '전문가 네트워크', tab: 'experts', dividerBefore: true },
         { label: '투자사 네트워크', tab: 'investors' },

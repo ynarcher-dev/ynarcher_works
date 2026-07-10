@@ -4,10 +4,12 @@ import { useNavigate } from 'react-router-dom'
 import { maskEmail, maskPhone } from '@/lib/mask'
 import { useSensitiveStore } from '@/features/admin/sensitiveStore'
 import {
+  activeOrgVersionId,
   useDeactivateEmployee,
   useDepartments,
   useEmployeesPage,
   useOrgLevels,
+  useOrgVersions,
   type Employee,
 } from '@/features/management/hooks'
 import { buildTiers, resolveByTier, toNodes } from '@/features/management/panels/departmentsMock'
@@ -55,8 +57,13 @@ export function EmployeeDirectory({
     setPage(0)
   }, [keyword])
 
-  const { data: depts } = useDepartments()
-  const { data: levels = [] } = useOrgLevels()
+  const { data: versionRows } = useOrgVersions()
+  const activeVersionId = useMemo(
+    () => (versionRows ? activeOrgVersionId(versionRows) : null),
+    [versionRows],
+  )
+  const { data: depts, isLoading: deptLoading } = useDepartments(false, activeVersionId ?? undefined)
+  const { data: levels = [], isLoading: levelLoading } = useOrgLevels(activeVersionId ?? undefined)
   const { data, isLoading } = useEmployeesPage(keyword, page, PAGE_SIZE)
 
   const nodes = useMemo(() => toNodes(depts ?? []), [depts])
@@ -130,7 +137,7 @@ export function EmployeeDirectory({
     { key: 'fund_operated', header: '펀드(운용)', render: () => DASH, align: 'right', className: 'w-20' },
   ]
 
-  if (isLoading) return <Spinner />
+  if (isLoading || (deptLoading && !depts) || (levelLoading && !levels.length)) return <Spinner />
 
   return (
     <DataTable

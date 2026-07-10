@@ -83,7 +83,7 @@ export const ENTITIES: Record<EntityKey, EntityConfig> = {
   },
   van: {
     key: 'van',
-    label: 'VAN',
+    label: 'BAN',
     table: 'van',
     fields: PERSON_FIELDS,
     listColumns: NETWORK_PROFILE_COLUMNS,
@@ -244,12 +244,30 @@ export const CATEGORY_OPTIONS: { key: EntityKey; label: string }[] = DIRECTORY_E
   (key) => ({ key, label: ENTITIES[key].label }),
 )
 
+const CATEGORY_ALIASES: Record<string, EntityKey> = {
+  VAN: 'van',
+}
+
+export function displayCategoryLabel(value: unknown): unknown {
+  return value === 'VAN' ? ENTITIES.van.label : value
+}
+
+export function normalizeEntityRowCategory<T extends Record<string, unknown>>(row: T, table: EntityKey): T {
+  if (table !== 'van' || row.profile == null || typeof row.profile !== 'object') return row
+  const profile = row.profile as Record<string, unknown>
+  if (profile.category !== 'VAN') return row
+  return { ...row, profile: { ...profile, category: displayCategoryLabel(profile.category) } }
+}
+
 /**
  * "구분" 값(라벨)으로 저장 대상 엔티티 키를 해석한다.
  * ENTITY_ORDER 라벨과 매칭되지 않는 값(게스트·스타트업 등)은 미분류(others)로 흡수한다.
  */
 export function resolveEntityFromCategory(value: string | null | undefined): EntityKey {
-  const found = CATEGORY_OPTIONS.find((o) => o.label === (value ?? '').trim())
+  const trimmed = (value ?? '').trim()
+  const alias = CATEGORY_ALIASES[trimmed]
+  if (alias) return alias
+  const found = CATEGORY_OPTIONS.find((o) => o.label === trimmed)
   return found?.key ?? 'others'
 }
 

@@ -98,7 +98,7 @@ function buildCards(s: HubSummary): InfoCardDef[] {
       to: '/hub?tab=experts',
       metric: String(s.networks.investExperts),
       unit: '건',
-      sub: '전문가·VAN·투자사',
+      sub: '전문가·BAN·투자사',
     },
     {
       key: 'orgs',
