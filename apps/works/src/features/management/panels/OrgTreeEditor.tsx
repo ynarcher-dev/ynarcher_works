@@ -40,11 +40,11 @@ import {
 } from '@/features/management/panels/departmentsMock'
 
 interface OrgTreeEditorProps {
-  /** ?몄쭛/議고쉶 ???議곗쭅 踰꾩쟾(org_versions.id). */
+  /** 편집/조회 대상 조직 버전(org_versions.id). */
   versionId: string
-  /** ?ㅻ뒛???좏슚 踰꾩쟾(?몃젰 諛곗튂瑜?users.department_id濡?誘몃윭?좎? ?먮떒). */
+  /** 오늘의 유효 버전(인력 배치를 users.department_id로 미러할지 판단). */
   activeVersionId: string | null
-  /** false硫??쎄린?꾩슜(議곗쭅 ?덈꺼 ?몄쭛湲걔룹븸?샕룸뱶?섍렇 ?④?). 湲곕낯 true. */
+  /** false면 읽기전용(조직 레벨 편집기·액션·드래그 숨김). 기본 true. */
   editable?: boolean
 }
 
@@ -54,9 +54,9 @@ export interface OrgTreeEditorHandle {
 }
 
 /**
- * 議곗쭅???몃━ ?몄쭛湲?踰꾩쟾 ?ㅼ퐫??. 議곗쭅 ?덈꺼 ?뺤쓽 + N-depth ?몃━-?뚯씠釉?+ ?몃젰 諛곗튂瑜??대떦?섎ŉ,
- * 議곗쭅愿由??⑤꼸(?꾩옱 議곗쭅)怨?議곗쭅 媛쒗렪 紐⑤떖(珥덉븞 踰꾩쟾)???숈씪 湲곕뒫??怨듭쑀?섍린 ?꾪빐 遺꾨━?덈떎.
- * 紐⑤뱺 ?몄쭛? 利됱떆 mutation?쇰줈 ??ν븳?? editable=false硫?議고쉶 ?꾩슜?쇰줈 ?뚮뜑?쒕떎.
+ * 조직도 트리 편집기(버전 스코프). 조직 레벨 정의 + N-depth 트리-테이블 + 인력 배치를 담당하며,
+ * 조직관리 패널(현재 조직)과 조직 개편 모달(초안 버전)이 동일 기능을 공유하기 위해 분리했다.
+ * 모든 편집은 즉시 mutation으로 저장한다. editable=false면 조회 전용으로 렌더한다.
  */
 export const OrgTreeEditor = forwardRef<OrgTreeEditorHandle, OrgTreeEditorProps>(
 function OrgTreeEditor({ versionId, activeVersionId, editable = true }, ref) {
@@ -74,7 +74,7 @@ function OrgTreeEditor({ versionId, activeVersionId, editable = true }, ref) {
   const updateLevel = useUpdateOrgLevel()
   const deleteLevel = useDeleteOrgLevel()
   const assignMember = useAssignDeptMember()
-  // ?뚯깮 ?곗씠???쒕쾭 ?먯쿇). ?몃젰 諛곗튂??"?좏깮 踰꾩쟾"??dept_members 湲곗?.
+  // 파생 데이터(서버 원천). 인력 배치는 "선택 버전"의 dept_members 기준.
   const nodes = useMemo(() => toNodes(deptRows ?? []), [deptRows])
   const levels = useMemo(() => levelRows ?? [], [levelRows])
   const placement = useMemo(() => {
@@ -89,7 +89,7 @@ function OrgTreeEditor({ versionId, activeVersionId, editable = true }, ref) {
   const removed = useMemo(() => deletedRoots(nodes), [nodes])
   const membersByDept = useMemo(() => groupByDept(employees), [employees])
 
-  // ?붾㈃ ?꾩슜(?섎컻) ?곹깭
+  // 화면 전용(휘발) 상태
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
@@ -160,7 +160,7 @@ function OrgTreeEditor({ versionId, activeVersionId, editable = true }, ref) {
     setEditingId(null)
   }
 
-  /** ?먯떇 ?몃뱶 湲곕낯 ?덈꺼: 遺紐??곗뼱??"?ㅼ쓬 ?곗뼱" 泥??덈꺼(?놁쑝硫?蹂댁젙). */
+  /** 자식 노드 기본 레벨: 부모 티어의 "다음 티어" 첫 레벨(없으면 보정). */
   const childLevelId = (parent: DeptNode | null): string | null => {
     if (!levels.length) return null
     if (!parent) {
@@ -207,7 +207,7 @@ function OrgTreeEditor({ versionId, activeVersionId, editable = true }, ref) {
     })
   }
 
-  // ?몄궗 誘몃끂異쒖? 怨꾨낫 ?⑥쐞(??踰꾩쟾 ?쇨큵) ???쒖꽦/?몄쭛 踰꾩쟾???щ씪???쇨? 諛섏쁺.
+  // 인사 미노출은 계보 단위(전 버전 일괄) — 활성/편집 버전이 달라도 일관 반영.
   const toggleHrHidden = (id: string, hidden: boolean) => {
     const node = nodes.find((n) => n.id === id)
     if (node) setHrHidden.mutate({ lineageId: node.lineageId, hidden })
@@ -217,17 +217,17 @@ function OrgTreeEditor({ versionId, activeVersionId, editable = true }, ref) {
   const restore = (id: string) =>
     setDeleted.mutate({ ids: [...subtreeIds(nodes, id)], deleted: false })
 
-  // --- ?덈꺼 ?뺤쓽(= ?몄궗愿由?而щ읆) ---
+  // --- 레벨 정의(= 인사관리 컬럼) ---
   const changeLevelDraftName = (id: string, name: string) =>
     setLevelDraftNames((prev) => ({ ...prev, [id]: name }))
-  /** ???곗뼱(?섏쐞 蹂쇰ⅷ): 理쒕? ?곗뼱 + 1. ?좏깮 踰꾩쟾 ?ㅼ퐫?? */
+  /** 새 티어(하위 볼륨): 최대 티어 + 1. 선택 버전 스코프. */
   const addTier = () => {
     const maxTier = levels.reduce((m, l) => Math.max(m, l.tier), -1)
-    createLevel.mutate({ name: '???덈꺼', sort_order: maxTier + 1, version_id: versionId })
+    createLevel.mutate({ name: '새 레벨', sort_order: maxTier + 1, version_id: versionId })
   }
-  /** 蹂묐젹 ?덈꺼: 吏???곗뼱? 媛숈? 媛?媛숈? 蹂쇰ⅷ). ?좏깮 踰꾩쟾 ?ㅼ퐫?? */
+  /** 병렬 레벨: 지정 티어와 같은 값(같은 볼륨). 선택 버전 스코프. */
   const addParallel = (tier: number) =>
-    createLevel.mutate({ name: '???덈꺼', sort_order: tier, version_id: versionId })
+    createLevel.mutate({ name: '새 레벨', sort_order: tier, version_id: versionId })
   const removeLevel = (id: string) => {
     if (levels.length <= 1) return
     const fallback = levels.find((l) => l.id !== id)?.id ?? null
@@ -297,7 +297,7 @@ function OrgTreeEditor({ versionId, activeVersionId, editable = true }, ref) {
       isActive: versionId === activeVersionId,
     })
 
-  // --- ?쒕옒洹????쒕∼: 而ㅼ꽌 ?꾩튂濡??????덉そ ?먯젙 ??蹂寃쎈텇留????---
+  // --- 드래그 앤 드롭: 커서 위치로 앞/뒤/안쪽 판정 후 변경분만 저장 ---
   const onDragOverRow = (e: DragEvent, id: string) => {
     if (!dragId || !canDrop(nodes, dragId, id)) return
     e.preventDefault()
@@ -336,7 +336,7 @@ function OrgTreeEditor({ versionId, activeVersionId, editable = true }, ref) {
 
   return (
     <div className="space-y-4">
-      {/* 議곗쭅 ?덈꺼 ?뺤쓽(= ?몄궗愿由?而щ읆) ???몄쭛 紐⑤뱶?먯꽌留?*/}
+      {/* 조직 레벨 정의(= 인사관리 컬럼) — 편집 모드에서만 */}
       {editable && (
         <div className="space-y-1">
           <OrgLevelEditor
@@ -351,8 +351,8 @@ function OrgTreeEditor({ versionId, activeVersionId, editable = true }, ref) {
             structureActionsEnabled={false}
           />
           <p className="text-caption text-gray-400">
-            쨌 議곗쭅 ?덈꺼(?몄궗愿由?而щ읆)? ??踰꾩쟾?먮쭔 ?곸슜?섎뒗 ?ㅻ깄?룹엯?덈떎. ?덉젙 踰꾩쟾?먯꽌??蹂寃쎌?
-            諛쒗슚 ?꾧퉴吏 ?꾩옱 議곗쭅쨌?몄궗???곹뼢??二쇱? ?딆뒿?덈떎.
+            · 조직 레벨(인사관리 컬럼)은 이 버전에만 적용되는 스냅샷입니다. 예정 버전에서의 변경은
+            발효 전까지 현재 조직·인사에 영향을 주지 않습니다.
           </p>
         </div>
       )}
@@ -360,12 +360,12 @@ function OrgTreeEditor({ versionId, activeVersionId, editable = true }, ref) {
       {false && editable && (
         <div className="flex justify-end">
           <Button size="sm" onClick={() => addChild(null)} disabled={createDept.isPending}>
-            + 理쒖긽??議곗쭅 異붽?
+            + 최상위 조직 추가
           </Button>
         </div>
       )}
 
-      {/* ?몃━-?뚯씠釉?*/}
+      {/* 트리-테이블 */}
       <div className="overflow-hidden rounded-radius-md border border-gray-200 bg-white">
         <div
           className={`${DEPT_GRID} items-center gap-2 border-b border-gray-200 bg-gray-50 py-2 pr-2 text-caption font-semibold text-gray-500`}
@@ -376,7 +376,7 @@ function OrgTreeEditor({ versionId, activeVersionId, editable = true }, ref) {
           <span />
         </div>
         {tree.length === 0 ? (
-          <p className="py-8 text-center text-body text-gray-400">?깅줉??議곗쭅???놁뒿?덈떎.</p>
+          <p className="py-8 text-center text-body text-gray-400">등록된 조직이 없습니다.</p>
         ) : (
           tree.map((root) => (
             <DeptTreeRow
@@ -409,22 +409,22 @@ function OrgTreeEditor({ versionId, activeVersionId, editable = true }, ref) {
         )}
       </div>
 
-      {/* ??젣??議곗쭅(soft delete) ??蹂듭썝留??쒓났(臾쇰━ ??젣???뺤콉??湲덉?) */}
+      {/* 삭제된 조직(soft delete) — 복원만 제공(물리 삭제는 정책상 금지) */}
       {editable && removed.length > 0 && (
         <div className="rounded-radius-md border border-dashed border-gray-300 bg-gray-25 p-3">
-          <p className="mb-2 text-caption font-semibold text-gray-500">??젣??議곗쭅</p>
+          <p className="mb-2 text-caption font-semibold text-gray-500">삭제된 조직</p>
           <ul className="space-y-1">
             {removed.map((n) => (
               <li key={n.id} className="flex items-center gap-2 text-body text-gray-400">
                 <span className="line-through">{n.name}</span>
-                <span className="text-caption">(?먯?)</span>
+                <span className="text-caption">(폐지)</span>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => restore(n.id)}
                   className="ml-auto h-7 gap-1 px-2 text-gray-500"
                 >
-                  蹂듭썝
+                  복원
                 </Button>
               </li>
             ))}
@@ -433,14 +433,14 @@ function OrgTreeEditor({ versionId, activeVersionId, editable = true }, ref) {
       )}
 
       <p className="text-caption text-gray-400">
-        議곗쭅紐낃낵 ?덈꺼 蹂寃쎌? ?붾㈃??癒쇱? 諛섏쁺?????곷떒 ???踰꾪듉?쇰줈 ?④퍡 ??λ맗?덈떎. ?쒕옒洹??대룞,
-        異붽?/??젣, ?몃젰 諛곗튂??踰꾪듉 ?숈옉 利됱떆 諛섏쁺?⑸땲??
+        조직명과 레벨 변경은 화면에 먼저 반영된 뒤 상단 저장 버튼으로 함께 저장됩니다. 드래그 이동,
+        추가/삭제, 인력 배치는 버튼 동작 즉시 반영됩니다.
       </p>
 
       {false && editable && (
         <p className="text-caption text-gray-400">
-          쨌 ?쒕옒洹몃줈 ?쒖꽌쨌?뚯냽 蹂寃????꾨옒=?뺤젣, 媛?대뜲=?섏쐞 ?몄엯), ?대쫫 ?대┃??蹂寃? ?덈꺼 ??됲듃濡?          怨꾩링 吏?? ?몄썝 移⑹쑝濡??몃젰 諛곗튂. ?덈꺼 ?뺤쓽媛 ?몄궗愿由?而щ읆???⑸땲?? 紐⑤뱺 ?몄쭛? 利됱떆
-          ??λ맗?덈떎.
+          · 드래그로 순서·소속 변경(위/아래=형제, 가운데=하위 편입), 이름 클릭해 변경, 레벨 셀렉트로 계층 지정, 인원 칩으로 인력 배치. 레벨 정의가 인사관리 컬럼이 됩니다. 모든 편집은 즉시
+          저장됩니다.
         </p>
       )}
 
