@@ -14,7 +14,7 @@ import {
 } from '@/features/startup/StartupBusinessTeamCard'
 import { StartupGrowthSection } from '@/features/startup/StartupGrowthSection'
 import { StartupBusinessTimeline } from '@/features/startup/StartupBusinessTimeline'
-import { readBusinessStatus, readMetrics } from '@/features/startup/startupGrowth'
+import { readBusinessStatus, readMetrics, formatFounded } from '@/features/startup/startupGrowth'
 import { StartupShareholderCard } from '@/features/startup/StartupShareholderCard'
 import { readShareholderHistory } from '@/features/startup/startupShareholders'
 import { STARTUP_MATERIAL_SECTIONS } from '@/features/startup/startupMaterials'
@@ -22,12 +22,13 @@ import { SectionHeading } from '@/features/startup/SectionHeading'
 import { PlaceholderCard } from '@/features/startup/PlaceholderCard'
 import { StartupMediaCard } from '@/features/startup/StartupMediaCard'
 import { readMedia } from '@/features/startup/startupMedia'
+import { StartupComparePanel } from '@/features/startup/StartupComparePanel'
 
 /** 첨부/피드백/기여 로그 대상 유형(다형 테이블 target_type). */
 const RESOURCE_TYPE = 'startup'
 
-/** 활동 내역 카드 섹션(플랫폼 전반 참여·수행 이력). 현재는 헤드라인만, 내용은 후속 구현. */
-const ACTIVITY_SECTIONS = ['참여 사업', '참여 M&A', '참여 프로젝트', '기업 진단', '멘토링 & 컨설팅']
+/** 관리 현황 카드 섹션(플랫폼 전반 참여·관리 이력). 현재는 헤드라인만, 내용은 후속 구현. */
+const ACTIVITY_SECTIONS = ['참여 사업', '참여 M&A', '참여 프로젝트', '기업 진단', '멘토링 & 컨설팅', '회의록']
 
 /** 라벨: 값 한 줄. */
 function Info({ label, value }: { label: string; value: ReactNode }) {
@@ -114,6 +115,8 @@ export function StartupDetailPage() {
                 <Info label="대표자" value={str('representative')} />
                 <Info label="이메일" value={str('email')} />
                 <Info label="연락처" value={str('phone')} />
+                <Info label="회사 형태" value={str('company_form')} />
+                <Info label="설립일" value={formatFounded(record.founded_on)} />
                 <Info label="사업자등록번호" value={str('biz_reg_no')} />
                 <Info label="수정일" value={formatDate(record.updated_at)} />
               </div>
@@ -148,8 +151,8 @@ export function StartupDetailPage() {
             {/* 비즈니스 타임라인(성장 지표 고용·투자 현황 아래 맨 끝). 편집은 통합 수정에서. */}
             <StartupBusinessTimeline businessStatus={readBusinessStatus(record)} />
 
-            {/* 활동 내역: 플랫폼 전반 참여·수행 이력(현재는 헤드라인만, 내용은 후속) */}
-            <SectionHeading title="활동 내역" />
+            {/* 관리 현황: 플랫폼 전반 참여·관리 이력(현재는 헤드라인만, 내용은 후속) */}
+            <SectionHeading title="관리 현황" />
             {ACTIVITY_SECTIONS.map((title) => (
               <PlaceholderCard key={title} title={title} />
             ))}
@@ -159,13 +162,14 @@ export function StartupDetailPage() {
             <StartupMediaCard media={readMedia(record)} />
           </div>
 
-          {/* 우측(1/3): 자료(IR·재무제표·기타) → 피드백 → 변동 이력 (NETWORKS 상세와 동일한 공용 패널) */}
+          {/* 우측(1/3): 자료(IR·재무제표·기타) → 피드백 → 변동 이력 → 기업 비교(좌우 비교 카드) */}
           <div className="space-y-4 lg:col-span-1">
             {STARTUP_MATERIAL_SECTIONS.map((s) => (
               <MaterialPanel key={s.type} targetType={s.type} targetId={record.id} title={s.title} readOnly />
             ))}
             <FeedbackPanel targetType={RESOURCE_TYPE} targetId={record.id} />
             <ChangeHistoryPanel contributions={contributions} />
+            <StartupComparePanel record={record} />
           </div>
         </div>
       )}

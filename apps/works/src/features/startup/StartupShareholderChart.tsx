@@ -49,8 +49,8 @@ export function StartupShareholderChart({ shareholders }: { shareholders: Shareh
             nameKey="name"
             cx="50%"
             cy="50%"
-            innerRadius="52%"
-            outerRadius="78%"
+            innerRadius="40%"
+            outerRadius="82%"
             paddingAngle={1.5}
             stroke="#FFFFFF"
             strokeWidth={2}

@@ -49,3 +49,29 @@ export function formatKRW(v: number | null | undefined): string {
   if (v == null || Number.isNaN(Number(v))) return '-'
   return `${Number(v).toLocaleString()}원`
 }
+
+/**
+ * 설립일 + 오늘 기준 기업 나이(만 n년 n일). 값 없으면 '-'.
+ * 설립 기념일을 실제 달력으로 더해 만(滿) 연수를 구하고 남은 일수를 계산하므로,
+ * 달력 날짜 연산(setFullYear)과 실제 경과일 기준이라 윤년(2월 29일)이 자연히 반영된다.
+ */
+export function formatFounded(v: unknown): string {
+  const date = v ? String(v).slice(0, 10) : ''
+  if (date.length < 10) return '-'
+  const founded = new Date(`${date}T00:00:00`)
+  if (Number.isNaN(founded.getTime())) return date
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  if (today.getTime() < founded.getTime()) return date
+
+  let years = today.getFullYear() - founded.getFullYear()
+  const anniversary = new Date(founded)
+  anniversary.setFullYear(founded.getFullYear() + years)
+  if (anniversary.getTime() > today.getTime()) {
+    years -= 1
+    anniversary.setFullYear(founded.getFullYear() + years)
+  }
+  const days = Math.floor((today.getTime() - anniversary.getTime()) / 86_400_000)
+  const age = years > 0 ? `${years}년 ${days.toLocaleString()}일` : `${days.toLocaleString()}일`
+  return `${date} (${age})`
+}

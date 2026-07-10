@@ -1,4 +1,4 @@
-import { Button, Input, TextArea, useToast } from '@ynarcher/ui'
+import { Button, Input, Select, TextArea, useToast } from '@ynarcher/ui'
 import { useState, type ChangeEvent, type ReactNode } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { PhotoBox } from '@/features/networks/PhotoBox'
@@ -20,9 +20,14 @@ import { readShareholderHistory, type ShareholderSnapshot } from '@/features/sta
 import { StartupMediaFields } from '@/features/startup/StartupMediaFields'
 import { readMedia, type MediaItem } from '@/features/startup/startupMedia'
 
+/** 회사 형태 고정 선택지. */
+const COMPANY_FORMS = ['법인', '개인', '예비'] as const
+
 export interface StartupDetailFormValues {
   name: string
   representative: string
+  company_form: string
+  founded_on: string
   biz_reg_no: string
   industry: string
   stage: string
@@ -113,6 +118,8 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel }: Props
     values: {
       name: str('name'),
       representative: str('representative'),
+      company_form: str('company_form'),
+      founded_on: str('founded_on').slice(0, 10),
       biz_reg_no: str('biz_reg_no'),
       industry: str('industry'),
       stage: str('stage'),
@@ -134,6 +141,8 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel }: Props
     const payload: Record<string, unknown> = {
       name: v.name.trim(),
       representative: v.representative.trim() || null,
+      company_form: v.company_form.trim() || null,
+      founded_on: v.founded_on || null,
       biz_reg_no: v.biz_reg_no.trim() || null,
       industry: v.industry.trim() || null,
       stage: v.stage.trim() || null,
@@ -245,6 +254,19 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel }: Props
           </Field>
           <Field label="대표자명">
             <Input {...register('representative')} />
+          </Field>
+          <Field label="회사 형태">
+            <Select {...register('company_form')}>
+              <option value="">선택</option>
+              {COMPANY_FORMS.map((f) => (
+                <option key={f} value={f}>
+                  {f}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="설립일">
+            <Input type="date" {...register('founded_on')} />
           </Field>
           <Field label="사업자등록번호">
             <Input {...register('biz_reg_no')} />
