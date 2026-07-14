@@ -26,14 +26,18 @@ const PIE_PALETTE = [
   '#0D9488', '#DB2777', '#4F46E5', '#515151',
 ]
 
-/** 도넛 파이 차트(범주형 분포). 규모 0 항목은 제외, 미지정은 gray로 마감. */
-function CategoryPie({ data, height }: { data: { label: string; count: number }[]; height: number }) {
+/** 도넛 파이 차트(범주형 분포). 부모 높이를 꽉 채워 중앙 정렬. 규모 0 항목은 제외, 미지정은 gray로 마감. */
+function CategoryPie({ data }: { data: { label: string; count: number }[] }) {
   const slices = data.filter((d) => d.count > 0)
   if (slices.length === 0) {
-    return <p className="py-8 text-center text-caption text-gray-400">표시할 데이터가 없습니다.</p>
+    return (
+      <div className="flex h-full items-center justify-center">
+        <p className="text-caption text-gray-400">표시할 데이터가 없습니다.</p>
+      </div>
+    )
   }
   return (
-    <ResponsiveContainer width="100%" height={height}>
+    <ResponsiveContainer width="100%" height="100%">
       <PieChart>
         <Pie
           data={slices}
@@ -326,8 +330,14 @@ export function DashboardTab() {
       title: '권역별 현황',
       subtitle: '글로벌 네트워크의 권역별 DB 보유 현황(미지정 별도)',
       expandable: false,
-      render: (inModal) =>
-        regionLoading ? spinnerBox : <CategoryPie data={region ?? []} height={inModal ? 380 : 250} />,
+      render: () =>
+        regionLoading ? (
+          spinnerBox
+        ) : (
+          <div className="h-full min-h-[16rem]">
+            <CategoryPie data={region ?? []} />
+          </div>
+        ),
     },
   ]
 
