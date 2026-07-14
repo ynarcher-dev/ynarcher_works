@@ -102,6 +102,46 @@ export function useNetworksSummary() {
   })
 }
 
+/** 분야(expertise) 집계 대상 — 전문 분야를 입력하는 프로필형 4종(BAN·EXP·전문가·투자사). */
+const EXPERTISE_TABLES = ['van', 'exp', 'experts', 'investors']
+
+/**
+ * BAN·EXP·전문가·투자사의 전문 분야(expertise jsonb 배열) 태그별 보유 인원 분포.
+ * 한 인물이 여러 분야를 가지면 각 분야에 중복 집계된다(합계 ≠ 인원 수).
+ */
+export function useExpertiseDistribution() {
+  return useQuery({
+    queryKey: ['networks', 'dashboard', 'expertise'],
+    queryFn: async (): Promise<{ label: string; count: number }[]> => {
+      const perTable = await Promise.all(
+        EXPERTISE_TABLES.map(async (t) => {
+          const { data } = await supabase
+            .from(t)
+            .select('expertise')
+            .is('deleted_at', null)
+            .is('merged_into_id', null)
+            .limit(2000)
+          return (data ?? []) as { expertise: unknown }[]
+        }),
+      )
+      const counts = new Map<string, number>()
+      for (const rows of perTable) {
+        for (const row of rows) {
+          const list = Array.isArray(row.expertise) ? row.expertise : []
+          for (const tag of list) {
+            if (typeof tag === 'string' && tag.trim()) {
+              counts.set(tag, (counts.get(tag) ?? 0) + 1)
+            }
+          }
+        }
+      }
+      return [...counts.entries()]
+        .map(([label, count]) => ({ label, count }))
+        .sort((a, b) => b.count - a.count)
+    },
+  })
+}
+
 export interface RecentUpload {
   entity: EntityKey
   entityLabel: string

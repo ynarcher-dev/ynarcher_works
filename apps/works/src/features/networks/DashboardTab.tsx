@@ -2,6 +2,7 @@ import { Badge, DataTable, Spinner, type Column } from '@ynarcher/ui'
 import { useNavigate } from 'react-router-dom'
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import {
+  useExpertiseDistribution,
   useNetworksSummary,
   useRecentUploads,
   type RecentUpload,
@@ -116,6 +117,7 @@ function formatDateTime(iso: string): string {
 export function DashboardTab() {
   const navigate = useNavigate()
   const { data: summary, isLoading: summaryLoading } = useNetworksSummary()
+  const { data: expertise, isLoading: expertiseLoading } = useExpertiseDistribution()
   const { data: recent, isLoading: recentLoading } = useRecentUploads(20)
 
   const catTotal = (summary?.byCategory ?? []).reduce((s, c) => s + c.count, 0) || 1
@@ -162,27 +164,39 @@ export function DashboardTab() {
         </div>
 
         <div className="rounded-radius-md border border-gray-300 bg-white p-4">
-          <h3 className="mb-3 text-body font-semibold text-gray-800">구분별 규모</h3>
-          <ul className="space-y-2">
-            {(summary?.byCategory ?? []).map((c, i) => {
-              const pct = Math.round((c.count / catTotal) * 100)
-              return (
-                <li key={c.key} className="flex items-center gap-3">
-                  <span className="w-16 shrink-0 text-caption text-gray-600">{c.label}</span>
-                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
-                    <div
-                      className="h-full rounded-full"
-                      style={{ width: `${pct}%`, backgroundColor: CHART_PALETTE[i % CHART_PALETTE.length] }}
-                    />
-                  </div>
-                  <span className="w-16 shrink-0 text-right text-caption tabular-nums text-gray-700">
-                    {c.count.toLocaleString()} ({pct}%)
-                  </span>
-                </li>
-              )
-            })}
-          </ul>
+          <h3 className="mb-1 text-body font-semibold text-gray-800">분야별 현황</h3>
+          <p className="mb-2 text-caption text-gray-400">
+            BAN · EXP · 전문가 · 투자사의 전문 분야 보유 인원(중복 집계)
+          </p>
+          {expertiseLoading ? (
+            <div className="flex h-[260px] items-center justify-center"><Spinner /></div>
+          ) : (
+            <CategoryDonut data={expertise ?? []} />
+          )}
         </div>
+      </div>
+
+      <div className="rounded-radius-md border border-gray-300 bg-white p-4">
+        <h3 className="mb-3 text-body font-semibold text-gray-800">구분별 규모</h3>
+        <ul className="space-y-2">
+          {(summary?.byCategory ?? []).map((c, i) => {
+            const pct = Math.round((c.count / catTotal) * 100)
+            return (
+              <li key={c.key} className="flex items-center gap-3">
+                <span className="w-16 shrink-0 text-caption text-gray-600">{c.label}</span>
+                <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
+                  <div
+                    className="h-full rounded-full"
+                    style={{ width: `${pct}%`, backgroundColor: CHART_PALETTE[i % CHART_PALETTE.length] }}
+                  />
+                </div>
+                <span className="w-16 shrink-0 text-right text-caption tabular-nums text-gray-700">
+                  {c.count.toLocaleString()} ({pct}%)
+                </span>
+              </li>
+            )
+          })}
+        </ul>
       </div>
 
       <div className="rounded-radius-md border border-gray-300 bg-white p-4">
