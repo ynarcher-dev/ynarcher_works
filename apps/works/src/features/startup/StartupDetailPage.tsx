@@ -6,7 +6,10 @@ import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
 import { PhotoBox } from '@/features/networks/PhotoBox'
 import { useContributions, useEntity } from '@/features/networks/hooks'
+import { useAuthStore } from '@/auth/authStore'
 import { StartupDetailForm } from '@/features/startup/StartupDetailForm'
+import { useStartupManagers } from '@/features/startup/startupPoolHooks'
+import { isInvested, managementStatusLabel } from '@/features/startup/startupClassification'
 import {
   StartupBusinessTeamCard,
   readBusiness,
@@ -14,7 +17,7 @@ import {
 } from '@/features/startup/StartupBusinessTeamCard'
 import { StartupGrowthSection } from '@/features/startup/StartupGrowthSection'
 import { StartupBusinessTimeline } from '@/features/startup/StartupBusinessTimeline'
-import { readBusinessStatus, readMetrics, formatFounded, readIndustries } from '@/features/startup/startupGrowth'
+import { readBusinessStatus, readGrowth, formatFounded, readIndustries } from '@/features/startup/startupGrowth'
 import { StartupShareholderCard } from '@/features/startup/StartupShareholderCard'
 import { readShareholderHistory } from '@/features/startup/startupShareholders'
 import { STARTUP_MATERIAL_SECTIONS } from '@/features/startup/startupMaterials'
@@ -28,7 +31,7 @@ import { StartupComparePanel } from '@/features/startup/StartupComparePanel'
 const RESOURCE_TYPE = 'startup'
 
 /** 관리 현황 카드 섹션(플랫폼 전반 참여·관리 이력). 현재는 헤드라인만, 내용은 후속 구현. */
-const ACTIVITY_SECTIONS = ['참여 사업', '참여 M&A', '참여 프로젝트', '기업 진단', '멘토링 & 컨설팅', '회의록']
+const ACTIVITY_SECTIONS = ['참여 사업', '참여 M&A', '참여 프로젝트', 'A-STREAM', '기업 진단', '멘토링 & 컨설팅', '회의록']
 
 /** 라벨: 값 한 줄. */
 function Info({ label, value }: { label: string; value: ReactNode }) {
@@ -54,10 +57,18 @@ export function StartupDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { data: record, isLoading } = useEntity('startups', id)
   const { data: contributions } = useContributions('startups', id)
+  const { data: managers } = useStartupManagers(id)
+  const authUser = useAuthStore((s) => s.user)
   const [editing, setEditing] = useState(false)
 
   if (isLoading) return <Spinner />
   if (!record) return <Banner tone="warning">스타트업 정보를 찾을 수 없습니다.</Banner>
+
+  // 투자기업은 지정 담당자 또는 관리자만 수정 가능(서버 RLS가 최종 강제, 여기선 UI 게이팅).
+  const invested = isInvested(record.management_status)
+  const isAdmin = authUser?.role === 'super_admin'
+  const isManager = (managers ?? []).some((m) => m.user_id === authUser?.id)
+  const canEdit = !invested || isAdmin || isManager
 
   const str = (key: string) => {
     const v = record[key]
@@ -77,7 +88,10 @@ export function StartupDetailPage() {
         >
           ← 발굴기업
         </Link>
-        {!editing && <Button onClick={() => setEditing(true)}>수정</Button>}
+        {!editing && canEdit && <Button onClick={() => setEditing(true)}>수정</Button>}
+        {!editing && !canEdit && (
+          <span className="text-caption text-gray-400">지정 담당자만 수정할 수 있습니다.</span>
+        )}
       </div>
 
       {editing ? (
@@ -110,8 +124,8 @@ export function StartupDetailPage() {
               {/* 정보 그리드(3열): 단계·구분·현황 / 대표자·이메일·연락처 / 사업자등록번호·수정일 */}
               <div className="mt-5 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-3">
                 <Info label="단계" value={str('stage')} />
-                <Info label="구분" value={str('management_status')} />
-                <Info label="현황" value={str('pool_status')} />
+                <Info label="구분" value={managementStatusLabel(record.management_status) ?? '-'} />
+                {invested && <Info label="관리현황" value={str('pool_status')} />}
                 <Info label="대표자" value={str('representative')} />
                 <Info label="이메일" value={str('email')} />
                 <Info label="연락처" value={str('phone')} />
@@ -130,13 +144,7 @@ export function StartupDetailPage() {
               </div>
             </section>
 
-            {/* 담당자 카드(기본 데이터 아래 별도 섹션). 임시: 담당자 필드 연동 전까지 '홍길동' 표기. */}
-            <section className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
-              <h2 className="mb-3 text-body font-semibold text-gray-900">담당자</h2>
-              <p className="text-body text-gray-800">홍길동</p>
-            </section>
-
-            {/* 기업 개요 구분선(담당자 아래) */}
+            {/* 기업 개요 구분선(기본 데이터 아래) */}
             <SectionHeading title="기업 개요" />
 
             {/* 기업 개요 첫 카드: 비즈니스 & 팀 역량. 카드 우상단 '수정'으로 편집. */}
@@ -146,20 +154,43 @@ export function StartupDetailPage() {
             <StartupShareholderCard history={readShareholderHistory(record)} />
 
             {/* 성장 지표(별도 그룹): 재무/매출/고용/투자 표 + 차트. 편집은 통합 수정에서. */}
-            <StartupGrowthSection metrics={readMetrics(record)} />
+            <StartupGrowthSection growth={readGrowth(record)} />
 
-            {/* 비즈니스 타임라인(성장 지표 고용·투자 현황 아래 맨 끝). 편집은 통합 수정에서. */}
+            {/* 연혁(성장 지표 아래). 편집은 통합 수정에서. */}
             <StartupBusinessTimeline businessStatus={readBusinessStatus(record)} />
 
-            {/* 관리 현황: 플랫폼 전반 참여·관리 이력(현재는 헤드라인만, 내용은 후속) */}
-            <SectionHeading title="관리 현황" />
-            {ACTIVITY_SECTIONS.map((title) => (
-              <PlaceholderCard key={title} title={title} />
-            ))}
-
-            {/* 미디어: 언론기사·영상 등 URL + OG 메타데이터. 편집·URL 첨부는 통합 수정에서. */}
+            {/* 미디어(관리 현황보다 위): 언론기사·영상 등 URL + OG 메타데이터. 편집·URL 첨부는 통합 수정에서. */}
             <SectionHeading title="미디어" />
             <StartupMediaCard media={readMedia(record)} />
+
+            {/* 관리 현황: 담당자(최상단) + 플랫폼 전반 참여·관리 이력(현재는 헤드라인만, 내용은 후속) */}
+            <SectionHeading title="관리 현황" />
+            {/* 담당자 카드(관리 현황 최상단). 투자기업은 지정 담당자(리드/지원), 그 외는 등록자. */}
+            <section className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+              <h2 className="mb-3 text-body font-semibold text-gray-900">담당자</h2>
+              {invested ? (
+                (managers ?? []).length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {(managers ?? []).map((m) => (
+                      <Badge key={m.user_id} tone={m.is_lead ? 'success' : 'neutral'} size="sm">
+                        {(m.user?.name ?? '-') + (m.is_lead ? ' (리드)' : '')}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-body text-gray-400">지정된 담당자가 없습니다.</p>
+                )
+              ) : (
+                <p className="text-body text-gray-800">
+                  <span className="mr-2 text-caption text-gray-400">등록자</span>
+                  {record.creator?.name || '-'}
+                </p>
+              )}
+            </section>
+            {/* 관리 현황 로그 카드: 기능은 후속 구현, 지금은 건수 뱃지(0) 디자인만 잡아둔다. */}
+            {ACTIVITY_SECTIONS.map((title) => (
+              <PlaceholderCard key={title} title={title} count={0} />
+            ))}
           </div>
 
           {/* 우측(1/3): 자료(IR·재무제표·기타) → 피드백 → 변동 이력 → 기업 비교(좌우 비교 카드) */}

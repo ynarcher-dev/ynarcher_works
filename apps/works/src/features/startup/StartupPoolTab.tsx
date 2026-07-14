@@ -1,48 +1,60 @@
-import { Spinner, useToast } from '@ynarcher/ui'
+import { Button, Input, Spinner, useToast } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { EntityFormModal } from '@/features/networks/EntityFormModal'
 import { DeactivateReasonModal } from '@/features/networks/DeactivateReasonModal'
-import {
-  recordContribution,
-  useEntityPage,
-  useUpdateEntity,
-} from '@/features/networks/hooks'
+import { recordContribution, useUpdateEntity } from '@/features/networks/hooks'
 import { ENTITIES } from '@/features/networks/config'
 import { StartupPoolTable, type StartupPoolRow } from '@/features/startup/StartupPoolTable'
+import { StartupPoolFilters } from '@/features/startup/StartupPoolFilters'
+import {
+  EMPTY_STARTUP_FILTERS,
+  useStartupPoolPage,
+  type StartupPoolFilters as Filters,
+} from '@/features/startup/startupPoolHooks'
+import type { ManagementStatus } from '@/features/startup/startupClassification'
 
 /** 목록 페이지당 행 수(서버 사이드 페이지네이션). */
 const PAGE_SIZE = 30
 
 interface StartupPoolTabProps {
-  /** 상단 검색어(기업명 ilike). */
-  keyword: string
-  /** 등록 모달 제어(StartupPage 헤더 액션에서 소유). */
-  creating?: boolean
-  setCreating?: (c: boolean) => void
+  /** 탭 고정 구분(코드). 4개 메뉴(투자/보육/발굴/기타) 상호 배타 뷰. */
+  category: ManagementStatus
 }
 
 /**
  * 스타트업 풀 관리 탭 컨테이너: 발굴기업(startups) 데이터를 공용 StartupPoolTable에 공급한다.
- * 서버 페이지네이션·다중선택·등록/비활성화(사유 입력)를 소유하고, 표 자체는 공용 컴포넌트가 그린다.
+ * 검색어(다중 필드)·복수 필터·서버 페이지네이션·다중선택·비활성화(사유 입력)를 소유하고,
+ * 검색창과 필터를 한 컨트롤 행으로 함께 배치한다. 신규 등록은 전용 등록 페이지에서 처리한다.
+ * (검색 상태는 탭 컨테이너가 소유 — 발굴기업 탭에서만 마운트되므로 탭 전환 시 자연히 초기화된다.)
  */
-export function StartupPoolTab({ keyword, creating, setCreating }: StartupPoolTabProps) {
+export function StartupPoolTab({ category }: StartupPoolTabProps) {
   const config = ENTITIES.startups
   const toast = useToast()
   const navigate = useNavigate()
   const update = useUpdateEntity('startups')
+  const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(0)
   const [selected, setSelected] = useState<string[]>([])
+  const [filters, setFilters] = useState<Filters>(EMPTY_STARTUP_FILTERS)
   const [deactivateTarget, setDeactivateTarget] = useState<StartupPoolRow | null>(null)
   const [deactivateBusy, setDeactivateBusy] = useState(false)
 
-  // 검색어 변경 시 첫 페이지로 되돌리고 선택을 비운다(빈 페이지·유령 선택 방지).
+  // 검색어·필터 변경 시 첫 페이지로 되돌리고 선택을 비운다(빈 페이지·유령 선택 방지).
+  const filtersKey = JSON.stringify(filters)
   useEffect(() => {
     setPage(0)
     setSelected([])
-  }, [keyword])
+  }, [keyword, filtersKey])
 
-  const { data, isLoading } = useEntityPage('startups', keyword, page, PAGE_SIZE)
+  const { data, isLoading } = useStartupPoolPage(keyword, filters, page, PAGE_SIZE, category)
+
+  // 탭 전환 시 검색·필터·선택·페이지를 초기화한다(탭마다 다른 구분 뷰).
+  useEffect(() => {
+    setKeyword('')
+    setFilters(EMPTY_STARTUP_FILTERS)
+    setPage(0)
+    setSelected([])
+  }, [category])
 
   // 비활성화 사유 확정 → 기여 로그(사유·행위자)를 먼저 남기고 soft-delete한다.
   const confirmDeactivate = async (reason: string) => {
@@ -70,12 +82,30 @@ export function StartupPoolTab({ keyword, creating, setCreating }: StartupPoolTa
     }
   }
 
-  if (isLoading) return <Spinner />
-
   return (
     <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="w-full sm:w-80">
+          <Input
+            placeholder="기업명·대표자·사업자번호·담당자 검색"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+          />
+        </div>
+        <StartupPoolFilters filters={filters} onChange={setFilters} />
+        <div className="sm:ml-auto">
+          <Button className="h-11" onClick={() => navigate('/startup/discovered/new')}>
+            {config.label} 등록
+          </Button>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <Spinner />
+      ) : (
       <StartupPoolTable
         rows={(data?.rows ?? []) as StartupPoolRow[]}
+        tab={category}
         selectedKeys={selected}
         onSelectionChange={setSelected}
         onRowClick={(row) => navigate(`/startup/discovered/${row.id}`)}
@@ -89,14 +119,6 @@ export function StartupPoolTab({ keyword, creating, setCreating }: StartupPoolTa
           onChange: setPage,
         }}
       />
-
-      {setCreating && (
-        <EntityFormModal
-          config={config}
-          open={Boolean(creating)}
-          onClose={() => setCreating(false)}
-          initial={null}
-        />
       )}
 
       {deactivateTarget && (

@@ -1,6 +1,11 @@
 import { Badge, DataTable, type Column, type DataTableProps } from '@ynarcher/ui'
 import { useMemo } from 'react'
-import { readIndustries } from '@/features/startup/startupGrowth'
+import { formatFounded, readIndustries } from '@/features/startup/startupGrowth'
+import {
+  MANAGEMENT_STATUS_TONE,
+  managementStatusLabel,
+  type ManagementStatus,
+} from '@/features/startup/startupClassification'
 
 /**
  * 스타트업 풀(발굴·보육·투자) 목록 행. `startups` 테이블 스키마의 표시 컬럼 부분집합이다.
@@ -11,36 +16,35 @@ export interface StartupPoolRow {
   name: string
   /** 대표자명(startups.representative). */
   representative?: string | null
-  /** 산업(startups.industry). */
+  /** 사업자등록번호(startups.biz_reg_no). */
+  biz_reg_no?: string | null
+  /** 설립일(startups.founded_on) — 목록에는 연도만 표시. */
+  founded_on?: string | null
+  /** 산업(startups.industry). SSOT는 industries(배열)이며, 목록은 readIndustries로 읽는다. */
   industry?: string | null
   /** 성장 단계(startups.stage). */
   stage?: string | null
-  /** 구분: 발굴/보육/투자/기타(startups.management_status). */
+  /** 구분 코드: sourced/incubated/invested/other(startups.management_status). */
   management_status?: string | null
-  /** 현황: 풀 진행 상태(startups.pool_status). */
+  /** 현황: 풀 진행 상태(startups.pool_status). 투자기업에서만 유효. */
   pool_status?: string | null
   /** 발굴 경로(startups.discovery_source). */
   discovery_source?: string | null
   updated_at?: string | null
   created_by?: string | null
+  /** 등록자(created_by → users) FK 임베드. 비투자 담당자 컬럼의 폴백 원천. */
+  creator?: { id: string; name: string | null } | null
+  /** 지정 담당자(startup_managers) 임베드. 투자기업 담당자 컬럼의 원천. */
+  managers?: { user_id: string; is_lead: boolean; user: { id: string; name: string | null } | null }[]
   deleted_at?: string | null
   [key: string]: unknown
-}
-
-/**
- * 구분(management_status) 태그명 → 배지 톤. 값은 기업구분 태그 원장(company_category_tags)에서 오며,
- * 알려진 기본 태그는 색으로 구분하고 그 외 사용자 정의 태그는 중립으로 폴백한다.
- */
-const CATEGORY_TONES: Record<string, 'neutral' | 'info' | 'success' | 'warning'> = {
-  발굴: 'neutral',
-  보육: 'info',
-  투자: 'success',
-  기타: 'warning',
 }
 
 interface StartupPoolTableProps {
   rows: StartupPoolRow[]
   isLoading?: boolean
+  /** 소속 탭(구분 코드). 조건부 컬럼(관리현황=투자, 발굴경로=발굴)·담당자 표시를 좌우한다. */
+  tab?: ManagementStatus
   /** 행 클릭(상세 진입). 지정 시 행이 클릭 가능해진다. */
   onRowClick?: (row: StartupPoolRow) => void
   /** 비활성화(소프트 삭제) 핸들러. 미지정 시 관리 컬럼 버튼은 비활성 상태로 노출된다. */
@@ -56,13 +60,23 @@ interface StartupPoolTableProps {
 
 /**
  * 스타트업 풀 관리 공용 데이터 테이블.
- * 컬럼: 체크박스·No.·기업명·대표자명·산업·단계·구분·현황·발굴 경로·작성자·수정일·관리.
- * 좌측 선택/넘버링과 우측 표준 컬럼(작성자·수정일·관리)은 공용 DataTable이 소유하고,
+ * 컬럼: 체크박스·No.·기업명·대표자명·사업자등록번호·설립일·산업(뱃지 최대 3)·단계·구분·관리현황·발굴 경로·담당자·수정일·관리.
+ * 좌측 선택/넘버링과 우측 표준 컬럼(담당자·수정일·관리)은 공용 DataTable이 소유하고,
  * 본 컴포넌트는 그 사이의 도메인 컬럼(기업명~발굴 경로)만 정의한다.
- * 현황·발굴 경로는 데이터 원천 확정 전까지 플레이스홀더('-')로 자리만 잡는다.
  */
+/** 투자기업 담당자 표시명: 리드 → 지원 순, 없으면 등록자로 폴백. */
+function managerLabel(r: StartupPoolRow): string | null {
+  const ms = r.managers ?? []
+  if (ms.length === 0) return null
+  const lead = ms.find((m) => m.is_lead) ?? ms[0]
+  const leadName = lead?.user?.name ?? null
+  const extra = ms.length - 1
+  return leadName ? (extra > 0 ? `${leadName} 외 ${extra}` : leadName) : null
+}
+
 export function StartupPoolTable({
   rows,
+  tab,
   onRowClick,
   onDeactivate,
   deactivateWithReason,
@@ -70,25 +84,50 @@ export function StartupPoolTable({
   onSelectionChange,
   pagination,
 }: StartupPoolTableProps) {
-  const columns = useMemo<Column<StartupPoolRow>[]>(
-    () => [
+  const columns = useMemo<Column<StartupPoolRow>[]>(() => {
+    const cols: Column<StartupPoolRow>[] = [
       {
         key: 'name',
         header: '기업명',
-        className: 'min-w-[10rem] font-semibold',
+        className: 'w-36 font-semibold',
         render: (r) => r.name ?? '-',
       },
       {
         key: 'representative',
         header: '대표자명',
-        className: 'w-28',
+        className: 'w-24',
         render: (r) => r.representative || '-',
+      },
+      {
+        key: 'biz_reg_no',
+        header: '사업자등록번호',
+        className: 'w-32',
+        render: (r) => r.biz_reg_no || <span className="text-gray-400">-</span>,
+      },
+      {
+        // 상세페이지와 동일하게 설립일 + 만 나이(formatFounded)로 표기한다.
+        key: 'founded_on',
+        header: '설립일',
+        className: 'w-44',
+        render: (r) => (r.founded_on ? formatFounded(r.founded_on) : <span className="text-gray-400">-</span>),
       },
       {
         key: 'industry',
         header: '산업',
-        className: 'min-w-[8rem]',
-        render: (r) => readIndustries(r).join(' · ') || '-',
+        className: 'w-52',
+        render: (r) => {
+          const inds = readIndustries(r).slice(0, 3)
+          if (inds.length === 0) return <span className="text-gray-400">-</span>
+          return (
+            <div className="flex flex-wrap gap-1">
+              {inds.map((ind) => (
+                <Badge key={ind} tone="neutral" size="sm">
+                  {ind}
+                </Badge>
+              ))}
+            </div>
+          )
+        },
       },
       {
         key: 'stage',
@@ -106,22 +145,25 @@ export function StartupPoolTable({
       {
         key: 'management_status',
         header: '구분',
-        align: 'center',
-        className: 'w-20',
+        className: 'w-24',
         render: (r) => {
-          const v = r.management_status
-          if (!v) return <span className="text-gray-400">-</span>
+          const label = managementStatusLabel(r.management_status)
+          if (!label) return <span className="text-gray-400">-</span>
+          const tone = MANAGEMENT_STATUS_TONE[r.management_status as ManagementStatus] ?? 'neutral'
           return (
-            <Badge tone={CATEGORY_TONES[v] ?? 'neutral'} size="sm">
-              {v}
+            <Badge tone={tone} size="sm">
+              {label}
             </Badge>
           )
         },
       },
-      {
+    ]
+
+    // 관리현황(pool_status)은 투자기업에서만 유효 → 투자 탭(또는 전체 뷰)에서만 노출.
+    if (tab === undefined || tab === 'invested') {
+      cols.push({
         key: 'pool_status',
-        header: '현황',
-        align: 'center',
+        header: '관리현황',
         className: 'w-24',
         render: (r) =>
           r.pool_status ? (
@@ -131,16 +173,21 @@ export function StartupPoolTable({
           ) : (
             <span className="text-gray-400">-</span>
           ),
-      },
-      {
+      })
+    }
+
+    // 발굴 경로는 발굴 탭(또는 전체 뷰)에서 노출. 자유 서술이라 남는 폭을 흡수한다.
+    if (tab === undefined || tab === 'sourced') {
+      cols.push({
         key: 'discovery_source',
         header: '발굴 경로',
-        className: 'w-28',
+        className: 'min-w-[9rem]',
         render: (r) => r.discovery_source || <span className="text-gray-400">-</span>,
-      },
-    ],
-    [],
-  )
+      })
+    }
+
+    return cols
+  }, [tab])
 
   return (
     <DataTable
@@ -155,8 +202,9 @@ export function StartupPoolTable({
       pagination={pagination}
       authorLabel="담당자"
       meta={{
-        // 임시: 담당자 연동 전까지 '홍길동'으로 대체한다(created_by는 UUID라 직접 노출 불가).
-        author: () => '홍길동',
+        // 담당자: 투자기업은 지정 담당자(리드), 그 외는 등록자(creator)로 폴백.
+        author: (r) =>
+          managerLabel(r) || r.creator?.name || <span className="text-gray-400">-</span>,
         onDeactivate,
         deactivateWithReason,
       }}
