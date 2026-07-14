@@ -272,7 +272,7 @@ export function DashboardTab() {
   const activeCard = cards.find((c) => c.key === expanded)
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-8">
       <div className="space-y-2">
         <h3 className="text-body font-semibold text-gray-800">네트워크 현황</h3>
         {summaryLoading ? (
