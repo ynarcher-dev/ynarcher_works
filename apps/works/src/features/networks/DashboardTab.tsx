@@ -11,13 +11,12 @@ import {
 import { usesDetailPage } from '@/features/networks/config'
 
 /**
- * 가로 막대 팔레트. 차트 규칙서(7)의 chart.1~8 순서를 따르고,
- * 9번째 이후 계열은 기타용 gray로 마감한다.
+ * 가로 막대 색. 분야별 현황은 단일 지표(분야별 보유 인원)이므로 다색 팔레트 대신
+ * 차트 규칙서(7)의 chart.1(단독 데이터=Blue) 단색으로 통일하고,
+ * '기타(미등록)'만 gray로 de-emphasize 한다.
  */
-const CHART_PALETTE = [
-  '#2563EB', '#16A34A', '#D97706', '#7C3AED',
-  '#0D9488', '#DB2777', '#4F46E5', '#515151', '#94A3B8',
-]
+const BAR_COLOR = '#2563EB'
+const BAR_OTHER_COLOR = '#9CA3AF'
 
 /** 전월 대비 증감 배지. 양수 초록·음수 빨강·0 회색. */
 function DeltaLabel({ delta }: { delta: number }) {
@@ -57,31 +56,40 @@ function NetworkStatus({ items }: { items: StatusItem[] }) {
   )
 }
 
-/** 가로 막대 리스트(라벨 · 막대 · 건수/비율). 규모 0 항목은 제외한다. */
+/**
+ * 가로 막대 리스트. 라벨·값을 막대 위에 얹고 막대는 전체폭으로 그려 여백을 줄인다.
+ * 막대 길이는 최댓값 기준(가독성), 표기 값은 실제 건수와 전체 대비 비율이다.
+ */
 function HBarList({ data }: { data: { label: string; count: number }[] }) {
   const rows = data.filter((d) => d.count > 0)
   if (rows.length === 0) {
     return <p className="py-8 text-center text-caption text-gray-400">표시할 데이터가 없습니다.</p>
   }
   const total = rows.reduce((s, d) => s + d.count, 0) || 1
+  const max = Math.max(...rows.map((d) => d.count))
   return (
-    <ul className="space-y-2">
-      {rows.map((d, i) => {
+    <ul className="space-y-3">
+      {rows.map((d) => {
         const pct = Math.round((d.count / total) * 100)
+        const barPct = Math.max(4, Math.round((d.count / max) * 100))
+        const isOther = d.label.startsWith('기타')
         return (
-          <li key={d.label} className="flex items-center gap-3">
-            <span className="w-24 shrink-0 truncate text-caption text-gray-600" title={d.label}>
-              {d.label}
-            </span>
-            <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
+          <li key={d.label} className="space-y-1">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="truncate text-caption font-medium text-gray-700" title={d.label}>
+                {d.label}
+              </span>
+              <span className="shrink-0 text-caption tabular-nums text-gray-400">
+                <span className="font-semibold text-gray-800">{d.count.toLocaleString()}</span>
+                <span className="ml-1">{pct}%</span>
+              </span>
+            </div>
+            <div className="h-2.5 w-full overflow-hidden rounded-full bg-gray-100">
               <div
-                className="h-full rounded-full"
-                style={{ width: `${pct}%`, backgroundColor: CHART_PALETTE[i % CHART_PALETTE.length] }}
+                className="h-full rounded-full transition-all"
+                style={{ width: `${barPct}%`, backgroundColor: isOther ? BAR_OTHER_COLOR : BAR_COLOR }}
               />
             </div>
-            <span className="w-16 shrink-0 text-right text-caption tabular-nums text-gray-700">
-              {d.count.toLocaleString()} ({pct}%)
-            </span>
           </li>
         )
       })}
