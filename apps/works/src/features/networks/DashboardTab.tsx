@@ -1,13 +1,13 @@
-import { Badge, Modal, Spinner } from '@ynarcher/ui'
+import { Modal, Spinner } from '@ynarcher/ui'
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import {
   useExpertiseDistribution,
+  useExpertRanking,
   useNetworksSummary,
-  useRecentUploads,
   useRegionDistribution,
-  type RecentUpload,
+  type ExpertRankRow,
   type StatusItem,
 } from '@/features/networks/dashboardHooks'
 import { usesDetailPage } from '@/features/networks/config'
@@ -165,62 +165,100 @@ function HBarList({ data, limit }: { data: { label: string; count: number }[]; l
   )
 }
 
-/** 유입 경로 배지(대량 업로드/개별 등록). */
-function SourceBadge({ source }: { source: RecentUpload['source'] }) {
-  return source === 'bulk_upload' ? (
-    <Badge tone="info">대량 업로드</Badge>
-  ) : (
-    <Badge tone="neutral">개별 등록</Badge>
-  )
-}
+/** 평가랭킹 기준 탭. 활동 횟수 / 만족도 별점. */
+const RANK_TABS = [
+  { key: 'activity', label: '활동 횟수' },
+  { key: 'satisfaction', label: '만족도' },
+] as const
 
-/** 등록일시를 'MM-DD HH:mm'로 축약 표기. */
-function formatDateTime(iso: string): string {
-  const d = new Date(iso)
-  const p = (n: number) => String(n).padStart(2, '0')
-  return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
-}
+type RankMetric = (typeof RANK_TABS)[number]['key']
 
-/** 컴팩트 최근 업로드 리스트. 스크롤은 부모 컨테이너가 담당한다. 상세페이지 엔티티는 클릭 시 진입. */
-function RecentUploadsList({
+/**
+ * 전문가 평가랭킹 패널: 활동 횟수/만족도 탭 + 순위 표(이름·구분·분야·활동건·만족도).
+ * 활동건·만족도는 실집계 연동 전이라 '-'로 표기하며, 선택 탭 기준 컬럼을 강조한다.
+ */
+function ExpertRankingPanel({
   rows,
   onOpen,
+  limit,
 }: {
-  rows: RecentUpload[]
-  onOpen: (r: RecentUpload) => void
+  rows: ExpertRankRow[]
+  onOpen: (r: ExpertRankRow) => void
+  limit?: number
 }) {
-  if (rows.length === 0) {
-    return <p className="py-8 text-center text-caption text-gray-400">최근 업로드된 데이터가 없습니다.</p>
-  }
+  const [metric, setMetric] = useState<RankMetric>('activity')
+  const sorted = [...rows].sort((a, b) => {
+    const av = metric === 'activity' ? a.activity : a.satisfaction
+    const bv = metric === 'activity' ? b.activity : b.satisfaction
+    return (bv ?? -1) - (av ?? -1)
+  })
+  const shown = limit ? sorted.slice(0, limit) : sorted
   return (
-    <ul className="space-y-1.5">
-      {rows.map((r) => {
-        const clickable = usesDetailPage(r.entity) && r.entity !== 'others'
-        return (
-          <li
-            key={`${r.entity}:${r.id}`}
-            onClick={() => onOpen(r)}
-            className={`rounded-radius-sm border border-gray-100 px-2.5 py-2 ${
-              clickable ? 'cursor-pointer hover:bg-gray-50' : ''
+    <div className="space-y-2">
+      <div className="sticky top-0 z-10 flex gap-1 bg-white pb-1">
+        {RANK_TABS.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => setMetric(t.key)}
+            className={`rounded-radius-sm px-2.5 py-1 text-caption font-medium ${
+              metric === t.key
+                ? 'bg-gray-900 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
-            <div className="flex items-center justify-between gap-2">
-              <span className="truncate font-medium text-gray-900" title={r.name}>
-                {r.name}
-              </span>
-              <Badge tone="neutral">{r.entityLabel}</Badge>
-            </div>
-            <div className="mt-1 flex items-center justify-between gap-2 text-caption text-gray-400">
-              <span className="flex min-w-0 items-center gap-1">
-                <SourceBadge source={r.source} />
-                <span className="truncate">{r.creatorName || '-'}</span>
-              </span>
-              <span className="shrink-0 tabular-nums">{formatDateTime(r.createdAt)}</span>
-            </div>
-          </li>
-        )
-      })}
-    </ul>
+            {t.label}
+          </button>
+        ))}
+      </div>
+      {shown.length === 0 ? (
+        <p className="py-8 text-center text-caption text-gray-400">표시할 전문가가 없습니다.</p>
+      ) : (
+        <table className="w-full text-caption">
+          <thead>
+            <tr className="border-b border-gray-200 text-left text-gray-400">
+              <th className="w-6 py-1.5 font-medium">#</th>
+              <th className="py-1.5 font-medium">이름</th>
+              <th className="py-1.5 font-medium">구분</th>
+              <th className="py-1.5 font-medium">분야</th>
+              <th className={`w-14 py-1.5 text-right font-medium ${metric === 'activity' ? 'text-gray-700' : ''}`}>
+                활동건
+              </th>
+              <th className={`w-12 py-1.5 text-right font-medium ${metric === 'satisfaction' ? 'text-gray-700' : ''}`}>
+                만족도
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {shown.map((r, i) => (
+              <tr
+                key={`${r.entity}:${r.id}`}
+                onClick={() => onOpen(r)}
+                className="cursor-pointer border-b border-gray-50 hover:bg-gray-50"
+              >
+                <td className="py-1.5 tabular-nums text-gray-400">{i + 1}</td>
+                <td className="py-1.5 font-medium text-gray-900">
+                  <span className="block max-w-[6rem] truncate" title={r.name}>{r.name}</span>
+                </td>
+                <td className="py-1.5 text-gray-600">{r.category || '-'}</td>
+                <td className="py-1.5 text-gray-500">
+                  <span className="block max-w-[8rem] truncate" title={r.fields.join(', ')}>
+                    {r.fields[0] ?? '-'}
+                    {r.fields.length > 1 ? ` 외 ${r.fields.length - 1}` : ''}
+                  </span>
+                </td>
+                <td className={`py-1.5 text-right tabular-nums ${metric === 'activity' ? 'font-semibold text-gray-800' : 'text-gray-400'}`}>
+                  {r.activity ?? '-'}
+                </td>
+                <td className={`py-1.5 text-right tabular-nums ${metric === 'satisfaction' ? 'font-semibold text-gray-800' : 'text-gray-400'}`}>
+                  {r.satisfaction != null ? r.satisfaction.toFixed(1) : '-'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
   )
 }
 
@@ -272,23 +310,21 @@ export function DashboardTab() {
   const { data: summary, isLoading: summaryLoading } = useNetworksSummary()
   const { data: expertise, isLoading: expertiseLoading } = useExpertiseDistribution()
   const { data: region, isLoading: regionLoading } = useRegionDistribution()
-  const { data: recent, isLoading: recentLoading } = useRecentUploads(20)
+  const { data: ranking, isLoading: rankingLoading } = useExpertRanking()
 
-  // 상세페이지가 있는 엔티티(8종)만 행 클릭으로 진입한다(미분류·스타트업 제외).
-  const openRow = (r: RecentUpload) => {
-    if (usesDetailPage(r.entity) && r.entity !== 'others') {
-      navigate(`/networks/${r.entity}/${r.id}`)
-    }
+  // 상세페이지가 있는 엔티티(프로필 4종)는 행 클릭 시 상세로 진입한다.
+  const openEntity = (r: ExpertRankRow) => {
+    if (usesDetailPage(r.entity)) navigate(`/networks/${r.entity}/${r.id}`)
   }
 
   // 확대 모달로 펼칠 카드 키(null=닫힘).
-  const [expanded, setExpanded] = useState<'expertise' | 'recent' | 'card3' | null>(null)
+  const [expanded, setExpanded] = useState<'expertise' | 'ranking' | 'card3' | null>(null)
 
   const spinnerBox = <div className="flex h-40 items-center justify-center"><Spinner /></div>
 
   // 카드 3종을 한 곳에 정의해 카드·확대 모달에서 동일 본문을 재사용한다.
   const cards: {
-    key: 'expertise' | 'recent' | 'card3'
+    key: 'expertise' | 'ranking' | 'card3'
     title: string
     subtitle?: string
     /** 파이처럼 전체가 이미 보이는 카드는 false로 전체보기 버튼을 숨긴다(기본 true). */
@@ -311,18 +347,18 @@ export function DashboardTab() {
         ),
     },
     {
-      key: 'recent',
-      title: '최근 업로드 데이터',
-      subtitle: '8종 통합 최신순(상세 클릭 이동)',
+      key: 'ranking',
+      title: '전문가 평가랭킹',
+      subtitle: '활동 횟수·만족도 기준(상세 데이터 연동 예정)',
       render: (inModal) =>
-        recentLoading ? (
+        rankingLoading ? (
           spinnerBox
         ) : inModal ? (
           <div className="max-h-[60vh] overflow-y-auto pr-1">
-            <RecentUploadsList rows={recent ?? []} onOpen={openRow} />
+            <ExpertRankingPanel rows={ranking ?? []} onOpen={openEntity} />
           </div>
         ) : (
-          <RecentUploadsList rows={recent ?? []} onOpen={openRow} />
+          <ExpertRankingPanel rows={ranking ?? []} onOpen={openEntity} limit={6} />
         ),
     },
     {

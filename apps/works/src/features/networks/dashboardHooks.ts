@@ -188,6 +188,64 @@ export function useRegionDistribution() {
   })
 }
 
+/** 전문가 평가랭킹 행. 활동건·만족도는 실집계 연동 전이라 null(미연동)로 둔다. */
+export interface ExpertRankRow {
+  id: string
+  entity: EntityKey
+  name: string
+  /** 구분(profile.category, 없으면 엔티티 라벨). */
+  category: string
+  /** 분야(expertise 태그). */
+  fields: string[]
+  /** 활동 건수(실집계 연동 후 채움). */
+  activity: number | null
+  /** 만족도 별점(실집계 연동 후 채움). */
+  satisfaction: number | null
+}
+
+/** 평가랭킹 대상 — 분야·활동·만족도를 갖는 프로필형 4종. */
+const RANKING_TABLES: EntityKey[] = ['experts', 'van', 'exp', 'investors']
+
+/**
+ * 전문가 평가랭킹용 목록(이름·구분·분야). 활동건·만족도는 실집계 연동 전이라 null이며,
+ * UI에서 '-'로 표기한다. 정렬(활동/만족도 탭)은 연동 후 값 기준으로 동작하도록 준비만 한다.
+ */
+export function useExpertRanking() {
+  return useQuery({
+    queryKey: ['networks', 'dashboard', 'expert-ranking'],
+    queryFn: async (): Promise<ExpertRankRow[]> => {
+      const perTable = await Promise.all(
+        RANKING_TABLES.map(async (t) => {
+          const { data } = await supabase
+            .from(t)
+            .select('id, name, expertise, profile')
+            .is('deleted_at', null)
+            .is('merged_into_id', null)
+            .order('name', { ascending: true })
+            .limit(500)
+          return (
+            (data ?? []) as {
+              id: string
+              name: string
+              expertise: unknown
+              profile: { category?: string } | null
+            }[]
+          ).map((r) => ({
+            id: r.id,
+            entity: t,
+            name: r.name,
+            category: r.profile?.category || ENTITIES[t].label,
+            fields: Array.isArray(r.expertise) ? (r.expertise as string[]) : [],
+            activity: null,
+            satisfaction: null,
+          }))
+        }),
+      )
+      return perTable.flat()
+    },
+  })
+}
+
 export interface RecentUpload {
   entity: EntityKey
   entityLabel: string
