@@ -1,6 +1,7 @@
 import { Badge, Modal, Spinner } from '@ynarcher/ui'
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import {
   useExpertiseDistribution,
   useNetworksSummary,
@@ -18,6 +19,48 @@ import { usesDetailPage } from '@/features/networks/config'
  */
 const BAR_COLOR = '#2563EB'
 const BAR_OTHER_COLOR = '#9CA3AF'
+
+/** 파이(권역 등 범주형 다계열) 팔레트. 차트 규칙서(7) chart.1~8, 미지정은 gray로 고정. */
+const PIE_PALETTE = [
+  '#2563EB', '#16A34A', '#D97706', '#7C3AED',
+  '#0D9488', '#DB2777', '#4F46E5', '#515151',
+]
+
+/** 도넛 파이 차트(범주형 분포). 규모 0 항목은 제외, 미지정은 gray로 마감. */
+function CategoryPie({ data, height }: { data: { label: string; count: number }[]; height: number }) {
+  const slices = data.filter((d) => d.count > 0)
+  if (slices.length === 0) {
+    return <p className="py-8 text-center text-caption text-gray-400">표시할 데이터가 없습니다.</p>
+  }
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <PieChart>
+        <Pie data={slices} dataKey="count" nameKey="label" innerRadius="55%" outerRadius="80%" paddingAngle={2}>
+          {slices.map((s, i) => (
+            <Cell
+              key={s.label}
+              fill={s.label.startsWith('미지정') ? BAR_OTHER_COLOR : PIE_PALETTE[i % PIE_PALETTE.length]}
+            />
+          ))}
+        </Pie>
+        <Tooltip
+          formatter={(v: number, n) => [`${v.toLocaleString()}건`, n as string]}
+          contentStyle={{
+            borderRadius: 6,
+            border: '1px solid #E5E5E5',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+            fontSize: 12,
+          }}
+        />
+        <Legend
+          iconType="circle"
+          iconSize={8}
+          formatter={(value) => <span className="text-caption text-gray-600">{value}</span>}
+        />
+      </PieChart>
+    </ResponsiveContainer>
+  )
+}
 
 /** 전월 대비 증감 배지. 양수 초록·음수 빨강·0 회색. */
 function DeltaLabel({ delta }: { delta: number }) {
@@ -265,15 +308,7 @@ export function DashboardTab() {
       title: '권역별 현황',
       subtitle: '글로벌 네트워크의 권역별 DB 보유 현황(미지정 별도)',
       render: (inModal) =>
-        regionLoading ? (
-          spinnerBox
-        ) : inModal ? (
-          <div className="max-h-[60vh] overflow-y-auto pr-1">
-            <HBarList data={region ?? []} />
-          </div>
-        ) : (
-          <HBarList data={region ?? []} limit={6} />
-        ),
+        regionLoading ? spinnerBox : <CategoryPie data={region ?? []} height={inModal ? 380 : 250} />,
     },
   ]
 
