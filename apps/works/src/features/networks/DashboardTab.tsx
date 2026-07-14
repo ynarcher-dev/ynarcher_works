@@ -59,14 +59,18 @@ function NetworkStatus({ items }: { items: StatusItem[] }) {
 /**
  * 가로 막대 리스트. 라벨·값을 막대 위에 얹고 막대는 전체폭으로 그려 여백을 줄인다.
  * 막대 길이는 최댓값 기준(가독성), 표기 값은 실제 건수와 전체 대비 비율이다.
+ * `limit` 지정 시 상위 N개만 노출하고 나머지는 '외 N개'로 요약한다(전체는 전체보기 모달에서).
+ * 비율·막대 스케일은 잘라내기 전 전체 기준으로 계산해 카드/모달이 일치한다.
  */
-function HBarList({ data }: { data: { label: string; count: number }[] }) {
-  const rows = data.filter((d) => d.count > 0)
-  if (rows.length === 0) {
+function HBarList({ data, limit }: { data: { label: string; count: number }[]; limit?: number }) {
+  const all = data.filter((d) => d.count > 0)
+  if (all.length === 0) {
     return <p className="py-8 text-center text-caption text-gray-400">표시할 데이터가 없습니다.</p>
   }
-  const total = rows.reduce((s, d) => s + d.count, 0) || 1
-  const max = Math.max(...rows.map((d) => d.count))
+  const total = all.reduce((s, d) => s + d.count, 0) || 1
+  const max = Math.max(...all.map((d) => d.count))
+  const rows = limit ? all.slice(0, limit) : all
+  const hidden = all.length - rows.length
   return (
     <ul className="space-y-3">
       {rows.map((d) => {
@@ -93,6 +97,9 @@ function HBarList({ data }: { data: { label: string; count: number }[] }) {
           </li>
         )
       })}
+      {hidden > 0 && (
+        <li className="pt-0.5 text-caption text-gray-400">외 {hidden}개 분야 · 전체보기</li>
+      )}
     </ul>
   )
 }
@@ -217,7 +224,16 @@ export function DashboardTab() {
       key: 'expertise',
       title: '분야별 현황',
       subtitle: 'BAN · EXP · 전문가 · 투자사의 관리 분야 태그별 보유 인원(중복 집계, 미등록 값은 기타)',
-      render: () => (expertiseLoading ? spinnerBox : <HBarList data={expertise ?? []} />),
+      render: (inModal) =>
+        expertiseLoading ? (
+          spinnerBox
+        ) : inModal ? (
+          <div className="max-h-[60vh] overflow-y-auto pr-1">
+            <HBarList data={expertise ?? []} />
+          </div>
+        ) : (
+          <HBarList data={expertise ?? []} limit={6} />
+        ),
     },
     {
       key: 'recent',
