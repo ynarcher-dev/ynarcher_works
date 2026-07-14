@@ -182,19 +182,21 @@ function DashCard({
   children: ReactNode
 }) {
   return (
-    <section className="space-y-3">
-      <div className="space-y-1">
+    <section className="space-y-2">
+      <div className="space-y-0.5">
         <h3 className="text-body font-semibold text-gray-800">{title}</h3>
         {subtitle && <p className="text-caption text-gray-400">{subtitle}</p>}
       </div>
-      {children}
-      <button
-        type="button"
-        onClick={onExpand}
-        className="w-full rounded-radius-sm border border-gray-200 py-1.5 text-caption font-medium text-gray-600 hover:bg-gray-50"
-      >
-        전체보기
-      </button>
+      <div className="rounded-radius-md border border-gray-300 bg-white p-4">
+        {children}
+        <button
+          type="button"
+          onClick={onExpand}
+          className="mt-3 w-full rounded-radius-sm border border-gray-200 py-1.5 text-caption font-medium text-gray-600 hover:bg-gray-50"
+        >
+          전체보기
+        </button>
+      </div>
     </section>
   )
 }
