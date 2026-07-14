@@ -97,6 +97,7 @@
 - [x] 상세페이지 2열(2:1) 재구성 + 우측 공용 패널 3종(자료 관리·변동 이력·피드백) 분리 <!-- 좌(2): 프로필 본문 현행 유지. 우(1): MaterialPanel/ChangeHistoryPanel/FeedbackPanel. DetailPanelCard 공용 래퍼, 국내(NetworkDetailPage)·글로벌(GlobalNetworkDetailPage) 공용. "연혁"→"변동 이력" 개칭·우측 이동(기여 로그 타임라인). CONTRIBUTION_ACTION_LABEL·uniqueContributors ChangeHistoryPanel로 통합 -->
 - [x] 자료 관리 실연동 — 비공개 Storage 버킷 + attachments 다형 테이블 업로드/다운로드/소프트삭제 <!-- 마이그레이션 20260707230000(attachments 버킷+uploaded_by 스탬프 트리거+storage.objects RLS). materialHooks(useMaterials/useUploadMaterial/useDeleteMaterial/downloadMaterial=Signed URL), MaterialPanel 드래그앤드랍 업로드·목록·다운로드·삭제. targetType(국내=리소스타입/글로벌=global_network)+targetId 주입 -->
 - [x] 피드백 실연동 — 레코드 단위 댓글형 피드백(테이블+RLS+작성/조회/소프트삭제 훅) <!-- 마이그레이션 20260707240000(entity_feedback: target_type/target_id 다형, author 서버 스탬프, 작성자/admin update RLS). feedbackHooks(useFeedback/useCreateFeedback/useDeleteFeedback), FeedbackPanel 작성(Cmd+Enter)·목록·본인/admin 삭제. 국내/글로벌 공용 -->
+- [ ] 스타트업 풀 구분·담당자·관리현황 라이프사이클 — [3_3_1](../docs_planning/3_3_1_startup_pool_classification.md) <!-- 구분(management_status) 코드화(sourced/incubated/invested/other 단일값 라이프사이클), 4개 메뉴 상호배타 필터 뷰(발굴=sourced만), 투자기업 복수 담당자(startup_managers 리드1+지원N)+행단위 RLS 잠금, create_startup/promote_to_invested RPC(SECURITY DEFINER, 등록 시 구분 직접선택·투자 시 담당자 원자지정), pool_status 투자 전용 게이팅. 상세 스펙 문서화 완료, 마이그레이션·프론트 구현 미착수 -->
 
 
 ## Phase 7. AC 워크스페이스 (Program First 14모듈)
