@@ -1,6 +1,5 @@
 import { Badge, DataTable, Spinner, type Column } from '@ynarcher/ui'
 import { useNavigate } from 'react-router-dom'
-import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import {
   useExpertiseDistribution,
   useNetworksSummary,
@@ -11,8 +10,8 @@ import {
 import { usesDetailPage } from '@/features/networks/config'
 
 /**
- * 구분별 분포 도넛 팔레트. 차트 규칙서(7)의 chart.1~8 순서를 따르고,
- * 9번째 계열(가장 후순위 카테고리)은 기타 계열용 gray로 마감한다.
+ * 가로 막대 팔레트. 차트 규칙서(7)의 chart.1~8 순서를 따르고,
+ * 9번째 이후 계열은 기타용 gray로 마감한다.
  */
 const CHART_PALETTE = [
   '#2563EB', '#16A34A', '#D97706', '#7C3AED',
@@ -57,43 +56,35 @@ function NetworkStatus({ items }: { items: StatusItem[] }) {
   )
 }
 
-/** 구분별 분포 도넛. 규모 0 카테고리는 렌더에서 제외한다. */
-function CategoryDonut({ data }: { data: { label: string; count: number }[] }) {
-  const slices = data.filter((d) => d.count > 0)
-  if (slices.length === 0) {
+/** 가로 막대 리스트(라벨 · 막대 · 건수/비율). 규모 0 항목은 제외한다. */
+function HBarList({ data }: { data: { label: string; count: number }[] }) {
+  const rows = data.filter((d) => d.count > 0)
+  if (rows.length === 0) {
     return <p className="py-8 text-center text-caption text-gray-400">표시할 데이터가 없습니다.</p>
   }
+  const total = rows.reduce((s, d) => s + d.count, 0) || 1
   return (
-    <ResponsiveContainer width="100%" height={260}>
-      <PieChart>
-        <Pie
-          data={slices}
-          dataKey="count"
-          nameKey="label"
-          innerRadius={60}
-          outerRadius={95}
-          paddingAngle={2}
-        >
-          {slices.map((_, i) => (
-            <Cell key={i} fill={CHART_PALETTE[i % CHART_PALETTE.length]} />
-          ))}
-        </Pie>
-        <Tooltip
-          formatter={(v: number, n) => [`${v.toLocaleString()}건`, n as string]}
-          contentStyle={{
-            borderRadius: 6,
-            border: '1px solid #E5E5E5',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-            fontSize: 12,
-          }}
-        />
-        <Legend
-          iconType="circle"
-          iconSize={8}
-          formatter={(value) => <span className="text-caption text-gray-600">{value}</span>}
-        />
-      </PieChart>
-    </ResponsiveContainer>
+    <ul className="space-y-2">
+      {rows.map((d, i) => {
+        const pct = Math.round((d.count / total) * 100)
+        return (
+          <li key={d.label} className="flex items-center gap-3">
+            <span className="w-24 shrink-0 truncate text-caption text-gray-600" title={d.label}>
+              {d.label}
+            </span>
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
+              <div
+                className="h-full rounded-full"
+                style={{ width: `${pct}%`, backgroundColor: CHART_PALETTE[i % CHART_PALETTE.length] }}
+              />
+            </div>
+            <span className="w-16 shrink-0 text-right text-caption tabular-nums text-gray-700">
+              {d.count.toLocaleString()} ({pct}%)
+            </span>
+          </li>
+        )
+      })}
+    </ul>
   )
 }
 
@@ -119,8 +110,6 @@ export function DashboardTab() {
   const { data: summary, isLoading: summaryLoading } = useNetworksSummary()
   const { data: expertise, isLoading: expertiseLoading } = useExpertiseDistribution()
   const { data: recent, isLoading: recentLoading } = useRecentUploads(20)
-
-  const catTotal = (summary?.byCategory ?? []).reduce((s, c) => s + c.count, 0) || 1
 
   const columns: Column<RecentUpload>[] = [
     { key: 'name', header: '이름/기업명', render: (r) => <span className="font-medium">{r.name}</span> },
@@ -153,50 +142,34 @@ export function DashboardTab() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <div className="rounded-radius-md border border-gray-300 bg-white p-4">
-          <h3 className="mb-2 text-body font-semibold text-gray-800">구분별 분포</h3>
-          {summaryLoading ? (
-            <div className="flex h-[260px] items-center justify-center"><Spinner /></div>
-          ) : (
-            <CategoryDonut data={summary?.byCategory ?? []} />
-          )}
-        </div>
-
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         <div className="rounded-radius-md border border-gray-300 bg-white p-4">
           <h3 className="mb-1 text-body font-semibold text-gray-800">분야별 현황</h3>
-          <p className="mb-2 text-caption text-gray-400">
+          <p className="mb-3 text-caption text-gray-400">
             BAN · EXP · 전문가 · 투자사의 관리 분야 태그별 보유 인원(중복 집계, 미등록 값은 기타)
           </p>
           {expertiseLoading ? (
-            <div className="flex h-[260px] items-center justify-center"><Spinner /></div>
+            <div className="flex h-40 items-center justify-center"><Spinner /></div>
           ) : (
-            <CategoryDonut data={expertise ?? []} />
+            <HBarList data={expertise ?? []} />
           )}
         </div>
-      </div>
 
-      <div className="rounded-radius-md border border-gray-300 bg-white p-4">
-        <h3 className="mb-3 text-body font-semibold text-gray-800">구분별 규모</h3>
-        <ul className="space-y-2">
-          {(summary?.byCategory ?? []).map((c, i) => {
-            const pct = Math.round((c.count / catTotal) * 100)
-            return (
-              <li key={c.key} className="flex items-center gap-3">
-                <span className="w-16 shrink-0 text-caption text-gray-600">{c.label}</span>
-                <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
-                  <div
-                    className="h-full rounded-full"
-                    style={{ width: `${pct}%`, backgroundColor: CHART_PALETTE[i % CHART_PALETTE.length] }}
-                  />
-                </div>
-                <span className="w-16 shrink-0 text-right text-caption tabular-nums text-gray-700">
-                  {c.count.toLocaleString()} ({pct}%)
-                </span>
-              </li>
-            )
-          })}
-        </ul>
+        <div className="rounded-radius-md border border-gray-300 bg-white p-4">
+          <h3 className="mb-1 text-body font-semibold text-gray-800">카드 2</h3>
+          <p className="mb-3 text-caption text-gray-400">준비 중</p>
+          <div className="flex h-40 items-center justify-center text-caption text-gray-400">
+            표시할 내용을 지정해 주세요
+          </div>
+        </div>
+
+        <div className="rounded-radius-md border border-gray-300 bg-white p-4">
+          <h3 className="mb-1 text-body font-semibold text-gray-800">카드 3</h3>
+          <p className="mb-3 text-caption text-gray-400">준비 중</p>
+          <div className="flex h-40 items-center justify-center text-caption text-gray-400">
+            표시할 내용을 지정해 주세요
+          </div>
+        </div>
       </div>
 
       <div className="rounded-radius-md border border-gray-300 bg-white p-4">
