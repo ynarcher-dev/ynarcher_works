@@ -1,6 +1,7 @@
-import { Button, PageHeader, Input, EmptyState } from '@ynarcher/ui'
+import { Button, PageHeader, Input } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { DashboardTab } from '@/features/networks/DashboardTab'
 import { DirectoryTab } from '@/features/networks/DirectoryTab'
 import { GlobalNetworkTab } from '@/features/networks/GlobalNetworkTab'
 import { BulkUploadPanel } from '@/features/networks/BulkUploadPanel'
@@ -69,12 +70,7 @@ export function NetworksPage() {
         actions={actions}
       />
 
-      {mode === 'dashboard' && (
-        <EmptyState
-          title="대시보드 준비 중"
-          description="네트워크 현황 요약 대시보드는 준비 중입니다."
-        />
-      )}
+      {mode === 'dashboard' && <DashboardTab />}
       {mode === 'global' && <GlobalNetworkTab keyword={keyword} />}
       {mode === 'directory' && (
         <DirectoryTab config={config} keyword={keyword} />
