@@ -259,7 +259,7 @@ export function DashboardTab() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+      <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-3">
         {cards.map((c) => (
           <DashCard
             key={c.key}
