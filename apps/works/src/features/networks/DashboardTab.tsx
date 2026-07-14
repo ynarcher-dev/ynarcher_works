@@ -20,12 +20,17 @@ const CHART_PALETTE = [
 
 /** 전월 대비 증감 배지. 양수 초록·음수 빨강·0 회색. */
 function DeltaLabel({ delta }: { delta: number }) {
-  if (delta === 0) return <span className="text-caption text-gray-400">전월 대비 0</span>
+  if (delta === 0) {
+    return <p className="mt-1 text-caption text-gray-400">전월 대비 &ndash;</p>
+  }
   const up = delta > 0
   return (
-    <span className={`text-caption tabular-nums ${up ? 'text-green-600' : 'text-red-600'}`}>
-      전월 대비 {up ? '▲' : '▼'} {Math.abs(delta).toLocaleString()}
-    </span>
+    <p className="mt-1 flex items-center gap-1 text-caption text-gray-400">
+      <span>전월 대비</span>
+      <span className={`font-semibold tabular-nums ${up ? 'text-green-600' : 'text-red-600'}`}>
+        {up ? '↑' : '↓'}{Math.abs(delta).toLocaleString()}
+      </span>
+    </p>
   )
 }
 
