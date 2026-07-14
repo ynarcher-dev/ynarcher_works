@@ -5,6 +5,7 @@ import {
   useExpertiseDistribution,
   useNetworksSummary,
   useRecentUploads,
+  useRegionDistribution,
   type RecentUpload,
   type StatusItem,
 } from '@/features/networks/dashboardHooks'
@@ -76,7 +77,7 @@ function HBarList({ data, limit }: { data: { label: string; count: number }[]; l
       {rows.map((d) => {
         const pct = Math.round((d.count / total) * 100)
         const barPct = Math.max(4, Math.round((d.count / max) * 100))
-        const isOther = d.label.startsWith('기타')
+        const isOther = d.label.startsWith('기타') || d.label.startsWith('미지정')
         return (
           <li key={d.label} className="space-y-1">
             <div className="flex items-baseline justify-between gap-2">
@@ -207,6 +208,7 @@ export function DashboardTab() {
   const navigate = useNavigate()
   const { data: summary, isLoading: summaryLoading } = useNetworksSummary()
   const { data: expertise, isLoading: expertiseLoading } = useExpertiseDistribution()
+  const { data: region, isLoading: regionLoading } = useRegionDistribution()
   const { data: recent, isLoading: recentLoading } = useRecentUploads(20)
 
   // 상세페이지가 있는 엔티티(8종)만 행 클릭으로 진입한다(미분류·스타트업 제외).
@@ -260,13 +262,18 @@ export function DashboardTab() {
     },
     {
       key: 'card3',
-      title: '카드 3',
-      subtitle: '준비 중',
-      render: () => (
-        <div className="flex h-full items-center justify-center text-caption text-gray-400">
-          표시할 내용을 지정해 주세요
-        </div>
-      ),
+      title: '권역별 현황',
+      subtitle: '글로벌 네트워크의 권역별 DB 보유 현황(미지정 별도)',
+      render: (inModal) =>
+        regionLoading ? (
+          spinnerBox
+        ) : inModal ? (
+          <div className="max-h-[60vh] overflow-y-auto pr-1">
+            <HBarList data={region ?? []} />
+          </div>
+        ) : (
+          <HBarList data={region ?? []} limit={6} />
+        ),
     },
   ]
 

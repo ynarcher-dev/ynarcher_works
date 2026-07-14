@@ -150,6 +150,44 @@ export function useExpertiseDistribution() {
   })
 }
 
+/**
+ * 글로벌 네트워크(global_networks)의 권역(region_tags)별 보유 건수 분포.
+ * 권역 미지정(region_tag_id null)은 '미지정'으로 집계한다. 건수 내림차순.
+ */
+export function useRegionDistribution() {
+  return useQuery({
+    queryKey: ['networks', 'dashboard', 'regions'],
+    queryFn: async (): Promise<{ label: string; count: number }[]> => {
+      const [tagRes, rowRes] = await Promise.all([
+        supabase.from('region_tags').select('id, name').is('deleted_at', null),
+        supabase
+          .from('global_networks')
+          .select('region_tag_id')
+          .is('deleted_at', null)
+          .is('merged_into_id', null)
+          .limit(5000),
+      ])
+      const nameById = new Map(
+        ((tagRes.data ?? []) as { id: string; name: string }[]).map((t) => [t.id, t.name]),
+      )
+      const counts = new Map<string, number>()
+      let none = 0
+      for (const r of (rowRes.data ?? []) as { region_tag_id: string | null }[]) {
+        if (!r.region_tag_id) {
+          none += 1
+          continue
+        }
+        counts.set(r.region_tag_id, (counts.get(r.region_tag_id) ?? 0) + 1)
+      }
+      const result = [...counts.entries()]
+        .map(([id, count]) => ({ label: nameById.get(id) ?? '기타', count }))
+        .sort((a, b) => b.count - a.count)
+      if (none > 0) result.push({ label: '미지정', count: none })
+      return result
+    },
+  })
+}
+
 export interface RecentUpload {
   entity: EntityKey
   entityLabel: string
