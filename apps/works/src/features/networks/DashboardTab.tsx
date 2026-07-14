@@ -36,7 +36,7 @@ function NetworkStatus({ items }: { items: StatusItem[] }) {
       {items.map((it) => (
         <div
           key={it.key}
-          className={`rounded border px-3 py-2.5 ${
+          className={`rounded-radius-md border px-3 py-2.5 ${
             it.emphasis ? 'border-gray-400 bg-gray-50' : 'border-gray-300 bg-white'
           }`}
         >
@@ -147,7 +147,7 @@ export function DashboardTab() {
       </div>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <div className="rounded border border-gray-300 bg-white p-4">
+        <div className="rounded-radius-md border border-gray-300 bg-white p-4">
           <h3 className="mb-2 text-body font-semibold text-gray-800">구분별 분포</h3>
           {summaryLoading ? (
             <div className="flex h-[260px] items-center justify-center"><Spinner /></div>
@@ -156,7 +156,7 @@ export function DashboardTab() {
           )}
         </div>
 
-        <div className="rounded border border-gray-300 bg-white p-4">
+        <div className="rounded-radius-md border border-gray-300 bg-white p-4">
           <h3 className="mb-3 text-body font-semibold text-gray-800">구분별 규모</h3>
           <ul className="space-y-2">
             {(summary?.byCategory ?? []).map((c, i) => {
@@ -180,7 +180,7 @@ export function DashboardTab() {
         </div>
       </div>
 
-      <div className="rounded border border-gray-300 bg-white p-4">
+      <div className="rounded-radius-md border border-gray-300 bg-white p-4">
         <h3 className="mb-3 text-body font-semibold text-gray-800">최근 업로드 데이터</h3>
         {recentLoading ? (
           <div className="flex h-40 items-center justify-center"><Spinner /></div>
