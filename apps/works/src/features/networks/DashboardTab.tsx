@@ -1,4 +1,4 @@
-import { Badge, DataTable, Spinner, type Column } from '@ynarcher/ui'
+import { Badge, Spinner } from '@ynarcher/ui'
 import { useNavigate } from 'react-router-dom'
 import {
   useExpertiseDistribution,
@@ -104,25 +104,55 @@ function formatDateTime(iso: string): string {
   return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
 }
 
+/** 카드용 컴팩트 최근 업로드 리스트(스크롤). 상세페이지 엔티티는 클릭 시 진입한다. */
+function RecentUploadsList({
+  rows,
+  onOpen,
+}: {
+  rows: RecentUpload[]
+  onOpen: (r: RecentUpload) => void
+}) {
+  if (rows.length === 0) {
+    return <p className="py-8 text-center text-caption text-gray-400">최근 업로드된 데이터가 없습니다.</p>
+  }
+  return (
+    <ul className="max-h-72 space-y-1.5 overflow-y-auto pr-1">
+      {rows.map((r) => {
+        const clickable = usesDetailPage(r.entity) && r.entity !== 'others'
+        return (
+          <li
+            key={`${r.entity}:${r.id}`}
+            onClick={() => onOpen(r)}
+            className={`rounded-radius-sm border border-gray-100 px-2.5 py-2 ${
+              clickable ? 'cursor-pointer hover:bg-gray-50' : ''
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="truncate font-medium text-gray-900" title={r.name}>
+                {r.name}
+              </span>
+              <Badge tone="neutral">{r.entityLabel}</Badge>
+            </div>
+            <div className="mt-1 flex items-center justify-between gap-2 text-caption text-gray-400">
+              <span className="flex min-w-0 items-center gap-1">
+                <SourceBadge source={r.source} />
+                <span className="truncate">{r.creatorName || '-'}</span>
+              </span>
+              <span className="shrink-0 tabular-nums">{formatDateTime(r.createdAt)}</span>
+            </div>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
 /** NETWORKS 대시보드: 규모 KPI · 구분별 분포 · 최근 업로드 리스트. */
 export function DashboardTab() {
   const navigate = useNavigate()
   const { data: summary, isLoading: summaryLoading } = useNetworksSummary()
   const { data: expertise, isLoading: expertiseLoading } = useExpertiseDistribution()
   const { data: recent, isLoading: recentLoading } = useRecentUploads(20)
-
-  const columns: Column<RecentUpload>[] = [
-    { key: 'name', header: '이름/기업명', render: (r) => <span className="font-medium">{r.name}</span> },
-    { key: 'entity', header: '구분', render: (r) => <Badge tone="neutral">{r.entityLabel}</Badge> },
-    { key: 'affiliation', header: '소속', render: (r) => r.affiliation || '-' },
-    { key: 'creator', header: '등록자', render: (r) => r.creatorName || '-' },
-    { key: 'source', header: '유입 경로', render: (r) => <SourceBadge source={r.source} /> },
-    {
-      key: 'created_at',
-      header: '등록일시',
-      render: (r) => <span className="tabular-nums text-gray-500">{formatDateTime(r.createdAt)}</span>,
-    },
-  ]
 
   // 상세페이지가 있는 엔티티(8종)만 행 클릭으로 진입한다(미분류·스타트업 제외).
   const openRow = (r: RecentUpload) => {
@@ -156,11 +186,13 @@ export function DashboardTab() {
         </div>
 
         <div className="rounded-radius-md border border-gray-300 bg-white p-4">
-          <h3 className="mb-1 text-body font-semibold text-gray-800">카드 2</h3>
-          <p className="mb-3 text-caption text-gray-400">준비 중</p>
-          <div className="flex h-40 items-center justify-center text-caption text-gray-400">
-            표시할 내용을 지정해 주세요
-          </div>
+          <h3 className="mb-1 text-body font-semibold text-gray-800">최근 업로드 데이터</h3>
+          <p className="mb-3 text-caption text-gray-400">8종 통합 최신순(상세 클릭 이동)</p>
+          {recentLoading ? (
+            <div className="flex h-40 items-center justify-center"><Spinner /></div>
+          ) : (
+            <RecentUploadsList rows={recent ?? []} onOpen={openRow} />
+          )}
         </div>
 
         <div className="rounded-radius-md border border-gray-300 bg-white p-4">
@@ -170,21 +202,6 @@ export function DashboardTab() {
             표시할 내용을 지정해 주세요
           </div>
         </div>
-      </div>
-
-      <div className="rounded-radius-md border border-gray-300 bg-white p-4">
-        <h3 className="mb-3 text-body font-semibold text-gray-800">최근 업로드 데이터</h3>
-        {recentLoading ? (
-          <div className="flex h-40 items-center justify-center"><Spinner /></div>
-        ) : (
-          <DataTable
-            columns={columns}
-            rows={recent ?? []}
-            rowKey={(r) => `${r.entity}:${r.id}`}
-            onRowClick={openRow}
-            emptyText="최근 업로드된 데이터가 없습니다."
-          />
-        )}
       </div>
     </div>
   )
