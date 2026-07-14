@@ -2,64 +2,102 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { ENTITIES, ENTITY_ORDER, type EntityKey } from '@/features/networks/config'
 
-/** 규모 KPI + 구분별 분포에 참여하는 인물 8종 마스터(미분류·스타트업 제외). */
-const PEOPLE_TABLES = ENTITY_ORDER
+/**
+ * 네트워크 현황 집계 슬롯(표시 순서 고정). 인물·조직 8종 + 글로벌 + 미분류.
+ * label은 현황 카드 표기용(구분별 분포 도넛은 config 라벨을 별도로 사용).
+ */
+const STATUS_SLOTS: { key: string; label: string; table: string }[] = [
+  { key: 'van', label: 'BAN', table: 'van' },
+  { key: 'exp', label: 'EXP', table: 'exp' },
+  { key: 'experts', label: '전문가', table: 'experts' },
+  { key: 'investors', label: '투자자', table: 'investors' },
+  { key: 'corporates', label: '기업', table: 'corporates' },
+  { key: 'institutions', label: '기관', table: 'institutions' },
+  { key: 'universities', label: '대학', table: 'universities' },
+  { key: 'vendors', label: '외주/거래', table: 'vendors' },
+  { key: 'etc', label: '기타', table: 'etc' },
+  { key: 'global', label: '글로벌', table: 'global_networks' },
+  { key: 'others', label: '미분류', table: 'others' },
+]
 
-/** '이번 달 신규'·최근 업로드 집계 대상(인물 8종 + 미분류 + 스타트업). */
-const ALL_TABLES: EntityKey[] = [...ENTITY_ORDER, 'others', 'startups']
+/** 도넛(구분별 분포)에 넣는 카테고리 키 집합(글로벌·미분류 제외). */
+const DONUT_KEYS = new Set<string>(ENTITY_ORDER)
 
-/** 이번 달 1일 0시(로컬) ISO — 신규 집계 하한. */
+/** 이번 달 1일 0시(로컬) ISO — 전월 대비 증감 집계 하한. */
 function startOfMonthISO(): string {
   const now = new Date()
   return new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
 }
 
-/** 활성(미삭제·미병합) 레코드 head 카운트. */
-async function activeCount(table: EntityKey, since?: string): Promise<number> {
+/** 레코드 head 카운트(행 미전송). active=활성만, createdSince/deletedSince=기간 필터. */
+async function headCount(
+  table: string,
+  opts: { active?: boolean; createdSince?: string; deletedSince?: string } = {},
+): Promise<number> {
   let q = supabase
     .from(table)
     .select('id', { count: 'exact', head: true })
-    .is('deleted_at', null)
     .is('merged_into_id', null)
-  if (since) q = q.gte('created_at', since)
+  if (opts.active) q = q.is('deleted_at', null)
+  if (opts.createdSince) q = q.gte('created_at', opts.createdSince)
+  if (opts.deletedSince) q = q.gte('deleted_at', opts.deletedSince)
   const { count } = await q
   return count ?? 0
 }
 
+export interface StatusItem {
+  key: string
+  label: string
+  /** 활성 보유 건수. */
+  total: number
+  /** 전월 대비 증감(= 이번 달 신규 − 이번 달 비활성화). 음수 가능. */
+  delta: number
+  /** 총보유 등 강조 셀 여부. */
+  emphasis?: boolean
+}
+
 export interface NetworksSummary {
-  activeTotal: number
-  newThisMonth: number
-  unclassified: number
-  startups: number
-  /** 구분별 분포(내림차순). 규모 0 카테고리도 포함해 팔레트 순서를 유지한다. */
+  /** 총보유(맨 앞) + 카테고리 10종 + 글로벌 + 미분류. 표시 순서 고정. */
+  items: StatusItem[]
+  /** 구분별 분포 도넛용(인물·조직 8종, 내림차순). */
   byCategory: { key: EntityKey; label: string; count: number }[]
 }
 
-/** 규모 요약 + 구분별 분포. 테이블별 head 카운트를 병렬 집계한다(행 미전송). */
+/** 네트워크 현황(슬롯별 보유·증감) + 구분별 분포. 테이블별 head 카운트를 병렬 집계한다. */
 export function useNetworksSummary() {
   return useQuery({
     queryKey: ['networks', 'dashboard', 'summary'],
     queryFn: async (): Promise<NetworksSummary> => {
       const since = startOfMonthISO()
-      const [peopleActive, others, startups, newCounts] = await Promise.all([
-        Promise.all(PEOPLE_TABLES.map((t) => activeCount(t))),
-        activeCount('others'),
-        activeCount('startups'),
-        Promise.all(ALL_TABLES.map((t) => activeCount(t, since))),
-      ])
-      const byCategory = PEOPLE_TABLES.map((key, i) => ({
-        key,
-        label: ENTITIES[key].label,
-        count: peopleActive[i] ?? 0,
-      })).sort((a, b) => b.count - a.count)
+      const stats = await Promise.all(
+        STATUS_SLOTS.map(async (s) => {
+          const [total, added, removed] = await Promise.all([
+            headCount(s.table, { active: true }),
+            headCount(s.table, { active: true, createdSince: since }),
+            headCount(s.table, { deletedSince: since }),
+          ])
+          return { ...s, total, delta: added - removed }
+        }),
+      )
 
-      return {
-        activeTotal: peopleActive.reduce((s, n) => s + n, 0),
-        newThisMonth: newCounts.reduce((s, n) => s + n, 0),
-        unclassified: others,
-        startups,
-        byCategory,
+      const grand: StatusItem = {
+        key: 'total',
+        label: '총보유',
+        total: stats.reduce((sum, s) => sum + s.total, 0),
+        delta: stats.reduce((sum, s) => sum + s.delta, 0),
+        emphasis: true,
       }
+
+      const byCategory = stats
+        .filter((s) => DONUT_KEYS.has(s.key))
+        .map((s) => ({
+          key: s.key as EntityKey,
+          label: ENTITIES[s.key as EntityKey].label,
+          count: s.total,
+        }))
+        .sort((a, b) => b.count - a.count)
+
+      return { items: [grand, ...stats], byCategory }
     },
   })
 }

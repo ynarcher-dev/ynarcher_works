@@ -1,7 +1,12 @@
 import { Badge, DataTable, Spinner, type Column } from '@ynarcher/ui'
 import { useNavigate } from 'react-router-dom'
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
-import { useNetworksSummary, useRecentUploads, type RecentUpload } from '@/features/networks/dashboardHooks'
+import {
+  useNetworksSummary,
+  useRecentUploads,
+  type RecentUpload,
+  type StatusItem,
+} from '@/features/networks/dashboardHooks'
 import { usesDetailPage } from '@/features/networks/config'
 
 /**
@@ -13,34 +18,34 @@ const CHART_PALETTE = [
   '#0D9488', '#DB2777', '#4F46E5', '#515151', '#94A3B8',
 ]
 
-/** 규모 요약 KPI 타일. 값 0도 표시하며, to 지정 시 클릭 이동한다. */
-interface Tile {
-  label: string
-  value: number
-  hint?: string
-  to?: string
+/** 전월 대비 증감 배지. 양수 초록·음수 빨강·0 회색. */
+function DeltaLabel({ delta }: { delta: number }) {
+  if (delta === 0) return <span className="text-caption text-gray-400">전월 대비 0</span>
+  const up = delta > 0
+  return (
+    <span className={`text-caption tabular-nums ${up ? 'text-green-600' : 'text-red-600'}`}>
+      전월 대비 {up ? '▲' : '▼'} {Math.abs(delta).toLocaleString()}
+    </span>
+  )
 }
 
-function KpiTiles({ tiles }: { tiles: Tile[] }) {
-  const navigate = useNavigate()
+/** 네트워크 현황: 총보유 + 카테고리별 보유 건수·전월 대비 증감 그리드. */
+function NetworkStatus({ items }: { items: StatusItem[] }) {
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-      {tiles.map((t) => (
-        <button
-          key={t.label}
-          type="button"
-          disabled={!t.to}
-          onClick={() => t.to && navigate(t.to)}
-          className={`rounded border border-gray-300 bg-white px-4 py-3 text-left ${
-            t.to ? 'cursor-pointer hover:border-gray-400' : 'cursor-default'
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+      {items.map((it) => (
+        <div
+          key={it.key}
+          className={`rounded border px-3 py-2.5 ${
+            it.emphasis ? 'border-gray-400 bg-gray-50' : 'border-gray-300 bg-white'
           }`}
         >
-          <p className="text-caption text-gray-500">{t.label}</p>
+          <p className="text-caption text-gray-500">{it.label}</p>
           <p className="text-title-md font-bold tabular-nums text-gray-900">
-            {t.value.toLocaleString()}
+            {it.total.toLocaleString()}
           </p>
-          {t.hint && <p className="text-caption text-gray-400">{t.hint}</p>}
-        </button>
+          <DeltaLabel delta={it.delta} />
+        </div>
       ))}
     </div>
   )
@@ -108,17 +113,7 @@ export function DashboardTab() {
   const { data: summary, isLoading: summaryLoading } = useNetworksSummary()
   const { data: recent, isLoading: recentLoading } = useRecentUploads(20)
 
-  const tiles: Tile[] = [
-    { label: '총 보유 네트워크', value: summary?.activeTotal ?? 0, hint: '인물·조직 8종 활성' },
-    { label: '이번 달 신규', value: summary?.newThisMonth ?? 0, hint: '스타트업·미분류 포함' },
-    {
-      label: '미분류 대기',
-      value: summary?.unclassified ?? 0,
-      hint: '분류 필요 →',
-      to: '/networks?tab=others',
-    },
-    { label: '스타트업', value: summary?.startups ?? 0, hint: '마스터 보유' },
-  ]
+  const catTotal = (summary?.byCategory ?? []).reduce((s, c) => s + c.count, 0) || 1
 
   const columns: Column<RecentUpload>[] = [
     { key: 'name', header: '이름/기업명', render: (r) => <span className="font-medium">{r.name}</span> },
@@ -142,7 +137,14 @@ export function DashboardTab() {
 
   return (
     <div className="space-y-5">
-      <KpiTiles tiles={tiles} />
+      <div className="space-y-2">
+        <h3 className="text-body font-semibold text-gray-800">네트워크 현황</h3>
+        {summaryLoading ? (
+          <div className="flex h-24 items-center justify-center"><Spinner /></div>
+        ) : (
+          <NetworkStatus items={summary?.items ?? []} />
+        )}
+      </div>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <div className="rounded border border-gray-300 bg-white p-4">
@@ -158,8 +160,7 @@ export function DashboardTab() {
           <h3 className="mb-3 text-body font-semibold text-gray-800">구분별 규모</h3>
           <ul className="space-y-2">
             {(summary?.byCategory ?? []).map((c, i) => {
-              const total = summary?.activeTotal || 1
-              const pct = Math.round((c.count / total) * 100)
+              const pct = Math.round((c.count / catTotal) * 100)
               return (
                 <li key={c.key} className="flex items-center gap-3">
                   <span className="w-16 shrink-0 text-caption text-gray-600">{c.label}</span>
