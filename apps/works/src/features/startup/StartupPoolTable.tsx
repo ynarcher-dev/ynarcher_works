@@ -2,6 +2,7 @@ import { Badge, DataTable, type Column, type DataTableProps } from '@ynarcher/ui
 import { useMemo } from 'react'
 import { formatFounded, readIndustries } from '@/features/startup/startupGrowth'
 import {
+  isInvested,
   MANAGEMENT_STATUS_TONE,
   managementStatusLabel,
   type ManagementStatus,
@@ -32,9 +33,9 @@ export interface StartupPoolRow {
   discovery_source?: string | null
   updated_at?: string | null
   created_by?: string | null
-  /** 등록자(created_by → users) FK 임베드. 비투자 담당자 컬럼의 폴백 원천. */
+  /** 작성자(등록자, created_by → users) FK 임베드. 전 구분 공통 작성자 컬럼의 원천. */
   creator?: { id: string; name: string | null } | null
-  /** 지정 담당자(startup_managers) 임베드. 투자기업 담당자 컬럼의 원천. */
+  /** 지정 담당자(startup_managers) 임베드. 투자기업 담당자 컬럼의 원천(비투자는 없음). */
   managers?: { user_id: string; is_lead: boolean; user: { id: string; name: string | null } | null }[]
   deleted_at?: string | null
   [key: string]: unknown
@@ -43,7 +44,7 @@ export interface StartupPoolRow {
 interface StartupPoolTableProps {
   rows: StartupPoolRow[]
   isLoading?: boolean
-  /** 소속 탭(구분 코드). 조건부 컬럼(관리현황=투자, 발굴경로=발굴)·담당자 표시를 좌우한다. */
+  /** 소속 탭(구분 코드). 조건부 컬럼(관리현황=투자 전용, 발굴경로=투자 제외)·담당자 표시를 좌우한다. 작성자는 전 구분 공통. */
   tab?: ManagementStatus
   /** 행 클릭(상세 진입). 지정 시 행이 클릭 가능해진다. */
   onRowClick?: (row: StartupPoolRow) => void
@@ -60,11 +61,12 @@ interface StartupPoolTableProps {
 
 /**
  * 스타트업 풀 관리 공용 데이터 테이블.
- * 컬럼: 체크박스·No.·기업명·대표자명·사업자등록번호·설립일·산업(뱃지 최대 3)·단계·구분·관리현황·발굴 경로·담당자·수정일·관리.
- * 좌측 선택/넘버링과 우측 표준 컬럼(담당자·수정일·관리)은 공용 DataTable이 소유하고,
- * 본 컴포넌트는 그 사이의 도메인 컬럼(기업명~발굴 경로)만 정의한다.
+ * 컬럼: 체크박스·No.·기업명·대표자명·사업자등록번호·설립일·산업(뱃지 최대 3)·단계·구분·관리현황(투자)·담당자·발굴 경로(투자 제외)·작성자·수정일·관리.
+ * 좌측 선택/넘버링과 우측 표준 컬럼(작성자·수정일·관리)은 공용 DataTable이 소유하고,
+ * 본 컴포넌트는 그 사이의 도메인 컬럼(기업명~발굴 경로, 담당자)만 정의한다.
+ * 작성자(등록자)와 담당자는 별개 축이다 — 작성자 컬럼은 전 구분 공통 등록자, 담당자 컬럼은 투자=지정 담당자·그 외=공동관리.
  */
-/** 투자기업 담당자 표시명: 리드 → 지원 순, 없으면 등록자로 폴백. */
+/** 투자기업 담당자 표시명: 리드 → 지원 순. 지정 담당자가 없으면 null(→ "미지정"). 등록자로 폴백하지 않는다. */
 function managerLabel(r: StartupPoolRow): string | null {
   const ms = r.managers ?? []
   if (ms.length === 0) return null
@@ -176,8 +178,23 @@ export function StartupPoolTable({
       })
     }
 
-    // 발굴 경로는 발굴 탭(또는 전체 뷰)에서 노출. 자유 서술이라 남는 폭을 흡수한다.
-    if (tab === undefined || tab === 'sourced') {
+    // 담당자(관리 주체): 관리현황 바로 뒤에 노출한다. 투자기업은 지정 담당자(리드, 외 N),
+    // 그 외는 공동관리(쓰기 권한자 누구나) 텍스트. 등록자로 폴백하지 않으며 작성자는 우측 표준 컬럼에 별도 표시.
+    cols.push({
+      key: 'managers',
+      header: '담당자',
+      className: 'w-28',
+      render: (r) => {
+        if (isInvested(r.management_status)) {
+          const label = managerLabel(r)
+          return label ?? <span className="text-gray-400">미지정</span>
+        }
+        return <span className="text-gray-500">공동관리</span>
+      },
+    })
+
+    // 발굴 경로는 투자기업을 제외한 구분(발굴·보육·기타)에서 노출한다. 자유 서술이라 남는 폭을 흡수한다.
+    if (tab !== 'invested') {
       cols.push({
         key: 'discovery_source',
         header: '발굴 경로',
@@ -200,11 +217,9 @@ export function StartupPoolTable({
       onSelectionChange={onSelectionChange}
       onRowClick={onRowClick}
       pagination={pagination}
-      authorLabel="담당자"
       meta={{
-        // 담당자: 투자기업은 지정 담당자(리드), 그 외는 등록자(creator)로 폴백.
-        author: (r) =>
-          managerLabel(r) || r.creator?.name || <span className="text-gray-400">-</span>,
+        // 작성자(등록자) 컬럼: 전 구분 공통으로 created_by를 표시한다(담당자와 별개 축, 폴백 없음).
+        author: (r) => r.creator?.name || <span className="text-gray-400">-</span>,
         onDeactivate,
         deactivateWithReason,
       }}

@@ -84,7 +84,10 @@ export interface DataTableProps<T> {
   standardColumns?: boolean
   /** 표준 컬럼 중 작성자 컬럼 노출 여부(기본 true). false면 수정일/관리만 남긴다. */
   showAuthor?: boolean
-  /** 작성자 컬럼 헤더 라벨(기본 '작성자'). 스타트업 풀 등 담당자 의미일 때 '담당자'로 바꾼다. */
+  /**
+   * 등록자 컬럼 헤더 라벨(기본 '등록자'). 이 표준 컬럼은 항상 등록자(최초 업로더, created_by)를 뜻한다.
+   * 담당자(관리 주체)는 별개 축이므로 이 컬럼을 '담당자'로 재라벨하지 말고 도메인 컬럼으로 따로 둔다.
+   */
   authorLabel?: string
   /** 수정일 값(셀) 정렬(기본 left). 헤더는 항상 좌측. 넓은 표에서 우측 여백을 줄이려면 'right'. */
   updatedAtAlign?: 'left' | 'right'
@@ -154,7 +157,7 @@ export function DataTable<T>({
   pagination,
   standardColumns = true,
   showAuthor = true,
-  authorLabel = '작성자',
+  authorLabel = '등록자',
   updatedAtAlign = 'left',
   manageable = true,
   selectable = false,

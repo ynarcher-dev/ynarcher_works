@@ -12,6 +12,11 @@ export type EntityRow = Record<string, unknown> & {
   name: string
   is_provisional?: boolean
   merged_into_id?: string | null
+  /**
+   * 작성자(등록자, created_by → users) FK 임베드. 목록·상세의 작성자 표시 원천.
+   * 담당자(관리 주체)는 별개 축 — 투자기업은 startup_managers 지정 담당자, 그 외는 공동관리(특정 담당자 없음).
+   */
+  creator?: { id: string; name: string | null } | null
 }
 
 /** 엔티티 목록(검색/미삭제/미병합). */
@@ -21,7 +26,7 @@ export function useEntityList(table: EntityKey, keyword: string) {
     queryFn: async (): Promise<EntityRow[]> => {
       let q = supabase
         .from(table)
-        .select('*')
+        .select('*, creator:users!created_by(id, name)')
         .is('deleted_at', null)
         .is('merged_into_id', null)
         .order('name', { ascending: true })
@@ -63,7 +68,7 @@ export function useEntityPage(
       const to = from + pageSize - 1
       let q = supabase
         .from(table)
-        .select('*', { count: 'exact' })
+        .select('*, creator:users!created_by(id, name)', { count: 'exact' })
         .is('deleted_at', null)
         .is('merged_into_id', null)
         .order('name', { ascending: true })
@@ -102,7 +107,7 @@ export function useEntity(table: EntityKey, id: string | undefined) {
     queryFn: async (): Promise<EntityRow | null> => {
       const { data, error } = await supabase
         .from(table)
-        .select('*')
+        .select('*, creator:users!created_by(id, name)')
         .eq('id', id)
         .maybeSingle()
       if (error) throw error

@@ -207,6 +207,15 @@ export function MasterListView({
         return v ?? '-'
       },
     }))
+    // 담당자(관리 주체) 컬럼: NETWORKS 8종은 모두 공동관리(쓰기 권한자 누구나 수정)다.
+    // 목록은 개념만 배지로 노출하고, 실제 기여자는 상세 페이지에서 확인한다.
+    // 작성자(등록자)는 우측 표준 컬럼(created_by)에 별도 표시된다.
+    base.push({
+      key: '_manager',
+      header: '담당자',
+      className: 'w-24',
+      render: () => <span className="text-gray-500">공동관리</span>,
+    })
     // 수정 가능(NETWORKS)일 때만 액션 컬럼을 노출한다. 보기 버튼은 제거됨.
     if (onEdit) {
       base.push({
@@ -239,8 +248,9 @@ export function MasterListView({
       onSelectionChange={onSelectionChange}
       pagination={pagination}
       meta={{
-        // 임시: created_by가 UUID로 노출되어 실제 작성자명 연동 전까지 '홍길동'으로 대체한다.
-        author: () => '홍길동',
+        // 작성자 = 레코드 생성자(created_by → users). FK 임베드한 creator.name을 노출한다.
+        author: (r) =>
+          (r as { creator?: { name?: string | null } | null }).creator?.name || '-',
         // 복사 버튼: 이름/소속/직책·직급/이메일/연락처를 텍스트로 복사.
         copyText: buildCopyText,
         onDeactivate,

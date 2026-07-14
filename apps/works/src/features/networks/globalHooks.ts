@@ -8,9 +8,12 @@ import { supabase } from '@/lib/supabase'
 import { GLOBAL_TABLE, type GlobalRow } from '@/features/networks/globalConfig'
 import type { Contribution } from '@/features/networks/hooks'
 
-/** 목록 조회 시 권역·국가명을 함께 임베드한다(태그 FK 조인). */
+/**
+ * 목록/상세 조회 시 권역·국가명과 등록자(created_by → users)를 함께 임베드한다.
+ * 국내 8종(useEntityPage)과 동일하게 creator를 실어 "등록자" 컬럼/항목이 비지 않게 한다.
+ */
 const SELECT_WITH_TAGS =
-  '*, region:region_tags(name), country:country_tags(name)'
+  '*, region:region_tags(name), country:country_tags(name), creator:users!created_by(id, name)'
 
 /** 글로벌 네트워크 목록 페이지(0-base). 국내 useEntityPage와 동일 규약 + 태그 조인. */
 export interface GlobalPage {

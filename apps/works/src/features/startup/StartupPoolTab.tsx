@@ -87,7 +87,7 @@ export function StartupPoolTab({ category }: StartupPoolTabProps) {
       <div className="flex flex-wrap items-center gap-2">
         <div className="w-full sm:w-80">
           <Input
-            placeholder="기업명·대표자·사업자번호·담당자 검색"
+            placeholder="기업명·대표자·사업자번호·등록자 검색"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
           />

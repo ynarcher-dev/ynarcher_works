@@ -88,9 +88,11 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
   // 부제: 소속 · 부서명 · 직책(부서명은 소속과 직책 사이에 노출).
   const subtitle = [affiliation, department, position].filter(Boolean).join(' · ')
 
-  // 공동 관리(기여자) + 연혁 타임라인. 단일 작성자 없이 기여자 목록으로 표시한다.
+  // 작성자(등록자)와 담당자는 별개 축이다. NETWORKS 8종은 모두 담당자=공동관리(쓰기 권한자 누구나)이므로
+  // 특정 담당자 없이 기여자 목록으로 표시하고, 최초 업로더(작성자)는 created_by로 별도 표기한다.
   const { data: contributions } = useContributions(entity, record.id as string)
   const contributors = uniqueContributors(contributions ?? [])
+  const author = (record.creator?.name as string) || '-'
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -161,7 +163,8 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
             />
           )}
           {compact && <Info label="구분" value={category || '-'} />}
-          <Info label="공동 관리" value={contributors.length ? contributors.join(', ') : '-'} />
+          <Info label="등록자" value={author} />
+          <Info label="담당자(공동관리)" value={contributors.length ? contributors.join(', ') : '-'} />
           <Info label="수정일" value={formatDate(record.updated_at)} />
         </div>
       </section>
@@ -300,7 +303,7 @@ export function NetworkDetailPage({
 
       {editing && (
         <h1 className="text-title-md font-bold text-gray-900">
-          {isNew ? `${label} 등록` : `${label} 수정`}
+          {isNew ? '네트워크 등록' : `${label} 수정`}
         </h1>
       )}
 

@@ -165,7 +165,8 @@ export function StartupDetailPage() {
 
             {/* 관리 현황: 담당자(최상단) + 플랫폼 전반 참여·관리 이력(현재는 헤드라인만, 내용은 후속) */}
             <SectionHeading title="관리 현황" />
-            {/* 담당자 카드(관리 현황 최상단). 투자기업은 지정 담당자(리드/지원), 그 외는 등록자. */}
+            {/* 담당자 카드(관리 현황 최상단). 담당자와 작성자(등록자)는 별개 축이므로 항상 분리 표기한다.
+                투자기업만 지정 담당자(리드/지원)를 가지며, 비투자는 공동관리(특정 담당자 없음)다. */}
             <section className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
               <h2 className="mb-3 text-body font-semibold text-gray-900">담당자</h2>
               {invested ? (
@@ -181,11 +182,15 @@ export function StartupDetailPage() {
                   <p className="text-body text-gray-400">지정된 담당자가 없습니다.</p>
                 )
               ) : (
-                <p className="text-body text-gray-800">
-                  <span className="mr-2 text-caption text-gray-400">등록자</span>
-                  {record.creator?.name || '-'}
+                <p className="text-body text-gray-600">
+                  공동관리 — NETWORKS 쓰기 권한자 누구나 수정할 수 있습니다.
                 </p>
               )}
+              {/* 등록자: 담당자와 무관한 최초 등록 감사 정보. 항상 표시한다. */}
+              <p className="mt-3 border-t border-gray-100 pt-3 text-body text-gray-800">
+                <span className="mr-2 text-caption text-gray-400">등록자</span>
+                {record.creator?.name || '-'}
+              </p>
             </section>
             {/* 관리 현황 로그 카드: 기능은 후속 구현, 지금은 건수 뱃지(0) 디자인만 잡아둔다. */}
             {ACTIVITY_SECTIONS.map((title) => (

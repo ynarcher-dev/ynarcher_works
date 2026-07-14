@@ -78,8 +78,9 @@ function sanitizeOrValue(v: string): string {
 
 /**
  * 발굴기업 풀 전용 서버 사이드 페이지네이션 훅. NETWORKS 공용 useEntityPage와 달리
- * 다중 필드 검색(기업명·대표자·사업자번호·담당자)과 복수 필터(산업·단계·구분·관리현황·설립일)를
- * 스타트업 스키마에 맞춰 처리한다. 담당자는 created_by FK를 users로 임베드해 이름으로 노출한다.
+ * 다중 필드 검색(기업명·대표자·사업자번호·작성자)과 복수 필터(산업·단계·구분·관리현황·설립일)를
+ * 스타트업 스키마에 맞춰 처리한다. 작성자(등록자)는 created_by FK를, 담당자(투자 지정)는
+ * startup_managers를 각각 임베드해 별개 컬럼으로 노출한다(두 축은 서로 다를 수 있음).
  */
 export function useStartupPoolPage(
   keyword: string,
@@ -100,8 +101,9 @@ export function useStartupPoolPage(
       let q = supabase
         .from('startups')
         .select(
-          // 담당자 = 투자기업 지정 담당자(startup_managers). 비투자는 없음 → 등록자(creator)로 폴백.
-          '*, creator:users!created_by(id, name), managers:startup_managers(user_id, is_lead, user:users(id, name))',
+          // creator = 작성자(등록자, created_by). managers = 담당자(투자기업 지정, startup_managers).
+          // 두 축은 별개 — 작성자 컬럼은 전 구분 공통, 담당자 컬럼은 투자 전용(비투자는 담당자 없음=공동관리).
+          '*, creator:users!created_by(id, name), managers:startup_managers(user_id, is_lead, user:users!startup_managers_user_id_fkey(id, name))',
           { count: 'exact' },
         )
         .is('deleted_at', null)
@@ -112,7 +114,7 @@ export function useStartupPoolPage(
       // 탭 고정 구분(있으면). 사용자 구분 필터는 탭 뷰에서 제거되어 category 로만 좁힌다.
       if (category) q = q.eq('management_status', category)
 
-      // 검색: 기업명·대표자·사업자번호 + 담당자(이름→created_by id 역조회).
+      // 검색: 기업명·대표자·사업자번호 + 작성자(등록자 이름→created_by id 역조회).
       if (kw) {
         const orParts = [
           `name.ilike.%${kw}%`,
@@ -186,7 +188,7 @@ export function useStartupManagers(startupId: string | undefined) {
     queryFn: async (): Promise<StartupManagerRow[]> => {
       const { data, error } = await supabase
         .from('startup_managers')
-        .select('user_id, is_lead, user:users(id, name)')
+        .select('user_id, is_lead, user:users!startup_managers_user_id_fkey(id, name)')
         .eq('startup_id', startupId)
         .order('is_lead', { ascending: false })
       if (error) throw error
