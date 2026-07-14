@@ -350,7 +350,7 @@ export function DashboardTab() {
             key={c.key}
             title={c.title}
             subtitle={c.subtitle}
-            onExpand={() => setExpanded(c.key)}
+            onExpand={c.expandable === false ? undefined : () => setExpanded(c.key)}
           >
             {c.render(false)}
           </DashCard>
