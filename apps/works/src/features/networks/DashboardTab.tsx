@@ -120,22 +120,19 @@ function formatDateTime(iso: string): string {
   return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
 }
 
-/** 카드용 컴팩트 최근 업로드 리스트(스크롤). 상세페이지 엔티티는 클릭 시 진입한다. */
+/** 컴팩트 최근 업로드 리스트. 스크롤은 부모 컨테이너가 담당한다. 상세페이지 엔티티는 클릭 시 진입. */
 function RecentUploadsList({
   rows,
   onOpen,
-  maxHClass = 'max-h-72',
 }: {
   rows: RecentUpload[]
   onOpen: (r: RecentUpload) => void
-  /** 스크롤 영역 최대 높이(카드=max-h-72, 모달=더 크게). */
-  maxHClass?: string
 }) {
   if (rows.length === 0) {
     return <p className="py-8 text-center text-caption text-gray-400">최근 업로드된 데이터가 없습니다.</p>
   }
   return (
-    <ul className={`${maxHClass} space-y-1.5 overflow-y-auto pr-1`}>
+    <ul className="space-y-1.5">
       {rows.map((r) => {
         const clickable = usesDetailPage(r.entity) && r.entity !== 'others'
         return (
@@ -185,10 +182,14 @@ function DashCard({
     <section className="space-y-2">
       <div className="space-y-0.5">
         <h3 className="text-body font-semibold text-gray-800">{title}</h3>
-        {subtitle && <p className="text-caption text-gray-400">{subtitle}</p>}
+        {subtitle && (
+          <p className="truncate text-caption text-gray-400" title={subtitle}>
+            {subtitle}
+          </p>
+        )}
       </div>
-      <div className="rounded-radius-md border border-gray-300 bg-white p-4">
-        {children}
+      <div className="flex h-[22rem] flex-col rounded-radius-md border border-gray-300 bg-white p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">{children}</div>
         <button
           type="button"
           onClick={onExpand}
@@ -249,12 +250,12 @@ export function DashboardTab() {
       render: (inModal) =>
         recentLoading ? (
           spinnerBox
+        ) : inModal ? (
+          <div className="max-h-[60vh] overflow-y-auto pr-1">
+            <RecentUploadsList rows={recent ?? []} onOpen={openRow} />
+          </div>
         ) : (
-          <RecentUploadsList
-            rows={recent ?? []}
-            onOpen={openRow}
-            maxHClass={inModal ? 'max-h-[60vh]' : 'max-h-72'}
-          />
+          <RecentUploadsList rows={recent ?? []} onOpen={openRow} />
         ),
     },
     {
@@ -262,7 +263,7 @@ export function DashboardTab() {
       title: '카드 3',
       subtitle: '준비 중',
       render: () => (
-        <div className="flex h-40 items-center justify-center text-caption text-gray-400">
+        <div className="flex h-full items-center justify-center text-caption text-gray-400">
           표시할 내용을 지정해 주세요
         </div>
       ),
