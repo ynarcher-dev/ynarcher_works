@@ -188,7 +188,7 @@ function DashCard({
           </p>
         )}
       </div>
-      <div className="flex h-[22rem] flex-col rounded-radius-md border border-gray-300 bg-white p-4">
+      <div className="flex h-[24rem] flex-col rounded-radius-md border border-gray-300 bg-white p-4">
         <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">{children}</div>
         <button
           type="button"
