@@ -35,7 +35,18 @@ function CategoryPie({ data, height }: { data: { label: string; count: number }[
   return (
     <ResponsiveContainer width="100%" height={height}>
       <PieChart>
-        <Pie data={slices} dataKey="count" nameKey="label" innerRadius="55%" outerRadius="80%" paddingAngle={2}>
+        <Pie
+          data={slices}
+          dataKey="count"
+          nameKey="label"
+          cx="50%"
+          cy="50%"
+          innerRadius="40%"
+          outerRadius="82%"
+          paddingAngle={1.5}
+          stroke="#FFFFFF"
+          strokeWidth={2}
+        >
           {slices.map((s, i) => (
             <Cell
               key={s.label}
