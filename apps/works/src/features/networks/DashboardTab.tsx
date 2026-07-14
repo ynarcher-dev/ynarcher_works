@@ -46,6 +46,8 @@ function CategoryPie({ data, height }: { data: { label: string; count: number }[
           paddingAngle={1.5}
           stroke="#FFFFFF"
           strokeWidth={2}
+          label={({ name, value }) => `${name} ${Number(value).toLocaleString()}`}
+          labelLine={{ stroke: '#D4D4D4' }}
         >
           {slices.map((s, i) => (
             <Cell
@@ -230,7 +232,8 @@ function DashCard({
 }: {
   title: string
   subtitle?: string
-  onExpand: () => void
+  /** 지정 시 하단에 '전체보기' 버튼을 노출(클릭 시 확대 모달). 미지정이면 버튼 없음. */
+  onExpand?: () => void
   children: ReactNode
 }) {
   return (
@@ -245,13 +248,15 @@ function DashCard({
       </div>
       <div className="flex h-[23rem] flex-col rounded-radius-md border border-gray-300 bg-white p-4">
         <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">{children}</div>
-        <button
-          type="button"
-          onClick={onExpand}
-          className="mt-3 w-full rounded-radius-sm border border-gray-200 py-1.5 text-caption font-medium text-gray-600 hover:bg-gray-50"
-        >
-          전체보기
-        </button>
+        {onExpand && (
+          <button
+            type="button"
+            onClick={onExpand}
+            className="mt-3 w-full rounded-radius-sm border border-gray-200 py-1.5 text-caption font-medium text-gray-600 hover:bg-gray-50"
+          >
+            전체보기
+          </button>
+        )}
       </div>
     </section>
   )
@@ -282,6 +287,8 @@ export function DashboardTab() {
     key: 'expertise' | 'recent' | 'card3'
     title: string
     subtitle?: string
+    /** 파이처럼 전체가 이미 보이는 카드는 false로 전체보기 버튼을 숨긴다(기본 true). */
+    expandable?: boolean
     render: (inModal: boolean) => ReactNode
   }[] = [
     {
@@ -318,6 +325,7 @@ export function DashboardTab() {
       key: 'card3',
       title: '권역별 현황',
       subtitle: '글로벌 네트워크의 권역별 DB 보유 현황(미지정 별도)',
+      expandable: false,
       render: (inModal) =>
         regionLoading ? spinnerBox : <CategoryPie data={region ?? []} height={inModal ? 380 : 250} />,
     },
