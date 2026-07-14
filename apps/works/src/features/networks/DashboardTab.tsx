@@ -166,7 +166,10 @@ function RecentUploadsList({
   )
 }
 
-/** 대시보드 카드 셸: 제목·부제·본문 + 하단 '전체보기' 버튼(클릭 시 확대 모달). */
+/**
+ * 대시보드 섹션: 제목·부제·본문 + 하단 '전체보기' 버튼(클릭 시 확대 모달).
+ * 네트워크 현황과 동일하게 테두리 카드로 감싸지 않고 배경 위 섹션으로 렌더한다.
+ */
 function DashCard({
   title,
   subtitle,
@@ -179,18 +182,20 @@ function DashCard({
   children: ReactNode
 }) {
   return (
-    <div className="flex flex-col rounded-radius-md border border-gray-300 bg-white p-4">
-      <h3 className="mb-1 text-body font-semibold text-gray-800">{title}</h3>
-      {subtitle && <p className="mb-3 text-caption text-gray-400">{subtitle}</p>}
-      <div className="flex-1">{children}</div>
+    <section className="space-y-3">
+      <div className="space-y-1">
+        <h3 className="text-body font-semibold text-gray-800">{title}</h3>
+        {subtitle && <p className="text-caption text-gray-400">{subtitle}</p>}
+      </div>
+      {children}
       <button
         type="button"
         onClick={onExpand}
-        className="mt-3 w-full rounded-radius-sm border border-gray-200 py-1.5 text-caption font-medium text-gray-600 hover:bg-gray-50"
+        className="w-full rounded-radius-sm border border-gray-200 py-1.5 text-caption font-medium text-gray-600 hover:bg-gray-50"
       >
         전체보기
       </button>
-    </div>
+    </section>
   )
 }
 
