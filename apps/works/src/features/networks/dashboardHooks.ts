@@ -107,37 +107,45 @@ const EXPERTISE_TABLES = ['van', 'exp', 'experts', 'investors']
 
 /**
  * BAN·EXP·전문가·투자사의 전문 분야(expertise jsonb 배열) 태그별 보유 인원 분포.
- * 한 인물이 여러 분야를 가지면 각 분야에 중복 집계된다(합계 ≠ 인원 수).
+ * ADMIN 분야 관리(field_tags)에 등록된 태그만 개별 조각으로 집계하고, 목록에 없는
+ * 레거시·자유입력 값은 '기타(미등록)'로 합산한다. 한 인물이 여러 분야를 가지면 각 분야에
+ * 중복 집계된다(합계 ≠ 인원 수).
  */
 export function useExpertiseDistribution() {
   return useQuery({
     queryKey: ['networks', 'dashboard', 'expertise'],
     queryFn: async (): Promise<{ label: string; count: number }[]> => {
-      const perTable = await Promise.all(
-        EXPERTISE_TABLES.map(async (t) => {
-          const { data } = await supabase
+      const [tagRes, ...tableRes] = await Promise.all([
+        supabase.from('field_tags').select('name').is('deleted_at', null),
+        ...EXPERTISE_TABLES.map((t) =>
+          supabase
             .from(t)
             .select('expertise')
             .is('deleted_at', null)
             .is('merged_into_id', null)
-            .limit(2000)
-          return (data ?? []) as { expertise: unknown }[]
-        }),
+            .limit(2000),
+        ),
+      ])
+      const managed = new Set(
+        ((tagRes.data ?? []) as { name: string }[]).map((t) => t.name),
       )
       const counts = new Map<string, number>()
-      for (const rows of perTable) {
-        for (const row of rows) {
+      let other = 0
+      for (const res of tableRes) {
+        for (const row of (res.data ?? []) as { expertise: unknown }[]) {
           const list = Array.isArray(row.expertise) ? row.expertise : []
           for (const tag of list) {
-            if (typeof tag === 'string' && tag.trim()) {
-              counts.set(tag, (counts.get(tag) ?? 0) + 1)
-            }
+            if (typeof tag !== 'string' || !tag.trim()) continue
+            if (managed.has(tag)) counts.set(tag, (counts.get(tag) ?? 0) + 1)
+            else other += 1
           }
         }
       }
-      return [...counts.entries()]
+      const result = [...counts.entries()]
         .map(([label, count]) => ({ label, count }))
         .sort((a, b) => b.count - a.count)
+      if (other > 0) result.push({ label: '기타(미등록)', count: other })
+      return result
     },
   })
 }

@@ -166,7 +166,7 @@ export function DashboardTab() {
         <div className="rounded-radius-md border border-gray-300 bg-white p-4">
           <h3 className="mb-1 text-body font-semibold text-gray-800">분야별 현황</h3>
           <p className="mb-2 text-caption text-gray-400">
-            BAN · EXP · 전문가 · 투자사의 전문 분야 보유 인원(중복 집계)
+            BAN · EXP · 전문가 · 투자사의 관리 분야 태그별 보유 인원(중복 집계, 미등록 값은 기타)
           </p>
           {expertiseLoading ? (
             <div className="flex h-[260px] items-center justify-center"><Spinner /></div>
