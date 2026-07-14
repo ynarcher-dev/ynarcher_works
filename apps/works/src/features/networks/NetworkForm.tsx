@@ -227,130 +227,147 @@ export function NetworkForm({ entity, recordId, initial, onDone, onCancel }: Pro
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
-        <p className="mb-3 text-caption font-medium text-gray-600">사진</p>
-        <div className="flex items-center gap-4">
-          <PhotoBox src={photo} />
-          <div className="flex gap-2">
-            <label className="cursor-pointer rounded-radius-md border border-gray-300 px-3 py-1.5 text-body text-gray-700 transition-colors hover:bg-gray-50">
-              사진 첨부
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={onPickPhoto}
-              />
-            </label>
-            {photo && (
-              <Button type="button" variant="secondary" onClick={() => setPhoto('')}>
-                삭제
-              </Button>
-            )}
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      {/* 상세페이지와 동일한 3열 배치: 좌측 2/3 편집 카드 + 우측 1/3 자료 관리 */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {/* 좌측(2/3): 사진 → 기본 데이터 → 약력 → 노트 */}
+        <div className="space-y-4 lg:col-span-2">
+          {/* 사진 카드 */}
+          <div className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+            <p className="mb-3 text-caption font-medium text-gray-600">사진</p>
+            <div className="flex items-center gap-4">
+              <PhotoBox src={photo} />
+              <div className="flex gap-2">
+                <label className="cursor-pointer rounded-radius-md border border-gray-300 px-3 py-1.5 text-body text-gray-700 transition-colors hover:bg-gray-50">
+                  사진 첨부
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={onPickPhoto}
+                  />
+                </label>
+                {photo && (
+                  <Button type="button" variant="secondary" onClick={() => setPhoto('')}>
+                    삭제
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 기본 데이터 카드 */}
+          <div className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="이름" required>
+                <Input
+                  invalid={Boolean(errors.name)}
+                  {...register('name', { required: '이름은 필수입니다.' })}
+                />
+                {errors.name && (
+                  <p className="mt-1 text-caption text-danger">{errors.name.message}</p>
+                )}
+              </Field>
+              <Field label="구분" hint="(선택한 네트워크로 저장됩니다)">
+                <Select {...register('category')}>
+                  {CATEGORY_OPTIONS.map((o) => (
+                    <option key={o.key} value={o.label}>
+                      {o.label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="소속">
+                <Input {...register('affiliation')} />
+              </Field>
+              <Field label="부서명">
+                <Input {...register('department')} />
+              </Field>
+              <Field label="직책/직급">
+                <Input {...register('position')} />
+              </Field>
+              <Field label="이메일">
+                <Input type="email" {...register('email')} />
+              </Field>
+              <Field label="연락처">
+                <Input {...register('phone')} />
+              </Field>
+              {!compact && (
+                <Field label="매칭 가능 여부">
+                  <Select {...register('match')}>
+                    <option value="possible">가능</option>
+                    <option value="impossible">불가능</option>
+                  </Select>
+                </Field>
+              )}
+              {!compact && (
+                <div className="sm:col-span-2">
+                  <Field label="전문 분야" hint={`(분야 관리 태그에서 최대 ${MAX_FIELDS}개)`}>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(fieldTags ?? []).map((t) => {
+                        const on = fields.includes(t.name)
+                        const disabled = !on && fields.length >= MAX_FIELDS
+                        return (
+                          <button
+                            key={t.id}
+                            type="button"
+                            disabled={disabled}
+                            onClick={() => toggleField(t.name)}
+                            className={cn(
+                              'rounded-radius-sm border px-2 py-0.5 text-caption transition-colors',
+                              on
+                                ? 'border-brand bg-brand/10 font-medium text-brand'
+                                : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50',
+                              disabled && 'cursor-not-allowed opacity-40 hover:bg-white',
+                            )}
+                          >
+                            {t.name}
+                          </button>
+                        )
+                      })}
+                      {(fieldTags ?? []).length === 0 && (
+                        <span className="text-caption text-gray-400">
+                          등록된 분야 태그가 없습니다. (ADMIN › 분야 관리)
+                        </span>
+                      )}
+                    </div>
+                  </Field>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {!compact && (
+            <div className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+              <p className="mb-4 text-caption font-medium text-gray-600">약력</p>
+              <CareerEditor value={background} onChange={setBackground} />
+            </div>
+          )}
+
+          {/* 노트 카드 */}
+          <div className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+            <Field label="노트">
+              <TextArea rows={4} {...register('intro')} />
+            </Field>
           </div>
         </div>
-      </div>
 
-      <div className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="이름" required>
-            <Input
-              invalid={Boolean(errors.name)}
-              {...register('name', { required: '이름은 필수입니다.' })}
+        {/* 우측(1/3): 자료 관리. 신규 등록 전에는 대상 레코드가 없어 안내만 노출한다. */}
+        <div className="space-y-4 lg:col-span-1">
+          {isEdit && recordId ? (
+            <MaterialPanel
+              targetType={PROFILE_RESOURCE_TYPE[entity] ?? entity}
+              targetId={recordId}
             />
-            {errors.name && (
-              <p className="mt-1 text-caption text-danger">{errors.name.message}</p>
-            )}
-          </Field>
-          <Field label="구분" hint="(선택한 네트워크로 저장됩니다)">
-            <Select {...register('category')}>
-              {CATEGORY_OPTIONS.map((o) => (
-                <option key={o.key} value={o.label}>
-                  {o.label}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="소속">
-            <Input {...register('affiliation')} />
-          </Field>
-          <Field label="부서명">
-            <Input {...register('department')} />
-          </Field>
-          <Field label="직책/직급">
-            <Input {...register('position')} />
-          </Field>
-          <Field label="이메일">
-            <Input type="email" {...register('email')} />
-          </Field>
-          <Field label="연락처">
-            <Input {...register('phone')} />
-          </Field>
-          {!compact && (
-            <Field label="매칭 가능 여부">
-              <Select {...register('match')}>
-                <option value="possible">가능</option>
-                <option value="impossible">불가능</option>
-              </Select>
-            </Field>
-          )}
-          {!compact && (
-            <div className="sm:col-span-2">
-              <Field label="전문 분야" hint={`(분야 관리 태그에서 최대 ${MAX_FIELDS}개)`}>
-                <div className="flex flex-wrap gap-1.5">
-                  {(fieldTags ?? []).map((t) => {
-                    const on = fields.includes(t.name)
-                    const disabled = !on && fields.length >= MAX_FIELDS
-                    return (
-                      <button
-                        key={t.id}
-                        type="button"
-                        disabled={disabled}
-                        onClick={() => toggleField(t.name)}
-                        className={cn(
-                          'rounded-radius-sm border px-2 py-0.5 text-caption transition-colors',
-                          on
-                            ? 'border-brand bg-brand/10 font-medium text-brand'
-                            : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50',
-                          disabled && 'cursor-not-allowed opacity-40 hover:bg-white',
-                        )}
-                      >
-                        {t.name}
-                      </button>
-                    )
-                  })}
-                  {(fieldTags ?? []).length === 0 && (
-                    <span className="text-caption text-gray-400">
-                      등록된 분야 태그가 없습니다. (ADMIN › 분야 관리)
-                    </span>
-                  )}
-                </div>
-              </Field>
+          ) : (
+            <div className="rounded-radius-lg border border-dashed border-gray-300 bg-gray-50 p-5 text-caption text-gray-500">
+              자료는 등록 완료 후 상세페이지에서 첨부할 수 있습니다.
             </div>
           )}
         </div>
       </div>
 
-      {!compact && (
-        <div className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
-          <p className="mb-4 text-caption font-medium text-gray-600">약력</p>
-          <CareerEditor value={background} onChange={setBackground} />
-        </div>
-      )}
-      <div className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
-        <Field label="노트">
-          <TextArea rows={4} {...register('intro')} />
-        </Field>
-      </div>
-
-      {/* 자료 관리: 기존 레코드 수정 시에만 업로드 가능(신규는 저장 후 id 확정되어야 첨부 가능). */}
-      {isEdit && recordId && (
-        <MaterialPanel
-          targetType={PROFILE_RESOURCE_TYPE[entity] ?? entity}
-          targetId={recordId}
-        />
-      )}
-
+      {/* 액션 버튼(그리드 아래 전체 폭) */}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="secondary" onClick={onCancel}>
           취소

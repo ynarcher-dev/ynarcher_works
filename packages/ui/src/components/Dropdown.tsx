@@ -60,7 +60,7 @@ export function DropdownItem({ onClick, children, disabled }: DropdownItemProps)
       role="menuitem"
       disabled={disabled}
       onClick={onClick}
-      className="block w-full rounded-radius-md px-3 py-1.5 text-left text-body text-gray-800 transition-colors duration-fast hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-info/10 disabled:opacity-50"
+      className="block w-full rounded-radius-md px-3 py-1.5 text-left text-body text-gray-800 transition-colors duration-fast hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10 disabled:opacity-50"
     >
       {children}
     </button>

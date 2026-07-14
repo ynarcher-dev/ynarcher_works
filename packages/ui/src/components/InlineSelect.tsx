@@ -15,12 +15,12 @@ export function InlineSelect({ invalid, className, children, ...props }: InlineS
       <select
         aria-invalid={invalid}
         className={cn(
-          'h-7 w-full appearance-none rounded-radius-sm border pl-2 pr-6 text-caption text-gray-900 transition-colors duration-fast',
+          'h-7 w-full appearance-none rounded-radius-sm border pl-2 pr-6 text-caption text-gray-900 transition-all duration-fast',
           'bg-white border-gray-300',
           'hover:border-gray-400',
-          'focus-visible:outline-none focus-visible:border-info focus-visible:ring-2 focus-visible:ring-info/10',
+          'focus-visible:outline-none focus-visible:border-brand/50 focus-visible:shadow-popover',
           'disabled:cursor-not-allowed disabled:border-gray-100 disabled:bg-gray-50 disabled:text-gray-400',
-          invalid ? 'border-danger focus-visible:border-danger focus-visible:ring-danger/10' : '',
+          invalid ? 'border-brand-700 focus-visible:border-brand-700 focus-visible:shadow-popover' : '',
           className,
         )}
         {...props}

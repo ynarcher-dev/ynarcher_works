@@ -3,7 +3,7 @@ import { Plus, X } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { PhotoBox } from '@/features/networks/PhotoBox'
 import { readBusiness } from '@/features/startup/StartupBusinessTeamCard'
-import { formatFounded, readIndustries, readMetrics, type GrowthMetric } from '@/features/startup/startupGrowth'
+import { formatFounded, readIndustries, readGrowth } from '@/features/startup/startupGrowth'
 import type { EntityRow } from '@/features/networks/hooks'
 
 /** 레코드의 텍스트 필드를 안전하게 문자열로 읽는다(없으면 빈 문자열). */
@@ -12,23 +12,11 @@ function txt(record: EntityRow | null | undefined, key: string): string {
   return v == null || v === '' ? '' : String(v)
 }
 
-/** 투자 정보(가치·유치액·라운드·투자자)가 있는 가장 최신 연도 지표를 고른다. */
-function latestInvestment(record: EntityRow | null): GrowthMetric | undefined {
-  if (!record) return undefined
-  return readMetrics(record).find(
-    (m) =>
-      m.valuation != null ||
-      m.fundingAmount != null ||
-      (m.fundingRound ?? '').trim() !== '' ||
-      (m.investor ?? '').trim() !== '',
-  )
-}
-
-/** 금액(천원 단위, ÷1000 반올림) 텍스트. 값 없으면 빈값 문구(empty). 음수는 ▼로 표기. */
+/** 금액(천원 단위, ÷1000 반올림) 텍스트. 값 없으면 빈값 문구(empty). 음수는 국내 관례대로 파란색 '-'로 표기. */
 function wonK(v: number | null | undefined, empty: string): { text: string; negative: boolean } {
   if (v == null || Number.isNaN(Number(v))) return { text: empty, negative: false }
   const n = Math.round(Number(v) / 1000)
-  if (n < 0) return { text: `▼${Math.abs(n).toLocaleString()}`, negative: true }
+  if (n < 0) return { text: `-${Math.abs(n).toLocaleString()}`, negative: true }
   return { text: n.toLocaleString(), negative: false }
 }
 
@@ -43,7 +31,7 @@ function Val({ v, unit, empty }: { v?: number | null; unit: 'won' | 'count'; emp
   }
   const { text, negative } = wonK(v, empty)
   return (
-    <span className={`block min-w-0 truncate text-center text-caption tabular-nums ${negative ? 'text-danger' : 'text-gray-800'}`}>
+    <span className={`block min-w-0 truncate text-center text-caption tabular-nums ${negative ? 'text-info' : 'text-gray-800'}`}>
       {text}
     </span>
   )
@@ -193,11 +181,20 @@ interface Props {
  * 지표는 성장 지표 최신 1개년(A·B 각자의 기준연도)을 사용하며 금액 단위는 천원.
  */
 export function StartupCompareCard({ a, b, bLoading, onSelectB, onClearB }: Props) {
-  const ma: GrowthMetric | undefined = readMetrics(a)[0]
-  const mb: GrowthMetric | undefined = b ? readMetrics(b)[0] : undefined
-  // 투자 현황은 재무연도와 별개로, 투자 정보가 있는 가장 최신 연도를 기준으로 표기한다.
-  const ia = latestInvestment(a)
-  const ib = latestInvestment(b)
+  // 항목별로 각자의 최신 1건을 비교한다(재무·매출·고용은 연도 최신, 투자는 기준월 최신).
+  const ga = readGrowth(a)
+  const gb = b ? readGrowth(b) : null
+  const fa = ga.finance[0]
+  const ra = ga.revenue[0]
+  const ea = ga.employee[0]
+  const ia = ga.investment[0]
+  const fb = gb?.finance[0]
+  const rb = gb?.revenue[0]
+  const eb = gb?.employee[0]
+  const ib = gb?.investment[0]
+  // 헤더 기준연도는 재무→매출→고용 순으로 존재하는 최신 연도를 쓴다.
+  const yearA = fa?.year ?? ra?.year ?? ea?.year
+  const yearB = fb?.year ?? rb?.year ?? eb?.year
   // 빈값 문구: 현재 기업(A)은 항상 존재하므로 '정보 없음', 비교기업(B)은 미선택 시 '-'.
   const aEmpty = '정보 없음'
   const bEmpty = b ? '정보 없음' : '-'
@@ -211,14 +208,14 @@ export function StartupCompareCard({ a, b, bLoading, onSelectB, onClearB }: Prop
       {/* 기업 헤더: A · VS · B — 두 기업을 각자 테두리 박스로 분리(기업 VS 기업) */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-2">
         <div className="rounded-radius-md border border-gray-200 bg-white p-3">
-          <CompanyHead record={a} year={ma?.year} />
+          <CompanyHead record={a} year={yearA} />
         </div>
         <span className="self-center text-caption font-semibold text-gray-300" aria-hidden>
           VS
         </span>
         <div className="rounded-radius-md border border-gray-200 bg-white p-3">
         {b ? (
-          <CompanyHead record={b} year={mb?.year} onClear={onClearB} />
+          <CompanyHead record={b} year={yearB} onClear={onClearB} />
         ) : (
           <PlaceholderHead loading={bLoading} onSelect={onSelectB} />
         )}
@@ -235,24 +232,24 @@ export function StartupCompareCard({ a, b, bLoading, onSelectB, onClearB }: Prop
 
         <p className="text-right text-caption text-gray-400">단위: 천원</p>
         <Group title="재무 현황">
-          <Row label="자산" a={ma?.assets} b={mb?.assets} aEmpty={aEmpty} bEmpty={bEmpty} />
-          <Row label="부채" a={ma?.liabilities} b={mb?.liabilities} aEmpty={aEmpty} bEmpty={bEmpty} />
-          <Row label="자본" a={ma?.equity} b={mb?.equity} aEmpty={aEmpty} bEmpty={bEmpty} />
+          <Row label="자산" a={fa?.assets} b={fb?.assets} aEmpty={aEmpty} bEmpty={bEmpty} />
+          <Row label="부채" a={fa?.liabilities} b={fb?.liabilities} aEmpty={aEmpty} bEmpty={bEmpty} />
+          <Row label="자본" a={fa?.equity} b={fb?.equity} aEmpty={aEmpty} bEmpty={bEmpty} />
         </Group>
 
         <Group title="매출 현황">
-          <Row label="매출액" a={ma?.revenue} b={mb?.revenue} aEmpty={aEmpty} bEmpty={bEmpty} />
-          <Row label="영업이익" a={ma?.operatingProfit} b={mb?.operatingProfit} aEmpty={aEmpty} bEmpty={bEmpty} />
-          <Row label="당기순이익" a={ma?.netIncome} b={mb?.netIncome} aEmpty={aEmpty} bEmpty={bEmpty} />
+          <Row label="매출액" a={ra?.revenue} b={rb?.revenue} aEmpty={aEmpty} bEmpty={bEmpty} />
+          <Row label="영업이익" a={ra?.operatingProfit} b={rb?.operatingProfit} aEmpty={aEmpty} bEmpty={bEmpty} />
+          <Row label="당기순이익" a={ra?.netIncome} b={rb?.netIncome} aEmpty={aEmpty} bEmpty={bEmpty} />
         </Group>
 
         <Group title="고용 현황">
-          <Row label="고용 인원" a={ma?.employeeCount} b={mb?.employeeCount} unit="count" aEmpty={aEmpty} bEmpty={bEmpty} />
+          <Row label="고용 인원" a={ea?.employeeCount} b={eb?.employeeCount} unit="count" aEmpty={aEmpty} bEmpty={bEmpty} />
         </Group>
 
         <Group title="투자 현황">
-          <TextRow label="연도" a={ia?.year ? String(ia.year) : ''} b={ib?.year ? String(ib.year) : ''} aEmpty={aEmpty} bEmpty={bEmpty} />
-          <TextRow label="라운드" a={ia?.fundingRound} b={ib?.fundingRound} aEmpty={aEmpty} bEmpty={bEmpty} />
+          <TextRow label="기준월" a={ia?.date} b={ib?.date} aEmpty={aEmpty} bEmpty={bEmpty} />
+          <TextRow label="라운드" a={ia?.round} b={ib?.round} aEmpty={aEmpty} bEmpty={bEmpty} />
           <Row label="기업가치(Pre)" a={ia?.valuation} b={ib?.valuation} aEmpty={aEmpty} bEmpty={bEmpty} />
           <Row label="투자유치액" a={ia?.fundingAmount} b={ib?.fundingAmount} aEmpty={aEmpty} bEmpty={bEmpty} />
         </Group>

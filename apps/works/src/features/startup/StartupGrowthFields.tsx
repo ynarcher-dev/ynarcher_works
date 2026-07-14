@@ -1,12 +1,50 @@
-import { Button, Input } from '@ynarcher/ui'
-import type { ReactNode } from 'react'
-import type { BusinessStatusEntry, GrowthMetric } from '@/features/startup/startupGrowth'
+import { Button, cn, Input } from '@ynarcher/ui'
+import { Fragment, useState } from 'react'
+import type {
+  BusinessStatusEntry,
+  EmployeeEntry,
+  FinanceEntry,
+  GrowthMetrics,
+  InvestmentEntry,
+  RevenueEntry,
+} from '@/features/startup/startupGrowth'
 
 /** 빈 문자열 → undefined, 그 외 숫자로 파싱(콤마 허용). */
 function numOrUndef(s: string): number | undefined {
   if (s.trim() === '') return undefined
   const n = Number(s.replace(/,/g, ''))
   return Number.isNaN(n) ? undefined : n
+}
+
+/**
+ * 천단위 콤마 표시 + 우측정렬 숫자 입력. number 타입은 콤마를 못 넣으므로 text로 처리한다.
+ * 편집 중에는 입력한 원문을 그대로 두어(음수 '-' 입력·캐럿 튐 방지) 콤마 없이 보이고,
+ * 포커스가 빠질 때 저장값을 콤마 포맷으로 다시 그린다.
+ */
+function NumberInput({
+  value,
+  onChange,
+  className,
+}: {
+  value?: number | null
+  onChange: (v: number | undefined) => void
+  className?: string
+}) {
+  const [typing, setTyping] = useState<string | null>(null)
+  const formatted = value == null || Number.isNaN(Number(value)) ? '' : Number(value).toLocaleString()
+  return (
+    <Input
+      type="text"
+      inputMode="numeric"
+      className={cn('text-right tabular-nums', className)}
+      value={typing ?? formatted}
+      onChange={(e) => {
+        setTyping(e.target.value)
+        onChange(numOrUndef(e.target.value))
+      }}
+      onBlur={() => setTyping(null)}
+    />
+  )
 }
 
 /** 숫자 입력 셀(라벨 + number Input). */
@@ -22,7 +60,7 @@ function Num({
   return (
     <label className="block">
       <span className="mb-0.5 block text-caption text-gray-500">{label}</span>
-      <Input type="number" value={value ?? ''} onChange={(e) => onChange(numOrUndef(e.target.value))} />
+      <NumberInput value={value} onChange={onChange} />
     </label>
   )
 }
@@ -45,53 +83,172 @@ function Txt({
   )
 }
 
-function Group({ title, children }: { title: string; children: ReactNode }) {
+/** 연도 기준 숫자 지표(재무/매출/고용) 편집기. 헤더 1행 + 연도별 값 행을 그리드로 정렬한다. */
+interface NumCol {
+  key: string
+  label: string
+}
+function YearMetricGroup<T extends { year: number }>({
+  title,
+  cols,
+  rows,
+  setRows,
+}: {
+  title: string
+  cols: NumCol[]
+  rows: T[]
+  setRows: (rows: T[]) => void
+}) {
+  const patch = (i: number, p: Partial<T>) => setRows(rows.map((r, idx) => (idx === i ? { ...r, ...p } : r)))
+  const get = (r: T, k: string) => (r as Record<string, number | null | undefined>)[k]
+  // 연도 + 각 항목 + 삭제 버튼 열. 헤더/값 행이 같은 그리드라 자동 정렬된다.
+  const gridStyle = { gridTemplateColumns: `5.5rem repeat(${cols.length}, minmax(0,1fr)) auto` }
   return (
-    <div>
-      <p className="mb-1 text-caption font-semibold text-brand">{title}</p>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{children}</div>
+    <div className="space-y-2">
+      <h3 className="text-body font-semibold text-gray-900">{title}</h3>
+      {rows.length > 0 && (
+        <div className="grid items-center gap-x-2 gap-y-1.5" style={gridStyle}>
+          <span className="text-caption text-gray-500">연도</span>
+          {cols.map((c) => (
+            <span key={c.key} className="text-caption text-gray-500">
+              {c.label}
+            </span>
+          ))}
+          <span aria-hidden />
+          {rows.map((r, i) => (
+            <Fragment key={i}>
+              <Input
+                type="number"
+                value={r.year ?? ''}
+                onChange={(e) => patch(i, { year: numOrUndef(e.target.value) ?? 0 } as Partial<T>)}
+              />
+              {cols.map((c) => (
+                <NumberInput
+                  key={c.key}
+                  value={get(r, c.key)}
+                  onChange={(v) => patch(i, { [c.key]: v } as Partial<T>)}
+                />
+              ))}
+              <Button
+                type="button"
+                variant="secondary"
+                className="shrink-0"
+                onClick={() => setRows(rows.filter((_, idx) => idx !== i))}
+              >
+                삭제
+              </Button>
+            </Fragment>
+          ))}
+        </div>
+      )}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => setRows([...rows, { year: new Date().getFullYear() } as T])}
+      >
+        연도 추가
+      </Button>
+    </div>
+  )
+}
+
+/** 투자 유치 편집기(월 기준). 회계연도와 무관하게 건별 카드로 관리한다. */
+function InvestmentGroup({
+  rows,
+  setRows,
+}: {
+  rows: InvestmentEntry[]
+  setRows: (rows: InvestmentEntry[]) => void
+}) {
+  const patch = (i: number, p: Partial<InvestmentEntry>) =>
+    setRows(rows.map((r, idx) => (idx === i ? { ...r, ...p } : r)))
+  return (
+    <div className="space-y-2">
+      <h3 className="text-body font-semibold text-gray-900">투자</h3>
+      {rows.map((r, i) => (
+        <div key={i} className="space-y-2 rounded-radius-md border border-gray-200 p-3">
+          <div className="flex items-end justify-between gap-2">
+            <label className="block w-40 shrink-0">
+              <span className="mb-0.5 block text-caption text-gray-500">기준월</span>
+              <Input type="month" value={r.date ?? ''} onChange={(e) => patch(i, { date: e.target.value })} />
+            </label>
+            <Button
+              type="button"
+              variant="secondary"
+              className="shrink-0"
+              onClick={() => setRows(rows.filter((_, idx) => idx !== i))}
+            >
+              삭제
+            </Button>
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <Txt label="라운드" value={r.round} onChange={(v) => patch(i, { round: v })} />
+            <Txt label="투자자" value={r.investor} onChange={(v) => patch(i, { investor: v })} />
+            <Num label="기업 가치(Pre)" value={r.valuation} onChange={(v) => patch(i, { valuation: v })} />
+            <Num label="투자유치액" value={r.fundingAmount} onChange={(v) => patch(i, { fundingAmount: v })} />
+          </div>
+        </div>
+      ))}
+      <Button type="button" variant="outline" size="sm" onClick={() => setRows([...rows, { date: '' }])}>
+        투자 추가
+      </Button>
     </div>
   )
 }
 
 interface Props {
-  metrics: GrowthMetric[]
-  setMetrics: (m: GrowthMetric[]) => void
+  growth: GrowthMetrics
+  setGrowth: (g: GrowthMetrics) => void
   businessStatus: BusinessStatusEntry[]
   setBusinessStatus: (b: BusinessStatusEntry[]) => void
 }
 
+/** 재무/매출/고용 카드의 항목 열 정의. */
+const FINANCE_COLS: NumCol[] = [
+  { key: 'assets', label: '자산' },
+  { key: 'liabilities', label: '부채' },
+  { key: 'equity', label: '자본' },
+]
+const REVENUE_COLS: NumCol[] = [
+  { key: 'revenue', label: '매출액' },
+  { key: 'operatingProfit', label: '영업이익' },
+  { key: 'netIncome', label: '당기순이익' },
+]
+const EMPLOYEE_COLS: NumCol[] = [{ key: 'employeeCount', label: '고용 인원' }]
+
 /**
  * 통합 수정 폼의 '성장 지표' 입력 섹션.
- * 비즈니스 현황(타임라인)과 연도별 지표(재무/매출/고용/투자)를 각각 목록으로 편집한다.
- * 저장은 상위 폼이 growth_metrics / business_status jsonb로 통째 반영한다.
+ * 연혁(월 기준)과 항목별 지표(재무·매출·고용은 연도 기준, 투자는 월 기준)를 각각 목록으로 편집한다.
+ * 저장은 상위 폼이 growth_metrics(항목별 객체) / business_status(jsonb)로 통째 반영한다.
  */
-export function StartupGrowthFields({ metrics, setMetrics, businessStatus, setBusinessStatus }: Props) {
-  const patchMetric = (i: number, patch: Partial<GrowthMetric>) =>
-    setMetrics(metrics.map((m, idx) => (idx === i ? { ...m, ...patch } : m)))
+export function StartupGrowthFields({ growth, setGrowth, businessStatus, setBusinessStatus }: Props) {
   const patchStatus = (i: number, patch: Partial<BusinessStatusEntry>) =>
     setBusinessStatus(businessStatus.map((s, idx) => (idx === i ? { ...s, ...patch } : s)))
 
   return (
     <div className="space-y-5">
-      {/* 비즈니스 타임라인 */}
+      {/* 연혁 */}
       <div className="space-y-2">
-        <h3 className="text-body font-semibold text-gray-900">비즈니스 타임라인</h3>
+        <h3 className="text-body font-semibold text-gray-900">연혁</h3>
         {businessStatus.map((s, i) => (
-          <div key={i} className="flex gap-2">
-            <Input
-              type="date"
-              className="w-40"
-              value={s.date ?? ''}
-              onChange={(e) => patchStatus(i, { date: e.target.value })}
-            />
-            <Input
-              className="flex-1"
-              placeholder="현황 내용"
-              value={s.content ?? ''}
-              onChange={(e) => patchStatus(i, { content: e.target.value })}
-            />
-            <Button type="button" variant="secondary" onClick={() => setBusinessStatus(businessStatus.filter((_, idx) => idx !== i))}>
+          <div key={i} className="flex items-center gap-2">
+            {/* Input 래퍼가 w-full이라 폭 클래스는 바깥 div에 준다. 선택은 월(YYYY-MM)까지만. */}
+            <div className="w-40 shrink-0">
+              <Input
+                type="month"
+                value={s.date ?? ''}
+                onChange={(e) => patchStatus(i, { date: e.target.value })}
+              />
+            </div>
+            <div className="min-w-0 flex-1">
+              <Input
+                placeholder="현황 내용"
+                value={s.content ?? ''}
+                onChange={(e) => patchStatus(i, { content: e.target.value })}
+              />
+            </div>
+            <Button type="button" variant="secondary" className="shrink-0" onClick={() => setBusinessStatus(businessStatus.filter((_, idx) => idx !== i))}>
               삭제
             </Button>
           </div>
@@ -106,55 +263,26 @@ export function StartupGrowthFields({ metrics, setMetrics, businessStatus, setBu
         </Button>
       </div>
 
-      {/* 연도별 지표 */}
-      <div className="space-y-3">
-        <h3 className="text-body font-semibold text-gray-900">연도별 지표</h3>
-        {metrics.map((m, i) => (
-          <div key={i} className="space-y-3 rounded-radius-md border border-gray-200 p-3">
-            <div className="flex items-end justify-between gap-2">
-              <label className="block">
-                <span className="mb-0.5 block text-caption text-gray-500">연도</span>
-                <Input
-                  type="number"
-                  className="w-28"
-                  value={m.year ?? ''}
-                  onChange={(e) => patchMetric(i, { year: numOrUndef(e.target.value) ?? 0 })}
-                />
-              </label>
-              <Button type="button" variant="secondary" onClick={() => setMetrics(metrics.filter((_, idx) => idx !== i))}>
-                연도 삭제
-              </Button>
-            </div>
-            <Group title="재무">
-              <Num label="자산" value={m.assets} onChange={(v) => patchMetric(i, { assets: v })} />
-              <Num label="부채" value={m.liabilities} onChange={(v) => patchMetric(i, { liabilities: v })} />
-              <Num label="자본" value={m.equity} onChange={(v) => patchMetric(i, { equity: v })} />
-            </Group>
-            <Group title="매출/손익">
-              <Num label="매출액" value={m.revenue} onChange={(v) => patchMetric(i, { revenue: v })} />
-              <Num label="영업이익" value={m.operatingProfit} onChange={(v) => patchMetric(i, { operatingProfit: v })} />
-              <Num label="당기순이익" value={m.netIncome} onChange={(v) => patchMetric(i, { netIncome: v })} />
-            </Group>
-            <Group title="고용">
-              <Num label="고용 인원" value={m.employeeCount} onChange={(v) => patchMetric(i, { employeeCount: v })} />
-            </Group>
-            <Group title="투자">
-              <Num label="기업 가치(Pre)" value={m.valuation} onChange={(v) => patchMetric(i, { valuation: v })} />
-              <Num label="투자유치액" value={m.fundingAmount} onChange={(v) => patchMetric(i, { fundingAmount: v })} />
-              <Txt label="라운드" value={m.fundingRound} onChange={(v) => patchMetric(i, { fundingRound: v })} />
-              <Txt label="투자자" value={m.investor} onChange={(v) => patchMetric(i, { investor: v })} />
-            </Group>
-          </div>
-        ))}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setMetrics([...metrics, { year: new Date().getFullYear() }])}
-        >
-          연도 추가
-        </Button>
-      </div>
+      {/* 항목별 지표: 재무·매출·고용(연도 기준) + 투자(월 기준) */}
+      <YearMetricGroup<FinanceEntry>
+        title="재무"
+        cols={FINANCE_COLS}
+        rows={growth.finance}
+        setRows={(finance) => setGrowth({ ...growth, finance })}
+      />
+      <YearMetricGroup<RevenueEntry>
+        title="매출/손익"
+        cols={REVENUE_COLS}
+        rows={growth.revenue}
+        setRows={(revenue) => setGrowth({ ...growth, revenue })}
+      />
+      <YearMetricGroup<EmployeeEntry>
+        title="고용"
+        cols={EMPLOYEE_COLS}
+        rows={growth.employee}
+        setRows={(employee) => setGrowth({ ...growth, employee })}
+      />
+      <InvestmentGroup rows={growth.investment} setRows={(investment) => setGrowth({ ...growth, investment })} />
     </div>
   )
 }

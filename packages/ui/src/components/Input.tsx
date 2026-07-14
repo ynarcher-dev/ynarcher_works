@@ -26,10 +26,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
           'bg-white border-gray-300 placeholder:text-gray-400',
           icon ? 'pl-10 pr-3.5' : 'px-3.5',
           'hover:border-gray-400',
-          'focus-visible:outline-none focus-visible:border-info focus-visible:ring-4 focus-visible:ring-info/10',
+          'focus-visible:outline-none focus-visible:border-brand/50 focus-visible:shadow-popover',
           'disabled:cursor-not-allowed disabled:border-gray-100 disabled:bg-gray-50 disabled:text-gray-400 disabled:shadow-none',
           invalid
-            ? 'border-danger bg-danger-subtle hover:border-danger focus-visible:border-danger focus-visible:ring-danger/10'
+            ? 'border-brand-700 bg-danger-subtle hover:border-brand-700 focus-visible:border-brand-700 focus-visible:shadow-popover'
             : '',
           className,
         )}

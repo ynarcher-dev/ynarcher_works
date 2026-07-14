@@ -128,7 +128,7 @@ export function Pagination({
               }
             }
           }}
-          className="h-8 w-14 rounded-radius-sm border border-gray-300 px-1.5 text-center text-body text-gray-800 transition-all focus:border-info focus:outline-none focus:ring-2 focus:ring-info/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          className="h-8 w-14 rounded-radius-sm border border-gray-300 px-1.5 text-center text-body text-gray-800 transition-all focus:border-brand/50 focus:outline-none focus:shadow-popover [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         />
       </div>
     </nav>

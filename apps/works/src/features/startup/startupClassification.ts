@@ -10,10 +10,10 @@ export const MANAGEMENT_STATUSES: ManagementStatus[] = ['sourced', 'incubated', 
 
 /** 구분 코드 → 한글 라벨. */
 export const MANAGEMENT_STATUS_LABEL: Record<ManagementStatus, string> = {
-  sourced: '발굴',
-  incubated: '보육',
-  invested: '투자',
-  other: '기타',
+  sourced: '발굴기업',
+  incubated: '보육기업',
+  invested: '투자기업',
+  other: '기타기업',
 }
 
 export type BadgeTone = 'neutral' | 'info' | 'success' | 'warning'

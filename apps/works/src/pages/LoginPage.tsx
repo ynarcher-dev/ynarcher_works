@@ -46,7 +46,7 @@ export function LoginPage() {
             id="email"
             type="email"
             autoComplete="email"
-            className="mt-1 w-full rounded-radius-md border border-gray-300 px-3 py-2 text-body text-gray-800 shadow-soft transition-all duration-fast hover:border-gray-400 focus-visible:border-info focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-info/10"
+            className="mt-1 w-full rounded-radius-md border border-gray-300 px-3 py-2 text-body text-gray-800 shadow-soft transition-all duration-fast hover:border-gray-400 focus-visible:border-brand/50 focus-visible:outline-none focus-visible:shadow-popover"
             {...register('email')}
           />
           {errors.email && (
@@ -62,7 +62,7 @@ export function LoginPage() {
             id="password"
             type="password"
             autoComplete="current-password"
-            className="mt-1 w-full rounded-radius-md border border-gray-300 px-3 py-2 text-body text-gray-800 shadow-soft transition-all duration-fast hover:border-gray-400 focus-visible:border-info focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-info/10"
+            className="mt-1 w-full rounded-radius-md border border-gray-300 px-3 py-2 text-body text-gray-800 shadow-soft transition-all duration-fast hover:border-gray-400 focus-visible:border-brand/50 focus-visible:outline-none focus-visible:shadow-popover"
             {...register('password')}
           />
           {errors.password && (

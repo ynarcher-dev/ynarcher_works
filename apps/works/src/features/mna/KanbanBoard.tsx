@@ -51,7 +51,7 @@ function DealCard({ deal }: { deal: Deal }) {
           type="button"
           disabled={update.isPending}
           onClick={() => update.mutate({ id: deal.id, stage: next })}
-          className="mt-2 w-full rounded-radius-md border border-gray-300 py-1 text-caption text-gray-600 transition-all duration-fast hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-info/10 disabled:opacity-50"
+          className="mt-2 w-full rounded-radius-md border border-gray-300 py-1 text-caption text-gray-600 transition-all duration-fast hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10 disabled:opacity-50"
         >
           {STAGE_LABELS[next]}(으)로 이동 →
         </button>

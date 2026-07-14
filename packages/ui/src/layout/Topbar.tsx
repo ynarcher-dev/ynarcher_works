@@ -31,7 +31,7 @@ export function Topbar({
             type="button"
             onClick={onMenuClick}
             aria-label="메뉴 열기"
-            className="rounded-radius-md p-1.5 text-gray-600 transition-colors duration-fast hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-info/10 lg:hidden"
+            className="rounded-radius-md p-1.5 text-gray-600 transition-colors duration-fast hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10 lg:hidden"
           >
             <span aria-hidden className="text-title-sm leading-none">
               ☰

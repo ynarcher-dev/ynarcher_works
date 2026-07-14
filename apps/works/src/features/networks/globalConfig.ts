@@ -43,7 +43,6 @@ export type GlobalRow = Record<string, unknown> & {
 export const GLOBAL_COLUMNS: MasterColumn[] = [
   { name: 'name', label: '이름', className: 'w-24' },
   { name: 'affiliation', label: '소속', className: 'w-40' },
-  { name: 'profile.department', label: '부서', className: 'w-28' },
   { name: 'profile.position', label: '직책/직급', className: 'w-24' },
   { name: 'email', label: '이메일', mask: 'email', className: 'w-44' },
   { name: 'phone', label: '연락처', mask: 'phone', className: 'w-32' },

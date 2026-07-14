@@ -22,6 +22,7 @@ import { GlobalNetworkDetailPage } from '@/features/networks/GlobalNetworkDetail
 import { DIRECTORY_ENTITIES, HUB_DETAIL_ENTITIES } from '@/features/networks/config'
 import { StartupPage } from '@/features/startup/StartupPage'
 import { StartupDetailPage } from '@/features/startup/StartupDetailPage'
+import { StartupCreatePage } from '@/features/startup/StartupCreatePage'
 import { ProjectDetailPage } from '@/features/project/ProjectDetailPage'
 import { ProjectPage } from '@/features/project/ProjectPage'
 import { LoginPage } from '@/pages/LoginPage'
@@ -96,6 +97,15 @@ export const router = createBrowserRouter([
             element: (
               <RequireWorkspace workspace="startup">
                 <StartupPage />
+              </RequireWorkspace>
+            ),
+          },
+          // 스타트업 신규 등록 페이지(모달 아님). 정적 세그먼트라 아래 :id 라우트보다 우선 매칭된다.
+          {
+            path: 'startup/discovered/new',
+            element: (
+              <RequireWorkspace workspace="startup">
+                <StartupCreatePage />
               </RequireWorkspace>
             ),
           },

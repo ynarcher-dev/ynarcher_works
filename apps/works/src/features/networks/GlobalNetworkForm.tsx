@@ -167,121 +167,137 @@ export function GlobalNetworkForm({ recordId, initial, onDone, onCancel }: Props
   }
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
-        <p className="mb-3 text-caption font-medium text-gray-600">사진</p>
-        <div className="flex items-center gap-4">
-          <PhotoBox src={photo} />
-          <div className="flex gap-2">
-            <label className="cursor-pointer rounded-radius-md border border-gray-300 px-3 py-1.5 text-body text-gray-700 transition-colors hover:bg-gray-50">
-              사진 첨부
-              <input type="file" accept="image/*" className="hidden" onChange={onPickPhoto} />
-            </label>
-            {photo && (
-              <Button type="button" variant="secondary" onClick={() => setPhoto('')}>
-                삭제
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="이름" required>
-            <Input value={name} onChange={(e) => setName(e.target.value)} />
-          </Field>
-          <Field label="구분">
-            <Select value={category} onChange={(e) => setCategory(e.target.value)}>
-              <option value="">선택 안 함</option>
-              {GLOBAL_CATEGORY_OPTIONS.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="소속">
-            <Input value={affiliation} onChange={(e) => setAffiliation(e.target.value)} />
-          </Field>
-          <Field label="부서">
-            <Input value={department} onChange={(e) => setDepartment(e.target.value)} />
-          </Field>
-          <Field label="직책/직급">
-            <Input value={position} onChange={(e) => setPosition(e.target.value)} />
-          </Field>
-          <Field label="이메일">
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          </Field>
-          <Field label="연락처">
-            <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
-          </Field>
-          <Field label="링크드인 URL">
-            <Input value={linkedin} onChange={(e) => setLinkedin(e.target.value)} />
-          </Field>
-          <Field label="권역">
-            <Select value={regionId} onChange={(e) => onRegionChange(e.target.value)}>
-              <option value="">선택 안 함</option>
-              {(regions.data ?? []).map((r) => (
-                <option key={r.id} value={r.id}>{r.name}</option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="국가">
-            <Select value={countryId} onChange={(e) => setCountryId(e.target.value)}>
-              <option value="">선택 안 함</option>
-              {countryOptions.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </Select>
-          </Field>
-          <div className="sm:col-span-2">
-            <Field label="전문 분야">
-              <span className="mb-1 block text-caption font-normal text-gray-400">
-                분야 관리 태그에서 최대 {MAX_FIELDS}개
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                {(fieldTags.data ?? []).map((t) => {
-                  const on = fields.includes(t.name)
-                  const disabled = !on && fields.length >= MAX_FIELDS
-                  return (
-                    <button
-                      key={t.id}
-                      type="button"
-                      disabled={disabled}
-                      onClick={() => toggleField(t.name)}
-                      className={cn(
-                        'rounded-radius-sm border px-2 py-0.5 text-caption transition-colors',
-                        on
-                          ? 'border-brand bg-brand/10 font-medium text-brand'
-                          : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50',
-                        disabled && 'cursor-not-allowed opacity-40 hover:bg-white',
-                      )}
-                    >
-                      {t.name}
-                    </button>
-                  )
-                })}
-                {(fieldTags.data ?? []).length === 0 && (
-                  <span className="text-caption text-gray-400">
-                    등록된 분야 태그가 없습니다. (ADMIN › 분야 관리)
-                  </span>
+    <div className="space-y-5">
+      {/* 상세페이지와 동일한 3열 배치: 좌측 2/3 편집 카드 + 우측 1/3 자료 관리 */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {/* 좌측(2/3): 사진 → 기본 데이터 → 노트 */}
+        <div className="space-y-4 lg:col-span-2">
+          {/* 사진 카드 */}
+          <div className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+            <p className="mb-3 text-caption font-medium text-gray-600">사진</p>
+            <div className="flex items-center gap-4">
+              <PhotoBox src={photo} />
+              <div className="flex gap-2">
+                <label className="cursor-pointer rounded-radius-md border border-gray-300 px-3 py-1.5 text-body text-gray-700 transition-colors hover:bg-gray-50">
+                  사진 첨부
+                  <input type="file" accept="image/*" className="hidden" onChange={onPickPhoto} />
+                </label>
+                {photo && (
+                  <Button type="button" variant="secondary" onClick={() => setPhoto('')}>
+                    삭제
+                  </Button>
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* 기본 데이터 카드 */}
+          <div className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="이름" required>
+                <Input value={name} onChange={(e) => setName(e.target.value)} />
+              </Field>
+              <Field label="구분">
+                <Select value={category} onChange={(e) => setCategory(e.target.value)}>
+                  <option value="">선택 안 함</option>
+                  {GLOBAL_CATEGORY_OPTIONS.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="소속">
+                <Input value={affiliation} onChange={(e) => setAffiliation(e.target.value)} />
+              </Field>
+              <Field label="부서">
+                <Input value={department} onChange={(e) => setDepartment(e.target.value)} />
+              </Field>
+              <Field label="직책/직급">
+                <Input value={position} onChange={(e) => setPosition(e.target.value)} />
+              </Field>
+              <Field label="이메일">
+                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+              </Field>
+              <Field label="연락처">
+                <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
+              </Field>
+              <Field label="링크드인 URL">
+                <Input value={linkedin} onChange={(e) => setLinkedin(e.target.value)} />
+              </Field>
+              <Field label="권역">
+                <Select value={regionId} onChange={(e) => onRegionChange(e.target.value)}>
+                  <option value="">선택 안 함</option>
+                  {(regions.data ?? []).map((r) => (
+                    <option key={r.id} value={r.id}>{r.name}</option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="국가">
+                <Select value={countryId} onChange={(e) => setCountryId(e.target.value)}>
+                  <option value="">선택 안 함</option>
+                  {countryOptions.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </Select>
+              </Field>
+              <div className="sm:col-span-2">
+                <Field label="전문 분야">
+                  <span className="mb-1 block text-caption font-normal text-gray-400">
+                    분야 관리 태그에서 최대 {MAX_FIELDS}개
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(fieldTags.data ?? []).map((t) => {
+                      const on = fields.includes(t.name)
+                      const disabled = !on && fields.length >= MAX_FIELDS
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          disabled={disabled}
+                          onClick={() => toggleField(t.name)}
+                          className={cn(
+                            'rounded-radius-sm border px-2 py-0.5 text-caption transition-colors',
+                            on
+                              ? 'border-brand bg-brand/10 font-medium text-brand'
+                              : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50',
+                            disabled && 'cursor-not-allowed opacity-40 hover:bg-white',
+                          )}
+                        >
+                          {t.name}
+                        </button>
+                      )
+                    })}
+                    {(fieldTags.data ?? []).length === 0 && (
+                      <span className="text-caption text-gray-400">
+                        등록된 분야 태그가 없습니다. (ADMIN › 분야 관리)
+                      </span>
+                    )}
+                  </div>
+                </Field>
+              </div>
+            </div>
+          </div>
+
+          {/* 노트 카드 */}
+          <div className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+            <Field label="노트">
+              <TextArea rows={4} value={intro} onChange={(e) => setIntro(e.target.value)} />
             </Field>
           </div>
         </div>
+
+        {/* 우측(1/3): 자료 관리. 신규 등록 전에는 대상 레코드가 없어 안내만 노출한다. */}
+        <div className="space-y-4 lg:col-span-1">
+          {isEdit && recordId ? (
+            <MaterialPanel targetType="global_network" targetId={recordId} />
+          ) : (
+            <div className="rounded-radius-lg border border-dashed border-gray-300 bg-gray-50 p-5 text-caption text-gray-500">
+              자료는 등록 완료 후 상세페이지에서 첨부할 수 있습니다.
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
-        <Field label="노트">
-          <TextArea rows={4} value={intro} onChange={(e) => setIntro(e.target.value)} />
-        </Field>
-      </div>
-
-      {/* 자료 관리: 기존 레코드 수정 시에만 업로드 가능(신규는 저장 후 id 확정되어야 첨부 가능). */}
-      {isEdit && recordId && (
-        <MaterialPanel targetType="global_network" targetId={recordId} />
-      )}
-
+      {/* 액션 버튼(그리드 아래 전체 폭) */}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="secondary" onClick={onCancel} disabled={busy}>
           취소

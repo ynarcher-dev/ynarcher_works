@@ -64,11 +64,18 @@ export function StartupBusinessTeamFields({ register, control, capabilities, set
           <p className="mb-1 text-body font-medium text-gray-800">핵심 팀원</p>
           <div className="space-y-2">
             {fields.map((f, i) => (
-              <div key={f.id} className="flex gap-2">
-                <Input className="w-28" placeholder="이름" {...register(`members.${i}.name`)} />
-                <Input className="w-28" placeholder="역할" {...register(`members.${i}.role`)} />
-                <Input className="flex-1" placeholder="한 줄 설명" {...register(`members.${i}.background`)} />
-                <Button type="button" variant="secondary" onClick={() => remove(i)}>
+              <div key={f.id} className="flex items-center gap-2">
+                {/* Input 래퍼가 w-full이라 폭 클래스는 바깥 div에 준다(안쪽 input에 주면 슬롯만 좁고 여백이 남음). */}
+                <div className="w-28 shrink-0">
+                  <Input placeholder="이름" {...register(`members.${i}.name`)} />
+                </div>
+                <div className="w-28 shrink-0">
+                  <Input placeholder="역할" {...register(`members.${i}.role`)} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <Input placeholder="한 줄 설명" {...register(`members.${i}.background`)} />
+                </div>
+                <Button type="button" variant="secondary" className="shrink-0" onClick={() => remove(i)}>
                   삭제
                 </Button>
               </div>

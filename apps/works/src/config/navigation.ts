@@ -42,10 +42,11 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
     {
       items: [
         { label: '대시보드', tab: 'dashboard' },
-        // 투자/보육/발굴 3분류. 발굴기업이 기존 스타트업 마스터 디렉토리.
+        // 투자/보육/발굴/기타 4분류. 발굴기업이 기존 스타트업 마스터 디렉토리.
         { label: '투자기업', tab: 'invested', dividerBefore: true },
         { label: '보육기업', tab: 'incubated' },
         { label: '발굴기업', tab: 'discovered' },
+        { label: '기타기업', tab: 'etc' },
         { label: '회의록', tab: 'minutes', dividerBefore: true },
         { label: '아처스캔', tab: 'archerscan' },
         { label: '대용량 업로드', tab: 'bulk' },

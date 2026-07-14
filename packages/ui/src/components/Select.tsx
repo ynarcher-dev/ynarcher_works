@@ -15,10 +15,10 @@ export function Select({ invalid, className, children, ...props }: SelectProps) 
           'h-11 w-full appearance-none rounded-radius-md border pl-3.5 pr-10 text-body text-gray-900 transition-all duration-fast shadow-soft',
           'bg-white border-gray-300',
           'hover:border-gray-400',
-          'focus-visible:outline-none focus-visible:border-info focus-visible:ring-4 focus-visible:ring-info/10',
+          'focus-visible:outline-none focus-visible:border-brand/50 focus-visible:shadow-popover',
           'disabled:cursor-not-allowed disabled:border-gray-100 disabled:bg-gray-50 disabled:text-gray-400 disabled:shadow-none',
           invalid
-            ? 'border-danger bg-danger-subtle hover:border-danger focus-visible:border-danger focus-visible:ring-danger/10'
+            ? 'border-brand-700 bg-danger-subtle hover:border-brand-700 focus-visible:border-brand-700 focus-visible:shadow-popover'
             : '',
           className,
         )}
