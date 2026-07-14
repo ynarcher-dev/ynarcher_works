@@ -35,6 +35,8 @@
   * **의미**: 사용자 등급별 메뉴 접근 권한 제어 콘솔과 시스템 보안 감사 로그 모니터링 화면 요건을 기획합니다.
 * **[3_3_workspace_networks.md](../docs_planning/3_3_workspace_networks.md) (NETWORKS 워크스페이스 상세 기획서)**
   * **의미**: 스타트업, 전문가, 협력사 등의 전사 핵심 마스터 데이터를 개별 등록/수정/관리하고 엑셀 파일 대량 임포터 화면을 명세합니다.
+  * **[3_3_1_startup_pool_classification.md](../docs_planning/3_3_1_startup_pool_classification.md) (스타트업 풀 구분·담당자·관리현황)**: 스타트업 마스터의 구분(발굴/보육/투자/기타) 라이프사이클, 담당자 권한 모델, 관리현황 적용 범위를 규정합니다.
+  * **[3_3_2_networks_dashboard.md](../docs_planning/3_3_2_networks_dashboard.md) (NETWORKS 대시보드 및 최근 업로드 현황)**: 네트워크 자산의 규모·구성·성장 추이·데이터 건강도 인포그래픽과 8종 통합 최근 업로드 리스트 화면을 명세합니다.
 * **[3_4_workspace_ac.md ~ 3_4_14_ac_custom_activities.md](../docs_planning/3_4_workspace_ac.md) (AC 워크스페이스 시리즈)**
   * **의미**: Program First 기반의 모듈형 스타트업 보육 프로그램 운영 플랫폼 명세로서, 프로그램 개요 및 모듈 보드, 모집 랜딩 및 신청 DB, 통합 참가자 풀, 공통 평가 엔진 및 서면/대면 심사, OT 및 출석 세션, N:N 멘토링 관계, 1:1 비즈니스 매칭 및 AI 자동 배정, 데모데이 피칭 및 투자자 관심 매칭, 통합 타임라인 충돌 방지, KPI 성과 요약 및 통합 엑셀 다운로더, 비정형 커스텀 활동 기록 등을 포함하는 액셀러레이팅 핵심 흐름을 담고 있습니다.
 * **[3_5_workspace_fund.md](../docs_planning/3_5_workspace_fund.md) (FUND 워크스페이스 상세 기획서)**
