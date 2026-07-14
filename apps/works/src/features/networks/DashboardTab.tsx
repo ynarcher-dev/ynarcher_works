@@ -1,4 +1,5 @@
-import { Badge, Spinner } from '@ynarcher/ui'
+import { Badge, Modal, Spinner } from '@ynarcher/ui'
+import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   useExpertiseDistribution,
@@ -108,15 +109,18 @@ function formatDateTime(iso: string): string {
 function RecentUploadsList({
   rows,
   onOpen,
+  maxHClass = 'max-h-72',
 }: {
   rows: RecentUpload[]
   onOpen: (r: RecentUpload) => void
+  /** 스크롤 영역 최대 높이(카드=max-h-72, 모달=더 크게). */
+  maxHClass?: string
 }) {
   if (rows.length === 0) {
     return <p className="py-8 text-center text-caption text-gray-400">최근 업로드된 데이터가 없습니다.</p>
   }
   return (
-    <ul className="max-h-72 space-y-1.5 overflow-y-auto pr-1">
+    <ul className={`${maxHClass} space-y-1.5 overflow-y-auto pr-1`}>
       {rows.map((r) => {
         const clickable = usesDetailPage(r.entity) && r.entity !== 'others'
         return (
@@ -147,7 +151,35 @@ function RecentUploadsList({
   )
 }
 
-/** NETWORKS 대시보드: 규모 KPI · 구분별 분포 · 최근 업로드 리스트. */
+/** 대시보드 카드 셸: 제목·부제·본문 + 하단 '전체보기' 버튼(클릭 시 확대 모달). */
+function DashCard({
+  title,
+  subtitle,
+  onExpand,
+  children,
+}: {
+  title: string
+  subtitle?: string
+  onExpand: () => void
+  children: ReactNode
+}) {
+  return (
+    <div className="flex flex-col rounded-radius-md border border-gray-300 bg-white p-4">
+      <h3 className="mb-1 text-body font-semibold text-gray-800">{title}</h3>
+      {subtitle && <p className="mb-3 text-caption text-gray-400">{subtitle}</p>}
+      <div className="flex-1">{children}</div>
+      <button
+        type="button"
+        onClick={onExpand}
+        className="mt-3 w-full rounded-radius-sm border border-gray-200 py-1.5 text-caption font-medium text-gray-600 hover:bg-gray-50"
+      >
+        전체보기
+      </button>
+    </div>
+  )
+}
+
+/** NETWORKS 대시보드: 규모 KPI · 분야별 현황 · 최근 업로드 · 확대 모달. */
 export function DashboardTab() {
   const navigate = useNavigate()
   const { data: summary, isLoading: summaryLoading } = useNetworksSummary()
@@ -161,6 +193,53 @@ export function DashboardTab() {
     }
   }
 
+  // 확대 모달로 펼칠 카드 키(null=닫힘).
+  const [expanded, setExpanded] = useState<'expertise' | 'recent' | 'card3' | null>(null)
+
+  const spinnerBox = <div className="flex h-40 items-center justify-center"><Spinner /></div>
+
+  // 카드 3종을 한 곳에 정의해 카드·확대 모달에서 동일 본문을 재사용한다.
+  const cards: {
+    key: 'expertise' | 'recent' | 'card3'
+    title: string
+    subtitle?: string
+    render: (inModal: boolean) => ReactNode
+  }[] = [
+    {
+      key: 'expertise',
+      title: '분야별 현황',
+      subtitle: 'BAN · EXP · 전문가 · 투자사의 관리 분야 태그별 보유 인원(중복 집계, 미등록 값은 기타)',
+      render: () => (expertiseLoading ? spinnerBox : <HBarList data={expertise ?? []} />),
+    },
+    {
+      key: 'recent',
+      title: '최근 업로드 데이터',
+      subtitle: '8종 통합 최신순(상세 클릭 이동)',
+      render: (inModal) =>
+        recentLoading ? (
+          spinnerBox
+        ) : (
+          <RecentUploadsList
+            rows={recent ?? []}
+            onOpen={openRow}
+            maxHClass={inModal ? 'max-h-[60vh]' : 'max-h-72'}
+          />
+        ),
+    },
+    {
+      key: 'card3',
+      title: '카드 3',
+      subtitle: '준비 중',
+      render: () => (
+        <div className="flex h-40 items-center justify-center text-caption text-gray-400">
+          표시할 내용을 지정해 주세요
+        </div>
+      ),
+    },
+  ]
+
+  const activeCard = cards.find((c) => c.key === expanded)
+
   return (
     <div className="space-y-5">
       <div className="space-y-2">
@@ -173,36 +252,29 @@ export function DashboardTab() {
       </div>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-        <div className="rounded-radius-md border border-gray-300 bg-white p-4">
-          <h3 className="mb-1 text-body font-semibold text-gray-800">분야별 현황</h3>
-          <p className="mb-3 text-caption text-gray-400">
-            BAN · EXP · 전문가 · 투자사의 관리 분야 태그별 보유 인원(중복 집계, 미등록 값은 기타)
-          </p>
-          {expertiseLoading ? (
-            <div className="flex h-40 items-center justify-center"><Spinner /></div>
-          ) : (
-            <HBarList data={expertise ?? []} />
-          )}
-        </div>
-
-        <div className="rounded-radius-md border border-gray-300 bg-white p-4">
-          <h3 className="mb-1 text-body font-semibold text-gray-800">최근 업로드 데이터</h3>
-          <p className="mb-3 text-caption text-gray-400">8종 통합 최신순(상세 클릭 이동)</p>
-          {recentLoading ? (
-            <div className="flex h-40 items-center justify-center"><Spinner /></div>
-          ) : (
-            <RecentUploadsList rows={recent ?? []} onOpen={openRow} />
-          )}
-        </div>
-
-        <div className="rounded-radius-md border border-gray-300 bg-white p-4">
-          <h3 className="mb-1 text-body font-semibold text-gray-800">카드 3</h3>
-          <p className="mb-3 text-caption text-gray-400">준비 중</p>
-          <div className="flex h-40 items-center justify-center text-caption text-gray-400">
-            표시할 내용을 지정해 주세요
-          </div>
-        </div>
+        {cards.map((c) => (
+          <DashCard
+            key={c.key}
+            title={c.title}
+            subtitle={c.subtitle}
+            onExpand={() => setExpanded(c.key)}
+          >
+            {c.render(false)}
+          </DashCard>
+        ))}
       </div>
+
+      <Modal
+        open={expanded !== null}
+        onClose={() => setExpanded(null)}
+        title={activeCard?.title}
+        size="lg"
+      >
+        {activeCard?.subtitle && (
+          <p className="mb-3 text-caption text-gray-400">{activeCard.subtitle}</p>
+        )}
+        {activeCard?.render(true)}
+      </Modal>
     </div>
   )
 }
