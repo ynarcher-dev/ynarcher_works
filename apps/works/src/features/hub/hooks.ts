@@ -227,6 +227,8 @@ export interface Employee {
   name: string
   email: string | null
   user_type: string
+  /** 소속 부서(조직도 users.department_id). 프로그램 담당자 배치의 부서 자동 제안에 사용. */
+  department_id: string | null
 }
 
 /** 임직원 프로필 디렉토리(내부 사용자). */
@@ -236,7 +238,7 @@ export function useEmployees() {
     queryFn: async (): Promise<Employee[]> => {
       const { data } = await supabase
         .from('users')
-        .select('id, name, email, user_type')
+        .select('id, name, email, user_type, department_id')
         .not('user_type', 'in', '(external_startup,external_expert,temporary_guest)')
         .is('deleted_at', null)
         .order('name', { ascending: true })

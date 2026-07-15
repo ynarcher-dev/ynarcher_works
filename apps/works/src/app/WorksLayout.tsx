@@ -103,6 +103,8 @@ const sidebarIconByTab: Record<string, LucideIcon> = {
 
   // HUB 그룹 3: 현황 정보
   ac: Target,
+  mine: User,
+  all: LayoutGrid,
   mna: BriefcaseBusiness,
   project: Folder,
 
@@ -185,11 +187,9 @@ export function WorksLayout() {
     key: w.key,
     label: w.implemented ? w.label : `${w.label} (준비 중)`,
     disabled: !w.implemented,
-    // 스위처 구획: 오피스 아래(startup 앞), 네트웍스 아래(ac 앞), 매니지먼트 앞(매니지먼트·어드민을 하단 묶음)에 구분선을 둔다.
-    dividerBefore:
-      w.key === 'startup' ||
-      w.key === 'ac' ||
-      w.key === 'management',
+    // 워크스페이스 부제 + 4개 구획(업무 허브/마스터·네트워크/투자 사업/경영·시스템) 섹션 헤더.
+    description: w.description,
+    groupLabel: w.groupLabel,
   }))
 
   const goToSection = (item: { tab?: string }) => {

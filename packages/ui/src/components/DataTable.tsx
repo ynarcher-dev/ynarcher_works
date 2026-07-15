@@ -345,11 +345,12 @@ export function DataTable<T>({
                   {standardColumns && (
                     <>
                       {showAuthor && (
-                        <td className={cn('border-b border-gray-200 px-3 text-gray-500', pad, truncate)}>
+                        <td className={cn('whitespace-nowrap border-b border-gray-200 px-3 text-gray-500', pad, truncate)}>
                           {resolveAuthor(row, meta)}
                         </td>
                       )}
-                      <td className={cn('border-b border-gray-200 px-3 text-gray-500 tabular-nums', alignClass[updatedAtAlign], pad, truncate)}>
+                      {/* 수정일(날짜)은 어떤 레이아웃에서도 줄바꿈되지 않게 nowrap 고정. auto 레이아웃에서 컬럼이 좁혀질 때 하이픈에서 줄이 갈라지는 것을 방지한다. */}
+                      <td className={cn('whitespace-nowrap border-b border-gray-200 px-3 text-gray-500 tabular-nums', alignClass[updatedAtAlign], pad, truncate)}>
                         {resolveUpdatedAt(row, meta)}
                       </td>
                       <td

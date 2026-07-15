@@ -28,25 +28,46 @@ export const PARTICIPATION_MODES = [
   'MANUAL_ALLOCATION',
 ] as const
 
+/**
+ * 프로그램(프로젝트) 상태 수명주기(6단계):
+ *   제안 → (성공) 준비 → 진행중 → 종료 / (중단) 취소 / (제안 실패) 미선정
+ * DB program_status enum: PROPOSED/DRAFT/OPERATING/FINISHED/CANCELLED/NOT_SELECTED.
+ * (등록/편집 폼에서 선택 가능한 값·순서는 PROGRAM_STATUS_OPTIONS 참조)
+ */
+export const PROGRAM_STATUS_OPTIONS = [
+  'PROPOSED',
+  'DRAFT',
+  'OPERATING',
+  'FINISHED',
+  'CANCELLED',
+  'NOT_SELECTED',
+] as const
+
 export const PROGRAM_STATUS_LABEL: Record<string, string> = {
+  PROPOSED: '제안',
   DRAFT: '준비',
-  RECRUITING: '모집',
-  SCREENING: '심사',
-  OPERATING: '운영',
-  DEMO_DAY: '데모데이',
+  OPERATING: '진행중',
   FINISHED: '종료',
   CANCELLED: '취소',
+  NOT_SELECTED: '미선정',
+  // 구 상태값(기존 데이터 표시용) — 신규 등록에서는 사용하지 않는다.
+  RECRUITING: '모집',
+  SCREENING: '심사',
+  DEMO_DAY: '데모데이',
 }
 
 /** 프로그램 상태 배지 톤(상세 헤더·목록 공용). */
 export const PROGRAM_STATUS_TONE: Record<string, BadgeTone> = {
+  PROPOSED: 'info',
   DRAFT: 'neutral',
-  RECRUITING: 'info',
-  SCREENING: 'warning',
   OPERATING: 'success',
-  DEMO_DAY: 'warning',
   FINISHED: 'neutral',
   CANCELLED: 'danger',
+  NOT_SELECTED: 'warning',
+  // 구 상태값
+  RECRUITING: 'info',
+  SCREENING: 'warning',
+  DEMO_DAY: 'warning',
 }
 
 export const PARTICIPANT_ROLES = [

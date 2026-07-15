@@ -178,7 +178,17 @@ export function StartupPoolTable({
       })
     }
 
-    // 담당자(관리 주체): 관리현황 바로 뒤에 노출한다. 투자기업은 지정 담당자(리드, 외 N),
+    // 발굴 경로는 투자기업을 제외한 구분(발굴·보육·기타)에서 담당자 앞에 노출한다. 자유 서술이라 남는 폭을 흡수한다.
+    if (tab !== 'invested') {
+      cols.push({
+        key: 'discovery_source',
+        header: '발굴 경로',
+        className: 'min-w-[9rem]',
+        render: (r) => r.discovery_source || <span className="text-gray-400">-</span>,
+      })
+    }
+
+    // 담당자(관리 주체): 투자기업(관리현황 바로 뒤)은 지정 담당자(리드, 외 N),
     // 그 외는 공동관리(쓰기 권한자 누구나) 텍스트. 등록자로 폴백하지 않으며 작성자는 우측 표준 컬럼에 별도 표시.
     cols.push({
       key: 'managers',
@@ -192,16 +202,6 @@ export function StartupPoolTable({
         return <span className="text-gray-500">공동관리</span>
       },
     })
-
-    // 발굴 경로는 투자기업을 제외한 구분(발굴·보육·기타)에서 노출한다. 자유 서술이라 남는 폭을 흡수한다.
-    if (tab !== 'invested') {
-      cols.push({
-        key: 'discovery_source',
-        header: '발굴 경로',
-        className: 'min-w-[9rem]',
-        render: (r) => r.discovery_source || <span className="text-gray-400">-</span>,
-      })
-    }
 
     return cols
   }, [tab])

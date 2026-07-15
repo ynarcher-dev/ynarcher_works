@@ -6,8 +6,10 @@ export interface WorkspaceOption {
   label: string
   /** 준비 중 등 선택 불가 워크스페이스는 비활성 처리. */
   disabled?: boolean
-  /** 이 항목 위에 구분선을 그린다(예: 시스템 관리 섹션 분리). */
-  dividerBefore?: boolean
+  /** 워크스페이스가 무엇을 하는지 한 줄로 설명하는 부제(라벨 아래에 회색으로 노출). */
+  description?: string
+  /** 이 항목부터 시작되는 섹션명. 지정 시 위에 구분선 + 섹션 라벨을 그린다. */
+  groupLabel?: string
 }
 
 export interface WorkspaceSwitcherProps {
@@ -51,12 +53,18 @@ export function WorkspaceSwitcher({
         </button>
       }
     >
-      {options.map((opt) => {
+      {options.map((opt, idx) => {
         const isCurrent = opt.key === current
         return (
           <Fragment key={opt.key}>
-            {opt.dividerBefore && (
-              <div className="my-1 border-t border-gray-200" aria-hidden />
+            {opt.groupLabel && (
+              <div
+                className={`px-3 pb-1 ${idx === 0 ? 'pt-1' : 'mt-1 border-t border-gray-200 pt-2'}`}
+              >
+                <span className="text-caption font-semibold text-gray-400">
+                  {opt.groupLabel}
+                </span>
+              </div>
             )}
             <DropdownItem
               disabled={opt.disabled}
@@ -65,12 +73,19 @@ export function WorkspaceSwitcher({
                 setOpen(false)
               }}
             >
-              <span className="flex w-full items-center justify-between gap-3">
-                <span className={isCurrent ? 'font-semibold text-brand' : undefined}>
+              <span className="flex w-full items-baseline gap-3 whitespace-nowrap">
+                <span
+                  className={`w-28 shrink-0 ${
+                    isCurrent ? 'font-semibold text-brand' : 'font-medium text-gray-900'
+                  }`}
+                >
                   {opt.label}
                 </span>
+                {opt.description && (
+                  <span className="text-caption font-light text-gray-600">{opt.description}</span>
+                )}
                 {isCurrent && (
-                  <span className="rounded-radius-sm bg-brand-25 px-1.5 py-0.5 text-caption font-medium text-brand">
+                  <span className="ml-auto shrink-0 self-center rounded-radius-sm bg-brand-25 px-1.5 py-0.5 text-caption font-medium text-brand">
                     현재
                   </span>
                 )}

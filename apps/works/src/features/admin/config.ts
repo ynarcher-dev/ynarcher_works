@@ -20,7 +20,7 @@ export const WORKSPACE_KEYS = [
   { key: 'networks', label: 'NETWORKS' },
   { key: 'ac', label: 'AC' },
   { key: 'fund', label: 'FUND' },
-  { key: 'mna', label: 'M&A' },
+  { key: 'mna', label: 'M&A/PE' },
   { key: 'project', label: 'PROJECT' },
   { key: 'management', label: 'MANAGEMENT' },
   { key: 'admin', label: 'ADMIN' },

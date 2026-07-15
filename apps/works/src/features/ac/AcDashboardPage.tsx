@@ -1,82 +1,44 @@
-import { Badge, Button, DataTable, Spinner, PageHeader, type Column } from '@ynarcher/ui'
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ProgramFormModal } from '@/features/ac/ProgramFormModal'
-import { usePrograms, type Program } from '@/features/ac/hooks'
-import { PROGRAM_STATUS_LABEL } from '@/features/ac/config'
+import { PageHeader, EmptyState } from '@ynarcher/ui'
+import { useSearchParams } from 'react-router-dom'
+import { AcDashboardTab } from '@/features/ac/AcDashboardTab'
+import { AcWorkspaceTab } from '@/features/ac/AcWorkspaceTab'
 
-/** AC 통합 대시보드: 프로그램 목록 + KPI 요약 + 등록. (7-14 / 7-1 진입) */
+const HEADINGS: Record<string, string> = {
+  dashboard: '대시보드',
+  mine: '내 사업',
+  all: '전체 사업',
+}
+
+/**
+ * AC 워크스페이스 페이지 컨테이너. 섹션 전환은 좌측 사이드바(?tab)가 구동한다.
+ * - dashboard: 상태 요약 대시보드(STARTUP/NETWORKS 대시보드처럼 확장 예정)
+ * - mine: 내가 담당자/등록자인 사업만
+ * - all: 전체 사업
+ */
 export function AcDashboardPage() {
-  const { data, isLoading } = usePrograms()
-  const [creating, setCreating] = useState(false)
-  const navigate = useNavigate()
-
-  const programs = data ?? []
-  const operating = programs.filter((p) => p.status === 'OPERATING').length
-  const recruiting = programs.filter((p) => p.status === 'RECRUITING').length
-
-  const columns: Column<Program>[] = [
-    { key: 'title', header: '프로그램', render: (r) => r.title },
-    {
-      key: 'status',
-      header: '상태',
-      render: (r) => <Badge tone="info">{PROGRAM_STATUS_LABEL[r.status] ?? r.status}</Badge>,
-    },
-    { key: 'start_date', header: '시작', render: (r) => r.start_date ?? '-' },
-    { key: 'end_date', header: '종료', render: (r) => r.end_date ?? '-' },
-    {
-      key: '_action',
-      header: '',
-      align: 'right',
-      render: (r) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate(`/ac/programs/${r.id}`)}
-        >
-          열기
-        </Button>
-      ),
-    },
-  ]
+  const [params] = useSearchParams()
+  const tab = params.get('tab') ?? 'dashboard'
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        title="AC 대시보드"
-        actions={<Button onClick={() => setCreating(true)}>프로그램 등록</Button>}
-      />
-
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { label: '전체 프로그램', value: programs.length },
-          { label: '운영 중', value: operating },
-          { label: '모집 중', value: recruiting },
-        ].map((tile) => (
-          <div
-            key={tile.label}
-            className="rounded border border-gray-300 bg-white px-4 py-3"
-          >
-            <p className="text-caption text-gray-500">{tile.label}</p>
-            <p className="text-title-md font-bold tabular-nums text-gray-900">
-              {tile.value}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      {isLoading ? (
-        <Spinner />
-      ) : (
-        <DataTable
-          columns={columns}
-          rows={programs}
-          rowKey={(r) => r.id}
-          emptyText="등록된 프로그램이 없습니다."
-        />
+      {/* 대시보드는 페이지 타이틀 없이 카드부터 노출한다. */}
+      {tab !== 'dashboard' && (
+        <PageHeader title={HEADINGS[tab] ?? HEADINGS.dashboard} />
       )}
 
-      <ProgramFormModal open={creating} onClose={() => setCreating(false)} />
+      {tab === 'dashboard' ? (
+        <AcDashboardTab />
+      ) : tab === 'mine' ? (
+        // key로 스코프 전환 시 검색·필터·페이지를 초기화한다.
+        <AcWorkspaceTab key="mine" scope="mine" />
+      ) : tab === 'all' ? (
+        <AcWorkspaceTab key="all" scope="all" />
+      ) : (
+        <EmptyState
+          title={`${HEADINGS[tab] ?? '대시보드'} 준비 중`}
+          description="해당 섹션은 준비 중입니다."
+        />
+      )}
     </div>
   )
 }

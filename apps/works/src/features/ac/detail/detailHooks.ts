@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { ModuleSettings } from '@/features/ac/detail/moduleMeta'
+import { recordProgramContribution } from '@/features/ac/detail/programContributions'
 
 /** 프로그램 마스터 수정(제목/상태/기간/설명 — 편집 모달용). */
 export function useUpdateProgram(id: string) {
@@ -15,10 +16,13 @@ export function useUpdateProgram(id: string) {
     }) => {
       const { error } = await supabase.from('programs').update(values).eq('id', id)
       if (error) throw error
+      // 변동 이력 'edited' 기록(부수 기록: 실패해도 수정은 성공 처리).
+      await recordProgramContribution(id, 'edited').catch(() => {})
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['ac', 'program', id] })
       void qc.invalidateQueries({ queryKey: ['ac', 'programs'] })
+      void qc.invalidateQueries({ queryKey: ['ac', 'contributions', id] })
     },
   })
 }

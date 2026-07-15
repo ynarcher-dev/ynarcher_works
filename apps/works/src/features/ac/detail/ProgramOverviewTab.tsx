@@ -1,25 +1,67 @@
+import { Tabs } from '@ynarcher/ui'
+import { useState } from 'react'
 import type { Program } from '@/features/ac/hooks'
+import { EvaluationPanel } from '@/features/ac/EvaluationPanel'
+import { ParticipantPool } from '@/features/ac/ParticipantPool'
 import { ModuleBoardCard } from '@/features/ac/detail/ModuleBoardCard'
-import { ParticipantPoolCard } from '@/features/ac/detail/ParticipantPoolCard'
+import { ProgramInfoCard } from '@/features/ac/detail/ProgramInfoCard'
 import { ProgramScheduleCard } from '@/features/ac/detail/ProgramScheduleCard'
+import { useProgramContributions } from '@/features/ac/detail/programContributions'
+import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
+import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
+import { MaterialPanel } from '@/features/networks/MaterialPanel'
+
+type LeftTab = 'modules' | 'participants' | 'evaluation'
+
+const LEFT_TABS: { key: LeftTab; label: string }[] = [
+  { key: 'modules', label: '운영 모듈' },
+  { key: 'participants', label: '참가자 풀' },
+  { key: 'evaluation', label: '평가 엔진' },
+]
 
 /**
- * 프로그램 상세 개요 탭: 좌측 운영 모듈 보드, 우측 통합 타임라인 + 참가자 풀.
- * 세 패널은 각자 자기 쿼리 훅으로 데이터를 독립 조회한다(부모는 컴포지션만).
+ * 프로그램 상세 개요(NETWORKS·STARTUP 상세와 동일한 2/3 + 1/3 카드섹션 컴포지션).
+ * 좌측 본문(2/3): 기본 데이터 카드 → 서브 탭(운영 모듈 · 참가자 풀 · 평가 엔진).
+ * 우측(1/3): 통합 타임라인 → 자료 관리 → 코멘트 → 변동 이력.
+ * 자료/코멘트/변동이력 패널은 NETWORKS 공용 패널을 target_type='program'으로 재사용한다.
+ * 통합 타임라인의 '전체 보기'와 운영 모듈 카드 클릭은 `onOpenTab`으로 전체 화면에 진입한다.
  */
 export function ProgramOverviewTab({
   program,
   onOpenModule,
+  onOpenTab,
 }: {
   program: Program
   onOpenModule: (moduleType: string) => void
+  onOpenTab: (tab: string) => void
 }) {
+  const { data: contributions } = useProgramContributions(program.id)
+  const [leftTab, setLeftTab] = useState<LeftTab>('modules')
+
   return (
-    <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
-      <ModuleBoardCard programId={program.id} onOpenModule={onOpenModule} />
-      <div className="space-y-4">
-        <ProgramScheduleCard program={program} />
-        <ParticipantPoolCard programId={program.id} />
+    <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
+      <div className="space-y-4 lg:col-span-2">
+        <ProgramInfoCard program={program} />
+        <div>
+          <Tabs
+            items={LEFT_TABS}
+            value={leftTab}
+            onChange={(key) => setLeftTab(key as LeftTab)}
+          />
+          <div className="mt-4">
+            {leftTab === 'modules' && (
+              <ModuleBoardCard programId={program.id} onOpenModule={onOpenModule} />
+            )}
+            {leftTab === 'participants' && <ParticipantPool programId={program.id} />}
+            {leftTab === 'evaluation' && <EvaluationPanel programId={program.id} />}
+          </div>
+        </div>
+      </div>
+      <div className="space-y-4 lg:col-span-1">
+        <ProgramScheduleCard program={program} onExpand={() => onOpenTab('timeline')} />
+        <MaterialPanel targetType="program" targetId={program.id} />
+        <FeedbackPanel targetType="program" targetId={program.id} />
+        <ChangeHistoryPanel contributions={contributions} />
       </div>
     </div>
   )

@@ -4,6 +4,48 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { recordProgramContribution } from '@/features/ac/detail/programContributions'
+
+/** 담당자 역할(program_manager_role enum). PM 복수 허용, 최소 1명 PM 필수. */
+export type ProgramManagerRole = 'PM' | 'MEMBER'
+
+/** 부서 역할(program_department_kind enum). 메인 1개 + 협업 n개. */
+export type ProgramDepartmentKind = 'MAIN' | 'COLLAB'
+
+/** 프로그램 부서 구성 1건(메인/협업 + 협업비율). 단계(org 버전) 그룹별 합 = 100. */
+export interface ProgramDepartmentDraft {
+  /** 소속 조직 버전(단계). 조직개편 경계마다 단계가 나뉜다. */
+  org_version_id: string
+  department_id: string
+  kind: ProgramDepartmentKind
+  /** 협업비율(정수 %). 단계 내 부서별 합 = 100. */
+  collaboration_ratio: number
+}
+
+/** 부서 임베드(Draft + 부서명). */
+export interface ProgramDepartment extends ProgramDepartmentDraft {
+  department: { id: string; name: string } | null
+}
+
+/** 담당자 배치 구간 1건(단계·부서·역할·수행 기간·투입률). 저장 RPC 입력이자 임베드 조회 형태. */
+export interface ProgramManagerDraft {
+  user_id: string
+  /** 소속 조직 버전(단계). 구간은 이 버전 유효기간 안에 있어야 한다. */
+  org_version_id: string
+  /** 소속 부서(해당 단계 지정 부서 중 하나). */
+  department_id: string
+  role: ProgramManagerRole
+  /** 투입률(정수 %). 부서 내 담당자 합 = 그 부서 협업비율. */
+  allocation_rate: number
+  start_date: string
+  end_date: string
+}
+
+/** 담당자 임베드(Draft + 사용자명·부서명). */
+export interface ProgramManager extends ProgramManagerDraft {
+  user: { id: string; name: string | null } | null
+  department: { id: string; name: string } | null
+}
 
 export interface Program {
   id: string
@@ -12,9 +54,20 @@ export interface Program {
   start_date: string | null
   end_date: string | null
   description: string | null
+  updated_at: string | null
+  /** 부서 구성(메인 1 + 협업 n, 협업비율 합 100). */
+  departments: ProgramDepartment[]
+  /** 담당자(program_managers 다대다 임베드). 등록자와 별개 축(재지정 가능). */
+  managers: ProgramManager[]
+  /** 등록자(created_by → users) FK 임베드. 목록 표준 컬럼(등록자)의 원천. */
+  creator: { id: string; name: string | null } | null
 }
 
-const PROGRAM_COLS = 'id, title, status, start_date, end_date, description'
+const PROGRAM_COLS =
+  'id, title, status, start_date, end_date, description, updated_at, ' +
+  'departments:program_departments(org_version_id, department_id, kind, collaboration_ratio, department:departments!program_departments_department_id_fkey(id, name)), ' +
+  'managers:program_managers(user_id, org_version_id, department_id, role, allocation_rate, start_date, end_date, user:users!program_managers_user_id_fkey(id, name), department:departments!program_managers_department_id_fkey(id, name)), ' +
+  'creator:users!created_by(id, name)'
 
 export function usePrograms() {
   return useQuery({
@@ -26,7 +79,8 @@ export function usePrograms() {
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
       if (error) throw error
-      return (data ?? []) as Program[]
+      // creator 임베드는 FK 힌트로 단일 객체가 오지만 타입 파서가 배열로 추론해 unknown 경유 캐스팅.
+      return (data ?? []) as unknown as Program[]
     },
   })
 }
@@ -41,7 +95,7 @@ export function useProgram(id: string | undefined) {
         .select(PROGRAM_COLS)
         .eq('id', id)
         .maybeSingle()
-      return (data as Program) ?? null
+      return (data as unknown as Program) ?? null
     },
   })
 }
@@ -55,11 +109,53 @@ export function useCreateProgram() {
       start_date?: string | null
       end_date?: string | null
       description?: string | null
+    }): Promise<string> => {
+      const { data, error } = await supabase
+        .from('programs')
+        .insert(values)
+        .select('id')
+        .single()
+      if (error) throw error
+      const id = (data as { id: string }).id
+      // 변동 이력 최초 'created' 기록(부수 기록: 실패해도 등록은 성공 처리).
+      await recordProgramContribution(id, 'created').catch(() => {})
+      return id
+    },
+    onSuccess: (id) => {
+      void qc.invalidateQueries({ queryKey: ['ac', 'programs'] })
+      void qc.invalidateQueries({ queryKey: ['ac', 'contributions', id] })
+    },
+  })
+}
+
+/**
+ * 프로그램 부서 구성 + 담당자 구간 원자적 전량 교체.
+ * 부서 1메인·협업비율 합100, 부서별 일별 합=협업비율, PM≥1 검증은 서버 RPC set_program_staffing가 강제한다.
+ * (직접 쓰기 정책은 없고 이 RPC가 유일한 쓰기 경로다.)
+ */
+export function useSetProgramStaffing() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      programId,
+      departments,
+      managers,
+    }: {
+      programId: string
+      departments: ProgramDepartmentDraft[]
+      managers: ProgramManagerDraft[]
     }) => {
-      const { error } = await supabase.from('programs').insert(values)
+      const { error } = await supabase.rpc('set_program_staffing', {
+        p_program_id: programId,
+        p_departments: departments,
+        p_managers: managers,
+      })
       if (error) throw error
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['ac', 'programs'] }),
+    onSuccess: (_data, { programId }) => {
+      void qc.invalidateQueries({ queryKey: ['ac', 'programs'] })
+      void qc.invalidateQueries({ queryKey: ['ac', 'program', programId] })
+    },
   })
 }
 

@@ -1,8 +1,18 @@
 import { Button, Input, Modal, Select, TextArea, useToast } from '@ynarcher/ui'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { useCreateProgram, type Program } from '@/features/ac/hooks'
+import {
+  useCreateProgram,
+  useSetProgramStaffing,
+  type Program,
+} from '@/features/ac/hooks'
 import { useUpdateProgram } from '@/features/ac/detail/detailHooks'
-import { PROGRAM_STATUS_LABEL } from '@/features/ac/config'
+import type { ProgramManagerSegment } from '@/features/ac/ProgramManagerEditor'
+import type { ProgramDepartmentSegment } from '@/features/ac/ProgramDepartmentEditor'
+import { PhaseStaffingEditor } from '@/features/ac/PhaseStaffingEditor'
+import { computePhases, validateStaffing } from '@/features/ac/programManagerCoverage'
+import { useOrgVersions } from '@/features/management/orgHooks'
+import { PROGRAM_STATUS_LABEL, PROGRAM_STATUS_OPTIONS } from '@/features/ac/config'
 
 interface FormValues {
   title: string
@@ -10,6 +20,35 @@ interface FormValues {
   start_date: string
   end_date: string
   description: string
+}
+
+/** 프로그램 임베드 담당자 → 편집용 구간. 단계(org 버전)·부서 미지정 레거시 행은 제외한다. */
+function toManagerSegments(program?: Program): ProgramManagerSegment[] {
+  return (program?.managers ?? [])
+    .filter((m) => m.org_version_id && m.department_id)
+    .map((m) => ({
+      _key: crypto.randomUUID(),
+      user_id: m.user_id,
+      org_version_id: m.org_version_id,
+      department_id: m.department_id,
+      role: m.role,
+      allocation_rate: m.allocation_rate,
+      start_date: m.start_date,
+      end_date: m.end_date,
+    }))
+}
+
+/** 프로그램 임베드 부서 → 편집용 부서 구성. 단계 미지정 레거시 행은 제외한다. */
+function toDepartmentSegments(program?: Program): ProgramDepartmentSegment[] {
+  return (program?.departments ?? [])
+    .filter((d) => d.org_version_id)
+    .map((d) => ({
+      _key: crypto.randomUUID(),
+      org_version_id: d.org_version_id,
+      department_id: d.department_id,
+      kind: d.kind,
+      collaboration_ratio: d.collaboration_ratio,
+    }))
 }
 
 /**
@@ -28,16 +67,28 @@ export function ProgramFormModal({
   const toast = useToast()
   const create = useCreateProgram()
   const update = useUpdateProgram(program?.id ?? '')
+  const saveStaffing = useSetProgramStaffing()
+  const { data: orgVersions } = useOrgVersions()
   const isEdit = Boolean(program)
+  const [departments, setDepartments] = useState<ProgramDepartmentSegment[]>(() =>
+    toDepartmentSegments(program),
+  )
+  const [managers, setManagers] = useState<ProgramManagerSegment[]>(() => toManagerSegments(program))
+  // 편집 대상이 바뀌면(모달 재사용) 부서·담당자 배치를 해당 프로그램 기준으로 다시 초기화한다.
+  useEffect(() => {
+    setDepartments(toDepartmentSegments(program))
+    setManagers(toManagerSegments(program))
+  }, [program])
   const {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     defaultValues: {
       title: program?.title ?? '',
-      status: program?.status ?? 'DRAFT',
+      status: program?.status ?? 'PROPOSED',
       start_date: program?.start_date ?? '',
       end_date: program?.end_date ?? '',
       description: program?.description ?? '',
@@ -49,6 +100,15 @@ export function ProgramFormModal({
       toast.show('종료일은 시작일 이후여야 합니다.', 'warning')
       return
     }
+    // 부서+담당자 배치 검증(서버 RPC와 동일 규칙, 단계별). 부서·담당자 모두 비면 허용(미배정).
+    const phases = computePhases(orgVersions ?? [], values.start_date || null, values.end_date || null)
+    const check = validateStaffing(departments, managers, phases)
+    if (!check.ok) {
+      toast.show(check.message, 'warning')
+      return
+    }
+    const departmentRows = departments.map(({ _key, ...r }) => r)
+    const managerRows = managers.map(({ _key, ...r }) => r)
     const payload = {
       title: values.title,
       status: values.status,
@@ -57,17 +117,29 @@ export function ProgramFormModal({
       description: values.description || null,
     }
     try {
-      if (isEdit) {
+      if (isEdit && program) {
         await update.mutateAsync(payload)
+        await saveStaffing.mutateAsync({
+          programId: program.id,
+          departments: departmentRows,
+          managers: managerRows,
+        })
         toast.show('프로그램을 수정했습니다.', 'success')
       } else {
-        await create.mutateAsync(payload)
+        const newId = await create.mutateAsync(payload)
+        await saveStaffing.mutateAsync({
+          programId: newId,
+          departments: departmentRows,
+          managers: managerRows,
+        })
         toast.show('프로그램을 등록했습니다.', 'success')
         reset()
+        setDepartments([])
+        setManagers([])
       }
       onClose()
     } catch {
-      toast.show(`${isEdit ? '수정' : '등록'}에 실패했습니다. 권한을 확인하세요.`, 'danger')
+      toast.show(`${isEdit ? '수정' : '등록'}에 실패했습니다. 권한과 담당자 배치를 확인하세요.`, 'danger')
     }
   }
 
@@ -75,6 +147,7 @@ export function ProgramFormModal({
     <Modal
       open={open}
       onClose={onClose}
+      size="xl"
       title={isEdit ? '프로그램 편집' : '프로그램 등록'}
       footer={
         <>
@@ -107,9 +180,9 @@ export function ProgramFormModal({
               상태
             </label>
             <Select id="status" {...register('status')}>
-              {Object.entries(PROGRAM_STATUS_LABEL).map(([key, label]) => (
+              {PROGRAM_STATUS_OPTIONS.map((key) => (
                 <option key={key} value={key}>
-                  {label}
+                  {PROGRAM_STATUS_LABEL[key]}
                 </option>
               ))}
             </Select>
@@ -126,6 +199,52 @@ export function ProgramFormModal({
             </label>
             <Input id="end_date" type="date" {...register('end_date')} />
           </div>
+        </div>
+        <div>
+          <label className="text-body font-medium text-gray-800">
+            배치 (부서 구성 + 담당자)
+            <span className="ml-1 text-caption font-normal text-gray-400">
+              조직개편 경계마다 단계로 나눠 독립 설정
+            </span>
+          </label>
+          {(() => {
+            const phases = computePhases(orgVersions ?? [], watch('start_date'), watch('end_date'))
+            if (!watch('start_date') || !watch('end_date')) {
+              return (
+                <p className="rounded-radius-md border border-dashed border-gray-300 bg-gray-25 px-3 py-4 text-caption text-gray-400">
+                  프로그램 기간(시작·종료일)을 입력하면 단계별 배치를 설정할 수 있습니다.
+                </p>
+              )
+            }
+            if (phases.length === 0) {
+              return (
+                <p className="rounded-radius-md border border-dashed border-gray-300 bg-gray-25 px-3 py-4 text-caption text-gray-400">
+                  해당 기간에 발행된 조직 버전이 없습니다. 조직관리에서 조직 버전을 발행하세요.
+                </p>
+              )
+            }
+            const lastEnd = phases[phases.length - 1]!.end
+            return (
+              <div className="space-y-2">
+                {phases.map((phase, i) => (
+                  <PhaseStaffingEditor
+                    key={phase.versionId}
+                    phase={phase}
+                    departments={departments}
+                    onDepartmentsChange={setDepartments}
+                    managers={managers}
+                    onManagersChange={setManagers}
+                    previousPhase={i > 0 ? phases[i - 1] : undefined}
+                  />
+                ))}
+                {lastEnd < (watch('end_date') || '') && (
+                  <p className="text-caption text-gray-400">
+                    {lastEnd} 이후 기간은 조직개편 확정(조직 버전 발행) 후 설정할 수 있습니다.
+                  </p>
+                )}
+              </div>
+            )
+          })()}
         </div>
         <div>
           <label className="text-body font-medium text-gray-800" htmlFor="description">
