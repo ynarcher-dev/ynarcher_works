@@ -55,6 +55,8 @@ export interface StartupDetailFormValues {
   management_status_etc: string
   pool_status: string
   discovery_source: string
+  location: string
+  address_detail: string
   email: string
   phone: string
   // 비즈니스 & 팀 역량(통합 수정에 포함)
@@ -182,6 +184,8 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel }: Props
       management_status_etc: str('management_status_etc'),
       pool_status: str('pool_status'),
       discovery_source: str('discovery_source'),
+      location: str('location'),
+      address_detail: str('address_detail'),
       email: str('email'),
       phone: str('phone'),
       oneLiner: b.oneLiner ?? '',
@@ -213,6 +217,9 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel }: Props
       management_status_etc: v.management_status === 'other' ? v.management_status_etc.trim() || null : null,
       pool_status: isInvested(v.management_status) ? v.pool_status.trim() || null : null,
       discovery_source: v.discovery_source.trim() || null,
+      // 소재지(location_tags 태그명)·상세주소.
+      location: v.location.trim() || null,
+      address_detail: v.address_detail.trim() || null,
       email: v.email.trim() || null,
       // 연락처는 숫자만 저장한다(NETWORKS 관례).
       phone: v.phone.replace(/\D/g, '') || null,
@@ -313,7 +320,7 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel }: Props
     }
   }
 
-  type TagFieldName = 'stage' | 'management_status' | 'pool_status'
+  type TagFieldName = 'stage' | 'management_status' | 'pool_status' | 'location'
   const tagField = (name: TagFieldName, table: string, label: string) => (
     <Field label={label}>
       <Controller
@@ -446,6 +453,10 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel }: Props
                     />
                   )}
                 />
+              </Field>
+              {tagField('location', 'location_tags', '소재지')}
+              <Field label="상세주소">
+                <Input {...register('address_detail')} placeholder="상세주소를 입력하세요" />
               </Field>
               <Field label="이메일">
                 <Input {...register('email')} />

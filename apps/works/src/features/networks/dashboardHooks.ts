@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { ENTITIES, ENTITY_ORDER, type EntityKey } from '@/features/networks/config'
+import { DIRECTORY_ENTITIES, ENTITIES, ENTITY_ORDER, type EntityKey } from '@/features/networks/config'
 
 /**
  * 네트워크 현황 집계 슬롯(표시 순서 고정). 인물·조직 8종 + 글로벌 + 미분류.
@@ -188,7 +188,49 @@ export function useRegionDistribution() {
   })
 }
 
-/** 전문가 평가랭킹 행. 활동건·만족도는 실집계 연동 전이라 null(미연동)로 둔다. */
+/** 최근 등록 네트워크 행(구분 표기용 entity 포함). 디렉토리 엔티티 테이블 전역에서 최신순으로 모은다. */
+export interface RecentNetworkRow {
+  id: string
+  name: string
+  created_at: string
+  /** 소속 엔티티(구분 배지·상세 라우팅용). */
+  entity: EntityKey
+}
+
+/**
+ * 최근 등록 네트워크(디렉토리 9종 + 미분류 통합, 등록일 내림차순 상위 60건).
+ * 테이블별로 최신 30건씩 병렬 조회 후 합쳐 정렬한다. 주간 피드(RecentRegisteredFeed)의 원천.
+ */
+export function useRecentNetworks() {
+  return useQuery({
+    queryKey: ['networks', 'dashboard', 'recent'],
+    queryFn: async (): Promise<RecentNetworkRow[]> => {
+      const perTable = await Promise.all(
+        DIRECTORY_ENTITIES.map(async (entity) => {
+          const { data } = await supabase
+            .from(entity)
+            .select('id, name, created_at')
+            .is('deleted_at', null)
+            .is('merged_into_id', null)
+            .order('created_at', { ascending: false })
+            .limit(30)
+          return ((data ?? []) as { id: string; name: string; created_at: string }[]).map((r) => ({
+            id: r.id,
+            name: r.name,
+            created_at: r.created_at,
+            entity,
+          }))
+        }),
+      )
+      return perTable
+        .flat()
+        .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+        .slice(0, 60)
+    },
+  })
+}
+
+/** 네트워크 평가랭킹 행(BAN·EXP·전문가·투자사 통합). 활동건·만족도는 실집계 연동 전이라 null(미연동)로 둔다. */
 export interface ExpertRankRow {
   id: string
   entity: EntityKey
@@ -207,8 +249,9 @@ export interface ExpertRankRow {
 const RANKING_TABLES: EntityKey[] = ['experts', 'van', 'exp', 'investors']
 
 /**
- * 전문가 평가랭킹용 목록(이름·구분·분야). 활동건·만족도는 실집계 연동 전이라 null이며,
- * UI에서 '-'로 표기한다. 정렬(활동/만족도 탭)은 연동 후 값 기준으로 동작하도록 준비만 한다.
+ * 네트워크 평가랭킹용 목록(BAN·EXP·전문가·투자사 통합, 이름·구분·분야). 활동건·만족도는
+ * 실집계 연동 전이라 null이며, UI에서 '-'로 표기한다. 정렬(활동/만족도 탭)은 연동 후 값
+ * 기준으로 동작하도록 준비만 한다.
  */
 export function useExpertRanking() {
   return useQuery({

@@ -1,8 +1,6 @@
-import { useQueries, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/auth/authStore'
 import { supabase } from '@/lib/supabase'
-import type { MasterRow } from '@/features/master/types'
-import type { HubEntityConfig } from '@/features/hub/masterConfig'
 
 /** 현재 로그인 사용자의 입사일(hr_profiles). 프로필이 없으면 null. */
 export function useMyHireDate() {
@@ -229,80 +227,6 @@ export interface Employee {
   name: string
   email: string | null
   user_type: string
-}
-
-/**
- * HUB 마스터 정보 조회(이름 검색·미삭제·미병합). NETWORKS 3대 마스터는 동일한 쿼리 형태를
- * 재사용하고, 심사역(managers)은 내부 임직원(users)을 대상으로 한다. 열람 권한은 RLS가 강제한다.
- */
-export function useMasterList(key: string, keyword: string) {
-  return useQuery({
-    queryKey: ['hub', 'master', key, keyword],
-    queryFn: async (): Promise<MasterRow[]> => {
-      const kw = keyword.trim()
-      if (key === 'managers') {
-        let q = supabase
-          .from('users')
-          .select('id, name, email, user_type')
-          .not('user_type', 'in', '(external_startup,external_expert,temporary_guest)')
-          .is('deleted_at', null)
-          .order('name', { ascending: true })
-          .limit(200)
-        if (kw) q = q.ilike('name', `%${kw}%`)
-        const { data, error } = await q
-        if (error) throw error
-        return (data ?? []) as MasterRow[]
-      }
-      let q = supabase
-        .from(key)
-        .select('*')
-        .is('deleted_at', null)
-        .is('merged_into_id', null)
-        .order('name', { ascending: true })
-        .limit(200)
-      if (kw) q = q.ilike('name', `%${kw}%`)
-      const { data, error } = await q
-      if (error) throw error
-      return (data ?? []) as MasterRow[]
-    },
-  })
-}
-
-/**
- * 복수 네트워크를 하나의 목록으로 병합 조회(투자/전문가·협력사 탭).
- * 각 행에 소속 네트워크 라벨(`_tag`)과 원본 엔티티 키(`_entityKey`)를 부여해
- * 목록에서는 구분 배지로, 상세에서는 엔티티별 컬럼으로 활용한다.
- */
-export function useMergedMasterList(entities: HubEntityConfig[], keyword: string) {
-  const kw = keyword.trim()
-  const results = useQueries({
-    queries: entities.map((e) => ({
-      queryKey: ['hub', 'master', e.key, kw],
-      queryFn: async (): Promise<MasterRow[]> => {
-        let q = supabase
-          .from(e.table)
-          .select('*')
-          .is('deleted_at', null)
-          .is('merged_into_id', null)
-          .order('name', { ascending: true })
-          .limit(200)
-        if (kw) q = q.ilike('name', `%${kw}%`)
-        const { data, error } = await q
-        if (error) throw error
-        return (data ?? []).map((r) => ({
-          ...(r as MasterRow),
-          _tag: e.label,
-          _entityKey: e.key,
-        }))
-      },
-    })),
-  })
-
-  const isLoading = results.some((r) => r.isLoading)
-  const rows = results
-    .flatMap((r) => r.data ?? [])
-    .sort((a, b) => String(a.name).localeCompare(String(b.name), 'ko'))
-  return { rows, isLoading }
 }
 
 /** 임직원 프로필 디렉토리(내부 사용자). */

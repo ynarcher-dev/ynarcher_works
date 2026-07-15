@@ -251,11 +251,11 @@ interface Props {
   /** 대상 엔티티(8종 공용). 라우트별로 고정 전달한다. */
   entity: EntityKey
   /**
-   * 읽기 전용 모드(HUB 조회 센터). true면 수정 버튼·편집 폼을 노출하지 않는다.
-   * HUB는 마스터를 소유하지 않으므로 조회만 하고, 편집은 NETWORKS 원장에서 수행한다.
+   * 읽기 전용 모드(조회 전용 진입). true면 수정 버튼·편집 폼을 노출하지 않는다.
+   * 마스터 편집은 NETWORKS 원장에서만 수행하고, 그 외 워크스페이스는 조회만 한다.
    */
   readOnly?: boolean
-  /** 목록/뒤로가기 경로. 기본 NETWORKS 디렉토리. HUB는 `/hub?tab=experts`. */
+  /** 목록/뒤로가기 경로. 기본 NETWORKS 디렉토리. */
   listPath?: string
   /** 뒤로가기 라벨(기본 `${label} 네트워크`). */
   backLabel?: string

@@ -7,19 +7,17 @@ import { AdminPage } from '@/features/admin/AdminPage'
 import { ProgramDetailPage } from '@/features/ac/ProgramDetailPage'
 import { FundDetailPage } from '@/features/fund/FundDetailPage'
 import { FundPage } from '@/features/fund/FundPage'
-import { HubPage } from '@/features/hub/HubPage'
 import { ManagementPage } from '@/features/management/ManagementPage'
 import { EmployeeCreatePage } from '@/features/management/EmployeeCreatePage'
 import { EmployeeDetailPage } from '@/features/management/EmployeeDetailPage'
 import { MyPage } from '@/features/management/MyPage'
 import { OfficePage } from '@/features/office/OfficePage'
-import { ApprovalPage } from '@/features/approval/ApprovalPage'
 import { MnaDealDetailPage } from '@/features/mna/MnaDealDetailPage'
 import { MnaPage } from '@/features/mna/MnaPage'
 import { NetworksPage } from '@/features/networks/NetworksPage'
 import { NetworkDetailPage } from '@/features/networks/NetworkDetailPage'
 import { GlobalNetworkDetailPage } from '@/features/networks/GlobalNetworkDetailPage'
-import { DIRECTORY_ENTITIES, HUB_DETAIL_ENTITIES } from '@/features/networks/config'
+import { DIRECTORY_ENTITIES } from '@/features/networks/config'
 import { StartupPage } from '@/features/startup/StartupPage'
 import { StartupDetailPage } from '@/features/startup/StartupDetailPage'
 import { StartupCreatePage } from '@/features/startup/StartupCreatePage'
@@ -41,31 +39,10 @@ export const router = createBrowserRouter([
           </RequireAuth>
         ),
         children: [
-          { index: true, element: <Navigate to="/hub" replace /> },
+          // HUB 워크스페이스 제거됨 → 기본 진입은 OFFICE(전사 대시보드).
+          { index: true, element: <Navigate to="/office" replace /> },
           // 마이페이지(내 계정 관리): 모든 인증 사용자 접근(워크스페이스 권한 불요).
           { path: 'me', element: <MyPage /> },
-          {
-            path: 'hub',
-            element: (
-              <RequireWorkspace workspace="hub">
-                <HubPage />
-              </RequireWorkspace>
-            ),
-          },
-          // HUB 조회 센터 내 프로필 상세(읽기 전용). NETWORKS로 이탈하지 않고 HUB에 머문다.
-          ...HUB_DETAIL_ENTITIES.map((entity) => ({
-            path: `hub/${entity}/:id`,
-            element: (
-              <RequireWorkspace workspace="hub">
-                <NetworkDetailPage
-                  entity={entity}
-                  readOnly
-                  listPath="/hub?tab=experts"
-                  backLabel="투자/전문가 네트워크"
-                />
-              </RequireWorkspace>
-            ),
-          })),
           {
             path: 'networks',
             element: (
@@ -237,13 +214,10 @@ export const router = createBrowserRouter([
               </RequireWorkspace>
             ),
           },
+          // 전자결재 워크스페이스는 OFFICE로 통합됨. 기존 링크·북마크는 OFFICE 전자결재 탭으로 리다이렉트.
           {
             path: 'approval',
-            element: (
-              <RequireWorkspace workspace="approval">
-                <ApprovalPage />
-              </RequireWorkspace>
-            ),
+            element: <Navigate to="/office?tab=approval" replace />,
           },
         ],
       },

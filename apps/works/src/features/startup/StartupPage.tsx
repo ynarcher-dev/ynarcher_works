@@ -1,6 +1,7 @@
 import { PageHeader, EmptyState } from '@ynarcher/ui'
 import { useSearchParams } from 'react-router-dom'
 import { StartupPoolTab } from '@/features/startup/StartupPoolTab'
+import { StartupDashboardTab } from '@/features/startup/StartupDashboardTab'
 import { TAB_TO_STATUS } from '@/features/startup/startupClassification'
 
 const HEADINGS: Record<string, string> = {
@@ -27,10 +28,13 @@ export function StartupPage() {
   // 검색창·필터·등록 버튼은 모두 StartupPoolTab의 컨트롤 행이 소유한다.
   return (
     <div className="space-y-5">
-      <PageHeader title={HEADINGS[tab] ?? HEADINGS.dashboard} />
+      {/* 대시보드는 페이지 타이틀 없이 카드부터 노출한다. */}
+      {tab !== 'dashboard' && <PageHeader title={HEADINGS[tab] ?? HEADINGS.dashboard} />}
 
       {category ? (
         <StartupPoolTab category={category} />
+      ) : tab === 'dashboard' ? (
+        <StartupDashboardTab />
       ) : (
         <EmptyState
           title={`${HEADINGS[tab] ?? '대시보드'} 준비 중`}

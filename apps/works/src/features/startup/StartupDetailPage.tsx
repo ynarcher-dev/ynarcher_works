@@ -33,12 +33,27 @@ const RESOURCE_TYPE = 'startup'
 /** 관리 현황 카드 섹션(플랫폼 전반 참여·관리 이력). 현재는 헤드라인만, 내용은 후속 구현. */
 const ACTIVITY_SECTIONS = ['참여 사업', '참여 M&A', '참여 프로젝트', 'A-STREAM', '기업 진단', '멘토링 & 컨설팅', '회의록']
 
-/** 라벨: 값 한 줄. */
-function Info({ label, value }: { label: string; value: ReactNode }) {
+/** 라벨: 값 한 줄. `className`으로 그리드 스팬 등을, `valueClassName`으로 값 표시(말줄임 등)를 지정한다. */
+function Info({
+  label,
+  value,
+  className,
+  valueClassName,
+}: {
+  label: string
+  value: ReactNode
+  className?: string
+  valueClassName?: string
+}) {
   return (
-    <div className="flex items-baseline gap-2">
+    <div className={`flex items-baseline gap-2${className ? ` ${className}` : ''}`}>
       <span className="shrink-0 text-caption text-gray-400">{label}:</span>
-      <span className="text-body text-gray-800">{value ?? '-'}</span>
+      <span
+        className={`text-body text-gray-800${valueClassName ? ` ${valueClassName}` : ''}`}
+        title={typeof value === 'string' ? value : undefined}
+      >
+        {value ?? '-'}
+      </span>
     </div>
   )
 }
@@ -132,6 +147,14 @@ export function StartupDetailPage() {
                 <Info label="회사 형태" value={str('company_form')} />
                 <Info label="설립일" value={formatFounded(record.founded_on)} />
                 <Info label="사업자등록번호" value={str('biz_reg_no')} />
+                {/* 소재지 옆 상세주소는 길 수 있어 나머지 2열을 차지하고, 수정일은 소재지 아래로 흐른다. */}
+                <Info label="소재지" value={str('location')} />
+                <Info
+                  label="상세주소"
+                  value={str('address_detail')}
+                  className="min-w-0 sm:col-span-2"
+                  valueClassName="min-w-0 flex-1 truncate"
+                />
                 <Info label="수정일" value={formatDate(record.updated_at)} />
               </div>
 

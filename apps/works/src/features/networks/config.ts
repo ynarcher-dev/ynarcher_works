@@ -207,18 +207,6 @@ export function isProfileEntity(key: EntityKey): boolean {
 }
 
 /**
- * HUB 조회 센터에서 읽기 전용 상세 라우트(`/hub/:entity/:id`)를 갖는 엔티티.
- * HUB는 마스터를 소유하지 않으므로 전문가·VAN·투자사 프로필 3종만 상세로 진입하고,
- * 그 외는 조회 모달로 표시한다.
- */
-export const HUB_DETAIL_ENTITIES: EntityKey[] = ['experts', 'van', 'investors']
-
-/** HUB 조회 센터에서 읽기 전용 상세 라우트를 갖는 엔티티인지 여부. */
-export function isHubDetailEntity(key: EntityKey): boolean {
-  return HUB_DETAIL_ENTITIES.includes(key)
-}
-
-/**
  * 축약(compact) 유형 — "구분"이 이들 중 하나이면 통합 폼·상세에서 매칭 가능여부·전문분야·약력·
  * 멘토링 만족도를 숨긴다. 조직 유형(기업·기관·대학·외주/거래·기타)에 더해, 미분류(others)도
  * 분류 전 임시 저장소이므로 기업 네트워크처럼 간단한 항목만 노출한다.

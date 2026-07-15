@@ -43,3 +43,13 @@ export const CHART_TOOLTIP_STYLE = {
 export function isNeutralLabel(label: string): boolean {
   return label.startsWith('기타') || label.startsWith('미지정')
 }
+
+/**
+ * 범주별 채움색(단일 지표 분포를 다채롭게). 기타·미지정은 무채색, 그 외는 범주형 팔레트를
+ * 순서대로(index) 순환 적용한다(0번=브랜드 레드). 세로·가로 막대 공용 — 같은 정렬 배열이면
+ * 카드·모달에서 같은 범주가 같은 색을 갖는다.
+ */
+export function categoricalFill(label: string, index: number): string {
+  if (isNeutralLabel(label)) return CHART_NEUTRAL
+  return CHART_CATEGORICAL[index % CHART_CATEGORICAL.length] ?? CHART_PRIMARY
+}

@@ -1,5 +1,4 @@
 export type WorkspaceKey =
-  | 'hub'
   | 'networks'
   | 'startup'
   | 'ac'
@@ -8,7 +7,6 @@ export type WorkspaceKey =
   | 'project'
   | 'management'
   | 'office'
-  | 'approval'
   | 'admin'
   | 'guest'
 

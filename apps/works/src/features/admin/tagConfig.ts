@@ -92,4 +92,10 @@ export const TAG_CONFIGS = {
     heading: '기업현황태그 관리',
     noun: '기업현황',
   },
+  locations: {
+    tab: 'locations',
+    table: 'location_tags',
+    heading: '소재지태그 관리',
+    noun: '소재지',
+  },
 } satisfies Record<string, TagConfig>

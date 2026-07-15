@@ -63,9 +63,9 @@ interface InfoCardDef {
 }
 
 /**
- * 요약 지표를 각 메뉴 대표 인포 카드 1장씩으로 변환한다.
- * 순서·라벨·아이콘·링크는 HUB 좌측 사이드바(마스터 4 · 현황 3 · 실적 2)와 일치시키고,
- * 그룹은 색으로 구분한다(마스터=info · 현황=success · 실적=warning).
+ * 요약 지표를 각 메뉴 대표 인포 카드 1장씩으로 변환한다(마스터 4 · 현황 3 · 실적 2).
+ * 각 카드는 해당 도메인 워크스페이스로 딥링크하고, 그룹은 색으로 구분한다
+ * (마스터=info · 현황=success · 실적=warning).
  */
 function buildCards(s: HubSummary): InfoCardDef[] {
   return [
@@ -75,7 +75,7 @@ function buildCards(s: HubSummary): InfoCardDef[] {
       label: '임직원 정보',
       emoji: '👥',
       tone: 'info',
-      to: '/hub?tab=managers',
+      to: '/office?tab=managers',
       metric: String(s.networks.managers),
       unit: '명',
       sub: '전사 임직원 디렉토리',
@@ -85,7 +85,7 @@ function buildCards(s: HubSummary): InfoCardDef[] {
       label: '스타트업 네트워크',
       emoji: '🚀',
       tone: 'info',
-      to: '/hub?tab=startups',
+      to: '/startup',
       metric: String(s.networks.startups),
       unit: '개사',
       sub: '포트폴리오 스타트업',
@@ -95,7 +95,7 @@ function buildCards(s: HubSummary): InfoCardDef[] {
       label: '투자/전문가 네트워크',
       emoji: '🎓',
       tone: 'info',
-      to: '/hub?tab=experts',
+      to: '/networks?tab=experts',
       metric: String(s.networks.investExperts),
       unit: '건',
       sub: '전문가·BAN·투자사',
@@ -105,7 +105,7 @@ function buildCards(s: HubSummary): InfoCardDef[] {
       label: '협력사 네트워크',
       emoji: '🤝',
       tone: 'info',
-      to: '/hub?tab=orgs',
+      to: '/networks?tab=corporates',
       metric: String(s.networks.partners),
       unit: '개사',
       sub: '기관·기업·대학·기타',
@@ -116,7 +116,7 @@ function buildCards(s: HubSummary): InfoCardDef[] {
       label: '사업 현황',
       emoji: '🎯',
       tone: 'success',
-      to: '/hub?tab=ac',
+      to: '/ac',
       metric: String(s.ac.operating),
       unit: '개 운영 중',
       sub: `전체 프로그램 ${s.ac.total}개`,
@@ -126,7 +126,7 @@ function buildCards(s: HubSummary): InfoCardDef[] {
       label: '글로벌/신사업 현황',
       emoji: '📁',
       tone: 'success',
-      to: '/hub?tab=project',
+      to: '/project',
       metric: String(s.project.active),
       unit: '개 활성',
       sub: `평균 진척률 ${s.project.avgProgress}%`,
@@ -136,7 +136,7 @@ function buildCards(s: HubSummary): InfoCardDef[] {
       label: 'M&A/PE 현황',
       emoji: '💼',
       tone: 'success',
-      to: '/hub?tab=mna',
+      to: '/mna',
       metric: String(s.mna.active),
       unit: '건 진행 중',
       sub: `파이프라인 추정가치 ${won(s.mna.totalValue)}`,
@@ -147,7 +147,7 @@ function buildCards(s: HubSummary): InfoCardDef[] {
       label: '투자현황',
       emoji: '💰',
       tone: 'warning',
-      to: '/hub?tab=fund',
+      to: '/fund',
       metric: won(s.fund.aum),
       unit: 'AUM',
       sub: `총 집행액 ${won(s.fund.drawn)}`,
@@ -157,7 +157,7 @@ function buildCards(s: HubSummary): InfoCardDef[] {
       label: '경영현황',
       emoji: '📊',
       tone: 'warning',
-      to: '/hub?tab=management',
+      to: '/management',
       metric: won(DEMO_ANNUAL_REVENUE),
       unit: '매출',
       sub: `${dayjs().year()}년 누적`,
@@ -237,7 +237,7 @@ function BoardCard({
           <h3 className="text-body font-semibold text-gray-900">{title}</h3>
         </span>
         <Link
-          to={`/hub?tab=${tab}`}
+          to={`/office?tab=${tab}`}
           className="text-caption font-medium text-gray-400 transition-colors duration-fast hover:text-brand"
         >
           더보기
@@ -265,7 +265,7 @@ function BoardCard({
 function PromoBanner() {
   return (
     <Link
-      to="/hub?tab=ai"
+      to="/office?tab=ai"
       className="group flex h-20 w-full items-center gap-4 overflow-hidden rounded-radius-md border border-gray-300 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 pl-5 pr-4 shadow-soft transition-all duration-fast hover:border-brand hover:shadow-md"
     >
       <div className="flex min-w-0 flex-1 flex-col justify-center">
@@ -296,7 +296,7 @@ function PromoBanner() {
 }
 
 /**
- * HUB 대시보드 — 상단 통합검색 + 좌측 워크스페이스 인포(메뉴별 대표 지표 1장씩) +
+ * 전사 대시보드(OFFICE 홈) — 상단 통합검색 + 좌측 워크스페이스 인포(메뉴별 대표 지표 1장씩) +
  * 우측 공지사항/자료실/인사이트 게시판. 스크롤 없이 한 화면에 담는다.
  * 근거: 3_1_workspace_hub.md §1.1 통합검색 / §1.5 공지·자료 / §1.6 도메인 요약
  */

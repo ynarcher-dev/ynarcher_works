@@ -30,14 +30,6 @@ export interface SubNavGroup {
  * 근거: 2_app_layout_navigation.md §3.1 (Contextual Sidebar Menu)
  */
 export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
-  hub: [
-    {
-      items: [
-        { label: '대시보드', tab: 'dashboard' },
-        { label: 'AI 에이전트', tab: 'ai' },
-      ],
-    },
-  ],
   startup: [
     {
       items: [
@@ -106,6 +98,7 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         { label: '투자단계 태그관리', tab: 'investment_stages', dividerBefore: true },
         { label: '기업구분 태그관리', tab: 'company_categories' },
         { label: '기업현황 태그관리', tab: 'company_statuses' },
+        { label: '소재지 태그관리', tab: 'locations' },
         { label: '민감정보 관리', tab: 'sensitive', dividerBefore: true },
         { label: '중복 병합 검증', tab: 'merge' },
         { label: '감사 로그 모니터', tab: 'audit' },
@@ -119,9 +112,16 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
   office: [
     {
       items: [
-        { label: '임직원 정보', tab: 'managers' },
+        // HUB에서 이관한 대시보드·AI 에이전트를 최상단에 배치.
+        { label: '대시보드', tab: 'dashboard' },
+        { label: 'AI 에이전트', tab: 'ai' },
+        { label: '임직원 정보', tab: 'managers', dividerBefore: true },
         { label: '전사 캘린더', tab: 'calendar' },
         { label: '회의실 예약', tab: 'rooms' },
+        // 전자결재 워크스페이스에서 통합 이관. 회의실 예약과 공지사항(고정 게시판) 사이에 배치하며,
+        // 아래 고정 게시판 그룹 경계가 이 두 항목과 공지사항을 구분선으로 나눈다.
+        { label: '전자결재', tab: 'approval' },
+        { label: '거래처 정보', tab: 'clients' },
       ],
     },
     {
@@ -134,17 +134,6 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       group: '게시판',
       items: [{ label: '게시판', dynamicKey: 'boards' }],
     },
-  ],
-  // 전자결재: OFFICE에서 분리한 독립 워크스페이스(전자결재 + 거래처 정보). 현재 페이지 골격만.
-  approval: [
-    {
-      items: [
-        { label: '전자결재', tab: 'approval' },
-        { label: '거래처 정보', tab: 'clients' },
-      ],
-    },
-    // 거래처 정보 아래 트레일링 구분선(항목 없는 그룹 → 그룹 경계 SidebarDivider만 렌더).
-    { items: [] },
   ],
   management: [
     {

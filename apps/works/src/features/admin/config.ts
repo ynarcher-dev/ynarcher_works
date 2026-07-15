@@ -15,9 +15,8 @@ export const ROLES = [
 
 export type RoleKey = (typeof ROLES)[number]['key']
 
-/** 토글 매트릭스에 노출되는 워크스페이스(내부 8 + GUEST). */
+/** 토글 매트릭스에 노출되는 워크스페이스(내부 + GUEST). */
 export const WORKSPACE_KEYS = [
-  { key: 'hub', label: 'HUB' },
   { key: 'networks', label: 'NETWORKS' },
   { key: 'ac', label: 'AC' },
   { key: 'fund', label: 'FUND' },

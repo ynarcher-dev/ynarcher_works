@@ -185,11 +185,10 @@ export function WorksLayout() {
     key: w.key,
     label: w.implemented ? w.label : `${w.label} (준비 중)`,
     disabled: !w.implemented,
-    // 스위처 구획: 허브 아래(startup 앞), 네트웍스 아래(ac 앞), 오피스 앞, 매니지먼트 앞(매니지먼트·어드민을 하단 묶음)에 구분선을 둔다.
+    // 스위처 구획: 오피스 아래(startup 앞), 네트웍스 아래(ac 앞), 매니지먼트 앞(매니지먼트·어드민을 하단 묶음)에 구분선을 둔다.
     dividerBefore:
       w.key === 'startup' ||
       w.key === 'ac' ||
-      w.key === 'office' ||
       w.key === 'management',
   }))
 
@@ -279,7 +278,7 @@ export function WorksLayout() {
     <Sidebar
       collapsed={sidebarCollapsed}
       header={
-        <Link to="/hub" className="flex w-full justify-center">
+        <Link to="/office" className="flex w-full justify-center">
           <img src={logo} alt="Y&ARCHER" className="h-8 object-contain" />
         </Link>
       }

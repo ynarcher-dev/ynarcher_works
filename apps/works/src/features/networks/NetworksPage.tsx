@@ -64,11 +64,10 @@ export function NetworksPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        title={heading}
-        search={searchField}
-        actions={actions}
-      />
+      {/* 대시보드는 페이지 타이틀 없이 카드부터 노출한다(검색·액션도 없음). */}
+      {mode !== 'dashboard' && (
+        <PageHeader title={heading} search={searchField} actions={actions} />
+      )}
 
       {mode === 'dashboard' && <DashboardTab />}
       {mode === 'global' && <GlobalNetworkTab keyword={keyword} />}
