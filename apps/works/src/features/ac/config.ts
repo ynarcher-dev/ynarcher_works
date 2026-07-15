@@ -1,3 +1,5 @@
+import type { BadgeTone } from '@ynarcher/ui'
+
 /** AC 모듈 타입 정의(Program First 14모듈 중 모듈 보드 대상). */
 export interface ModuleTypeDef {
   type: string
@@ -34,6 +36,17 @@ export const PROGRAM_STATUS_LABEL: Record<string, string> = {
   DEMO_DAY: '데모데이',
   FINISHED: '종료',
   CANCELLED: '취소',
+}
+
+/** 프로그램 상태 배지 톤(상세 헤더·목록 공용). */
+export const PROGRAM_STATUS_TONE: Record<string, BadgeTone> = {
+  DRAFT: 'neutral',
+  RECRUITING: 'info',
+  SCREENING: 'warning',
+  OPERATING: 'success',
+  DEMO_DAY: 'warning',
+  FINISHED: 'neutral',
+  CANCELLED: 'danger',
 }
 
 export const PARTICIPANT_ROLES = [

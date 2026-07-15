@@ -11,7 +11,10 @@ export interface Program {
   status: string
   start_date: string | null
   end_date: string | null
+  description: string | null
 }
+
+const PROGRAM_COLS = 'id, title, status, start_date, end_date, description'
 
 export function usePrograms() {
   return useQuery({
@@ -19,7 +22,7 @@ export function usePrograms() {
     queryFn: async (): Promise<Program[]> => {
       const { data, error } = await supabase
         .from('programs')
-        .select('id, title, status, start_date, end_date')
+        .select(PROGRAM_COLS)
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
       if (error) throw error
@@ -35,7 +38,7 @@ export function useProgram(id: string | undefined) {
     queryFn: async (): Promise<Program | null> => {
       const { data } = await supabase
         .from('programs')
-        .select('id, title, status, start_date, end_date')
+        .select(PROGRAM_COLS)
         .eq('id', id)
         .maybeSingle()
       return (data as Program) ?? null
@@ -46,7 +49,13 @@ export function useProgram(id: string | undefined) {
 export function useCreateProgram() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (values: { title: string; status: string }) => {
+    mutationFn: async (values: {
+      title: string
+      status: string
+      start_date?: string | null
+      end_date?: string | null
+      description?: string | null
+    }) => {
       const { error } = await supabase.from('programs').insert(values)
       if (error) throw error
     },
@@ -59,6 +68,10 @@ export interface ProgramModule {
   module_type: string
   enabled: boolean
   participation_mode: string | null
+  /** DRAFT(준비)/OPEN(진행)/CLOSED(완료) — module_status enum. */
+  status: string
+  /** 모듈별 자유 설정(jsonb). 일정·메모는 detail/moduleMeta.ts 의 readModuleSettings 로 읽는다. */
+  settings: Record<string, unknown>
 }
 
 export function useProgramModules(programId: string | undefined) {
@@ -68,7 +81,7 @@ export function useProgramModules(programId: string | undefined) {
     queryFn: async (): Promise<ProgramModule[]> => {
       const { data } = await supabase
         .from('program_modules')
-        .select('id, module_type, enabled, participation_mode')
+        .select('id, module_type, enabled, participation_mode, status, settings')
         .eq('program_id', programId)
       return (data ?? []) as ProgramModule[]
     },

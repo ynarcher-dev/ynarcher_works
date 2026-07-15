@@ -27,6 +27,10 @@ export { Switch } from './components/Switch'
 export { Avatar } from './components/Avatar'
 export { Badge } from './components/Badge'
 export type { BadgeTone, BadgeSize } from './components/Badge'
+export { Card } from './components/Card'
+export type { CardProps } from './components/Card'
+export { Tabs } from './components/Tabs'
+export type { TabItem, TabsProps } from './components/Tabs'
 
 // 데이터 테이블
 export { DataTable } from './components/DataTable'

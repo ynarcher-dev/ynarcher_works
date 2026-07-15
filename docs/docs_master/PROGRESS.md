@@ -69,6 +69,8 @@
 - [x] 피드백 컴포넌트 (Toast, 인라인 배너, 스피너/스켈레톤, Empty State)
 - [x] AppShell 레이아웃 (사이드바 240px + 상단바 56px + 1열/2열 콘텐츠 그리드, 1024px 미만 드로어 전환)
 - [x] 워크스페이스 전환 드롭다운 (PermissionMap 기반 노출 제어)
+- [x] 섹션 카드(Card)·언더라인 탭(Tabs) 컴포넌트 추가 <!-- 상세 화면 2컬럼 컴포지션용 카드 셸(제목·부제·우측 액션)과 건수 칩 지원 탭. AC 프로그램 상세·M&A 딜 상세 공용 -->
+
 
 ## Phase 5. HUB 워크스페이스
 
@@ -121,6 +123,8 @@
 - [x] 7-12. 성과 KPI 및 통합 다운로더 (export_jobs, 마스킹/사유/감사 로그) — [3_4_13](../docs_planning/3_4_13_ac_outcomes_kpi_export.md) <!-- 성과 목록 연결. export 다운로더/마스킹/감사로그는 후속 -->
 - [x] 7-13. 커스텀 활동/회의록 (Action Item, 공개 범위 4단계) — [3_4_14](../docs_planning/3_4_14_ac_custom_activities.md) <!-- 활동 목록 연결. 회의록/Action Item 상세는 후속 -->
 - [x] 7-14. AC 통합 대시보드 (전사 KPI 위젯, 오늘의 운영 이슈 보드) — [3_4_1](../docs_planning/3_4_1_ac_dashboard.md)
+- [x] 7-15. 프로그램 상세 '개요' 탭 재구성 — 운영 모듈 카드 보드 + 통합 타임라인 캘린더 + 참가자 풀 2컬럼 — [3_4_2](../docs_planning/3_4_2_ac_program_overview.md) <!-- features/ac/detail/ 신설: ModuleBoardCard(활성 모듈 카드: 아이콘·상태 배지·기간·메모, 호버 설정/끄기, 점선 '모듈 추가' 일괄 활성화), ModuleSettingsModal(상태 DRAFT/OPEN/CLOSED·참여방식·일정·메모 → settings jsonb 병합 저장, 마이그레이션 불필요), ProgramScheduleCard(월간 그리드에 모듈 기간 바(상태별 색)+program_timeline_items 행사 점+선택일 상세), ParticipantPoolCard(역할 4그룹 탭+건수 칩+검색+컴팩트 테이블, users FK 조인+startups/experts soft ref 조회 합성). ProgramDetailPage 개요 탭 기본 진입+모듈 카드 클릭→운영 탭 이동+헤더 '성과 허브 →'/'편집' 액션, ProgramFormModal 등록/편집 겸용(기간·설명 확장). 구 ModuleBoard(스위치 리스트) 삭제. tsc/vite build 통과 -->
+
 
 ## Phase 8. FUND 워크스페이스
 
@@ -139,6 +143,7 @@
 - [x] 딜 상세 및 NDA 체크리스트 (보안 문서 검토완료 잠금, 단계 타임라인)
 - [x] 매수/매도 매칭 매트릭스 (업종/키워드 적합도 스코어 → 신규 딜 인계)
 - [x] 부서 격리 RLS 검증 (M&A팀+관리자+경영진 읽기 외 차단) <!-- mna 워크스페이스 게이트 RLS. 권한 템플릿상 타 부서 mna 미부여로 자동 차단 -->
+- [x] 딜 상세 2컬럼 리치화 — AC 프로그램 상세와 동일 골격(좌: 작업 카드 / 우: 타임라인·정보) <!-- features/mna/detail/ 신설: DealStageCard(소싱→계약 5단계 스텝퍼: 완료/진행/대기 배지+단계 진입일+다음 단계 전환 액션, 완료/무산 종결 행), DocChecklistCard(기존 체크리스트를 카드화+검토 n/n 배지), DealTimelineCard(전환 로그), DealInfoCard(대상기업·추정가액·담당 심사역 users 조회·보류·메모). MnaDealDetailPage 컴포지션 재구성. tsc/vite build 통과 -->
 
 
 ## Phase 10. ADMIN 워크스페이스

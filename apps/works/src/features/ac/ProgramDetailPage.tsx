@@ -1,10 +1,12 @@
-import { Badge, Banner, Spinner, PageHeader } from '@ynarcher/ui'
+import { Badge, Banner, Button, PageHeader, Spinner, Tabs } from '@ynarcher/ui'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { EvaluationPanel } from '@/features/ac/EvaluationPanel'
 import { MentoringPanel } from '@/features/ac/MentoringPanel'
-import { ModuleBoard } from '@/features/ac/ModuleBoard'
 import { ParticipantPool } from '@/features/ac/ParticipantPool'
+import { ProgramFormModal } from '@/features/ac/ProgramFormModal'
+import { ProgramOverviewTab } from '@/features/ac/detail/ProgramOverviewTab'
+import { MODULE_META } from '@/features/ac/detail/moduleMeta'
 import { CustomActivityPanel } from '@/features/ac/panels/CustomActivityPanel'
 import { DemoDayPanel } from '@/features/ac/panels/DemoDayPanel'
 import { DocReviewPanel } from '@/features/ac/panels/DocReviewPanel'
@@ -15,10 +17,10 @@ import { OutcomesPanel } from '@/features/ac/panels/OutcomesPanel'
 import { RecruitmentPanel } from '@/features/ac/panels/RecruitmentPanel'
 import { TimelinePanel } from '@/features/ac/panels/TimelinePanel'
 import { useProgram } from '@/features/ac/hooks'
-import { PROGRAM_STATUS_LABEL } from '@/features/ac/config'
+import { PROGRAM_STATUS_LABEL, PROGRAM_STATUS_TONE } from '@/features/ac/config'
 
 type Tab =
-  | 'modules'
+  | 'overview'
   | 'participants'
   | 'recruitment'
   | 'docreview'
@@ -33,7 +35,7 @@ type Tab =
   | 'custom'
 
 const TABS: { key: Tab; label: string }[] = [
-  { key: 'modules', label: '모듈 보드' },
+  { key: 'overview', label: '개요' },
   { key: 'participants', label: '참가자 풀' },
   { key: 'recruitment', label: '모집' },
   { key: 'evaluation', label: '평가 엔진' },
@@ -48,15 +50,27 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'custom', label: '커스텀 활동' },
 ]
 
-/** 프로그램 상세: Program First 14모듈 진입. */
+const TAB_KEYS = new Set<string>(TABS.map((t) => t.key))
+
+/**
+ * 프로그램 상세: 개요(운영 모듈 보드 + 통합 타임라인 + 참가자 풀) 진입 후
+ * 모듈 카드 클릭으로 각 운영 탭에 진입한다. (Program First 구조)
+ */
 export function ProgramDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { data: program, isLoading } = useProgram(id)
-  const [tab, setTab] = useState<Tab>('modules')
+  const [tab, setTab] = useState<Tab>('overview')
+  const [editOpen, setEditOpen] = useState(false)
 
   if (isLoading) return <Spinner />
   if (!program || !id) {
     return <Banner tone="warning">프로그램을 찾을 수 없습니다.</Banner>
+  }
+
+  /** 모듈 카드 클릭 → 해당 운영 탭으로 이동. */
+  const onOpenModule = (moduleType: string) => {
+    const target = MODULE_META[moduleType]?.tab
+    if (target && TAB_KEYS.has(target)) setTab(target as Tab)
   }
 
   return (
@@ -64,35 +78,31 @@ export function ProgramDetailPage() {
       <PageHeader
         back={
           <Link to="/ac" className="text-caption font-semibold text-brand hover:text-brand-600">
-            ← AC 대시보드
+            ← 프로그램 목록
           </Link>
         }
         title={program.title}
         titleExtra={
-          <Badge tone="info">
+          <Badge tone={PROGRAM_STATUS_TONE[program.status] ?? 'neutral'}>
             {PROGRAM_STATUS_LABEL[program.status] ?? program.status}
           </Badge>
         }
+        description={program.description}
+        actions={
+          <>
+            <Button onClick={() => setTab('outcomes')}>성과 허브 →</Button>
+            <Button variant="outline" onClick={() => setEditOpen(true)}>
+              편집
+            </Button>
+          </>
+        }
       />
 
-      <nav className="flex flex-wrap gap-1 border-b border-gray-200">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            onClick={() => setTab(t.key)}
-            className={
-              tab === t.key
-                ? 'border-b-2 border-brand px-3 py-2 text-body font-medium text-brand'
-                : 'px-3 py-2 text-body text-gray-500 hover:text-gray-800'
-            }
-          >
-            {t.label}
-          </button>
-        ))}
-      </nav>
+      <Tabs items={TABS} value={tab} onChange={(key) => setTab(key as Tab)} />
 
-      {tab === 'modules' && <ModuleBoard programId={id} />}
+      {tab === 'overview' && (
+        <ProgramOverviewTab program={program} onOpenModule={onOpenModule} />
+      )}
       {tab === 'participants' && <ParticipantPool programId={id} />}
       {tab === 'recruitment' && <RecruitmentPanel programId={id} />}
       {tab === 'evaluation' && <EvaluationPanel programId={id} />}
@@ -105,6 +115,10 @@ export function ProgramDetailPage() {
       {tab === 'timeline' && <TimelinePanel programId={id} />}
       {tab === 'outcomes' && <OutcomesPanel programId={id} />}
       {tab === 'custom' && <CustomActivityPanel programId={id} />}
+
+      {editOpen && (
+        <ProgramFormModal open program={program} onClose={() => setEditOpen(false)} />
+      )}
     </div>
   )
 }
