@@ -88,7 +88,8 @@ export function AcWorkspaceTab({ scope }: AcWorkspaceTabProps) {
           rows={data?.rows ?? []}
           selectedKeys={selected}
           onSelectionChange={setSelected}
-          onRowClick={(row) => navigate(`/ac/programs/${row.id}`)}
+          // 출처 목록 탭(mine/all)을 쿼리로 넘겨 상세에서 사이드바 활성·뒤로가기 목적지를 유지한다.
+          onRowClick={(row) => navigate(`/ac/programs/${row.id}?tab=${scope}`)}
           onDeactivate={(row) => void onDeactivate(row)}
           pagination={{
             page,

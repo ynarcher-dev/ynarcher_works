@@ -79,7 +79,7 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         { label: '대시보드', tab: 'dashboard' },
         // 내가 담당자/등록자인 사업 vs 전체 사업 2분할.
         { label: '내 사업', tab: 'mine', dividerBefore: true },
-        { label: '전체 사업', tab: 'all' },
+        { label: '전체 사업', tab: 'all', dividerBefore: true },
       ],
     },
   ],

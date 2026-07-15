@@ -1,6 +1,6 @@
 import { Badge, Banner, Button, Spinner } from '@ynarcher/ui'
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { MentoringPanel } from '@/features/ac/MentoringPanel'
 import { ProgramFormModal } from '@/features/ac/ProgramFormModal'
 import { ProgramOverviewTab } from '@/features/ac/detail/ProgramOverviewTab'
@@ -66,6 +66,9 @@ const PANEL_LABEL: Record<Exclude<Tab, 'overview'>, string> = {
  */
 export function ProgramDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const [params] = useSearchParams()
+  // 출처 목록 탭(mine/all). 직접 진입 등으로 없으면 전체 사업으로 폴백한다.
+  const backTo = `/ac?tab=${params.get('tab') === 'mine' ? 'mine' : 'all'}`
   const { data: program, isLoading } = useProgram(id)
   const [tab, setTab] = useState<Tab>('overview')
   const [editOpen, setEditOpen] = useState(false)
@@ -80,9 +83,6 @@ export function ProgramDetailPage() {
     const target = MODULE_META[moduleType]?.tab
     if (target && TAB_KEYS.has(target)) setTab(target as Tab)
   }
-  const openTab = (t: string) => {
-    if (TAB_KEYS.has(t)) setTab(t as Tab)
-  }
 
   return (
     <div className="space-y-5">
@@ -90,18 +90,14 @@ export function ProgramDetailPage() {
         <>
           <div className="flex items-center justify-between gap-3">
             <Link
-              to="/ac"
+              to={backTo}
               className="text-caption font-semibold text-brand hover:text-brand-600"
             >
               ← 프로그램 목록
             </Link>
             <Button onClick={() => setEditOpen(true)}>편집</Button>
           </div>
-          <ProgramOverviewTab
-            program={program}
-            onOpenModule={onOpenModule}
-            onOpenTab={openTab}
-          />
+          <ProgramOverviewTab program={program} onOpenModule={onOpenModule} />
         </>
       ) : (
         <>

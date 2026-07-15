@@ -3,7 +3,6 @@ import dayjs, { type Dayjs } from 'dayjs'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { DetailPanelCard } from '@/features/networks/DetailPanelCard'
-import { ExpandAction } from '@/features/ac/detail/PanelExpandAction'
 import { MODULE_TYPES } from '@/features/ac/config'
 import { useProgramModules, type Program } from '@/features/ac/hooks'
 import { useTimelineItems, type TimelineItem } from '@/features/ac/detail/detailHooks'
@@ -13,7 +12,6 @@ import {
   barsOnDate,
   buildWeeks,
   itemsOnDate,
-  timelineRangeLabel,
   toModuleBars,
   type ModuleBar,
 } from '@/features/ac/detail/scheduleCompute'
@@ -66,6 +64,8 @@ function CalendarGrid({
   onSelect,
   bars,
   items,
+  rangeStart,
+  rangeEnd,
 }: {
   weeks: Dayjs[][]
   month: Dayjs
@@ -74,7 +74,14 @@ function CalendarGrid({
   onSelect: (key: string) => void
   bars: ModuleBar[]
   items: TimelineItem[]
+  /** 사업 운영 기간. 이 범위 밖의 날짜는 비활성(회색)으로 표시한다. null이면 제한 없음. */
+  rangeStart: Dayjs | null
+  rangeEnd: Dayjs | null
 }) {
+  // 사업 기간 밖(=비활성) 여부. 기간 경계가 없으면 항상 활성으로 본다.
+  const isOutOfProgram = (day: Dayjs) =>
+    (rangeStart != null && day.isBefore(rangeStart, 'day')) ||
+    (rangeEnd != null && day.isAfter(rangeEnd, 'day'))
   return (
     <div className="grid grid-cols-7 gap-1">
       {WEEKDAYS.map((w, i) => (
@@ -92,27 +99,33 @@ function CalendarGrid({
         const inMonth = day.isSame(month, 'month')
         const isToday = day.isSame(today, 'day')
         const isSelected = key === selected
+        const disabled = isOutOfProgram(day)
         const dayBars = barsOnDate(bars, key)
         const hasItems = itemsOnDate(items, key).length > 0
         return (
           <button
             type="button"
             key={key}
+            disabled={disabled}
             onClick={() => onSelect(key)}
             className={`flex min-h-[3.25rem] flex-col gap-1 rounded-radius-sm border p-1 text-left transition-colors duration-fast ${
-              isSelected
-                ? 'border-info-border bg-info-subtle/60'
-                : 'border-gray-200 hover:bg-gray-25'
-            } ${inMonth ? 'bg-white' : 'bg-gray-25/60'}`}
+              disabled
+                ? 'cursor-not-allowed border-gray-100 bg-gray-50/60'
+                : isSelected
+                  ? 'border-info-border bg-info-subtle/60'
+                  : `border-gray-200 hover:bg-gray-25 ${inMonth ? 'bg-white' : 'bg-gray-25/60'}`
+            }`}
           >
             <span className="flex items-center gap-1">
               <span
                 className={`text-caption tabular-nums ${
-                  isToday
-                    ? 'grid h-5 w-5 place-items-center rounded-full bg-brand font-bold text-gray-0'
-                    : inMonth
-                      ? 'text-gray-700'
-                      : 'text-gray-300'
+                  disabled
+                    ? 'text-gray-300'
+                    : isToday
+                      ? 'grid h-5 w-5 place-items-center rounded-full bg-brand font-bold text-gray-0'
+                      : inMonth
+                        ? 'text-gray-700'
+                        : 'text-gray-300'
                 }`}
               >
                 {day.date()}
@@ -184,37 +197,28 @@ function SelectedDayDetail({
 
 /**
  * 통합 타임라인(상세 개요 우측 패널).
- * 자료 관리·코멘트·변동 이력과 동일한 DetailPanelCard 톤을 쓰며, 제목 옆 일정 건수 뱃지 + 기간 캡션,
+ * 자료 관리·코멘트·변동 이력과 동일한 DetailPanelCard 톤을 쓰며, 제목 옆 일정 건수 뱃지 +
  * 월간 캘린더(모듈 기간 바·행사 점), 날짜 선택 시 하단 일정 목록으로 구성한다.
- * `onExpand` 지정 시 헤더에 '전체 보기 →'(타임라인 전체 화면 진입) 액션을 노출한다.
+ * 캘린더는 오늘 날짜가 속한 달을 기본으로 열고, 사업 운영 기간 밖의 날짜는 비활성(회색)으로 표시한다.
  */
-export function ProgramScheduleCard({
-  program,
-  onExpand,
-}: {
-  program: Program
-  onExpand?: () => void
-}) {
+export function ProgramScheduleCard({ program }: { program: Program }) {
   const { data: modules } = useProgramModules(program.id)
   const { data: items } = useTimelineItems(program.id)
   const today = dayjs()
-  const initialMonth = (program.start_date ? dayjs(program.start_date) : today).startOf('month')
-  const [month, setMonth] = useState<Dayjs>(initialMonth)
+  // 기본 달은 사업 시작일이 아니라 오늘 기준으로 연다.
+  const [month, setMonth] = useState<Dayjs>(today.startOf('month'))
   const [selected, setSelected] = useState<string>(today.format(DATE_KEY))
+
+  // 사업 운영 기간(캘린더 비활성 처리 기준). 값이 없으면 제한 없음.
+  const rangeStart = program.start_date ? dayjs(program.start_date) : null
+  const rangeEnd = program.end_date ? dayjs(program.end_date) : null
 
   const bars = useMemo(() => toModuleBars(modules ?? []), [modules])
   const weeks = useMemo(() => buildWeeks(month), [month])
   const timelineItems = items ?? []
 
   return (
-    <DetailPanelCard
-      title="통합 타임라인"
-      count={timelineItems.length}
-      action={<ExpandAction onExpand={onExpand} />}
-    >
-      <p className="mb-3 text-caption text-gray-400">
-        {timelineRangeLabel(program.start_date, program.end_date, bars)}
-      </p>
+    <DetailPanelCard title="통합 타임라인" count={timelineItems.length}>
       <MonthNav
         month={month}
         onPrev={() => setMonth((m) => m.subtract(1, 'month'))}
@@ -228,6 +232,8 @@ export function ProgramScheduleCard({
         onSelect={setSelected}
         bars={bars}
         items={timelineItems}
+        rangeStart={rangeStart}
+        rangeEnd={rangeEnd}
       />
       <SelectedDayDetail
         bars={barsOnDate(bars, selected)}

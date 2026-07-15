@@ -21,9 +21,11 @@ export function AcDashboardPage() {
 
   return (
     <div className="space-y-5">
-      {/* 대시보드는 페이지 타이틀 없이 카드부터 노출한다. */}
+      {/* 대시보드는 페이지 타이틀 없이 카드부터 노출한다. 사업 목록 탭은 타이틀 하단에 구분선을 둔다. */}
       {tab !== 'dashboard' && (
-        <PageHeader title={HEADINGS[tab] ?? HEADINGS.dashboard} />
+        <div className="border-b border-gray-200 pb-4">
+          <PageHeader title={HEADINGS[tab] ?? HEADINGS.dashboard} />
+        </div>
       )}
 
       {tab === 'dashboard' ? (

@@ -24,16 +24,14 @@ const LEFT_TABS: { key: LeftTab; label: string }[] = [
  * 좌측 본문(2/3): 기본 데이터 카드 → 서브 탭(운영 모듈 · 참가자 풀 · 평가 엔진).
  * 우측(1/3): 통합 타임라인 → 자료 관리 → 코멘트 → 변동 이력.
  * 자료/코멘트/변동이력 패널은 NETWORKS 공용 패널을 target_type='program'으로 재사용한다.
- * 통합 타임라인의 '전체 보기'와 운영 모듈 카드 클릭은 `onOpenTab`으로 전체 화면에 진입한다.
+ * 운영 모듈 카드 클릭은 `onOpenModule`로 해당 운영 화면 전체 화면에 진입한다.
  */
 export function ProgramOverviewTab({
   program,
   onOpenModule,
-  onOpenTab,
 }: {
   program: Program
   onOpenModule: (moduleType: string) => void
-  onOpenTab: (tab: string) => void
 }) {
   const { data: contributions } = useProgramContributions(program.id)
   const [leftTab, setLeftTab] = useState<LeftTab>('modules')
@@ -58,7 +56,7 @@ export function ProgramOverviewTab({
         </div>
       </div>
       <div className="space-y-4 lg:col-span-1">
-        <ProgramScheduleCard program={program} onExpand={() => onOpenTab('timeline')} />
+        <ProgramScheduleCard program={program} />
         <MaterialPanel targetType="program" targetId={program.id} />
         <FeedbackPanel targetType="program" targetId={program.id} />
         <ChangeHistoryPanel contributions={contributions} />
