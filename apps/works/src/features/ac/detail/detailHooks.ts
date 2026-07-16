@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { defaultParticipationMode } from '@/features/ac/config'
-import type { ModuleSettings } from '@/features/ac/detail/moduleMeta'
+import type { ProgramModule } from '@/features/ac/hooks'
 import { recordProgramContribution } from '@/features/ac/detail/programContributions'
 
 /** 프로그램 마스터 수정(제목/상태/기간/설명 — 편집 모달용). */
@@ -30,58 +29,33 @@ export function useUpdateProgram(id: string) {
   })
 }
 
-/** 모듈 운영 설정 저장: 상태/참여방식 컬럼 + settings(jsonb) 일정·메모 병합. */
-export function useUpdateModuleSettings(programId: string) {
+/**
+ * 모듈 인스턴스 상태만 변경(칸반 드래그앤드롭 전용). status 컬럼만 인스턴스 id 기준 부분 업데이트하며,
+ * 드래그 직후 즉시 컬럼이 이동하도록 낙관적 업데이트하고 실패 시 이전 상태로 롤백한다.
+ */
+export function useUpdateModuleStatus(programId: string) {
   const qc = useQueryClient()
+  const key = ['ac', 'modules', programId]
   return useMutation({
-    mutationFn: async (input: {
-      moduleType: string
-      status: string
-      participationMode: string | null
-      /** 공유 범위(module_visibility): INTERNAL_ONLY/GUEST_ONLY/PUBLIC. */
-      visibility: string
-      /** 기존 settings 원본(다른 키 보존을 위해 병합 기준으로 사용). */
-      currentSettings: Record<string, unknown>
-      settings: ModuleSettings
-    }) => {
-      const { error } = await supabase.from('program_modules').upsert(
-        {
-          program_id: programId,
-          module_type: input.moduleType,
-          enabled: true,
-          status: input.status,
-          participation_mode: input.participationMode,
-          visibility: input.visibility,
-          settings: { ...input.currentSettings, ...input.settings },
-        },
-        { onConflict: 'program_id,module_type' },
-      )
+    mutationFn: async (input: { moduleId: string; status: string }) => {
+      const { error } = await supabase
+        .from('program_modules')
+        .update({ status: input.status })
+        .eq('id', input.moduleId)
       if (error) throw error
     },
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: ['ac', 'modules', programId] }),
-  })
-}
-
-/** 모듈 일괄 활성화(+ 모듈 추가 모달). 기존 행의 settings 등은 건드리지 않는다. */
-export function useEnableModules(programId: string) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (moduleTypes: string[]) => {
-      // 배정 방식은 사용자 입력이 아니라 모듈 타입별 기본값으로 강제 지정한다.
-      const { error } = await supabase.from('program_modules').upsert(
-        moduleTypes.map((module_type) => ({
-          program_id: programId,
-          module_type,
-          enabled: true,
-          participation_mode: defaultParticipationMode(module_type),
-        })),
-        { onConflict: 'program_id,module_type' },
+    onMutate: async (input) => {
+      await qc.cancelQueries({ queryKey: key })
+      const prev = qc.getQueryData<ProgramModule[]>(key)
+      qc.setQueryData<ProgramModule[]>(key, (old) =>
+        (old ?? []).map((m) => (m.id === input.moduleId ? { ...m, status: input.status } : m)),
       )
-      if (error) throw error
+      return { prev }
     },
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: ['ac', 'modules', programId] }),
+    onError: (_err, _input, ctx) => {
+      if (ctx?.prev) qc.setQueryData(key, ctx.prev)
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: key }),
   })
 }
 

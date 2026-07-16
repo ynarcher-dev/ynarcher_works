@@ -1,6 +1,6 @@
 import { Badge, DataTable, Spinner, type Column } from '@ynarcher/ui'
 import dayjs from 'dayjs'
-import { useByModuleType, type Row } from '@/features/ac/moduleHooks'
+import { useByModuleId, type Row } from '@/features/ac/moduleHooks'
 
 const columns: Column<Row>[] = [
   { key: 'venue', header: '장소', render: (r) => String(r.venue ?? '-') },
@@ -9,11 +9,10 @@ const columns: Column<Row>[] = [
 ]
 
 /** 대면평가 세션. (7-6 — 발표 순서/현장 진행/최종 선발은 후속) */
-export function OnsitePanel({ programId }: { programId: string }) {
-  const { data, isLoading } = useByModuleType(
+export function OnsitePanel({ moduleId }: { moduleId: string }) {
+  const { data, isLoading } = useByModuleId(
     'onsite_eval_sessions',
-    programId,
-    'ONSITE_EVAL',
+    moduleId,
     'id, venue, starts_at, status',
   )
   if (isLoading) return <Spinner />

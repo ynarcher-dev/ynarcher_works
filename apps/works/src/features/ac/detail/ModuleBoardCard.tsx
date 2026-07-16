@@ -1,6 +1,17 @@
 import { Badge, Card, Spinner, useToast } from '@ynarcher/ui'
-import { ChartGantt, List, Pencil, Plus, SquareKanban, X, type LucideIcon } from 'lucide-react'
-import { useState } from 'react'
+import {
+  ChartGantt,
+  List,
+  Maximize2,
+  Minimize2,
+  Pencil,
+  Plus,
+  SquareKanban,
+  X,
+  type LucideIcon,
+} from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   MODULE_TYPES,
   MODULE_VISIBILITY_LABEL,
@@ -13,9 +24,9 @@ import {
   type ProgramModule,
 } from '@/features/ac/hooks'
 import { AddModulesModal } from '@/features/ac/detail/AddModulesModal'
+import { ModuleFormModal } from '@/features/ac/detail/ModuleFormModal'
 import { ModuleGanttView } from '@/features/ac/detail/ModuleGanttView'
 import { ModuleKanbanView } from '@/features/ac/detail/ModuleKanbanView'
-import { ModuleSettingsModal } from '@/features/ac/detail/ModuleSettingsModal'
 import {
   MODULE_META,
   moduleStatusMeta,
@@ -33,6 +44,8 @@ const VIEW_OPTIONS: { key: BoardView; label: string; icon: LucideIcon }[] = [
 const typeOrder = new Map(MODULE_TYPES.map((d, i) => [d.type, i]))
 const labelOf = (type: string) =>
   MODULE_TYPES.find((d) => d.type === type)?.label ?? type
+/** 인스턴스 표시명: 모듈명(자율 입력) 우선, 없으면 템플릿 라벨 폴백. */
+const nameOf = (mod: ProgramModule) => mod.title?.trim() || labelOf(mod.module_type)
 
 /** 활성 모듈 정렬: 시작일 오름차순 → 모듈 표준 순서. */
 function sortModules(modules: ProgramModule[]): ProgramModule[] {
@@ -46,23 +59,35 @@ function sortModules(modules: ProgramModule[]): ProgramModule[] {
 
 /**
  * 운영 모듈 보드(상세 개요 좌측 카드). 헤더 토글로 목록·칸반·간트 3개 뷰를 전환한다.
- * 목록 뷰: 활성 모듈 카드 나열(상태 배지·기간·메모, 호버 시 설정/비활성) + 하단 점선 카드로 모듈 추가.
- * 칸반 뷰: 상태(준비/진행/완료) 컬럼 배치. 간트 뷰: 일정 기간 막대. 편집은 목록 뷰에서만 제공한다.
+ * 목록 뷰: 활성 인스턴스 카드 나열(모듈명·템플릿 배지·상태·공유·기간·담당자, 호버 시 설정/끄기) + 하단 점선 카드로 모듈 추가.
+ * 추가는 2단계(템플릿 선택 → 세팅)이며, 편집은 세팅 폼을 재사용한다. 칸반: 상태 컬럼. 간트: 일정 막대.
  */
 export function ModuleBoardCard({
   program,
   onOpenModule,
 }: {
   program: Program
-  onOpenModule: (moduleType: string) => void
+  onOpenModule: (module: ProgramModule) => void
 }) {
   const programId = program.id
   const toast = useToast()
   const { data, isLoading } = useProgramModules(programId)
   const toggle = useToggleModule(programId)
   const [editTarget, setEditTarget] = useState<ProgramModule | null>(null)
+  // 2단계 마법사: 템플릿 선택(addOpen) → 세팅(createType 지정 시 폼).
   const [addOpen, setAddOpen] = useState(false)
+  const [createType, setCreateType] = useState<string | null>(null)
   const [view, setView] = useState<BoardView>('list')
+  const [expanded, setExpanded] = useState(false)
+
+  useEffect(() => {
+    if (!expanded) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setExpanded(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [expanded])
 
   if (isLoading) {
     return (
@@ -74,50 +99,66 @@ export function ModuleBoardCard({
 
   const modules = data ?? []
   const enabled = sortModules(modules.filter((m) => m.enabled))
-  const disabledTypes = MODULE_TYPES.map((d) => d.type).filter(
-    (t) => !modules.some((m) => m.module_type === t && m.enabled),
-  )
+  const outcomesExists = modules.some((m) => m.module_type === 'OUTCOMES')
+  // 모듈명 중복 검증용: 편집 대상 자신은 제외한 나머지 인스턴스 제목.
+  const titlesExcept = (id: string | undefined) =>
+    modules.filter((m) => m.id !== id).map((m) => m.title ?? '').filter((t) => t.length > 0)
 
   const onDisable = async (mod: ProgramModule) => {
-    if (!window.confirm(`'${labelOf(mod.module_type)}' 모듈을 끄시겠습니까? 데이터는 보존됩니다.`)) return
+    if (!window.confirm(`'${nameOf(mod)}' 모듈을 끄시겠습니까? 데이터는 보존됩니다.`)) return
     try {
-      await toggle.mutateAsync({
-        moduleType: mod.module_type,
-        enabled: false,
-        participationMode: mod.participation_mode,
-      })
+      await toggle.mutateAsync({ moduleId: mod.id, enabled: false })
     } catch {
       toast.show('모듈 비활성화에 실패했습니다. 권한을 확인하세요.', 'danger')
     }
   }
 
-  return (
-    <Card
-      title="운영 모듈"
-      actions={
-        <span className="flex rounded-radius-md border border-gray-300 bg-white p-0.5">
-          {VIEW_OPTIONS.map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              type="button"
-              title={`${label} 보기`}
-              aria-label={`${label} 보기`}
-              aria-pressed={view === key}
-              onClick={() => setView(key)}
-              className={`grid h-7 w-8 place-items-center rounded-radius-sm transition-colors duration-fast ${
-                view === key
-                  ? 'bg-gray-100 text-gray-900'
-                  : 'text-gray-400 hover:bg-gray-25 hover:text-gray-700'
-              }`}
-            >
-              <Icon className="h-4 w-4" />
-            </button>
-          ))}
-        </span>
-      }
+  // 모듈 진입 시에는 전체 화면 오버레이를 닫고 해당 운영 화면으로 이동한다.
+  const openModule = (mod: ProgramModule) => {
+    setExpanded(false)
+    onOpenModule(mod)
+  }
+
+  const viewToggle = (
+    <span className="flex rounded-radius-md border border-gray-300 bg-white p-0.5">
+      {VIEW_OPTIONS.map(({ key, label, icon: Icon }) => (
+        <button
+          key={key}
+          type="button"
+          title={`${label} 보기`}
+          aria-label={`${label} 보기`}
+          aria-pressed={view === key}
+          onClick={() => setView(key)}
+          className={`grid h-7 w-8 place-items-center rounded-radius-sm transition-colors duration-fast ${
+            view === key
+              ? 'bg-gray-100 text-gray-900'
+              : 'text-gray-400 hover:bg-gray-25 hover:text-gray-700'
+          }`}
+        >
+          <Icon className="h-4 w-4" />
+        </button>
+      ))}
+    </span>
+  )
+
+  const expandButton = (
+    <button
+      type="button"
+      title={expanded ? '축소' : '크게 보기'}
+      aria-label={expanded ? '축소' : '크게 보기'}
+      onClick={() => setExpanded((v) => !v)}
+      className="grid h-8 w-8 place-items-center rounded-radius-md border border-gray-300 bg-white text-gray-400 transition-colors duration-fast hover:bg-gray-25 hover:text-gray-700"
     >
-      {view === 'kanban' && <ModuleKanbanView modules={enabled} onOpenModule={onOpenModule} />}
-      {view === 'gantt' && <ModuleGanttView modules={enabled} onOpenModule={onOpenModule} />}
+      {expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+    </button>
+  )
+
+  const body = (
+    <>
+      {view === 'kanban' && (
+        <ModuleKanbanView programId={programId} modules={enabled} onOpenModule={openModule} />
+      )}
+      {view === 'gantt' && <ModuleGanttView modules={enabled} onOpenModule={openModule} />}
       {view === 'list' && (
         <>
           <ul className="space-y-3">
@@ -130,18 +171,20 @@ export function ModuleBoardCard({
                 <li key={mod.id} className="group relative">
                   <button
                     type="button"
-                    onClick={() => onOpenModule(mod.module_type)}
+                    onClick={() => openModule(mod)}
                     className="w-full rounded-radius-md border border-gray-300 bg-white px-4 py-3 text-left transition-colors duration-fast hover:border-gray-400 hover:bg-gray-25"
                   >
-                    <span className="flex items-center gap-2">
+                    <span className="flex flex-wrap items-center gap-2">
                       {Icon && (
                         <span className="grid h-7 w-7 shrink-0 place-items-center rounded-radius-sm bg-gray-50 text-gray-600">
                           <Icon className="h-4 w-4" />
                         </span>
                       )}
-                      <span className="text-body font-semibold text-gray-900">
+                      <span className="text-body font-semibold text-gray-900">{nameOf(mod)}</span>
+                      {/* 파생 템플릿 배지 — 모듈명과 별개로 원천 템플릿을 항상 표기. */}
+                      <Badge tone="neutral" size="sm">
                         {labelOf(mod.module_type)}
-                      </span>
+                      </Badge>
                       <Badge tone={status.tone} size="sm">
                         {status.label}
                       </Badge>
@@ -152,18 +195,26 @@ export function ModuleBoardCard({
                     <span className="mt-2 block text-body text-gray-600">
                       {settings.memo ?? meta?.description ?? ''}
                     </span>
-                    <span className="mt-1 block text-caption tabular-nums text-gray-400">
-                      {settings.start_date && settings.end_date
-                        ? `${settings.start_date} ~ ${settings.end_date}`
-                        : '일정 미등록'}
+                    <span className="mt-1 flex flex-wrap items-center gap-x-2 text-caption text-gray-400">
+                      <span className="tabular-nums">
+                        {settings.start_date && settings.end_date
+                          ? `${settings.start_date} ~ ${settings.end_date}`
+                          : '일정 미등록'}
+                      </span>
+                      {mod.assignees.length > 0 && (
+                        <span>
+                          · 담당{' '}
+                          {mod.assignees.map((a) => a.user?.name ?? '이름 미상').join(', ')}
+                        </span>
+                      )}
                     </span>
                   </button>
-                  {/* 호버 액션: 설정(연필)/비활성(X). 카드 클릭과 분리된 우상단 아이콘. */}
+                  {/* 호버 액션: 설정(연필)/끄기(X). 카드 클릭과 분리된 우상단 아이콘. */}
                   <span className="absolute right-3 top-3 flex gap-1 opacity-0 transition-opacity duration-fast group-hover:opacity-100">
                     <button
                       type="button"
                       title="모듈 설정"
-                      aria-label={`${labelOf(mod.module_type)} 설정`}
+                      aria-label={`${nameOf(mod)} 설정`}
                       onClick={() => setEditTarget(mod)}
                       className="grid h-7 w-7 place-items-center rounded-radius-sm border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 hover:text-gray-800"
                     >
@@ -172,7 +223,7 @@ export function ModuleBoardCard({
                     <button
                       type="button"
                       title="모듈 끄기"
-                      aria-label={`${labelOf(mod.module_type)} 끄기`}
+                      aria-label={`${nameOf(mod)} 끄기`}
                       onClick={() => void onDisable(mod)}
                       className="grid h-7 w-7 place-items-center rounded-radius-sm border border-gray-300 bg-white text-gray-500 hover:bg-red-50 hover:text-brand"
                     >
@@ -189,33 +240,84 @@ export function ModuleBoardCard({
             )}
           </ul>
 
-          {disabledTypes.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setAddOpen(true)}
-              className="mt-3 flex w-full flex-col items-center gap-1 rounded-radius-md border border-dashed border-gray-300 px-4 py-5 text-gray-500 transition-colors duration-fast hover:border-gray-400 hover:bg-gray-25 hover:text-gray-700"
-            >
-              <Plus className="h-5 w-5" />
-              <span className="text-body font-medium">모듈 추가</span>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setAddOpen(true)}
+            className="mt-3 flex w-full flex-col items-center gap-1 rounded-radius-md border border-dashed border-gray-300 px-4 py-5 text-gray-500 transition-colors duration-fast hover:border-gray-400 hover:bg-gray-25 hover:text-gray-700"
+          >
+            <Plus className="h-5 w-5" />
+            <span className="text-body font-medium">모듈 추가</span>
+          </button>
         </>
       )}
+    </>
+  )
 
+  return (
+    <>
+      <Card
+        title="운영 모듈"
+        actions={
+          <div className="flex items-center gap-2">
+            {viewToggle}
+            {expandButton}
+          </div>
+        }
+      >
+        {body}
+      </Card>
+
+      {expanded &&
+        createPortal(
+          <div className="fixed inset-0 z-[500] flex flex-col bg-gray-25">
+            <header className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-200 bg-white px-5 py-3">
+              <div className="flex items-center gap-2">
+                <span className="text-title-sm font-medium text-gray-900">운영 모듈</span>
+                <Badge tone="neutral" size="sm">
+                  {program.title}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                {viewToggle}
+                {expandButton}
+              </div>
+            </header>
+            <div className="flex-1 overflow-y-auto px-6 py-6">{body}</div>
+          </div>,
+          document.body,
+        )}
+
+      {/* 편집: 기존 인스턴스 세팅 폼. */}
       {editTarget && (
-        <ModuleSettingsModal
+        <ModuleFormModal
           program={program}
+          moduleType={editTarget.module_type}
           module={editTarget}
-          label={labelOf(editTarget.module_type)}
+          existingTitles={titlesExcept(editTarget.id)}
           onClose={() => setEditTarget(null)}
         />
       )}
+
+      {/* 추가 1단계: 템플릿 선택. */}
       <AddModulesModal
-        programId={programId}
         open={addOpen}
-        disabledTypes={disabledTypes}
+        outcomesExists={outcomesExists}
+        onPick={(type) => {
+          setAddOpen(false)
+          setCreateType(type)
+        }}
         onClose={() => setAddOpen(false)}
       />
-    </Card>
+
+      {/* 추가 2단계: 신규 인스턴스 세팅. */}
+      {createType && (
+        <ModuleFormModal
+          program={program}
+          moduleType={createType}
+          existingTitles={titlesExcept(undefined)}
+          onClose={() => setCreateType(null)}
+        />
+      )}
+    </>
   )
 }

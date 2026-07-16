@@ -165,9 +165,17 @@ export function useSetProgramStaffing() {
   })
 }
 
+/** 모듈 인스턴스 담당자(program_module_assignees 임베드). 이름은 users 조인. */
+export interface ModuleAssignee {
+  user_id: string
+  user: { id: string; name: string | null } | null
+}
+
 export interface ProgramModule {
   id: string
   module_type: string
+  /** 모듈명(자율 입력). 미입력 시 UI에서 템플릿 라벨로 폴백한다. */
+  title: string | null
   enabled: boolean
   /** 배정 방식(participation_mode). 모듈 타입별 기본값으로 강제, 매칭만 선택형. */
   participation_mode: string | null
@@ -177,7 +185,13 @@ export interface ProgramModule {
   status: string
   /** 모듈별 자유 설정(jsonb). 일정·메모는 detail/moduleMeta.ts 의 readModuleSettings 로 읽는다. */
   settings: Record<string, unknown>
+  /** 담당자(다중). 프로그램 담당자 풀에서 선택된 임직원. */
+  assignees: ModuleAssignee[]
 }
+
+const MODULE_COLS =
+  'id, module_type, title, enabled, participation_mode, visibility, status, settings, ' +
+  'assignees:program_module_assignees(user_id, user:users!program_module_assignees_user_id_fkey(id, name))'
 
 export function useProgramModules(programId: string | undefined) {
   return useQuery({
@@ -186,35 +200,63 @@ export function useProgramModules(programId: string | undefined) {
     queryFn: async (): Promise<ProgramModule[]> => {
       const { data } = await supabase
         .from('program_modules')
-        .select('id, module_type, enabled, participation_mode, visibility, status, settings')
+        .select(MODULE_COLS)
         .eq('program_id', programId)
-      return (data ?? []) as ProgramModule[]
+      return (data ?? []) as unknown as ProgramModule[]
     },
   })
 }
 
+/** 인스턴스 끄기/켜기(soft off). enabled 플래그만 부분 업데이트한다. */
 export function useToggleModule(programId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (input: {
-      moduleType: string
-      enabled: boolean
-      participationMode?: string | null
-    }) => {
-      const { error } = await supabase.from('program_modules').upsert(
-        {
-          program_id: programId,
-          module_type: input.moduleType,
-          enabled: input.enabled,
-          participation_mode: input.participationMode ?? null,
-          status: input.enabled ? 'OPEN' : 'CLOSED',
-        },
-        { onConflict: 'program_id,module_type' },
-      )
+    mutationFn: async (input: { moduleId: string; enabled: boolean }) => {
+      const { error } = await supabase
+        .from('program_modules')
+        .update({ enabled: input.enabled })
+        .eq('id', input.moduleId)
       if (error) throw error
     },
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: ['ac', 'modules', programId] }),
+  })
+}
+
+/**
+ * 운영 모듈 인스턴스 생성/수정 + 담당자 전량 교체(원자). 유일한 쓰기 경로는 set_program_module RPC이며,
+ * 모듈명 유일·담당자 풀 소속·OUTCOMES 단일·기간 포함 검증을 서버에서 강제한다. 생성된 인스턴스 id를 반환한다.
+ */
+export function useSetProgramModule(programId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      /** 신규 생성이면 null, 수정이면 대상 인스턴스 id. */
+      moduleId: string | null
+      moduleType: string
+      title: string | null
+      status: string
+      visibility: string
+      /** 매칭만 선택형. 그 외는 null로 보내면 서버가 템플릿 기본값으로 강제한다. */
+      participationMode: string | null
+      settings: Record<string, unknown>
+      assigneeUserIds: string[]
+    }): Promise<string> => {
+      const { data, error } = await supabase.rpc('set_program_module', {
+        p_program_id: programId,
+        p_module_id: input.moduleId,
+        p_module_type: input.moduleType,
+        p_title: input.title,
+        p_status: input.status,
+        p_visibility: input.visibility,
+        p_participation_mode: input.participationMode,
+        p_settings: input.settings,
+        p_assignee_user_ids: input.assigneeUserIds,
+      })
+      if (error) throw error
+      return data as string
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ac', 'modules', programId] }),
   })
 }
 
@@ -226,22 +268,16 @@ export interface MentoringRelationship {
 }
 
 /** 프로그램의 멘토링 관계 목록(MENTORING 모듈 기준). */
-export function useMentoringRelationships(programId: string | undefined) {
+/** 멘토링 관계(특정 멘토링 인스턴스 단위). moduleId = program_modules.id. */
+export function useMentoringRelationships(moduleId: string | undefined) {
   return useQuery({
-    queryKey: ['ac', 'mentoring', programId],
-    enabled: Boolean(programId),
+    queryKey: ['ac', 'mentoring', moduleId],
+    enabled: Boolean(moduleId),
     queryFn: async (): Promise<MentoringRelationship[]> => {
-      const { data: mod } = await supabase
-        .from('program_modules')
-        .select('id')
-        .eq('program_id', programId)
-        .eq('module_type', 'MENTORING')
-        .maybeSingle()
-      if (!mod) return []
       const { data } = await supabase
         .from('mentoring_relationships')
         .select('id, startup_id, mentor_participant_id, status')
-        .eq('program_module_id', (mod as { id: string }).id)
+        .eq('program_module_id', moduleId)
       return (data ?? []) as MentoringRelationship[]
     },
   })

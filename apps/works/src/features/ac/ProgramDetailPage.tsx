@@ -5,6 +5,7 @@ import { MentoringPanel } from '@/features/ac/MentoringPanel'
 import { ProgramFormModal } from '@/features/ac/ProgramFormModal'
 import { ProgramOverviewTab } from '@/features/ac/detail/ProgramOverviewTab'
 import { MODULE_META } from '@/features/ac/detail/moduleMeta'
+import type { ProgramModule } from '@/features/ac/hooks'
 import { CustomActivityPanel } from '@/features/ac/panels/CustomActivityPanel'
 import { DemoDayPanel } from '@/features/ac/panels/DemoDayPanel'
 import { DocReviewPanel } from '@/features/ac/panels/DocReviewPanel'
@@ -71,6 +72,8 @@ export function ProgramDetailPage() {
   const backTo = `/ac?tab=${params.get('tab') === 'mine' ? 'mine' : 'all'}`
   const { data: program, isLoading } = useProgram(id)
   const [tab, setTab] = useState<Tab>('overview')
+  // 진입한 모듈 인스턴스(운영 화면은 program_module_id 단위이므로 인스턴스를 들고 있어야 한다).
+  const [openMod, setOpenMod] = useState<ProgramModule | null>(null)
   const [editOpen, setEditOpen] = useState(false)
 
   if (isLoading) return <Spinner />
@@ -78,11 +81,22 @@ export function ProgramDetailPage() {
     return <Banner tone="warning">프로그램을 찾을 수 없습니다.</Banner>
   }
 
-  /** 모듈 카드 클릭 → 해당 운영 화면으로 이동. */
-  const onOpenModule = (moduleType: string) => {
-    const target = MODULE_META[moduleType]?.tab
-    if (target && TAB_KEYS.has(target)) setTab(target as Tab)
+  /** 모듈 카드 클릭 → 해당 인스턴스의 운영 화면으로 이동. */
+  const onOpenModule = (module: ProgramModule) => {
+    const target = MODULE_META[module.module_type]?.tab
+    if (target && TAB_KEYS.has(target)) {
+      setOpenMod(module)
+      setTab(target as Tab)
+    }
   }
+
+  // 운영 화면 뒤로가기 → 개요로 복귀(진입 인스턴스 해제).
+  const backToOverview = () => {
+    setTab('overview')
+    setOpenMod(null)
+  }
+  // 인스턴스 단위 운영 화면에 넘길 program_module_id.
+  const moduleId = openMod?.id
 
   return (
     <div className="space-y-5">
@@ -104,14 +118,14 @@ export function ProgramDetailPage() {
           <div className="flex items-center justify-between gap-3">
             <button
               type="button"
-              onClick={() => setTab('overview')}
+              onClick={backToOverview}
               className="text-caption font-semibold text-brand hover:text-brand-600"
             >
               ← {program.title} 개요
             </button>
             <div className="flex items-center gap-2">
               <span className="text-body font-semibold text-gray-900">
-                {PANEL_LABEL[tab]}
+                {openMod?.title?.trim() || PANEL_LABEL[tab]}
               </span>
               <Badge tone={PROGRAM_STATUS_TONE[program.status] ?? 'neutral'} size="sm">
                 {PROGRAM_STATUS_LABEL[program.status] ?? program.status}
@@ -119,16 +133,17 @@ export function ProgramDetailPage() {
             </div>
           </div>
 
+          {/* 프로그램 단위 화면(집계·접수·타임라인)은 programId, 인스턴스 단위 운영 화면은 moduleId로 렌더한다. */}
           {tab === 'recruitment' && <RecruitmentPanel programId={id} />}
-          {tab === 'docreview' && <DocReviewPanel programId={id} />}
-          {tab === 'onsite' && <OnsitePanel programId={id} />}
-          {tab === 'orientation' && <OrientationPanel programId={id} />}
-          {tab === 'mentoring' && <MentoringPanel programId={id} />}
-          {tab === 'matching' && <MatchingPanel programId={id} />}
-          {tab === 'demoday' && <DemoDayPanel programId={id} />}
           {tab === 'timeline' && <TimelinePanel programId={id} />}
           {tab === 'outcomes' && <OutcomesPanel programId={id} />}
           {tab === 'custom' && <CustomActivityPanel programId={id} />}
+          {moduleId && tab === 'docreview' && <DocReviewPanel moduleId={moduleId} />}
+          {moduleId && tab === 'onsite' && <OnsitePanel moduleId={moduleId} />}
+          {moduleId && tab === 'orientation' && <OrientationPanel moduleId={moduleId} />}
+          {moduleId && tab === 'mentoring' && <MentoringPanel moduleId={moduleId} />}
+          {moduleId && tab === 'matching' && <MatchingPanel moduleId={moduleId} />}
+          {moduleId && tab === 'demoday' && <DemoDayPanel moduleId={moduleId} />}
         </>
       )}
 

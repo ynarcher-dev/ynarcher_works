@@ -1,6 +1,6 @@
 import { Badge, DataTable, Spinner, type Column } from '@ynarcher/ui'
 import dayjs from 'dayjs'
-import { useByModuleType, type Row } from '@/features/ac/moduleHooks'
+import { useByModuleId, type Row } from '@/features/ac/moduleHooks'
 
 const columns: Column<Row>[] = [
   { key: 'starts_at', header: '일시', render: (r) => (r.starts_at ? dayjs(String(r.starts_at)).format('MM-DD HH:mm') : '-') },
@@ -8,11 +8,10 @@ const columns: Column<Row>[] = [
 ]
 
 /** 데모데이 세션. (7-10 — 모바일 심사/투자자 관심/후속 미팅은 후속) */
-export function DemoDayPanel({ programId }: { programId: string }) {
-  const { data, isLoading } = useByModuleType(
+export function DemoDayPanel({ moduleId }: { moduleId: string }) {
+  const { data, isLoading } = useByModuleId(
     'demoday_sessions',
-    programId,
-    'DEMO_DAY',
+    moduleId,
     'id, starts_at, status',
   )
   if (isLoading) return <Spinner />

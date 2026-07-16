@@ -32,8 +32,8 @@ const columns: Column<MentoringRelationship>[] = [
 ]
 
 /** N:N 멘토링 관계 보드. 회차/상담일지·양방향 평가는 각 관계 상세에서 확장. (7-8) */
-export function MentoringPanel({ programId }: { programId: string }) {
-  const { data, isLoading } = useMentoringRelationships(programId)
+export function MentoringPanel({ moduleId }: { moduleId: string }) {
+  const { data, isLoading } = useMentoringRelationships(moduleId)
   if (isLoading) return <Spinner />
 
   return (

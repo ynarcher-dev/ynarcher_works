@@ -1,6 +1,6 @@
 import { Badge, DataTable, Spinner, type Column } from '@ynarcher/ui'
 import dayjs from 'dayjs'
-import { useByModuleType, type Row } from '@/features/ac/moduleHooks'
+import { useByModuleId, type Row } from '@/features/ac/moduleHooks'
 
 const columns: Column<Row>[] = [
   { key: 'status', header: '라운드 상태', render: (r) => <Badge tone="info">{String(r.status)}</Badge> },
@@ -9,11 +9,10 @@ const columns: Column<Row>[] = [
 ]
 
 /** 서면평가 라운드. (7-5 — 평가 엔진 기반, 심사위원 배정/Split View는 후속) */
-export function DocReviewPanel({ programId }: { programId: string }) {
-  const { data, isLoading } = useByModuleType(
+export function DocReviewPanel({ moduleId }: { moduleId: string }) {
+  const { data, isLoading } = useByModuleId(
     'document_review_rounds',
-    programId,
-    'DOC_REVIEW',
+    moduleId,
     'id, status, opens_at, closes_at',
   )
   if (isLoading) return <Spinner />

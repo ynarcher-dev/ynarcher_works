@@ -24,28 +24,20 @@ export function useByProgram(
   })
 }
 
-/** program_module_id 경유 테이블 조회(모듈 타입 → 모듈 id → 대상 테이블). */
-export function useByModuleType(
+/** 특정 모듈 인스턴스(program_module_id = moduleId) 하위 테이블 조회. */
+export function useByModuleId(
   table: string,
-  programId: string | undefined,
-  moduleType: string,
+  moduleId: string | undefined,
   columns: string,
 ) {
   return useQuery({
-    queryKey: ['ac', table, programId, moduleType],
-    enabled: Boolean(programId),
+    queryKey: ['ac', table, 'module', moduleId],
+    enabled: Boolean(moduleId),
     queryFn: async (): Promise<Row[]> => {
-      const { data: mod } = await supabase
-        .from('program_modules')
-        .select('id')
-        .eq('program_id', programId)
-        .eq('module_type', moduleType)
-        .maybeSingle()
-      if (!mod) return []
       const { data } = await supabase
         .from(table)
         .select(columns)
-        .eq('program_module_id', (mod as { id: string }).id)
+        .eq('program_module_id', moduleId)
         .limit(200)
       return (data ?? []) as unknown as Row[]
     },

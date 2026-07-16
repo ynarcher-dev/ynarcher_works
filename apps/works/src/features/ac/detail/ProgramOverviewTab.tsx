@@ -1,6 +1,6 @@
 import { Tabs } from '@ynarcher/ui'
 import { useState } from 'react'
-import type { Program } from '@/features/ac/hooks'
+import type { Program, ProgramModule } from '@/features/ac/hooks'
 import { EvaluationPanel } from '@/features/ac/EvaluationPanel'
 import { ParticipantPool } from '@/features/ac/ParticipantPool'
 import { ModuleBoardCard } from '@/features/ac/detail/ModuleBoardCard'
@@ -32,7 +32,7 @@ export function ProgramOverviewTab({
   onOpenModule,
 }: {
   program: Program
-  onOpenModule: (moduleType: string) => void
+  onOpenModule: (module: ProgramModule) => void
 }) {
   const { data: contributions } = useProgramContributions(program.id)
   const [leftTab, setLeftTab] = useState<LeftTab>('modules')

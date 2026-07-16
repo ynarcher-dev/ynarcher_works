@@ -1,6 +1,6 @@
 import { Badge, DataTable, Spinner, type Column } from '@ynarcher/ui'
 import dayjs from 'dayjs'
-import { useByModuleType, type Row } from '@/features/ac/moduleHooks'
+import { useByModuleId, type Row } from '@/features/ac/moduleHooks'
 
 const columns: Column<Row>[] = [
   { key: 'starts_at', header: '일시', render: (r) => (r.starts_at ? dayjs(String(r.starts_at)).format('MM-DD HH:mm') : '-') },
@@ -9,11 +9,10 @@ const columns: Column<Row>[] = [
 ]
 
 /** 1:1 비즈니스 매칭 이벤트. (7-9 — 슬롯 자동생성/FCFS·AI 배정/노쇼는 후속) */
-export function MatchingPanel({ programId }: { programId: string }) {
-  const { data, isLoading } = useByModuleType(
+export function MatchingPanel({ moduleId }: { moduleId: string }) {
+  const { data, isLoading } = useByModuleId(
     'matching_events',
-    programId,
-    'BUSINESS_MATCHING',
+    moduleId,
     'id, starts_at, slot_minutes, status',
   )
   if (isLoading) return <Spinner />

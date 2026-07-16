@@ -1,6 +1,6 @@
 import { Badge, DataTable, Spinner, type Column } from '@ynarcher/ui'
 import dayjs from 'dayjs'
-import { useByModuleType, type Row } from '@/features/ac/moduleHooks'
+import { useByModuleId, type Row } from '@/features/ac/moduleHooks'
 
 const columns: Column<Row>[] = [
   { key: 'session_type', header: '세션 유형', render: (r) => String(r.session_type ?? '-') },
@@ -9,11 +9,10 @@ const columns: Column<Row>[] = [
 ]
 
 /** OT/공통 세션. (7-7 — QR 출석 체크/출석 상태 관리는 후속) */
-export function OrientationPanel({ programId }: { programId: string }) {
-  const { data, isLoading } = useByModuleType(
+export function OrientationPanel({ moduleId }: { moduleId: string }) {
+  const { data, isLoading } = useByModuleId(
     'orientation_sessions',
-    programId,
-    'ORIENTATION',
+    moduleId,
     'id, session_type, starts_at, status',
   )
   if (isLoading) return <Spinner />
