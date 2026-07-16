@@ -69,11 +69,12 @@ export const MODULE_META: Record<string, ModuleMeta> = {
   },
 }
 
-/** module_status enum(DRAFT/OPEN/CLOSED) → 표시 라벨·톤. */
+/** module_status enum(DRAFT/OPEN/CLOSED/CANCELLED) → 표시 라벨·톤. */
 export const MODULE_STATUS_META: Record<string, { label: string; tone: BadgeTone }> = {
   DRAFT: { label: '준비', tone: 'neutral' },
   OPEN: { label: '진행', tone: 'success' },
   CLOSED: { label: '완료', tone: 'info' },
+  CANCELLED: { label: '취소', tone: 'danger' },
 }
 
 const FALLBACK_STATUS = { label: '준비', tone: 'neutral' as BadgeTone }
@@ -88,6 +89,7 @@ export const MODULE_BAR_CLASS: Record<string, string> = {
   DRAFT: 'bg-gray-300',
   OPEN: 'bg-success',
   CLOSED: 'bg-info',
+  CANCELLED: 'bg-danger/50',
 }
 
 /** program_modules.settings(jsonb)에 담는 운영 설정(일정·메모). */
