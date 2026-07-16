@@ -13,6 +13,7 @@ import { PhaseStaffingEditor } from '@/features/ac/PhaseStaffingEditor'
 import { computePhases, validateStaffing } from '@/features/ac/programManagerCoverage'
 import { useOrgVersions } from '@/features/management/orgHooks'
 import { programStage, type ProgramStage } from '@/features/ac/config'
+import { rangesOverlap } from '@/features/ac/programPeriods'
 import {
   ProgramStageFields,
   type ProgramFormValues as FormValues,
@@ -117,6 +118,16 @@ export function ProgramFormModal({
     }
     if (values.start_date && values.end_date && values.start_date > values.end_date) {
       toast.show('운영 종료일은 운영 시작일 이후여야 합니다.', 'warning')
+      return
+    }
+    // 제안 기간과 운영 기간은 겹칠 수 없다(양쪽 모두 완전 구간일 때만 판정).
+    if (
+      rangesOverlap(
+        { start: values.proposal_start_date, end: values.proposal_end_date },
+        { start: values.start_date, end: values.end_date },
+      )
+    ) {
+      toast.show('제안 기간과 운영 기간은 겹칠 수 없습니다.', 'warning')
       return
     }
     // 부서+담당자 배치 검증(서버 RPC와 동일 규칙, 단계별). 부서·담당자 모두 비면 허용(미배정).

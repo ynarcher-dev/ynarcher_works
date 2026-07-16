@@ -5,9 +5,10 @@ import {
   MODULE_VISIBILITY_OPTIONS,
   PARTICIPATION_MODE_LABEL,
 } from '@/features/ac/config'
-import type { ProgramModule } from '@/features/ac/hooks'
+import type { Program, ProgramModule } from '@/features/ac/hooks'
 import { useUpdateModuleSettings } from '@/features/ac/detail/detailHooks'
 import { MODULE_STATUS_META, readModuleSettings } from '@/features/ac/detail/moduleMeta'
+import { isCompleteRange, moduleWithin, type CompleteRange } from '@/features/ac/programPeriods'
 
 interface FormValues {
   status: string
@@ -19,20 +20,41 @@ interface FormValues {
   memo: string
 }
 
-/** 모듈 설정 모달: 상태(준비/진행/완료)·참여 방식·일정·메모를 편집한다. */
+/** 기간 구간의 표시 라벨(YYYY-MM-DD ~ YYYY-MM-DD). */
+function periodLabel(r: CompleteRange): string {
+  return `${r.start} ~ ${r.end}`
+}
+
+/** 모듈 설정 모달: 상태(준비/진행/완료/취소)·참여 방식·일정·메모를 편집한다. */
 export function ModuleSettingsModal({
-  programId,
+  program,
   module,
   label,
   onClose,
 }: {
-  programId: string
+  program: Program
   module: ProgramModule
   label: string
   onClose: () => void
 }) {
   const toast = useToast()
-  const update = useUpdateModuleSettings(programId)
+  const update = useUpdateModuleSettings(program.id)
+  // 모듈 기간이 들어갈 수 있는 구간: 제안 기간·운영 기간 중 완전 구간만 후보.
+  const proposalRange: CompleteRange | null = isCompleteRange({
+    start: program.proposal_start_date,
+    end: program.proposal_end_date,
+  })
+    ? { start: program.proposal_start_date!, end: program.proposal_end_date! }
+    : null
+  const operationRange: CompleteRange | null = isCompleteRange({
+    start: program.start_date,
+    end: program.end_date,
+  })
+    ? { start: program.start_date!, end: program.end_date! }
+    : null
+  const allowedRanges = [proposalRange, operationRange].filter(
+    (r): r is CompleteRange => r !== null,
+  )
   const settings = readModuleSettings(module.settings)
   // 모듈 타입별 배정 방식 정책: options가 있으면 선택형(매칭), 없으면 기본값 고정.
   const modePolicy = MODULE_PARTICIPATION[module.module_type]
@@ -55,6 +77,16 @@ export function ModuleSettingsModal({
   const onSubmit = async (values: FormValues) => {
     if (values.start_date && values.end_date && values.start_date > values.end_date) {
       toast.show('종료일은 시작일 이후여야 합니다.', 'warning')
+      return
+    }
+    // 모듈 기간은 제안 기간 또는 운영 기간 안에서만 설정할 수 있다.
+    // (프로그램에 설정된 완전 구간이 하나도 없으면 판정 대상이 없어 통과시킨다.)
+    if (
+      (values.start_date || values.end_date) &&
+      allowedRanges.length > 0 &&
+      !allowedRanges.some((r) => moduleWithin(r, values.start_date, values.end_date))
+    ) {
+      toast.show('모듈 기간은 제안 기간 또는 운영 기간 내에서만 설정할 수 있습니다.', 'warning')
       return
     }
     // 선택형(매칭)만 폼 값을 쓰고, 나머지는 모듈 기본값으로 강제한다.
@@ -156,6 +188,14 @@ export function ModuleSettingsModal({
             </label>
             <Input id="mod-end" type="date" {...register('end_date')} />
           </div>
+          {allowedRanges.length > 0 && (
+            <p className="col-span-2 text-caption text-gray-400">
+              모듈 기간은 다음 범위 안에서만 설정할 수 있습니다 —{' '}
+              {proposalRange && <>제안 {periodLabel(proposalRange)}</>}
+              {proposalRange && operationRange && ' · '}
+              {operationRange && <>운영 {periodLabel(operationRange)}</>}
+            </p>
+          )}
         </div>
         <div>
           <label className="text-body font-medium text-gray-800" htmlFor="mod-memo">
