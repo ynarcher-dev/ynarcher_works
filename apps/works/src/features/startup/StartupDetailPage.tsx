@@ -120,7 +120,7 @@ export function StartupDetailPage() {
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           {/* 좌측(2/3): 기본 데이터 카드 — 사진 + 이름/배지 + 부제 + 정보행 */}
           <div className="space-y-4 lg:col-span-2">
-            <section className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+            <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
               <div className="flex items-center gap-5">
                 <PhotoBox src={logo} />
                 <div className="min-w-0 flex-1">
@@ -190,7 +190,7 @@ export function StartupDetailPage() {
             <SectionHeading title="관리 현황" />
             {/* 담당자 카드(관리 현황 최상단). 담당자와 작성자(등록자)는 별개 축이므로 항상 분리 표기한다.
                 투자기업만 지정 담당자(리드/지원)를 가지며, 비투자는 공동관리(특정 담당자 없음)다. */}
-            <section className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+            <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
               <h2 className="mb-3 text-body font-semibold text-gray-900">담당자</h2>
               {invested ? (
                 (managers ?? []).length > 0 ? (

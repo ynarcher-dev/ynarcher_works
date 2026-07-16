@@ -118,7 +118,7 @@ export function EmployeeForm({ recordId, initial, onDone, onCancel }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+      <div className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="이름" required>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
@@ -166,7 +166,7 @@ export function EmployeeForm({ recordId, initial, onDone, onCancel }: Props) {
         </div>
       </div>
 
-      <div className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+      <div className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
         <div className="space-y-4">
           <Field label="약력">
             <TextArea rows={4} value={bio} onChange={(e) => setBio(e.target.value)} />

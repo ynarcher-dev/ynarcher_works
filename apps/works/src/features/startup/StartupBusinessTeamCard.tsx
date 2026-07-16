@@ -85,7 +85,7 @@ export function StartupBusinessTeamCard({ business, team }: Props) {
     capabilities.length === 0
 
   return (
-    <section className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+    <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
       {isEmpty ? (
         <p className="text-body text-gray-400">
           등록된 비즈니스 · 팀 역량 정보가 없습니다. "수정"에서 입력하세요.

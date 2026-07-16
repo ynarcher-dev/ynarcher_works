@@ -77,7 +77,7 @@ export function ProgramInfoCard({ program }: { program: Program }) {
     )
 
   return (
-    <section className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+    <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
       <div className="flex items-center gap-5">
         <ProgramPhotoBox src={null} />
         <div className="min-w-0 flex-1">

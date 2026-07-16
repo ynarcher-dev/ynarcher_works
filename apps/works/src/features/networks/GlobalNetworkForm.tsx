@@ -173,7 +173,7 @@ export function GlobalNetworkForm({ recordId, initial, onDone, onCancel }: Props
         {/* 좌측(2/3): 사진 → 기본 데이터 → 노트 */}
         <div className="space-y-4 lg:col-span-2">
           {/* 사진 카드 */}
-          <div className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+          <div className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
             <p className="mb-3 text-caption font-medium text-gray-600">사진</p>
             <div className="flex items-center gap-4">
               <PhotoBox src={photo} />
@@ -192,7 +192,7 @@ export function GlobalNetworkForm({ recordId, initial, onDone, onCancel }: Props
           </div>
 
           {/* 기본 데이터 카드 */}
-          <div className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+          <div className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="이름" required>
                 <Input value={name} onChange={(e) => setName(e.target.value)} />
@@ -278,7 +278,7 @@ export function GlobalNetworkForm({ recordId, initial, onDone, onCancel }: Props
           </div>
 
           {/* 노트 카드 */}
-          <div className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+          <div className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
             <Field label="노트">
               <TextArea rows={4} value={intro} onChange={(e) => setIntro(e.target.value)} />
             </Field>

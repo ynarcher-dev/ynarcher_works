@@ -45,7 +45,7 @@ function GlobalView({ record }: { record: GlobalRow }) {
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
       {/* 좌측(2/3): 프로필 본문 — 현행 유지(메모 포함). */}
       <div className="space-y-4 lg:col-span-2">
-      <section className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+      <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
         <div className="flex items-center gap-5">
           <PhotoBox src={(profile.photo as string) ?? null} />
           <div className="min-w-0 flex-1">
@@ -98,7 +98,7 @@ function GlobalView({ record }: { record: GlobalRow }) {
         </div>
       </section>
 
-      <section className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+      <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
         <h2 className="mb-3 text-body font-semibold text-gray-900">노트</h2>
         {intro ? (
           <p className="whitespace-pre-wrap text-body text-gray-800">{intro}</p>

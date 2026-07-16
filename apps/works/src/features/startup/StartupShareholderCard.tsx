@@ -67,7 +67,7 @@ export function StartupShareholderCard({ history }: { history: ShareholderSnapsh
   const hasHistory = history.length > 1
 
   return (
-    <section className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+    <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h3 className="text-body font-semibold text-gray-900">주주 구성</h3>
         {hasHistory && (

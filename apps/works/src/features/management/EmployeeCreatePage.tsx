@@ -92,7 +92,7 @@ export function EmployeeCreatePage() {
       </div>
       <h1 className="text-title-md font-bold text-gray-900">임직원 계정 생성</h1>
 
-      <div className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+      <div className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="이름" required>
             <Input value={name} onChange={(e) => setName(e.target.value)} />

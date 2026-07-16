@@ -29,7 +29,7 @@ const RELATION_SECTIONS = [
 /** 상세 카드 섹션 래퍼. */
 function SectionCard({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+    <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
       <h2 className="mb-3 text-body font-semibold text-gray-900">{title}</h2>
       {children}
     </section>
@@ -158,7 +158,7 @@ export function EmployeeDetailPage({
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           {/* 좌측(2/3): 프로필 본문 */}
           <div className="space-y-4 lg:col-span-2">
-            <section className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+            <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
               <div className="flex items-center gap-5">
                 <PhotoBox src={null} />
                 <div className="min-w-0 flex-1">

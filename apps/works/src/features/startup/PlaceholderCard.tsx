@@ -20,7 +20,7 @@ export function PlaceholderCard({
   children?: ReactNode
 }) {
   return (
-    <section className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+    <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
       <h3 className="flex items-center gap-1.5 text-body font-semibold text-gray-900">
         {title}
         {count !== undefined && (

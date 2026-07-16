@@ -79,7 +79,7 @@ export function MyPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* 좌측(2/3): 계정 정보(조회) + 약력·노트(편집) */}
         <div className="space-y-4 lg:col-span-2">
-          <section className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+          <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-body font-semibold text-gray-900">{me.name}</h2>
               <Badge tone="neutral" size="sm">
@@ -100,7 +100,7 @@ export function MyPage() {
             </p>
           </section>
 
-          <section className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+          <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
             <div className="space-y-4">
               <div>
                 <label className="mb-1 block text-caption font-medium text-gray-600">약력</label>

@@ -37,7 +37,7 @@ function SectionCard({
   children: ReactNode
 }) {
   return (
-    <section className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+    <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-body font-semibold text-gray-900">{title}</h2>
         {action}
@@ -98,7 +98,7 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
       {/* 좌측(2/3): 프로필 본문 — 현행 유지(약력·메모·멘토링 만족도·매칭 안내). */}
       <div className="space-y-4 lg:col-span-2">
-      <section className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+      <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
         <div className="flex items-center gap-5">
           <PhotoBox src={(profile.photo as string) ?? null} />
           <div className="min-w-0 flex-1">

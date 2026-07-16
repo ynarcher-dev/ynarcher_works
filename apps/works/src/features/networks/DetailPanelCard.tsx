@@ -19,7 +19,7 @@ export function DetailPanelCard({
   children: ReactNode
 }) {
   return (
-    <section className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+    <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="flex items-center gap-1.5 text-body font-semibold text-gray-900">
           {title}

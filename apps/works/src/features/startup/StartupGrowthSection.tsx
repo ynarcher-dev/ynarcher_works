@@ -9,7 +9,7 @@ const C = CHART_COLORS
 /** 카드 래퍼(제목 + 선택적 단위 표기 + 내용). 수정 버튼·수정 날짜는 두지 않는다(통합 수정으로 관리). */
 function Card({ title, unit, children }: { title: string; unit?: string; children: ReactNode }) {
   return (
-    <section className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+    <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
       <div className="mb-3 flex items-baseline justify-between gap-2">
         <h3 className="text-body font-semibold text-gray-900">{title}</h3>
         {unit && <span className="shrink-0 text-caption text-gray-400">({unit})</span>}

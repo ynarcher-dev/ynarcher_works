@@ -70,7 +70,7 @@ function groupByKind(media: MediaItem[]): { kind: string; items: MediaItem[] }[]
  */
 export function StartupMediaCard({ media }: { media: MediaItem[] }) {
   return (
-    <section className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+    <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
       {media.length === 0 ? (
         <p className="text-body text-gray-400">등록된 미디어가 없습니다.</p>
       ) : (

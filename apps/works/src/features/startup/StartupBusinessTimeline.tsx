@@ -7,7 +7,7 @@ import type { BusinessStatusEntry } from '@/features/startup/startupGrowth'
  */
 export function StartupBusinessTimeline({ businessStatus }: { businessStatus: BusinessStatusEntry[] }) {
   return (
-    <section className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+    <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
       <h3 className="mb-3 text-body font-semibold text-gray-900">연혁</h3>
       {businessStatus.length === 0 ? (
         <p className="text-body text-gray-400">등록된 연혁이 없습니다.</p>

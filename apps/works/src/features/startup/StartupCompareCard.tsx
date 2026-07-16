@@ -202,7 +202,7 @@ export function StartupCompareCard({ a, b, bLoading, onSelectB, onClearB }: Prop
   const foundedB = b ? formatFounded(b.founded_on) : '-'
 
   return (
-    <section className="rounded-radius-lg border border-gray-200 bg-white p-5 shadow-soft">
+    <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
       <h3 className="mb-4 text-body font-semibold text-gray-900">기업 비교</h3>
 
       {/* 기업 헤더: A · VS · B — 두 기업을 각자 테두리 박스로 분리(기업 VS 기업) */}
