@@ -172,3 +172,72 @@ export function applyUrl(token: string | null | undefined): string | null {
     `${window.location.origin}/apply`
   return `${base}/${token}`
 }
+
+/** 신청 응답 1개(application_answers). 파일은 json_value에 attachment_id·file_name. */
+export interface SubmissionAnswer {
+  field_id: string
+  text_value: string | null
+  json_value: { attachment_id?: string; file_name?: string } | null
+}
+
+/** 접수 신청 1건(application_submissions + 응답 임베드). */
+export interface Submission {
+  id: string
+  status: string
+  source: string
+  submitted_at: string | null
+  consented_at: string | null
+  applicant_meta: Record<string, string> | null
+  answers: SubmissionAnswer[]
+}
+
+/** application_status → 표시 라벨·톤(Badge). */
+export const APPLICATION_STATUS_META: Record<string, { label: string; tone: string }> = {
+  DRAFT: { label: '작성중', tone: 'neutral' },
+  SUBMITTED: { label: '접수', tone: 'info' },
+  UNDER_REVIEW: { label: '심사중', tone: 'warning' },
+  SELECTED: { label: '선발', tone: 'success' },
+  WAITLISTED: { label: '예비', tone: 'neutral' },
+  REJECTED: { label: '탈락', tone: 'danger' },
+  WITHDRAWN: { label: '철회', tone: 'neutral' },
+}
+
+/** 특정 신청서(form_id)로 접수된 신청 목록 + 응답 임베드(최신순). */
+export function useSubmissions(formId: string | undefined) {
+  return useQuery({
+    queryKey: ['ac', 'submissions', formId],
+    enabled: Boolean(formId),
+    queryFn: async (): Promise<Submission[]> => {
+      const { data, error } = await supabase
+        .from('application_submissions')
+        .select(
+          'id, status, source, submitted_at, consented_at, applicant_meta, ' +
+            'answers:application_answers(field_id, text_value, json_value)',
+        )
+        .eq('form_id', formId)
+        .is('deleted_at', null)
+        .order('submitted_at', { ascending: false })
+        .limit(500)
+      if (error) throw error
+      return (data ?? []) as unknown as Submission[]
+    },
+  })
+}
+
+/**
+ * 신청 첨부 다운로드: material-download Edge Function 경유로 단기 Signed URL을 받아
+ * 브라우저 다운로드를 트리거한다. 서버가 내부 사용자 RLS + access_logs를 강제한다.
+ */
+export async function downloadApplicationFile(attachmentId: string, fileName: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke<{ url: string; fileName: string }>(
+    'material-download',
+    { body: { attachmentId } },
+  )
+  if (error || !data?.url) throw error ?? new Error('download_failed')
+  const a = document.createElement('a')
+  a.href = data.url
+  a.download = fileName
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+}
