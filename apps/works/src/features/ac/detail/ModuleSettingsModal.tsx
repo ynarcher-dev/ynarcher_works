@@ -1,12 +1,18 @@
 import { Button, Input, Modal, Select, TextArea, useToast } from '@ynarcher/ui'
 import { useForm } from 'react-hook-form'
-import { PARTICIPATION_MODES } from '@/features/ac/config'
+import {
+  MODULE_PARTICIPATION,
+  MODULE_VISIBILITY_OPTIONS,
+  PARTICIPATION_MODE_LABEL,
+} from '@/features/ac/config'
 import type { ProgramModule } from '@/features/ac/hooks'
 import { useUpdateModuleSettings } from '@/features/ac/detail/detailHooks'
 import { MODULE_STATUS_META, readModuleSettings } from '@/features/ac/detail/moduleMeta'
 
 interface FormValues {
   status: string
+  visibility: string
+  /** 매칭 모듈에서만 선택 입력. 그 외 모듈은 모듈 기본값으로 강제되어 폼에 없다. */
   participation_mode: string
   start_date: string
   end_date: string
@@ -28,6 +34,9 @@ export function ModuleSettingsModal({
   const toast = useToast()
   const update = useUpdateModuleSettings(programId)
   const settings = readModuleSettings(module.settings)
+  // 모듈 타입별 배정 방식 정책: options가 있으면 선택형(매칭), 없으면 기본값 고정.
+  const modePolicy = MODULE_PARTICIPATION[module.module_type]
+  const fixedMode = modePolicy?.default ?? null
   const {
     register,
     handleSubmit,
@@ -35,7 +44,8 @@ export function ModuleSettingsModal({
   } = useForm<FormValues>({
     defaultValues: {
       status: module.status,
-      participation_mode: module.participation_mode ?? '',
+      visibility: module.visibility || 'INTERNAL_ONLY',
+      participation_mode: module.participation_mode ?? fixedMode ?? '',
       start_date: settings.start_date ?? '',
       end_date: settings.end_date ?? '',
       memo: settings.memo ?? '',
@@ -47,11 +57,16 @@ export function ModuleSettingsModal({
       toast.show('종료일은 시작일 이후여야 합니다.', 'warning')
       return
     }
+    // 선택형(매칭)만 폼 값을 쓰고, 나머지는 모듈 기본값으로 강제한다.
+    const participationMode = modePolicy?.options
+      ? values.participation_mode || fixedMode
+      : fixedMode
     try {
       await update.mutateAsync({
         moduleType: module.module_type,
         status: values.status,
-        participationMode: values.participation_mode || null,
+        participationMode,
+        visibility: values.visibility,
         currentSettings: module.settings,
         settings: {
           start_date: values.start_date || undefined,
@@ -97,18 +112,36 @@ export function ModuleSettingsModal({
             </Select>
           </div>
           <div>
-            <label className="text-body font-medium text-gray-800" htmlFor="mod-mode">
-              참여 방식
+            <label className="text-body font-medium text-gray-800" htmlFor="mod-visibility">
+              공유 범위
             </label>
-            <Select id="mod-mode" {...register('participation_mode')}>
-              <option value="">선택 안 함</option>
-              {PARTICIPATION_MODES.map((m) => (
-                <option key={m} value={m}>
-                  {m}
+            <Select id="mod-visibility" {...register('visibility')}>
+              {MODULE_VISIBILITY_OPTIONS.map((v) => (
+                <option key={v.value} value={v.value}>
+                  {v.label}
                 </option>
               ))}
             </Select>
           </div>
+        </div>
+        <div>
+          <label className="text-body font-medium text-gray-800" htmlFor="mod-mode">
+            배정 방식
+          </label>
+          {modePolicy?.options ? (
+            <Select id="mod-mode" {...register('participation_mode')}>
+              {modePolicy.options.map((m) => (
+                <option key={m} value={m}>
+                  {PARTICIPATION_MODE_LABEL[m] ?? m}
+                </option>
+              ))}
+            </Select>
+          ) : (
+            <p className="rounded-radius-sm border border-gray-200 bg-gray-25 px-3 py-2 text-body text-gray-600">
+              {fixedMode ? (PARTICIPATION_MODE_LABEL[fixedMode] ?? fixedMode) : '해당 없음'}
+              <span className="ml-1 text-caption text-gray-400">· 모듈 기본값(고정)</span>
+            </p>
+          )}
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>

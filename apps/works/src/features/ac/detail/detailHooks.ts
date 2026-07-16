@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { defaultParticipationMode } from '@/features/ac/config'
 import type { ModuleSettings } from '@/features/ac/detail/moduleMeta'
 import { recordProgramContribution } from '@/features/ac/detail/programContributions'
 
@@ -35,6 +36,8 @@ export function useUpdateModuleSettings(programId: string) {
       moduleType: string
       status: string
       participationMode: string | null
+      /** 공유 범위(module_visibility): INTERNAL_ONLY/GUEST_ONLY/PUBLIC. */
+      visibility: string
       /** 기존 settings 원본(다른 키 보존을 위해 병합 기준으로 사용). */
       currentSettings: Record<string, unknown>
       settings: ModuleSettings
@@ -46,6 +49,7 @@ export function useUpdateModuleSettings(programId: string) {
           enabled: true,
           status: input.status,
           participation_mode: input.participationMode,
+          visibility: input.visibility,
           settings: { ...input.currentSettings, ...input.settings },
         },
         { onConflict: 'program_id,module_type' },
@@ -62,11 +66,13 @@ export function useEnableModules(programId: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (moduleTypes: string[]) => {
+      // 배정 방식은 사용자 입력이 아니라 모듈 타입별 기본값으로 강제 지정한다.
       const { error } = await supabase.from('program_modules').upsert(
         moduleTypes.map((module_type) => ({
           program_id: programId,
           module_type,
           enabled: true,
+          participation_mode: defaultParticipationMode(module_type),
         })),
         { onConflict: 'program_id,module_type' },
       )

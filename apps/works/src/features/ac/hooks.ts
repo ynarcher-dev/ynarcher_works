@@ -163,7 +163,10 @@ export interface ProgramModule {
   id: string
   module_type: string
   enabled: boolean
+  /** 배정 방식(participation_mode). 모듈 타입별 기본값으로 강제, 매칭만 선택형. */
   participation_mode: string | null
+  /** 공유 범위(module_visibility): INTERNAL_ONLY/GUEST_ONLY/PUBLIC. */
+  visibility: string
   /** DRAFT(준비)/OPEN(진행)/CLOSED(완료) — module_status enum. */
   status: string
   /** 모듈별 자유 설정(jsonb). 일정·메모는 detail/moduleMeta.ts 의 readModuleSettings 로 읽는다. */
@@ -177,7 +180,7 @@ export function useProgramModules(programId: string | undefined) {
     queryFn: async (): Promise<ProgramModule[]> => {
       const { data } = await supabase
         .from('program_modules')
-        .select('id, module_type, enabled, participation_mode, status, settings')
+        .select('id, module_type, enabled, participation_mode, visibility, status, settings')
         .eq('program_id', programId)
       return (data ?? []) as ProgramModule[]
     },

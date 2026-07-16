@@ -1,7 +1,11 @@
 import { Badge, Card, Spinner, useToast } from '@ynarcher/ui'
 import { Pencil, Plus, X } from 'lucide-react'
 import { useState } from 'react'
-import { MODULE_TYPES } from '@/features/ac/config'
+import {
+  MODULE_TYPES,
+  MODULE_VISIBILITY_LABEL,
+  MODULE_VISIBILITY_TONE,
+} from '@/features/ac/config'
 import { useProgramModules, useToggleModule, type ProgramModule } from '@/features/ac/hooks'
 import { AddModulesModal } from '@/features/ac/detail/AddModulesModal'
 import { ModuleSettingsModal } from '@/features/ac/detail/ModuleSettingsModal'
@@ -99,6 +103,9 @@ export function ModuleBoardCard({
                   </span>
                   <Badge tone={status.tone} size="sm">
                     {status.label}
+                  </Badge>
+                  <Badge tone={MODULE_VISIBILITY_TONE[mod.visibility] ?? 'neutral'} size="sm">
+                    {MODULE_VISIBILITY_LABEL[mod.visibility] ?? '비공개'}
                   </Badge>
                 </span>
                 <span className="mt-2 block text-body text-gray-600">

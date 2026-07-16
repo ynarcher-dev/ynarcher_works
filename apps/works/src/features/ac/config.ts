@@ -19,6 +19,29 @@ export const MODULE_TYPES: ModuleTypeDef[] = [
   { type: 'CUSTOM_ACTIVITY', label: '커스텀 활동', implemented: true },
 ]
 
+/**
+ * 모듈 공유 범위(participation과 별개 축). GUEST/공개 노출 여부를 정한다.
+ * DB module_visibility enum: INTERNAL_ONLY/GUEST_ONLY/PUBLIC. 기본값은 최소 공개(비공개).
+ */
+export const MODULE_VISIBILITY_OPTIONS = [
+  { value: 'PUBLIC', label: '전체공개', hint: '공개 URL로 누구나 열람(모집형)' },
+  { value: 'GUEST_ONLY', label: '일부공개', hint: 'GUEST 포털의 참여 기업/전문가만' },
+  { value: 'INTERNAL_ONLY', label: '비공개', hint: 'WORKS 내부 운영자만' },
+] as const
+
+export const MODULE_VISIBILITY_LABEL: Record<string, string> = {
+  PUBLIC: '전체공개',
+  GUEST_ONLY: '일부공개',
+  INTERNAL_ONLY: '비공개',
+}
+
+export const MODULE_VISIBILITY_TONE: Record<string, BadgeTone> = {
+  PUBLIC: 'success',
+  GUEST_ONLY: 'info',
+  INTERNAL_ONLY: 'neutral',
+}
+
+/** 배정 방식(participation_mode) enum 전체. 표시 라벨은 아래 맵을 사용한다. */
 export const PARTICIPATION_MODES = [
   'OPEN_APPLICATION',
   'REVIEWER_ASSIGNMENT',
@@ -27,6 +50,40 @@ export const PARTICIPATION_MODES = [
   'AI_ALLOCATION',
   'MANUAL_ALLOCATION',
 ] as const
+
+export const PARTICIPATION_MODE_LABEL: Record<string, string> = {
+  OPEN_APPLICATION: '공개 지원 접수',
+  REVIEWER_ASSIGNMENT: '심사위원 배정',
+  ADMIN_ONLY: '운영자 전담',
+  STARTUP_FCFS: '선착순 예약',
+  AI_ALLOCATION: 'AI 자동 배정',
+  MANUAL_ALLOCATION: '수동 배정',
+}
+
+/**
+ * 모듈 타입별 배정 방식 정책. `default`는 강제 기본값이며, `options`가 있는 모듈만
+ * 운영자가 그 범위 안에서 선택할 수 있다(현재 비즈니스 매칭만 선택형). 나머지는 고정.
+ * 근거: docs/docs_planning/3_4_2_ac_program_overview.md §6.3
+ */
+export const MODULE_PARTICIPATION: Record<string, { default: string; options?: string[] }> = {
+  RECRUITMENT: { default: 'OPEN_APPLICATION' },
+  DOC_REVIEW: { default: 'REVIEWER_ASSIGNMENT' },
+  ONSITE_EVAL: { default: 'REVIEWER_ASSIGNMENT' },
+  ORIENTATION: { default: 'ADMIN_ONLY' },
+  MENTORING: { default: 'MANUAL_ALLOCATION' },
+  BUSINESS_MATCHING: {
+    default: 'STARTUP_FCFS',
+    options: ['STARTUP_FCFS', 'AI_ALLOCATION', 'MANUAL_ALLOCATION'],
+  },
+  DEMO_DAY: { default: 'REVIEWER_ASSIGNMENT' },
+  OUTCOMES: { default: 'ADMIN_ONLY' },
+  CUSTOM_ACTIVITY: { default: 'ADMIN_ONLY' },
+}
+
+/** 모듈 타입의 강제 배정 방식 기본값(미정의 타입은 null). */
+export function defaultParticipationMode(moduleType: string): string | null {
+  return MODULE_PARTICIPATION[moduleType]?.default ?? null
+}
 
 /**
  * 프로그램(프로젝트) 상태 수명주기(6단계):
