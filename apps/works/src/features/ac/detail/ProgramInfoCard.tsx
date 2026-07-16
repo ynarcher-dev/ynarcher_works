@@ -86,6 +86,11 @@ export function ProgramInfoCard({ program }: { program: Program }) {
             <Badge tone={PROGRAM_STATUS_TONE[program.status] ?? 'neutral'} size="sm">
               {PROGRAM_STATUS_LABEL[program.status] ?? program.status}
             </Badge>
+            {program.code ? (
+              <span className="rounded-radius-sm bg-gray-100 px-2 py-0.5 font-mono text-caption tracking-wider text-gray-500">
+                {program.code}
+              </span>
+            ) : null}
           </div>
           <p className="mt-1 text-body text-gray-500">{program.description || '-'}</p>
         </div>
