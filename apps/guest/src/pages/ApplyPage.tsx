@@ -15,9 +15,16 @@ interface Field {
   sort_order: number
 }
 
+interface GuideSection {
+  title: string
+  body: string
+}
+
 interface Landing {
   landing_title?: string
   poster_path?: string
+  /** 커스터마이즈 안내 섹션(신규). 없으면 레거시 키로 폴백한다. */
+  sections?: GuideSection[]
   overview?: string
   schedule?: string
   target?: string
@@ -26,18 +33,45 @@ interface Landing {
   contact?: string
 }
 
+/** 랜딩 안내 섹션 도출: sections 우선, 없으면 레거시 4키를 승격(하위호환). */
+function guideSections(landing: Landing): GuideSection[] {
+  if (landing.sections && landing.sections.length) return landing.sections
+  return [
+    { title: '모집 개요', body: landing.overview ?? '' },
+    { title: '모집/사업 일정', body: landing.schedule ?? '' },
+    { title: '지원 대상', body: landing.target ?? '' },
+    { title: '제출 서류 안내', body: landing.doc_guide ?? '' },
+  ]
+}
+
 interface FormPayload {
   title: string
   landing: Landing
   fields: Field[]
+  open_at?: string | null
+  close_at?: string | null
 }
+
+type NotOpenReason = 'private' | 'scheduled' | 'closed'
 
 type State =
   | { kind: 'loading' }
-  | { kind: 'closed' }
+  | { kind: 'closed'; reason?: NotOpenReason; open_at?: string | null; close_at?: string | null }
   | { kind: 'notfound' }
   | { kind: 'ok'; form: FormPayload }
   | { kind: 'done' }
+
+/** ISO → 한국어 일시 표기(없으면 빈 문자열). */
+function fmtDateTime(iso?: string | null): string {
+  if (!iso) return ''
+  return new Date(iso).toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
 
 const inputClass =
   'w-full rounded border border-gray-300 px-3 py-2 text-body text-gray-900 outline-none focus:border-brand'
@@ -95,7 +129,19 @@ export function ApplyPage() {
           body: JSON.stringify({ token }),
         })
         if (!alive) return
-        if (res.status === 403) return setState({ kind: 'closed' })
+        if (res.status === 403) {
+          const body = (await res.json().catch(() => ({}))) as {
+            reason?: NotOpenReason
+            open_at?: string | null
+            close_at?: string | null
+          }
+          return setState({
+            kind: 'closed',
+            reason: body.reason,
+            open_at: body.open_at,
+            close_at: body.close_at,
+          })
+        }
         if (!res.ok) return setState({ kind: 'notfound' })
         const form = (await res.json()) as FormPayload
         setState({ kind: 'ok', form })
@@ -130,8 +176,23 @@ export function ApplyPage() {
   if (state.kind === 'loading') return <Centered>불러오는 중…</Centered>
   if (state.kind === 'notfound')
     return <Centered title="찾을 수 없는 신청서입니다">링크가 올바른지 확인하세요.</Centered>
-  if (state.kind === 'closed')
+  if (state.kind === 'closed') {
+    if (state.reason === 'scheduled' && state.open_at)
+      return (
+        <Centered title="모집 시작 전입니다">
+          {fmtDateTime(state.open_at)}부터 신청할 수 있습니다.
+        </Centered>
+      )
+    if (state.reason === 'closed')
+      return (
+        <Centered title="모집이 마감되었습니다">
+          {state.close_at
+            ? `${fmtDateTime(state.close_at)}에 마감되었습니다.`
+            : '신청 접수가 종료되었습니다.'}
+        </Centered>
+      )
     return <Centered title="현재 모집 중이 아닙니다">모집 기간이 아니거나 마감되었습니다.</Centered>
+  }
   if (state.kind === 'done')
     return (
       <Centered title="신청이 접수되었습니다">
@@ -197,10 +258,9 @@ export function ApplyPage() {
       {poster && (
         <img src={poster} alt="모집 포스터" className="mt-4 w-full rounded-lg border border-gray-200" />
       )}
-      <Section title="모집 개요" body={landing.overview} />
-      <Section title="모집/사업 일정" body={landing.schedule} />
-      <Section title="지원 대상" body={landing.target} />
-      <Section title="제출 서류 안내" body={landing.doc_guide} />
+      {guideSections(landing).map((s, i) => (
+        <Section key={i} title={s.title} body={s.body} />
+      ))}
 
       <div className="mt-8 border-t border-gray-200 pt-6">
         <h2 className="text-title-sm font-bold text-gray-900">신청서 작성</h2>

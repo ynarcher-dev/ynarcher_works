@@ -3,11 +3,13 @@
 // 응답: { title, landing, fields[] } | 403 not_open | 404 not_found
 //
 // 보안:
-// - 공개 상태(public_status='OPEN')인 신청서만 반환한다. PRIVATE/CLOSED는 403.
+// - 공개 상태(public_status='OPEN')이고 공개 기간(open_at~close_at) 내인 신청서만 반환한다.
+//   PRIVATE/CLOSED, 기간 전/후는 403(사유 reason과 함께).
 // - service_role로 조회하되 공개 화이트리스트 컬럼만 반환한다(내부 데이터·접수 목록 미노출).
 // - 개인정보를 반환하지 않는다(폼 정의만). 인증 불필요(익명 신청자 대상).
 import { jsonResponse, withCors } from '../_shared/cors.ts'
 import { supabaseAdmin } from '../_shared/supabaseAdmin.ts'
+import { windowState } from '../_shared/recruitmentWindow.ts'
 
 interface FieldRow {
   id: string
@@ -31,7 +33,7 @@ Deno.serve(withCors(async (req: Request) => {
     const { data: form, error } = await db
       .from('application_forms')
       .select(
-        'title, public_status, landing, ' +
+        'title, public_status, open_at, close_at, landing, ' +
           'fields:application_form_fields(id, field_type, label, is_required, options, file_constraints, sort_order)',
       )
       .eq('public_token', token)
@@ -39,14 +41,26 @@ Deno.serve(withCors(async (req: Request) => {
 
     if (error) return jsonResponse({ error: 'internal_error' }, 500)
     if (!form) return jsonResponse({ error: 'not_found' }, 404)
-    if (form.public_status !== 'OPEN') {
-      return jsonResponse({ error: 'not_open', status: form.public_status }, 403)
+
+    // 공개 상태 + 공개 기간(타이머)을 서버가 authoritative하게 판정한다.
+    const gate = windowState(form.public_status, form.open_at, form.close_at)
+    if (gate.reason) {
+      return jsonResponse(
+        { error: 'not_open', reason: gate.reason, open_at: form.open_at, close_at: form.close_at },
+        403,
+      )
     }
 
     const fields = ((form.fields as FieldRow[] | null) ?? []).sort(
       (a, b) => a.sort_order - b.sort_order,
     )
-    return jsonResponse({ title: form.title, landing: form.landing ?? {}, fields })
+    return jsonResponse({
+      title: form.title,
+      landing: form.landing ?? {},
+      fields,
+      open_at: form.open_at,
+      close_at: form.close_at,
+    })
   } catch (_e) {
     return jsonResponse({ error: 'internal_error' }, 500)
   }

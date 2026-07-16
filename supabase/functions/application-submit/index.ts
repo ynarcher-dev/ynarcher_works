@@ -11,6 +11,7 @@
 // - source='PUBLIC', consented_at 기록으로 공개 접수·동의 시각을 감사 가능하게 남긴다.
 import { jsonResponse, withCors } from '../_shared/cors.ts'
 import { supabaseAdmin } from '../_shared/supabaseAdmin.ts'
+import { windowState } from '../_shared/recruitmentWindow.ts'
 
 const ATTACH_BUCKET = 'attachments'
 const MAX_FILE_BYTES = 20 * 1024 * 1024 // 20MB/파일
@@ -56,7 +57,7 @@ Deno.serve(withCors(async (req: Request) => {
     const { data: form, error: formErr } = await db
       .from('application_forms')
       .select(
-        'id, program_id, public_status, ' +
+        'id, program_id, public_status, open_at, close_at, ' +
           'fields:application_form_fields(id, field_type, label, is_required)',
       )
       .eq('public_token', token)
@@ -64,7 +65,9 @@ Deno.serve(withCors(async (req: Request) => {
 
     if (formErr) return jsonResponse({ error: 'internal_error' }, 500)
     if (!form) return jsonResponse({ error: 'not_found' }, 404)
-    if (form.public_status !== 'OPEN') return jsonResponse({ error: 'not_open' }, 403)
+    // 공개 상태 + 공개 기간(타이머) 게이트를 서버가 강제한다.
+    const gate = windowState(form.public_status, form.open_at, form.close_at)
+    if (gate.reason) return jsonResponse({ error: 'not_open', reason: gate.reason }, 403)
 
     const fields = (form.fields as FieldRow[] | null) ?? []
     const fieldMap = new Map(fields.map((f) => [f.id, f]))

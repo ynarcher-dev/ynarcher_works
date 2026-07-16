@@ -21,16 +21,51 @@ export interface FormField {
   sort_order: number
 }
 
+/** 안내 섹션 1개(공개 랜딩의 제목+본문 블록). 운영자가 자유롭게 추가·정렬한다. */
+export interface GuideSection {
+  title: string
+  body: string
+}
+
 /** 랜딩 콘텐츠(application_forms.landing jsonb). 운영자가 쓰는 공개 안내 텍스트. */
 export interface LandingContent {
   landing_title?: string
   poster_path?: string
+  /** 커스터마이즈 가능한 안내 섹션(제목+본문). 신규 SSOT. */
+  sections?: GuideSection[]
+  /** @deprecated sections로 이관됨. 미이관 레코드 하위호환용으로만 읽는다. */
   overview?: string
+  /** @deprecated sections로 이관됨. */
   schedule?: string
+  /** @deprecated sections로 이관됨. */
   target?: string
+  /** @deprecated sections로 이관됨. */
   doc_guide?: string
   privacy_consent_text?: string
   contact?: string
+}
+
+/** 신규 인스턴스의 기본 안내 섹션(레퍼런스 표준 4종). 운영자가 자유롭게 편집한다. */
+export const DEFAULT_GUIDE_SECTIONS: GuideSection[] = [
+  { title: '모집 개요', body: '' },
+  { title: '모집/사업 일정', body: '' },
+  { title: '지원 대상', body: '' },
+  { title: '제출 서류 안내', body: '' },
+]
+
+/**
+ * 랜딩 콘텐츠에서 안내 섹션 목록을 도출한다. `sections`가 있으면 그대로 쓰고,
+ * 없으면(구버전 레코드) 레거시 4개 키를 섹션으로 승격한다(하위호환).
+ */
+export function guideSectionsFromLanding(landing: LandingContent): GuideSection[] {
+  if (landing.sections && landing.sections.length) return landing.sections.map((s) => ({ ...s }))
+  const legacy: [keyof LandingContent, string][] = [
+    ['overview', '모집 개요'],
+    ['schedule', '모집/사업 일정'],
+    ['target', '지원 대상'],
+    ['doc_guide', '제출 서류 안내'],
+  ]
+  return legacy.map(([key, title]) => ({ title, body: (landing[key] as string) ?? '' }))
 }
 
 /** 공개 상태: 비공개 / 공개 모집중 / 마감. */
@@ -43,6 +78,10 @@ export interface ApplicationForm {
   title: string
   public_token: string | null
   public_status: PublicStatus
+  /** 공개 모집 시작 일시(ISO). NULL이면 OPEN 즉시 공개. */
+  open_at: string | null
+  /** 공개 모집 마감 일시(ISO). NULL이면 무기한. */
+  close_at: string | null
   landing: LandingContent
   fields: FormField[]
 }
@@ -89,7 +128,7 @@ export const FIELD_TYPE_LABEL: Record<FieldType, string> = {
 const POSTER_BUCKET = 'program-posters'
 
 const FORM_COLS =
-  'id, program_id, program_module_id, title, public_token, public_status, landing, ' +
+  'id, program_id, program_module_id, title, public_token, public_status, open_at, close_at, landing, ' +
   'fields:application_form_fields(id, field_type, label, is_required, options, file_constraints, sort_order)'
 
 /** 모집 인스턴스(program_module_id)에 연결된 신청서 + 필드 조회. 없으면 null(미생성). */
@@ -123,6 +162,8 @@ export function useSetApplicationForm(programId: string, moduleId: string) {
       formId: string | null
       title: string
       publicStatus: PublicStatus
+      openAt: string | null
+      closeAt: string | null
       landing: LandingContent
       fields: FormField[]
     }): Promise<{ id: string; public_token: string }> => {
@@ -135,6 +176,8 @@ export function useSetApplicationForm(programId: string, moduleId: string) {
         p_landing: input.landing,
         // sort_order를 배열 순서로 재정렬해 전송(드래그·이동 결과 반영).
         p_fields: input.fields.map((f, i) => ({ ...f, sort_order: i })),
+        p_open_at: input.openAt,
+        p_close_at: input.closeAt,
       })
       if (error) throw error
       return data as { id: string; public_token: string }
