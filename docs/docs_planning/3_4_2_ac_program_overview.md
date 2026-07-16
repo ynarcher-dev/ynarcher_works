@@ -111,9 +111,11 @@ CREATE TABLE programs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title VARCHAR(255) NOT NULL,              -- 프로그램 공개명
     internal_title VARCHAR(255) NOT NULL,     -- 내부 관리용 명칭
-    status VARCHAR(50) NOT NULL DEFAULT 'DRAFT', -- 프로그램 대표 상태
-    start_date DATE NOT NULL,                 -- 시작일
-    end_date DATE NOT NULL,                   -- 종료일
+    status VARCHAR(50) NOT NULL DEFAULT 'DRAFT', -- 프로그램 대표 상태(제안/운영 단계 공용)
+    proposal_start_date DATE,                 -- 제안 기간 시작일(제안서 작성~발표)
+    proposal_end_date DATE,                   -- 제안 기간 종료일
+    start_date DATE NOT NULL,                 -- 운영 기간 시작일(실제 행사 관리)
+    end_date DATE NOT NULL,                   -- 운영 기간 종료일
     slug VARCHAR(100) UNIQUE NOT NULL,        -- 공개 URL 경로명
     host_organization VARCHAR(255),           -- 주관 기관
     partner_organization VARCHAR(255),        -- 협력 기관
@@ -142,6 +144,9 @@ CREATE TABLE program_modules (
 
 ## 8. 상태 모델
 
+* **프로그램 상태(단계 이원화)**: 프로그램 대표 상태는 제안 단계와 운영 단계로 나뉘며, 단계별로 별도의 기간 필드를 가집니다. 등록/편집 폼도 두 섹션으로 분리해 현재 단계에 해당하는 상태만 선택할 수 있습니다.
+  * 제안 단계: `PROPOSED`(제안) -> 선정 시 운영 단계로 전환 / 실패 시 `NOT_SELECTED`(미선정, 종결). 기간은 `proposal_start_date` ~ `proposal_end_date`(제안서 작성~발표 기간).
+  * 운영 단계: `DRAFT`(준비) -> `OPERATING`(진행중) -> `FINISHED`(종료), 중단 시 `CANCELLED`(취소). 기간은 `start_date` ~ `end_date`(실제 행사 관리 기간).
 * **프로그램 모듈 상태**: 개별 모듈은 프로그램 전체 상태와 무관하게 모듈 자체의 라이프사이클을 가집니다.
   * `DRAFT` (대기/준비) -> `OPEN` (모집 개시, 평가 오픈, 예약 오픈 등 실시간 가동) -> `CLOSED` (모집 마감, 평가 마감 등 외부 게스트 제어 차단)
 
@@ -172,7 +177,7 @@ CREATE TABLE program_modules (
 
 ---
 
-## 12. HUB/ADMIN/타 워크스페이스 연동
+## 12. OFFICE/ADMIN/타 워크스페이스 연동
 * **임직원 마스터 연동**: 프로그램 책임자로 등록되는 담당 임직원은 `MANAGEMENT 임직원 마스터` 테이블의 UUID와 매핑 검증을 거칩니다. 참가 스타트업/전문가는 `NETWORKS` 마스터와 매핑합니다.
 
 ---

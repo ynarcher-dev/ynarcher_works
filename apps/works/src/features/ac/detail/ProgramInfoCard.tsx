@@ -26,10 +26,11 @@ function formatDate(v: unknown): string {
  * 편집은 상단 슬림 헤더의 '편집' 버튼에서 수행한다. (커버 이미지 필드 연동은 후속.)
  */
 export function ProgramInfoCard({ program }: { program: Program }) {
-  const period =
-    program.start_date || program.end_date
-      ? `${program.start_date ?? '?'} ~ ${program.end_date ?? '?'}`
-      : '-'
+  // 기간 이원화: 제안 기간(제안서 작성~발표)과 운영 기간(실제 행사 관리)을 각각 표시한다.
+  const formatPeriod = (start: string | null, end: string | null) =>
+    start || end ? `${start ?? '?'} ~ ${end ?? '?'}` : '-'
+  const proposalPeriod = formatPeriod(program.proposal_start_date, program.proposal_end_date)
+  const operationPeriod = formatPeriod(program.start_date, program.end_date)
   // 담당자를 부서별로 묶는다. 담당자는 단계(org 버전)·기간 세그먼트로 쪼개져 한 부서 안에서도
   // 한 사람이 여러 구간(투입률 상이)을 가질 수 있으므로, 부서·사람 단위로 합쳐 대표 투입률(구간 중
   // 최대치)로 요약한다. 한 구간이라도 PM이면 PM으로 표기.
@@ -91,7 +92,8 @@ export function ProgramInfoCard({ program }: { program: Program }) {
       </div>
 
       <div className="mt-5 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-3">
-        <Info label="기간" value={period} />
+        <Info label="제안 기간" value={proposalPeriod} />
+        <Info label="운영 기간" value={operationPeriod} />
         <Info label="등록자" value={program.creator?.name || '-'} />
         <Info label="수정일" value={formatDate(program.updated_at)} />
       </div>

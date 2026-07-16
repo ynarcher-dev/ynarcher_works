@@ -51,6 +51,10 @@ export interface Program {
   id: string
   title: string
   status: string
+  /** 제안 단계 기간(제안서 작성~발표). 제안 없이 시작한 프로그램은 null. */
+  proposal_start_date: string | null
+  proposal_end_date: string | null
+  /** 운영 기간(실제 행사 관리 기간). */
   start_date: string | null
   end_date: string | null
   description: string | null
@@ -64,7 +68,7 @@ export interface Program {
 }
 
 const PROGRAM_COLS =
-  'id, title, status, start_date, end_date, description, updated_at, ' +
+  'id, title, status, proposal_start_date, proposal_end_date, start_date, end_date, description, updated_at, ' +
   'departments:program_departments(org_version_id, department_id, kind, collaboration_ratio, department:departments!program_departments_department_id_fkey(id, name)), ' +
   'managers:program_managers(user_id, org_version_id, department_id, role, allocation_rate, start_date, end_date, user:users!program_managers_user_id_fkey(id, name), department:departments!program_managers_department_id_fkey(id, name)), ' +
   'creator:users!created_by(id, name)'
@@ -106,6 +110,8 @@ export function useCreateProgram() {
     mutationFn: async (values: {
       title: string
       status: string
+      proposal_start_date?: string | null
+      proposal_end_date?: string | null
       start_date?: string | null
       end_date?: string | null
       description?: string | null
@@ -167,7 +173,7 @@ export interface ProgramModule {
   participation_mode: string | null
   /** 공유 범위(module_visibility): INTERNAL_ONLY/GUEST_ONLY/PUBLIC. */
   visibility: string
-  /** DRAFT(준비)/OPEN(진행)/CLOSED(완료) — module_status enum. */
+  /** DRAFT(준비)/OPEN(진행)/CLOSED(완료)/CANCELLED(취소) — module_status enum. */
   status: string
   /** 모듈별 자유 설정(jsonb). 일정·메모는 detail/moduleMeta.ts 의 readModuleSettings 로 읽는다. */
   settings: Record<string, unknown>

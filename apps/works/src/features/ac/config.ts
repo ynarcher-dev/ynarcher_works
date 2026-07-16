@@ -100,6 +100,22 @@ export const PROGRAM_STATUS_OPTIONS = [
   'NOT_SELECTED',
 ] as const
 
+/**
+ * 상태의 단계 이원화: 제안 단계(제안서 작성~발표, proposal_start/end_date)와
+ * 운영 단계(실제 행사 관리, start/end_date)로 나뉜다. 폼·표시가 공유하는 그룹 정의.
+ */
+export const PROGRAM_PROPOSAL_STATUSES = ['PROPOSED', 'NOT_SELECTED'] as const
+export const PROGRAM_OPERATION_STATUSES = ['DRAFT', 'OPERATING', 'FINISHED', 'CANCELLED'] as const
+
+export type ProgramStage = 'PROPOSAL' | 'OPERATION'
+
+/** 상태값이 속한 단계. 구 상태값(RECRUITING 등)은 운영 단계로 간주한다. */
+export function programStage(status: string): ProgramStage {
+  return (PROGRAM_PROPOSAL_STATUSES as readonly string[]).includes(status)
+    ? 'PROPOSAL'
+    : 'OPERATION'
+}
+
 export const PROGRAM_STATUS_LABEL: Record<string, string> = {
   PROPOSED: '제안',
   DRAFT: '준비',

@@ -1,4 +1,4 @@
-import { Button, Input, Modal, Select, TextArea, useToast } from '@ynarcher/ui'
+import { Button, Input, Modal, TextArea, useToast } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import {
@@ -12,15 +12,11 @@ import type { ProgramDepartmentSegment } from '@/features/ac/ProgramDepartmentEd
 import { PhaseStaffingEditor } from '@/features/ac/PhaseStaffingEditor'
 import { computePhases, validateStaffing } from '@/features/ac/programManagerCoverage'
 import { useOrgVersions } from '@/features/management/orgHooks'
-import { PROGRAM_STATUS_LABEL, PROGRAM_STATUS_OPTIONS } from '@/features/ac/config'
-
-interface FormValues {
-  title: string
-  status: string
-  start_date: string
-  end_date: string
-  description: string
-}
+import { programStage, type ProgramStage } from '@/features/ac/config'
+import {
+  ProgramStageFields,
+  type ProgramFormValues as FormValues,
+} from '@/features/ac/ProgramStageFields'
 
 /** 프로그램 임베드 담당자 → 편집용 구간. 단계(org 버전)·부서 미지정 레거시 행은 제외한다. */
 function toManagerSegments(program?: Program): ProgramManagerSegment[] {
@@ -74,10 +70,24 @@ export function ProgramFormModal({
     toDepartmentSegments(program),
   )
   const [managers, setManagers] = useState<ProgramManagerSegment[]>(() => toManagerSegments(program))
-  // 편집 대상이 바뀌면(모달 재사용) 부서·담당자 배치를 해당 프로그램 기준으로 다시 초기화한다.
+  // 상태는 단계(제안/운영)로 이원화 — 단계 라디오가 어느 셀렉트를 쓸지 정하고,
+  // 단계 전환 시 반대편 선택값을 잃지 않도록 단계별 상태를 각각 보관한다.
+  const initialStatus = program?.status ?? 'PROPOSED'
+  const [stage, setStage] = useState<ProgramStage>(() => programStage(initialStatus))
+  const [proposalStatus, setProposalStatus] = useState(() =>
+    programStage(initialStatus) === 'PROPOSAL' ? initialStatus : 'PROPOSED',
+  )
+  const [operationStatus, setOperationStatus] = useState(() =>
+    programStage(initialStatus) === 'OPERATION' ? initialStatus : 'DRAFT',
+  )
+  // 편집 대상이 바뀌면(모달 재사용) 배치·단계 상태를 해당 프로그램 기준으로 다시 초기화한다.
   useEffect(() => {
     setDepartments(toDepartmentSegments(program))
     setManagers(toManagerSegments(program))
+    const status = program?.status ?? 'PROPOSED'
+    setStage(programStage(status))
+    setProposalStatus(programStage(status) === 'PROPOSAL' ? status : 'PROPOSED')
+    setOperationStatus(programStage(status) === 'OPERATION' ? status : 'DRAFT')
   }, [program])
   const {
     register,
@@ -88,7 +98,8 @@ export function ProgramFormModal({
   } = useForm<FormValues>({
     defaultValues: {
       title: program?.title ?? '',
-      status: program?.status ?? 'PROPOSED',
+      proposal_start_date: program?.proposal_start_date ?? '',
+      proposal_end_date: program?.proposal_end_date ?? '',
       start_date: program?.start_date ?? '',
       end_date: program?.end_date ?? '',
       description: program?.description ?? '',
@@ -96,8 +107,16 @@ export function ProgramFormModal({
   })
 
   const onSubmit = async (values: FormValues) => {
+    if (
+      values.proposal_start_date &&
+      values.proposal_end_date &&
+      values.proposal_start_date > values.proposal_end_date
+    ) {
+      toast.show('제안 종료일은 제안 시작일 이후여야 합니다.', 'warning')
+      return
+    }
     if (values.start_date && values.end_date && values.start_date > values.end_date) {
-      toast.show('종료일은 시작일 이후여야 합니다.', 'warning')
+      toast.show('운영 종료일은 운영 시작일 이후여야 합니다.', 'warning')
       return
     }
     // 부서+담당자 배치 검증(서버 RPC와 동일 규칙, 단계별). 부서·담당자 모두 비면 허용(미배정).
@@ -111,7 +130,9 @@ export function ProgramFormModal({
     const managerRows = managers.map(({ _key, ...r }) => r)
     const payload = {
       title: values.title,
-      status: values.status,
+      status: stage === 'PROPOSAL' ? proposalStatus : operationStatus,
+      proposal_start_date: values.proposal_start_date || null,
+      proposal_end_date: values.proposal_end_date || null,
       start_date: values.start_date || null,
       end_date: values.end_date || null,
       description: values.description || null,
@@ -136,6 +157,9 @@ export function ProgramFormModal({
         reset()
         setDepartments([])
         setManagers([])
+        setStage('PROPOSAL')
+        setProposalStatus('PROPOSED')
+        setOperationStatus('DRAFT')
       }
       onClose()
     } catch {
@@ -174,32 +198,15 @@ export function ProgramFormModal({
             <p className="mt-1 text-caption text-danger">{errors.title.message}</p>
           )}
         </div>
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <label className="text-body font-medium text-gray-800" htmlFor="status">
-              상태
-            </label>
-            <Select id="status" {...register('status')}>
-              {PROGRAM_STATUS_OPTIONS.map((key) => (
-                <option key={key} value={key}>
-                  {PROGRAM_STATUS_LABEL[key]}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div>
-            <label className="text-body font-medium text-gray-800" htmlFor="start_date">
-              시작일
-            </label>
-            <Input id="start_date" type="date" {...register('start_date')} />
-          </div>
-          <div>
-            <label className="text-body font-medium text-gray-800" htmlFor="end_date">
-              종료일
-            </label>
-            <Input id="end_date" type="date" {...register('end_date')} />
-          </div>
-        </div>
+        <ProgramStageFields
+          stage={stage}
+          onStageChange={setStage}
+          proposalStatus={proposalStatus}
+          onProposalStatusChange={setProposalStatus}
+          operationStatus={operationStatus}
+          onOperationStatusChange={setOperationStatus}
+          register={register}
+        />
         <div>
           <label className="text-body font-medium text-gray-800">
             배치 (부서 구성 + 담당자)
@@ -212,7 +219,7 @@ export function ProgramFormModal({
             if (!watch('start_date') || !watch('end_date')) {
               return (
                 <p className="rounded-radius-md border border-dashed border-gray-300 bg-gray-25 px-3 py-4 text-caption text-gray-400">
-                  프로그램 기간(시작·종료일)을 입력하면 단계별 배치를 설정할 수 있습니다.
+                  운영 기간(시작·종료일)을 입력하면 단계별 배치를 설정할 수 있습니다.
                 </p>
               )
             }

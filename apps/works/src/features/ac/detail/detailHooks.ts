@@ -11,6 +11,8 @@ export function useUpdateProgram(id: string) {
     mutationFn: async (values: {
       title: string
       status: string
+      proposal_start_date: string | null
+      proposal_end_date: string | null
       start_date: string | null
       end_date: string | null
       description: string | null

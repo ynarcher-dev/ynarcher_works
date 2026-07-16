@@ -22,7 +22,7 @@ interface ProgramTableProps {
 
 /**
  * 프로그램 원장 공용 데이터 테이블(STARTUP StartupPoolTable과 동일 규격).
- * 컬럼: 체크박스·No.·프로그램명·상태·시작일·종료일 + 우측 표준 컬럼(등록자·수정일·관리).
+ * 컬럼: 체크박스·No.·프로그램명·상태·운영 시작일·운영 종료일 + 우측 표준 컬럼(등록자·수정일·관리).
  */
 export function ProgramTable({
   rows,
@@ -62,14 +62,14 @@ export function ProgramTable({
       },
       {
         key: 'start_date',
-        header: '시작일',
+        header: '운영 시작일',
         className: 'whitespace-nowrap',
         numeric: true,
         render: (r) => r.start_date ?? <span className="text-gray-400">-</span>,
       },
       {
         key: 'end_date',
-        header: '종료일',
+        header: '운영 종료일',
         className: 'whitespace-nowrap',
         numeric: true,
         render: (r) => r.end_date ?? <span className="text-gray-400">-</span>,
