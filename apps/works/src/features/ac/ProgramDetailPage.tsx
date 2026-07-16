@@ -78,7 +78,7 @@ export function ProgramDetailPage() {
 
   if (isLoading) return <Spinner />
   if (!program || !id) {
-    return <Banner tone="warning">프로그램을 찾을 수 없습니다.</Banner>
+    return <Banner tone="warning">사업을 찾을 수 없습니다.</Banner>
   }
 
   /** 모듈 카드 클릭 → 해당 인스턴스의 운영 화면으로 이동. */
@@ -107,7 +107,7 @@ export function ProgramDetailPage() {
               to={backTo}
               className="text-caption font-semibold text-brand hover:text-brand-600"
             >
-              ← 프로그램 목록
+              ← 사업 목록
             </Link>
             <Button onClick={() => setEditOpen(true)}>편집</Button>
           </div>

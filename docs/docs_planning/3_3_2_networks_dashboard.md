@@ -195,10 +195,10 @@ interface RecentUploadItem {
 
 ---
 
-## 12. HUB/ADMIN/타 워크스페이스 연동
+## 12. OFFICE/ADMIN/타 워크스페이스 연동
 
 * **ADMIN 태그 원장**: 구분·분야 분포는 ADMIN이 관리하는 `category_tags`·`field_tags`·`industry_tags`를 라벨 원천으로 사용합니다. 레거시(태그 미등록) 값은 '기타'로 합산합니다.
-* **HUB 조회**: 본 대시보드는 마스터를 소유한 NETWORKS 전용이며, HUB는 별도의 랭킹/검색 뷰를 유지합니다(중복 구현하지 않음).
+* **OFFICE 조회**: 본 대시보드는 마스터를 소유한 NETWORKS 전용이며, OFFICE는 별도의 전사 대시보드·검색 뷰를 유지합니다(중복 구현하지 않음).
 * **활동·만족도 지표**: `_activity`·`_satisfaction`은 현재 임시값(집계 미연동)이므로 본 대시보드에서 **표시하지 않습니다**. AC·매칭 실집계가 연동된 뒤 별도 확장 절로 편입합니다.
 
 ---

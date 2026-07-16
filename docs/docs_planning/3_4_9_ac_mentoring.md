@@ -198,10 +198,10 @@ request_mentor_feedback(session_id)
 
 ---
 
-## 12. HUB/ADMIN/타 워크스페이스 연동
+## 12. OFFICE/ADMIN/타 워크스페이스 연동
 
 * NETWORKS 스타트업 상세에는 멘토링 회차 수, 주요 액션아이템, 최근 상담 요약을 표시합니다.
-* **HUB 전문가 만족도 랭킹 연동**: 스타트업이 제출한 만족도 평점은 `(대상 전문가의 mentor_satisfaction_records 내 score 총합) / (평가 완료된 총 세션 수)` 수식으로 평균 계산되어, HUB 자문단 만족도 랭킹 보드([3_1_workspace_hub.md](./3_1_workspace_hub.md))에 평균 평점 내림차순으로 실시간 반영됩니다.
+* **OFFICE 전문가 만족도 랭킹 연동**: 스타트업이 제출한 만족도 평점은 `(대상 전문가의 mentor_satisfaction_records 내 score 총합) / (평가 완료된 총 세션 수)` 수식으로 평균 계산되어, OFFICE 자문단 만족도 랭킹 보드([3_1_workspace_hub.md](./3_1_workspace_hub.md))에 평균 평점 내림차순으로 실시간 반영됩니다.
 * **NETWORKS 성장 지표 연동**: 멘토가 제출한 5대 정량지표는 대상 스타트업의 NETWORKS 마스터 UUID로 매핑되어, 스타트업 상세의 '성장 지표 및 피드백 히스토리' 영역에 **레이더 차트(Radar Chart)** 형태로 평균값이 누적 갱신됩니다.
 * Outcomes/KPI는 멘토링 완료율, 일지 제출률, 멘토별 담당 기업 수를 집계합니다.
 * ADMIN 감사 로그에는 관계 생성/종료, 상담일지 수정 이력을 남깁니다.
@@ -220,7 +220,7 @@ request_mentor_feedback(session_id)
 
 1. N:N 멘토-멘티 관계를 구성할 수 있다.
 2. 회차별 상담일지와 만족도 평가가 누적된다.
-3. 스타트업별 멘토링 이력이 HUB와 KPI에 연결된다.
+3. 스타트업별 멘토링 이력이 OFFICE와 KPI에 연결된다.
 
 ---
 

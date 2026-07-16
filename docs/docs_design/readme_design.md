@@ -22,7 +22,10 @@
 
 ## ✍️ 히스토리 및 진행 예정 사항
 
-### 2026-07-05 (최신)
+### 2026-07-16 (최신)
+* **내비게이션 문서 최신화**: 실제 구현 기준의 `OFFICE`, `STARTUP`, `NETWORKS`, `AC`, `M&A/PE`, `PROJECT`, `FUND`, `MANAGEMENT`, `ADMIN` 사이드바 구조를 [2_app_layout_navigation.md](./2_app_layout_navigation.md)에 반영했습니다.
+
+### 2026-07-05
 * **신규 디자인 시스템 명세 4종 단위별 신규 생성**:
   * **인터랙션 모션 및 트랜지션 규격서** ([6_motion_transition_rules.md](./6_motion_transition_rules.md)) 작성 완료.
   * **차트 및 데이터 시각화 컬러 규칙서** ([7_chart_visualization_rules.md](./7_chart_visualization_rules.md)) 작성 완료.
@@ -37,7 +40,7 @@
 * **디자인 인덱스 생성**: 본 `readme_design.md`를 신규 생성하여 UI/UX 및 디자인 정책 문서를 체계적으로 누적할 수 있도록 뼈대 구성.
 
 ### 진행 예정
-* 각 개별 워크스페이스(HUB, AC 등)의 상세 대시보드 및 상세 페이지 피그마 시안 요소와 연계할 UI 레이아웃 세부 사항 정립.
+* 각 개별 워크스페이스(OFFICE, STARTUP, AC 등)의 상세 대시보드 및 상세 페이지 피그마 시안 요소와 연계할 UI 레이아웃 세부 사항 정립.
 * 모바일 환경의 사이드바/상단바 접기/열기 인터랙션 규칙 보강.
 
 

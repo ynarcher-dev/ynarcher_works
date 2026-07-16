@@ -2,13 +2,14 @@ import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '../utils/cn'
 
-export type ModalSize = 'sm' | 'md' | 'lg' | 'xl'
+export type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl'
 
 const sizeClass: Record<ModalSize, string> = {
   sm: 'max-w-sm',
   md: 'max-w-lg',
   lg: 'max-w-2xl',
   xl: 'max-w-4xl',
+  '2xl': 'max-w-6xl',
 }
 
 export interface ModalProps {

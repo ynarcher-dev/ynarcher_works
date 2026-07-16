@@ -176,9 +176,9 @@ confirm_document_review_shortlist(round_id, target_ids)
 
 ---
 
-## 12. HUB/ADMIN/타 워크스페이스 연동
+## 12. OFFICE/ADMIN/타 워크스페이스 연동
 
-* HUB에는 선발 확정 전까지 신청 기업을 임시 후보로만 연결합니다.
+* OFFICE에는 선발 확정 전까지 신청 기업을 임시 후보로만 연결합니다.
 * ADMIN 감사 로그에는 심사위원 배정, 회수, 재제출, 결과 확정 이력을 남깁니다.
 * 대면평가 모듈은 `confirm_document_review_shortlist` 결과를 평가 대상으로 이어받습니다.
 

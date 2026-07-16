@@ -16,7 +16,8 @@
 | **`auth`** | Supabase Auth (임직원 JWT 관리) |
 
 ### 1.1 핵심 공통 열거형 (Enum)
-* **`workspace_key`**: `'hub'`, `'networks'`, `'ac'`, `'fund'`, `'mna'`, `'project'`, `'management'`, `'admin'`, `'guest'`
+* **`workspace_key` (현재 마이그레이션 기준)**: `'hub'`, `'networks'`, `'ac'`, `'fund'`, `'mna'`, `'project'`, `'management'`, `'admin'`, `'guest'`
+  * **정합화 예정 기준**: 프론트 라우팅 타입은 `hub` 대신 `office`를 사용하고, 스타트업 운영 워크스페이스 `startup`을 별도 권한 키로 사용합니다. 운영 전 `workspace_key` enum·permission seed·ADMIN 권한 콘솔을 `office`, `startup`, `networks`, `ac`, `fund`, `mna`, `project`, `management`, `admin`, `guest` 기준으로 정비해야 합니다.
 * **`permission_level`**: `'none'`, `'read'`, `'write'`
 * **`scope_type`**: `'none'`, `'global'`, `'department'`, `'program'`, `'project'`, `'fund'`, `'company'`, `'self'`, `'temporary'`
 * **`user_type`**: `'super_admin'`, `'executive'`, `'management_support'`, `'ac_business'`, `'fund_manager'`, `'mna_manager'`, `'project_manager'`, `'external_startup'`, `'external_expert'`, `'temporary_guest'`, `'read_only'`

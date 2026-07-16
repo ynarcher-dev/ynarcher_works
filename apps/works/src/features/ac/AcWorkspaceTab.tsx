@@ -57,7 +57,7 @@ export function AcWorkspaceTab({ scope }: AcWorkspaceTabProps) {
   const onDeactivate = async (row: Program) => {
     try {
       await deactivate.mutateAsync(row.id)
-      toast.show('프로그램을 비활성화했습니다.', 'success')
+      toast.show('사업을 비활성화했습니다.', 'success')
     } catch {
       toast.show('비활성화에 실패했습니다. 권한을 확인하세요.', 'danger')
     }
@@ -68,7 +68,7 @@ export function AcWorkspaceTab({ scope }: AcWorkspaceTabProps) {
       <div className="flex flex-wrap items-center gap-2">
         <div className="w-full sm:w-80">
           <Input
-            placeholder="프로그램명·등록자 검색"
+            placeholder="사업명·등록자 검색"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
           />
@@ -76,7 +76,7 @@ export function AcWorkspaceTab({ scope }: AcWorkspaceTabProps) {
         <ProgramFilters filters={filters} onChange={setFilters} />
         <div className="sm:ml-auto">
           <Button className="h-11" onClick={() => setCreating(true)}>
-            프로그램 등록
+            사업 등록
           </Button>
         </div>
       </div>

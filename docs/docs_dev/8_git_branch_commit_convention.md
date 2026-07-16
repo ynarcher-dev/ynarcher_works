@@ -23,7 +23,7 @@
 
 ### 2.1 기능 브랜치 네이밍
 
-* **형식**: `<type>/<scope>-<간단설명>` (영문 소문자/하이픈). 예: `feat/ac-evaluation-engine`, `fix/hub-calendar-timezone`, `docs/dev-git-convention`
+* **형식**: `<type>/<scope>-<간단설명>` (영문 소문자/하이픈). 예: `feat/ac-evaluation-engine`, `fix/office-calendar-timezone`, `docs/dev-git-convention`
 * AI 에이전트 자동화 세션은 지정된 작업 브랜치 이름(예: `claude/<설명>`)을 그대로 사용할 수 있습니다.
 
 > [!NOTE]
@@ -62,7 +62,7 @@
 
 ### 3.3 `scope` 목록
 
-* **워크스페이스/영역**: `hub`, `networks`, `ac`, `fund`, `ma`, `admin`, `project`, `management`, `guest`
+* **워크스페이스/영역**: `office`, `startup`, `networks`, `ac`, `fund`, `mna`, `admin`, `project`, `management`, `guest`
 * **공통 영역**: `ui`, `master-data`, `db`, `auth`, `deps`
 * **문서**: 문서 수정은 `docs(<폴더>)` 형태로 폴더를 스코프에 표기합니다. 예: `docs(docs_dev)`, `docs(master)`
 

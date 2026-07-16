@@ -67,19 +67,23 @@
 
 | 워크스페이스 | 권한 | 관리자 | 경영진 | 매니지먼트 | 투자실 | 사업부 | M&A팀 | 프로젝트팀 | 스타트업 | 전문가 | 게스트 |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **OFFICE** (전사 업무 허브) | **읽기**<br>**쓰기** | O<br>O | O<br>Δ | O<br>O | O<br>Δ | O<br>Δ | O<br>Δ | O<br>Δ | X<br>X | X<br>X | X<br>X |
+| **STARTUP** (스타트업 풀) | **읽기**<br>**쓰기** | O<br>O | O<br>X | O<br>X | O<br>O | O<br>O | O<br>X | O<br>X | X<br>X | X<br>X | X<br>X |
+| **NETWORKS** (네트워크 원장)| **읽기**<br>**쓰기** | O<br>O | O<br>X | O<br>O | O<br>O | O<br>O | O<br>O | O<br>O | X<br>X | X<br>X | X<br>X |
 | **AC** (사업) | **읽기**<br>**쓰기** | O<br>O | O<br>X | O<br>X | O<br>X | O<br>O | X<br>X | X<br>X | X<br>X | X<br>X | X<br>X |
 | **M&A** (인수합병) | **읽기**<br>**쓰기** | O<br>O | O<br>X | X<br>X | X<br>X | X<br>X | O<br>O | X<br>X | X<br>X | X<br>X | X<br>X |
 | **FUND** (펀드) | **읽기**<br>**쓰기** | O<br>O | O<br>X | O<br>X | O<br>O | O<br>X | X<br>X | X<br>X | X<br>X | X<br>X | X<br>X |
 | **MANAGEMENT** (경영) | **읽기**<br>**쓰기** | O<br>O | O<br>X | O<br>O | O<br>Δ | O<br>Δ | O<br>Δ | O<br>Δ | X<br>X | X<br>X | X<br>X |
 | **PROJECT** (프로젝트)| **읽기**<br>**쓰기** | O<br>O | O<br>X | O<br>O | O<br>O | O<br>O | O<br>O | O<br>O | X<br>X | X<br>X | X<br>X |
-| **NETWORKS** (디렉토리)| **읽기**<br>**쓰기** | O<br>O | O<br>X | O<br>O | O<br>O | O<br>O | O<br>O | O<br>O | X<br>X | X<br>X | X<br>X |
-| **HUB** (데이터센터) | **읽기**<br>**쓰기** | O<br>O | O<br>X | O<br>X | O<br>X | O<br>X | O<br>X | O<br>X | X<br>X | X<br>X | X<br>X |
 | **ADMIN** (관리자) | **읽기**<br>**쓰기** | O<br>O | X<br>X | X<br>X | X<br>X | X<br>X | X<br>X | X<br>X | X<br>X | X<br>X | X<br>X |
 | **GUEST** (외부 서브도메인 앱) | **읽기**<br>**쓰기** | O<br>O | X<br>X | X<br>X | X<br>X | O<br>X | X<br>X | X<br>X | O<br>O | O<br>O | O<br>Δ |
 
 * **O**: 즉시 가능 (활성화)
 * **Δ**: 본인 결재서류 상신이나 특정 지정 범위에 국한하여 허용
 * **X**: 불가 (비활성화)
+
+> [!IMPORTANT]
+> 위 표는 현재 WORKS 프론트 라우팅 기준(`office`, `startup`, `networks`, `ac`, `fund`, `mna`, `project`, `management`, `admin`, `guest`)을 정본으로 합니다. 초기 DB enum 및 permission seed 일부에는 과거 `hub` 키가 남아 있으므로, 실제 운영 전 `office`/`startup` 권한 키를 DB와 ADMIN 권한 콘솔에 반영하는 정합화 작업이 필요합니다.
 
 ---
 

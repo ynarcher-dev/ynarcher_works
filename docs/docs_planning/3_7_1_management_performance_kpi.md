@@ -320,7 +320,7 @@ stateDiagram-v2
 
 ---
 
-## 12. HUB/ADMIN/타 워크스페이스 연동
+## 12. OFFICE/ADMIN/타 워크스페이스 연동
 * **전자결재(E-Approval)**: 실적 확정·평가 확정을 결재 문서로 상신하고, 실적 증빙(`evidence_ref`)을 전자문서로 연결하며 승인 시 잠금 처리합니다.
 * **조직 관리**: KPI 템플릿 할당의 대상은 조직 계보(`lineage_id`)를 원천으로 하며, 개편 시에도 연속됩니다. 조직 상세·개인 화면의 롤업은 `dept_members` 소속을 조인해 도출합니다.
 * **HRM/HRD**: 개인 템플릿의 `role_hint`는 인사 직책 문자열(`users.profile.position`, 예: 그룹장/팀원/PM)과 대조해 할당 자동 추천에 활용하고, 사이클 시점 소속은 `dept_members`로 해석합니다. 발령 이력(`hr_assignments`)·프로필(`hr_profiles`)과 연동합니다.

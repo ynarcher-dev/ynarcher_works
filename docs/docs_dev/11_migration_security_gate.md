@@ -23,7 +23,7 @@
 
 마이그레이션을 만들기 전에 아래 질문에 먼저 답합니다.
 
-* **소유 워크스페이스**: 이 데이터는 `hub`, `networks`, `ac`, `fund`, `mna`, `project`, `management`, `admin`, `guest` 중 어디 소유인가?
+* **소유 워크스페이스**: 이 데이터는 `office`, `startup`, `networks`, `ac`, `fund`, `mna`, `project`, `management`, `admin`, `guest` 중 어디 소유인가?
 * **데이터 등급**: `Public`, `Internal`, `Restricted`, `Personal`, `Secret` 중 어디에 해당하는가?
 * **접근 주체**: 내부 사용자, 외부 스타트업, 외부 전문가, 임시 게스트 중 누가 접근하는가?
 * **Scope 기준**: `global`, `department`, `program`, `project`, `fund`, `company`, `self`, `temporary` 중 어떤 범위가 필요한가?

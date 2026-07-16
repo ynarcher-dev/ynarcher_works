@@ -9,7 +9,7 @@
 | :--- | :--- |
 | **[CLAUDE.md](./CLAUDE.md)** (본 문서) | 작업 규칙, 확정 아키텍처 결정, 작업 시작 절차 — **작업 시 최초 1회 필독** |
 | **[PROGRESS.md](./PROGRESS.md)** | 개발 진행현황 체크리스트 — 다음 작업 선정 및 완료 체크의 단일 트래커 |
-| **[readme_master.md](./readme_master.md)** | 서비스 비전 명세서 — 비즈니스 배경과 8대 메뉴 + GUEST 구조 |
+| **[readme_master.md](./readme_master.md)** | 서비스 비전 명세서 — 비즈니스 배경과 9개 내부 워크스페이스 + GUEST 구조 |
 | **[0_service_spec_draft.md](./0_service_spec_draft.md)** | 전체 기획 문서(5대 폴더) 종합 인덱스 — 세부 기획서를 찾아갈 때 사용 |
 
 ## 작업 시작 절차 (필수 루틴)
@@ -23,11 +23,12 @@
 
 ## 프로젝트 개요
 
-AC/VC 업무 통합 플랫폼(내부 WORKS 앱 8대 메뉴 + 외부 GUEST 앱). 기존의 프로젝트 진척 관리(PMS) 성격에 인사, 재무, 자산, 전자결재 등 전사 자원 관리(ERP) 개념을 결합한 통합 기업 운영 플랫폼입니다. 현재 기획 문서 단계이며 전체 기획은 [readme_master.md](./readme_master.md), 문서 지도는 [0_service_spec_draft.md](./0_service_spec_draft.md) 참조.
+AC/VC 업무 통합 플랫폼(내부 WORKS 앱 9개 워크스페이스 + 외부 GUEST 앱). 기존의 프로젝트 진척 관리(PMS) 성격에 인사, 재무, 자산, 전자결재 등 전사 자원 관리(ERP) 개념을 결합한 통합 기업 운영 플랫폼입니다. 현재는 기획 문서와 구현 산출물을 함께 갱신하는 단계이며 전체 기획은 [readme_master.md](./readme_master.md), 문서 지도는 [0_service_spec_draft.md](./0_service_spec_draft.md) 참조.
 
 ## 확정된 아키텍처 결정 (변경 시 반드시 사용자 확인)
 
-- **마스터 데이터 SSOT**: 스타트업/전문가/협력사 마스터는 **NETWORKS** 워크스페이스가 원장, 임직원 마스터는 **MANAGEMENT**, HUB는 조회 센터(랭킹/캘린더/통합검색)일 뿐 마스터를 소유하지 않음.
+- **워크스페이스 구조**: 기존 `HUB`의 전사 포털 역할은 실제 앱에서 **OFFICE**가 승계하며, 스타트업 운영 뷰는 **STARTUP** 워크스페이스로 분리됨. 문서명 `3_1_workspace_hub.md`는 링크 연속성을 위해 유지하되 내용 기준은 OFFICE로 해석함.
+- **마스터 데이터 SSOT**: 스타트업 물리 원장(`public.startups`)은 NETWORKS 계열 스키마에 유지하되 업무 화면은 **STARTUP**이 담당합니다. 외부 전문가/투자사/기관/기업/대학/외주/글로벌 네트워크 원장은 **NETWORKS**, 임직원 원장은 **MANAGEMENT**, OFFICE는 조회·업무 허브로서 마스터를 소유하지 않음.
 - **백엔드 실행 모델**: React/TS **Vite SPA** (S3+CloudFront 정적 호스팅) + **Supabase Edge Functions/RPC**. Next.js 서버 런타임 없음. "서버 액션" = Edge Function/RPC를 지칭.
 - **스타일링**: **Tailwind CSS** 공식 채택. 컬러는 [4_color_system_rules.md](../docs_design/4_color_system_rules.md)의 웜그레이/브랜드 팔레트가 단일 원천.
 - **모노레포**: Turborepo — `apps/works`, `apps/guest`, `packages/ui`(순수 UI), `packages/master-data`.
@@ -37,7 +38,7 @@ AC/VC 업무 통합 플랫폼(내부 WORKS 앱 8대 메뉴 + 외부 GUEST 앱). 
 
 ## 커밋 컨벤션
 
-- 형식: `<type>(<scope>): <제목>` — type: `feat`/`fix`/`docs`/`refactor`/`chore`/`test`, scope: 워크스페이스 또는 영역(예: `ac`, `hub`, `ui`, `db`, `auth`)
+- 형식: `<type>(<scope>): <제목>` — type: `feat`/`fix`/`docs`/`refactor`/`chore`/`test`, scope: 워크스페이스 또는 영역(예: `office`, `startup`, `ac`, `ui`, `db`, `auth`)
 - 제목과 본문은 한국어로 작성한다.
 - 문서 수정은 `docs(<폴더>)` 스코프를 사용한다.
 

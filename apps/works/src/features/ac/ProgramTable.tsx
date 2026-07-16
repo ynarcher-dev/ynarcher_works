@@ -37,7 +37,7 @@ export function ProgramTable({
       {
         // 프로그램명은 min-width로 넓게 확보한다(설명 필러 컬럼이 그만큼 좁혀진다).
         key: 'title',
-        header: '프로그램명',
+        header: '사업명',
         className: 'min-w-[18rem] whitespace-nowrap font-semibold',
         render: (r) => r.title,
       },
@@ -107,7 +107,7 @@ export function ProgramTable({
         author: (r) => r.creator?.name || <span className="text-gray-400">-</span>,
         onDeactivate,
       }}
-      emptyText="등록된 프로그램이 없습니다."
+      emptyText="등록된 사업이 없습니다."
     />
   )
 }

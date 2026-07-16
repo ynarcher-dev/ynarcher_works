@@ -15,7 +15,7 @@ import { MaterialPanel } from '@/features/networks/MaterialPanel'
 type LeftTab = 'modules' | 'participants' | 'evaluation'
 
 const LEFT_TABS: { key: LeftTab; label: string }[] = [
-  { key: 'modules', label: '운영 모듈' },
+  { key: 'modules', label: '운영 프로그램' },
   { key: 'participants', label: '참가자 풀' },
   { key: 'evaluation', label: '평가 엔진' },
 ]

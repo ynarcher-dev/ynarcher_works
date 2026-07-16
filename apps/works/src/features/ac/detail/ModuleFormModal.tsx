@@ -123,8 +123,21 @@ export function ModuleFormModal({
       toast.show('이미 같은 이름의 모듈이 있습니다.', 'warning')
       return
     }
-    if (values.start_date && values.end_date && values.start_date > values.end_date) {
+    if (!values.start_date || !values.end_date) {
+      toast.show('일정(시작일·종료일)을 반드시 설정하세요.', 'warning')
+      return
+    }
+    if (values.start_date > values.end_date) {
       toast.show('종료일은 시작일 이후여야 합니다.', 'warning')
+      return
+    }
+    if (assignees.length === 0) {
+      toast.show(
+        pool.length === 0
+          ? '먼저 개요에서 사업 담당자를 배정한 뒤 담당자를 지정하세요.'
+          : '담당자를 최소 한 명 이상 지정하세요.',
+        'warning',
+      )
       return
     }
     if (
@@ -253,13 +266,13 @@ export function ModuleFormModal({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-body font-medium text-gray-800" htmlFor="mod-start">
-              시작일
+              시작일 <span className="text-brand">*</span>
             </label>
             <Input id="mod-start" type="date" {...register('start_date')} />
           </div>
           <div>
             <label className="text-body font-medium text-gray-800" htmlFor="mod-end">
-              종료일
+              종료일 <span className="text-brand">*</span>
             </label>
             <Input id="mod-end" type="date" {...register('end_date')} />
           </div>
@@ -274,10 +287,12 @@ export function ModuleFormModal({
         </div>
 
         <div>
-          <span className="text-body font-medium text-gray-800">담당자</span>
+          <span className="text-body font-medium text-gray-800">
+            담당자 <span className="text-brand">*</span>
+          </span>
           {pool.length === 0 ? (
             <p className="mt-1 rounded-radius-sm border border-gray-200 bg-gray-25 px-3 py-2 text-caption text-gray-500">
-              프로그램 담당자 풀이 비어 있습니다. 개요에서 담당자를 먼저 배정하세요.
+              사업 담당자 풀이 비어 있습니다. 개요에서 담당자를 먼저 배정하세요.
             </p>
           ) : (
             <div className="mt-1 flex flex-wrap gap-2">

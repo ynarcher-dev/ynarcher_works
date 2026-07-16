@@ -119,7 +119,7 @@ function buildCards(s: HubSummary): InfoCardDef[] {
       to: '/ac',
       metric: String(s.ac.operating),
       unit: '개 운영 중',
-      sub: `전체 프로그램 ${s.ac.total}개`,
+      sub: `전체 사업 ${s.ac.total}개`,
     },
     {
       key: 'project',

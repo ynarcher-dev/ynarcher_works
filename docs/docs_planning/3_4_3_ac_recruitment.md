@@ -206,7 +206,7 @@ stateDiagram-v2
 
 ---
 
-## 12. HUB/ADMIN/타 워크스페이스 연동
+## 12. OFFICE/ADMIN/타 워크스페이스 연동
 * **NETWORKS 스타트업 마스터**: `fn_submit_application` 내부에서 사업자등록번호 기반 정규화 쿼리가 작동하여 `startups`의 UUID를 가져옵니다.
 
 ---

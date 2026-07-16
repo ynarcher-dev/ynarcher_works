@@ -189,7 +189,7 @@ export_demoday_results(session_id)
 
 ---
 
-## 12. HUB/ADMIN/타 워크스페이스 연동
+## 12. OFFICE/ADMIN/타 워크스페이스 연동
 
 * NETWORKS 스타트업 상세에는 데모데이 발표 결과와 투자자 관심 현황을 표시합니다.
 * FUND/M&A는 `INVEST` 또는 후속 미팅 완료 기업을 후보 파이프라인으로 참조할 수 있습니다.
@@ -210,7 +210,7 @@ export_demoday_results(session_id)
 1. 발표 세션과 순서를 구성할 수 있다.
 2. 모바일 심사와 투자자 관심 체크가 가능하다.
 3. 스코어보드와 후속 미팅 상태가 관리된다.
-4. 결과가 HUB/FUND/M&A 후속 흐름으로 연결된다.
+4. 결과가 OFFICE/FUND/M&A 후속 흐름으로 연결된다.
 
 ---
 

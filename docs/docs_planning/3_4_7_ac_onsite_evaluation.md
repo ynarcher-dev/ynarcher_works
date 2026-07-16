@@ -189,7 +189,7 @@ confirm_selection_results(session_id, decision_payload)
 
 ---
 
-## 12. HUB/ADMIN/타 워크스페이스 연동
+## 12. OFFICE/ADMIN/타 워크스페이스 연동
 
 * 최종 선발 기업은 NETWORKS 스타트업 마스터와 연결하거나 신규 생성 후보로 등록합니다.
 * ADMIN 감사 로그에는 발표 순서 변경, 현장 상태 전환, 선발 확정 이력을 남깁니다.

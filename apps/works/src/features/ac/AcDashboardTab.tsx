@@ -17,7 +17,7 @@ export function AcDashboardTab() {
   const tiles: StatTile[] = [
     {
       key: 'total',
-      label: '전체 프로그램',
+      label: '전체 사업',
       value: programs.length.toLocaleString(),
       emphasis: true,
     },

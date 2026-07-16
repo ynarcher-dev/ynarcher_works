@@ -47,8 +47,11 @@ RLS 정책 선언 시 중복을 방지하고 비즈니스 규칙을 일관되게
 
 ## 4. 테이블별 RLS 정책 매트릭스
 
-### 4.1 HUB / NETWORKS 마스터 테이블
-* 대상 테이블: `startups`, `experts`, `partners`, `companies`, `people`, `identifiers`, `aliases`, `history`
+### 4.1 STARTUP / NETWORKS 마스터 테이블
+* 대상 테이블: `startups`, `startup_managers`, `experts`, `partners`, `companies`, `people`, `identifiers`, `aliases`, `history`, `global_networks`
+
+> [!NOTE]
+> `OFFICE`는 전사 조회·업무 허브이며 마스터 테이블을 직접 소유하지 않습니다. 스타트업 물리 원장은 `startups`이고 STARTUP 워크스페이스가 구분별 운영 뷰를 담당하며, 외부 전문가·투자사·기관·기업·대학·외주/거래처·글로벌 네트워크 원장은 NETWORKS가 담당합니다.
 
 > [!CAUTION]
 > 외부 스타트업이나 전문가는 내부 마스터 테이블(전체 기업 목록, 전체 전문가 DB 등)을 직접 `SELECT`해서는 절대 안 된다. 외부 앱은 허용된 View나 별도 RPC를 통해서만 자신의 프로필 및 필수 데이터에 한정 접근한다.

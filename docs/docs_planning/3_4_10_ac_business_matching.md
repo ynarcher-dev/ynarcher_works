@@ -193,7 +193,7 @@ export_matching_results(event_id)
 
 ---
 
-## 12. HUB/ADMIN/타 워크스페이스 연동
+## 12. OFFICE/ADMIN/타 워크스페이스 연동
 
 * NETWORKS 스타트업 상세에는 상담 이력과 후속 미팅 요청 여부가 표시됩니다.
 * FUND/M&A는 투자 또는 인수 검토로 이어진 상담 결과를 후속 파이프라인 후보로 참조할 수 있습니다.

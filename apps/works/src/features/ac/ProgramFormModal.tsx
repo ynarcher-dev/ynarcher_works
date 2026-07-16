@@ -156,7 +156,7 @@ export function ProgramFormModal({
           departments: departmentRows,
           managers: managerRows,
         })
-        toast.show('프로그램을 수정했습니다.', 'success')
+        toast.show('사업을 수정했습니다.', 'success')
       } else {
         const newId = await create.mutateAsync(payload)
         await saveStaffing.mutateAsync({
@@ -164,7 +164,7 @@ export function ProgramFormModal({
           departments: departmentRows,
           managers: managerRows,
         })
-        toast.show('프로그램을 등록했습니다.', 'success')
+        toast.show('사업을 등록했습니다.', 'success')
         reset()
         setDepartments([])
         setManagers([])
@@ -183,7 +183,7 @@ export function ProgramFormModal({
       open={open}
       onClose={onClose}
       size="xl"
-      title={isEdit ? '프로그램 편집' : '프로그램 등록'}
+      title={isEdit ? '사업 편집' : '사업 등록'}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
@@ -198,12 +198,12 @@ export function ProgramFormModal({
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
         <div>
           <label className="text-body font-medium text-gray-800" htmlFor="title">
-            프로그램명 <span className="text-brand">*</span>
+            사업명 <span className="text-brand">*</span>
           </label>
           <Input
             id="title"
             invalid={Boolean(errors.title)}
-            {...register('title', { required: '프로그램명은 필수입니다.' })}
+            {...register('title', { required: '사업명은 필수입니다.' })}
           />
           {errors.title && (
             <p className="mt-1 text-caption text-danger">{errors.title.message}</p>
@@ -271,7 +271,7 @@ export function ProgramFormModal({
           <TextArea
             id="description"
             rows={3}
-            placeholder="상세 헤더에 표시할 프로그램 소개"
+            placeholder="상세 헤더에 표시할 사업 소개"
             {...register('description')}
           />
         </div>

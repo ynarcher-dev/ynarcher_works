@@ -163,7 +163,7 @@ CREATE TABLE guest_invitations (
 
 ---
 
-## 12. HUB/ADMIN/타 워크스페이스 연동
+## 12. OFFICE/ADMIN/타 워크스페이스 연동
 * **NETWORKS 전문가/스타트업 마스터**: 참가자 풀에 전문가를 등록할 때, `experts` 테이블의 마스터 식별자 `master_id`를 연결하여 성명, 주요 분야, 소속 정보를 마스터에서 끌어다 표출합니다. (중복 기입 방지)
 
 ---
