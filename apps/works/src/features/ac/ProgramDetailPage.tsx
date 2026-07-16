@@ -133,11 +133,13 @@ export function ProgramDetailPage() {
             </div>
           </div>
 
-          {/* 프로그램 단위 화면(집계·접수·타임라인)은 programId, 인스턴스 단위 운영 화면은 moduleId로 렌더한다. */}
-          {tab === 'recruitment' && <RecruitmentPanel programId={id} />}
+          {/* 프로그램 단위 화면(집계·타임라인)은 programId, 인스턴스 단위 운영 화면은 moduleId로 렌더한다. */}
           {tab === 'timeline' && <TimelinePanel programId={id} />}
           {tab === 'outcomes' && <OutcomesPanel programId={id} />}
           {tab === 'custom' && <CustomActivityPanel programId={id} />}
+          {moduleId && tab === 'recruitment' && (
+            <RecruitmentPanel programId={id} moduleId={moduleId} />
+          )}
           {moduleId && tab === 'docreview' && <DocReviewPanel moduleId={moduleId} />}
           {moduleId && tab === 'onsite' && <OnsitePanel moduleId={moduleId} />}
           {moduleId && tab === 'orientation' && <OrientationPanel moduleId={moduleId} />}
