@@ -15,8 +15,10 @@ export const ROLES = [
 
 export type RoleKey = (typeof ROLES)[number]['key']
 
-/** 토글 매트릭스에 노출되는 워크스페이스(내부 + GUEST). */
+/** 토글 매트릭스에 노출되는 워크스페이스(내부 + GUEST). DB workspace_key enum과 1:1. */
 export const WORKSPACE_KEYS = [
+  { key: 'office', label: 'OFFICE' },
+  { key: 'startup', label: 'STARTUP' },
   { key: 'networks', label: 'NETWORKS' },
   { key: 'ac', label: 'AC' },
   { key: 'fund', label: 'FUND' },

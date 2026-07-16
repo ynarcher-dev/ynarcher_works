@@ -12,16 +12,12 @@ interface AuthState {
 /**
  * 단일 세션 상태 관찰소(currentUser/userRole 단일 원천).
  * 하위 비즈니스 컴포넌트는 인증 방식(표준/커스텀)을 몰라도 이 스토어만 관찰한다.
+ * 초기값은 반드시 loading/null — 실제 세션 확인(AuthProvider의 employeeAuth.init())
+ * 이 끝나기 전에는 어떤 보호 라우트도 열리지 않는다.
  */
 export const useAuthStore = create<AuthState>((set) => ({
-  status: 'authenticated',
-  user: {
-    id: 'test-user-id',
-    name: '테스트 관리자',
-    email: 'admin@ynarcher.com',
-    role: 'super_admin',
-    permissions: {},
-  },
+  status: 'loading',
+  user: null,
   setUser: (user) =>
     set({ user, status: user ? 'authenticated' : 'unauthenticated' }),
   setStatus: (status) => set({ status }),

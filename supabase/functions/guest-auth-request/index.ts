@@ -1,7 +1,7 @@
 // [Phase 3] 게스트 OTP 발급 (삼각 매핑 검증 → 6자리 OTP)
 // 요청: { name, contact, businessCode }
 // 응답: 열거(enumeration) 방지를 위해 매칭 여부와 무관하게 중립 응답을 반환한다.
-import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
+import { jsonResponse, withCors } from '../_shared/cors.ts'
 import { generateOtp, sha256Hex } from '../_shared/crypto.ts'
 import { sendNotification } from '../_shared/notifications.ts'
 import { supabaseAdmin } from '../_shared/supabaseAdmin.ts'
@@ -9,8 +9,7 @@ import { supabaseAdmin } from '../_shared/supabaseAdmin.ts'
 const OTP_TTL_SEC = 180 // 3분
 const NEUTRAL = { ok: true, expiresInSec: OTP_TTL_SEC }
 
-Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+Deno.serve(withCors(async (req: Request) => {
   if (req.method !== 'POST') return jsonResponse({ error: 'method_not_allowed' }, 405)
 
   try {
@@ -63,4 +62,4 @@ Deno.serve(async (req: Request) => {
   } catch (_e) {
     return jsonResponse({ error: 'internal_error' }, 500)
   }
-})
+}))

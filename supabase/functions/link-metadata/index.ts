@@ -9,7 +9,7 @@
 // - DB를 건드리지 않는다(메타데이터만 파싱해 반환). 저장은 상위 통합 수정 폼이 담당.
 // 근거: docs/docs_dev/11_migration_security_gate.md,
 //       supabase/functions/employee-create/index.ts(인증 검증 패턴)
-import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
+import { jsonResponse, withCors } from '../_shared/cors.ts'
 import { supabaseAdmin } from '../_shared/supabaseAdmin.ts'
 
 /** 사설망·로컬 호스트(SSRF 표적)를 차단한다. */
@@ -56,6 +56,51 @@ function safeUrl(raw: string): URL | null {
   return u
 }
 
+/** DNS 해석 결과가 사설/루프백 IP면 차단(베스트 에포트 — 미지원 런타임은 통과). */
+async function resolvesToBlockedIp(hostname: string): Promise<boolean> {
+  try {
+    const [a, aaaa] = await Promise.all([
+      Deno.resolveDns(hostname, 'A').catch(() => [] as string[]),
+      Deno.resolveDns(hostname, 'AAAA').catch(() => [] as string[]),
+    ])
+    return [...a, ...aaaa].some((ip) => isBlockedHost(ip))
+  } catch {
+    return false
+  }
+}
+
+/**
+ * SSRF 방어 fetch: redirect를 수동으로 따라가며 각 홉의 호스트를 재검사한다(최대 3회).
+ * 차단 대상으로 향하는 redirect는 즉시 중단한다. (P1-4.2)
+ */
+async function fetchWithSsrfGuard(
+  start: URL,
+  init: RequestInit,
+): Promise<{ resp: Response; finalUrl: string } | 'blocked'> {
+  let current = start
+  for (let hop = 0; hop <= 3; hop++) {
+    if (await resolvesToBlockedIp(current.hostname)) return 'blocked'
+    const resp = await fetch(current.toString(), { ...init, redirect: 'manual' })
+    if ([301, 302, 303, 307, 308].includes(resp.status)) {
+      const loc = resp.headers.get('location')
+      await resp.body?.cancel()
+      if (!loc) return 'blocked'
+      let nextRaw: string
+      try {
+        nextRaw = new URL(loc, current).toString()
+      } catch {
+        return 'blocked'
+      }
+      const next = safeUrl(nextRaw)
+      if (!next) return 'blocked'
+      current = next
+      continue
+    }
+    return { resp, finalUrl: current.toString() }
+  }
+  return 'blocked'
+}
+
 /** 최소 HTML 엔티티 디코드(메타 태그 content용). */
 function decodeEntities(s: string): string {
   return s
@@ -81,8 +126,7 @@ function findMeta(html: string, keys: string[]): string | undefined {
   return undefined
 }
 
-Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+Deno.serve(withCors(async (req: Request) => {
   if (req.method !== 'POST') return jsonResponse({ error: 'method_not_allowed' }, 405)
 
   try {
@@ -130,15 +174,25 @@ Deno.serve(async (req: Request) => {
       }
 
       // 3-b) 일반 페이지: OG/메타 스크래핑(본문 앞부분만) -----------------------
-      const resp = await fetch(url.toString(), {
+      // redirect는 수동 추적하며 매 홉 호스트를 재검사한다(SSRF 방어).
+      const guarded = await fetchWithSsrfGuard(url, {
         method: 'GET',
-        redirect: 'follow',
         signal: controller.signal,
         headers: { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml' },
       })
+      if (guarded === 'blocked') {
+        return jsonResponse({ error: 'invalid_url', message: '허용되지 않는 대상입니다.' }, 400)
+      }
+      const { resp, finalUrl } = guarded
       if (!resp.ok) return jsonResponse({ error: 'fetch_failed', message: `대상 응답 오류(${resp.status})` }, 502)
 
-      const finalUrl = resp.url || url.toString()
+      // 허용 콘텐츠 타입: HTML 계열만 파싱한다(바이너리/JSON 등 차단).
+      const contentType = resp.headers.get('content-type') ?? ''
+      if (!/text\/html|application\/xhtml/i.test(contentType)) {
+        await resp.body?.cancel()
+        return jsonResponse({ error: 'unsupported_content', message: 'HTML 문서가 아닙니다.' }, 415)
+      }
+
       const html = (await resp.text()).slice(0, 500_000)
 
       const title =
@@ -176,4 +230,4 @@ Deno.serve(async (req: Request) => {
       aborted ? 504 : 500,
     )
   }
-})
+}))

@@ -9,7 +9,7 @@
 //   users 행 생성 실패 시 방금 만든 auth 계정을 삭제(롤백)한다.
 // 근거: docs/docs_dev/11_migration_security_gate.md,
 //       supabase/functions/guest-auth-verify/index.ts(프로비저닝 패턴)
-import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
+import { jsonResponse, withCors } from '../_shared/cors.ts'
 import { supabaseAdmin } from '../_shared/supabaseAdmin.ts'
 
 /** 계정 생성 시 부여 가능한 임직원 역할(외부 게스트 유형은 제외). */
@@ -24,8 +24,7 @@ const INTERNAL_ROLES = new Set([
   'read_only',
 ])
 
-Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+Deno.serve(withCors(async (req: Request) => {
   if (req.method !== 'POST') return jsonResponse({ error: 'method_not_allowed' }, 405)
 
   try {
@@ -148,4 +147,4 @@ Deno.serve(async (req: Request) => {
   } catch (_e) {
     return jsonResponse({ error: 'internal_error' }, 500)
   }
-})
+}))

@@ -1,7 +1,7 @@
 // [Phase 3] 게스트 OTP 검증 → 커스텀 JWT 발급
 // 요청: { name, contact, businessCode, otp }
 // 응답: { accessToken, user } | 401 generic
-import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
+import { jsonResponse, withCors } from '../_shared/cors.ts'
 import { sha256Hex, signJwt } from '../_shared/crypto.ts'
 import { supabaseAdmin } from '../_shared/supabaseAdmin.ts'
 
@@ -9,8 +9,7 @@ const MAX_ATTEMPTS = 5
 const JWT_TTL_SEC = 60 * 60 * 8 // 8시간
 const DENIED = { error: 'auth_failed', message: '입력 정보가 일치하지 않거나 인증이 만료되었습니다.' }
 
-Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+Deno.serve(withCors(async (req: Request) => {
   if (req.method !== 'POST') return jsonResponse({ error: 'method_not_allowed' }, 405)
 
   try {
@@ -104,4 +103,4 @@ Deno.serve(async (req: Request) => {
   } catch (_e) {
     return jsonResponse({ error: 'internal_error' }, 500)
   }
-})
+}))

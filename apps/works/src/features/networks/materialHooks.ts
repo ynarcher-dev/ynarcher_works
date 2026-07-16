@@ -38,7 +38,7 @@ export function useMaterials(targetType: string, targetId: string | undefined) {
 
 /** 파일명에서 Storage 키로 쓸 수 없는 문자를 안전화한다. */
 function safeName(name: string): string {
-  return name.replace(/[^\w.\-]+/g, '_')
+  return name.replace(/[^\w.-]+/g, '_')
 }
 
 /**
@@ -92,16 +92,18 @@ export function useDeleteMaterial(targetType: string, targetId: string) {
 }
 
 /**
- * 자료 다운로드: 단기 Signed URL을 발급받아 브라우저 다운로드를 트리거한다.
- * 버킷이 비공개이므로 직접 URL 접근은 불가하고 서명 URL만 유효하다.
+ * 자료 다운로드: material-download Edge Function 경유로 단기 Signed URL을 받아
+ * 브라우저 다운로드를 트리거한다. 서버가 RLS 검증과 access_logs 적재를 강제하며,
+ * 로그 적재에 실패하면 URL이 발급되지 않는다(클라이언트 직접 서명 경로는 폐쇄됨).
  */
 export async function downloadMaterial(m: Material): Promise<void> {
-  const { data, error } = await supabase.storage
-    .from(BUCKET)
-    .createSignedUrl(m.storage_path, 60, { download: m.file_name })
-  if (error) throw error
+  const { data, error } = await supabase.functions.invoke<{
+    url: string
+    fileName: string
+  }>('material-download', { body: { attachmentId: m.id } })
+  if (error || !data?.url) throw error ?? new Error('download_failed')
   const a = document.createElement('a')
-  a.href = data.signedUrl
+  a.href = data.url
   a.download = m.file_name
   document.body.appendChild(a)
   a.click()

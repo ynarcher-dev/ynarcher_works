@@ -8,7 +8,7 @@
 --       해당 테이블 도입 시 케이스를 실제 테이블 접근으로 승격한다.
 -- =====================================================================
 begin;
-select plan(12);
+select plan(15);
 
 -- 픽스처: 테스트 계정 10종 + 데이터 (슈퍼유저로 삽입, 트랜잭션 종료 시 롤백) ----
 insert into public.startups(id, name) values
@@ -35,7 +35,9 @@ insert into public.workspace_permissions(user_id, workspace_key, permission_leve
   ('00000000-0000-0000-0000-0000000000e8', 'fund',     'write', 'fund', null),
   ('00000000-0000-0000-0000-0000000000e9', 'mna',      'write', 'global', null),
   ('00000000-0000-0000-0000-0000000000ea', 'networks', 'write', 'global', null),
-  ('00000000-0000-0000-0000-0000000000ea', 'management','write','global', null);
+  ('00000000-0000-0000-0000-0000000000ea', 'management','write','global', null),
+  ('00000000-0000-0000-0000-0000000000ea', 'office',   'write', 'global', null),   -- office 신키
+  ('00000000-0000-0000-0000-0000000000e4', 'startup',  'write', 'global', null);   -- startup 신키
 
 -- 임퍼소네이트 도우미: 매 케이스마다 role/claims 설정 후 reset ------------------
 -- (pgTAP 내에서는 set local role + set_config('request.jwt.claims', ...) 조합 사용)
@@ -98,6 +100,21 @@ select is(
   0,
   '케이스7b: audit_logs UPDATE 불가(0건 영향)'
 );
+reset role;
+
+-- 케이스 9: office/startup 신설 워크스페이스 키 권한 판정 (P0-2 정합화 회귀)
+set local role authenticated;
+select set_config('request.jwt.claims', '{"app_user_id":"00000000-0000-0000-0000-0000000000ea","session_version":1}', true);
+select is(app.can_write_workspace('office'), true, '케이스9a: office write 권한 보유자 판정 통과');
+reset role;
+set local role authenticated;
+select set_config('request.jwt.claims', '{"app_user_id":"00000000-0000-0000-0000-0000000000e4","session_version":1}', true);
+select is(app.can_write_workspace('startup'), true, '케이스9b: startup write 권한 보유자 판정 통과');
+reset role;
+set local role authenticated;
+select set_config('request.jwt.claims', '{"app_user_id":"00000000-0000-0000-0000-0000000000e2","session_version":1}', true);
+select is(app.can_read_workspace('office') or app.can_read_workspace('startup'), false,
+  '케이스9c: 무권한 사용자 office/startup 접근 차단');
 reset role;
 
 -- 케이스 8: public 전 테이블에 RLS 활성화 누락이 없다

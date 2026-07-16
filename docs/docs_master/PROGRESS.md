@@ -5,7 +5,7 @@
 > [!NOTE]
 > **작업 규칙 및 시작 절차는 [CLAUDE.md](./CLAUDE.md)**, 서비스 비전은 [readme_master.md](./readme_master.md), 전체 문서 지도는 [0_service_spec_draft.md](./0_service_spec_draft.md)를 참조하십시오.
 
-* 개발 우선순위는 [3_0_workspace_overview.md](../docs_planning/3_0_workspace_overview.md) 기준: `HUB → NETWORKS → AC → FUND → M&A → ADMIN → PROJECT → MANAGEMENT → GUEST`
+* 개발 우선순위는 [3_0_workspace_overview.md](../docs_planning/3_0_workspace_overview.md) 기준: `OFFICE → STARTUP → NETWORKS → AC → M&A/PE → PROJECT → FUND → MANAGEMENT → ADMIN → GUEST`
 * 기술 스택은 [1_development_stack.md](../docs_dev/1_development_stack.md) 기준: Turborepo 모노레포 + React/TS Vite SPA + Tailwind CSS + Supabase(PostgreSQL/RLS/Edge Functions) + AWS S3/CloudFront
 
 ---
@@ -20,6 +20,7 @@
 - [x] 상태값/FK 드리프트 정합화 (WAITLISTED 통일, evaluation_targets 다형화, RLS 헬퍼 2계층화)
 - [x] 인덱스 문서 최신화 및 Tailwind CSS 공식 스택 명문화
 - [x] 서비스 개념 확장: 기존 프로젝트 관리(PMS) 성격에 전사 자원 관리(ERP) 개념 융합 명문화
+- [x] WORKS 최상위 구조 최신화: `HUB` 조회 센터 역할을 `OFFICE` 전사 업무 허브로 이관하고, 스타트업 운영 뷰를 `STARTUP` 워크스페이스로 분리하는 현재 구현 기준 문서화
 
 ## Phase 1. 프로젝트 기반 셋업
 
@@ -72,15 +73,17 @@
 - [x] 섹션 카드(Card)·언더라인 탭(Tabs) 컴포넌트 추가 <!-- 상세 화면 2컬럼 컴포지션용 카드 셸(제목·부제·우측 액션)과 건수 칩 지원 탭. AC 프로그램 상세·M&A 딜 상세 공용 -->
 
 
-## Phase 5. HUB 워크스페이스
+## Phase 5. OFFICE 워크스페이스 (구 HUB 역할 이관)
 
-> **참고 문서**: [3_1_workspace_hub.md](../docs_planning/3_1_workspace_hub.md) (화면/데이터 연동 규격/GNB맵) · [2_business_scenarios.md](../docs_planning/2_business_scenarios.md) (교차 참조/권한 필터) · [7_chart_visualization_rules.md](../docs_design/7_chart_visualization_rules.md) (랭킹 차트)
+> **참고 문서**: [3_1_workspace_hub.md](../docs_planning/3_1_workspace_hub.md) (OFFICE 화면/데이터 연동 규격, 파일명은 링크 연속성을 위해 유지) · [2_business_scenarios.md](../docs_planning/2_business_scenarios.md) (교차 참조/권한 필터) · [7_chart_visualization_rules.md](../docs_design/7_chart_visualization_rules.md) (랭킹 차트)
 
-- [x] 통합 검색 대시보드 (일반 키워드 검색 — 권한 교차 필터 적용)
-- [ ] AI 검색 탭 (Gemini API 연동 — RAG/Text-to-SQL 방식 확정 필요) <!-- 탭 UI 배치 완료, 연동은 방식 확정 대기(백로그) -->
+- [x] OFFICE 대시보드 (상단 개인화 인사, 통합 검색, 워크스페이스 대표 지표 카드, 공지/자료/인사이트 게시판)
+- [x] AI 에이전트 탭 UI (자연어 검색/분석 진입점) <!-- Gemini/RAG/Text-to-SQL 실연동 방식 확정은 백로그 -->
 - [x] 전사 통합 캘린더 (4개 레이어: AC/프로젝트/펀드/사내, system_events 연동)
-- [x] 전문가 만족도 랭킹 보드 (mentor_satisfaction_records 평균 내림차순, RPC 집계)
-- [x] 임직원 프로필 디렉토리 (이메일 마스킹)
+- [x] 임직원 정보 조회 전용 탭 (MANAGEMENT 인사 데이터 동일 구조 재사용, 이메일/연락처 앱 계층 마스킹)
+- [x] 전자결재 탭 OFFICE 이관 (ApprovalTable 재사용)
+- [x] 게시판 홈 (고정 게시판: 공지사항/공용자료실, 일반 게시판: 인사이트 및 신규 생성분)
+- [ ] 회의실 예약/거래처 정보 상세 구현 <!-- 사이드바 메뉴와 준비 중 화면 골격만 존재 -->
 
 ## Phase 6. NETWORKS 워크스페이스 (마스터 원장)
 
@@ -206,6 +209,9 @@
 - [x] 백업/복구 절차 검증 (RPO 24h/RTO 4h, 분기 복구 리허설 절차 수립) <!-- infra/runbooks/restore-drill.md 복구 절차+분기 리허설 체크리스트+결과 기록 양식 -->
 - [x] 알림 채널 연동 (알림톡/SMS/이메일 프로바이더 확정 및 템플릿) <!-- _shared/notifications.ts 디스패처+템플릿 레지스트리, notifications-dispatch 함수, guest-OTP 연동, notification_logs. 프로바이더 키 주입 시 실발송 -->
 - [x] 문서 갭 해소: 배포·CI/CD 가이드 문서 작성 완료 처리 <!-- docs_dev/10_deployment_cicd_guide.md + readme_dev 인덱스 갱신 -->
+- [x] 보안 안정화 P0 일괄 조치 (12_immediate_security_stabilization_tasks.md) <!-- authStore 기본인증 제거, workspace_key office/startup 정합화(마이그레이션 2건), lint 0 error, log_sensitive_access RPC, material-download Edge Function+직접서명차단, CORS ALLOWED_ORIGINS, 알림 운영 폴백 차단, SSRF redirect 재검사, Vitest 17케이스 -->
+- [ ] 운영 CORS 차단 활성화: 운영 도메인 확정 후 `supabase secrets set ALLOWED_ORIGINS=...` 적용 (현재 미설정 유예 모드) <!-- 12번 문서 P0-6 후속 -->
+- [ ] 첨부 보안 등급(security_grade) 컬럼 설계 및 민감 파일 다운로드 사유 필수화 <!-- 12번 문서 P0-5 후속, 13번 가이드 §5 -->
 
 > _알림톡/SMS/이메일 실제 프로바이더 계약 및 AWS 계정 프로비저닝은 운영 착수 시점 과제(키 주입만으로 활성화되도록 폴백 구조 완비)._
 
@@ -215,5 +221,7 @@
 - [ ] 디자인 보강: 다크모드 정책, `prefers-reduced-motion` 대응, 폼 검증 타이밍 규칙
 - [ ] 심사 분과(Division) 그룹 배정 개념의 서면평가 모듈 도입 검토 (구버전 승계 후보)
 - [ ] Google Calendar OAuth 연동 (타임라인 2차 범위)
-- [ ] HUB AI 검색 방식 확정 (RAG vs Text-to-SQL) 및 프롬프트/보안 설계
+- [ ] OFFICE AI 에이전트 검색 방식 확정 (RAG vs Text-to-SQL) 및 프롬프트/보안 설계
+- [x] 권한 원장 정합화: 프론트 `WorkspaceKey`의 `office`/`startup`과 DB `workspace_key` enum·permission seed·ADMIN 권한 콘솔 노출 항목을 일치시키는 마이그레이션/설정 정비 <!-- 20260716130000(hub→office rename+startup 신설)·130100(시드/정책/RPC 갱신), admin config, RLS 회귀 케이스9 -->
+- [ ] 프론트 로컬 데모용 mock/dev 인증 프로바이더 분리 (authStore 기본 인증 제거 후속, 필요 시)
 - [ ] 관측성(모니터링/알림/APM) 인프라 설계

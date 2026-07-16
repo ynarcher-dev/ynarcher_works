@@ -357,14 +357,6 @@ function OrgTreeEditor({ versionId, activeVersionId, editable = true }, ref) {
         </div>
       )}
 
-      {false && editable && (
-        <div className="flex justify-end">
-          <Button size="sm" onClick={() => addChild(null)} disabled={createDept.isPending}>
-            + 최상위 조직 추가
-          </Button>
-        </div>
-      )}
-
       {/* 트리-테이블 */}
       <div className="overflow-hidden rounded-radius-md border border-gray-200 bg-white">
         <div
@@ -436,13 +428,6 @@ function OrgTreeEditor({ versionId, activeVersionId, editable = true }, ref) {
         조직명과 레벨 변경은 화면에 먼저 반영된 뒤 상단 저장 버튼으로 함께 저장됩니다. 드래그 이동,
         추가/삭제, 인력 배치는 버튼 동작 즉시 반영됩니다.
       </p>
-
-      {false && editable && (
-        <p className="text-caption text-gray-400">
-          · 드래그로 순서·소속 변경(위/아래=형제, 가운데=하위 편입), 이름 클릭해 변경, 레벨 셀렉트로 계층 지정, 인원 칩으로 인력 배치. 레벨 정의가 인사관리 컬럼이 됩니다. 모든 편집은 즉시
-          저장됩니다.
-        </p>
-      )}
 
       {editable && memberDept && (
         <DeptMemberModal

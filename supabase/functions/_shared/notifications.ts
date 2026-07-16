@@ -42,7 +42,17 @@ function render(template: string, vars: Record<string, string> = {}): string {
   return template.replace(/\{\{(\w+)\}\}/g, (_m, k) => vars[k] ?? '')
 }
 
-/** 단일 알림 발송. 프로바이더 미설정 시 콘솔 로그로 폴백(로컬/미구성 환경). */
+/** 로컬 Supabase 스택 여부(로컬만 http). 운영/호스팅 환경은 항상 https. */
+function isLocalStack(): boolean {
+  return (Deno.env.get('SUPABASE_URL') ?? '').startsWith('http://')
+}
+
+/**
+ * 단일 알림 발송.
+ * 프로바이더 미설정 시: 로컬 스택에서만 콘솔 로그 폴백을 성공으로 처리한다.
+ * 운영(https) 환경에서 키가 없으면 실패를 반환한다 — OTP 등 인증성 메시지가
+ * "발송된 척" 성공 처리되는 것을 차단한다(P1-4.3).
+ */
 export async function sendNotification(
   req: NotificationRequest,
 ): Promise<{ ok: boolean; provider: string }> {
@@ -58,8 +68,14 @@ export async function sendNotification(
         : Deno.env.get('EMAIL_API_KEY')
 
   if (!providerKey) {
-    console.log(`[notify:${req.channel}→${req.to}] ${tpl.title ?? ''} ${body}`)
-    return { ok: true, provider: 'log' }
+    if (isLocalStack()) {
+      // 로컬 개발: OTP 확인이 필요하므로 본문을 그대로 로그에 남긴다.
+      console.log(`[notify:${req.channel}→${req.to}] ${tpl.title ?? ''} ${body}`)
+      return { ok: true, provider: 'log' }
+    }
+    // 운영: OTP 원문을 로그에 남기지 않고 발송 실패로 처리한다.
+    console.error(`[notify:${req.channel}] provider key missing — dispatch failed (${req.templateCode})`)
+    return { ok: false, provider: 'none' }
   }
 
   // TODO(프로바이더 확정): 채널별 실제 API 호출 어댑터 연결.
