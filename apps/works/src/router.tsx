@@ -203,11 +203,7 @@ export const router = createBrowserRouter([
             path: 'office/managers/:id',
             element: (
               <RequireWorkspace workspace="office">
-                <EmployeeDetailPage
-                  readOnly
-                  backTo="/office?tab=managers"
-                  backLabel="임직원 정보"
-                />
+                <EmployeeDetailPage readOnly backTo="/office?tab=managers" />
               </RequireWorkspace>
             ),
           },

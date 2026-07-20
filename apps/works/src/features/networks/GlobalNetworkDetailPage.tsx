@@ -1,4 +1,4 @@
-import { Badge, Banner, Button, Spinner } from '@ynarcher/ui'
+import { BackButton, Badge, Banner, Button, Spinner } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -137,9 +137,7 @@ export function GlobalNetworkDetailPage() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <Link to={LIST_PATH} className="text-caption font-semibold text-brand hover:text-brand-600">
-          ← 글로벌 네트워크
-        </Link>
+        <BackButton as={Link} to={LIST_PATH} />
         {!isNew && !editing && <Button onClick={() => setEditing(true)}>수정</Button>}
       </div>
 

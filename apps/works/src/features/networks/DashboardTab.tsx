@@ -1,4 +1,4 @@
-import { Modal, Spinner, type BadgeTone } from '@ynarcher/ui'
+import { Modal, Spinner, Tooltip, type BadgeTone } from '@ynarcher/ui'
 import { useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -147,11 +147,9 @@ export function DashboardTab() {
   return (
     <div className="space-y-4">
       <section className="space-y-2">
-        <div className="space-y-0.5">
+        <div className="flex items-center gap-1">
           <h3 className="text-body font-semibold text-gray-800">네트워크 현황</h3>
-          <p className="text-caption text-gray-400">
-            전체 네트워크 DB 보유 현황을 구분(BAN·EXP·전문가·투자자·조직 등)별로 집계했습니다. 타일 클릭 시 해당 목록으로 이동합니다.
-          </p>
+          <Tooltip content="전체 네트워크 DB 보유 현황을 구분(BAN·EXP·전문가·투자자·조직 등)별로 집계했습니다. 타일 클릭 시 해당 목록으로 이동합니다." />
         </div>
         {summaryLoading ? (
           <div className="flex h-24 items-center justify-center"><Spinner /></div>
@@ -195,10 +193,19 @@ export function DashboardTab() {
         {tallCard(recentCard)}
       </div>
 
-      <Modal open={expanded !== null} onClose={() => setExpanded(null)} title={activeCard?.title} size="lg">
-        {activeCard?.subtitle && (
-          <p className="mb-3 text-caption text-gray-400">{activeCard.subtitle}</p>
-        )}
+      <Modal
+        open={expanded !== null}
+        onClose={() => setExpanded(null)}
+        title={
+          activeCard && (
+            <span className="inline-flex items-center gap-1">
+              {activeCard.title}
+              <Tooltip content={activeCard.subtitle} side="bottom" />
+            </span>
+          )
+        }
+        size="lg"
+      >
         {activeCard?.render(true)}
       </Modal>
     </div>

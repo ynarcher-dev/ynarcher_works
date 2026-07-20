@@ -1,4 +1,5 @@
 import {
+  BackButton,
   Badge,
   Banner,
   DataTable,
@@ -88,9 +89,7 @@ export function FundDetailPage() {
     <div className="space-y-5">
       <PageHeader
         back={
-          <Link to="/fund" className="text-caption font-semibold text-brand hover:text-brand-600">
-            ← FUND 보드
-          </Link>
+          <BackButton as={Link} to="/fund" />
         }
         title={fund.name}
       />

@@ -1,4 +1,4 @@
-import { Badge, Banner, Button, Spinner } from '@ynarcher/ui'
+import { BackButton, Badge, Banner, Button, Spinner } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -257,8 +257,6 @@ interface Props {
   readOnly?: boolean
   /** 목록/뒤로가기 경로. 기본 NETWORKS 디렉토리. */
   listPath?: string
-  /** 뒤로가기 라벨(기본 `${label} 네트워크`). */
-  backLabel?: string
 }
 
 /**
@@ -271,13 +269,11 @@ export function NetworkDetailPage({
   entity,
   readOnly = false,
   listPath: listPathProp,
-  backLabel,
 }: Props) {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const label = ENTITIES[entity].label
   const listPath = listPathProp ?? `/networks?tab=${entity}`
-  const backText = backLabel ?? `${label} 네트워크`
   const isNew = id === 'new'
   const [editing, setEditing] = useState(isNew && !readOnly)
   const { data: record, isLoading } = useEntity(entity, isNew ? undefined : id)
@@ -290,12 +286,7 @@ export function NetworkDetailPage({
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <Link
-          to={listPath}
-          className="text-caption font-semibold text-brand hover:text-brand-600"
-        >
-          ← {backText}
-        </Link>
+        <BackButton as={Link} to={listPath} />
         {!isNew && !editing && !readOnly && (
           <Button onClick={() => setEditing(true)}>수정</Button>
         )}

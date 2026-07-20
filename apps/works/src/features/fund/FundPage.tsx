@@ -1,6 +1,6 @@
-import { Badge, Button, DataTable, Spinner, PageHeader, type Column } from '@ynarcher/ui'
+import { Badge, Button, DataTable, EmptyState, Spinner, PageHeader, type Column } from '@ynarcher/ui'
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { FundFormModal } from '@/features/fund/FundFormModal'
 import { useFunds, type Fund } from '@/features/fund/hooks'
 
@@ -8,12 +8,38 @@ function won(n: number): string {
   return `${(n / 100_000_000).toLocaleString()}억`
 }
 
-/** FUND 현황 보드: 펀드 목록 + 결성/집행 요약. */
+/** 사이드바 탭 → 페이지 제목. 현황 외 항목은 메뉴만 선반영한 상태(화면 미구현). */
+const HEADINGS: Record<string, string> = {
+  dashboard: '펀드 현황',
+  mine: '내 펀드 관리',
+  ac_fund: 'AC 펀드',
+  vc_fund: 'VC 펀드',
+  pe_fund: 'PE 펀드',
+}
+
+/**
+ * FUND 워크스페이스: 펀드 현황 / 내 펀드 관리 / AC·VC·PE 펀드. 섹션 전환은 좌측 사이드바(?tab).
+ * 현재는 현황 탭만 실제 목록을 렌더링하고, 나머지는 골격만 노출한다.
+ */
 export function FundPage() {
+  const [params] = useSearchParams()
+  const tab = params.get('tab') ?? 'dashboard'
   const { data, isLoading } = useFunds()
   const [creating, setCreating] = useState(false)
   const navigate = useNavigate()
   const funds = data ?? []
+
+  if (tab !== 'dashboard') {
+    return (
+      <div className="space-y-5">
+        <PageHeader title={HEADINGS[tab] ?? HEADINGS.dashboard} />
+        <EmptyState
+          title={`${HEADINGS[tab] ?? HEADINGS.dashboard} 준비 중`}
+          description="해당 섹션은 준비 중입니다."
+        />
+      </div>
+    )
+  }
 
   const totalCommit = funds.reduce((s, f) => s + Number(f.total_commitment), 0)
   const totalDrawn = funds.reduce((s, f) => s + Number(f.drawn_amount), 0)
@@ -51,7 +77,7 @@ export function FundPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="투자 대시보드"
+        title={HEADINGS.dashboard}
         actions={<Button onClick={() => setCreating(true)}>펀드 등록</Button>}
       />
 

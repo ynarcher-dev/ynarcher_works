@@ -61,8 +61,8 @@ export const WORKSPACES: WorkspaceNavItem[] = [
     implemented: true,
     description: '수행 프로젝트 관리',
   },
-  // FUND는 같은 '투자 사업' 구획이지만 성격이 달라 위에 구분선만 둔다.
-  { key: 'fund', label: 'FUND', path: '/fund', implemented: true, divider: true, description: '펀드·투자 운용' },
+  // FUND는 같은 '투자 사업' 구획이므로 별도 구분선 없이 이어서 노출한다.
+  { key: 'fund', label: 'FUND', path: '/fund', implemented: true, description: '펀드·투자 운용' },
   // 경영·시스템 — 백오피스 및 시스템 관리
   {
     key: 'management',

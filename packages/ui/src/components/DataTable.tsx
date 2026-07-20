@@ -35,6 +35,11 @@ export interface DataTableMeta<T> {
   deactivateWithReason?: boolean
   /** 복사 버튼 텍스트 생성기. 지정 시 관리 컬럼에 복사 버튼이 노출된다. */
   copyText?: (row: T) => string
+  /**
+   * No. 칸을 대체할 표식. 반환값이 있으면 번호 대신 그 노드를 렌더한다.
+   * 상단 고정 행처럼 "순번이 의미 없는 행"을 제목 옆 배지 대신 번호 칸에서 알릴 때 쓴다.
+   */
+  rowMark?: (row: T) => ReactNode
 }
 
 export interface DataTableProps<T> {
@@ -324,7 +329,7 @@ export function DataTable<T>({
                   )}
                   {numbered && (
                     <td className={cn('border-b border-gray-200 px-3 text-right text-gray-500 tabular-nums', pad)}>
-                      {numberFrom - index}
+                      {meta?.rowMark?.(row) ?? numberFrom - index}
                     </td>
                   )}
                   {columns.map((col) => (

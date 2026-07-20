@@ -20,20 +20,16 @@ export function ProgramWorkspacePage() {
   const category = categoryFromTab(config.categories, tab)
 
   const headings: Record<string, string> = {
-    dashboard: '대시보드',
-    mine: `내 ${config.entityNoun}`,
+    dashboard: config.dashboardLabel,
+    mine: config.mineLabel,
     all: `전체 ${config.entityNoun}`,
   }
   const heading = headings[tab] ?? category?.menuLabel ?? null
 
   return (
     <div className="space-y-5">
-      {/* 대시보드는 페이지 타이틀 없이 카드부터 노출한다. 사업 목록 탭은 타이틀 하단에 구분선을 둔다. */}
-      {tab !== 'dashboard' && (
-        <div className="border-b border-gray-200 pb-4">
-          <PageHeader title={heading ?? headings.dashboard} />
-        </div>
-      )}
+      {/* 대시보드를 포함한 모든 탭이 '메뉴명 + 구분선'으로 시작한다. 구분선은 PageHeader가 그린다. */}
+      <PageHeader title={heading ?? headings.dashboard} />
 
       {tab === 'dashboard' ? (
         <ProgramDashboardTab />
@@ -52,7 +48,7 @@ export function ProgramWorkspacePage() {
         />
       ) : (
         <EmptyState
-          title={`${heading ?? '대시보드'} 준비 중`}
+          title={`${heading ?? headings.dashboard} 준비 중`}
           description="해당 섹션은 준비 중입니다."
         />
       )}

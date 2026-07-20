@@ -48,13 +48,13 @@ export function NetworksPage() {
     entity === 'others' ? '미분류 데이터베이스' : `${config.label} 네트워크`
   const heading =
     mode === 'dashboard'
-      ? '대시보드'
+      ? '네트워크 현황'
       : mode === 'global'
         ? '글로벌 네트워크'
         : mode === 'bulk'
           ? '대용량 업로드'
           : mode === 'mine'
-            ? '내 네트워크'
+            ? '내 네트워크 관리'
             : directoryHeading
 
   const searchField = mode === 'directory' || mode === 'global' ? (
@@ -76,8 +76,11 @@ export function NetworksPage() {
 
   return (
     <div className="space-y-5">
-      {/* 대시보드는 페이지 타이틀 없이 카드부터 노출한다(검색·액션도 없음). */}
-      {mode !== 'dashboard' && (
+      {/* 대시보드를 포함한 모든 모드가 '메뉴명 + 구분선'으로 시작한다.
+          단, 대시보드에는 검색·액션 컨트롤이 없으므로 제목만 노출한다. */}
+      {mode === 'dashboard' ? (
+        <PageHeader title={heading} />
+      ) : (
         <PageHeader title={heading} search={searchField} actions={actions} />
       )}
 

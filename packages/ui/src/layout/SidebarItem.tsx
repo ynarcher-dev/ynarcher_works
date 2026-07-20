@@ -34,7 +34,7 @@ export function SidebarItem({
         collapsed ? 'h-10 justify-center px-0 py-0' : 'gap-2.5 px-3.5 py-2.5',
         active
           ? 'bg-white text-brand shadow-soft'
-          : 'text-white/90 hover:bg-white/10 hover:text-white',
+          : 'text-white hover:bg-white/15',
       )}
     >
       {/* 좌측 세로 인디케이터 바 */}

@@ -3,10 +3,14 @@ import { Navigate, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '@/auth/authStore'
 import { ApprovalTable } from '@/features/approval/ApprovalTable'
 import { AiAgentPanel } from '@/features/hub/AiAgentPanel'
+import { ArchiveWorkspace } from '@/features/hub/ArchiveWorkspace'
 import { BoardWorkspace } from '@/features/hub/BoardWorkspace'
 import { CalendarPanel } from '@/features/hub/CalendarPanel'
 import { DashboardPanel } from '@/features/hub/DashboardPanel'
+import { NoticeWorkspace } from '@/features/hub/NoticeWorkspace'
+import { NOTICE_TAB } from '@/features/hub/boardPostStore'
 import { useBoardStore } from '@/features/hub/boardStore'
+import { DepartmentsPanel } from '@/features/management/panels/DepartmentsPanel'
 import { OfficeManagersPanel } from '@/features/office/OfficeManagersPanel'
 
 /** 페이지 골격만 있는 준비 중 메뉴(탭 → 제목). */
@@ -14,6 +18,8 @@ const PLACEHOLDER_TITLES: Record<string, string> = {
   rooms: '회의실 예약',
   // 거래처 정보: 전자결재 워크스페이스에서 이관, 세부 기능은 후속 작업(골격만).
   clients: '거래처 정보',
+  // 지사 정보: 원장 화면인 MANAGEMENT '지사 관리'가 아직 준비 중이라 함께 골격만 노출한다.
+  branches: '지사 정보',
 }
 
 /**
@@ -31,17 +37,37 @@ export function OfficePage() {
   // 탭 미지정 시 최상단 대시보드로 정규화(사이드바 활성 상태와 URL 동기화).
   if (!tab) return <Navigate to="/office?tab=dashboard" replace />
 
-  // 게시판 탭(고정·일반 모두)은 자체 헤더(검색·글쓰기)를 가진 BoardWorkspace가 담당한다.
-  const board = boards.find((b) => b.tab === tab && b.active)
+  // 공지사항은 게시판이 아니라 전체 공지 게시글을 모아 보여주는 뷰다(레지스트리와 무관).
+  if (tab === NOTICE_TAB) {
+    return (
+      <div className="flex h-full flex-col">
+        <NoticeWorkspace />
+      </div>
+    )
+  }
+
+  // 게시 탭은 종류에 따라 화면이 갈린다.
+  // 게시판(POST)=상세페이지가 있는 BoardWorkspace / 자료실(ARCHIVE)=즉시 다운로드 목록.
+  const board = boards.find((b) => b.slug === tab && b.isActive)
   if (board) {
     return (
       <div className="flex h-full flex-col">
-        <BoardWorkspace
-          key={board.tab}
-          boardTab={board.tab}
-          title={board.label}
-          authorName={userName}
-        />
+        {board.kind === 'ARCHIVE' ? (
+          <ArchiveWorkspace
+            key={board.slug}
+            boardSlug={board.slug}
+            title={board.label}
+            authorName={userName}
+          />
+        ) : (
+          <BoardWorkspace
+            key={board.slug}
+            boardSlug={board.slug}
+            title={board.label}
+            authorName={userName}
+            initialPostId={params.get('post') ?? undefined}
+          />
+        )}
       </div>
     )
   }
@@ -61,10 +87,27 @@ export function OfficePage() {
 
   return (
     <div className="flex h-full flex-col gap-5">
-      {/* 대시보드·AI 에이전트: HUB에서 이관(자체 헤더 보유 → PageHeader 생략). */}
-      {tab === 'dashboard' && <DashboardPanel />}
-      {tab === 'ai' && <AiAgentPanel />}
+      {/* 대시보드·AI 에이전트: HUB에서 이관. 다른 메뉴와 마찬가지로 '메뉴명 + 구분선'으로 시작한다. */}
+      {tab === 'dashboard' && (
+        <>
+          <PageHeader title="대시보드" />
+          <DashboardPanel />
+        </>
+      )}
+      {tab === 'ai' && (
+        <>
+          <PageHeader title="AI 에이전트" />
+          <AiAgentPanel />
+        </>
+      )}
       {tab === 'managers' && <OfficeManagersPanel />}
+      {/* 부서 정보: MANAGEMENT 조직 관리와 같은 조직도를 조회 전용으로 재사용한다. */}
+      {tab === 'departments' && (
+        <>
+          <PageHeader title="부서 정보" />
+          <DepartmentsPanel readOnly />
+        </>
+      )}
       {tab === 'calendar' && (
         <>
           <PageHeader title="전사 캘린더" />

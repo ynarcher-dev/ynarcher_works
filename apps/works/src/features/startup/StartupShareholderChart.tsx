@@ -55,7 +55,7 @@ export function StartupShareholderChart({ shareholders }: { shareholders: Shareh
             stroke="#FFFFFF"
             strokeWidth={2}
             label={({ name, value }) => `${name} ${Number(value).toFixed(1)}%`}
-            labelLine={{ stroke: '#D4D4D4' }}
+            labelLine={{ stroke: '#CBD0D8' }}
           >
             {slices.map((_, i) => (
               <Cell key={i} fill={SLICE_COLORS[i % SLICE_COLORS.length]} />
@@ -64,7 +64,7 @@ export function StartupShareholderChart({ shareholders }: { shareholders: Shareh
           <Tooltip
             contentStyle={{
               borderRadius: 8,
-              border: '1px solid #E5E5E5',
+              border: '1px solid #DFE2E7',
               boxShadow: '0 8px 20px rgba(0,0,0,0.06)',
               fontSize: 12,
             }}

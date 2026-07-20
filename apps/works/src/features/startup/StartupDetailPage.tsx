@@ -1,4 +1,4 @@
-import { Badge, Banner, Button, Spinner } from '@ynarcher/ui'
+import { BackButton, Badge, Banner, Button, Spinner } from '@ynarcher/ui'
 import { useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
@@ -97,12 +97,7 @@ export function StartupDetailPage() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <Link
-          to="/startup?tab=discovered"
-          className="text-caption font-semibold text-brand hover:text-brand-600"
-        >
-          ← 발굴기업
-        </Link>
+        <BackButton as={Link} to="/startup?tab=discovered" />
         {!editing && canEdit && <Button onClick={() => setEditing(true)}>수정</Button>}
         {!editing && !canEdit && (
           <span className="text-caption text-gray-400">지정 담당자만 수정할 수 있습니다.</span>

@@ -41,6 +41,8 @@ export { PhotoBox } from './components/PhotoBox'
 export type { PhotoBoxProps, PhotoBoxSize } from './components/PhotoBox'
 export { TextAction } from './components/TextAction'
 export type { TextActionProps } from './components/TextAction'
+export { BackButton } from './components/BackButton'
+export type { BackButtonProps } from './components/BackButton'
 export { DashedAddButton } from './components/DashedAddButton'
 export type { DashedAddButtonProps } from './components/DashedAddButton'
 
@@ -54,6 +56,8 @@ export { Modal } from './components/Modal'
 export type { ModalSize } from './components/Modal'
 export { Drawer } from './components/Drawer'
 export { Dropdown, DropdownItem } from './components/Dropdown'
+export { Tooltip } from './components/Tooltip'
+export type { TooltipProps, TooltipSide } from './components/Tooltip'
 
 // 피드백
 export { Banner } from './components/Banner'

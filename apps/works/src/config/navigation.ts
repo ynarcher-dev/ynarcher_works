@@ -15,11 +15,12 @@ export interface SubNavItem {
   /** 하위 항목(아코디언). 지정 시 이 항목은 펼침/접힘 그룹 헤더가 된다. */
   children?: SubNavItem[]
   /**
-   * 하위 항목을 런타임 스토어에서 주입(둘 다 아코디언 없이 상위 단독 항목으로 평탄 나열).
-   * - 'boards': 일반 게시판 레지스트리(고정 게시판 제외) — OFFICE에 노출
-   * - 'pinnedBoards': 고정 게시판(예: 공지사항) — HUB에 노출
+   * 하위 항목을 런타임 게시판 레지스트리에서 주입(아코디언 없이 상위 단독 항목으로 평탄 나열).
+   * 그룹핑 축은 게시 종류(kind) 하나다 — 설계: docs/docs_planning/3_1_1_board_archive_notice.md
+   * - 'boards': 게시판(kind = POST)
+   * - 'archives': 자료실(kind = ARCHIVE)
    */
-  dynamicKey?: 'boards' | 'pinnedBoards'
+  dynamicKey?: 'boards' | 'archives'
   /** 동적 항목의 아이콘 키(boardIcons.ts). 지정 시 tab 기반 매핑보다 우선한다. */
   iconKey?: string
   /** 이 항목 위에 같은 그룹 내 구분선을 그린다(그룹은 유지한 채 항목 사이만 시각적으로 나눌 때). */
@@ -34,7 +35,8 @@ export interface SubNavGroup {
 
 /**
  * 사업 워크스페이스(AC/M&A/PROJECT) 공용 사이드바 구성.
- * 대시보드 → 내 ~ → 사업구분(카테고리)별 항목 순으로 나열한다.
+ * 현황 → 내 ~ 관리 → 사업구분(카테고리)별 항목 순으로 나열한다.
+ * 앞 두 항목 라벨은 워크스페이스마다 다르므로(예: M&A는 `딜 현황`/`내 딜 관리`) 인자로 받는다.
  * 카테고리 항목의 `tab`은 소문자 카테고리 값이며(예: `pe_fund`), ProgramWorkspacePage가
  * 이를 목록의 category 스코프로 해석한다.
  *
@@ -43,14 +45,15 @@ export interface SubNavGroup {
  * 다만 `?tab=all`은 상세 뒤로가기 폴백·기존 북마크를 위해 페이지 쪽에서 계속 처리한다.
  */
 function programSubnav(
-  entityNoun: string,
+  dashboardLabel: string,
+  mineLabel: string,
   categories: readonly ProgramCategoryOption[],
 ): SubNavGroup[] {
   return [
     {
       items: [
-        { label: '대시보드', tab: 'dashboard' },
-        { label: `내 ${entityNoun}`, tab: 'mine', dividerBefore: true },
+        { label: dashboardLabel, tab: 'dashboard' },
+        { label: mineLabel, tab: 'mine', dividerBefore: true },
         ...categories.map((c, i) => ({
           label: c.menuLabel,
           tab: categoryTab(c.value),
@@ -70,9 +73,9 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
   startup: [
     {
       items: [
-        { label: '대시보드', tab: 'dashboard' },
+        { label: '기업 현황', tab: 'dashboard' },
         // 구분 무관, 담당자(startup_managers) 또는 등록자가 나인 기업.
-        { label: '내 관리기업', tab: 'mine', dividerBefore: true },
+        { label: '내 기업 관리', tab: 'mine', dividerBefore: true },
         // 투자/보육/발굴/기타 4분류. 발굴기업이 기존 스타트업 마스터 디렉토리.
         { label: '투자기업', tab: 'invested', dividerBefore: true },
         { label: '보육기업', tab: 'incubated' },
@@ -87,9 +90,9 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
   networks: [
     {
       items: [
-        { label: '대시보드', tab: 'dashboard' },
+        { label: '네트워크 현황', tab: 'dashboard' },
         // 종류 무관, 내가 등록·편집·병합에 관여한(entity_contributions) 네트워크 통합 목록.
-        { label: '내 네트워크', tab: 'mine', dividerBefore: true },
+        { label: '내 네트워크 관리', tab: 'mine', dividerBefore: true },
       ],
     },
     {
@@ -115,10 +118,22 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       ],
     },
   ],
-  ac: programSubnav('사업', AC_CATEGORIES),
-  fund: [{ group: 'FUND 메인', items: [{ label: '투자 대시보드' }] }],
+  ac: programSubnav('사업 현황', '내 사업 관리', AC_CATEGORIES),
+  // FUND: 현황 → 내 펀드 → 펀드 종류(AC/VC/PE) 순. 종류별 화면은 메뉴만 선반영한 상태.
+  fund: [
+    {
+      items: [
+        { label: '펀드 현황', tab: 'dashboard' },
+        // 운용역(담당자) 또는 등록자가 나인 펀드.
+        { label: '내 펀드 관리', tab: 'mine', dividerBefore: true },
+        { label: 'AC 펀드', tab: 'ac_fund', dividerBefore: true },
+        { label: 'VC 펀드', tab: 'vc_fund' },
+        { label: 'PE 펀드', tab: 'pe_fund' },
+      ],
+    },
+  ],
   // M&A/PE는 AC와 동일한 사업 원장 구조(features/program)를 공유한다.
-  mna: programSubnav('프로젝트', MNA_CATEGORIES),
+  mna: programSubnav('딜 현황', '내 딜 관리', MNA_CATEGORIES),
   admin: [
     {
       group: '시스템 관리',
@@ -142,7 +157,7 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
     },
   ],
   // PROJECT도 AC와 동일한 사업 원장 구조(features/program)를 공유한다.
-  project: programSubnav('프로젝트', PROJECT_CATEGORIES),
+  project: programSubnav('프로젝트 현황', '내 프로젝트 관리', PROJECT_CATEGORIES),
   // OFFICE: 임직원 정보·전사 캘린더 + 게시판(공지사항 고정 + 일반, 아코디언 없이 평탄 나열).
   // 신규 게시판은 모두 이곳에 생성·노출된다.
   office: [
@@ -151,31 +166,38 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         // HUB에서 이관한 대시보드·AI 에이전트를 최상단에 배치.
         { label: '대시보드', tab: 'dashboard' },
         { label: 'AI 에이전트', tab: 'ai' },
+        // 전사 인적·조직 정보 블록(조회 전용). 원장은 MANAGEMENT가 갖고 OFFICE는 확인만 한다.
         { label: '임직원 정보', tab: 'managers', dividerBefore: true },
-        { label: '전사 캘린더', tab: 'calendar' },
+        { label: '부서 정보', tab: 'departments' },
+        { label: '지사 정보', tab: 'branches' },
+        // 위 인적·조직 블록을 떼어내는 구분선.
+        { label: '전사 캘린더', tab: 'calendar', dividerBefore: true },
         { label: '회의실 예약', tab: 'rooms' },
-        // 전자결재 워크스페이스에서 통합 이관. 회의실 예약과 공지사항(고정 게시판) 사이에 배치하며,
-        // 아래 고정 게시판 그룹 경계가 이 두 항목과 공지사항을 구분선으로 나눈다.
-        { label: '전자결재', tab: 'approval' },
+        // 전자결재 워크스페이스에서 통합 이관. 일정·공간 예약(캘린더·회의실)과 결재·거래처를
+        // 구분선으로 나눈다. 아래 고정 게시판 그룹 경계가 이 블록과 공지사항을 다시 나눈다.
+        { label: '전자결재', tab: 'approval', dividerBefore: true },
         { label: '거래처 정보', tab: 'clients' },
       ],
     },
     {
-      // 고정 게시판(공지사항·공용자료실) — 상단 참조 영역으로 구분선 분리.
-      group: '고정 게시판',
-      items: [{ label: '고정 게시판', dynamicKey: 'pinnedBoards' }],
-    },
-    {
-      // 일반 게시판(인사이트·신규 생성분).
-      group: '게시판',
-      items: [{ label: '게시판', dynamicKey: 'boards' }],
+      // 게시 블록(위 업무 블록과는 그룹 경계 구분선으로만 나눈다).
+      // 공지사항은 게시판이 아니라 전체 공지(global_notice) 게시글을 모아 보여주는 뷰이며,
+      // 레지스트리와 무관한 고정 라우트이므로 dynamicKey 없이 단독 항목으로 둔다.
+      // 게시판(POST)·자료실(ARCHIVE)은 각각 상위 메뉴 한 줄로 두고, 클릭하면 우측 플라이아웃에
+      // 등록된 목록을 펼친다. 게시판이 늘어나도 사이드바가 길어지지 않는다.
+      group: '게시',
+      items: [
+        { label: '공지사항', tab: 'notices', iconKey: 'megaphone' },
+        { label: '게시판', dynamicKey: 'boards' },
+        { label: '자료실', dynamicKey: 'archives' },
+      ],
     },
   ],
   management: [
     {
       group: '경영지원',
       items: [
-        { label: '대시보드', tab: 'dashboard' },
+        { label: '경영 현황', tab: 'dashboard' },
         { label: '조직 관리', tab: 'departments', dividerBefore: true },
         { label: '지사 관리', tab: 'branches' },
         { label: '직책 관리', tab: 'positions' },

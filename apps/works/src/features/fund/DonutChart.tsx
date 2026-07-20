@@ -4,13 +4,13 @@ export interface DonutSegment {
 }
 
 const COLORS = [
-  '#E22213',
-  '#1D4ED8',
+  '#1F3A5F',
+  '#B91C1C',
   '#166534',
   '#92400E',
-  '#737373',
-  '#B31A0F',
-  '#A3A3A3',
+  '#5B6371',
+  '#152944',
+  '#6E7683',
 ]
 
 const R = 40

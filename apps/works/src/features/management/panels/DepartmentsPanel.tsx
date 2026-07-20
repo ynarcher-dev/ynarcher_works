@@ -10,7 +10,16 @@ import { OrgReformModal } from '@/features/management/panels/OrgReformModal'
 import { OrgTreeEditor, type OrgTreeEditorHandle } from '@/features/management/panels/OrgTreeEditor'
 import { OrgVersionBar } from '@/features/management/panels/OrgVersionBar'
 
-export function DepartmentsPanel() {
+export interface DepartmentsPanelProps {
+  /**
+   * 조회 전용(OFFICE 진입). 편집·개편·버전 삭제 진입점을 감추고 조직도만 보여준다.
+   * 원장과 실제 쓰기 권한은 MANAGEMENT가 갖는다 — 여기서 숨기는 것은 화면 정리 목적이며,
+   * 권한 강제는 서버(RLS/RPC)가 담당한다.
+   */
+  readOnly?: boolean
+}
+
+export function DepartmentsPanel({ readOnly = false }: DepartmentsPanelProps = {}) {
   const { data: versionRows, isLoading: versionLoading } = useOrgVersions()
   const versions = useMemo(() => versionRows ?? [], [versionRows])
   const activeVersionId = useMemo(() => activeOrgVersionId(versions), [versions])
@@ -64,11 +73,11 @@ export function DepartmentsPanel() {
           activeId={activeVersionId}
           onSelect={selectVersion}
           showClone={false}
-          onDelete={deleteVersion}
+          onDelete={readOnly ? undefined : deleteVersion}
           deleting={updateVersion.isPending}
         />
         <div className="flex items-center gap-2 pt-0.5">
-          {editMode ? (
+          {readOnly ? null : editMode ? (
             <>
               <Button size="sm" onClick={() => void saveEdit()}>
                 저장
@@ -90,7 +99,8 @@ export function DepartmentsPanel() {
         </div>
       </div>
 
-      {!editMode && (
+      {/* 편집 안내문은 편집 권한이 있는 MANAGEMENT에서만 노출한다. */}
+      {!readOnly && !editMode && (
         <p className="rounded-radius-md border border-gray-200 bg-gray-25 px-3 py-2 text-caption text-gray-500">
           조회 모드입니다. 운영 중인 조직을 즉시 수정하려면 직접 편집을 사용하고, 예정 조직은 조직 개편에서 설계하세요.
         </p>
@@ -100,7 +110,7 @@ export function DepartmentsPanel() {
         ref={editorRef}
         versionId={versionId}
         activeVersionId={activeVersionId}
-        editable={editMode}
+        editable={!readOnly && editMode}
       />
 
       <Modal

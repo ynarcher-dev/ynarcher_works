@@ -11,7 +11,7 @@
 | **모바일 UI/UX 기획** | [1_ui_ux_mobile.md](./1_ui_ux_mobile.md) | 모바일 해상도 적응(Reflow) 규칙, 모바일 특화 제어 요소(터치/스와이프) 기획 | 작성 완료 |
 | **공통 레이아웃 및 내비게이션** | [2_app_layout_navigation.md](./2_app_layout_navigation.md) | 상단바 서비스 전환 드롭다운 및 좌측 사이드바 동적 전환 규칙 | 작성 완료 |
 | **타이포그래피 및 폰트 규칙** | [3_typography_rules.md](./3_typography_rules.md) | 폰트 패밀리(Pretendard), 타이포 스케일, 웨이트 및 텍스트 컬러 위계 정의 | 작성 완료 |
-| **브랜드 컬러 시스템 규칙** | [4_color_system_rules.md](./4_color_system_rules.md) | CI Red, 기본 무채색 가이드 및 KWCAG 준수 4종 상태 신호색 사양 | 작성 완료 |
+| **브랜드 컬러 시스템 규칙** | [4_color_system_rules.md](./4_color_system_rules.md) | 브랜드 네이비(액센트)·CI Red(로고 전용) 구분, 기본 무채색 가이드 및 KWCAG 준수 4종 상태 신호색 사양 | 작성 완료 |
 | **공통 컴포넌트 표준 규격** | [5_component_spec_rules.md](./5_component_spec_rules.md) | 글로벌 토큰(Radius, Shadow), 조작 컨트롤, 데이터 테이블 및 모달 명세 | 작성 완료 |
 | **인터랙션 모션 및 트랜지션** | [6_motion_transition_rules.md](./6_motion_transition_rules.md) | 애니메이션 속도(Duration) 및 가속도(Easing) 글로벌 토큰 정의 | 작성 완료 |
 | **차트 및 데이터 시각화 컬러** | [7_chart_visualization_rules.md](./7_chart_visualization_rules.md) | 다중 계열 차트 범주형 컬러, 그리드, 범례 및 툴팁 시각 스펙 | 작성 완료 |

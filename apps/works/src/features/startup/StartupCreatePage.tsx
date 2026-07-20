@@ -1,4 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
+import { BackButton } from '@ynarcher/ui'
 import { StartupDetailForm } from '@/features/startup/StartupDetailForm'
 
 /**
@@ -11,12 +12,7 @@ export function StartupCreatePage() {
 
   return (
     <div className="space-y-5">
-      <Link
-        to="/startup?tab=discovered"
-        className="text-caption font-semibold text-brand hover:text-brand-600"
-      >
-        ← 발굴기업
-      </Link>
+      <BackButton as={Link} to="/startup?tab=discovered" />
 
       <StartupDetailForm
         onDone={(id) => navigate(`/startup/discovered/${id}`)}

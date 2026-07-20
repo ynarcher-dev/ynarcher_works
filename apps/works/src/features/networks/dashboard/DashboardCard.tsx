@@ -1,8 +1,8 @@
-import { Button } from '@ynarcher/ui'
+import { Button, Tooltip } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 
 /**
- * 대시보드 섹션 셸. '네트워크 현황'과 동일하게 제목·부제는 배경 위에 두고,
+ * 대시보드 섹션 셸. 제목은 배경 위에 두고 설명(`subtitle`)은 제목 옆 툴팁 아이콘 호버로 노출하며,
  * 본문은 고정 높이 카드(내부 스크롤)에 담는다. `onExpand` 지정 시 하단에 전체보기 버튼을 노출한다.
  * `compact` 지정 시 카드 높이를 낮춰(12rem) 첫 화면에 더 많은 카드가 들어오게 한다(대시보드 밀도용).
  * `bodyH` 지정 시 임의의 고정 높이(예: `h-[10.5rem]`)로 덮어써 카드를 더 촘촘히 줄인다(compact/기본보다 우선).
@@ -31,13 +31,9 @@ export function DashboardCard({
   const boxHeight = fill ? 'min-h-[16rem] flex-1' : (bodyH ?? (compact ? 'h-[12rem]' : 'h-[23rem]'))
   return (
     <section className={`space-y-2${fill ? ' flex h-full flex-col' : ''}${className ? ` ${className}` : ''}`}>
-      <div className="space-y-0.5">
+      <div className="flex items-center gap-1">
         <h3 className="text-body font-semibold text-gray-800">{title}</h3>
-        {subtitle && (
-          <p className="truncate text-caption text-gray-400" title={subtitle}>
-            {subtitle}
-          </p>
-        )}
+        <Tooltip content={subtitle} />
       </div>
       <div
         className={`flex ${boxHeight} flex-col rounded-radius-md border border-gray-300 bg-white p-4`}

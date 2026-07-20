@@ -83,6 +83,9 @@
 - [x] 임직원 정보 조회 전용 탭 (MANAGEMENT 인사 데이터 동일 구조 재사용, 이메일/연락처 앱 계층 마스킹)
 - [x] 전자결재 탭 OFFICE 이관 (ApprovalTable 재사용)
 - [x] 게시판 홈 (고정 게시판: 공지사항/공용자료실, 일반 게시판: 인사이트 및 신규 생성분)
+- [x] 게시판·자료실 구조 재편 + 스키마 신설 — [3_1_1](../docs_planning/3_1_1_board_archive_notice.md) <!-- 마이그레이션 20260720200000_office_boards: board_kind(POST/ARCHIVE)·board_scope enum, boards/board_posts 신설(RLS 분리 정책 + app.can_read/write/notice_board 헬퍼 + 시스템 게시판 가드·작성자 스탬프 트리거), 자료실 전체공지 금지 CHECK(board_kind 비정규화), 기본 3종 시드(전사 알림·인사이트·공용자료실). 프론트: 공지사항을 게시판이 아닌 globalNotice 조회 뷰(NoticeWorkspace)로 재정의해 크로스포스트 사본 폐기, ArchiveWorkspace 신설(상세페이지 없이 1행=1파일 즉시 다운로드), 사이드바 kind 기반 3블록(공지사항/게시판/자료실), pinned=게시판 내 고정과 globalNotice 분리, BoardAdminPanel 구분 선택 추가. tsc/vite build 통과 -->
+- [ ] 게시판·자료실 DB 실연동 (boards/board_posts 조회·작성 훅, 첨부 Storage 업로드, material-download 경유 다운로드) <!-- 현행 프론트는 zustand 인메모리 데모. 스키마·설계는 3_1_1로 확정됨 -->
+- [ ] 게시판 권한 범위 DEPT 구현 (board_scope='DEPT' + board_departments 연결 테이블) <!-- 이번 마이그레이션에서는 enum 값만 예약, 정책 분기 없음(admin 외 차단) -->
 - [ ] 회의실 예약/거래처 정보 상세 구현 <!-- 사이드바 메뉴와 준비 중 화면 골격만 존재 -->
 
 ## Phase 6. NETWORKS 워크스페이스 (마스터 원장)

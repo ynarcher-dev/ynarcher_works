@@ -18,7 +18,7 @@ export function Select({ invalid, className, children, ...props }: SelectProps) 
           'focus-visible:outline-none focus-visible:border-brand/50 focus-visible:shadow-popover',
           'disabled:cursor-not-allowed disabled:border-gray-100 disabled:bg-gray-50 disabled:text-gray-400 disabled:shadow-none',
           invalid
-            ? 'border-brand-700 bg-danger-subtle hover:border-brand-700 focus-visible:border-brand-700 focus-visible:shadow-popover'
+            ? 'border-danger-700 bg-danger-subtle hover:border-danger-700 focus-visible:border-danger-700 focus-visible:shadow-popover'
             : '',
           className,
         )}

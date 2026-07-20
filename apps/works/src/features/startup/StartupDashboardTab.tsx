@@ -1,4 +1,4 @@
-import { Modal, Spinner } from '@ynarcher/ui'
+import { Modal, Spinner, Tooltip } from '@ynarcher/ui'
 import { useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { EntityRow } from '@/features/networks/hooks'
@@ -138,11 +138,9 @@ export function StartupDashboardTab() {
   return (
     <div className="space-y-4">
       <section className="space-y-2">
-        <div className="space-y-0.5">
+        <div className="flex items-center gap-1">
           <h3 className="text-body font-semibold text-gray-800">일반현황</h3>
-          <p className="text-caption text-gray-400">
-            전체 보유 기업을 구분(투자·보육·발굴·기타)별로 집계했습니다. 타일 클릭 시 해당 목록으로 이동합니다.
-          </p>
+          <Tooltip content="전체 보유 기업을 구분(투자·보육·발굴·기타)별로 집계했습니다. 타일 클릭 시 해당 목록으로 이동합니다." />
         </div>
         {summaryLoading ? (
           <div className="flex h-24 items-center justify-center"><Spinner /></div>
@@ -152,11 +150,9 @@ export function StartupDashboardTab() {
       </section>
 
       <section className="space-y-2">
-        <div className="space-y-0.5">
+        <div className="flex items-center gap-1">
           <h3 className="text-body font-semibold text-gray-800">투자기업 현황</h3>
-          <p className="text-caption text-gray-400">
-            투자 포트폴리오 핵심 지표 영역입니다(지표 정의 예정).
-          </p>
+          <Tooltip content="투자 포트폴리오 핵심 지표 영역입니다(지표 정의 예정)." />
         </div>
         <StatusPlaceholderGrid count={5} />
       </section>
@@ -178,8 +174,19 @@ export function StartupDashboardTab() {
         </DashboardCard>
       </div>
 
-      <Modal open={expanded !== null} onClose={() => setExpanded(null)} title={activeCard?.title} size="lg">
-        {activeCard?.subtitle && <p className="mb-3 text-caption text-gray-400">{activeCard.subtitle}</p>}
+      <Modal
+        open={expanded !== null}
+        onClose={() => setExpanded(null)}
+        title={
+          activeCard && (
+            <span className="inline-flex items-center gap-1">
+              {activeCard.title}
+              <Tooltip content={activeCard.subtitle} side="bottom" />
+            </span>
+          )
+        }
+        size="lg"
+      >
         {activeCard?.render(true)}
       </Modal>
     </div>

@@ -6,8 +6,8 @@ import { StartupDashboardTab } from '@/features/startup/StartupDashboardTab'
 import { TAB_TO_STATUS } from '@/features/startup/startupClassification'
 
 const HEADINGS: Record<string, string> = {
-  dashboard: '대시보드',
-  mine: '내 관리기업',
+  dashboard: '기업 현황',
+  mine: '내 기업 관리',
   invested: '투자기업',
   incubated: '보육기업',
   discovered: '발굴기업',
@@ -32,8 +32,8 @@ export function StartupPage() {
   // 검색창·필터·등록 버튼은 모두 StartupPoolTab의 컨트롤 행이 소유한다.
   return (
     <div className="space-y-5">
-      {/* 대시보드는 페이지 타이틀 없이 카드부터 노출한다. */}
-      {tab !== 'dashboard' && <PageHeader title={HEADINGS[tab] ?? HEADINGS.dashboard} />}
+      {/* 대시보드를 포함한 모든 탭이 '메뉴명 + 구분선'으로 시작한다. */}
+      <PageHeader title={HEADINGS[tab] ?? HEADINGS.dashboard} />
 
       {tab === 'mine' ? (
         <StartupPoolTab key="mine" category={null} mineUserId={userId ?? null} />
@@ -43,7 +43,7 @@ export function StartupPage() {
         <StartupDashboardTab />
       ) : (
         <EmptyState
-          title={`${HEADINGS[tab] ?? '대시보드'} 준비 중`}
+          title={`${HEADINGS[tab] ?? HEADINGS.dashboard} 준비 중`}
           description="해당 섹션은 준비 중입니다."
         />
       )}

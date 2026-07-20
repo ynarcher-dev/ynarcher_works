@@ -20,7 +20,7 @@ export function InlineSelect({ invalid, className, children, ...props }: InlineS
           'hover:border-gray-400',
           'focus-visible:outline-none focus-visible:border-brand/50 focus-visible:shadow-popover',
           'disabled:cursor-not-allowed disabled:border-gray-100 disabled:bg-gray-50 disabled:text-gray-400',
-          invalid ? 'border-brand-700 focus-visible:border-brand-700 focus-visible:shadow-popover' : '',
+          invalid ? 'border-danger-700 focus-visible:border-danger-700 focus-visible:shadow-popover' : '',
           className,
         )}
         {...props}

@@ -19,6 +19,13 @@ export interface WorkspaceSwitcherProps {
   options: WorkspaceOption[]
   current: string
   onSelect: (key: string) => void
+  /**
+   * 배치 맥락. `topbar`는 밝은 상단바용 인라인 텍스트 버튼,
+   * `sidebar`는 어두운 사이드바 배경에 놓이는 전체 폭 컨트롤이다.
+   */
+  variant?: 'topbar' | 'sidebar'
+  /** sidebar variant 전용. 사이드바가 접힌 상태에서는 워크스페이스 첫 글자만 노출한다. */
+  collapsed?: boolean
 }
 
 /**
@@ -29,30 +36,66 @@ export function WorkspaceSwitcher({
   options,
   current,
   onSelect,
+  variant = 'topbar',
+  collapsed = false,
 }: WorkspaceSwitcherProps) {
   const [open, setOpen] = useState(false)
   const currentLabel =
     options.find((o) => o.key === current)?.label ?? current
+  const isSidebar = variant === 'sidebar'
 
   return (
     <Dropdown
       open={open}
       onClose={() => setOpen(false)}
-      align="center"
+      align={isSidebar ? 'left' : 'center'}
+      placement={isSidebar ? 'right-start' : 'bottom'}
+      block={isSidebar}
+      // 사이드바 컨테이너의 좌우 패딩(px-2 = 8px)을 상쇄해 바깥 테두리에서 6px 띄운다.
+      // (기본 ml-1.5만 쓰면 패널이 사이드바에 걸쳐 보인다.)
+      className={isSidebar ? 'ml-3.5' : undefined}
       trigger={
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          className="inline-flex items-center gap-1.5 rounded-radius-md px-2 py-1 text-body-lg font-semibold text-gray-900 transition-colors duration-fast hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10"
-        >
-          {currentLabel}
-          <span
-            aria-hidden
-            className={`text-caption text-gray-400 transition-transform duration-fast ${open ? 'rotate-180' : ''}`}
+        isSidebar ? (
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-label="워크스페이스 전환"
+            title={collapsed ? currentLabel : undefined}
+            className={`flex w-full items-center rounded-radius-md border border-white/20 bg-white/10 text-body font-bold text-white transition-colors duration-fast hover:bg-white/20 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/20 ${
+              // 접힘 시 사이드바 메뉴 항목과 동일한 h-10 규격으로 맞춘다.
+              collapsed
+                ? 'h-10 justify-center px-0'
+                : 'justify-between gap-1.5 px-3 py-2'
+            }`}
           >
-            ▼
-          </span>
-        </button>
+            <span className="min-w-0 truncate">
+              {collapsed ? currentLabel.charAt(0) : currentLabel}
+            </span>
+            {/* 메뉴가 오른쪽 옆으로 펼쳐지므로 화살표도 좌우 방향을 가리킨다(열리면 반대쪽). */}
+            {!collapsed && (
+              <span
+                aria-hidden
+                className={`shrink-0 text-caption text-white/70 transition-transform duration-fast ${open ? 'rotate-180' : ''}`}
+              >
+                ▶
+              </span>
+            )}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className="inline-flex items-center gap-1.5 rounded-radius-md px-2 py-1 text-body-lg font-semibold text-gray-900 transition-colors duration-fast hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10"
+          >
+            {currentLabel}
+            <span
+              aria-hidden
+              className={`text-caption text-gray-400 transition-transform duration-fast ${open ? 'rotate-180' : ''}`}
+            >
+              ▼
+            </span>
+          </button>
+        )
       }
     >
       {options.map((opt, idx) => {

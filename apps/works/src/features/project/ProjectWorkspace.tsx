@@ -12,6 +12,8 @@ export const PROJECT_WORKSPACE: ProgramWorkspaceConfig = {
   key: 'project',
   basePath: '/project',
   entityNoun: '프로젝트',
+  dashboardLabel: '프로젝트 현황',
+  mineLabel: '내 프로젝트 관리',
   tables: {
     programs: 'project_programs',
     modules: 'project_program_modules',

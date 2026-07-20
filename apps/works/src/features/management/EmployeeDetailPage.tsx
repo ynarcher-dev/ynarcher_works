@@ -1,4 +1,4 @@
-import { Badge, Banner, Button, Spinner } from '@ynarcher/ui'
+import { BackButton, Badge, Banner, Button, Spinner } from '@ynarcher/ui'
 import { useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { maskEmail, maskPhone } from '@/lib/mask'
@@ -91,14 +91,11 @@ interface EmployeeDetailPageProps {
   readOnly?: boolean
   /** 뒤로가기 경로. 기본은 인사 관리 리스트. */
   backTo?: string
-  /** 뒤로가기 라벨. */
-  backLabel?: string
 }
 
 export function EmployeeDetailPage({
   readOnly = false,
   backTo = '/management?tab=hr',
-  backLabel = '인사 관리',
 }: EmployeeDetailPageProps = {}) {
   const { id } = useParams<{ id: string }>()
   const show = useSensitiveStore((s) => s.show)
@@ -135,12 +132,7 @@ export function EmployeeDetailPage({
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <Link
-          to={backTo}
-          className="text-caption font-semibold text-brand hover:text-brand-600"
-        >
-          ← {backLabel}
-        </Link>
+        <BackButton as={Link} to={backTo} />
         {!readOnly && !editing && <Button onClick={() => setEditing(true)}>수정</Button>}
       </div>
 

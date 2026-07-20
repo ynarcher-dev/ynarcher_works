@@ -19,8 +19,14 @@ export interface ProgramWorkspaceConfig {
   key: ProgramWorkspaceKey
   /** 라우트 베이스 경로. 목록 `${basePath}`, 상세 `${basePath}/programs/:id`. */
   basePath: string
-  /** 사이드바 탭 제목(대시보드/내 ~/전체 ~)에 쓰는 도메인 명칭. */
+  /** 목록 제목(전체 ~)·본문 문구에 쓰는 도메인 명칭. */
   entityNoun: string
+  /**
+   * 첫 두 탭 제목. 워크스페이스마다 다르므로(M&A는 `딜 현황`/`내 딜 관리`) entityNoun으로
+   * 조립하지 않고 직접 지정한다. navigation.ts의 사이드바 라벨과 일치시킬 것.
+   */
+  dashboardLabel: string
+  mineLabel: string
   tables: {
     programs: string
     modules: string

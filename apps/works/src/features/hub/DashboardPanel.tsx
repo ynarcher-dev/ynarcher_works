@@ -3,7 +3,6 @@ import dayjs from 'dayjs'
 import {
   ChevronRight,
   FolderOpen,
-  Lightbulb,
   Megaphone,
   Sparkles,
   type LucideIcon,
@@ -11,9 +10,8 @@ import {
 import { Link } from 'react-router-dom'
 import aiBannerGraphic from '@/assets/ai_banner_graphic.png'
 import {
-  HUB_FILES,
-  HUB_INSIGHTS,
-  HUB_NOTICES,
+  SEED_FILES,
+  SEED_NOTICES,
   isNewPost,
   type BoardPost,
 } from '@/features/hub/boardData'
@@ -36,7 +34,8 @@ function GreetingHeader() {
 
   return (
     <div className="text-center">
-      <h1 className="truncate text-title-lg font-bold text-gray-900">반갑습니다, {name}님</h1>
+      {/* 페이지의 h1은 상단 PageHeader('대시보드')가 갖는다. 인사말은 그 아래 위계의 h2로 둔다. */}
+      <h2 className="truncate text-title-md font-bold text-gray-900">반갑습니다, {name}님</h2>
       <p className="mt-2 text-body-lg text-gray-500">
         오늘은 와이앤아처와 함께한 지{' '}
         <span className="font-bold tabular-nums text-brand">{days.toLocaleString()}일</span>째 되는
@@ -297,7 +296,7 @@ function PromoBanner() {
 
 /**
  * 전사 대시보드(OFFICE 홈) — 상단 통합검색 + 좌측 워크스페이스 인포(메뉴별 대표 지표 1장씩) +
- * 우측 공지사항/자료실/인사이트 게시판. 스크롤 없이 한 화면에 담는다.
+ * 우측 공지사항/자료실 게시판. 스크롤 없이 한 화면에 담는다.
  * 근거: 3_1_workspace_hub.md §1.1 통합검색 / §1.5 공지·자료 / §1.6 도메인 요약
  */
 export function DashboardPanel() {
@@ -327,13 +326,12 @@ export function DashboardPanel() {
           )}
         </div>
 
-        {/* 우: 공유 게시판(공지 / 자료 / 인사이트) */}
+        {/* 우: 공유 게시판(공지 / 자료) */}
         <div className="flex flex-col gap-3">
           <h2 className="text-title-sm font-semibold text-gray-900">알립니다</h2>
           <div className="flex flex-1 flex-col gap-3">
-            <BoardCard title="공지사항" icon={Megaphone} tab="notices" posts={HUB_NOTICES} />
-            <BoardCard title="공용자료실" icon={FolderOpen} tab="files" posts={HUB_FILES} />
-            <BoardCard title="인사이트" icon={Lightbulb} tab="insights" posts={HUB_INSIGHTS} />
+            <BoardCard title="공지사항" icon={Megaphone} tab="notices" posts={SEED_NOTICES} />
+            <BoardCard title="공용자료실" icon={FolderOpen} tab="files" posts={SEED_FILES} />
           </div>
         </div>
       </div>

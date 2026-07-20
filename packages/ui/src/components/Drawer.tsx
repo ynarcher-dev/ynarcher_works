@@ -31,7 +31,8 @@ export function Drawer({
       />
       <aside
         className={cn(
-          'absolute top-0 z-sidebar h-full w-60 bg-gray-600 shadow-xl transition-transform duration-slow ease-decelerate',
+          // 배경은 패널 내용(Sidebar 등)이 채운다. 자체 배경은 로딩 순간 비치는 바탕색만 담당.
+          'absolute top-0 z-sidebar h-full w-60 bg-brand-800 shadow-xl transition-transform duration-slow ease-decelerate',
           side === 'left' ? 'left-0' : 'right-0',
           className,
         )}

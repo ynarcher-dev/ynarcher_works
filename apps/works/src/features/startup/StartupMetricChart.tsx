@@ -14,18 +14,18 @@ import {
 
 /**
  * 차트 색. 성장 지표의 다계열(재무·매출·투자)은 categorical 팔레트(정체성별 유채색)로 칠해
- * 보조 계열이 '비활성 그레이'로 오인되지 않게 한다 — 슬롯 순서 고정: 레드→틸→앰버.
- * 세 색을 같은 무게(딥 주얼톤: 딥레드·딥에메랄드·딥골드)로 맞춰 채도·명도가 '들쑥날쑥'하지 않게 통일.
- * 색약 검증 통과(최악 인접 ΔE 25.7, 흰 배경 대비 전부 3:1↑). 표의 '음수=파랑'과 겹치지 않도록 파랑은 배제.
+ * 보조 계열이 '비활성 그레이'로 오인되지 않게 한다 — 슬롯 순서 고정: 네이비→틸→앰버.
+ * 세 색을 같은 무게(딥 주얼톤: 딥네이비·딥에메랄드·딥골드)로 맞춰 채도·명도가 '들쑥날쑥'하지 않게 통일.
+ * 흰 배경 대비 전부 3:1↑. 표의 '음수=파랑'과는 명도 차(딥네이비 11.5:1)로 구분한다.
  * gray*는 축·범례 텍스트와 주주 차트 slice 색으로 계속 사용한다.
  */
 export const CHART_COLORS = {
-  brand: '#E22213', // 슬롯1(주 지표) — 브랜드 레드
+  brand: '#1F3A5F', // 슬롯1(주 지표) — 브랜드 네이비
   teal: '#0A7D55', // 슬롯2 — 딥에메랄드
   amber: '#9A6300', // 슬롯3 — 딥골드
-  gray5: '#737373',
-  gray4: '#A3A3A3',
-  gray3: '#D4D4D4',
+  gray5: '#5B6371',
+  gray4: '#6E7683',
+  gray3: '#CBD0D8',
 } as const
 
 export interface ChartSeries {
@@ -65,7 +65,7 @@ export function StartupMetricChart({ data, series, unit = 'won', variant = 'bar'
   // 축·그리드·툴팁·범례는 막대/꺾은선 공용. recharts가 직속 자식만 훑으므로 Fragment로 묶지 않고
   // 각 차트 안에 배열로 펼쳐 넣는다(각 요소 key 필수).
   const axes = [
-    <CartesianGrid key="grid" vertical={false} stroke="#F0F0F0" />,
+    <CartesianGrid key="grid" vertical={false} stroke="#EDEFF2" />,
     <XAxis
       key="x"
       dataKey={xKey}
@@ -81,13 +81,13 @@ export function StartupMetricChart({ data, series, unit = 'won', variant = 'bar'
       tick={{ fontSize: 11, fill: CHART_COLORS.gray4 }}
       tickFormatter={unit === 'won' ? wonTick : undefined}
     />,
-    <ReferenceLine key="zero" y={0} stroke="#E5E5E5" />,
+    <ReferenceLine key="zero" y={0} stroke="#DFE2E7" />,
     <Tooltip
       key="tip"
-      cursor={variant === 'line' ? { stroke: '#E5E5E5' } : { fill: '#F7F7F7' }}
+      cursor={variant === 'line' ? { stroke: '#DFE2E7' } : { fill: '#F5F6F8' }}
       contentStyle={{
         borderRadius: 8,
-        border: '1px solid #E5E5E5',
+        border: '1px solid #DFE2E7',
         boxShadow: '0 8px 20px rgba(0,0,0,0.06)',
         fontSize: 12,
       }}

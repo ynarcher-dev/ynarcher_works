@@ -1,4 +1,4 @@
-import { Badge, Banner, Button, Spinner } from '@ynarcher/ui'
+import { BackButton, Badge, Banner, Button, Spinner } from '@ynarcher/ui'
 import { useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { categoryFromTab } from '@/config/programCategories'
@@ -111,12 +111,7 @@ export function ProgramDetailPage() {
       {tab === 'overview' ? (
         <>
           <div className="flex items-center justify-between gap-3">
-            <Link
-              to={backTo}
-              className="text-caption font-semibold text-brand hover:text-brand-600"
-            >
-              ← 사업 목록
-            </Link>
+            <BackButton as={Link} to={backTo} />
             <Button onClick={() => setEditOpen(true)}>편집</Button>
           </div>
           <ProgramOverviewTab program={program} onOpenModule={onOpenModule} />
@@ -124,13 +119,7 @@ export function ProgramDetailPage() {
       ) : (
         <>
           <div className="flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={backToOverview}
-              className="text-caption font-semibold text-brand hover:text-brand-600"
-            >
-              ← {program.title} 개요
-            </button>
+            <BackButton onClick={backToOverview} />
             <div className="flex items-center gap-2">
               <span className="text-body font-semibold text-gray-900">
                 {openMod?.title?.trim() || PANEL_LABEL[tab]}

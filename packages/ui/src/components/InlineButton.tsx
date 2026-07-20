@@ -5,7 +5,7 @@ export type InlineButtonTone = 'primary' | 'danger' | 'outline'
 
 const toneClass: Record<InlineButtonTone, string> = {
   primary: 'bg-brand !text-white shadow-sm shadow-brand/20 hover:bg-brand-600 active:bg-brand-700',
-  danger: 'bg-brand-700 !text-white shadow-sm shadow-brand/20 hover:bg-brand-800 active:bg-brand-900',
+  danger: 'bg-danger-700 !text-white shadow-sm shadow-danger/20 hover:bg-danger-800 active:bg-danger-900',
   outline:
     'border border-gray-300 bg-white text-gray-800 shadow-sm hover:border-gray-400 hover:bg-gray-25 active:bg-gray-50',
 }

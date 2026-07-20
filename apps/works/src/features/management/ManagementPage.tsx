@@ -11,7 +11,7 @@ import { TagAdminPanel } from '@/features/admin/TagAdminPanel'
 import { TAG_CONFIGS } from '@/features/admin/tagConfig'
 
 const HEADINGS: Record<string, string> = {
-  dashboard: '대시보드',
+  dashboard: '경영 현황',
   departments: '조직 관리',
   branches: '지사 관리',
   hr: '인사 관리',

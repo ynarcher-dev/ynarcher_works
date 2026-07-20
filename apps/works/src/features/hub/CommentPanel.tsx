@@ -1,6 +1,6 @@
-import { Button, TextArea } from '@ynarcher/ui'
-import { MessageSquare } from 'lucide-react'
+import { Badge, Button, TextArea } from '@ynarcher/ui'
 import { useState } from 'react'
+import { DetailPanelCard } from '@/features/networks/DetailPanelCard'
 import type { BoardComment } from '@/features/hub/boardData'
 
 export interface CommentPanelProps {
@@ -8,7 +8,11 @@ export interface CommentPanelProps {
   onAdd: (content: string) => void
 }
 
-/** 게시글 댓글 패널: 목록 + 작성 입력. */
+/**
+ * 게시글 댓글 패널: 작성 입력 + 목록.
+ * 상세페이지 공용 패널(자료 관리·변동 이력)과 카드 톤·구성을 맞추기 위해
+ * NETWORKS `DetailPanelCard` 래퍼와 코멘트 패널(FeedbackPanel) 레이아웃을 재사용한다.
+ */
 export function CommentPanel({ comments, onAdd }: CommentPanelProps) {
   const [draft, setDraft] = useState('')
 
@@ -19,51 +23,65 @@ export function CommentPanel({ comments, onAdd }: CommentPanelProps) {
     setDraft('')
   }
 
+  // 최신 댓글이 위로 오도록 표시만 뒤집는다(저장은 등록순 유지).
+  const list = [...comments].reverse()
+
   return (
-    <aside className="flex flex-col overflow-hidden rounded-radius-md border border-gray-300 bg-white shadow-soft">
-      <header className="flex items-center gap-1.5 border-b border-gray-200 px-4 py-3 text-body font-semibold text-gray-800">
-        <MessageSquare className="size-4 text-gray-500" /> 댓글
-        <span className="text-caption font-normal text-gray-400">{comments.length}</span>
-      </header>
-
-      <div className="space-y-4 px-4 py-4">
-        {comments.length === 0 ? (
-          <p className="py-8 text-center text-body text-gray-400">
-            첫 댓글을 남겨보세요.
-          </p>
-        ) : (
-          comments.map((c) => (
-            <div key={c.id} className="space-y-1">
-              <div className="flex items-baseline gap-2">
-                <span className="text-caption font-semibold text-gray-800">{c.author}</span>
-                <span className="tabular-nums text-caption text-gray-400">{c.createdAt}</span>
-              </div>
-              <p className="whitespace-pre-wrap break-words text-body text-gray-700">
-                {c.content}
-              </p>
-            </div>
-          ))
-        )}
-      </div>
-
-      <div className="space-y-2 border-t border-gray-200 bg-gray-25/60 px-4 py-3">
+    <DetailPanelCard title="댓글" count={comments.length}>
+      <div className="space-y-2">
         <TextArea
           rows={2}
-          className="border-gray-300"
-          placeholder="댓글을 입력하세요"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
+          placeholder="댓글을 입력하세요. (Enter 등록, Shift+Enter 줄바꿈)"
           onKeyDown={(e) => {
-            // Ctrl/⌘+Enter로 등록
-            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') submit()
+            // Enter로 등록, Shift+Enter는 줄바꿈. 한글 등 IME 조합 중에는 등록하지 않는다.
+            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+              e.preventDefault()
+              submit()
+            }
           }}
         />
         <div className="flex justify-end">
-          <Button size="sm" onClick={submit} disabled={!draft.trim()}>
+          <Button
+            size="sm"
+            // 비활성 시 투명도 대신 회색으로 표시(디자인 요청).
+            className="disabled:bg-gray-100 disabled:!text-gray-400 disabled:opacity-100"
+            disabled={!draft.trim()}
+            onClick={submit}
+          >
             등록
           </Button>
         </div>
       </div>
-    </aside>
+
+      <div className="mt-3 border-t border-gray-100 pt-3">
+        {list.length > 0 ? (
+          <ul className="space-y-2.5">
+            {list.map((c, idx) => (
+              <li
+                key={c.id}
+                className="border-t border-gray-100 pt-2.5 first:border-0 first:pt-0"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-caption font-medium text-gray-700">{c.author}</span>
+                  <span className="text-caption tabular-nums text-gray-400">{c.createdAt}</span>
+                  {idx === 0 && (
+                    <Badge tone="danger" size="sm">
+                      최신
+                    </Badge>
+                  )}
+                </div>
+                <p className="mt-0.5 whitespace-pre-wrap break-words text-body text-gray-800">
+                  {c.content}
+                </p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-body text-gray-400">등록된 댓글이 없습니다.</p>
+        )}
+      </div>
+    </DetailPanelCard>
   )
 }

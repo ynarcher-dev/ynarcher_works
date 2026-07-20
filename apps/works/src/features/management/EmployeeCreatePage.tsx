@@ -1,4 +1,4 @@
-import { Button, Input, Select, useToast } from '@ynarcher/ui'
+import { BackButton, Button, Input, Select, useToast } from '@ynarcher/ui'
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { CREATABLE_ROLE_OPTIONS } from '@/features/management/config'
@@ -83,12 +83,7 @@ export function EmployeeCreatePage() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <Link
-          to="/management?tab=hr"
-          className="text-caption font-semibold text-brand hover:text-brand-600"
-        >
-          ← 인사 관리
-        </Link>
+        <BackButton as={Link} to="/management?tab=hr" />
       </div>
       <h1 className="text-title-md font-bold text-gray-900">임직원 계정 생성</h1>
 
