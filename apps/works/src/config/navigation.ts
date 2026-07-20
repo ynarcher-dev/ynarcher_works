@@ -71,6 +71,8 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
     {
       items: [
         { label: '대시보드', tab: 'dashboard' },
+        // 구분 무관, 담당자(startup_managers) 또는 등록자가 나인 기업.
+        { label: '내 관리기업', tab: 'mine', dividerBefore: true },
         // 투자/보육/발굴/기타 4분류. 발굴기업이 기존 스타트업 마스터 디렉토리.
         { label: '투자기업', tab: 'invested', dividerBefore: true },
         { label: '보육기업', tab: 'incubated' },
@@ -84,7 +86,11 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
   ],
   networks: [
     {
-      items: [{ label: '대시보드', tab: 'dashboard' }],
+      items: [
+        { label: '대시보드', tab: 'dashboard' },
+        // 종류 무관, 내가 등록·편집·병합에 관여한(entity_contributions) 네트워크 통합 목록.
+        { label: '내 네트워크', tab: 'mine', dividerBefore: true },
+      ],
     },
     {
       group: '마스터 네트워크 관리',

@@ -17,8 +17,10 @@ import type { ManagementStatus } from '@/features/startup/startupClassification'
 const PAGE_SIZE = 30
 
 interface StartupPoolTabProps {
-  /** 탭 고정 구분(코드). 4개 메뉴(투자/보육/발굴/기타) 상호 배타 뷰. */
-  category: ManagementStatus
+  /** 탭 고정 구분(코드). 4개 메뉴(투자/보육/발굴/기타) 상호 배타 뷰. null이면 구분 무관 전체. */
+  category: ManagementStatus | null
+  /** 지정 시 담당자 또는 등록자가 이 사용자인 기업만 조회한다('내 관리기업'). */
+  mineUserId?: string | null
 }
 
 /**
@@ -27,7 +29,7 @@ interface StartupPoolTabProps {
  * 검색창과 필터를 한 컨트롤 행으로 함께 배치한다. 신규 등록은 전용 등록 페이지에서 처리한다.
  * (검색 상태는 탭 컨테이너가 소유 — 발굴기업 탭에서만 마운트되므로 탭 전환 시 자연히 초기화된다.)
  */
-export function StartupPoolTab({ category }: StartupPoolTabProps) {
+export function StartupPoolTab({ category, mineUserId }: StartupPoolTabProps) {
   const config = ENTITIES.startups
   const toast = useToast()
   const navigate = useNavigate()
@@ -46,7 +48,14 @@ export function StartupPoolTab({ category }: StartupPoolTabProps) {
     setSelected([])
   }, [keyword, filtersKey])
 
-  const { data, isLoading } = useStartupPoolPage(keyword, filters, page, PAGE_SIZE, category)
+  const { data, isLoading } = useStartupPoolPage(
+    keyword,
+    filters,
+    page,
+    PAGE_SIZE,
+    category,
+    mineUserId ?? null,
+  )
 
   // 탭 전환 시 검색·필터·선택·페이지를 초기화한다(탭마다 다른 구분 뷰).
   useEffect(() => {
@@ -54,7 +63,7 @@ export function StartupPoolTab({ category }: StartupPoolTabProps) {
     setFilters(EMPTY_STARTUP_FILTERS)
     setPage(0)
     setSelected([])
-  }, [category])
+  }, [category, mineUserId])
 
   // 비활성화 사유 확정 → 기여 로그(사유·행위자)를 먼저 남기고 soft-delete한다.
   const confirmDeactivate = async (reason: string) => {
@@ -105,7 +114,8 @@ export function StartupPoolTab({ category }: StartupPoolTabProps) {
       ) : (
       <StartupPoolTable
         rows={(data?.rows ?? []) as StartupPoolRow[]}
-        tab={category}
+        // 구분 무관 목록('내 관리기업')은 undefined로 넘겨 담당자·구분 컬럼을 모두 노출한다.
+        tab={category ?? undefined}
         selectedKeys={selected}
         onSelectionChange={setSelected}
         onRowClick={(row) => navigate(`/startup/discovered/${row.id}`)}

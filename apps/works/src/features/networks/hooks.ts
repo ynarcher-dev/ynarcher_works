@@ -99,6 +99,56 @@ export function useEntityPage(
   })
 }
 
+// ── 내 네트워크(10종 통합 목록) ───────────────────────────────────────────────
+
+/** 기여 이력 기준 통합 목록의 행(RPC `my_network_entities` 반환 컬럼). */
+export interface MyNetworkRow {
+  /** 원장 테이블명(= EntityKey). 종류 배지·상세 라우트의 기준. */
+  entity_table: EntityKey
+  id: string
+  name: string
+  affiliation: string | null
+  email: string | null
+  phone: string | null
+  /** 가장 최근 기여 행위(created/merged/enriched/edited). */
+  last_action: string | null
+  last_contributed_at: string | null
+}
+
+/** 내 네트워크 목록 페이지. `useEntityPage`와 동일 규약(rows + 건수). */
+export interface MyNetworkPage {
+  rows: MyNetworkRow[]
+  total: number
+}
+
+/**
+ * 내가 등록·편집·병합에 관여한 네트워크 10종 통합 목록(서버 사이드 페이지네이션).
+ * 다형 조인·중복 제거가 필요해 PostgREST 대신 RPC(`my_network_entities`)로 조회한다.
+ * 호출자 판정은 RPC 내부에서 하므로 user_id를 인자로 넘기지 않는다.
+ * 총 건수는 모든 행에 동일하게 실려오는 윈도우 카운트(`total_count`)에서 읽는다(행 0건이면 0).
+ * page는 0-base이며, 페이지 전환 시 이전 페이지를 유지(keepPreviousData)해 깜빡임을 줄인다.
+ */
+export function useMyNetworkPage(keyword: string, page: number, pageSize: number) {
+  return useQuery({
+    queryKey: ['networks', 'mine', 'page', keyword, page, pageSize],
+    placeholderData: keepPreviousData,
+    queryFn: async (): Promise<MyNetworkPage> => {
+      const trimmed = keyword.trim()
+      const { data, error } = await supabase.rpc('my_network_entities', {
+        p_keyword: trimmed || null,
+        p_limit: pageSize,
+        p_offset: page * pageSize,
+      })
+      if (error) throw error
+      const rows = (data ?? []) as (MyNetworkRow & { total_count?: number | string })[]
+      return {
+        rows: rows.map(({ total_count: _total, ...row }) => row as MyNetworkRow),
+        total: Number(rows[0]?.total_count ?? 0),
+      }
+    },
+  })
+}
+
 /** 엔티티 단건 조회(상세페이지). id 미지정 시 비활성. */
 export function useEntity(table: EntityKey, id: string | undefined) {
   return useQuery({

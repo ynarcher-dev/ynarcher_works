@@ -89,14 +89,42 @@ export function useStartupPoolPage(
   pageSize: number,
   /** 탭별 구분 고정 필터(코드). 지정 시 해당 구분만 조회한다(4개 메뉴 상호 배타 뷰). */
   category?: ManagementStatus | null,
+  /**
+   * 지정 시 담당자(startup_managers) 또는 등록자(created_by)가 이 사용자인 기업만 조회한다('내 관리기업').
+   * 담당자는 투자기업 전용 개념이므로 등록자 축을 함께 봐야 발굴·보육·기타 기업도 잡힌다.
+   */
+  mineUserId?: string | null,
 ) {
   return useQuery({
-    queryKey: ['startups', 'pool', keyword, filters, page, pageSize, category ?? null],
+    queryKey: [
+      'startups',
+      'pool',
+      keyword,
+      filters,
+      page,
+      pageSize,
+      category ?? null,
+      mineUserId ?? null,
+    ],
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<StartupPoolPage> => {
       const from = page * pageSize
       const to = from + pageSize - 1
       const kw = sanitizeOrValue(keyword)
+
+      // '내 관리기업' 스코프: 등록자(created_by=나) OR 담당자(startup_managers.user_id=나).
+      // 담당 기업 id를 먼저 조회해 or 조건을 구성한다(AC useProgramsPage와 동일 패턴).
+      let mineOr: string | null = null
+      if (mineUserId) {
+        const { data: mgr } = await supabase
+          .from('startup_managers')
+          .select('startup_id')
+          .eq('user_id', mineUserId)
+        const ids = ((mgr ?? []) as { startup_id: string }[]).map((m) => m.startup_id)
+        mineOr = ids.length
+          ? `created_by.eq.${mineUserId},id.in.(${ids.join(',')})`
+          : `created_by.eq.${mineUserId}`
+      }
 
       let q = supabase
         .from('startups')
@@ -113,6 +141,7 @@ export function useStartupPoolPage(
 
       // 탭 고정 구분(있으면). 사용자 구분 필터는 탭 뷰에서 제거되어 category 로만 좁힌다.
       if (category) q = q.eq('management_status', category)
+      if (mineOr) q = q.or(mineOr)
 
       // 검색: 기업명·대표자·사업자번호 + 작성자(등록자 이름→created_by id 역조회).
       if (kw) {
@@ -164,6 +193,7 @@ export function useStartupPoolPage(
           .is('deleted_at', null)
           .is('merged_into_id', null)
         if (category) allQ = allQ.eq('management_status', category)
+        if (mineOr) allQ = allQ.or(mineOr)
         const { count: allCount } = await allQ
         totalAll = allCount ?? total
       }
