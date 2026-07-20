@@ -7,7 +7,6 @@ import {
 import { useMemo } from 'react'
 import {
   PROGRAM_CATEGORY_LABEL,
-  PROGRAM_CATEGORY_TONE,
   PROGRAM_STATUS_LABEL,
   PROGRAM_STATUS_TONE,
 } from '@/features/ac/config'
@@ -27,7 +26,7 @@ interface ProgramTableProps {
 
 /**
  * 프로그램 원장 공용 데이터 테이블(STARTUP StartupPoolTable과 동일 규격).
- * 컬럼: 체크박스·No.·사업코드·사업구분·프로그램명·상태·운영 시작일·운영 종료일 + 우측 표준 컬럼(등록자·수정일·관리).
+ * 컬럼: 체크박스·No.·코드·카테고리·프로그램명·상태·운영 시작일·운영 종료일 + 우측 표준 컬럼(등록자·수정일·관리).
  */
 export function ProgramTable({
   rows,
@@ -40,27 +39,6 @@ export function ProgramTable({
   const columns = useMemo<Column<Program>[]>(
     () => [
       {
-        // 사업코드(6자리 영숫자 난수). 목록에서는 다른 컬럼과 동일한 본문 텍스트로 노출한다.
-        key: 'code',
-        header: '사업코드',
-        className: 'whitespace-nowrap text-gray-600',
-        render: (r) => r.code ?? <span className="text-gray-400">-</span>,
-      },
-      {
-        // 사업구분(공공/민간/매출). 상태 배지와 동일 규격의 톤 배지로 노출한다.
-        key: 'category',
-        header: '사업구분',
-        className: 'whitespace-nowrap',
-        render: (r) =>
-          r.category ? (
-            <Badge tone={PROGRAM_CATEGORY_TONE[r.category] ?? 'neutral'} size="sm">
-              {PROGRAM_CATEGORY_LABEL[r.category] ?? r.category}
-            </Badge>
-          ) : (
-            <span className="text-gray-400">-</span>
-          ),
-      },
-      {
         // 프로그램명은 min-width로 넓게 확보한다(설명 필러 컬럼이 그만큼 좁혀진다).
         key: 'title',
         header: '사업명',
@@ -68,11 +46,30 @@ export function ProgramTable({
         render: (r) => r.title,
       },
       {
+        // 사업코드(6자리 영숫자 난수). 목록에서는 다른 컬럼과 동일한 본문 텍스트로 노출한다.
+        key: 'code',
+        header: '코드',
+        className: 'whitespace-nowrap',
+        render: (r) => r.code ?? <span className="text-gray-400">-</span>,
+      },
+      {
+        // 사업구분(공공/민간/매출). 다른 컬럼과 동일한 본문 텍스트로 노출한다.
+        key: 'category',
+        header: '카테고리',
+        className: 'whitespace-nowrap',
+        render: (r) =>
+          r.category ? (
+            PROGRAM_CATEGORY_LABEL[r.category] ?? r.category
+          ) : (
+            <span className="text-gray-400">-</span>
+          ),
+      },
+      {
         // 설명은 자유 서술이라 남는 폭을 전부 흡수하는 필러 컬럼으로 둔다(넘치면 말줄임).
         // 나머지 컬럼은 내용에 맞춰 좁혀져 컬럼 간 여백이 균일해진다.
         key: 'description',
         header: '설명',
-        className: 'w-full max-w-0 truncate text-gray-600',
+        className: 'w-full max-w-0 truncate',
         render: (r) =>
           r.description || <span className="text-gray-400">-</span>,
       },

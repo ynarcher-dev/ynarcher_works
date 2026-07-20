@@ -10,6 +10,8 @@ export interface WorkspaceOption {
   description?: string
   /** 이 항목부터 시작되는 섹션명. 지정 시 위에 구분선 + 섹션 라벨을 그린다. */
   groupLabel?: string
+  /** 섹션 라벨 없이 이 항목 위에 구분선만 그린다(groupLabel과 함께 쓰면 무시). */
+  divider?: boolean
 }
 
 export interface WorkspaceSwitcherProps {
@@ -57,10 +59,12 @@ export function WorkspaceSwitcher({
         const isCurrent = opt.key === current
         return (
           <Fragment key={opt.key}>
+            {/* 구분선은 메뉴 좌우 여백(mx-3)에 맞춰 들여쓰는 드롭다운 관례를 따른다. */}
+            {idx > 0 && (opt.groupLabel || opt.divider) && (
+              <div className="mx-3 my-1 border-t border-gray-200" />
+            )}
             {opt.groupLabel && (
-              <div
-                className={`px-3 pb-1 ${idx === 0 ? 'pt-1' : 'mt-1 border-t border-gray-200 pt-2'}`}
-              >
+              <div className="px-3 pb-1 pt-1">
                 <span className="text-caption font-semibold text-gray-400">
                   {opt.groupLabel}
                 </span>

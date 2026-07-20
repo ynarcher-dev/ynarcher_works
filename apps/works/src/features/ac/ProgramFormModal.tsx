@@ -18,7 +18,6 @@ import {
   programStage,
   type ProgramStage,
 } from '@/features/ac/config'
-import { rangesOverlap } from '@/features/ac/programPeriods'
 import {
   ProgramStageFields,
   type ProgramFormValues as FormValues,
@@ -86,6 +85,12 @@ export function ProgramFormModal({
   const [operationStatus, setOperationStatus] = useState(() =>
     programStage(initialStatus) === 'OPERATION' ? initialStatus : 'DRAFT',
   )
+  // 제안 상태 변경 핸들러: '선정'을 고르면 운영 단계(준비)로 즉시 자동 전환한다.
+  // 운영 상태는 기존 값(신규는 '준비')을 유지해 편집 중이던 진행 상태를 잃지 않는다.
+  const handleProposalStatusChange = (status: string) => {
+    setProposalStatus(status)
+    if (status === 'SELECTED') setStage('OPERATION')
+  }
   // 편집 대상이 바뀌면(모달 재사용) 배치·단계 상태를 해당 프로그램 기준으로 다시 초기화한다.
   useEffect(() => {
     setDepartments(toDepartmentSegments(program))
@@ -105,8 +110,6 @@ export function ProgramFormModal({
     defaultValues: {
       title: program?.title ?? '',
       category: program?.category ?? '',
-      proposal_start_date: program?.proposal_start_date ?? '',
-      proposal_end_date: program?.proposal_end_date ?? '',
       start_date: program?.start_date ?? '',
       end_date: program?.end_date ?? '',
       description: program?.description ?? '',
@@ -114,26 +117,8 @@ export function ProgramFormModal({
   })
 
   const onSubmit = async (values: FormValues) => {
-    if (
-      values.proposal_start_date &&
-      values.proposal_end_date &&
-      values.proposal_start_date > values.proposal_end_date
-    ) {
-      toast.show('제안 종료일은 제안 시작일 이후여야 합니다.', 'warning')
-      return
-    }
     if (values.start_date && values.end_date && values.start_date > values.end_date) {
       toast.show('운영 종료일은 운영 시작일 이후여야 합니다.', 'warning')
-      return
-    }
-    // 제안 기간과 운영 기간은 겹칠 수 없다(양쪽 모두 완전 구간일 때만 판정).
-    if (
-      rangesOverlap(
-        { start: values.proposal_start_date, end: values.proposal_end_date },
-        { start: values.start_date, end: values.end_date },
-      )
-    ) {
-      toast.show('제안 기간과 운영 기간은 겹칠 수 없습니다.', 'warning')
       return
     }
     // 부서+담당자 배치 검증(서버 RPC와 동일 규칙, 단계별). 부서·담당자 모두 비면 허용(미배정).
@@ -148,8 +133,9 @@ export function ProgramFormModal({
     const payload = {
       title: values.title,
       status: stage === 'PROPOSAL' ? proposalStatus : operationStatus,
-      proposal_start_date: values.proposal_start_date || null,
-      proposal_end_date: values.proposal_end_date || null,
+      // 제안 단계는 별도 기간을 두지 않는다(컬럼은 유지, 항상 null로 기록).
+      proposal_start_date: null,
+      proposal_end_date: null,
       start_date: values.start_date || null,
       end_date: values.end_date || null,
       description: values.description || null,
@@ -233,7 +219,7 @@ export function ProgramFormModal({
           stage={stage}
           onStageChange={setStage}
           proposalStatus={proposalStatus}
-          onProposalStatusChange={setProposalStatus}
+          onProposalStatusChange={handleProposalStatusChange}
           operationStatus={operationStatus}
           onOperationStatusChange={setOperationStatus}
           register={register}

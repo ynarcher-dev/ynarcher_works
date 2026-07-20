@@ -190,6 +190,7 @@ export function WorksLayout() {
     // 워크스페이스 부제 + 4개 구획(업무 허브/마스터·네트워크/투자 사업/경영·시스템) 섹션 헤더.
     description: w.description,
     groupLabel: w.groupLabel,
+    divider: w.divider,
   }))
 
   const goToSection = (item: { tab?: string }) => {

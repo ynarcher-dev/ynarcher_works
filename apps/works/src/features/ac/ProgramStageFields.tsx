@@ -12,8 +12,6 @@ export interface ProgramFormValues {
   title: string
   /** 사업구분(공공/민간/매출). 빈 문자열 = 미지정. */
   category: string
-  proposal_start_date: string
-  proposal_end_date: string
   start_date: string
   end_date: string
   description: string
@@ -21,8 +19,9 @@ export interface ProgramFormValues {
 
 /**
  * 프로그램 단계(제안/운영) 이원화 입력 블록.
- * 단계 라디오로 현재 단계를 고르면 해당 섹션의 상태 셀렉트만 활성화된다.
- * 기간은 단계와 무관하게 상시 입력 가능(제안 단계에서도 운영 예정 기간을 미리 잡는다).
+ * 제안 단계 상태는 시도/선정/미선정 3분류이며 별도 기간(날짜)이 없다.
+ * '선정'을 고르면 운영 단계(준비)로 즉시 자동 전환된다(전환 처리는 상위 onProposalStatusChange).
+ * 운영 단계 라디오는 제안이 '선정'일 때만 활성화되고, 운영 기간(start/end_date)만 입력한다.
  */
 export function ProgramStageFields({
   stage,
@@ -41,6 +40,8 @@ export function ProgramStageFields({
   onOperationStatusChange: (status: string) => void
   register: UseFormRegister<ProgramFormValues>
 }) {
+  // 운영 단계는 제안이 '선정'된 경우에만 진입할 수 있다(미선정·시도 상태에서는 잠금).
+  const operationUnlocked = proposalStatus === 'SELECTED'
   const sectionClass = (active: boolean) =>
     'rounded-radius-md border p-3 ' +
     (active ? 'border-brand/40 bg-brand/[0.03]' : 'border-gray-200')
@@ -51,19 +52,24 @@ export function ProgramStageFields({
         <div className="mt-1 flex gap-4">
           {(
             [
-              ['PROPOSAL', '제안 단계'],
-              ['OPERATION', '운영 단계'],
+              ['PROPOSAL', '제안 단계', true],
+              ['OPERATION', '운영 단계', operationUnlocked],
             ] as const
-          ).map(([value, label]) => (
+          ).map(([value, label, enabled]) => (
             <label
               key={value}
-              className="flex cursor-pointer items-center gap-1.5 text-body text-gray-800"
+              className={
+                'flex items-center gap-1.5 text-body ' +
+                (enabled ? 'cursor-pointer text-gray-800' : 'cursor-not-allowed text-gray-300')
+              }
+              title={enabled ? undefined : "제안이 '선정'된 후 운영 단계로 넘어갈 수 있습니다."}
             >
               <input
                 type="radio"
                 name="program-stage"
                 className="h-4 w-4 accent-brand"
                 checked={stage === value}
+                disabled={!enabled}
                 onChange={() => onStageChange(value)}
               />
               {label}
@@ -75,7 +81,9 @@ export function ProgramStageFields({
       <div className={sectionClass(stage === 'PROPOSAL')}>
         <div className="flex flex-wrap items-baseline justify-between gap-1">
           <span className="text-body font-medium text-gray-800">제안</span>
-          <span className="text-caption text-gray-400">제안서 작성~발표 기간</span>
+          <span className="text-caption text-gray-400">
+            선정 시 운영 단계로 전환 · 미선정 시 프로젝트 종료
+          </span>
         </div>
         <div className="mt-2 grid grid-cols-3 gap-3">
           <div>
@@ -94,18 +102,6 @@ export function ProgramStageFields({
                 </option>
               ))}
             </Select>
-          </div>
-          <div>
-            <label className="text-caption text-gray-500" htmlFor="proposal_start_date">
-              시작일
-            </label>
-            <Input id="proposal_start_date" type="date" {...register('proposal_start_date')} />
-          </div>
-          <div>
-            <label className="text-caption text-gray-500" htmlFor="proposal_end_date">
-              종료일
-            </label>
-            <Input id="proposal_end_date" type="date" {...register('proposal_end_date')} />
           </div>
         </div>
       </div>

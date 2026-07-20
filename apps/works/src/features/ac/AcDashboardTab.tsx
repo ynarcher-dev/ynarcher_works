@@ -21,7 +21,7 @@ export function AcDashboardTab() {
       value: programs.length.toLocaleString(),
       emphasis: true,
     },
-    { key: 'proposed', label: '제안', value: proposed.toLocaleString() },
+    { key: 'proposed', label: '시도', value: proposed.toLocaleString() },
     { key: 'operating', label: '진행중', value: operating.toLocaleString() },
   ]
 

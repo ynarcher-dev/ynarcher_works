@@ -31,6 +31,18 @@ export { Card } from './components/Card'
 export type { CardProps } from './components/Card'
 export { Tabs } from './components/Tabs'
 export type { TabItem, TabsProps } from './components/Tabs'
+export { IconButton } from './components/IconButton'
+export type {
+  IconButtonProps,
+  IconButtonVariant,
+  IconButtonSize,
+} from './components/IconButton'
+export { PhotoBox } from './components/PhotoBox'
+export type { PhotoBoxProps, PhotoBoxSize } from './components/PhotoBox'
+export { TextAction } from './components/TextAction'
+export type { TextActionProps } from './components/TextAction'
+export { DashedAddButton } from './components/DashedAddButton'
+export type { DashedAddButtonProps } from './components/DashedAddButton'
 
 // 데이터 테이블
 export { DataTable } from './components/DataTable'
@@ -64,3 +76,42 @@ export { WorkspaceSwitcher } from './layout/WorkspaceSwitcher'
 export type { WorkspaceOption } from './layout/WorkspaceSwitcher'
 export { PageHeader } from './layout/PageHeader'
 export type { PageHeaderProps } from './layout/PageHeader'
+
+// 화면 패턴(순수 UI 컴포지션) — 상세·목록·보드 화면의 공통 뼈대.
+// 데이터 조회는 하지 않고 슬롯(ReactNode)만 배치하므로 워크스페이스 간 재사용이 가능하다.
+export { InfoField, InfoGrid } from './patterns/InfoGrid'
+export type { InfoFieldProps, InfoGridProps } from './patterns/InfoGrid'
+export { EntityHeaderCard, EntityHeaderSection } from './patterns/EntityHeaderCard'
+export type {
+  EntityHeaderCardProps,
+  EntityHeaderSectionProps,
+} from './patterns/EntityHeaderCard'
+export { PanelCard } from './patterns/PanelCard'
+export type { PanelCardProps } from './patterns/PanelCard'
+export { DetailTopBar } from './patterns/DetailTopBar'
+export type { DetailTopBarProps } from './patterns/DetailTopBar'
+export { StatTileGrid, StatTilePlaceholderGrid } from './patterns/StatTileGrid'
+export type {
+  StatTile,
+  StatTileGridProps,
+  StatTilePlaceholderGridProps,
+} from './patterns/StatTileGrid'
+export { ListToolbar } from './patterns/ListToolbar'
+export type { ListToolbarProps } from './patterns/ListToolbar'
+export { FilterButton, FilterResetButton } from './patterns/FilterButton'
+export type { FilterButtonProps, FilterResetButtonProps } from './patterns/FilterButton'
+export { MultiSelectFilter } from './patterns/MultiSelectFilter'
+export type { FilterOption, MultiSelectFilterProps } from './patterns/MultiSelectFilter'
+export { DateRangeFilter } from './patterns/DateRangeFilter'
+export type { DateRangeFilterProps } from './patterns/DateRangeFilter'
+export { ViewToggleGroup } from './patterns/ViewToggleGroup'
+export type { ViewToggleOption, ViewToggleGroupProps } from './patterns/ViewToggleGroup'
+export { FullscreenPanel, ExpandToggleButton } from './patterns/FullscreenPanel'
+export type {
+  FullscreenPanelProps,
+  ExpandToggleButtonProps,
+} from './patterns/FullscreenPanel'
+export { BoardItemCard, BoardEmptyRow } from './patterns/BoardItemCard'
+export type { BoardItemCardProps } from './patterns/BoardItemCard'
+export { MonthCalendar, CalendarDayDetail } from './patterns/MonthCalendar'
+export type { MonthCalendarProps, CalendarDayMeta } from './patterns/MonthCalendar'

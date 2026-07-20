@@ -86,25 +86,29 @@ export function defaultParticipationMode(moduleType: string): string | null {
 }
 
 /**
- * 프로그램(프로젝트) 상태 수명주기(6단계):
- *   제안 → (성공) 준비 → 진행중 → 종료 / (중단) 취소 / (제안 실패) 미선정
- * DB program_status enum: PROPOSED/DRAFT/OPERATING/FINISHED/CANCELLED/NOT_SELECTED.
+ * 프로그램(프로젝트) 상태 수명주기:
+ *   [제안 단계] 시도 → (선정) 선정 → [운영 단계] 준비 → 진행중 → 종료 / (중단) 취소
+ *              ↘ (미선정) 미선정 … 프로젝트 종료(terminal)
+ * 제안 단계에서 '선정'을 고르면 운영 단계(준비)로 즉시 자동 전환된다.
+ * DB program_status enum: PROPOSED/SELECTED/NOT_SELECTED/DRAFT/OPERATING/FINISHED/CANCELLED.
  * (등록/편집 폼에서 선택 가능한 값·순서는 PROGRAM_STATUS_OPTIONS 참조)
  */
 export const PROGRAM_STATUS_OPTIONS = [
   'PROPOSED',
+  'SELECTED',
+  'NOT_SELECTED',
   'DRAFT',
   'OPERATING',
   'FINISHED',
   'CANCELLED',
-  'NOT_SELECTED',
 ] as const
 
 /**
- * 상태의 단계 이원화: 제안 단계(제안서 작성~발표, proposal_start/end_date)와
- * 운영 단계(실제 행사 관리, start/end_date)로 나뉜다. 폼·표시가 공유하는 그룹 정의.
+ * 상태의 단계 이원화: 제안 단계(시도/선정/미선정)와 운영 단계(준비/진행중/종료/취소)로 나뉜다.
+ * 제안 단계는 별도 기간이 없고(날짜 미사용), 운영 단계만 start/end_date를 갖는다.
+ * '선정(SELECTED)'은 운영으로 넘어가는 경계 상태로 제안 단계 그룹에 속한다. 폼·표시가 공유하는 그룹 정의.
  */
-export const PROGRAM_PROPOSAL_STATUSES = ['PROPOSED', 'NOT_SELECTED'] as const
+export const PROGRAM_PROPOSAL_STATUSES = ['PROPOSED', 'SELECTED', 'NOT_SELECTED'] as const
 export const PROGRAM_OPERATION_STATUSES = ['DRAFT', 'OPERATING', 'FINISHED', 'CANCELLED'] as const
 
 export type ProgramStage = 'PROPOSAL' | 'OPERATION'
@@ -117,7 +121,8 @@ export function programStage(status: string): ProgramStage {
 }
 
 export const PROGRAM_STATUS_LABEL: Record<string, string> = {
-  PROPOSED: '제안',
+  PROPOSED: '시도',
+  SELECTED: '선정',
   DRAFT: '준비',
   OPERATING: '진행중',
   FINISHED: '종료',
@@ -132,6 +137,7 @@ export const PROGRAM_STATUS_LABEL: Record<string, string> = {
 /** 프로그램 상태 배지 톤(상세 헤더·목록 공용). */
 export const PROGRAM_STATUS_TONE: Record<string, BadgeTone> = {
   PROPOSED: 'info',
+  SELECTED: 'success',
   DRAFT: 'neutral',
   OPERATING: 'success',
   FINISHED: 'neutral',

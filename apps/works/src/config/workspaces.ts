@@ -10,6 +10,8 @@ export interface WorkspaceNavItem {
   description?: string
   /** 이 항목부터 시작되는 스위처 섹션명. 지정 시 위에 섹션 헤더(구분선+라벨)를 그린다. */
   groupLabel?: string
+  /** 섹션 라벨 없이 이 항목 위에 구분선만 그린다. */
+  divider?: boolean
 }
 
 /**
@@ -59,7 +61,8 @@ export const WORKSPACES: WorkspaceNavItem[] = [
     implemented: true,
     description: '수행 프로젝트 관리',
   },
-  { key: 'fund', label: 'FUND', path: '/fund', implemented: true, description: '펀드·투자 운용' },
+  // FUND는 같은 '투자 사업' 구획이지만 성격이 달라 위에 구분선만 둔다.
+  { key: 'fund', label: 'FUND', path: '/fund', implemented: true, divider: true, description: '펀드·투자 운용' },
   // 경영·시스템 — 백오피스 및 시스템 관리
   {
     key: 'management',
