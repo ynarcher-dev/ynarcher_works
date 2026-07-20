@@ -75,6 +75,8 @@ export function useProgramsPage(
   mineUserId?: string | null,
   /** 지정 시 해당 사업구분(category)만 조회한다(사이드바 카테고리 세분화 메뉴). */
   category?: string | null,
+  /** category와 함께 미분류(category is null) 건도 포함한다('기타' 항목). */
+  includeUnclassified = false,
 ) {
   const config = useProgramWorkspace()
   return useQuery({
@@ -88,6 +90,7 @@ export function useProgramsPage(
       pageSize,
       mineUserId ?? null,
       category ?? null,
+      includeUnclassified,
     ],
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<ProgramPage> => {
@@ -109,6 +112,13 @@ export function useProgramsPage(
           : `created_by.eq.${mineUserId}`
       }
 
+      // 사업구분 스코프. '기타'는 미분류(null)까지 함께 담아 사각지대를 막는다.
+      const categoryOr = category
+        ? includeUnclassified
+          ? `category.eq.${category},category.is.null`
+          : null
+        : null
+
       let q = supabase
         .from(config.tables.programs)
         .select(programListCols(config), { count: 'exact' })
@@ -118,7 +128,8 @@ export function useProgramsPage(
 
       if (mineOr) q = q.or(mineOr)
       // 카테고리 세분화 메뉴는 스코프의 일부이므로 검색·필터와 별개로 항상 적용한다.
-      if (category) q = q.eq('category', category)
+      if (categoryOr) q = q.or(categoryOr)
+      else if (category) q = q.eq('category', category)
 
       // 검색: 프로그램명 + 등록자(이름 → created_by id 역조회).
       if (kw) {
@@ -149,7 +160,8 @@ export function useProgramsPage(
           .select('*', { count: 'exact', head: true })
           .is('deleted_at', null)
         if (mineOr) allQ = allQ.or(mineOr)
-        if (category) allQ = allQ.eq('category', category)
+        if (categoryOr) allQ = allQ.or(categoryOr)
+        else if (category) allQ = allQ.eq('category', category)
         const { count: allCount } = await allQ
         totalAll = allCount ?? total
       }

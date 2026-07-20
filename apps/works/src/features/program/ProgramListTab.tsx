@@ -22,6 +22,8 @@ interface ProgramListTabProps {
   scope: 'mine' | 'all'
   /** 지정 시 해당 사업구분만 조회한다(사이드바 카테고리 세분화 메뉴). */
   category?: string
+  /** category와 함께 미분류(category is null) 건도 포함한다('기타' 항목). */
+  includeUnclassified?: boolean
   /** 상세 진입 시 넘길 출처 탭. 뒤로가기·사이드바 활성 상태 복원에 쓴다. */
   backTab: string
 }
@@ -32,7 +34,12 @@ interface ProgramListTabProps {
  * 검색창과 필터를 한 컨트롤 행으로 함께 배치한다. (STARTUP StartupPoolTab과 동일 구조.)
  * scope='mine'이면 등록자(created_by)·담당자가 현재 사용자인 사업만 조회한다.
  */
-export function ProgramListTab({ scope, category, backTab }: ProgramListTabProps) {
+export function ProgramListTab({
+  scope,
+  category,
+  includeUnclassified,
+  backTab,
+}: ProgramListTabProps) {
   const config = useProgramWorkspace()
   const toast = useToast()
   const navigate = useNavigate()
@@ -59,6 +66,7 @@ export function ProgramListTab({ scope, category, backTab }: ProgramListTabProps
     PAGE_SIZE,
     mineUserId,
     category ?? null,
+    includeUnclassified ?? false,
   )
 
   const onDeactivate = async (row: Program) => {

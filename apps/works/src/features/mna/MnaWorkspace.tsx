@@ -11,7 +11,8 @@ import { ProgramWorkspaceProvider, type ProgramWorkspaceConfig } from '@/feature
 export const MNA_WORKSPACE: ProgramWorkspaceConfig = {
   key: 'mna',
   basePath: '/mna',
-  entityNoun: '딜',
+  // 사이드바·목록 제목의 도메인 명칭. M&A 딜도 화면상으로는 '프로젝트'로 부른다.
+  entityNoun: '프로젝트',
   tables: {
     programs: 'ma_programs',
     modules: 'ma_program_modules',

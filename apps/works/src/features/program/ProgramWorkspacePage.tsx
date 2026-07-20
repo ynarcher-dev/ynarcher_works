@@ -9,8 +9,8 @@ import { useProgramWorkspace } from '@/features/program/workspace'
  * 사업 워크스페이스 페이지 컨테이너(AC/M&A/PROJECT 공용). 섹션 전환은 좌측 사이드바(?tab)가 구동한다.
  * - dashboard: 상태 요약 대시보드(STARTUP/NETWORKS 대시보드처럼 확장 예정)
  * - mine: 내가 담당자/등록자인 사업만
- * - all: 전체 사업
  * - 그 외: 사업구분(카테고리) 세분화 목록. tab이 소문자 카테고리 값(예: pe_fund)일 때 매칭된다.
+ * - all: 사이드바에서는 제거된 전체 목록. 상세 뒤로가기 폴백·기존 북마크를 위해 계속 처리한다.
  * 섹션 제목의 도메인 명칭은 워크스페이스 config(entityNoun)로 조립한다.
  */
 export function ProgramWorkspacePage() {
@@ -24,7 +24,7 @@ export function ProgramWorkspacePage() {
     mine: `내 ${config.entityNoun}`,
     all: `전체 ${config.entityNoun}`,
   }
-  const heading = headings[tab] ?? (category ? `${category.label} ${config.entityNoun}` : null)
+  const heading = headings[tab] ?? category?.menuLabel ?? null
 
   return (
     <div className="space-y-5">
@@ -47,6 +47,7 @@ export function ProgramWorkspacePage() {
           key={tab}
           scope="all"
           category={category.value}
+          includeUnclassified={category.includeUnclassified}
           backTab={tab}
         />
       ) : (

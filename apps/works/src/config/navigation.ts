@@ -34,9 +34,13 @@ export interface SubNavGroup {
 
 /**
  * 사업 워크스페이스(AC/M&A/PROJECT) 공용 사이드바 구성.
- * 대시보드 → 내 ~ → 전체 ~ 아래에 사업구분(카테고리)별 항목을 세분화해 나열한다.
+ * 대시보드 → 내 ~ → 사업구분(카테고리)별 항목 순으로 나열한다.
  * 카테고리 항목의 `tab`은 소문자 카테고리 값이며(예: `pe_fund`), ProgramWorkspacePage가
- * 이를 목록의 category 필터로 해석한다.
+ * 이를 목록의 category 스코프로 해석한다.
+ *
+ * '전체' 항목은 두지 않는다. 대신 각 워크스페이스의 '기타'가 미분류(category is null) 건을
+ * 함께 담아(ProgramCategoryOption.includeUnclassified) 사각지대를 막는다.
+ * 다만 `?tab=all`은 상세 뒤로가기 폴백·기존 북마크를 위해 페이지 쪽에서 계속 처리한다.
  */
 function programSubnav(
   entityNoun: string,
@@ -47,9 +51,8 @@ function programSubnav(
       items: [
         { label: '대시보드', tab: 'dashboard' },
         { label: `내 ${entityNoun}`, tab: 'mine', dividerBefore: true },
-        { label: `전체 ${entityNoun}`, tab: 'all', dividerBefore: true },
         ...categories.map((c, i) => ({
-          label: c.label,
+          label: c.menuLabel,
           tab: categoryTab(c.value),
           // 카테고리 묶음 시작에만 구분선을 둔다.
           ...(i === 0 ? { dividerBefore: true } : {}),
@@ -110,7 +113,7 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
   ac: programSubnav('사업', AC_CATEGORIES),
   fund: [{ group: 'FUND 메인', items: [{ label: '투자 대시보드' }] }],
   // M&A/PE는 AC와 동일한 사업 원장 구조(features/program)를 공유한다.
-  mna: programSubnav('딜', MNA_CATEGORIES),
+  mna: programSubnav('프로젝트', MNA_CATEGORIES),
   admin: [
     {
       group: '시스템 관리',
