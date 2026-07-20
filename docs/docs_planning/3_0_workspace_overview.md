@@ -15,7 +15,7 @@
 | :--- | :--- | :--- |
 | **[3-1]** | **[3_1_workspace_hub.md](./3_1_workspace_hub.md)** | **OFFICE (전사 업무 허브)**: 대시보드, 통합 검색, AI 에이전트, 임직원 정보, 전사 캘린더, 전자결재, 게시판, 회의실 예약/거래처 정보 골격 |
 | **[3-3-1]** | **[3_3_1_startup_pool_classification.md](./3_3_1_startup_pool_classification.md)** | **STARTUP (스타트업 풀)**: 투자기업·보육기업·발굴기업·기타기업 4개 상호 배타 뷰, 담당자, 관리현황, 승격 플로우 |
-| **[3-3]** | **[3_3_workspace_networks.md](./3_3_workspace_networks.md)** | **NETWORKS (네트워크 원장)**: 전문가, 투자사, 기업, 기관, 대학, 외주/거래, 기타, 글로벌 네트워크 원장 및 대용량 업로드 |
+| **[3-3]** | **[3_3_workspace_networks.md](./3_3_workspace_networks.md)** | **NETWORKS (네트워크 원장)**: 전문가, 투자사, 기업, 기관, 대학, 기타, 글로벌 네트워크 원장 및 대용량 업로드 |
 | **[3-3-2]** | **[3_3_2_networks_dashboard.md](./3_3_2_networks_dashboard.md)** | **NETWORKS 대시보드**: 네트워크 규모 KPI, 구분별 분포, 최근 업로드 통합 리스트 |
 | **[3-4]** | **[3_4_workspace_ac.md](./3_4_workspace_ac.md)** | **AC (사업부)**: Program First 기반 보육 프로그램 운영 플랫폼 및 14개 모듈 기획의 부모 아키텍처 |
 | **[3-4-1 ~ 3-4-14]** | **[AC 세부 모듈 문서](./3_4_1_ac_dashboard.md)** | **AC 운영 모듈**: 대시보드, 프로그램 개요, 모집, 참가자 풀, 평가 엔진, 서면/대면평가, OT, 멘토링, 매칭, 데모데이, 타임라인, 성과, 커스텀 활동 |

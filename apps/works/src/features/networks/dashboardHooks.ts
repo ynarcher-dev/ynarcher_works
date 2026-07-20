@@ -14,7 +14,6 @@ const STATUS_SLOTS: { key: string; label: string; table: string }[] = [
   { key: 'corporates', label: '기업', table: 'corporates' },
   { key: 'institutions', label: '기관', table: 'institutions' },
   { key: 'universities', label: '대학', table: 'universities' },
-  { key: 'vendors', label: '외주/거래', table: 'vendors' },
   { key: 'etc', label: '기타', table: 'etc' },
   { key: 'global', label: '글로벌', table: 'global_networks' },
   { key: 'others', label: '미분류', table: 'others' },

@@ -133,6 +133,8 @@ export const ENTITIES: Record<EntityKey, EntityConfig> = {
     fields: PERSON_FIELDS,
     listColumns: NETWORK_ORG_COLUMNS,
   },
+  // 외주/거래: NETWORKS 화면에서는 은퇴(메뉴·대시보드·구분 옵션에서 제거)했으나
+  // 기존 vendors 레코드 조회 하위호환을 위해 정의만 유지한다.
   vendors: {
     key: 'vendors',
     label: '외주/거래',
@@ -171,7 +173,7 @@ export const ENTITIES: Record<EntityKey, EntityConfig> = {
 
 /**
  * '마스터 네트워크 관리'에 노출되는 분류 가능한 네트워크 카테고리(구분 옵션의 원천).
- * 스타트업은 STARTUP 워크스페이스로 분리, partners는 제외.
+ * 스타트업은 STARTUP 워크스페이스로 분리, partners·vendors(외주/거래)는 은퇴하여 제외.
  * 미분류(others)는 카테고리가 아니라 임시 저장소(미분류 데이터베이스)이므로 여기서 제외한다.
  */
 export const ENTITY_ORDER: EntityKey[] = [
@@ -182,7 +184,6 @@ export const ENTITY_ORDER: EntityKey[] = [
   'corporates',
   'institutions',
   'universities',
-  'vendors',
   'etc',
 ]
 
@@ -208,7 +209,7 @@ export function isProfileEntity(key: EntityKey): boolean {
 
 /**
  * 축약(compact) 유형 — "구분"이 이들 중 하나이면 통합 폼·상세에서 매칭 가능여부·전문분야·약력·
- * 멘토링 만족도를 숨긴다. 조직 유형(기업·기관·대학·외주/거래·기타)에 더해, 미분류(others)도
+ * 멘토링 만족도를 숨긴다. 조직 유형(기업·기관·대학·기타, 은퇴한 외주/거래 포함)에 더해, 미분류(others)도
  * 분류 전 임시 저장소이므로 기업 네트워크처럼 간단한 항목만 노출한다.
  */
 export const COMPACT_ENTITIES: EntityKey[] = [

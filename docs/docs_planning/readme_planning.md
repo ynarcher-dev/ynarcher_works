@@ -13,7 +13,7 @@
 | **워크스페이스 요건 개요** | [3_0_workspace_overview.md](./3_0_workspace_overview.md) | 9개 내부 워크스페이스 및 외부 채널 요건의 최상위 인덱스 | 구현 반영 |
 | **3-1. OFFICE (전사 업무 허브)** | [3_1_workspace_hub.md](./3_1_workspace_hub.md) | 구 HUB 문서명을 유지하되, 실제 구현 기준인 OFFICE 대시보드·AI 에이전트·임직원 정보·캘린더·전자결재·게시판 요건 | 구현 반영 |
 | **3-2. ADMIN (관리자)** | [3_2_workspace_admin.md](./3_2_workspace_admin.md) | 사용자 권한 통제 콘솔, 게시판/태그/민감정보 관리, 보안 감사 로그 요건 | 구현 반영 |
-| **3-3. NETWORKS (네트워크 원장)** | [3_3_workspace_networks.md](./3_3_workspace_networks.md) | 전문가·투자사·기관·기업·대학·외주/거래·글로벌 네트워크 원장 및 대량 업로드 요건 | 구현 반영 |
+| **3-3. NETWORKS (네트워크 원장)** | [3_3_workspace_networks.md](./3_3_workspace_networks.md) | 전문가·투자사·기관·기업·대학·기타·글로벌 네트워크 원장 및 대량 업로드 요건 | 구현 반영 |
 | **3-3-1. STARTUP (스타트업 풀)** | [3_3_1_startup_pool_classification.md](./3_3_1_startup_pool_classification.md) | 투자·보육·발굴·기타기업 구분, 담당자, 관리현황, STARTUP 4개 목록 뷰 요건 | 구현 반영 |
 | **3-3-2. NETWORKS 대시보드** | [3_3_2_networks_dashboard.md](./3_3_2_networks_dashboard.md) | 네트워크 규모 KPI, 구분별 분포, 최근 업로드 통합 현황 | 구현 반영 |
 | **3-4. AC (사업부)** | [3_4_workspace_ac.md](./3_4_workspace_ac.md) | Program First 기반의 모집, 평가, OT, 멘토링, 비즈니스 매칭, 데모데이, KPI/Export 운영 모듈 기획 | 구현 반영 |

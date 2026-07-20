@@ -23,7 +23,7 @@ function resolveEither(row: MasterRow, primary: string, fallback: string): unkno
 /**
  * 복사 버튼 텍스트: 이름/소속·담당자/직책·직급/이메일/연락처를 라벨과 함께 줄바꿈으로 조합.
  * 프로필 엔티티(전문가·VAN·투자자)는 최상위 스칼라(email/phone)와 profile.* 를,
- * 조직 엔티티(기업·기관·대학·외주/거래)는 representative와 contact.* 를 함께 커버한다.
+ * 조직 엔티티(기업·기관·대학·기타)는 representative와 contact.* 를 함께 커버한다.
  */
 function buildCopyText(row: MasterRow): string {
   const line = (label: string, value: unknown) =>

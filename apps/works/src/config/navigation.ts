@@ -95,14 +95,13 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
     {
       group: '마스터 네트워크 관리',
       items: [
+        { label: '전문가 네트워크', tab: 'experts' },
+        { label: '투자사 네트워크', tab: 'investors' },
         { label: 'BAN 네트워크', tab: 'van' },
         { label: 'EXP 네트워크', tab: 'exp' },
-        { label: '전문가 네트워크', tab: 'experts', dividerBefore: true },
-        { label: '투자사 네트워크', tab: 'investors' },
         { label: '기업 네트워크', tab: 'corporates', dividerBefore: true },
         { label: '기관 네트워크', tab: 'institutions' },
         { label: '대학 네트워크', tab: 'universities' },
-        { label: '외주/거래 네트워크', tab: 'vendors' },
         { label: '기타 네트워크', tab: 'etc' },
       ],
     },

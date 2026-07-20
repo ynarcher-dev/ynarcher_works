@@ -42,7 +42,6 @@ import {
   GraduationCap,
   Boxes,
   EyeOff,
-  Truck,
   Component,
   Upload,
   DoorOpen,
@@ -100,7 +99,6 @@ const sidebarIconByTab: Record<string, LucideIcon> = {
   corporates: Building2,
   institutions: Landmark,
   universities: GraduationCap,
-  vendors: Truck,
   etc: Component,
   others: Boxes,
 

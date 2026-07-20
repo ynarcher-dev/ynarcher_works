@@ -35,7 +35,6 @@ const ENTITY_TONE: Record<string, BadgeTone> = {
   corporates: 'neutral',
   institutions: 'neutral',
   universities: 'neutral',
-  vendors: 'neutral',
   etc: 'neutral',
   others: 'danger',
 }
