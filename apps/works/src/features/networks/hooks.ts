@@ -101,15 +101,26 @@ export function useEntityPage(
 
 // ── 내 네트워크(10종 통합 목록) ───────────────────────────────────────────────
 
-/** 기여 이력 기준 통합 목록의 행(RPC `my_network_entities` 반환 컬럼). */
-export interface MyNetworkRow {
-  /** 원장 테이블명(= EntityKey). 종류 배지·상세 라우트의 기준. */
+/**
+ * 기여 이력 기준 통합 목록의 행(RPC `my_network_entities` 반환 컬럼).
+ * 공용 리스트뷰(`MasterListView`)가 그대로 렌더할 수 있도록 `MasterRow` 호환 형태를 유지한다
+ * (부서·직책·구분은 다른 네트워크와 동일하게 `profile` jsonb의 점 경로에서 읽힌다).
+ */
+export type MyNetworkRow = Record<string, unknown> & {
+  /** 원장 테이블명(= EntityKey). 상세 라우트의 기준(10종 혼재 목록이라 행마다 다르다). */
   entity_table: EntityKey
   id: string
   name: string
   affiliation: string | null
   email: string | null
   phone: string | null
+  /** 부서/직책/구분 등 공용 프로필 jsonb(다른 네트워크 목록과 동일 스키마). */
+  profile: Record<string, unknown> | null
+  expertise: unknown
+  created_by: string | null
+  /** 등록자(created_by → users.name). 공용 리스트뷰가 `creator.name`으로 읽는다. */
+  creator: { name: string | null } | null
+  updated_at: string | null
   /** 가장 최근 기여 행위(created/merged/enriched/edited). */
   last_action: string | null
   last_contributed_at: string | null
@@ -140,9 +151,21 @@ export function useMyNetworkPage(keyword: string, page: number, pageSize: number
         p_offset: page * pageSize,
       })
       if (error) throw error
-      const rows = (data ?? []) as (MyNetworkRow & { total_count?: number | string })[]
+      // RPC 원본 행: 등록자가 평면 컬럼(creator_name), 총 건수가 행마다 실린 윈도우 카운트.
+      const rows = (data ?? []) as (Record<string, unknown> & {
+        creator_name?: string | null
+        total_count?: number | string
+      })[]
       return {
-        rows: rows.map(({ total_count: _total, ...row }) => row as MyNetworkRow),
+        // RPC는 등록자를 평면 컬럼(creator_name)으로 돌려주므로 다른 네트워크 목록과 동일한
+        // 중첩 형태(creator.name)로 정규화한다(공용 리스트뷰의 작성자 컬럼 규약).
+        rows: rows.map(
+          ({ total_count: _total, creator_name, ...row }) =>
+            ({
+              ...row,
+              creator: creator_name ? { name: creator_name } : null,
+            }) as MyNetworkRow,
+        ),
         total: Number(rows[0]?.total_count ?? 0),
       }
     },
