@@ -5,7 +5,7 @@ import { ProgramWorkspaceProvider, type ProgramWorkspaceConfig } from '@/feature
 /**
  * PROJECT 워크스페이스 설정. 화면은 AC와 동일한 features/program 공용 모듈을 그대로 사용하며,
  * 원장만 project_* 테이블로 분리된다. 근거: docs/docs_planning/3_8_workspace_project.md
- * 사업구분은 현재 '기타' 단일이며, 분류 확장 시 아래 목록과 DB CHECK 제약을 함께 늘린다.
+ * 사업구분은 글로벌/신사업/기타 3분류이며, 확장 시 아래 목록과 DB CHECK 제약을 함께 늘린다.
  */
 export const PROJECT_WORKSPACE: ProgramWorkspaceConfig = {
   key: 'project',
@@ -25,7 +25,11 @@ export const PROJECT_WORKSPACE: ProgramWorkspaceConfig = {
     setStaffing: 'set_project_program_staffing',
     setModule: 'set_project_program_module',
   },
-  categories: [{ value: 'ETC', label: '기타', tone: 'neutral' }],
+  categories: [
+    { value: 'GLOBAL', label: '글로벌', tone: 'info' },
+    { value: 'NEW_BIZ', label: '신사업', tone: 'success' },
+    { value: 'ETC', label: '기타', tone: 'neutral' },
+  ],
   allowedModuleTypes: ['CUSTOM_ACTIVITY'],
 }
 

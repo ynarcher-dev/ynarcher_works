@@ -10,7 +10,7 @@
 --     project_program_timeline_items / project_custom_activities
 --   - enum은 신규 생성하지 않고 AC가 쓰는 public enum을 그대로 재사용한다.
 --   - 모듈 템플릿은 CUSTOM_ACTIVITY만 운용하므로 모집/평가/멘토링/매칭/데모데이/성과 하위 테이블은 만들지 않는다.
---   - 사업구분(category): ETC(기타) 단독. 추후 분류 추가 시 CHECK 제약만 확장한다.
+--   - 사업구분(category): GLOBAL(글로벌) / NEW_BIZ(신사업) / ETC(기타) 3분류.
 --
 -- 기존 projects / project_members / project_tasks / task_checklist_items / project_milestones는
 --   물리 삭제 금지 원칙에 따라 DROP하지 않는다(화면만 제거).
@@ -48,7 +48,7 @@ create table if not exists public.project_programs (
   updated_at           timestamptz not null default now(),
   deleted_at           timestamptz,
   constraint project_programs_category_check
-    check (category is null or category in ('ETC'))
+    check (category is null or category in ('GLOBAL', 'NEW_BIZ', 'ETC'))
 );
 
 create index if not exists idx_project_programs_status on public.project_programs (status);

@@ -150,22 +150,10 @@ export const PROGRAM_STATUS_TONE: Record<string, BadgeTone> = {
 }
 
 /**
- * 사업구분(category): 공공/민간/매출 3분류. DB programs.category(text, null=미지정).
- * 등록/편집 폼 선택값·상세/목록 배지 표시에 공용으로 쓰인다.
+ * 사업구분(category)은 워크스페이스마다 값이 다르므로 각 워크스페이스 config가 단일 원천이다.
+ * AC는 features/ac/AcWorkspace.tsx, M&A는 features/mna/MnaWorkspace.tsx,
+ * PROJECT는 features/project/ProjectWorkspace.tsx의 `categories`를 참조한다.
  */
-export const PROGRAM_CATEGORY_OPTIONS = ['PUBLIC', 'PRIVATE', 'REVENUE'] as const
-
-export const PROGRAM_CATEGORY_LABEL: Record<string, string> = {
-  PUBLIC: '공공',
-  PRIVATE: '민간',
-  REVENUE: '매출',
-}
-
-export const PROGRAM_CATEGORY_TONE: Record<string, BadgeTone> = {
-  PUBLIC: 'info',
-  PRIVATE: 'neutral',
-  REVENUE: 'success',
-}
 
 export const PARTICIPANT_ROLES = [
   'STARTUP',

@@ -30,6 +30,7 @@ export const AC_WORKSPACE: ProgramWorkspaceConfig = {
     { value: 'PUBLIC', label: '공공', tone: 'info' },
     { value: 'PRIVATE', label: '민간', tone: 'neutral' },
     { value: 'REVENUE', label: '매출', tone: 'success' },
+    { value: 'ETC', label: '기타', tone: 'neutral' },
   ],
   // AC는 정형 운영 모듈 9종을 모두 운용한다.
   allowedModuleTypes: MODULE_TYPES.map((def) => def.type),
