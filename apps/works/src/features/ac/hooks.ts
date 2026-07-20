@@ -51,6 +51,8 @@ export interface Program {
   id: string
   /** 사업코드(6자리 영숫자 난수, 유니크). DB 트리거가 등록 시 자동 부여. */
   code: string | null
+  /** 사업구분: PUBLIC(공공)/PRIVATE(민간)/REVENUE(매출). null=미지정. */
+  category: string | null
   title: string
   status: string
   /** 제안 단계 기간(제안서 작성~발표). 제안 없이 시작한 프로그램은 null. */
@@ -70,7 +72,7 @@ export interface Program {
 }
 
 const PROGRAM_COLS =
-  'id, code, title, status, proposal_start_date, proposal_end_date, start_date, end_date, description, updated_at, ' +
+  'id, code, category, title, status, proposal_start_date, proposal_end_date, start_date, end_date, description, updated_at, ' +
   'departments:program_departments(org_version_id, department_id, kind, collaboration_ratio, department:departments!program_departments_department_id_fkey(id, name)), ' +
   'managers:program_managers(user_id, org_version_id, department_id, role, allocation_rate, start_date, end_date, user:users!program_managers_user_id_fkey(id, name), department:departments!program_managers_department_id_fkey(id, name)), ' +
   'creator:users!created_by(id, name)'
@@ -117,6 +119,7 @@ export function useCreateProgram() {
       start_date?: string | null
       end_date?: string | null
       description?: string | null
+      category?: string | null
     }): Promise<string> => {
       const { data, error } = await supabase
         .from('programs')

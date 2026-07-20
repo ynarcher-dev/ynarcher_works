@@ -143,6 +143,24 @@ export const PROGRAM_STATUS_TONE: Record<string, BadgeTone> = {
   DEMO_DAY: 'warning',
 }
 
+/**
+ * 사업구분(category): 공공/민간/매출 3분류. DB programs.category(text, null=미지정).
+ * 등록/편집 폼 선택값·상세/목록 배지 표시에 공용으로 쓰인다.
+ */
+export const PROGRAM_CATEGORY_OPTIONS = ['PUBLIC', 'PRIVATE', 'REVENUE'] as const
+
+export const PROGRAM_CATEGORY_LABEL: Record<string, string> = {
+  PUBLIC: '공공',
+  PRIVATE: '민간',
+  REVENUE: '매출',
+}
+
+export const PROGRAM_CATEGORY_TONE: Record<string, BadgeTone> = {
+  PUBLIC: 'info',
+  PRIVATE: 'neutral',
+  REVENUE: 'success',
+}
+
 export const PARTICIPANT_ROLES = [
   'STARTUP',
   'EXPERT',

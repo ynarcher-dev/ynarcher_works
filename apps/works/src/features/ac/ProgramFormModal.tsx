@@ -1,4 +1,4 @@
-import { Button, Input, Modal, TextArea, useToast } from '@ynarcher/ui'
+import { Button, Input, Modal, Select, TextArea, useToast } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import {
@@ -12,7 +12,12 @@ import type { ProgramDepartmentSegment } from '@/features/ac/ProgramDepartmentEd
 import { PhaseStaffingEditor } from '@/features/ac/PhaseStaffingEditor'
 import { computePhases, validateStaffing } from '@/features/ac/programManagerCoverage'
 import { useOrgVersions } from '@/features/management/orgHooks'
-import { programStage, type ProgramStage } from '@/features/ac/config'
+import {
+  PROGRAM_CATEGORY_LABEL,
+  PROGRAM_CATEGORY_OPTIONS,
+  programStage,
+  type ProgramStage,
+} from '@/features/ac/config'
 import { rangesOverlap } from '@/features/ac/programPeriods'
 import {
   ProgramStageFields,
@@ -99,6 +104,7 @@ export function ProgramFormModal({
   } = useForm<FormValues>({
     defaultValues: {
       title: program?.title ?? '',
+      category: program?.category ?? '',
       proposal_start_date: program?.proposal_start_date ?? '',
       proposal_end_date: program?.proposal_end_date ?? '',
       start_date: program?.start_date ?? '',
@@ -147,6 +153,7 @@ export function ProgramFormModal({
       start_date: values.start_date || null,
       end_date: values.end_date || null,
       description: values.description || null,
+      category: values.category || null,
     }
     try {
       if (isEdit && program) {
@@ -208,6 +215,19 @@ export function ProgramFormModal({
           {errors.title && (
             <p className="mt-1 text-caption text-danger">{errors.title.message}</p>
           )}
+        </div>
+        <div>
+          <label className="text-body font-medium text-gray-800" htmlFor="category">
+            사업구분
+          </label>
+          <Select id="category" {...register('category')}>
+            <option value="">미지정</option>
+            {PROGRAM_CATEGORY_OPTIONS.map((key) => (
+              <option key={key} value={key}>
+                {PROGRAM_CATEGORY_LABEL[key]}
+              </option>
+            ))}
+          </Select>
         </div>
         <ProgramStageFields
           stage={stage}

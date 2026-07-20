@@ -48,7 +48,7 @@ export interface ProgramPage {
 }
 
 const PROGRAM_COLS =
-  'id, title, status, start_date, end_date, description, updated_at, managers:program_managers(user_id, user:users!program_managers_user_id_fkey(id, name)), creator:users!created_by(id, name)'
+  'id, code, category, title, status, start_date, end_date, description, updated_at, managers:program_managers(user_id, user:users!program_managers_user_id_fkey(id, name)), creator:users!created_by(id, name)'
 
 /**
  * 프로그램 원장 전용 서버 사이드 페이지네이션 훅.

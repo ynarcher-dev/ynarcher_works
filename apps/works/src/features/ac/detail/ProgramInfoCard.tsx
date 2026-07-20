@@ -2,7 +2,12 @@ import { Badge } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import type { Program, ProgramDepartmentKind } from '@/features/ac/hooks'
 import { ProgramPhotoBox } from '@/features/ac/detail/ProgramPhotoBox'
-import { PROGRAM_STATUS_LABEL, PROGRAM_STATUS_TONE } from '@/features/ac/config'
+import {
+  PROGRAM_CATEGORY_LABEL,
+  PROGRAM_CATEGORY_TONE,
+  PROGRAM_STATUS_LABEL,
+  PROGRAM_STATUS_TONE,
+} from '@/features/ac/config'
 
 /** 라벨: 값 한 줄(StartupDetailPage·NetworkDetailPage의 Info와 동일 톤). */
 function Info({ label, value }: { label: string; value: ReactNode }) {
@@ -86,10 +91,10 @@ export function ProgramInfoCard({ program }: { program: Program }) {
             <Badge tone={PROGRAM_STATUS_TONE[program.status] ?? 'neutral'} size="sm">
               {PROGRAM_STATUS_LABEL[program.status] ?? program.status}
             </Badge>
-            {program.code ? (
-              <span className="rounded-radius-sm bg-gray-100 px-2 py-0.5 font-mono text-caption tracking-wider text-gray-500">
-                {program.code}
-              </span>
+            {program.category ? (
+              <Badge tone={PROGRAM_CATEGORY_TONE[program.category] ?? 'neutral'} size="sm">
+                {PROGRAM_CATEGORY_LABEL[program.category] ?? program.category}
+              </Badge>
             ) : null}
           </div>
           <p className="mt-1 text-body text-gray-500">{program.description || '-'}</p>
@@ -97,6 +102,7 @@ export function ProgramInfoCard({ program }: { program: Program }) {
       </div>
 
       <div className="mt-5 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-3">
+        <Info label="사업코드" value={program.code || '-'} />
         <Info label="제안 기간" value={proposalPeriod} />
         <Info label="운영 기간" value={operationPeriod} />
         <Info label="등록자" value={program.creator?.name || '-'} />

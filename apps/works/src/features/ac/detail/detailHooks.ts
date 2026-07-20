@@ -15,6 +15,7 @@ export function useUpdateProgram(id: string) {
       start_date: string | null
       end_date: string | null
       description: string | null
+      category: string | null
     }) => {
       const { error } = await supabase.from('programs').update(values).eq('id', id)
       if (error) throw error

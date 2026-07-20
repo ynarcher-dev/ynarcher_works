@@ -5,7 +5,12 @@ import {
   type DataTableProps,
 } from '@ynarcher/ui'
 import { useMemo } from 'react'
-import { PROGRAM_STATUS_LABEL, PROGRAM_STATUS_TONE } from '@/features/ac/config'
+import {
+  PROGRAM_CATEGORY_LABEL,
+  PROGRAM_CATEGORY_TONE,
+  PROGRAM_STATUS_LABEL,
+  PROGRAM_STATUS_TONE,
+} from '@/features/ac/config'
 import type { Program } from '@/features/ac/hooks'
 
 interface ProgramTableProps {
@@ -22,7 +27,7 @@ interface ProgramTableProps {
 
 /**
  * 프로그램 원장 공용 데이터 테이블(STARTUP StartupPoolTable과 동일 규격).
- * 컬럼: 체크박스·No.·프로그램명·상태·운영 시작일·운영 종료일 + 우측 표준 컬럼(등록자·수정일·관리).
+ * 컬럼: 체크박스·No.·사업코드·사업구분·프로그램명·상태·운영 시작일·운영 종료일 + 우측 표준 컬럼(등록자·수정일·관리).
  */
 export function ProgramTable({
   rows,
@@ -34,6 +39,27 @@ export function ProgramTable({
 }: ProgramTableProps) {
   const columns = useMemo<Column<Program>[]>(
     () => [
+      {
+        // 사업코드(6자리 영숫자 난수). 목록에서는 다른 컬럼과 동일한 본문 텍스트로 노출한다.
+        key: 'code',
+        header: '사업코드',
+        className: 'whitespace-nowrap text-gray-600',
+        render: (r) => r.code ?? <span className="text-gray-400">-</span>,
+      },
+      {
+        // 사업구분(공공/민간/매출). 상태 배지와 동일 규격의 톤 배지로 노출한다.
+        key: 'category',
+        header: '사업구분',
+        className: 'whitespace-nowrap',
+        render: (r) =>
+          r.category ? (
+            <Badge tone={PROGRAM_CATEGORY_TONE[r.category] ?? 'neutral'} size="sm">
+              {PROGRAM_CATEGORY_LABEL[r.category] ?? r.category}
+            </Badge>
+          ) : (
+            <span className="text-gray-400">-</span>
+          ),
+      },
       {
         // 프로그램명은 min-width로 넓게 확보한다(설명 필러 컬럼이 그만큼 좁혀진다).
         key: 'title',

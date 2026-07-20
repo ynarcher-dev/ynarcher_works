@@ -10,6 +10,8 @@ import {
 /** 프로그램 등록/편집 폼 값(상태는 단계별 셀렉트가 별도 상태로 소유). */
 export interface ProgramFormValues {
   title: string
+  /** 사업구분(공공/민간/매출). 빈 문자열 = 미지정. */
+  category: string
   proposal_start_date: string
   proposal_end_date: string
   start_date: string
