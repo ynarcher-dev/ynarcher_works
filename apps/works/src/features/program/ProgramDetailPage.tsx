@@ -1,6 +1,7 @@
 import { Badge, Banner, Button, Spinner } from '@ynarcher/ui'
 import { useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { categoryFromTab } from '@/config/programCategories'
 import { MentoringPanel } from '@/features/program/MentoringPanel'
 import { ProgramFormModal } from '@/features/program/ProgramFormModal'
 import { ProgramOverviewTab } from '@/features/program/detail/ProgramOverviewTab'
@@ -70,8 +71,13 @@ export function ProgramDetailPage() {
   const config = useProgramWorkspace()
   const { id } = useParams<{ id: string }>()
   const [params] = useSearchParams()
-  // 출처 목록 탭(mine/all). 직접 진입 등으로 없으면 전체 사업으로 폴백한다.
-  const backTo = `${config.basePath}?tab=${params.get('tab') === 'mine' ? 'mine' : 'all'}`
+  // 출처 목록 탭(mine/all/카테고리). 알 수 없는 값이면 전체 목록으로 폴백한다.
+  const fromTab = params.get('tab') ?? ''
+  const backTab =
+    fromTab === 'mine' || fromTab === 'all' || categoryFromTab(config.categories, fromTab)
+      ? fromTab
+      : 'all'
+  const backTo = `${config.basePath}?tab=${backTab}`
   const { data: program, isLoading } = useProgram(id)
   const [tab, setTab] = useState<Tab>('overview')
   // 진입한 모듈 인스턴스(운영 화면은 program_module_id 단위이므로 인스턴스를 들고 있어야 한다).

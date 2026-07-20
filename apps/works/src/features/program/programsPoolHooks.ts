@@ -73,10 +73,22 @@ export function useProgramsPage(
   pageSize: number,
   /** 지정 시 등록자(created_by) 또는 담당자(담당자 원장)가 이 사용자인 사업만 조회한다('내 사업'). */
   mineUserId?: string | null,
+  /** 지정 시 해당 사업구분(category)만 조회한다(사이드바 카테고리 세분화 메뉴). */
+  category?: string | null,
 ) {
   const config = useProgramWorkspace()
   return useQuery({
-    queryKey: [config.key, 'programs', 'page', keyword, filters, page, pageSize, mineUserId ?? null],
+    queryKey: [
+      config.key,
+      'programs',
+      'page',
+      keyword,
+      filters,
+      page,
+      pageSize,
+      mineUserId ?? null,
+      category ?? null,
+    ],
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<ProgramPage> => {
       const from = page * pageSize
@@ -105,6 +117,8 @@ export function useProgramsPage(
         .range(from, to)
 
       if (mineOr) q = q.or(mineOr)
+      // 카테고리 세분화 메뉴는 스코프의 일부이므로 검색·필터와 별개로 항상 적용한다.
+      if (category) q = q.eq('category', category)
 
       // 검색: 프로그램명 + 등록자(이름 → created_by id 역조회).
       if (kw) {
@@ -127,7 +141,7 @@ export function useProgramsPage(
       const total = count ?? 0
 
       // 검색·필터가 하나도 없으면 반영 건수 == 전체 건수. 있을 때만 전체 건수를 별도 조회한다.
-      // (전체 건수도 '내 사업' 스코프는 반영한다.)
+      // (전체 건수도 '내 사업'·카테고리 스코프는 반영한다.)
       let totalAll = total
       if (kw || hasActiveProgramFilters(filters)) {
         let allQ = supabase
@@ -135,6 +149,7 @@ export function useProgramsPage(
           .select('*', { count: 'exact', head: true })
           .is('deleted_at', null)
         if (mineOr) allQ = allQ.or(mineOr)
+        if (category) allQ = allQ.eq('category', category)
         const { count: allCount } = await allQ
         totalAll = allCount ?? total
       }

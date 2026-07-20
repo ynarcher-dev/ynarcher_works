@@ -1,3 +1,4 @@
+import { MNA_CATEGORIES } from '@/config/programCategories'
 import { ProgramDetailPage } from '@/features/program/ProgramDetailPage'
 import { ProgramWorkspacePage } from '@/features/program/ProgramWorkspacePage'
 import { ProgramWorkspaceProvider, type ProgramWorkspaceConfig } from '@/features/program/workspace'
@@ -25,12 +26,7 @@ export const MNA_WORKSPACE: ProgramWorkspaceConfig = {
     setStaffing: 'set_ma_program_staffing',
     setModule: 'set_ma_program_module',
   },
-  categories: [
-    { value: 'SELL', label: 'Sell', tone: 'warning' },
-    { value: 'BUY', label: 'Buy', tone: 'info' },
-    { value: 'PE_FUND', label: 'PE Fund', tone: 'success' },
-    { value: 'ETC', label: '기타', tone: 'neutral' },
-  ],
+  categories: MNA_CATEGORIES,
   allowedModuleTypes: ['CUSTOM_ACTIVITY'],
 }
 

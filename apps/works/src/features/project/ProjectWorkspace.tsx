@@ -1,3 +1,4 @@
+import { PROJECT_CATEGORIES } from '@/config/programCategories'
 import { ProgramDetailPage } from '@/features/program/ProgramDetailPage'
 import { ProgramWorkspacePage } from '@/features/program/ProgramWorkspacePage'
 import { ProgramWorkspaceProvider, type ProgramWorkspaceConfig } from '@/features/program/workspace'
@@ -25,11 +26,7 @@ export const PROJECT_WORKSPACE: ProgramWorkspaceConfig = {
     setStaffing: 'set_project_program_staffing',
     setModule: 'set_project_program_module',
   },
-  categories: [
-    { value: 'GLOBAL', label: '글로벌', tone: 'info' },
-    { value: 'NEW_BIZ', label: '신사업', tone: 'success' },
-    { value: 'ETC', label: '기타', tone: 'neutral' },
-  ],
+  categories: PROJECT_CATEGORIES,
   allowedModuleTypes: ['CUSTOM_ACTIVITY'],
 }
 

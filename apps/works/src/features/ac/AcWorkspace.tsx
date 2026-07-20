@@ -1,3 +1,4 @@
+import { AC_CATEGORIES } from '@/config/programCategories'
 import { MODULE_TYPES } from '@/features/program/config'
 import { ProgramDetailPage } from '@/features/program/ProgramDetailPage'
 import { ProgramWorkspacePage } from '@/features/program/ProgramWorkspacePage'
@@ -26,12 +27,7 @@ export const AC_WORKSPACE: ProgramWorkspaceConfig = {
     setStaffing: 'set_program_staffing',
     setModule: 'set_program_module',
   },
-  categories: [
-    { value: 'PUBLIC', label: '공공', tone: 'info' },
-    { value: 'PRIVATE', label: '민간', tone: 'neutral' },
-    { value: 'REVENUE', label: '매출', tone: 'success' },
-    { value: 'ETC', label: '기타', tone: 'neutral' },
-  ],
+  categories: AC_CATEGORIES,
   // AC는 정형 운영 모듈 9종을 모두 운용한다.
   allowedModuleTypes: MODULE_TYPES.map((def) => def.type),
 }

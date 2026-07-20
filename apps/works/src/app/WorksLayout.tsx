@@ -36,6 +36,9 @@ import {
   Coins,
   Building2,
   Landmark,
+  TrendingUp,
+  ShoppingCart,
+  PiggyBank,
   GraduationCap,
   Boxes,
   EyeOff,
@@ -107,6 +110,16 @@ const sidebarIconByTab: Record<string, LucideIcon> = {
   all: LayoutGrid,
   mna: BriefcaseBusiness,
   project: Folder,
+
+  // 사업 워크스페이스(AC/M&A/PROJECT) 사업구분 세분화 메뉴.
+  // `global`(글로벌)·`etc`(기타)는 NETWORKS 매핑을 그대로 재사용한다.
+  public: Landmark,
+  private: Building2,
+  revenue: Coins,
+  sell: TrendingUp,
+  buy: ShoppingCart,
+  pe_fund: PiggyBank,
+  new_biz: Lightbulb,
 
   // HUB 그룹 4: 실적 정보
   fund: WalletCards,

@@ -20,6 +20,10 @@ const PAGE_SIZE = 30
 interface ProgramListTabProps {
   /** 'mine' = 내가 담당자/등록자인 사업만, 'all' = 전체 사업. */
   scope: 'mine' | 'all'
+  /** 지정 시 해당 사업구분만 조회한다(사이드바 카테고리 세분화 메뉴). */
+  category?: string
+  /** 상세 진입 시 넘길 출처 탭. 뒤로가기·사이드바 활성 상태 복원에 쓴다. */
+  backTab: string
 }
 
 /**
@@ -28,7 +32,7 @@ interface ProgramListTabProps {
  * 검색창과 필터를 한 컨트롤 행으로 함께 배치한다. (STARTUP StartupPoolTab과 동일 구조.)
  * scope='mine'이면 등록자(created_by)·담당자가 현재 사용자인 사업만 조회한다.
  */
-export function ProgramListTab({ scope }: ProgramListTabProps) {
+export function ProgramListTab({ scope, category, backTab }: ProgramListTabProps) {
   const config = useProgramWorkspace()
   const toast = useToast()
   const navigate = useNavigate()
@@ -54,6 +58,7 @@ export function ProgramListTab({ scope }: ProgramListTabProps) {
     page,
     PAGE_SIZE,
     mineUserId,
+    category ?? null,
   )
 
   const onDeactivate = async (row: Program) => {
@@ -90,8 +95,8 @@ export function ProgramListTab({ scope }: ProgramListTabProps) {
           rows={data?.rows ?? []}
           selectedKeys={selected}
           onSelectionChange={setSelected}
-          // 출처 목록 탭(mine/all)을 쿼리로 넘겨 상세에서 사이드바 활성·뒤로가기 목적지를 유지한다.
-          onRowClick={(row) => navigate(`${config.basePath}/programs/${row.id}?tab=${scope}`)}
+          // 출처 목록 탭(mine/all/카테고리)을 쿼리로 넘겨 상세에서 사이드바 활성·뒤로가기 목적지를 유지한다.
+          onRowClick={(row) => navigate(`${config.basePath}/programs/${row.id}?tab=${backTab}`)}
           onDeactivate={(row) => void onDeactivate(row)}
           pagination={{
             page,

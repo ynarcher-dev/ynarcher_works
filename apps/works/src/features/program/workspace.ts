@@ -1,5 +1,8 @@
 import type { BadgeTone } from '@ynarcher/ui'
 import { createContext, useContext } from 'react'
+import type { ProgramCategoryOption } from '@/config/programCategories'
+
+export type { ProgramCategoryOption }
 
 /**
  * 사업(Program) 공용 모듈을 사용하는 워크스페이스 키.
@@ -7,13 +10,6 @@ import { createContext, useContext } from 'react'
  * 차이를 본 config 하나로 흡수하고 features/program 전체를 공유한다.
  */
 export type ProgramWorkspaceKey = 'ac' | 'mna' | 'project'
-
-/** 사업구분(category) 선택지. DB는 text + CHECK 제약이며 워크스페이스마다 값이 다르다. */
-export interface ProgramCategoryOption {
-  value: string
-  label: string
-  tone: BadgeTone
-}
 
 /**
  * 워크스페이스별 원장 테이블·RPC·분류 정의.

@@ -1,4 +1,11 @@
 import type { WorkspaceKey } from '@/auth/types'
+import {
+  AC_CATEGORIES,
+  MNA_CATEGORIES,
+  PROJECT_CATEGORIES,
+  categoryTab,
+  type ProgramCategoryOption,
+} from '@/config/programCategories'
 
 /** 사이드바 세부 메뉴 항목. tab은 페이지 내부 섹션을 제어하는 `?tab=` 쿼리 값. */
 export interface SubNavItem {
@@ -23,6 +30,33 @@ export interface SubNavItem {
 export interface SubNavGroup {
   group?: string
   items: SubNavItem[]
+}
+
+/**
+ * 사업 워크스페이스(AC/M&A/PROJECT) 공용 사이드바 구성.
+ * 대시보드 → 내 ~ → 전체 ~ 아래에 사업구분(카테고리)별 항목을 세분화해 나열한다.
+ * 카테고리 항목의 `tab`은 소문자 카테고리 값이며(예: `pe_fund`), ProgramWorkspacePage가
+ * 이를 목록의 category 필터로 해석한다.
+ */
+function programSubnav(
+  entityNoun: string,
+  categories: readonly ProgramCategoryOption[],
+): SubNavGroup[] {
+  return [
+    {
+      items: [
+        { label: '대시보드', tab: 'dashboard' },
+        { label: `내 ${entityNoun}`, tab: 'mine', dividerBefore: true },
+        { label: `전체 ${entityNoun}`, tab: 'all', dividerBefore: true },
+        ...categories.map((c, i) => ({
+          label: c.label,
+          tab: categoryTab(c.value),
+          // 카테고리 묶음 시작에만 구분선을 둔다.
+          ...(i === 0 ? { dividerBefore: true } : {}),
+        })),
+      ],
+    },
+  ]
 }
 
 /**
@@ -73,27 +107,10 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       ],
     },
   ],
-  ac: [
-    {
-      items: [
-        { label: '대시보드', tab: 'dashboard' },
-        // 내가 담당자/등록자인 사업 vs 전체 사업 2분할.
-        { label: '내 사업', tab: 'mine', dividerBefore: true },
-        { label: '전체 사업', tab: 'all', dividerBefore: true },
-      ],
-    },
-  ],
+  ac: programSubnav('사업', AC_CATEGORIES),
   fund: [{ group: 'FUND 메인', items: [{ label: '투자 대시보드' }] }],
   // M&A/PE는 AC와 동일한 사업 원장 구조(features/program)를 공유한다.
-  mna: [
-    {
-      items: [
-        { label: '대시보드', tab: 'dashboard' },
-        { label: '내 딜', tab: 'mine', dividerBefore: true },
-        { label: '전체 딜', tab: 'all', dividerBefore: true },
-      ],
-    },
-  ],
+  mna: programSubnav('딜', MNA_CATEGORIES),
   admin: [
     {
       group: '시스템 관리',
@@ -117,15 +134,7 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
     },
   ],
   // PROJECT도 AC와 동일한 사업 원장 구조(features/program)를 공유한다.
-  project: [
-    {
-      items: [
-        { label: '대시보드', tab: 'dashboard' },
-        { label: '내 프로젝트', tab: 'mine', dividerBefore: true },
-        { label: '전체 프로젝트', tab: 'all', dividerBefore: true },
-      ],
-    },
-  ],
+  project: programSubnav('프로젝트', PROJECT_CATEGORIES),
   // OFFICE: 임직원 정보·전사 캘린더 + 게시판(공지사항 고정 + 일반, 아코디언 없이 평탄 나열).
   // 신규 게시판은 모두 이곳에 생성·노출된다.
   office: [
