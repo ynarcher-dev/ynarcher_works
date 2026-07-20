@@ -111,8 +111,8 @@ export function useExpertRanking() {
 /** HUB 대시보드 좌측 인포 — 각 워크스페이스의 대표 지표 하나씩 집계. */
 export interface HubSummary {
   ac: { operating: number; total: number }
-  mna: { active: number; totalValue: number }
-  project: { active: number; avgProgress: number }
+  mna: { operating: number; total: number }
+  project: { operating: number; total: number }
   fund: { aum: number; drawn: number }
   management: { pending: number; total: number }
   networks: {
@@ -157,8 +157,9 @@ export function useHubSummary() {
         others,
       ] = await Promise.all([
         supabase.from('programs').select('status').is('deleted_at', null),
-        supabase.from('ma_deals').select('estimated_value, on_hold').is('deleted_at', null),
-        supabase.from('projects').select('progress_pct').is('deleted_at', null),
+        // M&A/PROJECT는 AC와 동일한 사업 원장 구조로 재편되어 상태 기준으로 집계한다.
+        supabase.from('ma_programs').select('status').is('deleted_at', null),
+        supabase.from('project_programs').select('status').is('deleted_at', null),
         supabase.from('funds').select('total_commitment, drawn_amount').is('deleted_at', null),
         supabase.from('approval_documents').select('status').is('deleted_at', null),
         supabase
@@ -177,13 +178,10 @@ export function useHubSummary() {
       ])
 
       const pRows = programs.data ?? []
-      const dRows = (deals.data ?? []).filter((d) => !d.on_hold)
+      const dRows = deals.data ?? []
       const prjRows = projects.data ?? []
       const fRows = funds.data ?? []
       const aRows = approvals.data ?? []
-
-      const avg = (arr: number[]) =>
-        arr.length ? Math.round(arr.reduce((s, n) => s + n, 0) / arr.length) : 0
 
       return {
         ac: {
@@ -191,12 +189,12 @@ export function useHubSummary() {
           total: pRows.length,
         },
         mna: {
-          active: dRows.length,
-          totalValue: dRows.reduce((s, d) => s + Number(d.estimated_value ?? 0), 0),
+          operating: dRows.filter((d) => d.status === 'OPERATING').length,
+          total: dRows.length,
         },
         project: {
-          active: prjRows.length,
-          avgProgress: avg(prjRows.map((p) => Number(p.progress_pct ?? 0))),
+          operating: prjRows.filter((p) => p.status === 'OPERATING').length,
+          total: prjRows.length,
         },
         fund: {
           aum: fRows.reduce((s, f) => s + Number(f.total_commitment ?? 0), 0),

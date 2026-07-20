@@ -149,6 +149,9 @@
 - [x] 매수/매도 매칭 매트릭스 (업종/키워드 적합도 스코어 → 신규 딜 인계)
 - [x] 부서 격리 RLS 검증 (M&A팀+관리자+경영진 읽기 외 차단) <!-- mna 워크스페이스 게이트 RLS. 권한 템플릿상 타 부서 mna 미부여로 자동 차단 -->
 - [x] 딜 상세 2컬럼 리치화 — AC 프로그램 상세와 동일 골격(좌: 작업 카드 / 우: 타임라인·정보) <!-- features/mna/detail/ 신설: DealStageCard(소싱→계약 5단계 스텝퍼: 완료/진행/대기 배지+단계 진입일+다음 단계 전환 액션, 완료/무산 종결 행), DocChecklistCard(기존 체크리스트를 카드화+검토 n/n 배지), DealTimelineCard(전환 로그), DealInfoCard(대상기업·추정가액·담당 심사역 users 조회·보류·메모). MnaDealDetailPage 컴포지션 재구성. tsc/vite build 통과 -->
+- [x] M&A 워크스페이스 사업 원장 구조 전환 — AC와 동일한 대시보드/내 딜/전체 딜 + 리스트뷰 + 사업 상세 <!-- features/program 공용 모듈 공유(MNA_WORKSPACE config 주입). 원장 ma_* 8테이블 신설(20260720140000), 카테고리 SELL/BUY/PE_FUND/ETC, 모듈 템플릿은 CUSTOM_ACTIVITY만. 구 화면(칸반·매칭 매트릭스·딜 상세) 제거, ma_deals 등 구 테이블은 soft 보존 -->
+- [ ] M&A 딜 파이프라인·NDA 체크리스트·매칭 매트릭스 모듈 템플릿 재도입 <!-- 3_6_workspace_ma.md §4 후속 확장 과제 -->
+- [ ] ma_* 원장 마이그레이션 운영 DB 반영(supabase db push) 및 RLS 회귀 테스트
 
 
 ## Phase 10. ADMIN 워크스페이스
@@ -168,6 +171,9 @@
 - [x] 프로젝트 통합 대시보드 (유형/부서 필터) <!-- 유형 필터+진척도 카드 그리드. 부서 필터/아바타는 후속 -->
 - [x] 태스크 칸반 (To-Do → In-Progress → Review → Done) <!-- 4열 칸반+상태 이동+마감 UTC 병기·지연 배지. 드래그앤드롭/체크리스트는 후속 -->
 - [x] 간트 마일스톤 로드맵 (글로벌: 다국어/UTC 병기) <!-- 선형 막대 간트+전사 캘린더(system_events) 자동 연계. 드래그 리사이즈는 후속 -->
+- [x] PROJECT 워크스페이스 사업 원장 구조 전환 — AC와 동일한 대시보드/내 프로젝트/전체 프로젝트 + 리스트뷰 + 상세 <!-- features/program 공용 모듈 공유(PROJECT_WORKSPACE config 주입). 원장 project_* 8테이블 신설(20260720150000), 카테고리는 ETC 단일(구 project_type 폐지), 모듈 템플릿은 CUSTOM_ACTIVITY만. 구 화면(태스크 칸반·간트) 제거, projects 등 구 테이블은 soft 보존 -->
+- [ ] PROJECT 태스크 보드·간트 마일스톤 모듈 템플릿 재도입 <!-- 3_8_workspace_project.md §4 후속 확장 과제 -->
+- [ ] project_* 원장 마이그레이션 운영 DB 반영(supabase db push) 및 RLS 회귀 테스트
 
 
 ## Phase 12. MANAGEMENT 워크스페이스

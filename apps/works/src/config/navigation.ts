@@ -84,12 +84,13 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
     },
   ],
   fund: [{ group: 'FUND 메인', items: [{ label: '투자 대시보드' }] }],
+  // M&A/PE는 AC와 동일한 사업 원장 구조(features/program)를 공유한다.
   mna: [
     {
-      group: 'M&A 딜',
       items: [
-        { label: '딜 소싱 칸반', tab: 'kanban' },
-        { label: '매칭 매트릭스', tab: 'matching' },
+        { label: '대시보드', tab: 'dashboard' },
+        { label: '내 딜', tab: 'mine', dividerBefore: true },
+        { label: '전체 딜', tab: 'all', dividerBefore: true },
       ],
     },
   ],
@@ -115,7 +116,16 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       ],
     },
   ],
-  project: [{ group: 'PROJECT 메인', items: [{ label: '프로젝트 대시보드' }] }],
+  // PROJECT도 AC와 동일한 사업 원장 구조(features/program)를 공유한다.
+  project: [
+    {
+      items: [
+        { label: '대시보드', tab: 'dashboard' },
+        { label: '내 프로젝트', tab: 'mine', dividerBefore: true },
+        { label: '전체 프로젝트', tab: 'all', dividerBefore: true },
+      ],
+    },
+  ],
   // OFFICE: 임직원 정보·전사 캘린더 + 게시판(공지사항 고정 + 일반, 아코디언 없이 평탄 나열).
   // 신규 게시판은 모두 이곳에 생성·노출된다.
   office: [

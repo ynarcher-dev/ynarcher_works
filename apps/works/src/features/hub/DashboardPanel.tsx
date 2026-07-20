@@ -127,9 +127,9 @@ function buildCards(s: HubSummary): InfoCardDef[] {
       emoji: '📁',
       tone: 'success',
       to: '/project',
-      metric: String(s.project.active),
-      unit: '개 활성',
-      sub: `평균 진척률 ${s.project.avgProgress}%`,
+      metric: String(s.project.operating),
+      unit: '개 진행 중',
+      sub: `전체 프로젝트 ${s.project.total}개`,
     },
     {
       key: 'mna',
@@ -137,9 +137,9 @@ function buildCards(s: HubSummary): InfoCardDef[] {
       emoji: '💼',
       tone: 'success',
       to: '/mna',
-      metric: String(s.mna.active),
+      metric: String(s.mna.operating),
       unit: '건 진행 중',
-      sub: `파이프라인 추정가치 ${won(s.mna.totalValue)}`,
+      sub: `전체 딜 ${s.mna.total}건`,
     },
     // 실적 정보
     {

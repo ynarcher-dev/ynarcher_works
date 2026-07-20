@@ -33,7 +33,8 @@ AC/VC 업무 통합 플랫폼(내부 WORKS 앱 9개 워크스페이스 + 외부 
 - **스타일링**: **Tailwind CSS** 공식 채택. 컬러는 [4_color_system_rules.md](../docs_design/4_color_system_rules.md)의 웜그레이/브랜드 팔레트가 단일 원천.
 - **모노레포**: Turborepo — `apps/works`, `apps/guest`, `packages/ui`(순수 UI), `packages/master-data`.
 - **AC 문서 체계**: [3_4_workspace_ac.md](../docs_planning/3_4_workspace_ac.md) + `3_4_1`~`3_4_14` 신규 14문서가 정본. 구버전(ac_startups 등 5종)은 삭제됨 — 복원하지 말 것.
-- **RLS 헬퍼**: `current_app_user_id()`/`current_app_role()`이 기저 헬퍼, `is_admin()` 등 업무 헬퍼는 이를 경유.
+- **사업(Program) 공용 모듈**: AC·M&A·PROJECT는 화면 구현을 `apps/works/src/features/program` 하나로 공유하고, 워크스페이스별 차이(원장 테이블명·RPC명·사업구분·허용 모듈 템플릿·베이스 경로)는 `ProgramWorkspaceConfig` 주입으로만 표현한다. 원장은 물리적으로 분리(`programs` / `ma_programs` / `project_programs` 계열)하되 스키마 형태와 운영 규칙은 동일하게 유지한다. AC 화면을 고칠 때 M&A·PROJECT에 동시 반영되므로 회귀 범위에 유의할 것.
+- **RLS 헬퍼**: `current_app_user_id()`/`current_app_role()`이 기저 헬퍼, `is_admin()` 등 업무 헬퍼는 이를 경유. 워크스페이스 키로 파라미터화된 단건 사업 접근 판정은 `app.can_access_ws_program(ws_key, id)`를 사용한다(AC 전용 `app.can_access_program()`의 제네릭 버전).
 - **마이그레이션 보안 게이트**: Supabase 마이그레이션 작성/수정 전 [11_migration_security_gate.md](../docs_dev/11_migration_security_gate.md)를 확인하고, 완료 보고에 체크리스트 통과 여부를 포함한다.
 
 ## 커밋 컨벤션

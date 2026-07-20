@@ -2,9 +2,8 @@ import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { RequireAuth } from '@/auth/RequireAuth'
 import { RequireWorkspace } from '@/auth/RequireWorkspace'
 import { WorksLayout } from '@/app/WorksLayout'
-import { AcDashboardPage } from '@/features/ac/AcDashboardPage'
+import { AcProgramDetailPage, AcWorkspacePage } from '@/features/ac/AcWorkspace'
 import { AdminPage } from '@/features/admin/AdminPage'
-import { ProgramDetailPage } from '@/features/ac/ProgramDetailPage'
 import { FundDetailPage } from '@/features/fund/FundDetailPage'
 import { FundPage } from '@/features/fund/FundPage'
 import { ManagementPage } from '@/features/management/ManagementPage'
@@ -12,8 +11,7 @@ import { EmployeeCreatePage } from '@/features/management/EmployeeCreatePage'
 import { EmployeeDetailPage } from '@/features/management/EmployeeDetailPage'
 import { MyPage } from '@/features/management/MyPage'
 import { OfficePage } from '@/features/office/OfficePage'
-import { MnaDealDetailPage } from '@/features/mna/MnaDealDetailPage'
-import { MnaPage } from '@/features/mna/MnaPage'
+import { MnaProgramDetailPage, MnaWorkspacePage } from '@/features/mna/MnaWorkspace'
 import { NetworksPage } from '@/features/networks/NetworksPage'
 import { NetworkDetailPage } from '@/features/networks/NetworkDetailPage'
 import { GlobalNetworkDetailPage } from '@/features/networks/GlobalNetworkDetailPage'
@@ -21,8 +19,7 @@ import { DIRECTORY_ENTITIES } from '@/features/networks/config'
 import { StartupPage } from '@/features/startup/StartupPage'
 import { StartupDetailPage } from '@/features/startup/StartupDetailPage'
 import { StartupCreatePage } from '@/features/startup/StartupCreatePage'
-import { ProjectDetailPage } from '@/features/project/ProjectDetailPage'
-import { ProjectPage } from '@/features/project/ProjectPage'
+import { ProjectProgramDetailPage, ProjectWorkspacePage } from '@/features/project/ProjectWorkspace'
 import { LoginPage } from '@/pages/LoginPage'
 import { RootLayout } from '@/pages/RootLayout'
 
@@ -99,7 +96,7 @@ export const router = createBrowserRouter([
             path: 'ac',
             element: (
               <RequireWorkspace workspace="ac">
-                <AcDashboardPage />
+                <AcWorkspacePage />
               </RequireWorkspace>
             ),
           },
@@ -107,7 +104,7 @@ export const router = createBrowserRouter([
             path: 'ac/programs/:id',
             element: (
               <RequireWorkspace workspace="ac">
-                <ProgramDetailPage />
+                <AcProgramDetailPage />
               </RequireWorkspace>
             ),
           },
@@ -131,15 +128,15 @@ export const router = createBrowserRouter([
             path: 'mna',
             element: (
               <RequireWorkspace workspace="mna">
-                <MnaPage />
+                <MnaWorkspacePage />
               </RequireWorkspace>
             ),
           },
           {
-            path: 'mna/:id',
+            path: 'mna/programs/:id',
             element: (
               <RequireWorkspace workspace="mna">
-                <MnaDealDetailPage />
+                <MnaProgramDetailPage />
               </RequireWorkspace>
             ),
           },
@@ -155,15 +152,15 @@ export const router = createBrowserRouter([
             path: 'project',
             element: (
               <RequireWorkspace workspace="project">
-                <ProjectPage />
+                <ProjectWorkspacePage />
               </RequireWorkspace>
             ),
           },
           {
-            path: 'project/:id',
+            path: 'project/programs/:id',
             element: (
               <RequireWorkspace workspace="project">
-                <ProjectDetailPage />
+                <ProjectProgramDetailPage />
               </RequireWorkspace>
             ),
           },
