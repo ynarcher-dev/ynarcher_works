@@ -9,7 +9,8 @@ export const CONTRIBUTION_ACTION_LABEL: Record<Contribution['action'], string> =
   merged: '병합',
   enriched: '보강',
   edited: '수정',
-  deactivated: '비활성화',
+  // 말머리는 격자의 첫 열을 밀지 않도록 짧게 — 다른 넷과 폭을 맞춘다.
+  deactivated: '비활',
 }
 
 /** 기여 로그에서 중복 없는 기여자명 목록(최초 기여순). 공동 관리자 표기의 원천. */
@@ -66,7 +67,9 @@ export function ChangeHistoryPanel({
                 </span>
                 <span className={tableText.primary}>{c.user_name ?? '-'}</span>
                 <span className={`truncate ${tableText.meta}`}>
-                  {c.source === 'upload' ? '업로드' : '수기'}
+                  {/* 출처는 두 값뿐(DB 제약 manual|upload). 무엇을 뜻하는지 짐작하지 않아도
+                      되도록 풀어 쓴다 — '수기'는 종이 기록으로, '업로드'는 자료 첨부로 읽힌다. */}
+                  {c.source === 'upload' ? '대용량 업로드' : '직접 입력'}
                   {c.note ? ` · ${c.note}` : ''}
                 </span>
               </li>
