@@ -1,6 +1,7 @@
 import { Button, CardShell, Input, Select, TagChip, TextArea, useToast } from '@ynarcher/ui'
 import type { ChangeEvent, ReactNode } from 'react'
 import { useMemo, useState } from 'react'
+import { FormTopBar } from '@/components/FormTopBar'
 import { useTags } from '@/features/admin/hooks'
 import { PhotoBox } from '@/features/networks/PhotoBox'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
@@ -28,6 +29,8 @@ interface Props {
   /** 저장 완료 후 콜백(신규는 생성 id, 수정은 기존 id). */
   onDone: (id: string) => void
   onCancel: () => void
+  /** 상단 바 뒤로가기 목적지(목록 경로). */
+  backTo: string
 }
 
 /** 필드 래퍼(라벨 + 입력). NetworkForm과 동일한 페이지 폼 스타일. */
@@ -55,7 +58,13 @@ function Field({
  * 글로벌 네트워크 등록/수정 폼(상세페이지 내 편집 모드). 모달이 아닌 페이지형 카드 섹션.
  * 권역 선택 시 해당 권역의 국가만 노출한다(2뎁스 캐스케이드). 부서/직책·직급은 profile(jsonb)에 저장한다.
  */
-export function GlobalNetworkForm({ recordId, initial, onDone, onCancel }: Props) {
+export function GlobalNetworkForm({
+  recordId,
+  initial,
+  onDone,
+  onCancel,
+  backTo,
+}: Props) {
   const toast = useToast()
   const create = useCreateGlobal()
   const update = useUpdateGlobal()
@@ -179,6 +188,15 @@ export function GlobalNetworkForm({ recordId, initial, onDone, onCancel }: Props
 
   return (
     <div className="space-y-5">
+      {/* 상단 바(뒤로가기 ↔ 취소·확정) — 조회 화면의 '수정' 버튼과 같은 자리를 쓴다. */}
+      <FormTopBar
+        backTo={backTo}
+        mode={isEdit ? 'edit' : 'create'}
+        onCancel={onCancel}
+        busy={busy}
+        onSubmit={() => void submit()}
+      />
+
       {/* 상세페이지와 동일한 3열 배치: 좌측 2/3 편집 카드 + 우측 1/3 자료 관리 */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* 좌측(2/3): 사진 → 기본 데이터 → 노트 */}
@@ -300,14 +318,6 @@ export function GlobalNetworkForm({ recordId, initial, onDone, onCancel }: Props
       </div>
 
       {/* 액션 버튼(그리드 아래 전체 폭) */}
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="secondary" onClick={onCancel} disabled={busy}>
-          취소
-        </Button>
-        <Button type="button" onClick={() => void submit()} disabled={busy}>
-          {isEdit ? '수정 완료' : '등록'}
-        </Button>
-      </div>
     </div>
   )
 }

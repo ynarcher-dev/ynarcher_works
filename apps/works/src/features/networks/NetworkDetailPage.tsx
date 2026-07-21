@@ -247,17 +247,12 @@ export function NetworkDetailPage({
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <BackButton as={Link} to={listPath} />
-        {!isNew && !editing && !readOnly && (
-          <Button onClick={() => setEditing(true)}>수정</Button>
-        )}
-      </div>
-
-      {editing && (
-        <h1 className="text-title-md font-bold text-gray-900">
-          {isNew ? '네트워크 등록' : `${label} 수정`}
-        </h1>
+      {/* 편집 중에는 폼(FormTopBar)이 상단 바를 소유한다 — 뒤로가기 옆 우측 자리를 취소·확정이 쓴다. */}
+      {!editing && (
+        <div className="flex items-center justify-between">
+          <BackButton as={Link} to={listPath} />
+          {!isNew && !readOnly && <Button onClick={() => setEditing(true)}>수정</Button>}
+        </div>
       )}
 
       {editing ? (
@@ -265,6 +260,7 @@ export function NetworkDetailPage({
           entity={entity}
           recordId={isNew ? undefined : id}
           initial={isNew ? null : (record ?? null)}
+          backTo={listPath}
           onDone={({ id: newId, targetEntity, moved }) => {
             setEditing(false)
             // 이동(구분 변경)했으면 대상 엔티티 상세로, 신규 등록이면 해당 상세로 이동.

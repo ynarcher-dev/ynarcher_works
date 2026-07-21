@@ -30,6 +30,9 @@ import { StartupComparePanel } from '@/features/startup/StartupComparePanel'
 /** 첨부/피드백/기여 로그 대상 유형(다형 테이블 target_type). */
 const RESOURCE_TYPE = 'startup'
 
+/** 발굴기업 목록 경로(뒤로가기 목적지). */
+const LIST_PATH = '/startup?tab=discovered'
+
 /** 관리 현황 카드 섹션(플랫폼 전반 참여·관리 이력). 현재는 헤드라인만, 내용은 후속 구현. */
 const ACTIVITY_SECTIONS = ['참여 사업', '참여 M&A', '참여 프로젝트', 'A-STREAM', '기업 진단', '멘토링 & 컨설팅', '회의록']
 
@@ -74,18 +77,23 @@ export function StartupDetailPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <BackButton as={Link} to="/startup?tab=discovered" />
-        {!editing && canEdit && <Button onClick={() => setEditing(true)}>수정</Button>}
-        {!editing && !canEdit && (
-          <span className="text-caption text-gray-600">지정 담당자만 수정할 수 있습니다.</span>
-        )}
-      </div>
+      {/* 편집 중에는 폼(FormTopBar)이 상단 바를 소유한다 — 뒤로가기 옆 우측 자리를 취소·확정이 쓴다. */}
+      {!editing && (
+        <div className="flex items-center justify-between">
+          <BackButton as={Link} to={LIST_PATH} />
+          {canEdit ? (
+            <Button onClick={() => setEditing(true)}>수정</Button>
+          ) : (
+            <span className="text-caption text-gray-600">지정 담당자만 수정할 수 있습니다.</span>
+          )}
+        </div>
+      )}
 
       {editing ? (
         <StartupDetailForm
           recordId={record.id}
           initial={record}
+          backTo={LIST_PATH}
           onDone={() => setEditing(false)}
           onCancel={() => setEditing(false)}
         />

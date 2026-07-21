@@ -1,6 +1,8 @@
-import { Link, useNavigate } from 'react-router-dom'
-import { BackButton } from '@ynarcher/ui'
+import { useNavigate } from 'react-router-dom'
 import { StartupDetailForm } from '@/features/startup/StartupDetailForm'
+
+/** 발굴기업 목록 경로(뒤로가기·취소 목적지). */
+const LIST_PATH = '/startup?tab=discovered'
 
 /**
  * 스타트업 신규 등록 페이지(모달 아님). 발굴기업 목록의 '스타트업 등록'에서 진입하며,
@@ -12,11 +14,11 @@ export function StartupCreatePage() {
 
   return (
     <div className="space-y-5">
-      <BackButton as={Link} to="/startup?tab=discovered" />
-
+      {/* 상단 바(뒤로가기 ↔ 취소·등록)는 폼이 소유한다. */}
       <StartupDetailForm
+        backTo={LIST_PATH}
         onDone={(id) => navigate(`/startup/discovered/${id}`)}
-        onCancel={() => navigate('/startup?tab=discovered')}
+        onCancel={() => navigate(LIST_PATH)}
       />
     </div>
   )

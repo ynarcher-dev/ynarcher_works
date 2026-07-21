@@ -1,9 +1,13 @@
-import { BackButton, Button, CardShell, Input, Select, useToast } from '@ynarcher/ui'
+import { CardShell, Input, Select, useToast } from '@ynarcher/ui'
 import { useState, type ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import { FormTopBar } from '@/components/FormTopBar'
 import { CREATABLE_ROLE_OPTIONS } from '@/features/management/config'
 import { HrTagSelect } from '@/features/management/HrTagSelect'
 import { useCreateEmployee } from '@/features/management/hooks'
+
+/** 인사 관리 목록 경로(뒤로가기·취소 목적지). */
+const LIST_PATH = '/management?tab=hr'
 
 /** 필드 래퍼(라벨 + 입력). EmployeeForm과 동일한 페이지 폼 스타일. */
 function Field({
@@ -82,10 +86,14 @@ export function EmployeeCreatePage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <BackButton as={Link} to="/management?tab=hr" />
-      </div>
-      <h1 className="text-title-md font-bold text-gray-900">임직원 계정 생성</h1>
+      {/* 상단 바(뒤로가기 ↔ 취소·등록) — 다른 등록/수정 폼과 동일한 자리·문구를 쓴다. */}
+      <FormTopBar
+        backTo={LIST_PATH}
+        mode="create"
+        onCancel={() => navigate(LIST_PATH)}
+        busy={create.isPending}
+        onSubmit={() => void submit()}
+      />
 
       <CardShell>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -126,20 +134,6 @@ export function EmployeeCreatePage() {
           </Field>
         </div>
       </CardShell>
-
-      <div className="flex justify-end gap-2">
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => navigate('/management?tab=hr')}
-          disabled={create.isPending}
-        >
-          취소
-        </Button>
-        <Button type="button" onClick={() => void submit()} disabled={create.isPending}>
-          계정 생성
-        </Button>
-      </div>
     </div>
   )
 }

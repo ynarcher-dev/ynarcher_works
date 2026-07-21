@@ -126,21 +126,22 @@ export function EmployeeDetailPage({
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <BackButton as={Link} to={backTo} />
-        {!readOnly && !editing && <Button onClick={() => setEditing(true)}>수정</Button>}
-      </div>
+      {/* 편집 중에는 폼(FormTopBar)이 상단 바를 소유한다 — 뒤로가기 옆 우측 자리를 취소·확정이 쓴다. */}
+      {!editing && (
+        <div className="flex items-center justify-between">
+          <BackButton as={Link} to={backTo} />
+          {!readOnly && <Button onClick={() => setEditing(true)}>수정</Button>}
+        </div>
+      )}
 
       {editing ? (
-        <>
-          <h1 className="text-title-md font-bold text-gray-900">임직원 수정</h1>
-          <EmployeeForm
-            recordId={emp.id}
-            initial={emp}
-            onDone={() => setEditing(false)}
-            onCancel={() => setEditing(false)}
-          />
-        </>
+        <EmployeeForm
+          recordId={emp.id}
+          initial={emp}
+          backTo={backTo}
+          onDone={() => setEditing(false)}
+          onCancel={() => setEditing(false)}
+        />
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           {/* 좌측(2/3): 프로필 본문 */}

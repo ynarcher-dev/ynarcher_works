@@ -1,7 +1,8 @@
-import { Button, CardShell, Input, Select, TagChip, TextArea, useToast } from '@ynarcher/ui'
+import { CardShell, Input, Select, TagChip, TextArea, useToast } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { FormTopBar } from '@/components/FormTopBar'
 import { useTags } from '@/features/admin/hooks'
 import { supabase } from '@/lib/supabase'
 import { PhotoPicker } from '@/features/networks/PhotoPicker'
@@ -53,6 +54,8 @@ interface Props {
    */
   onDone: (result: { id: string; targetEntity: EntityKey; moved: boolean }) => void
   onCancel: () => void
+  /** 상단 바 뒤로가기 목적지(목록 경로). */
+  backTo: string
 }
 
 /** 필드 래퍼(라벨 + 입력). */
@@ -85,7 +88,14 @@ function Field({
  * 선택하면 매칭 가능여부·전문분야·약력을 숨긴다(요건 2). 미분류는 전체 필드를 유지한다.
  * 스키마에 없는 직책·부서·매칭여부·약력·소개는 `profile`(jsonb)에 저장한다.
  */
-export function NetworkForm({ entity, recordId, initial, onDone, onCancel }: Props) {
+export function NetworkForm({
+  entity,
+  recordId,
+  initial,
+  onDone,
+  onCancel,
+  backTo,
+}: Props) {
   const toast = useToast()
   const create = useCreateEntity(entity)
   const update = useUpdateEntity(entity)
@@ -219,6 +229,14 @@ export function NetworkForm({ entity, recordId, initial, onDone, onCancel }: Pro
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      {/* 상단 바(뒤로가기 ↔ 취소·확정) — 조회 화면의 '수정' 버튼과 같은 자리를 쓴다. */}
+      <FormTopBar
+        backTo={backTo}
+        mode={isEdit ? 'edit' : 'create'}
+        onCancel={onCancel}
+        busy={isSubmitting}
+      />
+
       {/* 상세페이지와 동일한 3열 배치: 좌측 2/3 편집 카드 + 우측 1/3 자료 관리 */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* 좌측(2/3): 사진 → 기본 데이터 → 약력 → 노트 */}
@@ -329,16 +347,6 @@ export function NetworkForm({ entity, recordId, initial, onDone, onCancel }: Pro
             <PendingMaterialPanel slot="main" pending={pending} />
           )}
         </div>
-      </div>
-
-      {/* 액션 버튼(그리드 아래 전체 폭) */}
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="secondary" onClick={onCancel}>
-          취소
-        </Button>
-        <Button type="submit" disabled={isSubmitting}>
-          {isEdit ? '수정 완료' : '등록'}
-        </Button>
       </div>
     </form>
   )

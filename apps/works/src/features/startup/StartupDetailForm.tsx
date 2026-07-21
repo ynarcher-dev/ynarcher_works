@@ -1,6 +1,7 @@
 import { Button, CardShell, Input, PanelCard, Select, TagChip, TextArea, useToast } from '@ynarcher/ui'
 import { useEffect, useState, type ChangeEvent, type ReactNode } from 'react'
 import { Controller, useForm } from 'react-hook-form'
+import { FormTopBar } from '@/components/FormTopBar'
 import { useEmployees } from '@/features/management/hooks'
 import {
   MANAGEMENT_STATUS_OPTIONS,
@@ -100,6 +101,8 @@ interface Props {
   /** 저장 완료 콜백. 인자로 대상 id(수정: 기존 id, 등록: 새 id)를 전달한다. */
   onDone: (id: string) => void
   onCancel: () => void
+  /** 상단 바 뒤로가기 목적지(목록 경로). */
+  backTo: string
 }
 
 /**
@@ -108,7 +111,7 @@ interface Props {
  * 단계/구분/현황/산업은 ADMIN 태그 관리 원장에서 선택한다.
  * recordId가 없으면 신규 등록 모드로, 저장 시 새 레코드를 생성하고 상세페이지로 이동한다.
  */
-export function StartupDetailForm({ recordId, initial, onDone, onCancel }: Props) {
+export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo }: Props) {
   const toast = useToast()
   const isCreate = !recordId
   const base = initial ?? ({} as EntityRow)
@@ -351,6 +354,14 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel }: Props
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      {/* 상단 바(뒤로가기 ↔ 취소·확정) — 조회 화면의 '수정' 버튼과 같은 자리를 쓴다. */}
+      <FormTopBar
+        backTo={backTo}
+        mode={isCreate ? 'create' : 'edit'}
+        onCancel={onCancel}
+        busy={isSubmitting}
+      />
+
       {/* 상세페이지와 동일한 3열 배치: 좌측 2/3 편집 카드 + 우측 1/3 자료 관리 */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* 좌측(2/3): 사진 → 기본 데이터 → 기업 개요(비즈니스·주주·성장) → 미디어 */}
@@ -563,14 +574,6 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel }: Props
       </div>
 
       {/* 액션 버튼(그리드 아래 전체 폭) */}
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="secondary" onClick={onCancel}>
-          취소
-        </Button>
-        <Button type="submit" disabled={isSubmitting}>
-          {isCreate ? '등록' : '저장'}
-        </Button>
-      </div>
     </form>
   )
 }

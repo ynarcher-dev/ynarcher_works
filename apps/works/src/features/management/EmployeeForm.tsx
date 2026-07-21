@@ -1,5 +1,6 @@
-import { Button, CardShell, Input, Select, TextArea, useToast } from '@ynarcher/ui'
+import { CardShell, Input, Select, TextArea, useToast } from '@ynarcher/ui'
 import { useMemo, useState, type ReactNode } from 'react'
+import { FormTopBar } from '@/components/FormTopBar'
 import { ROLE_OPTIONS } from '@/features/management/config'
 import { HrTagSelect } from '@/features/management/HrTagSelect'
 import {
@@ -42,6 +43,8 @@ interface Props {
   /** 저장 완료 후 콜백. */
   onDone: () => void
   onCancel: () => void
+  /** 상단 바 뒤로가기 목적지(목록 경로). */
+  backTo: string
 }
 
 /**
@@ -50,7 +53,7 @@ interface Props {
  * 사진(photo)·약력(background)은 NETWORKS와 동일한 공용 편집기·저장 규약을 그대로 쓴다.
  * 관계형 연동 도메인(관리기업/운영사업/M&A/프로젝트/펀드)은 자동 기록 대상이라 편집하지 않는다.
  */
-export function EmployeeForm({ recordId, initial, onDone, onCancel }: Props) {
+export function EmployeeForm({ recordId, initial, onDone, onCancel, backTo }: Props) {
   const toast = useToast()
   const update = useUpdateEmployee()
   const { data: depts } = useDepartments()
@@ -127,6 +130,15 @@ export function EmployeeForm({ recordId, initial, onDone, onCancel }: Props) {
 
   return (
     <div className="space-y-4">
+      {/* 상단 바(뒤로가기 ↔ 취소·확정) — 조회 화면의 '수정' 버튼과 같은 자리를 쓴다. */}
+      <FormTopBar
+        backTo={backTo}
+        mode="edit"
+        onCancel={onCancel}
+        busy={busy}
+        onSubmit={() => void submit()}
+      />
+
       <CardShell>
         <p className="mb-3 text-caption font-medium text-gray-700">사진</p>
         <PhotoPicker value={photo} onChange={setPhoto} />
@@ -197,15 +209,6 @@ export function EmployeeForm({ recordId, initial, onDone, onCancel }: Props) {
           <TextArea rows={4} value={note} onChange={(e) => setNote(e.target.value)} />
         </Field>
       </CardShell>
-
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="secondary" onClick={onCancel} disabled={busy}>
-          취소
-        </Button>
-        <Button type="button" onClick={() => void submit()} disabled={busy}>
-          수정 완료
-        </Button>
-      </div>
     </div>
   )
 }
