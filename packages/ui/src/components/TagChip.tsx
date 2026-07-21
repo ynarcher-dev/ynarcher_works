@@ -30,15 +30,15 @@ export function TagChip({
       type={type}
       aria-pressed={selected}
       className={cn(
-        'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-radius-sm border font-medium leading-none transition-colors duration-fast',
+        'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full font-medium leading-none transition-colors duration-fast',
         'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10',
         'disabled:cursor-not-allowed disabled:opacity-40',
         s.height,
         s.text,
         s.padX,
         selected
-          ? 'border-brand bg-brand/10 text-brand'
-          : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50 disabled:hover:bg-white',
+          ? 'bg-brand/10 text-brand'
+          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:hover:bg-gray-100',
         className,
       )}
       {...props}

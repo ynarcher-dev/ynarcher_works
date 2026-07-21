@@ -214,7 +214,8 @@ export function MasterListView({
       key: '_manager',
       header: '담당자',
       className: 'w-24',
-      render: () => <span className="text-gray-600">공동관리</span>,
+      // 색은 셀의 위계 톤을 그대로 따른다(여기서 다시 지정하면 열마다 색이 어긋난다).
+      render: () => '공동관리',
     })
     // 수정 가능(NETWORKS)일 때만 액션 컬럼을 노출한다. 보기 버튼은 제거됨.
     if (onEdit) {

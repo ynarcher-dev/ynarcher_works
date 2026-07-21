@@ -3,7 +3,6 @@ import { useMemo } from 'react'
 import { formatFounded, readIndustries } from '@/features/startup/startupGrowth'
 import {
   isInvested,
-  MANAGEMENT_STATUS_TONE,
   managementStatusLabel,
   type ManagementStatus,
 } from '@/features/startup/startupClassification'
@@ -44,7 +43,10 @@ export interface StartupPoolRow {
 interface StartupPoolTableProps {
   rows: StartupPoolRow[]
   isLoading?: boolean
-  /** 소속 탭(구분 코드). 조건부 컬럼(관리현황=투자 전용, 발굴경로=투자 제외)·담당자 표시를 좌우한다. 작성자는 전 구분 공통. */
+  /**
+   * 소속 탭(구분 코드). 조건부 컬럼과 담당자 표시를 좌우한다. 작성자는 전 구분 공통.
+   * 미지정('내 기업 관리')은 구분이 섞인 뷰이며, 열 구성은 투자기업 탭과 동일하게 맞춘다.
+   */
   tab?: ManagementStatus
   /** 행 클릭(상세 진입). 지정 시 행이 클릭 가능해진다. */
   onRowClick?: (row: StartupPoolRow) => void
@@ -61,7 +63,7 @@ interface StartupPoolTableProps {
 
 /**
  * 스타트업 풀 관리 공용 데이터 테이블.
- * 컬럼: 체크박스·No.·기업명·대표자명·사업자등록번호·설립일·산업(뱃지 최대 3)·단계·구분·관리현황(투자)·담당자·발굴 경로(투자 제외)·작성자·수정일·관리.
+ * 컬럼: 체크박스·No.·기업명·대표자명·사업자등록번호·설립일·산업(뱃지 최대 3)·단계·구분·관리현황(투자·내 기업)·담당자·발굴 경로(발굴·보육·기타)·작성자·수정일·관리.
  * 좌측 선택/넘버링과 우측 표준 컬럼(작성자·수정일·관리)은 공용 DataTable이 소유하고,
  * 본 컴포넌트는 그 사이의 도메인 컬럼(기업명~발굴 경로, 담당자)만 정의한다.
  * 작성자(등록자)와 담당자는 별개 축이다 — 작성자 컬럼은 전 구분 공통 등록자, 담당자 컬럼은 투자=지정 담당자·그 외=공동관리.
@@ -135,29 +137,14 @@ export function StartupPoolTable({
         key: 'stage',
         header: '단계',
         className: 'w-24',
-        render: (r) =>
-          r.stage ? (
-            <Badge tone="neutral">
-              {r.stage}
-            </Badge>
-          ) : (
-            '-'
-          ),
+        render: (r) => r.stage || <span className="text-gray-400">-</span>,
       },
       {
         key: 'management_status',
         header: '구분',
         className: 'w-24',
-        render: (r) => {
-          const label = managementStatusLabel(r.management_status)
-          if (!label) return <span className="text-gray-400">-</span>
-          const tone = MANAGEMENT_STATUS_TONE[r.management_status as ManagementStatus] ?? 'neutral'
-          return (
-            <Badge tone={tone}>
-              {label}
-            </Badge>
-          )
-        },
+        render: (r) =>
+          managementStatusLabel(r.management_status) || <span className="text-gray-400">-</span>,
       },
     ]
 
@@ -167,19 +154,14 @@ export function StartupPoolTable({
         key: 'pool_status',
         header: '관리현황',
         className: 'w-24',
-        render: (r) =>
-          r.pool_status ? (
-            <Badge tone="info">
-              {r.pool_status}
-            </Badge>
-          ) : (
-            <span className="text-gray-400">-</span>
-          ),
+        render: (r) => r.pool_status || <span className="text-gray-400">-</span>,
       })
     }
 
-    // 발굴 경로는 투자기업을 제외한 구분(발굴·보육·기타)에서 담당자 앞에 노출한다. 자유 서술이라 남는 폭을 흡수한다.
-    if (tab !== 'invested') {
+    // 발굴 경로는 구분이 확정된 비투자 탭(발굴·보육·기타)에서만 담당자 앞에 노출한다.
+    // '내 기업 관리'(tab 없음)는 구분이 섞여 있어 이 열이 대부분 비고, 투자기업 탭과 열 구성이
+    // 어긋나 보이므로 제외한다. 자유 서술이라 남는 폭을 흡수한다.
+    if (tab !== undefined && tab !== 'invested') {
       cols.push({
         key: 'discovery_source',
         header: '발굴 경로',
@@ -199,7 +181,7 @@ export function StartupPoolTable({
           const label = managerLabel(r)
           return label ?? <span className="text-gray-400">미지정</span>
         }
-        return <span className="text-gray-600">공동관리</span>
+        return '공동관리'
       },
     })
 

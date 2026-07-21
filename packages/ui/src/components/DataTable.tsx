@@ -1,7 +1,7 @@
 import { useContext, useState, type ReactNode } from 'react'
 import { cn } from '../utils/cn'
 import { DensityProvider } from '../density'
-import { tableGrid } from '../densityScale'
+import { tableGrid, tableText } from '../densityScale'
 import { Checkbox } from './Checkbox'
 import { Button } from './Button'
 import { Pagination } from './Pagination'
@@ -12,6 +12,12 @@ export interface Column<T> {
   header: ReactNode
   render?: (row: T) => ReactNode
   align?: 'left' | 'right' | 'center'
+  /**
+   * 식별 열 표시. 그 행이 무엇인지 알려주는 열(이름·기업명)에 지정하며 진한 값 톤을 받는다.
+   * 미지정 시 첫 번째 도메인 열이 자동으로 식별 열이 된다 — 행마다 하나만 진해야 하므로
+   * 두 개 이상 지정하지 않는다.
+   */
+  primary?: boolean
   numeric?: boolean
   sortable?: boolean
   /** 헤더·셀에 함께 적용할 추가 클래스(폭·여백 조정 등). 기본 셀 여백 등과 twMerge로 충돌 해소된다. */
@@ -191,6 +197,8 @@ export function DataTable<T>({
   // fixed 레이아웃은 여백을 조금 좁혀(px-2) 각 컬럼 내용 표시 폭을 넓힌다.
   const pad = fixed ? tableGrid.cellXFixed : ''
   const cellX = tableGrid.cellX
+  // 명시 지정이 없으면 첫 도메인 열을 식별 열로 삼는다.
+  const primaryKey = (columns.find((c) => c.primary) ?? columns[0])?.key
   const colSpan =
     columns.length +
     (selectable ? 1 : 0) +
@@ -235,7 +243,7 @@ export function DataTable<T>({
     >
       <table
         className={cn(
-          'w-full border-separate border-spacing-0 text-body',
+          'w-full border-separate border-spacing-0',
           fixed && 'table-fixed',
         )}
       >
@@ -258,7 +266,7 @@ export function DataTable<T>({
               </th>
             )}
             {numbered && (
-              <th className={cn(`h-row w-12 border-b border-gray-300 ${cellX} text-center text-caption font-semibold text-gray-600`, pad)}>
+              <th className={cn(`h-row w-12 border-b border-gray-300 ${cellX} text-center ${tableText.head}`, pad)}>
                 No.
               </th>
             )}
@@ -268,7 +276,7 @@ export function DataTable<T>({
                 <th
                   key={col.key}
                   className={cn(
-                    `h-row border-b border-gray-300 ${cellX} text-center text-caption font-semibold text-gray-600`,
+                    `h-row border-b border-gray-300 ${cellX} text-center ${tableText.head}`,
                     col.sortable && 'cursor-pointer select-none hover:bg-gray-100/50',
                     pad,
                     truncate,
@@ -298,11 +306,11 @@ export function DataTable<T>({
             {standardColumns && (
               <>
                 {showAuthor && (
-                  <th className={cn(`h-row w-20 border-b border-gray-300 ${cellX} text-center text-caption font-semibold text-gray-600`, pad, truncate)}>{authorLabel}</th>
+                  <th className={cn(`h-row w-20 border-b border-gray-300 ${cellX} text-center ${tableText.head}`, pad, truncate)}>{authorLabel}</th>
                 )}
                 {/* 헤더는 값 정렬과 무관하게 항상 가운데. 머리글 줄이 하나의 띠로 읽히게 한다. */}
-                <th className={cn(`h-row w-28 border-b border-gray-300 ${cellX} text-caption font-semibold text-gray-600 text-center`, pad, truncate)}>수정일</th>
-                <th className={cn(`h-row w-32 border-b border-gray-300 ${cellX} text-center text-caption font-semibold text-gray-600`, pad)}>관리</th>
+                <th className={cn(`h-row w-28 border-b border-gray-300 ${cellX} text-center ${tableText.head}`, pad, truncate)}>수정일</th>
+                <th className={cn(`h-row w-32 border-b border-gray-300 ${cellX} text-center ${tableText.head}`, pad)}>관리</th>
               </>
             )}
           </tr>
@@ -312,7 +320,7 @@ export function DataTable<T>({
             <tr>
               <td
                 colSpan={colSpan}
-                className="h-24 text-center text-body text-gray-500"
+                className={cn('h-24 text-center', tableText.meta)}
               >
                 {emptyText}
               </td>
@@ -349,7 +357,7 @@ export function DataTable<T>({
                     </td>
                   )}
                   {numbered && (
-                    <td className={cn(`border-b border-gray-200 ${cellX} text-center text-gray-600 tabular-nums`, pad)}>
+                    <td className={cn(`border-b border-gray-200 ${cellX} text-center tabular-nums ${tableText.meta}`, pad)}>
                       {meta?.rowMark?.(row) ?? numberFrom - index}
                     </td>
                   )}
@@ -357,7 +365,8 @@ export function DataTable<T>({
                     <td
                       key={col.key}
                       className={cn(
-                        `border-b border-gray-200 ${cellX} font-medium text-gray-800`,
+                        `border-b border-gray-200 ${cellX}`,
+                        col.key === primaryKey ? tableText.primary : tableText.body,
                         alignClass[col.align ?? 'center'],
                         col.numeric && 'tabular-nums',
                         pad,
@@ -371,16 +380,16 @@ export function DataTable<T>({
                   {standardColumns && (
                     <>
                       {showAuthor && (
-                        <td className={cn(`whitespace-nowrap border-b border-gray-200 ${cellX} text-center text-gray-600`, pad, truncate)}>
+                        <td className={cn(`whitespace-nowrap border-b border-gray-200 ${cellX} text-center ${tableText.meta}`, pad, truncate)}>
                           {resolveAuthor(row, meta)}
                         </td>
                       )}
                       {/* 수정일(날짜)은 어떤 레이아웃에서도 줄바꿈되지 않게 nowrap 고정. auto 레이아웃에서 컬럼이 좁혀질 때 하이픈에서 줄이 갈라지는 것을 방지한다. */}
-                      <td className={cn(`whitespace-nowrap border-b border-gray-200 ${cellX} text-gray-600 tabular-nums`, alignClass[updatedAtAlign], pad, truncate)}>
+                      <td className={cn(`whitespace-nowrap border-b border-gray-200 ${cellX} tabular-nums ${tableText.meta}`, alignClass[updatedAtAlign], pad, truncate)}>
                         {resolveUpdatedAt(row, meta)}
                       </td>
                       <td
-                        className={cn(`border-b border-gray-200 ${cellX} text-center`, pad)}
+                        className={cn(`border-b border-gray-200 ${cellX} text-center ${tableText.body}`, pad)}
                         onClick={(e) => e.stopPropagation()}
                       >
                         {/* 복사는 읽기 전용 액션이라 manageable과 무관하게 노출(HUB 조회 센터 포함). */}

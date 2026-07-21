@@ -37,7 +37,7 @@ export type GlobalRow = Record<string, unknown> & {
 /**
  * 글로벌 네트워크 목록 컬럼(공용 MasterListView 재활용).
  * DataTable 내장 컬럼(좌측 `No.`, 우측 `작성자`/`수정일`/`관리`)은 자동 렌더되므로
- * 여기서는 도메인 컬럼만 정의한다. 권역/국가는 태그 FK를 조인해 이름을 태그로 표시하고,
+ * 여기서는 도메인 컬럼만 정의한다. 권역/국가는 태그 FK를 조인해 이름을 읽어오며,
  * 링크드인은 URL 유무에 따라 아이콘 색으로 표시한다(kind: 'link').
  */
 export const GLOBAL_COLUMNS: MasterColumn[] = [
@@ -48,6 +48,7 @@ export const GLOBAL_COLUMNS: MasterColumn[] = [
   { name: 'phone', label: '연락처', mask: 'phone', className: 'w-32' },
   { name: 'linkedin_url', label: '링크드인', kind: 'link', align: 'center', className: 'w-20' },
   { name: 'region.name', label: '권역', kind: 'tag', className: 'w-24' },
-  { name: 'country.name', label: '국가', kind: 'tag', className: 'w-40' },
-  { name: 'category', label: '구분', kind: 'tag', className: 'w-20' },
+  // 국가·구분은 상태가 아니라 분류라 배지로 감싸지 않고 텍스트로 둔다(스펙 §3.4: 색은 상태에만).
+  { name: 'country.name', label: '국가', className: 'w-40' },
+  { name: 'category', label: '구분', className: 'w-20' },
 ]

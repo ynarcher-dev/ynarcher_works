@@ -45,9 +45,11 @@ export const iconScale: Record<Density, { box: string; glyph: number }> = {
 
 /** 배지·태그. 표시용(Badge)과 선택용(TagChip)이 같은 값을 공유해야 나란히 놓였을 때 어긋나지 않는다. */
 export const tagScale: Record<Density, { height: string; text: string; padX: string; dot: string }> = {
-  page: { height: 'h-tag-page', text: 'text-tag-page', padX: 'px-2', dot: 'h-1.5 w-1.5' },
-  card: { height: 'h-tag-card', text: 'text-tag-card', padX: 'px-1.5', dot: 'h-1 w-1' },
-  table: { height: 'h-tag-table', text: 'text-tag-table', padX: 'px-1.5', dot: 'h-1 w-1' },
+  // 좌우 여백이 높이 대비 넉넉한 이유: 알약(pill) 형태라 양끝이 둥글게 깎여, 각진 모양과 같은
+  // 여백을 주면 글자가 곡선에 붙어 답답해 보인다.
+  page: { height: 'h-tag-page', text: 'text-tag-page', padX: 'px-2.5', dot: 'h-1.5 w-1.5' },
+  card: { height: 'h-tag-card', text: 'text-tag-card', padX: 'px-2', dot: 'h-1 w-1' },
+  table: { height: 'h-tag-table', text: 'text-tag-table', padX: 'px-2', dot: 'h-1 w-1' },
 }
 
 /** 여러 줄 입력(TextArea) — 높이는 `rows`가 정하므로 글자·여백만 밀도에 반응한다. */
@@ -112,6 +114,28 @@ export const tableGrid = {
   cellX: 'px-2.5',
   /** 고정 레이아웃(`fixed`)에서 열을 더 좁히기 위한 축소 여백. */
   cellXFixed: 'px-2',
+} as const
+
+/**
+ * 표 안 글자 위계 — 크기는 하나, 구분은 굵기와 색으로만 만든다.
+ *
+ * 셀 텍스트도 `table` 맥락의 컨트롤과 같은 12px에 세운다. 본문만 14px로 남으면 한 행 안에서
+ * 값(14px)·버튼 라벨(12px)·배지(10px)가 제각각 크기로 보인다.
+ *
+ * 위계는 세 단계면 충분하다. 특히 `primary`(식별 열)를 행마다 하나로 제한하는 것이 핵심이다 —
+ * 도메인 열 전체를 진하게 쓰면 한 행이 통째로 진해져 눈이 걸릴 곳이 없어진다.
+ */
+export const tableText = {
+  /** 머리글. 값보다 한 단계 눌러 배경으로 물러나게 한다. */
+  head: 'text-caption font-semibold text-gray-500',
+  /** 식별 값 — 그 행이 무엇인지 알려주는 열(이름·기업명). 행마다 하나만. */
+  primary: 'text-caption font-medium text-gray-900',
+  /** 일반 값 — 나머지 도메인 열 전부. */
+  body: 'text-caption text-gray-700',
+  /** 보조 값 — No.·등록자·수정일 등 레코드 자체가 아닌 메타. */
+  meta: 'text-caption text-gray-500',
+  /** 빈 값 — 값이 없어 '-'로 대체한 자리. 실제 값과 구분되도록 한 단계 더 흐리게 둔다. */
+  empty: 'text-gray-400',
 } as const
 
 /** 스피너 — 로딩 자리를 차지하는 크기이므로 아이콘 격자보다 한 단계 작게 잡는다. */

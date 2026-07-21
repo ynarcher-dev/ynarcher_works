@@ -5,12 +5,14 @@ import { tagScale } from '../densityScale'
 
 export type BadgeTone = 'neutral' | 'success' | 'warning' | 'info' | 'danger'
 
+// 테두리 없이 배경만으로 형태를 잡는다. 표 한 셀에 여러 개가 놓일 때 1px 선이 겹쳐
+// 격자처럼 보이던 것을 없애기 위함이다. 중립 톤은 선이 빠진 만큼 배경을 한 단계 올린다.
 const toneClass: Record<BadgeTone, string> = {
-  neutral: 'border-gray-300 bg-gray-50 text-gray-600',
-  success: 'border-success-border bg-success-subtle text-success',
-  warning: 'border-warning-border bg-warning-subtle text-warning',
-  info: 'border-info-border bg-info-subtle text-info',
-  danger: 'border-danger-border bg-danger-subtle text-danger',
+  neutral: 'bg-gray-100 text-gray-600',
+  success: 'bg-success-subtle text-success',
+  warning: 'bg-warning-subtle text-warning',
+  info: 'bg-info-subtle text-info',
+  danger: 'bg-danger-subtle text-danger',
 }
 
 export interface BadgeProps {
@@ -45,7 +47,7 @@ export function Badge({ tone = 'neutral', density, dot = false, children, classN
     <span
       className={cn(
         // shrink-0 · whitespace-nowrap: 폭이 좁은 표 셀에서 찌그러지거나 줄바꿈으로 박스가 깨지지 않게 한다.
-        'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-radius-sm border font-medium leading-none transition-colors duration-fast',
+        'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full font-medium leading-none transition-colors duration-fast',
         s.height,
         s.text,
         s.padX,
