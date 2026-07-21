@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { ProgramModule } from '@/features/program/hooks'
-import { recordProgramContribution } from '@/features/program/detail/programContributions'
 import { useProgramWorkspace } from '@/features/program/workspace'
 
 /** 프로그램 마스터 수정(제목/상태/기간/설명 — 편집 모달용). */
@@ -21,8 +20,8 @@ export function useUpdateProgram(id: string) {
     }) => {
       const { error } = await supabase.from(config.tables.programs).update(values).eq('id', id)
       if (error) throw error
-      // 변동 이력 'edited' 기록(부수 기록: 실패해도 수정은 성공 처리).
-      await recordProgramContribution(config.entityKey, id, 'edited').catch(() => {})
+      // 변동 이력 'edited'는 원장 트리거가 같은 트랜잭션에서 남긴다(20260721140000).
+      // 값이 실제로 바뀐 경우에만 기록되므로 무변경 저장은 이력에 남지 않는다.
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: [config.key, 'program', id] })

@@ -4,7 +4,6 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { recordProgramContribution } from '@/features/program/detail/programContributions'
 import {
   useProgramWorkspace,
   type ProgramWorkspaceConfig,
@@ -142,10 +141,8 @@ export function useCreateProgram() {
         .select('id')
         .single()
       if (error) throw error
-      const id = (data as { id: string }).id
-      // 변동 이력 최초 'created' 기록(부수 기록: 실패해도 등록은 성공 처리).
-      await recordProgramContribution(config.entityKey, id, 'created').catch(() => {})
-      return id
+      // 변동 이력 'created'는 원장 트리거가 같은 트랜잭션에서 남긴다(20260721140000).
+      return (data as { id: string }).id
     },
     onSuccess: (id) => {
       void qc.invalidateQueries({ queryKey: [config.key, 'programs'] })

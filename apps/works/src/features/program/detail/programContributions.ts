@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { Contribution } from '@/features/networks/hooks'
-import { useProgramWorkspace, type ProgramWorkspaceConfig } from '@/features/program/workspace'
+import { useProgramWorkspace } from '@/features/program/workspace'
 
 
 /**
@@ -27,16 +27,7 @@ export function useProgramContributions(programId: string | undefined) {
   })
 }
 
-/**
- * 프로그램 기여 1건 기록(user_id·user_name은 서버 트리거가 현재 유저로 스탬프).
- * 부수 기록이므로 실패해도 본 작업(등록/수정)을 막지 않는다(에러를 삼킨다).
- */
-export async function recordProgramContribution(
-  entityKey: ProgramWorkspaceConfig['entityKey'],
-  programId: string,
-  action: Contribution['action'],
-): Promise<void> {
-  await supabase
-    .from('entity_contributions')
-    .insert({ entity_table: entityKey, entity_id: programId, action, source: 'manual' })
-}
+// 기록(쓰기)은 클라이언트에 두지 않는다 — 사업 원장 3종의 변동 이력은 원장 트리거
+// app.log_program_contribution()이 같은 트랜잭션에서 남긴다(마이그레이션 20260721140000).
+// 화면에서 손으로 남기던 시절에는 비활성화 경로가 통째로 누락돼 있었고, 원장 쓰기와 로그 쓰기가
+// 별개 요청이라 원자성도 없었다.

@@ -182,9 +182,12 @@ export function useDeactivateProgram() {
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', id)
       if (error) throw error
+      return id
     },
-    onSuccess: () => {
+    onSuccess: (id) => {
       void qc.invalidateQueries({ queryKey: [config.key, 'programs'] })
+      // 비활성화도 이제 원장 트리거가 'deactivated'로 남기므로 변동 이력을 무효화한다.
+      void qc.invalidateQueries({ queryKey: [config.key, 'contributions', id] })
     },
   })
 }
