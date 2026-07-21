@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '../utils/cn'
+import { DensityProvider } from '../density'
 
 export type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl'
 
@@ -36,6 +37,9 @@ export function Modal({
 }: ModalProps) {
   if (!open) return null
   return createPortal(
+    // 밀도 맥락을 'page'로 되돌린다. 포털은 DOM만 body로 옮길 뿐 React 컨텍스트는 부모를 그대로
+    // 따르므로, 카드나 표 셀 안에서 연 모달의 폼이 32px·24px로 쪼그라들던 것을 막는다.
+    <DensityProvider value="page">
     <div className="fixed inset-0 z-overlay flex items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-gray-900/35 backdrop-blur-[2px] transition-opacity duration-slow ease-decelerate"
@@ -65,7 +69,8 @@ export function Modal({
           </footer>
         )}
       </div>
-    </div>,
+    </div>
+    </DensityProvider>,
     document.body,
   )
 }

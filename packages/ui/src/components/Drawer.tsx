@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '../utils/cn'
+import { DensityProvider } from '../density'
 
 export interface DrawerProps {
   open: boolean
@@ -23,6 +24,8 @@ export function Drawer({
 }: DrawerProps) {
   if (!open) return null
   return createPortal(
+    // 모달과 같은 이유로 밀도를 'page'로 되돌린다(포털은 React 컨텍스트를 상속한다).
+    <DensityProvider value="page">
     <div className="fixed inset-0 z-overlay">
       <div
         className="absolute inset-0 bg-gray-900/40 transition-opacity duration-slow ease-decelerate"
@@ -39,7 +42,8 @@ export function Drawer({
       >
         {children}
       </aside>
-    </div>,
+    </div>
+    </DensityProvider>,
     document.body,
   )
 }

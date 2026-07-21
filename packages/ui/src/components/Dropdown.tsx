@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 import { cn } from '../utils/cn'
+import { DensityProvider } from '../density'
+import { controlScale } from '../densityScale'
 
 export interface DropdownProps {
   open: boolean
@@ -41,6 +43,7 @@ export function Dropdown({
       {open && (
         <>
           <div className="fixed inset-0 z-dropdown" onClick={onClose} aria-hidden />
+          <DensityProvider value="card">
           <div
             role="menu"
             className={cn(
@@ -58,6 +61,7 @@ export function Dropdown({
           >
             {children}
           </div>
+          </DensityProvider>
         </>
       )}
     </div>
@@ -72,13 +76,21 @@ export interface DropdownItemProps {
 
 /** 드롭다운 항목. */
 export function DropdownItem({ onClick, children, disabled }: DropdownItemProps) {
+  // 메뉴는 카드 규격(32px)으로 고정한다 — 가변 py는 항목마다 높이가 달라진다.
+  const s = controlScale.card
   return (
     <button
       type="button"
       role="menuitem"
       disabled={disabled}
       onClick={onClick}
-      className="block w-full rounded-radius-md px-3 py-1.5 text-left text-body text-gray-800 transition-colors duration-fast hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10 disabled:opacity-50"
+      className={cn(
+        'flex w-full items-center rounded-radius-md text-left text-gray-800 transition-colors duration-fast',
+        'hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10 disabled:opacity-50',
+        s.height,
+        s.text,
+        s.padX,
+      )}
     >
       {children}
     </button>

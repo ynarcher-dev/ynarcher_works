@@ -5,6 +5,7 @@ import {
   type ToastTone,
 } from './ToastContext'
 import { ToastItem } from './ToastItem'
+import { DensityProvider } from '../../density'
 
 const AUTO_DISMISS_MS = 4000
 
@@ -28,11 +29,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ show }}>
       {children}
-      <div className="fixed bottom-4 right-4 z-toast flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2">
-        {toasts.map((toast) => (
-          <ToastItem key={toast.id} toast={toast} />
-        ))}
-      </div>
+      {/* 토스트는 앱 어디서 호출되든 같은 크기여야 하므로 밀도를 카드 규격으로 고정한다. */}
+      <DensityProvider value="card">
+        <div className="fixed bottom-4 right-4 z-toast flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2">
+          {toasts.map((toast) => (
+            <ToastItem key={toast.id} toast={toast} />
+          ))}
+        </div>
+      </DensityProvider>
     </ToastContext.Provider>
   )
 }
