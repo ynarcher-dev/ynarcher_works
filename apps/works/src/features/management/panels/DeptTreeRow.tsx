@@ -1,4 +1,4 @@
-import { Button, InlineSelect, Input, cn } from '@ynarcher/ui'
+import { Badge, Button, InlineSelect, Input, cn } from '@ynarcher/ui'
 import { Check, ChevronRight, Eye, EyeOff, GripVertical, Pencil, Plus, Trash2, Users, X } from 'lucide-react'
 import type { DragEvent } from 'react'
 import {
@@ -156,12 +156,9 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
             </span>
           )}
           {node.hrHidden && !isEditing && (
-            <span
-              title="인사관리 컬럼 미노출"
-              className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-gray-100 px-1.5 py-0.5 text-[0.6875rem] text-gray-600"
-            >
-              <EyeOff size={11} /> 인사 미노출
-            </span>
+            <Badge tone="neutral" className="gap-0.5" >
+              <EyeOff size={11} aria-hidden /> 인사 미노출
+            </Badge>
           )}
         </div>
 
@@ -199,12 +196,9 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
                 {members.length > 0 ? (
                   <>
                     {members.slice(0, 6).map((m) => (
-                      <span
-                        key={m.id}
-                        className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-caption text-gray-700"
-                      >
+                      <Badge key={m.id} tone="neutral">
                         {m.name}
-                      </span>
+                      </Badge>
                     ))}
                     {members.length > 6 && (
                       <span className="text-caption text-gray-600">외 {members.length - 6}명</span>
@@ -221,12 +215,9 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
                 {members.length > 0 ? (
                   <>
                     {members.slice(0, 6).map((m) => (
-                      <span
-                        key={m.id}
-                        className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-caption text-gray-700"
-                      >
+                      <Badge key={m.id} tone="neutral">
                         {m.name}
-                      </span>
+                      </Badge>
                     ))}
                     {members.length > 6 && (
                       <span className="text-caption text-gray-600">외 {members.length - 6}명</span>

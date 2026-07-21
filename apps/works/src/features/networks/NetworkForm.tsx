@@ -1,4 +1,4 @@
-import { Button, CardShell, cn, Input, Select, TextArea, useToast } from '@ynarcher/ui'
+import { Button, CardShell, Input, Select, TagChip, TextArea, useToast } from '@ynarcher/ui'
 import type { ChangeEvent, ReactNode } from 'react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -322,21 +322,14 @@ export function NetworkForm({ entity, recordId, initial, onDone, onCancel }: Pro
                         const on = fields.includes(t.name)
                         const disabled = !on && fields.length >= MAX_FIELDS
                         return (
-                          <button
+                          <TagChip
                             key={t.id}
-                            type="button"
+                            selected={on}
                             disabled={disabled}
                             onClick={() => toggleField(t.name)}
-                            className={cn(
-                              'rounded-radius-sm border px-2 py-0.5 text-caption transition-colors',
-                              on
-                                ? 'border-brand bg-brand/10 font-medium text-brand'
-                                : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50',
-                              disabled && 'cursor-not-allowed opacity-40 hover:bg-white',
-                            )}
                           >
                             {t.name}
-                          </button>
+                          </TagChip>
                         )
                       })}
                       {(fieldTags ?? []).length === 0 && (

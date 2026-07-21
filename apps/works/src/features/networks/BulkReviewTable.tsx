@@ -78,7 +78,7 @@ function Seg({
 function DupCell({ row, match, revived }: { row: ReviewRow; match: ExistingRef; revived: boolean }) {
   if (match.deleted && !revived) {
     return (
-      <div className="inline-flex items-center gap-2.5 whitespace-nowrap text-[11px] leading-snug">
+      <div className="inline-flex items-center gap-2.5 whitespace-nowrap text-caption leading-snug">
         <Seg label="비활성" tone="danger" value={match.deactivatedBy ?? '미상'} widthCls="min-w-[6rem]" />
         <Seg label="사유" tone="danger" value={match.deactivateReason ?? '-'} />
       </div>
@@ -86,7 +86,7 @@ function DupCell({ row, match, revived }: { row: ReviewRow; match: ExistingRef; 
   }
   const dups = overlapLabels(row, match).join(', ')
   return (
-    <div className="inline-flex items-center gap-2.5 whitespace-nowrap text-[11px] leading-snug">
+    <div className="inline-flex items-center gap-2.5 whitespace-nowrap text-caption leading-snug">
       <Seg label="작성자" value={match.contributor ?? '미상'} widthCls="min-w-[6rem]" />
       <Seg label="구분" value={match.category} widthCls="min-w-[6.5rem]" />
       <Seg label="중복" tone="warning" value={dups} />

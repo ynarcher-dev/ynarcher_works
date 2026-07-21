@@ -1,4 +1,4 @@
-import { Button, CardShell, cn, Input, Select, TextArea, useToast } from '@ynarcher/ui'
+import { Button, CardShell, Input, Select, TagChip, TextArea, useToast } from '@ynarcher/ui'
 import { useEffect, useState, type ChangeEvent, type ReactNode } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { useEmployees } from '@/features/management/hooks'
@@ -409,21 +409,14 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel }: Props
                     const on = industries.includes(tag.name)
                     const disabled = !on && industries.length >= MAX_INDUSTRIES
                     return (
-                      <button
+                      <TagChip
                         key={tag.id}
-                        type="button"
+                        selected={on}
                         disabled={disabled}
                         onClick={() => toggleIndustry(tag.name)}
-                        className={cn(
-                          'rounded-radius-sm border px-2 py-0.5 text-caption transition-colors',
-                          on
-                            ? 'border-brand bg-brand/10 font-medium text-brand'
-                            : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50',
-                          disabled && 'cursor-not-allowed opacity-40 hover:bg-white',
-                        )}
                       >
                         {tag.name}
-                      </button>
+                      </TagChip>
                     )
                   })}
                   {(industryTags ?? []).length === 0 && (
@@ -503,19 +496,13 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel }: Props
                       .map((emp) => {
                         const on = supportIds.includes(emp.id)
                         return (
-                          <button
+                          <TagChip
                             key={emp.id}
-                            type="button"
+                            selected={on}
                             onClick={() => toggleSupport(emp.id)}
-                            className={cn(
-                              'rounded-radius-sm border px-2 py-0.5 text-caption transition-colors',
-                              on
-                                ? 'border-brand bg-brand/10 font-medium text-brand'
-                                : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50',
-                            )}
                           >
                             {emp.name ?? '(이름 없음)'}
-                          </button>
+                          </TagChip>
                         )
                       })}
                     {(employees ?? []).length === 0 && (

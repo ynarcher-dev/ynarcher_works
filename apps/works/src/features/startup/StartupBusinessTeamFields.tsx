@@ -1,4 +1,4 @@
-import { Button, Input, TextArea } from '@ynarcher/ui'
+import { Button, Input, TagChip, TextArea } from '@ynarcher/ui'
 import { useState, type ReactNode } from 'react'
 import { useFieldArray, type Control, type UseFormRegister } from 'react-hook-form'
 import type { StartupDetailFormValues } from '@/features/startup/StartupDetailForm'
@@ -113,14 +113,9 @@ export function StartupBusinessTeamFields({ register, control, capabilities, set
           {capabilities.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1">
               {capabilities.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => removeCap(c)}
-                  className="inline-flex items-center gap-1 rounded-radius-sm border border-gray-300 bg-gray-50 px-2 py-0.5 text-caption text-gray-600 transition-colors hover:bg-gray-100"
-                >
-                  {c} <span className="text-gray-400">×</span>
-                </button>
+                <TagChip key={c} onClick={() => removeCap(c)} title="제거">
+                  {c} <span aria-hidden className="text-gray-400">×</span>
+                </TagChip>
               ))}
             </div>
           )}

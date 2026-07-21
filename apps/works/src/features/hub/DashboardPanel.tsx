@@ -210,7 +210,7 @@ function InfoCard({ card }: { card: InfoCardDef }) {
 /** 최근 72시간 내 게시글 표시 뱃지. */
 export function NewBadge() {
   return (
-    <span className="inline-flex shrink-0 items-center rounded bg-brand px-1 py-px text-[0.625rem] font-bold uppercase leading-none tracking-wide text-gray-0">
+    <span className="inline-flex shrink-0 items-center rounded bg-brand px-1 py-px text-tag-table font-bold uppercase tracking-wide text-gray-0">
       NEW
     </span>
   )
