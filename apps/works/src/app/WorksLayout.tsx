@@ -387,7 +387,7 @@ export function WorksLayout() {
             sidebarCollapsed ? 'h-ctl-page justify-center px-0' : 'gap-2.5 px-2.5 py-2',
           )}
         >
-          <Avatar name={user?.name ?? '?'} size="sm" />
+          <Avatar name={user?.name ?? '?'} density="table" />
           {!sidebarCollapsed && (
             <span className="min-w-0 flex-1">
               <span className="block truncate text-body font-semibold text-white">

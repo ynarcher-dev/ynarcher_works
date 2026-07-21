@@ -43,7 +43,7 @@ const columns: Column<FormResult>[] = [
 /** 평가 집계 결과(가중 총점 내림차순). */
 export function ResultsTable({ formId }: { formId: string }) {
   const { data, isLoading } = useFormResults(formId)
-  if (isLoading) return <Spinner size="sm" />
+  if (isLoading) return <Spinner density="table" />
   return (
     <div className="space-y-2">
       <h3 className="text-title-sm font-medium text-gray-900">집계 결과</h3>

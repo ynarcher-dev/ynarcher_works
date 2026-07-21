@@ -1,4 +1,4 @@
-import { Input, Select } from '@ynarcher/ui'
+import { Input, Radio, Select } from '@ynarcher/ui'
 import type { UseFormRegister } from 'react-hook-form'
 import {
   PROGRAM_OPERATION_STATUSES,
@@ -56,24 +56,16 @@ export function ProgramStageFields({
               ['OPERATION', '운영 단계', operationUnlocked],
             ] as const
           ).map(([value, label, enabled]) => (
-            <label
+            <Radio
               key={value}
-              className={
-                'flex items-center gap-1.5 text-body ' +
-                (enabled ? 'cursor-pointer text-gray-800' : 'cursor-not-allowed text-gray-300')
-              }
+              name="program-stage"
+              label={label}
+              checked={stage === value}
+              disabled={!enabled}
+              onChange={() => onStageChange(value)}
+              wrapperClassName={enabled ? undefined : 'opacity-70'}
               title={enabled ? undefined : "제안이 '선정'된 후 운영 단계로 넘어갈 수 있습니다."}
-            >
-              <input
-                type="radio"
-                name="program-stage"
-                className="h-4 w-4 accent-brand"
-                checked={stage === value}
-                disabled={!enabled}
-                onChange={() => onStageChange(value)}
-              />
-              {label}
-            </label>
+            />
           ))}
         </div>
       </div>

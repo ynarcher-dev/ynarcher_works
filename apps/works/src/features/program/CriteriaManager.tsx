@@ -33,7 +33,7 @@ export function CriteriaManager({ formId }: { formId: string }) {
     <div className="space-y-3">
       <h3 className="text-title-sm font-medium text-gray-900">평가 지표</h3>
       {isLoading ? (
-        <Spinner size="sm" />
+        <Spinner density="table" />
       ) : (
         <ul className="space-y-1">
           {(data ?? []).map((c) => (

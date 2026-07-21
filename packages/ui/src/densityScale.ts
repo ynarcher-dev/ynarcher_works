@@ -53,11 +53,55 @@ export const textAreaScale: Record<Density, string> = {
   table: 'px-2.5 py-1.5 text-caption',
 }
 
-/** 체크박스·라디오·스위치 등 고정 비율 선택 컨트롤. */
+/** 체크박스·라디오 등 정사각 선택 컨트롤. */
 export const toggleScale: Record<Density, { box: string; text: string; gap: string }> = {
   page: { box: 'size-5', text: 'text-body', gap: 'gap-2' },
   card: { box: 'size-4', text: 'text-body-sm', gap: 'gap-2' },
   table: { box: 'size-3.5', text: 'text-caption', gap: 'gap-1.5' },
+}
+
+/**
+ * 스위치 — 트랙과 썸이 함께 움직여야 하므로 별도 표로 둔다.
+ * `travel`은 썸의 이동 거리로, 트랙 너비 − 썸 크기 − 좌우 여백(2px)과 일치해야 한다.
+ */
+export const switchScale: Record<Density, { track: string; thumb: string; travel: string }> = {
+  page: { track: 'h-6 w-11', thumb: 'size-5', travel: 'translate-x-[22px]' },
+  card: { track: 'h-5 w-9', thumb: 'size-4', travel: 'translate-x-[18px]' },
+  table: { track: 'h-4 w-7', thumb: 'size-3', travel: 'translate-x-[14px]' },
+}
+
+/** 아바타 — 이니셜 글자가 원 안에서 같은 비율로 보이도록 크기와 글자를 함께 옮긴다. */
+export const avatarScale: Record<Density, { box: string; text: string }> = {
+  page: { box: 'size-10', text: 'text-body-lg' },
+  card: { box: 'size-8', text: 'text-body' },
+  table: { box: 'size-6', text: 'text-caption' },
+}
+
+/** 탭 — 언더라인 탭의 높이를 같은 맥락의 컨트롤과 맞춘다(가변 py 금지). */
+export const tabScale: Record<Density, { height: string; text: string; padX: string }> = {
+  page: { height: 'h-ctl-page', text: 'text-body', padX: 'px-3.5' },
+  card: { height: 'h-ctl-card', text: 'text-body-sm', padX: 'px-3' },
+  table: { height: 'h-ctl-table', text: 'text-caption', padX: 'px-2.5' },
+}
+
+/**
+ * 페이지네이션 — 이동 버튼은 아이콘 버튼 격자를 그대로 쓴다.
+ * 숫자 버튼(`numBox`)은 같은 높이를 유지하되 세 자리 이상에서 넓어져야 하므로 최소 너비로 잡는다.
+ */
+export const pagerScale: Record<
+  Density,
+  { box: string; numBox: string; text: string; glyph: number }
+> = {
+  page: { box: 'size-icon-page', numBox: 'h-icon-page min-w-icon-page', text: 'text-body-sm', glyph: 16 },
+  card: { box: 'size-icon-card', numBox: 'h-icon-card min-w-icon-card', text: 'text-caption', glyph: 14 },
+  table: { box: 'size-icon-table', numBox: 'h-icon-table min-w-icon-table', text: 'text-caption', glyph: 12 },
+}
+
+/** 스피너 — 로딩 자리를 차지하는 크기이므로 아이콘 격자보다 한 단계 작게 잡는다. */
+export const spinnerScale: Record<Density, string> = {
+  page: 'size-6',
+  card: 'size-5',
+  table: 'size-4',
 }
 
 /** 폼 컨트롤 4상태(기본·호버·포커스·비활성) 공통 외형. 밀도와 무관하다. */

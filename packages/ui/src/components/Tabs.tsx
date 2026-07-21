@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 import { cn } from '../utils/cn'
+import { useDensity, type Density } from '../density'
+import { tabScale, tagScale } from '../densityScale'
 
 export interface TabItem {
   key: string
@@ -12,8 +14,8 @@ export interface TabsProps {
   items: TabItem[]
   value: string
   onChange: (key: string) => void
-  /** sm: 카드 내부용 컴팩트 밀도. 기본 md. */
-  size?: 'md' | 'sm'
+  /** 밀도 맥락 강제 지정. 생략하면 부모 Card·DataTable의 맥락을 따른다. */
+  density?: Density
   className?: string
 }
 
@@ -21,8 +23,10 @@ export interface TabsProps {
  * 언더라인 탭 내비게이션(활성 탭 브랜드 강조 + 선택 건수 칩).
  * 상세 페이지 탭·카드 내부 필터 탭 공용. 콘텐츠 렌더링은 호출 측이 소유한다.
  */
-export function Tabs({ items, value, onChange, size = 'md', className }: TabsProps) {
-  const pad = size === 'sm' ? 'px-2.5 py-1.5' : 'px-3 py-2'
+export function Tabs({ items, value, onChange, density, className }: TabsProps) {
+  const d = useDensity(density)
+  const s = tabScale[d]
+  const chip = tagScale[d]
   return (
     <nav
       role="tablist"
@@ -38,8 +42,10 @@ export function Tabs({ items, value, onChange, size = 'md', className }: TabsPro
             aria-selected={active}
             onClick={() => onChange(item.key)}
             className={cn(
-              pad,
-              '-mb-px inline-flex items-center gap-1.5 border-b-2 text-body transition-colors duration-fast',
+              s.height,
+              s.text,
+              s.padX,
+              '-mb-px inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 transition-colors duration-fast',
               active
                 ? 'border-brand font-medium text-brand'
                 : 'border-transparent text-gray-600 hover:text-gray-800',
@@ -49,7 +55,10 @@ export function Tabs({ items, value, onChange, size = 'md', className }: TabsPro
             {item.count != null && (
               <span
                 className={cn(
-                  'rounded-full px-1.5 py-0.5 text-caption tabular-nums',
+                  'inline-flex items-center justify-center rounded-full leading-none tabular-nums',
+                  chip.height,
+                  chip.text,
+                  chip.padX,
                   active
                     ? 'bg-brand/10 font-semibold text-brand'
                     : 'bg-gray-100 text-gray-600',

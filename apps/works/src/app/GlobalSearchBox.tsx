@@ -67,7 +67,7 @@ export function GlobalSearchBox() {
         >
           {isFetching && results.length === 0 && (
             <p className="flex items-center gap-2 px-3 py-2 text-body text-gray-500">
-              <Spinner size="sm" /> 검색 중
+              <Spinner density="table" /> 검색 중
             </p>
           )}
           {!isFetching && results.length === 0 && (

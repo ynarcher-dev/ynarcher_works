@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 import { cn } from '../utils/cn'
+import { useDensity, type Density } from '../density'
+import { pagerScale } from '../densityScale'
 
 export interface PaginationProps {
   page: number // 1-base
@@ -8,6 +10,8 @@ export interface PaginationProps {
   className?: string
   /** 좌측에 노출할 부가 정보(예: "12 / 87건"). 우측 직접 이동 입력창과 좌우 대칭으로 배치된다. */
   info?: ReactNode
+  /** 밀도 맥락 강제 지정. 생략하면 부모 맥락을 따른다. */
+  density?: Density
 }
 
 /** 
@@ -20,7 +24,9 @@ export function Pagination({
   onChange,
   className,
   info,
+  density,
 }: PaginationProps) {
+  const s = pagerScale[useDensity(density)]
   // 페이지가 1개뿐이어도 페이저를 노출한다(현재 페이지·전체 페이지 수를 항상 보여주기 위함).
 
   // 렌더링할 페이지 번호 계산 (현재 페이지 기준 좌우 2개씩 노출)
@@ -53,10 +59,10 @@ export function Pagination({
         type="button"
         disabled={page <= 1}
         onClick={() => onChange(1)}
-        className="flex h-8 w-8 items-center justify-center rounded-radius-sm border border-gray-300 text-gray-600 transition-all hover:bg-gray-50 active:scale-95 disabled:scale-100 disabled:opacity-30"
+        className={cn(s.box, "flex items-center justify-center rounded-radius-sm border border-gray-300 text-gray-600 transition-all hover:bg-gray-50 active:scale-95 disabled:scale-100 disabled:opacity-30")}
         aria-label="첫 페이지로 이동"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width={s.glyph} height={s.glyph} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/></svg>
       </button>
 
       {/* 이전 페이지 (◀) */}
@@ -64,10 +70,10 @@ export function Pagination({
         type="button"
         disabled={page <= 1}
         onClick={() => onChange(page - 1)}
-        className="flex h-8 w-8 items-center justify-center rounded-radius-sm border border-gray-300 text-gray-600 transition-all hover:bg-gray-50 active:scale-95 disabled:scale-100 disabled:opacity-30"
+        className={cn(s.box, "flex items-center justify-center rounded-radius-sm border border-gray-300 text-gray-600 transition-all hover:bg-gray-50 active:scale-95 disabled:scale-100 disabled:opacity-30")}
         aria-label="이전 페이지로 이동"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width={s.glyph} height={s.glyph} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
       </button>
 
       {/* 페이지 번호 리스트 */}
@@ -78,7 +84,9 @@ export function Pagination({
             type="button"
             onClick={() => onChange(p)}
             className={cn(
-              'h-8 min-w-8 px-2 flex items-center justify-center rounded-radius-sm text-caption transition-all font-semibold active:scale-95',
+              s.numBox,
+              s.text,
+              'flex items-center justify-center rounded-radius-sm px-2 font-semibold transition-all active:scale-95',
               p === page
                 ? 'bg-brand text-white shadow-sm shadow-brand/10'
                 : 'text-gray-700 hover:bg-gray-100'
@@ -95,10 +103,10 @@ export function Pagination({
         type="button"
         disabled={page >= pageCount}
         onClick={() => onChange(page + 1)}
-        className="flex h-8 w-8 items-center justify-center rounded-radius-sm border border-gray-300 text-gray-600 transition-all hover:bg-gray-50 active:scale-95 disabled:scale-100 disabled:opacity-30"
+        className={cn(s.box, "flex items-center justify-center rounded-radius-sm border border-gray-300 text-gray-600 transition-all hover:bg-gray-50 active:scale-95 disabled:scale-100 disabled:opacity-30")}
         aria-label="다음 페이지로 이동"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width={s.glyph} height={s.glyph} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
       </button>
 
       {/* 맨 뒤로 (⏭) */}
@@ -106,10 +114,10 @@ export function Pagination({
         type="button"
         disabled={page >= pageCount}
         onClick={() => onChange(pageCount)}
-        className="flex h-8 w-8 items-center justify-center rounded-radius-sm border border-gray-300 text-gray-600 transition-all hover:bg-gray-50 active:scale-95 disabled:scale-100 disabled:opacity-30"
+        className={cn(s.box, "flex items-center justify-center rounded-radius-sm border border-gray-300 text-gray-600 transition-all hover:bg-gray-50 active:scale-95 disabled:scale-100 disabled:opacity-30")}
         aria-label="마지막 페이지로 이동"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m17 17 5-5-5-5"/><path d="m10 17 5-5-5-5"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width={s.glyph} height={s.glyph} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m17 17 5-5-5-5"/><path d="m10 17 5-5-5-5"/></svg>
       </button>
 
       {/* 우측 직접 이동 입력창 (Go-To-Page) */}
@@ -128,7 +136,12 @@ export function Pagination({
               }
             }
           }}
-          className="h-8 w-14 rounded-radius-sm border border-gray-300 px-1.5 text-center text-body text-gray-800 transition-all focus:border-brand/50 focus:outline-none focus:shadow-popover [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          className={cn(
+            s.numBox,
+            s.text,
+            'w-14 rounded-radius-sm border border-gray-300 px-1.5 text-center text-gray-800 transition-all focus:border-brand/50 focus:shadow-popover focus:outline-none',
+            '[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',
+          )}
         />
       </div>
     </nav>

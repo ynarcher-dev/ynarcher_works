@@ -14,7 +14,7 @@ export function UnifiedSearchPanel() {
         value={keyword}
         onChange={(e) => setKeyword(e.target.value)}
       />
-      {isFetching && <Spinner size="sm" />}
+      {isFetching && <Spinner density="table" />}
       {keyword && data && data.length === 0 && !isFetching && (
         <EmptyState title="검색 결과가 없습니다." />
       )}

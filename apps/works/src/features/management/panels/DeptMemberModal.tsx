@@ -69,7 +69,7 @@ export function DeptMemberModal({
                   checked={here}
                   onChange={() => onAssign(e.id, here ? null : deptId)}
                 />
-                <Avatar name={e.name} size="sm" />
+                <Avatar name={e.name} density="table" />
                 <span className="text-body text-gray-800">{e.name}</span>
                 <span className="ml-auto text-caption text-gray-600">
                   {here ? '이 부서' : currentDept ? `현재: ${currentDept}` : '미배치'}
