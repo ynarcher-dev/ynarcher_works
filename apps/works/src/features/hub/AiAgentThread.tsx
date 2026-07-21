@@ -26,7 +26,7 @@ export function AiAgentThread({ messages }: AiAgentThreadProps) {
           </div>
         ) : (
           <div key={m.id} className="flex gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-radius-sm bg-gradient-to-br from-brand to-brand-700 text-white shadow-soft">
+            <span className="flex size-icon-card shrink-0 items-center justify-center rounded-radius-sm bg-gradient-to-br from-brand to-brand-700 text-white shadow-soft">
               <YnarcherMark className="w-6" />
             </span>
             <div className="min-w-0 flex-1 pt-0.5">

@@ -114,7 +114,7 @@ export function FeedbackPanel({
                       onClick={() => {
                         if (window.confirm('코멘트를 삭제하시겠습니까?')) remove.mutate(f.id)
                       }}
-                      className="grid size-6 shrink-0 place-items-center rounded-radius-sm text-gray-400 transition-colors duration-fast hover:bg-red-50 hover:text-brand disabled:opacity-50"
+                      className="grid size-6 shrink-0 place-items-center rounded-radius-sm text-gray-400 transition-colors duration-fast hover:bg-danger-subtle hover:text-danger disabled:opacity-50"
                     >
                       <Trash2 className="size-3.5" />
                     </button>

@@ -39,7 +39,7 @@ export function AiAgentComposer({
       <div className="flex items-end gap-2 rounded-radius-lg border border-gray-300 bg-white p-2 shadow-soft transition-colors focus-within:border-brand/50 focus-within:shadow-popover">
         <button
           type="button"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-radius-sm text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+          className="flex size-icon-card shrink-0 items-center justify-center rounded-radius-sm text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
           aria-label="첨부"
         >
           <Plus className="h-5 w-5" strokeWidth={1.75} />
@@ -60,7 +60,7 @@ export function AiAgentComposer({
           onClick={onSubmit}
           disabled={!canSend}
           aria-label="전송"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-radius-sm bg-brand text-white shadow-sm shadow-brand/20 transition-all hover:bg-brand-600 active:scale-95 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none"
+          className="flex size-icon-card shrink-0 items-center justify-center rounded-radius-sm bg-brand text-white shadow-sm shadow-brand/20 transition-all hover:bg-brand-600 active:scale-95 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none"
         >
           <ArrowUp className="h-5 w-5" strokeWidth={2} />
         </button>

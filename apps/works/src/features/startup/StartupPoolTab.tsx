@@ -103,7 +103,7 @@ export function StartupPoolTab({ category, mineUserId }: StartupPoolTabProps) {
         </div>
         <StartupPoolFilters filters={filters} onChange={setFilters} />
         <div className="sm:ml-auto">
-          <Button className="h-11" onClick={() => navigate('/startup/discovered/new')}>
+          <Button className="h-ctl-page" onClick={() => navigate('/startup/discovered/new')}>
             {config.label} 등록
           </Button>
         </div>

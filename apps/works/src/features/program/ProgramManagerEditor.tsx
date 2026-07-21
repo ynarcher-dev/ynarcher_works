@@ -89,7 +89,7 @@ export function ProgramManagerEditor({
           }}
           onFocus={() => setOpen(true)}
           placeholder="담당자 검색 후 추가 (같은 사람을 다시 추가하면 구간이 늘어납니다)"
-          className="relative z-dropdown min-h-11 w-full rounded-radius-md border border-gray-300 bg-white px-3 py-1.5 text-body text-gray-900 outline-none transition-colors duration-fast placeholder:text-gray-400 focus:border-brand"
+          className="relative z-dropdown min-h-ctl-page w-full rounded-radius-md border border-gray-300 bg-white px-3 py-1.5 text-body text-gray-900 outline-none transition-colors duration-fast placeholder:text-gray-400 focus:border-brand"
         />
         {open && (
           <div className="absolute left-0 right-0 z-dropdown mt-1 max-h-56 overflow-auto rounded-radius-lg border border-gray-300 bg-white p-1 shadow-popover">
@@ -122,7 +122,7 @@ export function ProgramManagerEditor({
               <div className="flex items-end gap-2">
                 <div className="w-20 shrink-0">
                   <span className="mb-0.5 block text-caption text-gray-600">담당자</span>
-                  <div className="flex h-10 items-center">
+                  <div className="flex h-ctl-page items-center">
                     <span className="truncate text-body font-medium text-gray-900">
                       {byId.get(row.user_id)?.name ?? '알 수 없음'}
                     </span>
@@ -186,7 +186,7 @@ export function ProgramManagerEditor({
                   type="button"
                   aria-label="구간 제거"
                   onClick={() => remove(row._key)}
-                  className="flex h-10 shrink-0 items-center text-gray-400 transition-colors duration-fast hover:text-brand"
+                  className="flex h-ctl-page shrink-0 items-center text-gray-400 transition-colors duration-fast hover:text-brand"
                 >
                   ×
                 </button>

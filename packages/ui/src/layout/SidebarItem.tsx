@@ -31,7 +31,7 @@ export function SidebarItem({
       className={cn(
         'group relative flex w-full items-center rounded-radius-md text-body font-semibold transition-all duration-fast active:scale-[0.98] transform-gpu',
         'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/20',
-        collapsed ? 'h-10 justify-center px-0 py-0' : 'gap-2.5 px-3.5 py-2.5',
+        collapsed ? 'h-ctl-page justify-center px-0 py-0' : 'gap-2.5 px-3.5 py-2.5',
         active
           ? 'bg-white text-brand shadow-soft'
           : 'text-white hover:bg-white/15',

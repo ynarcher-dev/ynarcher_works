@@ -46,7 +46,7 @@ function MultiTagFilter({
           type="button"
           onClick={() => setOpen((o) => !o)}
           className={
-            'flex h-11 items-center gap-1 rounded-radius-md border px-3.5 text-body shadow-soft transition-colors duration-fast ' +
+            'flex h-ctl-page items-center gap-1 rounded-radius-md border px-3.5 text-body shadow-soft transition-colors duration-fast ' +
             (active
               ? 'border-brand/50 bg-brand/5 text-brand-700'
               : 'border-gray-300 bg-white text-gray-400 hover:border-gray-400')
@@ -137,7 +137,7 @@ export function StartupPoolFilters({ filters, onChange }: StartupPoolFiltersProp
         <button
           type="button"
           onClick={() => onChange(EMPTY_STARTUP_FILTERS)}
-          className="flex h-11 items-center rounded-radius-md border border-gray-300 bg-white px-3.5 text-body text-gray-700 shadow-soft transition-colors duration-fast hover:border-gray-400 hover:text-brand-700"
+          className="flex h-ctl-page items-center rounded-radius-md border border-gray-300 bg-white px-3.5 text-body text-gray-700 shadow-soft transition-colors duration-fast hover:border-gray-400 hover:text-brand-700"
         >
           초기화
         </button>

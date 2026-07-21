@@ -103,7 +103,7 @@ export function AttachmentField({ value, onChange }: AttachmentFieldProps) {
                 type="button"
                 aria-label="첨부 삭제"
                 onClick={() => remove(a.id)}
-                className="grid size-6 shrink-0 place-items-center rounded-radius-sm text-gray-400 transition-colors duration-fast hover:bg-red-50 hover:text-brand"
+                className="grid size-6 shrink-0 place-items-center rounded-radius-sm text-gray-400 transition-colors duration-fast hover:bg-danger-subtle hover:text-danger"
               >
                 <X className="size-4" />
               </button>

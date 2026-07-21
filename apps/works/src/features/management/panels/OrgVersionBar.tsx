@@ -209,7 +209,7 @@ export function OrgVersionBar({
           </p>
           <label className="block space-y-1">
             <span className="text-caption font-semibold text-gray-600">버전 이름</span>
-            <Input value={label} onChange={(e) => setLabel(e.target.value)} className="h-9" />
+            <Input value={label} onChange={(e) => setLabel(e.target.value)} className="h-ctl-card" />
           </label>
           <div className="grid grid-cols-2 gap-2">
             <label className="block space-y-1">
@@ -218,7 +218,7 @@ export function OrgVersionBar({
                 type="date"
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
-                className="h-9"
+                className="h-ctl-card"
               />
             </label>
             <label className="block space-y-1">
@@ -227,7 +227,7 @@ export function OrgVersionBar({
                 type="date"
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
-                className="h-9"
+                className="h-ctl-card"
               />
             </label>
           </div>

@@ -383,8 +383,8 @@ export function WorksLayout() {
           className={cn(
             'flex w-full items-center rounded-radius-md text-left transition-colors duration-fast',
             'hover:bg-white/15 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/20',
-            // 접힘 시 메뉴 항목과 동일한 h-10 정사각 규격.
-            sidebarCollapsed ? 'h-10 justify-center px-0' : 'gap-2.5 px-2.5 py-2',
+            // 접힘 시 메뉴 항목과 동일한 규격(ctl-page 40px).
+            sidebarCollapsed ? 'h-ctl-page justify-center px-0' : 'gap-2.5 px-2.5 py-2',
           )}
         >
           <Avatar name={user?.name ?? '?'} size="sm" />
@@ -445,8 +445,8 @@ export function WorksLayout() {
             className={cn(
               'hidden shrink-0 items-center justify-center rounded-radius-md text-white/70 transition-colors duration-fast',
               'hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/20 lg:flex',
-              // 접힘 시 메뉴 항목과 동일한 규격(w-full h-10)으로 맞춰 아이콘 중심선을 일치시킨다.
-              sidebarCollapsed ? 'h-10 w-full' : 'p-1.5',
+              // 접힘 시 메뉴 항목과 동일한 규격(w-full · ctl-page)으로 맞춰 아이콘 중심선을 일치시킨다.
+              sidebarCollapsed ? 'h-ctl-page w-full' : 'p-1.5',
             )}
             aria-label={sidebarCollapsed ? '사이드바 열기' : '사이드바 접기'}
             title={sidebarCollapsed ? '사이드바 열기' : '사이드바 접기'}

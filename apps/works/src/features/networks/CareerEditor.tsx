@@ -80,7 +80,7 @@ function SectionBlock({
                 type="button"
                 aria-label="삭제"
                 onClick={() => onRows(rows.filter((_, ri) => ri !== i))}
-                className="shrink-0 rounded-radius-md p-2 text-gray-400 transition-colors hover:bg-red-50 hover:text-brand"
+                className="shrink-0 rounded-radius-md p-2 text-gray-400 transition-colors hover:bg-danger-subtle hover:text-danger"
               >
                 <Trash2 className="size-4" aria-hidden />
               </button>

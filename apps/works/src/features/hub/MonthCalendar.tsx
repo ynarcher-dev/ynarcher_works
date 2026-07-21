@@ -79,7 +79,7 @@ export function MonthCalendar({ events }: { events: SystemEvent[] }) {
             type="button"
             aria-label="이전 달"
             onClick={() => setMonth((m) => m.subtract(1, 'month'))}
-            className="grid h-8 w-8 place-items-center rounded-radius-sm text-gray-500 transition-colors duration-fast hover:bg-gray-100 hover:text-gray-800"
+            className="grid size-icon-card place-items-center rounded-radius-sm text-gray-500 transition-colors duration-fast hover:bg-gray-100 hover:text-gray-800"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -90,7 +90,7 @@ export function MonthCalendar({ events }: { events: SystemEvent[] }) {
             type="button"
             aria-label="다음 달"
             onClick={() => setMonth((m) => m.add(1, 'month'))}
-            className="grid h-8 w-8 place-items-center rounded-radius-sm text-gray-500 transition-colors duration-fast hover:bg-gray-100 hover:text-gray-800"
+            className="grid size-icon-card place-items-center rounded-radius-sm text-gray-500 transition-colors duration-fast hover:bg-gray-100 hover:text-gray-800"
           >
             <ChevronRight className="h-4 w-4" />
           </button>

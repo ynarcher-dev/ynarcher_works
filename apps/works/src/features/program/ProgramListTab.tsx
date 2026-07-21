@@ -90,7 +90,7 @@ export function ProgramListTab({
         </div>
         <ProgramFilters filters={filters} onChange={setFilters} />
         <div className="sm:ml-auto">
-          <Button className="h-11" onClick={() => setCreating(true)}>
+          <Button className="h-ctl-page" onClick={() => setCreating(true)}>
             사업 등록
           </Button>
         </div>

@@ -55,7 +55,7 @@ export function DeptMemberModal({
             placeholder="임직원 이름 검색"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            className="h-8 max-w-48"
+            className="h-ctl-card max-w-48"
           />
         </div>
 

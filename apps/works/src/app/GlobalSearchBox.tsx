@@ -58,7 +58,7 @@ export function GlobalSearchBox() {
         placeholder="스타트업·전문가 검색"
         aria-label="전역 검색"
         icon={<Search aria-hidden className="size-4" />}
-        className="h-9 shadow-none"
+        className="h-ctl-card shadow-none"
       />
       {showPanel && (
         <div
