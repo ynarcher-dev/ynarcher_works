@@ -3,25 +3,39 @@ import { supabase } from '@/lib/supabase'
 import type { ProgramModule } from '@/features/program/hooks'
 import { useProgramWorkspace } from '@/features/program/workspace'
 
-/** 프로그램 마스터 수정(제목/상태/기간/설명 — 편집 모달용). */
+/**
+ * 프로그램 마스터 수정(제목/상태/기간/설명 — 편집 모달용, 사유 필수).
+ * 사유는 원장 컬럼이 아니라 기여 로그의 note로만 남으므로 update_entity RPC를 경유한다
+ * (20260721200000). 변동 이력 'edited'는 그 트랜잭션 안에서 원장 트리거가 남기며,
+ * 값이 실제로 바뀐 경우에만 기록되므로 무변경 저장은 이력에 남지 않는다.
+ */
 export function useUpdateProgram(id: string) {
   const qc = useQueryClient()
   const config = useProgramWorkspace()
   return useMutation({
-    mutationFn: async (values: {
-      title: string
-      status: string
-      proposal_start_date: string | null
-      proposal_end_date: string | null
-      start_date: string | null
-      end_date: string | null
-      description: string | null
-      category: string | null
+    mutationFn: async ({
+      values,
+      reason,
+    }: {
+      values: {
+        title: string
+        status: string
+        proposal_start_date: string | null
+        proposal_end_date: string | null
+        start_date: string | null
+        end_date: string | null
+        description: string | null
+        category: string | null
+      }
+      reason: string
     }) => {
-      const { error } = await supabase.from(config.tables.programs).update(values).eq('id', id)
+      const { error } = await supabase.rpc('update_entity', {
+        p_table: config.tables.programs,
+        p_id: id,
+        p_values: values,
+        p_note: reason,
+      })
       if (error) throw error
-      // 변동 이력 'edited'는 원장 트리거가 같은 트랜잭션에서 남긴다(20260721140000).
-      // 값이 실제로 바뀐 경우에만 기록되므로 무변경 저장은 이력에 남지 않는다.
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: [config.key, 'program', id] })

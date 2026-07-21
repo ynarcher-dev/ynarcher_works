@@ -124,12 +124,28 @@ export function useCreateGlobal() {
   })
 }
 
-/** 글로벌 네트워크 수정. */
+/**
+ * 글로벌 네트워크 수정(사유 필수). 사유를 트랜잭션 컨텍스트에 실어 주는 update_entity RPC를
+ * 경유한다(20260721200000) — 국내 8종의 useUpdateEntity와 같은 규약이다.
+ */
 export function useUpdateGlobal() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, values }: { id: string; values: Record<string, unknown> }) => {
-      const { error } = await supabase.from(GLOBAL_TABLE).update(values).eq('id', id)
+    mutationFn: async ({
+      id,
+      values,
+      reason,
+    }: {
+      id: string
+      values: Record<string, unknown>
+      reason: string
+    }) => {
+      const { error } = await supabase.rpc('update_entity', {
+        p_table: GLOBAL_TABLE,
+        p_id: id,
+        p_values: values,
+        p_note: reason,
+      })
       if (error) throw error
     },
     onSuccess: (_v, { id }) => {

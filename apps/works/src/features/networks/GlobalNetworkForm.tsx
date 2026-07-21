@@ -2,6 +2,7 @@ import { Button, CardShell, Input, Select, TagChip, TextArea, useToast } from '@
 import type { ChangeEvent, ReactNode } from 'react'
 import { useMemo, useState } from 'react'
 import { FormTopBar } from '@/components/FormTopBar'
+import { useEditReasonPrompt } from '@/components/EditReasonPrompt'
 import { useTags } from '@/features/admin/hooks'
 import { PhotoBox } from '@/features/networks/PhotoBox'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
@@ -69,6 +70,7 @@ export function GlobalNetworkForm({
   const create = useCreateGlobal()
   const update = useUpdateGlobal()
   const isEdit = Boolean(recordId)
+  const { askReason, reasonModal } = useEditReasonPrompt()
   // 등록 모드에서 미리 고른 자료. 저장 성공 직후 새 id로 일괄 업로드한다.
   const pending = usePendingMaterials()
   const profile = (initial?.profile ?? {}) as Record<string, unknown>
@@ -160,7 +162,10 @@ export function GlobalNetworkForm({
     setBusy(true)
     try {
       if (isEdit && recordId) {
-        await update.mutateAsync({ id: recordId, values: payload })
+        // 수정은 사유를 받아야 확정된다(변동 이력에 note로 남는다).
+        const reason = await askReason()
+        if (!reason) return
+        await update.mutateAsync({ id: recordId, values: payload, reason })
         toast.show('글로벌 네트워크 정보를 수정했습니다.', 'success')
         onDone(recordId)
       } else {
@@ -188,6 +193,7 @@ export function GlobalNetworkForm({
 
   return (
     <div className="space-y-5">
+      {reasonModal}
       {/* 상단 바(뒤로가기 ↔ 취소·확정) — 조회 화면의 '수정' 버튼과 같은 자리를 쓴다. */}
       <FormTopBar
         backTo={backTo}

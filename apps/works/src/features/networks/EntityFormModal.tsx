@@ -7,6 +7,7 @@ import {
   type EntityRow,
 } from '@/features/networks/hooks'
 import { TagSelect } from '@/features/admin/TagSelect'
+import { useEditReasonPrompt } from '@/components/EditReasonPrompt'
 import type { EntityConfig } from '@/features/networks/config'
 
 interface Props {
@@ -22,6 +23,7 @@ export function EntityFormModal({ config, open, onClose, initial }: Props) {
   const create = useCreateEntity(config.table)
   const update = useUpdateEntity(config.table)
   const isEdit = Boolean(initial)
+  const { askReason, reasonModal } = useEditReasonPrompt()
 
   const defaults: Record<string, string> = {}
   for (const f of config.fields) {
@@ -43,7 +45,10 @@ export function EntityFormModal({ config, open, onClose, initial }: Props) {
     }
     try {
       if (isEdit && initial) {
-        await update.mutateAsync({ id: initial.id, values: payload })
+        // 수정은 사유를 받아야 확정된다(변동 이력에 note로 남는다).
+        const reason = await askReason()
+        if (!reason) return
+        await update.mutateAsync({ id: initial.id, values: payload, reason })
         toast.show(`${config.label} 정보를 수정했습니다.`, 'success')
       } else {
         if (await checkDuplicateName(config.table, (values.name ?? '').trim())) {
@@ -77,6 +82,7 @@ export function EntityFormModal({ config, open, onClose, initial }: Props) {
       }
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+        {reasonModal}
         {config.fields.map((f) => (
           <div key={f.name}>
             <label className="text-body font-medium text-gray-800" htmlFor={f.name}>

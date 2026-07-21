@@ -7,6 +7,7 @@ import {
   type Program,
 } from '@/features/program/hooks'
 import { useUpdateProgram } from '@/features/program/detail/detailHooks'
+import { useEditReasonPrompt } from '@/components/EditReasonPrompt'
 import type { ProgramManagerSegment } from '@/features/program/ProgramManagerEditor'
 import type { ProgramDepartmentSegment } from '@/features/program/ProgramDepartmentEditor'
 import { PhaseStaffingEditor } from '@/features/program/PhaseStaffingEditor'
@@ -68,6 +69,7 @@ export function ProgramFormModal({
   const saveStaffing = useSetProgramStaffing()
   const { data: orgVersions } = useOrgVersions()
   const isEdit = Boolean(program)
+  const { askReason, reasonModal } = useEditReasonPrompt()
   const [departments, setDepartments] = useState<ProgramDepartmentSegment[]>(() =>
     toDepartmentSegments(program),
   )
@@ -140,7 +142,10 @@ export function ProgramFormModal({
     }
     try {
       if (isEdit && program) {
-        await update.mutateAsync(payload)
+        // 수정은 사유를 받아야 확정된다(변동 이력에 note로 남는다).
+        const reason = await askReason()
+        if (!reason) return
+        await update.mutateAsync({ values: payload, reason })
         await saveStaffing.mutateAsync({
           programId: program.id,
           departments: departmentRows,
@@ -186,6 +191,7 @@ export function ProgramFormModal({
       }
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+        {reasonModal}
         <div>
           <label className="text-body font-medium text-gray-800" htmlFor="title">
             사업명 <span className="text-brand">*</span>

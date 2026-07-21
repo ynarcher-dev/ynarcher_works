@@ -2,6 +2,7 @@ import { Button, CardShell, Input, PanelCard, Select, TagChip, TextArea, useToas
 import { useEffect, useState, type ChangeEvent, type ReactNode } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { FormTopBar } from '@/components/FormTopBar'
+import { useEditReasonPrompt } from '@/components/EditReasonPrompt'
 import { useEmployees } from '@/features/management/hooks'
 import {
   MANAGEMENT_STATUS_OPTIONS,
@@ -119,6 +120,7 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
   // 등록 모드에서 미리 고른 자료(분류별). 저장 성공 직후 새 id로 일괄 업로드한다.
   const pending = usePendingMaterials()
   const update = useUpdateEntity('startups')
+  const { askReason, reasonModal } = useEditReasonPrompt()
   const str = (key: string) => (base[key] == null ? '' : String(base[key]))
   const b = readBusiness(base)
   const t = readTeam(base)
@@ -319,9 +321,11 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
         )
         onDone(newId)
       } else {
-        // 변동 이력 'edited'는 원장 트리거가 남긴다. 값이 실제로 바뀐 경우에만 기록되므로
-        // 무변경 저장은 이력에 남지 않는다.
-        await update.mutateAsync({ id: recordId, values: payload })
+        // 수정은 사유를 받아야 확정된다. 변동 이력 'edited'는 원장 트리거가 사유(note)와 함께
+        // 남기며, 값이 실제로 바뀐 경우에만 기록되므로 무변경 저장은 이력에 남지 않는다.
+        const reason = await askReason()
+        if (!reason) return
+        await update.mutateAsync({ id: recordId, values: payload, reason })
         // 투자 전환/담당자 재구성: 승격 RPC로 investment 세팅 + 담당자 동기화.
         if (goInvested) {
           await promote.mutateAsync({ startupId: recordId, leadUserId: leadId, supportUserIds: supports })
@@ -354,6 +358,7 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      {reasonModal}
       {/* 상단 바(뒤로가기 ↔ 취소·확정) — 조회 화면의 '수정' 버튼과 같은 자리를 쓴다. */}
       <FormTopBar
         backTo={backTo}

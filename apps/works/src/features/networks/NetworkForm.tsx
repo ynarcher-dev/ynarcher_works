@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { FormTopBar } from '@/components/FormTopBar'
+import { useEditReasonPrompt } from '@/components/EditReasonPrompt'
 import { useTags } from '@/features/admin/hooks'
 import { supabase } from '@/lib/supabase'
 import { PhotoPicker } from '@/features/networks/PhotoPicker'
@@ -100,6 +101,8 @@ export function NetworkForm({
   const create = useCreateEntity(entity)
   const update = useUpdateEntity(entity)
   const isEdit = Boolean(recordId)
+  // 수정 저장은 사유를 받아야 확정된다(구분 이관은 이관 사유가 따로 기록되므로 제외).
+  const { askReason, reasonModal } = useEditReasonPrompt()
   // 등록 모드에서 미리 고른 자료. 저장 성공 직후 새 id·확정 구분으로 일괄 업로드한다.
   const pending = usePendingMaterials()
 
@@ -181,8 +184,10 @@ export function NetworkForm({
     try {
       if (isEdit && recordId) {
         if (target === entity) {
-          // 동일 엔티티 내 수정.
-          await update.mutateAsync({ id: recordId, values: payload })
+          // 동일 엔티티 내 수정. 사유는 필수 — 변동 이력에 note로 남는다.
+          const reason = await askReason()
+          if (!reason) return
+          await update.mutateAsync({ id: recordId, values: payload, reason })
           toast.show(`${targetLabel} 정보를 수정했습니다.`, 'success')
           onDone({ id: recordId, targetEntity: target, moved: false })
         } else {
@@ -229,6 +234,7 @@ export function NetworkForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      {reasonModal}
       {/* 상단 바(뒤로가기 ↔ 취소·확정) — 조회 화면의 '수정' 버튼과 같은 자리를 쓴다. */}
       <FormTopBar
         backTo={backTo}

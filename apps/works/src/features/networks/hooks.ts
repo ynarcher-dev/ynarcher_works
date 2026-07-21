@@ -315,21 +315,35 @@ export function useReassignCategory(from: EntityKey) {
   })
 }
 
-/** 엔티티 수정. */
+/**
+ * 엔티티 수정(사유 필수). 사유는 원장 컬럼이 아니라 기여 로그의 note로만 남고 트리거는
+ * 사유를 알 수 없으므로, 사유를 트랜잭션 컨텍스트에 실어 주는 update_entity RPC를
+ * 경유한다(20260721200000). 쓰기 권한은 원장 RLS가 그대로 판정한다.
+ */
 export function useUpdateEntity(table: EntityKey) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({
       id,
       values,
+      reason,
     }: {
       id: string
       values: Record<string, unknown>
+      reason: string
     }) => {
-      const { error } = await supabase.from(table).update(values).eq('id', id)
+      const { error } = await supabase.rpc('update_entity', {
+        p_table: table,
+        p_id: id,
+        p_values: values,
+        p_note: reason,
+      })
       if (error) throw error
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['networks', table] }),
+    onSuccess: (_v, { id }) => {
+      void qc.invalidateQueries({ queryKey: ['networks', table] })
+      void qc.invalidateQueries({ queryKey: ['networks', 'contributions', table, id] })
+    },
   })
 }
 
