@@ -8,7 +8,7 @@
 --       해당 테이블 도입 시 케이스를 실제 테이블 접근으로 승격한다.
 -- =====================================================================
 begin;
-select plan(15);
+select plan(20);
 
 -- 픽스처: 테스트 계정 10종 + 데이터 (슈퍼유저로 삽입, 트랜잭션 종료 시 롤백) ----
 insert into public.startups(id, name) values
@@ -116,6 +116,53 @@ select set_config('request.jwt.claims', '{"app_user_id":"00000000-0000-0000-0000
 select is(app.can_read_workspace('office') or app.can_read_workspace('startup'), false,
   '케이스9c: 무권한 사용자 office/startup 접근 차단');
 reset role;
+
+-- 케이스 10: 기여 로그는 본인 명의로만 남길 수 있다(사칭 차단) ------------------
+-- 근거: 20260721120000_networks_shared_management_guard.sql
+--   기여 로그는 권한을 주지 않지만 '누가 했는가'의 기록이므로 행위자 위조를 막는다.
+reset role;
+set local role authenticated;
+select set_config('request.jwt.claims', '{"app_user_id":"00000000-0000-0000-0000-0000000000ea","session_version":1}', true);
+
+-- 10a: 본인 명의(= user_id 미지정 → 트리거가 현재 사용자로 스탬프) 기록은 허용
+select lives_ok(
+  $$insert into public.entity_contributions(entity_table, entity_id, action, source)
+    values ('experts', 'a0000000-0000-0000-0000-0000000000a1', 'edited', 'manual')$$,
+  '케이스10a: networks write 사용자는 본인 명의 기여 기록 가능'
+);
+
+-- 10b: 남의 user_id(master)를 명시해 사칭을 시도해도, 트리거가 현재 사용자로 덮어쓴다
+select lives_ok(
+  $$insert into public.entity_contributions(entity_table, entity_id, action, source, user_id, user_name)
+    values ('experts', 'b0000000-0000-0000-0000-0000000000b2', 'edited', 'manual',
+            '00000000-0000-0000-0000-0000000000e1', 'test_master_user')$$,
+  '케이스10b: 사칭 시도 INSERT 자체는 수행됨(트리거가 행위자를 교정)'
+);
+select is(
+  (select count(*)::int from public.entity_contributions
+    where entity_id = 'b0000000-0000-0000-0000-0000000000b2'
+      and user_id = '00000000-0000-0000-0000-0000000000e1'),
+  0,
+  '케이스10c: 타인 명의로 기록된 기여 행이 존재하지 않음(사칭 차단)'
+);
+
+-- 케이스 11: NETWORKS는 공동관리 — 비활성화 가드가 남아 있지 않다 --------------
+-- 근거: 20260721120000_networks_shared_management_guard.sql
+--   기여 로그 기반 파괴적 작업 가드는 우회 가능(로그를 스스로 넣으면 통과)해 실효가 없었고,
+--   NETWORKS는 수정·비활성화 모두 공용으로 확정했다.
+reset role;
+select is(
+  (select count(*)::int from pg_trigger
+    where tgname like 'trg_%_destructive_guard' and not tgisinternal),
+  0,
+  '케이스11a: 파괴적 작업 가드 트리거가 제거됨'
+);
+select is(
+  (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'app' and p.proname in ('is_entity_contributor', 'guard_network_destructive')),
+  0,
+  '케이스11b: 기여자 기반 권한 판정 헬퍼가 제거됨'
+);
 
 -- 케이스 8: public 전 테이블에 RLS 활성화 누락이 없다
 select is(

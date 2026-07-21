@@ -88,7 +88,7 @@ function GlobalView({ record }: { record: GlobalRow }) {
               )
             }
           />
-          <Info label="공동 관리" value={contributors.length ? contributors.join(', ') : '-'} />
+          <Info label="기여자" value={contributors.length ? contributors.join(', ') : '-'} />
           <Info label="수정일" value={formatDate(record.updated_at)} />
         </div>
       </CardShell>

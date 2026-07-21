@@ -156,7 +156,7 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
           )}
           {compact && <Info label="구분" value={category || '-'} />}
           <Info label="등록자" value={author} />
-          <Info label="담당자(공동관리)" value={contributors.length ? contributors.join(', ') : '-'} />
+          <Info label="기여자" value={contributors.length ? contributors.join(', ') : '-'} />
           <Info label="수정일" value={formatDate(record.updated_at)} />
         </div>
       </CardShell>

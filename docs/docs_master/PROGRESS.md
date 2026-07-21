@@ -227,6 +227,9 @@
 - [x] 보안 안정화 P0 일괄 조치 (12_immediate_security_stabilization_tasks.md) <!-- authStore 기본인증 제거, workspace_key office/startup 정합화(마이그레이션 2건), lint 0 error, log_sensitive_access RPC, material-download Edge Function+직접서명차단, CORS ALLOWED_ORIGINS, 알림 운영 폴백 차단, SSRF redirect 재검사, Vitest 17케이스 -->
 - [ ] 운영 CORS 차단 활성화: 운영 도메인 확정 후 `supabase secrets set ALLOWED_ORIGINS=...` 적용 (현재 미설정 유예 모드) <!-- 12번 문서 P0-6 후속 -->
 - [ ] 첨부 보안 등급(security_grade) 컬럼 설계 및 민감 파일 다운로드 사유 필수화 <!-- 12번 문서 P0-5 후속, 13번 가이드 §5 -->
+- [x] NETWORKS 공동관리 확정: 기여 로그 기반 파괴적 작업 가드 해제 + 기여 로그 사칭 차단 <!-- 20260721120000. 기여 로그를 권한 판정에서 분리(로그 한 줄 삽입으로 가드 통과 / 로그 유실 시 전면 개방 두 구멍 제거). NETWORKS 8종은 수정·비활성화·병합 모두 networks 쓰기 권한자 공용(안전장치=soft delete+사유 필수+이력). 담당자 지정 콘텐츠(STARTUP 투자기업 startup_managers, PROGRAM program_managers)는 각자 원장으로 판정하므로 영향 없음. stamp_contribution_actor를 무조건 스탬프로 고정 + INSERT 정책에 user_id=current_app_user_id() 추가. 화면 라벨 '담당자(공동관리)'→'기여자'(값이 기여자인데 라벨이 담당자였음). RLS 회귀 테스트 15→20케이스. 운영 DB 반영은 별도 -->
+- [ ] 기여 로그를 DB 트리거로 이관 (클라이언트 recordContribution 제거) <!-- 현재 화면마다 손으로 호출해 EntityFormModal·useReassignCategory(미분류 일괄 이관)·ImporterModal·글로벌 수정이 통째로 누락, 구분 변경은 created 2건 중복. 원장 트리거로 옮기면 누락·중복·원자성 동시 해소. MANAGEMENT/FUND/HUB/ADMIN는 아직 미적용 워크스페이스 -->
+- [ ] 기여 로그 읽기 훅 3벌(useContributions/useGlobalContributions/useProgramContributions) 통합 + 서버 페이징 <!-- 현재 limit 없이 전량 fetch 후 클라이언트에서 5건씩 절단. queryKey 규약도 PROGRAM만 어긋나 무효화 누락 -->
 
 > _알림톡/SMS/이메일 실제 프로바이더 계약 및 AWS 계정 프로비저닝은 운영 착수 시점 과제(키 주입만으로 활성화되도록 폴백 구조 완비)._
 
