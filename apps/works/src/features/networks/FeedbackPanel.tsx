@@ -1,4 +1,4 @@
-import { Badge, Button, Spinner, TextArea } from '@ynarcher/ui'
+import { Badge, Button, IconButton, Spinner, TextArea } from '@ynarcher/ui'
 import { Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuthStore } from '@/auth/authStore'
@@ -107,17 +107,16 @@ export function FeedbackPanel({
                     )}
                   </div>
                   {canDelete(f) && (
-                    <button
-                      type="button"
-                      aria-label="코멘트 삭제"
+                    <IconButton
+                      variant="ghost"
+                      danger
+                      label="코멘트 삭제"
                       disabled={remove.isPending && remove.variables === f.id}
                       onClick={() => {
                         if (window.confirm('코멘트를 삭제하시겠습니까?')) remove.mutate(f.id)
                       }}
-                      className="grid size-6 shrink-0 place-items-center rounded-radius-sm text-gray-400 transition-colors duration-fast hover:bg-danger-subtle hover:text-danger disabled:opacity-50"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
+                      icon={<Trash2 className="size-3.5" />}
+                    />
                   )}
                 </div>
                 <p className="mt-0.5 whitespace-pre-wrap text-body text-gray-800">{f.body}</p>

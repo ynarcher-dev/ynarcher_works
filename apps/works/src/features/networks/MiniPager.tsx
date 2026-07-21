@@ -1,3 +1,4 @@
+import { IconButton } from '@ynarcher/ui'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 
@@ -32,31 +33,25 @@ export function MiniPager({
   onPage: (next: number) => void
 }) {
   if (pageCount <= 1) return null
-  const btn =
-    'grid size-6 place-items-center rounded-radius-sm text-gray-400 transition-colors duration-fast hover:bg-gray-100 hover:text-gray-700 disabled:pointer-events-none disabled:opacity-40'
   return (
     <div className="mt-3 flex items-center justify-center gap-2 text-caption text-gray-600">
-      <button
-        type="button"
-        aria-label="이전"
+      <IconButton
+        variant="ghost"
+        label="이전"
         disabled={page <= 0}
         onClick={() => onPage(page - 1)}
-        className={btn}
-      >
-        <ChevronLeft className="size-4" />
-      </button>
+        icon={<ChevronLeft className="size-4" />}
+      />
       <span className="tabular-nums">
         {page + 1} / {pageCount}
       </span>
-      <button
-        type="button"
-        aria-label="다음"
+      <IconButton
+        variant="ghost"
+        label="다음"
         disabled={page >= pageCount - 1}
         onClick={() => onPage(page + 1)}
-        className={btn}
-      >
-        <ChevronRight className="size-4" />
-      </button>
+        icon={<ChevronRight className="size-4" />}
+      />
     </div>
   )
 }

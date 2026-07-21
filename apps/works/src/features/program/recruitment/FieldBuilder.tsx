@@ -1,4 +1,4 @@
-import { Button, Checkbox, Input, Select } from '@ynarcher/ui'
+import { Button, Checkbox, IconButton, Input, Select } from '@ynarcher/ui'
 import { ChevronDown, ChevronUp, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import {
   FIELD_TYPE_LABEL,
@@ -80,24 +80,20 @@ export function FieldBuilder({
           >
             <div className="flex items-start gap-2">
               <div className="flex flex-col pt-1">
-                <button
-                  type="button"
-                  aria-label="위로"
+                <IconButton
+                  variant="ghost"
+                  label="위로"
                   onClick={() => move(idx, -1)}
-                  className="text-gray-400 hover:text-gray-700 disabled:opacity-30"
                   disabled={idx === 0}
-                >
-                  <ChevronUp className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  aria-label="아래로"
+                  icon={<ChevronUp className="h-4 w-4" />}
+                />
+                <IconButton
+                  variant="ghost"
+                  label="아래로"
                   onClick={() => move(idx, 1)}
-                  className="text-gray-400 hover:text-gray-700 disabled:opacity-30"
                   disabled={idx === fields.length - 1}
-                >
-                  <ChevronDown className="h-4 w-4" />
-                </button>
+                  icon={<ChevronDown className="h-4 w-4" />}
+                />
               </div>
 
               <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-[1fr_9rem]">
@@ -174,14 +170,13 @@ export function FieldBuilder({
                   />
                   필수
                 </label>
-                <button
-                  type="button"
-                  aria-label="항목 삭제"
+                <IconButton
+                  variant="ghost"
+                  danger
+                  label="항목 삭제"
                   onClick={() => remove(idx)}
-                  className="text-gray-400 hover:text-danger"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                  icon={<Trash2 className="h-4 w-4" />}
+                />
               </div>
             </div>
           </li>

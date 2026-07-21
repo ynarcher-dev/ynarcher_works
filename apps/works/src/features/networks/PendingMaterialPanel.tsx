@@ -1,3 +1,4 @@
+import { IconButton } from '@ynarcher/ui'
 import { File as FileIcon, Trash2 } from 'lucide-react'
 import { DetailPanelCard } from '@/features/networks/DetailPanelCard'
 import { MaterialDropZone } from '@/features/networks/MaterialDropZone'
@@ -40,14 +41,13 @@ export function PendingMaterialPanel({
                 <span className="shrink-0 tabular-nums text-caption text-gray-600">
                   {formatBytes(file.size)}
                 </span>
-                <button
-                  type="button"
-                  aria-label={`${file.name} 첨부 취소`}
+                <IconButton
+                  variant="ghost"
+                  danger
+                  label={`${file.name} 첨부 취소`}
                   onClick={() => pending.remove(slot, i)}
-                  className="grid size-6 shrink-0 place-items-center rounded-radius-sm text-gray-400 transition-colors duration-fast hover:bg-danger-subtle hover:text-danger"
-                >
-                  <Trash2 className="size-4" />
-                </button>
+                  icon={<Trash2 className="size-4" />}
+                />
               </li>
             ))}
           </ul>

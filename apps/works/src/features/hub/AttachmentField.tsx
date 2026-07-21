@@ -1,3 +1,4 @@
+import { IconButton } from '@ynarcher/ui'
 import { Download, File, Paperclip, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import type { BoardAttachment } from '@/features/hub/boardData'
@@ -99,14 +100,13 @@ export function AttachmentField({ value, onChange }: AttachmentFieldProps) {
               <span className="shrink-0 tabular-nums text-caption text-gray-600">
                 {formatBytes(a.size)}
               </span>
-              <button
-                type="button"
-                aria-label="첨부 삭제"
+              <IconButton
+                variant="ghost"
+                danger
+                label="첨부 삭제"
                 onClick={() => remove(a.id)}
-                className="grid size-6 shrink-0 place-items-center rounded-radius-sm text-gray-400 transition-colors duration-fast hover:bg-danger-subtle hover:text-danger"
-              >
-                <X className="size-4" />
-              </button>
+                icon={<X className="size-4" />}
+              />
             </li>
           ))}
         </ul>

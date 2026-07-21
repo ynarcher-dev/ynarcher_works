@@ -1,4 +1,4 @@
-import { Button, Input, TextArea } from '@ynarcher/ui'
+import { Button, IconButton, Input, TextArea } from '@ynarcher/ui'
 import { ChevronDown, ChevronUp, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { DEFAULT_GUIDE_SECTIONS, type GuideSection } from '@/features/program/recruitment/recruitmentHooks'
 
@@ -56,24 +56,20 @@ export function GuideBuilder({
           <li key={idx} className="rounded-radius-md border border-gray-200 bg-white p-3">
             <div className="flex items-start gap-2">
               <div className="flex flex-col pt-1.5">
-                <button
-                  type="button"
-                  aria-label="위로"
+                <IconButton
+                  variant="ghost"
+                  label="위로"
                   onClick={() => move(idx, -1)}
-                  className="text-gray-400 hover:text-gray-700 disabled:opacity-30"
                   disabled={idx === 0}
-                >
-                  <ChevronUp className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  aria-label="아래로"
+                  icon={<ChevronUp className="h-4 w-4" />}
+                />
+                <IconButton
+                  variant="ghost"
+                  label="아래로"
                   onClick={() => move(idx, 1)}
-                  className="text-gray-400 hover:text-gray-700 disabled:opacity-30"
                   disabled={idx === sections.length - 1}
-                >
-                  <ChevronDown className="h-4 w-4" />
-                </button>
+                  icon={<ChevronDown className="h-4 w-4" />}
+                />
               </div>
 
               <div className="flex-1 space-y-2">
@@ -92,14 +88,14 @@ export function GuideBuilder({
                 />
               </div>
 
-              <button
-                type="button"
-                aria-label="섹션 삭제"
+              <IconButton
+                variant="ghost"
+                danger
+                label="섹션 삭제"
                 onClick={() => remove(idx)}
-                className="pt-1.5 text-gray-400 hover:text-danger"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+                className="mt-1.5"
+                icon={<Trash2 className="h-4 w-4" />}
+              />
             </div>
           </li>
         ))}

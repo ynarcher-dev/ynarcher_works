@@ -1,4 +1,4 @@
-import { Badge } from '@ynarcher/ui'
+import { Badge, IconButton } from '@ynarcher/ui'
 import dayjs, { type Dayjs } from 'dayjs'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -32,25 +32,21 @@ function MonthNav({
 }) {
   return (
     <div className="mb-3 flex items-center justify-center gap-1">
-      <button
-        type="button"
-        aria-label="이전 달"
+      <IconButton
+        variant="ghost"
+        label="이전 달"
         onClick={onPrev}
-        className="grid h-7 w-7 place-items-center rounded-radius-sm text-gray-500 transition-colors duration-fast hover:bg-gray-100 hover:text-gray-800"
-      >
-        <ChevronLeft className="h-4 w-4" />
-      </button>
+        icon={<ChevronLeft className="h-4 w-4" />}
+      />
       <span className="min-w-[6.5rem] text-center text-body font-semibold text-gray-900">
         {month.format('YYYY년 M월')}
       </span>
-      <button
-        type="button"
-        aria-label="다음 달"
+      <IconButton
+        variant="ghost"
+        label="다음 달"
         onClick={onNext}
-        className="grid h-7 w-7 place-items-center rounded-radius-sm text-gray-500 transition-colors duration-fast hover:bg-gray-100 hover:text-gray-800"
-      >
-        <ChevronRight className="h-4 w-4" />
-      </button>
+        icon={<ChevronRight className="h-4 w-4" />}
+      />
     </div>
   )
 }
