@@ -8,7 +8,7 @@ const columns: Column<FormResult>[] = [
     render: (r) => (
       <span className="inline-flex items-center gap-2">
         <Badge tone="neutral">{r.target_type}</Badge>
-        <span className="text-caption text-gray-500">
+        <span className="text-gray-500">
           {r.target_ref.slice(0, 8)}
         </span>
       </span>

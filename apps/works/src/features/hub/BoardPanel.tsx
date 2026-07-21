@@ -82,6 +82,7 @@ export function BoardPanel({
   emptyText = '등록된 게시글이 없습니다.',
   boardLabel,
   onSelect,
+  onEdit,
   onDeactivate,
 }: {
   posts: BoardPost[]
@@ -89,6 +90,8 @@ export function BoardPanel({
   /** 소속 게시판명. 지정 시 '게시판' 열을 노출한다(여러 게시판을 섞어 보여줄 때 사용). */
   boardLabel?: string
   onSelect?: (post: BoardPost) => void
+  /** 수정 핸들러. 지정 시 표준 관리 컬럼에 수정 버튼이 노출된다(상세 진입 없이 바로 편집). */
+  onEdit?: (post: BoardPost) => void
   /** 비활성화(소프트 삭제) 핸들러. 미지정 시 표준 관리 컬럼 버튼이 비활성으로 노출된다. */
   onDeactivate?: (post: BoardPost) => void
 }) {
@@ -109,7 +112,8 @@ export function BoardPanel({
       header: '게시판',
       align: 'center',
       className: 'w-64',
-      render: () => <span className="text-caption text-gray-500">{boardLabel}</span>,
+      // 본문 셀은 DataTable 기본 text-body를 상속한다(캡션 크기를 덧씌우면 다른 열과 어긋남).
+      render: () => <span className="text-gray-500">{boardLabel}</span>,
     })
   }
 
@@ -123,6 +127,7 @@ export function BoardPanel({
         author: (p) => p.author,
         updatedAt: (p) => p.date,
         active: (p) => !p.deletedAt,
+        onEdit,
         onDeactivate,
         rowMark: (p) => pinMark(p.pinned),
       }}

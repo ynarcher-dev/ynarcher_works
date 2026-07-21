@@ -19,7 +19,8 @@ import type {
 type View =
   | { mode: 'list' }
   | { mode: 'compose' }
-  | { mode: 'edit'; post: BoardPost }
+  // from: 편집 진입 경로. 취소·완료 후 들어온 화면(목록/상세)으로 되돌린다.
+  | { mode: 'edit'; post: BoardPost; from: 'list' | 'detail' }
   | { mode: 'detail'; post: BoardPost }
 
 /** 제목·작성자에 검색어(공백·대소문자 무시)가 포함된 글만 남긴다. */
@@ -92,9 +93,9 @@ export function BoardWorkspace({
     setView({ mode: 'detail', post: { ...post, views: (post.views ?? 0) + 1 } })
   }
 
-  const update = (post: BoardPost) => {
+  const update = (post: BoardPost, from: 'list' | 'detail') => {
     updatePost(boardSlug, post)
-    setView({ mode: 'detail', post })
+    setView(from === 'list' ? { mode: 'list' } : { mode: 'detail', post })
   }
 
   if (view.mode === 'compose') {
@@ -117,8 +118,12 @@ export function BoardWorkspace({
         authorName={authorName}
         initial={view.post}
         submitLabel="수정 완료"
-        onCancel={() => setView({ mode: 'detail', post: view.post })}
-        onSubmit={(post) => update(post)}
+        onCancel={() =>
+          setView(
+            view.from === 'list' ? { mode: 'list' } : { mode: 'detail', post: view.post },
+          )
+        }
+        onSubmit={(post) => update(post, view.from)}
       />
     )
   }
@@ -130,7 +135,7 @@ export function BoardWorkspace({
         comments={comments[view.post.id] ?? []}
         onAddComment={(content) => addComment(view.post.id, content)}
         onBack={() => setView({ mode: 'list' })}
-        onEdit={() => setView({ mode: 'edit', post: view.post })}
+        onEdit={() => setView({ mode: 'edit', post: view.post, from: 'detail' })}
       />
     )
   }
@@ -153,6 +158,7 @@ export function BoardWorkspace({
         emptyText={keyword.trim() ? '검색 결과가 없습니다.' : '등록된 게시글이 없습니다.'}
         boardLabel={title}
         onSelect={(post) => openDetail(post)}
+        onEdit={(post) => setView({ mode: 'edit', post, from: 'list' })}
         onDeactivate={(post) => setPostActive(boardSlug, post.id, false)}
       />
     </div>

@@ -6,7 +6,7 @@ import { collectNotices, usePostStore, type NoticeItem } from '@/features/hub/bo
 import { BOARD_PAGE_SIZE, isNewPost } from '@/features/hub/boardData'
 import { pinMark } from '@/features/hub/PostFlagBadges'
 import { attachmentColumn, viewsColumn } from '@/features/hub/BoardPanel'
-import { useBoardStore } from '@/features/hub/boardStore'
+import { useBoards } from '@/features/hub/boardHooks'
 
 /**
  * 공지사항: 게시판이 아니라 전체 공지(globalNotice) 게시글을 모아 보여주는 조회 뷰.
@@ -18,7 +18,7 @@ export function NoticeWorkspace() {
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(0)
   const postsByBoard = usePostStore((s) => s.postsByBoard)
-  const boards = useBoardStore((s) => s.boards)
+  const boards = useBoards().data ?? []
 
   const notices = collectNotices(postsByBoard, boards)
   const q = keyword.trim().toLowerCase()
@@ -59,7 +59,8 @@ export function NoticeWorkspace() {
       header: '게시판',
       align: 'center',
       className: 'w-64',
-      render: (n) => <span className="text-caption text-gray-500">{n.boardLabel}</span>,
+      // 본문 셀은 DataTable 기본 text-body를 상속한다(캡션 크기를 덧씌우면 다른 열과 어긋남).
+      render: (n) => <span className="text-gray-500">{n.boardLabel}</span>,
     },
   ]
 

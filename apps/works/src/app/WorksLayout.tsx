@@ -74,7 +74,8 @@ import { employeeAuth } from '@/auth/employeeAuthService'
 import { WORKSPACES } from '@/config/workspaces'
 import { WORKSPACE_SUBNAV, firstTab, pathTabOf, type SubNavItem } from '@/config/navigation'
 import { MenuSectionLabel, SidebarFlyout } from '@/app/SidebarFlyout'
-import { boardsOfKind, useBoardStore } from '@/features/hub/boardStore'
+import { useBoards } from '@/features/hub/boardHooks'
+import { boardsOfKind } from '@/features/hub/boardStore'
 import { boardIcon } from '@/features/hub/boardIcons'
 
 const sidebarIconByTab: Record<string, LucideIcon> = {
@@ -186,7 +187,7 @@ export function WorksLayout() {
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
   // 사이드바에서 뻗는 플라이아웃은 한 번에 하나만 열린다(열린 항목의 label, 없으면 null).
   const [openFlyout, setOpenFlyout] = useState<string | null>(null)
-  const boards = useBoardStore((s) => s.boards)
+  const boards = useBoards().data ?? []
 
   const visible = WORKSPACES.filter((w) => hasWorkspaceRead(user, w.key))
 

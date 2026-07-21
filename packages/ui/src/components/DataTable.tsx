@@ -35,6 +35,8 @@ export interface DataTableMeta<T> {
   deactivateWithReason?: boolean
   /** 복사 버튼 텍스트 생성기. 지정 시 관리 컬럼에 복사 버튼이 노출된다. */
   copyText?: (row: T) => string
+  /** 수정 핸들러. 지정 시 관리 컬럼 맨 앞에 수정 버튼이 노출된다(별도 '관리' 컬럼을 만들지 말 것). */
+  onEdit?: (row: T) => void
   /**
    * No. 칸을 대체할 표식. 반환값이 있으면 번호 대신 그 노드를 렌더한다.
    * 상단 고정 행처럼 "순번이 의미 없는 행"을 제목 옆 배지 대신 번호 칸에서 알릴 때 쓴다.
@@ -365,6 +367,17 @@ export function DataTable<T>({
                         {/* 복사는 읽기 전용 액션이라 manageable과 무관하게 노출(HUB 조회 센터 포함). */}
                         {(meta?.copyText || manageable) && (
                           <div className="flex items-center justify-center gap-1 whitespace-nowrap">
+                            {/* 수정은 편집 권한 컨텍스트에서, 활성 행에 대해서만 노출한다. */}
+                            {manageable && meta?.onEdit && active && (
+                              <button
+                                type="button"
+                                title="수정"
+                                onClick={() => meta.onEdit!(row)}
+                                className="inline-flex shrink-0 items-center rounded-radius-md border border-gray-300 px-1.5 py-0.5 text-caption text-gray-600 transition-colors duration-fast hover:bg-gray-50 hover:text-brand"
+                              >
+                                수정
+                              </button>
+                            )}
                             {meta?.copyText && (
                               <button
                                 type="button"

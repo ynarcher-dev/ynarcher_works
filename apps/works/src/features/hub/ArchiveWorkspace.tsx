@@ -1,6 +1,6 @@
 import { Button, Checkbox, DataTable, Input, PageHeader, type Column } from '@ynarcher/ui'
 import dayjs from 'dayjs'
-import { Download, Pencil } from 'lucide-react'
+import { Download } from 'lucide-react'
 import { useState } from 'react'
 import { AttachmentField, formatBytes } from '@/features/hub/AttachmentField'
 import { NewBadge } from '@/features/hub/DashboardPanel'
@@ -71,27 +71,38 @@ export function ArchiveWorkspace({ boardSlug, title, authorName }: ArchiveWorksp
     {
       key: 'title',
       header: '자료명',
+      // 다른 목록과 동일하게 1행 = 1줄. 설명은 별도 열로 분리한다.
       render: (p) => (
-        <span className="flex min-w-0 flex-col gap-0.5">
-          <span className="flex min-w-0 items-center gap-1.5">
-            {/* 자료실은 전체 공지가 불가하고, 고정은 No. 칸 핀 표식으로 알린다. */}
-            <span className="truncate text-gray-800">{p.title}</span>
-            {isNewPost(p.date) && <NewBadge />}
-          </span>
-          {p.summary && (
-            <span className="truncate text-caption text-gray-500">{p.summary}</span>
-          )}
+        <span className="flex min-w-0 items-center gap-1.5">
+          {/* 자료실은 전체 공지가 불가하고, 고정은 No. 칸 핀 표식으로 알린다. */}
+          <span className="truncate text-gray-800">{p.title}</span>
+          {isNewPost(p.date) && <NewBadge />}
         </span>
       ),
     },
     {
+      key: 'summary',
+      header: '설명',
+      render: (p) =>
+        p.summary ? (
+          <span className="block truncate font-normal text-gray-500" title={p.summary}>
+            {p.summary}
+          </span>
+        ) : (
+          <span className="text-gray-300">—</span>
+        ),
+    },
+    {
       key: 'size',
       header: '용량',
-      align: 'center',
+      // 수치이므로 우측 정렬 + tabular-nums(5_component_spec_rules §3.1).
+      align: 'right',
+      numeric: true,
+      className: 'w-24',
       render: (p) => {
         const file = p.attachments?.[0]
         return (
-          <span className="tabular-nums text-caption text-gray-500">
+          <span className="tabular-nums text-gray-500">
             {file ? formatBytes(file.size) : '—'}
           </span>
         )
@@ -101,9 +112,10 @@ export function ArchiveWorkspace({ boardSlug, title, authorName }: ArchiveWorksp
       key: 'download',
       header: '다운로드',
       align: 'center',
+      className: 'w-24',
       render: (p) => {
         const file = p.attachments?.[0]
-        if (!file) return <span className="text-caption text-gray-300">파일 없음</span>
+        if (!file) return <span className="text-gray-300">파일 없음</span>
         return (
           <a
             href={file.url ?? '#'}
@@ -120,16 +132,6 @@ export function ArchiveWorkspace({ boardSlug, title, authorName }: ArchiveWorksp
           </a>
         )
       },
-    },
-    {
-      key: 'action',
-      header: '관리',
-      align: 'center',
-      render: (p) => (
-        <Button variant="outline" size="sm" onClick={() => setEditing(p)}>
-          <Pencil className="size-3.5" /> 수정
-        </Button>
-      ),
     },
   ]
 
@@ -156,6 +158,8 @@ export function ArchiveWorkspace({ boardSlug, title, authorName }: ArchiveWorksp
           updatedAt: (p) => p.date,
           active: (p) => !p.deletedAt,
           rowMark: (p) => pinMark(p.pinned),
+          // 수정은 표준 관리 컬럼(최우측)에서 처리한다.
+          onEdit: (p) => setEditing(p),
           onDeactivate: (p) => setPostActive(boardSlug, p.id, false),
         }}
         pagination={{

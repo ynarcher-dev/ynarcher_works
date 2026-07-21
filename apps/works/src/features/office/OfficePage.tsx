@@ -9,7 +9,7 @@ import { CalendarPanel } from '@/features/hub/CalendarPanel'
 import { DashboardPanel } from '@/features/hub/DashboardPanel'
 import { NoticeWorkspace } from '@/features/hub/NoticeWorkspace'
 import { NOTICE_TAB } from '@/features/hub/boardPostStore'
-import { useBoardStore } from '@/features/hub/boardStore'
+import { useBoards } from '@/features/hub/boardHooks'
 import { DepartmentsPanel } from '@/features/management/panels/DepartmentsPanel'
 import { OfficeManagersPanel } from '@/features/office/OfficeManagersPanel'
 
@@ -30,7 +30,7 @@ const PLACEHOLDER_TITLES: Record<string, string> = {
 export function OfficePage() {
   const [params] = useSearchParams()
   const userName = useAuthStore((s) => s.user?.name)
-  const boards = useBoardStore((s) => s.boards)
+  const boards = useBoards().data ?? []
 
   const tab = params.get('tab')
 
