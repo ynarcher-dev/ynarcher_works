@@ -122,8 +122,8 @@ export function StartupPoolTable({
         render: (r) => {
           const inds = readIndustries(r).slice(0, 3)
           if (inds.length === 0) return <span className="text-gray-400">-</span>
+          // 셀의 text-center는 flex 자식에 먹지 않으므로 justify-center로 직접 모은다.
           return (
-            {/* 셀의 text-center는 flex 자식에 먹지 않으므로 justify-center로 직접 모은다. */}
             <div className="flex flex-wrap justify-center gap-1">
               {inds.map((ind) => (
                 <Badge key={ind} tone="neutral">
