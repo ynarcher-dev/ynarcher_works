@@ -71,7 +71,7 @@ export function MaterialPanel({
           <MaterialDropZone onFiles={addFiles} openRef={openPicker} />
 
           {upload.isError && (
-            <p className="mt-2 text-caption text-brand">
+            <p className="mt-2 text-caption text-danger">
               업로드에 실패했습니다. 다시 시도해 주세요.
             </p>
           )}
@@ -128,9 +128,9 @@ function MaterialRow({
       <span className={`shrink-0 tabular-nums ${tableText.meta}`}>
         {formatBytes(material.byte_size)}
       </span>
-      <button
-        type="button"
-        aria-label={`${material.file_name} 다운로드`}
+      <IconButton
+        variant="ghost"
+        label={`${material.file_name} 다운로드`}
         disabled={downloading}
         onClick={async () => {
           setDownloading(true)
@@ -140,10 +140,8 @@ function MaterialRow({
             setDownloading(false)
           }
         }}
-        className="grid size-6 shrink-0 place-items-center rounded-radius-sm text-gray-600 transition-colors duration-fast hover:bg-gray-100 hover:text-gray-900 disabled:opacity-50"
-      >
-        <Download className="size-4" />
-      </button>
+        icon={<Download className="size-4" />}
+      />
       {onDelete && (
         <IconButton
           variant="ghost"

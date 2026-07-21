@@ -1,4 +1,4 @@
-import { Badge, Button, IconButton, Spinner, TextArea, tableText } from '@ynarcher/ui'
+import { Badge, Button, IconButton, Spinner, TextArea, cardText, tableText } from '@ynarcher/ui'
 import { Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuthStore } from '@/auth/authStore'
@@ -75,7 +75,7 @@ export function FeedbackPanel({
           </Button>
         </div>
         {create.isError && (
-          <p className="text-caption text-brand">등록에 실패했습니다. 다시 시도해 주세요.</p>
+          <p className="text-caption text-danger">등록에 실패했습니다. 다시 시도해 주세요.</p>
         )}
       </div>
 
@@ -118,7 +118,7 @@ export function FeedbackPanel({
                     />
                   )}
                 </div>
-                <p className="mt-0.5 whitespace-pre-wrap text-body text-gray-800">{f.body}</p>
+                <p className={`mt-0.5 whitespace-pre-wrap ${cardText.value}`}>{f.body}</p>
               </li>
               )
             })}

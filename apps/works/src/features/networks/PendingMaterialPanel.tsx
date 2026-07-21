@@ -1,4 +1,4 @@
-import { IconButton } from '@ynarcher/ui'
+import { IconButton, tableText } from '@ynarcher/ui'
 import { File as FileIcon, Trash2 } from 'lucide-react'
 import { DetailPanelCard } from '@/features/networks/DetailPanelCard'
 import { MaterialDropZone } from '@/features/networks/MaterialDropZone'
@@ -35,10 +35,12 @@ export function PendingMaterialPanel({
                 className="flex items-center gap-2 rounded-radius-sm border border-gray-200 bg-white px-3 py-2"
               >
                 <FileIcon className="size-4 shrink-0 text-gray-500" />
-                <span className="min-w-0 flex-1 truncate text-body text-gray-800">
+                {/* 규격은 자료 관리 패널(MaterialPanel)의 행과 동일하게 맞춘다 — 등록 모드와
+                    조회 모드에서 같은 목록이 다르게 보이면 안 된다. */}
+                <span className={`min-w-0 flex-1 truncate ${tableText.primary}`}>
                   {file.name}
                 </span>
-                <span className="shrink-0 tabular-nums text-caption text-gray-700">
+                <span className={`shrink-0 tabular-nums ${tableText.meta}`}>
                   {formatBytes(file.size)}
                 </span>
                 <IconButton
@@ -54,7 +56,7 @@ export function PendingMaterialPanel({
         ) : (
           <p className="text-body text-gray-600">첨부한 자료가 없습니다.</p>
         )}
-        <p className="mt-2 text-caption text-gray-700">
+        <p className={`mt-2 ${tableText.meta}`}>
           첨부한 자료는 등록을 저장할 때 함께 업로드됩니다.
         </p>
       </div>
