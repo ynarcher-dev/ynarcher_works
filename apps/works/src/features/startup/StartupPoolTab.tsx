@@ -2,7 +2,7 @@ import { Button, Input, Spinner, useToast } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DeactivateReasonModal } from '@/features/networks/DeactivateReasonModal'
-import { recordContribution, useUpdateEntity } from '@/features/networks/hooks'
+import { useDeactivateEntity } from '@/features/networks/hooks'
 import { ENTITIES } from '@/features/networks/config'
 import { StartupPoolTable, type StartupPoolRow } from '@/features/startup/StartupPoolTable'
 import { StartupPoolFilters } from '@/features/startup/StartupPoolFilters'
@@ -33,7 +33,7 @@ export function StartupPoolTab({ category, mineUserId }: StartupPoolTabProps) {
   const config = ENTITIES.startups
   const toast = useToast()
   const navigate = useNavigate()
-  const update = useUpdateEntity('startups')
+  const deactivate = useDeactivateEntity('startups')
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(0)
   const [selected, setSelected] = useState<string[]>([])
@@ -65,23 +65,15 @@ export function StartupPoolTab({ category, mineUserId }: StartupPoolTabProps) {
     setSelected([])
   }, [category, mineUserId])
 
-  // 비활성화 사유 확정 → 기여 로그(사유·행위자)를 먼저 남기고 soft-delete한다.
+  // 비활성화 사유 확정 → 사유를 트랜잭션 컨텍스트에 실어 주는 RPC 경유(20260721150000).
+  // 원장 UPDATE와 사유 기록이 한 트랜잭션에 묶여, 종전처럼 '비활성화 기록만 남고 행은 살아 있는'
+  // 어긋난 상태가 생기지 않는다.
   const confirmDeactivate = async (reason: string) => {
     if (!deactivateTarget) return
     const target = deactivateTarget
     setDeactivateBusy(true)
     try {
-      await recordContribution({
-        table: 'startups',
-        id: target.id,
-        action: 'deactivated',
-        source: 'manual',
-        note: reason,
-      })
-      await update.mutateAsync({
-        id: target.id,
-        values: { deleted_at: new Date().toISOString() },
-      })
+      await deactivate.mutateAsync({ id: target.id, reason })
       toast.show(`${config.label}을(를) 비활성화했습니다.`, 'success')
       setDeactivateTarget(null)
     } catch {

@@ -19,7 +19,6 @@ import { useTags } from '@/features/admin/hooks'
 import { STARTUP_MATERIAL_SECTIONS } from '@/features/startup/startupMaterials'
 import {
   checkDuplicateName,
-  recordContribution,
   useCreateEntity,
   useUpdateEntity,
   type EntityRow,
@@ -301,8 +300,8 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel }: Props
           toast.show('동일한 이름이 이미 등록되어 있습니다.', 'warning')
           return
         }
+        // 변동 이력 'created'는 원장 트리거가 같은 트랜잭션에서 남긴다(20260721150000).
         const newId = await create.mutateAsync(payload)
-        await recordContribution({ table: 'startups', id: newId, action: 'created', source: 'manual' })
         // 투자 등록: sourced 로 생성된 레코드를 담당자와 함께 원자 승격한다.
         if (goInvested) {
           await promote.mutateAsync({ startupId: newId, leadUserId: leadId, supportUserIds: supports })
@@ -317,8 +316,9 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel }: Props
         )
         onDone(newId)
       } else {
+        // 변동 이력 'edited'는 원장 트리거가 남긴다. 값이 실제로 바뀐 경우에만 기록되므로
+        // 무변경 저장은 이력에 남지 않는다.
         await update.mutateAsync({ id: recordId, values: payload })
-        await recordContribution({ table: 'startups', id: recordId, action: 'edited', source: 'manual' })
         // 투자 전환/담당자 재구성: 승격 RPC로 investment 세팅 + 담당자 동기화.
         if (goInvested) {
           await promote.mutateAsync({ startupId: recordId, leadUserId: leadId, supportUserIds: supports })

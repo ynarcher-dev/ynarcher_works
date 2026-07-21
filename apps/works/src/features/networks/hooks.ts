@@ -362,6 +362,38 @@ export function useUpdateEntity(table: EntityKey) {
   })
 }
 
+/**
+ * 사유를 남기는 비활성화(소프트 삭제)를 지원하는 원장 키.
+ * 기록 트리거가 붙은 원장만 나열한다 — 트리거 없는 원장을 넣으면 RPC가 거절한다
+ * (사유는 사라지고 로그도 안 남는 조용한 유실을 막기 위해 서버도 화이트리스트로 막고 있다).
+ * NETWORKS 9종은 트리거 이관 슬라이스에서 추가한다.
+ */
+export type DeactivatableKey = 'startups' | 'global_networks'
+
+/**
+ * 사유를 남기는 비활성화. 사유는 원장 컬럼이 아니라 기여 로그의 note로만 남으므로,
+ * 사유를 트랜잭션 컨텍스트에 실어 주는 deactivate_entity RPC를 경유한다(20260721150000).
+ * 원장 UPDATE와 사유 기록이 한 트랜잭션에 묶이므로, 종전처럼 '비활성화 기록만 남고 행은
+ * 살아 있는' 어긋난 상태가 생기지 않는다. 쓰기 권한은 원장 RLS가 그대로 판정한다.
+ */
+export function useDeactivateEntity(table: DeactivatableKey) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      const { error } = await supabase.rpc('deactivate_entity', {
+        p_entity_key: table,
+        p_id: id,
+        p_reason: reason,
+      })
+      if (error) throw error
+    },
+    onSuccess: (_v, { id }) => {
+      void qc.invalidateQueries({ queryKey: ['networks', table] })
+      void qc.invalidateQueries({ queryKey: ['networks', 'contributions', table, id] })
+    },
+  })
+}
+
 /** 중복 병합: duplicate → primary 로 병합(merged_into_id 지정). */
 export function useMergeEntity(table: EntityKey) {
   const qc = useQueryClient()

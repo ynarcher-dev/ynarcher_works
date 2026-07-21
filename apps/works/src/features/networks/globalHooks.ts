@@ -117,9 +117,8 @@ export function useCreateGlobal() {
         .select('id')
         .single()
       if (error) throw error
-      const id = (data as { id: string }).id
-      await recordGlobalContribution(id, 'created', '글로벌 네트워크 등록')
-      return id
+      // 변동 이력 'created'는 원장 트리거가 같은 트랜잭션에서 남긴다(20260721150000).
+      return (data as { id: string }).id
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['networks', GLOBAL_TABLE] }),
   })
@@ -133,43 +132,37 @@ export function useUpdateGlobal() {
       const { error } = await supabase.from(GLOBAL_TABLE).update(values).eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['networks', GLOBAL_TABLE] }),
+    onSuccess: (_v, { id }) => {
+      void qc.invalidateQueries({ queryKey: ['networks', GLOBAL_TABLE] })
+      // 수정도 이제 트리거가 'edited'로 남긴다(종전에는 아무 기록도 남지 않았다).
+      void qc.invalidateQueries({ queryKey: ['networks', 'contributions', GLOBAL_TABLE, id] })
+    },
   })
 }
 
 /**
- * 비활성화(soft delete). 파괴적 가드(기여자 검사)를 통과하도록 사유·행위자를
- * 기여 로그로 먼저 남긴 뒤 deleted_at을 설정한다(국내 DirectoryTab과 동일 규약).
+ * 비활성화(soft delete). 사유는 원장에 컬럼이 없어 기여 로그의 note로만 남으므로,
+ * 사유를 트랜잭션 컨텍스트에 실어 주는 deactivate_entity RPC를 경유한다.
+ * 원장 쓰기 권한은 RPC가 아니라 global_networks의 RLS가 그대로 판정한다(SECURITY INVOKER).
  */
 export function useDeactivateGlobal() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
-      await recordGlobalContribution(id, 'deactivated', reason)
-      const { error } = await supabase
-        .from(GLOBAL_TABLE)
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', id)
+      const { error } = await supabase.rpc('deactivate_entity', {
+        p_entity_key: GLOBAL_TABLE,
+        p_id: id,
+        p_reason: reason,
+      })
       if (error) throw error
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['networks', GLOBAL_TABLE] }),
+    onSuccess: (_v, { id }) => {
+      void qc.invalidateQueries({ queryKey: ['networks', GLOBAL_TABLE] })
+      void qc.invalidateQueries({ queryKey: ['networks', 'contributions', GLOBAL_TABLE, id] })
+    },
   })
 }
 
-/**
- * 기여 1건 기록(user_id·user_name은 서버 트리거가 현재 유저로 스탬프).
- * 부수 기록이라 실패해도 본 작업을 막지 않는다. entity_table은 다형 참조라 global_networks로 기록.
- */
-export async function recordGlobalContribution(
-  id: string,
-  action: 'created' | 'merged' | 'enriched' | 'edited' | 'deactivated',
-  note?: string | null,
-): Promise<void> {
-  await supabase.from('entity_contributions').insert({
-    entity_table: GLOBAL_TABLE,
-    entity_id: id,
-    action,
-    source: 'manual',
-    note: note ?? null,
-  })
-}
+// 기록(쓰기)은 클라이언트에 두지 않는다 — global_networks의 변동 이력은 원장 트리거
+// app.log_entity_contribution()이 같은 트랜잭션에서 남긴다(마이그레이션 20260721150000).
+// 손으로 남기던 시절에는 useUpdateGlobal에 호출이 없어 글로벌 수정이 통째로 이력에서 빠져 있었다.
