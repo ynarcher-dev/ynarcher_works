@@ -118,7 +118,8 @@ export function EmployeeDetailPage({
   const hasCareer = hasCareerRows(profile.background)
   const legacyBio = str(profile.bio)
   const note = str(profile.note)
-  const roleLabel = ROLE_LABELS[emp.user_type] ?? emp.user_type
+  // 이름 옆 배지는 관리자(super_admin)만 표기한다 — 나머지 역할은 부서·직책으로 이미 드러난다.
+  const adminLabel = emp.user_type === 'super_admin' ? ROLE_LABELS[emp.user_type] : ''
   const email = show.email ? emp.email ?? '-' : maskEmail(emp.email ?? null)
   const phone = show.phone ? emp.phone ?? '-' : maskPhone(emp.phone ?? null)
 
@@ -151,9 +152,7 @@ export function EmployeeDetailPage({
                   <DensityProvider value="page">
                     <div className="flex flex-wrap items-center gap-2">
                       <h1 className="text-title-md font-bold text-gray-900">{emp.name}</h1>
-                      <Badge tone="neutral">
-                        {roleLabel}
-                      </Badge>
+                      {adminLabel && <Badge tone="neutral">{adminLabel}</Badge>}
                     </div>
                   </DensityProvider>
                   <p className={`mt-1 ${cardText.subtitle}`}>{subtitle}</p>

@@ -49,7 +49,8 @@ export function MyPage() {
   if (!me) return <Banner tone="warning">내 계정 정보를 불러올 수 없습니다.</Banner>
 
   const profile = me.profile ?? {}
-  const roleLabel = ROLE_LABELS[me.user_type] ?? me.user_type
+  // 이름 옆 배지는 관리자(super_admin)만 표기한다 — 임직원 상세와 동일 규칙.
+  const adminLabel = me.user_type === 'super_admin' ? ROLE_LABELS[me.user_type] : ''
 
   // 부서/팀 파생: 소속→루트 경로에서 인사 미노출(hr_hidden) 부서를 제외하고 가장 구체적인 2개를 취한다.
   const byId: Record<string, { name: string; parent_id: string | null; hidden: boolean }> = {}
@@ -82,9 +83,7 @@ export function MyPage() {
             <div className="flex flex-wrap items-center gap-2">
               {/* 페이지 제목('내 계정 관리')이 따로 있으므로 이름은 카드 제목 층이다. */}
               <h2 className={cardText.title}>{me.name}</h2>
-              <Badge tone="neutral">
-                {roleLabel}
-              </Badge>
+              {adminLabel && <Badge tone="neutral">{adminLabel}</Badge>}
             </div>
             <p className={`mt-1 ${cardText.subtitle}`}>{affiliation || '-'}</p>
             <div className="mt-4 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-2">
