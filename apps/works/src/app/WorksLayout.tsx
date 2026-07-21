@@ -76,7 +76,7 @@ import { WORKSPACE_SUBNAV, firstTab, pathTabOf, type SubNavItem } from '@/config
 import { MenuSectionLabel, SidebarFlyout } from '@/app/SidebarFlyout'
 import { TopbarBreadcrumb } from '@/app/TopbarBreadcrumb'
 import { GlobalSearchBox } from '@/app/GlobalSearchBox'
-import { TopbarActions } from '@/app/TopbarActions'
+import { TopbarActions, topbarIconButton } from '@/app/TopbarActions'
 import { useBoards } from '@/features/hub/boardHooks'
 import { boardsOfKind } from '@/features/hub/boardStore'
 import { boardIcon } from '@/features/hub/boardIcons'
@@ -423,40 +423,48 @@ export function WorksLayout() {
     </Dropdown>
   )
 
+  /**
+   * 사이드바 접기/펴기 토글. 사이드바 헤더가 아니라 상단바 좌측 끝에 두어, 사이드바가 접혀도
+   * 버튼 위치가 움직이지 않는다(접힘 폭 안에서 로고 자리로 밀려나던 문제 해소).
+   * 모바일에서는 사이드바가 드로어라 상단바 햄버거가 그 역할을 하므로 데스크톱에서만 노출한다.
+   */
+  const sidebarToggle = (
+    <button
+      type="button"
+      onClick={() => {
+        // 접기/펴기로 트리거 좌표가 바뀌므로 열려 있던 플라이아웃은 닫는다.
+        setOpenFlyout(null)
+        setSidebarCollapsed(!sidebarCollapsed)
+      }}
+      // 상단바 우측 액션들과 같은 40px 정사각 규격(topbarIconButton)을 쓴다 — 양 끝 버튼의
+      // 크기·호버 영역이 다르면 같은 줄에서 아이콘 크기가 달라 보인다.
+      className={cn(topbarIconButton, 'hidden lg:flex')}
+      aria-label={sidebarCollapsed ? '사이드바 열기' : '사이드바 접기'}
+      title={sidebarCollapsed ? '사이드바 열기' : '사이드바 접기'}
+    >
+      {sidebarCollapsed ? (
+        <PanelLeftOpen aria-hidden className="size-5" strokeWidth={1.8} />
+      ) : (
+        <PanelLeftClose aria-hidden className="size-5" strokeWidth={1.8} />
+      )}
+    </button>
+  )
+
   const sidebar = (
     <Sidebar
       collapsed={sidebarCollapsed}
       footer={accountMenu}
       header={
-        // 로고(좌) ↔ 접기 토글(우) 한 줄 배치. 접히면 로고를 감추고 토글만 가운데 남긴다.
-        <div className="flex w-full items-center justify-between gap-2">
+        // 접기 토글은 상단바로 옮겼고, 헤더에는 로고만 남긴다. 접힘 폭(64px)에는 가로형 로고가
+        // 들어가지 않아 감추되, 높이(h-16)는 유지해 상단바와 사이드바의 첫 줄을 맞춘다.
+        // 로고는 사이드바 폭 기준 가운데 정렬한다(왼쪽 정렬 시 아래 워크스페이스 스위처·메뉴와
+        // 시작선이 어긋나 보이는데, 가로형 로고라 어느 선에 맞춰도 어색했다).
+        <div className="flex w-full items-center justify-center">
           {!sidebarCollapsed && (
             <Link to="/office" className="min-w-0 shrink">
               <img src={logo} alt="Y&ARCHER" className="h-7 object-contain" />
             </Link>
           )}
-          <button
-            type="button"
-            onClick={() => {
-              // 접기/펴기로 트리거 좌표가 바뀌므로 열려 있던 플라이아웃은 닫는다.
-              setOpenFlyout(null)
-              setSidebarCollapsed(!sidebarCollapsed)
-            }}
-            className={cn(
-              'hidden shrink-0 items-center justify-center rounded-radius-md text-white/70 transition-colors duration-fast',
-              'hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/20 lg:flex',
-              // 접힘 시 메뉴 항목과 동일한 규격(w-full · ctl-page)으로 맞춰 아이콘 중심선을 일치시킨다.
-              sidebarCollapsed ? 'h-ctl-page w-full' : 'p-1.5',
-            )}
-            aria-label={sidebarCollapsed ? '사이드바 열기' : '사이드바 접기'}
-            title={sidebarCollapsed ? '사이드바 열기' : '사이드바 접기'}
-          >
-            {sidebarCollapsed ? (
-              <PanelLeftOpen aria-hidden className="size-5" strokeWidth={1.8} />
-            ) : (
-              <PanelLeftClose aria-hidden className="size-5" strokeWidth={1.8} />
-            )}
-          </button>
         </div>
       }
       subheader={
@@ -500,15 +508,18 @@ export function WorksLayout() {
       sidebarCollapsed={sidebarCollapsed}
       sidebar={sidebar}
       // 상단바는 사이드바와 역할이 겹치지 않는 전역 기능만 싣는다
-      // (현재 위치 · 전역 검색 · 알림/바로가기). 워크스페이스 전환·계정 메뉴는 사이드바 소관.
+      // (사이드바 접기 · 현재 위치 · 전역 검색 · 알림/바로가기). 워크스페이스 전환·계정 메뉴는 사이드바 소관.
       topbarLeft={
-        currentWs && (
-          <TopbarBreadcrumb
-            workspaceLabel={currentWs.label}
-            workspacePath={currentWs.path}
-            sectionLabel={activeSectionLabel}
-          />
-        )
+        <>
+          {sidebarToggle}
+          {currentWs && (
+            <TopbarBreadcrumb
+              workspaceLabel={currentWs.label}
+              workspacePath={currentWs.path}
+              sectionLabel={activeSectionLabel}
+            />
+          )}
+        </>
       }
       topbarCenter={<GlobalSearchBox />}
       topbarRight={<TopbarActions />}

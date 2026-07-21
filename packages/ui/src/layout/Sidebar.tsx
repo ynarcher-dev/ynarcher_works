@@ -38,13 +38,15 @@ export function Sidebar({
         className,
       )}
     >
-      {/* 접힘 상태에서도 헤더는 렌더링한다 — 접기 토글이 헤더 안에 있어, 여기서 통째로 숨기면
-          다시 펼 수단이 사라진다. 접힘 시 무엇을 감출지는 header를 주입하는 앱이 결정한다. */}
+      {/* 접힘 상태에서도 헤더 자리는 남긴다 — 높이(h-16)가 상단바와 같아, 접혔다고 없애면
+          사이드바 첫 메뉴가 상단바보다 위로 올라온다. 무엇을 감출지는 header를 주입하는 앱이 결정한다. */}
       {header && (
         <div
+          // 좌우 여백은 메뉴 목록·워크스페이스 스위처와 같은 px-2 가로 격자를 쓴다.
+          // 헤더만 px-4를 쓰면 로고가 그 아래 메뉴들과 어긋난 선에서 시작한다.
           className={cn(
-            'flex h-16 items-center',
-            collapsed ? 'justify-center px-2' : 'px-4',
+            'flex h-16 items-center px-2',
+            collapsed && 'justify-center',
           )}
         >
           {header}
