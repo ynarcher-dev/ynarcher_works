@@ -132,8 +132,15 @@ export const cardText = {
   title: 'text-body-lg font-semibold text-gray-900',
   /** 카드 부제 — 제목 아래 한 줄 보조 설명. */
   subtitle: 'text-body text-gray-500',
-  /** 카드 안 소제목 — 제목 아래 층. 카드 제목과 같은 규격을 쓰면 두 계층이 한 픽셀에 눌린다. */
-  subhead: 'text-body font-semibold text-gray-500',
+  /**
+   * 카드 안 소제목 — 제목 아래 층.
+   *
+   * 카드 제목과의 구분은 크기(16 → 14)가 맡고, 색은 제목과 같은 gray-900을 유지한다. 색까지
+   * 빼면 소제목이 자기가 이끄는 본문(gray-900/700)보다 연해져 위계가 뒤집힌다 — 제목이 본문보다
+   * 흐린 화면은 어디가 묶음의 시작인지 알려주지 못한다. 카드 제목이 없는 카드에서는 이 소제목이
+   * 그 안의 최상위 라벨이 되므로 더욱 그렇다.
+   */
+  subhead: 'text-body font-semibold text-gray-900',
   /**
    * 카드 제목 옆 건수 표기 — 배지가 아니라 `[3]` 말머리 형태.
    *
