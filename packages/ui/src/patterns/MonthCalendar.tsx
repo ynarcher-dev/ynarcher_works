@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from '../utils/cn'
+import { iconScale } from '../densityScale'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 
@@ -73,7 +74,7 @@ function MonthNav({
     onMonthChange(`${d.getFullYear()}-${pad(d.getMonth() + 1)}`)
   }
   const navClass =
-    'grid h-7 w-7 place-items-center rounded-radius-sm text-gray-500 transition-colors duration-fast hover:bg-gray-100 hover:text-gray-800'
+    'grid ' + iconScale.card.box + ' place-items-center rounded-radius-sm text-gray-500 transition-colors duration-fast hover:bg-gray-100 hover:text-gray-800'
   return (
     <div className="mb-3 flex items-center justify-center gap-1">
       <button

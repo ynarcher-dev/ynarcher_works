@@ -17,7 +17,7 @@ import type { Density } from './density'
 
 /** 라벨이 있는 가변폭 컨트롤(버튼·입력·선택). 한 줄에 나란히 서므로 높이·글자를 공유한다. */
 export const controlScale: Record<Density, { height: string; text: string; padX: string; gap: string }> = {
-  page: { height: 'h-ctl-page', text: 'text-body', padX: 'px-3.5', gap: 'gap-1.5' },
+  page: { height: 'h-ctl-page', text: 'text-body', padX: 'px-4', gap: 'gap-2' },
   card: { height: 'h-ctl-card', text: 'text-body-sm', padX: 'px-3', gap: 'gap-1.5' },
   table: { height: 'h-ctl-table', text: 'text-caption', padX: 'px-2.5', gap: 'gap-1' },
 }
@@ -25,16 +25,20 @@ export const controlScale: Record<Density, { height: string; text: string; padX:
 /**
  * 컨트롤 안에 아이콘 슬롯이 있는 경우의 좌우 여백.
  * `leading`은 아이콘이 왼쪽(검색 입력), `trailing`은 오른쪽(셀렉트 화살표).
+ * `iconLeft`/`iconRight`는 그 슬롯에 놓인 아이콘 자체의 절대 위치로, 위 여백과 짝을 이룬다.
  */
-export const controlIconPad: Record<Density, { leading: string; trailing: string; offset: string }> = {
-  page: { leading: 'pl-10 pr-3.5', trailing: 'pl-3.5 pr-10', offset: '3.5' },
-  card: { leading: 'pl-9 pr-3', trailing: 'pl-3 pr-9', offset: '3' },
-  table: { leading: 'pl-7 pr-2.5', trailing: 'pl-2.5 pr-7', offset: '2' },
+export const controlIconPad: Record<
+  Density,
+  { leading: string; trailing: string; iconLeft: string; iconRight: string }
+> = {
+  page: { leading: 'pl-11 pr-4', trailing: 'pl-4 pr-11', iconLeft: 'left-4', iconRight: 'right-4' },
+  card: { leading: 'pl-9 pr-3', trailing: 'pl-3 pr-9', iconLeft: 'left-3', iconRight: 'right-3' },
+  table: { leading: 'pl-7 pr-2.5', trailing: 'pl-2.5 pr-7', iconLeft: 'left-2.5', iconRight: 'right-2.5' },
 }
 
 /** 정사각 아이콘 버튼. 라벨이 없어 같은 맥락의 컨트롤보다 한 단계 작다. */
 export const iconScale: Record<Density, { box: string; glyph: number }> = {
-  page: { box: 'size-icon-page', glyph: 18 },
+  page: { box: 'size-icon-page', glyph: 20 },
   card: { box: 'size-icon-card', glyph: 16 },
   table: { box: 'size-icon-table', glyph: 14 },
 }
@@ -48,7 +52,7 @@ export const tagScale: Record<Density, { height: string; text: string; padX: str
 
 /** 여러 줄 입력(TextArea) — 높이는 `rows`가 정하므로 글자·여백만 밀도에 반응한다. */
 export const textAreaScale: Record<Density, string> = {
-  page: 'px-3.5 py-2.5 text-body',
+  page: 'px-4 py-3 text-body',
   card: 'px-3 py-2 text-body-sm',
   table: 'px-2.5 py-1.5 text-caption',
 }
@@ -79,7 +83,7 @@ export const avatarScale: Record<Density, { box: string; text: string }> = {
 
 /** 탭 — 언더라인 탭의 높이를 같은 맥락의 컨트롤과 맞춘다(가변 py 금지). */
 export const tabScale: Record<Density, { height: string; text: string; padX: string }> = {
-  page: { height: 'h-ctl-page', text: 'text-body', padX: 'px-3.5' },
+  page: { height: 'h-ctl-page', text: 'text-body', padX: 'px-4' },
   card: { height: 'h-ctl-card', text: 'text-body-sm', padX: 'px-3' },
   table: { height: 'h-ctl-table', text: 'text-caption', padX: 'px-2.5' },
 }

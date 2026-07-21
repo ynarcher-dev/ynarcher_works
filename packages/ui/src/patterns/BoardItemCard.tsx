@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from '../utils/cn'
+import { iconScale } from '../densityScale'
 
 export interface BoardItemCardProps {
   /** 좌측 리딩 심볼(이모지·아이콘). 미지정 시 제목부터 시작한다. */
@@ -48,7 +49,7 @@ export function BoardItemCard({
         >
           {leading && (
             <span
-              className="grid h-7 w-7 shrink-0 place-items-center rounded-radius-sm bg-gray-50 text-base leading-none"
+              className={cn(iconScale.card.box, 'grid shrink-0 place-items-center rounded-radius-sm bg-gray-50 text-base leading-none')}
               aria-hidden
             >
               {leading}

@@ -28,7 +28,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         <span
           className={cn(
             'absolute shrink-0 text-gray-400',
-            d === 'table' ? 'left-2.5' : d === 'card' ? 'left-3' : 'left-3.5',
+            controlIconPad[d].iconLeft,
           )}
         >
           {icon}

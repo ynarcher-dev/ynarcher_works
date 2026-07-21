@@ -1,5 +1,6 @@
 import type { ComponentType, ElementType } from 'react'
 import { cn } from '../utils/cn'
+import { controlScale } from '../densityScale'
 
 export interface BackButtonProps {
   /**
@@ -21,19 +22,24 @@ export interface BackButtonProps {
  *
  * 형태는 Outline 버튼 규격을 따른다(근거: 4_color_system_rules.md §5.1). 텍스트 링크가 아니라
  * 버튼으로 보여야 누를 수 있는 요소임이 분명해지고, 우측 주요 액션(Primary)과는 색으로 무게가
- * 구분된다. 치수는 일반 UI 맥락의 Button(`ctl-page` 40px / px-4 / `text-body`)과 정확히
- * 일치시켜, 같은 줄에 놓이는 '수정'·'편집' 버튼과 높이가 어긋나지 않게 한다.
+ * 구분된다. 치수는 `controlScale.page`에서 직접 가져오므로, 같은 줄에 놓이는 '수정'·'편집'
+ * 버튼과 높이가 어긋날 수 없다(규격을 여기에 다시 적지 않는다).
  */
 export function BackButton({ as, className, ...rest }: BackButtonProps) {
   const Comp = (as ?? 'button') as unknown as ComponentType<Record<string, unknown>>
   const extra = as ? {} : { type: 'button' }
+  const s = controlScale.page
   return (
     <Comp
       {...extra}
       {...rest}
       className={cn(
-        'inline-flex h-ctl-page shrink-0 items-center gap-1.5 whitespace-nowrap rounded-radius-md px-4',
-        'border border-gray-300 bg-white text-body font-semibold text-gray-800 shadow-sm',
+        'inline-flex shrink-0 items-center whitespace-nowrap rounded-radius-md',
+        s.height,
+        s.text,
+        s.padX,
+        s.gap,
+        'border border-gray-300 bg-white font-semibold text-gray-800 shadow-sm',
         'transition-all duration-fast ease-in-out hover:border-gray-400 hover:bg-gray-25 active:bg-gray-50',
         'active:scale-[0.98] transform-gpu',
         'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10',

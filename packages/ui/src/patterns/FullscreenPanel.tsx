@@ -1,5 +1,7 @@
 import { useEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { cn } from '../utils/cn'
+import { controlScale } from '../densityScale'
 
 export interface ExpandToggleButtonProps {
   expanded: boolean
@@ -24,7 +26,13 @@ export function ExpandToggleButton({
       aria-label={label}
       aria-pressed={expanded}
       onClick={onToggle}
-      className="flex h-8 items-center gap-1.5 rounded-radius-md border border-gray-300 bg-white px-2.5 text-caption font-medium text-gray-500 transition-colors duration-fast hover:bg-gray-25 hover:text-gray-700"
+      className={cn(
+        'flex items-center rounded-radius-md border border-gray-300 bg-white font-medium text-gray-500 transition-colors duration-fast hover:bg-gray-25 hover:text-gray-700',
+        controlScale.card.height,
+        controlScale.card.text,
+        controlScale.card.padX,
+        controlScale.card.gap,
+      )}
     >
       {expanded ? collapseIcon : expandIcon}
       <span>{label}</span>

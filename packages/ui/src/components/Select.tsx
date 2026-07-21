@@ -40,7 +40,7 @@ export function Select({ invalid, density, className, children, ...props }: Sele
       <span
         className={cn(
           'pointer-events-none absolute shrink-0 text-gray-400',
-          d === 'table' ? 'right-2.5' : d === 'card' ? 'right-3' : 'right-3.5',
+          controlIconPad[d].iconRight,
         )}
         aria-hidden="true"
       >
