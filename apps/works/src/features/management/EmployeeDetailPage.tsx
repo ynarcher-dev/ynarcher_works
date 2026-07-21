@@ -113,6 +113,7 @@ export function EmployeeDetailPage({
   const position = str(profile.position)
   const rank = str(profile.rank)
   const payStep = str(profile.pay_step)
+  const hireDate = str(profile.hire_date)
   const photo = str(profile.photo)
   // 약력은 구조화(background)가 정본이고, 구조 편집기 도입 전에 쌓인 자유 텍스트(bio)는 폴백으로만 노출한다.
   const hasCareer = hasCareerRows(profile.background)
@@ -164,6 +165,7 @@ export function EmployeeDetailPage({
                 <Info label="직책" value={position || '-'} />
                 <Info label="직급" value={rank || '-'} />
                 <Info label="호봉" value={payStep || '-'} />
+                <Info label="입사일" value={hireDate || '-'} />
                 <Info label="연락처" value={phone} />
                 <Info label="이메일" value={email} />
                 <Info label="수정일" value={formatDate(emp.updated_at)} />

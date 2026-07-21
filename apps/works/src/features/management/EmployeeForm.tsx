@@ -63,6 +63,7 @@ export function EmployeeForm({ recordId, initial, onDone, onCancel }: Props) {
   const [position, setPosition] = useState(str(profile.position))
   const [rank, setRank] = useState(str(profile.rank))
   const [payStep, setPayStep] = useState(str(profile.pay_step))
+  const [hireDate, setHireDate] = useState(str(profile.hire_date))
   const [phone, setPhone] = useState(initial.phone ?? '')
   const [email, setEmail] = useState(initial.email ?? '')
   const [note, setNote] = useState(str(profile.note))
@@ -106,6 +107,7 @@ export function EmployeeForm({ recordId, initial, onDone, onCancel }: Props) {
         position: position.trim() || null,
         rank: rank.trim() || null,
         pay_step: payStep.trim() || null,
+        hire_date: hireDate || null,
         photo: photo || null,
         background,
         note: note.trim() || null,
@@ -168,6 +170,13 @@ export function EmployeeForm({ recordId, initial, onDone, onCancel }: Props) {
           </Field>
           <Field label="호봉">
             <HrTagSelect table="pay_step_tags" value={payStep} onChange={setPayStep} />
+          </Field>
+          <Field label="입사일">
+            <Input
+              type="date"
+              value={hireDate}
+              onChange={(e) => setHireDate(e.target.value)}
+            />
           </Field>
           <Field label="연락처">
             <Input value={phone} onChange={(e) => setPhone(e.target.value)} />

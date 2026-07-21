@@ -91,6 +91,7 @@ export function MyPage() {
               <Info label="직책" value={str(profile.position)} />
               <Info label="직급" value={str(profile.rank)} />
               <Info label="호봉" value={str(profile.pay_step)} />
+              <Info label="입사일" value={str(profile.hire_date)} />
               <Info label="이메일" value={me.email ?? ''} />
               <Info label="연락처" value={me.phone ?? ''} />
             </div>

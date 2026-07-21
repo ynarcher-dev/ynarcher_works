@@ -2,7 +2,11 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/auth/authStore'
 import { supabase } from '@/lib/supabase'
 
-/** 현재 로그인 사용자의 입사일(hr_profiles). 프로필이 없으면 null. */
+/**
+ * 현재 로그인 사용자의 입사일(users.profile.hire_date). 미입력이면 null.
+ * hr_profiles가 아니라 users를 읽는다 — hr_profiles는 연차 정보 때문에 MANAGEMENT 열람
+ * 권한으로 잠겨 있어, 그쪽에서 읽으면 대부분의 임직원에게 근속일(D+n)이 뜨지 않는다.
+ */
 export function useMyHireDate() {
   const userId = useAuthStore((s) => s.user?.id)
   const isUuid = /^[0-9a-f-]{36}$/i.test(userId ?? '')
@@ -11,11 +15,12 @@ export function useMyHireDate() {
     enabled: isUuid,
     queryFn: async (): Promise<string | null> => {
       const { data } = await supabase
-        .from('hr_profiles')
-        .select('hire_date')
-        .eq('user_id', userId)
+        .from('users')
+        .select('profile')
+        .eq('id', userId)
         .maybeSingle()
-      return (data?.hire_date as string) ?? null
+      const profile = (data?.profile ?? {}) as Record<string, unknown>
+      return typeof profile.hire_date === 'string' ? profile.hire_date : null
     },
   })
 }
