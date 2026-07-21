@@ -114,7 +114,7 @@ export interface Employee {
   department_id: string | null
   updated_at: string | null
   phone: string | null
-  /** 자유 프로필(jsonb): company / position / bio / note 등. */
+  /** 자유 프로필(jsonb): company / position / photo / background(약력) / note 등. */
   profile: Record<string, unknown> | null
 }
 
@@ -272,15 +272,21 @@ export function useCreateEmployee() {
 }
 
 /**
- * 본인 프로필(약력·노트) 수정. 본인 직접 UPDATE는 RLS로 차단되며, 컬럼을 화이트리스트하는
- * `update_my_profile` RPC(SECURITY DEFINER)만 profile.bio / profile.note 를 갱신한다.
+ * 본인 프로필(사진·약력·노트) 수정. 본인 직접 UPDATE는 RLS로 차단되며, 키를 화이트리스트하는
+ * `update_my_profile` RPC(SECURITY DEFINER)만 profile.photo / profile.background / profile.note 를 갱신한다.
+ * 세 값은 항상 함께 보낸다 — RPC는 전달된 값으로 덮어쓰므로 빈 값은 곧 삭제를 뜻한다.
  */
 export function useUpdateMyProfile() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (v: { bio: string; note: string }) => {
+    mutationFn: async (v: {
+      photo: string
+      background: Record<string, unknown>
+      note: string
+    }) => {
       const { error } = await supabase.rpc('update_my_profile', {
-        p_bio: v.bio,
+        p_photo: v.photo,
+        p_background: v.background,
         p_note: v.note,
       })
       if (error) throw error

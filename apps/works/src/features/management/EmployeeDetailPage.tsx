@@ -5,6 +5,7 @@ import { maskEmail, maskPhone } from '@/lib/mask'
 import { useSensitiveStore } from '@/features/admin/sensitiveStore'
 import { EmployeeForm } from '@/features/management/EmployeeForm'
 import { PhotoBox } from '@/features/networks/PhotoBox'
+import { CareerView, hasCareerRows } from '@/features/networks/CareerView'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
@@ -70,7 +71,7 @@ function RelationCard({ title }: { title: string }) {
 
 /**
  * 임직원 상세페이지(조회 전용). 전문가 상세 레이아웃을 따르되 멘토링 만족도·매칭·전문분야는 제외한다.
- * 회사·직책/직급·연락처와 약력·노트는 데이터 모델 연결 전이라 '-'/플레이스홀더로 노출한다.
+ * 사진·약력·노트는 NETWORKS 상세와 동일한 규격(profile.photo / profile.background / profile.note)으로 표시한다.
  * 우측 자료 관리·피드백 패널은 다형(target_type/target_id) 공용 패널을 재사용한다.
  * OFFICE(임직원 정보)에서 진입할 때는 readOnly로 수정 버튼을 숨기고 조회만 제공한다.
  */
@@ -111,7 +112,10 @@ export function EmployeeDetailPage({
   const position = str(profile.position)
   const rank = str(profile.rank)
   const payStep = str(profile.pay_step)
-  const bio = str(profile.bio)
+  const photo = str(profile.photo)
+  // 약력은 구조화(background)가 정본이고, 구조 편집기 도입 전에 쌓인 자유 텍스트(bio)는 폴백으로만 노출한다.
+  const hasCareer = hasCareerRows(profile.background)
+  const legacyBio = str(profile.bio)
   const note = str(profile.note)
   const roleLabel = ROLE_LABELS[emp.user_type] ?? emp.user_type
   const email = show.email ? emp.email ?? '-' : maskEmail(emp.email ?? null)
@@ -140,7 +144,7 @@ export function EmployeeDetailPage({
           <div className="space-y-4 lg:col-span-2">
             <CardShell>
               <div className="flex items-center gap-5">
-                <PhotoBox src={null} />
+                <PhotoBox src={photo || null} />
                 <div className="min-w-0 flex-1">
                   {/* 상세 헤더는 카드 안에 있어도 페이지 맥락이다 — 24px 제목 옆 배지가 11px로 찍히지 않게 한다. */}
                   <DensityProvider value="page">
@@ -167,8 +171,10 @@ export function EmployeeDetailPage({
             </CardShell>
 
             <SectionCard title="약력">
-              {bio ? (
-                <p className="whitespace-pre-wrap text-body text-gray-800">{bio}</p>
+              {hasCareer ? (
+                <CareerView value={profile.background} />
+              ) : legacyBio ? (
+                <p className="whitespace-pre-wrap text-body text-gray-800">{legacyBio}</p>
               ) : (
                 <p className="text-body text-gray-600">
                   등록된 약력이 없습니다. "수정"에서 입력하세요.

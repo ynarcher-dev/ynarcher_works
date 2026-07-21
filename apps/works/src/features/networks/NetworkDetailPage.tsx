@@ -7,12 +7,7 @@ import { PhotoBox } from '@/features/networks/PhotoBox'
 import { ChangeHistoryPanel, uniqueContributors } from '@/features/networks/ChangeHistoryPanel'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
-import {
-  CAREER_SECTIONS,
-  formatRow,
-  parseBackground,
-  sortRowsByYearDesc,
-} from '@/features/networks/careerConfig'
+import { CareerView, hasCareerRows } from '@/features/networks/CareerView'
 import {
   ENTITIES,
   isCompactEntity,
@@ -65,10 +60,7 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
     ? (record.expertise as string[])
     : []
   const matchOk = profile.match_available !== false
-  const background = parseBackground(profile.background)
-  const hasCareer = CAREER_SECTIONS.some((s) =>
-    (background[s.key] ?? []).some((r) => formatRow(s, r)),
-  )
+  const hasCareer = hasCareerRows(profile.background)
   const intro = (profile.intro as string) ?? ''
   const affiliation = (record.affiliation as string) ?? ''
   const department = (profile.department as string) ?? ''
@@ -164,29 +156,7 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
       {!compact && (
         <SectionCard title="약력">
           {hasCareer ? (
-            <div className="space-y-4">
-              {CAREER_SECTIONS.map((s) => {
-                const rows = sortRowsByYearDesc(
-                  s,
-                  (background[s.key] ?? []).filter((r) => formatRow(s, r)),
-                )
-                if (!rows.length) return null
-                return (
-                  <div key={s.key}>
-                    <h3 className="mb-1 text-caption font-semibold text-gray-700">
-                      {s.title}
-                    </h3>
-                    <ul className="space-y-0.5">
-                      {rows.map((r, i) => (
-                        <li key={i} className="text-body text-gray-800">
-                          {formatRow(s, r)}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )
-              })}
-            </div>
+            <CareerView value={profile.background} />
           ) : (
             <p className="text-body text-gray-600">
               등록된 약력이 없습니다. "수정"에서 입력하세요.

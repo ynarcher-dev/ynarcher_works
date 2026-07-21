@@ -1,10 +1,10 @@
 import { Button, CardShell, Input, Select, TagChip, TextArea, useToast } from '@ynarcher/ui'
-import type { ChangeEvent, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTags } from '@/features/admin/hooks'
 import { supabase } from '@/lib/supabase'
-import { PhotoBox } from '@/features/networks/PhotoBox'
+import { PhotoPicker } from '@/features/networks/PhotoPicker'
 import { CareerEditor } from '@/features/networks/CareerEditor'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { PendingMaterialPanel } from '@/features/networks/PendingMaterialPanel'
@@ -115,20 +115,8 @@ export function NetworkForm({ entity, recordId, initial, onDone, onCancel }: Pro
     parseBackground(profile.background),
   )
 
-  // 사진: data URL로 profile.photo에 저장(2MB 이하). 첨부 즉시 미리보기.
+  // 사진: data URL로 profile.photo에 저장(2MB 이하). 첨부/미리보기는 공용 PhotoPicker가 소유한다.
   const [photo, setPhoto] = useState<string>((profile.photo as string) ?? '')
-  const onPickPhoto = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
-    if (file.size > 2_000_000) {
-      toast.show('이미지는 2MB 이하만 첨부할 수 있습니다.', 'warning')
-      return
-    }
-    const reader = new FileReader()
-    reader.onload = () => setPhoto(String(reader.result))
-    reader.readAsDataURL(file)
-  }
 
   const {
     register,
@@ -238,25 +226,7 @@ export function NetworkForm({ entity, recordId, initial, onDone, onCancel }: Pro
           {/* 사진 카드 */}
           <CardShell>
             <p className="mb-3 text-caption font-medium text-gray-700">사진</p>
-            <div className="flex items-center gap-4">
-              <PhotoBox src={photo} />
-              <div className="flex gap-2">
-                <label className="cursor-pointer rounded-radius-md border border-gray-300 px-3 py-1.5 text-body text-gray-700 transition-colors hover:bg-gray-50">
-                  사진 첨부
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={onPickPhoto}
-                  />
-                </label>
-                {photo && (
-                  <Button type="button" variant="secondary" onClick={() => setPhoto('')}>
-                    삭제
-                  </Button>
-                )}
-              </div>
-            </div>
+            <PhotoPicker value={photo} onChange={setPhoto} />
           </CardShell>
 
           {/* 기본 데이터 카드 */}

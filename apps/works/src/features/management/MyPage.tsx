@@ -8,6 +8,9 @@ import {
   useUpdateMyProfile,
 } from '@/features/management/hooks'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
+import { CareerEditor } from '@/features/networks/CareerEditor'
+import { PhotoPicker } from '@/features/networks/PhotoPicker'
+import { parseBackground, type CareerData } from '@/features/networks/careerConfig'
 
 function str(v: unknown): string {
   return typeof v === 'string' ? v : ''
@@ -18,7 +21,8 @@ const Info = InfoField
 
 /**
  * 마이페이지(내 계정 관리). 본인 계정 정보는 조회만 하고, 본인이 직접 바꿀 수 있는 것은
- * 약력·노트 텍스트와 자료 업로드로 한정한다(서버 RPC/RLS로 강제).
+ * 사진·약력·노트와 자료 업로드로 한정한다(서버 RPC/RLS로 강제).
+ * 편집기와 저장 규약(profile.photo / profile.background / profile.note)은 NETWORKS·인사 관리와 공용이다.
  * 이름·역할·부서·이메일 등 계정 필드 변경은 인사 관리(관리자)에서만 가능하다.
  */
 export function MyPage() {
@@ -28,14 +32,16 @@ export function MyPage() {
   const { data: depts } = useDepartments()
   const update = useUpdateMyProfile()
 
-  const [bio, setBio] = useState('')
+  const [photo, setPhoto] = useState('')
+  const [background, setBackground] = useState<CareerData>(parseBackground(null))
   const [note, setNote] = useState('')
 
   // 로드된 프로필로 편집 필드를 동기화한다(최초/재조회 시).
   useEffect(() => {
     if (!me) return
     const p = me.profile ?? {}
-    setBio(str(p.bio))
+    setPhoto(str(p.photo))
+    setBackground(parseBackground(p.background))
     setNote(str(p.note))
   }, [me])
 
@@ -58,7 +64,7 @@ export function MyPage() {
 
   const save = async () => {
     try {
-      await update.mutateAsync({ bio, note })
+      await update.mutateAsync({ photo, background, note })
       toast.show('내 프로필을 저장했습니다.', 'success')
     } catch {
       toast.show('저장에 실패했습니다. 다시 시도하세요.', 'danger')
@@ -70,7 +76,7 @@ export function MyPage() {
       <h1 className="text-title-md font-bold text-gray-900">내 계정 관리</h1>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* 좌측(2/3): 계정 정보(조회) + 약력·노트(편집) */}
+        {/* 좌측(2/3): 계정 정보(조회) + 사진·약력·노트(편집) */}
         <div className="space-y-4 lg:col-span-2">
           <CardShell>
             <div className="flex flex-wrap items-center gap-2">
@@ -95,22 +101,26 @@ export function MyPage() {
           </CardShell>
 
           <CardShell>
-            <div className="space-y-4">
-              <div>
-                <label className="mb-1 block text-caption font-medium text-gray-700">약력</label>
-                <TextArea rows={4} value={bio} onChange={(e) => setBio(e.target.value)} />
-              </div>
-              <div>
-                <label className="mb-1 block text-caption font-medium text-gray-700">노트</label>
-                <TextArea rows={4} value={note} onChange={(e) => setNote(e.target.value)} />
-              </div>
-              <div className="flex justify-end">
-                <Button type="button" onClick={() => void save()} disabled={update.isPending}>
-                  저장
-                </Button>
-              </div>
-            </div>
+            <p className="mb-3 text-caption font-medium text-gray-700">사진</p>
+            <PhotoPicker value={photo} onChange={setPhoto} />
           </CardShell>
+
+          <CardShell>
+            <p className="mb-3 text-caption font-medium text-gray-700">약력</p>
+            <CareerEditor value={background} onChange={setBackground} />
+          </CardShell>
+
+          <CardShell>
+            <label className="mb-1 block text-caption font-medium text-gray-700">노트</label>
+            <TextArea rows={4} value={note} onChange={(e) => setNote(e.target.value)} />
+          </CardShell>
+
+          {/* 저장은 사진·약력·노트 세 카드를 한 번에 반영한다(카드별 저장 없음). */}
+          <div className="flex justify-end">
+            <Button type="button" onClick={() => void save()} disabled={update.isPending}>
+              저장
+            </Button>
+          </div>
         </div>
 
         {/* 우측(1/3): 자료 업로드(공용 자료 패널 재사용). */}

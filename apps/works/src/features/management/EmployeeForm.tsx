@@ -7,6 +7,9 @@ import {
   useUpdateEmployee,
   type Employee,
 } from '@/features/management/hooks'
+import { CareerEditor } from '@/features/networks/CareerEditor'
+import { PhotoPicker } from '@/features/networks/PhotoPicker'
+import { parseBackground, type CareerData } from '@/features/networks/careerConfig'
 
 /** 필드 래퍼(라벨 + 입력). NetworkForm/GlobalNetworkForm과 동일한 페이지 폼 스타일. */
 function Field({
@@ -43,7 +46,8 @@ interface Props {
 
 /**
  * 임직원 수정 폼(상세페이지 내 편집 모드). 모달이 아닌 페이지형 카드 섹션.
- * 이름·이메일·역할·부서는 users 스칼라 컬럼, 회사·직책/직급·약력·노트는 profile(jsonb)에 저장한다.
+ * 이름·이메일·역할·부서는 users 스칼라 컬럼, 회사·직책/직급·사진·약력·노트는 profile(jsonb)에 저장한다.
+ * 사진(photo)·약력(background)은 NETWORKS와 동일한 공용 편집기·저장 규약을 그대로 쓴다.
  * 관계형 연동 도메인(관리기업/운영사업/M&A/프로젝트/펀드)은 자동 기록 대상이라 편집하지 않는다.
  */
 export function EmployeeForm({ recordId, initial, onDone, onCancel }: Props) {
@@ -61,9 +65,11 @@ export function EmployeeForm({ recordId, initial, onDone, onCancel }: Props) {
   const [payStep, setPayStep] = useState(str(profile.pay_step))
   const [phone, setPhone] = useState(initial.phone ?? '')
   const [email, setEmail] = useState(initial.email ?? '')
-  const [bio, setBio] = useState(str(profile.bio))
   const [note, setNote] = useState(str(profile.note))
   const [busy, setBusy] = useState(false)
+  // 사진·약력은 NETWORKS와 동일 규약: profile.photo(2MB 이하 data URL) / profile.background(섹션 jsonb).
+  const [photo, setPhoto] = useState(str(profile.photo))
+  const [background, setBackground] = useState<CareerData>(parseBackground(profile.background))
 
   // 부서 선택지: 최상위 → 하위(팀) 순으로 나열하고 하위는 "└ "로 들여쓴다.
   const deptOptions = useMemo(() => {
@@ -100,7 +106,8 @@ export function EmployeeForm({ recordId, initial, onDone, onCancel }: Props) {
         position: position.trim() || null,
         rank: rank.trim() || null,
         pay_step: payStep.trim() || null,
-        bio: bio.trim() || null,
+        photo: photo || null,
+        background,
         note: note.trim() || null,
       },
     }
@@ -118,6 +125,11 @@ export function EmployeeForm({ recordId, initial, onDone, onCancel }: Props) {
 
   return (
     <div className="space-y-4">
+      <CardShell>
+        <p className="mb-3 text-caption font-medium text-gray-700">사진</p>
+        <PhotoPicker value={photo} onChange={setPhoto} />
+      </CardShell>
+
       <CardShell>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="이름" required>
@@ -167,14 +179,14 @@ export function EmployeeForm({ recordId, initial, onDone, onCancel }: Props) {
       </CardShell>
 
       <CardShell>
-        <div className="space-y-4">
-          <Field label="약력">
-            <TextArea rows={4} value={bio} onChange={(e) => setBio(e.target.value)} />
-          </Field>
-          <Field label="노트">
-            <TextArea rows={4} value={note} onChange={(e) => setNote(e.target.value)} />
-          </Field>
-        </div>
+        <p className="mb-3 text-caption font-medium text-gray-700">약력</p>
+        <CareerEditor value={background} onChange={setBackground} />
+      </CardShell>
+
+      <CardShell>
+        <Field label="노트">
+          <TextArea rows={4} value={note} onChange={(e) => setNote(e.target.value)} />
+        </Field>
       </CardShell>
 
       <div className="flex justify-end gap-2">
