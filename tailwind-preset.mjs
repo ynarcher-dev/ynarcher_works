@@ -120,6 +120,18 @@ export default {
         // 데이터 테이블 표준 행 — ctl-table(24px) 위아래로 4px씩 여유
         row: '2rem',             // 32px
       },
+      /**
+       * 모달 폭 — Tailwind 기본 max-w-* 는 타이포그래피 척도(sm/lg/2xl)라서
+       * 다이얼로그 폭으로 쓰면 의미가 어긋난다. 대화 단계별로 이름을 따로 붙인다.
+       * 근거: 5_component_spec_rules.md §4.1
+       */
+      maxWidth: {
+        'modal-sm': '25rem',   // 400px — 확인·경고 등 한 문장짜리 대화
+        'modal-md': '37.5rem', // 600px — 단일 폼(기본값)
+        'modal-lg': '50rem',   // 800px — 2열 폼·목록 선택
+        'modal-xl': '62.5rem', // 1000px — 표를 품는 대화
+        'modal-2xl': '75rem',  // 1200px — 전체 화면에 준하는 편집기
+      },
       zIndex: {
         base: '0',
         sticky: '10',

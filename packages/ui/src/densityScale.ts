@@ -97,6 +97,19 @@ export const pagerScale: Record<
   table: { box: 'size-icon-table', numBox: 'h-icon-table min-w-icon-table', text: 'text-caption', glyph: 12 },
 }
 
+/**
+ * 데이터 테이블 격자 — 표는 언제나 `table` 맥락이므로 밀도별 분기 없이 단일 값이다.
+ * 행 높이 32px는 셀 안 컨트롤(24px) 위아래로 4px씩 남기고 딱 맞는 값이다.
+ */
+export const tableGrid = {
+  head: 'h-row',
+  row: 'h-row',
+  /** 셀 좌우 여백. 셀 안 버튼의 `px-2.5`와 같은 값이라 열이 시각적으로 정렬된다. */
+  cellX: 'px-2.5',
+  /** 고정 레이아웃(`fixed`)에서 열을 더 좁히기 위한 축소 여백. */
+  cellXFixed: 'px-2',
+} as const
+
 /** 스피너 — 로딩 자리를 차지하는 크기이므로 아이콘 격자보다 한 단계 작게 잡는다. */
 export const spinnerScale: Record<Density, string> = {
   page: 'size-6',

@@ -4,12 +4,13 @@ import { cn } from '../utils/cn'
 
 export type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl'
 
+/** 폭은 `modal-*` 토큰이 소유한다(400/600/800/1000/1200). 근거: 5_component_spec_rules.md §4.1 */
 const sizeClass: Record<ModalSize, string> = {
-  sm: 'max-w-sm',
-  md: 'max-w-lg',
-  lg: 'max-w-2xl',
-  xl: 'max-w-4xl',
-  '2xl': 'max-w-6xl',
+  sm: 'max-w-modal-sm',
+  md: 'max-w-modal-md',
+  lg: 'max-w-modal-lg',
+  xl: 'max-w-modal-xl',
+  '2xl': 'max-w-modal-2xl',
 }
 
 export interface ModalProps {

@@ -1,6 +1,7 @@
 import { useContext, useState, type ReactNode } from 'react'
 import { cn } from '../utils/cn'
 import { DensityProvider } from '../density'
+import { tableGrid } from '../densityScale'
 import { Checkbox } from './Checkbox'
 import { Button } from './Button'
 import { Pagination } from './Pagination'
@@ -13,7 +14,7 @@ export interface Column<T> {
   align?: 'left' | 'right' | 'center'
   numeric?: boolean
   sortable?: boolean
-  /** 헤더·셀에 함께 적용할 추가 클래스(폭·여백 조정 등). 기본 px-3 등과 twMerge로 충돌 해소된다. */
+  /** 헤더·셀에 함께 적용할 추가 클래스(폭·여백 조정 등). 기본 셀 여백 등과 twMerge로 충돌 해소된다. */
   className?: string
 }
 
@@ -182,7 +183,8 @@ export function DataTable<T>({
   const fixed = layout === 'fixed'
   const truncate = fixed ? 'truncate' : ''
   // fixed 레이아웃은 여백을 조금 좁혀(px-2) 각 컬럼 내용 표시 폭을 넓힌다.
-  const pad = fixed ? 'px-2' : ''
+  const pad = fixed ? tableGrid.cellXFixed : ''
+  const cellX = tableGrid.cellX
   const colSpan =
     columns.length +
     (selectable ? 1 : 0) +
@@ -234,7 +236,7 @@ export function DataTable<T>({
         <thead>
           <tr className="bg-gray-50">
             {selectable && (
-              <th className={cn('h-9 w-10 border-b border-gray-300 px-3 text-center', pad)}>
+              <th className={cn(`h-row w-10 border-b border-gray-300 ${cellX} text-center`, pad)}>
                 <Checkbox
                   aria-label="전체 선택"
                   checked={allSelected}
@@ -246,7 +248,7 @@ export function DataTable<T>({
               </th>
             )}
             {numbered && (
-              <th className={cn('h-9 w-12 border-b border-gray-300 px-3 text-right text-caption font-semibold text-gray-600', pad)}>
+              <th className={cn(`h-row w-12 border-b border-gray-300 ${cellX} text-right text-caption font-semibold text-gray-600`, pad)}>
                 No.
               </th>
             )}
@@ -256,7 +258,7 @@ export function DataTable<T>({
                 <th
                   key={col.key}
                   className={cn(
-                    'h-9 border-b border-gray-300 px-3 text-caption font-semibold text-gray-600',
+                    `h-row border-b border-gray-300 ${cellX} text-caption font-semibold text-gray-600`,
                     alignClass[col.align ?? 'left'],
                     col.sortable && 'cursor-pointer select-none hover:bg-gray-100/50',
                     pad,
@@ -287,11 +289,11 @@ export function DataTable<T>({
             {standardColumns && (
               <>
                 {showAuthor && (
-                  <th className={cn('h-9 w-20 border-b border-gray-300 px-3 text-left text-caption font-semibold text-gray-600', pad, truncate)}>{authorLabel}</th>
+                  <th className={cn(`h-row w-20 border-b border-gray-300 ${cellX} text-left text-caption font-semibold text-gray-600`, pad, truncate)}>{authorLabel}</th>
                 )}
                 {/* 수정일 헤더는 항상 좌측 정렬. 값(셀)만 updatedAtAlign을 따른다. */}
-                <th className={cn('h-9 w-28 border-b border-gray-300 px-3 text-left text-caption font-semibold text-gray-600', pad, truncate)}>수정일</th>
-                <th className={cn('h-9 w-32 border-b border-gray-300 px-3 text-center text-caption font-semibold text-gray-600', pad)}>관리</th>
+                <th className={cn(`h-row w-28 border-b border-gray-300 ${cellX} text-left text-caption font-semibold text-gray-600`, pad, truncate)}>수정일</th>
+                <th className={cn(`h-row w-32 border-b border-gray-300 ${cellX} text-center text-caption font-semibold text-gray-600`, pad)}>관리</th>
               </>
             )}
           </tr>
@@ -315,7 +317,8 @@ export function DataTable<T>({
                   key={key}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
                   className={cn(
-                    'h-11 transition-colors duration-fast hover:bg-gray-25',
+                    tableGrid.row,
+                    'transition-colors duration-fast hover:bg-gray-25',
                     !active && 'opacity-50',
                     selected.has(key) && 'bg-brand/5',
                     onRowClick && 'cursor-pointer',
@@ -324,7 +327,7 @@ export function DataTable<T>({
                 >
                   {selectable && (
                     <td
-                      className={cn('border-b border-gray-200 px-3 text-center', pad)}
+                      className={cn(`border-b border-gray-200 ${cellX} text-center`, pad)}
                       onClick={(e) => e.stopPropagation()}
                     >
                       <Checkbox
@@ -335,7 +338,7 @@ export function DataTable<T>({
                     </td>
                   )}
                   {numbered && (
-                    <td className={cn('border-b border-gray-200 px-3 text-right text-gray-600 tabular-nums', pad)}>
+                    <td className={cn(`border-b border-gray-200 ${cellX} text-right text-gray-600 tabular-nums`, pad)}>
                       {meta?.rowMark?.(row) ?? numberFrom - index}
                     </td>
                   )}
@@ -343,7 +346,7 @@ export function DataTable<T>({
                     <td
                       key={col.key}
                       className={cn(
-                        'border-b border-gray-200 px-3 font-medium text-gray-800',
+                        `border-b border-gray-200 ${cellX} font-medium text-gray-800`,
                         alignClass[col.align ?? 'left'],
                         col.numeric && 'tabular-nums',
                         pad,
@@ -357,16 +360,16 @@ export function DataTable<T>({
                   {standardColumns && (
                     <>
                       {showAuthor && (
-                        <td className={cn('whitespace-nowrap border-b border-gray-200 px-3 text-gray-600', pad, truncate)}>
+                        <td className={cn(`whitespace-nowrap border-b border-gray-200 ${cellX} text-gray-600`, pad, truncate)}>
                           {resolveAuthor(row, meta)}
                         </td>
                       )}
                       {/* 수정일(날짜)은 어떤 레이아웃에서도 줄바꿈되지 않게 nowrap 고정. auto 레이아웃에서 컬럼이 좁혀질 때 하이픈에서 줄이 갈라지는 것을 방지한다. */}
-                      <td className={cn('whitespace-nowrap border-b border-gray-200 px-3 text-gray-600 tabular-nums', alignClass[updatedAtAlign], pad, truncate)}>
+                      <td className={cn(`whitespace-nowrap border-b border-gray-200 ${cellX} text-gray-600 tabular-nums`, alignClass[updatedAtAlign], pad, truncate)}>
                         {resolveUpdatedAt(row, meta)}
                       </td>
                       <td
-                        className={cn('border-b border-gray-200 px-3 text-center', pad)}
+                        className={cn(`border-b border-gray-200 ${cellX} text-center`, pad)}
                         onClick={(e) => e.stopPropagation()}
                       >
                         {/* 복사는 읽기 전용 액션이라 manageable과 무관하게 노출(HUB 조회 센터 포함). */}
