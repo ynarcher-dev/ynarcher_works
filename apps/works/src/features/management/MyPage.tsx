@@ -1,5 +1,5 @@
-import { Badge, Banner, Button, CardShell, Spinner, TextArea, useToast } from '@ynarcher/ui'
-import { useEffect, useState, type ReactNode } from 'react'
+import { Badge, Banner, Button, CardShell, cardText, InfoField, Spinner, TextArea, useToast } from '@ynarcher/ui'
+import { useEffect, useState } from 'react'
 import { useAuthStore } from '@/auth/authStore'
 import { ROLE_LABELS } from '@/features/management/config'
 import {
@@ -13,15 +13,8 @@ function str(v: unknown): string {
   return typeof v === 'string' ? v : ''
 }
 
-/** 라벨: 값 한 줄(읽기 전용 정보). */
-function Info({ label, value }: { label: string; value: ReactNode }) {
-  return (
-    <div className="flex items-baseline gap-2">
-      <span className="shrink-0 text-caption text-gray-700">{label}:</span>
-      <span className="text-body text-gray-800">{value || '-'}</span>
-    </div>
-  )
-}
+/** 라벨: 값 한 줄 — 규격은 공용 `InfoField`가 소유한다. */
+const Info = InfoField
 
 /**
  * 마이페이지(내 계정 관리). 본인 계정 정보는 조회만 하고, 본인이 직접 바꿀 수 있는 것은
@@ -81,12 +74,13 @@ export function MyPage() {
         <div className="space-y-4 lg:col-span-2">
           <CardShell>
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-body font-semibold text-gray-900">{me.name}</h2>
+              {/* 페이지 제목('내 계정 관리')이 따로 있으므로 이름은 카드 제목 층이다. */}
+              <h2 className={cardText.title}>{me.name}</h2>
               <Badge tone="neutral">
                 {roleLabel}
               </Badge>
             </div>
-            <p className="mt-1 text-body text-gray-700">{affiliation || '-'}</p>
+            <p className={`mt-1 ${cardText.subtitle}`}>{affiliation || '-'}</p>
             <div className="mt-4 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-2">
               <Info label="회사" value={str(profile.company)} />
               <Info label="직책" value={str(profile.position)} />

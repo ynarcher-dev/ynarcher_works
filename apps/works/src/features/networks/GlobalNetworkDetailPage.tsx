@@ -1,5 +1,4 @@
-import { BackButton, Badge, Banner, Button, CardShell, Spinner } from '@ynarcher/ui'
-import type { ReactNode } from 'react'
+import { BackButton, Badge, Banner, Button, CardShell, cardText, DensityProvider, InfoField, PanelCard, Spinner } from '@ynarcher/ui'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { GlobalNetworkForm } from '@/features/networks/GlobalNetworkForm'
@@ -12,15 +11,8 @@ import { useGlobalContributions, useGlobalEntity } from '@/features/networks/glo
 
 const LIST_PATH = '/networks?tab=global'
 
-/** 라벨: 값 한 줄. */
-function Info({ label, value }: { label: string; value: ReactNode }) {
-  return (
-    <div className="flex items-baseline gap-2">
-      <span className="shrink-0 text-caption text-gray-700">{label}:</span>
-      <span className="text-body text-gray-800">{value ?? '-'}</span>
-    </div>
-  )
-}
+/** 라벨: 값 한 줄 — 규격은 공용 `InfoField`가 소유한다. */
+const Info = InfoField
 
 function formatDate(v: unknown): string {
   const s = v ? String(v) : ''
@@ -49,11 +41,14 @@ function GlobalView({ record }: { record: GlobalRow }) {
         <div className="flex items-center gap-5">
           <PhotoBox src={(profile.photo as string) ?? null} />
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-title-md font-bold text-gray-900">{record.name}</h1>
-              {record.category && <Badge tone="neutral">{record.category}</Badge>}
-            </div>
-            <p className="mt-1 text-body text-gray-700">{subtitle || '-'}</p>
+            {/* 상세 헤더는 카드 안에 있어도 페이지 맥락이다 — 24px 제목 옆 배지가 11px로 찍히지 않게 한다. */}
+            <DensityProvider value="page">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-title-md font-bold text-gray-900">{record.name}</h1>
+                {record.category && <Badge tone="neutral">{record.category}</Badge>}
+              </div>
+            </DensityProvider>
+            <p className={`mt-1 ${cardText.subtitle}`}>{subtitle || '-'}</p>
           </div>
         </div>
 
@@ -98,14 +93,13 @@ function GlobalView({ record }: { record: GlobalRow }) {
         </div>
       </CardShell>
 
-      <CardShell>
-        <h2 className="mb-3 text-body font-semibold text-gray-900">노트</h2>
+      <PanelCard title="노트">
         {intro ? (
           <p className="whitespace-pre-wrap text-body text-gray-800">{intro}</p>
         ) : (
           <p className="text-body text-gray-600">등록된 노트 내용이 없습니다.</p>
         )}
-      </CardShell>
+      </PanelCard>
       </div>
 
       {/* 우측(1/3): 자료 관리 → 변동 이력 → 피드백. 국내 상세와 공용 패널. */}

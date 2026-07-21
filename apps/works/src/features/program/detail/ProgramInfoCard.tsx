@@ -1,5 +1,4 @@
-import { Badge, CardShell } from '@ynarcher/ui'
-import type { ReactNode } from 'react'
+import { Badge, CardShell, InfoField } from '@ynarcher/ui'
 import type { Program, ProgramDepartmentKind } from '@/features/program/hooks'
 import { ProgramPhotoBox } from '@/features/program/detail/ProgramPhotoBox'
 import {
@@ -9,14 +8,8 @@ import {
 import { categoryLabel, useProgramWorkspace } from '@/features/program/workspace'
 
 /** 라벨: 값 한 줄(StartupDetailPage·NetworkDetailPage의 Info와 동일 톤). */
-function Info({ label, value }: { label: string; value: ReactNode }) {
-  return (
-    <div className="flex items-baseline gap-2">
-      <span className="shrink-0 text-caption text-gray-700">{label}:</span>
-      <span className="text-body text-gray-800">{value ?? '-'}</span>
-    </div>
-  )
-}
+/** 라벨: 값 한 줄 — 규격은 공용 `InfoField`가 소유한다. */
+const Info = InfoField
 
 function formatDate(v: unknown): string {
   const s = v ? String(v) : ''

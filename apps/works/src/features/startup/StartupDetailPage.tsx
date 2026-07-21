@@ -1,5 +1,5 @@
-import { BackButton, Badge, Banner, Button, CardShell, PanelCard, Spinner } from '@ynarcher/ui'
-import { useState, type ReactNode } from 'react'
+import { BackButton, Badge, Banner, Button, CardShell, cardText, DensityProvider, InfoField, PanelCard, Spinner } from '@ynarcher/ui'
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
@@ -33,36 +33,8 @@ const RESOURCE_TYPE = 'startup'
 /** 관리 현황 카드 섹션(플랫폼 전반 참여·관리 이력). 현재는 헤드라인만, 내용은 후속 구현. */
 const ACTIVITY_SECTIONS = ['참여 사업', '참여 M&A', '참여 프로젝트', 'A-STREAM', '기업 진단', '멘토링 & 컨설팅', '회의록']
 
-/**
- * 라벨: 값 한 줄. `className`으로 그리드 스팬 등을, `valueClassName`으로 값 표시(말줄임 등)를 지정한다.
- *
- * 라벨과 값은 크기를 `text-body` 하나로 통일하고 위계는 색으로만 만든다. 한 줄 안에서 크기가
- * 갈리면 2px 차이도 '작은 글씨'가 아니라 다른 폰트로 읽혀, 정작 색으로 줘야 할 위계를 크기가
- * 가져가 버린다. 근거: densityScale.ts `tableText` — "크기는 하나, 구분은 굵기와 색으로만".
- */
-function Info({
-  label,
-  value,
-  className,
-  valueClassName,
-}: {
-  label: string
-  value: ReactNode
-  className?: string
-  valueClassName?: string
-}) {
-  return (
-    <div className={`flex items-baseline gap-2${className ? ` ${className}` : ''}`}>
-      <span className="shrink-0 text-body text-gray-500">{label}:</span>
-      <span
-        className={`text-body text-gray-900${valueClassName ? ` ${valueClassName}` : ''}`}
-        title={typeof value === 'string' ? value : undefined}
-      >
-        {value ?? '-'}
-      </span>
-    </div>
-  )
-}
+/** 라벨: 값 한 줄 — 규격은 공용 `InfoField`가 소유한다. */
+const Info = InfoField
 
 function formatDate(v: unknown): string {
   const s = v ? String(v) : ''
@@ -125,15 +97,19 @@ export function StartupDetailPage() {
               <div className="flex items-center gap-5">
                 <PhotoBox src={logo} />
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h1 className="text-title-md font-bold text-gray-900">{record.name}</h1>
-                    {industries.map((ind) => (
-                      <Badge key={ind} tone="neutral">
-                        {ind}
-                      </Badge>
-                    ))}
-                  </div>
-                  <p className="mt-1 text-body text-gray-700">{oneLiner || '-'}</p>
+                  {/* 상세 헤더는 카드 안에 있어도 페이지 맥락이다. card 밀도를 그대로 두면 24px 제목 옆
+                      배지가 11px(tag-card)로 찍혀 먼지처럼 보인다. */}
+                  <DensityProvider value="page">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h1 className="text-title-md font-bold text-gray-900">{record.name}</h1>
+                      {industries.map((ind) => (
+                        <Badge key={ind} tone="neutral">
+                          {ind}
+                        </Badge>
+                      ))}
+                    </div>
+                  </DensityProvider>
+                  <p className={`mt-1 ${cardText.subtitle}`}>{oneLiner || '-'}</p>
                 </div>
               </div>
 
@@ -202,7 +178,7 @@ export function StartupDetailPage() {
                   <p className="text-body text-gray-600">지정된 담당자가 없습니다.</p>
                 )
               ) : (
-                <p className="text-body text-gray-700">
+                <p className="text-body text-gray-600">
                   공동관리 — NETWORKS 쓰기 권한자 누구나 수정할 수 있습니다.
                 </p>
               )}

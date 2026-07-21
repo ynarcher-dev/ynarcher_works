@@ -1,4 +1,4 @@
-import { Spinner, type BadgeTone } from '@ynarcher/ui'
+import { Spinner, cardText, type BadgeTone } from '@ynarcher/ui'
 import dayjs from 'dayjs'
 import {
   ChevronRight,
@@ -233,7 +233,7 @@ function BoardCard({
       <header className="flex shrink-0 items-center justify-between border-b border-gray-100 px-4 py-2.5">
         <span className="flex items-center gap-2">
           <Icon aria-hidden className="h-4 w-4 text-gray-500" strokeWidth={1.8} />
-          <h3 className="text-body font-semibold text-gray-900">{title}</h3>
+          <h3 className={cardText.title}>{title}</h3>
         </span>
         <Link
           to={`/office?tab=${tab}`}

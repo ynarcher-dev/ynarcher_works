@@ -23,7 +23,7 @@ export function CategoryBarList({
 }) {
   const all = data.filter((d) => d.count > 0)
   if (all.length === 0) {
-    return <p className="py-8 text-center text-caption text-gray-500">표시할 데이터가 없습니다.</p>
+    return <p className="py-8 text-center text-caption text-gray-600">표시할 데이터가 없습니다.</p>
   }
   const total = all.reduce((s, d) => s + d.count, 0) || 1
   const max = Math.max(...all.map((d) => d.count))
@@ -40,7 +40,7 @@ export function CategoryBarList({
               <span className="truncate text-caption font-medium text-gray-700" title={d.label}>
                 {d.label}
               </span>
-              <span className="shrink-0 text-caption tabular-nums text-gray-600">
+              <span className="shrink-0 text-caption tabular-nums text-gray-700">
                 <span className="font-semibold text-gray-800">{d.count.toLocaleString()}</span>
                 <span className="ml-1">{pct}%</span>
               </span>
@@ -62,7 +62,7 @@ export function CategoryBarList({
         )
       })}
       {hidden > 0 && (
-        <li className="pt-0.5 text-right text-caption text-gray-600">외 {hidden}개</li>
+        <li className="pt-0.5 text-right text-caption text-gray-700">외 {hidden}개</li>
       )}
     </ul>
   )

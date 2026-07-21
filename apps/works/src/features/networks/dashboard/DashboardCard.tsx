@@ -1,16 +1,19 @@
-import { Button, Tooltip } from '@ynarcher/ui'
+import { Button, CardShell, Tooltip, cardText } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 
 /**
  * 대시보드 블록 제목(공용). 상단 타일 섹션(일반현황 등)과 카드(DashboardCard) 제목은
  * 구조상 동급 — 둘 다 "콘텐츠 블록 위의 라벨" — 이므로 같은 스타일을 공유한다.
  * 위계는 제목 크기가 아니라 값(타일 24/30px)과 차트 값·라벨 대비로 만든다.
+ *
+ * 규격은 `cardText.title`에서 가져온다. 블록 위의 라벨이라는 역할이 카드 제목과 같으므로
+ * 문자열을 따로 들고 있을 이유가 없다.
  */
 export function DashboardSectionHeading({ title, tooltip }: { title: string; tooltip?: ReactNode }) {
   return (
     <div className="flex items-center gap-1">
-      <h3 className="text-body font-semibold text-gray-900">{title}</h3>
-      <Tooltip content={tooltip} className="text-gray-300" />
+      <h3 className={cardText.title}>{title}</h3>
+      <Tooltip content={tooltip} className="text-gray-500" />
     </div>
   )
 }
@@ -46,12 +49,12 @@ export function DashboardCard({
   const boxHeight = fill ? 'min-h-[16rem] flex-1' : (bodyH ?? (compact ? 'h-[12rem]' : 'h-[23rem]'))
   return (
     <section className={`space-y-2${fill ? ' flex h-full flex-col' : ''}${className ? ` ${className}` : ''}`}>
-      <div className="flex items-center gap-1">
-        <h3 className="text-body font-semibold text-gray-900">{title}</h3>
-        <Tooltip content={subtitle} className="text-gray-300" />
-      </div>
-      <div
-        className={`flex ${boxHeight} flex-col rounded-radius-md border border-gray-300 bg-white p-4`}
+      <DashboardSectionHeading title={title} tooltip={subtitle} />
+      {/* 상자는 CardShell이 소유한다. 수제 div로 두면 카드가 밀도 맥락(card)을 내려주지 못해
+          안의 버튼·배지가 페이지 밀도(40px)로 렌더된다 — 카드는 작은데 버튼만 큰 현상.
+          여백·모서리는 대시보드 격자에 맞춘 기존 값을 className으로 덮어쓴다. */}
+      <CardShell
+        className={`flex ${boxHeight} flex-col rounded-radius-md p-4 shadow-none`}
       >
         <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">{children}</div>
         {onExpand && (
@@ -59,7 +62,7 @@ export function DashboardCard({
             전체보기
           </Button>
         )}
-      </div>
+      </CardShell>
     </section>
   )
 }

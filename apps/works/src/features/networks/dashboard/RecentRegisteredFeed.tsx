@@ -80,7 +80,7 @@ export function RecentRegisteredFeed({
   const [offset, setOffset] = useState(0)
 
   if (!bounds) {
-    return <p className="py-8 text-center text-caption text-gray-500">{emptyLabel}</p>
+    return <p className="py-8 text-center text-caption text-gray-600">{emptyLabel}</p>
   }
 
   const totalWeeks = Math.round((bounds.latest.getTime() - bounds.earliest.getTime()) / (7 * DAY_MS))
@@ -98,7 +98,7 @@ export function RecentRegisteredFeed({
   const goNewer = () => setOffset(Math.min(0, clamped + 1))
 
   const navBtn =
-    'grid size-7 shrink-0 place-items-center rounded-radius-sm text-gray-400 transition-colors duration-fast hover:bg-gray-100 hover:text-gray-700 disabled:pointer-events-none disabled:opacity-40'
+    'grid size-7 shrink-0 place-items-center rounded-radius-sm text-gray-500 transition-colors duration-fast hover:bg-gray-100 hover:text-gray-700 disabled:pointer-events-none disabled:opacity-40'
 
   return (
     <div>
@@ -111,9 +111,9 @@ export function RecentRegisteredFeed({
           <p className="truncate text-caption font-semibold text-gray-800 tabular-nums">
             {fmtDate(start)} ~ {fmtDate(addDays(end, -1))}
           </p>
-          <p className="text-caption text-gray-600">
+          <p className="text-caption text-gray-700">
             {clamped === 0 ? '이번 주' : `${-clamped}주 전`} ·{' '}
-            <span className="font-semibold tabular-nums text-gray-600">{inWeek.length}</span>건 등록
+            <span className="font-semibold tabular-nums text-gray-700">{inWeek.length}</span>건 등록
           </p>
         </div>
         <button type="button" onClick={goNewer} disabled={!canNewer} aria-label="다음 주" className={navBtn}>
@@ -122,7 +122,7 @@ export function RecentRegisteredFeed({
       </div>
 
       {inWeek.length === 0 ? (
-        <p className="py-8 text-center text-caption text-gray-500">이 주에 등록된 항목이 없습니다.</p>
+        <p className="py-8 text-center text-caption text-gray-600">이 주에 등록된 항목이 없습니다.</p>
       ) : (
         <ul className="mt-2 space-y-1">
           {inWeek.map(({ item }) => (
@@ -141,7 +141,7 @@ export function RecentRegisteredFeed({
                     {item.badge.label}
                   </Badge>
                 </span>
-                <span className="shrink-0 text-caption tabular-nums text-gray-600">
+                <span className="shrink-0 text-caption tabular-nums text-gray-700">
                   {String(item.createdAt ?? '').slice(0, 10) || '-'}
                 </span>
               </button>

@@ -1,4 +1,4 @@
-import { BackButton, Badge, Banner, Button, CardShell, Spinner } from '@ynarcher/ui'
+import { BackButton, Badge, Banner, Button, CardShell, cardText, DensityProvider, InfoField, PanelCard, Spinner } from '@ynarcher/ui'
 import { useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { maskEmail, maskPhone } from '@/lib/mask'
@@ -26,25 +26,13 @@ const RELATION_SECTIONS = [
   '펀드(운용)',
 ] as const
 
-/** 상세 카드 섹션 래퍼. */
+/** 상세 카드 섹션 래퍼. 헤더 규격은 공용 `PanelCard`가 소유한다. */
 function SectionCard({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <CardShell>
-      <h2 className="mb-3 text-body font-semibold text-gray-900">{title}</h2>
-      {children}
-    </CardShell>
-  )
+  return <PanelCard title={title}>{children}</PanelCard>
 }
 
-/** 라벨: 값 한 줄. */
-function Info({ label, value }: { label: string; value: ReactNode }) {
-  return (
-    <div className="flex items-baseline gap-2">
-      <span className="shrink-0 text-caption text-gray-700">{label}:</span>
-      <span className="text-body text-gray-800">{value ?? '-'}</span>
-    </div>
-  )
-}
+/** 라벨: 값 한 줄 — 규격은 공용 `InfoField`가 소유한다. */
+const Info = InfoField
 
 function formatDate(v: string | null): string {
   return v && v.length >= 10 ? v.slice(0, 10) : '-'
@@ -154,13 +142,16 @@ export function EmployeeDetailPage({
               <div className="flex items-center gap-5">
                 <PhotoBox src={null} />
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h1 className="text-title-md font-bold text-gray-900">{emp.name}</h1>
-                    <Badge tone="neutral">
-                      {roleLabel}
-                    </Badge>
-                  </div>
-                  <p className="mt-1 text-body text-gray-700">{subtitle}</p>
+                  {/* 상세 헤더는 카드 안에 있어도 페이지 맥락이다 — 24px 제목 옆 배지가 11px로 찍히지 않게 한다. */}
+                  <DensityProvider value="page">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h1 className="text-title-md font-bold text-gray-900">{emp.name}</h1>
+                      <Badge tone="neutral">
+                        {roleLabel}
+                      </Badge>
+                    </div>
+                  </DensityProvider>
+                  <p className={`mt-1 ${cardText.subtitle}`}>{subtitle}</p>
                 </div>
               </div>
 

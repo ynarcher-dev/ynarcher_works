@@ -1,4 +1,4 @@
-import { Button, CardShell, Input, Select, TagChip, TextArea, cardText, useToast } from '@ynarcher/ui'
+import { Button, CardShell, Input, PanelCard, Select, TagChip, TextArea, useToast } from '@ynarcher/ui'
 import { useEffect, useState, type ChangeEvent, type ReactNode } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { useEmployees } from '@/features/management/hooks'
@@ -473,9 +473,8 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel }: Props
 
           {/* 담당자 카드(투자기업 전용): 리드 1 + 지원 N. 승격 RPC로 원자 지정된다. */}
           {willInvest && (
-            <CardShell>
-              <h2 className={`mb-1 ${cardText.title}`}>담당자 (투자기업)</h2>
-              <p className="mb-4 text-caption text-gray-700">
+            <PanelCard title="담당자 (투자기업)">
+              <p className="mb-4 text-body text-gray-500">
                 투자기업은 리드 담당자 지정이 필수입니다. 지정 담당자와 관리자만 이후 정보를 수정·삭제할 수 있습니다.
               </p>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -511,39 +510,36 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel }: Props
                   </div>
                 </Field>
               </div>
-            </CardShell>
+            </PanelCard>
           )}
 
           {/* 기업 개요 구분선(상세페이지와 동일) */}
           <SectionHeading title="기업 개요" />
 
           {/* 비즈니스 & 팀 역량 카드(통합 수정에 포함) */}
-          <CardShell>
-            <h2 className={`mb-4 ${cardText.title}`}>비즈니스 &amp; 팀 역량</h2>
+          <PanelCard title="비즈니스 & 팀 역량">
             <StartupBusinessTeamFields
               register={register}
               control={control}
               capabilities={capabilities}
               setCapabilities={setCapabilities}
             />
-          </CardShell>
+          </PanelCard>
 
           {/* 주주 구성 카드(통합 수정에 포함) */}
-          <CardShell>
-            <h2 className={`mb-4 ${cardText.title}`}>주주 구성</h2>
+          <PanelCard title="주주 구성">
             <StartupShareholderFields history={shareholders} setHistory={setShareholders} />
-          </CardShell>
+          </PanelCard>
 
           {/* 성장 지표 카드(통합 수정에 포함) */}
-          <CardShell>
-            <h2 className={`mb-4 ${cardText.title}`}>성장 지표</h2>
+          <PanelCard title="성장 지표">
             <StartupGrowthFields
               growth={growth}
               setGrowth={setGrowth}
               businessStatus={businessStatus}
               setBusinessStatus={setBusinessStatus}
             />
-          </CardShell>
+          </PanelCard>
 
           {/* 미디어 구분선(상세페이지와 동일) */}
           <SectionHeading title="미디어" />

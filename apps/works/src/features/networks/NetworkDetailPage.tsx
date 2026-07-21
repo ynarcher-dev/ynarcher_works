@@ -1,4 +1,4 @@
-import { BackButton, Badge, Banner, Button, CardShell, Spinner } from '@ynarcher/ui'
+import { BackButton, Badge, Banner, Button, CardShell, cardText, DensityProvider, InfoField, PanelCard, Spinner } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -37,25 +37,14 @@ function SectionCard({
   children: ReactNode
 }) {
   return (
-    <CardShell>
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-body font-semibold text-gray-900">{title}</h2>
-        {action}
-      </div>
+    <PanelCard title={title} action={action}>
       {children}
-    </CardShell>
+    </PanelCard>
   )
 }
 
-/** 라벨: 값 한 줄. */
-function Info({ label, value }: { label: string; value: ReactNode }) {
-  return (
-    <div className="flex items-baseline gap-2">
-      <span className="shrink-0 text-caption text-gray-700">{label}:</span>
-      <span className="text-body text-gray-800">{value ?? '-'}</span>
-    </div>
-  )
-}
+/** 라벨: 값 한 줄 — 규격은 공용 `InfoField`가 소유한다. */
+const Info = InfoField
 
 function formatDate(v: unknown): string {
   const s = v ? String(v) : ''
@@ -102,22 +91,25 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
         <div className="flex items-center gap-5">
           <PhotoBox src={(profile.photo as string) ?? null} />
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-title-md font-bold text-gray-900">
-                {(record.name as string) ?? label}
-              </h1>
-              {category && (
-                <Badge tone="neutral">
-                  {category}
-                </Badge>
-              )}
-              {!compact && (
-                <Badge tone={matchOk ? 'success' : 'neutral'}>
-                  매칭 {matchOk ? '가능' : '불가능'}
-                </Badge>
-              )}
-            </div>
-            <p className="mt-1 text-body text-gray-700">{subtitle || '-'}</p>
+            {/* 상세 헤더는 카드 안에 있어도 페이지 맥락이다 — 24px 제목 옆 배지가 11px로 찍히지 않게 한다. */}
+            <DensityProvider value="page">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-title-md font-bold text-gray-900">
+                  {(record.name as string) ?? label}
+                </h1>
+                {category && (
+                  <Badge tone="neutral">
+                    {category}
+                  </Badge>
+                )}
+                {!compact && (
+                  <Badge tone={matchOk ? 'success' : 'neutral'}>
+                    매칭 {matchOk ? '가능' : '불가능'}
+                  </Badge>
+                )}
+              </div>
+            </DensityProvider>
+            <p className={`mt-1 ${cardText.subtitle}`}>{subtitle || '-'}</p>
           </div>
         </div>
 

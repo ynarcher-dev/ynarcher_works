@@ -37,9 +37,8 @@ export function StyleguidePage() {
         description="크기를 가르는 축은 중요도가 아니라 놓이는 자리입니다. 아래 세 열은 같은 코드가 서로 다른 맥락에 놓였을 때의 결과이며, 우측 회색 숫자는 실제 렌더 높이(px)입니다."
       />
 
-      <Card>
+      <Card title="액션">
         <div className="space-y-1">
-          <h2 className="text-body font-semibold text-gray-900">액션</h2>
           <DensityHeader />
           <DensityRow name="Button primary" render={() => <Button>저장</Button>} />
           <DensityRow
@@ -62,9 +61,8 @@ export function StyleguidePage() {
         </div>
       </Card>
 
-      <Card>
+      <Card title="폼">
         <div className="space-y-1">
-          <h2 className="text-body font-semibold text-gray-900">폼</h2>
           <DensityHeader />
           <DensityRow name="Input" render={() => <Input placeholder="이름" />} />
           <DensityRow
@@ -90,9 +88,8 @@ export function StyleguidePage() {
         </div>
       </Card>
 
-      <Card>
+      <Card title="표시">
         <div className="space-y-1">
-          <h2 className="text-body font-semibold text-gray-900">표시</h2>
           <DensityHeader />
           <DensityRow name="Badge" render={() => <Badge tone="info">심사중</Badge>} />
           <DensityRow
