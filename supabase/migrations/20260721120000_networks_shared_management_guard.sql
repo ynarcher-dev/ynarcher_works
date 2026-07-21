@@ -33,15 +33,30 @@
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
--- (1) 파괴적 작업 가드 트리거 해제 (8종 실카테고리 테이블)
---     others(미분류)는 애초에 가드 대상이 아니었다.
+-- (1) 파괴적 작업 가드 트리거 해제
+--
+--     테이블 이름을 나열하지 않고 카탈로그에서 이 함수에 걸린 트리거를 찾아 지운다.
+--     원 마이그레이션(20260707160000)은 8종을 루프로 걸었지만, 이후 새 마스터가 추가될 때마다
+--     각자 트리거를 따로 붙였다 — exp(20260707180000), global_networks(20260707220000).
+--     이름을 하드코딩하면 그런 뒤늦은 추가분을 놓쳐 함수 DROP이 의존성 오류로 막힌다.
+--     (실제로 처음 적용 시도에서 이 두 개가 걸려 롤백됐다.)
 -- ---------------------------------------------------------------------
 do $$
-declare t text;
+declare r record;
 begin
-  foreach t in array array['experts','van','investors','corporates','institutions','universities','vendors','etc']
+  for r in
+    select n2.nspname as sch, c.relname as tbl, t.tgname as trg
+      from pg_trigger t
+      join pg_class c      on c.oid  = t.tgrelid
+      join pg_namespace n2 on n2.oid = c.relnamespace
+      join pg_proc p       on p.oid  = t.tgfoid
+      join pg_namespace n  on n.oid  = p.pronamespace
+     where n.nspname = 'app'
+       and p.proname = 'guard_network_destructive'
+       and not t.tgisinternal
   loop
-    execute format('drop trigger if exists trg_%1$s_destructive_guard on public.%1$s;', t);
+    execute format('drop trigger if exists %I on %I.%I;', r.trg, r.sch, r.tbl);
+    raise notice '가드 트리거 해제: %.% (%)', r.sch, r.tbl, r.trg;
   end loop;
 end $$;
 
