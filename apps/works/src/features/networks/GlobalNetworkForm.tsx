@@ -4,6 +4,8 @@ import { useMemo, useState } from 'react'
 import { useTags } from '@/features/admin/hooks'
 import { PhotoBox } from '@/features/networks/PhotoBox'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
+import { PendingMaterialPanel } from '@/features/networks/PendingMaterialPanel'
+import { usePendingMaterials } from '@/features/networks/pendingMaterials'
 import {
   GLOBAL_CATEGORY_OPTIONS,
   REGION_TAG_TABLE,
@@ -58,6 +60,8 @@ export function GlobalNetworkForm({ recordId, initial, onDone, onCancel }: Props
   const create = useCreateGlobal()
   const update = useUpdateGlobal()
   const isEdit = Boolean(recordId)
+  // 등록 모드에서 미리 고른 자료. 저장 성공 직후 새 id로 일괄 업로드한다.
+  const pending = usePendingMaterials()
   const profile = (initial?.profile ?? {}) as Record<string, unknown>
 
   const [name, setName] = useState((initial?.name as string) ?? '')
@@ -156,7 +160,14 @@ export function GlobalNetworkForm({ recordId, initial, onDone, onCancel }: Props
           return
         }
         const id = await create.mutateAsync(payload)
-        toast.show('글로벌 네트워크를 등록했습니다.', 'success')
+        // 등록 전에 첨부한 자료를 새 레코드에 업로드한다.
+        const { failed } = await pending.flush(id, () => 'global_network')
+        toast.show(
+          failed > 0
+            ? `글로벌 네트워크를 등록했지만 자료 ${failed}건 업로드에 실패했습니다. 상세페이지에서 다시 첨부해 주세요.`
+            : '글로벌 네트워크를 등록했습니다.',
+          failed > 0 ? 'warning' : 'success',
+        )
         onDone(id)
       }
     } catch {
@@ -285,14 +296,12 @@ export function GlobalNetworkForm({ recordId, initial, onDone, onCancel }: Props
           </div>
         </div>
 
-        {/* 우측(1/3): 자료 관리. 신규 등록 전에는 대상 레코드가 없어 안내만 노출한다. */}
+        {/* 우측(1/3): 자료 관리. 신규 등록에서는 보류 첨부 후 저장 시 함께 업로드한다. */}
         <div className="space-y-4 lg:col-span-1">
           {isEdit && recordId ? (
             <MaterialPanel targetType="global_network" targetId={recordId} />
           ) : (
-            <div className="rounded-radius-lg border border-dashed border-gray-300 bg-gray-50 p-5 text-caption text-gray-500">
-              자료는 등록 완료 후 상세페이지에서 첨부할 수 있습니다.
-            </div>
+            <PendingMaterialPanel slot="main" pending={pending} />
           )}
         </div>
       </div>

@@ -2,6 +2,7 @@ import { Button, Spinner } from '@ynarcher/ui'
 import { Download, File as FileIcon, Trash2 } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { DetailPanelCard } from '@/features/networks/DetailPanelCard'
+import { MaterialDropZone } from '@/features/networks/MaterialDropZone'
 import { MiniPager, usePaged } from '@/features/networks/MiniPager'
 import {
   downloadMaterial,
@@ -35,17 +36,16 @@ export function MaterialPanel({
   /** 패널 제목(기본 '자료 관리'). 한 레코드에 자료 분류가 여러 개일 때 구분용. */
   title?: string
 }) {
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [dragging, setDragging] = useState(false)
+  // 드롭존이 소유한 파일 입력을 헤더 '업로드' 버튼에서도 열기 위한 핸들.
+  const openPicker = useRef<(() => void) | null>(null)
   const { data: materials, isLoading } = useMaterials(targetType, targetId)
   const upload = useUploadMaterial(targetType, targetId)
   const remove = useDeleteMaterial(targetType, targetId)
   const list = materials ?? []
   const { pageItems, page, setPage, pageCount } = usePaged(list)
 
-  const addFiles = (files: FileList | null) => {
-    if (!files || files.length === 0) return
-    for (const file of Array.from(files)) upload.mutate(file)
+  const addFiles = (files: File[]) => {
+    for (const file of files) upload.mutate(file)
   }
 
   const busy = upload.isPending
@@ -60,7 +60,7 @@ export function MaterialPanel({
             size="sm"
             variant="secondary"
             disabled={busy}
-            onClick={() => inputRef.current?.click()}
+            onClick={() => openPicker.current?.()}
           >
             {busy ? '업로드 중…' : '업로드'}
           </Button>
@@ -69,44 +69,7 @@ export function MaterialPanel({
     >
       {!readOnly && (
         <>
-          <input
-            ref={inputRef}
-            type="file"
-            multiple
-            className="hidden"
-            onChange={(e) => {
-              addFiles(e.target.files)
-              e.target.value = ''
-            }}
-          />
-
-          <div
-            onDragOver={(e) => {
-              e.preventDefault()
-              setDragging(true)
-            }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={(e) => {
-              e.preventDefault()
-              setDragging(false)
-              addFiles(e.dataTransfer.files)
-            }}
-            className={`rounded-radius-md border border-dashed px-4 py-6 text-center transition-colors duration-fast ${
-              dragging ? 'border-brand bg-brand/5' : 'border-gray-300 bg-gray-50'
-            }`}
-          >
-            <p className="text-body text-gray-600">
-              파일을 여기로 끌어다 놓거나{' '}
-              <button
-                type="button"
-                onClick={() => inputRef.current?.click()}
-                className="font-semibold text-brand hover:text-brand-600"
-              >
-                클릭
-              </button>
-              하여 업로드
-            </p>
-          </div>
+          <MaterialDropZone onFiles={addFiles} openRef={openPicker} />
 
           {upload.isError && (
             <p className="mt-2 text-caption text-brand">

@@ -7,6 +7,8 @@ import { supabase } from '@/lib/supabase'
 import { PhotoBox } from '@/features/networks/PhotoBox'
 import { CareerEditor } from '@/features/networks/CareerEditor'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
+import { PendingMaterialPanel } from '@/features/networks/PendingMaterialPanel'
+import { usePendingMaterials } from '@/features/networks/pendingMaterials'
 import { parseBackground, type CareerData } from '@/features/networks/careerConfig'
 import {
   CATEGORY_OPTIONS,
@@ -89,6 +91,8 @@ export function NetworkForm({ entity, recordId, initial, onDone, onCancel }: Pro
   const create = useCreateEntity(entity)
   const update = useUpdateEntity(entity)
   const isEdit = Boolean(recordId)
+  // 등록 모드에서 미리 고른 자료. 저장 성공 직후 새 id·확정 구분으로 일괄 업로드한다.
+  const pending = usePendingMaterials()
 
   const profile = (initial?.profile ?? {}) as Record<string, unknown>
 
@@ -218,7 +222,17 @@ export function NetworkForm({ entity, recordId, initial, onDone, onCancel }: Pro
           action: 'created',
           source: 'manual',
         })
-        toast.show(`${targetLabel}을(를) 등록했습니다.`, 'success')
+        // 등록 전에 첨부한 자료를 새 레코드에 업로드한다(구분 변경 시 저장된 대상 기준).
+        const { failed } = await pending.flush(
+          newId,
+          () => PROFILE_RESOURCE_TYPE[target] ?? target,
+        )
+        toast.show(
+          failed > 0
+            ? `${targetLabel}을(를) 등록했지만 자료 ${failed}건 업로드에 실패했습니다. 상세페이지에서 다시 첨부해 주세요.`
+            : `${targetLabel}을(를) 등록했습니다.`,
+          failed > 0 ? 'warning' : 'success',
+        )
         onDone({ id: newId, targetEntity: target, moved: target !== entity })
       }
     } catch {
@@ -352,7 +366,7 @@ export function NetworkForm({ entity, recordId, initial, onDone, onCancel }: Pro
           </div>
         </div>
 
-        {/* 우측(1/3): 자료 관리. 신규 등록 전에는 대상 레코드가 없어 안내만 노출한다. */}
+        {/* 우측(1/3): 자료 관리. 신규 등록에서는 보류 첨부 후 저장 시 함께 업로드한다. */}
         <div className="space-y-4 lg:col-span-1">
           {isEdit && recordId ? (
             <MaterialPanel
@@ -360,9 +374,7 @@ export function NetworkForm({ entity, recordId, initial, onDone, onCancel }: Pro
               targetId={recordId}
             />
           ) : (
-            <div className="rounded-radius-lg border border-dashed border-gray-300 bg-gray-50 p-5 text-caption text-gray-500">
-              자료는 등록 완료 후 상세페이지에서 첨부할 수 있습니다.
-            </div>
+            <PendingMaterialPanel slot="main" pending={pending} />
           )}
         </div>
       </div>

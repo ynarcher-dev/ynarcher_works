@@ -42,34 +42,42 @@ function safeName(name: string): string {
 }
 
 /**
- * 자료 업로드: Storage 버킷에 올린 뒤 attachments 메타 행을 남긴다.
+ * 자료 1건 업로드(공용 실행부): Storage 버킷에 올린 뒤 attachments 메타 행을 남긴다.
  * 경로는 `${target_type}/${target_id}/${uuid}-${파일명}`으로 충돌을 피한다.
  * 메타 insert 실패 시 방금 올린 오브젝트를 되돌린다(고아 파일 방지).
+ * 등록 폼의 보류 자료(등록 완료 후 일괄 업로드)도 이 함수를 공유한다.
  */
+export async function uploadMaterialFile(
+  targetType: string,
+  targetId: string,
+  file: File,
+): Promise<void> {
+  const path = `${targetType}/${targetId}/${crypto.randomUUID()}-${safeName(file.name)}`
+  const { error: upErr } = await supabase.storage
+    .from(BUCKET)
+    .upload(path, file, { contentType: file.type || undefined })
+  if (upErr) throw upErr
+
+  const { error: metaErr } = await supabase.from('attachments').insert({
+    target_type: targetType,
+    target_id: targetId,
+    file_name: file.name,
+    storage_path: path,
+    content_type: file.type || null,
+    byte_size: file.size,
+  })
+  if (metaErr) {
+    // 메타 기록 실패 시 오브젝트를 되돌려 고아 파일이 남지 않게 한다.
+    await supabase.storage.from(BUCKET).remove([path])
+    throw metaErr
+  }
+}
+
+/** 자료 업로드 뮤테이션(상세·수정 모드). 성공 시 해당 대상의 목록을 무효화한다. */
 export function useUploadMaterial(targetType: string, targetId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (file: File): Promise<void> => {
-      const path = `${targetType}/${targetId}/${crypto.randomUUID()}-${safeName(file.name)}`
-      const { error: upErr } = await supabase.storage
-        .from(BUCKET)
-        .upload(path, file, { contentType: file.type || undefined })
-      if (upErr) throw upErr
-
-      const { error: metaErr } = await supabase.from('attachments').insert({
-        target_type: targetType,
-        target_id: targetId,
-        file_name: file.name,
-        storage_path: path,
-        content_type: file.type || null,
-        byte_size: file.size,
-      })
-      if (metaErr) {
-        // 메타 기록 실패 시 오브젝트를 되돌려 고아 파일이 남지 않게 한다.
-        await supabase.storage.from(BUCKET).remove([path])
-        throw metaErr
-      }
-    },
+    mutationFn: (file: File) => uploadMaterialFile(targetType, targetId, file),
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: ['materials', targetType, targetId] }),
   })
