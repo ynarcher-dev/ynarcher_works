@@ -2,7 +2,7 @@ import { useContext, useState, type ReactNode } from 'react'
 import { cn } from '../utils/cn'
 import { DensityProvider } from '../density'
 import { Checkbox } from './Checkbox'
-import { InlineButton } from './InlineButton'
+import { Button } from './Button'
 import { Pagination } from './Pagination'
 import { ToastContext } from './toast/ToastContext'
 
@@ -374,17 +374,17 @@ export function DataTable<T>({
                           <div className="flex items-center justify-center gap-1 whitespace-nowrap">
                             {/* 수정은 편집 권한 컨텍스트에서, 활성 행에 대해서만 노출한다. */}
                             {manageable && meta?.onEdit && active && (
-                              <InlineButton
-                                tone="outline"
+                              <Button
+                                variant="outline"
                                 title="수정"
                                 onClick={() => meta.onEdit!(row)}
                               >
                                 수정
-                              </InlineButton>
+                              </Button>
                             )}
                             {meta?.copyText && (
-                              <InlineButton
-                                tone="outline"
+                              <Button
+                                variant="outline"
                                 title="복사하기"
                                 onClick={() => {
                                   void navigator.clipboard
@@ -394,14 +394,13 @@ export function DataTable<T>({
                                 }}
                               >
                                 복사
-                              </InlineButton>
+                              </Button>
                             )}
                             {/* 비활성화(소프트 삭제)는 편집 권한 컨텍스트(manageable)에서만 노출한다. */}
                             {manageable &&
                               (active ? (
-                                <InlineButton
-                                  tone="outline"
-                                  danger
+                                <Button
+                                  variant="outline-danger"
                                   title="비활성화(소프트 삭제)"
                                   disabled={!meta?.onDeactivate}
                                   onClick={() => {
@@ -417,7 +416,7 @@ export function DataTable<T>({
                                   }}
                                 >
                                   비활성화
-                                </InlineButton>
+                                </Button>
                               ) : (
                                 <span className="text-caption text-gray-400">비활성</span>
                               ))}

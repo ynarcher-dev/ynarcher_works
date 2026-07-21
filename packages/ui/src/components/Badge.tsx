@@ -1,18 +1,9 @@
 import type { ReactNode } from 'react'
 import { cn } from '../utils/cn'
 import { useDensity, type Density } from '../density'
+import { tagScale } from '../densityScale'
 
 export type BadgeTone = 'neutral' | 'success' | 'warning' | 'info' | 'danger'
-
-/**
- * 밀도 맥락별 치수. 크기 변형(`size`)은 두지 않는다 — 배지의 위계는 크기가 아니라 색(tone)이
- * 전담하고, 크기는 놓이는 자리가 정한다. 근거: 5_component_spec_rules.md §1.2 / §3.4
- */
-const densityClass: Record<Density, string> = {
-  page: 'h-tag-page px-2 text-tag-page',
-  card: 'h-tag-card px-1.5 text-tag-card',
-  table: 'h-tag-table px-1.5 text-tag-table',
-}
 
 const toneClass: Record<BadgeTone, string> = {
   neutral: 'border-gray-300 bg-gray-50 text-gray-600',
@@ -41,7 +32,7 @@ export interface BadgeProps {
  * 근거: 5_component_spec_rules.md §3.4
  */
 export function Badge({ tone = 'neutral', density, dot = false, children, className }: BadgeProps) {
-  const d = useDensity(density)
+  const s = tagScale[useDensity(density)]
   const dotColorClass: Record<BadgeTone, string> = {
     neutral: 'bg-gray-400',
     success: 'bg-success',
@@ -55,14 +46,16 @@ export function Badge({ tone = 'neutral', density, dot = false, children, classN
       className={cn(
         // shrink-0 · whitespace-nowrap: 폭이 좁은 표 셀에서 찌그러지거나 줄바꿈으로 박스가 깨지지 않게 한다.
         'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-radius-sm border font-medium leading-none transition-colors duration-fast',
-        densityClass[d],
+        s.height,
+        s.text,
+        s.padX,
         toneClass[tone],
         className,
       )}
     >
       {dot && (
         <span
-          className={cn('h-1 w-1 shrink-0 rounded-full', dotColorClass[tone])}
+          className={cn('shrink-0 rounded-full', s.dot, dotColorClass[tone])}
           aria-hidden="true"
         />
       )}

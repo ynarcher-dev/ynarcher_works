@@ -1,4 +1,4 @@
-import { Badge, Button, DataTable, InlineSelect, Spinner, type Column, type DataTableProps } from '@ynarcher/ui'
+import { Badge, Button, DataTable, Select, Spinner, type Column, type DataTableProps } from '@ynarcher/ui'
 import { useMemo } from 'react'
 import { maskEmail, maskPhone } from '@/lib/mask'
 import { useSensitiveStore } from '@/features/admin/sensitiveStore'
@@ -181,7 +181,7 @@ export function MasterListView({
           if (categorySelect) {
             const known = categorySelect.options.some((o) => o.value === v)
             return (
-              <InlineSelect
+              <Select
                 value={known ? (v as string) : ''}
                 disabled={categorySelect.disabled}
                 // 행 클릭(상세 진입)과 분리한다.
@@ -196,7 +196,7 @@ export function MasterListView({
                     {o.label}
                   </option>
                 ))}
-              </InlineSelect>
+              </Select>
             )
           }
           return v ? <Badge tone="neutral">{v}</Badge> : '-'

@@ -2,12 +2,11 @@ import { forwardRef, type InputHTMLAttributes, type ReactNode } from 'react'
 import { cn } from '../utils/cn'
 import { useDensity, type Density } from '../density'
 import {
+  controlIconPad,
+  controlScale,
   formBaseClass,
-  formHeightClass,
   formInvalidClass,
-  formPadClass,
-  formPadWithIcon,
-} from '../formDensity'
+} from '../densityScale'
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   invalid?: boolean
@@ -22,13 +21,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   ref,
 ) {
   const d = useDensity(density)
+  const s = controlScale[d]
   return (
     <div className="relative flex w-full items-center">
       {icon && (
         <span
           className={cn(
             'absolute shrink-0 text-gray-400',
-            d === 'table' ? 'left-2' : d === 'card' ? 'left-2.5' : 'left-3.5',
+            d === 'table' ? 'left-2.5' : d === 'card' ? 'left-3' : 'left-3.5',
           )}
         >
           {icon}
@@ -39,8 +39,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         aria-invalid={invalid}
         className={cn(
           formBaseClass,
-          formHeightClass[d],
-          icon ? formPadWithIcon[d].left : formPadClass[d],
+          s.height,
+          s.text,
+          icon ? controlIconPad[d].leading : s.padX,
           invalid && formInvalidClass,
           className,
         )}

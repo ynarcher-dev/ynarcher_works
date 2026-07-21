@@ -1,17 +1,7 @@
 import type { ButtonHTMLAttributes } from 'react'
 import { cn } from '../utils/cn'
 import { useDensity, type Density } from '../density'
-
-/**
- * 밀도 맥락별 치수. 태그를 누르는 조작이므로 `Badge`와 **같은 높이·글자**를 공유한다 —
- * 선택 전후로 크기가 달라 보이면 같은 목록이 들썩이기 때문이다.
- * 근거: 5_component_spec_rules.md §1.2 / §3.4
- */
-const densityClass: Record<Density, string> = {
-  page: 'h-tag-page px-2 text-tag-page',
-  card: 'h-tag-card px-1.5 text-tag-card',
-  table: 'h-tag-table px-1.5 text-tag-table',
-}
+import { tagScale } from '../densityScale'
 
 export interface TagChipProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   /** 선택 상태. 켜지면 브랜드 톤으로 채운다. */
@@ -34,7 +24,7 @@ export function TagChip({
   type = 'button',
   ...props
 }: TagChipProps) {
-  const d = useDensity(density)
+  const s = tagScale[useDensity(density)]
   return (
     <button
       type={type}
@@ -43,7 +33,9 @@ export function TagChip({
         'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-radius-sm border font-medium leading-none transition-colors duration-fast',
         'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10',
         'disabled:cursor-not-allowed disabled:opacity-40',
-        densityClass[d],
+        s.height,
+        s.text,
+        s.padX,
         selected
           ? 'border-brand bg-brand/10 text-brand'
           : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50 disabled:hover:bg-white',

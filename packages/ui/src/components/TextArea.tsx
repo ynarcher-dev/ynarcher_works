@@ -1,7 +1,7 @@
 import { forwardRef, type TextareaHTMLAttributes } from 'react'
 import { cn } from '../utils/cn'
 import { useDensity, type Density } from '../density'
-import { formBaseClass, formInvalidClass } from '../formDensity'
+import { formBaseClass, formInvalidClass, textAreaScale } from '../densityScale'
 
 export interface TextAreaProps
   extends TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -15,12 +15,6 @@ export interface TextAreaProps
  * 세로 크기를 고정하지 않는 유일한 폼 컨트롤이다.
  * react-hook-form register가 동작하도록 ref를 forward한다.
  */
-const padClass: Record<Density, string> = {
-  page: 'px-3.5 py-2.5 text-body',
-  card: 'px-3 py-2 text-body-sm',
-  table: 'px-2 py-1.5 text-caption',
-}
-
 export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(function TextArea(
   { invalid, density, className, ...props },
   ref,
@@ -34,7 +28,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(function 
         formBaseClass,
         // 스펙 요구: 최소 높이 확보 + 세로 리사이즈 허용(가로는 레이아웃이 깨지므로 막는다).
         'min-h-[7.5rem] resize-y',
-        padClass[d],
+        textAreaScale[d],
         invalid && formInvalidClass,
         className,
       )}

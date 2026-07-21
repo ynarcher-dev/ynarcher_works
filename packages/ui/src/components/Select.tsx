@@ -2,11 +2,11 @@ import type { SelectHTMLAttributes } from 'react'
 import { cn } from '../utils/cn'
 import { useDensity, type Density } from '../density'
 import {
+  controlIconPad,
+  controlScale,
   formBaseClass,
-  formHeightClass,
   formInvalidClass,
-  formPadWithIcon,
-} from '../formDensity'
+} from '../densityScale'
 
 export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   invalid?: boolean
@@ -17,6 +17,7 @@ export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 /** 셀렉트 박스(4상태, 커스텀 화살표). 같은 줄의 Input·Button과 높이를 공유한다. */
 export function Select({ invalid, density, className, children, ...props }: SelectProps) {
   const d = useDensity(density)
+  const s = controlScale[d]
   const arrowSize = d === 'page' ? 16 : d === 'card' ? 14 : 12
   return (
     <div className="relative flex w-full items-center">
@@ -25,8 +26,9 @@ export function Select({ invalid, density, className, children, ...props }: Sele
         className={cn(
           formBaseClass,
           'appearance-none',
-          formHeightClass[d],
-          formPadWithIcon[d].right,
+          s.height,
+          s.text,
+          controlIconPad[d].trailing,
           invalid && formInvalidClass,
           className,
         )}
@@ -38,7 +40,7 @@ export function Select({ invalid, density, className, children, ...props }: Sele
       <span
         className={cn(
           'pointer-events-none absolute shrink-0 text-gray-400',
-          d === 'table' ? 'right-2' : d === 'card' ? 'right-3' : 'right-3.5',
+          d === 'table' ? 'right-2.5' : d === 'card' ? 'right-3' : 'right-3.5',
         )}
         aria-hidden="true"
       >

@@ -1,4 +1,4 @@
-import { Badge, Banner, Button, cn, InlineSelect, Modal, useToast } from '@ynarcher/ui'
+import { Badge, Banner, Button, cn, Modal, Select, useToast } from '@ynarcher/ui'
 import { useQueryClient } from '@tanstack/react-query'
 import { useState, type DragEvent } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -311,7 +311,7 @@ export function BulkUploadPanel() {
             <div className="flex flex-wrap items-center gap-2 rounded-radius-md border border-gray-200 bg-gray-50 px-3 py-2">
               <span className="text-caption font-medium text-gray-700">선택 {selected.length}건</span>
               <div className="w-32">
-                <InlineSelect
+                <Select
                   value=""
                   onChange={(e) => e.target.value && applyBulkDecision(e.target.value as Decision)}
                 >
@@ -319,15 +319,15 @@ export function BulkUploadPanel() {
                   <option value="merge">합치기</option>
                   <option value="new">신규 등록</option>
                   <option value="skip">미업로드</option>
-                </InlineSelect>
+                </Select>
               </div>
               <div className="w-32">
-                <InlineSelect value="" onChange={(e) => e.target.value && applyBulkCategory(e.target.value)}>
+                <Select value="" onChange={(e) => e.target.value && applyBulkCategory(e.target.value)}>
                   <option value="">구분 일괄</option>
                   {CATEGORY_SELECT.map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
-                </InlineSelect>
+                </Select>
               </div>
               <Button variant="secondary" onClick={() => setSelected([])}>선택 해제</Button>
             </div>

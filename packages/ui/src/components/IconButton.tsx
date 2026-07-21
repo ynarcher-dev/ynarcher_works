@@ -1,6 +1,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { cn } from '../utils/cn'
 import { useDensity, type Density } from '../density'
+import { iconScale } from '../densityScale'
 
 export type IconButtonVariant = 'outline' | 'ghost' | 'selected'
 
@@ -9,16 +10,6 @@ const variantClass: Record<IconButtonVariant, string> = {
     'border border-gray-300 bg-white text-gray-500 hover:bg-gray-25 hover:text-gray-700',
   ghost: 'border border-transparent text-gray-500 hover:bg-gray-100 hover:text-gray-800',
   selected: 'border border-gray-400 bg-gray-100 text-gray-900',
-}
-
-/**
- * 밀도 맥락별 정사각 치수. 라벨이 없어 같은 맥락의 Button보다 한 단계 작게 잡는다.
- * 근거: 5_component_spec_rules.md §1.2 / §2.1
- */
-const densityClass: Record<Density, string> = {
-  page: 'size-icon-page',
-  card: 'size-icon-card',
-  table: 'size-icon-table',
 }
 
 export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -47,7 +38,7 @@ export function IconButton({
   type = 'button',
   ...props
 }: IconButtonProps) {
-  const d = useDensity(density)
+  const s = iconScale[useDensity(density)]
   return (
     <button
       type={type}
@@ -57,7 +48,7 @@ export function IconButton({
         'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10',
         'disabled:cursor-not-allowed disabled:opacity-55',
         variantClass[variant],
-        densityClass[d],
+        s.box,
         danger && 'hover:bg-danger-subtle hover:text-danger',
         className,
       )}

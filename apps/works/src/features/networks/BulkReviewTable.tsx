@@ -1,4 +1,4 @@
-import { cn, DataTable, InlineButton, InlineSelect, type Column } from '@ynarcher/ui'
+import { Button, cn, DataTable, Select, type Column } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import type { ExistingRef, ParsedRow } from '@/features/networks/bulkUpload'
 
@@ -142,7 +142,7 @@ export function BulkReviewTable({
       header: '구분',
       className: pad,
       render: (r) => (
-        <InlineSelect
+        <Select
           value={r.categoryLabel}
           disabled={r.decision === 'skip' || isDeactivated(r)}
           onChange={(e) => onCategory(r.line, e.target.value)}
@@ -150,7 +150,7 @@ export function BulkReviewTable({
           {categoryOptions.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
-        </InlineSelect>
+        </Select>
       ),
     },
     {
@@ -180,11 +180,11 @@ export function BulkReviewTable({
       // 비활성 매칭은 먼저 '복구하기'로 의사를 밝힌 뒤에야 결정(합치기/미업로드) 드롭다운이 열린다.
       render: (r) =>
         r.match?.deleted && !revivedLines.includes(r.line) ? (
-          <InlineButton disabled={busy} onClick={() => onRevive(r.line)}>
+          <Button disabled={busy} onClick={() => onRevive(r.line)}>
             복구하기
-          </InlineButton>
+          </Button>
         ) : (
-          <InlineSelect
+          <Select
             value={r.decision}
             disabled={!r.name}
             onChange={(e) => onDecision(r.line, e.target.value as Decision)}
@@ -192,7 +192,7 @@ export function BulkReviewTable({
             {decisionOptions(Boolean(r.match)).map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
-          </InlineSelect>
+          </Select>
         ),
     },
   ]

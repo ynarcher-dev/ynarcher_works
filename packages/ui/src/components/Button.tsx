@@ -1,6 +1,7 @@
 import type { ButtonHTMLAttributes } from 'react'
 import { cn } from '../utils/cn'
 import { useDensity, type Density } from '../density'
+import { controlScale } from '../densityScale'
 
 export type ButtonVariant =
   | 'primary'
@@ -8,6 +9,7 @@ export type ButtonVariant =
   | 'outline'
   | 'ghost'
   | 'danger'
+  | 'outline-danger'
 
 const variantClass: Record<ButtonVariant, string> = {
   primary:
@@ -19,17 +21,10 @@ const variantClass: Record<ButtonVariant, string> = {
   ghost: 'text-gray-700 hover:bg-gray-100 active:bg-gray-200',
   danger:
     'bg-danger-700 !text-white shadow-sm shadow-danger/20 hover:bg-danger-800 active:bg-danger-900',
-}
-
-/**
- * 밀도 맥락별 치수. 크기 변형(`size`)은 두지 않는다 — 버튼의 위계는 크기가 아니라
- * variant(색)가 전담하고, 크기는 놓이는 자리가 정한다.
- * 근거: 5_component_spec_rules.md §1.2 / §2.1
- */
-const densityClass: Record<Density, string> = {
-  page: 'h-ctl-page gap-1.5 px-4 text-body',
-  card: 'h-ctl-card gap-1.5 px-3.5 text-body-sm',
-  table: 'h-ctl-table gap-1 px-2.5 text-caption',
+  // 평소에는 다른 액션과 같은 무게로 서 있다가 호버에서만 위험색을 드러낸다.
+  // 표의 '비활성화'처럼 행마다 반복되는 파괴적 액션용 — 빨간 버튼이 목록에 깔리는 것을 피한다.
+  'outline-danger':
+    'border border-gray-300 bg-white text-gray-800 shadow-sm hover:border-danger-border hover:bg-danger-subtle hover:text-danger active:bg-danger-subtle',
 }
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -49,7 +44,7 @@ export function Button({
   type = 'button',
   ...props
 }: ButtonProps) {
-  const d = useDensity(density)
+  const s = controlScale[useDensity(density)]
   return (
     <button
       type={type}
@@ -59,7 +54,10 @@ export function Button({
         'active:scale-[0.98] transform-gpu',
         'disabled:cursor-not-allowed disabled:opacity-55 disabled:shadow-none disabled:scale-100',
         variantClass[variant],
-        densityClass[d],
+        s.height,
+        s.text,
+        s.padX,
+        s.gap,
         className,
       )}
       {...props}

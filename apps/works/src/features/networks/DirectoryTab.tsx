@@ -1,4 +1,4 @@
-import { Button, InlineSelect, useToast } from '@ynarcher/ui'
+import { Button, Select, useToast } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { EntityFormModal } from '@/features/networks/EntityFormModal'
@@ -176,12 +176,12 @@ export function DirectoryTab({ config, keyword, creating, setCreating }: Directo
         <div className="flex flex-wrap items-center gap-2 rounded-radius-md border border-gray-200 bg-gray-50 px-3 py-2">
           <span className="text-caption font-medium text-gray-700">선택 {selected.length}건</span>
           <div className="w-36">
-            <InlineSelect value={bulkCat} onChange={(e) => setBulkCat(e.target.value)}>
+            <Select value={bulkCat} onChange={(e) => setBulkCat(e.target.value)}>
               <option value="">구분 선택</option>
               {CATEGORY_OPTIONS.filter((o) => o.key !== 'others').map((o) => (
                 <option key={o.key} value={o.label}>{o.label}</option>
               ))}
-            </InlineSelect>
+            </Select>
           </div>
           <Button onClick={() => void applyChosen()} disabled={bulkBusy}>
             일괄 적용

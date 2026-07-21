@@ -1,4 +1,4 @@
-import { Badge, Button, InlineSelect, Input, cn } from '@ynarcher/ui'
+import { Badge, cn, IconButton, Input, Select } from '@ynarcher/ui'
 import { Check, ChevronRight, Eye, EyeOff, GripVertical, Pencil, Plus, Trash2, Users, X } from 'lucide-react'
 import type { DragEvent } from 'react'
 import {
@@ -106,17 +106,17 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
             <span className="w-3.5 shrink-0" />
           )}
           {hasChildren ? (
-            <Button
+            <IconButton
               variant="ghost"
+              label={isCollapsed ? '펼치기' : '접기'}
               onClick={() => props.onToggle(node.id)}
-              className="h-6 w-6 shrink-0 px-0"
-              aria-label={isCollapsed ? '펼치기' : '접기'}
-            >
-              <ChevronRight
-                size={16}
-                className={cn('transition-transform', isCollapsed ? '' : 'rotate-90')}
-              />
-            </Button>
+              icon={
+                <ChevronRight
+                  size={16}
+                  className={cn('transition-transform', isCollapsed ? '' : 'rotate-90')}
+                />
+              }
+            />
           ) : (
             <span className="w-6 shrink-0" />
           )}
@@ -166,7 +166,7 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
         <div>
           {!isEditing &&
             (editable && structureActionsEnabled ? (
-              <InlineSelect
+              <Select
                 value={node.levelId}
                 onChange={(e) => props.onChangeLevel(node.id, e.target.value)}
                 className="w-20"
@@ -177,7 +177,7 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
                     {lv.name}
                   </option>
                 ))}
-              </InlineSelect>
+              </Select>
             ) : (
               <span className="px-1 text-caption text-gray-600">{levelName}</span>
             ))}
@@ -234,61 +234,55 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
         <div className="flex items-center justify-end gap-0.5">
           {editable && isEditing && (
             <>
-              <Button
+              <IconButton
                 variant="ghost"
+                label="저장"
                 title="저장"
                 onClick={props.onCommitEdit}
-                className="h-7 w-7 px-0 text-info"
-              >
-                <Check size={14} />
-              </Button>
-              <Button
+                icon={<Check size={14} />}
+                className="text-info"
+              />
+              <IconButton
                 variant="ghost"
+                label="취소"
                 title="취소"
                 onClick={props.onCancelEdit}
-                className="h-7 w-7 px-0 text-gray-400"
-              >
-                <X size={14} />
-              </Button>
+                icon={<X size={14} />}
+              />
             </>
           )}
           {editable && structureActionsEnabled && !isEditing && (
             <>
-              <Button
+              <IconButton
                 variant="ghost"
+                label="하위 부서 추가"
                 title="하위 부서 추가"
                 onClick={() => props.onAddChild(node.id)}
-                className="h-7 w-7 px-0 text-gray-500"
-              >
-                <Plus size={15} />
-              </Button>
-              <Button
+                icon={<Plus size={15} />}
+              />
+              <IconButton
                 variant="ghost"
+                label="이름 변경"
                 title="이름 변경"
                 onClick={() => props.onStartEdit(node)}
-                className="h-7 w-7 px-0 text-gray-500"
-              >
-                <Pencil size={14} />
-              </Button>
-              <Button
+                icon={<Pencil size={14} />}
+              />
+              <IconButton
                 variant="ghost"
+                label={node.hrHidden ? '인사관리 컬럼에 노출' : '인사관리 컬럼에서 숨김'}
                 title={node.hrHidden ? '인사관리 컬럼에 노출' : '인사관리 컬럼에서 숨김'}
                 onClick={() => props.onToggleHrHidden(node.id, !node.hrHidden)}
-                className={cn(
-                  'h-7 w-7 px-0',
-                  node.hrHidden ? 'text-info' : 'text-gray-400',
-                )}
-              >
-                {node.hrHidden ? <EyeOff size={14} /> : <Eye size={14} />}
-              </Button>
-              <Button
+                icon={node.hrHidden ? <EyeOff size={14} /> : <Eye size={14} />}
+                className={node.hrHidden ? 'text-info' : undefined}
+              />
+              <IconButton
                 variant="ghost"
+                danger
+                label="삭제"
                 title="삭제"
                 onClick={() => props.onDelete(node.id)}
-                className="h-7 w-7 px-0 text-gray-400 hover:bg-brand-25 hover:text-brand-700"
-              >
-                <Trash2 size={14} />
-              </Button>
+                icon={<Trash2 size={14} />}
+              />
             </>
           )}
         </div>

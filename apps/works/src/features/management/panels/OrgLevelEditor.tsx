@@ -77,7 +77,7 @@ export function OrgLevelEditor({
       {structureActionsEnabled && (
         <div className="flex items-start">
           {tiers.length > 0 && <span className="mx-1 mt-1.5 text-gray-300">›</span>}
-          <Button variant="ghost" onClick={onAddTier} className="h-7 gap-1 px-2 text-gray-600">
+          <Button variant="ghost" onClick={onAddTier} className="gap-1 text-gray-600">
             <Plus size={13} /> 하위 계층
           </Button>
         </div>
