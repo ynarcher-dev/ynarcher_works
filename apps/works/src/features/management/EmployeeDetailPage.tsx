@@ -6,6 +6,7 @@ import { useSensitiveStore } from '@/features/admin/sensitiveStore'
 import { EmployeeForm } from '@/features/management/EmployeeForm'
 import { PhotoBox } from '@/features/networks/PhotoBox'
 import { CareerView, hasCareerRows } from '@/features/networks/CareerView'
+import { SectionHeading } from '@/features/startup/SectionHeading'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
@@ -190,7 +191,8 @@ export function EmployeeDetailPage({
               )}
             </SectionCard>
 
-            {/* 관계형 연동 도메인(읽기 전용, 연동 시 자동 기록). 노트 아래로 카드 나열. */}
+            {/* 관계형 연동 도메인(읽기 전용, 연동 시 자동 기록). 프로필 본문과 구분선으로 가른다. */}
+            <SectionHeading title="활동 이력" />
             {RELATION_SECTIONS.map((title) => (
               <RelationCard key={title} title={title} />
             ))}
