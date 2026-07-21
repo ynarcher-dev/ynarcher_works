@@ -1,4 +1,4 @@
-import { IconButton } from '@ynarcher/ui'
+import { IconButton, tableText } from '@ynarcher/ui'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 
@@ -33,8 +33,9 @@ export function MiniPager({
   onPage: (next: number) => void
 }) {
   if (pageCount <= 1) return null
+  // 현재/전체는 데이터가 아니라 내비 메타이므로 목록 행의 메타 단계와 같이 둔다.
   return (
-    <div className="mt-3 flex items-center justify-center gap-2 text-caption text-gray-700">
+    <div className={`mt-3 flex items-center justify-center gap-2 ${tableText.meta}`}>
       <IconButton
         variant="ghost"
         label="이전"

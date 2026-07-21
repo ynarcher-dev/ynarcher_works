@@ -1,4 +1,4 @@
-import { Button, IconButton, Spinner } from '@ynarcher/ui'
+import { Button, IconButton, Spinner, tableText } from '@ynarcher/ui'
 import { Download, File as FileIcon, Trash2 } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { DetailPanelCard } from '@/features/networks/DetailPanelCard'
@@ -121,10 +121,11 @@ function MaterialRow({
   return (
     <li className="flex items-center gap-2 rounded-radius-sm border border-gray-200 bg-white px-3 py-2">
       <FileIcon className="size-4 shrink-0 text-gray-500" />
-      <span className="min-w-0 flex-1 truncate text-body text-gray-800">
+      {/* 파일명은 이 행의 식별 값, 용량은 메타 — 크기는 하나로 두고 색으로만 가른다. */}
+      <span className={`min-w-0 flex-1 truncate ${tableText.primary}`}>
         {material.file_name}
       </span>
-      <span className="shrink-0 tabular-nums text-caption text-gray-700">
+      <span className={`shrink-0 tabular-nums ${tableText.meta}`}>
         {formatBytes(material.byte_size)}
       </span>
       <button

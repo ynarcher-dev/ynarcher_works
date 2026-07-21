@@ -30,14 +30,15 @@ function MediaRow({ item }: { item: MediaItem }) {
               {item.kind}
             </Badge>
           )}
-          <span className="truncate text-caption text-gray-700">{item.siteName || item.url}</span>
+          {/* 출처는 메타, 제목은 식별 값, 설명은 본문 — 크기는 본문 하나, 위계는 색 3단으로. */}
+          <span className="truncate text-body text-gray-500">{item.siteName || item.url}</span>
         </div>
         <p className="mt-0.5 flex items-center gap-1 truncate text-body font-medium text-gray-900">
           <span className="truncate">{item.title || item.url}</span>
           <ExternalLink className="size-3.5 shrink-0 text-gray-400 group-hover:text-brand" />
         </p>
         {item.description && (
-          <p className="mt-0.5 line-clamp-2 text-caption leading-relaxed text-gray-700">
+          <p className="mt-0.5 line-clamp-2 text-body leading-relaxed text-gray-700">
             {item.description}
           </p>
         )}

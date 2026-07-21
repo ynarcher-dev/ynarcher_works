@@ -21,8 +21,9 @@ export function StartupBusinessTimeline({ businessStatus }: { businessStatus: Bu
               )}
               <span className="relative z-10 mt-1.5 size-2 shrink-0 rounded-full border-2 border-brand bg-white" aria-hidden />
               <div>
-                <p className="text-caption text-gray-700">{e.date || '-'}</p>
-                <p className="whitespace-pre-wrap text-body text-gray-800">{e.content}</p>
+                {/* 날짜와 내용은 크기를 본문 하나로 두고 위계는 색으로만 만든다. */}
+                <p className="text-body text-gray-500">{e.date || '-'}</p>
+                <p className="whitespace-pre-wrap text-body text-gray-900">{e.content}</p>
               </div>
             </li>
           ))}

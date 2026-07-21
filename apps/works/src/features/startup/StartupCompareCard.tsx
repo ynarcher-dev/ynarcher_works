@@ -27,11 +27,11 @@ function wonK(v: number | null | undefined, empty: string): { text: string; nega
 function Val({ v, unit, empty }: { v?: number | null; unit: 'won' | 'count'; empty: string }) {
   if (unit === 'count') {
     const text = v == null || Number.isNaN(Number(v)) ? empty : `${Number(v).toLocaleString()}명`
-    return <span className="block min-w-0 truncate text-center text-caption tabular-nums text-gray-800">{text}</span>
+    return <span className="block min-w-0 truncate text-center text-caption font-medium tabular-nums text-gray-900">{text}</span>
   }
   const { text, negative } = wonK(v, empty)
   return (
-    <span className={`block min-w-0 truncate text-center text-caption tabular-nums ${negative ? 'text-info' : 'text-gray-800'}`}>
+    <span className={`block min-w-0 truncate text-center text-caption font-medium tabular-nums ${negative ? 'text-info' : 'text-gray-900'}`}>
       {text}
     </span>
   )
@@ -60,7 +60,7 @@ function Row({
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_6rem_minmax(0,1fr)] items-center gap-2 py-1.5">
       <Val v={a} unit={unit} empty={aEmpty} />
-      <span className="whitespace-nowrap border-x border-gray-100 px-1.5 text-center text-caption text-gray-700">
+      <span className="whitespace-nowrap border-x border-gray-100 px-1.5 text-center text-caption text-gray-500">
         {label}
       </span>
       <Val v={b} unit={unit} empty={bEmpty} />
@@ -87,11 +87,11 @@ function TextRow({
 }) {
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_6rem_minmax(0,1fr)] items-stretch gap-2 py-1.5">
-      <span className="min-w-0 self-center break-words text-center text-caption text-gray-800">{a || aEmpty}</span>
-      <span className="flex items-center justify-center whitespace-nowrap border-x border-gray-100 px-1.5 text-center text-caption text-gray-700">
+      <span className="min-w-0 self-center break-words text-center text-caption font-medium text-gray-900">{a || aEmpty}</span>
+      <span className="flex items-center justify-center whitespace-nowrap border-x border-gray-100 px-1.5 text-center text-caption text-gray-500">
         {label}
       </span>
-      <span className="min-w-0 self-center break-words text-center text-caption text-gray-800">{b || bEmpty}</span>
+      <span className="min-w-0 self-center break-words text-center text-caption font-medium text-gray-900">{b || bEmpty}</span>
     </div>
   )
 }
@@ -100,7 +100,7 @@ function TextRow({
 function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div>
-      <p className="rounded-radius-sm bg-gray-50 px-2.5 py-1 text-caption font-semibold text-gray-700">
+      <p className="rounded-radius-sm bg-gray-50 px-2.5 py-1 text-caption font-semibold text-gray-900">
         {title}
       </p>
       <div className="mt-0.5 divide-y divide-gray-50">{children}</div>
@@ -139,7 +139,7 @@ function CompanyHead({ record, year, onClear }: { record: EntityRow; year?: numb
         </div>
       )}
       {year != null ? (
-        <span className="mt-0.5 text-caption text-gray-700">{year}</span>
+        <span className="mt-0.5 text-caption text-gray-500">{year}</span>
       ) : (
         <span className="mt-0.5 text-caption text-gray-400">기준연도 정보 없음</span>
       )}
@@ -229,7 +229,7 @@ export function StartupCompareCard({ a, b, bLoading, onSelectB, onClearB }: Prop
           <TextRow label="설립일" a={formatFounded(a.founded_on)} b={foundedB} aEmpty={aEmpty} bEmpty={bEmpty} />
         </Group>
 
-        <p className="text-right text-caption text-gray-700">단위: 천원</p>
+        <p className="text-right text-caption text-gray-500">단위: 천원</p>
         <Group title="재무 현황">
           <Row label="자산" a={fa?.assets} b={fb?.assets} aEmpty={aEmpty} bEmpty={bEmpty} />
           <Row label="부채" a={fa?.liabilities} b={fb?.liabilities} aEmpty={aEmpty} bEmpty={bEmpty} />

@@ -1,4 +1,4 @@
-import { Badge, Button, IconButton, Spinner, TextArea } from '@ynarcher/ui'
+import { Badge, Button, IconButton, Spinner, TextArea, tableText } from '@ynarcher/ui'
 import { Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuthStore } from '@/auth/authStore'
@@ -94,10 +94,9 @@ export function FeedbackPanel({
               <li key={f.id} className="border-t border-gray-100 pt-2.5 first:border-0 first:pt-0">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-caption font-medium text-gray-700">
-                      {f.author_name ?? '-'}
-                    </span>
-                    <span className="text-caption tabular-nums text-gray-700">
+                    {/* 작성자는 식별 값, 일시는 메타 — 종전에는 둘이 같은 색이라 구분이 없었다. */}
+                    <span className={tableText.primary}>{f.author_name ?? '-'}</span>
+                    <span className={`tabular-nums ${tableText.meta}`}>
                       {formatDateTime(f.created_at)}
                     </span>
                     {isNewest && (

@@ -1,5 +1,5 @@
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
-import { CHART_COLORS } from '@/features/startup/StartupMetricChart'
+import { CHART_COLORS, CHART_TEXT } from '@/features/startup/StartupMetricChart'
 import type { Shareholder } from '@/features/startup/startupShareholders'
 
 /** 도넛 슬라이스 색 순서: 브랜드 레드 → 웜그레이 단계별(현 UI 톤). 초과분은 순환. */
@@ -39,8 +39,11 @@ export function StartupShareholderChart({ shareholders }: { shareholders: Shareh
   const slices = toSlices(shareholders)
   if (slices.length === 0) return null
 
+  // 슬라이스 라벨은 문자열을 돌려주는 label 함수라 크기를 직접 줄 수 없고, 지정이 없으면 전역
+  // 본문(14px)을 상속해 바로 옆 표(12px)보다 커진다 — 가장 덜 중요한 텍스트가 데이터를 압도한다.
+  // SVG 글자는 CSS font-size를 상속하므로 컨테이너에서 차트 규격으로 눌러 준다.
   return (
-    <div className="h-52 w-full">
+    <div className="h-52 w-full text-caption">
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
@@ -66,11 +69,11 @@ export function StartupShareholderChart({ shareholders }: { shareholders: Shareh
               borderRadius: 8,
               border: '1px solid #DFE2E7',
               boxShadow: '0 8px 20px rgba(0,0,0,0.06)',
-              fontSize: 12,
+              fontSize: CHART_TEXT.size,
             }}
             formatter={(v: number) => [`${Number(v).toFixed(1)}%`, '지분율']}
           />
-          <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, color: CHART_COLORS.gray5 }} />
+          <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: CHART_TEXT.size, color: CHART_TEXT.color }} />
         </PieChart>
       </ResponsiveContainer>
     </div>

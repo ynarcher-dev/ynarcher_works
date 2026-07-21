@@ -28,6 +28,16 @@ export const CHART_COLORS = {
   gray3: '#CBD0D8',
 } as const
 
+/**
+ * 차트 텍스트 규격(축 눈금·범례·툴팁 공용).
+ *
+ * recharts는 Tailwind 클래스를 받지 않아 숫자로 줄 수밖에 없지만, 값 자체는 토큰과 맞춘다.
+ * 12px는 `caption`(0.75rem), 색은 `gray-500`(#5B6371)로 표의 머리글(`tableText.head`)과 같은
+ * 단계다. 종전에는 축·범례가 11px이었는데 11px 토큰(`tag-card`)은 배지 전용이라 스케일 밖이었고,
+ * 축(11)·툴팁(12)이 서로 어긋나 한 차트 안에 두 크기가 존재했다.
+ */
+export const CHART_TEXT = { size: 12, color: '#5B6371' } as const
+
 export interface ChartSeries {
   key: string
   name: string
@@ -71,14 +81,14 @@ export function StartupMetricChart({ data, series, unit = 'won', variant = 'bar'
       dataKey={xKey}
       tickLine={false}
       axisLine={false}
-      tick={{ fontSize: 11, fill: CHART_COLORS.gray4 }}
+      tick={{ fontSize: CHART_TEXT.size, fill: CHART_TEXT.color }}
     />,
     <YAxis
       key="y"
       tickLine={false}
       axisLine={false}
       width={46}
-      tick={{ fontSize: 11, fill: CHART_COLORS.gray4 }}
+      tick={{ fontSize: CHART_TEXT.size, fill: CHART_TEXT.color }}
       tickFormatter={unit === 'won' ? wonTick : undefined}
     />,
     <ReferenceLine key="zero" y={0} stroke="#DFE2E7" />,
@@ -89,11 +99,11 @@ export function StartupMetricChart({ data, series, unit = 'won', variant = 'bar'
         borderRadius: 8,
         border: '1px solid #DFE2E7',
         boxShadow: '0 8px 20px rgba(0,0,0,0.06)',
-        fontSize: 12,
+        fontSize: CHART_TEXT.size,
       }}
       formatter={(v: number, name) => [fmt(v), name as string]}
     />,
-    <Legend key="legend" iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, color: CHART_COLORS.gray5 }} />,
+    <Legend key="legend" iconType="circle" iconSize={8} wrapperStyle={{ fontSize: CHART_TEXT.size, color: CHART_TEXT.color }} />,
   ]
   return (
     <div className="h-44 w-full">

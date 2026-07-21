@@ -1,6 +1,6 @@
-import { Badge, Button, Modal, PanelCard } from '@ynarcher/ui'
+import { Badge, Button, Modal, PanelCard, tableText } from '@ynarcher/ui'
 import { useState } from 'react'
-import { MiniTable, td, tdL, th, thL } from '@/features/startup/MiniTable'
+import { MiniTable, td, tdEmpty, tdP, th, thL } from '@/features/startup/MiniTable'
 import { StartupShareholderChart } from '@/features/startup/StartupShareholderChart'
 import type { Shareholder, ShareholderSnapshot } from '@/features/startup/startupShareholders'
 
@@ -28,12 +28,13 @@ function HolderTable({ holders }: { holders: Shareholder[] }) {
         const pct = pctOf(h, total)
         return (
           <tr key={i}>
-            <td className={tdL}>{h.name || '-'}</td>
+            {/* 주주명이 이 행의 식별 값 — 없으면 숫자 열과 같은 무게로 읽힌다. */}
+            <td className={tdP}>{h.name || '-'}</td>
             <td className={td}>
-              {h.shares == null ? <span className="text-gray-500">-</span> : Number(h.shares).toLocaleString()}
+              {h.shares == null ? <span className={tdEmpty}>-</span> : Number(h.shares).toLocaleString()}
             </td>
             <td className={td}>
-              {pct == null ? <span className="text-gray-500">-</span> : `${pct.toFixed(1)}%`}
+              {pct == null ? <span className={tdEmpty}>-</span> : `${pct.toFixed(1)}%`}
             </td>
           </tr>
         )
@@ -46,7 +47,7 @@ function HolderTable({ holders }: { holders: Shareholder[] }) {
 function SnapshotMeta({ snap }: { snap: ShareholderSnapshot }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-caption text-gray-700">기준일 {snap.date || '-'}</span>
+      <span className={tableText.meta}>기준일 {snap.date || '-'}</span>
       {snap.round && (
         <Badge tone="neutral">
           {snap.round}

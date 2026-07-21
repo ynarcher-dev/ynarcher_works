@@ -206,11 +206,11 @@ export function StartupDetailPage() {
                   공동관리 — NETWORKS 쓰기 권한자 누구나 수정할 수 있습니다.
                 </p>
               )}
-              {/* 등록자: 담당자와 무관한 최초 등록 감사 정보. 항상 표시한다. */}
-              <p className="mt-3 border-t border-gray-100 pt-3 text-body text-gray-800">
-                <span className="mr-2 text-caption text-gray-700">등록자</span>
-                {record.creator?.name || '-'}
-              </p>
+              {/* 등록자: 담당자와 무관한 최초 등록 감사 정보. 항상 표시한다.
+                  표시 규격은 위 기본 데이터 카드의 정보행과 동일하게 Info에 맡긴다. */}
+              <div className="mt-3 border-t border-gray-100 pt-3">
+                <Info label="등록자" value={record.creator?.name || '-'} />
+              </div>
             </PanelCard>
             {/* 관리 현황 로그 카드: 기능은 후속 구현, 지금은 건수 뱃지(0) 디자인만 잡아둔다. */}
             {ACTIVITY_SECTIONS.map((title) => (

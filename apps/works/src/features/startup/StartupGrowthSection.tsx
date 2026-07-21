@@ -2,7 +2,7 @@ import { PanelCard, cardText } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import { type GrowthMetrics } from '@/features/startup/startupGrowth'
 import { CHART_COLORS, StartupMetricChart, type ChartSeries } from '@/features/startup/StartupMetricChart'
-import { MiniTable, td, tdL, th, thL } from '@/features/startup/MiniTable'
+import { MiniTable, td, tdEmpty, tdL, tdP, th, thL } from '@/features/startup/MiniTable'
 import { SectionHeading } from '@/features/startup/SectionHeading'
 
 const C = CHART_COLORS
@@ -26,7 +26,7 @@ function MetricCard({ title, unit, children }: { title: string; unit?: string; c
 
 /** 금액 셀(백만원 단위, ÷1,000,000 반올림). 음수(적자·자본잠식)는 국내 관례대로 파란색 '-'로 표기. 단위는 카드 헤더에 표기. */
 function Won({ v }: { v?: number | null }) {
-  if (v == null || Number.isNaN(Number(v))) return <span className="text-gray-500">-</span>
+  if (v == null || Number.isNaN(Number(v))) return <span className={tdEmpty}>-</span>
   const n = Math.round(Number(v) / 1_000_000)
   if (n < 0) return <span className="text-info">-{Math.abs(n).toLocaleString()}</span>
   return <span>{n.toLocaleString()}</span>
@@ -99,7 +99,7 @@ export function StartupGrowthSection({ growth }: Props) {
             <Table head={<><th className={thL}>연도</th><th className={th}>자산</th><th className={th}>부채</th><th className={th}>자본</th></>}>
               {finance.map((m) => (
                 <tr key={m.year}>
-                  <td className={tdL}>{m.year}</td>
+                  <td className={tdP}>{m.year}</td>
                   <td className={td}><Won v={m.assets} /></td>
                   <td className={td}><Won v={m.liabilities} /></td>
                   <td className={td}><Won v={m.equity} /></td>
@@ -120,7 +120,7 @@ export function StartupGrowthSection({ growth }: Props) {
             <Table head={<><th className={thL}>연도</th><th className={th}>매출액</th><th className={th}>영업이익</th><th className={th}>당기순이익</th></>}>
               {revenue.map((m) => (
                 <tr key={m.year}>
-                  <td className={tdL}>{m.year}</td>
+                  <td className={tdP}>{m.year}</td>
                   <td className={td}><Won v={m.revenue} /></td>
                   <td className={td}><Won v={m.operatingProfit} /></td>
                   <td className={td}><Won v={m.netIncome} /></td>
@@ -141,9 +141,9 @@ export function StartupGrowthSection({ growth }: Props) {
             <Table head={<><th className={thL}>연도</th><th className={th}>고용 인원</th></>}>
               {employee.map((m) => (
                 <tr key={m.year}>
-                  <td className={tdL}>{m.year}</td>
+                  <td className={tdP}>{m.year}</td>
                   <td className={td}>
-                    {m.employeeCount == null ? <span className="text-gray-500">-</span> : Number(m.employeeCount).toLocaleString()}
+                    {m.employeeCount == null ? <span className={tdEmpty}>-</span> : Number(m.employeeCount).toLocaleString()}
                   </td>
                 </tr>
               ))}
@@ -162,7 +162,7 @@ export function StartupGrowthSection({ growth }: Props) {
             <Table head={<><th className={thL}>기준월</th><th className={thL}>라운드</th><th className={th}>기업 가치(Pre)</th><th className={th}>투자유치액</th><th className={thL}>투자자</th></>}>
               {investment.map((m, i) => (
                 <tr key={`${m.date}-${i}`}>
-                  <td className={tdL}>{m.date || '-'}</td>
+                  <td className={tdP}>{m.date || '-'}</td>
                   <td className={tdL}>{m.round || '-'}</td>
                   <td className={td}><Won v={m.valuation} /></td>
                   <td className={td}><Won v={m.fundingAmount} /></td>

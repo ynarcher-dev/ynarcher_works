@@ -1,4 +1,4 @@
-import { Badge } from '@ynarcher/ui'
+import { Badge, tableText } from '@ynarcher/ui'
 import { DetailPanelCard } from '@/features/networks/DetailPanelCard'
 import { MiniPager, usePaged } from '@/features/networks/MiniPager'
 import type { Contribution } from '@/features/networks/hooks'
@@ -44,20 +44,19 @@ export function ChangeHistoryPanel({
     <DetailPanelCard title="변동 이력" count={list.length}>
       {list.length > 0 ? (
         <>
+          {/* 목록 행은 실질적으로 표의 한 행이므로 크기를 tableText 하나(12px)로 세우고
+              위계는 색으로만 만든다 — 종전에는 한 줄에 14/12/11px가 섞여 있었다. */}
           <ul className="space-y-2">
             {pageItems.map((c) => (
-              <li
-                key={c.id}
-                className="flex flex-wrap items-center gap-2 text-body text-gray-800"
-              >
-                <span className="text-caption tabular-nums text-gray-700">
+              <li key={c.id} className="flex flex-wrap items-center gap-2">
+                <span className={`tabular-nums ${tableText.meta}`}>
                   {c.created_at.slice(0, 10)}
                 </span>
                 <Badge tone="neutral">
                   {CONTRIBUTION_ACTION_LABEL[c.action]}
                 </Badge>
-                <span className="font-medium">{c.user_name ?? '-'}</span>
-                <span className="text-caption text-gray-700">
+                <span className={tableText.primary}>{c.user_name ?? '-'}</span>
+                <span className={tableText.meta}>
                   {c.source === 'upload' ? '업로드' : '수기'}
                   {c.note ? ` · ${c.note}` : ''}
                 </span>
