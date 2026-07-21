@@ -26,12 +26,14 @@ export const NETWORK_PROFILE_COLUMNS: MasterColumn[] = [
   { name: 'profile.position', label: '직책/직급', className: 'w-24' },
   { name: 'email', label: '이메일', mask: 'email', className: 'w-44' },
   { name: 'phone', label: '연락처', mask: 'phone', className: 'w-32' },
-  { name: 'profile.category', label: '구분', kind: 'tag', className: 'w-20' },
+  // 구분은 값이 하나뿐인 분류라 배지로 감싸지 않고 텍스트로 둔다(상태가 아니므로 색을 쓰지 않는다).
+  { name: 'profile.category', label: '구분', className: 'w-20' },
   // 분야: 전문 분야(expertise, ADMIN 분야 관리 태그 다중선택). 넘치면 말줄임 처리.
   { name: 'expertise', label: '분야', kind: 'tags', className: 'w-40' },
   { name: '_activity', label: '활동', kind: 'count', className: 'w-16' },
   { name: '_satisfaction', label: '만족도', kind: 'rating', className: 'w-16' },
-  { name: 'profile.match_available', label: '매칭', kind: 'match', className: 'w-16' },
+  // w-20: '불가능'(3자) 배지가 셀 폭을 넘겨 말줄임(…)이 배지 뒤에 남던 것을 해소한다.
+  { name: 'profile.match_available', label: '매칭', kind: 'match', className: 'w-20' },
 ]
 
 /**

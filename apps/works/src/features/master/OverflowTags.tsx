@@ -74,8 +74,9 @@ export function OverflowTags({ tags }: OverflowTagsProps) {
         </Badge>
       </span>
 
-      {/* 표시 레이어: 완전히 들어가는 태그 + (넘치면) '+'. */}
-      <span className="flex flex-nowrap gap-1">
+      {/* 표시 레이어: 완전히 들어가는 태그 + (넘치면) '+'. 셀의 text-center는 flex 자식에
+          먹지 않으므로 justify-center로 직접 가운데에 모은다. */}
+      <span className="flex flex-nowrap justify-center gap-1">
         {tags.slice(0, visibleCount).map((t, i) => (
           <Badge key={`${t}-${i}`} tone="neutral" className="shrink-0">
             {t}

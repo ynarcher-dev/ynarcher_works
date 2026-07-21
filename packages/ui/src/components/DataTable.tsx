@@ -99,8 +99,11 @@ export interface DataTableProps<T> {
    * 담당자(관리 주체)는 별개 축이므로 이 컬럼을 '담당자'로 재라벨하지 말고 도메인 컬럼으로 따로 둔다.
    */
   authorLabel?: string
-  /** 수정일 값(셀) 정렬(기본 left). 헤더는 항상 좌측. 넓은 표에서 우측 여백을 줄이려면 'right'. */
-  updatedAtAlign?: 'left' | 'right'
+  /**
+   * 수정일 값(셀) 정렬(기본 center). 날짜는 폭이 일정해 가운데가 안정적이다.
+   * 헤더는 모든 열이 그렇듯 항상 가운데. 넓은 표에서 우측 여백을 줄이려면 'right'.
+   */
+  updatedAtAlign?: 'left' | 'right' | 'center'
   /**
    * 관리(비활성화) 셀 내용 노출 여부(기본 true). `standardColumns`가 true이면 관리 컬럼 자리는
    * 항상 유지되며(컬럼 폭 고정), false면 셀을 비워 버튼 없이 표시한다(HUB 등 읽기 전용).
@@ -149,8 +152,11 @@ function resolveUpdatedAt<T>(row: T, meta?: DataTableMeta<T>): ReactNode {
 }
 
 /**
- * 데이터 테이블(헤더 36px / 행 44px, 수치 tabular-nums, 정렬 토글).
+ * 데이터 테이블(헤더·행 모두 `row` 토큰 36px, 수치 tabular-nums, 정렬 토글).
  * 좌측 No.(내림차순) + 우측 표준 컬럼(작성자/수정일/관리)을 기본 탑재한다.
+ *
+ * 정렬 기본값은 헤더·본문 모두 가운데다. 열 성격상 왼쪽 시작선이 필요하면
+ * 그 열만 `align: 'left'`로 되돌린다(기본값과 같은 값을 다시 적지 않는다).
  * 관리 컬럼 자리는 항상 유지되며, `manageable=false`면 셀을 비운다(HUB 등 읽기 전용).
  * 근거: 5_component_spec_rules.md §3.1 (테이블 규격·표준 메타 컬럼)
  */
@@ -168,7 +174,7 @@ export function DataTable<T>({
   standardColumns = true,
   showAuthor = true,
   authorLabel = '등록자',
-  updatedAtAlign = 'left',
+  updatedAtAlign = 'center',
   manageable = true,
   selectable = false,
   selectedKeys,
@@ -234,21 +240,25 @@ export function DataTable<T>({
         )}
       >
         <thead>
-          <tr className="bg-gray-50">
+          {/* divide-x: 셀 사이에만 세로선을 긋는다(표 바깥 가장자리에는 생기지 않는다). */}
+          <tr className="bg-gray-50 divide-x divide-gray-300">
             {selectable && (
-              <th className={cn(`h-row w-10 border-b border-gray-300 ${cellX} text-center`, pad)}>
-                <Checkbox
-                  aria-label="전체 선택"
-                  checked={allSelected}
-                  ref={(el) => {
-                    if (el) el.indeterminate = someSelected && !allSelected
-                  }}
-                  onChange={toggleAll}
-                />
+              <th className={cn(`h-row w-10 border-b border-gray-300 ${cellX}`, pad)}>
+                {/* 체크박스는 인라인 요소라 셀에 그냥 두면 글자 베이스라인에 걸려 위로 뜬다. */}
+                <div className="flex items-center justify-center">
+                  <Checkbox
+                    aria-label="전체 선택"
+                    checked={allSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = someSelected && !allSelected
+                    }}
+                    onChange={toggleAll}
+                  />
+                </div>
               </th>
             )}
             {numbered && (
-              <th className={cn(`h-row w-12 border-b border-gray-300 ${cellX} text-right text-caption font-semibold text-gray-600`, pad)}>
+              <th className={cn(`h-row w-12 border-b border-gray-300 ${cellX} text-center text-caption font-semibold text-gray-600`, pad)}>
                 No.
               </th>
             )}
@@ -258,8 +268,7 @@ export function DataTable<T>({
                 <th
                   key={col.key}
                   className={cn(
-                    `h-row border-b border-gray-300 ${cellX} text-caption font-semibold text-gray-600`,
-                    alignClass[col.align ?? 'left'],
+                    `h-row border-b border-gray-300 ${cellX} text-center text-caption font-semibold text-gray-600`,
                     col.sortable && 'cursor-pointer select-none hover:bg-gray-100/50',
                     pad,
                     truncate,
@@ -289,10 +298,10 @@ export function DataTable<T>({
             {standardColumns && (
               <>
                 {showAuthor && (
-                  <th className={cn(`h-row w-20 border-b border-gray-300 ${cellX} text-left text-caption font-semibold text-gray-600`, pad, truncate)}>{authorLabel}</th>
+                  <th className={cn(`h-row w-20 border-b border-gray-300 ${cellX} text-center text-caption font-semibold text-gray-600`, pad, truncate)}>{authorLabel}</th>
                 )}
-                {/* 수정일 헤더는 항상 좌측 정렬. 값(셀)만 updatedAtAlign을 따른다. */}
-                <th className={cn(`h-row w-28 border-b border-gray-300 ${cellX} text-left text-caption font-semibold text-gray-600`, pad, truncate)}>수정일</th>
+                {/* 헤더는 값 정렬과 무관하게 항상 가운데. 머리글 줄이 하나의 띠로 읽히게 한다. */}
+                <th className={cn(`h-row w-28 border-b border-gray-300 ${cellX} text-caption font-semibold text-gray-600 text-center`, pad, truncate)}>수정일</th>
                 <th className={cn(`h-row w-32 border-b border-gray-300 ${cellX} text-center text-caption font-semibold text-gray-600`, pad)}>관리</th>
               </>
             )}
@@ -318,7 +327,7 @@ export function DataTable<T>({
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
                   className={cn(
                     tableGrid.row,
-                    'transition-colors duration-fast hover:bg-gray-25',
+                    'divide-x divide-gray-200 transition-colors duration-fast hover:bg-gray-25',
                     !active && 'opacity-50',
                     selected.has(key) && 'bg-brand/5',
                     onRowClick && 'cursor-pointer',
@@ -327,18 +336,20 @@ export function DataTable<T>({
                 >
                   {selectable && (
                     <td
-                      className={cn(`border-b border-gray-200 ${cellX} text-center`, pad)}
+                      className={cn(`border-b border-gray-200 ${cellX}`, pad)}
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <Checkbox
-                        aria-label="행 선택"
-                        checked={selected.has(key)}
-                        onChange={() => toggleRow(key)}
-                      />
+                      <div className="flex items-center justify-center">
+                        <Checkbox
+                          aria-label="행 선택"
+                          checked={selected.has(key)}
+                          onChange={() => toggleRow(key)}
+                        />
+                      </div>
                     </td>
                   )}
                   {numbered && (
-                    <td className={cn(`border-b border-gray-200 ${cellX} text-right text-gray-600 tabular-nums`, pad)}>
+                    <td className={cn(`border-b border-gray-200 ${cellX} text-center text-gray-600 tabular-nums`, pad)}>
                       {meta?.rowMark?.(row) ?? numberFrom - index}
                     </td>
                   )}
@@ -347,7 +358,7 @@ export function DataTable<T>({
                       key={col.key}
                       className={cn(
                         `border-b border-gray-200 ${cellX} font-medium text-gray-800`,
-                        alignClass[col.align ?? 'left'],
+                        alignClass[col.align ?? 'center'],
                         col.numeric && 'tabular-nums',
                         pad,
                         truncate,
@@ -360,7 +371,7 @@ export function DataTable<T>({
                   {standardColumns && (
                     <>
                       {showAuthor && (
-                        <td className={cn(`whitespace-nowrap border-b border-gray-200 ${cellX} text-gray-600`, pad, truncate)}>
+                        <td className={cn(`whitespace-nowrap border-b border-gray-200 ${cellX} text-center text-gray-600`, pad, truncate)}>
                           {resolveAuthor(row, meta)}
                         </td>
                       )}

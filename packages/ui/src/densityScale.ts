@@ -38,7 +38,7 @@ export const controlIconPad: Record<
 
 /** 정사각 아이콘 버튼. 라벨이 없어 같은 맥락의 컨트롤보다 한 단계 작다. */
 export const iconScale: Record<Density, { box: string; glyph: number }> = {
-  page: { box: 'size-icon-page', glyph: 20 },
+  page: { box: 'size-icon-page', glyph: 18 },
   card: { box: 'size-icon-card', glyph: 16 },
   table: { box: 'size-icon-table', glyph: 14 },
 }
@@ -103,7 +103,7 @@ export const pagerScale: Record<
 
 /**
  * 데이터 테이블 격자 — 표는 언제나 `table` 맥락이므로 밀도별 분기 없이 단일 값이다.
- * 행 높이 32px는 셀 안 컨트롤(24px) 위아래로 4px씩 남기고 딱 맞는 값이다.
+ * 행 높이 36px는 셀 안 컨트롤(24px) 위아래로 6px씩 남긴다.
  */
 export const tableGrid = {
   head: 'h-row',
