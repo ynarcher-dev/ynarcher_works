@@ -1,4 +1,4 @@
-import { CardShell } from '@ynarcher/ui'
+import { PanelCard, cardText } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import { type GrowthMetrics } from '@/features/startup/startupGrowth'
 import { CHART_COLORS, StartupMetricChart, type ChartSeries } from '@/features/startup/StartupMetricChart'
@@ -7,22 +7,26 @@ import { SectionHeading } from '@/features/startup/SectionHeading'
 
 const C = CHART_COLORS
 
-/** 카드 래퍼(제목 + 선택적 단위 표기 + 내용). 수정 버튼·수정 날짜는 두지 않는다(통합 수정으로 관리). */
-function Card({ title, unit, children }: { title: string; unit?: string; children: ReactNode }) {
+/**
+ * 지표 카드 래퍼(제목 + 선택적 단위 표기 + 내용). 수정 버튼·수정 날짜는 두지 않는다(통합 수정으로 관리).
+ *
+ * 헤더는 공용 `PanelCard`가 소유하고, 단위는 헤더 우측 액션 자리에 놓는다. 한때 이 파일이
+ * 공용 `Card`와 같은 이름의 로컬 카드를 따로 갖고 있어 카드 제목이 두 규격으로 갈라졌었다.
+ */
+function MetricCard({ title, unit, children }: { title: string; unit?: string; children: ReactNode }) {
   return (
-    <CardShell>
-      <div className="mb-3 flex items-baseline justify-between gap-2">
-        <h3 className="text-body font-semibold text-gray-900">{title}</h3>
-        {unit && <span className="shrink-0 text-caption text-gray-600">({unit})</span>}
-      </div>
+    <PanelCard
+      title={title}
+      action={unit && <span className={`shrink-0 ${cardText.subtitle}`}>({unit})</span>}
+    >
       {children}
-    </CardShell>
+    </PanelCard>
   )
 }
 
 /** 금액 셀(백만원 단위, ÷1,000,000 반올림). 음수(적자·자본잠식)는 국내 관례대로 파란색 '-'로 표기. 단위는 카드 헤더에 표기. */
 function Won({ v }: { v?: number | null }) {
-  if (v == null || Number.isNaN(Number(v))) return <span className="text-gray-400">-</span>
+  if (v == null || Number.isNaN(Number(v))) return <span className="text-gray-500">-</span>
   const n = Math.round(Number(v) / 1_000_000)
   if (n < 0) return <span className="text-info">-{Math.abs(n).toLocaleString()}</span>
   return <span>{n.toLocaleString()}</span>
@@ -60,7 +64,7 @@ function Table({ head, children }: { head: ReactNode; children: ReactNode }) {
 }
 
 function Empty({ text }: { text: string }) {
-  return <p className="text-body text-gray-500">{text}</p>
+  return <p className="text-body text-gray-600">{text}</p>
 }
 
 interface Props {
@@ -86,7 +90,7 @@ export function StartupGrowthSection({ growth }: Props) {
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* 재무 현황 */}
-        <Card title="재무 현황 (최신 5개년)" unit="단위: 백만원">
+        <MetricCard title="재무 현황 (최신 5개년)" unit="단위: 백만원">
           {finance.length === 0 ? (
             <Empty text="등록된 재무 정보가 없습니다." />
           ) : (
@@ -104,10 +108,10 @@ export function StartupGrowthSection({ growth }: Props) {
             </Table>
             </>
           )}
-        </Card>
+        </MetricCard>
 
         {/* 매출 현황 */}
-        <Card title="매출 현황 (최신 5개년)" unit="단위: 백만원">
+        <MetricCard title="매출 현황 (최신 5개년)" unit="단위: 백만원">
           {revenue.length === 0 ? (
             <Empty text="등록된 매출 정보가 없습니다." />
           ) : (
@@ -125,10 +129,10 @@ export function StartupGrowthSection({ growth }: Props) {
             </Table>
             </>
           )}
-        </Card>
+        </MetricCard>
 
         {/* 고용 현황 */}
-        <Card title="고용 현황 (최신 5개년)" unit="단위: 명">
+        <MetricCard title="고용 현황 (최신 5개년)" unit="단위: 명">
           {employee.length === 0 ? (
             <Empty text="등록된 고용 정보가 없습니다." />
           ) : (
@@ -139,17 +143,17 @@ export function StartupGrowthSection({ growth }: Props) {
                 <tr key={m.year}>
                   <td className={tdL}>{m.year}</td>
                   <td className={td}>
-                    {m.employeeCount == null ? <span className="text-gray-400">-</span> : Number(m.employeeCount).toLocaleString()}
+                    {m.employeeCount == null ? <span className="text-gray-500">-</span> : Number(m.employeeCount).toLocaleString()}
                   </td>
                 </tr>
               ))}
             </Table>
             </>
           )}
-        </Card>
+        </MetricCard>
 
         {/* 투자 현황(월 기준, 최신순) */}
-        <Card title="투자 현황 (최신 5건)" unit="단위: 백만원">
+        <MetricCard title="투자 현황 (최신 5건)" unit="단위: 백만원">
           {investment.length === 0 ? (
             <Empty text="등록된 투자 정보가 없습니다." />
           ) : (
@@ -168,7 +172,7 @@ export function StartupGrowthSection({ growth }: Props) {
             </Table>
             </>
           )}
-        </Card>
+        </MetricCard>
       </div>
     </section>
   )

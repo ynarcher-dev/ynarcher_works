@@ -74,7 +74,7 @@ export function ModuleGanttView({
   if (rows.length === 0) {
     return (
       <div className="space-y-3">
-        <p className="rounded-radius-md border border-dashed border-gray-300 py-8 text-center text-body text-gray-500">
+        <p className="rounded-radius-md border border-dashed border-gray-300 py-8 text-center text-body text-gray-600">
           일정이 등록된 모듈이 없습니다. 모듈 설정에서 시작/종료일을 입력하세요.
         </p>
         {undated.length > 0 && <UndatedList modules={undated} onOpenModule={onOpenModule} />}
@@ -145,7 +145,7 @@ export function ModuleGanttView({
             style={{ width: LEFT_W }}
           >
             <div
-              className="flex items-end border-b border-gray-200 px-3 pb-1.5 text-caption text-gray-600"
+              className="flex items-end border-b border-gray-200 px-3 pb-1.5 text-caption text-gray-700"
               style={{ height: HEADER_H }}
             >
               모듈
@@ -163,7 +163,7 @@ export function ModuleGanttView({
                   title={`${nameOf(mod)} · ${labelOf(mod.module_type)}`}
                 >
                   {Icon && (
-                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-radius-sm bg-gray-50 text-gray-600">
+                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-radius-sm bg-gray-50 text-gray-700">
                       <Icon className="h-4 w-4" aria-hidden />
                     </span>
                   )}
@@ -338,7 +338,7 @@ function UndatedList({
   onOpenModule: (module: ProgramModule) => void
 }) {
   return (
-    <p className="text-caption text-gray-600">
+    <p className="text-caption text-gray-700">
       일정 미등록:{' '}
       {modules.map((m, i) => (
         <span key={m.id}>
@@ -346,7 +346,7 @@ function UndatedList({
           <button
             type="button"
             onClick={() => onOpenModule(m)}
-            className="text-gray-600 underline-offset-2 hover:underline"
+            className="text-gray-700 underline-offset-2 hover:underline"
           >
             {nameOf(m)}
           </button>

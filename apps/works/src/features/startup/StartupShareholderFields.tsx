@@ -49,7 +49,7 @@ export function StartupShareholderFields({ history, setHistory }: Props) {
           {/* 시점 헤더: 기준일 + 라운드 + 구성 삭제 */}
           <div className="flex flex-wrap items-end gap-2">
             <label className="block">
-              <span className="mb-0.5 block text-caption text-gray-600">기준일</span>
+              <span className="mb-0.5 block text-caption text-gray-700">기준일</span>
               <Input
                 type="date"
                 className="w-40"
@@ -58,7 +58,7 @@ export function StartupShareholderFields({ history, setHistory }: Props) {
               />
             </label>
             <label className="min-w-40 flex-1 block">
-              <span className="mb-0.5 block text-caption text-gray-600">라운드·사유(선택)</span>
+              <span className="mb-0.5 block text-caption text-gray-700">라운드·사유(선택)</span>
               <Input
                 placeholder="예: Series A"
                 value={snap.round ?? ''}
@@ -75,11 +75,11 @@ export function StartupShareholderFields({ history, setHistory }: Props) {
             {snap.holders.map((h, hi) => (
               <div key={hi} className="flex flex-wrap items-end gap-2">
                 <label className="min-w-40 flex-1 block">
-                  <span className="mb-0.5 block text-caption text-gray-600">주주명</span>
+                  <span className="mb-0.5 block text-caption text-gray-700">주주명</span>
                   <Input value={h.name ?? ''} onChange={(e) => patchHolder(si, hi, { name: e.target.value })} />
                 </label>
                 <label className="w-36 block">
-                  <span className="mb-0.5 block text-caption text-gray-600">보유 주식 수</span>
+                  <span className="mb-0.5 block text-caption text-gray-700">보유 주식 수</span>
                   <Input
                     type="number"
                     value={h.shares ?? ''}
@@ -87,7 +87,7 @@ export function StartupShareholderFields({ history, setHistory }: Props) {
                   />
                 </label>
                 <label className="w-28 block">
-                  <span className="mb-0.5 block text-caption text-gray-600">지분율(%)</span>
+                  <span className="mb-0.5 block text-caption text-gray-700">지분율(%)</span>
                   <Input
                     type="number"
                     value={h.percentage ?? ''}

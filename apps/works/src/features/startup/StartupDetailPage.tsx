@@ -1,4 +1,4 @@
-import { BackButton, Badge, Banner, Button, CardShell, Spinner } from '@ynarcher/ui'
+import { BackButton, Badge, Banner, Button, CardShell, PanelCard, Spinner } from '@ynarcher/ui'
 import { useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
@@ -33,7 +33,13 @@ const RESOURCE_TYPE = 'startup'
 /** 관리 현황 카드 섹션(플랫폼 전반 참여·관리 이력). 현재는 헤드라인만, 내용은 후속 구현. */
 const ACTIVITY_SECTIONS = ['참여 사업', '참여 M&A', '참여 프로젝트', 'A-STREAM', '기업 진단', '멘토링 & 컨설팅', '회의록']
 
-/** 라벨: 값 한 줄. `className`으로 그리드 스팬 등을, `valueClassName`으로 값 표시(말줄임 등)를 지정한다. */
+/**
+ * 라벨: 값 한 줄. `className`으로 그리드 스팬 등을, `valueClassName`으로 값 표시(말줄임 등)를 지정한다.
+ *
+ * 라벨과 값은 크기를 `text-body` 하나로 통일하고 위계는 색으로만 만든다. 한 줄 안에서 크기가
+ * 갈리면 2px 차이도 '작은 글씨'가 아니라 다른 폰트로 읽혀, 정작 색으로 줘야 할 위계를 크기가
+ * 가져가 버린다. 근거: densityScale.ts `tableText` — "크기는 하나, 구분은 굵기와 색으로만".
+ */
 function Info({
   label,
   value,
@@ -47,9 +53,9 @@ function Info({
 }) {
   return (
     <div className={`flex items-baseline gap-2${className ? ` ${className}` : ''}`}>
-      <span className="shrink-0 text-caption text-gray-600">{label}:</span>
+      <span className="shrink-0 text-body text-gray-500">{label}:</span>
       <span
-        className={`text-body text-gray-800${valueClassName ? ` ${valueClassName}` : ''}`}
+        className={`text-body text-gray-900${valueClassName ? ` ${valueClassName}` : ''}`}
         title={typeof value === 'string' ? value : undefined}
       >
         {value ?? '-'}
@@ -127,7 +133,7 @@ export function StartupDetailPage() {
                       </Badge>
                     ))}
                   </div>
-                  <p className="mt-1 text-body text-gray-600">{oneLiner || '-'}</p>
+                  <p className="mt-1 text-body text-gray-700">{oneLiner || '-'}</p>
                 </div>
               </div>
 
@@ -153,12 +159,9 @@ export function StartupDetailPage() {
                 <Info label="수정일" value={formatDate(record.updated_at)} />
               </div>
 
-              {/* 발굴 경로는 길 수 있어 전체 폭을 쓰되, 라벨: 값 한 줄로 표시하고 라벨↔값 간격을 넓힌다. */}
+              {/* 발굴 경로는 길 수 있어 전체 폭을 쓰되, 표시 규격은 위 정보행(Info)과 동일하게 맞춘다. */}
               <div className="mt-2.5 border-t border-gray-100 pt-3">
-                <div className="flex items-baseline gap-4">
-                  <span className="shrink-0 text-caption text-gray-600">발굴 경로:</span>
-                  <span className="text-body text-gray-800">{str('discovery_source')}</span>
-                </div>
+                <Info label="발굴 경로" value={str('discovery_source')} />
               </div>
             </CardShell>
 
@@ -185,8 +188,7 @@ export function StartupDetailPage() {
             <SectionHeading title="관리 현황" />
             {/* 담당자 카드(관리 현황 최상단). 담당자와 작성자(등록자)는 별개 축이므로 항상 분리 표기한다.
                 투자기업만 지정 담당자(리드/지원)를 가지며, 비투자는 공동관리(특정 담당자 없음)다. */}
-            <CardShell>
-              <h2 className="mb-3 text-body font-semibold text-gray-900">담당자</h2>
+            <PanelCard title="담당자">
               {invested ? (
                 (managers ?? []).length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
@@ -197,19 +199,19 @@ export function StartupDetailPage() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-body text-gray-500">지정된 담당자가 없습니다.</p>
+                  <p className="text-body text-gray-600">지정된 담당자가 없습니다.</p>
                 )
               ) : (
-                <p className="text-body text-gray-600">
+                <p className="text-body text-gray-700">
                   공동관리 — NETWORKS 쓰기 권한자 누구나 수정할 수 있습니다.
                 </p>
               )}
               {/* 등록자: 담당자와 무관한 최초 등록 감사 정보. 항상 표시한다. */}
               <p className="mt-3 border-t border-gray-100 pt-3 text-body text-gray-800">
-                <span className="mr-2 text-caption text-gray-600">등록자</span>
+                <span className="mr-2 text-caption text-gray-700">등록자</span>
                 {record.creator?.name || '-'}
               </p>
-            </CardShell>
+            </PanelCard>
             {/* 관리 현황 로그 카드: 기능은 후속 구현, 지금은 건수 뱃지(0) 디자인만 잡아둔다. */}
             {ACTIVITY_SECTIONS.map((title) => (
               <PlaceholderCard key={title} title={title} count={0} />

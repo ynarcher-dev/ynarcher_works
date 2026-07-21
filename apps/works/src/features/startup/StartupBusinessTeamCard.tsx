@@ -1,4 +1,4 @@
-import { Badge, CardShell } from '@ynarcher/ui'
+import { Badge, PanelCard, cardText } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import type { EntityRow } from '@/features/networks/hooks'
 
@@ -57,10 +57,12 @@ function Field({ label, value }: { label: string; value?: string }) {
   )
 }
 
+/**
+ * 카드 안 소제목. 카드 제목(16px)보다 한 층 아래이므로 `cardText.subhead`를 쓴다 —
+ * 카드 제목과 같은 규격을 주면 두 계층이 한 픽셀에 눌려 카드 경계가 보이지 않는다.
+ */
 function SubHead({ children }: { children: ReactNode }) {
-  return (
-    <h3 className="border-b border-gray-200 pb-1 text-body font-semibold text-gray-900">{children}</h3>
-  )
+  return <h3 className={`border-b border-gray-200 pb-1 ${cardText.subhead}`}>{children}</h3>
 }
 
 interface Props {
@@ -85,9 +87,9 @@ export function StartupBusinessTeamCard({ business, team }: Props) {
     capabilities.length === 0
 
   return (
-    <CardShell>
+    <PanelCard title="비즈니스 & 팀 역량">
       {isEmpty ? (
-        <p className="text-body text-gray-500">
+        <p className="text-body text-gray-600">
           등록된 비즈니스 · 팀 역량 정보가 없습니다. "수정"에서 입력하세요.
         </p>
       ) : (
@@ -109,8 +111,8 @@ export function StartupBusinessTeamCard({ business, team }: Props) {
                   {members.map((m, i) => (
                     <li key={i} className="text-body text-gray-800">
                       <span className="font-medium">{m.name}</span>
-                      {m.role && <span className="text-gray-600"> · {m.role}</span>}
-                      {m.background && <span className="text-gray-600"> — {m.background}</span>}
+                      {m.role && <span className="text-gray-700"> · {m.role}</span>}
+                      {m.background && <span className="text-gray-700"> — {m.background}</span>}
                     </li>
                   ))}
                 </ul>
@@ -131,6 +133,6 @@ export function StartupBusinessTeamCard({ business, team }: Props) {
           </div>
         </div>
       )}
-    </CardShell>
+    </PanelCard>
   )
 }

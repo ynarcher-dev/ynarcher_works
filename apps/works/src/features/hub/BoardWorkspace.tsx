@@ -344,7 +344,7 @@ function DetailView({
             {attachments.length > 0 ? (
               <AttachmentList attachments={attachments} />
             ) : (
-              <p className="text-body text-gray-500">등록된 자료가 없습니다.</p>
+              <p className="text-body text-gray-600">등록된 자료가 없습니다.</p>
             )}
           </DetailPanelCard>
           <CommentPanel comments={comments} onAdd={onAddComment} />

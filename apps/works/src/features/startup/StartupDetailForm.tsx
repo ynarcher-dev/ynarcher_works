@@ -1,4 +1,4 @@
-import { Button, CardShell, Input, Select, TagChip, TextArea, useToast } from '@ynarcher/ui'
+import { Button, CardShell, Input, Select, TagChip, TextArea, cardText, useToast } from '@ynarcher/ui'
 import { useEffect, useState, type ChangeEvent, type ReactNode } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { useEmployees } from '@/features/management/hooks'
@@ -357,7 +357,7 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel }: Props
         <div className="space-y-4 lg:col-span-2">
           {/* 사진 카드(NETWORKS 편집 폼과 동일) */}
           <CardShell>
-            <p className="mb-3 text-caption font-medium text-gray-600">사진</p>
+            <p className="mb-3 text-caption font-medium text-gray-700">사진</p>
             <div className="flex items-center gap-4">
               <PhotoBox src={photo} />
               <div className="flex gap-2">
@@ -420,12 +420,12 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel }: Props
                     )
                   })}
                   {(industryTags ?? []).length === 0 && (
-                    <span className="text-caption text-gray-500">
+                    <span className="text-caption text-gray-600">
                       등록된 산업 태그가 없습니다. (ADMIN › 산업 관리)
                     </span>
                   )}
                 </div>
-                <p className="mt-1 text-caption text-gray-600">산업 관리 태그에서 최대 {MAX_INDUSTRIES}개 선택</p>
+                <p className="mt-1 text-caption text-gray-700">산업 관리 태그에서 최대 {MAX_INDUSTRIES}개 선택</p>
               </Field>
               {tagField('stage', 'investment_stage_tags', '단계')}
               <Field label="구분">
@@ -474,8 +474,8 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel }: Props
           {/* 담당자 카드(투자기업 전용): 리드 1 + 지원 N. 승격 RPC로 원자 지정된다. */}
           {willInvest && (
             <CardShell>
-              <h2 className="mb-1 text-body font-semibold text-gray-900">담당자 (투자기업)</h2>
-              <p className="mb-4 text-caption text-gray-600">
+              <h2 className={`mb-1 ${cardText.title}`}>담당자 (투자기업)</h2>
+              <p className="mb-4 text-caption text-gray-700">
                 투자기업은 리드 담당자 지정이 필수입니다. 지정 담당자와 관리자만 이후 정보를 수정·삭제할 수 있습니다.
               </p>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -506,7 +506,7 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel }: Props
                         )
                       })}
                     {(employees ?? []).length === 0 && (
-                      <span className="text-caption text-gray-500">등록된 임직원이 없습니다.</span>
+                      <span className="text-caption text-gray-600">등록된 임직원이 없습니다.</span>
                     )}
                   </div>
                 </Field>
@@ -519,7 +519,7 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel }: Props
 
           {/* 비즈니스 & 팀 역량 카드(통합 수정에 포함) */}
           <CardShell>
-            <h2 className="mb-4 text-body font-semibold text-gray-900">비즈니스 &amp; 팀 역량</h2>
+            <h2 className={`mb-4 ${cardText.title}`}>비즈니스 &amp; 팀 역량</h2>
             <StartupBusinessTeamFields
               register={register}
               control={control}
@@ -530,13 +530,13 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel }: Props
 
           {/* 주주 구성 카드(통합 수정에 포함) */}
           <CardShell>
-            <h2 className="mb-4 text-body font-semibold text-gray-900">주주 구성</h2>
+            <h2 className={`mb-4 ${cardText.title}`}>주주 구성</h2>
             <StartupShareholderFields history={shareholders} setHistory={setShareholders} />
           </CardShell>
 
           {/* 성장 지표 카드(통합 수정에 포함) */}
           <CardShell>
-            <h2 className="mb-4 text-body font-semibold text-gray-900">성장 지표</h2>
+            <h2 className={`mb-4 ${cardText.title}`}>성장 지표</h2>
             <StartupGrowthFields
               growth={growth}
               setGrowth={setGrowth}

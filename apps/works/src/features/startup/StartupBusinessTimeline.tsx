@@ -1,4 +1,4 @@
-import { CardShell } from '@ynarcher/ui'
+import { PanelCard } from '@ynarcher/ui'
 import type { BusinessStatusEntry } from '@/features/startup/startupGrowth'
 
 /**
@@ -8,10 +8,9 @@ import type { BusinessStatusEntry } from '@/features/startup/startupGrowth'
  */
 export function StartupBusinessTimeline({ businessStatus }: { businessStatus: BusinessStatusEntry[] }) {
   return (
-    <CardShell>
-      <h3 className="mb-3 text-body font-semibold text-gray-900">연혁</h3>
+    <PanelCard title="연혁">
       {businessStatus.length === 0 ? (
-        <p className="text-body text-gray-500">등록된 연혁이 없습니다.</p>
+        <p className="text-body text-gray-600">등록된 연혁이 없습니다.</p>
       ) : (
         <ul>
           {businessStatus.map((e, i) => (
@@ -22,13 +21,13 @@ export function StartupBusinessTimeline({ businessStatus }: { businessStatus: Bu
               )}
               <span className="relative z-10 mt-1.5 size-2 shrink-0 rounded-full border-2 border-brand bg-white" aria-hidden />
               <div>
-                <p className="text-caption text-gray-600">{e.date || '-'}</p>
+                <p className="text-caption text-gray-700">{e.date || '-'}</p>
                 <p className="whitespace-pre-wrap text-body text-gray-800">{e.content}</p>
               </div>
             </li>
           ))}
         </ul>
       )}
-    </CardShell>
+    </PanelCard>
   )
 }

@@ -1,4 +1,4 @@
-import { Button, cn, Input } from '@ynarcher/ui'
+import { Button, cardText, cn, Input } from '@ynarcher/ui'
 import { Fragment, useState } from 'react'
 import type {
   BusinessStatusEntry,
@@ -59,7 +59,7 @@ function Num({
 }) {
   return (
     <label className="block">
-      <span className="mb-0.5 block text-caption text-gray-600">{label}</span>
+      <span className="mb-0.5 block text-caption text-gray-700">{label}</span>
       <NumberInput value={value} onChange={onChange} />
     </label>
   )
@@ -77,7 +77,7 @@ function Txt({
 }) {
   return (
     <label className="block">
-      <span className="mb-0.5 block text-caption text-gray-600">{label}</span>
+      <span className="mb-0.5 block text-caption text-gray-700">{label}</span>
       <Input value={value ?? ''} onChange={(e) => onChange(e.target.value)} />
     </label>
   )
@@ -105,12 +105,12 @@ function YearMetricGroup<T extends { year: number }>({
   const gridStyle = { gridTemplateColumns: `5.5rem repeat(${cols.length}, minmax(0,1fr)) auto` }
   return (
     <div className="space-y-2">
-      <h3 className="text-body font-semibold text-gray-900">{title}</h3>
+      <h3 className={cardText.subhead}>{title}</h3>
       {rows.length > 0 && (
         <div className="grid items-center gap-x-2 gap-y-1.5" style={gridStyle}>
-          <span className="text-caption text-gray-600">연도</span>
+          <span className="text-caption text-gray-700">연도</span>
           {cols.map((c) => (
-            <span key={c.key} className="text-caption text-gray-600">
+            <span key={c.key} className="text-caption text-gray-700">
               {c.label}
             </span>
           ))}
@@ -164,12 +164,12 @@ function InvestmentGroup({
     setRows(rows.map((r, idx) => (idx === i ? { ...r, ...p } : r)))
   return (
     <div className="space-y-2">
-      <h3 className="text-body font-semibold text-gray-900">투자</h3>
+      <h3 className={cardText.subhead}>투자</h3>
       {rows.map((r, i) => (
         <div key={i} className="space-y-2 rounded-radius-md border border-gray-200 p-3">
           <div className="flex items-end justify-between gap-2">
             <label className="block w-40 shrink-0">
-              <span className="mb-0.5 block text-caption text-gray-600">기준월</span>
+              <span className="mb-0.5 block text-caption text-gray-700">기준월</span>
               <Input type="month" value={r.date ?? ''} onChange={(e) => patch(i, { date: e.target.value })} />
             </label>
             <Button
@@ -229,7 +229,7 @@ export function StartupGrowthFields({ growth, setGrowth, businessStatus, setBusi
     <div className="space-y-5">
       {/* 연혁 */}
       <div className="space-y-2">
-        <h3 className="text-body font-semibold text-gray-900">연혁</h3>
+        <h3 className={cardText.subhead}>연혁</h3>
         {businessStatus.map((s, i) => (
           <div key={i} className="flex items-center gap-2">
             {/* Input 래퍼가 w-full이라 폭 클래스는 바깥 div에 준다. 선택은 월(YYYY-MM)까지만. */}

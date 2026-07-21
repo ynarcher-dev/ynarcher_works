@@ -64,7 +64,7 @@ export function CommentPanel({ comments, onAdd }: CommentPanelProps) {
               >
                 <div className="flex items-center gap-2">
                   <span className="text-caption font-medium text-gray-700">{c.author}</span>
-                  <span className="text-caption tabular-nums text-gray-600">{c.createdAt}</span>
+                  <span className="text-caption tabular-nums text-gray-700">{c.createdAt}</span>
                   {idx === 0 && (
                     <Badge tone="danger">
                       최신
@@ -78,7 +78,7 @@ export function CommentPanel({ comments, onAdd }: CommentPanelProps) {
             ))}
           </ul>
         ) : (
-          <p className="text-body text-gray-500">등록된 댓글이 없습니다.</p>
+          <p className="text-body text-gray-600">등록된 댓글이 없습니다.</p>
         )}
       </div>
     </DetailPanelCard>

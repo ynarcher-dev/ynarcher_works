@@ -131,7 +131,7 @@ export function ModuleBoardCard({
           className={`grid size-icon-card place-items-center rounded-radius-md border transition-colors duration-fast ${
             view === key
               ? 'border-gray-400 bg-gray-100 text-gray-900'
-              : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-25 hover:text-gray-700'
+              : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-25 hover:text-gray-700'
           }`}
         >
           <Icon className="h-4 w-4" />
@@ -146,7 +146,7 @@ export function ModuleBoardCard({
       title={expanded ? '축소' : '확대보기'}
       aria-label={expanded ? '축소' : '확대보기'}
       onClick={() => setExpanded((v) => !v)}
-      className="flex h-ctl-card items-center gap-1.5 rounded-radius-md border border-gray-300 bg-white px-2.5 text-caption font-medium text-gray-500 transition-colors duration-fast hover:bg-gray-25 hover:text-gray-700"
+      className="flex h-ctl-card items-center gap-1.5 rounded-radius-md border border-gray-300 bg-white px-2.5 text-caption font-medium text-gray-600 transition-colors duration-fast hover:bg-gray-25 hover:text-gray-700"
     >
       {expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
       <span>{expanded ? '축소' : '확대보기'}</span>
@@ -217,7 +217,7 @@ export function ModuleBoardCard({
                       title="모듈 설정"
                       aria-label={`${nameOf(mod)} 설정`}
                       onClick={() => setEditTarget(mod)}
-                      className="grid size-icon-card place-items-center rounded-radius-md border border-gray-300 bg-white text-gray-500 shadow-sm transition-colors duration-fast hover:bg-gray-25 hover:text-gray-700"
+                      className="grid size-icon-card place-items-center rounded-radius-md border border-gray-300 bg-white text-gray-600 shadow-sm transition-colors duration-fast hover:bg-gray-25 hover:text-gray-700"
                     >
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
@@ -226,7 +226,7 @@ export function ModuleBoardCard({
                       title="모듈 끄기"
                       aria-label={`${nameOf(mod)} 끄기`}
                       onClick={() => void onDisable(mod)}
-                      className="grid size-icon-card place-items-center rounded-radius-md border border-gray-300 bg-white text-gray-500 shadow-sm transition-colors duration-fast hover:bg-danger-subtle hover:text-danger"
+                      className="grid size-icon-card place-items-center rounded-radius-md border border-gray-300 bg-white text-gray-600 shadow-sm transition-colors duration-fast hover:bg-danger-subtle hover:text-danger"
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
@@ -235,7 +235,7 @@ export function ModuleBoardCard({
               )
             })}
             {enabled.length === 0 && (
-              <li className="rounded-radius-md border border-gray-200 bg-gray-25 px-4 py-6 text-center text-body text-gray-500">
+              <li className="rounded-radius-md border border-gray-200 bg-gray-25 px-4 py-6 text-center text-body text-gray-600">
                 활성화된 모듈이 없습니다. 아래에서 모듈을 추가하세요.
               </li>
             )}

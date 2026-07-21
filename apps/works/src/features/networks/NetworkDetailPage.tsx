@@ -51,7 +51,7 @@ function SectionCard({
 function Info({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-baseline gap-2">
-      <span className="shrink-0 text-caption text-gray-600">{label}:</span>
+      <span className="shrink-0 text-caption text-gray-700">{label}:</span>
       <span className="text-body text-gray-800">{value ?? '-'}</span>
     </div>
   )
@@ -117,7 +117,7 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
                 </Badge>
               )}
             </div>
-            <p className="mt-1 text-body text-gray-600">{subtitle || '-'}</p>
+            <p className="mt-1 text-body text-gray-700">{subtitle || '-'}</p>
           </div>
         </div>
 
@@ -181,7 +181,7 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
                 if (!rows.length) return null
                 return (
                   <div key={s.key}>
-                    <h3 className="mb-1 text-caption font-semibold text-gray-600">
+                    <h3 className="mb-1 text-caption font-semibold text-gray-700">
                       {s.title}
                     </h3>
                     <ul className="space-y-0.5">
@@ -196,7 +196,7 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
               })}
             </div>
           ) : (
-            <p className="text-body text-gray-500">
+            <p className="text-body text-gray-600">
               등록된 약력이 없습니다. "수정"에서 입력하세요.
             </p>
           )}
@@ -207,7 +207,7 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
         {intro ? (
           <p className="whitespace-pre-wrap text-body text-gray-800">{intro}</p>
         ) : (
-          <p className="text-body text-gray-500">등록된 노트 내용이 없습니다.</p>
+          <p className="text-body text-gray-600">등록된 노트 내용이 없습니다.</p>
         )}
       </SectionCard>
 
@@ -221,7 +221,7 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
               5.0
             </span>
             <div>
-              <p className="text-caption text-gray-600">멘토링 이력</p>
+              <p className="text-caption text-gray-700">멘토링 이력</p>
               <p className="text-body font-medium text-gray-800">0 건</p>
             </div>
           </div>

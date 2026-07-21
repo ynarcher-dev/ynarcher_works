@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { cn } from '../utils/cn'
 import { DensityProvider } from '../density'
+import { cardText } from '../densityScale'
 
 export interface CardProps {
   /** 카드 상단 제목. 미지정 시 헤더 없이 본문만 렌더한다. */
@@ -41,10 +42,8 @@ export function Card({
       {(title || actions) && (
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="space-y-1">
-            {title && (
-              <h2 className="text-title-sm font-semibold text-gray-900">{title}</h2>
-            )}
-            {subtitle && <p className="text-caption text-gray-600">{subtitle}</p>}
+            {title && <h2 className={cardText.title}>{title}</h2>}
+            {subtitle && <p className={cardText.subtitle}>{subtitle}</p>}
           </div>
           {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
         </div>

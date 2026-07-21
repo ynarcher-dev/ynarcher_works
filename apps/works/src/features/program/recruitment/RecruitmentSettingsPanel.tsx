@@ -65,9 +65,9 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-caption font-medium text-gray-600" htmlFor={htmlFor}>
+      <label className="mb-1.5 block text-caption font-medium text-gray-700" htmlFor={htmlFor}>
         {label}
-        {hint && <span className="ml-1 font-normal text-gray-600">{hint}</span>}
+        {hint && <span className="ml-1 font-normal text-gray-700">{hint}</span>}
       </label>
       {children}
     </div>
@@ -193,14 +193,14 @@ export function RecruitmentSettingsPanel({
                     type="button"
                     onClick={() => setStatus(o.value)}
                     className={`rounded-radius-sm px-3.5 py-1.5 text-caption font-medium transition-colors duration-fast ${
-                      status === o.value ? 'bg-brand text-white' : 'text-gray-600 hover:bg-gray-25'
+                      status === o.value ? 'bg-brand text-white' : 'text-gray-700 hover:bg-gray-25'
                     }`}
                   >
                     {o.label}
                   </button>
                 ))}
               </div>
-              <span className="inline-flex items-center gap-1.5 text-caption text-gray-600">
+              <span className="inline-flex items-center gap-1.5 text-caption text-gray-700">
                 현재 <Badge tone={eff.tone}>{eff.label}</Badge>
               </span>
             </div>
@@ -218,7 +218,7 @@ export function RecruitmentSettingsPanel({
                 value={toDatetimeInput(openAt)}
                 onChange={(e) => setOpenAt(fromDatetimeInput(e.target.value))}
               />
-              <span className="text-body text-gray-400">~</span>
+              <span className="text-body text-gray-500">~</span>
               <input
                 type="datetime-local"
                 aria-label="모집 마감 일시"
@@ -233,7 +233,7 @@ export function RecruitmentSettingsPanel({
                     setOpenAt(null)
                     setCloseAt(null)
                   }}
-                  className="text-caption text-gray-600 underline-offset-2 hover:text-gray-600 hover:underline"
+                  className="text-caption text-gray-700 underline-offset-2 hover:text-gray-700 hover:underline"
                 >
                   기간 지우기
                 </button>
@@ -255,7 +255,7 @@ export function RecruitmentSettingsPanel({
                 </a>
               </div>
             ) : (
-              <p className="rounded-radius-md border border-gray-200 bg-gray-25 px-3.5 py-2.5 text-caption text-gray-500">
+              <p className="rounded-radius-md border border-gray-200 bg-gray-25 px-3.5 py-2.5 text-caption text-gray-600">
                 저장하면 배포용 공개 URL이 생성됩니다.
               </p>
             )}
@@ -276,7 +276,7 @@ export function RecruitmentSettingsPanel({
                 {poster ? (
                   <img src={poster} alt="모집 포스터" className="h-full w-full object-cover" />
                 ) : (
-                  <ImageUp className="h-6 w-6 text-gray-300" />
+                  <ImageUp className="h-6 w-6 text-gray-400" />
                 )}
               </div>
               <input

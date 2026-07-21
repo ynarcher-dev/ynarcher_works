@@ -12,6 +12,9 @@ export { cn } from './utils/cn'
 // 밀도 맥락 — 모든 컴포넌트 크기의 단일 축(일반 UI / 카드섹션 / 데이터 테이블)
 export { DensityProvider, useDensity, byDensity } from './density'
 export type { Density } from './density'
+// 글자 위계 규격 — 앱이 카드·표 안에서 같은 규격을 재선언하지 않도록 열어 둔다.
+// 치수 스케일(controlScale 등)은 컴포넌트가 쓰는 내부 매핑이므로 계속 닫아 둔다.
+export { cardText, tableText } from './densityScale'
 
 // 기초 컴포넌트
 export { Button } from './components/Button'

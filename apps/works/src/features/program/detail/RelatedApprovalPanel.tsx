@@ -49,7 +49,7 @@ export function RelatedApprovalPanel({
                     {a.title}
                   </span>
                 </span>
-                <span className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5 border-t border-gray-200 pt-2 text-caption text-gray-600">
+                <span className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5 border-t border-gray-200 pt-2 text-caption text-gray-700">
                   <span className="tabular-nums">{a.date}</span>
                   <span className="border-l border-gray-200 pl-2 tabular-nums">
                     {a.docNo}
@@ -61,7 +61,7 @@ export function RelatedApprovalPanel({
           <MiniPager page={page} pageCount={pageCount} onPage={setPage} />
         </>
       ) : (
-        <p className="rounded-radius-md border border-gray-300 bg-white px-4 py-6 text-center text-body text-gray-500">
+        <p className="rounded-radius-md border border-gray-300 bg-white px-4 py-6 text-center text-body text-gray-600">
           연결된 전자결재가 없습니다.
         </p>
       )}

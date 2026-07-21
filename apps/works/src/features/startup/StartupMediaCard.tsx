@@ -1,4 +1,4 @@
-import { Badge, CardShell } from '@ynarcher/ui'
+import { Badge, CardShell, cardText } from '@ynarcher/ui'
 import { ExternalLink, ImageOff } from 'lucide-react'
 import { MEDIA_KINDS, type MediaItem } from '@/features/startup/startupMedia'
 
@@ -19,7 +19,7 @@ function MediaRow({ item }: { item: MediaItem }) {
           className="h-16 w-24 shrink-0 rounded-radius-sm bg-gray-100 object-cover"
         />
       ) : (
-        <div className="grid h-16 w-24 shrink-0 place-items-center rounded-radius-sm bg-gray-100 text-gray-300">
+        <div className="grid h-16 w-24 shrink-0 place-items-center rounded-radius-sm bg-gray-100 text-gray-400">
           <ImageOff className="size-5" />
         </div>
       )}
@@ -30,14 +30,14 @@ function MediaRow({ item }: { item: MediaItem }) {
               {item.kind}
             </Badge>
           )}
-          <span className="truncate text-caption text-gray-600">{item.siteName || item.url}</span>
+          <span className="truncate text-caption text-gray-700">{item.siteName || item.url}</span>
         </div>
         <p className="mt-0.5 flex items-center gap-1 truncate text-body font-medium text-gray-900">
           <span className="truncate">{item.title || item.url}</span>
-          <ExternalLink className="size-3.5 shrink-0 text-gray-300 group-hover:text-brand" />
+          <ExternalLink className="size-3.5 shrink-0 text-gray-400 group-hover:text-brand" />
         </p>
         {item.description && (
-          <p className="mt-0.5 line-clamp-2 text-caption leading-relaxed text-gray-600">
+          <p className="mt-0.5 line-clamp-2 text-caption leading-relaxed text-gray-700">
             {item.description}
           </p>
         )}
@@ -72,16 +72,14 @@ export function StartupMediaCard({ media }: { media: MediaItem[] }) {
   return (
     <CardShell>
       {media.length === 0 ? (
-        <p className="text-body text-gray-500">등록된 미디어가 없습니다.</p>
+        <p className="text-body text-gray-600">등록된 미디어가 없습니다.</p>
       ) : (
         <div className="space-y-5">
           {groupByKind(media).map(({ kind, items }) => (
             <div key={kind}>
-              <div className="mb-2 flex items-center gap-1.5 border-b border-gray-100 pb-1.5">
-                <span className="text-caption font-semibold text-gray-600">{kind}</span>
-                <Badge tone="neutral">
-                  {items.length}
-                </Badge>
+              <div className="mb-2 flex items-center gap-1 border-b border-gray-100 pb-1.5">
+                <span className={cardText.subhead}>{kind}</span>
+                <span className={cardText.count}>[{items.length}]</span>
               </div>
               <div className="space-y-2">
                 {items.map((item, i) => (

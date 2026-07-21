@@ -12,7 +12,7 @@ import { categoryLabel, useProgramWorkspace } from '@/features/program/workspace
 function Info({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-baseline gap-2">
-      <span className="shrink-0 text-caption text-gray-600">{label}:</span>
+      <span className="shrink-0 text-caption text-gray-700">{label}:</span>
       <span className="text-body text-gray-800">{value ?? '-'}</span>
     </div>
   )
@@ -91,7 +91,7 @@ export function ProgramInfoCard({ program }: { program: Program }) {
               {PROGRAM_STATUS_LABEL[program.status] ?? program.status}
             </Badge>
           </div>
-          <p className="mt-1 text-body text-gray-600">{program.description || '-'}</p>
+          <p className="mt-1 text-body text-gray-700">{program.description || '-'}</p>
         </div>
       </div>
 
@@ -110,7 +110,7 @@ export function ProgramInfoCard({ program }: { program: Program }) {
       </div>
 
       <div className="mt-4 border-t border-gray-100 pt-4">
-        <span className="text-caption text-gray-600">담당자</span>
+        <span className="text-caption text-gray-700">담당자</span>
         {departments.length ? (
           <div className="mt-2 flex flex-col gap-2">
             {departments.map((d) => (
@@ -118,7 +118,7 @@ export function ProgramInfoCard({ program }: { program: Program }) {
                 <Badge tone={d.kind === 'MAIN' ? 'info' : 'neutral'}>
                   {d.name + (d.kind === 'MAIN' ? ' · 메인' : '') + (d.ratio != null ? ` ${d.ratio}%` : '')}
                 </Badge>
-                <span className="text-caption text-gray-300">/</span>
+                <span className="text-caption text-gray-400">/</span>
                 {d.members.length ? (
                   <span className="flex flex-wrap gap-1">
                     {d.members.map((m) => (
@@ -128,7 +128,7 @@ export function ProgramInfoCard({ program }: { program: Program }) {
                     ))}
                   </span>
                 ) : (
-                  <span className="text-caption text-gray-500">담당자 미배정</span>
+                  <span className="text-caption text-gray-600">담당자 미배정</span>
                 )}
               </div>
             ))}

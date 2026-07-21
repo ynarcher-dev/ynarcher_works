@@ -56,7 +56,7 @@ export function SensitiveValue({ field, value, resourceType, resourceId }: Props
       <button
         type="button"
         onClick={() => setAsking(true)}
-        className="rounded-radius-sm border border-gray-300 px-1.5 py-0.5 text-caption text-gray-600 transition-colors hover:bg-gray-50"
+        className="rounded-radius-sm border border-gray-300 px-1.5 py-0.5 text-caption text-gray-700 transition-colors hover:bg-gray-50"
       >
         보기
       </button>

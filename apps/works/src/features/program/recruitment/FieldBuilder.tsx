@@ -67,7 +67,7 @@ export function FieldBuilder({
       </div>
 
       {fields.length === 0 && (
-        <p className="rounded-radius-sm border border-gray-200 bg-gray-25 px-3 py-2 text-caption text-gray-500">
+        <p className="rounded-radius-sm border border-gray-200 bg-gray-25 px-3 py-2 text-caption text-gray-600">
           신청 항목이 없습니다. 프리셋을 불러오거나 항목을 추가하세요.
         </p>
       )}
@@ -163,7 +163,7 @@ export function FieldBuilder({
               </div>
 
               <div className="flex flex-col items-end gap-1.5 pt-1">
-                <label className="flex cursor-pointer items-center gap-1 text-caption text-gray-600">
+                <label className="flex cursor-pointer items-center gap-1 text-caption text-gray-700">
                   <Checkbox
                     checked={f.is_required}
                     onChange={() => patch(idx, { is_required: !f.is_required })}

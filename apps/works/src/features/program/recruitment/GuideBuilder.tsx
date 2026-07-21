@@ -34,7 +34,7 @@ export function GuideBuilder({
   return (
     <div className="space-y-2.5">
       <div className="flex items-center justify-between">
-        <span className="text-caption font-medium text-gray-600">안내 섹션</span>
+        <span className="text-caption font-medium text-gray-700">안내 섹션</span>
         <div className="flex items-center gap-2">
           <Button variant="secondary" onClick={resetPreset} type="button">
             <RotateCcw className="mr-1 h-3.5 w-3.5" /> 기본값
@@ -46,7 +46,7 @@ export function GuideBuilder({
       </div>
 
       {sections.length === 0 && (
-        <p className="rounded-radius-sm border border-gray-200 bg-gray-25 px-3 py-2 text-caption text-gray-500">
+        <p className="rounded-radius-sm border border-gray-200 bg-gray-25 px-3 py-2 text-caption text-gray-600">
           안내 섹션이 없습니다. 기본값을 불러오거나 섹션을 추가하세요.
         </p>
       )}

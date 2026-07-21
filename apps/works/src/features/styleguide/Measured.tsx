@@ -24,7 +24,7 @@ export function Measured({ children }: { children: ReactNode }) {
       <div ref={ref} className="flex items-center">
         {children}
       </div>
-      <span className="shrink-0 text-caption tabular-nums text-gray-400">
+      <span className="shrink-0 text-caption tabular-nums text-gray-500">
         {h != null ? `${h}px` : ''}
       </span>
     </div>

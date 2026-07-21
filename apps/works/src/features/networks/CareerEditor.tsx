@@ -47,14 +47,14 @@ function SectionBlock({
         <button
           type="button"
           onClick={() => onRows([...rows, emptyRow(section)])}
-          className="inline-flex items-center gap-1 rounded-radius-md border border-gray-300 px-2 py-1 text-caption text-gray-600 transition-colors hover:bg-gray-50"
+          className="inline-flex items-center gap-1 rounded-radius-md border border-gray-300 px-2 py-1 text-caption text-gray-700 transition-colors hover:bg-gray-50"
         >
           <Plus className="size-3.5" aria-hidden /> 추가
         </button>
       </div>
 
       {rows.length === 0 ? (
-        <p className="text-caption text-gray-500">
+        <p className="text-caption text-gray-600">
           항목이 없습니다. "추가"로 입력하세요.
         </p>
       ) : (
@@ -80,7 +80,7 @@ function SectionBlock({
                 type="button"
                 aria-label="삭제"
                 onClick={() => onRows(rows.filter((_, ri) => ri !== i))}
-                className="shrink-0 rounded-radius-md p-2 text-gray-400 transition-colors hover:bg-danger-subtle hover:text-danger"
+                className="shrink-0 rounded-radius-md p-2 text-gray-500 transition-colors hover:bg-danger-subtle hover:text-danger"
               >
                 <Trash2 className="size-4" aria-hidden />
               </button>

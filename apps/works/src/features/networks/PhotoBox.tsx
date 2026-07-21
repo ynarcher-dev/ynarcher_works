@@ -18,7 +18,7 @@ export function PhotoBox({ src, className }: Props) {
   ) : (
     <div
       className={cn(
-        'flex size-20 shrink-0 items-center justify-center rounded-radius-lg bg-gray-100 text-gray-400',
+        'flex size-20 shrink-0 items-center justify-center rounded-radius-lg bg-gray-100 text-gray-500',
         className,
       )}
     >

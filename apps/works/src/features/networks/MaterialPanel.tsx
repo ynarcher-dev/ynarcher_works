@@ -100,7 +100,7 @@ export function MaterialPanel({
             <MiniPager page={page} pageCount={pageCount} onPage={setPage} />
           </>
         ) : (
-          <p className="text-body text-gray-500">등록된 자료가 없습니다.</p>
+          <p className="text-body text-gray-600">등록된 자료가 없습니다.</p>
         )}
       </div>
     </DetailPanelCard>
@@ -120,11 +120,11 @@ function MaterialRow({
   const [downloading, setDownloading] = useState(false)
   return (
     <li className="flex items-center gap-2 rounded-radius-sm border border-gray-200 bg-white px-3 py-2">
-      <FileIcon className="size-4 shrink-0 text-gray-400" />
+      <FileIcon className="size-4 shrink-0 text-gray-500" />
       <span className="min-w-0 flex-1 truncate text-body text-gray-800">
         {material.file_name}
       </span>
-      <span className="shrink-0 tabular-nums text-caption text-gray-600">
+      <span className="shrink-0 tabular-nums text-caption text-gray-700">
         {formatBytes(material.byte_size)}
       </span>
       <button
@@ -139,7 +139,7 @@ function MaterialRow({
             setDownloading(false)
           }
         }}
-        className="grid size-6 shrink-0 place-items-center rounded-radius-sm text-gray-500 transition-colors duration-fast hover:bg-gray-100 hover:text-gray-900 disabled:opacity-50"
+        className="grid size-6 shrink-0 place-items-center rounded-radius-sm text-gray-600 transition-colors duration-fast hover:bg-gray-100 hover:text-gray-900 disabled:opacity-50"
       >
         <Download className="size-4" />
       </button>

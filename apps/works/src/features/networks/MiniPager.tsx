@@ -34,7 +34,7 @@ export function MiniPager({
 }) {
   if (pageCount <= 1) return null
   return (
-    <div className="mt-3 flex items-center justify-center gap-2 text-caption text-gray-600">
+    <div className="mt-3 flex items-center justify-center gap-2 text-caption text-gray-700">
       <IconButton
         variant="ghost"
         label="이전"

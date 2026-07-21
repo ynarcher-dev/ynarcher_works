@@ -19,12 +19,12 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-caption font-medium text-gray-600">
+      <label className="mb-1 block text-caption font-medium text-gray-700">
         {label}
         {required && <span className="text-brand"> *</span>}
       </label>
       {children}
-      {hint && <p className="mt-1 text-caption text-gray-600">{hint}</p>}
+      {hint && <p className="mt-1 text-caption text-gray-700">{hint}</p>}
     </div>
   )
 }

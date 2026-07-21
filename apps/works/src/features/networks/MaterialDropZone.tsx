@@ -56,7 +56,7 @@ export function MaterialDropZone({
           dragging ? 'border-brand bg-brand/5' : 'border-gray-300 bg-gray-50'
         }`}
       >
-        <p className="text-body text-gray-600">
+        <p className="text-body text-gray-700">
           파일을 여기로 끌어다 놓거나{' '}
           <button
             type="button"

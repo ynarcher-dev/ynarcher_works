@@ -1,4 +1,4 @@
-import { Badge, Button, CardShell, Modal } from '@ynarcher/ui'
+import { Badge, Button, Modal, PanelCard } from '@ynarcher/ui'
 import { useState } from 'react'
 import { MiniTable, td, tdL, th, thL } from '@/features/startup/MiniTable'
 import { StartupShareholderChart } from '@/features/startup/StartupShareholderChart'
@@ -30,10 +30,10 @@ function HolderTable({ holders }: { holders: Shareholder[] }) {
           <tr key={i}>
             <td className={tdL}>{h.name || '-'}</td>
             <td className={td}>
-              {h.shares == null ? <span className="text-gray-400">-</span> : Number(h.shares).toLocaleString()}
+              {h.shares == null ? <span className="text-gray-500">-</span> : Number(h.shares).toLocaleString()}
             </td>
             <td className={td}>
-              {pct == null ? <span className="text-gray-400">-</span> : `${pct.toFixed(1)}%`}
+              {pct == null ? <span className="text-gray-500">-</span> : `${pct.toFixed(1)}%`}
             </td>
           </tr>
         )
@@ -46,7 +46,7 @@ function HolderTable({ holders }: { holders: Shareholder[] }) {
 function SnapshotMeta({ snap }: { snap: ShareholderSnapshot }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-caption text-gray-600">기준일 {snap.date || '-'}</span>
+      <span className="text-caption text-gray-700">기준일 {snap.date || '-'}</span>
       {snap.round && (
         <Badge tone="neutral">
           {snap.round}
@@ -67,18 +67,18 @@ export function StartupShareholderCard({ history }: { history: ShareholderSnapsh
   const hasHistory = history.length > 1
 
   return (
-    <CardShell>
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="text-body font-semibold text-gray-900">주주 구성</h3>
-        {hasHistory && (
+    <PanelCard
+      title="주주 구성"
+      action={
+        hasHistory && (
           <Button type="button" variant="outline" onClick={() => setHistoryOpen(true)}>
             변경 이력
           </Button>
-        )}
-      </div>
-
+        )
+      }
+    >
       {!latest || latest.holders.length === 0 ? (
-        <p className="text-body text-gray-500">등록된 주주 정보가 없습니다.</p>
+        <p className="text-body text-gray-600">등록된 주주 정보가 없습니다.</p>
       ) : (
         // 좌: 도넛 차트 · 우: 표(하단 우측에 기준일·라운드)
         <div className="grid items-center gap-4 lg:grid-cols-2">
@@ -105,6 +105,6 @@ export function StartupShareholderCard({ history }: { history: ShareholderSnapsh
           ))}
         </div>
       </Modal>
-    </CardShell>
+    </PanelCard>
   )
 }

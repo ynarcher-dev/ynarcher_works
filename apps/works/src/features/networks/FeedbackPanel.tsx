@@ -97,7 +97,7 @@ export function FeedbackPanel({
                     <span className="text-caption font-medium text-gray-700">
                       {f.author_name ?? '-'}
                     </span>
-                    <span className="text-caption tabular-nums text-gray-600">
+                    <span className="text-caption tabular-nums text-gray-700">
                       {formatDateTime(f.created_at)}
                     </span>
                     {isNewest && (
@@ -127,7 +127,7 @@ export function FeedbackPanel({
           <MiniPager page={page} pageCount={pageCount} onPage={setPage} />
           </>
         ) : (
-          <p className="text-body text-gray-500">등록된 코멘트가 없습니다.</p>
+          <p className="text-body text-gray-600">등록된 코멘트가 없습니다.</p>
         )}
       </div>
     </DetailPanelCard>

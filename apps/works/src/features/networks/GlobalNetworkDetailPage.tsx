@@ -16,7 +16,7 @@ const LIST_PATH = '/networks?tab=global'
 function Info({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-baseline gap-2">
-      <span className="shrink-0 text-caption text-gray-600">{label}:</span>
+      <span className="shrink-0 text-caption text-gray-700">{label}:</span>
       <span className="text-body text-gray-800">{value ?? '-'}</span>
     </div>
   )
@@ -53,7 +53,7 @@ function GlobalView({ record }: { record: GlobalRow }) {
               <h1 className="text-title-md font-bold text-gray-900">{record.name}</h1>
               {record.category && <Badge tone="neutral">{record.category}</Badge>}
             </div>
-            <p className="mt-1 text-body text-gray-600">{subtitle || '-'}</p>
+            <p className="mt-1 text-body text-gray-700">{subtitle || '-'}</p>
           </div>
         </div>
 
@@ -103,7 +103,7 @@ function GlobalView({ record }: { record: GlobalRow }) {
         {intro ? (
           <p className="whitespace-pre-wrap text-body text-gray-800">{intro}</p>
         ) : (
-          <p className="text-body text-gray-500">등록된 노트 내용이 없습니다.</p>
+          <p className="text-body text-gray-600">등록된 노트 내용이 없습니다.</p>
         )}
       </CardShell>
       </div>

@@ -17,7 +17,7 @@ function str(v: unknown): string {
 function Info({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-baseline gap-2">
-      <span className="shrink-0 text-caption text-gray-600">{label}:</span>
+      <span className="shrink-0 text-caption text-gray-700">{label}:</span>
       <span className="text-body text-gray-800">{value || '-'}</span>
     </div>
   )
@@ -86,7 +86,7 @@ export function MyPage() {
                 {roleLabel}
               </Badge>
             </div>
-            <p className="mt-1 text-body text-gray-600">{affiliation || '-'}</p>
+            <p className="mt-1 text-body text-gray-700">{affiliation || '-'}</p>
             <div className="mt-4 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-2">
               <Info label="회사" value={str(profile.company)} />
               <Info label="직책" value={str(profile.position)} />
@@ -95,7 +95,7 @@ export function MyPage() {
               <Info label="이메일" value={me.email ?? ''} />
               <Info label="연락처" value={me.phone ?? ''} />
             </div>
-            <p className="mt-3 text-caption text-gray-600">
+            <p className="mt-3 text-caption text-gray-700">
               이름·역할·부서·연락처 등 계정 정보 변경은 인사 관리(경영지원)에 요청하세요.
             </p>
           </CardShell>
@@ -103,11 +103,11 @@ export function MyPage() {
           <CardShell>
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-caption font-medium text-gray-600">약력</label>
+                <label className="mb-1 block text-caption font-medium text-gray-700">약력</label>
                 <TextArea rows={4} value={bio} onChange={(e) => setBio(e.target.value)} />
               </div>
               <div>
-                <label className="mb-1 block text-caption font-medium text-gray-600">노트</label>
+                <label className="mb-1 block text-caption font-medium text-gray-700">노트</label>
                 <TextArea rows={4} value={note} onChange={(e) => setNote(e.target.value)} />
               </div>
               <div className="flex justify-end">

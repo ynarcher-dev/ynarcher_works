@@ -51,7 +51,7 @@ export function StartupMediaFields({ media, setMedia }: Props) {
           {/* URL + 메타데이터 불러오기 + 삭제 */}
           <div className="flex flex-wrap items-end gap-2">
             <label className="min-w-56 flex-1 block">
-              <span className="mb-0.5 block text-caption text-gray-600">URL</span>
+              <span className="mb-0.5 block text-caption text-gray-700">URL</span>
               <Input
                 placeholder="https://…"
                 value={m.url ?? ''}
@@ -74,7 +74,7 @@ export function StartupMediaFields({ media, setMedia }: Props) {
           {/* 분류 + 제목 */}
           <div className="flex flex-wrap items-end gap-2">
             <label className="w-40 block">
-              <span className="mb-0.5 block text-caption text-gray-600">분류</span>
+              <span className="mb-0.5 block text-caption text-gray-700">분류</span>
               <Select value={m.kind ?? ''} onChange={(e) => patch(i, { kind: e.target.value })}>
                 {MEDIA_KINDS.map((k) => (
                   <option key={k} value={k}>
@@ -84,14 +84,14 @@ export function StartupMediaFields({ media, setMedia }: Props) {
               </Select>
             </label>
             <label className="min-w-56 flex-1 block">
-              <span className="mb-0.5 block text-caption text-gray-600">제목</span>
+              <span className="mb-0.5 block text-caption text-gray-700">제목</span>
               <Input value={m.title ?? ''} onChange={(e) => patch(i, { title: e.target.value })} />
             </label>
           </div>
 
           {/* 설명 */}
           <label className="block">
-            <span className="mb-0.5 block text-caption text-gray-600">설명</span>
+            <span className="mb-0.5 block text-caption text-gray-700">설명</span>
             <TextArea
               rows={2}
               value={m.description ?? ''}
@@ -103,7 +103,7 @@ export function StartupMediaFields({ media, setMedia }: Props) {
           {m.image && (
             <div className="flex items-center gap-2">
               <img src={m.image} alt="" className="h-12 w-20 rounded-radius-sm bg-gray-100 object-cover" />
-              <span className="truncate text-caption text-gray-600">{m.siteName}</span>
+              <span className="truncate text-caption text-gray-700">{m.siteName}</span>
             </div>
           )}
         </div>

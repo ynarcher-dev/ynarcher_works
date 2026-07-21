@@ -120,7 +120,7 @@ export function AttachmentList({ attachments }: { attachments: BoardAttachment[]
   if (attachments.length === 0) return null
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-1.5 text-caption font-semibold text-gray-600">
+      <div className="flex items-center gap-1.5 text-caption font-semibold text-gray-700">
         <Paperclip className="size-3.5" /> 첨부파일 {attachments.length}
       </div>
       <ul className="space-y-1.5">
@@ -129,9 +129,9 @@ export function AttachmentList({ attachments }: { attachments: BoardAttachment[]
             key={a.id}
             className="flex items-center gap-2 rounded-radius-sm border border-gray-200 bg-white px-3 py-2"
           >
-            <File className="size-4 shrink-0 text-gray-400" />
+            <File className="size-4 shrink-0 text-gray-500" />
             <span className="min-w-0 flex-1 truncate text-body text-gray-800">{a.name}</span>
-            <span className="shrink-0 tabular-nums text-caption text-gray-600">
+            <span className="shrink-0 tabular-nums text-caption text-gray-700">
               {formatBytes(a.size)}
             </span>
             <a
@@ -140,8 +140,8 @@ export function AttachmentList({ attachments }: { attachments: BoardAttachment[]
               aria-label={`${a.name} 다운로드`}
               className={`grid size-6 shrink-0 place-items-center rounded-radius-sm transition-colors duration-fast ${
                 a.url
-                  ? 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
-                  : 'pointer-events-none text-gray-300'
+                  ? 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  : 'pointer-events-none text-gray-400'
               }`}
             >
               <Download className="size-4" />

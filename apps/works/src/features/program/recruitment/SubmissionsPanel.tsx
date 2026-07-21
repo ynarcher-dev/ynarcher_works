@@ -82,7 +82,7 @@ export function SubmissionsPanel({ moduleId }: { moduleId: string }) {
 
   if (!form) {
     return (
-      <p className="rounded-radius-sm border border-gray-200 bg-gray-25 px-3 py-6 text-center text-caption text-gray-500">
+      <p className="rounded-radius-sm border border-gray-200 bg-gray-25 px-3 py-6 text-center text-caption text-gray-600">
         먼저 우측 모집 설정에서 신청서를 만들고 공개하세요.
       </p>
     )

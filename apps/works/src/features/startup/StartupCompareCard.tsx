@@ -1,4 +1,4 @@
-import { Badge, Button, CardShell, Spinner } from '@ynarcher/ui'
+import { Badge, Button, PanelCard, Spinner } from '@ynarcher/ui'
 import { Plus, X } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { PhotoBox } from '@/features/networks/PhotoBox'
@@ -60,7 +60,7 @@ function Row({
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_6rem_minmax(0,1fr)] items-center gap-2 py-1.5">
       <Val v={a} unit={unit} empty={aEmpty} />
-      <span className="whitespace-nowrap border-x border-gray-100 px-1.5 text-center text-caption text-gray-600">
+      <span className="whitespace-nowrap border-x border-gray-100 px-1.5 text-center text-caption text-gray-700">
         {label}
       </span>
       <Val v={b} unit={unit} empty={bEmpty} />
@@ -88,7 +88,7 @@ function TextRow({
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_6rem_minmax(0,1fr)] items-stretch gap-2 py-1.5">
       <span className="min-w-0 self-center break-words text-center text-caption text-gray-800">{a || aEmpty}</span>
-      <span className="flex items-center justify-center whitespace-nowrap border-x border-gray-100 px-1.5 text-center text-caption text-gray-600">
+      <span className="flex items-center justify-center whitespace-nowrap border-x border-gray-100 px-1.5 text-center text-caption text-gray-700">
         {label}
       </span>
       <span className="min-w-0 self-center break-words text-center text-caption text-gray-800">{b || bEmpty}</span>
@@ -100,7 +100,7 @@ function TextRow({
 function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div>
-      <p className="rounded-radius-sm bg-gray-50 px-2.5 py-1 text-caption font-semibold text-gray-600">
+      <p className="rounded-radius-sm bg-gray-50 px-2.5 py-1 text-caption font-semibold text-gray-700">
         {title}
       </p>
       <div className="mt-0.5 divide-y divide-gray-50">{children}</div>
@@ -127,7 +127,8 @@ function CompanyHead({ record, year, onClear }: { record: EntityRow; year?: numb
           </button>
         )}
       </div>
-      <p className="mt-1.5 w-full truncate text-body font-bold text-gray-900">{record.name}</p>
+      {/* 카드 제목(semibold)보다 무거워지지 않도록 medium에 둔다 — 자식이 부모를 눌러선 안 된다. */}
+      <p className="mt-1.5 w-full truncate text-body font-medium text-gray-900">{record.name}</p>
       {industries.length > 0 && (
         <div className="mt-0.5 flex flex-wrap justify-center gap-1">
           {industries.map((ind) => (
@@ -138,9 +139,9 @@ function CompanyHead({ record, year, onClear }: { record: EntityRow; year?: numb
         </div>
       )}
       {year != null ? (
-        <span className="mt-0.5 text-caption text-gray-600">{year}</span>
+        <span className="mt-0.5 text-caption text-gray-700">{year}</span>
       ) : (
-        <span className="mt-0.5 text-caption text-gray-300">기준연도 정보 없음</span>
+        <span className="mt-0.5 text-caption text-gray-400">기준연도 정보 없음</span>
       )}
     </div>
   )
@@ -202,15 +203,13 @@ export function StartupCompareCard({ a, b, bLoading, onSelectB, onClearB }: Prop
   const foundedB = b ? formatFounded(b.founded_on) : '-'
 
   return (
-    <CardShell>
-      <h3 className="mb-4 text-body font-semibold text-gray-900">기업 비교</h3>
-
+    <PanelCard title="기업 비교">
       {/* 기업 헤더: A · VS · B — 두 기업을 각자 테두리 박스로 분리(기업 VS 기업) */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-2">
         <div className="rounded-radius-md border border-gray-200 bg-white p-3">
           <CompanyHead record={a} year={yearA} />
         </div>
-        <span className="self-center text-caption font-semibold text-gray-300" aria-hidden>
+        <span className="self-center text-caption font-semibold text-gray-400" aria-hidden>
           VS
         </span>
         <div className="rounded-radius-md border border-gray-200 bg-white p-3">
@@ -230,7 +229,7 @@ export function StartupCompareCard({ a, b, bLoading, onSelectB, onClearB }: Prop
           <TextRow label="설립일" a={formatFounded(a.founded_on)} b={foundedB} aEmpty={aEmpty} bEmpty={bEmpty} />
         </Group>
 
-        <p className="text-right text-caption text-gray-600">단위: 천원</p>
+        <p className="text-right text-caption text-gray-700">단위: 천원</p>
         <Group title="재무 현황">
           <Row label="자산" a={fa?.assets} b={fb?.assets} aEmpty={aEmpty} bEmpty={bEmpty} />
           <Row label="부채" a={fa?.liabilities} b={fb?.liabilities} aEmpty={aEmpty} bEmpty={bEmpty} />
@@ -254,6 +253,6 @@ export function StartupCompareCard({ a, b, bLoading, onSelectB, onClearB }: Prop
           <Row label="투자유치액" a={ia?.fundingAmount} b={ib?.fundingAmount} aEmpty={aEmpty} bEmpty={bEmpty} />
         </Group>
       </div>
-    </CardShell>
+    </PanelCard>
   )
 }

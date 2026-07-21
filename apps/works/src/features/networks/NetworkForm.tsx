@@ -70,10 +70,10 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-caption font-medium text-gray-600">
+      <label className="mb-1 block text-caption font-medium text-gray-700">
         {label}
         {required && <span className="text-brand"> *</span>}
-        {hint && <span className="ml-1 font-normal text-gray-600">{hint}</span>}
+        {hint && <span className="ml-1 font-normal text-gray-700">{hint}</span>}
       </label>
       {children}
     </div>
@@ -248,7 +248,7 @@ export function NetworkForm({ entity, recordId, initial, onDone, onCancel }: Pro
         <div className="space-y-4 lg:col-span-2">
           {/* 사진 카드 */}
           <CardShell>
-            <p className="mb-3 text-caption font-medium text-gray-600">사진</p>
+            <p className="mb-3 text-caption font-medium text-gray-700">사진</p>
             <div className="flex items-center gap-4">
               <PhotoBox src={photo} />
               <div className="flex gap-2">
@@ -333,7 +333,7 @@ export function NetworkForm({ entity, recordId, initial, onDone, onCancel }: Pro
                         )
                       })}
                       {(fieldTags ?? []).length === 0 && (
-                        <span className="text-caption text-gray-500">
+                        <span className="text-caption text-gray-600">
                           등록된 분야 태그가 없습니다. (ADMIN › 분야 관리)
                         </span>
                       )}
@@ -346,7 +346,7 @@ export function NetworkForm({ entity, recordId, initial, onDone, onCancel }: Pro
 
           {!compact && (
             <CardShell>
-              <p className="mb-4 text-caption font-medium text-gray-600">약력</p>
+              <p className="mb-4 text-caption font-medium text-gray-700">약력</p>
               <CareerEditor value={background} onChange={setBackground} />
             </CardShell>
           )}

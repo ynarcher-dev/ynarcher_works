@@ -40,7 +40,7 @@ function SectionCard({ title, children }: { title: string; children: ReactNode }
 function Info({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-baseline gap-2">
-      <span className="shrink-0 text-caption text-gray-600">{label}:</span>
+      <span className="shrink-0 text-caption text-gray-700">{label}:</span>
       <span className="text-body text-gray-800">{value ?? '-'}</span>
     </div>
   )
@@ -74,7 +74,7 @@ function RelationCard({ title }: { title: string }) {
           <MiniPager page={page} pageCount={pageCount} onPage={setPage} />
         </>
       ) : (
-        <p className="text-body text-gray-500">연동된 {title} 정보가 없습니다.</p>
+        <p className="text-body text-gray-600">연동된 {title} 정보가 없습니다.</p>
       )}
     </DetailPanelCard>
   )
@@ -160,7 +160,7 @@ export function EmployeeDetailPage({
                       {roleLabel}
                     </Badge>
                   </div>
-                  <p className="mt-1 text-body text-gray-600">{subtitle}</p>
+                  <p className="mt-1 text-body text-gray-700">{subtitle}</p>
                 </div>
               </div>
 
@@ -179,7 +179,7 @@ export function EmployeeDetailPage({
               {bio ? (
                 <p className="whitespace-pre-wrap text-body text-gray-800">{bio}</p>
               ) : (
-                <p className="text-body text-gray-500">
+                <p className="text-body text-gray-600">
                   등록된 약력이 없습니다. "수정"에서 입력하세요.
                 </p>
               )}
@@ -189,7 +189,7 @@ export function EmployeeDetailPage({
               {note ? (
                 <p className="whitespace-pre-wrap text-body text-gray-800">{note}</p>
               ) : (
-                <p className="text-body text-gray-500">등록된 노트 내용이 없습니다.</p>
+                <p className="text-body text-gray-600">등록된 노트 내용이 없습니다.</p>
               )}
             </SectionCard>
 

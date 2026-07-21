@@ -34,11 +34,11 @@ export function PendingMaterialPanel({
                 key={`${file.name}-${i}`}
                 className="flex items-center gap-2 rounded-radius-sm border border-gray-200 bg-white px-3 py-2"
               >
-                <FileIcon className="size-4 shrink-0 text-gray-400" />
+                <FileIcon className="size-4 shrink-0 text-gray-500" />
                 <span className="min-w-0 flex-1 truncate text-body text-gray-800">
                   {file.name}
                 </span>
-                <span className="shrink-0 tabular-nums text-caption text-gray-600">
+                <span className="shrink-0 tabular-nums text-caption text-gray-700">
                   {formatBytes(file.size)}
                 </span>
                 <IconButton
@@ -52,9 +52,9 @@ export function PendingMaterialPanel({
             ))}
           </ul>
         ) : (
-          <p className="text-body text-gray-500">첨부한 자료가 없습니다.</p>
+          <p className="text-body text-gray-600">첨부한 자료가 없습니다.</p>
         )}
-        <p className="mt-2 text-caption text-gray-600">
+        <p className="mt-2 text-caption text-gray-700">
           첨부한 자료는 등록을 저장할 때 함께 업로드됩니다.
         </p>
       </div>

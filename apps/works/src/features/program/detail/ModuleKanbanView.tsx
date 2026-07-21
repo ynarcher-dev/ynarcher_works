@@ -95,7 +95,7 @@ export function ModuleKanbanView({
               <Badge tone={meta.tone}>
                 {meta.label}
               </Badge>
-              <span className="text-caption tabular-nums text-gray-600">{items.length}</span>
+              <span className="text-caption tabular-nums text-gray-700">{items.length}</span>
             </div>
             <ul className="space-y-2">
               {items.map((mod) => {
@@ -125,7 +125,7 @@ export function ModuleKanbanView({
                     >
                       <span className="flex items-center gap-2">
                         {Icon && (
-                          <span className="grid h-6 w-6 shrink-0 place-items-center rounded-radius-sm bg-gray-50 text-gray-600">
+                          <span className="grid h-6 w-6 shrink-0 place-items-center rounded-radius-sm bg-gray-50 text-gray-700">
                             <Icon className="h-3.5 w-3.5" />
                           </span>
                         )}
@@ -140,7 +140,7 @@ export function ModuleKanbanView({
                         <Badge tone={MODULE_VISIBILITY_TONE[mod.visibility] ?? 'neutral'}>
                           {MODULE_VISIBILITY_LABEL[mod.visibility] ?? '비공개'}
                         </Badge>
-                        <span className="text-caption tabular-nums text-gray-600">
+                        <span className="text-caption tabular-nums text-gray-700">
                           {settings.start_date && settings.end_date
                             ? `${settings.start_date} ~ ${settings.end_date}`
                             : '일정 미등록'}
@@ -157,10 +157,10 @@ export function ModuleKanbanView({
                   isOver
                     ? 'border-brand/50 bg-brand-25 text-brand'
                     : isValidTarget
-                      ? 'border-gray-300 text-gray-500'
+                      ? 'border-gray-300 text-gray-600'
                       : items.length === 0
-                        ? 'border-gray-200 text-gray-500'
-                        : 'border-gray-200 text-gray-300'
+                        ? 'border-gray-200 text-gray-600'
+                        : 'border-gray-200 text-gray-400'
                 }`}
               >
                 {isValidTarget

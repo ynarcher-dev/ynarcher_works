@@ -1,4 +1,4 @@
-import { Button, Input, TagChip, TextArea } from '@ynarcher/ui'
+import { Button, Input, TagChip, TextArea, cardText } from '@ynarcher/ui'
 import { useState, type ReactNode } from 'react'
 import { useFieldArray, type Control, type UseFormRegister } from 'react-hook-form'
 import type { StartupDetailFormValues } from '@/features/startup/StartupDetailForm'
@@ -39,7 +39,7 @@ export function StartupBusinessTeamFields({ register, control, capabilities, set
     <div className="space-y-5">
       {/* 비즈니스 */}
       <div className="space-y-3">
-        <h3 className="text-body font-semibold text-gray-900">비즈니스</h3>
+        <h3 className={cardText.subhead}>비즈니스</h3>
         {/* 한 줄 소개는 기본 데이터 카드에서 입력한다(헤더 부제로 노출). */}
         <Label text="비즈니스 모델">
           <TextArea rows={3} {...register('businessModel')} />
@@ -54,7 +54,7 @@ export function StartupBusinessTeamFields({ register, control, capabilities, set
 
       {/* 팀 역량 */}
       <div className="space-y-3">
-        <h3 className="text-body font-semibold text-gray-900">팀 역량</h3>
+        <h3 className={cardText.subhead}>팀 역량</h3>
         <Label text="대표 / 창업자 역량">
           <TextArea rows={3} {...register('founderStrength')} />
         </Label>
@@ -114,7 +114,7 @@ export function StartupBusinessTeamFields({ register, control, capabilities, set
             <div className="mt-2 flex flex-wrap gap-1">
               {capabilities.map((c) => (
                 <TagChip key={c} onClick={() => removeCap(c)} title="제거">
-                  {c} <span aria-hidden className="text-gray-400">×</span>
+                  {c} <span aria-hidden className="text-gray-500">×</span>
                 </TagChip>
               ))}
             </div>

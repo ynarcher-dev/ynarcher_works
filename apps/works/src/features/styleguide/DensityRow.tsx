@@ -16,7 +16,7 @@ export function DensityHeader() {
       {CONTEXTS.map((c) => (
         <div key={c.key}>
           <div className="text-body-sm font-semibold text-gray-900">{c.label}</div>
-          <div className="text-caption text-gray-500">{c.note}</div>
+          <div className="text-caption text-gray-600">{c.note}</div>
         </div>
       ))}
     </div>
@@ -37,7 +37,7 @@ export function DensityRow({
 }) {
   return (
     <div className="grid grid-cols-[10rem_repeat(3,minmax(0,1fr))] items-center gap-4 border-b border-gray-100 py-3">
-      <code className="text-caption text-gray-600">{name}</code>
+      <code className="text-caption text-gray-700">{name}</code>
       {CONTEXTS.map((c) => (
         <DensityProvider key={c.key} value={c.key}>
           <Measured>{render()}</Measured>

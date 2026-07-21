@@ -43,7 +43,7 @@ export function EntityHeaderCard({
             {badges}
           </div>
           {description !== undefined && (
-            <p className="mt-1 text-body text-gray-600">{description || '-'}</p>
+            <p className="mt-1 text-body text-gray-700">{description || '-'}</p>
           )}
         </div>
         {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
@@ -67,7 +67,7 @@ export interface EntityHeaderSectionProps {
 export function EntityHeaderSection({ label, children }: EntityHeaderSectionProps) {
   return (
     <div className="mt-4 border-t border-gray-100 pt-4">
-      <span className="text-caption text-gray-600">{label}</span>
+      <span className="text-caption text-gray-700">{label}</span>
       <div className="mt-2">{children}</div>
     </div>
   )
