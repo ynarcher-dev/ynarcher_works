@@ -18,7 +18,7 @@ export function CategoryColumnChart({
 }) {
   const all = data.filter((d) => d.count > 0)
   if (all.length === 0) {
-    return <p className="py-8 text-center text-caption text-gray-400">표시할 데이터가 없습니다.</p>
+    return <p className="py-8 text-center text-caption text-gray-500">표시할 데이터가 없습니다.</p>
   }
   const cols = limit ? all.slice(0, limit) : all
   const max = Math.max(...cols.map((d) => d.count))
@@ -41,13 +41,13 @@ export function CategoryColumnChart({
                 className="relative w-full max-w-[1.1rem] rounded-t-[3px] transition-all"
                 style={{ height: `${hPct}%`, backgroundColor: fill }}
               >
-                <span className="absolute bottom-full left-1/2 mb-0.5 -translate-x-1/2 whitespace-nowrap text-[10px] font-semibold leading-none tabular-nums text-gray-800">
+                <span className="absolute bottom-full left-1/2 mb-1 -translate-x-1/2 whitespace-nowrap text-caption font-semibold leading-none tabular-nums text-gray-900">
                   {d.count.toLocaleString()}
                 </span>
               </div>
             </div>
             <span
-              className="w-full shrink-0 truncate text-center text-[10px] leading-tight text-gray-600"
+              className="w-full shrink-0 truncate text-center text-caption leading-tight text-gray-600"
               title={d.label}
             >
               {d.label}

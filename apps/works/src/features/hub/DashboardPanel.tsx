@@ -36,7 +36,7 @@ function GreetingHeader() {
     <div className="text-center">
       {/* 페이지의 h1은 상단 PageHeader('대시보드')가 갖는다. 인사말은 그 아래 위계의 h2로 둔다. */}
       <h2 className="truncate text-title-md font-bold text-gray-900">반갑습니다, {name}님</h2>
-      <p className="mt-2 text-body-lg text-gray-500">
+      <p className="mt-2 text-body-lg text-gray-600">
         오늘은 와이앤아처와 함께한 지{' '}
         <span className="font-bold tabular-nums text-brand">{days.toLocaleString()}일</span>째 되는
         날입니다.
@@ -201,7 +201,7 @@ function InfoCard({ card }: { card: InfoCardDef }) {
             </span>
           )}
         </p>
-        <p className="mt-0.5 truncate text-caption text-gray-500">{card.sub}</p>
+        <p className="mt-0.5 truncate text-caption text-gray-600">{card.sub}</p>
       </div>
     </Link>
   )
@@ -237,7 +237,7 @@ function BoardCard({
         </span>
         <Link
           to={`/office?tab=${tab}`}
-          className="text-caption font-medium text-gray-400 transition-colors duration-fast hover:text-brand"
+          className="text-caption font-medium text-gray-600 transition-colors duration-fast hover:text-brand"
         >
           더보기
         </Link>
@@ -252,8 +252,8 @@ function BoardCard({
               <span className="truncate text-body text-gray-800">{p.title}</span>
               {isNewPost(p.date) && <NewBadge />}
             </span>
-            <span className="truncate text-right text-caption text-gray-500">{p.author}</span>
-            <span className="text-right tabular-nums text-caption text-gray-400">{p.date}</span>
+            <span className="truncate text-right text-caption text-gray-600">{p.author}</span>
+            <span className="text-right tabular-nums text-caption text-gray-600">{p.date}</span>
           </li>
         ))}
       </ul>
@@ -277,7 +277,7 @@ function PromoBanner() {
             AI 스마트 검색 &amp; 분석 에이전트
           </h3>
         </div>
-        <p className="mt-0.5 hidden max-w-lg truncate text-caption text-gray-500 xl:block">
+        <p className="mt-0.5 hidden max-w-lg truncate text-caption text-gray-600 xl:block">
           자연어로 복잡한 스타트업 데이터와 M&amp;A 동향을 질문하고, 스마트한 요약 리포트와 분석 딥링크를 즉시 받아보세요.
         </p>
       </div>

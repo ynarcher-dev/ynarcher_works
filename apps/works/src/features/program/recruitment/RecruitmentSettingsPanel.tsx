@@ -67,7 +67,7 @@ function Field({
     <div>
       <label className="mb-1.5 block text-caption font-medium text-gray-600" htmlFor={htmlFor}>
         {label}
-        {hint && <span className="ml-1 font-normal text-gray-400">{hint}</span>}
+        {hint && <span className="ml-1 font-normal text-gray-600">{hint}</span>}
       </label>
       {children}
     </div>
@@ -200,8 +200,8 @@ export function RecruitmentSettingsPanel({
                   </button>
                 ))}
               </div>
-              <span className="inline-flex items-center gap-1.5 text-caption text-gray-500">
-                현재 <Badge tone={eff.tone} size="sm">{eff.label}</Badge>
+              <span className="inline-flex items-center gap-1.5 text-caption text-gray-600">
+                현재 <Badge tone={eff.tone}>{eff.label}</Badge>
               </span>
             </div>
           </Field>
@@ -233,7 +233,7 @@ export function RecruitmentSettingsPanel({
                     setOpenAt(null)
                     setCloseAt(null)
                   }}
-                  className="text-caption text-gray-400 underline-offset-2 hover:text-gray-600 hover:underline"
+                  className="text-caption text-gray-600 underline-offset-2 hover:text-gray-600 hover:underline"
                 >
                   기간 지우기
                 </button>
@@ -245,11 +245,11 @@ export function RecruitmentSettingsPanel({
             {url ? (
               <div className="flex flex-wrap items-center gap-2">
                 <Input readOnly value={url} className="min-w-0 flex-1 text-caption" />
-                <Button variant="secondary" size="sm" type="button" onClick={copyUrl}>
+                <Button variant="secondary" type="button" onClick={copyUrl}>
                   <Link2 className="mr-1 h-3.5 w-3.5" /> URL 복사
                 </Button>
                 <a href={url} target="_blank" rel="noreferrer">
-                  <Button variant="secondary" size="sm" type="button">
+                  <Button variant="secondary" type="button">
                     <ExternalLink className="mr-1 h-3.5 w-3.5" /> 새 탭에서 열기
                   </Button>
                 </a>
@@ -288,7 +288,6 @@ export function RecruitmentSettingsPanel({
               />
               <Button
                 variant="secondary"
-                size="sm"
                 type="button"
                 disabled={uploading}
                 onClick={() => fileRef.current?.click()}
@@ -326,7 +325,7 @@ export function RecruitmentSettingsPanel({
       <Card
         title="신청 설정"
         subtitle="지원자가 작성할 신청 항목과 개인정보 동의 문구를 구성합니다."
-        actions={<Badge tone="neutral" size="sm">{`항목 ${fields.length}`}</Badge>}
+        actions={<Badge tone="neutral">{`항목 ${fields.length}`}</Badge>}
       >
         <div className="space-y-5">
           <Field

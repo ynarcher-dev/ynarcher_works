@@ -113,7 +113,7 @@ export function BoardPanel({
       align: 'center',
       className: 'w-64',
       // 본문 셀은 DataTable 기본 text-body를 상속한다(캡션 크기를 덧씌우면 다른 열과 어긋남).
-      render: () => <span className="text-gray-500">{boardLabel}</span>,
+      render: () => <span className="text-gray-600">{boardLabel}</span>,
     })
   }
 

@@ -43,7 +43,7 @@ export function Pagination({
     >
       {/* 좌측 부가 정보(필터 반영 수 / 전체 수 등) */}
       {info != null && (
-        <div className="absolute left-0 hidden items-center font-medium text-gray-500 sm:flex">
+        <div className="absolute left-0 hidden items-center font-medium text-gray-600 sm:flex">
           {info}
         </div>
       )}
@@ -113,7 +113,7 @@ export function Pagination({
       </button>
 
       {/* 우측 직접 이동 입력창 (Go-To-Page) */}
-      <div className="absolute right-0 hidden sm:flex items-center gap-1.5 text-gray-500">
+      <div className="absolute right-0 hidden sm:flex items-center gap-1.5 text-gray-600">
         <span>페이지 이동</span>
         <input
           type="number"

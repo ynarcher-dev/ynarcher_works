@@ -161,14 +161,13 @@ export function OrgVersionBar({
           </Select>
         </div>
         {showClone && (
-          <Button variant="outline" size="sm" onClick={openClone} disabled={!selected || cloning}>
+          <Button variant="outline" onClick={openClone} disabled={!selected || cloning}>
             <CopyPlus size={14} /> 새 버전 복제
           </Button>
         )}
         {onDelete && selectedUpcoming && (
           <Button
             variant="outline"
-            size="sm"
             onClick={() => {
               setDelError(null)
               setDelOpen(true)
@@ -194,17 +193,17 @@ export function OrgVersionBar({
         title="새 조직 버전 복제"
         footer={
           <div className="flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => setOpen(false)} disabled={busy}>
+            <Button variant="outline" onClick={() => setOpen(false)} disabled={busy}>
               취소
             </Button>
-            <Button size="sm" onClick={submit} disabled={busy || cloning}>
+            <Button onClick={submit} disabled={busy || cloning}>
               {busy ? '생성 중…' : '복제 생성'}
             </Button>
           </div>
         }
       >
         <div className="space-y-3">
-          <p className="text-caption text-gray-500">
+          <p className="text-caption text-gray-600">
             <span className="font-semibold text-gray-800">{selected?.label}</span> 의 조직 트리를
             새 가용기간으로 복사합니다.
           </p>
@@ -233,7 +232,7 @@ export function OrgVersionBar({
             </label>
           </div>
           {error && <p className="text-caption text-danger">{error}</p>}
-          <p className="text-caption text-gray-400">
+          <p className="text-caption text-gray-600">
             · 시작일부터 이 조직도가 유효합니다. 오늘 이하 시작일 중 가장 최근 버전이 '현재'가 됩니다.
           </p>
         </div>
@@ -247,11 +246,10 @@ export function OrgVersionBar({
         title="예약된 조직 개편 취소"
         footer={
           <div className="flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => setDelOpen(false)} disabled={delBusy}>
+            <Button variant="outline" onClick={() => setDelOpen(false)} disabled={delBusy}>
               닫기
             </Button>
             <Button
-              size="sm"
               onClick={confirmDelete}
               disabled={delBusy || deleting}
               className="bg-danger hover:bg-danger/90"

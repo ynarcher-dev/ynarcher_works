@@ -99,7 +99,7 @@ export function ProgramDepartmentEditor({ value, onChange, versionId }: Props) {
                   className="w-16"
                   aria-label={`${nameOf(row.department_id)} 협업비율`}
                 />
-                <span className="text-caption text-gray-400">%</span>
+                <span className="text-caption text-gray-600">%</span>
               </label>
               <button
                 type="button"
@@ -118,13 +118,13 @@ export function ProgramDepartmentEditor({ value, onChange, versionId }: Props) {
         <button
           type="button"
           onClick={add}
-          className="rounded-radius-md border border-dashed border-gray-300 px-3 py-1.5 text-caption font-medium text-gray-500 transition-colors duration-fast hover:border-gray-400 hover:bg-gray-25 hover:text-gray-700"
+          className="rounded-radius-md border border-dashed border-gray-300 px-3 py-1.5 text-caption font-medium text-gray-600 transition-colors duration-fast hover:border-gray-400 hover:bg-gray-25 hover:text-gray-700"
         >
           + 부서 추가
         </button>
         {value.length > 0 && (
           <span className="flex items-center gap-2 text-caption">
-            <span className={mainCount !== 1 ? 'font-medium text-danger' : 'text-gray-400'}>
+            <span className={mainCount !== 1 ? 'font-medium text-danger' : 'text-gray-600'}>
               메인 {mainCount}개{mainCount !== 1 ? ' (1개 필요)' : ''}
             </span>
             <span className={sum === 100 ? 'font-medium text-success' : 'font-medium text-danger'}>

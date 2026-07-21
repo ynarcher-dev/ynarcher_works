@@ -50,14 +50,14 @@ export function ChangeHistoryPanel({
                 key={c.id}
                 className="flex flex-wrap items-center gap-2 text-body text-gray-800"
               >
-                <span className="text-caption tabular-nums text-gray-400">
+                <span className="text-caption tabular-nums text-gray-600">
                   {c.created_at.slice(0, 10)}
                 </span>
-                <Badge tone="neutral" size="sm">
+                <Badge tone="neutral">
                   {CONTRIBUTION_ACTION_LABEL[c.action]}
                 </Badge>
                 <span className="font-medium">{c.user_name ?? '-'}</span>
-                <span className="text-caption text-gray-400">
+                <span className="text-caption text-gray-600">
                   {c.source === 'upload' ? '업로드' : '수기'}
                   {c.note ? ` · ${c.note}` : ''}
                 </span>
@@ -67,7 +67,7 @@ export function ChangeHistoryPanel({
           <MiniPager page={page} pageCount={pageCount} onPage={setPage} />
         </>
       ) : (
-        <p className="text-body text-gray-400">기록된 변동 이력이 없습니다.</p>
+        <p className="text-body text-gray-500">기록된 변동 이력이 없습니다.</p>
       )}
     </DetailPanelCard>
   )

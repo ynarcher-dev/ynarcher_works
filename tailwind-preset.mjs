@@ -82,7 +82,43 @@ export default {
         'title-sm': ['1.25rem', { lineHeight: '1.4', letterSpacing: '-0.015em' }],
         'body-lg': ['1rem', { lineHeight: '1.5', letterSpacing: '-0.01em' }],
         body: ['0.875rem', { lineHeight: '1.5', letterSpacing: '-0.01em' }],
+        // 컨트롤(버튼·탭·인라인 액션) 라벨 전용 단계(13px). 본문(14)보다 한 단계 작게 눌러
+        // 조작 요소가 읽을거리보다 앞으로 튀어나오지 않게 한다.
+        'body-sm': ['0.8125rem', { lineHeight: '1.4', letterSpacing: '-0.01em' }],
         caption: ['0.75rem', { lineHeight: '1.4', letterSpacing: '0em' }],
+        // 배지·태그 전용 단계(밀도 맥락 3종). 줄바꿈이 없는 한 줄 라벨이므로 line-height를 1로
+        // 고정해 부모의 leading을 상속하지 않게 한다 — 상속하면 같은 배지가 화면마다 달라진다.
+        // 근거: 5_component_spec_rules.md §3.4
+        'tag-page': ['0.75rem', { lineHeight: '1', letterSpacing: '0em' }],    // 12px
+        'tag-card': ['0.6875rem', { lineHeight: '1', letterSpacing: '0em' }],  // 11px
+        'tag-table': ['0.625rem', { lineHeight: '1', letterSpacing: '0em' }],  // 10px
+      },
+      /**
+       * 밀도 맥락(density) 3단 높이 격자.
+       *
+       * 크기를 가르는 축은 중요도가 아니라 **놓이는 자리**다. 같은 '수정' 버튼이라도 상세 헤더에
+       * 있으면 40px, 카드 안이면 32px, 표 셀 안이면 24px이어야 한다. 컴포넌트는 반드시 이 토큰에서
+       * 높이를 가져오고 `h-10` 같은 원시 유틸을 직접 쓰지 않는다 — 그래야 밀도를 한 곳에서 바꾼다.
+       *
+       * spacing에 두는 이유: 높이·너비·정사각(size) 유틸이 같은 값을 공유해야 정사각 아이콘
+       * 버튼과 직사각 버튼의 높이가 자동으로 맞는다.
+       * 근거: 5_component_spec_rules.md §1.2
+       */
+      spacing: {
+        // 버튼·입력·선택 등 폭이 가변인 컨트롤
+        'ctl-page': '2.5rem',    // 40px — 일반 UI(페이지 툴바·상세 헤더·폼)
+        'ctl-card': '2rem',      // 32px — 카드섹션 내부
+        'ctl-table': '1.5rem',   // 24px — 데이터 테이블 셀 내부
+        // 정사각 아이콘 버튼 — 라벨이 없어 같은 맥락에서 한 단계 작게 잡는다
+        'icon-page': '2.25rem',  // 36px
+        'icon-card': '1.75rem',  // 28px
+        'icon-table': '1.5rem',  // 24px
+        // 배지·태그
+        'tag-page': '1.375rem',  // 22px
+        'tag-card': '1.25rem',   // 20px
+        'tag-table': '1.125rem', // 18px
+        // 데이터 테이블 표준 행 — ctl-table(24px) 위아래로 4px씩 여유
+        row: '2rem',             // 32px
       },
       zIndex: {
         base: '0',

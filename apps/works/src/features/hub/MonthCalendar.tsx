@@ -114,7 +114,7 @@ export function MonthCalendar({ events }: { events: SystemEvent[] }) {
             <div
               key={w}
               className={`py-2 text-center text-caption font-semibold ${
-                i === 0 ? 'text-brand' : i === 6 ? 'text-info' : 'text-gray-500'
+                i === 0 ? 'text-brand' : i === 6 ? 'text-info' : 'text-gray-600'
               }`}
             >
               {w}
@@ -167,7 +167,7 @@ export function MonthCalendar({ events }: { events: SystemEvent[] }) {
                     </span>
                   ))}
                   {dayEvents.length > 3 && (
-                    <span className="px-1 text-caption text-gray-400">
+                    <span className="px-1 text-caption text-gray-600">
                       +{dayEvents.length - 3}건 더
                     </span>
                   )}
@@ -184,19 +184,19 @@ export function MonthCalendar({ events }: { events: SystemEvent[] }) {
       <div className="rounded-radius-md border border-gray-300 bg-gray-0 p-4 shadow-soft lg:col-span-1 lg:h-full">
         <p className="mb-3 text-body font-semibold text-gray-900">
           {dayjs(selected).format('M월 D일')} ({WEEKDAYS[dayjs(selected).day()]})
-          <span className="ml-2 text-caption font-normal text-gray-400">
+          <span className="ml-2 text-caption font-normal text-gray-600">
             {selectedEvents.length}건
           </span>
         </p>
         {selectedEvents.length === 0 ? (
-          <p className="text-body text-gray-400">등록된 일정이 없습니다.</p>
+          <p className="text-body text-gray-500">등록된 일정이 없습니다.</p>
         ) : (
           <ul className="space-y-2">
             {selectedEvents.map((ev) => (
               <li key={ev.id} className="flex items-center gap-3">
                 <Badge tone={layerTone[ev.event_type] ?? 'neutral'}>{ev.event_type}</Badge>
                 <span className="flex-1 text-body text-gray-800">{ev.title}</span>
-                <span className="tabular-nums text-caption text-gray-500">
+                <span className="tabular-nums text-caption text-gray-600">
                   {ev.starts_at ? dayjs(ev.starts_at).format('HH:mm') : '-'}
                 </span>
               </li>

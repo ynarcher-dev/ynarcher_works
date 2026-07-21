@@ -57,10 +57,10 @@ export function FieldBuilder({
       <div className="flex items-center justify-between">
         <span className="text-body font-medium text-gray-800">신청 항목</span>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={resetPreset} type="button">
+          <Button variant="secondary" onClick={resetPreset} type="button">
             <RotateCcw className="mr-1 h-3.5 w-3.5" /> 프리셋
           </Button>
-          <Button variant="secondary" size="sm" onClick={add} type="button">
+          <Button variant="secondary" onClick={add} type="button">
             <Plus className="mr-1 h-3.5 w-3.5" /> 항목 추가
           </Button>
         </div>

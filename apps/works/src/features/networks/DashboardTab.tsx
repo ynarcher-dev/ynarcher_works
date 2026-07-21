@@ -12,7 +12,7 @@ import {
 import { ENTITIES, usesDetailPage, type EntityKey } from '@/features/networks/config'
 import { CategoryBarList } from '@/features/networks/dashboard/CategoryBarList'
 import { CategoryColumnChart } from '@/features/networks/dashboard/CategoryColumnChart'
-import { DashboardCard } from '@/features/networks/dashboard/DashboardCard'
+import { DashboardCard, DashboardSectionHeading } from '@/features/networks/dashboard/DashboardCard'
 import { ExpertRankingPanel } from '@/features/networks/dashboard/ExpertRankingPanel'
 import { RecentRegisteredFeed, type RecentItem } from '@/features/networks/dashboard/RecentRegisteredFeed'
 import { StatusTileGrid, type StatTile } from '@/features/networks/dashboard/StatusTileGrid'
@@ -147,10 +147,10 @@ export function DashboardTab() {
   return (
     <div className="space-y-4">
       <section className="space-y-2">
-        <div className="flex items-center gap-1">
-          <h3 className="text-body font-semibold text-gray-800">네트워크 현황</h3>
-          <Tooltip content="전체 네트워크 DB 보유 현황을 구분(BAN·EXP·전문가·투자자·조직 등)별로 집계했습니다. 타일 클릭 시 해당 목록으로 이동합니다." />
-        </div>
+        <DashboardSectionHeading
+          title="네트워크 현황"
+          tooltip="전체 네트워크 DB 보유 현황을 구분(BAN·EXP·전문가·투자자·조직 등)별로 집계했습니다. 타일 클릭 시 해당 목록으로 이동합니다."
+        />
         {summaryLoading ? (
           <div className="flex h-24 items-center justify-center"><Spinner /></div>
         ) : (

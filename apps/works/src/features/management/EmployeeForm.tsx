@@ -1,4 +1,4 @@
-import { Button, Input, Select, TextArea, useToast } from '@ynarcher/ui'
+import { Button, CardShell, Input, Select, TextArea, useToast } from '@ynarcher/ui'
 import { useMemo, useState, type ReactNode } from 'react'
 import { ROLE_OPTIONS } from '@/features/management/config'
 import { HrTagSelect } from '@/features/management/HrTagSelect'
@@ -118,7 +118,7 @@ export function EmployeeForm({ recordId, initial, onDone, onCancel }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
+      <CardShell>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="이름" required>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
@@ -164,9 +164,9 @@ export function EmployeeForm({ recordId, initial, onDone, onCancel }: Props) {
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           </Field>
         </div>
-      </div>
+      </CardShell>
 
-      <div className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
+      <CardShell>
         <div className="space-y-4">
           <Field label="약력">
             <TextArea rows={4} value={bio} onChange={(e) => setBio(e.target.value)} />
@@ -175,7 +175,7 @@ export function EmployeeForm({ recordId, initial, onDone, onCancel }: Props) {
             <TextArea rows={4} value={note} onChange={(e) => setNote(e.target.value)} />
           </Field>
         </div>
-      </div>
+      </CardShell>
 
       <div className="flex justify-end gap-2">
         <Button type="button" variant="secondary" onClick={onCancel} disabled={busy}>

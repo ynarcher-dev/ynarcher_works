@@ -66,7 +66,6 @@ export function FeedbackPanel({
         />
         <div className="flex justify-end">
           <Button
-            size="sm"
             // 비활성 시 투명도 대신 회색으로 표시(디자인 요청).
             className="disabled:bg-gray-100 disabled:!text-gray-400 disabled:opacity-100"
             disabled={!body.trim() || create.isPending}
@@ -98,11 +97,11 @@ export function FeedbackPanel({
                     <span className="text-caption font-medium text-gray-700">
                       {f.author_name ?? '-'}
                     </span>
-                    <span className="text-caption tabular-nums text-gray-400">
+                    <span className="text-caption tabular-nums text-gray-600">
                       {formatDateTime(f.created_at)}
                     </span>
                     {isNewest && (
-                      <Badge tone="danger" size="sm">
+                      <Badge tone="danger">
                         최신
                       </Badge>
                     )}
@@ -129,7 +128,7 @@ export function FeedbackPanel({
           <MiniPager page={page} pageCount={pageCount} onPage={setPage} />
           </>
         ) : (
-          <p className="text-body text-gray-400">등록된 코멘트가 없습니다.</p>
+          <p className="text-body text-gray-500">등록된 코멘트가 없습니다.</p>
         )}
       </div>
     </DetailPanelCard>

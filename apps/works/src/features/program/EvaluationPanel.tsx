@@ -26,7 +26,7 @@ export function EvaluationPanel({ programId }: { programId: string }) {
         <p className="text-body text-gray-600">
           동적 평가표를 만들고 지표 가중치로 대상별 총점을 집계합니다. (점수 입력은 심사위원 GUEST 화면)
         </p>
-        <Button size="sm" onClick={() => setCreating(true)}>
+        <Button onClick={() => setCreating(true)}>
           평가 폼 생성
         </Button>
       </div>
@@ -50,7 +50,7 @@ export function EvaluationPanel({ programId }: { programId: string }) {
           </button>
         ))}
         {forms.length === 0 && (
-          <p className="text-caption text-gray-400">생성된 평가 폼이 없습니다.</p>
+          <p className="text-caption text-gray-500">생성된 평가 폼이 없습니다.</p>
         )}
       </div>
 

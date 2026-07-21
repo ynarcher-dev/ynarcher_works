@@ -37,7 +37,7 @@ export function PendingMaterialPanel({
                 <span className="min-w-0 flex-1 truncate text-body text-gray-800">
                   {file.name}
                 </span>
-                <span className="shrink-0 tabular-nums text-caption text-gray-400">
+                <span className="shrink-0 tabular-nums text-caption text-gray-600">
                   {formatBytes(file.size)}
                 </span>
                 <button
@@ -52,9 +52,9 @@ export function PendingMaterialPanel({
             ))}
           </ul>
         ) : (
-          <p className="text-body text-gray-400">첨부한 자료가 없습니다.</p>
+          <p className="text-body text-gray-500">첨부한 자료가 없습니다.</p>
         )}
-        <p className="mt-2 text-caption text-gray-400">
+        <p className="mt-2 text-caption text-gray-600">
           첨부한 자료는 등록을 저장할 때 함께 업로드됩니다.
         </p>
       </div>

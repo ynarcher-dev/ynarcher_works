@@ -60,7 +60,7 @@ export function AiAgentPanel() {
     <div className="mx-auto flex h-[calc(100vh-13rem)] min-h-[28rem] w-full max-w-3xl flex-col">
       {hasConversation && (
         <div className="flex shrink-0 justify-end pb-2">
-          <Button variant="ghost" size="sm" onClick={reset}>
+          <Button variant="ghost" onClick={reset}>
             <SquarePen className="h-4 w-4" strokeWidth={1.75} />
             대화 새로하기
           </Button>

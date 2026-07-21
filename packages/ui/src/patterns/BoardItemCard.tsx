@@ -78,7 +78,7 @@ export function BoardItemCard({
 /** 보드 항목이 하나도 없을 때의 인라인 안내 박스(카드 목록과 동일 폭). */
 export function BoardEmptyRow({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-radius-md border border-gray-200 bg-gray-25 px-4 py-6 text-center text-body text-gray-400">
+    <div className="rounded-radius-md border border-gray-200 bg-gray-25 px-4 py-6 text-center text-body text-gray-500">
       {children}
     </div>
   )

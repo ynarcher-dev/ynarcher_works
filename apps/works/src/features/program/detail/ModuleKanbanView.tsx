@@ -92,10 +92,10 @@ export function ModuleKanbanView({
             }`}
           >
             <div className="flex items-center gap-2 px-2 py-1.5">
-              <Badge tone={meta.tone} size="sm">
+              <Badge tone={meta.tone}>
                 {meta.label}
               </Badge>
-              <span className="text-caption tabular-nums text-gray-400">{items.length}</span>
+              <span className="text-caption tabular-nums text-gray-600">{items.length}</span>
             </div>
             <ul className="space-y-2">
               {items.map((mod) => {
@@ -132,15 +132,15 @@ export function ModuleKanbanView({
                         <span className="truncate text-body font-semibold text-gray-900">
                           {nameOf(mod)}
                         </span>
-                        <Badge tone="neutral" size="sm">
+                        <Badge tone="neutral">
                           {labelOf(mod.module_type)}
                         </Badge>
                       </span>
                       <span className="mt-1.5 flex items-center gap-2">
-                        <Badge tone={MODULE_VISIBILITY_TONE[mod.visibility] ?? 'neutral'} size="sm">
+                        <Badge tone={MODULE_VISIBILITY_TONE[mod.visibility] ?? 'neutral'}>
                           {MODULE_VISIBILITY_LABEL[mod.visibility] ?? '비공개'}
                         </Badge>
-                        <span className="text-caption tabular-nums text-gray-400">
+                        <span className="text-caption tabular-nums text-gray-600">
                           {settings.start_date && settings.end_date
                             ? `${settings.start_date} ~ ${settings.end_date}`
                             : '일정 미등록'}
@@ -159,7 +159,7 @@ export function ModuleKanbanView({
                     : isValidTarget
                       ? 'border-gray-300 text-gray-500'
                       : items.length === 0
-                        ? 'border-gray-200 text-gray-400'
+                        ? 'border-gray-200 text-gray-500'
                         : 'border-gray-200 text-gray-300'
                 }`}
               >

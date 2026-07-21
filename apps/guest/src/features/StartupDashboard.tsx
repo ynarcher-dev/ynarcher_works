@@ -63,12 +63,12 @@ export function StartupDashboard() {
             <li key={t.id} className="flex gap-3 border-l-2 border-brand/40 pl-3">
               <div>
                 <p className="text-body font-medium text-gray-900">{t.title}</p>
-                <p className="text-caption text-gray-500">{fmt(t.starts_at)}</p>
+                <p className="text-caption text-gray-600">{fmt(t.starts_at)}</p>
               </div>
             </li>
           ))}
           {(timeline ?? []).length === 0 && (
-            <p className="py-4 text-center text-caption text-gray-400">
+            <p className="py-4 text-center text-caption text-gray-500">
               공개된 일정이 없습니다.
             </p>
           )}
@@ -97,7 +97,7 @@ export function StartupDashboard() {
             </div>
           ))}
           {(slots ?? []).length === 0 && (
-            <p className="py-4 text-center text-caption text-gray-400">
+            <p className="py-4 text-center text-caption text-gray-500">
               예약 가능한 시간대가 없습니다.
             </p>
           )}
@@ -152,7 +152,7 @@ export function StartupDashboard() {
             </div>
           ))}
           {(sessions ?? []).length === 0 && (
-            <p className="py-4 text-center text-caption text-gray-400">
+            <p className="py-4 text-center text-caption text-gray-500">
               평가할 멘토링 세션이 없습니다.
             </p>
           )}

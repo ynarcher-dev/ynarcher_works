@@ -107,7 +107,7 @@ export function FundDetailPage() {
             className={
               tab === t.key
                 ? 'border-b-2 border-brand px-3 py-2 text-body font-medium text-brand'
-                : 'px-3 py-2 text-body text-gray-500 hover:text-gray-800'
+                : 'px-3 py-2 text-body text-gray-600 hover:text-gray-800'
             }
           >
             {t.label}

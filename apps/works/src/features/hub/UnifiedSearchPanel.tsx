@@ -27,7 +27,7 @@ export function UnifiedSearchPanel() {
             <div>
               <p className="text-body font-medium text-gray-900">{r.name}</p>
               {r.detail && (
-                <p className="text-caption text-gray-500">{r.detail}</p>
+                <p className="text-caption text-gray-600">{r.detail}</p>
               )}
             </div>
             <Badge tone={r.kind === 'startup' ? 'info' : 'success'}>

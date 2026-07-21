@@ -1,4 +1,4 @@
-import { Badge, Button, Modal } from '@ynarcher/ui'
+import { Badge, Button, CardShell, Modal } from '@ynarcher/ui'
 import { useState } from 'react'
 import { MiniTable, td, tdL, th, thL } from '@/features/startup/MiniTable'
 import { StartupShareholderChart } from '@/features/startup/StartupShareholderChart'
@@ -46,9 +46,9 @@ function HolderTable({ holders }: { holders: Shareholder[] }) {
 function SnapshotMeta({ snap }: { snap: ShareholderSnapshot }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-caption text-gray-500">기준일 {snap.date || '-'}</span>
+      <span className="text-caption text-gray-600">기준일 {snap.date || '-'}</span>
       {snap.round && (
-        <Badge tone="neutral" size="sm">
+        <Badge tone="neutral">
           {snap.round}
         </Badge>
       )}
@@ -67,18 +67,18 @@ export function StartupShareholderCard({ history }: { history: ShareholderSnapsh
   const hasHistory = history.length > 1
 
   return (
-    <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
+    <CardShell>
       <div className="mb-3 flex items-center justify-between gap-2">
         <h3 className="text-body font-semibold text-gray-900">주주 구성</h3>
         {hasHistory && (
-          <Button type="button" variant="outline" size="sm" onClick={() => setHistoryOpen(true)}>
+          <Button type="button" variant="outline" onClick={() => setHistoryOpen(true)}>
             변경 이력
           </Button>
         )}
       </div>
 
       {!latest || latest.holders.length === 0 ? (
-        <p className="text-body text-gray-400">등록된 주주 정보가 없습니다.</p>
+        <p className="text-body text-gray-500">등록된 주주 정보가 없습니다.</p>
       ) : (
         // 좌: 도넛 차트 · 우: 표(하단 우측에 기준일·라운드)
         <div className="grid items-center gap-4 lg:grid-cols-2">
@@ -105,6 +105,6 @@ export function StartupShareholderCard({ history }: { history: ShareholderSnapsh
           ))}
         </div>
       </Modal>
-    </section>
+    </CardShell>
   )
 }

@@ -141,10 +141,10 @@ export function TagAdminPanel({ config }: TagAdminPanelProps) {
       align: 'right',
       render: (t) => (
         <div className="flex justify-end gap-1.5">
-          <Button variant="outline" size="sm" onClick={() => openEdit(t)}>
+          <Button variant="outline" onClick={() => openEdit(t)}>
             수정
           </Button>
-          <Button variant="outline" size="sm" onClick={() => del(t)}>
+          <Button variant="outline" onClick={() => del(t)}>
             삭제
           </Button>
         </div>
@@ -188,7 +188,7 @@ export function TagAdminPanel({ config }: TagAdminPanelProps) {
                 className={
                   activeParentId === t.id
                     ? 'border-b-2 border-brand px-3 py-2 text-body font-medium text-brand'
-                    : 'px-3 py-2 text-body text-gray-500 hover:text-gray-800'
+                    : 'px-3 py-2 text-body text-gray-600 hover:text-gray-800'
                 }
               >
                 {t.label}

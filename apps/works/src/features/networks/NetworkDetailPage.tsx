@@ -1,4 +1,4 @@
-import { BackButton, Badge, Banner, Button, Spinner } from '@ynarcher/ui'
+import { BackButton, Badge, Banner, Button, CardShell, Spinner } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -37,13 +37,13 @@ function SectionCard({
   children: ReactNode
 }) {
   return (
-    <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
+    <CardShell>
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-body font-semibold text-gray-900">{title}</h2>
         {action}
       </div>
       {children}
-    </section>
+    </CardShell>
   )
 }
 
@@ -51,7 +51,7 @@ function SectionCard({
 function Info({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-baseline gap-2">
-      <span className="shrink-0 text-caption text-gray-400">{label}:</span>
+      <span className="shrink-0 text-caption text-gray-600">{label}:</span>
       <span className="text-body text-gray-800">{value ?? '-'}</span>
     </div>
   )
@@ -98,7 +98,7 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
       {/* 좌측(2/3): 프로필 본문 — 현행 유지(약력·메모·멘토링 만족도·매칭 안내). */}
       <div className="space-y-4 lg:col-span-2">
-      <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
+      <CardShell>
         <div className="flex items-center gap-5">
           <PhotoBox src={(profile.photo as string) ?? null} />
           <div className="min-w-0 flex-1">
@@ -107,17 +107,17 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
                 {(record.name as string) ?? label}
               </h1>
               {category && (
-                <Badge tone="neutral" size="sm">
+                <Badge tone="neutral">
                   {category}
                 </Badge>
               )}
               {!compact && (
-                <Badge tone={matchOk ? 'success' : 'neutral'} size="sm">
+                <Badge tone={matchOk ? 'success' : 'neutral'}>
                   매칭 {matchOk ? '가능' : '불가능'}
                 </Badge>
               )}
             </div>
-            <p className="mt-1 text-body text-gray-500">{subtitle || '-'}</p>
+            <p className="mt-1 text-body text-gray-600">{subtitle || '-'}</p>
           </div>
         </div>
 
@@ -151,7 +151,7 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
                 expertise.length ? (
                   <span className="flex flex-wrap gap-1">
                     {expertise.map((e) => (
-                      <Badge key={e} tone="neutral" size="sm">
+                      <Badge key={e} tone="neutral">
                         {e}
                       </Badge>
                     ))}
@@ -167,7 +167,7 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
           <Info label="담당자(공동관리)" value={contributors.length ? contributors.join(', ') : '-'} />
           <Info label="수정일" value={formatDate(record.updated_at)} />
         </div>
-      </section>
+      </CardShell>
 
       {!compact && (
         <SectionCard title="약력">
@@ -181,7 +181,7 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
                 if (!rows.length) return null
                 return (
                   <div key={s.key}>
-                    <h3 className="mb-1 text-caption font-semibold text-gray-500">
+                    <h3 className="mb-1 text-caption font-semibold text-gray-600">
                       {s.title}
                     </h3>
                     <ul className="space-y-0.5">
@@ -196,7 +196,7 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
               })}
             </div>
           ) : (
-            <p className="text-body text-gray-400">
+            <p className="text-body text-gray-500">
               등록된 약력이 없습니다. "수정"에서 입력하세요.
             </p>
           )}
@@ -207,7 +207,7 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
         {intro ? (
           <p className="whitespace-pre-wrap text-body text-gray-800">{intro}</p>
         ) : (
-          <p className="text-body text-gray-400">등록된 노트 내용이 없습니다.</p>
+          <p className="text-body text-gray-500">등록된 노트 내용이 없습니다.</p>
         )}
       </SectionCard>
 
@@ -221,7 +221,7 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
               5.0
             </span>
             <div>
-              <p className="text-caption text-gray-400">멘토링 이력</p>
+              <p className="text-caption text-gray-600">멘토링 이력</p>
               <p className="text-body font-medium text-gray-800">0 건</p>
             </div>
           </div>

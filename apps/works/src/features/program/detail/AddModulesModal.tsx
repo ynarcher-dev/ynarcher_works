@@ -93,7 +93,7 @@ export function AddModulesModal({
         {/* 좌측: 정방형 템플릿 타일 */}
         <div className="space-y-5">
           <section>
-            <h3 className="mb-2 text-caption font-semibold text-gray-500">기본 템플릿</h3>
+            <h3 className="mb-2 text-caption font-semibold text-gray-600">기본 템플릿</h3>
             <ul className="grid grid-cols-[repeat(auto-fill,minmax(6rem,1fr))] gap-2.5">
               {baseDefs.map(tile)}
             </ul>
@@ -101,7 +101,7 @@ export function AddModulesModal({
           {/* 운영 템플릿이 하나도 허용되지 않은 워크스페이스에서는 섹션 자체를 감춘다. */}
           {operatingDefs.length > 0 && (
             <section>
-              <h3 className="mb-2 text-caption font-semibold text-gray-500">운영 템플릿</h3>
+              <h3 className="mb-2 text-caption font-semibold text-gray-600">운영 템플릿</h3>
               <ul className="grid grid-cols-[repeat(auto-fill,minmax(6rem,1fr))] gap-2.5">
                 {operatingDefs.map(tile)}
               </ul>
@@ -123,7 +123,7 @@ export function AddModulesModal({
               <p className="text-body leading-relaxed text-gray-700">{activeMeta.detail}</p>
             </div>
           ) : (
-            <p className="text-caption text-gray-400">
+            <p className="text-caption text-gray-600">
               템플릿에 마우스를 올리거나 선택하면 설명이 표시됩니다.
             </p>
           )}

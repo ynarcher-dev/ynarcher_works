@@ -30,7 +30,7 @@ export function OrgLevelEditor({
 
   return (
     <div className="flex flex-wrap items-start gap-2 rounded-radius-md border border-gray-200 bg-gray-25 px-3 py-2">
-      <span className="mt-1.5 text-caption font-semibold text-gray-500">조직 레벨</span>
+      <span className="mt-1.5 text-caption font-semibold text-gray-600">조직 레벨</span>
       {tiers.map((t, i) => (
         <div key={t} className="flex items-start">
           {i > 0 && <span className="mx-1 mt-1.5 text-gray-300">›</span>}
@@ -77,7 +77,7 @@ export function OrgLevelEditor({
       {structureActionsEnabled && (
         <div className="flex items-start">
           {tiers.length > 0 && <span className="mx-1 mt-1.5 text-gray-300">›</span>}
-          <Button variant="ghost" size="sm" onClick={onAddTier} className="h-7 gap-1 px-2 text-gray-500">
+          <Button variant="ghost" onClick={onAddTier} className="h-7 gap-1 px-2 text-gray-600">
             <Plus size={13} /> 하위 계층
           </Button>
         </div>

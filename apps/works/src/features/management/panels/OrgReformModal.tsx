@@ -137,10 +137,10 @@ export function OrgReformModal({ open, onClose, versions, activeVersionId }: Org
 
   const footer = (
     <>
-      <Button variant="outline" size="sm" onClick={cancel} disabled={busy}>
+      <Button variant="outline" onClick={cancel} disabled={busy}>
         취소하기
       </Button>
-      <Button size="sm" onClick={reserve} disabled={busy || !draftId}>
+      <Button onClick={reserve} disabled={busy || !draftId}>
         {busy && draftId ? '처리 중…' : '예약하기'}
       </Button>
     </>
@@ -151,30 +151,30 @@ export function OrgReformModal({ open, onClose, versions, activeVersionId }: Org
       <div className="max-h-[70vh] space-y-4 overflow-y-auto">
         {/* 현재 운영 조직 현황 */}
         <section className="space-y-2">
-          <h3 className="text-caption font-semibold text-gray-500">현재 운영 조직</h3>
+          <h3 className="text-caption font-semibold text-gray-600">현재 운영 조직</h3>
           {active ? (
             <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 rounded-radius-md border border-gray-200 bg-gray-25 px-3 py-2.5 text-body sm:grid-cols-4">
               <div>
-                <dt className="text-caption text-gray-400">조직명</dt>
+                <dt className="text-caption text-gray-600">조직명</dt>
                 <dd className="font-semibold text-gray-800">{active.label}</dd>
               </div>
               <div>
-                <dt className="text-caption text-gray-400">시작일</dt>
+                <dt className="text-caption text-gray-600">시작일</dt>
                 <dd className="tabular-nums text-gray-700">{active.effective_from}</dd>
               </div>
               <div>
-                <dt className="text-caption text-gray-400">종료일</dt>
+                <dt className="text-caption text-gray-600">종료일</dt>
                 <dd className="tabular-nums text-gray-700">{active.effective_to ?? '미정'}</dd>
               </div>
               <div>
-                <dt className="text-caption text-gray-400">운영 기간</dt>
+                <dt className="text-caption text-gray-600">운영 기간</dt>
                 <dd className="font-semibold tabular-nums text-brand-700">
                   {operatingDays(active.effective_from)}일째
                 </dd>
               </div>
             </dl>
           ) : (
-            <p className="rounded-radius-md border border-gray-200 bg-gray-25 px-3 py-3 text-body text-gray-400">
+            <p className="rounded-radius-md border border-gray-200 bg-gray-25 px-3 py-3 text-body text-gray-500">
               현재 운영 중인 조직이 없습니다.
             </p>
           )}
@@ -184,11 +184,11 @@ export function OrgReformModal({ open, onClose, versions, activeVersionId }: Org
 
         {/* 조직 개편 설계 */}
         <section className="space-y-3">
-          <h3 className="text-caption font-semibold text-gray-500">조직 개편</h3>
+          <h3 className="text-caption font-semibold text-gray-600">조직 개편</h3>
 
           {!draftId ? (
             <>
-              <p className="text-caption text-gray-500">
+              <p className="text-caption text-gray-600">
                 현재 조직 구조를 복제해 새 조직을 설계합니다. 시작일·종료 예정일을 정하고 설계를
                 시작하세요.
               </p>
@@ -230,7 +230,7 @@ export function OrgReformModal({ open, onClose, versions, activeVersionId }: Org
               )}
               {error && <p className="text-caption text-danger">{error}</p>}
               <div className="flex justify-end">
-                <Button size="sm" onClick={startDraft} disabled={busy || !active}>
+                <Button onClick={startDraft} disabled={busy || !active}>
                   {busy ? '초안 생성 중…' : '구조 설계 시작'}
                 </Button>
               </div>
@@ -272,7 +272,7 @@ export function OrgReformModal({ open, onClose, versions, activeVersionId }: Org
               </div>
 
               {active && from >= TOMORROW() && (
-                <p className="text-caption text-gray-500">
+                <p className="text-caption text-gray-600">
                   · 예약 시 현재 조직 <span className="font-semibold">{active.label}</span> 종료일이{' '}
                   <span className="font-semibold tabular-nums">{dayBefore(from)}</span> 로 설정되고,
                   새 조직이 <span className="font-semibold tabular-nums">{from}</span> 자정부터
@@ -284,7 +284,7 @@ export function OrgReformModal({ open, onClose, versions, activeVersionId }: Org
               <OrgTreeEditor versionId={draftId} activeVersionId={activeVersionId} editable />
 
               {error && <p className="text-caption text-danger">{error}</p>}
-              <p className="text-caption text-gray-400">
+              <p className="text-caption text-gray-600">
                 · '예약하기'를 누르면 이 조직이 예정 버전으로 확정됩니다. '취소하기'를 누르면 설계한
                 초안이 폐기됩니다.
               </p>

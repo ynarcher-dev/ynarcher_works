@@ -1,4 +1,4 @@
-import { Button, cn, Input, Select, TextArea, useToast } from '@ynarcher/ui'
+import { Button, CardShell, cn, Input, Select, TextArea, useToast } from '@ynarcher/ui'
 import type { ChangeEvent, ReactNode } from 'react'
 import { useMemo, useState } from 'react'
 import { useTags } from '@/features/admin/hooks'
@@ -184,7 +184,7 @@ export function GlobalNetworkForm({ recordId, initial, onDone, onCancel }: Props
         {/* 좌측(2/3): 사진 → 기본 데이터 → 노트 */}
         <div className="space-y-4 lg:col-span-2">
           {/* 사진 카드 */}
-          <div className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
+          <CardShell>
             <p className="mb-3 text-caption font-medium text-gray-600">사진</p>
             <div className="flex items-center gap-4">
               <PhotoBox src={photo} />
@@ -200,10 +200,10 @@ export function GlobalNetworkForm({ recordId, initial, onDone, onCancel }: Props
                 )}
               </div>
             </div>
-          </div>
+          </CardShell>
 
           {/* 기본 데이터 카드 */}
-          <div className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
+          <CardShell>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="이름" required>
                 <Input value={name} onChange={(e) => setName(e.target.value)} />
@@ -252,7 +252,7 @@ export function GlobalNetworkForm({ recordId, initial, onDone, onCancel }: Props
               </Field>
               <div className="sm:col-span-2">
                 <Field label="전문 분야">
-                  <span className="mb-1 block text-caption font-normal text-gray-400">
+                  <span className="mb-1 block text-caption font-normal text-gray-600">
                     분야 관리 태그에서 최대 {MAX_FIELDS}개
                   </span>
                   <div className="flex flex-wrap gap-1.5">
@@ -278,7 +278,7 @@ export function GlobalNetworkForm({ recordId, initial, onDone, onCancel }: Props
                       )
                     })}
                     {(fieldTags.data ?? []).length === 0 && (
-                      <span className="text-caption text-gray-400">
+                      <span className="text-caption text-gray-500">
                         등록된 분야 태그가 없습니다. (ADMIN › 분야 관리)
                       </span>
                     )}
@@ -286,14 +286,14 @@ export function GlobalNetworkForm({ recordId, initial, onDone, onCancel }: Props
                 </Field>
               </div>
             </div>
-          </div>
+          </CardShell>
 
           {/* 노트 카드 */}
-          <div className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
+          <CardShell>
             <Field label="노트">
               <TextArea rows={4} value={intro} onChange={(e) => setIntro(e.target.value)} />
             </Field>
-          </div>
+          </CardShell>
         </div>
 
         {/* 우측(1/3): 자료 관리. 신규 등록에서는 보류 첨부 후 저장 시 함께 업로드한다. */}

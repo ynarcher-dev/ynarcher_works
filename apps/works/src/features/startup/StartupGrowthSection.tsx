@@ -1,3 +1,4 @@
+import { CardShell } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import { type GrowthMetrics } from '@/features/startup/startupGrowth'
 import { CHART_COLORS, StartupMetricChart, type ChartSeries } from '@/features/startup/StartupMetricChart'
@@ -9,13 +10,13 @@ const C = CHART_COLORS
 /** 카드 래퍼(제목 + 선택적 단위 표기 + 내용). 수정 버튼·수정 날짜는 두지 않는다(통합 수정으로 관리). */
 function Card({ title, unit, children }: { title: string; unit?: string; children: ReactNode }) {
   return (
-    <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
+    <CardShell>
       <div className="mb-3 flex items-baseline justify-between gap-2">
         <h3 className="text-body font-semibold text-gray-900">{title}</h3>
-        {unit && <span className="shrink-0 text-caption text-gray-400">({unit})</span>}
+        {unit && <span className="shrink-0 text-caption text-gray-600">({unit})</span>}
       </div>
       {children}
-    </section>
+    </CardShell>
   )
 }
 
@@ -59,7 +60,7 @@ function Table({ head, children }: { head: ReactNode; children: ReactNode }) {
 }
 
 function Empty({ text }: { text: string }) {
-  return <p className="text-body text-gray-400">{text}</p>
+  return <p className="text-body text-gray-500">{text}</p>
 }
 
 interface Props {

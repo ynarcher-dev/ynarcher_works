@@ -42,24 +42,24 @@ export function CriteriaManager({ formId }: { formId: string }) {
               className="flex items-center justify-between rounded border border-gray-300 bg-white px-3 py-2 text-body"
             >
               <span className="text-gray-800">{c.label}</span>
-              <span className="tabular-nums text-caption text-gray-500">
+              <span className="tabular-nums text-caption text-gray-600">
                 최대 {c.max_score} · 가중치 {c.weight}
               </span>
             </li>
           ))}
           {(data ?? []).length === 0 && (
-            <li className="text-caption text-gray-400">등록된 지표가 없습니다.</li>
+            <li className="text-caption text-gray-500">등록된 지표가 없습니다.</li>
           )}
         </ul>
       )}
 
       <div className="flex flex-wrap items-end gap-2">
         <div className="flex-1">
-          <label className="text-caption text-gray-500">지표명</label>
+          <label className="text-caption text-gray-600">지표명</label>
           <Input value={label} onChange={(e) => setLabel(e.target.value)} />
         </div>
         <div className="w-24">
-          <label className="text-caption text-gray-500">최대점</label>
+          <label className="text-caption text-gray-600">최대점</label>
           <Input
             inputMode="numeric"
             value={maxScore}
@@ -67,7 +67,7 @@ export function CriteriaManager({ formId }: { formId: string }) {
           />
         </div>
         <div className="w-24">
-          <label className="text-caption text-gray-500">가중치</label>
+          <label className="text-caption text-gray-600">가중치</label>
           <Input value={weight} onChange={(e) => setWeight(e.target.value)} />
         </div>
         <Button onClick={() => void onAdd()} disabled={add.isPending}>

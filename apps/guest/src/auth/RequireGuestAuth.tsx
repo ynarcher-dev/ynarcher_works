@@ -6,7 +6,7 @@ import { useGuestStore } from '@/auth/guestStore'
 export function RequireGuestAuth({ children }: { children: ReactNode }) {
   const status = useGuestStore((s) => s.status)
   if (status === 'loading') {
-    return <div className="p-6 text-body text-gray-500">불러오는 중…</div>
+    return <div className="p-6 text-body text-gray-600">불러오는 중…</div>
   }
   if (status === 'unauthenticated') {
     return <Navigate to="/login" replace />

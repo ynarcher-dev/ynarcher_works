@@ -74,6 +74,9 @@ import { employeeAuth } from '@/auth/employeeAuthService'
 import { WORKSPACES } from '@/config/workspaces'
 import { WORKSPACE_SUBNAV, firstTab, pathTabOf, type SubNavItem } from '@/config/navigation'
 import { MenuSectionLabel, SidebarFlyout } from '@/app/SidebarFlyout'
+import { TopbarBreadcrumb } from '@/app/TopbarBreadcrumb'
+import { GlobalSearchBox } from '@/app/GlobalSearchBox'
+import { TopbarActions } from '@/app/TopbarActions'
 import { useBoards } from '@/features/hub/boardHooks'
 import { boardsOfKind } from '@/features/hub/boardStore'
 import { boardIcon } from '@/features/hub/boardIcons'
@@ -203,6 +206,19 @@ export function WorksLayout() {
   const activeTab =
     new URLSearchParams(location.search).get('tab') ?? pathTab ?? firstTab(groups)
 
+  // 상단바 현재 위치 표시용 섹션명. 사이드바 트리에서 활성 탭의 라벨을 찾고,
+  // 게시판·자료실처럼 레지스트리에서 주입되는 동적 항목은 게시판 목록에서 보완한다.
+  const activeSectionLabel = (() => {
+    for (const g of groups) {
+      for (const item of g.items) {
+        if (item.tab === activeTab) return item.label
+        const child = item.children?.find((c) => c.tab === activeTab)
+        if (child) return child.label
+      }
+    }
+    return boards.find((b) => b.slug === activeTab)?.label
+  })()
+
   const switcherOptions = visible.map((w) => ({
     key: w.key,
     label: w.implemented ? w.label : `${w.label} (준비 중)`,
@@ -285,7 +301,7 @@ export function WorksLayout() {
           {list.length > 0 ? (
             list.map((b) => renderFlyoutLeaf({ label: b.label, tab: b.slug, iconKey: b.icon }))
           ) : (
-            <p className="px-3 py-1.5 text-body text-gray-400">
+            <p className="px-3 py-1.5 text-body text-gray-500">
               등록된 {item.label}이 없습니다.
             </p>
           )}
@@ -483,6 +499,19 @@ export function WorksLayout() {
     <AppShell
       sidebarCollapsed={sidebarCollapsed}
       sidebar={sidebar}
+      // 상단바는 사이드바와 역할이 겹치지 않는 전역 기능만 싣는다
+      // (현재 위치 · 전역 검색 · 알림/바로가기). 워크스페이스 전환·계정 메뉴는 사이드바 소관.
+      topbarLeft={
+        currentWs && (
+          <TopbarBreadcrumb
+            workspaceLabel={currentWs.label}
+            workspacePath={currentWs.path}
+            sectionLabel={activeSectionLabel}
+          />
+        )
+      }
+      topbarCenter={<GlobalSearchBox />}
+      topbarRight={<TopbarActions />}
     >
       <Outlet />
     </AppShell>

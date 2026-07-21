@@ -1,4 +1,4 @@
-import { Badge, Banner, Button, Spinner, TextArea, useToast } from '@ynarcher/ui'
+import { Badge, Banner, Button, CardShell, Spinner, TextArea, useToast } from '@ynarcher/ui'
 import { useEffect, useState, type ReactNode } from 'react'
 import { useAuthStore } from '@/auth/authStore'
 import { ROLE_LABELS } from '@/features/management/config'
@@ -17,7 +17,7 @@ function str(v: unknown): string {
 function Info({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-baseline gap-2">
-      <span className="shrink-0 text-caption text-gray-400">{label}:</span>
+      <span className="shrink-0 text-caption text-gray-600">{label}:</span>
       <span className="text-body text-gray-800">{value || '-'}</span>
     </div>
   )
@@ -79,14 +79,14 @@ export function MyPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* 좌측(2/3): 계정 정보(조회) + 약력·노트(편집) */}
         <div className="space-y-4 lg:col-span-2">
-          <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
+          <CardShell>
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-body font-semibold text-gray-900">{me.name}</h2>
-              <Badge tone="neutral" size="sm">
+              <Badge tone="neutral">
                 {roleLabel}
               </Badge>
             </div>
-            <p className="mt-1 text-body text-gray-500">{affiliation || '-'}</p>
+            <p className="mt-1 text-body text-gray-600">{affiliation || '-'}</p>
             <div className="mt-4 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-2">
               <Info label="회사" value={str(profile.company)} />
               <Info label="직책" value={str(profile.position)} />
@@ -95,12 +95,12 @@ export function MyPage() {
               <Info label="이메일" value={me.email ?? ''} />
               <Info label="연락처" value={me.phone ?? ''} />
             </div>
-            <p className="mt-3 text-caption text-gray-400">
+            <p className="mt-3 text-caption text-gray-600">
               이름·역할·부서·연락처 등 계정 정보 변경은 인사 관리(경영지원)에 요청하세요.
             </p>
-          </section>
+          </CardShell>
 
-          <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
+          <CardShell>
             <div className="space-y-4">
               <div>
                 <label className="mb-1 block text-caption font-medium text-gray-600">약력</label>
@@ -116,7 +116,7 @@ export function MyPage() {
                 </Button>
               </div>
             </div>
-          </section>
+          </CardShell>
         </div>
 
         {/* 우측(1/3): 자료 업로드(공용 자료 패널 재사용). */}

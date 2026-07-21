@@ -38,7 +38,7 @@ export function StartupComparePicker({ open, onClose, onPick, excludeId }: Props
               <Spinner />
             </div>
           ) : rows.length === 0 ? (
-            <p className="py-8 text-center text-body text-gray-400">검색 결과가 없습니다.</p>
+            <p className="py-8 text-center text-body text-gray-500">검색 결과가 없습니다.</p>
           ) : (
             <ul className="divide-y divide-gray-100">
               {rows.map((r) => {
@@ -57,7 +57,7 @@ export function StartupComparePicker({ open, onClose, onPick, excludeId }: Props
                       <PhotoBox src={logo} className="size-9 rounded-radius-md" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-body font-medium text-gray-900">{r.name}</p>
-                        {industry && <p className="truncate text-caption text-gray-400">{industry}</p>}
+                        {industry && <p className="truncate text-caption text-gray-600">{industry}</p>}
                       </div>
                     </button>
                   </li>

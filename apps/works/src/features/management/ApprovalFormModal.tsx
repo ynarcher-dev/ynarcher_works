@@ -98,7 +98,7 @@ export function ApprovalFormModal({
           <div className="space-y-2">
             {approvers.map((a, i) => (
               <div key={i} className="flex items-center gap-2">
-                <span className="text-caption text-gray-400">{i + 1}차</span>
+                <span className="text-caption text-gray-600">{i + 1}차</span>
                 <Select value={a} onChange={(e) => setApprover(i, e.target.value)}>
                   <option value="">결재자 선택</option>
                   {(employees ?? []).map((e) => (
@@ -111,7 +111,6 @@ export function ApprovalFormModal({
             ))}
             <Button
               variant="ghost"
-              size="sm"
               onClick={() => setApprovers((p) => [...p, ''])}
             >
               + 결재자 추가

@@ -18,7 +18,7 @@ export function CategoryPie({ data }: { data: CategoryDatum[] }) {
   if (slices.length === 0) {
     return (
       <div className="flex h-full items-center justify-center">
-        <p className="text-caption text-gray-400">표시할 데이터가 없습니다.</p>
+        <p className="text-caption text-gray-500">표시할 데이터가 없습니다.</p>
       </div>
     )
   }

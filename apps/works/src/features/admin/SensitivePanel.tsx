@@ -48,14 +48,14 @@ function SensitiveRow({
         <label htmlFor={id} className="text-body font-medium text-gray-900">
           {label}
         </label>
-        <p className="mt-0.5 text-caption text-gray-500">
+        <p className="mt-0.5 text-caption text-gray-600">
           {show
             ? '목록·상세 모두 원본을 표시합니다.'
             : '목록·상세를 마스킹하고, 상세 "보기"에서 사유 입력 후 열람합니다(접근 로그 기록).'}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        <span className="text-caption text-gray-400">
+        <span className="text-caption text-gray-600">
           {show ? '전체 공개' : '마스킹(상세 열람)'}
         </span>
         <Switch

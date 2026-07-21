@@ -227,7 +227,7 @@ export function ProgramFormModal({
         <div>
           <label className="text-body font-medium text-gray-800">
             배치 (부서 구성 + 담당자)
-            <span className="ml-1 text-caption font-normal text-gray-400">
+            <span className="ml-1 text-caption font-normal text-gray-600">
               조직개편 경계마다 단계로 나눠 독립 설정
             </span>
           </label>
@@ -235,14 +235,14 @@ export function ProgramFormModal({
             const phases = computePhases(orgVersions ?? [], watch('start_date'), watch('end_date'))
             if (!watch('start_date') || !watch('end_date')) {
               return (
-                <p className="rounded-radius-md border border-dashed border-gray-300 bg-gray-25 px-3 py-4 text-caption text-gray-400">
+                <p className="rounded-radius-md border border-dashed border-gray-300 bg-gray-25 px-3 py-4 text-caption text-gray-500">
                   운영 기간(시작·종료일)을 입력하면 단계별 배치를 설정할 수 있습니다.
                 </p>
               )
             }
             if (phases.length === 0) {
               return (
-                <p className="rounded-radius-md border border-dashed border-gray-300 bg-gray-25 px-3 py-4 text-caption text-gray-400">
+                <p className="rounded-radius-md border border-dashed border-gray-300 bg-gray-25 px-3 py-4 text-caption text-gray-500">
                   해당 기간에 발행된 조직 버전이 없습니다. 조직관리에서 조직 버전을 발행하세요.
                 </p>
               )
@@ -262,7 +262,7 @@ export function ProgramFormModal({
                   />
                 ))}
                 {lastEnd < (watch('end_date') || '') && (
-                  <p className="text-caption text-gray-400">
+                  <p className="text-caption text-gray-600">
                     {lastEnd} 이후 기간은 조직개편 확정(조직 버전 발행) 후 설정할 수 있습니다.
                   </p>
                 )}

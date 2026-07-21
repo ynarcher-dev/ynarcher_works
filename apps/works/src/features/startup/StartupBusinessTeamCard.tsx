@@ -1,4 +1,4 @@
-import { Badge } from '@ynarcher/ui'
+import { Badge, CardShell } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import type { EntityRow } from '@/features/networks/hooks'
 
@@ -85,9 +85,9 @@ export function StartupBusinessTeamCard({ business, team }: Props) {
     capabilities.length === 0
 
   return (
-    <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
+    <CardShell>
       {isEmpty ? (
-        <p className="text-body text-gray-400">
+        <p className="text-body text-gray-500">
           등록된 비즈니스 · 팀 역량 정보가 없습니다. "수정"에서 입력하세요.
         </p>
       ) : (
@@ -109,8 +109,8 @@ export function StartupBusinessTeamCard({ business, team }: Props) {
                   {members.map((m, i) => (
                     <li key={i} className="text-body text-gray-800">
                       <span className="font-medium">{m.name}</span>
-                      {m.role && <span className="text-gray-500"> · {m.role}</span>}
-                      {m.background && <span className="text-gray-500"> — {m.background}</span>}
+                      {m.role && <span className="text-gray-600"> · {m.role}</span>}
+                      {m.background && <span className="text-gray-600"> — {m.background}</span>}
                     </li>
                   ))}
                 </ul>
@@ -121,7 +121,7 @@ export function StartupBusinessTeamCard({ business, team }: Props) {
                 <p className="mb-1 text-caption font-semibold text-brand">핵심 역량</p>
                 <div className="flex flex-wrap gap-1">
                   {capabilities.map((c) => (
-                    <Badge key={c} tone="neutral" size="sm">
+                    <Badge key={c} tone="neutral">
                       {c}
                     </Badge>
                   ))}
@@ -131,6 +131,6 @@ export function StartupBusinessTeamCard({ business, team }: Props) {
           </div>
         </div>
       )}
-    </section>
+    </CardShell>
   )
 }

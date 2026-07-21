@@ -24,7 +24,7 @@ export function ParticipantPool({ programId }: { programId: string }) {
               key={role}
               className="rounded border border-gray-300 bg-white px-3 py-1.5 text-caption"
             >
-              <span className="text-gray-500">{role}</span>{' '}
+              <span className="text-gray-600">{role}</span>{' '}
               <span className="font-medium tabular-nums text-gray-900">{count}</span>
             </div>
           )

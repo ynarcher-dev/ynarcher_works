@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Badge } from '../components/Badge'
+import { CardShell } from '../components/CardShell'
 import { cn } from '../utils/cn'
 
 export interface PanelCardProps {
@@ -26,17 +27,12 @@ export function PanelCard({
   children,
 }: PanelCardProps) {
   return (
-    <section
-      className={cn(
-        'rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft',
-        className,
-      )}
-    >
+    <CardShell className={className}>
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="flex items-center gap-1.5 text-body font-semibold text-gray-900">
           {title}
           {count !== undefined && (
-            <Badge tone="neutral" size="sm">
+            <Badge tone="neutral">
               {count}
             </Badge>
           )}
@@ -44,6 +40,6 @@ export function PanelCard({
         {action}
       </div>
       <div className={cn(bodyClassName)}>{children}</div>
-    </section>
+    </CardShell>
   )
 }

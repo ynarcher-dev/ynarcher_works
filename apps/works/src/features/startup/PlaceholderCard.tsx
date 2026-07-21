@@ -1,4 +1,4 @@
-import { Badge } from '@ynarcher/ui'
+import { Badge, CardShell } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 
 /**
@@ -20,16 +20,16 @@ export function PlaceholderCard({
   children?: ReactNode
 }) {
   return (
-    <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
+    <CardShell>
       <h3 className="flex items-center gap-1.5 text-body font-semibold text-gray-900">
         {title}
         {count !== undefined && (
-          <Badge tone="neutral" size="sm">
+          <Badge tone="neutral">
             {count}
           </Badge>
         )}
       </h3>
-      {children ?? <p className="mt-3 text-body text-gray-400">{emptyText}</p>}
-    </section>
+      {children ?? <p className="mt-3 text-body text-gray-500">{emptyText}</p>}
+    </CardShell>
   )
 }

@@ -13,7 +13,7 @@ export function InfoField({ label, value, className }: InfoFieldProps) {
   const empty = value === null || value === undefined || value === ''
   return (
     <div className={cn('flex items-baseline gap-2', className)}>
-      <span className="shrink-0 text-caption text-gray-400">{label}:</span>
+      <span className="shrink-0 text-caption text-gray-600">{label}:</span>
       <span className="text-body text-gray-800">{empty ? '-' : value}</span>
     </div>
   )

@@ -6,8 +6,10 @@ export interface InlineSelectProps extends SelectHTMLAttributes<HTMLSelectElemen
 }
 
 /**
- * 컴팩트 셀렉트 박스. 데이터 테이블 셀 등 조밀한 컨텍스트에서 쓰는 축약형(h-8·caption)이며,
- * 폼 입력용 표준 `Select`(h-11)와 시각·용도를 구분한다. 표준 select 속성을 그대로 전달한다.
+ * 컴팩트 셀렉트 박스. 데이터 테이블 셀 등 조밀한 컨텍스트에서 쓰는 축약형으로,
+ * 같은 셀에 서는 `InlineButton`과 동일한 `ctl-table`(24px) 규격을 공유한다.
+ * 폼 입력용 표준 `Select`와는 크기·용도를 구분한다. 표준 select 속성을 그대로 전달한다.
+ * 근거: 5_component_spec_rules.md §1.2
  */
 export function InlineSelect({ invalid, className, children, ...props }: InlineSelectProps) {
   return (
@@ -15,7 +17,7 @@ export function InlineSelect({ invalid, className, children, ...props }: InlineS
       <select
         aria-invalid={invalid}
         className={cn(
-          'h-7 w-full appearance-none rounded-radius-sm border pl-2 pr-6 text-caption text-gray-900 transition-all duration-fast',
+          'h-ctl-table w-full appearance-none rounded-radius-sm border pl-2 pr-6 text-caption text-gray-900 transition-all duration-fast',
           'bg-white border-gray-300',
           'hover:border-gray-400',
           'focus-visible:outline-none focus-visible:border-brand/50 focus-visible:shadow-popover',

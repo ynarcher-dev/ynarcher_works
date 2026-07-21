@@ -113,7 +113,7 @@ export function MasterListView({
           // 목록은 읽기용 태그. 가능 여부 설정은 상세 페이지 드롭다운에서 수행한다.
           const ok = raw == null || raw === '' ? true : raw === true || raw === 'true' || raw === 'available'
           return (
-            <Badge tone={ok ? 'success' : 'neutral'} size="sm">
+            <Badge tone={ok ? 'success' : 'neutral'}>
               {ok ? '가능' : '불가능'}
             </Badge>
           )
@@ -199,9 +199,9 @@ export function MasterListView({
               </InlineSelect>
             )
           }
-          return v ? <Badge tone="neutral" size="sm">{v}</Badge> : '-'
+          return v ? <Badge tone="neutral">{v}</Badge> : '-'
         }
-        if (c.kind === 'tag') return v ? <Badge tone="neutral" size="sm">{v}</Badge> : '-'
+        if (c.kind === 'tag') return v ? <Badge tone="neutral">{v}</Badge> : '-'
         if (c.mask === 'email') return show.email ? (v ?? '-') : maskEmail(v ?? null)
         if (c.mask === 'phone') return show.phone ? (v ?? '-') : maskPhone(v ?? null)
         return v ?? '-'
@@ -214,7 +214,7 @@ export function MasterListView({
       key: '_manager',
       header: '담당자',
       className: 'w-24',
-      render: () => <span className="text-gray-500">공동관리</span>,
+      render: () => <span className="text-gray-600">공동관리</span>,
     })
     // 수정 가능(NETWORKS)일 때만 액션 컬럼을 노출한다. 보기 버튼은 제거됨.
     if (onEdit) {
@@ -224,7 +224,7 @@ export function MasterListView({
         align: 'right',
         render: (r) => (
           <div className="flex justify-end">
-            <Button variant="outline" size="sm" onClick={() => onEdit(r)}>
+            <Button variant="outline" onClick={() => onEdit(r)}>
               수정
             </Button>
           </div>

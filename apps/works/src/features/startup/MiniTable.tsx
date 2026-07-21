@@ -26,7 +26,7 @@ export function MiniTable({
 }
 
 /** 공용 표 셀 클래스. 헤더는 밑줄 한 줄(gray-200), 본문 행은 옅은 구분선(gray-100). */
-export const th = 'h-9 border-b border-gray-200 px-3 text-right text-caption font-semibold text-gray-500'
-export const thL = 'h-9 border-b border-gray-200 px-3 text-left text-caption font-semibold text-gray-500'
+export const th = 'h-9 border-b border-gray-200 px-3 text-right text-caption font-semibold text-gray-600'
+export const thL = 'h-9 border-b border-gray-200 px-3 text-left text-caption font-semibold text-gray-600'
 export const td = 'h-10 border-b border-gray-100 px-3 text-right tabular-nums text-gray-800'
 export const tdL = 'h-10 border-b border-gray-100 px-3 text-left text-gray-800'

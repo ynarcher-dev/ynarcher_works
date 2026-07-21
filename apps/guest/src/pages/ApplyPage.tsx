@@ -358,7 +358,7 @@ export function ApplyPage() {
         </button>
 
         {landing.contact && (
-          <p className="mt-6 whitespace-pre-wrap text-center text-caption text-gray-400">
+          <p className="mt-6 whitespace-pre-wrap text-center text-caption text-gray-600">
             문의: {landing.contact}
           </p>
         )}
@@ -372,7 +372,7 @@ function Centered({ title, children }: { title?: string; children: React.ReactNo
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-5 text-center">
       {title && <p className="text-title-sm font-bold text-gray-900">{title}</p>}
-      <p className="mt-2 text-body text-gray-500">{children}</p>
+      <p className="mt-2 text-body text-gray-600">{children}</p>
     </main>
   )
 }

@@ -84,7 +84,6 @@ export function StartupBusinessTeamFields({ register, control, capabilities, set
           <Button
             type="button"
             variant="outline"
-            size="sm"
             className="mt-2"
             onClick={() => append({ name: '', role: '', background: '' })}
           >

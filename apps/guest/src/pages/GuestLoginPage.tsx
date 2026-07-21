@@ -62,7 +62,7 @@ export function GuestLoginPage() {
       <h1 className="text-title-md font-bold text-gray-900">
         와이앤아처 <span className="text-brand">GUEST</span>
       </h1>
-      <p className="mt-1 text-body text-gray-500">
+      <p className="mt-1 text-body text-gray-600">
         {step === 'creds' ? '참여자 정보로 로그인' : '인증 번호 입력 (3분 이내)'}
       </p>
 

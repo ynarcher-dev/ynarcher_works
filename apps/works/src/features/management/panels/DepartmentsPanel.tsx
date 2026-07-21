@@ -79,19 +79,19 @@ export function DepartmentsPanel({ readOnly = false }: DepartmentsPanelProps = {
         <div className="flex items-center gap-2 pt-0.5">
           {readOnly ? null : editMode ? (
             <>
-              <Button size="sm" onClick={() => void saveEdit()}>
+              <Button onClick={() => void saveEdit()}>
                 저장
               </Button>
-              <Button variant="outline" size="sm" onClick={cancelEdit}>
+              <Button variant="outline" onClick={cancelEdit}>
                 취소
               </Button>
             </>
           ) : (
             <>
-              <Button variant="outline" size="sm" onClick={() => setWarnOpen(true)}>
+              <Button variant="outline" onClick={() => setWarnOpen(true)}>
                 <Pencil size={14} /> 직접 편집
               </Button>
-              <Button size="sm" onClick={() => setReformOpen(true)}>
+              <Button onClick={() => setReformOpen(true)}>
                 조직 개편
               </Button>
             </>
@@ -101,7 +101,7 @@ export function DepartmentsPanel({ readOnly = false }: DepartmentsPanelProps = {
 
       {/* 편집 안내문은 편집 권한이 있는 MANAGEMENT에서만 노출한다. */}
       {!readOnly && !editMode && (
-        <p className="rounded-radius-md border border-gray-200 bg-gray-25 px-3 py-2 text-caption text-gray-500">
+        <p className="rounded-radius-md border border-gray-200 bg-gray-25 px-3 py-2 text-caption text-gray-600">
           조회 모드입니다. 운영 중인 조직을 즉시 수정하려면 직접 편집을 사용하고, 예정 조직은 조직 개편에서 설계하세요.
         </p>
       )}
@@ -120,11 +120,10 @@ export function DepartmentsPanel({ readOnly = false }: DepartmentsPanelProps = {
         title="직접 편집으로 전환"
         footer={
           <>
-            <Button variant="outline" size="sm" onClick={() => setWarnOpen(false)}>
+            <Button variant="outline" onClick={() => setWarnOpen(false)}>
               취소
             </Button>
             <Button
-              size="sm"
               onClick={() => {
                 setEditMode(true)
                 setWarnOpen(false)

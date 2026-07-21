@@ -1,6 +1,8 @@
 import { useContext, useState, type ReactNode } from 'react'
 import { cn } from '../utils/cn'
+import { DensityProvider } from '../density'
 import { Checkbox } from './Checkbox'
+import { InlineButton } from './InlineButton'
 import { Pagination } from './Pagination'
 import { ToastContext } from './toast/ToastContext'
 
@@ -214,6 +216,9 @@ export function DataTable<T>({
   }
 
   const scroller = (
+    // 표 내부는 밀도 맥락을 `table`로 고정한다 — 셀 안의 버튼·선택·배지가 별도 지정 없이
+    // 표 규격(24px 계열)으로 렌더된다. 근거: 5_component_spec_rules.md §1.2
+    <DensityProvider value="table">
     <div
       className={cn(
         'w-full overflow-x-auto rounded-radius-md border border-gray-300 bg-white shadow-soft',
@@ -241,7 +246,7 @@ export function DataTable<T>({
               </th>
             )}
             {numbered && (
-              <th className={cn('h-9 w-12 border-b border-gray-300 px-3 text-right text-caption font-semibold text-gray-500', pad)}>
+              <th className={cn('h-9 w-12 border-b border-gray-300 px-3 text-right text-caption font-semibold text-gray-600', pad)}>
                 No.
               </th>
             )}
@@ -251,7 +256,7 @@ export function DataTable<T>({
                 <th
                   key={col.key}
                   className={cn(
-                    'h-9 border-b border-gray-300 px-3 text-caption font-semibold text-gray-500',
+                    'h-9 border-b border-gray-300 px-3 text-caption font-semibold text-gray-600',
                     alignClass[col.align ?? 'left'],
                     col.sortable && 'cursor-pointer select-none hover:bg-gray-100/50',
                     pad,
@@ -282,11 +287,11 @@ export function DataTable<T>({
             {standardColumns && (
               <>
                 {showAuthor && (
-                  <th className={cn('h-9 w-20 border-b border-gray-300 px-3 text-left text-caption font-semibold text-gray-500', pad, truncate)}>{authorLabel}</th>
+                  <th className={cn('h-9 w-20 border-b border-gray-300 px-3 text-left text-caption font-semibold text-gray-600', pad, truncate)}>{authorLabel}</th>
                 )}
                 {/* 수정일 헤더는 항상 좌측 정렬. 값(셀)만 updatedAtAlign을 따른다. */}
-                <th className={cn('h-9 w-28 border-b border-gray-300 px-3 text-left text-caption font-semibold text-gray-500', pad, truncate)}>수정일</th>
-                <th className={cn('h-9 w-32 border-b border-gray-300 px-3 text-center text-caption font-semibold text-gray-500', pad)}>관리</th>
+                <th className={cn('h-9 w-28 border-b border-gray-300 px-3 text-left text-caption font-semibold text-gray-600', pad, truncate)}>수정일</th>
+                <th className={cn('h-9 w-32 border-b border-gray-300 px-3 text-center text-caption font-semibold text-gray-600', pad)}>관리</th>
               </>
             )}
           </tr>
@@ -296,7 +301,7 @@ export function DataTable<T>({
             <tr>
               <td
                 colSpan={colSpan}
-                className="h-24 text-center text-body text-gray-400"
+                className="h-24 text-center text-body text-gray-500"
               >
                 {emptyText}
               </td>
@@ -330,7 +335,7 @@ export function DataTable<T>({
                     </td>
                   )}
                   {numbered && (
-                    <td className={cn('border-b border-gray-200 px-3 text-right text-gray-500 tabular-nums', pad)}>
+                    <td className={cn('border-b border-gray-200 px-3 text-right text-gray-600 tabular-nums', pad)}>
                       {meta?.rowMark?.(row) ?? numberFrom - index}
                     </td>
                   )}
@@ -352,12 +357,12 @@ export function DataTable<T>({
                   {standardColumns && (
                     <>
                       {showAuthor && (
-                        <td className={cn('whitespace-nowrap border-b border-gray-200 px-3 text-gray-500', pad, truncate)}>
+                        <td className={cn('whitespace-nowrap border-b border-gray-200 px-3 text-gray-600', pad, truncate)}>
                           {resolveAuthor(row, meta)}
                         </td>
                       )}
                       {/* 수정일(날짜)은 어떤 레이아웃에서도 줄바꿈되지 않게 nowrap 고정. auto 레이아웃에서 컬럼이 좁혀질 때 하이픈에서 줄이 갈라지는 것을 방지한다. */}
-                      <td className={cn('whitespace-nowrap border-b border-gray-200 px-3 text-gray-500 tabular-nums', alignClass[updatedAtAlign], pad, truncate)}>
+                      <td className={cn('whitespace-nowrap border-b border-gray-200 px-3 text-gray-600 tabular-nums', alignClass[updatedAtAlign], pad, truncate)}>
                         {resolveUpdatedAt(row, meta)}
                       </td>
                       <td
@@ -369,18 +374,17 @@ export function DataTable<T>({
                           <div className="flex items-center justify-center gap-1 whitespace-nowrap">
                             {/* 수정은 편집 권한 컨텍스트에서, 활성 행에 대해서만 노출한다. */}
                             {manageable && meta?.onEdit && active && (
-                              <button
-                                type="button"
+                              <InlineButton
+                                tone="outline"
                                 title="수정"
                                 onClick={() => meta.onEdit!(row)}
-                                className="inline-flex shrink-0 items-center rounded-radius-md border border-gray-300 px-1.5 py-0.5 text-caption text-gray-600 transition-colors duration-fast hover:bg-gray-50 hover:text-brand"
                               >
                                 수정
-                              </button>
+                              </InlineButton>
                             )}
                             {meta?.copyText && (
-                              <button
-                                type="button"
+                              <InlineButton
+                                tone="outline"
                                 title="복사하기"
                                 onClick={() => {
                                   void navigator.clipboard
@@ -388,16 +392,16 @@ export function DataTable<T>({
                                     .then(() => toast?.show('복사했습니다.', 'success'))
                                     .catch(() => toast?.show('복사에 실패했습니다.', 'danger'))
                                 }}
-                                className="inline-flex shrink-0 items-center rounded-radius-md border border-gray-300 px-1.5 py-0.5 text-caption text-gray-600 transition-colors duration-fast hover:bg-gray-50"
                               >
                                 복사
-                              </button>
+                              </InlineButton>
                             )}
                             {/* 비활성화(소프트 삭제)는 편집 권한 컨텍스트(manageable)에서만 노출한다. */}
                             {manageable &&
                               (active ? (
-                                <button
-                                  type="button"
+                                <InlineButton
+                                  tone="outline"
+                                  danger
                                   title="비활성화(소프트 삭제)"
                                   disabled={!meta?.onDeactivate}
                                   onClick={() => {
@@ -411,10 +415,9 @@ export function DataTable<T>({
                                       meta?.onDeactivate?.(row)
                                     }
                                   }}
-                                  className="inline-flex shrink-0 items-center rounded-radius-md border border-gray-300 px-1.5 py-0.5 text-caption text-gray-600 transition-colors duration-fast hover:bg-red-50 hover:text-brand disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-gray-600"
                                 >
                                   비활성화
-                                </button>
+                                </InlineButton>
                               ) : (
                                 <span className="text-caption text-gray-400">비활성</span>
                               ))}
@@ -430,6 +433,7 @@ export function DataTable<T>({
         </tbody>
       </table>
     </div>
+    </DensityProvider>
   )
 
   if (!pagination) return scroller

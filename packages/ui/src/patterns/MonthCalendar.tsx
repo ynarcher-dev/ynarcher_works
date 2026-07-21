@@ -137,7 +137,7 @@ export function MonthCalendar({
             key={w}
             className={cn(
               'py-1 text-center text-caption font-semibold',
-              i === 0 ? 'text-brand' : i === 6 ? 'text-info' : 'text-gray-500',
+              i === 0 ? 'text-brand' : i === 6 ? 'text-info' : 'text-gray-600',
             )}
           >
             {w}
@@ -218,7 +218,7 @@ export function CalendarDayDetail({
   return (
     <div className="mt-3 rounded-radius-sm border border-gray-200 bg-gray-25 px-3 py-2.5">
       {isEmpty ? (
-        <p className="text-caption text-gray-400">{emptyText}</p>
+        <p className="text-caption text-gray-500">{emptyText}</p>
       ) : (
         <ul className="space-y-1.5">{children}</ul>
       )}

@@ -1,8 +1,8 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { cn } from '../utils/cn'
+import { useDensity, type Density } from '../density'
 
 export type IconButtonVariant = 'outline' | 'ghost' | 'selected'
-export type IconButtonSize = 'sm' | 'md'
 
 const variantClass: Record<IconButtonVariant, string> = {
   outline:
@@ -11,9 +11,14 @@ const variantClass: Record<IconButtonVariant, string> = {
   selected: 'border border-gray-400 bg-gray-100 text-gray-900',
 }
 
-const sizeClass: Record<IconButtonSize, string> = {
-  sm: 'h-7 w-7',
-  md: 'h-8 w-8',
+/**
+ * 밀도 맥락별 정사각 치수. 라벨이 없어 같은 맥락의 Button보다 한 단계 작게 잡는다.
+ * 근거: 5_component_spec_rules.md §1.2 / §2.1
+ */
+const densityClass: Record<Density, string> = {
+  page: 'size-icon-page',
+  card: 'size-icon-card',
+  table: 'size-icon-table',
 }
 
 export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -22,7 +27,8 @@ export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>
   /** 스크린리더 라벨. `title`도 함께 지정하면 툴팁으로 노출된다. */
   label: string
   variant?: IconButtonVariant
-  size?: IconButtonSize
+  /** 밀도 맥락 강제 지정. 생략하면 부모 Card·DataTable이 내려준 맥락을 자동으로 따른다. */
+  density?: Density
   /** 위험 동작(끄기·삭제)용 호버 톤. */
   danger?: boolean
 }
@@ -35,12 +41,13 @@ export function IconButton({
   icon,
   label,
   variant = 'outline',
-  size = 'md',
+  density,
   danger = false,
   className,
   type = 'button',
   ...props
 }: IconButtonProps) {
+  const d = useDensity(density)
   return (
     <button
       type={type}
@@ -50,7 +57,7 @@ export function IconButton({
         'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10',
         'disabled:cursor-not-allowed disabled:opacity-55',
         variantClass[variant],
-        sizeClass[size],
+        densityClass[d],
         danger && 'hover:bg-danger-subtle hover:text-danger',
         className,
       )}

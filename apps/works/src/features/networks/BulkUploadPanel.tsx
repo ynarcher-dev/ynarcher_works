@@ -267,7 +267,7 @@ export function BulkUploadPanel() {
           <span className="text-body font-medium text-gray-700">
             CSV 파일을 여기로 드래그하거나 클릭해 선택하세요
           </span>
-          <span className="text-caption text-gray-400">.csv (UTF-8)</span>
+          <span className="text-caption text-gray-600">.csv (UTF-8)</span>
           <input
             type="file"
             accept=".csv,text/csv"
@@ -284,13 +284,13 @@ export function BulkUploadPanel() {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2 text-caption text-gray-600">
               <span className="font-medium text-gray-800">{fileName}</span>
-              <Badge tone="neutral" size="sm">전체 {rows.length}</Badge>
-              <Badge tone="success" size="sm">신규 {newRows.length}</Badge>
-              {mergeRows.length > 0 && <Badge tone="info" size="sm">합치기 {mergeRows.length}</Badge>}
-              {deletedPending > 0 && <Badge tone="warning" size="sm">비활성 {deletedPending}</Badge>}
-              {displaySkip > 0 && <Badge tone="neutral" size="sm">미업로드 {displaySkip}</Badge>}
-              {dupCount > 0 && <span className="text-gray-400">중복 {dupCount}</span>}
-              {checking && <span className="text-gray-400">중복 검사 중…</span>}
+              <Badge tone="neutral">전체 {rows.length}</Badge>
+              <Badge tone="success">신규 {newRows.length}</Badge>
+              {mergeRows.length > 0 && <Badge tone="info">합치기 {mergeRows.length}</Badge>}
+              {deletedPending > 0 && <Badge tone="warning">비활성 {deletedPending}</Badge>}
+              {displaySkip > 0 && <Badge tone="neutral">미업로드 {displaySkip}</Badge>}
+              {dupCount > 0 && <span className="text-gray-600">중복 {dupCount}</span>}
+              {checking && <span className="text-gray-600">중복 검사 중…</span>}
             </div>
             <div className="flex gap-2">
               <Button variant="secondary" onClick={reset} disabled={busy}>다시 선택</Button>
@@ -329,7 +329,7 @@ export function BulkUploadPanel() {
                   ))}
                 </InlineSelect>
               </div>
-              <Button size="sm" variant="secondary" onClick={() => setSelected([])}>선택 해제</Button>
+              <Button variant="secondary" onClick={() => setSelected([])}>선택 해제</Button>
             </div>
           )}
 

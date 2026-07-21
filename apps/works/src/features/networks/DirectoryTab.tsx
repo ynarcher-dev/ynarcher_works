@@ -183,13 +183,13 @@ export function DirectoryTab({ config, keyword, creating, setCreating }: Directo
               ))}
             </InlineSelect>
           </div>
-          <Button size="sm" onClick={() => void applyChosen()} disabled={bulkBusy}>
+          <Button onClick={() => void applyChosen()} disabled={bulkBusy}>
             일괄 적용
           </Button>
-          <Button size="sm" variant="outline" onClick={() => void applySuggested()} disabled={bulkBusy}>
+          <Button variant="outline" onClick={() => void applySuggested()} disabled={bulkBusy}>
             추천 구분 자동 적용
           </Button>
-          <Button size="sm" variant="secondary" onClick={() => setSelected([])} disabled={bulkBusy}>
+          <Button variant="secondary" onClick={() => setSelected([])} disabled={bulkBusy}>
             선택 해제
           </Button>
         </div>

@@ -105,15 +105,15 @@ export function BoardAdminPanel() {
       render: (b) => (
         // 이름·아이콘 수정은 기본 게시판을 포함해 항상 허용한다(구분·slug는 잠긴다).
         <span className="flex items-center justify-center gap-1.5">
-          <Button variant="outline" size="sm" onClick={() => setForm(b)}>
+          <Button variant="outline" onClick={() => setForm(b)}>
             수정
           </Button>
           {b.isActive ? (
-            <Button variant="outline" size="sm" onClick={() => deactivate(b)}>
+            <Button variant="outline" onClick={() => deactivate(b)}>
               비활성화
             </Button>
           ) : (
-            <Button variant="outline" size="sm" onClick={() => void changeActive(b, true)}>
+            <Button variant="outline" onClick={() => void changeActive(b, true)}>
               활성화
             </Button>
           )}

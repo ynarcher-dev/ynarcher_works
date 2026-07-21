@@ -41,14 +41,14 @@ export function DeptMemberModal({
       size="md"
       title={`${deptName} · 인력 배치`}
       footer={
-        <Button variant="outline" size="sm" onClick={onClose}>
+        <Button variant="outline" onClick={onClose}>
           닫기
         </Button>
       }
     >
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <p className="text-caption text-gray-500">
+          <p className="text-caption text-gray-600">
             이 부서 소속 <span className="font-semibold text-gray-800">{assignedCount}명</span>
           </p>
           <Input
@@ -71,19 +71,19 @@ export function DeptMemberModal({
                 />
                 <Avatar name={e.name} size="sm" />
                 <span className="text-body text-gray-800">{e.name}</span>
-                <span className="ml-auto text-caption text-gray-400">
+                <span className="ml-auto text-caption text-gray-600">
                   {here ? '이 부서' : currentDept ? `현재: ${currentDept}` : '미배치'}
                 </span>
               </li>
             )
           })}
           {filtered.length === 0 && (
-            <li className="px-3 py-6 text-center text-caption text-gray-400">
+            <li className="px-3 py-6 text-center text-caption text-gray-500">
               검색 결과가 없습니다.
             </li>
           )}
         </ul>
-        <p className="text-caption text-gray-400">
+        <p className="text-caption text-gray-600">
           · 다른 부서 소속을 체크하면 이 부서로 이동(재발령)합니다. 임직원은 한 부서에만 소속됩니다.
         </p>
       </div>

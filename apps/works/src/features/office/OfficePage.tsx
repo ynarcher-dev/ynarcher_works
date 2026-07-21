@@ -78,7 +78,7 @@ export function OfficePage() {
     return (
       <div className="space-y-5">
         <PageHeader title={placeholder} />
-        <p className="rounded border border-dashed border-gray-300 py-10 text-center text-body text-gray-400">
+        <p className="rounded border border-dashed border-gray-300 py-10 text-center text-body text-gray-500">
           {placeholder} 화면은 준비 중입니다.
         </p>
       </div>

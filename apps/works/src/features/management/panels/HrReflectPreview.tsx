@@ -28,18 +28,18 @@ export function HrReflectPreview({ open, onClose, levels, nodes, employees }: Hr
       size="lg"
       title="인사관리 반영 미리보기"
       footer={
-        <Button variant="outline" size="sm" onClick={onClose}>
+        <Button variant="outline" onClick={onClose}>
           닫기
         </Button>
       }
     >
       <div className="space-y-2">
-        <p className="text-caption text-gray-500">
+        <p className="text-caption text-gray-600">
           조직 레벨 정의가 그대로 인사관리 컬럼이 됩니다. 레벨을 추가/이름변경하면 아래 컬럼도 바뀝니다.
         </p>
         <div className="max-h-96 overflow-auto rounded-radius-md border border-gray-200">
           <table className="w-full border-collapse text-caption">
-            <thead className="sticky top-0 bg-gray-50 text-gray-500">
+            <thead className="sticky top-0 bg-gray-50 text-gray-600">
               <tr>
                 <th className="whitespace-nowrap px-3 py-2 text-left font-semibold">이름</th>
                 {tiers.map((t) => (
@@ -72,7 +72,7 @@ export function HrReflectPreview({ open, onClose, levels, nodes, employees }: Hr
               })}
               {employees.length === 0 && (
                 <tr>
-                  <td colSpan={tiers.length + 2} className="px-3 py-6 text-center text-gray-400">
+                  <td colSpan={tiers.length + 2} className="px-3 py-6 text-center text-gray-500">
                     임직원이 없습니다.
                   </td>
                 </tr>

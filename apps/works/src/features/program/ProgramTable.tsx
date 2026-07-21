@@ -84,7 +84,7 @@ export function ProgramTable({
         header: '상태',
         className: 'whitespace-nowrap',
         render: (r) => (
-          <Badge tone={PROGRAM_STATUS_TONE[r.status] ?? 'neutral'} size="sm">
+          <Badge tone={PROGRAM_STATUS_TONE[r.status] ?? 'neutral'}>
             {PROGRAM_STATUS_LABEL[r.status] ?? r.status}
           </Badge>
         ),

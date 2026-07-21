@@ -201,8 +201,8 @@ export function ModuleFormModal({
               <Icon className="h-4 w-4" />
             </span>
           )}
-          <span className="text-caption text-gray-500">템플릿</span>
-          <Badge tone="neutral" size="sm">
+          <span className="text-caption text-gray-600">템플릿</span>
+          <Badge tone="neutral">
             {labelOf(moduleType)}
           </Badge>
         </div>
@@ -277,7 +277,7 @@ export function ModuleFormModal({
             <Input id="mod-end" type="date" {...register('end_date')} />
           </div>
           {allowedRanges.length > 0 && (
-            <p className="col-span-2 text-caption text-gray-400">
+            <p className="col-span-2 text-caption text-gray-600">
               모듈 기간은 다음 범위 안에서만 설정할 수 있습니다 —{' '}
               {proposalRange && <>제안 {periodLabel(proposalRange)}</>}
               {proposalRange && operationRange && ' · '}

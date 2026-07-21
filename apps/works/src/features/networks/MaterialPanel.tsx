@@ -57,7 +57,6 @@ export function MaterialPanel({
       action={
         readOnly ? undefined : (
           <Button
-            size="sm"
             variant="secondary"
             disabled={busy}
             onClick={() => openPicker.current?.()}
@@ -101,7 +100,7 @@ export function MaterialPanel({
             <MiniPager page={page} pageCount={pageCount} onPage={setPage} />
           </>
         ) : (
-          <p className="text-body text-gray-400">등록된 자료가 없습니다.</p>
+          <p className="text-body text-gray-500">등록된 자료가 없습니다.</p>
         )}
       </div>
     </DetailPanelCard>
@@ -125,7 +124,7 @@ function MaterialRow({
       <span className="min-w-0 flex-1 truncate text-body text-gray-800">
         {material.file_name}
       </span>
-      <span className="shrink-0 tabular-nums text-caption text-gray-400">
+      <span className="shrink-0 tabular-nums text-caption text-gray-600">
         {formatBytes(material.byte_size)}
       </span>
       <button

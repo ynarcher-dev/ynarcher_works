@@ -21,14 +21,17 @@ export interface StatTile {
 /** 기본 그리드(5열). 열 수가 다른 대시보드는 className 으로 교체한다. */
 const DEFAULT_GRID = 'grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5'
 
-/** 전월 대비 증감 배지(증가=success·감소=danger·변화 없음=gray). */
+/**
+ * 전월 대비 증감 배지(증가=success·감소=danger·변화 없음=gray).
+ * 12px 한 줄 안에서 색과 굵기가 동시에 바뀌면 지저분해 보이므로, 굵기는 고정하고 색으로만 구분한다.
+ */
 function DeltaLabel({ delta }: { delta: number }) {
-  if (delta === 0) return <p className="mt-0.5 text-caption text-gray-400">전월 대비 &ndash;</p>
+  if (delta === 0) return <p className="mt-1 text-caption text-gray-600">전월 대비 &ndash;</p>
   const up = delta > 0
   return (
-    <p className="mt-0.5 flex items-center gap-1 text-caption text-gray-400">
+    <p className="mt-1 flex items-center gap-1 text-caption text-gray-600">
       <span>전월 대비</span>
-      <span className={`font-semibold tabular-nums ${up ? 'text-success' : 'text-danger'}`}>
+      <span className={`tabular-nums ${up ? 'text-success' : 'text-danger'}`}>
         {up ? '↑' : '↓'}
         {Math.abs(delta).toLocaleString()}
       </span>
@@ -52,8 +55,15 @@ export function StatusTileGrid({ tiles, className = DEFAULT_GRID }: { tiles: Sta
               t.emphasis ? 'border-gray-400 bg-gray-50' : 'border-gray-300 bg-white'
             } ${clickable ? 'cursor-pointer hover:border-gray-400 hover:bg-gray-50' : 'cursor-default'}`}
           >
-            <p className="text-caption text-gray-500">{t.label}</p>
-            <p className="text-title-sm font-bold tabular-nums text-gray-900">{t.value}</p>
+            <p className="text-caption text-gray-600">{t.label}</p>
+            {/* L3: 값이 헤드라인 역할을 하도록 라벨(12px)과 대비를 벌린다. 총계 타일은 한 단계 더 크게. */}
+            <p
+              className={`font-bold tabular-nums leading-tight text-gray-900 ${
+                t.emphasis ? 'text-title-lg' : 'text-title-md'
+              }`}
+            >
+              {t.value}
+            </p>
             {t.delta !== undefined && <DeltaLabel delta={t.delta} />}
           </button>
         )
@@ -77,9 +87,9 @@ export function StatusPlaceholderGrid({
           key={i}
           className="rounded-radius-md border border-dashed border-gray-300 bg-gray-50/40 px-3 py-2"
         >
-          <p className="text-caption text-gray-400">준비 중</p>
-          <p className="text-title-sm font-bold tabular-nums text-gray-300">&ndash;</p>
-          <p className="mt-0.5 text-caption text-gray-300">지표 미정</p>
+          <p className="text-caption text-gray-500">준비 중</p>
+          <p className="text-title-md font-bold tabular-nums leading-tight text-gray-300">&ndash;</p>
+          <p className="mt-1 text-caption text-gray-300">지표 미정</p>
         </div>
       ))}
     </div>

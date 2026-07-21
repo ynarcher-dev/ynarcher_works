@@ -3,7 +3,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { EntityRow } from '@/features/networks/hooks'
 import { CategoryBarList } from '@/features/networks/dashboard/CategoryBarList'
-import { DashboardCard } from '@/features/networks/dashboard/DashboardCard'
+import { DashboardCard, DashboardSectionHeading } from '@/features/networks/dashboard/DashboardCard'
 import { CategoryColumnChart } from '@/features/networks/dashboard/CategoryColumnChart'
 import {
   useStartupDashboardRows,
@@ -128,7 +128,7 @@ export function StartupDashboardTab() {
       key={c.key}
       title={c.title}
       subtitle={c.subtitle}
-      bodyH="h-[10.5rem]"
+      bodyH="h-[13.5rem]"
       onExpand={() => setExpanded(c.key)}
     >
       {c.render(false)}
@@ -138,10 +138,10 @@ export function StartupDashboardTab() {
   return (
     <div className="space-y-4">
       <section className="space-y-2">
-        <div className="flex items-center gap-1">
-          <h3 className="text-body font-semibold text-gray-800">일반현황</h3>
-          <Tooltip content="전체 보유 기업을 구분(투자·보육·발굴·기타)별로 집계했습니다. 타일 클릭 시 해당 목록으로 이동합니다." />
-        </div>
+        <DashboardSectionHeading
+          title="일반현황"
+          tooltip="전체 보유 기업을 구분(투자·보육·발굴·기타)별로 집계했습니다. 타일 클릭 시 해당 목록으로 이동합니다."
+        />
         {summaryLoading ? (
           <div className="flex h-24 items-center justify-center"><Spinner /></div>
         ) : (
@@ -150,10 +150,10 @@ export function StartupDashboardTab() {
       </section>
 
       <section className="space-y-2">
-        <div className="flex items-center gap-1">
-          <h3 className="text-body font-semibold text-gray-800">투자기업 현황</h3>
-          <Tooltip content="투자 포트폴리오 핵심 지표 영역입니다(지표 정의 예정)." />
-        </div>
+        <DashboardSectionHeading
+          title="투자기업 현황"
+          tooltip="투자 포트폴리오 핵심 지표 영역입니다(지표 정의 예정)."
+        />
         <StatusPlaceholderGrid count={5} />
       </section>
 

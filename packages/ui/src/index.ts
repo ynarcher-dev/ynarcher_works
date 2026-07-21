@@ -9,9 +9,13 @@ export const UI_PACKAGE_NAME = '@ynarcher/ui'
 // utils
 export { cn } from './utils/cn'
 
+// 밀도 맥락 — 모든 컴포넌트 크기의 단일 축(일반 UI / 카드섹션 / 데이터 테이블)
+export { DensityProvider, useDensity, byDensity } from './density'
+export type { Density } from './density'
+
 // 기초 컴포넌트
 export { Button } from './components/Button'
-export type { ButtonProps, ButtonVariant, ButtonSize } from './components/Button'
+export type { ButtonProps, ButtonVariant } from './components/Button'
 export { Input } from './components/Input'
 export type { InputProps } from './components/Input'
 export { TextArea } from './components/TextArea'
@@ -26,17 +30,15 @@ export { Checkbox } from './components/Checkbox'
 export { Switch } from './components/Switch'
 export { Avatar } from './components/Avatar'
 export { Badge } from './components/Badge'
-export type { BadgeTone, BadgeSize } from './components/Badge'
+export type { BadgeTone } from './components/Badge'
 export { Card } from './components/Card'
 export type { CardProps } from './components/Card'
+export { CardShell } from './components/CardShell'
+export type { CardShellProps } from './components/CardShell'
 export { Tabs } from './components/Tabs'
 export type { TabItem, TabsProps } from './components/Tabs'
 export { IconButton } from './components/IconButton'
-export type {
-  IconButtonProps,
-  IconButtonVariant,
-  IconButtonSize,
-} from './components/IconButton'
+export type { IconButtonProps, IconButtonVariant } from './components/IconButton'
 export { PhotoBox } from './components/PhotoBox'
 export type { PhotoBoxProps, PhotoBoxSize } from './components/PhotoBox'
 export { TextAction } from './components/TextAction'

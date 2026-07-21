@@ -67,7 +67,7 @@ export function FundPage() {
       header: '',
       align: 'right',
       render: (f) => (
-        <Button variant="ghost" size="sm" onClick={() => navigate(`/fund/${f.id}`)}>
+        <Button variant="ghost" onClick={() => navigate(`/fund/${f.id}`)}>
           열기
         </Button>
       ),
@@ -88,7 +88,7 @@ export function FundPage() {
           { label: '총 집행액', value: won(totalDrawn) },
         ].map((t) => (
           <div key={t.label} className="rounded border border-gray-300 bg-white px-4 py-3">
-            <p className="text-caption text-gray-500">{t.label}</p>
+            <p className="text-caption text-gray-600">{t.label}</p>
             <p className="text-title-md font-bold tabular-nums text-gray-900">{t.value}</p>
           </div>
         ))}

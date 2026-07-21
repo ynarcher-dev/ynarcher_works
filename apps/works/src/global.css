@@ -72,7 +72,17 @@
     /* 한글 조판 표준: 단어 단위 줄바꿈 + 레이아웃 침범 방지 */
     word-break: keep-all;
     overflow-wrap: break-word;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /*
+   * 폰트 스무딩은 고해상도(2x 이상)에서만 그레이스케일로 강제한다.
+   * 일반 DPI(1x) Windows에서 antialiased 를 걸면 브라우저 기본 서브픽셀 렌더링이 꺼지면서
+   * 11~14px 한글이 얇고 흐리게 뭉개진다(대시보드 caption/body 구간이 정확히 여기에 걸림).
+   */
+  @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    body {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
   }
 }

@@ -350,7 +350,7 @@ function OrgTreeEditor({ versionId, activeVersionId, editable = true }, ref) {
             onCancel={cancelDrafts}
             structureActionsEnabled={false}
           />
-          <p className="text-caption text-gray-400">
+          <p className="text-caption text-gray-600">
             · 조직 레벨(인사관리 컬럼)은 이 버전에만 적용되는 스냅샷입니다. 예정 버전에서의 변경은
             발효 전까지 현재 조직·인사에 영향을 주지 않습니다.
           </p>
@@ -360,7 +360,7 @@ function OrgTreeEditor({ versionId, activeVersionId, editable = true }, ref) {
       {/* 트리-테이블 */}
       <div className="overflow-hidden rounded-radius-md border border-gray-200 bg-white">
         <div
-          className={`${DEPT_GRID} items-center gap-2 border-b border-gray-200 bg-gray-50 py-2 pr-2 text-caption font-semibold text-gray-500`}
+          className={`${DEPT_GRID} items-center gap-2 border-b border-gray-200 bg-gray-50 py-2 pr-2 text-caption font-semibold text-gray-600`}
         >
           <span className="pl-2">조직명</span>
           <span>레벨</span>
@@ -368,7 +368,7 @@ function OrgTreeEditor({ versionId, activeVersionId, editable = true }, ref) {
           <span />
         </div>
         {tree.length === 0 ? (
-          <p className="py-8 text-center text-body text-gray-400">등록된 조직이 없습니다.</p>
+          <p className="py-8 text-center text-body text-gray-500">등록된 조직이 없습니다.</p>
         ) : (
           tree.map((root) => (
             <DeptTreeRow
@@ -404,7 +404,7 @@ function OrgTreeEditor({ versionId, activeVersionId, editable = true }, ref) {
       {/* 삭제된 조직(soft delete) — 복원만 제공(물리 삭제는 정책상 금지) */}
       {editable && removed.length > 0 && (
         <div className="rounded-radius-md border border-dashed border-gray-300 bg-gray-25 p-3">
-          <p className="mb-2 text-caption font-semibold text-gray-500">삭제된 조직</p>
+          <p className="mb-2 text-caption font-semibold text-gray-600">삭제된 조직</p>
           <ul className="space-y-1">
             {removed.map((n) => (
               <li key={n.id} className="flex items-center gap-2 text-body text-gray-400">
@@ -412,9 +412,8 @@ function OrgTreeEditor({ versionId, activeVersionId, editable = true }, ref) {
                 <span className="text-caption">(폐지)</span>
                 <Button
                   variant="ghost"
-                  size="sm"
                   onClick={() => restore(n.id)}
-                  className="ml-auto h-7 gap-1 px-2 text-gray-500"
+                  className="ml-auto h-7 gap-1 px-2 text-gray-600"
                 >
                   복원
                 </Button>
@@ -424,7 +423,7 @@ function OrgTreeEditor({ versionId, activeVersionId, editable = true }, ref) {
         </div>
       )}
 
-      <p className="text-caption text-gray-400">
+      <p className="text-caption text-gray-600">
         조직명과 레벨 변경은 화면에 먼저 반영된 뒤 상단 저장 버튼으로 함께 저장됩니다. 드래그 이동,
         추가/삭제, 인력 배치는 버튼 동작 즉시 반영됩니다.
       </p>

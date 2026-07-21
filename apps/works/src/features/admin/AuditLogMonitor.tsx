@@ -33,7 +33,7 @@ export function AuditLogMonitor() {
       header: '',
       align: 'right',
       render: (r) => (
-        <Button variant="ghost" size="sm" onClick={() => setDetail(r)}>
+        <Button variant="ghost" onClick={() => setDetail(r)}>
           전/후 대조
         </Button>
       ),
@@ -60,13 +60,13 @@ export function AuditLogMonitor() {
       >
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <p className="mb-1 text-caption font-semibold text-gray-500">변경 전</p>
+            <p className="mb-1 text-caption font-semibold text-gray-600">변경 전</p>
             <pre className="max-h-80 overflow-auto rounded bg-gray-50 p-3 text-caption text-gray-700">
               {JSON.stringify(detail?.before_data ?? {}, null, 2)}
             </pre>
           </div>
           <div>
-            <p className="mb-1 text-caption font-semibold text-gray-500">변경 후</p>
+            <p className="mb-1 text-caption font-semibold text-gray-600">변경 후</p>
             <pre className="max-h-80 overflow-auto rounded bg-gray-50 p-3 text-caption text-gray-700">
               {JSON.stringify(detail?.after_data ?? {}, null, 2)}
             </pre>

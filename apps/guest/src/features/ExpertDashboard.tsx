@@ -122,14 +122,14 @@ export function ExpertDashboard() {
             </div>
           ))}
           {(sessions ?? []).length === 0 && (
-            <p className="py-4 text-center text-caption text-gray-400">
+            <p className="py-4 text-center text-caption text-gray-500">
               배정된 멘토링 일정이 없습니다.
             </p>
           )}
         </div>
       </section>
 
-      <p className="text-caption text-gray-400">
+      <p className="text-caption text-gray-600">
         상담일지는 확정 예약(booking) 완료 후 활성화됩니다.
       </p>
     </div>

@@ -39,7 +39,7 @@ export function GuestHomePage() {
               type="button"
               onClick={() => setView(v)}
               className={`min-h-12 flex-1 rounded text-body font-medium ${
-                view === v ? 'bg-white text-brand shadow-sm' : 'text-gray-500'
+                view === v ? 'bg-white text-brand shadow-sm' : 'text-gray-600'
               }`}
             >
               {v === 'expert' ? '전문가' : '스타트업'} 뷰

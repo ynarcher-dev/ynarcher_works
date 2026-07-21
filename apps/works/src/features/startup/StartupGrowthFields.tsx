@@ -59,7 +59,7 @@ function Num({
 }) {
   return (
     <label className="block">
-      <span className="mb-0.5 block text-caption text-gray-500">{label}</span>
+      <span className="mb-0.5 block text-caption text-gray-600">{label}</span>
       <NumberInput value={value} onChange={onChange} />
     </label>
   )
@@ -77,7 +77,7 @@ function Txt({
 }) {
   return (
     <label className="block">
-      <span className="mb-0.5 block text-caption text-gray-500">{label}</span>
+      <span className="mb-0.5 block text-caption text-gray-600">{label}</span>
       <Input value={value ?? ''} onChange={(e) => onChange(e.target.value)} />
     </label>
   )
@@ -108,9 +108,9 @@ function YearMetricGroup<T extends { year: number }>({
       <h3 className="text-body font-semibold text-gray-900">{title}</h3>
       {rows.length > 0 && (
         <div className="grid items-center gap-x-2 gap-y-1.5" style={gridStyle}>
-          <span className="text-caption text-gray-500">연도</span>
+          <span className="text-caption text-gray-600">연도</span>
           {cols.map((c) => (
-            <span key={c.key} className="text-caption text-gray-500">
+            <span key={c.key} className="text-caption text-gray-600">
               {c.label}
             </span>
           ))}
@@ -144,7 +144,6 @@ function YearMetricGroup<T extends { year: number }>({
       <Button
         type="button"
         variant="outline"
-        size="sm"
         onClick={() => setRows([...rows, { year: new Date().getFullYear() } as T])}
       >
         연도 추가
@@ -170,7 +169,7 @@ function InvestmentGroup({
         <div key={i} className="space-y-2 rounded-radius-md border border-gray-200 p-3">
           <div className="flex items-end justify-between gap-2">
             <label className="block w-40 shrink-0">
-              <span className="mb-0.5 block text-caption text-gray-500">기준월</span>
+              <span className="mb-0.5 block text-caption text-gray-600">기준월</span>
               <Input type="month" value={r.date ?? ''} onChange={(e) => patch(i, { date: e.target.value })} />
             </label>
             <Button
@@ -190,7 +189,7 @@ function InvestmentGroup({
           </div>
         </div>
       ))}
-      <Button type="button" variant="outline" size="sm" onClick={() => setRows([...rows, { date: '' }])}>
+      <Button type="button" variant="outline" onClick={() => setRows([...rows, { date: '' }])}>
         투자 추가
       </Button>
     </div>
@@ -256,7 +255,6 @@ export function StartupGrowthFields({ growth, setGrowth, businessStatus, setBusi
         <Button
           type="button"
           variant="outline"
-          size="sm"
           onClick={() => setBusinessStatus([...businessStatus, { date: '', content: '' }])}
         >
           현황 추가

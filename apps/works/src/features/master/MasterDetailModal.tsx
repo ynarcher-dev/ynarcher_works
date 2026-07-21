@@ -35,7 +35,7 @@ export function MasterDetailModal({
         <dl className="space-y-2.5">
           {columns.map((c) => (
             <div key={c.name} className="flex gap-3">
-              <dt className="w-28 shrink-0 text-caption font-medium text-gray-500">
+              <dt className="w-28 shrink-0 text-caption font-medium text-gray-600">
                 {c.label}
               </dt>
               <dd className="text-body text-gray-800">

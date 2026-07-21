@@ -44,7 +44,6 @@ export function CommentPanel({ comments, onAdd }: CommentPanelProps) {
         />
         <div className="flex justify-end">
           <Button
-            size="sm"
             // 비활성 시 투명도 대신 회색으로 표시(디자인 요청).
             className="disabled:bg-gray-100 disabled:!text-gray-400 disabled:opacity-100"
             disabled={!draft.trim()}
@@ -65,9 +64,9 @@ export function CommentPanel({ comments, onAdd }: CommentPanelProps) {
               >
                 <div className="flex items-center gap-2">
                   <span className="text-caption font-medium text-gray-700">{c.author}</span>
-                  <span className="text-caption tabular-nums text-gray-400">{c.createdAt}</span>
+                  <span className="text-caption tabular-nums text-gray-600">{c.createdAt}</span>
                   {idx === 0 && (
-                    <Badge tone="danger" size="sm">
+                    <Badge tone="danger">
                       최신
                     </Badge>
                   )}
@@ -79,7 +78,7 @@ export function CommentPanel({ comments, onAdd }: CommentPanelProps) {
             ))}
           </ul>
         ) : (
-          <p className="text-body text-gray-400">등록된 댓글이 없습니다.</p>
+          <p className="text-body text-gray-500">등록된 댓글이 없습니다.</p>
         )}
       </div>
     </DetailPanelCard>

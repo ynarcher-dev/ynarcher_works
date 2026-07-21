@@ -10,7 +10,7 @@ import { createPortal } from 'react-dom'
 export function MenuSectionLabel({ children }: { children: ReactNode }) {
   return (
     <div className="px-3 pb-1 pt-1">
-      <span className="text-caption font-semibold text-gray-400">{children}</span>
+      <span className="text-caption font-semibold text-gray-600">{children}</span>
     </div>
   )
 }

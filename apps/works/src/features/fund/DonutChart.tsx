@@ -53,7 +53,7 @@ export function DonutChart({ segments }: { segments: DonutSegment[] }) {
               style={{ backgroundColor: COLORS[i % COLORS.length] }}
             />
             <span className="text-gray-700">{s.label}</span>
-            <span className="tabular-nums text-gray-500">
+            <span className="tabular-nums text-gray-600">
               {total > 0 ? Math.round((s.value / total) * 100) : 0}%
             </span>
           </li>

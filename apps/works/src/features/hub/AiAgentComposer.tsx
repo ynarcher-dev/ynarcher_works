@@ -66,7 +66,7 @@ export function AiAgentComposer({
         </button>
       </div>
 
-      <p className="mt-2 text-center text-caption text-gray-400">
+      <p className="mt-2 text-center text-caption text-gray-600">
         AI 에이전트는 미리보기 단계입니다. 답변에는 부정확한 내용이 포함될 수 있습니다.
       </p>
     </div>

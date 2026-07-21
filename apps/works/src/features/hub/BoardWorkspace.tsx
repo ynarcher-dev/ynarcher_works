@@ -249,7 +249,7 @@ function PostEditor({
         </label>
       </div>
       {!initial && (
-        <p className="text-caption text-gray-400">
+        <p className="text-caption text-gray-600">
           작성자({authorName ?? '작성자'})와 게시일(오늘)은 자동으로 기록됩니다.
         </p>
       )}
@@ -312,15 +312,15 @@ function DetailView({
             {/* 메타는 상세페이지 공통 '라벨: 값' 패턴으로 정렬한다(STARTUP·NETWORKS 정보행과 동일). */}
             <div className="mt-3 flex flex-wrap items-baseline gap-x-5 gap-y-1">
               <span className="flex items-baseline gap-2">
-                <span className="text-caption text-gray-400">작성자</span>
+                <span className="text-caption text-gray-600">작성자</span>
                 <span className="text-caption font-medium text-gray-700">{post.author}</span>
               </span>
               <span className="flex items-baseline gap-2">
-                <span className="text-caption text-gray-400">게시일</span>
+                <span className="text-caption text-gray-600">게시일</span>
                 <span className="text-caption tabular-nums text-gray-700">{post.date}</span>
               </span>
               <span className="flex items-baseline gap-2">
-                <span className="text-caption text-gray-400">조회</span>
+                <span className="text-caption text-gray-600">조회</span>
                 <span className="text-caption tabular-nums text-gray-700">
                   {(post.views ?? 0).toLocaleString()}
                 </span>
@@ -333,7 +333,7 @@ function DetailView({
             {post.content ? (
               <RichTextViewer html={post.content} />
             ) : (
-              <p className="text-body text-gray-400">본문이 없습니다.</p>
+              <p className="text-body text-gray-500">본문이 없습니다.</p>
             )}
           </div>
         </article>
@@ -344,7 +344,7 @@ function DetailView({
             {attachments.length > 0 ? (
               <AttachmentList attachments={attachments} />
             ) : (
-              <p className="text-body text-gray-400">등록된 자료가 없습니다.</p>
+              <p className="text-body text-gray-500">등록된 자료가 없습니다.</p>
             )}
           </DetailPanelCard>
           <CommentPanel comments={comments} onAdd={onAddComment} />

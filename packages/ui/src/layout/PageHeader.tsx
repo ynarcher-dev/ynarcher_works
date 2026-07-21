@@ -66,7 +66,7 @@ export function PageHeader({
             {titleExtra}
           </div>
           {description && (
-            <p className="mt-1 text-caption text-gray-500">{description}</p>
+            <p className="mt-1 text-caption text-gray-600">{description}</p>
           )}
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { BackButton, Badge, Banner, Button, Spinner } from '@ynarcher/ui'
+import { BackButton, Badge, Banner, Button, CardShell, Spinner } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -16,7 +16,7 @@ const LIST_PATH = '/networks?tab=global'
 function Info({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-baseline gap-2">
-      <span className="shrink-0 text-caption text-gray-400">{label}:</span>
+      <span className="shrink-0 text-caption text-gray-600">{label}:</span>
       <span className="text-body text-gray-800">{value ?? '-'}</span>
     </div>
   )
@@ -45,15 +45,15 @@ function GlobalView({ record }: { record: GlobalRow }) {
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
       {/* 좌측(2/3): 프로필 본문 — 현행 유지(메모 포함). */}
       <div className="space-y-4 lg:col-span-2">
-      <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
+      <CardShell>
         <div className="flex items-center gap-5">
           <PhotoBox src={(profile.photo as string) ?? null} />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-title-md font-bold text-gray-900">{record.name}</h1>
-              {record.category && <Badge tone="neutral" size="sm">{record.category}</Badge>}
+              {record.category && <Badge tone="neutral">{record.category}</Badge>}
             </div>
-            <p className="mt-1 text-body text-gray-500">{subtitle || '-'}</p>
+            <p className="mt-1 text-body text-gray-600">{subtitle || '-'}</p>
           </div>
         </div>
 
@@ -85,7 +85,7 @@ function GlobalView({ record }: { record: GlobalRow }) {
               expertise.length ? (
                 <span className="flex flex-wrap gap-1">
                   {expertise.map((e) => (
-                    <Badge key={e} tone="neutral" size="sm">{e}</Badge>
+                    <Badge key={e} tone="neutral">{e}</Badge>
                   ))}
                 </span>
               ) : (
@@ -96,16 +96,16 @@ function GlobalView({ record }: { record: GlobalRow }) {
           <Info label="공동 관리" value={contributors.length ? contributors.join(', ') : '-'} />
           <Info label="수정일" value={formatDate(record.updated_at)} />
         </div>
-      </section>
+      </CardShell>
 
-      <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
+      <CardShell>
         <h2 className="mb-3 text-body font-semibold text-gray-900">노트</h2>
         {intro ? (
           <p className="whitespace-pre-wrap text-body text-gray-800">{intro}</p>
         ) : (
-          <p className="text-body text-gray-400">등록된 노트 내용이 없습니다.</p>
+          <p className="text-body text-gray-500">등록된 노트 내용이 없습니다.</p>
         )}
-      </section>
+      </CardShell>
       </div>
 
       {/* 우측(1/3): 자료 관리 → 변동 이력 → 피드백. 국내 상세와 공용 패널. */}

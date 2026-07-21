@@ -35,11 +35,11 @@ export function ExpertRankingPanel({
   return (
     <div className="space-y-2">
       {shown.length === 0 ? (
-        <p className="py-8 text-center text-caption text-gray-400">표시할 네트워크가 없습니다.</p>
+        <p className="py-8 text-center text-caption text-gray-500">표시할 네트워크가 없습니다.</p>
       ) : (
         <table className="w-full text-caption">
           <thead>
-            <tr className="bg-gray-50 text-left text-gray-500">
+            <tr className="bg-gray-50 text-left text-gray-600">
               <th className="w-6 rounded-l-radius-sm py-1.5 pl-2 font-medium">#</th>
               <th className="py-1.5 font-medium">이름</th>
               <th className="py-1.5 font-medium">구분</th>
@@ -55,12 +55,12 @@ export function ExpertRankingPanel({
                 onClick={() => onOpen(r)}
                 className="cursor-pointer border-b border-gray-50 hover:bg-gray-50"
               >
-                <td className="py-1.5 pl-2 tabular-nums text-gray-400">{i + 1}</td>
+                <td className="py-1.5 pl-2 tabular-nums text-gray-600">{i + 1}</td>
                 <td className="py-1.5 font-medium text-gray-900">
                   <span className="block max-w-[6rem] truncate" title={r.name}>{r.name}</span>
                 </td>
                 <td className="py-1.5 text-gray-600">{r.category || '-'}</td>
-                <td className="py-1.5 text-gray-500">
+                <td className="py-1.5 text-gray-600">
                   {r.fields.length === 0 ? (
                     <span className="text-gray-400">-</span>
                   ) : (
@@ -95,7 +95,7 @@ export function ExpertRankingPanel({
         </table>
       )}
       {hidden > 0 && (
-        <p className="pt-0.5 text-right text-caption text-gray-400">외 {hidden}개</p>
+        <p className="pt-0.5 text-right text-caption text-gray-600">외 {hidden}개</p>
       )}
     </div>
   )

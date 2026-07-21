@@ -35,7 +35,7 @@ export function LoginPage() {
       <h1 className="text-title-md font-bold text-gray-900">
         와이앤아처 <span className="text-brand">WORKS</span>
       </h1>
-      <p className="mt-1 text-body text-gray-500">임직원 로그인</p>
+      <p className="mt-1 text-body text-gray-600">임직원 로그인</p>
 
       <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
         <div>

@@ -108,7 +108,7 @@ export function WorkspaceSwitcher({
             )}
             {opt.groupLabel && (
               <div className="px-3 pb-1 pt-1">
-                <span className="text-caption font-semibold text-gray-400">
+                <span className="text-caption font-semibold text-gray-600">
                   {opt.groupLabel}
                 </span>
               </div>

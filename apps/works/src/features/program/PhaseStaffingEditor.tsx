@@ -97,7 +97,7 @@ export function PhaseStaffingEditor({
       <div className="mb-2 flex items-center justify-between gap-2">
         <div>
           <span className="text-body font-semibold text-gray-900">{phase.label}</span>
-          <span className="ml-2 text-caption tabular-nums text-gray-400">
+          <span className="ml-2 text-caption tabular-nums text-gray-600">
             {phase.start} ~ {phase.end}
           </span>
         </div>
@@ -114,13 +114,13 @@ export function PhaseStaffingEditor({
 
       <div className="space-y-3">
         <div>
-          <span className="mb-1 block text-caption font-medium text-gray-500">
+          <span className="mb-1 block text-caption font-medium text-gray-600">
             부서 구성 (메인 1 + 협업 n, 협업비율 합 100%)
           </span>
           <ProgramDepartmentEditor value={deptSlice} onChange={setDeptSlice} versionId={phase.versionId} />
         </div>
         <div>
-          <span className="mb-1 block text-caption font-medium text-gray-500">
+          <span className="mb-1 block text-caption font-medium text-gray-600">
             담당자 배치 (부서별 합 = 협업비율)
           </span>
           <ProgramManagerEditor

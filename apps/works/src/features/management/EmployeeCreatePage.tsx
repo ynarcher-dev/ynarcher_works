@@ -1,4 +1,4 @@
-import { BackButton, Button, Input, Select, useToast } from '@ynarcher/ui'
+import { BackButton, Button, CardShell, Input, Select, useToast } from '@ynarcher/ui'
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { CREATABLE_ROLE_OPTIONS } from '@/features/management/config'
@@ -24,7 +24,7 @@ function Field({
         {required && <span className="text-brand"> *</span>}
       </label>
       {children}
-      {hint && <p className="mt-1 text-caption text-gray-400">{hint}</p>}
+      {hint && <p className="mt-1 text-caption text-gray-600">{hint}</p>}
     </div>
   )
 }
@@ -87,7 +87,7 @@ export function EmployeeCreatePage() {
       </div>
       <h1 className="text-title-md font-bold text-gray-900">임직원 계정 생성</h1>
 
-      <div className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
+      <CardShell>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="이름" required>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
@@ -125,7 +125,7 @@ export function EmployeeCreatePage() {
             <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
           </Field>
         </div>
-      </div>
+      </CardShell>
 
       <div className="flex justify-end gap-2">
         <Button

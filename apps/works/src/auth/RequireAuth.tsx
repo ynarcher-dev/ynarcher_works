@@ -6,7 +6,7 @@ import { useAuthStore } from '@/auth/authStore'
 export function RequireAuth({ children }: { children: ReactNode }) {
   const status = useAuthStore((s) => s.status)
   if (status === 'loading') {
-    return <div className="p-6 text-body text-gray-500">불러오는 중…</div>
+    return <div className="p-6 text-body text-gray-600">불러오는 중…</div>
   }
   if (status === 'unauthenticated') {
     return <Navigate to="/login" replace />

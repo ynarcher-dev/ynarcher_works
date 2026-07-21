@@ -1,4 +1,4 @@
-import { Badge } from '@ynarcher/ui'
+import { Badge, CardShell } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 
 /**
@@ -19,12 +19,12 @@ export function DetailPanelCard({
   children: ReactNode
 }) {
   return (
-    <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
+    <CardShell>
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="flex items-center gap-1.5 text-body font-semibold text-gray-900">
           {title}
           {count !== undefined && (
-            <Badge tone="neutral" size="sm">
+            <Badge tone="neutral">
               {count}
             </Badge>
           )}
@@ -32,6 +32,6 @@ export function DetailPanelCard({
         {action}
       </div>
       {children}
-    </section>
+    </CardShell>
   )
 }

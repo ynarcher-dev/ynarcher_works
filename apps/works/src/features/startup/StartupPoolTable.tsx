@@ -123,7 +123,7 @@ export function StartupPoolTable({
           return (
             <div className="flex flex-wrap gap-1">
               {inds.map((ind) => (
-                <Badge key={ind} tone="neutral" size="sm">
+                <Badge key={ind} tone="neutral">
                   {ind}
                 </Badge>
               ))}
@@ -137,7 +137,7 @@ export function StartupPoolTable({
         className: 'w-24',
         render: (r) =>
           r.stage ? (
-            <Badge tone="neutral" size="sm">
+            <Badge tone="neutral">
               {r.stage}
             </Badge>
           ) : (
@@ -153,7 +153,7 @@ export function StartupPoolTable({
           if (!label) return <span className="text-gray-400">-</span>
           const tone = MANAGEMENT_STATUS_TONE[r.management_status as ManagementStatus] ?? 'neutral'
           return (
-            <Badge tone={tone} size="sm">
+            <Badge tone={tone}>
               {label}
             </Badge>
           )
@@ -169,7 +169,7 @@ export function StartupPoolTable({
         className: 'w-24',
         render: (r) =>
           r.pool_status ? (
-            <Badge tone="info" size="sm">
+            <Badge tone="info">
               {r.pool_status}
             </Badge>
           ) : (
@@ -199,7 +199,7 @@ export function StartupPoolTable({
           const label = managerLabel(r)
           return label ?? <span className="text-gray-400">미지정</span>
         }
-        return <span className="text-gray-500">공동관리</span>
+        return <span className="text-gray-600">공동관리</span>
       },
     })
 

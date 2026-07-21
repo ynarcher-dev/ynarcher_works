@@ -42,7 +42,7 @@ export function Tabs({ items, value, onChange, size = 'md', className }: TabsPro
               '-mb-px inline-flex items-center gap-1.5 border-b-2 text-body transition-colors duration-fast',
               active
                 ? 'border-brand font-medium text-brand'
-                : 'border-transparent text-gray-500 hover:text-gray-800',
+                : 'border-transparent text-gray-600 hover:text-gray-800',
             )}
           >
             {item.label}
@@ -52,7 +52,7 @@ export function Tabs({ items, value, onChange, size = 'md', className }: TabsPro
                   'rounded-full px-1.5 py-0.5 text-caption tabular-nums',
                   active
                     ? 'bg-brand/10 font-semibold text-brand'
-                    : 'bg-gray-100 text-gray-500',
+                    : 'bg-gray-100 text-gray-600',
                 )}
               >
                 {item.count}

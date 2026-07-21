@@ -185,11 +185,11 @@ export function ImporterModal({
       }
     >
       <div className="space-y-3">
-        <p className="text-caption text-gray-500">
+        <p className="text-caption text-gray-600">
           1행 헤더 예시: <code className="text-gray-700">{headerHint}</code>
         </p>
         {routeByCategory && (
-          <p className="text-caption text-gray-500">
+          <p className="text-caption text-gray-600">
             '구분'은 전문가·BAN·EXP·투자사·기업·기관·대학·기타·미분류 중 하나로 저장되며,
             해당하지 않는 값(게스트·스타트업 등)은 미분류로 등록됩니다.
           </p>

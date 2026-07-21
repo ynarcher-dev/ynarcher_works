@@ -85,7 +85,7 @@ export function ArchiveWorkspace({ boardSlug, title, authorName }: ArchiveWorksp
       header: '설명',
       render: (p) =>
         p.summary ? (
-          <span className="block truncate font-normal text-gray-500" title={p.summary}>
+          <span className="block truncate font-normal text-gray-600" title={p.summary}>
             {p.summary}
           </span>
         ) : (
@@ -102,7 +102,7 @@ export function ArchiveWorkspace({ boardSlug, title, authorName }: ArchiveWorksp
       render: (p) => {
         const file = p.attachments?.[0]
         return (
-          <span className="tabular-nums text-gray-500">
+          <span className="tabular-nums text-gray-600">
             {file ? formatBytes(file.size) : '—'}
           </span>
         )
@@ -248,7 +248,7 @@ function ArchiveEditor({
           value={summary}
           onChange={(e) => setSummary(e.target.value)}
         />
-        <p className="text-caption text-gray-400">
+        <p className="text-caption text-gray-600">
           자료실은 상세페이지가 없으므로 이 설명이 유일한 안내 문구가 됩니다.
         </p>
       </div>
@@ -261,7 +261,7 @@ function ArchiveEditor({
         이 자료를 목록 <span className="font-semibold text-gray-900">최상단에 고정</span>
       </label>
       {!file && (
-        <p className="text-caption text-gray-400">
+        <p className="text-caption text-gray-600">
           자료실은 자료 1건당 파일 1개를 등록합니다. 파일을 첨부해야 등록할 수 있습니다.
         </p>
       )}

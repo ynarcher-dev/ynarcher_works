@@ -13,13 +13,12 @@ export interface AppShellProps {
 }
 
 /**
- * 앱 셸: 사이드바 240px(접힌 경우 64px) + 콘텐츠.
- * 1024px(lg) 미만에서는 사이드바를 드로어로 전환하고, 드로어를 여는 햄버거를 담기 위해
- * 상단바를 노출한다.
+ * 앱 셸: 사이드바 240px(접힌 경우 64px) + 상단바 + 콘텐츠.
+ * 1024px(lg) 미만에서는 사이드바를 드로어로 전환하고, 상단바 좌측에 드로어를 여는 햄버거를 둔다.
  *
- * 데스크톱에서는 상단바를 렌더하지 않는다 — 로고·워크스페이스 스위처·계정 메뉴·사이드바
- * 접기가 모두 사이드바로 이동해 상단바가 담을 내용이 없어졌고, 빈 띠가 세로 공간만 차지하기
- * 때문이다. 슬롯(topbarLeft/Center/Right) API는 유지하되 lg 이상에서는 표시되지 않는다.
+ * 상단바는 슬롯(topbarLeft/Center/Right)이 하나라도 채워지면 데스크톱에서도 노출한다.
+ * 워크스페이스 전환·계정 메뉴·사이드바 접기는 사이드바가 담당하므로, 상단바는 그와 겹치지 않는
+ * 전역 기능(현재 위치 표시·통합 검색·알림·바로가기)만 싣는다.
  * 근거: 2_app_layout_navigation.md, 1_ui_ux_mobile.md
  */
 export function AppShell({
@@ -31,6 +30,7 @@ export function AppShell({
   sidebarCollapsed = false,
 }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const hasTopbarContent = Boolean(topbarLeft || topbarCenter || topbarRight)
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -60,7 +60,9 @@ export function AppShell({
 
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar
-          className="lg:hidden"
+          // 슬롯이 모두 비어 있으면 데스크톱에서 빈 띠가 되므로, 그때만 모바일 전용으로 되돌린다
+          // (햄버거는 모바일에서만 필요하다).
+          className={hasTopbarContent ? undefined : 'lg:hidden'}
           onMenuClick={() => setMobileOpen(true)}
           left={topbarLeft}
           center={topbarCenter}

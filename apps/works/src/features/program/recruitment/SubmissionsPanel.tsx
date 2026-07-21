@@ -72,7 +72,7 @@ export function SubmissionsPanel({ moduleId }: { moduleId: string }) {
         key: 'detail',
         header: '',
         render: (s) => (
-          <Button variant="secondary" size="sm" onClick={() => setDetail(s)}>
+          <Button variant="secondary" onClick={() => setDetail(s)}>
             상세
           </Button>
         ),
@@ -142,7 +142,7 @@ function SubmissionDetail({
       }
     >
       <div className="space-y-3">
-        <div className="flex items-center gap-2 text-caption text-gray-500">
+        <div className="flex items-center gap-2 text-caption text-gray-600">
           {statusBadge(submission.status)}
           <span>· {submission.source === 'PUBLIC' ? '공개 접수' : '내부 입력'}</span>
           {submission.submitted_at && (
@@ -159,13 +159,12 @@ function SubmissionDetail({
               const file = f.field_type === 'file' ? ans?.json_value : null
               return (
                 <div key={f.id} className="grid grid-cols-[8rem_1fr] gap-3 py-2">
-                  <dt className="text-caption text-gray-500">{f.label}</dt>
+                  <dt className="text-caption text-gray-600">{f.label}</dt>
                   <dd className="text-body text-gray-900">
                     {f.field_type === 'file' ? (
                       file?.attachment_id ? (
                         <Button
                           variant="secondary"
-                          size="sm"
                           disabled={busy === file.attachment_id}
                           onClick={() => void onDownload(file.attachment_id!, file.file_name ?? '첨부')}
                         >

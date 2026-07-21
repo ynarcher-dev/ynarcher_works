@@ -182,14 +182,14 @@ export function ModuleBoardCard({
                         {meta?.emoji}
                       </span>
                       <span className="text-body font-semibold text-gray-900">{nameOf(mod)}</span>
-                      <Badge tone={status.tone} size="sm">
+                      <Badge tone={status.tone}>
                         {status.label}
                       </Badge>
-                      <Badge tone={MODULE_VISIBILITY_TONE[mod.visibility] ?? 'neutral'} size="sm">
+                      <Badge tone={MODULE_VISIBILITY_TONE[mod.visibility] ?? 'neutral'}>
                         {MODULE_VISIBILITY_LABEL[mod.visibility] ?? '비공개'}
                       </Badge>
                       {/* 파생 템플릿 배지 — 원천 템플릿을 다른 배지와 함께 표기. */}
-                      <Badge tone="neutral" size="sm">
+                      <Badge tone="neutral">
                         {labelOf(mod.module_type)}
                       </Badge>
                     </span>
@@ -235,7 +235,7 @@ export function ModuleBoardCard({
               )
             })}
             {enabled.length === 0 && (
-              <li className="rounded-radius-md border border-gray-200 bg-gray-25 px-4 py-6 text-center text-body text-gray-400">
+              <li className="rounded-radius-md border border-gray-200 bg-gray-25 px-4 py-6 text-center text-body text-gray-500">
                 활성화된 모듈이 없습니다. 아래에서 모듈을 추가하세요.
               </li>
             )}
@@ -274,7 +274,7 @@ export function ModuleBoardCard({
             <header className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-200 bg-white px-5 py-3">
               <div className="flex items-center gap-2">
                 <span className="text-title-sm font-medium text-gray-900">운영 프로그램</span>
-                <Badge tone="neutral" size="sm">
+                <Badge tone="neutral">
                   {program.title}
                 </Badge>
               </div>

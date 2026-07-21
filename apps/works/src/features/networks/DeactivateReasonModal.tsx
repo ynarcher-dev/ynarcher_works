@@ -38,7 +38,7 @@ export function DeactivateReasonModal({ open, name, busy, onCancel, onConfirm }:
       }
     >
       <div className="space-y-2">
-        <p className="text-caption text-gray-500">
+        <p className="text-caption text-gray-600">
           {name ? <b>{name}</b> : '이 항목'}을(를) 비활성화합니다. 사유를 30자 이내로 입력하세요.
         </p>
         <Input
@@ -51,7 +51,7 @@ export function DeactivateReasonModal({ open, name, busy, onCancel, onConfirm }:
             if (e.key === 'Enter') submit()
           }}
         />
-        <div className="text-right text-caption text-gray-400">
+        <div className="text-right text-caption text-gray-600">
           {reason.length}/{MAX}
         </div>
       </div>

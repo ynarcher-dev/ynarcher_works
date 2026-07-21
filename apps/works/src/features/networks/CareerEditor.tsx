@@ -54,7 +54,7 @@ function SectionBlock({
       </div>
 
       {rows.length === 0 ? (
-        <p className="text-caption text-gray-400">
+        <p className="text-caption text-gray-500">
           항목이 없습니다. "추가"로 입력하세요.
         </p>
       ) : (

@@ -124,7 +124,7 @@ export function ProgramDetailPage() {
               <span className="text-body font-semibold text-gray-900">
                 {openMod?.title?.trim() || PANEL_LABEL[tab]}
               </span>
-              <Badge tone={PROGRAM_STATUS_TONE[program.status] ?? 'neutral'} size="sm">
+              <Badge tone={PROGRAM_STATUS_TONE[program.status] ?? 'neutral'}>
                 {PROGRAM_STATUS_LABEL[program.status] ?? program.status}
               </Badge>
             </div>

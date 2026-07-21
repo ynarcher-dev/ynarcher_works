@@ -65,11 +65,11 @@ export function OverflowTags({ tags }: OverflowTagsProps) {
         className="pointer-events-none invisible absolute inset-0 flex flex-nowrap gap-1"
       >
         {tags.map((t, i) => (
-          <Badge key={`m-${t}-${i}`} tone="neutral" size="sm" className="shrink-0">
+          <Badge key={`m-${t}-${i}`} tone="neutral" className="shrink-0">
             {t}
           </Badge>
         ))}
-        <Badge tone="neutral" size="sm" className="shrink-0">
+        <Badge tone="neutral" className="shrink-0">
           +
         </Badge>
       </span>
@@ -77,12 +77,12 @@ export function OverflowTags({ tags }: OverflowTagsProps) {
       {/* 표시 레이어: 완전히 들어가는 태그 + (넘치면) '+'. */}
       <span className="flex flex-nowrap gap-1">
         {tags.slice(0, visibleCount).map((t, i) => (
-          <Badge key={`${t}-${i}`} tone="neutral" size="sm" className="shrink-0">
+          <Badge key={`${t}-${i}`} tone="neutral" className="shrink-0">
             {t}
           </Badge>
         ))}
         {hidden && (
-          <Badge tone="neutral" size="sm" className="shrink-0">
+          <Badge tone="neutral" className="shrink-0">
             +
           </Badge>
         )}

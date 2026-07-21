@@ -108,7 +108,6 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
           {hasChildren ? (
             <Button
               variant="ghost"
-              size="sm"
               onClick={() => props.onToggle(node.id)}
               className="h-6 w-6 shrink-0 px-0"
               aria-label={isCollapsed ? '펼치기' : '접기'}
@@ -159,7 +158,7 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
           {node.hrHidden && !isEditing && (
             <span
               title="인사관리 컬럼 미노출"
-              className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-gray-100 px-1.5 py-0.5 text-[0.6875rem] text-gray-400"
+              className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-gray-100 px-1.5 py-0.5 text-[0.6875rem] text-gray-600"
             >
               <EyeOff size={11} /> 인사 미노출
             </span>
@@ -183,7 +182,7 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
                 ))}
               </InlineSelect>
             ) : (
-              <span className="px-1 text-caption text-gray-500">{levelName}</span>
+              <span className="px-1 text-caption text-gray-600">{levelName}</span>
             ))}
         </div>
 
@@ -208,11 +207,11 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
                       </span>
                     ))}
                     {members.length > 6 && (
-                      <span className="text-caption text-gray-500">외 {members.length - 6}명</span>
+                      <span className="text-caption text-gray-600">외 {members.length - 6}명</span>
                     )}
                   </>
                 ) : (
-                  <span className="flex items-center gap-1 text-caption text-gray-400">
+                  <span className="flex items-center gap-1 text-caption text-gray-500">
                     <Users size={13} /> 배치
                   </span>
                 )}
@@ -230,7 +229,7 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
                       </span>
                     ))}
                     {members.length > 6 && (
-                      <span className="text-caption text-gray-500">외 {members.length - 6}명</span>
+                      <span className="text-caption text-gray-600">외 {members.length - 6}명</span>
                     )}
                   </>
                 ) : (
@@ -246,7 +245,6 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
             <>
               <Button
                 variant="ghost"
-                size="sm"
                 title="저장"
                 onClick={props.onCommitEdit}
                 className="h-7 w-7 px-0 text-info"
@@ -255,7 +253,6 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
               </Button>
               <Button
                 variant="ghost"
-                size="sm"
                 title="취소"
                 onClick={props.onCancelEdit}
                 className="h-7 w-7 px-0 text-gray-400"
@@ -268,7 +265,6 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
             <>
               <Button
                 variant="ghost"
-                size="sm"
                 title="하위 부서 추가"
                 onClick={() => props.onAddChild(node.id)}
                 className="h-7 w-7 px-0 text-gray-500"
@@ -277,7 +273,6 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
               </Button>
               <Button
                 variant="ghost"
-                size="sm"
                 title="이름 변경"
                 onClick={() => props.onStartEdit(node)}
                 className="h-7 w-7 px-0 text-gray-500"
@@ -286,7 +281,6 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
               </Button>
               <Button
                 variant="ghost"
-                size="sm"
                 title={node.hrHidden ? '인사관리 컬럼에 노출' : '인사관리 컬럼에서 숨김'}
                 onClick={() => props.onToggleHrHidden(node.id, !node.hrHidden)}
                 className={cn(
@@ -298,7 +292,6 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
               </Button>
               <Button
                 variant="ghost"
-                size="sm"
                 title="삭제"
                 onClick={() => props.onDelete(node.id)}
                 className="h-7 w-7 px-0 text-gray-400 hover:bg-brand-25 hover:text-brand-700"

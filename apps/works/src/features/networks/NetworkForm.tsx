@@ -1,4 +1,4 @@
-import { Button, cn, Input, Select, TextArea, useToast } from '@ynarcher/ui'
+import { Button, CardShell, cn, Input, Select, TextArea, useToast } from '@ynarcher/ui'
 import type { ChangeEvent, ReactNode } from 'react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -73,7 +73,7 @@ function Field({
       <label className="mb-1 block text-caption font-medium text-gray-600">
         {label}
         {required && <span className="text-brand"> *</span>}
-        {hint && <span className="ml-1 font-normal text-gray-400">{hint}</span>}
+        {hint && <span className="ml-1 font-normal text-gray-600">{hint}</span>}
       </label>
       {children}
     </div>
@@ -247,7 +247,7 @@ export function NetworkForm({ entity, recordId, initial, onDone, onCancel }: Pro
         {/* 좌측(2/3): 사진 → 기본 데이터 → 약력 → 노트 */}
         <div className="space-y-4 lg:col-span-2">
           {/* 사진 카드 */}
-          <div className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
+          <CardShell>
             <p className="mb-3 text-caption font-medium text-gray-600">사진</p>
             <div className="flex items-center gap-4">
               <PhotoBox src={photo} />
@@ -268,10 +268,10 @@ export function NetworkForm({ entity, recordId, initial, onDone, onCancel }: Pro
                 )}
               </div>
             </div>
-          </div>
+          </CardShell>
 
           {/* 기본 데이터 카드 */}
-          <div className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
+          <CardShell>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="이름" required>
                 <Input
@@ -340,7 +340,7 @@ export function NetworkForm({ entity, recordId, initial, onDone, onCancel }: Pro
                         )
                       })}
                       {(fieldTags ?? []).length === 0 && (
-                        <span className="text-caption text-gray-400">
+                        <span className="text-caption text-gray-500">
                           등록된 분야 태그가 없습니다. (ADMIN › 분야 관리)
                         </span>
                       )}
@@ -349,21 +349,21 @@ export function NetworkForm({ entity, recordId, initial, onDone, onCancel }: Pro
                 </div>
               )}
             </div>
-          </div>
+          </CardShell>
 
           {!compact && (
-            <div className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
+            <CardShell>
               <p className="mb-4 text-caption font-medium text-gray-600">약력</p>
               <CareerEditor value={background} onChange={setBackground} />
-            </div>
+            </CardShell>
           )}
 
           {/* 노트 카드 */}
-          <div className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
+          <CardShell>
             <Field label="노트">
               <TextArea rows={4} {...register('intro')} />
             </Field>
-          </div>
+          </CardShell>
         </div>
 
         {/* 우측(1/3): 자료 관리. 신규 등록에서는 보류 첨부 후 저장 시 함께 업로드한다. */}

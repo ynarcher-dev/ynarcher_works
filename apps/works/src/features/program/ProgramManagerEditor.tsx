@@ -94,7 +94,7 @@ export function ProgramManagerEditor({
         {open && (
           <div className="absolute left-0 right-0 z-dropdown mt-1 max-h-56 overflow-auto rounded-radius-lg border border-gray-300 bg-white p-1 shadow-popover">
             {filtered.length === 0 ? (
-              <div className="px-3 py-2 text-caption text-gray-400">
+              <div className="px-3 py-2 text-caption text-gray-500">
                 {list.length === 0 ? '불러오는 중…' : '검색 결과가 없습니다.'}
               </div>
             ) : (
@@ -121,7 +121,7 @@ export function ProgramManagerEditor({
             <li key={row._key} className="rounded-radius-md border border-gray-200 bg-gray-25 p-2.5">
               <div className="flex items-end gap-2">
                 <div className="w-20 shrink-0">
-                  <span className="mb-0.5 block text-caption text-gray-400">담당자</span>
+                  <span className="mb-0.5 block text-caption text-gray-600">담당자</span>
                   <div className="flex h-10 items-center">
                     <span className="truncate text-body font-medium text-gray-900">
                       {byId.get(row.user_id)?.name ?? '알 수 없음'}
@@ -129,7 +129,7 @@ export function ProgramManagerEditor({
                   </div>
                 </div>
                 <label className="block min-w-0 flex-1">
-                  <span className="mb-0.5 block text-caption text-gray-400">부서</span>
+                  <span className="mb-0.5 block text-caption text-gray-600">부서</span>
                   <Select
                     value={row.department_id}
                     onChange={(e) => patch(row._key, { department_id: e.target.value })}
@@ -143,7 +143,7 @@ export function ProgramManagerEditor({
                   </Select>
                 </label>
                 <label className="block w-28 shrink-0">
-                  <span className="mb-0.5 block text-caption text-gray-400">역할</span>
+                  <span className="mb-0.5 block text-caption text-gray-600">역할</span>
                   <Select
                     value={row.role}
                     onChange={(e) => patch(row._key, { role: e.target.value as ProgramManagerDraft['role'] })}
@@ -153,7 +153,7 @@ export function ProgramManagerEditor({
                   </Select>
                 </label>
                 <label className="block w-16 shrink-0">
-                  <span className="mb-0.5 block text-caption text-gray-400">투입률</span>
+                  <span className="mb-0.5 block text-caption text-gray-600">투입률</span>
                   <Input
                     type="number"
                     min={1}
@@ -167,7 +167,7 @@ export function ProgramManagerEditor({
                   />
                 </label>
                 <label className="block w-36 shrink-0">
-                  <span className="mb-0.5 block text-caption text-gray-400">시작일</span>
+                  <span className="mb-0.5 block text-caption text-gray-600">시작일</span>
                   <Input
                     type="date"
                     value={row.start_date}
@@ -175,7 +175,7 @@ export function ProgramManagerEditor({
                   />
                 </label>
                 <label className="block w-36 shrink-0">
-                  <span className="mb-0.5 block text-caption text-gray-400">종료일</span>
+                  <span className="mb-0.5 block text-caption text-gray-600">종료일</span>
                   <Input
                     type="date"
                     value={row.end_date}
@@ -199,7 +199,7 @@ export function ProgramManagerEditor({
       {/* 부서별 커버리지: 각 부서를 수행 기간 전 구간에서 협업비율만큼 채웠는지 */}
       {value.length > 0 && departments.length > 0 && (
         <div className="space-y-2 rounded-radius-md border border-gray-200 bg-white p-2.5 text-caption">
-          <div className={pmCount < 1 ? 'font-medium text-danger' : 'text-gray-400'}>
+          <div className={pmCount < 1 ? 'font-medium text-danger' : 'text-gray-600'}>
             PM {pmCount}구간{pmCount < 1 ? ' (최소 1)' : ''}
           </div>
           {departments.map((dep) => {
@@ -221,7 +221,7 @@ export function ProgramManagerEditor({
                   <ul className="mt-0.5 space-y-0.5">
                     {slices.map((s) => (
                       <li key={s.start} className="flex items-center justify-between tabular-nums">
-                        <span className="text-gray-500">
+                        <span className="text-gray-600">
                           {s.start} ~ {s.end}
                         </span>
                         <span className={s.ok ? 'text-gray-700' : 'font-medium text-danger'}>

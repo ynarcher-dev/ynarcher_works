@@ -19,7 +19,7 @@ export function AiAgentWelcome({ userName, onPick }: AiAgentWelcomeProps) {
       <h2 className="mt-5 text-title-md font-bold text-gray-900">
         안녕하세요, {userName}님
       </h2>
-      <p className="mt-1.5 text-body-lg text-gray-500">
+      <p className="mt-1.5 text-body-lg text-gray-600">
         무엇을 도와드릴까요? 스타트업·전문가·펀드 데이터를 함께 살펴봐요.
       </p>
 
@@ -38,7 +38,7 @@ export function AiAgentWelcome({ userName, onPick }: AiAgentWelcomeProps) {
               <span className="block text-body font-semibold text-gray-900">
                 {s.title}
               </span>
-              <span className="mt-0.5 block text-caption text-gray-500">
+              <span className="mt-0.5 block text-caption text-gray-600">
                 {s.description}
               </span>
             </span>

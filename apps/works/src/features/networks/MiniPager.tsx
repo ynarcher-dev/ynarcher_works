@@ -35,7 +35,7 @@ export function MiniPager({
   const btn =
     'grid size-6 place-items-center rounded-radius-sm text-gray-400 transition-colors duration-fast hover:bg-gray-100 hover:text-gray-700 disabled:pointer-events-none disabled:opacity-40'
   return (
-    <div className="mt-3 flex items-center justify-center gap-2 text-caption text-gray-400">
+    <div className="mt-3 flex items-center justify-center gap-2 text-caption text-gray-600">
       <button
         type="button"
         aria-label="이전"

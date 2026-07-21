@@ -20,10 +20,10 @@ const DEFAULT_GRID = 'grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5'
 /** 전월 대비 증감 배지(증가=success·감소=danger·변화 없음=gray). */
 function DeltaLabel({ delta }: { delta: number }) {
   if (delta === 0)
-    return <p className="mt-0.5 text-caption text-gray-400">전월 대비 &ndash;</p>
+    return <p className="mt-0.5 text-caption text-gray-600">전월 대비 &ndash;</p>
   const up = delta > 0
   return (
-    <p className="mt-0.5 flex items-center gap-1 text-caption text-gray-400">
+    <p className="mt-0.5 flex items-center gap-1 text-caption text-gray-600">
       <span>전월 대비</span>
       <span
         className={cn(
@@ -69,7 +69,7 @@ export function StatTileGrid({ tiles, className = DEFAULT_GRID }: StatTileGridPr
                 : 'cursor-default',
             )}
           >
-            <p className="text-caption text-gray-500">{t.label}</p>
+            <p className="text-caption text-gray-600">{t.label}</p>
             <p className="text-title-sm font-bold tabular-nums text-gray-900">
               {t.value}
             </p>
@@ -98,7 +98,7 @@ export function StatTilePlaceholderGrid({
           key={i}
           className="rounded-radius-md border border-dashed border-gray-300 bg-gray-50/40 px-3 py-2"
         >
-          <p className="text-caption text-gray-400">준비 중</p>
+          <p className="text-caption text-gray-500">준비 중</p>
           <p className="text-title-sm font-bold tabular-nums text-gray-300">&ndash;</p>
           <p className="mt-0.5 text-caption text-gray-300">지표 미정</p>
         </div>

@@ -81,13 +81,13 @@ export function ProgramStageFields({
       <div className={sectionClass(stage === 'PROPOSAL')}>
         <div className="flex flex-wrap items-baseline justify-between gap-1">
           <span className="text-body font-medium text-gray-800">제안</span>
-          <span className="text-caption text-gray-400">
+          <span className="text-caption text-gray-600">
             선정 시 운영 단계로 전환 · 미선정 시 프로젝트 종료
           </span>
         </div>
         <div className="mt-2 grid grid-cols-3 gap-3">
           <div>
-            <label className="text-caption text-gray-500" htmlFor="proposal_status">
+            <label className="text-caption text-gray-600" htmlFor="proposal_status">
               상태
             </label>
             <Select
@@ -109,11 +109,11 @@ export function ProgramStageFields({
       <div className={sectionClass(stage === 'OPERATION')}>
         <div className="flex flex-wrap items-baseline justify-between gap-1">
           <span className="text-body font-medium text-gray-800">운영</span>
-          <span className="text-caption text-gray-400">실제 행사 관리 기간</span>
+          <span className="text-caption text-gray-600">실제 행사 관리 기간</span>
         </div>
         <div className="mt-2 grid grid-cols-3 gap-3">
           <div>
-            <label className="text-caption text-gray-500" htmlFor="operation_status">
+            <label className="text-caption text-gray-600" htmlFor="operation_status">
               상태
             </label>
             <Select
@@ -130,13 +130,13 @@ export function ProgramStageFields({
             </Select>
           </div>
           <div>
-            <label className="text-caption text-gray-500" htmlFor="start_date">
+            <label className="text-caption text-gray-600" htmlFor="start_date">
               시작일
             </label>
             <Input id="start_date" type="date" {...register('start_date')} />
           </div>
           <div>
-            <label className="text-caption text-gray-500" htmlFor="end_date">
+            <label className="text-caption text-gray-600" htmlFor="end_date">
               종료일
             </label>
             <Input id="end_date" type="date" {...register('end_date')} />

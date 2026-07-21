@@ -1,4 +1,4 @@
-import { Badge } from '@ynarcher/ui'
+import { Badge, CardShell } from '@ynarcher/ui'
 import { ExternalLink, ImageOff } from 'lucide-react'
 import { MEDIA_KINDS, type MediaItem } from '@/features/startup/startupMedia'
 
@@ -26,18 +26,18 @@ function MediaRow({ item }: { item: MediaItem }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           {item.kind && (
-            <Badge tone="neutral" size="sm">
+            <Badge tone="neutral">
               {item.kind}
             </Badge>
           )}
-          <span className="truncate text-caption text-gray-400">{item.siteName || item.url}</span>
+          <span className="truncate text-caption text-gray-600">{item.siteName || item.url}</span>
         </div>
         <p className="mt-0.5 flex items-center gap-1 truncate text-body font-medium text-gray-900">
           <span className="truncate">{item.title || item.url}</span>
           <ExternalLink className="size-3.5 shrink-0 text-gray-300 group-hover:text-brand" />
         </p>
         {item.description && (
-          <p className="mt-0.5 line-clamp-2 text-caption leading-relaxed text-gray-500">
+          <p className="mt-0.5 line-clamp-2 text-caption leading-relaxed text-gray-600">
             {item.description}
           </p>
         )}
@@ -70,16 +70,16 @@ function groupByKind(media: MediaItem[]): { kind: string; items: MediaItem[] }[]
  */
 export function StartupMediaCard({ media }: { media: MediaItem[] }) {
   return (
-    <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
+    <CardShell>
       {media.length === 0 ? (
-        <p className="text-body text-gray-400">등록된 미디어가 없습니다.</p>
+        <p className="text-body text-gray-500">등록된 미디어가 없습니다.</p>
       ) : (
         <div className="space-y-5">
           {groupByKind(media).map(({ kind, items }) => (
             <div key={kind}>
               <div className="mb-2 flex items-center gap-1.5 border-b border-gray-100 pb-1.5">
                 <span className="text-caption font-semibold text-gray-600">{kind}</span>
-                <Badge tone="neutral" size="sm">
+                <Badge tone="neutral">
                   {items.length}
                 </Badge>
               </div>
@@ -92,6 +92,6 @@ export function StartupMediaCard({ media }: { media: MediaItem[] }) {
           ))}
         </div>
       )}
-    </section>
+    </CardShell>
   )
 }

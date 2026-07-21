@@ -1,4 +1,4 @@
-import { BackButton, Badge, Banner, Button, Spinner } from '@ynarcher/ui'
+import { BackButton, Badge, Banner, Button, CardShell, Spinner } from '@ynarcher/ui'
 import { useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
@@ -47,7 +47,7 @@ function Info({
 }) {
   return (
     <div className={`flex items-baseline gap-2${className ? ` ${className}` : ''}`}>
-      <span className="shrink-0 text-caption text-gray-400">{label}:</span>
+      <span className="shrink-0 text-caption text-gray-600">{label}:</span>
       <span
         className={`text-body text-gray-800${valueClassName ? ` ${valueClassName}` : ''}`}
         title={typeof value === 'string' ? value : undefined}
@@ -100,7 +100,7 @@ export function StartupDetailPage() {
         <BackButton as={Link} to="/startup?tab=discovered" />
         {!editing && canEdit && <Button onClick={() => setEditing(true)}>수정</Button>}
         {!editing && !canEdit && (
-          <span className="text-caption text-gray-400">지정 담당자만 수정할 수 있습니다.</span>
+          <span className="text-caption text-gray-600">지정 담당자만 수정할 수 있습니다.</span>
         )}
       </div>
 
@@ -115,19 +115,19 @@ export function StartupDetailPage() {
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           {/* 좌측(2/3): 기본 데이터 카드 — 사진 + 이름/배지 + 부제 + 정보행 */}
           <div className="space-y-4 lg:col-span-2">
-            <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
+            <CardShell>
               <div className="flex items-center gap-5">
                 <PhotoBox src={logo} />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h1 className="text-title-md font-bold text-gray-900">{record.name}</h1>
                     {industries.map((ind) => (
-                      <Badge key={ind} tone="neutral" size="sm">
+                      <Badge key={ind} tone="neutral">
                         {ind}
                       </Badge>
                     ))}
                   </div>
-                  <p className="mt-1 text-body text-gray-500">{oneLiner || '-'}</p>
+                  <p className="mt-1 text-body text-gray-600">{oneLiner || '-'}</p>
                 </div>
               </div>
 
@@ -156,11 +156,11 @@ export function StartupDetailPage() {
               {/* 발굴 경로는 길 수 있어 전체 폭을 쓰되, 라벨: 값 한 줄로 표시하고 라벨↔값 간격을 넓힌다. */}
               <div className="mt-2.5 border-t border-gray-100 pt-3">
                 <div className="flex items-baseline gap-4">
-                  <span className="shrink-0 text-caption text-gray-400">발굴 경로:</span>
+                  <span className="shrink-0 text-caption text-gray-600">발굴 경로:</span>
                   <span className="text-body text-gray-800">{str('discovery_source')}</span>
                 </div>
               </div>
-            </section>
+            </CardShell>
 
             {/* 기업 개요 구분선(기본 데이터 아래) */}
             <SectionHeading title="기업 개요" />
@@ -185,19 +185,19 @@ export function StartupDetailPage() {
             <SectionHeading title="관리 현황" />
             {/* 담당자 카드(관리 현황 최상단). 담당자와 작성자(등록자)는 별개 축이므로 항상 분리 표기한다.
                 투자기업만 지정 담당자(리드/지원)를 가지며, 비투자는 공동관리(특정 담당자 없음)다. */}
-            <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
+            <CardShell>
               <h2 className="mb-3 text-body font-semibold text-gray-900">담당자</h2>
               {invested ? (
                 (managers ?? []).length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
                     {(managers ?? []).map((m) => (
-                      <Badge key={m.user_id} tone={m.is_lead ? 'success' : 'neutral'} size="sm">
+                      <Badge key={m.user_id} tone={m.is_lead ? 'success' : 'neutral'}>
                         {(m.user?.name ?? '-') + (m.is_lead ? ' (리드)' : '')}
                       </Badge>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-body text-gray-400">지정된 담당자가 없습니다.</p>
+                  <p className="text-body text-gray-500">지정된 담당자가 없습니다.</p>
                 )
               ) : (
                 <p className="text-body text-gray-600">
@@ -206,10 +206,10 @@ export function StartupDetailPage() {
               )}
               {/* 등록자: 담당자와 무관한 최초 등록 감사 정보. 항상 표시한다. */}
               <p className="mt-3 border-t border-gray-100 pt-3 text-body text-gray-800">
-                <span className="mr-2 text-caption text-gray-400">등록자</span>
+                <span className="mr-2 text-caption text-gray-600">등록자</span>
                 {record.creator?.name || '-'}
               </p>
-            </section>
+            </CardShell>
             {/* 관리 현황 로그 카드: 기능은 후속 구현, 지금은 건수 뱃지(0) 디자인만 잡아둔다. */}
             {ACTIVITY_SECTIONS.map((title) => (
               <PlaceholderCard key={title} title={title} count={0} />

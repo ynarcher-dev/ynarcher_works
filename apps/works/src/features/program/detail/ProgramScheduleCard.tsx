@@ -88,7 +88,7 @@ function CalendarGrid({
         <div
           key={w}
           className={`py-1 text-center text-caption font-semibold ${
-            i === 0 ? 'text-brand' : i === 6 ? 'text-info' : 'text-gray-500'
+            i === 0 ? 'text-brand' : i === 6 ? 'text-info' : 'text-gray-600'
           }`}
         >
           {w}
@@ -161,7 +161,7 @@ function SelectedDayDetail({
   return (
     <div className="mt-3 rounded-radius-sm border border-gray-200 bg-gray-25 px-3 py-2.5">
       {bars.length === 0 && items.length === 0 ? (
-        <p className="text-caption text-gray-400">
+        <p className="text-caption text-gray-500">
           선택한 날짜에 등록된 일정이 없습니다.
         </p>
       ) : (
@@ -170,11 +170,11 @@ function SelectedDayDetail({
             const status = moduleStatusMeta(b.status)
             return (
               <li key={b.moduleType} className="flex items-center gap-2 text-caption">
-                <Badge tone={status.tone} size="sm">
+                <Badge tone={status.tone}>
                   {status.label}
                 </Badge>
                 <span className="text-gray-800">{labelOf(b.moduleType)}</span>
-                <span className="ml-auto tabular-nums text-gray-400">
+                <span className="ml-auto tabular-nums text-gray-600">
                   {b.start} ~ {b.end}
                 </span>
               </li>
@@ -184,7 +184,7 @@ function SelectedDayDetail({
             <li key={it.id} className="flex items-center gap-2 text-caption">
               <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" aria-hidden />
               <span className="text-gray-800">{it.title}</span>
-              <span className="ml-auto tabular-nums text-gray-400">
+              <span className="ml-auto tabular-nums text-gray-600">
                 {it.starts_at ? dayjs(it.starts_at).format('HH:mm') : ''}
               </span>
             </li>

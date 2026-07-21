@@ -63,7 +63,7 @@ function MultiTagFilter({
     >
       <div className="max-h-64 min-w-44 overflow-auto">
         {names.length === 0 && (
-          <div className="px-3 py-2 text-caption text-gray-400">옵션 없음</div>
+          <div className="px-3 py-2 text-caption text-gray-500">옵션 없음</div>
         )}
         {names.map((name) => (
           <label

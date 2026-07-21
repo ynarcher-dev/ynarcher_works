@@ -1,4 +1,4 @@
-import { BackButton, Badge, Banner, Button, Spinner } from '@ynarcher/ui'
+import { BackButton, Badge, Banner, Button, CardShell, Spinner } from '@ynarcher/ui'
 import { useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { maskEmail, maskPhone } from '@/lib/mask'
@@ -29,10 +29,10 @@ const RELATION_SECTIONS = [
 /** 상세 카드 섹션 래퍼. */
 function SectionCard({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
+    <CardShell>
       <h2 className="mb-3 text-body font-semibold text-gray-900">{title}</h2>
       {children}
-    </section>
+    </CardShell>
   )
 }
 
@@ -40,7 +40,7 @@ function SectionCard({ title, children }: { title: string; children: ReactNode }
 function Info({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-baseline gap-2">
-      <span className="shrink-0 text-caption text-gray-400">{label}:</span>
+      <span className="shrink-0 text-caption text-gray-600">{label}:</span>
       <span className="text-body text-gray-800">{value ?? '-'}</span>
     </div>
   )
@@ -74,7 +74,7 @@ function RelationCard({ title }: { title: string }) {
           <MiniPager page={page} pageCount={pageCount} onPage={setPage} />
         </>
       ) : (
-        <p className="text-body text-gray-400">연동된 {title} 정보가 없습니다.</p>
+        <p className="text-body text-gray-500">연동된 {title} 정보가 없습니다.</p>
       )}
     </DetailPanelCard>
   )
@@ -150,17 +150,17 @@ export function EmployeeDetailPage({
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           {/* 좌측(2/3): 프로필 본문 */}
           <div className="space-y-4 lg:col-span-2">
-            <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
+            <CardShell>
               <div className="flex items-center gap-5">
                 <PhotoBox src={null} />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h1 className="text-title-md font-bold text-gray-900">{emp.name}</h1>
-                    <Badge tone="neutral" size="sm">
+                    <Badge tone="neutral">
                       {roleLabel}
                     </Badge>
                   </div>
-                  <p className="mt-1 text-body text-gray-500">{subtitle}</p>
+                  <p className="mt-1 text-body text-gray-600">{subtitle}</p>
                 </div>
               </div>
 
@@ -173,13 +173,13 @@ export function EmployeeDetailPage({
                 <Info label="이메일" value={email} />
                 <Info label="수정일" value={formatDate(emp.updated_at)} />
               </div>
-            </section>
+            </CardShell>
 
             <SectionCard title="약력">
               {bio ? (
                 <p className="whitespace-pre-wrap text-body text-gray-800">{bio}</p>
               ) : (
-                <p className="text-body text-gray-400">
+                <p className="text-body text-gray-500">
                   등록된 약력이 없습니다. "수정"에서 입력하세요.
                 </p>
               )}
@@ -189,7 +189,7 @@ export function EmployeeDetailPage({
               {note ? (
                 <p className="whitespace-pre-wrap text-body text-gray-800">{note}</p>
               ) : (
-                <p className="text-body text-gray-400">등록된 노트 내용이 없습니다.</p>
+                <p className="text-body text-gray-500">등록된 노트 내용이 없습니다.</p>
               )}
             </SectionCard>
 

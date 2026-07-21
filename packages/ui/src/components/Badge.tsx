@@ -1,8 +1,18 @@
 import type { ReactNode } from 'react'
 import { cn } from '../utils/cn'
+import { useDensity, type Density } from '../density'
 
 export type BadgeTone = 'neutral' | 'success' | 'warning' | 'info' | 'danger'
-export type BadgeSize = 'sm' | 'md'
+
+/**
+ * 밀도 맥락별 치수. 크기 변형(`size`)은 두지 않는다 — 배지의 위계는 크기가 아니라 색(tone)이
+ * 전담하고, 크기는 놓이는 자리가 정한다. 근거: 5_component_spec_rules.md §1.2 / §3.4
+ */
+const densityClass: Record<Density, string> = {
+  page: 'h-tag-page px-2 text-tag-page',
+  card: 'h-tag-card px-1.5 text-tag-card',
+  table: 'h-tag-table px-1.5 text-tag-table',
+}
 
 const toneClass: Record<BadgeTone, string> = {
   neutral: 'border-gray-300 bg-gray-50 text-gray-600',
@@ -12,24 +22,26 @@ const toneClass: Record<BadgeTone, string> = {
   danger: 'border-danger-border bg-danger-subtle text-danger',
 }
 
-/** md: 기본 상태 배지. sm: 표 태그 등 밀도 높은 곳용 컴팩트(패딩·굵기·그림자 축소). */
-const sizeClass: Record<BadgeSize, string> = {
-  md: 'px-2 py-0.5 text-caption font-semibold shadow-sm shadow-gray-900/5',
-  sm: 'px-2 py-0.5 text-[0.6875rem] font-medium',
-}
-
 export interface BadgeProps {
   tone?: BadgeTone
-  size?: BadgeSize
+  /** 밀도 맥락 강제 지정. 생략하면 부모 Card·DataTable이 내려준 맥락을 자동으로 따른다. */
+  density?: Density
   dot?: boolean
   children: ReactNode
   className?: string
 }
 
 /**
- * 상태 뱃지(세만틱 3단 대비 및 둥근 토스 스타일).
+ * 상태 배지/태그. 크기는 단일 규격 하나뿐이다(§3.4).
+ *
+ * 크기 변형(size prop)을 두지 않는 이유: 배지가 전달하는 위계는 크기가 아니라 색(tone)이다.
+ * 같은 종류의 정보를 크기로 나누면 "큰 태그 = 더 중요한 상태"라는 잘못된 신호를 준다.
+ * 세로 크기는 세로 패딩이 아니라 고정 높이 + leading-none으로 확정한다 — 패딩만 주면 배지 높이가
+ * 부모의 line-height 상속에 끌려다녀 같은 배지가 화면마다 다른 크기로 보인다.
+ * 근거: 5_component_spec_rules.md §3.4
  */
-export function Badge({ tone = 'neutral', size = 'md', dot = false, children, className }: BadgeProps) {
+export function Badge({ tone = 'neutral', density, dot = false, children, className }: BadgeProps) {
+  const d = useDensity(density)
   const dotColorClass: Record<BadgeTone, string> = {
     neutral: 'bg-gray-400',
     success: 'bg-success',
@@ -41,15 +53,16 @@ export function Badge({ tone = 'neutral', size = 'md', dot = false, children, cl
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-radius-sm border transition-all duration-fast',
-        sizeClass[size],
+        // shrink-0 · whitespace-nowrap: 폭이 좁은 표 셀에서 찌그러지거나 줄바꿈으로 박스가 깨지지 않게 한다.
+        'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-radius-sm border font-medium leading-none transition-colors duration-fast',
+        densityClass[d],
         toneClass[tone],
         className,
       )}
     >
       {dot && (
         <span
-          className={cn('h-1.5 w-1.5 shrink-0 rounded-full', dotColorClass[tone])}
+          className={cn('h-1 w-1 shrink-0 rounded-full', dotColorClass[tone])}
           aria-hidden="true"
         />
       )}

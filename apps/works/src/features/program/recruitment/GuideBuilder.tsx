@@ -36,10 +36,10 @@ export function GuideBuilder({
       <div className="flex items-center justify-between">
         <span className="text-caption font-medium text-gray-600">안내 섹션</span>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={resetPreset} type="button">
+          <Button variant="secondary" onClick={resetPreset} type="button">
             <RotateCcw className="mr-1 h-3.5 w-3.5" /> 기본값
           </Button>
-          <Button variant="secondary" size="sm" onClick={add} type="button">
+          <Button variant="secondary" onClick={add} type="button">
             <Plus className="mr-1 h-3.5 w-3.5" /> 섹션 추가
           </Button>
         </div>

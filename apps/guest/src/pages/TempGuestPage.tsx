@@ -46,7 +46,7 @@ export function TempGuestPage() {
   if (state.kind === 'loading') {
     return (
       <main className="flex min-h-screen items-center justify-center px-5">
-        <p className="text-body text-gray-500">불러오는 중…</p>
+        <p className="text-body text-gray-600">불러오는 중…</p>
       </main>
     )
   }
@@ -57,7 +57,7 @@ export function TempGuestPage() {
         <p className="text-title-sm font-bold text-gray-900">
           만료된 접속 주소입니다
         </p>
-        <p className="mt-2 text-body text-gray-500">
+        <p className="mt-2 text-body text-gray-600">
           접속 기한이 지났거나 유효하지 않은 링크입니다. 담당자에게 재발급을 요청하세요.
         </p>
       </main>

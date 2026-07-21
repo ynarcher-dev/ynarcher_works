@@ -1,4 +1,4 @@
-import { Badge } from '@ynarcher/ui'
+import { Badge, CardShell } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import type { Program, ProgramDepartmentKind } from '@/features/program/hooks'
 import { ProgramPhotoBox } from '@/features/program/detail/ProgramPhotoBox'
@@ -12,7 +12,7 @@ import { categoryLabel, useProgramWorkspace } from '@/features/program/workspace
 function Info({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-baseline gap-2">
-      <span className="shrink-0 text-caption text-gray-400">{label}:</span>
+      <span className="shrink-0 text-caption text-gray-600">{label}:</span>
       <span className="text-body text-gray-800">{value ?? '-'}</span>
     </div>
   )
@@ -81,17 +81,17 @@ export function ProgramInfoCard({ program }: { program: Program }) {
     )
 
   return (
-    <section className="rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft">
+    <CardShell>
       <div className="flex items-center gap-5">
         <ProgramPhotoBox src={null} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-title-md font-bold text-gray-900">{program.title}</h1>
-            <Badge tone={PROGRAM_STATUS_TONE[program.status] ?? 'neutral'} size="sm">
+            <Badge tone={PROGRAM_STATUS_TONE[program.status] ?? 'neutral'}>
               {PROGRAM_STATUS_LABEL[program.status] ?? program.status}
             </Badge>
           </div>
-          <p className="mt-1 text-body text-gray-500">{program.description || '-'}</p>
+          <p className="mt-1 text-body text-gray-600">{program.description || '-'}</p>
         </div>
       </div>
 
@@ -110,25 +110,25 @@ export function ProgramInfoCard({ program }: { program: Program }) {
       </div>
 
       <div className="mt-4 border-t border-gray-100 pt-4">
-        <span className="text-caption text-gray-400">담당자</span>
+        <span className="text-caption text-gray-600">담당자</span>
         {departments.length ? (
           <div className="mt-2 flex flex-col gap-2">
             {departments.map((d) => (
               <div key={d.department_id} className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                <Badge tone={d.kind === 'MAIN' ? 'info' : 'neutral'} size="sm">
+                <Badge tone={d.kind === 'MAIN' ? 'info' : 'neutral'}>
                   {d.name + (d.kind === 'MAIN' ? ' · 메인' : '') + (d.ratio != null ? ` ${d.ratio}%` : '')}
                 </Badge>
                 <span className="text-caption text-gray-300">/</span>
                 {d.members.length ? (
                   <span className="flex flex-wrap gap-1">
                     {d.members.map((m) => (
-                      <Badge key={m.user_id} tone={m.isPM ? 'info' : 'neutral'} size="sm">
+                      <Badge key={m.user_id} tone={m.isPM ? 'info' : 'neutral'}>
                         {m.name + (m.isPM ? ' · PM' : '') + ` (${m.rate}%)`}
                       </Badge>
                     ))}
                   </span>
                 ) : (
-                  <span className="text-caption text-gray-400">담당자 미배정</span>
+                  <span className="text-caption text-gray-500">담당자 미배정</span>
                 )}
               </div>
             ))}
@@ -137,6 +137,6 @@ export function ProgramInfoCard({ program }: { program: Program }) {
           <p className="mt-2 text-body text-gray-800">-</p>
         )}
       </div>
-    </section>
+    </CardShell>
   )
 }

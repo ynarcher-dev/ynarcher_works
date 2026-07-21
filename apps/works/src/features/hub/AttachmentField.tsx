@@ -74,7 +74,7 @@ export function AttachmentField({ value, onChange }: AttachmentFieldProps) {
         <p className="text-body text-gray-600">
           파일을 여기로 끌어다 놓거나 <span className="font-semibold text-brand">클릭</span>하여 선택
         </p>
-        <p className="text-caption text-gray-400">여러 파일을 한 번에 첨부할 수 있습니다.</p>
+        <p className="text-caption text-gray-600">여러 파일을 한 번에 첨부할 수 있습니다.</p>
         <input
           ref={inputRef}
           type="file"
@@ -96,7 +96,7 @@ export function AttachmentField({ value, onChange }: AttachmentFieldProps) {
             >
               <File className="size-4 shrink-0 text-gray-400" />
               <span className="min-w-0 flex-1 truncate text-body text-gray-800">{a.name}</span>
-              <span className="shrink-0 tabular-nums text-caption text-gray-400">
+              <span className="shrink-0 tabular-nums text-caption text-gray-600">
                 {formatBytes(a.size)}
               </span>
               <button
@@ -131,7 +131,7 @@ export function AttachmentList({ attachments }: { attachments: BoardAttachment[]
           >
             <File className="size-4 shrink-0 text-gray-400" />
             <span className="min-w-0 flex-1 truncate text-body text-gray-800">{a.name}</span>
-            <span className="shrink-0 tabular-nums text-caption text-gray-400">
+            <span className="shrink-0 tabular-nums text-caption text-gray-600">
               {formatBytes(a.size)}
             </span>
             <a

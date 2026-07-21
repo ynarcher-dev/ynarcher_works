@@ -60,7 +60,7 @@ export function NoticeWorkspace() {
       align: 'center',
       className: 'w-64',
       // 본문 셀은 DataTable 기본 text-body를 상속한다(캡션 크기를 덧씌우면 다른 열과 어긋남).
-      render: (n) => <span className="text-gray-500">{n.boardLabel}</span>,
+      render: (n) => <span className="text-gray-600">{n.boardLabel}</span>,
     },
   ]
 
@@ -97,7 +97,7 @@ export function NoticeWorkspace() {
           onChange: setPage,
         }}
       />
-      <p className="text-caption text-gray-400">
+      <p className="text-caption text-gray-600">
         공지사항은 각 게시판에서 &lsquo;전체 공지&rsquo;로 등록한 글을 모아 보여줍니다. 제목을 클릭하면 원본 게시판으로 이동합니다.
       </p>
     </div>
