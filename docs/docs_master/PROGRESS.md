@@ -65,12 +65,14 @@
 > **참고 문서**: [5_component_spec_rules.md](../docs_design/5_component_spec_rules.md) (컴포넌트 규격) · [2_app_layout_navigation.md](../docs_design/2_app_layout_navigation.md) (AppShell/사이드바) · [9_feedback_notification_rules.md](../docs_design/9_feedback_notification_rules.md) (토스트/로딩) · [1_ui_ux_mobile.md](../docs_design/1_ui_ux_mobile.md) (반응형) · [4_color_system_rules.md](../docs_design/4_color_system_rules.md), [3_typography_rules.md](../docs_design/3_typography_rules.md) (토큰)
 
 - [x] 디자인 토큰 기반 기초 컴포넌트 (Button 5종 variant, Input/Select/TextArea 4상태, Checkbox, Switch, Avatar, Badge)
-- [x] 데이터 테이블 (헤더 36px/행 44px, tabular-nums, 페이지네이션, 정렬)
+- [x] 데이터 테이블 (헤더·행 36px, tabular-nums, 페이지네이션, 정렬)
 - [x] 오버레이 컴포넌트 (Modal sm/md/lg, Drawer, Dropdown — z-index 스케일 준수)
 - [x] 피드백 컴포넌트 (Toast, 인라인 배너, 스피너/스켈레톤, Empty State)
 - [x] AppShell 레이아웃 (사이드바 240px + 상단바 56px + 1열/2열 콘텐츠 그리드, 1024px 미만 드로어 전환)
 - [x] 워크스페이스 전환 드롭다운 (PermissionMap 기반 노출 제어)
 - [x] 섹션 카드(Card)·언더라인 탭(Tabs) 컴포넌트 추가 <!-- 상세 화면 2컬럼 컴포지션용 카드 셸(제목·부제·우측 액션)과 건수 칩 지원 탭. AC 프로그램 상세·M&A 딜 상세 공용 -->
+- [x] 컴포넌트 크기 축 재정의 — 중요도(lg/md/sm) → 밀도 맥락(일반 40px / 카드 32px / 표 24px) <!-- 근거: design_system_compliance_audit.md(종결). size prop 제거하고 Card·DataTable이 DensityProvider로 맥락을 하위에 내려준다. 조절판은 packages/ui/src/densityScale.ts 단일 파일. 신설 IconButton·Radio·TagChip·CardShell, 흡수 제거 InlineButton·InlineSelect. Accordion·Breadcrumb은 수요 없어 미신설. 포털 오버레이(Modal·Drawer→page / Dropdown·Toast→card) 맥락 재설정으로 카드·표 안에서 연 모달이 축소되던 결함 해소. 회귀 방어 ESLint 5종(임의 폰트값·컨트롤 임의높이·수제 카드셸·수제 태그·원시 색상). 규격 확인은 /styleguide(WORKS 내부, 메뉴 미노출)에서 3맥락 실측 비교. 주의: tailwind-preset.mjs는 Vite 감시 대상 밖이라 토큰 변경 시 dev 서버 재시작 필요 -->
+- [x] 데이터 테이블 정렬·격자 규격 확정 <!-- 헤더·본문 기본 가운데 정렬(예외 열만 align='left'), 행 높이 36px, 셀 사이 세로선(divide-x, 가로선과 동일 굵기), 체크박스 세로 중앙 고정(align-middle). 모달 폭을 타이포 척도(max-w-lg 등)에서 modal-sm~2xl(400/600/800/1000/1200) 전용 토큰으로 분리 -->
 
 
 ## Phase 5. OFFICE 워크스페이스 (구 HUB 역할 이관)

@@ -1,102 +1,97 @@
-# 디자인 시스템 준수 감사 리포트
+# 디자인 시스템 준수 감사 리포트 (종결)
 
-본 문서는 `apps/works` 프론트엔드 전반의 디자인 시스템 준수 실태를 감사한 결과입니다. 기준은 [5_component_spec_rules.md](./5_component_spec_rules.md)(컴포넌트 규격)와 [4_color_system_rules.md](./4_color_system_rules.md)(색·버튼 variant), 실제 토큰값은 `tailwind-preset.mjs`입니다. 정합(수정) 작업은 별도 세션으로 미루되, 착수 시 본 문서를 근거로 삼습니다.
+본 문서는 `apps/works` 프론트엔드의 디자인 시스템 준수 실태를 감사하고, 그 결과 수행한 정합 작업의 결말을 기록합니다. 기준 문서는 [5_component_spec_rules.md](./5_component_spec_rules.md)이며, 실제 토큰값은 `tailwind-preset.mjs`, 맥락별 매핑은 `packages/ui/src/densityScale.ts`입니다.
 
 > [!NOTE]
-> 감사 일자 기준 스냅샷입니다. 파일 위치·행 번호는 이후 변경으로 이동할 수 있으니 착수 시 재확인합니다.
+> **본 감사는 종결되었습니다.** 아래 진단(1~5절)은 착수 시점의 기록이며, 6절에 각 항목의 해소 결과를 남깁니다. 새로운 이탈이 쌓이면 본 문서를 갱신하지 말고 새 감사를 수행합니다.
 
 ---
 
-## 1. 핵심 결론
+## 1. 핵심 진단 (착수 시점)
 
-인라인 스타일 남발은 **증상**이며, 뿌리는 **단일 원천(SSOT)이 신뢰 불가** 상태라는 점입니다. 공식 컴포넌트 21종이 이미 존재함에도 우회가 잦은 이유는 세 갈래입니다.
+인라인 스타일 남발은 **증상**이며, 뿌리는 **단일 원천(SSOT)이 신뢰 불가** 상태라는 점이었습니다. 공식 컴포넌트가 이미 존재함에도 우회가 잦았던 이유는 세 갈래였습니다.
 
-* **① 스펙 문서 ↔ 공식 컴포넌트 불일치**: 문서가 규정한 값과 실제 컴포넌트 구현이 다릅니다(버튼 높이, 카드 radius, 입력 높이 등).
-* **② 스펙 문서 자체의 내부 모순**: `radius.md`가 §1.1에서는 14px, §2.1·§3.2에서는 6px로 상충하는 등 애초에 그대로 지킬 수 없는 문서입니다.
-* **③ 공식 컴포넌트 공백**: 스펙에 규격이 정의됐으나 구현이 없는 컴포넌트(IconButton·Radio·Accordion·Breadcrumb)가 있어 손수 제작이 강제됩니다.
+* **① 스펙 문서 ↔ 공식 컴포넌트 불일치**: 문서가 규정한 값과 실제 구현이 달랐습니다(버튼 높이, 카드 radius, 입력 높이 등).
+* **② 스펙 문서 자체의 내부 모순**: `radius.md`가 §1.1에서는 14px, §2.1·§3.2에서는 6px로 상충하는 등 그대로 지킬 수 없는 문서였습니다.
+* **③ 공식 컴포넌트 공백**: 스펙에 규격만 있고 구현이 없는 컴포넌트(IconButton·Radio 등)가 있어 손수 제작이 강제됐습니다.
 
-> [!IMPORTANT]
-> 지금 상태에서 인라인 코드를 공식 컴포넌트로 흡수하면 **스펙 위반이 오히려 전파**됩니다. 예: 인라인 카드 셸은 스펙대로 `radius.lg`(20px)를 쓰지만 공식 `Card`는 `radius.md`(14px)라, 통합 시 곡률이 스펙에서 후퇴합니다. 따라서 **SSOT 정합이 마이그레이션의 선행 조건**입니다.
+### 1.1 진단에 없던 진짜 원인
+
+정합 작업에 착수한 뒤 드러난 더 근본적인 원인은 **크기 축 자체가 잘못 잡혀 있었다**는 점입니다.
+
+착수 시점의 컴포넌트는 `size="lg|md|sm"`처럼 **중요도**로 크기를 갈랐습니다. 그러나 실제 화면에서 같은 '수정' 버튼의 크기를 결정하는 것은 중요도가 아니라 **놓이는 자리**(페이지 툴바 / 카드 안 / 표 셀 안)였습니다. 축이 어긋나 있으니 호출부마다 크기를 손으로 골라야 했고, 그 선택이 화면마다 달라지면서 인라인 우회가 계속 생겼습니다.
+
+`size="sm"`이 사실상 무의미했던 것도 이 때문입니다. `sm`의 글자 크기에 `line-height`가 지정돼 있지 않아 높이가 부모에서 상속됐고, 그 결과 `sm`(22.5px)과 `md`(22.8px)의 실제 높이 차이가 0.3px에 불과했습니다. 의도적으로 `sm`을 지정한 모든 호출부가 아무 효과가 없었습니다.
 
 ---
 
-## 2. 카테고리별 규모 요약
+## 2. 카테고리별 규모 (착수 시점)
 
-| 영역 | 인라인/우회 규모 | 공식 컴포넌트 흡수 가능 | High 이슈 |
-| :--- | :--- | :--- | :--- |
-| 버튼 | 인라인 `<button>` 81개 / 47파일 | 약 65~70% | 3 |
-| 폼 컨트롤 | raw 폼요소 18개(실질 위반 8) | 6개 | 1 |
-| 구조/카드 | 약 108건(카드 셸 ~100 + 테이블 4 + 탭 4) | 대부분 | 4 |
+| 영역 | 인라인/우회 규모 |
+| :--- | :--- |
+| 버튼 | 인라인 `<button>` 81개 / 47파일 |
+| 폼 컨트롤 | raw 폼요소 18개(실질 위반 8) |
+| 구조/카드 | 약 108건(카드 셸 ~100 + 테이블 4 + 탭 4) |
 
 ---
 
 ## 3. 공식 컴포넌트 ↔ 스펙 불일치 (원인 ①)
 
-| 컴포넌트 | 스펙 요구 | 실제 구현 | 판정 | 근거 |
-| :--- | :--- | :--- | :--- | :--- |
-| Button (md) | 36px / 글꼴 16px / Medium | `h-10`(40px) / 14px / `font-semibold` | 불일치 | `packages/ui/src/components/Button.tsx:26,46` |
-| Button (3단계) | lg40 / md36 / sm32 | sm(`h-8`) / md(`h-10`)의 2단계, lg 부재 | 미구현 | `Button.tsx:24-27` |
-| Card | `radius.lg`(20px) | `radius.md`(14px) | 불일치 | `packages/ui/src/components/Card.tsx:33` |
-| Input / Select | 36px(`h-9`) | `h-11`(44px) 전면 | 불일치 | `packages/ui/src/components/Input.tsx` |
-| Tabs | `h-10` 명시, 비활성 `gray-700` | 높이 미고정(`py-2`), 비활성 `gray-500` | 불일치 | `packages/ui/src/components/Tabs.tsx:24-45` |
-| Modal (md/lg) | 600 / 800~1000px | `max-w-lg`(512) / `max-w-2xl`(672) 미달 | 불일치 | `packages/ui/src/components/Modal.tsx:7-13` |
-| TextArea | 최소 120px + `resize-y` | 둘 다 미탑재 | 불일치 | `packages/ui/src/components/TextArea.tsx` |
-
-> DataTable(표준 메타컬럼·높이·테두리)·Badge·Switch·Checkbox·Dropdown·Banner는 대체로 스펙 정합입니다(경미 색 토큰 이탈 일부).
+| 컴포넌트 | 스펙 요구(구) | 착수 시점 구현 |
+| :--- | :--- | :--- |
+| Button | lg40 / md36 / sm32 | sm·md 2단계, lg 부재 |
+| Card | `radius.lg`(20px) | `radius.md`(14px) |
+| Input / Select | 36px | 44px 전면 |
+| Tabs | `h-10` 명시 | 높이 미고정(`py-2`) |
+| Modal (md/lg) | 600 / 800~1000px | 512 / 672px |
+| TextArea | 최소 120px + `resize-y` | 둘 다 미탑재 |
 
 ---
 
 ## 4. 공식 컴포넌트 공백 (원인 ③)
 
-* **IconButton** — 아이콘 전용 버튼 약 30개가 크기 8종(`h-9 w-9`·`h-8 w-8`·`h-7 w-7`·`size-6`·`size-5`·`p-2`·`p-1.5`·무규격)으로 난립합니다. `aria-label`을 필수 prop으로 강제한 공식 컴포넌트 하나로 구조적 정리 + 접근성 위반 재발 방지가 가능합니다.
-* **Radio** — 스펙 §2.3에 규격이 있으나 부재하여 `ProgramStageFields.tsx:61` 등에서 손수 제작됩니다.
-* **Accordion (§3.6) / Breadcrumb (§3.7)** — 스펙 명세만 존재, 구현 부재.
+* **IconButton** — 아이콘 전용 버튼 약 30개가 크기 8종으로 난립.
+* **Radio** — 스펙 §2.3에 규격이 있으나 부재하여 손수 제작.
+* **Accordion / Breadcrumb** — 스펙 명세만 존재, 구현 부재.
 
 ---
 
 ## 5. 스펙 문서 내부 모순 (원인 ②)
 
 * **`radius.md` 픽셀값 3중 상충**: §1.1 = 14px, §2.1(버튼) = 6px, §3.2(페이지네이션) = 6px.
-* **Input 규격 상충**: §2.2 = 높이 36px·radius `sm`(4px), 그러나 §1.1은 Input = `radius.md`. 실제 코드는 높이 44px·`radius.md`.
-* 문서를 정합의 기준으로 쓰려면 위 상충부터 해소해야 합니다.
+* **Input 규격 상충**: §2.2 = 높이 36px·radius `sm`, 그러나 §1.1은 Input = `radius.md`.
 
 ---
 
-## 6. 대표 인라인 우회 위치
+## 6. 해소 결과
 
-* **카드 셸 4중 파편화**: 공식 `Card`(ui) 외에 `DetailPanelCard`([networks/DetailPanelCard.tsx:22](../../apps/works/src/features/networks/DetailPanelCard.tsx)), `SectionCard`가 [NetworkDetailPage.tsx:40](../../apps/works/src/features/networks/NetworkDetailPage.tsx)과 [EmployeeDetailPage.tsx:30](../../apps/works/src/features/management/EmployeeDetailPage.tsx)에 **동일 정의로 이중 존재**, STARTUP 등 인라인 복붙 다수.
-* **인라인 탭 3중 재구현**: `ProjectDetailPage.tsx:58`, `FundDetailPage.tsx:104`, ProgramDetailPage가 언더라인 탭을 각자 인라인으로 구현(공식 `Tabs` 채택은 1파일뿐).
-* **인라인 테이블 4곳**: `startup/MiniTable.tsx:18`, 랭킹/미리보기 패널 등.
-* **primary 버튼 수제 복제**: `pages/LoginPage.tsx:81`이 `Button` primary 클래스를 손으로 복제.
-* **비토큰 radius**: `ProjectPage.tsx:63`(`rounded-lg`), `DeptTreeRow.tsx`·`OrgLevelEditor.tsx:57`(소문자 `rounded`).
+### 6.1 원인별 결말
 
----
+* **① 불일치 → 해소**: 스펙 문서를 실제 코드 기준으로 전면 재작성했습니다([5_component_spec_rules.md](./5_component_spec_rules.md)). 수십 화면에서 검증된 코드값을 정답으로 삼고, 문서 상단에 "수치의 원천은 코드"임을 명시했습니다.
+* **② 모순 → 해소**: `radius`는 실제 토큰(`2/4/6px`) 단일 표로 정리했습니다. 라운드를 "아주 약간"만 두어 각진 인상을 유지한다는 방침이 확정됐습니다.
+* **③ 공백 → 해소**: `IconButton`·`Radio`·`TagChip`·`CardShell`을 신설했습니다. `Accordion`·`Breadcrumb`은 **신설하지 않았습니다** — 앱 전수 조사 결과 접기 패널 수요가 없고(`ChevronDown` 사용처는 전부 순서 이동 버튼), 브레드크럼은 WORKS 상단바 하나뿐이라 공용 컴포넌트로 올릴 근거가 없었습니다. 쓰지 않을 컴포넌트를 미리 만드는 것은 지금 정리하려는 문제를 새로 만드는 일입니다.
+* **1.1 축 오류 → 해소**: 크기 축을 중요도(`lg/md/sm`)에서 **밀도 맥락**(`page/card/table`)으로 재정의했습니다. `Button`·`Badge`의 `size` prop을 제거하고, 크기는 부모(`Card`·`DataTable`)가 React 컨텍스트로 내려줍니다.
 
-## 7. 접근성
+### 6.2 구조적 변화
 
-전반 준수율은 높습니다(아이콘 버튼 대부분 `aria-label` 부여).
+* **조절판 단일화**: 높이·글자·여백·간격 매핑을 `packages/ui/src/densityScale.ts` 한 파일에 모았습니다. 규격 조정은 컴포넌트를 돌아다니지 않고 이 파일만 고칩니다.
+* **중복 부품 제거**: `InlineButton`·`InlineSelect`를 삭제했습니다. `Button`·`Select`가 표 안에서 자동으로 표 규격이 되므로 "표에서는 어느 걸 쓰나"라는 고민이 사라집니다.
+* **회귀 방어**: ESLint 규칙 5종을 도입했습니다 — 임의 폰트값, 컨트롤 임의 높이, 수제 카드 셸, 수제 태그, 원시 Tailwind 색상.
+* **확인 무대**: `/styleguide`에서 세 맥락을 나란히 놓고 실제 렌더 높이를 px로 확인합니다. 규격 판단을 문서가 아니라 화면에서 합니다.
 
-* **aria-label 누락 아이콘 버튼**: `management/panels/OrgLevelEditor.tsx:53`.
-* **placeholder를 라벨 대용**(§2.2 위반): `ac/ProgramManagerEditor.tsx:84`.
+### 6.3 작업 중 발견한 실제 결함
 
----
+정합 과정에서 규격 이탈이 아니라 **동작·표시 결함**으로 드러난 것들입니다.
 
-## 8. 권장 로드맵
+* **오버레이 밀도 상속**: 포털은 DOM만 `body`로 옮길 뿐 React 컨텍스트는 부모를 따릅니다. 그 결과 상세 카드 안에서 연 모달(`SensitiveValue`)의 `TextArea`가 카드 규격으로 렌더되고 있었고, 표 셀에서 여는 모달은 표 규격까지 내려갈 수 있는 구조였습니다. `Modal`·`Drawer`는 `page`, `Dropdown`·`Toast`는 `card`로 맥락을 재설정해 해소했습니다.
+* **적색 배경 + 네이비 글자**: `hover:bg-red-50 hover:text-brand` 조합이 7곳에 복사돼 있었습니다.
+* **표의 말줄임표 잔상**: NETWORKS `매칭` 열 폭이 '가능'(2자) 기준이라 '불가능'(3자)일 때 배지 뒤에 `…`이 남았습니다.
+* **비활성 라디오의 툴팁 미표시**: 비활성 `input`은 브라우저가 마우스 이벤트를 삼켜 `title` 안내가 뜨지 않았습니다.
+* **체크박스 세로 정렬**: 인라인 요소라 글자 베이스라인에 걸려 표 셀에서 위로 떠 있었습니다.
+* **탭 영역 미달**: 순서 이동 버튼이 상자 없이 16px 아이콘만 있어 접근성 최소치(24px)에 못 미쳤습니다.
 
-* **Phase 0 — SSOT 정합(선행·소규모·고레버리지)**: 5절 문서 내부 모순 해소 + 3절 각 토큰의 "문서 vs 코드" 정답 확정 → 공식 컴포넌트를 거기에 맞춤. *미실행 시 이후 단계가 오염을 전파합니다.*
-* **Phase 1 — 공백 컴포넌트 신설**: IconButton, Radio, (Accordion, Breadcrumb).
-* **Phase 2 — 흡수 마이그레이션**: 인라인 버튼·카드 셸·탭·폼을 공식 컴포넌트로 치환.
-* **Phase 3 — 회귀 방어**: ESLint 룰로 비토큰 `rounded`, raw `<button>` primary 복제 등을 차단.
+### 6.4 잔여
 
----
-
-## 9. 미결 결정 사항
-
-* **SSOT 방향**: 값이 어긋난 항목(버튼 36/40px, 카드 14/20px, 입력 36/44px 등)에서 문서와 코드 중 무엇을 정답으로 삼을지. 잠정 권고는 "수십 화면에서 검증된 **실제 코드값을 기준으로 문서를 최신화**"하되, 카드 `radius`만은 예외로 `radius.lg`(20px, 주변 다수·스펙 일치)로 통일 검토.
-* 상기 결정 후 Phase 0 착수.
-
----
-
-## 관련 기 반영 사항
-
-* 상세 카드 섹션 외곽 테두리 `gray-300` 통일(스펙 §L84 준수) 및 전자결재 패널 카드화는 커밋 `e2fc0b3`으로 선반영되었습니다.
+* **raw `<button>` 72곳**: 클릭 가능한 행·카드 표면처럼 버튼 상자가 아닌 용도가 대부분입니다. 상자를 가진 아이콘 액션은 모두 흡수했습니다.
+* **태그 색 축 정리**: 분류(중립)와 상태(색)를 분리하는 원칙을 스펙 §3.4에 명문화했고 NETWORKS 목록에 적용했습니다. 다른 워크스페이스의 잔여 혼선은 미점검 상태입니다.
+* **`placeholder`를 라벨 대용으로 쓰는 곳**: `program/ProgramManagerEditor.tsx`.
