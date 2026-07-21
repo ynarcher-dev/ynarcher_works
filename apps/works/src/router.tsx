@@ -17,6 +17,7 @@ import { NetworkDetailPage } from '@/features/networks/NetworkDetailPage'
 import { GlobalNetworkDetailPage } from '@/features/networks/GlobalNetworkDetailPage'
 import { DIRECTORY_ENTITIES } from '@/features/networks/config'
 import { StartupPage } from '@/features/startup/StartupPage'
+import { StyleguidePage } from '@/features/styleguide/StyleguidePage'
 import { StartupDetailPage } from '@/features/startup/StartupDetailPage'
 import { StartupCreatePage } from '@/features/startup/StartupCreatePage'
 import { ProjectProgramDetailPage, ProjectWorkspacePage } from '@/features/project/ProjectWorkspace'
@@ -148,6 +149,8 @@ export const router = createBrowserRouter([
               </RequireWorkspace>
             ),
           },
+          // 디자인 시스템 규격 확인용 내부 페이지. 메뉴에는 노출하지 않고 URL로만 진입한다.
+          { path: 'styleguide', element: <StyleguidePage /> },
           {
             path: 'project',
             element: (
