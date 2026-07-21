@@ -10,6 +10,7 @@ import { ProgramWorkspaceProvider, type ProgramWorkspaceConfig } from '@/feature
  */
 export const PROJECT_WORKSPACE: ProgramWorkspaceConfig = {
   key: 'project',
+  entityKey: 'project_program',
   basePath: '/project',
   entityNoun: '프로젝트',
   dashboardLabel: '프로젝트 현황',

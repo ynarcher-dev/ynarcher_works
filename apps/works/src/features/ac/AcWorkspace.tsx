@@ -11,6 +11,7 @@ import { ProgramWorkspaceProvider, type ProgramWorkspaceConfig } from '@/feature
  */
 export const AC_WORKSPACE: ProgramWorkspaceConfig = {
   key: 'ac',
+  entityKey: 'program',
   basePath: '/ac',
   entityNoun: '사업',
   dashboardLabel: '사업 현황',

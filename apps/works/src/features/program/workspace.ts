@@ -17,6 +17,17 @@ export type ProgramWorkspaceKey = 'ac' | 'mna' | 'project'
  */
 export interface ProgramWorkspaceConfig {
   key: ProgramWorkspaceKey
+  /**
+   * 다형 테이블(entity_contributions.entity_table / entity_feedback.target_type)에서
+   * 이 워크스페이스의 사업을 가리키는 값.
+   *
+   * 세 워크스페이스가 'program' 하나를 공유하던 것을 원장별로 나눴다 — 공유하면 RLS가 값만
+   * 보고는 소유 워크스페이스를 판정할 수 없어, M&A·PROJECT 사용자가 자기 사업의 변동 이력과
+   * 코멘트를 못 보는 문제가 있었다. 근거: 20260721130000_program_entity_key_split.sql
+   *
+   * 첨부(attachments)는 정책이 워크스페이스 무관이라 분리하지 않고 'program'을 그대로 쓴다.
+   */
+  entityKey: 'program' | 'ma_program' | 'project_program'
   /** 라우트 베이스 경로. 목록 `${basePath}`, 상세 `${basePath}/programs/:id`. */
   basePath: string
   /** 목록 제목(전체 ~)·본문 문구에 쓰는 도메인 명칭. */

@@ -22,7 +22,7 @@ export function useUpdateProgram(id: string) {
       const { error } = await supabase.from(config.tables.programs).update(values).eq('id', id)
       if (error) throw error
       // 변동 이력 'edited' 기록(부수 기록: 실패해도 수정은 성공 처리).
-      await recordProgramContribution(id, 'edited').catch(() => {})
+      await recordProgramContribution(config.entityKey, id, 'edited').catch(() => {})
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: [config.key, 'program', id] })

@@ -144,7 +144,7 @@ export function useCreateProgram() {
       if (error) throw error
       const id = (data as { id: string }).id
       // 변동 이력 최초 'created' 기록(부수 기록: 실패해도 등록은 성공 처리).
-      await recordProgramContribution(id, 'created').catch(() => {})
+      await recordProgramContribution(config.entityKey, id, 'created').catch(() => {})
       return id
     },
     onSuccess: (id) => {

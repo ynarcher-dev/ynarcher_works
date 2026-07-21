@@ -1,12 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { Contribution } from '@/features/networks/hooks'
-import { useProgramWorkspace } from '@/features/program/workspace'
+import { useProgramWorkspace, type ProgramWorkspaceConfig } from '@/features/program/workspace'
 
-// TODO(program): entity_feedback/entity_contributions는 아직 AC 전용 — 워크스페이스 확장 필요
-
-/** 변동 이력 다형 테이블에서 프로그램을 가리키는 entity_table 값. */
-const PROGRAM_ENTITY = 'program'
 
 /**
  * 프로그램 변동 이력(entity_contributions, 오래된 순).
@@ -22,7 +18,7 @@ export function useProgramContributions(programId: string | undefined) {
       const { data, error } = await supabase
         .from('entity_contributions')
         .select('*')
-        .eq('entity_table', PROGRAM_ENTITY)
+        .eq('entity_table', config.entityKey)
         .eq('entity_id', programId)
         .order('created_at', { ascending: true })
       if (error) throw error
@@ -36,10 +32,11 @@ export function useProgramContributions(programId: string | undefined) {
  * 부수 기록이므로 실패해도 본 작업(등록/수정)을 막지 않는다(에러를 삼킨다).
  */
 export async function recordProgramContribution(
+  entityKey: ProgramWorkspaceConfig['entityKey'],
   programId: string,
   action: Contribution['action'],
 ): Promise<void> {
   await supabase
     .from('entity_contributions')
-    .insert({ entity_table: PROGRAM_ENTITY, entity_id: programId, action, source: 'manual' })
+    .insert({ entity_table: entityKey, entity_id: programId, action, source: 'manual' })
 }
