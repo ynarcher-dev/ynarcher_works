@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { cardText } from '../densityScale'
 import { cn } from '../utils/cn'
 
 export interface InfoFieldProps {
@@ -21,9 +22,9 @@ export function InfoField({ label, value, className, valueClassName }: InfoField
   const empty = value === null || value === undefined || value === ''
   return (
     <div className={cn('flex items-baseline gap-2', className)}>
-      <span className="shrink-0 text-body text-gray-500">{label}:</span>
+      <span className={cn('shrink-0', cardText.label)}>{label}:</span>
       <span
-        className={cn('text-body text-gray-900', valueClassName)}
+        className={cn(cardText.value, valueClassName)}
         title={typeof value === 'string' ? value : undefined}
       >
         {empty ? '-' : value}

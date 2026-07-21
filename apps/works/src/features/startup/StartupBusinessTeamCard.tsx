@@ -46,15 +46,26 @@ export function readTeam(record: EntityRow): TeamProfile {
   return { founderStrength: (o.founderStrength as string) ?? '', members, capabilities }
 }
 
-/** 카테고리 라벨(포인트색) + 본문(줄바꿈 보존). 값 없으면 렌더 안 함. */
+/**
+ * 세로형 라벨 + 본문(줄바꿈 보존). 값 없으면 렌더 안 함.
+ *
+ * 라벨은 `InfoField`(한 줄형)와 같은 규격을 쓴다. 한때 12px·semibold·브랜드색을 동시에 써서
+ * 앱에서 유일하게 유채색 라벨이 반복되는 자리였는데, 라벨이 여섯 개씩 이어지면 그 색은 위계가
+ * 아니라 노이즈가 된다.
+ */
 function Field({ label, value }: { label: string; value?: string }) {
   if (!value) return null
   return (
     <div>
-      <p className="mb-0.5 text-caption font-semibold text-brand">{label}</p>
-      <p className="whitespace-pre-wrap text-body leading-relaxed text-gray-800">{value}</p>
+      <p className={`mb-0.5 ${cardText.label}`}>{label}</p>
+      <p className={`whitespace-pre-wrap leading-relaxed ${cardText.value}`}>{value}</p>
     </div>
   )
+}
+
+/** `Field`와 같은 라벨이지만 값이 텍스트가 아닌 경우(목록·배지 묶음)에 쓴다. */
+function FieldLabel({ children }: { children: ReactNode }) {
+  return <p className={`mb-1 ${cardText.label}`}>{children}</p>
 }
 
 /**
@@ -106,13 +117,13 @@ export function StartupBusinessTeamCard({ business, team }: Props) {
             <Field label="대표 / 창업자 역량" value={team.founderStrength} />
             {members.length > 0 && (
               <div>
-                <p className="mb-0.5 text-caption font-semibold text-brand">핵심 팀원</p>
+                <FieldLabel>핵심 팀원</FieldLabel>
                 <ul className="mt-1 space-y-1">
                   {members.map((m, i) => (
-                    <li key={i} className="text-body text-gray-800">
+                    <li key={i} className={cardText.value}>
                       <span className="font-medium">{m.name}</span>
-                      {m.role && <span className="text-gray-700"> · {m.role}</span>}
-                      {m.background && <span className="text-gray-700"> — {m.background}</span>}
+                      {m.role && <span className="text-gray-500"> · {m.role}</span>}
+                      {m.background && <span className="text-gray-500"> — {m.background}</span>}
                     </li>
                   ))}
                 </ul>
@@ -120,7 +131,7 @@ export function StartupBusinessTeamCard({ business, team }: Props) {
             )}
             {capabilities.length > 0 && (
               <div>
-                <p className="mb-1 text-caption font-semibold text-brand">핵심 역량</p>
+                <FieldLabel>핵심 역량</FieldLabel>
                 <div className="flex flex-wrap gap-1">
                   {capabilities.map((c) => (
                     <Badge key={c} tone="neutral">

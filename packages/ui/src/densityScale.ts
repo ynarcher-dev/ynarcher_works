@@ -142,6 +142,15 @@ export const cardText = {
    */
   subhead: 'text-body font-semibold text-gray-900',
   /**
+   * 라벨: 값 쌍의 라벨/값.
+   *
+   * 한 줄형(`InfoField`)과 세로형(라벨 위·값 아래) 필드가 같은 값을 공유한다. 크기는 본문 하나로
+   * 두고 위계는 색으로만 만든다 — 라벨을 작게·굵게·유채색으로 만들면 반복될 때 위계가 아니라
+   * 노이즈가 된다.
+   */
+  label: 'text-body text-gray-500',
+  value: 'text-body text-gray-900',
+  /**
    * 카드 제목 옆 건수 표기 — 배지가 아니라 `[3]` 말머리 형태.
    *
    * 알약 배지는 제목과 무게가 비슷해 제목 읽기를 방해한다. 카드가 세로로 쌓이면 제목마다
