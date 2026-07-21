@@ -1,6 +1,6 @@
 import { Button, EmptyState, Select, Spinner, useToast } from '@ynarcher/ui'
 import { useState } from 'react'
-import { recordContribution, useEntityList, useMergeEntity } from '@/features/networks/hooks'
+import { useEntityList, useMergeEntity } from '@/features/networks/hooks'
 import type { EntityConfig } from '@/features/networks/config'
 
 /** 중복 병합 콘솔: 중복 레코드를 정본으로 병합(merged_into_id 지정). */
@@ -23,14 +23,12 @@ export function MergeConsole({ config }: { config: EntityConfig }) {
       return
     }
     try {
-      await merge.mutateAsync({ primaryId, duplicateId })
+      // 이력은 RPC가 양쪽에 남긴다 — 정본에는 아래 사유로, 중복에는 '정본으로 병합됨'으로.
       const dupName = rows.find((r) => r.id === duplicateId)?.name
-      await recordContribution({
-        table: config.table,
-        id: primaryId,
-        action: 'merged',
-        source: 'manual',
-        note: dupName ? `중복 '${dupName}' 병합` : '중복 병합',
+      await merge.mutateAsync({
+        primaryId,
+        duplicateId,
+        note: dupName ? `중복 '${dupName}' 병합` : undefined,
       })
       toast.show('중복 레코드를 병합했습니다.', 'success')
       setDuplicateId('')

@@ -20,7 +20,6 @@ import {
 } from '@/features/networks/config'
 import {
   checkDuplicateName,
-  recordContribution,
   useCreateEntity,
   useMoveEntity,
   useUpdateEntity,
@@ -194,14 +193,9 @@ export function NetworkForm({ entity, recordId, initial, onDone, onCancel }: Pro
             toast.show(`이동 대상(${targetLabel})에 동일한 이름이 이미 있습니다.`, 'warning')
             return
           }
+          // 이력('created' + 원본 'deactivated')은 이관 RPC 안에서 원장 트리거가 남긴다.
+          // 종전에는 useMoveEntity와 여기가 각각 기록해 'created'가 두 줄이 됐다.
           const newId = await move.mutateAsync({ id: recordId, values: payload })
-          await recordContribution({
-            table: target,
-            id: newId,
-            action: 'created',
-            source: 'manual',
-            note: '구분 변경 이동',
-          })
           toast.show(`${targetLabel} 네트워크로 이동했습니다.`, 'success')
           onDone({ id: newId, targetEntity: target, moved: true })
         }
@@ -216,12 +210,7 @@ export function NetworkForm({ entity, recordId, initial, onDone, onCancel }: Pro
           target === entity
             ? await create.mutateAsync(payload)
             : await insertEntityDirect(target, payload)
-        await recordContribution({
-          table: target,
-          id: newId,
-          action: 'created',
-          source: 'manual',
-        })
+        // 변동 이력 'created'는 원장 트리거가 같은 트랜잭션에서 남긴다.
         // 등록 전에 첨부한 자료를 새 레코드에 업로드한다(구분 변경 시 저장된 대상 기준).
         const { failed } = await pending.flush(
           newId,

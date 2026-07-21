@@ -12,7 +12,6 @@ import {
   createUploadBatch,
   findPriorBatchByHash,
   mergeReclassify,
-  recordContribution,
 } from '@/features/networks/hooks'
 import {
   buildEnrichment,
@@ -183,14 +182,16 @@ export function BulkUploadPanel() {
         list.push(payload)
         byTable.set(target, list)
       }
+      // 등록과 이력을 한 트랜잭션에 넣는다. 종전에는 insert 후 행마다 기여 로그를 따로
+      // 밀어 넣어, 앞은 성공하고 뒤가 실패하면 배치 표식 없는 행이 남을 수 있었다.
       for (const [table, list] of byTable) {
-        const { data, error } = await supabase.from(table).insert(list).select('id')
+        const { error } = await supabase.rpc('upload_insert_entities', {
+          p_table: table,
+          p_rows: list,
+          p_batch_id: batchId,
+        })
         if (error) throw error
         touched.add(table)
-        const ids = ((data ?? []) as { id: string }[]).map((d) => d.id)
-        await Promise.all(
-          ids.map((id) => recordContribution({ table, id, action: 'created', source: 'upload', batchId })),
-        )
       }
 
       // 합치기: 같은 구분이면 제자리 보강, 다른 구분이면 재분류 이관.
@@ -201,23 +202,20 @@ export function BulkUploadPanel() {
         if (target === r.match.table) {
           const patch = buildEnrichment(r.match, r) ?? {}
           const values = r.match.deleted ? { deleted_at: null, ...patch } : patch
-          if (Object.keys(values).length) {
-            const { error } = await supabase.from(r.match.table).update(values).eq('id', r.match.id)
-            if (error) throw error
-          }
-          touched.add(r.match.table)
-          await recordContribution({
-            table: r.match.table,
-            id: r.match.id,
-            action: 'enriched',
-            source: 'upload',
-            batchId,
-            note: r.match.deleted
+          // 보강할 값이 없는 '재유입'은 원장이 바뀌지 않으므로 RPC가 기록만 남긴다.
+          const { error } = await supabase.rpc('upload_enrich_entity', {
+            p_table: r.match.table,
+            p_id: r.match.id,
+            p_values: values,
+            p_batch_id: batchId,
+            p_note: r.match.deleted
               ? '재업로드 복구·병합'
               : Object.keys(patch).length
                 ? '업로드 병합·보강'
                 : '업로드 재유입',
           })
+          if (error) throw error
+          touched.add(r.match.table)
         } else {
           const values = buildReclassifyValues(r.match, r, ENTITIES[target].label)
           await mergeReclassify({ from: r.match.table, fromId: r.match.id, to: target, values, batchId })

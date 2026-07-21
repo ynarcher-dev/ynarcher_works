@@ -222,8 +222,9 @@ export function useCreateEntity(table: EntityKey) {
 
 /**
  * 엔티티 이동(구분 변경). `from` 테이블 레코드를 `to` 테이블로 옮긴다.
- * 물리삭제 금지 규약을 지켜 신규 테이블에 insert한 뒤 기존 레코드를 soft-delete한다.
- * insert 성공 후 soft-delete가 실패하면 방금 생성한 신규 레코드를 되돌린다(보상 삭제).
+ * 대상 등록과 원본 비활성화를 reassign_entity RPC가 한 트랜잭션으로 처리하므로,
+ * 종전처럼 '대상은 만들어졌는데 원본이 안 지워져서 방금 만든 행을 물리 삭제로 되돌리는'
+ * 보상 로직이 필요 없다(물리 삭제 금지 규약에도 부합). 변동 이력은 원장 트리거가 남긴다.
  * 이동으로 생성된 신규 레코드 id를 반환한다.
  */
 export function useMoveEntity(from: EntityKey, to: EntityKey) {
@@ -232,45 +233,21 @@ export function useMoveEntity(from: EntityKey, to: EntityKey) {
     mutationFn: async ({
       id,
       values,
+      note,
     }: {
       id: string
       values: Record<string, unknown>
+      note?: string
     }): Promise<string> => {
-      const { data, error } = await supabase
-        .from(to)
-        .insert(values)
-        .select('id')
-        .single()
+      const { data, error } = await supabase.rpc('reassign_entity', {
+        p_from: from,
+        p_to: to,
+        p_id: id,
+        p_values: values,
+        p_note_target: note ?? '구분 변경 이동',
+      })
       if (error) throw error
-      const newId = (data as { id: string }).id
-
-      // 이동은 소스도 soft-delete한다. 파괴적 작업 가드를 통과하도록 이동자를 소스 기여자로
-      // 먼저 기록한다(순수 비활성화와 달리 이동은 데이터를 옮기는 것이라 허용).
-      await recordContribution({
-        table: from,
-        id,
-        action: 'edited',
-        source: 'manual',
-        note: '구분 변경 이관',
-      })
-      const { error: delError } = await supabase
-        .from(from)
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', id)
-      if (delError) {
-        // 원본 soft-delete 실패 시 신규 레코드를 되돌려 중복 노출을 막는다.
-        await supabase.from(to).delete().eq('id', newId)
-        throw delError
-      }
-      // 이관 = 대상 테이블에 신규 등록. 현재 유저를 기여자로 기록한다.
-      await recordContribution({
-        table: to,
-        id: newId,
-        action: 'created',
-        source: 'manual',
-        note: '미분류에서 이관',
-      })
-      return newId
+      return data as string
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['networks', from] })
@@ -319,23 +296,17 @@ export function useReassignCategory(from: EntityKey) {
         if (row[k] !== undefined) values[k] = row[k]
       }
 
-      const { data, error } = await supabase
-        .from(to)
-        .insert(values)
-        .select('id')
-        .single()
+      // 종전에는 여기에 기여 기록이 아예 없어 미분류 일괄 이관이 이력에서 통째로 빠졌다.
+      // 이제 RPC 한 트랜잭션이고 기록은 원장 트리거가 남긴다.
+      const { data, error } = await supabase.rpc('reassign_entity', {
+        p_from: from,
+        p_to: to,
+        p_id: row.id,
+        p_values: values,
+        p_note_target: '미분류에서 이관',
+      })
       if (error) throw error
-      const newId = (data as { id: string }).id
-
-      const { error: delError } = await supabase
-        .from(from)
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', row.id)
-      if (delError) {
-        await supabase.from(to).delete().eq('id', newId)
-        throw delError
-      }
-      return newId
+      return data as string
     },
     onSuccess: (_newId, { to }) => {
       void qc.invalidateQueries({ queryKey: ['networks', from] })
@@ -364,11 +335,10 @@ export function useUpdateEntity(table: EntityKey) {
 
 /**
  * 사유를 남기는 비활성화(소프트 삭제)를 지원하는 원장 키.
- * 기록 트리거가 붙은 원장만 나열한다 — 트리거 없는 원장을 넣으면 RPC가 거절한다
- * (사유는 사라지고 로그도 안 남는 조용한 유실을 막기 위해 서버도 화이트리스트로 막고 있다).
- * NETWORKS 9종은 트리거 이관 슬라이스에서 추가한다.
+ * 서버는 '기록 트리거가 실제로 붙어 있는가'를 카탈로그에서 확인해 거절하므로
+ * (app.has_contribution_trigger), 이 타입은 그 집합의 클라이언트 측 표현이다.
  */
-export type DeactivatableKey = 'startups' | 'global_networks'
+export type DeactivatableKey = EntityKey | 'global_networks'
 
 /**
  * 사유를 남기는 비활성화. 사유는 원장 컬럼이 아니라 기여 로그의 note로만 남으므로,
@@ -394,24 +364,35 @@ export function useDeactivateEntity(table: DeactivatableKey) {
   })
 }
 
-/** 중복 병합: duplicate → primary 로 병합(merged_into_id 지정). */
+/**
+ * 중복 병합: duplicate → primary 로 병합(merged_into_id 지정).
+ * RPC가 양쪽에 이력을 남긴다 — 중복에는 '어디로 흡수됐는지', 정본에는 '무엇을 흡수했는지'.
+ * 병합된 중복은 목록에서 사라져 이력을 열 수 없으므로 정본 쪽 기록이 실질적으로 읽히는 기록이다.
+ */
 export function useMergeEntity(table: EntityKey) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({
       primaryId,
       duplicateId,
+      note,
     }: {
       primaryId: string
       duplicateId: string
+      note?: string
     }) => {
-      const { error } = await supabase
-        .from(table)
-        .update({ merged_into_id: primaryId })
-        .eq('id', duplicateId)
+      const { error } = await supabase.rpc('merge_entity', {
+        p_table: table,
+        p_primary_id: primaryId,
+        p_duplicate_id: duplicateId,
+        p_note: note ?? null,
+      })
       if (error) throw error
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['networks', table] }),
+    onSuccess: (_v, { primaryId }) => {
+      void qc.invalidateQueries({ queryKey: ['networks', table] })
+      void qc.invalidateQueries({ queryKey: ['networks', 'contributions', table, primaryId] })
+    },
   })
 }
 
@@ -448,27 +429,12 @@ export function useContributions(table: EntityKey, id: string | undefined) {
   })
 }
 
-/**
- * 기여 1건 기록(user_id·user_name은 서버 트리거가 현재 유저로 스탬프).
- * 부수 기록이므로 실패해도 본 작업(등록/병합/업로드)을 막지 않는다(에러를 삼킨다).
- */
-export async function recordContribution(input: {
-  table: EntityKey
-  id: string
-  action: Contribution['action']
-  source: Contribution['source']
-  batchId?: string | null
-  note?: string | null
-}): Promise<void> {
-  await supabase.from('entity_contributions').insert({
-    entity_table: input.table,
-    entity_id: input.id,
-    action: input.action,
-    source: input.source,
-    batch_id: input.batchId ?? null,
-    note: input.note ?? null,
-  })
-}
+// 기록(쓰기)은 클라이언트에 두지 않는다 — 변동 이력은 원장 트리거
+// app.log_entity_contribution()이 같은 트랜잭션에서 남긴다(20260721150000·160000).
+// 손으로 남기던 시절에는 수정·미분류 일괄 이관·임포터가 이력에서 통째로 빠졌고,
+// 구분 변경은 두 곳이 각각 기록해 'created'가 두 줄이 됐다.
+// 사유·배치처럼 트리거가 알 수 없는 정보는 전용 RPC(deactivate_entity/reassign_entity/
+// merge_entity/upload_*)가 트랜잭션 컨텍스트로 실어 보낸다.
 
 /** 업로드 배치 이력 생성(uploaded_by는 서버 트리거 스탬프). 배치 id 반환(실패 시 null). */
 export async function createUploadBatch(input: {
@@ -497,8 +463,8 @@ export async function createUploadBatch(input: {
 
 /**
  * 합치기+재분류: 기존 매칭 레코드를 대상 구분 테이블로 이관한다(미분류→실구분 또는 명시적 override).
- * useMoveEntity와 동일 규약: 대상에 병합 완성값을 insert 후 원본 soft-delete(실패 시 보상 삭제).
- * 파괴적 가드 통과를 위해 원본에 기여를 먼저 기록한다. 신규 레코드 id 반환.
+ * 수동 이관과 같은 reassign_entity RPC를 쓰되 업로드 컨텍스트(source·batch_id)를 실어 보낸다.
+ * 신규 레코드 id 반환.
  */
 export async function mergeReclassify(input: {
   from: EntityKey
@@ -507,39 +473,19 @@ export async function mergeReclassify(input: {
   values: Record<string, unknown>
   batchId?: string | null
 }): Promise<string> {
-  const { data, error } = await supabase
-    .from(input.to)
-    .insert(input.values)
-    .select('id')
-    .single()
+  const { data, error } = await supabase.rpc('reassign_entity', {
+    p_from: input.from,
+    p_to: input.to,
+    p_id: input.fromId,
+    p_values: input.values,
+    p_source: 'upload',
+    p_batch_id: input.batchId ?? null,
+    p_target_action: 'merged',
+    p_note_target: '업로드 병합·재분류',
+    p_note_source: '업로드 재분류',
+  })
   if (error) throw error
-  const newId = (data as { id: string }).id
-
-  await recordContribution({
-    table: input.from,
-    id: input.fromId,
-    action: 'edited',
-    source: 'upload',
-    batchId: input.batchId,
-    note: '업로드 재분류',
-  })
-  const { error: delError } = await supabase
-    .from(input.from)
-    .update({ deleted_at: new Date().toISOString() })
-    .eq('id', input.fromId)
-  if (delError) {
-    await supabase.from(input.to).delete().eq('id', newId)
-    throw delError
-  }
-  await recordContribution({
-    table: input.to,
-    id: newId,
-    action: 'merged',
-    source: 'upload',
-    batchId: input.batchId,
-    note: '업로드 병합·재분류',
-  })
-  return newId
+  return data as string
 }
 
 /** 동일 콘텐츠 해시의 이전 업로드 이력(동일 파일 재업로드 경고용). */

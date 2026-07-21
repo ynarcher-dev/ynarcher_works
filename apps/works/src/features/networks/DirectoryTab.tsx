@@ -4,10 +4,9 @@ import { useNavigate } from 'react-router-dom'
 import { EntityFormModal } from '@/features/networks/EntityFormModal'
 import { DeactivateReasonModal } from '@/features/networks/DeactivateReasonModal'
 import {
-  recordContribution,
+  useDeactivateEntity,
   useEntityPage,
   useReassignCategory,
-  useUpdateEntity,
   type EntityRow,
 } from '@/features/networks/hooks'
 import {
@@ -44,7 +43,7 @@ interface DirectoryTabProps {
 export function DirectoryTab({ config, keyword, creating, setCreating }: DirectoryTabProps) {
   const navigate = useNavigate()
   const toast = useToast()
-  const update = useUpdateEntity(config.table)
+  const deactivate = useDeactivateEntity(config.table)
   const [page, setPage] = useState(0)
   const [selected, setSelected] = useState<string[]>([])
   const [bulkCat, setBulkCat] = useState('')
@@ -143,24 +142,15 @@ export function DirectoryTab({ config, keyword, creating, setCreating }: Directo
       }
     : undefined
 
-  // 비활성화 사유 확정 → 기여 로그(사유·행위자)를 먼저 남기고 soft-delete한다.
-  // 기여를 먼저 기록해 파괴적 가드(기여자 검사)를 통과시키고, 사유·비활성화자를 함께 보존한다.
+  // 비활성화 사유 확정 → 사유를 트랜잭션 컨텍스트에 실어 주는 RPC 경유(20260721160000).
+  // 원장 UPDATE와 사유 기록이 한 트랜잭션이라, 종전처럼 '비활성화 기록만 남고 행은 살아 있는'
+  // 어긋난 상태가 생기지 않는다.
   const confirmDeactivate = async (reason: string) => {
     if (!deactivateTarget) return
     const target = deactivateTarget
     setDeactivateBusy(true)
     try {
-      await recordContribution({
-        table: config.table,
-        id: target.id,
-        action: 'deactivated',
-        source: 'manual',
-        note: reason,
-      })
-      await update.mutateAsync({
-        id: target.id,
-        values: { deleted_at: new Date().toISOString() },
-      })
+      await deactivate.mutateAsync({ id: target.id, reason })
       toast.show(`${config.label}을(를) 비활성화했습니다.`, 'success')
       setDeactivateTarget(null)
     } catch {
