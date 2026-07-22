@@ -308,8 +308,11 @@ export async function findExistingMatches(
 }
 
 /**
- * 병합(합치기) 시 기존 레코드의 빈 필드를 업로드 값으로 보강하는 부분 업데이트를 만든다.
- * 비파괴 원칙: 기존 값이 있는 필드는 건드리지 않는다. 보강할 게 없으면 null.
+ * 병합(합치기) 시 기존 레코드를 업로드 값으로 보강하는 부분 업데이트를 만든다. 보강할 게 없으면 null.
+ * - 연락처(이메일·전화)는 비파괴 — 기존 값이 있으면 건드리지 않고 빈 칸만 채운다.
+ * - 소속·부서·직책은 '신규를 현재로 승격' — 새 값이 있고 기존과 다르면 덮어쓴다.
+ *   덮인 직전 조합은 원장 트리거(app.track_affiliation_history)가 profile.affiliation_history에
+ *   보존하므로, 여기서 이력을 직접 만들지 않는다(트리거가 배열의 단일 소유자).
  */
 export function buildEnrichment(
   existing: ExistingRef,
@@ -320,12 +323,14 @@ export function buildEnrichment(
   let profChanged = false
   if (!existing.email && row.email) patch.email = row.email
   if (!existing.phone && row.phone) patch.phone = row.phone.replace(/\D/g, '')
-  if (!existing.affiliation && row.affiliation) patch.affiliation = row.affiliation
-  if (!prof.department && row.department) {
+  if (row.affiliation && row.affiliation !== (existing.affiliation ?? '')) {
+    patch.affiliation = row.affiliation
+  }
+  if (row.department && row.department !== ((prof.department as string) ?? '')) {
     prof.department = row.department
     profChanged = true
   }
-  if (!prof.position && row.position) {
+  if (row.position && row.position !== ((prof.position as string) ?? '')) {
     prof.position = row.position
     profChanged = true
   }
@@ -335,7 +340,9 @@ export function buildEnrichment(
 
 /**
  * 합치기+재분류 시 대상 테이블에 insert할 병합 완성 페이로드.
- * 기존 레코드 값을 기준으로 업로드 값이 빈 필드를 보강하고, 구분(profile.category)을 대상 라벨로 바꾼다.
+ * 기존 레코드 값을 기준으로 소속·부서·직책은 신규를 현재로 승격하고, 구분(profile.category)을 대상 라벨로 바꾼다.
+ * 재분류는 대상 테이블에 INSERT라 원장 트리거(UPDATE 전용)가 돌지 않는다 —
+ * 승격으로 소속 3축이 바뀌면 직전 조합을 여기서 직접 이력에 보존한다(트리거와 같은 항목 형태).
  */
 export function buildReclassifyValues(
   existing: ExistingRef,
@@ -343,16 +350,37 @@ export function buildReclassifyValues(
   targetLabel: string,
 ): Record<string, unknown> {
   const patch = buildEnrichment(existing, row) ?? {}
-  const profile = {
+  const profile: Record<string, unknown> = {
     ...existing.profile,
     ...((patch.profile as Record<string, unknown>) ?? {}),
     category: targetLabel,
+  }
+  const nextAffiliation = (patch.affiliation as string) ?? existing.affiliation ?? null
+  const oldDept = (existing.profile.department as string) ?? null
+  const oldPos = (existing.profile.position as string) ?? null
+  const changed =
+    nextAffiliation !== (existing.affiliation ?? null) ||
+    ((profile.department as string) ?? null) !== oldDept ||
+    ((profile.position as string) ?? null) !== oldPos
+  if (changed && (existing.affiliation || oldDept || oldPos)) {
+    const prior = Array.isArray(existing.profile.affiliation_history)
+      ? [...(existing.profile.affiliation_history as unknown[])]
+      : []
+    prior.push({
+      affiliation: existing.affiliation ?? null,
+      department: oldDept,
+      position: oldPos,
+      source: 'upload',
+      note: '재분류 승격',
+      at: new Date().toISOString(),
+    })
+    profile.affiliation_history = prior
   }
   return {
     name: existing.name,
     email: (patch.email as string) ?? existing.email ?? null,
     phone: (patch.phone as string) ?? existing.phone ?? null,
-    affiliation: (patch.affiliation as string) ?? existing.affiliation ?? null,
+    affiliation: nextAffiliation,
     expertise: existing.expertise,
     profile,
   }

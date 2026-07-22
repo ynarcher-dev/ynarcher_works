@@ -6,6 +6,7 @@ import { PhotoBox } from '@/features/networks/PhotoBox'
 import { ChangeHistoryPanel, uniqueContributors } from '@/features/networks/ChangeHistoryPanel'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
+import { AffiliationHistoryPanel } from '@/features/networks/AffiliationHistoryPanel'
 import { type GlobalRow } from '@/features/networks/globalConfig'
 import { useGlobalContributions, useGlobalEntity } from '@/features/networks/globalHooks'
 
@@ -99,6 +100,11 @@ function GlobalView({ record }: { record: GlobalRow }) {
         ) : (
           <p className="text-body text-gray-600">등록된 노트 내용이 없습니다.</p>
         )}
+      </PanelCard>
+
+      {/* 이력(소속·부서·직책 변경): 국내 상세와 동일 규격. 현재값은 부제가, 과거 조합은 이 카드가 담는다. */}
+      <PanelCard title="이력">
+        <AffiliationHistoryPanel profile={profile} />
       </PanelCard>
       </div>
 

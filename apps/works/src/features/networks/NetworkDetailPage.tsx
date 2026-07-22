@@ -8,6 +8,7 @@ import { ChangeHistoryPanel, uniqueContributors } from '@/features/networks/Chan
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { CareerView, hasCareerRows } from '@/features/networks/CareerView'
+import { AffiliationHistoryPanel } from '@/features/networks/AffiliationHistoryPanel'
 import {
   ENTITIES,
   isCompactEntity,
@@ -164,6 +165,11 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
           )}
         </SectionCard>
       )}
+
+      {/* 이력(소속·부서·직책 변경): 인물·조직 전 유형 공통 노출. 현재값은 부제가, 과거 조합은 이 카드가 담는다. */}
+      <SectionCard title="이력">
+        <AffiliationHistoryPanel profile={profile} />
+      </SectionCard>
 
       <SectionCard title="노트">
         {intro ? (
