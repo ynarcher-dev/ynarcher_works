@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/auth/authStore'
 import { supabase } from '@/lib/supabase'
 
@@ -76,21 +76,143 @@ export interface SystemEvent {
   title: string
   starts_at: string | null
   ends_at: string | null
+  /** 사용자 일정의 부가정보(종일·메모·동행자)를 담은 JSON 문자열. 시스템 이벤트는 평문/빈값. */
+  body: string | null
+  /** 등록자(users.id). 본인 일정 삭제 노출 판정에 쓴다. 시스템 이벤트는 null일 수 있다. */
+  created_by: string | null
 }
 
-/** 전사 통합 캘린더 이벤트(system_events, 4개 레이어). */
+/** 사용자 일정 카테고리 — 업무(동행자 지정 가능) / 휴가. event_type 값으로 저장한다. */
+export type EventCategory = 'WORK' | 'LEAVE'
+
+export interface EventCompanion {
+  id: string
+  name: string
+}
+
+export interface EventMeta {
+  allDay: boolean
+  memo: string
+  companions: EventCompanion[]
+}
+
+/** body(JSON 또는 평문)에서 종일·메모·동행자를 해석한다. 파싱 실패 시 평문을 메모로 본다. */
+export function parseEventMeta(body: string | null): EventMeta {
+  if (body) {
+    try {
+      const o = JSON.parse(body) as Record<string, unknown>
+      if (o && typeof o === 'object' && !Array.isArray(o)) {
+        return {
+          allDay: o.all_day === true,
+          memo: typeof o.memo === 'string' ? o.memo : '',
+          companions: Array.isArray(o.companions) ? (o.companions as EventCompanion[]) : [],
+        }
+      }
+    } catch {
+      // 평문 body(시스템 이벤트 등)는 아래에서 메모로 처리한다.
+    }
+  }
+  return { allDay: false, memo: body ?? '', companions: [] }
+}
+
+/** 종일·메모·동행자를 body JSON 문자열로 직렬화한다(비어 있으면 null). */
+export function encodeEventBody(meta: Partial<EventMeta>): string | null {
+  const payload: Record<string, unknown> = {}
+  if (meta.allDay) payload.all_day = true
+  if (meta.memo) payload.memo = meta.memo
+  if (meta.companions && meta.companions.length > 0) payload.companions = meta.companions
+  return Object.keys(payload).length > 0 ? JSON.stringify(payload) : null
+}
+
+/**
+ * 캘린더 이벤트 — 사용자가 등록한 업무/휴가 일정만 조회한다. 타 워크스페이스에서 자동 반영되는
+ * 시스템 레이어(AC/PROJECT/FUND/COMPANY)는 이 캘린더에 노출하지 않는다(데이터는 보존, 표시만 제외).
+ */
 export function useSystemEvents() {
   return useQuery({
     queryKey: ['hub', 'events'],
     queryFn: async (): Promise<SystemEvent[]> => {
       const { data } = await supabase
         .from('system_events')
-        .select('id, event_type, title, starts_at, ends_at')
+        .select('id, event_type, title, starts_at, ends_at, body, created_by')
+        .in('event_type', ['WORK', 'LEAVE'])
         .is('deleted_at', null)
         .order('starts_at', { ascending: true })
         .limit(100)
       return (data ?? []) as SystemEvent[]
     },
+  })
+}
+
+export interface NewSystemEvent {
+  event_type: EventCategory
+  title: string
+  /** ISO 문자열(날짜 또는 날짜+시간). */
+  starts_at: string
+  ends_at: string | null
+  body: string | null
+}
+
+/**
+ * 전사 캘린더에 사용자 일정을 등록한다. 소유 워크스페이스는 OFFICE로 고정하며, 쓰기 권한·본인
+ * 소유(created_by) 여부는 RLS(system_events_insert)가 강제하므로 created_by만 실어 보낸다.
+ */
+export function useCreateSystemEvent() {
+  const qc = useQueryClient()
+  const userId = useAuthStore((s) => s.user?.id)
+  return useMutation({
+    mutationFn: async (input: NewSystemEvent): Promise<void> => {
+      const { error } = await supabase.from('system_events').insert({
+        event_type: input.event_type,
+        workspace_key: 'office',
+        title: input.title,
+        body: input.body,
+        starts_at: input.starts_at,
+        ends_at: input.ends_at,
+        created_by: userId,
+      })
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['hub', 'events'] }),
+  })
+}
+
+/** 사용자 일정 수정. 소유·워크스페이스는 그대로 두고 내용/시간만 갱신한다. */
+export function useUpdateSystemEvent() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: NewSystemEvent & { id: string }): Promise<void> => {
+      const { error } = await supabase
+        .from('system_events')
+        .update({
+          event_type: input.event_type,
+          title: input.title,
+          body: input.body,
+          starts_at: input.starts_at,
+          ends_at: input.ends_at,
+        })
+        .eq('id', input.id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['hub', 'events'] }),
+  })
+}
+
+/**
+ * 사용자 일정 삭제(soft delete — deleted_at 스탬프). RLS(system_events_update)가 OFFICE 쓰기
+ * 권한을 강제하며, UI는 본인이 등록한 일정에만 삭제를 노출한다.
+ */
+export function useDeleteSystemEvent() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string): Promise<void> => {
+      const { error } = await supabase
+        .from('system_events')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['hub', 'events'] }),
   })
 }
 

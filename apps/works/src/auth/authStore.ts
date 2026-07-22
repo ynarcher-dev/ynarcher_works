@@ -36,3 +36,16 @@ export function hasWorkspaceRead(
   const level = user.permissions[workspace]?.level
   return level === 'read' || level === 'write'
 }
+
+/**
+ * 워크스페이스 쓰기 권한 보유 여부(write 전용). UI 노출 판정용이며, 실제 강제는 RLS가 한다
+ * (UI에서 숨기는 것은 보안이 아니다). super_admin은 RLS is_admin()과 동일하게 전부 통과.
+ */
+export function hasWorkspaceWrite(
+  user: AuthUser | null,
+  workspace: WorkspaceKey,
+): boolean {
+  if (!user) return false
+  if (user.role === 'super_admin') return true
+  return user.permissions[workspace]?.level === 'write'
+}

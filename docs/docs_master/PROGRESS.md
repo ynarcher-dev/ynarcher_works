@@ -90,6 +90,7 @@
 - [x] 게시판 레지스트리(boards) DB 실연동 — 관리 콘솔·사이드바·OFFICE 탭 <!-- 20260720200000_office_boards를 운영 DB에 적용하고, zustand 인메모리 스토어(useBoardStore)를 react-query 서버 훅(boardHooks: useBoards/useCreateBoard/useUpdateBoard/useSetBoardActive)으로 교체. boardStore.ts는 타입·상수(BoardDef/BOARD_KIND_LABEL/boardsOfKind/시드)만 소유. 쓰기는 RLS로 admin 전용 강제. tsc/vite build 통과 -->
 - [ ] 게시글·자료(board_posts) DB 실연동 (조회·작성 훅, 첨부 Storage 업로드, material-download 경유 다운로드) <!-- 게시글은 아직 zustand 인메모리 데모(boardPostStore). 스키마·설계는 3_1_1로 확정됨 -->
 - [ ] 게시판 권한 범위 DEPT 구현 (board_scope='DEPT' + board_departments 연결 테이블) <!-- 이번 마이그레이션에서는 enum 값만 예약, 정책 분기 없음(admin 외 차단) -->
+- [x] 전사 캘린더 사용자 일정(업무/휴가) 등록·수정·삭제 <!-- 슬라이드오버 캘린더를 상하 배치+컴팩트(이벤트=레이어색 점)로 재구성, 선택일 상세를 업무/휴가/기타로 그룹핑(업무↔휴가 구분선). EventEditorModal(등록/수정 겸용, 저장 후 계속 추가), 카테고리=event_type WORK/LEAVE, 종일·메모(내용)·동행자는 body JSON({all_day,memo,companions}), 시작/종료 날짜+시간(여러 날 걸침=기간 내 모든 날짜 칸 반영). 동행자=내부 임직원 토큰입력(CompanionPicker, 오버레이 드롭다운, TagChip), 작성자 고정 표시. 본인(created_by) 일정만 클릭해 수정/삭제(soft delete). 스키마 변경 없이 기존 system_events RLS(insert/update) 활용, 시스템 레이어(AC/PROJECT/FUND/COMPANY)는 조회에서 제외. hasWorkspaceWrite 추가 -->
 - [ ] 회의실 예약/거래처 정보 상세 구현 <!-- 사이드바 메뉴와 준비 중 화면 골격만 존재 -->
 - [x] 전역 진입점(AI 에이전트·전사 캘린더·알림) 모듈형 슬라이드오버 전환 <!-- 상단바 AI/캘린더/알림을 페이지 이동(?tab)·드롭다운에서 현재 화면 위 우측 슬라이드오버로 개편. packages/ui SlideOver 신규(비차단 오버레이=뒤 화면 조작 유지, 우→좌 슬라이드+틴트 연출, z-panel), RightPanelProvider 단일 활성(하나 열면 다른 것 닫힘), 좁은 화면 전체폭 폴백. AiAgentPanel/CalendarPanel 재사용, 알림 목록 NotificationList 추출 -->
 
