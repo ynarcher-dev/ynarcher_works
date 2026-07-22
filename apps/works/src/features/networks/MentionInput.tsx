@@ -1,5 +1,5 @@
-import { TextArea, cn } from '@ynarcher/ui'
-import { useMemo, useRef, useState } from 'react'
+import { cn } from '@ynarcher/ui'
+import { Fragment, useMemo, useRef, useState } from 'react'
 import { useAuthStore } from '@/auth/authStore'
 import { useEmployees } from '@/features/management/hooks'
 
@@ -9,6 +9,12 @@ interface MentionCandidate {
   name: string
   email: string | null
 }
+
+/**
+ * 입력창(textarea)과 뒤에 겹쳐 그리는 하이라이트 백드롭이 공유하는 형태(geometry).
+ * 둘이 같은 여백·글자·줄높이를 써야 백드롭의 파란 강조가 실제 글자와 정확히 겹친다.
+ */
+const FIELD_GEOMETRY = 'w-full min-h-[7.5rem] box-border rounded-radius-md border px-3 py-2 text-body-sm'
 
 /** 캐럿 직전의 `@질의`를 찾는다. 없으면 null(팝업 닫힘). */
 function findQuery(value: string, caret: number): { start: number; text: string } | null {
@@ -23,10 +29,26 @@ function findQuery(value: string, caret: number): { start: number; text: string 
   return { start: at, text }
 }
 
+/** 백드롭에 그릴 하이라이트 조각. `@이름`만 파란 칩처럼, 나머지는 그대로.
+ *  주의: 글자 폭이 textarea와 달라지면 정렬이 어긋나므로 두께(font-weight)·자간은 바꾸지 않고
+ *  색과 배경만 입힌다(배경 박스는 레이아웃에 영향을 주지 않는다). */
+function highlight(text: string) {
+  return text.split(/(@\S+)/g).map((part, i) =>
+    part.startsWith('@') ? (
+      <span key={i} className="rounded-radius-sm bg-brand/15 text-brand">
+        {part}
+      </span>
+    ) : (
+      <Fragment key={i}>{part}</Fragment>
+    ),
+  )
+}
+
 /**
  * @멘션 자동완성이 붙은 코멘트 입력창. 내부 임직원(useEmployees)을 후보로 띄우고,
- * 고른 사람은 본문에 `@이름 `으로 삽입한다. onChange로 (본문, 멘션 user id[])를 함께 올린다.
- * 멘션 id는 "지금 본문에 `@이름`이 남아 있는" 사람만 산출하므로, 텍스트를 지우면 태그도 풀린다.
+ * 고른 사람은 본문에 `@이름 `으로 삽입한다. 입력창 안에서 `@이름`을 파란색으로 인라인 강조해
+ * "멘션이 걸렸다"를 즉시 인지시킨다(textarea는 부분 서식이 안 되므로 뒤에 백드롭을 겹쳐 칠한다).
+ * onChange로 (본문, 멘션 user id[])를 함께 올린다. 본문에서 `@이름`을 지우면 태그도 풀린다.
  */
 export function MentionInput({
   value,
@@ -46,6 +68,7 @@ export function MentionInput({
   rows?: number
 }) {
   const ref = useRef<HTMLTextAreaElement>(null)
+  const mirrorRef = useRef<HTMLDivElement>(null)
   // 이 입력창에서 한 번이라도 고른 사람(이름→id). 본문 잔존 여부로 실제 멘션을 판정한다.
   const pickedRef = useRef<Map<string, string>>(new Map())
   const [query, setQuery] = useState<{ start: number; text: string } | null>(null)
@@ -103,12 +126,48 @@ export function MentionInput({
 
   return (
     <div className="relative">
-      <TextArea
+      {/* 백드롭: textarea와 완전히 동일한 형태로 뒤에 깔고 멘션만 파랗게 칠한다. */}
+      <div
+        aria-hidden
+        className={cn(
+          FIELD_GEOMETRY,
+          'pointer-events-none absolute inset-0 select-none overflow-hidden border-transparent',
+          disabled ? 'bg-gray-50' : 'bg-white',
+        )}
+      >
+        <div
+          ref={mirrorRef}
+          className={cn(
+            'whitespace-pre-wrap break-words',
+            disabled ? 'text-gray-400' : 'text-gray-900',
+          )}
+        >
+          {highlight(value)}
+          {/* 마지막 줄이 개행으로 끝나도 높이를 유지시키는 보정 문자(zero-width space). */}
+          {'​'}
+        </div>
+      </div>
+
+      {/* 실제 입력: 글자는 투명(백드롭이 보이게)하되 캐럿·선택·IME는 그대로 살린다. */}
+      <textarea
         ref={ref}
         rows={rows}
         value={value}
         disabled={disabled}
         placeholder={placeholder}
+        className={cn(
+          FIELD_GEOMETRY,
+          'relative block resize-y bg-transparent text-transparent caret-gray-900 shadow-soft transition-all duration-fast',
+          'border-gray-300 placeholder:text-gray-400 hover:border-gray-400',
+          'focus-visible:border-brand/50 focus-visible:shadow-popover focus-visible:outline-none',
+          'disabled:cursor-not-allowed disabled:border-gray-100',
+        )}
+        onScroll={(e) => {
+          // 여러 줄로 스크롤될 때 백드롭도 같은 만큼 밀어 글자 정렬을 유지한다.
+          if (mirrorRef.current) {
+            mirrorRef.current.style.transform = `translateY(${-e.currentTarget.scrollTop}px)`
+          }
+        }}
         onChange={(e) => {
           emit(e.target.value)
           refreshQuery(e.target.value, e.target.selectionStart)
@@ -145,6 +204,7 @@ export function MentionInput({
           }
         }}
       />
+
       {open && (
         <ul
           className={cn(

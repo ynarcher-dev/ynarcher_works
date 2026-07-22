@@ -16,11 +16,14 @@ function formatDateTime(v: string): string {
   return v.length >= 16 ? v.slice(0, 16).replace('T', ' ') : v.slice(0, 10)
 }
 
-/** 본문 속 `@이름` 토큰을 브랜드색으로 강조해 렌더한다(멘션은 공백 없는 한 덩어리). */
+/** 본문 속 `@이름` 토큰을 태그 칩처럼 강조해 렌더한다(멘션은 공백 없는 한 덩어리). */
 function renderBody(body: string) {
   return body.split(/(@\S+)/g).map((part, i) =>
     part.startsWith('@') ? (
-      <span key={i} className="font-medium text-brand">
+      <span
+        key={i}
+        className="rounded-radius-sm bg-brand/10 px-1 py-px font-semibold text-brand"
+      >
         {part}
       </span>
     ) : (
