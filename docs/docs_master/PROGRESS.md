@@ -91,6 +91,8 @@
 - [ ] 게시글·자료(board_posts) DB 실연동 (조회·작성 훅, 첨부 Storage 업로드, material-download 경유 다운로드) <!-- 게시글은 아직 zustand 인메모리 데모(boardPostStore). 스키마·설계는 3_1_1로 확정됨 -->
 - [ ] 게시판 권한 범위 DEPT 구현 (board_scope='DEPT' + board_departments 연결 테이블) <!-- 이번 마이그레이션에서는 enum 값만 예약, 정책 분기 없음(admin 외 차단) -->
 - [ ] 회의실 예약/거래처 정보 상세 구현 <!-- 사이드바 메뉴와 준비 중 화면 골격만 존재 -->
+- [x] 전역 진입점(AI 에이전트·전사 캘린더·알림) 모듈형 슬라이드오버 전환 <!-- 상단바 AI/캘린더/알림을 페이지 이동(?tab)·드롭다운에서 현재 화면 위 우측 슬라이드오버로 개편. packages/ui SlideOver 신규(비차단 오버레이=뒤 화면 조작 유지, 우→좌 슬라이드+틴트 연출, z-panel), RightPanelProvider 단일 활성(하나 열면 다른 것 닫힘), 좁은 화면 전체폭 폴백. AiAgentPanel/CalendarPanel 재사용, 알림 목록 NotificationList 추출 -->
+
 
 ## Phase 6. NETWORKS 워크스페이스 (마스터 원장)
 

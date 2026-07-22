@@ -138,6 +138,9 @@ export default {
         dropdown: '100',
         navbar: '200',
         sidebar: '300',
+        // 우측 슬라이드오버(전역 진입점 패널). navbar(200)보다 낮아 상단바가 위에 남고
+        // dropdown(100)보다 높아 본문 콘텐츠를 덮는다. 근거: 8_z_index_system_rules.md
+        panel: '150',
         overlay: '1000',
         modal: '1010',
         toast: '2000',

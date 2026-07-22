@@ -66,7 +66,7 @@ import {
   WorkspaceSwitcher,
   cn,
 } from '@ynarcher/ui'
-import { Fragment, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import logo from '@/assets/logo.png'
 import { hasWorkspaceRead, useAuthStore } from '@/auth/authStore'
@@ -77,6 +77,8 @@ import { MenuSectionLabel, SidebarFlyout } from '@/app/SidebarFlyout'
 import { TopbarBreadcrumb } from '@/app/TopbarBreadcrumb'
 import { GlobalSearchBox } from '@/app/GlobalSearchBox'
 import { TopbarActions, topbarIconButton } from '@/app/TopbarActions'
+import { RightPanelProvider } from '@/app/rightPanel'
+import { RightPanelHost } from '@/app/RightPanelHost'
 import { useBoards } from '@/features/hub/boardHooks'
 import { boardsOfKind } from '@/features/hub/boardStore'
 import { boardIcon } from '@/features/hub/boardIcons'
@@ -188,6 +190,15 @@ export function WorksLayout() {
   const [profileOpen, setProfileOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
+
+  // 우측 슬라이드오버 폭 계산용 사이드바 폭(펼침 15rem/접힘 4rem). 패널은 body로 포털되므로
+  // 문서 루트에 CSS 변수로 실어 전달한다 — 접힘 상태에서도 "1" 트랙과 어긋나지 않게 한다.
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      '--app-sidebar-w',
+      sidebarCollapsed ? '4rem' : '15rem',
+    )
+  }, [sidebarCollapsed])
   // 사이드바에서 뻗는 플라이아웃은 한 번에 하나만 열린다(열린 항목의 label, 없으면 null).
   const [openFlyout, setOpenFlyout] = useState<string | null>(null)
   const boards = useBoards().data ?? []
@@ -504,6 +515,7 @@ export function WorksLayout() {
   )
 
   return (
+    <RightPanelProvider>
     <AppShell
       sidebarCollapsed={sidebarCollapsed}
       sidebar={sidebar}
@@ -525,6 +537,9 @@ export function WorksLayout() {
       topbarRight={<TopbarActions />}
     >
       <Outlet />
+      {/* 전역 우측 슬라이드오버(AI·캘린더·알림). body로 포털되므로 본문 레이아웃에는 영향 없음. */}
+      <RightPanelHost />
     </AppShell>
+    </RightPanelProvider>
   )
 }
