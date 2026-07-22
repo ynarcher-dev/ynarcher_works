@@ -1,8 +1,9 @@
-import { Badge, Button, IconButton, Spinner, TextArea, cardText, tableText } from '@ynarcher/ui'
+import { Badge, Button, IconButton, Spinner, cardText, tableText } from '@ynarcher/ui'
 import { Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { useAuthStore } from '@/auth/authStore'
 import { DetailPanelCard } from '@/features/networks/DetailPanelCard'
+import { MentionInput } from '@/features/networks/MentionInput'
 import { MiniPager, usePaged } from '@/features/networks/MiniPager'
 import {
   useCreateFeedback,
@@ -13,6 +14,19 @@ import {
 
 function formatDateTime(v: string): string {
   return v.length >= 16 ? v.slice(0, 16).replace('T', ' ') : v.slice(0, 10)
+}
+
+/** 본문 속 `@이름` 토큰을 브랜드색으로 강조해 렌더한다(멘션은 공백 없는 한 덩어리). */
+function renderBody(body: string) {
+  return body.split(/(@\S+)/g).map((part, i) =>
+    part.startsWith('@') ? (
+      <span key={i} className="font-medium text-brand">
+        {part}
+      </span>
+    ) : (
+      <Fragment key={i}>{part}</Fragment>
+    ),
+  )
 }
 
 /**
@@ -30,6 +44,7 @@ export function FeedbackPanel({
   targetId: string
 }) {
   const [body, setBody] = useState('')
+  const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([])
   const { data: items, isLoading } = useFeedback(targetType, targetId)
   const create = useCreateFeedback(targetType, targetId)
   const remove = useDeleteFeedback(targetType, targetId)
@@ -38,7 +53,15 @@ export function FeedbackPanel({
   const submit = () => {
     const text = body.trim()
     if (!text || create.isPending) return
-    create.mutate(text, { onSuccess: () => setBody('') })
+    create.mutate(
+      { body: text, mentionedUserIds },
+      {
+        onSuccess: () => {
+          setBody('')
+          setMentionedUserIds([])
+        },
+      },
+    )
   }
 
   /** 본인 글 또는 admin만 삭제 노출(서버 RLS가 최종 강제). */
@@ -51,18 +74,15 @@ export function FeedbackPanel({
   return (
     <DetailPanelCard title="코멘트" count={list.length}>
       <div className="space-y-2">
-        <TextArea
+        <MentionInput
           rows={2}
           value={body}
-          onChange={(e) => setBody(e.target.value)}
-          placeholder="코멘트를 입력하세요. (Enter 등록, Shift+Enter 줄바꿈)"
-          onKeyDown={(e) => {
-            // Enter로 등록, Shift+Enter는 줄바꿈. 한글 등 IME 조합 중에는 등록하지 않는다.
-            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-              e.preventDefault()
-              submit()
-            }
+          onChange={(next, ids) => {
+            setBody(next)
+            setMentionedUserIds(ids)
           }}
+          onSubmit={submit}
+          placeholder="코멘트를 입력하세요. @로 사람을 태그하면 알림이 갑니다. (Enter 등록, Shift+Enter 줄바꿈)"
         />
         <div className="flex justify-end">
           <Button
@@ -118,7 +138,7 @@ export function FeedbackPanel({
                     />
                   )}
                 </div>
-                <p className={`mt-0.5 whitespace-pre-wrap ${cardText.value}`}>{f.body}</p>
+                <p className={`mt-0.5 whitespace-pre-wrap ${cardText.value}`}>{renderBody(f.body)}</p>
               </li>
               )
             })}

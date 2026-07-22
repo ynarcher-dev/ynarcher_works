@@ -31,15 +31,26 @@ export function useFeedback(targetType: string, targetId: string | undefined) {
   })
 }
 
-/** 피드백 작성. author_id·author_name은 서버 트리거가 현재 유저로 스탬프한다. */
+/** 코멘트 작성 입력. 멘션한 임직원 id는 서버 트리거가 알림으로 팬아웃한다. */
+export interface CreateFeedbackInput {
+  body: string
+  /** @로 태그한 임직원 user id 배열(없으면 빈 배열). */
+  mentionedUserIds?: string[]
+}
+
+/**
+ * 피드백 작성. author_id·author_name은 서버 트리거가 현재 유저로 스탬프하고,
+ * mentioned_user_ids는 팬아웃 트리거가 각 대상에게 인앱 알림으로 남긴다.
+ */
 export function useCreateFeedback(targetType: string, targetId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (body: string): Promise<void> => {
+    mutationFn: async ({ body, mentionedUserIds = [] }: CreateFeedbackInput): Promise<void> => {
       const { error } = await supabase.from('entity_feedback').insert({
         target_type: targetType,
         target_id: targetId,
         body,
+        mentioned_user_ids: mentionedUserIds,
       })
       if (error) throw error
     },

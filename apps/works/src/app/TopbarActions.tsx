@@ -5,6 +5,17 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { hasWorkspaceRead, useAuthStore } from '@/auth/authStore'
 import { MenuSectionLabel } from '@/app/SidebarFlyout'
+import {
+  useMarkAllNotificationsRead,
+  useMarkNotificationRead,
+  useNotifications,
+  type Notification,
+} from '@/features/notifications/notificationHooks'
+import { notificationRoute } from '@/features/notifications/notificationRoute'
+
+function formatWhen(v: string): string {
+  return v.length >= 16 ? v.slice(5, 16).replace('T', ' ') : v.slice(0, 10)
+}
 
 /**
  * 상단바 아이콘 버튼 공통 규격(40px 정사각, 흰 배경 위 회색 아이콘).
@@ -36,6 +47,20 @@ export function TopbarActions() {
   const [notifOpen, setNotifOpen] = useState(false)
   const canOffice = hasWorkspaceRead(user, 'office')
 
+  const { data: notifications } = useNotifications()
+  const markRead = useMarkNotificationRead()
+  const markAllRead = useMarkAllNotificationsRead()
+  const list = notifications ?? []
+  const unread = list.filter((n) => n.read_at == null).length
+
+  /** 알림 클릭: 읽음 처리 후 대상 상세로 이동(경로가 없으면 이동 생략). */
+  const openNotification = (n: Notification) => {
+    if (n.read_at == null) markRead.mutate(n.id)
+    const to = notificationRoute(n.target_type, n.target_id)
+    setNotifOpen(false)
+    if (to) navigate(to)
+  }
+
   return (
     <div className="flex items-center gap-1">
       {canOffice &&
@@ -62,24 +87,71 @@ export function TopbarActions() {
         open={notifOpen}
         onClose={() => setNotifOpen(false)}
         align="right"
-        className="w-64"
+        className="w-80"
         trigger={
           <button
             type="button"
-            aria-label="알림"
+            aria-label={unread > 0 ? `알림 ${unread}건` : '알림'}
             title="알림"
             onClick={() => setNotifOpen((v) => !v)}
-            className={topbarIconButton}
+            className={cn(topbarIconButton, 'relative')}
           >
             <Bell aria-hidden className="size-5" strokeWidth={1.8} />
+            {unread > 0 && (
+              // 미읽음 배지(9건 초과는 9+). 종 아이콘 우상단에 겹친다.
+              <span className="absolute right-1.5 top-1.5 flex min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[0.625rem] font-bold leading-4 text-white">
+                {unread > 9 ? '9+' : unread}
+              </span>
+            )}
           </button>
         }
       >
-        <MenuSectionLabel>알림</MenuSectionLabel>
-        {/* 알림 원장·구독 모델이 아직 없다. 배지·건수를 임의로 표시하지 않고 상태를 그대로 밝힌다. */}
-        <p className="px-3 py-2 text-body text-gray-500">
-          알림 기능은 준비 중입니다.
-        </p>
+        <div className="flex items-center justify-between pr-1">
+          <MenuSectionLabel>알림</MenuSectionLabel>
+          {unread > 0 && (
+            <button
+              type="button"
+              onClick={() => markAllRead.mutate()}
+              className="px-2 py-1 text-caption text-gray-500 hover:text-gray-900"
+            >
+              모두 읽음
+            </button>
+          )}
+        </div>
+        {list.length === 0 ? (
+          <p className="px-3 py-2 text-body text-gray-500">받은 알림이 없습니다.</p>
+        ) : (
+          <ul className="max-h-96 overflow-auto">
+            {list.map((n) => (
+              <li key={n.id}>
+                <button
+                  type="button"
+                  onClick={() => openNotification(n)}
+                  className={cn(
+                    'flex w-full flex-col gap-0.5 px-3 py-2 text-left hover:bg-gray-50',
+                    n.read_at == null && 'bg-brand/5',
+                  )}
+                >
+                  <span className="flex items-center gap-1.5">
+                    {n.read_at == null && (
+                      <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-brand" />
+                    )}
+                    <span className="text-body text-gray-900">
+                      <b className="font-semibold">{n.actor_name ?? '누군가'}</b>님이 코멘트에서 회원님을
+                      언급했습니다.
+                    </span>
+                  </span>
+                  {n.body_preview && (
+                    <span className="line-clamp-2 text-caption text-gray-500">{n.body_preview}</span>
+                  )}
+                  <span className="text-caption tabular-nums text-gray-400">
+                    {formatWhen(n.created_at)}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </Dropdown>
     </div>
   )
