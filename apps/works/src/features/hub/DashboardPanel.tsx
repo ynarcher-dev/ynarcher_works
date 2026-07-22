@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import aiBannerGraphic from '@/assets/ai_banner_graphic.png'
+import { useRightPanel } from '@/app/rightPanel'
 import {
   SEED_FILES,
   SEED_NOTICES,
@@ -262,10 +263,13 @@ function BoardCard({
 }
 
 function PromoBanner() {
+  // AI 에이전트는 페이지가 아니라 상단바 전역 진입점(우측 슬라이드오버)에서 연다.
+  const { open } = useRightPanel()
   return (
-    <Link
-      to="/office?tab=ai"
-      className="group flex h-20 w-full items-center gap-4 overflow-hidden rounded-radius-md border border-gray-300 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 pl-5 pr-4 shadow-soft transition-all duration-fast hover:border-brand hover:shadow-md"
+    <button
+      type="button"
+      onClick={() => open('ai')}
+      className="group flex h-20 w-full items-center gap-4 overflow-hidden rounded-radius-md border border-gray-300 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 pl-5 pr-4 text-left shadow-soft transition-all duration-fast hover:border-brand hover:shadow-md"
     >
       <div className="flex min-w-0 flex-1 flex-col justify-center">
         <div className="flex items-center gap-2">
@@ -290,7 +294,7 @@ function PromoBanner() {
         alt=""
         className="h-16 w-24 shrink-0 object-contain transition-transform duration-fast group-hover:scale-105"
       />
-    </Link>
+    </button>
   )
 }
 

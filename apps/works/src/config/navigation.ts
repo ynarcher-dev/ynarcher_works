@@ -163,16 +163,15 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
   office: [
     {
       items: [
-        // HUB에서 이관한 대시보드·AI 에이전트를 최상단에 배치.
+        // 대시보드를 최상단에 배치. AI 에이전트·전사 캘린더는 사이드바가 아니라 상단바
+        // 전역 진입점(우측 슬라이드오버)에서만 연다.
         { label: '대시보드', tab: 'dashboard' },
-        { label: 'AI 에이전트', tab: 'ai' },
         // 전사 인적·조직 정보 블록(조회 전용). 원장은 MANAGEMENT가 갖고 OFFICE는 확인만 한다.
         { label: '임직원 정보', tab: 'managers', dividerBefore: true },
         { label: '부서 정보', tab: 'departments' },
         { label: '지사 정보', tab: 'branches' },
         // 위 인적·조직 블록을 떼어내는 구분선.
-        { label: '전사 캘린더', tab: 'calendar', dividerBefore: true },
-        { label: '회의실 예약', tab: 'rooms' },
+        { label: '회의실 예약', tab: 'rooms', dividerBefore: true },
         // 전자결재 워크스페이스에서 통합 이관. 일정·공간 예약(캘린더·회의실)과 결재·거래처를
         // 구분선으로 나눈다. 아래 고정 게시판 그룹 경계가 이 블록과 공지사항을 다시 나눈다.
         { label: '전자결재', tab: 'approval', dividerBefore: true },

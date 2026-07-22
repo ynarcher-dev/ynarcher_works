@@ -2,10 +2,8 @@ import { PageHeader } from '@ynarcher/ui'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '@/auth/authStore'
 import { ApprovalTable } from '@/features/approval/ApprovalTable'
-import { AiAgentPanel } from '@/features/hub/AiAgentPanel'
 import { ArchiveWorkspace } from '@/features/hub/ArchiveWorkspace'
 import { BoardWorkspace } from '@/features/hub/BoardWorkspace'
-import { CalendarPanel } from '@/features/hub/CalendarPanel'
 import { DashboardPanel } from '@/features/hub/DashboardPanel'
 import { NoticeWorkspace } from '@/features/hub/NoticeWorkspace'
 import { NOTICE_TAB } from '@/features/hub/boardPostStore'
@@ -23,9 +21,9 @@ const PLACEHOLDER_TITLES: Record<string, string> = {
 }
 
 /**
- * OFFICE 워크스페이스: 대시보드·AI 에이전트(HUB에서 이관) + 임직원 정보·전사 캘린더·회의실 예약
- * + 전자결재·거래처 정보 + 게시판 홈. 좌측 사이드바(?tab)로 섹션을 전환하며,
- * 신규 게시판(ADMIN 게시판 관리 생성)이 모두 이곳에 노출된다.
+ * OFFICE 워크스페이스: 대시보드 + 임직원 정보·회의실 예약 + 전자결재·거래처 정보 + 게시판 홈.
+ * 좌측 사이드바(?tab)로 섹션을 전환하며, 신규 게시판(ADMIN 게시판 관리 생성)이 모두 이곳에
+ * 노출된다. AI 에이전트·전사 캘린더는 상단바 전역 진입점(우측 슬라이드오버)에서 연다.
  */
 export function OfficePage() {
   const [params] = useSearchParams()
@@ -87,17 +85,11 @@ export function OfficePage() {
 
   return (
     <div className="flex h-full flex-col gap-5">
-      {/* 대시보드·AI 에이전트: HUB에서 이관. 다른 메뉴와 마찬가지로 '메뉴명 + 구분선'으로 시작한다. */}
+      {/* 대시보드: HUB에서 이관. 다른 메뉴와 마찬가지로 '메뉴명 + 구분선'으로 시작한다. */}
       {tab === 'dashboard' && (
         <>
           <PageHeader title="대시보드" />
           <DashboardPanel />
-        </>
-      )}
-      {tab === 'ai' && (
-        <>
-          <PageHeader title="AI 에이전트" />
-          <AiAgentPanel />
         </>
       )}
       {tab === 'managers' && <OfficeManagersPanel />}
@@ -106,12 +98,6 @@ export function OfficePage() {
         <>
           <PageHeader title="부서 정보" />
           <DepartmentsPanel readOnly />
-        </>
-      )}
-      {tab === 'calendar' && (
-        <>
-          <PageHeader title="전사 캘린더" />
-          <CalendarPanel />
         </>
       )}
       {/* 전자결재: 전자결재 워크스페이스에서 이관한 결재 문서 테이블. */}
