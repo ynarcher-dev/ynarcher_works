@@ -1,4 +1,4 @@
-import { Badge, Button, Modal, PanelCard, tableText } from '@ynarcher/ui'
+import { Button, Modal, PanelCard, tableText } from '@ynarcher/ui'
 import { useState } from 'react'
 import { MiniTable, td, tdEmpty, tdP, th, thL } from '@/features/startup/MiniTable'
 import { StartupShareholderChart } from '@/features/startup/StartupShareholderChart'
@@ -43,16 +43,11 @@ function HolderTable({ holders }: { holders: Shareholder[] }) {
   )
 }
 
-/** 스냅샷 헤더: 기준일 + 라운드 배지. */
+/** 스냅샷 헤더: 기준일. */
 function SnapshotMeta({ snap }: { snap: ShareholderSnapshot }) {
   return (
     <div className="flex items-center gap-2">
       <span className={tableText.meta}>기준일 {snap.date || '-'}</span>
-      {snap.round && (
-        <Badge tone="neutral">
-          {snap.round}
-        </Badge>
-      )}
     </div>
   )
 }
@@ -81,12 +76,12 @@ export function StartupShareholderCard({ history }: { history: ShareholderSnapsh
       {!latest || latest.holders.length === 0 ? (
         <p className="text-body text-gray-600">등록된 주주 정보가 없습니다.</p>
       ) : (
-        // 좌: 도넛 차트 · 우: 표(하단 우측에 기준일·라운드)
+        // 좌: 도넛 차트 · 우: 표(하단 우측에 기준일)
         <div className="grid items-center gap-4 lg:grid-cols-2">
           <StartupShareholderChart shareholders={latest.holders} />
           <div className="space-y-2">
             <HolderTable holders={latest.holders} />
-            {(latest.date || latest.round) && (
+            {latest.date && (
               <div className="flex justify-end">
                 <SnapshotMeta snap={latest} />
               </div>

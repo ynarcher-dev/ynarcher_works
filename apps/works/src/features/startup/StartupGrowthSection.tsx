@@ -1,6 +1,7 @@
-import { PanelCard, cardText } from '@ynarcher/ui'
+import { Badge, PanelCard, cardText } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import { type GrowthMetrics } from '@/features/startup/startupGrowth'
+import { useStartupFundInvestments } from '@/features/fund/hooks'
 import { CHART_COLORS, StartupMetricChart, type ChartSeries } from '@/features/startup/StartupMetricChart'
 import { MiniTable, td, tdEmpty, tdL, tdP, th, thL } from '@/features/startup/MiniTable'
 import { SectionHeading } from '@/features/startup/SectionHeading'
@@ -67,21 +68,50 @@ function Empty({ text }: { text: string }) {
   return <p className="text-body text-gray-600">{text}</p>
 }
 
+/** 투자 현황 표/차트에 그릴 한 행. 외부 라운드(jsonb)와 자사 펀드 투자(관계형)를 합친 표시형. */
+interface InvestmentRow {
+  date: string
+  round?: string | null
+  valuation?: number | null
+  fundingAmount?: number | null
+  investor?: string | null
+  /** true면 자사 운용 펀드가 집행한 투자(FUND 원장 연동). */
+  isFund?: boolean
+}
+
+const byDateDesc = (a: InvestmentRow, b: InvestmentRow) =>
+  String(b.date ?? '').localeCompare(String(a.date ?? ''))
+
 interface Props {
   growth: GrowthMetrics
+  /** 스타트업 레코드 id. 있으면 자사 펀드 투자(관계형)를 조회해 투자 현황에 병합한다. */
+  startupId?: string
 }
 
 /**
  * 성장 지표 섹션(읽기): 재무/매출/고용/투자 현황 표 + 차트.
  * 재무·매출·고용은 연도 기준, 투자는 월 기준으로 각각 독립 목록이다.
+ * 투자 현황은 외부 라운드(growth_metrics.investment, jsonb)와 자사 펀드 투자
+ * (investments 원장, 브리지 RPC)를 한 표에 합쳐 최신순으로 보여준다. 자사 펀드 행은
+ * FUND에서만 편집 가능하므로 여기선 조회만 하며 '자사' 배지로 구분한다.
  * 연혁은 별도 카드(StartupBusinessTimeline)로 분리해 주주 구성 아래에 둔다.
  * 편집은 통합 수정 폼에서 관리하므로 카드별 수정 버튼·수정 날짜는 두지 않는다.
  */
-export function StartupGrowthSection({ growth }: Props) {
+export function StartupGrowthSection({ growth, startupId }: Props) {
+  const { data: fundInvestments } = useStartupFundInvestments(startupId)
   const finance = recent(growth.finance)
   const revenue = recent(growth.revenue)
   const employee = recent(growth.employee)
-  const investment = recent(growth.investment)
+  // 외부 라운드(자유 입력) + 자사 펀드 투자(관계형)를 병합해 최신 5건.
+  const fundRows: InvestmentRow[] = (fundInvestments ?? []).map((f) => ({
+    date: (f.invested_at ?? '').slice(0, 7),
+    round: f.round,
+    valuation: f.valuation,
+    fundingAmount: f.amount,
+    investor: f.fund_name,
+    isFund: true,
+  }))
+  const investment = recent([...(growth.investment as InvestmentRow[]), ...fundRows].sort(byDateDesc))
   // 차트는 과거→최신(왼→오른쪽) 순서로 그린다.
   return (
     <section className="space-y-4">
@@ -166,7 +196,16 @@ export function StartupGrowthSection({ growth }: Props) {
                   <td className={tdL}>{m.round || '-'}</td>
                   <td className={td}><Won v={m.valuation} /></td>
                   <td className={td}><Won v={m.fundingAmount} /></td>
-                  <td className={tdL}>{m.investor || '-'}</td>
+                  <td className={tdL}>
+                    {m.isFund ? (
+                      <span className="inline-flex items-center gap-1">
+                        <Badge tone="info">자사</Badge>
+                        {m.investor || '-'}
+                      </span>
+                    ) : (
+                      m.investor || '-'
+                    )}
+                  </td>
                 </tr>
               ))}
             </Table>

@@ -12,13 +12,11 @@ export interface Shareholder {
 
 /**
  * 변경 시점별 주주 구성 스냅샷(startups.shareholders 배열 원소).
- * 캡테이블은 라운드마다 바뀌므로 시점(date) + 사유(round)별로 이력을 쌓는다.
+ * 캡테이블은 라운드마다 바뀌므로 시점(date)별로 이력을 쌓는다.
  */
 export interface ShareholderSnapshot {
   /** 변경 시점(YYYY-MM-DD). */
   date: string
-  /** 변경 사유·라운드(선택, 예: Series A). */
-  round?: string
   /** 해당 시점의 주주 목록. */
   holders: Shareholder[]
 }
@@ -38,10 +36,10 @@ function isSnapshot(v: unknown): v is ShareholderSnapshot {
 export function readShareholderHistory(record: EntityRow): ShareholderSnapshot[] {
   const raw = asArray(record.shareholders)
   if (raw.length === 0) return []
-  // 신 형식: [{ date, round, holders }]
+  // 신 형식: [{ date, holders }]
   if (raw.every(isSnapshot)) {
     return (raw as ShareholderSnapshot[])
-      .map((s) => ({ date: s.date ?? '', round: s.round, holders: asArray(s.holders) as Shareholder[] }))
+      .map((s) => ({ date: s.date ?? '', holders: asArray(s.holders) as Shareholder[] }))
       .sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? '')))
   }
   // 구 형식: 평면 주주 배열 → 날짜 없는 단일 스냅샷.

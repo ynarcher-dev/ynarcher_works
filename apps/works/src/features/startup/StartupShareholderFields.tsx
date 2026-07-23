@@ -20,7 +20,7 @@ interface Props {
 
 /**
  * 통합 수정 폼의 '주주 구성' 입력 섹션(변경 시점별 이력형).
- * 시점(기준일 + 라운드)별 스냅샷을 추가하고, 각 스냅샷 안에서 주주 행을 편집한다.
+ * 시점(기준일)별 스냅샷을 추가하고, 각 스냅샷 안에서 주주 행을 편집한다.
  * 저장은 상위 폼이 shareholders jsonb로 통째 반영한다.
  */
 export function StartupShareholderFields({ history, setHistory }: Props) {
@@ -46,7 +46,7 @@ export function StartupShareholderFields({ history, setHistory }: Props) {
     <div className="space-y-4">
       {history.map((snap, si) => (
         <div key={si} className="space-y-3 rounded-radius-md border border-gray-200 p-3">
-          {/* 시점 헤더: 기준일 + 라운드 + 구성 삭제 */}
+          {/* 시점 헤더: 기준일 + 구성 삭제 */}
           <div className="flex flex-wrap items-end gap-2">
             <label className="block">
               <span className="mb-0.5 block text-caption text-gray-700">기준일</span>
@@ -57,14 +57,7 @@ export function StartupShareholderFields({ history, setHistory }: Props) {
                 onChange={(e) => patchSnap(si, { date: e.target.value })}
               />
             </label>
-            <label className="min-w-40 flex-1 block">
-              <span className="mb-0.5 block text-caption text-gray-700">라운드·사유(선택)</span>
-              <Input
-                placeholder="예: Series A"
-                value={snap.round ?? ''}
-                onChange={(e) => patchSnap(si, { round: e.target.value })}
-              />
-            </label>
+            <div className="flex-1" />
             <Button type="button" variant="secondary" onClick={() => setHistory(history.filter((_, idx) => idx !== si))}>
               구성 삭제
             </Button>
@@ -108,7 +101,7 @@ export function StartupShareholderFields({ history, setHistory }: Props) {
       <Button
         type="button"
         variant="outline"
-        onClick={() => setHistory([{ date: today(), round: '', holders: [{ name: '', shares: undefined, percentage: undefined }] }, ...history])}
+        onClick={() => setHistory([{ date: today(), holders: [{ name: '', shares: undefined, percentage: undefined }] }, ...history])}
       >
         구성 추가(시점)
       </Button>

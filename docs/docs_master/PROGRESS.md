@@ -151,6 +151,7 @@
 - [x] 포트폴리오 집행 기록 및 피투자사 NETWORKS 연동
 - [x] 캐피탈 콜 스케줄러 (미납 LP 알림 발송) <!-- 콜 일정/상태(OVERDUE 등) 관리 구현. 알림 발송(알림톡/SMS)은 Phase 14 채널 연동 후 -->
 - [x] FUND 데이터 모델/필드 상세 확정 (문서 보강 포함) <!-- 스키마 마이그레이션 20260705170000이 확정 모델(funds/lps/capital_calls/investments/portfolio_financials) -->
+- [x] 자사 펀드 투자 ↔ 스타트업 관계형 연동 (집행액 자동 집계, 스타트업 투자 현황 병합 표시) <!-- 20260723120000: investments.valuation 추가, funds.drawn_amount(집행액)를 SUM(investments.amount) 트리거 집계로 전환(app.sync_fund_drawn_amount, SECURITY INVOKER), STARTUP 조회 브리지 public.startup_fund_investments(SECURITY DEFINER+호출자검사+authenticated grant). FUND 상세 포트폴리오 탭에 투자 집행 등록/수정/삭제 모달(InvestmentFormModal), StartupGrowthSection 투자 현황 표·차트에 자사 펀드 투자 병합('자사' 배지). 입력=FUND 소유, 스타트업=조회만. 결성액은 손입력 유지 -->
 
 ## Phase 9. M&A 워크스페이스
 

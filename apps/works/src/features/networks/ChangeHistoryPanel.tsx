@@ -47,14 +47,16 @@ export function ChangeHistoryPanel({
         <>
           {/* 목록 행은 실질적으로 표의 한 행이므로 크기를 tableText 하나(12px)로 세우고
               위계는 색으로만 만든다 — 종전에는 한 줄에 14/12/11px가 섞여 있었다. */}
-          <ul className="space-y-1.5">
+          {/* 행 사이 얕은 실선(divide-y)으로 표의 결을 만든다 — 텍스트만 떠 보이던 것을 눌러준다.
+              여백만으로는 34건을 세로로 훑을 때 어디서 한 건이 끝나는지 눈이 잡지 못한다. */}
+          <ul className="divide-y divide-gray-100">
             {pageItems.map((c) => (
               // 열 고정 격자. flex로 두면 각 항목의 x 위치가 내용 길이를 따라 행마다 달라져,
               // 34건을 세로로 훑을 수 없다. 앞 세 열은 내용 폭(auto)으로 잡아 모든 행이 같은
               // 지점에서 시작하게 하고, 길이를 예측할 수 없는 출처·비고만 남은 폭을 쓴다.
               <li
                 key={c.id}
-                className="grid grid-cols-[auto_auto_auto_minmax(0,1fr)] items-center gap-x-3"
+                className="grid grid-cols-[auto_auto_auto_minmax(0,1fr)] items-center gap-x-3 py-1.5 first:pt-0"
               >
                 <span className={`tabular-nums ${tableText.meta}`}>
                   {c.created_at.slice(0, 10)}

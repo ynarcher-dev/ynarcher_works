@@ -118,22 +118,39 @@ export function StartupDetailPage() {
                     </div>
                   </DensityProvider>
                   <p className={`mt-1 ${cardText.subtitle}`}>{oneLiner || '-'}</p>
+                  {/* 상태·분류 칩: 라벨 없이 값만으로 읽히는 정보(단계·구분·관리현황)는 배지로 올린다.
+                      톤은 축을 나눈다 — 단계=중립(사실), 구분=info(주 분류), 관리현황=success+점(라이브 상태).
+                      산업 태그와 같은 page 밀도로 맞춰 헤더 칩끼리 크기가 어긋나지 않게 한다. */}
+                  <DensityProvider value="page">
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      {str('stage') !== '-' && <Badge tone="neutral">{str('stage')}</Badge>}
+                      {managementStatusLabel(record.management_status) && (
+                        <Badge tone={invested ? 'info' : 'neutral'}>
+                          {managementStatusLabel(record.management_status)}
+                        </Badge>
+                      )}
+                      {invested && str('pool_status') !== '-' && (
+                        <Badge tone="success" dot>
+                          {str('pool_status')}
+                        </Badge>
+                      )}
+                    </div>
+                  </DensityProvider>
                 </div>
               </div>
 
-              {/* 정보 그리드(3열): 단계·구분·현황 / 대표자·이메일·연락처 / 사업자등록번호·수정일 */}
+              {/* 기본 정보(3열): 대표자·이메일·연락처 / 회사형태·설립일·사업자등록번호 / 소재지·수정일.
+                  상태·분류(단계·구분·관리현황)는 헤더 칩으로 올려 이 그리드에서 뺐다.
+                  상세주소는 길 수 있어 다음 행 전폭을 차지한다(소재지·수정일 뒤에서 자연스레 줄바꿈). */}
               <div className="mt-5 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-3">
-                <Info label="단계" value={str('stage')} />
-                <Info label="구분" value={managementStatusLabel(record.management_status) ?? '-'} />
-                {invested && <Info label="관리현황" value={str('pool_status')} />}
                 <Info label="대표자" value={str('representative')} />
                 <Info label="이메일" value={str('email')} />
                 <Info label="연락처" value={str('phone')} />
                 <Info label="회사 형태" value={str('company_form')} />
                 <Info label="설립일" value={formatFounded(record.founded_on)} />
                 <Info label="사업자등록번호" value={str('biz_reg_no')} />
-                {/* 소재지 옆 상세주소는 길 수 있어 나머지 2열을 차지하고, 수정일은 소재지 아래로 흐른다. */}
                 <Info label="소재지" value={str('location')} />
+                {/* 상세주소는 소재지 오른쪽(설립일 아래) 2열을 차지하고, 수정일은 다음 행으로 흐른다. */}
                 <Info
                   label="상세주소"
                   value={str('address_detail')}
@@ -159,7 +176,7 @@ export function StartupDetailPage() {
             <StartupShareholderCard history={readShareholderHistory(record)} />
 
             {/* 성장 지표(별도 그룹): 재무/매출/고용/투자 표 + 차트. 편집은 통합 수정에서. */}
-            <StartupGrowthSection growth={readGrowth(record)} />
+            <StartupGrowthSection growth={readGrowth(record)} startupId={record.id} />
 
             {/* 연혁(성장 지표 아래). 편집은 통합 수정에서. */}
             <StartupBusinessTimeline businessStatus={readBusinessStatus(record)} />

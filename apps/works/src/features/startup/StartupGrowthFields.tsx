@@ -166,27 +166,31 @@ function InvestmentGroup({
     <div className="space-y-2">
       <h3 className={cardText.subhead}>투자</h3>
       {rows.map((r, i) => (
-        <div key={i} className="space-y-2 rounded-radius-md border border-gray-200 p-3">
-          <div className="flex items-end justify-between gap-2">
-            <label className="block w-40 shrink-0">
-              <span className="mb-0.5 block text-caption text-gray-700">기준월</span>
-              <Input type="month" value={r.date ?? ''} onChange={(e) => patch(i, { date: e.target.value })} />
-            </label>
-            <Button
-              type="button"
-              variant="secondary"
-              className="shrink-0"
-              onClick={() => setRows(rows.filter((_, idx) => idx !== i))}
-            >
-              삭제
-            </Button>
-          </div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div key={i} className="flex flex-wrap items-end gap-2 rounded-radius-md border border-gray-200 p-3">
+          <label className="block w-32 shrink-0">
+            <span className="mb-0.5 block text-caption text-gray-700">기준월</span>
+            <Input type="month" value={r.date ?? ''} onChange={(e) => patch(i, { date: e.target.value })} />
+          </label>
+          <div className="min-w-28 flex-1">
             <Txt label="라운드" value={r.round} onChange={(v) => patch(i, { round: v })} />
+          </div>
+          <div className="min-w-28 flex-1">
             <Txt label="투자자" value={r.investor} onChange={(v) => patch(i, { investor: v })} />
+          </div>
+          <div className="min-w-32 flex-1">
             <Num label="기업 가치(Pre)" value={r.valuation} onChange={(v) => patch(i, { valuation: v })} />
+          </div>
+          <div className="min-w-32 flex-1">
             <Num label="투자유치액" value={r.fundingAmount} onChange={(v) => patch(i, { fundingAmount: v })} />
           </div>
+          <Button
+            type="button"
+            variant="secondary"
+            className="shrink-0"
+            onClick={() => setRows(rows.filter((_, idx) => idx !== i))}
+          >
+            삭제
+          </Button>
         </div>
       ))}
       <Button type="button" variant="outline" onClick={() => setRows([...rows, { date: '' }])}>

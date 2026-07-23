@@ -267,7 +267,6 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
       shareholders: shareholders
         .map((snap) => ({
           date: (snap.date ?? '').trim(),
-          round: (snap.round ?? '').trim(),
           holders: snap.holders
             .map((h) => ({ name: h.name.trim(), shares: h.shares ?? null, percentage: h.percentage ?? null }))
             .filter((h) => h.name),
