@@ -5,10 +5,11 @@ import { DashboardTab } from '@/features/networks/DashboardTab'
 import { DirectoryTab } from '@/features/networks/DirectoryTab'
 import { GlobalNetworkTab } from '@/features/networks/GlobalNetworkTab'
 import { BulkUploadPanel } from '@/features/networks/BulkUploadPanel'
+import { GlobalBulkUploadPanel } from '@/features/networks/GlobalBulkUploadPanel'
 import { MyNetworkTab } from '@/features/networks/MyNetworkTab'
 import { ENTITIES, DIRECTORY_ENTITIES, type EntityKey } from '@/features/networks/config'
 
-type Mode = 'dashboard' | 'global' | 'directory' | 'bulk' | 'mine'
+type Mode = 'dashboard' | 'global' | 'directory' | 'bulk' | 'bulk_global' | 'mine'
 
 const ENTITY_KEYS: EntityKey[] = DIRECTORY_ENTITIES
 
@@ -38,9 +39,11 @@ export function NetworksPage() {
         ? 'global'
         : tab === 'bulk'
           ? 'bulk'
-          : tab === 'mine'
-            ? 'mine'
-            : 'directory'
+          : tab === 'bulk_global'
+            ? 'bulk_global'
+            : tab === 'mine'
+              ? 'mine'
+              : 'directory'
   const config = ENTITIES[entity]
 
   // 미분류(others)는 카테고리가 아닌 임시 저장소이므로 '미분류 데이터베이스'로 표기한다.
@@ -53,9 +56,11 @@ export function NetworksPage() {
         ? '글로벌 네트워크'
         : mode === 'bulk'
           ? '대용량 업로드'
-          : mode === 'mine'
-            ? '내 네트워크 관리'
-            : directoryHeading
+          : mode === 'bulk_global'
+            ? '글로벌 대용량 업로드'
+            : mode === 'mine'
+              ? '내 네트워크 관리'
+              : directoryHeading
 
   const searchField = mode === 'directory' || mode === 'global' ? (
     <Input
@@ -92,6 +97,7 @@ export function NetworksPage() {
       {/* 내 네트워크는 10종 통합 목록이라 검색어를 탭이 직접 소유한다(상단 검색창 미사용). */}
       {mode === 'mine' && <MyNetworkTab />}
       {mode === 'bulk' && <BulkUploadPanel />}
+      {mode === 'bulk_global' && <GlobalBulkUploadPanel />}
     </div>
   )
 }

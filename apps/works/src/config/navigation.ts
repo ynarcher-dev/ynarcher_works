@@ -115,6 +115,7 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         { label: '글로벌 네트워크', tab: 'global' },
         { label: '미분류 데이터베이스', tab: 'others', dividerBefore: true },
         { label: '대용량 업로드', tab: 'bulk' },
+        { label: '글로벌 대용량 업로드', tab: 'bulk_global' },
       ],
     },
   ],
