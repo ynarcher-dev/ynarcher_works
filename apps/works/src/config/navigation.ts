@@ -114,8 +114,8 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         // 글로벌 네트워크: 미분류 데이터베이스 위에 구분선으로 구획(기능은 보류, 메뉴만 제공).
         { label: '글로벌 네트워크', tab: 'global' },
         { label: '미분류 데이터베이스', tab: 'others', dividerBefore: true },
+        // 대용량 업로드는 한 화면에서 국내/글로벌을 인페이지 탭으로 전환한다(BulkUploadSection).
         { label: '대용량 업로드', tab: 'bulk' },
-        { label: '글로벌 대용량 업로드', tab: 'bulk_global' },
       ],
     },
   ],
