@@ -1,5 +1,23 @@
-import { Button, IconButton, Modal, Spinner, tableText } from '@ynarcher/ui'
-import { Download, Eye, File as FileIcon, Music, Pause, Play, Trash2 } from 'lucide-react'
+import {
+  Button,
+  ExpandToggleButton,
+  FullscreenPanel,
+  IconButton,
+  Modal,
+  Spinner,
+  tableText,
+} from '@ynarcher/ui'
+import {
+  Download,
+  Eye,
+  File as FileIcon,
+  Maximize2,
+  Minimize2,
+  Music,
+  Pause,
+  Play,
+  Trash2,
+} from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { DetailPanelCard } from '@/features/networks/DetailPanelCard'
 import { MaterialDropZone } from '@/features/networks/MaterialDropZone'
@@ -229,13 +247,17 @@ function MaterialRow({
 }
 
 /**
- * PDF 간이 뷰어 모달. Signed URL은 첨부 다운로드 디스포지션이 붙어 iframe에 직접 넣으면
+ * PDF 간이 뷰어. Signed URL은 첨부 다운로드 디스포지션이 붙어 iframe에 직접 넣으면
  * 다운로드되므로, 바이트를 blob URL로 받아 브라우저 내장 PDF 뷰어(iframe)로 띄운다.
  * 닫히면 blob URL을 해제한다. 서버가 RLS·access_logs를 강제하는 material-download 경유.
+ *
+ * '크게보기'는 같은 blob을 유지한 채 모달 ↔ 전체화면 오버레이만 갈아 끼워, 토글해도
+ * 파일을 다시 받지 않는다(blob 로딩은 material에만 의존).
  */
 function PdfPreviewModal({ material, onClose }: { material: Material; onClose: () => void }) {
   const [url, setUrl] = useState<string | null>(null)
   const [error, setError] = useState(false)
+  const [expanded, setExpanded] = useState(false)
 
   useEffect(() => {
     let objectUrl: string | null = null
@@ -257,20 +279,56 @@ function PdfPreviewModal({ material, onClose }: { material: Material; onClose: (
     }
   }, [material])
 
+  const viewer = error ? (
+    <p className="py-10 text-center text-body text-danger">
+      미리보기를 불러오지 못했습니다. 다운로드해 확인해 주세요.
+    </p>
+  ) : url ? (
+    <iframe title={material.file_name} src={url} className="h-full w-full rounded-radius-sm border border-gray-200" />
+  ) : (
+    <div className="flex h-full items-center justify-center">
+      <Spinner />
+    </div>
+  )
+
+  const toggle = (
+    <ExpandToggleButton
+      expanded={expanded}
+      onToggle={() => setExpanded((v) => !v)}
+      expandIcon={<Maximize2 className="mr-1.5 size-4" />}
+      collapseIcon={<Minimize2 className="mr-1.5 size-4" />}
+    />
+  )
+
+  if (expanded) {
+    return (
+      <FullscreenPanel
+        open
+        onClose={onClose}
+        title={
+          <span className="truncate text-title-sm font-medium text-gray-900">
+            {material.file_name}
+          </span>
+        }
+        actions={
+          <>
+            {toggle}
+            <Button variant="secondary" onClick={onClose}>
+              닫기
+            </Button>
+          </>
+        }
+      >
+        <div className="h-full w-full">{viewer}</div>
+      </FullscreenPanel>
+    )
+  }
+
   return (
     <Modal open onClose={onClose} title={material.file_name} size="2xl">
-      <div className="h-[75vh] w-full">
-        {error ? (
-          <p className="py-10 text-center text-body text-danger">
-            미리보기를 불러오지 못했습니다. 다운로드해 확인해 주세요.
-          </p>
-        ) : url ? (
-          <iframe title={material.file_name} src={url} className="h-full w-full rounded-radius-sm border border-gray-200" />
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <Spinner />
-          </div>
-        )}
+      <div className="flex h-[75vh] w-full flex-col gap-3">
+        <div className="flex shrink-0 justify-end">{toggle}</div>
+        <div className="min-h-0 flex-1">{viewer}</div>
       </div>
     </Modal>
   )
