@@ -50,10 +50,6 @@ interface StartupPoolTableProps {
   tab?: ManagementStatus
   /** 행 클릭(상세 진입). 지정 시 행이 클릭 가능해진다. */
   onRowClick?: (row: StartupPoolRow) => void
-  /** 비활성화(소프트 삭제) 핸들러. 미지정 시 관리 컬럼 버튼은 비활성 상태로 노출된다. */
-  onDeactivate?: (row: StartupPoolRow) => void
-  /** true면 비활성화 버튼이 내장 confirm 없이 핸들러를 호출한다(사유 입력 모달 사용 시). */
-  deactivateWithReason?: boolean
   /** 행 다중선택 키(controlled). 일괄 작업용으로 상위가 소유한다. */
   selectedKeys?: string[]
   onSelectionChange?: (keys: string[]) => void
@@ -63,9 +59,10 @@ interface StartupPoolTableProps {
 
 /**
  * 스타트업 풀 관리 공용 데이터 테이블.
- * 컬럼: 체크박스·No.·기업명·대표자명·사업자등록번호·설립일·산업(뱃지 최대 3)·단계·구분·관리현황(투자·내 기업)·담당자·발굴 경로(발굴·보육·기타)·작성자·수정일·관리.
- * 좌측 선택/넘버링과 우측 표준 컬럼(작성자·수정일·관리)은 공용 DataTable이 소유하고,
+ * 컬럼: 체크박스·No.·기업명·대표자명·사업자등록번호·설립일·산업(뱃지 최대 3)·단계·구분·관리현황(투자·내 기업)·담당자·발굴 경로(발굴·보육·기타)·작성자·수정일.
+ * 좌측 선택/넘버링과 우측 표준 컬럼(작성자·수정일)은 공용 DataTable이 소유하고,
  * 본 컴포넌트는 그 사이의 도메인 컬럼(기업명~발굴 경로, 담당자)만 정의한다.
+ * 비활성화(삭제)는 목록이 아니라 상세 페이지에서 수행하므로 관리 컬럼(showManageColumn=false)은 두지 않는다.
  * 작성자(등록자)와 담당자는 별개 축이다 — 작성자 컬럼은 전 구분 공통 등록자, 담당자 컬럼은 투자=지정 담당자·그 외=공동관리.
  */
 /** 투자기업 담당자 표시명: 리드 → 지원 순. 지정 담당자가 없으면 null(→ "미지정"). 등록자로 폴백하지 않는다. */
@@ -82,8 +79,6 @@ export function StartupPoolTable({
   rows,
   tab,
   onRowClick,
-  onDeactivate,
-  deactivateWithReason,
   selectedKeys,
   onSelectionChange,
   pagination,
@@ -200,11 +195,10 @@ export function StartupPoolTable({
       onSelectionChange={onSelectionChange}
       onRowClick={onRowClick}
       pagination={pagination}
+      showManageColumn={false}
       meta={{
         // 작성자(등록자) 컬럼: 전 구분 공통으로 created_by를 표시한다(담당자와 별개 축, 폴백 없음).
         author: (r) => r.creator?.name || <span className="text-gray-400">-</span>,
-        onDeactivate,
-        deactivateWithReason,
       }}
       emptyText="등록된 스타트업이 없습니다."
     />

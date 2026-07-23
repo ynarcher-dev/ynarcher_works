@@ -157,6 +157,7 @@ const sidebarIconByTab: Record<string, LucideIcon> = {
   approval: BadgeCheck,
   clients: Handshake,
   rooms: DoorOpen,
+  minutes: FileText,
   hr: User,
   finance: WalletCards,
   assets: BriefcaseBusiness,
@@ -168,7 +169,6 @@ const sidebarIconByTab: Record<string, LucideIcon> = {
   invested: Coins,
   incubated: Sprout,
   discovered: Rocket,
-  minutes: FileText,
   archerscan: ScanLine,
 }
 

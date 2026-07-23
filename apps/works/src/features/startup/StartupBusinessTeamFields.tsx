@@ -1,5 +1,5 @@
-import { Button, Input, TagChip, TextArea, cardText } from '@ynarcher/ui'
-import { useState, type ReactNode } from 'react'
+import { Button, Input, TextArea, TokenMultiSelect, cardText } from '@ynarcher/ui'
+import { type ReactNode } from 'react'
 import { useFieldArray, type Control, type UseFormRegister } from 'react-hook-form'
 import type { StartupDetailFormValues } from '@/features/startup/StartupDetailForm'
 
@@ -26,14 +26,6 @@ interface Props {
  */
 export function StartupBusinessTeamFields({ register, control, capabilities, setCapabilities }: Props) {
   const { fields, append, remove } = useFieldArray({ control, name: 'members' })
-  const [capInput, setCapInput] = useState('')
-
-  const addCap = () => {
-    const c = capInput.trim()
-    if (c && !capabilities.includes(c)) setCapabilities([...capabilities, c])
-    setCapInput('')
-  }
-  const removeCap = (c: string) => setCapabilities(capabilities.filter((x) => x !== c))
 
   return (
     <div className="space-y-5">
@@ -91,34 +83,18 @@ export function StartupBusinessTeamFields({ register, control, capabilities, set
           </Button>
         </div>
 
-        {/* 핵심 역량(태그 입력) */}
+        {/* 핵심 역량(태그 입력) — 표준 토큰 입력. */}
         <div>
           <p className="mb-1 text-body font-medium text-gray-800">핵심 역량</p>
-          <div className="flex gap-2">
-            <Input
-              value={capInput}
-              onChange={(e) => setCapInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  addCap()
-                }
-              }}
-              placeholder="역량 입력 후 Enter"
-            />
-            <Button type="button" variant="outline" onClick={addCap}>
-              추가
-            </Button>
-          </div>
-          {capabilities.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1">
-              {capabilities.map((c) => (
-                <TagChip key={c} onClick={() => removeCap(c)} title="제거">
-                  {c} <span aria-hidden className="text-gray-500">×</span>
-                </TagChip>
-              ))}
-            </div>
-          )}
+          <TokenMultiSelect<string>
+            selected={capabilities}
+            onChange={setCapabilities}
+            getKey={(c) => c}
+            getLabel={(c) => c}
+            allowFreeText
+            createOption={(text) => text}
+            placeholder="역량 입력 후 Enter"
+          />
         </div>
       </div>
     </div>

@@ -10,6 +10,7 @@ import { NOTICE_TAB } from '@/features/hub/boardPostStore'
 import { useBoards } from '@/features/hub/boardHooks'
 import { DepartmentsPanel } from '@/features/management/panels/DepartmentsPanel'
 import { OfficeManagersPanel } from '@/features/office/OfficeManagersPanel'
+import { MinutesWorkspace } from '@/features/office/minutes/MinutesWorkspace'
 
 /** 페이지 골격만 있는 준비 중 메뉴(탭 → 제목). */
 const PLACEHOLDER_TITLES: Record<string, string> = {
@@ -93,6 +94,8 @@ export function OfficePage() {
         </>
       )}
       {tab === 'managers' && <OfficeManagersPanel />}
+      {/* 회의록: STARTUP에서 이관. 자체 목록/상세/작성 흐름과 헤더를 소유한다. */}
+      {tab === 'minutes' && <MinutesWorkspace />}
       {/* 부서 정보: MANAGEMENT 조직 관리와 같은 조직도를 조회 전용으로 재사용한다. */}
       {tab === 'departments' && (
         <>

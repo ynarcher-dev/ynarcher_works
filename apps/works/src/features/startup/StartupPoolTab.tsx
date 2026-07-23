@@ -1,8 +1,6 @@
-import { Button, Input, Spinner, useToast } from '@ynarcher/ui'
+import { Button, Input, Spinner } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { DeactivateReasonModal } from '@/features/networks/DeactivateReasonModal'
-import { useDeactivateEntity } from '@/features/networks/hooks'
 import { ENTITIES } from '@/features/networks/config'
 import { StartupPoolTable, type StartupPoolRow } from '@/features/startup/StartupPoolTable'
 import { StartupPoolFilters } from '@/features/startup/StartupPoolFilters'
@@ -25,21 +23,18 @@ interface StartupPoolTabProps {
 
 /**
  * 스타트업 풀 관리 탭 컨테이너: 발굴기업(startups) 데이터를 공용 StartupPoolTable에 공급한다.
- * 검색어(다중 필드)·복수 필터·서버 페이지네이션·다중선택·비활성화(사유 입력)를 소유하고,
+ * 검색어(다중 필드)·복수 필터·서버 페이지네이션·다중선택을 소유하고,
  * 검색창과 필터를 한 컨트롤 행으로 함께 배치한다. 신규 등록은 전용 등록 페이지에서 처리한다.
+ * 비활성화(삭제)는 목록이 아니라 상세 페이지에서 수행한다.
  * (검색 상태는 탭 컨테이너가 소유 — 발굴기업 탭에서만 마운트되므로 탭 전환 시 자연히 초기화된다.)
  */
 export function StartupPoolTab({ category, mineUserId }: StartupPoolTabProps) {
   const config = ENTITIES.startups
-  const toast = useToast()
   const navigate = useNavigate()
-  const deactivate = useDeactivateEntity('startups')
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(0)
   const [selected, setSelected] = useState<string[]>([])
   const [filters, setFilters] = useState<Filters>(EMPTY_STARTUP_FILTERS)
-  const [deactivateTarget, setDeactivateTarget] = useState<StartupPoolRow | null>(null)
-  const [deactivateBusy, setDeactivateBusy] = useState(false)
 
   // 검색어·필터 변경 시 첫 페이지로 되돌리고 선택을 비운다(빈 페이지·유령 선택 방지).
   const filtersKey = JSON.stringify(filters)
@@ -64,24 +59,6 @@ export function StartupPoolTab({ category, mineUserId }: StartupPoolTabProps) {
     setPage(0)
     setSelected([])
   }, [category, mineUserId])
-
-  // 비활성화 사유 확정 → 사유를 트랜잭션 컨텍스트에 실어 주는 RPC 경유(20260721150000).
-  // 원장 UPDATE와 사유 기록이 한 트랜잭션에 묶여, 종전처럼 '비활성화 기록만 남고 행은 살아 있는'
-  // 어긋난 상태가 생기지 않는다.
-  const confirmDeactivate = async (reason: string) => {
-    if (!deactivateTarget) return
-    const target = deactivateTarget
-    setDeactivateBusy(true)
-    try {
-      await deactivate.mutateAsync({ id: target.id, reason })
-      toast.show(`${config.label}을(를) 비활성화했습니다.`, 'success')
-      setDeactivateTarget(null)
-    } catch {
-      toast.show('비활성화에 실패했습니다. 권한을 확인하세요.', 'danger')
-    } finally {
-      setDeactivateBusy(false)
-    }
-  }
 
   return (
     <div className="space-y-3">
@@ -111,8 +88,6 @@ export function StartupPoolTab({ category, mineUserId }: StartupPoolTabProps) {
         selectedKeys={selected}
         onSelectionChange={setSelected}
         onRowClick={(row) => navigate(`/startup/discovered/${row.id}`)}
-        onDeactivate={(row) => setDeactivateTarget(row)}
-        deactivateWithReason
         pagination={{
           page,
           pageSize: PAGE_SIZE,
@@ -121,16 +96,6 @@ export function StartupPoolTab({ category, mineUserId }: StartupPoolTabProps) {
           onChange: setPage,
         }}
       />
-      )}
-
-      {deactivateTarget && (
-        <DeactivateReasonModal
-          open
-          name={deactivateTarget.name}
-          busy={deactivateBusy}
-          onCancel={() => setDeactivateTarget(null)}
-          onConfirm={(reason) => void confirmDeactivate(reason)}
-        />
       )}
     </div>
   )

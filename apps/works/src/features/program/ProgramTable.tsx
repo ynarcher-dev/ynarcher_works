@@ -15,8 +15,6 @@ import { categoryLabel, useProgramWorkspace } from '@/features/program/workspace
 interface ProgramTableProps {
   rows: Program[]
   onRowClick?: (row: Program) => void
-  /** 비활성화(소프트 삭제) 핸들러. 미지정 시 관리 컬럼 버튼은 비활성 상태로 노출된다. */
-  onDeactivate?: (row: Program) => void
   /** 행 다중선택 키(controlled). 상위가 소유한다. */
   selectedKeys?: string[]
   onSelectionChange?: (keys: string[]) => void
@@ -26,12 +24,12 @@ interface ProgramTableProps {
 
 /**
  * 프로그램 원장 공용 데이터 테이블(STARTUP StartupPoolTable과 동일 규격).
- * 컬럼: 체크박스·No.·코드·카테고리·프로그램명·상태·운영 시작일·운영 종료일 + 우측 표준 컬럼(등록자·수정일·관리).
+ * 컬럼: 체크박스·No.·코드·카테고리·프로그램명·상태·운영 시작일·운영 종료일 + 우측 표준 컬럼(등록자·수정일).
+ * 비활성화(삭제)는 목록이 아니라 상세 페이지에서 수행하므로 관리 컬럼(showManageColumn=false)은 두지 않는다.
  */
 export function ProgramTable({
   rows,
   onRowClick,
-  onDeactivate,
   selectedKeys,
   onSelectionChange,
   pagination,
@@ -132,9 +130,9 @@ export function ProgramTable({
       onSelectionChange={onSelectionChange}
       onRowClick={onRowClick}
       pagination={pagination}
+      showManageColumn={false}
       meta={{
         author: (r) => r.creator?.name || <span className="text-gray-400">-</span>,
-        onDeactivate,
       }}
       emptyText="등록된 사업이 없습니다."
     />

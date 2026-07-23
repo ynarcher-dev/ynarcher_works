@@ -1,6 +1,7 @@
 import { BackButton, Badge, Banner, Button, CardShell, cardText, DensityProvider, InfoField, PanelCard, Spinner } from '@ynarcher/ui'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { DetailDeleteButton } from '@/components/DetailDeleteButton'
 import { GlobalNetworkForm } from '@/features/networks/GlobalNetworkForm'
 import { PhotoBox } from '@/features/networks/PhotoBox'
 import { ChangeHistoryPanel, uniqueContributors } from '@/features/networks/ChangeHistoryPanel'
@@ -8,7 +9,7 @@ import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { AffiliationHistoryPanel } from '@/features/networks/AffiliationHistoryPanel'
 import { type GlobalRow } from '@/features/networks/globalConfig'
-import { useGlobalContributions, useGlobalEntity } from '@/features/networks/globalHooks'
+import { useDeactivateGlobal, useGlobalContributions, useGlobalEntity } from '@/features/networks/globalHooks'
 
 const LIST_PATH = '/networks?tab=global'
 
@@ -128,6 +129,7 @@ export function GlobalNetworkDetailPage() {
   const isNew = id === 'new'
   const [editing, setEditing] = useState(isNew)
   const { data: record, isLoading } = useGlobalEntity(isNew ? undefined : id)
+  const deactivate = useDeactivateGlobal()
 
   if (!isNew && isLoading) return <Spinner />
   if (!isNew && !record) {
@@ -140,7 +142,16 @@ export function GlobalNetworkDetailPage() {
       {!editing && (
         <div className="flex items-center justify-between">
           <BackButton as={Link} to={LIST_PATH} />
-          {!isNew && <Button onClick={() => setEditing(true)}>수정</Button>}
+          {!isNew && record && (
+            <div className="flex items-center gap-2">
+              <DetailDeleteButton
+                name={record.name ? String(record.name) : undefined}
+                onDelete={(reason) => deactivate.mutateAsync({ id: record.id, reason: reason ?? '' })}
+                onDeleted={() => navigate(LIST_PATH)}
+              />
+              <Button onClick={() => setEditing(true)}>수정</Button>
+            </div>
+          )}
         </div>
       )}
 

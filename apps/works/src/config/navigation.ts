@@ -81,8 +81,7 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         { label: '보육기업', tab: 'incubated' },
         { label: '발굴기업', tab: 'discovered' },
         { label: '기타기업', tab: 'etc' },
-        { label: '회의록', tab: 'minutes', dividerBefore: true },
-        { label: '아처스캔', tab: 'archerscan' },
+        { label: '아처스캔', tab: 'archerscan', dividerBefore: true },
         { label: '대용량 업로드', tab: 'bulk' },
       ],
     },
@@ -173,6 +172,8 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         { label: '지사 정보', tab: 'branches' },
         // 위 인적·조직 블록을 떼어내는 구분선.
         { label: '회의실 예약', tab: 'rooms', dividerBefore: true },
+        // 회의록: STARTUP에서 이관. 회의실 예약과 같은 공간·회의 블록에 묶는다(골격만).
+        { label: '회의록', tab: 'minutes' },
         // 전자결재 워크스페이스에서 통합 이관. 일정·공간 예약(캘린더·회의실)과 결재·거래처를
         // 구분선으로 나눈다. 아래 고정 게시판 그룹 경계가 이 블록과 공지사항을 다시 나눈다.
         { label: '전자결재', tab: 'approval', dividerBefore: true },

@@ -1,7 +1,9 @@
 import { BackButton, Badge, Banner, Button, Spinner } from '@ynarcher/ui'
 import { useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { categoryFromTab } from '@/config/programCategories'
+import { DetailDeleteButton } from '@/components/DetailDeleteButton'
+import { useDeactivateProgram } from '@/features/program/programsPoolHooks'
 import { MentoringPanel } from '@/features/program/MentoringPanel'
 import { ProgramFormModal } from '@/features/program/ProgramFormModal'
 import { ProgramOverviewTab } from '@/features/program/detail/ProgramOverviewTab'
@@ -70,6 +72,8 @@ const PANEL_LABEL: Record<Exclude<Tab, 'overview'>, string> = {
 export function ProgramDetailPage() {
   const config = useProgramWorkspace()
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const deactivate = useDeactivateProgram()
   const [params] = useSearchParams()
   // 출처 목록 탭(mine/all/카테고리). 알 수 없는 값이면 전체 목록으로 폴백한다.
   const fromTab = params.get('tab') ?? ''
@@ -112,7 +116,17 @@ export function ProgramDetailPage() {
         <>
           <div className="flex items-center justify-between gap-3">
             <BackButton as={Link} to={backTo} />
-            <Button onClick={() => setEditOpen(true)}>편집</Button>
+            <div className="flex items-center gap-2">
+              {/* 사업은 삭제 사유 인프라가 없어 확인창(confirm)으로 소프트 삭제한다. */}
+              <DetailDeleteButton
+                withReason={false}
+                onDelete={async () => {
+                  await deactivate.mutateAsync(program.id)
+                }}
+                onDeleted={() => navigate(backTo)}
+              />
+              <Button onClick={() => setEditOpen(true)}>편집</Button>
+            </div>
           </div>
           <ProgramOverviewTab program={program} onOpenModule={onOpenModule} />
         </>

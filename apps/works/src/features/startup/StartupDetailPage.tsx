@@ -1,11 +1,12 @@
 import { BackButton, Badge, Banner, Button, CardShell, cardText, DensityProvider, InfoField, PanelCard, Spinner } from '@ynarcher/ui'
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { DetailDeleteButton } from '@/components/DetailDeleteButton'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
 import { PhotoBox } from '@/features/networks/PhotoBox'
-import { useContributions, useEntity } from '@/features/networks/hooks'
+import { useContributions, useDeactivateEntity, useEntity } from '@/features/networks/hooks'
 import { useAuthStore } from '@/auth/authStore'
 import { StartupDetailForm } from '@/features/startup/StartupDetailForm'
 import { useStartupManagers } from '@/features/startup/startupPoolHooks'
@@ -51,10 +52,12 @@ function formatDate(v: unknown): string {
  */
 export function StartupDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const { data: record, isLoading } = useEntity('startups', id)
   const { data: contributions } = useContributions('startups', id)
   const { data: managers } = useStartupManagers(id)
   const authUser = useAuthStore((s) => s.user)
+  const deactivate = useDeactivateEntity('startups')
   const [editing, setEditing] = useState(false)
 
   if (isLoading) return <Spinner />
@@ -82,7 +85,14 @@ export function StartupDetailPage() {
         <div className="flex items-center justify-between">
           <BackButton as={Link} to={LIST_PATH} />
           {canEdit ? (
-            <Button onClick={() => setEditing(true)}>수정</Button>
+            <div className="flex items-center gap-2">
+              <DetailDeleteButton
+                name={record.name ? String(record.name) : undefined}
+                onDelete={(reason) => deactivate.mutateAsync({ id: record.id, reason: reason ?? '' })}
+                onDeleted={() => navigate(LIST_PATH)}
+              />
+              <Button onClick={() => setEditing(true)}>수정</Button>
+            </div>
           ) : (
             <span className="text-caption text-gray-600">지정 담당자만 수정할 수 있습니다.</span>
           )}

@@ -2,6 +2,7 @@ import { BackButton, Badge, Banner, Button, CardShell, cardText, DensityProvider
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { DetailDeleteButton } from '@/components/DetailDeleteButton'
 import { NetworkForm } from '@/features/networks/NetworkForm'
 import { PhotoBox } from '@/features/networks/PhotoBox'
 import { ChangeHistoryPanel, uniqueContributors } from '@/features/networks/ChangeHistoryPanel'
@@ -18,6 +19,7 @@ import {
 import { SensitiveValue } from '@/features/master/SensitiveValue'
 import {
   useContributions,
+  useDeactivateEntity,
   useEntity,
   type EntityRow,
 } from '@/features/networks/hooks'
@@ -245,6 +247,7 @@ export function NetworkDetailPage({
   const isNew = id === 'new'
   const [editing, setEditing] = useState(isNew && !readOnly)
   const { data: record, isLoading } = useEntity(entity, isNew ? undefined : id)
+  const deactivate = useDeactivateEntity(entity)
 
   if (!isNew && isLoading) return <Spinner />
   if (!isNew && !record) {
@@ -257,7 +260,16 @@ export function NetworkDetailPage({
       {!editing && (
         <div className="flex items-center justify-between">
           <BackButton as={Link} to={listPath} />
-          {!isNew && !readOnly && <Button onClick={() => setEditing(true)}>수정</Button>}
+          {!isNew && !readOnly && record && (
+            <div className="flex items-center gap-2">
+              <DetailDeleteButton
+                name={(record.name as string) ?? undefined}
+                onDelete={(reason) => deactivate.mutateAsync({ id: record.id as string, reason: reason ?? '' })}
+                onDeleted={() => navigate(listPath)}
+              />
+              <Button onClick={() => setEditing(true)}>수정</Button>
+            </div>
+          )}
         </div>
       )}
 

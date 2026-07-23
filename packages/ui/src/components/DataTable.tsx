@@ -115,6 +115,13 @@ export interface DataTableProps<T> {
    * 항상 유지되며(컬럼 폭 고정), false면 셀을 비워 버튼 없이 표시한다(HUB 등 읽기 전용).
    */
   manageable?: boolean
+  /**
+   * 관리 컬럼(헤더+셀)을 아예 렌더할지 여부(기본 true). false면 작성자/수정일만 남기고 관리 열 자체를
+   * 제거한다. 비활성화/복사/수정 등 관리 액션이 목록에 전혀 없는 표(예: 삭제를 상세 페이지로 옮긴
+   * STARTUP·PROGRAM 목록)에서 빈 열이 남지 않도록 opt-out 한다. 복사 등 다른 관리 액션이 필요한
+   * 표(NETWORKS 원장)는 이 열을 유지한 채 비활성화 핸들러만 빼면 된다.
+   */
+  showManageColumn?: boolean
   /** 표준 컬럼 값 접근자(미지정 시 관례 필드에서 자동 추론). */
   meta?: DataTableMeta<T>
 }
@@ -182,6 +189,7 @@ export function DataTable<T>({
   authorLabel = '등록자',
   updatedAtAlign = 'center',
   manageable = true,
+  showManageColumn = true,
   selectable = false,
   selectedKeys,
   onSelectionChange,
@@ -203,7 +211,7 @@ export function DataTable<T>({
     columns.length +
     (selectable ? 1 : 0) +
     (numbered ? 1 : 0) +
-    (standardColumns ? (showAuthor ? 3 : 2) : 0)
+    (standardColumns ? (showAuthor ? 1 : 0) + 1 + (showManageColumn ? 1 : 0) : 0)
 
   // 서버 페이징 시 전체 건수 기준으로 첫 행(index 0)의 No.를 매긴다. 미지정 시 페이지 내 rows 기준.
   const numberFrom = pagination
@@ -310,7 +318,9 @@ export function DataTable<T>({
                 )}
                 {/* 헤더는 값 정렬과 무관하게 항상 가운데. 머리글 줄이 하나의 띠로 읽히게 한다. */}
                 <th className={cn(`h-row w-28 border-b border-gray-300 ${cellX} text-center ${tableText.head}`, pad, truncate)}>수정일</th>
-                <th className={cn(`h-row w-32 border-b border-gray-300 ${cellX} text-center ${tableText.head}`, pad)}>관리</th>
+                {showManageColumn && (
+                  <th className={cn(`h-row w-32 border-b border-gray-300 ${cellX} text-center ${tableText.head}`, pad)}>관리</th>
+                )}
               </>
             )}
           </tr>
@@ -388,64 +398,66 @@ export function DataTable<T>({
                       <td className={cn(`whitespace-nowrap border-b border-gray-200 ${cellX} tabular-nums ${tableText.meta}`, alignClass[updatedAtAlign], pad, truncate)}>
                         {resolveUpdatedAt(row, meta)}
                       </td>
-                      <td
-                        className={cn(`border-b border-gray-200 ${cellX} text-center ${tableText.body}`, pad)}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {/* 복사는 읽기 전용 액션이라 manageable과 무관하게 노출(HUB 조회 센터 포함). */}
-                        {(meta?.copyText || manageable) && (
-                          <div className="flex items-center justify-center gap-1 whitespace-nowrap">
-                            {/* 수정은 편집 권한 컨텍스트에서, 활성 행에 대해서만 노출한다. */}
-                            {manageable && meta?.onEdit && active && (
-                              <Button
-                                variant="outline"
-                                title="수정"
-                                onClick={() => meta.onEdit!(row)}
-                              >
-                                수정
-                              </Button>
-                            )}
-                            {meta?.copyText && (
-                              <Button
-                                variant="outline"
-                                title="복사하기"
-                                onClick={() => {
-                                  void navigator.clipboard
-                                    ?.writeText(meta.copyText!(row))
-                                    .then(() => toast?.show('복사했습니다.', 'success'))
-                                    .catch(() => toast?.show('복사에 실패했습니다.', 'danger'))
-                                }}
-                              >
-                                복사
-                              </Button>
-                            )}
-                            {/* 비활성화(소프트 삭제)는 편집 권한 컨텍스트(manageable)에서만 노출한다. */}
-                            {manageable &&
-                              (active ? (
+                      {showManageColumn && (
+                        <td
+                          className={cn(`border-b border-gray-200 ${cellX} text-center ${tableText.body}`, pad)}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {/* 복사는 읽기 전용 액션이라 manageable과 무관하게 노출(HUB 조회 센터 포함). */}
+                          {(meta?.copyText || manageable) && (
+                            <div className="flex items-center justify-center gap-1 whitespace-nowrap">
+                              {/* 수정은 편집 권한 컨텍스트에서, 활성 행에 대해서만 노출한다. */}
+                              {manageable && meta?.onEdit && active && (
                                 <Button
-                                  variant="outline-danger"
-                                  title="비활성화(소프트 삭제)"
-                                  disabled={!meta?.onDeactivate}
+                                  variant="outline"
+                                  title="수정"
+                                  onClick={() => meta.onEdit!(row)}
+                                >
+                                  수정
+                                </Button>
+                              )}
+                              {meta?.copyText && (
+                                <Button
+                                  variant="outline"
+                                  title="복사하기"
                                   onClick={() => {
-                                    // 사유 모달을 쓰는 경우 내장 confirm 없이 핸들러로 위임한다.
-                                    if (meta?.deactivateWithReason) {
-                                      meta?.onDeactivate?.(row)
-                                    } else if (
-                                      typeof window !== 'undefined' &&
-                                      window.confirm('이 항목을 비활성화하시겠습니까?')
-                                    ) {
-                                      meta?.onDeactivate?.(row)
-                                    }
+                                    void navigator.clipboard
+                                      ?.writeText(meta.copyText!(row))
+                                      .then(() => toast?.show('복사했습니다.', 'success'))
+                                      .catch(() => toast?.show('복사에 실패했습니다.', 'danger'))
                                   }}
                                 >
-                                  비활성화
+                                  복사
                                 </Button>
-                              ) : (
-                                <span className="text-caption text-gray-400">비활성</span>
-                              ))}
-                          </div>
-                        )}
-                      </td>
+                              )}
+                              {/* 비활성화(소프트 삭제)는 핸들러가 주입된 편집 권한 컨텍스트에서만 노출한다.
+                                  핸들러가 없으면(삭제를 상세 페이지로 옮긴 목록) 버튼을 그리지 않는다. */}
+                              {manageable &&
+                                (active
+                                  ? meta?.onDeactivate && (
+                                      <Button
+                                        variant="outline-danger"
+                                        title="비활성화(소프트 삭제)"
+                                        onClick={() => {
+                                          // 사유 모달을 쓰는 경우 내장 confirm 없이 핸들러로 위임한다.
+                                          if (meta.deactivateWithReason) {
+                                            meta.onDeactivate?.(row)
+                                          } else if (
+                                            typeof window !== 'undefined' &&
+                                            window.confirm('이 항목을 비활성화하시겠습니까?')
+                                          ) {
+                                            meta.onDeactivate?.(row)
+                                          }
+                                        }}
+                                      >
+                                        비활성화
+                                      </Button>
+                                    )
+                                  : <span className="text-caption text-gray-400">비활성</span>)}
+                            </div>
+                          )}
+                        </td>
+                      )}
                     </>
                   )}
                 </tr>

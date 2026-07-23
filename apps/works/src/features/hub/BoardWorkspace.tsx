@@ -1,4 +1,4 @@
-import { BackButton, Button, Checkbox, Input, PageHeader } from '@ynarcher/ui'
+import { BackButton, Button, Checkbox, Input, PageHeader, PanelCard } from '@ynarcher/ui'
 import dayjs from 'dayjs'
 import { useState } from 'react'
 import { RichTextEditor, RichTextViewer } from '@/components/RichTextEditor'
@@ -102,7 +102,6 @@ export function BoardWorkspace({
     return (
       <PostEditor
         key="new"
-        heading={`${title} 글쓰기`}
         authorName={authorName}
         onCancel={() => setView({ mode: 'list' })}
         onSubmit={create}
@@ -114,7 +113,6 @@ export function BoardWorkspace({
     return (
       <PostEditor
         key={view.post.id}
-        heading={`${title} 수정`}
         authorName={authorName}
         initial={view.post}
         submitLabel="수정 완료"
@@ -136,6 +134,10 @@ export function BoardWorkspace({
         onAddComment={(content) => addComment(view.post.id, content)}
         onBack={() => setView({ mode: 'list' })}
         onEdit={() => setView({ mode: 'edit', post: view.post, from: 'detail' })}
+        onDelete={() => {
+          setPostActive(boardSlug, view.post.id, false)
+          setView({ mode: 'list' })
+        }}
       />
     )
   }
@@ -158,8 +160,7 @@ export function BoardWorkspace({
         emptyText={keyword.trim() ? '검색 결과가 없습니다.' : '등록된 게시글이 없습니다.'}
         boardLabel={title}
         onSelect={(post) => openDetail(post)}
-        onEdit={(post) => setView({ mode: 'edit', post, from: 'list' })}
-        onDeactivate={(post) => setPostActive(boardSlug, post.id, false)}
+        // 수정·삭제는 목록의 관리 컬럼이 아니라 상세 페이지에서 수행한다(관리 컬럼 미노출).
       />
     </div>
   )
@@ -167,14 +168,12 @@ export function BoardWorkspace({
 
 /** 리치 에디터 작성/수정 화면. initial이 있으면 수정 모드로 값을 채운다. */
 function PostEditor({
-  heading,
   authorName,
   initial,
   submitLabel = '등록',
   onCancel,
   onSubmit,
 }: {
-  heading: string
   authorName?: string
   initial?: BoardPost
   submitLabel?: string
@@ -214,45 +213,54 @@ function PostEditor({
   }
 
   return (
-    <div className="flex h-full flex-col gap-4">
-      <PageHeader
-        title={heading}
-        actions={
-          <>
-            <Button variant="outline" onClick={onCancel}>
-              취소
-            </Button>
-            <Button onClick={submit} disabled={!postTitle.trim()}>
-              {submitLabel}
-            </Button>
-          </>
-        }
-      />
-      <Input
-        placeholder="제목을 입력하세요"
-        value={postTitle}
-        onChange={(e) => setPostTitle(e.target.value)}
-      />
-      <RichTextEditor value={content} onChange={setContent} />
-      <AttachmentField value={attachments} onChange={setAttachments} />
-      <div className="flex flex-col gap-2">
-        <label className="flex w-fit cursor-pointer items-center gap-2 text-body text-gray-700">
-          <Checkbox checked={pinned} onChange={(e) => setPinned(e.target.checked)} />
-          이 글을 게시판 <span className="font-semibold text-gray-900">최상단에 고정</span>
-        </label>
-        <label className="flex w-fit cursor-pointer items-center gap-2 text-body text-gray-700">
-          <Checkbox
-            checked={globalNotice}
-            onChange={(e) => toggleGlobalNotice(e.target.checked)}
-          />
-          <span className="font-semibold text-gray-900">전체 공지</span>로 등록하여 공지사항 메뉴에 노출
-        </label>
+    <div className="space-y-5">
+      {/* 상단 바 — 다른 상세/편집 화면과 동일하게 좌측 뒤로가기, 우측 확정 버튼. */}
+      <div className="flex items-center justify-between">
+        <BackButton onClick={onCancel} />
+        <Button onClick={submit} disabled={!postTitle.trim()}>
+          {submitLabel}
+        </Button>
       </div>
-      {!initial && (
-        <p className="text-caption text-gray-600">
-          작성자({authorName ?? '작성자'})와 게시일(오늘)은 자동으로 기록됩니다.
-        </p>
-      )}
+
+      {/* 2:1 배치 — 좌측(2/3) 제목·본문 에디터, 우측(1/3) 첨부파일·게시 옵션 카드. */}
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
+        {/* 좌측(2/3): 제목 + 본문 에디터 */}
+        <div className="space-y-4 lg:col-span-2">
+          <Input
+            placeholder="제목을 입력하세요"
+            value={postTitle}
+            onChange={(e) => setPostTitle(e.target.value)}
+          />
+          <RichTextEditor value={content} onChange={setContent} />
+        </div>
+
+        {/* 우측(1/3): 첨부파일 → 게시 옵션 */}
+        <div className="space-y-4 lg:col-span-1">
+          <PanelCard title="첨부파일">
+            <AttachmentField value={attachments} onChange={setAttachments} />
+          </PanelCard>
+          <PanelCard title="게시 옵션">
+            <div className="flex flex-col gap-2">
+              <label className="flex w-fit cursor-pointer items-center gap-2 text-body text-gray-700">
+                <Checkbox checked={pinned} onChange={(e) => setPinned(e.target.checked)} />
+                이 글을 게시판 <span className="font-semibold text-gray-900">최상단에 고정</span>
+              </label>
+              <label className="flex w-fit cursor-pointer items-center gap-2 text-body text-gray-700">
+                <Checkbox
+                  checked={globalNotice}
+                  onChange={(e) => toggleGlobalNotice(e.target.checked)}
+                />
+                <span className="font-semibold text-gray-900">전체 공지</span>로 등록하여 공지사항 메뉴에 노출
+              </label>
+            </div>
+            {!initial && (
+              <p className="mt-3 border-t border-gray-100 pt-3 text-caption text-gray-600">
+                작성자({authorName ?? '작성자'})와 게시일(오늘)은 자동으로 기록됩니다.
+              </p>
+            )}
+          </PanelCard>
+        </div>
+      </div>
     </div>
   )
 }
@@ -268,13 +276,19 @@ function DetailView({
   onAddComment,
   onBack,
   onEdit,
+  onDelete,
 }: {
   post: BoardPost
   comments: BoardComment[]
   onAddComment: (content: string) => void
   onBack: () => void
   onEdit: () => void
+  onDelete: () => void
 }) {
+  const handleDelete = () => {
+    if (!window.confirm('이 게시글을 삭제할까요?')) return
+    onDelete()
+  }
   const attachments = post.attachments ?? []
   // 변동 이력: 서버 기여 로그(entity_contributions) 연동 전까지 게시글 등록 기록만 표시한다.
   const contributions: Contribution[] = [
@@ -296,7 +310,12 @@ function DetailView({
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <BackButton onClick={onBack} />
-        <Button onClick={onEdit}>수정</Button>
+        <div className="flex gap-2">
+          <Button variant="outline-danger" onClick={handleDelete}>
+            삭제
+          </Button>
+          <Button onClick={onEdit}>수정</Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
@@ -312,16 +331,16 @@ function DetailView({
             {/* 메타는 상세페이지 공통 '라벨: 값' 패턴으로 정렬한다(STARTUP·NETWORKS 정보행과 동일). */}
             <div className="mt-3 flex flex-wrap items-baseline gap-x-5 gap-y-1">
               <span className="flex items-baseline gap-2">
-                <span className="text-caption text-gray-600">작성자</span>
-                <span className="text-caption font-medium text-gray-700">{post.author}</span>
+                <span className="text-body text-gray-500">작성자</span>
+                <span className="text-body font-medium text-gray-800">{post.author}</span>
               </span>
               <span className="flex items-baseline gap-2">
-                <span className="text-caption text-gray-600">게시일</span>
-                <span className="text-caption tabular-nums text-gray-700">{post.date}</span>
+                <span className="text-body text-gray-500">게시일</span>
+                <span className="text-body font-medium tabular-nums text-gray-800">{post.date}</span>
               </span>
               <span className="flex items-baseline gap-2">
-                <span className="text-caption text-gray-600">조회</span>
-                <span className="text-caption tabular-nums text-gray-700">
+                <span className="text-body text-gray-500">조회</span>
+                <span className="text-body font-medium tabular-nums text-gray-800">
                   {(post.views ?? 0).toLocaleString()}
                 </span>
               </span>

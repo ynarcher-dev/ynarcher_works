@@ -37,18 +37,13 @@ export function NoticeWorkspace() {
     {
       key: 'title',
       header: '제목',
+      // 진입은 행 전체 클릭(onRowClick)이 담당하므로 제목은 텍스트·표식만 렌더한다.
       render: (n) => (
-        <button
-          type="button"
-          onClick={() => navigate(`/office?tab=${n.boardSlug}&post=${n.post.id}`)}
-          className="flex min-w-0 items-center gap-1.5 text-left"
-        >
+        <span className="flex min-w-0 items-center gap-1.5">
           {/* 전 항목이 전체 공지이고 고정은 No. 칸 핀 표식으로 알리므로 제목 앞 배지는 없다. */}
-          <span className="truncate text-gray-800 hover:text-brand hover:underline">
-            {n.post.title}
-          </span>
+          <span className="truncate text-gray-800">{n.post.title}</span>
           {isNewPost(n.post.date) && <NewBadge />}
-        </button>
+        </span>
       ),
     },
     // 첨부·조회 열은 게시판 목록과 같은 규격을 공유한다.
@@ -83,12 +78,16 @@ export function NoticeWorkspace() {
         emptyText={
           q ? '검색 결과가 없습니다.' : '등록된 공지사항이 없습니다.'
         }
+        // 행 전체 클릭으로 원본 게시판 상세로 이동(게시판·회의록 목록과 동일).
+        onRowClick={(n) => navigate(`/office?tab=${n.boardSlug}&post=${n.post.id}`)}
+        authorLabel="작성자"
+        // 공지사항은 조회 전용(원본 게시판 상세로 이동)이라 관리 컬럼을 두지 않는다.
+        showManageColumn={false}
         meta={{
           author: (n) => n.post.author,
           updatedAt: (n) => n.post.date,
           active: (n) => !n.post.deletedAt,
           rowMark: (n) => pinMark(n.post.pinned),
-          // 원본이 게시판에 있으므로 비활성화는 원본 게시판 목록에서만 수행한다(뷰는 조회 전용).
         }}
         pagination={{
           page: safePage,

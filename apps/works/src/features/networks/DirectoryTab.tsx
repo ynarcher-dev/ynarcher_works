@@ -195,8 +195,10 @@ export function DirectoryTab({ config, keyword, creating, setCreating }: Directo
             ? (r) => navigate(`/networks/${config.key}/${r.id}`)
             : undefined
         }
-        onDeactivate={(row) => setDeactivateTarget(row)}
-        deactivateWithReason
+        // 상세 페이지가 있는 8종은 비활성화(삭제)를 상세에서 수행하므로 목록에는 노출하지 않는다.
+        // 상세가 없는 미분류(others) 임시 저장소만 목록에서 바로 비활성화한다.
+        onDeactivate={isOthers ? (row) => setDeactivateTarget(row) : undefined}
+        deactivateWithReason={isOthers}
         categorySelect={categorySelect}
         selectedKeys={isOthers ? selected : undefined}
         onSelectionChange={isOthers ? setSelected : undefined}

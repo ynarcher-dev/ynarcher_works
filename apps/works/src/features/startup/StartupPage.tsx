@@ -12,13 +12,12 @@ const HEADINGS: Record<string, string> = {
   incubated: '보육기업',
   discovered: '발굴기업',
   etc: '기타기업',
-  minutes: '회의록',
   archerscan: '아처스캔',
   bulk: '대용량 업로드',
 }
 
 /**
- * STARTUP 워크스페이스: 대시보드 / 내 관리기업 / 투자·보육·발굴·기타 기업 / 회의록 / 아처스캔.
+ * STARTUP 워크스페이스: 대시보드 / 내 관리기업 / 투자·보육·발굴·기타 기업 / 아처스캔.
  * 섹션 전환은 좌측 사이드바(?tab)가 구동한다.
  * 투자·보육·발굴·기타 4개 메뉴는 구분(management_status) 코드로 갈린 상호 배타 뷰다.
  * '내 관리기업'은 구분과 무관하게 담당자(startup_managers) 또는 등록자(created_by)가 나인 기업을 모은다.

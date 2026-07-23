@@ -41,40 +41,27 @@ export function viewsColumn<T>(get: (row: T) => BoardPost): Column<T> {
   }
 }
 
-/** 제목 열 렌더러. onSelect가 있으면 제목을 클릭 가능한 버튼으로 노출한다. */
-function titleColumn(onSelect?: (post: BoardPost) => void): Column<BoardPost> {
+/** 제목 열 렌더러. 진입은 행 전체 클릭(onRowClick)이 담당하므로 표식·텍스트만 렌더한다. */
+function titleColumn(): Column<BoardPost> {
   return {
     key: 'title',
     header: '제목',
-    render: (p) => {
-      // 고정은 No. 칸 핀 표식으로 알리므로 제목 앞에는 공지 말머리만 남긴다.
-      const badges = <PostFlagBadges post={p} showPinned={false} />
-      return onSelect ? (
-        <button
-          type="button"
-          onClick={() => onSelect(p)}
-          className="flex min-w-0 items-center gap-1.5 text-left"
-        >
-          {badges}
-          <span className="truncate text-gray-800 hover:text-brand hover:underline">
-            {p.title}
-          </span>
-          {isNewPost(p.date) && <NewBadge />}
-        </button>
-      ) : (
-        <span className="flex min-w-0 items-center gap-1.5">
-          {badges}
-          <span className="truncate text-gray-800">{p.title}</span>
-          {isNewPost(p.date) && <NewBadge />}
-        </span>
-      )
-    },
+    // 고정은 No. 칸 핀 표식으로 알리므로 제목 앞에는 공지 말머리만 남긴다.
+    render: (p) => (
+      <span className="flex min-w-0 items-center gap-1.5">
+        <PostFlagBadges post={p} showPinned={false} />
+        <span className="truncate text-gray-800">{p.title}</span>
+        {isNewPost(p.date) && <NewBadge />}
+      </span>
+    ),
   }
 }
 
 /**
  * 게시판 목록 공통 표.
- * 열 구성: No.(고정 시 📌) · 제목 · 첨부 · 조회 · [게시판] · 작성자 · 수정일 · 관리.
+ * 열 구성: No.(고정 시 📌) · 제목 · 첨부 · 조회 · [게시판] · 작성자 · 수정일 · [관리].
+ * 관리 컬럼은 수정/비활성화 핸들러가 주입될 때만 노출한다 — 삭제를 상세 페이지로 옮긴 게시판처럼
+ * 관리 액션이 없으면 빈 열이 남지 않도록 자동으로 감춘다.
  * 표준 메타 컬럼과 페이저는 공용 DataTable 규격을 따른다(5_component_spec_rules.md §3.1~3.2).
  */
 export function BoardPanel({
@@ -102,7 +89,7 @@ export function BoardPanel({
   const pageRows = posts.slice(safePage * BOARD_PAGE_SIZE, (safePage + 1) * BOARD_PAGE_SIZE)
 
   const columns: Column<BoardPost>[] = [
-    titleColumn(onSelect),
+    titleColumn(),
     attachmentColumn<BoardPost>((p) => p),
     viewsColumn<BoardPost>((p) => p),
   ]
@@ -123,6 +110,11 @@ export function BoardPanel({
       rows={pageRows}
       rowKey={(p) => p.id}
       emptyText={emptyText}
+      // 행 전체 클릭으로 상세 진입(STARTUP·NETWORKS 목록과 동일).
+      onRowClick={onSelect}
+      authorLabel="작성자"
+      // 관리 액션(수정·비활성화)이 하나도 없으면 관리 컬럼 자체를 감춘다.
+      showManageColumn={Boolean(onEdit || onDeactivate)}
       meta={{
         author: (p) => p.author,
         updatedAt: (p) => p.date,
