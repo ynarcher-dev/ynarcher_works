@@ -39,6 +39,8 @@ export interface MinuteListItem {
 
 export interface MinuteDetail extends MinuteListItem {
   location: string | null
+  /** 주요 안건(단문 요약). 본문(body)과 별개 필드. */
+  agenda: string | null
   body: string | null
   people: MinutePerson[]
   externalAttendees: string[]
@@ -50,6 +52,7 @@ export interface MinuteDraft {
   title: string
   meetingDate: string | null
   location: string | null
+  agenda: string | null
   body: string | null
   visibility: MinuteVisibility
   people: { userId: string; role: MinutePersonRole }[]
@@ -61,7 +64,7 @@ const MINUTES_KEY = ['office', 'minutes']
 const LIST_COLUMNS =
   'id, title, meeting_date, visibility, author_id, author_name, created_at, view_count'
 const DETAIL_COLUMNS =
-  'id, title, meeting_date, location, body, visibility, author_id, author_name, created_at, view_count, external_attendees, meeting_minute_people(user_id, role, users:user_id(name))'
+  'id, title, meeting_date, location, agenda, body, visibility, author_id, author_name, created_at, view_count, external_attendees, meeting_minute_people(user_id, role, users:user_id(name))'
 
 interface ListRow {
   id: string
@@ -140,6 +143,7 @@ export function useMinute(id: string | null) {
       // unknown 경유로 캐스팅하고 배열/객체 양쪽을 정규화한다.
       const row = data as unknown as ListRow & {
         location: string | null
+        agenda: string | null
         body: string | null
         external_attendees: string[] | null
         meeting_minute_people: {
@@ -151,6 +155,7 @@ export function useMinute(id: string | null) {
       return {
         ...toListItem(row),
         location: row.location,
+        agenda: row.agenda,
         body: row.body,
         externalAttendees: row.external_attendees ?? [],
         people: (row.meeting_minute_people ?? []).map((p) => {
@@ -173,6 +178,7 @@ export function useSaveMinute() {
         title,
         meeting_date: draft.meetingDate || null,
         location: draft.location?.trim() || null,
+        agenda: draft.agenda?.trim() || null,
         body: draft.body?.trim() || null,
         visibility: draft.visibility,
         external_attendees: draft.externalAttendees.map((n) => n.trim()).filter(Boolean),

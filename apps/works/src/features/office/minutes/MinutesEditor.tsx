@@ -35,6 +35,7 @@ export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [meetingDate, setMeetingDate] = useState(initial?.meetingDate ?? '')
   const [location, setLocation] = useState(initial?.location ?? '')
+  const [agenda, setAgenda] = useState(initial?.agenda ?? '')
   const [body, setBody] = useState(initial?.body ?? '')
   const [visibility, setVisibility] = useState<MinuteVisibility>(initial?.visibility ?? 'PARTICIPANTS')
   const [people, setPeople] = useState<PickerPerson[]>(
@@ -49,6 +50,7 @@ export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
         title,
         meetingDate: meetingDate || null,
         location: location || null,
+        agenda: agenda || null,
         body: body || null,
         visibility,
         people,
@@ -144,6 +146,13 @@ export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
           />
 
           <ExternalAttendeePicker value={externalAttendees} onChange={setExternalAttendees} />
+
+          <Input
+            value={agenda}
+            onChange={(e) => setAgenda(e.target.value)}
+            placeholder="주요 안건 (예: 3분기 채용 계획 검토)"
+            aria-label="주요 안건"
+          />
 
           <RichTextEditor value={body} onChange={setBody} placeholder="회의 내용을 입력하세요…" />
         </div>

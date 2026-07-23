@@ -120,6 +120,12 @@ export function MinutesDetail({ minuteId, currentUserId, onBack, onEdit }: Props
                   <TagRow label="참조" names={references} />
                 </div>
               )}
+              {minute.agenda && (
+                <div className="flex items-start gap-2 border-t border-gray-100 pt-4">
+                  <span className="w-20 shrink-0 pt-0.5 text-body text-gray-500">주요 안건</span>
+                  <p className="min-w-0 whitespace-pre-line text-body text-gray-800">{minute.agenda}</p>
+                </div>
+              )}
             </div>
           </article>
 
