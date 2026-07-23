@@ -104,7 +104,7 @@ function GlobalView({ record }: { record: GlobalRow }) {
 
       {/* 이력(소속·부서·직책 변경): 국내 상세와 동일 규격. 현재값은 부제가, 과거 조합은 이 카드가 담는다. */}
       <PanelCard title="이력">
-        <AffiliationHistoryPanel profile={profile} />
+        <AffiliationHistoryPanel profile={profile} contributions={contributions} />
       </PanelCard>
       </div>
 
