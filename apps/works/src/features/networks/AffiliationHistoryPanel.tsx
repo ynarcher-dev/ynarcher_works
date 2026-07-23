@@ -94,7 +94,8 @@ export function AffiliationHistoryPanel({ profile, contributions = [] }: Props) 
           <li key={i} className="flex flex-wrap items-baseline gap-x-2 py-1.5 first:pt-0">
             <span className={tableText.primary}>{formatCombo(r) || '-'}</span>
             <span className={`tabular-nums ${tableText.meta}`}>
-              {[
+              {/* 날짜부터 사유까지를 괄호로 묶어 앞의 소속 조합과 시각적으로 분리한다. */}
+              {`(${[
                 r.at ? String(r.at).slice(0, 10) : '-',
                 // '수정'은 갱신 행위 말머리 — 뒤의 이름과 붙여 누가 바꿨는지 한 덩이로 읽힌다.
                 actor ? `수정 ${actor}` : null,
@@ -102,7 +103,7 @@ export function AffiliationHistoryPanel({ profile, contributions = [] }: Props) 
                 r.note || null,
               ]
                 .filter(Boolean)
-                .join(' · ')}
+                .join(' · ')})`}
             </span>
           </li>
         )
