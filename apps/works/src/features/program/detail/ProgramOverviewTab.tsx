@@ -7,6 +7,7 @@ import { ModuleBoardCard } from '@/features/program/detail/ModuleBoardCard'
 import { ProgramInfoCard } from '@/features/program/detail/ProgramInfoCard'
 import { ProgramScheduleCard } from '@/features/program/detail/ProgramScheduleCard'
 import { RelatedApprovalPanel } from '@/features/program/detail/RelatedApprovalPanel'
+import { RelatedMinutesPanel } from '@/features/office/minutes/RelatedMinutesPanel'
 import { useProgramContributions } from '@/features/program/detail/programContributions'
 import { useProgramWorkspace } from '@/features/program/workspace'
 import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
@@ -63,6 +64,7 @@ export function ProgramOverviewTab({
       <div className="space-y-4 lg:col-span-1">
         <ProgramScheduleCard program={program} />
         <RelatedApprovalPanel />
+        <RelatedMinutesPanel targetType={config.entityKey} targetId={program.id} />
         <MaterialPanel targetType="program" targetId={program.id} />
         <FeedbackPanel targetType={config.entityKey} targetId={program.id} />
         <ChangeHistoryPanel contributions={contributions} />

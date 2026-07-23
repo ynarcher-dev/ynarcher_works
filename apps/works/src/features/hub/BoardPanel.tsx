@@ -7,23 +7,23 @@ import { PostFlagBadges, pinMark } from '@/features/hub/PostFlagBadges'
 
 /**
  * 첨부 유무 열(공통). 건수는 상세에서 확인하므로 목록에서는 있음/없음만 알린다.
+ * 첨부 존재 여부는 attachments(BOARD_POST) 조회로 얻은 id 집합으로 판정한다(행별 조회 회피).
  * 게시판·공지사항 목록이 공유한다.
  */
-export function attachmentColumn<T>(get: (row: T) => BoardPost): Column<T> {
+export function attachmentColumn<T>(has: (row: T) => boolean): Column<T> {
   return {
     key: 'attachment',
     header: '첨부',
     align: 'center',
     className: 'w-16',
-    render: (row) => {
-      const count = get(row).attachments?.length ?? 0
-      if (count === 0) return <span className="sr-only">첨부 없음</span>
-      return (
-        <span className="inline-flex items-center justify-center" title={`첨부 ${count}건`}>
-          <Paperclip aria-label={`첨부 ${count}건`} className="size-4 text-gray-500" />
+    render: (row) =>
+      has(row) ? (
+        <span className="inline-flex items-center justify-center" title="첨부 있음">
+          <Paperclip aria-label="첨부 있음" className="size-4 text-gray-500" />
         </span>
-      )
-    },
+      ) : (
+        <span className="sr-only">첨부 없음</span>
+      ),
   }
 }
 
@@ -59,13 +59,14 @@ function titleColumn(): Column<BoardPost> {
 
 /**
  * 게시판 목록 공통 표.
- * 열 구성: No.(고정 시 📌) · 제목 · 첨부 · 조회 · [게시판] · 작성자 · 수정일 · [관리].
+ * 열 구성: No.(고정 시 📌) · 제목 · 첨부 · [게시판] · 조회 · 작성자 · 수정일 · [관리].
  * 관리 컬럼은 수정/비활성화 핸들러가 주입될 때만 노출한다 — 삭제를 상세 페이지로 옮긴 게시판처럼
  * 관리 액션이 없으면 빈 열이 남지 않도록 자동으로 감춘다.
  * 표준 메타 컬럼과 페이저는 공용 DataTable 규격을 따른다(5_component_spec_rules.md §3.1~3.2).
  */
 export function BoardPanel({
   posts,
+  attachmentIds,
   emptyText = '등록된 게시글이 없습니다.',
   boardLabel,
   onSelect,
@@ -73,6 +74,8 @@ export function BoardPanel({
   onDeactivate,
 }: {
   posts: BoardPost[]
+  /** 첨부가 있는 게시글 id 집합(useBoardPostAttachmentIds). 미지정 시 첨부 열은 모두 '없음'. */
+  attachmentIds?: Set<string>
   emptyText?: string
   /** 소속 게시판명. 지정 시 '게시판' 열을 노출한다(여러 게시판을 섞어 보여줄 때 사용). */
   boardLabel?: string
@@ -90,9 +93,9 @@ export function BoardPanel({
 
   const columns: Column<BoardPost>[] = [
     titleColumn(),
-    attachmentColumn<BoardPost>((p) => p),
-    viewsColumn<BoardPost>((p) => p),
+    attachmentColumn<BoardPost>((p) => attachmentIds?.has(p.id) ?? false),
   ]
+  // 게시판 열은 첨부 바로 우측에 둔다(여러 게시판을 섞어 볼 때 소속을 먼저 식별).
   if (boardLabel) {
     columns.push({
       key: 'board',
@@ -103,6 +106,7 @@ export function BoardPanel({
       render: () => <span className="text-gray-600">{boardLabel}</span>,
     })
   }
+  columns.push(viewsColumn<BoardPost>((p) => p))
 
   return (
     <DataTable

@@ -10,12 +10,9 @@ import {
 import { Link } from 'react-router-dom'
 import aiBannerGraphic from '@/assets/ai_banner_graphic.png'
 import { useRightPanel } from '@/app/rightPanel'
-import {
-  SEED_FILES,
-  SEED_NOTICES,
-  isNewPost,
-  type BoardPost,
-} from '@/features/hub/boardData'
+import { isNewPost, type BoardPost } from '@/features/hub/boardData'
+import { useBoardPosts, useNotices } from '@/features/hub/boardPostsApi'
+import { useBoards } from '@/features/hub/boardHooks'
 import { useAuthStore } from '@/auth/authStore'
 import { useHubSummary, useMyHireDate, type HubSummary } from '@/features/hub/hooks'
 import { UnifiedSearchPanel } from '@/features/hub/UnifiedSearchPanel'
@@ -211,7 +208,7 @@ function InfoCard({ card }: { card: InfoCardDef }) {
 /** 최근 72시간 내 게시글 표시 뱃지. */
 export function NewBadge() {
   return (
-    <span className="inline-flex shrink-0 items-center rounded bg-brand px-1 py-px text-tag-table font-bold uppercase tracking-wide text-gray-0">
+    <span className="inline-flex shrink-0 items-center rounded bg-danger-700 px-1 py-px text-tag-table font-bold uppercase tracking-wide text-gray-0">
       NEW
     </span>
   )
@@ -306,6 +303,11 @@ function PromoBanner() {
 export function DashboardPanel() {
   const summary = useHubSummary()
   const cards = summary.data ? buildCards(summary.data) : []
+  // 우측 게시판 카드: 전체 공지 상위 몇 건 + 공용자료실(첫 자료실 게시판) 최근 자료.
+  const { data: notices = [] } = useNotices()
+  const boards = useBoards().data ?? []
+  const filesBoard = boards.find((b) => b.slug === 'files') ?? boards.find((b) => b.kind === 'ARCHIVE')
+  const { data: filePosts = [] } = useBoardPosts(filesBoard?.id)
 
   return (
     <div>
@@ -334,8 +336,18 @@ export function DashboardPanel() {
         <div className="flex flex-col gap-3">
           <h2 className="text-title-sm font-semibold text-gray-900">알립니다</h2>
           <div className="flex flex-1 flex-col gap-3">
-            <BoardCard title="공지사항" icon={Megaphone} tab="notices" posts={SEED_NOTICES} />
-            <BoardCard title="공용자료실" icon={FolderOpen} tab="files" posts={SEED_FILES} />
+            <BoardCard
+              title="공지사항"
+              icon={Megaphone}
+              tab="notices"
+              posts={notices.slice(0, 5).map((n) => n.post)}
+            />
+            <BoardCard
+              title="공용자료실"
+              icon={FolderOpen}
+              tab={filesBoard?.slug ?? 'files'}
+              posts={filePosts.slice(0, 5)}
+            />
           </div>
         </div>
       </div>

@@ -1,12 +1,11 @@
-import { DataTable, Input, PageHeader, type Column } from '@ynarcher/ui'
+import { DataTable, Input, PageHeader, Spinner, type Column } from '@ynarcher/ui'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { NewBadge } from '@/features/hub/DashboardPanel'
-import { collectNotices, usePostStore, type NoticeItem } from '@/features/hub/boardPostStore'
+import { useNotices, useBoardPostAttachmentIds, type NoticeItem } from '@/features/hub/boardPostsApi'
 import { BOARD_PAGE_SIZE, isNewPost } from '@/features/hub/boardData'
 import { pinMark } from '@/features/hub/PostFlagBadges'
 import { attachmentColumn, viewsColumn } from '@/features/hub/BoardPanel'
-import { useBoards } from '@/features/hub/boardHooks'
 
 /**
  * 공지사항: 게시판이 아니라 전체 공지(globalNotice) 게시글을 모아 보여주는 조회 뷰.
@@ -17,10 +16,9 @@ export function NoticeWorkspace() {
   const navigate = useNavigate()
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(0)
-  const postsByBoard = usePostStore((s) => s.postsByBoard)
-  const boards = useBoards().data ?? []
+  const { data: notices = [], isLoading } = useNotices()
+  const { data: attachmentIds } = useBoardPostAttachmentIds()
 
-  const notices = collectNotices(postsByBoard, boards)
   const q = keyword.trim().toLowerCase()
   const rows = q
     ? notices.filter((n) =>
@@ -47,7 +45,7 @@ export function NoticeWorkspace() {
       ),
     },
     // 첨부·조회 열은 게시판 목록과 같은 규격을 공유한다.
-    attachmentColumn<NoticeItem>((n) => n.post),
+    attachmentColumn<NoticeItem>((n) => attachmentIds?.has(n.post.id) ?? false),
     viewsColumn<NoticeItem>((n) => n.post),
     {
       key: 'board',
@@ -71,6 +69,9 @@ export function NoticeWorkspace() {
           />
         }
       />
+      {isLoading ? (
+        <Spinner />
+      ) : (
       <DataTable
         columns={columns}
         rows={pageRows}
@@ -96,6 +97,7 @@ export function NoticeWorkspace() {
           onChange: setPage,
         }}
       />
+      )}
       <p className="text-caption text-gray-600">
         공지사항은 각 게시판에서 &lsquo;전체 공지&rsquo;로 등록한 글을 모아 보여줍니다. 제목을 클릭하면 원본 게시판으로 이동합니다.
       </p>

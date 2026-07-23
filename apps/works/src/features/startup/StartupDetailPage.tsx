@@ -5,6 +5,7 @@ import { DetailDeleteButton } from '@/components/DetailDeleteButton'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
+import { RelatedMinutesPanel } from '@/features/office/minutes/RelatedMinutesPanel'
 import { PhotoBox } from '@/features/networks/PhotoBox'
 import { useContributions, useDeactivateEntity, useEntity } from '@/features/networks/hooks'
 import { useAuthStore } from '@/auth/authStore'
@@ -34,8 +35,9 @@ const RESOURCE_TYPE = 'startup'
 /** 발굴기업 목록 경로(뒤로가기 목적지). */
 const LIST_PATH = '/startup?tab=discovered'
 
-/** 관리 현황 카드 섹션(플랫폼 전반 참여·관리 이력). 현재는 헤드라인만, 내용은 후속 구현. */
-const ACTIVITY_SECTIONS = ['참여 사업', '참여 M&A', '참여 프로젝트', 'A-STREAM', '기업 진단', '멘토링 & 컨설팅', '회의록']
+/** 관리 현황 카드 섹션(플랫폼 전반 참여·관리 이력). 현재는 헤드라인만, 내용은 후속 구현.
+ *  회의록은 실제 연동 패널(우측 RelatedMinutesPanel)로 구현되어 이 placeholder 목록에서 뺐다. */
+const ACTIVITY_SECTIONS = ['참여 사업', '참여 M&A', '참여 프로젝트', 'A-STREAM', '기업 진단', '멘토링 & 컨설팅']
 
 /** 라벨: 값 한 줄 — 규격은 공용 `InfoField`가 소유한다. */
 const Info = InfoField
@@ -234,6 +236,7 @@ export function StartupDetailPage() {
             {STARTUP_MATERIAL_SECTIONS.map((s) => (
               <MaterialPanel key={s.type} targetType={s.type} targetId={record.id} title={s.title} readOnly />
             ))}
+            <RelatedMinutesPanel targetType="startup" targetId={record.id} />
             <FeedbackPanel targetType={RESOURCE_TYPE} targetId={record.id} />
             <ChangeHistoryPanel contributions={contributions} />
             {/* 벤치마크: 동종기업 대비 지표 좌우 비교 카드 */}

@@ -1,5 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import {
+  MINUTE_LINK_TARGETS,
+  type MinuteLink,
+  type MinuteLinkRef,
+  type MinuteLinkTargetType,
+} from '@/features/office/minutes/minuteLinks'
+
+export type { MinuteLink, MinuteLinkRef } from '@/features/office/minutes/minuteLinks'
 
 /**
  * OFFICE 회의록(meeting_minutes) 서버 훅.
@@ -44,6 +52,8 @@ export interface MinuteDetail extends MinuteListItem {
   body: string | null
   people: MinutePerson[]
   externalAttendees: string[]
+  /** 연동된 사업/스타트업(cross-reference). 접근 불가 대상은 label=null. */
+  links: MinuteLink[]
 }
 
 /** 저장 payload(등록·수정 공용). id가 있으면 수정, 없으면 신규. */
@@ -57,6 +67,8 @@ export interface MinuteDraft {
   visibility: MinuteVisibility
   people: { userId: string; role: MinutePersonRole }[]
   externalAttendees: string[]
+  /** 연동 대상(종류+id). 저장 시 set_minute_links RPC로 일괄 교체. */
+  links: MinuteLinkRef[]
 }
 
 const MINUTES_KEY = ['office', 'minutes']
@@ -125,6 +137,59 @@ export function useIncrementMinuteView() {
   })
 }
 
+/**
+ * 회의록에 연동된 대상을 로드하고 각 원장에서 제목을 채운다.
+ * 링크 자체는 meeting_minute_links(RLS: 회의록 열람 가능자)에서, 제목은 종류별 원장을
+ * id 묶음으로 조회한다 — 원장 RLS로 접근 불가한 대상은 행이 안 돌아와 label=null이 된다.
+ */
+async function loadMinuteLinks(minuteId: string): Promise<MinuteLink[]> {
+  const { data, error } = await supabase
+    .from('meeting_minute_links')
+    .select('target_type, target_id')
+    .eq('minute_id', minuteId)
+  if (error) throw error
+  const rows = (data ?? []) as { target_type: MinuteLinkTargetType; target_id: string }[]
+  if (rows.length === 0) return []
+
+  // 종류별로 id를 모아 원장 한 번씩만 조회한다.
+  const byType = new Map<MinuteLinkTargetType, string[]>()
+  for (const r of rows) {
+    const list = byType.get(r.target_type) ?? []
+    list.push(r.target_id)
+    byType.set(r.target_type, list)
+  }
+
+  const labelMap = new Map<string, { label: string; code: string | null }>()
+  await Promise.all(
+    [...byType.entries()].map(async ([type, ids]) => {
+      const meta = MINUTE_LINK_TARGETS[type]
+      const cols = ['id', meta.titleColumn, meta.codeColumn].filter(Boolean).join(', ')
+      const { data: rowsData, error: rowsError } = await supabase
+        .from(meta.table)
+        .select(cols)
+        .in('id', ids)
+        .is('deleted_at', null)
+      if (rowsError) throw rowsError
+      for (const row of (rowsData ?? []) as unknown as Record<string, string | null>[]) {
+        labelMap.set(`${type}:${row.id}`, {
+          label: (row[meta.titleColumn] as string) ?? '(제목 없음)',
+          code: meta.codeColumn ? ((row[meta.codeColumn] as string | null) ?? null) : null,
+        })
+      }
+    }),
+  )
+
+  return rows.map((r) => {
+    const hit = labelMap.get(`${r.target_type}:${r.target_id}`)
+    return {
+      targetType: r.target_type,
+      targetId: r.target_id,
+      label: hit?.label ?? null,
+      code: hit?.code ?? null,
+    }
+  })
+}
+
 /** 회의록 상세(본문 + 참석자·참조 명단). RLS가 막으면 null. */
 export function useMinute(id: string | null) {
   return useQuery({
@@ -152,6 +217,7 @@ export function useMinute(id: string | null) {
           users: { name: string } | { name: string }[] | null
         }[]
       }
+      const links = await loadMinuteLinks(row.id)
       return {
         ...toListItem(row),
         location: row.location,
@@ -162,6 +228,7 @@ export function useMinute(id: string | null) {
           const u = Array.isArray(p.users) ? p.users[0] : p.users
           return { userId: p.user_id, name: u?.name ?? '알 수 없음', role: p.role }
         }),
+        links,
       }
     },
   })
@@ -203,6 +270,15 @@ export function useSaveMinute() {
         p_people: draft.people.map((p) => ({ user_id: p.userId, role: p.role })),
       })
       if (peopleError) throw peopleError
+
+      const { error: linksError } = await supabase.rpc('set_minute_links', {
+        p_minute_id: minuteId,
+        p_links: draft.links.map((l) => ({
+          target_type: l.targetType,
+          target_id: l.targetId,
+        })),
+      })
+      if (linksError) throw linksError
       return minuteId
     },
     onSuccess: (id) => {

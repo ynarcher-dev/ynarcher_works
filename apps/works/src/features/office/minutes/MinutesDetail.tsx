@@ -1,4 +1,5 @@
 import { Badge, BackButton, Button, EmptyState } from '@ynarcher/ui'
+import { Link } from 'react-router-dom'
 import { RichTextViewer } from '@/components/RichTextEditor'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import {
@@ -7,6 +8,11 @@ import {
   useDeleteMinute,
   useMinute,
 } from '@/features/office/minutes/minutesApi'
+import {
+  MINUTE_LINK_TARGETS,
+  minuteLinkPath,
+  type MinuteLink,
+} from '@/features/office/minutes/minuteLinks'
 
 interface Props {
   minuteId: string
@@ -25,6 +31,47 @@ function TagRow({ label, names }: { label: string; names: string[] }) {
         {names.map((name, i) => (
           <Badge key={`${name}-${i}`}>{name}</Badge>
         ))}
+      </div>
+    </div>
+  )
+}
+
+/** 연동된 사업/스타트업을 종류 라벨 + 이름 칩으로 표시한다. 접근 가능하면 상세로 링크한다. */
+function LinkRow({ links }: { links: MinuteLink[] }) {
+  if (links.length === 0) return null
+  return (
+    <div className="flex items-start gap-2">
+      <span className="w-20 shrink-0 pt-0.5 text-body text-gray-500">연동</span>
+      <div className="flex flex-wrap gap-1.5">
+        {links.map((l) => {
+          const kind = MINUTE_LINK_TARGETS[l.targetType].kindLabel
+          const path = l.label ? minuteLinkPath(l.targetType, l.targetId) : null
+          const content = (
+            <>
+              <span className="mr-1 text-gray-400">{kind}</span>
+              {l.label ?? '접근 권한 없음'}
+              {l.code && <span className="ml-1 text-gray-400">{l.code}</span>}
+            </>
+          )
+          const key = `${l.targetType}:${l.targetId}`
+          return path ? (
+            <Link
+              key={key}
+              to={path}
+              className="inline-flex items-center rounded-full bg-brand/10 px-2.5 py-0.5 text-caption font-medium text-brand transition-colors hover:bg-brand/20"
+            >
+              {content}
+            </Link>
+          ) : (
+            <span
+              key={key}
+              className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-caption font-medium text-gray-500"
+              title="접근 권한이 없어 열 수 없는 대상입니다"
+            >
+              {content}
+            </span>
+          )
+        })}
       </div>
     </div>
   )
@@ -107,11 +154,12 @@ export function MinutesDetail({ minuteId, currentUserId, onBack, onEdit }: Props
                   </span>
                 </div>
               </div>
-              {hasPeople && (
+              {(hasPeople || minute.links.length > 0) && (
                 <div className="space-y-2 border-t border-gray-100 pt-4">
                   <TagRow label="내부 참석자" names={attendees} />
                   <TagRow label="외부 참석자" names={minute.externalAttendees} />
                   <TagRow label="참조" names={references} />
+                  <LinkRow links={minute.links} />
                 </div>
               )}
               {(minute.location || minute.agenda) && (

@@ -1,5 +1,3 @@
-import { SEED_FILES, SEED_NOTICES, type BoardPost } from '@/features/hub/boardData'
-
 /**
  * 게시 종류. 설계 정본: docs/docs_planning/3_1_1_board_archive_notice.md
  * - `POST`: 게시판. 제목 클릭 → 상세페이지(본문·첨부·댓글).
@@ -30,12 +28,6 @@ export interface BoardDef {
   isActive: boolean
   /** 사이드바 정렬 순서(그룹 내 오름차순). */
   sortOrder: number
-}
-
-/** 기본 게시판의 시드 게시글. 신규 게시판은 빈 목록으로 시작한다. */
-export const BOARD_SEED_POSTS: Record<string, BoardPost[]> = {
-  'notices-general': SEED_NOTICES,
-  files: SEED_FILES,
 }
 
 /** 활성 게시판을 종류별로 정렬해 돌려준다(사이드바 그룹 = kind). */

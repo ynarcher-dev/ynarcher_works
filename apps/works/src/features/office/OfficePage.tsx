@@ -1,6 +1,5 @@
 import { PageHeader } from '@ynarcher/ui'
 import { Navigate, useSearchParams } from 'react-router-dom'
-import { useAuthStore } from '@/auth/authStore'
 import { ApprovalTable } from '@/features/approval/ApprovalTable'
 import { ArchiveWorkspace } from '@/features/hub/ArchiveWorkspace'
 import { BoardWorkspace } from '@/features/hub/BoardWorkspace'
@@ -28,7 +27,6 @@ const PLACEHOLDER_TITLES: Record<string, string> = {
  */
 export function OfficePage() {
   const [params] = useSearchParams()
-  const userName = useAuthStore((s) => s.user?.name)
   const boards = useBoards().data ?? []
 
   const tab = params.get('tab')
@@ -54,16 +52,14 @@ export function OfficePage() {
         {board.kind === 'ARCHIVE' ? (
           <ArchiveWorkspace
             key={board.slug}
-            boardSlug={board.slug}
+            boardId={board.id}
             title={board.label}
-            authorName={userName}
           />
         ) : (
           <BoardWorkspace
             key={board.slug}
-            boardSlug={board.slug}
+            boardId={board.id}
             title={board.label}
-            authorName={userName}
             initialPostId={params.get('post') ?? undefined}
           />
         )}
@@ -95,7 +91,7 @@ export function OfficePage() {
       )}
       {tab === 'managers' && <OfficeManagersPanel />}
       {/* 회의록: STARTUP에서 이관. 자체 목록/상세/작성 흐름과 헤더를 소유한다. */}
-      {tab === 'minutes' && <MinutesWorkspace />}
+      {tab === 'minutes' && <MinutesWorkspace initialMinuteId={params.get('minute') ?? undefined} />}
       {/* 부서 정보: MANAGEMENT 조직 관리와 같은 조직도를 조회 전용으로 재사용한다. */}
       {tab === 'departments' && (
         <>

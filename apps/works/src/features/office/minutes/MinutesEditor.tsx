@@ -12,6 +12,8 @@ import {
 } from '@/features/office/minutes/minutesApi'
 import { InternalPersonPicker, type PickerPerson } from '@/features/office/minutes/MinutePeoplePicker'
 import { ExternalAttendeePicker } from '@/features/office/minutes/ExternalAttendeePicker'
+import { MinuteLinkPicker } from '@/features/office/minutes/MinuteLinkPicker'
+import type { MinuteLink } from '@/features/office/minutes/minuteLinks'
 
 interface Props {
   /** 수정 대상(신규면 null). */
@@ -42,6 +44,7 @@ export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
     (initial?.people ?? []).map((p) => ({ userId: p.userId, role: p.role })),
   )
   const [externalAttendees, setExternalAttendees] = useState<string[]>(initial?.externalAttendees ?? [])
+  const [links, setLinks] = useState<MinuteLink[]>(initial?.links ?? [])
 
   const submit = () => {
     save.mutate(
@@ -55,6 +58,7 @@ export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
         visibility,
         people,
         externalAttendees,
+        links: links.map((l) => ({ targetType: l.targetType, targetId: l.targetId })),
       },
       {
         onSuccess: async (id) => {
@@ -146,6 +150,8 @@ export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
           />
 
           <ExternalAttendeePicker value={externalAttendees} onChange={setExternalAttendees} />
+
+          <MinuteLinkPicker value={links} onChange={setLinks} />
 
           <Input
             value={agenda}

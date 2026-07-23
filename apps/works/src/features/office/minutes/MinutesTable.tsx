@@ -1,6 +1,8 @@
 import { DataTable, type Column } from '@ynarcher/ui'
 import { Paperclip } from 'lucide-react'
 import { useState } from 'react'
+import { isNewPost } from '@/features/hub/boardData'
+import { NewBadge } from '@/features/hub/DashboardPanel'
 import { MINUTE_VISIBILITY_LABEL, type MinuteListItem } from '@/features/office/minutes/minutesApi'
 
 const PAGE_SIZE = 15
@@ -36,8 +38,9 @@ export function MinutesTable({
       header: '제목',
       // 진입은 행 전체 클릭(onRowClick)이 담당하므로 제목은 텍스트만 렌더한다.
       render: (m) => (
-        <span className="flex min-w-0">
+        <span className="flex min-w-0 items-center gap-1.5">
           <span className="truncate text-gray-800">{m.title}</span>
+          {isNewPost(m.createdAt) && <NewBadge />}
         </span>
       ),
     },

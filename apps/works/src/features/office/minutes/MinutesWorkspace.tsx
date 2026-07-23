@@ -32,9 +32,12 @@ function matchesKeyword(m: MinuteListItem, kw: string): boolean {
  * OFFICE 회의록 워크스페이스: 목록(게시판형 표) ↔ 상세 ↔ 작성/편집.
  * 열람 범위(전사 공개/참석자 한정)는 DB RLS가 강제하므로 목록에는 볼 수 있는 회의록만 담긴다.
  */
-export function MinutesWorkspace() {
+export function MinutesWorkspace({ initialMinuteId }: { initialMinuteId?: string } = {}) {
   const userId = useAuthStore((s) => s.user?.id) ?? null
-  const [view, setView] = useState<View>({ mode: 'list' })
+  // 딥링크(?minute=)로 진입하면 해당 상세를 초기 뷰로 연다(사업/스타트업 '관련 회의록'에서 이동).
+  const [view, setView] = useState<View>(
+    initialMinuteId ? { mode: 'detail', id: initialMinuteId } : { mode: 'list' },
+  )
   const [keyword, setKeyword] = useState('')
   const { data: minutes, isLoading } = useMinutes()
   const { data: attachmentIds } = useMinuteAttachmentIds()
