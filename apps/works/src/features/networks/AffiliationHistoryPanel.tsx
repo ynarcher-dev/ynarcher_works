@@ -10,6 +10,8 @@ export interface AffiliationRecord {
   note?: string | null
   /** 이력으로 보존된 시각(ISO). */
   at?: string | null
+  /** 갱신한 사람 이름(표시용 스냅샷). 마이그레이션 이전 항목·병합 흡수분은 비어 있을 수 있다. */
+  by?: string | null
 }
 
 /** profile.affiliation_history를 항목 배열로 정규화(누락·비배열은 빈 배열). */
@@ -52,21 +54,22 @@ export function AffiliationHistoryPanel({ profile }: Props) {
 
   return (
     // 목록 행은 표의 한 행이므로 크기를 tableText 하나로 세우고 위계는 색으로만 만든다(변동 이력과 동일 규격).
+    // 소속·부서·직책(현재값에서 밀려난 조합)을 앞세우고, 그 뒤에 '날짜 · 수정 이름 · 출처 · 사유'를
+    // 메타로 이어 붙인다 — 무엇이 바뀌었나(굵게)를 먼저 읽고 언제·누가·어떻게(연하게)를 뒤에 둔다.
     <ul className="divide-y divide-gray-100">
       {list.map((r, i) => (
-        <li
-          key={i}
-          className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 py-1.5 first:pt-0"
-        >
+        <li key={i} className="flex flex-wrap items-baseline gap-x-2 py-1.5 first:pt-0">
+          <span className={tableText.primary}>{formatCombo(r) || '-'}</span>
           <span className={`tabular-nums ${tableText.meta}`}>
-            {r.at ? String(r.at).slice(0, 10) : '-'}
-          </span>
-          <span className="min-w-0">
-            <span className={`truncate ${tableText.primary}`}>{formatCombo(r) || '-'}</span>
-            <span className={`ml-2 ${tableText.meta}`}>
-              {SOURCE_LABEL[r.source ?? ''] ?? '직접 입력'}
-              {r.note ? ` · ${r.note}` : ''}
-            </span>
+            {[
+              r.at ? String(r.at).slice(0, 10) : '-',
+              // '수정'은 갱신 행위 말머리 — 뒤의 이름과 붙여 누가 바꿨는지 한 덩이로 읽힌다.
+              r.by ? `수정 ${r.by}` : null,
+              SOURCE_LABEL[r.source ?? ''] ?? '직접 입력',
+              r.note || null,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
           </span>
         </li>
       ))}
