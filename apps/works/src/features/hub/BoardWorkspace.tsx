@@ -2,11 +2,10 @@ import { BackButton, Button, Checkbox, EmptyState, Input, PageHeader, PanelCard,
 import { useEffect, useRef, useState } from 'react'
 import { RichTextEditor, RichTextViewer } from '@/components/RichTextEditor'
 import { BoardPanel } from '@/features/hub/BoardPanel'
-import { CommentPanel } from '@/features/hub/CommentPanel'
+import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { PendingMaterialPanel } from '@/features/networks/PendingMaterialPanel'
 import { usePendingMaterials } from '@/features/networks/pendingMaterials'
-import { useAddBoardComment, useBoardComments } from '@/features/hub/boardCommentsApi'
 import {
   BOARD_POST_ATTACHMENT_TYPE,
   useBoardPost,
@@ -42,7 +41,7 @@ export interface BoardWorkspaceProps {
 
 /**
  * 게시판(kind = POST) 워크스페이스: 목록(검색·글쓰기) ↔ 리치 에디터(작성/수정) ↔ 상세 읽기.
- * 게시글·댓글·조회수·첨부는 전부 실데이터(board_posts / board_comments / attachments)이며
+ * 게시글·코멘트·조회수·첨부는 전부 실데이터(board_posts / entity_feedback / attachments)이며
  * 열람·쓰기 권한은 DB RLS가 강제한다. 전체 공지(globalNotice)는 공지사항 메뉴가 모아 보여준다.
  */
 export function BoardWorkspace({ boardId, title, initialPostId }: BoardWorkspaceProps) {
@@ -251,8 +250,8 @@ function PostEditor({
 }
 
 /**
- * 게시글 상세. 헤더(뒤로가기 · 삭제 · 수정) + 좌측 2/3 본문 · 우측 1/3 공용 패널(자료 관리 · 댓글).
- * 게시글 본문·조회수·첨부·댓글 모두 실데이터이며, 쓰기 권한은 DB RLS가 강제한다.
+ * 게시글 상세. 헤더(뒤로가기 · 삭제 · 수정) + 좌측 2/3 본문 · 우측 1/3 공용 패널(자료 관리 · 코멘트).
+ * 게시글 본문·조회수·첨부·코멘트 모두 실데이터이며, 쓰기 권한은 DB RLS가 강제한다.
  */
 function DetailView({
   postId,
@@ -267,8 +266,6 @@ function DetailView({
 }) {
   const toast = useToast()
   const { data: post, isLoading } = useBoardPost(postId)
-  const { data: comments } = useBoardComments(postId)
-  const addComment = useAddBoardComment()
   const setActive = useSetBoardPostActive()
 
   const handleDelete = async () => {
@@ -280,13 +277,6 @@ function DetailView({
     } catch {
       toast.show('삭제에 실패했습니다. 권한을 확인하세요.', 'danger')
     }
-  }
-
-  const onAddComment = (content: string) => {
-    addComment.mutate(
-      { postId, content },
-      { onError: () => toast.show('댓글 등록에 실패했습니다.', 'danger') },
-    )
   }
 
   if (isLoading) return <Spinner />
@@ -346,10 +336,10 @@ function DetailView({
           </div>
         </article>
 
-        {/* 우측(1/3): 공용 패널 — 자료 관리(조회 전용) → 댓글 */}
+        {/* 우측(1/3): 공용 패널 — 자료 관리(조회 전용) → 코멘트(다른 상세페이지와 동일) */}
         <div className="space-y-4 lg:col-span-1">
           <MaterialPanel targetType={BOARD_POST_ATTACHMENT_TYPE} targetId={postId} title="자료 관리" readOnly />
-          <CommentPanel comments={comments ?? []} onAdd={onAddComment} />
+          <FeedbackPanel targetType="board_post" targetId={postId} />
         </div>
       </div>
     </div>

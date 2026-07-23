@@ -2,8 +2,8 @@ import dayjs from 'dayjs'
 
 /**
  * OFFICE 게시판·자료실 공용 타입/헬퍼.
- * 게시글·조회수·댓글·첨부는 실데이터(board_posts / board_comments / attachments)이며
- * 조회/변경은 서버 훅(boardPostsApi.ts / boardCommentsApi.ts)이 담당한다.
+ * 게시글·조회수·첨부는 실데이터(board_posts / attachments)이며 조회/변경은 서버 훅(boardPostsApi.ts)이
+ * 담당한다. 코멘트는 다른 상세페이지와 동일하게 공용 코멘트(entity_feedback / FeedbackPanel)를 쓴다.
  * 필드는 public.board_posts 컬럼과 대응한다(설계: docs/docs_planning/3_1_1_board_archive_notice.md).
  */
 /** 게시글 첨부파일(로컬 표시용 형태). 실제 저장/다운로드는 attachments(BOARD_POST)를 쓴다. */
@@ -18,15 +18,6 @@ export interface BoardAttachment {
   url?: string
 }
 
-/** 게시글 댓글(표시 단위). 원천은 board_comments. */
-export interface BoardComment {
-  id: string
-  author: string
-  content: string
-  /** 작성 일시. `YYYY.MM.DD HH:mm` 표기. */
-  createdAt: string
-}
-
 export interface BoardPost {
   id: string
   title: string
@@ -39,8 +30,6 @@ export interface BoardPost {
   summary?: string
   /** 첨부파일 목록(로컬 표시용). 실데이터 첨부는 attachments 훅으로 별도 조회한다. */
   attachments?: BoardAttachment[]
-  /** 댓글 목록(로컬 표시용). 실데이터 댓글은 boardCommentsApi로 별도 조회한다. */
-  comments?: BoardComment[]
   /** 소속 게시판 내 최상단 고정. */
   pinned?: boolean
   /** 전체 공지 — OFFICE 공지사항 메뉴에 노출한다. 자료실은 불가. */

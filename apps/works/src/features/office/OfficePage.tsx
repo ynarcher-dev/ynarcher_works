@@ -1,4 +1,4 @@
-import { PageHeader } from '@ynarcher/ui'
+import { PageHeader, Spinner } from '@ynarcher/ui'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { ApprovalTable } from '@/features/approval/ApprovalTable'
 import { ArchiveWorkspace } from '@/features/hub/ArchiveWorkspace'
@@ -6,6 +6,7 @@ import { BoardWorkspace } from '@/features/hub/BoardWorkspace'
 import { DashboardPanel } from '@/features/hub/DashboardPanel'
 import { NoticeWorkspace } from '@/features/hub/NoticeWorkspace'
 import { NOTICE_TAB } from '@/features/hub/boardPostStore'
+import { useBoardPostBoardId } from '@/features/hub/boardPostsApi'
 import { useBoards } from '@/features/hub/boardHooks'
 import { DepartmentsPanel } from '@/features/management/panels/DepartmentsPanel'
 import { OfficeManagersPanel } from '@/features/office/OfficeManagersPanel'
@@ -27,9 +28,25 @@ const PLACEHOLDER_TITLES: Record<string, string> = {
  */
 export function OfficePage() {
   const [params] = useSearchParams()
-  const boards = useBoards().data ?? []
+  const boardsQuery = useBoards()
+  const boards = boardsQuery.data ?? []
 
   const tab = params.get('tab')
+  const post = params.get('post') ?? undefined
+
+  // 게시글이 이미 어느 게시판 탭 안에서 열려 있는지(공지사항 딥링크 등은 tab을 이미 갖고 있다).
+  const tabBoard = boards.find((b) => b.slug === tab && b.isActive)
+
+  // 코멘트 멘션 알림은 slug 없이 /office?post=<id>로 들어온다. 글의 게시판을 찾아 탭을 보정한다.
+  // (탭이 이미 그 게시판을 가리키면 아래 분기를 건너뛰어 정상 렌더로 진행한다.)
+  const needBoardLookup = Boolean(post) && !tabBoard
+  const boardIdQuery = useBoardPostBoardId(needBoardLookup ? post : undefined)
+  if (needBoardLookup) {
+    if (boardsQuery.isLoading || boardIdQuery.isLoading) return <Spinner />
+    const postBoard = boards.find((b) => b.id === boardIdQuery.data)
+    if (postBoard) return <Navigate to={`/office?tab=${postBoard.slug}&post=${post}`} replace />
+    // 게시판을 못 찾으면(접근 불가·삭제) 아래 일반 흐름으로 떨어진다(탭 없으면 대시보드).
+  }
 
   // 탭 미지정 시 최상단 대시보드로 정규화(사이드바 활성 상태와 URL 동기화).
   if (!tab) return <Navigate to="/office?tab=dashboard" replace />
@@ -45,7 +62,7 @@ export function OfficePage() {
 
   // 게시 탭은 종류에 따라 화면이 갈린다.
   // 게시판(POST)=상세페이지가 있는 BoardWorkspace / 자료실(ARCHIVE)=즉시 다운로드 목록.
-  const board = boards.find((b) => b.slug === tab && b.isActive)
+  const board = tabBoard
   if (board) {
     return (
       <div className="flex h-full flex-col">

@@ -92,6 +92,27 @@ export function useBoardPost(id: string | undefined) {
   })
 }
 
+/**
+ * 게시글의 소속 게시판 id. 코멘트 멘션 알림(/office?post=<id>)이 열 게시판 탭을
+ * 되찾을 때 쓴다 — board_id로 boards.slug를 역매핑한다. RLS가 막으면 null.
+ */
+export function useBoardPostBoardId(id: string | undefined) {
+  return useQuery({
+    queryKey: [...POSTS_KEY, 'board-id', id],
+    enabled: Boolean(id),
+    queryFn: async (): Promise<string | null> => {
+      const { data, error } = await supabase
+        .from('board_posts')
+        .select('board_id')
+        .eq('id', id as string)
+        .is('deleted_at', null)
+        .maybeSingle()
+      if (error) throw error
+      return data ? (data as { board_id: string }).board_id : null
+    },
+  })
+}
+
 /** 첨부가 있는 게시글 id 집합(목록 첨부 아이콘용). */
 export function useBoardPostAttachmentIds() {
   return useQuery({
