@@ -1,5 +1,6 @@
-import { Badge, PanelCard, cardText } from '@ynarcher/ui'
+import { PanelCard, cardText } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { type GrowthMetrics } from '@/features/startup/startupGrowth'
 import { useStartupFundInvestments } from '@/features/fund/hooks'
 import { CHART_COLORS, StartupMetricChart, type ChartSeries } from '@/features/startup/StartupMetricChart'
@@ -77,6 +78,8 @@ interface InvestmentRow {
   investor?: string | null
   /** true면 자사 운용 펀드가 집행한 투자(FUND 원장 연동). */
   isFund?: boolean
+  /** 자사 펀드 투자일 때 연결 대상 펀드 id(투자자명 → 펀드 상세 링크). */
+  fundId?: string
 }
 
 const byDateDesc = (a: InvestmentRow, b: InvestmentRow) =>
@@ -110,6 +113,7 @@ export function StartupGrowthSection({ growth, startupId }: Props) {
     fundingAmount: f.amount,
     investor: f.fund_name,
     isFund: true,
+    fundId: f.fund_id,
   }))
   const investment = recent([...(growth.investment as InvestmentRow[]), ...fundRows].sort(byDateDesc))
   // 차트는 과거→최신(왼→오른쪽) 순서로 그린다.
@@ -196,14 +200,20 @@ export function StartupGrowthSection({ growth, startupId }: Props) {
                   <td className={tdL}>{m.round || '-'}</td>
                   <td className={td}><Won v={m.valuation} /></td>
                   <td className={td}><Won v={m.fundingAmount} /></td>
+                  {/* 투자자명은 길어지면 말줄임(가로 스크롤 방지). 자사 펀드 투자는 펀드 상세로 링크한다. */}
                   <td className={tdL}>
-                    {m.isFund ? (
-                      <span className="inline-flex items-center gap-1">
-                        <Badge tone="info">자사</Badge>
+                    {m.isFund && m.fundId ? (
+                      <Link
+                        to={`/fund/${m.fundId}`}
+                        title={m.investor ?? ''}
+                        className="block max-w-[11rem] truncate text-info underline underline-offset-2 hover:text-info/80"
+                      >
+                        {m.investor || '-'}
+                      </Link>
+                    ) : (
+                      <span className="block max-w-[11rem] truncate" title={m.investor ?? ''}>
                         {m.investor || '-'}
                       </span>
-                    ) : (
-                      m.investor || '-'
                     )}
                   </td>
                 </tr>
