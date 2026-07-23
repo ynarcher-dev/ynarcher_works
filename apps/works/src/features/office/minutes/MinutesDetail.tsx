@@ -2,9 +2,12 @@ import { Badge, BackButton, Button, EmptyState } from '@ynarcher/ui'
 import { Link } from 'react-router-dom'
 import { RichTextViewer } from '@/components/RichTextEditor'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
+import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import {
   MINUTE_ATTACHMENT_TYPE,
+  MINUTE_FEEDBACK_TYPE,
   MINUTE_VISIBILITY_LABEL,
+  MINUTE_VOICE_ATTACHMENT_TYPE,
   useDeleteMinute,
   useMinute,
 } from '@/features/office/minutes/minutesApi'
@@ -198,9 +201,11 @@ export function MinutesDetail({ minuteId, currentUserId, onBack, onEdit }: Props
           </article>
         </div>
 
-        {/* 우: 파일첨부 1/3 (조회 전용) */}
+        {/* 우: 1/3 — 첨부 파일 → 음성 기록(조회 전용) → 코멘트 */}
         <div className="space-y-4 lg:col-span-1">
           <MaterialPanel targetType={MINUTE_ATTACHMENT_TYPE} targetId={minuteId} title="첨부 파일" readOnly />
+          <MaterialPanel targetType={MINUTE_VOICE_ATTACHMENT_TYPE} targetId={minuteId} title="음성 기록" readOnly />
+          <FeedbackPanel targetType={MINUTE_FEEDBACK_TYPE} targetId={minuteId} />
         </div>
       </div>
     </div>

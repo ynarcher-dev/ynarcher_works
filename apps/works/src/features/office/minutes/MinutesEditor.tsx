@@ -1,11 +1,14 @@
 import { BackButton, Button, Input } from '@ynarcher/ui'
+import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { RichTextEditor } from '@/components/RichTextEditor'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { PendingMaterialPanel } from '@/features/networks/PendingMaterialPanel'
 import { usePendingMaterials } from '@/features/networks/pendingMaterials'
+import { uploadMaterialFile } from '@/features/networks/materialHooks'
 import {
   MINUTE_ATTACHMENT_TYPE,
+  MINUTE_VOICE_ATTACHMENT_TYPE,
   useSaveMinute,
   type MinuteDetail,
   type MinuteVisibility,
@@ -14,6 +17,8 @@ import { InternalPersonPicker, type PickerPerson } from '@/features/office/minut
 import { ExternalAttendeePicker } from '@/features/office/minutes/ExternalAttendeePicker'
 import { MinuteLinkPicker } from '@/features/office/minutes/MinuteLinkPicker'
 import type { MinuteLink } from '@/features/office/minutes/minuteLinks'
+import { VoiceMinutePanel } from '@/features/office/minutes/voice/VoiceMinutePanel'
+import type { MinuteDraft } from '@/features/office/minutes/voice/voiceMinuteApi'
 
 interface Props {
   /** 수정 대상(신규면 null). */
@@ -34,6 +39,7 @@ const VISIBILITY_OPTS: { value: MinuteVisibility; label: string; help: string }[
 export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
   const save = useSaveMinute()
   const pending = usePendingMaterials()
+  const qc = useQueryClient()
   const [title, setTitle] = useState(initial?.title ?? '')
   const [meetingDate, setMeetingDate] = useState(initial?.meetingDate ?? '')
   const [location, setLocation] = useState(initial?.location ?? '')
@@ -68,6 +74,27 @@ export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
         },
       },
     )
+  }
+
+  // AI 초안 반영: 비어 있는 필드만 채우고, 본문은 기존 내용을 덮지 않도록 뒤에 잇는다.
+  const applyDraft = (draft: MinuteDraft) => {
+    if (draft.title && !title.trim()) setTitle(draft.title)
+    if (draft.agenda && !agenda.trim()) setAgenda(draft.agenda)
+    if (draft.body) {
+      const hasBody = body.replace(/<[^>]*>/g, '').trim().length > 0
+      setBody(hasBody ? `${body}${draft.body}` : draft.body)
+    }
+  }
+
+  // 음성 오디오 저장: 일반 첨부와 섞이지 않게 음성 전용 슬롯(MINUTE_VOICE_ATTACHMENT_TYPE)에 담는다.
+  // 수정 모드면 즉시 업로드(목록 갱신), 신규면 저장 후 일괄 업로드되도록 보류에 담는다.
+  const saveAudio = async (file: File) => {
+    if (initial?.id) {
+      await uploadMaterialFile(MINUTE_VOICE_ATTACHMENT_TYPE, initial.id, file)
+      qc.invalidateQueries({ queryKey: ['materials', MINUTE_VOICE_ATTACHMENT_TYPE, initial.id] })
+    } else {
+      pending.add(MINUTE_VOICE_ATTACHMENT_TYPE, [file])
+    }
   }
 
   const activeHelp = VISIBILITY_OPTS.find((o) => o.value === visibility)?.help
@@ -163,13 +190,26 @@ export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
           <RichTextEditor value={body} onChange={setBody} placeholder="회의 내용을 입력하세요…" />
         </div>
 
-        {/* 우: 파일첨부 1/3 */}
+        {/* 우: 파일첨부 + 음성 기록 + 음성/AI 초안 1/3 */}
         <div className="space-y-4 lg:col-span-1">
           {initial?.id ? (
             <MaterialPanel targetType={MINUTE_ATTACHMENT_TYPE} targetId={initial.id} title="첨부 파일" />
           ) : (
             <PendingMaterialPanel slot={MINUTE_ATTACHMENT_TYPE} pending={pending} title="첨부 파일" />
           )}
+
+          {/* 음성 기록: 일반 첨부와 분리된 전용 슬롯. 아래 녹음기가 저장한 오디오가 여기에 쌓인다. */}
+          {initial?.id ? (
+            <MaterialPanel targetType={MINUTE_VOICE_ATTACHMENT_TYPE} targetId={initial.id} title="음성 기록" />
+          ) : (
+            <PendingMaterialPanel slot={MINUTE_VOICE_ATTACHMENT_TYPE} pending={pending} title="음성 기록" />
+          )}
+
+          <VoiceMinutePanel
+            context={{ title, meetingDate, attendees: externalAttendees, agenda }}
+            onApplyDraft={applyDraft}
+            onSaveAudio={saveAudio}
+          />
         </div>
       </div>
 

@@ -68,6 +68,9 @@ export interface RichTextEditorProps {
 
 /** 편집 가능한 리치 텍스트 에디터(툴바 + 본문). 값은 HTML 문자열. */
 export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorProps) {
+  // 에디터가 마지막으로 방출한 HTML. 외부에서 온 value 변경(AI 초안 반영 등)과
+  // 자기 자신의 편집을 구분해, 외부 변경일 때만 setContent로 동기화한다(입력 중 커서 튐 방지).
+  const lastHtmlRef = useRef(value)
   const editor = useEditor({
     extensions: placeholder ? buildExtensions(placeholder) : extensions,
     content: value,
@@ -75,8 +78,21 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
     editorProps: {
       attributes: { class: 'px-4 py-3' },
     },
-    onUpdate: ({ editor }) => onChange(editor.getHTML()),
+    onUpdate: ({ editor }) => {
+      const html = editor.getHTML()
+      lastHtmlRef.current = html
+      onChange(html)
+    },
   })
+
+  // 외부에서 value가 바뀌면(폼이 setBody로 주입) 에디터에 반영한다. 방출 없이 세팅해 재귀를 막는다.
+  useEffect(() => {
+    if (!editor) return
+    if (value !== lastHtmlRef.current) {
+      lastHtmlRef.current = value
+      editor.commands.setContent(value, { emitUpdate: false })
+    }
+  }, [editor, value])
 
   if (!editor) return null
 

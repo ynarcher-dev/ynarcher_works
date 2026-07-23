@@ -27,6 +27,16 @@ export const MINUTE_VISIBILITY_LABEL: Record<MinuteVisibility, string> = {
 /** 회의록 첨부의 attachments.target_type. RLS가 office_minute만 회의록 접근범위에 종속시킨다. */
 export const MINUTE_ATTACHMENT_TYPE = 'office_minute'
 
+/**
+ * 회의록 음성 기록 전용 첨부의 attachments.target_type. 일반 첨부(office_minute)와 슬롯을 나눠
+ * 서로 섞이지 않게 저장한다(스타트업 자료 분류와 동일 방식). 접근범위는 office_minute과 같은
+ * 회의록 종속(RLS: can_read_minute / is_minute_author) — 20260723236000 마이그레이션.
+ */
+export const MINUTE_VOICE_ATTACHMENT_TYPE = 'office_minute_voice'
+
+/** 회의록 코멘트(공용 FeedbackPanel)의 entity_feedback.target_type. RLS가 회의록 열람 권한에 종속. */
+export const MINUTE_FEEDBACK_TYPE = 'office_minute'
+
 export interface MinutePerson {
   userId: string
   name: string

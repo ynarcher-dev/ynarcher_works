@@ -100,22 +100,52 @@ export function useDeleteMaterial(targetType: string, targetId: string) {
 }
 
 /**
- * 자료 다운로드: material-download Edge Function 경유로 단기 Signed URL을 받아
- * 브라우저 다운로드를 트리거한다. 서버가 RLS 검증과 access_logs 적재를 강제하며,
- * 로그 적재에 실패하면 URL이 발급되지 않는다(클라이언트 직접 서명 경로는 폐쇄됨).
+ * 자료의 단기 Signed URL을 받는다: material-download Edge Function이 RLS 검증과
+ * access_logs 적재를 강제하며, 로그 적재에 실패하면 URL이 발급되지 않는다
+ * (클라이언트 직접 서명 경로는 폐쇄됨). 다운로드·인라인 재생이 공유한다.
  */
-export async function downloadMaterial(m: Material): Promise<void> {
+export async function fetchMaterialUrl(m: Material): Promise<string> {
   const { data, error } = await supabase.functions.invoke<{
     url: string
     fileName: string
   }>('material-download', { body: { attachmentId: m.id } })
   if (error || !data?.url) throw error ?? new Error('download_failed')
+  return data.url
+}
+
+/** 자료 다운로드: 단기 Signed URL을 받아 브라우저 다운로드를 트리거한다. */
+export async function downloadMaterial(m: Material): Promise<void> {
+  const url = await fetchMaterialUrl(m)
   const a = document.createElement('a')
-  a.href = data.url
+  a.href = url
   a.download = m.file_name
   document.body.appendChild(a)
   a.click()
   a.remove()
+}
+
+/** 오디오 자료 여부(인라인 재생 대상). content_type 우선, 없으면 확장자로 판정. */
+export function isAudioMaterial(m: Material): boolean {
+  if (m.content_type?.startsWith('audio/')) return true
+  return /\.(wav|mp3|m4a|aac|ogg|oga|webm|flac)$/i.test(m.file_name)
+}
+
+/** PDF 자료 여부(모달 간이 뷰어 대상). */
+export function isPdfMaterial(m: Material): boolean {
+  if (m.content_type === 'application/pdf') return true
+  return /\.pdf$/i.test(m.file_name)
+}
+
+/**
+ * 자료를 blob URL로 받는다(모달 인라인 뷰어용). Signed URL은 첨부 다운로드용
+ * Content-Disposition이 붙어 iframe에 그대로 넣으면 다운로드되므로, 바이트를 받아
+ * 자체 blob URL로 만든다. 호출부는 사용 후 URL.revokeObjectURL로 해제해야 한다.
+ */
+export async function fetchMaterialBlobUrl(m: Material): Promise<string> {
+  const url = await fetchMaterialUrl(m)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error('fetch_failed')
+  return URL.createObjectURL(await res.blob())
 }
 
 /** 바이트를 사람이 읽는 단위로 변환. */
