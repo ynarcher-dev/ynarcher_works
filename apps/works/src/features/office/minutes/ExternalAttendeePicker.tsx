@@ -18,7 +18,7 @@ export function ExternalAttendeePicker({ value, onChange }: Props) {
       getLabel={(s) => s}
       allowFreeText
       createOption={(text) => text}
-      placeholder="외부참석자 이름 입력 후 Enter (예: 홍길동/○○社)"
+      placeholder="외부 참석자 이름 입력 후 Enter (예: 홍길동/○○社)"
     />
   )
 }

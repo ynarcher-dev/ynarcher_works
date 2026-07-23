@@ -109,8 +109,8 @@ export function MinutesDetail({ minuteId, currentUserId, onBack, onEdit }: Props
               </div>
               {hasPeople && (
                 <div className="space-y-2 border-t border-gray-100 pt-4">
-                  <TagRow label="참석자" names={attendees} />
-                  <TagRow label="외부참석자" names={minute.externalAttendees} />
+                  <TagRow label="내부 참석자" names={attendees} />
+                  <TagRow label="외부 참석자" names={minute.externalAttendees} />
                   <TagRow label="참조" names={references} />
                 </div>
               )}

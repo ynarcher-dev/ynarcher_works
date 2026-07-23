@@ -135,7 +135,7 @@ export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
             role="ATTENDEE"
             people={people}
             onChange={setPeople}
-            placeholder="참석자 검색 후 추가"
+            placeholder="내부 참석자 검색 후 추가"
           />
 
           <InternalPersonPicker
