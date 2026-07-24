@@ -56,8 +56,27 @@ export const FUND_PURPOSE_KIND_LABEL: Record<string, string> = {
   SPECIAL: '특수목적',
 }
 
+/** 캐피탈 콜 차수 상태(capital_call_status enum) 한글 라벨. 근거: 3_5_workspace_fund.md §1.3 */
+export const CAPITAL_CALL_STATUS_LABEL: Record<string, string> = {
+  SCHEDULED: '예정',
+  NOTIFIED: '통지',
+  PARTIALLY_PAID: '일부납입',
+  PAID: '납입완료',
+  OVERDUE: '연체',
+}
+
+/** 차수 상태 배지 톤: 납입완료=활성, 연체=위험, 통지·일부납입=경고, 예정=회색. */
+export const CAPITAL_CALL_STATUS_TONE: Record<string, 'neutral' | 'success' | 'warning' | 'info' | 'danger'> = {
+  SCHEDULED: 'neutral',
+  NOTIFIED: 'warning',
+  PARTIALLY_PAID: 'warning',
+  PAID: 'success',
+  OVERDUE: 'danger',
+}
+
 const toOptions = (m: Record<string, string>) =>
   Object.entries(m).map(([value, label]) => ({ value, label }))
+export const CAPITAL_CALL_STATUS_OPTIONS = toOptions(CAPITAL_CALL_STATUS_LABEL)
 export const FUND_SOURCE_OPTIONS = toOptions(FUND_SOURCE_LABEL)
 export const FUND_CHARACTER_OPTIONS = toOptions(FUND_CHARACTER_LABEL)
 export const FUND_STRATEGY_OPTIONS = toOptions(FUND_STRATEGY_LABEL)
@@ -67,6 +86,11 @@ export const FUND_SUBSCRIPTION_OPTIONS = toOptions(FUND_SUBSCRIPTION_LABEL)
 /** 원(₩) 정수 → "n억" 표기. 기존 FundPage 표기 규칙과 동일. */
 export function formatEok(won: number): string {
   return `${(won / 100_000_000).toLocaleString(undefined, { maximumFractionDigits: 2 })}억`
+}
+
+/** 원(₩) 정수 → 천단위 콤마 + "원" 표기(전액 표기). */
+export function formatWon(won: number): string {
+  return `${won.toLocaleString()}원`
 }
 
 /** ISO 날짜 → YYYY-MM-DD 절삭. */

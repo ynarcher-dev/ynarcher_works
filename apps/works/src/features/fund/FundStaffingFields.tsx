@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
+import { TokenMultiSelect } from '@ynarcher/ui'
 import { useEmployees } from '@/features/hub/hooks'
 
 interface Emp {
@@ -27,7 +28,9 @@ export function toStaffing(
 }
 
 /**
- * 임직원 검색 typeahead + 선택 칩. single이면 1명만(대표), 아니면 다중(운용·관리).
+ * 임직원 검색 typeahead + 선택 칩(공용 TokenMultiSelect 사용 — 칩이 입력 필드 안에 인라인으로 남는다).
+ * 상위는 user_id 배열만 다루므로, 여기서 id↔Emp 객체를 오가며 변환한다.
+ * single이면 max 1(대표): 새로 고르면 마지막 선택으로 대체된다.
  */
 function MemberPicker({
   employees,
@@ -42,82 +45,20 @@ function MemberPicker({
   single?: boolean
   placeholder: string
 }) {
-  const [query, setQuery] = useState('')
-  const [open, setOpen] = useState(false)
   const byId = useMemo(() => new Map(employees.map((e) => [e.id, e] as const)), [employees])
-  const kw = query.trim().toLowerCase()
-  const filtered = employees.filter(
-    (e) => !selected.includes(e.id) && (e.name ?? '').toLowerCase().includes(kw),
-  )
-
-  const add = (id: string) => {
-    onChange(single ? [id] : [...selected, id])
-    setQuery('')
-    setOpen(false)
-  }
-  const remove = (id: string) => onChange(selected.filter((x) => x !== id))
+  const asEmp = (id: string): Emp => byId.get(id) ?? { id, name: '알 수 없음' }
 
   return (
-    <div>
-      <div className="mb-1.5 flex flex-wrap gap-1.5">
-        {selected.length === 0 ? (
-          <span className="text-body text-gray-500">미지정</span>
-        ) : (
-          selected.map((id) => (
-            <span
-              key={id}
-              className="inline-flex items-center gap-1 rounded-radius-md border border-gray-300 bg-gray-50 px-2 py-0.5 text-body text-gray-800"
-            >
-              {byId.get(id)?.name ?? '알 수 없음'}
-              <button
-                type="button"
-                aria-label="제거"
-                onClick={() => remove(id)}
-                className="text-gray-400 transition-colors hover:text-brand"
-              >
-                ×
-              </button>
-            </span>
-          ))
-        )}
-      </div>
-      <div className="relative">
-        {open && (
-          <div className="fixed inset-0 z-dropdown" aria-hidden onClick={() => setOpen(false)} />
-        )}
-        <input
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value)
-            setOpen(true)
-          }}
-          onFocus={() => setOpen(true)}
-          placeholder={placeholder}
-          className="relative z-dropdown min-h-ctl-page w-full rounded-radius-md border border-gray-300 bg-white px-3 py-1.5 text-body text-gray-900 outline-none transition-colors duration-fast placeholder:text-gray-400 focus:border-brand"
-        />
-        {open && (
-          <div className="absolute left-0 right-0 z-dropdown mt-1 max-h-56 overflow-auto rounded-radius-lg border border-gray-300 bg-white p-1 shadow-popover">
-            {filtered.length === 0 ? (
-              <div className="px-3 py-2 text-caption text-gray-500">
-                {employees.length === 0 ? '불러오는 중…' : '검색 결과가 없습니다.'}
-              </div>
-            ) : (
-              filtered.slice(0, 30).map((e) => (
-                <button
-                  key={e.id}
-                  type="button"
-                  onMouseDown={(ev) => ev.preventDefault()}
-                  onClick={() => add(e.id)}
-                  className="block w-full rounded-radius-md px-3 py-1.5 text-left text-body text-gray-800 transition-colors duration-fast hover:bg-gray-50"
-                >
-                  {e.name}
-                </button>
-              ))
-            )}
-          </div>
-        )}
-      </div>
-    </div>
+    <TokenMultiSelect<Emp>
+      selected={selected.map(asEmp)}
+      onChange={(next) => onChange(single ? next.slice(-1).map((e) => e.id) : next.map((e) => e.id))}
+      options={employees}
+      getKey={(e) => e.id}
+      getLabel={(e) => e.name ?? '(이름 없음)'}
+      getSearchText={(e) => e.name ?? ''}
+      max={single ? 1 : undefined}
+      placeholder={placeholder}
+    />
   )
 }
 

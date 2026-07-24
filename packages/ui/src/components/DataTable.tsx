@@ -65,6 +65,12 @@ export interface DataTableProps<T> {
   /** 좌측 No. 내림차순 넘버링 컬럼(기본 true). 로그/매트릭스 등은 false로 opt-out. */
   numbered?: boolean
   /**
+   * 선두(식별) 열 고정. true면 선택·No.·첫 도메인 열(기업명 등)을 왼쪽에 sticky 고정하고
+   * 나머지 열만 가로 스크롤한다. 컬럼이 많아 가로 스크롤이 필요한 넓은 표에서 행 식별을 유지한다.
+   * 고정 셀은 배경을 불투명하게 깔아(hover 포함) 스크롤되는 셀 위를 덮는다.
+   */
+  stickyLead?: boolean
+  /**
    * 서버 사이드 페이지네이션(0-base page). 지정 시 표 하단에 페이저를 렌더하고, 넘겨받은
    * `rows`(해당 페이지 구간)를 전체 건수 기준으로 넘버링한다(예: 총 87건·2페이지면 57부터).
    * 페이지가 1개뿐이어도 페이저는 노출된다. 미지정 시 페이저 없이 `rows`를 그대로 렌더한다.
@@ -183,6 +189,7 @@ export function DataTable<T>({
   emptyText = '표시할 데이터가 없습니다.',
   className,
   numbered = true,
+  stickyLead = false,
   pagination,
   standardColumns = true,
   showAuthor = true,
@@ -207,6 +214,23 @@ export function DataTable<T>({
   const cellX = tableGrid.cellX
   // 명시 지정이 없으면 첫 도메인 열을 식별 열로 삼는다.
   const primaryKey = (columns.find((c) => c.primary) ?? columns[0])?.key
+
+  // 선두 열 고정(stickyLead): 선택(w-10=2.5rem)·No.(w-12=3rem)가 앞설 때 각 고정 열의 left 오프셋을 누적한다.
+  const selRem = 2.5
+  const noRem = 3
+  const leftNo = selectable ? selRem : 0
+  const leftFirst = (selectable ? selRem : 0) + (numbered ? noRem : 0)
+  // 고정 셀 공통 클래스. 헤더는 gray-50, 본문은 white(+hover gray-25)로 불투명 배경을 깐다.
+  // last(첫 도메인 열)에는 우측 seam을 은은하게 번지는 그림자로만 둬, 가로 스크롤 시 고정 영역이
+  // 스크롤되는 셀 위로 부드럽게 떠 있게 한다(선명한 경계선 없이).
+  const stickyCell = (isHeader: boolean, isLast = false) =>
+    stickyLead
+      ? cn(
+          'sticky',
+          isHeader ? 'z-20 bg-gray-50' : 'z-10 bg-white group-hover:bg-gray-25',
+          isLast && 'shadow-[10px_0_14px_-4px_rgba(17,24,39,0.16)]',
+        )
+      : ''
   const colSpan =
     columns.length +
     (selectable ? 1 : 0) +
@@ -259,7 +283,10 @@ export function DataTable<T>({
           {/* divide-x: 셀 사이에만 세로선을 긋는다(표 바깥 가장자리에는 생기지 않는다). */}
           <tr className="bg-gray-50 divide-x divide-gray-300">
             {selectable && (
-              <th className={cn(`h-row w-10 border-b border-gray-300 ${cellX}`, pad)}>
+              <th
+                className={cn(`h-row w-10 border-b border-gray-300 ${cellX}`, pad, stickyCell(true))}
+                style={stickyLead ? { left: 0 } : undefined}
+              >
                 {/* 체크박스는 인라인 요소라 셀에 그냥 두면 글자 베이스라인에 걸려 위로 뜬다. */}
                 <div className="flex items-center justify-center">
                   <Checkbox
@@ -274,12 +301,16 @@ export function DataTable<T>({
               </th>
             )}
             {numbered && (
-              <th className={cn(`h-row w-12 border-b border-gray-300 ${cellX} text-center ${tableText.head}`, pad)}>
+              <th
+                className={cn(`h-row w-12 border-b border-gray-300 ${cellX} text-center ${tableText.head}`, pad, stickyCell(true))}
+                style={stickyLead ? { left: `${leftNo}rem` } : undefined}
+              >
                 No.
               </th>
             )}
-            {columns.map((col) => {
+            {columns.map((col, colIndex) => {
               const active = sortKey === col.key
+              const leadFrozen = stickyLead && colIndex === 0
               return (
                 <th
                   key={col.key}
@@ -289,7 +320,9 @@ export function DataTable<T>({
                     pad,
                     truncate,
                     col.className,
+                    leadFrozen && stickyCell(true, true),
                   )}
+                  style={leadFrozen ? { left: `${leftFirst}rem` } : undefined}
                   onClick={col.sortable ? () => onSort?.(col.key) : undefined}
                 >
                   <span className="inline-flex items-center gap-1">
@@ -345,7 +378,8 @@ export function DataTable<T>({
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
                   className={cn(
                     tableGrid.row,
-                    'divide-x divide-gray-200 transition-colors duration-fast hover:bg-gray-25',
+                    // group: 고정 셀(sticky)이 자기 배경을 깔아도 행 hover 강조를 함께 받도록 한다.
+                    'group divide-x divide-gray-200 transition-colors duration-fast hover:bg-gray-25',
                     !active && 'opacity-50',
                     selected.has(key) && 'bg-brand/5',
                     onRowClick && 'cursor-pointer',
@@ -354,7 +388,8 @@ export function DataTable<T>({
                 >
                   {selectable && (
                     <td
-                      className={cn(`border-b border-gray-200 ${cellX}`, pad)}
+                      className={cn(`border-b border-gray-200 ${cellX}`, pad, stickyCell(false))}
+                      style={stickyLead ? { left: 0 } : undefined}
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="flex items-center justify-center">
@@ -367,11 +402,16 @@ export function DataTable<T>({
                     </td>
                   )}
                   {numbered && (
-                    <td className={cn(`border-b border-gray-200 ${cellX} text-center tabular-nums ${tableText.meta}`, pad)}>
+                    <td
+                      className={cn(`border-b border-gray-200 ${cellX} text-center tabular-nums ${tableText.meta}`, pad, stickyCell(false))}
+                      style={stickyLead ? { left: `${leftNo}rem` } : undefined}
+                    >
                       {meta?.rowMark?.(row) ?? numberFrom - index}
                     </td>
                   )}
-                  {columns.map((col) => (
+                  {columns.map((col, colIndex) => {
+                    const leadFrozen = stickyLead && colIndex === 0
+                    return (
                     <td
                       key={col.key}
                       className={cn(
@@ -382,11 +422,14 @@ export function DataTable<T>({
                         pad,
                         truncate,
                         col.className,
+                        leadFrozen && stickyCell(false, true),
                       )}
+                      style={leadFrozen ? { left: `${leftFirst}rem` } : undefined}
                     >
                       {col.render ? col.render(row) : (row[col.key as keyof T] as ReactNode)}
                     </td>
-                  ))}
+                    )
+                  })}
                   {standardColumns && (
                     <>
                       {showAuthor && (

@@ -73,7 +73,8 @@ export function Tooltip({ content, children, side = 'top', className }: TooltipP
             role="tooltip"
             style={{ top: pos.top, left: pos.left }}
             className={cn(
-              'pointer-events-none fixed z-[100] w-max max-w-[18rem] -translate-x-1/2 whitespace-pre-line rounded-radius-sm bg-gray-800 px-2.5 py-1.5 text-caption font-normal leading-snug text-white shadow-md',
+              // z: 모달(z-modal=1010) 위에서도 보이도록 그보다 높인다(토스트 2000보다는 아래). 근거: 8_z_index_system_rules.md
+              'pointer-events-none fixed z-[1100] w-max max-w-[18rem] -translate-x-1/2 whitespace-pre-line rounded-radius-sm bg-gray-800 px-2.5 py-1.5 text-caption font-normal leading-snug text-white shadow-md',
               pos.flipped ? '' : '-translate-y-full',
             )}
           >

@@ -180,6 +180,8 @@ export interface FundLp {
   name: string
   commitment_amount: number
   ownership_pct: number | null
+  /** 실 납입액(파생) = 캐피탈 콜에서 납입 체크된 요청액의 합. 20260724240000. */
+  paid_amount: number
 }
 
 export function useFundLps(fundId: string | undefined) {
@@ -189,7 +191,7 @@ export function useFundLps(fundId: string | undefined) {
     queryFn: async (): Promise<FundLp[]> => {
       const { data } = await supabase
         .from('fund_lps')
-        .select('id, name, commitment_amount, ownership_pct')
+        .select('id, name, commitment_amount, ownership_pct, paid_amount')
         .eq('fund_id', fundId)
         .is('deleted_at', null)
         .order('commitment_amount', { ascending: false })
@@ -201,9 +203,123 @@ export function useFundLps(fundId: string | undefined) {
 export interface CapitalCall {
   id: string
   call_no: number
+  /** 차수 총 요청액(파생) = 그 차수 LP별 요청액의 합. */
   amount: number
   due_date: string | null
   status: string
+}
+
+/** 캐피탈 콜 차수 생성/수정 입력값. 금액은 파생이라 입력받지 않는다. */
+export interface CapitalCallInput {
+  call_no: number
+  due_date: string | null
+  status: string
+}
+
+export function useCreateCapitalCall(fundId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (values: CapitalCallInput): Promise<string> => {
+      const { data, error } = await supabase
+        .from('capital_calls')
+        .insert({ ...values, fund_id: fundId })
+        .select('id')
+        .single()
+      if (error) throw error
+      return (data as { id: string }).id
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['fund', 'calls', fundId] }),
+  })
+}
+
+export function useUpdateCapitalCall(fundId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, values }: { id: string; values: CapitalCallInput }) => {
+      const { error } = await supabase.from('capital_calls').update(values).eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['fund', 'calls', fundId] }),
+  })
+}
+
+/** 캐피탈 콜 차수 삭제(soft delete). */
+export function useDeleteCapitalCall(fundId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('capital_calls')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['fund', 'calls', fundId] })
+      qc.invalidateQueries({ queryKey: ['fund', 'lps', fundId] })
+      qc.invalidateQueries({ queryKey: ['fund', 'one', fundId] })
+    },
+  })
+}
+
+/** 한 차수의 LP별 요청·납입 행. */
+export interface CapitalCallPayment {
+  lp_id: string
+  requested_amount: number
+  amount: number
+  is_paid: boolean
+  paid_at: string | null
+}
+
+/** 한 차수의 LP별 납입 그리드(원자 교체 대상). */
+export function useCapitalCallPayments(callId: string | undefined) {
+  return useQuery({
+    queryKey: ['fund', 'call-payments', callId],
+    enabled: Boolean(callId),
+    queryFn: async (): Promise<CapitalCallPayment[]> => {
+      const { data, error } = await supabase
+        .from('capital_call_payments')
+        .select('lp_id, requested_amount, amount, is_paid, paid_at')
+        .eq('capital_call_id', callId)
+      if (error) throw error
+      return ((data ?? []) as unknown[]).map((row) => {
+        const r = row as Record<string, unknown>
+        return {
+          lp_id: r.lp_id as string,
+          requested_amount: Number(r.requested_amount ?? 0),
+          amount: Number(r.amount ?? 0),
+          is_paid: Boolean(r.is_paid),
+          paid_at: (r.paid_at as string) ?? null,
+        }
+      })
+    },
+  })
+}
+
+/** 차수×LP 요청·납입 그리드 원자 교체. set_capital_call_payments RPC(SECURITY INVOKER). */
+export interface CapitalCallPaymentInput {
+  lp_id: string
+  requested_amount: number
+  is_paid: boolean
+}
+
+export function useSetCapitalCallPayments(fundId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ callId, rows }: { callId: string; rows: CapitalCallPaymentInput[] }) => {
+      const { error } = await supabase.rpc('set_capital_call_payments', {
+        p_capital_call_id: callId,
+        p_rows: rows,
+      })
+      if (error) throw error
+    },
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ['fund', 'call-payments', v.callId] })
+      qc.invalidateQueries({ queryKey: ['fund', 'calls', fundId] })
+      qc.invalidateQueries({ queryKey: ['fund', 'lps', fundId] })
+      qc.invalidateQueries({ queryKey: ['fund', 'one', fundId] })
+    },
+  })
 }
 
 /** 목적 구분: 의무투자(MANDATORY, 단일)/주목적(MAIN)/특수목적(SPECIAL). */
@@ -291,6 +407,7 @@ export function useCapitalCalls(fundId: string | undefined) {
         .from('capital_calls')
         .select('id, call_no, amount, due_date, status')
         .eq('fund_id', fundId)
+        .is('deleted_at', null)
         .order('call_no', { ascending: true })
       return (data ?? []) as CapitalCall[]
     },
@@ -301,6 +418,8 @@ export interface Investment {
   id: string
   startup_id: string | null
   startup_name: string | null
+  /** 로고 = startups.logo_url. 없으면 null(플레이스홀더). */
+  startup_logo_url: string | null
   /** 아이템 = startups.business_profile.oneLiner(한줄소개). */
   startup_one_liner: string | null
   /** 회사개요(startups 마스터 호출값 — investments에 중복 저장하지 않음). */
@@ -371,7 +490,7 @@ export function useInvestments(fundId: string | undefined) {
         .select(
           'id, startup_id, amount, invested_at, stage, investment_method, valuation, post_valuation, is_own_investment, ' +
             'purposes:investment_purposes(purpose_id), ' +
-            'startup:startups!investments_startup_id_fkey(name, business_profile, representative, founded_on, location, industries, industry, management_status, pool_status, closed_on, ' +
+            'startup:startups!investments_startup_id_fkey(name, logo_url, business_profile, representative, founded_on, location, industries, industry, management_status, pool_status, closed_on, ' +
             'managers:startup_managers(is_lead, user:users!startup_managers_user_id_fkey(name)))',
         )
         .eq('fund_id', fundId)
@@ -384,6 +503,7 @@ export function useInvestments(fundId: string | undefined) {
           id: r.id as string,
           startup_id: (r.startup_id as string) ?? null,
           startup_name: (s?.name as string) ?? null,
+          startup_logo_url: (s?.logo_url as string) ?? null,
           startup_one_liner: readOneLiner(s?.business_profile),
           startup_representative: (s?.representative as string) ?? null,
           startup_founded_on: (s?.founded_on as string) ?? null,
@@ -484,6 +604,7 @@ export function useDeleteInvestment(fundId: string) {
 export interface StartupOption {
   id: string
   name: string
+  logo_url: string | null
   one_liner: string | null
   representative: string | null
   founded_on: string | null
@@ -502,7 +623,7 @@ export function useStartupOptions() {
       const { data } = await supabase
         .from('startups')
         .select(
-          'id, name, business_profile, representative, founded_on, location, industries, industry, management_status, pool_status, ' +
+          'id, name, logo_url, business_profile, representative, founded_on, location, industries, industry, management_status, pool_status, ' +
             'managers:startup_managers(is_lead, user:users!startup_managers_user_id_fkey(name))',
         )
         .is('deleted_at', null)
@@ -513,6 +634,7 @@ export function useStartupOptions() {
         return {
           id: s.id as string,
           name: (s.name as string) ?? '',
+          logo_url: (s.logo_url as string) ?? null,
           one_liner: readOneLiner(s.business_profile),
           representative: (s.representative as string) ?? null,
           founded_on: (s.founded_on as string) ?? null,

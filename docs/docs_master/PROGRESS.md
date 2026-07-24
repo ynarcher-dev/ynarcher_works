@@ -159,6 +159,8 @@
 - [x] 자사 펀드 투자 ↔ 스타트업 관계형 연동 (집행액 자동 집계, 스타트업 투자 현황 병합 표시) <!-- 20260723120000: investments.valuation 추가, funds.drawn_amount(집행액)를 SUM(investments.amount) 트리거 집계로 전환(app.sync_fund_drawn_amount, SECURITY INVOKER), STARTUP 조회 브리지 public.startup_fund_investments(SECURITY DEFINER+호출자검사+authenticated grant). FUND 상세 포트폴리오 탭에 투자 집행 등록/수정/삭제 모달(InvestmentFormModal), StartupGrowthSection 투자 현황 표·차트에 자사 펀드 투자 병합('자사' 배지). 입력=FUND 소유, 스타트업=조회만. 결성액은 손입력 유지 -->
 
 - [x] FUND 전면 보완 — 리스트뷰(검색·필터·체크박스·페이지네이션, AC/VC/PE 탭이 유형구분으로 대시보드 테이블 상속)·상세 2:1 카드+서브탭·생성/편집 페이지형·AC 동일 우측 패널(전자결재·회의록·자료·코멘트·변동이력) <!-- 마이그레이션 20260724100000(구분 enum)/110000(기간·실출자·fund_managers)/120000(다형키 fund: entity_key_workspace·feedback·contributions·회의록링크·funds 변동이력 트리거)/140000(펀드유형 fund_type). 구분(strategy_type: AC/VC/PE)=탭 축, 펀드유형(fund_type: 프로젝트/블라인드)=별개 컬럼·필터. 성격=개인투자조합/벤처투자조합. 담당자 컬럼=등록자값·라벨만 재표기. 인력 배정 모달(대표/운용OPERATION/관리ADMIN, set_fund_staffing RPC 20260724150000, SECURITY INVOKER 원자 교체) -->
+- [x] 출자자↔캐피탈 콜 연동 콘솔 — N차 회차 + 차수×LP 요청/납입 2축 그리드, 납입 체크가 실 납입액을 파생 갱신 <!-- 20260724240000: capital_call_payments.requested_amount(요청)/fund_id(RLS 비정규화)·fund_lps.paid_amount(파생)·capital_calls.deleted_at 추가. 집계 트리거 app.sync_capital_call_rollups(SECURITY INVOKER)가 요청액→차수총액, 납입→fund_lps.paid_amount→funds.paid_in_amount 파생. 그리드 원자 교체 set_capital_call_payments RPC(SECURITY INVOKER, upsert+paid_at 보존). capital_call_payments RLS를 워크스페이스 게이트→can_access_fund(fund_id) 승격 + DELETE 정책 신설. 화면: CapitalCallPanel(요약)·CapitalCallRound(그리드+지분율 일괄채움+미납 알림 stub)·CapitalCallFormModal, 출자자 표에 납입액·납입률 컬럼. 미납 발송 채널은 Phase 14. 배분·세전·출자잔액(outflow)은 후속. 기획 §1.3/§2.2 갱신. 포트폴리오 표 요약/전체보기 컬럼 분기(compact) 동반 -->
+- [ ] FUND 캐피탈 콜 콘솔 마이그레이션 운영 DB 반영(supabase db push) 확인
 
 ## Phase 9. M&A 워크스페이스
 

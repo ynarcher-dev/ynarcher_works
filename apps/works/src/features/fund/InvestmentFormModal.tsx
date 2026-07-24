@@ -1,14 +1,17 @@
 import {
   Badge,
   Button,
+  cardText,
   InfoField,
   Input,
   Modal,
   TokenMultiSelect,
+  Tooltip,
   useToast,
   type BadgeTone,
 } from '@ynarcher/ui'
 import { Check, Search } from 'lucide-react'
+import { PhotoBox } from '@/features/networks/PhotoBox'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { TagSelect } from '@/features/admin/TagSelect'
@@ -75,6 +78,7 @@ export function InvestmentFormModal({
   open,
   onClose,
   editing,
+  onDelete,
 }: {
   fundId: string
   /** 이 투자가 속한 펀드명. 맥락 표시용(읽기 전용, 선택 불가). */
@@ -83,6 +87,8 @@ export function InvestmentFormModal({
   onClose: () => void
   /** 수정 대상. 없으면 신규 등록. */
   editing?: Investment | null
+  /** 수정 모드에서 좌측 하단 삭제 버튼. 미지정이면 삭제 버튼을 숨긴다(신규 등록엔 없음). */
+  onDelete?: (inv: Investment) => void
 }) {
   const toast = useToast()
   const { data: startups } = useStartupOptions()
@@ -150,6 +156,7 @@ export function InvestmentFormModal({
       return {
         id: startupId,
         name: editing.startup_name ?? '-',
+        logo_url: editing.startup_logo_url,
         one_liner: editing.startup_one_liner,
         representative: editing.startup_representative,
         founded_on: editing.startup_founded_on,
@@ -289,6 +296,17 @@ export function InvestmentFormModal({
       title={editing ? '투자 집행 수정' : '투자 집행 등록'}
       footer={
         <>
+          {/* 삭제는 수정 모드에서만 — 좌측 하단(mr-auto 로 취소·수정과 갈라 세운다). */}
+          {editing && onDelete && (
+            <Button
+              variant="outline-danger"
+              className="mr-auto"
+              onClick={() => onDelete(editing)}
+              disabled={busy}
+            >
+              삭제
+            </Button>
+          )}
           <Button variant="secondary" onClick={onClose}>
             취소
           </Button>
@@ -301,11 +319,25 @@ export function InvestmentFormModal({
       <div className="space-y-5">
         {/* 1) 피투자사 — 검색해 고르면 회사개요가 상속되어 딸려 온다(읽기 전용). */}
         <section className="space-y-2">
-          <h4 className="text-body-sm font-semibold text-gray-500">
-            피투자사 <span className="font-normal">— 기업을 검색하면 회사개요가 함께 불러와집니다</span>
-          </h4>
+          {/* '다른 기업 선택'은 선택 카드 위(섹션 헤더 우측)로 올려 잘 보이게 둔다. */}
+          <div className="flex items-center justify-between gap-2">
+            <h4 className="flex items-center gap-1.5 text-body-sm font-semibold text-gray-500">
+              기업 선택
+              <Tooltip content="기업을 검색하면 회사개요가 함께 불러와집니다" />
+            </h4>
+            {selected && (
+              <Button
+                variant="outline"
+                density="card"
+                onClick={() => pickStartup('')}
+                className="shrink-0"
+              >
+                다른 기업 선택
+              </Button>
+            )}
+          </div>
           {selected ? (
-            <SelectedCompany company={selected} onChange={() => pickStartup('')} />
+            <SelectedCompany company={selected} />
           ) : (
             <CompanySearch
               keyword={keyword}
@@ -318,7 +350,10 @@ export function InvestmentFormModal({
 
         {/* 2) 투자 정보 — 사용자가 직접 입력하는 값. */}
         <section className="space-y-3 border-t border-gray-100 pt-4">
-          <h4 className="text-body-sm font-semibold text-gray-500">투자 정보 (직접 입력)</h4>
+          <h4 className="flex items-center gap-1.5 text-body-sm font-semibold text-gray-500">
+            투자 정보
+            <Tooltip content="투자일·라운드·투자방식·기업 가치·집행액을 직접 입력합니다" />
+          </h4>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="투자펀드" className="sm:col-span-2">
               {/* 이 모달이 속한 펀드로 고정 — 선택 불가(비활성). */}
@@ -374,8 +409,9 @@ export function InvestmentFormModal({
 
         {/* 3) 규약 목적 부합 — 이 기업이 부합하는 주목적/특수목적을 체크한다(N:N). */}
         <section className="space-y-2 border-t border-gray-100 pt-4">
-          <h4 className="text-body-sm font-semibold text-gray-500">
-            규약 목적 부합 <span className="font-normal">— 이 기업이 부합하는 목적을 선택하세요</span>
+          <h4 className="flex items-center gap-1.5 text-body-sm font-semibold text-gray-500">
+            목적
+            <Tooltip content="이 기업이 부합하는 규약 목적을 선택하세요" />
           </h4>
           <PurposeChecklist
             purposes={purposes ?? []}
@@ -390,13 +426,12 @@ export function InvestmentFormModal({
 
         {/* 4) 투자기업 담당·현황 — 딜메이커 지정 = 편집 권한 부여. */}
         <section className="space-y-3 border-t border-gray-100 pt-4">
-          <h4 className="text-body-sm font-semibold text-gray-500">투자기업 담당 · 현황</h4>
-          <p className="text-body-sm text-gray-500">
-            등록하면 이 기업이 <b>투자기업으로 전환</b>되고, 지정한 딜메이커와 관리자만 이후 정보를 수정·삭제할
-            수 있습니다.
-          </p>
+          <h4 className="flex items-center gap-1.5 text-body-sm font-semibold text-gray-500">
+            투자기업 담당 · 현황
+            <Tooltip content="등록하면 이 기업이 투자기업으로 전환되고, 지정한 딜메이커와 관리자만 이후 정보를 수정·삭제할 수 있습니다." />
+          </h4>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label="딜메이커 (리드 담당자)">
+            <Field label="딜메이커(정)">
               {/* 단일 선택(max 1): 칩이 입력 필드 안에 남고, 지우면 다시 검색 가능. */}
               <TokenMultiSelect<PersonOpt>
                 selected={leadId ? [personObj(leadId)] : []}
@@ -410,8 +445,8 @@ export function InvestmentFormModal({
                 placeholder="이름으로 검색"
               />
             </Field>
-            <Field label="지원 담당자">
-              {/* 다중 선택: 칩이 입력 필드 안에 인라인으로 쌓이고, 딜메이커는 후보에서 제외. */}
+            <Field label="딜메이커(부)">
+              {/* 다중 선택(지원 담당자): 칩이 입력 필드 안에 인라인으로 쌓이고, 딜메이커(정)는 후보에서 제외. */}
               <TokenMultiSelect<PersonOpt>
                 selected={supportIds.filter((id) => id !== leadId).map(personObj)}
                 onChange={(next) => setSupportIds(next.map((e) => e.id))}
@@ -668,14 +703,8 @@ function CompanySearch({
 /** TokenMultiSelect(칩이 입력 필드 안에 남는 다중 선택)용 임직원 최소 형태. */
 type PersonOpt = { id: string; name: string | null; email: string | null }
 
-/** 선택된 피투자사의 회사개요(startups 상속값) 읽기 전용 표시 + 변경 버튼. */
-function SelectedCompany({
-  company,
-  onChange,
-}: {
-  company: StartupOption
-  onChange: () => void
-}) {
+/** 선택된 피투자사의 회사개요(startups 상속값) 읽기 전용 표시. '다른 기업 선택'은 상위 섹션 헤더가 소유한다. */
+function SelectedCompany({ company }: { company: StartupOption }) {
   const categoryLabel = managementStatusLabel(company.management_status)
   const categoryTone: BadgeTone = company.management_status
     ? MANAGEMENT_STATUS_TONE[company.management_status as ManagementStatus] ?? 'neutral'
@@ -683,26 +712,36 @@ function SelectedCompany({
 
   return (
     <div className="rounded-radius-md border border-gray-200 bg-gray-50/60 p-4">
-      <div className="mb-2 flex items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <span className="grid size-5 place-items-center rounded-full border border-brand bg-brand text-white">
-            <Check className="size-3.5" />
-          </span>
-          <h3 className="text-title-sm font-bold text-gray-900">{company.name}</h3>
-          {categoryLabel && <Badge tone={categoryTone}>{categoryLabel}</Badge>}
-          {company.pool_status && <Badge tone="neutral">{company.pool_status}</Badge>}
-          {company.industries.map((ind) => (
-            <Badge key={ind} tone="info">
-              {ind}
-            </Badge>
-          ))}
+      {/* 헤더: 로고 + 이름·업종 배지 + 부제 + 상태·분류 칩 — 상세 모달(InvestmentDetailModal) 헤더 구성과 동일. */}
+      <div className="flex items-start gap-4">
+        <PhotoBox src={company.logo_url} />
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            {/* 선택 완료 표시(체크). 이름·업종은 그 옆에 이어 붙는다. */}
+            <span className="grid size-5 shrink-0 place-items-center rounded-full border border-brand bg-brand text-white">
+              <Check className="size-3.5" />
+            </span>
+            <h3 className="text-title-md font-bold text-gray-900">{company.name}</h3>
+            {company.industries.map((ind) => (
+              <Badge key={ind} tone="neutral">
+                {ind}
+              </Badge>
+            ))}
+          </div>
+          {/* 부제 = 한줄소개 */}
+          <p className={`mt-1 ${cardText.subtitle}`}>{company.one_liner || '-'}</p>
+          {/* 상태·분류 칩: 구분=주 분류, 관리현황=라이브 상태(점). */}
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            {categoryLabel && <Badge tone={categoryTone}>{categoryLabel}</Badge>}
+            {company.pool_status && (
+              <Badge tone="success" dot>
+                {company.pool_status}
+              </Badge>
+            )}
+          </div>
         </div>
-        <Button variant="ghost" density="card" onClick={onChange} className="shrink-0">
-          다른 기업 선택
-        </Button>
       </div>
-      {company.one_liner && <p className="mb-3 text-body text-gray-600">{company.one_liner}</p>}
-      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+      <div className="mt-4 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-3">
         <InfoField label="대표자" value={company.representative || '-'} />
         <InfoField label="설립일" value={shortDate(company.founded_on)} />
         <InfoField label="소재지" value={company.location || '-'} />

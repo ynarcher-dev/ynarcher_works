@@ -17,8 +17,12 @@ function num(v: number | null): string {
   return v == null ? '-' : Number(v).toLocaleString()
 }
 
-/** 목적 구분별 컬럼 헤더 접두어(의무투자=의, 주목적=주, 특수목적=특). 번호는 구분 안에서 1부터. */
-const PURPOSE_KIND_PREFIX: Record<FundPurposeKind, string> = { MANDATORY: '의', MAIN: '주', SPECIAL: '특' }
+/** 목적 구분별 컬럼 헤더 접두어(의무투자=의무, 주목적=주목적, 특수목적=특수). 번호는 구분 안에서 1부터. */
+const PURPOSE_KIND_PREFIX: Record<FundPurposeKind, string> = {
+  MANDATORY: '의무',
+  MAIN: '주목적',
+  SPECIAL: '특수',
+}
 /** 컬럼 배치 순서: 의무투자 → 주목적 → 특수목적(각 구분 안에서는 sort_order). */
 const PURPOSE_KIND_ORDER: Record<FundPurposeKind, number> = { MANDATORY: 0, MAIN: 1, SPECIAL: 2 }
 
@@ -44,6 +48,8 @@ function buildPurposeColumns(purposes: FundPurpose[]): Column<Investment>[] {
         </span>
       ),
       align: 'center',
+      // 의무·주목적·특수 컬럼은 폭을 동일하게 고정한다(가장 긴 헤더 '주목적N'이 들어가는 w-20).
+      className: 'w-20',
       render: (r) =>
         r.purpose_ids.includes(p.id) ? (
           <span className="font-semibold text-success">Y</span>
@@ -55,16 +61,40 @@ function buildPurposeColumns(purposes: FundPurpose[]): Column<Investment>[] {
 }
 
 /**
- * 포트폴리오 표 컬럼 팩토리(단일 순서). 기본 표·크게보기 모두 같은 컬럼을 쓴다(크게보기는 같은 표를 크게 볼 뿐).
+ * 요약보기(카드 축소 상태)에서 감추는 컬럼 키. 전체보기(오버레이)에서는 모두 노출한다.
+ * 업종·대표자·설립일·아이템·소재지·구분·관리현황·투자펀드는 회사개요/상태 성격이라 요약에서 숨긴다.
+ * 규약 목적 부합 컬럼(purpose_*, 의1·주1·특1…)도 요약에서는 숨긴다(prefix로 판정).
+ */
+const SUMMARY_HIDDEN_KEYS = new Set([
+  'industries',
+  'representative',
+  'founded_on',
+  'item',
+  'location',
+  'category',
+  'pool_status',
+  'fund',
+])
+
+/** 요약보기에서 숨길 컬럼인지 — 고정 키 목록 + 가변 목적 컬럼(purpose_*) prefix. */
+function isHiddenInSummary(key: string): boolean {
+  return SUMMARY_HIDDEN_KEYS.has(key) || key.startsWith('purpose_')
+}
+
+/**
+ * 포트폴리오 표 컬럼 팩토리. 전체보기(오버레이)는 전체 컬럼, 카드 축소 상태는 요약 컬럼만 쓴다.
+ * `compact`이면 회사개요·구분·관리현황·투자펀드 컬럼을 감춰 핵심 투자 정보만 남긴다(요약보기).
  * 회사개요·구분·관리현황·딜메이커·아이템은 startups 마스터 조인 호출값(investments 중복 저장 안 함, §2.3).
  * 행 클릭 시 상세 모달이 열리므로 수정/삭제는 컬럼이 아니라 모달에서 처리한다.
  */
 export function buildPortfolioColumns({
   fundName,
   purposes,
+  compact = false,
 }: {
   fundName: string
   purposes: FundPurpose[]
+  compact?: boolean
 }): Column<Investment>[] {
   // 기업명 = 스타트업 상세(/startup/discovered/:id) 하이퍼링크. id 없으면 링크 없이 텍스트.
   // 링크 클릭은 stopPropagation — 행 클릭(상세 모달)과 분리해 이름은 스타트업 상세로만 이동한다.
@@ -118,7 +148,8 @@ export function buildPortfolioColumns({
     header: '업종',
     render: (r) =>
       r.startup_industries.length ? (
-        <span className="flex flex-wrap gap-1">
+        // 표는 한 줄 유지(전체보기 가로 스크롤) — 배지도 줄바꿈 없이 나란히 둔다.
+        <span className="flex gap-1">
           {r.startup_industries.map((ind) => (
             <Badge key={ind} tone="info">
               {ind}
@@ -193,7 +224,7 @@ export function buildPortfolioColumns({
 
   // 사용자 확정 순서(No.는 DataTable 표준, 좌측 자동). 수정/삭제는 행 클릭 상세 모달에서 처리.
   // …·라운드·투자방식·집행액·투자일·딜메이커
-  return [
+  const all: Column<Investment>[] = [
     startupColumn,
     industriesColumn,
     representativeColumn,
@@ -203,14 +234,23 @@ export function buildPortfolioColumns({
     categoryColumn,
     poolStatusColumn,
     fundColumn,
-    preColumn,
-    postColumn,
+    // 라운드·투자방식은 투자펀드 뒤(요약보기에선 회사개요가 숨어 기업명 바로 뒤).
     stageColumn,
     methodColumn,
+    preColumn,
+    postColumn,
     amountColumn,
     investedAtColumn,
     dealmakerColumn,
     // 규약 목적 부합(의1·주1·주2·특1…) — 펀드별 가변 컬럼을 뒤에 이어붙인다.
     ...buildPurposeColumns(purposes),
   ]
+
+  // 요약보기: 회사개요·상태·목적부합 컬럼을 감춘다. 전체보기는 그대로 전체 노출.
+  const visible = compact ? all.filter((c) => !isHiddenInSummary(c.key)) : all
+  // 모든 셀을 한 줄로 고정한다 — 컬럼이 좁혀져도 두 줄로 접히지 않고, 넘치면 표가 가로 스크롤된다.
+  return visible.map((c) => ({
+    ...c,
+    className: c.className ? `${c.className} whitespace-nowrap` : 'whitespace-nowrap',
+  }))
 }
