@@ -136,6 +136,40 @@ export function isPdfMaterial(m: Material): boolean {
   return /\.pdf$/i.test(m.file_name)
 }
 
+/** 이미지 자료 여부(모달 인라인 뷰어 대상). */
+export function isImageMaterial(m: Material): boolean {
+  if (m.content_type?.startsWith('image/')) return true
+  return /\.(png|jpe?g|gif|webp|svg|bmp|avif|apng|ico)$/i.test(m.file_name)
+}
+
+/**
+ * 동영상 자료 여부(모달 인라인 플레이어 대상). webm은 오디오 판별과 겹치므로
+ * content_type이 video/일 때만 동영상으로 본다(파일명 확장자에서는 제외).
+ */
+export function isVideoMaterial(m: Material): boolean {
+  if (m.content_type?.startsWith('video/')) return true
+  return /\.(mp4|m4v|mov|ogv)$/i.test(m.file_name)
+}
+
+/** 텍스트/코드/CSV 자료 여부(모달 간이 뷰어 대상). content_type 우선, 없으면 확장자로 판정. */
+export function isTextMaterial(m: Material): boolean {
+  const ct = m.content_type
+  if (ct?.startsWith('text/') || ct === 'application/json' || ct === 'application/xml') return true
+  return /\.(txt|md|markdown|csv|tsv|json|log|xml|ya?ml|ini|conf|css|html?|js|jsx|ts|tsx|py|java|c|cpp|h|go|rs|rb|php|sh|sql)$/i.test(
+    m.file_name,
+  )
+}
+
+/** 모달 미리보기 종류(오디오는 행에서 인라인 재생하므로 여기서 제외). 지원 안 하면 null. */
+export type PreviewKind = 'pdf' | 'image' | 'video' | 'text'
+export function materialPreviewKind(m: Material): PreviewKind | null {
+  if (isImageMaterial(m)) return 'image'
+  if (isVideoMaterial(m)) return 'video'
+  if (isPdfMaterial(m)) return 'pdf'
+  if (isTextMaterial(m)) return 'text'
+  return null
+}
+
 /**
  * 자료를 blob URL로 받는다(모달 인라인 뷰어용). Signed URL은 첨부 다운로드용
  * Content-Disposition이 붙어 iframe에 그대로 넣으면 다운로드되므로, 바이트를 받아
@@ -146,6 +180,25 @@ export async function fetchMaterialBlobUrl(m: Material): Promise<string> {
   const res = await fetch(url)
   if (!res.ok) throw new Error('fetch_failed')
   return URL.createObjectURL(await res.blob())
+}
+
+/** 텍스트/코드/CSV 미리보기 표시 상한(초과분은 앞부분만 보여준다). */
+export const TEXT_PREVIEW_LIMIT = 1_000_000
+
+/**
+ * 자료를 텍스트로 받는다(텍스트/코드/CSV 모달 뷰어용). 과대 파일은 앞부분만 잘라
+ * 반환하며(브라우저 렌더 보호), 초과 여부는 truncated로 알린다.
+ */
+export async function fetchMaterialText(
+  m: Material,
+): Promise<{ text: string; truncated: boolean }> {
+  const url = await fetchMaterialUrl(m)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error('fetch_failed')
+  const full = await res.text()
+  return full.length > TEXT_PREVIEW_LIMIT
+    ? { text: full.slice(0, TEXT_PREVIEW_LIMIT), truncated: true }
+    : { text: full, truncated: false }
 }
 
 /** 바이트를 사람이 읽는 단위로 변환. */

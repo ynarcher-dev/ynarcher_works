@@ -1,34 +1,24 @@
-import {
-  Button,
-  ExpandToggleButton,
-  FullscreenPanel,
-  IconButton,
-  Modal,
-  Spinner,
-  tableText,
-} from '@ynarcher/ui'
+import { Button, IconButton, Spinner, tableText } from '@ynarcher/ui'
 import {
   Download,
   Eye,
   File as FileIcon,
-  Maximize2,
-  Minimize2,
   Music,
   Pause,
   Play,
   Trash2,
 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { DetailPanelCard } from '@/features/networks/DetailPanelCard'
 import { MaterialDropZone } from '@/features/networks/MaterialDropZone'
+import { MaterialPreviewModal } from '@/features/networks/MaterialPreview'
 import { MiniPager, usePaged } from '@/features/networks/MiniPager'
 import {
   downloadMaterial,
-  fetchMaterialBlobUrl,
   fetchMaterialUrl,
   formatBytes,
   isAudioMaterial,
-  isPdfMaterial,
+  materialPreviewKind,
   useDeleteMaterial,
   useMaterials,
   useUploadMaterial,
@@ -65,7 +55,7 @@ export function MaterialPanel({
   const remove = useDeleteMaterial(targetType, targetId)
   const list = materials ?? []
   const { pageItems, page, setPage, pageCount } = usePaged(list)
-  // PDF 간이 뷰어 모달 대상(패널당 하나만 연다).
+  // 간이 뷰어 모달 대상(패널당 하나만 연다). pdf/이미지/동영상/텍스트를 종류별로 렌더한다.
   const [preview, setPreview] = useState<Material | null>(null)
 
   const addFiles = (files: File[]) => {
@@ -114,7 +104,7 @@ export function MaterialPanel({
                 <MaterialRow
                   key={m.id}
                   material={m}
-                  onPreview={isPdfMaterial(m) ? () => setPreview(m) : undefined}
+                  onPreview={materialPreviewKind(m) ? () => setPreview(m) : undefined}
                   onDelete={
                     readOnly ? undefined : () => remove.mutate(m.id)
                   }
@@ -129,13 +119,14 @@ export function MaterialPanel({
         )}
       </div>
 
-      {preview && <PdfPreviewModal material={preview} onClose={() => setPreview(null)} />}
+      {preview && <MaterialPreviewModal material={preview} onClose={() => setPreview(null)} />}
     </DetailPanelCard>
   )
 }
 
 /**
- * 자료 1건 행: 파일명·용량 + (오디오면)재생 · (PDF면)미리보기 + 다운로드/삭제.
+ * 자료 1건 행: 파일명·용량 + (오디오면)재생 · (미리보기 지원 종류면)미리보기 + 다운로드/삭제.
+ * 미리보기는 pdf·이미지·동영상·텍스트를 지원한다(그 외 형식은 다운로드만).
  * `onDelete` 미지정 시 삭제 버튼을, `onPreview` 미지정 시 미리보기 버튼을 숨긴다.
  */
 function MaterialRow({
@@ -243,93 +234,5 @@ function MaterialRow({
         <p className="mt-1 text-caption text-danger">재생 URL을 불러오지 못했습니다.</p>
       )}
     </li>
-  )
-}
-
-/**
- * PDF 간이 뷰어. Signed URL은 첨부 다운로드 디스포지션이 붙어 iframe에 직접 넣으면
- * 다운로드되므로, 바이트를 blob URL로 받아 브라우저 내장 PDF 뷰어(iframe)로 띄운다.
- * 닫히면 blob URL을 해제한다. 서버가 RLS·access_logs를 강제하는 material-download 경유.
- *
- * '크게보기'는 같은 blob을 유지한 채 모달 ↔ 전체화면 오버레이만 갈아 끼워, 토글해도
- * 파일을 다시 받지 않는다(blob 로딩은 material에만 의존).
- */
-function PdfPreviewModal({ material, onClose }: { material: Material; onClose: () => void }) {
-  const [url, setUrl] = useState<string | null>(null)
-  const [error, setError] = useState(false)
-  const [expanded, setExpanded] = useState(false)
-
-  useEffect(() => {
-    let objectUrl: string | null = null
-    let alive = true
-    setUrl(null)
-    setError(false)
-    fetchMaterialBlobUrl(material)
-      .then((u) => {
-        objectUrl = u
-        if (alive) setUrl(u)
-        else URL.revokeObjectURL(u)
-      })
-      .catch(() => {
-        if (alive) setError(true)
-      })
-    return () => {
-      alive = false
-      if (objectUrl) URL.revokeObjectURL(objectUrl)
-    }
-  }, [material])
-
-  const viewer = error ? (
-    <p className="py-10 text-center text-body text-danger">
-      미리보기를 불러오지 못했습니다. 다운로드해 확인해 주세요.
-    </p>
-  ) : url ? (
-    <iframe title={material.file_name} src={url} className="h-full w-full rounded-radius-sm border border-gray-200" />
-  ) : (
-    <div className="flex h-full items-center justify-center">
-      <Spinner />
-    </div>
-  )
-
-  const toggle = (
-    <ExpandToggleButton
-      expanded={expanded}
-      onToggle={() => setExpanded((v) => !v)}
-      expandIcon={<Maximize2 className="mr-1.5 size-4" />}
-      collapseIcon={<Minimize2 className="mr-1.5 size-4" />}
-    />
-  )
-
-  if (expanded) {
-    return (
-      <FullscreenPanel
-        open
-        onClose={onClose}
-        title={
-          <span className="truncate text-title-sm font-medium text-gray-900">
-            {material.file_name}
-          </span>
-        }
-        actions={
-          <>
-            {toggle}
-            <Button variant="secondary" onClick={onClose}>
-              닫기
-            </Button>
-          </>
-        }
-      >
-        <div className="h-full w-full">{viewer}</div>
-      </FullscreenPanel>
-    )
-  }
-
-  return (
-    <Modal open onClose={onClose} title={material.file_name} size="2xl">
-      <div className="flex h-[75vh] w-full flex-col gap-3">
-        <div className="flex shrink-0 justify-end">{toggle}</div>
-        <div className="min-h-0 flex-1">{viewer}</div>
-      </div>
-    </Modal>
   )
 }
