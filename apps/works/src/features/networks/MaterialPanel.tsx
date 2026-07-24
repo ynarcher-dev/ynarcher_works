@@ -176,7 +176,11 @@ function MaterialRow({
         <span className={`shrink-0 tabular-nums ${tableText.meta}`}>
           {formatBytes(material.byte_size)}
         </span>
-        {audio && (
+        {/*
+          재생(오디오)·미리보기(눈)는 상호배타라 한 자리를 공유한다. 해당 없는 파일도
+          같은 크기의 빈 칸을 둬, 용량·다운로드 열이 행마다 같은 위치에 오도록 고정한다.
+        */}
+        {audio ? (
           <IconButton
             variant="ghost"
             label={audioUrl ? `${material.file_name} 접기` : `${material.file_name} 재생`}
@@ -192,14 +196,15 @@ function MaterialRow({
               )
             }
           />
-        )}
-        {onPreview && (
+        ) : onPreview ? (
           <IconButton
             variant="ghost"
             label={`${material.file_name} 미리보기`}
             onClick={onPreview}
             icon={<Eye className="size-4" />}
           />
+        ) : (
+          <span className="size-icon-card shrink-0" aria-hidden />
         )}
         <IconButton
           variant="ghost"
