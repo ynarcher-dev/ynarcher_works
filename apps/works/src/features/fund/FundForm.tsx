@@ -134,6 +134,13 @@ export function FundForm({ fundId, initial, onCancel, onDone }: FundFormProps) {
         onDone(fundId)
       } else {
         const id = await create.mutateAsync(values)
+        // 생성 직후 인력 배정 적용(펀드 id가 생겼으므로). 미지정이면 무해한 빈 교체.
+        await setStaffing.mutateAsync({
+          fundId: id,
+          managerId: staff.manager[0] ?? null,
+          operators: staff.operators,
+          admins: staff.admins,
+        })
         toast.show('펀드를 등록했습니다.', 'success')
         onDone(id)
       }
@@ -158,8 +165,8 @@ export function FundForm({ fundId, initial, onCancel, onDone }: FundFormProps) {
 
       <h1 className="text-title-md font-bold text-gray-900">{editing ? '펀드 수정' : '펀드 등록'}</h1>
 
-      <div className={editing && fundId ? 'grid grid-cols-1 items-start gap-4 lg:grid-cols-3' : ''}>
-        <div className={editing && fundId ? 'space-y-4 lg:col-span-2' : ''}>
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
+        <div className="space-y-4 lg:col-span-2">
       <CardShell>
         <div className="space-y-3">
           <div>
@@ -211,17 +218,19 @@ export function FundForm({ fundId, initial, onCancel, onDone }: FundFormProps) {
           </div>
         </div>
       </CardShell>
-          {editing && fundId && (
-            <PanelCard title="인력 배정">
-              <FundStaffingFields value={staff} onChange={setStaff} />
+          <PanelCard title="인력 배정">
+            <FundStaffingFields value={staff} onChange={setStaff} />
+          </PanelCard>
+        </div>
+        <div className="lg:col-span-1">
+          {fundId ? (
+            <MaterialPanel targetType="fund" targetId={fundId} />
+          ) : (
+            <PanelCard title="자료 관리">
+              <p className="text-body text-gray-600">펀드를 저장하면 자료를 업로드할 수 있습니다.</p>
             </PanelCard>
           )}
         </div>
-        {editing && fundId && (
-          <div className="lg:col-span-1">
-            <MaterialPanel targetType="fund" targetId={fundId} />
-          </div>
-        )}
       </div>
     </div>
   )
