@@ -39,8 +39,10 @@ NETWORKS/STARTUP/AC 상세와 동일한 `grid lg:grid-cols-3`(좌 `col-span-2` :
 * **상단 바**: 뒤로가기 + **삭제**(`DetailDeleteButton`, 확인창형 소프트 삭제) · **편집**. 편집은 페이지형 폼(`FundForm`)으로 인라인 전환한다.
 * **좌측(2/3)**: 펀드 개요 `CardShell`(펀드명 + 재원·성격·유형·상태 배지 + KPI 4타일〔약정·실출자·집행·잔액〕 + 정보행〔결성일·존속기간·운용기간·출자 방식·**대표펀드매니저·운용인력·등록자**·수정일〕) **고정**, 그 아래 **서브 탭바**(`Tabs`: 출자자(LP)〔도넛+표〕 / 포트폴리오 / 캐피탈 콜) — AC `ProgramOverviewTab` 구조.
 * **우측(1/3)**: AC 상세와 **완전 동일한 공용 패널** — 전자결재 · 관련회의록 · 자료관리 · 코멘트 · 변동이력(타임라인은 펀드에 모듈 개념이 없어 제외). 다형 키 `'fund'`를 마이그레이션 `20260724120000`으로 지원: `app.entity_key_workspace`에 `fund` 분기 + `entity_feedback`·`entity_contributions` 정책에 `can_access_fund` arm + `funds` 변동이력 트리거 + 회의록 링크 `'fund'` 허용. 자료관리는 attachments 정책이 워크스페이스 무관이라 그대로 재사용.
-* **생성·편집**: 모달이 아니라 **페이지형 폼**(`FundForm`, STARTUP `StartupDetailForm` 패턴). 생성은 `/fund/new`(`FundCreatePage`), 편집은 상세에서 인라인 전환. 필드: 펀드명·결성액·실출자 + 재원/성격/구분/펀드유형/출자/상태 + 결성일·존속기간·운용기간.
-* **인력 배정**: 상세 상단 '인력 배정' 모달에서 **대표펀드매니저(단일) · 운용인력(role `OPERATION`) · 관리인력(role `ADMIN`)** 을 임직원 검색(typeahead)으로 지정한다. 운용≠관리(별개 축). 쓰기는 `set_fund_staffing` RPC(`SECURITY INVOKER`, 20260724150000)로 `funds.manager_id` + `fund_managers` 전체를 한 트랜잭션에 원자 교체하며, 권한은 각 원장 RLS가 판정한다. 개요 정보행에 대표·운용·관리를 각각 노출.
+* **생성·편집**: 모달이 아니라 **페이지형 폼**(`FundForm`, STARTUP `StartupDetailForm` 패턴). 생성은 `/fund/new`(`FundCreatePage`), 편집은 상세에서 인라인 전환.
+  * **편집 페이지 2:1 레이아웃**: 좌측(2/3) = 필드 카드(펀드명·결성액·실출자 + 재원/성격/구분/펀드유형/출자/상태 + 결성일·존속기간·운용기간) + **인력 배정** 카드. 우측(1/3) = **자료 관리**(`MaterialPanel`, 업로드 가능). 생성 모드는 펀드 id가 없어 필드 카드만 단일 렌더.
+* **인력 배정**(편집 페이지 좌측 카드): **대표펀드매니저(단일) · 운용인력(role `OPERATION`) · 관리인력(role `ADMIN`)** 을 임직원 검색(typeahead, `FundStaffingFields`)으로 지정한다. 운용≠관리(별개 축, 한쪽 추가 시 다른 쪽에서 자동 제외). 저장 시 폼 저장과 함께 `set_fund_staffing` RPC(`SECURITY INVOKER`, 20260724150000)로 `funds.manager_id` + `fund_managers` 전체를 원자 교체(권한은 각 원장 RLS). 개요 정보행에 대표·운용·관리를 각각 노출.
+* **자료 관리**: 업로드는 **편집 페이지 우측**(`MaterialPanel`)에서, 상세 우측 패널의 자료관리는 **읽기 전용**(`readOnly`) 뷰. (STARTUP 상세=읽기/편집=업로드 패턴과 동일.)
 
 ### 1.2 포트폴리오 투자 집행 기록
 * **피투자 스타트업 매핑 표 (`Table`)**

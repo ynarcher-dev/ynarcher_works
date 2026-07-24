@@ -1,5 +1,7 @@
-import { BackButton, Button, CardShell, Input, Select, useToast } from '@ynarcher/ui'
+import { BackButton, Button, CardShell, Input, PanelCard, Select, useToast } from '@ynarcher/ui'
 import { useState } from 'react'
+import { MaterialPanel } from '@/features/networks/MaterialPanel'
+import { FundStaffingFields, toStaffing, type FundStaffing } from '@/features/fund/FundStaffingFields'
 import {
   FUND_CHARACTER_OPTIONS,
   FUND_SOURCE_OPTIONS,
@@ -8,7 +10,13 @@ import {
   FUND_SUBSCRIPTION_OPTIONS,
   FUND_TYPE_OPTIONS,
 } from '@/features/fund/fundListHooks'
-import { useCreateFund, useUpdateFund, type Fund, type FundInput } from '@/features/fund/hooks'
+import {
+  useCreateFund,
+  useSetFundStaffing,
+  useUpdateFund,
+  type Fund,
+  type FundInput,
+} from '@/features/fund/hooks'
 
 interface Option {
   value: string
@@ -64,6 +72,7 @@ export function FundForm({ fundId, initial, onCancel, onDone }: FundFormProps) {
   const toast = useToast()
   const create = useCreateFund()
   const update = useUpdateFund()
+  const setStaffing = useSetFundStaffing()
   const editing = Boolean(fundId)
   const d = (v?: string | null) => (v ? v.slice(0, 10) : '')
 
@@ -85,8 +94,10 @@ export function FundForm({ fundId, initial, onCancel, onDone }: FundFormProps) {
   const [termEnd, setTermEnd] = useState(d(initial?.term_end))
   const [opStart, setOpStart] = useState(d(initial?.operation_start))
   const [opEnd, setOpEnd] = useState(d(initial?.operation_end))
+  // 인력 배정(수정 모드에서만 노출·저장). 생성은 펀드가 아직 없어 배정 불가.
+  const [staff, setStaff] = useState<FundStaffing>(toStaffing(initial?.manager?.id, initial?.operators))
 
-  const busy = create.isPending || update.isPending
+  const busy = create.isPending || update.isPending || setStaffing.isPending
 
   const save = async () => {
     if (!name.trim()) {
@@ -113,6 +124,12 @@ export function FundForm({ fundId, initial, onCancel, onDone }: FundFormProps) {
     try {
       if (editing && fundId) {
         await update.mutateAsync({ id: fundId, values })
+        await setStaffing.mutateAsync({
+          fundId,
+          managerId: staff.manager[0] ?? null,
+          operators: staff.operators,
+          admins: staff.admins,
+        })
         toast.show('펀드를 수정했습니다.', 'success')
         onDone(fundId)
       } else {
@@ -141,6 +158,8 @@ export function FundForm({ fundId, initial, onCancel, onDone }: FundFormProps) {
 
       <h1 className="text-title-md font-bold text-gray-900">{editing ? '펀드 수정' : '펀드 등록'}</h1>
 
+      <div className={editing && fundId ? 'grid grid-cols-1 items-start gap-4 lg:grid-cols-3' : ''}>
+        <div className={editing && fundId ? 'space-y-4 lg:col-span-2' : ''}>
       <CardShell>
         <div className="space-y-3">
           <div>
@@ -192,6 +211,18 @@ export function FundForm({ fundId, initial, onCancel, onDone }: FundFormProps) {
           </div>
         </div>
       </CardShell>
+          {editing && fundId && (
+            <PanelCard title="인력 배정">
+              <FundStaffingFields value={staff} onChange={setStaff} />
+            </PanelCard>
+          )}
+        </div>
+        {editing && fundId && (
+          <div className="lg:col-span-1">
+            <MaterialPanel targetType="fund" targetId={fundId} />
+          </div>
+        )}
+      </div>
     </div>
   )
 }

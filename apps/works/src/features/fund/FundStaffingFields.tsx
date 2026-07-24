@@ -1,16 +1,33 @@
-import { Button, Modal, useToast } from '@ynarcher/ui'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useEmployees } from '@/features/hub/hooks'
-import { useSetFundStaffing } from '@/features/fund/hooks'
 
 interface Emp {
   id: string
   name: string
 }
 
+/** 대표(단일)·운용·관리(다중) 배정 상태. user_id 배열. */
+export interface FundStaffing {
+  manager: string[]
+  operators: string[]
+  admins: string[]
+}
+
+/** initial Fund.operators/manager → FundStaffing 초기값. */
+export function toStaffing(
+  managerId: string | null | undefined,
+  operators: { user_id: string; role: string; is_lead: boolean }[] | undefined,
+): FundStaffing {
+  const ops = operators ?? []
+  return {
+    manager: managerId ? [managerId] : [],
+    operators: ops.filter((o) => o.role === 'OPERATION' && !o.is_lead).map((o) => o.user_id),
+    admins: ops.filter((o) => o.role === 'ADMIN').map((o) => o.user_id),
+  }
+}
+
 /**
  * 임직원 검색 typeahead + 선택 칩. single이면 1명만(대표), 아니면 다중(운용·관리).
- * ProgramManagerEditor의 검색 패턴을 펀드 인력 배정용으로 단순화했다.
  */
 function MemberPicker({
   employees,
@@ -113,110 +130,42 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-interface Props {
-  open: boolean
-  onClose: () => void
-  fundId: string
-  initialManagerId: string | null
-  initialOperators: string[]
-  initialAdmins: string[]
-}
-
-/** 펀드 인력 배정 모달: 대표펀드매니저(단일) · 운용인력 · 관리인력(각 다중). */
-export function FundStaffingModal({
-  open,
-  onClose,
-  fundId,
-  initialManagerId,
-  initialOperators,
-  initialAdmins,
-}: Props) {
-  const toast = useToast()
+/**
+ * 펀드 인력 배정 필드(컨트롤드): 대표펀드매니저(단일)·운용인력·관리인력(각 다중).
+ * 한 사람이 운용·관리에 동시에 들어가지 않도록 한쪽 추가 시 다른 쪽에서 뺀다.
+ */
+export function FundStaffingFields({
+  value,
+  onChange,
+}: {
+  value: FundStaffing
+  onChange: (next: FundStaffing) => void
+}) {
   const { data: employees } = useEmployees()
-  const save = useSetFundStaffing()
-  const [manager, setManager] = useState<string[]>([])
-  const [operators, setOperators] = useState<string[]>([])
-  const [admins, setAdmins] = useState<string[]>([])
-
-  // 모달을 열 때마다 현재 배정으로 초기화한다.
-  useEffect(() => {
-    if (open) {
-      setManager(initialManagerId ? [initialManagerId] : [])
-      setOperators(initialOperators)
-      setAdmins(initialAdmins)
-    }
-  }, [open, initialManagerId, initialOperators, initialAdmins])
-
   const list = (employees ?? []) as Emp[]
 
-  // 한 사람이 운용·관리에 동시에 들어가지 않도록, 한쪽에 추가되면 다른 쪽에서 뺀다.
-  const setOps = (next: string[]) => {
-    setOperators(next)
-    setAdmins((a) => a.filter((id) => !next.includes(id)))
-  }
-  const setAdm = (next: string[]) => {
-    setAdmins(next)
-    setOperators((o) => o.filter((id) => !next.includes(id)))
-  }
-
-  const onSubmit = async () => {
-    try {
-      await save.mutateAsync({
-        fundId,
-        managerId: manager[0] ?? null,
-        operators,
-        admins,
-      })
-      toast.show('인력을 배정했습니다.', 'success')
-      onClose()
-    } catch {
-      toast.show('배정에 실패했습니다. 권한을 확인하세요.', 'danger')
-    }
-  }
+  const setOps = (next: string[]) =>
+    onChange({ ...value, operators: next, admins: value.admins.filter((id) => !next.includes(id)) })
+  const setAdm = (next: string[]) =>
+    onChange({ ...value, admins: next, operators: value.operators.filter((id) => !next.includes(id)) })
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="인력 배정"
-      footer={
-        <>
-          <Button variant="secondary" onClick={onClose}>
-            취소
-          </Button>
-          <Button onClick={() => void onSubmit()} disabled={save.isPending}>
-            저장
-          </Button>
-        </>
-      }
-    >
-      <div className="space-y-4">
-        <Field label="대표펀드매니저">
-          <MemberPicker
-            employees={list}
-            selected={manager}
-            onChange={setManager}
-            single
-            placeholder="임직원 검색 후 대표 지정(1명)"
-          />
-        </Field>
-        <Field label="운용인력">
-          <MemberPicker
-            employees={list}
-            selected={operators}
-            onChange={setOps}
-            placeholder="임직원 검색 후 추가"
-          />
-        </Field>
-        <Field label="관리인력">
-          <MemberPicker
-            employees={list}
-            selected={admins}
-            onChange={setAdm}
-            placeholder="임직원 검색 후 추가"
-          />
-        </Field>
-      </div>
-    </Modal>
+    <div className="space-y-4">
+      <Field label="대표펀드매니저">
+        <MemberPicker
+          employees={list}
+          selected={value.manager}
+          onChange={(manager) => onChange({ ...value, manager })}
+          single
+          placeholder="임직원 검색 후 대표 지정(1명)"
+        />
+      </Field>
+      <Field label="운용인력">
+        <MemberPicker employees={list} selected={value.operators} onChange={setOps} placeholder="임직원 검색 후 추가" />
+      </Field>
+      <Field label="관리인력">
+        <MemberPicker employees={list} selected={value.admins} onChange={setAdm} placeholder="임직원 검색 후 추가" />
+      </Field>
+    </div>
   )
 }

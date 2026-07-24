@@ -23,7 +23,6 @@ import { RelatedApprovalPanel } from '@/features/program/detail/RelatedApprovalP
 import { RelatedMinutesPanel } from '@/features/office/minutes/RelatedMinutesPanel'
 import { DonutChart } from '@/features/fund/DonutChart'
 import { FundForm } from '@/features/fund/FundForm'
-import { FundStaffingModal } from '@/features/fund/FundStaffingModal'
 import { InvestmentFormModal } from '@/features/fund/InvestmentFormModal'
 import {
   FUND_CHARACTER_LABEL,
@@ -133,7 +132,6 @@ export function FundDetailPage() {
   const deactivate = useDeactivateFund()
   const toast = useToast()
   const [editing, setEditing] = useState(false)
-  const [staffOpen, setStaffOpen] = useState(false)
   const [tab, setTab] = useState<DetailTab>('lp')
   const [invModal, setInvModal] = useState<{ open: boolean; editing: Investment | null }>({
     open: false,
@@ -220,9 +218,6 @@ export function FundDetailPage() {
             }}
             onDeleted={() => navigate('/fund')}
           />
-          <Button variant="secondary" onClick={() => setStaffOpen(true)}>
-            인력 배정
-          </Button>
           <Button onClick={() => setEditing(true)}>편집</Button>
         </div>
       </div>
@@ -334,7 +329,8 @@ export function FundDetailPage() {
         <div className="space-y-4 lg:col-span-1">
           <RelatedApprovalPanel />
           <RelatedMinutesPanel targetType="fund" targetId={fund.id} />
-          <MaterialPanel targetType="fund" targetId={fund.id} />
+          {/* 자료 업로드는 편집 페이지에서 — 상세는 읽기 전용 뷰. */}
+          <MaterialPanel targetType="fund" targetId={fund.id} readOnly />
           <FeedbackPanel targetType="fund" targetId={fund.id} />
           <ChangeHistoryPanel contributions={contributions} />
         </div>
@@ -345,15 +341,6 @@ export function FundDetailPage() {
         open={invModal.open}
         editing={invModal.editing}
         onClose={() => setInvModal({ open: false, editing: null })}
-      />
-
-      <FundStaffingModal
-        open={staffOpen}
-        onClose={() => setStaffOpen(false)}
-        fundId={id}
-        initialManagerId={fund.manager?.id ?? null}
-        initialOperators={operators.filter((o) => o.role === 'OPERATION' && !o.is_lead).map((o) => o.user_id)}
-        initialAdmins={operators.filter((o) => o.role === 'ADMIN').map((o) => o.user_id)}
       />
     </div>
   )
