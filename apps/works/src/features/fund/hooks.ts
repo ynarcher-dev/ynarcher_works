@@ -312,6 +312,8 @@ export interface Investment {
   startup_management_status: string | null
   /** 관리현황 = startups.pool_status(진행중/보류/종료/제외) — 사용자 확정: startups 그대로 호출. */
   startup_pool_status: string | null
+  /** 폐업일자 = startups.closed_on. 관리현황이 폐업일 때만 유효. 20260724230000. */
+  startup_closed_on: string | null
   /** 딜메이커(전권 담당자) = startup_managers 리드(is_lead). networks 읽기 권한 없으면 RLS로 null. */
   dealmaker_name: string | null
   amount: number
@@ -369,7 +371,7 @@ export function useInvestments(fundId: string | undefined) {
         .select(
           'id, startup_id, amount, invested_at, stage, investment_method, valuation, post_valuation, is_own_investment, ' +
             'purposes:investment_purposes(purpose_id), ' +
-            'startup:startups!investments_startup_id_fkey(name, business_profile, representative, founded_on, location, industries, industry, management_status, pool_status, ' +
+            'startup:startups!investments_startup_id_fkey(name, business_profile, representative, founded_on, location, industries, industry, management_status, pool_status, closed_on, ' +
             'managers:startup_managers(is_lead, user:users!startup_managers_user_id_fkey(name)))',
         )
         .eq('fund_id', fundId)
@@ -389,6 +391,7 @@ export function useInvestments(fundId: string | undefined) {
           startup_industries: readIndustryList(s?.industries, s?.industry),
           startup_management_status: (s?.management_status as string) ?? null,
           startup_pool_status: (s?.pool_status as string) ?? null,
+          startup_closed_on: (s?.closed_on as string) ?? null,
           dealmaker_name: readLeadManager(s?.managers),
           amount: Number(r.amount),
           invested_at: (r.invested_at as string) ?? null,

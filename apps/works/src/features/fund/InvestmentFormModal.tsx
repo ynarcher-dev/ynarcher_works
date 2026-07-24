@@ -66,6 +66,9 @@ function shortDate(v: string | null): string {
  * 딜메이커를 담당자로 지정한다. 전환은 이 흐름(자사 투자 집행)에서만 서버가 허용한다(20260724190000).
  * 딜메이커가 지정되면 그 사람과 관리자만 이후 이 투자기업 정보를 수정·삭제할 수 있다.
  */
+/** 관리현황이 이 값이면 폐업일자 입력을 노출·저장한다(company_status_tags 의 폐업 라벨). */
+const CLOSED_STATUS = '폐업'
+
 export function InvestmentFormModal({
   fundId,
   fundName,
@@ -101,6 +104,8 @@ export function InvestmentFormModal({
   const [leadId, setLeadId] = useState('')
   const [supportIds, setSupportIds] = useState<string[]>([])
   const [poolStatus, setPoolStatus] = useState('')
+  // 폐업일자(YYYY-MM-DD). 관리현황이 '폐업'일 때만 입력·저장된다.
+  const [closedOn, setClosedOn] = useState('')
   // 이 투자가 부합하는 규약 목적(fund_purposes.id 목록).
   const [purposeIds, setPurposeIds] = useState<string[]>([])
 
@@ -123,6 +128,7 @@ export function InvestmentFormModal({
     setLeadId('')
     setSupportIds([])
     setPoolStatus(editing?.startup_pool_status ?? '')
+    setClosedOn(editing?.startup_closed_on?.slice(0, 10) ?? '')
     setPurposeIds(editing?.purpose_ids ?? [])
   }, [open, editing])
 
@@ -189,6 +195,7 @@ export function InvestmentFormModal({
     setLeadId('')
     setSupportIds([])
     setPoolStatus((startups ?? []).find((s) => s.id === id)?.pool_status ?? '')
+    setClosedOn('')
   }
 
   // 담당자·현황이 기존값과 달라졌는지(수정 시 promote 재호출 여부 판정).
@@ -198,12 +205,14 @@ export function InvestmentFormModal({
     const supSet = new Set(supportIds.filter((id) => id && id !== leadId))
     const supportsDiff =
       curSupports.size !== supSet.size || [...supSet].some((id) => !curSupports.has(id))
+    const curClosed = (editing?.startup_closed_on?.slice(0, 10) ?? '') || null
     return (
       curLead !== leadId ||
       supportsDiff ||
-      (poolStatus || null) !== ((selected?.pool_status ?? '') || null)
+      (poolStatus || null) !== ((selected?.pool_status ?? '') || null) ||
+      (closedOn || null) !== curClosed
     )
-  }, [existingManagers, supportIds, leadId, poolStatus, selected])
+  }, [existingManagers, supportIds, leadId, poolStatus, closedOn, selected, editing])
 
   const onSubmit = async () => {
     if (!startupId) {
@@ -233,6 +242,8 @@ export function InvestmentFormModal({
     // 라운드(투자단계)를 투자기업 단계(startups.stage)로 전파. 승격 RPC 인자로 함께 넘긴다.
     const stage = round.trim() || null
     const stageChanged = stage !== ((editing?.stage ?? '') || null)
+    // 폐업일자는 관리현황이 폐업일 때만 의미가 있다(그 외 상태로 바뀌면 서버가 NULL 로 정리).
+    const effectiveClosedOn = poolStatus === CLOSED_STATUS ? closedOn || null : null
     try {
       if (editing) {
         await update.mutateAsync({ id: editing.id, values })
@@ -244,6 +255,7 @@ export function InvestmentFormModal({
             supportUserIds: supports,
             poolStatus: poolStatus || null,
             stage,
+            closedOn: effectiveClosedOn,
           })
         }
         // 규약 목적 부합 매핑 교체(비었으면 전체 해제).
@@ -258,6 +270,7 @@ export function InvestmentFormModal({
           supportUserIds: supports,
           poolStatus: poolStatus || null,
           stage,
+          closedOn: effectiveClosedOn,
         })
         await setInvPurposes.mutateAsync({ investmentId: invId, purposeIds })
         toast.show('투자를 등록하고 투자기업으로 전환했습니다.', 'success')
@@ -405,6 +418,12 @@ export function InvestmentFormModal({
                 placeholder="선택"
               />
             </Field>
+            {/* 관리현황이 폐업일 때만 폐업일자를 입력받는다(다른 상태로 바꾸면 서버가 NULL 로 정리). */}
+            {poolStatus === CLOSED_STATUS && (
+              <Field label="폐업일자">
+                <Input type="date" value={closedOn} onChange={(e) => setClosedOn(e.target.value)} />
+              </Field>
+            )}
             <Field label="지원 담당자" className="sm:col-span-2">
               {/* 다중 선택: 칩이 입력 필드 안에 인라인으로 쌓이고, 딜메이커는 후보에서 제외. */}
               <TokenMultiSelect<PersonOpt>

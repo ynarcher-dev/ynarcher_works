@@ -231,6 +231,7 @@ export function useStartupManagers(startupId: string | undefined) {
  * 투자 승격 RPC 호출(담당자 지정 + investment 전환 + 관리현황·단계 지정 원자 처리).
  * 미투자 → 투자 전환은 자사 투자 집행이 있을 때만 서버가 허용한다(20260724190000).
  * poolStatus·stage 를 주면 승격과 동시에 관리현황·단계를 세팅한다(생략 시 기존값 유지, 20260724220000).
+ * closedOn(폐업일자)은 관리현황이 '폐업'일 때만 유효 — 그 외 상태로 바뀌면 서버가 NULL 로 정리한다(20260724230000).
  */
 export function usePromoteToInvested() {
   const qc = useQueryClient()
@@ -242,6 +243,8 @@ export function usePromoteToInvested() {
       poolStatus?: string | null
       /** 라운드(투자단계) = startups.stage 로 전파. */
       stage?: string | null
+      /** 폐업일자(YYYY-MM-DD). 관리현황이 폐업일 때만 서버가 반영한다. */
+      closedOn?: string | null
     }) => {
       const { error } = await supabase.rpc('promote_to_invested', {
         p_startup_id: args.startupId,
@@ -249,6 +252,7 @@ export function usePromoteToInvested() {
         p_support_user_ids: args.supportUserIds,
         p_pool_status: args.poolStatus ?? null,
         p_stage: args.stage ?? null,
+        p_closed_on: args.closedOn ?? null,
       })
       if (error) throw error
     },
