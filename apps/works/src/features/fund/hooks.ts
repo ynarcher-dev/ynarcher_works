@@ -135,6 +135,31 @@ export function useFundContributions(fundId: string | undefined) {
   })
 }
 
+/**
+ * 펀드 인력 배정(대표펀드매니저 + 운용/관리 인력). set_fund_staffing RPC 원자 교체.
+ * 근거: 20260724150000_set_fund_staffing.sql
+ */
+export function useSetFundStaffing() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (args: {
+      fundId: string
+      managerId: string | null
+      operators: string[]
+      admins: string[]
+    }) => {
+      const { error } = await supabase.rpc('set_fund_staffing', {
+        p_fund_id: args.fundId,
+        p_manager_id: args.managerId,
+        p_operators: args.operators,
+        p_admins: args.admins,
+      })
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['fund'] }),
+  })
+}
+
 /** 펀드 삭제(soft delete). */
 export function useDeactivateFund() {
   const qc = useQueryClient()

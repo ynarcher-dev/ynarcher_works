@@ -73,15 +73,24 @@ export function fundPeriod(start: string | null, end: string | null): string | n
   return `${fundDate(start) ?? '?'} ~ ${fundDate(end) ?? '?'}`
 }
 
+/** 인력 목록을 "이름 외 N"으로 요약(없으면 null). */
+function summarizeMembers(members: FundListRow['operators']): string | null {
+  if (members.length === 0) return null
+  const first = members[0]?.user?.name ?? '-'
+  return members.length > 1 ? `${first} 외 ${members.length - 1}` : first
+}
+
 /**
- * 운용인력 표시명: 참여 운용인력(role=OPERATION, 대표 제외)을 "이름 외 N"으로 요약.
- * 대표펀드매니저(is_lead)는 별도 컬럼(manager)에서 노출하므로 여기선 제외한다.
+ * 운용인력 표시명: 참여 운용인력(role=OPERATION, 대표 제외)을 요약.
+ * 대표펀드매니저(is_lead)는 별도(manager)에서 노출하므로 여기선 제외한다.
  */
 export function fundOperatorLabel(operators: FundListRow['operators']): string | null {
-  const ops = operators.filter((o) => o.role === 'OPERATION' && !o.is_lead)
-  if (ops.length === 0) return null
-  const first = ops[0]?.user?.name ?? '-'
-  return ops.length > 1 ? `${first} 외 ${ops.length - 1}` : first
+  return summarizeMembers(operators.filter((o) => o.role === 'OPERATION' && !o.is_lead))
+}
+
+/** 관리인력 표시명: 조합 행정·보고·사후관리 담당(role=ADMIN). 운용인력과 별개 축. */
+export function fundManagerLabel(operators: FundListRow['operators']): string | null {
+  return summarizeMembers(operators.filter((o) => o.role === 'ADMIN'))
 }
 
 /** 펀드 리스트 행. `funds` 표시 컬럼 + 대표펀드매니저·담당자(등록자) 임베드. */

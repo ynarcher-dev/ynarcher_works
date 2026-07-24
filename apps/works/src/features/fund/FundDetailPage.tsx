@@ -23,6 +23,7 @@ import { RelatedApprovalPanel } from '@/features/program/detail/RelatedApprovalP
 import { RelatedMinutesPanel } from '@/features/office/minutes/RelatedMinutesPanel'
 import { DonutChart } from '@/features/fund/DonutChart'
 import { FundForm } from '@/features/fund/FundForm'
+import { FundStaffingModal } from '@/features/fund/FundStaffingModal'
 import { InvestmentFormModal } from '@/features/fund/InvestmentFormModal'
 import {
   FUND_CHARACTER_LABEL,
@@ -33,6 +34,7 @@ import {
   FUND_TYPE_LABEL,
   formatEok,
   fundDate,
+  fundManagerLabel,
   fundOperatorLabel,
   fundPeriod,
   fundStatusLabel,
@@ -131,6 +133,7 @@ export function FundDetailPage() {
   const deactivate = useDeactivateFund()
   const toast = useToast()
   const [editing, setEditing] = useState(false)
+  const [staffOpen, setStaffOpen] = useState(false)
   const [tab, setTab] = useState<DetailTab>('lp')
   const [invModal, setInvModal] = useState<{ open: boolean; editing: Investment | null }>({
     open: false,
@@ -217,6 +220,9 @@ export function FundDetailPage() {
             }}
             onDeleted={() => navigate('/fund')}
           />
+          <Button variant="secondary" onClick={() => setStaffOpen(true)}>
+            인력 배정
+          </Button>
           <Button onClick={() => setEditing(true)}>편집</Button>
         </div>
       </div>
@@ -274,6 +280,7 @@ export function FundDetailPage() {
               />
               <Info label="대표펀드매니저" value={fund.manager?.name || '-'} />
               <Info label="운용인력" value={fundOperatorLabel(operators) ?? '-'} />
+              <Info label="관리인력" value={fundManagerLabel(operators) ?? '-'} />
               <Info label="등록자" value={fund.creator?.name || '-'} />
               <Info label="수정일" value={fundDate(fund.updated_at ?? null) ?? '-'} />
             </div>
@@ -338,6 +345,15 @@ export function FundDetailPage() {
         open={invModal.open}
         editing={invModal.editing}
         onClose={() => setInvModal({ open: false, editing: null })}
+      />
+
+      <FundStaffingModal
+        open={staffOpen}
+        onClose={() => setStaffOpen(false)}
+        fundId={id}
+        initialManagerId={fund.manager?.id ?? null}
+        initialOperators={operators.filter((o) => o.role === 'OPERATION' && !o.is_lead).map((o) => o.user_id)}
+        initialAdmins={operators.filter((o) => o.role === 'ADMIN').map((o) => o.user_id)}
       />
     </div>
   )
