@@ -225,14 +225,62 @@ export interface Investment {
   id: string
   startup_id: string | null
   startup_name: string | null
+  /** 아이템 = startups.business_profile.oneLiner(한줄소개). */
+  startup_one_liner: string | null
+  /** 회사개요(startups 마스터 호출값 — investments에 중복 저장하지 않음). */
+  startup_representative: string | null
+  startup_founded_on: string | null
+  startup_location: string | null
+  startup_industries: string[]
+  /** 구분 = startups.management_status(발굴/보육/투자/기타). 포트폴리오는 항상 invested. */
+  startup_management_status: string | null
+  /** 관리현황 = startups.pool_status(진행중/보류/종료/제외) — 사용자 확정: startups 그대로 호출. */
+  startup_pool_status: string | null
+  /** 딜메이커(전권 담당자) = startup_managers 리드(is_lead). networks 읽기 권한 없으면 RLS로 null. */
+  dealmaker_name: string | null
   amount: number
   invested_at: string | null
   stage: string | null
+  /** 투자방식(보통주/CPS/RCPS/CB/BW 등). 라운드(stage)와 별개 축. 20260724170000. */
+  investment_method: string | null
+  /** PRE 밸류(투자 시점). */
   valuation: number | null
+  /** POST 밸류(투자 후). 20260724160000. */
+  post_valuation: number | null
   is_own_investment: boolean
 }
 
-/** 투자 목록(피투자사명 조인). 투자일 내림차순. */
+/** startups.business_profile(jsonb) → oneLiner. 없으면 null. */
+function readOneLiner(profile: unknown): string | null {
+  if (!profile || typeof profile !== 'object') return null
+  const v = (profile as Record<string, unknown>).oneLiner
+  return typeof v === 'string' && v.trim() ? v.trim() : null
+}
+
+/** startups.industries(jsonb 배열) → 업종 태그 목록. 비면 레거시 단일 industry 흡수. */
+function readIndustryList(industries: unknown, legacy: unknown): string[] {
+  const list = Array.isArray(industries)
+    ? industries.map((v) => String(v).trim()).filter(Boolean)
+    : []
+  if (list.length > 0) return list
+  const one = typeof legacy === 'string' ? legacy.trim() : ''
+  return one ? [one] : []
+}
+
+/** 딜메이커 = startup_managers 리드(is_lead)의 이름. 리드가 없으면 null. */
+function readLeadManager(managers: unknown): string | null {
+  if (!Array.isArray(managers)) return null
+  const lead = managers.find(
+    (m) => m && typeof m === 'object' && (m as Record<string, unknown>).is_lead === true,
+  ) as { user?: { name?: string | null } | null } | undefined
+  return lead?.user?.name ?? null
+}
+
+/**
+ * 투자 목록(피투자사 + 회사개요 조인). 투자일 내림차순.
+ * 아이템(한줄소개)·회사개요(대표자·설립일·소재지·업종)는 startups 마스터에서 호출하며
+ * investments에 중복 저장하지 않는다(기획 §2.3).
+ */
 export function useInvestments(fundId: string | undefined) {
   return useQuery({
     queryKey: ['fund', 'investments', fundId],
@@ -241,21 +289,34 @@ export function useInvestments(fundId: string | undefined) {
       const { data } = await supabase
         .from('investments')
         .select(
-          'id, startup_id, amount, invested_at, stage, valuation, is_own_investment, startup:startups!investments_startup_id_fkey(name)',
+          'id, startup_id, amount, invested_at, stage, investment_method, valuation, post_valuation, is_own_investment, ' +
+            'startup:startups!investments_startup_id_fkey(name, business_profile, representative, founded_on, location, industries, industry, management_status, pool_status, ' +
+            'managers:startup_managers(is_lead, user:users!startup_managers_user_id_fkey(name)))',
         )
         .eq('fund_id', fundId)
         .is('deleted_at', null)
         .order('invested_at', { ascending: false })
       return ((data ?? []) as unknown[]).map((row) => {
-        const r = row as Record<string, unknown> & { startup?: { name?: string } | null }
+        const r = row as Record<string, unknown> & { startup?: Record<string, unknown> | null }
+        const s = r.startup ?? null
         return {
           id: r.id as string,
           startup_id: (r.startup_id as string) ?? null,
-          startup_name: r.startup?.name ?? null,
+          startup_name: (s?.name as string) ?? null,
+          startup_one_liner: readOneLiner(s?.business_profile),
+          startup_representative: (s?.representative as string) ?? null,
+          startup_founded_on: (s?.founded_on as string) ?? null,
+          startup_location: (s?.location as string) ?? null,
+          startup_industries: readIndustryList(s?.industries, s?.industry),
+          startup_management_status: (s?.management_status as string) ?? null,
+          startup_pool_status: (s?.pool_status as string) ?? null,
+          dealmaker_name: readLeadManager(s?.managers),
           amount: Number(r.amount),
           invested_at: (r.invested_at as string) ?? null,
           stage: (r.stage as string) ?? null,
+          investment_method: (r.investment_method as string) ?? null,
           valuation: r.valuation == null ? null : Number(r.valuation),
+          post_valuation: r.post_valuation == null ? null : Number(r.post_valuation),
           is_own_investment: Boolean(r.is_own_investment),
         }
       })
@@ -263,12 +324,14 @@ export function useInvestments(fundId: string | undefined) {
   })
 }
 
-/** 투자 등록/수정 입력값. 라운드는 stage 컬럼에, 기업 가치(Pre)는 valuation에 저장한다. */
+/** 투자 등록/수정 입력값. 라운드는 stage, 투자방식은 investment_method, PRE/POST는 valuation/post_valuation. */
 export interface InvestmentInput {
   startup_id: string
   invested_at: string | null
   stage: string | null
+  investment_method: string | null
   valuation: number | null
+  post_valuation: number | null
   amount: number
 }
 
@@ -325,23 +388,53 @@ export function useDeleteInvestment(fundId: string) {
   })
 }
 
+/**
+ * 피투자사 선택용 스타트업 옵션. 이름으로 검색해 고르면 회사개요가 함께 딸려 오도록
+ * startups 마스터의 조회값(한줄소개·대표자·설립일·소재지·업종·구분·관리현황·딜메이커)을
+ * 함께 싣는다 — 투자 등록 화면에서 읽기 전용으로 상속 표시하는 데 쓴다(investments에 중복 저장하지 않음).
+ */
 export interface StartupOption {
   id: string
   name: string
+  one_liner: string | null
+  representative: string | null
+  founded_on: string | null
+  location: string | null
+  industries: string[]
+  management_status: string | null
+  pool_status: string | null
+  dealmaker_name: string | null
 }
 
-/** 피투자사 선택용 스타트업 목록(활성·미병합). 이름 오름차순. */
+/** 피투자사 선택용 스타트업 목록(활성·미병합, 회사개요 조인). 이름 오름차순. */
 export function useStartupOptions() {
   return useQuery({
     queryKey: ['fund', 'startup-options'],
     queryFn: async (): Promise<StartupOption[]> => {
       const { data } = await supabase
         .from('startups')
-        .select('id, name')
+        .select(
+          'id, name, business_profile, representative, founded_on, location, industries, industry, management_status, pool_status, ' +
+            'managers:startup_managers(is_lead, user:users!startup_managers_user_id_fkey(name))',
+        )
         .is('deleted_at', null)
         .is('merged_into_id', null)
         .order('name', { ascending: true })
-      return (data ?? []) as StartupOption[]
+      return ((data ?? []) as unknown[]).map((row) => {
+        const s = row as Record<string, unknown>
+        return {
+          id: s.id as string,
+          name: (s.name as string) ?? '',
+          one_liner: readOneLiner(s.business_profile),
+          representative: (s.representative as string) ?? null,
+          founded_on: (s.founded_on as string) ?? null,
+          location: (s.location as string) ?? null,
+          industries: readIndustryList(s.industries, s.industry),
+          management_status: (s.management_status as string) ?? null,
+          pool_status: (s.pool_status as string) ?? null,
+          dealmaker_name: readLeadManager(s.managers),
+        }
+      })
     },
   })
 }

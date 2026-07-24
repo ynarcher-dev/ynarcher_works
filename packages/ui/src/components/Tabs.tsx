@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { Fragment, type ReactNode } from 'react'
 import { cn } from '../utils/cn'
 import { useDensity, type Density } from '../density'
 import { tabScale, tagScale } from '../densityScale'
@@ -8,6 +8,8 @@ export interface TabItem {
   label: ReactNode
   /** 라벨 우측 건수 칩(참가자 풀 등 집계 탭). */
   count?: number
+  /** 이 탭 앞에 세로 구분선을 그린다(그룹·권한 경계 구분용). */
+  divider?: boolean
 }
 
 export interface TabsProps {
@@ -35,39 +37,43 @@ export function Tabs({ items, value, onChange, density, className }: TabsProps) 
       {items.map((item) => {
         const active = item.key === value
         return (
-          <button
-            key={item.key}
-            type="button"
-            role="tab"
-            aria-selected={active}
-            onClick={() => onChange(item.key)}
-            className={cn(
-              s.height,
-              s.text,
-              s.padX,
-              '-mb-px inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 transition-colors duration-fast',
-              active
-                ? 'border-brand font-medium text-brand'
-                : 'border-transparent text-gray-600 hover:text-gray-800',
+          <Fragment key={item.key}>
+            {item.divider && (
+              <span aria-hidden className="mx-1.5 my-1.5 w-px self-stretch bg-gray-200" />
             )}
-          >
-            {item.label}
-            {item.count != null && (
-              <span
-                className={cn(
-                  'inline-flex items-center justify-center rounded-full leading-none tabular-nums',
-                  chip.height,
-                  chip.text,
-                  chip.padX,
-                  active
-                    ? 'bg-brand/10 font-semibold text-brand'
-                    : 'bg-gray-100 text-gray-600',
-                )}
-              >
-                {item.count}
-              </span>
-            )}
-          </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => onChange(item.key)}
+              className={cn(
+                s.height,
+                s.text,
+                s.padX,
+                '-mb-px inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 transition-colors duration-fast',
+                active
+                  ? 'border-brand font-medium text-brand'
+                  : 'border-transparent text-gray-600 hover:text-gray-800',
+              )}
+            >
+              {item.label}
+              {item.count != null && (
+                <span
+                  className={cn(
+                    'inline-flex items-center justify-center rounded-full leading-none tabular-nums',
+                    chip.height,
+                    chip.text,
+                    chip.padX,
+                    active
+                      ? 'bg-brand/10 font-semibold text-brand'
+                      : 'bg-gray-100 text-gray-600',
+                  )}
+                >
+                  {item.count}
+                </span>
+              )}
+            </button>
+          </Fragment>
         )
       })}
     </nav>

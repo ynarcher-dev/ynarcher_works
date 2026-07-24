@@ -37,8 +37,8 @@ const dash = <span className="text-gray-400">-</span>
 
 /**
  * 펀드(조합) 목록 데이터 테이블. STARTUP 풀 테이블 골격 재사용.
- * 컬럼: 펀드명·재원·성격·유형·상태·존속기간·약정총액·실출자금액·집행액·잔액·대표펀드매니저·운용인력 + 담당자(우측).
- * 우측 '담당자' 컬럼의 값은 등록자(created_by)이며, 헤더 라벨만 재표기한다(사용자 결정, 작성자≠담당자 가드 인지).
+ * 컬럼: 펀드명·재원·성격·유형·상태·존속기간·약정총액·실출자금액·집행액·잔액·대표펀드매니저·운용인력 + 관리자(우측).
+ * 우측 '관리자' 컬럼의 값은 등록자(created_by)이며, 헤더 라벨만 재표기한다(사용자 결정, 작성자≠담당자 가드 인지). 관리인력과는 별개 축.
  */
 export function FundListTable({
   rows,
@@ -172,8 +172,8 @@ export function FundListTable({
       onSelectionChange={onSelectionChange}
       pagination={pagination}
       showManageColumn={false}
-      // 값은 등록자(created_by), 라벨만 '담당자'로 표기(작성자≠담당자 원칙을 인지한 의도적 재라벨).
-      authorLabel="담당자"
+      // 값은 등록자(created_by), 라벨만 '관리자'로 표기(작성자≠담당자 원칙을 인지한 의도적 재라벨). ※관리인력과는 별개 축.
+      authorLabel="관리자"
       meta={{ author: (f) => f.creator?.name || dash }}
       emptyText={emptyText ?? '등록된 펀드가 없습니다.'}
     />

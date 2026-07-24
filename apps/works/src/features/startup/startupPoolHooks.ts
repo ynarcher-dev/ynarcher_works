@@ -228,8 +228,9 @@ export function useStartupManagers(startupId: string | undefined) {
 }
 
 /**
- * 투자 승격 RPC 호출(담당자 지정 + investment 전환 원자 처리).
- * 미투자 → 투자, 또는 이미 투자기업의 담당자 재구성 모두 이 RPC 하나로 처리한다.
+ * 투자 승격 RPC 호출(담당자 지정 + investment 전환 + 관리현황 지정 원자 처리).
+ * 미투자 → 투자 전환은 자사 투자 집행이 있을 때만 서버가 허용한다(20260724190000).
+ * poolStatus 를 주면 승격과 동시에 관리현황을 세팅한다(생략 시 기존값 유지).
  */
 export function usePromoteToInvested() {
   const qc = useQueryClient()
@@ -238,17 +239,20 @@ export function usePromoteToInvested() {
       startupId: string
       leadUserId: string
       supportUserIds: string[]
+      poolStatus?: string | null
     }) => {
       const { error } = await supabase.rpc('promote_to_invested', {
         p_startup_id: args.startupId,
         p_lead_user_id: args.leadUserId,
         p_support_user_ids: args.supportUserIds,
+        p_pool_status: args.poolStatus ?? null,
       })
       if (error) throw error
     },
     onSuccess: (_data, args) => {
       void qc.invalidateQueries({ queryKey: ['startups'] })
       void qc.invalidateQueries({ queryKey: ['startups', 'managers', args.startupId] })
+      void qc.invalidateQueries({ queryKey: ['fund'] })
     },
   })
 }

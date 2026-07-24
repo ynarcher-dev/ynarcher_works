@@ -73,27 +73,30 @@ export function fundPeriod(start: string | null, end: string | null): string | n
   return `${fundDate(start) ?? '?'} ~ ${fundDate(end) ?? '?'}`
 }
 
-/** 인력 목록을 "이름 외 N"으로 요약(없으면 null). */
-function summarizeMembers(members: FundListRow['operators']): string | null {
+/** 인력 목록을 표시명으로. full=true면 전원 나열, 아니면 "이름 외 N" 요약(없으면 null). */
+function memberLabel(members: FundListRow['operators'], full: boolean): string | null {
   if (members.length === 0) return null
-  const first = members[0]?.user?.name ?? '-'
-  return members.length > 1 ? `${first} 외 ${members.length - 1}` : first
+  const names = members.map((m) => m.user?.name ?? '-')
+  if (full) return names.join(', ')
+  const first = names[0] ?? '-'
+  return names.length > 1 ? `${first} 외 ${names.length - 1}` : first
 }
 
 /**
- * 운용인력 표시명: 참여 운용인력(role=OPERATION, 대표 제외)을 요약.
+ * 운용인력 표시명: 참여 운용인력(role=OPERATION, 대표 제외).
  * 대표펀드매니저(is_lead)는 별도(manager)에서 노출하므로 여기선 제외한다.
+ * full=true(상세 개요)는 전원 나열, 기본(리스트 컬럼)은 "외 N" 축약.
  */
-export function fundOperatorLabel(operators: FundListRow['operators']): string | null {
-  return summarizeMembers(operators.filter((o) => o.role === 'OPERATION' && !o.is_lead))
+export function fundOperatorLabel(operators: FundListRow['operators'], full = false): string | null {
+  return memberLabel(operators.filter((o) => o.role === 'OPERATION' && !o.is_lead), full)
 }
 
-/** 관리인력 표시명: 조합 행정·보고·사후관리 담당(role=ADMIN). 운용인력과 별개 축. */
-export function fundManagerLabel(operators: FundListRow['operators']): string | null {
-  return summarizeMembers(operators.filter((o) => o.role === 'ADMIN'))
+/** 관리인력 표시명: 조합 행정·보고·사후관리 담당(role=ADMIN). 운용인력과 별개 축. full=true면 전원 나열. */
+export function fundManagerLabel(operators: FundListRow['operators'], full = false): string | null {
+  return memberLabel(operators.filter((o) => o.role === 'ADMIN'), full)
 }
 
-/** 펀드 리스트 행. `funds` 표시 컬럼 + 대표펀드매니저·담당자(등록자) 임베드. */
+/** 펀드 리스트 행. `funds` 표시 컬럼 + 대표펀드매니저·관리자(등록자) 임베드. */
 export interface FundListRow {
   id: string
   name: string
@@ -106,7 +109,7 @@ export interface FundListRow {
   updated_at: string | null
   /** 대표펀드매니저(manager_id → users). */
   manager: { id: string; name: string | null } | null
-  /** 담당자 컬럼의 원천 = 등록자(created_by → users). 라벨만 '담당자'로 표기(작성자≠담당자 인지). */
+  /** 관리자 컬럼의 원천 = 등록자(created_by → users). 라벨만 '관리자'로 표기(작성자≠담당자 인지). 관리인력과 별개. */
   creator: { id: string; name: string | null } | null
   /** 재원/성격/구분(20260724100000) + 펀드유형(20260724140000). */
   source_type: string | null

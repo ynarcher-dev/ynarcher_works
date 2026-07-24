@@ -21,6 +21,7 @@ const HEADINGS: Record<string, string> = {
   company_categories: TAG_CONFIGS.companyCategories.heading,
   company_statuses: TAG_CONFIGS.companyStatuses.heading,
   locations: TAG_CONFIGS.locations.heading,
+  investment_methods: TAG_CONFIGS.investmentMethods.heading,
   sensitive: '민감정보 관리',
   merge: '중복 병합 검증',
   audit: '감사 로그 모니터',

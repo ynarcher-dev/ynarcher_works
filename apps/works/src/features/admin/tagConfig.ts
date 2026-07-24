@@ -98,4 +98,11 @@ export const TAG_CONFIGS = {
     heading: '소재지태그 관리',
     noun: '소재지',
   },
+  // FUND 포트폴리오 투자방식(investments.investment_method) 선택지 원장.
+  investmentMethods: {
+    tab: 'investment_methods',
+    table: 'investment_method_tags',
+    heading: '투자방식태그 관리',
+    noun: '투자방식',
+  },
 } satisfies Record<string, TagConfig>

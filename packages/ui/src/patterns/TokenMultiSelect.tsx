@@ -29,6 +29,21 @@ export interface TokenMultiSelectProps<T> {
   allowFreeText?: boolean
   /** 자유 입력 문자열 → 항목 변환(allowFreeText면 필수). */
   createOption?: (text: string) => T
+  /**
+   * 입력 질의 변화 통지(비동기 후보 조회용). 호출부가 이 질의로 `options`를 갱신하면
+   * 필드 안에서 원격 검색 드롭다운이 뜬다. 순수성 유지를 위해 컴포넌트는 로딩을 하지 않는다.
+   */
+  onQueryChange?: (q: string) => void
+  /**
+   * 매칭 후보가 없을 때 드롭다운에 노출할 안내 행의 라벨을 반환한다(생략 시 미노출).
+   * 검색해도 없을 때의 다음 행동을 유도하는 용도다.
+   */
+  freeTextHint?: (q: string) => string
+  /**
+   * 후보 없음 안내 행/Enter의 동작을 커스터마이즈한다(예: 등록 모달 열기). 지정하면 자유 입력 대신
+   * 이 콜백을 호출한다 — 문자열을 그대로 토큰으로 넣지 않고 다른 경로로 등록을 유도할 때 쓴다.
+   */
+  onFreeTextSelect?: (q: string) => void
   placeholder?: string
   disabled?: boolean
   /** 최대 선택 수. */
@@ -55,6 +70,9 @@ export function TokenMultiSelect<T>({
   getSearchText,
   allowFreeText = false,
   createOption,
+  onQueryChange,
+  freeTextHint,
+  onFreeTextSelect,
   placeholder,
   disabled = false,
   max,
@@ -65,6 +83,12 @@ export function TokenMultiSelect<T>({
   const s = controlScale[d]
   const [q, setQ] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // 질의를 바꿀 때마다 호출부에 통지한다(비동기 후보 조회를 걸 수 있게).
+  const changeQuery = (next: string) => {
+    setQ(next)
+    onQueryChange?.(next)
+  }
 
   const atMax = max != null && selected.length >= max
   const selectedKeys = useMemo(() => new Set(selected.map(getKey)), [selected, getKey])
@@ -81,7 +105,7 @@ export function TokenMultiSelect<T>({
   const add = (item: T) => {
     if (atMax || selectedKeys.has(getKey(item))) return
     onChange([...selected, item])
-    setQ('')
+    changeQuery('')
     inputRef.current?.focus()
   }
 
@@ -90,10 +114,20 @@ export function TokenMultiSelect<T>({
     if (!text || !allowFreeText || !createOption) return
     const item = createOption(text)
     if (selectedKeys.has(getKey(item))) {
-      setQ('')
+      changeQuery('')
       return
     }
     add(item)
+  }
+
+  // 매칭 후보가 없을 때 드롭다운에 안내 행을 띄운다. 행/Enter 동작은 onFreeTextSelect가 있으면
+  // 그쪽으로(등록 모달 열기 등), 없고 allowFreeText면 입력값을 그대로 토큰으로 추가한다.
+  const showFreeTextRow = Boolean(freeTextHint) && q.trim() !== '' && matches.length === 0
+  const runFreeTextAction = () => {
+    const text = q.trim()
+    if (!text) return
+    if (onFreeTextSelect) onFreeTextSelect(text)
+    else addFreeText()
   }
 
   const remove = (key: string) => onChange(selected.filter((s) => getKey(s) !== key))
@@ -108,7 +142,7 @@ export function TokenMultiSelect<T>({
       e.preventDefault()
       const first = matches[0]
       if (first) add(first)
-      else addFreeText()
+      else runFreeTextAction()
     }
   }
 
@@ -150,7 +184,7 @@ export function TokenMultiSelect<T>({
           <input
             ref={inputRef}
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => changeQuery(e.target.value)}
             onKeyDown={onKeyDown}
             placeholder={selected.length > 0 ? '' : placeholder}
             className={cn(
@@ -160,7 +194,7 @@ export function TokenMultiSelect<T>({
           />
         )}
       </div>
-      {matches.length > 0 && (
+      {(matches.length > 0 || showFreeTextRow) && (
         <ul className="absolute inset-x-0 top-full z-dropdown mt-1 max-h-56 overflow-auto rounded-radius-md border border-gray-200 bg-white shadow-popover">
           {matches.map((o) => {
             const meta = getMeta?.(o)
@@ -178,6 +212,19 @@ export function TokenMultiSelect<T>({
               </li>
             )
           })}
+          {showFreeTextRow && (
+            // 후보가 없을 때 다음 행동을 유도하는 안내 행.
+            <li>
+              <button
+                type="button"
+                onMouseDown={(ev) => ev.preventDefault()}
+                onClick={runFreeTextAction}
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-left transition-colors duration-fast hover:bg-gray-50"
+              >
+                <span className="text-body text-brand">{freeTextHint!(q.trim())}</span>
+              </button>
+            </li>
+          )}
         </ul>
       )}
     </div>

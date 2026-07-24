@@ -24,6 +24,7 @@ import { RelatedMinutesPanel } from '@/features/office/minutes/RelatedMinutesPan
 import { DonutChart } from '@/features/fund/DonutChart'
 import { FundForm } from '@/features/fund/FundForm'
 import { InvestmentFormModal } from '@/features/fund/InvestmentFormModal'
+import { PortfolioBoardCard } from '@/features/fund/PortfolioBoardCard'
 import {
   FUND_CHARACTER_LABEL,
   FUND_SOURCE_LABEL,
@@ -98,11 +99,15 @@ const lpColumns: Column<FundLp>[] = [
   },
 ]
 
-type DetailTab = 'lp' | 'portfolio' | 'calls'
-const DETAIL_TABS: { key: DetailTab; label: string }[] = [
-  { key: 'lp', label: '출자자(LP)' },
+type DetailTab = 'overview' | 'portfolio' | 'lp' | 'calls' | 'financials' | 'reports'
+// 구분선(divider) = 열람권한 경계. 일반 권한은 개요·포트폴리오까지, 그 뒤(출자자~보고서)는 유관 관리자급만.
+const DETAIL_TABS: { key: DetailTab; label: string; divider?: boolean }[] = [
+  { key: 'overview', label: '펀드개요' },
   { key: 'portfolio', label: '포트폴리오' },
+  { key: 'lp', label: '출자자', divider: true },
   { key: 'calls', label: '캐피탈 콜' },
+  { key: 'financials', label: '조합 재무' },
+  { key: 'reports', label: '보고서' },
 ]
 
 /** 카드 안 KPI 타일. */
@@ -132,7 +137,7 @@ export function FundDetailPage() {
   const deactivate = useDeactivateFund()
   const toast = useToast()
   const [editing, setEditing] = useState(false)
-  const [tab, setTab] = useState<DetailTab>('lp')
+  const [tab, setTab] = useState<DetailTab>('overview')
   const [invModal, setInvModal] = useState<{ open: boolean; editing: Investment | null }>({
     open: false,
     editing: null,
@@ -147,41 +152,6 @@ export function FundDetailPage() {
       toast.show('삭제에 실패했습니다. 권한을 확인하세요.', 'danger')
     }
   }
-
-  const invColumns: Column<Investment>[] = [
-    { key: 'startup', header: '피투자사', primary: true, render: (r) => r.startup_name ?? '-' },
-    { key: 'invested_at', header: '투자일', render: (r) => r.invested_at?.slice(0, 10) ?? '-' },
-    { key: 'stage', header: '라운드', render: (r) => r.stage ?? '-' },
-    {
-      key: 'valuation',
-      header: '기업 가치(Pre)',
-      align: 'right',
-      numeric: true,
-      render: (r) => (r.valuation == null ? '-' : Number(r.valuation).toLocaleString()),
-    },
-    {
-      key: 'amount',
-      header: '집행액',
-      align: 'right',
-      numeric: true,
-      render: (r) => Number(r.amount).toLocaleString(),
-    },
-    {
-      key: '_action',
-      header: '',
-      align: 'right',
-      render: (r) => (
-        <div className="flex justify-end gap-1">
-          <Button variant="ghost" onClick={() => setInvModal({ open: true, editing: r })}>
-            수정
-          </Button>
-          <Button variant="ghost" onClick={() => void onDeleteInvestment(r)}>
-            삭제
-          </Button>
-        </div>
-      ),
-    },
-  ]
 
   if (isLoading) return <Spinner />
   if (!fund || !id) return <Banner tone="warning">펀드를 찾을 수 없습니다.</Banner>
@@ -223,67 +193,77 @@ export function FundDetailPage() {
       </div>
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
-        {/* 좌측(2/3): 개요 카드 + 운영 서브 탭 */}
+        {/* 좌측(2/3): 펀드명·배지 헤더(고정) + 6개 운영 서브 탭 */}
         <div className="space-y-4 lg:col-span-2">
           <CardShell>
             <DensityProvider value="page">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-title-md font-bold text-gray-900">{fund.name}</h1>
-                {fund.source_type && (
-                  <Badge tone={fund.source_type === 'MOTAE' ? 'info' : 'neutral'}>
-                    {FUND_SOURCE_LABEL[fund.source_type] ?? fund.source_type}
-                  </Badge>
-                )}
-                {fund.character_type && (
-                  <Badge tone="neutral">{FUND_CHARACTER_LABEL[fund.character_type] ?? fund.character_type}</Badge>
-                )}
+                {/* 헤더에는 구분(전략)·상태만. 재원·성격·펀드유형은 펀드개요 탭 정보부로 내림. */}
                 {fund.strategy_type && (
                   <Badge tone={strategyTone[fund.strategy_type] ?? 'neutral'}>
                     {FUND_STRATEGY_LABEL[fund.strategy_type] ?? fund.strategy_type}
                   </Badge>
                 )}
-                {fund.fund_type && (
-                  <Badge tone={fund.fund_type === 'PROJECT' ? 'info' : 'neutral'}>
-                    {FUND_TYPE_LABEL[fund.fund_type] ?? fund.fund_type}
-                  </Badge>
-                )}
                 <Badge tone={FUND_STATUS_TONE[fund.status] ?? 'neutral'}>{fundStatusLabel(fund.status)}</Badge>
               </div>
             </DensityProvider>
-
-            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Stat label="약정총액" value={formatEok(commit)} />
-              <Stat label="실출자금액" value={paidIn == null ? '-' : formatEok(paidIn)} />
-              <Stat label="집행액" value={formatEok(drawn)} />
-              <Stat label="잔액" value={formatEok(commit - drawn)} />
-            </div>
-
-            <div className="mt-4 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-3">
-              <Info label="결성일" value={fundDate(fund.formed_on ?? null) ?? '-'} />
-              <Info label="존속기간" value={fundPeriod(fund.term_start ?? null, fund.term_end ?? null) ?? '-'} />
-              <Info
-                label="운용기간"
-                value={fundPeriod(fund.operation_start ?? null, fund.operation_end ?? null) ?? '-'}
-              />
-              <Info
-                label="출자 방식"
-                value={
-                  fund.subscription_type
-                    ? FUND_SUBSCRIPTION_LABEL[fund.subscription_type] ?? fund.subscription_type
-                    : '-'
-                }
-              />
-              <Info label="대표펀드매니저" value={fund.manager?.name || '-'} />
-              <Info label="운용인력" value={fundOperatorLabel(operators) ?? '-'} />
-              <Info label="관리인력" value={fundManagerLabel(operators) ?? '-'} />
-              <Info label="등록자" value={fund.creator?.name || '-'} />
-              <Info label="수정일" value={fundDate(fund.updated_at ?? null) ?? '-'} />
-            </div>
           </CardShell>
 
           <div>
             <Tabs items={DETAIL_TABS} value={tab} onChange={(k) => setTab(k as DetailTab)} />
             <div className="mt-4">
+              {tab === 'overview' && (
+                <CardShell>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <Stat label="약정총액" value={formatEok(commit)} />
+                    <Stat label="실출자금액" value={paidIn == null ? '-' : formatEok(paidIn)} />
+                    <Stat label="집행액" value={formatEok(drawn)} />
+                    <Stat label="잔액" value={formatEok(commit - drawn)} />
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+                    <Info
+                      label="재원구분"
+                      value={fund.source_type ? FUND_SOURCE_LABEL[fund.source_type] ?? fund.source_type : '-'}
+                    />
+                    <Info
+                      label="성격구분"
+                      value={
+                        fund.character_type ? FUND_CHARACTER_LABEL[fund.character_type] ?? fund.character_type : '-'
+                      }
+                    />
+                    <Info
+                      label="펀드유형"
+                      value={fund.fund_type ? FUND_TYPE_LABEL[fund.fund_type] ?? fund.fund_type : '-'}
+                    />
+                    {/* 결성일은 존속기간 시작일과 중복이라 개요에선 생략(컬럼·보고서는 유지). */}
+                    <Info label="존속기간" value={fundPeriod(fund.term_start ?? null, fund.term_end ?? null) ?? '-'} />
+                    <Info
+                      label="운용기간"
+                      value={fundPeriod(fund.operation_start ?? null, fund.operation_end ?? null) ?? '-'}
+                    />
+                    <Info
+                      label="출자 방식"
+                      value={
+                        fund.subscription_type
+                          ? FUND_SUBSCRIPTION_LABEL[fund.subscription_type] ?? fund.subscription_type
+                          : '-'
+                      }
+                    />
+                  </div>
+
+                  {/* 인력·등록 그룹: 펀드 속성과 구분선으로 분리. */}
+                  <div className="mt-4 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-3">
+                    <Info label="대표펀드매니저" value={fund.manager?.name || '-'} />
+                    <Info label="운용인력" value={fundOperatorLabel(operators, true) ?? '-'} />
+                    <Info label="관리인력" value={fundManagerLabel(operators, true) ?? '-'} />
+                    {/* 값은 등록자(created_by)이나 사용자 결정으로 라벨만 '관리자'로 표기(리스트뷰 authorLabel과 동일 성격). */}
+                    <Info label="관리자" value={fund.creator?.name || '-'} />
+                    <Info label="수정일" value={fundDate(fund.updated_at ?? null) ?? '-'} />
+                  </div>
+                </CardShell>
+              )}
               {tab === 'lp' && (
                 <CardShell>
                   {segments.length > 0 ? (
@@ -297,18 +277,13 @@ export function FundDetailPage() {
                 </CardShell>
               )}
               {tab === 'portfolio' && (
-                <CardShell>
-                  <div className="mb-3 flex justify-end">
-                    <Button onClick={() => setInvModal({ open: true, editing: null })}>투자 집행 등록</Button>
-                  </div>
-                  <DataTable
-                    columns={invColumns}
-                    rows={investments ?? []}
-                    rowKey={(r) => r.id}
-                    standardColumns={false}
-                    emptyText="집행된 투자가 없습니다."
-                  />
-                </CardShell>
+                <PortfolioBoardCard
+                  fundName={fund.name}
+                  investments={investments ?? []}
+                  onAdd={() => setInvModal({ open: true, editing: null })}
+                  onEdit={(inv) => setInvModal({ open: true, editing: inv })}
+                  onDelete={(inv) => void onDeleteInvestment(inv)}
+                />
               )}
               {tab === 'calls' && (
                 <CardShell>
@@ -319,6 +294,21 @@ export function FundDetailPage() {
                     standardColumns={false}
                     emptyText="캐피탈 콜 일정이 없습니다."
                   />
+                </CardShell>
+              )}
+              {tab === 'financials' && (
+                <CardShell>
+                  <Banner tone="info">
+                    조합 재무(재무상태표·손익), 관리보수 산출·환입, 회계감사인 원장은 후속 마이그레이션에서
+                    연결됩니다.
+                  </Banner>
+                </CardShell>
+              )}
+              {tab === 'reports' && (
+                <CardShell>
+                  <Banner tone="info">
+                    영업보고서·운용보고(월간 투자현황) 자동 생성은 후속 Phase에서 제공됩니다.
+                  </Banner>
                 </CardShell>
               )}
             </div>
@@ -342,6 +332,7 @@ export function FundDetailPage() {
         editing={invModal.editing}
         onClose={() => setInvModal({ open: false, editing: null })}
       />
+
     </div>
   )
 }

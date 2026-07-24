@@ -148,6 +148,7 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         { label: '투자단계 태그관리', tab: 'investment_stages', dividerBefore: true },
         { label: '기업구분 태그관리', tab: 'company_categories' },
         { label: '기업현황 태그관리', tab: 'company_statuses' },
+        { label: '투자방식 태그관리', tab: 'investment_methods' },
         { label: '소재지 태그관리', tab: 'locations' },
         { label: '민감정보 관리', tab: 'sensitive', dividerBefore: true },
         { label: '중복 병합 검증', tab: 'merge' },

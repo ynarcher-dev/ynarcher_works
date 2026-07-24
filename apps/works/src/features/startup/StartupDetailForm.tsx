@@ -1,17 +1,14 @@
 import { Button, CardShell, Input, PanelCard, Select, TagChip, TextArea, useToast } from '@ynarcher/ui'
-import { useEffect, useState, type ChangeEvent, type ReactNode } from 'react'
+import { useState, type ChangeEvent, type ReactNode } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { FormTopBar } from '@/components/FormTopBar'
 import { useEditReasonPrompt } from '@/components/EditReasonPrompt'
-import { useEmployees } from '@/features/management/hooks'
 import {
   MANAGEMENT_STATUS_OPTIONS,
   isInvested,
+  managementStatusLabel,
 } from '@/features/startup/startupClassification'
-import {
-  usePromoteToInvested,
-  useStartupManagers,
-} from '@/features/startup/startupPoolHooks'
+import { useStartupManagers } from '@/features/startup/startupPoolHooks'
 import { PhotoBox } from '@/features/networks/PhotoBox'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { PendingMaterialPanel } from '@/features/networks/PendingMaterialPanel'
@@ -146,20 +143,8 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
   const [businessStatus, setBusinessStatus] = useState<BusinessStatusEntry[]>(readBusinessStatus(base))
   const [shareholders, setShareholders] = useState<ShareholderSnapshot[]>(readShareholderHistory(base))
   const [media, setMedia] = useState<MediaItem[]>(readMedia(base))
-  // 담당자(투자기업 전용): 리드 1 + 지원 N. 기존 투자기업 편집 시 현재 담당자로 초기화한다.
-  const { data: employees } = useEmployees()
+  // 투자기업의 담당자·관리현황은 이 화면에서 조회만 한다(지정·전환은 FUND 투자 집행 전용).
   const { data: existingManagers } = useStartupManagers(recordId)
-  const promote = usePromoteToInvested()
-  const [leadId, setLeadId] = useState<string>('')
-  const [supportIds, setSupportIds] = useState<string[]>([])
-  useEffect(() => {
-    if (!existingManagers) return
-    const lead = existingManagers.find((m) => m.is_lead)
-    setLeadId(lead?.user_id ?? '')
-    setSupportIds(existingManagers.filter((m) => !m.is_lead).map((m) => m.user_id))
-  }, [existingManagers])
-  const toggleSupport = (id: string) =>
-    setSupportIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
   const onPickPhoto = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     e.target.value = ''
@@ -205,9 +190,12 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
     },
   })
 
-  // 구분에 따라 관리현황(투자)·기타 라벨(기타)·담당자(투자) 노출을 분기한다.
+  // 투자기업으로의 전환·담당자 지정·관리현황은 FUND 투자 집행에서만 처리한다(20260724190000).
+  // 이 화면에서는 투자기업이면 구분을 읽기 전용으로 보여주고, 비투자면 발굴/보육/기타 간에만 바꾼다.
   const watchedStatus = watch('management_status')
-  const willInvest = isInvested(watchedStatus)
+  const alreadyInvested = isInvested(str('management_status'))
+  // 투자기업의 딜메이커(리드 담당자) 이름 — 읽기 전용 표시용.
+  const leadName = existingManagers?.find((m) => m.is_lead)?.user?.name ?? null
 
   const onSubmit = async (v: StartupDetailFormValues) => {
     const payload: Record<string, unknown> = {
@@ -220,10 +208,9 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
       industries,
       industry: industries[0] ?? null,
       stage: v.stage.trim() || null,
-      // 관리현황(pool_status)·기타 라벨은 구분에 따라 게이팅한다. management_status는 아래에서
-      // 비투자만 직접 저장하고, 투자는 승격 RPC(promote_to_invested)로 원자 처리한다.
+      // 기타 라벨은 구분에 따라 게이팅한다. 구분(management_status)과 관리현황(pool_status)은
+      // 아래에서 투자기업 여부로 분기한다(투자기업은 이 화면에서 건드리지 않는다).
       management_status_etc: v.management_status === 'other' ? v.management_status_etc.trim() || null : null,
-      pool_status: isInvested(v.management_status) ? v.pool_status.trim() || null : null,
       discovery_source: v.discovery_source.trim() || null,
       // 소재지(location_tags 태그명)·상세주소.
       location: v.location.trim() || null,
@@ -284,32 +271,27 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
         }))
         .filter((m) => m.url),
     }
-    // 투자기업 승격 여부. 투자면 리드 담당자 필수(서버 RLS도 강제).
-    const goInvested = isInvested(v.management_status)
-    if (goInvested && !leadId) {
-      toast.show('투자기업은 리드 담당자를 지정해야 합니다.', 'warning')
-      return
+    // 구분·관리현황 분기: 투자기업은 이 화면에서 건드리지 않는다(전환·담당자·현황은 FUND 전용).
+    //   · 비투자(발굴/보육/기타): 선택한 구분을 직접 저장하고 pool_status 는 없음(트리거도 강제).
+    //   · 투자기업: management_status/pool_status 를 payload 에서 빼 서버 값 그대로 둔다.
+    if (alreadyInvested) {
+      delete payload.management_status
+      delete payload.pool_status
+    } else {
+      payload.management_status = v.management_status
+      payload.pool_status = null
     }
-    // 비투자는 구분을 직접 저장. 투자는 승격 RPC가 세팅하므로 직접 저장에서 제외한다
-    // (신규는 DB 기본값 sourced 로 INSERT 후 승격, 기존은 현재 값 유지 후 승격).
-    if (goInvested) delete payload.management_status
-    else payload.management_status = v.management_status
-
-    const supports = supportIds.filter((id) => id && id !== leadId)
 
     try {
       if (isCreate) {
         // 등록: 이름 중복 검사 후 새 레코드를 만들고, 생성 로그를 남긴 뒤 상세페이지로 이동한다.
+        // (신규 스타트업은 항상 비투자로 만든다 — 투자기업 전환은 FUND 투자 집행에서만 일어난다.)
         if (await checkDuplicateName('startups', payload.name as string)) {
           toast.show('동일한 이름이 이미 등록되어 있습니다.', 'warning')
           return
         }
         // 변동 이력 'created'는 원장 트리거가 같은 트랜잭션에서 남긴다(20260721150000).
         const newId = await create.mutateAsync(payload)
-        // 투자 등록: sourced 로 생성된 레코드를 담당자와 함께 원자 승격한다.
-        if (goInvested) {
-          await promote.mutateAsync({ startupId: newId, leadUserId: leadId, supportUserIds: supports })
-        }
         // 등록 전에 첨부한 자료를 새 레코드에 업로드한다(분류 슬롯 = target_type).
         const { failed } = await pending.flush(newId)
         toast.show(
@@ -325,10 +307,6 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
         const reason = await askReason()
         if (!reason) return
         await update.mutateAsync({ id: recordId, values: payload, reason })
-        // 투자 전환/담당자 재구성: 승격 RPC로 investment 세팅 + 담당자 동기화.
-        if (goInvested) {
-          await promote.mutateAsync({ startupId: recordId, leadUserId: leadId, supportUserIds: supports })
-        }
         toast.show('스타트업 정보를 수정했습니다.', 'success')
         onDone(recordId)
       }
@@ -444,21 +422,28 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
               </Field>
               {tagField('stage', 'investment_stage_tags', '단계')}
               <Field label="구분">
-                <Select {...register('management_status')}>
-                  {MANAGEMENT_STATUS_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </Select>
+                {alreadyInvested ? (
+                  // 투자기업은 이 화면에서 구분을 바꾸지 않는다(전환·복귀는 FUND 투자 집행에서 관리).
+                  <div className="flex items-center gap-2 py-2 text-body text-gray-900">
+                    {managementStatusLabel('invested')}
+                    <span className="text-caption text-gray-500">(FUND 투자 집행에서 관리)</span>
+                  </div>
+                ) : (
+                  // 투자기업 전환은 여기서 할 수 없다 — 발굴/보육/기타 간에만 바꾼다('투자' 옵션 제외).
+                  <Select {...register('management_status')}>
+                    {MANAGEMENT_STATUS_OPTIONS.filter((o) => o.value !== 'invested').map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </Select>
+                )}
               </Field>
               {watchedStatus === 'other' && (
                 <Field label="기타 분류">
                   <Input {...register('management_status_etc')} placeholder="기타 구분 라벨(선택)" />
                 </Field>
               )}
-              {/* 관리현황(pool_status)은 투자기업에서만 노출·저장한다. */}
-              {willInvest && tagField('pool_status', 'company_status_tags', '관리현황')}
               <Field label="발굴 경로" className="sm:col-span-2">
                 <Controller
                   control={control}
@@ -486,43 +471,18 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
             </div>
           </CardShell>
 
-          {/* 담당자 카드(투자기업 전용): 리드 1 + 지원 N. 승격 RPC로 원자 지정된다. */}
-          {willInvest && (
-            <PanelCard title="담당자 (투자기업)">
+          {/* 담당자·현황 카드(투자기업 전용, 읽기 전용): 지정·전환은 FUND 투자 집행에서 처리한다. */}
+          {alreadyInvested && (
+            <PanelCard title="담당자 · 현황 (투자기업)">
               <p className="mb-4 text-body text-gray-500">
-                투자기업은 리드 담당자 지정이 필수입니다. 지정 담당자와 관리자만 이후 정보를 수정·삭제할 수 있습니다.
+                투자기업의 딜메이커·관리현황은 FUND 투자 집행에서 지정·관리합니다. 이 화면에서는 조회만 됩니다.
               </p>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field label="리드 담당자" required>
-                  <Select value={leadId} onChange={(e) => setLeadId(e.target.value)}>
-                    <option value="">선택</option>
-                    {(employees ?? []).map((emp) => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.name ?? '(이름 없음)'}
-                      </option>
-                    ))}
-                  </Select>
+                <Field label="딜메이커">
+                  <div className="py-2 text-body text-gray-900">{leadName || '-'}</div>
                 </Field>
-                <Field label="지원 담당자" className="sm:col-span-2">
-                  <div className="flex flex-wrap gap-1.5">
-                    {(employees ?? [])
-                      .filter((emp) => emp.id !== leadId)
-                      .map((emp) => {
-                        const on = supportIds.includes(emp.id)
-                        return (
-                          <TagChip
-                            key={emp.id}
-                            selected={on}
-                            onClick={() => toggleSupport(emp.id)}
-                          >
-                            {emp.name ?? '(이름 없음)'}
-                          </TagChip>
-                        )
-                      })}
-                    {(employees ?? []).length === 0 && (
-                      <span className="text-caption text-gray-600">등록된 임직원이 없습니다.</span>
-                    )}
-                  </div>
+                <Field label="관리현황">
+                  <div className="py-2 text-body text-gray-900">{str('pool_status') || '-'}</div>
                 </Field>
               </div>
             </PanelCard>

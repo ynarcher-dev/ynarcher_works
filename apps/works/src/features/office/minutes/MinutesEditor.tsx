@@ -167,13 +167,19 @@ export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
             people={people}
             onChange={setPeople}
             placeholder="내부 참석자 검색 후 추가"
+            searchTitle="내부 참석자 검색"
           />
 
+          {/* 전체공개는 임직원 전원이 열람하므로 참조(열람 허용)가 의미 없다 → 입력 비활성화. */}
           <InternalPersonPicker
             role="REFERENCE"
             people={people}
             onChange={setPeople}
-            placeholder="참조 대상 검색 후 추가"
+            placeholder={
+              visibility === 'OFFICE' ? '전체공개 회의록은 참조가 필요 없습니다' : '참조 대상 검색 후 추가'
+            }
+            searchTitle="참조 대상 검색"
+            disabled={visibility === 'OFFICE'}
           />
 
           <ExternalAttendeePicker value={externalAttendees} onChange={setExternalAttendees} />
