@@ -158,6 +158,8 @@
 - [x] FUND 데이터 모델/필드 상세 확정 (문서 보강 포함) <!-- 스키마 마이그레이션 20260705170000이 확정 모델(funds/lps/capital_calls/investments/portfolio_financials) -->
 - [x] 자사 펀드 투자 ↔ 스타트업 관계형 연동 (집행액 자동 집계, 스타트업 투자 현황 병합 표시) <!-- 20260723120000: investments.valuation 추가, funds.drawn_amount(집행액)를 SUM(investments.amount) 트리거 집계로 전환(app.sync_fund_drawn_amount, SECURITY INVOKER), STARTUP 조회 브리지 public.startup_fund_investments(SECURITY DEFINER+호출자검사+authenticated grant). FUND 상세 포트폴리오 탭에 투자 집행 등록/수정/삭제 모달(InvestmentFormModal), StartupGrowthSection 투자 현황 표·차트에 자사 펀드 투자 병합('자사' 배지). 입력=FUND 소유, 스타트업=조회만. 결성액은 손입력 유지 -->
 
+- [x] FUND 전면 보완 — 리스트뷰(검색·필터·체크박스·페이지네이션, AC/VC/PE 탭이 유형구분으로 대시보드 테이블 상속)·상세 2:1 카드+서브탭·생성/편집 페이지형·AC 동일 우측 패널(전자결재·회의록·자료·코멘트·변동이력) <!-- 마이그레이션 20260724100000(구분 enum)/110000(기간·실출자·fund_managers)/120000(다형키 fund: entity_key_workspace·feedback·contributions·회의록링크·funds 변동이력 트리거)/130000(유형 PROJECT·BLIND). 유형 탭 AC/VC/PE/프로젝트/블라인드, 성격=개인투자조합/벤처투자조합. 담당자 컬럼=등록자값·라벨만 재표기. 남은 것: 운용인력 배정 UI(유저 피커) -->
+
 ## Phase 9. M&A 워크스페이스
 
 > **참고 문서**: [3_6_workspace_ma.md](../docs_planning/3_6_workspace_ma.md) · [3_database_rls_policy_matrix.md](../docs_dev/3_database_rls_policy_matrix.md) (부서 격리 정책)

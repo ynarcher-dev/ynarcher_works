@@ -4,6 +4,14 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import type { Contribution } from '@/features/networks/hooks'
+
+export interface FundManagerRef {
+  user_id: string
+  role: string
+  is_lead: boolean
+  user: { id: string; name: string | null } | null
+}
 
 export interface Fund {
   id: string
@@ -12,6 +20,21 @@ export interface Fund {
   total_commitment: number
   drawn_amount: number
   status: string
+  // 구분·기간·금액·인력(20260724100000/110000). 목록 최소 조회에서는 미포함이라 옵셔널.
+  source_type?: string | null
+  character_type?: string | null
+  strategy_type?: string | null
+  subscription_type?: string | null
+  formed_on?: string | null
+  term_start?: string | null
+  term_end?: string | null
+  operation_start?: string | null
+  operation_end?: string | null
+  paid_in_amount?: number | null
+  updated_at?: string | null
+  manager?: { id: string; name: string | null } | null
+  creator?: { id: string; name: string | null } | null
+  operators?: FundManagerRef[]
 }
 
 export function useFunds() {
@@ -29,6 +52,7 @@ export function useFunds() {
   })
 }
 
+/** 펀드 상세: 구분·기간·금액 + 대표펀드매니저·등록자·운용/관리 인력 임베드. */
 export function useFund(id: string | undefined) {
   return useQuery({
     queryKey: ['fund', 'one', id],
@@ -36,26 +60,91 @@ export function useFund(id: string | undefined) {
     queryFn: async (): Promise<Fund | null> => {
       const { data } = await supabase
         .from('funds')
-        .select('id, name, vintage_year, total_commitment, drawn_amount, status')
+        .select(
+          'id, name, vintage_year, total_commitment, drawn_amount, status, source_type, character_type, strategy_type, subscription_type, formed_on, term_start, term_end, operation_start, operation_end, paid_in_amount, updated_at, manager:users!manager_id(id, name), creator:users!created_by(id, name), operators:fund_managers(user_id, role, is_lead, user:users!user_id(id, name))',
+        )
         .eq('id', id)
         .maybeSingle()
-      return (data as Fund) ?? null
+      // PostgREST 임베드(manager/creator/operators)의 배열 추론과 Fund 형태가 어긋나므로 unknown 경유.
+      return (data as unknown as Fund) ?? null
     },
   })
+}
+
+/** 펀드 생성/수정 공용 입력값. 미지정 구분·기간은 null. */
+export interface FundInput {
+  name: string
+  total_commitment: number
+  status: string
+  source_type?: string | null
+  character_type?: string | null
+  strategy_type?: string | null
+  subscription_type?: string | null
+  formed_on?: string | null
+  term_start?: string | null
+  term_end?: string | null
+  operation_start?: string | null
+  operation_end?: string | null
+  paid_in_amount?: number | null
 }
 
 export function useCreateFund() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (values: {
-      name: string
-      total_commitment: number
-      status: string
-    }) => {
-      const { error } = await supabase.from('funds').insert(values)
+    mutationFn: async (values: FundInput): Promise<string> => {
+      const { data, error } = await supabase.from('funds').insert(values).select('id').single()
+      if (error) throw error
+      return (data as { id: string }).id
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['fund'] }),
+  })
+}
+
+/** 펀드 수정. */
+export function useUpdateFund() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, values }: { id: string; values: FundInput }) => {
+      const { error } = await supabase.from('funds').update(values).eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['fund', 'list'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['fund'] }),
+  })
+}
+
+/**
+ * 펀드 변동 이력(entity_contributions, entity_table='fund', 오래된 순).
+ * 기록(쓰기)은 원장 트리거 app.log_entity_contribution('fund')가 남긴다(20260724120000).
+ */
+export function useFundContributions(fundId: string | undefined) {
+  return useQuery({
+    queryKey: ['fund', 'contributions', fundId],
+    enabled: Boolean(fundId),
+    queryFn: async (): Promise<Contribution[]> => {
+      const { data, error } = await supabase
+        .from('entity_contributions')
+        .select('*')
+        .eq('entity_table', 'fund')
+        .eq('entity_id', fundId)
+        .order('created_at', { ascending: true })
+      if (error) throw error
+      return (data ?? []) as Contribution[]
+    },
+  })
+}
+
+/** 펀드 삭제(soft delete). */
+export function useDeactivateFund() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('funds')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['fund'] }),
   })
 }
 

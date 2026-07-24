@@ -5,8 +5,8 @@
  * 원장: supabase/migrations/20260723220000_meeting_minute_links.sql
  */
 
-/** 연동 가능한 대상 종류. 사업 원장의 entityKey(program/ma_program/project_program) + startup. */
-export type MinuteLinkTargetType = 'program' | 'ma_program' | 'project_program' | 'startup'
+/** 연동 가능한 대상 종류. 사업 원장의 entityKey(program/ma_program/project_program) + startup + fund. */
+export type MinuteLinkTargetType = 'program' | 'ma_program' | 'project_program' | 'startup' | 'fund'
 
 export interface MinuteLinkTargetMeta {
   /** 종류 선택 UI에 노출하는 라벨. */
@@ -21,12 +21,13 @@ export interface MinuteLinkTargetMeta {
   toPath: (id: string) => string
 }
 
-/** 종류 선택 세그먼트·검색 순서(사업 3종 → 스타트업). */
+/** 종류 선택 세그먼트·검색 순서(사업 3종 → 스타트업 → 펀드). */
 export const MINUTE_LINK_TARGET_TYPES: MinuteLinkTargetType[] = [
   'program',
   'ma_program',
   'project_program',
   'startup',
+  'fund',
 ]
 
 export const MINUTE_LINK_TARGETS: Record<MinuteLinkTargetType, MinuteLinkTargetMeta> = {
@@ -57,6 +58,13 @@ export const MINUTE_LINK_TARGETS: Record<MinuteLinkTargetType, MinuteLinkTargetM
     titleColumn: 'name',
     codeColumn: null,
     toPath: (id) => `/startup/discovered/${id}`,
+  },
+  fund: {
+    kindLabel: 'FUND',
+    table: 'funds',
+    titleColumn: 'name',
+    codeColumn: null,
+    toPath: (id) => `/fund/${id}`,
   },
 }
 
