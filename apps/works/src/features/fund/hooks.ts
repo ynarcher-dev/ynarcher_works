@@ -206,6 +206,82 @@ export interface CapitalCall {
   status: string
 }
 
+/** 목적 구분: 의무투자(MANDATORY, 단일)/주목적(MAIN)/특수목적(SPECIAL). */
+export type FundPurposeKind = 'MANDATORY' | 'MAIN' | 'SPECIAL'
+
+/** 펀드 목적(의무투자 MANDATORY / 주목적 MAIN / 특수목적 SPECIAL). target_pct는 약정총액 대비 목표비율(%). 근거: 20260724200000. */
+export interface FundPurpose {
+  id: string
+  kind: FundPurposeKind
+  label: string
+  target_pct: number | null
+  sort_order: number
+}
+
+/** 펀드 목적 목록(sort_order 오름차순). */
+export function useFundPurposes(fundId: string | undefined) {
+  return useQuery({
+    queryKey: ['fund', 'purposes', fundId],
+    enabled: Boolean(fundId),
+    queryFn: async (): Promise<FundPurpose[]> => {
+      const { data, error } = await supabase
+        .from('fund_purposes')
+        .select('id, kind, label, target_pct, sort_order')
+        .eq('fund_id', fundId)
+        .order('sort_order', { ascending: true })
+      if (error) throw error
+      return ((data ?? []) as unknown[]).map((row) => {
+        const r = row as Record<string, unknown>
+        return {
+          id: r.id as string,
+          kind: r.kind as FundPurposeKind,
+          label: (r.label as string) ?? '',
+          target_pct: r.target_pct == null ? null : Number(r.target_pct),
+          sort_order: Number(r.sort_order ?? 0),
+        }
+      })
+    },
+  })
+}
+
+/** 펀드 목적 집합 원자 교체. set_fund_purposes RPC(SECURITY INVOKER). */
+export interface FundPurposeInput {
+  id?: string
+  kind: FundPurposeKind
+  label: string
+  target_pct: number | null
+  sort_order: number
+}
+
+export function useSetFundPurposes() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ fundId, purposes }: { fundId: string; purposes: FundPurposeInput[] }) => {
+      const { error } = await supabase.rpc('set_fund_purposes', {
+        p_fund_id: fundId,
+        p_purposes: purposes,
+      })
+      if (error) throw error
+    },
+    onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: ['fund', 'purposes', v.fundId] }),
+  })
+}
+
+/** 한 투자의 부합 목적 매핑 원자 교체. set_investment_purposes RPC(SECURITY INVOKER). */
+export function useSetInvestmentPurposes(fundId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ investmentId, purposeIds }: { investmentId: string; purposeIds: string[] }) => {
+      const { error } = await supabase.rpc('set_investment_purposes', {
+        p_investment_id: investmentId,
+        p_purpose_ids: purposeIds,
+      })
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['fund', 'investments', fundId] }),
+  })
+}
+
 export function useCapitalCalls(fundId: string | undefined) {
   return useQuery({
     queryKey: ['fund', 'calls', fundId],
@@ -248,6 +324,8 @@ export interface Investment {
   /** POST 밸류(투자 후). 20260724160000. */
   post_valuation: number | null
   is_own_investment: boolean
+  /** 이 투자가 부합하는 목적(fund_purposes.id 목록). 20260724200000. */
+  purpose_ids: string[]
 }
 
 /** startups.business_profile(jsonb) → oneLiner. 없으면 null. */
@@ -290,6 +368,7 @@ export function useInvestments(fundId: string | undefined) {
         .from('investments')
         .select(
           'id, startup_id, amount, invested_at, stage, investment_method, valuation, post_valuation, is_own_investment, ' +
+            'purposes:investment_purposes(purpose_id), ' +
             'startup:startups!investments_startup_id_fkey(name, business_profile, representative, founded_on, location, industries, industry, management_status, pool_status, ' +
             'managers:startup_managers(is_lead, user:users!startup_managers_user_id_fkey(name)))',
         )
@@ -318,6 +397,9 @@ export function useInvestments(fundId: string | undefined) {
           valuation: r.valuation == null ? null : Number(r.valuation),
           post_valuation: r.post_valuation == null ? null : Number(r.post_valuation),
           is_own_investment: Boolean(r.is_own_investment),
+          purpose_ids: Array.isArray(r.purposes)
+            ? (r.purposes as { purpose_id: string }[]).map((p) => p.purpose_id)
+            : [],
         }
       })
     },
@@ -335,15 +417,18 @@ export interface InvestmentInput {
   amount: number
 }
 
-/** 자사 펀드 투자 집행 등록. drawn_amount(집행액)는 DB 트리거가 자동 재계산한다. */
+/** 자사 펀드 투자 집행 등록. drawn_amount(집행액)는 DB 트리거가 자동 재계산한다. 생성된 투자 id를 반환. */
 export function useCreateInvestment(fundId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (values: InvestmentInput) => {
-      const { error } = await supabase
+    mutationFn: async (values: InvestmentInput): Promise<string> => {
+      const { data, error } = await supabase
         .from('investments')
         .insert({ ...values, fund_id: fundId, is_own_investment: true })
+        .select('id')
+        .single()
       if (error) throw error
+      return (data as { id: string }).id
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['fund', 'investments', fundId] })

@@ -23,6 +23,7 @@ import { RelatedApprovalPanel } from '@/features/program/detail/RelatedApprovalP
 import { RelatedMinutesPanel } from '@/features/office/minutes/RelatedMinutesPanel'
 import { DonutChart } from '@/features/fund/DonutChart'
 import { FundForm } from '@/features/fund/FundForm'
+import { FundPurposeProgress } from '@/features/fund/FundPurposeProgress'
 import { InvestmentFormModal } from '@/features/fund/InvestmentFormModal'
 import { PortfolioBoardCard } from '@/features/fund/PortfolioBoardCard'
 import {
@@ -46,6 +47,7 @@ import {
   useFund,
   useFundContributions,
   useFundLps,
+  useFundPurposes,
   useInvestments,
   type CapitalCall,
   type FundLp,
@@ -132,6 +134,7 @@ export function FundDetailPage() {
   const { data: lps } = useFundLps(id)
   const { data: calls } = useCapitalCalls(id)
   const { data: investments } = useInvestments(id)
+  const { data: purposes } = useFundPurposes(id)
   const { data: contributions } = useFundContributions(id)
   const del = useDeleteInvestment(id ?? '')
   const deactivate = useDeactivateFund()
@@ -214,6 +217,7 @@ export function FundDetailPage() {
             <Tabs items={DETAIL_TABS} value={tab} onChange={(k) => setTab(k as DetailTab)} />
             <div className="mt-4">
               {tab === 'overview' && (
+                <div className="space-y-4">
                 <CardShell>
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <Stat label="약정총액" value={formatEok(commit)} />
@@ -262,7 +266,20 @@ export function FundDetailPage() {
                     <Info label="관리자" value={fund.creator?.name || '-'} />
                     <Info label="수정일" value={fundDate(fund.updated_at ?? null) ?? '-'} />
                   </div>
+
                 </CardShell>
+
+                  {/* 목적별 달성 현황: 규약 주목적·특수목적 목표비율 대비 부합 투자 집행 달성률.
+                      개요 카드와 분리된 별도 카드로 노출한다. */}
+                  <CardShell>
+                    <h3 className="mb-3 text-body font-semibold text-gray-900">목적별 달성 현황</h3>
+                    <FundPurposeProgress
+                      purposes={purposes ?? []}
+                      investments={investments ?? []}
+                      commitment={commit}
+                    />
+                  </CardShell>
+                </div>
               )}
               {tab === 'lp' && (
                 <CardShell>
@@ -280,6 +297,7 @@ export function FundDetailPage() {
                 <PortfolioBoardCard
                   fundName={fund.name}
                   investments={investments ?? []}
+                  purposes={purposes ?? []}
                   onAdd={() => setInvModal({ open: true, editing: null })}
                   onEdit={(inv) => setInvModal({ open: true, editing: inv })}
                   onDelete={(inv) => void onDeleteInvestment(inv)}
@@ -328,6 +346,7 @@ export function FundDetailPage() {
 
       <InvestmentFormModal
         fundId={id}
+        fundName={fund.name}
         open={invModal.open}
         editing={invModal.editing}
         onClose={() => setInvModal({ open: false, editing: null })}

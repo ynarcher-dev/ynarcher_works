@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { buildPortfolioColumns } from '@/features/fund/portfolioColumns'
 import { InvestmentDetailModal } from '@/features/fund/InvestmentDetailModal'
-import type { Investment } from '@/features/fund/hooks'
+import type { FundPurpose, Investment } from '@/features/fund/hooks'
 
 /**
  * 포트폴리오 보드 카드(펀드 상세 포트폴리오 탭).
@@ -14,12 +14,14 @@ import type { Investment } from '@/features/fund/hooks'
 export function PortfolioBoardCard({
   fundName,
   investments,
+  purposes,
   onAdd,
   onEdit,
   onDelete,
 }: {
   fundName: string
   investments: Investment[]
+  purposes: FundPurpose[]
   onAdd: () => void
   onEdit: (inv: Investment) => void
   onDelete: (inv: Investment) => void
@@ -37,7 +39,7 @@ export function PortfolioBoardCard({
   }, [expanded])
 
   // 기본 표·크게보기 모두 같은 컬럼(크게보기는 같은 표를 큰 캔버스에 펼칠 뿐).
-  const columns = buildPortfolioColumns({ fundName })
+  const columns = buildPortfolioColumns({ fundName, purposes })
 
   // 수정: 상세 닫고 편집 폼 열기. 삭제: 상세 닫고 삭제(확인창은 onDelete 내부).
   const handleEdit = (inv: Investment) => {

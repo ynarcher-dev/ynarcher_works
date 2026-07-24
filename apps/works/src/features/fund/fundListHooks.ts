@@ -49,6 +49,13 @@ export const FUND_SUBSCRIPTION_LABEL: Record<string, string> = {
   ON_DEMAND: '수시납',
 }
 
+/** 목적 구분(fund_purposes.kind): 의무투자(MANDATORY)/주목적(MAIN)/특수목적(SPECIAL). 근거: 3_5_workspace_fund.md §2.3 */
+export const FUND_PURPOSE_KIND_LABEL: Record<string, string> = {
+  MANDATORY: '의무투자',
+  MAIN: '주목적',
+  SPECIAL: '특수목적',
+}
+
 const toOptions = (m: Record<string, string>) =>
   Object.entries(m).map(([value, label]) => ({ value, label }))
 export const FUND_SOURCE_OPTIONS = toOptions(FUND_SOURCE_LABEL)

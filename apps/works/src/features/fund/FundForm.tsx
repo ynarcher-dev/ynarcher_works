@@ -1,7 +1,13 @@
 import { BackButton, Button, CardShell, Input, PanelCard, Select, useToast } from '@ynarcher/ui'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { FundStaffingFields, toStaffing, type FundStaffing } from '@/features/fund/FundStaffingFields'
+import {
+  FundPurposeFields,
+  toPurposeDrafts,
+  toPurposeInputs,
+  type PurposeDraft,
+} from '@/features/fund/FundPurposeFields'
 import {
   FUND_CHARACTER_OPTIONS,
   FUND_SOURCE_OPTIONS,
@@ -12,6 +18,8 @@ import {
 } from '@/features/fund/fundListHooks'
 import {
   useCreateFund,
+  useFundPurposes,
+  useSetFundPurposes,
   useSetFundStaffing,
   useUpdateFund,
   type Fund,
@@ -73,6 +81,8 @@ export function FundForm({ fundId, initial, onCancel, onDone }: FundFormProps) {
   const create = useCreateFund()
   const update = useUpdateFund()
   const setStaffing = useSetFundStaffing()
+  const setPurposes = useSetFundPurposes()
+  const { data: purposeData } = useFundPurposes(fundId)
   const editing = Boolean(fundId)
   const d = (v?: string | null) => (v ? v.slice(0, 10) : '')
 
@@ -96,8 +106,14 @@ export function FundForm({ fundId, initial, onCancel, onDone }: FundFormProps) {
   const [opEnd, setOpEnd] = useState(d(initial?.operation_end))
   // 인력 배정(수정 모드에서만 노출·저장). 생성은 펀드가 아직 없어 배정 불가.
   const [staff, setStaff] = useState<FundStaffing>(toStaffing(initial?.manager?.id, initial?.operators))
+  // 목적관리(주목적·특수목적). 수정 시 원장에서 로드, 생성은 빈 상태로 시작.
+  const [purposes, setPurposes_] = useState<PurposeDraft[]>([])
+  // 목적 원장 로딩 완료 시 초안으로 시드(수정 모드). 목록이 비어도 한 번만 반영한다.
+  useEffect(() => {
+    if (purposeData) setPurposes_(toPurposeDrafts(purposeData))
+  }, [purposeData])
 
-  const busy = create.isPending || update.isPending || setStaffing.isPending
+  const busy = create.isPending || update.isPending || setStaffing.isPending || setPurposes.isPending
 
   const save = async () => {
     if (!name.trim()) {
@@ -130,17 +146,19 @@ export function FundForm({ fundId, initial, onCancel, onDone }: FundFormProps) {
           operators: staff.operators,
           admins: staff.admins,
         })
+        await setPurposes.mutateAsync({ fundId, purposes: toPurposeInputs(purposes) })
         toast.show('펀드를 수정했습니다.', 'success')
         onDone(fundId)
       } else {
         const id = await create.mutateAsync(values)
-        // 생성 직후 인력 배정 적용(펀드 id가 생겼으므로). 미지정이면 무해한 빈 교체.
+        // 생성 직후 인력 배정·목적관리 적용(펀드 id가 생겼으므로). 미지정이면 무해한 빈 교체.
         await setStaffing.mutateAsync({
           fundId: id,
           managerId: staff.manager[0] ?? null,
           operators: staff.operators,
           admins: staff.admins,
         })
+        await setPurposes.mutateAsync({ fundId: id, purposes: toPurposeInputs(purposes) })
         toast.show('펀드를 등록했습니다.', 'success')
         onDone(id)
       }
@@ -220,6 +238,13 @@ export function FundForm({ fundId, initial, onCancel, onDone }: FundFormProps) {
       </CardShell>
           <PanelCard title="인력 배정">
             <FundStaffingFields value={staff} onChange={setStaff} />
+          </PanelCard>
+          <PanelCard title="목적관리">
+            <p className="mb-3 text-body-sm text-gray-500">
+              주목적·특수목적(각 N개)에 약정총액 대비 달성 기준선(%)을 둡니다. 투자 등록 시 부합 여부를
+              체크하고, 어디에도 부합하지 않는 투자는 일반으로 집계됩니다.
+            </p>
+            <FundPurposeFields value={purposes} onChange={setPurposes_} />
           </PanelCard>
         </div>
         <div className="lg:col-span-1">

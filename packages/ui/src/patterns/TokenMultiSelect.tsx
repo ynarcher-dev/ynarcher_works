@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { cn } from '../utils/cn'
 import { useDensity, type Density } from '../density'
 import { controlScale, formBaseClass } from '../densityScale'
@@ -83,6 +84,9 @@ export function TokenMultiSelect<T>({
   const s = controlScale[d]
   const [q, setQ] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  // 후보 드롭다운은 포털(document.body)에 fixed 로 그려 모달 스크롤 컨테이너에 잘리지 않게 한다.
+  const fieldRef = useRef<HTMLDivElement>(null)
+  const [rect, setRect] = useState<DOMRect | null>(null)
 
   // 질의를 바꿀 때마다 호출부에 통지한다(비동기 후보 조회를 걸 수 있게).
   const changeQuery = (next: string) => {
@@ -132,6 +136,22 @@ export function TokenMultiSelect<T>({
 
   const remove = (key: string) => onChange(selected.filter((s) => getKey(s) !== key))
 
+  const dropdownOpen = matches.length > 0 || showFreeTextRow
+  const reposition = useCallback(() => {
+    if (fieldRef.current) setRect(fieldRef.current.getBoundingClientRect())
+  }, [])
+  // 열려 있는 동안 스크롤·리사이즈를 따라 위치를 다시 잡는다(capture=true 로 모달 내부 스크롤도 포착).
+  useEffect(() => {
+    if (!dropdownOpen) return
+    reposition()
+    window.addEventListener('scroll', reposition, true)
+    window.addEventListener('resize', reposition)
+    return () => {
+      window.removeEventListener('scroll', reposition, true)
+      window.removeEventListener('resize', reposition)
+    }
+  }, [dropdownOpen, reposition])
+
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     const last = selected[selected.length - 1]
     if (e.key === 'Backspace' && !q && last) {
@@ -149,6 +169,7 @@ export function TokenMultiSelect<T>({
   return (
     <div className="relative">
       <div
+        ref={fieldRef}
         onClick={() => inputRef.current?.focus()}
         className={cn(
           // 공용 Input과 동일한 외형·상태(테두리·그림자·호버·전환). 높이만 고정 대신 min-height로 두어
@@ -194,8 +215,20 @@ export function TokenMultiSelect<T>({
           />
         )}
       </div>
-      {(matches.length > 0 || showFreeTextRow) && (
-        <ul className="absolute inset-x-0 top-full z-dropdown mt-1 max-h-56 overflow-auto rounded-radius-md border border-gray-200 bg-white shadow-popover">
+      {dropdownOpen &&
+        rect &&
+        createPortal(
+          <ul
+            // fixed 로 뷰포트 기준 배치 → 모달 overflow 에 잘리지 않는다(모달보다 위 z).
+            style={{
+              position: 'fixed',
+              top: rect.bottom + 4,
+              left: rect.left,
+              width: rect.width,
+              zIndex: 9999,
+            }}
+            className="max-h-56 overflow-auto rounded-radius-md border border-gray-200 bg-white shadow-popover"
+          >
           {matches.map((o) => {
             const meta = getMeta?.(o)
             return (
@@ -225,8 +258,9 @@ export function TokenMultiSelect<T>({
               </button>
             </li>
           )}
-        </ul>
-      )}
+          </ul>,
+          document.body,
+        )}
     </div>
   )
 }
