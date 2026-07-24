@@ -14,8 +14,8 @@ import {
 const PAGE_SIZE = 20
 
 interface FundListTabProps {
-  /** 유형구분(전략) 프리필터. 지정 시 해당 전략 펀드만(유형 탭이 대시보드 테이블을 상속). */
-  strategy?: 'AC' | 'VC' | 'PE' | 'PROJECT' | 'BLIND' | null
+  /** 구분(전략) 프리필터. 지정 시 해당 구분 펀드만(구분 탭이 대시보드 테이블을 상속). */
+  strategy?: 'AC' | 'VC' | 'PE' | null
   /** 지정 시 등록자 또는 대표펀드매니저가 이 사용자인 펀드만('내 펀드'). */
   mineUserId?: string | null
 }
@@ -47,7 +47,9 @@ export function FundListTab({ strategy, mineUserId }: FundListTabProps) {
     if (filters.sources.length) out = out.filter((f) => !!f.source_type && filters.sources.includes(f.source_type))
     if (filters.characters.length)
       out = out.filter((f) => !!f.character_type && filters.characters.includes(f.character_type))
-    // 유형구분(strategy_type) 프리필터 — 미분류(null) 펀드는 AC/VC/PE 탭에서 제외된다.
+    if (filters.fundTypes.length)
+      out = out.filter((f) => !!f.fund_type && filters.fundTypes.includes(f.fund_type))
+    // 구분(strategy_type) 프리필터 — 미분류(null) 펀드는 AC/VC/PE 탭에서 제외된다.
     if (strategy) out = out.filter((f) => f.strategy_type === strategy)
     if (mineUserId) out = out.filter((f) => f.created_by === mineUserId || f.manager_id === mineUserId)
     return out
@@ -63,7 +65,7 @@ export function FundListTab({ strategy, mineUserId }: FundListTabProps) {
   const pageRows = filtered.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE)
 
   const emptyText = strategy
-    ? `${strategy} 유형으로 분류된 펀드가 없습니다. 펀드 등록·수정에서 유형구분을 지정하세요.`
+    ? `${strategy} 구분으로 분류된 펀드가 없습니다. 펀드 등록·수정에서 구분을 지정하세요.`
     : '등록된 펀드가 없습니다.'
 
   return (

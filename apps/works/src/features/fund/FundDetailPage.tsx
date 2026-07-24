@@ -30,6 +30,7 @@ import {
   FUND_STATUS_TONE,
   FUND_STRATEGY_LABEL,
   FUND_SUBSCRIPTION_LABEL,
+  FUND_TYPE_LABEL,
   formatEok,
   fundDate,
   fundOperatorLabel,
@@ -238,6 +239,11 @@ export function FundDetailPage() {
                 {fund.strategy_type && (
                   <Badge tone={strategyTone[fund.strategy_type] ?? 'neutral'}>
                     {FUND_STRATEGY_LABEL[fund.strategy_type] ?? fund.strategy_type}
+                  </Badge>
+                )}
+                {fund.fund_type && (
+                  <Badge tone={fund.fund_type === 'PROJECT' ? 'info' : 'neutral'}>
+                    {FUND_TYPE_LABEL[fund.fund_type] ?? fund.fund_type}
                   </Badge>
                 )}
                 <Badge tone={FUND_STATUS_TONE[fund.status] ?? 'neutral'}>{fundStatusLabel(fund.status)}</Badge>

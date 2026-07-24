@@ -24,6 +24,7 @@ export interface Fund {
   source_type?: string | null
   character_type?: string | null
   strategy_type?: string | null
+  fund_type?: string | null
   subscription_type?: string | null
   formed_on?: string | null
   term_start?: string | null
@@ -61,7 +62,7 @@ export function useFund(id: string | undefined) {
       const { data } = await supabase
         .from('funds')
         .select(
-          'id, name, vintage_year, total_commitment, drawn_amount, status, source_type, character_type, strategy_type, subscription_type, formed_on, term_start, term_end, operation_start, operation_end, paid_in_amount, updated_at, manager:users!manager_id(id, name), creator:users!created_by(id, name), operators:fund_managers(user_id, role, is_lead, user:users!user_id(id, name))',
+          'id, name, vintage_year, total_commitment, drawn_amount, status, source_type, character_type, strategy_type, fund_type, subscription_type, formed_on, term_start, term_end, operation_start, operation_end, paid_in_amount, updated_at, manager:users!manager_id(id, name), creator:users!created_by(id, name), operators:fund_managers(user_id, role, is_lead, user:users!user_id(id, name))',
         )
         .eq('id', id)
         .maybeSingle()
@@ -79,6 +80,7 @@ export interface FundInput {
   source_type?: string | null
   character_type?: string | null
   strategy_type?: string | null
+  fund_type?: string | null
   subscription_type?: string | null
   formed_on?: string | null
   term_start?: string | null

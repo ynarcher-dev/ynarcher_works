@@ -11,17 +11,13 @@ const HEADINGS: Record<string, string> = {
   ac_fund: 'AC 펀드',
   vc_fund: 'VC 펀드',
   pe_fund: 'PE 펀드',
-  project_fund: '프로젝트 펀드',
-  blind_fund: '블라인드 펀드',
 }
 
-/** 유형 탭 → 유형구분(전략) 프리필터 값. 대시보드 테이블을 상속해 필터만 다르게 건다. */
-const TAB_TO_STRATEGY: Record<string, 'AC' | 'VC' | 'PE' | 'PROJECT' | 'BLIND' | undefined> = {
+/** 구분 탭(AC/VC/PE) → strategy_type 프리필터 값. 대시보드 테이블을 상속해 필터만 다르게 건다. */
+const TAB_TO_STRATEGY: Record<string, 'AC' | 'VC' | 'PE' | undefined> = {
   ac_fund: 'AC',
   vc_fund: 'VC',
   pe_fund: 'PE',
-  project_fund: 'PROJECT',
-  blind_fund: 'BLIND',
 }
 
 /**

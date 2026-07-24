@@ -6,6 +6,7 @@ import {
   FUND_STATUS_OPTIONS,
   FUND_STRATEGY_OPTIONS,
   FUND_SUBSCRIPTION_OPTIONS,
+  FUND_TYPE_OPTIONS,
 } from '@/features/fund/fundListHooks'
 import { useCreateFund, useUpdateFund, type Fund, type FundInput } from '@/features/fund/hooks'
 
@@ -77,6 +78,7 @@ export function FundForm({ fundId, initial, onCancel, onDone }: FundFormProps) {
   const [source, setSource] = useState(initial?.source_type ?? '')
   const [character, setCharacter] = useState(initial?.character_type ?? '')
   const [strategy, setStrategy] = useState(initial?.strategy_type ?? '')
+  const [fundType, setFundType] = useState(initial?.fund_type ?? '')
   const [subscription, setSubscription] = useState(initial?.subscription_type ?? '')
   const [formedOn, setFormedOn] = useState(d(initial?.formed_on))
   const [termStart, setTermStart] = useState(d(initial?.term_start))
@@ -99,6 +101,7 @@ export function FundForm({ fundId, initial, onCancel, onDone }: FundFormProps) {
       source_type: source || null,
       character_type: character || null,
       strategy_type: strategy || null,
+      fund_type: fundType || null,
       subscription_type: subscription || null,
       paid_in_amount: paidIn ? Number(paidIn) : null,
       formed_on: formedOn || null,
@@ -159,7 +162,8 @@ export function FundForm({ fundId, initial, onCancel, onDone }: FundFormProps) {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <SelectField label="재원" value={source} onChange={setSource} options={FUND_SOURCE_OPTIONS} blank="미지정" />
             <SelectField label="성격" value={character} onChange={setCharacter} options={FUND_CHARACTER_OPTIONS} blank="미지정" />
-            <SelectField label="유형" value={strategy} onChange={setStrategy} options={FUND_STRATEGY_OPTIONS} blank="미지정" />
+            <SelectField label="구분" value={strategy} onChange={setStrategy} options={FUND_STRATEGY_OPTIONS} blank="미지정" />
+            <SelectField label="펀드유형" value={fundType} onChange={setFundType} options={FUND_TYPE_OPTIONS} blank="미지정" />
             <SelectField label="출자" value={subscription} onChange={setSubscription} options={FUND_SUBSCRIPTION_OPTIONS} blank="미지정" />
             <SelectField label="상태" value={status} onChange={setStatus} options={FUND_STATUS_OPTIONS} />
           </div>

@@ -129,8 +129,6 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         { label: 'AC 펀드', tab: 'ac_fund', dividerBefore: true },
         { label: 'VC 펀드', tab: 'vc_fund' },
         { label: 'PE 펀드', tab: 'pe_fund' },
-        { label: '프로젝트 펀드', tab: 'project_fund' },
-        { label: '블라인드 펀드', tab: 'blind_fund' },
       ],
     },
   ],

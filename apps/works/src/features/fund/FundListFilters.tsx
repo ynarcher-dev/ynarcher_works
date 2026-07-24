@@ -4,6 +4,7 @@ import {
   FUND_CHARACTER_OPTIONS,
   FUND_SOURCE_OPTIONS,
   FUND_STATUS_OPTIONS,
+  FUND_TYPE_OPTIONS,
   type FundListFilterState,
 } from '@/features/fund/fundListHooks'
 
@@ -18,7 +19,10 @@ interface FundListFiltersProps {
  */
 export function FundListFilters({ filters, onChange }: FundListFiltersProps) {
   const active =
-    filters.statuses.length > 0 || filters.sources.length > 0 || filters.characters.length > 0
+    filters.statuses.length > 0 ||
+    filters.sources.length > 0 ||
+    filters.characters.length > 0 ||
+    filters.fundTypes.length > 0
   return (
     <div className="flex flex-wrap items-center gap-2">
       <MultiSelectFilter
@@ -32,6 +36,12 @@ export function FundListFilters({ filters, onChange }: FundListFiltersProps) {
         options={FUND_CHARACTER_OPTIONS}
         selected={filters.characters}
         onChange={(characters) => onChange({ ...filters, characters })}
+      />
+      <MultiSelectFilter
+        label="펀드유형"
+        options={FUND_TYPE_OPTIONS}
+        selected={filters.fundTypes}
+        onChange={(fundTypes) => onChange({ ...filters, fundTypes })}
       />
       <MultiSelectFilter
         label="상태"

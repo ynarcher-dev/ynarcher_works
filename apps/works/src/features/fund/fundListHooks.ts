@@ -39,14 +39,10 @@ export const FUND_CHARACTER_LABEL: Record<string, string> = {
   PERSONAL: '개인투자조합',
   VENTURE: '벤처투자조합',
 }
-export const FUND_STRATEGY_LABEL: Record<string, string> = {
-  AC: 'AC',
-  VC: 'VC',
-  PE: 'PE',
-  PROJECT: '프로젝트',
-  BLIND: '블라인드',
-  ETC: '기타',
-}
+/** 구분(strategy_type): 투자 전략 축 — 사이드바 탭. */
+export const FUND_STRATEGY_LABEL: Record<string, string> = { AC: 'AC', VC: 'VC', PE: 'PE', ETC: '기타' }
+/** 펀드유형(fund_type): 조합 구조 축 — 구분과 별개(컬럼·필터). */
+export const FUND_TYPE_LABEL: Record<string, string> = { PROJECT: '프로젝트', BLIND: '블라인드' }
 export const FUND_SUBSCRIPTION_LABEL: Record<string, string> = {
   LUMP_SUM: '일시납',
   INSTALLMENT: '분할납',
@@ -58,6 +54,7 @@ const toOptions = (m: Record<string, string>) =>
 export const FUND_SOURCE_OPTIONS = toOptions(FUND_SOURCE_LABEL)
 export const FUND_CHARACTER_OPTIONS = toOptions(FUND_CHARACTER_LABEL)
 export const FUND_STRATEGY_OPTIONS = toOptions(FUND_STRATEGY_LABEL)
+export const FUND_TYPE_OPTIONS = toOptions(FUND_TYPE_LABEL)
 export const FUND_SUBSCRIPTION_OPTIONS = toOptions(FUND_SUBSCRIPTION_LABEL)
 
 /** 원(₩) 정수 → "n억" 표기. 기존 FundPage 표기 규칙과 동일. */
@@ -102,10 +99,11 @@ export interface FundListRow {
   manager: { id: string; name: string | null } | null
   /** 담당자 컬럼의 원천 = 등록자(created_by → users). 라벨만 '담당자'로 표기(작성자≠담당자 인지). */
   creator: { id: string; name: string | null } | null
-  /** 재원/성격/유형 구분(20260724100000 마이그레이션). */
+  /** 재원/성격/구분(20260724100000) + 펀드유형(20260724140000). */
   source_type: string | null
   character_type: string | null
   strategy_type: string | null
+  fund_type: string | null
   /** 결성일·존속기간·실출자금액(20260724110000 마이그레이션). */
   formed_on: string | null
   term_start: string | null
@@ -120,14 +118,20 @@ export interface FundListRow {
   }[]
 }
 
-/** 상태·재원·성격 다중선택 필터. 유형(전략)은 탭이 프리필터로 담당한다. */
+/** 상태·재원·성격·펀드유형 다중선택 필터. 구분(전략)은 탭이 프리필터로 담당한다. */
 export interface FundListFilterState {
   statuses: string[]
   sources: string[]
   characters: string[]
+  fundTypes: string[]
 }
 
-export const EMPTY_FUND_FILTERS: FundListFilterState = { statuses: [], sources: [], characters: [] }
+export const EMPTY_FUND_FILTERS: FundListFilterState = {
+  statuses: [],
+  sources: [],
+  characters: [],
+  fundTypes: [],
+}
 
 /**
  * 펀드 목록 조회. 펀드는 건수가 적어 서버 페이지네이션 없이 단건 조회하고,
@@ -141,7 +145,7 @@ export function useFundList() {
       const { data, error } = await supabase
         .from('funds')
         .select(
-          'id, name, vintage_year, total_commitment, drawn_amount, status, source_type, character_type, strategy_type, formed_on, term_start, term_end, paid_in_amount, created_by, manager_id, updated_at, manager:users!manager_id(id, name), creator:users!created_by(id, name), operators:fund_managers(user_id, role, is_lead, user:users!user_id(id, name))',
+          'id, name, vintage_year, total_commitment, drawn_amount, status, source_type, character_type, strategy_type, fund_type, formed_on, term_start, term_end, paid_in_amount, created_by, manager_id, updated_at, manager:users!manager_id(id, name), creator:users!created_by(id, name), operators:fund_managers(user_id, role, is_lead, user:users!user_id(id, name))',
         )
         .is('deleted_at', null)
         .order('vintage_year', { ascending: false, nullsFirst: false })
@@ -158,6 +162,7 @@ export function useFundList() {
           source_type: (row.source_type as string) ?? null,
           character_type: (row.character_type as string) ?? null,
           strategy_type: (row.strategy_type as string) ?? null,
+          fund_type: (row.fund_type as string) ?? null,
           formed_on: (row.formed_on as string) ?? null,
           term_start: (row.term_start as string) ?? null,
           term_end: (row.term_end as string) ?? null,

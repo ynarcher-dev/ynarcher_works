@@ -5,6 +5,7 @@ import {
   FUND_SOURCE_LABEL,
   FUND_STATUS_TONE,
   FUND_STRATEGY_LABEL,
+  FUND_TYPE_LABEL,
   formatEok,
   fundOperatorLabel,
   fundPeriod,
@@ -12,13 +13,16 @@ import {
   type FundListRow,
 } from '@/features/fund/fundListHooks'
 
-/** 유형구분 배지 톤: AC=파랑, VC=초록, PE=주황, 기타=회색. */
+/** 구분(전략) 배지 톤: AC=파랑, VC=초록, PE=주황, 기타=회색. */
 const STRATEGY_TONE: Record<string, 'neutral' | 'success' | 'warning' | 'info'> = {
   AC: 'info',
   VC: 'success',
   PE: 'warning',
   ETC: 'neutral',
 }
+
+/** 펀드유형 배지 톤: 프로젝트=파랑, 블라인드=회색. */
+const TYPE_TONE: Record<string, 'neutral' | 'info'> = { PROJECT: 'info', BLIND: 'neutral' }
 
 interface FundListTableProps {
   rows: FundListRow[]
@@ -73,12 +77,25 @@ export function FundListTable({
       },
       {
         key: 'strategy_type',
-        header: '유형',
+        header: '구분',
         className: 'w-20',
         render: (f) =>
           f.strategy_type ? (
             <Badge tone={STRATEGY_TONE[f.strategy_type] ?? 'neutral'}>
               {FUND_STRATEGY_LABEL[f.strategy_type] ?? f.strategy_type}
+            </Badge>
+          ) : (
+            dash
+          ),
+      },
+      {
+        key: 'fund_type',
+        header: '펀드유형',
+        className: 'w-24',
+        render: (f) =>
+          f.fund_type ? (
+            <Badge tone={TYPE_TONE[f.fund_type] ?? 'neutral'}>
+              {FUND_TYPE_LABEL[f.fund_type] ?? f.fund_type}
             </Badge>
           ) : (
             dash
