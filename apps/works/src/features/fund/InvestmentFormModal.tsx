@@ -410,6 +410,20 @@ export function InvestmentFormModal({
                 placeholder="이름으로 검색"
               />
             </Field>
+            <Field label="지원 담당자">
+              {/* 다중 선택: 칩이 입력 필드 안에 인라인으로 쌓이고, 딜메이커는 후보에서 제외. */}
+              <TokenMultiSelect<PersonOpt>
+                selected={supportIds.filter((id) => id !== leadId).map(personObj)}
+                onChange={(next) => setSupportIds(next.map((e) => e.id))}
+                options={personOpts.filter((e) => e.id !== leadId)}
+                getKey={(e) => e.id}
+                getLabel={(e) => e.name ?? '(이름 없음)'}
+                getMeta={(e) => e.email ?? undefined}
+                getSearchText={(e) => `${e.name ?? ''} ${e.email ?? ''}`}
+                placeholder="이름으로 검색해 추가"
+              />
+            </Field>
+            {/* 담당자(딜메이커·지원) 아래 줄에 관리현황을 두고, 폐업이면 그 옆에 폐업일자를 노출한다. */}
             <Field label="관리현황">
               <TagSelect
                 table="company_status_tags"
@@ -424,19 +438,6 @@ export function InvestmentFormModal({
                 <Input type="date" value={closedOn} onChange={(e) => setClosedOn(e.target.value)} />
               </Field>
             )}
-            <Field label="지원 담당자" className="sm:col-span-2">
-              {/* 다중 선택: 칩이 입력 필드 안에 인라인으로 쌓이고, 딜메이커는 후보에서 제외. */}
-              <TokenMultiSelect<PersonOpt>
-                selected={supportIds.filter((id) => id !== leadId).map(personObj)}
-                onChange={(next) => setSupportIds(next.map((e) => e.id))}
-                options={personOpts.filter((e) => e.id !== leadId)}
-                getKey={(e) => e.id}
-                getLabel={(e) => e.name ?? '(이름 없음)'}
-                getMeta={(e) => e.email ?? undefined}
-                getSearchText={(e) => `${e.name ?? ''} ${e.email ?? ''}`}
-                placeholder="이름으로 검색해 추가"
-              />
-            </Field>
           </div>
         </section>
       </div>
