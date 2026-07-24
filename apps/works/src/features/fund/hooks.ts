@@ -296,6 +296,38 @@ export function useCapitalCallPayments(callId: string | undefined) {
   })
 }
 
+/** 펀드 전체 차수의 납입행(매트릭스 뷰용) — capital_call_id로 열, lp_id로 행을 짠다. */
+export interface FundCallPayment {
+  capital_call_id: string
+  lp_id: string
+  requested_amount: number
+  is_paid: boolean
+}
+
+/** 펀드의 모든 차수×LP 납입행(fund_id 비정규화로 단건 조회). 매트릭스(가로 N차·세로 LP)의 원천. */
+export function useFundCapitalCallPayments(fundId: string | undefined) {
+  return useQuery({
+    queryKey: ['fund', 'call-payments-all', fundId],
+    enabled: Boolean(fundId),
+    queryFn: async (): Promise<FundCallPayment[]> => {
+      const { data, error } = await supabase
+        .from('capital_call_payments')
+        .select('capital_call_id, lp_id, requested_amount, is_paid')
+        .eq('fund_id', fundId)
+      if (error) throw error
+      return ((data ?? []) as unknown[]).map((row) => {
+        const r = row as Record<string, unknown>
+        return {
+          capital_call_id: r.capital_call_id as string,
+          lp_id: r.lp_id as string,
+          requested_amount: Number(r.requested_amount ?? 0),
+          is_paid: Boolean(r.is_paid),
+        }
+      })
+    },
+  })
+}
+
 /** 차수×LP 요청·납입 그리드 원자 교체. set_capital_call_payments RPC(SECURITY INVOKER). */
 export interface CapitalCallPaymentInput {
   lp_id: string
@@ -315,6 +347,7 @@ export function useSetCapitalCallPayments(fundId: string) {
     },
     onSuccess: (_d, v) => {
       qc.invalidateQueries({ queryKey: ['fund', 'call-payments', v.callId] })
+      qc.invalidateQueries({ queryKey: ['fund', 'call-payments-all', fundId] })
       qc.invalidateQueries({ queryKey: ['fund', 'calls', fundId] })
       qc.invalidateQueries({ queryKey: ['fund', 'lps', fundId] })
       qc.invalidateQueries({ queryKey: ['fund', 'one', fundId] })

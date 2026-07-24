@@ -2,7 +2,7 @@ import { Button, CardShell, useToast } from '@ynarcher/ui'
 import { Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { CapitalCallFormModal } from '@/features/fund/CapitalCallFormModal'
-import { CapitalCallRound } from '@/features/fund/CapitalCallRound'
+import { CapitalCallMatrix } from '@/features/fund/CapitalCallMatrix'
 import {
   useDeleteCapitalCall,
   type CapitalCall,
@@ -87,19 +87,18 @@ export function CapitalCallPanel({
           <p className="text-body-sm text-gray-500">
             등록된 캐피탈 콜 차수가 없습니다. '차수 추가'로 1차를 등록하세요.
           </p>
+        ) : lps.length === 0 ? (
+          <p className="text-body-sm text-gray-500">
+            등록된 출자자(LP)가 없습니다. 출자자 탭에서 먼저 조합원을 등록하세요.
+          </p>
         ) : (
-          <div className="space-y-2">
-            {calls.map((call) => (
-              <CapitalCallRound
-                key={call.id}
-                fundId={fundId}
-                call={call}
-                lps={lps}
-                onEdit={(c) => setModal({ open: true, editing: c })}
-                onDelete={onDelete}
-              />
-            ))}
-          </div>
+          <CapitalCallMatrix
+            fundId={fundId}
+            calls={calls}
+            lps={lps}
+            onEditCall={(c) => setModal({ open: true, editing: c })}
+            onDeleteCall={onDelete}
+          />
         )}
       </div>
 
