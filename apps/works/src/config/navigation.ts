@@ -140,6 +140,7 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       items: [
         { label: '권한 제어 콘솔', tab: 'permissions' },
         { label: '게시판 관리', tab: 'boards' },
+        { label: '회의실 관리', tab: 'rooms' },
         { label: '산업태그 관리', tab: 'industries' },
         { label: '분야태그 관리', tab: 'fields' },
         { label: '구분태그 관리', tab: 'categories' },

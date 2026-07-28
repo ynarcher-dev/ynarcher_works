@@ -11,10 +11,10 @@ import { useBoards } from '@/features/hub/boardHooks'
 import { DepartmentsPanel } from '@/features/management/panels/DepartmentsPanel'
 import { OfficeManagersPanel } from '@/features/office/OfficeManagersPanel'
 import { MinutesWorkspace } from '@/features/office/minutes/MinutesWorkspace'
+import { RoomReservationWorkspace } from '@/features/office/rooms/RoomReservationWorkspace'
 
 /** 페이지 골격만 있는 준비 중 메뉴(탭 → 제목). */
 const PLACEHOLDER_TITLES: Record<string, string> = {
-  rooms: '회의실 예약',
   // 거래처 정보: 전자결재 워크스페이스에서 이관, 세부 기능은 후속 작업(골격만).
   clients: '거래처 정보',
   // 지사 정보: 원장 화면인 MANAGEMENT '지사 관리'가 아직 준비 중이라 함께 골격만 노출한다.
@@ -107,6 +107,8 @@ export function OfficePage() {
         </>
       )}
       {tab === 'managers' && <OfficeManagersPanel />}
+      {/* 회의실 예약: 지사 탭 + 날짜 이동 + 회의실 카드. 설정은 ADMIN이 소유한다. */}
+      {tab === 'rooms' && <RoomReservationWorkspace />}
       {/* 회의록: STARTUP에서 이관. 자체 목록/상세/작성 흐름과 헤더를 소유한다. */}
       {tab === 'minutes' && <MinutesWorkspace initialMinuteId={params.get('minute') ?? undefined} />}
       {/* 부서 정보: MANAGEMENT 조직 관리와 같은 조직도를 조회 전용으로 재사용한다. */}
