@@ -1,4 +1,4 @@
-import { Badge, Button, Modal, useToast } from '@ynarcher/ui'
+import { Badge, Button, DensityProvider, Modal, cardText, cn, useToast } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '@/auth/authStore'
 import { ReservationFormView } from '@/features/office/rooms/ReservationFormView'
@@ -83,49 +83,51 @@ export function RoomReservationModal({ open, room, dateKey, reservations, onClos
           onSubmit={submit}
         />
       ) : (
-        <div className="space-y-3">
-          {reservations.length === 0 ? (
-            <p className="rounded-radius-md border border-dashed border-gray-300 py-8 text-center text-body text-gray-500">
-              이 날의 예약이 없습니다.
-            </p>
-          ) : (
-            <ul className="space-y-2">
-              {reservations.map((r) => {
-                const canCancel = isAdmin || r.createdBy === myId
-                return (
-                  <li
-                    key={r.id}
-                    className="flex items-center justify-between gap-3 rounded-radius-md border border-gray-200 bg-gray-50 p-3"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-body font-semibold text-brand">
-                        {r.startTime} - {r.endTime}
-                      </p>
-                      <p className="mt-0.5 truncate text-caption text-gray-600">
-                        {r.createdByName ?? '예약자'}
-                      </p>
-                    </div>
-                    {canCancel ? (
-                      <Button
-                        variant="outline-danger"
-                        onClick={() => doCancel(r)}
-                        disabled={cancel.isPending}
-                      >
-                        취소
-                      </Button>
-                    ) : (
-                      <Badge tone="neutral">예약됨</Badge>
-                    )}
-                  </li>
-                )
-              })}
-            </ul>
-          )}
+        <DensityProvider value="card">
+          <div className="space-y-3">
+            {reservations.length === 0 ? (
+              <p className={cn('rounded-radius-md border border-dashed border-gray-300 py-8 text-center', cardText.label)}>
+                이 날의 예약이 없습니다.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {reservations.map((r) => {
+                  const canCancel = isAdmin || r.createdBy === myId
+                  return (
+                    <li
+                      key={r.id}
+                      className="flex items-center justify-between gap-3 rounded-radius-md border border-gray-200 bg-gray-50 p-3"
+                    >
+                      <div className="min-w-0">
+                        <p className={cardText.subhead}>
+                          {r.startTime} - {r.endTime}
+                        </p>
+                        <p className={cn('mt-0.5 truncate', cardText.label)}>
+                          {r.createdByName ?? '예약자'}
+                        </p>
+                      </div>
+                      {canCancel ? (
+                        <Button
+                          variant="outline-danger"
+                          onClick={() => doCancel(r)}
+                          disabled={cancel.isPending}
+                        >
+                          취소
+                        </Button>
+                      ) : (
+                        <Badge tone="neutral">예약됨</Badge>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
 
-          <Button className="w-full" onClick={() => setMode('form')}>
-            + 예약하기
-          </Button>
-        </div>
+            <Button className="w-full" onClick={() => setMode('form')}>
+              + 예약하기
+            </Button>
+          </div>
+        </DensityProvider>
       )}
     </Modal>
   )

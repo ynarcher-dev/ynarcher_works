@@ -1,4 +1,4 @@
-import { Badge, Button, cn } from '@ynarcher/ui'
+import { Badge, Button, CardShell, InfoField, cardText, cn } from '@ynarcher/ui'
 import { ImageIcon, Users } from 'lucide-react'
 import {
   buildSlots,
@@ -18,6 +18,8 @@ interface Props {
 /**
  * 가로형 회의실 카드(레퍼런스 재현): 좌측 사진 · 중앙 이름/위치/요일일정 · 우측 인원·예약하기,
  * 하단에 운영시간을 슬롯으로 쪼갠 가용성 바(예약된 슬롯은 채워 표시).
+ * 컨테이너는 CardShell — 카드 밀도 맥락을 내려 내부 버튼·배지가 카드 규격으로 렌더된다.
+ * 글자 위계는 cardText·InfoField가 소유하고 화면에서 규격 클래스를 직접 쓰지 않는다.
  */
 export function RoomCard({ room, date, spans, onReserve }: Props) {
   const url = roomPhotoUrl(room.photoPath)
@@ -25,7 +27,7 @@ export function RoomCard({ room, date, spans, onReserve }: Props) {
   const slots = buildSlots(schedule, spans, date)
 
   return (
-    <div className="flex items-stretch gap-4 rounded-radius-lg border border-gray-200 bg-white p-3">
+    <CardShell className="flex items-stretch gap-4">
       {/* 사진 */}
       <div className="flex h-28 w-44 shrink-0 items-center justify-center overflow-hidden rounded-radius-md bg-gray-100 text-gray-400">
         {url ? (
@@ -38,16 +40,14 @@ export function RoomCard({ room, date, spans, onReserve }: Props) {
       {/* 정보 + 가용성 바 */}
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h3 className="truncate text-h4 font-semibold text-gray-900">{room.name}</h3>
-            {room.location && (
-              <p className="mt-1 text-body text-gray-600">위치 {room.location}</p>
-            )}
-            <p className="mt-0.5 text-caption text-brand">{scheduleLabel(schedule, date)}</p>
+          <div className="min-w-0 space-y-1">
+            <h3 className={cardText.subhead}>{room.name}</h3>
+            {room.location && <InfoField label="위치" value={room.location} />}
+            <p className={cardText.label}>{scheduleLabel(schedule, date)}</p>
           </div>
           <div className="flex shrink-0 items-center gap-3">
             {room.capacity != null && (
-              <Badge tone="info" dot={false}>
+              <Badge tone="info">
                 <Users className="mr-1 size-3" aria-hidden />
                 인원 {room.capacity}
               </Badge>
@@ -59,7 +59,7 @@ export function RoomCard({ room, date, spans, onReserve }: Props) {
         {/* 가용성 슬롯 바 */}
         <div className="mt-auto pt-3">
           {slots.length === 0 ? (
-            <p className="text-caption text-gray-400">이 날은 예약할 수 없습니다.</p>
+            <p className={cardText.label}>이 날은 예약할 수 없습니다.</p>
           ) : (
             <div className="flex gap-0.5">
               {slots.map((s) => (
@@ -76,6 +76,6 @@ export function RoomCard({ room, date, spans, onReserve }: Props) {
           )}
         </div>
       </div>
-    </div>
+    </CardShell>
   )
 }
