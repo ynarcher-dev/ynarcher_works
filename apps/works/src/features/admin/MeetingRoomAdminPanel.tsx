@@ -3,11 +3,11 @@ import { ImageIcon } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { MeetingBranchBar } from '@/features/admin/MeetingBranchBar'
 import { MeetingRoomFormModal } from '@/features/admin/MeetingRoomFormModal'
+import { useBranches } from '@/features/office/branches/branchesApi'
 import { normalizeTime } from '@/features/office/rooms/availability'
 import {
   roomPhotoUrl,
   useCreateRoom,
-  useMeetingBranches,
   useMeetingRooms,
   useSetRoomActive,
   useUpdateRoom,
@@ -22,7 +22,7 @@ const weekdayText = (days: number[]) =>
 /** ADMIN 회의실 관리: 지사 선택 + 지사별 회의실 목록·설정(생성/수정/비활성화). */
 export function MeetingRoomAdminPanel() {
   const toast = useToast()
-  const branchesQuery = useMeetingBranches(true)
+  const branchesQuery = useBranches(true)
   const branches = useMemo(() => branchesQuery.data ?? [], [branchesQuery.data])
   const [branchId, setBranchId] = useState<string>()
 

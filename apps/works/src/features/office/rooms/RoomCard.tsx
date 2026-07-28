@@ -1,4 +1,5 @@
 import { Badge, Button, CardShell, cardText, cn } from '@ynarcher/ui'
+import dayjs from 'dayjs'
 import { ImageIcon, Users } from 'lucide-react'
 import {
   buildSlots,
@@ -27,6 +28,8 @@ export function RoomCard({ room, date, spans, onReserve }: Props) {
   const schedule = roomSchedule(room)
   const open = isOpenOn(schedule, date)
   const slots = buildSlots(schedule, spans, date)
+  // 지나간 날짜는 예약을 받지 않는다(휴무와 같은 비활성 처리).
+  const past = dayjs(date).isBefore(dayjs(), 'day')
 
   return (
     <CardShell className="flex items-stretch gap-4">
@@ -53,7 +56,11 @@ export function RoomCard({ room, date, spans, onReserve }: Props) {
                 인원 {room.capacity}
               </Badge>
             )}
-            <Button onClick={onReserve} disabled={!open}>
+            <Button
+              onClick={onReserve}
+              disabled={!open || past}
+              title={past ? '지난 날짜는 예약할 수 없습니다.' : undefined}
+            >
               예약하기
             </Button>
           </div>

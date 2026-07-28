@@ -3,19 +3,13 @@ import { supabase } from '@/lib/supabase'
 import type { RoomSchedule } from '@/features/office/rooms/availability'
 
 /**
- * 회의실 예약 원장(지사·회의실) 서버 훅.
+ * 회의실 원장 서버 훅.
  * ADMIN('회의실 관리')이 편집하고 OFFICE('회의실 예약')가 소비하는 단일 원천.
  * RLS: 조회는 내부 사용자, 쓰기는 admin 전용(supabase/migrations/20260728120000_meeting_rooms.sql).
+ * 지사 원장은 features/office/branches/branchesApi가 소유한다(ADMIN '지사 관리'가 세팅).
  */
 
 const PHOTO_BUCKET = 'meeting-room-photos'
-
-export interface MeetingBranch {
-  id: string
-  name: string
-  sortOrder: number
-  isActive: boolean
-}
 
 export interface MeetingRoom {
   id: string
@@ -42,12 +36,6 @@ export function roomSchedule(room: MeetingRoom): RoomSchedule {
   }
 }
 
-interface BranchRow {
-  id: string
-  name: string
-  sort_order: number
-  is_active: boolean
-}
 interface RoomRow {
   id: string
   branch_id: string
@@ -63,12 +51,6 @@ interface RoomRow {
   is_active: boolean
 }
 
-const toBranch = (r: BranchRow): MeetingBranch => ({
-  id: r.id,
-  name: r.name,
-  sortOrder: r.sort_order,
-  isActive: r.is_active,
-})
 const toRoom = (r: RoomRow): MeetingRoom => ({
   id: r.id,
   branchId: r.branch_id,
@@ -84,77 +66,7 @@ const toRoom = (r: RoomRow): MeetingRoom => ({
   isActive: r.is_active,
 })
 
-const BRANCHES_KEY = ['office', 'meeting-branches']
 const roomsKey = (branchId?: string) => ['office', 'meeting-rooms', branchId ?? 'all']
-
-// ── 지사 ─────────────────────────────────────────────────────────────
-
-/** 지사 목록. includeInactive=true(ADMIN)면 비활성 포함, 기본(OFFICE)은 활성만. */
-export function useMeetingBranches(includeInactive = false) {
-  return useQuery({
-    queryKey: [...BRANCHES_KEY, includeInactive],
-    queryFn: async (): Promise<MeetingBranch[]> => {
-      let q = supabase
-        .from('meeting_branches')
-        .select('id, name, sort_order, is_active')
-        .is('deleted_at', null)
-        .order('sort_order', { ascending: true })
-        .order('name', { ascending: true })
-      if (!includeInactive) q = q.eq('is_active', true)
-      const { data, error } = await q
-      if (error) throw error
-      return ((data ?? []) as BranchRow[]).map(toBranch)
-    },
-  })
-}
-
-export function useCreateBranch() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (name: string) => {
-      const label = name.trim()
-      if (!label) throw new Error('지사명을 입력하세요.')
-      const { data: last, error: readErr } = await supabase
-        .from('meeting_branches')
-        .select('sort_order')
-        .order('sort_order', { ascending: false })
-        .limit(1)
-      if (readErr) throw readErr
-      const { error } = await supabase
-        .from('meeting_branches')
-        .insert({ name: label, sort_order: (last?.[0]?.sort_order ?? 0) + 10 })
-      if (error) throw error
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: BRANCHES_KEY }),
-  })
-}
-
-export function useUpdateBranch() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (v: { id: string; name: string }) => {
-      const name = v.name.trim()
-      if (!name) throw new Error('지사명을 입력하세요.')
-      const { error } = await supabase.from('meeting_branches').update({ name }).eq('id', v.id)
-      if (error) throw error
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: BRANCHES_KEY }),
-  })
-}
-
-export function useSetBranchActive() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (v: { id: string; isActive: boolean }) => {
-      const { error } = await supabase
-        .from('meeting_branches')
-        .update({ is_active: v.isActive })
-        .eq('id', v.id)
-      if (error) throw error
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: BRANCHES_KEY }),
-  })
-}
 
 // ── 회의실 ───────────────────────────────────────────────────────────
 

@@ -10,6 +10,7 @@ import { useBoardPostBoardId } from '@/features/hub/boardPostsApi'
 import { useBoards } from '@/features/hub/boardHooks'
 import { DepartmentsPanel } from '@/features/management/panels/DepartmentsPanel'
 import { OfficeManagersPanel } from '@/features/office/OfficeManagersPanel'
+import { BranchesPanel } from '@/features/office/branches/BranchesPanel'
 import { MinutesWorkspace } from '@/features/office/minutes/MinutesWorkspace'
 import { RoomReservationWorkspace } from '@/features/office/rooms/RoomReservationWorkspace'
 
@@ -17,8 +18,6 @@ import { RoomReservationWorkspace } from '@/features/office/rooms/RoomReservatio
 const PLACEHOLDER_TITLES: Record<string, string> = {
   // 거래처 정보: 전자결재 워크스페이스에서 이관, 세부 기능은 후속 작업(골격만).
   clients: '거래처 정보',
-  // 지사 정보: 원장 화면인 MANAGEMENT '지사 관리'가 아직 준비 중이라 함께 골격만 노출한다.
-  branches: '지사 정보',
 }
 
 /**
@@ -111,6 +110,8 @@ export function OfficePage() {
       {tab === 'rooms' && <RoomReservationWorkspace />}
       {/* 회의록: STARTUP에서 이관. 자체 목록/상세/작성 흐름과 헤더를 소유한다. */}
       {tab === 'minutes' && <MinutesWorkspace initialMinuteId={params.get('minute') ?? undefined} />}
+      {/* 지사 정보: ADMIN '지사 관리'가 소유한 지사 원장을 조회 전용 리스트뷰로 노출한다. */}
+      {tab === 'branches' && <BranchesPanel />}
       {/* 부서 정보: MANAGEMENT 조직 관리와 같은 조직도를 조회 전용으로 재사용한다. */}
       {tab === 'departments' && (
         <>

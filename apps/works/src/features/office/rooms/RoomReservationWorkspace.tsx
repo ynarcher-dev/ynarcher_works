@@ -1,10 +1,12 @@
 import { PageHeader, Spinner, Tabs } from '@ynarcher/ui'
 import dayjs from 'dayjs'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { ReservationSearchBox } from '@/features/office/rooms/ReservationSearchBox'
 import { RoomCard } from '@/features/office/rooms/RoomCard'
 import { RoomReservationModal } from '@/features/office/rooms/RoomReservationModal'
-import { useMeetingBranches, useMeetingRooms, type MeetingRoom } from '@/features/office/rooms/meetingRoomsApi'
+import { useBranches } from '@/features/office/branches/branchesApi'
+import { useMeetingRooms, type MeetingRoom } from '@/features/office/rooms/meetingRoomsApi'
 import { toSpans, useDayReservations, type Reservation } from '@/features/office/rooms/reservationsApi'
 
 const KO_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
@@ -18,10 +20,14 @@ function dateLabel(date: dayjs.Dayjs): string {
   return `${date.format('M월 D일')} (${KO_WEEKDAYS[date.day()]})`
 }
 
-/** 상단 날짜 이동 바(‹ 라벨 ›). */
+/** 상단 날짜 이동 바(‹ 라벨 › + 달력). */
 function DateNav({ date, onChange }: { date: dayjs.Dayjs; onChange: (d: dayjs.Dayjs) => void }) {
+  // 달력은 브라우저 기본 date 피커를 띄운다(별도 팝오버 없이 입력 규격을 앱 전체와 맞춘다).
+  const pickerRef = useRef<HTMLInputElement>(null)
+
+  // 달력 아이콘은 꺽쇠와 달리 글리프가 상자를 꽉 채워서, 같은 여백이면 더 밖으로 나와 보인다 → 오른쪽만 4px 더 준다.
   return (
-    <div className="mx-auto flex w-fit items-center gap-1 rounded-radius-full border border-gray-200 bg-white px-1.5 py-1">
+    <div className="mx-auto flex w-fit items-center gap-1 rounded-radius-full border border-gray-200 bg-white py-1 pl-1.5 pr-2.5">
       <button
         type="button"
         aria-label="이전 날"
@@ -41,6 +47,37 @@ function DateNav({ date, onChange }: { date: dayjs.Dayjs; onChange: (d: dayjs.Da
       >
         <ChevronRight className="size-4" />
       </button>
+
+      <span className="mx-0.5 h-4 w-px bg-gray-200" />
+
+      <div className="relative">
+        <button
+          type="button"
+          aria-label="날짜 선택"
+          onClick={() => {
+            const el = pickerRef.current
+            if (!el) return
+            // showPicker 미지원 브라우저에서는 포커스만 주고 키보드 입력으로 대체한다.
+            if (typeof el.showPicker === 'function') el.showPicker()
+            else el.focus()
+          }}
+          className="rounded-radius-full p-1.5 text-gray-500 hover:bg-gray-100"
+        >
+          <CalendarDays className="size-4" />
+        </button>
+        <input
+          ref={pickerRef}
+          type="date"
+          tabIndex={-1}
+          aria-hidden
+          value={date.format('YYYY-MM-DD')}
+          onChange={(e) => {
+            const next = dayjs(e.target.value)
+            if (next.isValid()) onChange(next)
+          }}
+          className="pointer-events-none absolute bottom-0 left-1/2 size-0 border-0 p-0 opacity-0"
+        />
+      </div>
     </div>
   )
 }
@@ -54,7 +91,7 @@ export function RoomReservationWorkspace() {
   const [date, setDate] = useState(() => dayjs())
   const [modalRoom, setModalRoom] = useState<MeetingRoom | null>(null)
 
-  const branchesQuery = useMeetingBranches()
+  const branchesQuery = useBranches()
   const branches = useMemo(() => branchesQuery.data ?? [], [branchesQuery.data])
 
   // 첫 로드 시 첫 지사를 선택.
@@ -103,7 +140,19 @@ export function RoomReservationWorkspace() {
             onChange={setBranchId}
           />
 
-          <DateNav date={date} onChange={setDate} />
+          {/* 날짜 바는 화면 중앙 고정 — 검색은 그 위에 겹치지 않게 왼쪽 끝에 띄운다. */}
+          <div className="relative flex items-center justify-center gap-3">
+            <DateNav date={date} onChange={setDate} />
+            <div className="absolute left-0">
+              <ReservationSearchBox
+                branches={branches}
+                onPick={(hit) => {
+                  setBranchId(hit.branchId)
+                  setDate(dayjs(hit.reservedDate))
+                }}
+              />
+            </div>
+          </div>
 
           {roomsQuery.isLoading ? (
             <div className="flex justify-center py-10">

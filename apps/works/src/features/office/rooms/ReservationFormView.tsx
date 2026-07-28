@@ -52,9 +52,11 @@ export function ReservationFormView({
   }
 
   const dayOpen = isOpenOn(schedule, dayjs(date).toDate())
+  const today = dayjs().format('YYYY-MM-DD')
 
   const submit = () => {
     if (!date) return setErr('날짜를 선택하세요.')
+    if (date < today) return setErr('지난 날짜는 예약할 수 없습니다.')
     if (!dayOpen) return setErr('선택한 날짜는 예약할 수 없는 요일입니다.')
     if (!start || !end) return setErr('시작·종료 시간을 선택하세요.')
     if (end <= start) return setErr('종료가 시작보다 빨라요.')
@@ -70,7 +72,8 @@ export function ReservationFormView({
     <div className="space-y-4">
       <label className="block">
         <span className="mb-1 block text-caption font-medium text-gray-600">날짜</span>
-        <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        {/* 지난 날짜는 고를 수 없다(최종 검증은 submit·서버가 한다). */}
+        <Input type="date" min={today} value={date} onChange={(e) => setDate(e.target.value)} />
       </label>
 
       <div className="grid grid-cols-2 gap-3">

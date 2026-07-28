@@ -13,7 +13,6 @@ import { TAG_CONFIGS } from '@/features/admin/tagConfig'
 const HEADINGS: Record<string, string> = {
   dashboard: '경영 현황',
   departments: '조직 관리',
-  branches: '지사 관리',
   hr: '인사 관리',
   positions: TAG_CONFIGS.positions.heading,
   ranks: TAG_CONFIGS.ranks.heading,
@@ -59,11 +58,6 @@ export function ManagementPage() {
         actions={actions}
       />
       {tab === 'departments' && <DepartmentsPanel />}
-      {tab === 'branches' && (
-        <p className="rounded border border-dashed border-gray-300 py-12 text-center text-body text-gray-500">
-          지사 관리는 준비 중입니다.
-        </p>
-      )}
       {tab === 'hr' && <HrPanel keyword={keyword} />}
       {tab === 'positions' && <TagAdminPanel config={TAG_CONFIGS.positions} />}
       {tab === 'ranks' && <TagAdminPanel config={TAG_CONFIGS.ranks} />}

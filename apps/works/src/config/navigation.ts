@@ -140,6 +140,8 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       items: [
         { label: '권한 제어 콘솔', tab: 'permissions' },
         { label: '게시판 관리', tab: 'boards' },
+        // 지사 원장(지사명·주소·전화번호·배정인력)의 단일 세팅 지점. OFFICE '지사 정보'가 이를 조회한다.
+        { label: '지사 관리', tab: 'branches' },
         { label: '회의실 관리', tab: 'rooms' },
         { label: '산업태그 관리', tab: 'industries' },
         { label: '분야태그 관리', tab: 'fields' },
@@ -202,7 +204,7 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       items: [
         { label: '경영 현황', tab: 'dashboard' },
         { label: '조직 관리', tab: 'departments', dividerBefore: true },
-        { label: '지사 관리', tab: 'branches' },
+        // 지사 관리는 ADMIN이 단독 소유한다(원장이 둘로 갈리지 않도록 MANAGEMENT에서는 제외).
         { label: '직책 관리', tab: 'positions' },
         { label: '직급 관리', tab: 'ranks' },
         { label: '호봉 관리', tab: 'pay_steps' },
