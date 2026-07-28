@@ -85,7 +85,7 @@ export function RoomReservationWorkspace() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="회의실 예약" description="원하시는 회의실을 선택하여 예약해주세요." />
+      <PageHeader title="회의실 예약" />
 
       {branchesQuery.isLoading ? (
         <div className="flex justify-center py-10">
