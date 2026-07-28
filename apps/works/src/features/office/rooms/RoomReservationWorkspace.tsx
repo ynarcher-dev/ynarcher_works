@@ -87,47 +87,52 @@ export function RoomReservationWorkspace() {
     <div className="space-y-5">
       <PageHeader title="회의실 예약" description="원하시는 회의실을 선택하여 예약해주세요." />
 
-      {branchesQuery.isLoading ? (
-        <div className="flex justify-center py-10">
-          <Spinner />
-        </div>
-      ) : branches.length === 0 ? (
-        <p className="rounded-radius-md border border-dashed border-gray-300 py-10 text-center text-body text-gray-500">
-          등록된 지사·회의실이 없습니다. 관리자에게 문의하세요.
-        </p>
-      ) : (
-        <>
-          <Tabs
-            items={branches.map((b) => ({ key: b.id, label: b.name }))}
-            value={branchId ?? branches[0]?.id ?? ''}
-            onChange={setBranchId}
-          />
-
-          <DateNav date={date} onChange={setDate} />
-
-          {roomsQuery.isLoading ? (
+      {/* 2:1 배치 — 좌측 2/3에 예약 영역, 우측 1/3은 비운다(후속 우측 패널 여지). */}
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
+        <div className="space-y-5 lg:col-span-2">
+          {branchesQuery.isLoading ? (
             <div className="flex justify-center py-10">
               <Spinner />
             </div>
-          ) : rooms.length === 0 ? (
+          ) : branches.length === 0 ? (
             <p className="rounded-radius-md border border-dashed border-gray-300 py-10 text-center text-body text-gray-500">
-              이 지사에 등록된 회의실이 없습니다.
+              등록된 지사·회의실이 없습니다. 관리자에게 문의하세요.
             </p>
           ) : (
-            <div className="space-y-3">
-              {rooms.map((room) => (
-                <RoomCard
-                  key={room.id}
-                  room={room}
-                  date={dateObj}
-                  spans={toSpans(byRoom.get(room.id) ?? [])}
-                  onReserve={() => setModalRoom(room)}
-                />
-              ))}
-            </div>
+            <>
+              <Tabs
+                items={branches.map((b) => ({ key: b.id, label: b.name }))}
+                value={branchId ?? branches[0]?.id ?? ''}
+                onChange={setBranchId}
+              />
+
+              <DateNav date={date} onChange={setDate} />
+
+              {roomsQuery.isLoading ? (
+                <div className="flex justify-center py-10">
+                  <Spinner />
+                </div>
+              ) : rooms.length === 0 ? (
+                <p className="rounded-radius-md border border-dashed border-gray-300 py-10 text-center text-body text-gray-500">
+                  이 지사에 등록된 회의실이 없습니다.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {rooms.map((room) => (
+                    <RoomCard
+                      key={room.id}
+                      room={room}
+                      date={dateObj}
+                      spans={toSpans(byRoom.get(room.id) ?? [])}
+                      onReserve={() => setModalRoom(room)}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
           )}
-        </>
-      )}
+        </div>
+      </div>
 
       <RoomReservationModal
         open={modalRoom !== null}
