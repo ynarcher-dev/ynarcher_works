@@ -21,7 +21,7 @@ function dateLabel(date: dayjs.Dayjs): string {
 /** 상단 날짜 이동 바(‹ 라벨 ›). */
 function DateNav({ date, onChange }: { date: dayjs.Dayjs; onChange: (d: dayjs.Dayjs) => void }) {
   return (
-    <div className="mx-auto flex items-center gap-1 rounded-radius-full border border-gray-200 bg-white px-1.5 py-1">
+    <div className="mx-auto flex w-fit items-center gap-1 rounded-radius-full border border-gray-200 bg-white px-1.5 py-1">
       <button
         type="button"
         aria-label="이전 날"
@@ -87,52 +87,47 @@ export function RoomReservationWorkspace() {
     <div className="space-y-5">
       <PageHeader title="회의실 예약" description="원하시는 회의실을 선택하여 예약해주세요." />
 
-      {/* 2:1 배치 — 좌측 2/3에 예약 영역, 우측 1/3은 비운다(후속 우측 패널 여지). */}
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
-        <div className="space-y-5 lg:col-span-2">
-          {branchesQuery.isLoading ? (
+      {branchesQuery.isLoading ? (
+        <div className="flex justify-center py-10">
+          <Spinner />
+        </div>
+      ) : branches.length === 0 ? (
+        <p className="rounded-radius-md border border-dashed border-gray-300 py-10 text-center text-body text-gray-500">
+          등록된 지사·회의실이 없습니다. 관리자에게 문의하세요.
+        </p>
+      ) : (
+        <>
+          <Tabs
+            items={branches.map((b) => ({ key: b.id, label: b.name }))}
+            value={branchId ?? branches[0]?.id ?? ''}
+            onChange={setBranchId}
+          />
+
+          <DateNav date={date} onChange={setDate} />
+
+          {roomsQuery.isLoading ? (
             <div className="flex justify-center py-10">
               <Spinner />
             </div>
-          ) : branches.length === 0 ? (
+          ) : rooms.length === 0 ? (
             <p className="rounded-radius-md border border-dashed border-gray-300 py-10 text-center text-body text-gray-500">
-              등록된 지사·회의실이 없습니다. 관리자에게 문의하세요.
+              이 지사에 등록된 회의실이 없습니다.
             </p>
           ) : (
-            <>
-              <Tabs
-                items={branches.map((b) => ({ key: b.id, label: b.name }))}
-                value={branchId ?? branches[0]?.id ?? ''}
-                onChange={setBranchId}
-              />
-
-              <DateNav date={date} onChange={setDate} />
-
-              {roomsQuery.isLoading ? (
-                <div className="flex justify-center py-10">
-                  <Spinner />
-                </div>
-              ) : rooms.length === 0 ? (
-                <p className="rounded-radius-md border border-dashed border-gray-300 py-10 text-center text-body text-gray-500">
-                  이 지사에 등록된 회의실이 없습니다.
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {rooms.map((room) => (
-                    <RoomCard
-                      key={room.id}
-                      room={room}
-                      date={dateObj}
-                      spans={toSpans(byRoom.get(room.id) ?? [])}
-                      onReserve={() => setModalRoom(room)}
-                    />
-                  ))}
-                </div>
-              )}
-            </>
+            <div className="space-y-3">
+              {rooms.map((room) => (
+                <RoomCard
+                  key={room.id}
+                  room={room}
+                  date={dateObj}
+                  spans={toSpans(byRoom.get(room.id) ?? [])}
+                  onReserve={() => setModalRoom(room)}
+                />
+              ))}
+            </div>
           )}
-        </div>
-      </div>
+        </>
+      )}
 
       <RoomReservationModal
         open={modalRoom !== null}

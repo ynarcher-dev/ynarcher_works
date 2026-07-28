@@ -1,4 +1,4 @@
-import { Badge, Button, CardShell, InfoField, cardText, cn } from '@ynarcher/ui'
+import { Badge, Button, CardShell, cardText, cn } from '@ynarcher/ui'
 import { ImageIcon, Users } from 'lucide-react'
 import {
   buildSlots,
@@ -42,7 +42,6 @@ export function RoomCard({ room, date, spans, onReserve }: Props) {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 space-y-1">
             <h3 className={cardText.subhead}>{room.name}</h3>
-            {room.location && <InfoField label="위치" value={room.location} />}
             <p className={cardText.label}>{scheduleLabel(schedule, date)}</p>
           </div>
           <div className="flex shrink-0 items-center gap-3">
