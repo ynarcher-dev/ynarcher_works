@@ -58,11 +58,11 @@ export function weekdayLabel(date: Date): string {
 
 /**
  * 카드에 표기하는 그날 일정 라벨.
- * 예약 가능 요일이면 '수요일 일정 (09:00 - 18:00)', 아니면 '휴무일'.
+ * 예약 가능 요일이면 '이용가능 시간 (09:00 - 18:00)', 아니면 '휴무일'.
  */
 export function scheduleLabel(schedule: RoomSchedule, date: Date): string {
-  if (!isOpenOn(schedule, date)) return `${weekdayLabel(date)} 휴무`
-  return `${weekdayLabel(date)} 일정 (${normalizeTime(schedule.openTime)} - ${normalizeTime(schedule.closeTime)})`
+  if (!isOpenOn(schedule, date)) return '휴무일'
+  return `이용가능 시간 (${normalizeTime(schedule.openTime)} - ${normalizeTime(schedule.closeTime)})`
 }
 
 /** 두 시간대가 겹치는가(반열림 [start, end) 기준 — 경계 접촉은 겹침 아님). */

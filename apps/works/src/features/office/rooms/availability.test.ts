@@ -39,9 +39,9 @@ describe('availability 슬롯 계산', () => {
     expect(buildSlots(schedule, [], sat)).toEqual([])
   })
 
-  it('요일 라벨을 붙인다', () => {
-    expect(scheduleLabel(schedule, wed)).toBe('수요일 일정 (09:00 - 11:00)')
-    expect(scheduleLabel(schedule, sat)).toBe('토요일 휴무')
+  it('이용가능 시간·휴무일 라벨', () => {
+    expect(scheduleLabel(schedule, wed)).toBe('이용가능 시간 (09:00 - 11:00)')
+    expect(scheduleLabel(schedule, sat)).toBe('휴무일')
   })
 })
 

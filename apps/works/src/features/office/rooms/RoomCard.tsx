@@ -2,6 +2,7 @@ import { Badge, Button, CardShell, cardText, cn } from '@ynarcher/ui'
 import { ImageIcon, Users } from 'lucide-react'
 import {
   buildSlots,
+  isOpenOn,
   scheduleLabel,
   type ReservationSpan,
 } from '@/features/office/rooms/availability'
@@ -24,12 +25,13 @@ interface Props {
 export function RoomCard({ room, date, spans, onReserve }: Props) {
   const url = roomPhotoUrl(room.photoPath)
   const schedule = roomSchedule(room)
+  const open = isOpenOn(schedule, date)
   const slots = buildSlots(schedule, spans, date)
 
   return (
     <CardShell className="flex items-stretch gap-4">
       {/* 사진 */}
-      <div className="flex h-28 w-44 shrink-0 items-center justify-center overflow-hidden rounded-radius-md bg-gray-100 text-gray-400">
+      <div className="flex h-24 w-40 shrink-0 items-center justify-center overflow-hidden rounded-radius-md bg-gray-100 text-gray-400">
         {url ? (
           <img src={url} alt="" className="h-full w-full object-cover" />
         ) : (
@@ -37,10 +39,10 @@ export function RoomCard({ room, date, spans, onReserve }: Props) {
         )}
       </div>
 
-      {/* 정보 + 가용성 바 */}
-      <div className="flex min-w-0 flex-1 flex-col">
+      {/* 정보 + 가용성 바 (세로 중앙 정렬로 묶어 붕뜨는 여백 제거) */}
+      <div className="flex min-w-0 flex-1 flex-col justify-center gap-3">
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 space-y-1">
+          <div className="min-w-0 space-y-0.5">
             <h3 className={cardText.subhead}>{room.name}</h3>
             <p className={cardText.label}>{scheduleLabel(schedule, date)}</p>
           </div>
@@ -51,29 +53,29 @@ export function RoomCard({ room, date, spans, onReserve }: Props) {
                 인원 {room.capacity}
               </Badge>
             )}
-            <Button onClick={onReserve}>예약하기</Button>
+            <Button onClick={onReserve} disabled={!open}>
+              예약하기
+            </Button>
           </div>
         </div>
 
-        {/* 가용성 슬롯 바 */}
-        <div className="mt-auto pt-3">
-          {slots.length === 0 ? (
-            <p className={cardText.label}>이 날은 예약할 수 없습니다.</p>
-          ) : (
-            <div className="flex gap-0.5">
-              {slots.map((s) => (
-                <span
-                  key={s.start}
-                  title={`${s.start} - ${s.end}${s.reserved ? ' (예약됨)' : ''}`}
-                  className={cn(
-                    'h-2.5 flex-1 rounded-sm',
-                    s.reserved ? 'bg-brand/70' : 'bg-gray-200',
-                  )}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+        {/* 가용성 슬롯 바(휴무일이면 안내 문구) */}
+        {slots.length === 0 ? (
+          <p className={cardText.label}>이 날은 예약할 수 없습니다.</p>
+        ) : (
+          <div className="flex gap-0.5">
+            {slots.map((s) => (
+              <span
+                key={s.start}
+                title={`${s.start} - ${s.end}${s.reserved ? ' (예약됨)' : ''}`}
+                className={cn(
+                  'h-2.5 flex-1 rounded-sm',
+                  s.reserved ? 'bg-brand/70' : 'bg-gray-200',
+                )}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </CardShell>
   )
