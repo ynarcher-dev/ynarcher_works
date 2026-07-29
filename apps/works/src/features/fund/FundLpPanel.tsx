@@ -2,7 +2,7 @@ import { Badge, Button, CardShell, DataTable, EmptyState, type Column } from '@y
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
 import { DonutChart } from '@/features/fund/DonutChart'
-import { FundLpFormModal } from '@/features/fund/FundLpFormModal'
+import { FundLpRosterModal } from '@/features/fund/FundLpRosterModal'
 import { FUND_LP_TYPE_LABEL, FUND_LP_TYPE_TONE } from '@/features/fund/fundListHooks'
 import type { FundLp } from '@/features/fund/hooks'
 
@@ -66,12 +66,10 @@ const lpColumns: Column<FundLp>[] = [
  * (근거: docs_planning/3_5_workspace_fund.md §2.2)
  */
 export function FundLpPanel({ fundId, lps }: { fundId: string; lps: FundLp[] }) {
-  const [modal, setModal] = useState<{ open: boolean; editing: FundLp | null }>({
-    open: false,
-    editing: null,
-  })
+  const [open, setOpen] = useState(false)
 
   const segments = lps.map((lp) => ({ label: lp.name, value: lp.commitment_amount }))
+  const openLabel = lps.length > 0 ? '명부 편집' : '출자자 등록'
 
   return (
     <>
@@ -79,38 +77,35 @@ export function FundLpPanel({ fundId, lps }: { fundId: string; lps: FundLp[] }) 
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="text-body font-semibold text-gray-700">조합원 구성</h4>
-            <Button density="card" onClick={() => setModal({ open: true, editing: null })}>
+            <Button density="card" onClick={() => setOpen(true)}>
               <Plus className="size-4" />
-              출자자 등록
+              {openLabel}
             </Button>
           </div>
 
           {lps.length > 0 ? (
             <>
               <DonutChart segments={segments} />
+              {/* 표는 읽기 전용 — 편집은 명부 모달 한 곳에서만 한다(행 클릭도 같은 모달을 연다). */}
               <DataTable
                 columns={lpColumns}
                 rows={lps}
                 rowKey={(r) => r.id}
                 standardColumns={false}
-                onRowClick={(r) => setModal({ open: true, editing: r })}
+                onRowClick={() => setOpen(true)}
               />
             </>
           ) : (
             <EmptyState
               title="등록된 출자자(LP)가 없습니다."
-              description="'출자자 등록'으로 조합원과 약정액을 먼저 등록하면 캐피탈 콜에서 차수별 요청액을 배정할 수 있습니다."
+              description="조합원과 약정액을 먼저 등록하면 캐피탈 콜에서 차수별 요청액을 배정할 수 있습니다."
+              action={<Button onClick={() => setOpen(true)}>출자자 등록</Button>}
             />
           )}
         </div>
       </CardShell>
 
-      <FundLpFormModal
-        fundId={fundId}
-        open={modal.open}
-        onClose={() => setModal({ open: false, editing: null })}
-        editing={modal.editing}
-      />
+      <FundLpRosterModal fundId={fundId} open={open} onClose={() => setOpen(false)} lps={lps} />
     </>
   )
 }

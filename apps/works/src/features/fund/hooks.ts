@@ -222,57 +222,34 @@ export function useFundLps(fundId: string | undefined) {
   })
 }
 
-/** 출자자 등록·수정 입력값. 지분율은 트리거가 파생하므로 받지 않는다. */
+/** 명부 한 줄. id가 있으면 기존 조합원 갱신, 없으면 신규. 지분율은 트리거 파생이라 없다. */
 export interface FundLpInput {
+  id?: string
   name: string
   lp_type: string
   commitment_amount: number
   contact: FundLpContact
 }
 
-export function useCreateFundLp(fundId: string) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (values: FundLpInput) => {
-      const { error } = await supabase.from('fund_lps').insert({ ...values, fund_id: fundId })
-      if (error) throw error
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['fund'] }),
-  })
-}
-
-export function useUpdateFundLp(fundId: string) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ id, values }: { id: string; values: FundLpInput }) => {
-      const { error } = await supabase.from('fund_lps').update(values).eq('id', id)
-      if (error) throw error
-    },
-    // 약정액이 바뀌면 그 펀드 LP 전원의 지분율이 트리거로 다시 계산된다 — 목록을 통째로 다시 읽는다.
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['fund', 'lps', fundId] })
-      qc.invalidateQueries({ queryKey: ['fund', 'one', fundId] })
-    },
-  })
-}
-
 /**
- * 출자자 삭제(soft delete). 지분율 트리거가 남은 LP의 지분율을 100% 기준으로 다시 나눈다.
- * 캐피탈 콜 납입 행은 남겨두지 않고 함께 지운다 — 빠진 조합원의 납입이 실출자금액에만
- * 남으면 출자자 표와 펀드 개요가 어긋난다(차수 삭제와 같은 판단).
+ * 출자자 명부 원자 교체(set_fund_lps RPC, SECURITY INVOKER).
+ *
+ * 조합원은 한 명씩이 아니라 명부 단위로 짜는 대상이라 화면도 저장도 한 번에 간다 —
+ * 행마다 따로 쏘면 중간에 실패했을 때 지분율(합 100%)이 깨진 상태로 남는다.
+ * payload에서 빠진 LP는 soft delete되고 그 조합원의 캐피탈 콜 납입 행도 함께 제거된다.
  */
-export function useDeleteFundLp(fundId: string) {
+export function useSetFundLps(fundId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (id: string) => {
-      const payments = await supabase.from('capital_call_payments').delete().eq('lp_id', id)
-      if (payments.error) throw payments.error
-      const { error } = await supabase
-        .from('fund_lps')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', id)
+    mutationFn: async (rows: FundLpInput[]) => {
+      const { error } = await supabase.rpc('set_fund_lps', {
+        p_fund_id: fundId,
+        p_rows: rows,
+      })
       if (error) throw error
     },
+    // 약정액이 바뀌면 그 펀드 LP 전원의 지분율이 트리거로 다시 계산되고, 조합원이 빠지면
+    // 납입 행까지 사라져 실출자금액이 움직인다 — 관련 조회를 모두 다시 읽는다.
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['fund', 'lps', fundId] })
       qc.invalidateQueries({ queryKey: ['fund', 'call-payments-all', fundId] })
