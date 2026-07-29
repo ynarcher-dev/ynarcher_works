@@ -1,7 +1,9 @@
-import { Badge, Banner, Button, CardShell, cardText, InfoField, Spinner, TextArea, useToast } from '@ynarcher/ui'
+import { Badge, Banner, Button, CardShell, cardText, InfoField, Spinner, useToast } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '@/auth/authStore'
 import { ROLE_LABELS } from '@/features/management/config'
+import { EmployeeNoteFields } from '@/features/management/EmployeeNoteFields'
+import { noteEditorInit, parseNote, type EmployeeNote } from '@/features/management/noteConfig'
 import {
   useDepartments,
   useEmployee,
@@ -22,7 +24,7 @@ const Info = InfoField
 /**
  * 마이페이지(내 계정 관리). 본인 계정 정보는 조회만 하고, 본인이 직접 바꿀 수 있는 것은
  * 사진·약력·노트와 자료 업로드로 한정한다(서버 RPC/RLS로 강제).
- * 편집기와 저장 규약(profile.photo / profile.background / profile.note)은 NETWORKS·인사 관리와 공용이다.
+ * 편집기와 저장 규약(profile.photo / profile.background / 노트 세 항목)은 NETWORKS·인사 관리와 공용이다.
  * 이름·역할·부서·이메일 등 계정 필드 변경은 인사 관리(관리자)에서만 가능하다.
  */
 export function MyPage() {
@@ -34,7 +36,9 @@ export function MyPage() {
 
   const [photo, setPhoto] = useState('')
   const [background, setBackground] = useState<CareerData>(parseBackground(null))
-  const [note, setNote] = useState('')
+  const [note, setNote] = useState<EmployeeNote>(parseNote(null))
+  // 이전 자유 텍스트 노트를 철학 칸으로 옮겨 실었는지 — 그때만 저장 시 원본 키를 비운다.
+  const [carriedLegacy, setCarriedLegacy] = useState(false)
 
   // 로드된 프로필로 편집 필드를 동기화한다(최초/재조회 시).
   useEffect(() => {
@@ -42,7 +46,9 @@ export function MyPage() {
     const p = me.profile ?? {}
     setPhoto(str(p.photo))
     setBackground(parseBackground(p.background))
-    setNote(str(p.note))
+    const init = noteEditorInit(p)
+    setNote(init.value)
+    setCarriedLegacy(init.carriedLegacy)
   }, [me])
 
   if (isLoading) return <Spinner />
@@ -65,7 +71,15 @@ export function MyPage() {
 
   const save = async () => {
     try {
-      await update.mutateAsync({ photo, background, note })
+      await update.mutateAsync({
+        photo,
+        background,
+        philosophy: note.philosophy,
+        interests: note.interests,
+        oneLiner: note.oneLiner,
+        // 옮겨 실었으면 원본을 비우고, 아니면 있던 값을 그대로 되돌려 보낸다(RPC는 덮어쓴다).
+        note: carriedLegacy ? '' : str(profile.note),
+      })
       toast.show('내 프로필을 저장했습니다.', 'success')
     } catch {
       toast.show('저장에 실패했습니다. 다시 시도하세요.', 'danger')
@@ -111,8 +125,7 @@ export function MyPage() {
           </CardShell>
 
           <CardShell>
-            <label className="mb-1 block text-caption font-medium text-gray-700">노트</label>
-            <TextArea rows={4} value={note} onChange={(e) => setNote(e.target.value)} />
+            <EmployeeNoteFields value={note} onChange={setNote} />
           </CardShell>
 
           {/* 저장은 사진·약력·노트 세 카드를 한 번에 반영한다(카드별 저장 없음). */}

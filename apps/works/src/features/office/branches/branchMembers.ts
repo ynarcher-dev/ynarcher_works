@@ -35,22 +35,23 @@ export function useBranchMemberNames() {
 }
 
 /**
- * 반대 방향 조회 — 임직원 한 명이 배정된 지사명을 읽는 훅.
+ * 반대 방향 조회 — 임직원 한 명이 배정된 지사를 읽는 훅.
  * 임직원 원장에 지사를 따로 적지 않는다. 배정은 지사 원장(branch_members)이 단일 원천이고,
  * 임직원 정보는 거기서 파생해 보여주기만 한다 — 양쪽에 적으면 한쪽만 고쳐질 때 서로 어긋난다.
- * 비활성 지사는 목록(useBranches 기본값)에서 빠지므로 자연히 표기에서도 사라진다.
+ * 인사 관리에서 지사를 지정할 때도 이 원장을 그대로 고친다(set_user_branches RPC).
+ * 비활성 지사는 목록(useBranches 기본값)에서 빠지므로 자연히 표기·편집 대상에서도 사라진다.
  */
 export function useEmployeeBranchNames() {
   const branchesQuery = useBranches()
   const membersQuery = useBranchMembers()
 
-  // user_id → 지사명 목록(지사 정렬 순서 유지).
+  // user_id → 배정 지사 목록(지사 정렬 순서 유지).
   const byUser = useMemo(() => {
-    const map = new Map<string, string[]>()
+    const map = new Map<string, { id: string; name: string }[]>()
     for (const b of branchesQuery.data ?? []) {
       for (const userId of membersQuery.data?.get(b.id) ?? []) {
         const arr = map.get(userId) ?? []
-        arr.push(b.name)
+        arr.push({ id: b.id, name: b.name })
         map.set(userId, arr)
       }
     }
@@ -58,12 +59,19 @@ export function useEmployeeBranchNames() {
   }, [branchesQuery.data, membersQuery.data])
 
   const branchNamesOf = useCallback(
-    (userId: string): string[] => byUser.get(userId) ?? [],
+    (userId: string): string[] => (byUser.get(userId) ?? []).map((b) => b.name),
+    [byUser],
+  )
+
+  /** 배정 지사 id 목록(인사 관리 수정 폼 초기값). */
+  const branchIdsOf = useCallback(
+    (userId: string): string[] => (byUser.get(userId) ?? []).map((b) => b.id),
     [byUser],
   )
 
   return {
     branchNamesOf,
+    branchIdsOf,
     isLoading: branchesQuery.isLoading || membersQuery.isLoading,
   }
 }

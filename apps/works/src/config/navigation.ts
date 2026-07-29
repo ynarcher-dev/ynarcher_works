@@ -6,14 +6,23 @@ import {
   categoryTab,
   type ProgramCategoryOption,
 } from '@/config/programCategories'
+import { ADMIN_TAG_CONFIGS } from '@/features/admin/tagConfig'
 
 /** 사이드바 세부 메뉴 항목. tab은 페이지 내부 섹션을 제어하는 `?tab=` 쿼리 값. */
 export interface SubNavItem {
   label: string
   /** 미지정 시 워크스페이스 루트(단일 대시보드 메뉴)를 의미한다. */
   tab?: string
-  /** 하위 항목(아코디언). 지정 시 이 항목은 펼침/접힘 그룹 헤더가 된다. */
+  /**
+   * 하위 항목. 지정 시 이 항목은 사이드바 한 줄로 남고 클릭하면 우측 플라이아웃으로 펼쳐진다
+   * (아래로 펼치지 않는다 — 항목이 늘어도 사이드바 길이가 변하지 않아야 한다).
+   */
   children?: SubNavItem[]
+  /**
+   * 하위 항목을 가진 상위 항목의 아이콘 키(WorksLayout `sidebarGroupIcon`).
+   * 상위 항목은 tab이 없어 탭 기반 아이콘 매핑이 걸리지 않으므로 별도로 지정한다.
+   */
+  groupIconKey?: string
   /**
    * 하위 항목을 런타임 게시판 레지스트리에서 주입(아코디언 없이 상위 단독 항목으로 평탄 나열).
    * 그룹핑 축은 게시 종류(kind) 하나다 — 설계: docs/docs_planning/3_1_1_board_archive_notice.md
@@ -140,19 +149,16 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       items: [
         { label: '권한 제어 콘솔', tab: 'permissions' },
         { label: '게시판 관리', tab: 'boards' },
-        // 지사 원장(지사명·주소·전화번호·배정인력)의 단일 세팅 지점. OFFICE '지사 정보'가 이를 조회한다.
-        { label: '지사 관리', tab: 'branches' },
         { label: '회의실 관리', tab: 'rooms' },
-        { label: '산업태그 관리', tab: 'industries' },
-        { label: '분야태그 관리', tab: 'fields' },
-        { label: '구분태그 관리', tab: 'categories' },
-        { label: '권역태그 관리', tab: 'regions' },
-        { label: '국가태그 관리', tab: 'countries' },
-        { label: '투자단계 태그관리', tab: 'investment_stages', dividerBefore: true },
-        { label: '기업구분 태그관리', tab: 'company_categories' },
-        { label: '기업현황 태그관리', tab: 'company_statuses' },
-        { label: '투자방식 태그관리', tab: 'investment_methods' },
-        { label: '소재지 태그관리', tab: 'locations' },
+        // 전사 기준정보 태그는 종류가 계속 늘어나므로 사이드바에 평탄 나열하지 않고
+        // 상위 한 줄로 두고 우측 플라이아웃으로 편다(게시판·자료실과 같은 조작감).
+        // 항목은 TAG_CONFIGS(owner: 'admin')에서 파생되므로 태그를 추가할 때 이 파일은 손대지 않는다.
+        {
+          label: '태그 관리',
+          groupIconKey: 'tags',
+          dividerBefore: true,
+          children: ADMIN_TAG_CONFIGS.map((c) => ({ label: c.menuLabel, tab: c.tab })),
+        },
         { label: '민감정보 관리', tab: 'sensitive', dividerBefore: true },
         { label: '중복 병합 검증', tab: 'merge' },
         { label: '감사 로그 모니터', tab: 'audit' },
@@ -204,7 +210,9 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       items: [
         { label: '경영 현황', tab: 'dashboard' },
         { label: '조직 관리', tab: 'departments', dividerBefore: true },
-        // 지사 관리는 ADMIN이 단독 소유한다(원장이 둘로 갈리지 않도록 MANAGEMENT에서는 제외).
+        // 지사 원장(지사명·주소·전화번호·배정인력)의 단일 세팅 지점. 조직 관리와 같은 조직
+        // 축이라 MANAGEMENT가 소유하고, OFFICE '지사 정보'와 회의실 예약의 지사 탭이 조회한다.
+        { label: '지사 관리', tab: 'branches' },
         { label: '직책 관리', tab: 'positions' },
         { label: '직급 관리', tab: 'ranks' },
         { label: '호봉 관리', tab: 'pay_steps' },

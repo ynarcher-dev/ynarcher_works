@@ -440,11 +440,6 @@ function OrgTreeEditor({ versionId, activeVersionId, editable = true }, ref) {
         </div>
       )}
 
-      <p className="text-caption text-gray-600">
-        조직명과 레벨 변경은 화면에 먼저 반영된 뒤 상단 저장 버튼으로 함께 저장됩니다. 드래그 이동,
-        추가/삭제, 인력 배치는 버튼 동작 즉시 반영됩니다.
-      </p>
-
       {editable && memberDept && (
         <DeptMemberModal
           open={Boolean(memberDept)}

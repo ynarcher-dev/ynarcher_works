@@ -6,29 +6,16 @@ interface Props {
   branch: Branch | null
   /** 해당 지사의 배정인력 이름(배정 순서 유지). */
   memberNames: string[]
-  /** 목록에서의 위치(1-base)와 전체 건수 — 순차 이동 표기용. */
-  index: number
-  total: number
   onClose: () => void
-  /** 목록 순서대로 앞/뒤 지사로 이동. 끝에서는 undefined. */
-  onPrev?: () => void
-  onNext?: () => void
 }
 
 /**
  * OFFICE 지사 상세 모달(조회 전용). 목록 표는 지사명·주소·전화번호만 보여주고,
- * 배정인력을 포함한 전체 항목은 여기서 순서대로 확인한다.
- * 원장 수정은 ADMIN '지사 관리'가 소유하므로 이 모달은 편집 수단을 두지 않는다.
+ * 배정인력을 포함한 전체 항목은 여기서 확인한다. 하단은 닫기 하나만 둔다 —
+ * 목록이 한 화면에 다 들어와 순차 이동(이전·다음)이 필요 없다.
+ * 원장 수정은 MANAGEMENT '지사 관리'가 소유하므로 이 모달은 편집 수단을 두지 않는다.
  */
-export function BranchDetailModal({
-  branch,
-  memberNames,
-  index,
-  total,
-  onClose,
-  onPrev,
-  onNext,
-}: Props) {
+export function BranchDetailModal({ branch, memberNames, onClose }: Props) {
   if (!branch) return null
 
   return (
@@ -37,22 +24,7 @@ export function BranchDetailModal({
       onClose={onClose}
       title={branch.name}
       size="md"
-      footer={
-        <div className="flex w-full items-center justify-between">
-          <span className="text-caption text-gray-500">
-            {index} / {total}
-          </span>
-          <div className="flex gap-2">
-            <Button variant="ghost" onClick={onPrev} disabled={!onPrev}>
-              이전
-            </Button>
-            <Button variant="ghost" onClick={onNext} disabled={!onNext}>
-              다음
-            </Button>
-            <Button onClick={onClose}>닫기</Button>
-          </div>
-        </div>
-      }
+      footer={<Button onClick={onClose}>닫기</Button>}
     >
       <div className="space-y-2.5">
         <InfoField label="지사명" value={branch.name} />

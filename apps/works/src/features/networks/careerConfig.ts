@@ -32,6 +32,8 @@ export const CAREER_SECTIONS: CareerSection[] = [
     title: '경력',
     fields: [
       { key: 'org', placeholder: '회사/기관' },
+      // 같은 회사 안에서도 어느 조직에 있었는지가 이력의 핵심이라 직책 앞에 둔다.
+      { key: 'dept', placeholder: '부서명' },
       { key: 'position', placeholder: '직책' },
       { key: 'period', placeholder: '기간 (예: 2015-2020)' },
     ],
@@ -71,12 +73,19 @@ export function parseBackground(raw: unknown): CareerData {
   return out
 }
 
+/**
+ * 표시용: 항목의 비어있지 않은 필드값을 필드 정의 순서대로 뽑는다.
+ *
+ * 첫 값은 그 항목이 무엇인지 알려주는 식별값(학교·회사·자격증명·수상명)이라 표시할 때
+ * 나머지와 색을 갈라 쓴다 — 그래서 결합 문자열이 아니라 조각 배열이 원본이다.
+ */
+export function rowParts(section: CareerSection, row: CareerRow): string[] {
+  return section.fields.map((f) => row[f.key]?.trim()).filter(Boolean) as string[]
+}
+
 /** 표시용: 항목의 비어있지 않은 필드를 ' · '로 결합. */
 export function formatRow(section: CareerSection, row: CareerRow): string {
-  return section.fields
-    .map((f) => row[f.key]?.trim())
-    .filter(Boolean)
-    .join(' · ')
+  return rowParts(section, row).join(' · ')
 }
 
 /**

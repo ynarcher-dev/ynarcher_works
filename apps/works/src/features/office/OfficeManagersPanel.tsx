@@ -22,7 +22,7 @@ export function OfficeManagersPanel() {
           />
         }
       />
-      <EmployeeDirectory keyword={keyword} readOnly detailBasePath="/office/managers" />
+      <EmployeeDirectory keyword={keyword} detailBasePath="/office/managers" />
     </div>
   )
 }

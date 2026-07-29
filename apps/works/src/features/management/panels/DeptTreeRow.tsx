@@ -181,7 +181,8 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
                 ))}
               </Select>
             ) : (
-              <span className="px-1 text-caption text-gray-600">{levelName}</span>
+              // 한 줄 안에서 크기로 위계를 만들지 않는다 — 조직명과 같은 본문 크기, 구분은 색으로.
+              <span className="px-1 text-body text-gray-600">{levelName}</span>
             ))}
         </div>
 

@@ -1,7 +1,8 @@
 import { BackButton, Badge, Banner, Button, CardShell, cardText, DensityProvider, InfoField, PanelCard, Spinner } from '@ynarcher/ui'
 import { useState, type ReactNode } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { maskEmail, maskPhone } from '@/lib/mask'
+import { DetailDeleteButton } from '@/components/DetailDeleteButton'
 import { useSensitiveStore } from '@/features/admin/sensitiveStore'
 import { EmployeeForm } from '@/features/management/EmployeeForm'
 import { PhotoBox } from '@/features/networks/PhotoBox'
@@ -13,7 +14,8 @@ import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
 import { DetailPanelCard } from '@/features/networks/DetailPanelCard'
 import { MiniPager, usePaged } from '@/features/networks/MiniPager'
 import { ROLE_LABELS } from '@/features/management/config'
-import { useDepartments, useEmployee } from '@/features/management/hooks'
+import { useDeactivateEmployee, useDepartments, useEmployee } from '@/features/management/hooks'
+import { legacyNote, parseNote } from '@/features/management/noteConfig'
 import { useEmployeeBranchNames } from '@/features/office/branches/branchMembers'
 
 /**
@@ -89,10 +91,13 @@ export function EmployeeDetailPage({
   backTo = '/management?tab=hr',
 }: EmployeeDetailPageProps = {}) {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const show = useSensitiveStore((s) => s.show)
   const [editing, setEditing] = useState(false)
   const { data: emp, isLoading } = useEmployee(id)
   const { data: depts } = useDepartments()
+  // 비활성화(소프트 삭제)는 목록의 관리 컬럼이 아니라 이 상세 상단바가 소유한다.
+  const deactivate = useDeactivateEmployee()
   // 지사는 지사 원장(branch_members)에서 파생한다 — ADMIN '지사 관리'에서 배정하면 여기에 그대로 뜬다.
   const { branchNamesOf } = useEmployeeBranchNames()
 
@@ -121,7 +126,9 @@ export function EmployeeDetailPage({
   // 약력은 구조화(background)가 정본이고, 구조 편집기 도입 전에 쌓인 자유 텍스트(bio)는 폴백으로만 노출한다.
   const hasCareer = hasCareerRows(profile.background)
   const legacyBio = str(profile.bio)
-  const note = str(profile.note)
+  // 노트는 철학·관심분야·한마디 세 항목이다. 아직 옮기지 않은 자유 텍스트 노트는 '이전 기록'으로 남긴다.
+  const note = parseNote(profile)
+  const oldNote = legacyNote(profile)
   // 이름 옆 배지는 관리자(super_admin)만 표기한다 — 나머지 역할은 부서·직책으로 이미 드러난다.
   const adminLabel = emp.user_type === 'super_admin' ? ROLE_LABELS[emp.user_type] : ''
   const branchLabel = branchNamesOf(emp.id).join(', ')
@@ -134,7 +141,19 @@ export function EmployeeDetailPage({
       {!editing && (
         <div className="flex items-center justify-between">
           <BackButton as={Link} to={backTo} />
-          {!readOnly && <Button onClick={() => setEditing(true)}>수정</Button>}
+          {!readOnly && (
+            <div className="flex items-center gap-2">
+              {/* 임직원 원장은 사유 기록 인프라(기여 로그 RPC)가 없어 확인창만 띄운다. */}
+              <DetailDeleteButton
+                name={emp.name}
+                label="비활성화"
+                withReason={false}
+                onDelete={() => deactivate.mutateAsync(emp.id)}
+                onDeleted={() => navigate(backTo)}
+              />
+              <Button onClick={() => setEditing(true)}>수정</Button>
+            </div>
+          )}
         </div>
       )}
 
@@ -190,13 +209,45 @@ export function EmployeeDetailPage({
               )}
             </SectionCard>
 
-            <SectionCard title="노트">
-              {note ? (
-                <p className="whitespace-pre-wrap text-body text-gray-800">{note}</p>
+            <SectionCard title="액셀러레이터 철학">
+              {note.philosophy ? (
+                <p className="whitespace-pre-wrap text-body text-gray-800">{note.philosophy}</p>
               ) : (
-                <p className="text-body text-gray-600">등록된 노트 내용이 없습니다.</p>
+                <p className="text-body text-gray-600">등록된 내용이 없습니다.</p>
               )}
             </SectionCard>
+
+            <SectionCard title="관심분야">
+              {note.interests.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {note.interests.map((name) => (
+                    <Badge key={name} tone="neutral">
+                      {name}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-body text-gray-600">등록된 관심분야가 없습니다.</p>
+              )}
+            </SectionCard>
+
+            <SectionCard title="한마디">
+              {note.oneLiner ? (
+                <p className="whitespace-pre-wrap text-body text-gray-800">{note.oneLiner}</p>
+              ) : (
+                <p className="text-body text-gray-600">등록된 내용이 없습니다.</p>
+              )}
+            </SectionCard>
+
+            {/* 세 항목으로 가르기 전의 자유 텍스트 노트. '수정'에서 세 칸으로 나눠 저장하면 사라진다. */}
+            {oldNote && (
+              <SectionCard title="노트(이전 기록)">
+                <p className="whitespace-pre-wrap text-body text-gray-800">{oldNote}</p>
+                <p className="mt-2 text-caption text-gray-700">
+                  "수정"을 열면 이 글이 액셀러레이터 철학 칸에 담겨 있습니다. 세 항목으로 나눠 저장하세요.
+                </p>
+              </SectionCard>
+            )}
 
             {/* 관계형 연동 도메인(읽기 전용, 연동 시 자동 기록). 프로필 본문과 구분선으로 가른다. */}
             <SectionHeading title="활동 이력" />

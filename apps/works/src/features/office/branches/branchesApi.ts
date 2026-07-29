@@ -148,6 +148,25 @@ export function useUpdateBranch() {
   })
 }
 
+/**
+ * 반대 방향 쓰기 — 임직원 한 명의 지사 배정 교체(인사 관리 임직원 수정 폼).
+ * 지사 원장은 그대로 두고 branch_members만 바꾸므로 admin 아닌 management write도 호출한다
+ * (권한 판정은 RPC 내부). 활성 지사만 대상이며 비활성 지사의 기존 배정은 보존된다.
+ */
+export function useSetUserBranches() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (v: { userId: string; branchIds: string[] }) => {
+      const { error } = await supabase.rpc('set_user_branches', {
+        p_user_id: v.userId,
+        p_branch_ids: v.branchIds,
+      })
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: MEMBERS_KEY }),
+  })
+}
+
 export function useSetBranchActive() {
   const qc = useQueryClient()
   return useMutation({

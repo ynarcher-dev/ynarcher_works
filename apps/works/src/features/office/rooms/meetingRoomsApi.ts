@@ -6,14 +6,15 @@ import type { RoomSchedule } from '@/features/office/rooms/availability'
  * 회의실 원장 서버 훅.
  * ADMIN('회의실 관리')이 편집하고 OFFICE('회의실 예약')가 소비하는 단일 원천.
  * RLS: 조회는 내부 사용자, 쓰기는 admin 전용(supabase/migrations/20260728120000_meeting_rooms.sql).
- * 지사 원장은 features/office/branches/branchesApi가 소유한다(ADMIN '지사 관리'가 세팅).
+ * 소속 지점 원장은 features/office/rooms/meetingPlacesApi가 소유한다 —
+ * 지사 원장(branchesApi)과는 연동하지 않는 별개 목록이다.
  */
 
 const PHOTO_BUCKET = 'meeting-room-photos'
 
 export interface MeetingRoom {
   id: string
-  branchId: string
+  placeId: string
   name: string
   location: string | null
   capacity: number | null
@@ -38,7 +39,7 @@ export function roomSchedule(room: MeetingRoom): RoomSchedule {
 
 interface RoomRow {
   id: string
-  branch_id: string
+  place_id: string
   name: string
   location: string | null
   capacity: number | null
@@ -53,7 +54,7 @@ interface RoomRow {
 
 const toRoom = (r: RoomRow): MeetingRoom => ({
   id: r.id,
-  branchId: r.branch_id,
+  placeId: r.place_id,
   name: r.name,
   location: r.location,
   capacity: r.capacity,
@@ -66,24 +67,24 @@ const toRoom = (r: RoomRow): MeetingRoom => ({
   isActive: r.is_active,
 })
 
-const roomsKey = (branchId?: string) => ['office', 'meeting-rooms', branchId ?? 'all']
+const roomsKey = (placeId?: string) => ['office', 'meeting-rooms', placeId ?? 'all']
 
 // ── 회의실 ───────────────────────────────────────────────────────────
 
 const ROOM_COLS =
-  'id, branch_id, name, location, capacity, photo_path, open_time, close_time, ' +
+  'id, place_id, name, location, capacity, photo_path, open_time, close_time, ' +
   'slot_minutes, weekdays, sort_order, is_active'
 
-/** 지사별 회의실 목록. includeInactive=true(ADMIN)면 비활성 포함. */
-export function useMeetingRooms(branchId: string | undefined, includeInactive = false) {
+/** 지점별 회의실 목록. includeInactive=true(ADMIN)면 비활성 포함. */
+export function useMeetingRooms(placeId: string | undefined, includeInactive = false) {
   return useQuery({
-    queryKey: [...roomsKey(branchId), includeInactive],
-    enabled: Boolean(branchId),
+    queryKey: [...roomsKey(placeId), includeInactive],
+    enabled: Boolean(placeId),
     queryFn: async (): Promise<MeetingRoom[]> => {
       let q = supabase
         .from('meeting_rooms')
         .select(ROOM_COLS)
-        .eq('branch_id', branchId as string)
+        .eq('place_id', placeId as string)
         .is('deleted_at', null)
         .order('sort_order', { ascending: true })
         .order('name', { ascending: true })
@@ -97,7 +98,7 @@ export function useMeetingRooms(branchId: string | undefined, includeInactive = 
 
 /** 회의실 저장 입력(생성·수정 공용). */
 export interface RoomInput {
-  branchId: string
+  placeId: string
   name: string
   location: string | null
   capacity: number | null
@@ -110,7 +111,7 @@ export interface RoomInput {
 
 function roomPayload(v: RoomInput) {
   return {
-    branch_id: v.branchId,
+    place_id: v.placeId,
     name: v.name.trim(),
     location: v.location?.trim() || null,
     capacity: v.capacity,
@@ -130,7 +131,7 @@ export function useCreateRoom() {
       const { data: last, error: readErr } = await supabase
         .from('meeting_rooms')
         .select('sort_order')
-        .eq('branch_id', v.branchId)
+        .eq('place_id', v.placeId)
         .order('sort_order', { ascending: false })
         .limit(1)
       if (readErr) throw readErr

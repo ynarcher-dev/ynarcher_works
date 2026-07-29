@@ -115,14 +115,41 @@ export function useTags(table: string, parentColumn?: string, enabled = true) {
   })
 }
 
-/** 태그 추가. 2뎁스 태그는 `parent`로 부모 FK를 함께 지정한다. */
+/**
+ * 태그 추가. 2뎁스 태그는 `parent`로 부모 FK를 함께 지정한다.
+ * `sortOrder`를 주면 그 노출순위로 넣는다(미지정 시 DB 기본값 0 → 목록 맨 앞에 붙는다).
+ */
 export function useCreateTag(table: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ name, parent }: { name: string; parent?: TagParentValue }) => {
+    mutationFn: async ({
+      name,
+      parent,
+      sortOrder,
+    }: {
+      name: string
+      parent?: TagParentValue
+      sortOrder?: number
+    }) => {
       const row: Record<string, unknown> = { name }
       if (parent) row[parent.column] = parent.id
+      if (sortOrder !== undefined) row.sort_order = sortOrder
       const { error } = await supabase.from(table).insert(row)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'tags', table] }),
+  })
+}
+
+/**
+ * 노출순위(sort_order) 단건 지정. 관리 화면에서 숫자를 직접 입력해 저장한다.
+ * 값이 겹치면 useTags의 2차 정렬(name)이 순서를 가른다 — 유일성은 강제하지 않는다.
+ */
+export function useSetTagOrder(table: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, sortOrder }: { id: string; sortOrder: number }) => {
+      const { error } = await supabase.from(table).update({ sort_order: sortOrder }).eq('id', id)
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'tags', table] }),

@@ -12,6 +12,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   useCreateTag,
   useDeleteTag,
+  useSetTagOrder,
   useTags,
   useUpdateTag,
   type Tag,
@@ -24,10 +25,14 @@ interface TagAdminPanelProps {
 }
 
 /**
- * 기준정보 태그 관리(ADMIN): 태그 추가/수정/삭제(soft delete).
- * 산업태그·분야태그 등 동일 구조 태그를 설정(config) 주입으로 공용 처리한다.
+ * 기준정보 태그 관리: 태그 추가/수정/삭제(soft delete) + 노출순위 조정.
+ * 산업태그·분야태그 등 동일 구조 태그를 설정(config) 주입으로 공용 처리하며,
+ * ADMIN '태그 관리'와 MANAGEMENT 인사 기준정보가 같은 패널을 쓴다.
  * `config.parent`가 있으면 2뎁스 태그(예: 국가 › 권역)로, 상단에 부모(권역) 탭 바를 놓고
  * 선택한 권역의 태그만 테이블로 보여준다. 권역이 늘면 탭도 자동으로 늘어난다.
+ *
+ * 노출순위는 여기서 입력한 sort_order가 그대로 각 화면의 선택지 순서가 된다(useTags 정렬 기준,
+ * 작은 값이 앞). 2뎁스 태그는 부모 탭 범위 안에서 운용하므로 부모가 다르면 번호가 겹칠 수 있다.
  */
 export function TagAdminPanel({ config }: TagAdminPanelProps) {
   const { table, noun, parent } = config
@@ -38,8 +43,11 @@ export function TagAdminPanel({ config }: TagAdminPanelProps) {
   const create = useCreateTag(table)
   const update = useUpdateTag(table)
   const remove = useDeleteTag(table)
+  const setOrder = useSetTagOrder(table)
 
   const [newName, setNewName] = useState('')
+  // 노출순위 입력의 편집 중 값(행 id → 문자열). 저장하면 비워 서버 값으로 되돌아간다.
+  const [orderDraft, setOrderDraft] = useState<Record<string, string>>({})
   const [activeParentId, setActiveParentId] = useState('') // 선택된 권역 탭
   const [editing, setEditing] = useState<Tag | null>(null)
   const [editName, setEditName] = useState('')
@@ -87,11 +95,34 @@ export function TagAdminPanel({ config }: TagAdminPanelProps) {
       return
     }
     try {
-      await create.mutateAsync({ name, parent: parentValue(activeParentId) })
+      // 새 태그는 현재 범위의 맨 뒤에 붙인다(기본값 0으로 두면 목록 맨 앞에 끼어든다).
+      await create.mutateAsync({
+        name,
+        parent: parentValue(activeParentId),
+        sortOrder: rows.reduce((max, t) => Math.max(max, t.sort_order), 0) + 1,
+      })
       setNewName('')
       toast.show(`'${name}' 태그를 추가했습니다.`, 'success')
     } catch {
       toast.show('추가에 실패했습니다. 이미 존재하는 태그인지 확인하세요.', 'danger')
+    }
+  }
+
+  /** 노출순위 입력 확정(Enter·포커스 아웃). 값이 그대로면 저장하지 않는다. */
+  const commitOrder = async (tag: Tag) => {
+    const raw = orderDraft[tag.id]
+    const clear = () => setOrderDraft(({ [tag.id]: _, ...rest }) => rest)
+    if (raw === undefined) return
+    const next = Number.parseInt(raw, 10)
+    if (Number.isNaN(next) || next < 0 || next === tag.sort_order) {
+      clear()
+      return
+    }
+    try {
+      await setOrder.mutateAsync({ id: tag.id, sortOrder: next })
+      clear()
+    } catch {
+      toast.show('노출순위 저장에 실패했습니다. 권한을 확인하세요.', 'danger')
     }
   }
 
@@ -133,12 +164,39 @@ export function TagAdminPanel({ config }: TagAdminPanelProps) {
   }
 
   // 2뎁스는 권역을 탭이 대신하므로 표에서 부모 컬럼을 빼고 태그명만 노출한다.
+  // 노출순위는 저장된 sort_order를 그대로 입력·수정한다(작은 값이 앞). 값이 겹쳐도 막지 않고
+  // 이름순으로 갈린다 — 중간에 하나를 끼워 넣으려고 같은 번호를 쓰는 운영을 허용하기 위함이다.
   const columns: Column<Tag>[] = [
-    { key: 'name', header: noun, render: (t) => t.name },
+    {
+      key: 'order',
+      header: '노출순위',
+      align: 'center',
+      className: 'w-24',
+      render: (t) => (
+        <span className="flex justify-center">
+          <span className="w-16">
+            <Input
+              type="number"
+              min={0}
+              className="text-center"
+              aria-label={`${t.name} 노출순위`}
+              value={orderDraft[t.id] ?? String(t.sort_order)}
+              onChange={(e) => setOrderDraft((d) => ({ ...d, [t.id]: e.target.value }))}
+              onBlur={() => commitOrder(t)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') e.currentTarget.blur()
+              }}
+            />
+          </span>
+        </span>
+      ),
+    },
+    { key: 'name', header: noun, primary: true, render: (t) => t.name },
     {
       key: 'action',
       header: '관리',
       align: 'right',
+      className: 'w-40',
       render: (t) => (
         <div className="flex justify-end gap-1.5">
           <Button variant="outline" onClick={() => openEdit(t)}>
@@ -209,6 +267,9 @@ export function TagAdminPanel({ config }: TagAdminPanelProps) {
           rows={rows}
           rowKey={(t) => t.id}
           standardColumns={false}
+          // 기본 No.(내림차순)는 노출순위와 정반대로 매겨져 서로 헷갈린다. 여기서 읽어야 할
+          // 번호는 노출순위 하나뿐이므로 끈다.
+          numbered={false}
           emptyText={`등록된 ${noun} 태그가 없습니다.`}
         />
       )}

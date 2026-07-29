@@ -273,8 +273,9 @@ export function useCreateEmployee() {
 
 /**
  * 본인 프로필(사진·약력·노트) 수정. 본인 직접 UPDATE는 RLS로 차단되며, 키를 화이트리스트하는
- * `update_my_profile` RPC(SECURITY DEFINER)만 profile.photo / profile.background / profile.note 를 갱신한다.
- * 세 값은 항상 함께 보낸다 — RPC는 전달된 값으로 덮어쓰므로 빈 값은 곧 삭제를 뜻한다.
+ * `update_my_profile` RPC(SECURITY DEFINER)만 photo / background / philosophy / interests /
+ * one_liner / note 를 갱신한다.
+ * 값은 항상 함께 보낸다 — RPC는 전달된 값으로 덮어쓰므로 빈 값은 곧 삭제를 뜻한다.
  */
 export function useUpdateMyProfile() {
   const qc = useQueryClient()
@@ -282,11 +283,18 @@ export function useUpdateMyProfile() {
     mutationFn: async (v: {
       photo: string
       background: Record<string, unknown>
+      philosophy: string
+      interests: string[]
+      oneLiner: string
+      /** 아직 세 항목으로 옮기지 않은 이전 자유 텍스트 노트(옮겼으면 빈 문자열로 지운다). */
       note: string
     }) => {
       const { error } = await supabase.rpc('update_my_profile', {
         p_photo: v.photo,
         p_background: v.background,
+        p_philosophy: v.philosophy,
+        p_interests: v.interests,
+        p_one_liner: v.oneLiner,
         p_note: v.note,
       })
       if (error) throw error

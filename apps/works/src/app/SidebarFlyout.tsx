@@ -76,9 +76,11 @@ export function SidebarFlyout({
         collapsed={collapsed}
         onClick={() => onOpenChange(!open)}
         trailing={
+          // 활성 항목은 흰 pill로 반전되므로 색을 고정하지 않고 항목 글자색을 그대로 따른다
+          // (비활성: 흰색 / 활성: 브랜드색). 고정 흰색이면 활성 상태에서 꺽쇠가 사라진다.
           <ChevronRight
             aria-hidden
-            className={`size-4 text-white/75 transition-transform duration-fast ${
+            className={`size-4 text-current opacity-75 transition-transform duration-fast ${
               open ? 'translate-x-0.5' : ''
             }`}
           />

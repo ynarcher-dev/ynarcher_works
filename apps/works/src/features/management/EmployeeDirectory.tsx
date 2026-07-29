@@ -1,11 +1,10 @@
-import { DataTable, Spinner, useToast, type Column } from '@ynarcher/ui'
+import { DataTable, Spinner, type Column } from '@ynarcher/ui'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { maskEmail, maskPhone } from '@/lib/mask'
 import { useSensitiveStore } from '@/features/admin/sensitiveStore'
 import {
   activeOrgVersionId,
-  useDeactivateEmployee,
   useDepartments,
   useEmployeesPage,
   useOrgLevels,
@@ -13,6 +12,7 @@ import {
   type Employee,
 } from '@/features/management/hooks'
 import { buildTiers, resolveByTier, toNodes } from '@/features/management/panels/departmentsMock'
+import { useEmployeeBranchNames } from '@/features/office/branches/branchMembers'
 
 /** 목록 페이지당 행 수(서버 사이드 페이지네이션). */
 const PAGE_SIZE = 30
@@ -27,8 +27,6 @@ function str(v: unknown): string {
 interface EmployeeDirectoryProps {
   /** 상위(PageHeader 검색 슬롯)에서 내려오는 이름 검색어. */
   keyword: string
-  /** 조회 전용 모드(OFFICE 임직원 정보): 비활성화 액션을 숨긴다. */
-  readOnly?: boolean
   /** 행 클릭 시 이동할 상세 경로 prefix. 기본은 인사 관리 상세('/management/hr'). */
   detailBasePath?: string
 }
@@ -38,19 +36,17 @@ interface EmployeeDirectoryProps {
  * 의존하지 않고 DataTable을 직접 구성한다(HR 전용 컬럼·정렬 요구를 공용 컴포넌트에 얹지 않기 위함).
  * 소속은 회사/부서/팀으로 세분화하고, 부서/팀은 2단 조직도(상위=부서·하위=팀)에서 파생한다.
  * 회사·직책/직급·연락처 및 집계 지표(관리기업/운영사업/M&A/프로젝트/펀드)는 데이터 연결 전이라 '-'.
- * 인사 관리(MANAGEMENT)와 임직원 정보(OFFICE)가 동일 구조로 재사용하며, OFFICE는 readOnly로 조회만 한다.
+ * 인사 관리(MANAGEMENT)와 임직원 정보(OFFICE)가 동일 구조로 재사용하며, 목록은 양쪽 모두 조회 전용이다.
+ * 비활성화(소프트 삭제)는 NETWORKS·STARTUP과 같이 상세 페이지 상단바가 소유한다 — 목록에 관리 컬럼을 두지 않는다.
  */
 export function EmployeeDirectory({
   keyword,
-  readOnly = false,
   detailBasePath = '/management/hr',
 }: EmployeeDirectoryProps) {
   const navigate = useNavigate()
-  const toast = useToast()
   // 관리자 민감정보 표시 토글. 목록은 기본 마스킹, 토글이 켜졌을 때만 원문을 노출한다.
   const show = useSensitiveStore((s) => s.show)
   const [page, setPage] = useState(0)
-  const deactivate = useDeactivateEmployee()
 
   // 검색어 변경 시 첫 페이지로 되돌린다(빈 페이지 방지).
   useEffect(() => {
@@ -65,6 +61,8 @@ export function EmployeeDirectory({
   const { data: depts, isLoading: deptLoading } = useDepartments(false, activeVersionId ?? undefined)
   const { data: levels = [], isLoading: levelLoading } = useOrgLevels(activeVersionId ?? undefined)
   const { data, isLoading } = useEmployeesPage(keyword, page, PAGE_SIZE)
+  // 지사는 임직원 원장이 아니라 지사 원장(branch_members)에서 역방향으로 읽는다 — 양쪽에 적지 않는다.
+  const { branchNamesOf } = useEmployeeBranchNames()
 
   const nodes = useMemo(() => toNodes(depts ?? []), [depts])
   // 병렬 레벨은 티어로 합쳐 컬럼 1개(예: '본부 / 실').
@@ -99,6 +97,16 @@ export function EmployeeDirectory({
     { key: 'name', header: '이름', render: (r) => r.name, className: 'w-24' },
     ...levelColumns,
     {
+      key: 'branch',
+      header: '지사',
+      // 한 사람이 여러 지사에 배정될 수 있어(원장은 다대다) 쉼표로 잇는다.
+      render: (r) => {
+        const names = branchNamesOf(r.id)
+        return names.length ? names.join(', ') : DASH
+      },
+      className: 'w-24',
+    },
+    {
       key: 'position',
       header: '직책',
       render: (r) => str(r.profile?.position) || DASH,
@@ -120,21 +128,24 @@ export function EmployeeDirectory({
       key: 'email',
       header: '이메일',
       render: (r) => (show.email ? r.email ?? '-' : maskEmail(r.email ?? null)),
-      className: 'w-36',
+      // 회사 도메인(@ynarcher.com) 포함 20자 안팎이 잘리지 않는 폭.
+      className: 'w-44',
     },
     {
       key: 'phone',
       header: '연락처',
       render: (r) =>
         r.phone ? (show.phone ? r.phone : maskPhone(r.phone)) : DASH,
-      className: 'w-28',
+      // 휴대폰 번호(010-0000-0000)가 잘리지 않는 최소 폭.
+      className: 'w-32',
     },
-    { key: 'managed_cos', header: '관리기업', render: () => DASH, align: 'right', className: 'w-20' },
-    { key: 'businesses', header: '운영사업', render: () => DASH, align: 'right', className: 'w-20' },
-    { key: 'mna', header: 'M&A', render: () => DASH, align: 'right', className: 'w-20' },
-    { key: 'projects', header: '프로젝트', render: () => DASH, align: 'right', className: 'w-20' },
-    { key: 'fund_managed', header: '펀드(관리)', render: () => DASH, align: 'right', className: 'w-20' },
-    { key: 'fund_operated', header: '펀드(운용)', render: () => DASH, align: 'right', className: 'w-20' },
+    // 집계 지표는 값이 아직 '-'뿐이고 자릿수도 한 자리 수준이라, 우측 정렬보다 가운데가 읽기 쉽다.
+    { key: 'managed_cos', header: '관리기업', render: () => DASH, align: 'center', className: 'w-20' },
+    { key: 'businesses', header: '운영사업', render: () => DASH, align: 'center', className: 'w-20' },
+    { key: 'mna', header: 'M&A', render: () => DASH, align: 'center', className: 'w-20' },
+    { key: 'projects', header: '프로젝트', render: () => DASH, align: 'center', className: 'w-20' },
+    { key: 'fund_managed', header: '펀드(관리)', render: () => DASH, align: 'center', className: 'w-20' },
+    { key: 'fund_operated', header: '펀드(운용)', render: () => DASH, align: 'center', className: 'w-20' },
   ]
 
   if (isLoading || (deptLoading && !depts) || (levelLoading && !levels.length)) return <Spinner />
@@ -147,7 +158,9 @@ export function EmployeeDirectory({
       layout="fixed"
       selectable
       showAuthor={false}
-      updatedAtAlign="right"
+      // 관리 액션이 전부 상세로 옮겨가 빈 열만 남으므로 관리 컬럼 자체를 렌더하지 않는다.
+      showManageColumn={false}
+      updatedAtAlign="center"
       onRowClick={(r) => navigate(`${detailBasePath}/${r.id}`)}
       pagination={{
         page,
@@ -155,23 +168,6 @@ export function EmployeeDirectory({
         total: data?.total ?? 0,
         totalAll: data?.totalAll ?? 0,
         onChange: setPage,
-      }}
-      meta={{
-        // 작성자명 연동 전까지 임시 표기(작성자 컬럼은 showAuthor=false로 숨김).
-        copyText: (r) => {
-          const path = resolveFor(r.department_id)
-          const orgLines = tiers.map((t) => `${t.label}: ${path[t.tier] === '-' ? '' : path[t.tier]}`)
-          return [`이름: ${r.name}`, ...orgLines, `이메일: ${r.email ?? ''}`].join('\n')
-        },
-        // 조회 전용(OFFICE)에서는 비활성화 액션을 제공하지 않는다.
-        onDeactivate: readOnly
-          ? undefined
-          : (r) =>
-              deactivate.mutate(r.id, {
-                onSuccess: () => toast.show('임직원을 비활성화했습니다.', 'success'),
-                onError: () =>
-                  toast.show('비활성화에 실패했습니다. 권한을 확인하세요.', 'danger'),
-              }),
       }}
       emptyText="등록된 임직원이 없습니다."
     />

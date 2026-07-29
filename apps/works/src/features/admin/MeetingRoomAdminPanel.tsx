@@ -1,9 +1,9 @@
 import { Badge, Button, DataTable, Spinner, useToast, type Column } from '@ynarcher/ui'
 import { ImageIcon } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { MeetingBranchBar } from '@/features/admin/MeetingBranchBar'
+import { MeetingPlaceBar } from '@/features/admin/MeetingPlaceBar'
 import { MeetingRoomFormModal } from '@/features/admin/MeetingRoomFormModal'
-import { useBranches } from '@/features/office/branches/branchesApi'
+import { useMeetingPlaces } from '@/features/office/rooms/meetingPlacesApi'
 import { normalizeTime } from '@/features/office/rooms/availability'
 import {
   roomPhotoUrl,
@@ -19,19 +19,22 @@ const KO_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 const weekdayText = (days: number[]) =>
   [...days].sort().map((d) => KO_WEEKDAYS[d]).join('·') || '—'
 
-/** ADMIN 회의실 관리: 지사 선택 + 지사별 회의실 목록·설정(생성/수정/비활성화). */
+/**
+ * ADMIN 회의실 관리: 지점 관리(추가·이름 수정·비활성화) + 지점별 회의실 목록·설정.
+ * 지점 목록은 지사 원장과 연동하지 않는 회의실 전용 목록이다(meeting_places).
+ */
 export function MeetingRoomAdminPanel() {
   const toast = useToast()
-  const branchesQuery = useBranches(true)
-  const branches = useMemo(() => branchesQuery.data ?? [], [branchesQuery.data])
-  const [branchId, setBranchId] = useState<string>()
+  const placesQuery = useMeetingPlaces(true)
+  const places = useMemo(() => placesQuery.data ?? [], [placesQuery.data])
+  const [placeId, setPlaceId] = useState<string>()
 
   useEffect(() => {
-    const first = branches[0]
-    if (!branchId && first) setBranchId(first.id)
-  }, [branchId, branches])
+    const first = places[0]
+    if (!placeId && first) setPlaceId(first.id)
+  }, [placeId, places])
 
-  const roomsQuery = useMeetingRooms(branchId, true)
+  const roomsQuery = useMeetingRooms(placeId, true)
   const rooms = roomsQuery.data ?? []
 
   const createRoom = useCreateRoom()
@@ -122,15 +125,15 @@ export function MeetingRoomAdminPanel() {
 
   return (
     <div className="space-y-5">
-      {branchesQuery.isLoading ? (
+      {placesQuery.isLoading ? (
         <div className="flex justify-center py-10">
           <Spinner />
         </div>
       ) : (
         <>
-          <MeetingBranchBar branches={branches} selectedId={branchId} onSelect={setBranchId} />
+          <MeetingPlaceBar places={places} selectedId={placeId} onSelect={setPlaceId} />
 
-          {branchId && (
+          {placeId && (
             <>
               <div className="flex justify-end">
                 <Button onClick={() => setForm('create')}>회의실 추가</Button>
@@ -154,10 +157,10 @@ export function MeetingRoomAdminPanel() {
         </>
       )}
 
-      {branchId && (
+      {placeId && (
         <MeetingRoomFormModal
           open={form !== null}
-          branchId={branchId}
+          placeId={placeId}
           room={editing}
           busy={busy}
           onClose={() => setForm(null)}

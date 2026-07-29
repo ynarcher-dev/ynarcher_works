@@ -4,7 +4,6 @@ import {
   BriefcaseBusiness,
   CalendarDays,
   ChartNoAxesCombined,
-  ChevronDown,
   ClipboardList,
   Download,
   Folder,
@@ -53,6 +52,13 @@ import {
   Sprout,
   FileText,
   ScanLine,
+  Tag,
+  Map,
+  MapPin,
+  Flag,
+  Milestone,
+  Activity,
+  HandCoins,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import {
@@ -145,12 +151,9 @@ const sidebarIconByTab: Record<string, LucideIcon> = {
   matching: LayoutGrid,
   permissions: LockKeyhole,
   boards: ClipboardList,
-  industries: Factory,
-  fields: Tags,
   positions: UserCog,
   ranks: Medal,
   pay_steps: Layers,
-  categories: Shapes,
   sensitive: EyeOff,
   audit: ReceiptText,
   downloads: Download,
@@ -170,6 +173,24 @@ const sidebarIconByTab: Record<string, LucideIcon> = {
   incubated: Sprout,
   discovered: Rocket,
   archerscan: ScanLine,
+
+  // ADMIN '태그 관리' 그룹(tagConfig.ts의 owner: 'admin'). 한 그룹 안에서 나란히 놓이므로
+  // 다른 메뉴와 겹치더라도 그룹 내부에서는 서로 다른 아이콘을 쓴다.
+  industries: Factory,
+  fields: Tag,
+  categories: Shapes,
+  regions: Map,
+  countries: Flag,
+  investment_stages: Milestone,
+  company_categories: Building2,
+  company_statuses: Activity,
+  investment_methods: HandCoins,
+  locations: MapPin,
+}
+
+/** 하위 항목을 여는 아코디언 그룹 헤더의 아이콘(SubNavItem.groupIconKey). */
+const sidebarGroupIcon: Record<string, LucideIcon> = {
+  tags: Tags,
 }
 
 const sidebarIconByWorkspace: Record<string, LucideIcon> = {
@@ -189,7 +210,6 @@ export function WorksLayout() {
   const location = useLocation()
   const [profileOpen, setProfileOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
 
   // 우측 슬라이드오버 폭 계산용 사이드바 폭(펼침 15rem/접힘 4rem). 패널은 body로 포털되므로
   // 문서 루트에 CSS 변수로 실어 전달한다 — 접힘 상태에서도 "1" 트랙과 어긋나지 않게 한다.
@@ -323,50 +343,23 @@ export function WorksLayout() {
     const children = item.children
     if (!children) return renderLeaf(item)
 
+    // 하위 항목을 가진 메뉴는 접힘/펼침과 무관하게 우측 플라이아웃으로 연다
+    // (게시판·자료실과 같은 조작감). 아래로 펼치면 항목이 늘어날수록 사이드바가 길어진다.
     const anyChildActive = children.some((c) => c.tab === activeTab)
-
-    // 접힘 상태: 아이콘 호버 시 우측 플라이아웃으로 하위 메뉴 노출.
-    if (sidebarCollapsed) {
-      return (
-        <SidebarFlyout
-          key={item.label}
-          icon={<ClipboardList aria-hidden className="size-4" />}
-          label={item.label}
-          active={anyChildActive}
-          collapsed
-          open={openFlyout === item.label}
-          onOpenChange={(next) => toggleFlyout(item.label, next)}
-        >
-          {children.map((c) => renderFlyoutLeaf(c))}
-        </SidebarFlyout>
-      )
-    }
-
-    const open = openGroups[item.label] ?? anyChildActive
+    const GroupIcon =
+      (item.groupIconKey ? sidebarGroupIcon[item.groupIconKey] : undefined) ?? ClipboardList
     return (
-      <div key={item.label}>
-        <SidebarItem
-          icon={<ClipboardList aria-hidden className="size-4" />}
-          label={item.label}
-          collapsed={false}
-          onClick={() =>
-            setOpenGroups((prev) => ({ ...prev, [item.label]: !open }))
-          }
-          trailing={
-            <ChevronDown
-              aria-hidden
-              className={`size-4 text-white/75 transition-transform duration-fast ${
-                open ? 'rotate-180' : ''
-              }`}
-            />
-          }
-        />
-        {open && (
-          <div className="mt-1 space-y-1 pl-3">
-            {children.map((c) => renderLeaf(c))}
-          </div>
-        )}
-      </div>
+      <SidebarFlyout
+        key={item.label}
+        icon={<GroupIcon aria-hidden className="size-4" />}
+        label={item.label}
+        active={anyChildActive}
+        collapsed={sidebarCollapsed}
+        open={openFlyout === item.label}
+        onOpenChange={(next) => toggleFlyout(item.label, next)}
+      >
+        {children.map((c) => renderFlyoutLeaf(c))}
+      </SidebarFlyout>
     )
   }
 

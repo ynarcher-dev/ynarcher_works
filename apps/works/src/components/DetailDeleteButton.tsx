@@ -6,6 +6,11 @@ interface DetailDeleteButtonProps {
   /** 삭제 대상 이름(사유 모달 안내 문구용). */
   name?: string
   /**
+   * 액션 표기(기본 '삭제'). 버튼·확인창·토스트 문구를 모두 이 말로 통일한다.
+   * 임직원처럼 원장에서 '비활성화'로 부르는 대상만 바꾼다.
+   */
+  label?: string
+  /**
    * true(기본)면 사유 입력 모달을, false면 확인창(confirm)을 띄운다.
    * NETWORKS·STARTUP처럼 사유를 기여 로그에 남기는 원장은 true, 사유 인프라가 없는 PROGRAM은 false.
    */
@@ -23,9 +28,11 @@ interface DetailDeleteButtonProps {
  * 상세 페이지 상단바의 '삭제' 액션 — 목록의 관리 컬럼에 있던 비활성화(소프트 삭제)를 상세로 옮긴 것이다.
  * 사유 모달/확인창·진행 상태·성공/실패 토스트를 스스로 소유하고, 실제 삭제와 이동만 상위가 주입한다.
  * 물리 삭제가 아니라 소프트 삭제(원장 트리거가 'deactivated' 기여 로그를 남김)이며, 표기만 '삭제'다.
+ * 표기를 '비활성화'로 부르는 원장(임직원 등)은 `label`로 바꾼다 — 동작은 동일하다.
  */
 export function DetailDeleteButton({
   name,
+  label = '삭제',
   withReason = true,
   onDelete,
   onDeleted,
@@ -38,11 +45,11 @@ export function DetailDeleteButton({
     setBusy(true)
     try {
       await onDelete(reason)
-      toast.show('삭제했습니다.', 'success')
+      toast.show(`${label}했습니다.`, 'success')
       setOpen(false)
       onDeleted?.()
     } catch {
-      toast.show('삭제에 실패했습니다. 권한을 확인하세요.', 'danger')
+      toast.show(`${label}에 실패했습니다. 권한을 확인하세요.`, 'danger')
     } finally {
       setBusy(false)
     }
@@ -55,17 +62,20 @@ export function DetailDeleteButton({
         onClick={() => {
           if (withReason) {
             setOpen(true)
-          } else if (typeof window !== 'undefined' && window.confirm('이 항목을 삭제하시겠습니까?')) {
+          } else if (
+            typeof window !== 'undefined' &&
+            window.confirm(`${name ? `'${name}'` : '이 항목'}을(를) ${label}하시겠습니까?`)
+          ) {
             void run()
           }
         }}
       >
-        삭제
+        {label}
       </Button>
       {withReason && open && (
         <DeactivateReasonModal
           open
-          verb="삭제"
+          verb={label}
           name={name}
           busy={busy}
           onCancel={() => setOpen(false)}

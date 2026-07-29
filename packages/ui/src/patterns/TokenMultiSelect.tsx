@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '../utils/cn'
 import { useDensity, type Density } from '../density'
-import { controlScale, formBaseClass } from '../densityScale'
+import { controlScale, formBaseClass, iconScale } from '../densityScale'
 import { TagChip } from '../components/TagChip'
 
 /** 밀도별 최소 높이 — 공용 Input의 고정 높이(controlScale.height)와 짝을 맞춘 min-height. */
@@ -51,8 +51,39 @@ export interface TokenMultiSelectProps<T> {
   max?: number
   /** 후보 최대 표시 수(기본 8). */
   maxSuggestions?: number
+  /**
+   * 필드 오른쪽에 돋보기 버튼을 달아 검색어 없이도 후보 전체를 펼쳐 고를 수 있게 한다.
+   *
+   * 후보가 원장에서 오는 경우(태그 등) 사용자는 무엇이 있는지 모르는 채로 빈 칸을 마주한다 —
+   * 검색은 이미 아는 것을 빨리 찾는 수단이지 목록을 알려주는 수단이 아니다. 원격 조회형
+   * (`onQueryChange`로 후보를 채우는) 필드에는 켜지 말 것 — 펼칠 전체 목록이 애초에 없다.
+   */
+  browsable?: boolean
   /** 밀도 맥락 강제 지정. 생략하면 부모 Card·DataTable이 내려준 맥락을 따른다(공용 Input과 동일). */
   density?: Density
+}
+
+/**
+ * 돋보기 글리프. packages/ui는 아이콘 패키지에 의존하지 않는 것이 규약이라(IconButton은 앱이
+ * 주입) 여기서는 lucide `search`와 같은 형태를 인라인 SVG로 그린다.
+ */
+function SearchGlyph({ size }: { size: number }) {
+  return (
+    <svg
+      aria-hidden
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="11" cy="11" r="7" />
+      <path d="m21 21-4.3-4.3" />
+    </svg>
+  )
 }
 
 /**
@@ -78,6 +109,7 @@ export function TokenMultiSelect<T>({
   disabled = false,
   max,
   maxSuggestions = 8,
+  browsable = false,
   density,
 }: TokenMultiSelectProps<T>) {
   const d = useDensity(density)
@@ -86,7 +118,10 @@ export function TokenMultiSelect<T>({
   const inputRef = useRef<HTMLInputElement>(null)
   // 후보 드롭다운은 포털(document.body)에 fixed 로 그려 모달 스크롤 컨테이너에 잘리지 않게 한다.
   const fieldRef = useRef<HTMLDivElement>(null)
+  const listRef = useRef<HTMLUListElement>(null)
   const [rect, setRect] = useState<DOMRect | null>(null)
+  // 돋보기로 연 '전체 보기' 상태. 검색 결과와 달리 스스로 닫히지 않으므로 별도 상태로 둔다.
+  const [browsing, setBrowsing] = useState(false)
 
   // 질의를 바꿀 때마다 호출부에 통지한다(비동기 후보 조회를 걸 수 있게).
   const changeQuery = (next: string) => {
@@ -106,10 +141,22 @@ export function TokenMultiSelect<T>({
       .slice(0, maxSuggestions)
   }, [q, options, selectedKeys, getKey, getLabel, getSearchText, maxSuggestions])
 
+  // 돋보기로 펼친 전체 목록 — 검색 결과와 달리 개수를 자르지 않고 드롭다운 안에서 스크롤시킨다.
+  const browseList = useMemo(() => {
+    if (!browsing || q.trim() || !options) return []
+    return options.filter((o) => !selectedKeys.has(getKey(o)))
+  }, [browsing, q, options, selectedKeys, getKey])
+
+  // 드롭다운에 그릴 행. 검색어가 있으면 언제나 검색 결과가 이긴다(돋보기로 펼쳐 둔 상태여도).
+  const rows = q.trim() ? matches : browseList
+
   const add = (item: T) => {
     if (atMax || selectedKeys.has(getKey(item))) return
-    onChange([...selected, item])
+    const next = [...selected, item]
+    onChange(next)
     changeQuery('')
+    // 상한에 닿으면 입력 칸이 사라지므로 펼쳐 둔 목록도 함께 닫는다.
+    if (max != null && next.length >= max) setBrowsing(false)
     inputRef.current?.focus()
   }
 
@@ -136,7 +183,7 @@ export function TokenMultiSelect<T>({
 
   const remove = (key: string) => onChange(selected.filter((s) => getKey(s) !== key))
 
-  const dropdownOpen = matches.length > 0 || showFreeTextRow
+  const dropdownOpen = rows.length > 0 || showFreeTextRow
   const reposition = useCallback(() => {
     if (fieldRef.current) setRect(fieldRef.current.getBoundingClientRect())
   }, [])
@@ -152,8 +199,25 @@ export function TokenMultiSelect<T>({
     }
   }, [dropdownOpen, reposition])
 
+  // 펼친 목록은 스스로 닫히지 않으므로 바깥 클릭으로 닫는다. 드롭다운은 포털이라 필드의
+  // DOM 하위가 아니어서, 두 영역을 각각 확인해야 한다.
+  useEffect(() => {
+    if (!browsing) return
+    const onPointerDown = (e: MouseEvent) => {
+      const t = e.target as Node
+      if (fieldRef.current?.contains(t) || listRef.current?.contains(t)) return
+      setBrowsing(false)
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    return () => document.removeEventListener('mousedown', onPointerDown)
+  }, [browsing])
+
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     const last = selected[selected.length - 1]
+    if (e.key === 'Escape' && browsing) {
+      setBrowsing(false)
+      return
+    }
     if (e.key === 'Backspace' && !q && last) {
       remove(getKey(last))
       return
@@ -214,11 +278,36 @@ export function TokenMultiSelect<T>({
             )}
           />
         )}
+        {browsable && !atMax && !disabled && (
+          // 검색어 없이 후보 전체를 펼치는 버튼. 필드 안 오른쪽 끝에 두어 '이 칸의 목록'임을 드러낸다.
+          <button
+            type="button"
+            // 입력에서 포커스가 빠져나가지 않도록 mousedown을 막는다(칩·드롭다운과 같은 규약).
+            onMouseDown={(ev) => ev.preventDefault()}
+            onClick={() => {
+              changeQuery('')
+              setBrowsing((v) => !v)
+              inputRef.current?.focus()
+            }}
+            aria-label="전체 태그 보기"
+            aria-expanded={browsing}
+            title="전체 태그 보기"
+            className={cn(
+              'ml-auto grid shrink-0 place-items-center rounded-radius-md transition-colors duration-fast',
+              'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10',
+              iconScale[d].box,
+              browsing ? 'text-brand' : 'text-gray-400 hover:text-gray-700',
+            )}
+          >
+            <SearchGlyph size={iconScale[d].glyph} />
+          </button>
+        )}
       </div>
       {dropdownOpen &&
         rect &&
         createPortal(
           <ul
+            ref={listRef}
             // fixed 로 뷰포트 기준 배치 → 모달 overflow 에 잘리지 않는다(모달보다 위 z).
             style={{
               position: 'fixed',
@@ -229,7 +318,7 @@ export function TokenMultiSelect<T>({
             }}
             className="max-h-56 overflow-auto rounded-radius-md border border-gray-200 bg-white shadow-popover"
           >
-          {matches.map((o) => {
+          {rows.map((o) => {
             const meta = getMeta?.(o)
             return (
               <li key={getKey(o)}>

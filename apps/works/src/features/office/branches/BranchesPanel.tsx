@@ -13,12 +13,11 @@ export function BranchesPanel() {
   const branchesQuery = useBranches()
   const branches = branchesQuery.data ?? []
   const { namesOf } = useBranchMemberNames()
-  // 모달은 목록 순서(index)로 연다 — 지사 id로 잡으면 이전·다음 이동에서 위치를 다시 찾아야 한다.
-  const [openIndex, setOpenIndex] = useState<number | null>(null)
-  const current = openIndex !== null ? branches[openIndex] ?? null : null
+  const [current, setCurrent] = useState<Branch | null>(null)
 
   const columns: Column<Branch>[] = [
-    { key: 'name', header: '지사명', primary: true, className: 'w-40', render: (b) => b.name },
+    // 지사명은 '대구 센터/기업부설연구소'처럼 긴 이름이 있어 한 줄에 들어가는 폭을 준다.
+    { key: 'name', header: '지사명', primary: true, className: 'w-56', render: (b) => b.name },
     { key: 'address', header: '주소', render: (b) => b.address ?? '—' },
     {
       key: 'phone',
@@ -43,7 +42,7 @@ export function BranchesPanel() {
           rowKey={(b) => b.id}
           numbered
           standardColumns={false}
-          onRowClick={(b) => setOpenIndex(branches.findIndex((x) => x.id === b.id))}
+          onRowClick={(b) => setCurrent(b)}
           emptyText="등록된 지사가 없습니다."
         />
       )}
@@ -51,17 +50,7 @@ export function BranchesPanel() {
       <BranchDetailModal
         branch={current}
         memberNames={current ? namesOf(current.id) : []}
-        index={(openIndex ?? 0) + 1}
-        total={branches.length}
-        onClose={() => setOpenIndex(null)}
-        onPrev={
-          openIndex !== null && openIndex > 0 ? () => setOpenIndex(openIndex - 1) : undefined
-        }
-        onNext={
-          openIndex !== null && openIndex < branches.length - 1
-            ? () => setOpenIndex(openIndex + 1)
-            : undefined
-        }
+        onClose={() => setCurrent(null)}
       />
     </div>
   )
