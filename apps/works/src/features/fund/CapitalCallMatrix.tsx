@@ -5,12 +5,19 @@ import { CapitalCallCell, cellTint } from '@/features/fund/CapitalCallCell'
 import type { CapitalCallDraft } from '@/features/fund/capitalCallDraft'
 import type { CapitalCall, FundLp } from '@/features/fund/hooks'
 
-/** 푸터 합계 한 줄 — 라벨과 값을 같은 크기로 두고 색·굵기로만 갈라 위계를 만든다. */
-function TotalLine({ label, value }: { label: string; value: number }) {
+/**
+ * 합계 한 줄 — 라벨과 값을 같은 크기로 두고 색·굵기로만 갈라 위계를 만든다.
+ * 금액만 있고 라벨이 없으면 그 숫자가 요청인지 납입인지 읽히지 않으므로 항상 라벨을 붙인다.
+ */
+function TotalLine({ label, value, tone }: { label: string; value: number; tone?: 'brand' }) {
   return (
     <div className="flex items-baseline justify-between gap-2">
       <span className={tableText.meta}>{label}</span>
-      <span className="font-semibold tabular-nums text-gray-900">{value.toLocaleString()}</span>
+      <span
+        className={`font-semibold tabular-nums ${tone === 'brand' ? 'text-brand' : 'text-gray-900'}`}
+      >
+        {value.toLocaleString()}
+      </span>
     </div>
   )
 }
@@ -100,8 +107,10 @@ export function CapitalCallMatrix({
                   </div>
                 </th>
               ))}
-              <th className={`border-l border-gray-200 px-3 py-2 text-right ${tableText.head}`}>
-                납입 합계
+              <th
+                className={`min-w-[11.5rem] border-l border-gray-200 px-3 py-2 text-right ${tableText.head}`}
+              >
+                LP 합계
               </th>
             </tr>
           </thead>
@@ -130,8 +139,10 @@ export function CapitalCallMatrix({
                     </td>
                   )
                 })}
-                <td className="border-l border-gray-200 px-3 py-1.5 text-right text-caption font-semibold tabular-nums text-brand">
-                  {draft.lpPaid(lp.id).toLocaleString()}
+                {/* LP별 누적 — 요청/납입 두 축을 모두 라벨과 함께 적는다. */}
+                <td className="border-l border-gray-200 px-3 py-1.5 text-caption">
+                  <TotalLine label="요청금액 합계" value={draft.lpTotals(lp.id).requested} />
+                  <TotalLine label="납입금액 합계" value={draft.lpTotals(lp.id).paid} tone="brand" />
                 </td>
               </tr>
             ))}
@@ -149,24 +160,22 @@ export function CapitalCallMatrix({
                 const t = draft.callTotals[call.id] ?? { requested: 0, paid: 0 }
                 return (
                   <td key={call.id} className="border-l border-gray-100 px-2 py-2">
-                    <TotalLine label="납입" value={t.paid} />
-                    <TotalLine label="요청" value={t.requested} />
+                    <TotalLine label="요청금액 합계" value={t.requested} />
+                    <TotalLine label="납입금액 합계" value={t.paid} />
                   </td>
                 )
               })}
-              <td className="border-l border-gray-200 px-3 py-2 text-right font-semibold tabular-nums text-brand">
-                {draft.totals.paid.toLocaleString()}
+              {/* 오른쪽 아래 모서리 = 전 차수·전 LP 총계. 상단 요약 타일과 같은 값이다. */}
+              <td className="border-l border-gray-200 px-3 py-2">
+                <TotalLine label="요청금액 합계" value={draft.totals.requested} />
+                <TotalLine label="납입금액 합계" value={draft.totals.paid} tone="brand" />
               </td>
             </tr>
           </tfoot>
         </table>
       </div>
 
-      <div className="flex items-center justify-between">
-        <p className={tableText.meta}>
-          셀에 요청액을 입력하고 LP마다 상태를 고르세요. 저장하면 실 납입액·실출자금액과 차수 상태에
-          반영됩니다.
-        </p>
+      <div className="flex items-center justify-end">
         <Button onClick={() => void onSave()} disabled={draft.dirtyCount === 0 || draft.saving}>
           납입 현황 저장
         </Button>

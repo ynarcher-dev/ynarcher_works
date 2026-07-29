@@ -41,8 +41,8 @@ export interface CapitalCallDraft {
   setCell: (callId: string, lpId: string, patch: Partial<CapitalCallCellValue>) => void
   /** 차수별 요청/납입 합계(푸터). */
   callTotals: Record<string, { requested: number; paid: number }>
-  /** LP별 납입 합계(오른쪽 열). */
-  lpPaid: (lpId: string) => number
+  /** LP별 요청·납입 합계(오른쪽 열). */
+  lpTotals: (lpId: string) => { requested: number; paid: number }
   /** 상단 요약 타일의 4개 지표. 표와 같은 초안에서 계산해 둘이 갈라지지 않는다. */
   totals: { commitment: number; requested: number; paid: number; unpaid: number; rate: string }
   dirtyCount: number
@@ -113,9 +113,9 @@ export function useCapitalCallDraft(
   }
 
   // 차수별·전체 합계를 한 번에 센다(같은 순회 결과를 요약 타일과 푸터가 나눠 쓴다).
-  const { callTotals, lpPaidMap, grand } = useMemo(() => {
+  const { callTotals, lpTotalsMap, grand } = useMemo(() => {
     const byCall: Record<string, { requested: number; paid: number }> = {}
-    const byLp: Record<string, number> = {}
+    const byLp: Record<string, { requested: number; paid: number }> = {}
     let requested = 0
     let paid = 0
     for (const call of calls) {
@@ -124,17 +124,19 @@ export function useCapitalCallDraft(
       for (const lp of lps) {
         const c = draft[call.id]?.[lp.id] ?? EMPTY_CELL
         const r = toNum(c.requested)
+        const row = (byLp[lp.id] ??= { requested: 0, paid: 0 })
         callRequested += r
+        row.requested += r
         if (c.status === 'PAID') {
           callPaid += r
-          byLp[lp.id] = (byLp[lp.id] ?? 0) + r
+          row.paid += r
         }
       }
       byCall[call.id] = { requested: callRequested, paid: callPaid }
       requested += callRequested
       paid += callPaid
     }
-    return { callTotals: byCall, lpPaidMap: byLp, grand: { requested, paid } }
+    return { callTotals: byCall, lpTotalsMap: byLp, grand: { requested, paid } }
   }, [draft, calls, lps])
 
   const commitment = useMemo(
@@ -161,7 +163,7 @@ export function useCapitalCallDraft(
     cellOf,
     setCell,
     callTotals,
-    lpPaid: (lpId: string) => lpPaidMap[lpId] ?? 0,
+    lpTotals: (lpId: string) => lpTotalsMap[lpId] ?? { requested: 0, paid: 0 },
     totals: {
       commitment,
       requested: grand.requested,
