@@ -245,11 +245,23 @@ export function useUpdateCapitalCall(fundId: string) {
   })
 }
 
-/** 캐피탈 콜 차수 삭제(soft delete). */
+/**
+ * 캐피탈 콜 차수 삭제 — 납입 행을 먼저 지우고 차수를 soft delete 한다.
+ *
+ * 차수만 숨기면 그 차수의 납입 행이 남아 `fund_lps.paid_amount`·`funds.실출자금액`에는 계속
+ * 잡힌다. 화면에서 사라진 돈이 집계에는 남는 상태라 확인창 문구("납입 현황도 함께 사라집니다")와
+ * 어긋난다. 납입 행은 순수 배정성 데이터라 원자 교체 RPC도 hard DELETE 하므로 여기서도 지운다
+ * (삭제 즉시 집계 트리거가 파생값을 되돌린다).
+ */
 export function useDeleteCapitalCall(fundId: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (id: string) => {
+      const payments = await supabase
+        .from('capital_call_payments')
+        .delete()
+        .eq('capital_call_id', id)
+      if (payments.error) throw payments.error
       const { error } = await supabase
         .from('capital_calls')
         .update({ deleted_at: new Date().toISOString() })
@@ -258,6 +270,7 @@ export function useDeleteCapitalCall(fundId: string) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['fund', 'calls', fundId] })
+      qc.invalidateQueries({ queryKey: ['fund', 'call-payments-all', fundId] })
       qc.invalidateQueries({ queryKey: ['fund', 'lps', fundId] })
       qc.invalidateQueries({ queryKey: ['fund', 'one', fundId] })
     },

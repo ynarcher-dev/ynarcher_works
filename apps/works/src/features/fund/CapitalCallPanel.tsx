@@ -1,13 +1,10 @@
 import { Button, CardShell, ExpandToggleButton, useToast } from '@ynarcher/ui'
 import { Maximize2, Minimize2, Plus } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { CapitalCallFormModal } from '@/features/fund/CapitalCallFormModal'
 import { CapitalCallMatrix } from '@/features/fund/CapitalCallMatrix'
-import {
-  useDeleteCapitalCall,
-  type CapitalCall,
-  type FundLp,
-} from '@/features/fund/hooks'
+import { useCapitalCallDraft } from '@/features/fund/capitalCallDraft'
+import { useDeleteCapitalCall, type CapitalCall, type FundLp } from '@/features/fund/hooks'
 
 /** 상단 요약 타일 — 라벨 한 줄, 값 한 줄. 타일마다 지표는 하나만 싣는다. */
 function Summary({ label, value }: { label: string; value: string }) {
@@ -20,9 +17,10 @@ function Summary({ label, value }: { label: string; value: string }) {
 }
 
 /**
- * 캐피탈 콜 탭 — 상단 요약 타일 + 차수×LP 매트릭스. 상단 요약은 출자자 원장에서 파생된
- * 총 약정·총 실납입·납입률·미납 잔액이며, 캐피탈 콜에서 LP 상태를 '납입완료'로 둔 요청액이
- * fund_lps.paid_amount 로 집계된 결과가 그대로 반영된다.
+ * 캐피탈 콜 탭 — 상단 요약 타일 + 차수×LP 매트릭스.
+ * 요약 타일과 표는 `useCapitalCallDraft` 하나에서 계산된 같은 숫자를 본다(§1.3 산식) —
+ * 총 약정액 = Σ 약정액, 총 실 납입액 = Σ 요청액(상태 납입완료), 납입률 = 납입 ÷ 약정,
+ * 미납 잔액 = 약정 − 납입. 저장하면 같은 값이 fund_lps.paid_amount·실출자금액으로 파생된다.
  * (근거: docs_planning/3_5_workspace_fund.md §1.3)
  */
 export function CapitalCallPanel({
@@ -38,17 +36,12 @@ export function CapitalCallPanel({
 }) {
   const toast = useToast()
   const del = useDeleteCapitalCall(fundId)
+  const draft = useCapitalCallDraft(fundId, calls, lps)
   const [modal, setModal] = useState<{ open: boolean; editing: CapitalCall | null }>({
     open: false,
     editing: null,
   })
   const [expanded, setExpanded] = useState(false)
-
-  const totals = useMemo(() => {
-    const commitment = lps.reduce((a, l) => a + l.commitment_amount, 0)
-    const paid = lps.reduce((a, l) => a + l.paid_amount, 0)
-    return { commitment, paid, rate: commitment > 0 ? Math.round((paid / commitment) * 100) : 0 }
-  }, [lps])
 
   const nextCallNo = calls.reduce((max, c) => Math.max(max, c.call_no), 0) + 1
 
@@ -64,16 +57,12 @@ export function CapitalCallPanel({
     }
   }
 
-  // 출자자 연동 요약: 총 약정 대비 캐피탈 콜로 집계된 실 납입. 납입률도 제 타일을 가져 모두 두 줄이다.
   const summary = (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-      <Summary label="총 약정액" value={totals.commitment.toLocaleString()} />
-      <Summary label="총 실 납입액" value={totals.paid.toLocaleString()} />
-      <Summary label="납입률" value={`${totals.rate}%`} />
-      <Summary
-        label="미납 잔액"
-        value={Math.max(0, totals.commitment - totals.paid).toLocaleString()}
-      />
+      <Summary label="총 약정액" value={draft.totals.commitment.toLocaleString()} />
+      <Summary label="총 실 납입액" value={draft.totals.paid.toLocaleString()} />
+      <Summary label="납입률" value={draft.totals.rate} />
+      <Summary label="미납 잔액" value={draft.totals.unpaid.toLocaleString()} />
     </div>
   )
 
@@ -117,16 +106,12 @@ export function CapitalCallPanel({
             {actions}
           </div>
 
-          {/*
-            매트릭스는 항상 마운트해 두고 확대 여부만 내려준다 — 확대/축소 때 컴포넌트가 다시
-            마운트되면 저장 전 초안(요청액·상태)이 날아간다.
-          */}
           {empty ?? (
             <CapitalCallMatrix
-              fundId={fundId}
               fundName={fundName}
               calls={calls}
               lps={lps}
+              draft={draft}
               onEditCall={(c) => setModal({ open: true, editing: c })}
               onDeleteCall={onDelete}
               expanded={expanded}

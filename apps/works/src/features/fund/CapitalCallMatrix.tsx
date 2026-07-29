@@ -1,42 +1,16 @@
 import { Badge, Button, FullscreenPanel, IconButton, tableText, useToast } from '@ynarcher/ui'
 import { Pencil, Trash2 } from 'lucide-react'
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { CapitalCallCell, cellTint } from '@/features/fund/CapitalCallCell'
-import {
-  useFundCapitalCallPayments,
-  useSetCapitalCallPayments,
-  type CapitalCall,
-  type FundLp,
-} from '@/features/fund/hooks'
-
-/** 숫자만 남겨 천단위 콤마. */
-function formatThousands(s: string): string {
-  return s.replace(/[^\d]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-}
-/** 콤마 제거 후 숫자(빈값·실패=0). */
-function toNum(s: string): number {
-  const n = Number(s.replace(/,/g, ''))
-  return Number.isFinite(n) ? n : 0
-}
-
-type Cell = { requested: string; status: string }
-/** draft[callId][lpId] = 셀 초안. */
-type Draft = Record<string, Record<string, Cell>>
-
-const EMPTY_CELL: Cell = { requested: '', status: 'SCHEDULED' }
+import type { CapitalCallDraft } from '@/features/fund/capitalCallDraft'
+import type { CapitalCall, FundLp } from '@/features/fund/hooks'
 
 /** 푸터 합계 한 줄 — 라벨과 값을 같은 크기로 두고 색·굵기로만 갈라 위계를 만든다. */
-function TotalLine({ label, value, tone }: { label: string; value: number; tone?: 'brand' }) {
+function TotalLine({ label, value }: { label: string; value: number }) {
   return (
     <div className="flex items-baseline justify-between gap-2">
       <span className={tableText.meta}>{label}</span>
-      <span
-        className={`tabular-nums ${
-          tone === 'brand' ? 'font-semibold text-brand' : 'font-semibold text-gray-900'
-        }`}
-      >
-        {value.toLocaleString()}
-      </span>
+      <span className="font-semibold tabular-nums text-gray-900">{value.toLocaleString()}</span>
     </div>
   )
 }
@@ -44,15 +18,15 @@ function TotalLine({ label, value, tone }: { label: string; value: number; tone?
 /**
  * 캐피탈 콜 매트릭스 — 가로축 N차 · 세로축 LP. 각 셀은 그 차수에 그 LP가 낼 요청액 +
  * 그 LP의 상태(예정/통지/납입완료/연체)다. "누가 몇 차를 얼마 냈나"가 한 화면에 보인다.
- * 저장하면 변경된 차수만 set_capital_call_payments RPC로 원자 교체하고, DB 트리거가
- * 납입액·차수 상태·fund_lps.paid_amount·funds 실출자금액을 파생 갱신한다.
+ * 편집 상태와 합계는 모두 `useCapitalCallDraft`가 소유하고 이 컴포넌트는 그리기만 한다 —
+ * 상단 요약 타일과 이 표가 같은 숫자를 보게 하는 것이 목적이다.
  * (근거: docs_planning/3_5_workspace_fund.md §1.3)
  */
 export function CapitalCallMatrix({
-  fundId,
   fundName,
   calls,
   lps,
+  draft,
   onEditCall,
   onDeleteCall,
   expanded = false,
@@ -60,10 +34,10 @@ export function CapitalCallMatrix({
   headerActions,
   summary,
 }: {
-  fundId: string
   fundName: string
   calls: CapitalCall[]
   lps: FundLp[]
+  draft: CapitalCallDraft
   onEditCall: (call: CapitalCall) => void
   onDeleteCall: (call: CapitalCall) => void
   /** 전체화면 확대 여부(상태는 부모가 소유 — 토글 버튼이 '차수 추가' 옆에 있다). */
@@ -75,87 +49,11 @@ export function CapitalCallMatrix({
   summary?: ReactNode
 }) {
   const toast = useToast()
-  const { data: payments } = useFundCapitalCallPayments(fundId)
-  const save = useSetCapitalCallPayments(fundId)
-
-  const [draft, setDraft] = useState<Draft>({})
-  const [dirty, setDirty] = useState<Set<string>>(new Set())
-
-  // 서버값(차수×LP)으로 초안을 시드한다. 저장 후 재조회되면 다시 맞춘다.
-  useEffect(() => {
-    if (!payments) return
-    const byKey = new Map(payments.map((p) => [`${p.capital_call_id}:${p.lp_id}`, p]))
-    const next: Draft = {}
-    for (const call of calls) {
-      const col: Record<string, Cell> = {}
-      for (const lp of lps) {
-        const p = byKey.get(`${call.id}:${lp.id}`)
-        col[lp.id] = {
-          requested: p && p.requested_amount > 0 ? formatThousands(String(p.requested_amount)) : '',
-          status: p?.status ?? 'SCHEDULED',
-        }
-      }
-      next[call.id] = col
-    }
-    setDraft(next)
-    setDirty(new Set())
-  }, [payments, calls, lps])
-
-  const setCell = (callId: string, lpId: string, patch: Partial<Cell>) => {
-    const normalized: Partial<Cell> =
-      patch.requested === undefined ? patch : { ...patch, requested: formatThousands(patch.requested) }
-    setDraft((prev) => ({
-      ...prev,
-      [callId]: {
-        ...prev[callId],
-        [lpId]: { ...EMPTY_CELL, ...prev[callId]?.[lpId], ...normalized },
-      },
-    }))
-    setDirty((prev) => new Set(prev).add(callId))
-  }
-
-  const cellOf = (callId: string, lpId: string): Cell => draft[callId]?.[lpId] ?? EMPTY_CELL
-
-  // 차수별 요청/납입 합계(푸터). 납입은 상태가 PAID인 셀의 요청액만 센다.
-  const callTotals = useMemo(() => {
-    const m: Record<string, { requested: number; paid: number }> = {}
-    for (const call of calls) {
-      let requested = 0
-      let paid = 0
-      for (const lp of lps) {
-        const c = cellOf(call.id, lp.id)
-        const r = toNum(c.requested)
-        requested += r
-        if (c.status === 'PAID') paid += r
-      }
-      m[call.id] = { requested, paid }
-    }
-    return m
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft, calls, lps])
-
-  // LP별 납입 합계(오른쪽 열, 초안 기준 실시간).
-  const lpPaid = (lpId: string) =>
-    calls.reduce((sum, call) => {
-      const c = cellOf(call.id, lpId)
-      return sum + (c.status === 'PAID' ? toNum(c.requested) : 0)
-    }, 0)
 
   const onSave = async () => {
-    const targets = calls.filter((c) => dirty.has(c.id))
-    if (targets.length === 0) return
     try {
-      for (const call of targets) {
-        const rows = lps
-          .map((lp) => {
-            const c = cellOf(call.id, lp.id)
-            return { lp_id: lp.id, requested_amount: toNum(c.requested), status: c.status }
-          })
-          .filter((r) => r.requested_amount > 0 || r.status !== 'SCHEDULED')
-        await save.mutateAsync({ callId: call.id, rows })
-      }
+      await draft.save()
       toast.show('납입 현황을 저장했습니다.', 'success')
-      setDirty(new Set())
     } catch {
       toast.show('저장에 실패했습니다. 권한을 확인하세요.', 'danger')
     }
@@ -217,7 +115,7 @@ export function CapitalCallMatrix({
                   {lp.commitment_amount.toLocaleString()}
                 </td>
                 {calls.map((call) => {
-                  const c = cellOf(call.id, lp.id)
+                  const c = draft.cellOf(call.id, lp.id)
                   return (
                     <td
                       key={call.id}
@@ -227,13 +125,13 @@ export function CapitalCallMatrix({
                         requested={c.requested}
                         status={c.status}
                         ariaLabel={`${lp.name} ${call.call_no}차`}
-                        onChange={(patch) => setCell(call.id, lp.id, patch)}
+                        onChange={(patch) => draft.setCell(call.id, lp.id, patch)}
                       />
                     </td>
                   )
                 })}
                 <td className="border-l border-gray-200 px-3 py-1.5 text-right text-caption font-semibold tabular-nums text-brand">
-                  {lpPaid(lp.id).toLocaleString()}
+                  {draft.lpPaid(lp.id).toLocaleString()}
                 </td>
               </tr>
             ))}
@@ -245,10 +143,10 @@ export function CapitalCallMatrix({
                 차수 합계
               </td>
               <td className={`px-3 py-2 text-right tabular-nums ${tableText.meta}`}>
-                {lps.reduce((a, l) => a + l.commitment_amount, 0).toLocaleString()}
+                {draft.totals.commitment.toLocaleString()}
               </td>
               {calls.map((call) => {
-                const t = callTotals[call.id] ?? { requested: 0, paid: 0 }
+                const t = draft.callTotals[call.id] ?? { requested: 0, paid: 0 }
                 return (
                   <td key={call.id} className="border-l border-gray-100 px-2 py-2">
                     <TotalLine label="납입" value={t.paid} />
@@ -257,7 +155,7 @@ export function CapitalCallMatrix({
                 )
               })}
               <td className="border-l border-gray-200 px-3 py-2 text-right font-semibold tabular-nums text-brand">
-                {lps.reduce((a, l) => a + lpPaid(l.id), 0).toLocaleString()}
+                {draft.totals.paid.toLocaleString()}
               </td>
             </tr>
           </tfoot>
@@ -269,14 +167,14 @@ export function CapitalCallMatrix({
           셀에 요청액을 입력하고 LP마다 상태를 고르세요. 저장하면 실 납입액·실출자금액과 차수 상태에
           반영됩니다.
         </p>
-        <Button onClick={() => void onSave()} disabled={dirty.size === 0 || save.isPending}>
+        <Button onClick={() => void onSave()} disabled={draft.dirtyCount === 0 || draft.saving}>
           납입 현황 저장
         </Button>
       </div>
     </div>
   )
 
-  // 확대보기: 카드 밖 전체 화면으로 펼친다. 이 컴포넌트 자체는 계속 마운트돼 있어 저장 전 초안이 유지된다.
+  // 확대보기: 카드 밖 전체 화면으로 펼친다. 초안은 부모(훅)가 들고 있어 확대/축소로 사라지지 않는다.
   if (expanded) {
     return (
       <FullscreenPanel
