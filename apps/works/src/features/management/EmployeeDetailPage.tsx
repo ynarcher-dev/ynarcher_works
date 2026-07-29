@@ -14,6 +14,7 @@ import { DetailPanelCard } from '@/features/networks/DetailPanelCard'
 import { MiniPager, usePaged } from '@/features/networks/MiniPager'
 import { ROLE_LABELS } from '@/features/management/config'
 import { useDepartments, useEmployee } from '@/features/management/hooks'
+import { useEmployeeBranchNames } from '@/features/office/branches/branchMembers'
 
 /**
  * 임직원과 상호 연결될 관계형 도메인 카드 목록(추후 개발 데이터와 연동).
@@ -92,6 +93,8 @@ export function EmployeeDetailPage({
   const [editing, setEditing] = useState(false)
   const { data: emp, isLoading } = useEmployee(id)
   const { data: depts } = useDepartments()
+  // 지사는 지사 원장(branch_members)에서 파생한다 — ADMIN '지사 관리'에서 배정하면 여기에 그대로 뜬다.
+  const { branchNamesOf } = useEmployeeBranchNames()
 
   if (isLoading) return <Spinner />
   if (!emp) return <Banner tone="warning">임직원 정보를 찾을 수 없습니다.</Banner>
@@ -121,6 +124,7 @@ export function EmployeeDetailPage({
   const note = str(profile.note)
   // 이름 옆 배지는 관리자(super_admin)만 표기한다 — 나머지 역할은 부서·직책으로 이미 드러난다.
   const adminLabel = emp.user_type === 'super_admin' ? ROLE_LABELS[emp.user_type] : ''
+  const branchLabel = branchNamesOf(emp.id).join(', ')
   const email = show.email ? emp.email ?? '-' : maskEmail(emp.email ?? null)
   const phone = show.phone ? emp.phone ?? '-' : maskPhone(emp.phone ?? null)
 
@@ -163,6 +167,7 @@ export function EmployeeDetailPage({
 
               <div className="mt-5 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-3">
                 <Info label="회사" value={company || '-'} />
+                <Info label="지사" value={branchLabel || '-'} />
                 <Info label="직책" value={position || '-'} />
                 <Info label="직급" value={rank || '-'} />
                 <Info label="호봉" value={payStep || '-'} />
