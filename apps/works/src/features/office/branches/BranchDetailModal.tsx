@@ -31,17 +31,23 @@ export function BranchDetailModal({ branch, members, onClose }: Props) {
         <InfoField label="지사명" value={branch.name} />
         <InfoField label="주소" value={branch.address} />
         <InfoField label="전화번호" value={branch.phone} />
-        {/* 이름과 조직관리에서 배치된 자리를 한 사람 한 줄로 세운다(태그 나열은 자리 정보를 담지 못한다). */}
+        {/*
+          이름과 조직관리에서 배치된 자리를 한 사람 한 줄로 세운다(태그 나열은 자리 정보를 담지 못한다).
+          자리는 직접 소속만이 아니라 최상위 조직까지의 경로 전체다 — 레벨 수가 조직관리에서
+          동적으로 늘고 줄기 때문에 몇 단이든 그대로 따라 붙는다.
+        */}
         <InfoField
           label="상주인력"
           value={
             members.length > 0 ? (
               <span className="flex flex-col gap-1">
                 {members.map((m) => (
-                  <span key={m.id} className="flex items-baseline gap-2">
+                  <span key={m.id} className="flex flex-wrap items-baseline gap-x-2">
                     <span className="font-medium text-gray-900">{m.name}</span>
                     <span className="text-gray-500">
-                      {[m.deptName, m.levelName].filter(Boolean).join(' · ') || '조직 미배치'}
+                      {m.orgPath.length > 0
+                        ? m.orgPath.map((step) => step.name).join(' · ')
+                        : '조직 미배치'}
                     </span>
                   </span>
                 ))}

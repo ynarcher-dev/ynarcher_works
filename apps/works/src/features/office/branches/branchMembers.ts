@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { useEmployees } from '@/features/hub/hooks'
 import { useDepartments, useOrgLevels } from '@/features/management/orgHooks'
+import { ancestorPath, toNodes } from '@/features/management/panels/departmentsMock'
 import { useBranchMembers, useBranches } from '@/features/office/branches/branchesApi'
 
 /**
@@ -35,20 +36,29 @@ export function useBranchMemberNames() {
   return { namesOf, idsOf, isLoading: membersQuery.isLoading }
 }
 
-/** 상주인력 1명의 표기 단위 — 이름과 조직관리에서 배치된 자리. */
+/** 조직 경로 한 마디(상위→하위 중 하나). */
+export interface BranchMemberOrgStep {
+  id: string
+  name: string
+  /** 그 조직의 레벨명(소속·본부·그룹 등). 레벨 미지정이면 null. */
+  levelName: string | null
+}
+
+/** 상주인력 1명의 표기 단위 — 이름과 조직관리에서 배치된 자리(루트→소속 전체 경로). */
 export interface BranchMemberEntry {
   id: string
   name: string
-  /** 배치된 조직명(부서). 아직 배치 전이면 null. */
-  deptName: string | null
-  /** 그 조직의 레벨명(본부·그룹 등). */
-  levelName: string | null
+  /** 최상위 조직부터 직접 소속까지. 아직 배치 전이면 빈 배열. */
+  orgPath: BranchMemberOrgStep[]
 }
 
 /**
  * 상주인력을 "이름 + 조직관리에서 배치된 자리"로 읽는 훅.
  * 자리는 임직원 원장에 따로 적지 않고 조직관리(users.department_id → departments → org_levels)에서
  * 파생한다 — 조직 개편으로 배치가 바뀌면 지사 표기도 자동으로 따라간다.
+ * 레벨 수는 조직관리에서 동적으로 늘고 줄기 때문에 직접 소속만 찍지 않고 루트까지의 조상 경로를
+ * 통째로 만든다(예: 와이앤아처 · 지원본부 · 경영지원2실). 인사 미노출(hr_hidden) 조직은
+ * 인사관리 컬럼과 같은 기준으로 경로에서 건너뛴다.
  * 부서·레벨은 오늘의 유효 조직 버전 스코프다(useDepartments/useOrgLevels 기본값).
  */
 export function useBranchMemberEntries() {
@@ -61,10 +71,7 @@ export function useBranchMemberEntries() {
     () => new Map((employees ?? []).map((e) => [e.id, e] as const)),
     [employees],
   )
-  const deptById = useMemo(
-    () => new Map((departments ?? []).map((d) => [d.id, d] as const)),
-    [departments],
-  )
+  const nodes = useMemo(() => toNodes(departments ?? []), [departments])
   const levelNameById = useMemo(
     () => new Map((levels ?? []).map((l) => [l.id, l.name] as const)),
     [levels],
@@ -75,17 +82,22 @@ export function useBranchMemberEntries() {
       (membersQuery.data?.get(branchId) ?? []).flatMap((userId) => {
         const employee = employeeById.get(userId)
         if (!employee) return [] // 조회 불가한 계정은 표기에서 제외
-        const dept = employee.department_id ? deptById.get(employee.department_id) ?? null : null
+        const path = employee.department_id ? ancestorPath(nodes, employee.department_id) : []
         return [
           {
             id: userId,
             name: employee.name,
-            deptName: dept?.name ?? null,
-            levelName: dept?.level_id ? levelNameById.get(dept.level_id) ?? null : null,
+            orgPath: path
+              .filter((n) => !n.hrHidden)
+              .map((n) => ({
+                id: n.id,
+                name: n.name,
+                levelName: levelNameById.get(n.levelId) ?? null,
+              })),
           },
         ]
       }),
-    [membersQuery.data, employeeById, deptById, levelNameById],
+    [membersQuery.data, employeeById, nodes, levelNameById],
   )
 
   return { entriesOf, isLoading: membersQuery.isLoading }
