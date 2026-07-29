@@ -56,6 +56,20 @@ export const FUND_PURPOSE_KIND_LABEL: Record<string, string> = {
   SPECIAL: '특수목적',
 }
 
+/** 조합원유형(fund_lp_type enum) 한글 라벨. 근거: 3_5_workspace_fund.md §2.2 */
+export const FUND_LP_TYPE_LABEL: Record<string, string> = {
+  GP: '업무집행(GP)',
+  LIMITED: '유한책임(LP)',
+  SPECIAL: '특별',
+}
+
+/** GP는 운용사 자기 출자분이라 눈에 걸리게 두고, 나머지는 배경으로 물러난다. */
+export const FUND_LP_TYPE_TONE: Record<string, 'neutral' | 'success' | 'warning' | 'info' | 'danger'> = {
+  GP: 'info',
+  LIMITED: 'neutral',
+  SPECIAL: 'warning',
+}
+
 /**
  * 캐피탈 콜 상태(capital_call_status enum) 한글 라벨. 근거: 3_5_workspace_fund.md §1.3
  * 상태의 소유자는 LP 행(capital_call_payments.status)이고, 차수 상태는 그 분포에서 파생된다.
@@ -80,6 +94,7 @@ export const CAPITAL_CALL_STATUS_TONE: Record<string, 'neutral' | 'success' | 'w
 const toOptions = (m: Record<string, string>) =>
   Object.entries(m).map(([value, label]) => ({ value, label }))
 export const CAPITAL_CALL_STATUS_OPTIONS = toOptions(CAPITAL_CALL_STATUS_LABEL)
+export const FUND_LP_TYPE_OPTIONS = toOptions(FUND_LP_TYPE_LABEL)
 
 /**
  * LP 한 명에게 붙일 수 있는 상태. 일부납입(PARTIALLY_PAID)은 "여럿 중 일부만 냈다"는 차수 롤업

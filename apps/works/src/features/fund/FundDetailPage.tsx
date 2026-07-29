@@ -4,14 +4,12 @@ import {
   Banner,
   Button,
   CardShell,
-  DataTable,
   DensityProvider,
   InfoField,
   Spinner,
   Tabs,
   useToast,
   type BadgeTone,
-  type Column,
 } from '@ynarcher/ui'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -22,8 +20,8 @@ import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { RelatedApprovalPanel } from '@/features/program/detail/RelatedApprovalPanel'
 import { RelatedMinutesPanel } from '@/features/office/minutes/RelatedMinutesPanel'
 import { CapitalCallPanel } from '@/features/fund/CapitalCallPanel'
-import { DonutChart } from '@/features/fund/DonutChart'
 import { FundForm } from '@/features/fund/FundForm'
+import { FundLpPanel } from '@/features/fund/FundLpPanel'
 import { FundPurposeProgress } from '@/features/fund/FundPurposeProgress'
 import { InvestmentFormModal } from '@/features/fund/InvestmentFormModal'
 import { PortfolioBoardCard } from '@/features/fund/PortfolioBoardCard'
@@ -50,49 +48,12 @@ import {
   useFundLps,
   useFundPurposes,
   useInvestments,
-  type FundLp,
   type Investment,
 } from '@/features/fund/hooks'
 
 const Info = InfoField
 
 const strategyTone: Record<string, BadgeTone> = { AC: 'info', VC: 'success', PE: 'warning', ETC: 'neutral' }
-
-const lpColumns: Column<FundLp>[] = [
-  { key: 'name', header: 'LP명', primary: true, render: (r) => r.name },
-  {
-    key: 'commitment_amount',
-    header: '약정액',
-    align: 'right',
-    numeric: true,
-    render: (r) => Number(r.commitment_amount).toLocaleString(),
-  },
-  {
-    key: 'ownership_pct',
-    header: '지분율',
-    align: 'right',
-    numeric: true,
-    render: (r) => (r.ownership_pct == null ? '-' : `${r.ownership_pct}%`),
-  },
-  {
-    // 납입액·납입률은 캐피탈 콜에서 집계된 파생값(fund_lps.paid_amount).
-    key: 'paid_amount',
-    header: '납입액',
-    align: 'right',
-    numeric: true,
-    render: (r) => Number(r.paid_amount).toLocaleString(),
-  },
-  {
-    key: 'paid_pct',
-    header: '납입률',
-    align: 'right',
-    numeric: true,
-    render: (r) =>
-      r.commitment_amount > 0
-        ? `${Math.round((r.paid_amount / r.commitment_amount) * 100)}%`
-        : '-',
-  },
-]
 
 type DetailTab = 'overview' | 'portfolio' | 'lp' | 'calls' | 'financials' | 'reports'
 // 구분선(divider) = 열람권한 경계. 일반 권한은 개요·포트폴리오까지, 그 뒤(출자자~보고서)는 유관 관리자급만.
@@ -169,7 +130,6 @@ export function FundDetailPage() {
   const commit = Number(fund.total_commitment)
   const drawn = Number(fund.drawn_amount)
   const paidIn = fund.paid_in_amount == null ? null : Number(fund.paid_in_amount)
-  const segments = (lps ?? []).map((lp) => ({ label: lp.name, value: Number(lp.commitment_amount) }))
   const operators = fund.operators ?? []
 
   return (
@@ -274,18 +234,7 @@ export function FundDetailPage() {
                   </CardShell>
                 </div>
               )}
-              {tab === 'lp' && (
-                <CardShell>
-                  {segments.length > 0 ? (
-                    <div className="space-y-4">
-                      <DonutChart segments={segments} />
-                      <DataTable columns={lpColumns} rows={lps ?? []} rowKey={(r) => r.id} standardColumns={false} />
-                    </div>
-                  ) : (
-                    <p className="text-body text-gray-600">등록된 출자자(LP)가 없습니다.</p>
-                  )}
-                </CardShell>
-              )}
+              {tab === 'lp' && <FundLpPanel fundId={id} lps={lps ?? []} />}
               {tab === 'portfolio' && (
                 <PortfolioBoardCard
                   fundName={fund.name}

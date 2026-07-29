@@ -175,13 +175,24 @@ export function useDeactivateFund() {
   })
 }
 
+/** LP 연락처(`fund_lps.contact` jsonb). 통지·납입 촉구를 보낼 창구다. */
+export interface FundLpContact {
+  manager?: string
+  phone?: string
+  email?: string
+}
+
 export interface FundLp {
   id: string
   name: string
+  /** 조합원유형 — GP(업무집행)/LIMITED(유한책임)/SPECIAL(특별). 20260729140000. */
+  lp_type: string
   commitment_amount: number
+  /** 지분율(파생) = 약정액 ÷ 활성 LP 약정액 합. 직접 입력하지 않는다. 20260729140000. */
   ownership_pct: number | null
   /** 실 납입액(파생) = 캐피탈 콜에서 납입 체크된 요청액의 합. 20260724240000. */
   paid_amount: number
+  contact: FundLpContact
 }
 
 export function useFundLps(fundId: string | undefined) {
@@ -191,11 +202,82 @@ export function useFundLps(fundId: string | undefined) {
     queryFn: async (): Promise<FundLp[]> => {
       const { data } = await supabase
         .from('fund_lps')
-        .select('id, name, commitment_amount, ownership_pct, paid_amount')
+        .select('id, name, lp_type, commitment_amount, ownership_pct, paid_amount, contact')
         .eq('fund_id', fundId)
         .is('deleted_at', null)
         .order('commitment_amount', { ascending: false })
-      return (data ?? []) as FundLp[]
+      return ((data ?? []) as unknown[]).map((row) => {
+        const r = row as Record<string, unknown>
+        return {
+          id: r.id as string,
+          name: r.name as string,
+          lp_type: (r.lp_type as string) ?? 'LIMITED',
+          commitment_amount: Number(r.commitment_amount ?? 0),
+          ownership_pct: r.ownership_pct == null ? null : Number(r.ownership_pct),
+          paid_amount: Number(r.paid_amount ?? 0),
+          contact: (r.contact as FundLpContact) ?? {},
+        }
+      })
+    },
+  })
+}
+
+/** 출자자 등록·수정 입력값. 지분율은 트리거가 파생하므로 받지 않는다. */
+export interface FundLpInput {
+  name: string
+  lp_type: string
+  commitment_amount: number
+  contact: FundLpContact
+}
+
+export function useCreateFundLp(fundId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (values: FundLpInput) => {
+      const { error } = await supabase.from('fund_lps').insert({ ...values, fund_id: fundId })
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['fund'] }),
+  })
+}
+
+export function useUpdateFundLp(fundId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, values }: { id: string; values: FundLpInput }) => {
+      const { error } = await supabase.from('fund_lps').update(values).eq('id', id)
+      if (error) throw error
+    },
+    // 약정액이 바뀌면 그 펀드 LP 전원의 지분율이 트리거로 다시 계산된다 — 목록을 통째로 다시 읽는다.
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['fund', 'lps', fundId] })
+      qc.invalidateQueries({ queryKey: ['fund', 'one', fundId] })
+    },
+  })
+}
+
+/**
+ * 출자자 삭제(soft delete). 지분율 트리거가 남은 LP의 지분율을 100% 기준으로 다시 나눈다.
+ * 캐피탈 콜 납입 행은 남겨두지 않고 함께 지운다 — 빠진 조합원의 납입이 실출자금액에만
+ * 남으면 출자자 표와 펀드 개요가 어긋난다(차수 삭제와 같은 판단).
+ */
+export function useDeleteFundLp(fundId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const payments = await supabase.from('capital_call_payments').delete().eq('lp_id', id)
+      if (payments.error) throw payments.error
+      const { error } = await supabase
+        .from('fund_lps')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['fund', 'lps', fundId] })
+      qc.invalidateQueries({ queryKey: ['fund', 'call-payments-all', fundId] })
+      qc.invalidateQueries({ queryKey: ['fund', 'calls', fundId] })
+      qc.invalidateQueries({ queryKey: ['fund', 'one', fundId] })
     },
   })
 }
