@@ -37,8 +37,12 @@ interface DeptTreeRowProps {
   editable?: boolean
 }
 
-/** 행/헤더 공용 그리드 컬럼: 조직명 | 레벨 | 인원 | 액션. 헤더와 행 정렬을 맞춘다. */
-export const DEPT_GRID = 'grid grid-cols-[minmax(0,20rem)_6rem_1fr_7.25rem]'
+/**
+ * 행/헤더 공용 그리드 컬럼: 조직명 | 레벨 | 인원 | 액션. 헤더와 행 정렬을 맞춘다.
+ * 레벨 열은 셀렉트가 들어가는 자리다 — 레벨명은 '그룹사'·'경영지원' 같은 자유 입력이라
+ * 화살표 자리를 빼고도 서너 글자가 들어가도록 9rem을 준다(6rem에서는 두 글자도 잘렸다).
+ */
+export const DEPT_GRID = 'grid grid-cols-[minmax(0,20rem)_9rem_1fr_7.25rem]'
 
 /** 커서 Y 위치를 행 높이로 나눠 앞(<25%)/뒤(>75%)/안쪽(그 사이)을 판정한다. */
 export function dropPosFromEvent(e: DragEvent): DropPos {
@@ -167,7 +171,7 @@ export function DeptTreeRow(props: DeptTreeRowProps) {
               <Select
                 value={node.levelId}
                 onChange={(e) => props.onChangeLevel(node.id, e.target.value)}
-                className="w-20"
+                className="w-full"
                 title="조직 레벨"
               >
                 {props.levels.map((lv) => (
