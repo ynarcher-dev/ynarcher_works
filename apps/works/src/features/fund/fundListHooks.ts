@@ -56,7 +56,10 @@ export const FUND_PURPOSE_KIND_LABEL: Record<string, string> = {
   SPECIAL: '특수목적',
 }
 
-/** 캐피탈 콜 차수 상태(capital_call_status enum) 한글 라벨. 근거: 3_5_workspace_fund.md §1.3 */
+/**
+ * 캐피탈 콜 상태(capital_call_status enum) 한글 라벨. 근거: 3_5_workspace_fund.md §1.3
+ * 상태의 소유자는 LP 행(capital_call_payments.status)이고, 차수 상태는 그 분포에서 파생된다.
+ */
 export const CAPITAL_CALL_STATUS_LABEL: Record<string, string> = {
   SCHEDULED: '예정',
   NOTIFIED: '통지',
@@ -77,6 +80,16 @@ export const CAPITAL_CALL_STATUS_TONE: Record<string, 'neutral' | 'success' | 'w
 const toOptions = (m: Record<string, string>) =>
   Object.entries(m).map(([value, label]) => ({ value, label }))
 export const CAPITAL_CALL_STATUS_OPTIONS = toOptions(CAPITAL_CALL_STATUS_LABEL)
+
+/**
+ * LP 한 명에게 붙일 수 있는 상태. 일부납입(PARTIALLY_PAID)은 "여럿 중 일부만 냈다"는 차수 롤업
+ * 개념이라 한 사람 행에는 성립하지 않으므로 제외한다(DB BEFORE 트리거도 같은 값을 되돌린다).
+ */
+export const CAPITAL_CALL_LP_STATUSES = ['SCHEDULED', 'NOTIFIED', 'PAID', 'OVERDUE'] as const
+export const CAPITAL_CALL_LP_STATUS_OPTIONS = CAPITAL_CALL_LP_STATUSES.map((value) => ({
+  value,
+  label: CAPITAL_CALL_STATUS_LABEL[value],
+}))
 export const FUND_SOURCE_OPTIONS = toOptions(FUND_SOURCE_LABEL)
 export const FUND_CHARACTER_OPTIONS = toOptions(FUND_CHARACTER_LABEL)
 export const FUND_STRATEGY_OPTIONS = toOptions(FUND_STRATEGY_LABEL)

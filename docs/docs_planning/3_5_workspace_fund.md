@@ -67,11 +67,13 @@ NETWORKS/STARTUP/AC 상세와 동일한 `grid lg:grid-cols-3`(좌 `col-span-2` :
 투자 약정액을 **차수(N차)별로 분할 납입**받는 업무를 트래킹합니다. **출자자(§2.2)와 상호 연동**되어, 이 화면에서 체크한 납입이 곧 각 LP의 실 납입액과 펀드 실출자금액으로 파생됩니다(§2.2 캐스케이드). 납입액을 LP 화면에 따로 손으로 입력하지 않고 **캐피탈 콜이 유일한 입력 표면**입니다.
 
 * **차수(N차) 설정 타임라인**
-  * **기능**: 회차(1차·2차…)를 자유롭게 추가하며, 각 차수는 **회차·납입 요청 기한(Due Date)·상태**만 갖습니다.
+  * **기능**: 회차(1차·2차…)를 자유롭게 추가하며, 각 차수는 **회차·납입 요청 기한(Due Date)**만 입력받습니다. 표의 차수 머리글은 `1차 (2026-08-31)`처럼 회차와 기한을 한 줄로 붙여 씁니다.
   * **차수 총 요청액·완료율은 입력이 아니라 파생값**: 총 요청액 = 아래 조합원별 요청액의 합(`Σ requested_amount`), 전체 납입 완료율(%) = `Σ 납입완료 요청액 ÷ Σ 요청액`.
+  * **차수 상태도 파생값**: 같은 차수라도 LP마다 통지·납입·연체가 갈리므로 **상태의 소유자는 LP 행**입니다(아래 콘솔). 차수 상태는 그 분포에서 롤업합니다 — 전원 납입 = `PAID`, 일부 납입 = `PARTIALLY_PAID`, 아무도 안 냈으면 `OVERDUE` > `NOTIFIED` > `SCHEDULED` 순으로 가장 앞선 신호를 올립니다.
 * **조합원별 요청·납입 콘솔 (차수 × LP 그리드) — 연동의 입력 표면**
   * **LP별 요청액 개별 입력**: 각 차수마다 LP별로 "이번 차수에 납입해야 할 금액(요청액)"을 **개별 입력**합니다. **LP마다 요청 비율/금액이 다를 수 있으므로 균등 안분을 강제하지 않으며**, 지분율 기반 자동채움을 **기본값**으로 제안하되 행마다 수정합니다. 저장은 콘솔 전체를 원자 교체하는 `set_capital_call_payments` RPC(`SECURITY INVOKER`).
-  * **납입 여부 체크박스(`미납`/`완료`)**: 각 행의 체크박스를 **체크하는 순간 그 요청액이 실 납입액에 반영**되고(납입 완료일 자동 기록), 집계 트리거가 `fund_lps.paid_amount` → `funds.실출자금액`으로 파생 갱신합니다. **체크 해제 시 원복**됩니다. (부분납입은 채택하지 않고 체크=요청액 전액 납입으로 간주 — 필요 시 후속 확장.)
+  * **LP별 상태 드롭다운(`예정`/`통지`/`납입완료`/`연체`)**: 각 셀은 요청액 입력과 상태 선택 두 칸으로 이뤄집니다. 상태를 `PAID`(납입완료)로 두는 순간 그 요청액이 실 납입액에 반영되고(납입 완료일 자동 기록), 집계 트리거가 `fund_lps.paid_amount` → `funds.실출자금액`으로 파생 갱신합니다. **다른 상태로 되돌리면 원복**됩니다. `is_paid`·`amount`·`paid_at`은 모두 `status`에서 파생되며 DB 트리거가 소유합니다. 일부납입(`PARTIALLY_PAID`)은 "여럿 중 일부만 냈다"는 차수 롤업 개념이라 LP 한 행에는 두지 않습니다(부분 금액 납입은 채택하지 않고 납입완료 = 요청액 전액 납입으로 간주 — 필요 시 후속 확장).
+  * **차수 합계(푸터)**: 그 차수의 **납입**(상태가 납입완료인 셀의 요청액 합)과 **요청**(요청액 전체 합) 두 줄을 라벨과 함께 표기합니다. 라벨 없는 `A / B` 표기는 기준이 읽히지 않아 폐기했습니다.
   * **누적 무결성**: LP별 차수 누적 `Σ requested_amount ≤ commitment_amount`(약정액)만 지키면 되고, 한 차수의 요청 합이 약정총액에 비례할 필요는 없습니다. 지분율(약정 기준)과 실제 납입 진행률(LP별)이 갈라지는 것은 정상으로 수용합니다.
 * **미납 LP 알림 콘솔**
   * **미납 관리**: '미납' 상태의 LP가 존재하고 납입 기한이 도래하면 해당 행에 [알림톡 발송]/[이메일 촉구] 버튼이 활성화되어, 한 번의 클릭으로 납입 촉구 안내 메시지를 즉시 발송합니다.
@@ -113,7 +115,7 @@ NETWORKS/STARTUP/AC 상세와 동일한 `grid lg:grid-cols-3`(좌 `col-span-2` :
 | 조합원명 | | 기존 `name` |
 | **조합원유형** | | `SPECIAL`(특별)/`GP`(업무집행)/`LIMITED`(유한책임) |
 | 약정액(금액/비율) | 비율(지분율) = `commitment_amount ÷ 약정총액`(파생) | 기존 `commitment_amount`/`ownership_pct` |
-| **납입액(금액/비율)** | 캐피탈 콜에서 납입 체크된 요청액의 합. 비율 = `paid_amount ÷ 납입총액`(파생, 약정비율과 별개 축) | **신규 `paid_amount`(파생)** — 직접 입력 금지. 집계 트리거가 `Σ capital_call_payments.requested_amount where is_paid`로 갱신 |
+| **납입액(금액/비율)** | 캐피탈 콜에서 상태를 `PAID`로 둔 요청액의 합. 비율 = `paid_amount ÷ 납입총액`(파생, 약정비율과 별개 축) | **신규 `paid_amount`(파생)** — 직접 입력 금지. 집계 트리거가 `Σ capital_call_payments.requested_amount where status = 'PAID'`로 갱신 |
 | **배분액(세전) — 원금/이익/총액** | 세전(원천징수 전) 배분 내역. `원금 + 이익 = 총액` | 신규 — **⚠ 의미론 미확정**(§2.4 배분/회수 흐름 소관, 아래 NOTE) |
 | **출자잔액** | `납입액 − 누적 배분원금`. 배분(원금 회수)이 진행돼야 감소 | 신규(파생) — **의미론 미확정** |
 | **배분순위** | 배분 우선순위 | 신규 |
@@ -125,9 +127,9 @@ NETWORKS/STARTUP/AC 상세와 동일한 `grid lg:grid-cols-3`(좌 `col-span-2` :
 > [!IMPORTANT]
 > **출자자 ↔ 캐피탈 콜 연동 캐스케이드(사용자 확정):** 약정액은 천장(입력)이고 납입액은 **파생**입니다 — 두 번 입력하지 않습니다.
 >
-> `fund_lps.commitment_amount`(약정·입력) → 지분율(파생) → 차수별 **LP별 요청액**(`capital_call_payments.requested_amount`, §1.3 콘솔 입력) → **납입 체크**(`is_paid`) → `fund_lps.paid_amount`(실 납입·파생) → `funds.실출자금액`(파생).
+> `fund_lps.commitment_amount`(약정·입력) → 지분율(파생) → 차수별 **LP별 요청액**(`capital_call_payments.requested_amount`, §1.3 콘솔 입력) → **LP별 상태**(`capital_call_payments.status`) → `is_paid`/`amount`/`paid_at`(파생) → `fund_lps.paid_amount`(실 납입·파생) → `funds.실출자금액`(파생). 같은 상태 값이 `capital_calls.status`(차수 상태)로도 롤업됩니다.
 >
-> * **스키마 변경**: `capital_call_payments`에 **`requested_amount` 컬럼 추가**(현행은 `amount` 1축뿐이라 요청/납입 구분 불가). `amount`는 납입 실적, `requested_amount`는 차수 요청액. `fund_lps.paid_amount` 컬럼 신규.
+> * **스키마 변경**: `capital_call_payments`에 **`requested_amount` 컬럼 추가**(현행은 `amount` 1축뿐이라 요청/납입 구분 불가). `amount`는 납입 실적, `requested_amount`는 차수 요청액. `fund_lps.paid_amount` 컬럼 신규. 이후 **`status` 컬럼 추가**(LP별 상태, 입력 SSOT) — `is_paid`는 `status = 'PAID'`의 파생값이 되었습니다.
 > * **파생 소유자는 트리거**: `funds.drawn_amount` 자동 집계(`app.sync_fund_drawn_amount`)와 동일 패턴의 `SECURITY INVOKER` 집계 트리거가 `capital_call_payments` → `fund_lps.paid_amount` → `funds` 실출자금액을 갱신한다. 화면에서 납입액을 직접 쓰지 않는다(§5.2 집계 원칙).
 > * **출자자 탭 표시**: 도넛/표에 약정액·지분율에 더해 **납입액·납입 진행률**(`paid_amount ÷ commitment_amount`) 축을 노출한다(§1.1 "실 납입액" 주요 항목 반영).
 

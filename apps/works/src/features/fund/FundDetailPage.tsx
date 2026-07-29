@@ -296,7 +296,12 @@ export function FundDetailPage() {
                 />
               )}
               {tab === 'calls' && (
-                <CapitalCallPanel fundId={id} calls={calls ?? []} lps={lps ?? []} />
+                <CapitalCallPanel
+                  fundId={id}
+                  fundName={fund.name}
+                  calls={calls ?? []}
+                  lps={lps ?? []}
+                />
               )}
               {tab === 'financials' && (
                 <CardShell>

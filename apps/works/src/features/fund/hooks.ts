@@ -209,11 +209,13 @@ export interface CapitalCall {
   status: string
 }
 
-/** 캐피탈 콜 차수 생성/수정 입력값. 금액은 파생이라 입력받지 않는다. */
+/**
+ * 캐피탈 콜 차수 생성/수정 입력값. 금액도 상태도 파생이라 입력받지 않는다 —
+ * 금액은 LP별 요청액의 합이고, 상태는 LP별 상태의 롤업이다(sync_capital_call_rollups).
+ */
 export interface CapitalCallInput {
   call_no: number
   due_date: string | null
-  status: string
 }
 
 export function useCreateCapitalCall(fundId: string) {
@@ -301,6 +303,8 @@ export interface FundCallPayment {
   capital_call_id: string
   lp_id: string
   requested_amount: number
+  /** LP별 상태(SCHEDULED/NOTIFIED/PAID/OVERDUE) — 입력 SSOT. is_paid는 여기서 파생된 값. */
+  status: string
   is_paid: boolean
 }
 
@@ -312,7 +316,7 @@ export function useFundCapitalCallPayments(fundId: string | undefined) {
     queryFn: async (): Promise<FundCallPayment[]> => {
       const { data, error } = await supabase
         .from('capital_call_payments')
-        .select('capital_call_id, lp_id, requested_amount, is_paid')
+        .select('capital_call_id, lp_id, requested_amount, status, is_paid')
         .eq('fund_id', fundId)
       if (error) throw error
       return ((data ?? []) as unknown[]).map((row) => {
@@ -321,6 +325,7 @@ export function useFundCapitalCallPayments(fundId: string | undefined) {
           capital_call_id: r.capital_call_id as string,
           lp_id: r.lp_id as string,
           requested_amount: Number(r.requested_amount ?? 0),
+          status: (r.status as string) ?? 'SCHEDULED',
           is_paid: Boolean(r.is_paid),
         }
       })
@@ -328,11 +333,12 @@ export function useFundCapitalCallPayments(fundId: string | undefined) {
   })
 }
 
-/** 차수×LP 요청·납입 그리드 원자 교체. set_capital_call_payments RPC(SECURITY INVOKER). */
+/** 차수×LP 요청액·LP별 상태 그리드 원자 교체. set_capital_call_payments RPC(SECURITY INVOKER). */
 export interface CapitalCallPaymentInput {
   lp_id: string
   requested_amount: number
-  is_paid: boolean
+  /** LP별 상태. 납입액·납입일은 DB 트리거가 이 값에서 파생하므로 보내지 않는다. */
+  status: string
 }
 
 export function useSetCapitalCallPayments(fundId: string) {
