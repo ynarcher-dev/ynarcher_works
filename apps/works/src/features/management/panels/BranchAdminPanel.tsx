@@ -12,7 +12,7 @@ import {
 } from '@/features/office/branches/branchesApi'
 
 /**
- * MANAGEMENT 지사 관리: 지사 목록(지사명·주소·전화번호·배정인력) + 생성/수정/비활성화.
+ * MANAGEMENT 지사 관리: 지사 목록(지사명·주소·전화번호·상주인력) + 생성/수정/비활성화.
  * 여기가 지사 원장의 단일 세팅 지점이며, OFFICE '지사 정보'가 이를 소비한다.
  * 회의실 예약의 지점 탭은 이 원장과 연동하지 않는다(ADMIN '회의실 관리'가 소유하는 meeting_places).
  * 쓰기는 RLS(`branches_insert`/`branches_update`)가 관리자만 허용하므로 화면 노출과 무관하게 서버가 막는다.
@@ -72,7 +72,7 @@ export function BranchAdminPanel() {
     },
     {
       key: 'members',
-      header: '배정인력',
+      header: '상주인력',
       className: 'w-56',
       render: (b) => {
         const names = namesOf(b.id)

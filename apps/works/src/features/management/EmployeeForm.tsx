@@ -189,7 +189,7 @@ export function EmployeeForm({ recordId, initial, onDone, onCancel, backTo }: Pr
           <Field label="회사">
             <Input value={company} onChange={(e) => setCompany(e.target.value)} />
           </Field>
-          {/* 지사는 '지사 관리'와 같은 원장(branch_members)을 고친다 — 여기서 지정하면 지사 배정인력에도 그대로 뜬다. */}
+          {/* 지사는 '지사 관리'와 같은 원장(branch_members)을 고친다 — 여기서 지정하면 지사 상주인력에도 그대로 뜬다. */}
           <Field label="지사">
             <Select value={branchId} onChange={(e) => setEditedBranchId(e.target.value)}>
               <option value="">선택 안 함</option>

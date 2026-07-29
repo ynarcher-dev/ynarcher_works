@@ -1,18 +1,18 @@
 import { DataTable, PageHeader, Spinner, type Column } from '@ynarcher/ui'
 import { useState } from 'react'
 import { BranchDetailModal } from '@/features/office/branches/BranchDetailModal'
-import { useBranchMemberNames } from '@/features/office/branches/branchMembers'
+import { useBranchMemberEntries } from '@/features/office/branches/branchMembers'
 import { useBranches, type Branch } from '@/features/office/branches/branchesApi'
 
 /**
- * OFFICE 지사 정보(조회 전용). 표는 지사명·주소·전화번호만 두고, 배정인력을 포함한 전체 항목은
- * 행을 눌러 여는 상세 모달에서 순서대로 확인한다(배정인력이 늘어도 표 폭이 흔들리지 않게 한다).
+ * OFFICE 지사 정보(조회 전용). 표는 지사명·주소·전화번호만 두고, 상주인력을 포함한 전체 항목은
+ * 행을 눌러 여는 상세 모달에서 순서대로 확인한다(상주인력이 늘어도 표 폭이 흔들리지 않게 한다).
  * 원장은 ADMIN '지사 관리'가 소유하며, 여기서는 확인만 한다(회의록 등 다른 목록과 같은 표 규격).
  */
 export function BranchesPanel() {
   const branchesQuery = useBranches()
   const branches = branchesQuery.data ?? []
-  const { namesOf } = useBranchMemberNames()
+  const { entriesOf } = useBranchMemberEntries()
   const [current, setCurrent] = useState<Branch | null>(null)
 
   const columns: Column<Branch>[] = [
@@ -49,7 +49,7 @@ export function BranchesPanel() {
 
       <BranchDetailModal
         branch={current}
-        memberNames={current ? namesOf(current.id) : []}
+        members={current ? entriesOf(current.id) : []}
         onClose={() => setCurrent(null)}
       />
     </div>

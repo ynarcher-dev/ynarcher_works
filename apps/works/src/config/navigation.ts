@@ -210,7 +210,7 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       items: [
         { label: '경영 현황', tab: 'dashboard' },
         { label: '조직 관리', tab: 'departments', dividerBefore: true },
-        // 지사 원장(지사명·주소·전화번호·배정인력)의 단일 세팅 지점. 조직 관리와 같은 조직
+        // 지사 원장(지사명·주소·전화번호·상주인력)의 단일 세팅 지점. 조직 관리와 같은 조직
         // 축이라 MANAGEMENT가 소유하고, OFFICE '지사 정보'와 회의실 예약의 지사 탭이 조회한다.
         { label: '지사 관리', tab: 'branches' },
         { label: '직책 관리', tab: 'positions' },

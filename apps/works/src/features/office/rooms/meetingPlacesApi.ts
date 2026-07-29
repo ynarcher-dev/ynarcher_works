@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 /**
  * 회의실 지점(예약 화면의 장소 탭) 서버 훅.
  * 지사 원장(features/office/branches/branchesApi)과 **연동하지 않는 독립 목록**이다 —
- * 지사는 조직 정보(주소·전화·배정인력), 지점은 예약 대상이 있는 장소라 생명주기가 다르다.
+ * 지사는 조직 정보(주소·전화·상주인력), 지점은 예약 대상이 있는 장소라 생명주기가 다르다.
  * ADMIN('회의실 관리')이 편집하고 OFFICE('회의실 예약')가 소비한다.
  * RLS: 조회는 내부 사용자, 쓰기는 admin 전용(supabase/migrations/20260729190000_meeting_places.sql).
  */

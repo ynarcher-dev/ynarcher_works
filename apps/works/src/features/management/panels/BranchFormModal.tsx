@@ -12,7 +12,7 @@ interface Props {
   open: boolean
   /** 있으면 수정, 없으면 생성. */
   branch?: Branch
-  /** 수정 대상의 현재 배정인력 id(생성 시 빈 배열). */
+  /** 수정 대상의 현재 상주인력 id(생성 시 빈 배열). */
   memberIds: string[]
   busy: boolean
   onClose: () => void
@@ -20,8 +20,8 @@ interface Props {
 }
 
 /**
- * ADMIN 지사 생성/수정 폼. 지사명·주소·전화번호·배정인력(복수).
- * 배정인력은 임직원 원장에서 골라 담기만 한다 — 계정 생성은 MANAGEMENT 인사 관리가 소유한다.
+ * ADMIN 지사 생성/수정 폼. 지사명·주소·전화번호·상주인력(복수).
+ * 상주인력은 임직원 원장에서 골라 담기만 한다 — 계정 생성은 MANAGEMENT 인사 관리가 소유한다.
  */
 export function BranchFormModal({ open, branch, memberIds, busy, onClose, onSubmit }: Props) {
   const editing = Boolean(branch)
@@ -110,7 +110,7 @@ export function BranchFormModal({ open, branch, memberIds, busy, onClose, onSubm
         </label>
 
         <div>
-          <span className="mb-1 block text-caption font-medium text-gray-600">배정인력</span>
+          <span className="mb-1 block text-caption font-medium text-gray-600">상주인력</span>
           <TokenMultiSelect<Sel>
             selected={members}
             onChange={setMembers}

@@ -2,9 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 
 /**
- * 지사 원장(branches) + 배정인력(branch_members) 서버 훅.
+ * 지사 원장(branches) + 상주인력(branch_members) 서버 훅.
  * ADMIN('지사 관리')이 세팅하고 OFFICE('지사 정보')·회의실 예약이 소비하는 단일 원천.
- * RLS: 조회는 내부 사용자, 쓰기는 admin 전용. 배정인력 쓰기는 app.set_branch_members RPC 전용
+ * RLS: 조회는 내부 사용자, 쓰기는 admin 전용. 상주인력 쓰기는 app.set_branch_members RPC 전용
  * (supabase/migrations/20260728150000_branches.sql).
  */
 
@@ -17,7 +17,7 @@ export interface Branch {
   isActive: boolean
 }
 
-/** 지사 저장 입력(생성·수정 공용). 배정인력은 RPC로 함께 반영한다. */
+/** 지사 저장 입력(생성·수정 공용). 상주인력은 RPC로 함께 반영한다. */
 export interface BranchInput {
   name: string
   address: string | null
@@ -65,7 +65,7 @@ export function useBranches(includeInactive = false) {
   })
 }
 
-/** 지사별 배정인력 id 목록(표기 순서 보존). 이름은 임직원 원장에서 붙인다. */
+/** 지사별 상주인력 id 목록(표기 순서 보존). 이름은 임직원 원장에서 붙인다. */
 export function useBranchMembers() {
   return useQuery({
     queryKey: MEMBERS_KEY,
@@ -86,7 +86,7 @@ export function useBranchMembers() {
   })
 }
 
-/** 배정인력 명단 교체(RPC 전용 쓰기 경로). */
+/** 상주인력 명단 교체(RPC 전용 쓰기 경로). */
 async function saveMembers(branchId: string, memberIds: string[]) {
   const { error } = await supabase.rpc('set_branch_members', {
     p_branch_id: branchId,
