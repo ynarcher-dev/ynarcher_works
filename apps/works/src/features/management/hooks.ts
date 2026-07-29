@@ -328,6 +328,7 @@ export {
   useDeleteOrgLevel,
   useDepartments,
   useDeptMembers,
+  useOrgDraftVersions,
   useMoveDepartments,
   useOrgLevels,
   useOrgVersions,

@@ -98,6 +98,27 @@ export function useOrgVersions() {
   })
 }
 
+/**
+ * 설계 중인 조직 개편 초안(DRAFT) 목록 — 최근 생성 순.
+ * 초안은 발효 대상이 아니라 버전 드롭다운(useOrgVersions)에 나오지 않지만, 조직 개편 페이지는
+ * 여기서 "이어서 편집할 초안"을 찾는다. 초안이 서버에 남아 있으므로 화면을 떠나도 설계가 유지된다.
+ */
+export function useOrgDraftVersions() {
+  return useQuery({
+    queryKey: ['management', 'org-versions', 'draft'],
+    queryFn: async (): Promise<OrgVersion[]> => {
+      const { data, error } = await supabase
+        .from('org_versions')
+        .select('id, label, effective_from, effective_to, status')
+        .is('deleted_at', null)
+        .eq('status', 'DRAFT')
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return (data ?? []) as OrgVersion[]
+    },
+  })
+}
+
 export interface OrgLevel {
   id: string
   name: string

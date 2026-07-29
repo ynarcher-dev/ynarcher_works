@@ -1,14 +1,18 @@
 import { Button, Modal, Spinner } from '@ynarcher/ui'
 import { Pencil } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   activeOrgVersionId,
+  useOrgDraftVersions,
   useOrgVersions,
   useUpdateOrgVersion,
 } from '@/features/management/hooks'
-import { OrgReformModal } from '@/features/management/panels/OrgReformModal'
 import { OrgTreeEditor, type OrgTreeEditorHandle } from '@/features/management/panels/OrgTreeEditor'
 import { OrgVersionBar } from '@/features/management/panels/OrgVersionBar'
+
+/** 조직 개편 설계 페이지 경로. 초안이 있으면 그 초안을 열고, 없으면 생성 폼으로 들어간다. */
+const REFORM_PATH = '/management/org-reform'
 
 export interface DepartmentsPanelProps {
   /**
@@ -20,9 +24,13 @@ export interface DepartmentsPanelProps {
 }
 
 export function DepartmentsPanel({ readOnly = false }: DepartmentsPanelProps = {}) {
+  const navigate = useNavigate()
   const { data: versionRows, isLoading: versionLoading } = useOrgVersions()
+  const { data: draftRows } = useOrgDraftVersions()
   const versions = useMemo(() => versionRows ?? [], [versionRows])
   const activeVersionId = useMemo(() => activeOrgVersionId(versions), [versions])
+  // 설계 중인 개편 초안(있으면 배너로 복귀 동선을 준다). 조회 전용 진입에서는 노출하지 않는다.
+  const draft = readOnly ? null : (draftRows ?? [])[0] ?? null
 
   const [versionId, setVersionId] = useState('')
   useEffect(() => {
@@ -31,7 +39,6 @@ export function DepartmentsPanel({ readOnly = false }: DepartmentsPanelProps = {
 
   const [editMode, setEditMode] = useState(false)
   const [warnOpen, setWarnOpen] = useState(false)
-  const [reformOpen, setReformOpen] = useState(false)
   const editorRef = useRef<OrgTreeEditorHandle>(null)
 
   const updateVersion = useUpdateOrgVersion()
@@ -91,8 +98,8 @@ export function DepartmentsPanel({ readOnly = false }: DepartmentsPanelProps = {
               <Button variant="outline" onClick={() => setWarnOpen(true)}>
                 <Pencil size={14} /> 직접 편집
               </Button>
-              <Button onClick={() => setReformOpen(true)}>
-                조직 개편
+              <Button onClick={() => navigate(REFORM_PATH)}>
+                {draft ? '개편 설계 이어서' : '조직 개편'}
               </Button>
             </>
           )}
@@ -103,6 +110,21 @@ export function DepartmentsPanel({ readOnly = false }: DepartmentsPanelProps = {
       {!readOnly && !editMode && (
         <p className="rounded-radius-md border border-gray-200 bg-gray-25 px-3 py-2 text-caption text-gray-600">
           조회 모드입니다. 운영 중인 조직을 즉시 수정하려면 직접 편집을 사용하고, 예정 조직은 조직 개편에서 설계하세요.
+        </p>
+      )}
+
+      {/* 설계 중인 초안은 어느 버전에도 발효되지 않아 아래 조직도에 나타나지 않는다 — 복귀 동선을 준다. */}
+      {draft && !editMode && (
+        <p className="flex flex-wrap items-center gap-2 rounded-radius-md border border-info-border bg-info-subtle px-3 py-2 text-caption text-info">
+          설계 중인 개편 초안 <span className="font-semibold">{draft.label}</span>
+          (발효 예정 <span className="tabular-nums">{draft.effective_from}</span>)이 있습니다.
+          <button
+            type="button"
+            onClick={() => navigate(`${REFORM_PATH}?draft=${draft.id}`)}
+            className="font-semibold underline underline-offset-2"
+          >
+            이어서 설계하기
+          </button>
         </p>
       )}
 
@@ -138,13 +160,6 @@ export function DepartmentsPanel({ readOnly = false }: DepartmentsPanelProps = {
           현재 선택한 조직 버전을 직접 수정합니다. 구조 개편 이력을 분리하려면 조직 개편을 사용하세요.
         </p>
       </Modal>
-
-      <OrgReformModal
-        open={reformOpen}
-        onClose={() => setReformOpen(false)}
-        versions={versions}
-        activeVersionId={activeVersionId}
-      />
     </div>
   )
 }

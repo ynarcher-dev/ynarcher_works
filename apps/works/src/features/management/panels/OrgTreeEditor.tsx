@@ -1,4 +1,5 @@
-﻿import { Button, Spinner } from '@ynarcher/ui'
+﻿import { Button, Spinner, useToast } from '@ynarcher/ui'
+import { Plus } from 'lucide-react'
 import {
   forwardRef,
   useEffect,
@@ -60,6 +61,7 @@ export interface OrgTreeEditorHandle {
  */
 export const OrgTreeEditor = forwardRef<OrgTreeEditorHandle, OrgTreeEditorProps>(
 function OrgTreeEditor({ versionId, activeVersionId, editable = true }, ref) {
+  const toast = useToast()
   const { data: deptRows, isLoading: deptLoading } = useDepartments(true, versionId || undefined)
   const { data: levelRows, isLoading: levelLoading } = useOrgLevels(versionId || undefined)
   const { data: empRows, isLoading: empLoading } = useEmployees()
@@ -229,7 +231,11 @@ function OrgTreeEditor({ versionId, activeVersionId, editable = true }, ref) {
   const addParallel = (tier: number) =>
     createLevel.mutate({ name: '새 레벨', sort_order: tier, version_id: versionId })
   const removeLevel = (id: string) => {
-    if (levels.length <= 1) return
+    // 마지막 레벨까지 지우면 부서가 가리킬 레벨이 없어진다(인사관리 컬럼도 사라진다).
+    if (levels.length <= 1) {
+      toast.show('마지막 조직 레벨은 삭제할 수 없습니다.', 'warning')
+      return
+    }
     const fallback = levels.find((l) => l.id !== id)?.id ?? null
     deleteLevel.mutate({ id, fallbackLevelId: fallback })
   }
@@ -348,7 +354,6 @@ function OrgTreeEditor({ versionId, activeVersionId, editable = true }, ref) {
             onRemove={removeLevel}
             onSave={() => void saveDrafts()}
             onCancel={cancelDrafts}
-            structureActionsEnabled={false}
           />
           <p className="text-caption text-gray-600">
             · 조직 레벨(인사관리 컬럼)은 이 버전에만 적용되는 스냅샷입니다. 예정 버전에서의 변경은
@@ -365,17 +370,29 @@ function OrgTreeEditor({ versionId, activeVersionId, editable = true }, ref) {
           <span className="pl-2">조직명</span>
           <span>레벨</span>
           <span>인원</span>
-          <span />
+          {/* 최상위(루트) 조직은 부모 행이 없어 행 액션으로 만들 수 없다 — 헤더에 진입점을 둔다. */}
+          {editable ? (
+            <button
+              type="button"
+              onClick={() => addChild(null)}
+              className="flex items-center justify-end gap-0.5 pr-1 text-caption text-gray-600 hover:text-brand-700"
+            >
+              <Plus size={13} /> 최상위 조직
+            </button>
+          ) : (
+            <span />
+          )}
         </div>
         {tree.length === 0 ? (
-          <p className="py-8 text-center text-body text-gray-500">등록된 조직이 없습니다.</p>
+          <p className="py-8 text-center text-body text-gray-500">
+            {editable ? '‘최상위 조직’으로 첫 조직을 추가하세요.' : '등록된 조직이 없습니다.'}
+          </p>
         ) : (
           tree.map((root) => (
             <DeptTreeRow
               key={root.id}
               node={root}
               editable={editable}
-              structureActionsEnabled={false}
               collapsed={collapsed}
               editingId={editingId}
               draft={draft}

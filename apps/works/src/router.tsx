@@ -11,6 +11,7 @@ import { ManagementPage } from '@/features/management/ManagementPage'
 import { EmployeeCreatePage } from '@/features/management/EmployeeCreatePage'
 import { EmployeeDetailPage } from '@/features/management/EmployeeDetailPage'
 import { MyPage } from '@/features/management/MyPage'
+import { OrgReformPage } from '@/features/management/OrgReformPage'
 import { OfficePage } from '@/features/office/OfficePage'
 import { MnaProgramDetailPage, MnaWorkspacePage } from '@/features/mna/MnaWorkspace'
 import { NetworksPage } from '@/features/networks/NetworksPage'
@@ -181,6 +182,15 @@ export const router = createBrowserRouter([
             element: (
               <RequireWorkspace workspace="management">
                 <ManagementPage />
+              </RequireWorkspace>
+            ),
+          },
+          // 조직 개편 설계 페이지. 초안(DRAFT) 버전이 서버에 남으므로 나갔다 돌아와도 이어서 편집한다.
+          {
+            path: 'management/org-reform',
+            element: (
+              <RequireWorkspace workspace="management">
+                <OrgReformPage />
               </RequireWorkspace>
             ),
           },
