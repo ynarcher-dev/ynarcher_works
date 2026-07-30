@@ -45,7 +45,7 @@ export function EmployeeNoteFields({ value, onChange }: Props) {
         />
       </Field>
 
-      <Field label="관심분야">
+      <Field label={`관심분야(${MAX_INTERESTS}개)`}>
         <TokenMultiSelect<string>
           selected={value.interests}
           onChange={(next) => onChange({ ...value, interests: next })}
@@ -57,9 +57,6 @@ export function EmployeeNoteFields({ value, onChange }: Props) {
           // 태그 이름을 외우고 있을 리 없으므로 돋보기로 원장 전체를 펼쳐 고를 수 있게 한다.
           browsable
         />
-        <p className="mt-1 text-caption text-gray-700">
-          산업태그 관리(ADMIN)에 등록된 태그에서 최대 {MAX_INTERESTS}개 선택
-        </p>
       </Field>
 
       <Field label="한마디">
