@@ -30,10 +30,10 @@ interface AssetCheckoutModalProps {
   open: boolean
   row: AssetRow | null
   branchName: string | null
+  /** 비품 관리자 이름(자산 원장의 할당 대상). 없으면 빈 칸. */
+  managerName: string | null
   viewer: { id?: string; isManager: boolean }
   busy: boolean
-  /** 열자마자 반출 폼으로 갈지(표의 '반출하기'로 들어온 경우). */
-  startInForm: boolean
   onAction: (checkout: Checkout, action: CheckoutAction) => void
   onSubmit: (v: CheckoutInput) => void
   onClose: () => void
@@ -134,9 +134,9 @@ export function AssetCheckoutModal({
   open,
   row,
   branchName,
+  managerName,
   viewer,
   busy,
-  startInForm,
   onAction,
   onSubmit,
   onClose,
@@ -146,10 +146,10 @@ export function AssetCheckoutModal({
   const { data: urls } = useAssetPhotoUrls(asset?.photoPaths ?? [])
   const { data: history } = useCheckoutHistory(open ? asset?.id : undefined, LINE_LIMIT)
 
-  // 열릴 때마다 어디로 들어왔는지에 맞춘다('반출하기'로 눌렀으면 폼부터).
+  // 열 때마다 물건을 읽는 자리에서 시작한다 — 폼은 여기서 '반출하기'를 눌러야 나온다.
   useEffect(() => {
-    if (open) setMode(startInForm ? 'form' : 'list')
-  }, [open, startInForm, asset?.id])
+    if (open) setMode('list')
+  }, [open, asset?.id])
 
   // 지금 걸린 건이 먼저다 — 처리할 수 있는 것을 스크롤해서 찾게 하지 않는다.
   const lines = useMemo(
@@ -179,6 +179,7 @@ export function AssetCheckoutModal({
                 <InfoField label="품목" value={asset.itemType} />
                 <InfoField label="시리얼 번호" value={asset.serialNo} />
                 <InfoField label="보유 지사" value={branchName} />
+                <InfoField label="관리자" value={managerName} />
                 <InfoField label="반출 승인" value={asset.requiresApproval ? '필요' : '불필요'} />
                 <InfoField
                   label="재고"

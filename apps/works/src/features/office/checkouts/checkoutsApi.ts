@@ -112,6 +112,11 @@ export interface PortableAsset {
   photoPaths: string[]
   /** 보유 수량. 잔여는 이 값에서 그때 나가 있는 개수를 뺀 것이다. */
   quantity: number
+  /**
+   * 비품 관리자 = 자산 원장의 할당 대상(assets.assigned_to). 이 물건을 물어볼 상대다.
+   * 뷰는 id만 내려보내고 이름은 화면이 임직원 디렉토리에서 붙인다.
+   */
+  assignedTo: string | null
 }
 
 interface PortableRow {
@@ -124,6 +129,7 @@ interface PortableRow {
   note: string | null
   photo_paths: string[] | null
   quantity: number
+  assigned_to: string | null
 }
 
 /**
@@ -138,7 +144,7 @@ export function usePortableAssets(branchId: string | undefined) {
       const { data, error } = await supabase
         .from('portable_assets')
         .select(
-          'id, name, item_type, serial_no, branch_id, requires_approval, note, photo_paths, quantity',
+          'id, name, item_type, serial_no, branch_id, requires_approval, note, photo_paths, quantity, assigned_to',
         )
         .eq('branch_id', branchId!)
         .order('name', { ascending: true })
@@ -153,6 +159,7 @@ export function usePortableAssets(branchId: string | undefined) {
         note: r.note,
         photoPaths: r.photo_paths ?? [],
         quantity: r.quantity,
+        assignedTo: r.assigned_to,
       }))
     },
   })

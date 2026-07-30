@@ -1,8 +1,7 @@
-import { Button, DataTable, EmptyValue, cn, type Column, type DataTableProps } from '@ynarcher/ui'
+import { DataTable, EmptyValue, cn, type Column, type DataTableProps } from '@ynarcher/ui'
 import { ImageOff } from 'lucide-react'
 import {
   ASSET_STATE_LABELS,
-  abilityOf,
   elapsedLabel,
   formatDateTime,
   overdueMs,
@@ -24,15 +23,12 @@ export interface AssetRow {
 
 interface PortableAssetsTableProps {
   rows: AssetRow[]
-  viewer: { id?: string; isManager: boolean }
   now: string
-  busy: boolean
   /** 사진 경로 → Signed URL(없으면 빈 자리). */
   urlOf: (path: string | undefined) => string | undefined
+  /** 사용자 id → 이름(없으면 빈 칸). 비품 관리자 칸이 쓴다. */
+  nameOf: (id: string | null) => string | null
   onOpen: (row: AssetRow) => void
-  /** 표에서 바로 누르는 대표 처리(반출하기·반납하기). 나머지 처리는 모달이 갖는다. */
-  onCheckout: (row: AssetRow) => void
-  onReturn: (row: AssetRow) => void
   pagination: DataTableProps<AssetRow>['pagination']
 }
 
@@ -52,21 +48,19 @@ function Thumb({ url }: { url?: string }) {
 /**
  * 반출 가능 물품 표 — 이 화면의 주인공은 반출 기록이 아니라 물건이다.
  *
- * 한 줄이 답하는 것은 셋이다: 어떤 물건인가(사진·이름·품목·시리얼), 지금 있는가(상태),
- * 없다면 누가 언제까지 갖고 있는가(반출자·반납 예정). 그 뒤의 이야기(목적·행선지·지난 기록)는
- * 물건을 눌러 모달에서 읽는다 — 표에 다 펼치면 정작 "지금 있나"가 묻히기 때문이다.
+ * 한 줄이 답하는 것은 넷이다: 어떤 물건인가(사진·이름·품목), 지금 있는가(재고·상태),
+ * 없다면 누가 언제까지 갖고 있는가(반출자·반납 예정), 그리고 누구에게 물어보는가(관리자).
+ * 그 뒤의 이야기(시리얼·목적·행선지·지난 기록)와 모든 처리는 물건을 눌러 모달에서 한다 —
+ * 표에 버튼과 값을 다 펼치면 정작 "지금 있나"가 묻히기 때문이다.
  *
  * 색은 연체 하나에만 쓴다. 색을 여러 값에 나눠 주면 어느 색도 경고가 되지 못한다.
  */
 export function PortableAssetsTable({
   rows,
-  viewer,
   now,
-  busy,
   urlOf,
+  nameOf,
   onOpen,
-  onCheckout,
-  onReturn,
   pagination,
 }: PortableAssetsTableProps) {
   const columns: Column<AssetRow>[] = [
@@ -89,22 +83,11 @@ export function PortableAssetsTable({
       className: 'w-24',
       render: (r) => r.asset.itemType ?? <EmptyValue />,
     },
-    {
-      key: 'serialNo',
-      header: '시리얼 번호',
-      className: 'w-32',
-      render: (r) =>
-        r.asset.serialNo ? (
-          <span className="tabular-nums text-gray-600">{r.asset.serialNo}</span>
-        ) : (
-          <EmptyValue />
-        ),
-    },
-    // 잔여는 이 표에서 가장 자주 읽히는 숫자다 — "빌릴 수 있나"에 상태보다 먼저 답한다.
+    // 재고는 이 표에서 가장 자주 읽히는 숫자다 — "빌릴 수 있나"에 상태보다 먼저 답한다.
     // 보유를 옆에 함께 적는다: 3이라는 수는 보유가 3일 때와 10일 때 뜻이 다르다.
     {
       key: 'stock',
-      header: '잔여',
+      header: '재고(잔여)',
       align: 'right',
       numeric: true,
       className: 'w-20',
@@ -149,33 +132,13 @@ export function PortableAssetsTable({
         )
       },
     },
+    // 관리자 = 자산 원장의 할당 대상. 반출을 물어보고 승인을 받을 상대이므로 반출자 옆이 아니라
+    // 줄의 끝에 둔다 — 지금 누가 갖고 있는가(반출자)와 이 물건을 맡은 사람은 다른 질문이다.
     {
-      key: 'actions',
-      header: '처리',
-      className: 'w-28',
-      render: (r) => {
-        const can = r.active ? abilityOf(r.active, viewer) : null
-        // 표에는 대표 처리 하나만 둔다 — 승인·취소처럼 판단이 필요한 일은 물건을 열어서 한다.
-        return (
-          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-            {r.remaining > 0 && (
-              <Button variant="outline" onClick={() => onCheckout(r)} disabled={busy}>
-                반출하기
-              </Button>
-            )}
-            {can?.canReturn && (
-              <Button variant="outline" onClick={() => onReturn(r)} disabled={busy}>
-                반납하기
-              </Button>
-            )}
-            {r.state === 'PENDING' && viewer.isManager && (
-              <Button variant="outline" onClick={() => onOpen(r)} disabled={busy}>
-                승인 처리
-              </Button>
-            )}
-          </div>
-        )
-      },
+      key: 'manager',
+      header: '관리자',
+      className: 'w-24',
+      render: (r) => nameOf(r.asset.assignedTo) ?? <EmptyValue />,
     },
   ]
 

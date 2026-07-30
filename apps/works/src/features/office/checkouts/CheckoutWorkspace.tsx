@@ -10,6 +10,7 @@ import {
 } from '@ynarcher/ui'
 import { useEffect, useMemo, useState } from 'react'
 import { hasWorkspaceWrite, useAuthStore } from '@/auth/authStore'
+import { useEmployees } from '@/features/hub/hooks'
 import { useAssetPhotoUrls } from '@/features/management/assets/assetPhotos'
 import { AssetCheckoutModal, type CheckoutAction } from '@/features/office/checkouts/AssetCheckoutModal'
 import { CheckoutActionModal, type PromptAction } from '@/features/office/checkouts/CheckoutActionModal'
@@ -57,9 +58,10 @@ export function CheckoutWorkspace() {
   const [keyword, setKeyword] = useState('')
   const [states, setStates] = useState<string[]>([])
   const [page, setPage] = useState(0)
-  const [opened, setOpened] = useState<{ row: AssetRow; startInForm: boolean } | null>(null)
+  const [opened, setOpened] = useState<AssetRow | null>(null)
   const [prompt, setPrompt] = useState<{ action: PromptAction; row: Checkout } | null>(null)
 
+  const { data: employees } = useEmployees()
   const branchesQuery = useBranches()
   const branches = useMemo(() => branchesQuery.data ?? [], [branchesQuery.data])
 
@@ -135,6 +137,13 @@ export function CheckoutWorkspace() {
     const byId = new Map(branches.map((b) => [b.id, b.name] as const))
     return (id: string | null) => (id ? byId.get(id) ?? null : null)
   }, [branches])
+
+  // 비품 관리자 이름. 뷰는 id만 내려주고 이름은 임직원 디렉토리에서 붙인다 —
+  // 자산 원장의 할당 대상이 곧 그 물건을 맡은 사람이다.
+  const managerNameOf = useMemo(() => {
+    const byId = new Map((employees ?? []).map((e) => [e.id, e.name] as const))
+    return (id: string | null) => (id ? byId.get(id) ?? '알 수 없음' : null)
+  }, [employees])
 
   const submit = async (v: CheckoutInput) => {
     try {
@@ -250,13 +259,10 @@ export function CheckoutWorkspace() {
           ) : (
             <PortableAssetsTable
               rows={pageRows}
-              viewer={viewer}
               now={now}
-              busy={busy}
               urlOf={(p) => (p ? thumbUrls?.[p] : undefined)}
-              onOpen={(row) => setOpened({ row, startInForm: false })}
-              onCheckout={(row) => setOpened({ row, startInForm: true })}
-              onReturn={(row) => row.active && setPrompt({ action: 'RETURN', row: row.active })}
+              nameOf={managerNameOf}
+              onOpen={setOpened}
               pagination={{
                 page,
                 pageSize: PAGE_SIZE,
@@ -271,11 +277,11 @@ export function CheckoutWorkspace() {
 
       <AssetCheckoutModal
         open={opened !== null}
-        row={opened?.row ?? null}
-        branchName={branchNameOf(opened?.row.asset.branchId ?? null)}
+        row={opened}
+        branchName={branchNameOf(opened?.asset.branchId ?? null)}
+        managerName={managerNameOf(opened?.asset.assignedTo ?? null)}
         viewer={viewer}
         busy={busy}
-        startInForm={opened?.startInForm ?? false}
         onAction={(c, action) => void act(c, action)}
         onSubmit={(v) => void submit(v)}
         onClose={() => setOpened(null)}
