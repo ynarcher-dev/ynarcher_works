@@ -1,4 +1,4 @@
-import { DataTable, PageHeader, Spinner, type Column } from '@ynarcher/ui'
+import { DataTable, EmptyValue, PageHeader, Spinner, type Column } from '@ynarcher/ui'
 import { useState } from 'react'
 import { BranchDetailModal } from '@/features/office/branches/BranchDetailModal'
 import { useBranchMemberEntries } from '@/features/office/branches/branchMembers'
@@ -18,13 +18,14 @@ export function BranchesPanel() {
   const columns: Column<Branch>[] = [
     // 지사명은 '대구 센터/기업부설연구소'처럼 긴 이름이 있어 한 줄에 들어가는 폭을 준다.
     { key: 'name', header: '지사명', primary: true, className: 'w-56', render: (b) => b.name },
-    { key: 'address', header: '주소', render: (b) => b.address ?? '—' },
+    { key: 'address', header: '주소', render: (b) => b.address ?? <EmptyValue /> },
     {
       key: 'phone',
       header: '전화번호',
       align: 'center',
       className: 'w-36',
-      render: (b) => <span className="tabular-nums text-gray-600">{b.phone ?? '—'}</span>,
+      render: (b) =>
+        b.phone ? <span className="tabular-nums text-gray-600">{b.phone}</span> : <EmptyValue />,
     },
   ]
 

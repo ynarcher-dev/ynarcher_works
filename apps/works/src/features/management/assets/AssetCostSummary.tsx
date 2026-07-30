@@ -1,4 +1,4 @@
-import { cardText } from '@ynarcher/ui'
+import { cardText, EmptyValue } from '@ynarcher/ui'
 import { BILLING_LABELS } from '@/features/management/config'
 import { formatAmount } from '@/features/management/assets/assetForm'
 import {
@@ -28,15 +28,19 @@ export function AssetCostSummary({ basis }: { basis: CostBasis }) {
         </span>
         <span className="text-body text-gray-600">
           연 환산{' '}
-          <b className="font-semibold tabular-nums text-gray-900">
-            {annual == null ? '—' : `${formatAmount(annual)}원`}
-          </b>
+          {annual == null ? (
+            <EmptyValue />
+          ) : (
+            <b className="font-semibold tabular-nums text-gray-900">{formatAmount(annual)}원</b>
+          )}
         </span>
         <span className="text-body text-gray-600">
           계약 총액{' '}
-          <b className="font-semibold tabular-nums text-gray-900">
-            {total == null ? '—' : `${formatAmount(total)}원`}
-          </b>
+          {total == null ? (
+            <EmptyValue />
+          ) : (
+            <b className="font-semibold tabular-nums text-gray-900">{formatAmount(total)}원</b>
+          )}
           {periods && <span className="ml-1 text-caption text-gray-500">({periods})</span>}
         </span>
       </div>

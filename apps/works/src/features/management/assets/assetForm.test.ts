@@ -107,7 +107,7 @@ describe('금액 입출력', () => {
   it('표시할 때 천 단위로 끊고, 미입력은 0원과 구분한다', () => {
     expect(formatAmount(2500000)).toBe('2,500,000')
     expect(formatAmount(0)).toBe('0')
-    expect(formatAmount(null)).toBe('—')
+    expect(formatAmount(null)).toBe('-')
   })
 })
 

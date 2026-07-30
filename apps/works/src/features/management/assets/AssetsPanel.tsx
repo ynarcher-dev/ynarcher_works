@@ -77,7 +77,8 @@ export function AssetsPanel() {
 
   const nameOf = useMemo(() => {
     const byId = new Map((employees ?? []).map((e) => [e.id, e.name] as const))
-    return (id: string | null) => (id ? byId.get(id) ?? '알 수 없음' : '—')
+    // 할당 대상이 없으면 null이다 — 빈 칸을 무슨 글자로 채울지는 표가 정한다.
+    return (id: string | null) => (id ? byId.get(id) ?? '알 수 없음' : null)
   }, [employees])
 
   // 선택 id를 현재 페이지의 행으로 되돌린다 — 합계와 일괄 처리가 같은 집합을 본다.

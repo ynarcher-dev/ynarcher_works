@@ -110,9 +110,9 @@ export function normalizeAmountInput(value: string): string {
   return value.replace(/[^\d]/g, '')
 }
 
-/** 표시용 천 단위 구분. 값이 없으면 '—'(0원과 미입력을 구분한다). */
+/** 표시용 천 단위 구분. 값이 없으면 '-'(0원과 미입력을 구분한다). */
 export function formatAmount(amount: number | null): string {
-  return amount == null ? '—' : amount.toLocaleString('ko-KR')
+  return amount == null ? '-' : amount.toLocaleString('ko-KR')
 }
 
 /** 저장 전 검증. 첫 번째로 어긋난 규칙 하나만 돌려준다 — 한 번에 여러 줄을 읽게 하지 않는다. */
@@ -123,7 +123,7 @@ export function validateDraft(draft: AssetDraft): AssetFormError | null {
     return { field: 'assignedTo', message: '할당됨 상태에는 할당 대상이 필요합니다.' }
   }
   // 끝나는 날이 시작한 날보다 앞설 수는 없다. DB는 폐기일자만 제약하지만 만료일도 같은 이치라
-  // 화면에서 함께 막는다 — 뒤집힌 기간은 계약 총액도 계산되지 않아 '—'로만 남는다.
+  // 화면에서 함께 막는다 — 뒤집힌 기간은 계약 총액도 계산되지 않아 빈 값으로만 남는다.
   if (draft.endsOn && draft.acquiredOn && draft.endsOn < draft.acquiredOn) {
     return {
       field: 'endsOn',
@@ -134,7 +134,7 @@ export function validateDraft(draft: AssetDraft): AssetFormError | null {
     return { field: 'amount', message: '금액은 0 이상의 숫자로 입력하세요.' }
   }
   // 구독은 만료일이 있어야 계약 총액을 계산할 수 있다. 다만 저장을 막지는 않는다 —
-  // 만료일을 아직 모르는 계약도 등록해 두어야 하므로, 총액을 '—'로 두는 것이 답이다.
+  // 만료일을 아직 모르는 계약도 등록해 두어야 하므로, 총액을 빈 값으로 두는 것이 답이다.
   return null
 }
 

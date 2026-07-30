@@ -1,4 +1,4 @@
-import { Button, Checkbox, DataTable, Input, PageHeader, Spinner, useToast, type Column } from '@ynarcher/ui'
+import { Button, Checkbox, DataTable, EmptyValue, Input, PageHeader, Spinner, useToast, type Column } from '@ynarcher/ui'
 import { Download } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { NewBadge } from '@/features/hub/DashboardPanel'
@@ -121,7 +121,7 @@ export function ArchiveWorkspace({ boardId, title }: ArchiveWorkspaceProps) {
             {p.summary}
           </span>
         ) : (
-          <span className="text-gray-300">—</span>
+          <EmptyValue />
         ),
     },
     {

@@ -1,4 +1,4 @@
-import { Button, cn, DataTable, Select, type Column } from '@ynarcher/ui'
+import { Button, cn, DataTable, EmptyValue, Select, type Column } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import type { ExistingRef, ParsedRow } from '@/features/networks/bulkUpload'
 
@@ -131,7 +131,7 @@ export function BulkReviewTable({
   // 비활성 행은 원본 데이터 텍스트를 옅게 처리한다.
   const dim = (r: ReviewRow, normal: string) => (isDeactivated(r) ? 'text-gray-300' : normal)
   const columns: Column<ReviewRow>[] = [
-    { key: 'name', header: '이름', className: pad, render: (r) => <span className={cn('font-medium', dim(r, 'text-gray-800'))}>{r.name || '—'}</span> },
+    { key: 'name', header: '이름', className: pad, render: (r) => <span className={cn('font-medium', dim(r, 'text-gray-800'))}>{r.name || <EmptyValue />}</span> },
     { key: 'affiliation', header: '소속', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.affiliation || '-'}</span> },
     { key: 'department', header: '부서', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.department || '-'}</span> },
     { key: 'position', header: '직책', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.position || '-'}</span> },

@@ -1,4 +1,4 @@
-import { Button, cn, DataTable, Select, type Column } from '@ynarcher/ui'
+import { Button, cn, DataTable, EmptyValue, Select, type Column } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import { GLOBAL_CATEGORY_OPTIONS, type GlobalCategory } from '@/features/networks/globalConfig'
 import type { GlobalExistingRef, GlobalParsedRow } from '@/features/networks/globalBulkUpload'
@@ -127,7 +127,7 @@ export function GlobalBulkReviewTable({
     Boolean(r.match?.deleted) && !revivedLines.includes(r.line)
   const dim = (r: GlobalReviewRow, normal: string) => (isDeactivated(r) ? 'text-gray-300' : normal)
   const columns: Column<GlobalReviewRow>[] = [
-    { key: 'name', header: '이름', className: pad, render: (r) => <span className={cn('font-medium', dim(r, 'text-gray-800'))}>{r.name || '—'}</span> },
+    { key: 'name', header: '이름', className: pad, render: (r) => <span className={cn('font-medium', dim(r, 'text-gray-800'))}>{r.name || <EmptyValue />}</span> },
     { key: 'affiliation', header: '소속', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.affiliation || '-'}</span> },
     { key: 'position', header: '직책', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.position || '-'}</span> },
     { key: 'email', header: '이메일', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.email || '-'}</span> },

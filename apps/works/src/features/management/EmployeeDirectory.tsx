@@ -1,4 +1,4 @@
-import { DataTable, Spinner, type Column } from '@ynarcher/ui'
+import { DataTable, EmptyValue, Spinner, type Column } from '@ynarcher/ui'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -15,8 +15,8 @@ import { useEmployeeBranchNames } from '@/features/office/branches/branchMembers
 /** 목록 페이지당 행 수(서버 사이드 페이지네이션). */
 const PAGE_SIZE = 30
 
-/** 값이 없거나 집계 미연동 컬럼의 공통 플레이스홀더. */
-const DASH = <span className="text-gray-400">-</span>
+/** 값이 없거나 집계 미연동 컬럼의 공통 플레이스홀더(규격은 공용 `EmptyValue`가 소유). */
+const DASH = <EmptyValue />
 
 function str(v: unknown): string {
   return typeof v === 'string' ? v : ''

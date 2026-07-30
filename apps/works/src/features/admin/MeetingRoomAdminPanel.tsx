@@ -1,4 +1,12 @@
-import { Badge, Button, DataTable, Spinner, useToast, type Column } from '@ynarcher/ui'
+import {
+  Badge,
+  Button,
+  DataTable,
+  EmptyValue,
+  Spinner,
+  useToast,
+  type Column,
+} from '@ynarcher/ui'
 import { ImageIcon } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { MeetingPlaceBar } from '@/features/admin/MeetingPlaceBar'
@@ -17,7 +25,7 @@ import {
 
 const KO_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 const weekdayText = (days: number[]) =>
-  [...days].sort().map((d) => KO_WEEKDAYS[d]).join('·') || '—'
+  [...days].sort().map((d) => KO_WEEKDAYS[d]).join('·')
 
 /**
  * ADMIN 회의실 관리: 지점 관리(추가·이름 수정·비활성화) + 지점별 회의실 목록·설정.
@@ -86,19 +94,23 @@ export function MeetingRoomAdminPanel() {
       },
     },
     { key: 'name', header: '회의실명', primary: true, render: (r) => r.name },
-    { key: 'location', header: '위치', render: (r) => r.location ?? '—' },
+    { key: 'location', header: '위치', render: (r) => r.location ?? <EmptyValue /> },
     {
       key: 'capacity',
       header: '인원',
       align: 'center',
-      render: (r) => (r.capacity != null ? `${r.capacity}명` : '—'),
+      render: (r) => (r.capacity != null ? `${r.capacity}명` : <EmptyValue />),
     },
     {
       key: 'hours',
       header: '운영시간',
       render: (r) => `${normalizeTime(r.openTime)}–${normalizeTime(r.closeTime)} · ${r.slotMinutes}분`,
     },
-    { key: 'weekdays', header: '요일', render: (r) => weekdayText(r.weekdays) },
+    {
+      key: 'weekdays',
+      header: '요일',
+      render: (r) => weekdayText(r.weekdays) || <EmptyValue />,
+    },
     {
       key: 'status',
       header: '상태',

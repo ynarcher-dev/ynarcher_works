@@ -1,4 +1,4 @@
-import { Banner, Button, PanelCard, Switch, cardText } from '@ynarcher/ui'
+import { Banner, Button, EmptyValue, PanelCard, Switch, cardText } from '@ynarcher/ui'
 import {
   SENSITIVE_CONTENT_GROUPS,
   SENSITIVE_FIELDS,
@@ -124,7 +124,7 @@ function ContentRow({
               />
             ) : (
               // 화면에 없는 필드는 스위치 대신 자리만 비워 열 정렬을 유지한다.
-              <span className="text-caption text-gray-300">—</span>
+              <EmptyValue />
             )}
           </div>
         ))}

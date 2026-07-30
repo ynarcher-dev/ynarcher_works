@@ -1,4 +1,4 @@
-import { Badge, DataTable, type Column, type DataTableProps } from '@ynarcher/ui'
+import { Badge, DataTable, EmptyValue, type Column, type DataTableProps } from '@ynarcher/ui'
 import { useMemo } from 'react'
 import {
   FUND_CHARACTER_LABEL,
@@ -33,7 +33,8 @@ interface FundListTableProps {
   pagination?: DataTableProps<FundListRow>['pagination']
 }
 
-const dash = <span className="text-gray-400">-</span>
+/** 빈 칸 표기(규격은 공용 `EmptyValue`가 소유). */
+const dash = <EmptyValue />
 
 /**
  * 펀드(조합) 목록 데이터 테이블. STARTUP 풀 테이블 골격 재사용.

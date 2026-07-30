@@ -35,6 +35,8 @@ export { Avatar } from './components/Avatar'
 export type { AvatarProps } from './components/Avatar'
 export { Badge } from './components/Badge'
 export type { BadgeTone } from './components/Badge'
+// 빈 값 표기 — 값 없는 칸의 글자(`-`)와 색을 한곳에 모아 둔다.
+export { EmptyValue } from './components/EmptyValue'
 export { TagChip } from './components/TagChip'
 export type { TagChipProps } from './components/TagChip'
 export { Card } from './components/Card'

@@ -1,4 +1,12 @@
-import { Badge, Button, DataTable, Spinner, useToast, type Column } from '@ynarcher/ui'
+import {
+  Badge,
+  Button,
+  DataTable,
+  EmptyValue,
+  Spinner,
+  useToast,
+  type Column,
+} from '@ynarcher/ui'
 import { useState } from 'react'
 import { BranchFormModal } from '@/features/management/panels/BranchFormModal'
 import { useBranchMemberNames } from '@/features/office/branches/branchMembers'
@@ -65,13 +73,14 @@ export function BranchAdminPanel() {
 
   const columns: Column<Branch>[] = [
     { key: 'name', header: '지사명', primary: true, className: 'w-56', render: (b) => b.name },
-    { key: 'address', header: '주소', render: (b) => b.address ?? '—' },
+    { key: 'address', header: '주소', render: (b) => b.address ?? <EmptyValue /> },
     {
       key: 'phone',
       header: '전화번호',
       align: 'center',
       className: 'w-36',
-      render: (b) => <span className="tabular-nums text-gray-600">{b.phone ?? '—'}</span>,
+      render: (b) =>
+        b.phone ? <span className="tabular-nums text-gray-600">{b.phone}</span> : <EmptyValue />,
     },
     {
       key: 'members',
@@ -79,7 +88,7 @@ export function BranchAdminPanel() {
       className: 'w-56',
       render: (b) => {
         const names = namesOf(b.id)
-        return names.length > 0 ? names.join(', ') : '—'
+        return names.length > 0 ? names.join(', ') : <EmptyValue />
       },
     },
     {

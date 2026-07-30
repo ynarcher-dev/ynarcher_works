@@ -1,4 +1,4 @@
-import { Badge, DataTable, type Column, type DataTableProps } from '@ynarcher/ui'
+import { Badge, DataTable, EmptyValue, type Column, type DataTableProps } from '@ynarcher/ui'
 import {
   ACQUISITION_LABELS,
   ASSET_LABELS,
@@ -9,8 +9,11 @@ import type { Asset } from '@/features/management/assets/assetsApi'
 
 interface AssetsTableProps {
   rows: Asset[]
-  /** 할당 대상 id → 이름. 목록에는 이름만 적는다(연락처·이메일은 노출하지 않는다). */
-  nameOf: (id: string | null) => string
+  /**
+   * 할당 대상 id → 이름. 목록에는 이름만 적는다(연락처·이메일은 노출하지 않는다).
+   * 할당 대상이 없으면 `null`이며, 빈 칸 표기는 표가 정한다.
+   */
+  nameOf: (id: string | null) => string | null
   selectedKeys: string[]
   onSelectionChange: (keys: string[]) => void
   onRowClick: (row: Asset) => void
@@ -19,7 +22,8 @@ interface AssetsTableProps {
 
 /** 날짜 셀. 자릿수가 흔들리지 않게 tabular-nums로 고정한다. */
 function DateCell({ value }: { value: string | null }) {
-  return <span className="tabular-nums text-gray-600">{value ?? '—'}</span>
+  if (!value) return <EmptyValue />
+  return <span className="tabular-nums text-gray-600">{value}</span>
 }
 
 /**
@@ -58,9 +62,19 @@ export function AssetsTable({
       key: 'serialNo',
       header: '시리얼 번호',
       className: 'w-32',
-      render: (a) => <span className="tabular-nums text-gray-600">{a.serialNo ?? '—'}</span>,
+      render: (a) =>
+        a.serialNo ? (
+          <span className="tabular-nums text-gray-600">{a.serialNo}</span>
+        ) : (
+          <EmptyValue />
+        ),
     },
-    { key: 'itemType', header: '품목', className: 'w-24', render: (a) => a.itemType ?? '—' },
+    {
+      key: 'itemType',
+      header: '품목',
+      className: 'w-24',
+      render: (a) => a.itemType ?? <EmptyValue />,
+    },
     {
       key: 'acquisitionType',
       header: '분류',
@@ -78,7 +92,7 @@ export function AssetsTable({
       key: 'assignedTo',
       header: '할당',
       className: 'w-24',
-      render: (a) => nameOf(a.assignedTo),
+      render: (a) => nameOf(a.assignedTo) ?? <EmptyValue />,
     },
     {
       key: 'amount',
@@ -86,7 +100,7 @@ export function AssetsTable({
       align: 'right',
       numeric: true,
       className: 'w-28',
-      render: (a) => formatAmount(a.amount),
+      render: (a) => (a.amount == null ? <EmptyValue /> : formatAmount(a.amount)),
     },
     {
       key: 'billingCycle',
