@@ -42,7 +42,7 @@ export interface EntityField {
  * 이름·소속·이메일·연락처는 스칼라 컬럼에 저장한다(experts와 동일 스키마).
  */
 const PERSON_FIELDS: EntityField[] = [
-  { name: 'name', label: '이름', required: true },
+  { name: 'name', label: '이름', required: true, mask: 'name' },
   { name: 'affiliation', label: '소속' },
   { name: 'profile.department', label: '부서명' },
   { name: 'profile.position', label: '직책/직급' },

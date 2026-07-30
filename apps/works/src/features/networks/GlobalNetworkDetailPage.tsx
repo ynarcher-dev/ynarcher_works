@@ -8,10 +8,16 @@ import { ChangeHistoryPanel, uniqueContributors } from '@/features/networks/Chan
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { AffiliationHistoryPanel } from '@/features/networks/AffiliationHistoryPanel'
+import { SensitiveValue } from '@/features/master/SensitiveValue'
 import { type GlobalRow } from '@/features/networks/globalConfig'
 import { useDeactivateGlobal, useGlobalContributions, useGlobalEntity } from '@/features/networks/globalHooks'
 
 const LIST_PATH = '/networks?tab=global'
+
+/** 민감정보 정책 콘텐츠 키(목록 GlobalNetworkTab과 동일 — 목록·상세가 함께 움직인다). */
+const CONTENT_KEY = 'networks.global'
+/** 열람 접근 로그의 리소스 유형. */
+const RESOURCE_TYPE = 'global_network'
 
 /** 라벨: 값 한 줄 — 규격은 공용 `InfoField`가 소유한다. */
 const Info = InfoField
@@ -46,7 +52,15 @@ function GlobalView({ record }: { record: GlobalRow }) {
             {/* 상세 헤더는 카드 안에 있어도 페이지 맥락이다 — 24px 제목 옆 배지가 11px로 찍히지 않게 한다. */}
             <DensityProvider value="page">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-title-md font-bold text-gray-900">{record.name}</h1>
+                <h1 className="text-title-md font-bold text-gray-900">
+                  <SensitiveValue
+                    field="name"
+                    contentKey={CONTENT_KEY}
+                    value={record.name}
+                    resourceType={RESOURCE_TYPE}
+                    resourceId={record.id}
+                  />
+                </h1>
                 {record.category && <Badge tone="neutral">{record.category}</Badge>}
               </div>
             </DensityProvider>
@@ -55,8 +69,30 @@ function GlobalView({ record }: { record: GlobalRow }) {
         </div>
 
         <div className="mt-5 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-3">
-          <Info label="연락처" value={(record.phone as string) || '-'} />
-          <Info label="이메일" value={(record.email as string) || '-'} />
+          <Info
+            label="연락처"
+            value={
+              <SensitiveValue
+                field="phone"
+                contentKey={CONTENT_KEY}
+                value={(record.phone as string) ?? null}
+                resourceType={RESOURCE_TYPE}
+                resourceId={record.id}
+              />
+            }
+          />
+          <Info
+            label="이메일"
+            value={
+              <SensitiveValue
+                field="email"
+                contentKey={CONTENT_KEY}
+                value={(record.email as string) ?? null}
+                resourceType={RESOURCE_TYPE}
+                resourceId={record.id}
+              />
+            }
+          />
           <Info
             label="링크드인"
             value={

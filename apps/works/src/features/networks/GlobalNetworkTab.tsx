@@ -28,6 +28,7 @@ export function GlobalNetworkTab({ keyword }: Props) {
     <div className="space-y-3">
       <MasterListView
         label="글로벌 네트워크"
+        contentKey="networks.global"
         columns={GLOBAL_COLUMNS}
         rows={(data?.rows ?? []) as MasterRow[]}
         isLoading={isLoading}

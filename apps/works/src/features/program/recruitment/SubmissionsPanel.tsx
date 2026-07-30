@@ -2,6 +2,10 @@ import { Badge, Button, DataTable, Modal, Spinner, useToast, type BadgeTone, typ
 import dayjs from 'dayjs'
 import { Download } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { maskBy } from '@/lib/mask'
+import { applicantContentKey, type SensitiveField } from '@/features/admin/sensitiveContents'
+import { useMaskPolicy } from '@/features/admin/sensitiveStore'
+import { useProgramWorkspace } from '@/features/program/workspace'
 import {
   APPLICATION_STATUS_META,
   downloadApplicationFile,
@@ -11,20 +15,16 @@ import {
   type Submission,
 } from '@/features/program/recruitment/recruitmentHooks'
 
-/** 개인정보 목록 마스킹: 이메일/연락처는 일부만 노출한다(상세에서 전체). */
-function mask(value: string, type: string): string {
-  if (!value) return value
-  if (type === 'email') {
-    const [id, domain] = value.split('@')
-    if (!domain || !id) return value
-    return `${id.slice(0, 2)}***@${domain}`
-  }
-  if (type === 'tel') {
-    const d = value.replace(/\D/g, '')
-    if (d.length < 7) return value
-    return `${d.slice(0, 3)}****${d.slice(-4)}`
-  }
-  return value
+/**
+ * 신청서 필드 → 민감정보 필드 매핑. 신청서는 운영자가 자유롭게 만드는 동적 폼이라
+ * 타입(email/tel)으로 잡히지 않는 이름 항목은 라벨로 판별한다 — 폼 빌더에 개인정보 표시가
+ * 생기기 전까지의 임시 규칙이며, 못 잡으면 마스킹이 걸리지 않을 뿐 원본이 새지는 않는다.
+ */
+function sensitiveFieldOf(field: FormField): SensitiveField | null {
+  if (field.field_type === 'email') return 'email'
+  if (field.field_type === 'tel') return 'phone'
+  if (field.field_type === 'text' && /대표|성명|이름/.test(field.label)) return 'name'
+  return null
 }
 
 const statusBadge = (status: string) => {
@@ -34,9 +34,12 @@ const statusBadge = (status: string) => {
 
 /**
  * 신청 현황(인스턴스 단위). 신청서 필드 기반 동적 컬럼 + 행 상세(전체 응답·첨부 다운로드).
- * 목록은 개인정보를 마스킹하고, 첨부는 material-download(감사 로그 강제) 경유로만 내려받는다.
+ * 신청 기업(외부)의 대표자명·이메일·연락처는 ADMIN '민감정보 관리'의 워크스페이스별 정책을
+ * 따르며, 첨부는 material-download(감사 로그 강제) 경유로만 내려받는다.
  */
 export function SubmissionsPanel({ moduleId }: { moduleId: string }) {
+  const workspace = useProgramWorkspace()
+  const masked = useMaskPolicy(applicantContentKey(workspace.key))
   const { data: form } = useApplicationForm(moduleId)
   const { data: subs, isLoading } = useSubmissions(form?.id)
   const [detail, setDetail] = useState<Submission | null>(null)
@@ -54,11 +57,18 @@ export function SubmissionsPanel({ moduleId }: { moduleId: string }) {
     s.answers.find((a) => a.field_id === fieldId)?.text_value ?? ''
 
   const columns = useMemo<Column<Submission>[]>(() => {
-    const dyn: Column<Submission>[] = listFields.map((f) => ({
-      key: f.id ?? f.label,
-      header: f.label,
-      render: (s: Submission) => mask(valueOf(s, f.id ?? ''), f.field_type) || '-',
-    }))
+    const dyn: Column<Submission>[] = listFields.map((f) => {
+      const sensitive = sensitiveFieldOf(f)
+      return {
+        key: f.id ?? f.label,
+        header: f.label,
+        render: (s: Submission) => {
+          const v = valueOf(s, f.id ?? '')
+          if (!v) return '-'
+          return sensitive && masked[sensitive] ? maskBy(sensitive, v) : v
+        },
+      }
+    })
     return [
       ...dyn,
       { key: 'consent', header: '동의', render: (s) => (s.consented_at ? <Badge tone="success">동의</Badge> : '-') },
@@ -78,7 +88,9 @@ export function SubmissionsPanel({ moduleId }: { moduleId: string }) {
         ),
       },
     ]
-  }, [listFields])
+    // valueOf는 렌더 시점 인자만 쓰므로 의존성에 넣지 않는다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listFields, masked])
 
   if (!form) {
     return (

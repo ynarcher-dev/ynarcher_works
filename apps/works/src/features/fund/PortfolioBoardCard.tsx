@@ -2,6 +2,8 @@ import { Badge, Button, DataTable, PanelCard } from '@ynarcher/ui'
 import { Maximize2, Minimize2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { FUND_PORTFOLIO_CONTENT_KEY } from '@/features/admin/sensitiveContents'
+import { useMaskPolicy } from '@/features/admin/sensitiveStore'
 import { buildPortfolioColumns } from '@/features/fund/portfolioColumns'
 import { InvestmentDetailModal } from '@/features/fund/InvestmentDetailModal'
 import type { FundPurpose, Investment } from '@/features/fund/hooks'
@@ -27,6 +29,8 @@ export function PortfolioBoardCard({
 }) {
   const [expanded, setExpanded] = useState(false)
   const [detail, setDetail] = useState<Investment | null>(null)
+  // 피투자사(외부 기업) 대표자명 정책. 딜메이커·관리인력은 내부 임직원이라 대상이 아니다.
+  const masked = useMaskPolicy(FUND_PORTFOLIO_CONTENT_KEY)
 
   useEffect(() => {
     if (!expanded) return
@@ -38,8 +42,13 @@ export function PortfolioBoardCard({
   }, [expanded])
 
   // 카드 축소 상태는 요약 컬럼, 전체보기 오버레이는 전체 컬럼.
-  const summaryColumns = buildPortfolioColumns({ fundName, purposes, compact: true })
-  const fullColumns = buildPortfolioColumns({ fundName, purposes })
+  const summaryColumns = buildPortfolioColumns({
+    fundName,
+    purposes,
+    compact: true,
+    maskRepresentative: masked.name,
+  })
+  const fullColumns = buildPortfolioColumns({ fundName, purposes, maskRepresentative: masked.name })
 
   // 수정: 상세 닫고 편집 폼 열기(삭제는 편집 폼 좌측 하단에서 처리).
   const handleEdit = (inv: Investment) => {

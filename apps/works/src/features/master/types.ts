@@ -3,8 +3,11 @@
  * 동일한 리스트뷰를 공유하기 위한 단일 원천이다.
  */
 
-/** 개인정보 목록 마스킹 유형. 근거: docs_dev/4_security_privacy_policy.md */
-export type MaskKind = 'email' | 'phone'
+/**
+ * 개인정보 목록 마스킹 유형. 실제 적용 여부는 ADMIN '민감정보 관리'의 콘텐츠별 정책이 정한다.
+ * 근거: docs_dev/4_security_privacy_policy.md
+ */
+export type MaskKind = 'name' | 'email' | 'phone'
 
 /**
  * 목록 셀 렌더 유형.

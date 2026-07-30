@@ -9,7 +9,10 @@ import {
   useStartupPoolPage,
   type StartupPoolFilters as Filters,
 } from '@/features/startup/startupPoolHooks'
-import type { ManagementStatus } from '@/features/startup/startupClassification'
+import {
+  startupContentKey,
+  type ManagementStatus,
+} from '@/features/startup/startupClassification'
 
 /** 목록 페이지당 행 수(서버 사이드 페이지네이션). */
 const PAGE_SIZE = 30
@@ -85,6 +88,7 @@ export function StartupPoolTab({ category, mineUserId }: StartupPoolTabProps) {
         rows={(data?.rows ?? []) as StartupPoolRow[]}
         // 구분 무관 목록('내 관리기업')은 undefined로 넘겨 담당자·구분 컬럼을 모두 노출한다.
         tab={category ?? undefined}
+        contentKey={startupContentKey(category)}
         selectedKeys={selected}
         onSelectionChange={setSelected}
         onRowClick={(row) => navigate(`/startup/discovered/${row.id}`)}

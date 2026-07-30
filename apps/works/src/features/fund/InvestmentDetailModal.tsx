@@ -1,5 +1,7 @@
 import { Badge, Button, cardText, InfoField, Modal, type BadgeTone } from '@ynarcher/ui'
 import { Link } from 'react-router-dom'
+import { FUND_PORTFOLIO_CONTENT_KEY } from '@/features/admin/sensitiveContents'
+import { SensitiveValue } from '@/features/master/SensitiveValue'
 import { PhotoBox } from '@/features/networks/PhotoBox'
 import {
   MANAGEMENT_STATUS_TONE,
@@ -92,7 +94,18 @@ export function InvestmentDetailModal({
 
         {/* 회사개요(startups 호출값) */}
         <div className="grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-3">
-          <Info label="대표자" value={inv.startup_representative || '-'} />
+          <Info
+            label="대표자"
+            value={
+              <SensitiveValue
+                field="name"
+                contentKey={FUND_PORTFOLIO_CONTENT_KEY}
+                value={inv.startup_representative}
+                resourceType="fund_investment"
+                resourceId={inv.id}
+              />
+            }
+          />
           <Info label="설립일" value={shortDate(inv.startup_founded_on)} />
           <Info label="소재지" value={inv.startup_location || '-'} />
         </div>

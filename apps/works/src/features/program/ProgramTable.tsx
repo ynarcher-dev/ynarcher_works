@@ -35,6 +35,7 @@ export function ProgramTable({
   pagination,
 }: ProgramTableProps) {
   const config = useProgramWorkspace()
+  // 담당자·등록자는 내부 임직원이라 민감정보 마스킹 대상이 아니다(외부 신청 기업 정보만 가린다).
   const columns = useMemo<Column<Program>[]>(
     () => [
       {

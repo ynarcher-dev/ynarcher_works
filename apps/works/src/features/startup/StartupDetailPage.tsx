@@ -11,7 +11,12 @@ import { useContributions, useDeactivateEntity, useEntity } from '@/features/net
 import { useAuthStore } from '@/auth/authStore'
 import { StartupDetailForm } from '@/features/startup/StartupDetailForm'
 import { useStartupManagers } from '@/features/startup/startupPoolHooks'
-import { isInvested, managementStatusLabel } from '@/features/startup/startupClassification'
+import {
+  isInvested,
+  managementStatusLabel,
+  startupContentKey,
+} from '@/features/startup/startupClassification'
+import { SensitiveValue } from '@/features/master/SensitiveValue'
 import {
   StartupBusinessTeamCard,
   readBusiness,
@@ -47,6 +52,11 @@ function formatDate(v: unknown): string {
   return s.length >= 10 ? s.slice(0, 10) : '-'
 }
 
+/** 원장 스칼라 값 → 문자열(빈 값은 null). 민감정보 컴포넌트에 넘길 때 쓴다. */
+function text(v: unknown): string | null {
+  return v == null || v === '' ? null : String(v)
+}
+
 /**
  * 스타트업 풀 상세페이지(모달 아님, NETWORKS와 동일한 카드 섹션 + 좌우 배치).
  * 좌측: '기본 데이터' 카드(사진 + 이름/배지 + 부제 + 연락처·이메일 정보행) — NETWORKS 헤더 구성과 동일.
@@ -75,6 +85,8 @@ export function StartupDetailPage() {
     const v = record[key]
     return v == null || v === '' ? '-' : String(v)
   }
+  // 민감정보 정책은 구분(관리현황)별 메뉴 단위다 — 상세도 자기가 속한 목록과 같은 정책을 따른다.
+  const contentKey = startupContentKey(record.management_status)
   const logo = record.logo_url ? String(record.logo_url) : null
   const industries = readIndustries(record)
   // 부제 자리에는 한 줄 소개(business_profile.oneLiner)를 노출한다.
@@ -155,9 +167,43 @@ export function StartupDetailPage() {
                   상태·분류(단계·구분·관리현황)는 헤더 칩으로 올려 이 그리드에서 뺐다.
                   상세주소는 길 수 있어 다음 행 전폭을 차지한다(소재지·수정일 뒤에서 자연스레 줄바꿈). */}
               <div className="mt-5 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-3">
-                <Info label="대표자" value={str('representative')} />
-                <Info label="이메일" value={str('email')} />
-                <Info label="연락처" value={str('phone')} />
+                {/* 대표자·이메일·연락처는 외부 기업 정보 — ADMIN '민감정보 관리'의 구분별 정책을 따른다. */}
+                <Info
+                  label="대표자"
+                  value={
+                    <SensitiveValue
+                      field="name"
+                      contentKey={contentKey}
+                      value={text(record.representative)}
+                      resourceType={RESOURCE_TYPE}
+                      resourceId={record.id}
+                    />
+                  }
+                />
+                <Info
+                  label="이메일"
+                  value={
+                    <SensitiveValue
+                      field="email"
+                      contentKey={contentKey}
+                      value={text(record.email)}
+                      resourceType={RESOURCE_TYPE}
+                      resourceId={record.id}
+                    />
+                  }
+                />
+                <Info
+                  label="연락처"
+                  value={
+                    <SensitiveValue
+                      field="phone"
+                      contentKey={contentKey}
+                      value={text(record.phone)}
+                      resourceType={RESOURCE_TYPE}
+                      resourceId={record.id}
+                    />
+                  }
+                />
                 <Info label="회사 형태" value={str('company_form')} />
                 <Info label="설립일" value={formatFounded(record.founded_on)} />
                 <Info label="사업자등록번호" value={str('biz_reg_no')} />

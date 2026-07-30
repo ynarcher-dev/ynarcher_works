@@ -38,6 +38,7 @@ export function MyNetworkTab() {
 
       <MasterListView
         label="내 네트워크"
+        contentKey="networks.mine"
         // 10종이 통일된 프로필 스키마를 공유하므로 조직형 공용 컬럼을 그대로 사용한다
         // (이름·소속·부서·직책/직급·이메일·연락처·구분). 개인 지표(분야·활동·만족도·매칭)는
         // 엔티티마다 의미가 달라 통합 목록에서는 노출하지 않는다.
@@ -50,7 +51,7 @@ export function MyNetworkTab() {
           navigate(`/networks/${row.entity_table}/${row.id}`)
         }}
         // 비활성화는 엔티티별 테이블 컨텍스트가 필요해 통합 목록에서는 제공하지 않는다
-        // (관리 컬럼의 비활성화 버튼은 비활성 상태로 노출된다).
+        // (핸들러가 없으므로 관리 컬럼 자체가 렌더되지 않는다).
         pagination={{
           page,
           pageSize: PAGE_SIZE,

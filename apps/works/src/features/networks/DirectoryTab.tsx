@@ -187,6 +187,8 @@ export function DirectoryTab({ config, keyword, creating, setCreating }: Directo
 
       <MasterListView
         label={config.label}
+        // 엔티티 키가 곧 사이드바 탭이라 민감정보 정책 콘텐츠 키와 1:1로 대응한다.
+        contentKey={`networks.${config.key}`}
         columns={config.listColumns ?? config.fields}
         rows={data?.rows ?? []}
         isLoading={isLoading}

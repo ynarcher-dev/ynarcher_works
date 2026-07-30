@@ -1,7 +1,7 @@
 import { Badge, Button, DataTable, Select, Spinner, type Column, type DataTableProps } from '@ynarcher/ui'
 import { useMemo } from 'react'
-import { maskEmail, maskPhone } from '@/lib/mask'
-import { useSensitiveStore } from '@/features/admin/sensitiveStore'
+import { maskBy } from '@/lib/mask'
+import { useMaskPolicy } from '@/features/admin/sensitiveStore'
 import { OverflowTags } from '@/features/master/OverflowTags'
 import type { MasterColumn, MasterRow } from '@/features/master/types'
 
@@ -14,31 +14,13 @@ function resolveField(row: MasterRow, path: string): unknown {
   }, row)
 }
 
-/** 값이 비면 두 번째 경로에서 대체값을 읽는다(프로필 profile.* / 조직 contact.* 공용). */
-function resolveEither(row: MasterRow, primary: string, fallback: string): unknown {
-  const v = resolveField(row, primary)
-  return v == null || v === '' ? resolveField(row, fallback) : v
-}
-
-/**
- * 복사 버튼 텍스트: 이름/소속·담당자/직책·직급/이메일/연락처를 라벨과 함께 줄바꿈으로 조합.
- * 프로필 엔티티(전문가·VAN·투자자)는 최상위 스칼라(email/phone)와 profile.* 를,
- * 조직 엔티티(기업·기관·대학·기타)는 representative와 contact.* 를 함께 커버한다.
- */
-function buildCopyText(row: MasterRow): string {
-  const line = (label: string, value: unknown) =>
-    `${label}: ${value == null || value === '' ? '' : String(value)}`
-  return [
-    line('이름', resolveField(row, 'name')),
-    line('소속/담당자', resolveEither(row, 'affiliation', 'representative')),
-    line('직책/직급', resolveEither(row, 'profile.position', 'contact.position')),
-    line('이메일', resolveEither(row, 'email', 'contact.email')),
-    line('연락처', resolveEither(row, 'phone', 'contact.phone')),
-  ].join('\n')
-}
-
 interface MasterListViewProps {
   label: string
+  /**
+   * 민감정보 정책 콘텐츠 키(ADMIN '민감정보 관리'). 이 목록이 어느 메뉴인지에 따라
+   * 이름·이메일·연락처를 가릴지가 갈린다. 카탈로그: features/admin/sensitiveContents.ts
+   */
+  contentKey: string
   columns: MasterColumn[]
   /** (미사용) 정본/임시 상태 배지 — 상태 컬럼 제거로 현재 렌더에 반영되지 않는다. */
   hasStatus?: boolean
@@ -50,12 +32,13 @@ interface MasterListViewProps {
   onEdit?: (row: MasterRow) => void
   /** 행 클릭(상세페이지 진입 등). 지정 시 행이 클릭 가능해진다. */
   onRowClick?: (row: MasterRow) => void
-  /** 비활성화(소프트 삭제) 핸들러. 지정 시 관리 컬럼의 비활성화 버튼이 활성화된다. */
+  /**
+   * 비활성화(소프트 삭제) 핸들러. 목록의 '관리' 컬럼은 이 핸들러가 있을 때만 렌더한다 —
+   * 상세페이지가 있는 엔티티는 비활성화를 상세에서 수행하므로 목록에 관리 열을 두지 않는다.
+   */
   onDeactivate?: (row: MasterRow) => void
   /** true면 비활성화 버튼이 내장 confirm 없이 핸들러를 호출한다(사유 입력 모달 등 사용 시). */
   deactivateWithReason?: boolean
-  /** 관리(비활성화) 컬럼 노출 여부. HUB(조회 센터)는 false, NETWORKS(원장)는 true. 기본 true. */
-  manageable?: boolean
   /**
    * 인라인 구분 드롭다운(kind: 'category' 컬럼 전용). 미분류 임시 저장소에서 목록에 머문 채
    * 구분을 선택해 대상 네트워크로 이관할 때 주입한다. 미주입 시 해당 컬럼은 태그로 폴백한다.
@@ -86,6 +69,7 @@ interface MasterListViewProps {
  */
 export function MasterListView({
   label,
+  contentKey,
   columns,
   rows,
   isLoading,
@@ -93,13 +77,12 @@ export function MasterListView({
   onRowClick,
   onDeactivate,
   deactivateWithReason,
-  manageable = true,
   categorySelect,
   selectedKeys,
   onSelectionChange,
   pagination,
 }: MasterListViewProps) {
-  const show = useSensitiveStore((s) => s.show)
+  const masked = useMaskPolicy(contentKey)
   const cols = useMemo<Column<MasterRow>[]>(() => {
     const base: Column<MasterRow>[] = columns.map((c) => ({
       key: c.name,
@@ -202,8 +185,8 @@ export function MasterListView({
           return v ? <Badge tone="neutral">{v}</Badge> : '-'
         }
         if (c.kind === 'tag') return v ? <Badge tone="neutral">{v}</Badge> : '-'
-        if (c.mask === 'email') return show.email ? (v ?? '-') : maskEmail(v ?? null)
-        if (c.mask === 'phone') return show.phone ? (v ?? '-') : maskPhone(v ?? null)
+        // 마스킹 여부는 콘텐츠(메뉴)별 정책이 정한다 — 정책이 '공개'면 원본을 그대로 보여준다.
+        if (c.mask) return masked[c.mask] ? maskBy(c.mask, v ?? null) : (v ?? '-')
         return v ?? '-'
       },
     }))
@@ -233,7 +216,7 @@ export function MasterListView({
       })
     }
     return base
-  }, [columns, onEdit, show.email, show.phone, categorySelect])
+  }, [columns, onEdit, masked, categorySelect])
 
   if (isLoading) return <Spinner />
   return (
@@ -242,7 +225,8 @@ export function MasterListView({
       rows={rows}
       rowKey={(r) => r.id}
       layout="fixed"
-      manageable={manageable}
+      // 관리 컬럼은 비활성화 핸들러가 주입된 목록(상세페이지가 없는 미분류)에만 남긴다.
+      showManageColumn={Boolean(onDeactivate)}
       onRowClick={onRowClick}
       selectable
       selectedKeys={selectedKeys}
@@ -250,10 +234,9 @@ export function MasterListView({
       pagination={pagination}
       meta={{
         // 작성자 = 레코드 생성자(created_by → users). FK 임베드한 creator.name을 노출한다.
+        // 내부 임직원이므로 민감정보 정책 대상이 아니다 — 원본을 그대로 표시한다.
         author: (r) =>
           (r as { creator?: { name?: string | null } | null }).creator?.name || '-',
-        // 복사 버튼: 이름/소속/직책·직급/이메일/연락처를 텍스트로 복사.
-        copyText: buildCopyText,
         onDeactivate,
         deactivateWithReason,
       }}

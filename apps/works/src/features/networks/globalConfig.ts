@@ -36,12 +36,12 @@ export type GlobalRow = Record<string, unknown> & {
 
 /**
  * 글로벌 네트워크 목록 컬럼(공용 MasterListView 재활용).
- * DataTable 내장 컬럼(좌측 `No.`, 우측 `작성자`/`수정일`/`관리`)은 자동 렌더되므로
+ * DataTable 내장 컬럼(좌측 `No.`, 우측 `작성자`/`수정일`)은 자동 렌더되므로
  * 여기서는 도메인 컬럼만 정의한다. 권역/국가는 태그 FK를 조인해 이름을 읽어오며,
  * 링크드인은 URL 유무에 따라 아이콘 색으로 표시한다(kind: 'link').
  */
 export const GLOBAL_COLUMNS: MasterColumn[] = [
-  { name: 'name', label: '이름', className: 'w-24' },
+  { name: 'name', label: '이름', mask: 'name', className: 'w-24' },
   { name: 'affiliation', label: '소속', className: 'w-40' },
   { name: 'profile.position', label: '직책/직급', className: 'w-24' },
   { name: 'email', label: '이메일', mask: 'email', className: 'w-44' },

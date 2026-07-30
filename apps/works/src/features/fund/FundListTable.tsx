@@ -48,6 +48,7 @@ export function FundListTable({
   onSelectionChange,
   pagination,
 }: FundListTableProps) {
+  // 대표펀드매니저·운용인력·관리자는 모두 내부 임직원이라 민감정보 마스킹 대상이 아니다.
   const columns = useMemo<Column<FundListRow>[]>(
     () => [
       { key: 'name', header: '펀드명', primary: true, className: 'w-52', render: (f) => f.name },

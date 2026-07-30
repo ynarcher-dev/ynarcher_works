@@ -1,11 +1,13 @@
 import { Button, Modal, TextArea, useToast } from '@ynarcher/ui'
 import { useState } from 'react'
-import { maskEmail, maskPhone } from '@/lib/mask'
+import { maskBy } from '@/lib/mask'
 import { supabase } from '@/lib/supabase'
-import { useSensitiveStore, type SensitiveField } from '@/features/admin/sensitiveStore'
+import { useMaskPolicy, type SensitiveField } from '@/features/admin/sensitiveStore'
 
 interface Props {
   field: SensitiveField
+  /** 민감정보 정책 콘텐츠 키(어느 메뉴의 상세인지). 카탈로그: features/admin/sensitiveContents.ts */
+  contentKey: string
   value: string | null | undefined
   /** 접근 로그용 컨텍스트. */
   resourceType?: string
@@ -13,21 +15,21 @@ interface Props {
 }
 
 /**
- * 민감정보 표시값. ADMIN 정책이 '공개'면 원본을, '마스킹'이면 마스킹 + "보기"(사유 입력)로 열람한다.
+ * 민감정보 표시값. 콘텐츠별 ADMIN 정책이 '공개'면 원본을, '마스킹'이면 마스킹 + "보기"(사유 입력)로 열람한다.
  * 열람 로그는 서버 RPC(log_sensitive_access)가 강제하며, 로그 적재에 실패하면
  * 원본을 표시하지 않는다(사유 검증도 서버에서 수행).
  */
-export function SensitiveValue({ field, value, resourceType, resourceId }: Props) {
-  const show = useSensitiveStore((s) => s.show[field])
+export function SensitiveValue({ field, contentKey, value, resourceType, resourceId }: Props) {
+  const policy = useMaskPolicy(contentKey)
   const toast = useToast()
   const [revealed, setRevealed] = useState(false)
   const [asking, setAsking] = useState(false)
   const [reason, setReason] = useState('')
 
   if (!value) return <>-</>
-  if (show || revealed) return <>{value}</>
+  if (!policy[field] || revealed) return <>{value}</>
 
-  const masked = field === 'email' ? maskEmail(value) : maskPhone(value)
+  const masked = maskBy(field, value)
 
   const confirm = async () => {
     if (!reason.trim()) {

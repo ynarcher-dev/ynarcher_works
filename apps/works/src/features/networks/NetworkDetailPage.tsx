@@ -58,6 +58,8 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
   const compact = isCompactEntity(entity)
   const showMentoring = !compact
   const resourceType = PROFILE_RESOURCE_TYPE[entity] ?? entity
+  // 민감정보 정책 콘텐츠 키 — 목록(DirectoryTab)과 같은 키를 써야 목록·상세가 함께 움직인다.
+  const contentKey = `networks.${entity}`
   const profile = (record.profile ?? {}) as Record<string, unknown>
   const expertise = Array.isArray(record.expertise)
     ? (record.expertise as string[])
@@ -90,7 +92,13 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
             <DensityProvider value="page">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-title-md font-bold text-gray-900">
-                  {(record.name as string) ?? label}
+                  <SensitiveValue
+                    field="name"
+                    contentKey={contentKey}
+                    value={(record.name as string) ?? label}
+                    resourceType={resourceType}
+                    resourceId={record.id as string}
+                  />
                 </h1>
                 {category && (
                   <Badge tone="neutral">
@@ -114,6 +122,7 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
             value={
               <SensitiveValue
                 field="phone"
+                contentKey={contentKey}
                 value={(record.phone as string) ?? null}
                 resourceType={resourceType}
                 resourceId={record.id}
@@ -125,6 +134,7 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
             value={
               <SensitiveValue
                 field="email"
+                contentKey={contentKey}
                 value={(record.email as string) ?? null}
                 resourceType={resourceType}
                 resourceId={record.id}

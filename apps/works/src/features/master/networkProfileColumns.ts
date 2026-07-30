@@ -21,7 +21,7 @@ import type { MasterColumn } from '@/features/master/types'
  */
 // 컬럼 폭 비율(table-fixed 기준). 여백은 DataTable 기본 px-3로 통일한다.
 export const NETWORK_PROFILE_COLUMNS: MasterColumn[] = [
-  { name: 'name', label: '이름', className: 'w-20' },
+  { name: 'name', label: '이름', mask: 'name', className: 'w-20' },
   { name: 'affiliation', label: '소속', className: 'w-44' },
   { name: 'profile.position', label: '직책/직급', className: 'w-24' },
   { name: 'email', label: '이메일', mask: 'email', className: 'w-44' },
@@ -67,7 +67,7 @@ export const NETWORK_ORG_COLUMNS: MasterColumn[] = NETWORK_PROFILE_COLUMNS.filte
  * (작성자·수정일·관리 컬럼은 DataTable이 자동 렌더한다.)
  */
 export const NETWORK_OTHERS_COLUMNS: MasterColumn[] = [
-  { name: 'name', label: '이름', className: 'w-20' },
+  { name: 'name', label: '이름', mask: 'name', className: 'w-20' },
   { name: 'affiliation', label: '소속', className: 'w-40' },
   { name: 'profile.department', label: '부서명', className: 'w-28' },
   { name: 'profile.position', label: '직책/직급', className: 'w-24' },

@@ -1,5 +1,6 @@
 import { Badge, type BadgeTone, type Column } from '@ynarcher/ui'
 import { Link } from 'react-router-dom'
+import { maskName } from '@/lib/mask'
 import {
   MANAGEMENT_STATUS_TONE,
   managementStatusLabel,
@@ -91,10 +92,16 @@ export function buildPortfolioColumns({
   fundName,
   purposes,
   compact = false,
+  maskRepresentative = false,
 }: {
   fundName: string
   purposes: FundPurpose[]
   compact?: boolean
+  /**
+   * 피투자사(외부 기업) 대표자명 마스킹 여부. ADMIN '민감정보 관리'의 FUND 포트폴리오 정책이 정한다.
+   * 대표펀드매니저·딜메이커 등 내부 임직원 컬럼은 대상이 아니다.
+   */
+  maskRepresentative?: boolean
 }): Column<Investment>[] {
   // 기업명 = 스타트업 상세(/startup/discovered/:id) 하이퍼링크. id 없으면 링크 없이 텍스트.
   // 링크 클릭은 stopPropagation — 행 클릭(상세 모달)과 분리해 이름은 스타트업 상세로만 이동한다.
@@ -131,7 +138,11 @@ export function buildPortfolioColumns({
   const representativeColumn: Column<Investment> = {
     key: 'representative',
     header: '대표자',
-    render: (r) => r.startup_representative || '-',
+    render: (r) => {
+      const v = r.startup_representative
+      if (!v) return '-'
+      return maskRepresentative ? maskName(v) : v
+    },
   }
   const foundedColumn: Column<Investment> = {
     key: 'founded_on',

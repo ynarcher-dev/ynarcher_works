@@ -1,5 +1,7 @@
 import { Badge, DataTable, type Column, type DataTableProps } from '@ynarcher/ui'
 import { useMemo } from 'react'
+import { maskName } from '@/lib/mask'
+import { useMaskPolicy } from '@/features/admin/sensitiveStore'
 import { formatFounded, readIndustries } from '@/features/startup/startupGrowth'
 import {
   isInvested,
@@ -48,6 +50,11 @@ interface StartupPoolTableProps {
    * 미지정('내 기업 관리')은 구분이 섞인 뷰이며, 열 구성은 투자기업 탭과 동일하게 맞춘다.
    */
   tab?: ManagementStatus
+  /**
+   * 민감정보 정책 콘텐츠 키(ADMIN '민감정보 관리'). 이름 정책이 켜지면 외부 기업의 대표자명을 가린다
+   * (담당자·작성자는 내부 임직원이라 대상 아님). 카탈로그: features/admin/sensitiveContents.ts
+   */
+  contentKey: string
   /** 행 클릭(상세 진입). 지정 시 행이 클릭 가능해진다. */
   onRowClick?: (row: StartupPoolRow) => void
   /** 행 다중선택 키(controlled). 일괄 작업용으로 상위가 소유한다. */
@@ -78,11 +85,16 @@ function managerLabel(r: StartupPoolRow): string | null {
 export function StartupPoolTable({
   rows,
   tab,
+  contentKey,
   onRowClick,
   selectedKeys,
   onSelectionChange,
   pagination,
 }: StartupPoolTableProps) {
+  const masked = useMaskPolicy(contentKey)
+  // 마스킹 대상은 외부 기업의 대표자명뿐이다 — 담당자·작성자는 내부 임직원이라 원본을 유지한다.
+  const externalName = (v: string | null | undefined): string | null =>
+    v ? (masked.name ? maskName(v) : v) : null
   const columns = useMemo<Column<StartupPoolRow>[]>(() => {
     const cols: Column<StartupPoolRow>[] = [
       {
@@ -95,7 +107,7 @@ export function StartupPoolTable({
         key: 'representative',
         header: '대표자명',
         className: 'w-24',
-        render: (r) => r.representative || '-',
+        render: (r) => externalName(r.representative) || '-',
       },
       {
         key: 'biz_reg_no',
@@ -174,6 +186,7 @@ export function StartupPoolTable({
       className: 'w-28',
       render: (r) => {
         if (isInvested(r.management_status)) {
+          // 담당자는 내부 임직원이라 마스킹하지 않는다.
           const label = managerLabel(r)
           return label ?? <span className="text-gray-400">미지정</span>
         }
@@ -182,7 +195,9 @@ export function StartupPoolTable({
     })
 
     return cols
-  }, [tab])
+    // externalName은 masked.name에만 의존하므로 정책이 바뀔 때만 컬럼을 다시 만든다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, masked.name])
 
   return (
     <DataTable
@@ -198,6 +213,7 @@ export function StartupPoolTable({
       showManageColumn={false}
       meta={{
         // 작성자(등록자) 컬럼: 전 구분 공통으로 created_by를 표시한다(담당자와 별개 축, 폴백 없음).
+        // 작성자(등록자)는 내부 임직원이라 마스킹 대상이 아니다.
         author: (r) => r.creator?.name || <span className="text-gray-400">-</span>,
       }}
       emptyText="등록된 스타트업이 없습니다."
