@@ -180,8 +180,13 @@ export function CheckoutFormView({
 
       {error && <p className="text-caption text-danger">{error.message}</p>}
 
-      <div className="flex justify-end gap-2">
-        <Button variant="ghost" onClick={onCancel} disabled={busy}>
+      {/*
+        뒤로는 outline이다 — 이 버튼은 모달 푸터가 아니라 본문(흰 바탕) 위에 서 있어서,
+        ghost(테두리·배경 없음)로 두면 글자만 떠 있고 누를 수 있는 영역이 보이지 않는다.
+        같은 '취소' 성격이라도 회색 바탕의 푸터에 있을 때와 판단이 갈린다.
+      */}
+      <div className="flex justify-end gap-2 border-t border-gray-200 pt-3">
+        <Button variant="outline" onClick={onCancel} disabled={busy}>
           뒤로
         </Button>
         <Button onClick={submit} disabled={busy}>
