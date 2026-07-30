@@ -24,7 +24,7 @@ interface AssetImportModalProps {
  * 검증을 통과한 줄만 세고, 한 줄이라도 문제가 있으면 저장 버튼을 잠근다. 절반만 들어간 원장을
  * 정리하는 일은 파일을 고쳐 다시 올리는 일보다 훨씬 번거롭다 — 그래서 부분 저장을 두지 않는다.
  *
- * 지사·할당 대상은 이름으로 받아 id로 바꾼다(파일을 만드는 사람이 uuid를 알 이유가 없다).
+ * 지사·관리자·할당 대상은 이름으로 받아 id로 바꾼다(파일을 만드는 사람이 uuid를 알 이유가 없다).
  * 동명이인처럼 이름만으로 특정할 수 없는 경우는 그 줄을 오류로 돌려보내 화면에서 지정하게 한다.
  */
 export function AssetImportModal({ open, onClose, branches }: AssetImportModalProps) {
@@ -85,7 +85,7 @@ export function AssetImportModal({ open, onClose, branches }: AssetImportModalPr
     >
       <div className="space-y-3">
         <p className="text-body text-gray-600">
-          템플릿의 열 순서대로 CSV를 붙여 넣거나 파일을 선택하세요. 지사와 할당 대상은{' '}
+          템플릿의 열 순서대로 CSV를 붙여 넣거나 파일을 선택하세요. 지사·관리자·할당 대상은{' '}
           <b>이름</b>으로 적고, 분류·상태·결제주기는 화면에서 쓰는 말(구매 · 보유 · 월 구독)을
           그대로 적으면 됩니다. 빈 칸은 기본값(구매 · 보유 · 완납 · 반출 불가)으로 들어갑니다.
           만료일은 상태가 <b>폐기</b>면 폐기일자로 저장됩니다.

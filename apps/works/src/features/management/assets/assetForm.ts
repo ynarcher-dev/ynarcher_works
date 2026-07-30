@@ -28,6 +28,8 @@ export interface AssetDraft {
   branchId: string
   /** 빈 문자열이면 미지정. */
   assignedTo: string
+  /** 이 물건을 맡은 사람. 빈 문자열이면 미지정. 할당 대상과 다른 축이다(§AssetsApi). */
+  managerId: string
   serialNo: string
   acquiredOn: string
   /**
@@ -65,6 +67,7 @@ export function emptyDraft(branchId: string): AssetDraft {
     status: 'AVAILABLE',
     branchId,
     assignedTo: '',
+    managerId: '',
     serialNo: '',
     acquiredOn: '',
     endsOn: '',
@@ -90,6 +93,7 @@ export function draftFromAsset(a: Asset): AssetDraft {
     status: a.status,
     branchId: a.branchId ?? '',
     assignedTo: a.assignedTo ?? '',
+    managerId: a.managerId ?? '',
     serialNo: a.serialNo ?? '',
     acquiredOn: a.acquiredOn ?? '',
     endsOn: a.disposedOn ?? a.returnDue ?? '',
@@ -106,6 +110,7 @@ export function draftFromAsset(a: Asset): AssetDraft {
 
 /**
  * 상태 변경 — 폐기로 가면 할당을 비운다(폐기한 물건에 소유자를 남겨 둘 수 없다).
+ * 관리자는 비우지 않는다: 맡은 사람은 물건을 정리한 뒤에도 그 물건을 설명할 수 있는 사람이다.
  *
  * 끝나는 날은 건드리지 않는다. 상태가 바뀌면 그 날짜가 저장될 컬럼이 만료일↔폐기일자로 옮겨갈
  * 뿐, 사용자가 적어 둔 날 자체는 그대로다 — 상태를 고쳤다고 날짜가 사라지면 지운 적 없는 값이
@@ -181,6 +186,7 @@ export function toAssetInput(draft: AssetDraft): AssetInput {
     status: draft.status,
     branchId: draft.branchId,
     assignedTo: draft.assignedTo || null,
+    managerId: draft.managerId || null,
     serialNo: draft.serialNo.trim() || null,
     acquiredOn: draft.acquiredOn || null,
     disposedOn: retired ? endsOn : null,

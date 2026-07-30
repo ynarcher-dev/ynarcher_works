@@ -132,13 +132,13 @@ export function PortableAssetsTable({
         )
       },
     },
-    // 관리자 = 자산 원장의 할당 대상. 반출을 물어보고 승인을 받을 상대이므로 반출자 옆이 아니라
+    // 관리자는 MANAGEMENT 자산 관리에서 지정한 사람이다. 반출을 물어보고 승인을 받을 상대이므로
     // 줄의 끝에 둔다 — 지금 누가 갖고 있는가(반출자)와 이 물건을 맡은 사람은 다른 질문이다.
     {
       key: 'manager',
       header: '관리자',
       className: 'w-24',
-      render: (r) => nameOf(r.asset.assignedTo) ?? <EmptyValue />,
+      render: (r) => nameOf(r.asset.managerId) ?? <EmptyValue />,
     },
   ]
 

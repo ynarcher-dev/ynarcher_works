@@ -25,7 +25,13 @@ export interface Asset {
   acquisitionType: AssetAcquisition
   status: AssetStatus
   branchId: string | null
+  /** 이 물건을 지금 쓰는 사람(지급 대상). 상태가 ASSIGNED면 필수다. */
   assignedTo: string | null
+  /**
+   * 이 물건을 맡은 사람. 반출 요청·승인을 받는 상대이며 할당 대상과는 다른 축이다 —
+   * 공용 비품은 누구에게도 지급되지 않지만(할당 없음) 맡은 사람은 있다.
+   */
+  managerId: string | null
   /** 시리얼·관리 번호. 유니크가 아니다(라이선스 키는 좌석마다 반복될 수 있다). */
   serialNo: string | null
   acquiredOn: string | null
@@ -53,6 +59,7 @@ export interface AssetInput {
   status: AssetStatus
   branchId: string
   assignedTo: string | null
+  managerId: string | null
   serialNo: string | null
   acquiredOn: string | null
   disposedOn: string | null
@@ -74,6 +81,7 @@ interface AssetRow {
   status: AssetStatus
   branch_id: string | null
   assigned_to: string | null
+  manager_id: string | null
   serial_no: string | null
   acquired_on: string | null
   disposed_on: string | null
@@ -89,7 +97,7 @@ interface AssetRow {
 }
 
 const COLUMNS =
-  'id, name, item_type, acquisition_type, status, branch_id, assigned_to, serial_no, acquired_on, disposed_on, amount, billing_cycle, quantity, is_portable, requires_approval, return_due, note, photo_paths, updated_at'
+  'id, name, item_type, acquisition_type, status, branch_id, assigned_to, manager_id, serial_no, acquired_on, disposed_on, amount, billing_cycle, quantity, is_portable, requires_approval, return_due, note, photo_paths, updated_at'
 
 const toAsset = (r: AssetRow): Asset => ({
   id: r.id,
@@ -99,6 +107,7 @@ const toAsset = (r: AssetRow): Asset => ({
   status: r.status,
   branchId: r.branch_id,
   assignedTo: r.assigned_to,
+  managerId: r.manager_id,
   serialNo: r.serial_no,
   acquiredOn: r.acquired_on,
   disposedOn: r.disposed_on,
@@ -123,6 +132,7 @@ export const toAssetRow = (v: AssetInput) => ({
   status: v.status,
   branch_id: v.branchId,
   assigned_to: v.assignedTo,
+  manager_id: v.managerId,
   serial_no: v.serialNo?.trim() || null,
   acquired_on: v.acquiredOn,
   disposed_on: v.disposedOn,

@@ -96,6 +96,25 @@ describe('parseAssetCsv', () => {
     expect(rows[0]!.assignedTo).toBe('u-hong')
   })
 
+  it('관리자와 할당 대상은 서로 다른 칸이다 — 맡은 사람과 쓰는 사람', () => {
+    const { errors, rows } = parseAssetCsv(
+      csv({ 자산명: '빔프로젝터', 지사: '본사', 관리자: '홍길동' }),
+      refs,
+    )
+    expect(errors).toEqual([])
+    expect(rows[0]!.managerId).toBe('u-hong')
+    // 공용 비품은 누구에게도 지급되지 않는다 — 관리자만 있고 할당은 비어 있는 것이 정상이다.
+    expect(rows[0]!.assignedTo).toBeNull()
+  })
+
+  it('사람을 못 찾으면 어느 칸이 틀렸는지 이름으로 알린다', () => {
+    const { errors } = parseAssetCsv(
+      csv({ 자산명: '노트북', 지사: '본사', 관리자: '없는사람' }),
+      refs,
+    )
+    expect(errors[0]?.message).toContain('관리자')
+  })
+
   describe('끝나는 날', () => {
     it('폐기 상태면 만료일이 폐기일자로 저장된다 — 한 칸이 상태에 따라 갈린다', () => {
       const { rows, errors } = parseAssetCsv(

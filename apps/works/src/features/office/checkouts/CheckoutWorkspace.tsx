@@ -138,8 +138,8 @@ export function CheckoutWorkspace() {
     return (id: string | null) => (id ? byId.get(id) ?? null : null)
   }, [branches])
 
-  // 비품 관리자 이름. 뷰는 id만 내려주고 이름은 임직원 디렉토리에서 붙인다 —
-  // 자산 원장의 할당 대상이 곧 그 물건을 맡은 사람이다.
+  // 자산 관리자 이름. 뷰는 id만 내려주고 이름은 임직원 디렉토리에서 붙인다 —
+  // 누가 맡았는가는 MANAGEMENT 자산 관리가 정하고 이 화면은 읽기만 한다.
   const managerNameOf = useMemo(() => {
     const byId = new Map((employees ?? []).map((e) => [e.id, e.name] as const))
     return (id: string | null) => (id ? byId.get(id) ?? '알 수 없음' : null)
@@ -279,7 +279,7 @@ export function CheckoutWorkspace() {
         open={opened !== null}
         row={opened}
         branchName={branchNameOf(opened?.asset.branchId ?? null)}
-        managerName={managerNameOf(opened?.asset.assignedTo ?? null)}
+        managerName={managerNameOf(opened?.asset.managerId ?? null)}
         viewer={viewer}
         busy={busy}
         onAction={(c, action) => void act(c, action)}

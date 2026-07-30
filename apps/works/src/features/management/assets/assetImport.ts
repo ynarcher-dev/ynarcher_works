@@ -39,6 +39,7 @@ export const ASSET_IMPORT_HEADERS = [
   '수량',
   '분류',
   '상태',
+  '관리자',
   '할당대상',
   '금액',
   '결제주기',
@@ -58,6 +59,7 @@ const HEADER_ALIASES: Record<string, string> = {
   수량: '수량', quantity: '수량', 보유수량: '수량',
   분류: '분류', acquisition_type: '분류',
   상태: '상태', status: '상태',
+  관리자: '관리자', manager: '관리자', manager_id: '관리자', 자산관리자: '관리자',
   할당대상: '할당대상', assigned_to: '할당대상', 할당: '할당대상',
   시리얼번호: '시리얼번호', serial_no: '시리얼번호', 시리얼: '시리얼번호',
   취득일자: '취득일자', acquired_on: '취득일자',
@@ -134,8 +136,8 @@ function uniqueIdByName(list: { id: string; name: string }[], name: string) {
 export function buildAssetTemplateCsv(): string {
   return [
     ASSET_IMPORT_HEADERS.join(','),
-    '"MacBook Pro 16 (2025)",C02X1234ABCD,노트북,1,구매,보유,,2500000,완납,2026-03-01,,O,X,본사,',
-    'Figma 엔터프라이즈,,라이선스,5,렌탈,보유,,55000,월 구독,2026-01-01,2027-12-31,X,X,본사,연 단위 갱신',
+    '"MacBook Pro 16 (2025)",C02X1234ABCD,노트북,1,구매,보유,,,2500000,완납,2026-03-01,,O,X,본사,',
+    'Figma 엔터프라이즈,,라이선스,5,렌탈,보유,,,55000,월 구독,2026-01-01,2027-12-31,X,X,본사,연 단위 갱신',
   ].join('\n')
 }
 
@@ -218,19 +220,33 @@ export function parseAssetCsv(text: string, refs: ImportRefs): ImportParseResult
     const endsOn = disposed || expiry
     const finalStatus = disposed ? 'RETIRED' : status
 
-    let assignedTo = ''
-    const personName = cell('할당대상')
-    if (personName) {
-      const found = uniqueIdByName(refs.employees, personName)
+    // 사람 칸은 둘이다(관리자·할당대상). 어느 쪽이 틀렸는지는 칸 이름으로 알린다 —
+    // '임직원을 찾을 수 없습니다'만 나오면 두 칸 중 어디를 고쳐야 하는지 알 수 없다.
+    const person = (column: '관리자' | '할당대상'): string | ImportRowError => {
+      const raw = cell(column)
+      if (!raw) return ''
+      const found = uniqueIdByName(refs.employees, raw)
       if (found === 'none') {
-        errors.push({ line, message: `임직원 '${personName}'을(를) 찾을 수 없습니다.` })
-        continue
+        return { line, message: `${column} '${raw}'을(를) 임직원에서 찾을 수 없습니다.` }
       }
       if (found === 'many') {
-        errors.push({ line, message: `임직원 '${personName}'이(가) 여러 명입니다. 화면에서 직접 지정하세요.` })
-        continue
+        return {
+          line,
+          message: `${column} '${raw}'이(가) 여러 명입니다. 화면에서 직접 지정하세요.`,
+        }
       }
-      assignedTo = found
+      return found
+    }
+
+    const managerId = person('관리자')
+    if (typeof managerId !== 'string') {
+      errors.push(managerId)
+      continue
+    }
+    const assignedTo = person('할당대상')
+    if (typeof assignedTo !== 'string') {
+      errors.push(assignedTo)
+      continue
     }
 
     const draft = {
@@ -240,7 +256,9 @@ export function parseAssetCsv(text: string, refs: ImportRefs): ImportParseResult
       acquisitionType,
       status: finalStatus,
       // 폐기한 물건에는 소유자를 남기지 않는다(화면의 상태 전이와 같은 규칙).
+      // 관리자는 그대로 둔다 — 맡은 사람은 물건을 정리한 뒤에도 그 물건을 설명할 수 있다.
       assignedTo: finalStatus === 'RETIRED' ? '' : assignedTo,
+      managerId,
       serialNo: cell('시리얼번호'),
       acquiredOn,
       endsOn,

@@ -10,8 +10,8 @@ import type { Asset } from '@/features/management/assets/assetsApi'
 interface AssetsTableProps {
   rows: Asset[]
   /**
-   * 할당 대상 id → 이름. 목록에는 이름만 적는다(연락처·이메일은 노출하지 않는다).
-   * 할당 대상이 없으면 `null`이며, 빈 칸 표기는 표가 정한다.
+   * 사용자 id → 이름(관리자·할당 대상). 목록에는 이름만 적는다(연락처·이메일은 노출하지 않는다).
+   * 지정된 사람이 없으면 `null`이며, 빈 칸 표기는 표가 정한다.
    */
   nameOf: (id: string | null) => string | null
   selectedKeys: string[]
@@ -96,6 +96,13 @@ export function AssetsTable({
       header: '상태',
       className: 'w-20',
       render: (a) => ASSET_LABELS[a.status],
+    },
+    // 관리자와 할당은 이웃한 두 열이다 — 맡은 사람과 쓰는 사람이 한눈에 갈려야 한다.
+    {
+      key: 'managerId',
+      header: '관리자',
+      className: 'w-24',
+      render: (a) => nameOf(a.managerId) ?? <EmptyValue />,
     },
     {
       key: 'assignedTo',
