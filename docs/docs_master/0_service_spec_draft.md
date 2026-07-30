@@ -33,6 +33,8 @@
   * **의미**: 기존 HUB의 전사 포털 역할을 승계한 OFFICE 화면 요건을 정의합니다. 전사 대시보드, 통합 검색, AI 에이전트, 임직원 조회 전용 디렉토리, 전사 캘린더, 전자결재, 게시판, 회의실 예약/거래처 정보 골격을 포함합니다.
 * **[3_1_1_board_archive_notice.md](../docs_planning/3_1_1_board_archive_notice.md) (OFFICE 게시판·자료실·공지사항 구조 설계)**
   * **의미**: 게시 기능을 게시판(`POST`)과 자료실(`ARCHIVE`) 두 종류로 확정하고, 공지사항을 별도 게시판이 아닌 게시글 플래그(`global_notice`) 기반 조회 뷰로 재정의합니다. `boards`/`board_posts` 물리 스키마와 권한 범위(`board_scope`)를 규정합니다.
+* **[3_1_2_office_asset_checkout.md](../docs_planning/3_1_2_office_asset_checkout.md) (OFFICE 반출대장 기획서)**
+  * **의미**: 회사 물건이 사외로 나갔다가 돌아오는 사실을 기록하는 반출 원장(`asset_checkouts`)을 명세합니다. 상태 6종(`PENDING`/`REJECTED`/`RESERVED`/`OUT`/`RETURNED`/`CANCELLED`)의 전이 규칙, `daterange` 기반 기간 점유와 `EXCLUDE` 겹침 차단, 연체 파생 판정, 자산별 승인 필요 여부(`assets.requires_approval`)와 승인 흐름, MANAGEMENT 권한이 없는 임직원에게 후보 자산만 노출하는 `portable_assets` 뷰, 자산 표기 스냅샷 비정규화의 근거를 포함합니다. 자산의 소유 국면(`assets.status`)과 위치(반출)는 다른 축이므로 원장에 `반출중` 상태를 만들지 않고 대장에서 파생합니다.
 * **[3_2_workspace_admin.md](../docs_planning/3_2_workspace_admin.md) (ADMIN 워크스페이스 상세 기획서)**
   * **의미**: 사용자 등급별 메뉴 접근 권한 제어 콘솔과 시스템 보안 감사 로그 모니터링 화면 요건을 기획합니다.
 * **[3_3_workspace_networks.md](../docs_planning/3_3_workspace_networks.md) (NETWORKS 워크스페이스 상세 기획서)**

@@ -120,12 +120,20 @@ export function AssetsTable({
       className: 'w-28',
       render: (a) => <DateCell value={a.disposedOn ?? a.returnDue} />,
     },
+    // 승인 필요는 반출 가능의 하위 값이라 열을 나누지 않는다 — 나누면 '불가'인 행에 늘 빈 칸이
+    // 하나 더 생기고, 두 칸을 함께 읽어야 뜻이 서는 값이 된다.
     {
       key: 'isPortable',
       header: '반출',
-      className: 'w-20',
+      className: 'w-24',
       render: (a) =>
-        a.isPortable ? <Badge tone="info">가능</Badge> : <Badge tone="neutral">불가</Badge>,
+        !a.isPortable ? (
+          <Badge tone="neutral">불가</Badge>
+        ) : a.requiresApproval ? (
+          <Badge tone="warning">승인 필요</Badge>
+        ) : (
+          <Badge tone="info">가능</Badge>
+        ),
     },
   ]
 

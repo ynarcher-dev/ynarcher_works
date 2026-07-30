@@ -253,19 +253,41 @@ export function AssetFormFields({
         }}
       />
 
-      {/* 반출 가능 여부는 관리자의 사전 판단이며, OFFICE 반출대장이 이 값으로 후보를 거른다. */}
-      <div className="flex items-center justify-between rounded-radius-md border border-gray-200 bg-gray-25 px-3 py-2.5">
-        <div>
-          <p className="text-body font-medium text-gray-800">반출 가능 여부</p>
-          <p className="text-caption text-gray-500">
-            켜면 OFFICE 반출대장에서 반출 후보로 제시됩니다.
-          </p>
+      {/*
+        반출 가능 여부는 관리자의 사전 판단이며, OFFICE 반출대장이 이 값으로 후보를 거른다.
+        승인 필요 여부는 그 아래에 딸린 값이라 반출을 켰을 때만 나타난다 — 반출하지 못하는
+        물건에 "승인이 필요한가"를 묻는 것은 뜻이 없는 질문이다.
+      */}
+      <div className="rounded-radius-md border border-gray-200 bg-gray-25 px-3 py-2.5">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-body font-medium text-gray-800">반출 가능 여부</p>
+            <p className="text-caption text-gray-500">
+              켜면 OFFICE 반출대장에서 반출 후보로 제시됩니다.
+            </p>
+          </div>
+          <Switch
+            checked={draft.isPortable}
+            onChange={(isPortable) => onChange({ ...draft, isPortable })}
+            aria-label="반출 가능 여부"
+          />
         </div>
-        <Switch
-          checked={draft.isPortable}
-          onChange={(isPortable) => onChange({ ...draft, isPortable })}
-          aria-label="반출 가능 여부"
-        />
+
+        {draft.isPortable && (
+          <div className="mt-2.5 flex items-center justify-between border-t border-gray-200 pt-2.5 pl-3">
+            <div>
+              <p className="text-body font-medium text-gray-800">반출 시 승인 필요</p>
+              <p className="text-caption text-gray-500">
+                켜면 반출 요청이 승인 대기로 등록되며, 자산 담당자가 승인해야 반출됩니다.
+              </p>
+            </div>
+            <Switch
+              checked={draft.requiresApproval}
+              onChange={(requiresApproval) => onChange({ ...draft, requiresApproval })}
+              aria-label="반출 시 승인 필요"
+            />
+          </div>
+        )}
       </div>
 
       {/*

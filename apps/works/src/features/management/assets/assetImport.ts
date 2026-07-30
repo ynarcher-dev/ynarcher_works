@@ -44,6 +44,7 @@ export const ASSET_IMPORT_HEADERS = [
   '취득일자',
   '만료일',
   '반출가능',
+  '반출승인',
   '지사',
   '비고',
 ] as const
@@ -63,6 +64,7 @@ const HEADER_ALIASES: Record<string, string> = {
   금액: '금액', amount: '금액',
   결제주기: '결제주기', billing_cycle: '결제주기',
   반출가능: '반출가능', is_portable: '반출가능', 반출: '반출가능',
+  반출승인: '반출승인', requires_approval: '반출승인', 승인필요: '반출승인',
   비고: '비고', note: '비고',
 }
 
@@ -130,8 +132,8 @@ function uniqueIdByName(list: { id: string; name: string }[], name: string) {
 export function buildAssetTemplateCsv(): string {
   return [
     ASSET_IMPORT_HEADERS.join(','),
-    '"MacBook Pro 16 (2025)",C02X1234ABCD,노트북,구매,보유,,2500000,완납,2026-03-01,,O,본사,',
-    'Figma 엔터프라이즈,,라이선스,렌탈,보유,,55000,월 구독,2026-01-01,2027-12-31,X,본사,연 단위 갱신',
+    '"MacBook Pro 16 (2025)",C02X1234ABCD,노트북,구매,보유,,2500000,완납,2026-03-01,,O,X,본사,',
+    'Figma 엔터프라이즈,,라이선스,렌탈,보유,,55000,월 구독,2026-01-01,2027-12-31,X,X,본사,연 단위 갱신',
   ].join('\n')
 }
 
@@ -194,6 +196,13 @@ export function parseAssetCsv(text: string, refs: ImportRefs): ImportParseResult
       errors.push({ line, message: `반출가능 '${cell('반출가능')}'를 알 수 없습니다(O/X).` })
       continue
     }
+    // 반출이 불가하면 승인 여부는 뜻이 없는 값이라 저장 단계에서 꺼진다(toAssetInput).
+    // 그래도 값 자체는 읽어 둔다 — 알 수 없는 글자를 말없이 넘기면 어느 줄이 잘못됐는지 모른다.
+    const requiresApproval = boolOf(cell('반출승인'))
+    if (requiresApproval == null) {
+      errors.push({ line, message: `반출승인 '${cell('반출승인')}'를 알 수 없습니다(O/X).` })
+      continue
+    }
 
     const acquiredOn = dateOf(cell('취득일자'))
     const expiry = dateOf(cell('만료일'))
@@ -236,6 +245,7 @@ export function parseAssetCsv(text: string, refs: ImportRefs): ImportParseResult
       amount: normalizeAmountInput(cell('금액')),
       billingCycle,
       isPortable,
+      requiresApproval,
       note: cell('비고'),
     }
 

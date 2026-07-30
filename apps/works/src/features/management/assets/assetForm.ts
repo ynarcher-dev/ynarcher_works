@@ -39,6 +39,8 @@ export interface AssetDraft {
   amount: string
   billingCycle: AssetBillingCycle
   isPortable: boolean
+  /** 반출 시 승인 필요 여부. 반출 가능이 꺼져 있으면 저장되지 않는다(뜻이 없는 값이다). */
+  requiresApproval: boolean
   note: string
   /**
    * 사진 경로 목록. 파일 자체는 고른 자리에서 이미 버킷에 올라가 있고 여기에는 경로만 담긴다 —
@@ -67,6 +69,7 @@ export function emptyDraft(branchId: string): AssetDraft {
     amount: '',
     billingCycle: 'ONE_TIME',
     isPortable: false,
+    requiresApproval: false,
     note: '',
     photoPaths: [],
   }
@@ -91,6 +94,7 @@ export function draftFromAsset(a: Asset): AssetDraft {
     amount: a.amount == null ? '' : String(Math.trunc(a.amount)),
     billingCycle: a.billingCycle,
     isPortable: a.isPortable,
+    requiresApproval: a.requiresApproval,
     note: a.note ?? '',
     photoPaths: a.photoPaths,
   }
@@ -175,6 +179,7 @@ export function toAssetInput(draft: AssetDraft): AssetInput {
     amount: draft.amount ? Number(draft.amount) : null,
     billingCycle: draft.billingCycle,
     isPortable: draft.isPortable,
+    requiresApproval: draft.isPortable && draft.requiresApproval,
     returnDue: retired ? null : endsOn,
     note: draft.note.trim() || null,
     photoPaths: draft.photoPaths,

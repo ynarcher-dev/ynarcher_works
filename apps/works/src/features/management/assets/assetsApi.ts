@@ -34,6 +34,8 @@ export interface Asset {
   amount: number | null
   billingCycle: AssetBillingCycle
   isPortable: boolean
+  /** 반출 시 승인이 필요한가. 반출 가능(isPortable)일 때만 뜻을 갖는다. */
+  requiresApproval: boolean
   returnDue: string | null
   note: string | null
   /** 사진 경로(asset-photos 버킷 키). 순서가 표시 순서이며 최대 5장(DB check). */
@@ -55,6 +57,7 @@ export interface AssetInput {
   amount: number | null
   billingCycle: AssetBillingCycle
   isPortable: boolean
+  requiresApproval: boolean
   returnDue: string | null
   note: string | null
   photoPaths: string[]
@@ -74,6 +77,7 @@ interface AssetRow {
   amount: string | number | null
   billing_cycle: AssetBillingCycle
   is_portable: boolean
+  requires_approval: boolean
   return_due: string | null
   note: string | null
   photo_paths: string[] | null
@@ -81,7 +85,7 @@ interface AssetRow {
 }
 
 const COLUMNS =
-  'id, name, item_type, acquisition_type, status, branch_id, assigned_to, serial_no, acquired_on, disposed_on, amount, billing_cycle, is_portable, return_due, note, photo_paths, updated_at'
+  'id, name, item_type, acquisition_type, status, branch_id, assigned_to, serial_no, acquired_on, disposed_on, amount, billing_cycle, is_portable, requires_approval, return_due, note, photo_paths, updated_at'
 
 const toAsset = (r: AssetRow): Asset => ({
   id: r.id,
@@ -98,6 +102,7 @@ const toAsset = (r: AssetRow): Asset => ({
   amount: r.amount == null ? null : Number(r.amount),
   billingCycle: r.billing_cycle,
   isPortable: r.is_portable,
+  requiresApproval: r.requires_approval,
   returnDue: r.return_due,
   note: r.note,
   // 컬럼 기본값이 빈 배열이라 null이 올 일은 없지만, 없으면 없는 대로 다룬다(화면이 빈 칸을 그린다).
@@ -119,6 +124,9 @@ export const toAssetRow = (v: AssetInput) => ({
   amount: v.amount,
   billing_cycle: v.billingCycle,
   is_portable: v.isPortable,
+  // 반출이 불가한 자산에 승인 여부는 뜻이 없다 — 토글을 끄면 함께 내린다(꺼진 채 남아 있으면
+  // 나중에 반출을 다시 켰을 때 예전 설정이 조용히 되살아난다).
+  requires_approval: v.isPortable && v.requiresApproval,
   return_due: v.returnDue,
   note: v.note?.trim() || null,
   photo_paths: v.photoPaths,
@@ -287,6 +295,32 @@ export function useDeactivateAssets() {
         .from('assets')
         .update({ deleted_at: new Date().toISOString() })
         .in('id', ids)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ASSETS_KEY }),
+  })
+}
+
+/**
+ * 반출 승인 필요 여부 일괄 설정 — 품목 단위 운용의 실제 경로다.
+ *
+ * 정책을 품목(item_type)에 매달 수 없어(원장 없는 자유입력이라 '노트북'과 '랩탑'이 갈린다)
+ * 값은 자산마다 있지만, 실제 운용은 "차량 12대를 전부 승인 대상으로"처럼 무리 단위다.
+ * 검색으로 골라 한 번에 바꾸는 이 경로가 그것을 대신한다.
+ *
+ * 반출 가능한 자산에만 건다 — 반출이 불가한 자산의 승인 여부는 뜻이 없는 값이고, 켜 두면
+ * 나중에 반출을 허용하는 순간 아무도 의도하지 않은 승인 절차가 조용히 붙는다.
+ */
+export function useSetAssetsApproval() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (v: { ids: string[]; requiresApproval: boolean }) => {
+      if (!v.ids.length) return
+      const { error } = await supabase
+        .from('assets')
+        .update({ requires_approval: v.requiresApproval })
+        .in('id', v.ids)
+        .eq('is_portable', true)
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ASSETS_KEY }),

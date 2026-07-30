@@ -12,6 +12,7 @@ import {
   useAssetsPage,
   useCreateAsset,
   useDeactivateAssets,
+  useSetAssetsApproval,
   useUpdateAsset,
   type Asset,
   type AssetFilters,
@@ -50,7 +51,12 @@ export function AssetsPanel() {
   const createAsset = useCreateAsset()
   const updateAsset = useUpdateAsset()
   const deactivateAssets = useDeactivateAssets()
-  const busy = createAsset.isPending || updateAsset.isPending || deactivateAssets.isPending
+  const setApproval = useSetAssetsApproval()
+  const busy =
+    createAsset.isPending ||
+    updateAsset.isPending ||
+    deactivateAssets.isPending ||
+    setApproval.isPending
 
   const [form, setForm] = useState<'create' | Asset | null>(null)
   const [importOpen, setImportOpen] = useState(false)
@@ -118,6 +124,28 @@ export function AssetsPanel() {
     }
   }
 
+  // 승인 설정은 반출 가능한 자산에만 건다 — 대상이 아닌 선택은 세어서 알린다(말없이 지나가면
+  // 12건을 골랐는데 3건만 바뀐 것을 눈치채지 못한다).
+  const portableSelected = useMemo(() => selectedRows.filter((r) => r.isPortable), [selectedRows])
+
+  const applyApproval = async (requiresApproval: boolean) => {
+    if (!portableSelected.length) return
+    try {
+      await setApproval.mutateAsync({
+        ids: portableSelected.map((r) => r.id),
+        requiresApproval,
+      })
+      const skipped = selectedRows.length - portableSelected.length
+      toast.show(
+        `${portableSelected.length}건의 반출 승인을 ${requiresApproval ? '필요로 설정' : '해제'}했습니다.` +
+          (skipped ? ` 반출 불가 ${skipped}건은 제외했습니다.` : ''),
+        'success',
+      )
+    } catch {
+      toast.show('반출 승인 설정에 실패했습니다.', 'danger')
+    }
+  }
+
   if (branchesQuery.isLoading) {
     return (
       <div className="flex justify-center py-10">
@@ -164,7 +192,9 @@ export function AssetsPanel() {
 
       <AssetsSelectionBar
         items={selectedRows.map(costBasisFromAsset)}
+        portableCount={portableSelected.length}
         busy={busy}
+        onSetApproval={(v) => void applyApproval(v)}
         onDeactivate={() => void deactivate(selectedRows)}
       />
 
