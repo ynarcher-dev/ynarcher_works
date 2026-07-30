@@ -36,6 +36,8 @@ export interface Asset {
   isPortable: boolean
   returnDue: string | null
   note: string | null
+  /** 사진 경로(asset-photos 버킷 키). 순서가 표시 순서이며 최대 5장(DB check). */
+  photoPaths: string[]
   updatedAt: string | null
 }
 
@@ -55,6 +57,7 @@ export interface AssetInput {
   isPortable: boolean
   returnDue: string | null
   note: string | null
+  photoPaths: string[]
 }
 
 interface AssetRow {
@@ -73,11 +76,12 @@ interface AssetRow {
   is_portable: boolean
   return_due: string | null
   note: string | null
+  photo_paths: string[] | null
   updated_at: string | null
 }
 
 const COLUMNS =
-  'id, name, item_type, acquisition_type, status, branch_id, assigned_to, serial_no, acquired_on, disposed_on, amount, billing_cycle, is_portable, return_due, note, updated_at'
+  'id, name, item_type, acquisition_type, status, branch_id, assigned_to, serial_no, acquired_on, disposed_on, amount, billing_cycle, is_portable, return_due, note, photo_paths, updated_at'
 
 const toAsset = (r: AssetRow): Asset => ({
   id: r.id,
@@ -96,6 +100,8 @@ const toAsset = (r: AssetRow): Asset => ({
   isPortable: r.is_portable,
   returnDue: r.return_due,
   note: r.note,
+  // 컬럼 기본값이 빈 배열이라 null이 올 일은 없지만, 없으면 없는 대로 다룬다(화면이 빈 칸을 그린다).
+  photoPaths: r.photo_paths ?? [],
   updatedAt: r.updated_at,
 })
 
@@ -115,6 +121,7 @@ export const toAssetRow = (v: AssetInput) => ({
   is_portable: v.isPortable,
   return_due: v.returnDue,
   note: v.note?.trim() || null,
+  photo_paths: v.photoPaths,
 })
 
 const ASSETS_KEY = ['management', 'assets']

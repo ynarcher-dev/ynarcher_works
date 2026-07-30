@@ -12,6 +12,7 @@
  * DB check 제약(폐기일자가 있으면 상태는 폐기)이 둘의 구분 위에 서 있다.
  */
 import {
+  ASSET_PHOTO_MAX,
   type AssetAcquisition,
   type AssetBillingCycle,
   type AssetStatus,
@@ -39,6 +40,11 @@ export interface AssetDraft {
   billingCycle: AssetBillingCycle
   isPortable: boolean
   note: string
+  /**
+   * 사진 경로 목록. 파일 자체는 고른 자리에서 이미 버킷에 올라가 있고 여기에는 경로만 담긴다 —
+   * 폼이 저장하는 것은 "이 자산의 사진이 이 다섯 장"이라는 사실뿐이다.
+   */
+  photoPaths: string[]
 }
 
 export interface AssetFormError {
@@ -62,6 +68,7 @@ export function emptyDraft(branchId: string): AssetDraft {
     billingCycle: 'ONE_TIME',
     isPortable: false,
     note: '',
+    photoPaths: [],
   }
 }
 
@@ -85,6 +92,7 @@ export function draftFromAsset(a: Asset): AssetDraft {
     billingCycle: a.billingCycle,
     isPortable: a.isPortable,
     note: a.note ?? '',
+    photoPaths: a.photoPaths,
   }
 }
 
@@ -133,6 +141,14 @@ export function validateDraft(draft: AssetDraft): AssetFormError | null {
   if (draft.amount && !/^\d+$/.test(draft.amount)) {
     return { field: 'amount', message: '금액은 0 이상의 숫자로 입력하세요.' }
   }
+  // 화면은 다섯 장을 채우면 첨부 버튼을 감추므로 여기 걸릴 일은 드물다. 그래도 둔다 —
+  // DB check(assets_photo_paths_max)에 먼저 걸리면 사용자는 무엇이 문제인지 알 수 없다.
+  if (draft.photoPaths.length > ASSET_PHOTO_MAX) {
+    return {
+      field: 'photoPaths',
+      message: `사진은 최대 ${ASSET_PHOTO_MAX}장까지 첨부할 수 있습니다.`,
+    }
+  }
   // 구독은 만료일이 있어야 계약 총액을 계산할 수 있다. 다만 저장을 막지는 않는다 —
   // 만료일을 아직 모르는 계약도 등록해 두어야 하므로, 총액을 빈 값으로 두는 것이 답이다.
   return null
@@ -161,5 +177,6 @@ export function toAssetInput(draft: AssetDraft): AssetInput {
     isPortable: draft.isPortable,
     returnDue: retired ? null : endsOn,
     note: draft.note.trim() || null,
+    photoPaths: draft.photoPaths,
   }
 }

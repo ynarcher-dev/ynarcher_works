@@ -9,6 +9,7 @@ import {
   withStatus,
   type AssetDraft,
 } from '@/features/management/assets/assetForm'
+import { ASSET_PHOTO_MAX } from '@/features/management/config'
 
 /**
  * 자산 폼 규칙은 DB check 제약을 비춘 것이다 — 여기 사례가 곧 "저장이 거부되는 조합"의 목록이며,
@@ -67,6 +68,14 @@ describe('validateDraft', () => {
     expect(validateDraft(draft({ amount: '2500000' }))).toBeNull()
     expect(validateDraft(draft({ amount: '' }))).toBeNull()
     expect(validateDraft(draft({ amount: '-1' }))?.field).toBe('amount')
+  })
+
+  it(`사진은 ${ASSET_PHOTO_MAX}장까지다 — 넘으면 DB check에 걸리기 전에 화면이 먼저 말한다`, () => {
+    const paths = (n: number) => Array.from({ length: n }, (_, i) => `p${i}.jpg`)
+    expect(validateDraft(draft({ photoPaths: paths(ASSET_PHOTO_MAX) }))).toBeNull()
+    expect(validateDraft(draft({ photoPaths: paths(ASSET_PHOTO_MAX + 1) }))?.field).toBe(
+      'photoPaths',
+    )
   })
 })
 
@@ -133,6 +142,12 @@ describe('toAssetInput', () => {
     const retired = toAssetInput(draft({ status: 'RETIRED', endsOn: '2027-12-31' }))
     expect(retired.disposedOn).toBe('2027-12-31')
     expect(retired.returnDue).toBeNull()
+  })
+
+  it('사진 경로는 순서 그대로 실린다 — 배열 순서가 곧 표시 순서다', () => {
+    const paths = ['a.jpg', 'b.jpg', 'c.jpg']
+    expect(toAssetInput(draft({ photoPaths: paths })).photoPaths).toEqual(paths)
+    expect(toAssetInput(draft()).photoPaths).toEqual([])
   })
 
   it('끝나는 날이 비면 양쪽 다 null이다', () => {

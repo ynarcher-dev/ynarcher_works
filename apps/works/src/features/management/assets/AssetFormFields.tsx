@@ -12,6 +12,7 @@ import {
   type AssetStatus,
 } from '@/features/management/config'
 import { AssetCostSummary } from '@/features/management/assets/AssetCostSummary'
+import { AssetPhotoPicker } from '@/features/management/assets/AssetPhotoPicker'
 import {
   endsOnLabel,
   normalizeAmountInput,
@@ -264,6 +265,19 @@ export function AssetFormFields({
           checked={draft.isPortable}
           onChange={(isPortable) => onChange({ ...draft, isPortable })}
           aria-label="반출 가능 여부"
+        />
+      </div>
+
+      {/*
+        사진은 값 입력이 끝난 뒤에 둔다 — 파일을 고르는 동안 폼이 멈춘 것처럼 보이는 자리라,
+        이름·금액 같은 필수 값을 적는 흐름 중간에 끼우지 않는다.
+      */}
+      {/* Field(=label)로 감싸지 않는다 — 안에 파일 입력 label과 삭제 버튼이 있어 label이 중첩된다. */}
+      <div className="block">
+        <span className="mb-1 block text-caption font-medium text-gray-600">사진</span>
+        <AssetPhotoPicker
+          value={draft.photoPaths}
+          onChange={(photoPaths) => onChange({ ...draft, photoPaths })}
         />
       </div>
 

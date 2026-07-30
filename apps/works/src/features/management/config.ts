@@ -109,3 +109,12 @@ export const ASSET_STATUS_ORDER: AssetStatus[] = [
   'MAINTENANCE',
   'RETIRED',
 ]
+
+/**
+ * 자산 사진 상한. DB check 제약(assets_photo_paths_max)과 같은 값이며 최종 판정은 DB다.
+ * 값 규칙이라 화면·검증·Storage 헬퍼가 함께 보도록 여기(순수 설정)에 둔다.
+ */
+export const ASSET_PHOTO_MAX = 5
+
+/** 사진 한 장의 원본 파일 크기 상한(회의실 사진과 같은 기준). */
+export const ASSET_PHOTO_MAX_BYTES = 5_000_000
