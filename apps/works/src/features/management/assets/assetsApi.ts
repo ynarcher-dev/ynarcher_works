@@ -44,6 +44,8 @@ export interface Asset {
   isPortable: boolean
   /** 반출 시 승인이 필요한가. 반출 가능(isPortable)일 때만 뜻을 갖는다. */
   requiresApproval: boolean
+  /** 중요 표시. 켜면 자산명 순을 건너뛰고 목록 맨 위에 서며 번호 칸이 핀으로 바뀐다. */
+  isPinned: boolean
   returnDue: string | null
   note: string | null
   /** 사진 경로(asset-photos 버킷 키). 순서가 표시 순서이며 최대 5장(DB check). */
@@ -68,6 +70,7 @@ export interface AssetInput {
   quantity: number
   isPortable: boolean
   requiresApproval: boolean
+  isPinned: boolean
   returnDue: string | null
   note: string | null
   photoPaths: string[]
@@ -90,6 +93,7 @@ interface AssetRow {
   quantity: number
   is_portable: boolean
   requires_approval: boolean
+  is_pinned: boolean
   return_due: string | null
   note: string | null
   photo_paths: string[] | null
@@ -97,7 +101,7 @@ interface AssetRow {
 }
 
 const COLUMNS =
-  'id, name, item_type, acquisition_type, status, branch_id, assigned_to, manager_id, serial_no, acquired_on, disposed_on, amount, billing_cycle, quantity, is_portable, requires_approval, return_due, note, photo_paths, updated_at'
+  'id, name, item_type, acquisition_type, status, branch_id, assigned_to, manager_id, serial_no, acquired_on, disposed_on, amount, billing_cycle, quantity, is_portable, requires_approval, is_pinned, return_due, note, photo_paths, updated_at'
 
 const toAsset = (r: AssetRow): Asset => ({
   id: r.id,
@@ -117,6 +121,7 @@ const toAsset = (r: AssetRow): Asset => ({
   quantity: r.quantity,
   isPortable: r.is_portable,
   requiresApproval: r.requires_approval,
+  isPinned: r.is_pinned,
   returnDue: r.return_due,
   note: r.note,
   // 컬럼 기본값이 빈 배열이라 null이 올 일은 없지만, 없으면 없는 대로 다룬다(화면이 빈 칸을 그린다).
@@ -143,6 +148,7 @@ export const toAssetRow = (v: AssetInput) => ({
   // 반출이 불가한 자산에 승인 여부는 뜻이 없다 — 토글을 끄면 함께 내린다(꺼진 채 남아 있으면
   // 나중에 반출을 다시 켰을 때 예전 설정이 조용히 되살아난다).
   requires_approval: v.isPortable && v.requiresApproval,
+  is_pinned: v.isPinned,
   return_due: v.returnDue,
   note: v.note?.trim() || null,
   photo_paths: v.photoPaths,
@@ -189,9 +195,11 @@ function sanitizeOrValue(v: string): string {
 }
 
 /**
- * 선택 지사의 자산 목록(자산명 오름차순, 서버 페이지네이션).
+ * 선택 지사의 자산 목록(중요 표시 먼저, 그 안에서 자산명 오름차순, 서버 페이지네이션).
  * 지사가 정해지지 않으면 조회하지 않는다 — 전사 자산을 한 번에 내리는 경로를 두면
  * 지사 귀속이라는 화면 규칙이 무의미해진다.
+ * 중요 정렬은 서버에서 건다 — 페이지 안에서만 올리면 2페이지의 중요 자산이 1페이지 맨
+ * 위에 서지 못해, 고정이 "맨 위"가 아니라 "이 페이지 맨 위"라는 다른 뜻이 된다.
  * 폐기 자산도 목록에 남긴다(하단으로 밀지 않고 상태 배지로만 구분).
  * 검색은 자산명·품목·시리얼 번호를 함께 훑는다(현장에서 자산을 찾는 세 가지 단서다).
  */
@@ -215,6 +223,7 @@ export function useAssetsPage(
         .select(COLUMNS, { count: 'exact' })
         .eq('branch_id', branchId!)
         .is('deleted_at', null)
+        .order('is_pinned', { ascending: false })
         .order('name', { ascending: true })
         .range(from, from + pageSize - 1)
 

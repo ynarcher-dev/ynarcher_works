@@ -1,4 +1,4 @@
-import { Badge, DataTable, EmptyValue, type Column, type DataTableProps } from '@ynarcher/ui'
+import { Badge, DataTable, EmptyValue, pinMark, type Column, type DataTableProps } from '@ynarcher/ui'
 import {
   ACQUISITION_LABELS,
   ASSET_LABELS,
@@ -163,6 +163,8 @@ export function AssetsTable({
       selectedKeys={selectedKeys}
       onSelectionChange={onSelectionChange}
       onRowClick={onRowClick}
+      // 중요 자산은 정렬을 건너뛰고 맨 위에 서므로 순번이 뜻을 잃는다 — 번호 자리를 핀에 준다.
+      meta={{ rowMark: (a) => pinMark(a.isPinned) }}
       pagination={pagination}
       // 목록에 관리 액션이 없으므로 열 자체를 없앤다(자리만 남겨 빈 열을 만들지 않는다).
       showManageColumn={false}

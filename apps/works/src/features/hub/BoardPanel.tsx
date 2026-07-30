@@ -1,9 +1,9 @@
-import { DataTable, type Column } from '@ynarcher/ui'
+import { DataTable, pinMark, type Column } from '@ynarcher/ui'
 import { Paperclip } from 'lucide-react'
 import { useState } from 'react'
 import { BOARD_PAGE_SIZE, isNewPost, type BoardPost } from '@/features/hub/boardData'
 import { NewBadge } from '@/features/hub/DashboardPanel'
-import { PostFlagBadges, pinMark } from '@/features/hub/PostFlagBadges'
+import { PostFlagBadges } from '@/features/hub/PostFlagBadges'
 
 /**
  * 첨부 유무 열(공통). 건수는 상세에서 확인하므로 목록에서는 있음/없음만 알린다.

@@ -117,6 +117,8 @@ export interface PortableAsset {
    * 뷰는 id만 내려보내고 이름은 화면이 임직원 디렉토리에서 붙인다.
    */
   managerId: string | null
+  /** 중요 표시(assets.is_pinned). 자산 관리에서 정하고 이 화면은 자리(맨 위)로만 읽는다. */
+  isPinned: boolean
 }
 
 interface PortableRow {
@@ -130,11 +132,15 @@ interface PortableRow {
   photo_paths: string[] | null
   quantity: number
   manager_id: string | null
+  is_pinned: boolean
 }
 
 /**
  * 지사의 반출 가능 자산. `assets`가 아니라 뷰를 읽는다 — 원장은 MANAGEMENT 권한자만 볼 수
  * 있고, 반출대장은 임직원 전원이 쓰는 화면이기 때문이다.
+ *
+ * 차례는 중요 표시가 먼저, 그 안에서 물품명 순이다. 자산 관리 목록과 같은 규칙을 쓴다 —
+ * 어느 물건을 먼저 보아야 하는가는 화면마다 달라질 이유가 없다.
  */
 export function usePortableAssets(branchId: string | undefined) {
   return useQuery({
@@ -144,9 +150,10 @@ export function usePortableAssets(branchId: string | undefined) {
       const { data, error } = await supabase
         .from('portable_assets')
         .select(
-          'id, name, item_type, serial_no, branch_id, requires_approval, note, photo_paths, quantity, manager_id',
+          'id, name, item_type, serial_no, branch_id, requires_approval, note, photo_paths, quantity, manager_id, is_pinned',
         )
         .eq('branch_id', branchId!)
+        .order('is_pinned', { ascending: false })
         .order('name', { ascending: true })
       if (error) throw error
       return ((data ?? []) as PortableRow[]).map((r) => ({
@@ -160,6 +167,7 @@ export function usePortableAssets(branchId: string | undefined) {
         photoPaths: r.photo_paths ?? [],
         quantity: r.quantity,
         managerId: r.manager_id,
+        isPinned: r.is_pinned,
       }))
     },
   })
@@ -277,6 +285,30 @@ export function useTransitionCheckout() {
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: CHECKOUTS_KEY }),
+  })
+}
+
+/**
+ * 예약 시각이 지난 건을 반출 중으로 따라잡는다(public.start_due_checkouts).
+ *
+ * 반출대장을 열 때 한 번 부른다. 예약은 "이 시각부터 가져가겠다"는 약속이고 그 시각이
+ * 지나면 물건은 실제로 나가 있으므로, 아무도 '반출 시작'을 누르지 않았다는 이유로 대장이
+ * 어제 나간 물건을 '예약'으로 적고 있을 이유가 없다.
+ *
+ * 판정과 전이는 전부 서버가 한다 — 화면은 몇 건이 옮겨졌는지만 받고, 0이 아닐 때에만
+ * 목록을 다시 읽는다(대개 0이라 매번 다시 읽으면 진입 때마다 헛 조회가 한 번씩 늘어난다).
+ */
+export function useStartDueCheckouts() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (): Promise<number> => {
+      const { data, error } = await supabase.rpc('start_due_checkouts')
+      if (error) throw error
+      return Number(data ?? 0)
+    },
+    onSuccess: (moved) => {
+      if (moved > 0) void qc.invalidateQueries({ queryKey: CHECKOUTS_KEY })
+    },
   })
 }
 

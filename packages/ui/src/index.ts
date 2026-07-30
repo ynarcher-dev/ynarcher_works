@@ -59,6 +59,7 @@ export type { DashedAddButtonProps } from './components/DashedAddButton'
 // 데이터 테이블
 export { DataTable } from './components/DataTable'
 export type { Column, DataTableProps, DataTableMeta } from './components/DataTable'
+export { pinMark } from './components/pinMark'
 export { Pagination } from './components/Pagination'
 
 // 오버레이

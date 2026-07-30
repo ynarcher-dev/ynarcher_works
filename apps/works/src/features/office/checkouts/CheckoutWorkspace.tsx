@@ -8,7 +8,7 @@ import {
   Tabs,
   useToast,
 } from '@ynarcher/ui'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { hasWorkspaceWrite, useAuthStore } from '@/auth/authStore'
 import { useEmployees } from '@/features/hub/hooks'
 import { useAssetPhotoUrls } from '@/features/management/assets/assetPhotos'
@@ -27,6 +27,7 @@ import {
   useActiveCheckouts,
   useCreateCheckout,
   usePortableAssets,
+  useStartDueCheckouts,
   useTransitionCheckout,
   type Checkout,
   type CheckoutInput,
@@ -73,6 +74,19 @@ export function CheckoutWorkspace() {
   const create = useCreateCheckout()
   const transition = useTransitionCheckout()
   const busy = create.isPending || transition.isPending
+
+  /*
+   * 화면에 들어올 때 한 번, 시각이 지난 예약을 반출 중으로 따라잡는다(서버가 판정한다).
+   * 실패해도 알리지 않는다 — 대장을 보러 온 사람에게 보정이 실패했다는 말은 할 일이 아니고,
+   * 다음 진입에서 다시 시도된다. 지사를 옮길 때마다 부르지 않는 이유는 보정 대상이 지사와
+   * 무관한 전사 범위라, 탭을 오갈 때마다 같은 일을 반복하게 되기 때문이다.
+   */
+  const startDue = useStartDueCheckouts()
+  const startDueRef = useRef(startDue.mutate)
+  startDueRef.current = startDue.mutate
+  useEffect(() => {
+    startDueRef.current()
+  }, [])
 
   // 첫 진입·지사 목록 변동 시 첫 지사를 고른다(고르고 있던 지사가 비활성화된 경우 포함).
   useEffect(() => {
@@ -167,7 +181,8 @@ export function CheckoutWorkspace() {
     }
     const ask =
       action === 'APPROVE'
-        ? `'${c.assetName}' 반출을 승인할까요?`
+        ? // 목록에서도 이 문구 하나로 승인하므로 누구의 요청인지 함께 적는다.
+          `${c.createdByName ?? '반출자'}님의 '${c.assetName}' 반출을 승인할까요?`
         : action === 'START'
           ? `'${c.assetName}'을(를) 지금 반출 처리할까요?`
           : `'${c.assetName}' 반출을 취소할까요?`
@@ -262,7 +277,9 @@ export function CheckoutWorkspace() {
               now={now}
               urlOf={(p) => (p ? thumbUrls?.[p] : undefined)}
               nameOf={managerNameOf}
+              canApprove={viewer.isManager}
               onOpen={setOpened}
+              onApprove={(c) => void act(c, 'APPROVE')}
               pagination={{
                 page,
                 pageSize: PAGE_SIZE,

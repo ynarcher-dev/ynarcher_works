@@ -223,6 +223,21 @@ export function deriveAssetState<T extends StockSpan>(
   return { state: 'AVAILABLE', active: null }
 }
 
+/**
+ * 이 물건에 걸린 승인 대기 건(오래 기다린 순). 표의 승인 열이 읽는다.
+ *
+ * 상태(`deriveAssetState`)로 판정하지 않는 이유가 있다 — 다섯 개 중 하나에 승인 대기가
+ * 걸려도 남은 것이 있으면 물품 상태는 '반출 가능'이라, 상태만 보면 기다리는 요청이
+ * 보이지 않는다. 승인해야 할 일이 있는가는 걸린 건들에서 직접 세어야 한다.
+ */
+export function pendingCheckouts<T extends { status: CheckoutStatus; checkoutAt: string }>(
+  checkouts: T[],
+): T[] {
+  return checkouts
+    .filter((c) => c.status === 'PENDING')
+    .sort((a, b) => a.checkoutAt.localeCompare(b.checkoutAt))
+}
+
 // ── 처리 권한 ─────────────────────────────────────────────────────────
 
 /** 이 사람이 이 반출 건에 대고 할 수 있는 일. 버튼 노출은 이 결과만 본다. */

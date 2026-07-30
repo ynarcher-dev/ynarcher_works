@@ -1,4 +1,4 @@
-import { Input, Select, Switch, TextArea, TokenMultiSelect } from '@ynarcher/ui'
+import { Checkbox, Input, Select, Switch, TextArea, TokenMultiSelect } from '@ynarcher/ui'
 import { useMemo, type ReactNode } from 'react'
 import {
   ACQUISITION_LABELS,
@@ -145,6 +145,23 @@ export function AssetFormFields({
           />
         </Field>
       </Row>
+
+      {/*
+        중요는 폼 맨 앞자리다 — 필드 차례는 표의 열 차례를 따르는데, 이 값이 목록에서
+        차지하는 자리가 맨 앞의 번호 칸이기 때문이다. 아래 반출 묶음에 넣지 않는 이유는
+        축이 다르기 때문이다: 반출 가능·승인 필요는 물건을 어떻게 다루는가이고, 중요는
+        목록에서 어디에 서는가다.
+      */}
+      <label className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <Checkbox
+          checked={draft.isPinned}
+          onChange={(e) => onChange({ ...draft, isPinned: e.target.checked })}
+        />
+        <span className="text-body font-medium text-gray-800">중요</span>
+        <span className="text-caption text-gray-500">
+          목록에서 자산명 순을 건너뛰고 맨 위에 고정합니다(번호 대신 📌).
+        </span>
+      </label>
 
       <Row>
         <Field label="품목" hint="이미 등록된 품목이 제안되며, 새 품목은 그대로 입력합니다.">

@@ -1,10 +1,9 @@
-import { DataTable, Input, PageHeader, Spinner, type Column } from '@ynarcher/ui'
+import { DataTable, Input, PageHeader, Spinner, pinMark, type Column } from '@ynarcher/ui'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { NewBadge } from '@/features/hub/DashboardPanel'
 import { useNotices, useBoardPostAttachmentIds, type NoticeItem } from '@/features/hub/boardPostsApi'
 import { BOARD_PAGE_SIZE, isNewPost } from '@/features/hub/boardData'
-import { pinMark } from '@/features/hub/PostFlagBadges'
 import { attachmentColumn, viewsColumn } from '@/features/hub/BoardPanel'
 
 /**

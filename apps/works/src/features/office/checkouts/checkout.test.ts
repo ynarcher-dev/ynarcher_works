@@ -8,6 +8,7 @@ import {
   nowLocalInput,
   overdueMs,
   peakUsage,
+  pendingCheckouts,
   periodsOverlap,
   remainingForPeriod,
   remainingNow,
@@ -178,6 +179,26 @@ describe('deriveAssetState', () => {
     expect(deriveAssetState([reserved, pending], now, 3).state).toBe('AVAILABLE')
     // 보유가 2개면 잔여 0 — 이때 승인 대기를 예약보다 앞세운다(먼저 처리해야 할 일이다).
     expect(deriveAssetState([reserved, pending], now, 2).active?.id).toBe('p')
+  })
+})
+
+describe('pendingCheckouts', () => {
+  const now = '2026-07-22T00:00:00.000Z'
+
+  it('승인 대기만 골라 오래 기다린 순으로 준다', () => {
+    const late = row({ id: 'late', status: 'PENDING', checkoutAt: '2026-07-24T01:00:00.000Z' })
+    const early = row({ id: 'early', status: 'PENDING', checkoutAt: '2026-07-21T01:00:00.000Z' })
+    expect(pendingCheckouts([late, row({ status: 'RESERVED' }), early]).map((c) => c.id)).toEqual([
+      'early',
+      'late',
+    ])
+  })
+
+  it('잔여가 있어 상태가 반출 가능이어도 기다리는 요청은 남아 있다', () => {
+    // 표의 상태 열만 보면 승인할 일이 없어 보이는 자리 — 승인 열이 걸린 건을 직접 세는 이유다.
+    const checkouts = [row({ id: 'p', status: 'PENDING', quantity: 1 })]
+    expect(deriveAssetState(checkouts, now, 5).state).toBe('AVAILABLE')
+    expect(pendingCheckouts(checkouts)).toHaveLength(1)
   })
 })
 

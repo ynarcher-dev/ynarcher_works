@@ -1,9 +1,8 @@
-import { Button, Checkbox, DataTable, EmptyValue, Input, PageHeader, Spinner, useToast, type Column } from '@ynarcher/ui'
+import { Button, Checkbox, DataTable, EmptyValue, Input, PageHeader, Spinner, pinMark, useToast, type Column } from '@ynarcher/ui'
 import { Download } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { NewBadge } from '@/features/hub/DashboardPanel'
 import { isNewPost, type BoardPost } from '@/features/hub/boardData'
-import { pinMark } from '@/features/hub/PostFlagBadges'
 import {
   BOARD_POST_ATTACHMENT_TYPE,
   useBoardPostMaterials,
