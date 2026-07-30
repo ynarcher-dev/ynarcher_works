@@ -20,7 +20,10 @@ import {
   useUpdateOrgVersion,
 } from '@/features/management/hooks'
 import { OrgDraftFields } from '@/features/management/panels/OrgDraftFields'
-import { OrgTreeEditor, type OrgTreeEditorHandle } from '@/features/management/panels/OrgTreeEditor'
+import {
+  OrgReformStructure,
+  type OrgReformStructureHandle,
+} from '@/features/management/OrgReformStructure'
 
 /** 조직 관리 목록 경로(뒤로가기 목적지). */
 const LIST_PATH = '/management?tab=departments'
@@ -56,7 +59,7 @@ export function OrgReformPage() {
 
   const cloneVersion = useCloneOrgVersion()
   const updateVersion = useUpdateOrgVersion()
-  const editorRef = useRef<OrgTreeEditorHandle>(null)
+  const editorRef = useRef<OrgReformStructureHandle>(null)
 
   const [label, setLabel] = useState('')
   const [from, setFrom] = useState(TOMORROW())
@@ -115,7 +118,14 @@ export function OrgReformPage() {
       })
       setParams({ draft: newId }, { replace: true })
     } catch (e) {
-      setError(e instanceof Error ? e.message : '초안 생성에 실패했습니다.')
+      // 살아있는 초안은 원장에서 한 건으로 강제된다(org_versions_single_live_draft).
+      // 다른 탭에서 먼저 만들었을 때만 걸리는 경로라 DB 원문 대신 할 일을 적는다.
+      const raw = e instanceof Error ? e.message : ''
+      setError(
+        raw.includes('org_versions_single_live_draft')
+          ? '이미 설계 중인 개편 초안이 있습니다. 기존 초안을 이어서 설계하거나 폐기한 뒤 다시 시도하세요.'
+          : raw || '초안 생성에 실패했습니다.',
+      )
     } finally {
       setBusy(false)
     }
@@ -275,13 +285,12 @@ export function OrgReformPage() {
       {draft && (
         <Card
           title="새 조직 구조"
-          subtitle="조직 레벨(계층)은 '하위 계층'·'병렬'로 늘리고, 레벨 옆 X로 줄입니다."
+          subtitle="왼쪽에서 조직을 만들고 이름·레벨을 정하고, 오른쪽에서 그 조직에 인력을 배치합니다."
         >
-          <OrgTreeEditor
+          <OrgReformStructure
             ref={editorRef}
             versionId={draft.id}
             activeVersionId={activeVersionId}
-            editable
           />
         </Card>
       )}

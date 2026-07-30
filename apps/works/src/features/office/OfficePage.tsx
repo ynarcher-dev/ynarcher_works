@@ -8,7 +8,6 @@ import { NoticeWorkspace } from '@/features/hub/NoticeWorkspace'
 import { NOTICE_TAB } from '@/features/hub/boardPostStore'
 import { useBoardPostBoardId } from '@/features/hub/boardPostsApi'
 import { useBoards } from '@/features/hub/boardHooks'
-import { DepartmentsPanel } from '@/features/management/panels/DepartmentsPanel'
 import { OfficeManagersPanel } from '@/features/office/OfficeManagersPanel'
 import { BranchesPanel } from '@/features/office/branches/BranchesPanel'
 import { MinutesWorkspace } from '@/features/office/minutes/MinutesWorkspace'
@@ -18,6 +17,8 @@ import { RoomReservationWorkspace } from '@/features/office/rooms/RoomReservatio
 const PLACEHOLDER_TITLES: Record<string, string> = {
   // 거래처 정보: 전자결재 워크스페이스에서 이관, 세부 기능은 후속 작업(골격만).
   clients: '거래처 정보',
+  // 반출대장: 물품 반출 기록. 세부 기능은 후속 작업(골격만).
+  outbound: '반출대장',
 }
 
 /**
@@ -49,6 +50,9 @@ export function OfficePage() {
 
   // 탭 미지정 시 최상단 대시보드로 정규화(사이드바 활성 상태와 URL 동기화).
   if (!tab) return <Navigate to="/office?tab=dashboard" replace />
+
+  // 부서 정보는 임직원 정보로 합쳐졌다(목록=조직, 상세=임직원). 기존 링크·북마크를 넘겨준다.
+  if (tab === 'departments') return <Navigate to="/office?tab=managers" replace />
 
   // 공지사항은 게시판이 아니라 전체 공지 게시글을 모아 보여주는 뷰다(레지스트리와 무관).
   if (tab === NOTICE_TAB) {
@@ -105,6 +109,7 @@ export function OfficePage() {
           <DashboardPanel />
         </>
       )}
+      {/* 임직원 정보: 목록은 조직 트리+인물 카드(구 부서 정보), 상세는 임직원 상세로 간다. */}
       {tab === 'managers' && <OfficeManagersPanel />}
       {/* 회의실 예약: 지사 탭 + 날짜 이동 + 회의실 카드. 설정은 ADMIN이 소유한다. */}
       {tab === 'rooms' && <RoomReservationWorkspace />}
@@ -112,13 +117,6 @@ export function OfficePage() {
       {tab === 'minutes' && <MinutesWorkspace initialMinuteId={params.get('minute') ?? undefined} />}
       {/* 지사 정보: ADMIN '지사 관리'가 소유한 지사 원장을 조회 전용 리스트뷰로 노출한다. */}
       {tab === 'branches' && <BranchesPanel />}
-      {/* 부서 정보: MANAGEMENT 조직 관리와 같은 조직도를 조회 전용으로 재사용한다. */}
-      {tab === 'departments' && (
-        <>
-          <PageHeader title="부서 정보" />
-          <DepartmentsPanel readOnly />
-        </>
-      )}
       {/* 전자결재: 전자결재 워크스페이스에서 이관한 결재 문서 테이블. */}
       {tab === 'approval' && (
         <>

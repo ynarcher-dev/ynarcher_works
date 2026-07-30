@@ -238,6 +238,7 @@ export function useMoveDepartments() {
 /** 부서 소프트 삭제/복원(하위 포함). deleted=true면 deleted_at 기록, false면 해제. */
 export function useSetDepartmentsDeleted() {
   const invalidate = useInvalidateDepartments()
+  const qc = useQueryClient()
   return useMutation({
     mutationFn: async (v: { ids: string[]; deleted: boolean }) => {
       const { error } = await supabase
@@ -246,7 +247,14 @@ export function useSetDepartmentsDeleted() {
         .in('id', v.ids)
       if (error) throw error
     },
-    onSuccess: () => invalidate(),
+    // 삭제는 배치까지 함께 끊는다(DB 트리거 trg_departments_clear_members). 화면이 이 사실을
+    // 모르면 없는 조직 소속이 목록에 계속 남으므로 인력 쪽 캐시도 함께 무효화한다.
+    onSuccess: () => {
+      invalidate()
+      void qc.invalidateQueries({ queryKey: MEMBER_KEY })
+      void qc.invalidateQueries({ queryKey: ['management', 'employees'] })
+      void qc.invalidateQueries({ queryKey: ['management', 'employees-page'] })
+    },
   })
 }
 

@@ -165,6 +165,46 @@ export function buildTree(nodes: DeptNode[]): DeptTreeNode[] {
   return attach(null, 0)
 }
 
+/** 트리에서 id로 노드를 찾는다(DFS). 선택 범위를 해석하는 화면들의 단일 기준. */
+export function findTreeNode(tree: DeptTreeNode[], id: string): DeptTreeNode | null {
+  for (const n of tree) {
+    if (n.id === id) return n
+    const hit = findTreeNode(n.children, id)
+    if (hit) return hit
+  }
+  return null
+}
+
+/** 자식이 있는 노드 id 전체 — '전체 접기'가 접어야 할 대상. */
+export function collapsibleIds(tree: DeptTreeNode[]): Set<string> {
+  const ids = new Set<string>()
+  const walk = (list: DeptTreeNode[]) => {
+    for (const n of list) {
+      if (!n.children.length) continue
+      ids.add(n.id)
+      walk(n.children)
+    }
+  }
+  walk(tree)
+  return ids
+}
+
+/**
+ * 조직명이 검색어에 걸리는 노드만 남긴다(걸린 노드의 조상은 경로를 잇기 위해 함께 남는다).
+ * 검색은 좌측 트리(이동 수단)만 좁히고 우측 편집판은 좁히지 않는다 — 걸러진 목록 위에서
+ * 드래그 이동을 허용하면 화면에 없는 형제 사이로 순서를 옮기게 된다.
+ */
+export function filterTree(tree: DeptTreeNode[], keyword: string): DeptTreeNode[] {
+  const q = keyword.trim().toLowerCase()
+  if (!q) return tree
+  const keep = (node: DeptTreeNode): DeptTreeNode | null => {
+    const children = node.children.map(keep).filter((n): n is DeptTreeNode => n != null)
+    if (children.length || node.name.toLowerCase().includes(q)) return { ...node, children }
+    return null
+  }
+  return tree.map(keep).filter((n): n is DeptTreeNode => n != null)
+}
+
 /** 삭제된 조직의 "삭제 기점"(부모가 살아있는 삭제 노드)만 추린다. */
 export function deletedRoots(nodes: DeptNode[]): DeptNode[] {
   const byId = new Map(nodes.map((n) => [n.id, n]))

@@ -1,8 +1,6 @@
 import { DataTable, Spinner, type Column } from '@ynarcher/ui'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { maskEmail, maskPhone } from '@/lib/mask'
-import { useSensitiveStore } from '@/features/admin/sensitiveStore'
 import {
   activeOrgVersionId,
   useDepartments,
@@ -29,6 +27,8 @@ interface EmployeeDirectoryProps {
   keyword: string
   /** 행 클릭 시 이동할 상세 경로 prefix. 기본은 인사 관리 상세('/management/hr'). */
   detailBasePath?: string
+  /** 호봉 컬럼 노출. 인사 관리(MANAGEMENT)만 true, OFFICE 임직원 정보는 false로 내린다. */
+  showPayStep?: boolean
 }
 
 /**
@@ -42,10 +42,10 @@ interface EmployeeDirectoryProps {
 export function EmployeeDirectory({
   keyword,
   detailBasePath = '/management/hr',
+  showPayStep = true,
 }: EmployeeDirectoryProps) {
   const navigate = useNavigate()
-  // 관리자 민감정보 표시 토글. 목록은 기본 마스킹, 토글이 켜졌을 때만 원문을 노출한다.
-  const show = useSensitiveStore((s) => s.show)
+  // 임직원은 내부 구성원이라 개인정보 마스킹 대상이 아니다(민감정보 정책은 외부 인물·기업만 다룬다).
   const [page, setPage] = useState(0)
 
   // 검색어 변경 시 첫 페이지로 되돌린다(빈 페이지 방지).
@@ -118,24 +118,28 @@ export function EmployeeDirectory({
       render: (r) => str(r.profile?.rank) || DASH,
       className: 'w-20',
     },
-    {
-      key: 'pay_step',
-      header: '호봉',
-      render: (r) => str(r.profile?.pay_step) || DASH,
-      className: 'w-20',
-    },
+    // 호봉은 인사 관리 맥락에서만 쓰는 처우 정보다 — OFFICE 임직원 정보에서는 컬럼째 빼둔다.
+    ...(showPayStep
+      ? [
+          {
+            key: 'pay_step',
+            header: '호봉',
+            render: (r: Employee) => str(r.profile?.pay_step) || DASH,
+            className: 'w-20',
+          },
+        ]
+      : []),
     {
       key: 'email',
       header: '이메일',
-      render: (r) => (show.email ? r.email ?? '-' : maskEmail(r.email ?? null)),
+      render: (r) => r.email ?? '-',
       // 회사 도메인(@ynarcher.com) 포함 20자 안팎이 잘리지 않는 폭.
       className: 'w-44',
     },
     {
       key: 'phone',
       header: '연락처',
-      render: (r) =>
-        r.phone ? (show.phone ? r.phone : maskPhone(r.phone)) : DASH,
+      render: (r) => r.phone || DASH,
       // 휴대폰 번호(010-0000-0000)가 잘리지 않는 최소 폭.
       className: 'w-32',
     },

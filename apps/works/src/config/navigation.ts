@@ -177,17 +177,19 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         // 전역 진입점(우측 슬라이드오버)에서만 연다.
         { label: '대시보드', tab: 'dashboard' },
         // 전사 인적·조직 정보 블록(조회 전용). 원장은 MANAGEMENT가 갖고 OFFICE는 확인만 한다.
+        // 임직원 정보 한 메뉴가 조직(목록)과 사람(상세)을 함께 답한다 — 구 '부서 정보'는 여기에 합쳐졌다.
         { label: '임직원 정보', tab: 'managers', dividerBefore: true },
-        { label: '부서 정보', tab: 'departments' },
         { label: '지사 정보', tab: 'branches' },
-        // 위 인적·조직 블록을 떼어내는 구분선.
-        { label: '회의실 예약', tab: 'rooms', dividerBefore: true },
-        // 회의록: STARTUP에서 이관. 회의실 예약과 같은 공간·회의 블록에 묶는다(골격만).
-        { label: '회의록', tab: 'minutes' },
-        // 전자결재 워크스페이스에서 통합 이관. 일정·공간 예약(캘린더·회의실)과 결재·거래처를
-        // 구분선으로 나눈다. 아래 고정 게시판 그룹 경계가 이 블록과 공지사항을 다시 나눈다.
+        // 위 인적·조직 블록을 떼어내는 구분선. 전자결재 워크스페이스에서 통합 이관한
+        // 결재·거래처 블록을 공간·회의 블록보다 앞에 둔다.
         { label: '전자결재', tab: 'approval', dividerBefore: true },
         { label: '거래처 정보', tab: 'clients' },
+        // 반출대장(물품 반출 기록)은 단독 블록으로 두고 위아래를 구분선으로 끊는다(골격만).
+        { label: '반출대장', tab: 'outbound', dividerBefore: true },
+        // 공간·회의 블록. 회의록은 STARTUP에서 이관해 회의실 예약과 같은 블록에 묶는다.
+        // 아래 고정 게시판 그룹 경계가 이 블록과 공지사항을 다시 나눈다.
+        { label: '회의실 예약', tab: 'rooms', dividerBefore: true },
+        { label: '회의록', tab: 'minutes' },
       ],
     },
     {

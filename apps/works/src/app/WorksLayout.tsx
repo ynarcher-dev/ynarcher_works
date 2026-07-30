@@ -59,6 +59,7 @@ import {
   Milestone,
   Activity,
   HandCoins,
+  PackageOpen,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import {
@@ -159,6 +160,7 @@ const sidebarIconByTab: Record<string, LucideIcon> = {
   downloads: Download,
   approval: BadgeCheck,
   clients: Handshake,
+  outbound: PackageOpen,
   rooms: DoorOpen,
   minutes: FileText,
   hr: User,
