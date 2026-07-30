@@ -13,8 +13,8 @@ import {
 } from '@/features/management/config'
 import { AssetCostSummary } from '@/features/management/assets/AssetCostSummary'
 import {
+  endsOnLabel,
   normalizeAmountInput,
-  withDisposedOn,
   withStatus,
   type AssetDraft,
   type AssetFormError,
@@ -70,9 +70,12 @@ function Row({ children }: { children: ReactNode }) {
  * 자산 등록·수정 폼의 필드 배치. 값 판단(전이·검증)은 `assetForm`이, 금액 계산은 `assetCost`가
  * 갖고 여기서는 배치만 한다.
  *
- * 줄 묶음은 함께 정하는 값끼리다 — 무엇인가(자산명·시리얼) / 어떤 물건인가(품목·분류) /
- * 어디·어떤 상태(지사·상태) / 누구·언제 끝났나(할당 대상·폐기일자) / 계약 기간 / 비용.
- * 비용 줄 바로 아래에 계산 결과를 붙인다 — 금액을 고치는 자리에서 결과가 바뀌어야 한다.
+ * 필드 차례는 표의 열 차례와 같다 — 표에서 보던 순서대로 폼이 이어져야 무엇을 고치는 중인지
+ * 눈이 헤매지 않는다. 줄 묶음은 함께 정하는 값끼리다: 무엇인가(자산명·시리얼) /
+ * 어떤 물건인가(품목·분류) / 어디·어떤 상태(지사·상태) / 누구에게(할당) / 얼마(금액·결제 주기) /
+ * 언제부터 언제까지(취득일자·끝나는 날).
+ *
+ * 비용 계산 결과는 금액·기간 줄 바로 아래에 붙인다 — 값을 고치는 자리에서 결과가 바뀌어야 한다.
  */
 export function AssetFormFields({
   draft,
@@ -169,51 +172,24 @@ export function AssetFormFields({
         </Field>
       </Row>
 
-      <Row>
-        <Field
-          label="할당 대상"
-          required={draft.status === 'ASSIGNED'}
-          hint={draft.status === 'RETIRED' ? '폐기 자산에는 할당 대상을 두지 않습니다.' : undefined}
-        >
-          {/* 한 자산은 한 사람에게 간다 — 공용 검색 필드를 쓰되 max 1로 마지막 선택이 대체하게 둔다. */}
-          <TokenMultiSelect<Emp>
-            selected={selected}
-            onChange={(next) => onChange({ ...draft, assignedTo: next.slice(-1)[0]?.id ?? '' })}
-            options={employees}
-            getKey={(e) => e.id}
-            getLabel={(e) => e.name || '(이름 없음)'}
-            getMeta={(e) => e.email ?? undefined}
-            max={1}
-            disabled={draft.status === 'RETIRED'}
-            placeholder="임직원 검색 후 지정(1명)"
-          />
-        </Field>
-        <Field label="폐기일자" hint="입력하면 상태가 폐기로 바뀌고 할당 대상이 비워집니다.">
-          <Input
-            type="date"
-            value={draft.disposedOn}
-            invalid={invalid('disposedOn')}
-            onChange={(e) => onChange(withDisposedOn(draft, e.target.value))}
-          />
-        </Field>
-      </Row>
-
-      <Row>
-        <Field label="취득일자" hint="구독·리스는 계약 개시일.">
-          <Input
-            type="date"
-            value={draft.acquiredOn}
-            onChange={(e) => onChange({ ...draft, acquiredOn: e.target.value })}
-          />
-        </Field>
-        <Field label="만료일 · 회수 예정일" hint="구독 만료일, 리스·렌탈 반납일, 회수 예정일.">
-          <Input
-            type="date"
-            value={draft.returnDue}
-            onChange={(e) => onChange({ ...draft, returnDue: e.target.value })}
-          />
-        </Field>
-      </Row>
+      <Field
+        label="할당"
+        required={draft.status === 'ASSIGNED'}
+        hint={draft.status === 'RETIRED' ? '폐기 자산에는 할당 대상을 두지 않습니다.' : undefined}
+      >
+        {/* 한 자산은 한 사람에게 간다 — 공용 검색 필드를 쓰되 max 1로 마지막 선택이 대체하게 둔다. */}
+        <TokenMultiSelect<Emp>
+          selected={selected}
+          onChange={(next) => onChange({ ...draft, assignedTo: next.slice(-1)[0]?.id ?? '' })}
+          options={employees}
+          getKey={(e) => e.id}
+          getLabel={(e) => e.name || '(이름 없음)'}
+          getMeta={(e) => e.email ?? undefined}
+          max={1}
+          disabled={draft.status === 'RETIRED'}
+          placeholder="임직원 검색 후 지정(1명)"
+        />
+      </Field>
 
       <Row>
         <Field label="금액(원)">
@@ -241,7 +217,40 @@ export function AssetFormFields({
         </Field>
       </Row>
 
-      <AssetCostSummary basis={{ ...draft, amount: draft.amount ? Number(draft.amount) : null }} />
+      <Row>
+        <Field label="취득일자" hint="구독·리스는 계약 개시일.">
+          <Input
+            type="date"
+            value={draft.acquiredOn}
+            onChange={(e) => onChange({ ...draft, acquiredOn: e.target.value })}
+          />
+        </Field>
+        {/* 만료일과 폐기일자는 한 칸이다 — 그 날이 예정인지 사실인지는 위의 상태가 이미 말한다. */}
+        <Field
+          label={endsOnLabel(draft.status)}
+          hint={
+            draft.status === 'RETIRED'
+              ? '실제로 폐기한 날.'
+              : '구독 만료일, 리스·렌탈 반납일, 회수 예정일.'
+          }
+        >
+          <Input
+            type="date"
+            value={draft.endsOn}
+            invalid={invalid('endsOn')}
+            onChange={(e) => onChange({ ...draft, endsOn: e.target.value })}
+          />
+        </Field>
+      </Row>
+
+      <AssetCostSummary
+        basis={{
+          amount: draft.amount ? Number(draft.amount) : null,
+          billingCycle: draft.billingCycle,
+          acquiredOn: draft.acquiredOn || null,
+          endsOn: draft.endsOn || null,
+        }}
+      />
 
       {/* 반출 가능 여부는 관리자의 사전 판단이며, OFFICE 반출대장이 이 값으로 후보를 거른다. */}
       <div className="flex items-center justify-between rounded-radius-md border border-gray-200 bg-gray-25 px-3 py-2.5">

@@ -3,7 +3,7 @@ import { formatAmount } from '@/features/management/assets/assetForm'
 import { summarizeCosts, type CostBasis } from '@/features/management/assets/assetCost'
 
 interface AssetsSelectionBarProps {
-  /** 고른 자산들의 비용 근거. 빈 배열이면 이 줄 자체를 렌더하지 않는다. */
+  /** 고른 자산들의 비용 근거(`costBasisFromAsset`로 만든다). 비면 이 줄 자체를 렌더하지 않는다. */
   items: CostBasis[]
   onDeactivate: () => void
   busy: boolean

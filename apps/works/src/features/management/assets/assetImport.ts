@@ -24,25 +24,27 @@ import {
   normalizeAmountInput,
   toAssetInput,
   validateDraft,
-  withDisposedOn,
 } from '@/features/management/assets/assetForm'
 import type { AssetInput } from '@/features/management/assets/assetsApi'
 
-/** 업로드 CSV 헤더(순서 = 템플릿 열 순서). */
+/**
+ * 업로드 CSV 헤더(순서 = 템플릿 열 순서 = 표의 열 순서).
+ * 끝나는 날은 한 칸('만료일')이다 — 상태가 폐기면 그 값이 폐기일자로 저장된다.
+ * 옛 템플릿으로 만든 파일을 위해 '폐기일자' 열도 계속 읽는다(아래 별칭·병합 규칙 참조).
+ */
 export const ASSET_IMPORT_HEADERS = [
   '자산명',
-  '지사',
+  '시리얼번호',
   '품목',
   '분류',
   '상태',
   '할당대상',
-  '시리얼번호',
-  '취득일자',
-  '만료일',
-  '폐기일자',
   '금액',
   '결제주기',
+  '취득일자',
+  '만료일',
   '반출가능',
+  '지사',
   '비고',
 ] as const
 
@@ -128,8 +130,8 @@ function uniqueIdByName(list: { id: string; name: string }[], name: string) {
 export function buildAssetTemplateCsv(): string {
   return [
     ASSET_IMPORT_HEADERS.join(','),
-    '"MacBook Pro 16 (2025)",본사,노트북,구매,가용,,C02X1234ABCD,2026-03-01,,,2500000,완납,O,',
-    'Figma 엔터프라이즈,본사,라이선스,렌탈,가용,,,2026-01-01,2027-12-31,,55000,월 구독,X,연 단위 갱신',
+    '"MacBook Pro 16 (2025)",C02X1234ABCD,노트북,구매,보유,,2500000,완납,2026-03-01,,O,본사,',
+    'Figma 엔터프라이즈,,라이선스,렌탈,보유,,55000,월 구독,2026-01-01,2027-12-31,X,본사,연 단위 갱신',
   ].join('\n')
 }
 
@@ -194,12 +196,16 @@ export function parseAssetCsv(text: string, refs: ImportRefs): ImportParseResult
     }
 
     const acquiredOn = dateOf(cell('취득일자'))
-    const returnDue = dateOf(cell('만료일'))
-    const disposedOn = dateOf(cell('폐기일자'))
-    if (acquiredOn == null || returnDue == null || disposedOn == null) {
+    const expiry = dateOf(cell('만료일'))
+    const disposed = dateOf(cell('폐기일자'))
+    if (acquiredOn == null || expiry == null || disposed == null) {
       errors.push({ line, message: '날짜는 YYYY-MM-DD 형식으로 적으세요.' })
       continue
     }
+    // 옛 템플릿에는 만료일·폐기일자가 따로 있었다. 둘을 한 값으로 접되 폐기일자를 우선하고,
+    // 폐기일자가 적혀 있으면 상태도 폐기로 본다 — 폐기한 날을 아는데 상태가 보유일 수는 없다.
+    const endsOn = disposed || expiry
+    const finalStatus = disposed ? 'RETIRED' : status
 
     let assignedTo = ''
     const personName = cell('할당대상')
@@ -216,23 +222,22 @@ export function parseAssetCsv(text: string, refs: ImportRefs): ImportParseResult
       assignedTo = found
     }
 
-    let draft = {
+    const draft = {
       ...emptyDraft(branchId),
       name: cell('자산명'),
       itemType: cell('품목'),
       acquisitionType,
-      status,
-      assignedTo,
+      status: finalStatus,
+      // 폐기한 물건에는 소유자를 남기지 않는다(화면의 상태 전이와 같은 규칙).
+      assignedTo: finalStatus === 'RETIRED' ? '' : assignedTo,
       serialNo: cell('시리얼번호'),
       acquiredOn,
-      returnDue,
+      endsOn,
       amount: normalizeAmountInput(cell('금액')),
       billingCycle,
       isPortable,
       note: cell('비고'),
     }
-    // 폐기일자는 상태·할당을 함께 끌고 다니므로 화면과 같은 전이 함수를 거친다.
-    if (disposedOn) draft = withDisposedOn(draft, disposedOn)
 
     const invalid = validateDraft(draft)
     if (invalid) {

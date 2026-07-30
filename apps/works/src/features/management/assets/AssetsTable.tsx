@@ -2,10 +2,9 @@ import { Badge, DataTable, type Column, type DataTableProps } from '@ynarcher/ui
 import {
   ACQUISITION_LABELS,
   ASSET_LABELS,
-  assetTone,
+  BILLING_LABELS,
 } from '@/features/management/config'
 import { formatAmount } from '@/features/management/assets/assetForm'
-import { annualizedAmount, formatCycleAmount } from '@/features/management/assets/assetCost'
 import type { Asset } from '@/features/management/assets/assetsApi'
 
 interface AssetsTableProps {
@@ -18,16 +17,25 @@ interface AssetsTableProps {
   pagination: DataTableProps<Asset>['pagination']
 }
 
+/** 날짜 셀. 자릿수가 흔들리지 않게 tabular-nums로 고정한다. */
+function DateCell({ value }: { value: string | null }) {
+  return <span className="tabular-nums text-gray-600">{value ?? '—'}</span>
+}
+
 /**
  * 자산 표 — 지사 안에서 자산명 순으로 늘어놓는다.
  *
- * 금액 열은 주기까지 함께 적는다('55,000/월') — 숫자만 적으면 완납가와 구독료가 같은 크기로
- * 읽혀 합계는 물론 눈대중도 틀린다. 그 옆 연 환산 열이 주기가 다른 자산을 한 자로 비교해 준다.
+ * 금액과 결제 주기는 이웃한 두 열이다. 한 칸에 '55,000/월'로 붙여 적으면 금액 열의 숫자가
+ * 서로 다른 자를 쓰게 되어 세로로 훑을 수 없다 — 주기를 옆 칸으로 빼면 금액 열은 숫자만 남고,
+ * 그 숫자가 무엇인지는 바로 옆에서 읽힌다.
+ *
+ * 만료일과 폐기일자는 한 열이다. 둘 다 "이 자산이 끝나는 날"이고 한 자산에 동시에 성립하지
+ * 않으므로, 열을 나누면 어느 쪽이든 늘 절반이 비어 있게 된다. 그 날이 예정인지 사실인지는
+ * 바로 왼쪽 상태 열이 이미 말하고 있다.
  *
  * 등록자 열은 두지 않는다(원장에 created_by가 없고, 관리 축은 '지금 누구에게 있는가'다).
  * 관리 열도 두지 않는다 — 비활성화는 행을 열어 내용을 확인한 뒤(모달 푸터) 또는 체크박스로 골라
- * 한 번에(선택 요약 줄) 한다. 열이 이미 많은 표에서 행마다 버튼을 세워 두면 스치듯 눌리기 쉽고,
- * 무엇을 지우는지 보지 않은 채 지우게 된다.
+ * 한 번에(선택 요약 줄) 한다.
  */
 export function AssetsTable({
   rows,
@@ -59,15 +67,16 @@ export function AssetsTable({
       className: 'w-20',
       render: (a) => ACQUISITION_LABELS[a.acquisitionType],
     },
+    // 상태는 네 값이 대등한 분류라 배지로 칠하지 않는다(색을 입히면 없는 위계가 생긴다).
     {
       key: 'status',
       header: '상태',
-      className: 'w-24',
-      render: (a) => <Badge tone={assetTone[a.status]}>{ASSET_LABELS[a.status]}</Badge>,
+      className: 'w-20',
+      render: (a) => ASSET_LABELS[a.status],
     },
     {
       key: 'assignedTo',
-      header: '할당 대상',
+      header: '할당',
       className: 'w-24',
       render: (a) => nameOf(a.assignedTo),
     },
@@ -77,33 +86,25 @@ export function AssetsTable({
       align: 'right',
       numeric: true,
       className: 'w-28',
-      render: (a) => formatCycleAmount(a.amount, a.billingCycle),
+      render: (a) => formatAmount(a.amount),
     },
     {
-      key: 'annualized',
-      header: '연 환산',
-      align: 'right',
-      numeric: true,
-      className: 'w-28',
-      render: (a) => formatAmount(annualizedAmount(a)),
+      key: 'billingCycle',
+      header: '결제 주기',
+      className: 'w-24',
+      render: (a) => BILLING_LABELS[a.billingCycle],
     },
     {
       key: 'acquiredOn',
       header: '취득일자',
-      className: 'w-24',
-      render: (a) => <span className="tabular-nums text-gray-600">{a.acquiredOn ?? '—'}</span>,
+      className: 'w-28',
+      render: (a) => <DateCell value={a.acquiredOn} />,
     },
     {
-      key: 'returnDue',
-      header: '만료일',
-      className: 'w-24',
-      render: (a) => <span className="tabular-nums text-gray-600">{a.returnDue ?? '—'}</span>,
-    },
-    {
-      key: 'disposedOn',
-      header: '폐기일자',
-      className: 'w-24',
-      render: (a) => <span className="tabular-nums text-gray-600">{a.disposedOn ?? '—'}</span>,
+      key: 'endsOn',
+      header: '만료(폐기)일자',
+      className: 'w-28',
+      render: (a) => <DateCell value={a.disposedOn ?? a.returnDue} />,
     },
     {
       key: 'isPortable',
@@ -115,9 +116,6 @@ export function AssetsTable({
   ]
 
   return (
-    // 자산명 열을 고정하지 않는다 — 고정은 가로 스크롤이 있을 때 식별 열을 붙잡아 두려는 것이고,
-    // 그 대가로 경계에 그림자가 깔린다. 관리 열을 뺀 뒤로는 표가 한 화면에 들어가므로
-    // 붙잡을 것이 없고 그림자만 남는다.
     <DataTable
       columns={columns}
       rows={rows}

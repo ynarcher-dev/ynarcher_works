@@ -60,18 +60,16 @@ export const ROLE_LABELS: Record<string, string> = Object.fromEntries(
 
 export type AssetStatus = 'ASSIGNED' | 'AVAILABLE' | 'MAINTENANCE' | 'RETIRED'
 
+/**
+ * 상태 라벨. 네 값 모두 두 글자로 맞춘다 — 표에서 한 열에 세로로 쌓이는 말이라 길이가 들쭉날쭉하면
+ * 값보다 글자 수가 먼저 눈에 든다. 배지(태그)로 칠하지 않고 텍스트로만 적는다: 상태는 네 값이
+ * 대등한 분류이지 좋고 나쁨의 단계가 아니라서, 색을 입히면 없는 위계가 생긴다.
+ */
 export const ASSET_LABELS: Record<AssetStatus, string> = {
-  ASSIGNED: '할당됨',
-  AVAILABLE: '가용',
-  MAINTENANCE: '유지보수',
+  ASSIGNED: '할당',
+  AVAILABLE: '보유',
+  MAINTENANCE: '보수',
   RETIRED: '폐기',
-}
-
-export const assetTone: Record<AssetStatus, BadgeTone> = {
-  ASSIGNED: 'info',
-  AVAILABLE: 'success',
-  MAINTENANCE: 'warning',
-  RETIRED: 'neutral',
 }
 
 /**
@@ -102,16 +100,9 @@ export const BILLING_LABELS: Record<AssetBillingCycle, string> = {
   YEARLY: '연 구독',
 }
 
-/** 금액 뒤에 붙는 단위 표기('55,000/월'). 완납은 주기가 없으므로 붙이지 않는다. */
-export const BILLING_SUFFIX: Record<AssetBillingCycle, string> = {
-  ONE_TIME: '',
-  MONTHLY: '/월',
-  YEARLY: '/년',
-}
-
 export const BILLING_ORDER: AssetBillingCycle[] = ['ONE_TIME', 'MONTHLY', 'YEARLY']
 
-/** 상태 셀렉트 순서. 가용 → 할당됨 → 유지보수 → 폐기(실물 흐름 순). */
+/** 상태 셀렉트 순서. 보유 → 할당 → 보수 → 폐기(실물 흐름 순). */
 export const ASSET_STATUS_ORDER: AssetStatus[] = [
   'AVAILABLE',
   'ASSIGNED',

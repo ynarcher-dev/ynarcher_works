@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   emptyDraft,
+  endsOnLabel,
   formatAmount,
   normalizeAmountInput,
   toAssetInput,
   validateDraft,
-  withDisposedOn,
   withStatus,
   type AssetDraft,
 } from '@/features/management/assets/assetForm'
@@ -39,27 +39,28 @@ describe('validateDraft', () => {
     expect(validateDraft(draft({ status: 'ASSIGNED', assignedTo: 'u1' }))).toBeNull()
   })
 
-  it('폐기일자가 취득일자보다 앞서면 막는다', () => {
-    const err = validateDraft(
-      draft({ status: 'RETIRED', acquiredOn: '2026-03-01', disposedOn: '2026-02-28' }),
+  it('끝나는 날이 취득일자보다 앞서면 막는다(폐기·만료 둘 다)', () => {
+    const retired = validateDraft(
+      draft({ status: 'RETIRED', acquiredOn: '2026-03-01', endsOn: '2026-02-28' }),
     )
-    expect(err?.field).toBe('disposedOn')
+    expect(retired?.field).toBe('endsOn')
+    expect(retired?.message).toContain('폐기일자')
+
+    const live = validateDraft(
+      draft({ status: 'AVAILABLE', acquiredOn: '2026-03-01', endsOn: '2026-02-28' }),
+    )
+    expect(live?.field).toBe('endsOn')
+    expect(live?.message).toContain('만료일')
   })
 
   it('같은 날 취득·폐기는 허용한다(경계값)', () => {
     expect(
-      validateDraft(draft({ status: 'RETIRED', acquiredOn: '2026-03-01', disposedOn: '2026-03-01' })),
+      validateDraft(draft({ status: 'RETIRED', acquiredOn: '2026-03-01', endsOn: '2026-03-01' })),
     ).toBeNull()
   })
 
-  it('폐기일자만 있고 상태가 폐기가 아니면 막는다', () => {
-    expect(validateDraft(draft({ status: 'AVAILABLE', disposedOn: '2026-03-01' }))?.field).toBe(
-      'status',
-    )
-  })
-
   it('취득일자 없는 폐기는 허용한다 — 날짜를 모르는 과거 자산도 등록해야 한다', () => {
-    expect(validateDraft(draft({ status: 'RETIRED', disposedOn: '2020-01-01' }))).toBeNull()
+    expect(validateDraft(draft({ status: 'RETIRED', endsOn: '2020-01-01' }))).toBeNull()
   })
 
   it('금액은 숫자만 받는다(빈 값은 미입력이라 통과)', () => {
@@ -70,31 +71,30 @@ describe('validateDraft', () => {
 })
 
 describe('전이 규칙', () => {
-  it('폐기일자를 넣으면 상태가 폐기로 옮겨가고 할당이 비워진다', () => {
-    const next = withDisposedOn(draft({ status: 'ASSIGNED', assignedTo: 'u1' }), '2026-03-01')
-    expect(next.status).toBe('RETIRED')
-    expect(next.assignedTo).toBe('')
-  })
-
-  it('폐기일자를 지워도 상태는 폐기로 남는다 — 폐기는 날짜와 독립이다', () => {
-    const next = withDisposedOn(draft({ status: 'RETIRED', disposedOn: '2026-03-01' }), '')
-    expect(next.status).toBe('RETIRED')
-    expect(next.disposedOn).toBe('')
-  })
-
   it('폐기 상태로 바꾸면 할당이 비워진다', () => {
     expect(withStatus(draft({ assignedTo: 'u1' }), 'RETIRED').assignedTo).toBe('')
   })
 
-  it('폐기에서 나오면 폐기일자를 비운다 — 둘은 함께 성립할 수 없다', () => {
-    const next = withStatus(draft({ status: 'RETIRED', disposedOn: '2026-03-01' }), 'AVAILABLE')
-    expect(next.disposedOn).toBe('')
-    // 전이 결과가 곧 저장 가능한 상태여야 한다(제약과 어긋난 중간 상태를 남기지 않는다).
+  it('상태를 바꿔도 끝나는 날은 그대로다 — 지운 적 없는 값이 사라지면 안 된다', () => {
+    const retired = withStatus(draft({ endsOn: '2027-12-31' }), 'RETIRED')
+    expect(retired.endsOn).toBe('2027-12-31')
+    // 되돌려도 마찬가지다. 바뀌는 것은 그 날짜가 저장될 컬럼뿐이다.
+    expect(withStatus(retired, 'AVAILABLE').endsOn).toBe('2027-12-31')
+  })
+
+  it('전이 결과는 곧 저장 가능해야 한다(제약과 어긋난 중간 상태를 남기지 않는다)', () => {
+    const next = withStatus(draft({ status: 'RETIRED', endsOn: '2026-03-01' }), 'AVAILABLE')
     expect(validateDraft(next)).toBeNull()
   })
 
-  it('유지보수는 할당을 유지한다 — 정비 중에도 소유자는 그대로다', () => {
+  it('보수는 할당을 유지한다 — 정비 중에도 소유자는 그대로다', () => {
     expect(withStatus(draft({ assignedTo: 'u1' }), 'MAINTENANCE').assignedTo).toBe('u1')
+  })
+
+  it('끝나는 날의 이름은 상태가 정한다', () => {
+    expect(endsOnLabel('RETIRED')).toBe('폐기일자')
+    expect(endsOnLabel('AVAILABLE')).toBe('만료일')
+    expect(endsOnLabel('ASSIGNED')).toBe('만료일')
   })
 })
 
@@ -123,5 +123,21 @@ describe('toAssetInput', () => {
 
   it('금액 0은 값으로 보낸다 — 무상 취득과 미입력은 다른 사실이다', () => {
     expect(toAssetInput(draft({ amount: '0' })).amount).toBe(0)
+  })
+
+  it('끝나는 날은 상태에 따라 두 컬럼으로 갈린다', () => {
+    const live = toAssetInput(draft({ status: 'AVAILABLE', endsOn: '2027-12-31' }))
+    expect(live.returnDue).toBe('2027-12-31')
+    expect(live.disposedOn).toBeNull()
+
+    const retired = toAssetInput(draft({ status: 'RETIRED', endsOn: '2027-12-31' }))
+    expect(retired.disposedOn).toBe('2027-12-31')
+    expect(retired.returnDue).toBeNull()
+  })
+
+  it('끝나는 날이 비면 양쪽 다 null이다', () => {
+    const input = toAssetInput(draft({ status: 'RETIRED', endsOn: '' }))
+    expect(input.disposedOn).toBeNull()
+    expect(input.returnDue).toBeNull()
   })
 })

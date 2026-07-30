@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { downloadCsv } from '@/lib/csv'
 import { useEmployees } from '@/features/hub/hooks'
 import {
+  ASSET_IMPORT_HEADERS,
   buildAssetTemplateCsv,
   parseAssetCsv,
   type ImportRowError,
@@ -85,8 +86,9 @@ export function AssetImportModal({ open, onClose, branches }: AssetImportModalPr
       <div className="space-y-3">
         <p className="text-body text-gray-600">
           템플릿의 열 순서대로 CSV를 붙여 넣거나 파일을 선택하세요. 지사와 할당 대상은{' '}
-          <b>이름</b>으로 적고, 분류·상태·결제주기는 화면에서 쓰는 말(구매 · 가용 · 월 구독)을
-          그대로 적으면 됩니다. 빈 칸은 기본값(구매 · 가용 · 완납 · 반출 불가)으로 들어갑니다.
+          <b>이름</b>으로 적고, 분류·상태·결제주기는 화면에서 쓰는 말(구매 · 보유 · 월 구독)을
+          그대로 적으면 됩니다. 빈 칸은 기본값(구매 · 보유 · 완납 · 반출 불가)으로 들어갑니다.
+          만료일은 상태가 <b>폐기</b>면 폐기일자로 저장됩니다.
         </p>
 
         <input
@@ -100,7 +102,7 @@ export function AssetImportModal({ open, onClose, branches }: AssetImportModalPr
           value={text}
           rows={8}
           onChange={(e) => setText(e.target.value)}
-          placeholder="자산명,지사,품목,분류,상태,할당대상,시리얼번호,취득일자,만료일,폐기일자,금액,결제주기,반출가능,비고"
+          placeholder={ASSET_IMPORT_HEADERS.join(',')}
           className="font-mono"
         />
 

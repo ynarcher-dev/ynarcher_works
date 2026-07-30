@@ -1,6 +1,7 @@
 import { Banner, Button, Input, Spinner, Tabs, useToast } from '@ynarcher/ui'
 import { useEffect, useMemo, useState } from 'react'
 import { useEmployees } from '@/features/hub/hooks'
+import { costBasisFromAsset } from '@/features/management/assets/assetCost'
 import { AssetFormModal } from '@/features/management/assets/AssetFormModal'
 import { AssetImportModal } from '@/features/management/assets/AssetImportModal'
 import { AssetsFilterBar } from '@/features/management/assets/AssetsFilterBar'
@@ -161,7 +162,7 @@ export function AssetsPanel() {
       </div>
 
       <AssetsSelectionBar
-        items={selectedRows}
+        items={selectedRows.map(costBasisFromAsset)}
         busy={busy}
         onDeactivate={() => void deactivate(selectedRows)}
       />

@@ -11,11 +11,10 @@
  * 1일마다 24번 결제하므로 24회차다. 달을 일수로 나누지 않는 이유는, 청구가 일수가 아니라
  * 결제일 단위로 일어나기 때문이다.
  *
- * 계약 기간은 취득일자~회수 예정일이다(기획 §5.2 — 리스·렌탈·구독의 계약 종료일은 회수 예정일).
+ * 계약 기간은 취득일자~끝나는 날이다(만료 예정일, 이미 폐기했다면 폐기일자).
  * 기간이 비어 있으면 총액은 알 수 없다(null) — 0으로 접으면 "0원 계약"과 구분되지 않는다.
  */
-import { BILLING_SUFFIX, type AssetBillingCycle } from '@/features/management/config'
-import { formatAmount } from '@/features/management/assets/assetForm'
+import type { AssetBillingCycle } from '@/features/management/config'
 
 /** 계산에 필요한 최소 형태. Asset과 폼 초안 양쪽에서 쓴다. */
 export interface CostBasis {
@@ -23,8 +22,27 @@ export interface CostBasis {
   billingCycle: AssetBillingCycle
   /** 계약 개시일(취득일자). */
   acquiredOn: string | null
-  /** 계약 만료일(회수 예정일). */
+  /** 계약이 끝나는 날 — 만료 예정일이거나, 이미 폐기했다면 폐기일자다. */
+  endsOn: string | null
+}
+
+/**
+ * 원장 행 → 계산 근거. 끝나는 날은 폐기일자를 먼저 본다 — 폐기한 자산은 그날로 결제가 멈췄으므로
+ * 만료 예정일이 아니라 폐기일자까지가 실제로 돈이 나간 기간이다.
+ */
+export function costBasisFromAsset(a: {
+  amount: number | null
+  billingCycle: AssetBillingCycle
+  acquiredOn: string | null
+  disposedOn: string | null
   returnDue: string | null
+}): CostBasis {
+  return {
+    amount: a.amount,
+    billingCycle: a.billingCycle,
+    acquiredOn: a.acquiredOn,
+    endsOn: a.disposedOn ?? a.returnDue,
+  }
 }
 
 interface Ymd {
@@ -47,7 +65,7 @@ function parseYmd(value: string | null): Ymd | null {
 export function billingPeriods(basis: CostBasis): number | null {
   if (basis.billingCycle === 'ONE_TIME') return 1
   const start = parseYmd(basis.acquiredOn)
-  const end = parseYmd(basis.returnDue)
+  const end = parseYmd(basis.endsOn)
   if (!start || !end) return null
   if (
     end.y < start.y ||
@@ -76,12 +94,6 @@ export function contractTotal(basis: CostBasis): number | null {
   if (basis.amount == null) return null
   const periods = billingPeriods(basis)
   return periods == null ? null : basis.amount * periods
-}
-
-/** 금액 + 주기 표기('55,000/월', '2,500,000'). 미입력은 '—'. */
-export function formatCycleAmount(amount: number | null, cycle: AssetBillingCycle): string {
-  if (amount == null) return '—'
-  return `${formatAmount(amount)}${BILLING_SUFFIX[cycle]}`
 }
 
 /** 회차 표기('24개월', '2년'). 완납·미상은 표기하지 않는다. */
