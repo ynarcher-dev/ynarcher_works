@@ -90,6 +90,27 @@ export const ACQUISITION_LABELS: Record<AssetAcquisition, string> = {
 /** 등록 폼 셀렉트 순서(구매가 기본). 라벨은 ACQUISITION_LABELS가 단일 원천이다. */
 export const ACQUISITION_ORDER: AssetAcquisition[] = ['PURCHASE', 'LEASE', 'RENTAL', 'OTHER']
 
+/**
+ * 금액의 결제 주기. 같은 금액 열에 완납가와 월 구독료가 섞이면 합계가 뜻을 잃으므로,
+ * 금액이 어느 주기의 값인지를 함께 적는다. 계약 기간은 취득일자~회수 예정일로 본다.
+ */
+export type AssetBillingCycle = 'ONE_TIME' | 'MONTHLY' | 'YEARLY'
+
+export const BILLING_LABELS: Record<AssetBillingCycle, string> = {
+  ONE_TIME: '완납',
+  MONTHLY: '월 구독',
+  YEARLY: '연 구독',
+}
+
+/** 금액 뒤에 붙는 단위 표기('55,000/월'). 완납은 주기가 없으므로 붙이지 않는다. */
+export const BILLING_SUFFIX: Record<AssetBillingCycle, string> = {
+  ONE_TIME: '',
+  MONTHLY: '/월',
+  YEARLY: '/년',
+}
+
+export const BILLING_ORDER: AssetBillingCycle[] = ['ONE_TIME', 'MONTHLY', 'YEARLY']
+
 /** 상태 셀렉트 순서. 가용 → 할당됨 → 유지보수 → 폐기(실물 흐름 순). */
 export const ASSET_STATUS_ORDER: AssetStatus[] = [
   'AVAILABLE',

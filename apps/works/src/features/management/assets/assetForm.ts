@@ -9,6 +9,7 @@
  */
 import {
   type AssetAcquisition,
+  type AssetBillingCycle,
   type AssetStatus,
 } from '@/features/management/config'
 import type { Asset, AssetInput } from '@/features/management/assets/assetsApi'
@@ -22,10 +23,12 @@ export interface AssetDraft {
   branchId: string
   /** 빈 문자열이면 미지정. */
   assignedTo: string
+  serialNo: string
   acquiredOn: string
   disposedOn: string
   /** 원 단위 정수 문자열. 빈 문자열이면 미입력(0과 구분한다). */
   amount: string
+  billingCycle: AssetBillingCycle
   isPortable: boolean
   returnDue: string
   note: string
@@ -45,9 +48,11 @@ export function emptyDraft(branchId: string): AssetDraft {
     status: 'AVAILABLE',
     branchId,
     assignedTo: '',
+    serialNo: '',
     acquiredOn: '',
     disposedOn: '',
     amount: '',
+    billingCycle: 'ONE_TIME',
     isPortable: false,
     returnDue: '',
     note: '',
@@ -62,10 +67,12 @@ export function draftFromAsset(a: Asset): AssetDraft {
     status: a.status,
     branchId: a.branchId ?? '',
     assignedTo: a.assignedTo ?? '',
+    serialNo: a.serialNo ?? '',
     acquiredOn: a.acquiredOn ?? '',
     disposedOn: a.disposedOn ?? '',
     // 금액은 원 단위 정수로 다룬다 — 소수점 입력을 되살려 보여줄 이유가 없다.
     amount: a.amount == null ? '' : String(Math.trunc(a.amount)),
+    billingCycle: a.billingCycle,
     isPortable: a.isPortable,
     returnDue: a.returnDue ?? '',
     note: a.note ?? '',
@@ -116,6 +123,8 @@ export function validateDraft(draft: AssetDraft): AssetFormError | null {
   if (draft.amount && !/^\d+$/.test(draft.amount)) {
     return { field: 'amount', message: '금액은 0 이상의 숫자로 입력하세요.' }
   }
+  // 구독은 만료일이 있어야 계약 총액을 계산할 수 있다. 다만 저장을 막지는 않는다 —
+  // 만료일을 아직 모르는 계약도 등록해 두어야 하므로, 총액을 '—'로 두는 것이 답이다.
   return null
 }
 
@@ -128,9 +137,11 @@ export function toAssetInput(draft: AssetDraft): AssetInput {
     status: draft.status,
     branchId: draft.branchId,
     assignedTo: draft.assignedTo || null,
+    serialNo: draft.serialNo.trim() || null,
     acquiredOn: draft.acquiredOn || null,
     disposedOn: draft.disposedOn || null,
     amount: draft.amount ? Number(draft.amount) : null,
+    billingCycle: draft.billingCycle,
     isPortable: draft.isPortable,
     returnDue: draft.returnDue || null,
     note: draft.note.trim() || null,

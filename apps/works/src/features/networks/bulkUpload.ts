@@ -1,3 +1,4 @@
+import { splitCsvLine } from '@/lib/csv'
 import { supabase } from '@/lib/supabase'
 import {
   DIRECTORY_ENTITIES,
@@ -45,25 +46,6 @@ export interface ParsedRow {
   category: string
 }
 
-/** 따옴표/이스케이프를 처리하는 최소 CSV 라인 분해기. */
-function splitCsvLine(line: string): string[] {
-  const out: string[] = []
-  let cur = ''
-  let inQuote = false
-  for (let i = 0; i < line.length; i++) {
-    const c = line[i]
-    if (inQuote) {
-      if (c === '"') {
-        if (line[i + 1] === '"') { cur += '"'; i++ } else inQuote = false
-      } else cur += c
-    } else if (c === '"') inQuote = true
-    else if (c === ',') { out.push(cur); cur = '' }
-    else cur += c
-  }
-  out.push(cur)
-  return out.map((s) => s.trim())
-}
-
 /** CSV 텍스트를 표준 필드로 매핑해 파싱한다(헤더 별칭 자동 인식). */
 export function parseBulkCsv(text: string): ParsedRow[] {
   const lines = text.replace(/\r\n?/g, '\n').split('\n').filter((l) => l.trim())
@@ -100,16 +82,9 @@ export function buildTemplateCsv(): string {
   ].join('\n')
 }
 
-/** 텍스트를 CSV 파일로 다운로드(Excel 한글 대응 BOM 포함). */
-export function downloadCsv(filename: string, text: string): void {
-  const blob = new Blob(['﻿' + text], { type: 'text/csv;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.click()
-  URL.revokeObjectURL(url)
-}
+// CSV 라인 분해·파일 다운로드는 화면과 무관한 문자열 처리라 lib/csv가 소유한다(자산 임포터와 공유).
+// 기존 호출부(BulkUploadPanel 등)가 이 모듈에서 가져다 쓰므로 이름은 여기서도 유지한다.
+export { downloadCsv } from '@/lib/csv'
 
 /** 파일 콘텐츠 SHA-256 해시(hex). 동일 파일 재업로드 경고용. */
 export async function sha256Hex(text: string): Promise<string> {

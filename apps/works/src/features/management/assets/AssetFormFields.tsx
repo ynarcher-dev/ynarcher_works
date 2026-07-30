@@ -5,9 +5,13 @@ import {
   ACQUISITION_ORDER,
   ASSET_LABELS,
   ASSET_STATUS_ORDER,
+  BILLING_LABELS,
+  BILLING_ORDER,
   type AssetAcquisition,
+  type AssetBillingCycle,
   type AssetStatus,
 } from '@/features/management/config'
+import { AssetCostSummary } from '@/features/management/assets/AssetCostSummary'
 import {
   normalizeAmountInput,
   withDisposedOn,
@@ -58,11 +62,17 @@ function Field({
   )
 }
 
+function Row({ children }: { children: ReactNode }) {
+  return <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">{children}</div>
+}
+
 /**
- * 자산 등록·수정 폼의 필드 배치. 값 판단(전이·검증)은 `assetForm`이 갖고 여기서는 배치만 한다.
+ * 자산 등록·수정 폼의 필드 배치. 값 판단(전이·검증)은 `assetForm`이, 금액 계산은 `assetCost`가
+ * 갖고 여기서는 배치만 한다.
  *
- * 줄 묶음은 함께 정하는 값끼리다 — 무엇인가(자산명·품목) / 어떻게 들여왔나(분류·지사) /
- * 지금 어떤 상태인가(상태·할당 대상) / 언제(취득·폐기) / 얼마·언제까지(금액·회수 예정일).
+ * 줄 묶음은 함께 정하는 값끼리다 — 무엇인가(자산명·시리얼) / 어떤 물건인가(품목·분류) /
+ * 어디·어떤 상태(지사·상태) / 누구·언제 끝났나(할당 대상·폐기일자) / 계약 기간 / 비용.
+ * 비용 줄 바로 아래에 계산 결과를 붙인다 — 금액을 고치는 자리에서 결과가 바뀌어야 한다.
  */
 export function AssetFormFields({
   draft,
@@ -80,7 +90,7 @@ export function AssetFormFields({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <Row>
         <Field label="자산명" required>
           <Input
             value={draft.name}
@@ -90,6 +100,16 @@ export function AssetFormFields({
             autoFocus
           />
         </Field>
+        <Field label="시리얼 번호" hint="제조사 시리얼 또는 사내 관리 번호.">
+          <Input
+            value={draft.serialNo}
+            onChange={(e) => onChange({ ...draft, serialNo: e.target.value })}
+            placeholder="예: C02X1234ABCD"
+          />
+        </Field>
+      </Row>
+
+      <Row>
         <Field label="품목" hint="이미 등록된 품목이 제안되며, 새 품목은 그대로 입력합니다.">
           <Input
             value={draft.itemType}
@@ -103,9 +123,6 @@ export function AssetFormFields({
             ))}
           </datalist>
         </Field>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="분류" required>
           <Select
             value={draft.acquisitionType}
@@ -120,6 +137,9 @@ export function AssetFormFields({
             ))}
           </Select>
         </Field>
+      </Row>
+
+      <Row>
         <Field label="지사" required>
           <Select
             value={draft.branchId}
@@ -134,9 +154,6 @@ export function AssetFormFields({
             ))}
           </Select>
         </Field>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="상태" required>
           <Select
             value={draft.status}
@@ -150,6 +167,9 @@ export function AssetFormFields({
             ))}
           </Select>
         </Field>
+      </Row>
+
+      <Row>
         <Field
           label="할당 대상"
           required={draft.status === 'ASSIGNED'}
@@ -168,20 +188,7 @@ export function AssetFormFields({
             placeholder="임직원 검색 후 지정(1명)"
           />
         </Field>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Field label="취득일자">
-          <Input
-            type="date"
-            value={draft.acquiredOn}
-            onChange={(e) => onChange({ ...draft, acquiredOn: e.target.value })}
-          />
-        </Field>
-        <Field
-          label="폐기일자"
-          hint="입력하면 상태가 폐기로 바뀌고 할당 대상이 비워집니다."
-        >
+        <Field label="폐기일자" hint="입력하면 상태가 폐기로 바뀌고 할당 대상이 비워집니다.">
           <Input
             type="date"
             value={draft.disposedOn}
@@ -189,9 +196,26 @@ export function AssetFormFields({
             onChange={(e) => onChange(withDisposedOn(draft, e.target.value))}
           />
         </Field>
-      </div>
+      </Row>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <Row>
+        <Field label="취득일자" hint="구독·리스는 계약 개시일.">
+          <Input
+            type="date"
+            value={draft.acquiredOn}
+            onChange={(e) => onChange({ ...draft, acquiredOn: e.target.value })}
+          />
+        </Field>
+        <Field label="만료일 · 회수 예정일" hint="구독 만료일, 리스·렌탈 반납일, 회수 예정일.">
+          <Input
+            type="date"
+            value={draft.returnDue}
+            onChange={(e) => onChange({ ...draft, returnDue: e.target.value })}
+          />
+        </Field>
+      </Row>
+
+      <Row>
         <Field label="금액(원)">
           <Input
             value={draft.amount}
@@ -201,14 +225,23 @@ export function AssetFormFields({
             placeholder="예: 2500000"
           />
         </Field>
-        <Field label="회수 예정일" hint="리스·렌탈 반납 예정일 또는 할당 자산 회수 예정일.">
-          <Input
-            type="date"
-            value={draft.returnDue}
-            onChange={(e) => onChange({ ...draft, returnDue: e.target.value })}
-          />
+        <Field label="결제 주기" required hint="완납은 일시금, 구독은 회차마다 내는 금액입니다.">
+          <Select
+            value={draft.billingCycle}
+            onChange={(e) =>
+              onChange({ ...draft, billingCycle: e.target.value as AssetBillingCycle })
+            }
+          >
+            {BILLING_ORDER.map((v) => (
+              <option key={v} value={v}>
+                {BILLING_LABELS[v]}
+              </option>
+            ))}
+          </Select>
         </Field>
-      </div>
+      </Row>
+
+      <AssetCostSummary basis={{ ...draft, amount: draft.amount ? Number(draft.amount) : null }} />
 
       {/* 반출 가능 여부는 관리자의 사전 판단이며, OFFICE 반출대장이 이 값으로 후보를 거른다. */}
       <div className="flex items-center justify-between rounded-radius-md border border-gray-200 bg-gray-25 px-3 py-2.5">
