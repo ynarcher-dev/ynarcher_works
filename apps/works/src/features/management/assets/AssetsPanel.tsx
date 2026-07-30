@@ -178,7 +178,6 @@ export function AssetsPanel() {
           selectedKeys={selected}
           onSelectionChange={setSelected}
           onRowClick={(a) => setForm(a)}
-          onDeactivate={(a) => void deactivate([a])}
           pagination={{
             page,
             pageSize: PAGE_SIZE,

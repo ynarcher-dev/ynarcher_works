@@ -15,7 +15,6 @@ interface AssetsTableProps {
   selectedKeys: string[]
   onSelectionChange: (keys: string[]) => void
   onRowClick: (row: Asset) => void
-  onDeactivate: (row: Asset) => void
   pagination: DataTableProps<Asset>['pagination']
 }
 
@@ -26,6 +25,9 @@ interface AssetsTableProps {
  * 읽혀 합계는 물론 눈대중도 틀린다. 그 옆 연 환산 열이 주기가 다른 자산을 한 자로 비교해 준다.
  *
  * 등록자 열은 두지 않는다(원장에 created_by가 없고, 관리 축은 '지금 누구에게 있는가'다).
+ * 관리 열도 두지 않는다 — 비활성화는 행을 열어 내용을 확인한 뒤(모달 푸터) 또는 체크박스로 골라
+ * 한 번에(선택 요약 줄) 한다. 열이 이미 많은 표에서 행마다 버튼을 세워 두면 스치듯 눌리기 쉽고,
+ * 무엇을 지우는지 보지 않은 채 지우게 된다.
  */
 export function AssetsTable({
   rows,
@@ -33,7 +35,6 @@ export function AssetsTable({
   selectedKeys,
   onSelectionChange,
   onRowClick,
-  onDeactivate,
   pagination,
 }: AssetsTableProps) {
   const columns: Column<Asset>[] = [
@@ -114,20 +115,21 @@ export function AssetsTable({
   ]
 
   return (
-    // 열이 많아 가로 스크롤이 생기므로 식별 열(자산명)을 왼쪽에 고정한다.
+    // 자산명 열을 고정하지 않는다 — 고정은 가로 스크롤이 있을 때 식별 열을 붙잡아 두려는 것이고,
+    // 그 대가로 경계에 그림자가 깔린다. 관리 열을 뺀 뒤로는 표가 한 화면에 들어가므로
+    // 붙잡을 것이 없고 그림자만 남는다.
     <DataTable
       columns={columns}
       rows={rows}
       rowKey={(a) => a.id}
       showAuthor={false}
-      stickyLead
       selectable
       selectedKeys={selectedKeys}
       onSelectionChange={onSelectionChange}
       onRowClick={onRowClick}
       pagination={pagination}
-      // 확인 문구를 화면이 갖는다(폐기와 다른 축임을 밝혀야 하므로) — 내장 confirm은 끈다.
-      meta={{ onDeactivate, deactivateWithReason: true }}
+      // 목록에 관리 액션이 없으므로 열 자체를 없앤다(자리만 남겨 빈 열을 만들지 않는다).
+      showManageColumn={false}
       emptyText="조건에 맞는 자산이 없습니다."
     />
   )
