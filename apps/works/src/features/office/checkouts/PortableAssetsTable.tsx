@@ -88,7 +88,6 @@ export function PortableAssetsTable({
     {
       key: 'stock',
       header: '재고(잔여)',
-      align: 'right',
       numeric: true,
       className: 'w-20',
       render: (r) => (
