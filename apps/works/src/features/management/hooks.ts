@@ -6,7 +6,7 @@ import {
 } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useActivePlacementMap } from '@/features/management/orgHooks'
-import type { ApprovalStatus, AssetStatus } from '@/features/management/config'
+import type { ApprovalStatus } from '@/features/management/config'
 
 export interface ApprovalDoc {
   id: string
@@ -389,25 +389,5 @@ export function useKpis() {
   })
 }
 
-export interface Asset {
-  id: string
-  name: string
-  category: string | null
-  status: AssetStatus
-  assigned_to: string | null
-  return_due: string | null
-}
-
-export function useAssets() {
-  return useQuery({
-    queryKey: ['management', 'assets'],
-    queryFn: async (): Promise<Asset[]> => {
-      const { data } = await supabase
-        .from('assets')
-        .select('id, name, category, status, assigned_to, return_due')
-        .is('deleted_at', null)
-        .order('name', { ascending: true })
-      return (data ?? []) as Asset[]
-    },
-  })
-}
+// 자산 원장 훅은 features/management/assets/assetsApi.ts가 소유한다 — 조회 단위가 지사이고
+// 쓰기(등록·수정·비활성화)까지 함께 다루므로 자산 화면 옆에 두는 것이 맞다.

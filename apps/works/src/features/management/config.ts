@@ -73,3 +73,27 @@ export const assetTone: Record<AssetStatus, BadgeTone> = {
   MAINTENANCE: 'warning',
   RETIRED: 'neutral',
 }
+
+/**
+ * 취득 형태. 화면에서는 '분류'로 부르고 컬럼명은 acquisition_type이다 — 사용자가 쓰는 말과
+ * 그 값이 실제로 가르는 것(취득 형태)이 달라서, 양쪽을 각자의 자리에서 정확하게 부른다.
+ */
+export type AssetAcquisition = 'PURCHASE' | 'LEASE' | 'RENTAL' | 'OTHER'
+
+export const ACQUISITION_LABELS: Record<AssetAcquisition, string> = {
+  PURCHASE: '구매',
+  LEASE: '리스',
+  RENTAL: '렌탈',
+  OTHER: '기타',
+}
+
+/** 등록 폼 셀렉트 순서(구매가 기본). 라벨은 ACQUISITION_LABELS가 단일 원천이다. */
+export const ACQUISITION_ORDER: AssetAcquisition[] = ['PURCHASE', 'LEASE', 'RENTAL', 'OTHER']
+
+/** 상태 셀렉트 순서. 가용 → 할당됨 → 유지보수 → 폐기(실물 흐름 순). */
+export const ASSET_STATUS_ORDER: AssetStatus[] = [
+  'AVAILABLE',
+  'ASSIGNED',
+  'MAINTENANCE',
+  'RETIRED',
+]
