@@ -17,13 +17,23 @@ interface Props {
   busy: boolean
   onClose: () => void
   onSubmit: (v: BranchInput) => void
+  /** 수정일 때만 쓰는 활성/비활성 전환. 지사를 지우지 않고 OFFICE 노출만 끊는 수단이다. */
+  onToggleActive?: () => void
 }
 
 /**
  * ADMIN 지사 생성/수정 폼. 지사명·주소·전화번호·상주인력(복수).
  * 상주인력은 임직원 원장에서 골라 담기만 한다 — 계정 생성은 MANAGEMENT 인사 관리가 소유한다.
  */
-export function BranchFormModal({ open, branch, memberIds, busy, onClose, onSubmit }: Props) {
+export function BranchFormModal({
+  open,
+  branch,
+  memberIds,
+  busy,
+  onClose,
+  onSubmit,
+  onToggleActive,
+}: Props) {
   const editing = Boolean(branch)
   const { data: employees } = useEmployees()
   const [name, setName] = useState('')
@@ -70,6 +80,24 @@ export function BranchFormModal({ open, branch, memberIds, busy, onClose, onSubm
       size="lg"
       footer={
         <>
+          {/*
+            비활성화는 저장과 성격이 다른 일(이 지사를 계속 쓸지)이라 확인/취소와 같은 무리에 두지
+            않고 반대쪽 끝으로 민다 — 나란히 두면 저장하려다 누르는 자리가 된다.
+          */}
+          {editing && onToggleActive && (
+            <Button
+              variant="outline"
+              onClick={onToggleActive}
+              disabled={busy}
+              className={
+                branch?.isActive
+                  ? 'mr-auto text-danger hover:bg-danger-subtle hover:text-danger'
+                  : 'mr-auto'
+              }
+            >
+              {branch?.isActive ? '비활성화' : '활성화'}
+            </Button>
+          )}
           <Button variant="ghost" onClick={onClose} disabled={busy}>
             취소
           </Button>

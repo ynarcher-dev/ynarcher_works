@@ -46,6 +46,8 @@ export function BranchAdminPanel() {
     }
   }
 
+  // 전환 후에는 폼을 닫는다 — 폼이 들고 있는 지사는 열 때의 스냅샷이라, 열어 둔 채로는
+  // 버튼 라벨이 방금 만든 상태와 어긋난다.
   const toggleActive = async (b: Branch) => {
     if (
       b.isActive &&
@@ -55,6 +57,7 @@ export function BranchAdminPanel() {
     try {
       await setActive.mutateAsync({ id: b.id, isActive: !b.isActive })
       toast.show(b.isActive ? '비활성화했습니다.' : '활성화했습니다.', 'success')
+      setForm(null)
     } catch {
       toast.show('변경에 실패했습니다.', 'danger')
     }
@@ -87,22 +90,6 @@ export function BranchAdminPanel() {
       render: (b) =>
         b.isActive ? <Badge tone="success">활성</Badge> : <Badge tone="neutral">비활성</Badge>,
     },
-    {
-      key: 'action',
-      header: '관리',
-      align: 'center',
-      className: 'w-40',
-      render: (b) => (
-        <span className="flex items-center justify-center gap-1.5">
-          <Button variant="outline" onClick={() => setForm(b)}>
-            수정
-          </Button>
-          <Button variant="outline" onClick={() => void toggleActive(b)}>
-            {b.isActive ? '비활성화' : '활성화'}
-          </Button>
-        </span>
-      ),
-    },
   ]
 
   return (
@@ -116,12 +103,14 @@ export function BranchAdminPanel() {
           <Spinner />
         </div>
       ) : (
+        // 행을 누르면 그 지사를 연다 — 확인과 수정이 같은 화면이라 '수정' 열을 따로 두지 않는다.
         <DataTable
           columns={columns}
           rows={branches}
           rowKey={(b) => b.id}
           numbered
           standardColumns={false}
+          onRowClick={(b) => setForm(b)}
           emptyText="등록된 지사가 없습니다."
         />
       )}
@@ -133,6 +122,7 @@ export function BranchAdminPanel() {
         busy={busy}
         onClose={() => setForm(null)}
         onSubmit={submit}
+        onToggleActive={editing ? () => void toggleActive(editing) : undefined}
       />
     </div>
   )
