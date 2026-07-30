@@ -1,9 +1,7 @@
 import { BackButton, Badge, Banner, Button, CardShell, cardText, DensityProvider, InfoField, PanelCard, Spinner } from '@ynarcher/ui'
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { maskEmail, maskPhone } from '@/lib/mask'
 import { DetailDeleteButton } from '@/components/DetailDeleteButton'
-import { useSensitiveStore } from '@/features/admin/sensitiveStore'
 import { EmployeeForm } from '@/features/management/EmployeeForm'
 import { PhotoBox } from '@/features/networks/PhotoBox'
 import { CareerView, hasCareerRows } from '@/features/networks/CareerView'
@@ -15,6 +13,7 @@ import { DetailPanelCard } from '@/features/networks/DetailPanelCard'
 import { MiniPager, usePaged } from '@/features/networks/MiniPager'
 import { ROLE_LABELS } from '@/features/management/config'
 import { useDeactivateEmployee, useDepartments, useEmployee } from '@/features/management/hooks'
+import { useJobTitleLabel } from '@/features/management/jobTitleHooks'
 import { legacyNote, parseNote } from '@/features/management/noteConfig'
 import { useEmployeeBranchNames } from '@/features/office/branches/branchMembers'
 
@@ -77,22 +76,26 @@ function RelationCard({ title }: { title: string }) {
  * 임직원 상세페이지(조회 전용). 전문가 상세 레이아웃을 따르되 멘토링 만족도·매칭·전문분야는 제외한다.
  * 사진·약력·노트는 NETWORKS 상세와 동일한 규격(profile.photo / profile.background / profile.note)으로 표시한다.
  * 우측 자료 관리·피드백 패널은 다형(target_type/target_id) 공용 패널을 재사용한다.
- * OFFICE(임직원 정보)에서 진입할 때는 readOnly로 수정 버튼을 숨기고 조회만 제공한다.
+ * OFFICE(임직원 정보)에서 진입할 때는 readOnly로 수정 버튼을 숨기고 조회만 제공하며,
+ * 호봉은 인사 관리 맥락에서만 표기한다(showPayStep=false).
  */
 interface EmployeeDetailPageProps {
   /** 조회 전용(OFFICE 진입): 수정 버튼/편집 모드를 제공하지 않는다. */
   readOnly?: boolean
   /** 뒤로가기 경로. 기본은 인사 관리 리스트. */
   backTo?: string
+  /** 호봉 표기. 인사 관리(MANAGEMENT)만 true, OFFICE 임직원 정보는 false로 내린다. */
+  showPayStep?: boolean
 }
 
 export function EmployeeDetailPage({
   readOnly = false,
   backTo = '/management?tab=hr',
+  showPayStep = true,
 }: EmployeeDetailPageProps = {}) {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const show = useSensitiveStore((s) => s.show)
+  // 임직원은 내부 구성원이라 개인정보 마스킹 대상이 아니다(민감정보 정책은 외부 인물·기업만 다룬다).
   const [editing, setEditing] = useState(false)
   const { data: emp, isLoading } = useEmployee(id)
   const { data: depts } = useDepartments()
@@ -100,6 +103,8 @@ export function EmployeeDetailPage({
   const deactivate = useDeactivateEmployee()
   // 지사는 지사 원장(branch_members)에서 파생한다 — ADMIN '지사 관리'에서 배정하면 여기에 그대로 뜬다.
   const { branchNamesOf } = useEmployeeBranchNames()
+  // 이름 옆 호칭은 직급·직책 태그 원장의 표기 방식이 정한다(코드에 목록을 박지 않는다).
+  const jobTitle = useJobTitleLabel()
 
   if (isLoading) return <Spinner />
   if (!emp) return <Banner tone="warning">임직원 정보를 찾을 수 없습니다.</Banner>
@@ -129,11 +134,13 @@ export function EmployeeDetailPage({
   // 노트는 철학·관심분야·한마디 세 항목이다. 아직 옮기지 않은 자유 텍스트 노트는 '이전 기록'으로 남긴다.
   const note = parseNote(profile)
   const oldNote = legacyNote(profile)
-  // 이름 옆 배지는 관리자(super_admin)만 표기한다 — 나머지 역할은 부서·직책으로 이미 드러난다.
+  // 이름 옆 배지는 자리 표기(직급 직책) + 관리자(super_admin)뿐이다 — 나머지 역할은 부서로 드러난다.
+  // 자리 표기가 앞이다: 이 사람이 무엇을 하는 사람인가가 계정 권한보다 먼저 읽혀야 한다.
+  const jobLabel = jobTitle(rank, position)
   const adminLabel = emp.user_type === 'super_admin' ? ROLE_LABELS[emp.user_type] : ''
   const branchLabel = branchNamesOf(emp.id).join(', ')
-  const email = show.email ? emp.email ?? '-' : maskEmail(emp.email ?? null)
-  const phone = show.phone ? emp.phone ?? '-' : maskPhone(emp.phone ?? null)
+  const email = emp.email ?? '-'
+  const phone = emp.phone ?? '-'
 
   return (
     <div className="space-y-5">
@@ -177,6 +184,7 @@ export function EmployeeDetailPage({
                   <DensityProvider value="page">
                     <div className="flex flex-wrap items-center gap-2">
                       <h1 className="text-title-md font-bold text-gray-900">{emp.name}</h1>
+                      {jobLabel && <Badge tone="neutral">{jobLabel}</Badge>}
                       {adminLabel && <Badge tone="neutral">{adminLabel}</Badge>}
                     </div>
                   </DensityProvider>
@@ -187,9 +195,9 @@ export function EmployeeDetailPage({
               <div className="mt-5 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-3">
                 <Info label="회사" value={company || '-'} />
                 <Info label="지사" value={branchLabel || '-'} />
-                <Info label="직책" value={position || '-'} />
-                <Info label="직급" value={rank || '-'} />
-                <Info label="호봉" value={payStep || '-'} />
+                {/* 직책·직급은 이름 옆 호칭 태그가 이미 말한다 — 같은 값을 아래에 한 번 더 적지 않는다. */}
+                {/* 호봉은 인사 관리 맥락에서만 표기한다(OFFICE 임직원 정보에서는 감춤). */}
+                {showPayStep && <Info label="호봉" value={payStep || '-'} />}
                 <Info label="입사일" value={hireDate || '-'} />
                 <Info label="연락처" value={phone} />
                 <Info label="이메일" value={email} />
@@ -258,7 +266,8 @@ export function EmployeeDetailPage({
 
           {/* 우측(1/3): 자료 관리 · 피드백 · 변동 이력(공용 패널 재사용). */}
           <div className="space-y-4 lg:col-span-1">
-            <MaterialPanel targetType="employee" targetId={emp.id} />
+            {/* 조회 전용 진입(OFFICE 임직원 정보)에서는 자료도 목록·다운로드만 — 원장 쓰기는 MANAGEMENT 소관. */}
+            <MaterialPanel targetType="employee" targetId={emp.id} readOnly={readOnly} />
             <FeedbackPanel targetType="employee" targetId={emp.id} />
             {/* 변동 이력: 임직원용 이력 소스 연결 전이라 빈 상태로 골격만 노출한다. */}
             <ChangeHistoryPanel contributions={undefined} />

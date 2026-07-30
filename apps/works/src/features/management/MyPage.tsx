@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useAuthStore } from '@/auth/authStore'
 import { ROLE_LABELS } from '@/features/management/config'
 import { EmployeeNoteFields } from '@/features/management/EmployeeNoteFields'
+import { useJobTitleLabel } from '@/features/management/jobTitleHooks'
 import { noteEditorInit, parseNote, type EmployeeNote } from '@/features/management/noteConfig'
 import {
   useDepartments,
@@ -33,6 +34,8 @@ export function MyPage() {
   const { data: me, isLoading } = useEmployee(userId)
   const { data: depts } = useDepartments()
   const update = useUpdateMyProfile()
+  // 이름 옆 호칭은 직급·직책 태그 원장의 표기 방식이 정한다(코드에 목록을 박지 않는다).
+  const jobTitle = useJobTitleLabel()
 
   const [photo, setPhoto] = useState('')
   const [background, setBackground] = useState<CareerData>(parseBackground(null))
@@ -55,7 +58,8 @@ export function MyPage() {
   if (!me) return <Banner tone="warning">내 계정 정보를 불러올 수 없습니다.</Banner>
 
   const profile = me.profile ?? {}
-  // 이름 옆 배지는 관리자(super_admin)만 표기한다 — 임직원 상세와 동일 규칙.
+  // 이름 옆 배지는 자리 표기(직급 직책) + 관리자(super_admin)뿐이다 — 임직원 상세와 동일 규칙.
+  const jobLabel = jobTitle(str(profile.rank), str(profile.position))
   const adminLabel = me.user_type === 'super_admin' ? ROLE_LABELS[me.user_type] : ''
 
   // 부서/팀 파생: 소속→루트 경로에서 인사 미노출(hr_hidden) 부서를 제외하고 가장 구체적인 2개를 취한다.
@@ -97,6 +101,8 @@ export function MyPage() {
             <div className="flex flex-wrap items-center gap-2">
               {/* 페이지 제목('내 계정 관리')이 따로 있으므로 이름은 카드 제목 층이다. */}
               <h2 className={cardText.title}>{me.name}</h2>
+              {/* 자리 표기(직급 직책)는 임직원 상세 헤더와 같은 자리·같은 모양으로 둔다. */}
+              {jobLabel && <Badge tone="neutral">{jobLabel}</Badge>}
               {adminLabel && <Badge tone="neutral">{adminLabel}</Badge>}
             </div>
             <p className={`mt-1 ${cardText.subtitle}`}>{affiliation || '-'}</p>
@@ -104,7 +110,7 @@ export function MyPage() {
               <Info label="회사" value={str(profile.company)} />
               <Info label="직책" value={str(profile.position)} />
               <Info label="직급" value={str(profile.rank)} />
-              <Info label="호봉" value={str(profile.pay_step)} />
+              {/* 호봉은 인사 관리(MANAGEMENT) 화면에서만 다룬다 — 본인 확인 화면에는 노출하지 않는다. */}
               <Info label="입사일" value={str(profile.hire_date)} />
               <Info label="이메일" value={me.email ?? ''} />
               <Info label="연락처" value={me.phone ?? ''} />

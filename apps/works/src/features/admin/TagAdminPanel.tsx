@@ -1,24 +1,21 @@
-import {
-  Button,
-  DataTable,
-  Input,
-  Modal,
-  Select,
-  Spinner,
-  useToast,
-  type Column,
-} from '@ynarcher/ui'
+import { Button, DataTable, Input, Select, Spinner, useToast, type Column } from '@ynarcher/ui'
 import { useEffect, useMemo, useState } from 'react'
 import {
   useCreateTag,
   useDeleteTag,
+  useSetTagMode,
   useSetTagOrder,
+  useSetTagOrders,
   useTags,
   useUpdateTag,
   type Tag,
   type TagParentValue,
 } from '@/features/admin/hooks'
+import { TagEditModal } from '@/features/admin/TagEditModal'
 import type { TagConfig } from '@/features/admin/tagConfig'
+
+/** 태그명 정렬 상태. null이면 저장된 노출순위(sort_order) 순서 그대로 본다. */
+type NameSort = 'asc' | 'desc' | null
 
 interface TagAdminPanelProps {
   config: TagConfig
@@ -33,21 +30,28 @@ interface TagAdminPanelProps {
  *
  * 노출순위는 여기서 입력한 sort_order가 그대로 각 화면의 선택지 순서가 된다(useTags 정렬 기준,
  * 작은 값이 앞). 2뎁스 태그는 부모 탭 범위 안에서 운용하므로 부모가 다르면 번호가 겹칠 수 있다.
+ *
+ * 순서 정리는 "보기 → 확정" 두 단계다. 태그명 오름/내림차순은 화면에서만 정렬해 보여주고,
+ * '노출순위 10단위 재부여'가 그 순서를 10, 20, 30…으로 저장한다. 10단위로 띄우는 이유는
+ * 나중에 사이에 끼워 넣을 자리(15 등)를 남겨 전체 재부여 없이 한 건만 고칠 수 있게 하기 위함이다.
  */
 export function TagAdminPanel({ config }: TagAdminPanelProps) {
-  const { table, noun, parent } = config
+  const { table, noun, parent, modes } = config
   const toast = useToast()
-  const { data, isLoading } = useTags(table, parent?.column)
+  const { data, isLoading } = useTags(table, parent?.column, true, Boolean(modes))
   // 부모 태그 목록(예: 권역)은 2뎁스 태그일 때만 조회한다.
   const { data: parentTags } = useTags(parent?.table ?? '', undefined, Boolean(parent))
   const create = useCreateTag(table)
   const update = useUpdateTag(table)
   const remove = useDeleteTag(table)
   const setOrder = useSetTagOrder(table)
+  const setOrders = useSetTagOrders(table)
+  const setMode = useSetTagMode(table)
 
   const [newName, setNewName] = useState('')
   // 노출순위 입력의 편집 중 값(행 id → 문자열). 저장하면 비워 서버 값으로 되돌아간다.
   const [orderDraft, setOrderDraft] = useState<Record<string, string>>({})
+  const [nameSort, setNameSort] = useState<NameSort>(null)
   const [activeParentId, setActiveParentId] = useState('') // 선택된 권역 탭
   const [editing, setEditing] = useState<Tag | null>(null)
   const [editName, setEditName] = useState('')
@@ -72,11 +76,14 @@ export function TagAdminPanel({ config }: TagAdminPanelProps) {
     parent ? { column: parent.column, id: id || null } : undefined
 
   // 활성 권역 탭에 속한 태그만 노출(2뎁스). 평면 태그는 전체.
+  // 태그명 정렬은 화면 표시 순서만 바꾼다 — 저장은 '노출순위 10단위 재부여'가 맡는다.
   const rows = useMemo(() => {
-    if (!parent) return data ?? []
-    return (data ?? []).filter((t) => parentIdOf(t) === activeParentId)
+    const scoped = parent ? (data ?? []).filter((t) => parentIdOf(t) === activeParentId) : data ?? []
+    if (!nameSort) return scoped
+    const dir = nameSort === 'asc' ? 1 : -1
+    return [...scoped].sort((a, b) => a.name.localeCompare(b.name, 'ko') * dir)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, parent, activeParentId])
+  }, [data, parent, activeParentId, nameSort])
 
   // 권역이 없는(미지정) 태그가 있으면 마지막에 '미지정' 탭을 덧붙여 유실을 막는다.
   const hasUnassigned = parent ? (data ?? []).some((t) => !parentIdOf(t)) : false
@@ -126,6 +133,32 @@ export function TagAdminPanel({ config }: TagAdminPanelProps) {
     }
   }
 
+  /**
+   * 지금 화면에 보이는 순서대로 노출순위를 10, 20, 30…으로 다시 매긴다.
+   * 2뎁스 태그는 선택된 부모 탭 범위(rows)에만 적용된다 — 부모가 다르면 번호가 겹쳐도 무방하다.
+   */
+  const renumber = async () => {
+    const changed = rows
+      .map((t, i) => ({ id: t.id, sortOrder: (i + 1) * 10, current: t.sort_order }))
+      .filter((it) => it.current !== it.sortOrder)
+      .map(({ id, sortOrder }) => ({ id, sortOrder }))
+    if (!changed.length) {
+      toast.show('이미 10단위로 정리되어 있습니다.', 'info')
+      return
+    }
+    try {
+      await setOrders.mutateAsync(changed)
+      setOrderDraft({}) // 편집 중이던 입력값은 새 번호로 갈아끼운다.
+      toast.show('노출순위를 10단위로 다시 매겼습니다.', 'success')
+    } catch {
+      toast.show('노출순위 저장에 실패했습니다. 권한을 확인하세요.', 'danger')
+    }
+  }
+
+  /** 같은 방향을 다시 누르면 정렬을 풀어 저장된 노출순위 순서로 돌아간다. */
+  const toggleNameSort = (dir: Exclude<NameSort, null>) =>
+    setNameSort((prev) => (prev === dir ? null : dir))
+
   const openEdit = (tag: Tag) => {
     setEditing(tag)
     setEditName(tag.name)
@@ -150,6 +183,15 @@ export function TagAdminPanel({ config }: TagAdminPanelProps) {
       toast.show('태그를 수정했습니다.', 'success')
     } catch {
       toast.show('수정에 실패했습니다. 이미 존재하는 태그인지 확인하세요.', 'danger')
+    }
+  }
+
+  /** 표기 방식 변경(직급·직책 태그 전용). 고르는 즉시 저장한다 — 확정 버튼을 따로 두지 않는다. */
+  const changeMode = async (tag: Tag, mode: string) => {
+    try {
+      await setMode.mutateAsync({ id: tag.id, mode })
+    } catch {
+      toast.show('표기 방식 저장에 실패했습니다. 권한을 확인하세요.', 'danger')
     }
   }
 
@@ -178,7 +220,9 @@ export function TagAdminPanel({ config }: TagAdminPanelProps) {
             <Input
               type="number"
               min={0}
-              className="text-center"
+              // 스피너(증감 화살표)를 지운다 — 크롬은 이 버튼 자리를 항상 차지해 두어
+              // text-center로 가운데 정렬해도 글자가 왼쪽으로 밀려 보인다.
+              className="text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
               aria-label={`${t.name} 노출순위`}
               value={orderDraft[t.id] ?? String(t.sort_order)}
               onChange={(e) => setOrderDraft((d) => ({ ...d, [t.id]: e.target.value }))}
@@ -191,14 +235,37 @@ export function TagAdminPanel({ config }: TagAdminPanelProps) {
         </span>
       ),
     },
-    { key: 'name', header: noun, primary: true, render: (t) => t.name },
+    { key: 'name', header: noun, primary: true, sortable: true, render: (t) => t.name },
+    // 표기 방식(직급·직책 전용): 임직원 이름 옆 호칭을 이 값이 정한다.
+    ...(modes
+      ? [
+          {
+            key: 'mode',
+            header: '표기 방식',
+            className: 'w-64',
+            render: (t: Tag) => (
+              <Select
+                aria-label={`${t.name} 표기 방식`}
+                value={t.display_mode ?? 'DEFAULT'}
+                onChange={(e) => changeMode(t, e.target.value)}
+              >
+                {modes.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </Select>
+            ),
+          },
+        ]
+      : []),
     {
       key: 'action',
       header: '관리',
-      align: 'right',
-      className: 'w-40',
+      align: 'center',
+      className: 'w-32',
       render: (t) => (
-        <div className="flex justify-end gap-1.5">
+        <div className="flex justify-center gap-1.5">
           <Button variant="outline" onClick={() => openEdit(t)}>
             수정
           </Button>
@@ -259,57 +326,70 @@ export function TagAdminPanel({ config }: TagAdminPanelProps) {
           </p>
         ))}
 
-      {isLoading ? (
-        <Spinner />
-      ) : (
-        <DataTable
-          columns={columns}
-          rows={rows}
-          rowKey={(t) => t.id}
-          standardColumns={false}
-          // 기본 No.(내림차순)는 노출순위와 정반대로 매겨져 서로 헷갈린다. 여기서 읽어야 할
-          // 번호는 노출순위 하나뿐이므로 끈다.
-          numbered={false}
-          emptyText={`등록된 ${noun} 태그가 없습니다.`}
-        />
-      )}
-
-      <Modal
-        open={Boolean(editing)}
-        onClose={() => setEditing(null)}
-        title={`${noun} 태그 수정`}
-        footer={
-          <>
-            <Button variant="outline" onClick={() => setEditing(null)}>
-              취소
-            </Button>
-            <Button onClick={submitEdit} disabled={!editName.trim() || update.isPending}>
-              수정
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-3">
-          {parent && (
-            <Select value={editParentId} onChange={(e) => setEditParentId(e.target.value)}>
-              <option value="">{parent.noun} 선택</option>
-              {parentTags?.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </Select>
-          )}
-          <Input
-            autoFocus
-            value={editName}
-            onChange={(e) => setEditName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') submitEdit()
-            }}
-          />
+      {/* 태그 표는 열이 셋뿐이라 화면 폭을 다 쓰면 이름 한 칸이 과하게 벌어진다. 절반만 쓴다.
+          표기 방식 열이 붙는 직급·직책 태그만 셀렉트가 눌리지 않게 3/4로 넓힌다. */}
+      <div className={`space-y-2 ${modes ? 'lg:w-3/4' : 'lg:w-1/2'}`}>
+        <div className="flex flex-wrap items-center justify-end gap-1.5">
+          <Button
+            variant={nameSort === 'asc' ? 'primary' : 'outline'}
+            onClick={() => toggleNameSort('asc')}
+            disabled={!rows.length}
+          >
+            이름 오름차순
+          </Button>
+          <Button
+            variant={nameSort === 'desc' ? 'primary' : 'outline'}
+            onClick={() => toggleNameSort('desc')}
+            disabled={!rows.length}
+          >
+            이름 내림차순
+          </Button>
+          <Button variant="outline" onClick={renumber} disabled={!rows.length || setOrders.isPending}>
+            노출순위 10단위 재부여
+          </Button>
         </div>
-      </Modal>
+
+        {isLoading ? (
+          <Spinner />
+        ) : (
+          <DataTable
+            columns={columns}
+            rows={rows}
+            rowKey={(t) => t.id}
+            sortKey={nameSort ? 'name' : undefined}
+            sortDir={nameSort ?? undefined}
+            onSort={(key) => {
+              if (key === 'name') toggleNameSort(nameSort === 'asc' ? 'desc' : 'asc')
+            }}
+            standardColumns={false}
+            // 기본 No.(내림차순)는 노출순위와 정반대로 매겨져 서로 헷갈린다. 여기서 읽어야 할
+            // 번호는 노출순위 하나뿐이므로 끈다.
+            numbered={false}
+            emptyText={`등록된 ${noun} 태그가 없습니다.`}
+          />
+        )}
+
+        {/* 두 원장의 설정이 부딪힐 때 어느 쪽이 이기는지는 화면에서 읽히지 않는다 — 적어 둔다. */}
+        {modes && (
+          <p className="text-caption text-gray-600">
+            임직원 이름 옆 호칭을 정하는 값입니다. 직급과 직책 설정이 부딪히면 직급이 이깁니다.
+          </p>
+        )}
+      </div>
+
+      <TagEditModal
+        tag={editing}
+        noun={noun}
+        parent={parent}
+        parentTags={parentTags}
+        name={editName}
+        onNameChange={setEditName}
+        parentId={editParentId}
+        onParentIdChange={setEditParentId}
+        onClose={() => setEditing(null)}
+        onSubmit={submitEdit}
+        pending={update.isPending}
+      />
     </div>
   )
 }

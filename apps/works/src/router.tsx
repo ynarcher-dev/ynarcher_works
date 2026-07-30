@@ -220,12 +220,12 @@ export const router = createBrowserRouter([
               </RequireWorkspace>
             ),
           },
-          // 임직원 정보 상세(조회 전용). OFFICE 임직원 정보 목록 행 클릭으로 진입한다.
+          // 임직원 정보 상세(조회 전용). OFFICE 임직원 정보 목록(조직 트리)의 인물 카드 클릭으로 진입한다.
           {
             path: 'office/managers/:id',
             element: (
               <RequireWorkspace workspace="office">
-                <EmployeeDetailPage readOnly backTo="/office?tab=managers" />
+                <EmployeeDetailPage readOnly showPayStep={false} backTo="/office?tab=managers" />
               </RequireWorkspace>
             ),
           },
