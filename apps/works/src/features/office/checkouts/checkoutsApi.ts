@@ -1,22 +1,20 @@
 /**
  * 반출대장(public.asset_checkouts) 서버 훅 — OFFICE가 소유한다.
  * 기획: docs_planning/3_1_2_office_asset_checkout.md
- * 원장: supabase/migrations/20260730180000_asset_checkouts.sql
+ * 원장: supabase/migrations/20260730180000_asset_checkouts.sql(+20260730190000 일시화)
  *
  * RLS: 조회는 내부 임직원 전원(app.is_internal_user), 등록은 본인 명의만,
  * 수정은 본인·management 쓰기·관리자. 무엇으로 바꿀 수 있는가(상태 전이)는 DB 트리거가
  * 판정하므로 여기서는 전이 요청을 그대로 보내고 실패 메시지를 옮긴다.
  *
- * 자산명·시리얼·지사는 조인하지 않는다 — assets 조회 권한이 없는 임직원도 대장을 봐야 하므로
- * 원장이 등록 시점 값을 스냅샷으로 들고 있다(회의실 예약의 created_by_name과 같은 해법).
+ * 자산은 조인하지 않는다 — assets 조회 권한이 없는 임직원도 대장을 봐야 하므로 목록은
+ * 뷰(portable_assets)에서, 기록의 물품 표기는 원장의 등록 시점 스냅샷에서 온다.
  */
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import {
   OCCUPYING_STATUSES,
-  todayKey,
   type CheckoutStatus,
-  type CheckoutView,
 } from '@/features/office/checkouts/checkoutConfig'
 
 export interface Checkout {
@@ -28,9 +26,10 @@ export interface Checkout {
   assetSerialNo: string | null
   branchId: string | null
   status: CheckoutStatus
-  checkoutOn: string
-  dueOn: string
-  returnedOn: string | null
+  /** ISO 일시(timestamptz). */
+  checkoutAt: string
+  dueAt: string
+  returnedAt: string | null
   purpose: string
   destination: string | null
   note: string | null
@@ -51,9 +50,9 @@ interface CheckoutRow {
   asset_serial_no: string | null
   branch_id: string | null
   status: CheckoutStatus
-  checkout_on: string
-  due_on: string
-  returned_on: string | null
+  checkout_at: string
+  due_at: string
+  returned_at: string | null
   purpose: string
   destination: string | null
   note: string | null
@@ -67,7 +66,7 @@ interface CheckoutRow {
 }
 
 const COLUMNS =
-  'id, asset_id, asset_name, asset_item_type, asset_serial_no, branch_id, status, checkout_on, due_on, returned_on, purpose, destination, note, created_by, created_by_name, decided_by, decided_at, decision_note, returned_by_name, return_note'
+  'id, asset_id, asset_name, asset_item_type, asset_serial_no, branch_id, status, checkout_at, due_at, returned_at, purpose, destination, note, created_by, created_by_name, decided_by, decided_at, decision_note, returned_by_name, return_note'
 
 const toCheckout = (r: CheckoutRow): Checkout => ({
   id: r.id,
@@ -77,9 +76,9 @@ const toCheckout = (r: CheckoutRow): Checkout => ({
   assetSerialNo: r.asset_serial_no,
   branchId: r.branch_id,
   status: r.status,
-  checkoutOn: r.checkout_on,
-  dueOn: r.due_on,
-  returnedOn: r.returned_on,
+  checkoutAt: r.checkout_at,
+  dueAt: r.due_at,
+  returnedAt: r.returned_at,
   purpose: r.purpose,
   destination: r.destination,
   note: r.note,
@@ -94,89 +93,6 @@ const toCheckout = (r: CheckoutRow): Checkout => ({
 
 const CHECKOUTS_KEY = ['office', 'asset-checkouts']
 
-/** PostgREST or 구문에서 값 구분자로 쓰이는 문자를 걷어낸다. */
-function sanitizeOrValue(v: string): string {
-  return v.replace(/[(),]/g, ' ').trim()
-}
-
-export interface CheckoutPage {
-  rows: Checkout[]
-  total: number
-}
-
-/**
- * 뷰(탭) 하나의 목록. 뷰가 곧 조건이며, 정렬도 뷰가 정한다 —
- * 진행 중인 건은 급한 것(반납 예정이 가까운 것)부터, 지난 기록은 최근 것부터 읽는다.
- */
-export function useCheckoutsPage(args: {
-  view: CheckoutView
-  keyword: string
-  branchIds: string[]
-  page: number
-  pageSize: number
-  myId?: string
-}) {
-  const { view, keyword, branchIds, page, pageSize, myId } = args
-  return useQuery({
-    queryKey: [...CHECKOUTS_KEY, 'page', view, keyword, branchIds, page, pageSize, myId ?? ''],
-    // '내 반출'은 내가 누구인지 알아야 답할 수 있는 질문이다.
-    enabled: view !== 'MINE' || Boolean(myId),
-    placeholderData: keepPreviousData,
-    queryFn: async (): Promise<CheckoutPage> => {
-      const from = page * pageSize
-      const kw = sanitizeOrValue(keyword)
-      const recent = view === 'MINE' || view === 'ALL'
-
-      let q = supabase
-        .from('asset_checkouts')
-        .select(COLUMNS, { count: 'exact' })
-        .is('deleted_at', null)
-        .order(recent ? 'checkout_on' : 'due_on', { ascending: !recent })
-        .range(from, from + pageSize - 1)
-
-      if (view === 'OUT') q = q.eq('status', 'OUT')
-      if (view === 'PENDING') q = q.eq('status', 'PENDING')
-      if (view === 'RESERVED') q = q.eq('status', 'RESERVED')
-      if (view === 'OVERDUE') q = q.eq('status', 'OUT').lt('due_on', todayKey())
-      if (view === 'MINE' && myId) q = q.eq('created_by', myId)
-
-      if (branchIds.length) q = q.in('branch_id', branchIds)
-      if (kw) {
-        q = q.or(
-          [
-            `asset_name.ilike.%${kw}%`,
-            `asset_serial_no.ilike.%${kw}%`,
-            `created_by_name.ilike.%${kw}%`,
-          ].join(','),
-        )
-      }
-
-      const { data, error, count } = await q
-      if (error) throw error
-      return { rows: ((data ?? []) as CheckoutRow[]).map(toCheckout), total: count ?? 0 }
-    },
-  })
-}
-
-/** 한 자산의 기간을 잡고 있는 반출 건(예약·승인 대기·반출 중). 등록 폼의 경고·안내용. */
-export function useAssetOccupancy(assetId: string | undefined) {
-  return useQuery({
-    queryKey: [...CHECKOUTS_KEY, 'occupancy', assetId ?? ''],
-    enabled: Boolean(assetId),
-    queryFn: async (): Promise<Checkout[]> => {
-      const { data, error } = await supabase
-        .from('asset_checkouts')
-        .select(COLUMNS)
-        .eq('asset_id', assetId!)
-        .is('deleted_at', null)
-        .in('status', OCCUPYING_STATUSES)
-        .order('checkout_on', { ascending: true })
-      if (error) throw error
-      return ((data ?? []) as CheckoutRow[]).map(toCheckout)
-    },
-  })
-}
-
 // ── 반출 후보 자산 ────────────────────────────────────────────────────
 
 /** 반출 후보(public.portable_assets 뷰). 금액·할당 대상은 내려오지 않는다. */
@@ -187,6 +103,9 @@ export interface PortableAsset {
   serialNo: string | null
   branchId: string | null
   requiresApproval: boolean
+  /** 자산 원장의 비고 — 이 물건이 어떤 물건인지 알려 주는 설명 자리다. */
+  note: string | null
+  photoPaths: string[]
 }
 
 interface PortableRow {
@@ -196,19 +115,23 @@ interface PortableRow {
   serial_no: string | null
   branch_id: string | null
   requires_approval: boolean
+  note: string | null
+  photo_paths: string[] | null
 }
 
 /**
- * 반출 가능 자산 목록. `assets`가 아니라 뷰를 읽는다 — 원장은 MANAGEMENT 권한자만 볼 수 있고,
- * 반출대장은 임직원 전원이 쓰는 화면이기 때문이다.
+ * 지사의 반출 가능 자산. `assets`가 아니라 뷰를 읽는다 — 원장은 MANAGEMENT 권한자만 볼 수
+ * 있고, 반출대장은 임직원 전원이 쓰는 화면이기 때문이다.
  */
-export function usePortableAssets() {
+export function usePortableAssets(branchId: string | undefined) {
   return useQuery({
-    queryKey: ['office', 'portable-assets'],
+    queryKey: ['office', 'portable-assets', branchId ?? ''],
+    enabled: Boolean(branchId),
     queryFn: async (): Promise<PortableAsset[]> => {
       const { data, error } = await supabase
         .from('portable_assets')
-        .select('id, name, item_type, serial_no, branch_id, requires_approval')
+        .select('id, name, item_type, serial_no, branch_id, requires_approval, note, photo_paths')
+        .eq('branch_id', branchId!)
         .order('name', { ascending: true })
       if (error) throw error
       return ((data ?? []) as PortableRow[]).map((r) => ({
@@ -218,7 +141,59 @@ export function usePortableAssets() {
         serialNo: r.serial_no,
         branchId: r.branch_id,
         requiresApproval: r.requires_approval,
+        note: r.note,
+        photoPaths: r.photo_paths ?? [],
       }))
+    },
+  })
+}
+
+/**
+ * 지사 물품들에 지금 걸려 있는 반출 건(승인 대기·예약·반출 중) — 자산 id별로 묶어 준다.
+ * 목록의 상태·반출자·반납 예정 칸이 모두 이 한 번의 조회에서 나온다.
+ */
+export function useActiveCheckouts(assetIds: string[]) {
+  const key = [...assetIds].sort().join(',')
+  return useQuery({
+    queryKey: [...CHECKOUTS_KEY, 'active', key],
+    enabled: assetIds.length > 0,
+    queryFn: async (): Promise<Map<string, Checkout[]>> => {
+      const { data, error } = await supabase
+        .from('asset_checkouts')
+        .select(COLUMNS)
+        .in('asset_id', assetIds)
+        .is('deleted_at', null)
+        .in('status', OCCUPYING_STATUSES)
+        .order('checkout_at', { ascending: true })
+      if (error) throw error
+      const map = new Map<string, Checkout[]>()
+      for (const row of (data ?? []) as CheckoutRow[]) {
+        const c = toCheckout(row)
+        const arr = map.get(c.assetId) ?? []
+        arr.push(c)
+        map.set(c.assetId, arr)
+      }
+      return map
+    },
+  })
+}
+
+/** 물품 하나의 지난 기록(종결 건). 모달 하단에서 "이 물건이 그동안 어디에 다녀왔는가"를 읽는다. */
+export function useCheckoutHistory(assetId: string | undefined, limit = 10) {
+  return useQuery({
+    queryKey: [...CHECKOUTS_KEY, 'history', assetId ?? '', limit],
+    enabled: Boolean(assetId),
+    queryFn: async (): Promise<Checkout[]> => {
+      const { data, error } = await supabase
+        .from('asset_checkouts')
+        .select(COLUMNS)
+        .eq('asset_id', assetId!)
+        .is('deleted_at', null)
+        .not('status', 'in', `(${OCCUPYING_STATUSES.join(',')})`)
+        .order('checkout_at', { ascending: false })
+        .limit(limit)
+      if (error) throw error
+      return ((data ?? []) as CheckoutRow[]).map(toCheckout)
     },
   })
 }
@@ -227,8 +202,9 @@ export function usePortableAssets() {
 
 export interface CheckoutInput {
   assetId: string
-  checkoutOn: string
-  dueOn: string
+  /** ISO 일시. */
+  checkoutAt: string
+  dueAt: string
   purpose: string
   destination: string | null
   note: string | null
@@ -244,8 +220,8 @@ export function useCreateCheckout() {
     mutationFn: async (v: CheckoutInput) => {
       const { error } = await supabase.from('asset_checkouts').insert({
         asset_id: v.assetId,
-        checkout_on: v.checkoutOn,
-        due_on: v.dueOn,
+        checkout_at: v.checkoutAt,
+        due_at: v.dueAt,
         purpose: v.purpose.trim(),
         destination: v.destination?.trim() || null,
         note: v.note?.trim() || null,
@@ -266,13 +242,13 @@ export function useTransitionCheckout() {
     mutationFn: async (v: {
       id: string
       status: CheckoutStatus
-      returnedOn?: string
+      returnedAt?: string
       returnNote?: string | null
       decisionNote?: string | null
     }) => {
       const patch: Record<string, unknown> = { status: v.status }
       if (v.status === 'RETURNED') {
-        patch.returned_on = v.returnedOn ?? todayKey()
+        patch.returned_at = v.returnedAt ?? new Date().toISOString()
         patch.return_note = v.returnNote?.trim() || null
       }
       if (v.status === 'REJECTED' || v.status === 'RESERVED') {
