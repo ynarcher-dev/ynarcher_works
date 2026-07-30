@@ -7,12 +7,16 @@ import {
   localToIso,
   nowLocalInput,
   overdueMs,
+  peakUsage,
   periodsOverlap,
+  remainingForPeriod,
+  remainingNow,
 } from '@/features/office/checkouts/checkoutConfig'
 import {
   conflictingCheckouts,
   defaultDueAt,
   emptyCheckoutDraft,
+  remainingForDraft,
   toCheckoutInput,
   unreturnedCheckouts,
   validateCheckoutDraft,
@@ -32,6 +36,7 @@ function row(over: Partial<Checkout> = {}): Checkout {
     checkoutAt: '2026-07-20T01:00:00.000Z',
     dueAt: '2026-07-25T01:00:00.000Z',
     returnedAt: null,
+    quantity: 1,
     purpose: '데모데이',
     destination: null,
     note: null,
@@ -90,6 +95,58 @@ describe('overdueMs', () => {
   })
 })
 
+describe('재고 계산', () => {
+  const morning = row({
+    id: 'am',
+    quantity: 1,
+    checkoutAt: '2026-08-01T00:00:00.000Z',
+    dueAt: '2026-08-01T04:00:00.000Z',
+  })
+  const afternoon = row({
+    id: 'pm',
+    quantity: 1,
+    checkoutAt: '2026-08-01T05:00:00.000Z',
+    dueAt: '2026-08-01T09:00:00.000Z',
+  })
+
+  it('동시에 나가 있는 최대치를 센다 — 오전 한 개와 오후 한 개는 두 개가 아니다', () => {
+    expect(
+      peakUsage([morning, afternoon], '2026-08-01T00:00:00.000Z', '2026-08-01T09:00:00.000Z'),
+    ).toBe(1)
+  })
+
+  it('겹치는 것끼리는 더한다', () => {
+    const same = row({ id: 'x', quantity: 2, ...{} })
+    expect(
+      peakUsage(
+        [morning, { ...same, checkoutAt: morning.checkoutAt, dueAt: morning.dueAt }],
+        morning.checkoutAt,
+        morning.dueAt,
+      ),
+    ).toBe(3)
+  })
+
+  it('점유하지 않는 상태(반납·반려·취소)는 재고를 잡지 않는다', () => {
+    const done = row({ id: 'd', status: 'RETURNED', quantity: 5 })
+    expect(peakUsage([done], done.checkoutAt, done.dueAt)).toBe(0)
+  })
+
+  it('반열림이라 앞 건이 끝나는 시각에 시작하면 겹치지 않는다', () => {
+    const next = row({ id: 'n', quantity: 1, checkoutAt: morning.dueAt, dueAt: afternoon.dueAt })
+    expect(peakUsage([morning], next.checkoutAt, next.dueAt)).toBe(0)
+  })
+
+  it('잔여는 0 아래로 내려가지 않는다(보유보다 많이 나간 과거 데이터가 있어도)', () => {
+    const big = row({ id: 'b', quantity: 5 })
+    expect(remainingForPeriod(3, [big], big.checkoutAt, big.dueAt)).toBe(0)
+  })
+
+  it('지금의 잔여는 지금을 덮고 있는 건만 뺀다', () => {
+    const at = '2026-08-01T02:00:00.000Z'
+    expect(remainingNow(3, [morning, afternoon], at)).toBe(2)
+  })
+})
+
 describe('deriveAssetState', () => {
   const now = '2026-07-22T00:00:00.000Z'
 
@@ -97,27 +154,30 @@ describe('deriveAssetState', () => {
     expect(deriveAssetState([], now)).toEqual({ state: 'AVAILABLE', active: null })
   })
 
-  it('나가 있는 건이 예약보다 앞선다 — 표 한 줄이 답할 것은 "지금 없다"이다', () => {
-    const out = row({ id: 'o' })
-    const reserved = row({
-      id: 'r',
-      status: 'RESERVED',
-      checkoutAt: '2026-08-01T00:00:00.000Z',
-      dueAt: '2026-08-02T00:00:00.000Z',
-    })
-    const result = deriveAssetState([reserved, out], now)
+  it('한 개짜리가 나가 있으면 반출 중이다', () => {
+    const result = deriveAssetState([row({ id: 'o' })], now, 1)
     expect(result.state).toBe('OUT')
     expect(result.active?.id).toBe('o')
   })
 
-  it('예정 시각이 지난 반출 중은 연체로 적는다', () => {
-    expect(deriveAssetState([row()], '2026-07-28T00:00:00.000Z').state).toBe('OVERDUE')
+  it('다섯 개 중 두 개가 나가 있으면 여전히 반출 가능이다 — 남은 것이 있으므로', () => {
+    const result = deriveAssetState([row({ id: 'o', quantity: 2 })], now, 5)
+    expect(result.state).toBe('AVAILABLE')
+    // 그래도 나가 있는 건은 함께 실어 표의 반출자·반납 예정 칸이 비지 않게 한다.
+    expect(result.active?.id).toBe('o')
   })
 
-  it('승인 대기는 예약보다 앞선다(먼저 처리해야 할 일이다)', () => {
+  it('예정 시각이 지난 반출 중은 잔여가 있어도 연체로 앞세운다', () => {
+    expect(deriveAssetState([row()], '2026-07-28T00:00:00.000Z', 5).state).toBe('OVERDUE')
+  })
+
+  it('잔여가 0일 때에만 무엇 때문에 못 빌리는지 적는다', () => {
     const pending = row({ id: 'p', status: 'PENDING' })
     const reserved = row({ id: 'r', status: 'RESERVED' })
-    expect(deriveAssetState([reserved, pending], now).active?.id).toBe('p')
+    // 두 건(각 1개)이 지금을 덮고 있으므로 보유 3개면 하나가 남는다.
+    expect(deriveAssetState([reserved, pending], now, 3).state).toBe('AVAILABLE')
+    // 보유가 2개면 잔여 0 — 이때 승인 대기를 예약보다 앞세운다(먼저 처리해야 할 일이다).
+    expect(deriveAssetState([reserved, pending], now, 2).active?.id).toBe('p')
   })
 })
 
@@ -213,6 +273,31 @@ describe('toCheckoutInput', () => {
     expect(v.destination).toBeNull()
     expect(v.note).toBeNull()
     expect(isoToLocalInput(v.checkoutAt)).toBe('2026-07-30T09:00')
+  })
+})
+
+describe('remainingForDraft', () => {
+  const occupancy = [row({ id: 'o', quantity: 2 })] // 2026-07-20 01:00 ~ 07-25 01:00
+
+  it('그 기간에 겹치는 만큼만 뺀다', () => {
+    const draft = {
+      ...emptyCheckoutDraft('a1', isoToLocalInput('2026-07-21T01:00:00.000Z')),
+      dueAt: isoToLocalInput('2026-07-22T01:00:00.000Z'),
+    }
+    expect(remainingForDraft(5, occupancy, draft)).toBe(3)
+  })
+
+  it('겹치지 않는 기간에는 전부 남아 있다', () => {
+    const draft = {
+      ...emptyCheckoutDraft('a1', isoToLocalInput('2026-07-26T01:00:00.000Z')),
+      dueAt: isoToLocalInput('2026-07-27T01:00:00.000Z'),
+    }
+    expect(remainingForDraft(5, occupancy, draft)).toBe(5)
+  })
+
+  it('기간이 아직 성립하지 않으면 판정하지 않는다(열자마자 잔여 0을 적지 않는다)', () => {
+    const draft = { ...emptyCheckoutDraft('a1', '2026-07-30T10:00'), dueAt: '' }
+    expect(remainingForDraft(5, occupancy, draft)).toBeNull()
   })
 })
 

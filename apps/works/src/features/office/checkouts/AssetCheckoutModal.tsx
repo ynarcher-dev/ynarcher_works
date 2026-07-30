@@ -69,7 +69,7 @@ function CheckoutLine({
           {formatDateTime(c.checkoutAt)} ~ {formatDateTime(c.returnedAt ?? c.dueAt)}
         </span>
         <span className={cardText.label}>
-          {CHECKOUT_LABELS[c.status]} · {c.createdByName ?? '반출자'}
+          {c.quantity}개 · {CHECKOUT_LABELS[c.status]} · {c.createdByName ?? '반출자'}
         </span>
       </div>
       {late > 0 && (
@@ -180,6 +180,10 @@ export function AssetCheckoutModal({
                 <InfoField label="시리얼 번호" value={asset.serialNo} />
                 <InfoField label="보유 지사" value={branchName} />
                 <InfoField label="반출 승인" value={asset.requiresApproval ? '필요' : '불필요'} />
+                <InfoField
+                  label="재고"
+                  value={`잔여 ${row.remaining}개 / 보유 ${asset.quantity}개`}
+                />
               </div>
               <InfoField label="설명" value={asset.note} valueClassName="whitespace-pre-line" />
 

@@ -38,6 +38,8 @@ export interface AssetDraft {
   /** 원 단위 정수 문자열. 빈 문자열이면 미입력(0과 구분한다). */
   amount: string
   billingCycle: AssetBillingCycle
+  /** 보유 수량(1 이상 정수 문자열). 입력 중간의 빈 값을 담기 위해 문자열로 둔다. */
+  quantity: string
   isPortable: boolean
   /** 반출 시 승인 필요 여부. 반출 가능이 꺼져 있으면 저장되지 않는다(뜻이 없는 값이다). */
   requiresApproval: boolean
@@ -68,6 +70,7 @@ export function emptyDraft(branchId: string): AssetDraft {
     endsOn: '',
     amount: '',
     billingCycle: 'ONE_TIME',
+    quantity: '1',
     isPortable: false,
     requiresApproval: false,
     note: '',
@@ -93,6 +96,7 @@ export function draftFromAsset(a: Asset): AssetDraft {
     // 금액은 원 단위 정수로 다룬다 — 소수점 입력을 되살려 보여줄 이유가 없다.
     amount: a.amount == null ? '' : String(Math.trunc(a.amount)),
     billingCycle: a.billingCycle,
+    quantity: String(a.quantity),
     isPortable: a.isPortable,
     requiresApproval: a.requiresApproval,
     note: a.note ?? '',
@@ -145,6 +149,10 @@ export function validateDraft(draft: AssetDraft): AssetFormError | null {
   if (draft.amount && !/^\d+$/.test(draft.amount)) {
     return { field: 'amount', message: '금액은 0 이상의 숫자로 입력하세요.' }
   }
+  // 수량 0은 "없는 자산"이라는 뜻이 되는데, 그것은 비활성화나 폐기로 말해야 할 일이다.
+  if (!/^\d+$/.test(draft.quantity) || Number(draft.quantity) < 1) {
+    return { field: 'quantity', message: '보유 수량은 1 이상의 숫자로 입력하세요.' }
+  }
   // 화면은 다섯 장을 채우면 첨부 버튼을 감추므로 여기 걸릴 일은 드물다. 그래도 둔다 —
   // DB check(assets_photo_paths_max)에 먼저 걸리면 사용자는 무엇이 문제인지 알 수 없다.
   if (draft.photoPaths.length > ASSET_PHOTO_MAX) {
@@ -178,6 +186,7 @@ export function toAssetInput(draft: AssetDraft): AssetInput {
     disposedOn: retired ? endsOn : null,
     amount: draft.amount ? Number(draft.amount) : null,
     billingCycle: draft.billingCycle,
+    quantity: Number(draft.quantity || '1'),
     isPortable: draft.isPortable,
     requiresApproval: draft.isPortable && draft.requiresApproval,
     returnDue: retired ? null : endsOn,

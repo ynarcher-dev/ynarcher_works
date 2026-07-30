@@ -11,6 +11,7 @@ import {
   conflictingCheckouts,
   defaultDueAt,
   emptyCheckoutDraft,
+  remainingForDraft,
   toCheckoutInput,
   unreturnedCheckouts,
   validateCheckoutDraft,
@@ -70,6 +71,11 @@ export function CheckoutFormView({
 
   const conflicts = useMemo(() => conflictingCheckouts(draft, occupancy), [draft, occupancy])
   const unreturned = useMemo(() => unreturnedCheckouts(occupancy), [occupancy])
+  const remaining = useMemo(
+    () => remainingForDraft(asset.quantity, occupancy, draft),
+    [asset.quantity, occupancy, draft],
+  )
+  const short = remaining !== null && Number(draft.quantity || '0') > remaining
   const now = nowLocalInput()
 
   const change = (next: CheckoutDraft) => {
@@ -139,12 +145,45 @@ export function CheckoutFormView({
         </Field>
       </div>
 
-      {conflicts.length > 0 && (
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field
+          label="수량"
+          required
+          hint={
+            remaining === null
+              ? `보유 ${asset.quantity}개.`
+              : `이 기간 잔여 ${remaining}개 / 보유 ${asset.quantity}개.`
+          }
+        >
+          <Input
+            value={draft.quantity}
+            invalid={invalid('quantity') || short}
+            inputMode="numeric"
+            onChange={(e) =>
+              change({ ...draft, quantity: e.target.value.replace(/[^\d]/g, '') })
+            }
+            placeholder="1"
+          />
+        </Field>
+        <div />
+      </div>
+
+      {/*
+        기간이 겹친다고 곧바로 막지 않는다 — 다섯 개 중 두 개가 나가 있어도 세 개는 빌릴 수
+        있기 때문이다. 겹치는 건은 누가 잡고 있는지 알려 주는 정보로 두고, 경고는 요청한
+        개수가 잔여를 넘을 때만 낸다.
+      */}
+      {short && (
         <Banner tone="danger">
+          이 기간 잔여는 {remaining}개인데 {draft.quantity}개를 요청했습니다.
+        </Banner>
+      )}
+      {conflicts.length > 0 && (
+        <Banner tone="info">
           {conflicts.map((c) => (
             <span key={c.id} className="block">
-              {formatDateTime(c.checkoutAt)} ~ {formatDateTime(c.dueAt)}에 이미{' '}
-              {CHECKOUT_LABELS[c.status]} 건이 있습니다({c.createdByName ?? '반출자'}).
+              {formatDateTime(c.checkoutAt)} ~ {formatDateTime(c.dueAt)} · {c.quantity}개{' '}
+              {CHECKOUT_LABELS[c.status]}({c.createdByName ?? '반출자'})
             </span>
           ))}
         </Banner>
@@ -189,7 +228,7 @@ export function CheckoutFormView({
         <Button variant="outline" onClick={onCancel} disabled={busy}>
           뒤로
         </Button>
-        <Button onClick={submit} disabled={busy}>
+        <Button onClick={submit} disabled={busy || short}>
           {busy ? '저장 중…' : asset.requiresApproval ? '승인 요청' : '반출 등록'}
         </Button>
       </div>

@@ -1,4 +1,4 @@
-import { Button, DataTable, EmptyValue, type Column, type DataTableProps } from '@ynarcher/ui'
+import { Button, DataTable, EmptyValue, cn, type Column, type DataTableProps } from '@ynarcher/ui'
 import { ImageOff } from 'lucide-react'
 import {
   ASSET_STATE_LABELS,
@@ -14,6 +14,8 @@ import type { Checkout, PortableAsset } from '@/features/office/checkouts/checko
 export interface AssetRow {
   asset: PortableAsset
   state: AssetState
+  /** 지금 이 순간 가져갈 수 있는 개수. 보유 수량에서 나가 있는 것을 뺀 값이다. */
+  remaining: number
   /** 지금 상태를 만든 반출 건(반출 가능이면 없음). */
   active: Checkout | null
   /** 이 물건에 걸린 모든 점유 건(모달이 목록으로 편다). */
@@ -98,6 +100,23 @@ export function PortableAssetsTable({
           <EmptyValue />
         ),
     },
+    // 잔여는 이 표에서 가장 자주 읽히는 숫자다 — "빌릴 수 있나"에 상태보다 먼저 답한다.
+    // 보유를 옆에 함께 적는다: 3이라는 수는 보유가 3일 때와 10일 때 뜻이 다르다.
+    {
+      key: 'stock',
+      header: '잔여',
+      align: 'right',
+      numeric: true,
+      className: 'w-20',
+      render: (r) => (
+        <span className="tabular-nums">
+          <b className={cn('font-semibold', r.remaining === 0 && 'text-gray-400')}>
+            {r.remaining}
+          </b>
+          <span className="text-gray-400"> / {r.asset.quantity}</span>
+        </span>
+      ),
+    },
     {
       key: 'state',
       header: '상태',
@@ -139,7 +158,7 @@ export function PortableAssetsTable({
         // 표에는 대표 처리 하나만 둔다 — 승인·취소처럼 판단이 필요한 일은 물건을 열어서 한다.
         return (
           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-            {r.state === 'AVAILABLE' && (
+            {r.remaining > 0 && (
               <Button variant="outline" onClick={() => onCheckout(r)} disabled={busy}>
                 반출하기
               </Button>

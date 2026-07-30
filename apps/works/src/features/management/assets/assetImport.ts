@@ -36,6 +36,7 @@ export const ASSET_IMPORT_HEADERS = [
   '자산명',
   '시리얼번호',
   '품목',
+  '수량',
   '분류',
   '상태',
   '할당대상',
@@ -54,6 +55,7 @@ const HEADER_ALIASES: Record<string, string> = {
   자산명: '자산명', name: '자산명',
   지사: '지사', branch: '지사',
   품목: '품목', item_type: '품목',
+  수량: '수량', quantity: '수량', 보유수량: '수량',
   분류: '분류', acquisition_type: '분류',
   상태: '상태', status: '상태',
   할당대상: '할당대상', assigned_to: '할당대상', 할당: '할당대상',
@@ -132,8 +134,8 @@ function uniqueIdByName(list: { id: string; name: string }[], name: string) {
 export function buildAssetTemplateCsv(): string {
   return [
     ASSET_IMPORT_HEADERS.join(','),
-    '"MacBook Pro 16 (2025)",C02X1234ABCD,노트북,구매,보유,,2500000,완납,2026-03-01,,O,X,본사,',
-    'Figma 엔터프라이즈,,라이선스,렌탈,보유,,55000,월 구독,2026-01-01,2027-12-31,X,X,본사,연 단위 갱신',
+    '"MacBook Pro 16 (2025)",C02X1234ABCD,노트북,1,구매,보유,,2500000,완납,2026-03-01,,O,X,본사,',
+    'Figma 엔터프라이즈,,라이선스,5,렌탈,보유,,55000,월 구독,2026-01-01,2027-12-31,X,X,본사,연 단위 갱신',
   ].join('\n')
 }
 
@@ -243,6 +245,8 @@ export function parseAssetCsv(text: string, refs: ImportRefs): ImportParseResult
       acquiredOn,
       endsOn,
       amount: normalizeAmountInput(cell('금액')),
+      // 수량 칸이 없는 옛 파일은 한 개짜리로 본다(그때는 그것이 사실이었다).
+      quantity: normalizeAmountInput(cell('수량')) || '1',
       billingCycle,
       isPortable,
       requiresApproval,

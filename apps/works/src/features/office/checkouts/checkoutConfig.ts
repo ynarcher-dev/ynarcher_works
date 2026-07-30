@@ -92,6 +92,66 @@ export function overdueMs(
   return Number.isNaN(diff) || diff <= 0 ? 0 : diff
 }
 
+// ── 재고 ──────────────────────────────────────────────────────────────
+// 판정의 최종 권한은 DB 트리거(app.check_asset_stock)에 있다. 같은 계산을 여기 두는 것은
+// 저장을 누르기 전에 몇 개 남았는지 보여 주기 위해서이며, 둘이 어긋나면 DB가 맞다.
+
+/** 재고 계산이 보는 반출 건의 최소 모양. */
+export interface StockSpan {
+  status: CheckoutStatus
+  checkoutAt: string
+  dueAt: string
+  quantity: number
+}
+
+const occupies = (c: StockSpan) => OCCUPYING_STATUSES.includes(c.status)
+
+/**
+ * 주어진 구간에서 **동시에** 나가 있는 최대 개수.
+ *
+ * 단순 합이 아니다 — 오전에 한 개, 오후에 한 개가 나갔다면 그 하루에 동시에 나가 있는 것은
+ * 두 개가 아니라 한 개다. 합으로 세면 실제로는 남아 있는 물건을 못 빌리게 된다.
+ *
+ * 시작(+)과 끝(-)을 시간순으로 훑으며 누적의 최댓값을 취한다. 같은 시각에서는 끝을 먼저
+ * 세어 반열림 구간('[)')과 뜻을 맞춘다 — 10시에 반납된 것은 10시에 나가는 것과 겹치지 않는다.
+ */
+export function peakUsage(spans: StockSpan[], from: string, to: string): number {
+  const events: { t: string; d: number }[] = []
+  for (const c of spans) {
+    if (!occupies(c)) continue
+    if (!(c.checkoutAt < to && c.dueAt > from)) continue
+    events.push({ t: c.checkoutAt, d: c.quantity })
+    events.push({ t: c.dueAt, d: -c.quantity })
+  }
+  events.sort((a, b) => (a.t === b.t ? a.d - b.d : a.t < b.t ? -1 : 1))
+
+  let running = 0
+  let peak = 0
+  for (const e of events) {
+    running += e.d
+    if (running > peak) peak = running
+  }
+  return peak
+}
+
+/** 그 구간에 새로 가져갈 수 있는 개수(0 이상). */
+export function remainingForPeriod(
+  quantity: number,
+  spans: StockSpan[],
+  from: string,
+  to: string,
+): number {
+  return Math.max(quantity - peakUsage(spans, from, to), 0)
+}
+
+/** 지금 이 순간의 잔여. 표의 `잔여 / 보유` 칸이 읽는 값이다. */
+export function remainingNow(quantity: number, spans: StockSpan[], now: string): number {
+  const used = spans
+    .filter((c) => occupies(c) && c.checkoutAt <= now && c.dueAt > now)
+    .reduce((sum, c) => sum + c.quantity, 0)
+  return Math.max(quantity - used, 0)
+}
+
 // ── 물품의 지금 상태 ──────────────────────────────────────────────────
 
 /** 표에 적는 물품 상태. 반출 건들에서 파생하며 자산 원장에는 저장하지 않는다. */
@@ -121,26 +181,44 @@ export interface AssetStateResult<T> {
 }
 
 /**
- * 물품의 지금 상태 — 나가 있는 것이 먼저고, 그 다음이 승인 대기, 그 다음이 예약이다.
+ * 물품의 지금 상태 — 연체가 가장 앞서고, 그 다음은 지금 남은 것이 있느냐다.
  *
- * 한 물건에 여러 건이 걸려 있을 수 있다(오늘 나가 있고 다음 주에 예약이 잡힌 상태). 표는 한 줄에
- * 한 상태만 적을 수 있으므로, 지금 이 물건을 찾는 사람에게 가장 중요한 사실 하나를 고른다 —
- * "지금 없다"가 "다음 주에 없을 것이다"보다 앞선다.
+ * 수량이 생기면서 "나가 있음"과 "빌릴 수 없음"이 갈렸다. 다섯 개 중 두 개가 나가 있어도
+ * 세 개는 빌릴 수 있으므로, 남은 것이 있으면 `반출 가능`이다. 잔여가 0일 때에야 무엇 때문에
+ * 못 빌리는지(반출 중·승인 대기·예약)를 적는다.
+ *
+ * 연체만은 잔여와 무관하게 앞세운다 — 남은 게 있든 없든 돌아오지 않은 물건은 알려야 한다.
  */
-export function deriveAssetState<T extends { status: CheckoutStatus; dueAt: string }>(
+export function deriveAssetState<T extends StockSpan>(
   checkouts: T[],
   now: string,
+  quantity = 1,
 ): AssetStateResult<T> {
-  const pick = (s: CheckoutStatus) =>
+  const covering = (s: CheckoutStatus) =>
+    checkouts
+      .filter((c) => c.status === s && c.checkoutAt <= now && c.dueAt > now)
+      .sort((a, b) => a.dueAt.localeCompare(b.dueAt))[0]
+  const soonest = (s: CheckoutStatus) =>
     checkouts
       .filter((c) => c.status === s)
-      .sort((a, b) => a.dueAt.localeCompare(b.dueAt))[0]
+      .sort((a, b) => a.checkoutAt.localeCompare(b.checkoutAt))[0]
 
-  const out = pick('OUT')
-  if (out) return { state: overdueMs(out, now) > 0 ? 'OVERDUE' : 'OUT', active: out }
-  const pending = pick('PENDING')
+  const overdue = checkouts
+    .filter((c) => overdueMs(c, now) > 0)
+    .sort((a, b) => a.dueAt.localeCompare(b.dueAt))[0]
+  if (overdue) return { state: 'OVERDUE', active: overdue }
+
+  if (remainingNow(quantity, checkouts, now) > 0) {
+    // 남은 것이 있으면 빌릴 수 있다. 다만 지금 나가 있는 건이 있으면 그 건을 함께 실어
+    // 보내, 표의 반출자·반납 예정 칸이 빈 채로 남지 않게 한다.
+    return { state: 'AVAILABLE', active: covering('OUT') ?? null }
+  }
+
+  const out = covering('OUT')
+  if (out) return { state: 'OUT', active: out }
+  const pending = covering('PENDING') ?? soonest('PENDING')
   if (pending) return { state: 'PENDING', active: pending }
-  const reserved = pick('RESERVED')
+  const reserved = covering('RESERVED') ?? soonest('RESERVED')
   if (reserved) return { state: 'RESERVED', active: reserved }
   return { state: 'AVAILABLE', active: null }
 }

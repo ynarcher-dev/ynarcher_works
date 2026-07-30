@@ -9,6 +9,7 @@ import {
   localToIso,
   nowLocalInput,
   periodsOverlap,
+  remainingForPeriod,
 } from '@/features/office/checkouts/checkoutConfig'
 import type { Checkout, CheckoutInput } from '@/features/office/checkouts/checkoutsApi'
 import dayjs from 'dayjs'
@@ -19,6 +20,8 @@ export interface CheckoutDraft {
   /** 로컬 표기 'YYYY-MM-DDTHH:mm'. */
   checkoutAt: string
   dueAt: string
+  /** 가져갈 개수(1 이상 정수 문자열). */
+  quantity: string
   purpose: string
   destination: string
   note: string
@@ -43,6 +46,7 @@ export function emptyCheckoutDraft(assetId = '', now: string = nowLocalInput()):
     assetId,
     checkoutAt: now,
     dueAt: defaultDueAt(now),
+    quantity: '1',
     purpose: '',
     destination: '',
     note: '',
@@ -58,6 +62,9 @@ export function validateCheckoutDraft(draft: CheckoutDraft): CheckoutFormError |
   if (draft.dueAt <= draft.checkoutAt) {
     return { field: 'dueAt', message: '반납 예정은 반출 일시보다 뒤여야 합니다.' }
   }
+  if (!/^\d+$/.test(draft.quantity) || Number(draft.quantity) < 1) {
+    return { field: 'quantity', message: '반출 수량은 1 이상의 숫자로 입력하세요.' }
+  }
   if (!draft.purpose.trim()) return { field: 'purpose', message: '반출 목적을 입력하세요.' }
   return null
 }
@@ -67,6 +74,7 @@ export function toCheckoutInput(draft: CheckoutDraft): CheckoutInput {
     assetId: draft.assetId,
     checkoutAt: localToIso(draft.checkoutAt),
     dueAt: localToIso(draft.dueAt),
+    quantity: Number(draft.quantity || '1'),
     purpose: draft.purpose.trim(),
     destination: draft.destination.trim() || null,
     note: draft.note.trim() || null,
@@ -74,9 +82,27 @@ export function toCheckoutInput(draft: CheckoutDraft): CheckoutInput {
 }
 
 /**
- * 고른 기간과 부딪히는 기존 점유 건. 최종 판정은 DB의 EXCLUDE 제약이지만, 저장을 누른 뒤에야
- * 알게 되면 시각을 다시 고르는 일이 두 번 걸린다.
+ * 고른 기간의 잔여 수량. 최종 판정은 DB 트리거지만, 저장을 누른 뒤에야 알게 되면 시각과
+ * 개수를 다시 고르는 일이 두 번 걸린다.
+ *
+ * 기간이 아직 비어 있으면 판정하지 않는다(`null`) — 폼을 열자마자 "잔여 0"이라고 적으면
+ * 아직 아무것도 고르지 않은 사람에게 없는 문제를 알리는 셈이다.
  */
+export function remainingForDraft(
+  quantity: number,
+  occupancy: Checkout[],
+  draft: CheckoutDraft,
+): number | null {
+  if (!draft.checkoutAt || !draft.dueAt || draft.dueAt <= draft.checkoutAt) return null
+  return remainingForPeriod(
+    quantity,
+    occupancy,
+    localToIso(draft.checkoutAt),
+    localToIso(draft.dueAt),
+  )
+}
+
+/** 고른 기간과 부딪히는 기존 점유 건(누가 잡고 있는지 이름을 대기 위해 쓴다). */
 export function conflictingCheckouts(draft: CheckoutDraft, occupancy: Checkout[]): Checkout[] {
   if (!draft.checkoutAt || !draft.dueAt) return []
   const from = localToIso(draft.checkoutAt)

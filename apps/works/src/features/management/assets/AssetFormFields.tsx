@@ -144,6 +144,29 @@ export function AssetFormFields({
       </Row>
 
       <Row>
+        {/*
+          보유 수량은 품목 다음 자리다 — "어떤 물건인가" 다음에 오는 질문이 "몇 개인가"이고,
+          이 값이 OFFICE 반출대장의 잔여 계산 기준이 된다.
+        */}
+        <Field
+          label="보유 수량"
+          required
+          hint="같은 물건을 여러 개 두는 자산만 1보다 크게 둡니다."
+        >
+          <Input
+            value={draft.quantity}
+            invalid={invalid('quantity')}
+            inputMode="numeric"
+            onChange={(e) =>
+              onChange({ ...draft, quantity: e.target.value.replace(/[^\d]/g, '') })
+            }
+            placeholder="1"
+          />
+        </Field>
+        <div />
+      </Row>
+
+      <Row>
         <Field label="지사" required>
           <Select
             value={draft.branchId}

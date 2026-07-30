@@ -19,9 +19,10 @@ import {
   ASSET_STATE_ORDER,
   deriveAssetState,
   localToIso,
+  remainingNow,
 } from '@/features/office/checkouts/checkoutConfig'
 import {
-  isOverlapError,
+  stockErrorMessage,
   useActiveCheckouts,
   useCreateCheckout,
   usePortableAssets,
@@ -93,8 +94,14 @@ export function CheckoutWorkspace() {
     const at = new Date().toISOString()
     const list: AssetRow[] = assets.map((asset) => {
       const checkouts = byAsset?.get(asset.id) ?? []
-      const { state, active } = deriveAssetState(checkouts, at)
-      return { asset, state, active, checkouts }
+      const { state, active } = deriveAssetState(checkouts, at, asset.quantity)
+      return {
+        asset,
+        state,
+        remaining: remainingNow(asset.quantity, checkouts, at),
+        active,
+        checkouts,
+      }
     })
     return { rows: list, now: at }
   }, [assets, byAsset])
@@ -135,10 +142,9 @@ export function CheckoutWorkspace() {
       toast.show('반출을 등록했습니다.', 'success')
       setOpened(null)
     } catch (e) {
+      // 재고 부족은 서버가 수치까지 담아 보낸다 — 화면이 다시 지어내지 않고 그대로 옮긴다.
       toast.show(
-        isOverlapError(e)
-          ? '그 시간대에는 이미 예약이 있습니다. 일시를 확인하세요.'
-          : '등록에 실패했습니다. 입력값과 권한을 확인하세요.',
+        stockErrorMessage(e) ?? '등록에 실패했습니다. 입력값과 권한을 확인하세요.',
         'danger',
       )
     }

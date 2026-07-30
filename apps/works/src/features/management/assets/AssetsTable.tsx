@@ -75,6 +75,15 @@ export function AssetsTable({
       className: 'w-24',
       render: (a) => a.itemType ?? <EmptyValue />,
     },
+    // 수량은 1이 대부분이라 굳이 강조하지 않는다 — 1보다 클 때만 눈에 들어오면 된다.
+    {
+      key: 'quantity',
+      header: '수량',
+      align: 'right',
+      numeric: true,
+      className: 'w-16',
+      render: (a) => a.quantity,
+    },
     {
       key: 'acquisitionType',
       header: '분류',
