@@ -1,18 +1,32 @@
 import { ListToolbar } from '@ynarcher/ui'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ListActions } from '@/components/ListActions'
+import { useMaskPolicy } from '@/features/admin/sensitiveStore'
 import { NETWORK_ORG_COLUMNS } from '@/features/master/networkProfileColumns'
 import { MasterListView } from '@/features/master/MasterListView'
 import { MyNetworkFilters } from '@/features/networks/MyNetworkFilters'
 import {
   EMPTY_MY_NETWORK_FILTERS,
+  GLOBAL_ENTITY_KEY,
+  searchPlaceholderFor,
   type MyNetworkFilterState,
 } from '@/features/networks/filters'
 import { useMyNetworkPage, type MyNetworkRow } from '@/features/networks/hooks'
 
 /** 목록 페이지당 행 수(디렉토리·글로벌과 동일). */
 const PAGE_SIZE = 30
+
+/** 민감정보 정책 콘텐츠 키(ADMIN '민감정보 관리'). */
+const CONTENT_KEY = 'networks.mine'
+
+/**
+ * 원장 테이블명 → 상세 라우트 세그먼트. 디렉토리 10종은 테이블명이 곧 세그먼트지만
+ * 글로벌만 라우트가 짧다(/networks/global/:id) — 통합 목록에만 있는 어긋남이라 여기서 흡수한다.
+ */
+function detailSegment(entityTable: string): string {
+  return entityTable === GLOBAL_ENTITY_KEY ? 'global' : entityTable
+}
 
 /**
  * 내 네트워크 탭: 내가 등록·편집·병합에 관여한 10종 엔티티를 하나의 목록으로 보여준다.
@@ -30,14 +44,22 @@ export function MyNetworkTab() {
   // 검색어·필터 변경 시 첫 페이지로 되돌린다(빈 페이지 방지).
   const filtersKey = JSON.stringify(filters)
   useEffect(() => setPage(0), [keyword, filtersKey])
-  const { data, isLoading } = useMyNetworkPage(keyword, page, PAGE_SIZE, filters)
+
+  // 검색 가능 범위는 이 목록의 마스킹 정책이 정한다 — 가려진 필드는 검색어로도 잡지 않는다.
+  const masked = useMaskPolicy(CONTENT_KEY)
+  const searchScope = useMemo(
+    () => ({ email: !masked.email, phone: !masked.phone }),
+    [masked.email, masked.phone],
+  )
+
+  const { data, isLoading } = useMyNetworkPage(keyword, page, PAGE_SIZE, filters, searchScope)
 
   return (
     <div className="space-y-3">
       <ListToolbar
         keyword={keyword}
         onKeywordChange={setKeyword}
-        searchPlaceholder="이름·소속 검색"
+        searchPlaceholder={searchPlaceholderFor(searchScope)}
         filters={<MyNetworkFilters filters={filters} onChange={setFilters} />}
         // 등록 버튼은 두지 않는다 — 종류가 섞인 목록이라 '어느 원장에 넣을지'가 정해지지 않는다.
         // 대신 등록은 각 네트워크 목록에서, 업로드는 여기서도 바로 들어갈 수 있게 둔다.
@@ -46,17 +68,18 @@ export function MyNetworkTab() {
 
       <MasterListView
         label="내 네트워크"
-        contentKey="networks.mine"
-        // 10종이 통일된 프로필 스키마를 공유하므로 조직형 공용 컬럼을 그대로 사용한다
+        contentKey={CONTENT_KEY}
+        // 원장 11종이 통일된 프로필 스키마를 공유하므로 조직형 공용 컬럼을 그대로 사용한다
         // (이름·소속·부서·직책/직급·이메일·연락처·구분). 개인 지표(분야·활동·만족도·매칭)는
-        // 엔티티마다 의미가 달라 통합 목록에서는 노출하지 않는다.
+        // 엔티티마다 의미가 달라 통합 목록에서는 노출하지 않으며, 글로벌 고유 열(권역·국가·
+        // 링크드인)도 다른 원장이 채울 수 없어 두지 않는다 — 통합 목록은 공통분모만 보여준다.
         columns={NETWORK_ORG_COLUMNS}
         rows={data?.rows ?? []}
         isLoading={isLoading}
         // 행마다 원장 테이블이 달라 entity_table로 상세 라우트를 결정한다.
         onRowClick={(r) => {
           const row = r as MyNetworkRow
-          navigate(`/networks/${row.entity_table}/${row.id}`)
+          navigate(`/networks/${detailSegment(row.entity_table)}/${row.id}`)
         }}
         // 비활성화는 엔티티별 테이블 컨텍스트가 필요해 통합 목록에서는 제공하지 않는다
         // (핸들러가 없으므로 관리 컬럼 자체가 렌더되지 않는다).

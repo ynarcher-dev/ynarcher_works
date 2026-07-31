@@ -7,45 +7,21 @@ import {
 import { supabase } from '@/lib/supabase'
 import { ENTITIES, normalizeEntityRowCategory, type EntityKey } from '@/features/networks/config'
 import {
+  CLOSED_SEARCH_SCOPE,
   EMPTY_MY_NETWORK_FILTERS,
   EMPTY_NETWORK_FILTERS,
   hasActiveNetworkFilters,
   type MyNetworkFilterState,
   type NetworkFilterState,
+  type NetworkSearchScope,
 } from '@/features/networks/filters'
 
-/** PostgREST `or=(...)` 인자에 값을 넣을 때 구분자(콤마·괄호)를 깨지 않게 감싼다. */
-function quoteFilterValue(v: string): string {
-  return `"${v.replace(/["\\]/g, '\\$&')}"`
-}
-
-/**
- * 목록 필터를 PostgREST 쿼리에 얹는다. 축이 셋이라 각각 다루는 방법이 다르다.
- * - 구분: `profile`(jsonb)의 텍스트 값이라 점 경로 대신 `->>`로 꺼내 in 비교한다.
- * - 분야: `expertise`(jsonb 배열)에 "하나라도 들어 있으면"이라 태그별 포함(cs) 조건을 or로 잇는다.
- * - 매칭: 값이 비어 있으면 '가능'이 기본이라(목록 배지와 같은 규칙) null도 가능 쪽에 넣는다.
- */
-function applyNetworkFilters<T>(query: T, filters: NetworkFilterState): T {
-  // supabase-js 쿼리 빌더는 체이닝 타입이 복잡해 제네릭으로 되받는다(런타임 동작은 동일).
-  let q = query as unknown as {
-    in: (c: string, v: string[]) => unknown
-    or: (f: string) => unknown
-  }
-  if (filters.categories.length) {
-    q = q.in('profile->>category', filters.categories) as typeof q
-  }
-  if (filters.expertise.length) {
-    const clauses = filters.expertise.map((t) => `expertise.cs.[${quoteFilterValue(t)}]`)
-    q = q.or(clauses.join(',')) as typeof q
-  }
-  // 둘 다 고르면 거르지 않은 것과 같다(전체) — 조건을 붙이지 않는다.
-  if (filters.match.length === 1) {
-    q =
-      filters.match[0] === 'possible'
-        ? (q.or('profile->>match_available.is.null,profile->>match_available.eq.true') as typeof q)
-        : (q.or('profile->>match_available.eq.false') as typeof q)
-  }
-  return q as unknown as T
+/** 레인지 입력(문자열)을 숫자로. 빈 칸·비수치는 '경계 없음'(null)이다. */
+function rangeBound(v: string): number | null {
+  const trimmed = v.trim()
+  if (!trimmed) return null
+  const n = Number(trimmed)
+  return Number.isFinite(n) ? n : null
 }
 
 export type EntityRow = Record<string, unknown> & {
@@ -53,6 +29,10 @@ export type EntityRow = Record<string, unknown> & {
   name: string
   is_provisional?: boolean
   merged_into_id?: string | null
+  /** 활동(참여 사업 수) 집계. 목록 RPC가 실어 준다. */
+  activity_count?: number
+  /** 만족도(멘토 평가 평균) 집계. 평가가 없으면 null이다. */
+  satisfaction_avg?: number | null
   /**
    * 생성자(생성자, created_by → users) FK 임베드. 목록·상세의 생성자 표시 원천.
    * 담당자(관리 주체)는 별개 축 — 투자기업은 startup_managers 지정 담당자, 그 외는 공동관리(특정 담당자 없음).
@@ -90,10 +70,16 @@ export interface EntityPage {
 }
 
 /**
- * 엔티티 목록의 서버 사이드 페이지네이션(검색/미삭제/미병합).
- * `.range()`로 페이지 구간만 조회하고 `count: 'exact'`로 필터 반영 건수를 함께 받는다.
- * 검색어가 있으면 필터 미적용 전체 건수(totalAll)를 head 카운트로 추가 조회한다(행 미전송).
- * page는 0-base. 페이지 전환 시 이전 페이지를 유지(keepPreviousData)해 깜빡임을 줄인다.
+ * 엔티티 목록의 서버 사이드 페이지네이션(검색/필터/미삭제/미병합).
+ *
+ * 조회를 PostgREST가 아니라 RPC(`network_directory_entities`)로 내린다 — 활동·만족도는 AC 참여
+ * 원장에서 집계되는 파생값이라 원장 테이블에 얹은 조건으로는 거를 수 없고, 클라이언트에서 거르면
+ * 지금 페이지에 실려 온 30건 안에서만 걸러져 2페이지의 대상이 사라진 것처럼 보인다.
+ * 서버가 집계·필터·페이지네이션을 한 곳에서 처리하고, 총 건수는 모든 행에 동일하게 실려오는
+ * 윈도우 카운트(`total_count`)로 돌아온다.
+ *
+ * 검색어가 이메일·연락처까지 닿을지는 `searchScope`가 정하며(마스킹 정책이 연 필드만 켠다)
+ * 서버도 같은 인자로 강제한다. page는 0-base. 페이지 전환 시 이전 페이지를 유지(keepPreviousData).
  */
 export function useEntityPage(
   table: EntityKey,
@@ -101,28 +87,38 @@ export function useEntityPage(
   page: number,
   pageSize: number,
   filters: NetworkFilterState = EMPTY_NETWORK_FILTERS,
+  searchScope: NetworkSearchScope = CLOSED_SEARCH_SCOPE,
 ) {
   // 필터 객체는 매 렌더 새로 만들어지므로 값으로 직렬화해 캐시 키를 안정시킨다.
+  // 정책이 바뀌면 같은 검색어라도 결과가 달라지므로 검색 범위도 캐시 키에 넣는다.
   const filtersKey = JSON.stringify(filters)
+  const scopeKey = JSON.stringify(searchScope)
   return useQuery({
-    queryKey: ['networks', table, 'page', keyword, filtersKey, page, pageSize],
+    queryKey: ['networks', table, 'page', keyword, filtersKey, scopeKey, page, pageSize],
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<EntityPage> => {
-      const from = page * pageSize
-      const to = from + pageSize - 1
-      let q = supabase
-        .from(table)
-        .select('*, creator:users!created_by(id, name)', { count: 'exact' })
-        .is('deleted_at', null)
-        .is('merged_into_id', null)
-        .order('name', { ascending: true })
-        .range(from, to)
       const trimmed = keyword.trim()
-      if (trimmed) q = q.ilike('name', `%${trimmed}%`)
-      q = applyNetworkFilters(q, filters)
-      const { data, error, count } = await q
+      const { data, error } = await supabase.rpc('network_directory_entities', {
+        p_table: table,
+        p_keyword: trimmed || null,
+        p_search_email: searchScope.email,
+        p_search_phone: searchScope.phone,
+        p_expertise: filters.expertise.length ? filters.expertise : null,
+        // 둘 다 고르면 거르지 않은 것과 같다(전체) — 조건을 붙이지 않는다.
+        p_match: filters.match.length === 1 ? filters.match[0] : null,
+        p_activity_min: rangeBound(filters.activityMin),
+        p_activity_max: rangeBound(filters.activityMax),
+        p_satisfaction_min: rangeBound(filters.satisfactionMin),
+        p_satisfaction_max: rangeBound(filters.satisfactionMax),
+        p_limit: pageSize,
+        p_offset: page * pageSize,
+      })
       if (error) throw error
-      const total = count ?? 0
+      const raw = (data ?? []) as (Record<string, unknown> & {
+        creator_name?: string | null
+        total_count?: number | string
+      })[]
+      const total = Number(raw[0]?.total_count ?? 0)
 
       // 검색어·필터가 모두 없으면 반영 건수 == 전체 건수. 하나라도 걸렸을 때만 별도 조회한다.
       let totalAll = total
@@ -136,7 +132,17 @@ export function useEntityPage(
       }
 
       return {
-        rows: ((data ?? []) as EntityRow[]).map((row) => normalizeEntityRowCategory(row, table)),
+        // RPC는 생성자를 평면 컬럼(creator_name)으로 돌려주므로 다른 목록과 동일한 중첩 형태
+        // (creator.name)로 정규화한다(공용 리스트뷰의 생성자 컬럼 규약).
+        rows: raw.map(({ total_count: _total, creator_name, ...row }) =>
+          normalizeEntityRowCategory(
+            {
+              ...row,
+              creator: creator_name ? { name: creator_name } : null,
+            } as EntityRow,
+            table,
+          ),
+        ),
         total,
         totalAll,
       }
@@ -152,8 +158,11 @@ export function useEntityPage(
  * (부서·직책·구분은 다른 네트워크와 동일하게 `profile` jsonb의 점 경로에서 읽힌다).
  */
 export type MyNetworkRow = Record<string, unknown> & {
-  /** 원장 테이블명(= EntityKey). 상세 라우트의 기준(10종 혼재 목록이라 행마다 다르다). */
-  entity_table: EntityKey
+  /**
+   * 원장 테이블명(EntityKey 또는 글로벌 원장). 상세 라우트의 기준 —
+   * 원장이 섞인 목록이라 행마다 다르며, 글로벌만 라우트 세그먼트가 테이블명과 다르다.
+   */
+  entity_table: EntityKey | 'global_networks'
   id: string
   name: string
   affiliation: string | null
@@ -189,10 +198,12 @@ export function useMyNetworkPage(
   page: number,
   pageSize: number,
   filters: MyNetworkFilterState = EMPTY_MY_NETWORK_FILTERS,
+  searchScope: NetworkSearchScope = CLOSED_SEARCH_SCOPE,
 ) {
   const filtersKey = JSON.stringify(filters)
+  const scopeKey = JSON.stringify(searchScope)
   return useQuery({
-    queryKey: ['networks', 'mine', 'page', keyword, filtersKey, page, pageSize],
+    queryKey: ['networks', 'mine', 'page', keyword, filtersKey, scopeKey, page, pageSize],
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<MyNetworkPage> => {
       const trimmed = keyword.trim()
@@ -203,7 +214,8 @@ export function useMyNetworkPage(
         p_limit: pageSize,
         p_offset: page * pageSize,
         p_entities: filters.entities.length ? filters.entities : null,
-        p_categories: filters.categories.length ? filters.categories : null,
+        p_search_email: searchScope.email,
+        p_search_phone: searchScope.phone,
       })
       if (error) throw error
       // RPC 원본 행: 생성자가 평면 컬럼(creator_name), 총 건수가 행마다 실린 윈도우 카운트.

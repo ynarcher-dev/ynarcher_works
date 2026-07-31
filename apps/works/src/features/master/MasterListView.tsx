@@ -101,8 +101,8 @@ export function MasterListView({
             </Badge>
           )
         }
-        // 집계값(활동·만족도)은 아직 실집계와 연동되지 않았다. 값이 없으면 '-'로 비워 둔다 —
-        // 임의의 기본값(999건·5.0)을 채우면 실데이터와 구분되지 않아 잘못 읽힌다.
+        // 집계값(활동·만족도)은 목록 RPC가 실어 준다. 집계 대상이 한 건도 없으면 '-'로 비워 둔다 —
+        // 만족도를 0.0으로 채우면 '최하 평가'와, 임의의 기본값(999건·5.0)은 실데이터와 구분되지 않는다.
         if (c.kind === 'count') {
           if (raw == null || raw === '') return '-'
           return <span className="tabular-nums">{Number(raw).toLocaleString()}건</span>

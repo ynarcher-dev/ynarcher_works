@@ -1,9 +1,9 @@
 import { MultiSelectFilter } from '@ynarcher/ui'
 import { useMemo } from 'react'
-import { useTags } from '@/features/admin/hooks'
 import { DIRECTORY_ENTITIES, ENTITIES } from '@/features/networks/config'
 import {
   EMPTY_MY_NETWORK_FILTERS,
+  GLOBAL_ENTITY_KEY,
   hasActiveMyNetworkFilters,
   type MyNetworkFilterState,
 } from '@/features/networks/filters'
@@ -14,26 +14,24 @@ interface MyNetworkFiltersProps {
 }
 
 /**
- * 내 네트워크(10종 통합) 목록 필터 바: 네트워크 종류 · 구분.
+ * 내 네트워크(디렉토리 10종 + 글로벌) 목록 필터 바: 네트워크 종류 하나.
  *
- * 다른 목록과 첫 축이 다르다 — 여기서만 원장이 섞여 있으므로 '어느 네트워크인가'가 먼저다.
- * 분야·매칭은 이 목록의 컬럼 구성(조직형 공용 컬럼)에 없어 축으로 두지 않는다.
+ * 다른 목록과 첫 축이 다르다 — 여기서만 원장이 섞여 있으므로 '어느 네트워크인가'가 축이다.
+ * 구분은 이 축과 같은 것을 묻는 중복이라 두지 않고(filters.ts 참조), 분야·매칭은 이 목록의
+ * 컬럼 구성(조직형 공용 컬럼)에 없어 축으로 두지 않는다.
  */
 export function MyNetworkFilters({ filters, onChange }: MyNetworkFiltersProps) {
-  const { data: categoryTags } = useTags('category_tags')
-
-  // 종류 선택지는 디렉토리 정의에서 파생한다(원장이 늘어도 이 파일은 손대지 않는다).
+  // 선택지는 디렉토리 정의에서 파생한다(원장이 늘어도 이 파일은 손대지 않는다).
+  // 글로벌은 EntityKey 밖의 단일 원장이라 뒤에 따로 붙인다.
   const entityOptions = useMemo(
-    () =>
-      DIRECTORY_ENTITIES.map((key) => ({
+    () => [
+      ...DIRECTORY_ENTITIES.map((key) => ({
         value: key,
         label: key === 'others' ? '미분류' : `${ENTITIES[key].label} 네트워크`,
       })),
+      { value: GLOBAL_ENTITY_KEY, label: '글로벌 네트워크' },
+    ],
     [],
-  )
-  const categoryOptions = useMemo(
-    () => (categoryTags ?? []).map((t) => ({ value: t.name, label: t.name })),
-    [categoryTags],
   )
 
   const active = hasActiveMyNetworkFilters(filters)
@@ -45,12 +43,6 @@ export function MyNetworkFilters({ filters, onChange }: MyNetworkFiltersProps) {
         options={entityOptions}
         selected={filters.entities}
         onChange={(entities) => onChange({ ...filters, entities })}
-      />
-      <MultiSelectFilter
-        label="구분"
-        options={categoryOptions}
-        selected={filters.categories}
-        onChange={(categories) => onChange({ ...filters, categories })}
       />
 
       {active && (

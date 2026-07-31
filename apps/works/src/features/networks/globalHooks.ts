@@ -7,9 +7,11 @@ import {
 import { supabase } from '@/lib/supabase'
 import { GLOBAL_TABLE, type GlobalRow } from '@/features/networks/globalConfig'
 import {
+  CLOSED_SEARCH_SCOPE,
   EMPTY_GLOBAL_FILTERS,
   hasActiveGlobalFilters,
   type GlobalFilterState,
+  type NetworkSearchScope,
 } from '@/features/networks/filters'
 import type { Contribution } from '@/features/networks/hooks'
 
@@ -28,19 +30,32 @@ export interface GlobalPage {
 }
 
 /**
+ * PostgREST `or=(...)` 인자를 깨는 구분자(콤마·괄호)를 걸러 낸다.
+ * 검색어는 사용자 자유 입력이라 그대로 이으면 조건식 자체가 어긋난다.
+ */
+function sanitizeOrValue(v: string): string {
+  return v.trim().replace(/[(),]/g, ' ')
+}
+
+/**
  * 글로벌 네트워크 서버 사이드 페이지네이션(검색/미삭제/미병합).
- * 이름 검색은 ilike, 권역·국가명은 조인 임베드로 함께 조회한다. page는 0-base.
+ * 검색은 이름·소속에 항상 닿고, 이메일·연락처는 목록 마스킹 정책이 공개로 연 경우에만 닿는다
+ * (`searchScope`) — 가려진 값을 검색으로 되짚을 수 있으면 마스킹이 무력해진다.
+ * 권역·국가명은 조인 임베드로 함께 조회한다. page는 0-base.
  */
 export function useGlobalPage(
   keyword: string,
   page: number,
   pageSize: number,
   filters: GlobalFilterState = EMPTY_GLOBAL_FILTERS,
+  searchScope: NetworkSearchScope = CLOSED_SEARCH_SCOPE,
 ) {
   // 필터 객체는 매 렌더 새로 만들어지므로 값으로 직렬화해 캐시 키를 안정시킨다.
+  // 정책이 바뀌면 같은 검색어라도 결과가 달라지므로 검색 범위도 캐시 키에 넣는다.
   const filtersKey = JSON.stringify(filters)
+  const scopeKey = JSON.stringify(searchScope)
   return useQuery({
-    queryKey: ['networks', GLOBAL_TABLE, 'page', keyword, filtersKey, page, pageSize],
+    queryKey: ['networks', GLOBAL_TABLE, 'page', keyword, filtersKey, scopeKey, page, pageSize],
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<GlobalPage> => {
       const from = page * pageSize
@@ -53,7 +68,13 @@ export function useGlobalPage(
         .order('name', { ascending: true })
         .range(from, to)
       const trimmed = keyword.trim()
-      if (trimmed) q = q.ilike('name', `%${trimmed}%`)
+      if (trimmed) {
+        const kw = sanitizeOrValue(trimmed)
+        const orParts = [`name.ilike.%${kw}%`, `affiliation.ilike.%${kw}%`]
+        if (searchScope.email) orParts.push(`email.ilike.%${kw}%`)
+        if (searchScope.phone) orParts.push(`phone.ilike.%${kw}%`)
+        q = q.or(orParts.join(','))
+      }
       // 권역·국가는 태그 FK로, 구분은 스칼라 값으로 거른다(모두 목록에 노출된 열이다).
       if (filters.regionIds.length) q = q.in('region_tag_id', filters.regionIds)
       if (filters.countryIds.length) q = q.in('country_tag_id', filters.countryIds)

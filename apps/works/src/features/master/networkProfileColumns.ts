@@ -16,8 +16,10 @@ import type { MasterColumn } from '@/features/master/types'
  *   `profile`(jsonb)에 저장한다.
  * - `profile.match_available`: 목록은 가능/불가능 읽기용 태그(값 없음 → '가능' 기본).
  *   값 설정은 상세 페이지 드롭다운에서 수행하며 `profile`(jsonb)에 저장한다.
- * - `_activity`(활동): 건수 표기. 실집계 연동 전이라 값이 없어 '-'로 비워 둔다.
- * - `_satisfaction`(만족도): 별점 표기. 실집계 연동 전이라 값이 없어 '-'로 비워 둔다.
+ * - `activity_count`(활동): 그 인물이 참여한 사업 수. 목록 RPC(`network_directory_entities`)가
+ *   AC 참여 원장(program_participants)에서 집계해 실어 준다.
+ * - `satisfaction_avg`(만족도): 멘토로 참여한 세션의 스타트업 평가 평균(5점). 같은 RPC가 집계한다.
+ *   평가가 한 건도 없으면 값이 비어 '-'로 남는다(0.0으로 채우면 '최하 평가'와 구분되지 않는다).
  */
 // 컬럼 폭 비율(table-fixed 기준). 여백은 DataTable 기본 px-3로 통일한다.
 export const NETWORK_PROFILE_COLUMNS: MasterColumn[] = [
@@ -30,8 +32,8 @@ export const NETWORK_PROFILE_COLUMNS: MasterColumn[] = [
   { name: 'profile.category', label: '구분', className: 'w-20' },
   // 분야: 전문 분야(expertise, ADMIN 분야 관리 태그 다중선택). 넘치면 말줄임 처리.
   { name: 'expertise', label: '분야', kind: 'tags', className: 'w-40' },
-  { name: '_activity', label: '활동', kind: 'count', className: 'w-16' },
-  { name: '_satisfaction', label: '만족도', kind: 'rating', className: 'w-16' },
+  { name: 'activity_count', label: '활동', kind: 'count', className: 'w-16' },
+  { name: 'satisfaction_avg', label: '만족도', kind: 'rating', className: 'w-16' },
   // w-20: '불가능'(3자) 배지가 셀 폭을 넘겨 말줄임(…)이 배지 뒤에 남던 것을 해소한다.
   { name: 'profile.match_available', label: '매칭', kind: 'match', className: 'w-20' },
 ]
@@ -44,8 +46,8 @@ export const NETWORK_PROFILE_COLUMNS: MasterColumn[] = [
  */
 const ORG_OMIT_COLUMNS = new Set([
   'expertise',
-  '_activity',
-  '_satisfaction',
+  'activity_count',
+  'satisfaction_avg',
   'profile.match_available',
 ])
 

@@ -50,7 +50,10 @@ export function MultiSelectFilter({
         </FilterButton>
       }
     >
-      <div className="min-w-40">
+      {/* 선택지 수는 원장(태그 목록)이 정하므로 화면이 감당할 상한을 여기서 건다 —
+          국가처럼 200개가 넘는 축은 팝오버가 화면 아래로 흘러 마지막 항목을 고를 수 없었다.
+          약 열 줄까지는 그대로 늘고 그 뒤부터 팝오버 안에서 스크롤한다. */}
+      <div className="max-h-80 min-w-40 overflow-y-auto overscroll-contain">
         {options.map((opt) => (
           <label
             key={opt.value}
