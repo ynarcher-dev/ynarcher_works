@@ -136,6 +136,27 @@ interface PortableRow {
 }
 
 /**
+ * 물품 하나가 어느 지사에 있는지. 알림 딥링크(`?asset=`)로 들어왔을 때 그 물건이 있는
+ * 지사 탭으로 옮겨 가기 위해 쓴다 — 목록 조회 단위가 지사라, 지사를 모르면 그 물건이
+ * 애초에 목록에 없다. 한 컬럼만 읽으므로 전체 목록을 다시 받는 것보다 싸다.
+ */
+export function usePortableAssetBranch(assetId: string | undefined) {
+  return useQuery({
+    queryKey: ['office', 'portable-asset-branch', assetId ?? ''],
+    enabled: Boolean(assetId),
+    queryFn: async (): Promise<string | null> => {
+      const { data, error } = await supabase
+        .from('portable_assets')
+        .select('branch_id')
+        .eq('id', assetId!)
+        .maybeSingle()
+      if (error) throw error
+      return (data as { branch_id: string | null } | null)?.branch_id ?? null
+    },
+  })
+}
+
+/**
  * 지사의 반출 가능 자산. `assets`가 아니라 뷰를 읽는다 — 원장은 MANAGEMENT 권한자만 볼 수
  * 있고, 반출대장은 임직원 전원이 쓰는 화면이기 때문이다.
  *

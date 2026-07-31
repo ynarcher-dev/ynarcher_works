@@ -45,6 +45,10 @@ export function notificationRoute(targetType: string, targetId: string): string 
     case 'office_minute':
       // 회의록은 탭이 고정('minutes')이라 slug 조회 없이 바로 딥링크한다(MinutesWorkspace가 minute=로 연다).
       return `/office?tab=minutes&minute=${targetId}`
+    case 'asset_checkout':
+      // 반출 알림이 가리키는 것은 반출 건이 아니라 그 물건이다 — 요청·이력·처리 버튼이 모두
+      // 물품 모달 안에 있어서, 물건을 여는 것이 곧 그 요청 앞에 서는 것이다.
+      return `/office?tab=outbound&asset=${targetId}`
     default: {
       const seg = NETWORK_SEGMENT[targetType]
       return seg ? `/networks/${seg}/${targetId}` : null

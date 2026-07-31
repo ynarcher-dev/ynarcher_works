@@ -1,27 +1,21 @@
-import { Button, DensityProvider, InfoField, Modal, cardText, cn } from '@ynarcher/ui'
+import { Button, DensityProvider, InfoField, InfoGrid, Modal } from '@ynarcher/ui'
 import { useEffect, useMemo, useState } from 'react'
 // 사진 서명은 자산 원장이 소유한 헬퍼를 그대로 쓴다 — 같은 버킷을 두 곳에서 다르게 다루면
 // 만료 시간과 실패 처리가 갈린다(조회 권한은 내부 임직원으로 열려 있다).
 import { useAssetPhotoUrls } from '@/features/management/assets/assetPhotos'
 import { AssetPhotoCarousel } from '@/features/office/checkouts/AssetPhotoCarousel'
 import { CheckoutFormView } from '@/features/office/checkouts/CheckoutFormView'
+import { CheckoutHistoryList } from '@/features/office/checkouts/CheckoutHistoryList'
 import type { AssetRow } from '@/features/office/checkouts/PortableAssetsTable'
-import {
-  CHECKOUT_LABELS,
-  CLOSED_STATUSES,
-  abilityOf,
-  elapsedLabel,
-  formatDateTime,
-  overdueMs,
+import type {
+  CheckoutAction,
+  CheckoutViewer,
 } from '@/features/office/checkouts/checkoutConfig'
 import {
   useCheckoutHistory,
   type Checkout,
   type CheckoutInput,
 } from '@/features/office/checkouts/checkoutsApi'
-
-/** 반출 건에 대고 하는 처리. 한 마디를 더 받아야 하는 둘(반려·반납)은 부모가 모달을 연다. */
-export type CheckoutAction = 'APPROVE' | 'REJECT' | 'START' | 'RETURN' | 'CANCEL'
 
 /** 이력 목록에 적는 건수 — 지금 걸린 건이 먼저 오고 남는 자리를 지난 기록이 채운다. */
 const LINE_LIMIT = 5
@@ -32,91 +26,11 @@ interface AssetCheckoutModalProps {
   branchName: string | null
   /** 비품 관리자 이름(자산 원장의 할당 대상). 없으면 빈 칸. */
   managerName: string | null
-  viewer: { id?: string; isManager: boolean }
+  viewer: CheckoutViewer
   busy: boolean
   onAction: (checkout: Checkout, action: CheckoutAction) => void
   onSubmit: (v: CheckoutInput) => void
   onClose: () => void
-}
-
-/** 한 건의 반출 — 기간·상태·반출자와, 아직 살아 있는 건이라면 그 건에 할 수 있는 처리. */
-function CheckoutLine({
-  c,
-  viewer,
-  busy,
-  onAction,
-}: {
-  c: Checkout
-  viewer: { id?: string; isManager: boolean }
-  busy: boolean
-  onAction: (checkout: Checkout, action: CheckoutAction) => void
-}) {
-  const can = abilityOf(c, viewer)
-  const late = overdueMs(c, new Date().toISOString())
-  const closed = CLOSED_STATUSES.includes(c.status)
-  const actions = can.canApprove || can.canStart || can.canReturn || can.canCancel
-
-  return (
-    <li
-      className={cn(
-        'rounded-radius-md border px-2.5 py-2',
-        // 끝난 건은 테두리만 남긴다 — 지금 손댈 수 있는 건과 한눈에 갈려야 한다.
-        closed ? 'border-gray-200' : 'border-gray-200 bg-gray-50',
-      )}
-    >
-      <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-        <span className={cardText.value}>
-          {formatDateTime(c.checkoutAt)} ~ {formatDateTime(c.returnedAt ?? c.dueAt)}
-        </span>
-        <span className={cardText.label}>
-          {c.quantity}개 · {CHECKOUT_LABELS[c.status]} · {c.createdByName ?? '반출자'}
-        </span>
-      </div>
-      {late > 0 && (
-        <p className={cn('mt-0.5 font-semibold text-danger', cardText.label)}>
-          {elapsedLabel(late)}
-        </p>
-      )}
-      <p className={cn('mt-0.5 truncate', cardText.label)}>
-        {[c.purpose, c.destination, c.returnNote].filter(Boolean).join(' · ')}
-      </p>
-
-      {actions && (
-        <div className="mt-1.5 flex flex-wrap gap-1">
-          {can.canApprove && (
-            <>
-              <Button variant="outline" onClick={() => onAction(c, 'APPROVE')} disabled={busy}>
-                승인
-              </Button>
-              <Button
-                variant="outline"
-                className="text-danger hover:bg-danger-subtle hover:text-danger"
-                onClick={() => onAction(c, 'REJECT')}
-                disabled={busy}
-              >
-                반려
-              </Button>
-            </>
-          )}
-          {can.canStart && (
-            <Button variant="outline" onClick={() => onAction(c, 'START')} disabled={busy}>
-              반출 시작
-            </Button>
-          )}
-          {can.canReturn && (
-            <Button variant="outline" onClick={() => onAction(c, 'RETURN')} disabled={busy}>
-              반납하기
-            </Button>
-          )}
-          {can.canCancel && (
-            <Button variant="ghost" onClick={() => onAction(c, 'CANCEL')} disabled={busy}>
-              취소
-            </Button>
-          )}
-        </div>
-      )}
-    </li>
-  )
 }
 
 /**
@@ -151,11 +65,18 @@ export function AssetCheckoutModal({
     if (open) setMode('list')
   }, [open, asset?.id])
 
-  // 지금 걸린 건이 먼저다 — 처리할 수 있는 것을 스크롤해서 찾게 하지 않는다.
-  const lines = useMemo(
-    () => [...(row?.checkouts ?? []), ...(history ?? [])].slice(0, LINE_LIMIT),
-    [row?.checkouts, history],
-  )
+  // 지금 걸린 건이 먼저다 — 처리할 수 있는 것을 스크롤해서 찾게 하지 않는다. 걸린 건끼리는
+  // 최근 반출순으로 세워, 그 뒤를 잇는 지난 기록(같은 정렬)과 시간의 방향이 어긋나지 않게 한다.
+  const lines = useMemo(() => {
+    const live = [...(row?.checkouts ?? [])].sort((a, b) =>
+      b.checkoutAt.localeCompare(a.checkoutAt),
+    )
+    return [...live, ...(history ?? [])].slice(0, LINE_LIMIT)
+  }, [row?.checkouts, history])
+
+  // 연체 판정의 기준 시각은 한 번 읽어 목록 전체가 나눠 쓴다 — 행마다 new Date()를 부르면
+  // 같은 목록 안에서 기준이 미세하게 갈린다(표도 같은 방식으로 `now`를 내려받는다).
+  const now = new Date().toISOString()
 
   if (!asset || !row) return null
 
@@ -175,47 +96,37 @@ export function AssetCheckoutModal({
             />
           ) : (
             <div className="min-w-0 space-y-3">
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {/*
+                읽는 순서는 "무엇인가 → 어디 있나 → 지금 되나 → 누구에게 묻나"다. 모달 제목이
+                이미 품목명을 달고 있어도 격자의 첫 칸에 다시 적는다 — 제목은 창의 이름이고,
+                이 격자는 물건의 명세라 그 첫 줄이 비면 나머지 값이 무엇에 대한 것인지
+                격자 안에서 답하지 못한다.
+              */}
+              <InfoGrid columns={2}>
+                <InfoField label="품목명" value={asset.name} valueClassName="truncate" />
                 <InfoField label="품목" value={asset.itemType} />
                 <InfoField label="시리얼 번호" value={asset.serialNo} />
                 <InfoField label="보유 지사" value={branchName} />
-                <InfoField label="관리자" value={managerName} />
-                <InfoField label="반출 승인" value={asset.requiresApproval ? '필요' : '불필요'} />
                 <InfoField
                   label="재고"
                   value={`잔여 ${row.remaining}개 / 보유 ${asset.quantity}개`}
                 />
-              </div>
+                <InfoField label="반출 승인" value={asset.requiresApproval ? '필요' : '불필요'} />
+                <InfoField label="관리자" value={managerName} />
+              </InfoGrid>
               <InfoField label="설명" value={asset.note} valueClassName="whitespace-pre-line" />
 
-              <div>
-                <p className={cn('mb-1.5', cardText.subhead)}>반출 이력</p>
-                {lines.length === 0 ? (
-                  <p
-                    className={cn(
-                      'rounded-radius-md border border-dashed border-gray-300 py-5 text-center',
-                      cardText.label,
-                    )}
-                  >
-                    지금은 아무도 가져가지 않았습니다.
-                  </p>
-                ) : (
-                  <ul className="space-y-1.5">
-                    {lines.map((c) => (
-                      <CheckoutLine
-                        key={c.id}
-                        c={c}
-                        viewer={viewer}
-                        busy={busy}
-                        onAction={onAction}
-                      />
-                    ))}
-                  </ul>
-                )}
-              </div>
+              <CheckoutHistoryList
+                lines={lines}
+                limit={LINE_LIMIT}
+                now={now}
+                viewer={viewer}
+                busy={busy}
+                onAction={onAction}
+              />
 
               <Button className="w-full" onClick={() => setMode('form')} disabled={busy}>
-                + 반출하기
+                + 예약하기
               </Button>
             </div>
           )}

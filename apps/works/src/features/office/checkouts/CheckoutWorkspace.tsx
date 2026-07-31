@@ -12,7 +12,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { hasWorkspaceWrite, useAuthStore } from '@/auth/authStore'
 import { useEmployees } from '@/features/hub/hooks'
 import { useAssetPhotoUrls } from '@/features/management/assets/assetPhotos'
-import { AssetCheckoutModal, type CheckoutAction } from '@/features/office/checkouts/AssetCheckoutModal'
+import { AssetCheckoutModal } from '@/features/office/checkouts/AssetCheckoutModal'
 import { CheckoutActionModal, type PromptAction } from '@/features/office/checkouts/CheckoutActionModal'
 import { PortableAssetsTable, type AssetRow } from '@/features/office/checkouts/PortableAssetsTable'
 import {
@@ -21,12 +21,14 @@ import {
   deriveAssetState,
   localToIso,
   remainingNow,
+  type CheckoutAction,
 } from '@/features/office/checkouts/checkoutConfig'
 import {
   stockErrorMessage,
   useActiveCheckouts,
   useCreateCheckout,
   usePortableAssets,
+  usePortableAssetBranch,
   useStartDueCheckouts,
   useTransitionCheckout,
   type Checkout,
@@ -46,8 +48,12 @@ const PAGE_SIZE = 30
  *
  * 이 컴포넌트는 목록의 상태(지사·검색·상태 필터·페이지·열린 물품)만 소유한다. 물품의 지금
  * 상태를 반출 건들에서 파생하는 규칙은 checkoutConfig가, 표는 PortableAssetsTable이 갖는다.
+ *
+ * `initialAssetId`는 딥링크(`/office?tab=outbound&asset=`)로 들어온 물품이다. 승인 요청·결정
+ * 알림이 이 경로로 보내며, 지사 탭·필터와 무관하게 그 물건을 곧바로 연다 — 알림을 눌렀는데
+ * 목록만 나오면 승인할 요청을 다시 찾아야 한다.
  */
-export function CheckoutWorkspace() {
+export function CheckoutWorkspace({ initialAssetId }: { initialAssetId?: string } = {}) {
   const toast = useToast()
   const user = useAuthStore((s) => s.user)
   const viewer = useMemo(
@@ -88,12 +94,18 @@ export function CheckoutWorkspace() {
     startDueRef.current()
   }, [])
 
+  // 딥링크로 지정된 물품이 어느 지사에 있는지. 목록 조회 단위가 지사라, 지사를 모르면 그
+  // 물건이 애초에 목록에 없다(알림을 눌렀는데 다른 지사 탭이 열려 있으면 빈손으로 도착한다).
+  const { data: deepLinkedBranchId } = usePortableAssetBranch(initialAssetId)
+
   // 첫 진입·지사 목록 변동 시 첫 지사를 고른다(고르고 있던 지사가 비활성화된 경우 포함).
+  // 딥링크로 들어왔다면 그 물건이 있는 지사를 첫 지사보다 앞세운다.
   useEffect(() => {
     if (!branches.length) return
     if (branches.some((b) => b.id === branchId)) return
-    setBranchId(branches[0]!.id)
-  }, [branches, branchId])
+    const wanted = branches.find((b) => b.id === deepLinkedBranchId)
+    setBranchId(wanted?.id ?? branches[0]!.id)
+  }, [branches, branchId, deepLinkedBranchId])
 
   const statesKey = states.join(',')
   useEffect(() => {
@@ -139,6 +151,17 @@ export function CheckoutWorkspace() {
     () => filtered.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE),
     [filtered, page],
   )
+
+  // 딥링크로 지정된 물품을 목록이 도착하는 대로 한 번 연다. `rows`가 바뀔 때마다 다시 열지
+  // 않도록(닫아도 되살아난다) 이미 처리한 id를 기억해 둔다.
+  const deepLinked = useRef<string | null>(null)
+  useEffect(() => {
+    if (!initialAssetId || deepLinked.current === initialAssetId) return
+    const target = rows.find((r) => r.asset.id === initialAssetId)
+    if (!target) return
+    deepLinked.current = initialAssetId
+    setOpened(target)
+  }, [initialAssetId, rows])
 
   // 목록에 보이는 물품의 대표 사진만 한 번에 서명한다(행마다 요청을 돌리지 않는다).
   const thumbPaths = useMemo(
@@ -277,9 +300,7 @@ export function CheckoutWorkspace() {
               now={now}
               urlOf={(p) => (p ? thumbUrls?.[p] : undefined)}
               nameOf={managerNameOf}
-              canApprove={viewer.isManager}
               onOpen={setOpened}
-              onApprove={(c) => void act(c, 'APPROVE')}
               pagination={{
                 page,
                 pageSize: PAGE_SIZE,

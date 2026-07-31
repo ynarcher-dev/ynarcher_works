@@ -1,9 +1,11 @@
-import { Banner, Button, Input, TextArea } from '@ynarcher/ui'
+import { Banner, Button, Input, Select, TextArea } from '@ynarcher/ui'
 import { useMemo, useState, type ReactNode } from 'react'
 import {
   CHECKOUT_LABELS,
   elapsedLabel,
   formatDateTime,
+  isoToLocalInput,
+  nextAvailableAt,
   nowLocalInput,
   overdueMs,
 } from '@/features/office/checkouts/checkoutConfig'
@@ -11,7 +13,10 @@ import {
   conflictingCheckouts,
   defaultDueAt,
   emptyCheckoutDraft,
+  joinLocal,
   remainingForDraft,
+  splitLocal,
+  timeOptions,
   toCheckoutInput,
   unreturnedCheckouts,
   validateCheckoutDraft,
@@ -66,25 +71,76 @@ export function CheckoutFormView({
   onCancel,
   onSubmit,
 }: CheckoutFormViewProps) {
-  const [draft, setDraft] = useState<CheckoutDraft>(() => emptyCheckoutDraft(asset.id))
+  // 폼이 열려 있는 동안 기준이 흔들리면 입력 중에 min이 뒤로 밀린다 — 열린 순간을 고정한다.
+  const [nowIso] = useState(() => new Date().toISOString())
+  const now = isoToLocalInput(nowIso)
+  /**
+   * 고를 수 있는 가장 이른 시각 — 지금과 "재고가 돌아오는 시각" 중 늦은 쪽.
+   *
+   * 잔여가 0이어도 예약 자체는 막지 않는다. 대신 지금 나가 있는 것이 돌아오는 시각으로 폼을
+   * 열어, 비어 있지 않은 구간을 고르느라 저장을 눌러 보고서야 거절당하는 일을 없앤다.
+   *
+   * 언제 비는지 알 수 없는 경우(연체 — 돌아올 시각을 아무도 모른다)에는 지금을 바닥으로 둔다.
+   * 시각을 지어내 막는 대신 아래 미반납 경고가 사정을 말하고, 최종 판정은 DB에 맡긴다.
+   */
+  const [earliest] = useState(() => {
+    const at = nextAvailableAt(asset.quantity, occupancy, nowIso)
+    return at ? isoToLocalInput(at) : nowLocalInput()
+  })
+  const [draft, setDraft] = useState<CheckoutDraft>(() => emptyCheckoutDraft(asset.id, earliest))
   const [error, setError] = useState<CheckoutFormError | null>(null)
 
   const conflicts = useMemo(() => conflictingCheckouts(draft, occupancy), [draft, occupancy])
   const unreturned = useMemo(() => unreturnedCheckouts(occupancy), [occupancy])
   const remaining = useMemo(
-    () => remainingForDraft(asset.quantity, occupancy, draft),
-    [asset.quantity, occupancy, draft],
+    () => remainingForDraft(asset.quantity, occupancy, draft, nowIso),
+    [asset.quantity, occupancy, draft, nowIso],
   )
   const short = remaining !== null && Number(draft.quantity || '0') > remaining
-  const now = nowLocalInput()
+  // 지금 당장은 비어 있지 않아 앞당겨 잡아 둔 자리인가 — 안내 문구가 이 사실을 먼저 말한다.
+  const deferred = earliest > now
 
   const change = (next: CheckoutDraft) => {
     setDraft(next)
     if (error) setError(null)
   }
 
+  // ── 날짜·시각 두 칸 ──────────────────────────────────────────────────
+  const earliestParts = splitLocal(earliest)
+  const checkoutParts = splitLocal(draft.checkoutAt)
+  const dueParts = splitLocal(draft.dueAt)
+  /** 지금 담고 있는 값이 후보에 없으면 끼워 넣는다 — 셀렉트가 빈 칸으로 보이지 않게. */
+  const withCurrent = (options: string[], v: string) =>
+    !v || options.includes(v) ? options : [...options, v].sort()
+  const checkoutTimes = withCurrent(
+    timeOptions(checkoutParts.date, earliest),
+    checkoutParts.time,
+  )
+  const dueTimes = withCurrent(
+    timeOptions(dueParts.date, draft.checkoutAt, true),
+    dueParts.time,
+  )
+
+  /** 반출 일시를 바꾼다. 날짜를 옮겨 고를 수 없는 시각이 되면 그 날의 첫 후보로 끌어당긴다. */
+  const setCheckout = (date: string, time: string) => {
+    const options = timeOptions(date, earliest)
+    const next = joinLocal(date, options.includes(time) ? time : (options[0] ?? ''))
+    change({
+      ...draft,
+      checkoutAt: next,
+      // 아직 손대지 않은 반납 예정은 함께 따라간다(하루 뒤 유지).
+      dueAt:
+        draft.dueAt === defaultDueAt(draft.checkoutAt) ? defaultDueAt(next) : draft.dueAt,
+    })
+  }
+
+  const setDue = (date: string, time: string) => {
+    const options = timeOptions(date, draft.checkoutAt, true)
+    change({ ...draft, dueAt: joinLocal(date, options.includes(time) ? time : (options[0] ?? '')) })
+  }
+
   const submit = () => {
-    const found = validateCheckoutDraft(draft)
+    const found = validateCheckoutDraft(draft, earliest)
     if (found) return setError(found)
     onSubmit(toCheckoutInput(draft))
   }
@@ -111,37 +167,74 @@ export function CheckoutFormView({
         )
       })}
 
+      {/*
+        잔여가 0이어도 예약은 연다 — 막는 대신 언제부터 비는지를 알린다. 한 개짜리 물건에서
+        "지금 없음"을 "예약 불가"로 읽으면 먼저 가져간 사람이 반납할 때까지 아무도 줄을 설 수
+        없고, 그러면 대장이 순서를 관리하는 일을 그만두게 된다.
+      */}
+      {deferred && (
+        <Banner tone="info">
+          지금은 잔여가 없어 <b>{earliest.replace('T', ' ')}</b>부터 잡을 수 있습니다. 그 전
+          시각은 고를 수 없습니다.
+        </Banner>
+      )}
+
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Field label="반출 일시" required hint="지금 가져가면 그대로 두세요.">
-          <Input
-            type="datetime-local"
-            value={draft.checkoutAt}
-            invalid={invalid('checkoutAt')}
-            onChange={(e) =>
-              // 시작을 바꾸면 아직 손대지 않은 반납 예정은 함께 따라간다(하루 뒤 유지).
-              change({
-                ...draft,
-                checkoutAt: e.target.value,
-                dueAt:
-                  draft.dueAt === defaultDueAt(draft.checkoutAt)
-                    ? defaultDueAt(e.target.value)
-                    : draft.dueAt,
-              })
-            }
-          />
+        {/*
+          Input·Select는 스스로를 감싸는 상자가 `w-full`이라, 폭은 바깥에서 정해 준다
+          (컴포넌트에 className을 주면 안쪽 컨트롤에만 붙어 상자는 그대로 늘어난다).
+        */}
+        <Field label="반출 일시" required>
+          <div className="flex gap-2">
+            <div className="min-w-0 flex-1">
+              <Input
+                type="date"
+                value={checkoutParts.date}
+                min={earliestParts.date}
+                invalid={invalid('checkoutAt')}
+                onChange={(e) => setCheckout(e.target.value, checkoutParts.time)}
+              />
+            </div>
+            <div className="w-24 shrink-0">
+              <Select
+                value={checkoutParts.time}
+                invalid={invalid('checkoutAt')}
+                onChange={(e) => setCheckout(checkoutParts.date, e.target.value)}
+              >
+                {checkoutTimes.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </div>
         </Field>
-        <Field
-          label="반납 예정 일시"
-          required
-          hint="이때까지 다른 사람이 이 물건을 잡을 수 없습니다."
-        >
-          <Input
-            type="datetime-local"
-            value={draft.dueAt}
-            min={draft.checkoutAt || now}
-            invalid={invalid('dueAt')}
-            onChange={(e) => change({ ...draft, dueAt: e.target.value })}
-          />
+        <Field label="반납 예정 일시" required>
+          <div className="flex gap-2">
+            <div className="min-w-0 flex-1">
+              <Input
+                type="date"
+                value={dueParts.date}
+                min={checkoutParts.date || earliestParts.date}
+                invalid={invalid('dueAt')}
+                onChange={(e) => setDue(e.target.value, dueParts.time)}
+              />
+            </div>
+            <div className="w-24 shrink-0">
+              <Select
+                value={dueParts.time}
+                invalid={invalid('dueAt')}
+                onChange={(e) => setDue(dueParts.date, e.target.value)}
+              >
+                {dueTimes.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </div>
         </Field>
       </div>
 
@@ -228,8 +321,12 @@ export function CheckoutFormView({
         <Button variant="outline" onClick={onCancel} disabled={busy}>
           뒤로
         </Button>
+        {/*
+          고를 수 있는 시각이 모두 지금 이후이므로 등록은 언제나 예약이다 — '지금 가져감'도
+          "지금부터 잡는 예약"일 뿐이라, 버튼도 목록의 '+ 예약하기'와 같은 말을 쓴다.
+        */}
         <Button onClick={submit} disabled={busy || short}>
-          {busy ? '저장 중…' : asset.requiresApproval ? '승인 요청' : '반출 등록'}
+          {busy ? '저장 중…' : asset.requiresApproval ? '승인 요청' : '예약 등록'}
         </Button>
       </div>
     </div>

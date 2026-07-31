@@ -1,5 +1,4 @@
 import {
-  Button,
   DataTable,
   EmptyValue,
   cn,
@@ -13,7 +12,6 @@ import {
   elapsedLabel,
   formatDateTime,
   overdueMs,
-  pendingCheckouts,
   type AssetState,
 } from '@/features/office/checkouts/checkoutConfig'
 import type { Checkout, PortableAsset } from '@/features/office/checkouts/checkoutsApi'
@@ -37,11 +35,7 @@ interface PortableAssetsTableProps {
   urlOf: (path: string | undefined) => string | undefined
   /** 사용자 id → 이름(없으면 빈 칸). 비품 관리자 칸이 쓴다. */
   nameOf: (id: string | null) => string | null
-  /** 보는 사람이 승인권자인가(management 쓰기·관리자). 아니면 승인 열은 대기 건수만 알린다. */
-  canApprove: boolean
   onOpen: (row: AssetRow) => void
-  /** 승인 실행(확인 문구·서버 호출은 워크스페이스가 갖는다). */
-  onApprove: (target: Checkout) => void
   pagination: DataTableProps<AssetRow>['pagination']
 }
 
@@ -61,11 +55,11 @@ function Thumb({ url }: { url?: string }) {
 /**
  * 반출 가능 물품 표 — 이 화면의 주인공은 반출 기록이 아니라 물건이다.
  *
- * 한 줄이 답하는 것은 넷이다: 어떤 물건인가(사진·이름·품목), 지금 있는가(재고·상태),
+ * 한 줄이 답하는 것은 넷이다: 어떤 물건인가(사진·이름·품목), 지금 있는가(재고·상태·승인 여부),
  * 없다면 누가 언제까지 갖고 있는가(반출자·반납 예정), 그리고 누구에게 물어보는가(관리자).
- * 그 뒤의 이야기(시리얼·목적·행선지·지난 기록)와 처리는 물건을 눌러 모달에서 한다 —
- * 표에 버튼과 값을 다 펼치면 정작 "지금 있나"가 묻히기 때문이다. 예외는 승인 하나다:
- * 승인권자가 목록을 훑으며 끝내는 일이라 그 자리에 버튼을 둔다(맨 끝 승인 열).
+ * 그 뒤의 이야기(시리얼·목적·행선지·지난 기록)와 **모든 처리**는 물건을 눌러 모달에서 한다 —
+ * 표에 버튼과 값을 다 펼치면 정작 "지금 있나"가 묻히기 때문이다. 승인도 예외가 아니다:
+ * 승인은 어느 요청에 대고 하는 일이라, 어느 건인지 보지 않고 누르는 버튼은 그 자체가 위험하다.
  *
  * 색은 연체 하나에만 쓴다. 색을 여러 값에 나눠 주면 어느 색도 경고가 되지 못한다.
  */
@@ -74,9 +68,7 @@ export function PortableAssetsTable({
   now,
   urlOf,
   nameOf,
-  canApprove,
   onOpen,
-  onApprove,
   pagination,
 }: PortableAssetsTableProps) {
   const columns: Column<AssetRow>[] = [
@@ -126,6 +118,15 @@ export function PortableAssetsTable({
           ASSET_STATE_LABELS[r.state]
         ),
     },
+    // 승인이 필요한 물건인가는 상태와 붙어 읽힌다 — "지금 있나" 다음에 오는 질문이
+    // "그냥 가져가도 되나"이기 때문이다. 맨 끝의 '승인' 열과 뜻이 다르다: 이쪽은 이 물건의
+    // 성질이고, 그쪽은 지금 기다리는 요청에 대고 하는 처리다.
+    {
+      key: 'requiresApproval',
+      header: '승인 여부',
+      className: 'w-20',
+      render: (r) => (r.asset.requiresApproval ? '필요' : '불필요'),
+    },
     {
       key: 'holder',
       header: '반출자',
@@ -154,32 +155,6 @@ export function PortableAssetsTable({
       header: '관리자',
       className: 'w-24',
       render: (r) => nameOf(r.asset.managerId) ?? <EmptyValue />,
-    },
-    // 승인만 표에 꺼내 둔다. 반려는 사유를 받아야 하고 반출 시작·반납은 본인이 물건을 손에
-    // 쥐고 하는 처리라 물품을 열어 확인한 뒤에 해도 늦지 않지만, 승인은 승인권자가 목록을
-    // 훑다가 "이건 됐다"고 끝내는 일이고 그때마다 모달을 여는 것은 절차가 아니라 지연이다.
-    {
-      key: 'approval',
-      header: '승인',
-      className: 'w-24',
-      render: (r) => {
-        const pending = pendingCheckouts(r.checkouts)
-        if (!pending.length) return <EmptyValue />
-        // 승인권자가 아니면 누를 것이 없다 — 대신 기다리는 요청이 있다는 사실만 알린다.
-        if (!canApprove) return <span className="text-gray-500">대기 {pending.length}건</span>
-        return (
-          <div className="flex justify-center" onClick={(e) => e.stopPropagation()}>
-            <Button
-              variant="outline"
-              // 여러 건이 기다리면 어느 건인지 골라야 한다 — 표에서 임의로 하나를 고르지
-              // 않고 물품을 열어 목록을 보여 준다.
-              onClick={() => (pending.length === 1 ? onApprove(pending[0]!) : onOpen(r))}
-            >
-              {pending.length === 1 ? '승인' : `승인 ${pending.length}건`}
-            </Button>
-          </div>
-        )
-      },
     },
   ]
 

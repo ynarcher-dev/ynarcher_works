@@ -111,7 +111,9 @@ export function OfficePage() {
       {/* 임직원 정보: 목록은 조직 트리+인물 카드(구 부서 정보), 상세는 임직원 상세로 간다. */}
       {tab === 'managers' && <OfficeManagersPanel />}
       {/* 반출대장: 물품 반출·반납 기록. 후보 자산의 기준값(반출 가능·승인 필요)은 MANAGEMENT가 소유한다. */}
-      {tab === 'outbound' && <CheckoutWorkspace />}
+      {tab === 'outbound' && (
+        <CheckoutWorkspace initialAssetId={params.get('asset') ?? undefined} />
+      )}
       {/* 회의실 예약: 지사 탭 + 날짜 이동 + 회의실 카드. 설정은 ADMIN이 소유한다. */}
       {tab === 'rooms' && <RoomReservationWorkspace />}
       {/* 회의록: STARTUP에서 이관. 자체 목록/상세/작성 흐름과 헤더를 소유한다. */}

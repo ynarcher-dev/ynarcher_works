@@ -12,6 +12,26 @@ function formatWhen(v: string): string {
   return v.length >= 16 ? v.slice(5, 16).replace('T', ' ') : v.slice(0, 10)
 }
 
+/**
+ * 알림 유형별 한 줄 — 무슨 일이 있었나.
+ *
+ * 문구를 유형(`type`)으로 고르고 본문(`body_preview`)을 읽어 판정하지 않는다. 본문은 물품명·
+ * 기간처럼 사람이 읽을 값이지 기계가 갈라야 할 값이 아니며, 파싱으로 결과를 알아내는 목록은
+ * 값이 조금만 바뀌어도 '승인'을 '반려'로 읽는다. 그래서 승인과 반려는 유형부터 갈라 둔다.
+ */
+function headline(type: string): string {
+  switch (type) {
+    case 'checkout_request':
+      return '님이 물품 반출 승인을 요청했습니다.'
+    case 'checkout_approved':
+      return '님이 반출 요청을 승인했습니다.'
+    case 'checkout_rejected':
+      return '님이 반출 요청을 반려했습니다.'
+    default:
+      return '님이 코멘트에서 회원님을 언급했습니다.'
+  }
+}
+
 export interface NotificationListProps {
   /** 알림을 눌러 대상으로 이동한 뒤 호출(패널 닫기 등). */
   onNavigate?: () => void
@@ -70,8 +90,8 @@ export function NotificationList({ onNavigate }: NotificationListProps) {
                     <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-brand" />
                   )}
                   <span className="text-body text-gray-900">
-                    <b className="font-semibold">{n.actor_name ?? '누군가'}</b>님이 코멘트에서 회원님을
-                    언급했습니다.
+                    <b className="font-semibold">{n.actor_name ?? '누군가'}</b>
+                    {headline(n.type)}
                   </span>
                 </span>
                 {n.body_preview && (

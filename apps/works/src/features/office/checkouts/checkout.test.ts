@@ -3,10 +3,13 @@ import {
   abilityOf,
   deriveAssetState,
   elapsedLabel,
+  isStartDelayed,
   isoToLocalInput,
   localToIso,
+  nextAvailableAt,
   nowLocalInput,
   overdueMs,
+  overdueQuantity,
   peakUsage,
   pendingCheckouts,
   periodsOverlap,
@@ -17,7 +20,10 @@ import {
   conflictingCheckouts,
   defaultDueAt,
   emptyCheckoutDraft,
+  joinLocal,
   remainingForDraft,
+  splitLocal,
+  timeOptions,
   toCheckoutInput,
   unreturnedCheckouts,
   validateCheckoutDraft,
@@ -172,13 +178,49 @@ describe('deriveAssetState', () => {
     expect(deriveAssetState([row()], '2026-07-28T00:00:00.000Z', 5).state).toBe('OVERDUE')
   })
 
+  it('예약 시각이 지났는데 못 받은 건은 시작 지연이다', () => {
+    const stuck = row({
+      id: 's',
+      status: 'RESERVED',
+      checkoutAt: '2026-07-21T00:00:00.000Z',
+      dueAt: '2026-07-23T00:00:00.000Z',
+    })
+    const result = deriveAssetState([stuck], now, 1)
+    expect(result.state).toBe('DELAYED')
+    expect(result.active?.id).toBe('s')
+  })
+
+  it('연체가 지연보다 앞선다 — 손을 대야 할 사실은 앞사람의 미반납이다', () => {
+    const stuck = row({
+      id: 's',
+      status: 'RESERVED',
+      checkoutAt: '2026-07-21T00:00:00.000Z',
+      dueAt: '2026-07-30T00:00:00.000Z',
+    })
+    // row()는 07-25 01:00까지인 반출 중 — 07-28에는 연체다.
+    expect(deriveAssetState([stuck, row()], '2026-07-28T00:00:00.000Z', 1).state).toBe('OVERDUE')
+  })
+
+  it('기간이 통째로 지난 예약은 지연이 아니다(자동 시작도 건드리지 않는다)', () => {
+    const dead = row({
+      id: 'd',
+      status: 'RESERVED',
+      checkoutAt: '2026-07-19T00:00:00.000Z',
+      dueAt: '2026-07-21T00:00:00.000Z',
+    })
+    expect(deriveAssetState([dead], now, 1).state).toBe('AVAILABLE')
+  })
+
   it('잔여가 0일 때에만 무엇 때문에 못 빌리는지 적는다', () => {
     const pending = row({ id: 'p', status: 'PENDING' })
     const reserved = row({ id: 'r', status: 'RESERVED' })
     // 두 건(각 1개)이 지금을 덮고 있으므로 보유 3개면 하나가 남는다.
     expect(deriveAssetState([reserved, pending], now, 3).state).toBe('AVAILABLE')
-    // 보유가 2개면 잔여 0 — 이때 승인 대기를 예약보다 앞세운다(먼저 처리해야 할 일이다).
-    expect(deriveAssetState([reserved, pending], now, 2).active?.id).toBe('p')
+    // 보유가 2개면 잔여 0 — 이때 무엇 때문에 못 빌리는지 적는다. 지금을 덮고 있는 예약은
+    // 시각이 이미 지났다는 뜻이므로 '시작 지연'이고, 승인 대기보다 앞선다: 승인 대기는 아직
+    // 아무도 약속받지 않은 요청이지만 지연은 이미 한 약속이 지켜지지 않고 있는 자리다.
+    expect(deriveAssetState([reserved, pending], now, 2).state).toBe('DELAYED')
+    expect(deriveAssetState([reserved, pending], now, 2).active?.id).toBe('r')
   })
 })
 
@@ -279,6 +321,133 @@ describe('validateCheckoutDraft', () => {
 
   it('같은 날 오전에 나갔다 오후에 돌아오는 반출은 허용한다', () => {
     expect(validateCheckoutDraft({ ...base, dueAt: '2026-07-30T18:00' })).toBeNull()
+  })
+
+  it('비는 시각보다 앞서면 막고, 그 시각부터는 통과한다', () => {
+    expect(validateCheckoutDraft(base, '2026-07-30T12:00')?.field).toBe('checkoutAt')
+    expect(validateCheckoutDraft(base, '2026-07-30T09:00')).toBeNull()
+    // 기준을 주지 않으면 판정하지 않는다(다른 화면에서 그대로 쓸 수 있게).
+    expect(validateCheckoutDraft(base)).toBeNull()
+  })
+})
+
+describe('nextAvailableAt', () => {
+  const now = '2026-07-22T00:00:00.000Z'
+
+  it('잔여가 있으면 지금부터다', () => {
+    expect(nextAvailableAt(3, [row({ quantity: 1 })], now)).toBe(now)
+  })
+
+  it('한 개짜리가 나가 있으면 돌아오는 시각부터다', () => {
+    // row()는 07-20 01:00 ~ 07-25 01:00 반출 중.
+    expect(nextAvailableAt(1, [row()], now)).toBe('2026-07-25T01:00:00.000Z')
+  })
+
+  it('돌아오는 자리에 다음 예약이 붙어 있으면 그 뒤로 넘어간다', () => {
+    const next = row({
+      id: 'n',
+      status: 'RESERVED',
+      checkoutAt: '2026-07-25T01:00:00.000Z',
+      dueAt: '2026-07-27T01:00:00.000Z',
+    })
+    expect(nextAvailableAt(1, [row(), next], now)).toBe('2026-07-27T01:00:00.000Z')
+  })
+
+  it('점유가 하나도 없으면 지금부터다', () => {
+    expect(nextAvailableAt(1, [], now)).toBe(now)
+  })
+
+  it('연체가 원인이면 언제 비는지 모른다고 답한다(시각을 지어내지 않는다)', () => {
+    // 07-25 01:00까지 빌린 것이 07-28에도 돌아오지 않았다.
+    expect(nextAvailableAt(1, [row()], '2026-07-28T00:00:00.000Z')).toBeNull()
+  })
+
+  it('연체가 있어도 여유분이 있으면 지금부터다', () => {
+    expect(nextAvailableAt(2, [row()], '2026-07-28T00:00:00.000Z')).toBe(
+      '2026-07-28T00:00:00.000Z',
+    )
+  })
+})
+
+describe('연체 점유 — 반납되지 않은 물건은 지금도 나가 있다', () => {
+  // row()는 07-20 01:00 ~ 07-25 01:00 반출 중(1개). 아래에서는 이미 예정이 지난 시점을 본다.
+  const late = '2026-07-28T00:00:00.000Z'
+
+  it('예정 시각이 지나도 잔여로 돌아오지 않는다', () => {
+    expect(overdueQuantity([row()], late)).toBe(1)
+    expect(remainingNow(1, [row()], late)).toBe(0)
+  })
+
+  it('반납된 건은 연체가 아니다', () => {
+    expect(overdueQuantity([row({ status: 'RETURNED' })], late)).toBe(0)
+    expect(remainingNow(1, [row({ status: 'RETURNED' })], late)).toBe(1)
+  })
+
+  it('지금을 덮는 구간에서는 막고, 미래 구간은 열어 둔다', () => {
+    // 지금(07-28)을 포함하는 요청 — 아직 돌아오지 않았으므로 자리가 없다.
+    expect(
+      remainingForPeriod(1, [row()], '2026-07-28T00:00:00.000Z', '2026-07-29T00:00:00.000Z', late),
+    ).toBe(0)
+    // 내일 이후 — 돌아온다고 보고 통과시킨다(한 사람의 지각이 모두의 줄서기를 막지 않는다).
+    expect(
+      remainingForPeriod(1, [row()], '2026-07-30T00:00:00.000Z', '2026-07-31T00:00:00.000Z', late),
+    ).toBe(1)
+  })
+
+  it('기준 시각을 주지 않으면 종전처럼 선언한 기간만 본다', () => {
+    expect(
+      remainingForPeriod(1, [row()], '2026-07-28T00:00:00.000Z', '2026-07-29T00:00:00.000Z'),
+    ).toBe(1)
+  })
+})
+
+describe('isStartDelayed', () => {
+  it('예약 시각이 지났는데 아직 못 받은 건이다', () => {
+    const reserved = row({ status: 'RESERVED', checkoutAt: '2026-07-25T01:00:00.000Z' })
+    expect(isStartDelayed(reserved, '2026-07-26T00:00:00.000Z')).toBe(true)
+    expect(isStartDelayed(reserved, '2026-07-24T00:00:00.000Z')).toBe(false)
+  })
+
+  it('이미 받아 간 건과 종결된 건은 지연이 아니다', () => {
+    const at = '2026-07-26T00:00:00.000Z'
+    expect(isStartDelayed(row({ status: 'OUT' }), at)).toBe(false)
+    expect(isStartDelayed(row({ status: 'CANCELLED' }), at)).toBe(false)
+  })
+
+  it('막 시각이 된 예약은 아직 지연이 아니다(서버 보정이 따라잡을 여유)', () => {
+    const justNow = row({ status: 'RESERVED', checkoutAt: '2026-07-25T01:00:00.000Z' })
+    expect(isStartDelayed(justNow, '2026-07-25T01:02:00.000Z')).toBe(false)
+    expect(isStartDelayed(justNow, '2026-07-25T01:06:00.000Z')).toBe(true)
+  })
+})
+
+describe('시각 후보(timeOptions)', () => {
+  const floor = '2026-07-30T10:31'
+
+  it('바닥과 같은 날에는 바닥 이후만 남기고, 바닥 시각 자체를 첫 후보로 둔다', () => {
+    const opts = timeOptions('2026-07-30', floor)
+    expect(opts.slice(0, 4)).toEqual(['10:31', '11:00', '11:30', '12:00'])
+    expect(opts.at(-1)).toBe('23:30')
+  })
+
+  it('바닥보다 이른 날짜에는 고를 수 있는 시각이 없다', () => {
+    expect(timeOptions('2026-07-29', floor)).toEqual([])
+  })
+
+  it('다음 날부터는 하루가 통째로 열린다(30분 간격 48칸)', () => {
+    const opts = timeOptions('2026-07-31', floor)
+    expect(opts).toHaveLength(48)
+    expect(opts[0]).toBe('00:00')
+  })
+
+  it('exclusive는 바닥과 같은 시각을 뺀다(길이 0인 반출을 만들지 않는다)', () => {
+    expect(timeOptions('2026-07-30', floor, true)[0]).toBe('11:00')
+  })
+
+  it('날짜와 시각을 오갈 때 값이 그대로 돌아온다', () => {
+    expect(splitLocal(floor)).toEqual({ date: '2026-07-30', time: '10:31' })
+    expect(joinLocal('2026-07-30', '10:31')).toBe(floor)
+    expect(joinLocal('', '10:31')).toBe('')
   })
 })
 
