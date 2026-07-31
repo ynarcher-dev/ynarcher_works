@@ -21,7 +21,8 @@ export interface ProgramFormValues {
  * 프로그램 단계(제안/운영) 이원화 입력 블록.
  * 제안 단계 상태는 시도/선정/미선정 3분류이며 별도 기간(날짜)이 없다.
  * 운영 기간(시작·종료일)은 제안 단계에서도 입력할 수 있고 필수다 — 담당자 배치 단계가 이 기간에서 나온다.
- * '선정'을 고르면 운영 단계(준비)로 즉시 자동 전환된다(전환 처리는 상위 onProposalStatusChange).
+ * '선정'은 운영 단계 라디오를 열어 주기만 하고 자동으로 넘기지 않는다 — 선정(제안이 통과함)과
+ * 준비(운영 채비를 함)는 서로 다른 사실이라, 자동 전환하면 선정 상태가 원장에 한 번도 남지 않는다.
  * 운영 단계 라디오는 제안이 '선정'일 때만 활성화되고, 운영 기간(start/end_date)만 입력한다.
  */
 export function ProgramStageFields({
@@ -75,7 +76,7 @@ export function ProgramStageFields({
         <div className="flex flex-wrap items-baseline justify-between gap-1">
           <span className="text-body font-medium text-gray-800">제안</span>
           <span className="text-caption text-gray-600">
-            선정 시 운영 단계로 전환 · 미선정 시 프로젝트 종료
+            선정 후 운영 단계로 넘어갈 수 있음 · 미선정 시 프로젝트 종료
           </span>
         </div>
         <div className="mt-2 grid grid-cols-3 gap-3">

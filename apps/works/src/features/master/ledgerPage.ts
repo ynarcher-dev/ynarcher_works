@@ -123,11 +123,29 @@ export async function fetchLedgerPage<T>(spec: LedgerPageSpec): Promise<LedgerPa
     return { rows: (data ?? []) as unknown as T[], total, totalAll: total }
   }
 
-  let allQ = supabase.from(table).select('id', { count: 'exact', head: true })
-  allQ = applyLive(allQ, liveColumns)
-  allQ = applyConditions(allQ, scope)
-  const { count: allCount } = await allQ
-  return { rows: (data ?? []) as unknown as T[], total, totalAll: allCount ?? total }
+  const allCount = await countLedgerRows({ table, liveColumns, conditions: scope })
+  return { rows: (data ?? []) as unknown as T[], total, totalAll: allCount }
+}
+
+export interface LedgerCountSpec {
+  table: string
+  liveColumns: readonly string[]
+  /** 셀 조건(스코프 + 좁힘을 구분하지 않는다 — 건수 하나만 답한다). */
+  conditions?: readonly LedgerCondition[]
+}
+
+/**
+ * 조건에 걸리는 살아 있는 행의 개수만 세어 온다(행은 내려받지 않는다).
+ * 목록의 전체 건수와, 상태별로 쪼개 세는 집계(진행 현황 파이프라인)가 같은 절차를 공유해야
+ * 건수가 어긋나지 않는다 — 그래서 `fetchLedgerPage`도 이 함수를 경유한다.
+ */
+export async function countLedgerRows(spec: LedgerCountSpec): Promise<number> {
+  let q = supabase.from(spec.table).select('id', { count: 'exact', head: true })
+  q = applyLive(q, spec.liveColumns)
+  q = applyConditions(q, spec.conditions ?? [])
+  const { count, error } = await q
+  if (error) throw error
+  return count ?? 0
 }
 
 /**

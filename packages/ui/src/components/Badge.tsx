@@ -15,6 +15,19 @@ const toneClass: Record<BadgeTone, string> = {
   danger: 'bg-danger-subtle text-danger',
 }
 
+/**
+ * 톤별 원색 배경. 배지 안의 점이 쓰고, 배지 밖에서 같은 톤으로 칠해야 하는 작은 면
+ * (막대·진행 바 등)도 이 표를 함께 쓴다 — 배지는 초록인데 그 옆 막대만 다른 초록이면
+ * 같은 상태가 두 색으로 보인다.
+ */
+export const badgeToneFill: Record<BadgeTone, string> = {
+  neutral: 'bg-gray-400',
+  success: 'bg-success',
+  warning: 'bg-warning',
+  info: 'bg-info',
+  danger: 'bg-danger',
+}
+
 export interface BadgeProps {
   tone?: BadgeTone
   /** 밀도 맥락 강제 지정. 생략하면 부모 Card·DataTable이 내려준 맥락을 자동으로 따른다. */
@@ -35,13 +48,6 @@ export interface BadgeProps {
  */
 export function Badge({ tone = 'neutral', density, dot = false, children, className }: BadgeProps) {
   const s = tagScale[useDensity(density)]
-  const dotColorClass: Record<BadgeTone, string> = {
-    neutral: 'bg-gray-400',
-    success: 'bg-success',
-    warning: 'bg-warning',
-    info: 'bg-info',
-    danger: 'bg-danger',
-  }
 
   return (
     <span
@@ -57,7 +63,7 @@ export function Badge({ tone = 'neutral', density, dot = false, children, classN
     >
       {dot && (
         <span
-          className={cn('shrink-0 rounded-full', s.dot, dotColorClass[tone])}
+          className={cn('shrink-0 rounded-full', s.dot, badgeToneFill[tone])}
           aria-hidden="true"
         />
       )}

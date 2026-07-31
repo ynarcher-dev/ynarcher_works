@@ -5,6 +5,7 @@ import { useAuthStore } from '@/auth/authStore'
 import { ListActions } from '@/components/ListActions'
 import { ProgramFormModal } from '@/features/program/ProgramFormModal'
 import { ProgramFilters } from '@/features/program/ProgramFilters'
+import { ProgramPipeline } from '@/features/program/ProgramPipeline'
 import { ProgramTable } from '@/features/program/ProgramTable'
 import {
   EMPTY_PROGRAM_FILTERS,
@@ -25,6 +26,8 @@ interface ProgramListTabProps {
   includeUnclassified?: boolean
   /** 상세 진입 시 넘길 출처 탭. 뒤로가기·사이드바 활성 상태 복원에 쓴다. */
   backTab: string
+  /** 목록 위에 진행 현황 프로세스 뷰를 함께 둔다('내 사업 관리' 전용). */
+  showPipeline?: boolean
 }
 
 /**
@@ -39,6 +42,7 @@ export function ProgramListTab({
   category,
   includeUnclassified,
   backTab,
+  showPipeline = false,
 }: ProgramListTabProps) {
   const config = useProgramWorkspace()
   const navigate = useNavigate()
@@ -67,8 +71,28 @@ export function ProgramListTab({
     includeUnclassified ?? false,
   )
 
+  /** 단계 토글: 이미 걸린 상태면 빼고, 아니면 더한다(상태 필터와 같은 다중선택 규약). */
+  const toggleStatus = (status: string) =>
+    setFilters((f) => ({
+      ...f,
+      statuses: f.statuses.includes(status)
+        ? f.statuses.filter((s) => s !== status)
+        : [...f.statuses, status],
+    }))
+
   return (
     <div className="space-y-3">
+      {showPipeline && (
+        <ProgramPipeline
+          mineUserId={mineUserId}
+          category={category ?? null}
+          includeUnclassified={includeUnclassified ?? false}
+          selectedStatuses={filters.statuses}
+          onToggleStatus={toggleStatus}
+          onClearStatuses={() => setFilters((f) => ({ ...f, statuses: [] }))}
+        />
+      )}
+
       <ListToolbar
         keyword={keyword}
         onKeywordChange={setKeyword}

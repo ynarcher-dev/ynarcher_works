@@ -7,6 +7,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import {
   NO_MATCH_ID,
+  countLedgerRows,
   fetchLedgerPage,
   managedRecordIds,
   sanitizeOrValue,
@@ -14,6 +15,7 @@ import {
   type LedgerCondition,
   type LedgerPage,
 } from '@/features/master/ledgerPage'
+import { PROGRAM_STATUS_OPTIONS } from '@/features/program/config'
 import type { Program } from '@/features/program/hooks'
 import {
   useProgramWorkspace,
@@ -60,6 +62,42 @@ export function hasActiveProgramFilters(f: ProgramFilters): boolean {
 
 /** 사업 목록 페이지. 다른 원장 목록과 동일 규약(rows + 건수 둘). */
 export type ProgramPage = LedgerPage<Program>
+
+/**
+ * 살아 있는 사업 판정 컬럼. 사업 원장은 병합을 쓰지 않아 soft delete 컬럼 하나다
+ * (인덱스 부분 조건과 일치 — 20260731220000).
+ */
+const PROGRAM_LIVE_COLUMNS = ['deleted_at'] as const
+
+/**
+ * '이 목록이 무엇인가'를 정하는 스코프 조건(내 사업 / 사업구분).
+ * 목록 조회와 진행 현황 집계가 반드시 같은 모수를 봐야 하므로 한 곳에서 만든다 —
+ * 갈라지면 파이프라인 단계 합과 목록 전체 건수가 어긋난다.
+ */
+async function programScopeConditions(
+  config: ProgramWorkspaceConfig,
+  mineUserId: string | null | undefined,
+  category: string | null | undefined,
+  includeUnclassified: boolean,
+): Promise<LedgerCondition[]> {
+  const scope: LedgerCondition[] = []
+  // '내 사업' 스코프: 생성자(created_by=나) OR 담당자(담당자 원장.user_id=나).
+  // 담당은 원장 밖에 있어 조인으로 걸 수 없으므로 담당 사업 id를 먼저 모은다.
+  if (mineUserId) {
+    const ids = await managedRecordIds(config.tables.managers, 'program_id', mineUserId)
+    const parts = [`created_by.eq.${mineUserId}`]
+    if (ids.length) parts.push(`id.in.(${ids.join(',')})`)
+    scope.push({ kind: 'or', expr: parts.join(',') })
+  }
+  // 사업구분은 스코프의 일부이므로 검색·필터와 별개로 항상 적용한다.
+  // '기타'는 미분류(null)까지 함께 담아 사각지대를 막는다.
+  if (category && includeUnclassified) {
+    scope.push({ kind: 'or', expr: `category.eq.${category},category.is.null` })
+  } else if (category) {
+    scope.push({ kind: 'eq', column: 'category', value: category })
+  }
+  return scope
+}
 
 /** 목록용 축약 select 문자열. 담당자·부서 임베드 테이블명·FK 힌트를 config로 조립한다. */
 function programListCols(config: ProgramWorkspaceConfig): string {
@@ -109,22 +147,12 @@ export function useProgramsPage(
     queryFn: async (): Promise<ProgramPage> => {
       const kw = sanitizeOrValue(keyword)
 
-      const scope: LedgerCondition[] = []
-      // '내 사업' 스코프: 생성자(created_by=나) OR 담당자(담당자 원장.user_id=나).
-      // 담당은 원장 밖에 있어 조인으로 걸 수 없으므로 담당 사업 id를 먼저 모은다.
-      if (mineUserId) {
-        const ids = await managedRecordIds(config.tables.managers, 'program_id', mineUserId)
-        const parts = [`created_by.eq.${mineUserId}`]
-        if (ids.length) parts.push(`id.in.(${ids.join(',')})`)
-        scope.push({ kind: 'or', expr: parts.join(',') })
-      }
-      // 사업구분은 스코프의 일부이므로 검색·필터와 별개로 항상 적용한다.
-      // '기타'는 미분류(null)까지 함께 담아 사각지대를 막는다.
-      if (category && includeUnclassified) {
-        scope.push({ kind: 'or', expr: `category.eq.${category},category.is.null` })
-      } else if (category) {
-        scope.push({ kind: 'eq', column: 'category', value: category })
-      }
+      const scope = await programScopeConditions(
+        config,
+        mineUserId,
+        category,
+        includeUnclassified,
+      )
 
       const narrow: LedgerCondition[] = []
       // 검색: 프로그램명 + 생성자(이름 → created_by id 역조회).
@@ -151,14 +179,72 @@ export function useProgramsPage(
       return fetchLedgerPage<Program>({
         table: config.tables.programs,
         select: programListCols(config),
-        // 사업 원장은 병합을 쓰지 않아 soft delete 컬럼 하나다(인덱스 부분 조건과 일치).
-        liveColumns: ['deleted_at'],
+        liveColumns: PROGRAM_LIVE_COLUMNS,
         order: { column: 'created_at', ascending: false },
         page,
         pageSize,
         scope,
         narrow,
       })
+    },
+  })
+}
+
+/** 스코프 안 사업의 상태별 분포(진행 현황 프로세스 뷰의 원천). */
+export interface ProgramStatusCounts {
+  /** program_status 값 → 건수. 수명주기 7개 상태를 모두 담는다(0건 포함). */
+  byStatus: Record<string, number>
+  /** 스코프 전체 건수(상태 무관). */
+  total: number
+  /** 수명주기 밖 건수 = 전체 − 7개 상태 합. 구 상태값(모집·심사 등) 잔여분이 여기 잡힌다. */
+  other: number
+}
+
+/**
+ * 상태별 건수 집계. 행을 내려받아 세지 않고 상태마다 count 질의를 던진다 —
+ * 행으로 세면 PostgREST 기본 상한(1000행)에 걸리는 순간 조용히 작은 수를 답하게 된다.
+ * 검색어·필터는 일부러 반영하지 않는다. 이 패널은 "지금 무엇을 찾고 있나"가 아니라
+ * "내 사업 전체가 어느 단계에 몰려 있나"에 답하고, 그 답이 곧 필터의 출발점이기 때문이다.
+ */
+export function useProgramStatusCounts(
+  /** 지정 시 생성자 또는 담당자가 이 사용자인 사업만 집계한다('내 사업'). */
+  mineUserId?: string | null,
+  category?: string | null,
+  includeUnclassified = false,
+) {
+  const config = useProgramWorkspace()
+  return useQuery({
+    queryKey: [
+      config.key,
+      'programs',
+      'status-counts',
+      mineUserId ?? null,
+      category ?? null,
+      includeUnclassified,
+    ],
+    placeholderData: keepPreviousData,
+    queryFn: async (): Promise<ProgramStatusCounts> => {
+      const conditions = await programScopeConditions(
+        config,
+        mineUserId,
+        category,
+        includeUnclassified,
+      )
+      const base = { table: config.tables.programs, liveColumns: PROGRAM_LIVE_COLUMNS }
+      const [total, ...perStatus] = await Promise.all([
+        countLedgerRows({ ...base, conditions }),
+        ...PROGRAM_STATUS_OPTIONS.map((status) =>
+          countLedgerRows({
+            ...base,
+            conditions: [...conditions, { kind: 'eq', column: 'status', value: status }],
+          }),
+        ),
+      ])
+      const byStatus = Object.fromEntries(
+        PROGRAM_STATUS_OPTIONS.map((status, i) => [status, perStatus[i] ?? 0]),
+      )
+      const known = perStatus.reduce((sum, n) => sum + n, 0)
+      return { byStatus, total, other: Math.max(0, total - known) }
     },
   })
 }

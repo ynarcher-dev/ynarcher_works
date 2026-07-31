@@ -198,11 +198,18 @@ export const FUND_BULK_SPEC: BulkImportSpec = {
 }
 
 /**
- * 등록으로 지정할 수 있는 사업 상태. 구 상태값(모집·심사·데모데이)과 '선정'은 뺀다 —
- * 구 상태값은 표시 전용이고(config.ts), '선정'은 폼에서 고르는 즉시 운영 '준비'로 넘어가
- * 원장에 남지 않는 중간값이다. 업로드만 저장할 수 있으면 그 값은 업로드로만 생긴다.
+ * 등록으로 지정할 수 있는 사업 상태. 구 상태값(모집·심사·데모데이)만 뺀다 — 표시 전용이라
+ * 새로 만들 수 없다(config.ts). '선정'은 폼에서도 그대로 저장되는 정식 상태이므로 포함한다.
  */
-const PROGRAM_UPLOAD_STATUSES = ['PROPOSED', 'NOT_SELECTED', 'DRAFT', 'OPERATING', 'FINISHED', 'CANCELLED']
+const PROGRAM_UPLOAD_STATUSES = [
+  'PROPOSED',
+  'SELECTED',
+  'NOT_SELECTED',
+  'DRAFT',
+  'OPERATING',
+  'FINISHED',
+  'CANCELLED',
+]
 const PROGRAM_UPLOAD_STATUS_LABEL: Record<string, string> = Object.fromEntries(
   PROGRAM_UPLOAD_STATUSES.map((code) => [code, PROGRAM_STATUS_LABEL[code] ?? code]),
 )

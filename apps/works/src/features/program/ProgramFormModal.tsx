@@ -84,12 +84,11 @@ export function ProgramFormModal({
   const [operationStatus, setOperationStatus] = useState(() =>
     programStage(initialStatus) === 'OPERATION' ? initialStatus : 'DRAFT',
   )
-  // 제안 상태 변경 핸들러: '선정'을 고르면 운영 단계(준비)로 즉시 자동 전환한다.
-  // 운영 상태는 기존 값(신규는 '준비')을 유지해 편집 중이던 진행 상태를 잃지 않는다.
-  const handleProposalStatusChange = (status: string) => {
-    setProposalStatus(status)
-    if (status === 'SELECTED') setStage('OPERATION')
-  }
+  // '선정'은 운영 단계로 자동 전환하지 않는다 — 선정과 준비는 서로 다른 사실이다.
+  // (선정 = 제안이 통과했다 / 준비 = 운영을 시작할 채비를 한다) 자동으로 넘겨 버리면
+  // 선정된 사업이 원장에 한 번도 'SELECTED'로 남지 않아, 선정만 되고 아직 착수하지 않은
+  // 사업을 목록에서 가려낼 수 없다. 운영 단계는 '선정' 이후 열리기만 하고,
+  // 실제 전환은 사용자가 단계 라디오로 직접 고른다.
   // 편집 대상이 바뀌면(모달 재사용) 배치·단계 상태를 해당 프로그램 기준으로 다시 초기화한다.
   useEffect(() => {
     setDepartments(toDepartmentSegments(program))
@@ -231,7 +230,7 @@ export function ProgramFormModal({
           stage={stage}
           onStageChange={setStage}
           proposalStatus={proposalStatus}
-          onProposalStatusChange={handleProposalStatusChange}
+          onProposalStatusChange={setProposalStatus}
           operationStatus={operationStatus}
           onOperationStatusChange={setOperationStatus}
           register={register}

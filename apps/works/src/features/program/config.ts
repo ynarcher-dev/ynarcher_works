@@ -87,9 +87,11 @@ export function defaultParticipationMode(moduleType: string): string | null {
 
 /**
  * 프로그램(프로젝트) 상태 수명주기:
- *   [제안 단계] 시도 → (선정) 선정 → [운영 단계] 준비 → 진행중 → 종료 / (중단) 취소
+ *   [제안 단계] 시도 → 선정 ┈▶ [운영 단계] 준비 → 진행중 → 종료 / (중단) 취소
  *              ↘ (미선정) 미선정 … 프로젝트 종료(terminal)
- * 제안 단계에서 '선정'을 고르면 운영 단계(준비)로 즉시 자동 전환된다.
+ * '선정'은 운영 단계를 열어 줄 뿐 자동으로 넘어가지 않는다(┈▶ = 사용자가 직접 전환).
+ * 선정(제안이 통과함)과 준비(운영 채비를 함)는 서로 다른 사실이고, 자동 전환하면 선정만 되고
+ * 아직 착수하지 않은 사업이 원장에 남지 않아 목록·집계에서 가려낼 수 없다.
  * DB program_status enum: PROPOSED/SELECTED/NOT_SELECTED/DRAFT/OPERATING/FINISHED/CANCELLED.
  * (등록/편집 폼에서 선택 가능한 값·순서는 PROGRAM_STATUS_OPTIONS 참조)
  */
@@ -119,6 +121,30 @@ export function programStage(status: string): ProgramStage {
     ? 'PROPOSAL'
     : 'OPERATION'
 }
+
+/**
+ * 진행 현황(프로세스 뷰)의 흐름 정의 — 수명주기를 왼쪽에서 오른쪽으로 편 것.
+ * 묶음은 위 `PROGRAM_*_STATUSES`와 같은 이원화(제안/운영)를 따른다.
+ *
+ * 이탈(`exits`)은 그 단계에서 빠져나가는 종착 상태이므로 다른 묶음으로 몰지 않고 자기 단계
+ * 끝에 함께 둔다 — 미선정은 제안 단계의 결말이고 취소는 운영 단계의 결말이라, 한데 모으면
+ * 어느 단계에서 빠졌는지가 사라진다. 다만 `statuses`와 화살표로 잇지는 않는다
+ * ("선정 → 미선정"으로 읽히면 흐름이 거짓말을 한다) — 점선으로 갈라 병렬로 놓는다.
+ */
+export const PROGRAM_FLOW_GROUPS = [
+  {
+    stage: 'PROPOSAL',
+    label: '제안 단계',
+    statuses: ['PROPOSED', 'SELECTED'],
+    exits: ['NOT_SELECTED'],
+  },
+  {
+    stage: 'OPERATION',
+    label: '운영 단계',
+    statuses: ['DRAFT', 'OPERATING', 'FINISHED'],
+    exits: ['CANCELLED'],
+  },
+] as const
 
 export const PROGRAM_STATUS_LABEL: Record<string, string> = {
   PROPOSED: '시도',
