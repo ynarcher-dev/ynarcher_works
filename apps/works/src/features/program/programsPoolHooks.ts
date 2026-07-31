@@ -5,6 +5,15 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import {
+  NO_MATCH_ID,
+  fetchLedgerPage,
+  managedRecordIds,
+  sanitizeOrValue,
+  userIdsByName,
+  type LedgerCondition,
+  type LedgerPage,
+} from '@/features/master/ledgerPage'
 import type { Program } from '@/features/program/hooks'
 import {
   useProgramWorkspace,
@@ -49,23 +58,8 @@ export function hasActiveProgramFilters(f: ProgramFilters): boolean {
   )
 }
 
-/** 어떤 사업도 만족시키지 않는 id(필터 결과가 공집합일 때의 표식). */
-const NO_MATCH_ID = '00000000-0000-0000-0000-000000000000'
-
-/**
- * PostgREST `.or()` 값에서 문법 제어문자(콤마·괄호)를 제거해 필터 파싱이 깨지지 않게 한다.
- */
-function sanitizeOrValue(v: string): string {
-  return v.replace(/[(),]/g, ' ').trim()
-}
-
-export interface ProgramPage {
-  rows: Program[]
-  /** 검색어·필터 반영 건수(페이지 수·No. 넘버링 기준). */
-  total: number
-  /** 미삭제 전체 건수(검색·필터 미적용). */
-  totalAll: number
-}
+/** 사업 목록 페이지. 다른 원장 목록과 동일 규약(rows + 건수 둘). */
+export type ProgramPage = LedgerPage<Program>
 
 /** 목록용 축약 select 문자열. 담당자·부서 임베드 테이블명·FK 힌트를 config로 조립한다. */
 function programListCols(config: ProgramWorkspaceConfig): string {
@@ -113,102 +107,88 @@ export function useProgramsPage(
     ],
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<ProgramPage> => {
-      const from = page * pageSize
-      const to = from + pageSize - 1
       const kw = sanitizeOrValue(keyword)
 
-      // '내 사업' 필터: 생성자(created_by=나) OR 담당자(담당자 원장.user_id=나).
-      // 담당 사업 id를 먼저 조회해 or 조건을 구성한다.
-      let mineOr: string | null = null
+      const scope: LedgerCondition[] = []
+      // '내 사업' 스코프: 생성자(created_by=나) OR 담당자(담당자 원장.user_id=나).
+      // 담당은 원장 밖에 있어 조인으로 걸 수 없으므로 담당 사업 id를 먼저 모은다.
       if (mineUserId) {
-        const { data: mgr } = await supabase
-          .from(config.tables.managers)
-          .select('program_id')
-          .eq('user_id', mineUserId)
-        const ids = ((mgr ?? []) as { program_id: string }[]).map((m) => m.program_id)
-        mineOr = ids.length
-          ? `created_by.eq.${mineUserId},id.in.(${ids.join(',')})`
-          : `created_by.eq.${mineUserId}`
+        const ids = await managedRecordIds(config.tables.managers, 'program_id', mineUserId)
+        const parts = [`created_by.eq.${mineUserId}`]
+        if (ids.length) parts.push(`id.in.(${ids.join(',')})`)
+        scope.push({ kind: 'or', expr: parts.join(',') })
+      }
+      // 사업구분은 스코프의 일부이므로 검색·필터와 별개로 항상 적용한다.
+      // '기타'는 미분류(null)까지 함께 담아 사각지대를 막는다.
+      if (category && includeUnclassified) {
+        scope.push({ kind: 'or', expr: `category.eq.${category},category.is.null` })
+      } else if (category) {
+        scope.push({ kind: 'eq', column: 'category', value: category })
       }
 
-      // 사업구분 스코프. '기타'는 미분류(null)까지 함께 담아 사각지대를 막는다.
-      const categoryOr = category
-        ? includeUnclassified
-          ? `category.eq.${category},category.is.null`
-          : null
-        : null
-
-      let q = supabase
-        .from(config.tables.programs)
-        .select(programListCols(config), { count: 'exact' })
-        .is('deleted_at', null)
-        .order('created_at', { ascending: false })
-        .range(from, to)
-
-      if (mineOr) q = q.or(mineOr)
-      // 카테고리 세분화 메뉴는 스코프의 일부이므로 검색·필터와 별개로 항상 적용한다.
-      if (categoryOr) q = q.or(categoryOr)
-      else if (category) q = q.eq('category', category)
-
+      const narrow: LedgerCondition[] = []
       // 검색: 프로그램명 + 생성자(이름 → created_by id 역조회).
       if (kw) {
-        const orParts = [`title.ilike.%${kw}%`]
-        const { data: matchedUsers } = await supabase
-          .from('users')
-          .select('id')
-          .ilike('name', `%${kw}%`)
-        const ids = ((matchedUsers ?? []) as { id: string }[]).map((u) => u.id)
-        if (ids.length) orParts.push(`created_by.in.(${ids.join(',')})`)
-        q = q.or(orParts.join(','))
+        const parts = [`title.ilike.%${kw}%`]
+        const userIds = await userIdsByName(kw)
+        if (userIds.length) parts.push(`created_by.in.(${userIds.join(',')})`)
+        narrow.push({ kind: 'or', expr: parts.join(',') })
       }
-
-      // 담당 부서: 계보 → (전 버전) 부서 id → 그 부서가 배정된 사업 id 순으로 좁힌다.
-      // 부서 구성은 사업 원장이 아니라 별도 원장에 있어 조인 조건으로 한 번에 걸 수 없다.
       if (filters.departmentLineages.length) {
-        const { data: deptRows } = await supabase
-          .from('departments')
-          .select('id')
-          .in('lineage_id', filters.departmentLineages)
-        const deptIds = ((deptRows ?? []) as { id: string }[]).map((d) => d.id)
-        let programIds: string[] = []
-        if (deptIds.length) {
-          const { data: assigned } = await supabase
-            .from(config.tables.departments)
-            .select('program_id')
-            .in('department_id', deptIds)
-          programIds = [
-            ...new Set(((assigned ?? []) as { program_id: string }[]).map((r) => r.program_id)),
-          ]
-        }
-        q = q.in('id', programIds.length ? programIds : [NO_MATCH_ID])
+        narrow.push({
+          kind: 'in',
+          column: 'id',
+          values: await programIdsByDepartment(config, filters.departmentLineages),
+        })
       }
+      if (filters.statuses.length)
+        narrow.push({ kind: 'in', column: 'status', values: filters.statuses })
+      if (filters.startFrom)
+        narrow.push({ kind: 'gte', column: 'start_date', value: filters.startFrom })
+      if (filters.startTo)
+        narrow.push({ kind: 'lte', column: 'start_date', value: filters.startTo })
 
-      if (filters.statuses.length) q = q.in('status', filters.statuses)
-      if (filters.startFrom) q = q.gte('start_date', filters.startFrom)
-      if (filters.startTo) q = q.lte('start_date', filters.startTo)
-
-      const { data, error, count } = await q
-      if (error) throw error
-      const total = count ?? 0
-
-      // 검색·필터가 하나도 없으면 반영 건수 == 전체 건수. 있을 때만 전체 건수를 별도 조회한다.
-      // (전체 건수도 '내 사업'·카테고리 스코프는 반영한다.)
-      let totalAll = total
-      if (kw || hasActiveProgramFilters(filters)) {
-        let allQ = supabase
-          .from(config.tables.programs)
-          .select('*', { count: 'exact', head: true })
-          .is('deleted_at', null)
-        if (mineOr) allQ = allQ.or(mineOr)
-        if (categoryOr) allQ = allQ.or(categoryOr)
-        else if (category) allQ = allQ.eq('category', category)
-        const { count: allCount } = await allQ
-        totalAll = allCount ?? total
-      }
-
-      return { rows: (data ?? []) as unknown as Program[], total, totalAll }
+      return fetchLedgerPage<Program>({
+        table: config.tables.programs,
+        select: programListCols(config),
+        // 사업 원장은 병합을 쓰지 않아 soft delete 컬럼 하나다(인덱스 부분 조건과 일치).
+        liveColumns: ['deleted_at'],
+        order: { column: 'created_at', ascending: false },
+        page,
+        pageSize,
+        scope,
+        narrow,
+      })
     },
   })
+}
+
+/**
+ * 담당 부서 필터를 사업 id 목록으로 환산한다.
+ * 계보 → (전 조직 버전의) 부서 id → 그 부서가 배정된 사업 id 순으로 좁힌다. 부서 구성은
+ * 사업 원장이 아니라 별도 원장에 있어 조인 조건으로 한 번에 걸 수 없다.
+ * 걸리는 사업이 없으면 공집합 표식을 돌려준다 — 빈 배열을 그대로 넘기면 조건이 사라져
+ * 필터를 걸었는데 전체가 나온다.
+ */
+async function programIdsByDepartment(
+  config: ProgramWorkspaceConfig,
+  lineages: string[],
+): Promise<string[]> {
+  const { data: deptRows } = await supabase
+    .from('departments')
+    .select('id')
+    .in('lineage_id', lineages)
+  const deptIds = ((deptRows ?? []) as { id: string }[]).map((d) => d.id)
+  if (!deptIds.length) return [NO_MATCH_ID]
+
+  const { data: assigned } = await supabase
+    .from(config.tables.departments)
+    .select('program_id')
+    .in('department_id', deptIds)
+  const programIds = [
+    ...new Set(((assigned ?? []) as { program_id: string }[]).map((r) => r.program_id)),
+  ]
+  return programIds.length ? programIds : [NO_MATCH_ID]
 }
 
 /** 프로그램 비활성화(소프트 삭제 — deleted_at 기록). */

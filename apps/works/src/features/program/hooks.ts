@@ -88,23 +88,6 @@ export function programCols(config: ProgramWorkspaceConfig): string {
   )
 }
 
-export function usePrograms() {
-  const config = useProgramWorkspace()
-  return useQuery({
-    queryKey: [config.key, 'programs'],
-    queryFn: async (): Promise<Program[]> => {
-      const { data, error } = await supabase
-        .from(config.tables.programs)
-        .select(programCols(config))
-        .is('deleted_at', null)
-        .order('created_at', { ascending: false })
-      if (error) throw error
-      // creator 임베드는 FK 힌트로 단일 객체가 오지만 타입 파서가 배열로 추론해 unknown 경유 캐스팅.
-      return (data ?? []) as unknown as Program[]
-    },
-  })
-}
-
 export function useProgram(id: string | undefined) {
   const config = useProgramWorkspace()
   return useQuery({

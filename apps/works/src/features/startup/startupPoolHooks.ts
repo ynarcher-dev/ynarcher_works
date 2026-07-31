@@ -6,6 +6,14 @@ import {
 } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { EntityRow } from '@/features/networks/hooks'
+import {
+  fetchLedgerPage,
+  managedRecordIds,
+  sanitizeOrValue,
+  userIdsByName,
+  type LedgerCondition,
+  type LedgerPage,
+} from '@/features/master/ledgerPage'
 import type { ManagementStatus } from '@/features/startup/startupClassification'
 
 /**
@@ -78,21 +86,8 @@ function foundedCutoff(years: number): string {
   return `${y}-${m}-${day}`
 }
 
-export interface StartupPoolPage {
-  rows: EntityRow[]
-  /** 검색어·필터 반영 건수(페이지 수·No. 넘버링 기준). */
-  total: number
-  /** 미삭제/미병합 전체 건수(검색·필터 미적용). */
-  totalAll: number
-}
-
-/**
- * PostgREST `.or()` 값에서 문법 제어문자(콤마·괄호)를 제거해 필터 파싱이 깨지지 않게 한다.
- * 기업 검색어는 사실상 콤마/괄호를 담지 않으므로 유실 영향은 없다.
- */
-function sanitizeOrValue(v: string): string {
-  return v.replace(/[(),]/g, ' ').trim()
-}
+/** 기업 목록 페이지. 다른 원장 목록과 동일 규약(rows + 건수 둘). */
+export type StartupPoolPage = LedgerPage<EntityRow>
 
 /**
  * 발굴기업 풀 전용 서버 사이드 페이지네이션 훅. NETWORKS 공용 useEntityPage와 달리
@@ -131,114 +126,90 @@ export function useStartupPoolPage(
     ],
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<StartupPoolPage> => {
-      const from = page * pageSize
-      const to = from + pageSize - 1
       const kw = sanitizeOrValue(keyword)
 
-      // '내 관리기업' 스코프: 생성자(created_by=나) OR 담당자(startup_managers.user_id=나).
-      // 담당 기업 id를 먼저 조회해 or 조건을 구성한다(AC useProgramsPage와 동일 패턴).
-      let mineOr: string | null = null
-      if (mineUserId) {
-        const { data: mgr } = await supabase
-          .from('startup_managers')
-          .select('startup_id')
-          .eq('user_id', mineUserId)
-        const ids = ((mgr ?? []) as { startup_id: string }[]).map((m) => m.startup_id)
-        mineOr = ids.length
-          ? `created_by.eq.${mineUserId},id.in.(${ids.join(',')})`
-          : `created_by.eq.${mineUserId}`
-      }
-
-      let q = supabase
-        .from('startups')
-        .select(
-          // creator = 생성자(생성자, created_by). managers = 담당자(투자기업 지정, startup_managers).
-          // 두 축은 별개 — 생성자 컬럼은 전 구분 공통, 담당자 컬럼은 투자 전용(비투자는 담당자 없음=공동관리).
-          '*, creator:users!created_by(id, name), managers:startup_managers(user_id, is_lead, user:users!startup_managers_user_id_fkey(id, name))',
-          { count: 'exact' },
-        )
-        .is('deleted_at', null)
-        .is('merged_into_id', null)
-        .order('name', { ascending: true })
-        .range(from, to)
-
+      const scope: LedgerCondition[] = []
       // 탭 고정 구분(있으면). 사용자 구분 필터는 탭 뷰에서 제거되어 category 로만 좁힌다.
-      if (category) q = q.eq('management_status', category)
-      if (mineOr) q = q.or(mineOr)
-
-      // 검색: 기업명·대표자·사업자번호 + 담당자(이름→users.id→startup_managers 역조회).
-      // 생성자는 검색 대상이 아니다 — 목록이 답해야 하는 것은 '지금 누가 관리하나'이고,
-      // 생성자는 아무 권한도 갖지 않는 축이라 열도 검색도 담당자 하나로 모은다.
-      if (kw) {
-        const orParts = [
-          `name.ilike.%${kw}%`,
-          `representative.ilike.%${kw}%`,
-          `biz_reg_no.ilike.%${kw}%`,
-        ]
-        // 이메일·연락처는 목록에서 공개된 경우에만 검색어가 닿는다(가려진 값은 조건에서 빠진다).
-        if (searchScope.email) orParts.push(`email.ilike.%${kw}%`)
-        if (searchScope.phone) orParts.push(`phone.ilike.%${kw}%`)
-        const { data: matchedUsers } = await supabase
-          .from('users')
-          .select('id')
-          .ilike('name', `%${kw}%`)
-        const userIds = ((matchedUsers ?? []) as { id: string }[]).map((u) => u.id)
-        if (userIds.length) {
-          const { data: mgr } = await supabase
-            .from('startup_managers')
-            .select('startup_id')
-            .in('user_id', userIds)
-          const startupIds = [
-            ...new Set(((mgr ?? []) as { startup_id: string }[]).map((m) => m.startup_id)),
-          ]
-          if (startupIds.length) orParts.push(`id.in.(${startupIds.join(',')})`)
-        }
-        q = q.or(orParts.join(','))
+      if (category) scope.push({ kind: 'eq', column: 'management_status', value: category })
+      // '내 관리기업' 스코프: 생성자(created_by=나) OR 담당자(startup_managers.user_id=나).
+      // 담당은 원장 밖에 있어 조인으로 걸 수 없으므로 담당 기업 id를 먼저 모은다.
+      if (mineUserId) {
+        const ids = await managedRecordIds('startup_managers', 'startup_id', mineUserId)
+        const parts = [`created_by.eq.${mineUserId}`]
+        if (ids.length) parts.push(`id.in.(${ids.join(',')})`)
+        scope.push({ kind: 'or', expr: parts.join(',') })
       }
 
-      // 복수 필터. 소재지/단계/구분/현황은 스칼라(in), 설립일은 범위.
+      const narrow: LedgerCondition[] = []
+      if (kw) narrow.push(await searchCondition(kw, searchScope))
       // 산업(industries)은 jsonb 배열이라 overlaps(&&) 불가 — 각 선택값의 포함(@>, cs)을 OR로 묶는다.
       if (filters.industries.length) {
-        const industryOr = filters.industries
-          .map((name) => `industries.cs.${JSON.stringify([name])}`)
-          .join(',')
-        q = q.or(industryOr)
+        narrow.push({
+          kind: 'or',
+          expr: filters.industries
+            .map((name) => `industries.cs.${JSON.stringify([name])}`)
+            .join(','),
+        })
       }
-      if (filters.locations.length) q = q.in('location', filters.locations)
-      if (filters.stages.length) q = q.in('stage', filters.stages)
-      if (filters.categories.length) q = q.in('management_status', filters.categories)
-      if (filters.statuses.length) q = q.in('pool_status', filters.statuses)
+      if (filters.locations.length)
+        narrow.push({ kind: 'in', column: 'location', values: filters.locations })
+      if (filters.stages.length)
+        narrow.push({ kind: 'in', column: 'stage', values: filters.stages })
+      if (filters.categories.length)
+        narrow.push({ kind: 'in', column: 'management_status', values: filters.categories })
+      if (filters.statuses.length)
+        narrow.push({ kind: 'in', column: 'pool_status', values: filters.statuses })
 
       // 업력(년차) 범위 → 설립일 경계. 최소 N년차 이상 = N년 전 또는 그 이전에 설립.
       // 최대 N년차 이하 = (N+1)년 전보다 나중에 설립(만 나이 N년 초과분 제외).
       const ageMin = Number.parseInt(filters.ageMin, 10)
       const ageMax = Number.parseInt(filters.ageMax, 10)
       if (Number.isFinite(ageMin) && filters.ageMin !== '')
-        q = q.lte('founded_on', foundedCutoff(ageMin))
+        narrow.push({ kind: 'lte', column: 'founded_on', value: foundedCutoff(ageMin) })
       if (Number.isFinite(ageMax) && filters.ageMax !== '')
-        q = q.gt('founded_on', foundedCutoff(ageMax + 1))
+        narrow.push({ kind: 'gt', column: 'founded_on', value: foundedCutoff(ageMax + 1) })
 
-      const { data, error, count } = await q
-      if (error) throw error
-      const total = count ?? 0
-
-      // 검색·필터가 하나도 없으면 반영 건수 == 전체 건수. 있을 때만 전체 건수를 별도 조회한다.
-      let totalAll = total
-      if (kw || hasActiveStartupFilters(filters)) {
-        let allQ = supabase
-          .from('startups')
-          .select('*', { count: 'exact', head: true })
-          .is('deleted_at', null)
-          .is('merged_into_id', null)
-        if (category) allQ = allQ.eq('management_status', category)
-        if (mineOr) allQ = allQ.or(mineOr)
-        const { count: allCount } = await allQ
-        totalAll = allCount ?? total
-      }
-
-      return { rows: (data ?? []) as EntityRow[], total, totalAll }
+      return fetchLedgerPage<EntityRow>({
+        table: 'startups',
+        // creator = 생성자(created_by). managers = 담당자(투자기업 지정, startup_managers).
+        // 두 축은 별개 — 생성자 컬럼은 전 구분 공통, 담당자 컬럼은 투자 전용(비투자는 담당자 없음=공동관리).
+        select:
+          '*, creator:users!created_by(id, name), managers:startup_managers(user_id, is_lead, user:users!startup_managers_user_id_fkey(id, name))',
+        liveColumns: ['deleted_at', 'merged_into_id'],
+        order: { column: 'name', ascending: true },
+        page,
+        pageSize,
+        scope,
+        narrow,
+      })
     },
   })
+}
+
+/**
+ * 검색어 조건: 기업명·대표자·사업자번호 + 담당자(이름→users.id→startup_managers 역조회).
+ * 생성자는 검색 대상이 아니다 — 목록이 답해야 하는 것은 '지금 누가 관리하나'이고,
+ * 생성자는 아무 권한도 갖지 않는 축이라 열도 검색도 담당자 하나로 모은다.
+ * 이메일·연락처는 목록에서 공개된 경우에만 검색어가 닿는다(가려진 값은 조건에서 빠진다).
+ */
+async function searchCondition(
+  kw: string,
+  searchScope: StartupSearchScope,
+): Promise<LedgerCondition> {
+  const parts = [`name.ilike.%${kw}%`, `representative.ilike.%${kw}%`, `biz_reg_no.ilike.%${kw}%`]
+  if (searchScope.email) parts.push(`email.ilike.%${kw}%`)
+  if (searchScope.phone) parts.push(`phone.ilike.%${kw}%`)
+
+  const userIds = await userIdsByName(kw)
+  if (userIds.length) {
+    const { data: mgr } = await supabase
+      .from('startup_managers')
+      .select('startup_id')
+      .in('user_id', userIds)
+    const startupIds = [...new Set(((mgr ?? []) as { startup_id: string }[]).map((m) => m.startup_id))]
+    if (startupIds.length) parts.push(`id.in.(${startupIds.join(',')})`)
+  }
+  return { kind: 'or', expr: parts.join(',') }
 }
 
 /** 스타트업 담당자 행(startup_managers + user 임베드). */

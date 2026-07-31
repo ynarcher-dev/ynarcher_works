@@ -1,5 +1,12 @@
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import {
+  fetchLedgerPage,
+  managedRecordIds,
+  sanitizeOrValue,
+  userIdsByName,
+  type LedgerCondition,
+  type LedgerPage,
+} from '@/features/master/ledgerPage'
 import { joinNames, memberSummary } from '@/lib/memberLabel'
 
 /**
@@ -226,26 +233,107 @@ export const EMPTY_FUND_FILTERS: FundListFilterState = {
   fundTypes: [],
 }
 
+/** 하나라도 활성 필터가 있는지. */
+export function hasActiveFundFilters(f: FundListFilterState): boolean {
+  return (
+    f.statuses.length > 0 ||
+    f.sources.length > 0 ||
+    f.characters.length > 0 ||
+    f.fundTypes.length > 0
+  )
+}
+
+/** 목록 표시 컬럼 + 담당자·생성자 임베드. */
+const FUND_LIST_SELECT =
+  'id, code, name, vintage_year, total_commitment, drawn_amount, status, source_type, character_type, strategy_type, fund_type, formed_on, term_start, term_end, paid_in_amount, created_by, manager_id, updated_at, manager:users!manager_id(id, name), creator:users!created_by(id, name), operators:fund_managers(user_id, role, is_lead, user:users!user_id(id, name))'
+
+/** 펀드 목록 페이지. 다른 원장 목록과 동일 규약(rows + 건수 둘). */
+export type FundListPage = LedgerPage<FundListRow>
+
 /**
- * 펀드 목록 조회. 펀드는 건수가 적어 서버 페이지네이션 없이 단건 조회하고,
- * 검색·필터·유형(탭)·내 펀드 스코프는 컨테이너(FundListTab)에서 클라이언트 측으로 적용한다.
- * 건수가 커지면 startupPoolHooks의 서버 페이지네이션 패턴으로 교체한다.
+ * '내 펀드' 스코프 조건. FUND의 담당자 축은 대표펀드매니저(funds.manager_id)와
+ * 운용·관리 인력(fund_managers) 둘이라 양쪽을 봐야 한다 — 대표만 보면 인력으로 배정된
+ * 사람의 목록에 그 펀드가 잡히지 않는다. 생성자(created_by)는 권한 축은 아니지만
+ * '내가 만든 것'을 찾는 자리라 다른 원장과 같이 함께 건다.
  */
-export function useFundList() {
+async function mineScope(userId: string): Promise<LedgerCondition> {
+  const ids = await managedRecordIds('fund_managers', 'fund_id', userId)
+  const parts = [`created_by.eq.${userId}`, `manager_id.eq.${userId}`]
+  if (ids.length) parts.push(`id.in.(${ids.join(',')})`)
+  return { kind: 'or', expr: parts.join(',') }
+}
+
+/** 검색어 조건: 펀드명·펀드코드·대표펀드매니저 이름. 이름은 users 역조회를 거친다. */
+async function searchCondition(keyword: string): Promise<LedgerCondition> {
+  const parts = [`name.ilike.%${keyword}%`, `code.ilike.%${keyword}%`]
+  const userIds = await userIdsByName(keyword)
+  if (userIds.length) parts.push(`manager_id.in.(${userIds.join(',')})`)
+  return { kind: 'or', expr: parts.join(',') }
+}
+
+/**
+ * 펀드 목록(서버 사이드 페이지네이션). 종전에는 funds 전량을 임베드까지 붙여 내려받고
+ * 검색·필터·스코프를 브라우저 메모리에서 걸었다 — '전체 펀드'가 열리면서 그 전량 로드가
+ * 기본 화면 중 하나가 되어 더는 둘 수 없었다. 조건을 전부 서버로 내려 다른 원장 목록과
+ * 같은 절차(fetchLedgerPage)를 쓴다.
+ */
+export function useFundListPage(
+  keyword: string,
+  filters: FundListFilterState,
+  page: number,
+  pageSize: number,
+  /** 구분(전략) 프리필터. AC/VC/PE 탭이 건다. */
+  strategy?: 'AC' | 'VC' | 'PE' | null,
+  /** 지정 시 생성자 또는 담당자가 이 사용자인 펀드만('내 펀드'). */
+  mineUserId?: string | null,
+) {
   return useQuery({
-    queryKey: ['fund', 'list', 'v2'],
-    queryFn: async (): Promise<FundListRow[]> => {
-      const { data, error } = await supabase
-        .from('funds')
-        .select(
-          'id, code, name, vintage_year, total_commitment, drawn_amount, status, source_type, character_type, strategy_type, fund_type, formed_on, term_start, term_end, paid_in_amount, created_by, manager_id, updated_at, manager:users!manager_id(id, name), creator:users!created_by(id, name), operators:fund_managers(user_id, role, is_lead, user:users!user_id(id, name))',
-        )
-        .is('deleted_at', null)
-        .order('vintage_year', { ascending: false, nullsFirst: false })
-      if (error) throw error
-      return ((data ?? []) as unknown[]).map((r) => {
-        const row = r as Record<string, unknown>
-        return {
+    queryKey: [
+      'fund',
+      'list',
+      'page',
+      keyword,
+      filters,
+      page,
+      pageSize,
+      strategy ?? null,
+      mineUserId ?? null,
+    ],
+    placeholderData: keepPreviousData,
+    queryFn: async (): Promise<FundListPage> => {
+      const kw = sanitizeOrValue(keyword)
+
+      const scope: LedgerCondition[] = []
+      // 구분 프리필터 — 미분류(null) 펀드는 AC/VC/PE 탭에서 제외된다.
+      if (strategy) scope.push({ kind: 'eq', column: 'strategy_type', value: strategy })
+      if (mineUserId) scope.push(await mineScope(mineUserId))
+
+      const narrow: LedgerCondition[] = []
+      if (kw) narrow.push(await searchCondition(kw))
+      if (filters.statuses.length)
+        narrow.push({ kind: 'in', column: 'status', values: filters.statuses })
+      if (filters.sources.length)
+        narrow.push({ kind: 'in', column: 'source_type', values: filters.sources })
+      if (filters.characters.length)
+        narrow.push({ kind: 'in', column: 'character_type', values: filters.characters })
+      if (filters.fundTypes.length)
+        narrow.push({ kind: 'in', column: 'fund_type', values: filters.fundTypes })
+
+      const raw = await fetchLedgerPage<Record<string, unknown>>({
+        table: 'funds',
+        select: FUND_LIST_SELECT,
+        // funds는 병합을 쓰지 않아 soft delete 컬럼 하나다(인덱스 부분 조건과 일치).
+        liveColumns: ['deleted_at'],
+        order: { column: 'vintage_year', ascending: false, nullsFirst: false },
+        page,
+        pageSize,
+        scope,
+        narrow,
+      })
+
+      return {
+        ...raw,
+        rows: raw.rows.map((row) => ({
           id: row.id as string,
           code: (row.code as string) ?? null,
           name: row.name as string,
@@ -267,8 +355,8 @@ export function useFundList() {
           manager: (row.manager as FundListRow['manager']) ?? null,
           creator: (row.creator as FundListRow['creator']) ?? null,
           operators: (row.operators as FundListRow['operators']) ?? [],
-        }
-      })
+        })),
+      }
     },
   })
 }
