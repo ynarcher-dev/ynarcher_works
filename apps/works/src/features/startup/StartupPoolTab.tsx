@@ -1,8 +1,9 @@
 import { ListToolbar, Spinner } from '@ynarcher/ui'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ListActions } from '@/components/ListActions'
 import { ENTITIES } from '@/features/networks/config'
+import { useMaskPolicy } from '@/features/admin/sensitiveStore'
 import { StartupPoolTable, type StartupPoolRow } from '@/features/startup/StartupPoolTable'
 import { StartupPoolFilters } from '@/features/startup/StartupPoolFilters'
 import {
@@ -47,6 +48,14 @@ export function StartupPoolTab({ category, mineUserId }: StartupPoolTabProps) {
     setSelected([])
   }, [keyword, filtersKey])
 
+  // 검색 가능 범위는 이 목록의 마스킹 정책이 정한다 — 가려진 필드는 검색어로도 잡지 않는다.
+  const contentKey = startupContentKey(category)
+  const masked = useMaskPolicy(contentKey)
+  const searchScope = useMemo(
+    () => ({ email: !masked.email, phone: !masked.phone }),
+    [masked.email, masked.phone],
+  )
+
   const { data, isLoading } = useStartupPoolPage(
     keyword,
     filters,
@@ -54,6 +63,7 @@ export function StartupPoolTab({ category, mineUserId }: StartupPoolTabProps) {
     PAGE_SIZE,
     category,
     mineUserId ?? null,
+    searchScope,
   )
 
   // 탭 전환 시 검색·필터·선택·페이지를 초기화한다(탭마다 다른 구분 뷰).
@@ -69,8 +79,12 @@ export function StartupPoolTab({ category, mineUserId }: StartupPoolTabProps) {
       <ListToolbar
         keyword={keyword}
         onKeywordChange={setKeyword}
-        searchPlaceholder="기업명·대표자·사업자번호·생성자 검색"
-        filters={<StartupPoolFilters filters={filters} onChange={setFilters} />}
+        // 검색되지 않는 필드를 안내에 적어 두면 "쳤는데 왜 안 나오나"가 되므로,
+        // 자리표시자도 실제 검색 범위(정책에 따라 늘고 준다)를 그대로 읽어 만든다.
+        searchPlaceholder={`${['기업명', '대표자', '사업자번호', '담당자', ...(searchScope.email ? ['이메일'] : []), ...(searchScope.phone ? ['연락처'] : [])].join('·')} 검색`}
+        filters={
+          <StartupPoolFilters filters={filters} onChange={setFilters} category={category} />
+        }
         actions={
           <ListActions
             createLabel={`${config.label} 등록`}
@@ -85,9 +99,7 @@ export function StartupPoolTab({ category, mineUserId }: StartupPoolTabProps) {
       ) : (
       <StartupPoolTable
         rows={(data?.rows ?? []) as StartupPoolRow[]}
-        // 구분 무관 목록('내 관리기업')은 undefined로 넘겨 담당자·구분 컬럼을 모두 노출한다.
-        tab={category ?? undefined}
-        contentKey={startupContentKey(category)}
+        contentKey={contentKey}
         selectedKeys={selected}
         onSelectionChange={setSelected}
         onRowClick={(row) => navigate(`/startup/discovered/${row.id}`)}

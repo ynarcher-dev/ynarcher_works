@@ -13,13 +13,15 @@ import type { ManagementStatus } from '@/features/startup/startupClassification'
  * 산업만 배열 컬럼(industries)이라 overlaps로, 나머지 스칼라는 in으로, 설립일은 범위로 건다.
  */
 export interface StartupPoolFilters {
+  /** 소재지(location, location_tags 태그명). */
+  locations: string[]
   /** 산업(industries 배열, 태그명) — 선택 중 하나라도 포함(overlaps). */
   industries: string[]
   /** 단계(stage). */
   stages: string[]
   /** 구분(management_status). */
   categories: string[]
-  /** 관리현황(pool_status). */
+  /** 관리현황(pool_status). 투자기업에서만 채워지므로 비투자 탭에서는 필터 자체를 내린다. */
   statuses: string[]
   /** 최소 업력(년차, 만 나이 기준). '' = 미적용. */
   ageMin: string
@@ -29,6 +31,7 @@ export interface StartupPoolFilters {
 
 /** 필터 초기값(전부 미적용). */
 export const EMPTY_STARTUP_FILTERS: StartupPoolFilters = {
+  locations: [],
   industries: [],
   stages: [],
   categories: [],
@@ -37,9 +40,24 @@ export const EMPTY_STARTUP_FILTERS: StartupPoolFilters = {
   ageMax: '',
 }
 
+/**
+ * 검색어를 걸어도 되는 민감 필드(이메일·연락처). 목록에서 가려지는 값은 검색어로도 잡지 않는다 —
+ * `d***@example.com`으로 보이는 값이 전체 주소로 검색되면, 화면이 가린 것을 검색창이 되짚어 주는
+ * 확인 도구가 되기 때문이다. 판단 근거는 화면과 동일한 마스킹 정책(useMaskPolicy)이다.
+ *
+ * 다만 이것은 **표시 일관성이지 보안 경계가 아니다** — 목록 조회는 행 전체를 그대로 내려받고
+ * 마스킹은 렌더 단계에서 걸리므로, 원본은 이미 클라이언트에 있다. 정책이 서버(정책 테이블 +
+ * RPC)로 옮겨갈 때 이 게이트도 함께 서버로 옮겨야 실제 통제가 된다.
+ */
+export interface StartupSearchScope {
+  email: boolean
+  phone: boolean
+}
+
 /** 하나라도 활성 필터가 있는지. */
 export function hasActiveStartupFilters(f: StartupPoolFilters): boolean {
   return (
+    f.locations.length > 0 ||
     f.industries.length > 0 ||
     f.stages.length > 0 ||
     f.categories.length > 0 ||
@@ -78,9 +96,10 @@ function sanitizeOrValue(v: string): string {
 
 /**
  * 발굴기업 풀 전용 서버 사이드 페이지네이션 훅. NETWORKS 공용 useEntityPage와 달리
- * 다중 필드 검색(기업명·대표자·사업자번호·생성자)과 복수 필터(산업·단계·구분·관리현황·설립일)를
- * 스타트업 스키마에 맞춰 처리한다. 생성자(생성자)는 created_by FK를, 담당자(투자 지정)는
- * startup_managers를 각각 임베드해 별개 컬럼으로 노출한다(두 축은 서로 다를 수 있음).
+ * 다중 필드 검색(기업명·대표자·사업자번호·담당자 + 공개 시 이메일·연락처)과
+ * 복수 필터(소재지·산업·단계·구분·관리현황·설립일)를
+ * 스타트업 스키마에 맞춰 처리한다. 담당자(투자 지정)는 startup_managers를 임베드해 컬럼으로 노출하고,
+ * 생성자(created_by)는 '내 관리기업' 조회 조건으로만 쓴다(표시·검색 대상은 아님).
  */
 export function useStartupPoolPage(
   keyword: string,
@@ -94,8 +113,11 @@ export function useStartupPoolPage(
    * 담당자는 투자기업 전용 개념이므로 생성자 축을 함께 봐야 발굴·보육·기타 기업도 잡힌다.
    */
   mineUserId?: string | null,
+  /** 검색 대상에 포함할 민감 필드. 마스킹 정책이 공개로 열린 필드만 켠다. */
+  searchScope: StartupSearchScope = { email: false, phone: false },
 ) {
   return useQuery({
+    // 정책이 바뀌면 같은 검색어라도 결과가 달라지므로 스코프도 캐시 키에 넣는다.
     queryKey: [
       'startups',
       'pool',
@@ -105,6 +127,7 @@ export function useStartupPoolPage(
       pageSize,
       category ?? null,
       mineUserId ?? null,
+      searchScope,
     ],
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<StartupPoolPage> => {
@@ -143,23 +166,37 @@ export function useStartupPoolPage(
       if (category) q = q.eq('management_status', category)
       if (mineOr) q = q.or(mineOr)
 
-      // 검색: 기업명·대표자·사업자번호 + 생성자(생성자 이름→created_by id 역조회).
+      // 검색: 기업명·대표자·사업자번호 + 담당자(이름→users.id→startup_managers 역조회).
+      // 생성자는 검색 대상이 아니다 — 목록이 답해야 하는 것은 '지금 누가 관리하나'이고,
+      // 생성자는 아무 권한도 갖지 않는 축이라 열도 검색도 담당자 하나로 모은다.
       if (kw) {
         const orParts = [
           `name.ilike.%${kw}%`,
           `representative.ilike.%${kw}%`,
           `biz_reg_no.ilike.%${kw}%`,
         ]
+        // 이메일·연락처는 목록에서 공개된 경우에만 검색어가 닿는다(가려진 값은 조건에서 빠진다).
+        if (searchScope.email) orParts.push(`email.ilike.%${kw}%`)
+        if (searchScope.phone) orParts.push(`phone.ilike.%${kw}%`)
         const { data: matchedUsers } = await supabase
           .from('users')
           .select('id')
           .ilike('name', `%${kw}%`)
-        const ids = ((matchedUsers ?? []) as { id: string }[]).map((u) => u.id)
-        if (ids.length) orParts.push(`created_by.in.(${ids.join(',')})`)
+        const userIds = ((matchedUsers ?? []) as { id: string }[]).map((u) => u.id)
+        if (userIds.length) {
+          const { data: mgr } = await supabase
+            .from('startup_managers')
+            .select('startup_id')
+            .in('user_id', userIds)
+          const startupIds = [
+            ...new Set(((mgr ?? []) as { startup_id: string }[]).map((m) => m.startup_id)),
+          ]
+          if (startupIds.length) orParts.push(`id.in.(${startupIds.join(',')})`)
+        }
         q = q.or(orParts.join(','))
       }
 
-      // 복수 필터. 단계/구분/현황은 스칼라(in), 설립일은 범위.
+      // 복수 필터. 소재지/단계/구분/현황은 스칼라(in), 설립일은 범위.
       // 산업(industries)은 jsonb 배열이라 overlaps(&&) 불가 — 각 선택값의 포함(@>, cs)을 OR로 묶는다.
       if (filters.industries.length) {
         const industryOr = filters.industries
@@ -167,6 +204,7 @@ export function useStartupPoolPage(
           .join(',')
         q = q.or(industryOr)
       }
+      if (filters.locations.length) q = q.in('location', filters.locations)
       if (filters.stages.length) q = q.in('stage', filters.stages)
       if (filters.categories.length) q = q.in('management_status', filters.categories)
       if (filters.statuses.length) q = q.in('pool_status', filters.statuses)

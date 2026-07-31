@@ -104,7 +104,8 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         { label: '기타기업', tab: 'etc' },
         // 대용량 업로드는 사이드바 항목이 아니라 목록 상단의 '대용량 업로드' 버튼으로 들어간다
         // (/startup/bulk). 메뉴로 두면 어느 원장으로 들어가는 업로드인지가 이름에 드러나지 않는다.
-        { label: '아처스캔', tab: 'archerscan', dividerBefore: true },
+        // 아처스캔은 화면이 준비되기 전까지 메뉴에서 내린다 — 눌러서 '준비 중'만 나오는 항목은
+        // 메뉴를 읽는 사람에게 있는 기능처럼 보인다. 라우팅(?tab=archerscan)은 그대로 살아 있다.
       ],
     },
   ],

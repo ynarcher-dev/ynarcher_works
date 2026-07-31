@@ -4,11 +4,7 @@ import { maskName } from '@/lib/mask'
 import { memberSummary } from '@/lib/memberLabel'
 import { useMaskPolicy } from '@/features/admin/sensitiveStore'
 import { formatFounded, readIndustries } from '@/features/startup/startupGrowth'
-import {
-  isInvested,
-  managementStatusLabel,
-  type ManagementStatus,
-} from '@/features/startup/startupClassification'
+import { isInvested, managementStatusLabel } from '@/features/startup/startupClassification'
 
 /**
  * 스타트업 풀(발굴·보육·투자) 목록 행. `startups` 테이블 스키마의 표시 컬럼 부분집합이다.
@@ -31,10 +27,8 @@ export interface StartupPoolRow {
   stage?: string | null
   /** 구분 코드: sourced/incubated/invested/other(startups.management_status). */
   management_status?: string | null
-  /** 현황: 풀 진행 상태(startups.pool_status). 투자기업에서만 유효. */
+  /** 현황: 풀 진행 상태(startups.pool_status). 투자기업에서만 채워진다(그 외는 '-'). */
   pool_status?: string | null
-  /** 발굴 경로(startups.discovery_source). */
-  discovery_source?: string | null
   updated_at?: string | null
   created_by?: string | null
   /** 생성자(생성자, created_by → users) FK 임베드. 전 구분 공통 생성자 컬럼의 원천. */
@@ -48,11 +42,6 @@ export interface StartupPoolRow {
 interface StartupPoolTableProps {
   rows: StartupPoolRow[]
   isLoading?: boolean
-  /**
-   * 소속 탭(구분 코드). 조건부 컬럼과 담당자 표시를 좌우한다. 생성자는 전 구분 공통.
-   * 미지정('내 기업 관리')은 구분이 섞인 뷰이며, 열 구성은 투자기업 탭과 동일하게 맞춘다.
-   */
-  tab?: ManagementStatus
   /**
    * 민감정보 정책 콘텐츠 키(ADMIN '민감정보 관리'). 이름 정책이 켜지면 외부 기업의 대표자명을 가린다
    * (담당자·생성자는 내부 임직원이라 대상 아님). 카탈로그: features/admin/sensitiveContents.ts
@@ -69,9 +58,12 @@ interface StartupPoolTableProps {
 
 /**
  * 스타트업 풀 관리 공용 데이터 테이블.
- * 컬럼: 체크박스·No.·기업명·대표자명·사업자등록번호·설립일·산업(뱃지 최대 3)·소재지·단계·구분·관리현황(투자·내 기업)·담당자·발굴 경로(발굴·보육·기타)·수정일.
+ * 컬럼: 체크박스·No.·기업명·대표자명·사업자등록번호·설립일·소재지·산업(뱃지 최대 3)·단계·구분·관리현황·담당자·수정일.
  * 좌측 선택/넘버링과 우측 표준 컬럼(수정일)은 공용 DataTable이 소유하고,
- * 본 컴포넌트는 그 사이의 도메인 컬럼(기업명~발굴 경로, 담당자)만 정의한다.
+ * 본 컴포넌트는 그 사이의 도메인 컬럼(기업명~담당자)만 정의한다.
+ * 열 구성은 탭(구분)과 무관하게 **투자기업 기준으로 하나로 통일**한다 — 탭마다 열이 달라지면
+ * 같은 원장을 보는데도 표가 다른 표처럼 읽히고, 탭을 옮길 때마다 눈이 열 위치를 다시 찾아야 한다.
+ * 그래서 관리현황(투자 전용 값)은 비투자 탭에서 '-'로 비고, 발굴 경로(자유 서술)는 상세 페이지에만 둔다.
  * 비활성화(삭제)는 목록이 아니라 상세 페이지에서 수행하므로 관리 컬럼(showManageColumn=false)은 두지 않는다.
  * 담당자 컬럼은 투자=지정 담당자·그 외=공동관리를 뜻한다(생성자 축은 목록에서 제외).
  */
@@ -89,7 +81,6 @@ function managerLabel(r: StartupPoolRow): string | null {
 
 export function StartupPoolTable({
   rows,
-  tab,
   contentKey,
   onRowClick,
   selectedKeys,
@@ -128,6 +119,13 @@ export function StartupPoolTable({
         render: (r) => (r.founded_on ? formatFounded(r.founded_on) : <span className="text-gray-400">-</span>),
       },
       {
+        // 소재지는 시·도 태그명 한 덩어리(짧고 값이 항상 하나)라 폭이 널뛰는 산업 뱃지 앞에 둔다.
+        key: 'location',
+        header: '소재지',
+        className: 'w-24',
+        render: (r) => r.location || <span className="text-gray-400">-</span>,
+      },
+      {
         key: 'industry',
         header: '산업',
         className: 'w-52',
@@ -147,13 +145,6 @@ export function StartupPoolTable({
         },
       },
       {
-        // 소재지는 시·도 태그명 한 덩어리라 산업 뒤(기업 프로필 블록 끝)에 둔다.
-        key: 'location',
-        header: '소재지',
-        className: 'w-24',
-        render: (r) => r.location || <span className="text-gray-400">-</span>,
-      },
-      {
         key: 'stage',
         header: '단계',
         className: 'w-24',
@@ -166,50 +157,35 @@ export function StartupPoolTable({
         render: (r) =>
           managementStatusLabel(r.management_status) || <span className="text-gray-400">-</span>,
       },
-    ]
-
-    // 관리현황(pool_status)은 투자기업에서만 유효 → 투자 탭(또는 전체 뷰)에서만 노출.
-    if (tab === undefined || tab === 'invested') {
-      cols.push({
+      {
+        // 관리현황(pool_status)은 투자기업에서만 채워지는 값이지만 열은 모든 탭에 둔다 —
+        // 비투자 탭에서는 '-'로 비며, 그 빈칸이 "아직 투자 전"이라는 정보 자체다.
         key: 'pool_status',
         header: '관리현황',
         className: 'w-24',
         render: (r) => r.pool_status || <span className="text-gray-400">-</span>,
-      })
-    }
-
-    // 발굴 경로는 구분이 확정된 비투자 탭(발굴·보육·기타)에서만 담당자 앞에 노출한다.
-    // '내 기업 관리'(tab 없음)는 구분이 섞여 있어 이 열이 대부분 비고, 투자기업 탭과 열 구성이
-    // 어긋나 보이므로 제외한다. 자유 서술이라 남는 폭을 흡수한다.
-    if (tab !== undefined && tab !== 'invested') {
-      cols.push({
-        key: 'discovery_source',
-        header: '발굴 경로',
-        className: 'min-w-[9rem]',
-        render: (r) => r.discovery_source || <span className="text-gray-400">-</span>,
-      })
-    }
-
-    // 담당자(관리 주체): 투자기업(관리현황 바로 뒤)은 지정 담당자(리드, 외 N),
-    // 그 외는 공동관리(쓰기 권한자 누구나) 텍스트. 생성자로 폴백하지 않으며 생성자는 우측 표준 컬럼에 별도 표시.
-    cols.push({
-      key: 'managers',
-      header: '담당자',
-      className: 'w-28',
-      render: (r) => {
-        if (isInvested(r.management_status)) {
-          // 담당자는 내부 임직원이라 마스킹하지 않는다.
-          const label = managerLabel(r)
-          return label ?? <span className="text-gray-400">미지정</span>
-        }
-        return '공동관리'
       },
-    })
+      {
+        // 담당자(관리 주체): 투자기업은 지정 담당자(리드, 외 N), 그 외는 공동관리(쓰기 권한자 누구나).
+        // 지정 담당자가 없어도 생성자로 폴백하지 않는다 — 두 축은 별개이고 생성자는 권한이 없다.
+        key: 'managers',
+        header: '담당자',
+        className: 'w-28',
+        render: (r) => {
+          if (isInvested(r.management_status)) {
+            // 담당자는 내부 임직원이라 마스킹하지 않는다.
+            const label = managerLabel(r)
+            return label ?? <span className="text-gray-400">미지정</span>
+          }
+          return '공동관리'
+        },
+      },
+    ]
 
     return cols
     // externalName은 masked.name에만 의존하므로 정책이 바뀔 때만 컬럼을 다시 만든다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, masked.name])
+  }, [masked.name])
 
   return (
     <DataTable
