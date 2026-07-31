@@ -40,6 +40,11 @@ export function MultiSelectFilter({
       open={open}
       onClose={() => setOpen(false)}
       align={align}
+      // 팝오버는 absolute라 폭이 트리거 버튼 크기로 수축한다 — min-w-40은 하한만 잡으므로
+      // 그보다 긴 선택지(부서 계보처럼 상위까지 붙는 이름)가 두세 줄로 접혔다. 내용 폭
+      // (w-max)으로 늘려 한 줄에 담고, 화면을 넘지 않도록 상한만 건다. 상한을 넘는 이름은
+      // 그때만 접힌다 — 잘라내면 어느 부서인지 읽을 수 없게 된다.
+      className="w-max max-w-[min(32rem,calc(100vw-2rem))]"
       trigger={
         <FilterButton
           active={selected.length > 0}
