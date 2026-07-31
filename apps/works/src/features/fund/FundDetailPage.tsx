@@ -193,7 +193,7 @@ export function FundDetailPage() {
                 label="펀드유형"
                 value={fund.fund_type ? FUND_TYPE_LABEL[fund.fund_type] ?? fund.fund_type : '-'}
               />
-              {/* 결성일은 존속기간 시작일과 중복이라 개요에선 생략(컬럼·보고서는 유지). */}
+              {/* 결성일은 존속기간 시작일과 같은 날이라 은퇴했다 — 묻지도 적지도 않는다(20260731240000). */}
               <Info label="존속기간" value={fundPeriod(fund.term_start ?? null, fund.term_end ?? null) ?? '-'} />
               <Info
                 label="운용기간"

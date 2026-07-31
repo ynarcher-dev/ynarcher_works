@@ -100,7 +100,8 @@ export const STARTUP_BULK_SPEC: BulkImportSpec = {
 
 /**
  * FUND — 펀드(조합) 원장(funds). 펀드코드는 DB 트리거가 부여하므로 열로 받지 않는다.
- * 결성연도(vintage_year)는 존속기간이 대체한 구 컬럼이라 받지 않는다(3_5_workspace_fund.md §2.1).
+ * 결성연도(vintage_year)·결성일(formed_on)은 존속기간이 대체한 구 컬럼이라 받지 않는다
+ * (3_5_workspace_fund.md §2.1, 20260731240000).
  */
 export const FUND_BULK_SPEC: BulkImportSpec = {
   noun: '펀드',
@@ -161,7 +162,7 @@ export const FUND_BULK_SPEC: BulkImportSpec = {
       aliases: ['status'],
       example: '운용 중',
     },
-    { header: '결성일', column: 'formed_on', kind: 'date', aliases: ['formed_on'], example: '2026-01-15' },
+    // 결성일(formed_on)은 존속기간 시작일과 같은 날이라 받지 않는다(20260731240000).
     { header: '존속기간 시작', column: 'term_start', kind: 'date', aliases: ['term_start'], example: '2026-01-15' },
     { header: '존속기간 종료', column: 'term_end', kind: 'date', aliases: ['term_end'], example: '2034-01-14' },
     {

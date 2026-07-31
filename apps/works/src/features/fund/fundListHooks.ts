@@ -188,7 +188,6 @@ export interface FundListRow {
   /** 펀드코드(6자리 영숫자 난수, 워크스페이스 전역 유니크). DB 트리거가 등록 시 부여한다. */
   code: string | null
   name: string
-  vintage_year: number | null
   total_commitment: number
   drawn_amount: number
   status: string
@@ -204,8 +203,7 @@ export interface FundListRow {
   character_type: string | null
   strategy_type: string | null
   fund_type: string | null
-  /** 결성일·존속기간·실출자금액(20260724110000 마이그레이션). */
-  formed_on: string | null
+  /** 존속기간·실출자금액(20260724110000). 결성일은 존속기간 시작일과 같은 날이라 은퇴했다(20260731240000). */
   term_start: string | null
   term_end: string | null
   paid_in_amount: number | null
@@ -244,8 +242,9 @@ export function hasActiveFundFilters(f: FundListFilterState): boolean {
 }
 
 /** 목록 표시 컬럼 + 담당자·생성자 임베드. */
+// 결성일(formed_on)·결성연도(vintage_year)는 존속기간이 대체해 목록이 읽지 않는다(20260731240000).
 const FUND_LIST_SELECT =
-  'id, code, name, vintage_year, total_commitment, drawn_amount, status, source_type, character_type, strategy_type, fund_type, formed_on, term_start, term_end, paid_in_amount, created_by, manager_id, updated_at, manager:users!manager_id(id, name), creator:users!created_by(id, name), operators:fund_managers(user_id, role, is_lead, user:users!user_id(id, name))'
+  'id, code, name, total_commitment, drawn_amount, status, source_type, character_type, strategy_type, fund_type, term_start, term_end, paid_in_amount, created_by, manager_id, updated_at, manager:users!manager_id(id, name), creator:users!created_by(id, name), operators:fund_managers(user_id, role, is_lead, user:users!user_id(id, name))'
 
 /** 펀드 목록 페이지. 다른 원장 목록과 동일 규약(rows + 건수 둘). */
 export type FundListPage = LedgerPage<FundListRow>
@@ -324,7 +323,10 @@ export function useFundListPage(
         select: FUND_LIST_SELECT,
         // funds는 병합을 쓰지 않아 soft delete 컬럼 하나다(인덱스 부분 조건과 일치).
         liveColumns: ['deleted_at'],
-        order: { column: 'vintage_year', ascending: false, nullsFirst: false },
+        // 존속기간 시작일 내림차순(최근 결성 순). 종전 기준이던 결성연도(vintage_year)는
+        // 존속기간이 대체한 구 컬럼이라 비어 있는 펀드가 많아 정렬이 서지 않았다.
+        // 20260731240000의 부분 인덱스와 같은 식이어야 한다.
+        order: { column: 'term_start', ascending: false, nullsFirst: false },
         page,
         pageSize,
         scope,
@@ -337,7 +339,6 @@ export function useFundListPage(
           id: row.id as string,
           code: (row.code as string) ?? null,
           name: row.name as string,
-          vintage_year: (row.vintage_year as number) ?? null,
           total_commitment: Number(row.total_commitment),
           drawn_amount: Number(row.drawn_amount),
           status: row.status as string,
@@ -345,7 +346,6 @@ export function useFundListPage(
           character_type: (row.character_type as string) ?? null,
           strategy_type: (row.strategy_type as string) ?? null,
           fund_type: (row.fund_type as string) ?? null,
-          formed_on: (row.formed_on as string) ?? null,
           term_start: (row.term_start as string) ?? null,
           term_end: (row.term_end as string) ?? null,
           paid_in_amount: row.paid_in_amount == null ? null : Number(row.paid_in_amount),

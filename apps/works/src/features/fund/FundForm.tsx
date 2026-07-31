@@ -99,7 +99,6 @@ export function FundForm({ fundId, initial, onCancel, onDone }: FundFormProps) {
   const [strategy, setStrategy] = useState(initial?.strategy_type ?? '')
   const [fundType, setFundType] = useState(initial?.fund_type ?? '')
   const [subscription, setSubscription] = useState(initial?.subscription_type ?? '')
-  const [formedOn, setFormedOn] = useState(d(initial?.formed_on))
   const [termStart, setTermStart] = useState(d(initial?.term_start))
   const [termEnd, setTermEnd] = useState(d(initial?.term_end))
   const [opStart, setOpStart] = useState(d(initial?.operation_start))
@@ -138,7 +137,6 @@ export function FundForm({ fundId, initial, onCancel, onDone }: FundFormProps) {
       fund_type: fundType || null,
       subscription_type: subscription || null,
       paid_in_amount: paidIn ? Number(paidIn) : null,
-      formed_on: formedOn || null,
       term_start: termStart || null,
       term_end: termEnd || null,
       operation_start: opStart || null,
@@ -220,10 +218,8 @@ export function FundForm({ fundId, initial, onCancel, onDone }: FundFormProps) {
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <div>
-              <Label>결성일</Label>
-              <Input type="date" value={formedOn} onChange={(e) => setFormedOn(e.target.value)} />
-            </div>
+            {/* 결성일은 묻지 않는다 — 존속기간 시작일과 같은 날이라 두 곳에 적게 하면
+                어긋났을 때 어느 쪽이 맞는지 판정할 근거가 없다(20260731240000). */}
             <div>
               <Label>존속기간 시작</Label>
               <Input type="date" value={termStart} onChange={(e) => setTermStart(e.target.value)} />
