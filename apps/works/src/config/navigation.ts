@@ -201,8 +201,8 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         // 결재·거래처 블록을 공간·회의 블록보다 앞에 둔다.
         { label: '전자결재', tab: 'approval', dividerBefore: true },
         { label: '거래처 정보', tab: 'clients' },
-        // 반출대장(물품 반출 기록)은 단독 블록으로 두고 위아래를 구분선으로 끊는다(골격만).
-        { label: '반출대장', tab: 'outbound', dividerBefore: true },
+        // 자산 반출대장(물품 반출 기록)은 단독 블록으로 두고 위아래를 구분선으로 끊는다(골격만).
+        { label: '자산 반출대장', tab: 'outbound', dividerBefore: true },
         // 공간·회의 블록. 회의록은 STARTUP에서 이관해 회의실 예약과 같은 블록에 묶는다.
         // 아래 고정 게시판 그룹 경계가 이 블록과 공지사항을 다시 나눈다.
         { label: '회의실 예약', tab: 'rooms', dividerBefore: true },

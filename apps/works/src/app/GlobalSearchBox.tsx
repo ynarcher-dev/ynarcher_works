@@ -3,16 +3,11 @@ import { Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUnifiedSearch } from '@/features/hub/hooks'
-
-/** 검색 결과 종류별 상세 경로. RLS가 걸러낸 결과만 내려오므로 별도 권한 분기는 두지 않는다. */
-function detailPath(kind: 'startup' | 'expert', id: string) {
-  return kind === 'startup' ? `/startup/discovered/${id}` : `/networks/exp/${id}`
-}
+import { GLOBAL_SEARCH_MIN_LENGTH } from '@/features/hub/globalSearch'
 
 /**
- * 상단바 전역 검색. 스타트업·전문가 원장을 이름으로 훑어 상세로 바로 보낸다.
- * OFFICE 통합검색 패널(UnifiedSearchPanel)과 동일한 쿼리를 쓰되, 어느 워크스페이스에서든
- * 화면 이동 없이 찾을 수 있게 상단바에 상주시킨다.
+ * 상단바 전역 검색. 데이터베이스 원장과 주요 워크스페이스 항목을 훑어 상세로 바로 보낸다.
+ * 민감정보는 각 목록 화면과 같은 정책으로 검색 범위를 줄이고, 결과 라벨도 같은 기준으로 가린다.
  */
 export function GlobalSearchBox() {
   const navigate = useNavigate()
@@ -29,11 +24,13 @@ export function GlobalSearchBox() {
   const { data, isFetching } = useUnifiedSearch(debounced)
   const results = data ?? []
   const showPanel = open && debounced.trim().length > 0
+  const showMinHint =
+    debounced.trim().length > 0 && debounced.trim().length < GLOBAL_SEARCH_MIN_LENGTH
 
-  const go = (kind: 'startup' | 'expert', id: string) => {
+  const go = (path: string) => {
     setOpen(false)
     setKeyword('')
-    navigate(detailPath(kind, id))
+    navigate(path)
   }
 
   return (
@@ -55,7 +52,7 @@ export function GlobalSearchBox() {
           setOpen(true)
         }}
         onFocus={() => setOpen(true)}
-        placeholder="스타트업·전문가 검색"
+        placeholder="DB·워크스페이스 검색"
         aria-label="전역 검색"
         icon={<Search aria-hidden className="size-4" />}
         className="h-ctl-card shadow-none"
@@ -65,19 +62,24 @@ export function GlobalSearchBox() {
           // 팝오버 패널 규격: radius.md · border-gray-300 · shadow.popover (5_component_spec_rules §1.1)
           className="absolute left-0 right-0 top-full z-dropdown mt-1.5 max-h-80 overflow-y-auto rounded-radius-md border border-gray-300 bg-white p-1 shadow-popover"
         >
-          {isFetching && results.length === 0 && (
+          {showMinHint && (
+            <p className="px-3 py-2 text-body text-gray-500">
+              {GLOBAL_SEARCH_MIN_LENGTH}글자 이상 입력하세요.
+            </p>
+          )}
+          {!showMinHint && isFetching && results.length === 0 && (
             <p className="flex items-center gap-2 px-3 py-2 text-body text-gray-500">
               <Spinner density="table" /> 검색 중
             </p>
           )}
-          {!isFetching && results.length === 0 && (
+          {!showMinHint && !isFetching && results.length === 0 && (
             <p className="px-3 py-2 text-body text-gray-500">검색 결과가 없습니다.</p>
           )}
-          {results.map((r) => (
+          {!showMinHint && results.map((r) => (
             <button
-              key={`${r.kind}-${r.id}`}
+              key={`${r.kind}-${r.id}-${r.path}`}
               type="button"
-              onClick={() => go(r.kind, r.id)}
+              onClick={() => go(r.path)}
               className={cn(
                 'flex w-full items-center justify-between gap-2 rounded-radius-md px-3 py-1.5 text-left',
                 'transition-colors duration-fast hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10',
@@ -89,9 +91,7 @@ export function GlobalSearchBox() {
                   <span className="block truncate text-caption text-gray-500">{r.detail}</span>
                 )}
               </span>
-              <Badge tone={r.kind === 'startup' ? 'info' : 'success'}>
-                {r.kind === 'startup' ? '스타트업' : '전문가'}
-              </Badge>
+              <Badge tone={r.tone}>{r.badge}</Badge>
             </button>
           ))}
         </div>

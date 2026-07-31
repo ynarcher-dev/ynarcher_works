@@ -186,11 +186,6 @@ export function MinutesDetail({ minuteId, currentUserId, onBack, onEdit }: Props
 
           {/* 본문 카드 */}
           <article className="overflow-hidden rounded-radius-lg border border-gray-300 bg-white shadow-soft">
-            <header className="px-6 py-4">
-              <h2 className="text-title-sm font-semibold text-gray-900">회의 내용</h2>
-            </header>
-            {/* 구분선은 카드 끝까지 닿지 않도록 본문과 같은 좌우 여백 안쪽으로 들인다. */}
-            <div className="mx-6 border-t border-gray-200" />
             <div className="px-6 py-6">
               {minute.body ? (
                 <RichTextViewer html={minute.body} />

@@ -1,5 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import { useAuthStore } from '@/auth/authStore'
+import { useSensitiveStore } from '@/features/admin/sensitiveStore'
+import {
+  fetchUnifiedSearch,
+  GLOBAL_SEARCH_MIN_LENGTH,
+  globalSearchPolicyKey,
+  type SearchResult,
+} from '@/features/hub/globalSearch'
 import { supabase } from '@/lib/supabase'
 
 /**
@@ -25,48 +33,17 @@ export function useMyHireDate() {
   })
 }
 
-export interface SearchResult {
-  id: string
-  name: string
-  kind: 'startup' | 'expert'
-  detail: string | null
-}
+export type { SearchResult } from '@/features/hub/globalSearch'
 
-/** 통합 키워드 검색(스타트업/전문가). RLS가 권한 교차 필터를 강제한다. */
+/** 통합 키워드 검색. RLS와 민감정보 표시 정책이 권한·검색 범위를 함께 줄인다. */
 export function useUnifiedSearch(keyword: string) {
+  const overrides = useSensitiveStore((s) => s.overrides)
+  const policyKey = useMemo(() => globalSearchPolicyKey(overrides), [overrides])
+
   return useQuery({
-    queryKey: ['hub', 'search', keyword],
-    enabled: keyword.trim().length >= 1,
-    queryFn: async (): Promise<SearchResult[]> => {
-      const like = `%${keyword.trim()}%`
-      const [s, e] = await Promise.all([
-        supabase
-          .from('startups')
-          .select('id, name, industry')
-          .ilike('name', like)
-          .is('deleted_at', null)
-          .limit(20),
-        supabase
-          .from('experts')
-          .select('id, name, affiliation')
-          .ilike('name', like)
-          .is('deleted_at', null)
-          .limit(20),
-      ])
-      const startups = (s.data ?? []).map((r) => ({
-        id: r.id as string,
-        name: r.name as string,
-        kind: 'startup' as const,
-        detail: (r.industry as string) ?? null,
-      }))
-      const experts = (e.data ?? []).map((r) => ({
-        id: r.id as string,
-        name: r.name as string,
-        kind: 'expert' as const,
-        detail: (r.affiliation as string) ?? null,
-      }))
-      return [...startups, ...experts]
-    },
+    queryKey: ['hub', 'search', keyword.trim(), policyKey],
+    enabled: keyword.trim().length >= GLOBAL_SEARCH_MIN_LENGTH,
+    queryFn: (): Promise<SearchResult[]> => fetchUnifiedSearch(keyword, overrides),
   })
 }
 
