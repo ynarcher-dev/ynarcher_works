@@ -62,7 +62,7 @@ export function OrgDirectorySections({ sections, onSelectMember }: OrgDirectoryS
         <section key={section.deptId} className="space-y-2 py-4 first:pt-0 last:pb-0">
           <h3 className="flex items-center gap-2">
             <span className={cardText.subhead}>{section.path}</span>
-            <span className={cardText.count}>{section.members.length}</span>
+            <span className={cardText.count}>[{section.members.length}]</span>
           </h3>
           <div className="flex flex-wrap gap-x-3 gap-y-1">
             {section.members.map((m) => (

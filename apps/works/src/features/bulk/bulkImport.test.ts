@@ -87,6 +87,76 @@ describe('parseBulkCsv', () => {
   })
 })
 
+/** 태그 원장에서 고르는 값과 jsonb 안쪽 항목을 함께 받는 명세(스타트업 형태). */
+const TAG_SPEC: BulkImportSpec = {
+  noun: '스타트업',
+  table: 'startups',
+  backTo: '/startup',
+  templateName: 't.csv',
+  guide: '',
+  invalidateKeys: [['startups']],
+  fields: [
+    { header: '기업명', column: 'name', required: true },
+    { header: '한 줄 소개', column: 'business_profile.oneLiner' },
+    { header: '강점', column: 'business_profile.competitiveEdge' },
+    {
+      header: '산업',
+      column: 'industries',
+      kind: 'tags',
+      tagTable: 'industry_tags',
+      max: 2,
+      mirrorColumn: 'industry',
+    },
+    { header: '단계', column: 'stage', kind: 'tag', tagTable: 'investment_stage_tags' },
+    { header: '연락처', column: 'phone', kind: 'phone' },
+  ],
+}
+
+const TAGS = { industry_tags: ['SaaS', '핀테크', '바이오'], investment_stage_tags: ['Seed', 'Series A'] }
+
+describe('parseBulkCsv — 태그·배열·중첩 컬럼', () => {
+  it('태그 원장에 있는 이름만 받는다(오타는 조용히 저장되지 않는다)', () => {
+    const csv = ['기업명,단계', 'A사,Seed', 'B사,씨드'].join('\n')
+    const { rows, errors } = parseBulkCsv(csv, TAG_SPEC, TAGS)
+    expect(rows).toEqual([{ name: 'A사', stage: 'Seed' }])
+    expect(errors.map((e) => e.line)).toEqual([3])
+    expect(errors[0]?.message).toContain('ADMIN 태그 관리')
+  })
+
+  it('산업은 세미콜론으로 나눠 배열로 넣고 대표값을 스칼라에 미러링한다', () => {
+    const { rows, errors } = parseBulkCsv(['기업명,산업', 'A사,SaaS;핀테크'].join('\n'), TAG_SPEC, TAGS)
+    expect(errors).toEqual([])
+    expect(rows[0]).toEqual({ name: 'A사', industries: ['SaaS', '핀테크'], industry: 'SaaS' })
+  })
+
+  it('다중 태그 상한을 넘으면 그 줄을 돌려보낸다', () => {
+    const csv = ['기업명,산업', 'A사,SaaS;핀테크;바이오'].join('\n')
+    const { rows, errors } = parseBulkCsv(csv, TAG_SPEC, TAGS)
+    expect(rows).toEqual([])
+    expect(errors[0]?.message).toContain('최대 2개')
+  })
+
+  it('점 표기 열들은 한 jsonb 컬럼으로 모인다(뒤 열이 앞 열을 덮지 않는다)', () => {
+    const csv = ['기업명,한 줄 소개,강점', 'A사,한 줄,우리 강점'].join('\n')
+    const { rows } = parseBulkCsv(csv, TAG_SPEC, TAGS)
+    expect(rows[0]).toEqual({
+      name: 'A사',
+      business_profile: { oneLiner: '한 줄', competitiveEdge: '우리 강점' },
+    })
+  })
+
+  it('연락처는 표기를 걷어내고 숫자만 저장한다', () => {
+    const { rows } = parseBulkCsv(['기업명,연락처', 'A사,010-1234-5678'].join('\n'), TAG_SPEC, TAGS)
+    expect(rows[0]).toEqual({ name: 'A사', phone: '01012345678' })
+  })
+
+  it('태그 원장을 못 읽었으면 그 열은 검증하지 않는다(빈 스냅숏으로 전부 막지 않는다)', () => {
+    const { rows, errors } = parseBulkCsv(['기업명,단계', 'A사,씨드'].join('\n'), TAG_SPEC, {})
+    expect(errors).toEqual([])
+    expect(rows[0]).toEqual({ name: 'A사', stage: '씨드' })
+  })
+})
+
 describe('buildTemplateCsv', () => {
   it('헤더 순서와 예시 한 줄을 내보내고 콤마가 든 예시는 따옴표로 감싼다', () => {
     const spec = {

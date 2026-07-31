@@ -67,20 +67,20 @@ export interface EntityConfig {
 
 /** NETWORKS 마스터 엔티티 정의(등록 폼·목록 컬럼 공통 원천). */
 export const ENTITIES: Record<EntityKey, EntityConfig> = {
+  /**
+   * 스타트업은 NETWORKS 마스터의 한 종류였던 시절의 잔재다. 지금 업무 화면·등록 폼·업로드는 모두
+   * STARTUP 워크스페이스가 소유하며(StartupDetailForm / features/bulk), 이 엔트리는 라벨만 쓰인다
+   * (미분류 흡수 판정 `resolveEntityFromCategory`가 '스타트업' 라벨을 만났을 때).
+   *
+   * 여기에 필드 목록을 두면 안 된다 — 실제로 쓰이지 않으면서 STARTUP의 현행 항목(산업은 배열
+   * `industries`, 구분은 4분류 코드)과 어긋난 옛 정의가 정본처럼 남는다. `ENTITY_ORDER`에
+   * 없으므로 목록·폼·임포터 어디서도 이 fields를 읽지 않는다.
+   */
   startups: {
     key: 'startups',
     label: '스타트업',
     table: 'startups',
-    fields: [
-      { name: 'name', label: '기업명', required: true },
-      { name: 'biz_reg_no', label: '사업자등록번호' },
-      { name: 'representative', label: '대표자' },
-      // 산업/단계/구분/현황은 ADMIN 태그 관리 원장에서 선택한다(자유 입력 아님).
-      { name: 'industry', label: '산업', tagTable: 'industry_tags' },
-      { name: 'stage', label: '단계', tagTable: 'investment_stage_tags' },
-      { name: 'management_status', label: '구분', tagTable: 'company_category_tags' },
-      { name: 'pool_status', label: '현황', tagTable: 'company_status_tags' },
-    ],
+    fields: [],
   },
   experts: {
     key: 'experts',

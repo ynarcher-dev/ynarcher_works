@@ -25,7 +25,7 @@ export function OrgScopeHeading({ names, count }: OrgScopeHeadingProps) {
         )}
         {leaf}
       </span>
-      <span className={cardText.count}>{count}</span>
+      <span className={cardText.count}>[{count}]</span>
     </h2>
   )
 }

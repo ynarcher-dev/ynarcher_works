@@ -12,6 +12,7 @@ import {
 export const BULK_HEADERS = [
   'name',
   'category',
+  'expertise',
   'affiliation',
   'department',
   'position',
@@ -26,6 +27,7 @@ export const BULK_HEADERS = [
 const HEADER_ALIASES: Record<string, string> = {
   이름: 'name', 성명: 'name', name: 'name',
   구분: 'category', category: 'category',
+  분야: 'expertise', 전문분야: 'expertise', 전문영역: 'expertise', expertise: 'expertise',
   회사: 'affiliation', 회사명: 'affiliation', 소속: 'affiliation', affiliation: 'affiliation', company: 'affiliation',
   부서: 'department', 부서명: 'department', department: 'department',
   직함: 'position', 직책: 'position', 직급: 'position', position: 'position', title: 'position',
@@ -44,6 +46,19 @@ export interface ParsedRow {
   phone: string
   /** CSV의 '구분' 원값(비어 있을 수 있음). */
   category: string
+  /**
+   * 분야(expertise) — 세미콜론·슬래시로 나눈 태그명. 프로필형 4종의 목록 열이자 필터 축이라,
+   * 비운 채 등록하면 그 인물만 분야 필터에 걸리지 않는다(등록 폼은 태그에서 고르게 한다).
+   */
+  expertise: string[]
+}
+
+/** 다중 값 열 구분자 — 콤마는 CSV 구분자와 겹쳐 따옴표가 필요하므로 세미콜론·슬래시도 받는다. */
+function splitMulti(raw: string): string[] {
+  return raw
+    .split(/[,;/|]/)
+    .map((v) => v.trim())
+    .filter(Boolean)
 }
 
 /** CSV 텍스트를 표준 필드로 매핑해 파싱한다(헤더 별칭 자동 인식). */
@@ -69,16 +84,17 @@ export function parseBulkCsv(text: string): ParsedRow[] {
       email: at(cells, 'email'),
       phone: at(cells, 'phone'),
       category: at(cells, 'category'),
+      expertise: splitMulti(at(cells, 'expertise')),
     }
   })
 }
 
-/** 다운로드용 템플릿 CSV(헤더 + 예시 2행). 구분은 비워도 됨을 예시로 보인다. */
+/** 다운로드용 템플릿 CSV(헤더 + 예시 2행). 구분·분야는 비워도 됨을 예시로 보인다. */
 export function buildTemplateCsv(): string {
   return [
     BULK_HEADERS.join(','),
-    '홍길동,전문가,와이앤아처,전략실,대표,hong@example.com,010-1234-5678',
-    '김미분,,수집처 회사명,,팀장,kim@example.com,010-0000-0000',
+    '홍길동,전문가,투자;마케팅,와이앤아처,전략실,대표,hong@example.com,010-1234-5678',
+    '김미분,,,수집처 회사명,,팀장,kim@example.com,010-0000-0000',
   ].join('\n')
 }
 
@@ -288,6 +304,8 @@ export async function findExistingMatches(
  * - 소속·부서·직책은 '신규를 현재로 승격' — 새 값이 있고 기존과 다르면 덮어쓴다.
  *   덮인 직전 조합은 원장 트리거(app.track_affiliation_history)가 profile.affiliation_history에
  *   보존하므로, 여기서 이력을 직접 만들지 않는다(트리거가 배열의 단일 소유자).
+ * - 분야(expertise)는 비파괴 — 기존에 지정된 분야가 있으면 파일 값으로 덮지 않는다.
+ *   상세 화면에서 고른 분야가 명함 한 장 때문에 밀려나면 안 된다.
  */
 export function buildEnrichment(
   existing: ExistingRef,
@@ -298,6 +316,7 @@ export function buildEnrichment(
   let profChanged = false
   if (!existing.email && row.email) patch.email = row.email
   if (!existing.phone && row.phone) patch.phone = row.phone.replace(/\D/g, '')
+  if (existing.expertise.length === 0 && row.expertise.length > 0) patch.expertise = row.expertise
   if (row.affiliation && row.affiliation !== (existing.affiliation ?? '')) {
     patch.affiliation = row.affiliation
   }
@@ -356,7 +375,7 @@ export function buildReclassifyValues(
     email: (patch.email as string) ?? existing.email ?? null,
     phone: (patch.phone as string) ?? existing.phone ?? null,
     affiliation: nextAffiliation,
-    expertise: existing.expertise,
+    expertise: (patch.expertise as string[]) ?? existing.expertise,
     profile,
   }
 }
@@ -375,7 +394,8 @@ export function rowToPayload(
       email: row.email || null,
       phone: row.phone.replace(/\D/g, '') || null,
       affiliation: row.affiliation || null,
-      expertise: [],
+      // 조직형(축약) 4종은 분야를 쓰지 않는다 — 폼·상세에서도 감춰 두는 축이라 값을 만들지 않는다.
+      expertise: compact ? [] : row.expertise,
       profile: {
         department: row.department || null,
         position: row.position || null,

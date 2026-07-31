@@ -1,7 +1,8 @@
 import { Badge, Banner, Button, cn, Modal, Select, useToast } from '@ynarcher/ui'
 import { useQueryClient } from '@tanstack/react-query'
-import { useState, type DragEvent } from 'react'
+import { useMemo, useState, type DragEvent } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useTags } from '@/features/admin/hooks'
 import {
   CATEGORY_OPTIONS,
   ENTITIES,
@@ -56,6 +57,15 @@ export function BulkUploadPanel() {
   const [dragging, setDragging] = useState(false)
   const [checking, setChecking] = useState(false)
   const [busy, setBusy] = useState(false)
+  // 분야는 ADMIN 분야 관리(field_tags)에서 고르는 값이다. 파일의 값은 그대로 저장하되,
+  // 원장에 없는 이름은 목록 필터에 걸리지 않으므로 올리기 전에 드러낸다(조용히 버리지 않는다).
+  const { data: fieldTags } = useTags('field_tags')
+  const unknownFields = useMemo(() => {
+    const known = new Set((fieldTags ?? []).map((t) => t.name))
+    const out = new Set<string>()
+    for (const r of rows) for (const f of r.expertise) if (!known.has(f)) out.add(f)
+    return [...out]
+  }, [rows, fieldTags])
 
   const loadFile = async (file: File) => {
     const text = await file.text()
@@ -302,6 +312,13 @@ export function BulkUploadPanel() {
             <Banner tone="warning">
               동일한 내용의 파일이 <b>{priorUpload.created_at.slice(0, 10)}</b>에 이미 업로드된 이력이
               있습니다{priorUpload.filename ? ` (${priorUpload.filename})` : ''}. 중복 업로드가 아닌지 확인하세요.
+            </Banner>
+          )}
+
+          {unknownFields.length > 0 && (
+            <Banner tone="warning">
+              ADMIN 분야 관리에 없는 분야가 있습니다 — <b>{unknownFields.join(', ')}</b>. 이대로 올리면
+              값은 저장되지만 목록의 분야 필터에는 걸리지 않습니다. 필요하면 먼저 분야를 등록하세요.
             </Banner>
           )}
 

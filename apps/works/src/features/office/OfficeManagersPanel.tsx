@@ -1,7 +1,6 @@
 import { ListToolbar, PageHeader, Spinner } from '@ynarcher/ui'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { activeOrgVersionId, useOrgVersions } from '@/features/management/hooks'
-import { OrgVersionBar } from '@/features/management/panels/OrgVersionBar'
 import { OrgDirectory } from '@/features/management/panels/OrgDirectory'
 
 /**
@@ -11,21 +10,18 @@ import { OrgDirectory } from '@/features/management/panels/OrgDirectory'
  * 사람을 찾는 실제 경로는 대개 조직이므로, 목록 자리에는 조직 트리와 그 조직의 인물 카드를 두고
  * 카드를 누르면 임직원 상세로 간다. 그래서 부서 정보와 임직원 정보를 한 메뉴로 합쳤다.
  *
+ * 보이는 조직은 언제나 **현재 조직(오늘의 유효 버전)** 하나다. 전사에서 사람을 찾는 화면이
+ * 답해야 하는 질문은 "지금 누가 어디 있나"이고, 과거·예정 조직까지 고를 수 있게 하면 지금 보는
+ * 배치가 현재인지 되짚어야 한다. 조직 개편 전후를 비교하는 일은 MANAGEMENT 조직 관리의 몫이다.
+ *
  * 원장과 쓰기 권한은 MANAGEMENT(인사·조직 관리)가 갖는다. 여기엔 편집 진입점을 두지 않으며,
  * 권한 강제는 서버(RLS/RPC)가 담당한다.
- *
- * 검색과 조직 운영 기간(버전) 선택은 한 줄에 나란히 둔다 — 둘 다 "무엇을 보여줄지"를 정하는
- * 같은 층의 조건이라, 위아래로 나누면 기간 선택이 화면의 결과물처럼 읽힌다.
  */
 export function OfficeManagersPanel() {
   const { data: versionRows, isLoading: versionLoading } = useOrgVersions()
   const versions = useMemo(() => versionRows ?? [], [versionRows])
-  const activeVersionId = useMemo(() => activeOrgVersionId(versions), [versions])
-
-  const [versionId, setVersionId] = useState('')
-  useEffect(() => {
-    if (!versionId && versions.length) setVersionId(activeVersionId ?? versions[0]!.id)
-  }, [versions, activeVersionId, versionId])
+  // 현재 조직 = 오늘의 유효 버전. 공백 구간이면 직전 버전을 유지한다(activeOrgVersionId 규칙).
+  const versionId = useMemo(() => activeOrgVersionId(versions), [versions])
 
   const [keyword, setKeyword] = useState('')
 
@@ -33,7 +29,13 @@ export function OfficeManagersPanel() {
     return (
       <div className="space-y-5">
         <PageHeader title="임직원 정보" />
-        <Spinner />
+        {versionLoading || !versionRows ? (
+          <Spinner />
+        ) : (
+          <p className="py-10 text-center text-body text-gray-500">
+            발행된 조직 버전이 없습니다. 조직관리에서 조직 버전을 발행하세요.
+          </p>
+        )}
       </div>
     )
   }
@@ -45,15 +47,6 @@ export function OfficeManagersPanel() {
         keyword={keyword}
         onKeywordChange={setKeyword}
         searchPlaceholder="이름, 직급·직책, 소속 검색"
-        filters={
-          <OrgVersionBar
-            versions={versions}
-            selectedId={versionId}
-            activeId={activeVersionId}
-            onSelect={setVersionId}
-            showClone={false}
-          />
-        }
       />
       <OrgDirectory versionId={versionId} keyword={keyword} detailBasePath="/office/managers" />
     </div>

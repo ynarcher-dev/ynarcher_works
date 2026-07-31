@@ -8,7 +8,7 @@
 --       해당 테이블 도입 시 케이스를 실제 테이블 접근으로 승격한다.
 -- =====================================================================
 begin;
-select plan(24);
+select plan(27);
 
 -- 픽스처: 테스트 계정 10종 + 데이터 (슈퍼유저로 삽입, 트랜잭션 종료 시 롤백) ----
 insert into public.startups(id, name) values
@@ -207,6 +207,32 @@ select is(
   4,
   '케이스12d: 코드 부여 트리거가 사업 3종·펀드에 모두 붙어 있다'
 );
+
+-- 케이스 13: 투자기업은 등록(INSERT)으로 만들 수 없다 --------------------------
+-- 근거: 20260731180000_startups_invested_insert_guard.sql
+--   승격 게이트(promote_to_invested)는 UPDATE 경로에만 걸려 있어, 처음부터 invested 로 넣으면
+--   자사 투자 집행 근거 없이 투자기업이 생긴다. 대용량 업로드가 그 경로를 실제로 연다.
+reset role;
+set local role authenticated;
+select set_config('request.jwt.claims', '{"app_user_id":"00000000-0000-0000-0000-0000000000e4","session_version":1}', true);
+select throws_ok(
+  $$ insert into public.startups(name, management_status) values ('우회투자사', 'invested') $$,
+  '42501',
+  null,
+  '케이스13a: startup 쓰기 권한자도 invested 로 직접 등록할 수 없다'
+);
+select lives_ok(
+  $$ insert into public.startups(name, management_status) values ('정상발굴사', 'sourced') $$,
+  '케이스13b: 같은 사용자의 일반 등록(sourced)은 그대로 통과한다'
+);
+reset role;
+set local role authenticated;
+select set_config('request.jwt.claims', '{"app_user_id":"00000000-0000-0000-0000-0000000000e1","session_version":1}', true);
+select lives_ok(
+  $$ insert into public.startups(name, management_status) values ('관리자수습사', 'invested') $$,
+  '케이스13c: 관리자는 오등록 수습을 위한 브레이크글라스로 남는다'
+);
+reset role;
 
 select * from finish();
 rollback;
