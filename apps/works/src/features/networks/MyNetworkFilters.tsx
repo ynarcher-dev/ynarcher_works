@@ -22,14 +22,16 @@ interface MyNetworkFiltersProps {
  */
 export function MyNetworkFilters({ filters, onChange }: MyNetworkFiltersProps) {
   // 선택지는 디렉토리 정의에서 파생한다(원장이 늘어도 이 파일은 손대지 않는다).
-  // 글로벌은 EntityKey 밖의 단일 원장이라 뒤에 따로 붙인다.
+  // 순서는 사이드바와 같다 — 분류 카테고리 → 글로벌(EntityKey 밖의 단일 원장) → 미분류.
+  // 미분류는 카테고리가 아니라 분류 전 임시 저장소이므로 맨 아래에 둔다.
   const entityOptions = useMemo(
     () => [
-      ...DIRECTORY_ENTITIES.map((key) => ({
+      ...DIRECTORY_ENTITIES.filter((key) => key !== 'others').map((key) => ({
         value: key,
-        label: key === 'others' ? '미분류' : `${ENTITIES[key].label} 네트워크`,
+        label: `${ENTITIES[key].label} 네트워크`,
       })),
       { value: GLOBAL_ENTITY_KEY, label: '글로벌 네트워크' },
+      { value: 'others', label: '미분류' },
     ],
     [],
   )

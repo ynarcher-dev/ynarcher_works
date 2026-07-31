@@ -17,7 +17,7 @@ const PAGE_SIZE = 20
 interface FundListTabProps {
   /** 구분(전략) 프리필터. 지정 시 해당 구분 펀드만(구분 탭이 대시보드 테이블을 상속). */
   strategy?: 'AC' | 'VC' | 'PE' | null
-  /** 지정 시 생성자 또는 대표펀드매니저가 이 사용자인 펀드만('내 펀드'). */
+  /** 지정 시 생성자 또는 담당자(대표펀드매니저·운용/관리 인력)가 이 사용자인 펀드만('내 펀드'). */
   mineUserId?: string | null
 }
 
@@ -54,7 +54,16 @@ export function FundListTab({ strategy, mineUserId }: FundListTabProps) {
       out = out.filter((f) => !!f.fund_type && filters.fundTypes.includes(f.fund_type))
     // 구분(strategy_type) 프리필터 — 미분류(null) 펀드는 AC/VC/PE 탭에서 제외된다.
     if (strategy) out = out.filter((f) => f.strategy_type === strategy)
-    if (mineUserId) out = out.filter((f) => f.created_by === mineUserId || f.manager_id === mineUserId)
+    // '내 펀드' 스코프 = 생성자 OR 담당자. FUND의 담당자는 대표펀드매니저(funds.manager_id)와
+    // 운용/관리 인력(fund_managers) 두 축이라 둘 다 봐야 한다 — 대표만 보면 인력으로 배정된
+    // 사람의 목록에 그 펀드가 잡히지 않는다. operators는 목록 조회가 이미 임베드해 온다.
+    if (mineUserId)
+      out = out.filter(
+        (f) =>
+          f.created_by === mineUserId ||
+          f.manager_id === mineUserId ||
+          f.operators.some((o) => o.user_id === mineUserId),
+      )
     return out
   }, [data, keyword, filters, strategy, mineUserId])
 

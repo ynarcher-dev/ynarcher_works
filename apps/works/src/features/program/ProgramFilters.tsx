@@ -1,4 +1,4 @@
-import { Input, MultiSelectFilter } from '@ynarcher/ui'
+import { DateRangeFilter, MultiSelectFilter } from '@ynarcher/ui'
 import { useMemo } from 'react'
 import { useDepartmentOptions } from '@/features/management/departmentOptions'
 import { PROGRAM_STATUS_LABEL, PROGRAM_STATUS_OPTIONS } from '@/features/program/config'
@@ -20,7 +20,7 @@ const STATUS_OPTIONS = PROGRAM_STATUS_OPTIONS.map((value) => ({
 }))
 
 /**
- * 프로그램 목록 복수 필터 바: 상태(다중선택) + 담당 부서(다중선택) + 시작일 범위(From~To).
+ * 프로그램 목록 복수 필터 바: 상태(다중선택) + 담당 부서(다중선택) + 시작일 범위(부터·까지).
  * 상태는 상위(AcWorkspaceTab)가 소유하며, 본 컴포넌트는 표시·변경만 담당한다.
  */
 export function ProgramFilters({ filters, onChange }: ProgramFiltersProps) {
@@ -49,23 +49,12 @@ export function ProgramFilters({ filters, onChange }: ProgramFiltersProps) {
         onChange={(departmentLineages) => onChange({ ...filters, departmentLineages })}
       />
 
-      <div className="w-40">
-        <Input
-          type="date"
-          aria-label="시작일(부터)"
-          value={filters.startFrom}
-          onChange={(e) => onChange({ ...filters, startFrom: e.target.value })}
-        />
-      </div>
-      <span className="text-caption text-gray-400">~</span>
-      <div className="w-40">
-        <Input
-          type="date"
-          aria-label="시작일(까지)"
-          value={filters.startTo}
-          onChange={(e) => onChange({ ...filters, startTo: e.target.value })}
-        />
-      </div>
+      <DateRangeFilter
+        label="시작일"
+        from={filters.startFrom}
+        to={filters.startTo}
+        onChange={({ from, to }) => onChange({ ...filters, startFrom: from, startTo: to })}
+      />
 
       {active && (
         <button
