@@ -74,11 +74,11 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
   // 부제: 소속 · 부서명 · 직책(부서명은 소속과 직책 사이에 노출).
   const subtitle = [affiliation, department, position].filter(Boolean).join(' · ')
 
-  // 작성자(등록자)와 담당자는 별개 축이다. NETWORKS 8종은 모두 담당자=공동관리(쓰기 권한자 누구나)이므로
-  // 특정 담당자 없이 기여자 목록으로 표시하고, 최초 업로더(작성자)는 created_by로 별도 표기한다.
+  // 생성자(created_by)와 담당자는 별개 축이다. NETWORKS 8종은 모두 담당자=공동관리(쓰기 권한자 누구나)이므로
+  // 특정 담당자 없이 기여자 목록으로 표시하고, 레코드를 만든 사람은 생성자로 별도 표기한다.
   const { data: contributions } = useContributions(entity, record.id as string)
   const contributors = uniqueContributors(contributions ?? [])
-  const author = (record.creator?.name as string) || '-'
+  const creator = (record.creator?.name as string) || '-'
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -160,7 +160,7 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
             />
           )}
           {compact && <Info label="구분" value={category || '-'} />}
-          <Info label="등록자" value={author} />
+          <Info label="생성자" value={creator} />
           <Info label="기여자" value={contributors.length ? contributors.join(', ') : '-'} />
           <Info label="수정일" value={formatDate(record.updated_at)} />
         </div>
@@ -193,18 +193,9 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
 
       {showMentoring && (
         <SectionCard title="멘토링 만족도">
-          <div className="flex items-center gap-6">
-            <span className="inline-flex items-center gap-1.5 text-title-sm font-semibold text-gray-900">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" className="text-warning" aria-hidden>
-                <path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-              </svg>
-              5.0
-            </span>
-            <div>
-              <p className="text-caption text-gray-700">멘토링 이력</p>
-              <p className="text-body font-medium text-gray-800">0 건</p>
-            </div>
-          </div>
+          {/* 만족도 집계(mentor_satisfaction_records) 연동 전이라 값을 비워 둔다 —
+              예시 별점(5.0)을 띄우면 실제 평가와 구분되지 않는다. */}
+          <p className="text-body text-gray-600">집계된 멘토링 만족도 평가가 아직 없습니다.</p>
         </SectionCard>
       )}
 

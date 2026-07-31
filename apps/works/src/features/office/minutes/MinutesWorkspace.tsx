@@ -93,7 +93,8 @@ export function MinutesWorkspace({ initialMinuteId }: { initialMinuteId?: string
             onChange={(e) => setKeyword(e.target.value)}
           />
         }
-        actions={<Button onClick={() => setView({ mode: 'edit', id: null })}>새 회의록</Button>}
+        // 문구는 `{대상 명사} 등록` 규칙(구 '새 회의록').
+        actions={<Button onClick={() => setView({ mode: 'edit', id: null })}>회의록 등록</Button>}
       />
       {isLoading ? (
         <p className="py-10 text-center text-body text-gray-400">불러오는 중…</p>

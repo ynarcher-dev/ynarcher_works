@@ -145,16 +145,24 @@ function validatePhase(
 }
 
 /**
- * 프로그램 배치(부서+담당자) 저장 가능 여부 검증(서버 RPC와 동일 규칙). 단계(org 버전)별 독립 검증.
- * 부서/담당자 모두 비면 허용(미배정). 각 단계는 메인1·협업비율합100 + 부서별 협업비율 충족.
- * 아직 설정 안 된 미래 단계는 pending으로 허용한다.
+ * 프로그램 배치(부서+담당자) 저장 가능 여부 검증. 단계(org 버전)별 독립 검증.
+ * 각 단계는 메인1·협업비율합100 + 부서별 협업비율 충족이며, 아직 설정 안 된 미래 단계는 pending으로 허용한다.
+ *
+ * 담당자 미배정은 허용하지 않는다 — 담당자 원장이 비면 그 사업은 워크스페이스 쓰기 권한자 전원의
+ * 공동관리로 열려 관리 책임이 사라진다. 사업은 제안·운영 단계를 가리지 않고 최소 1명(구간)을 요구한다.
+ * (서버 RPC는 아직 '둘 다 비면 전량 삭제' 경로를 남겨 두고 있어, 이 규칙의 강제 지점은 현재 폼이다.)
  */
 export function validateStaffing(
   departments: ProgramDepartmentDraft[],
   managers: ProgramManagerDraft[],
   phases: StaffingPhase[],
 ): { ok: true } | { ok: false; message: string } {
-  if (departments.length === 0 && managers.length === 0) return { ok: true }
+  if (managers.length === 0) {
+    return {
+      ok: false,
+      message: '담당자를 1명 이상 배정해야 합니다. 부서 구성을 지정한 뒤 담당자를 추가하세요.',
+    }
+  }
 
   const phaseIds = new Set(phases.map((p) => p.versionId))
   if ([...departments, ...managers].some((r) => !phaseIds.has(r.org_version_id))) {

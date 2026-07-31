@@ -22,6 +22,10 @@ export interface Department {
   deleted_at?: string | null
 }
 
+/** 부서 원장 조회 컬럼(트리 해석에 필요한 전량). 버전 스코프 훅과 전체 조회 훅이 함께 쓴다. */
+const DEPT_COLS =
+  'id, name, parent_id, level_id, sort_order, version_id, lineage_id, hr_hidden, deleted_at'
+
 /**
  * 조직 관리 트리 조회. 삭제(soft delete) 포함 여부와 버전 스코프를 옵션으로 받는다.
  * versionId 미지정 시 "오늘의 유효 버전"으로 자동 스코프한다(임직원 화면 등 라이브 조직도 조회).
@@ -38,13 +42,31 @@ export function useDepartments(includeDeleted = false, versionId?: string) {
     queryFn: async (): Promise<Department[]> => {
       let q = supabase
         .from('departments')
-        .select(
-          'id, name, parent_id, level_id, sort_order, version_id, lineage_id, hr_hidden, deleted_at',
-        )
+        .select(DEPT_COLS)
         .eq('version_id', scopeId as string)
         .order('sort_order', { ascending: true })
       if (!includeDeleted) q = q.is('deleted_at', null)
       const { data, error } = await q
+      if (error) throw error
+      return (data ?? []) as Department[]
+    },
+  })
+}
+
+/**
+ * 버전 무관 부서 원장 전체(삭제분 포함). **id → 표기 변환에만** 쓴다 — 트리를 그리거나 선택지를
+ * 만드는 데 쓰면 여러 버전의 조직도가 겹쳐 나온다(그 용도는 버전 스코프 useDepartments).
+ *
+ * 사업의 부서 구성은 단계(org 버전)별로 지정되어 한 사업 안에서도 여러 버전의 부서 id가 섞인다.
+ * 목록에서 그 부서명을 적으려면 활성 버전 밖의 부서도 읽을 수 있어야 한다. 삭제된 부서까지 담는
+ * 이유도 같다 — 지난 단계에 배정된 부서가 이후 폐지되었다고 해서 그 사업의 이력이 빈칸이 되면 안 된다.
+ */
+export function useAllDepartments() {
+  return useQuery({
+    // 무효화 프리픽스(DEPT_KEY = ['management','departments'])를 공유해 조직 편집과 함께 갱신된다.
+    queryKey: ['management', 'departments', 'all'],
+    queryFn: async (): Promise<Department[]> => {
+      const { data, error } = await supabase.from('departments').select(DEPT_COLS)
       if (error) throw error
       return (data ?? []) as Department[]
     },

@@ -30,13 +30,15 @@ export type GlobalRow = Record<string, unknown> & {
   /** 조인 임베드: 권역/국가명(목록 표시용). */
   region?: { name: string } | null
   country?: { name: string } | null
+  /** 조인 임베드: 생성자(created_by → users). 상세의 생성자 항목이 읽는다. */
+  creator?: { id: string; name: string | null } | null
   is_provisional?: boolean
   merged_into_id?: string | null
 }
 
 /**
  * 글로벌 네트워크 목록 컬럼(공용 MasterListView 재활용).
- * DataTable 내장 컬럼(좌측 `No.`, 우측 `작성자`/`수정일`)은 자동 렌더되므로
+ * DataTable 내장 컬럼(좌측 `No.`, 우측 `생성자`/`수정일`)은 자동 렌더되므로
  * 여기서는 도메인 컬럼만 정의한다. 권역/국가는 태그 FK를 조인해 이름을 읽어오며,
  * 링크드인은 URL 유무에 따라 아이콘 색으로 표시한다(kind: 'link').
  */

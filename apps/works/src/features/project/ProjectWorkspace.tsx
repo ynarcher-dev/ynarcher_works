@@ -1,4 +1,5 @@
 import { PROJECT_CATEGORIES } from '@/config/programCategories'
+import { ProgramBulkPage } from '@/features/program/ProgramBulkPage'
 import { ProgramDetailPage } from '@/features/program/ProgramDetailPage'
 import { ProgramWorkspacePage } from '@/features/program/ProgramWorkspacePage'
 import { ProgramWorkspaceProvider, type ProgramWorkspaceConfig } from '@/features/program/workspace'
@@ -13,7 +14,7 @@ export const PROJECT_WORKSPACE: ProgramWorkspaceConfig = {
   entityKey: 'project_program',
   basePath: '/project',
   entityNoun: '프로젝트',
-  dashboardLabel: '프로젝트 현황',
+  dashboardLabel: '전체 프로젝트',
   mineLabel: '내 프로젝트 관리',
   tables: {
     programs: 'project_programs',
@@ -45,6 +46,14 @@ export function ProjectProgramDetailPage() {
   return (
     <ProgramWorkspaceProvider value={PROJECT_WORKSPACE}>
       <ProgramDetailPage />
+    </ProgramWorkspaceProvider>
+  )
+}
+
+export function ProjectBulkPage() {
+  return (
+    <ProgramWorkspaceProvider value={PROJECT_WORKSPACE}>
+      <ProgramBulkPage />
     </ProgramWorkspaceProvider>
   )
 }

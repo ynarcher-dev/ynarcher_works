@@ -32,6 +32,12 @@ export interface SubNavItem {
   dynamicKey?: 'boards' | 'archives'
   /** 동적 항목의 아이콘 키(boardIcons.ts). 지정 시 tab 기반 매핑보다 우선한다. */
   iconKey?: string
+  /**
+   * 아이콘 자리에 대신 놓을 이모지. 지정 시 lucide 아이콘 매핑보다 우선한다.
+   * '내 ~ 관리'처럼 다른 메뉴와 층이 다른(내 것만 모은) 항목에만 쓴다 — 회색 선 아이콘 사이에서
+   * 색이 있는 이모지 하나가 강세를 만든다.
+   */
+  emoji?: string
   /** 이 항목 위에 같은 그룹 내 구분선을 그린다(그룹은 유지한 채 항목 사이만 시각적으로 나눌 때). */
   dividerBefore?: boolean
 }
@@ -43,9 +49,15 @@ export interface SubNavGroup {
 }
 
 /**
+ * '내 ~ 관리' 메뉴의 아이콘 자리에 놓는 이모지. 워크스페이스마다 같은 것을 쓴다.
+ */
+export const MINE_EMOJI = '⭐'
+
+/**
  * 사업 워크스페이스(AC/M&A/PROJECT) 공용 사이드바 구성.
- * 현황 → 내 ~ 관리 → 사업구분(카테고리)별 항목 순으로 나열한다.
- * 앞 두 항목 라벨은 워크스페이스마다 다르므로(예: M&A는 `딜 현황`/`내 딜 관리`) 인자로 받는다.
+ * 내 ~ 관리 → 전체 ~ → 사업구분(카테고리)별 항목 순으로 나열한다. 내 것이 맨 위에 오고,
+ * 그 아래로 전체 → 분류 순으로 범위가 넓어진다.
+ * 앞 두 항목 라벨은 워크스페이스마다 다르므로(예: M&A는 `내 딜 관리`/`전체 딜`) 인자로 받는다.
  * 카테고리 항목의 `tab`은 소문자 카테고리 값이며(예: `pe_fund`), ProgramWorkspacePage가
  * 이를 목록의 category 스코프로 해석한다.
  *
@@ -54,15 +66,15 @@ export interface SubNavGroup {
  * 다만 `?tab=all`은 상세 뒤로가기 폴백·기존 북마크를 위해 페이지 쪽에서 계속 처리한다.
  */
 function programSubnav(
-  dashboardLabel: string,
   mineLabel: string,
+  dashboardLabel: string,
   categories: readonly ProgramCategoryOption[],
 ): SubNavGroup[] {
   return [
     {
       items: [
-        { label: dashboardLabel, tab: 'dashboard' },
-        { label: mineLabel, tab: 'mine', dividerBefore: true },
+        { label: mineLabel, tab: 'mine', emoji: MINE_EMOJI },
+        { label: dashboardLabel, tab: 'dashboard', dividerBefore: true },
         ...categories.map((c, i) => ({
           label: c.menuLabel,
           tab: categoryTab(c.value),
@@ -82,25 +94,26 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
   startup: [
     {
       items: [
-        { label: '기업 현황', tab: 'dashboard' },
-        // 구분 무관, 담당자(startup_managers) 또는 등록자가 나인 기업.
-        { label: '내 기업 관리', tab: 'mine', dividerBefore: true },
+        // 구분 무관, 담당자(startup_managers) 또는 생성자가 나인 기업.
+        { label: '내 기업 관리', tab: 'mine', emoji: MINE_EMOJI },
+        { label: '전체 기업', tab: 'dashboard', dividerBefore: true },
         // 투자/보육/발굴/기타 4분류. 발굴기업이 기존 스타트업 마스터 디렉토리.
         { label: '투자기업', tab: 'invested', dividerBefore: true },
         { label: '보육기업', tab: 'incubated' },
         { label: '발굴기업', tab: 'discovered' },
         { label: '기타기업', tab: 'etc' },
+        // 대용량 업로드는 사이드바 항목이 아니라 목록 상단의 '대용량 업로드' 버튼으로 들어간다
+        // (/startup/bulk). 메뉴로 두면 어느 원장으로 들어가는 업로드인지가 이름에 드러나지 않는다.
         { label: '아처스캔', tab: 'archerscan', dividerBefore: true },
-        { label: '대용량 업로드', tab: 'bulk' },
       ],
     },
   ],
   networks: [
     {
       items: [
-        { label: '네트워크 현황', tab: 'dashboard' },
         // 종류 무관, 내가 등록·편집·병합에 관여한(entity_contributions) 네트워크 통합 목록.
-        { label: '내 네트워크 관리', tab: 'mine', dividerBefore: true },
+        { label: '내 네트워크 관리', tab: 'mine', emoji: MINE_EMOJI },
+        { label: '전체 네트워크', tab: 'dashboard', dividerBefore: true },
       ],
     },
     {
@@ -121,20 +134,21 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       items: [
         // 글로벌 네트워크: 미분류 데이터베이스 위에 구분선으로 구획(기능은 보류, 메뉴만 제공).
         { label: '글로벌 네트워크', tab: 'global' },
+        // 대용량 업로드는 사이드바 항목이 아니라 각 원장 목록 상단의 '대용량 업로드' 버튼으로
+        // 들어간다(/networks/bulk, 글로벌은 ?scope=global). 국내/글로벌 전환은 그 화면의 인페이지
+        // 탭이 맡는다(BulkUploadSection).
         { label: '미분류 데이터베이스', tab: 'others', dividerBefore: true },
-        // 대용량 업로드는 한 화면에서 국내/글로벌을 인페이지 탭으로 전환한다(BulkUploadSection).
-        { label: '대용량 업로드', tab: 'bulk' },
       ],
     },
   ],
-  ac: programSubnav('사업 현황', '내 사업 관리', AC_CATEGORIES),
-  // FUND: 현황 → 내 펀드 → 펀드 종류(AC/VC/PE) 순. 종류별 화면은 메뉴만 선반영한 상태.
+  ac: programSubnav('내 사업 관리', '전체 사업', AC_CATEGORIES),
+  // FUND: 내 펀드 → 전체 펀드 → 펀드 종류(AC/VC/PE) 순. 종류별 화면은 메뉴만 선반영한 상태.
   fund: [
     {
       items: [
-        { label: '펀드 현황', tab: 'dashboard' },
-        // 운용역(담당자) 또는 등록자가 나인 펀드.
-        { label: '내 펀드 관리', tab: 'mine', dividerBefore: true },
+        // 운용역(담당자) 또는 생성자가 나인 펀드.
+        { label: '내 펀드 관리', tab: 'mine', emoji: MINE_EMOJI },
+        { label: '전체 펀드', tab: 'dashboard', dividerBefore: true },
         { label: 'AC 펀드', tab: 'ac_fund', dividerBefore: true },
         { label: 'VC 펀드', tab: 'vc_fund' },
         { label: 'PE 펀드', tab: 'pe_fund' },
@@ -142,7 +156,7 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
     },
   ],
   // M&A/PE는 AC와 동일한 사업 원장 구조(features/program)를 공유한다.
-  mna: programSubnav('딜 현황', '내 딜 관리', MNA_CATEGORIES),
+  mna: programSubnav('내 딜 관리', '전체 딜', MNA_CATEGORIES),
   admin: [
     {
       group: '시스템 관리',
@@ -161,13 +175,15 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         },
         { label: '민감정보 관리', tab: 'sensitive', dividerBefore: true },
         { label: '중복 병합 검증', tab: 'merge' },
+        // 생성자(created_by) 강제 교체. 권한 축이 아니라 표기·소속 정리용 관리자 오버라이드다.
+        { label: '생성자 교체', tab: 'creators' },
         { label: '감사 로그 모니터', tab: 'audit' },
         { label: '다운로드 사유 로그', tab: 'downloads' },
       ],
     },
   ],
   // PROJECT도 AC와 동일한 사업 원장 구조(features/program)를 공유한다.
-  project: programSubnav('프로젝트 현황', '내 프로젝트 관리', PROJECT_CATEGORIES),
+  project: programSubnav('내 프로젝트 관리', '전체 프로젝트', PROJECT_CATEGORIES),
   // OFFICE: 임직원 정보·전사 캘린더 + 게시판(공지사항 고정 + 일반, 아코디언 없이 평탄 나열).
   // 신규 게시판은 모두 이곳에 생성·노출된다.
   office: [

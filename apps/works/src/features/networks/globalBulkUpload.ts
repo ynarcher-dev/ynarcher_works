@@ -143,7 +143,7 @@ export interface GlobalExistingRef {
   country_tag_id: string | null
   expertise: unknown[]
   profile: Record<string, unknown>
-  /** 선행 작성자(최초 기여자)명. 기여 로그에서 조회. */
+  /** 선행 생성자(최초 기여자)명. 기여 로그에서 조회. */
   contributor: string | null
   /** 비활성(soft-delete) 상태 여부. true면 재업로드 시 '복구' 대상. */
   deleted: boolean
@@ -273,7 +273,7 @@ export async function findGlobalMatches(
     if (best) out.set(r.line, best.ref)
   }
 
-  // 기여 로그에서 선행 작성자와, 비활성 매칭의 비활성화자·사유(가장 최근 deactivated)를 채운다.
+  // 기여 로그에서 선행 생성자와, 비활성 매칭의 비활성화자·사유(가장 최근 deactivated)를 채운다.
   const refs = [...new Set(out.values())]
   const ids = refs.map((r) => r.id)
   if (ids.length) {

@@ -7,8 +7,8 @@ import { useProgramWorkspace } from '@/features/program/workspace'
 
 /**
  * 사업 워크스페이스 페이지 컨테이너(AC/M&A/PROJECT 공용). 섹션 전환은 좌측 사이드바(?tab)가 구동한다.
- * - dashboard: 상태 요약 대시보드(STARTUP/NETWORKS 대시보드처럼 확장 예정)
- * - mine: 내가 담당자/등록자인 사업만
+ * - mine: 내가 담당자/생성자인 사업만. 사이드바 첫 항목이자 탭 없이 진입했을 때의 기본 화면이다.
+ * - dashboard: 전체 ~ (대시보드 — 전면 재설계를 위해 콘텐츠를 비워 둔 상태)
  * - 그 외: 사업구분(카테고리) 세분화 목록. tab이 소문자 카테고리 값(예: pe_fund)일 때 매칭된다.
  * - all: 사이드바에서는 제거된 전체 목록. 상세 뒤로가기 폴백·기존 북마크를 위해 계속 처리한다.
  * 섹션 제목의 도메인 명칭은 워크스페이스 config(entityNoun)로 조립한다.
@@ -16,13 +16,14 @@ import { useProgramWorkspace } from '@/features/program/workspace'
 export function ProgramWorkspacePage() {
   const config = useProgramWorkspace()
   const [params] = useSearchParams()
-  const tab = params.get('tab') ?? 'dashboard'
+  const tab = params.get('tab') ?? 'mine'
   const category = categoryFromTab(config.categories, tab)
 
   const headings: Record<string, string> = {
     dashboard: config.dashboardLabel,
     mine: config.mineLabel,
-    all: `전체 ${config.entityNoun}`,
+    // 사이드바의 '전체 ~'(dashboard)와 제목이 겹치지 않도록 잔존 목록 탭에는 '목록'을 붙인다.
+    all: `전체 ${config.entityNoun} 목록`,
   }
   const heading = headings[tab] ?? category?.menuLabel ?? null
 

@@ -18,6 +18,8 @@ import {
   type EntityConfig,
   type EntityKey,
 } from '@/features/networks/config'
+import { NetworkFilters } from '@/features/networks/NetworkFilters'
+import { EMPTY_NETWORK_FILTERS, type NetworkFilterState } from '@/features/networks/filters'
 import { MasterListView } from '@/features/master/MasterListView'
 import type { MasterRow } from '@/features/master/types'
 
@@ -48,15 +50,19 @@ export function DirectoryTab({ config, keyword, creating, setCreating }: Directo
   const [selected, setSelected] = useState<string[]>([])
   const [bulkCat, setBulkCat] = useState('')
   const [bulkBusy, setBulkBusy] = useState(false)
+  const [filters, setFilters] = useState<NetworkFilterState>(EMPTY_NETWORK_FILTERS)
   // 비활성화 사유 입력 모달 대상(열림 = 값 존재).
   const [deactivateTarget, setDeactivateTarget] = useState<MasterRow | null>(null)
   const [deactivateBusy, setDeactivateBusy] = useState(false)
-  // 검색어·엔티티 전환 시 첫 페이지로 되돌리고 선택을 비운다(빈 페이지·유령 선택 방지).
+  // 검색어·필터·엔티티 전환 시 첫 페이지로 되돌리고 선택을 비운다(빈 페이지·유령 선택 방지).
+  const filtersKey = JSON.stringify(filters)
   useEffect(() => {
     setPage(0)
     setSelected([])
-  }, [keyword, config.table])
-  const { data, isLoading } = useEntityPage(config.table, keyword, page, PAGE_SIZE)
+  }, [keyword, filtersKey, config.table])
+  // 엔티티가 바뀌면 필터 축 자체가 달라지므로(프로필형↔조직형) 이전 선택을 들고 가지 않는다.
+  useEffect(() => setFilters(EMPTY_NETWORK_FILTERS), [config.table])
+  const { data, isLoading } = useEntityPage(config.table, keyword, page, PAGE_SIZE, filters)
   // 미분류(others)는 분류 전 임시 저장소이므로 상세페이지로 진입하지 않는다(행 클릭 비활성).
   const hasDetailPage = usesDetailPage(config.key) && config.key !== 'others'
 
@@ -162,6 +168,8 @@ export function DirectoryTab({ config, keyword, creating, setCreating }: Directo
 
   return (
     <div className="space-y-3">
+      <NetworkFilters entity={config.key} filters={filters} onChange={setFilters} />
+
       {isOthers && selected.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 rounded-radius-md border border-gray-200 bg-gray-50 px-3 py-2">
           <span className="text-caption font-medium text-gray-700">선택 {selected.length}건</span>

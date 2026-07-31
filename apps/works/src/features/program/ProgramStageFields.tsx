@@ -20,6 +20,7 @@ export interface ProgramFormValues {
 /**
  * 프로그램 단계(제안/운영) 이원화 입력 블록.
  * 제안 단계 상태는 시도/선정/미선정 3분류이며 별도 기간(날짜)이 없다.
+ * 운영 기간(시작·종료일)은 제안 단계에서도 입력할 수 있고 필수다 — 담당자 배치 단계가 이 기간에서 나온다.
  * '선정'을 고르면 운영 단계(준비)로 즉시 자동 전환된다(전환 처리는 상위 onProposalStatusChange).
  * 운영 단계 라디오는 제안이 '선정'일 때만 활성화되고, 운영 기간(start/end_date)만 입력한다.
  */
@@ -121,15 +122,16 @@ export function ProgramStageFields({
               ))}
             </Select>
           </div>
+          {/* 담당자 배치가 필수이고 배치 단계는 이 기간에서 산출되므로, 제안 단계에서도 기간은 필수다. */}
           <div>
             <label className="text-caption text-gray-600" htmlFor="start_date">
-              시작일
+              시작일 <span className="text-brand">*</span>
             </label>
             <Input id="start_date" type="date" {...register('start_date')} />
           </div>
           <div>
             <label className="text-caption text-gray-600" htmlFor="end_date">
-              종료일
+              종료일 <span className="text-brand">*</span>
             </label>
             <Input id="end_date" type="date" {...register('end_date')} />
           </div>

@@ -8,7 +8,7 @@
 --       해당 테이블 도입 시 케이스를 실제 테이블 접근으로 승격한다.
 -- =====================================================================
 begin;
-select plan(20);
+select plan(24);
 
 -- 픽스처: 테스트 계정 10종 + 데이터 (슈퍼유저로 삽입, 트랜잭션 종료 시 롤백) ----
 insert into public.startups(id, name) values
@@ -169,6 +169,43 @@ select is(
   (select count(*)::int from pg_tables where schemaname = 'public' and rowsecurity = false),
   0,
   '케이스8: RLS 미적용 테이블 없음'
+);
+
+-- 케이스 12: 레코드 코드 전역 레지스트리는 클라이언트가 닿을 수 없다 -------------
+-- 근거: 20260731150000_entity_code_registry.sql
+--   코드 유니크 보장을 entity_codes의 PK가 진다. 이 표를 클라이언트가 직접 쓸 수 있으면
+--   남이 받을 코드를 미리 선점해 발급을 방해할 수 있으므로, 정책을 하나도 두지 않고
+--   테이블 권한도 전부 회수해 트리거(DEFINER)만 닿게 한다.
+reset role;
+select is(
+  (select count(*)::int from pg_policies where schemaname = 'public' and tablename = 'entity_codes'),
+  0,
+  '케이스12a: entity_codes에 RLS 정책이 하나도 없다(Default Deny)'
+);
+select is(
+  (select count(*)::int
+     from information_schema.role_table_grants
+    where table_schema = 'public' and table_name = 'entity_codes'
+      and grantee in ('anon', 'authenticated')),
+  0,
+  '케이스12b: anon·authenticated에 entity_codes 테이블 권한이 없다'
+);
+select is(
+  (select count(*)::int
+     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'claim_entity_code'
+      and has_function_privilege('authenticated', p.oid, 'EXECUTE')),
+  0,
+  '케이스12c: authenticated가 코드 발급 함수를 직접 호출할 수 없다'
+);
+-- 코드는 원장에 행을 넣을 때만 트리거가 발급하며, 워크스페이스가 달라도 겹치지 않는다.
+select is(
+  (select count(*)::int from pg_trigger
+    where tgname in ('trg_programs_assign_code', 'trg_ma_programs_assign_code',
+                     'trg_project_programs_assign_code', 'trg_funds_assign_code')
+      and not tgisinternal),
+  4,
+  '케이스12d: 코드 부여 트리거가 사업 3종·펀드에 모두 붙어 있다'
 );
 
 select * from finish();

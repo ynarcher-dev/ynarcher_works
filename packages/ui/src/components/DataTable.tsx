@@ -25,11 +25,11 @@ export interface Column<T> {
 }
 
 /**
- * 표준 메타 컬럼(작성자/수정일/비활성화) 접근자.
+ * 표준 메타 컬럼(생성자/수정일/비활성화) 접근자.
  * 미지정 시 관례 필드(created_by, updated_at, deleted_at)에서 자동 추론한다.
  */
 export interface DataTableMeta<T> {
-  /** 작성자 표시값. 기본값: row.created_by */
+  /** 생성자 표시값. 기본값: row.created_by */
   author?: (row: T) => ReactNode
   /** 수정일 표시값. 기본값: row.updated_at (YYYY-MM-DD로 절삭) */
   updatedAt?: (row: T) => ReactNode
@@ -102,13 +102,21 @@ export interface DataTableProps<T> {
    * 셀 내용이 넘치면 말줄임(…) 처리한다. 컬럼 폭은 각 컬럼 `className`(w-*)이 정한다.
    */
   layout?: 'auto' | 'fixed'
-  /** 우측 표준 컬럼(작성자/수정일, 기본 true). 로그/매트릭스/랭킹은 false로 opt-out. */
+  /**
+   * 열이 많아 가로가 빠듯한 표의 축소 여백(기본 false). 자동 레이아웃('auto')을 유지한 채
+   * 셀 좌우 여백만 좁힌다 — 열 폭은 내용에 맞춰 늘고 긴 값은 그대로 줄바꿈되므로,
+   * 말줄임으로 값 끝이 잘리면 안 되는 표(예: 펀드 목록의 존속기간)에 쓴다.
+   * `layout="fixed"`는 이 여백을 이미 쓰므로 함께 지정할 필요가 없다.
+   */
+  dense?: boolean
+  /** 우측 표준 컬럼(생성자/수정일, 기본 true). 로그/매트릭스/랭킹은 false로 opt-out. */
   standardColumns?: boolean
-  /** 표준 컬럼 중 작성자 컬럼 노출 여부(기본 true). false면 수정일/관리만 남긴다. */
+  /** 표준 컬럼 중 생성자 컬럼 노출 여부(기본 true). false면 수정일/관리만 남긴다. */
   showAuthor?: boolean
   /**
-   * 등록자 컬럼 헤더 라벨(기본 '등록자'). 이 표준 컬럼은 항상 등록자(최초 업로더, created_by)를 뜻한다.
+   * 생성자 컬럼 헤더 라벨(기본 '생성자'). 이 표준 컬럼은 항상 생성자(레코드를 만든 사람, created_by)를 뜻한다.
    * 담당자(관리 주체)는 별개 축이므로 이 컬럼을 '담당자'로 재라벨하지 말고 도메인 컬럼으로 따로 둔다.
+   * 게시글처럼 '작성자'가 도메인 용어인 표에서만 라벨을 바꾼다.
    */
   authorLabel?: string
   /**
@@ -122,7 +130,7 @@ export interface DataTableProps<T> {
    */
   manageable?: boolean
   /**
-   * 관리 컬럼(헤더+셀)을 아예 렌더할지 여부(기본 true). false면 작성자/수정일만 남기고 관리 열 자체를
+   * 관리 컬럼(헤더+셀)을 아예 렌더할지 여부(기본 true). false면 생성자/수정일만 남기고 관리 열 자체를
    * 제거한다. 비활성화/복사/수정 등 관리 액션이 목록에 전혀 없는 표(예: 삭제를 상세 페이지로 옮긴
    * STARTUP·PROGRAM 목록)에서 빈 열이 남지 않도록 opt-out 한다. 복사 등 다른 관리 액션이 필요한
    * 표(NETWORKS 원장)는 이 열을 유지한 채 비활성화 핸들러만 빼면 된다.
@@ -172,7 +180,7 @@ function resolveUpdatedAt<T>(row: T, meta?: DataTableMeta<T>): ReactNode {
 
 /**
  * 데이터 테이블(헤더·행 모두 `row` 토큰 36px, 수치 tabular-nums, 정렬 토글).
- * 좌측 No.(내림차순) + 우측 표준 컬럼(작성자/수정일/관리)을 기본 탑재한다.
+ * 좌측 No.(내림차순) + 우측 표준 컬럼(생성자/수정일/관리)을 기본 탑재한다.
  *
  * 정렬 기본값은 헤더·본문 모두 가운데다. 열 성격상 왼쪽 시작선이 필요하면
  * 그 열만 `align: 'left'`로 되돌린다(기본값과 같은 값을 다시 적지 않는다).
@@ -193,7 +201,7 @@ export function DataTable<T>({
   pagination,
   standardColumns = true,
   showAuthor = true,
-  authorLabel = '등록자',
+  authorLabel = '생성자',
   updatedAtAlign = 'center',
   manageable = true,
   showManageColumn = true,
@@ -203,14 +211,16 @@ export function DataTable<T>({
   onRowClick,
   rowClassName,
   layout = 'auto',
+  dense = false,
   meta,
 }: DataTableProps<T>) {
   // ToastProvider 밖에서도 쓰일 수 있어 컨텍스트를 null-safe로 읽는다(복사 알림용).
   const toast = useContext(ToastContext)
   const fixed = layout === 'fixed'
   const truncate = fixed ? 'truncate' : ''
-  // fixed 레이아웃은 여백을 조금 좁혀(px-2) 각 컬럼 내용 표시 폭을 넓힌다.
-  const pad = fixed ? tableGrid.cellXFixed : ''
+  // 열이 많은 표는 여백을 좁혀(px-2) 각 컬럼의 내용 표시 폭을 넓힌다.
+  // 폭을 고정한 표(fixed)는 항상 그렇고, 자동 레이아웃이라도 dense를 켜면 같은 여백을 쓴다.
+  const pad = fixed || dense ? tableGrid.cellXTight : ''
   const cellX = tableGrid.cellX
   // 명시 지정이 없으면 첫 도메인 열을 식별 열로 삼는다.
   const primaryKey = (columns.find((c) => c.primary) ?? columns[0])?.key

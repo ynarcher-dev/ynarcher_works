@@ -1,4 +1,5 @@
 import { Badge, CardShell, InfoField } from '@ynarcher/ui'
+import { useDepartmentLabels } from '@/features/management/departmentOptions'
 import type { Program, ProgramDepartmentKind } from '@/features/program/hooks'
 import { ProgramPhotoBox } from '@/features/program/detail/ProgramPhotoBox'
 import {
@@ -24,6 +25,8 @@ function formatDate(v: unknown): string {
  */
 export function ProgramInfoCard({ program }: { program: Program }) {
   const config = useProgramWorkspace()
+  // 부서명은 목록과 같은 표기(최상위를 뺀 경로)를 쓴다 — 같은 사업을 목록과 상세에서 다르게 부르면 안 된다.
+  const { pathLabelOf } = useDepartmentLabels()
   // 운영 기간(실제 행사 관리)만 표시한다. 제안 단계는 별도 기간을 두지 않는다.
   const formatPeriod = (start: string | null, end: string | null) =>
     start || end ? `${start ?? '?'} ~ ${end ?? '?'}` : '-'
@@ -98,7 +101,7 @@ export function ProgramInfoCard({ program }: { program: Program }) {
           />
         )}
         <Info label="운영 기간" value={operationPeriod} />
-        <Info label="등록자" value={program.creator?.name || '-'} />
+        <Info label="생성자" value={program.creator?.name || '-'} />
         <Info label="수정일" value={formatDate(program.updated_at)} />
       </div>
 
@@ -108,9 +111,19 @@ export function ProgramInfoCard({ program }: { program: Program }) {
           <div className="mt-2 flex flex-col gap-2">
             {departments.map((d) => (
               <div key={d.department_id} className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                <Badge tone={d.kind === 'MAIN' ? 'info' : 'neutral'}>
-                  {d.name + (d.kind === 'MAIN' ? ' · 메인' : '') + (d.ratio != null ? ` ${d.ratio}%` : '')}
-                </Badge>
+                {/* 부서는 배지가 아니라 텍스트다 — 담당자(사람) 배지와 나란히 두면 같은 층위로 읽혀
+                    "어느 부서의 누구"라는 포함 관계가 사라진다. 메인만 굵기로 세운다. */}
+                <span
+                  className={
+                    d.kind === 'MAIN'
+                      ? 'text-body font-semibold text-gray-900'
+                      : 'text-body text-gray-700'
+                  }
+                >
+                  {(pathLabelOf(d.department_id) || d.name) +
+                    (d.kind === 'MAIN' ? ' · 메인' : '') +
+                    (d.ratio != null ? ` ${d.ratio}%` : '')}
+                </span>
                 <span className="text-caption text-gray-400">/</span>
                 {d.members.length ? (
                   <span className="flex flex-wrap gap-1">

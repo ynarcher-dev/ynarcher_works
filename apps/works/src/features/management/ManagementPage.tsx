@@ -52,14 +52,18 @@ export function ManagementPage() {
       />
     ) : undefined
 
-  // 크게보기·계정 생성 액션은 인사 관리 리스트뷰에서만 노출한다.
+  // 크게보기·등록 액션은 인사 관리 리스트뷰에서만 노출한다.
+  // 문구는 `{대상 명사} 등록` 규칙을 따른다 — 하는 일은 로그인 계정 발급이지만, 이 화면이
+  // 다루는 원장은 임직원이고 다른 목록도 모두 '~ 등록'으로 부른다(구 '계정 생성').
+  // 대용량 업로드 버튼은 두지 않는다 — 임직원 등록은 원장 INSERT가 아니라 인증 계정 발급이라
+  // CSV 한 장으로 일괄 처리할 경로가 없다.
   const actions =
     tab === 'hr' ? (
       <>
         <Button variant="outline" onClick={() => setHrExpanded(true)}>
           <Maximize2 size={14} /> 크게보기
         </Button>
-        <Button onClick={() => navigate('/management/hr/new')}>계정 생성</Button>
+        <Button onClick={() => navigate('/management/hr/new')}>임직원 등록</Button>
       </>
     ) : undefined
 

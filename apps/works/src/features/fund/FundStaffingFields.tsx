@@ -92,7 +92,8 @@ export function FundStaffingFields({
 
   return (
     <div className="space-y-4">
-      <Field label="대표펀드매니저">
+      {/* 대표펀드매니저는 펀드의 관리 주체라 필수다(폼 저장 시 강제). 운용·관리는 선택. */}
+      <Field label="대표펀드매니저 *">
         <MemberPicker
           employees={list}
           selected={value.manager}

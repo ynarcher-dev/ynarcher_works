@@ -116,11 +116,17 @@ export function ProgramFormModal({
   })
 
   const onSubmit = async (values: FormValues) => {
-    if (values.start_date && values.end_date && values.start_date > values.end_date) {
+    // 담당자는 제안·운영을 가리지 않고 필수이며, 배치는 운영 기간이 있어야 단계를 산출할 수 있다.
+    // 따라서 기간이 담당자보다 앞선 선행 조건이 된다.
+    if (!values.start_date || !values.end_date) {
+      toast.show('운영 기간(시작일·종료일)을 입력해야 담당자를 배정할 수 있습니다.', 'warning')
+      return
+    }
+    if (values.start_date > values.end_date) {
       toast.show('운영 종료일은 운영 시작일 이후여야 합니다.', 'warning')
       return
     }
-    // 부서+담당자 배치 검증(서버 RPC와 동일 규칙, 단계별). 부서·담당자 모두 비면 허용(미배정).
+    // 부서+담당자 배치 검증(단계별). 담당자 1명(구간) 이상은 필수다.
     const phases = computePhases(orgVersions ?? [], values.start_date || null, values.end_date || null)
     const check = validateStaffing(departments, managers, phases)
     if (!check.ok) {
@@ -232,9 +238,9 @@ export function ProgramFormModal({
         />
         <div>
           <label className="text-body font-medium text-gray-800">
-            배치 (부서 구성 + 담당자)
+            배치 (부서 구성 + 담당자) <span className="text-brand">*</span>
             <span className="ml-1 text-caption font-normal text-gray-600">
-              조직개편 경계마다 단계로 나눠 독립 설정
+              조직개편 경계마다 단계로 나눠 독립 설정 · 담당자 1명 이상 필수
             </span>
           </label>
           {(() => {

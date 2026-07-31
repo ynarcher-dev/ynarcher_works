@@ -2,6 +2,7 @@ import { Badge, Banner, Button, CardShell, cardText, InfoField, Spinner, useToas
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '@/auth/authStore'
 import { ROLE_LABELS } from '@/features/management/config'
+import { affiliationLabel } from '@/features/management/departmentOptions'
 import { EmployeeNoteFields } from '@/features/management/EmployeeNoteFields'
 import { useJobTitleLabel } from '@/features/management/jobTitleHooks'
 import { noteEditorInit, parseNote, type EmployeeNote } from '@/features/management/noteConfig'
@@ -62,16 +63,8 @@ export function MyPage() {
   const jobLabel = jobTitle(str(profile.rank), str(profile.position))
   const adminLabel = me.user_type === 'super_admin' ? ROLE_LABELS[me.user_type] : ''
 
-  // 부서/팀 파생: 소속→루트 경로에서 인사 미노출(hr_hidden) 부서를 제외하고 가장 구체적인 2개를 취한다.
-  const byId: Record<string, { name: string; parent_id: string | null; hidden: boolean }> = {}
-  for (const d of depts ?? []) byId[d.id] = { name: d.name, parent_id: d.parent_id, hidden: d.hr_hidden }
-  const chain: string[] = []
-  for (let cur = me.department_id ?? null; cur && byId[cur]; cur = byId[cur]!.parent_id) {
-    if (!byId[cur]!.hidden) chain.push(byId[cur]!.name)
-  }
-  const teamName = chain.length > 1 ? chain[0]! : ''
-  const deptName = chain.length > 1 ? chain[1]! : chain[0] ?? ''
-  const affiliation = [deptName, teamName].filter(Boolean).join(' · ')
+  // 부서/팀 표기(상위 · 하위)의 규칙은 departmentOptions.affiliationLabel이 소유한다.
+  const affiliation = affiliationLabel(depts ?? [], me.department_id ?? null)
 
   const save = async () => {
     try {

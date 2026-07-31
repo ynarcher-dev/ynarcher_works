@@ -1,5 +1,6 @@
 import { AC_CATEGORIES } from '@/config/programCategories'
 import { MODULE_TYPES } from '@/features/program/config'
+import { ProgramBulkPage } from '@/features/program/ProgramBulkPage'
 import { ProgramDetailPage } from '@/features/program/ProgramDetailPage'
 import { ProgramWorkspacePage } from '@/features/program/ProgramWorkspacePage'
 import { ProgramWorkspaceProvider, type ProgramWorkspaceConfig } from '@/features/program/workspace'
@@ -14,7 +15,7 @@ export const AC_WORKSPACE: ProgramWorkspaceConfig = {
   entityKey: 'program',
   basePath: '/ac',
   entityNoun: '사업',
-  dashboardLabel: '사업 현황',
+  dashboardLabel: '전체 사업',
   mineLabel: '내 사업 관리',
   tables: {
     programs: 'programs',
@@ -47,6 +48,14 @@ export function AcProgramDetailPage() {
   return (
     <ProgramWorkspaceProvider value={AC_WORKSPACE}>
       <ProgramDetailPage />
+    </ProgramWorkspaceProvider>
+  )
+}
+
+export function AcBulkPage() {
+  return (
+    <ProgramWorkspaceProvider value={AC_WORKSPACE}>
+      <ProgramBulkPage />
     </ProgramWorkspaceProvider>
   )
 }

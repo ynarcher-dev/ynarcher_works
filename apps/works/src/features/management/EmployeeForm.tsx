@@ -5,11 +5,8 @@ import { ROLE_OPTIONS } from '@/features/management/config'
 import { EmployeeNoteFields } from '@/features/management/EmployeeNoteFields'
 import { HrTagSelect } from '@/features/management/HrTagSelect'
 import { noteEditorInit, noteValues } from '@/features/management/noteConfig'
-import {
-  useDepartments,
-  useUpdateEmployee,
-  type Employee,
-} from '@/features/management/hooks'
+import { useDepartmentOptions } from '@/features/management/departmentOptions'
+import { useUpdateEmployee, type Employee } from '@/features/management/hooks'
 import { useEmployeeBranchNames } from '@/features/office/branches/branchMembers'
 import { useBranches, useSetUserBranches } from '@/features/office/branches/branchesApi'
 import { CareerEditor } from '@/features/networks/CareerEditor'
@@ -62,7 +59,9 @@ export function EmployeeForm({ recordId, initial, onDone, onCancel, backTo }: Pr
   const toast = useToast()
   const update = useUpdateEmployee()
   const setUserBranches = useSetUserBranches()
-  const { data: depts } = useDepartments()
+  // 부서 선택지는 조직도 순서 + 전체 경로 라벨(departmentOptions). 2단만 접던 예전 방식으로는
+  // 본부 > 그룹 > 팀처럼 3단 이상인 조직에서 하위가 상위 없이 평탄하게 섞였다.
+  const { options: deptOptions } = useDepartmentOptions()
   const { data: branches } = useBranches()
   const { branchIdsOf } = useEmployeeBranchNames()
   const profile = initial.profile ?? {}
@@ -90,23 +89,6 @@ export function EmployeeForm({ recordId, initial, onDone, onCancel, backTo }: Pr
   // 사진·약력은 NETWORKS와 동일 규약: profile.photo(2MB 이하 data URL) / profile.background(섹션 jsonb).
   const [photo, setPhoto] = useState(str(profile.photo))
   const [background, setBackground] = useState<CareerData>(parseBackground(profile.background))
-
-  // 부서 선택지: 최상위 → 하위(팀) 순으로 나열하고 하위는 "└ "로 들여쓴다.
-  const deptOptions = useMemo(() => {
-    const list = depts ?? []
-    const out: { id: string; label: string }[] = []
-    for (const root of list.filter((d) => !d.parent_id)) {
-      out.push({ id: root.id, label: root.name })
-      for (const child of list.filter((d) => d.parent_id === root.id)) {
-        out.push({ id: child.id, label: `└ ${child.name}` })
-      }
-    }
-    // 트리에 안 잡힌 항목(부모가 목록에 없음)도 누락 없이 포함한다.
-    for (const d of list) {
-      if (!out.some((o) => o.id === d.id)) out.push({ id: d.id, label: d.name })
-    }
-    return out
-  }, [depts])
 
   const submit = async () => {
     const trimmed = name.trim()

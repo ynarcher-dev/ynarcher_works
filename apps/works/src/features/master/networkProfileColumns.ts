@@ -3,7 +3,7 @@ import type { MasterColumn } from '@/features/master/types'
 /**
  * 전문가 · VAN · 투자자 공용 프로필 테이블 컬럼.
  *
- * DataTable 내장 컬럼(좌측 `No.`, 우측 `작성자`/`수정일`/`관리`)은 자동 렌더되므로
+ * DataTable 내장 컬럼(좌측 `No.`, 우측 `생성자`/`수정일`/`관리`)은 자동 렌더되므로
  * 여기서는 그 사이의 도메인 컬럼만 정의한다. NETWORKS(원장·관리 노출)와
  * HUB(조회 센터·관리 숨김)가 동일한 컬럼 구성을 공유한다.
  *
@@ -16,8 +16,8 @@ import type { MasterColumn } from '@/features/master/types'
  *   `profile`(jsonb)에 저장한다.
  * - `profile.match_available`: 목록은 가능/불가능 읽기용 태그(값 없음 → '가능' 기본).
  *   값 설정은 상세 페이지 드롭다운에서 수행하며 `profile`(jsonb)에 저장한다.
- * - `_activity`(활동): 건수 표기. 실제 활동 집계 연동 전 임시 999건.
- * - `_satisfaction`(만족도): 별점 표기. 실제 만족도 집계 연동 전 임시 5.0.
+ * - `_activity`(활동): 건수 표기. 실집계 연동 전이라 값이 없어 '-'로 비워 둔다.
+ * - `_satisfaction`(만족도): 별점 표기. 실집계 연동 전이라 값이 없어 '-'로 비워 둔다.
  */
 // 컬럼 폭 비율(table-fixed 기준). 여백은 DataTable 기본 px-3로 통일한다.
 export const NETWORK_PROFILE_COLUMNS: MasterColumn[] = [
@@ -64,7 +64,7 @@ export const NETWORK_ORG_COLUMNS: MasterColumn[] = NETWORK_PROFILE_COLUMNS.filte
  * 미분류(others) 목록 컬럼. 분류가 없거나 미분류 상태로 유입된 인물이 모이는 임시 저장소로,
  * 목록에서 바로 '구분'을 선택해 대상 네트워크로 이관할 수 있도록 구분을 드롭다운(kind: 'category')으로
  * 노출한다. 분야/활동/만족도/매칭 등 개인 지표는 배정 전이라 표시하지 않는다.
- * (작성자·수정일·관리 컬럼은 DataTable이 자동 렌더한다.)
+ * (생성자·수정일·관리 컬럼은 DataTable이 자동 렌더한다.)
  */
 export const NETWORK_OTHERS_COLUMNS: MasterColumn[] = [
   { name: 'name', label: '이름', mask: 'name', className: 'w-20' },

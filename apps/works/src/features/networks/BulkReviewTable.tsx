@@ -73,7 +73,7 @@ function Seg({
 /**
  * 중복 매칭 셀. 최소폭으로 행마다 시작점을 정렬한다.
  * - 비활성(미복구): 비활성화한 사람 · 사유만(둘 다 레드). 구분·중복은 숨긴다.
- * - 활성 매칭 or 복구 확정: 작성자 · 구분 · 중복(앰버).
+ * - 활성 매칭 or 복구 확정: 생성자 · 구분 · 중복(앰버).
  */
 function DupCell({ row, match, revived }: { row: ReviewRow; match: ExistingRef; revived: boolean }) {
   if (match.deleted && !revived) {
@@ -87,7 +87,7 @@ function DupCell({ row, match, revived }: { row: ReviewRow; match: ExistingRef; 
   const dups = overlapLabels(row, match).join(', ')
   return (
     <div className="inline-flex items-center gap-2.5 whitespace-nowrap text-caption leading-snug">
-      <Seg label="작성자" value={match.contributor ?? '미상'} widthCls="min-w-[6rem]" />
+      <Seg label="생성자" value={match.contributor ?? '미상'} widthCls="min-w-[6rem]" />
       <Seg label="구분" value={match.category} widthCls="min-w-[6.5rem]" />
       <Seg label="중복" tone="warning" value={dups} />
     </div>
@@ -111,7 +111,7 @@ interface Props {
 
 /**
  * 대용량 업로드 리뷰 테이블. 공용 DataTable(디자인 통일) 위에 구분 재결정·중복 강조·결정을 얹는다.
- * 중복이 있는 행은 '중복' 칸을 테두리 박스로 강조해 선행 데이터(이름/구분/작성자)를 함께 보인다.
+ * 중복이 있는 행은 '중복' 칸을 테두리 박스로 강조해 선행 데이터(이름/구분/생성자)를 함께 보인다.
  */
 export function BulkReviewTable({
   rows,
@@ -163,7 +163,7 @@ export function BulkReviewTable({
       ),
       // 왼쪽은 좁혀(pl-1) 구분 열에 붙이고, 오른쪽은 키워(pr-8) 주황 '중복' 뱃지가 결정 열에 붙지 않게 한다.
       className: 'w-72 pl-1 pr-8',
-      // 중복이 있는 행만 표시. 비활성 미복구는 비활성/사유만, 그 외는 작성자·구분·중복.
+      // 중복이 있는 행만 표시. 비활성 미복구는 비활성/사유만, 그 외는 생성자·구분·중복.
       render: (r) =>
         r.match ? (
           <DupCell row={r} match={r.match} revived={revivedLines.includes(r.line)} />

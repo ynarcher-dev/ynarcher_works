@@ -68,9 +68,9 @@ export interface Program {
   updated_at: string | null
   /** 부서 구성(메인 1 + 협업 n, 협업비율 합 100). */
   departments: ProgramDepartment[]
-  /** 담당자(program_managers 다대다 임베드). 등록자와 별개 축(재지정 가능). */
+  /** 담당자(program_managers 다대다 임베드). 생성자와 별개 축(재지정 가능). */
   managers: ProgramManager[]
-  /** 등록자(created_by → users) FK 임베드. 목록 표준 컬럼(등록자)의 원천. */
+  /** 생성자(created_by → users) FK 임베드. 목록 표준 컬럼(생성자)의 원천. */
   creator: { id: string; name: string | null } | null
 }
 

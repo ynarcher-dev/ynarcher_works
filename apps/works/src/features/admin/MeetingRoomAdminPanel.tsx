@@ -148,7 +148,7 @@ export function MeetingRoomAdminPanel() {
           {placeId && (
             <>
               <div className="flex justify-end">
-                <Button onClick={() => setForm('create')}>회의실 추가</Button>
+                <Button onClick={() => setForm('create')}>회의실 등록</Button>
               </div>
               {roomsQuery.isLoading ? (
                 <div className="flex justify-center py-10">

@@ -126,6 +126,8 @@ function GlobalView({ record }: { record: GlobalRow }) {
               )
             }
           />
+          {/* 생성자(created_by) — 국내 8종 상세와 같은 자리에 둔다. 담당자는 없다(영구 공동관리). */}
+          <Info label="생성자" value={record.creator?.name || '-'} />
           <Info label="기여자" value={contributors.length ? contributors.join(', ') : '-'} />
           <Info label="수정일" value={formatDate(record.updated_at)} />
         </div>

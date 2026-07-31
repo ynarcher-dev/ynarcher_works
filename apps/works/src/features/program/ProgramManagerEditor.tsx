@@ -1,9 +1,15 @@
 import { Input, Select } from '@ynarcher/ui'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ProgramManagerDraft } from '@/features/program/hooks'
 import type { ProgramDepartmentSegment } from '@/features/program/ProgramDepartmentEditor'
 import { coverageSlices } from '@/features/program/programManagerCoverage'
-import { useDepartments } from '@/features/management/orgHooks'
+import { deptPathLabel, nearestScopedAncestor } from '@/features/management/departmentOptions'
+import {
+  activeOrgVersionId,
+  useDepartments,
+  useDeptMembers,
+  useOrgVersions,
+} from '@/features/management/orgHooks'
 import { useEmployees } from '@/features/hub/hooks'
 
 /** 편집용 구간(저장 payload인 Draft + React 리스트 키). _key는 RPC에서 무시된다. */
@@ -26,7 +32,9 @@ interface Props {
 
 /**
  * 프로그램 담당자 배치 편집기(부서 계층 + 기간 세그먼트).
- * 담당자를 추가하면 조직도상 본인 부서(프로그램 지정 부서 중)로 자동 배정되고, 부서·역할·기간·투입률을 편집한다.
+ * 담당자의 부서는 고르는 값이 아니라 **사람에게 종속된 값**이다 — 그 단계 조직도에서 본인이 배치된
+ * 부서를 사업 지정 부서로 접어 자동으로 따라오게 하고, 화면은 역할·기간·투입률만 편집한다.
+ * 후보 목록도 같은 기준으로 좁힌다(지정 부서에 배치된 인력만).
  * 하단에 부서별로 수행 기간을 쪼갠 투입률 합을 실시간 표시해, 각 부서가 협업비율만큼 채워졌는지 드러낸다.
  */
 export function ProgramManagerEditor({
@@ -38,21 +46,65 @@ export function ProgramManagerEditor({
   phaseEnd,
 }: Props) {
   const { data: employees } = useEmployees()
-  const { data: deptMaster } = useDepartments(false, versionId)
+  // 소속 판정은 이 단계의 조직 버전 기준이다. 부서 트리(상위 접기·경로 표기)와 인력 배치를 그 버전에서 읽는다.
+  const { data: master } = useDepartments(false, versionId)
+  const { data: members } = useDeptMembers(versionId)
+  const { data: versions } = useOrgVersions()
+  const isActivePhase = versions ? activeOrgVersionId(versions) === versionId : false
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
 
   const list = employees ?? []
   const byId = useMemo(() => new Map(list.map((e) => [e.id, e] as const)), [list])
-  const deptName = (id: string) => (deptMaster ?? []).find((d) => d.id === id)?.name ?? '부서 미지정'
-  const filtered = list.filter((e) => (e.name ?? '').toLowerCase().includes(query.trim().toLowerCase()))
+  // 부서명은 최상위(법인)만 뺀 경로로 적는다 — 사업 목록·상세와 같은 표기(deptPathLabel).
+  const deptName = (id: string) => deptPathLabel(master ?? [], id) || '부서 미지정'
 
-  /** 신규 담당자 기본 부서: 조직도상 본인 부서(프로그램 지정 부서면) 아니면 메인 부서. */
-  const defaultDeptFor = (userId: string): string => {
-    const orgDept = byId.get(userId)?.department_id ?? ''
-    if (orgDept && departments.some((d) => d.department_id === orgDept)) return orgDept
-    return departments.find((d) => d.kind === 'MAIN')?.department_id ?? departments[0]?.department_id ?? ''
-  }
+  const placementMap = useMemo(
+    () => new Map((members ?? []).map((m) => [m.user_id, m.department_id] as const)),
+    [members],
+  )
+  /**
+   * 이 단계 조직 버전에서 그 사람이 배치된 부서. 배치 원장(dept_members)이 원천이며,
+   * 행이 없을 때만 users.department_id 미러로 채운다 — 미러는 활성 버전 값이라 다른 단계에는 쓸 수 없다.
+   */
+  const placementOf = (userId: string): string | null =>
+    placementMap.get(userId) ?? (isActivePhase ? byId.get(userId)?.department_id ?? null : null)
+
+  const scope = useMemo(
+    () => new Set(departments.map((d) => d.department_id).filter(Boolean)),
+    [departments],
+  )
+  /**
+   * 그 사람이 속한 사업 지정 부서(자기 부서에서 위로 접어 올린 결과). 지정 부서 밖이면 null —
+   * 후보에서 빠지고, 이미 추가된 구간이면 부서가 비어 저장 전에 드러난다.
+   */
+  const programDeptOf = (userId: string): string | null =>
+    nearestScopedAncestor(master ?? [], placementOf(userId), scope)
+
+  /**
+   * 부서 구성을 나중에 바꾸면(부서 교체·제거) 이미 추가된 구간의 부서가 옛 값으로 남는다.
+   * 부서는 사람에게 종속된 값이므로 매번 다시 계산해 되맞춘다 — 계산 결과가 곧 저장값이라 한 번에 수렴한다.
+   * 조직도·배치가 도착하기 전에는 손대지 않는다(전원이 '지정 부서 밖'으로 보여 부서를 지워버린다).
+   */
+  const ready = master !== undefined && (members !== undefined || isActivePhase)
+  useEffect(() => {
+    if (!ready || value.length === 0 || scope.size === 0) return
+    let changed = false
+    const next = value.map((r) => {
+      const dept = programDeptOf(r.user_id) ?? ''
+      if (dept === r.department_id) return r
+      changed = true
+      return { ...r, department_id: dept }
+    })
+    if (changed) onChange(next)
+  })
+
+  // 후보는 이 단계 지정 부서(하위 포함)에 배치된 인력만이다 — 지정 부서 밖 사람은 배정해도
+  // 서버가 되돌린다("담당자의 부서는 해당 단계에 지정된 부서 중 하나여야 합니다").
+  const candidates = ready ? list.filter((e) => programDeptOf(e.id) !== null) : []
+  const filtered = candidates.filter((e) =>
+    (e.name ?? '').toLowerCase().includes(query.trim().toLowerCase()),
+  )
 
   const add = (userId: string) => {
     onChange([
@@ -61,7 +113,7 @@ export function ProgramManagerEditor({
         _key: crypto.randomUUID(),
         user_id: userId,
         org_version_id: versionId,
-        department_id: defaultDeptFor(userId),
+        department_id: programDeptOf(userId) ?? '',
         role: 'MEMBER',
         allocation_rate: 0,
         start_date: phaseStart,
@@ -88,25 +140,43 @@ export function ProgramManagerEditor({
             setOpen(true)
           }}
           onFocus={() => setOpen(true)}
-          placeholder="담당자 검색 후 추가 (같은 사람을 다시 추가하면 구간이 늘어납니다)"
+          placeholder={
+            scope.size === 0
+              ? '먼저 위에서 부서 구성을 지정하세요'
+              : '담당자 검색 후 추가 (같은 사람을 다시 추가하면 구간이 늘어납니다)'
+          }
           className="relative z-dropdown min-h-ctl-page w-full rounded-radius-md border border-gray-300 bg-white px-3 py-1.5 text-body text-gray-900 outline-none transition-colors duration-fast placeholder:text-gray-400 focus:border-brand"
         />
         {open && (
           <div className="absolute left-0 right-0 z-dropdown mt-1 max-h-56 overflow-auto rounded-radius-lg border border-gray-300 bg-white p-1 shadow-popover">
             {filtered.length === 0 ? (
+              // 왜 비었는지를 구분해 적는다 — 후보를 지정 부서로 좁혔기 때문에, 아무 안내가 없으면
+              // 사람이 없는 것인지 검색이 안 맞은 것인지 알 수 없다.
               <div className="px-3 py-2 text-caption text-gray-500">
-                {list.length === 0 ? '불러오는 중…' : '검색 결과가 없습니다.'}
+                {scope.size === 0
+                  ? '부서 구성을 지정하면 그 부서의 인력이 나옵니다.'
+                  : !ready || list.length === 0
+                    ? '불러오는 중…'
+                    : candidates.length === 0
+                      ? '지정 부서에 배치된 인력이 없습니다.'
+                      : '검색 결과가 없습니다.'}
               </div>
             ) : (
+              // 동명이인·같은 성씨가 섞이는 목록이라 이름만으로는 누구인지 못 고른다.
+              // 소속은 이름과 같은 크기로 두고 색으로만 눌러 한 줄 안에서 위계를 만든다.
+              // 적는 소속은 이 단계 조직도상 본인 부서다(사업 지정 부서로 접기 전의 실제 배치).
               filtered.map((e) => (
                 <button
                   key={e.id}
                   type="button"
                   onMouseDown={(ev) => ev.preventDefault()}
                   onClick={() => add(e.id)}
-                  className="block w-full rounded-radius-md px-3 py-1.5 text-left text-body text-gray-800 transition-colors duration-fast hover:bg-gray-50"
+                  className="flex w-full items-center justify-between gap-3 rounded-radius-md px-3 py-1.5 text-left text-body transition-colors duration-fast hover:bg-gray-50"
                 >
-                  {e.name}
+                  <span className="truncate text-gray-800">{e.name}</span>
+                  <span className="min-w-0 max-w-[60%] shrink-0 truncate text-gray-500">
+                    {deptPathLabel(master ?? [], placementOf(e.id))}
+                  </span>
                 </button>
               ))
             )}
@@ -128,20 +198,22 @@ export function ProgramManagerEditor({
                     </span>
                   </div>
                 </div>
-                <label className="block min-w-0 flex-1">
+                {/* 부서는 고르는 값이 아니라 사람에게 딸려오는 값이라 입력이 아닌 표시다.
+                    바꾸려면 사람의 소속(조직 관리)이나 사업의 부서 구성을 바꿔야 한다. */}
+                <div className="block min-w-0 flex-1">
                   <span className="mb-0.5 block text-caption text-gray-600">부서</span>
-                  <Select
-                    value={row.department_id}
-                    onChange={(e) => patch(row._key, { department_id: e.target.value })}
-                  >
-                    <option value="">부서 선택</option>
-                    {departments.map((d) => (
-                      <option key={d.department_id} value={d.department_id}>
-                        {deptName(d.department_id)}
-                      </option>
-                    ))}
-                  </Select>
-                </label>
+                  <div className="flex h-ctl-page items-center">
+                    {row.department_id ? (
+                      <span className="truncate text-body text-gray-800">
+                        {deptName(row.department_id)}
+                      </span>
+                    ) : (
+                      <span className="truncate text-body font-medium text-danger">
+                        지정 부서 밖
+                      </span>
+                    )}
+                  </div>
+                </div>
                 <label className="block w-28 shrink-0">
                   <span className="mb-0.5 block text-caption text-gray-600">역할</span>
                   <Select

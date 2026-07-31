@@ -125,7 +125,8 @@ export function BoardAdminPanel() {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <Button onClick={() => setForm('create')}>게시판·자료실 생성</Button>
+        {/* 문구는 `{대상 명사} 등록` 규칙(구 '게시판·자료실 생성'). */}
+        <Button onClick={() => setForm('create')}>게시판·자료실 등록</Button>
       </div>
 
       {isLoading ? (

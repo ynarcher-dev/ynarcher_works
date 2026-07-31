@@ -78,8 +78,8 @@ function sanitizeOrValue(v: string): string {
 
 /**
  * 발굴기업 풀 전용 서버 사이드 페이지네이션 훅. NETWORKS 공용 useEntityPage와 달리
- * 다중 필드 검색(기업명·대표자·사업자번호·작성자)과 복수 필터(산업·단계·구분·관리현황·설립일)를
- * 스타트업 스키마에 맞춰 처리한다. 작성자(등록자)는 created_by FK를, 담당자(투자 지정)는
+ * 다중 필드 검색(기업명·대표자·사업자번호·생성자)과 복수 필터(산업·단계·구분·관리현황·설립일)를
+ * 스타트업 스키마에 맞춰 처리한다. 생성자(생성자)는 created_by FK를, 담당자(투자 지정)는
  * startup_managers를 각각 임베드해 별개 컬럼으로 노출한다(두 축은 서로 다를 수 있음).
  */
 export function useStartupPoolPage(
@@ -90,8 +90,8 @@ export function useStartupPoolPage(
   /** 탭별 구분 고정 필터(코드). 지정 시 해당 구분만 조회한다(4개 메뉴 상호 배타 뷰). */
   category?: ManagementStatus | null,
   /**
-   * 지정 시 담당자(startup_managers) 또는 등록자(created_by)가 이 사용자인 기업만 조회한다('내 관리기업').
-   * 담당자는 투자기업 전용 개념이므로 등록자 축을 함께 봐야 발굴·보육·기타 기업도 잡힌다.
+   * 지정 시 담당자(startup_managers) 또는 생성자(created_by)가 이 사용자인 기업만 조회한다('내 관리기업').
+   * 담당자는 투자기업 전용 개념이므로 생성자 축을 함께 봐야 발굴·보육·기타 기업도 잡힌다.
    */
   mineUserId?: string | null,
 ) {
@@ -112,7 +112,7 @@ export function useStartupPoolPage(
       const to = from + pageSize - 1
       const kw = sanitizeOrValue(keyword)
 
-      // '내 관리기업' 스코프: 등록자(created_by=나) OR 담당자(startup_managers.user_id=나).
+      // '내 관리기업' 스코프: 생성자(created_by=나) OR 담당자(startup_managers.user_id=나).
       // 담당 기업 id를 먼저 조회해 or 조건을 구성한다(AC useProgramsPage와 동일 패턴).
       let mineOr: string | null = null
       if (mineUserId) {
@@ -129,8 +129,8 @@ export function useStartupPoolPage(
       let q = supabase
         .from('startups')
         .select(
-          // creator = 작성자(등록자, created_by). managers = 담당자(투자기업 지정, startup_managers).
-          // 두 축은 별개 — 작성자 컬럼은 전 구분 공통, 담당자 컬럼은 투자 전용(비투자는 담당자 없음=공동관리).
+          // creator = 생성자(생성자, created_by). managers = 담당자(투자기업 지정, startup_managers).
+          // 두 축은 별개 — 생성자 컬럼은 전 구분 공통, 담당자 컬럼은 투자 전용(비투자는 담당자 없음=공동관리).
           '*, creator:users!created_by(id, name), managers:startup_managers(user_id, is_lead, user:users!startup_managers_user_id_fkey(id, name))',
           { count: 'exact' },
         )
@@ -143,7 +143,7 @@ export function useStartupPoolPage(
       if (category) q = q.eq('management_status', category)
       if (mineOr) q = q.or(mineOr)
 
-      // 검색: 기업명·대표자·사업자번호 + 작성자(등록자 이름→created_by id 역조회).
+      // 검색: 기업명·대표자·사업자번호 + 생성자(생성자 이름→created_by id 역조회).
       if (kw) {
         const orParts = [
           `name.ilike.%${kw}%`,

@@ -104,7 +104,8 @@ export function FundForm({ fundId, initial, onCancel, onDone }: FundFormProps) {
   const [termEnd, setTermEnd] = useState(d(initial?.term_end))
   const [opStart, setOpStart] = useState(d(initial?.operation_start))
   const [opEnd, setOpEnd] = useState(d(initial?.operation_end))
-  // 인력 배정(수정 모드에서만 노출·저장). 생성은 펀드가 아직 없어 배정 불가.
+  // 인력 배정(대표펀드매니저·운용인력·관리인력). 생성자가 생성 시점에 직접 배정하며,
+  // 펀드 id가 생긴 뒤(생성 직후 또는 수정 시) set_fund_staffing으로 반영한다.
   const [staff, setStaff] = useState<FundStaffing>(toStaffing(initial?.manager?.id, initial?.operators))
   // 목적관리(주목적·특수목적). 수정 시 원장에서 로드, 생성은 빈 상태로 시작.
   const [purposes, setPurposes_] = useState<PurposeDraft[]>([])
@@ -118,6 +119,12 @@ export function FundForm({ fundId, initial, onCancel, onDone }: FundFormProps) {
   const save = async () => {
     if (!name.trim()) {
       toast.show('펀드명을 입력하세요.', 'warning')
+      return
+    }
+    // 대표펀드매니저는 펀드의 관리 주체다 — 비면 그 펀드는 FUND 쓰기 권한자 전원의 공동관리로 열린다.
+    // 운용·관리 인력은 대표 아래 보조 축이라 선택으로 둔다.
+    if (!staff.manager[0]) {
+      toast.show('대표펀드매니저를 지정하세요.', 'warning')
       return
     }
     const values: FundInput = {

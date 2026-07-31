@@ -88,7 +88,7 @@ export function MeetingPlaceBar({ places, selectedId, onSelect }: Props) {
 
       <Button variant="outline" className="gap-1" onClick={() => setForm('create')}>
         <Plus className="size-4" aria-hidden />
-        지점 추가
+        지점 등록
       </Button>
 
       {selected && (
@@ -112,7 +112,7 @@ export function MeetingPlaceBar({ places, selectedId, onSelect }: Props) {
       <Modal
         open={form !== null}
         onClose={() => setForm(null)}
-        title={editing ? '지점 이름 수정' : '지점 추가'}
+        title={editing ? '지점 이름 수정' : '지점 등록'}
         footer={
           <>
             <Button variant="ghost" onClick={() => setForm(null)} disabled={busy}>

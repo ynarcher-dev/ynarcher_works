@@ -112,8 +112,11 @@ export const tableGrid = {
   row: 'h-row',
   /** 셀 좌우 여백. 셀 안 버튼의 `px-2.5`와 같은 값이라 열이 시각적으로 정렬된다. */
   cellX: 'px-2.5',
-  /** 고정 레이아웃(`fixed`)에서 열을 더 좁히기 위한 축소 여백. */
-  cellXFixed: 'px-2',
+  /**
+   * 열이 많은 표의 축소 여백. 폭을 고정한 표(`layout="fixed"`)와, 열 수가 많아 가로가 빠듯한
+   * 표(`dense`, 예: 펀드 목록)가 함께 쓴다 — 둘 다 "한 줄에 열을 더 넣어야 한다"는 같은 사정이다.
+   */
+  cellXTight: 'px-2',
 } as const
 
 /**
@@ -181,7 +184,7 @@ export const tableText = {
   primary: 'text-caption font-medium text-gray-900',
   /** 일반 값 — 나머지 도메인 열 전부. */
   body: 'text-caption text-gray-700',
-  /** 보조 값 — No.·등록자·수정일 등 레코드 자체가 아닌 메타. */
+  /** 보조 값 — No.·생성자·수정일 등 레코드 자체가 아닌 메타. */
   meta: 'text-caption text-gray-500',
   /** 빈 값 — 값이 없어 '-'로 대체한 자리. 실제 값과 구분되도록 한 단계 더 흐리게 둔다. */
   empty: 'text-gray-400',

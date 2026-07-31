@@ -2,8 +2,10 @@ import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { RequireAuth } from '@/auth/RequireAuth'
 import { RequireWorkspace } from '@/auth/RequireWorkspace'
 import { WorksLayout } from '@/app/WorksLayout'
-import { AcProgramDetailPage, AcWorkspacePage } from '@/features/ac/AcWorkspace'
+import { AcBulkPage, AcProgramDetailPage, AcWorkspacePage } from '@/features/ac/AcWorkspace'
 import { AdminPage } from '@/features/admin/AdminPage'
+import { BulkImportPage } from '@/features/bulk/BulkImportPage'
+import { FUND_BULK_SPEC, STARTUP_BULK_SPEC } from '@/features/bulk/specs'
 import { FundCreatePage } from '@/features/fund/FundCreatePage'
 import { FundDetailPage } from '@/features/fund/FundDetailPage'
 import { FundPage } from '@/features/fund/FundPage'
@@ -13,8 +15,9 @@ import { EmployeeDetailPage } from '@/features/management/EmployeeDetailPage'
 import { MyPage } from '@/features/management/MyPage'
 import { OrgReformPage } from '@/features/management/OrgReformPage'
 import { OfficePage } from '@/features/office/OfficePage'
-import { MnaProgramDetailPage, MnaWorkspacePage } from '@/features/mna/MnaWorkspace'
+import { MnaBulkPage, MnaProgramDetailPage, MnaWorkspacePage } from '@/features/mna/MnaWorkspace'
 import { NetworksPage } from '@/features/networks/NetworksPage'
+import { NetworksBulkPage } from '@/features/networks/NetworksBulkPage'
 import { NetworkDetailPage } from '@/features/networks/NetworkDetailPage'
 import { GlobalNetworkDetailPage } from '@/features/networks/GlobalNetworkDetailPage'
 import { DIRECTORY_ENTITIES } from '@/features/networks/config'
@@ -22,7 +25,11 @@ import { StartupPage } from '@/features/startup/StartupPage'
 import { StyleguidePage } from '@/features/styleguide/StyleguidePage'
 import { StartupDetailPage } from '@/features/startup/StartupDetailPage'
 import { StartupCreatePage } from '@/features/startup/StartupCreatePage'
-import { ProjectProgramDetailPage, ProjectWorkspacePage } from '@/features/project/ProjectWorkspace'
+import {
+  ProjectBulkPage,
+  ProjectProgramDetailPage,
+  ProjectWorkspacePage,
+} from '@/features/project/ProjectWorkspace'
 import { LoginPage } from '@/pages/LoginPage'
 import { RootLayout } from '@/pages/RootLayout'
 
@@ -51,6 +58,16 @@ export const router = createBrowserRouter([
               </RequireWorkspace>
             ),
           },
+          // 대용량 업로드는 원장 목록의 버튼으로 진입하는 전용 페이지다(사이드바 메뉴 아님).
+          // 정적 세그먼트라 아래 `networks/:entity/:id` 라우트보다 먼저 놓는다.
+          {
+            path: 'networks/bulk',
+            element: (
+              <RequireWorkspace workspace="networks">
+                <NetworksBulkPage />
+              </RequireWorkspace>
+            ),
+          },
           // 글로벌 네트워크 상세페이지(독립 마스터). id='new'면 등록 모드.
           {
             path: 'networks/global/:id',
@@ -74,6 +91,14 @@ export const router = createBrowserRouter([
             element: (
               <RequireWorkspace workspace="startup">
                 <StartupPage />
+              </RequireWorkspace>
+            ),
+          },
+          {
+            path: 'startup/bulk',
+            element: (
+              <RequireWorkspace workspace="startup">
+                <BulkImportPage spec={STARTUP_BULK_SPEC} />
               </RequireWorkspace>
             ),
           },
@@ -104,6 +129,14 @@ export const router = createBrowserRouter([
             ),
           },
           {
+            path: 'ac/bulk',
+            element: (
+              <RequireWorkspace workspace="ac">
+                <AcBulkPage />
+              </RequireWorkspace>
+            ),
+          },
+          {
             path: 'ac/programs/:id',
             element: (
               <RequireWorkspace workspace="ac">
@@ -128,6 +161,14 @@ export const router = createBrowserRouter([
             ),
           },
           {
+            path: 'fund/bulk',
+            element: (
+              <RequireWorkspace workspace="fund">
+                <BulkImportPage spec={FUND_BULK_SPEC} />
+              </RequireWorkspace>
+            ),
+          },
+          {
             path: 'fund/:id',
             element: (
               <RequireWorkspace workspace="fund">
@@ -140,6 +181,14 @@ export const router = createBrowserRouter([
             element: (
               <RequireWorkspace workspace="mna">
                 <MnaWorkspacePage />
+              </RequireWorkspace>
+            ),
+          },
+          {
+            path: 'mna/bulk',
+            element: (
+              <RequireWorkspace workspace="mna">
+                <MnaBulkPage />
               </RequireWorkspace>
             ),
           },
@@ -166,6 +215,14 @@ export const router = createBrowserRouter([
             element: (
               <RequireWorkspace workspace="project">
                 <ProjectWorkspacePage />
+              </RequireWorkspace>
+            ),
+          },
+          {
+            path: 'project/bulk',
+            element: (
+              <RequireWorkspace workspace="project">
+                <ProjectBulkPage />
               </RequireWorkspace>
             ),
           },

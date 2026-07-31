@@ -1,8 +1,14 @@
-import { Input } from '@ynarcher/ui'
+import { ListToolbar } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { ListActions } from '@/components/ListActions'
 import { NETWORK_ORG_COLUMNS } from '@/features/master/networkProfileColumns'
 import { MasterListView } from '@/features/master/MasterListView'
+import { MyNetworkFilters } from '@/features/networks/MyNetworkFilters'
+import {
+  EMPTY_MY_NETWORK_FILTERS,
+  type MyNetworkFilterState,
+} from '@/features/networks/filters'
 import { useMyNetworkPage, type MyNetworkRow } from '@/features/networks/hooks'
 
 /** 목록 페이지당 행 수(디렉토리·글로벌과 동일). */
@@ -19,22 +25,24 @@ export function MyNetworkTab() {
   const navigate = useNavigate()
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(0)
+  const [filters, setFilters] = useState<MyNetworkFilterState>(EMPTY_MY_NETWORK_FILTERS)
 
-  // 검색어 변경 시 첫 페이지로 되돌린다(빈 페이지 방지).
-  useEffect(() => setPage(0), [keyword])
-  const { data, isLoading } = useMyNetworkPage(keyword, page, PAGE_SIZE)
+  // 검색어·필터 변경 시 첫 페이지로 되돌린다(빈 페이지 방지).
+  const filtersKey = JSON.stringify(filters)
+  useEffect(() => setPage(0), [keyword, filtersKey])
+  const { data, isLoading } = useMyNetworkPage(keyword, page, PAGE_SIZE, filters)
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <div className="w-64">
-          <Input
-            placeholder="이름·소속 검색"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-          />
-        </div>
-      </div>
+      <ListToolbar
+        keyword={keyword}
+        onKeywordChange={setKeyword}
+        searchPlaceholder="이름·소속 검색"
+        filters={<MyNetworkFilters filters={filters} onChange={setFilters} />}
+        // 등록 버튼은 두지 않는다 — 종류가 섞인 목록이라 '어느 원장에 넣을지'가 정해지지 않는다.
+        // 대신 등록은 각 네트워크 목록에서, 업로드는 여기서도 바로 들어갈 수 있게 둔다.
+        actions={<ListActions bulkTo="/networks/bulk" />}
+      />
 
       <MasterListView
         label="내 네트워크"

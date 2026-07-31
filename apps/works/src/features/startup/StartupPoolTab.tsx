@@ -1,6 +1,7 @@
-import { Button, Input, Spinner } from '@ynarcher/ui'
+import { ListToolbar, Spinner } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { ListActions } from '@/components/ListActions'
 import { ENTITIES } from '@/features/networks/config'
 import { StartupPoolTable, type StartupPoolRow } from '@/features/startup/StartupPoolTable'
 import { StartupPoolFilters } from '@/features/startup/StartupPoolFilters'
@@ -20,7 +21,7 @@ const PAGE_SIZE = 30
 interface StartupPoolTabProps {
   /** 탭 고정 구분(코드). 4개 메뉴(투자/보육/발굴/기타) 상호 배타 뷰. null이면 구분 무관 전체. */
   category: ManagementStatus | null
-  /** 지정 시 담당자 또는 등록자가 이 사용자인 기업만 조회한다('내 관리기업'). */
+  /** 지정 시 담당자 또는 생성자가 이 사용자인 기업만 조회한다('내 관리기업'). */
   mineUserId?: string | null
 }
 
@@ -65,21 +66,19 @@ export function StartupPoolTab({ category, mineUserId }: StartupPoolTabProps) {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="w-full sm:w-80">
-          <Input
-            placeholder="기업명·대표자·사업자번호·등록자 검색"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
+      <ListToolbar
+        keyword={keyword}
+        onKeywordChange={setKeyword}
+        searchPlaceholder="기업명·대표자·사업자번호·생성자 검색"
+        filters={<StartupPoolFilters filters={filters} onChange={setFilters} />}
+        actions={
+          <ListActions
+            createLabel={`${config.label} 등록`}
+            onCreate={() => navigate('/startup/discovered/new')}
+            bulkTo="/startup/bulk"
           />
-        </div>
-        <StartupPoolFilters filters={filters} onChange={setFilters} />
-        <div className="sm:ml-auto">
-          <Button className="h-ctl-page" onClick={() => navigate('/startup/discovered/new')}>
-            {config.label} 등록
-          </Button>
-        </div>
-      </div>
+        }
+      />
 
       {isLoading ? (
         <Spinner />

@@ -16,7 +16,7 @@ export interface WorkspaceNavItem {
 
 /**
  * WORKS 앱 8대 메뉴 네비게이션 정의(GUEST 제외).
- * `groupLabel`은 스위처 4개 구획(업무 허브 / 마스터·네트워크 / 투자 사업 / 경영·시스템)의 시작 항목에만 부여한다.
+ * `groupLabel`은 스위처 4개 구획(업무 허브 / 데이터베이스 / 워크스페이스 / 경영·시스템)의 시작 항목에만 부여한다.
  */
 export const WORKSPACES: WorkspaceNavItem[] = [
   // 업무 허브 — 전사 공통 업무 허브로 최상단에 노출(구 HUB 대시보드·AI 에이전트 통합)
@@ -28,13 +28,13 @@ export const WORKSPACES: WorkspaceNavItem[] = [
     groupLabel: '업무 허브',
     description: '전사 공통 업무·대시보드',
   },
-  // 마스터·네트워크 — 조직의 원장(SSOT) 데이터
+  // 데이터베이스 — 조직의 원장(SSOT) 데이터
   {
     key: 'startup',
     label: 'STARTUP',
     path: '/startup',
     implemented: true,
-    groupLabel: '마스터·네트워크',
+    groupLabel: '데이터베이스',
     description: '투자·보육 기업 관리',
   },
   {
@@ -44,13 +44,13 @@ export const WORKSPACES: WorkspaceNavItem[] = [
     implemented: true,
     description: '전문가·투자사 네트워크 원장',
   },
-  // 투자 사업 — 딜·펀드 실행 라인
+  // 워크스페이스 — 딜·펀드 실행 라인
   {
     key: 'ac',
     label: 'AC',
     path: '/ac',
     implemented: true,
-    groupLabel: '투자 사업',
+    groupLabel: '워크스페이스',
     description: '액셀러레이팅 사업 관리',
   },
   { key: 'mna', label: 'M&A/PE', path: '/mna', implemented: true, description: '인수·합병·경영참여 딜 관리' },
@@ -61,7 +61,7 @@ export const WORKSPACES: WorkspaceNavItem[] = [
     implemented: true,
     description: '수행 프로젝트 관리',
   },
-  // FUND는 같은 '투자 사업' 구획이므로 별도 구분선 없이 이어서 노출한다.
+  // FUND는 같은 '워크스페이스' 구획이므로 별도 구분선 없이 이어서 노출한다.
   { key: 'fund', label: 'FUND', path: '/fund', implemented: true, description: '펀드·투자 운용' },
   // 경영·시스템 — 백오피스 및 시스템 관리
   {

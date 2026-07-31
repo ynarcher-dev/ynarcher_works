@@ -104,7 +104,8 @@ export function BranchAdminPanel() {
   return (
     <div className="space-y-5">
       <div className="flex justify-end">
-        <Button onClick={() => setForm('create')}>지사 추가</Button>
+        {/* 문구는 `{대상 명사} 등록` 규칙(구 '지사 추가'). */}
+        <Button onClick={() => setForm('create')}>지사 등록</Button>
       </div>
 
       {branchesQuery.isLoading ? (

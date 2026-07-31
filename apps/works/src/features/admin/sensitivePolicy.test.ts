@@ -60,7 +60,7 @@ describe('민감정보 정책 스토어', () => {
 
 describe('마스킹 대상 범위', () => {
   it('내부 임직원 원장(MANAGEMENT/OFFICE 임직원 정보)은 정책 대상이 아니다', () => {
-    // 담당자·등록자·운용인력 등 내부 임직원 이름은 어느 화면에서도 가리지 않는다(사용자 확정).
+    // 담당자·생성자·운용인력 등 내부 임직원 이름은 어느 화면에서도 가리지 않는다(사용자 확정).
     const keys = SENSITIVE_CONTENTS.map((c) => c.key)
     expect(keys.some((k) => k.startsWith('management.'))).toBe(false)
     expect(keys.some((k) => k.startsWith('office.'))).toBe(false)

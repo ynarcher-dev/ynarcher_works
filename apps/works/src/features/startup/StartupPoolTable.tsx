@@ -1,6 +1,7 @@
 import { Badge, DataTable, type Column, type DataTableProps } from '@ynarcher/ui'
 import { useMemo } from 'react'
 import { maskName } from '@/lib/mask'
+import { memberSummary } from '@/lib/memberLabel'
 import { useMaskPolicy } from '@/features/admin/sensitiveStore'
 import { formatFounded, readIndustries } from '@/features/startup/startupGrowth'
 import {
@@ -24,6 +25,8 @@ export interface StartupPoolRow {
   founded_on?: string | null
   /** 산업(startups.industry). SSOT는 industries(배열)이며, 목록은 readIndustries로 읽는다. */
   industry?: string | null
+  /** 소재지(startups.location) — location_tags 태그명(시·도 등). 상세주소는 목록에 노출하지 않는다. */
+  location?: string | null
   /** 성장 단계(startups.stage). */
   stage?: string | null
   /** 구분 코드: sourced/incubated/invested/other(startups.management_status). */
@@ -34,7 +37,7 @@ export interface StartupPoolRow {
   discovery_source?: string | null
   updated_at?: string | null
   created_by?: string | null
-  /** 작성자(등록자, created_by → users) FK 임베드. 전 구분 공통 작성자 컬럼의 원천. */
+  /** 생성자(생성자, created_by → users) FK 임베드. 전 구분 공통 생성자 컬럼의 원천. */
   creator?: { id: string; name: string | null } | null
   /** 지정 담당자(startup_managers) 임베드. 투자기업 담당자 컬럼의 원천(비투자는 없음). */
   managers?: { user_id: string; is_lead: boolean; user: { id: string; name: string | null } | null }[]
@@ -46,13 +49,13 @@ interface StartupPoolTableProps {
   rows: StartupPoolRow[]
   isLoading?: boolean
   /**
-   * 소속 탭(구분 코드). 조건부 컬럼과 담당자 표시를 좌우한다. 작성자는 전 구분 공통.
+   * 소속 탭(구분 코드). 조건부 컬럼과 담당자 표시를 좌우한다. 생성자는 전 구분 공통.
    * 미지정('내 기업 관리')은 구분이 섞인 뷰이며, 열 구성은 투자기업 탭과 동일하게 맞춘다.
    */
   tab?: ManagementStatus
   /**
    * 민감정보 정책 콘텐츠 키(ADMIN '민감정보 관리'). 이름 정책이 켜지면 외부 기업의 대표자명을 가린다
-   * (담당자·작성자는 내부 임직원이라 대상 아님). 카탈로그: features/admin/sensitiveContents.ts
+   * (담당자·생성자는 내부 임직원이라 대상 아님). 카탈로그: features/admin/sensitiveContents.ts
    */
   contentKey: string
   /** 행 클릭(상세 진입). 지정 시 행이 클릭 가능해진다. */
@@ -66,20 +69,22 @@ interface StartupPoolTableProps {
 
 /**
  * 스타트업 풀 관리 공용 데이터 테이블.
- * 컬럼: 체크박스·No.·기업명·대표자명·사업자등록번호·설립일·산업(뱃지 최대 3)·단계·구분·관리현황(투자·내 기업)·담당자·발굴 경로(발굴·보육·기타)·작성자·수정일.
- * 좌측 선택/넘버링과 우측 표준 컬럼(작성자·수정일)은 공용 DataTable이 소유하고,
+ * 컬럼: 체크박스·No.·기업명·대표자명·사업자등록번호·설립일·산업(뱃지 최대 3)·소재지·단계·구분·관리현황(투자·내 기업)·담당자·발굴 경로(발굴·보육·기타)·수정일.
+ * 좌측 선택/넘버링과 우측 표준 컬럼(수정일)은 공용 DataTable이 소유하고,
  * 본 컴포넌트는 그 사이의 도메인 컬럼(기업명~발굴 경로, 담당자)만 정의한다.
  * 비활성화(삭제)는 목록이 아니라 상세 페이지에서 수행하므로 관리 컬럼(showManageColumn=false)은 두지 않는다.
- * 작성자(등록자)와 담당자는 별개 축이다 — 작성자 컬럼은 전 구분 공통 등록자, 담당자 컬럼은 투자=지정 담당자·그 외=공동관리.
+ * 담당자 컬럼은 투자=지정 담당자·그 외=공동관리를 뜻한다(생성자 축은 목록에서 제외).
  */
-/** 투자기업 담당자 표시명: 리드 → 지원 순. 지정 담당자가 없으면 null(→ "미지정"). 등록자로 폴백하지 않는다. */
+/**
+ * 투자기업 담당자 표시명: 대표(리드) 1명 + "외 N"(공용 규격 memberSummary).
+ * 지정 담당자가 없으면 null(→ "미지정"). 생성자로 폴백하지 않는다.
+ */
 function managerLabel(r: StartupPoolRow): string | null {
   const ms = r.managers ?? []
-  if (ms.length === 0) return null
-  const lead = ms.find((m) => m.is_lead) ?? ms[0]
-  const leadName = lead?.user?.name ?? null
-  const extra = ms.length - 1
-  return leadName ? (extra > 0 ? `${leadName} 외 ${extra}` : leadName) : null
+  const lead = ms.find((m) => m.is_lead)
+  // 리드를 맨 앞에 세우고 나머지를 뒤로 — 대표가 누구인지는 도메인이, 표기는 공용 규격이 정한다.
+  const ordered = lead ? [lead, ...ms.filter((m) => m !== lead)] : ms
+  return memberSummary(ordered.map((m) => m.user?.name))
 }
 
 export function StartupPoolTable({
@@ -92,7 +97,7 @@ export function StartupPoolTable({
   pagination,
 }: StartupPoolTableProps) {
   const masked = useMaskPolicy(contentKey)
-  // 마스킹 대상은 외부 기업의 대표자명뿐이다 — 담당자·작성자는 내부 임직원이라 원본을 유지한다.
+  // 마스킹 대상은 외부 기업의 대표자명뿐이다 — 담당자·생성자는 내부 임직원이라 원본을 유지한다.
   const externalName = (v: string | null | undefined): string | null =>
     v ? (masked.name ? maskName(v) : v) : null
   const columns = useMemo<Column<StartupPoolRow>[]>(() => {
@@ -142,6 +147,13 @@ export function StartupPoolTable({
         },
       },
       {
+        // 소재지는 시·도 태그명 한 덩어리라 산업 뒤(기업 프로필 블록 끝)에 둔다.
+        key: 'location',
+        header: '소재지',
+        className: 'w-24',
+        render: (r) => r.location || <span className="text-gray-400">-</span>,
+      },
+      {
         key: 'stage',
         header: '단계',
         className: 'w-24',
@@ -179,7 +191,7 @@ export function StartupPoolTable({
     }
 
     // 담당자(관리 주체): 투자기업(관리현황 바로 뒤)은 지정 담당자(리드, 외 N),
-    // 그 외는 공동관리(쓰기 권한자 누구나) 텍스트. 등록자로 폴백하지 않으며 작성자는 우측 표준 컬럼에 별도 표시.
+    // 그 외는 공동관리(쓰기 권한자 누구나) 텍스트. 생성자로 폴백하지 않으며 생성자는 우측 표준 컬럼에 별도 표시.
     cols.push({
       key: 'managers',
       header: '담당자',
@@ -211,11 +223,10 @@ export function StartupPoolTable({
       onRowClick={onRowClick}
       pagination={pagination}
       showManageColumn={false}
-      meta={{
-        // 작성자(등록자) 컬럼: 전 구분 공통으로 created_by를 표시한다(담당자와 별개 축, 폴백 없음).
-        // 작성자(등록자)는 내부 임직원이라 마스킹 대상이 아니다.
-        author: (r) => r.creator?.name || <span className="text-gray-400">-</span>,
-      }}
+      // 생성자(created_by)는 아무 권한도 갖지 않는 축이라 목록에서 내린다 — 목록이 답해야 하는 것은
+      // '누가 만들었나'가 아니라 '지금 누가 관리하나'(담당자 컬럼)다. 생성자는 상세 페이지에만 남기며,
+      // '내 기업 관리' 스코프는 계속 created_by를 조회 조건으로 쓴다(표시와 조회는 별개).
+      showAuthor={false}
       emptyText="등록된 스타트업이 없습니다."
     />
   )

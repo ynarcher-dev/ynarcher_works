@@ -6,11 +6,16 @@ import {
 } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { GLOBAL_TABLE, type GlobalRow } from '@/features/networks/globalConfig'
+import {
+  EMPTY_GLOBAL_FILTERS,
+  hasActiveGlobalFilters,
+  type GlobalFilterState,
+} from '@/features/networks/filters'
 import type { Contribution } from '@/features/networks/hooks'
 
 /**
- * 목록/상세 조회 시 권역·국가명과 등록자(created_by → users)를 함께 임베드한다.
- * 국내 8종(useEntityPage)과 동일하게 creator를 실어 "등록자" 컬럼/항목이 비지 않게 한다.
+ * 목록/상세 조회 시 권역·국가명과 생성자(created_by → users)를 함께 임베드한다.
+ * 국내 8종(useEntityPage)과 동일하게 creator를 실어 "생성자" 컬럼/항목이 비지 않게 한다.
  */
 const SELECT_WITH_TAGS =
   '*, region:region_tags(name), country:country_tags(name), creator:users!created_by(id, name)'
@@ -26,9 +31,16 @@ export interface GlobalPage {
  * 글로벌 네트워크 서버 사이드 페이지네이션(검색/미삭제/미병합).
  * 이름 검색은 ilike, 권역·국가명은 조인 임베드로 함께 조회한다. page는 0-base.
  */
-export function useGlobalPage(keyword: string, page: number, pageSize: number) {
+export function useGlobalPage(
+  keyword: string,
+  page: number,
+  pageSize: number,
+  filters: GlobalFilterState = EMPTY_GLOBAL_FILTERS,
+) {
+  // 필터 객체는 매 렌더 새로 만들어지므로 값으로 직렬화해 캐시 키를 안정시킨다.
+  const filtersKey = JSON.stringify(filters)
   return useQuery({
-    queryKey: ['networks', GLOBAL_TABLE, 'page', keyword, page, pageSize],
+    queryKey: ['networks', GLOBAL_TABLE, 'page', keyword, filtersKey, page, pageSize],
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<GlobalPage> => {
       const from = page * pageSize
@@ -42,12 +54,16 @@ export function useGlobalPage(keyword: string, page: number, pageSize: number) {
         .range(from, to)
       const trimmed = keyword.trim()
       if (trimmed) q = q.ilike('name', `%${trimmed}%`)
+      // 권역·국가는 태그 FK로, 구분은 스칼라 값으로 거른다(모두 목록에 노출된 열이다).
+      if (filters.regionIds.length) q = q.in('region_tag_id', filters.regionIds)
+      if (filters.countryIds.length) q = q.in('country_tag_id', filters.countryIds)
+      if (filters.categories.length) q = q.in('category', filters.categories)
       const { data, error, count } = await q
       if (error) throw error
       const total = count ?? 0
 
       let totalAll = total
-      if (trimmed) {
+      if (trimmed || hasActiveGlobalFilters(filters)) {
         const { count: allCount } = await supabase
           .from(GLOBAL_TABLE)
           .select('*', { count: 'exact', head: true })

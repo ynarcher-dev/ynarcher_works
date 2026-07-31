@@ -27,9 +27,8 @@ export function ExpertRankingPanel({
     const byActivity = (b.activity ?? -1) - (a.activity ?? -1)
     return byActivity !== 0 ? byActivity : (b.satisfaction ?? -1) - (a.satisfaction ?? -1)
   })
-  const sliced = limit ? sorted.slice(0, limit) : sorted
-  // TODO(임시): 활동건 999·만족도 5.0 렌더 미리보기용 예시. 실집계 연동 시 제거.
-  const shown = sliced.map((r, i) => (i === 0 ? { ...r, activity: 999, satisfaction: 5.0 } : r))
+  // 활동건·만족도는 실집계 연동 전이라 값이 없으면 '-'로 비워 둔다(예시값을 끼워 넣지 않는다).
+  const shown = limit ? sorted.slice(0, limit) : sorted
   const hidden = sorted.length - shown.length
 
   return (

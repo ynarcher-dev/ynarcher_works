@@ -6,6 +6,47 @@ import {
 } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { ENTITIES, normalizeEntityRowCategory, type EntityKey } from '@/features/networks/config'
+import {
+  EMPTY_MY_NETWORK_FILTERS,
+  EMPTY_NETWORK_FILTERS,
+  hasActiveNetworkFilters,
+  type MyNetworkFilterState,
+  type NetworkFilterState,
+} from '@/features/networks/filters'
+
+/** PostgREST `or=(...)` 인자에 값을 넣을 때 구분자(콤마·괄호)를 깨지 않게 감싼다. */
+function quoteFilterValue(v: string): string {
+  return `"${v.replace(/["\\]/g, '\\$&')}"`
+}
+
+/**
+ * 목록 필터를 PostgREST 쿼리에 얹는다. 축이 셋이라 각각 다루는 방법이 다르다.
+ * - 구분: `profile`(jsonb)의 텍스트 값이라 점 경로 대신 `->>`로 꺼내 in 비교한다.
+ * - 분야: `expertise`(jsonb 배열)에 "하나라도 들어 있으면"이라 태그별 포함(cs) 조건을 or로 잇는다.
+ * - 매칭: 값이 비어 있으면 '가능'이 기본이라(목록 배지와 같은 규칙) null도 가능 쪽에 넣는다.
+ */
+function applyNetworkFilters<T>(query: T, filters: NetworkFilterState): T {
+  // supabase-js 쿼리 빌더는 체이닝 타입이 복잡해 제네릭으로 되받는다(런타임 동작은 동일).
+  let q = query as unknown as {
+    in: (c: string, v: string[]) => unknown
+    or: (f: string) => unknown
+  }
+  if (filters.categories.length) {
+    q = q.in('profile->>category', filters.categories) as typeof q
+  }
+  if (filters.expertise.length) {
+    const clauses = filters.expertise.map((t) => `expertise.cs.[${quoteFilterValue(t)}]`)
+    q = q.or(clauses.join(',')) as typeof q
+  }
+  // 둘 다 고르면 거르지 않은 것과 같다(전체) — 조건을 붙이지 않는다.
+  if (filters.match.length === 1) {
+    q =
+      filters.match[0] === 'possible'
+        ? (q.or('profile->>match_available.is.null,profile->>match_available.eq.true') as typeof q)
+        : (q.or('profile->>match_available.eq.false') as typeof q)
+  }
+  return q as unknown as T
+}
 
 export type EntityRow = Record<string, unknown> & {
   id: string
@@ -13,7 +54,7 @@ export type EntityRow = Record<string, unknown> & {
   is_provisional?: boolean
   merged_into_id?: string | null
   /**
-   * 작성자(등록자, created_by → users) FK 임베드. 목록·상세의 작성자 표시 원천.
+   * 생성자(생성자, created_by → users) FK 임베드. 목록·상세의 생성자 표시 원천.
    * 담당자(관리 주체)는 별개 축 — 투자기업은 startup_managers 지정 담당자, 그 외는 공동관리(특정 담당자 없음).
    */
   creator?: { id: string; name: string | null } | null
@@ -59,9 +100,12 @@ export function useEntityPage(
   keyword: string,
   page: number,
   pageSize: number,
+  filters: NetworkFilterState = EMPTY_NETWORK_FILTERS,
 ) {
+  // 필터 객체는 매 렌더 새로 만들어지므로 값으로 직렬화해 캐시 키를 안정시킨다.
+  const filtersKey = JSON.stringify(filters)
   return useQuery({
-    queryKey: ['networks', table, 'page', keyword, page, pageSize],
+    queryKey: ['networks', table, 'page', keyword, filtersKey, page, pageSize],
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<EntityPage> => {
       const from = page * pageSize
@@ -75,13 +119,14 @@ export function useEntityPage(
         .range(from, to)
       const trimmed = keyword.trim()
       if (trimmed) q = q.ilike('name', `%${trimmed}%`)
+      q = applyNetworkFilters(q, filters)
       const { data, error, count } = await q
       if (error) throw error
       const total = count ?? 0
 
-      // 검색어가 없으면 필터 반영 건수 == 전체 건수. 있을 때만 전체 건수를 별도 조회한다.
+      // 검색어·필터가 모두 없으면 반영 건수 == 전체 건수. 하나라도 걸렸을 때만 별도 조회한다.
       let totalAll = total
-      if (trimmed) {
+      if (trimmed || hasActiveNetworkFilters(filters)) {
         const { count: allCount } = await supabase
           .from(table)
           .select('*', { count: 'exact', head: true })
@@ -118,7 +163,7 @@ export type MyNetworkRow = Record<string, unknown> & {
   profile: Record<string, unknown> | null
   expertise: unknown
   created_by: string | null
-  /** 등록자(created_by → users.name). 공용 리스트뷰가 `creator.name`으로 읽는다. */
+  /** 생성자(created_by → users.name). 공용 리스트뷰가 `creator.name`으로 읽는다. */
   creator: { name: string | null } | null
   updated_at: string | null
   /** 가장 최근 기여 행위(created/merged/enriched/edited). */
@@ -139,26 +184,36 @@ export interface MyNetworkPage {
  * 총 건수는 모든 행에 동일하게 실려오는 윈도우 카운트(`total_count`)에서 읽는다(행 0건이면 0).
  * page는 0-base이며, 페이지 전환 시 이전 페이지를 유지(keepPreviousData)해 깜빡임을 줄인다.
  */
-export function useMyNetworkPage(keyword: string, page: number, pageSize: number) {
+export function useMyNetworkPage(
+  keyword: string,
+  page: number,
+  pageSize: number,
+  filters: MyNetworkFilterState = EMPTY_MY_NETWORK_FILTERS,
+) {
+  const filtersKey = JSON.stringify(filters)
   return useQuery({
-    queryKey: ['networks', 'mine', 'page', keyword, page, pageSize],
+    queryKey: ['networks', 'mine', 'page', keyword, filtersKey, page, pageSize],
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<MyNetworkPage> => {
       const trimmed = keyword.trim()
+      // 10종을 union하는 목록이라 페이지네이션과 필터를 같은 곳(RPC)에서 걸어야 한다 —
+      // 클라이언트에서 거르면 현재 페이지에 실려 온 행 안에서만 걸러진다.
       const { data, error } = await supabase.rpc('my_network_entities', {
         p_keyword: trimmed || null,
         p_limit: pageSize,
         p_offset: page * pageSize,
+        p_entities: filters.entities.length ? filters.entities : null,
+        p_categories: filters.categories.length ? filters.categories : null,
       })
       if (error) throw error
-      // RPC 원본 행: 등록자가 평면 컬럼(creator_name), 총 건수가 행마다 실린 윈도우 카운트.
+      // RPC 원본 행: 생성자가 평면 컬럼(creator_name), 총 건수가 행마다 실린 윈도우 카운트.
       const rows = (data ?? []) as (Record<string, unknown> & {
         creator_name?: string | null
         total_count?: number | string
       })[]
       return {
-        // RPC는 등록자를 평면 컬럼(creator_name)으로 돌려주므로 다른 네트워크 목록과 동일한
-        // 중첩 형태(creator.name)로 정규화한다(공용 리스트뷰의 작성자 컬럼 규약).
+        // RPC는 생성자를 평면 컬럼(creator_name)으로 돌려주므로 다른 네트워크 목록과 동일한
+        // 중첩 형태(creator.name)로 정규화한다(공용 리스트뷰의 생성자 컬럼 규약).
         rows: rows.map(
           ({ total_count: _total, creator_name, ...row }) =>
             ({

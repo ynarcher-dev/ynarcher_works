@@ -297,7 +297,7 @@ export function TagAdminPanel({ config }: TagAdminPanelProps) {
           onClick={add}
           disabled={!newName.trim() || create.isPending || (Boolean(parent) && !activeParentId)}
         >
-          태그 추가
+          태그 등록
         </Button>
       </div>
 

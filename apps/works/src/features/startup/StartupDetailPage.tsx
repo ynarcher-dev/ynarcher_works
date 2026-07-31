@@ -163,7 +163,7 @@ export function StartupDetailPage() {
                 </div>
               </div>
 
-              {/* 기본 정보(3열): 대표자·이메일·연락처 / 회사형태·설립일·사업자등록번호 / 소재지·수정일.
+              {/* 기본 정보(3열): 대표자·이메일·연락처 / 회사형태·설립일·사업자등록번호 / 소재지·상세주소 / 수정일·생성자.
                   상태·분류(단계·구분·관리현황)는 헤더 칩으로 올려 이 그리드에서 뺐다.
                   상세주소는 길 수 있어 다음 행 전폭을 차지한다(소재지·수정일 뒤에서 자연스레 줄바꿈). */}
               <div className="mt-5 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-3">
@@ -216,6 +216,9 @@ export function StartupDetailPage() {
                   valueClassName="min-w-0 flex-1 truncate"
                 />
                 <Info label="수정일" value={formatDate(record.updated_at)} />
+                {/* 생성자(created_by) — 권한 축이 아니라 이 레코드를 만든 사람이라, 관리 주체(담당자 카드)가
+                    아니라 수정일과 같은 줄의 기록 정보로 둔다. 목록에는 노출하지 않는다. */}
+                <Info label="생성자" value={record.creator?.name || '-'} />
               </div>
 
               {/* 발굴 경로는 길 수 있어 전체 폭을 쓰되, 표시 규격은 위 정보행(Info)과 동일하게 맞춘다. */}
@@ -245,8 +248,9 @@ export function StartupDetailPage() {
 
             {/* 관리 현황: 담당자(최상단) + 플랫폼 전반 참여·관리 이력(현재는 헤드라인만, 내용은 후속) */}
             <SectionHeading title="관리 현황" />
-            {/* 담당자 카드(관리 현황 최상단). 담당자와 작성자(등록자)는 별개 축이므로 항상 분리 표기한다.
-                투자기업만 지정 담당자(리드/지원)를 가지며, 비투자는 공동관리(특정 담당자 없음)다. */}
+            {/* 담당자 카드(관리 현황 최상단). 관리 주체만 답한다 — 생성자는 별개 축이라 위 기본 데이터
+                카드의 기록 정보(수정일 옆)에 둔다. 투자기업만 지정 담당자(리드/지원)를 가지며,
+                비투자는 공동관리(특정 담당자 없음)다. */}
             <PanelCard title="담당자">
               {invested ? (
                 (managers ?? []).length > 0 ? (
@@ -262,14 +266,9 @@ export function StartupDetailPage() {
                 )
               ) : (
                 <p className="text-body text-gray-600">
-                  공동관리 — NETWORKS 쓰기 권한자 누구나 수정할 수 있습니다.
+                  공동관리 — STARTUP 쓰기 권한자 누구나 수정할 수 있습니다.
                 </p>
               )}
-              {/* 등록자: 담당자와 무관한 최초 등록 감사 정보. 항상 표시한다.
-                  표시 규격은 위 기본 데이터 카드의 정보행과 동일하게 Info에 맡긴다. */}
-              <div className="mt-3 border-t border-gray-100 pt-3">
-                <Info label="등록자" value={record.creator?.name || '-'} />
-              </div>
             </PanelCard>
             {/* 관리 현황 로그 카드: 기능은 후속 구현, 지금은 건수 뱃지(0) 디자인만 잡아둔다. */}
             {ACTIVITY_SECTIONS.map((title) => (

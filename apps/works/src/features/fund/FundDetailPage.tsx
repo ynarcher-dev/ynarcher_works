@@ -177,6 +177,8 @@ export function FundDetailPage() {
 
             {/* 펀드 속성(재원·성격·유형·기간·출자방식) */}
             <div className="mt-4 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-3">
+              {/* 펀드코드: 사업코드와 같은 형식(6자리 영숫자)이며 워크스페이스를 가로질러 유니크하다. */}
+              <Info label="펀드코드" value={fund.code || '-'} />
               <Info
                 label="재원구분"
                 value={fund.source_type ? FUND_SOURCE_LABEL[fund.source_type] ?? fund.source_type : '-'}
@@ -212,8 +214,8 @@ export function FundDetailPage() {
               <Info label="대표펀드매니저" value={fund.manager?.name || '-'} />
               <Info label="운용인력" value={fundOperatorLabel(operators, true) ?? '-'} />
               <Info label="관리인력" value={fundManagerLabel(operators, true) ?? '-'} />
-              {/* 값은 등록자(created_by)이나 사용자 결정으로 라벨만 '관리자'로 표기(리스트뷰 authorLabel과 동일 성격). */}
-              <Info label="관리자" value={fund.creator?.name || '-'} />
+              {/* 생성자(created_by) — 관리 주체(대표펀드매니저·운용·관리인력)와 별개 축이다. */}
+              <Info label="생성자" value={fund.creator?.name || '-'} />
               <Info label="수정일" value={fundDate(fund.updated_at ?? null) ?? '-'} />
             </div>
           </CardShell>

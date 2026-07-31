@@ -256,7 +256,7 @@ export function WorksLayout() {
     key: w.key,
     label: w.implemented ? w.label : `${w.label} (준비 중)`,
     disabled: !w.implemented,
-    // 워크스페이스 부제 + 4개 구획(업무 허브/마스터·네트워크/투자 사업/경영·시스템) 섹션 헤더.
+    // 워크스페이스 부제 + 4개 구획(업무 허브/데이터베이스/워크스페이스/경영·시스템) 섹션 헤더.
     description: w.description,
     groupLabel: w.groupLabel,
     divider: w.divider,
@@ -274,13 +274,29 @@ export function WorksLayout() {
         ? sidebarIconByWorkspace[currentWs.key]
         : undefined
 
+  /**
+   * 아이콘 자리에 놓을 요소. 이모지가 지정된 항목('내 ~ 관리')은 lucide 아이콘 대신 이모지를 쓴다 —
+   * 회색 선 아이콘이 이어지는 목록에서 색 있는 글리프 하나가 "내 것" 층을 구분한다.
+   * 아이콘(size-4=16px)과 광학 크기를 맞추기 위해 이모지는 15px로 둔다.
+   */
+  const leafIcon = (item: SubNavItem) => {
+    if (item.emoji) {
+      return (
+        <span aria-hidden className="text-[15px] leading-none">
+          {item.emoji}
+        </span>
+      )
+    }
+    const Icon = item.iconKey ? boardIcon(item.iconKey) : getSidebarIcon(item)
+    return Icon ? <Icon aria-hidden className="size-4" /> : undefined
+  }
+
   /** 사이드바 본체의 메뉴 한 줄(어두운 배경 규격). 플라이아웃 내부는 renderFlyoutLeaf를 쓴다. */
   const renderLeaf = (item: SubNavItem) => {
-    const Icon = item.iconKey ? boardIcon(item.iconKey) : getSidebarIcon(item)
     return (
       <SidebarItem
         key={item.label}
-        icon={Icon ? <Icon aria-hidden className="size-4" /> : undefined}
+        icon={leafIcon(item)}
         label={item.label}
         active={item.tab ? item.tab === activeTab : true}
         collapsed={sidebarCollapsed}
@@ -302,11 +318,17 @@ export function WorksLayout() {
     return (
       <DropdownItem key={item.label} onClick={() => goToSection(item)}>
         <span className="flex items-center gap-2 whitespace-nowrap">
-          {Icon && (
-            <Icon
-              aria-hidden
-              className={cn('size-4 shrink-0', isActive ? 'text-brand' : 'text-gray-400')}
-            />
+          {item.emoji ? (
+            <span aria-hidden className="shrink-0 text-[15px] leading-none">
+              {item.emoji}
+            </span>
+          ) : (
+            Icon && (
+              <Icon
+                aria-hidden
+                className={cn('size-4 shrink-0', isActive ? 'text-brand' : 'text-gray-400')}
+              />
+            )
           )}
           <span className={isActive ? 'font-semibold text-brand' : undefined}>{item.label}</span>
         </span>

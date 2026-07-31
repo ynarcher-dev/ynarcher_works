@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { joinNames, memberSummary } from '@/lib/memberLabel'
 
 /**
  * 펀드 상태(fund_status enum) 한글 라벨. 저장값은 코드 그대로 두고 화면에서만 매핑한다
@@ -111,9 +112,18 @@ export const FUND_STRATEGY_OPTIONS = toOptions(FUND_STRATEGY_LABEL)
 export const FUND_TYPE_OPTIONS = toOptions(FUND_TYPE_LABEL)
 export const FUND_SUBSCRIPTION_OPTIONS = toOptions(FUND_SUBSCRIPTION_LABEL)
 
-/** 원(₩) 정수 → "n억" 표기. 기존 FundPage 표기 규칙과 동일. */
+/** 원(₩) 정수 → "n억" 표기. 규약 목적 달성률 등 어림 규모를 적는 자리에서 쓴다. */
 export function formatEok(won: number): string {
   return `${(won / 100_000_000).toLocaleString(undefined, { maximumFractionDigits: 2 })}억`
+}
+
+/**
+ * 원(₩) 정수 → "n백만원" 표기(소수점 없음, 반올림).
+ * 펀드 금액 4종(약정총액·실출자금액·집행액·잔액)의 목록 표기 단위다 — 억 단위로는
+ * 소액 집행이 `0.01억`처럼 뭉개져 자릿수를 비교할 수 없다.
+ */
+export function formatMillion(won: number): string {
+  return `${Math.round(won / 1_000_000).toLocaleString()}백만원`
 }
 
 /** 원(₩) 정수 → 천단위 콤마 + "원" 표기(전액 표기). */
@@ -126,19 +136,29 @@ export function fundDate(iso: string | null): string | null {
   return iso ? iso.slice(0, 10) : null
 }
 
-/** 존속기간 "YYYY-MM-DD ~ YYYY-MM-DD". 둘 다 없으면 null. */
+/** 존속기간 "YYYY-MM-DD ~ YYYY-MM-DD"(한 줄, 상세용). 둘 다 없으면 null. */
 export function fundPeriod(start: string | null, end: string | null): string | null {
   if (!start && !end) return null
   return `${fundDate(start) ?? '?'} ~ ${fundDate(end) ?? '?'}`
 }
 
-/** 인력 목록을 표시명으로. full=true면 전원 나열, 아니면 "이름 외 N" 요약(없으면 null). */
+/**
+ * 존속기간을 시작·종료 두 줄로(목록용). 둘 다 없으면 null.
+ * 목록의 열 폭에서는 한 줄 표기가 임의의 지점에서 접혀 날짜가 반토막 나므로,
+ * 접히는 자리를 표기 쪽에서 시작/종료 경계로 못박는다.
+ */
+export function fundPeriodLines(start: string | null, end: string | null): [string, string] | null {
+  if (!start && !end) return null
+  return [fundDate(start) ?? '?', fundDate(end) ?? '?']
+}
+
+/**
+ * 인력 목록을 표시명으로. full=true(상세)면 전원 나열, 아니면 목록 공용 규격("대표 1명 외 N").
+ * 표기 규칙 자체는 lib/memberLabel이 소유한다 — 표마다 접는 인원 수가 달라지지 않게 한다.
+ */
 function memberLabel(members: FundListRow['operators'], full: boolean): string | null {
-  if (members.length === 0) return null
-  const names = members.map((m) => m.user?.name ?? '-')
-  if (full) return names.join(', ')
-  const first = names[0] ?? '-'
-  return names.length > 1 ? `${first} 외 ${names.length - 1}` : first
+  const names = members.map((m) => m.user?.name)
+  return full ? joinNames(names) : memberSummary(names)
 }
 
 /**
@@ -155,9 +175,11 @@ export function fundManagerLabel(operators: FundListRow['operators'], full = fal
   return memberLabel(operators.filter((o) => o.role === 'ADMIN'), full)
 }
 
-/** 펀드 리스트 행. `funds` 표시 컬럼 + 대표펀드매니저·관리자(등록자) 임베드. */
+/** 펀드 리스트 행. `funds` 표시 컬럼 + 대표펀드매니저·관리자(생성자) 임베드. */
 export interface FundListRow {
   id: string
+  /** 펀드코드(6자리 영숫자 난수, 워크스페이스 전역 유니크). DB 트리거가 등록 시 부여한다. */
+  code: string | null
   name: string
   vintage_year: number | null
   total_commitment: number
@@ -168,7 +190,7 @@ export interface FundListRow {
   updated_at: string | null
   /** 대표펀드매니저(manager_id → users). */
   manager: { id: string; name: string | null } | null
-  /** 관리자 컬럼의 원천 = 등록자(created_by → users). 라벨만 '관리자'로 표기(작성자≠담당자 인지). 관리인력과 별개. */
+  /** 관리자 컬럼의 원천 = 생성자(created_by → users). 라벨만 '관리자'로 표기(생성자≠담당자 인지). 관리인력과 별개. */
   creator: { id: string; name: string | null } | null
   /** 재원/성격/구분(20260724100000) + 펀드유형(20260724140000). */
   source_type: string | null
@@ -216,7 +238,7 @@ export function useFundList() {
       const { data, error } = await supabase
         .from('funds')
         .select(
-          'id, name, vintage_year, total_commitment, drawn_amount, status, source_type, character_type, strategy_type, fund_type, formed_on, term_start, term_end, paid_in_amount, created_by, manager_id, updated_at, manager:users!manager_id(id, name), creator:users!created_by(id, name), operators:fund_managers(user_id, role, is_lead, user:users!user_id(id, name))',
+          'id, code, name, vintage_year, total_commitment, drawn_amount, status, source_type, character_type, strategy_type, fund_type, formed_on, term_start, term_end, paid_in_amount, created_by, manager_id, updated_at, manager:users!manager_id(id, name), creator:users!created_by(id, name), operators:fund_managers(user_id, role, is_lead, user:users!user_id(id, name))',
         )
         .is('deleted_at', null)
         .order('vintage_year', { ascending: false, nullsFirst: false })
@@ -225,6 +247,7 @@ export function useFundList() {
         const row = r as Record<string, unknown>
         return {
           id: row.id as string,
+          code: (row.code as string) ?? null,
           name: row.name as string,
           vintage_year: (row.vintage_year as number) ?? null,
           total_commitment: Number(row.total_commitment),

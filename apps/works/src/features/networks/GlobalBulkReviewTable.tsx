@@ -66,7 +66,7 @@ function Seg({
   )
 }
 
-/** 중복 매칭 셀. 비활성 미복구는 비활성/사유만, 그 외는 작성자·구분·중복. */
+/** 중복 매칭 셀. 비활성 미복구는 비활성/사유만, 그 외는 생성자·구분·중복. */
 function DupCell({
   row,
   match,
@@ -87,7 +87,7 @@ function DupCell({
   const dups = overlapLabels(row, match).join(', ')
   return (
     <div className="inline-flex items-center gap-2.5 whitespace-nowrap text-caption leading-snug">
-      <Seg label="작성자" value={match.contributor ?? '미상'} widthCls="min-w-[6rem]" />
+      <Seg label="생성자" value={match.contributor ?? '미상'} widthCls="min-w-[6rem]" />
       <Seg label="구분" value={match.category || '미지정'} widthCls="min-w-[5rem]" />
       <Seg label="중복" tone="warning" value={dups} />
     </div>

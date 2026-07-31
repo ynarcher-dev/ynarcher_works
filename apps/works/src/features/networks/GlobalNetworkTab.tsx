@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MasterListView } from '@/features/master/MasterListView'
 import type { MasterRow } from '@/features/master/types'
+import { GlobalNetworkFilters } from '@/features/networks/GlobalNetworkFilters'
+import { EMPTY_GLOBAL_FILTERS, type GlobalFilterState } from '@/features/networks/filters'
 import { GLOBAL_COLUMNS } from '@/features/networks/globalConfig'
 import { useGlobalPage } from '@/features/networks/globalHooks'
 
@@ -20,12 +22,17 @@ interface Props {
 export function GlobalNetworkTab({ keyword }: Props) {
   const navigate = useNavigate()
   const [page, setPage] = useState(0)
+  const [filters, setFilters] = useState<GlobalFilterState>(EMPTY_GLOBAL_FILTERS)
 
-  useEffect(() => setPage(0), [keyword])
-  const { data, isLoading } = useGlobalPage(keyword, page, PAGE_SIZE)
+  // 검색어·필터가 바뀌면 첫 페이지로 되돌린다(빈 페이지에 남지 않도록).
+  const filtersKey = JSON.stringify(filters)
+  useEffect(() => setPage(0), [keyword, filtersKey])
+  const { data, isLoading } = useGlobalPage(keyword, page, PAGE_SIZE, filters)
 
   return (
     <div className="space-y-3">
+      <GlobalNetworkFilters filters={filters} onChange={setFilters} />
+
       <MasterListView
         label="글로벌 네트워크"
         contentKey="networks.global"

@@ -41,6 +41,7 @@
   * **의미**: 외부 전문가, 투자사, 기업, 기관, 대학, 외주/거래처, 글로벌 네트워크 등 전사 핵심 외부 네트워크 마스터 데이터를 개별 등록/수정/관리하고 대량 임포터 화면을 명세합니다. 스타트업 물리 원장은 `public.startups`로 유지하되, 업무 화면은 STARTUP 워크스페이스에서 다룹니다.
   * **[3_3_1_startup_pool_classification.md](../docs_planning/3_3_1_startup_pool_classification.md) (STARTUP 워크스페이스 / 스타트업 풀 구분·담당자·관리현황)**: 스타트업 마스터의 구분(발굴/보육/투자/기타) 라이프사이클, 담당자 권한 모델, 관리현황 적용 범위 및 STARTUP 워크스페이스의 4개 목록 뷰를 규정합니다.
   * **[3_3_2_networks_dashboard.md](../docs_planning/3_3_2_networks_dashboard.md) (NETWORKS 대시보드 및 최근 업로드 현황)**: 네트워크 자산의 규모·구성·성장 추이·데이터 건강도 인포그래픽과 8종 통합 최근 업로드 리스트 화면을 명세합니다.
+  * **[3_3_3_startup_menu_stat_cards.md](../docs_planning/3_3_3_startup_menu_stat_cards.md) (STARTUP 메뉴별 통계 카드 섹션)**: 대시보드에 지표를 몰아넣는 대신 각 목록 메뉴(내 기업 관리·투자·보육·발굴·기타)가 메뉴명 아래에 자기 통계 카드 4장을 이고 가는 구조를 기획합니다. 카드별 집계 정의와 데이터 원천, 현행 스키마 기준 실현 가능성(즉시/조인/신규) 판정을 담은 후보안 단계 문서입니다.
 * **[3_4_workspace_ac.md ~ 3_4_14_ac_custom_activities.md](../docs_planning/3_4_workspace_ac.md) (AC 워크스페이스 시리즈)**
   * **의미**: Program First 기반의 모듈형 스타트업 보육 프로그램 운영 플랫폼 명세로서, 프로그램 개요 및 모듈 보드, 모집 랜딩 및 신청 DB, 통합 참가자 풀, 공통 평가 엔진 및 서면/대면 심사, OT 및 출석 세션, N:N 멘토링 관계, 1:1 비즈니스 매칭 및 AI 자동 배정, 데모데이 피칭 및 투자자 관심 매칭, 통합 타임라인 충돌 방지, KPI 성과 요약 및 통합 엑셀 다운로더, 비정형 커스텀 활동 기록 등을 포함하는 액셀러레이팅 핵심 흐름을 담고 있습니다.
 * **[3_5_workspace_fund.md](../docs_planning/3_5_workspace_fund.md) (FUND 워크스페이스 상세 기획서)**

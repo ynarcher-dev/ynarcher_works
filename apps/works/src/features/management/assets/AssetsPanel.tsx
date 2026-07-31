@@ -1,5 +1,6 @@
-import { Banner, Button, Input, Spinner, Tabs, useToast } from '@ynarcher/ui'
+import { Banner, Input, Spinner, Tabs, useToast } from '@ynarcher/ui'
 import { useEffect, useMemo, useState } from 'react'
+import { ListActions } from '@/components/ListActions'
 import { useEmployees } from '@/features/hub/hooks'
 import { costBasisFromAsset } from '@/features/management/assets/assetCost'
 import { AssetFormModal } from '@/features/management/assets/AssetFormModal'
@@ -180,13 +181,13 @@ export function AssetsPanel() {
           />
         </div>
         <AssetsFilterBar filters={filters} onChange={setFilters} />
-        <div className="flex items-center gap-2 sm:ml-auto">
-          <Button variant="outline" className="h-ctl-page" onClick={() => setImportOpen(true)}>
-            대용량 업로드
-          </Button>
-          <Button className="h-ctl-page" onClick={() => setForm('create')}>
-            자산 등록
-          </Button>
+        <div className="sm:ml-auto">
+          {/* 지사 컨텍스트를 이 목록이 이미 들고 있어 업로드는 페이지 이동 없이 모달로 연다. */}
+          <ListActions
+            createLabel="자산 등록"
+            onCreate={() => setForm('create')}
+            onBulk={() => setImportOpen(true)}
+          />
         </div>
       </div>
 

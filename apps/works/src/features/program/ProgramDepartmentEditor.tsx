@@ -1,7 +1,7 @@
 import { Input, Select } from '@ynarcher/ui'
 import type { ProgramDepartmentDraft } from '@/features/program/hooks'
 import { ratioSum } from '@/features/program/programManagerCoverage'
-import { useDepartments } from '@/features/management/orgHooks'
+import { useDepartmentOptions } from '@/features/management/departmentOptions'
 
 /** 편집용 부서 구성(Draft + React 리스트 키). */
 export interface ProgramDepartmentSegment extends ProgramDepartmentDraft {
@@ -19,11 +19,12 @@ interface Props {
  * 프로그램 부서 구성 편집기(메인 1개 + 협업 n개) — 한 단계(org 버전) 스코프.
  * 해당 버전 조직도에서 부서를 골라 메인/협업으로 지정하고 협업비율(합 100%)을 세팅한다.
  * 담당자 투입률은 이 부서 협업비율을 기준으로 채운다.
+ * 부서 선택지는 조직도 순서 + 전체 경로 라벨이다(departmentOptions) — 같은 이름의 말단이 여럿이라
+ * 이름만으로는 어느 상위 소속인지 가릴 수 없다.
  */
 export function ProgramDepartmentEditor({ value, onChange, versionId }: Props) {
-  const { data: departments } = useDepartments(false, versionId)
-  const master = departments ?? []
-  const nameOf = (id: string) => master.find((d) => d.id === id)?.name ?? '부서 선택'
+  const { options: master, labelOf } = useDepartmentOptions(versionId)
+  const nameOf = (id: string) => labelOf(id, '부서 선택')
 
   const add = () => {
     const isFirst = value.length === 0
@@ -69,7 +70,7 @@ export function ProgramDepartmentEditor({ value, onChange, versionId }: Props) {
                   .filter((d) => d.id === row.department_id || !usedIds.has(d.id))
                   .map((d) => (
                     <option key={d.id} value={d.id}>
-                      {d.name}
+                      {d.label}
                     </option>
                   ))}
               </Select>

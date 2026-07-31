@@ -1,7 +1,8 @@
-import { Button, Input, Spinner } from '@ynarcher/ui'
+import { ListToolbar, Spinner } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/auth/authStore'
+import { ListActions } from '@/components/ListActions'
 import { ProgramFormModal } from '@/features/program/ProgramFormModal'
 import { ProgramFilters } from '@/features/program/ProgramFilters'
 import { ProgramTable } from '@/features/program/ProgramTable'
@@ -16,7 +17,7 @@ import { useProgramWorkspace } from '@/features/program/workspace'
 const PAGE_SIZE = 30
 
 interface ProgramListTabProps {
-  /** 'mine' = 내가 담당자/등록자인 사업만, 'all' = 전체 사업. */
+  /** 'mine' = 내가 담당자/생성자인 사업만, 'all' = 전체 사업. */
   scope: 'mine' | 'all'
   /** 지정 시 해당 사업구분만 조회한다(사이드바 카테고리 세분화 메뉴). */
   category?: string
@@ -28,10 +29,10 @@ interface ProgramListTabProps {
 
 /**
  * 사업 워크스페이스(AC/M&A/PROJECT 공용): 사업 원장 목록.
- * 검색어(사업명·등록자)·복수 필터(상태·시작일)·서버 페이지네이션·다중선택을 소유하고,
+ * 검색어(사업명·생성자)·복수 필터(상태·시작일)·서버 페이지네이션·다중선택을 소유하고,
  * 검색창과 필터를 한 컨트롤 행으로 함께 배치한다. (STARTUP StartupPoolTab과 동일 구조.)
  * 비활성화(삭제)는 목록이 아니라 상세 페이지에서 수행한다.
- * scope='mine'이면 등록자(created_by)·담당자가 현재 사용자인 사업만 조회한다.
+ * scope='mine'이면 생성자(created_by)·담당자가 현재 사용자인 사업만 조회한다.
  */
 export function ProgramListTab({
   scope,
@@ -68,21 +69,20 @@ export function ProgramListTab({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="w-full sm:w-80">
-          <Input
-            placeholder="사업명·등록자 검색"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
+      <ListToolbar
+        keyword={keyword}
+        onKeywordChange={setKeyword}
+        // 워크스페이스마다 부르는 이름이 다르다(AC 사업 / M&A·PROJECT 프로젝트).
+        searchPlaceholder={`${config.entityNoun}명·생성자 검색`}
+        filters={<ProgramFilters filters={filters} onChange={setFilters} />}
+        actions={
+          <ListActions
+            createLabel={`${config.entityNoun} 등록`}
+            onCreate={() => setCreating(true)}
+            bulkTo={`${config.basePath}/bulk`}
           />
-        </div>
-        <ProgramFilters filters={filters} onChange={setFilters} />
-        <div className="sm:ml-auto">
-          <Button className="h-ctl-page" onClick={() => setCreating(true)}>
-            사업 등록
-          </Button>
-        </div>
-      </div>
+        }
+      />
 
       {isLoading ? (
         <Spinner />

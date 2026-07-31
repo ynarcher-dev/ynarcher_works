@@ -1,4 +1,5 @@
 import { MNA_CATEGORIES } from '@/config/programCategories'
+import { ProgramBulkPage } from '@/features/program/ProgramBulkPage'
 import { ProgramDetailPage } from '@/features/program/ProgramDetailPage'
 import { ProgramWorkspacePage } from '@/features/program/ProgramWorkspacePage'
 import { ProgramWorkspaceProvider, type ProgramWorkspaceConfig } from '@/features/program/workspace'
@@ -14,8 +15,8 @@ export const MNA_WORKSPACE: ProgramWorkspaceConfig = {
   basePath: '/mna',
   // 사이드바·목록 제목의 도메인 명칭. M&A 딜도 화면상으로는 '프로젝트'로 부른다.
   entityNoun: '프로젝트',
-  // 현황·내 관리 메뉴는 워크스페이스 성격(인수·합병 딜)을 살려 '딜'로 부른다.
-  dashboardLabel: '딜 현황',
+  // 전체·내 관리 메뉴는 워크스페이스 성격(인수·합병 딜)을 살려 '딜'로 부른다.
+  dashboardLabel: '전체 딜',
   mineLabel: '내 딜 관리',
   tables: {
     programs: 'ma_programs',
@@ -47,6 +48,14 @@ export function MnaProgramDetailPage() {
   return (
     <ProgramWorkspaceProvider value={MNA_WORKSPACE}>
       <ProgramDetailPage />
+    </ProgramWorkspaceProvider>
+  )
+}
+
+export function MnaBulkPage() {
+  return (
+    <ProgramWorkspaceProvider value={MNA_WORKSPACE}>
+      <ProgramBulkPage />
     </ProgramWorkspaceProvider>
   )
 }

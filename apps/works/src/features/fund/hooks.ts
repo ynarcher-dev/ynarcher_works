@@ -4,6 +4,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { memberSummary } from '@/lib/memberLabel'
 import type { Contribution } from '@/features/networks/hooks'
 
 export interface FundManagerRef {
@@ -15,6 +16,8 @@ export interface FundManagerRef {
 
 export interface Fund {
   id: string
+  /** 펀드코드(6자리 영숫자 난수, 워크스페이스 전역 유니크). 목록 최소 조회에서는 미포함이라 옵셔널. */
+  code?: string | null
   name: string
   vintage_year: number | null
   total_commitment: number
@@ -53,7 +56,7 @@ export function useFunds() {
   })
 }
 
-/** 펀드 상세: 구분·기간·금액 + 대표펀드매니저·등록자·운용/관리 인력 임베드. */
+/** 펀드 상세: 구분·기간·금액 + 대표펀드매니저·생성자·운용/관리 인력 임베드. */
 export function useFund(id: string | undefined) {
   return useQuery({
     queryKey: ['fund', 'one', id],
@@ -62,7 +65,7 @@ export function useFund(id: string | undefined) {
       const { data } = await supabase
         .from('funds')
         .select(
-          'id, name, vintage_year, total_commitment, drawn_amount, status, source_type, character_type, strategy_type, fund_type, subscription_type, formed_on, term_start, term_end, operation_start, operation_end, paid_in_amount, updated_at, manager:users!manager_id(id, name), creator:users!created_by(id, name), operators:fund_managers(user_id, role, is_lead, user:users!user_id(id, name))',
+          'id, code, name, vintage_year, total_commitment, drawn_amount, status, source_type, character_type, strategy_type, fund_type, subscription_type, formed_on, term_start, term_end, operation_start, operation_end, paid_in_amount, updated_at, manager:users!manager_id(id, name), creator:users!created_by(id, name), operators:fund_managers(user_id, role, is_lead, user:users!user_id(id, name))',
         )
         .eq('id', id)
         .maybeSingle()
@@ -577,13 +580,19 @@ function readIndustryList(industries: unknown, legacy: unknown): string[] {
   return one ? [one] : []
 }
 
-/** 딜메이커 = startup_managers 리드(is_lead)의 이름. 리드가 없으면 null. */
+/**
+ * 딜메이커 = startup_managers 담당자를 목록 공용 규격("대표(리드) 1명 외 N")으로 요약한다.
+ * 지원 담당자(딜메이커 부)가 있으면 "외 N"으로 드러나야 한다 — 리드만 적으면 목록에서는
+ * 담당자가 1명뿐인 것처럼 보인다. 담당자가 없으면 null.
+ */
 function readLeadManager(managers: unknown): string | null {
   if (!Array.isArray(managers)) return null
-  const lead = managers.find(
-    (m) => m && typeof m === 'object' && (m as Record<string, unknown>).is_lead === true,
-  ) as { user?: { name?: string | null } | null } | undefined
-  return lead?.user?.name ?? null
+  const rows = managers.filter((m): m is Record<string, unknown> => Boolean(m) && typeof m === 'object')
+  const nameOf = (m: Record<string, unknown>) =>
+    (m.user as { name?: string | null } | null | undefined)?.name
+  const lead = rows.find((m) => m.is_lead === true)
+  const ordered = lead ? [lead, ...rows.filter((m) => m !== lead)] : rows
+  return memberSummary(ordered.map(nameOf))
 }
 
 /**

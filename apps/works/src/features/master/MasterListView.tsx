@@ -101,12 +101,15 @@ export function MasterListView({
             </Badge>
           )
         }
+        // 집계값(활동·만족도)은 아직 실집계와 연동되지 않았다. 값이 없으면 '-'로 비워 둔다 —
+        // 임의의 기본값(999건·5.0)을 채우면 실데이터와 구분되지 않아 잘못 읽힌다.
         if (c.kind === 'count') {
-          const n = raw == null || raw === '' ? 999 : Number(raw)
-          return <span className="tabular-nums">{n.toLocaleString()}건</span>
+          if (raw == null || raw === '') return '-'
+          return <span className="tabular-nums">{Number(raw).toLocaleString()}건</span>
         }
         if (c.kind === 'rating') {
-          const score = raw == null || raw === '' ? 5.0 : Number(raw)
+          if (raw == null || raw === '') return '-'
+          const score = Number(raw)
           return (
             <span className="inline-flex items-center gap-1 tabular-nums">
               <svg
@@ -191,8 +194,7 @@ export function MasterListView({
       },
     }))
     // 담당자(관리 주체) 컬럼: NETWORKS 8종은 모두 공동관리(쓰기 권한자 누구나 수정)다.
-    // 목록은 개념만 배지로 노출하고, 실제 기여자는 상세 페이지에서 확인한다.
-    // 작성자(등록자)는 우측 표준 컬럼(created_by)에 별도 표시된다.
+    // 목록은 개념만 배지로 노출하고, 실제 기여자와 최초 생성자는 상세 페이지에서 확인한다.
     base.push({
       key: '_manager',
       header: '담당자',
@@ -232,11 +234,10 @@ export function MasterListView({
       selectedKeys={selectedKeys}
       onSelectionChange={onSelectionChange}
       pagination={pagination}
+      // 생성자(created_by)는 권한을 주지 않는 축이라 목록에서 내린다 — NETWORKS는 담당자 원장이 없어
+      // 영구 공동관리이며, 그 사실은 위 '담당자' 컬럼이 답한다. 최초 생성자는 상세 페이지에만 남는다.
+      showAuthor={false}
       meta={{
-        // 작성자 = 레코드 생성자(created_by → users). FK 임베드한 creator.name을 노출한다.
-        // 내부 임직원이므로 민감정보 정책 대상이 아니다 — 원본을 그대로 표시한다.
-        author: (r) =>
-          (r as { creator?: { name?: string | null } | null }).creator?.name || '-',
         onDeactivate,
         deactivateWithReason,
       }}

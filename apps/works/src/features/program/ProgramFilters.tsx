@@ -1,4 +1,6 @@
 import { Input, MultiSelectFilter } from '@ynarcher/ui'
+import { useMemo } from 'react'
+import { useDepartmentOptions } from '@/features/management/departmentOptions'
 import { PROGRAM_STATUS_LABEL, PROGRAM_STATUS_OPTIONS } from '@/features/program/config'
 import {
   EMPTY_PROGRAM_FILTERS,
@@ -18,11 +20,19 @@ const STATUS_OPTIONS = PROGRAM_STATUS_OPTIONS.map((value) => ({
 }))
 
 /**
- * 프로그램 목록 복수 필터 바: 상태(다중선택) + 시작일 범위(From~To).
+ * 프로그램 목록 복수 필터 바: 상태(다중선택) + 담당 부서(다중선택) + 시작일 범위(From~To).
  * 상태는 상위(AcWorkspaceTab)가 소유하며, 본 컴포넌트는 표시·변경만 담당한다.
  */
 export function ProgramFilters({ filters, onChange }: ProgramFiltersProps) {
   const active = hasActiveProgramFilters(filters)
+  // 선택지는 오늘의 조직도(활성 버전) 기준이되, 값은 계보 id라 지난 단계에 지정된 사업도 함께 걸린다.
+  // 라벨은 전체 경로다 — 체크박스 목록에서 동명의 말단('1팀')을 가리려면 상위가 다 보여야 한다.
+  const { options } = useDepartmentOptions()
+  const departmentOptions = useMemo(
+    () => options.map((o) => ({ value: o.lineage, label: o.label })),
+    [options],
+  )
+
   return (
     <div className="flex flex-wrap items-center gap-2">
       <MultiSelectFilter
@@ -30,6 +40,13 @@ export function ProgramFilters({ filters, onChange }: ProgramFiltersProps) {
         options={STATUS_OPTIONS}
         selected={filters.statuses}
         onChange={(statuses) => onChange({ ...filters, statuses })}
+      />
+
+      <MultiSelectFilter
+        label="담당 부서"
+        options={departmentOptions}
+        selected={filters.departmentLineages}
+        onChange={(departmentLineages) => onChange({ ...filters, departmentLineages })}
       />
 
       <div className="w-40">

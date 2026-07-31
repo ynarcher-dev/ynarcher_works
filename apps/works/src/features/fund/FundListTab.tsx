@@ -1,6 +1,7 @@
-import { Button, Input, Spinner } from '@ynarcher/ui'
+import { ListToolbar, Spinner } from '@ynarcher/ui'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { ListActions } from '@/components/ListActions'
 import { FundListFilters } from '@/features/fund/FundListFilters'
 import { FundListTable } from '@/features/fund/FundListTable'
 import {
@@ -16,7 +17,7 @@ const PAGE_SIZE = 20
 interface FundListTabProps {
   /** 구분(전략) 프리필터. 지정 시 해당 구분 펀드만(구분 탭이 대시보드 테이블을 상속). */
   strategy?: 'AC' | 'VC' | 'PE' | null
-  /** 지정 시 등록자 또는 대표펀드매니저가 이 사용자인 펀드만('내 펀드'). */
+  /** 지정 시 생성자 또는 대표펀드매니저가 이 사용자인 펀드만('내 펀드'). */
   mineUserId?: string | null
 }
 
@@ -40,6 +41,8 @@ export function FundListTab({ strategy, mineUserId }: FundListTabProps) {
       out = out.filter(
         (f) =>
           f.name.toLowerCase().includes(kw) ||
+          // 펀드코드로도 찾을 수 있어야 한다 — 코드는 사람이 옮겨 적어 지목하는 값이다.
+          (f.code ?? '').toLowerCase().includes(kw) ||
           (f.manager?.name ?? '').toLowerCase().includes(kw),
       )
     }
@@ -70,21 +73,19 @@ export function FundListTab({ strategy, mineUserId }: FundListTabProps) {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="w-full sm:w-80">
-          <Input
-            placeholder="펀드명·대표펀드매니저 검색"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
+      <ListToolbar
+        keyword={keyword}
+        onKeywordChange={setKeyword}
+        searchPlaceholder="펀드명·펀드코드·대표펀드매니저 검색"
+        filters={<FundListFilters filters={filters} onChange={setFilters} />}
+        actions={
+          <ListActions
+            createLabel="펀드 등록"
+            onCreate={() => navigate('/fund/new')}
+            bulkTo="/fund/bulk"
           />
-        </div>
-        <FundListFilters filters={filters} onChange={setFilters} />
-        <div className="sm:ml-auto">
-          <Button className="h-ctl-page" onClick={() => navigate('/fund/new')}>
-            펀드 등록
-          </Button>
-        </div>
-      </div>
+        }
+      />
 
       {isLoading ? (
         <Spinner />
