@@ -38,7 +38,8 @@ export interface ProgramWorkspaceConfig {
    * navigation.ts의 사이드바 라벨과 일치시킬 것.
    */
   mineLabel: string
-  dashboardLabel: string
+  /** '전체 ~' 목록 라벨. 내 목록과 같은 화면을 범위만 넓혀 쓰는 메뉴다. */
+  allLabel: string
   tables: {
     programs: string
     modules: string

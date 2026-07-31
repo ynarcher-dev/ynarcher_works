@@ -1,13 +1,13 @@
 import { PageHeader } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { DashboardTab } from '@/features/networks/DashboardTab'
+import { LIST_ALL_TAB, resolveListTab } from '@/config/navigation'
 import { DirectoryTab } from '@/features/networks/DirectoryTab'
 import { GlobalNetworkTab } from '@/features/networks/GlobalNetworkTab'
-import { MyNetworkTab } from '@/features/networks/MyNetworkTab'
+import { NetworkListTab } from '@/features/networks/NetworkListTab'
 import { ENTITIES, DIRECTORY_ENTITIES, type EntityKey } from '@/features/networks/config'
 
-type Mode = 'dashboard' | 'global' | 'directory' | 'mine'
+type Mode = 'all' | 'global' | 'directory' | 'mine'
 
 const ENTITY_KEYS: EntityKey[] = DIRECTORY_ENTITIES
 
@@ -21,7 +21,7 @@ const ENTITY_KEYS: EntityKey[] = DIRECTORY_ENTITIES
  */
 export function NetworksPage() {
   const [params] = useSearchParams()
-  const tab = params.get('tab') ?? 'mine'
+  const tab = resolveListTab(params.get('tab'))
 
   // 엔티티는 병합 섹션 진입 시에도 유지되도록 내부 상태로 보존한다.
   const [entity, setEntity] = useState<EntityKey>('experts')
@@ -33,8 +33,8 @@ export function NetworksPage() {
   // 대용량 업로드는 더 이상 이 페이지의 탭이 아니라 전용 라우트(/networks/bulk)다 —
   // 목록의 '대용량 업로드' 버튼이 그 원장을 들고 이동한다.
   const mode: Mode =
-    tab === 'dashboard'
-      ? 'dashboard'
+    tab === LIST_ALL_TAB
+      ? 'all'
       : tab === 'global'
         ? 'global'
         : tab === 'mine'
@@ -46,7 +46,7 @@ export function NetworksPage() {
   const directoryHeading =
     entity === 'others' ? '미분류 데이터베이스' : `${config.label} 네트워크`
   const heading =
-    mode === 'dashboard'
+    mode === 'all'
       ? '전체 네트워크'
       : mode === 'global'
         ? '글로벌 네트워크'
@@ -58,11 +58,11 @@ export function NetworksPage() {
     <div className="space-y-5">
       <PageHeader title={heading} />
 
-      {mode === 'dashboard' && <DashboardTab />}
       {mode === 'global' && <GlobalNetworkTab />}
       {/* 원장이 바뀌면 검색어·필터·페이지가 이전 원장 것으로 남지 않도록 탭을 새로 마운트한다. */}
       {mode === 'directory' && <DirectoryTab key={config.key} config={config} />}
-      {mode === 'mine' && <MyNetworkTab />}
+      {/* 내 것과 전체는 같은 목록이고 범위만 다르다. key로 범위 전환 시 검색·필터·페이지를 초기화한다. */}
+      {(mode === 'mine' || mode === 'all') && <NetworkListTab key={mode} scope={mode} />}
     </div>
   )
 }

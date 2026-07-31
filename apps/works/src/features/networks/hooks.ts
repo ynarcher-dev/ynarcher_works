@@ -157,7 +157,7 @@ export function useEntityPage(
  * 공용 리스트뷰(`MasterListView`)가 그대로 렌더할 수 있도록 `MasterRow` 호환 형태를 유지한다
  * (부서·직책·구분은 다른 네트워크와 동일하게 `profile` jsonb의 점 경로에서 읽힌다).
  */
-export type MyNetworkRow = Record<string, unknown> & {
+export type NetworkListRow = Record<string, unknown> & {
   /**
    * 원장 테이블명(EntityKey 또는 글로벌 원장). 상세 라우트의 기준 —
    * 원장이 섞인 목록이라 행마다 다르며, 글로벌만 라우트 세그먼트가 테이블명과 다르다.
@@ -180,20 +180,36 @@ export type MyNetworkRow = Record<string, unknown> & {
   last_contributed_at: string | null
 }
 
-/** 내 네트워크 목록 페이지. `useEntityPage`와 동일 규약(rows + 건수). */
-export interface MyNetworkPage {
-  rows: MyNetworkRow[]
+/** 네트워크 통합 목록 페이지. `useEntityPage`와 동일 규약(rows + 건수). */
+export interface NetworkListPage {
+  rows: NetworkListRow[]
   total: number
 }
 
 /**
- * 내가 등록·편집·병합에 관여한 네트워크 10종 통합 목록(서버 사이드 페이지네이션).
- * 다형 조인·중복 제거가 필요해 PostgREST 대신 RPC(`my_network_entities`)로 조회한다.
+ * 통합 목록의 범위. 'mine'은 내가 등록·편집·병합에 관여한 것만, 'all'은 볼 수 있는 전부.
+ * 두 목록은 열·필터·검색·상세 진입이 모두 같고 이 축 하나로만 갈린다.
+ */
+export type NetworkListScope = 'mine' | 'all'
+
+/**
+ * 범위별 RPC. 인자와 반환 열 규약은 같고 함수만 다르다 — 두 범위는 빠른 실행 계획이 서로
+ * 달라(내 것은 기여 로그 조인 + 최근 기여순, 전체는 조인 없이 이름순) DB에서 나뉘어 있다.
+ */
+const SCOPE_RPC: Record<NetworkListScope, string> = {
+  mine: 'my_network_entities',
+  all: 'all_network_entities',
+}
+
+/**
+ * 네트워크 원장 11종(디렉토리 10 + 글로벌) 통합 목록(서버 사이드 페이지네이션).
+ * 다형 조인·중복 제거가 필요해 PostgREST 대신 RPC로 조회한다.
  * 호출자 판정은 RPC 내부에서 하므로 user_id를 인자로 넘기지 않는다.
- * 총 건수는 모든 행에 동일하게 실려오는 윈도우 카운트(`total_count`)에서 읽는다(행 0건이면 0).
+ * 총 건수는 모든 행에 동일하게 실려오는 `total_count`에서 읽는다(행 0건이면 0).
  * page는 0-base이며, 페이지 전환 시 이전 페이지를 유지(keepPreviousData)해 깜빡임을 줄인다.
  */
-export function useMyNetworkPage(
+export function useNetworkListPage(
+  scope: NetworkListScope,
   keyword: string,
   page: number,
   pageSize: number,
@@ -203,13 +219,13 @@ export function useMyNetworkPage(
   const filtersKey = JSON.stringify(filters)
   const scopeKey = JSON.stringify(searchScope)
   return useQuery({
-    queryKey: ['networks', 'mine', 'page', keyword, filtersKey, scopeKey, page, pageSize],
+    queryKey: ['networks', scope, 'page', keyword, filtersKey, scopeKey, page, pageSize],
     placeholderData: keepPreviousData,
-    queryFn: async (): Promise<MyNetworkPage> => {
+    queryFn: async (): Promise<NetworkListPage> => {
       const trimmed = keyword.trim()
-      // 10종을 union하는 목록이라 페이지네이션과 필터를 같은 곳(RPC)에서 걸어야 한다 —
+      // 11종을 union하는 목록이라 페이지네이션과 필터를 같은 곳(RPC)에서 걸어야 한다 —
       // 클라이언트에서 거르면 현재 페이지에 실려 온 행 안에서만 걸러진다.
-      const { data, error } = await supabase.rpc('my_network_entities', {
+      const { data, error } = await supabase.rpc(SCOPE_RPC[scope], {
         p_keyword: trimmed || null,
         p_limit: pageSize,
         p_offset: page * pageSize,
@@ -218,7 +234,7 @@ export function useMyNetworkPage(
         p_search_phone: searchScope.phone,
       })
       if (error) throw error
-      // RPC 원본 행: 생성자가 평면 컬럼(creator_name), 총 건수가 행마다 실린 윈도우 카운트.
+      // RPC 원본 행: 생성자가 평면 컬럼(creator_name), 총 건수가 행마다 같은 값으로 실린다.
       const rows = (data ?? []) as (Record<string, unknown> & {
         creator_name?: string | null
         total_count?: number | string
@@ -231,7 +247,7 @@ export function useMyNetworkPage(
             ({
               ...row,
               creator: creator_name ? { name: creator_name } : null,
-            }) as MyNetworkRow,
+            }) as NetworkListRow,
         ),
         total: Number(rows[0]?.total_count ?? 0),
       }

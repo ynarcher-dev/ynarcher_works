@@ -49,7 +49,8 @@ export function StartupPoolTab({ category, mineUserId }: StartupPoolTabProps) {
   }, [keyword, filtersKey])
 
   // 검색 가능 범위는 이 목록의 마스킹 정책이 정한다 — 가려진 필드는 검색어로도 잡지 않는다.
-  const contentKey = startupContentKey(category)
+  // 구분 무관 목록은 '내 기업 관리'와 '전체 기업' 둘이라 범위로 정책 키가 갈린다.
+  const contentKey = startupContentKey(category, mineUserId ? 'mine' : 'all')
   const masked = useMaskPolicy(contentKey)
   const searchScope = useMemo(
     () => ({ email: !masked.email, phone: !masked.phone }),

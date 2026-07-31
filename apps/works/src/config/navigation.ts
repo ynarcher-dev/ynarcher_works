@@ -54,6 +54,30 @@ export interface SubNavGroup {
 export const MINE_EMOJI = '⭐'
 
 /**
+ * '전체 ~' 목록 메뉴의 탭 키. STARTUP·NETWORKS·FUND·AC/M&A/PROJECT가 같은 키를 쓴다 —
+ * 이 메뉴들은 '내 ~ 관리'와 같은 목록 화면을 범위만 넓혀 그대로 쓰므로 키도 하나여야 한다.
+ */
+export const LIST_ALL_TAB = 'all'
+
+/**
+ * 사이드바에서 물러난 옛 탭 키 → 현재 키.
+ * '전체 ~'는 원래 대시보드 자리(`?tab=dashboard`)였다가 목록으로 바뀌었으므로, 기존 북마크와
+ * 상세 뒤로가기가 옛 키로 들어온다.
+ */
+const LEGACY_LIST_TABS: Record<string, string> = { dashboard: LIST_ALL_TAB }
+
+/**
+ * 목록 워크스페이스의 `?tab` 해석. 옛 키를 현재 키로 옮기고, 값이 없으면 기본 탭을 준다.
+ *
+ * OFFICE·MANAGEMENT는 `dashboard`가 지금도 살아 있는 제 메뉴이므로 이 함수를 쓰지 않는다 —
+ * '전체 ~'가 대시보드 자리를 넘겨받은 워크스페이스(STARTUP·NETWORKS·FUND·사업 3종)에만 쓴다.
+ */
+export function resolveListTab(raw: string | null, fallback = 'mine'): string {
+  const tab = raw ?? fallback
+  return LEGACY_LIST_TABS[tab] ?? tab
+}
+
+/**
  * 사업 워크스페이스(AC/M&A/PROJECT) 공용 사이드바 구성.
  * 내 ~ 관리 → 전체 ~ → 사업구분(카테고리)별 항목 순으로 나열한다. 내 것이 맨 위에 오고,
  * 그 아래로 전체 → 분류 순으로 범위가 넓어진다.
@@ -61,20 +85,20 @@ export const MINE_EMOJI = '⭐'
  * 카테고리 항목의 `tab`은 소문자 카테고리 값이며(예: `pe_fund`), ProgramWorkspacePage가
  * 이를 목록의 category 스코프로 해석한다.
  *
- * '전체' 항목은 두지 않는다. 대신 각 워크스페이스의 '기타'가 미분류(category is null) 건을
- * 함께 담아(ProgramCategoryOption.includeUnclassified) 사각지대를 막는다.
- * 다만 `?tab=all`은 상세 뒤로가기 폴백·기존 북마크를 위해 페이지 쪽에서 계속 처리한다.
+ * '전체 ~'는 '내 ~ 관리'와 같은 목록 화면을 범위만 넓혀 그대로 쓴다(`?tab=all`). 카테고리
+ * 항목은 여전히 각 워크스페이스의 '기타'가 미분류(category is null) 건을 함께 담아
+ * (ProgramCategoryOption.includeUnclassified) 사각지대를 막는다.
  */
 function programSubnav(
   mineLabel: string,
-  dashboardLabel: string,
+  allLabel: string,
   categories: readonly ProgramCategoryOption[],
 ): SubNavGroup[] {
   return [
     {
       items: [
         { label: mineLabel, tab: 'mine', emoji: MINE_EMOJI },
-        { label: dashboardLabel, tab: 'dashboard', dividerBefore: true },
+        { label: allLabel, tab: LIST_ALL_TAB, dividerBefore: true },
         ...categories.map((c, i) => ({
           label: c.menuLabel,
           tab: categoryTab(c.value),
@@ -96,7 +120,8 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       items: [
         // 구분 무관, 담당자(startup_managers) 또는 생성자가 나인 기업.
         { label: '내 기업 관리', tab: 'mine', emoji: MINE_EMOJI },
-        { label: '전체 기업', tab: 'dashboard', dividerBefore: true },
+        // 구분 무관, 볼 수 있는 전부. '내 기업 관리'와 같은 목록을 범위만 넓혀 쓴다.
+        { label: '전체 기업', tab: LIST_ALL_TAB, dividerBefore: true },
         // 투자/보육/발굴/기타 4분류. 발굴기업이 기존 스타트업 마스터 디렉토리.
         { label: '투자기업', tab: 'invested', dividerBefore: true },
         { label: '보육기업', tab: 'incubated' },
@@ -114,7 +139,8 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       items: [
         // 종류 무관, 내가 등록·편집·병합에 관여한(entity_contributions) 네트워크 통합 목록.
         { label: '내 네트워크 관리', tab: 'mine', emoji: MINE_EMOJI },
-        { label: '전체 네트워크', tab: 'dashboard', dividerBefore: true },
+        // 종류 무관, 볼 수 있는 원장 11종 전부. 위 '내 네트워크'와 같은 목록을 범위만 넓혀 쓴다.
+        { label: '전체 네트워크', tab: LIST_ALL_TAB, dividerBefore: true },
       ],
     },
     {
@@ -143,13 +169,14 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
     },
   ],
   ac: programSubnav('내 사업 관리', '전체 사업', AC_CATEGORIES),
-  // FUND: 내 펀드 → 전체 펀드 → 펀드 종류(AC/VC/PE) 순. 종류별 화면은 메뉴만 선반영한 상태.
+  // FUND: 내 펀드 → 전체 펀드 → 펀드 종류(AC/VC/PE) 순.
   fund: [
     {
       items: [
         // 운용역(담당자) 또는 생성자가 나인 펀드.
         { label: '내 펀드 관리', tab: 'mine', emoji: MINE_EMOJI },
-        { label: '전체 펀드', tab: 'dashboard', dividerBefore: true },
+        // 종류 무관, 볼 수 있는 전부. 위 '내 펀드'와 같은 목록을 범위만 넓혀 쓴다.
+        { label: '전체 펀드', tab: LIST_ALL_TAB, dividerBefore: true },
         { label: 'AC 펀드', tab: 'ac_fund', dividerBefore: true },
         { label: 'VC 펀드', tab: 'vc_fund' },
         { label: 'PE 펀드', tab: 'pe_fund' },

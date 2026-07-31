@@ -1,12 +1,12 @@
 import { PageHeader, EmptyState } from '@ynarcher/ui'
 import { useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '@/auth/authStore'
+import { LIST_ALL_TAB, resolveListTab } from '@/config/navigation'
 import { StartupPoolTab } from '@/features/startup/StartupPoolTab'
-import { StartupDashboardTab } from '@/features/startup/StartupDashboardTab'
 import { TAB_TO_STATUS } from '@/features/startup/startupClassification'
 
 const HEADINGS: Record<string, string> = {
-  dashboard: '전체 기업',
+  [LIST_ALL_TAB]: '전체 기업',
   mine: '내 기업 관리',
   invested: '투자기업',
   incubated: '보육기업',
@@ -21,28 +21,30 @@ const HEADINGS: Record<string, string> = {
  * 투자·보육·발굴·기타 4개 메뉴는 구분(management_status) 코드로 갈린 상호 배타 뷰다.
  * '내 기업 관리'는 구분과 무관하게 담당자(startup_managers) 또는 생성자(created_by)가 나인 기업을 모으며,
  * 사이드바 첫 항목이자 탭 없이 진입했을 때의 기본 화면이다(navigation.ts 순서와 일치시킬 것).
+ * '전체 기업'은 같은 목록을 구분·담당 무관으로 넓힌 것이라 화면을 그대로 공유하고 스코프만 뺀다.
  */
 export function StartupPage() {
   const [params] = useSearchParams()
   const userId = useAuthStore((s) => s.user?.id)
-  const tab = params.get('tab') ?? 'mine'
+  const tab = resolveListTab(params.get('tab'))
   const category = TAB_TO_STATUS[tab]
 
   // 검색창·필터·등록 버튼은 모두 StartupPoolTab의 컨트롤 행이 소유한다.
   return (
     <div className="space-y-5">
-      {/* 대시보드를 포함한 모든 탭이 '메뉴명 + 구분선'으로 시작한다. */}
-      <PageHeader title={HEADINGS[tab] ?? HEADINGS.dashboard} />
+      {/* 모든 탭이 '메뉴명 + 구분선'으로 시작한다. */}
+      <PageHeader title={HEADINGS[tab] ?? HEADINGS[LIST_ALL_TAB]} />
 
       {tab === 'mine' ? (
         <StartupPoolTab key="mine" category={null} mineUserId={userId ?? null} />
+      ) : tab === LIST_ALL_TAB ? (
+        // 내 기업 관리와 같은 목록. 구분 프리필터도 담당자 스코프도 걸지 않는다.
+        <StartupPoolTab key={LIST_ALL_TAB} category={null} />
       ) : category ? (
         <StartupPoolTab category={category} />
-      ) : tab === 'dashboard' ? (
-        <StartupDashboardTab />
       ) : (
         <EmptyState
-          title={`${HEADINGS[tab] ?? HEADINGS.dashboard} 준비 중`}
+          title={`${HEADINGS[tab] ?? HEADINGS[LIST_ALL_TAB]} 준비 중`}
           description="해당 섹션은 준비 중입니다."
         />
       )}

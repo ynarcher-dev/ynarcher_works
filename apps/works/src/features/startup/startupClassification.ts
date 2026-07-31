@@ -44,7 +44,6 @@ export const TAB_TO_STATUS: Record<string, ManagementStatus> = {
 /**
  * 구분 코드 → 민감정보 정책 콘텐츠 키(ADMIN '민감정보 관리').
  * 정책은 코드값이 아니라 사이드바 메뉴 기준이라 탭 이름(discovered/etc)을 키로 쓴다.
- * 구분이 없거나 섞인 뷰('내 기업 관리')는 `startup.mine`을 따른다.
  */
 const CONTENT_KEY_BY_STATUS: Record<ManagementStatus, string> = {
   invested: 'startup.invested',
@@ -53,9 +52,21 @@ const CONTENT_KEY_BY_STATUS: Record<ManagementStatus, string> = {
   other: 'startup.etc',
 }
 
-export function startupContentKey(status: unknown): string {
-  if (typeof status !== 'string') return 'startup.mine'
-  return CONTENT_KEY_BY_STATUS[status as ManagementStatus] ?? 'startup.mine'
+/**
+ * 구분이 없거나 섞인 뷰의 콘텐츠 키. 구분 무관 목록은 '내 기업 관리'와 '전체 기업' 둘이며,
+ * 같은 화면을 범위만 넓혀 쓰지만 정책은 따로 걸 수 있어야 하므로 키를 나눈다.
+ */
+const CONTENT_KEY_BY_SCOPE = { mine: 'startup.mine', all: 'startup.all' } as const
+
+/**
+ * 구분 코드 → 콘텐츠 키. 구분이 없으면(구분 무관 목록) 범위로 갈린다.
+ * `scope`는 구분이 지정된 경우에는 쓰이지 않는다 — 그때는 메뉴가 구분 하나로 정해진다.
+ */
+export function startupContentKey(status: unknown, scope: 'mine' | 'all' = 'mine'): string {
+  if (typeof status === 'string' && status in CONTENT_KEY_BY_STATUS) {
+    return CONTENT_KEY_BY_STATUS[status as ManagementStatus]
+  }
+  return CONTENT_KEY_BY_SCOPE[scope]
 }
 
 /** 구분 값(코드) → 한글 라벨. 미매핑/빈값은 null. */
