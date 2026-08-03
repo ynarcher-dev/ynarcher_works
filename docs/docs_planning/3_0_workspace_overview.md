@@ -29,6 +29,7 @@
 | **[3-7]** | **[3_7_workspace_management.md](./3_7_workspace_management.md)** | **MANAGEMENT (경영지원)**: 인사, 조직 버전/개편, 재무, 자산, KPI 관리 등 전사 자원 관리(ERP)의 핵심 기능 |
 | **[3-7-1]** | **[3_7_1_management_performance_kpi.md](./3_7_1_management_performance_kpi.md)** | **MANAGEMENT KPI**: 조직·개인 KPI 지표 카탈로그, 스코어링 룰, 템플릿, 할당, 실적, 등급/인센티브 사이클 |
 | **[3-7-2]** | **[3_7_2_management_assets.md](./3_7_2_management_assets.md)** | **MANAGEMENT 자산**: 지사 귀속 자산, 비용·구독·사진·대량 업로드·OFFICE 반출 연계 |
+| **[3-7-3]** | **[3_7_3_management_attendance.md](./3_7_3_management_attendance.md)** | **MANAGEMENT 근태**: 근무 정책·상태 원장, 일별 근태와 정정 이력, OFFICE 근무체크 위젯 연계 |
 | **[3-2]** | **[3_2_workspace_admin.md](./3_2_workspace_admin.md)** | **ADMIN (시스템 관리자)**: 권한 제어 콘솔, 게시판/태그/민감정보 관리, 중복 병합 검증, 감사 로그 |
 | **[3-9]** | **[3_9_workspace_guest.md](./3_9_workspace_guest.md)** | **GUEST (외부 파트너)**: 스타트업/전문가용 외부 대시보드, OTP/매직링크 로그인, 미팅 예약, 평가지 작성 |
 

@@ -28,6 +28,7 @@
 | **3-7. MANAGEMENT (경영지원)** | [3_7_workspace_management.md](./3_7_workspace_management.md) | 조직·지사·인사·자산·재무·KPI. 경영 현황 대시보드는 준비 중 | 혼합 |
 | **3-7-1. MANAGEMENT KPI** | [3_7_1_management_performance_kpi.md](./3_7_1_management_performance_kpi.md) | 조직·개인 KPI 스코어링 룰 엔진 및 성과관리 사이클 | 기획 완료 |
 | **3-7-2. MANAGEMENT 자산** | [3_7_2_management_assets.md](./3_7_2_management_assets.md) | 지사 귀속 자산·비용·사진·검색/필터·대량 업로드·반출 연계 | 구현 반영 |
+| **3-7-3. MANAGEMENT 근태** | [3_7_3_management_attendance.md](./3_7_3_management_attendance.md) | 근무 정책·상태 원장, 날짜별/인력별 조회와 사유 필수 정정, 근무체크 위젯 | 기획 완료 |
 | **3-8. PROJECT (프로젝트)** | [3_8_workspace_project.md](./3_8_workspace_project.md) | 공용 사업 원장의 프로젝트 목록/상세와 커스텀 활동. 태스크/의존 간트는 후속 | 혼합 |
 | **3-9. GUEST (외부 파트너)** | [3_9_workspace_guest.md](./3_9_workspace_guest.md) | 외부 스타트업/전문가 전용 대시보드 및 미팅 예약, 만족도 평가지 작성 요건 | 구현 반영 |
 
