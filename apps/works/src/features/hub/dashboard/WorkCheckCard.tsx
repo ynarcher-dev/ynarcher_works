@@ -92,14 +92,14 @@ function StampButton({
       >
         {label}
       </span>
-      <span
-        className={cn(
-          'text-body-sm tabular-nums',
-          done ? 'font-semibold text-gray-900' : 'text-gray-400',
-        )}
-      >
-        {at ? dayjs(at).format('HH:mm:ss') : '--:--:--'}
-      </span>
+      {/* 찍히지 않은 자리는 비워 둔다. `--:--:--`로 채우면 값이 없다는 사실을 알리는 대신
+          값이 있는 칸과 같은 무게의 글자가 하나 더 서서, 두 줄 중 어디에 시각이 있는지를
+          눈이 한 번 더 가려야 한다. */}
+      {at && (
+        <span className="text-body-sm font-semibold tabular-nums text-gray-900">
+          {dayjs(at).format('HH:mm:ss')}
+        </span>
+      )}
     </button>
   )
 }
@@ -204,37 +204,45 @@ export function WorkCheckCard() {
   const ledgerBadge = ledger && ledger.code !== 'NORMAL' ? ledger : null
 
   return (
-    <Card title="근무체크">
+    <Card
+      title="근무체크"
+      /* 현황 태그는 카드 제목 옆이 제자리다 — 이 카드 전체가 무엇에 관한 상태인지를 말하는
+         값이라, 안쪽 한 칸에 넣으면 그 칸에만 걸린 값처럼 읽힌다. 출근 전에는 같은 자리가
+         근무지를 고르는 칩이 된다(배지와 칩은 같은 규격이라 헤더 높이가 흔들리지 않는다). */
+      actions={
+        <>
+          <Badge tone={progress.tone}>{progress.label}</Badge>
+          {ledgerBadge && <Badge tone={ledgerBadge.tone}>{ledgerBadge.label}</Badge>}
+          {checkedIn
+            ? today?.workPlace === 'EXTERNAL' && <Badge tone="info">외부</Badge>
+            : policy?.allowExternal &&
+              (Object.keys(PLACE_LABELS) as AttendancePlace[]).map((p) => (
+                <TagChip key={p} selected={place === p} onClick={() => setPlace(p)}>
+                  {PLACE_LABELS[p]}
+                </TagChip>
+              ))}
+        </>
+      }
+    >
       <div className="grid grid-cols-5 items-stretch gap-2">
-        {/* 왼쪽(2/5) — 지금이 언제인가. 오른쪽 두 칸과 같은 상자·같은 높이. */}
-        <div className="col-span-2 flex flex-col justify-between rounded-radius-md border border-gray-200 bg-white px-3 py-2">
-          <div className="space-y-0.5">
-            <p className="text-caption leading-tight text-gray-500">
-              {now.format('M월 D일')} ({WEEKDAY_LABELS[now.day()]})
+        {/* 왼쪽(2/5) — 지금이 언제인가. 오른쪽 두 칸과 같은 상자·같은 높이.
+            세 줄을 위아래로 벌리지 않고 가운데에 모은다 — 오른쪽이 두 칸이라 남는 높이가
+            생기는데, 그 여백을 줄 사이에 나눠 주면 세 줄이 서로 무관한 조각처럼 흩어진다. */}
+        <div className="col-span-2 flex flex-col justify-center gap-2 rounded-radius-md border border-gray-200 bg-white px-3 py-2">
+          <p className="text-caption font-medium text-gray-800">
+            {now.format('M월 D일')} ({WEEKDAY_LABELS[now.day()]})
+          </p>
+          <p className="text-title-sm font-bold leading-none tabular-nums text-gray-900">
+            {now.format('HH:mm:ss')}
+          </p>
+          {benchmark && (
+            /* 라벨과 값은 크기를 가르지 않고 색으로만 나눈다(한 줄 안에서 크기로 위계를
+               만들지 않는다는 규격 원칙). */
+            <p className="text-caption text-gray-600">
+              {benchmark.label}{' '}
+              <span className="tabular-nums font-medium text-gray-800">{benchmark.value}</span>
             </p>
-            <p className="text-title-sm font-bold leading-tight tabular-nums text-gray-900">
-              {now.format('HH:mm:ss')}
-            </p>
-            {benchmark && (
-              <p className="text-caption leading-tight text-gray-500">
-                {benchmark.label} <span className="tabular-nums">{benchmark.value}</span>
-              </p>
-            )}
-          </div>
-          {/* 현황 태그 줄. 출근 전에는 이 자리가 근무지를 고르는 칩이 된다 — 배지와 칩은
-              같은 규격이라 자리를 물려줘도 줄 높이가 흔들리지 않는다. */}
-          <div className="flex flex-wrap items-center gap-1 pt-1.5">
-            <Badge tone={progress.tone}>{progress.label}</Badge>
-            {ledgerBadge && <Badge tone={ledgerBadge.tone}>{ledgerBadge.label}</Badge>}
-            {checkedIn
-              ? today?.workPlace === 'EXTERNAL' && <Badge tone="info">외부</Badge>
-              : policy?.allowExternal &&
-                (Object.keys(PLACE_LABELS) as AttendancePlace[]).map((p) => (
-                  <TagChip key={p} selected={place === p} onClick={() => setPlace(p)}>
-                    {PLACE_LABELS[p]}
-                  </TagChip>
-                ))}
-          </div>
+          )}
         </div>
 
         {/* 오른쪽(3/5) — 무엇을 하는가. */}
