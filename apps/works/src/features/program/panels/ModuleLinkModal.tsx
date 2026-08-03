@@ -105,12 +105,15 @@ function LinkRow({
   }
 
   return (
-    <li className="flex items-center gap-2">
+    // 수정·삭제를 링크 카드 안에 둔다. <a> 안에 버튼을 넣으면 마크업이 깨지므로(대화형 요소
+    // 중첩) 형제로 두고 카드 위에 겹쳐 올린다 — 모듈 보드 카드와 같은 방식이다.
+    // 링크 본문에는 액션 폭만큼 오른쪽 여백을 줘 긴 제목·주소가 버튼 밑으로 들어가지 않게 한다.
+    <li className="relative">
       <a
         href={link.url}
         target="_blank"
         rel="noreferrer"
-        className="flex min-w-0 flex-1 items-center gap-3 rounded-radius-md border border-gray-300 bg-white px-4 py-3 transition-colors duration-fast hover:border-brand/50 hover:bg-brand-25"
+        className="flex min-w-0 items-center gap-3 rounded-radius-md border border-gray-300 bg-white py-3 pl-4 pr-24 transition-colors duration-fast hover:border-brand/50 hover:bg-brand-25"
       >
         <ExternalLink className="size-4 shrink-0 text-brand" />
         <span className="min-w-0 flex-1">
@@ -121,20 +124,22 @@ function LinkRow({
           <span className="block truncate text-caption text-gray-500">{link.url}</span>
         </span>
       </a>
-      <IconButton
-        variant="ghost"
-        label={`${link.label} 수정`}
-        onClick={onEdit}
-        icon={<Pencil className="size-4" />}
-      />
-      <IconButton
-        variant="ghost"
-        danger
-        label={`${link.label} 삭제`}
-        disabled={remove.isPending}
-        onClick={() => void onDelete()}
-        icon={<Trash2 className="size-4" />}
-      />
+      <span className="absolute right-3 top-1/2 z-10 flex -translate-y-1/2 items-center gap-1">
+        <IconButton
+          variant="ghost"
+          label={`${link.label} 수정`}
+          onClick={onEdit}
+          icon={<Pencil className="size-4" />}
+        />
+        <IconButton
+          variant="ghost"
+          danger
+          label={`${link.label} 삭제`}
+          disabled={remove.isPending}
+          onClick={() => void onDelete()}
+          icon={<Trash2 className="size-4" />}
+        />
+      </span>
     </li>
   )
 }
