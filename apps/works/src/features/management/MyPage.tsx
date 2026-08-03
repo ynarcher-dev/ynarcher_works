@@ -85,7 +85,13 @@ export function MyPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-title-md font-bold text-gray-900">내 계정 관리</h1>
+      {/* 저장은 사진·약력·노트를 한 번에 반영한다(카드별 저장 없음) — 페이지 머리 우측에 고정으로 둔다. */}
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-title-md font-bold text-gray-900">내 계정 관리</h1>
+        <Button type="button" onClick={() => void save()} disabled={update.isPending}>
+          저장
+        </Button>
+      </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* 좌측(2/3): 계정 정보(조회) + 사진·약력·노트(편집) */}
@@ -127,13 +133,6 @@ export function MyPage() {
           <CardShell>
             <EmployeeNoteFields value={note} onChange={setNote} />
           </CardShell>
-
-          {/* 저장은 사진·약력·노트를 한 번에 반영한다(카드별 저장 없음). */}
-          <div className="flex justify-end">
-            <Button type="button" onClick={() => void save()} disabled={update.isPending}>
-              저장
-            </Button>
-          </div>
         </div>
 
         {/* 우측(1/3): 자료 업로드(공용 자료 패널 재사용). */}
