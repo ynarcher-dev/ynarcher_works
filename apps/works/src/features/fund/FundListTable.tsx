@@ -14,17 +14,6 @@ import {
   type FundListRow,
 } from '@/features/fund/fundListHooks'
 
-/** 구분(전략) 배지 톤: AC=파랑, VC=초록, PE=주황, 기타=회색. */
-const STRATEGY_TONE: Record<string, 'neutral' | 'success' | 'warning' | 'info'> = {
-  AC: 'info',
-  VC: 'success',
-  PE: 'warning',
-  ETC: 'neutral',
-}
-
-/** 펀드유형 배지 톤: 프로젝트=파랑, 블라인드=회색. */
-const TYPE_TONE: Record<string, 'neutral' | 'info'> = { PROJECT: 'info', BLIND: 'neutral' }
-
 interface FundListTableProps {
   rows: FundListRow[]
   onRowClick?: (row: FundListRow) => void
@@ -62,55 +51,33 @@ export function FundListTable({
         className: 'w-20 whitespace-nowrap',
         render: (f) => f.code ?? dash,
       },
+      // 재원·성격·구분·펀드유형은 펀드를 서술하는 고정 속성이라 본문 텍스트로 적는다.
+      // 배지는 상태 하나만 쓴다 — 색이 여러 열에 흩어지면 정작 봐야 할 운용 상태가 묻힌다.
       {
         key: 'source_type',
         header: '재원',
         className: 'w-24',
-        render: (f) =>
-          f.source_type ? (
-            <Badge tone={f.source_type === 'MOTAE' ? 'info' : 'neutral'}>
-              {FUND_SOURCE_LABEL[f.source_type] ?? f.source_type}
-            </Badge>
-          ) : (
-            dash
-          ),
+        render: (f) => (f.source_type ? (FUND_SOURCE_LABEL[f.source_type] ?? f.source_type) : dash),
       },
       {
         key: 'character_type',
         header: '성격',
         className: 'w-32',
         render: (f) =>
-          f.character_type ? (
-            <Badge tone="neutral">{FUND_CHARACTER_LABEL[f.character_type] ?? f.character_type}</Badge>
-          ) : (
-            dash
-          ),
+          f.character_type ? (FUND_CHARACTER_LABEL[f.character_type] ?? f.character_type) : dash,
       },
       {
         key: 'strategy_type',
         header: '구분',
         className: 'w-20',
         render: (f) =>
-          f.strategy_type ? (
-            <Badge tone={STRATEGY_TONE[f.strategy_type] ?? 'neutral'}>
-              {FUND_STRATEGY_LABEL[f.strategy_type] ?? f.strategy_type}
-            </Badge>
-          ) : (
-            dash
-          ),
+          f.strategy_type ? (FUND_STRATEGY_LABEL[f.strategy_type] ?? f.strategy_type) : dash,
       },
       {
         key: 'fund_type',
         header: '펀드유형',
         className: 'w-24',
-        render: (f) =>
-          f.fund_type ? (
-            <Badge tone={TYPE_TONE[f.fund_type] ?? 'neutral'}>
-              {FUND_TYPE_LABEL[f.fund_type] ?? f.fund_type}
-            </Badge>
-          ) : (
-            dash
-          ),
+        render: (f) => (f.fund_type ? (FUND_TYPE_LABEL[f.fund_type] ?? f.fund_type) : dash),
       },
       {
         key: 'status',
