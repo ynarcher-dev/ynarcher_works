@@ -196,6 +196,9 @@ CREATE TABLE program_module_assignees (
 
 ## 8. 상태 모델
 
+> [!NOTE]
+> 본 절의 제안 단계는 **AC 전용**입니다. 사업 공용 모듈을 공유하는 M&A·PROJECT는 착수 결정이 곧 시작이므로 운영 4단계(`DRAFT`/`OPERATING`/`FINISHED`/`CANCELLED`)만 운용합니다. 운용 여부는 `ProgramWorkspaceConfig.hasProposalStage`가 단일 원천이며, 두 원장에는 제안 상태 저장을 막는 CHECK 제약이 걸려 있습니다(`20260803120000_program_stage_scope.sql`).
+
 * **프로그램 상태(단계 이원화)**: 프로그램 대표 상태는 제안 단계와 운영 단계로 나뉩니다. 등록/편집 폼도 두 섹션으로 분리해 현재 단계에 해당하는 상태만 선택할 수 있습니다.
   * 제안 단계(별도 기간 없음): `PROPOSED`(시도) -> `SELECTED`(선정) 또는 `NOT_SELECTED`(미선정). `SELECTED`(선정)는 운영 단계로 넘어갈 수 있게 **열어 주기만 하고 자동 전환하지 않습니다** — 선정(제안이 통과함)과 `DRAFT`(준비, 운영 채비를 함)는 서로 다른 사실이며, 자동으로 넘기면 선정만 되고 아직 착수하지 않은 사업이 원장에 `SELECTED`로 남지 않아 목록·집계에서 가려낼 수 없습니다. 운영 단계로의 전환은 사용자가 단계 라디오로 직접 선택합니다. `NOT_SELECTED`(미선정)는 프로젝트가 종료되는 종결 상태입니다. 운영 단계는 제안이 선정된 경우에만 진입할 수 있습니다.
   * 운영 단계: `DRAFT`(준비) -> `OPERATING`(진행중) -> `FINISHED`(종료), 중단 시 `CANCELLED`(취소). 기간은 `start_date` ~ `end_date`(실제 행사 관리 기간).

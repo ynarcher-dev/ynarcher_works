@@ -18,7 +18,11 @@ import {
   FUND_SUBSCRIPTION_LABEL,
   FUND_TYPE_LABEL,
 } from '@/features/fund/fundListHooks'
-import { PROGRAM_STATUS_LABEL } from '@/features/program/config'
+import {
+  PROGRAM_STATUS_LABEL,
+  defaultProgramStatus,
+  programStatusOptions,
+} from '@/features/program/config'
 import { MANAGEMENT_STATUS_LABEL } from '@/features/startup/startupClassification'
 import { FUND_BULK_ASSIGNMENT, programBulkAssignment } from '@/features/bulk/bulkAssign'
 import type { ProgramWorkspaceConfig } from '@/features/program/workspace'
@@ -198,23 +202,6 @@ export const FUND_BULK_SPEC: BulkImportSpec = {
 }
 
 /**
- * 등록으로 지정할 수 있는 사업 상태. 구 상태값(모집·심사·데모데이)만 뺀다 — 표시 전용이라
- * 새로 만들 수 없다(config.ts). '선정'은 폼에서도 그대로 저장되는 정식 상태이므로 포함한다.
- */
-const PROGRAM_UPLOAD_STATUSES = [
-  'PROPOSED',
-  'SELECTED',
-  'NOT_SELECTED',
-  'DRAFT',
-  'OPERATING',
-  'FINISHED',
-  'CANCELLED',
-]
-const PROGRAM_UPLOAD_STATUS_LABEL: Record<string, string> = Object.fromEntries(
-  PROGRAM_UPLOAD_STATUSES.map((code) => [code, PROGRAM_STATUS_LABEL[code] ?? code]),
-)
-
-/**
  * AC·M&A·PROJECT 공용 사업 원장 명세. 원장 테이블·명사·경로·사업구분이 워크스페이스마다 다르므로
  * ProgramWorkspaceConfig에서 조립한다(사업 공용 모듈의 config 주입 규칙과 같은 축).
  *
@@ -223,16 +210,25 @@ const PROGRAM_UPLOAD_STATUS_LABEL: Record<string, string> = Object.fromEntries(
  */
 export function programBulkSpec(config: ProgramWorkspaceConfig): BulkImportSpec {
   const categoryLabels = Object.fromEntries(config.categories.map((c) => [c.value, c.label]))
+  // 등록으로 지정할 수 있는 상태 = 워크스페이스 수명주기 그대로. 구 상태값(모집·심사·데모데이)은
+  // 표시 전용이라 빠지고, 제안 단계를 쓰지 않는 워크스페이스에서는 운영 4종만 남는다(config.ts).
+  const statusLabels: Record<string, string> = Object.fromEntries(
+    programStatusOptions(config.hasProposalStage).map((code) => [
+      code,
+      PROGRAM_STATUS_LABEL[code] ?? code,
+    ]),
+  )
+  const defaultStatus = defaultProgramStatus(config.hasProposalStage)
   return {
     noun: config.entityNoun,
     table: config.tables.programs,
     backTo: config.basePath,
     templateName: `${config.entityNoun}_업로드_템플릿.csv`,
-    guide: `${config.entityNoun}명과 기간(시작일·종료일)이 필수입니다. 기간은 담당자 배치 단계를 나누는 기준이라 비울 수 없습니다. 상태${config.categories.length ? '와 구분' : ''}은 화면에서 쓰는 말을 그대로 적으면 되고, 상태를 비워 두면 제안 단계의 '시도'로 들어갑니다. 담당자는 아래에서 한 번 지정해 파일 전체에 적용하며, 부서별 협업비율·투입률 조정과 운영 모듈은 등록 후 상세 화면에서 다룹니다.`,
+    guide: `${config.entityNoun}명과 기간(시작일·종료일)이 필수입니다. 기간은 담당자 배치 단계를 나누는 기준이라 비울 수 없습니다. 상태${config.categories.length ? '와 구분' : ''}은 화면에서 쓰는 말을 그대로 적으면 되고, 상태를 비워 두면 ${config.hasProposalStage ? "제안 단계의 '시도'" : "운영 단계의 '준비'"}로 들어갑니다. 담당자는 아래에서 한 번 지정해 파일 전체에 적용하며, 부서별 협업비율·투입률 조정과 운영 모듈은 등록 후 상세 화면에서 다룹니다.`,
     invalidateKeys: [[config.key, 'programs']],
-    // 신규 등록 기본 상태는 등록 폼과 같이 제안 '시도'다(DB 기본값 DRAFT를 그대로 쓰면
-    // 업로드로 만든 사업만 제안 단계를 건너뛴 것처럼 보인다).
-    fixedValues: { status: 'PROPOSED' },
+    // 신규 등록 기본 상태는 등록 폼과 같이 수명주기의 첫 칸이다(제안을 쓰면 '시도', 아니면 '준비').
+    // 폼과 어긋나면 업로드로 만든 사업만 다른 자리에서 출발한다.
+    fixedValues: { status: defaultStatus },
     assignment: programBulkAssignment(config),
     fields: [
       { header: `${config.entityNoun}명`, column: 'title', required: true, aliases: ['title', '사업명'] },
@@ -240,9 +236,9 @@ export function programBulkSpec(config: ProgramWorkspaceConfig): BulkImportSpec 
         header: '상태',
         column: 'status',
         kind: 'enum',
-        labels: PROGRAM_UPLOAD_STATUS_LABEL,
+        labels: statusLabels,
         aliases: ['status'],
-        example: '시도',
+        example: PROGRAM_STATUS_LABEL[defaultStatus],
       },
       // 분류를 운용하지 않는 워크스페이스에서는 구분 열 자체를 빼둔다(빈 열을 주면 뭘 적을지 묻게 된다).
       ...(config.categories.length

@@ -2,9 +2,9 @@ import { PanelCard, Skeleton, TextAction, badgeToneFill, cn, type BadgeTone } fr
 import { ChevronRight } from 'lucide-react'
 import { Fragment } from 'react'
 import {
-  PROGRAM_FLOW_GROUPS,
   PROGRAM_STATUS_LABEL,
   PROGRAM_STATUS_TONE,
+  programFlowGroups,
 } from '@/features/program/config'
 import { useProgramStatusCounts } from '@/features/program/programsPoolHooks'
 import { useProgramWorkspace } from '@/features/program/workspace'
@@ -46,7 +46,8 @@ interface FlowGroup {
  * 목록 위에서 "내 사업이 지금 어느 단계에 몰려 있나"에 한눈에 답하고, 단계를 누르면 그대로
  * 아래 목록의 상태 필터가 된다 — 현황을 읽는 눈과 목록을 좁히는 손을 같은 자리에 둔다.
  *
- * 흐름은 수명주기(config.ts)를 그대로 편 것이라 여기서 단계를 새로 정의하지 않는다.
+ * 흐름은 수명주기(config.ts)를 그대로 편 것이라 여기서 단계를 새로 정의하지 않는다 —
+ * 제안 단계를 쓰지 않는 워크스페이스(M&A·PROJECT)에서는 운영 4단계 한 줄만 그려진다.
  * 이탈(미선정·취소)은 같은 줄 끝에 나란히 두되 점선으로 가른다 — 아래로 내리면 눈이 두 번
  * 움직이고, 실선 화살표로 이으면 "선정 → 미선정"처럼 읽혀 흐름이 거짓말을 한다.
  * 이탈끼리는 서로 이어지지 않으므로(각자 다른 지점에서 빠진다) 화살표 없이 병렬로 놓는다.
@@ -76,7 +77,7 @@ export function ProgramPipeline({
     tone: PROGRAM_STATUS_TONE[status] ?? 'neutral',
   })
 
-  const groups: FlowGroup[] = PROGRAM_FLOW_GROUPS.map((g) => ({
+  const groups: FlowGroup[] = programFlowGroups(config.hasProposalStage).map((g) => ({
     key: g.stage,
     label: g.label,
     steps: g.statuses.map(stepOf),
@@ -127,28 +128,32 @@ export function ProgramPipeline({
         ) : null
       }
     >
-      {/* 묶음 라벨. 아래 단계 줄과 같은 flex 비율을 써서 열이 정확히 겹친다. */}
-      <div className="flex gap-1.5">
-        {groups.map((group, gi) => (
-          <Fragment key={group.key}>
-            {gi > 0 && <span className="size-4 shrink-0" aria-hidden />}
-            <div
-              className="flex min-w-0 flex-1 items-center gap-2"
-              style={{ flexGrow: group.steps.length + group.exits.length }}
-            >
-              {/* 묶음 라벨은 자기가 이끄는 칸 라벨(gray-700)보다 연해지지 않아야 한다 —
-                  연하면 어디가 묶음의 시작인지 알려주지 못한다. */}
-              <span className="shrink-0 text-caption font-medium text-gray-800">
-                {group.label}
-              </span>
-              <span className="flex-1 border-t border-gray-200" aria-hidden />
-            </div>
-          </Fragment>
-        ))}
-      </div>
+      {/* 묶음 라벨. 아래 단계 줄과 같은 flex 비율을 써서 열이 정확히 겹친다.
+          묶음이 하나뿐이면(제안 단계를 쓰지 않는 워크스페이스) 라벨 줄을 아예 그리지 않는다 —
+          가를 대상이 없는 구분선은 카드 제목이 이미 한 말을 한 번 더 하는 것뿐이다. */}
+      {groups.length > 1 && (
+        <div className="flex gap-1.5">
+          {groups.map((group, gi) => (
+            <Fragment key={group.key}>
+              {gi > 0 && <span className="size-4 shrink-0" aria-hidden />}
+              <div
+                className="flex min-w-0 flex-1 items-center gap-2"
+                style={{ flexGrow: group.steps.length + group.exits.length }}
+              >
+                {/* 묶음 라벨은 자기가 이끄는 칸 라벨(gray-700)보다 연해지지 않아야 한다 —
+                    연하면 어디가 묶음의 시작인지 알려주지 못한다. */}
+                <span className="shrink-0 text-caption font-medium text-gray-800">
+                  {group.label}
+                </span>
+                <span className="flex-1 border-t border-gray-200" aria-hidden />
+              </div>
+            </Fragment>
+          ))}
+        </div>
+      )}
 
       {/* 단계 줄 — 주 경로는 화살표로 잇고, 그 단계의 이탈은 점선 경계 뒤에 나란히 세운다. */}
-      <div className="mt-1.5 flex items-stretch gap-1.5">
+      <div className={cn('flex items-stretch gap-1.5', groups.length > 1 && 'mt-1.5')}>
         {groups.map((group, gi) => (
           <Fragment key={group.key}>
             {gi > 0 && <FlowArrow />}

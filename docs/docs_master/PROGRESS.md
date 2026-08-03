@@ -192,6 +192,7 @@
 - [x] 부서 격리 RLS 검증 (M&A팀+관리자+경영진 읽기 외 차단) <!-- mna 워크스페이스 게이트 RLS. 권한 템플릿상 타 부서 mna 미부여로 자동 차단 -->
 - [x] 딜 상세 2컬럼 리치화 — AC 프로그램 상세와 동일 골격(좌: 작업 카드 / 우: 타임라인·정보) <!-- features/mna/detail/ 신설: DealStageCard(소싱→계약 5단계 스텝퍼: 완료/진행/대기 배지+단계 진입일+다음 단계 전환 액션, 완료/무산 종결 행), DocChecklistCard(기존 체크리스트를 카드화+검토 n/n 배지), DealTimelineCard(전환 로그), DealInfoCard(대상기업·추정가액·담당 심사역 users 조회·보류·메모). MnaDealDetailPage 컴포지션 재구성. tsc/vite build 통과 -->
 - [x] M&A 워크스페이스 사업 원장 구조 전환 — AC와 동일한 대시보드/내 딜/전체 딜 + 리스트뷰 + 사업 상세 <!-- features/program 공용 모듈 공유(MNA_WORKSPACE config 주입). 원장 ma_* 8테이블 신설(20260720140000), 카테고리 SELL/BUY/PE_FUND/ETC, 모듈 템플릿은 CUSTOM_ACTIVITY만. 구 화면(칸반·매칭 매트릭스·딜 상세) 제거, ma_deals 등 구 테이블은 soft 보존 -->
+- [x] M&A·PROJECT 상태 수명주기에서 제안 단계 폐지 — 운영 4단계(준비·진행중·종료·취소)만 <!-- 제안 단계(시도→선정/미선정)는 AC의 사실이다(공고에 제안해 선정되어야 사업이 열린다). M&A 딜·PROJECT는 착수 결정이 곧 시작이라 밟지 않는데도 공용 모듈을 이식하며 수명주기까지 따라와, 진행 현황에 영원히 0건인 칸 셋이 서고(편중을 읽어야 할 자리가 빈칸을 읽는다) 상태 셀렉트가 열려 있는 한 언젠가 제안 상태로 등록되어 운영 4단계 어디에도 속하지 않는 행이 생길 수 있었다. 수명주기를 워크스페이스가 정하도록 ProgramWorkspaceConfig.hasProposalStage 신설(AC만 true) — 선택지·흐름·기본 상태를 config.ts의 programStatusOptions()/programFlowGroups()/defaultProgramStatus()가 답하게 모으고, 화면 상수 PROGRAM_STATUS_OPTIONS·PROGRAM_FLOW_GROUPS 직접 참조를 없앴다(등록 폼·목록 상태 필터·상태별 집계·대용량 업로드 명세 전부 같은 원천). 등록/편집 폼은 단계 라디오와 제안 블록이 통째로 빠지고 상태·기간이 한 평면에 놓인다(고를 단계가 하나뿐인데 라디오와 테두리를 남기면 "무언가 잠겨 있다"로 읽힌다) — ProgramStageFields를 StatusSelect/PeriodInputs로 분해해 두 모양이 같은 조각을 쓴다. 진행 현황 프로세스 뷰는 묶음이 하나뿐이면 묶음 라벨 줄을 그리지 않는다(가를 대상이 없는 구분선은 카드 제목의 반복). DB: 20260803120000_program_stage_scope.sql — 기존 행 환산(시도·선정→준비, 미선정→취소, 사유는 app.contribution_ctx로 변동 이력에 note 기록) + ma_programs/project_programs에 제안 상태 저장 금지 CHECK('허용 4종 열거'가 아니라 '제안 3종 금지'로 쓴다 — 열거로 쓰면 구 상태값 잔여 행 하나에 제약 추가가 실패하고 마이그레이션이 임의의 상태를 지어내게 된다). AC(programs)는 무변경. 보안 게이트: 신규 테이블·RPC·정책·SECURITY DEFINER 없음, RLS 변경 없음. tsc/vitest(219)/eslint 통과 -->
 - [ ] M&A 딜 파이프라인·NDA 체크리스트·매칭 매트릭스 모듈 템플릿 재도입 <!-- 3_6_workspace_ma.md §4 후속 확장 과제 -->
 - [ ] ma_* 원장 마이그레이션 운영 DB 반영(supabase db push) 및 RLS 회귀 테스트
 
@@ -215,6 +216,7 @@
 - [x] 태스크 칸반 (To-Do → In-Progress → Review → Done) <!-- 4열 칸반+상태 이동+마감 UTC 병기·지연 배지. 드래그앤드롭/체크리스트는 후속 -->
 - [x] 간트 마일스톤 로드맵 (글로벌: 다국어/UTC 병기) <!-- 선형 막대 간트+전사 캘린더(system_events) 자동 연계. 드래그 리사이즈는 후속 -->
 - [x] PROJECT 워크스페이스 사업 원장 구조 전환 — AC와 동일한 대시보드/내 프로젝트/전체 프로젝트 + 리스트뷰 + 상세 <!-- features/program 공용 모듈 공유(PROJECT_WORKSPACE config 주입). 원장 project_* 8테이블 신설(20260720150000), 카테고리는 ETC 단일(구 project_type 폐지), 모듈 템플릿은 CUSTOM_ACTIVITY만. 구 화면(태스크 칸반·간트) 제거, projects 등 구 테이블은 soft 보존 -->
+- [x] PROJECT 상태 수명주기에서 제안 단계 폐지 — 운영 4단계만 <!-- Phase 9의 M&A 항목과 한 변경(같은 공용 모듈·같은 마이그레이션 20260803120000). 상세는 그쪽 주석 참조 -->
 - [ ] PROJECT 태스크 보드·간트 마일스톤 모듈 템플릿 재도입 <!-- 3_8_workspace_project.md §4 후속 확장 과제 -->
 - [ ] project_* 원장 마이그레이션 운영 DB 반영(supabase db push) 및 RLS 회귀 테스트
 

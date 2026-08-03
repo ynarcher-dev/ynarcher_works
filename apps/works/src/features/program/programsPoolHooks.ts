@@ -15,7 +15,7 @@ import {
   type LedgerCondition,
   type LedgerPage,
 } from '@/features/master/ledgerPage'
-import { PROGRAM_STATUS_OPTIONS } from '@/features/program/config'
+import { programStatusOptions } from '@/features/program/config'
 import type { Program } from '@/features/program/hooks'
 import {
   useProgramWorkspace,
@@ -192,11 +192,15 @@ export function useProgramsPage(
 
 /** 스코프 안 사업의 상태별 분포(진행 현황 프로세스 뷰의 원천). */
 export interface ProgramStatusCounts {
-  /** program_status 값 → 건수. 수명주기 7개 상태를 모두 담는다(0건 포함). */
+  /** program_status 값 → 건수. 워크스페이스 수명주기의 모든 상태를 담는다(0건 포함). */
   byStatus: Record<string, number>
   /** 스코프 전체 건수(상태 무관). */
   total: number
-  /** 수명주기 밖 건수 = 전체 − 7개 상태 합. 구 상태값(모집·심사 등) 잔여분이 여기 잡힌다. */
+  /**
+   * 수명주기 밖 건수 = 전체 − 수명주기 상태 합. 구 상태값(모집·심사 등) 잔여분이 여기 잡힌다.
+   * 제안 단계를 쓰지 않는 워크스페이스에서는 제안 상태로 남은 레거시 행도 여기에 들어온다
+   * (20260803120000 마이그레이션이 환산했으므로 정상 운영에서는 0이다).
+   */
   other: number
 }
 
@@ -231,18 +235,17 @@ export function useProgramStatusCounts(
         includeUnclassified,
       )
       const base = { table: config.tables.programs, liveColumns: PROGRAM_LIVE_COLUMNS }
+      const statuses = programStatusOptions(config.hasProposalStage)
       const [total, ...perStatus] = await Promise.all([
         countLedgerRows({ ...base, conditions }),
-        ...PROGRAM_STATUS_OPTIONS.map((status) =>
+        ...statuses.map((status) =>
           countLedgerRows({
             ...base,
             conditions: [...conditions, { kind: 'eq', column: 'status', value: status }],
           }),
         ),
       ])
-      const byStatus = Object.fromEntries(
-        PROGRAM_STATUS_OPTIONS.map((status, i) => [status, perStatus[i] ?? 0]),
-      )
+      const byStatus = Object.fromEntries(statuses.map((status, i) => [status, perStatus[i] ?? 0]))
       const known = perStatus.reduce((sum, n) => sum + n, 0)
       return { byStatus, total, other: Math.max(0, total - known) }
     },

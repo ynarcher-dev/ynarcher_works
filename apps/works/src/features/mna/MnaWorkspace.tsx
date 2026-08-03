@@ -32,6 +32,8 @@ export const MNA_WORKSPACE: ProgramWorkspaceConfig = {
     setStaffing: 'set_ma_program_staffing',
     setModule: 'set_ma_program_module',
   },
+  // 딜은 착수 결정이 곧 시작이라 제안 단계를 밟지 않는다 — 운영 4단계만 쓴다.
+  hasProposalStage: false,
   categories: MNA_CATEGORIES,
   allowedModuleTypes: ['CUSTOM_ACTIVITY'],
 }

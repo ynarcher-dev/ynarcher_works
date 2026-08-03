@@ -13,8 +13,8 @@ import type { ProgramDepartmentSegment } from '@/features/program/ProgramDepartm
 import { PhaseStaffingEditor } from '@/features/program/PhaseStaffingEditor'
 import { computePhases, validateStaffing } from '@/features/program/programManagerCoverage'
 import { useOrgVersions } from '@/features/management/orgHooks'
-import { programStage, type ProgramStage } from '@/features/program/config'
-import { useProgramWorkspace } from '@/features/program/workspace'
+import { defaultProgramStatus, programStage, type ProgramStage } from '@/features/program/config'
+import { useProgramWorkspace, type ProgramWorkspaceConfig } from '@/features/program/workspace'
 import {
   ProgramStageFields,
   type ProgramFormValues as FormValues,
@@ -50,6 +50,22 @@ function toDepartmentSegments(program?: Program): ProgramDepartmentSegment[] {
 }
 
 /**
+ * 편집 대상의 상태값을 단계별 폼 상태로 푼다.
+ * 단계 전환 시 반대편 선택값을 잃지 않도록 제안·운영 상태를 각각 보관하며, 해당 단계 값이
+ * 아니면 그 단계의 첫 상태로 채운다. 제안 단계를 쓰지 않는 워크스페이스는 무조건 운영으로
+ * 고정한다 — 제안 상태로 남은 레거시 행을 편집하면 저장과 함께 운영 단계로 환산된다.
+ */
+function stageStateOf(config: ProgramWorkspaceConfig, program?: Program) {
+  const status = program?.status ?? defaultProgramStatus(config.hasProposalStage)
+  const of = programStage(status)
+  return {
+    stage: (config.hasProposalStage ? of : 'OPERATION') as ProgramStage,
+    proposalStatus: of === 'PROPOSAL' ? status : 'PROPOSED',
+    operationStatus: of === 'OPERATION' ? status : 'DRAFT',
+  }
+}
+
+/**
  * 프로그램 등록/편집 모달. `program`을 넘기면 편집 모드로 동작한다.
  * 편집 모드는 defaultValues 초기화를 위해 열 때만 마운트한다.
  */
@@ -76,14 +92,10 @@ export function ProgramFormModal({
   const [managers, setManagers] = useState<ProgramManagerSegment[]>(() => toManagerSegments(program))
   // 상태는 단계(제안/운영)로 이원화 — 단계 라디오가 어느 셀렉트를 쓸지 정하고,
   // 단계 전환 시 반대편 선택값을 잃지 않도록 단계별 상태를 각각 보관한다.
-  const initialStatus = program?.status ?? 'PROPOSED'
-  const [stage, setStage] = useState<ProgramStage>(() => programStage(initialStatus))
-  const [proposalStatus, setProposalStatus] = useState(() =>
-    programStage(initialStatus) === 'PROPOSAL' ? initialStatus : 'PROPOSED',
-  )
-  const [operationStatus, setOperationStatus] = useState(() =>
-    programStage(initialStatus) === 'OPERATION' ? initialStatus : 'DRAFT',
-  )
+  const initial = stageStateOf(config, program)
+  const [stage, setStage] = useState<ProgramStage>(initial.stage)
+  const [proposalStatus, setProposalStatus] = useState(initial.proposalStatus)
+  const [operationStatus, setOperationStatus] = useState(initial.operationStatus)
   // '선정'은 운영 단계로 자동 전환하지 않는다 — 선정과 준비는 서로 다른 사실이다.
   // (선정 = 제안이 통과했다 / 준비 = 운영을 시작할 채비를 한다) 자동으로 넘겨 버리면
   // 선정된 사업이 원장에 한 번도 'SELECTED'로 남지 않아, 선정만 되고 아직 착수하지 않은
@@ -93,11 +105,11 @@ export function ProgramFormModal({
   useEffect(() => {
     setDepartments(toDepartmentSegments(program))
     setManagers(toManagerSegments(program))
-    const status = program?.status ?? 'PROPOSED'
-    setStage(programStage(status))
-    setProposalStatus(programStage(status) === 'PROPOSAL' ? status : 'PROPOSED')
-    setOperationStatus(programStage(status) === 'OPERATION' ? status : 'DRAFT')
-  }, [program])
+    const next = stageStateOf(config, program)
+    setStage(next.stage)
+    setProposalStatus(next.proposalStatus)
+    setOperationStatus(next.operationStatus)
+  }, [config, program])
   const {
     register,
     handleSubmit,
@@ -168,9 +180,10 @@ export function ProgramFormModal({
         reset()
         setDepartments([])
         setManagers([])
-        setStage('PROPOSAL')
-        setProposalStatus('PROPOSED')
-        setOperationStatus('DRAFT')
+        const blank = stageStateOf(config, undefined)
+        setStage(blank.stage)
+        setProposalStatus(blank.proposalStatus)
+        setOperationStatus(blank.operationStatus)
       }
       onClose()
     } catch {
@@ -227,6 +240,7 @@ export function ProgramFormModal({
           </div>
         )}
         <ProgramStageFields
+          hasProposalStage={config.hasProposalStage}
           stage={stage}
           onStageChange={setStage}
           proposalStatus={proposalStatus}

@@ -93,22 +93,11 @@ export function defaultParticipationMode(moduleType: string): string | null {
  * 선정(제안이 통과함)과 준비(운영 채비를 함)는 서로 다른 사실이고, 자동 전환하면 선정만 되고
  * 아직 착수하지 않은 사업이 원장에 남지 않아 목록·집계에서 가려낼 수 없다.
  * DB program_status enum: PROPOSED/SELECTED/NOT_SELECTED/DRAFT/OPERATING/FINISHED/CANCELLED.
- * (등록/편집 폼에서 선택 가능한 값·순서는 PROGRAM_STATUS_OPTIONS 참조)
- */
-export const PROGRAM_STATUS_OPTIONS = [
-  'PROPOSED',
-  'SELECTED',
-  'NOT_SELECTED',
-  'DRAFT',
-  'OPERATING',
-  'FINISHED',
-  'CANCELLED',
-] as const
-
-/**
- * 상태의 단계 이원화: 제안 단계(시도/선정/미선정)와 운영 단계(준비/진행중/종료/취소)로 나뉜다.
- * 제안 단계는 별도 기간이 없고(날짜 미사용), 운영 단계만 start/end_date를 갖는다.
- * '선정(SELECTED)'은 운영으로 넘어가는 경계 상태로 제안 단계 그룹에 속한다. 폼·표시가 공유하는 그룹 정의.
+ *
+ * 제안 단계를 운용하는지는 워크스페이스가 정한다(ProgramWorkspaceConfig.hasProposalStage).
+ * AC는 제안으로 수주해 운영까지 가지만, M&A·PROJECT는 착수가 곧 시작이라 운영 4단계만 쓴다 —
+ * 쓰지 않는 단계를 남겨 두면 목록·집계에 영원히 0건인 칸이 서고, 제안으로 잘못 등록된 건이
+ * 어느 단계에도 속하지 않은 채 원장에 남는다. 선택 가능한 값은 programStatusOptions() 참조.
  */
 export const PROGRAM_PROPOSAL_STATUSES = ['PROPOSED', 'SELECTED', 'NOT_SELECTED'] as const
 export const PROGRAM_OPERATION_STATUSES = ['DRAFT', 'OPERATING', 'FINISHED', 'CANCELLED'] as const
@@ -123,6 +112,21 @@ export function programStage(status: string): ProgramStage {
 }
 
 /**
+ * 워크스페이스가 운용하는 상태 전체(폼 셀렉트·목록 필터·상태별 집계가 공유하는 단일 원천).
+ * 제안 단계를 쓰지 않는 워크스페이스에서는 운영 4종만 돌려준다.
+ */
+export function programStatusOptions(hasProposalStage: boolean): readonly string[] {
+  return hasProposalStage
+    ? [...PROGRAM_PROPOSAL_STATUSES, ...PROGRAM_OPERATION_STATUSES]
+    : PROGRAM_OPERATION_STATUSES
+}
+
+/** 신규 등록의 기본 상태 — 수명주기의 첫 칸(제안을 쓰면 '시도', 아니면 '준비'). */
+export function defaultProgramStatus(hasProposalStage: boolean): string {
+  return hasProposalStage ? 'PROPOSED' : 'DRAFT'
+}
+
+/**
  * 진행 현황(프로세스 뷰)의 흐름 정의 — 수명주기를 왼쪽에서 오른쪽으로 편 것.
  * 묶음은 위 `PROGRAM_*_STATUSES`와 같은 이원화(제안/운영)를 따른다.
  *
@@ -131,7 +135,7 @@ export function programStage(status: string): ProgramStage {
  * 어느 단계에서 빠졌는지가 사라진다. 다만 `statuses`와 화살표로 잇지는 않는다
  * ("선정 → 미선정"으로 읽히면 흐름이 거짓말을 한다) — 점선으로 갈라 병렬로 놓는다.
  */
-export const PROGRAM_FLOW_GROUPS = [
+const PROGRAM_FLOW_GROUPS = [
   {
     stage: 'PROPOSAL',
     label: '제안 단계',
@@ -145,6 +149,13 @@ export const PROGRAM_FLOW_GROUPS = [
     exits: ['CANCELLED'],
   },
 ] as const
+
+/** 워크스페이스가 실제로 밟는 흐름 묶음만. 운영만 쓰는 곳에는 제안 줄을 그리지 않는다. */
+export function programFlowGroups(hasProposalStage: boolean) {
+  return hasProposalStage
+    ? PROGRAM_FLOW_GROUPS
+    : PROGRAM_FLOW_GROUPS.filter((g) => g.stage === 'OPERATION')
+}
 
 export const PROGRAM_STATUS_LABEL: Record<string, string> = {
   PROPOSED: '시도',

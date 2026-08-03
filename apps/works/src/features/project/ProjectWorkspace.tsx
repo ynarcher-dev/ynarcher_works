@@ -30,6 +30,8 @@ export const PROJECT_WORKSPACE: ProgramWorkspaceConfig = {
     setStaffing: 'set_project_program_staffing',
     setModule: 'set_project_program_module',
   },
+  // 프로젝트는 착수 결정이 곧 시작이라 제안 단계를 밟지 않는다 — 운영 4단계만 쓴다.
+  hasProposalStage: false,
   categories: PROJECT_CATEGORIES,
   allowedModuleTypes: ['CUSTOM_ACTIVITY'],
 }

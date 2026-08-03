@@ -31,6 +31,8 @@ export const AC_WORKSPACE: ProgramWorkspaceConfig = {
     setStaffing: 'set_program_staffing',
     setModule: 'set_program_module',
   },
+  // 공고에 제안해 선정되어야 사업이 열리므로 제안 단계(시도·선정·미선정)를 운용한다.
+  hasProposalStage: true,
   categories: AC_CATEGORIES,
   // AC는 정형 운영 모듈 9종을 모두 운용한다.
   allowedModuleTypes: MODULE_TYPES.map((def) => def.type),

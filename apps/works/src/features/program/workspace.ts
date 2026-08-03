@@ -54,6 +54,16 @@ export interface ProgramWorkspaceConfig {
     setStaffing: string
     setModule: string
   }
+  /**
+   * 제안 단계(시도·선정·미선정) 운용 여부. false면 상태 수명주기가 운영 4단계
+   * (준비→진행중→종료/취소)만으로 좁혀지고 등록 폼의 단계 라디오·제안 블록이 사라진다.
+   *
+   * AC만 true다 — 공고에 제안해 선정되어야 사업이 열리므로 '선정되지 않은 사업'이 원장에
+   * 남아야 한다. M&A·PROJECT는 착수 결정이 곧 시작이라 제안 단계를 밟지 않는다.
+   * 값 자체의 저장은 DB CHECK 제약(20260803120000)이 함께 막는다 — 화면에서 숨기는 것은
+   * 보안이 아니다.
+   */
+  hasProposalStage: boolean
   /** 사업구분 선택지. 빈 배열이면 분류 UI를 감춘다. */
   categories: readonly ProgramCategoryOption[]
   /**
