@@ -27,12 +27,15 @@ export function attachmentColumn<T>(has: (row: T) => boolean): Column<T> {
   }
 }
 
-/** 조회수 열(공통). 수치이므로 우측 정렬 + tabular-nums(5_component_spec_rules §3.1). */
+/**
+ * 조회수 열(공통). 자릿수가 한두 자리에 머무는 짧은 카운트라 우측 정렬하면 헤더와 어긋나
+ * 보이므로 가운데 정렬하되, 자릿수 흔들림을 막는 tabular-nums는 유지한다.
+ */
 export function viewsColumn<T>(get: (row: T) => BoardPost): Column<T> {
   return {
     key: 'views',
     header: '조회',
-    align: 'right',
+    align: 'center',
     numeric: true,
     className: 'w-20',
     render: (row) => (
