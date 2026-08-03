@@ -91,31 +91,36 @@ export function MyPage() {
         {/* 좌측(2/3): 계정 정보(조회) + 사진·약력·노트(편집) */}
         <div className="space-y-4 lg:col-span-2">
           <CardShell>
-            <div className="flex flex-wrap items-center gap-2">
-              {/* 페이지 제목('내 계정 관리')이 따로 있으므로 이름은 카드 제목 층이다. */}
-              <h2 className={cardText.title}>{me.name}</h2>
-              {/* 자리 표기(직급 직책)는 임직원 상세 헤더와 같은 자리·같은 모양으로 둔다. */}
-              {jobLabel && <Badge tone="neutral">{jobLabel}</Badge>}
-              {adminLabel && <Badge tone="neutral">{adminLabel}</Badge>}
+            {/* 사진은 내 신원을 이루는 정보이므로 계정 정보 카드 안, 이름 왼쪽에 둔다(별도 카드 없음). */}
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <PhotoPicker
+                value={photo}
+                onChange={setPhoto}
+                className="shrink-0 flex-col items-start gap-2"
+              />
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* 페이지 제목('내 계정 관리')이 따로 있으므로 이름은 카드 제목 층이다. */}
+                  <h2 className={cardText.title}>{me.name}</h2>
+                  {/* 자리 표기(직급 직책)는 임직원 상세 헤더와 같은 자리·같은 모양으로 둔다. */}
+                  {jobLabel && <Badge tone="neutral">{jobLabel}</Badge>}
+                  {adminLabel && <Badge tone="neutral">{adminLabel}</Badge>}
+                </div>
+                <p className={`mt-1 ${cardText.subtitle}`}>{affiliation || '-'}</p>
+                <div className="mt-4 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-2">
+                  <Info label="회사" value={str(profile.company)} />
+                  <Info label="직책" value={str(profile.position)} />
+                  <Info label="직급" value={str(profile.rank)} />
+                  {/* 호봉은 인사 관리(MANAGEMENT) 화면에서만 다룬다 — 본인 확인 화면에는 노출하지 않는다. */}
+                  <Info label="입사일" value={str(profile.hire_date)} />
+                  <Info label="이메일" value={me.email ?? ''} />
+                  <Info label="연락처" value={me.phone ?? ''} />
+                </div>
+                <p className="mt-3 text-caption text-gray-700">
+                  이름·역할·부서·연락처 등 계정 정보 변경은 인사 관리(경영지원)에 요청하세요.
+                </p>
+              </div>
             </div>
-            <p className={`mt-1 ${cardText.subtitle}`}>{affiliation || '-'}</p>
-            <div className="mt-4 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-2">
-              <Info label="회사" value={str(profile.company)} />
-              <Info label="직책" value={str(profile.position)} />
-              <Info label="직급" value={str(profile.rank)} />
-              {/* 호봉은 인사 관리(MANAGEMENT) 화면에서만 다룬다 — 본인 확인 화면에는 노출하지 않는다. */}
-              <Info label="입사일" value={str(profile.hire_date)} />
-              <Info label="이메일" value={me.email ?? ''} />
-              <Info label="연락처" value={me.phone ?? ''} />
-            </div>
-            <p className="mt-3 text-caption text-gray-700">
-              이름·역할·부서·연락처 등 계정 정보 변경은 인사 관리(경영지원)에 요청하세요.
-            </p>
-          </CardShell>
-
-          <CardShell>
-            <p className="mb-3 text-caption font-medium text-gray-700">사진</p>
-            <PhotoPicker value={photo} onChange={setPhoto} />
           </CardShell>
 
           <CardShell>
@@ -127,7 +132,7 @@ export function MyPage() {
             <EmployeeNoteFields value={note} onChange={setNote} />
           </CardShell>
 
-          {/* 저장은 사진·약력·노트 세 카드를 한 번에 반영한다(카드별 저장 없음). */}
+          {/* 저장은 사진·약력·노트를 한 번에 반영한다(카드별 저장 없음). */}
           <div className="flex justify-end">
             <Button type="button" onClick={() => void save()} disabled={update.isPending}>
               저장
