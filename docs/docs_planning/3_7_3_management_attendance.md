@@ -3,7 +3,7 @@
 본 문서는 MANAGEMENT 워크스페이스 `근태 관리`(`/management?tab=attendance`) 화면과, 그 원장에 기록을 남기는 OFFICE 대시보드 `근무체크` 위젯의 데이터 모델·기능 요건을 명세합니다. 상위 워크스페이스 기획은 [3_7_workspace_management.md](./3_7_workspace_management.md), 대시보드 구성은 [3_1_workspace_hub.md](./3_1_workspace_hub.md)가 소유합니다.
 
 > [!NOTE]
-> **구현 상태(2026-08-03)**: 기획 단계입니다. 근태 관련 테이블·RPC는 DB에 존재하지 않으며 본 문서가 신설 범위를 정의합니다.
+> **구현 상태(2026-08-03)**: 원장 4종·RLS·상태 시드·RPC 5종 마이그레이션(`20260803190000_attendance.sql`)과 화면 전체(MANAGEMENT `근태 관리` 일간/월간·수정 모달·설정 모달, OFFICE 대시보드 `근무체크` 위젯)가 구현되어 있습니다. 근무일 판정과 정책 해석은 화면이 아니라 조회 RPC(`attendance_board`/`attendance_month`)가 붙여 줍니다. 전자결재 휴가 연동·공휴일 원장·월말 마감·Export는 §12 후속입니다.
 
 ---
 

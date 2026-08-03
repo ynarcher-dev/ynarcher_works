@@ -244,6 +244,9 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         // 직책·직급·호봉 태그는 ADMIN '태그 관리'로 이관했다(2026-08-03) — 쓰기 정책이
         // is_admin() 하나뿐이라 여기 두면 MANAGEMENT 사용자는 볼 수만 있었다.
         { label: '인사 관리', tab: 'hr', dividerBefore: true },
+        // 근태 원장(정책·상태·일별 기록)의 소유 자리. OFFICE 대시보드 '근무체크' 위젯은
+        // 본인 기록을 찍기만 하고, 판독·정정은 여기서만 한다.
+        { label: '근태 관리', tab: 'attendance' },
         { label: '자산 관리', tab: 'assets' },
         { label: '재무 관리', tab: 'finance' },
         { label: 'KPI 관리', tab: 'kpi', dividerBefore: true },

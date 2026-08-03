@@ -60,6 +60,7 @@ import {
   Activity,
   HandCoins,
   PackageOpen,
+  CalendarClock,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import {
@@ -161,6 +162,7 @@ const sidebarIconByTab: Record<string, LucideIcon> = {
   rooms: DoorOpen,
   minutes: FileText,
   hr: User,
+  attendance: CalendarClock,
   finance: WalletCards,
   assets: BriefcaseBusiness,
   departments: Network,

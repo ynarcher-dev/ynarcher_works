@@ -2,6 +2,7 @@ import { Button, Input, PageHeader } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { AssetsPanel } from '@/features/management/assets/AssetsPanel'
+import { AttendancePanel } from '@/features/management/attendance/AttendancePanel'
 import { DashboardPanel } from '@/features/management/panels/DashboardPanel'
 import { DepartmentsPanel } from '@/features/management/panels/DepartmentsPanel'
 import { FinancePanel } from '@/features/management/panels/FinancePanel'
@@ -14,6 +15,7 @@ const HEADINGS: Record<string, string> = {
   departments: '조직 관리',
   branches: '지사 관리',
   hr: '인사 관리',
+  attendance: '근태 관리',
   assets: '자산 관리',
   finance: '재무 관리',
   kpi: 'KPI 관리',
@@ -66,6 +68,7 @@ export function ManagementPage() {
       {tab === 'departments' && <DepartmentsPanel />}
       {tab === 'branches' && <BranchAdminPanel />}
       {tab === 'hr' && <HrPanel keyword={keyword} />}
+      {tab === 'attendance' && <AttendancePanel />}
       {tab === 'assets' && <AssetsPanel />}
       {tab === 'finance' && <FinancePanel />}
       {tab === 'kpi' && <KpiPanel />}

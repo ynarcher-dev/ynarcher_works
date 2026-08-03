@@ -15,7 +15,7 @@
 | 지사 관리 | `branches` | 사용 가능 |
 | 인사 관리 | `hr` | 사용 가능 |
 | 계정 생성/임직원 상세 | `/management/hr/new`, `/management/hr/:id` | 사용 가능 |
-| 근태 관리 | `attendance` | 기획 완료 |
+| 근태 관리 | `attendance` | 사용 가능 |
 | 자산 관리 | `assets` | 사용 가능 |
 | 재무 관리 | `finance` | 부분 구현 |
 | KPI 관리 | `kpi` | 부분 구현 |
