@@ -22,18 +22,20 @@ interface ProgramListTabProps {
   scope: 'mine' | 'all'
   /** 상세 진입 시 넘길 출처 탭. 뒤로가기·사이드바 활성 상태 복원에 쓴다. */
   backTab: string
-  /** 목록 위에 진행 현황 프로세스 뷰를 함께 둔다('내 사업 관리' 전용). */
-  showPipeline?: boolean
 }
 
 /**
  * 사업 워크스페이스(AC/M&A/PROJECT 공용): 사업 원장 목록.
- * 검색어(사업명·생성자)·복수 필터(상태·시작일)·서버 페이지네이션·다중선택을 소유하고,
- * 검색창과 필터를 한 컨트롤 행으로 함께 배치한다. (STARTUP StartupPoolTab과 동일 구조.)
+ * 검색어(사업명·생성자)·복수 필터(상태·사업구분·부서·시작일)·서버 페이지네이션·다중선택을
+ * 소유하고, 검색창과 필터를 한 컨트롤 행으로 함께 배치한다. (STARTUP StartupPoolTab과 동일 구조.)
  * 비활성화(삭제)는 목록이 아니라 상세 페이지에서 수행한다.
  * scope='mine'이면 생성자(created_by)·담당자가 현재 사용자인 사업만 조회한다.
+ *
+ * 진행 현황 프로세스 뷰는 두 스코프 모두에 둔다. 종전에는 '내 사업'에만 두었는데,
+ * 검색어·필터가 집계에 반영되면서 전체 목록에서도 "지금 좁혀 놓은 범위가 어느 단계에
+ * 몰려 있나"라는 같은 질문이 성립한다 — 더는 '회사 전체 통계' 한 장이 아니다.
  */
-export function ProgramListTab({ scope, backTab, showPipeline = false }: ProgramListTabProps) {
+export function ProgramListTab({ scope, backTab }: ProgramListTabProps) {
   const config = useProgramWorkspace()
   const navigate = useNavigate()
   const userId = useAuthStore((s) => s.user?.id)
@@ -64,14 +66,13 @@ export function ProgramListTab({ scope, backTab, showPipeline = false }: Program
 
   return (
     <div className="space-y-3">
-      {showPipeline && (
-        <ProgramPipeline
-          mineUserId={mineUserId}
-          selectedStatuses={filters.statuses}
-          onToggleStatus={toggleStatus}
-          onClearStatuses={() => setFilters((f) => ({ ...f, statuses: [] }))}
-        />
-      )}
+      <ProgramPipeline
+        mineUserId={mineUserId}
+        keyword={keyword}
+        filters={filters}
+        onToggleStatus={toggleStatus}
+        onClearStatuses={() => setFilters((f) => ({ ...f, statuses: [] }))}
+      />
 
       <ListToolbar
         keyword={keyword}

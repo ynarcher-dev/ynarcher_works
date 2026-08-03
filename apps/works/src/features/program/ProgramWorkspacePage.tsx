@@ -35,9 +35,7 @@ export function ProgramWorkspacePage() {
 
       {mine ? (
         // key로 스코프 전환 시 검색·필터·페이지를 초기화한다.
-        // 진행 현황 프로세스 뷰는 '내 사업'에만 둔다 — 내가 굴리는 사업의 편중을 읽는 화면이라,
-        // 전체 목록에서는 같은 그림이 "회사 전체 통계"로 읽혀 질문이 달라진다.
-        <ProgramListTab key="mine" scope="mine" backTab="mine" showPipeline />
+        <ProgramListTab key="mine" scope="mine" backTab="mine" />
       ) : (
         <ProgramListTab key={LIST_ALL_TAB} scope="all" backTab={LIST_ALL_TAB} />
       )}

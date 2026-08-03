@@ -99,9 +99,6 @@ const PROGRAM_LIVE_COLUMNS = ['deleted_at'] as const
  * '이 목록이 무엇인가'를 정하는 스코프 조건(내 사업 / 전체).
  * 목록 조회와 진행 현황 집계가 반드시 같은 모수를 봐야 하므로 한 곳에서 만든다 —
  * 갈라지면 파이프라인 단계 합과 목록 전체 건수가 어긋난다.
- *
- * 사업구분은 여기 없다. 세분화 메뉴를 내린 뒤로 분류는 '이 목록이 무엇인가'가 아니라
- * '지금 무엇을 찾고 있나'(필터)이며, 그래서 진행 현황 집계에도 반영되지 않는다.
  */
 async function programScopeConditions(
   config: ProgramWorkspaceConfig,
@@ -117,6 +114,45 @@ async function programScopeConditions(
     scope.push({ kind: 'or', expr: parts.join(',') })
   }
   return scope
+}
+
+/**
+ * '지금 무엇을 찾고 있나'를 정하는 좁힘 조건(검색어 + 필터).
+ * 목록과 진행 현황 집계가 한 함수를 공유한다 — 조건을 두 벌로 두면 같은 화면에서
+ * 목록은 3건인데 단계 합은 10건인 상태가 언제든 생긴다.
+ *
+ * `withStatus`가 false면 상태 조건만 뺀다. 진행 현황 카드가 그렇게 부른다 —
+ * 그 카드는 상태 필터를 스스로 만들어 내는 자리라, 자기가 만든 조건을 자기 집계에 도로
+ * 걸면 고른 단계만 남고 나머지 칸이 전부 0이 되어 되돌릴 근거(분포)가 사라진다.
+ */
+async function programNarrowConditions(
+  config: ProgramWorkspaceConfig,
+  keyword: string,
+  filters: ProgramFilters,
+  withStatus: boolean,
+): Promise<LedgerCondition[]> {
+  const narrow: LedgerCondition[] = []
+  // 검색: 프로그램명 + 생성자(이름 → created_by id 역조회).
+  const kw = sanitizeOrValue(keyword)
+  if (kw) {
+    const parts = [`title.ilike.%${kw}%`]
+    const userIds = await userIdsByName(kw)
+    if (userIds.length) parts.push(`created_by.in.(${userIds.join(',')})`)
+    narrow.push({ kind: 'or', expr: parts.join(',') })
+  }
+  if (filters.departmentLineages.length) {
+    narrow.push({
+      kind: 'in',
+      column: 'id',
+      values: await programIdsByDepartment(config, filters.departmentLineages),
+    })
+  }
+  if (withStatus && filters.statuses.length)
+    narrow.push({ kind: 'in', column: 'status', values: filters.statuses })
+  if (filters.categories.length) narrow.push(categoryCondition(filters.categories))
+  if (filters.startFrom) narrow.push({ kind: 'gte', column: 'start_date', value: filters.startFrom })
+  if (filters.startTo) narrow.push({ kind: 'lte', column: 'start_date', value: filters.startTo })
+  return narrow
 }
 
 /** 목록용 축약 select 문자열. 담당자·부서 임베드 테이블명·FK 힌트를 config로 조립한다. */
@@ -150,32 +186,8 @@ export function useProgramsPage(
     queryKey: [config.key, 'programs', 'page', keyword, filters, page, pageSize, mineUserId ?? null],
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<ProgramPage> => {
-      const kw = sanitizeOrValue(keyword)
-
       const scope = await programScopeConditions(config, mineUserId)
-
-      const narrow: LedgerCondition[] = []
-      // 검색: 프로그램명 + 생성자(이름 → created_by id 역조회).
-      if (kw) {
-        const parts = [`title.ilike.%${kw}%`]
-        const userIds = await userIdsByName(kw)
-        if (userIds.length) parts.push(`created_by.in.(${userIds.join(',')})`)
-        narrow.push({ kind: 'or', expr: parts.join(',') })
-      }
-      if (filters.departmentLineages.length) {
-        narrow.push({
-          kind: 'in',
-          column: 'id',
-          values: await programIdsByDepartment(config, filters.departmentLineages),
-        })
-      }
-      if (filters.statuses.length)
-        narrow.push({ kind: 'in', column: 'status', values: filters.statuses })
-      if (filters.categories.length) narrow.push(categoryCondition(filters.categories))
-      if (filters.startFrom)
-        narrow.push({ kind: 'gte', column: 'start_date', value: filters.startFrom })
-      if (filters.startTo)
-        narrow.push({ kind: 'lte', column: 'start_date', value: filters.startTo })
+      const narrow = await programNarrowConditions(config, keyword, filters, true)
 
       return fetchLedgerPage<Program>({
         table: config.tables.programs,
@@ -191,11 +203,11 @@ export function useProgramsPage(
   })
 }
 
-/** 스코프 안 사업의 상태별 분포(진행 현황 프로세스 뷰의 원천). */
+/** 지금 보고 있는 모수(스코프 + 검색·필터, 상태 제외)의 상태별 분포. 진행 현황 뷰의 원천. */
 export interface ProgramStatusCounts {
   /** program_status 값 → 건수. 워크스페이스 수명주기의 모든 상태를 담는다(0건 포함). */
   byStatus: Record<string, number>
-  /** 스코프 전체 건수(상태 무관). */
+  /** 모수 전체 건수(상태 무관). 단계 합과 반드시 같은 조건에서 센다. */
   total: number
   /**
    * 수명주기 밖 건수 = 전체 − 수명주기 상태 합. 구 상태값(모집·심사 등) 잔여분이 여기 잡힌다.
@@ -208,19 +220,38 @@ export interface ProgramStatusCounts {
 /**
  * 상태별 건수 집계. 행을 내려받아 세지 않고 상태마다 count 질의를 던진다 —
  * 행으로 세면 PostgREST 기본 상한(1000행)에 걸리는 순간 조용히 작은 수를 답하게 된다.
- * 검색어·필터는 일부러 반영하지 않는다. 이 패널은 "지금 무엇을 찾고 있나"가 아니라
- * "내 사업 전체가 어느 단계에 몰려 있나"에 답하고, 그 답이 곧 필터의 출발점이기 때문이다.
+ *
+ * 검색어와 필터를 목록과 똑같이 반영한다(상태만 제외 — programNarrowConditions 주석 참조).
+ * 반영하지 않으면 "부서를 좁혀 놓고 그 부서 사업이 어느 단계에 몰렸는지" 같은, 이 카드가
+ * 가장 잘 답할 질문에 답하지 못한 채 목록과 다른 모수를 보여 준다.
+ * 캐시 키에 상태를 넣지 않는 것도 같은 이유다 — 단계를 눌러도 집계는 그대로여야 하는데
+ * 키가 흔들리면 누를 때마다 같은 답을 다시 받아 온다.
  */
 export function useProgramStatusCounts(
   /** 지정 시 생성자 또는 담당자가 이 사용자인 사업만 집계한다('내 사업'). */
-  mineUserId?: string | null,
+  mineUserId: string | null | undefined,
+  keyword: string,
+  filters: ProgramFilters,
 ) {
   const config = useProgramWorkspace()
   return useQuery({
-    queryKey: [config.key, 'programs', 'status-counts', mineUserId ?? null],
+    queryKey: [
+      config.key,
+      'programs',
+      'status-counts',
+      mineUserId ?? null,
+      keyword,
+      filters.categories,
+      filters.departmentLineages,
+      filters.startFrom,
+      filters.startTo,
+    ],
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<ProgramStatusCounts> => {
-      const conditions = await programScopeConditions(config, mineUserId)
+      const conditions = [
+        ...(await programScopeConditions(config, mineUserId)),
+        ...(await programNarrowConditions(config, keyword, filters, false)),
+      ]
       const base = { table: config.tables.programs, liveColumns: PROGRAM_LIVE_COLUMNS }
       const statuses = programStatusOptions(config.hasProposalStage)
       const [total, ...perStatus] = await Promise.all([

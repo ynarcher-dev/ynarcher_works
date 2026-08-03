@@ -16,14 +16,20 @@ import {
   PROGRAM_UNKNOWN_STATUS_ICON,
   programFlowGroups,
 } from '@/features/program/config'
-import { useProgramStatusCounts } from '@/features/program/programsPoolHooks'
+import {
+  hasActiveProgramFilters,
+  useProgramStatusCounts,
+  type ProgramFilters as Filters,
+} from '@/features/program/programsPoolHooks'
 import { useProgramWorkspace } from '@/features/program/workspace'
 
 interface ProgramPipelineProps {
   /** 집계 스코프. 목록과 같은 값을 받아 같은 모수를 본다. */
   mineUserId: string | null
-  /** 목록에 걸린 상태 필터. 여기서는 '선택된 단계'로 표시된다. */
-  selectedStatuses: string[]
+  /** 목록 검색어. 집계도 같은 값으로 좁힌다. */
+  keyword: string
+  /** 목록에 걸린 필터 전체. 상태는 '선택된 단계'로 표시되고, 나머지는 집계 모수를 좁힌다. */
+  filters: Filters
   /** 단계 클릭 — 해당 상태를 목록 필터에서 켜고 끈다. */
   onToggleStatus: (status: string) => void
   /** 상태 필터 전체 해제. */
@@ -53,8 +59,13 @@ interface FlowGroup {
 /**
  * 사업 진행 현황 프로세스 뷰(AC/M&A/PROJECT 공용).
  *
- * 목록 위에서 "내 사업이 지금 어느 단계에 몰려 있나"에 한눈에 답하고, 단계를 누르면 그대로
- * 아래 목록의 상태 필터가 된다 — 현황을 읽는 눈과 목록을 좁히는 손을 같은 자리에 둔다.
+ * 목록 위에서 "지금 보고 있는 사업이 어느 단계에 몰려 있나"에 한눈에 답하고, 단계를 누르면
+ * 그대로 아래 목록의 상태 필터가 된다 — 현황을 읽는 눈과 목록을 좁히는 손을 같은 자리에 둔다.
+ *
+ * 모수는 아래 목록과 같다(스코프 + 검색어 + 필터). 단 상태 필터만은 집계에서 뺀다 —
+ * 자기가 만들어 낸 조건을 자기 집계에 도로 걸면 고른 단계만 남고 나머지가 전부 0이 되어
+ * 되돌릴 근거인 분포가 사라진다. 그래서 상태를 고른 동안에는 카드의 총계가 목록 건수보다
+ * 크게 나오는데, 이는 "이 모수에서 그 단계를 고르는 중"이라는 사실 그대로다.
  *
  * 흐름은 수명주기(config.ts)를 그대로 편 것이라 여기서 단계를 새로 정의하지 않는다 —
  * 제안 단계를 쓰지 않는 워크스페이스(M&A·PROJECT)에서는 운영 4단계 한 줄만 그려진다.
@@ -64,17 +75,22 @@ interface FlowGroup {
  */
 export function ProgramPipeline({
   mineUserId,
-  selectedStatuses,
+  keyword,
+  filters,
   onToggleStatus,
   onClearStatuses,
 }: ProgramPipelineProps) {
   const config = useProgramWorkspace()
-  const { data, isPending } = useProgramStatusCounts(mineUserId)
+  const { data, isPending } = useProgramStatusCounts(mineUserId, keyword, filters)
+  const selectedStatuses = filters.statuses
+  const narrowed = keyword !== '' || hasActiveProgramFilters(filters)
 
   // 첫 조회 중에는 카드 높이만큼 자리를 잡아 둔다(도착하는 순간 목록이 밀려 내려가지 않게).
   if (isPending) return <Skeleton className="h-[8.5rem] w-full rounded-radius-lg" />
-  // 스코프에 사업이 하나도 없으면 빈 프로세스 줄을 그리지 않는다 — 목록의 빈 상태가 이미 답한다.
-  if (!data || data.total === 0) return null
+  // 볼 사업이 하나도 없으면 빈 프로세스 줄을 그리지 않는다 — 목록의 빈 상태가 이미 답한다.
+  // 다만 검색어·필터로 좁혀서 0건이 된 경우에는 남긴다. 이때 카드를 걷어 버리면 방금 누른
+  // 단계를 되돌릴 '단계 선택 해제'까지 함께 사라져, 빈 화면에서 빠져나올 손잡이가 없어진다.
+  if (!data || (data.total === 0 && !narrowed)) return null
 
   const countOf = (status: string) => data.byStatus[status] ?? 0
   const stepOf = (status: string): FlowStep => ({
@@ -268,22 +284,17 @@ function StepTile({
           이탈만 한 단계 물러난다(점선 테두리와 함께 주 경로 밖임을 색으로도 말한다). */}
       {/* 아이콘은 라벨과 한 이름표로 읽히도록 같은 줄에 붙인다 — 줄을 따로 주면 칸이 세 층에서
           네 층이 되어 일곱 칸이 나란히 선 줄 전체가 높아진다.
-          색은 상태 톤을 쓴다(목록 배지·아래 막대와 같은 표). 0건이면 막대가 비어 색이 사라지는데,
-          아이콘이 톤을 들고 있으면 빈 단계도 어느 단계인지 색으로 남는다.
-          선택 중일 때만 라벨과 함께 브랜드색으로 묶인다 — 한 줄이 두 색으로 갈리지 않게. */}
+          색은 언제나 상태 톤이다(목록 배지·아래 막대와 같은 표). 0건이어도, 이탈이어도,
+          선택 중이어도 바꾸지 않는다 — 아이콘이 답하는 것은 '지금 어떤 상태인가'(정체성)이지
+          '지금 어떤 처지인가'(비어 있음·물러남·선택됨)가 아니다. 후자는 건수·테두리·배경이
+          이미 각자 말하고 있어서, 아이콘까지 거기 끌려가면 색이 상태를 가리키지 못한다. */}
       <p
         className={cn(
           'flex items-center gap-1 text-caption',
           active ? 'text-brand-700' : exit ? 'text-gray-500' : 'text-gray-700',
         )}
       >
-        <Icon
-          className={cn(
-            'size-3.5 shrink-0',
-            active ? 'text-brand-700' : exit ? 'text-gray-400' : badgeToneText[tone],
-          )}
-          aria-hidden
-        />
+        <Icon className={cn('size-3.5 shrink-0', badgeToneText[tone])} aria-hidden />
         <span className="truncate">{label}</span>
       </p>
       <p
