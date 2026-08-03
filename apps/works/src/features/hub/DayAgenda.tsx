@@ -117,7 +117,7 @@ export function DayAgenda({
   )
 
   if (events.length === 0) {
-    return <p className="text-body text-gray-500">등록된 일정이 없습니다.</p>
+    return <p className="text-caption text-gray-600">등록된 일정이 없습니다.</p>
   }
   const work = events.filter((e) => e.event_type === 'WORK')
   const leave = events.filter((e) => e.event_type === 'LEAVE')

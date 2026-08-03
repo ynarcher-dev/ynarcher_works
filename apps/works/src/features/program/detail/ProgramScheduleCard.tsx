@@ -193,8 +193,8 @@ function SelectedDayDetail({
 
 /**
  * 통합 타임라인(상세 개요 우측 패널).
- * 자료 관리·코멘트·변동 이력과 동일한 DetailPanelCard 톤을 쓰며, 제목 옆 일정 건수 뱃지 +
- * 월간 캘린더(모듈 기간 바·행사 점), 날짜 선택 시 하단 일정 목록으로 구성한다.
+ * 자료 관리·코멘트·변동 이력과 동일한 DetailPanelCard 톤을 쓰며, 월간 캘린더(모듈 기간 바·행사 점)와
+ * 날짜 선택 시 하단 일정 목록으로 구성한다. 건수는 달마다 달라져 의미가 없으므로 제목 옆 뱃지를 두지 않는다.
  * 캘린더는 오늘 날짜가 속한 달을 기본으로 열고, 사업 운영 기간 밖의 날짜는 비활성(회색)으로 표시한다.
  */
 export function ProgramScheduleCard({ program }: { program: Program }) {
@@ -214,7 +214,7 @@ export function ProgramScheduleCard({ program }: { program: Program }) {
   const timelineItems = items ?? []
 
   return (
-    <DetailPanelCard title="통합 타임라인" count={timelineItems.length}>
+    <DetailPanelCard title="통합 타임라인">
       <MonthNav
         month={month}
         onPrev={() => setMonth((m) => m.subtract(1, 'month'))}
