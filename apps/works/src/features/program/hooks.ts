@@ -57,7 +57,7 @@ export interface Program {
   /** 사업구분: PUBLIC(공공)/PRIVATE(민간)/REVENUE(매출)/NEW(신규)/ETC(기타). null=미지정. */
   category: string | null
   /**
-   * 산업 태그(industry_tags 태그명 배열, 최대 3개). 이 사업이 발굴·대상으로 하는 산업군이며,
+   * 분야 태그(industry_tags 태그명 배열, 최대 3개). 이 사업이 발굴·대상으로 하는 분야이며,
    * 스타트업 원장의 industries와 같은 태그 원장을 읽는다. 미지정은 빈 배열.
    */
   industries: string[]
@@ -94,7 +94,7 @@ export function programCols(config: ProgramWorkspaceConfig): string {
 }
 
 /**
- * 산업 태그 목록을 읽는다. 원장 컬럼은 jsonb라 스키마상 배열이 보장되지 않으므로
+ * 분야 태그 목록을 읽는다. 원장 컬럼은 jsonb라 스키마상 배열이 보장되지 않으므로
  * (컬럼이 없던 시절의 캐시·다른 select로 받은 행) 배열이 아닌 값은 빈 목록으로 흡수한다.
  */
 export function programIndustries(program: Pick<Program, 'industries'> | null | undefined): string[] {

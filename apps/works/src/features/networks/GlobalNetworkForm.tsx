@@ -20,7 +20,7 @@ import {
   useUpdateGlobal,
 } from '@/features/networks/globalHooks'
 
-/** 전문 분야 최대 선택 수(국내 폼과 동일). */
+/** 전문 영역 최대 선택 수(국내 폼과 동일). */
 const MAX_FIELDS = 3
 
 interface Props {
@@ -103,7 +103,7 @@ export function GlobalNetworkForm({
     reader.readAsDataURL(file)
   }
 
-  // 전문 분야: ADMIN 분야 관리(field_tags) 태그에서 다중 선택(최대 3개), expertise(jsonb 배열)에 저장.
+  // 전문 영역: ADMIN 영역 관리(field_tags) 태그에서 다중 선택(최대 3개), expertise(jsonb 배열)에 저장.
   const fieldTags = useTags('field_tags')
   const [fields, setFields] = useState<string[]>(
     Array.isArray(initial?.expertise) ? (initial?.expertise as string[]) : [],
@@ -275,9 +275,9 @@ export function GlobalNetworkForm({
                 </Select>
               </Field>
               <div className="sm:col-span-2">
-                <Field label="전문 분야">
+                <Field label="전문 영역">
                   <span className="mb-1 block text-caption font-normal text-gray-700">
-                    분야 관리 태그에서 최대 {MAX_FIELDS}개
+                    영역 관리 태그에서 최대 {MAX_FIELDS}개
                   </span>
                   <div className="flex flex-wrap gap-1.5">
                     {(fieldTags.data ?? []).map((t) => {
@@ -296,7 +296,7 @@ export function GlobalNetworkForm({
                     })}
                     {(fieldTags.data ?? []).length === 0 && (
                       <span className="text-caption text-gray-600">
-                        등록된 분야 태그가 없습니다. (ADMIN › 분야 관리)
+                        등록된 영역 태그가 없습니다. (ADMIN › 영역 관리)
                       </span>
                     )}
                   </div>

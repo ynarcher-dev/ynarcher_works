@@ -97,7 +97,7 @@ export interface TagParentValue {
 }
 
 /**
- * 태그 목록(미삭제, 표시순). 산업/분야 등 기준정보 태그 테이블 공용.
+ * 태그 목록(미삭제, 표시순). 분야/영역 등 기준정보 태그 테이블 공용.
  * `parentColumn`을 주면 2뎁스 태그의 부모 FK(예: region_tag_id)를 함께 조회한다.
  * `withMode`는 표기 방식(display_mode) 컬럼을 가진 원장(직급·직책)에만 켠다 — 컬럼이 없는
  * 테이블에 켜면 조회 자체가 실패하므로, 켜는 판단은 태그 설정(TagConfig.modes)이 갖는다.

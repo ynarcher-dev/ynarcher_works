@@ -1,7 +1,7 @@
 /**
  * 임직원 프로필 '노트' 영역 정의 — 종전 자유 텍스트 한 칸(profile.note)을 세 항목으로 가른다.
  *  · 액셀러레이터 철학 : profile.philosophy (자유 텍스트)
- *  · 관심분야         : profile.interests  (산업 태그명 배열 — ADMIN 산업태그 관리 원장)
+ *  · 관심분야         : profile.interests  (분야 태그명 배열 — ADMIN 분야태그 관리 원장)
  *  · 한마디           : profile.one_liner  (자유 텍스트)
  *
  * 인사 관리 상세·수정과 마이페이지가 같은 키·같은 파서를 쓰도록 정의를 여기 하나에 모은다.
@@ -11,12 +11,12 @@
 
 export interface EmployeeNote {
   philosophy: string
-  /** 산업 태그명 배열. 자유 입력이 아니라 태그 원장에서 고른 값만 담긴다. */
+  /** 분야 태그명 배열. 자유 입력이 아니라 태그 원장에서 고른 값만 담긴다. */
   interests: string[]
   oneLiner: string
 }
 
-/** 관심분야 태그 원장(ADMIN › 산업태그 관리). */
+/** 관심분야 태그 원장(ADMIN › 분야태그 관리 — 물리명은 industry_tags). */
 export const INTEREST_TAG_TABLE = 'industry_tags'
 
 /** 관심분야 최대 선택 수. 서버(update_my_profile)도 같은 상한으로 막는다. */

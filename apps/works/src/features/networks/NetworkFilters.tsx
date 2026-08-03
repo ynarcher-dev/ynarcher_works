@@ -18,7 +18,7 @@ interface NetworkFiltersProps {
 /**
  * 국내 네트워크 목록 필터 바(검색창 오른쪽에 같은 줄로 선다).
  *
- * 노출 축을 엔티티가 정한다 — 프로필형(전문가·BAN·EXP·투자사)은 분야·매칭·활동·만족도를 갖고,
+ * 노출 축을 엔티티가 정한다 — 프로필형(전문가·BAN·EXP·투자사)은 영역·매칭·활동·만족도를 갖고,
  * 조직형(기업·기관·대학·기타)과 미분류는 축이 없어 아무것도 렌더하지 않는다. 그 목록에는
  * 해당 열이 아예 없어서(networkProfileColumns의 ORG_OMIT_COLUMNS) 그 축으로 거르면 왜
  * 걸러졌는지 표에서 확인할 방법이 없다.
@@ -45,7 +45,7 @@ export function NetworkFilters({ entity, filters, onChange }: NetworkFiltersProp
   return (
     <div className="flex flex-wrap items-center gap-2">
       <MultiSelectFilter
-        label="분야"
+        label="영역"
         options={fieldOptions}
         selected={filters.expertise}
         onChange={(expertise) => onChange({ ...filters, expertise })}

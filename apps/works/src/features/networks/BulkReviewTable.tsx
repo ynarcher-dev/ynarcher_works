@@ -1,4 +1,13 @@
-import { Button, cn, DataTable, EmptyValue, Select, type Column } from '@ynarcher/ui'
+import {
+  Badge,
+  Button,
+  cn,
+  DataTable,
+  EmptyValue,
+  Select,
+  type BadgeTone,
+  type Column,
+} from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import type { ExistingRef, ParsedRow } from '@/features/networks/bulkUpload'
 
@@ -48,25 +57,19 @@ function overlapLabels(row: ReviewRow, match: ExistingRef): string[] {
 function Seg({
   label,
   value,
-  tone = 'plain',
+  tone = 'neutral',
   widthCls,
 }: {
   label: string
   value: ReactNode
-  tone?: 'plain' | 'warning' | 'danger'
+  tone?: BadgeTone
   widthCls?: string
 }) {
-  const toneCls =
-    tone === 'danger'
-      ? 'border-danger-border bg-danger-subtle text-danger'
-      : tone === 'warning'
-        ? 'border-warning-border bg-warning-subtle text-warning'
-        : 'border-gray-200 bg-gray-50 text-gray-600'
   return (
-    <span className={cn('inline-flex items-center rounded-radius-sm border px-2 py-0.5', widthCls, toneCls)}>
+    <Badge tone={tone} className={widthCls}>
       <span className="opacity-60">{label}</span>
-      <span className="ml-1 font-semibold">{value}</span>
-    </span>
+      <span className="font-semibold">{value}</span>
+    </Badge>
   )
 }
 

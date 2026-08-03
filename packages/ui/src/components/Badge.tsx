@@ -5,14 +5,27 @@ import { tagScale } from '../densityScale'
 
 export type BadgeTone = 'neutral' | 'success' | 'warning' | 'info' | 'danger'
 
-// 테두리 없이 배경만으로 형태를 잡는다. 표 한 셀에 여러 개가 놓일 때 1px 선이 겹쳐
-// 격자처럼 보이던 것을 없애기 위함이다. 중립 톤은 선이 빠진 만큼 배경을 한 단계 올린다.
+// 옅은 배경 + 같은 계열 1px 테두리로 형태를 잡는다(§3.4). 흰 카드 위에서 배경만으로는
+// 윤곽이 서지 않아 태그가 글자 덩어리처럼 보이던 것을 테두리가 잡아준다.
 const toneSubtleBg: Record<BadgeTone, string> = {
-  neutral: 'bg-gray-100',
+  neutral: 'bg-gray-50',
   success: 'bg-success-subtle',
   warning: 'bg-warning-subtle',
   info: 'bg-info-subtle',
   danger: 'bg-danger-subtle',
+}
+
+/**
+ * 톤별 테두리 색. 배경보다 한 단계만 진한 같은 계열이라 선이 도드라지지 않는다.
+ * 중립도 같은 관계(gray-50 위 gray-200)를 지켜 상태 톤보다 무겁게 읽히지 않게 한다 —
+ * 중립이 제일 흔한데 선까지 제일 진하면 색이 만드는 위계가 뒤집힌다.
+ */
+export const badgeToneBorder: Record<BadgeTone, string> = {
+  neutral: 'border-gray-200',
+  success: 'border-success-border',
+  warning: 'border-warning-border',
+  info: 'border-info-border',
+  danger: 'border-danger-border',
 }
 
 /**
@@ -46,8 +59,15 @@ export interface BadgeProps {
   /** 밀도 맥락 강제 지정. 생략하면 부모 Card·DataTable이 내려준 맥락을 자동으로 따른다. */
   density?: Density
   dot?: boolean
+  /**
+   * 원색 배경 + 흰 글씨. 목록 안에서 "여기를 보라"고 외쳐야 하는 표식(NEW 등) 전용이다.
+   * 상태 표시에는 쓰지 않는다 — 상태끼리 무게가 갈리면 색이 만드는 위계가 깨진다.
+   */
+  solid?: boolean
   children: ReactNode
   className?: string
+  /** 마우스를 올렸을 때의 보조 설명(네이티브 tooltip). */
+  title?: string
 }
 
 /**
@@ -59,25 +79,36 @@ export interface BadgeProps {
  * 부모의 line-height 상속에 끌려다녀 같은 배지가 화면마다 다른 크기로 보인다.
  * 근거: 5_component_spec_rules.md §3.4
  */
-export function Badge({ tone = 'neutral', density, dot = false, children, className }: BadgeProps) {
+export function Badge({
+  tone = 'neutral',
+  density,
+  dot = false,
+  solid = false,
+  children,
+  className,
+  title,
+}: BadgeProps) {
   const s = tagScale[useDensity(density)]
 
   return (
     <span
+      title={title}
       className={cn(
         // shrink-0 · whitespace-nowrap: 폭이 좁은 표 셀에서 찌그러지거나 줄바꿈으로 박스가 깨지지 않게 한다.
-        'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full font-medium leading-none transition-colors duration-fast',
+        // border는 톤과 무관하게 항상 1px 잡아둔다 — solid에서만 빼면 같은 줄의 배지끼리 높이가 어긋난다.
+        'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border font-medium leading-none transition-colors duration-fast',
         s.height,
         s.text,
         s.padX,
-        toneSubtleBg[tone],
-        badgeToneText[tone],
+        solid
+          ? cn('border-transparent text-gray-0', badgeToneFill[tone])
+          : cn(toneSubtleBg[tone], badgeToneBorder[tone], badgeToneText[tone]),
         className,
       )}
     >
       {dot && (
         <span
-          className={cn('shrink-0 rounded-full', s.dot, badgeToneFill[tone])}
+          className={cn('shrink-0 rounded-full', s.dot, solid ? 'bg-gray-0' : badgeToneFill[tone])}
           aria-hidden="true"
         />
       )}

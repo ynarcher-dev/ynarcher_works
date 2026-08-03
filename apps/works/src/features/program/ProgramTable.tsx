@@ -51,7 +51,7 @@ function managerLabel(r: Program): string | null {
 
 /**
  * 프로그램 원장 공용 데이터 테이블(STARTUP StartupPoolTable과 동일 규격).
- * 컬럼: 체크박스·No.·사업명·코드·카테고리·담당 부서·산업·상태·운영 시작일·운영 종료일·담당자.
+ * 컬럼: 체크박스·No.·사업명·코드·카테고리·담당 부서·분야·상태·운영 시작일·운영 종료일·담당자.
  * 비활성화(삭제)는 목록이 아니라 상세 페이지에서 수행하므로 관리 컬럼(showManageColumn=false)은 두지 않는다.
  */
 export function ProgramTable({
@@ -68,7 +68,7 @@ export function ProgramTable({
   const columns = useMemo<Column<Program>[]>(
     () => [
       {
-        // 프로그램명은 min-width로 넓게 확보한다(산업 필러 컬럼이 그만큼 좁혀진다).
+        // 프로그램명은 min-width로 넓게 확보한다(분야 필러 컬럼이 그만큼 좁혀진다).
         key: 'title',
         header: '사업명',
         className: 'min-w-[18rem] whitespace-nowrap font-semibold',
@@ -100,7 +100,7 @@ export function ProgramTable({
         : []),
       {
         // 담당 부서: 메인 부서 한 곳만 경로로 적고 나머지는 '외 N'으로 접는다.
-        // 자리를 산업 왼쪽에 두는 이유 — 사업을 가르는 축(코드·분류·부서)을 왼쪽에 모으고,
+        // 자리를 분야 왼쪽에 두는 이유 — 사업을 가르는 축(코드·분류·부서)을 왼쪽에 모으고,
         // 남는 폭을 다 먹는 필러 컬럼이 그 뒤를 잇게 한다.
         // 경로가 길어지면 칸을 넓히지 않고 말줄임한다(넓히면 필러가 그만큼 사라진다).
         key: 'departments',
@@ -118,13 +118,13 @@ export function ProgramTable({
         },
       },
       {
-        // 산업. 종전 이 자리는 설명(자유 서술)이었는데, 목록에서 사업을 가려낼 때 실제로 묻는 것은
-        // "어느 산업군의 기업을 발굴하는 사업인가"이지 소개 문장이 아니다. 설명은 상세 헤더가 답한다.
+        // 분야. 종전 이 자리는 설명(자유 서술)이었는데, 목록에서 사업을 가려낼 때 실제로 묻는 것은
+        // "어느 분야의 기업을 발굴하는 사업인가"이지 소개 문장이 아니다. 설명은 상세 헤더가 답한다.
         // 남는 폭을 전부 흡수하는 필러 컬럼 자리를 그대로 이어받는다(넘치면 말줄임).
         // 배지가 아니라 텍스트로 적는다 — 목록에서 배지는 상태 하나만 쓴다(같은 층위로 읽히면
         // 무엇이 이 행의 상태인지가 흐려진다). 여러 개는 가운뎃점으로 잇는다.
         key: 'industries',
-        header: '산업',
+        header: '분야',
         className: 'w-full max-w-0 truncate',
         render: (r) => {
           const list = programIndustries(r)

@@ -32,7 +32,7 @@ import type { BulkImportSpec } from '@/features/bulk/bulkImport'
 /** 회사 형태 선택지(StartupDetailForm의 COMPANY_FORMS와 같은 고정 3값 — 코드=라벨). */
 const COMPANY_FORM_LABEL: Record<string, string> = { 법인: '법인', 개인: '개인', 예비: '예비' }
 
-/** 산업 태그 다중 선택 상한(등록 폼 MAX_INDUSTRIES와 같다). */
+/** 분야 태그 다중 선택 상한(등록 폼 MAX_INDUSTRIES와 같다). */
 const MAX_INDUSTRIES = 3
 
 /**
@@ -51,7 +51,7 @@ export const STARTUP_BULK_SPEC: BulkImportSpec = {
   backTo: '/startup',
   templateName: '스타트업_업로드_템플릿.csv',
   guide:
-    '기업명만 필수이고 나머지는 비워 두어도 됩니다. 구분은 화면에서 쓰는 말(발굴기업·보육기업·기타기업)을 그대로 적으면 되고, 비워 두면 발굴기업으로 들어갑니다. 투자기업은 업로드로 만들 수 없습니다 — 투자기업 전환은 FUND 투자 집행이 처리합니다. 산업·단계·소재지는 ADMIN 태그 관리에 등록된 이름만 받으며, 산업은 세미콜론(;)으로 최대 3개까지 적을 수 있습니다. 주주·성장지표처럼 기업 한 곳에 여러 줄이 붙는 정보는 등록 후 상세 화면에서 입력합니다.',
+    '기업명만 필수이고 나머지는 비워 두어도 됩니다. 구분은 화면에서 쓰는 말(발굴기업·보육기업·기타기업)을 그대로 적으면 되고, 비워 두면 발굴기업으로 들어갑니다. 투자기업은 업로드로 만들 수 없습니다 — 투자기업 전환은 FUND 투자 집행이 처리합니다. 분야·단계·소재지는 ADMIN 태그 관리에 등록된 이름만 받으며, 분야는 세미콜론(;)으로 최대 3개까지 적을 수 있습니다. 주주·성장지표처럼 기업 한 곳에 여러 줄이 붙는 정보는 등록 후 상세 화면에서 입력합니다.',
   fixedValues: { management_status: 'sourced' },
   invalidateKeys: [['startups']],
   fields: [
@@ -76,14 +76,15 @@ export const STARTUP_BULK_SPEC: BulkImportSpec = {
     { header: '설립일', column: 'founded_on', kind: 'date', aliases: ['founded_on'], example: '2021-03-02' },
     { header: '사업자등록번호', column: 'biz_reg_no', aliases: ['biz_reg_no'], example: '123-45-67890' },
     {
-      header: '산업',
+      header: '분야',
       // SSOT는 배열 industries다(목록 열·필터 모두 배열을 읽는다). 스칼라 industry는 대표값 미러.
       column: 'industries',
       kind: 'tags',
       tagTable: 'industry_tags',
       max: MAX_INDUSTRIES,
       mirrorColumn: 'industry',
-      aliases: ['industries', 'industry'],
+      // '산업'은 2026-08-03 이전 표기 — 그때 받아 둔 파일이 그대로 올라와도 열을 잃지 않는다.
+      aliases: ['산업', 'industries', 'industry'],
       example: 'SaaS;핀테크',
     },
     { header: '단계', column: 'stage', kind: 'tag', tagTable: 'investment_stage_tags', aliases: ['stage'] },
@@ -271,14 +272,15 @@ export function programBulkSpec(config: ProgramWorkspaceConfig): BulkImportSpec 
         example: '2026-12-31',
       },
       {
-        // 산업: 등록 폼과 같은 태그 원장·같은 상한을 쓴다(스타트업 업로드의 '산업' 열과 동일 규격).
+        // 분야: 등록 폼과 같은 태그 원장·같은 상한을 쓴다(스타트업 업로드의 '분야' 열과 동일 규격).
         // 사업 원장에는 대표값을 읽는 레거시 소비자가 없으므로 미러 컬럼을 두지 않는다.
-        header: '산업',
+        header: '분야',
         column: 'industries',
         kind: 'tags',
         tagTable: 'industry_tags',
         max: MAX_PROGRAM_INDUSTRIES,
-        aliases: ['industries', 'industry'],
+        // '산업'은 2026-08-03 이전 표기 — 그때 받아 둔 파일이 그대로 올라와도 열을 잃지 않는다.
+        aliases: ['산업', 'industries', 'industry'],
         example: 'SaaS;핀테크',
       },
       { header: '주관기관', column: 'host_organization', aliases: ['host_organization'] },

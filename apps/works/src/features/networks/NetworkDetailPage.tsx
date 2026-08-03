@@ -51,7 +51,7 @@ function formatDate(v: unknown): string {
 
 /**
  * 네트워크 통합 상세 뷰(읽기 전용 카드). 8종 전체 공용.
- * 축약(compact) 유형(조직 5종 + 미분류)은 매칭 배지·전문분야·약력·멘토링 만족도 섹션을 숨긴다.
+ * 축약(compact) 유형(조직 5종 + 미분류)은 매칭 배지·전문영역·약력·멘토링 만족도 섹션을 숨긴다.
  */
 function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow }) {
   const label = ENTITIES[entity].label
@@ -143,7 +143,7 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
           />
           {!compact && (
             <Info
-              label="전문 분야"
+              label="전문 영역"
               value={
                 expertise.length ? (
                   <span className="flex flex-wrap gap-1">

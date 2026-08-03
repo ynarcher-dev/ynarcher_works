@@ -27,7 +27,9 @@ export const BULK_HEADERS = [
 const HEADER_ALIASES: Record<string, string> = {
   이름: 'name', 성명: 'name', name: 'name',
   구분: 'category', category: 'category',
-  분야: 'expertise', 전문분야: 'expertise', 전문영역: 'expertise', expertise: 'expertise',
+  // 영역이 현행 표기이고 분야·전문분야는 2026-08-03 이전 표기다 — 그때 내려받은 파일이
+  // 그대로 올라와도 열이 유실되지 않도록 옛 이름을 별칭으로 남겨 둔다.
+  영역: 'expertise', 전문영역: 'expertise', 분야: 'expertise', 전문분야: 'expertise', expertise: 'expertise',
   회사: 'affiliation', 회사명: 'affiliation', 소속: 'affiliation', affiliation: 'affiliation', company: 'affiliation',
   부서: 'department', 부서명: 'department', department: 'department',
   직함: 'position', 직책: 'position', 직급: 'position', position: 'position', title: 'position',
@@ -47,8 +49,8 @@ export interface ParsedRow {
   /** CSV의 '구분' 원값(비어 있을 수 있음). */
   category: string
   /**
-   * 분야(expertise) — 세미콜론·슬래시로 나눈 태그명. 프로필형 4종의 목록 열이자 필터 축이라,
-   * 비운 채 등록하면 그 인물만 분야 필터에 걸리지 않는다(등록 폼은 태그에서 고르게 한다).
+   * 영역(expertise) — 세미콜론·슬래시로 나눈 태그명. 프로필형 4종의 목록 열이자 필터 축이라,
+   * 비운 채 등록하면 그 인물만 영역 필터에 걸리지 않는다(등록 폼은 태그에서 고르게 한다).
    */
   expertise: string[]
 }
@@ -89,7 +91,7 @@ export function parseBulkCsv(text: string): ParsedRow[] {
   })
 }
 
-/** 다운로드용 템플릿 CSV(헤더 + 예시 2행). 구분·분야는 비워도 됨을 예시로 보인다. */
+/** 다운로드용 템플릿 CSV(헤더 + 예시 2행). 구분·영역은 비워도 됨을 예시로 보인다. */
 export function buildTemplateCsv(): string {
   return [
     BULK_HEADERS.join(','),
@@ -304,8 +306,8 @@ export async function findExistingMatches(
  * - 소속·부서·직책은 '신규를 현재로 승격' — 새 값이 있고 기존과 다르면 덮어쓴다.
  *   덮인 직전 조합은 원장 트리거(app.track_affiliation_history)가 profile.affiliation_history에
  *   보존하므로, 여기서 이력을 직접 만들지 않는다(트리거가 배열의 단일 소유자).
- * - 분야(expertise)는 비파괴 — 기존에 지정된 분야가 있으면 파일 값으로 덮지 않는다.
- *   상세 화면에서 고른 분야가 명함 한 장 때문에 밀려나면 안 된다.
+ * - 영역(expertise)는 비파괴 — 기존에 지정된 영역이 있으면 파일 값으로 덮지 않는다.
+ *   상세 화면에서 고른 영역이 명함 한 장 때문에 밀려나면 안 된다.
  */
 export function buildEnrichment(
   existing: ExistingRef,
@@ -394,7 +396,7 @@ export function rowToPayload(
       email: row.email || null,
       phone: row.phone.replace(/\D/g, '') || null,
       affiliation: row.affiliation || null,
-      // 조직형(축약) 4종은 분야를 쓰지 않는다 — 폼·상세에서도 감춰 두는 축이라 값을 만들지 않는다.
+      // 조직형(축약) 4종은 영역을 쓰지 않는다 — 폼·상세에서도 감춰 두는 축이라 값을 만들지 않는다.
       expertise: compact ? [] : row.expertise,
       profile: {
         department: row.department || null,

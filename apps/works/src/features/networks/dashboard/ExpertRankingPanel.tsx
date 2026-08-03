@@ -10,7 +10,7 @@ function StarIcon() {
 }
 
 /**
- * 네트워크 평가랭킹 패널: 순위 표(이름·구분·분야·활동건·만족도).
+ * 네트워크 평가랭킹 패널: 순위 표(이름·구분·영역·활동건·만족도).
  * BAN·EXP·전문가·투자사 4종을 통합해 활동건 내림차순으로 표시한다. 활동건·만족도는
  * 실집계 연동 전이라 '-'로 표기하며, 만족도는 별점 아이콘과 함께 노출한다.
  */
@@ -42,7 +42,7 @@ export function ExpertRankingPanel({
               <th className="w-6 rounded-l-radius-sm py-1.5 pl-2 font-medium">#</th>
               <th className="py-1.5 font-medium">이름</th>
               <th className="py-1.5 font-medium">구분</th>
-              <th className="py-1.5 font-medium">분야</th>
+              <th className="py-1.5 font-medium">영역</th>
               <th className="w-14 py-1.5 text-right font-medium text-gray-700">활동건</th>
               <th className="w-14 rounded-r-radius-sm py-1.5 pr-2 text-right font-medium">만족도</th>
             </tr>

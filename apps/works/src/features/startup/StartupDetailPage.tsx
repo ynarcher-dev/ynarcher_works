@@ -144,7 +144,7 @@ export function StartupDetailPage() {
                   <p className={`mt-1 ${cardText.subtitle}`}>{oneLiner || '-'}</p>
                   {/* 상태·분류 칩: 라벨 없이 값만으로 읽히는 정보(단계·구분·관리현황)는 배지로 올린다.
                       톤은 축을 나눈다 — 단계=중립(사실), 구분=info(주 분류), 관리현황=success+점(라이브 상태).
-                      산업 태그와 같은 page 밀도로 맞춰 헤더 칩끼리 크기가 어긋나지 않게 한다. */}
+                      분야 태그와 같은 page 밀도로 맞춰 헤더 칩끼리 크기가 어긋나지 않게 한다. */}
                   <DensityProvider value="page">
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
                       {str('stage') !== '-' && <Badge tone="neutral">{str('stage')}</Badge>}

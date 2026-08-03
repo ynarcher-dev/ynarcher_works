@@ -11,7 +11,7 @@ export interface TagChipProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 /**
- * 선택 가능한 태그 칩(산업·분야 다중 선택 등).
+ * 선택 가능한 태그 칩(분야·영역 다중 선택 등).
  *
  * 모양은 `Badge`와 같되 `<button>`이라 누를 수 있다. 화면마다 `<span>`/`<button>`에
  * `rounded + px + py`를 손으로 조합해 만들던 선택 칩을 흡수한다 — 그렇게 만든 칩은
@@ -30,15 +30,15 @@ export function TagChip({
       type={type}
       aria-pressed={selected}
       className={cn(
-        'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full font-medium leading-none transition-colors duration-fast',
+        'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border font-medium leading-none transition-colors duration-fast',
         'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10',
         'disabled:cursor-not-allowed disabled:opacity-40',
         s.height,
         s.text,
         s.padX,
         selected
-          ? 'bg-brand/10 text-brand'
-          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:hover:bg-gray-100',
+          ? 'border-brand/30 bg-brand/10 text-brand'
+          : 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 disabled:hover:bg-gray-50',
         className,
       )}
       {...props}

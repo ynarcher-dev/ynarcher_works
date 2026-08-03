@@ -101,13 +101,13 @@ export function useNetworksSummary() {
   })
 }
 
-/** 분야(expertise) 집계 대상 — 전문 분야를 입력하는 프로필형 4종(BAN·EXP·전문가·투자사). */
+/** 영역(expertise) 집계 대상 — 전문 영역을 입력하는 프로필형 4종(BAN·EXP·전문가·투자사). */
 const EXPERTISE_TABLES = ['van', 'exp', 'experts', 'investors']
 
 /**
- * BAN·EXP·전문가·투자사의 전문 분야(expertise jsonb 배열) 태그별 보유 인원 분포.
- * ADMIN 분야 관리(field_tags)에 등록된 태그만 개별 조각으로 집계하고, 목록에 없는
- * 레거시·자유입력 값은 '기타(미등록)'로 합산한다. 한 인물이 여러 분야를 가지면 각 분야에
+ * BAN·EXP·전문가·투자사의 전문 영역(expertise jsonb 배열) 태그별 보유 인원 분포.
+ * ADMIN 영역 관리(field_tags)에 등록된 태그만 개별 조각으로 집계하고, 목록에 없는
+ * 레거시·자유입력 값은 '기타(미등록)'로 합산한다. 한 인물이 여러 영역을 가지면 각 영역에
  * 중복 집계된다(합계 ≠ 인원 수).
  */
 export function useExpertiseDistribution() {
@@ -236,7 +236,7 @@ export interface ExpertRankRow {
   name: string
   /** 구분(profile.category, 없으면 엔티티 라벨). */
   category: string
-  /** 분야(expertise 태그). */
+  /** 영역(expertise 태그). */
   fields: string[]
   /** 활동 건수(실집계 연동 후 채움). */
   activity: number | null
@@ -244,11 +244,11 @@ export interface ExpertRankRow {
   satisfaction: number | null
 }
 
-/** 평가랭킹 대상 — 분야·활동·만족도를 갖는 프로필형 4종. */
+/** 평가랭킹 대상 — 영역·활동·만족도를 갖는 프로필형 4종. */
 const RANKING_TABLES: EntityKey[] = ['experts', 'van', 'exp', 'investors']
 
 /**
- * 네트워크 평가랭킹용 목록(BAN·EXP·전문가·투자사 통합, 이름·구분·분야). 활동건·만족도는
+ * 네트워크 평가랭킹용 목록(BAN·EXP·전문가·투자사 통합, 이름·구분·영역). 활동건·만족도는
  * 실집계 연동 전이라 null이며, UI에서 '-'로 표기한다. 정렬(활동/만족도 탭)은 연동 후 값
  * 기준으로 동작하도록 준비만 한다.
  */

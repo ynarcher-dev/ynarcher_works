@@ -14,7 +14,7 @@ interface Props {
 }
 
 /**
- * 비교기업 선택 모달. 기업명 검색(ilike) 결과를 로고·이름·산업 리스트로 보여주고,
+ * 비교기업 선택 모달. 기업명 검색(ilike) 결과를 로고·이름·분야 리스트로 보여주고,
  * 행을 클릭하면 해당 기업을 비교 대상으로 확정한다. 현재 기업 자신은 목록에서 제외한다.
  */
 export function StartupComparePicker({ open, onClose, onPick, excludeId }: Props) {

@@ -26,7 +26,7 @@ export function useUpdateProgram(id: string) {
         end_date: string | null
         description: string | null
         category: string | null
-        /** 산업 태그(태그명 배열). jsonb 컬럼이라 배열 그대로 실어 보낸다. */
+        /** 분야 태그(태그명 배열). jsonb 컬럼이라 배열 그대로 실어 보낸다. */
         industries: string[]
       }
       reason: string

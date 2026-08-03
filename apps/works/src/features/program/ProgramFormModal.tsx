@@ -97,7 +97,7 @@ export function ProgramFormModal({
     toDepartmentSegments(program),
   )
   const [managers, setManagers] = useState<ProgramManagerSegment[]>(() => toManagerSegments(program))
-  // 산업 태그: ADMIN 산업 관리(industry_tags)에서 다중 선택(최대 3개). 폼 값이 아니라 배열
+  // 분야 태그: ADMIN 분야 관리(industry_tags — 물리명은 구 표기 그대로)에서 다중 선택(최대 3개). 폼 값이 아니라 배열
   // 상태로 따로 든다 — react-hook-form의 register는 단일 값 입력을 전제로 한다.
   const { data: industryTags } = useTags('industry_tags')
   const [industries, setIndustries] = useState<string[]>(() => programIndustries(program))
@@ -261,10 +261,10 @@ export function ProgramFormModal({
             </Select>
           </div>
         )}
-        {/* 산업. 사업구분 바로 아래에 둔다 — 둘 다 '이 사업이 무엇인가'를 가르는 분류 축이고,
+        {/* 분야. 사업구분 바로 아래에 둔다 — 둘 다 '이 사업이 무엇인가'를 가르는 분류 축이고,
             기간·배치처럼 운영을 적는 칸과는 층위가 다르다. 태그 원장은 스타트업과 공유한다. */}
         <div>
-          <label className="text-body font-medium text-gray-800">산업</label>
+          <label className="text-body font-medium text-gray-800">분야</label>
           <div className="mt-1 flex flex-wrap gap-1.5">
             {(industryTags ?? []).map((tag) => {
               const on = industries.includes(tag.name)
@@ -281,12 +281,12 @@ export function ProgramFormModal({
             })}
             {(industryTags ?? []).length === 0 && (
               <span className="text-caption text-gray-600">
-                등록된 산업 태그가 없습니다. (ADMIN › 산업 관리)
+                등록된 분야 태그가 없습니다. (ADMIN › 분야 관리)
               </span>
             )}
           </div>
           <p className="mt-1 text-caption text-gray-700">
-            이 사업이 발굴·대상으로 하는 산업군 · 최대 {MAX_PROGRAM_INDUSTRIES}개 선택
+            이 사업이 발굴·대상으로 하는 분야 · 최대 {MAX_PROGRAM_INDUSTRIES}개 선택
           </p>
         </div>
         <ProgramStageFields

@@ -8,7 +8,7 @@ import {
 
 /**
  * 스타트업 대시보드 파생 집계(순수 함수 모음). 원장 rows(활성 스타트업)를 단일 조회한 뒤
- * 산업/소재지/단계/현황/업력 분포·랭킹·투자추이·퍼널·KPI·담당자 부하를 모두 클라이언트에서 계산한다.
+ * 분야/소재지/단계/현황/업력 분포·랭킹·투자추이·퍼널·KPI·담당자 부하를 모두 클라이언트에서 계산한다.
  * 서버 라운드트립을 늘리지 않기 위해 배포 시점 rows 한 벌로 모든 카드를 채운다.
  */
 
@@ -45,7 +45,7 @@ export function countByColumn(rows: EntityRow[], key: string): CategoryDatum[] {
   return result
 }
 
-/** 산업(industries 다중 태그) 태그별 보유 기업 수(중복 집계). 미기재는 '미지정'. 건수 내림차순. */
+/** 분야(industries 다중 태그) 태그별 보유 기업 수(중복 집계). 미기재는 '미지정'. 건수 내림차순. */
 export function countIndustries(rows: EntityRow[]): CategoryDatum[] {
   const counts = new Map<string, number>()
   let none = 0

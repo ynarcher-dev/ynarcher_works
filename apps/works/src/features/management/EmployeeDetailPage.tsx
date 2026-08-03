@@ -5,31 +5,16 @@ import { DetailDeleteButton } from '@/components/DetailDeleteButton'
 import { EmployeeForm } from '@/features/management/EmployeeForm'
 import { PhotoBox } from '@/features/networks/PhotoBox'
 import { CareerView, hasCareerRows } from '@/features/networks/CareerView'
-import { SectionHeading } from '@/features/startup/SectionHeading'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
-import { DetailPanelCard } from '@/features/networks/DetailPanelCard'
-import { MiniPager, usePaged } from '@/features/networks/MiniPager'
+import { EmployeeActivitySection } from '@/features/management/EmployeeActivitySection'
 import { ROLE_LABELS } from '@/features/management/config'
 import { affiliationLabel } from '@/features/management/departmentOptions'
 import { useDeactivateEmployee, useDepartments, useEmployee } from '@/features/management/hooks'
 import { useJobTitleLabel } from '@/features/management/jobTitleHooks'
 import { legacyNote, parseNote } from '@/features/management/noteConfig'
 import { useEmployeeBranchNames } from '@/features/office/branches/branchMembers'
-
-/**
- * 임직원과 상호 연결될 관계형 도메인 카드 목록(추후 개발 데이터와 연동).
- * 수정 모드에서 직접 입력하지 않고, 각 도메인이 연동되면 자동으로 기록되는 읽기 전용 이력이다.
- */
-const RELATION_SECTIONS = [
-  '관리기업',
-  '운영사업',
-  'M&A',
-  '프로젝트',
-  '펀드(관리)',
-  '펀드(운용)',
-] as const
 
 /** 상세 카드 섹션 래퍼. 헤더 규격은 공용 `PanelCard`가 소유한다. */
 function SectionCard({ title, children }: { title: string; children: ReactNode }) {
@@ -45,32 +30,6 @@ function formatDate(v: string | null): string {
 
 function str(v: unknown): string {
   return typeof v === 'string' ? v : ''
-}
-
-/**
- * 관계형 연동 도메인 카드(읽기 전용). 우측 패널과 동일한 미니 페이저를 갖춘 목록 골격이다.
- * 현재는 연동 데이터가 없어 빈 상태만 노출하며, 각 도메인 연동 시 연결 레코드가 자동 채워진다.
- */
-function RelationCard({ title }: { title: string }) {
-  // 추후 관계형 연동 시 연결된 레코드로 대체된다. 지금은 빈 목록.
-  const items: ReactNode[] = []
-  const { pageItems, page, setPage, pageCount } = usePaged(items)
-  return (
-    <DetailPanelCard title={title} count={items.length}>
-      {items.length > 0 ? (
-        <>
-          <ul className="space-y-2 text-body text-gray-800">
-            {pageItems.map((it, i) => (
-              <li key={i}>{it}</li>
-            ))}
-          </ul>
-          <MiniPager page={page} pageCount={pageCount} onPage={setPage} />
-        </>
-      ) : (
-        <p className="text-body text-gray-600">연동된 {title} 정보가 없습니다.</p>
-      )}
-    </DetailPanelCard>
-  )
 }
 
 /**
@@ -249,11 +208,8 @@ export function EmployeeDetailPage({
               </SectionCard>
             )}
 
-            {/* 관계형 연동 도메인(읽기 전용, 연동 시 자동 기록). 프로필 본문과 구분선으로 가른다. */}
-            <SectionHeading title="활동 이력" />
-            {RELATION_SECTIONS.map((title) => (
-              <RelationCard key={title} title={title} />
-            ))}
+            {/* 담당자로 배정된 레코드(읽기 전용). 프로필 본문과 구분선으로 가른다. */}
+            <EmployeeActivitySection userId={emp.id} />
           </div>
 
           {/* 우측(1/3): 자료 관리 · 피드백 · 변동 이력(공용 패널 재사용). */}

@@ -19,7 +19,7 @@ export interface StartupPoolRow {
   biz_reg_no?: string | null
   /** 설립일(startups.founded_on) — 목록에는 연도만 표시. */
   founded_on?: string | null
-  /** 산업(startups.industry). SSOT는 industries(배열)이며, 목록은 readIndustries로 읽는다. */
+  /** 분야(startups.industry). SSOT는 industries(배열)이며, 목록은 readIndustries로 읽는다. */
   industry?: string | null
   /** 소재지(startups.location) — location_tags 태그명(시·도 등). 상세주소는 목록에 노출하지 않는다. */
   location?: string | null
@@ -58,7 +58,7 @@ interface StartupPoolTableProps {
 
 /**
  * 스타트업 풀 관리 공용 데이터 테이블.
- * 컬럼: 체크박스·No.·기업명·대표자명·사업자등록번호·설립일·소재지·산업(뱃지 최대 3)·단계·구분·관리현황·담당자·수정일.
+ * 컬럼: 체크박스·No.·기업명·대표자명·사업자등록번호·설립일·소재지·분야(뱃지 최대 3)·단계·구분·관리현황·담당자·수정일.
  * 좌측 선택/넘버링과 우측 표준 컬럼(수정일)은 공용 DataTable이 소유하고,
  * 본 컴포넌트는 그 사이의 도메인 컬럼(기업명~담당자)만 정의한다.
  * 열 구성은 탭(구분)과 무관하게 **투자기업 기준으로 하나로 통일**한다 — 탭마다 열이 달라지면
@@ -119,7 +119,7 @@ export function StartupPoolTable({
         render: (r) => (r.founded_on ? formatFounded(r.founded_on) : <span className="text-gray-400">-</span>),
       },
       {
-        // 소재지는 시·도 태그명 한 덩어리(짧고 값이 항상 하나)라 폭이 널뛰는 산업 뱃지 앞에 둔다.
+        // 소재지는 시·도 태그명 한 덩어리(짧고 값이 항상 하나)라 폭이 널뛰는 분야 뱃지 앞에 둔다.
         key: 'location',
         header: '소재지',
         className: 'w-24',
@@ -127,7 +127,7 @@ export function StartupPoolTable({
       },
       {
         key: 'industry',
-        header: '산업',
+        header: '분야',
         className: 'w-52',
         render: (r) => {
           const inds = readIndustries(r).slice(0, 3)

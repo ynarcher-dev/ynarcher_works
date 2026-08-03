@@ -1,12 +1,15 @@
-import { Card } from '@ynarcher/ui'
+import { Badge, Card } from '@ynarcher/ui'
 import { PersonalPanel } from '@/features/hub/dashboard/PersonalPanel'
 
-/** 최근 72시간 내 게시글 표시 뱃지. 대시보드 외 게시판·자료실·회의록 목록이 함께 쓴다. */
+/**
+ * 최근 72시간 내 게시글 표시 뱃지. 대시보드 외 게시판·자료실·회의록 목록이 함께 쓴다.
+ * 규격(높이·글자·여백)은 `Badge`에 맡기고 이 파일은 "빨간 solid + NEW"라는 의미만 갖는다.
+ */
 export function NewBadge() {
   return (
-    <span className="inline-flex shrink-0 items-center rounded bg-danger-700 px-1 py-px text-tag-table font-bold uppercase tracking-wide text-gray-0">
+    <Badge tone="danger" solid className="font-bold uppercase tracking-wide">
       NEW
-    </span>
+    </Badge>
   )
 }
 

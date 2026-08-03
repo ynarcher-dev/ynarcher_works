@@ -108,7 +108,7 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 
-/** 기업 헤더(로고·이름·산업·기준연도). 중앙 정렬 스택. onClear 시 썸네일 우상단에 해제(X) 배지. */
+/** 기업 헤더(로고·이름·분야·기준연도). 중앙 정렬 스택. onClear 시 썸네일 우상단에 해제(X) 배지. */
 function CompanyHead({ record, year, onClear }: { record: EntityRow; year?: number; onClear?: () => void }) {
   const logo = record.logo_url ? String(record.logo_url) : null
   const industries = readIndustries(record)

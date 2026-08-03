@@ -41,7 +41,7 @@ import { SectionHeading } from '@/features/startup/SectionHeading'
 /** 회사 형태 고정 선택지. */
 const COMPANY_FORMS = ['법인', '개인', '예비'] as const
 
-/** 산업 태그 다중 선택 상한(networks 전문 분야와 동일 규칙). */
+/** 분야 태그 다중 선택 상한(networks 전문 영역과 동일 규칙). */
 const MAX_INDUSTRIES = 3
 
 export interface StartupDetailFormValues {
@@ -106,7 +106,7 @@ interface Props {
 /**
  * 스타트업 풀 상세 입력 폼(카드 섹션) — 등록·수정 공용. NETWORKS 편집 폼과 동일하게
  * 사진 입력(2MB 이하 data URL) + 기본 필드를 카드로 배치한다.
- * 단계/구분/현황/산업은 ADMIN 태그 관리 원장에서 선택한다.
+ * 단계/구분/현황/분야는 ADMIN 태그 관리 원장에서 선택한다.
  * recordId가 없으면 신규 등록 모드로, 저장 시 새 레코드를 생성하고 상세페이지로 이동한다.
  */
 export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo }: Props) {
@@ -126,7 +126,8 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
   const [photo, setPhoto] = useState<string>(str('logo_url'))
   // 핵심 역량 태그는 배열 상태로 별도 관리(폼 값과 분리).
   const [capabilities, setCapabilities] = useState<string[]>(t.capabilities ?? [])
-  // 산업 태그: ADMIN 산업 관리(industry_tags)에서 다중 선택(최대 3개), industries(jsonb 배열)에 저장.
+  // 분야 태그: ADMIN 분야 관리(industry_tags — 물리명은 구 표기 그대로)에서 다중 선택(최대 3개),
+  // industries(jsonb 배열)에 저장.
   const { data: industryTags } = useTags('industry_tags')
   const [industries, setIndustries] = useState<string[]>(readIndustries(base))
   const toggleIndustry = (name: string) => {
@@ -204,7 +205,7 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
       company_form: v.company_form.trim() || null,
       founded_on: v.founded_on || null,
       biz_reg_no: v.biz_reg_no.trim() || null,
-      // 산업: industries(배열)가 SSOT. 대표값(첫 번째)은 하위 호환용으로 industry 스칼라에 미러링.
+      // 분야: industries(배열)가 SSOT. 대표값(첫 번째)은 하위 호환용으로 industry 스칼라에 미러링.
       industries,
       industry: industries[0] ?? null,
       stage: v.stage.trim() || null,
@@ -396,7 +397,7 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
               <Field label="사업자등록번호">
                 <Input {...register('biz_reg_no')} />
               </Field>
-              <Field label="산업" className="sm:col-span-2">
+              <Field label="분야" className="sm:col-span-2">
                 <div className="flex flex-wrap gap-1.5">
                   {(industryTags ?? []).map((tag) => {
                     const on = industries.includes(tag.name)
@@ -414,11 +415,11 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
                   })}
                   {(industryTags ?? []).length === 0 && (
                     <span className="text-caption text-gray-600">
-                      등록된 산업 태그가 없습니다. (ADMIN › 산업 관리)
+                      등록된 분야 태그가 없습니다. (ADMIN › 분야 관리)
                     </span>
                   )}
                 </div>
-                <p className="mt-1 text-caption text-gray-700">산업 관리 태그에서 최대 {MAX_INDUSTRIES}개 선택</p>
+                <p className="mt-1 text-caption text-gray-700">분야 관리 태그에서 최대 {MAX_INDUSTRIES}개 선택</p>
               </Field>
               {tagField('stage', 'investment_stage_tags', '단계')}
               <Field label="구분">

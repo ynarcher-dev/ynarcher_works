@@ -20,7 +20,7 @@ export interface TagModeOption {
 }
 
 /**
- * 기준정보 태그 관리 설정. 산업/분야 등 동일 구조 태그 테이블을 하나의 패널로 처리한다.
+ * 기준정보 태그 관리 설정. 분야/영역 등 동일 구조 태그 테이블을 하나의 패널로 처리한다.
  *
  * 태그 원장은 종류를 가리지 않고 ADMIN이 소유한다 — 쓰기 정책이 전부 `app.is_admin()`이라
  * 다른 워크스페이스에 메뉴를 걸어도 그 워크스페이스 사용자는 읽기만 할 수 있었고(2026-08-03
@@ -35,7 +35,7 @@ export interface TagConfig {
   heading: string
   /** 사이드바 '태그 관리' 그룹 안에서 쓰는 짧은 표기(그룹명이 '태그'를 이미 말하므로 접미어를 뺀다) */
   menuLabel: string
-  /** UI 문구에 쓰는 분류 명사(예: '산업 분야', '분야') */
+  /** UI 문구에 쓰는 분류 명사(예: '분야', '영역') */
   noun: string
   /** 2뎁스 태그일 때 부모 설정(예: 국가 태그의 부모 권역). 미지정 시 평면 태그. */
   parent?: TagParentConfig
@@ -47,19 +47,24 @@ export interface TagConfig {
 }
 
 export const TAG_CONFIGS = {
+  // 분야(핀테크·헬스케어…) — 기업·사업이 뛰는 산업 영역. 물리 테이블명은 industry_tags로 남아
+  // 있다(2026-08-03 표기만 '산업' → '분야'로 정정). 스키마를 바꾸지 않은 이유는 startups.industries·
+  // programs.industries 등 참조 지점이 많고, 부르는 말이 달라졌을 뿐 담는 값이 그대로이기 때문이다.
   industries: {
     tab: 'industries',
     table: 'industry_tags',
-    heading: '산업태그 관리',
-    menuLabel: '산업',
-    noun: '산업 분야',
-  },
-  fields: {
-    tab: 'fields',
-    table: 'field_tags',
     heading: '분야태그 관리',
     menuLabel: '분야',
     noun: '분야',
+  },
+  // 영역(마케팅·재무/회계…) — 사람이 잘하는 일. 물리 테이블명은 field_tags(구 표기 '분야').
+  // 분야와 헷갈리기 쉬우니 기준을 적어 둔다: 분야는 "무슨 산업인가", 영역은 "무슨 일을 하는가".
+  fields: {
+    tab: 'fields',
+    table: 'field_tags',
+    heading: '영역태그 관리',
+    menuLabel: '영역',
+    noun: '영역',
   },
   categories: {
     tab: 'categories',

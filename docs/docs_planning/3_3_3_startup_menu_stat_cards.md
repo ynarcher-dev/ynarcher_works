@@ -86,7 +86,7 @@
 | :--- | :--- | :--- | :--- |
 | 보육기업 수 | 총 개사 수 + 이번 달 신규 | `management_status`, `created_at` | `즉시` |
 | 사업 참여 현황 | 진행 중 사업에 참여 중인 개사 수 / 미참여 개사 수 | `program_participants` | `조인` (AC 권한 필요) |
-| 산업 분포 Top 5 | 산업 태그별 개사 수(다중 태그 중복 집계) | `industries` | `즉시` |
+| 분야 분포 Top 5 | 분야 태그별 개사 수(다중 태그 중복 집계) | `industries` | `즉시` |
 | 90일 무활동 | 최근 90일간 기여 로그가 없는 개사 수 | `entity_contributions` | `즉시` |
 
 > [!NOTE]
@@ -100,7 +100,7 @@
 | :--- | :--- | :--- | :--- |
 | 발굴기업 수 | 총 개사 수 + 이번 달 신규 | `management_status`, `created_at` | `즉시` |
 | 발굴 경로 Top 5 | 발굴 경로별 개사 수 | `discovery_source` | `즉시` |
-| 정보 보강 대상 | 설립일·산업·소재지·대표자 중 하나라도 비어 있는 개사 수 | `founded_on`, `industries`, `location`, `representative` | `즉시` |
+| 정보 보강 대상 | 설립일·분야·소재지·대표자 중 하나라도 비어 있는 개사 수 | `founded_on`, `industries`, `location`, `representative` | `즉시` |
 | 소재지 분포 Top 5 | 시·도별 개사 수(미기재 별도) | `location` | `즉시` |
 
 > [!NOTE]

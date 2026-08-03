@@ -86,7 +86,7 @@ function Field({
 /**
  * 네트워크 통합 등록/수정 폼(상세페이지 내 편집 모드). 8종 전체 공용.
  * "구분"(엔티티 선택자) 값이 저장 대상 테이블을 결정하며, 조직 유형(기업·기관·대학·기타)을
- * 선택하면 매칭 가능여부·전문분야·약력을 숨긴다(요건 2). 미분류는 전체 필드를 유지한다.
+ * 선택하면 매칭 가능여부·전문영역·약력을 숨긴다(요건 2). 미분류는 전체 필드를 유지한다.
  * 스키마에 없는 직책·부서·매칭여부·약력·소개는 `profile`(jsonb)에 저장한다.
  */
 export function NetworkForm({
@@ -108,7 +108,7 @@ export function NetworkForm({
 
   const profile = (initial?.profile ?? {}) as Record<string, unknown>
 
-  // 전문 분야: ADMIN 분야 관리(field_tags) 태그에서 다중 선택(최대 3개), expertise(jsonb 배열)에 저장.
+  // 전문 영역: ADMIN 영역 관리(field_tags) 태그에서 다중 선택(최대 3개), expertise(jsonb 배열)에 저장.
   const { data: fieldTags } = useTags('field_tags')
   const [fields, setFields] = useState<string[]>(
     Array.isArray(initial?.expertise) ? (initial?.expertise as string[]) : [],
@@ -151,7 +151,7 @@ export function NetworkForm({
     },
   })
 
-  // 선택된 구분 → 저장 대상 엔티티. 조직 4종이면 매칭/전문분야/약력을 숨긴다.
+  // 선택된 구분 → 저장 대상 엔티티. 조직 4종이면 매칭/전문영역/약력을 숨긴다.
   const target = resolveEntityFromCategory(watch('category'))
   const compact = isCompactEntity(target)
 
@@ -166,7 +166,7 @@ export function NetworkForm({
       // 연락처는 하이픈 등 숫자 외 문자를 제거하고 숫자만 저장한다.
       phone: v.phone.replace(/\D/g, '') || null,
       affiliation: v.affiliation.trim() || null,
-      // 조직 4종은 전문분야 미사용(빈 배열).
+      // 조직 4종은 전문영역 미사용(빈 배열).
       expertise: compact ? [] : fields,
       profile: {
         ...profile,
@@ -299,7 +299,7 @@ export function NetworkForm({
               )}
               {!compact && (
                 <div className="sm:col-span-2">
-                  <Field label="전문 분야" hint={`(분야 관리 태그에서 최대 ${MAX_FIELDS}개)`}>
+                  <Field label="전문 영역" hint={`(영역 관리 태그에서 최대 ${MAX_FIELDS}개)`}>
                     <div className="flex flex-wrap gap-1.5">
                       {(fieldTags ?? []).map((t) => {
                         const on = fields.includes(t.name)
@@ -317,7 +317,7 @@ export function NetworkForm({
                       })}
                       {(fieldTags ?? []).length === 0 && (
                         <span className="text-caption text-gray-600">
-                          등록된 분야 태그가 없습니다. (ADMIN › 분야 관리)
+                          등록된 영역 태그가 없습니다. (ADMIN › 영역 관리)
                         </span>
                       )}
                     </div>

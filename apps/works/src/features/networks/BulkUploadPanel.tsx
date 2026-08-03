@@ -57,7 +57,7 @@ export function BulkUploadPanel() {
   const [dragging, setDragging] = useState(false)
   const [checking, setChecking] = useState(false)
   const [busy, setBusy] = useState(false)
-  // 분야는 ADMIN 분야 관리(field_tags)에서 고르는 값이다. 파일의 값은 그대로 저장하되,
+  // 영역은 ADMIN 영역 관리(field_tags)에서 고르는 값이다. 파일의 값은 그대로 저장하되,
   // 원장에 없는 이름은 목록 필터에 걸리지 않으므로 올리기 전에 드러낸다(조용히 버리지 않는다).
   const { data: fieldTags } = useTags('field_tags')
   const unknownFields = useMemo(() => {
@@ -317,8 +317,8 @@ export function BulkUploadPanel() {
 
           {unknownFields.length > 0 && (
             <Banner tone="warning">
-              ADMIN 분야 관리에 없는 분야가 있습니다 — <b>{unknownFields.join(', ')}</b>. 이대로 올리면
-              값은 저장되지만 목록의 분야 필터에는 걸리지 않습니다. 필요하면 먼저 분야를 등록하세요.
+              ADMIN 영역 관리에 없는 영역이 있습니다 — <b>{unknownFields.join(', ')}</b>. 이대로 올리면
+              값은 저장되지만 목록의 영역 필터에는 걸리지 않습니다. 필요하면 먼저 영역을 등록하세요.
             </Banner>
           )}
 

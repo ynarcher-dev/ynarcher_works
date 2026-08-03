@@ -57,22 +57,17 @@ function LinkRow({ links }: { links: MinuteLink[] }) {
             </>
           )
           const key = `${l.targetType}:${l.targetId}`
+          // 열 수 있으면 info(파랑)로 눌러볼 수 있음을, 아니면 neutral로 죽어 있음을 알린다.
           return path ? (
-            <Link
-              key={key}
-              to={path}
-              className="inline-flex items-center rounded-full bg-brand/10 px-2.5 py-0.5 text-caption font-medium text-brand transition-colors hover:bg-brand/20"
-            >
-              {content}
+            <Link key={key} to={path} className="inline-flex">
+              <Badge tone="info" className="hover:bg-info-border">
+                {content}
+              </Badge>
             </Link>
           ) : (
-            <span
-              key={key}
-              className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-caption font-medium text-gray-500"
-              title="접근 권한이 없어 열 수 없는 대상입니다"
-            >
+            <Badge key={key} title="접근 권한이 없어 열 수 없는 대상입니다">
               {content}
-            </span>
+            </Badge>
           )
         })}
       </div>

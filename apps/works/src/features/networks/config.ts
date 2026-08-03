@@ -59,7 +59,7 @@ export interface EntityConfig {
   fields: EntityField[]
   /**
    * 목록 표시 컬럼 재정의. 미지정 시 `fields`를 그대로 목록 컬럼으로 사용한다.
-   * 전문가·VAN·투자자는 공용 프로필 컬럼(구분/분야/활동/매칭/만족도)을 목록에 노출하되
+   * 전문가·VAN·투자자는 공용 프로필 컬럼(구분/영역/활동/매칭/만족도)을 목록에 노출하되
    * 등록·상세 폼은 `fields`를 유지한다.
    */
   listColumns?: MasterColumn[]
@@ -72,7 +72,7 @@ export const ENTITIES: Record<EntityKey, EntityConfig> = {
    * STARTUP 워크스페이스가 소유하며(StartupDetailForm / features/bulk), 이 엔트리는 라벨만 쓰인다
    * (미분류 흡수 판정 `resolveEntityFromCategory`가 '스타트업' 라벨을 만났을 때).
    *
-   * 여기에 필드 목록을 두면 안 된다 — 실제로 쓰이지 않으면서 STARTUP의 현행 항목(산업은 배열
+   * 여기에 필드 목록을 두면 안 된다 — 실제로 쓰이지 않으면서 STARTUP의 현행 항목(분야는 배열
    * `industries`, 구분은 4분류 코드)과 어긋난 옛 정의가 정본처럼 남는다. `ENTITY_ORDER`에
    * 없으므로 목록·폼·임포터 어디서도 이 fields를 읽지 않는다.
    */
@@ -116,7 +116,7 @@ export const ENTITIES: Record<EntityKey, EntityConfig> = {
     label: '기업',
     table: 'corporates',
     fields: PERSON_FIELDS,
-    // 조직 유형: 분야·활동·만족도·매칭을 제외한 축약 컬럼(폼·상세 숨김과 대칭).
+    // 조직 유형: 영역·활동·만족도·매칭을 제외한 축약 컬럼(폼·상세 숨김과 대칭).
     listColumns: NETWORK_ORG_COLUMNS,
   },
   institutions: {
@@ -147,7 +147,7 @@ export const ENTITIES: Record<EntityKey, EntityConfig> = {
     label: '기타',
     table: 'etc',
     fields: PERSON_FIELDS,
-    // 기타는 조직형(compact) 네트워크 — 조직 4종과 동일 컬럼(분야/활동/만족도/매칭 제외, 부서 노출).
+    // 기타는 조직형(compact) 네트워크 — 조직 4종과 동일 컬럼(영역/활동/만족도/매칭 제외, 부서 노출).
     listColumns: NETWORK_ORG_COLUMNS,
   },
   others: {
@@ -195,7 +195,7 @@ export const ENTITY_ORDER: EntityKey[] = [
 export const DIRECTORY_ENTITIES: EntityKey[] = [...ENTITY_ORDER, 'others']
 
 /**
- * 전문가 프로필 구조(사진·약력·분야·구분·매칭·소개)를 공유하는 엔티티.
+ * 전문가 프로필 구조(사진·약력·영역·구분·매칭·소개)를 공유하는 엔티티.
  * 업로드 양식 통일(Phase 15)로 8종 전부 experts와 동일한 컬럼
  * (email/phone/affiliation/expertise/profile)을 가지며, 공용 통합 폼(`NetworkForm`)과
  * 공용 상세페이지(`NetworkDetailPage`)를 동일 컴포넌트로 사용한다.
@@ -208,7 +208,7 @@ export function isProfileEntity(key: EntityKey): boolean {
 }
 
 /**
- * 축약(compact) 유형 — "구분"이 이들 중 하나이면 통합 폼·상세에서 매칭 가능여부·전문분야·약력·
+ * 축약(compact) 유형 — "구분"이 이들 중 하나이면 통합 폼·상세에서 매칭 가능여부·전문영역·약력·
  * 멘토링 만족도를 숨긴다. 조직 유형(기업·기관·대학·기타, 은퇴한 외주/거래 포함)에 더해, 미분류(others)도
  * 분류 전 임시 저장소이므로 기업 네트워크처럼 간단한 항목만 노출한다.
  */
@@ -221,7 +221,7 @@ export const COMPACT_ENTITIES: EntityKey[] = [
   'others',
 ]
 
-/** 통합 폼에서 매칭/전문분야/약력을 숨기는 축약(조직) 유형인지 여부. */
+/** 통합 폼에서 매칭/전문영역/약력을 숨기는 축약(조직) 유형인지 여부. */
 export function isCompactEntity(key: EntityKey): boolean {
   return COMPACT_ENTITIES.includes(key)
 }

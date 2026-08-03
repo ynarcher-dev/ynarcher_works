@@ -2,7 +2,7 @@
  * NETWORKS 목록 필터 상태 — 국내 9종(디렉토리)과 글로벌 네트워크가 각자 다른 축을 쓴다.
  *
  * 필터 축은 그 목록에 실제로 노출된 열에서만 고른다. 화면에 없는 값으로 거르면 왜 걸러졌는지
- * 표에서 확인할 수 없다. 그래서 프로필형(전문가·BAN·EXP·투자사)만 분야·매칭·활동·만족도 필터를
+ * 표에서 확인할 수 없다. 그래서 프로필형(전문가·BAN·EXP·투자사)만 영역·매칭·활동·만족도 필터를
  * 갖고, 조직형(기업·기관·대학·기타)과 미분류는 필터 축이 없다(그 목록의 열이 전부 인적사항이라
  * 검색어 하나로 닿는다).
  *
@@ -17,7 +17,7 @@
  * 빈 칸("경계 없음")과 0을 숫자 타입 하나로는 구분할 수 없다.
  */
 export interface NetworkFilterState {
-  /** 분야(expertise jsonb 배열) — ADMIN 분야 관리(field_tags) 태그명. 프로필형 전용. */
+  /** 영역(expertise jsonb 배열) — ADMIN 영역 관리(field_tags) 태그명. 프로필형 전용. */
   expertise: string[]
   /** 매칭 가능여부(profile.match_available). 'possible' | 'impossible'. 프로필형 전용. */
   match: string[]

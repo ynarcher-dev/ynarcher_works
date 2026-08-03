@@ -33,7 +33,7 @@ export { Switch } from './components/Switch'
 export type { SwitchProps } from './components/Switch'
 export { Avatar } from './components/Avatar'
 export type { AvatarProps } from './components/Avatar'
-export { Badge, badgeToneFill, badgeToneText } from './components/Badge'
+export { Badge, badgeToneBorder, badgeToneFill, badgeToneText } from './components/Badge'
 export type { BadgeTone } from './components/Badge'
 // 빈 값 표기 — 값 없는 칸의 글자(`-`)와 색을 한곳에 모아 둔다.
 export { EmptyValue } from './components/EmptyValue'

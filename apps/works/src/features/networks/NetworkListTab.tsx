@@ -95,7 +95,7 @@ export function NetworkListTab({ scope }: NetworkListTabProps) {
         label={meta.label}
         contentKey={meta.contentKey}
         // 원장 11종이 통일된 프로필 스키마를 공유하므로 조직형 공용 컬럼을 그대로 사용한다
-        // (이름·소속·부서·직책/직급·이메일·연락처·구분). 개인 지표(분야·활동·만족도·매칭)는
+        // (이름·소속·부서·직책/직급·이메일·연락처·구분). 개인 지표(영역·활동·만족도·매칭)는
         // 엔티티마다 의미가 달라 통합 목록에서는 노출하지 않으며, 글로벌 고유 열(권역·국가·
         // 링크드인)도 다른 원장이 채울 수 없어 두지 않는다 — 통합 목록은 공통분모만 보여준다.
         columns={NETWORK_ORG_COLUMNS}

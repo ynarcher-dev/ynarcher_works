@@ -41,9 +41,9 @@ function TagFilter({
 }
 
 /**
- * 발굴기업 목록 복수 필터 바: 소재지·산업·단계·관리현황(태그 다중선택) + 업력 범위(최소~최대).
+ * 발굴기업 목록 복수 필터 바: 소재지·분야·단계·관리현황(태그 다중선택) + 업력 범위(최소~최대).
  * 상태는 상위(StartupPoolTab)가 소유하며, 본 컴포넌트는 표시·변경만 담당한다.
- * 필터 순서는 표의 열 순서(소재지 → 산업 → 단계 → 관리현황)를 그대로 따른다.
+ * 필터 순서는 표의 열 순서(소재지 → 분야 → 단계 → 관리현황)를 그대로 따른다.
  */
 export function StartupPoolFilters({ filters, onChange, category = null }: StartupPoolFiltersProps) {
   const active = hasActiveStartupFilters(filters)
@@ -60,7 +60,7 @@ export function StartupPoolFilters({ filters, onChange, category = null }: Start
         onChange={(locations) => onChange({ ...filters, locations })}
       />
       <TagFilter
-        label="산업"
+        label="분야"
         table="industry_tags"
         selected={filters.industries}
         onChange={(industries) => onChange({ ...filters, industries })}

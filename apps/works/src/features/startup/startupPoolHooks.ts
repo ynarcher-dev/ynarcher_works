@@ -18,12 +18,12 @@ import type { ManagementStatus } from '@/features/startup/startupClassification'
 
 /**
  * 발굴기업(startups) 목록 복수 필터. 빈 배열/빈 문자열은 "미적용"이다.
- * 산업만 배열 컬럼(industries)이라 overlaps로, 나머지 스칼라는 in으로, 설립일은 범위로 건다.
+ * 분야만 배열 컬럼(industries)이라 overlaps로, 나머지 스칼라는 in으로, 설립일은 범위로 건다.
  */
 export interface StartupPoolFilters {
   /** 소재지(location, location_tags 태그명). */
   locations: string[]
-  /** 산업(industries 배열, 태그명) — 선택 중 하나라도 포함(overlaps). */
+  /** 분야(industries 배열, 태그명) — 선택 중 하나라도 포함(overlaps). */
   industries: string[]
   /** 단계(stage). */
   stages: string[]
@@ -92,7 +92,7 @@ export type StartupPoolPage = LedgerPage<EntityRow>
 /**
  * 발굴기업 풀 전용 서버 사이드 페이지네이션 훅. NETWORKS 공용 useEntityPage와 달리
  * 다중 필드 검색(기업명·대표자·사업자번호·담당자 + 공개 시 이메일·연락처)과
- * 복수 필터(소재지·산업·단계·구분·관리현황·설립일)를
+ * 복수 필터(소재지·분야·단계·구분·관리현황·설립일)를
  * 스타트업 스키마에 맞춰 처리한다. 담당자(투자 지정)는 startup_managers를 임베드해 컬럼으로 노출하고,
  * 생성자(created_by)는 '내 관리기업' 조회 조건으로만 쓴다(표시·검색 대상은 아님).
  */
@@ -142,7 +142,7 @@ export function useStartupPoolPage(
 
       const narrow: LedgerCondition[] = []
       if (kw) narrow.push(await searchCondition(kw, searchScope))
-      // 산업(industries)은 jsonb 배열이라 overlaps(&&) 불가 — 각 선택값의 포함(@>, cs)을 OR로 묶는다.
+      // 분야(industries)은 jsonb 배열이라 overlaps(&&) 불가 — 각 선택값의 포함(@>, cs)을 OR로 묶는다.
       if (filters.industries.length) {
         narrow.push({
           kind: 'or',

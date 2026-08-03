@@ -1,4 +1,4 @@
-import { Button, Input, Modal, cn, useToast } from '@ynarcher/ui'
+import { Button, Input, Modal, TagChip, cn, useToast } from '@ynarcher/ui'
 import { Pencil, Plus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import {
@@ -69,21 +69,15 @@ export function MeetingPlaceBar({ places, selectedId, onSelect }: Props) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       {places.map((p) => (
-        <button
+        <TagChip
           key={p.id}
-          type="button"
+          selected={p.id === selectedId}
           onClick={() => onSelect(p.id)}
-          className={cn(
-            'rounded-radius-full border px-3 py-1.5 text-body font-medium transition-colors',
-            p.id === selectedId
-              ? 'border-brand bg-brand/10 text-brand'
-              : 'border-gray-300 text-gray-600 hover:bg-gray-50',
-            !p.isActive && 'opacity-60',
-          )}
+          className={cn(!p.isActive && 'opacity-60')}
         >
           {p.name}
-          {!p.isActive && <span className="ml-1 text-caption text-gray-400">(비활성)</span>}
-        </button>
+          {!p.isActive && <span className="text-gray-400">(비활성)</span>}
+        </TagChip>
       ))}
 
       <Button variant="outline" className="gap-1" onClick={() => setForm('create')}>

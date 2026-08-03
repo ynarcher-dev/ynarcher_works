@@ -100,12 +100,14 @@ const TAG_SPEC: BulkImportSpec = {
     { header: '한 줄 소개', column: 'business_profile.oneLiner' },
     { header: '강점', column: 'business_profile.competitiveEdge' },
     {
-      header: '산업',
+      header: '분야',
       column: 'industries',
       kind: 'tags',
       tagTable: 'industry_tags',
       max: 2,
       mirrorColumn: 'industry',
+      // '산업'은 2026-08-03 이전 표기(실제 STARTUP_BULK_SPEC과 같은 별칭 구성).
+      aliases: ['산업'],
     },
     { header: '단계', column: 'stage', kind: 'tag', tagTable: 'investment_stage_tags' },
     { header: '연락처', column: 'phone', kind: 'phone' },
@@ -123,14 +125,21 @@ describe('parseBulkCsv — 태그·배열·중첩 컬럼', () => {
     expect(errors[0]?.message).toContain('ADMIN 태그 관리')
   })
 
-  it('산업은 세미콜론으로 나눠 배열로 넣고 대표값을 스칼라에 미러링한다', () => {
-    const { rows, errors } = parseBulkCsv(['기업명,산업', 'A사,SaaS;핀테크'].join('\n'), TAG_SPEC, TAGS)
+  it('분야는 세미콜론으로 나눠 배열로 넣고 대표값을 스칼라에 미러링한다', () => {
+    const { rows, errors } = parseBulkCsv(['기업명,분야', 'A사,SaaS;핀테크'].join('\n'), TAG_SPEC, TAGS)
     expect(errors).toEqual([])
     expect(rows[0]).toEqual({ name: 'A사', industries: ['SaaS', '핀테크'], industry: 'SaaS' })
   })
 
+  // 표기가 '산업'에서 '분야'로 바뀌기 전에 내려받은 템플릿이 그대로 올라와도 열이 유실되면 안 된다.
+  it('구 표기 헤더(산업)로 올려도 같은 컬럼으로 들어간다', () => {
+    const { rows, errors } = parseBulkCsv(['기업명,산업', 'A사,SaaS'].join('\n'), TAG_SPEC, TAGS)
+    expect(errors).toEqual([])
+    expect(rows[0]).toEqual({ name: 'A사', industries: ['SaaS'], industry: 'SaaS' })
+  })
+
   it('다중 태그 상한을 넘으면 그 줄을 돌려보낸다', () => {
-    const csv = ['기업명,산업', 'A사,SaaS;핀테크;바이오'].join('\n')
+    const csv = ['기업명,분야', 'A사,SaaS;핀테크;바이오'].join('\n')
     const { rows, errors } = parseBulkCsv(csv, TAG_SPEC, TAGS)
     expect(rows).toEqual([])
     expect(errors[0]?.message).toContain('최대 2개')

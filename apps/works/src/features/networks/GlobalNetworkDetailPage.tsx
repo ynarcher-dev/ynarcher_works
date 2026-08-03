@@ -113,7 +113,7 @@ function GlobalView({ record }: { record: GlobalRow }) {
           <Info label="권역" value={record.region?.name || '-'} />
           <Info label="국가" value={record.country?.name || '-'} />
           <Info
-            label="전문 분야"
+            label="전문 영역"
             value={
               expertise.length ? (
                 <span className="flex flex-wrap gap-1">
