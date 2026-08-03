@@ -1,4 +1,15 @@
-import { Badge, Banner, Button, CardShell, cardText, InfoField, Spinner, useToast } from '@ynarcher/ui'
+import {
+  Badge,
+  Banner,
+  Button,
+  CardShell,
+  cardText,
+  InfoField,
+  Spinner,
+  Tabs,
+  useToast,
+  type TabItem,
+} from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '@/auth/authStore'
 import { ROLE_LABELS } from '@/features/management/config'
@@ -19,6 +30,13 @@ import { parseBackground, type CareerData } from '@/features/networks/careerConf
 function str(v: unknown): string {
   return typeof v === 'string' ? v : ''
 }
+
+/**
+ * 계정 정보 카드 아래 편집 영역을 가르는 탭. 계정 정보(사진·이름·기본정보)는
+ * 어느 탭에서나 보여야 하므로 탭 위에 고정하고, 그 아래 내용만 갈아 끼운다.
+ * 항목이 늘면 여기에 키를 더하고 아래 분기에 카드를 붙인다.
+ */
+const MY_TABS: TabItem[] = [{ key: 'profile', label: '소개' }]
 
 /** 라벨: 값 한 줄 — 규격은 공용 `InfoField`가 소유한다. */
 const Info = InfoField
@@ -41,6 +59,7 @@ export function MyPage() {
   const [photo, setPhoto] = useState('')
   const [background, setBackground] = useState<CareerData>(parseBackground(null))
   const [note, setNote] = useState<EmployeeNote>(parseNote(null))
+  const [tab, setTab] = useState<string>('profile')
   // 이전 자유 텍스트 노트를 철학 칸으로 옮겨 실었는지 — 그때만 저장 시 원본 키를 비운다.
   const [carriedLegacy, setCarriedLegacy] = useState(false)
 
@@ -125,14 +144,22 @@ export function MyPage() {
             </div>
           </CardShell>
 
-          <CardShell>
-            <p className="mb-3 text-caption font-medium text-gray-700">약력</p>
-            <CareerEditor value={background} onChange={setBackground} />
-          </CardShell>
+          {/* 탭 전환은 화면만 갈아 끼운다 — 값은 페이지가 들고 있어 편집 중이던 내용이 남는다. */}
+          <Tabs items={MY_TABS} value={tab} onChange={setTab} />
 
-          <CardShell>
-            <EmployeeNoteFields value={note} onChange={setNote} />
-          </CardShell>
+          {/* 소개 = 약력 + 노트. 둘 다 '나를 설명하는 글'이라 한 탭에서 이어 읽는다. */}
+          {tab === 'profile' && (
+            <>
+              <CardShell>
+                <p className="mb-3 text-caption font-medium text-gray-700">약력</p>
+                <CareerEditor value={background} onChange={setBackground} />
+              </CardShell>
+
+              <CardShell>
+                <EmployeeNoteFields value={note} onChange={setNote} />
+              </CardShell>
+            </>
+          )}
         </div>
 
         {/* 우측(1/3): 자료 업로드(공용 자료 패널 재사용). */}
