@@ -6,7 +6,7 @@ export interface SidebarProps {
   /** 헤더 바로 아래에 고정되는 영역(워크스페이스 스위처 등). 스크롤과 무관하게 항상 보인다. */
   subheader?: ReactNode
   children: ReactNode
-  /** 스크롤 영역 아래 고정되는 하단 영역(계정 메뉴 등). 목록이 길어져도 항상 보인다. */
+  /** 스크롤 영역 아래 고정되는 하단 영역. 목록이 길어져도 항상 보인다. */
   footer?: ReactNode
   className?: string
   collapsed?: boolean

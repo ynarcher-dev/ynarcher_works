@@ -48,7 +48,6 @@ import {
   Gauge,
   Building,
   Layers,
-  LogOut,
   Sprout,
   FileText,
   ScanLine,
@@ -65,8 +64,6 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import {
   AppShell,
-  Avatar,
-  Dropdown,
   DropdownItem,
   Sidebar,
   SidebarItem,
@@ -78,10 +75,9 @@ import { Fragment, useEffect, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import logo from '@/assets/logo.png'
 import { hasWorkspaceRead, useAuthStore } from '@/auth/authStore'
-import { employeeAuth } from '@/auth/employeeAuthService'
 import { WORKSPACES } from '@/config/workspaces'
 import { WORKSPACE_SUBNAV, firstTab, pathTabOf, type SubNavItem } from '@/config/navigation'
-import { MenuSectionLabel, SidebarFlyout } from '@/app/SidebarFlyout'
+import { SidebarFlyout } from '@/app/SidebarFlyout'
 import { TopbarBreadcrumb } from '@/app/TopbarBreadcrumb'
 import { GlobalSearchBox } from '@/app/GlobalSearchBox'
 import { TopbarActions, topbarIconButton } from '@/app/TopbarActions'
@@ -206,14 +202,13 @@ const sidebarIconByWorkspace: Record<string, LucideIcon> = {
 }
 
 /**
- * 인증된 WORKS 셸: 상단바 워크스페이스 전환 드롭다운 + 컨텍스트 사이드바 + 프로필 메뉴.
+ * 인증된 WORKS 셸: 컨텍스트 사이드바(워크스페이스 전환 + 메뉴) + 상단바(전역 기능·계정 메뉴).
  * 근거: 2_app_layout_navigation.md (§2 상단바 / §3 사이드바)
  */
 export function WorksLayout() {
   const user = useAuthStore((s) => s.user)
   const navigate = useNavigate()
   const location = useLocation()
-  const [profileOpen, setProfileOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   // 우측 슬라이드오버 폭 계산용 사이드바 폭(펼침 15rem/접힘 4rem). 패널은 body로 포털되므로
@@ -308,10 +303,9 @@ export function WorksLayout() {
     )
   }
 
-  /** 플라이아웃 열기/닫기. 다른 팝오버(계정 메뉴 포함)는 함께 닫아 항상 하나만 열리게 한다. */
+  /** 플라이아웃 열기/닫기. 사이드바에서 뻗는 패널은 항상 하나만 열리게 한다. */
   const toggleFlyout = (label: string, next: boolean) => {
     setOpenFlyout(next ? label : null)
-    if (next) setProfileOpen(false)
   }
 
   /** 플라이아웃(흰 팝오버) 안의 메뉴 한 줄. 사이드바 항목이 아니라 드롭다운 항목 규격을 쓴다. */
@@ -390,70 +384,6 @@ export function WorksLayout() {
     )
   }
 
-  /** 사이드바 하단 고정 계정 메뉴. 어두운 배경 위 항목이라 흰 글씨·white/15 호버를 쓴다. */
-  const accountMenu = (
-    <Dropdown
-      block
-      open={profileOpen}
-      onClose={() => setProfileOpen(false)}
-      align="left"
-      placement="right-end"
-      // 사이드바에서 뻗는 패널은 폭·간격 규격을 통일한다(게시판·자료실 플라이아웃과 동일).
-      // ml-3.5 = 사이드바 패딩(8px) 상쇄 + 바깥 테두리에서 6px.
-      className="ml-3.5 min-w-44"
-      trigger={
-        <button
-          type="button"
-          aria-label="계정 메뉴"
-          title={sidebarCollapsed ? (user?.name ?? '계정 메뉴') : undefined}
-          onClick={() => {
-            // 계정 메뉴를 열 때는 게시판·자료실 플라이아웃을 닫는다(동시 노출 방지).
-            setOpenFlyout(null)
-            setProfileOpen((v) => !v)
-          }}
-          className={cn(
-            'flex w-full items-center rounded-radius-md text-left transition-colors duration-fast',
-            'hover:bg-white/15 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/20',
-            // 접힘 시 메뉴 항목과 동일한 규격(ctl-page 40px).
-            sidebarCollapsed ? 'h-ctl-page justify-center px-0' : 'gap-2.5 px-2.5 py-2',
-          )}
-        >
-          <Avatar name={user?.name ?? '?'} density="table" />
-          {!sidebarCollapsed && (
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-body font-semibold text-white">
-                {user?.name}
-              </span>
-              <span className="block truncate text-caption text-white/70">
-                {user?.email ?? user?.role}
-              </span>
-            </span>
-          )}
-        </button>
-      }
-    >
-      {/* 게시판·자료실 플라이아웃과 동일한 구성: 섹션 라벨 + 아이콘 + 라벨. */}
-      <MenuSectionLabel>계정</MenuSectionLabel>
-      <DropdownItem
-        onClick={() => {
-          setProfileOpen(false)
-          navigate('/me')
-        }}
-      >
-        <span className="flex items-center gap-2 whitespace-nowrap">
-          <UserCog aria-hidden className="size-4 shrink-0 text-gray-400" />
-          내 계정 관리
-        </span>
-      </DropdownItem>
-      <DropdownItem onClick={() => void employeeAuth.signOut()}>
-        <span className="flex items-center gap-2 whitespace-nowrap">
-          <LogOut aria-hidden className="size-4 shrink-0 text-gray-400" />
-          로그아웃
-        </span>
-      </DropdownItem>
-    </Dropdown>
-  )
-
   /**
    * 사이드바 접기/펴기 토글. 사이드바 헤더가 아니라 상단바 좌측 끝에 두어, 사이드바가 접혀도
    * 버튼 위치가 움직이지 않는다(접힘 폭 안에서 로고 자리로 밀려나던 문제 해소).
@@ -484,7 +414,6 @@ export function WorksLayout() {
   const sidebar = (
     <Sidebar
       collapsed={sidebarCollapsed}
-      footer={accountMenu}
       header={
         // 접기 토글은 상단바로 옮겼고, 헤더에는 로고만 남긴다. 접힘 폭(64px)에는 가로형 로고가
         // 들어가지 않아 감추되, 높이(h-16)는 유지해 상단바와 사이드바의 첫 줄을 맞춘다.

@@ -18,7 +18,7 @@ export interface DropdownProps {
    */
   placement?: 'bottom' | 'top' | 'right-start' | 'right-end'
   className?: string
-  /** 래퍼를 블록으로 펼쳐 트리거가 부모 폭을 채우게 한다(사이드바 하단 계정 메뉴 등). */
+  /** 래퍼를 블록으로 펼쳐 트리거가 부모 폭을 채우게 한다(사이드바처럼 좁은 열 안의 메뉴). */
   block?: boolean
 }
 

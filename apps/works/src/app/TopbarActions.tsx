@@ -28,7 +28,7 @@ const QUICK_LINKS: { label: string; icon?: LucideIcon; key: RightPanelKey; text?
 /**
  * 상단바 우측 전역 액션 — AI·캘린더·알림 진입점. 셋 다 우측 슬라이드오버(RightPanelHost)를
  * 여는 토글이며, 하나를 열면 나머지는 닫힌다(단일 활성). 상단바는 패널보다 z가 높아 패널을 연
- * 채로도 다른 진입점으로 전환할 수 있다. 워크스페이스 전환·계정 메뉴는 사이드바 소관.
+ * 채로도 다른 진입점으로 전환할 수 있다. 워크스페이스 전환은 사이드바, 계정은 OFFICE 환영 카드 소관.
  */
 export function TopbarActions() {
   const user = useAuthStore((s) => s.user)
