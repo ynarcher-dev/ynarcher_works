@@ -10,8 +10,6 @@ import { HrDirectoryFullscreen } from '@/features/management/panels/HrDirectoryF
 import { HrPanel } from '@/features/management/panels/HrPanel'
 import { KpiPanel } from '@/features/management/panels/KpiPanel'
 import { BranchAdminPanel } from '@/features/management/panels/BranchAdminPanel'
-import { TagAdminPanel } from '@/features/admin/TagAdminPanel'
-import { tagConfigOf } from '@/features/admin/tagConfig'
 
 const HEADINGS: Record<string, string> = {
   dashboard: '경영 현황',
@@ -24,14 +22,14 @@ const HEADINGS: Record<string, string> = {
 }
 
 /**
- * MANAGEMENT 워크스페이스: 대시보드 / 조직·지사 / 인사 기준정보 / 인사 / 자산 / 재무 / KPI.
- * 섹션 전환은 사이드바(?tab). 지사 원장은 조직 축이므로 ADMIN에서 이관해 여기서 소유한다.
+ * MANAGEMENT 워크스페이스: 대시보드 / 조직·지사 / 인사 / 자산 / 재무 / KPI.
+ * 섹션 전환은 사이드바(?tab). 지사 원장은 조직 축이므로 ADMIN에서 이관해 여기서 소유하고,
+ * 반대로 인사 기준정보 태그(직책·직급·호봉)는 쓰기 권한이 ADMIN 하나뿐이라 ADMIN이 소유한다.
  */
 export function ManagementPage() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const tab = params.get('tab') ?? 'dashboard'
-  const tagConfig = tagConfigOf('management', tab)
   const [keyword, setKeyword] = useState('')
   // 임직원 목록 크게보기(전체화면) 여부.
   const [hrExpanded, setHrExpanded] = useState(false)
@@ -70,18 +68,18 @@ export function ManagementPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title={tagConfig?.heading ?? HEADINGS[tab] ?? HEADINGS.dashboard}
+        title={HEADINGS[tab] ?? HEADINGS.dashboard}
         search={searchField}
         actions={actions}
       />
       {tab === 'departments' && <DepartmentsPanel />}
       {tab === 'branches' && <BranchAdminPanel />}
       {tab === 'hr' && <HrPanel keyword={keyword} />}
-      {tagConfig && <TagAdminPanel config={tagConfig} />}
       {tab === 'assets' && <AssetsPanel />}
       {tab === 'finance' && <FinancePanel />}
       {tab === 'kpi' && <KpiPanel />}
-      {(tab === 'dashboard' || (!HEADINGS[tab] && !tagConfig)) && <DashboardPanel />}
+      {/* 모르는 탭(이관된 직책·직급·호봉의 옛 링크 포함)은 이 워크스페이스의 첫 화면으로 받는다. */}
+      {(tab === 'dashboard' || !HEADINGS[tab]) && <DashboardPanel />}
 
       <HrDirectoryFullscreen
         open={tab === 'hr' && hrExpanded}

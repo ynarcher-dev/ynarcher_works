@@ -152,9 +152,6 @@ const sidebarIconByTab: Record<string, LucideIcon> = {
   matching: LayoutGrid,
   permissions: LockKeyhole,
   boards: ClipboardList,
-  positions: UserCog,
-  ranks: Medal,
-  pay_steps: Layers,
   sensitive: EyeOff,
   audit: ReceiptText,
   downloads: Download,
@@ -176,8 +173,12 @@ const sidebarIconByTab: Record<string, LucideIcon> = {
   discovered: Rocket,
   archerscan: ScanLine,
 
-  // ADMIN '태그 관리' 그룹(tagConfig.ts의 owner: 'admin'). 한 그룹 안에서 나란히 놓이므로
+  // ADMIN '태그 관리' 그룹(tagConfig.ts의 TAG_CONFIGS). 한 그룹 안에서 나란히 놓이므로
   // 다른 메뉴와 겹치더라도 그룹 내부에서는 서로 다른 아이콘을 쓴다.
+  // 직책·직급·호봉은 MANAGEMENT에서 이 그룹으로 이관됐다(2026-08-03).
+  positions: UserCog,
+  ranks: Medal,
+  pay_steps: Layers,
   industries: Factory,
   fields: Tag,
   categories: Shapes,

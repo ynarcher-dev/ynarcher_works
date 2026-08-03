@@ -176,7 +176,7 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         { label: '회의실 관리', tab: 'rooms' },
         // 전사 기준정보 태그는 종류가 계속 늘어나므로 사이드바에 평탄 나열하지 않고
         // 상위 한 줄로 두고 우측 플라이아웃으로 편다(게시판·자료실과 같은 조작감).
-        // 항목은 TAG_CONFIGS(owner: 'admin')에서 파생되므로 태그를 추가할 때 이 파일은 손대지 않는다.
+        // 항목은 TAG_CONFIGS에서 파생되므로 태그를 추가할 때 이 파일은 손대지 않는다.
         {
           label: '태그 관리',
           groupIconKey: 'tags',
@@ -241,9 +241,8 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         // 지사 원장(지사명·주소·전화번호·상주인력)의 단일 세팅 지점. 조직 관리와 같은 조직
         // 축이라 MANAGEMENT가 소유하고, OFFICE '지사 정보'와 회의실 예약의 지사 탭이 조회한다.
         { label: '지사 관리', tab: 'branches' },
-        { label: '직책 관리', tab: 'positions' },
-        { label: '직급 관리', tab: 'ranks' },
-        { label: '호봉 관리', tab: 'pay_steps' },
+        // 직책·직급·호봉 태그는 ADMIN '태그 관리'로 이관했다(2026-08-03) — 쓰기 정책이
+        // is_admin() 하나뿐이라 여기 두면 MANAGEMENT 사용자는 볼 수만 있었다.
         { label: '인사 관리', tab: 'hr', dividerBefore: true },
         { label: '자산 관리', tab: 'assets' },
         { label: '재무 관리', tab: 'finance' },

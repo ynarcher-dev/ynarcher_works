@@ -35,13 +35,14 @@ const NON_TAG_TABS = new Set([
 
 /**
  * ADMIN 워크스페이스: 권한 콘솔 / 게시판·회의실 / 태그 관리 / 감사·다운로드 로그.
- * 섹션 전환은 사이드바(?tab)이며, 태그 탭은 TAG_CONFIGS(owner: 'admin')에서 파생된다 —
- * 항목을 추가하면 메뉴·헤딩·패널이 함께 따라온다. 지사 관리는 MANAGEMENT가 소유한다.
+ * 섹션 전환은 사이드바(?tab)이며, 태그 탭은 TAG_CONFIGS에서 파생된다 — 항목을 추가하면
+ * 메뉴·헤딩·패널이 함께 따라온다. 인사 기준정보(직책·직급·호봉)도 여기서 관리하며,
+ * 지사 관리는 조직 축이라 MANAGEMENT가 소유한다.
  */
 export function AdminPage() {
   const [params] = useSearchParams()
   const tab = params.get('tab') ?? 'permissions'
-  const tagConfig = tagConfigOf('admin', tab)
+  const tagConfig = tagConfigOf(tab)
 
   return (
     <div className="space-y-5">

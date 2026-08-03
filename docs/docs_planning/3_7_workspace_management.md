@@ -13,7 +13,6 @@
 | 조직 관리 | `departments` | 사용 가능 |
 | 조직 개편 | `/management/org-reform` | 사용 가능 |
 | 지사 관리 | `branches` | 사용 가능 |
-| 직책·직급·호봉 관리 | `positions`, `ranks`, `pay_steps` | 사용 가능 |
 | 인사 관리 | `hr` | 사용 가능 |
 | 계정 생성/임직원 상세 | `/management/hr/new`, `/management/hr/:id` | 사용 가능 |
 | 자산 관리 | `assets` | 사용 가능 |
@@ -21,6 +20,9 @@
 | KPI 관리 | `kpi` | 부분 구현 |
 
 탭이 없으면 `경영 현황`을 열며 현재는 `대시보드는 준비 중입니다` 안내만 표시합니다.
+
+> [!NOTE]
+> 직책·직급·호봉 태그 관리는 2026-08-03부터 ADMIN `태그 관리` 그룹이 소유합니다([3_2_workspace_admin.md](./3_2_workspace_admin.md) §1.4). 세 원장 모두 쓰기 정책이 `app.is_admin()`이라 MANAGEMENT에서는 열람만 가능했습니다. 임직원 등록·수정 화면의 직책·직급·호봉 선택은 그대로이며, 선택지 원장을 고치는 자리만 옮겼습니다.
 
 ## 2. 조직 관리
 
