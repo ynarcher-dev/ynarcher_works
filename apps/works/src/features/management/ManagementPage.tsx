@@ -1,12 +1,10 @@
 import { Button, Input, PageHeader } from '@ynarcher/ui'
-import { Maximize2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { AssetsPanel } from '@/features/management/assets/AssetsPanel'
 import { DashboardPanel } from '@/features/management/panels/DashboardPanel'
 import { DepartmentsPanel } from '@/features/management/panels/DepartmentsPanel'
 import { FinancePanel } from '@/features/management/panels/FinancePanel'
-import { HrDirectoryFullscreen } from '@/features/management/panels/HrDirectoryFullscreen'
 import { HrPanel } from '@/features/management/panels/HrPanel'
 import { KpiPanel } from '@/features/management/panels/KpiPanel'
 import { BranchAdminPanel } from '@/features/management/panels/BranchAdminPanel'
@@ -31,13 +29,10 @@ export function ManagementPage() {
   const navigate = useNavigate()
   const tab = params.get('tab') ?? 'dashboard'
   const [keyword, setKeyword] = useState('')
-  // 임직원 목록 크게보기(전체화면) 여부.
-  const [hrExpanded, setHrExpanded] = useState(false)
 
   // 섹션(탭) 전환 시 이전 검색어를 비운다(NETWORKS 디렉토리와 동일 UX).
   useEffect(() => {
     setKeyword('')
-    setHrExpanded(false)
   }, [tab])
 
   // 검색 필드는 인사 관리(리스트뷰)에서만 노출한다. NETWORKS와 동일하게 헤더 슬롯에 둔다.
@@ -50,19 +45,15 @@ export function ManagementPage() {
       />
     ) : undefined
 
-  // 크게보기·등록 액션은 인사 관리 리스트뷰에서만 노출한다.
+  // 등록 액션은 인사 관리 리스트뷰에서만 노출한다.
   // 문구는 `{대상 명사} 등록` 규칙을 따른다 — 하는 일은 로그인 계정 발급이지만, 이 화면이
   // 다루는 원장은 임직원이고 다른 목록도 모두 '~ 등록'으로 부른다(구 '계정 생성').
   // 대용량 업로드 버튼은 두지 않는다 — 임직원 등록은 원장 INSERT가 아니라 인증 계정 발급이라
   // CSV 한 장으로 일괄 처리할 경로가 없다.
+  // '크게보기'(전체화면)도 두지 않는다 — 집계 열이 빠져 본문 폭에 표가 들어오므로 볼 이유가 없다.
   const actions =
     tab === 'hr' ? (
-      <>
-        <Button variant="outline" onClick={() => setHrExpanded(true)}>
-          <Maximize2 size={14} /> 크게보기
-        </Button>
-        <Button onClick={() => navigate('/management/hr/new')}>임직원 등록</Button>
-      </>
+      <Button onClick={() => navigate('/management/hr/new')}>임직원 등록</Button>
     ) : undefined
 
   return (
@@ -80,13 +71,6 @@ export function ManagementPage() {
       {tab === 'kpi' && <KpiPanel />}
       {/* 모르는 탭(이관된 직책·직급·호봉의 옛 링크 포함)은 이 워크스페이스의 첫 화면으로 받는다. */}
       {(tab === 'dashboard' || !HEADINGS[tab]) && <DashboardPanel />}
-
-      <HrDirectoryFullscreen
-        open={tab === 'hr' && hrExpanded}
-        keyword={keyword}
-        onKeywordChange={setKeyword}
-        onClose={() => setHrExpanded(false)}
-      />
     </div>
   )
 }

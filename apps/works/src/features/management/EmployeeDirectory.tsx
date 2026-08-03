@@ -35,7 +35,8 @@ interface EmployeeDirectoryProps {
  * 임직원 풀 리스트뷰(독립 컴포넌트). 전문가 풀과 구성은 유사하나 공용 MasterListView에
  * 의존하지 않고 DataTable을 직접 구성한다(HR 전용 컬럼·정렬 요구를 공용 컴포넌트에 얹지 않기 위함).
  * 소속은 회사/부서/팀으로 세분화하고, 부서/팀은 2단 조직도(상위=부서·하위=팀)에서 파생한다.
- * 회사·직책/직급·연락처 및 집계 지표(관리기업/운영사업/M&A/프로젝트/펀드)는 데이터 연결 전이라 '-'.
+ * 회사·직책/직급·연락처는 데이터 연결 전이라 '-'. 관리기업·운영사업·M&A·프로젝트·펀드 집계 열은
+ * 값이 전부 '-'뿐이라 표만 넓혔고, 사람에 대해 아무것도 답하지 못해 걷어냈다 — 되살릴 땐 집계와 함께 온다.
  * 인사 관리(MANAGEMENT)와 임직원 정보(OFFICE)가 동일 구조로 재사용하며, 목록은 양쪽 모두 조회 전용이다.
  * 비활성화(소프트 삭제)는 NETWORKS·STARTUP과 같이 상세 페이지 상단바가 소유한다 — 목록에 관리 컬럼을 두지 않는다.
  */
@@ -143,13 +144,6 @@ export function EmployeeDirectory({
       // 휴대폰 번호(010-0000-0000)가 잘리지 않는 최소 폭.
       className: 'w-32',
     },
-    // 집계 지표는 값이 아직 '-'뿐이고 자릿수도 한 자리 수준이라, 우측 정렬보다 가운데가 읽기 쉽다.
-    { key: 'managed_cos', header: '관리기업', render: () => DASH, align: 'center', className: 'w-20' },
-    { key: 'businesses', header: '운영사업', render: () => DASH, align: 'center', className: 'w-20' },
-    { key: 'mna', header: 'M&A', render: () => DASH, align: 'center', className: 'w-20' },
-    { key: 'projects', header: '프로젝트', render: () => DASH, align: 'center', className: 'w-20' },
-    { key: 'fund_managed', header: '펀드(관리)', render: () => DASH, align: 'center', className: 'w-20' },
-    { key: 'fund_operated', header: '펀드(운용)', render: () => DASH, align: 'center', className: 'w-20' },
   ]
 
   if (isLoading || (deptLoading && !depts) || (levelLoading && !levels.length)) return <Spinner />
