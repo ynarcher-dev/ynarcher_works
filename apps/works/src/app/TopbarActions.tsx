@@ -2,6 +2,7 @@ import { cn } from '@ynarcher/ui'
 import { Bell, CalendarDays, CircleUserRound } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { hasWorkspaceRead, useAuthStore } from '@/auth/authStore'
+import { useMyPhoto } from '@/features/management/myPhotoHooks'
 import { useNotifications } from '@/features/notifications/notificationHooks'
 import { useRightPanel, type RightPanelKey } from '@/app/rightPanel'
 
@@ -46,6 +47,9 @@ export function TopbarActions() {
   // 종 배지용 미읽음 수(목록 본문은 NotificationList가 조회한다 — 같은 queryKey라 캐시 공유).
   const { data: notifications } = useNotifications()
   const unread = (notifications ?? []).filter((n) => n.read_at == null).length
+
+  // 개인 메뉴 버튼의 얼굴. 없으면 인물 아이콘으로 물러난다.
+  const { data: photo } = useMyPhoto()
 
   return (
     <div className="flex items-center gap-1">
@@ -110,7 +114,18 @@ export function TopbarActions() {
         onClick={() => toggle('me')}
         className={cn(topbarLabeledButton, active === 'me' && 'bg-gray-100 text-gray-900')}
       >
-        <CircleUserRound aria-hidden className="size-5 shrink-0" strokeWidth={1.8} />
+        {/* 아이콘 자리에 본인 사진을 끼운다 — 크기는 옆 아이콘들과 같은 20px이라 상단바의
+            줄맞춤이 흔들리지 않는다. 사진이 없는 계정은 같은 크기의 인물 아이콘으로 물러난다
+            (공용 PhotoBox의 플레이스홀더는 정사각 큰 규격이라 이 크기에 맞지 않는다). */}
+        {photo ? (
+          <img
+            src={photo}
+            alt=""
+            className="size-5 shrink-0 rounded-full object-cover"
+          />
+        ) : (
+          <CircleUserRound aria-hidden className="size-5 shrink-0" strokeWidth={1.8} />
+        )}
         {/* 아이콘 옆에 지금 로그인한 사람의 이름을 적는다 — 이 버튼만 '나'에 관한 것이라,
             이름이 곧 이 자리가 무엇인지에 대한 설명이 된다(계정 확인도 겸한다).
             글자색은 버튼이 정한다(호버·활성에서 아이콘과 함께 진해진다). 이름이 길어도
