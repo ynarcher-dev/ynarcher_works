@@ -3,9 +3,6 @@ import { sanitizeOrValue } from '@/features/master/ledgerPage'
 import type { FundListFilterState } from '@/features/fund/fundListHooks'
 import { supabase } from '@/lib/supabase'
 
-/** 만료 임박으로 볼 잔여 기간(개월). 청산 준비·기간 연장 총회를 띄우는 데 필요한 리드타임. */
-const EXPIRING_MONTHS = 12
-
 /** 목록 요약 카드가 읽는 값 한 벌. 금액은 전부 원(₩) 정수. */
 export interface FundListTotals {
   /** 집계에 든 펀드 수. 목록 건수와 같아야 한다(조건 드리프트 감지). */
@@ -15,9 +12,6 @@ export interface FundListTotals {
   paidIn: number | null
   drawn: number
   balance: number
-  overdueCount: number
-  overdueAmount: number
-  expiringCount: number
 }
 
 /** 빈 배열은 '미적용'이라 null로 되돌려 보낸다(RPC도 같은 규약이지만 뜻을 넘기는 쪽에서 정한다). */
@@ -38,7 +32,7 @@ function millionArg(input: string): number | null {
  *
  * 합계를 화면에서 내지 못하는 이유는 목록이 서버 페이지네이션이기 때문이다(보이는 한 페이지의
  * 합은 답이 아니다). 건수와 달리 합계는 PostgREST로 셀 수 없고(이 프로젝트는 집계 함수 비활성)
- * 그래서 집계 전용 RPC를 경유한다. 근거·보안 게이트: 20260803160000_fund_list_totals.sql
+ * 그래서 집계 전용 RPC를 경유한다. 근거·보안 게이트: 20260803180000_fund_list_totals_amounts_only.sql
  *
  * 사업 진행 현황 카드는 상태 분포를 답하느라 상태 필터만 집계에서 뺐지만, 이 카드는 금액을
  * 답하므로 자기 조건을 자기 집계에 도로 거는 문제가 없다 — 상태 필터도 그대로 건다.
@@ -70,7 +64,6 @@ export function useFundListTotals(
           p_balance_max: millionArg(filters.balanceMaxMillion),
           p_strategy: strategy ?? null,
           p_mine_user_id: mineUserId ?? null,
-          p_expiring_months: EXPIRING_MONTHS,
         })
         .single()
       if (error) throw error
@@ -84,9 +77,6 @@ export function useFundListTotals(
         paidIn: row.paid_in_amount == null ? null : Number(row.paid_in_amount),
         drawn: num(row.drawn_amount),
         balance: num(row.balance),
-        overdueCount: num(row.overdue_count),
-        overdueAmount: num(row.overdue_amount),
-        expiringCount: num(row.expiring_count),
       }
     },
   })
