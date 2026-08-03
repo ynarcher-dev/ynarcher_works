@@ -19,6 +19,7 @@ import {
   FUND_TYPE_LABEL,
 } from '@/features/fund/fundListHooks'
 import {
+  MAX_PROGRAM_INDUSTRIES,
   PROGRAM_STATUS_LABEL,
   defaultProgramStatus,
   programStatusOptions,
@@ -268,6 +269,17 @@ export function programBulkSpec(config: ProgramWorkspaceConfig): BulkImportSpec 
         required: true,
         aliases: ['end_date'],
         example: '2026-12-31',
+      },
+      {
+        // 산업: 등록 폼과 같은 태그 원장·같은 상한을 쓴다(스타트업 업로드의 '산업' 열과 동일 규격).
+        // 사업 원장에는 대표값을 읽는 레거시 소비자가 없으므로 미러 컬럼을 두지 않는다.
+        header: '산업',
+        column: 'industries',
+        kind: 'tags',
+        tagTable: 'industry_tags',
+        max: MAX_PROGRAM_INDUSTRIES,
+        aliases: ['industries', 'industry'],
+        example: 'SaaS;핀테크',
       },
       { header: '주관기관', column: 'host_organization', aliases: ['host_organization'] },
       { header: '협력기관', column: 'partner_organization', aliases: ['partner_organization'] },

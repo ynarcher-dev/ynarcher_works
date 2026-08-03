@@ -54,8 +54,13 @@ export interface Program {
   id: string
   /** 사업코드(6자리 영숫자 난수, 유니크). DB 트리거가 등록 시 자동 부여. */
   code: string | null
-  /** 사업구분: PUBLIC(공공)/PRIVATE(민간)/REVENUE(매출). null=미지정. */
+  /** 사업구분: PUBLIC(공공)/PRIVATE(민간)/REVENUE(매출)/NEW(신규)/ETC(기타). null=미지정. */
   category: string | null
+  /**
+   * 산업 태그(industry_tags 태그명 배열, 최대 3개). 이 사업이 발굴·대상으로 하는 산업군이며,
+   * 스타트업 원장의 industries와 같은 태그 원장을 읽는다. 미지정은 빈 배열.
+   */
+  industries: string[]
   title: string
   status: string
   /** 제안 단계 기간(제안서 작성~발표). 제안 없이 시작한 프로그램은 null. */
@@ -81,11 +86,20 @@ export interface Program {
 export function programCols(config: ProgramWorkspaceConfig): string {
   const { departments, managers } = config.tables
   return (
-    'id, code, category, title, status, proposal_start_date, proposal_end_date, start_date, end_date, description, updated_at, ' +
+    'id, code, category, industries, title, status, proposal_start_date, proposal_end_date, start_date, end_date, description, updated_at, ' +
     `departments:${departments}(org_version_id, department_id, kind, collaboration_ratio, department:departments!${departments}_department_id_fkey(id, name)), ` +
     `managers:${managers}(user_id, org_version_id, department_id, role, allocation_rate, start_date, end_date, user:users!${managers}_user_id_fkey(id, name), department:departments!${managers}_department_id_fkey(id, name)), ` +
     'creator:users!created_by(id, name)'
   )
+}
+
+/**
+ * 산업 태그 목록을 읽는다. 원장 컬럼은 jsonb라 스키마상 배열이 보장되지 않으므로
+ * (컬럼이 없던 시절의 캐시·다른 select로 받은 행) 배열이 아닌 값은 빈 목록으로 흡수한다.
+ */
+export function programIndustries(program: Pick<Program, 'industries'> | null | undefined): string[] {
+  const raw: unknown = program?.industries
+  return Array.isArray(raw) ? raw.map((v) => String(v).trim()).filter(Boolean) : []
 }
 
 export function useProgram(id: string | undefined) {
@@ -117,6 +131,7 @@ export function useCreateProgram() {
       end_date?: string | null
       description?: string | null
       category?: string | null
+      industries?: string[]
     }): Promise<string> => {
       const { data, error } = await supabase
         .from(config.tables.programs)

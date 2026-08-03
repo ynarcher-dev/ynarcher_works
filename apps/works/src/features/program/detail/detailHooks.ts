@@ -4,7 +4,7 @@ import type { ProgramModule } from '@/features/program/hooks'
 import { useProgramWorkspace } from '@/features/program/workspace'
 
 /**
- * 프로그램 마스터 수정(제목/상태/기간/설명 — 편집 모달용, 사유 필수).
+ * 프로그램 마스터 수정(제목/상태/기간/설명/분류 — 편집 모달용, 사유 필수).
  * 사유는 원장 컬럼이 아니라 기여 로그의 note로만 남으므로 update_entity RPC를 경유한다
  * (20260721200000). 변동 이력 'edited'는 그 트랜잭션 안에서 원장 트리거가 남기며,
  * 값이 실제로 바뀐 경우에만 기록되므로 무변경 저장은 이력에 남지 않는다.
@@ -26,6 +26,8 @@ export function useUpdateProgram(id: string) {
         end_date: string | null
         description: string | null
         category: string | null
+        /** 산업 태그(태그명 배열). jsonb 컬럼이라 배열 그대로 실어 보낸다. */
+        industries: string[]
       }
       reason: string
     }) => {

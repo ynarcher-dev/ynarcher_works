@@ -1,7 +1,9 @@
-import { Button, Input, Modal, Select, TextArea, useToast } from '@ynarcher/ui'
+import { Button, Input, Modal, Select, TagChip, TextArea, useToast } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { useTags } from '@/features/admin/hooks'
 import {
+  programIndustries,
   useCreateProgram,
   useSetProgramStaffing,
   type Program,
@@ -13,7 +15,12 @@ import type { ProgramDepartmentSegment } from '@/features/program/ProgramDepartm
 import { PhaseStaffingEditor } from '@/features/program/PhaseStaffingEditor'
 import { computePhases, validateStaffing } from '@/features/program/programManagerCoverage'
 import { useOrgVersions } from '@/features/management/orgHooks'
-import { defaultProgramStatus, programStage, type ProgramStage } from '@/features/program/config'
+import {
+  MAX_PROGRAM_INDUSTRIES,
+  defaultProgramStatus,
+  programStage,
+  type ProgramStage,
+} from '@/features/program/config'
 import { useProgramWorkspace, type ProgramWorkspaceConfig } from '@/features/program/workspace'
 import {
   ProgramStageFields,
@@ -90,6 +97,18 @@ export function ProgramFormModal({
     toDepartmentSegments(program),
   )
   const [managers, setManagers] = useState<ProgramManagerSegment[]>(() => toManagerSegments(program))
+  // 산업 태그: ADMIN 산업 관리(industry_tags)에서 다중 선택(최대 3개). 폼 값이 아니라 배열
+  // 상태로 따로 든다 — react-hook-form의 register는 단일 값 입력을 전제로 한다.
+  const { data: industryTags } = useTags('industry_tags')
+  const [industries, setIndustries] = useState<string[]>(() => programIndustries(program))
+  const toggleIndustry = (name: string) =>
+    setIndustries((prev) =>
+      prev.includes(name)
+        ? prev.filter((n) => n !== name)
+        : prev.length >= MAX_PROGRAM_INDUSTRIES
+          ? prev
+          : [...prev, name],
+    )
   // 상태는 단계(제안/운영)로 이원화 — 단계 라디오가 어느 셀렉트를 쓸지 정하고,
   // 단계 전환 시 반대편 선택값을 잃지 않도록 단계별 상태를 각각 보관한다.
   const initial = stageStateOf(config, program)
@@ -105,6 +124,7 @@ export function ProgramFormModal({
   useEffect(() => {
     setDepartments(toDepartmentSegments(program))
     setManagers(toManagerSegments(program))
+    setIndustries(programIndustries(program))
     const next = stageStateOf(config, program)
     setStage(next.stage)
     setProposalStatus(next.proposalStatus)
@@ -156,6 +176,7 @@ export function ProgramFormModal({
       end_date: values.end_date || null,
       description: values.description || null,
       category: values.category || null,
+      industries,
     }
     try {
       if (isEdit && program) {
@@ -180,6 +201,7 @@ export function ProgramFormModal({
         reset()
         setDepartments([])
         setManagers([])
+        setIndustries([])
         const blank = stageStateOf(config, undefined)
         setStage(blank.stage)
         setProposalStatus(blank.proposalStatus)
@@ -239,6 +261,34 @@ export function ProgramFormModal({
             </Select>
           </div>
         )}
+        {/* 산업. 사업구분 바로 아래에 둔다 — 둘 다 '이 사업이 무엇인가'를 가르는 분류 축이고,
+            기간·배치처럼 운영을 적는 칸과는 층위가 다르다. 태그 원장은 스타트업과 공유한다. */}
+        <div>
+          <label className="text-body font-medium text-gray-800">산업</label>
+          <div className="mt-1 flex flex-wrap gap-1.5">
+            {(industryTags ?? []).map((tag) => {
+              const on = industries.includes(tag.name)
+              return (
+                <TagChip
+                  key={tag.id}
+                  selected={on}
+                  disabled={!on && industries.length >= MAX_PROGRAM_INDUSTRIES}
+                  onClick={() => toggleIndustry(tag.name)}
+                >
+                  {tag.name}
+                </TagChip>
+              )
+            })}
+            {(industryTags ?? []).length === 0 && (
+              <span className="text-caption text-gray-600">
+                등록된 산업 태그가 없습니다. (ADMIN › 산업 관리)
+              </span>
+            )}
+          </div>
+          <p className="mt-1 text-caption text-gray-700">
+            이 사업이 발굴·대상으로 하는 산업군 · 최대 {MAX_PROGRAM_INDUSTRIES}개 선택
+          </p>
+        </div>
         <ProgramStageFields
           hasProposalStage={config.hasProposalStage}
           stage={stage}

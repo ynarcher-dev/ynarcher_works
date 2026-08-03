@@ -1,6 +1,6 @@
 import { Badge, CardShell, InfoField } from '@ynarcher/ui'
 import { useDepartmentLabels } from '@/features/management/departmentOptions'
-import type { Program, ProgramDepartmentKind } from '@/features/program/hooks'
+import { programIndustries, type Program, type ProgramDepartmentKind } from '@/features/program/hooks'
 import { ProgramPhotoBox } from '@/features/program/detail/ProgramPhotoBox'
 import {
   PROGRAM_STATUS_LABEL,
@@ -100,6 +100,8 @@ export function ProgramInfoCard({ program }: { program: Program }) {
             value={program.category ? categoryLabel(config, program.category) ?? program.category : '-'}
           />
         )}
+        {/* 산업. 목록과 같은 표기(가운뎃점 잇기)를 쓴다 — 같은 값을 두 화면이 다르게 부르지 않는다. */}
+        <Info label="산업" value={programIndustries(program).join(' · ') || '-'} />
         <Info label="운영 기간" value={operationPeriod} />
         <Info label="생성자" value={program.creator?.name || '-'} />
         <Info label="수정일" value={formatDate(program.updated_at)} />

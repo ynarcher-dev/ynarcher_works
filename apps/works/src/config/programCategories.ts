@@ -17,11 +17,16 @@ export interface ProgramCategoryOption {
   tone: BadgeTone
 }
 
-/** AC 사업구분: 공공/민간/매출/기타. */
+/**
+ * AC 사업구분: 공공/민간/매출/신규/기타.
+ * '신규'는 성격(공공·민간·매출)이 아직 정해지지 않은 건의 자리다 — 그전까지는 전부 '기타'로
+ * 흘러들어, 어디에도 속하지 않는 건과 아직 정하지 않은 건이 한 칸에 섞여 있었다.
+ */
 export const AC_CATEGORIES: readonly ProgramCategoryOption[] = [
   { value: 'PUBLIC', label: '공공', tone: 'info' },
   { value: 'PRIVATE', label: '민간', tone: 'neutral' },
   { value: 'REVENUE', label: '매출', tone: 'success' },
+  { value: 'NEW', label: '신규', tone: 'warning' },
   { value: 'ETC', label: '기타', tone: 'neutral' },
 ]
 

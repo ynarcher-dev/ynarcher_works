@@ -245,6 +245,13 @@ export const PROGRAM_STATUS_TONE: Record<string, BadgeTone> = {
  * PROJECT는 features/project/ProjectWorkspace.tsx의 `categories`를 참조한다.
  */
 
+/**
+ * 산업 태그(industry_tags) 다중 선택 상한. 스타트업 원장(MAX_INDUSTRIES)과 같은 값이다 —
+ * 같은 태그 원장을 읽는 두 축이 서로 다른 상한을 가지면 "이 사업이 노린 산업"과
+ * "실제로 발굴한 기업의 산업"을 나란히 놓고 읽을 때 폭이 어긋난다.
+ */
+export const MAX_PROGRAM_INDUSTRIES = 3
+
 export const PARTICIPANT_ROLES = [
   'STARTUP',
   'EXPERT',
