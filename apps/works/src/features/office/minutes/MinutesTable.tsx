@@ -46,13 +46,19 @@ export function MinutesTable({
     },
     {
       // 공개범위: 태그가 아니라 텍스트 컬럼으로 전체공개/일부공개를 표기한다.
-      // 일부공개(제한 공개)는 버건디로 색만으로 구분하고, 전체공개는 기본 본문색.
+      // 일부공개(제한 공개)는 붉은색으로 색만 갈라 표기하고, 전체공개는 기본 본문색.
+      // 별도의 버건디 톤을 두었었지만, 화면에 붉은 계열이 둘로 갈려 같은 '주의' 신호가
+      // 자리마다 다른 색으로 보였다 — 제한 표기도 danger 램프 하나로 모은다(2026-08-03).
       key: 'visibility',
       header: '공개범위',
       align: 'center',
       className: 'w-24',
       render: (m) => (
-        <span className={m.visibility === 'PARTICIPANTS' ? 'font-medium text-burgundy' : 'text-gray-600'}>
+        <span
+          className={
+            m.visibility === 'PARTICIPANTS' ? 'font-medium text-danger-700' : 'text-gray-600'
+          }
+        >
           {MINUTE_VISIBILITY_LABEL[m.visibility]}
         </span>
       ),

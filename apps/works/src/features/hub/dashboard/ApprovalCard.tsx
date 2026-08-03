@@ -46,14 +46,18 @@ export function ApprovalCard() {
               key={key}
               icon={<Icon className="size-4" />}
               label={label}
-              // 건이 있는 줄만 아이콘에 색이 들어오고 숫자가 진해진다. 0건도 자리는 지키되
+              // 건이 있는 줄만 아이콘에 색이 들어오고 숫자가 붉어진다. 0건도 자리는 지키되
               // 연한 색으로 물러나 있어, 훑는 눈이 처리할 것이 있는 줄에 먼저 걸린다.
+              //
+              // 붉은 건수는 게시판 [공지] 말머리·카드 제목 옆 건수(cardText.count)와 같은
+              // danger-700이다. 다만 크기는 줄 라벨과 같은 단계로 두어 한 줄 안에서 크기로
+              // 위계를 만들지 않는다 — 구분은 굵기와 색이 맡는다.
               active={count > 0}
               trailing={
                 <span
                   className={cn(
                     'text-body-sm tabular-nums',
-                    count > 0 ? 'font-semibold text-gray-900' : 'text-gray-400',
+                    count > 0 ? 'font-semibold text-danger-700' : 'text-gray-400',
                   )}
                 >
                   {count}건
