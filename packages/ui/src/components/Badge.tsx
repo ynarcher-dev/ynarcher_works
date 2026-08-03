@@ -7,12 +7,25 @@ export type BadgeTone = 'neutral' | 'success' | 'warning' | 'info' | 'danger'
 
 // 테두리 없이 배경만으로 형태를 잡는다. 표 한 셀에 여러 개가 놓일 때 1px 선이 겹쳐
 // 격자처럼 보이던 것을 없애기 위함이다. 중립 톤은 선이 빠진 만큼 배경을 한 단계 올린다.
-const toneClass: Record<BadgeTone, string> = {
-  neutral: 'bg-gray-100 text-gray-600',
-  success: 'bg-success-subtle text-success',
-  warning: 'bg-warning-subtle text-warning',
-  info: 'bg-info-subtle text-info',
-  danger: 'bg-danger-subtle text-danger',
+const toneSubtleBg: Record<BadgeTone, string> = {
+  neutral: 'bg-gray-100',
+  success: 'bg-success-subtle',
+  warning: 'bg-warning-subtle',
+  info: 'bg-info-subtle',
+  danger: 'bg-danger-subtle',
+}
+
+/**
+ * 톤별 글자·아이콘 색. 배지 글자가 쓰고, 배지 밖에서 같은 톤으로 칠해야 하는 글리프
+ * (상태 아이콘 등)도 이 표를 함께 쓴다 — badgeToneFill(면)과 같은 이유다.
+ * 배지는 초록인데 그 상태를 가리키는 아이콘만 다른 초록이면 같은 상태가 두 색으로 보인다.
+ */
+export const badgeToneText: Record<BadgeTone, string> = {
+  neutral: 'text-gray-600',
+  success: 'text-success',
+  warning: 'text-warning',
+  info: 'text-info',
+  danger: 'text-danger',
 }
 
 /**
@@ -57,7 +70,8 @@ export function Badge({ tone = 'neutral', density, dot = false, children, classN
         s.height,
         s.text,
         s.padX,
-        toneClass[tone],
+        toneSubtleBg[tone],
+        badgeToneText[tone],
         className,
       )}
     >

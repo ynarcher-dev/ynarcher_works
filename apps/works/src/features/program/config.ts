@@ -1,4 +1,15 @@
 import type { BadgeTone } from '@ynarcher/ui'
+import {
+  Ban,
+  CircleCheck,
+  CircleHelp,
+  CirclePlay,
+  CircleX,
+  ClipboardList,
+  Flag,
+  Send,
+  type LucideIcon,
+} from 'lucide-react'
 
 /** AC 모듈 타입 정의(Program First 14모듈 중 모듈 보드 대상). */
 export interface ModuleTypeDef {
@@ -170,6 +181,31 @@ export const PROGRAM_STATUS_LABEL: Record<string, string> = {
   SCREENING: '심사',
   DEMO_DAY: '데모데이',
 }
+
+/**
+ * 상태별 아이콘(진행 현황 프로세스 뷰 전용).
+ *
+ * 라벨·톤과 나란히 두는 이유는 셋이 한 상태의 표시 규격이기 때문이다 — 흩어 두면 상태를
+ * 하나 늘릴 때 어디를 더 고쳐야 하는지가 이름으로 드러나지 않는다.
+ * 구 상태값(RECRUITING 등)은 넣지 않는다. 프로세스 뷰가 그것들을 '수명주기 밖' 한 칸으로
+ * 합치므로 개별 아이콘이 그려질 자리가 없고, 없는 값을 채워 두면 쓰이지 않는 규격이 남는다.
+ *
+ * 고른 기준은 '그 단계에서 무엇을 하는가'다 — 제안서를 낸다(Send) / 통과했다(CircleCheck) /
+ * 떨어졌다(CircleX) / 채비한다(ClipboardList) / 돌아간다(CirclePlay) / 결승선(Flag) /
+ * 멈췄다(Ban). 상태끼리 형태가 겹치지 않아야 색 없이도 구분된다.
+ */
+export const PROGRAM_STATUS_ICON: Record<string, LucideIcon> = {
+  PROPOSED: Send,
+  SELECTED: CircleCheck,
+  NOT_SELECTED: CircleX,
+  DRAFT: ClipboardList,
+  OPERATING: CirclePlay,
+  FINISHED: Flag,
+  CANCELLED: Ban,
+}
+
+/** 수명주기 어디에도 속하지 않는 잔여 건(구 상태값)을 가리키는 아이콘. */
+export const PROGRAM_UNKNOWN_STATUS_ICON: LucideIcon = CircleHelp
 
 /** 프로그램 상태 배지 톤(상세 헤더·목록 공용). */
 export const PROGRAM_STATUS_TONE: Record<string, BadgeTone> = {

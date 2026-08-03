@@ -1,9 +1,19 @@
-import { PanelCard, Skeleton, TextAction, badgeToneFill, cn, type BadgeTone } from '@ynarcher/ui'
-import { ChevronRight } from 'lucide-react'
+import {
+  PanelCard,
+  Skeleton,
+  TextAction,
+  badgeToneFill,
+  badgeToneText,
+  cn,
+  type BadgeTone,
+} from '@ynarcher/ui'
+import { ChevronRight, type LucideIcon } from 'lucide-react'
 import { Fragment } from 'react'
 import {
+  PROGRAM_STATUS_ICON,
   PROGRAM_STATUS_LABEL,
   PROGRAM_STATUS_TONE,
+  PROGRAM_UNKNOWN_STATUS_ICON,
   programFlowGroups,
 } from '@/features/program/config'
 import { useProgramStatusCounts } from '@/features/program/programsPoolHooks'
@@ -26,8 +36,10 @@ interface FlowStep {
   label: string
   count: number
   status: string | null
-  /** 상태 배지와 같은 톤. 막대 색이 목록의 상태 배지와 어긋나지 않게 한다. */
+  /** 상태 배지와 같은 톤. 막대·아이콘 색이 목록의 상태 배지와 어긋나지 않게 한다. */
   tone: BadgeTone
+  /** 그 단계에서 무엇을 하는지 형태로 말하는 글리프(config.ts가 소유). */
+  icon: LucideIcon
 }
 
 /** 한 묶음(제안 단계 · 운영 단계). 주 경로 `steps` 뒤에 점선으로 갈린 `exits`가 붙는다. */
@@ -71,6 +83,7 @@ export function ProgramPipeline({
     count: countOf(status),
     status,
     tone: PROGRAM_STATUS_TONE[status] ?? 'neutral',
+    icon: PROGRAM_STATUS_ICON[status] ?? PROGRAM_UNKNOWN_STATUS_ICON,
   })
 
   const groups: FlowGroup[] = programFlowGroups(config.hasProposalStage).map((g) => ({
@@ -89,6 +102,7 @@ export function ProgramPipeline({
               count: data.other,
               status: null,
               tone: 'neutral' as const,
+              icon: PROGRAM_UNKNOWN_STATUS_ICON,
             },
           ]
         : []),
@@ -100,11 +114,12 @@ export function ProgramPipeline({
   const peak = Math.max(1, ...groups.flatMap((g) => g.steps.map((s) => s.count)))
 
   /** 칸 하나. 주 경로와 이탈이 같은 규격을 공유해야 한 줄에서 높이가 어긋나지 않는다. */
-  const tile = ({ label, count, status, tone }: FlowStep, exit = false) => (
+  const tile = ({ label, count, status, tone, icon }: FlowStep, exit = false) => (
     <StepTile
       label={label}
       count={count}
       tone={tone}
+      icon={icon}
       share={Math.min(1, count / peak)}
       total={data.total}
       noun={config.entityNoun}
@@ -196,8 +211,10 @@ function ExitDivider() {
 interface StepTileProps {
   label: string
   count: number
-  /** 목록 상태 배지와 같은 톤. 막대 색의 근거. */
+  /** 목록 상태 배지와 같은 톤. 막대·아이콘 색의 근거. */
   tone: BadgeTone
+  /** 라벨 앞에 서는 단계 글리프. */
+  icon: LucideIcon
   /** 최다 단계 대비 비율(0~1). 막대 길이의 근거. */
   share: number
   total: number
@@ -218,6 +235,7 @@ function StepTile({
   label,
   count,
   tone,
+  icon: Icon,
   share,
   total,
   noun,
@@ -248,13 +266,25 @@ function StepTile({
       {/* 주 경로는 라벨·건수를 모두 진하게 세운다 — 0건이라고 흐려 두면 흐름 전체가 회색으로
           가라앉아 '빈 단계'가 아니라 '읽을 것 없음'으로 보인다. 비어 있음은 아래 막대가 답한다.
           이탈만 한 단계 물러난다(점선 테두리와 함께 주 경로 밖임을 색으로도 말한다). */}
+      {/* 아이콘은 라벨과 한 이름표로 읽히도록 같은 줄에 붙인다 — 줄을 따로 주면 칸이 세 층에서
+          네 층이 되어 일곱 칸이 나란히 선 줄 전체가 높아진다.
+          색은 상태 톤을 쓴다(목록 배지·아래 막대와 같은 표). 0건이면 막대가 비어 색이 사라지는데,
+          아이콘이 톤을 들고 있으면 빈 단계도 어느 단계인지 색으로 남는다.
+          선택 중일 때만 라벨과 함께 브랜드색으로 묶인다 — 한 줄이 두 색으로 갈리지 않게. */}
       <p
         className={cn(
-          'truncate text-caption',
+          'flex items-center gap-1 text-caption',
           active ? 'text-brand-700' : exit ? 'text-gray-500' : 'text-gray-700',
         )}
       >
-        {label}
+        <Icon
+          className={cn(
+            'size-3.5 shrink-0',
+            active ? 'text-brand-700' : exit ? 'text-gray-400' : badgeToneText[tone],
+          )}
+          aria-hidden
+        />
+        <span className="truncate">{label}</span>
       </p>
       <p
         className={cn(
