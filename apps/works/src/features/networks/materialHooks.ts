@@ -15,7 +15,16 @@ export interface Material {
   byte_size: number | null
   uploaded_by: string | null
   program_module_id: string | null
+  /** 표시명. 비어 있으면 화면은 file_name을 대신 쓴다. */
+  label: string | null
+  /** 한 줄 설명. */
+  description: string | null
   created_at: string
+}
+
+/** 목록에 노출할 이름 — 표시명이 있으면 그것, 없으면 파일명. */
+export function materialDisplayName(m: Material): string {
+  return m.label?.trim() || m.file_name
 }
 
 /**
@@ -101,6 +110,24 @@ export function useUploadMaterial(targetType: string, targetId: string, moduleId
     mutationFn: (file: File) => uploadMaterialFile(targetType, targetId, file, moduleId),
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: ['materials', targetType, targetId] }),
+  })
+}
+
+/**
+ * 표시명·설명 수정. 파일 자체(Storage 오브젝트·파일명)는 건드리지 않는다 — 바꾸는 것은
+ * "이 파일이 무엇인지 부르는 말"이지 파일이 아니다.
+ */
+export function useUpdateMaterialMeta(targetType: string, targetId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { id: string; label: string | null; description: string | null }) => {
+      const { error } = await supabase
+        .from('attachments')
+        .update({ label: input.label, description: input.description })
+        .eq('id', input.id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['materials', targetType, targetId] }),
   })
 }
 

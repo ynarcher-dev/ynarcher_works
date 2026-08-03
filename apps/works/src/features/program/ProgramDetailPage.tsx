@@ -144,7 +144,13 @@ export function ProgramDetailPage() {
           {/* 프로그램 단위 화면(집계·타임라인)은 programId, 인스턴스 단위 운영 화면은 moduleId로 렌더한다. */}
           {tab === 'timeline' && <TimelinePanel programId={id} />}
           {tab === 'outcomes' && <OutcomesPanel programId={id} />}
-          {moduleId && tab === 'post' && <PostPanel programId={id} moduleId={moduleId} />}
+          {moduleId && tab === 'post' && (
+            <PostPanel
+              programId={id}
+              moduleId={moduleId}
+              moduleTitle={openMod?.title?.trim() || '글쓰기'}
+            />
+          )}
           {moduleId && tab === 'recruitment' && (
             <RecruitmentPanel programId={id} moduleId={moduleId} />
           )}

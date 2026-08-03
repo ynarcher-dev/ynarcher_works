@@ -1,218 +1,92 @@
-import {
-  BackButton,
-  Button,
-  DataTable,
-  EmptyValue,
-  Input,
-  Spinner,
-  useToast,
-  type Column,
-} from '@ynarcher/ui'
+import { Button, Spinner, useToast } from '@ynarcher/ui'
 import { useState } from 'react'
 import { RichTextEditor, RichTextViewer } from '@/components/RichTextEditor'
-import {
-  useDeletePost,
-  useModulePosts,
-  useSavePost,
-  type ProgramPost,
-} from '@/features/program/moduleContentHooks'
-
-/** 본문 HTML에서 태그를 걷어 목록용 한 줄 요약을 만든다(에디터가 낳은 마크업은 표에서 의미가 없다). */
-function plainSummary(html: string | null): string {
-  if (!html) return ''
-  return html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
-}
+import { useModulePosts, useSavePost } from '@/features/program/moduleContentHooks'
 
 /**
- * 글쓰기 모듈(전체 화면). 게시판과 같은 3상태 — 목록 / 읽기 / 편집 — 를 한 화면에서 돈다.
+ * 글쓰기 모듈(전체 화면). **모듈 하나가 곧 글 하나**이며, 들어오면 목록을 거치지 않고
+ * 본문이 바로 열린다.
  *
- * 링크·파일과 달리 모달이 아닌 이유는 머무는 화면이기 때문이다(목록에서 고르고, 읽고,
- * 고치는 일이 이어진다). 본문 에디터·뷰어는 게시판·회의록과 같은 공용 리치텍스트를 쓴다.
+ * 글 목록을 두지 않는 이유: 모듈 인스턴스 자체가 이미 이름을 가진 한 덩어리의 기록이다.
+ * 그 아래에 또 목록을 두면 이름이 두 층('모듈명'과 '글 제목')으로 갈려 어느 쪽이 이 기록의
+ * 이름인지 모호해지고, 한 건뿐인 목록을 한 번 더 클릭해야 본문에 닿는다. 여러 건을 남기고
+ * 싶다면 모듈을 하나 더 만드는 쪽이 보드에서 바로 보인다.
+ *
+ * 제목은 모듈명이 대신하므로 별도 입력을 받지 않는다(원장의 title은 NOT NULL이라 모듈명을
+ * 그대로 적는다). 본문 에디터·뷰어는 게시판·회의록과 같은 공용 리치텍스트다.
  */
-export function PostPanel({ programId, moduleId }: { programId: string; moduleId: string }) {
-  const { data: posts = [], isLoading } = useModulePosts(moduleId)
-  // undefined=목록 / null=신규 작성 / ProgramPost=읽기
-  const [opened, setOpened] = useState<ProgramPost | null | undefined>(undefined)
-  const [editing, setEditing] = useState(false)
-
-  const backToList = () => {
-    setOpened(undefined)
-    setEditing(false)
-  }
-
-  if (isLoading) return <Spinner />
-
-  if (opened !== undefined) {
-    // 신규(null)는 곧바로 편집, 기존 글은 '수정'을 누를 때 편집으로 넘어간다.
-    return editing || opened === null ? (
-      <PostEditor
-        key={opened?.id ?? 'new'}
-        programId={programId}
-        moduleId={moduleId}
-        post={opened ?? undefined}
-        onDone={backToList}
-        onCancel={opened === null ? backToList : () => setEditing(false)}
-      />
-    ) : (
-      <PostReader
-        post={opened}
-        moduleId={moduleId}
-        onEdit={() => setEditing(true)}
-        onBack={backToList}
-        onDeleted={backToList}
-      />
-    )
-  }
-
-  const columns: Column<ProgramPost>[] = [
-    { key: 'title', header: '제목', render: (p) => <span className="text-gray-800">{p.title}</span> },
-    {
-      key: 'summary',
-      header: '내용',
-      render: (p) => {
-        const summary = plainSummary(p.body)
-        return summary ? (
-          <span className="block truncate font-normal text-gray-600" title={summary}>
-            {summary}
-          </span>
-        ) : (
-          <EmptyValue />
-        )
-      },
-    },
-    {
-      key: 'updated_at',
-      header: '수정일',
-      align: 'center',
-      className: 'w-32',
-      render: (p) => <span className="tabular-nums text-gray-600">{p.updated_at.slice(0, 10)}</span>,
-    },
-  ]
-
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <Button onClick={() => setOpened(null)}>글쓰기</Button>
-      </div>
-      <DataTable
-        columns={columns}
-        rows={posts}
-        rowKey={(p) => p.id}
-        emptyText="등록된 글이 없습니다."
-        onRowClick={(p) => setOpened(p)}
-      />
-    </div>
-  )
-}
-
-/** 글 읽기: 제목 + 본문 렌더 + 수정·삭제. */
-function PostReader({
-  post,
-  moduleId,
-  onEdit,
-  onBack,
-  onDeleted,
-}: {
-  post: ProgramPost
-  moduleId: string
-  onEdit: () => void
-  onBack: () => void
-  onDeleted: () => void
-}) {
-  const toast = useToast()
-  const remove = useDeletePost(moduleId)
-
-  const onDelete = async () => {
-    if (!window.confirm(`'${post.title}' 글을 삭제하시겠습니까?`)) return
-    try {
-      await remove.mutateAsync(post.id)
-      onDeleted()
-    } catch {
-      toast.show('삭제에 실패했습니다. 권한을 확인하세요.', 'danger')
-    }
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <BackButton onClick={onBack} />
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => void onDelete()} disabled={remove.isPending}>
-            삭제
-          </Button>
-          <Button onClick={onEdit}>수정</Button>
-        </div>
-      </div>
-      <article className="rounded-radius-md border border-gray-200 bg-white p-6">
-        <h3 className="text-title-sm font-semibold text-gray-900">{post.title}</h3>
-        <p className="mt-1 text-caption text-gray-600">최종 수정 {post.updated_at.slice(0, 10)}</p>
-        <div className="mt-4 border-t border-gray-200 pt-4">
-          {post.body ? (
-            <RichTextViewer html={post.body} />
-          ) : (
-            <p className="text-body text-gray-600">본문이 없습니다.</p>
-          )}
-        </div>
-      </article>
-    </div>
-  )
-}
-
-/** 글 작성·수정: 제목 + 리치텍스트 본문. */
-function PostEditor({
+export function PostPanel({
   programId,
   moduleId,
-  post,
-  onDone,
-  onCancel,
+  moduleTitle,
 }: {
   programId: string
   moduleId: string
-  post?: ProgramPost
-  onDone: () => void
-  onCancel: () => void
+  /** 모듈명. 글의 제목 자리를 대신한다. */
+  moduleTitle: string
 }) {
   const toast = useToast()
+  const { data: posts = [], isLoading } = useModulePosts(moduleId)
   const save = useSavePost(programId, moduleId)
-  const [title, setTitle] = useState(post?.title ?? '')
-  const [body, setBody] = useState(post?.body ?? '')
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+
+  // 이 모듈의 본문 한 건. 과거 커스텀 활동에서 여러 건이 넘어왔다면 최신 글을 본문으로 본다.
+  const post = posts[0]
+  const body = post?.body ?? ''
+
+  const startEdit = () => {
+    setDraft(body)
+    setEditing(true)
+  }
 
   const submit = async () => {
-    if (!title.trim() || save.isPending) return
+    if (save.isPending) return
     try {
-      await save.mutateAsync({ id: post?.id, title: title.trim(), body })
-      onDone()
+      await save.mutateAsync({ id: post?.id, title: moduleTitle || '본문', body: draft })
+      setEditing(false)
     } catch {
       toast.show('저장에 실패했습니다. 권한을 확인하세요.', 'danger')
     }
   }
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <BackButton onClick={onCancel} />
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={onCancel} disabled={save.isPending}>
+  if (isLoading) return <Spinner />
+
+  if (editing) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-end gap-2">
+          <Button variant="outline" onClick={() => setEditing(false)} disabled={save.isPending}>
             취소
           </Button>
-          <Button onClick={() => void submit()} disabled={!title.trim() || save.isPending}>
-            {save.isPending ? '저장 중…' : post ? '수정 완료' : '등록'}
+          <Button onClick={() => void submit()} disabled={save.isPending}>
+            {save.isPending ? '저장 중…' : '저장'}
           </Button>
         </div>
+        <RichTextEditor value={draft} onChange={setDraft} />
       </div>
-      <div className="space-y-1.5">
-        <label className="text-caption font-semibold text-gray-600">제목</label>
-        <Input
-          autoFocus
-          placeholder="예: 3차 운영위원회 회의록"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-end gap-2">
+        {post && (
+          <span className="mr-auto text-caption text-gray-600">
+            최종 수정 {post.updated_at.slice(0, 10)}
+          </span>
+        )}
+        <Button onClick={startEdit}>{body ? '수정' : '작성'}</Button>
       </div>
-      <div className="space-y-1.5">
-        <label className="text-caption font-semibold text-gray-600">본문</label>
-        <RichTextEditor value={body} onChange={setBody} />
-      </div>
+      <article className="rounded-radius-md border border-gray-200 bg-white p-6">
+        {body ? (
+          <RichTextViewer html={body} />
+        ) : (
+          <p className="py-8 text-center text-body text-gray-600">
+            작성된 내용이 없습니다. 오른쪽 위 &lsquo;작성&rsquo;을 눌러 본문을 남겨 보세요.
+          </p>
+        )}
+      </article>
     </div>
   )
 }

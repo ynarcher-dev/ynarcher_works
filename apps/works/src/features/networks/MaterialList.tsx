@@ -1,5 +1,5 @@
 import { IconButton, Spinner, tableText } from '@ynarcher/ui'
-import { Download, Eye, File as FileIcon, Music, Pause, Play, Trash2 } from 'lucide-react'
+import { Download, Eye, File as FileIcon, Music, Pause, Pencil, Play, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { MaterialPreviewModal } from '@/features/networks/MaterialPreview'
 import { MiniPager, usePaged } from '@/features/networks/MiniPager'
@@ -8,6 +8,7 @@ import {
   fetchMaterialUrl,
   formatBytes,
   isAudioMaterial,
+  materialDisplayName,
   materialPreviewKind,
   type Material,
 } from '@/features/networks/materialHooks'
@@ -22,6 +23,7 @@ import {
 export function MaterialList({
   materials,
   loading = false,
+  onEdit,
   onDelete,
   deletingId,
   emptyText = '등록된 자료가 없습니다.',
@@ -29,6 +31,8 @@ export function MaterialList({
 }: {
   materials: Material[]
   loading?: boolean
+  /** 미지정 시 표시명·설명 수정 버튼을 숨긴다. */
+  onEdit?: (material: Material) => void
   /** 미지정 시 삭제 버튼을 숨긴다(조회 모드). */
   onDelete?: (id: string) => void
   /** 삭제 진행 중인 자료 id(해당 행의 버튼만 비활성화). */
@@ -60,6 +64,7 @@ export function MaterialList({
             key={m.id}
             material={m}
             onPreview={materialPreviewKind(m) ? () => setPreview(m) : undefined}
+            onEdit={onEdit ? () => onEdit(m) : undefined}
             onDelete={onDelete ? () => onDelete(m.id) : undefined}
             deleting={deletingId === m.id}
           />
@@ -72,18 +77,23 @@ export function MaterialList({
 }
 
 /**
- * 자료 1건 행: 파일명·용량 + (오디오면)재생 · (미리보기 지원 종류면)미리보기 + 다운로드/삭제.
- * 미리보기는 pdf·이미지·동영상·텍스트를 지원한다(그 외 형식은 다운로드만).
- * `onDelete` 미지정 시 삭제 버튼을, `onPreview` 미지정 시 미리보기 버튼을 숨긴다.
+ * 자료 1건 행: 표시명·설명·파일명·용량 + (오디오면)재생 · (미리보기 지원 종류면)미리보기
+ * + 다운로드/수정/삭제. 미리보기는 pdf·이미지·동영상·텍스트를 지원한다(그 외는 다운로드만).
+ * `onDelete`·`onEdit`·`onPreview` 미지정 시 해당 버튼을 숨긴다.
+ *
+ * 표시명이 있으면 파일명은 그 아래 회색 메타로 내려간다 — 표시명은 "이게 무엇인지",
+ * 파일명은 "무엇을 받게 되는지"라 둘 다 필요하되 이 행의 이름은 하나여야 한다.
  */
 export function MaterialRow({
   material,
   onPreview,
+  onEdit,
   onDelete,
   deleting,
 }: {
   material: Material
   onPreview?: () => void
+  onEdit?: () => void
   onDelete?: () => void
   deleting: boolean
 }) {
@@ -116,9 +126,17 @@ export function MaterialRow({
         ) : (
           <FileIcon className="size-4 shrink-0 text-gray-500" />
         )}
-        {/* 파일명은 이 행의 식별 값, 용량은 메타 — 크기는 하나로 두고 색으로만 가른다. */}
-        <span className={`min-w-0 flex-1 truncate ${tableText.primary}`}>
-          {material.file_name}
+        {/* 이름은 이 행의 식별 값, 설명·파일명·용량은 메타 — 크기는 하나로 두고 색으로만 가른다. */}
+        <span className="min-w-0 flex-1">
+          <span className={`block truncate ${tableText.primary}`}>
+            {materialDisplayName(material)}
+          </span>
+          {material.description && (
+            <span className={`block truncate ${tableText.meta}`}>{material.description}</span>
+          )}
+          {material.label?.trim() && (
+            <span className={`block truncate ${tableText.meta}`}>{material.file_name}</span>
+          )}
         </span>
         <span className={`shrink-0 tabular-nums ${tableText.meta}`}>
           {formatBytes(material.byte_size)}
@@ -152,6 +170,14 @@ export function MaterialRow({
           />
         ) : (
           <span className="size-icon-card shrink-0" aria-hidden />
+        )}
+        {onEdit && (
+          <IconButton
+            variant="ghost"
+            label={`${materialDisplayName(material)} 표시명·설명 수정`}
+            onClick={onEdit}
+            icon={<Pencil className="size-4" />}
+          />
         )}
         <IconButton
           variant="ghost"
