@@ -1,4 +1,4 @@
-import { Badge, Card, TagChip, cn, useToast, type BadgeTone } from '@ynarcher/ui'
+import { Badge, Button, Card, TagChip, cn, useToast, type BadgeTone } from '@ynarcher/ui'
 import dayjs from 'dayjs'
 import { LogIn, LogOut } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
@@ -221,6 +221,10 @@ export function WorkCheckCard() {
                   {PLACE_LABELS[p]}
                 </TagChip>
               ))}
+          {/* 내 근태 현황으로 가는 자리. 갈 곳(본인 월간 뷰)은 아직 없으므로 버튼만 세워 둔다 —
+              연결되기 전까지 눌러도 아무 일이 없다. 대시보드 우측 열에서 나란히 서는 다른 이동
+              버튼(환영 카드 '내 메뉴')과 같은 outline 규격을 쓴다. */}
+          <Button variant="outline">근태현황</Button>
         </>
       }
     >
