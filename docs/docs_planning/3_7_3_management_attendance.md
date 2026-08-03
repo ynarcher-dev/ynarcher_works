@@ -283,6 +283,9 @@
 6. **트리거**: `app.set_updated_at`을 `attendance_days`·`attendance_policies`에 겁니다. 기여 로그 트리거는 걸지 않습니다(§5.4).
 7. **RPC 3종**: §8대로 생성하고 `GRANT EXECUTE ... TO authenticated`.
 
+> [!NOTE]
+> **후속 보정**(`20260803200000_attendance_policy_internal_gate.sql`): 배포 후 REST 스모크에서 근무 정책이 로그인하지 않은 요청에도 읽히는 것이 드러났습니다. `attendance_policies_select`의 세 갈래(management read / 전사 기본 / 본인) 중 **전사 기본 갈래만 순수 컬럼 비교(`user_id is null`)라 헬퍼 호출이 없어** 통과한 것입니다 — 나머지 두 갈래는 `app.*` 헬퍼를 부르므로 익명 역할에 `EXECUTE`가 없어 막히고 있었습니다. 바깥에 `app.is_internal_user()`를 한 겹 두어 세 갈래 전부가 그 안에서만 성립하게 했습니다. **교훈은 하나입니다 — RLS 정책의 `OR` 갈래 중 헬퍼를 부르지 않는 갈래가 있으면 그 갈래가 곧 게이트의 구멍입니다.**
+
 **보안 게이트 점검**([11_migration_security_gate.md](../docs_dev/11_migration_security_gate.md)): 소유 워크스페이스 `management` / 데이터 등급 `Personal` / 접근 주체 내부 임직원 / Scope `self` + `global` / 감사 로그는 Export 도입 시점까지 미대상. 새 테이블 4종과 `SECURITY DEFINER` 함수 2종이 생기므로 RLS 즉시 활성화, 정책 분리, DELETE 미생성, 헬퍼 경유, `search_path` 고정, 함수 내부 권한 확인, `GRANT` 최소화를 모두 충족시키고 `supabase/tests/rls_regression_test.sql`에 본인/타인/게스트 3케이스를 추가합니다.
 
 ---
