@@ -60,7 +60,13 @@ export function FundListTab({ strategy, mineUserId }: FundListTabProps) {
         keyword={keyword}
         onKeywordChange={setKeyword}
         searchPlaceholder="펀드명·펀드코드·대표펀드매니저 검색"
-        filters={<FundListFilters filters={filters} onChange={setFilters} />}
+        filters={
+          <FundListFilters
+            filters={filters}
+            onChange={setFilters}
+            hideStrategy={Boolean(strategy)}
+          />
+        }
         actions={
           <ListActions
             createLabel="펀드 등록"

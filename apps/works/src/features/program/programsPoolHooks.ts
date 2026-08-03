@@ -42,10 +42,14 @@ export interface ProgramFilters {
    * 개편 전 단계에 같은 부서를 지정한 사업이 통째로 빠진다.
    */
   departmentLineages: string[]
-  /** 시작일(start_date) 최소. '' = 미적용. */
+  /**
+   * 운영 시작일(start_date) 하한. '' = 미적용.
+   * 종전에는 이 축 하나에 부터~까지 두 칸을 걸었는데, 목록이 답하는 것은 운영 시작일과
+   * 운영 종료일 두 열이라 "언제 시작해서 언제까지 하는 사업인가"를 물을 길이 없었다.
+   */
   startFrom: string
-  /** 시작일(start_date) 최대. '' = 미적용. */
-  startTo: string
+  /** 운영 종료일(end_date) 상한. '' = 미적용. */
+  endTo: string
 }
 
 /**
@@ -60,7 +64,7 @@ export const EMPTY_PROGRAM_FILTERS: ProgramFilters = {
   categories: [],
   departmentLineages: [],
   startFrom: '',
-  startTo: '',
+  endTo: '',
 }
 
 /** 하나라도 활성 필터가 있는지. */
@@ -70,7 +74,7 @@ export function hasActiveProgramFilters(f: ProgramFilters): boolean {
     f.categories.length > 0 ||
     f.departmentLineages.length > 0 ||
     f.startFrom !== '' ||
-    f.startTo !== ''
+    f.endTo !== ''
   )
 }
 
@@ -150,8 +154,10 @@ async function programNarrowConditions(
   if (withStatus && filters.statuses.length)
     narrow.push({ kind: 'in', column: 'status', values: filters.statuses })
   if (filters.categories.length) narrow.push(categoryCondition(filters.categories))
+  // 두 칸은 서로 다른 컬럼을 본다 — 함께 걸면 "이 날 이후 시작해서 이 날 이전에 끝나는 사업",
+  // 즉 지정한 구간 안에 운영기간이 통째로 들어가는 사업만 남는다.
   if (filters.startFrom) narrow.push({ kind: 'gte', column: 'start_date', value: filters.startFrom })
-  if (filters.startTo) narrow.push({ kind: 'lte', column: 'start_date', value: filters.startTo })
+  if (filters.endTo) narrow.push({ kind: 'lte', column: 'end_date', value: filters.endTo })
   return narrow
 }
 
@@ -244,7 +250,7 @@ export function useProgramStatusCounts(
       filters.categories,
       filters.departmentLineages,
       filters.startFrom,
-      filters.startTo,
+      filters.endTo,
     ],
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<ProgramStatusCounts> => {

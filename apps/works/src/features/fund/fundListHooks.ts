@@ -216,19 +216,40 @@ export interface FundListRow {
   }[]
 }
 
-/** 상태·재원·성격·펀드유형 다중선택 필터. 구분(전략)은 탭이 프리필터로 담당한다. */
+/**
+ * 펀드 목록 필터. 빈 배열/빈 문자열은 "미적용"이다.
+ * 상태·재원·성격·구분·펀드유형은 다중선택, 존속기간과 잔액은 범위로 건다.
+ */
 export interface FundListFilterState {
   statuses: string[]
   sources: string[]
   characters: string[]
+  /**
+   * 구분(strategy_type). AC/VC/PE 탭은 같은 축을 프리필터로 걸므로 그 탭에서는 이 필터를
+   * 내린다 — 스코프가 이미 답한 질문을 좁힘으로 또 묻는 칸이 된다.
+   */
+  strategies: string[]
   fundTypes: string[]
+  /** 존속기간 구간 시작('' = 미적용). 아래 termTo와 함께 "이 구간에 존속 중"을 묻는다. */
+  termFrom: string
+  /** 존속기간 구간 종료('' = 미적용). */
+  termTo: string
+  /** 잔액 하한(백만원 단위 입력, '' = 미적용). */
+  balanceMinMillion: string
+  /** 잔액 상한(백만원 단위 입력, '' = 미적용). */
+  balanceMaxMillion: string
 }
 
 export const EMPTY_FUND_FILTERS: FundListFilterState = {
   statuses: [],
   sources: [],
   characters: [],
+  strategies: [],
   fundTypes: [],
+  termFrom: '',
+  termTo: '',
+  balanceMinMillion: '',
+  balanceMaxMillion: '',
 }
 
 /** 하나라도 활성 필터가 있는지. */
@@ -237,8 +258,41 @@ export function hasActiveFundFilters(f: FundListFilterState): boolean {
     f.statuses.length > 0 ||
     f.sources.length > 0 ||
     f.characters.length > 0 ||
-    f.fundTypes.length > 0
+    f.strategies.length > 0 ||
+    f.fundTypes.length > 0 ||
+    f.termFrom !== '' ||
+    f.termTo !== '' ||
+    f.balanceMinMillion !== '' ||
+    f.balanceMaxMillion !== ''
   )
+}
+
+/**
+ * 구분 필터에서 '미지정'(strategy_type is null)을 가리키는 표식.
+ * 실제 코드와 겹치지 않도록 DB에 존재할 수 없는 모양을 쓴다(사업구분 필터와 같은 규약).
+ */
+export const UNCLASSIFIED_STRATEGY = '__none__'
+
+/** 구분 선택지 + '미지정'. 원장에 구분이 비어 있는 펀드를 골라 볼 길이 여기뿐이다. */
+export const FUND_STRATEGY_FILTER_OPTIONS = [
+  ...FUND_STRATEGY_OPTIONS,
+  { value: UNCLASSIFIED_STRATEGY, label: '미지정' },
+]
+
+/** 구분 필터 → 조회 조건. '미지정'이 섞이면 `is null`을 OR로 함께 묶어야 한다. */
+function strategyCondition(selected: string[]): LedgerCondition {
+  const codes = selected.filter((c) => c !== UNCLASSIFIED_STRATEGY)
+  const withNull = selected.includes(UNCLASSIFIED_STRATEGY)
+  if (!withNull) return { kind: 'in', column: 'strategy_type', values: codes }
+  if (!codes.length) return { kind: 'or', expr: 'strategy_type.is.null' }
+  return { kind: 'or', expr: `strategy_type.in.(${codes.join(',')}),strategy_type.is.null` }
+}
+
+/** 백만원 단위 입력 → 원(₩) 문자열. 숫자가 아니면 미적용(null)으로 되돌린다. */
+function millionToWon(input: string): string | null {
+  if (input.trim() === '') return null
+  const n = Number(input)
+  return Number.isFinite(n) ? String(Math.round(n * 1_000_000)) : null
 }
 
 /** 목록 표시 컬럼 + 담당자·생성자 임베드. */
@@ -315,8 +369,24 @@ export function useFundListPage(
         narrow.push({ kind: 'in', column: 'source_type', values: filters.sources })
       if (filters.characters.length)
         narrow.push({ kind: 'in', column: 'character_type', values: filters.characters })
+      // 탭이 이미 같은 축을 스코프로 걸었으면 필터는 무시한다(칸도 화면에서 내려 둔다).
+      if (!strategy && filters.strategies.length)
+        narrow.push(strategyCondition(filters.strategies))
       if (filters.fundTypes.length)
         narrow.push({ kind: 'in', column: 'fund_type', values: filters.fundTypes })
+
+      // 존속기간은 "이 구간에 존속 중"으로 읽는다 — 지정한 구간과 펀드의 존속기간이 겹치면
+      // 걸린다(구간 안에 통째로 들어갈 필요는 없다). 존속기간이 비어 있는 펀드는
+      // 겹친다고 단정할 근거가 없어 이 필터를 걸면 빠진다.
+      if (filters.termTo) narrow.push({ kind: 'lte', column: 'term_start', value: filters.termTo })
+      if (filters.termFrom) narrow.push({ kind: 'gte', column: 'term_end', value: filters.termFrom })
+
+      // 잔액은 DB 생성 열(funds.balance = 약정총액 - 집행액)로 건다 — 목록이 서버
+      // 페이지네이션이라 화면에서 계산해 거르면 페이지와 건수가 어긋난다(20260803130000).
+      const balanceMin = millionToWon(filters.balanceMinMillion)
+      const balanceMax = millionToWon(filters.balanceMaxMillion)
+      if (balanceMin !== null) narrow.push({ kind: 'gte', column: 'balance', value: balanceMin })
+      if (balanceMax !== null) narrow.push({ kind: 'lte', column: 'balance', value: balanceMax })
 
       const raw = await fetchLedgerPage<Record<string, unknown>>({
         table: 'funds',

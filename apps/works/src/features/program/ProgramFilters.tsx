@@ -16,7 +16,7 @@ interface ProgramFiltersProps {
 }
 
 /**
- * 프로그램 목록 복수 필터 바: 상태 + 사업구분 + 담당 부서(모두 다중선택) + 시작일 범위.
+ * 프로그램 목록 복수 필터 바: 상태 + 사업구분 + 담당 부서(모두 다중선택) + 운영기간(시작일~종료일).
  * 필터 값은 상위(ProgramListTab)가 소유하며, 본 컴포넌트는 표시·변경만 담당한다.
  */
 export function ProgramFilters({ filters, onChange }: ProgramFiltersProps) {
@@ -76,11 +76,14 @@ export function ProgramFilters({ filters, onChange }: ProgramFiltersProps) {
         onChange={(departmentLineages) => onChange({ ...filters, departmentLineages })}
       />
 
+      {/* 두 칸은 표의 두 열(운영 시작일·운영 종료일)을 그대로 묻는다 — 칸 안에 적힌 이름이
+          곧 어느 열을 거르는지의 답이라 별도 라벨을 앞에 두지 않는다. */}
       <DateRangeFilter
-        label="시작일"
+        fromLabel="운영 시작일"
+        toLabel="운영 종료일"
         from={filters.startFrom}
-        to={filters.startTo}
-        onChange={({ from, to }) => onChange({ ...filters, startFrom: from, startTo: to })}
+        to={filters.endTo}
+        onChange={({ from, to }) => onChange({ ...filters, startFrom: from, endTo: to })}
       />
 
       {active && (
