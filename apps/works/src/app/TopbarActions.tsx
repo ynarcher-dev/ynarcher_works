@@ -9,11 +9,19 @@ import { useRightPanel, type RightPanelKey } from '@/app/rightPanel'
  * 상단바 아이콘 버튼 공통 규격(40px 정사각, 흰 배경 위 회색 아이콘).
  * 좌측의 사이드바 접기 토글도 이 규격을 써서 상단바 양 끝 버튼의 크기·여백을 일치시킨다.
  */
-export const topbarIconButton = cn(
-  'flex size-10 shrink-0 items-center justify-center rounded-radius-md text-gray-500',
+const topbarButtonBase = cn(
+  'flex h-10 shrink-0 items-center justify-center rounded-radius-md text-gray-500',
   'transition-colors duration-fast hover:bg-gray-100 hover:text-gray-900',
   'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10',
 )
+
+export const topbarIconButton = cn(topbarButtonBase, 'w-10')
+
+/**
+ * 글자를 함께 다는 상단바 버튼(개인 메뉴). 아이콘 버튼과 높이·모서리·색·호버가 같고
+ * 폭만 내용에 맞춰 늘어난다 — 한 줄에 선 버튼들의 높이가 갈리지 않게 규격을 공유한다.
+ */
+const topbarLabeledButton = cn(topbarButtonBase, 'gap-2 px-2.5')
 
 /**
  * 전역 진입점(OFFICE 권한 필요, 없으면 감춘다). 페이지 이동이 아니라 우측 슬라이드오버를
@@ -100,9 +108,16 @@ export function TopbarActions() {
         title="개인 메뉴"
         aria-pressed={active === 'me'}
         onClick={() => toggle('me')}
-        className={cn(topbarIconButton, active === 'me' && 'bg-gray-100 text-gray-900')}
+        className={cn(topbarLabeledButton, active === 'me' && 'bg-gray-100 text-gray-900')}
       >
-        <CircleUserRound aria-hidden className="size-5" strokeWidth={1.8} />
+        <CircleUserRound aria-hidden className="size-5 shrink-0" strokeWidth={1.8} />
+        {/* 아이콘 옆에 지금 로그인한 사람의 이름을 적는다 — 이 버튼만 '나'에 관한 것이라,
+            이름이 곧 이 자리가 무엇인지에 대한 설명이 된다(계정 확인도 겸한다).
+            글자색은 버튼이 정한다(호버·활성에서 아이콘과 함께 진해진다). 이름이 길어도
+            상단바가 밀리지 않게 잘라 두고, 좁은 화면에서는 아이콘만 남긴다. */}
+        <span className="hidden max-w-32 truncate text-body font-medium sm:inline">
+          {user?.name || '개인 메뉴'}
+        </span>
       </button>
     </div>
   )
