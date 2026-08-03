@@ -29,8 +29,11 @@ function daysSinceHire(hireDate: string): number | null {
  *
  * 계정 조작('내 메뉴'·로그아웃)도 이 카드가 갖는다 — 사이드바 하단 계정 메뉴를 걷어내고
  * "지금 로그인한 사람"을 이미 말하고 있는 자리 하나로 모았다(2026-08-03).
+ *
+ * `onNavigate`는 이 카드가 페이지를 옮길 때 호출된다 — 슬라이드오버(개인 메뉴) 안에서 열렸을
+ * 때 패널을 닫는 용도다. 대시보드에 놓일 때는 넘기지 않는다(닫을 것이 없다).
  */
-export function WelcomeCard() {
+export function WelcomeCard({ onNavigate }: { onNavigate?: () => void }) {
   const userId = useAuthStore((s) => s.user?.id)
   const { data: me } = useEmployee(userId)
   const { data: depts } = useDepartments()
@@ -69,7 +72,13 @@ export function WelcomeCard() {
         {/* 계정 조작은 글자 버튼 두 칸으로 둔다. 로그아웃은 되돌리기 어려운 동작이지만
             대시보드에 상시 놓이므로, 빨간 버튼 대신 호버에서만 위험색을 드러내는 톤을 쓴다. */}
         <div className="flex shrink-0 items-center gap-2">
-          <Button variant="outline" onClick={() => navigate('/me')}>
+          <Button
+            variant="outline"
+            onClick={() => {
+              navigate('/me')
+              onNavigate?.()
+            }}
+          >
             내 메뉴
           </Button>
           <Button variant="outline-danger" onClick={signOut}>

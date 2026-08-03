@@ -1,5 +1,5 @@
 import { cn } from '@ynarcher/ui'
-import { Bell, CalendarDays } from 'lucide-react'
+import { Bell, CalendarDays, CircleUserRound } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { hasWorkspaceRead, useAuthStore } from '@/auth/authStore'
 import { useNotifications } from '@/features/notifications/notificationHooks'
@@ -26,9 +26,9 @@ const QUICK_LINKS: { label: string; icon?: LucideIcon; key: RightPanelKey; text?
 ]
 
 /**
- * 상단바 우측 전역 액션 — AI·캘린더·알림 진입점. 셋 다 우측 슬라이드오버(RightPanelHost)를
+ * 상단바 우측 전역 액션 — AI·캘린더·알림·개인 메뉴 진입점. 넷 다 우측 슬라이드오버(RightPanelHost)를
  * 여는 토글이며, 하나를 열면 나머지는 닫힌다(단일 활성). 상단바는 패널보다 z가 높아 패널을 연
- * 채로도 다른 진입점으로 전환할 수 있다. 워크스페이스 전환은 사이드바, 계정은 OFFICE 환영 카드 소관.
+ * 채로도 다른 진입점으로 전환할 수 있다. 워크스페이스 전환은 사이드바 소관.
  */
 export function TopbarActions() {
   const user = useAuthStore((s) => s.user)
@@ -85,6 +85,20 @@ export function TopbarActions() {
             {unread > 9 ? '9+' : unread}
           </span>
         )}
+      </button>
+      {/* 개인 메뉴 — 대시보드 우측 열(인사말·근무체크·전자결재)을 그대로 연다. 다른 워크스페이스에
+          있다가 출퇴근을 찍으려고 OFFICE로 돌아오지 않게 하는 것이 이 버튼의 목적이라, OFFICE
+          권한과 무관하게(내 계정·내 근태는 누구에게나 자기 것이다) 항상 노출한다.
+          가장 오른쪽 끝이 제자리다 — '나'에 관한 것은 전역 기능들 바깥에 선다. */}
+      <button
+        type="button"
+        aria-label="개인 메뉴"
+        title="개인 메뉴"
+        aria-pressed={active === 'me'}
+        onClick={() => toggle('me')}
+        className={cn(topbarIconButton, active === 'me' && 'bg-gray-100 text-gray-900')}
+      >
+        <CircleUserRound aria-hidden className="size-5" strokeWidth={1.8} />
       </button>
     </div>
   )

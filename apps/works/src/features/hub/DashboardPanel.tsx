@@ -1,7 +1,5 @@
 import { Card } from '@ynarcher/ui'
-import { ApprovalCard } from '@/features/hub/dashboard/ApprovalCard'
-import { WelcomeCard } from '@/features/hub/dashboard/WelcomeCard'
-import { WorkCheckCard } from '@/features/hub/dashboard/WorkCheckCard'
+import { PersonalPanel } from '@/features/hub/dashboard/PersonalPanel'
 
 /** 최근 72시간 내 게시글 표시 뱃지. 대시보드 외 게시판·자료실·회의록 목록이 함께 쓴다. */
 export function NewBadge() {
@@ -35,11 +33,10 @@ export function DashboardPanel() {
       <div className="space-y-4 lg:col-span-2">
         <DashboardSlot title="주요 영역" />
       </div>
-      {/* 우측(1/3): 인사말 → 근무체크 → 전자결재. 전자결재는 배치만 잡힌 껍데기다(건수 0 고정). */}
-      <div className="space-y-4 lg:col-span-1">
-        <WelcomeCard />
-        <WorkCheckCard />
-        <ApprovalCard />
+      {/* 우측(1/3): 인사말 → 근무체크 → 전자결재. 같은 한 벌이 상단바 '개인 메뉴' 슬라이드오버에도
+          그대로 서므로 구성은 PersonalPanel이 소유한다(전자결재는 배치만 잡힌 껍데기 — 건수 더미). */}
+      <div className="lg:col-span-1">
+        <PersonalPanel />
       </div>
     </div>
   )
