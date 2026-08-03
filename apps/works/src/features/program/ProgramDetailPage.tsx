@@ -129,17 +129,23 @@ export function ProgramDetailPage() {
         </>
       ) : (
         <>
-          <div className="flex items-center justify-between gap-3">
-            <BackButton onClick={backToOverview} />
-            <div className="flex items-center gap-2">
-              <span className="text-body font-semibold text-gray-900">
-                {openMod?.title?.trim() || PANEL_LABEL[tab]}
-              </span>
-              <Badge tone={PROGRAM_STATUS_TONE[program.status] ?? 'neutral'}>
-                {PROGRAM_STATUS_LABEL[program.status] ?? program.status}
-              </Badge>
+          {/*
+            글쓰기는 헤더를 자기가 들고 있다 — 뒤로가기와 수정이 한 줄에 서야 하고,
+            모듈명·사업 상태는 본문을 읽는 데 필요한 정보가 아니다(모듈명은 이미 글의 제목이다).
+          */}
+          {tab !== 'post' && (
+            <div className="flex items-center justify-between gap-3">
+              <BackButton onClick={backToOverview} />
+              <div className="flex items-center gap-2">
+                <span className="text-body font-semibold text-gray-900">
+                  {openMod?.title?.trim() || PANEL_LABEL[tab]}
+                </span>
+                <Badge tone={PROGRAM_STATUS_TONE[program.status] ?? 'neutral'}>
+                  {PROGRAM_STATUS_LABEL[program.status] ?? program.status}
+                </Badge>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* 프로그램 단위 화면(집계·타임라인)은 programId, 인스턴스 단위 운영 화면은 moduleId로 렌더한다. */}
           {tab === 'timeline' && <TimelinePanel programId={id} />}
@@ -149,6 +155,7 @@ export function ProgramDetailPage() {
               programId={id}
               moduleId={moduleId}
               moduleTitle={openMod?.title?.trim() || '글쓰기'}
+              onBack={backToOverview}
             />
           )}
           {moduleId && tab === 'recruitment' && (
