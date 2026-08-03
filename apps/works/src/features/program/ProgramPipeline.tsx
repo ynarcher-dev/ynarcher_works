@@ -17,7 +17,6 @@ import {
   programFlowGroups,
 } from '@/features/program/config'
 import {
-  hasActiveProgramFilters,
   useProgramStatusCounts,
   type ProgramFilters as Filters,
 } from '@/features/program/programsPoolHooks'
@@ -83,14 +82,15 @@ export function ProgramPipeline({
   const config = useProgramWorkspace()
   const { data, isPending } = useProgramStatusCounts(mineUserId, keyword, filters)
   const selectedStatuses = filters.statuses
-  const narrowed = keyword !== '' || hasActiveProgramFilters(filters)
 
   // 첫 조회 중에는 카드 높이만큼 자리를 잡아 둔다(도착하는 순간 목록이 밀려 내려가지 않게).
   if (isPending) return <Skeleton className="h-[8.5rem] w-full rounded-radius-lg" />
-  // 볼 사업이 하나도 없으면 빈 프로세스 줄을 그리지 않는다 — 목록의 빈 상태가 이미 답한다.
-  // 다만 검색어·필터로 좁혀서 0건이 된 경우에는 남긴다. 이때 카드를 걷어 버리면 방금 누른
-  // 단계를 되돌릴 '단계 선택 해제'까지 함께 사라져, 빈 화면에서 빠져나올 손잡이가 없어진다.
-  if (!data || (data.total === 0 && !narrowed)) return null
+  // 조회에 실패했을 때만 자리를 비운다. 0건이어도 줄은 그린다 —
+  // 종전에는 "목록의 빈 상태가 이미 답한다"며 걷었지만, 그러면 아직 등록이 없는 워크스페이스
+  // (또는 내가 맡은 건이 없는 '내 ~ 관리')에서만 목록 위 구조가 통째로 달라져, 화면을 옮길
+  // 때마다 있던 카드가 사라지는 것으로 보인다. 빈 줄은 아무것도 아닌 게 아니라 "이 사업이
+  // 앞으로 밟을 단계"를 미리 보여 주는 자리이고, 단계 선택 해제 손잡이도 여기 붙어 있다.
+  if (!data) return null
 
   const countOf = (status: string) => data.byStatus[status] ?? 0
   const stepOf = (status: string): FlowStep => ({
