@@ -93,11 +93,7 @@ export function MyPage() {
           <CardShell>
             {/* 사진은 내 신원을 이루는 정보이므로 계정 정보 카드 안, 이름 왼쪽에 둔다(별도 카드 없음). */}
             <div className="flex flex-col gap-4 sm:flex-row">
-              <PhotoPicker
-                value={photo}
-                onChange={setPhoto}
-                className="shrink-0 flex-col items-start gap-2"
-              />
+              <PhotoPicker value={photo} onChange={setPhoto} vertical className="shrink-0" />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   {/* 페이지 제목('내 계정 관리')이 따로 있으므로 이름은 카드 제목 층이다. */}
