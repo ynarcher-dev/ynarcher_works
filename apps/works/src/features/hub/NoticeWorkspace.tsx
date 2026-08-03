@@ -45,7 +45,8 @@ export function NoticeWorkspace() {
     },
     // 첨부·조회 열은 게시판 목록과 같은 규격을 공유한다.
     attachmentColumn<NoticeItem>((n) => attachmentIds?.has(n.post.id) ?? false),
-    viewsColumn<NoticeItem>((n) => n.post),
+    // 열 순서도 게시판 목록(BoardPanel)과 맞춘다 — 게시판 열이 첨부 바로 우측,
+    // 조회는 그 다음(여러 게시판을 섞어 보는 뷰라 소속을 먼저 식별한다).
     {
       key: 'board',
       header: '게시판',
@@ -54,6 +55,7 @@ export function NoticeWorkspace() {
       // 본문 셀은 DataTable 기본 text-body를 상속한다(캡션 크기를 덧씌우면 다른 열과 어긋남).
       render: (n) => <span className="text-gray-600">{n.boardLabel}</span>,
     },
+    viewsColumn<NoticeItem>((n) => n.post),
   ]
 
   return (
