@@ -16,6 +16,7 @@ import { ROLE_LABELS } from '@/features/management/config'
 import { affiliationLabel } from '@/features/management/departmentOptions'
 import { EmployeeNoteFields } from '@/features/management/EmployeeNoteFields'
 import { useJobTitleLabel } from '@/features/management/jobTitleHooks'
+import { MyPasswordCard } from '@/features/management/MyPasswordCard'
 import { noteEditorInit, parseNote, type EmployeeNote } from '@/features/management/noteConfig'
 import {
   useDepartments,
@@ -36,7 +37,10 @@ function str(v: unknown): string {
  * 어느 탭에서나 보여야 하므로 탭 위에 고정하고, 그 아래 내용만 갈아 끼운다.
  * 항목이 늘면 여기에 키를 더하고 아래 분기에 카드를 붙인다.
  */
-const MY_TABS: TabItem[] = [{ key: 'profile', label: '소개' }]
+const MY_TABS: TabItem[] = [
+  { key: 'profile', label: '소개' },
+  { key: 'password', label: '비밀번호 변경' },
+]
 
 /** 라벨: 값 한 줄 — 규격은 공용 `InfoField`가 소유한다. */
 const Info = InfoField
@@ -107,9 +111,12 @@ export function MyPage() {
       {/* 저장은 사진·약력·노트를 한 번에 반영한다(카드별 저장 없음) — 페이지 머리 우측에 고정으로 둔다. */}
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-title-md font-bold text-gray-900">내 계정 관리</h1>
-        <Button type="button" onClick={() => void save()} disabled={update.isPending}>
-          저장
-        </Button>
+        {/* 비밀번호 탭은 저장 경로가 달라 자기 버튼으로 끝내므로 이 버튼을 내린다. */}
+        {tab !== 'password' && (
+          <Button type="button" onClick={() => void save()} disabled={update.isPending}>
+            저장
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -160,6 +167,9 @@ export function MyPage() {
               </CardShell>
             </>
           )}
+
+          {/* 비밀번호는 프로필과 저장 경로가 달라(Auth) 카드가 자기 버튼으로 끝낸다. */}
+          {tab === 'password' && <MyPasswordCard />}
         </div>
 
         {/* 우측(1/3): 자료 업로드(공용 자료 패널 재사용). */}
