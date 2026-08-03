@@ -12,8 +12,6 @@ import { useProgramWorkspace } from '@/features/program/workspace'
 interface ProgramPipelineProps {
   /** 집계 스코프. 목록과 같은 값을 받아 같은 모수를 본다. */
   mineUserId: string | null
-  category: string | null
-  includeUnclassified: boolean
   /** 목록에 걸린 상태 필터. 여기서는 '선택된 단계'로 표시된다. */
   selectedStatuses: string[]
   /** 단계 클릭 — 해당 상태를 목록 필터에서 켜고 끈다. */
@@ -54,14 +52,12 @@ interface FlowGroup {
  */
 export function ProgramPipeline({
   mineUserId,
-  category,
-  includeUnclassified,
   selectedStatuses,
   onToggleStatus,
   onClearStatuses,
 }: ProgramPipelineProps) {
   const config = useProgramWorkspace()
-  const { data, isPending } = useProgramStatusCounts(mineUserId, category, includeUnclassified)
+  const { data, isPending } = useProgramStatusCounts(mineUserId)
 
   // 첫 조회 중에는 카드 높이만큼 자리를 잡아 둔다(도착하는 순간 목록이 밀려 내려가지 않게).
   if (isPending) return <Skeleton className="h-[8.5rem] w-full rounded-radius-lg" />

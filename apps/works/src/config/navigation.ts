@@ -1,11 +1,4 @@
 import type { WorkspaceKey } from '@/auth/types'
-import {
-  AC_CATEGORIES,
-  MNA_CATEGORIES,
-  PROJECT_CATEGORIES,
-  categoryTab,
-  type ProgramCategoryOption,
-} from '@/config/programCategories'
 import { ADMIN_TAG_CONFIGS } from '@/features/admin/tagConfig'
 
 /** 사이드바 세부 메뉴 항목. tab은 페이지 내부 섹션을 제어하는 `?tab=` 쿼리 값. */
@@ -78,33 +71,22 @@ export function resolveListTab(raw: string | null, fallback = 'mine'): string {
 }
 
 /**
- * 사업 워크스페이스(AC/M&A/PROJECT) 공용 사이드바 구성.
- * 내 ~ 관리 → 전체 ~ → 사업구분(카테고리)별 항목 순으로 나열한다. 내 것이 맨 위에 오고,
- * 그 아래로 전체 → 분류 순으로 범위가 넓어진다.
- * 앞 두 항목 라벨은 워크스페이스마다 다르므로(예: M&A는 `내 딜 관리`/`전체 딜`) 인자로 받는다.
- * 카테고리 항목의 `tab`은 소문자 카테고리 값이며(예: `pe_fund`), ProgramWorkspacePage가
- * 이를 목록의 category 스코프로 해석한다.
+ * 사업 워크스페이스(AC/M&A/PROJECT) 공용 사이드바 구성 — `내 ~ 관리` → `전체 ~` 두 줄.
+ * 내 것이 맨 위에 오고 그 아래로 범위가 넓어진다. 라벨은 워크스페이스마다 다르므로
+ * (예: M&A는 `내 딜 관리`/`전체 딜`) 인자로 받는다.
  *
- * '전체 ~'는 '내 ~ 관리'와 같은 목록 화면을 범위만 넓혀 그대로 쓴다(`?tab=all`). 카테고리
- * 항목은 여전히 각 워크스페이스의 '기타'가 미분류(category is null) 건을 함께 담아
- * (ProgramCategoryOption.includeUnclassified) 사각지대를 막는다.
+ * 2026-08-03: 사업구분(카테고리)별 세분화 항목을 내렸다. 분류를 메뉴로 두면 그것이
+ * '어디에 있는가'가 되어 상태·부서 같은 다른 축과 함께 걸 수 없고(공공 사업 중 진행중만 같은
+ * 질문에 답할 수 없다), 분류를 하나 늘릴 때마다 사이드바가 길어진다. 이제 사업구분은 목록의
+ * 필터 축 하나이며, 미분류 건은 그 필터의 '미지정' 선택지가 답한다 — 종전에 '기타'가 맡던
+ * 사각지대 방어는 `전체 ~`가 이미 구분 무관 전부를 보여주므로 필요 없다.
  */
-function programSubnav(
-  mineLabel: string,
-  allLabel: string,
-  categories: readonly ProgramCategoryOption[],
-): SubNavGroup[] {
+function programSubnav(mineLabel: string, allLabel: string): SubNavGroup[] {
   return [
     {
       items: [
         { label: mineLabel, tab: 'mine', emoji: MINE_EMOJI },
         { label: allLabel, tab: LIST_ALL_TAB, dividerBefore: true },
-        ...categories.map((c, i) => ({
-          label: c.menuLabel,
-          tab: categoryTab(c.value),
-          // 카테고리 묶음 시작에만 구분선을 둔다.
-          ...(i === 0 ? { dividerBefore: true } : {}),
-        })),
       ],
     },
   ]
@@ -168,7 +150,7 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       ],
     },
   ],
-  ac: programSubnav('내 사업 관리', '전체 사업', AC_CATEGORIES),
+  ac: programSubnav('내 사업 관리', '전체 사업'),
   // FUND: 내 펀드 → 전체 펀드 → 펀드 종류(AC/VC/PE) 순.
   fund: [
     {
@@ -184,7 +166,7 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
     },
   ],
   // M&A/PE는 AC와 동일한 사업 원장 구조(features/program)를 공유한다.
-  mna: programSubnav('내 딜 관리', '전체 딜', MNA_CATEGORIES),
+  mna: programSubnav('내 딜 관리', '전체 딜'),
   admin: [
     {
       group: '시스템 관리',
@@ -211,7 +193,7 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
     },
   ],
   // PROJECT도 AC와 동일한 사업 원장 구조(features/program)를 공유한다.
-  project: programSubnav('내 프로젝트 관리', '전체 프로젝트', PROJECT_CATEGORIES),
+  project: programSubnav('내 프로젝트 관리', '전체 프로젝트'),
   // OFFICE: 임직원 정보·전사 캘린더 + 게시판(공지사항 고정 + 일반, 아코디언 없이 평탄 나열).
   // 신규 게시판은 모두 이곳에 생성·노출된다.
   office: [

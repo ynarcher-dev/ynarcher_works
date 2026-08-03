@@ -1,7 +1,6 @@
 import { BackButton, Badge, Banner, Button, Spinner } from '@ynarcher/ui'
 import { useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { categoryFromTab } from '@/config/programCategories'
 import { DetailDeleteButton } from '@/components/DetailDeleteButton'
 import { useDeactivateProgram } from '@/features/program/programsPoolHooks'
 import { MentoringPanel } from '@/features/program/MentoringPanel'
@@ -75,12 +74,10 @@ export function ProgramDetailPage() {
   const navigate = useNavigate()
   const deactivate = useDeactivateProgram()
   const [params] = useSearchParams()
-  // 출처 목록 탭(mine/all/카테고리). 알 수 없는 값이면 전체 목록으로 폴백한다.
+  // 출처 목록 탭(mine/all). 알 수 없는 값이면 전체 목록으로 폴백한다 —
+  // 사업구분별 탭은 폐지되었으므로 옛 링크로 들어온 카테고리 값도 여기서 전체로 접힌다.
   const fromTab = params.get('tab') ?? ''
-  const backTab =
-    fromTab === 'mine' || fromTab === 'all' || categoryFromTab(config.categories, fromTab)
-      ? fromTab
-      : 'all'
+  const backTab = fromTab === 'mine' || fromTab === 'all' ? fromTab : 'all'
   const backTo = `${config.basePath}?tab=${backTab}`
   const { data: program, isLoading } = useProgram(id)
   const [tab, setTab] = useState<Tab>('overview')

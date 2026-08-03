@@ -30,6 +30,12 @@ export interface ProgramFilters {
   /** 상태(program_status). 대기/진행중/종료/취소. */
   statuses: string[]
   /**
+   * 사업구분(category). 값은 워크스페이스 config.categories의 코드이며,
+   * 미분류(category is null)는 UNCLASSIFIED 표식으로 함께 고른다 — 종전에 사이드바 '기타'가
+   * includeUnclassified로 떠맡던 역할이 여기로 옮겨 왔다(2026-08-03 세분화 메뉴 폐지).
+   */
+  categories: string[]
+  /**
    * 담당 부서 계보 id(departments.lineage_id). 메인/협업을 가리지 않고 걸린다 —
    * 목록 표기에서 '외 N'으로 접힌 협업 부서로도 사업을 찾을 수 있어야 한다.
    * 부서 id가 아니라 계보 id인 이유: 부서 id는 조직 버전마다 새로 발급되므로, id로 거르면
@@ -42,9 +48,16 @@ export interface ProgramFilters {
   startTo: string
 }
 
+/**
+ * 사업구분 필터에서 '미지정'(category is null)을 가리키는 표식.
+ * 실제 분류 코드와 겹치지 않도록 DB에 존재할 수 없는 모양을 쓴다.
+ */
+export const UNCLASSIFIED_CATEGORY = '__none__'
+
 /** 필터 초기값(전부 미적용). */
 export const EMPTY_PROGRAM_FILTERS: ProgramFilters = {
   statuses: [],
+  categories: [],
   departmentLineages: [],
   startFrom: '',
   startTo: '',
@@ -54,10 +67,23 @@ export const EMPTY_PROGRAM_FILTERS: ProgramFilters = {
 export function hasActiveProgramFilters(f: ProgramFilters): boolean {
   return (
     f.statuses.length > 0 ||
+    f.categories.length > 0 ||
     f.departmentLineages.length > 0 ||
     f.startFrom !== '' ||
     f.startTo !== ''
   )
+}
+
+/**
+ * 사업구분 필터 → 조회 조건. '미지정'이 섞이면 `is null`을 OR로 함께 묶어야 하므로
+ * 단순 in 조건으로 끝나지 않는다.
+ */
+function categoryCondition(selected: string[]): LedgerCondition {
+  const codes = selected.filter((c) => c !== UNCLASSIFIED_CATEGORY)
+  const withNull = selected.includes(UNCLASSIFIED_CATEGORY)
+  if (!withNull) return { kind: 'in', column: 'category', values: codes }
+  if (!codes.length) return { kind: 'or', expr: 'category.is.null' }
+  return { kind: 'or', expr: `category.in.(${codes.join(',')}),category.is.null` }
 }
 
 /** 사업 목록 페이지. 다른 원장 목록과 동일 규약(rows + 건수 둘). */
@@ -70,15 +96,16 @@ export type ProgramPage = LedgerPage<Program>
 const PROGRAM_LIVE_COLUMNS = ['deleted_at'] as const
 
 /**
- * '이 목록이 무엇인가'를 정하는 스코프 조건(내 사업 / 사업구분).
+ * '이 목록이 무엇인가'를 정하는 스코프 조건(내 사업 / 전체).
  * 목록 조회와 진행 현황 집계가 반드시 같은 모수를 봐야 하므로 한 곳에서 만든다 —
  * 갈라지면 파이프라인 단계 합과 목록 전체 건수가 어긋난다.
+ *
+ * 사업구분은 여기 없다. 세분화 메뉴를 내린 뒤로 분류는 '이 목록이 무엇인가'가 아니라
+ * '지금 무엇을 찾고 있나'(필터)이며, 그래서 진행 현황 집계에도 반영되지 않는다.
  */
 async function programScopeConditions(
   config: ProgramWorkspaceConfig,
   mineUserId: string | null | undefined,
-  category: string | null | undefined,
-  includeUnclassified: boolean,
 ): Promise<LedgerCondition[]> {
   const scope: LedgerCondition[] = []
   // '내 사업' 스코프: 생성자(created_by=나) OR 담당자(담당자 원장.user_id=나).
@@ -88,13 +115,6 @@ async function programScopeConditions(
     const parts = [`created_by.eq.${mineUserId}`]
     if (ids.length) parts.push(`id.in.(${ids.join(',')})`)
     scope.push({ kind: 'or', expr: parts.join(',') })
-  }
-  // 사업구분은 스코프의 일부이므로 검색·필터와 별개로 항상 적용한다.
-  // '기타'는 미분류(null)까지 함께 담아 사각지대를 막는다.
-  if (category && includeUnclassified) {
-    scope.push({ kind: 'or', expr: `category.eq.${category},category.is.null` })
-  } else if (category) {
-    scope.push({ kind: 'eq', column: 'category', value: category })
   }
   return scope
 }
@@ -124,35 +144,15 @@ export function useProgramsPage(
   pageSize: number,
   /** 지정 시 생성자(created_by) 또는 담당자(담당자 원장)가 이 사용자인 사업만 조회한다('내 사업'). */
   mineUserId?: string | null,
-  /** 지정 시 해당 사업구분(category)만 조회한다(사이드바 카테고리 세분화 메뉴). */
-  category?: string | null,
-  /** category와 함께 미분류(category is null) 건도 포함한다('기타' 항목). */
-  includeUnclassified = false,
 ) {
   const config = useProgramWorkspace()
   return useQuery({
-    queryKey: [
-      config.key,
-      'programs',
-      'page',
-      keyword,
-      filters,
-      page,
-      pageSize,
-      mineUserId ?? null,
-      category ?? null,
-      includeUnclassified,
-    ],
+    queryKey: [config.key, 'programs', 'page', keyword, filters, page, pageSize, mineUserId ?? null],
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<ProgramPage> => {
       const kw = sanitizeOrValue(keyword)
 
-      const scope = await programScopeConditions(
-        config,
-        mineUserId,
-        category,
-        includeUnclassified,
-      )
+      const scope = await programScopeConditions(config, mineUserId)
 
       const narrow: LedgerCondition[] = []
       // 검색: 프로그램명 + 생성자(이름 → created_by id 역조회).
@@ -171,6 +171,7 @@ export function useProgramsPage(
       }
       if (filters.statuses.length)
         narrow.push({ kind: 'in', column: 'status', values: filters.statuses })
+      if (filters.categories.length) narrow.push(categoryCondition(filters.categories))
       if (filters.startFrom)
         narrow.push({ kind: 'gte', column: 'start_date', value: filters.startFrom })
       if (filters.startTo)
@@ -213,27 +214,13 @@ export interface ProgramStatusCounts {
 export function useProgramStatusCounts(
   /** 지정 시 생성자 또는 담당자가 이 사용자인 사업만 집계한다('내 사업'). */
   mineUserId?: string | null,
-  category?: string | null,
-  includeUnclassified = false,
 ) {
   const config = useProgramWorkspace()
   return useQuery({
-    queryKey: [
-      config.key,
-      'programs',
-      'status-counts',
-      mineUserId ?? null,
-      category ?? null,
-      includeUnclassified,
-    ],
+    queryKey: [config.key, 'programs', 'status-counts', mineUserId ?? null],
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<ProgramStatusCounts> => {
-      const conditions = await programScopeConditions(
-        config,
-        mineUserId,
-        category,
-        includeUnclassified,
-      )
+      const conditions = await programScopeConditions(config, mineUserId)
       const base = { table: config.tables.programs, liveColumns: PROGRAM_LIVE_COLUMNS }
       const statuses = programStatusOptions(config.hasProposalStage)
       const [total, ...perStatus] = await Promise.all([

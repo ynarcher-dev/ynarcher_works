@@ -4,6 +4,7 @@ import { useDepartmentOptions } from '@/features/management/departmentOptions'
 import { PROGRAM_STATUS_LABEL, programStatusOptions } from '@/features/program/config'
 import {
   EMPTY_PROGRAM_FILTERS,
+  UNCLASSIFIED_CATEGORY,
   hasActiveProgramFilters,
   type ProgramFilters as Filters,
 } from '@/features/program/programsPoolHooks'
@@ -15,8 +16,8 @@ interface ProgramFiltersProps {
 }
 
 /**
- * 프로그램 목록 복수 필터 바: 상태(다중선택) + 담당 부서(다중선택) + 시작일 범위(부터·까지).
- * 상태는 상위(AcWorkspaceTab)가 소유하며, 본 컴포넌트는 표시·변경만 담당한다.
+ * 프로그램 목록 복수 필터 바: 상태 + 사업구분 + 담당 부서(모두 다중선택) + 시작일 범위.
+ * 필터 값은 상위(ProgramListTab)가 소유하며, 본 컴포넌트는 표시·변경만 담당한다.
  */
 export function ProgramFilters({ filters, onChange }: ProgramFiltersProps) {
   const config = useProgramWorkspace()
@@ -30,6 +31,15 @@ export function ProgramFilters({ filters, onChange }: ProgramFiltersProps) {
         label: PROGRAM_STATUS_LABEL[value] ?? value,
       })),
     [config.hasProposalStage],
+  )
+  // 사업구분 선택지 끝에 '미지정'을 둔다 — 세분화 메뉴를 내린 뒤로 미분류(category is null)
+  // 건을 골라 볼 길이 여기뿐이다. 종전에는 사이드바 '기타'가 그 역할을 겸했다.
+  const categoryOptions = useMemo(
+    () => [
+      ...config.categories.map((c) => ({ value: c.value, label: c.label })),
+      { value: UNCLASSIFIED_CATEGORY, label: '미지정' },
+    ],
+    [config.categories],
   )
   // 선택지는 오늘의 조직도(활성 버전) 기준이되, 값은 계보 id라 지난 단계에 지정된 사업도 함께 걸린다.
   // 라벨은 전체 경로다 — 체크박스 목록에서 동명의 말단('1팀')을 가리려면 상위가 다 보여야 한다.
@@ -47,6 +57,17 @@ export function ProgramFilters({ filters, onChange }: ProgramFiltersProps) {
         selected={filters.statuses}
         onChange={(statuses) => onChange({ ...filters, statuses })}
       />
+
+      {/* 분류를 운용하지 않는 워크스페이스에서는 필터 자체를 감춘다(선택지가 '미지정' 하나뿐인
+          필터는 걸 이유가 없다). 등록 폼의 사업구분 필드와 같은 판정이다. */}
+      {config.categories.length > 0 && (
+        <MultiSelectFilter
+          label="사업구분"
+          options={categoryOptions}
+          selected={filters.categories}
+          onChange={(categories) => onChange({ ...filters, categories })}
+        />
+      )}
 
       <MultiSelectFilter
         label="담당 부서"

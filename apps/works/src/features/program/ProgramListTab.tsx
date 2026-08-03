@@ -20,10 +20,6 @@ const PAGE_SIZE = 30
 interface ProgramListTabProps {
   /** 'mine' = 내가 담당자/생성자인 사업만, 'all' = 전체 사업. */
   scope: 'mine' | 'all'
-  /** 지정 시 해당 사업구분만 조회한다(사이드바 카테고리 세분화 메뉴). */
-  category?: string
-  /** category와 함께 미분류(category is null) 건도 포함한다('기타' 항목). */
-  includeUnclassified?: boolean
   /** 상세 진입 시 넘길 출처 탭. 뒤로가기·사이드바 활성 상태 복원에 쓴다. */
   backTab: string
   /** 목록 위에 진행 현황 프로세스 뷰를 함께 둔다('내 사업 관리' 전용). */
@@ -37,13 +33,7 @@ interface ProgramListTabProps {
  * 비활성화(삭제)는 목록이 아니라 상세 페이지에서 수행한다.
  * scope='mine'이면 생성자(created_by)·담당자가 현재 사용자인 사업만 조회한다.
  */
-export function ProgramListTab({
-  scope,
-  category,
-  includeUnclassified,
-  backTab,
-  showPipeline = false,
-}: ProgramListTabProps) {
+export function ProgramListTab({ scope, backTab, showPipeline = false }: ProgramListTabProps) {
   const config = useProgramWorkspace()
   const navigate = useNavigate()
   const userId = useAuthStore((s) => s.user?.id)
@@ -61,15 +51,7 @@ export function ProgramListTab({
   }, [keyword, filtersKey])
 
   const mineUserId = scope === 'mine' ? userId ?? null : null
-  const { data, isLoading } = useProgramsPage(
-    keyword,
-    filters,
-    page,
-    PAGE_SIZE,
-    mineUserId,
-    category ?? null,
-    includeUnclassified ?? false,
-  )
+  const { data, isLoading } = useProgramsPage(keyword, filters, page, PAGE_SIZE, mineUserId)
 
   /** 단계 토글: 이미 걸린 상태면 빼고, 아니면 더한다(상태 필터와 같은 다중선택 규약). */
   const toggleStatus = (status: string) =>
@@ -85,8 +67,6 @@ export function ProgramListTab({
       {showPipeline && (
         <ProgramPipeline
           mineUserId={mineUserId}
-          category={category ?? null}
-          includeUnclassified={includeUnclassified ?? false}
           selectedStatuses={filters.statuses}
           onToggleStatus={toggleStatus}
           onClearStatuses={() => setFilters((f) => ({ ...f, statuses: [] }))}
