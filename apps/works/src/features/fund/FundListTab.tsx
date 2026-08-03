@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { ListActions } from '@/components/ListActions'
 import { FundListFilters } from '@/features/fund/FundListFilters'
 import { FundListTable } from '@/features/fund/FundListTable'
+import { FundSummaryPanel } from '@/features/fund/FundSummaryPanel'
 import {
   EMPTY_FUND_FILTERS,
   useFundListPage,
@@ -56,6 +57,17 @@ export function FundListTab({ strategy, mineUserId }: FundListTabProps) {
 
   return (
     <div className="space-y-3">
+      {/* 요약 카드는 모든 스코프에 둔다 — 검색어·필터가 집계에 반영되므로 '전체 펀드'에서도
+          "지금 좁혀 놓은 범위에 돈이 어디까지 와 있나"라는 같은 질문이 성립한다.
+          (사업 진행 현황 카드를 두 스코프 모두에 둔 것과 같은 판단) */}
+      <FundSummaryPanel
+        keyword={keyword}
+        filters={filters}
+        strategy={strategy}
+        mineUserId={mineUserId}
+        listTotal={data?.total}
+      />
+
       <ListToolbar
         keyword={keyword}
         onKeywordChange={setKeyword}
