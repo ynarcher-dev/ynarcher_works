@@ -1,4 +1,4 @@
-import { Badge, Button, Card, TagChip, cn, useToast, type BadgeTone } from '@ynarcher/ui'
+import { Badge, Button, Card, TagChip, useToast, type BadgeTone } from '@ynarcher/ui'
 import dayjs from 'dayjs'
 import { LogIn, LogOut } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
@@ -18,6 +18,7 @@ import {
   timeText,
   type AttendancePlace,
 } from '@/features/management/attendance/attendanceModel'
+import { DashboardRowButton } from '@/features/hub/dashboard/DashboardRowButton'
 
 /**
  * 서버가 거절한 이유를 그대로 보여 준다 — '근무일이 아닙니다', '출근 기록이 없어...'처럼
@@ -40,14 +41,11 @@ function useClock() {
 }
 
 /**
- * 스탬프 한 칸 — 영역 전체가 버튼이다.
+ * 스탬프 한 칸 — 영역 전체가 버튼이다(줄 규격은 DashboardRowButton이 소유한다).
  *
  * 라벨 아래에 버튼을 따로 두지 않는다. 누를 곳과 결과가 같은 자리에 있어야 "여기를 눌러 찍고,
  * 찍힌 시각이 여기 남는다"가 한 번에 읽힌다. 찍은 뒤에도 계속 누를 수 있다(마지막 시각이
  * 그날의 기록이다).
- *
- * 찍혔는지 여부는 **아이콘 색 하나로만** 말한다. 테두리·배경·라벨까지 함께 칠하면 두 칸이
- * 서로 다른 무게로 보여, 나란히 선 같은 종류의 동작이 위계가 다른 것처럼 읽힌다.
  */
 function StampButton({
   icon,
@@ -65,42 +63,23 @@ function StampButton({
   onClick: () => void
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
+    <DashboardRowButton
+      icon={icon}
+      label={label}
+      active={done}
       disabled={disabled}
-      className={cn(
-        'flex w-full items-center gap-2.5 rounded-radius-md border border-gray-200 bg-white px-3 py-2 text-left transition-colors duration-fast',
-        'hover:border-gray-300 hover:bg-gray-25',
-        'disabled:cursor-not-allowed disabled:bg-gray-50 disabled:hover:border-gray-200 disabled:hover:bg-gray-50',
-      )}
-    >
-      <span
-        className={cn(
-          'flex size-7 shrink-0 items-center justify-center rounded-radius-md',
-          done ? 'bg-brand text-gray-0' : 'bg-gray-100 text-gray-400',
-        )}
-        aria-hidden
-      >
-        {icon}
-      </span>
-      <span
-        className={cn(
-          'flex-1 text-body-sm font-medium',
-          disabled ? 'text-gray-400' : 'text-gray-700',
-        )}
-      >
-        {label}
-      </span>
-      {/* 찍히지 않은 자리는 비워 둔다. `--:--:--`로 채우면 값이 없다는 사실을 알리는 대신
-          값이 있는 칸과 같은 무게의 글자가 하나 더 서서, 두 줄 중 어디에 시각이 있는지를
-          눈이 한 번 더 가려야 한다. */}
-      {at && (
-        <span className="text-body-sm font-semibold tabular-nums text-gray-900">
-          {dayjs(at).format('HH:mm:ss')}
-        </span>
-      )}
-    </button>
+      onClick={onClick}
+      // 찍히지 않은 자리는 비워 둔다. `--:--:--`로 채우면 값이 없다는 사실을 알리는 대신
+      // 값이 있는 칸과 같은 무게의 글자가 하나 더 서서, 두 줄 중 어디에 시각이 있는지를
+      // 눈이 한 번 더 가려야 한다.
+      trailing={
+        at && (
+          <span className="text-body-sm font-semibold tabular-nums text-gray-900">
+            {dayjs(at).format('HH:mm:ss')}
+          </span>
+        )
+      }
+    />
   )
 }
 

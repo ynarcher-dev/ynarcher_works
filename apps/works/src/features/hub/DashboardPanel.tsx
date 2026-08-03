@@ -1,4 +1,5 @@
 import { Card } from '@ynarcher/ui'
+import { ApprovalCard } from '@/features/hub/dashboard/ApprovalCard'
 import { WelcomeCard } from '@/features/hub/dashboard/WelcomeCard'
 import { WorkCheckCard } from '@/features/hub/dashboard/WorkCheckCard'
 
@@ -34,11 +35,11 @@ export function DashboardPanel() {
       <div className="space-y-4 lg:col-span-2">
         <DashboardSlot title="주요 영역" />
       </div>
-      {/* 우측(1/3): 인사말 → 근무체크 → 전자결재 현황. 전자결재는 후속 작업에서 채운다. */}
+      {/* 우측(1/3): 인사말 → 근무체크 → 전자결재. 전자결재는 배치만 잡힌 껍데기다(건수 0 고정). */}
       <div className="space-y-4 lg:col-span-1">
         <WelcomeCard />
         <WorkCheckCard />
-        <DashboardSlot title="전자결재" />
+        <ApprovalCard />
       </div>
     </div>
   )
