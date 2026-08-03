@@ -78,9 +78,12 @@ export function MinutesTable({
         ),
     },
     {
+      // 조회수는 한두 자리에 머무는 짧은 카운트라 우측 정렬하면 헤더 '조회'와 눈에 띄게
+      // 어긋난다. 가운데로 모으되 자릿수가 늘 때 폭이 흔들리지 않게 tabular-nums는 남긴다
+      // (게시판·공지사항 viewsColumn과 같은 규칙).
       key: 'views',
       header: '조회',
-      align: 'right',
+      align: 'center',
       numeric: true,
       className: 'w-20',
       render: (m) => <span className="tabular-nums text-gray-600">{m.viewCount.toLocaleString()}</span>,
