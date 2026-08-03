@@ -1,13 +1,13 @@
 import { Button, Modal } from '@ynarcher/ui'
 import { useState } from 'react'
-import { MODULE_TYPES, type ModuleTypeDef } from '@/features/program/config'
+import { MODULE_TYPES, isBaseModuleType, type ModuleTypeDef } from '@/features/program/config'
 import { MODULE_META } from '@/features/program/detail/moduleMeta'
 import { useProgramWorkspace } from '@/features/program/workspace'
 
-/** 기본(추천) 템플릿 — 활동 유형을 정하지 못했을 때의 출발점. 최초 선택값으로도 사용한다. */
-const DEFAULT_TYPE = 'CUSTOM_ACTIVITY'
-/** 좌측 그리드에서 제외할 타입: 성과/KPI는 이 화면에서 배치하지 않는다. */
-const EXCLUDED = new Set(['OUTCOMES', DEFAULT_TYPE])
+/** 최초 선택값 — 기본 3종 중 가장 범용인 글쓰기. 활동 유형을 정하지 못했을 때의 출발점이다. */
+const DEFAULT_TYPE = 'POST'
+/** 운영 템플릿 그리드에서 제외할 타입: 성과/KPI는 이 화면에서 배치하지 않는다. */
+const EXCLUDED = new Set(['OUTCOMES'])
 
 /**
  * 모듈 추가 1단계 — 템플릿 선택(단일). 좌측은 정방형 타일 그리드(기본/운영 템플릿),
@@ -27,10 +27,12 @@ export function AddModulesModal({
   // 설명 패널 미리보기: 마우스 오버/포커스 대상 우선, 없으면 선택된 템플릿.
   const [hovered, setHovered] = useState<string | null>(null)
 
-  // 워크스페이스가 허용한 템플릿만 노출한다(M&A/PROJECT는 커스텀 활동만 운용).
+  // 워크스페이스가 허용한 템플릿만 노출한다(M&A/PROJECT는 기본 3종만 운용).
   const allowedDefs = MODULE_TYPES.filter((def) => config.allowedModuleTypes.includes(def.type))
-  const baseDefs = allowedDefs.filter((def) => def.type === DEFAULT_TYPE)
-  const operatingDefs = allowedDefs.filter((def) => !EXCLUDED.has(def.type))
+  const baseDefs = allowedDefs.filter((def) => isBaseModuleType(def.type))
+  const operatingDefs = allowedDefs.filter(
+    (def) => !isBaseModuleType(def.type) && !EXCLUDED.has(def.type),
+  )
 
   const activeType = hovered ?? picked
   const activeDef = allowedDefs.find((def) => def.type === activeType) ?? null

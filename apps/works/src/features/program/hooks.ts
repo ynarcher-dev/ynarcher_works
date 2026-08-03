@@ -61,6 +61,11 @@ export interface Program {
    * 스타트업 원장의 industries와 같은 태그 원장을 읽는다. 미지정은 빈 배열.
    */
   industries: string[]
+  /**
+   * 주관(발주·주관하는 기관 또는 기업, 자유 서술). 운용 여부는 워크스페이스가 정한다
+   * (ProgramWorkspaceConfig.hasHostOrganization — AC만 true). 미입력은 null.
+   */
+  host_organization: string | null
   title: string
   status: string
   /** 제안 단계 기간(제안서 작성~발표). 제안 없이 시작한 프로그램은 null. */
@@ -86,7 +91,9 @@ export interface Program {
 export function programCols(config: ProgramWorkspaceConfig): string {
   const { departments, managers } = config.tables
   return (
-    'id, code, category, industries, title, status, proposal_start_date, proposal_end_date, start_date, end_date, description, updated_at, ' +
+    // host_organization은 세 원장에 모두 있는 컬럼이라 select는 갈라지지 않는다 —
+    // 표시·저장만 config(hasHostOrganization)가 가른다.
+    'id, code, category, industries, host_organization, title, status, proposal_start_date, proposal_end_date, start_date, end_date, description, updated_at, ' +
     `departments:${departments}(org_version_id, department_id, kind, collaboration_ratio, department:departments!${departments}_department_id_fkey(id, name)), ` +
     `managers:${managers}(user_id, org_version_id, department_id, role, allocation_rate, start_date, end_date, user:users!${managers}_user_id_fkey(id, name), department:departments!${managers}_department_id_fkey(id, name)), ` +
     'creator:users!created_by(id, name)'
@@ -132,6 +139,8 @@ export function useCreateProgram() {
       description?: string | null
       category?: string | null
       industries?: string[]
+      /** 주관. 운용하지 않는 워크스페이스는 키 자체를 보내지 않는다. */
+      host_organization?: string | null
     }): Promise<string> => {
       const { data, error } = await supabase
         .from(config.tables.programs)

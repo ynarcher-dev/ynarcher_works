@@ -18,6 +18,25 @@ export interface ModuleTypeDef {
   implemented: boolean
 }
 
+/**
+ * 기본 템플릿 3종 — 구 '커스텀 활동' 하나를 저장 대상별로 가른 것(2026-08-03).
+ *
+ * 한 템플릿이 "정형에 속하지 않는 모든 것"을 받아 내던 시절에는 글·링크·파일이 한 화면에
+ * 섞여, 무엇을 남기러 들어온 화면인지가 열어 봐야만 드러났다. 셋은 남기는 것도 다르고
+ * 여는 방식도 다르므로(글은 전체 화면, 링크·파일은 모달) 템플릿 자체를 가른다.
+ * 어떤 활동인지 정하지 못했을 때의 출발점은 셋 중 가장 범용인 글쓰기다.
+ */
+export const BASE_MODULE_TYPES: ModuleTypeDef[] = [
+  { type: 'POST', label: '글쓰기', implemented: true },
+  { type: 'LINK', label: 'URL첨부', implemented: true },
+  { type: 'FILE', label: '파일첨부', implemented: true },
+]
+
+/** 기본 템플릿 여부(모듈 추가 모달의 '기본 템플릿' 섹션 대상). */
+export function isBaseModuleType(moduleType: string): boolean {
+  return BASE_MODULE_TYPES.some((d) => d.type === moduleType)
+}
+
 export const MODULE_TYPES: ModuleTypeDef[] = [
   { type: 'RECRUITMENT', label: '모집/신청서', implemented: true },
   { type: 'DOC_REVIEW', label: '서면평가', implemented: true },
@@ -27,7 +46,7 @@ export const MODULE_TYPES: ModuleTypeDef[] = [
   { type: 'BUSINESS_MATCHING', label: '1:1 비즈니스 매칭', implemented: true },
   { type: 'DEMO_DAY', label: '데모데이', implemented: true },
   { type: 'OUTCOMES', label: '성과/KPI', implemented: true },
-  { type: 'CUSTOM_ACTIVITY', label: '커스텀 활동', implemented: true },
+  ...BASE_MODULE_TYPES,
 ]
 
 /**
@@ -88,7 +107,10 @@ export const MODULE_PARTICIPATION: Record<string, { default: string; options?: s
   },
   DEMO_DAY: { default: 'REVIEWER_ASSIGNMENT' },
   OUTCOMES: { default: 'ADMIN_ONLY' },
-  CUSTOM_ACTIVITY: { default: 'ADMIN_ONLY' },
+  // 기본 템플릿 3종은 운영자가 직접 남기는 기록이라 배정 개념이 없다.
+  POST: { default: 'ADMIN_ONLY' },
+  LINK: { default: 'ADMIN_ONLY' },
+  FILE: { default: 'ADMIN_ONLY' },
 }
 
 /** 모듈 타입의 강제 배정 방식 기본값(미정의 타입은 null). */
@@ -251,6 +273,19 @@ export const PROGRAM_STATUS_TONE: Record<string, BadgeTone> = {
  * "실제로 발굴한 기업의 분야"를 나란히 놓고 읽을 때 폭이 어긋난다.
  */
 export const MAX_PROGRAM_INDUSTRIES = 3
+
+/**
+ * 주관(host_organization) 자리에 '바깥에서 받은 사업이 아니다'를 적는 값.
+ *
+ * 별도 boolean 컬럼을 두지 않고 주관 칸의 값 하나로 적는다 — 그 열이 답하는 질문은
+ * "누가 준 사업인가"이고 자체 프로젝트는 그 질문의 답 중 하나이기 때문이다. 플래그를 따로
+ * 두면 목록·상세·업로드·통합검색이 매번 두 값을 합쳐 읽어야 하고, 둘이 어긋난 행
+ * (자체=true인데 기관명도 채워진)이 언제든 생긴다. 지금 구조에서는 어긋날 값이 없다.
+ *
+ * 화면에 그대로 노출되는 문구이므로 표시용 라벨과 저장값이 같다 — 목록·상세는 이 값을
+ * 특별히 몰라도 되고, 대용량 업로드도 같은 말을 그대로 적으면 그대로 들어온다.
+ */
+export const SELF_HOSTED_PROGRAM_HOST = '자체 프로젝트'
 
 export const PARTICIPANT_ROLES = [
   'STARTUP',

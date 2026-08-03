@@ -1,31 +1,34 @@
-# [3-4-14] AC Custom Activity 및 회의록 기획서
+# [3-4-14] 기본 템플릿 3종(글쓰기·URL첨부·파일첨부) 기획서
 
-본 문서는 Program First 구조 안에서 정형 모듈 밖에서 발생하는 비정형 활동, 회의록, 사진, 첨부 파일을 Program/Module/Session과 연결해 운영 이력으로 보존하는 모듈을 정의합니다.
+본 문서는 정형 운영 모듈 밖에서 발생하는 기록을 담는 **기본 템플릿 3종**을 정의합니다. 2026-08-03 이전의 단일 템플릿 '커스텀 활동(`CUSTOM_ACTIVITY`)'을 저장 대상에 따라 글쓰기(`POST`)·URL첨부(`LINK`)·파일첨부(`FILE`)로 분리한 것이며, 파일명은 링크 연속성을 위해 유지합니다.
 
 ---
 
 ## 1. 목적
 
-Custom Activity는 단순 행사 메모가 아니라 Program 운영 중 발생하는 예외 활동과 현장 기록을 정형 데이터 흐름에 연결하는 보완 장치입니다. 회의록, 결정사항, 후속 조치, 첨부 파일, 공개 범위를 함께 관리합니다.
+한 템플릿이 "정형에 속하지 않는 모든 것"을 받아 내던 구조에서는 회의록·외부 링크·배포 파일이 한 화면에 섞여, 무엇을 남기러 들어온 모듈인지가 열어 봐야만 드러났습니다. 남기는 대상이 다르면 화면도 진입 방식도 달라야 하므로 템플릿 자체를 셋으로 가릅니다.
+
+* **글쓰기(`POST`)**: 게시판처럼 글을 쓰고 읽고 고칩니다. 회의록·활동 기록·공지가 여기에 들어갑니다.
+* **URL첨부(`LINK`)**: 관련 주소를 여러 개 모아 두고 버튼으로 골라 엽니다.
+* **파일첨부(`FILE`)**: 파일을 모아 두고 미리보기·다운로드합니다. 사업 자료 관리와 같은 원장을 씁니다.
 
 ---
 
 ## 2. 이 문서가 다루는 범위
 
-1. 비정형 활동 기록 작성
-2. Program/Module/Session 연결
-3. 참석자 지정
-4. 회의록/결정사항/Action Item 관리
-5. 사진/첨부 파일 업로드
-6. OFFICE/GUEST 이력 노출
+1. 기본 템플릿 3종의 정의와 모듈 추가 모달 노출
+2. 템플릿별 진입 방식(전체 화면 탭 / 모달)
+3. 글·링크·파일의 데이터 모델과 권한
+4. 파일첨부와 사업 자료 관리의 연동 규칙
+5. 구 커스텀 활동 데이터의 이관
 
 ---
 
 ## 3. 핵심 사용자
 
-* **AC 운영자**: 활동 기록과 회의록을 작성합니다.
-* **스타트업 GUEST**: 자기 기업과 관련된 공개 활동 이력을 확인합니다.
-* **관리자**: Program 운영 이력을 감사하고 후속 조치를 확인합니다.
+* **사업 담당자**: 운영 중 발생한 기록을 남기고 참여자에게 나눠 줄 링크·파일을 배치합니다.
+* **사업 조회 권한자**: 남겨진 글·링크·파일을 열람하고 파일을 내려받습니다.
+* **관리자**: 사업 운영 이력을 감사합니다.
 
 ---
 
@@ -33,173 +36,180 @@ Custom Activity는 단순 행사 메모가 아니라 Program 운영 중 발생�
 
 ```txt
 Program
-  -> custom_activities
-  -> activity_attendees
-  -> activity_minutes
-  -> activity_attachments
-  -> action_items
+  -> program_modules (module_type = POST | LINK | FILE)
+       -> program_posts        (글쓰기: 글 N건)
+       -> program_links        (URL첨부: 링크 N건)
+       -> attachments          (파일첨부: 사업 자료와 공유. program_module_id로 귀속 표시)
 ```
+
+> [!NOTE]
+> 원장은 워크스페이스별로 물리 분리됩니다(`program_posts` / `ma_program_posts` / `project_program_posts`, `program_links` / `ma_program_links` / `project_program_links`). 첨부만 정책이 워크스페이스 무관이라 `attachments` 한 벌을 공유합니다.
 
 ---
 
 ## 5. 화면 구성
 
-### 5.1 활동 타임라인
+### 5.1 모듈 추가 — 템플릿 선택
 
 ```txt
-[활동 기록 작성] [모듈 필터] [참석자 필터] [공개 범위 필터]
-
-Activity Feed Card
-  - 활동명
-  - 날짜/장소
-  - 연결 모듈/세션
-  - 참석 스타트업/전문가
-  - 회의록 요약
-  - 사진/첨부
-  - 후속 조치
+기본 템플릿   [📝 글쓰기] [🔗 URL첨부] [📎 파일첨부]
+운영 템플릿   [모집/신청서] [서면평가] [대면평가] [OT/공통세션] [N:N 멘토링] [1:1 비즈니스 매칭] [데모데이]
 ```
 
-### 5.2 활동 편집 모달
+최초 선택값은 글쓰기입니다. 어떤 활동을 넣을지 정하지 못했을 때의 출발점이 필요하고, 셋 중 가장 범용이기 때문입니다. M&A·PROJECT는 기본 템플릿 3종만 노출하므로 '운영 템플릿' 섹션 자체가 렌더되지 않습니다.
+
+### 5.2 글쓰기 — 전체 화면
 
 ```txt
-기본 정보 / 연결 대상 / 참석자 / 회의록 / 첨부 / 공개 범위
+[글쓰기]
+
+목록: 제목 | 내용(본문 요약) | 수정일        → 행 클릭 시 읽기
+읽기: 제목 / 최종 수정일 / 본문           → [삭제] [수정]
+편집: 제목 + 리치텍스트 본문              → [취소] [등록|수정 완료]
+```
+
+### 5.3 URL첨부 — 모달
+
+```txt
+┌ 모듈명 ──────────────────────────────┐
+│ [🔗 참가 신청 구글폼]        [✎] [🗑] │
+│      신청서는 3/15까지 받습니다        │
+│      https://forms.gle/...            │
+│ [🔗 운영 매뉴얼]             [✎] [🗑] │
+├──────────────────────────────────────┤
+│                  [＋ 링크 추가] [닫기] │
+└──────────────────────────────────────┘
+```
+
+### 5.4 파일첨부 — 모달
+
+```txt
+┌ 모듈명 ──────────────────────────────┐
+│ [ 파일을 끌어다 놓거나 클릭해 선택 ]   │
+│ 📄 2026 운영계획.pdf  1.2 MB [👁][⬇][🗑]│
+│ 🖼 현장사진.jpg       880 KB [👁][⬇][🗑]│
+│ 여기에 올린 파일은 이 사업의 자료 관리에도 함께 표시됩니다. │
+├──────────────────────────────────────┤
+│                     [업로드] [닫기]   │
+└──────────────────────────────────────┘
 ```
 
 ---
 
 ## 6. 주요 기능
 
-### 6.1 활동 기록
+### 6.1 진입 방식
 
-* 활동 유형은 `MEETING`, `WORKSHOP`, `SITE_VISIT`, `NETWORKING`, `FOLLOW_UP`, `ETC`로 구분합니다.
-* Program 전체, 특정 Module, 특정 Session 중 하나 이상에 연결할 수 있습니다.
-* 참석 스타트업과 전문가를 participant pool에서 선택합니다.
+* **글쓰기는 전체 화면 탭**입니다. 목록에서 고르고, 읽고, 고치는 일이 이어지는 머무는 화면이기 때문입니다.
+* **URL첨부·파일첨부는 모달**입니다. 링크를 고르거나 파일을 받는 일은 한 번의 선택으로 끝나므로, 화면을 갈아 끼우면 돌아올 자리만 잃습니다.
+* 진입 방식은 화면이 아니라 `MODULE_META[type].open`(`'tab' | 'modal'`)이 정하며, 목록·칸반·간트 세 뷰가 같은 판정을 공유합니다.
 
-### 6.2 회의록
+### 6.2 글쓰기
 
-* 회의록은 안건, 논의 내용, 결정사항, 후속 조치, 담당자, 기한을 포함합니다.
-* 후속 조치는 Action Item으로 분리해 완료 상태를 추적합니다.
-* 내부 전용 메모와 GUEST 공개 요약을 분리합니다.
+* 본문은 게시판·회의록과 동일한 공용 리치텍스트 에디터(TipTap)로 작성하고 같은 뷰어로 렌더합니다.
+* 목록의 '내용' 열은 본문 HTML에서 태그를 걷어 낸 한 줄 요약입니다.
+* 삭제는 `deleted_at` 기반 소프트 삭제입니다.
 
-### 6.3 첨부와 사진
+### 6.3 URL첨부
 
-* 사진, PDF, 문서 파일을 첨부할 수 있습니다.
-* 공개 범위에 따라 GUEST 노출, OFFICE 노출, 내부 전용을 구분합니다.
-* 이미지 파일은 용량 제한과 리사이징 정책을 적용합니다.
+* 링크는 표시명·URL·설명을 가지며 지정한 순서로 나열됩니다.
+* 링크는 새 탭으로 열고 `rel="noreferrer"`를 붙여 외부 페이지에 원래 창 제어권이 넘어가지 않게 합니다.
+* **URL은 `http`/`https`만 저장됩니다.** 링크 버튼이 사용자가 넣은 주소를 그대로 열기 때문에 `javascript:` 같은 스킴은 그 자체가 XSS 경로가 됩니다. 화면 검증은 안내용이고 강제는 DB CHECK 제약이 합니다.
+
+### 6.4 파일첨부와 자료 관리 연동
+
+* 파일은 **사업 자료와 같은 `attachments` 행 하나**입니다. 첨부 대상은 사업(`target_type='program'`, `target_id=사업id`)이고 모듈은 `program_module_id`로 귀속만 표시합니다.
+* 따라서 모듈에 올린 파일은 사업 상세 개요탭의 자료 관리 패널에 **복제나 동기화 없이** 그대로 나타납니다. 별도 원장을 두고 옮겨 적으면 두 목록이 언젠가 어긋나고, 어느 쪽이 진짜인지 판정할 근거가 사라집니다.
+* 반대 방향은 성립하지 않습니다 — 자료 관리 패널에서 올린 파일은 어느 모듈에도 속하지 않으므로 모듈 목록에는 나타나지 않습니다.
+* 목록·행·미리보기·다운로드는 자료 관리 패널과 공용 컴포넌트(`MaterialList`)를 그대로 씁니다. 미리보기는 PDF·이미지·동영상·텍스트를 지원합니다.
 
 ---
 
 ## 7. 데이터 모델
 
 ```txt
-custom_activities
+program_posts (구 custom_activities — 2026-08-03 개명)
   - id
-  - program_id
-  - program_module_id
-  - session_source_id
-  - activity_type
+  - program_id / program_module_id
   - title
+  - body              (리치텍스트 HTML)
   - activity_date
   - visibility
+  - created_by        (기본값 app.current_app_user_id())
+  - created_at / updated_at / deleted_at
+  - activity_type, session_source_id   ← 구 커스텀 활동 잔여 컬럼(신규 글에는 미사용)
 
-activity_minutes
+program_links
   - id
-  - custom_activity_id
-  - agenda
-  - discussion
-  - decisions
-  - internal_note
+  - program_id / program_module_id
+  - label / url / description / sort_order
+  - created_by / created_at / updated_at / deleted_at
+  - CHECK (url ~* '^https?://')
 
-action_items
-  - id
-  - custom_activity_id
-  - title
-  - owner_participant_id
-  - due_date
-  - status
-
-activity_attachments
-  - id
-  - custom_activity_id
-  - file_id
-  - visibility
+attachments (기존 공용 원장)
+  - program_module_id  ← 신설. 파일첨부 모듈이 올린 파일만 값을 가진다
 ```
+
+구 커스텀 활동의 하위 테이블 4종(`activity_minutes`·`action_items`·`activity_attachments`·`activity_attendees`)은 물리 삭제 금지 원칙에 따라 보존하며, 기존 행의 사실만 담습니다. 회의록의 안건·결정사항은 글쓰기 본문이 대신합니다.
 
 ---
 
 ## 8. 상태 모델
 
-```txt
-custom_activities.visibility
-  INTERNAL_ONLY
-  PARTICIPANTS
-  OFFICE_SUMMARY
-  PUBLIC_SUMMARY
-
-action_items.status
-  TODO
-  IN_PROGRESS
-  DONE
-  DROPPED
-```
+기본 템플릿 3종은 자체 상태를 갖지 않고 모듈 인스턴스의 상태(`module_status`: `DRAFT`/`OPEN`/`CLOSED`/`CANCELLED`)와 공유 범위(`module_visibility`: `INTERNAL_ONLY`/`GUEST_ONLY`/`PUBLIC`)를 따릅니다. 배정 방식(`participation_mode`)은 셋 모두 `ADMIN_ONLY` 고정입니다 — 운영자가 직접 남기는 기록이라 배정할 대상이 없습니다.
 
 ---
 
 ## 9. 권한/RLS
 
-* AC 운영자는 담당 Program의 활동 기록을 작성/수정할 수 있습니다.
-* GUEST는 자신이 참석자이거나 자기 기업과 연결된 `PARTICIPANTS` 이상 공개 범위의 기록만 조회합니다.
-* 내부 메모와 내부 첨부는 GUEST에 노출하지 않습니다.
-* 파일 다운로드는 첨부 visibility와 participant scope를 함께 검증합니다.
+* 글·링크 원장은 워크스페이스 권한과 사업 단건 접근을 함께 판정합니다. AC는 `app.can_read_workspace('ac') and app.can_access_program(program_id)`, M&A·PROJECT는 `app.can_access_ws_program(ws, program_id)`를 경유합니다.
+* `SELECT`/`INSERT`/`UPDATE` 정책을 분리하고 `DELETE` 정책은 만들지 않습니다(소프트 삭제).
+* 파일은 기존 `attachments` 정책을 그대로 따르며, 다운로드는 `material-download` Edge Function이 RLS 검증과 `access_logs` 적재를 강제하는 경로만 사용합니다.
+* 외부 게스트(`external_startup`·`external_expert`·`temporary_guest`)에는 정책을 부여하지 않아 기본 거부(default deny)입니다.
 
 ---
 
 ## 10. API/RPC/서버 액션
 
-```txt
-create_custom_activity(program_id, payload)
-update_custom_activity(activity_id, payload)
-attach_activity_file(activity_id, file_payload)
-upsert_activity_minutes(activity_id, minutes_payload)
-create_activity_action_item(activity_id, action_payload)
-update_action_item_status(action_item_id, status)
-publish_activity_summary(activity_id, visibility)
-```
+전용 RPC 없이 PostgREST 직접 접근으로 처리합니다. 저장 규칙(URL 스킴·워크스페이스 경계)이 CHECK 제약과 RLS로 강제되므로 함수 안에 정책을 복제할 이유가 없기 때문입니다. 파일 업로드만 기존 Storage 흐름(`uploadMaterialFile`)과 `material-download` Edge Function을 경유합니다.
 
 ---
 
 ## 11. GUEST 연동
 
-스타트업 GUEST는 자기 기업이 참석했거나 관련된 활동 이력을 Program 이력에서 확인합니다. 공개 가능한 회의록 요약, 사진, 후속 조치만 노출하며 내부 운영 메모는 숨깁니다.
+현재 기본 템플릿 3종은 WORKS 내부 화면만 제공합니다. GUEST 노출은 모듈 공유 범위(`GUEST_ONLY`/`PUBLIC`) 설계가 확정된 뒤 후속으로 다룹니다.
 
 ---
 
 ## 12. OFFICE/ADMIN/타 워크스페이스 연동
 
-* NETWORKS 스타트업 상세에는 활동 이력 요약과 공개 사진을 표시합니다.
-* ADMIN 감사 로그에는 활동 삭제, 공개 범위 변경, 첨부 다운로드 이력을 남깁니다.
-* Outcomes/KPI는 활동 수, 후속 조치 완료율을 보조 지표로 사용할 수 있습니다.
+* **M&A·PROJECT**: 정형 평가·모집 절차가 없어 기본 템플릿 3종만 운용합니다(구 커스텀 활동 단독 운용에서 전환).
+* **사업 자료 관리**: 파일첨부 모듈의 파일이 사업 상세 자료 관리 패널에 함께 표시됩니다(§6.4).
+* **ADMIN**: 파일 다운로드 이력은 기존 `access_logs` 경로에 그대로 남습니다.
 
 ---
 
 ## 13. 예외/오류/운영 리스크
 
-* 공개 범위를 상향 변경할 때 개인정보 또는 민감 정보 포함 여부를 확인합니다.
-* 참석자 지정 없이 GUEST 공개를 선택할 수 없도록 제한합니다.
-* 활동 삭제는 soft delete로 처리하고 첨부 파일 접근을 즉시 차단합니다.
+* 모듈 인스턴스를 끄거나 지워도 파일은 사업 자료로 남습니다(첨부 대상이 사업이기 때문). 파일을 완전히 내리려면 자료 관리에서 삭제해야 합니다.
+* `http`/`https` 외 스킴은 저장 단계에서 거부되므로, 화면 오류 메시지만 보고 API로 우회 저장할 수 없습니다.
+* 구 커스텀 활동 인스턴스는 글쓰기로 이관되었으므로 활동 유형(`activity_type`)으로 분류하던 화면·리포트가 있다면 본문 기반으로 다시 세워야 합니다.
 
 ---
 
 ## 14. 완료 기준
 
-1. 비정형 활동과 회의록을 Program/Module/Session에 연결할 수 있다.
-2. 참석자와 공개 범위에 따라 GUEST 노출이 제어된다.
-3. 사진/첨부와 Action Item이 활동 기록에 함께 관리된다.
+1. 모듈 추가 모달에서 기본 템플릿 3종을 선택해 인스턴스를 만들 수 있다.
+2. 글쓰기는 전체 화면에서 목록·읽기·작성·수정·삭제가 동작한다.
+3. URL첨부·파일첨부는 모듈 카드 클릭 시 모달로 열린다.
+4. 파일첨부에 올린 파일이 사업 자료 관리 패널에 같은 파일로 나타난다.
+5. 구 커스텀 활동 모듈 인스턴스가 글쓰기로 이관되어 데이터 손실 없이 열린다.
 
 ---
 
 ## 15. 테스트 기준
 
-1. 내부 전용 활동이 GUEST에 노출되지 않는지 검증합니다.
-2. 공개 범위 변경 시 감사 로그가 남는지 검증합니다.
-3. 삭제된 활동의 첨부 파일 URL이 더 이상 발급되지 않는지 검증합니다.
+1. `javascript:` 등 비허용 스킴 URL이 저장되지 않는지 검증합니다(API 직접 호출 포함).
+2. 다른 워크스페이스 사용자가 타 워크스페이스의 글·링크를 조회할 수 없는지 검증합니다.
+3. 모듈에서 업로드한 파일이 사업 자료 관리 목록에 즉시 나타나는지 검증합니다.
+4. 소프트 삭제한 글·링크가 목록에서 사라지되 원장에는 남는지 검증합니다.

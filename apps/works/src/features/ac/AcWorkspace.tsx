@@ -25,7 +25,8 @@ export const AC_WORKSPACE: ProgramWorkspaceConfig = {
     departments: 'program_departments',
     participants: 'program_participants',
     timeline: 'program_timeline_items',
-    customActivities: 'custom_activities',
+    posts: 'program_posts',
+    links: 'program_links',
   },
   rpcs: {
     setStaffing: 'set_program_staffing',
@@ -33,8 +34,10 @@ export const AC_WORKSPACE: ProgramWorkspaceConfig = {
   },
   // 공고에 제안해 선정되어야 사업이 열리므로 제안 단계(시도·선정·미선정)를 운용한다.
   hasProposalStage: true,
+  // 공고를 낸 주관기관/기업이 있어야 제안이 성립하므로 '주관'을 운용한다(AC 전용).
+  hasHostOrganization: true,
   categories: AC_CATEGORIES,
-  // AC는 정형 운영 모듈 9종을 모두 운용한다.
+  // AC는 기본 3종 + 정형 운영 모듈 8종을 모두 운용한다.
   allowedModuleTypes: MODULE_TYPES.map((def) => def.type),
 }
 

@@ -1,4 +1,5 @@
 import { PROJECT_CATEGORIES } from '@/config/programCategories'
+import { BASE_MODULE_TYPES } from '@/features/program/config'
 import { ProgramBulkPage } from '@/features/program/ProgramBulkPage'
 import { ProgramDetailPage } from '@/features/program/ProgramDetailPage'
 import { ProgramWorkspacePage } from '@/features/program/ProgramWorkspacePage'
@@ -24,7 +25,8 @@ export const PROJECT_WORKSPACE: ProgramWorkspaceConfig = {
     departments: 'project_program_departments',
     participants: 'project_program_participants',
     timeline: 'project_program_timeline_items',
-    customActivities: 'project_custom_activities',
+    posts: 'project_program_posts',
+    links: 'project_program_links',
   },
   rpcs: {
     setStaffing: 'set_project_program_staffing',
@@ -32,8 +34,11 @@ export const PROJECT_WORKSPACE: ProgramWorkspaceConfig = {
   },
   // 프로젝트는 착수 결정이 곧 시작이라 제안 단계를 밟지 않는다 — 운영 4단계만 쓴다.
   hasProposalStage: false,
+  // 프로젝트도 발주·주관하는 바깥 기관 없이 우리가 여는 일이라 '주관'을 묻지 않는다.
+  hasHostOrganization: false,
   categories: PROJECT_CATEGORIES,
-  allowedModuleTypes: ['CUSTOM_ACTIVITY'],
+  // 프로젝트도 정형 평가·모집 절차가 없어 기본 3종(글쓰기·URL첨부·파일첨부)만 운용한다.
+  allowedModuleTypes: BASE_MODULE_TYPES.map((def) => def.type),
 }
 
 export function ProjectWorkspacePage() {

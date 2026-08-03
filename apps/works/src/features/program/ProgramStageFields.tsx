@@ -12,6 +12,11 @@ export interface ProgramFormValues {
   title: string
   /** 사업구분(공공/민간/매출). 빈 문자열 = 미지정. */
   category: string
+  /**
+   * 주관(발주·주관하는 기관 또는 기업, 자유 서술). 빈 문자열 = 미지정.
+   * 운용 여부는 워크스페이스가 정한다(ProgramWorkspaceConfig.hasHostOrganization).
+   */
+  host_organization: string
   start_date: string
   end_date: string
   description: string

@@ -14,22 +14,37 @@ export interface Material {
   content_type: string | null
   byte_size: number | null
   uploaded_by: string | null
+  program_module_id: string | null
   created_at: string
 }
 
-/** 레코드에 귀속된 자료 목록(미삭제, 최신순). */
-export function useMaterials(targetType: string, targetId: string | undefined) {
+/**
+ * 레코드에 귀속된 자료 목록(미삭제, 최신순).
+ *
+ * `moduleId`를 주면 그 사업 모듈이 올린 파일만 좁혀 본다(파일첨부 모듈). 주지 않으면 대상
+ * 레코드의 자료 전부다 — 파일첨부 모듈이 올린 파일도 결국 그 사업의 자료이므로 사업 자료
+ * 관리 패널에는 그대로 함께 보인다(같은 attachments 행 하나를 두 화면이 본다).
+ *
+ * 쿼리 키는 대상까지가 앞자리이므로 `['materials', targetType, targetId]`로 무효화하면
+ * 모듈별 목록까지 함께 갱신된다(모듈에서 올린 파일이 사업 자료 목록에 즉시 뜨는 이유).
+ */
+export function useMaterials(
+  targetType: string,
+  targetId: string | undefined,
+  moduleId?: string,
+) {
   return useQuery({
-    queryKey: ['materials', targetType, targetId],
+    queryKey: ['materials', targetType, targetId, moduleId ?? null],
     enabled: Boolean(targetId),
     queryFn: async (): Promise<Material[]> => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('attachments')
         .select('*')
         .eq('target_type', targetType)
         .eq('target_id', targetId)
         .is('deleted_at', null)
-        .order('created_at', { ascending: false })
+      if (moduleId) query = query.eq('program_module_id', moduleId)
+      const { data, error } = await query.order('created_at', { ascending: false })
       if (error) throw error
       return (data ?? []) as Material[]
     },
@@ -51,6 +66,7 @@ export async function uploadMaterialFile(
   targetType: string,
   targetId: string,
   file: File,
+  programModuleId?: string,
 ): Promise<void> {
   const path = `${targetType}/${targetId}/${crypto.randomUUID()}-${safeName(file.name)}`
   const { error: upErr } = await supabase.storage
@@ -65,6 +81,8 @@ export async function uploadMaterialFile(
     storage_path: path,
     content_type: file.type || null,
     byte_size: file.size,
+    // 파일첨부 모듈에서 올린 파일만 귀속 모듈을 남긴다(대상은 여전히 사업 자체다).
+    program_module_id: programModuleId ?? null,
   })
   if (metaErr) {
     // 메타 기록 실패 시 오브젝트를 되돌려 고아 파일이 남지 않게 한다.
@@ -73,11 +91,14 @@ export async function uploadMaterialFile(
   }
 }
 
-/** 자료 업로드 뮤테이션(상세·수정 모드). 성공 시 해당 대상의 목록을 무효화한다. */
-export function useUploadMaterial(targetType: string, targetId: string) {
+/**
+ * 자료 업로드 뮤테이션(상세·수정 모드). 성공 시 해당 대상의 목록을 무효화한다.
+ * `moduleId`를 주면 그 모듈 귀속으로 올린다(파일첨부 모듈).
+ */
+export function useUploadMaterial(targetType: string, targetId: string, moduleId?: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (file: File) => uploadMaterialFile(targetType, targetId, file),
+    mutationFn: (file: File) => uploadMaterialFile(targetType, targetId, file, moduleId),
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: ['materials', targetType, targetId] }),
   })

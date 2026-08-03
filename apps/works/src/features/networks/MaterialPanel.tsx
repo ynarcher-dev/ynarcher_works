@@ -1,34 +1,16 @@
-import { Button, IconButton, Spinner, tableText } from '@ynarcher/ui'
-import {
-  Download,
-  Eye,
-  File as FileIcon,
-  Music,
-  Pause,
-  Play,
-  Trash2,
-} from 'lucide-react'
-import { useRef, useState } from 'react'
+import { Button } from '@ynarcher/ui'
+import { useRef } from 'react'
 import { DetailPanelCard } from '@/features/networks/DetailPanelCard'
 import { MaterialDropZone } from '@/features/networks/MaterialDropZone'
-import { MaterialPreviewModal } from '@/features/networks/MaterialPreview'
-import { MiniPager, usePaged } from '@/features/networks/MiniPager'
-import {
-  downloadMaterial,
-  fetchMaterialUrl,
-  formatBytes,
-  isAudioMaterial,
-  materialPreviewKind,
-  useDeleteMaterial,
-  useMaterials,
-  useUploadMaterial,
-  type Material,
-} from '@/features/networks/materialHooks'
+import { MaterialList } from '@/features/networks/MaterialList'
+import { useDeleteMaterial, useMaterials, useUploadMaterial } from '@/features/networks/materialHooks'
 
 /**
  * 자료 관리 패널(공용). 레코드에 귀속된 파일의 업로드·다운로드·삭제(소프트)를 담당한다.
  * 저장은 비공개 Storage 버킷 + attachments 다형 테이블(target_type/target_id)로 처리한다.
  * 국내·글로벌 상세페이지가 공유하며, 대상은 `targetType`/`targetId`로 주입한다.
+ *
+ * 목록·행·미리보기는 공용 `MaterialList`가 소유한다(파일첨부 모듈 모달과 같은 표시 규격).
  *
  * `readOnly`(조회 모드)면 업로드/삭제 없이 목록·다운로드만 노출한다.
  * 업로드/삭제는 수정 모드(폼 내부 자료 관리 카드)에서만 가능하다.
@@ -54,9 +36,6 @@ export function MaterialPanel({
   const upload = useUploadMaterial(targetType, targetId)
   const remove = useDeleteMaterial(targetType, targetId)
   const list = materials ?? []
-  const { pageItems, page, setPage, pageCount } = usePaged(list)
-  // 간이 뷰어 모달 대상(패널당 하나만 연다). pdf/이미지/동영상/텍스트를 종류별로 렌더한다.
-  const [preview, setPreview] = useState<Material | null>(null)
 
   const addFiles = (files: File[]) => {
     for (const file of files) upload.mutate(file)
@@ -70,11 +49,7 @@ export function MaterialPanel({
       count={list.length}
       action={
         readOnly ? undefined : (
-          <Button
-            variant="secondary"
-            disabled={busy}
-            onClick={() => openPicker.current?.()}
-          >
+          <Button variant="secondary" disabled={busy} onClick={() => openPicker.current?.()}>
             {busy ? '업로드 중…' : '업로드'}
           </Button>
         )
@@ -93,151 +68,13 @@ export function MaterialPanel({
       )}
 
       <div className={readOnly ? '' : 'mt-3'}>
-        {isLoading ? (
-          <div className="py-4">
-            <Spinner />
-          </div>
-        ) : list.length > 0 ? (
-          <>
-            <ul className="space-y-1.5">
-              {pageItems.map((m) => (
-                <MaterialRow
-                  key={m.id}
-                  material={m}
-                  onPreview={materialPreviewKind(m) ? () => setPreview(m) : undefined}
-                  onDelete={
-                    readOnly ? undefined : () => remove.mutate(m.id)
-                  }
-                  deleting={remove.isPending && remove.variables === m.id}
-                />
-              ))}
-            </ul>
-            <MiniPager page={page} pageCount={pageCount} onPage={setPage} />
-          </>
-        ) : (
-          <p className="text-body text-gray-600">등록된 자료가 없습니다.</p>
-        )}
-      </div>
-
-      {preview && <MaterialPreviewModal material={preview} onClose={() => setPreview(null)} />}
-    </DetailPanelCard>
-  )
-}
-
-/**
- * 자료 1건 행: 파일명·용량 + (오디오면)재생 · (미리보기 지원 종류면)미리보기 + 다운로드/삭제.
- * 미리보기는 pdf·이미지·동영상·텍스트를 지원한다(그 외 형식은 다운로드만).
- * `onDelete` 미지정 시 삭제 버튼을, `onPreview` 미지정 시 미리보기 버튼을 숨긴다.
- */
-function MaterialRow({
-  material,
-  onPreview,
-  onDelete,
-  deleting,
-}: {
-  material: Material
-  onPreview?: () => void
-  onDelete?: () => void
-  deleting: boolean
-}) {
-  const [downloading, setDownloading] = useState(false)
-  const audio = isAudioMaterial(material)
-  // 재생용 Signed URL은 처음 재생을 누를 때 한 번만 받아 온다(펼쳐지면 그 아래 오디오 플레이어 표시).
-  const [audioUrl, setAudioUrl] = useState<string | null>(null)
-  const [loadingUrl, setLoadingUrl] = useState(false)
-  const [urlError, setUrlError] = useState(false)
-
-  const openPlayer = async () => {
-    if (audioUrl || loadingUrl) return
-    setLoadingUrl(true)
-    setUrlError(false)
-    try {
-      setAudioUrl(await fetchMaterialUrl(material))
-    } catch {
-      setUrlError(true)
-    } finally {
-      setLoadingUrl(false)
-    }
-  }
-
-  return (
-    <li className="rounded-radius-sm border border-gray-200 bg-white px-3 py-2">
-      <div className="flex items-center gap-2">
-        {/* 오디오는 파일 아이콘 대신 음표 아이콘으로 한눈에 구분한다. */}
-        {audio ? (
-          <Music className="size-4 shrink-0 text-brand" />
-        ) : (
-          <FileIcon className="size-4 shrink-0 text-gray-500" />
-        )}
-        {/* 파일명은 이 행의 식별 값, 용량은 메타 — 크기는 하나로 두고 색으로만 가른다. */}
-        <span className={`min-w-0 flex-1 truncate ${tableText.primary}`}>
-          {material.file_name}
-        </span>
-        <span className={`shrink-0 tabular-nums ${tableText.meta}`}>
-          {formatBytes(material.byte_size)}
-        </span>
-        {/*
-          재생(오디오)·미리보기(눈)는 상호배타라 한 자리를 공유한다. 해당 없는 파일도
-          같은 크기의 빈 칸을 둬, 용량·다운로드 열이 행마다 같은 위치에 오도록 고정한다.
-        */}
-        {audio ? (
-          <IconButton
-            variant="ghost"
-            label={audioUrl ? `${material.file_name} 접기` : `${material.file_name} 재생`}
-            disabled={loadingUrl}
-            onClick={() => (audioUrl ? setAudioUrl(null) : void openPlayer())}
-            icon={
-              loadingUrl ? (
-                <Spinner />
-              ) : audioUrl ? (
-                <Pause className="size-4" />
-              ) : (
-                <Play className="size-4" />
-              )
-            }
-          />
-        ) : onPreview ? (
-          <IconButton
-            variant="ghost"
-            label={`${material.file_name} 미리보기`}
-            onClick={onPreview}
-            icon={<Eye className="size-4" />}
-          />
-        ) : (
-          <span className="size-icon-card shrink-0" aria-hidden />
-        )}
-        <IconButton
-          variant="ghost"
-          label={`${material.file_name} 다운로드`}
-          disabled={downloading}
-          onClick={async () => {
-            setDownloading(true)
-            try {
-              await downloadMaterial(material)
-            } finally {
-              setDownloading(false)
-            }
-          }}
-          icon={<Download className="size-4" />}
+        <MaterialList
+          materials={list}
+          loading={isLoading}
+          onDelete={readOnly ? undefined : (id) => remove.mutate(id)}
+          deletingId={remove.isPending ? remove.variables : undefined}
         />
-        {onDelete && (
-          <IconButton
-            variant="ghost"
-            danger
-            label={`${material.file_name} 삭제`}
-            disabled={deleting}
-            onClick={onDelete}
-            icon={<Trash2 className="size-4" />}
-          />
-        )}
       </div>
-      {audioUrl && (
-        // eslint-disable-next-line jsx-a11y/media-has-caption
-        <audio className="mt-2 h-9 w-full" src={audioUrl} controls autoPlay />
-      )}
-      {urlError && (
-        <p className="mt-1 text-caption text-danger">재생 URL을 불러오지 못했습니다.</p>
-      )}
-    </li>
+    </DetailPanelCard>
   )
 }

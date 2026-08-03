@@ -282,8 +282,9 @@ export function ProgramManagerEditor({
               <div key={dep.department_id || dep._key} className="border-t border-gray-100 pt-1.5 first:border-0 first:pt-0">
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-gray-700">
+                    {dep.kind === 'MAIN' ? '메인' : '협업'}
+                    {' · '}
                     {dep.department_id ? deptName(dep.department_id) : '부서 미선택'}
-                    {dep.kind === 'MAIN' ? ' · 메인' : ''}
                   </span>
                   <span className={allOk ? 'font-medium text-success' : 'font-medium text-danger'}>
                     목표 {dep.collaboration_ratio}%{allOk ? ' 충족' : ''}

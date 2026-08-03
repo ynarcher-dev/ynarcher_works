@@ -283,7 +283,18 @@ export function programBulkSpec(config: ProgramWorkspaceConfig): BulkImportSpec 
         aliases: ['산업', 'industries', 'industry'],
         example: 'SaaS;핀테크',
       },
-      { header: '주관기관', column: 'host_organization', aliases: ['host_organization'] },
+      // 주관. 화면(목록 열·등록 폼)과 같은 이름·같은 판정을 쓴다 — 운용하지 않는 워크스페이스에는
+      // 열 자체를 주지 않는다(빈 열을 주면 뭘 적을지 묻게 된다). '주관기관'은 종전 표기라 별칭으로 남긴다.
+      ...(config.hasHostOrganization
+        ? [
+            {
+              header: '주관',
+              column: 'host_organization',
+              aliases: ['주관기관', 'host_organization'],
+              example: '중소벤처기업부',
+            },
+          ]
+        : []),
       { header: '협력기관', column: 'partner_organization', aliases: ['partner_organization'] },
       { header: '설명', column: 'description', aliases: ['description'] },
     ],

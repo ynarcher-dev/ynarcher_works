@@ -13,6 +13,7 @@ import { useEditReasonPrompt } from '@/components/EditReasonPrompt'
 import type { ProgramManagerSegment } from '@/features/program/ProgramManagerEditor'
 import type { ProgramDepartmentSegment } from '@/features/program/ProgramDepartmentEditor'
 import { PhaseStaffingEditor } from '@/features/program/PhaseStaffingEditor'
+import { ProgramHostField } from '@/features/program/ProgramHostField'
 import { computePhases, validateStaffing } from '@/features/program/programManagerCoverage'
 import { useOrgVersions } from '@/features/management/orgHooks'
 import {
@@ -135,11 +136,13 @@ export function ProgramFormModal({
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     defaultValues: {
       title: program?.title ?? '',
       category: program?.category ?? '',
+      host_organization: program?.host_organization ?? '',
       start_date: program?.start_date ?? '',
       end_date: program?.end_date ?? '',
       description: program?.description ?? '',
@@ -177,6 +180,11 @@ export function ProgramFormModal({
       description: values.description || null,
       category: values.category || null,
       industries,
+      // 주관을 운용하지 않는 워크스페이스는 키 자체를 빼고 보낸다 — update_entity는 넘어온
+      // 키만 SET하므로, 화면에 없는 칸이 저장 때 원장 값을 null로 덮는 일이 생기지 않는다.
+      ...(config.hasHostOrganization
+        ? { host_organization: values.host_organization?.trim() || null }
+        : {}),
     }
     try {
       if (isEdit && program) {
@@ -260,6 +268,17 @@ export function ProgramFormModal({
               ))}
             </Select>
           </div>
+        )}
+        {/* 주관. 사업구분 바로 아래, 분야 위에 둔다 — '이 사업이 어디서 왔나'는 '무엇인가'와
+            같은 층위의 분류 축이고, 기간·배치처럼 운영을 적는 칸보다 앞선다.
+            우선은 자유 서술이다(NETWORKS 기관 원장과 잇는 것은 후속).
+            register 대신 watch/setValue로 잇는 이유 — '자체 프로젝트' 체크가 입력값 자체를
+            갈아 끼우므로 값의 주인이 입력 엘리먼트가 아니라 폼 상태여야 한다. */}
+        {config.hasHostOrganization && (
+          <ProgramHostField
+            value={watch('host_organization')}
+            onChange={(next) => setValue('host_organization', next)}
+          />
         )}
         {/* 분야. 사업구분 바로 아래에 둔다 — 둘 다 '이 사업이 무엇인가'를 가르는 분류 축이고,
             기간·배치처럼 운영을 적는 칸과는 층위가 다르다. 태그 원장은 스타트업과 공유한다. */}

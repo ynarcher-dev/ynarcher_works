@@ -31,6 +31,17 @@ export function ProgramInfoCard({ program }: { program: Program }) {
   const formatPeriod = (start: string | null, end: string | null) =>
     start || end ? `${start ?? '?'} ~ ${end ?? '?'}` : '-'
   const operationPeriod = formatPeriod(program.start_date, program.end_date)
+  // 분야는 목록과 같은 중립 배지로 적는다. 값이 없으면 InfoField가 하이픈으로 대체하도록 null을 준다.
+  const industryList = programIndustries(program)
+  const industryBadges = industryList.length ? (
+    <span className="flex flex-wrap gap-1">
+      {industryList.map((ind) => (
+        <Badge key={ind} tone="neutral">
+          {ind}
+        </Badge>
+      ))}
+    </span>
+  ) : null
   // 담당자를 부서별로 묶는다. 담당자는 단계(org 버전)·기간 세그먼트로 쪼개져 한 부서 안에서도
   // 한 사람이 여러 구간(투입률 상이)을 가질 수 있으므로, 부서·사람 단위로 합쳐 대표 투입률(구간 중
   // 최대치)로 요약한다. 한 구간이라도 PM이면 PM으로 표기.
@@ -100,8 +111,12 @@ export function ProgramInfoCard({ program }: { program: Program }) {
             value={program.category ? categoryLabel(config, program.category) ?? program.category : '-'}
           />
         )}
-        {/* 분야. 목록과 같은 표기(가운뎃점 잇기)를 쓴다 — 같은 값을 두 화면이 다르게 부르지 않는다. */}
-        <Info label="분야" value={programIndustries(program).join(' · ') || '-'} />
+        {/* 주관. 운용하지 않는 워크스페이스에서는 항목을 감춘다(사업구분과 같은 판정). */}
+        {config.hasHostOrganization && (
+          <Info label="주관" value={program.host_organization || '-'} valueClassName="truncate" />
+        )}
+        {/* 분야. 목록과 같은 표기(중립 배지)를 쓴다 — 같은 값을 두 화면이 다르게 부르지 않는다. */}
+        <Info label="분야" value={industryBadges} />
         <Info label="운영 기간" value={operationPeriod} />
         <Info label="생성자" value={program.creator?.name || '-'} />
         <Info label="수정일" value={formatDate(program.updated_at)} />
@@ -122,9 +137,12 @@ export function ProgramInfoCard({ program }: { program: Program }) {
                       : 'text-body text-gray-700'
                   }
                 >
-                  {(pathLabelOf(d.department_id) || d.name) +
-                    (d.kind === 'MAIN' ? ' · 메인' : '') +
-                    (d.ratio != null ? ` ${d.ratio}%` : '')}
+                  {/* 역할·비율을 앞에 세운다 — 부서 경로는 길이가 제각각이라 뒤에 두면 %가 줄마다
+                      다른 자리에서 시작해 세로로 비교되지 않는다. */}
+                  {(d.kind === 'MAIN' ? '메인' : '협업') +
+                    (d.ratio != null ? `(${d.ratio}%)` : '') +
+                    ' · ' +
+                    (pathLabelOf(d.department_id) || d.name)}
                 </span>
                 <span className="text-caption text-gray-400">/</span>
                 {d.members.length ? (

@@ -28,6 +28,11 @@ export function useUpdateProgram(id: string) {
         category: string | null
         /** 분야 태그(태그명 배열). jsonb 컬럼이라 배열 그대로 실어 보낸다. */
         industries: string[]
+        /**
+         * 주관(자유 서술). 운용하지 않는 워크스페이스는 키를 아예 빼고 보낸다 —
+         * update_entity는 넘어온 키만 SET하므로, 빼면 그 원장의 값은 손대지 않는다.
+         */
+        host_organization?: string | null
       }
       reason: string
     }) => {

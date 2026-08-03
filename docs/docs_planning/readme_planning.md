@@ -24,12 +24,12 @@
 | **3-3-3. STARTUP 메뉴 통계 카드** | [3_3_3_startup_menu_stat_cards.md](./3_3_3_startup_menu_stat_cards.md) | 내 기업·4개 구분 목록 위 통계 카드 후보와 집계 정의 | 후보 기획 |
 | **3-4. AC (사업부)** | [3_4_workspace_ac.md](./3_4_workspace_ac.md) | Program First 운영 모듈과 목록/상세. 전체 사업 대시보드는 재설계 대기 | 혼합 |
 | **3-5. FUND (투자실)** | [3_5_workspace_fund.md](./3_5_workspace_fund.md) | 펀드·인력·포트폴리오·출자자·캐피탈 콜. 조합 재무/보고서는 후속 | 혼합 |
-| **3-6. M&A/PE (딜 관리)** | [3_6_workspace_ma.md](./3_6_workspace_ma.md) | 공용 사업 원장의 딜 목록/상세와 커스텀 활동. 파이프라인·매칭·NDA는 후속 | 혼합 |
+| **3-6. M&A/PE (딜 관리)** | [3_6_workspace_ma.md](./3_6_workspace_ma.md) | 공용 사업 원장의 딜 목록/상세와 기본 템플릿 3종. 파이프라인·매칭·NDA는 후속 | 혼합 |
 | **3-7. MANAGEMENT (경영지원)** | [3_7_workspace_management.md](./3_7_workspace_management.md) | 조직·지사·인사·자산·재무·KPI. 경영 현황 대시보드는 준비 중 | 혼합 |
 | **3-7-1. MANAGEMENT KPI** | [3_7_1_management_performance_kpi.md](./3_7_1_management_performance_kpi.md) | 조직·개인 KPI 스코어링 룰 엔진 및 성과관리 사이클 | 기획 완료 |
 | **3-7-2. MANAGEMENT 자산** | [3_7_2_management_assets.md](./3_7_2_management_assets.md) | 지사 귀속 자산·비용·사진·검색/필터·대량 업로드·반출 연계 | 구현 반영 |
 | **3-7-3. MANAGEMENT 근태** | [3_7_3_management_attendance.md](./3_7_3_management_attendance.md) | 근무 정책·상태 원장, 날짜별/인력별 조회와 사유 필수 정정, 근무체크 위젯 | 구현 반영 |
-| **3-8. PROJECT (프로젝트)** | [3_8_workspace_project.md](./3_8_workspace_project.md) | 공용 사업 원장의 프로젝트 목록/상세와 커스텀 활동. 태스크/의존 간트는 후속 | 혼합 |
+| **3-8. PROJECT (프로젝트)** | [3_8_workspace_project.md](./3_8_workspace_project.md) | 공용 사업 원장의 프로젝트 목록/상세와 기본 템플릿 3종. 태스크/의존 간트는 후속 | 혼합 |
 | **3-9. GUEST (외부 파트너)** | [3_9_workspace_guest.md](./3_9_workspace_guest.md) | 외부 스타트업/전문가 전용 대시보드 및 미팅 예약, 만족도 평가지 작성 요건 | 구현 반영 |
 
 ---

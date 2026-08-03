@@ -22,9 +22,9 @@
 | **[3-3]** | **[3_3_workspace_networks.md](./3_3_workspace_networks.md)** | **NETWORKS (네트워크 원장)**: 전문가, 투자사, 기업, 기관, 대학, 기타, 글로벌 네트워크 원장 및 대용량 업로드 |
 | **[3-3-2]** | **[3_3_2_networks_dashboard.md](./3_3_2_networks_dashboard.md)** | **NETWORKS 대시보드 목표안**: 네트워크 규모 KPI, 구분별 분포, 최근 업로드 통합 리스트(현재 화면은 재설계 대기 골격) |
 | **[3-4]** | **[3_4_workspace_ac.md](./3_4_workspace_ac.md)** | **AC (사업부)**: Program First 기반 보육 프로그램 운영 플랫폼 및 14개 모듈 기획의 부모 아키텍처 |
-| **[3-4-1 ~ 3-4-14]** | **[AC 세부 모듈 문서](./3_4_1_ac_dashboard.md)** | **AC 운영 모듈**: 대시보드, 프로그램 개요, 모집, 참가자 풀, 평가 엔진, 서면/대면평가, OT, 멘토링, 매칭, 데모데이, 타임라인, 성과, 커스텀 활동 |
-| **[3-6]** | **[3_6_workspace_ma.md](./3_6_workspace_ma.md)** | **M&A/PE (딜 관리)**: 공용 사업 목록·상세와 커스텀 활동 구현, 딜 파이프라인·매칭·NDA는 후속 |
-| **[3-8]** | **[3_8_workspace_project.md](./3_8_workspace_project.md)** | **PROJECT (프로젝트)**: 공용 사업 목록·상세와 커스텀 활동 구현, 태스크 칸반·의존 간트는 후속 |
+| **[3-4-1 ~ 3-4-14]** | **[AC 세부 모듈 문서](./3_4_1_ac_dashboard.md)** | **AC 운영 모듈**: 대시보드, 프로그램 개요, 모집, 참가자 풀, 평가 엔진, 서면/대면평가, OT, 멘토링, 매칭, 데모데이, 타임라인, 성과, 기본 템플릿 3종(글쓰기·URL첨부·파일첨부) |
+| **[3-6]** | **[3_6_workspace_ma.md](./3_6_workspace_ma.md)** | **M&A/PE (딜 관리)**: 공용 사업 목록·상세와 기본 템플릿 3종 구현, 딜 파이프라인·매칭·NDA는 후속 |
+| **[3-8]** | **[3_8_workspace_project.md](./3_8_workspace_project.md)** | **PROJECT (프로젝트)**: 공용 사업 목록·상세와 기본 템플릿 3종 구현, 태스크 칸반·의존 간트는 후속 |
 | **[3-5]** | **[3_5_workspace_fund.md](./3_5_workspace_fund.md)** | **FUND (투자실)**: 펀드·인력·LP·포트폴리오·캐피탈 콜 구현, 조합 재무·보고서는 후속 |
 | **[3-7]** | **[3_7_workspace_management.md](./3_7_workspace_management.md)** | **MANAGEMENT (경영지원)**: 인사, 조직 버전/개편, 재무, 자산, KPI 관리 등 전사 자원 관리(ERP)의 핵심 기능 |
 | **[3-7-1]** | **[3_7_1_management_performance_kpi.md](./3_7_1_management_performance_kpi.md)** | **MANAGEMENT KPI**: 조직·개인 KPI 지표 카탈로그, 스코어링 룰, 템플릿, 할당, 실적, 등급/인센티브 사이클 |

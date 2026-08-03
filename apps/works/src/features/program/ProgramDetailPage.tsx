@@ -8,13 +8,13 @@ import { ProgramFormModal } from '@/features/program/ProgramFormModal'
 import { ProgramOverviewTab } from '@/features/program/detail/ProgramOverviewTab'
 import { MODULE_META } from '@/features/program/detail/moduleMeta'
 import type { ProgramModule } from '@/features/program/hooks'
-import { CustomActivityPanel } from '@/features/program/panels/CustomActivityPanel'
 import { DemoDayPanel } from '@/features/program/panels/DemoDayPanel'
 import { DocReviewPanel } from '@/features/program/panels/DocReviewPanel'
 import { MatchingPanel } from '@/features/program/panels/MatchingPanel'
 import { OnsitePanel } from '@/features/program/panels/OnsitePanel'
 import { OrientationPanel } from '@/features/program/panels/OrientationPanel'
 import { OutcomesPanel } from '@/features/program/panels/OutcomesPanel'
+import { PostPanel } from '@/features/program/panels/PostPanel'
 import { RecruitmentPanel } from '@/features/program/panels/RecruitmentPanel'
 import { TimelinePanel } from '@/features/program/panels/TimelinePanel'
 import { useProgram } from '@/features/program/hooks'
@@ -33,7 +33,7 @@ type Tab =
   | 'demoday'
   | 'timeline'
   | 'outcomes'
-  | 'custom'
+  | 'post'
 
 const TAB_KEYS = new Set<string>([
   'overview',
@@ -46,7 +46,7 @@ const TAB_KEYS = new Set<string>([
   'demoday',
   'timeline',
   'outcomes',
-  'custom',
+  'post',
 ])
 
 /** 운영(개요 외) 화면의 상단 라벨. 뒤로가기 헤더 제목에 사용한다. */
@@ -60,7 +60,7 @@ const PANEL_LABEL: Record<Exclude<Tab, 'overview'>, string> = {
   demoday: '데모데이',
   timeline: '타임라인',
   outcomes: '성과/KPI',
-  custom: '커스텀 활동',
+  post: '글쓰기',
 }
 
 /**
@@ -144,7 +144,7 @@ export function ProgramDetailPage() {
           {/* 프로그램 단위 화면(집계·타임라인)은 programId, 인스턴스 단위 운영 화면은 moduleId로 렌더한다. */}
           {tab === 'timeline' && <TimelinePanel programId={id} />}
           {tab === 'outcomes' && <OutcomesPanel programId={id} />}
-          {tab === 'custom' && <CustomActivityPanel programId={id} />}
+          {moduleId && tab === 'post' && <PostPanel programId={id} moduleId={moduleId} />}
           {moduleId && tab === 'recruitment' && (
             <RecruitmentPanel programId={id} moduleId={moduleId} />
           )}

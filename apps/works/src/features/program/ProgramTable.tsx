@@ -51,7 +51,8 @@ function managerLabel(r: Program): string | null {
 
 /**
  * 프로그램 원장 공용 데이터 테이블(STARTUP StartupPoolTable과 동일 규격).
- * 컬럼: 체크박스·No.·사업명·코드·카테고리·담당 부서·분야·상태·운영 시작일·운영 종료일·담당자.
+ * 컬럼: 체크박스·No.·사업명·코드·카테고리·주관·담당 부서·분야·상태·운영 시작일·운영 종료일·담당자.
+ * 카테고리·주관은 워크스페이스가 그 축을 운용할 때만 선다(config 주입).
  * 비활성화(삭제)는 목록이 아니라 상세 페이지에서 수행하므로 관리 컬럼(showManageColumn=false)은 두지 않는다.
  */
 export function ProgramTable({
@@ -68,17 +69,19 @@ export function ProgramTable({
   const columns = useMemo<Column<Program>[]>(
     () => [
       {
-        // 프로그램명은 min-width로 넓게 확보한다(분야 필러 컬럼이 그만큼 좁혀진다).
+        // 사업명. 필러(남는 폭을 전부 먹는 열)를 두지 않는다 — 필러가 있으면 그 열이 폭을
+        // 독점하고 나머지가 min-content까지 눌려, 정작 값이 여러 개인 분야가 줄바꿈된다.
+        // 넘치면 말줄임 + 툴팁(폭은 아래 열들과 함께 layout="fixed"가 비율로 나눈다).
         key: 'title',
         header: '사업명',
-        className: 'min-w-[18rem] whitespace-nowrap font-semibold',
-        render: (r) => r.title,
+        className: 'w-56 font-semibold',
+        render: (r) => <span title={r.title}>{r.title}</span>,
       },
       {
         // 사업코드(6자리 영숫자 난수). 목록에서는 다른 컬럼과 동일한 본문 텍스트로 노출한다.
         key: 'code',
         header: '코드',
-        className: 'whitespace-nowrap',
+        className: 'w-20',
         render: (r) => r.code ?? <span className="text-gray-400">-</span>,
       },
       // 사업구분. 워크스페이스가 분류를 운용하지 않으면(categories 비어 있음) 컬럼 자체를 감춘다.
@@ -88,7 +91,7 @@ export function ProgramTable({
               // 다른 컬럼과 동일한 본문 텍스트로 노출한다.
               key: 'category',
               header: '카테고리',
-              className: 'whitespace-nowrap',
+              className: 'w-20',
               render: (r: Program) =>
                 r.category ? (
                   categoryLabel(config, r.category) ?? r.category
@@ -98,14 +101,32 @@ export function ProgramTable({
             } satisfies Column<Program>,
           ]
         : []),
+      // 주관(발주·주관 기관/기업). 운용하지 않는 워크스페이스에서는 열 자체를 감춘다 —
+      // M&A·PROJECT는 우리가 스스로 여는 일이라 영원히 '-'만 차는 칸이 된다.
+      // 자리는 사업구분 바로 뒤다. 둘 다 '이 사업이 어디서 왔고 무엇인가'를 가르는 축이라
+      // 우리 쪽 수행 주체(담당 부서·담당자)보다 앞에 모은다.
+      ...(config.hasHostOrganization
+        ? [
+            {
+              key: 'host_organization',
+              header: '주관',
+              // 기관명은 길이가 널뛰므로 폭을 묶고 넘치면 말줄임한다(넓히면 분야가 그만큼 준다).
+              className: 'w-28',
+              render: (r: Program) =>
+                r.host_organization ? (
+                  <span title={r.host_organization}>{r.host_organization}</span>
+                ) : (
+                  <span className="text-gray-400">-</span>
+                ),
+            } satisfies Column<Program>,
+          ]
+        : []),
       {
         // 담당 부서: 메인 부서 한 곳만 경로로 적고 나머지는 '외 N'으로 접는다.
-        // 자리를 분야 왼쪽에 두는 이유 — 사업을 가르는 축(코드·분류·부서)을 왼쪽에 모으고,
-        // 남는 폭을 다 먹는 필러 컬럼이 그 뒤를 잇게 한다.
-        // 경로가 길어지면 칸을 넓히지 않고 말줄임한다(넓히면 필러가 그만큼 사라진다).
+        // 경로가 길어지면 칸을 넓히지 않고 말줄임한다(넓히면 분야가 그만큼 사라진다).
         key: 'departments',
         header: '담당 부서',
-        className: 'max-w-[16rem] truncate',
+        className: 'w-44',
         render: (r) => {
           const summary = summarizeProgramDepartments(r.departments ?? [], lineageOf)
           if (!summary) return <span className="text-gray-400">미지정</span>
@@ -118,25 +139,35 @@ export function ProgramTable({
         },
       },
       {
-        // 분야. 종전 이 자리는 설명(자유 서술)이었는데, 목록에서 사업을 가려낼 때 실제로 묻는 것은
-        // "어느 분야의 기업을 발굴하는 사업인가"이지 소개 문장이 아니다. 설명은 상세 헤더가 답한다.
-        // 남는 폭을 전부 흡수하는 필러 컬럼 자리를 그대로 이어받는다(넘치면 말줄임).
-        // 배지가 아니라 텍스트로 적는다 — 목록에서 배지는 상태 하나만 쓴다(같은 층위로 읽히면
-        // 무엇이 이 행의 상태인지가 흐려진다). 여러 개는 가운뎃점으로 잇는다.
+        // 분야. 값이 여러 개인 태그라 스타트업 목록(StartupPoolTable)과 같은 규격으로 적는다 —
+        // 같은 태그 원장(industry_tags)을 읽는 두 열이 한쪽은 배지, 한쪽은 가운뎃점 텍스트면
+        // 같은 값을 두 화면이 다르게 부르는 것이 된다.
+        // 상태 배지와 층위가 겹치지 않는 이유는 톤이다 — 분야는 항상 중립(회색)이고
+        // 상태만 색을 갖는다. 색이 있는 배지가 행마다 하나라 '이 행의 상태'는 그대로 읽힌다.
+        // 최대 3개를 한 줄에 세울 수 있도록 이 표에서 가장 넓은 칸을 준다 — 접히면 그 행만
+        // 두 줄이 되어 표 전체의 행 높이가 들쭉날쭉해진다(줄바꿈 금지 · 넘치면 잘림).
         key: 'industries',
         header: '분야',
-        className: 'w-full max-w-0 truncate',
+        className: 'w-64',
         render: (r) => {
           const list = programIndustries(r)
           if (!list.length) return <span className="text-gray-400">-</span>
-          const text = list.join(' · ')
-          return <span title={text}>{text}</span>
+          // 셀의 text-center는 flex 자식에 먹지 않으므로 justify-center로 직접 모은다.
+          return (
+            <div className="flex justify-center gap-1" title={list.join(' · ')}>
+              {list.map((ind) => (
+                <Badge key={ind} tone="neutral">
+                  {ind}
+                </Badge>
+              ))}
+            </div>
+          )
         },
       },
       {
         key: 'status',
         header: '상태',
-        className: 'whitespace-nowrap',
+        className: 'w-20',
         render: (r) => (
           <Badge tone={PROGRAM_STATUS_TONE[r.status] ?? 'neutral'}>
             {PROGRAM_STATUS_LABEL[r.status] ?? r.status}
@@ -146,21 +177,21 @@ export function ProgramTable({
       {
         key: 'start_date',
         header: '운영 시작일',
-        className: 'whitespace-nowrap',
+        className: 'w-24',
         numeric: true,
         render: (r) => r.start_date ?? <span className="text-gray-400">-</span>,
       },
       {
         key: 'end_date',
         header: '운영 종료일',
-        className: 'whitespace-nowrap',
+        className: 'w-24',
         numeric: true,
         render: (r) => r.end_date ?? <span className="text-gray-400">-</span>,
       },
       {
         key: 'managers',
         header: '담당자',
-        className: 'whitespace-nowrap',
+        className: 'w-24',
         // 대표(PM) 1명 + "외 N" 공용 규격. 담당자는 사람당 구간이 여러 개일 수 있으므로
         // 먼저 사람 단위로 접은 뒤 세어야 같은 사람이 두 번 세어지지 않는다.
         render: (r) => managerLabel(r) ?? <span className="text-gray-400">미지정</span>,
@@ -174,6 +205,10 @@ export function ProgramTable({
       columns={columns}
       rows={rows}
       rowKey={(r) => r.id}
+      // 폭을 비율로 못박는다(STARTUP 목록과 동일 규격). 자동 레이아웃은 내용이 긴 열이
+      // 폭을 가져가 값이 여러 개인 열(분야)을 줄바꿈시키는데, 한 행만 두 줄이 되면 행 높이가
+      // 어긋나 표가 들쭉날쭉해진다. 고정 폭에서는 모든 값이 한 줄로 서고 넘치면 말줄임된다.
+      layout="fixed"
       selectable
       selectedKeys={selectedKeys}
       onSelectionChange={onSelectionChange}

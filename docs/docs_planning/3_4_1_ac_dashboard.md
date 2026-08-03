@@ -116,7 +116,7 @@ interface ProgramDashboardItem {
   start_date: string;
   end_date: string;
   active_modules: {
-    module_type: 'RECRUITMENT' | 'DOC_REVIEW' | 'ONSITE_EVAL' | 'ORIENTATION' | 'MENTORING' | 'BUSINESS_MATCHING' | 'DEMO_DAY' | 'OUTCOMES' | 'CUSTOM_ACTIVITY';
+    module_type: 'RECRUITMENT' | 'DOC_REVIEW' | 'ONSITE_EVAL' | 'ORIENTATION' | 'MENTORING' | 'BUSINESS_MATCHING' | 'DEMO_DAY' | 'OUTCOMES' | 'POST' | 'LINK' | 'FILE';
     enabled: boolean;
     progress_percent: number; // 모듈별 자체 계산된 진행률
     issue_count: number; // 해당 모듈 내 미해결 이슈 개수

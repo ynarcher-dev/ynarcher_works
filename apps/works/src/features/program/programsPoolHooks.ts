@@ -165,7 +165,7 @@ async function programNarrowConditions(
 function programListCols(config: ProgramWorkspaceConfig): string {
   const { departments, managers } = config.tables
   return (
-    'id, code, category, industries, title, status, start_date, end_date, description, updated_at, ' +
+    'id, code, category, industries, host_organization, title, status, start_date, end_date, description, updated_at, ' +
     // 담당 부서 컬럼은 메인 부서 하나만 적지만, 부서명은 상위까지 붙는 표기라 여기서 이름을 완성할 수
     // 없다(상위는 다른 행이다). id·구분만 받아 화면에서 조직도로 푼다.
     `departments:${departments}(org_version_id, department_id, kind, collaboration_ratio), ` +

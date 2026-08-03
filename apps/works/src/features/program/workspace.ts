@@ -48,7 +48,10 @@ export interface ProgramWorkspaceConfig {
     departments: string
     participants: string
     timeline: string
-    customActivities: string
+    /** 글쓰기 모듈의 글 원장(구 커스텀 활동 원장을 2026-08-03 개명한 것). */
+    posts: string
+    /** URL첨부 모듈의 링크 원장. */
+    links: string
   }
   rpcs: {
     setStaffing: string
@@ -64,11 +67,22 @@ export interface ProgramWorkspaceConfig {
    * 보안이 아니다.
    */
   hasProposalStage: boolean
+  /**
+   * 주관(host_organization — 이 사업을 발주·주관하는 기관/기업) 운용 여부.
+   * false면 목록 열·등록 폼 칸·상세 항목·업로드 열이 함께 사라진다.
+   *
+   * AC만 true다 — 공고를 낸 주관기관이 있어야 제안이 성립하므로 "누가 준 사업인가"가
+   * 사업을 가르는 축이 된다. M&A·PROJECT는 우리가 스스로 여는 일이라 물을 대상이 없고,
+   * 빈 열을 남겨 두면 목록에서 영원히 '-'만 찬 칸이 폭을 먹는다.
+   * 컬럼 자체는 세 원장에 모두 있으므로(20260705150100 / 20260720140000 / 20260720150000)
+   * 조회 select는 갈라지지 않고, 이 플래그는 화면과 저장 페이로드만 가른다.
+   */
+  hasHostOrganization: boolean
   /** 사업구분 선택지. 빈 배열이면 분류 UI를 감춘다. */
   categories: readonly ProgramCategoryOption[]
   /**
    * 모듈 추가 모달에 노출할 템플릿(module_type) 목록.
-   * AC는 전체 9종, M&A/PROJECT는 커스텀 활동만 운용한다.
+   * AC는 전체 11종, M&A·PROJECT는 기본 3종(글쓰기·URL첨부·파일첨부)만 운용한다.
    */
   allowedModuleTypes: readonly string[]
 }

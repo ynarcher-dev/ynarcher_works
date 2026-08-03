@@ -27,6 +27,8 @@ import { AddModulesModal } from '@/features/program/detail/AddModulesModal'
 import { ModuleFormModal } from '@/features/program/detail/ModuleFormModal'
 import { ModuleGanttView } from '@/features/program/detail/ModuleGanttView'
 import { ModuleKanbanView } from '@/features/program/detail/ModuleKanbanView'
+import { ModuleFileModal } from '@/features/program/panels/ModuleFileModal'
+import { ModuleLinkModal } from '@/features/program/panels/ModuleLinkModal'
 import {
   MODULE_META,
   moduleStatusMeta,
@@ -74,6 +76,8 @@ export function ModuleBoardCard({
   const { data, isLoading } = useProgramModules(programId)
   const toggle = useToggleModule(programId)
   const [editTarget, setEditTarget] = useState<ProgramModule | null>(null)
+  // 모달형 템플릿(URL첨부·파일첨부)으로 진입한 인스턴스. 보드 위에서 그대로 연다.
+  const [modalTarget, setModalTarget] = useState<ProgramModule | null>(null)
   // 2단계 마법사: 템플릿 선택(addOpen) → 세팅(createType 지정 시 폼).
   const [addOpen, setAddOpen] = useState(false)
   const [createType, setCreateType] = useState<string | null>(null)
@@ -112,8 +116,16 @@ export function ModuleBoardCard({
     }
   }
 
-  // 모듈 진입 시에는 전체 화면 오버레이를 닫고 해당 운영 화면으로 이동한다.
+  /**
+   * 모듈 진입. 여는 방식은 템플릿이 정한다(moduleMeta의 `open`).
+   * 모달형(URL첨부·파일첨부)은 보드를 떠나지 않고 그 자리에서 열고, 탭형은 전체 화면
+   * 오버레이를 닫은 뒤 상세 페이지의 운영 화면으로 넘긴다.
+   */
   const openModule = (mod: ProgramModule) => {
+    if (MODULE_META[mod.module_type]?.open === 'modal') {
+      setModalTarget(mod)
+      return
+    }
     setExpanded(false)
     onOpenModule(mod)
   }
@@ -308,6 +320,24 @@ export function ModuleBoardCard({
         }}
         onClose={() => setAddOpen(false)}
       />
+
+      {/* 모달형 템플릿 진입: URL첨부는 링크 버튼 목록, 파일첨부는 파일 목록. */}
+      {modalTarget?.module_type === 'LINK' && (
+        <ModuleLinkModal
+          programId={programId}
+          moduleId={modalTarget.id}
+          title={nameOf(modalTarget)}
+          onClose={() => setModalTarget(null)}
+        />
+      )}
+      {modalTarget?.module_type === 'FILE' && (
+        <ModuleFileModal
+          programId={programId}
+          moduleId={modalTarget.id}
+          title={nameOf(modalTarget)}
+          onClose={() => setModalTarget(null)}
+        />
+      )}
 
       {/* 추가 2단계: 신규 인스턴스 세팅. */}
       {createType && (
