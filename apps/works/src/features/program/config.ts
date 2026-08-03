@@ -207,19 +207,36 @@ export const PROGRAM_STATUS_ICON: Record<string, LucideIcon> = {
 /** 수명주기 어디에도 속하지 않는 잔여 건(구 상태값)을 가리키는 아이콘. */
 export const PROGRAM_UNKNOWN_STATUS_ICON: LucideIcon = CircleHelp
 
-/** 프로그램 상태 배지 톤(상세 헤더·목록 공용). */
+/**
+ * 프로그램 상태 배지 톤(상세 헤더·목록 배지·프로세스 뷰의 막대와 아이콘 공용).
+ *
+ * 색이 답하는 것은 '어느 단계인가'가 아니라 **'지금 어떤 성격인가'**다.
+ *   대기(warning) · 아직(neutral) · 굴러감(info) · 잘 끝남(success) · 엎어짐(danger)
+ * 근거: docs_design/4_color_system_rules.md §3.1 — 사업 진행 중은 info, 최종 선정은 success,
+ * 심사 탈락·취소/중단은 danger, 검토 대기는 warning으로 명시되어 있다.
+ *
+ * 상태 7종에 톤 5종이므로 겹침은 피할 수 없다. 그래서 겹치는 자리를 고른다 — **제안 단계의
+ * 결말과 운영 단계의 결말이 서로 같은 색을 쓴다**(선정·종료=success, 미선정·취소=danger).
+ * 두 단계가 같은 모양의 끝을 가지므로 색이 대칭을 이루고, 겹치는 둘은 흐름에서 나란히 서지
+ * 않아 한 화면에서 헷갈릴 일이 없다.
+ *
+ * 2026-08-03 정정: 진행중이 success여서 선정과 같은 초록이었고(목록에서 둘을 색으로 가릴 수
+ * 없었다), 미선정이 warning이어서 '아직 뭔가 기다리는 중'으로 읽혔다. 위 두 축으로 다시 폈다.
+ * 색만으로 구분하지 않는다는 §4.2 규정은 배지의 라벨과 프로세스 뷰의 단계 아이콘이 지킨다.
+ */
 export const PROGRAM_STATUS_TONE: Record<string, BadgeTone> = {
-  PROPOSED: 'info',
+  PROPOSED: 'warning',
   SELECTED: 'success',
+  NOT_SELECTED: 'danger',
   DRAFT: 'neutral',
-  OPERATING: 'success',
-  FINISHED: 'neutral',
+  OPERATING: 'info',
+  FINISHED: 'success',
   CANCELLED: 'danger',
-  NOT_SELECTED: 'warning',
-  // 구 상태값
+  // 구 상태값 — 셋 다 운영이 굴러가던 중의 표기라 진행(info)으로 함께 묶는다.
+  // 종전에 심사·데모데이가 warning이었던 것은 이 표에서 노랑이 '대기'를 뜻하기 전의 잔재다.
   RECRUITING: 'info',
-  SCREENING: 'warning',
-  DEMO_DAY: 'warning',
+  SCREENING: 'info',
+  DEMO_DAY: 'info',
 }
 
 /**
