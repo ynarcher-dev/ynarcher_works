@@ -46,7 +46,8 @@ export function FundSummaryPanel({
   const { data, isPending } = useFundListTotals(keyword, filters, strategy, mineUserId)
 
   // 첫 조회 중에는 카드 높이만큼 자리를 잡아 둔다(도착하는 순간 목록이 밀려 내려가지 않게).
-  if (isPending) return <Skeleton className="h-[7.5rem] w-full rounded-radius-lg" />
+  // AC 진행 현황과 같은 구조(제목 + 묶음 라벨 줄 + 3층 타일)라 같은 높이를 쓴다.
+  if (isPending) return <Skeleton className="h-[8.5rem] w-full rounded-radius-lg" />
   if (!data) return null
 
   // 조건이 어긋나면 카드와 목록이 서로 다른 집합을 말한다. 값이 아니라 '일치'를 보는 검사라
@@ -62,45 +63,65 @@ export function FundSummaryPanel({
 
   return (
     <PanelCard title="자금 현황" count={data.fundCount}>
-      <div className="flex items-stretch gap-1.5">
-        <MoneyTile
-          label="약정총액"
-          icon={Wallet}
-          amount={data.totalCommitment}
-          // 나머지 셋의 분모라 자기 비율은 말할 것이 없다. 막대가 꽉 찬 이유를 대신 적는다.
-          ratio="비율 기준"
-          share={1}
-          tone="neutral"
-        />
-        <MoneyTile
-          label="실출자금액"
-          icon={ArrowDownToLine}
-          amount={data.paidIn}
-          ratio={ratioText('약정 대비', data.paidIn, data.totalCommitment)}
-          share={share(data.paidIn, data.totalCommitment)}
-          tone="info"
-        />
-        <MoneyTile
-          label="집행액"
-          icon={ArrowUpFromLine}
-          amount={data.drawn}
-          // 집행률의 분모는 약정이 아니라 출자다 — 약정으로 나누면 미납이 많은 펀드에서
-          // 운용역이 일을 안 한 것처럼 보인다. 출자 기록이 없으면 비율을 말하지 않는다.
-          ratio={ratioText('출자 대비', data.drawn, data.paidIn)}
-          // 막대만은 약정을 기준으로 그린다 — 네 칸의 막대가 같은 자로 재야 서로 비교된다.
-          share={share(data.drawn, data.totalCommitment)}
-          tone="success"
-        />
+      {/* 묶음 라벨. 아래 타일 줄과 같은 flex 비율을 써서 열이 정확히 겹친다(AC와 같은 규약).
+          점선이 무엇을 가르는지 여기서 이름 붙는다 — 이름이 없으면 그 경계가 그냥 여백으로 읽힌다.
+          묶음 라벨은 자기가 이끄는 타일 라벨(gray-700)보다 연해지지 않아야 한다. */}
+      <div className="flex gap-1.5">
+        <div className="flex min-w-0 flex-1 items-center gap-2" style={{ flexGrow: 3 }}>
+          <span className="shrink-0 text-caption font-medium text-gray-800">조성과 집행</span>
+          <span className="flex-1 border-t border-gray-200" aria-hidden />
+        </div>
+        <span className="size-4 shrink-0" aria-hidden />
+        <div className="flex min-w-0 flex-1 items-center gap-2" style={{ flexGrow: 1 }}>
+          <span className="shrink-0 text-caption font-medium text-gray-800">잔여</span>
+          <span className="flex-1 border-t border-gray-200" aria-hidden />
+        </div>
+      </div>
+
+      <div className="mt-1.5 flex items-stretch gap-1.5">
+        <div className="flex min-w-0 flex-1 items-stretch gap-1.5" style={{ flexGrow: 3 }}>
+          <MoneyTile
+            label="약정총액"
+            icon={Wallet}
+            amount={data.totalCommitment}
+            // 나머지 셋의 분모라 자기 비율은 말할 것이 없다. 막대가 꽉 찬 이유를 대신 적는다.
+            ratio="비율 기준"
+            share={1}
+            tone="neutral"
+            baseline
+          />
+          <MoneyTile
+            label="실출자금액"
+            icon={ArrowDownToLine}
+            amount={data.paidIn}
+            ratio={ratioText('약정 대비', data.paidIn, data.totalCommitment)}
+            share={share(data.paidIn, data.totalCommitment)}
+            tone="info"
+          />
+          <MoneyTile
+            label="집행액"
+            icon={ArrowUpFromLine}
+            amount={data.drawn}
+            // 집행률의 분모는 약정이 아니라 출자다 — 약정으로 나누면 미납이 많은 펀드에서
+            // 운용역이 일을 안 한 것처럼 보인다. 출자 기록이 없으면 비율을 말하지 않는다.
+            ratio={ratioText('출자 대비', data.drawn, data.paidIn)}
+            // 막대만은 약정을 기준으로 그린다 — 네 칸의 막대가 같은 자로 재야 서로 비교된다.
+            share={share(data.drawn, data.totalCommitment)}
+            tone="success"
+          />
+        </div>
         <SplitDivider />
-        <MoneyTile
-          label="잔액"
-          icon={PiggyBank}
-          amount={data.balance}
-          ratio={ratioText('약정 대비', data.balance, data.totalCommitment)}
-          share={share(data.balance, data.totalCommitment)}
-          tone="neutral"
-          aside
-        />
+        <div className="flex min-w-0 flex-1 items-stretch gap-1.5" style={{ flexGrow: 1 }}>
+          <MoneyTile
+            label="잔액"
+            icon={PiggyBank}
+            amount={data.balance}
+            ratio={ratioText('약정 대비', data.balance, data.totalCommitment)}
+            share={share(data.balance, data.totalCommitment)}
+            tone="neutral"
+            aside
+          />
+        </div>
       </div>
 
       {/* 조치 알림 — 하나도 없으면 줄 자체를 그리지 않는다. 늘 있는 현황(위)과 달리
@@ -177,6 +198,12 @@ interface MoneyTileProps {
   tone: BadgeTone
   /** 측정값 밖(파생) 여부. 점선 테두리로 한 단계 물러난다. */
   aside?: boolean
+  /**
+   * 나머지 칸이 자기를 기준으로 재는 칸(약정총액). 막대가 구조적으로 늘 100%라 재는 값이
+   * 아니라 눈금이다 — 톤 색으로 꽉 채우면 아무 말도 하지 않는 굵은 밑줄만 남고, 실제로
+   * 뭔가를 말하는 옆 칸의 막대보다 눈에 먼저 든다.
+   */
+  baseline?: boolean
 }
 
 /**
@@ -187,7 +214,16 @@ interface MoneyTileProps {
  * 카드만 사업 진행 현황보다 높아진다. 라벨과 같은 크기를 쓰고 색으로만 물러나게 한다
  * (한 줄 안에서 크기를 갈라 위계를 만들지 않는다).
  */
-function MoneyTile({ label, icon: Icon, amount, ratio, share, tone, aside }: MoneyTileProps) {
+function MoneyTile({
+  label,
+  icon: Icon,
+  amount,
+  ratio,
+  share,
+  tone,
+  aside,
+  baseline,
+}: MoneyTileProps) {
   return (
     <div
       title={`${label} ${amount == null ? '미입력' : `${millionNumber(amount)}백만원`} · ${ratio}`}
@@ -198,10 +234,18 @@ function MoneyTile({ label, icon: Icon, amount, ratio, share, tone, aside }: Mon
     >
       {/* 아이콘 색은 언제나 타일의 톤이다(막대와 같은 표) — 값이 비어 있어도 바꾸지 않는다.
           아이콘이 답하는 것은 '무엇을 재는가'이지 '지금 얼마인가'가 아니다. */}
-      <p className={cn('flex items-center gap-1 text-caption', aside ? 'text-gray-500' : 'text-gray-700')}>
+      {/* 비율은 라벨 오른쪽 끝이 아니라 라벨 바로 뒤에 붙인다 — 칸이 넓어지면 양끝 정렬은
+          두 섬으로 갈려 눈이 두 번 움직이고, AC의 왼쪽 뭉침과도 어긋난다. 라벨의 수식어처럼
+          같은 크기로 이어 두고 색으로만 물러나게 한다. */}
+      <p
+        className={cn(
+          'flex items-center gap-1 text-caption',
+          aside ? 'text-gray-500' : 'text-gray-700',
+        )}
+      >
         <Icon className={cn('size-3.5 shrink-0', badgeToneText[tone])} aria-hidden />
         <span className="truncate">{label}</span>
-        <span className="ml-auto shrink-0 tabular-nums text-gray-500">{ratio}</span>
+        <span className="truncate tabular-nums text-gray-500">{ratio}</span>
       </p>
       <p className="truncate text-title-sm font-bold tabular-nums text-gray-900">
         {amount == null ? (
@@ -216,7 +260,7 @@ function MoneyTile({ label, icon: Icon, amount, ratio, share, tone, aside }: Mon
       </p>
       <span className="mt-1.5 block h-1 w-full overflow-hidden rounded-full bg-gray-100">
         <span
-          className={cn('block h-full rounded-full', badgeToneFill[tone])}
+          className={cn('block h-full rounded-full', baseline ? 'bg-gray-200' : badgeToneFill[tone])}
           style={{ width: `${Math.round((share ?? 0) * 100)}%` }}
         />
       </span>
