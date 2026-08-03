@@ -1,5 +1,6 @@
-import { Button, CardShell, Input, useToast } from '@ynarcher/ui'
+import { Button, CardShell, useToast } from '@ynarcher/ui'
 import { useState, type ReactNode } from 'react'
+import { PasswordInput } from '@/components/PasswordInput'
 import { supabase } from '@/lib/supabase'
 
 /** 새 비밀번호 최소 길이 — 계정 생성 시 초기 비밀번호와 같은 기준을 쓴다. */
@@ -93,8 +94,7 @@ export function MyPasswordCard() {
       <p className="mb-3 text-caption font-medium text-gray-700">비밀번호 변경</p>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="현재 비밀번호">
-          <Input
-            type="password"
+          <PasswordInput
             value={current}
             onChange={(e) => setCurrent(e.target.value)}
             autoComplete="current-password"
@@ -102,16 +102,14 @@ export function MyPasswordCard() {
         </Field>
         <div className="hidden sm:block" />
         <Field label="새 비밀번호">
-          <Input
-            type="password"
+          <PasswordInput
             value={next}
             onChange={(e) => setNext(e.target.value)}
             autoComplete="new-password"
           />
         </Field>
         <Field label="새 비밀번호 확인">
-          <Input
-            type="password"
+          <PasswordInput
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             autoComplete="new-password"
