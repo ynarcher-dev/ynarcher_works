@@ -17,6 +17,17 @@ export const PLACE_LABELS: Record<AttendancePlace, string> = {
   EXTERNAL: '외부근무',
 }
 
+/**
+ * 근무지 짧은 표기 — 다른 말이 붙는 좁은 자리(버튼 라벨 '외부 출근' 등) 전용.
+ *
+ * 열 이름이 '근무지'라고 말해 주는 표 안에서는 긴 표기를 쓰고, 라벨 안에 근무지와 동작이 함께
+ * 들어가는 자리에서만 이 표기를 쓴다. 값이 무엇인지는 두 표기가 같은 키를 공유해 보장한다.
+ */
+export const PLACE_SHORT_LABELS: Record<AttendancePlace, string> = {
+  INTERNAL: '사내',
+  EXTERNAL: '외부',
+}
+
 /** 근태 상태 원장 한 줄(설정에서 늘린다). */
 export interface AttendanceStatus {
   code: string

@@ -1,4 +1,4 @@
-import { Badge, Button, Card, TagChip, useToast, type BadgeTone } from '@ynarcher/ui'
+import { Badge, Button, Card, SegmentedToggle, useToast, type BadgeTone } from '@ynarcher/ui'
 import dayjs from 'dayjs'
 import { LogIn, LogOut } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
@@ -13,6 +13,7 @@ import {
 } from '@/features/management/attendance/attendanceConfigApi'
 import {
   PLACE_LABELS,
+  PLACE_SHORT_LABELS,
   WEEKDAY_LABELS,
   statusOf,
   timeText,
@@ -91,10 +92,10 @@ function StampButton({
  * 무엇을 하는가(스탬프 둘)다. 시계와 버튼을 세로로 쌓으면 카드가 길어지기만 하고, 눈이
  * '지금 몇 시'와 '찍힌 시각'을 오갈 때 매번 위아래로 움직여야 한다.
  *
- * 왼쪽도 오른쪽과 같은 상자다. 안쪽 요소 셋이 테두리 없이 떠 있으면 오른쪽 두 칸과 무게가
- * 달라 한 카드 안에서 서로 다른 층으로 보인다. 높이는 오른쪽 두 칸의 합에 맞춘다.
+ * 왼쪽도 오른쪽과 같은 상자다. 안쪽 요소 셋이 테두리 없이 떠 있으면 오른쪽 칸들과 무게가
+ * 달라 한 카드 안에서 서로 다른 층으로 보인다. 높이는 오른쪽 열 전체에 맞춰 늘어난다.
  *
- * 버튼은 둘뿐이다. 외출·회의·외근·조퇴는 일과의 분류이지 근태 상태가 아니라, 이 원장이
+ * 찍는 버튼은 둘뿐이다. 외출·회의·외근·조퇴는 일과의 분류이지 근태 상태가 아니라, 이 원장이
  * 답해야 하는 질문(제때 왔는가, 얼마나 일했는가)에 기여하지 않는다.
  *
  * 시각과 판정은 전부 서버가 정한다 — 화면의 시계는 보여 주기 위한 것이고, 기록되는 값은
@@ -112,7 +113,18 @@ export function WorkCheckCard() {
   const checkIn = useCheckIn()
   const checkOut = useCheckOut()
 
-  const [place, setPlace] = useState<AttendancePlace>('INTERNAL')
+  /**
+   * 근무지 — 지금 출근을 찍으면 어디로 기록되는가.
+   *
+   * 고른 값이 없으면 오늘 기록의 근무지를 따른다. 이미 찍은 뒤에도 이 버튼은 살아 있어(다시
+   * 찍으면 그 값으로 덮인다) 기본값이 기록과 어긋나 있으면 다시 찍는 순간 근무지가 조용히
+   * 바뀐다. 외부근무를 허용하지 않는 근무 기준이면 고를 것이 없으므로 사내로 고정한다 —
+   * 화면이 막는 것은 표시일 뿐이고 실제 거절은 RPC가 한다.
+   */
+  const [placeChoice, setPlaceChoice] = useState<AttendancePlace | null>(null)
+  const place: AttendancePlace = policy?.allowExternal
+    ? (placeChoice ?? today?.workPlace ?? 'INTERNAL')
+    : 'INTERNAL'
 
   const checkedIn = Boolean(today?.checkInAt)
   const checkedOut = Boolean(today?.checkOutAt)
@@ -184,32 +196,26 @@ export function WorkCheckCard() {
 
   return (
     <Card
-      title="근무체크"
-      /* 현황 태그는 카드 제목 옆이 제자리다 — 이 카드 전체가 무엇에 관한 상태인지를 말하는
-         값이라, 안쪽 한 칸에 넣으면 그 칸에만 걸린 값처럼 읽힌다. 출근 전에는 같은 자리가
-         근무지를 고르는 칩이 된다(배지와 칩은 같은 규격이라 헤더 높이가 흔들리지 않는다). */
-      actions={
-        <>
+      /* 현황 배지는 제목에 딸려 붙인다 — 이 카드 전체가 무엇에 관한 상태인지를 말하는 값이라,
+         제목에서 떨어져 우측 액션 쪽에 서면 옆의 이동 버튼과 같은 무리로 읽힌다. 헤더 우측은
+         '어디로 가는가'(근태현황) 하나만 남긴다. */
+      title={
+        <span className="flex flex-wrap items-center gap-2">
+          근무체크
           <Badge tone={progress.tone}>{progress.label}</Badge>
           {ledgerBadge && <Badge tone={ledgerBadge.tone}>{ledgerBadge.label}</Badge>}
-          {checkedIn
-            ? today?.workPlace === 'EXTERNAL' && <Badge tone="info">외부</Badge>
-            : policy?.allowExternal &&
-              (Object.keys(PLACE_LABELS) as AttendancePlace[]).map((p) => (
-                <TagChip key={p} selected={place === p} onClick={() => setPlace(p)}>
-                  {PLACE_LABELS[p]}
-                </TagChip>
-              ))}
-          {/* 내 근태 현황으로 가는 자리. 갈 곳(본인 월간 뷰)은 아직 없으므로 버튼만 세워 둔다 —
-              연결되기 전까지 눌러도 아무 일이 없다. 대시보드 우측 열에서 나란히 서는 다른 이동
-              버튼(환영 카드 '내 메뉴')과 같은 outline 규격을 쓴다. */}
-          <Button variant="outline">근태현황</Button>
-        </>
+        </span>
+      }
+      actions={
+        /* 내 근태 현황으로 가는 자리. 갈 곳(본인 월간 뷰)은 아직 없으므로 버튼만 세워 둔다 —
+           연결되기 전까지 눌러도 아무 일이 없다. 대시보드 우측 열에서 나란히 서는 다른 이동
+           버튼(환영 카드 '내 메뉴')과 같은 outline 규격을 쓴다. */
+        <Button variant="outline">근태현황</Button>
       }
     >
       <div className="grid grid-cols-5 items-stretch gap-2">
-        {/* 왼쪽(2/5) — 지금이 언제인가. 오른쪽 두 칸과 같은 상자·같은 높이.
-            세 줄을 위아래로 벌리지 않고 가운데에 모은다 — 오른쪽이 두 칸이라 남는 높이가
+        {/* 왼쪽(2/5) — 지금이 언제인가. 오른쪽 열과 같은 상자·같은 높이.
+            세 줄을 위아래로 벌리지 않고 가운데에 모은다 — 오른쪽이 더 길어 남는 높이가
             생기는데, 그 여백을 줄 사이에 나눠 주면 세 줄이 서로 무관한 조각처럼 흩어진다. */}
         <div className="col-span-2 flex flex-col justify-center gap-2 rounded-radius-md border border-gray-200 bg-white px-3 py-2">
           <p className="text-caption font-medium text-gray-800">
@@ -230,9 +236,28 @@ export function WorkCheckCard() {
 
         {/* 오른쪽(3/5) — 무엇을 하는가. */}
         <div className="col-span-3 space-y-2">
+          {/* 근무지는 출근 버튼 바로 위에 둔다. 고른 값이 아래 버튼의 라벨로 그대로 나타나므로
+              (사내 출근 / 외부 출근) 무엇을 찍는지 누르기 전에 읽힌다. 선택지가 하나뿐인 근무
+              기준에서는 아예 세우지 않는다 — 고를 수 없는 선택지는 질문이 아니다. */}
+          {policy?.allowExternal && (
+            <SegmentedToggle
+              label="근무지"
+              block
+              options={(Object.keys(PLACE_LABELS) as AttendancePlace[]).map((p) => ({
+                key: p,
+                label: PLACE_LABELS[p],
+              }))}
+              value={place}
+              onChange={setPlaceChoice}
+              disabled={busy || !isWorkday}
+            />
+          )}
           <StampButton
             icon={<LogIn className="size-4" />}
-            label="출근하기"
+            /* 근무지를 고를 수 있을 때만 라벨이 근무지를 밝힌다. 이 열은 대시보드의 1/3
+               트랙이라 '외부근무 출근하기'까지 적으면 좁은 화면에서 라벨이 두 줄로 접힌다 —
+               근무지가 붙는 자리에서는 짧은 표기를 쓴다. */
+            label={policy?.allowExternal ? `${PLACE_SHORT_LABELS[place]} 출근` : '출근하기'}
             at={today?.checkInAt ?? null}
             done={checkedIn}
             disabled={busy || !isWorkday}
