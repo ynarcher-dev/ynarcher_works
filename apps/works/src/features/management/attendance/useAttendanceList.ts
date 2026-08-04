@@ -9,6 +9,7 @@ import type { FilterOption, StatTile } from '@ynarcher/ui'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   EMPTY_ATTENDANCE_FILTERS,
+  NO_AFFILIATION,
   PENDING_LABEL,
   PENDING_STATUS,
   matchesPlace,
@@ -33,8 +34,11 @@ interface Input {
   /** 날짜별 뷰가 보고 있는 날. 빈 칸이 결근인지 미출근인지를 이 날짜가 가른다. */
   dateKey: string
   isPerson: boolean
-  /** 임직원 id → 소속 표기. 규칙은 departmentOptions.affiliationLabel이 소유한다. */
-  affiliationOf: (departmentId: string | null) => string
+  /**
+   * 부서 id → 그 사람이 걸치는 소속명들(본부·그룹·팀…). 소속 조건은 뎁스를 가리지 않는다 —
+   * 'AC본부'를 고르면 그 아래 팀 사람까지 걸려야 조직으로 묶어 보는 일이 된다.
+   */
+  affiliationNamesOf: (departmentId: string | null) => string[]
 }
 
 export function useAttendanceList({
@@ -43,7 +47,7 @@ export function useAttendanceList({
   statusList,
   dateKey,
   isPerson,
-  affiliationOf,
+  affiliationNamesOf,
 }: Input) {
   const [keyword, setKeyword] = useState('')
   const [filters, setFilters] = useState<AttendanceFilters>(EMPTY_ATTENDANCE_FILTERS)
@@ -63,14 +67,15 @@ export function useAttendanceList({
     const kw = keyword.trim()
     return boardRows.filter((r) => {
       if (kw && !r.userName.includes(kw)) return false
-      if (
-        filters.affiliations.length &&
-        !filters.affiliations.includes(affiliationOf(r.departmentId))
-      )
-        return false
+      if (filters.affiliations.length) {
+        const names = affiliationNamesOf(r.departmentId)
+        // 소속이 없는 사람은 '소속 없음'이라는 한 칸으로 묶어 고를 수 있게 한다.
+        const pick = names.length ? names : [NO_AFFILIATION]
+        if (!pick.some((n) => filters.affiliations.includes(n))) return false
+      }
       return matchesPlace(r, filters)
     })
-  }, [boardRows, keyword, filters, affiliationOf])
+  }, [boardRows, keyword, filters, affiliationNamesOf])
 
   const dayRows = useMemo(
     () => scopedDayRows.filter((r) => matchesStatus(r, dateKey, filters)),
@@ -137,13 +142,18 @@ export function useAttendanceList({
   )
 
   // 소속 선택지는 조직도 전체가 아니라 그날 표에 실제로 선 소속만 담는다 — 아무도 없는 부서를
-  // 골라 빈 표를 보게 만들 이유가 없다.
+  // 골라 빈 표를 보게 만들 이유가 없다. 뎁스를 가리지 않으므로 본부도 팀도 함께 선다.
   const affiliationOptions = useMemo<FilterOption[]>(() => {
-    const names = new Set(boardRows.map((r) => affiliationOf(r.departmentId)))
+    const names = new Set<string>()
+    for (const r of boardRows) {
+      const own = affiliationNamesOf(r.departmentId)
+      if (own.length) own.forEach((n) => names.add(n))
+      else names.add(NO_AFFILIATION)
+    }
     return [...names]
       .sort((a, b) => a.localeCompare(b, 'ko'))
       .map((value) => ({ value, label: value }))
-  }, [boardRows, affiliationOf])
+  }, [boardRows, affiliationNamesOf])
 
   return {
     keyword,

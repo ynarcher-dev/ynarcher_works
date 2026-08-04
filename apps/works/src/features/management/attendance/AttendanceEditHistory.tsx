@@ -4,7 +4,7 @@ import {
   EDIT_FIELD_LABELS,
   PLACE_LABELS,
   statusOf,
-  timeText,
+  timeTextSec,
   type AttendanceEdit,
   type AttendancePlace,
   type AttendanceStatus,
@@ -15,12 +15,15 @@ interface Props {
   statuses: AttendanceStatus[]
 }
 
-/** 저장된 원시값을 사람이 읽는 말로. 상태 코드는 원장 라벨, 시각은 HH:mm으로 편다. */
+/**
+ * 저장된 원시값을 사람이 읽는 말로. 상태 코드는 원장 라벨, 시각은 표와 같은 초 단위로 편다 —
+ * 이력이 표보다 뭉뚱그리면 "무엇을 무엇으로 바꿨는가"가 표의 값과 맞아떨어지지 않는다.
+ */
 function readable(edit: AttendanceEdit, raw: string | null, statuses: AttendanceStatus[]): string {
   if (!raw) return '없음'
   if (edit.field === 'status') return statusOf(statuses, raw)?.label ?? raw
   if (edit.field === 'work_place') return PLACE_LABELS[raw as AttendancePlace] ?? raw
-  if (edit.field === 'check_in_at' || edit.field === 'check_out_at') return timeText(raw) ?? raw
+  if (edit.field === 'check_in_at' || edit.field === 'check_out_at') return timeTextSec(raw) ?? raw
   return raw
 }
 

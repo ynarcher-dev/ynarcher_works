@@ -6,7 +6,7 @@ import {
   WEEKDAY_LABELS,
   displayStatusCode,
   durationText,
-  timeText,
+  timeTextSec,
   type AttendanceMonthRow,
   type AttendanceStatus,
 } from '@/features/management/attendance/attendanceModel'
@@ -17,8 +17,9 @@ interface Props {
   onRowClick: (row: AttendanceMonthRow) => void
 }
 
+/** 시각 셀. 찍힌 시각이라 초까지 적는다(일간 표와 같은 규격). */
 function TimeCell({ value }: { value: string | null }) {
-  const text = timeText(value)
+  const text = timeTextSec(value)
   if (!text) return <EmptyValue />
   return <span className="tabular-nums text-gray-700">{text}</span>
 }
@@ -58,16 +59,17 @@ export function AttendanceMonthTable({ rows, statuses, onRowClick }: Props) {
           <EmptyValue />
         ),
     },
+    // 'HH:mm:ss' 여덟 자가 줄바꿈되지 않는 폭.
     {
       key: 'checkInAt',
       header: '출근',
-      className: 'w-20',
+      className: 'w-24',
       render: (r) => <TimeCell value={r.checkInAt} />,
     },
     {
       key: 'checkOutAt',
       header: '퇴근',
-      className: 'w-20',
+      className: 'w-24',
       render: (r) => <TimeCell value={r.checkOutAt} />,
     },
     {

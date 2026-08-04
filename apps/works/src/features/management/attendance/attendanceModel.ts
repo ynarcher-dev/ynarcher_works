@@ -137,10 +137,26 @@ export function isCorrected(entry: AttendanceEntry): boolean {
   return Boolean(entry.autoStatusCode) && entry.autoStatusCode !== entry.statusCode
 }
 
-/** 'HH:mm:ss' 또는 ISO 시각 → 'HH:mm'. 값이 없으면 null. */
+/**
+ * 'HH:mm:ss' 또는 ISO 시각 → 'HH:mm'. 값이 없으면 null.
+ * 분까지만 적는 자리(근무 기준의 출근 마감 등 '규칙'을 말하는 값)와 `<input type="time">`의
+ * 입력값이 쓴다 — 규칙은 초를 갖지 않고, time 입력은 step 없이는 초를 받지 못한다.
+ */
 export function timeText(value: string | null): string | null {
   if (!value) return null
   return value.includes('T') ? dayjs(value).format('HH:mm') : value.slice(0, 5)
+}
+
+/**
+ * 'HH:mm:ss' 또는 ISO 시각 → 'HH:mm:ss'. 값이 없으면 null.
+ *
+ * **찍힌 시각을 적는 자리**(표의 출근·퇴근, 정정 이력의 이전·이후 값)는 초까지 적는다. 분에서
+ * 자르면 지각선 직전에 찍은 두 사람이 같은 시각으로 보이고, 무엇보다 원장에 남은 값과 화면에
+ * 보이는 값이 달라 "왜 지각인가"를 화면으로 설명할 수 없다.
+ */
+export function timeTextSec(value: string | null): string | null {
+  if (!value) return null
+  return value.includes('T') ? dayjs(value).format('HH:mm:ss') : value.slice(0, 8)
 }
 
 /** 재실 시간 'N시간 M분'. 출근·퇴근이 모두 있어야 값이 선다. */

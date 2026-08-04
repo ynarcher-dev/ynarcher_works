@@ -7,11 +7,12 @@ import {
   type DataTableProps,
 } from '@ynarcher/ui'
 import { AttendanceStatusBadge } from '@/features/management/attendance/AttendanceStatusBadge'
+import { TIER_EMPTY, type OrgTiers } from '@/features/management/orgTiers'
 import {
   PLACE_LABELS,
   displayStatusCode,
   durationText,
-  timeText,
+  timeTextSec,
   type AttendanceBoardRow,
   type AttendanceStatus,
 } from '@/features/management/attendance/attendanceModel'
@@ -20,17 +21,17 @@ interface Props {
   rows: AttendanceBoardRow[]
   dateKey: string
   statuses: AttendanceStatus[]
-  /** 임직원 id → 소속 표기. 규칙은 departmentOptions.affiliationLabel이 소유한다. */
-  affiliationOf: (departmentId: string | null) => string
+  /** 조직 뎁스 눈금. 컬럼 수와 헤더는 조직 관리가 정한다(management/orgTiers). */
+  org: OrgTiers
   onRowClick: (row: AttendanceBoardRow) => void
   onOpenPerson: (row: AttendanceBoardRow) => void
   /** 페이저. `rows`는 이미 그 페이지 구간으로 잘려 온다(넘버링 기준은 total이 잡는다). */
   pagination?: DataTableProps<AttendanceBoardRow>['pagination']
 }
 
-/** 시각 셀. 자릿수가 흔들리지 않게 tabular-nums로 고정한다. */
+/** 시각 셀. 찍힌 시각이라 초까지 적고, 자릿수가 흔들리지 않게 tabular-nums로 고정한다. */
 function TimeCell({ value }: { value: string | null }) {
-  const text = timeText(value)
+  const text = timeTextSec(value)
   if (!text) return <EmptyValue />
   return <span className="tabular-nums text-gray-700">{text}</span>
 }
@@ -48,7 +49,7 @@ export function AttendanceDayTable({
   rows,
   dateKey,
   statuses,
-  affiliationOf,
+  org,
   onRowClick,
   onOpenPerson,
   pagination,
@@ -73,12 +74,17 @@ export function AttendanceDayTable({
         </TextAction>
       ),
     },
-    {
-      key: 'affiliation',
-      header: '소속',
-      className: 'w-36',
-      render: (r) => affiliationOf(r.departmentId) || <EmptyValue />,
-    },
+    // 소속은 뎁스마다 한 칸씩 선다 — 한 칸에 이어 붙이면 본부로 묶어 보거나 팀만 눈으로
+    // 따라가는 일이 되지 않는다. 칸 수와 헤더는 조직 관리가 정한다.
+    ...org.tiers.map<Column<AttendanceBoardRow>>((t) => ({
+      key: `tier-${t.tier}`,
+      header: t.label,
+      className: 'w-28',
+      render: (r) => {
+        const name = org.valuesOf(r.departmentId)[t.tier]
+        return name && name !== TIER_EMPTY ? name : <EmptyValue />
+      },
+    })),
     {
       key: 'workPlace',
       header: '근무지',
@@ -92,16 +98,17 @@ export function AttendanceDayTable({
           <EmptyValue />
         ),
     },
+    // 'HH:mm:ss' 여덟 자가 줄바꿈되지 않는 폭.
     {
       key: 'checkInAt',
       header: '출근',
-      className: 'w-20',
+      className: 'w-24',
       render: (r) => <TimeCell value={r.checkInAt} />,
     },
     {
       key: 'checkOutAt',
       header: '퇴근',
-      className: 'w-20',
+      className: 'w-24',
       render: (r) => <TimeCell value={r.checkOutAt} />,
     },
     {
@@ -126,6 +133,9 @@ export function AttendanceDayTable({
       key: 'note',
       header: '비고',
       align: 'left',
+      // 폭을 묶어 둔다 — 열어 두면 남는 가로를 비고가 다 먹어, 대부분 '-'인 칸이 표에서
+      // 제일 넓어진다. 긴 사유는 줄바꿈으로 받는다.
+      className: 'w-48',
       render: (r) => r.note ?? <EmptyValue />,
     },
   ]

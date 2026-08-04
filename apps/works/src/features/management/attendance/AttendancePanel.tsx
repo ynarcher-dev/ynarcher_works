@@ -12,14 +12,12 @@ import {
   useAttendanceMonth,
 } from '@/features/management/attendance/attendanceApi'
 import { useAttendanceStatuses } from '@/features/management/attendance/attendanceConfigApi'
-import { NO_AFFILIATION } from '@/features/management/attendance/attendanceFilters'
 import { personSummary } from '@/features/management/attendance/attendanceSummary'
 import {
   ATTENDANCE_PAGE_SIZE,
   useAttendanceList,
 } from '@/features/management/attendance/useAttendanceList'
-import { affiliationLabel } from '@/features/management/departmentOptions'
-import { useDepartments } from '@/features/management/hooks'
+import { useOrgTiers } from '@/features/management/orgTiers'
 
 /** 무엇을 축으로 자를 것인가. 이 값이 표뿐 아니라 날짜 바의 이동 단위(일/월)까지 정한다. */
 type ViewAxis = 'day' | 'person'
@@ -61,7 +59,8 @@ export function AttendancePanel() {
   const monthTo = date.endOf('month').format('YYYY-MM-DD')
 
   const { data: statuses } = useAttendanceStatuses()
-  const { data: depts } = useDepartments()
+  // 소속 컬럼의 눈금(뎁스)은 조직 관리가 정한다 — 인사 관리 목록과 같은 훅을 쓴다.
+  const org = useOrgTiers()
   const boardQuery = useAttendanceBoard(dateKey)
   const monthQuery = useAttendanceMonth(
     isPerson && personId ? personId : undefined,
@@ -72,12 +71,6 @@ export function AttendancePanel() {
   const statusList = useMemo(() => statuses ?? [], [statuses])
   const boardRows = useMemo(() => boardQuery.data ?? [], [boardQuery.data])
   const monthRows = useMemo(() => monthQuery.data ?? [], [monthQuery.data])
-
-  const affiliationOf = useMemo(() => {
-    const rows = depts ?? []
-    // 소속이 비어 있는 사람도 고를 수 있어야 하므로 빈 문자열 대신 글자를 준다.
-    return (departmentId: string | null) => affiliationLabel(rows, departmentId) || NO_AFFILIATION
-  }, [depts])
 
   /**
    * 대상 선택지는 임직원 원장이 아니라 **그 표에 선 사람들**(attendance_board의 명부)에서 뽑는다.
@@ -100,7 +93,7 @@ export function AttendancePanel() {
     statusList,
     dateKey,
     isPerson,
-    affiliationOf,
+    affiliationNamesOf: org.namesOf,
   })
 
   const summary = useMemo(() => personSummary(monthRows), [monthRows])
@@ -130,8 +123,7 @@ export function AttendancePanel() {
       {/* 축 전환 — 표뿐 아니라 아래 날짜 바의 이동 단위(일/월)와 조건 구성까지 이 탭이 정한다. */}
       <Tabs items={VIEW_TABS} value={view} onChange={(k) => setView(k as ViewAxis)} />
 
-      {/* 탭·툴바와 같은 줄에서 시작한다 — 혼자 가운데 뜨면 어느 줄에 속한 컨트롤인지 흐려진다. */}
-      <DateNav date={date} onChange={setDate} unit={isPerson ? 'month' : 'day'} align="left" />
+      <DateNav date={date} onChange={setDate} unit={isPerson ? 'month' : 'day'} />
 
       <AttendanceToolbar
         person={isPerson ? { id: personId, options: people, onChange: setPersonId } : null}
@@ -187,7 +179,7 @@ export function AttendancePanel() {
           rows={list.pagedDayRows}
           dateKey={dateKey}
           statuses={statusList}
-          affiliationOf={affiliationOf}
+          org={org}
           onRowClick={(row) =>
             setTarget({
               userId: row.userId,
