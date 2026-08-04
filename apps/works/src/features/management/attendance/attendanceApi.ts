@@ -188,6 +188,41 @@ export interface AttendanceRecordInput {
   reason: string
 }
 
+/** 일괄 변경 대상 한 칸(누구의 어느 날인가). 날짜별은 한 날짜에 여러 사람, 인력별은 그 반대다. */
+export interface AttendanceBulkTarget {
+  userId: string
+  workDate: string
+}
+
+/**
+ * 상태 일괄 변경 — 고른 칸들의 상태 하나만 바꾼다. 반환값은 실제로 바뀐 건수다.
+ *
+ * set_attendance_record를 여러 번 부르지 않는다. 12건 중 5건에서 끊기면 어느 것이 반영됐는지
+ * 화면이 답할 수 없고, 그 RPC는 시각·근무지·비고까지 함께 덮어써서 호출부가 화면이 읽은(낡았을
+ * 수 있는) 값을 되돌려 보내야 한다. 일괄 RPC는 상태만 바꾸고 나머지는 원장 값 그대로 둔다.
+ * 근거: supabase/migrations/20260804100000_attendance_bulk_status.sql
+ */
+export function useSetAttendanceStatusBulk() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (v: {
+      targets: AttendanceBulkTarget[]
+      statusCode: string
+      reason: string
+    }): Promise<number> => {
+      const { data, error } = await supabase.rpc('set_attendance_status_bulk', {
+        p_user_ids: v.targets.map((t) => t.userId),
+        p_work_dates: v.targets.map((t) => t.workDate),
+        p_status: v.statusCode,
+        p_reason: v.reason,
+      })
+      if (error) throw error
+      return (data ?? 0) as number
+    },
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ATTENDANCE_KEY }),
+  })
+}
+
 /** 근태 정정 — 원장 수정과 이력 기록을 한 트랜잭션으로 묶는 RPC 경유. */
 export function useSetAttendanceRecord() {
   const qc = useQueryClient()

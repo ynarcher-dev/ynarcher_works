@@ -15,6 +15,9 @@ interface Props {
   rows: AttendanceMonthRow[]
   statuses: AttendanceStatus[]
   onRowClick: (row: AttendanceMonthRow) => void
+  /** 일괄 변경 대상 선택(날짜). */
+  selectedKeys: string[]
+  onSelectionChange: (keys: string[]) => void
 }
 
 /** 시각 셀. 찍힌 시각이라 초까지 적는다(일간 표와 같은 규격). */
@@ -29,7 +32,13 @@ function TimeCell({ value }: { value: string | null }) {
  * 열 구성은 일간 표와 같게 두고 이름 자리만 날짜로 바꾼다. 같은 값을 다른 순서로 늘어놓으면
  * 두 뷰를 오갈 때마다 눈이 열을 다시 찾아야 한다.
  */
-export function AttendanceMonthTable({ rows, statuses, onRowClick }: Props) {
+export function AttendanceMonthTable({
+  rows,
+  statuses,
+  onRowClick,
+  selectedKeys,
+  onSelectionChange,
+}: Props) {
   const columns: Column<AttendanceMonthRow>[] = [
     {
       key: 'workDate',
@@ -103,6 +112,9 @@ export function AttendanceMonthTable({ rows, statuses, onRowClick }: Props) {
       columns={columns}
       rows={rows}
       rowKey={(r) => r.workDate}
+      selectable
+      selectedKeys={selectedKeys}
+      onSelectionChange={onSelectionChange}
       onRowClick={onRowClick}
       // 날짜가 곧 순번이라 No. 열은 같은 말을 두 번 하는 자리가 된다.
       numbered={false}

@@ -27,6 +27,9 @@ interface Props {
   onOpenPerson: (row: AttendanceBoardRow) => void
   /** 페이저. `rows`는 이미 그 페이지 구간으로 잘려 온다(넘버링 기준은 total이 잡는다). */
   pagination?: DataTableProps<AttendanceBoardRow>['pagination']
+  /** 일괄 변경 대상 선택(임직원 id). */
+  selectedKeys: string[]
+  onSelectionChange: (keys: string[]) => void
 }
 
 /** 시각 셀. 찍힌 시각이라 초까지 적고, 자릿수가 흔들리지 않게 tabular-nums로 고정한다. */
@@ -53,6 +56,8 @@ export function AttendanceDayTable({
   onRowClick,
   onOpenPerson,
   pagination,
+  selectedKeys,
+  onSelectionChange,
 }: Props) {
   const columns: Column<AttendanceBoardRow>[] = [
     {
@@ -145,6 +150,9 @@ export function AttendanceDayTable({
       columns={columns}
       rows={rows}
       rowKey={(r) => r.userId}
+      selectable
+      selectedKeys={selectedKeys}
+      onSelectionChange={onSelectionChange}
       onRowClick={onRowClick}
       // 근태 행에는 생성자·수정일·비활성화가 뜻이 없다. 알아야 하는 시각은 출근·퇴근이고,
       // 언제 누가 고쳤는지는 수정 모달의 정정 이력이 답한다.

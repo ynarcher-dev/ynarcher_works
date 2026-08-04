@@ -1,7 +1,8 @@
 import { Button, EmptyState, Spinner, StatTileGrid, Tabs } from '@ynarcher/ui'
 import dayjs from 'dayjs'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { DateNav } from '@/components/DateNav'
+import { AttendanceBulkBar } from '@/features/management/attendance/AttendanceBulkBar'
 import { AttendanceDayTable } from '@/features/management/attendance/AttendanceDayTable'
 import { AttendanceEditModal, type AttendanceTarget } from '@/features/management/attendance/AttendanceEditModal'
 import { AttendanceMonthTable } from '@/features/management/attendance/AttendanceMonthTable'
@@ -50,6 +51,7 @@ export function AttendancePanel() {
   const [date, setDate] = useState(() => dayjs())
   const [view, setView] = useState<ViewAxis>('day')
   const [personId, setPersonId] = useState('')
+  const [selected, setSelected] = useState<string[]>([])
   const [target, setTarget] = useState<AttendanceTarget | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
 
@@ -99,6 +101,23 @@ export function AttendancePanel() {
   const summary = useMemo(() => personSummary(monthRows), [monthRows])
 
   const loading = boardQuery.isLoading || monthQuery.isLoading
+
+  /**
+   * 선택은 화면에 보이는 것에 대한 선택이다 — 축·날짜·대상·조건·페이지가 바뀌면 비운다.
+   * 남겨 두면 일괄 변경의 대상이 눈에 보이지 않는 칸까지 번진다.
+   */
+  useEffect(() => {
+    setSelected([])
+  }, [view, dateKey, personId, list.keyword, list.page, list.filters])
+
+  /** 고른 행 키를 (임직원, 날짜) 쌍으로 되돌린다 — 날짜별은 키가 사람, 인력별은 키가 날짜다. */
+  const bulkTargets = useMemo(
+    () =>
+      isPerson
+        ? selected.map((workDate) => ({ userId: personId, workDate }))
+        : selected.map((userId) => ({ userId, workDate: dateKey })),
+    [isPerson, selected, personId, dateKey],
+  )
 
   const openPerson = (userId: string) => {
     setPersonId(userId)
@@ -150,6 +169,13 @@ export function AttendancePanel() {
         </div>
       )}
 
+      <AttendanceBulkBar
+        targets={bulkTargets}
+        statuses={statusList}
+        unit={isPerson ? '일' : '명'}
+        onDone={() => setSelected([])}
+      />
+
       {isPerson && !personId ? (
         <EmptyState
           title="임직원을 선택하세요"
@@ -165,6 +191,8 @@ export function AttendancePanel() {
         <AttendanceMonthTable
           rows={list.personRows}
           statuses={statusList}
+          selectedKeys={selected}
+          onSelectionChange={setSelected}
           onRowClick={(row) =>
             setTarget({
               userId: personId,
@@ -180,6 +208,8 @@ export function AttendancePanel() {
           dateKey={dateKey}
           statuses={statusList}
           org={org}
+          selectedKeys={selected}
+          onSelectionChange={setSelected}
           onRowClick={(row) =>
             setTarget({
               userId: row.userId,
