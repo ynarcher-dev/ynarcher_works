@@ -4,8 +4,18 @@ import { cn } from '../utils/cn'
 export interface StatTile {
   key: string
   label: string
-  /** 이미 포맷된 표시값(건수 문자열 등). */
+  /** 이미 포맷된 표시값(숫자 문자열 등). 단위는 `unit`으로 갈라 넘긴다. */
   value: string
+  /**
+   * 값 뒤에 붙는 단위('건'·'백만원' 등). 숫자보다 한 단 작은 회색으로 붙는다.
+   *
+   * 디자인 규약의 기본은 '한 줄 안에서 크기를 갈라 위계를 만들지 않는다'이지만, 여기서 크게
+   * 읽혀야 하는 것은 자릿수이고 단위는 모든 타일에 똑같이 반복되는 고정 문자열이라 같은 크기로
+   * 두면 숫자만큼 자리를 먹는다(50,000보다 '백만원'이 길다). 사용자 판단으로 둔 예외이며,
+   * 그래서 `value`에 단위를 이어 붙이지 않고 이 자리로 받는다 — 규격을 화면마다 다시 쓰면
+   * 어느 대시보드는 회색, 어느 대시보드는 검정이 된다.
+   */
+  unit?: string
   /** 전월 대비 증감(옵션). 지정 시에만 배지 표기. */
   delta?: number
   /** 클릭 이동 핸들러(옵션). 지정 시 해당 타일만 클릭 가능. */
@@ -72,6 +82,9 @@ export function StatTileGrid({ tiles, className = DEFAULT_GRID }: StatTileGridPr
             <p className="text-caption text-gray-600">{t.label}</p>
             <p className="text-title-sm font-bold tabular-nums text-gray-900">
               {t.value}
+              {t.unit && (
+                <span className="ml-1 text-body font-normal text-gray-500">{t.unit}</span>
+              )}
             </p>
             {t.delta !== undefined && <DeltaLabel delta={t.delta} />}
           </button>

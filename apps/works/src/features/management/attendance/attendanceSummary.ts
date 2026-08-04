@@ -55,7 +55,10 @@ export function statusTiles(
   const tile = (code: string, label: string): StatTile => ({
     key: code,
     label,
-    value: `${counts.get(code) ?? 0}건`,
+    // 단위는 값에 이어 붙이지 않는다 — 크게 읽혀야 하는 것은 건수이고 '건'은 모든 타일에
+    // 똑같이 반복되는 글자다. 회색·한 단 작은 규격은 StatTileGrid가 소유한다.
+    value: `${counts.get(code) ?? 0}`,
+    unit: '건',
     // 켜진 타일은 지금 표를 좁히고 있는 조건이다 — 강조로 그 사실을 말한다.
     emphasis: selected.includes(code),
     onClick: () => onToggle(code),
