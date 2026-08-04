@@ -14,7 +14,11 @@ import type {
   AttendanceEntry,
   AttendanceStatus,
 } from '@/features/management/attendance/attendanceModel'
-import { personSummary, statusTiles } from '@/features/management/attendance/attendanceSummary'
+import {
+  TOTAL_KEY,
+  personSummary,
+  statusTiles,
+} from '@/features/management/attendance/attendanceSummary'
 
 const YESTERDAY = dayjs().subtract(1, 'day').format('YYYY-MM-DD')
 const TOMORROW = dayjs().add(1, 'day').format('YYYY-MM-DD')
@@ -105,26 +109,49 @@ describe('statusTiles — 타일과 표가 같은 수를 말한다', () => {
     { entry: entry({ statusCode: 'LATE' }), dateKey: YESTERDAY },
     { entry: entry({ statusCode: 'NORMAL' }), dateKey: YESTERDAY },
     { entry: entry(), dateKey: TOMORROW }, // 미출근
-    { entry: entry({ isWorkday: false }), dateKey: YESTERDAY }, // 휴무일은 세지 않는다
+    { entry: entry({ isWorkday: false }), dateKey: YESTERDAY }, // 상태로는 세지 않는다
   ]
 
-  it('원장 순서대로 세고 미출근은 맨 뒤에 붙인다', () => {
-    const tiles = statusTiles(items, STATUSES, [], () => {})
-    expect(tiles.map((t) => [t.key, t.value])).toEqual([
+  const tiles = (over: Partial<Parameters<typeof statusTiles>[0]> = {}) =>
+    statusTiles({
+      items,
+      statuses: STATUSES,
+      selected: [],
+      onToggle: () => {},
+      onClear: () => {},
+      totalUnit: '명',
+      ...over,
+    })
+
+  it('맨 앞이 전체, 원장 순서대로 세고, 미출근은 맨 뒤에 붙인다', () => {
+    expect(tiles().map((t) => [t.key, t.value])).toEqual([
+      [TOTAL_KEY, '5'],
       ['NORMAL', '1'],
       ['LATE', '2'],
       ['PENDING', '1'],
     ])
   })
 
-  it('단위는 값에 붙이지 않고 따로 넘긴다(규격은 StatTileGrid가 소유한다)', () => {
-    const tiles = statusTiles(items, STATUSES, [], () => {})
-    expect(tiles.every((t) => t.unit === '건')).toBe(true)
+  it('전체는 근무일 여부를 가리지 않는다 — 근무일이 아닌 날이 화면에서 읽혀야 한다', () => {
+    const holiday = [
+      { entry: entry({ isWorkday: false }), dateKey: YESTERDAY },
+      { entry: entry({ isWorkday: false }), dateKey: YESTERDAY },
+    ]
+    const t = tiles({ items: holiday })
+    expect(t.find((x) => x.key === TOTAL_KEY)?.value).toBe('2')
+    expect(t.filter((x) => x.key !== TOTAL_KEY).every((x) => x.value === '0')).toBe(true)
+  })
+
+  it('전체 타일의 단위는 세는 대상을 따른다(날짜별 명 / 인력별 일)', () => {
+    expect(tiles().find((t) => t.key === TOTAL_KEY)?.unit).toBe('명')
+    expect(tiles({ totalUnit: '일' }).find((t) => t.key === TOTAL_KEY)?.unit).toBe('일')
+    // 상태 타일의 단위는 언제나 '건'이다.
+    expect(tiles().filter((t) => t.key !== TOTAL_KEY).every((t) => t.unit === '건')).toBe(true)
   })
 
   it('활성 상태는 0건이어도 자리를 지킨다(타일이 날마다 나타났다 사라지지 않게)', () => {
-    const tiles = statusTiles([], STATUSES, [], () => {})
-    expect(tiles.map((t) => [t.key, t.value])).toEqual([
+    expect(tiles({ items: [] }).map((t) => [t.key, t.value])).toEqual([
+      [TOTAL_KEY, '0'],
       ['NORMAL', '0'],
       ['LATE', '0'],
       ['PENDING', '0'],
@@ -132,21 +159,23 @@ describe('statusTiles — 타일과 표가 같은 수를 말한다', () => {
   })
 
   it('원장에 없는 코드(결근 등)도 빠뜨리지 않는다', () => {
-    const tiles = statusTiles([{ entry: entry(), dateKey: YESTERDAY }], STATUSES, [], () => {})
-    expect(tiles.map((t) => t.key)).toEqual(['NORMAL', 'LATE', 'ABSENT', 'PENDING'])
+    const t = tiles({ items: [{ entry: entry(), dateKey: YESTERDAY }] })
+    expect(t.map((x) => x.key)).toEqual([TOTAL_KEY, 'NORMAL', 'LATE', 'ABSENT', 'PENDING'])
   })
 
   it('비활성 상태는 그 코드로 남은 기록이 있을 때만 세운다', () => {
-    const withRetired = [...STATUSES, status('OLD_LEAVE', { isActive: false, sortOrder: 9 })]
-    expect(statusTiles([], withRetired, [], () => {}).map((t) => t.key)).not.toContain('OLD_LEAVE')
+    const statuses = [...STATUSES, status('OLD_LEAVE', { isActive: false, sortOrder: 9 })]
+    expect(tiles({ items: [], statuses }).map((t) => t.key)).not.toContain('OLD_LEAVE')
     const used = [{ entry: entry({ statusCode: 'OLD_LEAVE' }), dateKey: YESTERDAY }]
-    expect(statusTiles(used, withRetired, [], () => {}).map((t) => t.key)).toContain('OLD_LEAVE')
+    expect(tiles({ items: used, statuses }).map((t) => t.key)).toContain('OLD_LEAVE')
   })
 
-  it('선택된 상태의 타일만 강조된다', () => {
-    const tiles = statusTiles(items, STATUSES, ['LATE'], () => {})
-    expect(tiles.find((t) => t.key === 'LATE')?.emphasis).toBe(true)
-    expect(tiles.find((t) => t.key === 'NORMAL')?.emphasis).toBe(false)
+  it('선택된 상태의 타일만 강조되고, 조건이 없으면 전체가 강조된다', () => {
+    const picked = tiles({ selected: ['LATE'] })
+    expect(picked.find((t) => t.key === 'LATE')?.emphasis).toBe(true)
+    expect(picked.find((t) => t.key === 'NORMAL')?.emphasis).toBe(false)
+    expect(picked.find((t) => t.key === TOTAL_KEY)?.emphasis).toBe(false)
+    expect(tiles().find((t) => t.key === TOTAL_KEY)?.emphasis).toBe(true)
   })
 })
 

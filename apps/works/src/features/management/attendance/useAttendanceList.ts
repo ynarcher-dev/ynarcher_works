@@ -98,17 +98,33 @@ export function useAttendanceList({
     setFilters((f) => toggleStatusFilter(f, code))
   }, [])
 
+  const clearStatuses = useCallback(() => {
+    setFilters((f) => ({ ...f, statuses: [] }))
+  }, [])
+
   const tiles = useMemo<StatTile[]>(
     () =>
-      statusTiles(
-        isPerson
+      statusTiles({
+        items: isPerson
           ? scopedMonthRows.map((r) => ({ entry: r, dateKey: r.workDate }))
           : scopedDayRows.map((r) => ({ entry: r, dateKey })),
-        statusList,
-        filters.statuses,
-        toggleStatus,
-      ),
-    [isPerson, scopedMonthRows, scopedDayRows, dateKey, statusList, filters.statuses, toggleStatus],
+        statuses: statusList,
+        selected: filters.statuses,
+        onToggle: toggleStatus,
+        onClear: clearStatuses,
+        // 날짜별은 그날의 사람을 세고, 인력별은 한 사람의 날을 센다.
+        totalUnit: isPerson ? '일' : '명',
+      }),
+    [
+      isPerson,
+      scopedMonthRows,
+      scopedDayRows,
+      dateKey,
+      statusList,
+      filters.statuses,
+      toggleStatus,
+      clearStatuses,
+    ],
   )
 
   const statusOptions = useMemo<FilterOption[]>(
