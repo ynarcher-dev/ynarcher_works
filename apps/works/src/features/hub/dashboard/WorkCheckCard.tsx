@@ -236,9 +236,9 @@ export function WorkCheckCard() {
 
         {/* 오른쪽(3/5) — 무엇을 하는가. */}
         <div className="col-span-3 space-y-2">
-          {/* 근무지는 출근 버튼 바로 위에 둔다. 고른 값이 아래 버튼의 라벨로 그대로 나타나므로
-              (사내 출근 / 외부 출근) 무엇을 찍는지 누르기 전에 읽힌다. 선택지가 하나뿐인 근무
-              기준에서는 아예 세우지 않는다 — 고를 수 없는 선택지는 질문이 아니다. */}
+          {/* 근무지는 출근 버튼 바로 위에 둔다 — 이 토글은 '지금 누르면 어디로 찍히는가'만
+              말한다. 선택지가 하나뿐인 근무 기준에서는 아예 세우지 않는다 — 고를 수 없는
+              선택지는 질문이 아니다. */}
           {policy?.allowExternal && (
             <SegmentedToggle
               label="근무지"
@@ -254,10 +254,18 @@ export function WorkCheckCard() {
           )}
           <StampButton
             icon={<LogIn className="size-4" />}
-            /* 근무지를 고를 수 있을 때만 라벨이 근무지를 밝힌다. 이 열은 대시보드의 1/3
-               트랙이라 '외부근무 출근하기'까지 적으면 좁은 화면에서 라벨이 두 줄로 접힌다 —
-               근무지가 붙는 자리에서는 짧은 표기를 쓴다. */
-            label={policy?.allowExternal ? `${PLACE_SHORT_LABELS[place]} 출근` : '출근하기'}
+            /**
+             * 라벨의 괄호는 **찍힌 결과**다 — 토글(앞으로 어디로 찍힐지)이 아니라 오늘 기록에
+             * 남은 근무지를 적는다. 토글을 따라 라벨이 움직이면 찍기 전과 찍은 뒤가 같은 말을
+             * 하게 되어, 내가 최종으로 어디로 출근했는지 이 카드가 답하지 못한다.
+             * 찍기 전에는 결과가 없으므로 괄호도 없다. 근무지를 고를 수 없는 근무 기준이면
+             * 값이 언제나 사내 하나뿐이라 적지 않는다.
+             */
+            label={
+              checkedIn && policy?.allowExternal && today?.workPlace
+                ? `출근(${PLACE_SHORT_LABELS[today.workPlace]})`
+                : '출근하기'
+            }
             at={today?.checkInAt ?? null}
             done={checkedIn}
             disabled={busy || !isWorkday}
