@@ -1,4 +1,4 @@
-import { Button, Spinner, StatTileGrid, TextAction, type StatTile } from '@ynarcher/ui'
+import { Button, EmptyState, SegmentedToggle, Spinner, StatTileGrid } from '@ynarcher/ui'
 import dayjs from 'dayjs'
 import { useMemo, useState } from 'react'
 import { DateNav } from '@/components/DateNav'
@@ -6,35 +6,53 @@ import { AttendanceDayTable } from '@/features/management/attendance/AttendanceD
 import { AttendanceEditModal, type AttendanceTarget } from '@/features/management/attendance/AttendanceEditModal'
 import { AttendanceMonthTable } from '@/features/management/attendance/AttendanceMonthTable'
 import { AttendanceSettingsModal } from '@/features/management/attendance/AttendanceSettingsModal'
+import { AttendanceToolbar } from '@/features/management/attendance/AttendanceToolbar'
 import {
   useAttendanceBoard,
   useAttendanceMonth,
 } from '@/features/management/attendance/attendanceApi'
 import { useAttendanceStatuses } from '@/features/management/attendance/attendanceConfigApi'
-import { displayStatusCode, statusOf } from '@/features/management/attendance/attendanceModel'
+import { NO_AFFILIATION } from '@/features/management/attendance/attendanceFilters'
+import { personSummary } from '@/features/management/attendance/attendanceSummary'
+import {
+  ATTENDANCE_PAGE_SIZE,
+  useAttendanceList,
+} from '@/features/management/attendance/useAttendanceList'
 import { affiliationLabel } from '@/features/management/departmentOptions'
 import { useDepartments } from '@/features/management/hooks'
 
-/** 인력별 월간으로 들어간 상태(누구를 보고 있는가). null이면 날짜별 일간이다. */
-interface PersonView {
-  userId: string
-  userName: string
-}
+/** 무엇을 축으로 자를 것인가. 이 값이 표뿐 아니라 날짜 바의 이동 단위(일/월)까지 정한다. */
+type ViewAxis = 'day' | 'person'
+
+const VIEW_OPTIONS = [
+  { key: 'day' as const, label: '날짜별' },
+  { key: 'person' as const, label: '인력별' },
+]
 
 /**
- * MANAGEMENT 근태 관리 — 날짜별 일간이 기본이고, 이름을 누르면 인력별 월간으로 축이 바뀐다.
+ * MANAGEMENT 근태 관리 — 날짜별 일간과 인력별 월간, 두 축을 한 화면에서 오간다.
  * 기획: docs_planning/3_7_3_management_attendance.md
  *
  * 메뉴를 둘로 쪼개지 않는 이유는 두 뷰가 같은 원장을 다른 각도로 자르는 것일 뿐이기 때문이다.
+ * 다만 축 전환을 표 안의 이름 링크에만 맡기지 않는다 — 그러면 "김OO의 이번 달"을 보려고 먼저
+ * 수백 줄에서 그 사람을 눈으로 찾아야 하고, 그런 문은 있어도 없는 것과 같다. 세그먼트 토글이
+ * 축을 드러내고, 이름 링크는 표 안에서의 지름길로 남는다.
+ *
+ * 컨트롤의 규칙은 하나다. **축 전환은 세그먼트, 날짜 이동은 날짜 바, 목록 조건은 툴바(검색·필터
+ * 칩), 화면 동작은 버튼**이며, 텍스트 링크는 표 안의 인라인 이동에만 쓴다. 같은 자리에 같은 일을
+ * 하는 것이 어떤 때는 링크로 어떤 때는 버튼으로 서면 규칙이 없는 화면이 된다.
+ *
  * 근무일 판정과 상태 파생은 서버(attendance_board / attendance_month)가 붙여 주고, 이 화면은
- * 날짜·대상·모달만 소유한다.
+ * 축·날짜·조건·모달만 소유한다. 세는 규칙은 attendanceFilters/attendanceSummary가 갖는다.
  */
 export function AttendancePanel() {
   const [date, setDate] = useState(() => dayjs())
-  const [person, setPerson] = useState<PersonView | null>(null)
+  const [view, setView] = useState<ViewAxis>('day')
+  const [personId, setPersonId] = useState('')
   const [target, setTarget] = useState<AttendanceTarget | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
 
+  const isPerson = view === 'person'
   const dateKey = date.format('YYYY-MM-DD')
   const monthFrom = date.startOf('month').format('YYYY-MM-DD')
   const monthTo = date.endOf('month').format('YYYY-MM-DD')
@@ -42,7 +60,11 @@ export function AttendancePanel() {
   const { data: statuses } = useAttendanceStatuses()
   const { data: depts } = useDepartments()
   const boardQuery = useAttendanceBoard(dateKey)
-  const monthQuery = useAttendanceMonth(person?.userId, monthFrom, monthTo)
+  const monthQuery = useAttendanceMonth(
+    isPerson && personId ? personId : undefined,
+    monthFrom,
+    monthTo,
+  )
 
   const statusList = useMemo(() => statuses ?? [], [statuses])
   const boardRows = useMemo(() => boardQuery.data ?? [], [boardQuery.data])
@@ -50,99 +72,109 @@ export function AttendancePanel() {
 
   const affiliationOf = useMemo(() => {
     const rows = depts ?? []
-    return (departmentId: string | null) => affiliationLabel(rows, departmentId)
+    // 소속이 비어 있는 사람도 고를 수 있어야 하므로 빈 문자열 대신 글자를 준다.
+    return (departmentId: string | null) => affiliationLabel(rows, departmentId) || NO_AFFILIATION
   }, [depts])
 
   /**
-   * 요약 타일 — 그날의 상태 분포. 상태 원장이 늘어나면 타일도 함께 늘어난다(값을 코드에 박지
-   * 않는다). 기록이 없는 사람은 결근(지난 날)이거나 미출근(오늘 이후)으로 갈린다.
+   * 대상 선택지는 임직원 원장이 아니라 **그 표에 선 사람들**(attendance_board의 명부)에서 뽑는다.
+   * 두 목록이 갈리면 표에서 이름을 눌러 들어온 사람이 정작 선택 상자에는 없는 상태가 된다.
    */
-  const tiles = useMemo<StatTile[]>(() => {
-    const counts = new Map<string, number>()
-    let pending = 0
-    for (const row of boardRows) {
-      if (!row.isWorkday) continue
-      const code = displayStatusCode(row, dateKey)
-      if (!code) {
-        pending += 1
-        continue
-      }
-      counts.set(code, (counts.get(code) ?? 0) + 1)
-    }
-    const used = statusList
-      .filter((s) => counts.has(s.code))
-      .map((s) => ({ key: s.code, label: s.label, value: `${counts.get(s.code)}건` }))
-    // 아직 찍지 않은 사람은 상태가 아니라 '아직 일어나지 않은 일'이라 맨 뒤에 따로 센다.
-    return pending ? [...used, { key: 'PENDING', label: '미출근', value: `${pending}건` }] : used
-  }, [boardRows, dateKey, statusList])
+  const people = useMemo(
+    () => boardRows.map((r) => ({ id: r.userId, name: r.userName })),
+    [boardRows],
+  )
 
-  const monthSummary = useMemo(() => {
-    let workdays = 0
-    let late = 0
-    let leave = 0
-    let minutes = 0
-    for (const row of monthRows) {
-      if (row.isWorkday) workdays += 1
-      const status = statusOf(statusList, displayStatusCode(row, row.workDate))
-      if (status?.code === 'LATE' || status?.code === 'LATE_EARLY') late += 1
-      if (status?.kind === 'LEAVE') leave += 1
-      if (row.checkInAt && row.checkOutAt) {
-        minutes += dayjs(row.checkOutAt).diff(dayjs(row.checkInAt), 'minute')
-      }
-    }
-    return { workdays, late, leave, hours: Math.round((minutes / 60) * 10) / 10 }
-  }, [monthRows, statusList])
+  const personName = useMemo(
+    () => people.find((p) => p.id === personId)?.name ?? '',
+    [people, personId],
+  )
+
+  // 검색어·필터·페이지와 거기서 파생되는 행·선택지·타일은 훅이 갖는다(조건을 아는 자리는 하나).
+  const list = useAttendanceList({
+    boardRows,
+    monthRows,
+    statusList,
+    dateKey,
+    isPerson,
+    affiliationOf,
+  })
+
+  const summary = useMemo(() => personSummary(monthRows), [monthRows])
 
   const loading = boardQuery.isLoading || monthQuery.isLoading
 
+  const openPerson = (userId: string) => {
+    setPersonId(userId)
+    setView('person')
+  }
+
   return (
     <div className="space-y-4">
+      {/* 날짜 축 — 가운데 날짜 바, 왼쪽에 축 전환(이동 단위도 함께 바뀐다), 오른쪽에 오늘로 복귀. */}
       <div className="relative flex items-center justify-center gap-3">
-        <DateNav date={date} onChange={setDate} unit={person ? 'month' : 'day'} />
-        {person ? (
-          <div className="absolute left-0">
-            <TextAction arrow="left" onClick={() => setPerson(null)}>
-              일간으로
-            </TextAction>
-          </div>
-        ) : (
-          <div className="absolute left-0">
-            <Button variant="secondary" onClick={() => setDate(dayjs())}>
-              오늘
-            </Button>
-          </div>
-        )}
+        <div className="absolute left-0">
+          <SegmentedToggle
+            label="근태 보기 축"
+            options={VIEW_OPTIONS}
+            value={view}
+            onChange={setView}
+          />
+        </div>
+        <DateNav date={date} onChange={setDate} unit={isPerson ? 'month' : 'day'} />
         <div className="absolute right-0">
-          <Button variant="secondary" onClick={() => setSettingsOpen(true)}>
-            근태 설정
+          <Button variant="secondary" onClick={() => setDate(dayjs())}>
+            {isPerson ? '이번 달' : '오늘'}
           </Button>
         </div>
       </div>
 
-      {person ? (
+      <AttendanceToolbar
+        person={isPerson ? { id: personId, options: people, onChange: setPersonId } : null}
+        keyword={list.keyword}
+        onKeywordChange={list.setKeyword}
+        filters={list.filters}
+        onFiltersChange={list.setFilters}
+        statusOptions={list.statusOptions}
+        affiliationOptions={list.affiliationOptions}
+        actions={
+          <Button variant="secondary" onClick={() => setSettingsOpen(true)}>
+            근태 설정
+          </Button>
+        }
+      />
+
+      {isPerson && personId && (
         <div className="rounded-radius-md border border-gray-300 bg-white px-4 py-3">
-          <p className="text-body-lg font-semibold text-gray-900">{person.userName}</p>
+          <p className="text-body-lg font-semibold text-gray-900">{personName}</p>
+          {/* 상태별 건수는 아래 타일이 답한다 — 여기서 또 세면 조건을 걸었을 때 두 수가 갈린다. */}
           <p className="mt-0.5 text-caption text-gray-600">
-            근무일 {monthSummary.workdays}일 · 지각 {monthSummary.late}일 · 휴가{' '}
-            {monthSummary.leave}일 · 총 근무 {monthSummary.hours}시간
+            {date.format('YYYY년 M월')} · 근무일 {summary.workdays}일 · 총 근무 {summary.hours}시간
           </p>
         </div>
-      ) : (
-        tiles.length > 0 && <StatTileGrid tiles={tiles} />
       )}
 
-      {loading ? (
+      {list.tiles.length > 0 && <StatTileGrid tiles={list.tiles} />}
+
+      {isPerson && !personId ? (
+        <EmptyState
+          title="임직원을 선택하세요"
+          description="위 목록에서 사람을 고르면 그 사람의 한 달 근태가 날짜순으로 섭니다."
+        />
+      ) : loading ? (
         <div className="flex justify-center py-10">
           <Spinner />
         </div>
-      ) : person ? (
+      ) : isPerson ? (
+        // 월간은 한 달이 곧 한 페이지(최대 31줄)라 페이저를 두지 않는다 — 달을 넘기는 일은
+        // 날짜 바가 이미 한다.
         <AttendanceMonthTable
-          rows={monthRows}
+          rows={list.personRows}
           statuses={statusList}
           onRowClick={(row) =>
             setTarget({
-              userId: person.userId,
-              userName: person.userName,
+              userId: personId,
+              userName: personName,
               workDate: row.workDate,
               entry: row,
             })
@@ -150,7 +182,7 @@ export function AttendancePanel() {
         />
       ) : (
         <AttendanceDayTable
-          rows={boardRows}
+          rows={list.pagedDayRows}
           dateKey={dateKey}
           statuses={statusList}
           affiliationOf={affiliationOf}
@@ -162,7 +194,14 @@ export function AttendancePanel() {
               entry: row,
             })
           }
-          onOpenPerson={(row) => setPerson({ userId: row.userId, userName: row.userName })}
+          onOpenPerson={(row) => openPerson(row.userId)}
+          pagination={{
+            page: list.page,
+            pageSize: ATTENDANCE_PAGE_SIZE,
+            total: list.dayRows.length,
+            totalAll: boardRows.length,
+            onChange: list.setPage,
+          }}
         />
       )}
 

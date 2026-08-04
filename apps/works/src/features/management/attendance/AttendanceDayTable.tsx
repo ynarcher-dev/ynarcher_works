@@ -1,4 +1,11 @@
-import { Badge, DataTable, EmptyValue, TextAction, type Column } from '@ynarcher/ui'
+import {
+  Badge,
+  DataTable,
+  EmptyValue,
+  TextAction,
+  type Column,
+  type DataTableProps,
+} from '@ynarcher/ui'
 import { AttendanceStatusBadge } from '@/features/management/attendance/AttendanceStatusBadge'
 import {
   PLACE_LABELS,
@@ -17,6 +24,8 @@ interface Props {
   affiliationOf: (departmentId: string | null) => string
   onRowClick: (row: AttendanceBoardRow) => void
   onOpenPerson: (row: AttendanceBoardRow) => void
+  /** 페이저. `rows`는 이미 그 페이지 구간으로 잘려 온다(넘버링 기준은 total이 잡는다). */
+  pagination?: DataTableProps<AttendanceBoardRow>['pagination']
 }
 
 /** 시각 셀. 자릿수가 흔들리지 않게 tabular-nums로 고정한다. */
@@ -42,6 +51,7 @@ export function AttendanceDayTable({
   affiliationOf,
   onRowClick,
   onOpenPerson,
+  pagination,
 }: Props) {
   const columns: Column<AttendanceBoardRow>[] = [
     {
@@ -131,7 +141,8 @@ export function AttendanceDayTable({
       standardColumns={false}
       // 근무일이 아닌 사람의 줄은 한 단계 물러나게 둔다(빈 칸이 결근처럼 읽히지 않게).
       rowClassName={(r) => (r.isWorkday ? undefined : 'bg-gray-25 text-gray-400')}
-      emptyText="표시할 임직원이 없습니다."
+      pagination={pagination}
+      emptyText="조건에 맞는 임직원이 없습니다."
     />
   )
 }
