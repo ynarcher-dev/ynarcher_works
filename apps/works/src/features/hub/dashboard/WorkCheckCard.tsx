@@ -217,17 +217,19 @@ export function WorkCheckCard() {
         {/* 왼쪽(2/5) — 지금이 언제인가. 오른쪽 열과 같은 상자·같은 높이.
             세 줄을 위아래로 벌리지 않고 가운데에 모은다 — 오른쪽이 더 길어 남는 높이가
             생기는데, 그 여백을 줄 사이에 나눠 주면 세 줄이 서로 무관한 조각처럼 흩어진다. */}
+        {/* 세 줄 모두 한 단계씩 키운다(캡션 12 → 본문 14, 시계 20 → 24). 카드 안 표준 본문이
+            14px이므로 날짜·기준 시각이 캡션에 머물면 이 상자만 주석처럼 물러나 보인다. */}
         <div className="col-span-2 flex flex-col justify-center gap-2 rounded-radius-md border border-gray-200 bg-white px-3 py-2">
-          <p className="text-caption font-medium text-gray-800">
+          <p className="text-body font-medium text-gray-800">
             {now.format('M월 D일')} ({WEEKDAY_LABELS[now.day()]})
           </p>
-          <p className="text-title-sm font-bold leading-none tabular-nums text-gray-900">
+          <p className="text-title-md font-bold leading-none tabular-nums text-gray-900">
             {now.format('HH:mm:ss')}
           </p>
           {benchmark && (
             /* 라벨과 값은 크기를 가르지 않고 색으로만 나눈다(한 줄 안에서 크기로 위계를
                만들지 않는다는 규격 원칙). */
-            <p className="text-caption text-gray-600">
+            <p className="text-body text-gray-600">
               {benchmark.label}{' '}
               <span className="tabular-nums font-medium text-gray-800">{benchmark.value}</span>
             </p>
