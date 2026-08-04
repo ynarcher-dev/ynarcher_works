@@ -1,4 +1,4 @@
-import { Button, EmptyState, SegmentedToggle, Spinner, StatTileGrid } from '@ynarcher/ui'
+import { Button, EmptyState, Spinner, StatTileGrid, Tabs } from '@ynarcher/ui'
 import dayjs from 'dayjs'
 import { useMemo, useState } from 'react'
 import { DateNav } from '@/components/DateNav'
@@ -24,9 +24,9 @@ import { useDepartments } from '@/features/management/hooks'
 /** 무엇을 축으로 자를 것인가. 이 값이 표뿐 아니라 날짜 바의 이동 단위(일/월)까지 정한다. */
 type ViewAxis = 'day' | 'person'
 
-const VIEW_OPTIONS = [
-  { key: 'day' as const, label: '날짜별' },
-  { key: 'person' as const, label: '인력별' },
+const VIEW_TABS = [
+  { key: 'day', label: '날짜별' },
+  { key: 'person', label: '인력별' },
 ]
 
 /**
@@ -35,12 +35,15 @@ const VIEW_OPTIONS = [
  *
  * 메뉴를 둘로 쪼개지 않는 이유는 두 뷰가 같은 원장을 다른 각도로 자르는 것일 뿐이기 때문이다.
  * 다만 축 전환을 표 안의 이름 링크에만 맡기지 않는다 — 그러면 "김OO의 이번 달"을 보려고 먼저
- * 수백 줄에서 그 사람을 눈으로 찾아야 하고, 그런 문은 있어도 없는 것과 같다. 세그먼트 토글이
- * 축을 드러내고, 이름 링크는 표 안에서의 지름길로 남는다.
+ * 수백 줄에서 그 사람을 눈으로 찾아야 하고, 그런 문은 있어도 없는 것과 같다. 탭이 축을
+ * 드러내고, 이름 링크는 표 안에서의 지름길로 남는다.
  *
- * 컨트롤의 규칙은 하나다. **축 전환은 세그먼트, 날짜 이동은 날짜 바, 목록 조건은 툴바(검색·필터
- * 칩), 화면 동작은 버튼**이며, 텍스트 링크는 표 안의 인라인 이동에만 쓴다. 같은 자리에 같은 일을
- * 하는 것이 어떤 때는 링크로 어떤 때는 버튼으로 서면 규칙이 없는 화면이 된다.
+ * 화면은 넓은 것에서 좁은 것으로 내려간다 — **통계 현황(상태 원장 전체) → 축(탭) → 날짜 →
+ * 조건(툴바) → 표**. 위로 갈수록 범위를 말하고 아래로 갈수록 그 범위를 좁힌다.
+ *
+ * 컨트롤의 규칙도 하나다. **축은 탭, 날짜 이동은 날짜 바, 목록 조건은 툴바(검색·필터 칩), 화면
+ * 동작은 버튼**이며, 텍스트 링크는 표 안의 인라인 이동에만 쓴다. 같은 자리에 같은 일을 하는 것이
+ * 어떤 때는 링크로 어떤 때는 버튼으로 서면 규칙이 없는 화면이 된다.
  *
  * 근무일 판정과 상태 파생은 서버(attendance_board / attendance_month)가 붙여 주고, 이 화면은
  * 축·날짜·조건·모달만 소유한다. 세는 규칙은 attendanceFilters/attendanceSummary가 갖는다.
@@ -111,23 +114,24 @@ export function AttendancePanel() {
 
   return (
     <div className="space-y-4">
-      {/* 날짜 축 — 가운데 날짜 바, 왼쪽에 축 전환(이동 단위도 함께 바뀐다), 오른쪽에 오늘로 복귀. */}
-      <div className="relative flex items-center justify-center gap-3">
-        <div className="absolute left-0">
-          <SegmentedToggle
-            label="근태 보기 축"
-            options={VIEW_OPTIONS}
-            value={view}
-            onChange={setView}
-          />
-        </div>
-        <DateNav date={date} onChange={setDate} unit={isPerson ? 'month' : 'day'} />
-        <div className="absolute right-0">
-          <Button variant="secondary" onClick={() => setDate(dayjs())}>
-            {isPerson ? '이번 달' : '오늘'}
-          </Button>
-        </div>
-      </div>
+      {/*
+        통계 현황 — 화면 맨 위에서 "지금 보고 있는 범위가 어떤 상태로 갈리는가"를 먼저 말한다.
+        상태 원장 전체가 서므로 0건도 자리를 지킨다(0은 값이 없는 것이 아니라 값이 0인 것이다).
+        타일 수는 원장이 정하니 기본 5열보다 촘촘히 깐다 — 열 폭이 아니라 항목 수가 기준이다.
+      */}
+      {/* 원장을 아직 못 읽었으면 세우지 않는다 — '미출근' 한 칸만 덩그러니 떴다 사라진다. */}
+      {statusList.length > 0 && (
+        <StatTileGrid
+          tiles={list.tiles}
+          className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6"
+        />
+      )}
+
+      {/* 축 전환 — 표뿐 아니라 아래 날짜 바의 이동 단위(일/월)와 조건 구성까지 이 탭이 정한다. */}
+      <Tabs items={VIEW_TABS} value={view} onChange={(k) => setView(k as ViewAxis)} />
+
+      {/* 탭·툴바와 같은 줄에서 시작한다 — 혼자 가운데 뜨면 어느 줄에 속한 컨트롤인지 흐려진다. */}
+      <DateNav date={date} onChange={setDate} unit={isPerson ? 'month' : 'day'} align="left" />
 
       <AttendanceToolbar
         person={isPerson ? { id: personId, options: people, onChange: setPersonId } : null}
@@ -147,14 +151,12 @@ export function AttendancePanel() {
       {isPerson && personId && (
         <div className="rounded-radius-md border border-gray-300 bg-white px-4 py-3">
           <p className="text-body-lg font-semibold text-gray-900">{personName}</p>
-          {/* 상태별 건수는 아래 타일이 답한다 — 여기서 또 세면 조건을 걸었을 때 두 수가 갈린다. */}
+          {/* 상태별 건수는 위 통계 현황이 답한다 — 여기서 또 세면 조건을 걸었을 때 두 수가 갈린다. */}
           <p className="mt-0.5 text-caption text-gray-600">
             {date.format('YYYY년 M월')} · 근무일 {summary.workdays}일 · 총 근무 {summary.hours}시간
           </p>
         </div>
       )}
-
-      {list.tiles.length > 0 && <StatTileGrid tiles={list.tiles} />}
 
       {isPerson && !personId ? (
         <EmptyState

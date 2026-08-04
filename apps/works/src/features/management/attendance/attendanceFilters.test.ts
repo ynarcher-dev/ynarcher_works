@@ -117,9 +117,25 @@ describe('statusTiles — 타일과 표가 같은 수를 말한다', () => {
     ])
   })
 
+  it('활성 상태는 0건이어도 자리를 지킨다(타일이 날마다 나타났다 사라지지 않게)', () => {
+    const tiles = statusTiles([], STATUSES, [], () => {})
+    expect(tiles.map((t) => [t.key, t.value])).toEqual([
+      ['NORMAL', '0건'],
+      ['LATE', '0건'],
+      ['PENDING', '0건'],
+    ])
+  })
+
   it('원장에 없는 코드(결근 등)도 빠뜨리지 않는다', () => {
     const tiles = statusTiles([{ entry: entry(), dateKey: YESTERDAY }], STATUSES, [], () => {})
-    expect(tiles.map((t) => t.key)).toEqual(['ABSENT'])
+    expect(tiles.map((t) => t.key)).toEqual(['NORMAL', 'LATE', 'ABSENT', 'PENDING'])
+  })
+
+  it('비활성 상태는 그 코드로 남은 기록이 있을 때만 세운다', () => {
+    const withRetired = [...STATUSES, status('OLD_LEAVE', { isActive: false, sortOrder: 9 })]
+    expect(statusTiles([], withRetired, [], () => {}).map((t) => t.key)).not.toContain('OLD_LEAVE')
+    const used = [{ entry: entry({ statusCode: 'OLD_LEAVE' }), dateKey: YESTERDAY }]
+    expect(statusTiles(used, withRetired, [], () => {}).map((t) => t.key)).toContain('OLD_LEAVE')
   })
 
   it('선택된 상태의 타일만 강조된다', () => {

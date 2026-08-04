@@ -25,11 +25,16 @@ export interface DatedEntry {
 }
 
 /**
- * 상태 분포 타일. 근무일만 센다(휴무일의 빈 칸은 셀 것이 없다).
+ * 상태 분포 타일 — 근태 상태 원장 전체를 세운다. 근무일만 센다(휴무일의 빈 칸은 셀 것이 없다).
  *
- * 상태 원장이 늘어나면 타일도 함께 늘어난다 — 값을 코드에 박지 않는다. 원장에서 지워졌거나
- * 비활성인 코드가 데이터에 남아 있으면 뒤에 따로 붙인다(세어 놓고 안 보여 주면 합이 맞지 않는다).
- * 미출근은 상태가 아니라 아직 일어나지 않은 일이라 언제나 맨 뒤다.
+ * **활성 상태는 0건이어도 자리를 지킨다.** 건수가 있는 것만 세우면 타일이 날마다 나타났다
+ * 사라져 어제와 오늘을 같은 눈으로 비교할 수 없고, 무엇보다 "오늘 지각 0"이라는 사실 자체가
+ * 화면에서 지워진다 — 0은 값이 없는 것이 아니라 값이 0인 것이다.
+ *
+ * 상태 원장이 늘거나 줄면 타일도 함께 움직인다(값을 코드에 박지 않는다). 비활성으로 내린
+ * 상태와 원장에 없는 코드는 그 코드로 남은 기록이 있을 때만 뒤에 붙인다 — 세어 놓고 안 보여
+ * 주면 타일의 합과 표의 줄 수가 어긋난다. 미출근은 상태가 아니라 아직 일어나지 않은 일이라
+ * 언제나 맨 뒤다.
  *
  * 타일은 곧 그 상태의 필터다. 건수를 세어 놓고 누를 수 없으면 다음에 할 일이 표를 눈으로 훑는
  * 일밖에 남지 않는다.
@@ -57,14 +62,16 @@ export function statusTiles(
   })
 
   const known = new Set(statuses.map((s) => s.code))
-  const ledger = statuses.filter((s) => counts.has(s.code)).map((s) => tile(s.code, s.label))
+  // 원장 순서(sort_order)를 그대로 따른다 — 관리자가 근태 설정에서 정한 차례가 곧 타일의 차례다.
+  const active = statuses.filter((s) => s.isActive).map((s) => tile(s.code, s.label))
+  const retired = statuses
+    .filter((s) => !s.isActive && counts.has(s.code))
+    .map((s) => tile(s.code, s.label))
   const orphan = [...counts.keys()]
     .filter((code) => code !== PENDING_STATUS && !known.has(code))
     .map((code) => tile(code, statusOf(statuses, code)?.label ?? code))
 
-  return counts.has(PENDING_STATUS)
-    ? [...ledger, ...orphan, tile(PENDING_STATUS, PENDING_LABEL)]
-    : [...ledger, ...orphan]
+  return [...active, ...retired, ...orphan, tile(PENDING_STATUS, PENDING_LABEL)]
 }
 
 export interface PersonSummary {

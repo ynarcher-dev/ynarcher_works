@@ -1,3 +1,4 @@
+import { cn } from '@ynarcher/ui'
 import dayjs from 'dayjs'
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useRef } from 'react'
@@ -18,6 +19,11 @@ export interface DateNavProps {
   onChange: (d: dayjs.Dayjs) => void
   /** 이동 단위. 'month'면 달을 넘기고 라벨도 'YYYY년 M월'이 된다. 기본 'day'. */
   unit?: 'day' | 'month'
+  /**
+   * 가로 정렬(기본 center). 날짜 바가 화면의 축일 때는 가운데가 맞지만, 탭·툴바처럼 왼쪽에서
+   * 시작하는 줄들 사이에 끼면 혼자 가운데 뜬 것처럼 보인다 — 그때 'left'로 줄을 맞춘다.
+   */
+  align?: 'center' | 'left'
 }
 
 /**
@@ -26,7 +32,7 @@ export interface DateNavProps {
  * 날짜를 축으로 삼는 화면은 같은 자리에서 같은 모양으로 움직여야 한다. 달력은 브라우저 기본
  * date 피커를 띄운다(별도 팝오버 없이 입력 규격을 앱 전체와 맞춘다).
  */
-export function DateNav({ date, onChange, unit = 'day' }: DateNavProps) {
+export function DateNav({ date, onChange, unit = 'day', align = 'center' }: DateNavProps) {
   const pickerRef = useRef<HTMLInputElement>(null)
   const isMonth = unit === 'month'
   const label = isMonth ? date.format('YYYY년 M월') : dayLabel(date)
@@ -34,7 +40,12 @@ export function DateNav({ date, onChange, unit = 'day' }: DateNavProps) {
   // 달력 아이콘은 꺽쇠와 달리 글리프가 상자를 꽉 채워서, 같은 여백이면 더 밖으로 나와 보인다
   // → 오른쪽만 4px 더 준다.
   return (
-    <div className="mx-auto flex w-fit items-center gap-1 rounded-radius-full border border-gray-200 bg-white py-1 pl-1.5 pr-2.5">
+    <div
+      className={cn(
+        'flex w-fit items-center gap-1 rounded-radius-full border border-gray-200 bg-white py-1 pl-1.5 pr-2.5',
+        align === 'left' ? 'mr-auto' : 'mx-auto',
+      )}
+    >
       <button
         type="button"
         aria-label={isMonth ? '이전 달' : '이전 날'}
