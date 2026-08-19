@@ -39,7 +39,7 @@ function recent<T>(list: T[], n = 5): T[] {
   return list.slice(0, n)
 }
 
-/** 재무/매출/고용/투자 카드별 막대차트 시리즈 정의. */
+/** 재무/매출/고용 카드별 차트 시리즈 정의. 투자 현황은 연 단위 시계열이 아니라 표만 둔다. */
 const FINANCE_SERIES: ChartSeries[] = [
   { key: 'assets', name: '자산', color: C.brand },
   { key: 'liabilities', name: '부채', color: C.teal },
@@ -51,10 +51,6 @@ const REVENUE_SERIES: ChartSeries[] = [
   { key: 'netIncome', name: '당기순이익', color: C.amber },
 ]
 const EMPLOYEE_SERIES: ChartSeries[] = [{ key: 'employeeCount', name: '고용 인원', color: C.brand }]
-const INVESTMENT_SERIES: ChartSeries[] = [
-  { key: 'valuation', name: '기업 가치(Pre)', color: C.brand },
-  { key: 'fundingAmount', name: '투자유치액', color: C.teal },
-]
 
 /** 차트↔표 간격(mt-4)을 준 공용 소형 표. */
 function Table({ head, children }: { head: ReactNode; children: ReactNode }) {
@@ -92,7 +88,9 @@ interface Props {
 }
 
 /**
- * 성장 지표 섹션(읽기): 재무/매출/고용/투자 현황 표 + 차트.
+ * 성장 지표 섹션(읽기): 재무/매출/고용은 표 + 차트, 투자 현황은 표만 둔다.
+ * 투자는 연 단위로 채워지는 시계열이 아니라 라운드가 있을 때만 드문드문 쌓이는 사건 목록이라
+ * 꺾은선의 기울기가 추세를 뜻하지 않는다 — 그래서 이 카드만 차트를 두지 않는다.
  * 재무·매출·고용은 연도 기준, 투자는 월 기준으로 각각 독립 목록이다.
  * 투자 현황은 외부 라운드(growth_metrics.investment, jsonb)와 자사 펀드 투자
  * (investments 원장, 브리지 RPC)를 한 표에 합쳐 최신순으로 보여준다. 자사 펀드 행은
@@ -191,9 +189,7 @@ export function StartupGrowthSection({ growth, startupId }: Props) {
           {investment.length === 0 ? (
             <Empty text="등록된 투자 정보가 없습니다." />
           ) : (
-            <>
-            <StartupMetricChart data={[...investment].reverse()} series={INVESTMENT_SERIES} variant="line" xKey="date" />
-            <Table head={<><th className={thL}>기준월</th><th className={thL}>라운드</th><th className={th}>기업 가치(Pre)</th><th className={th}>투자유치액</th><th className={thL}>투자자</th></>}>
+            <MiniTable head={<><th className={thL}>기준월</th><th className={thL}>라운드</th><th className={th}>기업 가치(Pre)</th><th className={th}>투자유치액</th><th className={thL}>투자자</th></>}>
               {investment.map((m, i) => (
                 <tr key={`${m.date}-${i}`}>
                   <td className={tdP}>{m.date || '-'}</td>
@@ -218,8 +214,7 @@ export function StartupGrowthSection({ growth, startupId }: Props) {
                   </td>
                 </tr>
               ))}
-            </Table>
-            </>
+            </MiniTable>
           )}
         </MetricCard>
       </div>
