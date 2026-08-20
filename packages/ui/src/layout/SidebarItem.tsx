@@ -29,7 +29,7 @@ export function SidebarItem({
       aria-current={active ? 'page' : undefined}
       title={collapsed ? label : undefined}
       className={cn(
-        'group relative flex w-full items-center rounded-radius-md text-body font-semibold transition-all duration-fast active:scale-[0.98] transform-gpu',
+        'group relative flex w-full items-center rounded-radius-md text-body font-semibold transition-all duration-fast active:scale-[0.98]',
         'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/20',
         collapsed ? 'h-ctl-page justify-center px-0 py-0' : 'gap-2.5 px-3.5 py-2.5',
         active

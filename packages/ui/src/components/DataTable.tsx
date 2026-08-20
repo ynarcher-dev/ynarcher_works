@@ -1,16 +1,100 @@
 import { useContext, useState, type ReactNode } from 'react'
 import { cn } from '../utils/cn'
-import { DensityProvider } from '../density'
-import { tableGrid, tableText } from '../densityScale'
+import { DensityProvider, useDensity } from '../density'
+import { columnWidth, tableGrid, tableText } from '../densityScale'
 import { Checkbox } from './Checkbox'
 import { Button } from './Button'
 import { Pagination } from './Pagination'
 import { ToastContext } from './toast/ToastContext'
 
+/**
+ * 열의 종류 — 그 칸에 무엇이 들어가는가.
+ *
+ * 열 하나를 제대로 세우려면 폭·정렬·수치서식·줄바꿈을 함께 정해야 하는데, 이 넷은 사실 하나의
+ * 사실에서 따라 나온다. 날짜 열이면 112px에 가운데 정렬에 줄바꿈 금지이고, 금액 열이면 112px에
+ * 우측 정렬에 `tabular-nums`다. 그래서 넷을 따로 적게 두지 않고 종류 한 단어로 선언한다 —
+ * 넷을 손으로 조합하게 두면 화면마다 조합이 조금씩 달라지고, 그게 곧 들쑥날쑥한 표가 된다.
+ *
+ * `name`만 폭이 없다. 식별 열은 길이를 예측할 수 없고 잘리면 곤란해서, 남는 폭을 받는 쪽이다.
+ *
+ * 개별 열에서 `align`·`numeric`·`className`을 직접 주면 종류가 정한 값을 이긴다 — 예외는 있게
+ * 마련이고, 예외를 적는 것이 예외를 위해 종류를 안 쓰는 것보다 낫다.
+ */
+export type ColumnType =
+  | 'name'
+  | 'text'
+  | 'person'
+  | 'badge'
+  | 'date'
+  | 'datetime'
+  | 'money'
+  | 'count'
+  | 'long'
+
+/**
+ * 종류별 규격.
+ *
+ * 열은 두 부류로 갈린다.
+ *
+ * - **고정폭(`rem`)** — 날짜·배지·금액처럼 데이터 자체의 폭이 정해진 열. 넓혀 봐야 빈 칸만
+ *   늘어나므로 늘리지 않는다.
+ * - **가변폭(`flex`)** — 이름·업종처럼 값 길이를 예측할 수 없는 열. 남는 폭은 이 열들이
+ *   가중치대로 **나눠 갖는다.** 한 열이나 빈 칸에 몰아주면 그 자리가 통째로 비어 보인다.
+ *
+ * `flex` 값은 절대 폭이 아니라 서로에 대한 비율이다. 이름 3 : 업종 1.2는 "남는 폭을 이 비율로
+ * 갈라라"라는 뜻이고, 실제 픽셀은 표가 컨테이너 폭에서 고정폭 합을 뺀 뒤 계산한다.
+ */
+const columnTypeSpec: Record<
+  ColumnType,
+  {
+    width: string
+    align: 'left' | 'right' | 'center'
+    numeric: boolean
+    /** 고정폭(rem). 지정되면 남는 폭을 받지 않는다. */
+    rem?: number
+    /** 가변폭 가중치. 남는 폭을 이 비율로 나눠 갖는다. */
+    flex?: number
+  }
+> = {
+  /** 식별 값(이름·기업명). 가장 큰 몫을 받는다 — 잘리면 곤란한 값이라 여유가 가장 쓸모 있다. */
+  name: { width: '', align: 'left', numeric: false, flex: 3 },
+  /** 업종·분류 등 짧은 라벨. */
+  text: { width: '', align: 'left', numeric: false, flex: 1.2 },
+  /** 사람 이름. */
+  person: { width: '', align: 'left', numeric: false, flex: 1 },
+  /** 주소·비고 등 긴 텍스트. */
+  long: { width: '', align: 'left', numeric: false, flex: 2 },
+  /** 상태 배지 한 개. */
+  badge: { width: columnWidth.badge, align: 'center', numeric: false, rem: 5 },
+  /** 날짜 `YYYY-MM-DD`. */
+  date: { width: columnWidth.date, align: 'center', numeric: false, rem: 7 },
+  /** 일시 `YYYY-MM-DD HH:MM:SS`. */
+  datetime: { width: columnWidth.datetime, align: 'center', numeric: false, rem: 9 },
+  /** 금액·수량. */
+  money: { width: columnWidth.money, align: 'right', numeric: true, rem: 7 },
+  /** 건수·개수. */
+  count: { width: columnWidth.count, align: 'right', numeric: true, rem: 5 },
+}
+
 export interface Column<T> {
   key: string
   header: ReactNode
   render?: (row: T) => ReactNode
+  /**
+   * 열의 종류. 폭·정렬·수치서식·줄바꿈을 한 번에 정한다.
+   *
+   * 이것만 적으면 비율을 계산할 일이 없다 — 종류별 절대폭은 `columnWidth`가 갖고 있고,
+   * 남는 폭은 표가 알아서 처리한다. 아래 `align`·`numeric`·`className`은 이 값을 덮는 예외 통로다.
+   */
+  type?: ColumnType
+  /**
+   * 열 정렬 — **머리글과 셀에 함께 적용된다.** `type`이 정한 정렬을 덮는 예외 통로이며,
+   * 종류도 정렬도 없으면 가운데다.
+   *
+   * 표를 빨리 읽게 만드는 것은 선이 아니라 열마다의 기준 모서리다. 길이가 제각각인 텍스트
+   * (이름·업종·담당자)는 `left`로 두어 왼쪽 모서리를 세우고, 숫자는 `right`로 두어 자릿수를
+   * 맞추며, 날짜·배지처럼 폭이 일정한 것만 가운데에 둔다.
+   */
   align?: 'left' | 'right' | 'center'
   /**
    * 식별 열 표시. 그 행이 무엇인지 알려주는 열(이름·기업명)에 지정하며 진한 값 톤을 받는다.
@@ -18,6 +102,7 @@ export interface Column<T> {
    * 두 개 이상 지정하지 않는다.
    */
   primary?: boolean
+  /** 수치 서식(`tabular-nums`). `type`이 정한 값을 덮는다. */
   numeric?: boolean
   sortable?: boolean
   /** 헤더·셀에 함께 적용할 추가 클래스(폭·여백 조정 등). 기본 셀 여백 등과 twMerge로 충돌 해소된다. */
@@ -87,7 +172,22 @@ export interface DataTableProps<T> {
     /** 페이지 변경 콜백(0-base). */
     onChange: (page: number) => void
   }
-  /** 최좌측 선택 체크박스 컬럼(헤더 전체선택 + 행별 선택). 기본 false. */
+  /**
+   * 최좌측 선택 체크박스 컬럼(헤더 전체선택 + 행별 선택).
+   *
+   * **기본값은 표가 놓인 자리가 정한다**(2026-08-20). 페이지에 바로 놓인 표는 그 화면의 작업
+   * 대상이므로 켜고, 카드 안에 놓인 표는 상세 화면을 받치는 보조 목록이므로 끈다 — 투자 이력이나
+   * 관련 목록에서 여러 건을 골라 일괄 처리할 일은 없고, 체크박스만 첫 칸을 차지한다.
+   *
+   * 크기를 가르는 축과 같은 축이다. 중요도가 아니라 놓이는 자리가 답한다.
+   *
+   * 선택 핸들러를 주지 않아도 동작한다 — 내부 상태로 관리하며 고른 행은 `bg-brand/5`로 표시된다.
+   * 여러 건을 눈으로 짚어 두는 용도만으로도 쓸모가 있다.
+   *
+   * 명시하면 자리와 무관하게 그 값이 이긴다. 카드 안이지만 일괄 처리가 필요한 표는 `selectable`을,
+   * 페이지에 있지만 선택이라는 개념이 성립하지 않는 표(집계 매트릭스·순위표처럼 행이 레코드가
+   * 아닌 것)는 `selectable={false}`를 준다.
+   */
   selectable?: boolean
   /** 선택된 행 키(제어 모드). 미지정 시 컴포넌트 내부 상태로 관리한다. */
   selectedKeys?: string[]
@@ -98,8 +198,17 @@ export interface DataTableProps<T> {
   /** 행별 추가 클래스(상태 강조 등). 반환값이 있으면 해당 행 `<tr>`에 병합된다. */
   rowClassName?: (row: T) => string | undefined
   /**
-   * 레이아웃 모드(기본 'auto'). 'fixed'는 `table-fixed`로 컬럼 폭 비율을 고정하고
-   * 셀 내용이 넘치면 말줄임(…) 처리한다. 컬럼 폭은 각 컬럼 `className`(w-*)이 정한다.
+   * 레이아웃 모드(기본 'auto').
+   *
+   * 열마다 `type`을 적었다면 두 모드 모두 폭이 계산되어 표를 정확히 채운다(빈 구간이 생기지 않는다).
+   * 갈리는 것은 계산된 폭보다 내용이 길 때다.
+   *
+   * - 'auto' — 열이 늘어나 값을 다 보여준다. 대신 그만큼 다른 열이 밀린다.
+   * - 'fixed' — 폭을 지키고 넘치는 글자를 말줄임(…)한다. 행 높이와 열 위치가 절대 흔들리지 않아야
+   *   하는 표에 쓴다.
+   *
+   * `type`이 없는 열이 섞여 있으면 그 열은 계산에서 빠진다 — 'auto'에서는 내용 폭을 갖고,
+   * 'fixed'에서는 남은 폭을 균등 분할한다.
    */
   layout?: 'auto' | 'fixed'
   /**
@@ -120,8 +229,8 @@ export interface DataTableProps<T> {
    */
   authorLabel?: string
   /**
-   * 수정일 값(셀) 정렬(기본 center). 날짜는 폭이 일정해 가운데가 안정적이다.
-   * 헤더는 모든 열이 그렇듯 항상 가운데. 넓은 표에서 우측 여백을 줄이려면 'right'.
+   * 수정일 정렬(기본 center). 날짜는 폭이 일정해 가운데가 안정적이다.
+   * 머리글은 값과 같은 쪽에 서므로 이 값이 둘을 함께 정한다. 넓은 표에서 우측 여백을 줄이려면 'right'.
    */
   updatedAtAlign?: 'left' | 'right' | 'center'
   /**
@@ -205,7 +314,7 @@ export function DataTable<T>({
   updatedAtAlign = 'center',
   manageable = true,
   showManageColumn = true,
-  selectable = false,
+  selectable: selectableProp,
   selectedKeys,
   onSelectionChange,
   onRowClick,
@@ -216,6 +325,13 @@ export function DataTable<T>({
 }: DataTableProps<T>) {
   // ToastProvider 밖에서도 쓰일 수 있어 컨텍스트를 null-safe로 읽는다(복사 알림용).
   const toast = useContext(ToastContext)
+  /*
+   * 표가 놓인 자리. `DataTable`은 내부를 `table` 밀도로 고정하지만, 그 provider는 반환하는
+   * JSX 안에 있으므로 여기서 읽는 값은 **부모가 내려준 맥락**이다 — 카드 안이면 'card',
+   * 페이지에 바로 놓였으면 'page'.
+   */
+  const placement = useDensity()
+  const selectable = selectableProp ?? placement !== 'card'
   const fixed = layout === 'fixed'
   const truncate = fixed ? 'truncate' : ''
   // 열이 많은 표는 여백을 좁혀(px-2) 각 컬럼의 내용 표시 폭을 넓힌다.
@@ -224,6 +340,44 @@ export function DataTable<T>({
   const cellX = tableGrid.cellX
   // 명시 지정이 없으면 첫 도메인 열을 식별 열로 삼는다.
   const primaryKey = (columns.find((c) => c.primary) ?? columns[0])?.key
+  /**
+   * 열 폭 계산(2026-08-20).
+   *
+   * 표가 컨테이너를 꽉 채워야 하는 한 남는 폭은 반드시 어딘가로 간다. 모든 열에 조금씩 뿌리면
+   * 값들이 흩어지고, 한 열이나 빈 칸에 몰아주면 그 자리가 통째로 비어 보인다. 셋 다 겪어 보고
+   * 남은 결론은 하나다 — **폭을 계산해서 딱 채우는 수밖에 없다.**
+   *
+   * 계산은 두 부류로 나눠서 한다. 날짜·배지·금액처럼 데이터의 폭이 정해진 열은 rem으로 고정하고,
+   * 이름·업종처럼 길이를 예측할 수 없는 열이 나머지를 가중치대로 나눠 갖는다. 그래서 열이 6개든
+   * 3개든, 컨테이너가 넓든 좁든 표는 항상 정확히 채워지고 어디에도 빈 구간이 생기지 않는다.
+   *
+   * 비율을 손으로 적을 일은 없다 — 화면은 열마다 `type`만 적고, 비율은 그 종류들이 모여
+   * 자동으로 정해진다.
+   */
+  const fixedRem =
+    (selectable ? 2.5 : 0) +
+    (numbered ? 3 : 0) +
+    (standardColumns ? (showAuthor ? 5 : 0) + 7 + (showManageColumn ? 8 : 0) : 0) +
+    columns.reduce((sum, c) => sum + (c.type ? (columnTypeSpec[c.type].rem ?? 0) : 0), 0)
+  const totalFlex = columns.reduce(
+    (sum, c) => sum + (c.type ? (columnTypeSpec[c.type].flex ?? 0) : 0),
+    0,
+  )
+  /** 가변폭 열이 가져갈 몫. 고정폭 합을 뺀 나머지를 가중치 비율로 자른다. */
+  const flexWidth = (col: Column<T>): string | undefined => {
+    const w = col.type ? columnTypeSpec[col.type].flex : undefined
+    if (!w || !totalFlex) return undefined
+    return `calc((100% - ${fixedRem}rem) * ${(w / totalFlex).toFixed(4)})`
+  }
+  /** 셀 인라인 스타일 — 고정 열의 left 오프셋과 가변폭을 함께 얹는다. */
+  const cellStyle = (col: Column<T>, leadFrozen: boolean) => {
+    const width = flexWidth(col)
+    if (!leadFrozen && !width) return undefined
+    return {
+      ...(leadFrozen ? { left: `${leftFirst}rem` } : {}),
+      ...(width ? { width } : {}),
+    }
+  }
 
   // 선두 열 고정(stickyLead): 선택(w-10=2.5rem)·No.(w-12=3rem)가 앞설 때 각 고정 열의 left 오프셋을 누적한다.
   const selRem = 2.5
@@ -237,7 +391,10 @@ export function DataTable<T>({
     stickyLead
       ? cn(
           'sticky',
-          isHeader ? 'z-20 bg-gray-50' : 'z-10 bg-white group-hover:bg-gray-25',
+          // 고정 셀은 스크롤되는 셀 위를 덮어야 하므로 반드시 불투명해야 한다. 머리글의 회색
+          // 면을 걷어냈으므로 머리글 고정 셀도 흰색을 깐다 — gray-50을 남기면 그 열만 회색으로
+          // 뜬다.
+          isHeader ? 'z-20 bg-white' : 'z-10 bg-white group-hover:bg-gray-25',
           isLast && 'shadow-[10px_0_14px_-4px_rgba(17,24,39,0.16)]',
         )
       : ''
@@ -290,8 +447,27 @@ export function DataTable<T>({
         )}
       >
         <thead>
-          {/* divide-x: 셀 사이에만 세로선을 긋는다(표 바깥 가장자리에는 생기지 않는다). */}
-          <tr className="bg-gray-50 divide-x divide-gray-300">
+          {/*
+            세로 구분선을 긋지 않는다(2026-08-20).
+
+            이전에는 `divide-x`로 모든 셀 사이에 세로선을 그었다. 세로선은 가로로 읽는 눈의 진행을
+            매 열마다 끊어 스캔을 느리게 하고, 열이 많은 표에서는 격자가 데이터보다 먼저 보인다.
+            열 구분은 선이 아니라 정렬이 이미 하고 있다 — 숫자는 우측 정렬에 `tabular-nums`로 폭이
+            고정되고, 각 열은 머리글 아래로 수직 정렬이 유지된다. 행 구분(가로선 `border-b`)만
+            남기면 표가 훨씬 빨리 읽힌다.
+          */}
+          {/*
+            머리글에 회색 면을 깔지 않는다(2026-08-20).
+
+            이전에는 `bg-gray-50` 배경과 진한 밑줄을 함께 썼다. 둘 다 "여기부터 머리글이다"라는
+            같은 말이라, 겹치면 머리글이 정작 읽어야 할 데이터보다 무거워진다. 표를 세로로 훑을 때
+            제일 먼저 눈에 걸리는 것이 회색 띠가 되는 것은 순서가 뒤바뀐 것이다.
+
+            머리글임은 굵기와 색이 이미 말하고 있고(`tableText.head` — semibold gray-600), 데이터와의
+            경계는 밑줄 하나가 긋는다. 면을 걷어내면 글자가 흰 바탕 위로 올라와 대비도 7.19:1에서
+            7.77:1로 함께 오른다.
+          */}
+          <tr>
             {selectable && (
               <th
                 className={cn(`h-row w-10 border-b border-gray-300 ${cellX}`, pad, stickyCell(true))}
@@ -321,18 +497,28 @@ export function DataTable<T>({
             {columns.map((col, colIndex) => {
               const active = sortKey === col.key
               const leadFrozen = stickyLead && colIndex === 0
+              // 종류가 폭·정렬을 정하고, 열이 직접 준 값이 그것을 덮는다.
+              const spec = col.type ? columnTypeSpec[col.type] : undefined
               return (
                 <th
                   key={col.key}
                   className={cn(
-                    `h-row border-b border-gray-300 ${cellX} text-center ${tableText.head}`,
-                    col.sortable && 'cursor-pointer select-none hover:bg-gray-100/50',
+                    // 머리글은 자기 열의 값과 같은 쪽에 선다(2026-08-20). 이전에는 모든 머리글이
+                    // 가운데 고정이라, 왼쪽으로 선 이름 열이나 오른쪽으로 선 금액 열에서 머리글만
+                    // 홀로 떠 있었다. 머리글이 어느 열의 것인지는 위치가 알려주는 것이므로,
+                    // 값과 어긋나면 열을 훑을 기준선이 두 개가 된다.
+                    `h-row border-b border-gray-300 ${cellX} ${tableText.head}`,
+                    alignClass[col.align ?? spec?.align ?? 'center'],
+                    spec?.width,
+                    // 정렬 가능한 머리글의 hover. 머리글이 흰 바탕이 되었으므로 gray-100은 너무
+                    // 진하다 — 마우스를 올렸을 뿐인데 걷어낸 회색 띠가 되돌아온 것처럼 보인다.
+                    col.sortable && 'cursor-pointer select-none hover:bg-gray-50',
                     pad,
                     truncate,
                     col.className,
                     leadFrozen && stickyCell(true, true),
                   )}
-                  style={leadFrozen ? { left: `${leftFirst}rem` } : undefined}
+                  style={cellStyle(col, leadFrozen)}
                   onClick={col.sortable ? () => onSort?.(col.key) : undefined}
                 >
                   <span className="inline-flex items-center gap-1">
@@ -360,7 +546,8 @@ export function DataTable<T>({
                   <th className={cn(`h-row w-20 border-b border-gray-300 ${cellX} text-center ${tableText.head}`, pad, truncate)}>{authorLabel}</th>
                 )}
                 {/* 헤더는 값 정렬과 무관하게 항상 가운데. 머리글 줄이 하나의 띠로 읽히게 한다. */}
-                <th className={cn(`h-row w-28 border-b border-gray-300 ${cellX} text-center ${tableText.head}`, pad, truncate)}>수정일</th>
+                {/* 수정일 머리글도 값과 같은 쪽에 선다 — 값만 우측으로 보내면 머리글이 어긋난다. */}
+                <th className={cn(`h-row w-28 border-b border-gray-300 ${cellX} ${tableText.head}`, alignClass[updatedAtAlign], pad, truncate)}>수정일</th>
                 {showManageColumn && (
                   <th className={cn(`h-row w-32 border-b border-gray-300 ${cellX} text-center ${tableText.head}`, pad)}>관리</th>
                 )}
@@ -368,7 +555,14 @@ export function DataTable<T>({
             )}
           </tr>
         </thead>
-        <tbody>
+        {/*
+          마지막 행의 밑줄은 지운다(2026-08-20).
+
+          모든 셀이 `border-b`를 갖는데 표 바깥 래퍼도 `border`를 두르고 있어, 표 아래쪽에 1px 선이
+          두 줄로 겹쳐 그림자처럼 두껍게 보였다. 마지막 행의 경계는 래퍼가 이미 그리고 있으므로
+          행 쪽 밑줄만 걷어낸다.
+        */}
+        <tbody className="[&>tr:last-child>td]:border-b-0">
           {rows.length === 0 ? (
             <tr>
               <td
@@ -389,7 +583,8 @@ export function DataTable<T>({
                   className={cn(
                     tableGrid.row,
                     // group: 고정 셀(sticky)이 자기 배경을 깔아도 행 hover 강조를 함께 받도록 한다.
-                    'group divide-x divide-gray-200 transition-colors duration-fast hover:bg-gray-25',
+                    // 세로 구분선 없음 — 근거는 머리글 행의 주석 참조.
+                    'group transition-colors duration-fast hover:bg-gray-25',
                     !active && 'opacity-50',
                     selected.has(key) && 'bg-brand/5',
                     onRowClick && 'cursor-pointer',
@@ -421,20 +616,22 @@ export function DataTable<T>({
                   )}
                   {columns.map((col, colIndex) => {
                     const leadFrozen = stickyLead && colIndex === 0
+                    const spec = col.type ? columnTypeSpec[col.type] : undefined
                     return (
                     <td
                       key={col.key}
                       className={cn(
                         `border-b border-gray-200 ${cellX}`,
                         col.key === primaryKey ? tableText.primary : tableText.body,
-                        alignClass[col.align ?? 'center'],
-                        col.numeric && 'tabular-nums',
+                        alignClass[col.align ?? spec?.align ?? 'center'],
+                        spec?.width,
+                        (col.numeric ?? spec?.numeric) && 'tabular-nums',
                         pad,
                         truncate,
                         col.className,
                         leadFrozen && stickyCell(false, true),
                       )}
-                      style={leadFrozen ? { left: `${leftFirst}rem` } : undefined}
+                      style={cellStyle(col, leadFrozen)}
                     >
                       {col.render ? col.render(row) : (row[col.key as keyof T] as ReactNode)}
                     </td>

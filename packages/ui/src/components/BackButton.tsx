@@ -41,7 +41,7 @@ export function BackButton({ as, className, ...rest }: BackButtonProps) {
         s.gap,
         'border border-gray-300 bg-white font-semibold text-gray-800 shadow-sm',
         'transition-all duration-fast ease-in-out hover:border-gray-400 hover:bg-gray-25 active:bg-gray-50',
-        'active:scale-[0.98] transform-gpu',
+        'active:scale-[0.98]',
         'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10',
         className,
       )}

@@ -21,7 +21,7 @@ export function Topbar({
   return (
     <header
       className={cn(
-        'sticky top-0 z-navbar grid h-16 grid-cols-[1fr_auto_1fr] items-center border-b border-gray-100 bg-white/95 px-4 backdrop-blur',
+        'sticky top-0 z-navbar grid h-16 grid-cols-[1fr_auto_1fr] items-center border-b border-gray-100 bg-white px-4',
         className,
       )}
     >

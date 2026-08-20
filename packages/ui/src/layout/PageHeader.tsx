@@ -65,8 +65,16 @@ export function PageHeader({
             <h1 className="text-title-lg font-bold text-gray-900">{title}</h1>
             {titleExtra}
           </div>
+          {/*
+            페이지 설명은 본문 크기(14px)에 두고 색으로만 물러난다(2026-08-20).
+
+            이전에는 캡션(12px)이었다. 제목이 30px인데 바로 아래 설명이 표 셀과 같은 12px이면
+            한 헤더 안에서 크기가 30 → 12로 두 단계를 건너뛰어, 설명이 화면에서 가장 작은 글자가
+            된다. 카드 부제(`cardText.subtitle`)가 같은 이유로 이미 본문 크기를 쓰고 있었는데
+            페이지 헤더만 다르게 처리되고 있었다 — 같은 원리라면 같은 규격이어야 한다.
+          */}
           {description && (
-            <p className="mt-1 text-caption text-gray-600">{description}</p>
+            <p className="mt-1 text-body text-gray-500">{description}</p>
           )}
         </div>
       </div>

@@ -51,7 +51,7 @@ export function Button({
       className={cn(
         'inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-radius-md font-semibold transition-all duration-fast ease-in-out',
         'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10',
-        'active:scale-[0.98] transform-gpu',
+        'active:scale-[0.98]',
         'disabled:cursor-not-allowed disabled:opacity-55 disabled:shadow-none disabled:scale-100',
         variantClass[variant],
         s.height,
