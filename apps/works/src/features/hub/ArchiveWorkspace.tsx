@@ -104,6 +104,7 @@ export function ArchiveWorkspace({ boardId, title }: ArchiveWorkspaceProps) {
     {
       key: 'title',
       header: '자료명',
+      type: 'name',
       render: (p) => (
         <span className="flex min-w-0 items-center gap-1.5">
           <span className="truncate text-gray-800">{p.title}</span>
@@ -114,6 +115,7 @@ export function ArchiveWorkspace({ boardId, title }: ArchiveWorkspaceProps) {
     {
       key: 'summary',
       header: '설명',
+      type: 'long',
       render: (p) =>
         p.summary ? (
           <span className="block truncate font-normal text-gray-600" title={p.summary}>
@@ -126,9 +128,7 @@ export function ArchiveWorkspace({ boardId, title }: ArchiveWorkspaceProps) {
     {
       key: 'size',
       header: '용량',
-      align: 'right',
-      numeric: true,
-      className: 'w-24',
+      type: 'money',
       render: (p) => (
         <span className="tabular-nums text-gray-600">
           {formatBytes(matByPost.get(p.id)?.byte_size ?? null)}
@@ -138,8 +138,7 @@ export function ArchiveWorkspace({ boardId, title }: ArchiveWorkspaceProps) {
     {
       key: 'download',
       header: '다운로드',
-      align: 'center',
-      className: 'w-24',
+      type: 'badge',
       render: (p) => <DownloadCell material={matByPost.get(p.id)} />,
     },
   ]

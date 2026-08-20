@@ -5,23 +5,20 @@ const columns: Column<ExpertRank>[] = [
   {
     key: 'rank',
     header: '순위',
-    align: 'right',
-    numeric: true,
+    type: 'count',
     render: () => '',
   },
-  { key: 'expert_name', header: '전문가', render: (r) => r.expert_name },
+  { key: 'expert_name', header: '전문가', type: 'name', render: (r) => r.expert_name },
   {
     key: 'avg_score',
     header: '평균 만족도',
-    align: 'right',
-    numeric: true,
+    type: 'money',
     render: (r) => r.avg_score.toFixed(2),
   },
   {
     key: 'session_count',
     header: '평가 세션',
-    align: 'right',
-    numeric: true,
+    type: 'count',
     render: (r) => r.session_count,
   },
 ]

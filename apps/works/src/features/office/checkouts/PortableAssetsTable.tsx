@@ -71,13 +71,13 @@ export function PortableAssetsTable({
   onOpen,
   pagination,
 }: PortableAssetsTableProps) {
+  // 폭·정렬은 열마다의 종류(type)가 정한다 — 수동 w-* 폭을 적지 않는다(2026-08 디자인 리프레시).
   const columns: Column<AssetRow>[] = [
     {
       key: 'name',
       header: '물품',
       primary: true,
-      align: 'left',
-      className: 'w-64',
+      type: 'name',
       render: (r) => (
         <div className="flex items-center gap-2">
           <Thumb url={urlOf(r.asset.photoPaths[0])} />
@@ -88,7 +88,7 @@ export function PortableAssetsTable({
     {
       key: 'itemType',
       header: '품목',
-      className: 'w-24',
+      type: 'text',
       render: (r) => r.asset.itemType ?? <EmptyValue />,
     },
     // 재고는 이 표에서 가장 자주 읽히는 숫자다 — "빌릴 수 있나"에 상태보다 먼저 답한다.
@@ -96,8 +96,7 @@ export function PortableAssetsTable({
     {
       key: 'stock',
       header: '재고(잔여)',
-      numeric: true,
-      className: 'w-20',
+      type: 'count',
       render: (r) => (
         <span className="tabular-nums">
           <b className={cn('font-semibold', r.remaining === 0 && 'text-gray-400')}>
@@ -110,7 +109,7 @@ export function PortableAssetsTable({
     {
       key: 'state',
       header: '상태',
-      className: 'w-24',
+      type: 'badge',
       render: (r) =>
         r.state === 'OVERDUE' ? (
           <b className="font-semibold text-danger">{ASSET_STATE_LABELS[r.state]}</b>
@@ -124,19 +123,20 @@ export function PortableAssetsTable({
     {
       key: 'requiresApproval',
       header: '승인 여부',
-      className: 'w-20',
+      type: 'badge',
       render: (r) => (r.asset.requiresApproval ? '필요' : '불필요'),
     },
     {
       key: 'holder',
       header: '반출자',
-      className: 'w-24',
+      type: 'person',
       render: (r) => r.active?.createdByName ?? <EmptyValue />,
     },
     {
       key: 'dueAt',
       header: '반납 예정',
-      className: 'w-44',
+      // 일시 + 연체 경과가 붙는 자리라 date보다 넓은 datetime 규격에 세운다.
+      type: 'datetime',
       render: (r) => {
         if (!r.active) return <EmptyValue />
         const late = overdueMs(r.active, now)
@@ -153,7 +153,7 @@ export function PortableAssetsTable({
     {
       key: 'manager',
       header: '관리자',
-      className: 'w-24',
+      type: 'person',
       render: (r) => nameOf(r.asset.managerId) ?? <EmptyValue />,
     },
   ]

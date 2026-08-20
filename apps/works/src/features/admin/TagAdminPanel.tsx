@@ -210,6 +210,8 @@ export function TagAdminPanel({ config }: TagAdminPanelProps) {
   // 이름순으로 갈린다 — 중간에 하나를 끼워 넣으려고 같은 번호를 쓰는 운영을 허용하기 위함이다.
   const columns: Column<Tag>[] = [
     {
+      // 입력창·버튼이 들어가는 두 열(노출순위·관리)은 종류가 답하는 데이터 열이 아니라
+      // 조작 자리라, 폭을 예외 통로(className)로 직접 잡는다.
       key: 'order',
       header: '노출순위',
       align: 'center',
@@ -235,14 +237,15 @@ export function TagAdminPanel({ config }: TagAdminPanelProps) {
         </span>
       ),
     },
-    { key: 'name', header: noun, primary: true, sortable: true, render: (t) => t.name },
+    { key: 'name', header: noun, primary: true, type: 'name', sortable: true, render: (t) => t.name },
     // 표기 방식(직급·직책 전용): 임직원 이름 옆 호칭을 이 값이 정한다.
     ...(modes
       ? [
           {
             key: 'mode',
             header: '표기 방식',
-            className: 'w-64',
+            // 드롭다운이 들어가는 가변 열 — long 규격의 몫을 받는다.
+            type: 'long' as const,
             render: (t: Tag) => (
               <Select
                 aria-label={`${t.name} 표기 방식`}

@@ -9,17 +9,20 @@ export function DownloadLogView() {
     {
       key: 'created_at',
       header: '다운로드 시각',
+      type: 'datetime',
       render: (r) => new Date(r.created_at).toLocaleString('ko-KR'),
     },
     {
       key: 'user_id',
       header: '기안자',
+      type: 'person',
       render: (r) => (r.user_id ? r.user_id.slice(0, 8) : '-'),
     },
-    { key: 'resource_type', header: '대상 유형', render: (r) => r.resource_type ?? '-' },
+    { key: 'resource_type', header: '대상 유형', type: 'text', render: (r) => r.resource_type ?? '-' },
     {
       key: 'reason',
       header: '입력 사유',
+      type: 'long',
       render: (r) => <span className="text-gray-700">{r.reason ?? '-'}</span>,
     },
   ]

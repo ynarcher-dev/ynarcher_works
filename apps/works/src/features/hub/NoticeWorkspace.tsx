@@ -34,6 +34,7 @@ export function NoticeWorkspace() {
     {
       key: 'title',
       header: '제목',
+      type: 'name',
       // 진입은 행 전체 클릭(onRowClick)이 담당하므로 제목은 텍스트·표식만 렌더한다.
       render: (n) => (
         <span className="flex min-w-0 items-center gap-1.5">
@@ -50,8 +51,8 @@ export function NoticeWorkspace() {
     {
       key: 'board',
       header: '게시판',
+      type: 'text',
       align: 'center',
-      className: 'w-64',
       // 본문 셀은 DataTable 기본 text-body를 상속한다(캡션 크기를 덧씌우면 다른 열과 어긋남).
       render: (n) => <span className="text-gray-600">{n.boardLabel}</span>,
     },

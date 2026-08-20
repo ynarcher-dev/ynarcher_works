@@ -14,8 +14,8 @@ export function attachmentColumn<T>(has: (row: T) => boolean): Column<T> {
   return {
     key: 'attachment',
     header: '첨부',
-    align: 'center',
-    className: 'w-16',
+    // 아이콘 하나가 놓이는 고정폭 열 — 배지 규격(badge, 가운데)을 쓴다.
+    type: 'badge',
     render: (row) =>
       has(row) ? (
         <span className="inline-flex items-center justify-center" title="첨부 있음">
@@ -35,9 +35,8 @@ export function viewsColumn<T>(get: (row: T) => BoardPost): Column<T> {
   return {
     key: 'views',
     header: '조회',
+    type: 'count',
     align: 'center',
-    numeric: true,
-    className: 'w-20',
     render: (row) => (
       <span className="text-gray-600">{(get(row).views ?? 0).toLocaleString()}</span>
     ),
@@ -49,6 +48,7 @@ function titleColumn(): Column<BoardPost> {
   return {
     key: 'title',
     header: '제목',
+    type: 'name',
     // 고정은 No. 칸 핀 표식으로 알리므로 제목 앞에는 공지 말머리만 남긴다.
     render: (p) => (
       <span className="flex min-w-0 items-center gap-1.5">
@@ -103,8 +103,8 @@ export function BoardPanel({
     columns.push({
       key: 'board',
       header: '게시판',
+      type: 'text',
       align: 'center',
-      className: 'w-64',
       // 본문 셀은 DataTable 기본 text-body를 상속한다(캡션 크기를 덧씌우면 다른 열과 어긋남).
       render: () => <span className="text-gray-600">{boardLabel}</span>,
     })

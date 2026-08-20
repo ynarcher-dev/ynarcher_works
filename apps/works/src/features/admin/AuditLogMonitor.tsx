@@ -11,23 +11,26 @@ export function AuditLogMonitor() {
     {
       key: 'created_at',
       header: '일시',
+      type: 'datetime',
       render: (r) => new Date(r.created_at).toLocaleString('ko-KR'),
     },
     {
       key: 'action',
       header: '액션',
+      type: 'badge',
       render: (r) => <Badge tone="info">{r.action}</Badge>,
     },
-    { key: 'changed_workspace', header: '대상', render: (r) => r.changed_workspace ?? '-' },
+    { key: 'changed_workspace', header: '대상', type: 'text', render: (r) => r.changed_workspace ?? '-' },
     {
       key: 'perm',
       header: '권한 변경',
+      type: 'long',
       render: (r) =>
         r.before_permission || r.after_permission
           ? `${r.before_permission ?? '-'} → ${r.after_permission ?? '-'}`
           : '-',
     },
-    { key: 'request_ip', header: 'IP', render: (r) => r.request_ip ?? '-' },
+    { key: 'request_ip', header: 'IP', type: 'text', render: (r) => r.request_ip ?? '-' },
     {
       key: '_action',
       header: '',

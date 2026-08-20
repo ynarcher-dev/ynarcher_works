@@ -32,10 +32,12 @@ export function MinutesTable({
   const safePage = Math.min(page, pageCount - 1)
   const rows = minutes.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE)
 
+  // 폭·정렬은 열마다의 종류(type)가 정한다 — 수동 w-* 폭을 적지 않는다(2026-08 디자인 리프레시).
   const columns: Column<MinuteListItem>[] = [
     {
       key: 'title',
       header: '제목',
+      type: 'name',
       // 진입은 행 전체 클릭(onRowClick)이 담당하므로 제목은 텍스트만 렌더한다.
       render: (m) => (
         <span className="flex min-w-0 items-center gap-1.5">
@@ -51,8 +53,7 @@ export function MinutesTable({
       // 자리마다 다른 색으로 보였다 — 제한 표기도 danger 램프 하나로 모은다(2026-08-03).
       key: 'visibility',
       header: '공개범위',
-      align: 'center',
-      className: 'w-24',
+      type: 'badge',
       render: (m) => (
         <span
           className={
@@ -66,8 +67,7 @@ export function MinutesTable({
     {
       key: 'attachment',
       header: '첨부',
-      align: 'center',
-      className: 'w-16',
+      type: 'badge',
       render: (m) =>
         attachmentIds.has(m.id) ? (
           <span className="inline-flex items-center justify-center" title="첨부 있음">
@@ -83,23 +83,22 @@ export function MinutesTable({
       // (게시판·공지사항 viewsColumn과 같은 규칙).
       key: 'views',
       header: '조회',
+      type: 'count',
       align: 'center',
-      numeric: true,
-      className: 'w-20',
       render: (m) => <span className="tabular-nums text-gray-600">{m.viewCount.toLocaleString()}</span>,
     },
     {
+      // 작성자는 게시판류와 같이 가운데로 모은다(person 기본 좌측을 덮는 예외).
       key: 'author',
       header: '작성자',
+      type: 'person',
       align: 'center',
-      className: 'w-24',
       render: (m) => <span className="text-gray-600">{m.authorName ?? '-'}</span>,
     },
     {
       key: 'meetingDate',
       header: '회의일',
-      align: 'center',
-      className: 'w-28',
+      type: 'date',
       render: (m) => <span className="tabular-nums text-gray-600">{m.meetingDate ?? '-'}</span>,
     },
   ]

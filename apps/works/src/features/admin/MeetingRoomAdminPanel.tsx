@@ -80,8 +80,10 @@ export function MeetingRoomAdminPanel() {
 
   const columns: Column<MeetingRoom>[] = [
     {
+      // 썸네일(h-9 w-16) 하나가 놓이는 고정폭 열 — 배지 규격(badge, 가운데)을 쓴다.
       key: 'photo',
       header: '사진',
+      type: 'badge',
       render: (r) => {
         const url = roomPhotoUrl(r.photoPath)
         return url ? (
@@ -93,28 +95,30 @@ export function MeetingRoomAdminPanel() {
         )
       },
     },
-    { key: 'name', header: '회의실명', primary: true, render: (r) => r.name },
-    { key: 'location', header: '위치', render: (r) => r.location ?? <EmptyValue /> },
+    { key: 'name', header: '회의실명', primary: true, type: 'name', render: (r) => r.name },
+    { key: 'location', header: '위치', type: 'text', render: (r) => r.location ?? <EmptyValue /> },
     {
       key: 'capacity',
       header: '인원',
-      align: 'center',
+      type: 'count',
       render: (r) => (r.capacity != null ? `${r.capacity}명` : <EmptyValue />),
     },
     {
       key: 'hours',
       header: '운영시간',
+      type: 'text',
       render: (r) => `${normalizeTime(r.openTime)}–${normalizeTime(r.closeTime)} · ${r.slotMinutes}분`,
     },
     {
       key: 'weekdays',
       header: '요일',
+      type: 'text',
       render: (r) => weekdayText(r.weekdays) || <EmptyValue />,
     },
     {
       key: 'status',
       header: '상태',
-      align: 'center',
+      type: 'badge',
       render: (r) =>
         r.isActive ? <Badge tone="success">활성</Badge> : <Badge tone="neutral">비활성</Badge>,
     },

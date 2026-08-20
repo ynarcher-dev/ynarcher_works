@@ -60,6 +60,7 @@ export function BoardAdminPanel() {
     {
       key: 'label',
       header: '게시판명',
+      type: 'name',
       render: (b) => {
         const Icon = boardIcon(b.icon)
         return (
@@ -73,7 +74,7 @@ export function BoardAdminPanel() {
     {
       key: 'kind',
       header: '구분',
-      align: 'center',
+      type: 'badge',
       render: (b) => (
         <Badge tone={b.kind === 'ARCHIVE' ? 'warning' : 'info'}>
           {BOARD_KIND_LABEL[b.kind]}
@@ -83,14 +84,14 @@ export function BoardAdminPanel() {
     {
       key: 'type',
       header: '유형',
-      align: 'center',
+      type: 'badge',
       render: (b) =>
         b.isSystem ? <Badge tone="neutral">기본</Badge> : <Badge tone="info">사용자</Badge>,
     },
     {
       key: 'status',
       header: '상태',
-      align: 'center',
+      type: 'badge',
       render: (b) =>
         b.isActive ? (
           <Badge tone="success">활성</Badge>

@@ -3,11 +3,12 @@ import { maskEmail } from '@/lib/mask'
 import { useEmployees, type Employee } from '@/features/hub/hooks'
 
 const columns: Column<Employee>[] = [
-  { key: 'name', header: '이름', render: (r) => r.name },
-  { key: 'user_type', header: '역할', render: (r) => r.user_type },
+  { key: 'name', header: '이름', type: 'name', render: (r) => r.name },
+  { key: 'user_type', header: '역할', type: 'text', render: (r) => r.user_type },
   {
     key: 'email',
     header: '이메일',
+    type: 'text',
     render: (r) => maskEmail(r.email),
   },
 ]

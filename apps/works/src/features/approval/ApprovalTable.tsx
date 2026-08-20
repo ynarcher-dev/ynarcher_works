@@ -23,16 +23,17 @@ export interface ApprovalDocument {
   category: string
 }
 
+// 폭·정렬·수치서식은 열마다의 종류(type)가 정한다(2026-08 디자인 리프레시).
 const columns: Column<ApprovalDocument>[] = [
-  { key: 'docType', header: '문서 종류', render: (r) => r.docType },
-  { key: 'docNo', header: '문서 번호', render: (r) => r.docNo },
-  { key: 'title', header: '제목', render: (r) => r.title },
-  { key: 'department', header: '부서명', render: (r) => r.department },
-  { key: 'drafter', header: '기안자', render: (r) => r.drafter },
-  { key: 'draftedAt', header: '기안일', numeric: true, render: (r) => r.draftedAt },
-  { key: 'completedAt', header: '완료일', numeric: true, render: (r) => r.completedAt ?? '-' },
-  { key: 'status', header: '상태', render: (r) => <Badge tone="neutral">{r.status}</Badge> },
-  { key: 'category', header: '구분', render: (r) => r.category },
+  { key: 'docType', header: '문서 종류', type: 'text', render: (r) => r.docType },
+  { key: 'docNo', header: '문서 번호', type: 'text', render: (r) => r.docNo },
+  { key: 'title', header: '제목', type: 'name', primary: true, render: (r) => r.title },
+  { key: 'department', header: '부서명', type: 'text', render: (r) => r.department },
+  { key: 'drafter', header: '기안자', type: 'person', render: (r) => r.drafter },
+  { key: 'draftedAt', header: '기안일', type: 'date', render: (r) => r.draftedAt },
+  { key: 'completedAt', header: '완료일', type: 'date', render: (r) => r.completedAt ?? '-' },
+  { key: 'status', header: '상태', type: 'badge', render: (r) => <Badge tone="neutral">{r.status}</Badge> },
+  { key: 'category', header: '구분', type: 'text', render: (r) => r.category },
 ]
 
 export interface ApprovalTableProps {
@@ -55,7 +56,7 @@ export function ApprovalTable({ rows = [], selectedKeys, onSelectionChange }: Ap
       columns={columns}
       rows={rows}
       rowKey={(r) => r.id}
-      selectable
+      // selectable은 자리 기본값(페이지에 바로 놓인 표 = 켬)을 그대로 따른다.
       numbered={false}
       standardColumns={false}
       selectedKeys={selectedKeys}

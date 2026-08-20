@@ -15,15 +15,14 @@ export function BranchesPanel() {
   const { entriesOf } = useBranchMemberEntries()
   const [current, setCurrent] = useState<Branch | null>(null)
 
+  // 폭·정렬은 열마다의 종류(type)가 정한다(2026-08 디자인 리프레시, ADMIN 지사 관리와 동일 규격).
   const columns: Column<Branch>[] = [
-    // 지사명은 '대구 센터/기업부설연구소'처럼 긴 이름이 있어 한 줄에 들어가는 폭을 준다.
-    { key: 'name', header: '지사명', primary: true, className: 'w-56', render: (b) => b.name },
-    { key: 'address', header: '주소', render: (b) => b.address ?? <EmptyValue /> },
+    { key: 'name', header: '지사명', primary: true, type: 'name', render: (b) => b.name },
+    { key: 'address', header: '주소', type: 'long', render: (b) => b.address ?? <EmptyValue /> },
     {
       key: 'phone',
       header: '전화번호',
-      align: 'center',
-      className: 'w-36',
+      type: 'text',
       render: (b) =>
         b.phone ? <span className="tabular-nums text-gray-600">{b.phone}</span> : <EmptyValue />,
     },
