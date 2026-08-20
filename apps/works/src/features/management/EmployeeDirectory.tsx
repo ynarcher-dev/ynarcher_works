@@ -91,11 +91,12 @@ export function EmployeeDirectory({
       const v = resolveFor(r.department_id)[t.tier]
       return v && v !== '-' ? v : DASH
     },
-    className: 'w-28',
+    type: 'text',
   }))
 
+  // 폭·정렬은 열마다의 종류(type)가 정한다 — 수동 w-* 폭을 적지 않는다(2026-08 디자인 리프레시).
   const columns: Column<Employee>[] = [
-    { key: 'name', header: '이름', render: (r) => r.name, className: 'w-24' },
+    { key: 'name', header: '이름', render: (r) => r.name, type: 'name' },
     ...levelColumns,
     {
       key: 'branch',
@@ -105,19 +106,19 @@ export function EmployeeDirectory({
         const names = branchNamesOf(r.id)
         return names.length ? names.join(', ') : DASH
       },
-      className: 'w-24',
+      type: 'text',
     },
     {
       key: 'position',
       header: '직책',
       render: (r) => str(r.profile?.position) || DASH,
-      className: 'w-20',
+      type: 'text',
     },
     {
       key: 'rank',
       header: '직급',
       render: (r) => str(r.profile?.rank) || DASH,
-      className: 'w-20',
+      type: 'text',
     },
     // 호봉은 인사 관리 맥락에서만 쓰는 처우 정보다 — OFFICE 임직원 정보에서는 컬럼째 빼둔다.
     ...(showPayStep
@@ -126,7 +127,7 @@ export function EmployeeDirectory({
             key: 'pay_step',
             header: '호봉',
             render: (r: Employee) => str(r.profile?.pay_step) || DASH,
-            className: 'w-20',
+            type: 'count' as const,
           },
         ]
       : []),
@@ -134,15 +135,13 @@ export function EmployeeDirectory({
       key: 'email',
       header: '이메일',
       render: (r) => r.email ?? '-',
-      // 회사 도메인(@ynarcher.com) 포함 20자 안팎이 잘리지 않는 폭.
-      className: 'w-44',
+      type: 'text',
     },
     {
       key: 'phone',
       header: '연락처',
       render: (r) => r.phone || DASH,
-      // 휴대폰 번호(010-0000-0000)가 잘리지 않는 최소 폭.
-      className: 'w-32',
+      type: 'text',
     },
   ]
 
@@ -153,8 +152,8 @@ export function EmployeeDirectory({
       columns={columns}
       rows={data?.rows ?? []}
       rowKey={(r) => r.id}
-      layout="fixed"
-      selectable
+      // 폭·정렬은 type이 정하고 레이아웃은 기본(auto) — 긴 값(이메일 등)은 열이 늘어나 다 보인다.
+      // selectable은 자리 기본값(페이지에 바로 놓인 표 = 켬)을 그대로 따른다.
       showAuthor={false}
       // 관리 액션이 전부 상세로 옮겨가 빈 열만 남으므로 관리 컬럼 자체를 렌더하지 않는다.
       showManageColumn={false}

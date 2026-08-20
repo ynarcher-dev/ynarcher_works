@@ -5,21 +5,21 @@ import { useKpis, type Kpi } from '@/features/management/hooks'
 export function KpiPanel() {
   const { data: kpis, isLoading } = useKpis()
 
+  // 폭·정렬·수치서식은 열마다의 종류(type)가 정한다(2026-08 디자인 리프레시).
   const columns: Column<Kpi>[] = [
-    { key: 'metric_name', header: '지표', render: (r) => r.metric_name },
-    { key: 'period', header: '기간', render: (r) => r.period ?? '-' },
+    { key: 'metric_name', header: '지표', type: 'name', render: (r) => r.metric_name },
+    { key: 'period', header: '기간', type: 'text', render: (r) => r.period ?? '-' },
     {
       key: 'actual',
       header: '실적/목표',
-      align: 'right',
-      numeric: true,
+      type: 'money',
       render: (r) =>
         `${Number(r.actual_value ?? 0).toLocaleString()} / ${Number(r.target_value ?? 0).toLocaleString()}`,
     },
     {
       key: 'rate',
       header: '달성률',
-      align: 'right',
+      type: 'badge',
       render: (r) => {
         const rate =
           r.target_value && Number(r.target_value) > 0

@@ -49,19 +49,19 @@ export function AssetsTable({
   onRowClick,
   pagination,
 }: AssetsTableProps) {
+  // 폭·정렬·수치서식은 열마다의 종류(type)가 정한다 — 수동 w-* 폭을 적지 않는다(2026-08 디자인 리프레시).
   const columns: Column<Asset>[] = [
     {
       key: 'name',
       header: '자산명',
       primary: true,
-      align: 'left',
-      className: 'w-52',
+      type: 'name',
       render: (a) => a.name,
     },
     {
       key: 'serialNo',
       header: '시리얼 번호',
-      className: 'w-32',
+      type: 'text',
       render: (a) =>
         a.serialNo ? (
           <span className="tabular-nums text-gray-600">{a.serialNo}</span>
@@ -72,68 +72,64 @@ export function AssetsTable({
     {
       key: 'itemType',
       header: '품목',
-      className: 'w-24',
+      type: 'text',
       render: (a) => a.itemType ?? <EmptyValue />,
     },
     // 수량은 1이 대부분이라 굳이 강조하지 않는다 — 1보다 클 때만 눈에 들어오면 된다.
     {
       key: 'quantity',
       header: '수량',
-      align: 'right',
-      numeric: true,
-      className: 'w-16',
+      type: 'count',
       render: (a) => a.quantity,
     },
     {
       key: 'acquisitionType',
       header: '분류',
-      className: 'w-20',
+      type: 'text',
       render: (a) => ACQUISITION_LABELS[a.acquisitionType],
     },
     // 상태는 네 값이 대등한 분류라 배지로 칠하지 않는다(색을 입히면 없는 위계가 생긴다).
     {
       key: 'status',
       header: '상태',
-      className: 'w-20',
+      type: 'text',
       render: (a) => ASSET_LABELS[a.status],
     },
     // 관리자와 할당은 이웃한 두 열이다 — 맡은 사람과 쓰는 사람이 한눈에 갈려야 한다.
     {
       key: 'managerId',
       header: '관리자',
-      className: 'w-24',
+      type: 'person',
       render: (a) => nameOf(a.managerId) ?? <EmptyValue />,
     },
     {
       key: 'assignedTo',
       header: '할당',
-      className: 'w-24',
+      type: 'person',
       render: (a) => nameOf(a.assignedTo) ?? <EmptyValue />,
     },
     {
       key: 'amount',
       header: '금액',
-      align: 'right',
-      numeric: true,
-      className: 'w-28',
+      type: 'money',
       render: (a) => (a.amount == null ? <EmptyValue /> : formatAmount(a.amount)),
     },
     {
       key: 'billingCycle',
       header: '결제 주기',
-      className: 'w-24',
+      type: 'text',
       render: (a) => BILLING_LABELS[a.billingCycle],
     },
     {
       key: 'acquiredOn',
       header: '취득일자',
-      className: 'w-28',
+      type: 'date',
       render: (a) => <DateCell value={a.acquiredOn} />,
     },
     {
       key: 'endsOn',
       header: '만료(폐기)일자',
-      className: 'w-28',
+      type: 'date',
       render: (a) => <DateCell value={a.disposedOn ?? a.returnDue} />,
     },
     // 승인 필요는 반출 가능의 하위 값이라 열을 나누지 않는다 — 나누면 '불가'인 행에 늘 빈 칸이
@@ -141,7 +137,7 @@ export function AssetsTable({
     {
       key: 'isPortable',
       header: '반출',
-      className: 'w-24',
+      type: 'badge',
       render: (a) =>
         !a.isPortable ? (
           <Badge tone="neutral">불가</Badge>
@@ -159,7 +155,7 @@ export function AssetsTable({
       rows={rows}
       rowKey={(a) => a.id}
       showAuthor={false}
-      selectable
+      // selectable은 자리 기본값(페이지에 바로 놓인 표 = 켬)을 그대로 따른다.
       selectedKeys={selectedKeys}
       onSelectionChange={onSelectionChange}
       onRowClick={onRowClick}

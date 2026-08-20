@@ -39,13 +39,14 @@ export function AttendanceMonthTable({
   selectedKeys,
   onSelectionChange,
 }: Props) {
+  // 폭·정렬은 열마다의 종류(type)가 정한다 — 수동 w-* 폭을 적지 않는다(2026-08 디자인 리프레시).
   const columns: Column<AttendanceMonthRow>[] = [
     {
+      // 날짜가 이 표의 식별 열이다(한 사람의 월간 뷰) — 고정폭 date가 아니라 name으로 세운다.
       key: 'workDate',
       header: '날짜',
       primary: true,
-      align: 'left',
-      className: 'w-28',
+      type: 'name',
       render: (r) => {
         const d = dayjs(r.workDate)
         return (
@@ -58,7 +59,7 @@ export function AttendanceMonthTable({
     {
       key: 'workPlace',
       header: '근무지',
-      className: 'w-20',
+      type: 'badge',
       render: (r) =>
         r.workPlace === 'EXTERNAL' ? (
           <Badge tone="info">{PLACE_LABELS.EXTERNAL}</Badge>
@@ -68,29 +69,29 @@ export function AttendanceMonthTable({
           <EmptyValue />
         ),
     },
-    // 'HH:mm:ss' 여덟 자가 줄바꿈되지 않는 폭.
+    // 시각·소요는 폭이 일정한 값이라 날짜와 같은 고정폭 규격(date)에 세운다.
     {
       key: 'checkInAt',
       header: '출근',
-      className: 'w-24',
+      type: 'date',
       render: (r) => <TimeCell value={r.checkInAt} />,
     },
     {
       key: 'checkOutAt',
       header: '퇴근',
-      className: 'w-24',
+      type: 'date',
       render: (r) => <TimeCell value={r.checkOutAt} />,
     },
     {
       key: 'duration',
       header: '근무시간',
-      className: 'w-24',
+      type: 'date',
       render: (r) => durationText(r.checkInAt, r.checkOutAt) ?? <EmptyValue />,
     },
     {
       key: 'status',
       header: '상태',
-      className: 'w-32',
+      type: 'badge',
       render: (r) => (
         <AttendanceStatusBadge
           statuses={statuses}
@@ -102,7 +103,7 @@ export function AttendanceMonthTable({
     {
       key: 'note',
       header: '비고',
-      align: 'left',
+      type: 'long',
       render: (r) => r.note ?? <EmptyValue />,
     },
   ]
@@ -112,7 +113,7 @@ export function AttendanceMonthTable({
       columns={columns}
       rows={rows}
       rowKey={(r) => r.workDate}
-      selectable
+      // selectable은 자리 기본값(페이지에 바로 놓인 표 = 켬)을 그대로 따른다.
       selectedKeys={selectedKeys}
       onSelectionChange={onSelectionChange}
       onRowClick={onRowClick}

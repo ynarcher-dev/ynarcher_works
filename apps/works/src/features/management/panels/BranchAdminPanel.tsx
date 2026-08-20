@@ -71,21 +71,21 @@ export function BranchAdminPanel() {
     }
   }
 
+  // 폭·정렬은 열마다의 종류(type)가 정한다 — 수동 w-* 폭을 적지 않는다(2026-08 디자인 리프레시).
   const columns: Column<Branch>[] = [
-    { key: 'name', header: '지사명', primary: true, className: 'w-56', render: (b) => b.name },
-    { key: 'address', header: '주소', render: (b) => b.address ?? <EmptyValue /> },
+    { key: 'name', header: '지사명', primary: true, type: 'name', render: (b) => b.name },
+    { key: 'address', header: '주소', type: 'long', render: (b) => b.address ?? <EmptyValue /> },
     {
       key: 'phone',
       header: '전화번호',
-      align: 'center',
-      className: 'w-36',
+      type: 'text',
       render: (b) =>
         b.phone ? <span className="tabular-nums text-gray-600">{b.phone}</span> : <EmptyValue />,
     },
     {
       key: 'members',
       header: '상주인력',
-      className: 'w-56',
+      type: 'long',
       render: (b) => {
         const names = namesOf(b.id)
         return names.length > 0 ? names.join(', ') : <EmptyValue />
@@ -94,8 +94,7 @@ export function BranchAdminPanel() {
     {
       key: 'status',
       header: '상태',
-      align: 'center',
-      className: 'w-20',
+      type: 'badge',
       render: (b) =>
         b.isActive ? <Badge tone="success">활성</Badge> : <Badge tone="neutral">비활성</Badge>,
     },

@@ -59,13 +59,13 @@ export function AttendanceDayTable({
   selectedKeys,
   onSelectionChange,
 }: Props) {
+  // 폭·정렬은 열마다의 종류(type)가 정한다 — 수동 w-* 폭을 적지 않는다(2026-08 디자인 리프레시).
   const columns: Column<AttendanceBoardRow>[] = [
     {
       key: 'userName',
       header: '이름',
       primary: true,
-      align: 'left',
-      className: 'w-28',
+      type: 'name',
       // 이름은 그 사람의 월간으로 가는 문이다 — 행 클릭(정정)과 다른 동작이라 링크로 갈라 둔다.
       render: (r) => (
         <TextAction
@@ -84,7 +84,7 @@ export function AttendanceDayTable({
     ...org.tiers.map<Column<AttendanceBoardRow>>((t) => ({
       key: `tier-${t.tier}`,
       header: t.label,
-      className: 'w-28',
+      type: 'text',
       render: (r) => {
         const name = org.valuesOf(r.departmentId)[t.tier]
         return name && name !== TIER_EMPTY ? name : <EmptyValue />
@@ -93,7 +93,7 @@ export function AttendanceDayTable({
     {
       key: 'workPlace',
       header: '근무지',
-      className: 'w-20',
+      type: 'badge',
       render: (r) =>
         r.workPlace === 'EXTERNAL' ? (
           <Badge tone="info">{PLACE_LABELS.EXTERNAL}</Badge>
@@ -103,29 +103,29 @@ export function AttendanceDayTable({
           <EmptyValue />
         ),
     },
-    // 'HH:mm:ss' 여덟 자가 줄바꿈되지 않는 폭.
+    // 시각·소요는 폭이 일정한 값이라 날짜와 같은 고정폭 규격(date)에 세운다.
     {
       key: 'checkInAt',
       header: '출근',
-      className: 'w-24',
+      type: 'date',
       render: (r) => <TimeCell value={r.checkInAt} />,
     },
     {
       key: 'checkOutAt',
       header: '퇴근',
-      className: 'w-24',
+      type: 'date',
       render: (r) => <TimeCell value={r.checkOutAt} />,
     },
     {
       key: 'duration',
       header: '근무시간',
-      className: 'w-24',
+      type: 'date',
       render: (r) => durationText(r.checkInAt, r.checkOutAt) ?? <EmptyValue />,
     },
     {
       key: 'status',
       header: '상태',
-      className: 'w-32',
+      type: 'badge',
       render: (r) => (
         <AttendanceStatusBadge
           statuses={statuses}
@@ -137,10 +137,9 @@ export function AttendanceDayTable({
     {
       key: 'note',
       header: '비고',
-      align: 'left',
-      // 폭을 묶어 둔다 — 열어 두면 남는 가로를 비고가 다 먹어, 대부분 '-'인 칸이 표에서
-      // 제일 넓어진다. 긴 사유는 줄바꿈으로 받는다.
-      className: 'w-48',
+      // 긴 텍스트 열(long) — 남는 폭은 가중치로 배분되므로 비고가 표를 다 먹지 않고,
+      // 긴 사유는 줄바꿈으로 받는다(long은 유일하게 줄바꿈을 허용하는 종류다).
+      type: 'long',
       render: (r) => r.note ?? <EmptyValue />,
     },
   ]
@@ -150,7 +149,7 @@ export function AttendanceDayTable({
       columns={columns}
       rows={rows}
       rowKey={(r) => r.userId}
-      selectable
+      // selectable은 자리 기본값(페이지에 바로 놓인 표 = 켬)을 그대로 따른다.
       selectedKeys={selectedKeys}
       onSelectionChange={onSelectionChange}
       onRowClick={onRowClick}

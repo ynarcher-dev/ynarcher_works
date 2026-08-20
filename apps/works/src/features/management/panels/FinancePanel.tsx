@@ -45,26 +45,25 @@ export function FinancePanel() {
     [budgets, deptName, spentByDept],
   )
 
+  // 폭·정렬·수치서식은 열마다의 종류(type)가 정한다(2026-08 디자인 리프레시).
   const budgetCols: Column<BudgetRow>[] = [
-    { key: 'name', header: '부서', render: (r) => r.name },
+    { key: 'name', header: '부서', type: 'name', render: (r) => r.name },
     {
       key: 'budget',
       header: '예산',
-      align: 'right',
-      numeric: true,
+      type: 'money',
       render: (r) => r.budget.toLocaleString(),
     },
     {
       key: 'spent',
       header: '실지출',
-      align: 'right',
-      numeric: true,
+      type: 'money',
       render: (r) => r.spent.toLocaleString(),
     },
     {
       key: 'status',
       header: '상태',
-      align: 'right',
+      type: 'badge',
       render: (r) =>
         r.budget > 0 && r.spent > r.budget ? (
           <Badge tone="danger">예산 초과</Badge>
