@@ -10,7 +10,8 @@ const lpColumns: Column<FundLp>[] = [
   { key: 'name', header: '조합원명', primary: true, type: 'name', render: (r) => r.name },
   {
     key: 'lp_type',
-    header: '조합원유형',
+    // 두 어절은 붙여 적지 않는다 — 고정폭 열의 머리글은 공백에서만 접힌다(break-keep).
+    header: '조합원 유형',
     type: 'badge',
     render: (r) => (
       <Badge tone={FUND_LP_TYPE_TONE[r.lp_type] ?? 'neutral'}>

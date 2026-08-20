@@ -84,6 +84,8 @@ export function SubmissionsPanel({ moduleId }: { moduleId: string }) {
       {
         key: 'detail',
         header: '',
+        // 버튼 하나만 놓이는 조작 열 — 데이터 열이 아니라 종류를 주지 않고 가운데로 세운다.
+        align: 'center',
         render: (s) => (
           <Button variant="secondary" onClick={() => setDetail(s)}>
             상세

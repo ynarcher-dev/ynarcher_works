@@ -49,8 +49,9 @@ const STAGE_TONE = { 발굴: 'neutral', 보육: 'info', 투자: 'success' } as c
  * 식별 열만 `name`이다. 폭을 갖지 않아 남는 폭을 받는 쪽이며, 자동 레이아웃에서는 도메인 열 뒤의
  * 빈 열이 여백을 삼키므로 이 열도 자기 내용 폭으로 붙는다.
  *
- * '투자금액(백만원)'은 머리글이 값보다 길어 종류가 정한 112px보다 넓어진다. 자동 레이아웃에서
- * 폭은 하한이므로 정상 동작이며, 그럴 때 늘려야 하는 것은 폭이 아니라 줄여야 하는 것이 머리글이다.
+ * 머리글에는 단위를 적지 않는다(2026-08-20 확정). 이 표의 금액 열은 한때 '투자금액(백만원)'이었고,
+ * 머리글이 값보다 길어 종류가 정한 112px을 밀어냈다. 단위는 열마다 반복될 값이 아니라 표 전체에
+ * 한 번만 있으면 되는 정보라서, 머리글이 아니라 표 밖 한 줄(카드 부제·지표 띠의 `unit`)이 말한다.
  */
 const COLUMNS: Column<Row>[] = [
   { key: 'name', header: '기업명', type: 'name', primary: true, render: (r) => r.name },
@@ -75,7 +76,7 @@ const COLUMNS: Column<Row>[] = [
   },
   {
     key: 'amount',
-    header: '투자금액(백만원)',
+    header: '투자금액',
     type: 'money',
     render: (r) => (r.amount ? r.amount.toLocaleString() : <EmptyValue />),
   },

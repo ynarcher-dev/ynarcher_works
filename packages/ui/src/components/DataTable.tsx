@@ -89,11 +89,16 @@ export interface Column<T> {
   type?: ColumnType
   /**
    * 열 정렬 — **머리글과 셀에 함께 적용된다.** `type`이 정한 정렬을 덮는 예외 통로이며,
-   * 종류도 정렬도 없으면 가운데다.
+   * 종류도 정렬도 없으면 왼쪽이다(2026-08-20, 이전 기본값은 가운데).
    *
    * 표를 빨리 읽게 만드는 것은 선이 아니라 열마다의 기준 모서리다. 길이가 제각각인 텍스트
    * (이름·업종·담당자)는 `left`로 두어 왼쪽 모서리를 세우고, 숫자는 `right`로 두어 자릿수를
    * 맞추며, 날짜·배지처럼 폭이 일정한 것만 가운데에 둔다.
+   *
+   * 기본값이 왼쪽인 이유는 그 셋 중 가운데만이 **폭이 일정하다는 조건**을 요구하기 때문이다.
+   * 조건이 붙은 값은 기본값이 될 수 없다 — 종류를 안 적었다는 것은 그 조건을 확인하지 않았다는
+   * 뜻이므로, 확인 없이 안전한 쪽인 왼쪽으로 떨어져야 한다. 가운데가 기본이던 동안에는 종류를
+   * 붙이지 못한 몇 개 열만 홀로 가운데로 떠서, 같은 표 안에 기준선이 두 개 생겼다.
    */
   align?: 'left' | 'right' | 'center'
   /**
@@ -291,8 +296,8 @@ function resolveUpdatedAt<T>(row: T, meta?: DataTableMeta<T>): ReactNode {
  * 데이터 테이블(헤더·행 모두 `row` 토큰 36px, 수치 tabular-nums, 정렬 토글).
  * 좌측 No.(내림차순) + 우측 표준 컬럼(생성자/수정일/관리)을 기본 탑재한다.
  *
- * 정렬 기본값은 헤더·본문 모두 가운데다. 열 성격상 왼쪽 시작선이 필요하면
- * 그 열만 `align: 'left'`로 되돌린다(기본값과 같은 값을 다시 적지 않는다).
+ * 정렬은 열의 `type`이 정하고, 종류도 정렬도 없으면 헤더·본문 모두 왼쪽이다. 버튼만 놓이는
+ * 조작 열처럼 가운데가 필요한 자리만 `align: 'center'`를 적는다(기본값과 같은 값은 적지 않는다).
  * 관리 컬럼 자리는 항상 유지되며, `manageable=false`면 셀을 비운다(HUB 등 읽기 전용).
  * 근거: 5_component_spec_rules.md §3.1 (테이블 규격·표준 메타 컬럼)
  */
@@ -508,8 +513,18 @@ export function DataTable<T>({
                     // 홀로 떠 있었다. 머리글이 어느 열의 것인지는 위치가 알려주는 것이므로,
                     // 값과 어긋나면 열을 훑을 기준선이 두 개가 된다.
                     `h-row border-b border-gray-300 ${cellX} ${tableText.head}`,
-                    alignClass[col.align ?? spec?.align ?? 'center'],
+                    alignClass[col.align ?? spec?.align ?? 'left'],
                     spec?.width,
+                    // 고정폭 열의 머리글은 접힌다(2026-08-20). `columnWidth`의 `whitespace-nowrap`은
+                    // 값을 위한 것이다 — `2026-05-14`가 하이픈에서 갈라지지 않게. 그런데 그 nowrap이
+                    // 머리글에도 걸리면 머리글의 길이가 곧 열의 최소 폭이 되어, `재고(잔여)` 한 단어가
+                    // 종류가 정한 5rem을 밀어낸다. 규격을 정해 놓고 머리글이 그것을 이기면 규격이 아니다.
+                    // 그래서 머리글만 nowrap을 벗겨 두 줄로 접히게 두고 열은 자기 폭을 지킨다.
+                    // `break-keep`으로 어절 중간에서는 끊지 않는다 — 한글은 기본값이면 `조합원유` /
+                    // `형`처럼 음절 아무 데서나 갈라진다. 따라서 두 어절 이상인 머리글은 공백으로 띄워
+                    // 적는다(`조합원 유형`). 접히지 않고 열을 밀어내면 머리글이 길다는 신호이며,
+                    // 그때 줄일 것은 열 폭이 아니라 머리글이다.
+                    spec?.width && 'whitespace-normal break-keep',
                     // 정렬 가능한 머리글의 hover. 머리글이 흰 바탕이 되었으므로 gray-100은 너무
                     // 진하다 — 마우스를 올렸을 뿐인데 걷어낸 회색 띠가 되돌아온 것처럼 보인다.
                     col.sortable && 'cursor-pointer select-none hover:bg-gray-50',
@@ -623,7 +638,7 @@ export function DataTable<T>({
                       className={cn(
                         `border-b border-gray-200 ${cellX}`,
                         col.key === primaryKey ? tableText.primary : tableText.body,
-                        alignClass[col.align ?? spec?.align ?? 'center'],
+                        alignClass[col.align ?? spec?.align ?? 'left'],
                         spec?.width,
                         (col.numeric ?? spec?.numeric) && 'tabular-nums',
                         pad,
