@@ -55,7 +55,7 @@ export function GlobalSearchBox() {
         placeholder="DB·워크스페이스 검색"
         aria-label="전역 검색"
         icon={<Search aria-hidden className="size-4" />}
-        className="h-ctl-card shadow-none"
+        className="h-ctl-card"
       />
       {showPanel && (
         <div

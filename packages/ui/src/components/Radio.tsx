@@ -30,7 +30,7 @@ export const Radio = forwardRef<HTMLInputElement, RadioProps>(function Radio(
       title={label == null ? title : undefined}
       className={cn(
         // align-middle: 인라인 요소인 input이 글자 베이스라인에 걸려 위로 뜨는 것을 막는다.
-        'shrink-0 align-middle border-gray-300 text-brand accent-brand shadow-sm',
+        'shrink-0 align-middle border-gray-300 text-brand accent-brand',
         'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10',
         'disabled:cursor-not-allowed disabled:opacity-60',
         s.box,

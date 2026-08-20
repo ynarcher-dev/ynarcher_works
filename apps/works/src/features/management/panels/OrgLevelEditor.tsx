@@ -49,7 +49,7 @@ export function OrgLevelEditor({
                     if (e.key === 'Enter') onSave()
                     if (e.key === 'Escape') onCancel()
                   }}
-                  className="h-6 w-24 border-0 px-1 text-caption shadow-none focus-visible:ring-0"
+                  className="h-6 w-24 border-0 px-1 text-caption focus-visible:ring-0"
                 />
                 <button
                   type="button"

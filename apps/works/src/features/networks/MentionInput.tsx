@@ -162,7 +162,7 @@ export function MentionInput({
         <ul
           className={cn(
             'absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-auto',
-            'rounded-radius-md border border-gray-200 bg-white py-1 shadow-lg',
+            'rounded-radius-md border border-gray-300 bg-white py-1 shadow-popover',
           )}
         >
           {candidates.map((c, i) => (

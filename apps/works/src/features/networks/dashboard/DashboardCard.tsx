@@ -54,7 +54,7 @@ export function DashboardCard({
           안의 버튼·배지가 페이지 밀도(40px)로 렌더된다 — 카드는 작은데 버튼만 큰 현상.
           여백·모서리는 대시보드 격자에 맞춘 기존 값을 className으로 덮어쓴다. */}
       <CardShell
-        className={`flex ${boxHeight} flex-col rounded-radius-md p-4 shadow-none`}
+        className={`flex ${boxHeight} flex-col rounded-radius-md p-4`}
       >
         <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">{children}</div>
         {onExpand && (

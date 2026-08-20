@@ -129,7 +129,11 @@ export function WorkspaceSwitcher({
                   {opt.label}
                 </span>
                 {opt.description && (
-                  <span className="text-caption font-light text-gray-600">{opt.description}</span>
+                  // 설명은 라벨과 **같은 줄**에 선다. 한 줄 안에서 크기를 갈라 위계를 만들지
+                  // 않으므로(4_color·3_typography의 관통 원칙) 크기는 라벨과 같은 본문 하나로
+                  // 두고 색으로만 물러난다 — 이전에는 12px + font-light였고, 그 굵기는 이
+                  // 코드베이스에서 여기 한 곳에서만 쓰이던 사다리 밖 값이었다.
+                  <span className="text-body text-gray-500">{opt.description}</span>
                 )}
                 {isCurrent && (
                   <span className="ml-auto shrink-0 self-center rounded-radius-sm bg-brand-25 px-1.5 py-0.5 text-caption font-medium text-brand">

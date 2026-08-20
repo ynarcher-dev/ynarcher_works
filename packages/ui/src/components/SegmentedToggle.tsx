@@ -73,7 +73,7 @@ export function SegmentedToggle<K extends string = string>({
               s.padX,
               block && 'flex-1',
               on
-                ? 'bg-white text-brand shadow-sm'
+                ? 'bg-white text-brand'
                 : 'text-gray-500 hover:text-gray-800 disabled:hover:text-gray-500',
             )}
           >

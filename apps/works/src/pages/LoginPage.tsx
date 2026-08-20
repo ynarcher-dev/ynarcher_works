@@ -81,7 +81,7 @@ export function LoginPage() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full rounded-radius-md bg-brand px-4 py-2 text-body font-medium text-white shadow-sm shadow-brand/20 transition-all duration-fast hover:bg-brand-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10 active:scale-[0.98] active:bg-brand-700 disabled:scale-100 disabled:opacity-60"
+          className="w-full rounded-radius-md bg-brand px-4 py-2 text-body font-medium text-white transition-all duration-fast hover:bg-brand-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10 active:scale-[0.98] active:bg-brand-700 disabled:scale-100 disabled:opacity-60"
         >
           {isSubmitting ? '로그인 중…' : '로그인'}
         </button>

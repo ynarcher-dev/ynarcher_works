@@ -50,7 +50,7 @@ export function AssetPhotoCarousel({ paths, urlOf, className }: AssetPhotoCarous
               type="button"
               aria-label="이전 사진"
               onClick={() => move(-1)}
-              className="absolute left-2 top-1/2 -translate-y-1/2 rounded-radius-full bg-white/85 p-1.5 text-gray-700 shadow-sm hover:bg-white"
+              className="absolute left-2 top-1/2 -translate-y-1/2 rounded-radius-full bg-white/85 p-1.5 text-gray-700 shadow-popover hover:bg-white"
             >
               <ChevronLeft className="size-4" />
             </button>
@@ -58,7 +58,7 @@ export function AssetPhotoCarousel({ paths, urlOf, className }: AssetPhotoCarous
               type="button"
               aria-label="다음 사진"
               onClick={() => move(1)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-radius-full bg-white/85 p-1.5 text-gray-700 shadow-sm hover:bg-white"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-radius-full bg-white/85 p-1.5 text-gray-700 shadow-popover hover:bg-white"
             >
               <ChevronRight className="size-4" />
             </button>

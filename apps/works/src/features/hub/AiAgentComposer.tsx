@@ -60,7 +60,7 @@ export function AiAgentComposer({
           onClick={onSubmit}
           disabled={!canSend}
           aria-label="전송"
-          className="flex size-icon-card shrink-0 items-center justify-center rounded-radius-sm bg-brand text-white shadow-sm shadow-brand/20 transition-all hover:bg-brand-600 active:scale-95 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none"
+          className="flex size-icon-card shrink-0 items-center justify-center rounded-radius-sm bg-brand text-white transition-all hover:bg-brand-600 active:scale-95 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400"
         >
           <ArrowUp className="h-5 w-5" strokeWidth={2} />
         </button>

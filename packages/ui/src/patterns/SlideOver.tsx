@@ -89,7 +89,7 @@ export function SlideOver({
           }}
           className={cn(
             'pointer-events-auto absolute inset-y-0 right-0 flex flex-col overflow-hidden',
-            'border-l border-gray-200 bg-white shadow-2xl shadow-gray-900/15',
+            'border-l border-gray-200 bg-white shadow-dialog',
             'rounded-l-radius-lg transition-transform duration-slow ease-decelerate',
             widthClassName ?? DEFAULT_WIDTH,
             open ? 'translate-x-0' : 'translate-x-full',

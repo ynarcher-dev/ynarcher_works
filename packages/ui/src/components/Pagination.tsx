@@ -88,7 +88,7 @@ export function Pagination({
               s.text,
               'flex items-center justify-center rounded-radius-sm px-2 font-semibold transition-all active:scale-95',
               p === page
-                ? 'bg-brand text-white shadow-sm shadow-brand/10'
+                ? 'bg-brand text-white'
                 : 'text-gray-700 hover:bg-gray-100'
             )}
             aria-current={p === page ? 'page' : undefined}

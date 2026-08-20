@@ -229,7 +229,7 @@ export function ModuleBoardCard({
                       title="모듈 설정"
                       aria-label={`${nameOf(mod)} 설정`}
                       onClick={() => setEditTarget(mod)}
-                      className="grid size-icon-card place-items-center rounded-radius-md border border-gray-300 bg-white text-gray-600 shadow-sm transition-colors duration-fast hover:bg-gray-25 hover:text-gray-700"
+                      className="grid size-icon-card place-items-center rounded-radius-md border border-gray-300 bg-white text-gray-600 transition-colors duration-fast hover:bg-gray-25 hover:text-gray-700"
                     >
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
@@ -238,7 +238,7 @@ export function ModuleBoardCard({
                       title="모듈 끄기"
                       aria-label={`${nameOf(mod)} 끄기`}
                       onClick={() => void onDisable(mod)}
-                      className="grid size-icon-card place-items-center rounded-radius-md border border-gray-300 bg-white text-gray-600 shadow-sm transition-colors duration-fast hover:bg-danger-subtle hover:text-danger"
+                      className="grid size-icon-card place-items-center rounded-radius-md border border-gray-300 bg-white text-gray-600 transition-colors duration-fast hover:bg-danger-subtle hover:text-danger"
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>

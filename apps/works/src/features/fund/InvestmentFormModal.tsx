@@ -640,7 +640,7 @@ function Combobox({
             }}
             // 항목 클릭이 blur 보다 먼저 나가 목록이 사라지는 것을 막는다(포커스 유지).
             onMouseDown={(e) => e.preventDefault()}
-            className="rounded-radius-md border border-gray-200 bg-white shadow-lg"
+            className="rounded-radius-md border border-gray-300 bg-white shadow-popover"
           >
             {renderList(() => setOpen(false))}
           </div>,
