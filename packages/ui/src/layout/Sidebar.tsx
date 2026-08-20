@@ -13,13 +13,13 @@ export interface SidebarProps {
 }
 
 /**
- * 사이드바 컨테이너(딥 네이비 배경 표준). 근거: 2_app_layout_navigation.md
+ * 사이드바 컨테이너(브랜드 인디고 배경 표준). 근거: 2_app_layout_navigation.md
  *
- * 배경은 브랜드 액센트와 같은 계열의 심도 단계를 위에서 아래로 잇는 세로 그라디언트
- * (`brand.600` → `brand.700` → `brand.800`)를 쓴다. 이전에는 본문 텍스트용 중간 명도
- * (`gray.600`) 단색을 배경으로 써서, 그 위의 반투명 흰 글씨가 배경과 섞여 메뉴 전체가
- * 뿌옇게 보이는 문제가 있었다. 배경을 충분히 어둡게 내리고 글자를 불투명 흰색으로 올려 해소하되,
- * 단색 딥 네이비가 답답해 보이지 않도록 상단을 한 단계 밝게 띄워 깊이를 준다.
+ * 배경은 브랜드 인디고 한 단계(`brand.700`) **단색**이다. 한때 `brand.600`→`700`→`800`
+ * 세로 그라디언트로 깊이를 줬는데, 화면 왼쪽 끝에서 위아래로 밝기가 변하는 면이 생기면서
+ * 그 위에 얹히는 흰 pill·구분선의 대비가 자리마다 달라졌다 — 같은 메뉴 항목이 상단에서는
+ * 또렷하고 하단에서는 묻힌다. 배경은 균일한 바탕으로 두고 위계는 항목 쪽(흰 pill·인디케이터
+ * 바)이 만든다(2026-08-20).
  */
 export function Sidebar({
   header,
@@ -33,7 +33,7 @@ export function Sidebar({
     <nav
       className={cn(
         'flex h-full flex-col border-r border-white/15 transition-[width] duration-300 ease-in-out',
-        'bg-gradient-to-b from-brand-600 via-brand-700 to-brand-800',
+        'bg-brand-700',
         collapsed ? 'w-16' : 'w-60',
         className,
       )}
