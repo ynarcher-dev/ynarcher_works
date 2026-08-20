@@ -4,14 +4,16 @@ import {
   DataTable,
   EmptyValue,
   Spinner,
+  TagChip,
+  cn,
   useToast,
   type Column,
 } from '@ynarcher/ui'
 import { ImageIcon } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { MeetingPlaceBar } from '@/features/admin/MeetingPlaceBar'
+import { Link } from 'react-router-dom'
 import { MeetingRoomFormModal } from '@/features/admin/MeetingRoomFormModal'
-import { useMeetingPlaces } from '@/features/office/rooms/meetingPlacesApi'
+import { useBranches } from '@/features/office/branches/branchesApi'
 import { normalizeTime } from '@/features/office/rooms/availability'
 import {
   roomPhotoUrl,
@@ -23,26 +25,30 @@ import {
   type RoomInput,
 } from '@/features/office/rooms/meetingRoomsApi'
 
+/** 지사 원장의 단일 세팅 지점(MANAGEMENT). 여기서는 링크로만 안내한다. */
+const BRANCH_ADMIN_PATH = '/management?tab=branches'
+
 const KO_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 const weekdayText = (days: number[]) =>
   [...days].sort().map((d) => KO_WEEKDAYS[d]).join('·')
 
 /**
- * ADMIN 회의실 관리: 지점 관리(추가·이름 수정·비활성화) + 지점별 회의실 목록·설정.
- * 지점 목록은 지사 원장과 연동하지 않는 회의실 전용 목록이다(meeting_places).
+ * ADMIN 회의실 관리: 지사를 골라 그 지사의 회의실 목록·설정을 편집한다.
+ * 지사 목록 자체(추가·이름·비활성화)는 여기서 만들지 않는다 — 원장은 MANAGEMENT
+ * '지사 관리'가 소유하고(2026-08-20 회의실 전용 지점 원장 폐기), 여기는 고르기만 한다.
  */
 export function MeetingRoomAdminPanel() {
   const toast = useToast()
-  const placesQuery = useMeetingPlaces(true)
-  const places = useMemo(() => placesQuery.data ?? [], [placesQuery.data])
-  const [placeId, setPlaceId] = useState<string>()
+  const branchesQuery = useBranches(true)
+  const branches = useMemo(() => branchesQuery.data ?? [], [branchesQuery.data])
+  const [branchId, setBranchId] = useState<string>()
 
   useEffect(() => {
-    const first = places[0]
-    if (!placeId && first) setPlaceId(first.id)
-  }, [placeId, places])
+    const first = branches[0]
+    if (!branchId && first) setBranchId(first.id)
+  }, [branchId, branches])
 
-  const roomsQuery = useMeetingRooms(placeId, true)
+  const roomsQuery = useMeetingRooms(branchId, true)
   const rooms = roomsQuery.data ?? []
 
   const createRoom = useCreateRoom()
@@ -141,15 +147,35 @@ export function MeetingRoomAdminPanel() {
 
   return (
     <div className="space-y-5">
-      {placesQuery.isLoading ? (
+      {branchesQuery.isLoading ? (
         <div className="flex justify-center py-10">
           <Spinner />
         </div>
+      ) : branches.length === 0 ? (
+        <p className="text-body text-gray-500">
+          등록된 지사가 없습니다. 먼저 <Link className="text-brand underline" to={BRANCH_ADMIN_PATH}>지사 관리</Link>에서 지사를 등록하세요.
+        </p>
       ) : (
         <>
-          <MeetingPlaceBar places={places} selectedId={placeId} onSelect={setPlaceId} />
+          {/* 지사 칩은 고르기 전용이다 — 이름·활성 여부를 바꾸는 자리는 '지사 관리' 한 곳뿐. */}
+          <div className="flex flex-wrap items-center gap-2">
+            {branches.map((b) => (
+              <TagChip
+                key={b.id}
+                selected={b.id === branchId}
+                onClick={() => setBranchId(b.id)}
+                className={cn(!b.isActive && 'opacity-60')}
+              >
+                {b.name}
+                {!b.isActive && <span className="text-gray-400">(비활성)</span>}
+              </TagChip>
+            ))}
+            <Link className="text-caption text-gray-500 underline" to={BRANCH_ADMIN_PATH}>
+              지사 관리
+            </Link>
+          </div>
 
-          {placeId && (
+          {branchId && (
             <>
               <div className="flex justify-end">
                 <Button onClick={() => setForm('create')}>회의실 등록</Button>
@@ -173,10 +199,10 @@ export function MeetingRoomAdminPanel() {
         </>
       )}
 
-      {placeId && (
+      {branchId && (
         <MeetingRoomFormModal
           open={form !== null}
-          placeId={placeId}
+          branchId={branchId}
           room={editing}
           busy={busy}
           onClose={() => setForm(null)}

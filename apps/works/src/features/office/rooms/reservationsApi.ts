@@ -49,7 +49,7 @@ const dayKey = (roomIds: string[], date: string) => [
   [...roomIds].sort().join(','),
 ]
 
-/** 지점의 여러 회의실 × 특정 날짜의 유효 예약(취소 제외). 시간 오름차순. */
+/** 지사의 여러 회의실 × 특정 날짜의 유효 예약(취소 제외). 시간 오름차순. */
 export function useDayReservations(roomIds: string[], date: string) {
   return useQuery({
     queryKey: dayKey(roomIds, date),
@@ -70,12 +70,12 @@ export function useDayReservations(roomIds: string[], date: string) {
 
 // ── 예약자 검색 ──────────────────────────────────────────────────────
 
-/** 예약자 검색 결과 1건(회의실·지점을 함께 실어 화면 이동에 쓴다). */
+/** 예약자 검색 결과 1건(회의실·지사를 함께 실어 화면 이동에 쓴다). */
 export interface ReservationHit {
   id: string
   roomId: string
   roomName: string
-  placeId: string
+  branchId: string
   reservedDate: string
   startTime: string
   endTime: string
@@ -89,7 +89,7 @@ interface HitRow {
   start_time: string
   end_time: string
   created_by_name: string | null
-  meeting_rooms: { name: string; place_id: string } | null
+  meeting_rooms: { name: string; branch_id: string } | null
 }
 
 /** PostgREST 필터 값에서 문법 제어문자를 걷어낸다(networkPeopleSearch와 동일 처리). */
@@ -112,7 +112,7 @@ export function useReservationSearch(keyword: string) {
         .from('meeting_room_reservations')
         .select(
           'id, room_id, reserved_date, start_time, end_time, created_by_name, ' +
-            'meeting_rooms!inner(name, place_id)',
+            'meeting_rooms!inner(name, branch_id)',
         )
         .is('deleted_at', null)
         .gte('reserved_date', dayjs().format('YYYY-MM-DD'))
@@ -125,7 +125,7 @@ export function useReservationSearch(keyword: string) {
         id: r.id,
         roomId: r.room_id,
         roomName: r.meeting_rooms?.name ?? '',
-        placeId: r.meeting_rooms?.place_id ?? '',
+        branchId: r.meeting_rooms?.branch_id ?? '',
         reservedDate: r.reserved_date,
         startTime: normalizeTime(r.start_time),
         endTime: normalizeTime(r.end_time),

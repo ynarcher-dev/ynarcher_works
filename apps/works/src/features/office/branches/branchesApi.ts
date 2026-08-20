@@ -3,7 +3,8 @@ import { supabase } from '@/lib/supabase'
 
 /**
  * 지사 원장(branches) + 상주인력(branch_members) 서버 훅.
- * ADMIN('지사 관리')이 세팅하고 OFFICE('지사 정보')·회의실 예약이 소비하는 단일 원천.
+ * MANAGEMENT('지사 관리')가 세팅하고 OFFICE('지사 정보'·자산 반출대장·회의실 예약 탭)가
+ * 소비하는 단일 원천. 회의실 지점 원장(meeting_places)은 2026-08-20에 폐기됐다.
  * RLS: 조회는 내부 사용자, 쓰기는 admin 전용. 상주인력 쓰기는 app.set_branch_members RPC 전용
  * (supabase/migrations/20260728150000_branches.sql).
  */

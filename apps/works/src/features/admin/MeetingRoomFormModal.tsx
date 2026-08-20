@@ -17,7 +17,7 @@ const WEEKDAYS = [
 
 interface Props {
   open: boolean
-  placeId: string
+  branchId: string
   /** 있으면 수정, 없으면 생성. */
   room?: MeetingRoom
   busy: boolean
@@ -26,7 +26,7 @@ interface Props {
 }
 
 /** ADMIN 회의실 생성/수정 폼. 이름·위치·인원·운영시간·슬롯·예약가능 요일·사진. */
-export function MeetingRoomFormModal({ open, placeId, room, busy, onClose, onSubmit }: Props) {
+export function MeetingRoomFormModal({ open, branchId, room, busy, onClose, onSubmit }: Props) {
   const editing = Boolean(room)
   const [name, setName] = useState('')
   const [location, setLocation] = useState('')
@@ -63,7 +63,7 @@ export function MeetingRoomFormModal({ open, placeId, room, busy, onClose, onSub
     if (cap != null && (!Number.isInteger(cap) || cap < 0)) return setErr('인원은 0 이상 정수로 입력하세요.')
     setErr('')
     onSubmit({
-      placeId,
+      branchId,
       name: name.trim(),
       location: location.trim() || null,
       capacity: cap,

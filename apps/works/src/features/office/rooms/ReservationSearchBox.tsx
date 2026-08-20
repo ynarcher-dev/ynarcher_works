@@ -2,7 +2,7 @@ import { Input, Spinner, cn } from '@ynarcher/ui'
 import dayjs from 'dayjs'
 import { Search } from 'lucide-react'
 import { useState } from 'react'
-import type { MeetingPlace } from '@/features/office/rooms/meetingPlacesApi'
+import type { Branch } from '@/features/office/branches/branchesApi'
 import { useReservationSearch, type ReservationHit } from '@/features/office/rooms/reservationsApi'
 import { useDebounced } from '@/features/office/minutes/networkPeopleSearch'
 
@@ -15,17 +15,17 @@ function hitDateLabel(date: string): string {
 }
 
 interface Props {
-  /** 지점명 표기용 — 이미 화면이 들고 있는 목록을 그대로 쓴다(추가 조회 없음). */
-  places: MeetingPlace[]
-  /** 결과 선택 시 그 지점·날짜로 화면을 이동시킨다. */
+  /** 지사명 표기용 — 이미 화면이 들고 있는 목록을 그대로 쓴다(추가 조회 없음). */
+  branches: Branch[]
+  /** 결과 선택 시 그 지사·날짜로 화면을 이동시킨다. */
   onPick: (hit: ReservationHit) => void
 }
 
 /**
  * 예약자 검색 박스(오늘 이후 예정 예약만). 이름을 넣으면 날짜·회의실·시간을 목록으로 보여주고,
- * 고르면 그 지점·날짜의 회의실 화면으로 이동한다. 팝오버 규격·닫힘 처리는 GlobalSearchBox와 맞춘다.
+ * 고르면 그 지사·날짜의 회의실 화면으로 이동한다. 팝오버 규격·닫힘 처리는 GlobalSearchBox와 맞춘다.
  */
-export function ReservationSearchBox({ places, onPick }: Props) {
+export function ReservationSearchBox({ branches, onPick }: Props) {
   const [keyword, setKeyword] = useState('')
   const [open, setOpen] = useState(false)
   const debounced = useDebounced(keyword)
@@ -34,7 +34,7 @@ export function ReservationSearchBox({ places, onPick }: Props) {
   const hits = data ?? []
   const showPanel = open && debounced.trim().length > 0
 
-  const placeName = (id: string) => places.find((p) => p.id === id)?.name ?? ''
+  const branchName = (id: string) => branches.find((b) => b.id === id)?.name ?? ''
 
   const pick = (hit: ReservationHit) => {
     setOpen(false)
@@ -92,7 +92,7 @@ export function ReservationSearchBox({ places, onPick }: Props) {
                 </span>
               </span>
               <span className="block truncate text-caption text-gray-500">
-                {[placeName(h.placeId), h.roomName, h.reserverName].filter(Boolean).join(' · ')}
+                {[branchName(h.branchId), h.roomName, h.reserverName].filter(Boolean).join(' · ')}
               </span>
             </button>
           ))}
