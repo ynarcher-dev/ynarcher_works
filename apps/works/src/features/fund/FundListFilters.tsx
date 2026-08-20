@@ -13,17 +13,15 @@ import {
 interface FundListFiltersProps {
   filters: FundListFilterState
   onChange: (next: FundListFilterState) => void
-  /** 구분(전략) 탭에서 진입해 같은 축이 이미 스코프로 걸려 있으면 구분 필터를 감춘다. */
-  hideStrategy?: boolean
 }
 
 /**
  * 펀드 목록 필터 바: 재원·성격·구분·펀드유형·상태(enum 정적 옵션) 다중선택 +
  * 존속기간 구간 + 잔액 범위.
- * 구분(AC/VC/PE)은 사이드바 탭도 같은 축을 프리필터로 걸므로, 그 탭에서만 칸을 내린다 —
- * '전체 펀드'·'내 펀드'에서는 구분을 물을 다른 길이 없어 필터가 필요하다.
+ * 구분(AC/VC/PE)은 2026-08-20에 사이드바 탭에서 내려와 이 필터가 답하는 축이 되었다 —
+ * 구분을 물을 길이 여기뿐이므로 두 목록('내 운용펀드'·'전체 운용펀드') 모두에 칸을 둔다.
  */
-export function FundListFilters({ filters, onChange, hideStrategy }: FundListFiltersProps) {
+export function FundListFilters({ filters, onChange }: FundListFiltersProps) {
   const active = hasActiveFundFilters(filters)
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -39,14 +37,12 @@ export function FundListFilters({ filters, onChange, hideStrategy }: FundListFil
         selected={filters.characters}
         onChange={(characters) => onChange({ ...filters, characters })}
       />
-      {!hideStrategy && (
-        <MultiSelectFilter
-          label="구분"
-          options={FUND_STRATEGY_FILTER_OPTIONS}
-          selected={filters.strategies}
-          onChange={(strategies) => onChange({ ...filters, strategies })}
-        />
-      )}
+      <MultiSelectFilter
+        label="구분"
+        options={FUND_STRATEGY_FILTER_OPTIONS}
+        selected={filters.strategies}
+        onChange={(strategies) => onChange({ ...filters, strategies })}
+      />
       <MultiSelectFilter
         label="펀드유형"
         options={FUND_TYPE_OPTIONS}

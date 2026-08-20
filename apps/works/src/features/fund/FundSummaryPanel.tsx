@@ -6,7 +6,6 @@ interface FundSummaryPanelProps {
   /** 아래 목록과 같은 모수를 만들기 위한 값들. 하나라도 다르면 카드가 다른 집합을 말한다. */
   keyword: string
   filters: FundListFilterState
-  strategy?: 'AC' | 'VC' | 'PE' | null
   mineUserId?: string | null
   /** 목록이 센 건수. 집계의 fund_count와 대조해 조건 드리프트를 잡는다. */
   listTotal?: number
@@ -28,14 +27,8 @@ interface FundSummaryPanelProps {
  * 아이콘과 진행 막대를 얹은 자체 타일을 썼는데, 지표를 상자에 가두면 비교가 아니라 열거로
  * 읽히고, 아이콘과 막대는 라벨·비율 문구가 이미 하는 말을 형태로 한 번 더 하는 것이었다.
  */
-export function FundSummaryPanel({
-  keyword,
-  filters,
-  strategy,
-  mineUserId,
-  listTotal,
-}: FundSummaryPanelProps) {
-  const { data, isPending } = useFundListTotals(keyword, filters, strategy, mineUserId)
+export function FundSummaryPanel({ keyword, filters, mineUserId, listTotal }: FundSummaryPanelProps) {
+  const { data, isPending } = useFundListTotals(keyword, filters, mineUserId)
 
   // 첫 조회 중에는 카드 높이만큼 자리를 잡아 둔다(도착하는 순간 목록이 밀려 내려가지 않게).
   if (isPending) return <Skeleton className="h-[8.5rem] w-full rounded-radius-lg" />

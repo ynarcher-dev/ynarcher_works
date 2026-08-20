@@ -14,11 +14,8 @@ export const MNA_WORKSPACE: ProgramWorkspaceConfig = {
   key: 'mna',
   entityKey: 'ma_program',
   basePath: '/mna',
-  // 사이드바·목록 제목의 도메인 명칭. M&A 딜도 화면상으로는 '프로젝트'로 부른다.
+  // 목록 안쪽 문구의 도메인 명칭. M&A 딜도 화면상으로는 '프로젝트'로 부른다.
   entityNoun: '프로젝트',
-  // 전체·내 관리 메뉴는 워크스페이스 성격(인수·합병 딜)을 살려 '딜'로 부른다.
-  allLabel: '전체 딜',
-  mineLabel: '내 딜 관리',
   tables: {
     programs: 'ma_programs',
     modules: 'ma_program_modules',

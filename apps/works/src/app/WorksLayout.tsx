@@ -135,9 +135,8 @@ const sidebarIconByTab: Record<string, LucideIcon> = {
   pe_fund: PiggyBank,
   new_biz: Lightbulb,
 
-  // FUND 종류별 메뉴(`pe_fund`는 M&A 사업구분 매핑을 그대로 재사용한다).
-  ac_fund: Target,
-  vc_fund: Coins,
+  // FUND 펀드 종류별 메뉴(`ac_fund`·`vc_fund`)는 2026-08-20에 목록 '구분' 필터로 내려가
+  // 매핑도 함께 지웠다(`pe_fund`는 M&A 사업구분 키와 같아 위에 남아 있다).
 
   // HUB 그룹 4: 실적 정보
   fund: WalletCards,

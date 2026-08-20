@@ -15,8 +15,6 @@ export const AC_WORKSPACE: ProgramWorkspaceConfig = {
   entityKey: 'program',
   basePath: '/ac',
   entityNoun: '사업',
-  allLabel: '전체 사업',
-  mineLabel: '내 사업 관리',
   tables: {
     programs: 'programs',
     modules: 'program_modules',

@@ -47,7 +47,7 @@ export const FUND_CHARACTER_LABEL: Record<string, string> = {
   PERSONAL: '개인투자조합',
   VENTURE: '벤처투자조합',
 }
-/** 구분(strategy_type): 투자 전략 축 — 사이드바 탭. */
+/** 구분(strategy_type): 투자 전략 축 — 목록 열·필터. */
 export const FUND_STRATEGY_LABEL: Record<string, string> = { AC: 'AC', VC: 'VC', PE: 'PE', ETC: '기타' }
 /** 펀드유형(fund_type): 조합 구조 축 — 구분과 별개(컬럼·필터). */
 export const FUND_TYPE_LABEL: Record<string, string> = { PROJECT: '프로젝트', BLIND: '블라인드' }
@@ -224,10 +224,7 @@ export interface FundListFilterState {
   statuses: string[]
   sources: string[]
   characters: string[]
-  /**
-   * 구분(strategy_type). AC/VC/PE 탭은 같은 축을 프리필터로 걸므로 그 탭에서는 이 필터를
-   * 내린다 — 스코프가 이미 답한 질문을 좁힘으로 또 묻는 칸이 된다.
-   */
+  /** 구분(strategy_type). 2026-08-20에 사이드바 탭이 내려와 이 축을 묻는 길은 여기뿐이다. */
   strategies: string[]
   fundTypes: string[]
   /** 존속기간 구간 시작('' = 미적용). 아래 termTo와 함께 "이 구간에 존속 중"을 묻는다. */
@@ -326,7 +323,7 @@ async function searchCondition(keyword: string): Promise<LedgerCondition> {
 
 /**
  * 펀드 목록(서버 사이드 페이지네이션). 종전에는 funds 전량을 임베드까지 붙여 내려받고
- * 검색·필터·스코프를 브라우저 메모리에서 걸었다 — '전체 펀드'가 열리면서 그 전량 로드가
+ * 검색·필터·스코프를 브라우저 메모리에서 걸었다 — '전체 운용펀드'가 열리면서 그 전량 로드가
  * 기본 화면 중 하나가 되어 더는 둘 수 없었다. 조건을 전부 서버로 내려 다른 원장 목록과
  * 같은 절차(fetchLedgerPage)를 쓴다.
  */
@@ -335,30 +332,16 @@ export function useFundListPage(
   filters: FundListFilterState,
   page: number,
   pageSize: number,
-  /** 구분(전략) 프리필터. AC/VC/PE 탭이 건다. */
-  strategy?: 'AC' | 'VC' | 'PE' | null,
-  /** 지정 시 생성자 또는 담당자가 이 사용자인 펀드만('내 펀드'). */
+  /** 지정 시 생성자 또는 담당자가 이 사용자인 펀드만('내 운용펀드'). */
   mineUserId?: string | null,
 ) {
   return useQuery({
-    queryKey: [
-      'fund',
-      'list',
-      'page',
-      keyword,
-      filters,
-      page,
-      pageSize,
-      strategy ?? null,
-      mineUserId ?? null,
-    ],
+    queryKey: ['fund', 'list', 'page', keyword, filters, page, pageSize, mineUserId ?? null],
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<FundListPage> => {
       const kw = sanitizeOrValue(keyword)
 
       const scope: LedgerCondition[] = []
-      // 구분 프리필터 — 미분류(null) 펀드는 AC/VC/PE 탭에서 제외된다.
-      if (strategy) scope.push({ kind: 'eq', column: 'strategy_type', value: strategy })
       if (mineUserId) scope.push(await mineScope(mineUserId))
 
       const narrow: LedgerCondition[] = []
@@ -369,9 +352,7 @@ export function useFundListPage(
         narrow.push({ kind: 'in', column: 'source_type', values: filters.sources })
       if (filters.characters.length)
         narrow.push({ kind: 'in', column: 'character_type', values: filters.characters })
-      // 탭이 이미 같은 축을 스코프로 걸었으면 필터는 무시한다(칸도 화면에서 내려 둔다).
-      if (!strategy && filters.strategies.length)
-        narrow.push(strategyCondition(filters.strategies))
+      if (filters.strategies.length) narrow.push(strategyCondition(filters.strategies))
       if (filters.fundTypes.length)
         narrow.push({ kind: 'in', column: 'fund_type', values: filters.fundTypes })
 

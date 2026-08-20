@@ -40,11 +40,10 @@ function millionArg(input: string): number | null {
 export function useFundListTotals(
   keyword: string,
   filters: FundListFilterState,
-  strategy?: 'AC' | 'VC' | 'PE' | null,
   mineUserId?: string | null,
 ) {
   return useQuery({
-    queryKey: ['fund', 'list', 'totals', keyword, filters, strategy ?? null, mineUserId ?? null],
+    queryKey: ['fund', 'list', 'totals', keyword, filters, mineUserId ?? null],
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<FundListTotals> => {
       // 검색어는 목록과 같은 값으로 좁혀야 한다 — 한쪽만 제어문자를 털면 결과가 갈린다.
@@ -55,14 +54,16 @@ export function useFundListTotals(
           p_statuses: arrayArg(filters.statuses),
           p_sources: arrayArg(filters.sources),
           p_characters: arrayArg(filters.characters),
-          // 탭이 이미 같은 축을 스코프로 걸었으면 필터는 무시한다(목록과 같은 판단).
-          p_strategies: strategy ? null : arrayArg(filters.strategies),
+          p_strategies: arrayArg(filters.strategies),
           p_fund_types: arrayArg(filters.fundTypes),
           p_term_from: filters.termFrom || null,
           p_term_to: filters.termTo || null,
           p_balance_min: millionArg(filters.balanceMinMillion),
           p_balance_max: millionArg(filters.balanceMaxMillion),
-          p_strategy: strategy ?? null,
+          // 구분 프리필터(구 AC/VC/PE 탭)는 2026-08-20에 메뉴가 내려가 항상 비어 있다.
+          // RPC 시그니처는 그대로 두고 null만 넘긴다 — 인자를 빼면 PostgREST가 다른
+          // 시그니처를 찾아 함수를 못 찾는다.
+          p_strategy: null,
           p_mine_user_id: mineUserId ?? null,
         })
         .single()

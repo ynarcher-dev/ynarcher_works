@@ -15,20 +15,18 @@ import {
 const PAGE_SIZE = 20
 
 interface FundListTabProps {
-  /** 구분(전략) 프리필터. 지정 시 해당 구분 펀드만. */
-  strategy?: 'AC' | 'VC' | 'PE' | null
-  /** 지정 시 생성자 또는 담당자(대표펀드매니저·운용/관리 인력)가 이 사용자인 펀드만('내 펀드'). */
+  /** 지정 시 생성자 또는 담당자(대표펀드매니저·운용/관리 인력)가 이 사용자인 펀드만('내 운용펀드'). */
   mineUserId?: string | null
 }
 
 /**
  * 펀드 리스트뷰 컨테이너. 검색어·필터·페이지는 이 컴포넌트가 소유하고, 그 조건으로 좁히는 일은
  * 서버가 한다(useFundListPage) — 종전에는 원장 전량을 내려받아 브라우저에서 걸렀고,
- * '전체 펀드'가 열리면서 그 전량 로드가 기본 화면 중 하나가 되어 더는 둘 수 없었다.
- * 스코프(구분·내 펀드)와 좁힘(검색·필터)이 나뉘어 있어 건수도 둘로 온다.
+ * '전체 운용펀드'가 열리면서 그 전량 로드가 기본 화면 중 하나가 되어 더는 둘 수 없었다.
+ * 스코프(내 운용펀드)와 좁힘(검색·필터)이 나뉘어 있어 건수도 둘로 온다.
  * (StartupPoolTab·ProgramListTab과 같은 절차)
  */
-export function FundListTab({ strategy, mineUserId }: FundListTabProps) {
+export function FundListTab({ mineUserId }: FundListTabProps) {
   const navigate = useNavigate()
   const [keyword, setKeyword] = useState('')
   const [filters, setFilters] = useState<FundListFilterState>(EMPTY_FUND_FILTERS)
@@ -40,30 +38,18 @@ export function FundListTab({ strategy, mineUserId }: FundListTabProps) {
   useEffect(() => {
     setPage(0)
     setSelected([])
-  }, [keyword, filtersKey, strategy, mineUserId])
+  }, [keyword, filtersKey, mineUserId])
 
-  const { data, isLoading } = useFundListPage(
-    keyword,
-    filters,
-    page,
-    PAGE_SIZE,
-    strategy,
-    mineUserId,
-  )
-
-  const emptyText = strategy
-    ? `${strategy} 구분으로 분류된 펀드가 없습니다. 펀드 등록·수정에서 구분을 지정하세요.`
-    : '등록된 펀드가 없습니다.'
+  const { data, isLoading } = useFundListPage(keyword, filters, page, PAGE_SIZE, mineUserId)
 
   return (
     <div className="space-y-3">
-      {/* 요약 카드는 모든 스코프에 둔다 — 검색어·필터가 집계에 반영되므로 '전체 펀드'에서도
+      {/* 요약 카드는 두 스코프에 모두 둔다 — 검색어·필터가 집계에 반영되므로 '전체 운용펀드'에서도
           "지금 좁혀 놓은 범위에 돈이 어디까지 와 있나"라는 같은 질문이 성립한다.
           (사업 진행 현황 카드를 두 스코프 모두에 둔 것과 같은 판단) */}
       <FundSummaryPanel
         keyword={keyword}
         filters={filters}
-        strategy={strategy}
         mineUserId={mineUserId}
         listTotal={data?.total}
       />
@@ -72,13 +58,7 @@ export function FundListTab({ strategy, mineUserId }: FundListTabProps) {
         keyword={keyword}
         onKeywordChange={setKeyword}
         searchPlaceholder="펀드명·펀드코드·대표펀드매니저 검색"
-        filters={
-          <FundListFilters
-            filters={filters}
-            onChange={setFilters}
-            hideStrategy={Boolean(strategy)}
-          />
-        }
+        filters={<FundListFilters filters={filters} onChange={setFilters} />}
         actions={
           <ListActions
             createLabel="펀드 등록"
@@ -97,7 +77,7 @@ export function FundListTab({ strategy, mineUserId }: FundListTabProps) {
           selectedKeys={selected}
           onSelectionChange={setSelected}
           pagination={{ page, pageSize: PAGE_SIZE, total: data?.total ?? 0, onChange: setPage }}
-          emptyText={emptyText}
+          emptyText="등록된 펀드가 없습니다."
         />
       )}
     </div>

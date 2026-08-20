@@ -30,16 +30,15 @@ export interface ProgramWorkspaceConfig {
   entityKey: 'program' | 'ma_program' | 'project_program'
   /** 라우트 베이스 경로. 목록 `${basePath}`, 상세 `${basePath}/programs/:id`. */
   basePath: string
-  /** 목록 제목(전체 ~)·본문 문구에 쓰는 도메인 명칭. */
-  entityNoun: string
   /**
-   * 첫 두 탭 제목(사이드바 순서대로 `내 ~ 관리` → `전체 ~`). 워크스페이스마다 다르므로
-   * (M&A는 `내 딜 관리`/`전체 딜`) entityNoun으로 조립하지 않고 직접 지정한다.
-   * navigation.ts의 사이드바 라벨과 일치시킬 것.
+   * 목록 안쪽 문구(검색 자리표시자·등록 버튼·업로드 템플릿)에 쓰는 도메인 명칭.
+   *
+   * 사이드바·페이지 제목은 2026-08-20부터 워크스페이스와 무관하게 `내 프로젝트`/`전체 프로젝트`
+   * 한 쌍으로 통일되어 여기서 조립하지 않는다(navigation.ts의 PROGRAM_MINE_LABEL·
+   * PROGRAM_ALL_LABEL이 단일 원천) — 워크스페이스별 라벨 필드를 두면 사이드바와 제목이
+   * 따로 관리되어 어긋난다.
    */
-  mineLabel: string
-  /** '전체 ~' 목록 라벨. 내 목록과 같은 화면을 범위만 넓혀 쓰는 메뉴다. */
-  allLabel: string
+  entityNoun: string
   tables: {
     programs: string
     modules: string

@@ -77,9 +77,22 @@ export function resolveListTab(raw: string | null, fallback = 'mine'): string {
 }
 
 /**
- * 사업 워크스페이스(AC/M&A/PROJECT) 공용 사이드바 구성 — `내 ~ 관리` → `전체 ~` 두 줄.
- * 내 것이 맨 위에 오고 그 아래로 범위가 넓어진다. 라벨은 워크스페이스마다 다르므로
- * (예: M&A는 `내 딜 관리`/`전체 딜`) 인자로 받는다.
+ * 사업 워크스페이스(AC/M&A/PROJECT) 공용 사이드바 라벨.
+ *
+ * 2026-08-20: 워크스페이스마다 달랐던 라벨(AC `내 사업 관리`/`전체 사업`, M&A `내 딜 관리`/
+ * `전체 딜`)을 셋 다 같은 말로 통일했다 — 세 워크스페이스는 같은 원장 구조·같은 화면을 쓰므로
+ * 메뉴 이름까지 같아야 워크스페이스를 옮겨도 손이 같은 자리를 찾는다. 도메인 명칭(사업·딜)은
+ * 목록 안쪽 문구(`entityNoun`)가 계속 답한다.
+ *
+ * 페이지 제목도 이 상수를 읽는다(ProgramWorkspacePage) — 사이드바 라벨과 제목이 어긋나면
+ * 눌러 들어간 메뉴와 도착한 화면의 이름이 달라진다.
+ */
+export const PROGRAM_MINE_LABEL = '내 프로젝트'
+export const PROGRAM_ALL_LABEL = '전체 프로젝트'
+
+/**
+ * 사업 워크스페이스(AC/M&A/PROJECT) 공용 사이드바 구성 — `내 프로젝트` → `전체 프로젝트` 두 줄.
+ * 내 것이 맨 위에 오고 그 아래로 범위가 넓어진다.
  *
  * 2026-08-03: 사업구분(카테고리)별 세분화 항목을 내렸다. 분류를 메뉴로 두면 그것이
  * '어디에 있는가'가 되어 상태·부서 같은 다른 축과 함께 걸 수 없고(공공 사업 중 진행중만 같은
@@ -87,12 +100,14 @@ export function resolveListTab(raw: string | null, fallback = 'mine'): string {
  * 필터 축 하나이며, 미분류 건은 그 필터의 '미지정' 선택지가 답한다 — 종전에 '기타'가 맡던
  * 사각지대 방어는 `전체 ~`가 이미 구분 무관 전부를 보여주므로 필요 없다.
  */
-function programSubnav(mineLabel: string, allLabel: string): SubNavGroup[] {
+function programSubnav(): SubNavGroup[] {
   return [
     {
       items: [
-        { label: mineLabel, tab: 'mine', emoji: MINE_EMOJI },
-        { label: allLabel, tab: LIST_ALL_TAB, dividerBefore: true },
+        // 구분선을 쌍 안에 두지 않는다(STARTUP·NETWORKS와 같은 규칙) — 같은 원장을 범위만
+        // 달리해 보는 한 쌍이라 사이에 선을 그으면 층이 다른 두 메뉴처럼 읽힌다.
+        { label: PROGRAM_MINE_LABEL, tab: 'mine', emoji: MINE_EMOJI },
+        { label: PROGRAM_ALL_LABEL, tab: LIST_ALL_TAB },
       ],
     },
   ]
@@ -157,23 +172,27 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       ],
     },
   ],
-  ac: programSubnav('내 사업 관리', '전체 사업'),
-  // FUND: 내 펀드 → 전체 펀드 → 펀드 종류(AC/VC/PE) 순.
+  ac: programSubnav(),
+  // FUND: 내 운용펀드 → 전체 운용펀드. 사업 3종·STARTUP·NETWORKS와 같은 한 쌍 구조다.
+  //
+  // 2026-08-20: 펀드 종류별 메뉴(AC·VC·PE 펀드)를 내리고 목록의 '구분' 필터로 옮겼다.
+  // AC 사업구분(2026-08-03)·STARTUP 구분·NETWORKS 원장(2026-08-20)이 먼저 밟은 길과 같은
+  // 이유다 — 분류를 메뉴로 두면 그것이 '어디에 있는가'가 되어 재원·성격·상태 같은 다른 축과
+  // 함께 걸 수 없고(VC 펀드 중 모태 재원만, 같은 질문에 답할 수 없다), 구분이 비어 있는 펀드는
+  // 세 메뉴 어디에도 나타나지 않아 아예 보이지 않았다. 이제 구분은 두 목록의 필터 축 하나이며
+  // 미분류 건은 그 필터의 '미지정' 선택지가 답한다.
   fund: [
     {
       items: [
-        // 운용역(담당자) 또는 생성자가 나인 펀드.
-        { label: '내 펀드 관리', tab: 'mine', emoji: MINE_EMOJI },
-        // 종류 무관, 볼 수 있는 전부. 위 '내 펀드'와 같은 목록을 범위만 넓혀 쓴다.
-        { label: '전체 펀드', tab: LIST_ALL_TAB, dividerBefore: true },
-        { label: 'AC 펀드', tab: 'ac_fund', dividerBefore: true },
-        { label: 'VC 펀드', tab: 'vc_fund' },
-        { label: 'PE 펀드', tab: 'pe_fund' },
+        // 운용역(담당자) 또는 생성자가 나인 펀드. 쌍 사이에 구분선을 두지 않는다(위와 같은 규칙).
+        { label: '내 운용펀드', tab: 'mine', emoji: MINE_EMOJI },
+        // 구분 무관, 볼 수 있는 전부. 위 '내 운용펀드'와 같은 목록을 범위만 넓혀 쓴다.
+        { label: '전체 운용펀드', tab: LIST_ALL_TAB },
       ],
     },
   ],
   // M&A/PE는 AC와 동일한 사업 원장 구조(features/program)를 공유한다.
-  mna: programSubnav('내 딜 관리', '전체 딜'),
+  mna: programSubnav(),
   admin: [
     {
       group: '시스템 관리',
@@ -200,7 +219,7 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
     },
   ],
   // PROJECT도 AC와 동일한 사업 원장 구조(features/program)를 공유한다.
-  project: programSubnav('내 프로젝트 관리', '전체 프로젝트'),
+  project: programSubnav(),
   // OFFICE: 임직원 정보·전사 캘린더 + 게시판(공지사항 고정 + 일반, 아코디언 없이 평탄 나열).
   // 신규 게시판은 모두 이곳에 생성·노출된다.
   office: [
