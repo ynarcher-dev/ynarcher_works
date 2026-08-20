@@ -53,7 +53,7 @@ export function NoticeWorkspace() {
       header: '게시판',
       type: 'text',
       align: 'center',
-      // 본문 셀은 DataTable 기본 text-body를 상속한다(캡션 크기를 덧씌우면 다른 열과 어긋남).
+      // 셀 글자 규격은 DataTable(tableText.body)이 준다 — 화면에서 크기를 덧씌우지 않는다.
       render: (n) => n.boardLabel,
     },
     viewsColumn<NoticeItem>((n) => n.post),
