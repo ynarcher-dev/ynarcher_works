@@ -101,14 +101,15 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
     {
       items: [
         // 구분 무관, 담당자(startup_managers) 또는 생성자가 나인 기업.
-        { label: '내 기업 관리', tab: 'mine', emoji: MINE_EMOJI },
-        // 구분 무관, 볼 수 있는 전부. '내 기업 관리'와 같은 목록을 범위만 넓혀 쓴다.
-        { label: '전체 기업', tab: LIST_ALL_TAB, dividerBefore: true },
-        // 투자/보육/발굴/기타 4분류. 발굴기업이 기존 스타트업 마스터 디렉토리.
-        { label: '투자기업', tab: 'invested', dividerBefore: true },
-        { label: '보육기업', tab: 'incubated' },
-        { label: '발굴기업', tab: 'discovered' },
-        { label: '기타기업', tab: 'etc' },
+        // STARTUP만 이모지 대신 아이콘(탭 매핑 mine=User)을 쓴다 — 두 항목이 같은 원장을 범위만
+        // 달리해 보는 한 쌍이라, 한쪽에만 색 있는 글리프가 붙으면 층이 다른 메뉴처럼 읽힌다.
+        { label: '내 업로드 DB', tab: 'mine' },
+        // 구분 무관, 볼 수 있는 전부. '내 업로드 DB'와 같은 목록을 범위만 넓혀 쓴다.
+        { label: '스타트업 DB', tab: LIST_ALL_TAB },
+        // 2026-08-20: 구분(투자·보육·발굴·기타)별 세분화 항목을 내렸다. AC 사업구분이 2026-08-03에
+        // 밟은 길과 같은 이유다 — 분류를 메뉴로 두면 그것이 '어디에 있는가'가 되어 소재지·단계 같은
+        // 다른 축과 함께 걸 수 없고(보육기업 중 시드 단계만, 같은 질문에 답할 수 없다), 분류를 하나
+        // 늘릴 때마다 사이드바가 길어진다. 이제 구분은 위 두 목록의 필터 축 하나다.
         // 대용량 업로드는 사이드바 항목이 아니라 목록 상단의 '대용량 업로드' 버튼으로 들어간다
         // (/startup/bulk). 메뉴로 두면 어느 원장으로 들어가는 업로드인지가 이름에 드러나지 않는다.
         // 아처스캔은 화면이 준비되기 전까지 메뉴에서 내린다 — 눌러서 '준비 중'만 나오는 항목은

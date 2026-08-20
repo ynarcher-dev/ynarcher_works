@@ -14,10 +14,9 @@ import {
   type LedgerCondition,
   type LedgerPage,
 } from '@/features/master/ledgerPage'
-import type { ManagementStatus } from '@/features/startup/startupClassification'
 
 /**
- * 발굴기업(startups) 목록 복수 필터. 빈 배열/빈 문자열은 "미적용"이다.
+ * 기업(startups) 목록 복수 필터. 빈 배열/빈 문자열은 "미적용"이다.
  * 분야만 배열 컬럼(industries)이라 overlaps로, 나머지 스칼라는 in으로, 설립일은 범위로 건다.
  */
 export interface StartupPoolFilters {
@@ -27,9 +26,9 @@ export interface StartupPoolFilters {
   industries: string[]
   /** 단계(stage). */
   stages: string[]
-  /** 구분(management_status). */
+  /** 구분(management_status). 코드 4종(투자·보육·발굴·기타) 다중선택. */
   categories: string[]
-  /** 관리현황(pool_status). 투자기업에서만 채워지므로 비투자 탭에서는 필터 자체를 내린다. */
+  /** 관리현황(pool_status). 투자기업에서만 채워지는 값이라 비투자 구분에서는 결과가 빈다. */
   statuses: string[]
   /** 최소 업력(년차, 만 나이 기준). '' = 미적용. */
   ageMin: string
@@ -90,7 +89,7 @@ function foundedCutoff(years: number): string {
 export type StartupPoolPage = LedgerPage<EntityRow>
 
 /**
- * 발굴기업 풀 전용 서버 사이드 페이지네이션 훅. NETWORKS 공용 useEntityPage와 달리
+ * 기업 풀 전용 서버 사이드 페이지네이션 훅. NETWORKS 공용 useEntityPage와 달리
  * 다중 필드 검색(기업명·대표자·사업자번호·담당자 + 공개 시 이메일·연락처)과
  * 복수 필터(소재지·분야·단계·구분·관리현황·설립일)를
  * 스타트업 스키마에 맞춰 처리한다. 담당자(투자 지정)는 startup_managers를 임베드해 컬럼으로 노출하고,
@@ -101,8 +100,6 @@ export function useStartupPoolPage(
   filters: StartupPoolFilters,
   page: number,
   pageSize: number,
-  /** 탭별 구분 고정 필터(코드). 지정 시 해당 구분만 조회한다(4개 메뉴 상호 배타 뷰). */
-  category?: ManagementStatus | null,
   /**
    * 지정 시 담당자(startup_managers) 또는 생성자(created_by)가 이 사용자인 기업만 조회한다('내 관리기업').
    * 담당자는 투자기업 전용 개념이므로 생성자 축을 함께 봐야 발굴·보육·기타 기업도 잡힌다.
@@ -120,7 +117,6 @@ export function useStartupPoolPage(
       filters,
       page,
       pageSize,
-      category ?? null,
       mineUserId ?? null,
       searchScope,
     ],
@@ -129,8 +125,6 @@ export function useStartupPoolPage(
       const kw = sanitizeOrValue(keyword)
 
       const scope: LedgerCondition[] = []
-      // 탭 고정 구분(있으면). 사용자 구분 필터는 탭 뷰에서 제거되어 category 로만 좁힌다.
-      if (category) scope.push({ kind: 'eq', column: 'management_status', value: category })
       // '내 관리기업' 스코프: 생성자(created_by=나) OR 담당자(startup_managers.user_id=나).
       // 담당은 원장 밖에 있어 조인으로 걸 수 없으므로 담당 기업 id를 먼저 모은다.
       if (mineUserId) {

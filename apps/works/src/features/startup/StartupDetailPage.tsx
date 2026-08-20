@@ -38,7 +38,7 @@ import { StartupComparePanel } from '@/features/startup/StartupComparePanel'
 const RESOURCE_TYPE = 'startup'
 
 /** 발굴기업 목록 경로(뒤로가기 목적지). */
-const LIST_PATH = '/startup?tab=discovered'
+const LIST_PATH = '/startup?tab=all'
 
 /** 관리 현황 카드 섹션(플랫폼 전반 참여·관리 이력). 현재는 헤드라인만, 내용은 후속 구현.
  *  회의록은 실제 연동 패널(우측 RelatedMinutesPanel)로 구현되어 이 placeholder 목록에서 뺐다. */

@@ -5,16 +5,11 @@ import {
   hasActiveStartupFilters,
   type StartupPoolFilters as Filters,
 } from '@/features/startup/startupPoolHooks'
-import { isInvested, type ManagementStatus } from '@/features/startup/startupClassification'
+import { MANAGEMENT_STATUS_OPTIONS } from '@/features/startup/startupClassification'
 
 interface StartupPoolFiltersProps {
   filters: Filters
   onChange: (next: Filters) => void
-  /**
-   * 탭 고정 구분(코드). null이면 구분이 섞인 뷰('내 기업 관리'·'전체 기업').
-   * 관리현황 필터의 노출 여부만 좌우한다 — 열 구성은 탭과 무관하게 하나로 통일되어 있다.
-   */
-  category?: ManagementStatus | null
 }
 
 /**
@@ -41,16 +36,12 @@ function TagFilter({
 }
 
 /**
- * 발굴기업 목록 복수 필터 바: 소재지·분야·단계·관리현황(태그 다중선택) + 업력 범위(최소~최대).
+ * 기업 목록 복수 필터 바: 소재지·분야·단계·구분·관리현황(다중선택) + 업력 범위(최소~최대).
  * 상태는 상위(StartupPoolTab)가 소유하며, 본 컴포넌트는 표시·변경만 담당한다.
- * 필터 순서는 표의 열 순서(소재지 → 분야 → 단계 → 관리현황)를 그대로 따른다.
+ * 필터 순서는 표의 열 순서(소재지 → 분야 → 단계 → 구분 → 관리현황)를 그대로 따른다.
  */
-export function StartupPoolFilters({ filters, onChange, category = null }: StartupPoolFiltersProps) {
+export function StartupPoolFilters({ filters, onChange }: StartupPoolFiltersProps) {
   const active = hasActiveStartupFilters(filters)
-  // 관리현황(pool_status)은 투자기업에서만 채워지는 값이라, 구분이 보육·발굴·기타로 고정된
-  // 탭에서는 어떤 값을 골라도 결과가 비어 고를 이유가 없다 → 그 탭에서만 필터를 내린다.
-  // 구분이 섞인 뷰(category=null)에는 투자기업이 함께 있으므로 그대로 둔다.
-  const showStatusFilter = category === null || isInvested(category)
   return (
     <div className="flex flex-wrap items-center gap-2">
       <TagFilter
@@ -71,15 +62,26 @@ export function StartupPoolFilters({ filters, onChange, category = null }: Start
         selected={filters.stages}
         onChange={(stages) => onChange({ ...filters, stages })}
       />
-      {/* 구분은 탭(투자/보육/발굴/기타)이 이미 고정하므로 필터에서 제외한다. */}
-      {showStatusFilter && (
-        <TagFilter
-          label="관리현황"
-          table="company_status_tags"
-          selected={filters.statuses}
-          onChange={(statuses) => onChange({ ...filters, statuses })}
-        />
-      )}
+      {/*
+        구분(management_status)은 사이드바 메뉴가 아니라 이 필터가 답한다(2026-08-20). 태그 원장이
+        아니라 코드 4종으로 고정된 값이라 TagFilter가 아닌 고정 옵션 다중선택이다.
+      */}
+      <MultiSelectFilter
+        label="구분"
+        options={MANAGEMENT_STATUS_OPTIONS}
+        selected={filters.categories}
+        onChange={(categories) => onChange({ ...filters, categories })}
+      />
+      {/*
+        관리현황(pool_status)은 투자기업에서만 채워지는 값이지만, 구분이 섞인 목록에는 투자기업이
+        함께 있으므로 항상 둔다 — 구분 필터로 비투자만 좁혔을 때 결과가 비는 것은 값 자체의 의미다.
+      */}
+      <TagFilter
+        label="관리현황"
+        table="company_status_tags"
+        selected={filters.statuses}
+        onChange={(statuses) => onChange({ ...filters, statuses })}
+      />
 
       <div className="w-28">
         <Input
