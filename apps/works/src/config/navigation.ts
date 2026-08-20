@@ -25,12 +25,6 @@ export interface SubNavItem {
   dynamicKey?: 'boards' | 'archives'
   /** 동적 항목의 아이콘 키(boardIcons.ts). 지정 시 tab 기반 매핑보다 우선한다. */
   iconKey?: string
-  /**
-   * 아이콘 자리에 대신 놓을 이모지. 지정 시 lucide 아이콘 매핑보다 우선한다.
-   * '내 ~ 관리'처럼 다른 메뉴와 층이 다른(내 것만 모은) 항목에만 쓴다 — 회색 선 아이콘 사이에서
-   * 색이 있는 이모지 하나가 강세를 만든다.
-   */
-  emoji?: string
   /** 이 항목 위에 같은 그룹 내 구분선을 그린다(그룹은 유지한 채 항목 사이만 시각적으로 나눌 때). */
   dividerBefore?: boolean
 }
@@ -40,11 +34,6 @@ export interface SubNavGroup {
   group?: string
   items: SubNavItem[]
 }
-
-/**
- * '내 ~ 관리' 메뉴의 아이콘 자리에 놓는 이모지. 워크스페이스마다 같은 것을 쓴다.
- */
-export const MINE_EMOJI = '⭐'
 
 /**
  * '전체 ~' 목록 메뉴의 탭 키. STARTUP·NETWORKS·FUND·AC/M&A/PROJECT가 같은 키를 쓴다 —
@@ -104,9 +93,10 @@ function programSubnav(): SubNavGroup[] {
   return [
     {
       items: [
-        // 구분선을 쌍 안에 두지 않는다(STARTUP·NETWORKS와 같은 규칙) — 같은 원장을 범위만
-        // 달리해 보는 한 쌍이라 사이에 선을 그으면 층이 다른 두 메뉴처럼 읽힌다.
-        { label: PROGRAM_MINE_LABEL, tab: 'mine', emoji: MINE_EMOJI },
+        // 구분선도 이모지도 쌍 안에 두지 않는다(STARTUP·NETWORKS와 같은 규칙) — 같은 원장을
+        // 범위만 달리해 보는 한 쌍이라 선을 긋거나 한쪽에만 색 있는 글리프를 붙이면 층이 다른
+        // 두 메뉴처럼 읽힌다. 아이콘은 탭 매핑(mine=User)이 답한다.
+        { label: PROGRAM_MINE_LABEL, tab: 'mine' },
         { label: PROGRAM_ALL_LABEL, tab: LIST_ALL_TAB },
       ],
     },
@@ -184,8 +174,8 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
   fund: [
     {
       items: [
-        // 운용역(담당자) 또는 생성자가 나인 펀드. 쌍 사이에 구분선을 두지 않는다(위와 같은 규칙).
-        { label: '내 운용펀드', tab: 'mine', emoji: MINE_EMOJI },
+        // 운용역(담당자) 또는 생성자가 나인 펀드. 쌍 안에 구분선도 이모지도 두지 않는다(위와 같은 규칙).
+        { label: '내 운용펀드', tab: 'mine' },
         // 구분 무관, 볼 수 있는 전부. 위 '내 운용펀드'와 같은 목록을 범위만 넓혀 쓴다.
         { label: '전체 운용펀드', tab: LIST_ALL_TAB },
       ],

@@ -276,18 +276,11 @@ export function WorksLayout() {
         : undefined
 
   /**
-   * 아이콘 자리에 놓을 요소. 이모지가 지정된 항목('내 ~ 관리')은 lucide 아이콘 대신 이모지를 쓴다 —
-   * 회색 선 아이콘이 이어지는 목록에서 색 있는 글리프 하나가 "내 것" 층을 구분한다.
-   * 아이콘(size-4=16px)과 광학 크기를 맞추기 위해 이모지는 15px로 둔다.
+   * 아이콘 자리에 놓을 요소. 사이드바 글리프는 lucide 선 아이콘 한 종류뿐이다 —
+   * 2026-08-20에 '내 ~' 항목의 ⭐ 이모지를 걷었다. 색 있는 글리프는 그 줄을 다른 층의
+   * 메뉴로 보이게 하는데, '내 ~'와 '전체 ~'는 같은 원장을 범위만 달리해 보는 한 쌍이다.
    */
   const leafIcon = (item: SubNavItem) => {
-    if (item.emoji) {
-      return (
-        <span aria-hidden className="text-[15px] leading-none">
-          {item.emoji}
-        </span>
-      )
-    }
     const Icon = item.iconKey ? boardIcon(item.iconKey) : getSidebarIcon(item)
     return Icon ? <Icon aria-hidden className="size-4" /> : undefined
   }
@@ -318,17 +311,11 @@ export function WorksLayout() {
     return (
       <DropdownItem key={item.label} onClick={() => goToSection(item)}>
         <span className="flex items-center gap-2 whitespace-nowrap">
-          {item.emoji ? (
-            <span aria-hidden className="shrink-0 text-[15px] leading-none">
-              {item.emoji}
-            </span>
-          ) : (
-            Icon && (
-              <Icon
-                aria-hidden
-                className={cn('size-4 shrink-0', isActive ? 'text-brand' : 'text-gray-400')}
-              />
-            )
+          {Icon && (
+            <Icon
+              aria-hidden
+              className={cn('size-4 shrink-0', isActive ? 'text-brand' : 'text-gray-400')}
+            />
           )}
           <span className={isActive ? 'font-semibold text-brand' : undefined}>{item.label}</span>
         </span>
