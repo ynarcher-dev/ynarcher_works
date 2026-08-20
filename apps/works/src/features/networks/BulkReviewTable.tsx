@@ -134,15 +134,16 @@ export function BulkReviewTable({
   // 비활성 행은 원본 데이터 텍스트를 옅게 처리한다.
   const dim = (r: ReviewRow, normal: string) => (isDeactivated(r) ? 'text-gray-300' : normal)
   const columns: Column<ReviewRow>[] = [
-    { key: 'name', header: '이름', className: pad, render: (r) => <span className={cn('font-medium', dim(r, 'text-gray-800'))}>{r.name || <EmptyValue />}</span> },
-    { key: 'affiliation', header: '소속', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.affiliation || '-'}</span> },
-    { key: 'department', header: '부서', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.department || '-'}</span> },
-    { key: 'position', header: '직책', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.position || '-'}</span> },
-    { key: 'email', header: '이메일', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.email || '-'}</span> },
-    { key: 'phone', header: '연락처', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.phone || '-'}</span> },
+    { key: 'name', header: '이름', type: 'name', className: pad, render: (r) => <span className={cn('font-medium', dim(r, 'text-gray-800'))}>{r.name || <EmptyValue />}</span> },
+    { key: 'affiliation', header: '소속', type: 'long', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.affiliation || '-'}</span> },
+    { key: 'department', header: '부서', type: 'text', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.department || '-'}</span> },
+    { key: 'position', header: '직책', type: 'text', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.position || '-'}</span> },
+    { key: 'email', header: '이메일', type: 'text', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.email || '-'}</span> },
+    { key: 'phone', header: '연락처', type: 'text', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.phone || '-'}</span> },
     {
       key: 'category',
       header: '구분',
+      type: 'text',
       className: pad,
       render: (r) => (
         <Select
@@ -209,7 +210,6 @@ export function BulkReviewTable({
       standardColumns={false}
       // 비활성(미복구) 중복 행은 배경을 회색으로 눌러 표시한다(복구 확정 시 일반 행으로 복귀).
       rowClassName={(r) => (isDeactivated(r) ? 'bg-gray-100' : undefined)}
-      selectable
       selectedKeys={selected.map(String)}
       onSelectionChange={(keys) => onSelectionChange(keys.map(Number))}
       emptyText="업로드할 데이터가 없습니다."

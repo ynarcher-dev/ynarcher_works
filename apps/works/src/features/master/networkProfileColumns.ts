@@ -21,21 +21,21 @@ import type { MasterColumn } from '@/features/master/types'
  * - `satisfaction_avg`(만족도): 멘토로 참여한 세션의 스타트업 평가 평균(5점). 같은 RPC가 집계한다.
  *   평가가 한 건도 없으면 값이 비어 '-'로 남는다(0.0으로 채우면 '최하 평가'와 구분되지 않는다).
  */
-// 컬럼 폭 비율(table-fixed 기준). 여백은 DataTable 기본 px-3로 통일한다.
+// 폭·정렬은 열마다의 종류(type)가 정한다 — 수동 w-* 폭을 적지 않는다(2026-08 디자인 리프레시).
 export const NETWORK_PROFILE_COLUMNS: MasterColumn[] = [
-  { name: 'name', label: '이름', mask: 'name', className: 'w-20' },
-  { name: 'affiliation', label: '소속', className: 'w-44' },
-  { name: 'profile.position', label: '직책/직급', className: 'w-24' },
-  { name: 'email', label: '이메일', mask: 'email', className: 'w-44' },
-  { name: 'phone', label: '연락처', mask: 'phone', className: 'w-32' },
+  { name: 'name', label: '이름', mask: 'name', type: 'name' },
+  // 소속은 기관·기업명이라 식별 값 다음으로 길다 — 가변 열 중 두 번째 몫(long).
+  { name: 'affiliation', label: '소속', type: 'long' },
+  { name: 'profile.position', label: '직책/직급', type: 'text' },
+  { name: 'email', label: '이메일', mask: 'email', type: 'text' },
+  { name: 'phone', label: '연락처', mask: 'phone', type: 'text' },
   // 구분은 값이 하나뿐인 분류라 배지로 감싸지 않고 텍스트로 둔다(상태가 아니므로 색을 쓰지 않는다).
-  { name: 'profile.category', label: '구분', className: 'w-20' },
-  // 영역: 전문 영역(expertise, ADMIN 영역 관리 태그 다중선택). 넘치면 말줄임 처리.
-  { name: 'expertise', label: '영역', kind: 'tags', className: 'w-40' },
-  { name: 'activity_count', label: '활동', kind: 'count', className: 'w-16' },
-  { name: 'satisfaction_avg', label: '만족도', kind: 'rating', className: 'w-16' },
-  // w-20: '불가능'(3자) 배지가 셀 폭을 넘겨 말줄임(…)이 배지 뒤에 남던 것을 해소한다.
-  { name: 'profile.match_available', label: '매칭', kind: 'match', className: 'w-20' },
+  { name: 'profile.category', label: '구분', type: 'text' },
+  // 영역: 전문 영역(expertise, ADMIN 영역 관리 태그 다중선택). 태그가 여러 개라 badge가 아니라 long.
+  { name: 'expertise', label: '영역', kind: 'tags', type: 'long' },
+  { name: 'activity_count', label: '활동', kind: 'count', type: 'count' },
+  { name: 'satisfaction_avg', label: '만족도', kind: 'rating', type: 'count' },
+  { name: 'profile.match_available', label: '매칭', kind: 'match', type: 'badge' },
 ]
 
 /**
@@ -55,7 +55,7 @@ const ORG_OMIT_COLUMNS = new Set([
 const ORG_DEPARTMENT_COLUMN: MasterColumn = {
   name: 'profile.department',
   label: '부서',
-  className: 'w-32',
+  type: 'text',
 }
 
 export const NETWORK_ORG_COLUMNS: MasterColumn[] = NETWORK_PROFILE_COLUMNS.filter(
@@ -69,11 +69,12 @@ export const NETWORK_ORG_COLUMNS: MasterColumn[] = NETWORK_PROFILE_COLUMNS.filte
  * (생성자·수정일·관리 컬럼은 DataTable이 자동 렌더한다.)
  */
 export const NETWORK_OTHERS_COLUMNS: MasterColumn[] = [
-  { name: 'name', label: '이름', mask: 'name', className: 'w-20' },
-  { name: 'affiliation', label: '소속', className: 'w-40' },
-  { name: 'profile.department', label: '부서명', className: 'w-28' },
-  { name: 'profile.position', label: '직책/직급', className: 'w-24' },
-  { name: 'email', label: '이메일', mask: 'email', className: 'w-44' },
-  { name: 'phone', label: '연락처', mask: 'phone', className: 'w-32' },
-  { name: 'profile.category', label: '구분', kind: 'category', className: 'w-36' },
+  { name: 'name', label: '이름', mask: 'name', type: 'name' },
+  { name: 'affiliation', label: '소속', type: 'long' },
+  { name: 'profile.department', label: '부서명', type: 'text' },
+  { name: 'profile.position', label: '직책/직급', type: 'text' },
+  { name: 'email', label: '이메일', mask: 'email', type: 'text' },
+  { name: 'phone', label: '연락처', mask: 'phone', type: 'text' },
+  // 구분은 인라인 드롭다운(Select)이 들어가는 열이라 태그 열보다 넓게 — long.
+  { name: 'profile.category', label: '구분', kind: 'category', type: 'long' },
 ]

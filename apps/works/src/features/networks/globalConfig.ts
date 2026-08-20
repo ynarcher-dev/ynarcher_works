@@ -43,14 +43,15 @@ export type GlobalRow = Record<string, unknown> & {
  * 링크드인은 URL 유무에 따라 아이콘 색으로 표시한다(kind: 'link').
  */
 export const GLOBAL_COLUMNS: MasterColumn[] = [
-  { name: 'name', label: '이름', mask: 'name', className: 'w-24' },
-  { name: 'affiliation', label: '소속', className: 'w-40' },
-  { name: 'profile.position', label: '직책/직급', className: 'w-24' },
-  { name: 'email', label: '이메일', mask: 'email', className: 'w-44' },
-  { name: 'phone', label: '연락처', mask: 'phone', className: 'w-32' },
-  { name: 'linkedin_url', label: '링크드인', kind: 'link', align: 'center', className: 'w-20' },
-  { name: 'region.name', label: '권역', kind: 'tag', className: 'w-24' },
+  { name: 'name', label: '이름', mask: 'name', type: 'name' },
+  { name: 'affiliation', label: '소속', type: 'long' },
+  { name: 'profile.position', label: '직책/직급', type: 'text' },
+  { name: 'email', label: '이메일', mask: 'email', type: 'text' },
+  { name: 'phone', label: '연락처', mask: 'phone', type: 'text' },
+  // 링크드인은 아이콘 하나가 놓이는 고정폭 열이라 badge 규격(가운데)을 쓴다.
+  { name: 'linkedin_url', label: '링크드인', kind: 'link', type: 'badge' },
+  { name: 'region.name', label: '권역', kind: 'tag', type: 'badge' },
   // 국가·구분은 상태가 아니라 분류라 배지로 감싸지 않고 텍스트로 둔다(스펙 §3.4: 색은 상태에만).
-  { name: 'country.name', label: '국가', className: 'w-40' },
-  { name: 'category', label: '구분', className: 'w-20' },
+  { name: 'country.name', label: '국가', type: 'text' },
+  { name: 'category', label: '구분', type: 'text' },
 ]

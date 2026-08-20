@@ -127,14 +127,15 @@ export function GlobalBulkReviewTable({
     Boolean(r.match?.deleted) && !revivedLines.includes(r.line)
   const dim = (r: GlobalReviewRow, normal: string) => (isDeactivated(r) ? 'text-gray-300' : normal)
   const columns: Column<GlobalReviewRow>[] = [
-    { key: 'name', header: '이름', className: pad, render: (r) => <span className={cn('font-medium', dim(r, 'text-gray-800'))}>{r.name || <EmptyValue />}</span> },
-    { key: 'affiliation', header: '소속', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.affiliation || '-'}</span> },
-    { key: 'position', header: '직책', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.position || '-'}</span> },
-    { key: 'email', header: '이메일', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.email || '-'}</span> },
-    { key: 'phone', header: '연락처', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.phone || '-'}</span> },
+    { key: 'name', header: '이름', type: 'name', className: pad, render: (r) => <span className={cn('font-medium', dim(r, 'text-gray-800'))}>{r.name || <EmptyValue />}</span> },
+    { key: 'affiliation', header: '소속', type: 'long', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.affiliation || '-'}</span> },
+    { key: 'position', header: '직책', type: 'text', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.position || '-'}</span> },
+    { key: 'email', header: '이메일', type: 'text', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.email || '-'}</span> },
+    { key: 'phone', header: '연락처', type: 'text', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.phone || '-'}</span> },
     {
       key: 'geo',
       header: '권역·국가',
+      type: 'text',
       className: pad,
       render: (r) => (
         <span className={dim(r, 'text-gray-600')}>
@@ -145,6 +146,7 @@ export function GlobalBulkReviewTable({
     {
       key: 'category',
       header: '구분',
+      type: 'text',
       className: pad,
       render: (r) => (
         <Select
@@ -207,7 +209,6 @@ export function GlobalBulkReviewTable({
       numbered={false}
       standardColumns={false}
       rowClassName={(r) => (isDeactivated(r) ? 'bg-gray-100' : undefined)}
-      selectable
       selectedKeys={selected.map(String)}
       onSelectionChange={(keys) => onSelectionChange(keys.map(Number))}
       emptyText="업로드할 데이터가 없습니다."

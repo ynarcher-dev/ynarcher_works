@@ -2,6 +2,7 @@
  * 마스터 목록/상세 공용 타입. NETWORKS(원장·수정)와 HUB(조회 센터·읽기 전용)가
  * 동일한 리스트뷰를 공유하기 위한 단일 원천이다.
  */
+import type { ColumnType } from '@ynarcher/ui'
 
 /**
  * 개인정보 목록 마스킹 유형. 실제 적용 여부는 ADMIN '민감정보 관리'의 콘텐츠별 정책이 정한다.
@@ -38,9 +39,14 @@ export interface MasterColumn {
   label: string
   mask?: MaskKind
   kind?: MasterColumnKind
-  /** 셀 정렬(기본 좌측). 매칭/만족도 등 수치·상태 컬럼은 center 권장. */
+  /**
+   * 열의 종류(DataTable ColumnType). 폭·정렬·수치서식·줄바꿈을 한 단어로 정한다.
+   * `kind`(셀 렌더 방식)와는 별개 축 — kind가 "무엇을 그릴까"라면 type은 "열을 어떻게 세울까"다.
+   */
+  type?: ColumnType
+  /** 셀 정렬. `type`이 정한 값을 덮는 예외 통로. */
   align?: 'left' | 'right' | 'center'
-  /** 헤더·셀 폭/여백 조정 클래스(예: 'min-w-[13rem]', 'px-2'). */
+  /** 헤더·셀 폭/여백 조정 클래스(예: 'min-w-[13rem]', 'px-2'). `type`이 정한 폭을 덮는 예외 통로. */
   className?: string
 }
 

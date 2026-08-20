@@ -87,6 +87,7 @@ export function MasterListView({
     const base: Column<MasterRow>[] = columns.map((c) => ({
       key: c.name,
       header: c.label,
+      type: c.type,
       align: c.align,
       className: c.className,
       render: (r) => {
@@ -198,7 +199,7 @@ export function MasterListView({
     base.push({
       key: '_manager',
       header: '담당자',
-      className: 'w-24',
+      type: 'person',
       // 색은 셀의 위계 톤을 그대로 따른다(여기서 다시 지정하면 열마다 색이 어긋난다).
       render: () => '공동관리',
     })
@@ -226,11 +227,12 @@ export function MasterListView({
       columns={cols}
       rows={rows}
       rowKey={(r) => r.id}
-      layout="fixed"
+      // 폭·정렬은 열마다의 type이 정하고, 레이아웃은 기본(auto)이라 계산 폭보다 긴 값
+      // (이메일·소속 등)은 말줄임 대신 열이 늘어나 다 보인다.
+      // selectable은 자리 기본값(페이지에 바로 놓인 표 = 켬)을 그대로 따른다.
       // 관리 컬럼은 비활성화 핸들러가 주입된 목록(상세페이지가 없는 미분류)에만 남긴다.
       showManageColumn={Boolean(onDeactivate)}
       onRowClick={onRowClick}
-      selectable
       selectedKeys={selectedKeys}
       onSelectionChange={onSelectionChange}
       pagination={pagination}
