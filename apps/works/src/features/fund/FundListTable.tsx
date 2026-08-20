@@ -42,13 +42,14 @@ export function FundListTable({
   // 대표펀드매니저·운용인력·관리자는 모두 내부 임직원이라 민감정보 마스킹 대상이 아니다.
   const columns = useMemo<Column<FundListRow>[]>(
     () => [
-      { key: 'name', header: '펀드명', primary: true, className: 'w-52', render: (f) => f.name },
+      // 폭·정렬·수치서식은 열마다의 종류(type)가 정한다 — 수동 w-* 폭을 적지 않는다(2026-08 디자인 리프레시).
+      { key: 'name', header: '펀드명', primary: true, type: 'name', render: (f) => f.name },
       {
         // 펀드코드(6자리 영숫자 난수). 사업코드와 같은 형식·같은 발급 경로(전역 레지스트리)라
         // 워크스페이스가 달라도 값이 겹치지 않는다. 목록에서는 본문 텍스트로 노출한다.
         key: 'code',
         header: '코드',
-        className: 'w-20 whitespace-nowrap',
+        type: 'text',
         render: (f) => f.code ?? dash,
       },
       // 재원·성격·구분·펀드유형은 펀드를 서술하는 고정 속성이라 본문 텍스트로 적는다.
@@ -56,40 +57,40 @@ export function FundListTable({
       {
         key: 'source_type',
         header: '재원',
-        className: 'w-24',
+        type: 'text',
         render: (f) => (f.source_type ? (FUND_SOURCE_LABEL[f.source_type] ?? f.source_type) : dash),
       },
       {
         key: 'character_type',
         header: '성격',
-        className: 'w-32',
+        type: 'text',
         render: (f) =>
           f.character_type ? (FUND_CHARACTER_LABEL[f.character_type] ?? f.character_type) : dash,
       },
       {
         key: 'strategy_type',
         header: '구분',
-        className: 'w-20',
+        type: 'text',
         render: (f) =>
           f.strategy_type ? (FUND_STRATEGY_LABEL[f.strategy_type] ?? f.strategy_type) : dash,
       },
       {
         key: 'fund_type',
         header: '펀드유형',
-        className: 'w-24',
+        type: 'text',
         render: (f) => (f.fund_type ? (FUND_TYPE_LABEL[f.fund_type] ?? f.fund_type) : dash),
       },
       {
         key: 'status',
         header: '상태',
-        className: 'w-24',
+        type: 'badge',
         render: (f) => <Badge tone={FUND_STATUS_TONE[f.status] ?? 'neutral'}>{fundStatusLabel(f.status)}</Badge>,
       },
       {
         // 존속기간은 항상 시작/종료 두 줄로 적는다 — 한 줄로 두면 열 폭에 따라 날짜 중간에서 접힌다.
         key: 'term',
         header: '존속기간',
-        className: 'w-28',
+        type: 'date',
         render: (f) => {
           const lines = fundPeriodLines(f.term_start, f.term_end)
           if (!lines) return dash
@@ -105,52 +106,44 @@ export function FundListTable({
       {
         key: 'total_commitment',
         header: '약정총액',
-        align: 'right',
-        numeric: true,
-        className: 'w-24',
+        type: 'money',
         render: (f) => formatMillion(f.total_commitment),
       },
       {
         key: 'paid_in_amount',
         header: '실출자금액',
-        align: 'right',
-        numeric: true,
-        className: 'w-24',
+        type: 'money',
         render: (f) => (f.paid_in_amount == null ? dash : formatMillion(f.paid_in_amount)),
       },
       {
         key: 'drawn_amount',
         header: '집행액',
-        align: 'right',
-        numeric: true,
-        className: 'w-24',
+        type: 'money',
         render: (f) => formatMillion(f.drawn_amount),
       },
       {
         key: 'balance',
         header: '잔액',
-        align: 'right',
-        numeric: true,
-        className: 'w-24',
+        type: 'money',
         render: (f) => formatMillion(f.total_commitment - f.drawn_amount),
       },
       {
         key: 'manager',
         header: '대표펀드매니저',
-        className: 'w-28',
+        type: 'person',
         render: (f) => f.manager?.name || dash,
       },
       {
         key: 'operators',
         header: '운용인력',
-        className: 'w-28',
+        type: 'person',
         render: (f) => fundOperatorLabel(f.operators) ?? dash,
       },
       {
         // 관리인력(role=ADMIN)은 조합 행정·보고·사후관리 축이라 운용인력과 별개 열로 세운다.
         key: 'admins',
         header: '관리인력',
-        className: 'w-28',
+        type: 'person',
         render: (f) => fundManagerLabel(f.operators) ?? dash,
       },
     ],
@@ -163,7 +156,7 @@ export function FundListTable({
       rows={rows}
       rowKey={(f) => f.id}
       onRowClick={onRowClick}
-      selectable
+      // selectable은 자리 기본값(페이지에 바로 놓인 표 = 켬)을 그대로 따른다.
       selectedKeys={selectedKeys}
       onSelectionChange={onSelectionChange}
       pagination={pagination}

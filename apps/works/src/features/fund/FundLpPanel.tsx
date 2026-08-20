@@ -5,11 +5,13 @@ import { FundLpRosterModal } from '@/features/fund/FundLpRosterModal'
 import { FUND_LP_TYPE_LABEL, FUND_LP_TYPE_TONE } from '@/features/fund/fundListHooks'
 import type { FundLp } from '@/features/fund/hooks'
 
+// 폭·정렬·수치서식은 열마다의 종류(type)가 정한다(2026-08 디자인 리프레시).
 const lpColumns: Column<FundLp>[] = [
-  { key: 'name', header: '조합원명', primary: true, render: (r) => r.name },
+  { key: 'name', header: '조합원명', primary: true, type: 'name', render: (r) => r.name },
   {
     key: 'lp_type',
     header: '조합원유형',
+    type: 'badge',
     render: (r) => (
       <Badge tone={FUND_LP_TYPE_TONE[r.lp_type] ?? 'neutral'}>
         {FUND_LP_TYPE_LABEL[r.lp_type] ?? r.lp_type}
@@ -19,31 +21,27 @@ const lpColumns: Column<FundLp>[] = [
   {
     key: 'commitment_amount',
     header: '약정액',
-    align: 'right',
-    numeric: true,
+    type: 'money',
     render: (r) => r.commitment_amount.toLocaleString(),
   },
   {
     // 지분율은 약정액 ÷ 약정총액의 파생값(sync_fund_lp_ownership 트리거).
     key: 'ownership_pct',
     header: '지분율',
-    align: 'right',
-    numeric: true,
+    type: 'count',
     render: (r) => (r.ownership_pct == null ? '-' : `${r.ownership_pct}%`),
   },
   {
     // 납입액·납입률은 캐피탈 콜에서 집계된 파생값(fund_lps.paid_amount).
     key: 'paid_amount',
     header: '납입액',
-    align: 'right',
-    numeric: true,
+    type: 'money',
     render: (r) => r.paid_amount.toLocaleString(),
   },
   {
     key: 'paid_pct',
     header: '납입률',
-    align: 'right',
-    numeric: true,
+    type: 'count',
     render: (r) =>
       r.commitment_amount > 0
         ? `${Math.round((r.paid_amount / r.commitment_amount) * 100)}%`
@@ -52,6 +50,7 @@ const lpColumns: Column<FundLp>[] = [
   {
     key: 'contact',
     header: '담당자',
+    type: 'person',
     render: (r) => r.contact?.manager ?? '-',
   },
 ]

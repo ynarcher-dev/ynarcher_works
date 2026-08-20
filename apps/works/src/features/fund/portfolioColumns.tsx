@@ -48,9 +48,8 @@ function buildPurposeColumns(purposes: FundPurpose[]): Column<Investment>[] {
           {short}
         </span>
       ),
-      align: 'center',
-      // 의무·주목적·특수 컬럼은 폭을 동일하게 고정한다(가장 긴 헤더 '주목적N'이 들어가는 w-20).
-      className: 'w-20',
+      // Y/빈 표시 한 글자짜리 고정폭 열 — 배지 규격(badge, 5rem 가운데)을 그대로 쓴다.
+      type: 'badge',
       render: (r) =>
         r.purpose_ids.includes(p.id) ? (
           <span className="font-semibold text-success">Y</span>
@@ -109,6 +108,7 @@ export function buildPortfolioColumns({
     key: 'startup',
     header: '기업명',
     primary: true,
+    type: 'name',
     render: (r) =>
       r.startup_id ? (
         <Link
@@ -127,6 +127,7 @@ export function buildPortfolioColumns({
   const itemColumn: Column<Investment> = {
     key: 'item',
     header: '아이템',
+    type: 'long',
     render: (r) => (
       <span className="block max-w-[16rem] truncate text-gray-600" title={r.startup_one_liner ?? ''}>
         {r.startup_one_liner || '-'}
@@ -138,6 +139,7 @@ export function buildPortfolioColumns({
   const representativeColumn: Column<Investment> = {
     key: 'representative',
     header: '대표자',
+    type: 'person',
     render: (r) => {
       const v = r.startup_representative
       if (!v) return '-'
@@ -147,16 +149,19 @@ export function buildPortfolioColumns({
   const foundedColumn: Column<Investment> = {
     key: 'founded_on',
     header: '설립일',
+    type: 'date',
     render: (r) => shortDate(r.startup_founded_on),
   }
   const locationColumn: Column<Investment> = {
     key: 'location',
     header: '소재지',
+    type: 'text',
     render: (r) => r.startup_location || '-',
   }
   const industriesColumn: Column<Investment> = {
     key: 'industries',
     header: '업종',
+    type: 'long',
     render: (r) =>
       r.startup_industries.length ? (
         // 표는 한 줄 유지(전체보기 가로 스크롤) — 배지도 줄바꿈 없이 나란히 둔다.
@@ -175,48 +180,49 @@ export function buildPortfolioColumns({
   const investedAtColumn: Column<Investment> = {
     key: 'invested_at',
     header: '투자일',
+    type: 'date',
     render: (r) => shortDate(r.invested_at),
   }
   // 투자펀드 = 현재 펀드(포트폴리오는 이 펀드로 필터된 목록이라 상수).
-  const fundColumn: Column<Investment> = { key: 'fund', header: '투자펀드', render: () => fundName }
-  const stageColumn: Column<Investment> = { key: 'stage', header: '라운드', render: (r) => r.stage ?? '-' }
+  const fundColumn: Column<Investment> = { key: 'fund', header: '투자펀드', type: 'text', render: () => fundName }
+  const stageColumn: Column<Investment> = { key: 'stage', header: '라운드', type: 'text', render: (r) => r.stage ?? '-' }
   // 투자방식 = 취득 증권 종류(보통주/CPS/RCPS/CB/BW 등). 라운드와 별개 축.
   const methodColumn: Column<Investment> = {
     key: 'investment_method',
     header: '투자방식',
+    type: 'badge',
     render: (r) => (r.investment_method ? <Badge tone="neutral">{r.investment_method}</Badge> : '-'),
   }
   const preColumn: Column<Investment> = {
     key: 'valuation',
     header: 'PRE VALUE',
-    align: 'right',
-    numeric: true,
+    type: 'money',
     render: (r) => num(r.valuation),
   }
   const postColumn: Column<Investment> = {
     key: 'post_valuation',
     header: 'POST VALUE',
-    align: 'right',
-    numeric: true,
+    type: 'money',
     render: (r) => num(r.post_valuation),
   }
   const amountColumn: Column<Investment> = {
     key: 'amount',
     header: '집행액',
-    align: 'right',
-    numeric: true,
+    type: 'money',
     render: (r) => num(r.amount),
   }
   // 딜메이커(전권 담당자) = startup_managers 리드. networks 읽기 권한 없으면 RLS로 '-'.
   const dealmakerColumn: Column<Investment> = {
     key: 'dealmaker',
     header: '딜메이커',
+    type: 'person',
     render: (r) => r.dealmaker_name || '-',
   }
   // 구분 = startups.management_status(포트폴리오는 항상 투자기업).
   const categoryColumn: Column<Investment> = {
     key: 'category',
     header: '구분',
+    type: 'badge',
     render: (r) => {
       const label = managementStatusLabel(r.startup_management_status)
       if (!label) return '-'
@@ -230,6 +236,7 @@ export function buildPortfolioColumns({
   const poolStatusColumn: Column<Investment> = {
     key: 'pool_status',
     header: '관리현황',
+    type: 'badge',
     render: (r) => (r.startup_pool_status ? <Badge tone="neutral">{r.startup_pool_status}</Badge> : '-'),
   }
 
