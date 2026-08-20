@@ -1,6 +1,6 @@
-import { Button, Modal, PanelCard, tableText } from '@ynarcher/ui'
+import { Button, EmptyValue, Modal, PanelCard, tableText } from '@ynarcher/ui'
 import { useState } from 'react'
-import { MiniTable, td, tdEmpty, tdP, th, thL } from '@/features/startup/MiniTable'
+import { MiniTable, td, tdP, th, thL } from '@/features/startup/MiniTable'
 import { StartupShareholderChart } from '@/features/startup/StartupShareholderChart'
 import type { Shareholder, ShareholderSnapshot } from '@/features/startup/startupShareholders'
 
@@ -29,12 +29,12 @@ function HolderTable({ holders }: { holders: Shareholder[] }) {
         return (
           <tr key={i}>
             {/* 주주명이 이 행의 식별 값 — 없으면 숫자 열과 같은 무게로 읽힌다. */}
-            <td className={tdP}>{h.name || '-'}</td>
+            <td className={tdP}>{h.name || <EmptyValue />}</td>
             <td className={td}>
-              {h.shares == null ? <span className={tdEmpty}>-</span> : Number(h.shares).toLocaleString()}
+              {h.shares == null ? <EmptyValue /> : Number(h.shares).toLocaleString()}
             </td>
             <td className={td}>
-              {pct == null ? <span className={tdEmpty}>-</span> : `${pct.toFixed(1)}%`}
+              {pct == null ? <EmptyValue /> : `${pct.toFixed(1)}%`}
             </td>
           </tr>
         )

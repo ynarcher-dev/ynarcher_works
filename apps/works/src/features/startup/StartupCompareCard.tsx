@@ -103,7 +103,7 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
       <p className="rounded-radius-sm bg-gray-50 px-2.5 py-1 text-caption font-semibold text-gray-900">
         {title}
       </p>
-      <div className="mt-0.5 divide-y divide-gray-50">{children}</div>
+      <div className="mt-0.5 divide-y divide-gray-200">{children}</div>
     </div>
   )
 }
@@ -121,7 +121,7 @@ function CompanyHead({ record, year, onClear }: { record: EntityRow; year?: numb
             type="button"
             onClick={onClear}
             aria-label="비교기업 해제"
-            className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-danger text-white shadow-soft transition-opacity hover:opacity-80"
+            className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-danger text-white shadow-popover transition-opacity hover:opacity-80"
           >
             <X className="size-3.5" strokeWidth={3} aria-hidden />
           </button>
@@ -206,13 +206,13 @@ export function StartupCompareCard({ a, b, bLoading, onSelectB, onClearB }: Prop
     <PanelCard title="기업 비교">
       {/* 기업 헤더: A · VS · B — 두 기업을 각자 테두리 박스로 분리(기업 VS 기업) */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-2">
-        <div className="rounded-radius-md border border-gray-200 bg-white p-3">
+        <div className="rounded-radius-md border border-gray-300 bg-white p-3">
           <CompanyHead record={a} year={yearA} />
         </div>
         <span className="self-center text-caption font-semibold text-gray-400" aria-hidden>
           VS
         </span>
-        <div className="rounded-radius-md border border-gray-200 bg-white p-3">
+        <div className="rounded-radius-md border border-gray-300 bg-white p-3">
         {b ? (
           <CompanyHead record={b} year={yearB} onClear={onClearB} />
         ) : (

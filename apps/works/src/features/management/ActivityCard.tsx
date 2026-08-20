@@ -1,10 +1,10 @@
-import { PanelCard } from '@ynarcher/ui'
+import { EmptyValue, PanelCard } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { hasWorkspaceRead, useAuthStore } from '@/auth/authStore'
 import type { WorkspaceKey } from '@/auth/types'
 import { MiniPager, usePaged } from '@/features/networks/MiniPager'
-import { MiniTable, td, tdEmpty, tdL, tdP, th, thL } from '@/features/startup/MiniTable'
+import { MiniTable, td, tdL, tdP, th, thL } from '@/features/startup/MiniTable'
 
 /**
  * 활동 이력 카드의 열 정의. 표 규격(머리글·본문 위계, 식별 열)은 STARTUP 성장 지표가 쓰는
@@ -23,7 +23,7 @@ export interface ActivityColumn<T> {
 
 /** 빈 값('-') 표기. 실제 값과 구분되도록 한 단계 흐리게 둔다. */
 export function Dash() {
-  return <span className={tdEmpty}>-</span>
+  return <EmptyValue />
 }
 
 interface ActivityCardProps<T> {

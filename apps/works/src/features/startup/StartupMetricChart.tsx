@@ -32,11 +32,18 @@ export const CHART_COLORS = {
  * 차트 텍스트 규격(축 눈금·범례·툴팁 공용).
  *
  * recharts는 Tailwind 클래스를 받지 않아 숫자로 줄 수밖에 없지만, 값 자체는 토큰과 맞춘다.
- * 12px는 `caption`(0.75rem), 색은 `gray-500`(#5B6371)로 표의 머리글(`tableText.head`)과 같은
+ * 12px는 `caption`(0.75rem), 색은 `gray-600`(#4A5361)로 표의 머리글(`tableText.head`)과 같은
  * 단계다. 종전에는 축·범례가 11px이었는데 11px 토큰(`tag-card`)은 배지 전용이라 스케일 밖이었고,
  * 축(11)·툴팁(12)이 서로 어긋나 한 차트 안에 두 크기가 존재했다.
+ *
+ * 색이 `gray-500`에서 한 단 올라온 이유는 표 머리글과 같다(2026-08-20) — 12px 한글은 받침까지
+ * 획이 촘촘해 라틴 12px보다 먼저 뭉개지므로, AA를 넘기는 `gray-500`(6.06:1)도 이 크기에서는
+ * 흐리게 읽힌다. 같은 날 표 머리글만 `gray-600`으로 올리면서 "축·범례는 표 머리글과 같은 단계"
+ * 라던 이 값이 홀로 뒤에 남아, 한 카드 안에서 표 머리글과 차트 축이 다른 회색이 됐다.
+ * 팔레트 SSOT도 차트 축 라벨을 `gray.600`(구조 라벨)로 지정한다.
+ * 근거: 4_color_system_rules.md §2 gray.600 / 3_typography_rules.md §4.1
  */
-export const CHART_TEXT = { size: 12, color: '#5B6371' } as const
+export const CHART_TEXT = { size: 12, color: '#4A5361' } as const
 
 export interface ChartSeries {
   key: string

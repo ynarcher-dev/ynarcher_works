@@ -1,9 +1,9 @@
-import { tableText } from '@ynarcher/ui'
+import { tableGrid, tableText } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 
 /**
- * 상세페이지 카드 안에서 쓰는 소형 표. 카드가 이미 테두리·그림자를 가지므로
- * 표는 외곽선·모서리 없이, 헤더에만 옅은 회색 배경 + 밑줄을 둬 심플하게 보인다.
+ * 상세페이지 카드 안에서 쓰는 소형 표. 카드가 이미 표면(테두리)을 이루므로 표는 외곽선·모서리
+ * 없이 행 구분선만 둔다.
  */
 export function MiniTable({
   head,
@@ -17,8 +17,15 @@ export function MiniTable({
   return (
     <div className={`w-full overflow-x-auto ${className ?? ''}`}>
       <table className="w-full border-separate border-spacing-0 text-caption">
+        {/*
+          머리글에 회색 면을 깔지 않는다(2026-08-20 데이터 테이블 규격과 동일).
+          배경과 밑줄은 둘 다 "여기부터 머리글이다"라는 같은 말이라, 겹치면 머리글이 정작
+          읽어야 할 데이터보다 무거워진다. 머리글임은 굵기와 색(semibold + gray-600)이 이미
+          말하고 있고, 데이터와의 경계는 밑줄 하나가 긋는다.
+          근거: 5_component_spec_rules.md §3.1
+        */}
         <thead>
-          <tr className="bg-gray-50">{head}</tr>
+          <tr>{head}</tr>
         </thead>
         <tbody>{children}</tbody>
       </table>
@@ -27,19 +34,23 @@ export function MiniTable({
 }
 
 /**
- * 공용 표 셀 클래스. 헤더는 밑줄 한 줄(gray-200), 본문 행은 옅은 구분선(gray-100).
+ * 공용 표 셀 클래스.
  *
- * 글자 위계는 손으로 쓰지 않고 `tableText`에서 그대로 가져온다. 한때 이 표가 같은 위계를
- * 자체 문자열로 재선언했는데, 옮겨 적는 사이 머리글이 gray-500에서 gray-700으로, 값이
- * gray-700에서 gray-800으로 한 칸씩 밀렸다. 머리글과 값이 한 단계 차이가 되면서 머리글이
- * 배경으로 물러나지 못했고, `primary`(식별 열)와 `empty`(빈 값) 두 단계는 통째로 사라졌다.
+ * 격자(행 높이·셀 좌우 여백)와 글자 위계는 손으로 정하지 않고 `tableGrid`·`tableText`에서
+ * 그대로 가져온다 — 값을 옮겨 적으면 그 사본이 곧 어긋난다. 실제로 한때 이 표는 행 높이 40px,
+ * 셀 여백 `px-3`, 머리글 회색 띠를 자체 값으로 갖고 있어 같은 화면의 `DataTable`과 행 높이도
+ * 여백도 머리글 처리도 전부 달랐고, 글자 위계 역시 옮겨 적는 사이 한 칸씩 밀려 머리글이 배경으로
+ * 물러나지 못했다.
+ *
+ * 테두리 색도 규격을 따른다 — 머리글 밑줄은 컨테이너 경계에 준하는 `gray-300`, 행 사이는 한
+ * 단계 연한 `gray-200`이다. 근거: 5_component_spec_rules.md §3.1
  */
-export const th = `h-9 border-b border-gray-200 px-3 text-right ${tableText.head}`
-export const thL = `h-9 border-b border-gray-200 px-3 text-left ${tableText.head}`
-export const td = `h-10 border-b border-gray-100 px-3 text-right tabular-nums ${tableText.body}`
+const cell = `${tableGrid.row} border-b ${tableGrid.cellX}`
+
+export const th = `${cell} border-gray-300 text-right ${tableText.head}`
+export const thL = `${cell} border-gray-300 text-left ${tableText.head}`
+export const td = `${cell} border-gray-200 text-right tabular-nums ${tableText.body}`
 /** 좌측 정렬 일반 값. 그 행이 무엇인지 알려주는 열에는 `tdP`를 쓴다. */
-export const tdL = `h-10 border-b border-gray-100 px-3 text-left ${tableText.body}`
+export const tdL = `${cell} border-gray-200 text-left ${tableText.body}`
 /** 식별 열(연도·기준월·주주명 등) — 행마다 하나만. 없으면 모든 열이 같은 무게로 읽힌다. */
-export const tdP = `h-10 border-b border-gray-100 px-3 text-left ${tableText.primary}`
-/** 빈 값('-') 자리. 실제 값과 구분되도록 한 단계 더 흐리게 둔다. */
-export const tdEmpty = tableText.empty
+export const tdP = `${cell} border-gray-200 text-left ${tableText.primary}`

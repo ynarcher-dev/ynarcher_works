@@ -18,6 +18,9 @@ export { cardText, tableText } from './densityScale'
 // 열 폭 스케일 — 컬럼 정의(화면 코드)가 직접 고르는 값이라 열어 둔다.
 // 폭을 감으로 붙이지 않게 하는 것이 목적이므로 `w-24` 같은 원시 값을 대신 쓰지 않는다.
 export { columnWidth } from './densityScale'
+// 표 격자(행 높이·셀 좌우 여백) — 카드 안 소형 표처럼 `DataTable`을 거치지 않는 표가 격자를
+// 자체 값으로 재선언하지 않도록 열어 둔다. 재선언하면 같은 화면에서 행 높이와 여백이 갈린다.
+export { tableGrid } from './densityScale'
 
 // 기초 컴포넌트
 export { Button } from './components/Button'

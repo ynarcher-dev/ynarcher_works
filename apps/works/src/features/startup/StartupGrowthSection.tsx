@@ -1,10 +1,10 @@
-import { PanelCard, cardText } from '@ynarcher/ui'
+import { EmptyValue, PanelCard, cardText } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { type GrowthMetrics } from '@/features/startup/startupGrowth'
 import { useStartupFundInvestments } from '@/features/fund/hooks'
 import { CHART_COLORS, StartupMetricChart, type ChartSeries } from '@/features/startup/StartupMetricChart'
-import { MiniTable, td, tdEmpty, tdL, tdP, th, thL } from '@/features/startup/MiniTable'
+import { MiniTable, td, tdL, tdP, th, thL } from '@/features/startup/MiniTable'
 import { SectionHeading } from '@/features/startup/SectionHeading'
 
 const C = CHART_COLORS
@@ -28,7 +28,7 @@ function MetricCard({ title, unit, children }: { title: string; unit?: string; c
 
 /** 금액 셀(백만원 단위, ÷1,000,000 반올림). 음수(적자·자본잠식)는 국내 관례대로 파란색 '-'로 표기. 단위는 카드 헤더에 표기. */
 function Won({ v }: { v?: number | null }) {
-  if (v == null || Number.isNaN(Number(v))) return <span className={tdEmpty}>-</span>
+  if (v == null || Number.isNaN(Number(v))) return <EmptyValue />
   const n = Math.round(Number(v) / 1_000_000)
   if (n < 0) return <span className="text-info">-{Math.abs(n).toLocaleString()}</span>
   return <span>{n.toLocaleString()}</span>
@@ -172,7 +172,7 @@ export function StartupGrowthSection({ growth, startupId }: Props) {
                 <tr key={m.year}>
                   <td className={tdP}>{m.year}</td>
                   <td className={td}>
-                    {m.employeeCount == null ? <span className={tdEmpty}>-</span> : Number(m.employeeCount).toLocaleString()}
+                    {m.employeeCount == null ? <EmptyValue /> : Number(m.employeeCount).toLocaleString()}
                   </td>
                 </tr>
               ))}
@@ -188,8 +188,8 @@ export function StartupGrowthSection({ growth, startupId }: Props) {
             <MiniTable head={<><th className={thL}>기준월</th><th className={thL}>라운드</th><th className={th}>기업 가치(Pre)</th><th className={th}>투자유치액</th><th className={thL}>투자자</th></>}>
               {investment.map((m, i) => (
                 <tr key={`${m.date}-${i}`}>
-                  <td className={tdP}>{m.date || '-'}</td>
-                  <td className={tdL}>{m.round || '-'}</td>
+                  <td className={tdP}>{m.date || <EmptyValue />}</td>
+                  <td className={tdL}>{m.round || <EmptyValue />}</td>
                   <td className={td}><Won v={m.valuation} /></td>
                   <td className={td}><Won v={m.fundingAmount} /></td>
                   {/* 투자자명은 길어지면 말줄임(가로 스크롤 방지). 자사 펀드 투자는 펀드 상세로 링크한다. */}
@@ -200,11 +200,11 @@ export function StartupGrowthSection({ growth, startupId }: Props) {
                         title={m.investor ?? ''}
                         className="block max-w-[11rem] truncate text-info underline underline-offset-2 hover:text-info/80"
                       >
-                        {m.investor || '-'}
+                        {m.investor || <EmptyValue />}
                       </Link>
                     ) : (
                       <span className="block max-w-[11rem] truncate" title={m.investor ?? ''}>
-                        {m.investor || '-'}
+                        {m.investor || <EmptyValue />}
                       </span>
                     )}
                   </td>

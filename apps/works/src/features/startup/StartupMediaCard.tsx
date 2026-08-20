@@ -2,14 +2,19 @@ import { Badge, CardShell, cardText } from '@ynarcher/ui'
 import { ExternalLink, ImageOff } from 'lucide-react'
 import { MEDIA_KINDS, type MediaItem } from '@/features/startup/startupMedia'
 
-/** 미디어 1건 카드: 썸네일 + 분류·출처 + 제목 + 설명. 클릭 시 원문 새 탭. */
+/**
+ * 미디어 1건 카드: 썸네일 + 분류·출처 + 제목 + 설명. 클릭 시 원문 새 탭.
+ *
+ * 상자의 외곽은 표준 헤어라인(`gray-300`)이다 — 카드·표·입력과 같은 값이라야 한 화면에서
+ * 상자의 경계가 하나의 굵기로 읽힌다. 근거: 5_component_spec_rules.md §3.1
+ */
 function MediaRow({ item }: { item: MediaItem }) {
   return (
     <a
       href={item.url}
       target="_blank"
       rel="noreferrer noopener"
-      className="group flex gap-3 rounded-radius-md border border-gray-200 bg-white p-3 transition-colors duration-fast hover:border-gray-300 hover:bg-gray-25"
+      className="group flex gap-3 rounded-radius-md border border-gray-300 bg-white p-3 transition-colors duration-fast hover:border-gray-400 hover:bg-gray-25"
     >
       {item.image ? (
         <img
@@ -78,7 +83,10 @@ export function StartupMediaCard({ media }: { media: MediaItem[] }) {
         <div className="space-y-5">
           {groupByKind(media).map(({ kind, items }) => (
             <div key={kind}>
-              <div className="mb-2 flex items-center gap-1 border-b border-gray-100 pb-1.5">
+              {/* 소제목 밑줄은 같은 화면의 '비즈니스 & 팀 역량' 소제목(SubHead)과 같은 내부
+                  divider 단계(gray-200)를 쓴다 — 같은 층의 같은 요소가 화면 안에서 다른 굵기로
+                  보이면 층이 하나 더 있는 것처럼 읽힌다. */}
+              <div className="mb-2 flex items-center gap-1 border-b border-gray-200 pb-1.5">
                 <span className={cardText.subhead}>{kind}</span>
                 <span className={cardText.count}>[{items.length}]</span>
               </div>

@@ -54,9 +54,10 @@ export function RelatedMinutesPanel({
           <MiniPager page={page} pageCount={pageCount} onPage={setPage} />
         </>
       ) : (
-        <p className="rounded-radius-md border border-gray-300 bg-white px-4 py-6 text-center text-body text-gray-600">
-          연동된 회의록이 없습니다.
-        </p>
+        // 빈 안내는 상자를 두르지 않는다 — 이미 패널 카드 안이라 테두리를 하나 더 그리면
+        // 흰 상자 안에 흰 상자가 생기고, 같은 상세 화면의 다른 패널(자료·코멘트·변동 이력)이
+        // 전부 문장 한 줄만 두는 것과도 어긋난다.
+        <p className="text-body text-gray-600">연동된 회의록이 없습니다.</p>
       )}
     </DetailPanelCard>
   )
