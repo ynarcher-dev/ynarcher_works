@@ -112,12 +112,8 @@ export { PanelCard } from './patterns/PanelCard'
 export type { PanelCardProps } from './patterns/PanelCard'
 export { DetailTopBar } from './patterns/DetailTopBar'
 export type { DetailTopBarProps } from './patterns/DetailTopBar'
-export { StatTileGrid, StatTilePlaceholderGrid } from './patterns/StatTileGrid'
-export type {
-  StatTile,
-  StatTileGridProps,
-  StatTilePlaceholderGridProps,
-} from './patterns/StatTileGrid'
+export { StatStrip } from './patterns/StatStrip'
+export type { StripTile, StatStripProps } from './patterns/StatStrip'
 export { ListToolbar } from './patterns/ListToolbar'
 export type { ListToolbarProps } from './patterns/ListToolbar'
 export { FilterButton, FilterResetButton } from './patterns/FilterButton'

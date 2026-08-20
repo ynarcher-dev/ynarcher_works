@@ -1,4 +1,4 @@
-import { Button, EmptyState, Spinner, StatTileGrid, Tabs } from '@ynarcher/ui'
+import { Button, EmptyState, Spinner, StatStrip, Tabs } from '@ynarcher/ui'
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
 import { DateNav } from '@/components/DateNav'
@@ -129,13 +129,13 @@ export function AttendancePanel() {
       {/*
         통계 현황 — 화면 맨 위에서 "지금 보고 있는 범위가 어떤 상태로 갈리는가"를 먼저 말한다.
         상태 원장 전체가 서므로 0건도 자리를 지킨다(0은 값이 없는 것이 아니라 값이 0인 것이다).
-        타일 수는 원장이 정하니 기본 5열보다 촘촘히 깐다 — 열 폭이 아니라 항목 수가 기준이다.
+        칸 수는 원장이 정하니 기본 5칸보다 촘촘히 깐다 — 칸 폭이 아니라 항목 수가 기준이다.
       */}
       {/* 원장을 아직 못 읽었으면 세우지 않는다 — '미출근' 한 칸만 덩그러니 떴다 사라진다. */}
       {statusList.length > 0 && (
-        <StatTileGrid
+        <StatStrip
           tiles={list.tiles}
-          className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6"
+          className="grid grid-cols-2 divide-gray-200 sm:grid-cols-4 sm:divide-x lg:grid-cols-6"
         />
       )}
 

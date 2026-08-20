@@ -5,7 +5,7 @@
  * 공통이라 한 곳에서 같은 규칙으로 좁혀야 한다는 것이고, 다른 하나는 "지금 무엇이 걸려 있는가"를
  * 아는 자리가 하나여야 페이지 되돌리기 같은 일이 빠지지 않는다는 것이다.
  */
-import type { FilterOption, StatTile } from '@ynarcher/ui'
+import type { FilterOption, StripTile } from '@ynarcher/ui'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   EMPTY_ATTENDANCE_FILTERS,
@@ -107,7 +107,7 @@ export function useAttendanceList({
     setFilters((f) => ({ ...f, statuses: [] }))
   }, [])
 
-  const tiles = useMemo<StatTile[]>(
+  const tiles = useMemo<StripTile[]>(
     () =>
       statusTiles({
         items: isPerson

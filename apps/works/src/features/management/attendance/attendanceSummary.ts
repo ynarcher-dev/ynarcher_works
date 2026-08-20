@@ -5,7 +5,7 @@
  * 세는 기준은 필터와 같다(`countedStatus`) — 타일이 '지각 3건'이라고 말했는데 그 타일을 눌러
  * 좁힌 표가 4줄이면 둘 중 하나는 거짓말이 된다.
  */
-import type { StatTile } from '@ynarcher/ui'
+import type { StripTile } from '@ynarcher/ui'
 import dayjs from 'dayjs'
 import {
   PENDING_LABEL,
@@ -69,7 +69,7 @@ export function statusTiles({
   onToggle,
   onClear,
   totalUnit,
-}: StatusTilesInput): StatTile[] {
+}: StatusTilesInput): StripTile[] {
   const counts = new Map<string, number>()
   for (const { entry, dateKey } of items) {
     if (!entry.isWorkday) continue
@@ -77,15 +77,15 @@ export function statusTiles({
     counts.set(code, (counts.get(code) ?? 0) + 1)
   }
 
-  const tile = (code: string, label: string): StatTile => ({
+  const tile = (code: string, label: string): StripTile => ({
     key: code,
     label,
-    // 단위는 값에 이어 붙이지 않는다 — 크게 읽혀야 하는 것은 건수이고 '건'은 모든 타일에
-    // 똑같이 반복되는 글자다. 회색·한 단 작은 규격은 StatTileGrid가 소유한다.
+    // 단위는 값에 이어 붙이지 않는다 — 크게 읽혀야 하는 것은 건수이고 '건'은 모든 칸에
+    // 똑같이 반복되는 글자다. 회색·한 단 작은 규격은 StatStrip이 소유한다.
     value: `${counts.get(code) ?? 0}`,
     unit: '건',
-    // 켜진 타일은 지금 표를 좁히고 있는 조건이다 — 강조로 그 사실을 말한다.
-    emphasis: selected.includes(code),
+    // 켜진 칸은 지금 표를 좁히고 있는 조건이다 — 옅은 브랜드 면으로 그 사실을 말한다.
+    selected: selected.includes(code),
     onClick: () => onToggle(code),
   })
 
@@ -93,12 +93,12 @@ export function statusTiles({
    * 전체 — 다른 타일이 상태로 좁히는 문이라면 이것은 그 조건을 푸는 문이다. 총계라고 못 누르게
    * 두면 상태 하나를 눌러 좁힌 뒤 되돌아올 자리가 필터 팝오버 안으로 숨는다.
    */
-  const total: StatTile = {
+  const total: StripTile = {
     key: TOTAL_KEY,
     label: '전체',
     value: `${items.length}`,
     unit: totalUnit,
-    emphasis: selected.length === 0,
+    selected: selected.length === 0,
     onClick: onClear,
   }
 

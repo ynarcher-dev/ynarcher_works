@@ -170,12 +170,12 @@ describe('statusTiles — 타일과 표가 같은 수를 말한다', () => {
     expect(tiles({ items: used, statuses }).map((t) => t.key)).toContain('OLD_LEAVE')
   })
 
-  it('선택된 상태의 타일만 강조되고, 조건이 없으면 전체가 강조된다', () => {
+  it('선택된 상태의 칸만 켜지고, 조건이 없으면 전체가 켜진다', () => {
     const picked = tiles({ selected: ['LATE'] })
-    expect(picked.find((t) => t.key === 'LATE')?.emphasis).toBe(true)
-    expect(picked.find((t) => t.key === 'NORMAL')?.emphasis).toBe(false)
-    expect(picked.find((t) => t.key === TOTAL_KEY)?.emphasis).toBe(false)
-    expect(tiles().find((t) => t.key === TOTAL_KEY)?.emphasis).toBe(true)
+    expect(picked.find((t) => t.key === 'LATE')?.selected).toBe(true)
+    expect(picked.find((t) => t.key === 'NORMAL')?.selected).toBe(false)
+    expect(picked.find((t) => t.key === TOTAL_KEY)?.selected).toBe(false)
+    expect(tiles().find((t) => t.key === TOTAL_KEY)?.selected).toBe(true)
   })
 })
 

@@ -12,12 +12,12 @@ import {
   Input,
   PageHeader,
   PanelCard,
+  StatStrip,
   Tabs,
   TextAction,
   type Column,
 } from '@ynarcher/ui'
 import { Section, Spec } from '@/lib/Spec'
-import { StatStrip } from '@/components/StatStrip'
 
 interface Row {
   id: string
@@ -82,7 +82,8 @@ const COLUMNS: Column<Row>[] = [
 ]
 
 const TILES = [
-  { key: 'all', label: '전체', value: '128', unit: '개사', emphasis: true },
+  // 켜진 칸 = 지금 목록을 좁히고 있는 조건. 상자를 걷어냈으므로 선택은 옅은 브랜드 면으로 말한다.
+  { key: 'all', label: '전체', value: '128', unit: '개사', selected: true },
   { key: 'found', label: '발굴', value: '61', unit: '개사', delta: 4 },
   { key: 'care', label: '보육', value: '43', unit: '개사', delta: 0 },
   { key: 'inv', label: '투자', value: '24', unit: '개사', delta: -1 },

@@ -1,21 +1,14 @@
 import {
-  PanelCard,
+  CardShell,
   Skeleton,
+  StatStrip,
   TextAction,
-  badgeToneFill,
-  badgeToneText,
   cn,
-  type BadgeTone,
+  type StripTile,
 } from '@ynarcher/ui'
-import { ChevronRight, type LucideIcon } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { Fragment } from 'react'
-import {
-  PROGRAM_STATUS_ICON,
-  PROGRAM_STATUS_LABEL,
-  PROGRAM_STATUS_TONE,
-  PROGRAM_UNKNOWN_STATUS_ICON,
-  programFlowGroups,
-} from '@/features/program/config'
+import { PROGRAM_STATUS_LABEL, programFlowGroups } from '@/features/program/config'
 import {
   useProgramStatusCounts,
   type ProgramFilters as Filters,
@@ -41,10 +34,6 @@ interface FlowStep {
   label: string
   count: number
   status: string | null
-  /** 상태 배지와 같은 톤. 막대·아이콘 색이 목록의 상태 배지와 어긋나지 않게 한다. */
-  tone: BadgeTone
-  /** 그 단계에서 무엇을 하는지 형태로 말하는 글리프(config.ts가 소유). */
-  icon: LucideIcon
 }
 
 /** 한 묶음(제안 단계 · 운영 단계). 주 경로 `steps` 뒤에 점선으로 갈린 `exits`가 붙는다. */
@@ -98,8 +87,6 @@ export function ProgramPipeline({
     label: PROGRAM_STATUS_LABEL[status] ?? status,
     count: countOf(status),
     status,
-    tone: PROGRAM_STATUS_TONE[status] ?? 'neutral',
-    icon: PROGRAM_STATUS_ICON[status] ?? PROGRAM_UNKNOWN_STATUS_ICON,
   })
 
   const groups: FlowGroup[] = programFlowGroups(config.hasProposalStage).map((g) => ({
@@ -117,70 +104,69 @@ export function ProgramPipeline({
               label: '수명주기 밖',
               count: data.other,
               status: null,
-              tone: 'neutral' as const,
-              icon: PROGRAM_UNKNOWN_STATUS_ICON,
             },
           ]
         : []),
     ],
   }))
 
-  // 막대 기준선은 전체가 아니라 주 경로에서 가장 많은 단계다. 전체로 나누면 여러 단계로 흩어진
-  // 막대가 모두 짧아져 어디에 몰렸는지 보이지 않는다 — 이 막대가 답할 것은 비율이 아니라 편중이다.
-  const peak = Math.max(1, ...groups.flatMap((g) => g.steps.map((s) => s.count)))
+  /**
+   * 칸 하나 — 공용 지표 띠의 칸 규격을 그대로 쓴다(2026-08-20).
+   *
+   * 한때 이 카드만 단계마다 테두리 상자에 아이콘과 편중 막대를 얹은 자체 타일을 썼다. 지표를
+   * 상자에 가두면 비교가 아니라 열거로 읽히고, 아이콘과 막대는 라벨과 건수가 이미 하는 말을
+   * 형태로 한 번 더 하는 것이었다. 흐름을 말하는 것(화살표·이탈 점선)만 남기고 지표를 그리는
+   * 일은 규격에 넘긴다.
+   */
+  const tileOf = ({ label, count, status }: FlowStep): StripTile => ({
+    key: status ?? label,
+    label,
+    value: `${count}`,
+    unit: '건',
+    selected: status !== null && selectedStatuses.includes(status),
+    onClick: status ? () => onToggleStatus(status) : undefined,
+  })
 
-  /** 칸 하나. 주 경로와 이탈이 같은 규격을 공유해야 한 줄에서 높이가 어긋나지 않는다. */
-  const tile = ({ label, count, status, tone, icon }: FlowStep, exit = false) => (
-    <StepTile
-      label={label}
-      count={count}
-      tone={tone}
-      icon={icon}
-      share={Math.min(1, count / peak)}
-      total={data.total}
-      noun={config.entityNoun}
-      exit={exit}
-      active={status !== null && selectedStatuses.includes(status)}
-      onClick={status ? () => onToggleStatus(status) : undefined}
-    />
+  /** 한 칸을 감싼 지표 띠. 칸 사이를 잇는 것이 세로선이 아니라 화살표라 칸마다 따로 세운다. */
+  const strip = (step: FlowStep) => (
+    <StatStrip tiles={[tileOf(step)]} className="min-w-0 flex-1" />
   )
 
   return (
-    <PanelCard
-      title="진행 현황"
-      count={data.total}
-      action={
-        selectedStatuses.length > 0 ? (
-          <TextAction onClick={onClearStatuses}>단계 선택 해제</TextAction>
-        ) : null
-      }
-    >
+    <CardShell>
       {/* 묶음 라벨. 아래 단계 줄과 같은 flex 비율을 써서 열이 정확히 겹친다.
-          묶음이 하나뿐이면(제안 단계를 쓰지 않는 워크스페이스) 라벨 줄을 아예 그리지 않는다 —
-          가를 대상이 없는 구분선은 카드 제목이 이미 한 말을 한 번 더 하는 것뿐이다. */}
-      {groups.length > 1 && (
-        <div className="flex gap-1.5">
-          {groups.map((group, gi) => (
-            <Fragment key={group.key}>
-              {gi > 0 && <span className="size-4 shrink-0" aria-hidden />}
-              <div
-                className="flex min-w-0 flex-1 items-center gap-2"
-                style={{ flexGrow: group.steps.length + group.exits.length }}
-              >
-                {/* 묶음 라벨은 자기가 이끄는 칸 라벨(gray-700)보다 연해지지 않아야 한다 —
-                    연하면 어디가 묶음의 시작인지 알려주지 못한다. */}
-                <span className="shrink-0 text-caption font-medium text-gray-800">
-                  {group.label}
-                </span>
-                <span className="flex-1 border-t border-gray-200" aria-hidden />
-              </div>
-            </Fragment>
-          ))}
+          묶음이 하나뿐이면(제안 단계를 쓰지 않는 워크스페이스) 라벨을 그리지 않지만,
+          단계를 고른 동안에는 해제 손잡이를 둘 자리가 필요하므로 줄 자체는 남긴다. */}
+      {(groups.length > 1 || selectedStatuses.length > 0) && (
+        <div className="mb-1.5 flex items-center gap-1.5">
+          {groups.length > 1 &&
+            groups.map((group, gi) => (
+              <Fragment key={group.key}>
+                {gi > 0 && <span className="size-4 shrink-0" aria-hidden />}
+                <div
+                  className="flex min-w-0 flex-1 items-center gap-2"
+                  style={{ flexGrow: group.steps.length + group.exits.length }}
+                >
+                  {/* 묶음 라벨은 자기가 이끄는 칸 라벨(gray-600)보다 연해지지 않아야 한다 —
+                      연하면 어디가 묶음의 시작인지 알려주지 못한다. */}
+                  <span className="shrink-0 text-caption font-medium text-gray-800">
+                    {group.label}
+                  </span>
+                  <span className="flex-1 border-t border-gray-200" aria-hidden />
+                </div>
+              </Fragment>
+            ))}
+          {/* 카드 제목을 걷어냈으므로 해제 손잡이는 이 줄의 오른쪽 끝에 선다. */}
+          {selectedStatuses.length > 0 && (
+            <span className={cn('shrink-0', groups.length === 1 && 'ml-auto')}>
+              <TextAction onClick={onClearStatuses}>단계 선택 해제</TextAction>
+            </span>
+          )}
         </div>
       )}
 
       {/* 단계 줄 — 주 경로는 화살표로 잇고, 그 단계의 이탈은 점선 경계 뒤에 나란히 세운다. */}
-      <div className={cn('flex items-stretch gap-1.5', groups.length > 1 && 'mt-1.5')}>
+      <div className="flex items-stretch gap-1.5">
         {groups.map((group, gi) => (
           <Fragment key={group.key}>
             {gi > 0 && <FlowArrow />}
@@ -191,18 +177,18 @@ export function ProgramPipeline({
               {group.steps.map((step, si) => (
                 <Fragment key={step.key}>
                   {si > 0 && <FlowArrow />}
-                  {tile(step)}
+                  {strip(step)}
                 </Fragment>
               ))}
               {group.exits.length > 0 && <ExitDivider />}
               {group.exits.map((step) => (
-                <Fragment key={step.key}>{tile(step, true)}</Fragment>
+                <Fragment key={step.key}>{strip(step)}</Fragment>
               ))}
             </div>
           </Fragment>
         ))}
       </div>
-    </PanelCard>
+    </CardShell>
   )
 }
 
@@ -224,102 +210,3 @@ function ExitDivider() {
   )
 }
 
-interface StepTileProps {
-  label: string
-  count: number
-  /** 목록 상태 배지와 같은 톤. 막대·아이콘 색의 근거. */
-  tone: BadgeTone
-  /** 라벨 앞에 서는 단계 글리프. */
-  icon: LucideIcon
-  /** 최다 단계 대비 비율(0~1). 막대 길이의 근거. */
-  share: number
-  total: number
-  noun: string
-  /** 주 경로 밖(이탈) 여부. 테두리를 점선으로 바꾸고 한 단계 물러나게 한다. */
-  exit: boolean
-  active: boolean
-  /** 미지정이면 토글할 수 없는 표시 전용 칸이다. */
-  onClick?: () => void
-}
-
-/**
- * 단계 타일 — 라벨(위) · 건수(아래) · 편중 막대. 상태 타일(StatTileGrid)과 같은 글자 위계를
- * 따르되, 선택 상태와 편중 막대가 더해져 별도 컴포넌트로 둔다.
- * 이탈 타일도 같은 규격을 쓴다 — 한 줄에 나란히 서므로 높이가 어긋나면 안 된다.
- */
-function StepTile({
-  label,
-  count,
-  tone,
-  icon: Icon,
-  share,
-  total,
-  noun,
-  exit,
-  active,
-  onClick,
-}: StepTileProps) {
-  const percent = total > 0 ? Math.round((count / total) * 100) : 0
-  return (
-    <button
-      type="button"
-      disabled={!onClick}
-      onClick={onClick}
-      aria-pressed={onClick ? active : undefined}
-      title={`${label} ${count}건 · 전체 ${noun}의 ${percent}%`}
-      className={cn(
-        'min-w-0 flex-1 rounded-radius-md border px-2.5 py-2 text-left transition-colors duration-fast',
-        exit && 'border-dashed',
-        active
-          ? 'border-brand bg-brand-25'
-          : exit
-            ? 'border-gray-300 bg-gray-25'
-            : 'border-gray-300 bg-white',
-        onClick && !active && 'hover:border-gray-400 hover:bg-gray-50',
-        !onClick && 'cursor-default',
-      )}
-    >
-      {/* 주 경로는 라벨·건수를 모두 진하게 세운다 — 0건이라고 흐려 두면 흐름 전체가 회색으로
-          가라앉아 '빈 단계'가 아니라 '읽을 것 없음'으로 보인다. 비어 있음은 아래 막대가 답한다.
-          이탈만 한 단계 물러난다(점선 테두리와 함께 주 경로 밖임을 색으로도 말한다). */}
-      {/* 아이콘은 라벨과 한 이름표로 읽히도록 같은 줄에 붙인다 — 줄을 따로 주면 칸이 세 층에서
-          네 층이 되어 일곱 칸이 나란히 선 줄 전체가 높아진다.
-          색은 언제나 상태 톤이다(목록 배지·아래 막대와 같은 표). 0건이어도, 이탈이어도,
-          선택 중이어도 바꾸지 않는다 — 아이콘이 답하는 것은 '지금 어떤 상태인가'(정체성)이지
-          '지금 어떤 처지인가'(비어 있음·물러남·선택됨)가 아니다. 후자는 건수·테두리·배경이
-          이미 각자 말하고 있어서, 아이콘까지 거기 끌려가면 색이 상태를 가리키지 못한다. */}
-      <p
-        className={cn(
-          'flex items-center gap-1 text-caption',
-          active ? 'text-brand-700' : exit ? 'text-gray-500' : 'text-gray-700',
-        )}
-      >
-        <Icon className={cn('size-3.5 shrink-0', badgeToneText[tone])} aria-hidden />
-        <span className="truncate">{label}</span>
-      </p>
-      <p
-        className={cn(
-          'text-title-sm font-bold tabular-nums',
-          exit ? (count > 0 ? 'text-gray-500' : 'text-gray-400') : 'text-gray-900',
-        )}
-      >
-        {count}
-        {/* 단위는 크기를 낮추지 않고 굵기·색으로만 물린다 — 한 줄 안에서 크기를 가르면
-            숫자와 단위가 서로 다른 층으로 읽혀 기준선이 어긋난다. */}
-        <span className={cn('ml-0.5 font-normal', exit ? 'text-gray-400' : 'text-gray-500')}>
-          건
-        </span>
-      </p>
-      {/* 편중 막대. 색은 목록 상태 배지와 같은 톤을 쓴다 — 같은 상태가 두 색으로 보이면
-          목록과 이 카드를 오갈 때 매번 다시 짝을 지어야 한다.
-          선택 중이라도 톤을 브랜드색으로 덮지 않는다(선택은 테두리·배경이 이미 말한다).
-          0건은 트랙만 남겨 '비어 있음'을 자리로 보여 준다. */}
-      <span className="mt-1.5 block h-1 w-full overflow-hidden rounded-full bg-gray-100">
-        <span
-          className={cn('block h-full rounded-full', badgeToneFill[tone])}
-          style={{ width: `${Math.round(share * 100)}%` }}
-        />
-      </span>
-    </button>
-  )
-}
