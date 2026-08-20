@@ -67,8 +67,8 @@
   }
 
   body {
-    /* 전체 화면 기본 바탕(gray.50) + 기본 본문(body/gray.900) + 프리텐다드 */
-    @apply bg-gray-50 font-sans text-body text-gray-900;
+    /* 페이지 바탕은 팔레트(gray)가 아니라 전용 역할 토큰(page)이 칠한다. 근거: 4_color §2.1 */
+    @apply bg-page font-sans text-body text-gray-900;
     /* 한글 조판 표준: 단어 단위 줄바꿈 + 레이아웃 침범 방지 */
     word-break: keep-all;
     overflow-wrap: break-word;

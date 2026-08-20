@@ -58,7 +58,7 @@ export function StartupShareholderChart({ shareholders }: { shareholders: Shareh
             stroke="#FFFFFF"
             strokeWidth={2}
             label={({ name, value }) => `${name} ${Number(value).toFixed(1)}%`}
-            labelLine={{ stroke: '#CBD0D8' }}
+            labelLine={{ stroke: '#D9DEE5' }}
           >
             {slices.map((_, i) => (
               <Cell key={i} fill={SLICE_COLORS[i % SLICE_COLORS.length]} />

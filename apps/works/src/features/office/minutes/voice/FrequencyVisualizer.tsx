@@ -7,8 +7,8 @@ interface Props {
   active: boolean
 }
 
-/** 브랜드 네이비(brand.DEFAULT). 막대 그라디언트 상단/하단에 사용. */
-const BAR_TOP = '#1F3A5F'
+/** 브랜드 인디고(brand.DEFAULT). 막대 그라디언트 상단/하단에 사용. */
+const BAR_TOP = '#2E5CB8'
 const BAR_BOTTOM = '#6E7683'
 
 /**
