@@ -27,6 +27,7 @@ import {
   stockErrorMessage,
   useActiveCheckouts,
   useCreateCheckout,
+  useAssetBranchIds,
   usePortableAssets,
   usePortableAssetBranch,
   useStartDueCheckouts,
@@ -42,8 +43,8 @@ const PAGE_SIZE = 30
  * OFFICE 반출대장 — 지사 탭 → 반출 가능 물품 표 → 물품 모달(사진·설명 + 반출/반납).
  * 기획: docs_planning/3_1_2_office_asset_checkout.md
  *
- * 회의실 예약과 같은 구조다: 지점 탭 위에 빌릴 수 있는 것들을 늘어놓고, 하나를 열어 그 안에서
- * 잡거나 놓는다. 다른 것은 빌리는 대상이 공간이 아니라 물건이라는 점, 그래서 끝이 저절로
+ * 회의실 예약과 같은 구조다: 지사 탭 위에 빌릴 수 있는 것들을 늘어놓고, 하나를 열어 그 안에서
+ * 잡거나 놓는다. 탭 목록도 같은 규칙을 쓴다 — 빌릴 것이 한 점도 없는 지사는 탭에 세우지 않는다. 다른 것은 빌리는 대상이 공간이 아니라 물건이라는 점, 그래서 끝이 저절로
  * 오지 않고 누군가 '반납하기'를 눌러야 비워진다는 점뿐이다.
  *
  * 이 컴포넌트는 목록의 상태(지사·검색·상태 필터·페이지·열린 물품)만 소유한다. 물품의 지금
@@ -70,7 +71,14 @@ export function CheckoutWorkspace({ initialAssetId }: { initialAssetId?: string 
 
   const { data: employees } = useEmployees()
   const branchesQuery = useBranches()
-  const branches = useMemo(() => branchesQuery.data ?? [], [branchesQuery.data])
+  const withAssetsQuery = useAssetBranchIds()
+  // 반출 가능 물품이 있는 지사만 탭에 세운다(집합이 오기 전에는 탭을 그리지 않는다 —
+  // 전체 지사를 먼저 보였다가 줄이면 눌러 둔 탭이 사라진다).
+  const branches = useMemo(() => {
+    const withAssets = withAssetsQuery.data
+    if (!withAssets) return []
+    return (branchesQuery.data ?? []).filter((b) => withAssets.has(b.id))
+  }, [branchesQuery.data, withAssetsQuery.data])
 
   const assetsQuery = usePortableAssets(branchId || undefined)
   const assets = useMemo(() => assetsQuery.data ?? [], [assetsQuery.data])
@@ -246,7 +254,7 @@ export function CheckoutWorkspace({ initialAssetId }: { initialAssetId?: string 
     }
   }
 
-  if (branchesQuery.isLoading) {
+  if (branchesQuery.isLoading || withAssetsQuery.isLoading) {
     return (
       <div className="flex justify-center py-10">
         <Spinner />
@@ -260,7 +268,7 @@ export function CheckoutWorkspace({ initialAssetId }: { initialAssetId?: string 
 
       {branches.length === 0 ? (
         <Banner tone="warning">
-          지사가 없어 반출할 물품을 찾을 수 없습니다. 관리자에게 문의하세요.
+          반출할 수 있는 물품이 등록된 지사가 없습니다. 관리자에게 문의하세요.
         </Banner>
       ) : (
         <>

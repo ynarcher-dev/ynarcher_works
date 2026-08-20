@@ -157,6 +157,26 @@ export function usePortableAssetBranch(assetId: string | undefined) {
 }
 
 /**
+ * 반출 가능 자산이 한 점이라도 있는 지사 id 집합.
+ * 지사 탭은 지사 전체가 아니라 이 집합으로 거른다 — 빌릴 것이 없는 탭을 열어 두면 빈손으로
+ * 도착하고, 지사가 늘어날수록 그런 탭만 늘어난다(회의실 예약의 useRoomBranchIds와 같은 규칙).
+ */
+export function useAssetBranchIds() {
+  return useQuery({
+    queryKey: ['office', 'portable-asset-branch-ids'],
+    queryFn: async (): Promise<Set<string>> => {
+      const { data, error } = await supabase.from('portable_assets').select('branch_id')
+      if (error) throw error
+      return new Set(
+        ((data ?? []) as { branch_id: string | null }[])
+          .map((r) => r.branch_id)
+          .filter((id): id is string => Boolean(id)),
+      )
+    },
+  })
+}
+
+/**
  * 지사의 반출 가능 자산. `assets`가 아니라 뷰를 읽는다 — 원장은 MANAGEMENT 권한자만 볼 수
  * 있고, 반출대장은 임직원 전원이 쓰는 화면이기 때문이다.
  *
