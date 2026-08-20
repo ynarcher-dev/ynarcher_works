@@ -17,7 +17,7 @@ export interface StartupPoolRow {
   representative?: string | null
   /** 사업자등록번호(startups.biz_reg_no). */
   biz_reg_no?: string | null
-  /** 설립일(startups.founded_on) — 목록에는 연도만 표시. */
+  /** 설립일(startups.founded_on) — 목록도 상세와 같이 설립일+경과(formatFounded)로 표시. */
   founded_on?: string | null
   /** 분야(startups.industry). SSOT는 industries(배열)이며, 목록은 readIndustries로 읽는다. */
   industry?: string | null
@@ -96,45 +96,47 @@ export function StartupPoolTable({
       {
         key: 'name',
         header: '기업명',
-        className: 'w-36 font-semibold',
+        type: 'name',
         render: (r) => r.name ?? '-',
       },
       {
         key: 'representative',
         header: '대표자명',
-        className: 'w-24',
+        type: 'person',
         render: (r) => externalName(r.representative) || '-',
       },
       {
+        // 사업자등록번호는 폭이 일정한 코드지만 전용 종류가 없어 짧은 라벨(text)로 둔다.
         key: 'biz_reg_no',
         header: '사업자등록번호',
-        className: 'w-32',
+        type: 'text',
         render: (r) => r.biz_reg_no || <span className="text-gray-400">-</span>,
       },
       {
         // 상세페이지와 동일하게 설립일 + 만 나이(formatFounded)로 표기한다.
+        // 종류는 date — 경과 표기만큼 계산 폭보다 길어지지만, 자동 레이아웃이 열을 늘려 다 보여준다.
         key: 'founded_on',
         header: '설립일',
-        className: 'w-44',
+        type: 'date',
         render: (r) => (r.founded_on ? formatFounded(r.founded_on) : <span className="text-gray-400">-</span>),
       },
       {
         // 소재지는 시·도 태그명 한 덩어리(짧고 값이 항상 하나)라 폭이 널뛰는 분야 뱃지 앞에 둔다.
         key: 'location',
         header: '소재지',
-        className: 'w-24',
+        type: 'text',
         render: (r) => r.location || <span className="text-gray-400">-</span>,
       },
       {
+        // 분야는 뱃지가 최대 3개 나열되는 가변 폭 열이라 badge(한 개 고정폭)가 아니라 long이다.
         key: 'industry',
         header: '분야',
-        className: 'w-52',
+        type: 'long',
         render: (r) => {
           const inds = readIndustries(r).slice(0, 3)
           if (inds.length === 0) return <span className="text-gray-400">-</span>
-          // 셀의 text-center는 flex 자식에 먹지 않으므로 justify-center로 직접 모은다.
           return (
-            <div className="flex flex-wrap justify-center gap-1">
+            <div className="flex flex-wrap gap-1">
               {inds.map((ind) => (
                 <Badge key={ind} tone="neutral">
                   {ind}
@@ -147,13 +149,13 @@ export function StartupPoolTable({
       {
         key: 'stage',
         header: '단계',
-        className: 'w-24',
+        type: 'text',
         render: (r) => r.stage || <span className="text-gray-400">-</span>,
       },
       {
         key: 'management_status',
         header: '구분',
-        className: 'w-24',
+        type: 'text',
         render: (r) =>
           managementStatusLabel(r.management_status) || <span className="text-gray-400">-</span>,
       },
@@ -162,7 +164,7 @@ export function StartupPoolTable({
         // 비투자 탭에서는 '-'로 비며, 그 빈칸이 "아직 투자 전"이라는 정보 자체다.
         key: 'pool_status',
         header: '관리현황',
-        className: 'w-24',
+        type: 'text',
         render: (r) => r.pool_status || <span className="text-gray-400">-</span>,
       },
       {
@@ -170,7 +172,7 @@ export function StartupPoolTable({
         // 지정 담당자가 없어도 생성자로 폴백하지 않는다 — 두 축은 별개이고 생성자는 권한이 없다.
         key: 'managers',
         header: '담당자',
-        className: 'w-28',
+        type: 'person',
         render: (r) => {
           if (isInvested(r.management_status)) {
             // 담당자는 내부 임직원이라 마스킹하지 않는다.
@@ -192,8 +194,9 @@ export function StartupPoolTable({
       columns={columns}
       rows={rows}
       rowKey={(r) => r.id}
-      layout="fixed"
-      selectable
+      // 폭·정렬은 열마다의 type이 정하고(수동 w-* 없음), 레이아웃은 기본(auto)이라
+      // 계산 폭보다 긴 값(설립일 경과 등)은 열이 늘어나 다 보인다.
+      // selectable은 자리 기본값(페이지에 바로 놓인 표 = 켬)을 그대로 따른다.
       selectedKeys={selectedKeys}
       onSelectionChange={onSelectionChange}
       onRowClick={onRowClick}
