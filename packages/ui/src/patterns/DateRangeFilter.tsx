@@ -40,9 +40,8 @@ interface DateBoxProps {
 function DateBox({ value, label, onChange, density }: DateBoxProps) {
   const d = useDensity(density)
   return (
-    // 글자 크기는 겉 상자가 갖고 라벨은 물려받는다. 라벨에 크기와 색을 함께 주면
-    // twMerge가 `text-body`(크기 토큰)와 `text-gray-400`(색)을 같은 자리로 보고 뒤엣것만
-    // 남겨, 라벨이 다른 필터 칩보다 진해진다.
+    // 글자 크기는 겉 상자가 갖고 겹쳐 그린 라벨은 물려받는다 — 입력과 라벨이 같은 자리에
+    // 겹치므로 크기가 한 곳에서만 정해져야 두 글자가 정확히 포개진다.
     <div className={cn('group relative w-40', controlScale[d].text)}>
       <Input
         type="date"

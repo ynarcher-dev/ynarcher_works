@@ -44,7 +44,9 @@ export function Pagination({
 
   return (
     <nav
-      className={cn('relative flex items-center justify-center gap-1.5 text-caption font-semibold py-4 w-full', className)}
+      // 페이저는 한 줄짜리 컨트롤 묶음이라 글자 크기를 하나로 둔다 — 건수·'페이지 이동' 라벨이
+      // 번호 버튼·이동 입력과 다른 단계에 서면 같은 줄 안에서 크기가 갈린다(위계는 굵기·색이 만든다).
+      className={cn('relative flex w-full items-center justify-center gap-1.5 py-4 font-semibold', s.text, className)}
       aria-label="페이지네이션"
     >
       {/* 좌측 부가 정보(필터 반영 수 / 전체 수 등) */}
