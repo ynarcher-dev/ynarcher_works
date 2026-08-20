@@ -275,6 +275,36 @@ export const spinnerScale: Record<Density, string> = {
   table: 'size-4',
 }
 
+/**
+ * 폼 필드 글자 위계 — 입력 위 라벨과 그 아래 도움말·오류의 규격.
+ *
+ * 카드의 `cardText`, 표의 `tableText`와 같은 자리의 매핑이다. 이 표가 생기기 전에는 폼 라벨의
+ * 소유자가 없어 화면마다 손으로 썼고, works 전체에 **네 가지 규격**이 난립했다
+ * (`text-body font-medium text-gray-800` 36곳 / `text-caption font-semibold text-gray-600` 11곳 /
+ * `text-caption font-medium text-gray-700` 7곳 / `text-caption text-gray-600` 5곳). 같은 모달
+ * 안에서도 위에 선 필드와 아래 필드의 라벨이 다른 크기였다.
+ *
+ * 라벨을 본문(14px)·`gray-900`에 세우는 근거는 정본이다 — 3_typography_rules.md §4가 폼 레이블을
+ * 페이지 타이틀·표 본문과 같은 Primary Text 단계로 규정한다. 라벨은 값을 읽기 전에 **무엇을
+ * 묻는지**를 알려주는 자리이므로, 카드의 `label`(gray-500 — 값이 주인공이고 라벨은 이름표)과
+ * 달리 물러나지 않는다.
+ *
+ * 도움말·오류만 캡션(12px)으로 내려가는 것은 라벨·컨트롤과 **다른 줄**에 서기 때문이다.
+ * "한 줄 안에서 크기를 갈라 위계를 만들지 않는다"는 같은 줄에 대한 원칙이고, 줄이 갈리면 크기로
+ * 층을 만드는 편이 읽기 쉽다. 도움말 색(gray-600)도 정본이 '폼 필드 입력 힌트 안내문'에 지정한
+ * Secondary Text 단계를 그대로 쓴다.
+ */
+export const formText = {
+  /** 입력 위 라벨. */
+  label: 'text-body font-medium text-gray-900',
+  /** 필수 표식(`*`). 라벨 뒤에 붙는다. */
+  required: 'text-danger',
+  /** 라벨·컨트롤 아래 도움말 한 줄. */
+  hint: 'text-caption text-gray-600',
+  /** 검증 실패 안내. 도움말과 같은 크기에서 색만 갈린다. */
+  error: 'text-caption text-danger',
+} as const
+
 /** 폼 컨트롤 4상태(기본·호버·포커스·비활성) 공통 외형. 밀도와 무관하다. */
 export const formBaseClass =
   'w-full rounded-radius-md border bg-white border-gray-300 text-gray-900 shadow-soft transition-all duration-fast ' +

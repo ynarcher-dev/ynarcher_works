@@ -14,7 +14,7 @@ export { DensityProvider, useDensity, byDensity } from './density'
 export type { Density } from './density'
 // 글자 위계 규격 — 앱이 카드·표 안에서 같은 규격을 재선언하지 않도록 열어 둔다.
 // 치수 스케일(controlScale 등)은 컴포넌트가 쓰는 내부 매핑이므로 계속 닫아 둔다.
-export { cardText, tableText } from './densityScale'
+export { cardText, tableText, formText } from './densityScale'
 // 열 폭 스케일 — 컬럼 정의(화면 코드)가 직접 고르는 값이라 열어 둔다.
 // 폭을 감으로 붙이지 않게 하는 것이 목적이므로 `w-24` 같은 원시 값을 대신 쓰지 않는다.
 export { columnWidth } from './densityScale'
@@ -29,6 +29,8 @@ export { Input } from './components/Input'
 export type { InputProps } from './components/Input'
 export { TextArea } from './components/TextArea'
 export type { TextAreaProps } from './components/TextArea'
+export { Field } from './components/Field'
+export type { FieldProps } from './components/Field'
 export { Select } from './components/Select'
 export type { SelectProps } from './components/Select'
 export { Checkbox } from './components/Checkbox'
