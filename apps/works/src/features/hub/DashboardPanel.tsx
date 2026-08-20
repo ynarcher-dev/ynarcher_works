@@ -1,4 +1,4 @@
-import { Badge, Card } from '@ynarcher/ui'
+import { Badge, Card, cardText } from '@ynarcher/ui'
 import { PersonalPanel } from '@/features/hub/dashboard/PersonalPanel'
 
 /**
@@ -17,7 +17,7 @@ export function NewBadge() {
 function DashboardSlot({ title }: { title: string }) {
   return (
     <Card title={title} bodyClassName="min-h-40">
-      <p className="text-caption text-gray-400">준비 중입니다.</p>
+      <p className={cardText.subtitle}>준비 중입니다.</p>
     </Card>
   )
 }

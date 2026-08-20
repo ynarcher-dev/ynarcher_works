@@ -1,4 +1,4 @@
-import { BackButton, Button, Input } from '@ynarcher/ui'
+import { BackButton, Button, Input, SegmentedToggle, cn, formText } from '@ynarcher/ui'
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { RichTextEditor } from '@/components/RichTextEditor'
@@ -142,24 +142,13 @@ export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
 
           {/* 공개범위: 세그먼트 토글(각 버튼이 스스로를 설명하므로 별도 라벨을 두지 않는다). */}
           <div>
-            <div className="flex overflow-hidden rounded-radius-md border border-gray-300">
-              {VISIBILITY_OPTS.map((o) => (
-                <button
-                  key={o.value}
-                  type="button"
-                  onClick={() => setVisibility(o.value)}
-                  className={
-                    'flex-1 px-3 py-1.5 text-body transition-colors duration-fast ' +
-                    (visibility === o.value
-                      ? 'bg-brand text-white'
-                      : 'bg-white text-gray-600 hover:bg-gray-50')
-                  }
-                >
-                  {o.label}
-                </button>
-              ))}
-            </div>
-            {activeHelp && <p className="mt-1 text-caption text-gray-500">{activeHelp}</p>}
+            <SegmentedToggle
+              label="공개범위"
+              options={VISIBILITY_OPTS.map((o) => ({ key: o.value, label: o.label }))}
+              value={visibility}
+              onChange={setVisibility}
+            />
+            {activeHelp && <p className={cn('mt-1', formText.hint)}>{activeHelp}</p>}
           </div>
 
           <InternalPersonPicker
@@ -220,7 +209,7 @@ export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
       </div>
 
       {save.isError && (
-        <p className="text-caption text-danger">
+        <p className={formText.error}>
           {save.error instanceof Error ? save.error.message : '저장에 실패했습니다.'}
         </p>
       )}

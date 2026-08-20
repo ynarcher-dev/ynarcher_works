@@ -1,4 +1,4 @@
-import { DataTable, type Column } from '@ynarcher/ui'
+import { DataTable, EmptyValue, cn, tableText, type Column } from '@ynarcher/ui'
 import { Paperclip } from 'lucide-react'
 import { useState } from 'react'
 import { isNewPost } from '@/features/hub/boardData'
@@ -41,7 +41,7 @@ export function MinutesTable({
       // 진입은 행 전체 클릭(onRowClick)이 담당하므로 제목은 텍스트만 렌더한다.
       render: (m) => (
         <span className="flex min-w-0 items-center gap-1.5">
-          <span className="truncate text-gray-800">{m.title}</span>
+          <span className="truncate">{m.title}</span>
           {isNewPost(m.createdAt) && <NewBadge />}
         </span>
       ),
@@ -57,7 +57,7 @@ export function MinutesTable({
       render: (m) => (
         <span
           className={
-            m.visibility === 'PARTICIPANTS' ? 'font-medium text-danger-700' : 'text-gray-600'
+            m.visibility === 'PARTICIPANTS' ? 'font-medium text-danger-700' : undefined
           }
         >
           {MINUTE_VISIBILITY_LABEL[m.visibility]}
@@ -85,7 +85,7 @@ export function MinutesTable({
       header: '조회',
       type: 'count',
       align: 'center',
-      render: (m) => <span className="tabular-nums text-gray-600">{m.viewCount.toLocaleString()}</span>,
+      render: (m) => <span className={cn('tabular-nums', tableText.meta)}>{m.viewCount.toLocaleString()}</span>,
     },
     {
       // 작성자는 게시판류와 같이 가운데로 모은다(person 기본 좌측을 덮는 예외).
@@ -93,13 +93,15 @@ export function MinutesTable({
       header: '작성자',
       type: 'person',
       align: 'center',
-      render: (m) => <span className="text-gray-600">{m.authorName ?? '-'}</span>,
+      render: (m) =>
+        m.authorName ? <span className={tableText.meta}>{m.authorName}</span> : <EmptyValue />,
     },
     {
       key: 'meetingDate',
       header: '회의일',
       type: 'date',
-      render: (m) => <span className="tabular-nums text-gray-600">{m.meetingDate ?? '-'}</span>,
+      render: (m) =>
+        m.meetingDate ? <span className="tabular-nums">{m.meetingDate}</span> : <EmptyValue />,
     },
   ]
 

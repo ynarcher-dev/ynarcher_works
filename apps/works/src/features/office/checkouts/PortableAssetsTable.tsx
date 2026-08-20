@@ -143,7 +143,7 @@ export function PortableAssetsTable({
         if (!r.active) return <EmptyValue />
         const late = overdueMs(r.active, now)
         return (
-          <span className="tabular-nums text-gray-600">
+          <span className="tabular-nums">
             {formatDateTime(r.active.dueAt)}
             {late > 0 && <b className="ml-1 font-semibold text-danger">{elapsedLabel(late)}</b>}
           </span>

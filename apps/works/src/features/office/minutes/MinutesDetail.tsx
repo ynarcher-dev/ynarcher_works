@@ -1,4 +1,16 @@
-import { Badge, BackButton, Button, EmptyState } from '@ynarcher/ui'
+import {
+  Badge,
+  BackButton,
+  Button,
+  CardShell,
+  EmptyState,
+  EntityHeaderCard,
+  InfoField,
+  InfoGrid,
+  Spinner,
+  cardText,
+  cn,
+} from '@ynarcher/ui'
 import { Link } from 'react-router-dom'
 import { RichTextViewer } from '@/components/RichTextEditor'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
@@ -29,7 +41,7 @@ function TagRow({ label, names }: { label: string; names: string[] }) {
   if (names.length === 0) return null
   return (
     <div className="flex items-start gap-2">
-      <span className="w-20 shrink-0 pt-0.5 text-body text-gray-500">{label}</span>
+      <span className={cn('w-20 shrink-0 pt-0.5', cardText.label)}>{label}</span>
       <div className="flex flex-wrap gap-1.5">
         {names.map((name, i) => (
           <Badge key={`${name}-${i}`}>{name}</Badge>
@@ -44,7 +56,7 @@ function LinkRow({ links }: { links: MinuteLink[] }) {
   if (links.length === 0) return null
   return (
     <div className="flex items-start gap-2">
-      <span className="w-20 shrink-0 pt-0.5 text-body text-gray-500">연동</span>
+      <span className={cn('w-20 shrink-0 pt-0.5', cardText.label)}>연동</span>
       <div className="flex flex-wrap gap-1.5">
         {links.map((l) => {
           const kind = MINUTE_LINK_TARGETS[l.targetType].kindLabel
@@ -80,7 +92,7 @@ export function MinutesDetail({ minuteId, currentUserId, onBack, onEdit }: Props
   const { data: minute, isLoading } = useMinute(minuteId)
   const del = useDeleteMinute()
 
-  if (isLoading) return <p className="py-10 text-center text-body text-gray-400">불러오는 중…</p>
+  if (isLoading) return <Spinner />
   if (!minute) {
     return (
       <div className="space-y-4">
@@ -118,77 +130,61 @@ export function MinutesDetail({ minuteId, currentUserId, onBack, onEdit }: Props
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
         {/* 좌: 2/3 — 회의 정보 카드와 본문 카드를 별도 섹션으로 분리한다. */}
         <div className="space-y-4 lg:col-span-2">
-          {/* 회의 정보 카드: 제목·공개범위·메타 + 참석자/참조 태그 */}
-          <article className="overflow-hidden rounded-radius-lg border border-gray-300 bg-white shadow-soft">
-            <div className="space-y-4 px-6 py-5">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="min-w-0 text-title-md font-bold leading-tight text-gray-900">
-                    {minute.title}
-                  </h1>
-                  <Badge tone={minute.visibility === 'OFFICE' ? 'info' : 'neutral'}>
-                    {MINUTE_VISIBILITY_LABEL[minute.visibility]}
-                  </Badge>
-                </div>
-                {/* 메타는 상세페이지 공통 '라벨: 값' 패턴(게시판·STARTUP 정보행과 동일). */}
-                <div className="mt-3 flex flex-wrap items-baseline gap-x-5 gap-y-1">
-                  {minute.authorName && (
-                    <span className="flex items-baseline gap-2">
-                      <span className="text-body text-gray-500">작성자</span>
-                      <span className="text-body font-medium text-gray-800">{minute.authorName}</span>
-                    </span>
-                  )}
-                  {minute.meetingDate && (
-                    <span className="flex items-baseline gap-2">
-                      <span className="text-body text-gray-500">회의일</span>
-                      <span className="text-body font-medium tabular-nums text-gray-800">{minute.meetingDate}</span>
-                    </span>
-                  )}
-                  <span className="flex items-baseline gap-2">
-                    <span className="text-body text-gray-500">조회</span>
-                    <span className="text-body font-medium tabular-nums text-gray-800">
-                      {minute.viewCount.toLocaleString()}
-                    </span>
-                  </span>
-                </div>
+          {/* 회의 정보 카드: 제목·공개범위·메타 + 참석자/참조 태그.
+              상세 최상단 카드는 전 워크스페이스 공용 규격(EntityHeaderCard)을 쓰고, 메타 줄은
+              상세 공통 '라벨: 값'(InfoField)에 맡긴다 — 작성자·조회는 회의 자체가 아니라 기록을
+              다룬 흔적이라 meta 톤으로 한 단 물러난다. 회의일은 회의의 사실이므로 값 톤 그대로다. */}
+          <EntityHeaderCard
+            title={minute.title}
+            badges={
+              <Badge tone={minute.visibility === 'OFFICE' ? 'info' : 'neutral'}>
+                {MINUTE_VISIBILITY_LABEL[minute.visibility]}
+              </Badge>
+            }
+            info={
+              <InfoGrid columns={3}>
+                {minute.authorName && <InfoField label="작성자" value={minute.authorName} meta />}
+                {minute.meetingDate && <InfoField label="회의일" value={minute.meetingDate} />}
+                <InfoField label="조회" value={minute.viewCount.toLocaleString()} meta />
+              </InfoGrid>
+            }
+          >
+            {(hasPeople || minute.links.length > 0) && (
+              <div className="mt-4 space-y-2 border-t border-gray-100 pt-4">
+                <TagRow label="내부 참석자" names={attendees} />
+                <TagRow label="외부 참석자" names={minute.externalAttendees} />
+                <TagRow label="참조" names={references} />
+                <LinkRow links={minute.links} />
               </div>
-              {(hasPeople || minute.links.length > 0) && (
-                <div className="space-y-2 border-t border-gray-100 pt-4">
-                  <TagRow label="내부 참석자" names={attendees} />
-                  <TagRow label="외부 참석자" names={minute.externalAttendees} />
-                  <TagRow label="참조" names={references} />
-                  <LinkRow links={minute.links} />
-                </div>
-              )}
-              {(minute.location || minute.agenda) && (
-                <div className="space-y-2 border-t border-gray-100 pt-4">
-                  {minute.location && (
-                    <div className="flex items-start gap-2">
-                      <span className="w-20 shrink-0 pt-0.5 text-body text-gray-500">장소</span>
-                      <p className="min-w-0 text-body text-gray-800">{minute.location}</p>
-                    </div>
-                  )}
-                  {minute.agenda && (
-                    <div className="flex items-start gap-2">
-                      <span className="w-20 shrink-0 pt-0.5 text-body text-gray-500">주요 안건</span>
-                      <p className="min-w-0 whitespace-pre-line text-body text-gray-800">{minute.agenda}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </article>
+            )}
+            {(minute.location || minute.agenda) && (
+              <div className="mt-4 space-y-2 border-t border-gray-100 pt-4">
+                {minute.location && (
+                  <div className="flex items-start gap-2">
+                    <span className={cn('w-20 shrink-0 pt-0.5', cardText.label)}>장소</span>
+                    <p className={cn('min-w-0', cardText.value)}>{minute.location}</p>
+                  </div>
+                )}
+                {minute.agenda && (
+                  <div className="flex items-start gap-2">
+                    <span className={cn('w-20 shrink-0 pt-0.5', cardText.label)}>주요 안건</span>
+                    <p className={cn('min-w-0 whitespace-pre-line', cardText.value)}>
+                      {minute.agenda}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </EntityHeaderCard>
 
           {/* 본문 카드 */}
-          <article className="overflow-hidden rounded-radius-lg border border-gray-300 bg-white shadow-soft">
-            <div className="px-6 py-6">
-              {minute.body ? (
-                <RichTextViewer html={minute.body} />
-              ) : (
-                <p className="text-body text-gray-500">본문이 없습니다.</p>
-              )}
-            </div>
-          </article>
+          <CardShell>
+            {minute.body ? (
+              <RichTextViewer html={minute.body} />
+            ) : (
+              <p className={cardText.subtitle}>본문이 없습니다.</p>
+            )}
+          </CardShell>
         </div>
 
         {/* 우: 1/3 — 첨부 파일 → 음성 기록(조회 전용) → 코멘트 */}

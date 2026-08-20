@@ -1,4 +1,4 @@
-import { Button, cn, Input, Modal, Select, Spinner, useToast } from '@ynarcher/ui'
+import { Button, cn, formText, Input, Modal, Select, Spinner, useToast } from '@ynarcher/ui'
 import { Check } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { CATEGORY_OPTIONS, ENTITIES, type EntityKey } from '@/features/networks/config'
@@ -162,7 +162,7 @@ export function ExternalAttendeeSearchModal({
                                 <span className="text-gray-500"> · {h.affiliation}</span>
                               )}
                             </span>
-                            <span className="block text-caption text-gray-400">
+                            <span className="block text-caption text-gray-600">
                               {h.categoryLabel}
                             </span>
                           </span>
@@ -213,7 +213,7 @@ export function ExternalAttendeeSearchModal({
               {create.isPending ? '등록 중…' : '등록 후 추가'}
             </Button>
           </div>
-          <p className="text-caption text-gray-400">
+          <p className={formText.hint}>
             선택한 구분의 networks 원장에 새 인물로 등록되고, 회의록 참석자 명단에도 함께 담깁니다.
           </p>
         </section>

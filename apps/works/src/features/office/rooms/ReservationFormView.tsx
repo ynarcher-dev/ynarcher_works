@@ -1,4 +1,4 @@
-import { Button, Input, Select, cn } from '@ynarcher/ui'
+import { Button, Field, Input, Select, formText } from '@ynarcher/ui'
 import dayjs from 'dayjs'
 import { useMemo, useState } from 'react'
 import {
@@ -70,15 +70,13 @@ export function ReservationFormView({
 
   return (
     <div className="space-y-4">
-      <label className="block">
-        <span className="mb-1 block text-caption font-medium text-gray-600">날짜</span>
+      <Field label="날짜">
         {/* 지난 날짜는 고를 수 없다(최종 검증은 submit·서버가 한다). */}
         <Input type="date" min={today} value={date} onChange={(e) => setDate(e.target.value)} />
-      </label>
+      </Field>
 
       <div className="grid grid-cols-2 gap-3">
-        <label className="block">
-          <span className="mb-1 block text-caption font-medium text-gray-600">시작 시간</span>
+        <Field label="시작 시간">
           <Select value={start} onChange={(e) => onStartChange(e.target.value)}>
             {starts.map((t) => (
               <option key={t} value={t}>
@@ -86,9 +84,8 @@ export function ReservationFormView({
               </option>
             ))}
           </Select>
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-caption font-medium text-gray-600">종료 시간</span>
+        </Field>
+        <Field label="종료 시간">
           <Select value={end} onChange={(e) => setEnd(e.target.value)}>
             {ends.map((t) => (
               <option key={t} value={t}>
@@ -96,13 +93,13 @@ export function ReservationFormView({
               </option>
             ))}
           </Select>
-        </label>
+        </Field>
       </div>
 
       {!dayOpen && (
-        <p className={cn('text-caption text-danger')}>선택한 요일은 예약할 수 없습니다.</p>
+        <p className={formText.error}>선택한 요일은 예약할 수 없습니다.</p>
       )}
-      {err && <p className="text-caption text-danger">{err}</p>}
+      {err && <p className={formText.error}>{err}</p>}
 
       <div className="flex justify-end gap-2 pt-2">
         <Button variant="outline" onClick={onCancel} disabled={busy}>

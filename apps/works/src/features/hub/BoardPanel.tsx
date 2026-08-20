@@ -1,4 +1,4 @@
-import { DataTable, pinMark, type Column } from '@ynarcher/ui'
+import { DataTable, pinMark, tableText, type Column } from '@ynarcher/ui'
 import { Paperclip } from 'lucide-react'
 import { useState } from 'react'
 import { BOARD_PAGE_SIZE, isNewPost, type BoardPost } from '@/features/hub/boardData'
@@ -38,7 +38,7 @@ export function viewsColumn<T>(get: (row: T) => BoardPost): Column<T> {
     type: 'count',
     align: 'center',
     render: (row) => (
-      <span className="text-gray-600">{(get(row).views ?? 0).toLocaleString()}</span>
+      <span className={tableText.meta}>{(get(row).views ?? 0).toLocaleString()}</span>
     ),
   }
 }
@@ -53,7 +53,7 @@ function titleColumn(): Column<BoardPost> {
     render: (p) => (
       <span className="flex min-w-0 items-center gap-1.5">
         <PostFlagBadges post={p} showPinned={false} />
-        <span className="truncate text-gray-800">{p.title}</span>
+        <span className="truncate">{p.title}</span>
         {isNewPost(p.date) && <NewBadge />}
       </span>
     ),
@@ -106,7 +106,7 @@ export function BoardPanel({
       type: 'text',
       align: 'center',
       // 본문 셀은 DataTable 기본 text-body를 상속한다(캡션 크기를 덧씌우면 다른 열과 어긋남).
-      render: () => <span className="text-gray-600">{boardLabel}</span>,
+      render: () => boardLabel,
     })
   }
   columns.push(viewsColumn<BoardPost>((p) => p))

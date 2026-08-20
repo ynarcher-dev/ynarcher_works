@@ -1,4 +1,4 @@
-import { Button, Checkbox, Input, Modal, TagChip, TextArea, cn } from '@ynarcher/ui'
+import { Button, Checkbox, Input, Modal, SegmentedToggle, TagChip, TextArea, cn, formText } from '@ynarcher/ui'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '@/auth/authStore'
@@ -33,7 +33,7 @@ function Row({
     <>
       <span
         className={cn(
-          'text-caption font-medium text-gray-600',
+          formText.label,
           tall ? 'self-start pt-2' : 'self-center',
         )}
       >
@@ -207,23 +207,13 @@ export function EventEditorModal({
     >
       <div className="grid grid-cols-[4.5rem_1fr] items-center gap-x-4 gap-y-3">
         <Row label="구분">
-          <div className="flex gap-2">
-            {CATEGORIES.map((c) => (
-              <button
-                key={c.key}
-                type="button"
-                onClick={() => setCategory(c.key)}
-                className={cn(
-                  'flex-1 rounded-radius-md border py-1.5 text-body font-semibold transition-colors duration-fast',
-                  category === c.key
-                    ? 'border-brand bg-brand/10 text-brand'
-                    : 'border-gray-300 text-gray-600 hover:bg-gray-50',
-                )}
-              >
-                {c.label}
-              </button>
-            ))}
-          </div>
+          <SegmentedToggle
+            block
+            label="일정 구분"
+            options={CATEGORIES.map((c) => ({ key: c.key, label: c.label }))}
+            value={category}
+            onChange={setCategory}
+          />
         </Row>
 
         <Row label={category === 'WORK' ? '제목' : '제목(선택)'}>
@@ -271,7 +261,7 @@ export function EventEditorModal({
             )}
             <label className="flex items-center gap-1.5">
               <Checkbox checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
-              <span className="text-body text-gray-800">종일</span>
+              <span className="text-body text-gray-900">종일</span>
             </label>
           </div>
         </Row>
@@ -300,7 +290,7 @@ export function EventEditorModal({
         </Row>
       </div>
 
-      {err && <p className="mt-3 text-caption text-danger">{err}</p>}
+      {err && <p className={cn('mt-3', formText.error)}>{err}</p>}
     </Modal>
   )
 }

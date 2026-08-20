@@ -1,4 +1,4 @@
-import { PageHeader, Spinner } from '@ynarcher/ui'
+import { EmptyState, PageHeader, Spinner } from '@ynarcher/ui'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { ApprovalTable } from '@/features/approval/ApprovalTable'
 import { ArchiveWorkspace } from '@/features/hub/ArchiveWorkspace'
@@ -92,9 +92,7 @@ export function OfficePage() {
     return (
       <div className="space-y-5">
         <PageHeader title={placeholder} />
-        <p className="rounded border border-dashed border-gray-300 py-10 text-center text-body text-gray-500">
-          {placeholder} 화면은 준비 중입니다.
-        </p>
+        <EmptyState title={`${placeholder} 화면은 준비 중입니다`} />
       </div>
     )
   }

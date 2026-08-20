@@ -1,3 +1,4 @@
+import { cn, formText } from '@ynarcher/ui'
 import { ArrowUp, Plus } from 'lucide-react'
 import { useEffect, useRef, type KeyboardEvent } from 'react'
 
@@ -39,7 +40,7 @@ export function AiAgentComposer({
       <div className="flex items-end gap-2 rounded-radius-lg border border-gray-300 bg-white p-2 shadow-soft transition-colors focus-within:border-brand/50 focus-within:shadow-popover">
         <button
           type="button"
-          className="flex size-icon-card shrink-0 items-center justify-center rounded-radius-sm text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+          className="flex size-icon-card shrink-0 items-center justify-center rounded-radius-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800"
           aria-label="첨부"
         >
           <Plus className="h-5 w-5" strokeWidth={1.75} />
@@ -52,7 +53,7 @@ export function AiAgentComposer({
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="AI 에이전트에게 무엇이든 물어보세요"
-          className="max-h-40 flex-1 resize-none self-center border-0 bg-transparent py-1.5 text-body text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-0"
+          className="max-h-40 flex-1 resize-none self-center border-0 bg-transparent py-1.5 text-body text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-0"
         />
 
         <button
@@ -66,7 +67,7 @@ export function AiAgentComposer({
         </button>
       </div>
 
-      <p className="mt-2 text-center text-caption text-gray-600">
+      <p className={cn('mt-2 text-center', formText.hint)}>
         AI 에이전트는 미리보기 단계입니다. 답변에는 부정확한 내용이 포함될 수 있습니다.
       </p>
     </div>

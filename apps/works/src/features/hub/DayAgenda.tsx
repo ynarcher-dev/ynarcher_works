@@ -1,4 +1,4 @@
-import { Badge } from '@ynarcher/ui'
+import { Badge, cardText, cn } from '@ynarcher/ui'
 import dayjs from 'dayjs'
 import { useAuthStore } from '@/auth/authStore'
 import { parseEventMeta, type SystemEvent } from '@/features/hub/hooks'
@@ -40,8 +40,8 @@ function UserRow({
     <>
       <div className="flex items-center gap-2">
         <span className={`size-2 shrink-0 rounded-full ${dotColor[toneOf(ev.event_type)]}`} />
-        <span className="flex-1 truncate text-body text-gray-800">{ev.title}</span>
-        <span className="shrink-0 tabular-nums text-caption text-gray-600">
+        <span className={cn('flex-1 truncate', cardText.value)}>{ev.title}</span>
+        <span className={cn('shrink-0 tabular-nums', cardText.meta)}>
           {timeText(ev, meta.allDay)}
         </span>
       </div>
@@ -50,7 +50,7 @@ function UserRow({
           동행 {meta.companions.map((c) => c.name).join(', ')}
         </p>
       )}
-      {meta.memo && <p className="ml-4 mt-0.5 truncate text-caption text-gray-400">{meta.memo}</p>}
+      {meta.memo && <p className="ml-4 mt-0.5 truncate text-caption text-gray-500">{meta.memo}</p>}
     </>
   )
 
@@ -76,8 +76,8 @@ function SystemRow({ ev }: { ev: SystemEvent }) {
   return (
     <li className="flex items-center gap-3 px-2 py-1.5">
       <Badge tone={toneOf(ev.event_type)}>{ev.event_type}</Badge>
-      <span className="flex-1 text-body text-gray-800">{ev.title}</span>
-      <span className="tabular-nums text-caption text-gray-600">
+      <span className={cn('flex-1', cardText.value)}>{ev.title}</span>
+      <span className={cn('tabular-nums', cardText.meta)}>
         {ev.starts_at ? dayjs(ev.starts_at).format('HH:mm') : '-'}
       </span>
     </li>
@@ -96,7 +96,7 @@ function Section({
   if (items.length === 0) return null
   return (
     <div>
-      <p className="mb-1 text-caption font-bold uppercase tracking-wide text-gray-400">{title}</p>
+      <p className="mb-1 text-caption font-bold uppercase tracking-wide text-gray-600">{title}</p>
       <ul className="space-y-0.5">{items.map(render)}</ul>
     </div>
   )

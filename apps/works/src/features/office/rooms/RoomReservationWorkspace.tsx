@@ -1,4 +1,4 @@
-import { PageHeader, Spinner, Tabs } from '@ynarcher/ui'
+import { EmptyState, PageHeader, Spinner, Tabs } from '@ynarcher/ui'
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
 import { DateNav } from '@/components/DateNav'
@@ -57,9 +57,10 @@ export function RoomReservationWorkspace() {
           <Spinner />
         </div>
       ) : places.length === 0 ? (
-        <p className="rounded-radius-md border border-dashed border-gray-300 py-10 text-center text-body text-gray-500">
-          등록된 지점·회의실이 없습니다. 관리자에게 문의하세요.
-        </p>
+        <EmptyState
+          title="등록된 지점·회의실이 없습니다"
+          description="관리자에게 문의하세요."
+        />
       ) : (
         <>
           <Tabs
@@ -87,9 +88,7 @@ export function RoomReservationWorkspace() {
               <Spinner />
             </div>
           ) : rooms.length === 0 ? (
-            <p className="rounded-radius-md border border-dashed border-gray-300 py-10 text-center text-body text-gray-500">
-              이 지점에 등록된 회의실이 없습니다.
-            </p>
+            <EmptyState title="이 지점에 등록된 회의실이 없습니다" />
           ) : (
             <div className="space-y-3">
               {rooms.map((room) => (

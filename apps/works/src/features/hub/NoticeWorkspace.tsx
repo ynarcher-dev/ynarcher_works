@@ -39,7 +39,7 @@ export function NoticeWorkspace() {
       render: (n) => (
         <span className="flex min-w-0 items-center gap-1.5">
           {/* 전 항목이 전체 공지이고 고정은 No. 칸 핀 표식으로 알리므로 제목 앞 배지는 없다. */}
-          <span className="truncate text-gray-800">{n.post.title}</span>
+          <span className="truncate">{n.post.title}</span>
           {isNewPost(n.post.date) && <NewBadge />}
         </span>
       ),
@@ -54,7 +54,7 @@ export function NoticeWorkspace() {
       type: 'text',
       align: 'center',
       // 본문 셀은 DataTable 기본 text-body를 상속한다(캡션 크기를 덧씌우면 다른 열과 어긋남).
-      render: (n) => <span className="text-gray-600">{n.boardLabel}</span>,
+      render: (n) => n.boardLabel,
     },
     viewsColumn<NoticeItem>((n) => n.post),
   ]
@@ -63,6 +63,7 @@ export function NoticeWorkspace() {
     <div className="flex h-full flex-col gap-5">
       <PageHeader
         title="공지사항"
+        description="각 게시판에서 ‘전체 공지’로 등록한 글을 모아 보여줍니다. 항목을 클릭하면 원본 게시판으로 이동합니다."
         search={
           <Input
             placeholder="제목·작성자·게시판 검색"
@@ -100,9 +101,6 @@ export function NoticeWorkspace() {
         }}
       />
       )}
-      <p className="text-caption text-gray-600">
-        공지사항은 각 게시판에서 &lsquo;전체 공지&rsquo;로 등록한 글을 모아 보여줍니다. 제목을 클릭하면 원본 게시판으로 이동합니다.
-      </p>
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { Button, PanelCard, Spinner } from '@ynarcher/ui'
+import { Button, PanelCard, Spinner, TextArea, cardText, cn } from '@ynarcher/ui'
 import { Sparkles, RotateCcw, AlertTriangle, Save, Check, Music } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { formatBytes } from '@/features/networks/materialHooks'
@@ -128,7 +128,7 @@ export function VoiceMinutePanel({ context, onApplyDraft, onSaveAudio }: Props) 
   return (
     <PanelCard title="음성 기록 · AI 초안">
       <div className="space-y-3">
-        <p className="text-caption text-gray-500">
+        <p className={cardText.subtitle}>
           회의 음성을 녹음하거나 녹취파일을 올려 텍스트로 옮기고, 필요하면 AI가 초안(제목·안건·본문)을
           작성합니다. 길이·포맷에 상관없이 자동으로 나눠 인식합니다.
         </p>
@@ -162,10 +162,10 @@ export function VoiceMinutePanel({ context, onApplyDraft, onSaveAudio }: Props) 
             {/* 1행: 파일명 칩(아이콘 + 이름 + 용량) — 덜렁 텍스트 대신 파일임을 한눈에. */}
             <div className="flex items-center gap-2 rounded-radius-sm border border-gray-200 bg-white px-2.5 py-1.5">
               <Music className="size-4 shrink-0 text-brand" strokeWidth={1.75} />
-              <span className="min-w-0 flex-1 truncate text-caption font-medium text-gray-800" title={audio.name}>
+              <span className={cn('min-w-0 flex-1 truncate', cardText.value)} title={audio.name}>
                 {audio.name}
               </span>
-              <span className="shrink-0 tabular-nums text-caption text-gray-500">
+              <span className={cn('shrink-0 tabular-nums', cardText.meta)}>
                 {formatBytes(audio.size)}
               </span>
             </div>
@@ -203,11 +203,10 @@ export function VoiceMinutePanel({ context, onApplyDraft, onSaveAudio }: Props) 
 
         {/* ── 전사 텍스트(항상 노출) + AI 초안(독립) ────────────────────── */}
         <div className="space-y-2 border-t border-gray-200 pt-3">
-          <textarea
+          <TextArea
             value={transcript}
             onChange={(e) => setTranscript(e.target.value)}
             rows={5}
-            className="w-full resize-y rounded-radius-md border border-gray-300 bg-white p-2 text-body text-gray-800 focus:border-brand focus:outline-none"
             placeholder="전사 결과가 여기에 표시됩니다. 직접 입력·붙여넣기해 초안을 만들 수도 있습니다."
             aria-label="회의 내용 텍스트"
           />

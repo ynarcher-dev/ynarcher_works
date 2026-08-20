@@ -1,4 +1,4 @@
-import { ListToolbar, PageHeader, Spinner } from '@ynarcher/ui'
+import { EmptyState, ListToolbar, PageHeader, Spinner } from '@ynarcher/ui'
 import { useMemo, useState } from 'react'
 import { activeOrgVersionId, useOrgVersions } from '@/features/management/hooks'
 import { OrgDirectory } from '@/features/management/panels/OrgDirectory'
@@ -32,9 +32,10 @@ export function OfficeManagersPanel() {
         {versionLoading || !versionRows ? (
           <Spinner />
         ) : (
-          <p className="py-10 text-center text-body text-gray-500">
-            발행된 조직 버전이 없습니다. 조직관리에서 조직 버전을 발행하세요.
-          </p>
+          <EmptyState
+            title="발행된 조직 버전이 없습니다"
+            description="조직관리에서 조직 버전을 발행하세요."
+          />
         )}
       </div>
     )

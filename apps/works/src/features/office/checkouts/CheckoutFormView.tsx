@@ -1,5 +1,5 @@
-import { Banner, Button, Input, Select, TextArea } from '@ynarcher/ui'
-import { useMemo, useState, type ReactNode } from 'react'
+import { Banner, Button, Field, Input, Select, TextArea } from '@ynarcher/ui'
+import { useMemo, useState } from 'react'
 import {
   CHECKOUT_LABELS,
   elapsedLabel,
@@ -32,29 +32,6 @@ interface CheckoutFormViewProps {
   busy: boolean
   onCancel: () => void
   onSubmit: (v: CheckoutInput) => void
-}
-
-function Field({
-  label,
-  required,
-  hint,
-  children,
-}: {
-  label: string
-  required?: boolean
-  hint?: string
-  children: ReactNode
-}) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-caption font-medium text-gray-600">
-        {label}
-        {required && <span className="ml-0.5 text-danger">*</span>}
-      </span>
-      {children}
-      {hint && <span className="mt-1 block text-caption text-gray-500">{hint}</span>}
-    </label>
-  )
 }
 
 /**

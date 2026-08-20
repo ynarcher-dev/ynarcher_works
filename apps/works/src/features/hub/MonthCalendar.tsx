@@ -1,4 +1,4 @@
-import { IconButton } from '@ynarcher/ui'
+import { Button, IconButton, cardText, cn } from '@ynarcher/ui'
 import dayjs, { type Dayjs } from 'dayjs'
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -109,16 +109,17 @@ export function MonthCalendar({ events }: { events: SystemEvent[] }) {
             icon={<ChevronRight className="h-4 w-4" />}
           />
         </div>
-        <button
-          type="button"
+        <Button
+          variant="outline"
+          density="card"
+          className="absolute right-0"
           onClick={() => {
             setMonth(today.startOf('month'))
             setSelected(today.format(DATE_KEY))
           }}
-          className="absolute right-0 rounded-radius-sm border border-gray-300 px-3 py-1 text-caption font-semibold text-gray-600 transition-colors duration-fast hover:bg-gray-50 hover:text-gray-900"
         >
           오늘
-        </button>
+        </Button>
       </div>
 
       {/* 그리드 — 통합 타임라인과 동일하게 칸을 띄운 라운드 셀로 그리고, 일정은 색 바로만 표시한다
@@ -183,19 +184,13 @@ export function MonthCalendar({ events }: { events: SystemEvent[] }) {
         <div className="mb-2 flex shrink-0 items-center justify-between">
           <p className="text-body font-semibold text-gray-900">
             {dayjs(selected).format('M월 D일')} ({WEEKDAYS[dayjs(selected).day()]})
-            <span className="ml-2 text-caption font-normal text-gray-600">
-              {selectedEvents.length}건
-            </span>
+            <span className={cn('ml-2', cardText.count)}>[{selectedEvents.length}]</span>
           </p>
           {canWrite && (
-            <button
-              type="button"
-              onClick={openCreate}
-              className="inline-flex items-center gap-1 rounded-radius-sm border border-gray-300 bg-gray-0 px-2 py-1 text-caption font-semibold text-gray-600 transition-colors duration-fast hover:bg-gray-50 hover:text-gray-900"
-            >
-              <Plus className="h-3.5 w-3.5" />
+            <Button variant="outline" density="card" onClick={openCreate}>
+              <Plus className="size-3.5" />
               일정 등록
-            </button>
+            </Button>
           )}
         </div>
         <div className="min-h-0 flex-1 overflow-auto">

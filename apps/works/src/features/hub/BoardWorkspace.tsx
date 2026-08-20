@@ -1,4 +1,19 @@
-import { BackButton, Button, Checkbox, EmptyState, Input, PageHeader, PanelCard, Spinner, useToast } from '@ynarcher/ui'
+import {
+  BackButton,
+  Button,
+  Checkbox,
+  EmptyState,
+  EntityHeaderCard,
+  InfoField,
+  InfoGrid,
+  Input,
+  PageHeader,
+  PanelCard,
+  Spinner,
+  cardText,
+  cn,
+  useToast,
+} from '@ynarcher/ui'
 import { useEffect, useRef, useState } from 'react'
 import { RichTextEditor, RichTextViewer } from '@/components/RichTextEditor'
 import { BoardPanel } from '@/features/hub/BoardPanel'
@@ -238,7 +253,7 @@ function PostEditor({
               </label>
             </div>
             {!isEdit && (
-              <p className="mt-3 border-t border-gray-100 pt-3 text-caption text-gray-600">
+              <p className={cn('mt-3 border-t border-gray-100 pt-3', cardText.subtitle)}>
                 작성자와 게시일은 저장 시 자동으로 기록됩니다.
               </p>
             )}
@@ -302,39 +317,35 @@ function DetailView({
       </div>
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
-        {/* 좌측(2/3): 본문 — 제목·작성자·게시일·조회 + 리치 텍스트 */}
-        <article className="overflow-hidden rounded-radius-lg border border-gray-300 bg-white shadow-soft lg:col-span-2">
-          <header className="px-6 py-5">
-            <h1 className="min-w-0 text-title-md font-bold leading-tight text-gray-900">
-              {post.globalNotice && <span className="mr-1.5 text-danger-700">[공지]</span>}
-              {post.title}
-            </h1>
-            <div className="mt-3 flex flex-wrap items-baseline gap-x-5 gap-y-1">
-              <span className="flex items-baseline gap-2">
-                <span className="text-body text-gray-500">작성자</span>
-                <span className="text-body font-medium text-gray-800">{post.author}</span>
+        {/* 좌측(2/3): 본문 — 제목·작성자·게시일·조회 + 리치 텍스트.
+            상세 최상단 카드는 전 워크스페이스 공용 규격(EntityHeaderCard)을 쓴다. 메타 세 줄도
+            상세 공통 '라벨: 값'(InfoField)에 맡긴다 — 작성자·게시일·조회는 글 자체가 아니라 글을
+            다룬 흔적이므로 meta 톤으로 한 단 물러난다. */}
+        <div className="lg:col-span-2">
+          <EntityHeaderCard
+            title={
+              <span className="min-w-0">
+                {post.globalNotice && <span className="mr-1.5 text-danger-700">[공지]</span>}
+                {post.title}
               </span>
-              <span className="flex items-baseline gap-2">
-                <span className="text-body text-gray-500">게시일</span>
-                <span className="text-body font-medium tabular-nums text-gray-800">{post.date}</span>
-              </span>
-              <span className="flex items-baseline gap-2">
-                <span className="text-body text-gray-500">조회</span>
-                <span className="text-body font-medium tabular-nums text-gray-800">
-                  {(post.views ?? 0).toLocaleString()}
-                </span>
-              </span>
+            }
+            info={
+              <InfoGrid columns={3}>
+                <InfoField label="작성자" value={post.author} meta />
+                <InfoField label="게시일" value={post.date} meta />
+                <InfoField label="조회" value={(post.views ?? 0).toLocaleString()} meta />
+              </InfoGrid>
+            }
+          >
+            <div className="mt-4 border-t border-gray-100 pt-4">
+              {post.content ? (
+                <RichTextViewer html={post.content} />
+              ) : (
+                <p className={cardText.subtitle}>본문이 없습니다.</p>
+              )}
             </div>
-          </header>
-          <div className="mx-6 border-t border-gray-200" />
-          <div className="px-6 py-6">
-            {post.content ? (
-              <RichTextViewer html={post.content} />
-            ) : (
-              <p className="text-body text-gray-500">본문이 없습니다.</p>
-            )}
-          </div>
-        </article>
+          </EntityHeaderCard>
+        </div>
 
         {/* 우측(1/3): 공용 패널 — 자료 관리(조회 전용) → 코멘트(다른 상세페이지와 동일) */}
         <div className="space-y-4 lg:col-span-1">

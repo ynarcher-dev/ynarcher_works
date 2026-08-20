@@ -1,4 +1,4 @@
-import { Button, Input, Modal, TextArea } from '@ynarcher/ui'
+import { Button, Field, Input, Modal, TextArea } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { formatDateTime, nowLocalInput } from '@/features/office/checkouts/checkoutConfig'
 import type { Checkout } from '@/features/office/checkouts/checkoutsApi'
@@ -75,26 +75,16 @@ export function CheckoutActionModal({
     >
       <div className="space-y-4">
         {returning && (
-          <label className="block">
-            <span className="mb-1 block text-caption font-medium text-gray-600">
-              실제 반납 일시<span className="ml-0.5 text-danger">*</span>
-            </span>
+          <Field label="실제 반납 일시" required hint={`반출 ${formatDateTime(row.checkoutAt)}`}>
             <Input
               type="datetime-local"
               value={returnedAt}
               onChange={(e) => setReturnedAt(e.target.value)}
             />
-            <span className="mt-1 block text-caption text-gray-500">
-              반출 {formatDateTime(row.checkoutAt)}
-            </span>
-          </label>
+          </Field>
         )}
 
-        <label className="block">
-          <span className="mb-1 block text-caption font-medium text-gray-600">
-            {returning ? '반납 메모' : '반려 사유'}
-            {!returning && <span className="ml-0.5 text-danger">*</span>}
-          </span>
+        <Field label={returning ? '반납 메모' : '반려 사유'} required={!returning}>
           <TextArea
             value={note}
             rows={3}
@@ -104,7 +94,7 @@ export function CheckoutActionModal({
             }
             autoFocus
           />
-        </label>
+        </Field>
       </div>
     </Modal>
   )

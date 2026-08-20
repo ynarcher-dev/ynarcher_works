@@ -1,4 +1,4 @@
-import { Button, Checkbox, DataTable, EmptyValue, Input, PageHeader, Spinner, pinMark, useToast, type Column } from '@ynarcher/ui'
+import { Button, Checkbox, DataTable, EmptyValue, Field, IconButton, Input, PageHeader, Spinner, pinMark, useToast, type Column } from '@ynarcher/ui'
 import { Download } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { NewBadge } from '@/features/hub/DashboardPanel'
@@ -41,26 +41,20 @@ function matchesKeyword(p: BoardPost, kw: string): boolean {
 /** 자료 1건 다운로드 버튼(material-download Edge Function 경유). */
 function DownloadCell({ material }: { material: Material | undefined }) {
   const [downloading, setDownloading] = useState(false)
-  if (!material) return <span className="text-gray-300">파일 없음</span>
+  if (!material) return <EmptyValue />
   return (
-    <button
-      type="button"
+    <IconButton
       disabled={downloading}
-      onClick={async (e) => {
+      onClick={(e) => {
         e.stopPropagation()
         setDownloading(true)
-        try {
-          await downloadMaterial(material)
-        } finally {
-          setDownloading(false)
-        }
+        void downloadMaterial(material).finally(() => setDownloading(false))
       }}
-      aria-label={`${material.file_name} 다운로드`}
+      icon={<Download className="size-3.5" />}
+      label={`${material.file_name} 다운로드`}
       title={material.file_name}
-      className="inline-grid size-7 place-items-center rounded-radius-sm border border-gray-300 text-gray-600 transition-colors duration-fast hover:border-brand hover:bg-brand/5 hover:text-brand disabled:opacity-50"
-    >
-      <Download className="size-4" />
-    </button>
+      className="mx-auto"
+    />
   )
 }
 
@@ -107,7 +101,7 @@ export function ArchiveWorkspace({ boardId, title }: ArchiveWorkspaceProps) {
       type: 'name',
       render: (p) => (
         <span className="flex min-w-0 items-center gap-1.5">
-          <span className="truncate text-gray-800">{p.title}</span>
+          <span className="truncate">{p.title}</span>
           {isNewPost(p.date) && <NewBadge />}
         </span>
       ),
@@ -118,7 +112,7 @@ export function ArchiveWorkspace({ boardId, title }: ArchiveWorkspaceProps) {
       type: 'long',
       render: (p) =>
         p.summary ? (
-          <span className="block truncate font-normal text-gray-600" title={p.summary}>
+          <span className="block truncate" title={p.summary}>
             {p.summary}
           </span>
         ) : (
@@ -130,7 +124,7 @@ export function ArchiveWorkspace({ boardId, title }: ArchiveWorkspaceProps) {
       header: '용량',
       type: 'money',
       render: (p) => (
-        <span className="tabular-nums text-gray-600">
+        <span className="tabular-nums">
           {formatBytes(matByPost.get(p.id)?.byte_size ?? null)}
         </span>
       ),
@@ -264,40 +258,39 @@ function ArchiveEditor({
           </>
         }
       />
-      <div className="space-y-1.5">
-        <label className="text-caption font-semibold text-gray-600">자료명</label>
+      <Field label="자료명">
         <Input
           autoFocus
           placeholder="예: 투자심의보고서 표준 템플릿 v3"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
-      </div>
-      <div className="space-y-1.5">
-        <label className="text-caption font-semibold text-gray-600">설명</label>
+      </Field>
+      <Field
+        label="설명"
+        hint="자료실은 상세페이지가 없으므로 이 설명이 유일한 안내 문구가 됩니다."
+      >
         <Input
           placeholder="목록에 노출할 한 줄 설명(40자 내외)"
           maxLength={60}
           value={summary}
           onChange={(e) => setSummary(e.target.value)}
         />
-        <p className="text-caption text-gray-600">
-          자료실은 상세페이지가 없으므로 이 설명이 유일한 안내 문구가 됩니다.
-        </p>
-      </div>
-      <div className="space-y-1.5">
-        <label className="text-caption font-semibold text-gray-600">파일</label>
+      </Field>
+      <Field
+        label="파일"
+        hint={
+          isEdit
+            ? '파일을 새로 선택하면 교체됩니다. 비워 두면 기존 파일이 유지됩니다.'
+            : '자료실은 자료 1건당 파일 1개를 등록합니다. 파일을 선택해야 등록할 수 있습니다.'
+        }
+      >
         <input
           type="file"
           className="block w-full text-body text-gray-700 file:mr-3 file:cursor-pointer file:rounded-radius-sm file:border file:border-gray-300 file:bg-white file:px-3 file:py-1.5 file:text-body file:text-gray-700 hover:file:border-gray-400"
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
         />
-        <p className="text-caption text-gray-600">
-          {isEdit
-            ? '파일을 새로 선택하면 교체됩니다. 비워 두면 기존 파일이 유지됩니다.'
-            : '자료실은 자료 1건당 파일 1개를 등록합니다. 파일을 선택해야 등록할 수 있습니다.'}
-        </p>
-      </div>
+      </Field>
       <label className="flex w-fit cursor-pointer items-center gap-2 text-body text-gray-700">
         <Checkbox checked={pinned} onChange={(e) => setPinned(e.target.checked)} />
         이 자료를 목록 <span className="font-semibold text-gray-900">최상단에 고정</span>

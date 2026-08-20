@@ -24,7 +24,7 @@ export function BranchesPanel() {
       header: '전화번호',
       type: 'text',
       render: (b) =>
-        b.phone ? <span className="tabular-nums text-gray-600">{b.phone}</span> : <EmptyValue />,
+        b.phone ? <span className="tabular-nums">{b.phone}</span> : <EmptyValue />,
     },
   ]
 

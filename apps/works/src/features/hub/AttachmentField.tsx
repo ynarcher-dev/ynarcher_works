@@ -1,4 +1,4 @@
-import { IconButton } from '@ynarcher/ui'
+import { IconButton, cardText, cn, formText } from '@ynarcher/ui'
 import { Download, File, Paperclip, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import type { BoardAttachment } from '@/features/hub/boardData'
@@ -50,7 +50,7 @@ export function AttachmentField({ value, onChange }: AttachmentFieldProps) {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-1.5 text-caption font-semibold text-gray-600">
+      <div className={cn('flex items-center gap-1.5', formText.label)}>
         <Paperclip className="size-3.5" /> 첨부파일
       </div>
 
@@ -72,10 +72,10 @@ export function AttachmentField({ value, onChange }: AttachmentFieldProps) {
             : 'border-gray-300 bg-gray-25 hover:border-gray-400'
         }`}
       >
-        <p className="text-body text-gray-600">
+        <p className={cardText.value}>
           파일을 여기로 끌어다 놓거나 <span className="font-semibold text-brand">클릭</span>하여 선택
         </p>
-        <p className="text-caption text-gray-600">여러 파일을 한 번에 첨부할 수 있습니다.</p>
+        <p className={formText.hint}>여러 파일을 한 번에 첨부할 수 있습니다.</p>
         <input
           ref={inputRef}
           type="file"
@@ -96,8 +96,8 @@ export function AttachmentField({ value, onChange }: AttachmentFieldProps) {
               className="flex items-center gap-2 rounded-radius-sm border border-gray-200 bg-white px-3 py-2"
             >
               <File className="size-4 shrink-0 text-gray-400" />
-              <span className="min-w-0 flex-1 truncate text-body text-gray-800">{a.name}</span>
-              <span className="shrink-0 tabular-nums text-caption text-gray-600">
+              <span className={cn('min-w-0 flex-1 truncate', cardText.value)}>{a.name}</span>
+              <span className={cn('shrink-0 tabular-nums', cardText.meta)}>
                 {formatBytes(a.size)}
               </span>
               <IconButton
@@ -120,7 +120,7 @@ export function AttachmentList({ attachments }: { attachments: BoardAttachment[]
   if (attachments.length === 0) return null
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-1.5 text-caption font-semibold text-gray-700">
+      <div className={cn('flex items-center gap-1.5', formText.label)}>
         <Paperclip className="size-3.5" /> 첨부파일 {attachments.length}
       </div>
       <ul className="space-y-1.5">
@@ -130,17 +130,17 @@ export function AttachmentList({ attachments }: { attachments: BoardAttachment[]
             className="flex items-center gap-2 rounded-radius-sm border border-gray-200 bg-white px-3 py-2"
           >
             <File className="size-4 shrink-0 text-gray-500" />
-            <span className="min-w-0 flex-1 truncate text-body text-gray-800">{a.name}</span>
-            <span className="shrink-0 tabular-nums text-caption text-gray-700">
+            <span className={cn('min-w-0 flex-1 truncate', cardText.value)}>{a.name}</span>
+            <span className={cn('shrink-0 tabular-nums', cardText.meta)}>
               {formatBytes(a.size)}
             </span>
             <a
               href={a.url ?? '#'}
               download={a.name}
               aria-label={`${a.name} 다운로드`}
-              className={`grid size-6 shrink-0 place-items-center rounded-radius-sm transition-colors duration-fast ${
+              className={`grid size-icon-card shrink-0 place-items-center rounded-radius-md transition-colors duration-fast ${
                 a.url
-                  ? 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  ? 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'
                   : 'pointer-events-none text-gray-400'
               }`}
             >

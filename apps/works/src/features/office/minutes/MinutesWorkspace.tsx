@@ -1,4 +1,4 @@
-import { Button, EmptyState, Input, PageHeader } from '@ynarcher/ui'
+import { Button, EmptyState, Input, PageHeader, Spinner } from '@ynarcher/ui'
 import { useState } from 'react'
 import { useAuthStore } from '@/auth/authStore'
 import {
@@ -17,7 +17,7 @@ type View = { mode: 'list' } | { mode: 'detail'; id: string } | { mode: 'edit'; 
 /** 기존 회의록 편집: 상세를 불러와 초기값으로 넘긴다. */
 function EditExisting({ id, onDone }: { id: string; onDone: (id: string) => void }) {
   const { data, isLoading } = useMinute(id)
-  if (isLoading) return <p className="py-10 text-center text-body text-gray-400">불러오는 중…</p>
+  if (isLoading) return <Spinner />
   if (!data) return <EmptyState title="열람할 수 없습니다" description="수정 권한이 없거나 삭제된 회의록입니다." />
   return <MinutesEditor initial={data} onSaved={() => onDone(id)} onCancel={() => onDone(id)} />
 }
@@ -97,7 +97,7 @@ export function MinutesWorkspace({ initialMinuteId }: { initialMinuteId?: string
         actions={<Button onClick={() => setView({ mode: 'edit', id: null })}>회의록 등록</Button>}
       />
       {isLoading ? (
-        <p className="py-10 text-center text-body text-gray-400">불러오는 중…</p>
+        <Spinner />
       ) : (
         <MinutesTable
           minutes={filtered}
