@@ -203,7 +203,7 @@ export const DOMESTIC_LIST_ENTITIES: EntityKey[] = [...ENTITY_ORDER, 'vendors']
 export const DIRECTORY_ENTITIES: EntityKey[] = [...ENTITY_ORDER, 'others']
 
 /**
- * 전문가 프로필 구조(사진·약력·영역·구분·매칭·소개)를 공유하는 엔티티.
+ * 전문가 프로필 구조(사진·영역·구분·매칭·소개)를 공유하는 엔티티.
  * 업로드 양식 통일(Phase 15)로 8종 전부 experts와 동일한 컬럼
  * (email/phone/affiliation/expertise/profile)을 가지며, 공용 통합 폼(`NetworkForm`)과
  * 공용 상세페이지(`NetworkDetailPage`)를 동일 컴포넌트로 사용한다.
@@ -216,7 +216,7 @@ export function isProfileEntity(key: EntityKey): boolean {
 }
 
 /**
- * 축약(compact) 유형 — "구분"이 이들 중 하나이면 통합 폼·상세에서 매칭 가능여부·전문영역·약력·
+ * 축약(compact) 유형 — "구분"이 이들 중 하나이면 통합 폼·상세에서 매칭 가능여부·전문영역·
  * 멘토링 만족도를 숨긴다. 조직 유형(기업·기관·대학·기타, 은퇴한 외주/거래 포함)에 더해, 미분류(others)도
  * 분류 전 임시 저장소이므로 기업 네트워크처럼 간단한 항목만 노출한다.
  */
@@ -229,7 +229,7 @@ export const COMPACT_ENTITIES: EntityKey[] = [
   'others',
 ]
 
-/** 통합 폼에서 매칭/전문영역/약력을 숨기는 축약(조직) 유형인지 여부. */
+/** 통합 폼에서 매칭/전문영역을 숨기는 축약(조직) 유형인지 여부. */
 export function isCompactEntity(key: EntityKey): boolean {
   return COMPACT_ENTITIES.includes(key)
 }

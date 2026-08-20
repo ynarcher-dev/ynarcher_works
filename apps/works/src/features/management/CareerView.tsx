@@ -4,7 +4,7 @@ import {
   parseBackground,
   rowParts,
   sortRowsByYearDesc,
-} from '@/features/networks/careerConfig'
+} from '@/features/management/careerConfig'
 
 /** 약력 jsonb에 표시할 항목이 하나라도 있는지. */
 export function hasCareerRows(raw: unknown): boolean {

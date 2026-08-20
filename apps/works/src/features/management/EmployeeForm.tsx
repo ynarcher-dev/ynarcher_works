@@ -9,9 +9,9 @@ import { useDepartmentOptions } from '@/features/management/departmentOptions'
 import { useUpdateEmployee, type Employee } from '@/features/management/hooks'
 import { useEmployeeBranchNames } from '@/features/office/branches/branchMembers'
 import { useBranches, useSetUserBranches } from '@/features/office/branches/branchesApi'
-import { CareerEditor } from '@/features/networks/CareerEditor'
+import { CareerEditor } from '@/features/management/CareerEditor'
 import { PhotoPicker } from '@/features/networks/PhotoPicker'
-import { parseBackground, type CareerData } from '@/features/networks/careerConfig'
+import { parseBackground, type CareerData } from '@/features/management/careerConfig'
 
 /** 필드 래퍼(라벨 + 입력). NetworkForm/GlobalNetworkForm과 동일한 페이지 폼 스타일. */
 function Field({

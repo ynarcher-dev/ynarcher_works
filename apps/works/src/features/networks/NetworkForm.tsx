@@ -7,11 +7,9 @@ import { useEditReasonPrompt } from '@/components/EditReasonPrompt'
 import { useTags } from '@/features/admin/hooks'
 import { supabase } from '@/lib/supabase'
 import { PhotoPicker } from '@/features/networks/PhotoPicker'
-import { CareerEditor } from '@/features/networks/CareerEditor'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { PendingMaterialPanel } from '@/features/networks/PendingMaterialPanel'
 import { usePendingMaterials } from '@/features/networks/pendingMaterials'
-import { parseBackground, type CareerData } from '@/features/networks/careerConfig'
 import {
   CATEGORY_OPTIONS,
   ENTITIES,
@@ -86,8 +84,8 @@ function Field({
 /**
  * 네트워크 통합 등록/수정 폼(상세페이지 내 편집 모드). 8종 전체 공용.
  * "구분"(엔티티 선택자) 값이 저장 대상 테이블을 결정하며, 조직 유형(기업·기관·대학·기타)을
- * 선택하면 매칭 가능여부·전문영역·약력을 숨긴다(요건 2). 미분류는 전체 필드를 유지한다.
- * 스키마에 없는 직책·부서·매칭여부·약력·소개는 `profile`(jsonb)에 저장한다.
+ * 선택하면 매칭 가능여부·전문영역을 숨긴다(요건 2). 미분류는 전체 필드를 유지한다.
+ * 스키마에 없는 직책·부서·매칭여부·소개는 `profile`(jsonb)에 저장한다.
  */
 export function NetworkForm({
   entity,
@@ -123,11 +121,6 @@ export function NetworkForm({
     )
   }
 
-  // 약력: 학력/경력/자격증/수상 세부 항목을 profile.background에 저장.
-  const [background, setBackground] = useState<CareerData>(
-    parseBackground(profile.background),
-  )
-
   // 사진: data URL로 profile.photo에 저장(2MB 이하). 첨부/미리보기는 공용 PhotoPicker가 소유한다.
   const [photo, setPhoto] = useState<string>((profile.photo as string) ?? '')
 
@@ -151,7 +144,7 @@ export function NetworkForm({
     },
   })
 
-  // 선택된 구분 → 저장 대상 엔티티. 조직 4종이면 매칭/전문영역/약력을 숨긴다.
+  // 선택된 구분 → 저장 대상 엔티티. 조직 4종이면 매칭/전문영역을 숨긴다.
   const target = resolveEntityFromCategory(watch('category'))
   const compact = isCompactEntity(target)
 
@@ -174,9 +167,8 @@ export function NetworkForm({
         position: v.position.trim() || null,
         department: v.department.trim() || null,
         category: targetLabel,
-        // 조직 4종은 매칭/약력 미사용.
+        // 조직 4종은 매칭 미사용.
         match_available: compact ? null : v.match === 'possible',
-        background: compact ? [] : background,
         intro: v.intro.trim() || null,
       },
     }
@@ -245,7 +237,7 @@ export function NetworkForm({
 
       {/* 상세페이지와 동일한 3열 배치: 좌측 2/3 편집 카드 + 우측 1/3 자료 관리 */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* 좌측(2/3): 사진 → 기본 데이터 → 약력 → 노트 */}
+        {/* 좌측(2/3): 사진 → 기본 데이터 → 노트 */}
         <div className="space-y-4 lg:col-span-2">
           {/* 사진 카드 */}
           <CardShell>
@@ -326,13 +318,6 @@ export function NetworkForm({
               )}
             </div>
           </CardShell>
-
-          {!compact && (
-            <CardShell>
-              <p className="mb-4 text-caption font-medium text-gray-700">약력</p>
-              <CareerEditor value={background} onChange={setBackground} />
-            </CardShell>
-          )}
 
           {/* 노트 카드 */}
           <CardShell>

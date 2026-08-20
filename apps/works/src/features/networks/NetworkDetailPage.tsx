@@ -8,7 +8,6 @@ import { PhotoBox } from '@/features/networks/PhotoBox'
 import { ChangeHistoryPanel, uniqueContributors } from '@/features/networks/ChangeHistoryPanel'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
-import { CareerView, hasCareerRows } from '@/features/networks/CareerView'
 import { AffiliationHistoryPanel } from '@/features/networks/AffiliationHistoryPanel'
 import {
   ENTITIES,
@@ -51,7 +50,7 @@ function formatDate(v: unknown): string {
 
 /**
  * 네트워크 통합 상세 뷰(읽기 전용 카드). 8종 전체 공용.
- * 축약(compact) 유형(조직 5종 + 미분류)은 매칭 배지·전문영역·약력·멘토링 만족도 섹션을 숨긴다.
+ * 축약(compact) 유형(조직 5종 + 미분류)은 매칭 배지·전문영역·멘토링 만족도 섹션을 숨긴다.
  */
 function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow }) {
   const label = ENTITIES[entity].label
@@ -65,7 +64,6 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
     ? (record.expertise as string[])
     : []
   const matchOk = profile.match_available !== false
-  const hasCareer = hasCareerRows(profile.background)
   const intro = (profile.intro as string) ?? ''
   const affiliation = (record.affiliation as string) ?? ''
   const department = (profile.department as string) ?? ''
@@ -82,7 +80,7 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-      {/* 좌측(2/3): 프로필 본문 — 현행 유지(약력·메모·멘토링 만족도·매칭 안내). */}
+      {/* 좌측(2/3): 프로필 본문 — 이력·노트·멘토링 만족도·매칭 안내. */}
       <div className="space-y-4 lg:col-span-2">
       <CardShell>
         <div className="flex items-center gap-5">
@@ -165,18 +163,6 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
           <Info label="수정일" value={formatDate(record.updated_at)} />
         </div>
       </CardShell>
-
-      {!compact && (
-        <SectionCard title="약력">
-          {hasCareer ? (
-            <CareerView value={profile.background} />
-          ) : (
-            <p className="text-body text-gray-600">
-              등록된 약력이 없습니다. "수정"에서 입력하세요.
-            </p>
-          )}
-        </SectionCard>
-      )}
 
       {/* 이력(소속·부서·직책 변경): 인물·조직 전 유형 공통 노출. 현재값은 부제가, 과거 조합은 이 카드가 담는다. */}
       <SectionCard title="이력">

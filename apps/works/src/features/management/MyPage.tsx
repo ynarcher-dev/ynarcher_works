@@ -24,9 +24,9 @@ import {
   useUpdateMyProfile,
 } from '@/features/management/hooks'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
-import { CareerEditor } from '@/features/networks/CareerEditor'
+import { CareerEditor } from '@/features/management/CareerEditor'
 import { PhotoPicker } from '@/features/networks/PhotoPicker'
-import { parseBackground, type CareerData } from '@/features/networks/careerConfig'
+import { parseBackground, type CareerData } from '@/features/management/careerConfig'
 
 function str(v: unknown): string {
   return typeof v === 'string' ? v : ''

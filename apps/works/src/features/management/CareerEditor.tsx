@@ -5,7 +5,7 @@ import {
   emptyRow,
   type CareerData,
   type CareerSection,
-} from '@/features/networks/careerConfig'
+} from '@/features/management/careerConfig'
 
 interface Props {
   value: CareerData
