@@ -1,60 +1,69 @@
 import { Input, MultiSelectFilter } from '@ynarcher/ui'
 import { useMemo } from 'react'
 import { useTags } from '@/features/admin/hooks'
-import { isCompactEntity, type EntityKey } from '@/features/networks/config'
+import { DOMESTIC_LIST_ENTITIES, ENTITIES } from '@/features/networks/config'
 import {
-  EMPTY_NETWORK_FILTERS,
+  EMPTY_NETWORK_LIST_FILTERS,
   MATCH_FILTER_OPTIONS,
-  hasActiveNetworkFilters,
-  type NetworkFilterState,
+  hasActiveNetworkListFilters,
+  type NetworkListFilterState,
 } from '@/features/networks/filters'
 
-interface NetworkFiltersProps {
-  entity: EntityKey
-  filters: NetworkFilterState
-  onChange: (next: NetworkFilterState) => void
+interface NetworkListFiltersProps {
+  filters: NetworkListFilterState
+  onChange: (next: NetworkListFilterState) => void
 }
 
 /**
- * 국내 네트워크 목록 필터 바(검색창 오른쪽에 같은 줄로 선다).
+ * 국내 통합 목록 필터 바(검색창 오른쪽에 같은 줄로 선다).
  *
- * 노출 축을 엔티티가 정한다 — 프로필형(전문가·BAN·EXP·투자사)은 영역·매칭·활동·만족도를 갖고,
- * 조직형(기업·기관·대학·기타)과 미분류는 축이 없어 아무것도 렌더하지 않는다. 그 목록에는
- * 해당 열이 아예 없어서(networkProfileColumns의 ORG_OMIT_COLUMNS) 그 축으로 거르면 왜
- * 걸러졌는지 표에서 확인할 방법이 없다.
+ * 축 순서는 표의 열 순서를 따른다 — 구분 → 영역 → 활동 → 만족도 → 매칭.
+ * 첫 축은 이 목록에만 있다: 원장이 섞여 있으므로 '어느 구분인가'로 좁힐 수 있다. 값은 원장
+ * 테이블명으로 거르되 화면에는 구분 이름만 보인다 — `profile.category`를 따로 축으로 두지
+ * 않는 이유도 그 값이 곧 원장 라벨이라 같은 것을 두 번 묻게 되기 때문이다.
  *
- * 구분은 여기 두지 않는다 — 목록 하나가 곧 구분 하나라 어느 값을 골라도 결과가 그대로거나 0건이다
- * (구분이 결과를 가르는 목록은 내 네트워크·글로벌 네트워크뿐이며 각자 자기 필터 바가 갖는다).
+ * 나머지 넷은 2026-08-20에 폐지된 원장별 목록에서 그대로 옮겨 왔다. 조직형(기업·기관·대학·
+ * 기타) 행은 그 열이 비어 있어 이 축으로 거르면 자연히 빠지며, 그것이 이 축들의 뜻이다 —
+ * '영역이 핀테크인 사람'을 물으면 영역 자체가 없는 조직 담당자는 답이 아니다.
  *
- * 선택지는 ADMIN 태그 원장(field_tags)에서 읽는다(코드에 목록을 박지 않는다).
+ * 영역 선택지는 ADMIN 태그 원장(field_tags)에서 읽는다(코드에 목록을 박지 않는다).
  */
-export function NetworkFilters({ entity, filters, onChange }: NetworkFiltersProps) {
-  const compact = isCompactEntity(entity)
-  const { data: fieldTags } = useTags('field_tags', undefined, !compact)
+export function NetworkListFilters({ filters, onChange }: NetworkListFiltersProps) {
+  const { data: fieldTags } = useTags('field_tags')
+
+  // 선택지는 국내 목록이 담는 원장에서 파생한다(원장이 늘어도 이 파일은 손대지 않는다).
+  // 은퇴 원장(vendors)은 새로 고를 이유가 없어 선택지에서만 빼고 목록에는 그대로 담긴다.
+  // 라벨은 구분 이름 그대로다 — 필터 이름이 이미 '구분'이라 항목마다 '네트워크'를 붙이면
+  // 같은 말이 두 번 서고, 표의 구분 열에 찍히는 값과도 표기가 어긋난다.
+  const entityOptions = useMemo(
+    () =>
+      DOMESTIC_LIST_ENTITIES.filter((key) => key !== 'vendors').map((key) => ({
+        value: key,
+        label: ENTITIES[key].label,
+      })),
+    [],
+  )
 
   const fieldOptions = useMemo(
     () => (fieldTags ?? []).map((t) => ({ value: t.name, label: t.name })),
     [fieldTags],
   )
 
-  const active = hasActiveNetworkFilters(filters)
-
-  // 조직형·미분류는 거를 축이 없다. 빈 래퍼를 남기면 검색창 옆에 빈 간격만 생긴다.
-  if (compact) return null
+  const active = hasActiveNetworkListFilters(filters)
 
   return (
     <div className="flex flex-wrap items-center gap-2">
+      <MultiSelectFilter
+        label="구분"
+        options={entityOptions}
+        selected={filters.entities}
+        onChange={(entities) => onChange({ ...filters, entities })}
+      />
       <MultiSelectFilter
         label="영역"
         options={fieldOptions}
         selected={filters.expertise}
         onChange={(expertise) => onChange({ ...filters, expertise })}
-      />
-      <MultiSelectFilter
-        label="매칭"
-        options={MATCH_FILTER_OPTIONS}
-        selected={filters.match}
-        onChange={(match) => onChange({ ...filters, match })}
       />
 
       {/* 활동·만족도는 값이 연속이라 선택지로 나눌 수 없다 — 최소~최대 두 칸으로 받는다.
@@ -106,10 +115,17 @@ export function NetworkFilters({ entity, filters, onChange }: NetworkFiltersProp
         />
       </div>
 
+      <MultiSelectFilter
+        label="매칭"
+        options={MATCH_FILTER_OPTIONS}
+        selected={filters.match}
+        onChange={(match) => onChange({ ...filters, match })}
+      />
+
       {active && (
         <button
           type="button"
-          onClick={() => onChange(EMPTY_NETWORK_FILTERS)}
+          onClick={() => onChange(EMPTY_NETWORK_LIST_FILTERS)}
           className="flex h-ctl-page items-center rounded-radius-md border border-gray-300 bg-white px-3.5 text-body text-gray-700 shadow-soft transition-colors duration-fast hover:border-gray-400 hover:text-brand-700"
         >
           초기화

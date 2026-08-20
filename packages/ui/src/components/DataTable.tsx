@@ -11,7 +11,7 @@ import { ToastContext } from './toast/ToastContext'
  * 열의 종류 — 그 칸에 무엇이 들어가는가.
  *
  * 열 하나를 제대로 세우려면 폭·정렬·수치서식·줄바꿈을 함께 정해야 하는데, 이 넷은 사실 하나의
- * 사실에서 따라 나온다. 날짜 열이면 112px에 가운데 정렬에 줄바꿈 금지이고, 금액 열이면 112px에
+ * 사실에서 따라 나온다. 날짜 열이면 112px에 왼쪽 정렬에 줄바꿈 금지이고, 금액 열이면 112px에
  * 우측 정렬에 `tabular-nums`다. 그래서 넷을 따로 적게 두지 않고 종류 한 단어로 선언한다 —
  * 넷을 손으로 조합하게 두면 화면마다 조합이 조금씩 달라지고, 그게 곧 들쑥날쑥한 표가 된다.
  *
@@ -65,11 +65,11 @@ const columnTypeSpec: Record<
   /** 주소·비고 등 긴 텍스트. */
   long: { width: '', align: 'left', numeric: false, flex: 2 },
   /** 상태 배지 한 개. */
-  badge: { width: columnWidth.badge, align: 'center', numeric: false, rem: 5 },
+  badge: { width: columnWidth.badge, align: 'left', numeric: false, rem: 5 },
   /** 날짜 `YYYY-MM-DD`. */
-  date: { width: columnWidth.date, align: 'center', numeric: false, rem: 7 },
+  date: { width: columnWidth.date, align: 'left', numeric: false, rem: 7 },
   /** 일시 `YYYY-MM-DD HH:MM:SS`. */
-  datetime: { width: columnWidth.datetime, align: 'center', numeric: false, rem: 9 },
+  datetime: { width: columnWidth.datetime, align: 'left', numeric: false, rem: 9 },
   /** 금액·수량. */
   money: { width: columnWidth.money, align: 'right', numeric: true, rem: 7 },
   /** 건수·개수. */
@@ -91,14 +91,17 @@ export interface Column<T> {
    * 열 정렬 — **머리글과 셀에 함께 적용된다.** `type`이 정한 정렬을 덮는 예외 통로이며,
    * 종류도 정렬도 없으면 왼쪽이다(2026-08-20, 이전 기본값은 가운데).
    *
-   * 표를 빨리 읽게 만드는 것은 선이 아니라 열마다의 기준 모서리다. 길이가 제각각인 텍스트
-   * (이름·업종·담당자)는 `left`로 두어 왼쪽 모서리를 세우고, 숫자는 `right`로 두어 자릿수를
-   * 맞추며, 날짜·배지처럼 폭이 일정한 것만 가운데에 둔다.
+   * 표를 빨리 읽게 만드는 것은 선이 아니라 **한 표에 기준 모서리가 하나뿐이라는 것**이다.
+   * 그래서 규칙은 셋으로 끝난다.
    *
-   * 기본값이 왼쪽인 이유는 그 셋 중 가운데만이 **폭이 일정하다는 조건**을 요구하기 때문이다.
-   * 조건이 붙은 값은 기본값이 될 수 없다 — 종류를 안 적었다는 것은 그 조건을 확인하지 않았다는
-   * 뜻이므로, 확인 없이 안전한 쪽인 왼쪽으로 떨어져야 한다. 가운데가 기본이던 동안에는 종류를
-   * 붙이지 못한 몇 개 열만 홀로 가운데로 떠서, 같은 표 안에 기준선이 두 개 생겼다.
+   * * **왼쪽(기본)**: 값을 읽는 모든 열 — 이름·업종·담당자는 물론 날짜·배지도 여기 든다.
+   * * **오른쪽**: 자릿수를 맞춰 크기를 견주는 숫자(금액·건수·No.)만.
+   * * **가운데**: 값이 아니라 조작이 놓이는 열(체크박스·관리)만.
+   *
+   * 2026-08-20에 날짜·일시·배지를 가운데에서 왼쪽으로 옮겼다. 폭이 일정하다는 것은 가운데를
+   * *허용하는* 조건일 뿐 *요구하는* 이유가 아니었고, 그 셋만 가운데로 뜬 표는 왼쪽 기준선
+   * 사이에 다른 기준선이 끼어 눈이 두 번 옮겨 갔다. 폭이 일정한 값은 왼쪽에 세워도 이미
+   * 세로로 가지런하므로 가운데로 얻는 것이 없다.
    */
   align?: 'left' | 'right' | 'center'
   /**
@@ -234,7 +237,7 @@ export interface DataTableProps<T> {
    */
   authorLabel?: string
   /**
-   * 수정일 정렬(기본 center). 날짜는 폭이 일정해 가운데가 안정적이다.
+   * 수정일 정렬(기본 left). 값을 읽는 열은 전부 왼쪽 한 기준선에 세운다(2026-08-20).
    * 머리글은 값과 같은 쪽에 서므로 이 값이 둘을 함께 정한다. 넓은 표에서 우측 여백을 줄이려면 'right'.
    */
   updatedAtAlign?: 'left' | 'right' | 'center'
@@ -316,7 +319,7 @@ export function DataTable<T>({
   standardColumns = true,
   showAuthor = true,
   authorLabel = '생성자',
-  updatedAtAlign = 'center',
+  updatedAtAlign = 'left',
   manageable = true,
   showManageColumn = true,
   selectable: selectableProp,

@@ -18,12 +18,12 @@ export function NetworksBulkPage() {
 
   return (
     <div className="space-y-5">
-      {/* 돌아갈 곳은 넘어온 목록이다. 국내는 첫 원장(전문가), 글로벌은 글로벌 목록. */}
+      {/* 돌아갈 곳은 넘어온 목록이다 — 국내/글로벌 각각의 '전체 네트워크'. */}
       <DetailTopBar
         back={
           <BackButton
             as={Link}
-            to={scope === 'global' ? '/networks?tab=global' : '/networks?tab=experts'}
+            to={scope === 'global' ? '/networks?tab=global' : '/networks?tab=all'}
           />
         }
       />

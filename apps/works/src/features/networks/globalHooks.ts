@@ -30,20 +30,25 @@ export interface GlobalPage {
 }
 
 /**
- * PostgREST `or=(...)` 인자를 깨는 구분자(콤마·괄호)를 걸러 낸다.
- * 검색어는 사용자 자유 입력이라 그대로 이으면 조건식 자체가 어긋난다.
+ * 글로벌 목록의 범위. 'mine'은 내가 생성했거나 기여한 것만, 'all'은 볼 수 있는 전부.
+ * 국내 통합 목록(NetworkListScope)과 같은 축이며 판정 기준도 같다.
  */
-function sanitizeOrValue(v: string): string {
-  return v.trim().replace(/[(),]/g, ' ')
-}
+export type GlobalListScope = 'mine' | 'all'
 
 /**
- * 글로벌 네트워크 서버 사이드 페이지네이션(검색/미삭제/미병합).
+ * 글로벌 네트워크 서버 사이드 페이지네이션(범위/검색/필터/미삭제/미병합).
+ *
+ * 조회를 PostgREST가 아니라 RPC(`global_network_entities`)로 내린다 — '내 것' 판정이
+ * 기여 로그(entity_contributions)와의 조인이라 다형 키를 FK로 삼는 PostgREST 임베드로는
+ * 표현되지 않고, id를 먼저 긁어 와 `in()`으로 걸면 그 id 목록의 상한이 곧 목록의 상한이 된다.
+ *
  * 검색은 이름·소속에 항상 닿고, 이메일·연락처는 목록 마스킹 정책이 공개로 연 경우에만 닿는다
  * (`searchScope`) — 가려진 값을 검색으로 되짚을 수 있으면 마스킹이 무력해진다.
- * 권역·국가명은 조인 임베드로 함께 조회한다. page는 0-base.
+ * RPC는 권역·국가·생성자를 평면 컬럼으로 돌려주므로 다른 목록과 같은 중첩 형태
+ * (region.name / country.name / creator.name)로 되담는다. page는 0-base.
  */
 export function useGlobalPage(
+  scope: GlobalListScope,
   keyword: string,
   page: number,
   pageSize: number,
@@ -55,44 +60,65 @@ export function useGlobalPage(
   const filtersKey = JSON.stringify(filters)
   const scopeKey = JSON.stringify(searchScope)
   return useQuery({
-    queryKey: ['networks', GLOBAL_TABLE, 'page', keyword, filtersKey, scopeKey, page, pageSize],
+    queryKey: [
+      'networks',
+      GLOBAL_TABLE,
+      'page',
+      scope,
+      keyword,
+      filtersKey,
+      scopeKey,
+      page,
+      pageSize,
+    ],
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<GlobalPage> => {
-      const from = page * pageSize
-      const to = from + pageSize - 1
-      let q = supabase
-        .from(GLOBAL_TABLE)
-        .select(SELECT_WITH_TAGS, { count: 'exact' })
-        .is('deleted_at', null)
-        .is('merged_into_id', null)
-        .order('name', { ascending: true })
-        .range(from, to)
       const trimmed = keyword.trim()
-      if (trimmed) {
-        const kw = sanitizeOrValue(trimmed)
-        const orParts = [`name.ilike.%${kw}%`, `affiliation.ilike.%${kw}%`]
-        if (searchScope.email) orParts.push(`email.ilike.%${kw}%`)
-        if (searchScope.phone) orParts.push(`phone.ilike.%${kw}%`)
-        q = q.or(orParts.join(','))
-      }
-      // 권역·국가는 태그 FK로, 구분은 스칼라 값으로 거른다(모두 목록에 노출된 열이다).
-      if (filters.regionIds.length) q = q.in('region_tag_id', filters.regionIds)
-      if (filters.countryIds.length) q = q.in('country_tag_id', filters.countryIds)
-      if (filters.categories.length) q = q.in('category', filters.categories)
-      const { data, error, count } = await q
+      const { data, error } = await supabase.rpc('global_network_entities', {
+        p_keyword: trimmed || null,
+        p_mine: scope === 'mine',
+        // 권역·국가는 태그 FK로, 구분은 스칼라 값으로 거른다(모두 목록에 노출된 열이다).
+        p_regions: filters.regionIds.length ? filters.regionIds : null,
+        p_countries: filters.countryIds.length ? filters.countryIds : null,
+        p_categories: filters.categories.length ? filters.categories : null,
+        p_search_email: searchScope.email,
+        p_search_phone: searchScope.phone,
+        p_limit: pageSize,
+        p_offset: page * pageSize,
+      })
       if (error) throw error
-      const total = count ?? 0
+      const raw = (data ?? []) as (Record<string, unknown> & {
+        region_name?: string | null
+        country_name?: string | null
+        creator_name?: string | null
+        total_count?: number | string
+        total_all?: number | string
+      })[]
+      const total = Number(raw[0]?.total_count ?? 0)
+      // 검색·필터가 하나도 없으면 반영 건수가 곧 범위 전체 건수다(RPC도 같은 값을 싣는다).
+      const totalAll =
+        trimmed || hasActiveGlobalFilters(filters) ? Number(raw[0]?.total_all ?? total) : total
 
-      let totalAll = total
-      if (trimmed || hasActiveGlobalFilters(filters)) {
-        const { count: allCount } = await supabase
-          .from(GLOBAL_TABLE)
-          .select('*', { count: 'exact', head: true })
-          .is('deleted_at', null)
-          .is('merged_into_id', null)
-        totalAll = allCount ?? total
+      return {
+        rows: raw.map(
+          ({
+            region_name,
+            country_name,
+            creator_name,
+            total_count: _total,
+            total_all: _totalAll,
+            ...row
+          }) =>
+            ({
+              ...row,
+              region: region_name ? { name: region_name } : null,
+              country: country_name ? { name: country_name } : null,
+              creator: creator_name ? { name: creator_name } : null,
+            }) as unknown as GlobalRow,
+        ),
+        total,
+        totalAll,
       }
-      return { rows: (data ?? []) as unknown as GlobalRow[], total, totalAll }
     },
   })
 }

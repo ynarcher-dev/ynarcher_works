@@ -103,10 +103,14 @@ const sidebarIconByTab: Record<string, LucideIcon> = {
   partners: Handshake,
   orgs: Handshake,
 
-  // NETWORKS 8종 네트워크
+  // NETWORKS 8종 네트워크(원장별 메뉴는 2026-08-20에 내렸으나, 상세·HUB 등 다른 화면이
+  // 같은 탭 키를 쓰므로 매핑은 남긴다)
   van: Handshake,
   exp: Star,
   global: Globe,
+  // 글로벌 '내 업로드 DB' — 같은 역할(내 것)이라 국내 `mine`과 같은 글리프를 쓰고,
+  // 국내/글로벌은 라벨과 구분선이 가른다.
+  global_mine: User,
   investors: Coins,
   corporates: Building2,
   institutions: Landmark,

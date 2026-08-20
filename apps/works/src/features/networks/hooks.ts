@@ -5,13 +5,18 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { ENTITIES, normalizeEntityRowCategory, type EntityKey } from '@/features/networks/config'
+import {
+  DOMESTIC_LIST_ENTITIES,
+  ENTITIES,
+  normalizeEntityRowCategory,
+  type EntityKey,
+} from '@/features/networks/config'
 import {
   CLOSED_SEARCH_SCOPE,
-  EMPTY_MY_NETWORK_FILTERS,
+  EMPTY_NETWORK_LIST_FILTERS,
   EMPTY_NETWORK_FILTERS,
   hasActiveNetworkFilters,
-  type MyNetworkFilterState,
+  type NetworkListFilterState,
   type NetworkFilterState,
   type NetworkSearchScope,
 } from '@/features/networks/filters'
@@ -150,19 +155,16 @@ export function useEntityPage(
   })
 }
 
-// ── 내 네트워크(10종 통합 목록) ───────────────────────────────────────────────
+// ── 국내 네트워크 통합 목록 ───────────────────────────────────────────────────
 
 /**
- * 기여 이력 기준 통합 목록의 행(RPC `my_network_entities` 반환 컬럼).
+ * 국내 통합 목록의 행(RPC `my_network_entities` / `all_network_entities` 반환 컬럼).
  * 공용 리스트뷰(`MasterListView`)가 그대로 렌더할 수 있도록 `MasterRow` 호환 형태를 유지한다
  * (부서·직책·구분은 다른 네트워크와 동일하게 `profile` jsonb의 점 경로에서 읽힌다).
  */
 export type NetworkListRow = Record<string, unknown> & {
-  /**
-   * 원장 테이블명(EntityKey 또는 글로벌 원장). 상세 라우트의 기준 —
-   * 원장이 섞인 목록이라 행마다 다르며, 글로벌만 라우트 세그먼트가 테이블명과 다르다.
-   */
-  entity_table: EntityKey | 'global_networks'
+  /** 원장 테이블명. 상세 라우트의 기준 — 원장이 섞인 목록이라 행마다 다르다. */
+  entity_table: EntityKey
   id: string
   name: string
   affiliation: string | null
@@ -175,9 +177,13 @@ export type NetworkListRow = Record<string, unknown> & {
   /** 생성자(created_by → users.name). 공용 리스트뷰가 `creator.name`으로 읽는다. */
   creator: { name: string | null } | null
   updated_at: string | null
-  /** 가장 최근 기여 행위(created/merged/enriched/edited). */
+  /** 가장 최근 기여 행위(created/merged/enriched/edited). 전체 범위에서는 비어 있다. */
   last_action: string | null
   last_contributed_at: string | null
+  /** 활동(참여 사업 수). 참여 이력이 없으면 0. */
+  activity_count: number
+  /** 만족도(멘토 평가 평균). 평가가 없으면 null이라 목록에서 '-'로 남는다. */
+  satisfaction_avg: number | null
 }
 
 /** 네트워크 통합 목록 페이지. `useEntityPage`와 동일 규약(rows + 건수). */
@@ -202,18 +208,21 @@ const SCOPE_RPC: Record<NetworkListScope, string> = {
 }
 
 /**
- * 네트워크 원장 11종(디렉토리 10 + 글로벌) 통합 목록(서버 사이드 페이지네이션).
+ * 국내 네트워크 원장 8종(+은퇴한 vendors) 통합 목록(서버 사이드 페이지네이션).
  * 다형 조인·중복 제거가 필요해 PostgREST 대신 RPC로 조회한다.
  * 호출자 판정은 RPC 내부에서 하므로 user_id를 인자로 넘기지 않는다.
  * 총 건수는 모든 행에 동일하게 실려오는 `total_count`에서 읽는다(행 0건이면 0).
  * page는 0-base이며, 페이지 전환 시 이전 페이지를 유지(keepPreviousData)해 깜빡임을 줄인다.
+ *
+ * 담는 범위도 `p_entities`가 정한다 — 통합 RPC는 글로벌·미분류까지 아는 union을 보므로,
+ * 종류 필터를 고르지 않았을 때도 국내 원장 목록을 명시해 넘겨야 이 목록의 경계가 선다.
  */
 export function useNetworkListPage(
   scope: NetworkListScope,
   keyword: string,
   page: number,
   pageSize: number,
-  filters: MyNetworkFilterState = EMPTY_MY_NETWORK_FILTERS,
+  filters: NetworkListFilterState = EMPTY_NETWORK_LIST_FILTERS,
   searchScope: NetworkSearchScope = CLOSED_SEARCH_SCOPE,
 ) {
   const filtersKey = JSON.stringify(filters)
@@ -223,15 +232,22 @@ export function useNetworkListPage(
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<NetworkListPage> => {
       const trimmed = keyword.trim()
-      // 11종을 union하는 목록이라 페이지네이션과 필터를 같은 곳(RPC)에서 걸어야 한다 —
+      // 여러 원장을 union하는 목록이라 페이지네이션과 필터를 같은 곳(RPC)에서 걸어야 한다 —
       // 클라이언트에서 거르면 현재 페이지에 실려 온 행 안에서만 걸러진다.
       const { data, error } = await supabase.rpc(SCOPE_RPC[scope], {
         p_keyword: trimmed || null,
         p_limit: pageSize,
         p_offset: page * pageSize,
-        p_entities: filters.entities.length ? filters.entities : null,
+        p_entities: filters.entities.length ? filters.entities : DOMESTIC_LIST_ENTITIES,
         p_search_email: searchScope.email,
         p_search_phone: searchScope.phone,
+        p_expertise: filters.expertise.length ? filters.expertise : null,
+        // 둘 다 고르면 거르지 않은 것과 같다(전체) — 조건을 붙이지 않는다.
+        p_match: filters.match.length === 1 ? filters.match[0] : null,
+        p_activity_min: rangeBound(filters.activityMin),
+        p_activity_max: rangeBound(filters.activityMax),
+        p_satisfaction_min: rangeBound(filters.satisfactionMin),
+        p_satisfaction_max: rangeBound(filters.satisfactionMax),
       })
       if (error) throw error
       // RPC 원본 행: 생성자가 평면 컬럼(creator_name), 총 건수가 행마다 같은 값으로 실린다.

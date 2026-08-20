@@ -244,7 +244,9 @@ export function NetworkDetailPage({
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const label = ENTITIES[entity].label
-  const listPath = listPathProp ?? `/networks?tab=${entity}`
+  // 원장별 목록은 2026-08-20에 국내 통합 목록으로 합쳐졌다. 미분류(others)만 자기 메뉴가
+  // 남아 있으므로 그쪽으로 돌려보내고, 나머지 원장은 모두 '전체 네트워크 (국내)'로 돌아간다.
+  const listPath = listPathProp ?? `/networks?tab=${entity === 'others' ? 'others' : 'all'}`
   const isNew = id === 'new'
   const [editing, setEditing] = useState(isNew && !readOnly)
   const { data: record, isLoading } = useEntity(entity, isNew ? undefined : id)

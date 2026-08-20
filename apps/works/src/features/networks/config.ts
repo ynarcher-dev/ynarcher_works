@@ -188,6 +188,14 @@ export const ENTITY_ORDER: EntityKey[] = [
 ]
 
 /**
+ * 국내 통합 목록('내 업로드 DB (국내)' / '전체 네트워크 (국내)')이 담는 원장.
+ * 분류 카테고리 8종 + 은퇴 원장(vendors) — 은퇴 원장은 메뉴도 필터 선택지도 없지만 기존
+ * 레코드가 남아 있어, 여기서 빼면 어느 목록에서도 보이지 않는 행이 된다.
+ * 글로벌과 미분류는 각자 자기 메뉴가 있으므로 이 목록에 섞지 않는다.
+ */
+export const DOMESTIC_LIST_ENTITIES: EntityKey[] = [...ENTITY_ORDER, 'vendors']
+
+/**
  * 디렉토리(목록+상세)로 렌더되는 전체 엔티티.
  * 분류 카테고리(ENTITY_ORDER) + 미분류 데이터베이스(others 임시 저장소).
  * NetworksPage 탭 인식·상세 라우트·상세페이지 사용 판정의 단일 원천이다.

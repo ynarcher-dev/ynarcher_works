@@ -53,6 +53,12 @@ export const MINE_EMOJI = '⭐'
 export const LIST_ALL_TAB = 'all'
 
 /**
+ * NETWORKS 글로벌 '내 업로드 DB'의 탭 키. 국내 쌍(`mine`/`all`)과 같은 범위 축이지만
+ * 원장·열이 달라 화면이 갈리므로 키를 따로 둔다(`global`이 글로벌 '전체' 쪽 키다).
+ */
+export const GLOBAL_MINE_TAB = 'global_mine'
+
+/**
  * 사이드바에서 물러난 옛 탭 키 → 현재 키.
  * '전체 ~'는 원래 대시보드 자리(`?tab=dashboard`)였다가 목록으로 바뀌었으므로, 기존 북마크와
  * 상세 뒤로가기가 옛 키로 들어온다.
@@ -117,36 +123,36 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       ],
     },
   ],
+  // NETWORKS: 국내 한 쌍 → 글로벌 한 쌍 → 미분류. 축은 둘뿐이다 —
+  // 소재(국내/글로벌)가 그룹을 가르고, 범위(내 것/전부)가 그룹 안의 두 줄을 가른다.
+  //
+  // 2026-08-20: 원장별 8개 메뉴(전문가·투자사·BAN·EXP·기업·기관·대학·기타)를 내리고 국내
+  // 통합 목록의 '구분' 필터로 옮겼다. AC 사업구분(2026-08-03)·STARTUP 구분
+  // (2026-08-20)이 먼저 밟은 길과 같은 이유다 — 분류를 메뉴로 두면 그것이 '어디에 있는가'가
+  // 되어 영역·활동 같은 다른 축과 함께 걸 수 없고(전문가 중 영역이 핀테크인 사람, 같은 질문에
+  // 답할 수 없다), 원장을 하나 늘릴 때마다 사이드바가 길어진다. 원장별 목록이 갖고 있던
+  // 영역·매칭·활동·만족도 필터도 통합 목록으로 함께 옮겼으므로 거를 수 있는 축은 줄지 않는다.
+  //
+  // 국내와 글로벌을 한 목록으로 합치지는 않는다. 글로벌은 권역·국가·링크드인이라는 자기 열을
+  // 갖고 다른 원장이 그 열을 채울 수 없어, 합치면 통합 목록이 공통분모만 남는다.
+  //
+  // 이모지·구분선을 쌍 안에 두지 않는다(STARTUP과 같은 규칙) — 같은 원장을 범위만 달리해 보는
+  // 한 쌍이라 한쪽에만 색 있는 글리프가 붙으면 층이 다른 메뉴처럼 읽힌다. 구분선은 쌍과 쌍
+  // 사이에만 선다.
   networks: [
     {
       items: [
-        // 종류 무관, 내가 등록·편집·병합에 관여한(entity_contributions) 네트워크 통합 목록.
-        { label: '내 네트워크 관리', tab: 'mine', emoji: MINE_EMOJI },
-        // 종류 무관, 볼 수 있는 원장 11종 전부. 위 '내 네트워크'와 같은 목록을 범위만 넓혀 쓴다.
-        { label: '전체 네트워크', tab: LIST_ALL_TAB, dividerBefore: true },
-      ],
-    },
-    {
-      group: '마스터 네트워크 관리',
-      items: [
-        { label: '전문가 네트워크', tab: 'experts' },
-        { label: '투자사 네트워크', tab: 'investors' },
-        { label: 'BAN 네트워크', tab: 'van' },
-        { label: 'EXP 네트워크', tab: 'exp' },
-        { label: '기업 네트워크', tab: 'corporates', dividerBefore: true },
-        { label: '기관 네트워크', tab: 'institutions' },
-        { label: '대학 네트워크', tab: 'universities' },
-        { label: '기타 네트워크', tab: 'etc' },
-      ],
-    },
-    {
-      group: '데이터 관리',
-      items: [
-        // 글로벌 네트워크: 미분류 데이터베이스 위에 구분선으로 구획(기능은 보류, 메뉴만 제공).
-        { label: '글로벌 네트워크', tab: 'global' },
-        // 대용량 업로드는 사이드바 항목이 아니라 각 원장 목록 상단의 '대용량 업로드' 버튼으로
-        // 들어간다(/networks/bulk, 글로벌은 ?scope=global). 국내/글로벌 전환은 그 화면의 인페이지
-        // 탭이 맡는다(BulkUploadSection).
+        // 국내 원장 8종 통합. 내가 생성했거나 기여한(entity_contributions) 것만.
+        { label: '내 업로드 DB (국내)', tab: 'mine' },
+        // 같은 목록을 범위만 넓혀 쓴다 — 볼 수 있는 국내 전부.
+        { label: '전체 네트워크 (국내)', tab: LIST_ALL_TAB },
+        // 글로벌은 원장 하나(global_networks)를 같은 범위 축으로 가른다.
+        { label: '내 업로드 DB (글로벌)', tab: GLOBAL_MINE_TAB, dividerBefore: true },
+        { label: '전체 네트워크 (글로벌)', tab: 'global' },
+        // 미분류는 카테고리가 아니라 분류 전 임시 저장소라 위 두 쌍과 층이 다르다.
+        // 대용량 업로드는 사이드바 항목이 아니라 각 목록 상단의 '대용량 업로드' 버튼으로
+        // 들어간다(/networks/bulk, 글로벌은 ?scope=global). 국내/글로벌 전환은 그 화면의
+        // 인페이지 탭이 맡는다(BulkUploadSection).
         { label: '미분류 데이터베이스', tab: 'others', dividerBefore: true },
       ],
     },

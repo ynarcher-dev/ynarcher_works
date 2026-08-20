@@ -20,12 +20,7 @@ import {
   type EntityConfig,
   type EntityKey,
 } from '@/features/networks/config'
-import { NetworkFilters } from '@/features/networks/NetworkFilters'
-import {
-  EMPTY_NETWORK_FILTERS,
-  searchPlaceholderFor,
-  type NetworkFilterState,
-} from '@/features/networks/filters'
+import { EMPTY_NETWORK_FILTERS, searchPlaceholderFor } from '@/features/networks/filters'
 import { MasterListView } from '@/features/master/MasterListView'
 import type { MasterRow } from '@/features/master/types'
 
@@ -47,7 +42,12 @@ interface DirectoryTabProps {
  * 상세페이지 엔티티(프로필·조직 마스터)는 행 클릭 시 상세페이지로 진입해 등록/편집한다.
  * 그 외 엔티티(스타트업)는 등록 모달을 사용한다.
  *
- * 검색어·필터·액션은 이 탭이 소유하고 한 컨트롤 행(`ListToolbar`)에 모은다 — 페이지 헤더가
+ * 2026-08-20 이후 NETWORKS에서 이 탭이 실제로 서는 자리는 미분류 데이터베이스(others)
+ * 하나다 — 원장별 목록은 국내 통합 목록(NetworkListTab)으로 합쳐졌고, 미분류만 구분 이관
+ * 드롭다운·일괄 이관·목록 비활성화라는 자기 조작을 갖는다. 나머지 분기는 config 기반이라
+ * 그대로 두되, 새 화면을 이 탭으로 만들지 않는다.
+ *
+ * 검색어·액션은 이 탭이 소유하고 한 컨트롤 행(`ListToolbar`)에 모은다 — 페이지 헤더가
  * 검색을, 탭이 필터를 나눠 갖던 동안은 같은 목록의 조건이 두 줄로 갈라져 있었다
  * (AC 사업·발굴기업 목록과 같은 규격).
  */
@@ -60,18 +60,14 @@ export function DirectoryTab({ config, creating, setCreating }: DirectoryTabProp
   const [selected, setSelected] = useState<string[]>([])
   const [bulkCat, setBulkCat] = useState('')
   const [bulkBusy, setBulkBusy] = useState(false)
-  const [filters, setFilters] = useState<NetworkFilterState>(EMPTY_NETWORK_FILTERS)
   // 비활성화 사유 입력 모달 대상(열림 = 값 존재).
   const [deactivateTarget, setDeactivateTarget] = useState<MasterRow | null>(null)
   const [deactivateBusy, setDeactivateBusy] = useState(false)
-  // 검색어·필터 변경 시 첫 페이지로 되돌리고 선택을 비운다(빈 페이지·유령 선택 방지).
-  // 엔티티 전환은 상위(NetworksPage)가 key로 이 탭을 새로 마운트하므로 여기서 다루지 않는다 —
-  // 원장이 바뀌면 필터 축 자체가 달라져(프로필형↔조직형) 상태를 하나씩 되돌릴 이유가 없다.
-  const filtersKey = JSON.stringify(filters)
+  // 검색어 변경 시 첫 페이지로 되돌리고 선택을 비운다(빈 페이지·유령 선택 방지).
   useEffect(() => {
     setPage(0)
     setSelected([])
-  }, [keyword, filtersKey])
+  }, [keyword])
 
   // 엔티티 키가 곧 사이드바 탭이라 민감정보 정책 콘텐츠 키와 1:1로 대응한다.
   const contentKey = `networks.${config.key}`
@@ -87,7 +83,7 @@ export function DirectoryTab({ config, creating, setCreating }: DirectoryTabProp
     keyword,
     page,
     PAGE_SIZE,
-    filters,
+    EMPTY_NETWORK_FILTERS,
     searchScope,
   )
   // 미분류(others)는 분류 전 임시 저장소이므로 상세페이지로 진입하지 않는다(행 클릭 비활성).
@@ -202,9 +198,8 @@ export function DirectoryTab({ config, creating, setCreating }: DirectoryTabProp
         keyword={keyword}
         onKeywordChange={setKeyword}
         searchPlaceholder={searchPlaceholderFor(searchScope)}
-        filters={<NetworkFilters entity={config.key} filters={filters} onChange={setFilters} />}
-        // 등록 버튼 문구는 `{대상 명사} 등록` 규칙을 따른다. 9종이 같은 버튼을 쓰는 화면이라
-        // '네트워크 등록'으로 뭉뚱그리면 지금 어느 원장에 넣는 것인지가 버튼에 드러나지 않는다.
+        // 필터 축이 없다 — 이 목록의 열은 전부 인적사항이라 검색어 하나로 닿는다.
+        // 등록 버튼 문구는 `{대상 명사} 등록` 규칙을 따른다.
         actions={
           <ListActions
             // 미분류 데이터베이스(others)는 분류 전 임시 저장소라 직접 등록하지 않는다.

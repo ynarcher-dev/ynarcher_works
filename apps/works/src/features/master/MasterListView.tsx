@@ -1,8 +1,7 @@
-import { Badge, Button, DataTable, Select, Spinner, type Column, type DataTableProps } from '@ynarcher/ui'
+import { Button, DataTable, Select, Spinner, type Column, type DataTableProps } from '@ynarcher/ui'
 import { useMemo } from 'react'
 import { maskBy } from '@/lib/mask'
 import { useMaskPolicy } from '@/features/admin/sensitiveStore'
-import { OverflowTags } from '@/features/master/OverflowTags'
 import type { MasterColumn, MasterRow } from '@/features/master/types'
 
 /** 컬럼 name의 점 경로(예: 'profile.position')로 중첩 값을 읽는다. */
@@ -41,7 +40,7 @@ interface MasterListViewProps {
   deactivateWithReason?: boolean
   /**
    * 인라인 구분 드롭다운(kind: 'category' 컬럼 전용). 미분류 임시 저장소에서 목록에 머문 채
-   * 구분을 선택해 대상 네트워크로 이관할 때 주입한다. 미주입 시 해당 컬럼은 태그로 폴백한다.
+   * 구분을 선택해 대상 네트워크로 이관할 때 주입한다. 미주입 시 해당 컬럼은 텍스트로 폴백한다.
    */
   categorySelect?: {
     /** 드롭다운 옵션(value = 저장/이관 기준 구분 라벨). 선두에 빈 값 플레이스홀더 권장. */
@@ -94,13 +93,12 @@ export function MasterListView({
         if (c.kind === 'placeholder') return '-'
         const raw = resolveField(r, c.name)
         if (c.kind === 'match') {
-          // 목록은 읽기용 태그. 가능 여부 설정은 상세 페이지 드롭다운에서 수행한다.
+          // 목록은 읽기 전용 표기. 가능 여부 설정은 상세 페이지 드롭다운에서 수행한다.
+          // 배지가 아니라 텍스트다(2026-08-20) — 기본값이 '가능'이라 열 전체가 같은 배지로
+          // 채워지고, 그러면 색이 신호가 아니라 배경이 된다. 눈에 띄어야 하는 쪽은 드문
+          // '불가능'이므로 그쪽만 위험색 글자로 두고 '가능'은 본문 톤으로 둔다.
           const ok = raw == null || raw === '' ? true : raw === true || raw === 'true' || raw === 'available'
-          return (
-            <Badge tone={ok ? 'success' : 'neutral'}>
-              {ok ? '가능' : '불가능'}
-            </Badge>
-          )
+          return ok ? '가능' : <span className="text-danger-700">불가능</span>
         }
         // 집계값(활동·만족도)은 목록 RPC가 실어 준다. 집계 대상이 한 건도 없으면 '-'로 비워 둔다 —
         // 만족도를 0.0으로 채우면 '최하 평가'와, 임의의 기본값(999건·5.0)은 실데이터와 구분되지 않는다.
@@ -131,7 +129,16 @@ export function MasterListView({
         if (c.kind === 'tags') {
           const arr = Array.isArray(raw) ? (raw as unknown[]).map(String) : []
           if (arr.length === 0) return '-'
-          return <OverflowTags tags={arr} />
+          // 배지가 아니라 한 줄 텍스트로 잇는다(2026-08-20). 배지는 그 자체가 강세라 값이
+          // 여러 개인 열에서는 색 덩어리가 줄마다 다른 길이로 서고, 개수에 따라 셀 안에서
+          // 정렬이 흔들렸다. 색은 상태에만 쓰고 분류는 텍스트로 둔다는 규칙과도 같은 방향이다.
+          // 폭을 넘치면 말줄임으로 자르고 전체 값은 title로 남긴다.
+          const text = arr.join(', ')
+          return (
+            <span className="block truncate" title={text}>
+              {text}
+            </span>
+          )
         }
         if (c.kind === 'link') {
           // 링크드인 등 URL: 값이 있으면 브랜드 색 아이콘 링크, 없으면 회색 아이콘(비활성).
@@ -164,7 +171,7 @@ export function MasterListView({
         }
         const v = raw as string | null | undefined
         if (c.kind === 'category') {
-          // 인라인 구분 드롭다운(미분류 임시 저장소). 핸들러 미주입 시 태그로 폴백한다.
+          // 인라인 구분 드롭다운(미분류 임시 저장소). 핸들러 미주입 시 텍스트로 폴백한다.
           if (categorySelect) {
             const known = categorySelect.options.some((o) => o.value === v)
             return (
@@ -186,9 +193,10 @@ export function MasterListView({
               </Select>
             )
           }
-          return v ? <Badge tone="neutral">{v}</Badge> : '-'
+          return v || '-'
         }
-        if (c.kind === 'tag') return v ? <Badge tone="neutral">{v}</Badge> : '-'
+        // 분류 값(권역 등)도 배지가 아니라 텍스트다 — 색은 상태에만 쓴다(5_component_spec_rules §3.4).
+        if (c.kind === 'tag') return v || '-'
         // 마스킹 여부는 콘텐츠(메뉴)별 정책이 정한다 — 정책이 '공개'면 원본을 그대로 보여준다.
         if (c.mask) return masked[c.mask] ? maskBy(c.mask, v ?? null) : (v ?? '-')
         return v ?? '-'

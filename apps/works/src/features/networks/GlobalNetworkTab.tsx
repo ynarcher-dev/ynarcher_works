@@ -12,21 +12,36 @@ import {
   type GlobalFilterState,
 } from '@/features/networks/filters'
 import { GLOBAL_COLUMNS } from '@/features/networks/globalConfig'
-import { useGlobalPage } from '@/features/networks/globalHooks'
+import { useGlobalPage, type GlobalListScope } from '@/features/networks/globalHooks'
 
-/** 목록 페이지당 행 수(국내 디렉토리와 동일). */
+/** 목록 페이지당 행 수(국내 통합 목록과 동일). */
 const PAGE_SIZE = 30
 
-/** 민감정보 정책 콘텐츠 키(ADMIN '민감정보 관리'). */
+/**
+ * 민감정보 정책 콘텐츠 키(ADMIN '민감정보 관리').
+ * 두 범위가 한 원장·같은 열을 보므로 정책도 하나다 — 범위별로 가림을 달리 할 이유가 없다.
+ */
 const CONTENT_KEY = 'networks.global'
+
+/** 범위별 표 라벨. 열·필터·검색·상세 진입은 두 범위가 같다. */
+const SCOPE_LABEL: Record<GlobalListScope, string> = {
+  mine: '내 업로드 DB',
+  all: '전체 네트워크',
+}
+
+interface GlobalNetworkTabProps {
+  /** 'mine'은 내가 생성했거나 기여한 것만, 'all'은 볼 수 있는 전부. */
+  scope: GlobalListScope
+}
 
 /**
  * 글로벌 네트워크 탭: 공용 리스트뷰(MasterListView) 재활용.
- * 국내 8종과 달리 독립 단일 마스터(global_networks)이며, 권역·국가는 조인된 태그명으로 표시한다.
+ * 국내와 달리 독립 단일 마스터(global_networks)라 권역·국가·링크드인 열을 갖는다 —
+ * 국내 통합 목록에 합치지 않고 자기 한 쌍(내 업로드 DB / 전체 네트워크)을 갖는 이유다.
  * 등록/수정은 모달이 아닌 상세페이지(/networks/global/:id)에서 처리하며, 비활성화(삭제)도 상세에서 수행한다.
- * 검색어·필터·액션은 국내 디렉토리와 같은 규격으로 한 컨트롤 행에 모은다.
+ * 검색어·필터·액션은 국내 통합 목록과 같은 규격으로 한 컨트롤 행에 모은다.
  */
-export function GlobalNetworkTab() {
+export function GlobalNetworkTab({ scope }: GlobalNetworkTabProps) {
   const navigate = useNavigate()
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(0)
@@ -43,7 +58,7 @@ export function GlobalNetworkTab() {
     [masked.email, masked.phone],
   )
 
-  const { data, isLoading } = useGlobalPage(keyword, page, PAGE_SIZE, filters, searchScope)
+  const { data, isLoading } = useGlobalPage(scope, keyword, page, PAGE_SIZE, filters, searchScope)
 
   return (
     <div className="space-y-3">
@@ -62,7 +77,7 @@ export function GlobalNetworkTab() {
       />
 
       <MasterListView
-        label="글로벌 네트워크"
+        label={SCOPE_LABEL[scope]}
         contentKey={CONTENT_KEY}
         columns={GLOBAL_COLUMNS}
         rows={(data?.rows ?? []) as MasterRow[]}
