@@ -3,9 +3,9 @@ import { useParticipants, type Participant } from '@/features/program/hooks'
 import { PARTICIPANT_ROLES } from '@/features/program/config'
 
 const columns: Column<Participant>[] = [
-  { key: 'role', header: '역할', render: (r) => <Badge tone="info">{r.role}</Badge> },
-  { key: 'status', header: '상태', render: (r) => r.status },
-  { key: 'user_id', header: '연결 계정', render: (r) => (r.user_id ? '연결됨' : '미연결') },
+  { key: 'role', header: '역할', type: 'badge', render: (r) => <Badge tone="info">{r.role}</Badge> },
+  { key: 'status', header: '상태', type: 'text', render: (r) => r.status },
+  { key: 'user_id', header: '연결 계정', type: 'text', render: (r) => (r.user_id ? '연결됨' : '미연결') },
 ]
 
 /** 참가자 풀 및 역할 요약. (7-3 — CSV 대량 업로드/매직링크 초대는 후속 확장) */

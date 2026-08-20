@@ -3,8 +3,8 @@ import dayjs from 'dayjs'
 import { useByModuleId, type Row } from '@/features/program/moduleHooks'
 
 const columns: Column<Row>[] = [
-  { key: 'starts_at', header: '일시', render: (r) => (r.starts_at ? dayjs(String(r.starts_at)).format('MM-DD HH:mm') : '-') },
-  { key: 'status', header: '상태', render: (r) => <Badge tone="info">{String(r.status)}</Badge> },
+  { key: 'starts_at', header: '일시', type: 'date', render: (r) => (r.starts_at ? dayjs(String(r.starts_at)).format('MM-DD HH:mm') : '-') },
+  { key: 'status', header: '상태', type: 'badge', render: (r) => <Badge tone="info">{String(r.status)}</Badge> },
 ]
 
 /** 데모데이 세션. (7-10 — 모바일 심사/투자자 관심/후속 미팅은 후속) */

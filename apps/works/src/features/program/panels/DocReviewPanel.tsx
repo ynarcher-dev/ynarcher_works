@@ -3,9 +3,9 @@ import dayjs from 'dayjs'
 import { useByModuleId, type Row } from '@/features/program/moduleHooks'
 
 const columns: Column<Row>[] = [
-  { key: 'status', header: '라운드 상태', render: (r) => <Badge tone="info">{String(r.status)}</Badge> },
-  { key: 'opens_at', header: '시작', render: (r) => (r.opens_at ? dayjs(String(r.opens_at)).format('MM-DD HH:mm') : '-') },
-  { key: 'closes_at', header: '마감', render: (r) => (r.closes_at ? dayjs(String(r.closes_at)).format('MM-DD HH:mm') : '-') },
+  { key: 'status', header: '라운드 상태', type: 'badge', render: (r) => <Badge tone="info">{String(r.status)}</Badge> },
+  { key: 'opens_at', header: '시작', type: 'date', render: (r) => (r.opens_at ? dayjs(String(r.opens_at)).format('MM-DD HH:mm') : '-') },
+  { key: 'closes_at', header: '마감', type: 'date', render: (r) => (r.closes_at ? dayjs(String(r.closes_at)).format('MM-DD HH:mm') : '-') },
 ]
 
 /** 서면평가 라운드. (7-5 — 평가 엔진 기반, 심사위원 배정/Split View는 후속) */

@@ -3,9 +3,9 @@ import dayjs from 'dayjs'
 import { useByModuleId, type Row } from '@/features/program/moduleHooks'
 
 const columns: Column<Row>[] = [
-  { key: 'venue', header: '장소', render: (r) => String(r.venue ?? '-') },
-  { key: 'starts_at', header: '일시', render: (r) => (r.starts_at ? dayjs(String(r.starts_at)).format('MM-DD HH:mm') : '-') },
-  { key: 'status', header: '상태', render: (r) => <Badge tone="info">{String(r.status)}</Badge> },
+  { key: 'venue', header: '장소', type: 'name', render: (r) => String(r.venue ?? '-') },
+  { key: 'starts_at', header: '일시', type: 'date', render: (r) => (r.starts_at ? dayjs(String(r.starts_at)).format('MM-DD HH:mm') : '-') },
+  { key: 'status', header: '상태', type: 'badge', render: (r) => <Badge tone="info">{String(r.status)}</Badge> },
 ]
 
 /** 대면평가 세션. (7-6 — 발표 순서/현장 진행/최종 선발은 후속) */

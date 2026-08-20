@@ -5,6 +5,7 @@ const columns: Column<FormResult>[] = [
   {
     key: 'target',
     header: '평가 대상',
+    type: 'name',
     render: (r) => (
       <span className="inline-flex items-center gap-2">
         <Badge tone="neutral">{r.target_type}</Badge>
@@ -17,22 +18,19 @@ const columns: Column<FormResult>[] = [
   {
     key: 'weighted_total',
     header: '가중 총점',
-    align: 'right',
-    numeric: true,
+    type: 'money',
     render: (r) => Number(r.weighted_total).toFixed(2),
   },
   {
     key: 'evaluator_count',
     header: '평가자',
-    align: 'right',
-    numeric: true,
+    type: 'count',
     render: (r) => r.evaluator_count,
   },
   {
     key: 'avg',
     header: '평가자 평균',
-    align: 'right',
-    numeric: true,
+    type: 'money',
     render: (r) =>
       r.evaluator_count > 0
         ? (Number(r.weighted_total) / r.evaluator_count).toFixed(2)

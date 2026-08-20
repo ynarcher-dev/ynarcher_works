@@ -62,6 +62,8 @@ export function SubmissionsPanel({ moduleId }: { moduleId: string }) {
       return {
         key: f.id ?? f.label,
         header: f.label,
+        // 동적 필드는 내용 종류를 미리 알 수 없어 일괄 text로 세운다(단문류만 목록에 오른다).
+        type: 'text' as const,
         render: (s: Submission) => {
           const v = valueOf(s, f.id ?? '')
           if (!v) return '-'
@@ -71,11 +73,12 @@ export function SubmissionsPanel({ moduleId }: { moduleId: string }) {
     })
     return [
       ...dyn,
-      { key: 'consent', header: '동의', render: (s) => (s.consented_at ? <Badge tone="success">동의</Badge> : '-') },
-      { key: 'status', header: '상태', render: (s) => statusBadge(s.status) },
+      { key: 'consent', header: '동의', type: 'badge', render: (s) => (s.consented_at ? <Badge tone="success">동의</Badge> : '-') },
+      { key: 'status', header: '상태', type: 'badge', render: (s) => statusBadge(s.status) },
       {
         key: 'submitted_at',
         header: '제출일',
+        type: 'date',
         render: (s) => (s.submitted_at ? dayjs(s.submitted_at).format('YYYY-MM-DD') : '-'),
       },
       {

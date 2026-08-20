@@ -69,19 +69,18 @@ export function ProgramTable({
   const columns = useMemo<Column<Program>[]>(
     () => [
       {
-        // 사업명. 필러(남는 폭을 전부 먹는 열)를 두지 않는다 — 필러가 있으면 그 열이 폭을
-        // 독점하고 나머지가 min-content까지 눌려, 정작 값이 여러 개인 분야가 줄바꿈된다.
-        // 넘치면 말줄임 + 툴팁(폭은 아래 열들과 함께 layout="fixed"가 비율로 나눈다).
+        // 사업명(식별 열). 폭·정렬은 종류(type)가 정한다 — 수동 w-*를 적지 않는다.
+        // 넘치면 말줄임 + 툴팁(layout="fixed"가 계산 폭을 지키고 넘치는 글자를 자른다).
         key: 'title',
         header: '사업명',
-        className: 'w-56 font-semibold',
+        type: 'name',
         render: (r) => <span title={r.title}>{r.title}</span>,
       },
       {
         // 사업코드(6자리 영숫자 난수). 목록에서는 다른 컬럼과 동일한 본문 텍스트로 노출한다.
         key: 'code',
         header: '코드',
-        className: 'w-20',
+        type: 'text',
         render: (r) => r.code ?? <span className="text-gray-400">-</span>,
       },
       // 사업구분. 워크스페이스가 분류를 운용하지 않으면(categories 비어 있음) 컬럼 자체를 감춘다.
@@ -91,7 +90,7 @@ export function ProgramTable({
               // 다른 컬럼과 동일한 본문 텍스트로 노출한다.
               key: 'category',
               header: '카테고리',
-              className: 'w-20',
+              type: 'text',
               render: (r: Program) =>
                 r.category ? (
                   categoryLabel(config, r.category) ?? r.category
@@ -110,8 +109,8 @@ export function ProgramTable({
             {
               key: 'host_organization',
               header: '주관',
-              // 기관명은 길이가 널뛰므로 폭을 묶고 넘치면 말줄임한다(넓히면 분야가 그만큼 준다).
-              className: 'w-28',
+              // 기관명은 길이가 널뛰므로 가변 열로 두고 넘치면 말줄임한다.
+              type: 'text',
               render: (r: Program) =>
                 r.host_organization ? (
                   <span title={r.host_organization}>{r.host_organization}</span>
@@ -126,7 +125,7 @@ export function ProgramTable({
         // 경로가 길어지면 칸을 넓히지 않고 말줄임한다(넓히면 분야가 그만큼 사라진다).
         key: 'departments',
         header: '담당 부서',
-        className: 'w-44',
+        type: 'long',
         render: (r) => {
           const summary = summarizeProgramDepartments(r.departments ?? [], lineageOf)
           if (!summary) return <span className="text-gray-400">미지정</span>
@@ -148,13 +147,12 @@ export function ProgramTable({
         // 두 줄이 되어 표 전체의 행 높이가 들쭉날쭉해진다(줄바꿈 금지 · 넘치면 잘림).
         key: 'industries',
         header: '분야',
-        className: 'w-64',
+        type: 'long',
         render: (r) => {
           const list = programIndustries(r)
           if (!list.length) return <span className="text-gray-400">-</span>
-          // 셀의 text-center는 flex 자식에 먹지 않으므로 justify-center로 직접 모은다.
           return (
-            <div className="flex justify-center gap-1" title={list.join(' · ')}>
+            <div className="flex gap-1" title={list.join(' · ')}>
               {list.map((ind) => (
                 <Badge key={ind} tone="neutral">
                   {ind}
@@ -167,7 +165,7 @@ export function ProgramTable({
       {
         key: 'status',
         header: '상태',
-        className: 'w-20',
+        type: 'badge',
         render: (r) => (
           <Badge tone={PROGRAM_STATUS_TONE[r.status] ?? 'neutral'}>
             {PROGRAM_STATUS_LABEL[r.status] ?? r.status}
@@ -177,21 +175,19 @@ export function ProgramTable({
       {
         key: 'start_date',
         header: '운영 시작일',
-        className: 'w-24',
-        numeric: true,
+        type: 'date',
         render: (r) => r.start_date ?? <span className="text-gray-400">-</span>,
       },
       {
         key: 'end_date',
         header: '운영 종료일',
-        className: 'w-24',
-        numeric: true,
+        type: 'date',
         render: (r) => r.end_date ?? <span className="text-gray-400">-</span>,
       },
       {
         key: 'managers',
         header: '담당자',
-        className: 'w-24',
+        type: 'person',
         // 대표(PM) 1명 + "외 N" 공용 규격. 담당자는 사람당 구간이 여러 개일 수 있으므로
         // 먼저 사람 단위로 접은 뒤 세어야 같은 사람이 두 번 세어지지 않는다.
         render: (r) => managerLabel(r) ?? <span className="text-gray-400">미지정</span>,
@@ -205,11 +201,11 @@ export function ProgramTable({
       columns={columns}
       rows={rows}
       rowKey={(r) => r.id}
-      // 폭을 비율로 못박는다(STARTUP 목록과 동일 규격). 자동 레이아웃은 내용이 긴 열이
+      // 폭은 열마다의 type이 계산하되 fixed로 못박는다. 자동 레이아웃은 내용이 긴 열이
       // 폭을 가져가 값이 여러 개인 열(분야)을 줄바꿈시키는데, 한 행만 두 줄이 되면 행 높이가
       // 어긋나 표가 들쭉날쭉해진다. 고정 폭에서는 모든 값이 한 줄로 서고 넘치면 말줄임된다.
       layout="fixed"
-      selectable
+      // selectable은 자리 기본값(페이지에 바로 놓인 표 = 켬)을 그대로 따른다.
       selectedKeys={selectedKeys}
       onSelectionChange={onSelectionChange}
       onRowClick={onRowClick}

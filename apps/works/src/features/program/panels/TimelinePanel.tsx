@@ -4,10 +4,10 @@ import { useByProgram, type Row } from '@/features/program/moduleHooks'
 import { useProgramWorkspace } from '@/features/program/workspace'
 
 const columns: Column<Row>[] = [
-  { key: 'title', header: '항목', render: (r) => String(r.title) },
-  { key: 'item_type', header: '유형', render: (r) => <Badge tone="neutral">{String(r.item_type ?? '-')}</Badge> },
-  { key: 'starts_at', header: '시작', render: (r) => (r.starts_at ? dayjs(String(r.starts_at)).format('MM-DD HH:mm') : '-') },
-  { key: 'visibility', header: '공개', render: (r) => String(r.visibility) },
+  { key: 'title', header: '항목', type: 'name', render: (r) => String(r.title) },
+  { key: 'item_type', header: '유형', type: 'badge', render: (r) => <Badge tone="neutral">{String(r.item_type ?? '-')}</Badge> },
+  { key: 'starts_at', header: '시작', type: 'date', render: (r) => (r.starts_at ? dayjs(String(r.starts_at)).format('MM-DD HH:mm') : '-') },
+  { key: 'visibility', header: '공개', type: 'text', render: (r) => String(r.visibility) },
 ]
 
 /** 통합 타임라인. (7-11 — 충돌 감지/ICS/system_events 동기화는 후속) */

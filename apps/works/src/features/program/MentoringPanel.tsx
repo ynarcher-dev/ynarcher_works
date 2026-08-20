@@ -14,17 +14,20 @@ const columns: Column<MentoringRelationship>[] = [
   {
     key: 'startup_id',
     header: '스타트업',
+    type: 'name',
     render: (r) => (r.startup_id ? r.startup_id.slice(0, 8) : '-'),
   },
   {
     key: 'mentor_participant_id',
     header: '멘토',
+    type: 'person',
     render: (r) =>
       r.mentor_participant_id ? r.mentor_participant_id.slice(0, 8) : '-',
   },
   {
     key: 'status',
     header: '상태',
+    type: 'badge',
     render: (r) => (
       <Badge tone={statusTone[r.status] ?? 'neutral'}>{r.status}</Badge>
     ),

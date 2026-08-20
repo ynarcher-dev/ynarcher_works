@@ -2,13 +2,12 @@ import { Badge, DataTable, Spinner, type Column } from '@ynarcher/ui'
 import { useByProgram, type Row } from '@/features/program/moduleHooks'
 
 const columns: Column<Row>[] = [
-  { key: 'outcome_type', header: '성과 유형', render: (r) => String(r.outcome_type ?? '-') },
-  { key: 'status', header: '상태', render: (r) => <Badge tone="info">{String(r.status)}</Badge> },
+  { key: 'outcome_type', header: '성과 유형', type: 'name', render: (r) => String(r.outcome_type ?? '-') },
+  { key: 'status', header: '상태', type: 'badge', render: (r) => <Badge tone="info">{String(r.status)}</Badge> },
   {
     key: 'amount',
     header: '금액',
-    align: 'right',
-    numeric: true,
+    type: 'money',
     render: (r) => (r.amount != null ? Number(r.amount).toLocaleString() : '-'),
   },
 ]
