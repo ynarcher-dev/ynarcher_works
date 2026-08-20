@@ -479,7 +479,7 @@ async function searchPortableAssets(kw: string): Promise<SearchResult[]> {
     id: `asset:${row.id}`,
     name: row.name,
     kind: 'asset' as const,
-    detail: detail(['워크스페이스', '자산 반출대장', row.item_type, row.serial_no]),
+    detail: detail(['워크스페이스', '자산 현황', row.item_type, row.serial_no]),
     badge: '자산',
     tone: 'neutral' as const,
     path: `/office?tab=outbound&asset=${row.id}`,

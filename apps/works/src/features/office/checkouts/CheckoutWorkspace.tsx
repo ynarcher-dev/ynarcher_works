@@ -256,7 +256,7 @@ export function CheckoutWorkspace({ initialAssetId }: { initialAssetId?: string 
 
   return (
     <div className="space-y-5">
-      <PageHeader title="자산 반출대장" />
+      <PageHeader title="자산 현황" />
 
       {branches.length === 0 ? (
         <Banner tone="warning">
