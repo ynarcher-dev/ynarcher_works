@@ -1,5 +1,7 @@
+import { Checkbox } from '@ynarcher/ui'
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
+import { GuestButton } from '@/components/GuestButton'
 import { getEnv } from '@/lib/env'
 import { anonHeaders, functionsBase } from '@/lib/supabase'
 
@@ -325,7 +327,7 @@ export function ApplyPage() {
         </div>
 
         {/* 개인정보 동의 */}
-        <div className="mt-6 rounded-lg border border-gray-200 bg-gray-25 p-4">
+        <div className="mt-6 rounded-radius-md border border-gray-300 bg-gray-25 p-4">
           {landing.privacy_consent_text && (
             <p className="whitespace-pre-wrap text-caption text-gray-600">
               {landing.privacy_consent_text}
@@ -333,29 +335,30 @@ export function ApplyPage() {
           )}
           <div className="mt-3 space-y-2">
             {consentFields.map((c) => (
-              <label key={c.id} className="flex items-center gap-2 text-body text-gray-800">
-                <input
-                  type="checkbox"
-                  checked={consents[c.id] ?? false}
-                  onChange={(e) => setConsents((prev) => ({ ...prev, [c.id]: e.target.checked }))}
-                />
-                {c.label}
-                {c.is_required && <span className="text-danger">*</span>}
-              </label>
+              <Checkbox
+                key={c.id}
+                checked={consents[c.id] ?? false}
+                onChange={(e) => setConsents((prev) => ({ ...prev, [c.id]: e.target.checked }))}
+                label={
+                  <>
+                    {c.label}
+                    {c.is_required && <span className="text-danger">*</span>}
+                  </>
+                }
+              />
             ))}
           </div>
         </div>
 
         {error && <p className="mt-4 text-caption text-danger">{error}</p>}
 
-        <button
-          type="button"
+        <GuestButton
+          className="mt-5 w-full"
           onClick={() => void onSubmit()}
           disabled={submitting}
-          className="mt-5 w-full rounded bg-brand px-4 py-2.5 text-body font-medium text-white transition-colors duration-fast hover:bg-brand-600 active:bg-brand-700 disabled:opacity-60"
         >
           {submitting ? '제출 중…' : '신청서 제출'}
-        </button>
+        </GuestButton>
 
         {landing.contact && (
           <p className="mt-6 whitespace-pre-wrap text-center text-caption text-gray-600">

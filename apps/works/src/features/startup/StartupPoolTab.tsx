@@ -6,6 +6,7 @@ import { ENTITIES } from '@/features/networks/config'
 import { useMaskPolicy } from '@/features/admin/sensitiveStore'
 import { StartupPoolTable, type StartupPoolRow } from '@/features/startup/StartupPoolTable'
 import { StartupPoolFilters } from '@/features/startup/StartupPoolFilters'
+import { StartupFilteredSummary } from '@/features/startup/StartupFilteredSummary'
 import {
   EMPTY_STARTUP_FILTERS,
   useStartupPoolPage,
@@ -71,6 +72,13 @@ export function StartupPoolTab({ mineUserId }: StartupPoolTabProps) {
 
   return (
     <div className="space-y-3">
+      <StartupFilteredSummary
+        keyword={keyword}
+        filters={filters}
+        mineUserId={mineUserId}
+        searchScope={searchScope}
+      />
+
       <ListToolbar
         keyword={keyword}
         onKeywordChange={setKeyword}

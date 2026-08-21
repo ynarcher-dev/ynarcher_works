@@ -6,7 +6,6 @@ import {
   type Column,
   type DataTableProps,
 } from '@ynarcher/ui'
-import { ImageOff } from 'lucide-react'
 import {
   ASSET_STATE_LABELS,
   elapsedLabel,
@@ -31,31 +30,16 @@ export interface AssetRow {
 interface PortableAssetsTableProps {
   rows: AssetRow[]
   now: string
-  /** 사진 경로 → Signed URL(없으면 빈 자리). */
-  urlOf: (path: string | undefined) => string | undefined
   /** 사용자 id → 이름(없으면 빈 칸). 비품 관리자 칸이 쓴다. */
   nameOf: (id: string | null) => string | null
   onOpen: (row: AssetRow) => void
   pagination: DataTableProps<AssetRow>['pagination']
 }
 
-/** 물품 썸네일. 사진이 없거나 서명에 실패하면 빈 자리를 같은 크기로 둔다(줄 높이가 흔들리지 않게). */
-function Thumb({ url }: { url?: string }) {
-  return (
-    <span className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-radius-sm border border-gray-200 bg-gray-50">
-      {url ? (
-        <img src={url} alt="" className="size-full object-cover" />
-      ) : (
-        <ImageOff className="size-4 text-gray-300" />
-      )}
-    </span>
-  )
-}
-
 /**
  * 반출 가능 물품 표 — 이 화면의 주인공은 반출 기록이 아니라 물건이다.
  *
- * 한 줄이 답하는 것은 넷이다: 어떤 물건인가(사진·이름·품목), 지금 있는가(재고·상태·승인 여부),
+ * 한 줄이 답하는 것은 넷이다: 어떤 물건인가(이름·품목), 지금 있는가(재고·상태·승인 여부),
  * 없다면 누가 언제까지 갖고 있는가(반출자·반납 예정), 그리고 누구에게 물어보는가(관리자).
  * 그 뒤의 이야기(시리얼·목적·행선지·지난 기록)와 **모든 처리**는 물건을 눌러 모달에서 한다 —
  * 표에 버튼과 값을 다 펼치면 정작 "지금 있나"가 묻히기 때문이다. 승인도 예외가 아니다:
@@ -66,7 +50,6 @@ function Thumb({ url }: { url?: string }) {
 export function PortableAssetsTable({
   rows,
   now,
-  urlOf,
   nameOf,
   onOpen,
   pagination,
@@ -78,12 +61,10 @@ export function PortableAssetsTable({
       header: '물품',
       primary: true,
       type: 'name',
-      render: (r) => (
-        <div className="flex items-center gap-2">
-          <Thumb url={urlOf(r.asset.photoPaths[0])} />
-          <span className="min-w-0 truncate">{r.asset.name}</span>
-        </div>
-      ),
+      // 사진은 표에 두지 않는다 — 목록에서 답해야 할 것은 '지금 빌릴 수 있나'이고, 썸네일은
+      // 그 답과 무관하면서 행마다 가장 눈에 띄는 자리를 차지한다. 실물 확인은 물건을 눌러
+      // 모달의 사진(AssetPhotoCarousel)에서 한다.
+      render: (r) => r.asset.name,
     },
     {
       key: 'itemType',

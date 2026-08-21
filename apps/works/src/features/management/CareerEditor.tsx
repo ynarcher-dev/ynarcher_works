@@ -1,4 +1,4 @@
-import { Input } from '@ynarcher/ui'
+import { Button, CardHeading, IconButton, Input } from '@ynarcher/ui'
 import { Plus, Trash2 } from 'lucide-react'
 import {
   CAREER_SECTIONS,
@@ -43,14 +43,10 @@ function SectionBlock({
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-body font-semibold text-gray-800">{section.title}</h3>
-        <button
-          type="button"
-          onClick={() => onRows([...rows, emptyRow(section)])}
-          className="inline-flex items-center gap-1 rounded-radius-md border border-gray-300 px-2 py-1 text-caption text-gray-700 transition-colors hover:bg-gray-50"
-        >
+        <CardHeading level="subhead">{section.title}</CardHeading>
+        <Button variant="outline" onClick={() => onRows([...rows, emptyRow(section)])}>
           <Plus className="size-3.5" aria-hidden /> 추가
-        </button>
+        </Button>
       </div>
 
       {rows.length === 0 ? (
@@ -76,14 +72,13 @@ function SectionBlock({
                   />
                 </div>
               ))}
-              <button
-                type="button"
-                aria-label="삭제"
+              <IconButton
+                variant="ghost"
+                danger
+                label="삭제"
                 onClick={() => onRows(rows.filter((_, ri) => ri !== i))}
-                className="shrink-0 rounded-radius-md p-2 text-gray-500 transition-colors hover:bg-danger-subtle hover:text-danger"
-              >
-                <Trash2 className="size-4" aria-hidden />
-              </button>
+                icon={<Trash2 className="size-4" aria-hidden />}
+              />
             </div>
           ))}
         </div>

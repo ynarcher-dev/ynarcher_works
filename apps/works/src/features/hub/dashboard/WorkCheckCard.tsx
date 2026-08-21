@@ -51,6 +51,7 @@ function useClock() {
 function StampButton({
   icon,
   label,
+  tag,
   at,
   done,
   disabled,
@@ -58,6 +59,8 @@ function StampButton({
 }: {
   icon: ReactNode
   label: string
+  /** 이 스탬프를 평하는 배지 하나. 찍히기 전에는 없다. */
+  tag?: ReactNode
   at: string | null
   done: boolean
   disabled?: boolean
@@ -67,6 +70,7 @@ function StampButton({
     <DashboardRowButton
       icon={icon}
       label={label}
+      tag={tag}
       active={done}
       disabled={disabled}
       onClick={onClick}
@@ -177,35 +181,67 @@ export function WorkCheckCard() {
         : null
 
   /**
-   * 근무 현황 태그 — 진행 상태 하나 + 원장이 매긴 상태 하나.
+   * 근무 현황 태그 — **찍은 버튼 위에, 한 버튼에 하나씩**(2026-08-21).
    *
-   * 둘을 한 값으로 합치지 않는다. '지금 근무중인가'와 '오늘이 어떤 날로 기록됐는가'는 다른
-   * 질문이고, 지각한 채로 근무중인 날이 실제로 있다. 원장 상태는 `정상`일 때 적지 않는다 —
-   * 아무 일도 없었다는 말을 배지로 붙이면 눈이 걸릴 곳만 늘어난다. 라벨·색은 상태 원장이
-   * 갖고 있으므로 휴가 종류가 늘어나도 이 화면은 그대로다.
+   * 예전에는 카드 제목 옆에 진행 상태와 원장 상태를 나란히 달았다. 그러면 배지 둘이 카드
+   * 전체를 설명하는 값처럼 보이는데, 정작 둘이 가리키는 것은 각각 다른 스탬프다 — '지각'은
+   * 출근에 관한 말이고 '조기퇴근'은 퇴근에 관한 말이라, 제목 옆에 모아 두면 어느 기록이
+   * 문제였는지 눈이 버튼까지 되짚어 내려가야 한다.
+   *
+   * 그래서 규칙을 하나로 정한다. **태그는 그 버튼이 남긴 기록을 평한다.**
+   *
+   * * 찍히지 않은 버튼에는 태그가 없다. 아직 일어나지 않은 일에 평할 것이 없다.
+   * * 한 버튼에 하나만 붙는다. 두 개가 필요하면 그중 하나는 다른 버튼의 몫이다.
+   * * '휴무'·'미출근'은 태그로 세우지 않는다. 근무일이 아니면 왼쪽 기준 줄이 이미 '근무일
+   *   아님'이라 말하고, 출근 전임은 비어 있는 출근 버튼이 그 자체로 말한다.
+   *
+   * 원장 상태 코드는 하루에 하나지만 담긴 사실은 둘일 수 있다(`LATE_EARLY` = 지각 + 조기퇴근).
+   * 그래서 코드에서 **사실을 분리해** 각 버튼으로 나눠 보내고, 라벨·색은 여전히 상태 원장에서
+   * 가져온다(`LATE`·`EARLY_LEAVE` 행). 상태 이름이나 톤을 화면에 적어 두지 않으므로 원장에서
+   * 라벨을 고치면 여기도 함께 따라온다.
    */
-  const progress: { label: string; tone: BadgeTone } = !isWorkday
-    ? { label: '휴무', tone: 'neutral' }
-    : checkedOut
-      ? { label: '퇴근', tone: 'neutral' }
-      : checkedIn
-        ? { label: '근무중', tone: 'success' }
-        : { label: '미출근', tone: 'neutral' }
-  const ledger = statusOf(statuses ?? [], today?.statusCode ?? null)
-  const ledgerBadge = ledger && ledger.code !== 'NORMAL' ? ledger : null
+  const code = today?.statusCode ?? null
+  const isLate = code === 'LATE' || code === 'LATE_EARLY'
+  const isEarly = code === 'EARLY_LEAVE' || code === 'LATE_EARLY'
+
+  /**
+   * 규칙이 자동으로 매기는 근무 코드 5종. 이 밖의 상태(연차·반차·공가처럼 관리자가 지정한
+   * 것)는 스탬프가 아니라 **하루 전체**를 설명하는 값이라, 첫 스탬프인 출근 버튼에 세운다.
+   */
+  const AUTO_CODES = ['NORMAL', 'LATE', 'EARLY_LEAVE', 'LATE_EARLY', 'ABSENT']
+  const ledger = statusOf(statuses ?? [], code)
+  const dayStatus = ledger && !AUTO_CODES.includes(ledger.code) ? ledger : null
+
+  const lateStatus = statusOf(statuses ?? [], 'LATE')
+  const earlyStatus = statusOf(statuses ?? [], 'EARLY_LEAVE')
+
+  /**
+   * 출근 버튼의 태그 — 우선순위대로 하나.
+   * ① 하루를 규정하는 상태(연차 등) → ② 지각 → ③ 아직 퇴근 전이면 '근무중'.
+   * 정상 출근이고 퇴근까지 찍었으면 붙일 말이 없다(그 날의 평은 퇴근 버튼에 있다).
+   */
+  const inTag: { label: string; tone: BadgeTone } | null = !checkedIn
+    ? null
+    : dayStatus
+      ? { label: dayStatus.label, tone: dayStatus.tone }
+      : isLate && lateStatus
+        ? { label: lateStatus.label, tone: lateStatus.tone }
+        : checkedOut
+          ? null
+          : { label: '근무중', tone: 'success' }
+
+  /** 퇴근 버튼의 태그 — 조기퇴근이면 그 말, 아니면 제때 마쳤다는 표시 하나. */
+  const outTag: { label: string; tone: BadgeTone } | null = !checkedOut
+    ? null
+    : isEarly && earlyStatus
+      ? { label: earlyStatus.label, tone: earlyStatus.tone }
+      : { label: '퇴근', tone: 'neutral' }
 
   return (
     <Card
-      /* 현황 배지는 제목에 딸려 붙인다 — 이 카드 전체가 무엇에 관한 상태인지를 말하는 값이라,
-         제목에서 떨어져 우측 액션 쪽에 서면 옆의 이동 버튼과 같은 무리로 읽힌다. 헤더 우측은
-         '어디로 가는가'(근태현황) 하나만 남긴다. */
-      title={
-        <span className="flex flex-wrap items-center gap-2">
-          근무체크
-          <Badge tone={progress.tone}>{progress.label}</Badge>
-          {ledgerBadge && <Badge tone={ledgerBadge.tone}>{ledgerBadge.label}</Badge>}
-        </span>
-      }
+      /* 제목에는 배지를 달지 않는다 — 현황 태그는 그것을 만든 스탬프 버튼 위에 선다.
+         헤더 우측은 '어디로 가는가'(근태현황) 하나만 남긴다. */
+      title="근무체크"
       actions={
         /* 내 근태 현황으로 가는 자리. 갈 곳(본인 월간 뷰)은 아직 없으므로 버튼만 세워 둔다 —
            연결되기 전까지 눌러도 아무 일이 없다. 대시보드 우측 열에서 나란히 서는 다른 이동
@@ -215,23 +251,33 @@ export function WorkCheckCard() {
     >
       <div className="grid grid-cols-5 items-stretch gap-2">
         {/* 왼쪽(2/5) — 지금이 언제인가. 오른쪽 열과 같은 상자·같은 높이.
-            세 줄을 위아래로 벌리지 않고 가운데에 모은다 — 오른쪽이 더 길어 남는 높이가
-            생기는데, 그 여백을 줄 사이에 나눠 주면 세 줄이 서로 무관한 조각처럼 흩어진다. */}
-        {/* 세 줄 모두 한 단계씩 키운다(캡션 12 → 본문 14, 시계 20 → 24). 카드 안 표준 본문이
-            14px이므로 날짜·기준 시각이 캡션에 머물면 이 상자만 주석처럼 물러나 보인다. */}
-        <div className="col-span-2 flex flex-col justify-center gap-2 rounded-radius-md border border-gray-200 bg-white px-3 py-2">
-          <p className={cardText.value}>
+            내용은 가운데에 모은다 — 오른쪽이 더 길어 남는 높이가 생기는데, 그 여백을 줄
+            사이에 나눠 주면 줄들이 서로 무관한 조각처럼 흩어진다.
+            글자는 캡션이 아니라 본문 단계에 세운다(시계만 24px). 카드 안 표준 본문이 14px
+            이므로 날짜·기준 시각이 캡션에 머물면 이 상자만 주석처럼 물러나 보인다. */}
+        <div className="col-span-2 flex flex-col justify-center rounded-radius-md border border-gray-200 bg-white px-3 py-2.5">
+          {/* 날짜와 시계는 한 묶음이라 붙여 세운다 — 둘이 함께 '지금'이라는 한 가지를 말한다.
+              날짜는 시계의 머리말이므로 라벨 단계(gray-500)로 물러난다. 셋을 모두 gray-900으로
+              두면 세 줄이 같은 무게로 서서 어느 것이 주인공인지 갈리지 않는다. */}
+          <p className={cardText.label}>
             {now.format('M월 D일')} ({WEEKDAY_LABELS[now.day()]})
           </p>
-          <p className="text-title-md font-bold leading-none tabular-nums text-gray-900">
+          <p className="mt-1 text-title-md font-bold leading-none tabular-nums text-gray-900">
             {now.format('HH:mm:ss')}
           </p>
           {benchmark && (
-            /* 라벨과 값은 크기를 가르지 않고 색으로만 나눈다(한 줄 안에서 크기로 위계를
-               만들지 않는다는 규격 원칙). */
-            <p className="text-body text-gray-600">
-              {benchmark.label}{' '}
-              <span className={cn('tabular-nums font-medium', cardText.value)}>{benchmark.value}</span>
+            /* 기준 시각은 '지금'과 다른 질문(언제까지인가)이라 선으로 끊는다. 균등한 gap으로
+               세 줄을 벌려 두면 서로 무관한 조각처럼 흩어져, 어느 줄과 어느 줄이 한 쌍인지
+               읽히지 않는다.
+
+               라벨과 값은 크기를 가르지 않고 색으로만 나눈다(한 줄 안에서 크기로 위계를
+               만들지 않는다는 규격 원칙). 값을 오른쪽 끝에 붙이는 것은 오른쪽 열의 찍힌
+               시각과 같은 규칙이다 — 이 카드에서 시각은 언제나 자기 상자의 오른쪽 끝에 선다. */
+            <p className="mt-2.5 flex items-baseline justify-between gap-2 border-t border-gray-200 pt-2.5">
+              <span className={cardText.label}>{benchmark.label}</span>
+              <span className={cn('tabular-nums font-medium', cardText.value)}>
+                {benchmark.value}
+              </span>
             </p>
           )}
         </div>
@@ -268,6 +314,7 @@ export function WorkCheckCard() {
                 ? `출근(${PLACE_SHORT_LABELS[today.workPlace]})`
                 : '출근하기'
             }
+            tag={inTag && <Badge tone={inTag.tone}>{inTag.label}</Badge>}
             at={today?.checkInAt ?? null}
             done={checkedIn}
             disabled={busy || !isWorkday}
@@ -276,6 +323,7 @@ export function WorkCheckCard() {
           <StampButton
             icon={<LogOut className="size-4" />}
             label="퇴근하기"
+            tag={outTag && <Badge tone={outTag.tone}>{outTag.label}</Badge>}
             at={today?.checkOutAt ?? null}
             done={checkedOut}
             disabled={busy || !isWorkday || !checkedIn}

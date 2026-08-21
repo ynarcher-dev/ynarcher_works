@@ -1,4 +1,4 @@
-import { cn, formText } from '@ynarcher/ui'
+import { IconButton, cn, formText } from '@ynarcher/ui'
 import { ArrowUp, Plus } from 'lucide-react'
 import { useEffect, useRef, type KeyboardEvent } from 'react'
 
@@ -37,14 +37,16 @@ export function AiAgentComposer({
 
   return (
     <div className="shrink-0 pt-2">
+      {/* 카드가 아니라 입력 상자다 — 안에 담긴 것을 보여주는 면이 아니라 글을 받는 자리이고,
+          그래서 focus-within으로 테두리·그림자가 반응한다. 카드 셸로 바꾸면 그 반응이 사라진다.
+          모서리가 카드와 같은 단계인 것은 이 상자가 대화 영역의 바닥 전체를 차지하기 때문이다. */}
+      {/* eslint-disable-next-line no-restricted-syntax -- 위 사유로 CardShell 대상이 아니다. */}
       <div className="flex items-end gap-2 rounded-radius-lg border border-gray-300 bg-white p-2 shadow-soft transition-colors focus-within:border-brand/50 focus-within:shadow-popover">
-        <button
-          type="button"
-          className="flex size-icon-card shrink-0 items-center justify-center rounded-radius-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800"
-          aria-label="첨부"
-        >
-          <Plus className="h-5 w-5" strokeWidth={1.75} />
-        </button>
+        <IconButton
+          variant="ghost"
+          label="첨부"
+          icon={<Plus className="h-5 w-5" strokeWidth={1.75} />}
+        />
 
         <textarea
           ref={ref}
@@ -61,7 +63,9 @@ export function AiAgentComposer({
           onClick={onSubmit}
           disabled={!canSend}
           aria-label="전송"
-          className="flex size-icon-card shrink-0 items-center justify-center rounded-radius-sm bg-brand text-white transition-all hover:bg-brand-600 active:scale-95 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400"
+          // 브랜드 채움 아이콘 버튼은 IconButton의 3종(outline·ghost·selected) 밖이라 여기서
+          // 만들지만, 모서리·포커스 링·크기는 아이콘 버튼 규격을 그대로 따른다.
+          className="grid size-icon-card shrink-0 place-items-center rounded-radius-md bg-brand text-white transition-all hover:bg-brand-600 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400"
         >
           <ArrowUp className="h-5 w-5" strokeWidth={2} />
         </button>

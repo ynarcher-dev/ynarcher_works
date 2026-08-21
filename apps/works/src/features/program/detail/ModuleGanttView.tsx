@@ -158,7 +158,7 @@ export function ModuleGanttView({
                   key={mod.id}
                   type="button"
                   onClick={() => onOpenModule(mod)}
-                  className="flex w-full items-center gap-2 border-b border-gray-100 px-3 text-left transition-colors duration-fast hover:bg-gray-25"
+                  className="flex w-full items-center gap-2 border-b border-gray-100 px-3 text-left transition-colors duration-fast hover:bg-gray-25 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10"
                   style={{ height: ROW_H }}
                   title={`${nameOf(mod)} · ${labelOf(mod.module_type)}`}
                 >
@@ -285,7 +285,7 @@ export function ModuleGanttView({
                   <button
                     type="button"
                     onClick={() => onOpenModule(mod)}
-                    className={`absolute flex items-center overflow-hidden rounded-radius-sm text-left shadow-soft transition-opacity duration-fast hover:opacity-80 ${MODULE_BAR_CLASS[mod.status] ?? 'bg-gray-300'}`}
+                    className={`absolute flex items-center overflow-hidden rounded-radius-sm text-left transition-opacity duration-fast hover:opacity-80 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10 ${MODULE_BAR_CLASS[mod.status] ?? 'bg-gray-300'}`}
                     style={{
                       left: pct(days(start)),
                       width: pct(durationDays),
@@ -346,7 +346,7 @@ function UndatedList({
           <button
             type="button"
             onClick={() => onOpenModule(m)}
-            className="text-gray-700 underline-offset-2 hover:underline"
+            className="rounded-radius-sm text-gray-700 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10"
           >
             {nameOf(m)}
           </button>

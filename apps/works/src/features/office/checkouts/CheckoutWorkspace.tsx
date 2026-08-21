@@ -11,7 +11,6 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { hasWorkspaceWrite, useAuthStore } from '@/auth/authStore'
 import { useEmployees } from '@/features/hub/hooks'
-import { useAssetPhotoUrls } from '@/features/management/assets/assetPhotos'
 import { AssetCheckoutModal } from '@/features/office/checkouts/AssetCheckoutModal'
 import { CheckoutActionModal, type PromptAction } from '@/features/office/checkouts/CheckoutActionModal'
 import { PortableAssetsTable, type AssetRow } from '@/features/office/checkouts/PortableAssetsTable'
@@ -171,13 +170,6 @@ export function CheckoutWorkspace({ initialAssetId }: { initialAssetId?: string 
     setOpened(target)
   }, [initialAssetId, rows])
 
-  // 목록에 보이는 물품의 대표 사진만 한 번에 서명한다(행마다 요청을 돌리지 않는다).
-  const thumbPaths = useMemo(
-    () => pageRows.map((r) => r.asset.photoPaths[0]).filter((p): p is string => Boolean(p)),
-    [pageRows],
-  )
-  const { data: thumbUrls } = useAssetPhotoUrls(thumbPaths)
-
   const branchNameOf = useMemo(() => {
     const byId = new Map(branches.map((b) => [b.id, b.name] as const))
     return (id: string | null) => (id ? byId.get(id) ?? null : null)
@@ -306,7 +298,6 @@ export function CheckoutWorkspace({ initialAssetId }: { initialAssetId?: string 
             <PortableAssetsTable
               rows={pageRows}
               now={now}
-              urlOf={(p) => (p ? thumbUrls?.[p] : undefined)}
               nameOf={managerNameOf}
               onOpen={setOpened}
               pagination={{

@@ -1,4 +1,4 @@
-import { Badge, Button, DataTable, PanelCard } from '@ynarcher/ui'
+import { Badge, Button, DataTable, ExpandToggleButton, PanelCard } from '@ynarcher/ui'
 import { Maximize2, Minimize2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -58,16 +58,13 @@ export function PortfolioBoardCard({
 
   const actions = (
     <div className="flex items-center gap-2">
-      <button
-        type="button"
-        title={expanded ? '축소' : '전체보기'}
-        aria-label={expanded ? '축소' : '전체보기'}
-        onClick={() => setExpanded((v) => !v)}
-        className="flex h-ctl-card items-center gap-1.5 rounded-radius-md border border-gray-300 bg-white px-2.5 text-caption font-medium text-gray-600 transition-colors duration-fast hover:bg-gray-25 hover:text-gray-700"
-      >
-        {expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-        <span>{expanded ? '축소' : '전체보기'}</span>
-      </button>
+      <ExpandToggleButton
+        expanded={expanded}
+        onToggle={() => setExpanded((v) => !v)}
+        expandLabel="전체보기"
+        expandIcon={<Maximize2 className="h-4 w-4" />}
+        collapseIcon={<Minimize2 className="h-4 w-4" />}
+      />
       <Button onClick={onAdd}>투자 집행 등록</Button>
     </div>
   )

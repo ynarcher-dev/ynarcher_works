@@ -27,7 +27,7 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
           onClick={() => setShown((v) => !v)}
           aria-label={shown ? '비밀번호 가리기' : '비밀번호 보기'}
           aria-pressed={shown}
-          className="absolute inset-y-0 right-0 flex items-center px-2.5 text-gray-400 transition-colors duration-fast hover:text-gray-600"
+          className="absolute inset-y-0 right-0 flex items-center rounded-radius-md px-2.5 text-gray-400 transition-colors duration-fast hover:text-gray-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10"
         >
           <Icon className="size-4" aria-hidden />
         </button>

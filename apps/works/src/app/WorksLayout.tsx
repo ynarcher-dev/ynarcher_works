@@ -65,6 +65,7 @@ import type { LucideIcon } from 'lucide-react'
 import {
   AppShell,
   DropdownItem,
+  IconButton,
   Sidebar,
   SidebarItem,
   SidebarDivider,
@@ -80,7 +81,7 @@ import { WORKSPACE_SUBNAV, firstTab, pathTabOf, type SubNavItem } from '@/config
 import { SidebarFlyout } from '@/app/SidebarFlyout'
 import { TopbarBreadcrumb } from '@/app/TopbarBreadcrumb'
 import { GlobalSearchBox } from '@/app/GlobalSearchBox'
-import { TopbarActions, topbarIconButton } from '@/app/TopbarActions'
+import { TopbarActions } from '@/app/TopbarActions'
 import { RightPanelProvider } from '@/app/rightPanel'
 import { RightPanelHost } from '@/app/RightPanelHost'
 import { useBoards } from '@/features/hub/boardHooks'
@@ -147,6 +148,7 @@ const sidebarIconByTab: Record<string, LucideIcon> = {
   ranking: Award,
   directory: Users,
   merge: Link2,
+  creators: UserCog,
   bulk: Upload,
   kanban: BadgeCheck,
   matching: LayoutGrid,
@@ -380,25 +382,26 @@ export function WorksLayout() {
    * 모바일에서는 사이드바가 드로어라 상단바 햄버거가 그 역할을 하므로 데스크톱에서만 노출한다.
    */
   const sidebarToggle = (
-    <button
-      type="button"
+    // 상단바 우측 액션들과 같은 아이콘 버튼 규격(page 36px)을 쓴다 — 양 끝 버튼의 크기·호버
+    // 영역이 다르면 같은 줄에서 아이콘 크기가 달라 보인다.
+    <IconButton
+      variant="ghost"
+      className="hidden lg:grid"
+      label={sidebarCollapsed ? '사이드바 열기' : '사이드바 접기'}
+      title={sidebarCollapsed ? '사이드바 열기' : '사이드바 접기'}
       onClick={() => {
         // 접기/펴기로 트리거 좌표가 바뀌므로 열려 있던 플라이아웃은 닫는다.
         setOpenFlyout(null)
         setSidebarCollapsed(!sidebarCollapsed)
       }}
-      // 상단바 우측 액션들과 같은 40px 정사각 규격(topbarIconButton)을 쓴다 — 양 끝 버튼의
-      // 크기·호버 영역이 다르면 같은 줄에서 아이콘 크기가 달라 보인다.
-      className={cn(topbarIconButton, 'hidden lg:flex')}
-      aria-label={sidebarCollapsed ? '사이드바 열기' : '사이드바 접기'}
-      title={sidebarCollapsed ? '사이드바 열기' : '사이드바 접기'}
-    >
-      {sidebarCollapsed ? (
-        <PanelLeftOpen aria-hidden className="size-5" strokeWidth={1.8} />
-      ) : (
-        <PanelLeftClose aria-hidden className="size-5" strokeWidth={1.8} />
-      )}
-    </button>
+      icon={
+        sidebarCollapsed ? (
+          <PanelLeftOpen aria-hidden className="size-5" strokeWidth={1.8} />
+        ) : (
+          <PanelLeftClose aria-hidden className="size-5" strokeWidth={1.8} />
+        )
+      }
+    />
   )
 
   const sidebar = (

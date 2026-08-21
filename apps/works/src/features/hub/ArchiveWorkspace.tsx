@@ -1,7 +1,7 @@
 import { Button, Checkbox, DataTable, EmptyValue, Field, IconButton, Input, PageHeader, Spinner, pinMark, useToast, type Column } from '@ynarcher/ui'
 import { Download } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { NewBadge } from '@/features/hub/DashboardPanel'
+import { NewBadge } from '@/features/hub/PostFlagBadges'
 import { isNewPost, type BoardPost } from '@/features/hub/boardData'
 import {
   BOARD_POST_ATTACHMENT_TYPE,
@@ -291,10 +291,16 @@ function ArchiveEditor({
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
         />
       </Field>
-      <label className="flex w-fit cursor-pointer items-center gap-2 text-body text-gray-700">
-        <Checkbox checked={pinned} onChange={(e) => setPinned(e.target.checked)} />
-        이 자료를 목록 <span className="font-semibold text-gray-900">최상단에 고정</span>
-      </label>
+      <Checkbox
+        checked={pinned}
+        onChange={(e) => setPinned(e.target.checked)}
+        wrapperClassName="w-fit"
+        label={
+          <>
+            이 자료를 목록 <span className="font-semibold text-gray-900">최상단에 고정</span>
+          </>
+        }
+      />
     </div>
   )
 }

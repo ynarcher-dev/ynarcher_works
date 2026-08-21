@@ -170,7 +170,7 @@ export function useStartupPoolPage(
         select:
           '*, creator:users!created_by(id, name), managers:startup_managers(user_id, is_lead, user:users!startup_managers_user_id_fkey(id, name))',
         liveColumns: ['deleted_at', 'merged_into_id'],
-        order: { column: 'name', ascending: true },
+        order: { column: 'updated_at', ascending: false },
         page,
         pageSize,
         scope,

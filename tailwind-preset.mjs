@@ -61,6 +61,46 @@ export default {
         // 깎인다. 값이 gray.100과 우연히 같지만 역할이 다르므로 별도 토큰으로 둔다.
         // 흰 카드와의 톤차 1.15로 면 묶음이 성립한다. 근거: 4_color_system_rules.md §2.1
         page: '#EDEFF2',
+        // 정보 요약 카드용 파스텔 표면. 상태색이 아니라 업무 영역을 빠르게 구분하는 범주색이다.
+        // 각 계열은 surface/icon/iconText/value/chip 5역할을 한 벌로 사용한다.
+        summary: {
+          blue: {
+            surface: '#EEF5FF', icon: '#D9E9FF', 'icon-text': '#2E64B5',
+            value: '#214F91', chip: '#315C92',
+          },
+          purple: {
+            surface: '#F5F0FF', icon: '#E6DAFA', 'icon-text': '#7452AA',
+            value: '#654397', chip: '#6C5092',
+          },
+          mint: {
+            surface: '#EDF9F4', icon: '#D5F0E4', 'icon-text': '#27775B',
+            value: '#21684F', chip: '#356E59',
+          },
+          rose: {
+            surface: '#FFF1F3', icon: '#F8DDE1', 'icon-text': '#A94D5B',
+            value: '#8F3E4B', chip: '#8A5360',
+          },
+          amber: {
+            surface: '#FFF8E8', icon: '#F8E8B9', 'icon-text': '#9B6A12',
+            value: '#81570E', chip: '#80652D',
+          },
+          cyan: {
+            surface: '#ECFAFC', icon: '#CDEFF3', 'icon-text': '#26747D',
+            value: '#1D626A', chip: '#326E75',
+          },
+          lime: {
+            surface: '#F3F9E9', icon: '#E1EFC8', 'icon-text': '#627B2A',
+            value: '#536A22', chip: '#61733B',
+          },
+          peach: {
+            surface: '#FFF3EC', icon: '#FADFCC', 'icon-text': '#A55D35',
+            value: '#8C4E2C', chip: '#8A6048',
+          },
+          indigo: {
+            surface: '#F0F2FF', icon: '#DCE1FA', 'icon-text': '#5264A8',
+            value: '#435493', chip: '#58658F',
+          },
+        },
         // 상태 신호색 — 텍스트(DEFAULT)/배경(subtle)/보더(border) 3단계 (토스 스타일 HSL 계열 튜닝)
         success: { DEFAULT: '#059669', subtle: '#ECFDF5', border: '#D1FAE5' },
         warning: { DEFAULT: '#D97706', subtle: '#FFFBEB', border: '#FEF3C7' },
@@ -147,8 +187,12 @@ export default {
         'tag-page': '1.375rem',  // 22px
         'tag-card': '1.25rem',   // 20px
         'tag-table': '1.125rem', // 18px
-        // 데이터 테이블 표준 행 — ctl-table(24px) 위아래로 6px씩 여유
-        row: '2.25rem',          // 36px
+        // 데이터 테이블 행 — 표가 놓인 자리로 갈린다(2026-08-20).
+        row: '2.25rem',          // 36px — 카드섹션 안의 표(ctl-table 24 + 위아래 6px)
+        // 페이지에 바로 놓인 표. 컨트롤(ctl-card 32px) 위아래로 4px씩 남긴다.
+        // 카드 안 표의 6px 비율을 그대로 옮기면 44px인데, 목록 화면의 표는 행이 수십 줄
+        // 쌓이므로 한 줄에 얹은 여유가 화면 전체의 높이로 곱해진다 — 실제로 세워 보니 넓었다.
+        'row-lg': '2.5rem',      // 40px — 페이지에 바로 놓인 표
       },
       /**
        * 모달 폭 — Tailwind 기본 max-w-* 는 타이포그래피 척도(sm/lg/2xl)라서

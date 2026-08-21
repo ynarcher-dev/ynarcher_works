@@ -86,14 +86,10 @@ export function BranchFormModal({
           */}
           {editing && onToggleActive && (
             <Button
-              variant="outline"
+              variant={branch?.isActive ? 'outline-danger' : 'outline'}
               onClick={onToggleActive}
               disabled={busy}
-              className={
-                branch?.isActive
-                  ? 'mr-auto text-danger hover:bg-danger-subtle hover:text-danger'
-                  : 'mr-auto'
-              }
+              className="mr-auto"
             >
               {branch?.isActive ? '비활성화' : '활성화'}
             </Button>

@@ -20,13 +20,12 @@ import {
   MAX_PROGRAM_INDUSTRIES,
   defaultProgramStatus,
   programStage,
-  type ProgramStage,
 } from '@/features/program/config'
 import { useProgramWorkspace, type ProgramWorkspaceConfig } from '@/features/program/workspace'
 import {
-  ProgramStageFields,
+  ProgramStatusFields,
   type ProgramFormValues as FormValues,
-} from '@/features/program/ProgramStageFields'
+} from '@/features/program/ProgramStatusFields'
 
 /** 프로그램 임베드 담당자 → 편집용 구간. 단계(org 버전)·부서 미지정 레거시 행은 제외한다. */
 function toManagerSegments(program?: Program): ProgramManagerSegment[] {
@@ -58,19 +57,16 @@ function toDepartmentSegments(program?: Program): ProgramDepartmentSegment[] {
 }
 
 /**
- * 편집 대상의 상태값을 단계별 폼 상태로 푼다.
- * 단계 전환 시 반대편 선택값을 잃지 않도록 제안·운영 상태를 각각 보관하며, 해당 단계 값이
- * 아니면 그 단계의 첫 상태로 채운다. 제안 단계를 쓰지 않는 워크스페이스는 무조건 운영으로
- * 고정한다 — 제안 상태로 남은 레거시 행을 편집하면 저장과 함께 운영 단계로 환산된다.
+ * 편집 대상의 초기 상태값.
+ *
+ * 제안 단계를 쓰지 않는 워크스페이스(M&A·PROJECT)에서 제안 상태로 남은 레거시 행은 운영의
+ * 첫 칸으로 환산한다 — 셀렉트에 없는 값을 그대로 들고 있으면 아무것도 고르지 않은 것처럼
+ * 보이고, 저장하면 CHECK 제약에 걸린다.
  */
-function stageStateOf(config: ProgramWorkspaceConfig, program?: Program) {
+function initialStatusOf(config: ProgramWorkspaceConfig, program?: Program): string {
   const status = program?.status ?? defaultProgramStatus(config.hasProposalStage)
-  const of = programStage(status)
-  return {
-    stage: (config.hasProposalStage ? of : 'OPERATION') as ProgramStage,
-    proposalStatus: of === 'PROPOSAL' ? status : 'PROPOSED',
-    operationStatus: of === 'OPERATION' ? status : 'DRAFT',
-  }
+  if (!config.hasProposalStage && programStage(status) === 'PROPOSAL') return 'DRAFT'
+  return status
 }
 
 /**
@@ -110,26 +106,15 @@ export function ProgramFormModal({
           ? prev
           : [...prev, name],
     )
-  // 상태는 단계(제안/운영)로 이원화 — 단계 라디오가 어느 셀렉트를 쓸지 정하고,
-  // 단계 전환 시 반대편 선택값을 잃지 않도록 단계별 상태를 각각 보관한다.
-  const initial = stageStateOf(config, program)
-  const [stage, setStage] = useState<ProgramStage>(initial.stage)
-  const [proposalStatus, setProposalStatus] = useState(initial.proposalStatus)
-  const [operationStatus, setOperationStatus] = useState(initial.operationStatus)
-  // '선정'은 운영 단계로 자동 전환하지 않는다 — 선정과 준비는 서로 다른 사실이다.
-  // (선정 = 제안이 통과했다 / 준비 = 운영을 시작할 채비를 한다) 자동으로 넘겨 버리면
-  // 선정된 사업이 원장에 한 번도 'SELECTED'로 남지 않아, 선정만 되고 아직 착수하지 않은
-  // 사업을 목록에서 가려낼 수 없다. 운영 단계는 '선정' 이후 열리기만 하고,
-  // 실제 전환은 사용자가 단계 라디오로 직접 고른다.
+  // 원장에 저장되는 값은 상태 하나뿐이므로 폼도 하나만 든다. 단계(제안/운영)는 이 값에서
+  // 따라 나오는 것이라(`programStage()`) 따로 묻지 않는다.
+  const [status, setStatus] = useState(() => initialStatusOf(config, program))
   // 편집 대상이 바뀌면(모달 재사용) 배치·단계 상태를 해당 프로그램 기준으로 다시 초기화한다.
   useEffect(() => {
     setDepartments(toDepartmentSegments(program))
     setManagers(toManagerSegments(program))
     setIndustries(programIndustries(program))
-    const next = stageStateOf(config, program)
-    setStage(next.stage)
-    setProposalStatus(next.proposalStatus)
-    setOperationStatus(next.operationStatus)
+    setStatus(initialStatusOf(config, program))
   }, [config, program])
   const {
     register,
@@ -171,7 +156,7 @@ export function ProgramFormModal({
     const managerRows = managers.map(({ _key, ...r }) => r)
     const payload = {
       title: values.title,
-      status: stage === 'PROPOSAL' ? proposalStatus : operationStatus,
+      status,
       // 제안 단계는 별도 기간을 두지 않는다(컬럼은 유지, 항상 null로 기록).
       proposal_start_date: null,
       proposal_end_date: null,
@@ -210,10 +195,7 @@ export function ProgramFormModal({
         setDepartments([])
         setManagers([])
         setIndustries([])
-        const blank = stageStateOf(config, undefined)
-        setStage(blank.stage)
-        setProposalStatus(blank.proposalStatus)
-        setOperationStatus(blank.operationStatus)
+        setStatus(initialStatusOf(config, undefined))
       }
       onClose()
     } catch {
@@ -308,14 +290,10 @@ export function ProgramFormModal({
             이 사업이 발굴·대상으로 하는 분야 · 최대 {MAX_PROGRAM_INDUSTRIES}개 선택
           </p>
         </div>
-        <ProgramStageFields
+        <ProgramStatusFields
           hasProposalStage={config.hasProposalStage}
-          stage={stage}
-          onStageChange={setStage}
-          proposalStatus={proposalStatus}
-          onProposalStatusChange={setProposalStatus}
-          operationStatus={operationStatus}
-          onOperationStatusChange={setOperationStatus}
+          status={status}
+          onStatusChange={setStatus}
           register={register}
         />
         <div>

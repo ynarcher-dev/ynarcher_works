@@ -25,6 +25,7 @@ export const Radio = forwardRef<HTMLInputElement, RadioProps>(function Radio(
   const input = (
     <input
       ref={ref}
+      // eslint-disable-next-line no-restricted-syntax -- 선택 컨트롤의 정본. 이 input이 곧 규격이다.
       type="radio"
       disabled={disabled}
       title={label == null ? title : undefined}
@@ -44,6 +45,9 @@ export const Radio = forwardRef<HTMLInputElement, RadioProps>(function Radio(
 
   return (
     <label
+      // 래퍼가 title을 받는 자리. 여기 붙이지 않으면 라벨을 넘긴 순간 안내가 사라진다 —
+      // 비활성 input은 마우스 이벤트를 삼키고, 라벨이 있으면 input은 title을 받지 않는다.
+      title={title}
       className={cn(
         'inline-flex items-center',
         s.gap,

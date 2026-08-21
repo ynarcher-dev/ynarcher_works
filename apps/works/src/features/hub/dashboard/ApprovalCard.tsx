@@ -32,9 +32,12 @@ const DUMMY_COUNTS: Record<string, number> = { pending: 3 }
  * 같은 규격(DashboardRowButton)이라, 우측 열 전체가 하나의 목록처럼 읽힌다.
  */
 export function ApprovalCard() {
+  // 제목 옆 건수는 네 함의 합이다 — 카드를 펼치지 않고도 지금 처리할 것이 몇 건인지 알린다.
+  const total = APPROVAL_BOXES.reduce((sum, { key }) => sum + (DUMMY_COUNTS[key] ?? 0), 0)
   return (
     <Card
       title="전자결재"
+      count={total}
       // 결재 목록 전체로 가는 자리. 갈 곳이 아직 없어 버튼만 세워 둔다(근무체크 '근태현황'과 동일).
       actions={<Button variant="outline">결재함</Button>}
     >

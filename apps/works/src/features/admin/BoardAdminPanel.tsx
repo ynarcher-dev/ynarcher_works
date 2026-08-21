@@ -110,7 +110,7 @@ export function BoardAdminPanel() {
             수정
           </Button>
           {b.isActive ? (
-            <Button variant="outline" onClick={() => deactivate(b)}>
+            <Button variant="outline-danger" onClick={() => deactivate(b)}>
               비활성화
             </Button>
           ) : (

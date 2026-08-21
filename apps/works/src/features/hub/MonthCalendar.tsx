@@ -1,4 +1,4 @@
-import { Button, IconButton, cardText, cn } from '@ynarcher/ui'
+import { Button, CardHeading, IconButton } from '@ynarcher/ui'
 import dayjs, { type Dayjs } from 'dayjs'
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -182,10 +182,9 @@ export function MonthCalendar({ events }: { events: SystemEvent[] }) {
           통합 타임라인의 선택일 상세와 같은 회색 박스 톤을 쓴다. */}
       <section className="flex min-h-0 flex-1 flex-col rounded-radius-sm border border-gray-200 bg-gray-25 px-3 py-2.5">
         <div className="mb-2 flex shrink-0 items-center justify-between">
-          <p className="text-body font-semibold text-gray-900">
+          <CardHeading level="subhead" as="p" count={selectedEvents.length}>
             {dayjs(selected).format('M월 D일')} ({WEEKDAYS[dayjs(selected).day()]})
-            <span className={cn('ml-2', cardText.count)}>[{selectedEvents.length}]</span>
-          </p>
+          </CardHeading>
           {canWrite && (
             <Button variant="outline" density="card" onClick={openCreate}>
               <Plus className="size-3.5" />

@@ -1,4 +1,5 @@
 import type { ComponentType, ElementType } from 'react'
+import { buttonVariantClass } from './Button'
 import { cn } from '../utils/cn'
 import { controlScale } from '../densityScale'
 
@@ -34,15 +35,17 @@ export function BackButton({ as, className, ...rest }: BackButtonProps) {
       {...extra}
       {...rest}
       className={cn(
-        'inline-flex shrink-0 items-center whitespace-nowrap rounded-radius-md',
+        'inline-flex shrink-0 items-center whitespace-nowrap rounded-radius-md font-semibold',
+        'transition-all duration-fast ease-in-out active:scale-[0.98]',
+        'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10',
+        // 색·테두리·호버는 Button과 같은 표에서 가져온다. `as={Link}`로 앵커가 될 수 있어
+        // Button을 그대로 쓸 수는 없지만, 그렇다고 outline의 상태색을 여기 다시 적으면
+        // 정본이 두 벌이 된다(실제로 호버 배경이 gray-25/gray-50으로 갈려 있었다).
+        buttonVariantClass.outline,
         s.height,
         s.text,
         s.padX,
         s.gap,
-        'border border-gray-300 bg-white font-semibold text-gray-800',
-        'transition-all duration-fast ease-in-out hover:border-gray-400 hover:bg-gray-25 active:bg-gray-50',
-        'active:scale-[0.98]',
-        'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10',
         className,
       )}
     >

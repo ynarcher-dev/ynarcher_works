@@ -1,4 +1,4 @@
-import { Badge, useToast } from '@ynarcher/ui'
+import { Badge, Select, useToast } from '@ynarcher/ui'
 import { useState } from 'react'
 import { MODULE_TYPES, MODULE_VISIBILITY_LABEL, MODULE_VISIBILITY_TONE } from '@/features/program/config'
 import type { ProgramModule } from '@/features/program/hooks'
@@ -46,6 +46,21 @@ export function ModuleKanbanView({
   const updateStatus = useUpdateModuleStatus(programId)
   const [dragging, setDragging] = useState<Dragging | null>(null)
   const [overStatus, setOverStatus] = useState<string | null>(null)
+  const [announcement, setAnnouncement] = useState('')
+
+  const changeStatus = (module: ProgramModule, status: string) => {
+    const current = module.status ?? 'DRAFT'
+    if (current === status) return
+    updateStatus.mutate(
+      { moduleId: module.id, status },
+      {
+        onSuccess: () => {
+          setAnnouncement(`${nameOf(module)} 상태를 ${moduleStatusMeta(status).label}(으)로 변경했습니다.`)
+        },
+        onError: () => toast.show('상태 변경에 실패했습니다. 권한을 확인하세요.', 'danger'),
+      },
+    )
+  }
 
   const drop = (status: string) => {
     if (dragging && dragging.status !== status) {
@@ -61,7 +76,9 @@ export function ModuleKanbanView({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+    <>
+      <p className="sr-only" aria-live="polite">{announcement}</p>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
       {COLUMNS.map((status) => {
         const meta = moduleStatusMeta(status)
         const items = modules.filter((m) => (m.status ?? 'DRAFT') === status)
@@ -104,7 +121,7 @@ export function ModuleKanbanView({
                 const Icon = modMeta?.icon
                 const isDragging = dragging?.id === mod.id
                 return (
-                  <li key={mod.id}>
+                  <li key={mod.id} className="rounded-radius-md border border-gray-300 bg-white shadow-soft">
                     <button
                       type="button"
                       draggable
@@ -119,7 +136,7 @@ export function ModuleKanbanView({
                         setOverStatus(null)
                       }}
                       onClick={() => onOpenModule(mod)}
-                      className={`w-full cursor-grab rounded-radius-md border border-gray-300 bg-white px-3 py-2.5 text-left shadow-soft transition-colors duration-fast hover:border-gray-400 active:cursor-grabbing ${
+                      className={`w-full cursor-grab rounded-t-radius-md px-3 py-2.5 text-left transition-colors duration-fast hover:bg-gray-25 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10 active:cursor-grabbing ${
                         isDragging ? 'opacity-40' : ''
                       }`}
                     >
@@ -147,6 +164,24 @@ export function ModuleKanbanView({
                         </span>
                       </span>
                     </button>
+                    <div className="border-t border-gray-100 px-2 py-2">
+                      <label className="sr-only" htmlFor={`module-status-${mod.id}`}>
+                        {nameOf(mod)} 상태 변경
+                      </label>
+                      <Select
+                        id={`module-status-${mod.id}`}
+                        density="table"
+                        value={mod.status ?? 'DRAFT'}
+                        onChange={(event) => changeStatus(mod, event.target.value)}
+                        aria-label={`${nameOf(mod)} 상태 변경`}
+                      >
+                        {COLUMNS.map((option) => (
+                          <option key={option} value={option}>
+                            {moduleStatusMeta(option).label}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
                   </li>
                 )
               })}
@@ -173,6 +208,7 @@ export function ModuleKanbanView({
           </div>
         )
       })}
-    </div>
+      </div>
+    </>
   )
 }

@@ -1,4 +1,6 @@
+import { Card, TextArea } from '@ynarcher/ui'
 import { useState } from 'react'
+import { GuestButton } from '@/components/GuestButton'
 import { StarRating } from '@/components/StarRating'
 import { useMentoringSessions, useSubmitFeedback } from '@/features/hooks'
 
@@ -6,9 +8,6 @@ function fmt(iso: string | null): string {
   return iso ? new Date(iso).toLocaleString('ko-KR') : '일정 미정'
 }
 
-const sectionClass = 'rounded-lg border border-gray-200 bg-white p-4'
-const btnClass =
-  'min-h-12 rounded bg-brand px-4 text-body font-medium text-white active:bg-brand-700 disabled:opacity-50'
 
 const METRICS = [
   { key: 'score_technology', label: '기술성' },
@@ -64,13 +63,10 @@ export function ExpertDashboard() {
 
   return (
     <div className="space-y-5">
-      <section className={sectionClass}>
-        <h2 className="text-title-sm font-semibold text-gray-900">
-          멘토링 스케줄 보드
-        </h2>
-        <div className="mt-3 space-y-2">
+      <Card title="멘토링 스케줄 보드">
+        <div className="space-y-2">
           {(sessions ?? []).map((s) => (
-            <div key={s.id} className="rounded border border-gray-200 p-3">
+            <div key={s.id} className="rounded-radius-md border border-gray-300 p-3">
               <div className="flex items-center justify-between">
                 <span className="text-body text-gray-800">
                   {s.round_no}회차 · {fmt(s.scheduled_at)}
@@ -78,13 +74,12 @@ export function ExpertDashboard() {
                 {done.includes(s.id) ? (
                   <span className="text-caption text-success">평가 완료</span>
                 ) : (
-                  <button
-                    type="button"
-                    className="min-h-12 rounded border border-gray-300 px-3 text-body text-gray-700 active:bg-gray-50"
+                  <GuestButton
+                    variant="outline"
                     onClick={() => setOpenId(openId === s.id ? null : s.id)}
                   >
                     평가지 작성
-                  </button>
+                  </GuestButton>
                 )}
               </div>
 
@@ -102,21 +97,18 @@ export function ExpertDashboard() {
                       />
                     </div>
                   ))}
-                  <textarea
+                  <TextArea
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
                     rows={3}
                     placeholder="종합 코멘트/조언"
-                    className="w-full rounded border border-gray-300 px-3 py-2 text-body focus-visible:border-brand focus-visible:outline-none"
                   />
-                  <button
-                    type="button"
-                    className={btnClass}
+                  <GuestButton
                     disabled={submitFeedback.isPending}
                     onClick={() => void onSubmit(s.id)}
                   >
                     평가 제출
-                  </button>
+                  </GuestButton>
                 </div>
               )}
             </div>
@@ -127,7 +119,7 @@ export function ExpertDashboard() {
             </p>
           )}
         </div>
-      </section>
+      </Card>
 
       <p className="text-caption text-gray-600">
         상담일지는 확정 예약(booking) 완료 후 활성화됩니다.

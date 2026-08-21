@@ -1,4 +1,4 @@
-import { MultiSelectFilter } from '@ynarcher/ui'
+import { FilterResetButton, MultiSelectFilter } from '@ynarcher/ui'
 import { useMemo } from 'react'
 import { useTags } from '@/features/admin/hooks'
 import {
@@ -79,13 +79,7 @@ export function GlobalNetworkFilters({ filters, onChange }: GlobalNetworkFilters
       />
 
       {active && (
-        <button
-          type="button"
-          onClick={() => onChange(EMPTY_GLOBAL_FILTERS)}
-          className="flex h-ctl-page items-center rounded-radius-md border border-gray-300 bg-white px-3.5 text-body text-gray-700 shadow-soft transition-colors duration-fast hover:border-gray-400 hover:text-brand-700"
-        >
-          초기화
-        </button>
+        <FilterResetButton onClick={() => onChange(EMPTY_GLOBAL_FILTERS)} />
       )}
     </div>
   )

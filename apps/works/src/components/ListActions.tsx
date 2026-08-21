@@ -61,7 +61,7 @@ export function ListActions({
   const hasMenu = Boolean(createOptions?.length && onCreateOption)
   const createButton = createLabel ? (
     <Button
-      className="h-ctl-page"
+      density="page"
       onClick={hasMenu ? () => setMenuOpen((v) => !v) : onCreate}
       disabled={disabled}
     >
@@ -72,7 +72,7 @@ export function ListActions({
   return (
     <div className="flex items-center gap-2">
       {openBulk && (
-        <Button variant="outline" className="h-ctl-page" onClick={openBulk}>
+        <Button variant="outline" density="page" onClick={openBulk}>
           대용량 업로드
         </Button>
       )}

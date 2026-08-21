@@ -56,12 +56,14 @@ export function AddModulesModal({
       <li key={def.type}>
         <button
           type="button"
+          role="radio"
+          aria-checked={on}
           onClick={() => setPicked(def.type)}
           onMouseEnter={() => setHovered(def.type)}
           onMouseLeave={() => setHovered(null)}
           onFocus={() => setHovered(def.type)}
           onBlur={() => setHovered(null)}
-          className={`flex aspect-square w-full flex-col items-center justify-center gap-1.5 rounded-radius-md border p-1.5 text-center transition-colors duration-fast ${
+          className={`flex aspect-square w-full flex-col items-center justify-center gap-1.5 rounded-radius-md border p-1.5 text-center transition-colors duration-fast focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10 ${
             on ? 'border-brand/50 bg-brand-25' : 'border-gray-300 hover:bg-gray-25'
           }`}
         >
@@ -93,7 +95,7 @@ export function AddModulesModal({
     >
       <div className="grid gap-5 md:grid-cols-[1fr_20rem]">
         {/* 좌측: 정방형 템플릿 타일 */}
-        <div className="space-y-5">
+        <div className="space-y-5" role="radiogroup" aria-label="모듈 템플릿">
           <section>
             <h3 className="mb-2 text-caption font-semibold text-gray-600">기본 템플릿</h3>
             <ul className="grid grid-cols-[repeat(auto-fill,minmax(6rem,1fr))] gap-2.5">

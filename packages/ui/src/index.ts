@@ -14,7 +14,13 @@ export { DensityProvider, useDensity, byDensity } from './density'
 export type { Density } from './density'
 // 글자 위계 규격 — 앱이 카드·표 안에서 같은 규격을 재선언하지 않도록 열어 둔다.
 // 치수 스케일(controlScale 등)은 컴포넌트가 쓰는 내부 매핑이므로 계속 닫아 둔다.
+//
+// `tableText`·`tableGrid`·`columnWidth`는 **카드 안에 든 표**의 값이다. 페이지에 바로 놓인 표는
+// 한 단 큰 규격을 쓰지만(2026-08-20), 그 자리는 `DataTable`이 스스로 알아 고르므로 화면이 고를
+// 일이 없다 — 화면이 쓰는 자리는 밀도 맥락을 내려받지 못하는 수제 목록뿐이고 그것들은 전부
+// 카드 안에 있다. 자리별 두 벌이 필요한 곳은 `DataTable` 내부이며 그 스케일은 닫아 둔다.
 export { cardText, tableText, formText } from './densityScale'
+export type { TableStage, TableTextSet } from './densityScale'
 // 열 폭 스케일 — 컬럼 정의(화면 코드)가 직접 고르는 값이라 열어 둔다.
 // 폭을 감으로 붙이지 않게 하는 것이 목적이므로 `w-24` 같은 원시 값을 대신 쓰지 않는다.
 export { columnWidth } from './densityScale'
@@ -53,6 +59,9 @@ export { Card } from './components/Card'
 export type { CardProps } from './components/Card'
 export { CardShell } from './components/CardShell'
 export type { CardShellProps } from './components/CardShell'
+// 제목 옆 건수(`[3]`)의 소유자 — 카드 밖 소제목 줄에서도 같은 규격을 쓰도록 열어 둔다.
+export { CardHeading } from './components/CardHeading'
+export type { CardHeadingProps } from './components/CardHeading'
 export { Tabs } from './components/Tabs'
 export type { TabItem, TabsProps } from './components/Tabs'
 export { IconButton } from './components/IconButton'
@@ -115,10 +124,15 @@ export type {
 } from './patterns/EntityHeaderCard'
 export { PanelCard } from './patterns/PanelCard'
 export type { PanelCardProps } from './patterns/PanelCard'
+// 설정 한 줄(제목·설명 + 오른쪽 토글)의 소유자.
+export { SettingRow } from './patterns/SettingRow'
+export type { SettingRowProps } from './patterns/SettingRow'
 export { DetailTopBar } from './patterns/DetailTopBar'
 export type { DetailTopBarProps } from './patterns/DetailTopBar'
 export { StatStrip } from './patterns/StatStrip'
 export type { StripTile, StatStripProps } from './patterns/StatStrip'
+export { SummaryTile } from './patterns/SummaryTile'
+export type { SummaryTileMetric, SummaryTileProps, SummaryTileTone } from './patterns/SummaryTile'
 export { ListToolbar } from './patterns/ListToolbar'
 export type { ListToolbarProps } from './patterns/ListToolbar'
 export { FilterButton, FilterResetButton } from './patterns/FilterButton'

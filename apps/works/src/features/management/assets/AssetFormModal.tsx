@@ -86,10 +86,10 @@ export function AssetFormModal({
           */}
           {editing && onDeactivate && (
             <Button
-              variant="outline"
+              variant="outline-danger"
               onClick={onDeactivate}
               disabled={busy}
-              className="mr-auto text-danger hover:bg-danger-subtle hover:text-danger"
+              className="mr-auto"
             >
               비활성화
             </Button>

@@ -3,6 +3,7 @@ import {
   Button,
   DataTable,
   EmptyValue,
+  Input,
   Spinner,
   useToast,
   type Column,
@@ -18,6 +19,21 @@ import {
   type Branch,
   type BranchInput,
 } from '@/features/office/branches/branchesApi'
+
+/** OFFICE '지사 정보'와 같은 한 페이지 분량 — 같은 원장을 같은 규격으로 넘긴다. */
+const PAGE_SIZE = 15
+
+/**
+ * 검색은 표의 글자 열(지사명·주소·전화번호·상주인력)만 훑는다 — 결과와 화면이 어긋나지 않게 한다.
+ * 상주인력은 표에 이름이 그대로 나오므로 명단도 함께 훑는다(활성 여부는 상태 열의 몫이다).
+ */
+function matchesKeyword(b: Branch, memberNames: string[], kw: string): boolean {
+  const q = kw.trim().toLowerCase()
+  if (!q) return true
+  return [b.name, b.address, b.phone, ...memberNames].some((v) =>
+    (v ?? '').toLowerCase().includes(q),
+  )
+}
 
 /**
  * MANAGEMENT 지사 관리: 지사 목록(지사명·주소·전화번호·상주인력) + 생성/수정/비활성화.
@@ -36,6 +52,15 @@ export function BranchAdminPanel() {
   const createBranch = useCreateBranch()
   const updateBranch = useUpdateBranch()
   const setActive = useSetBranchActive()
+
+  const [keyword, setKeyword] = useState('')
+  const [page, setPage] = useState(0)
+
+  const filtered = branches.filter((b) => matchesKeyword(b, namesOf(b.id), keyword))
+  // 검색으로 목록이 줄어 현재 페이지가 범위를 벗어나면 마지막 페이지로 클램프한다.
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const safePage = Math.min(page, pageCount - 1)
+  const pageRows = filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE)
 
   const [form, setForm] = useState<'create' | Branch | null>(null)
   const editing = form && form !== 'create' ? form : undefined
@@ -104,9 +129,18 @@ export function BranchAdminPanel() {
 
   return (
     <div className="space-y-5">
-      <div className="flex justify-end">
-        {/* 문구는 `{대상 명사} 등록` 규칙(구 '지사 추가'). */}
-        <Button onClick={() => setForm('create')}>지사 등록</Button>
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="w-full sm:w-80">
+          <Input
+            placeholder="지사명·주소·전화번호·상주인력 검색"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+          />
+        </div>
+        <div className="sm:ml-auto">
+          {/* 문구는 `{대상 명사} 등록` 규칙(구 '지사 추가'). */}
+          <Button onClick={() => setForm('create')}>지사 등록</Button>
+        </div>
       </div>
 
       {branchesQuery.isLoading ? (
@@ -117,12 +151,19 @@ export function BranchAdminPanel() {
         // 행을 누르면 그 지사를 연다 — 확인과 수정이 같은 화면이라 '수정' 열을 따로 두지 않는다.
         <DataTable
           columns={columns}
-          rows={branches}
+          rows={pageRows}
           rowKey={(b) => b.id}
           numbered
           standardColumns={false}
           onRowClick={(b) => setForm(b)}
-          emptyText="등록된 지사가 없습니다."
+          emptyText={keyword.trim() ? '검색 결과가 없습니다.' : '등록된 지사가 없습니다.'}
+          pagination={{
+            page: safePage,
+            pageSize: PAGE_SIZE,
+            total: filtered.length,
+            totalAll: branches.length,
+            onChange: setPage,
+          }}
         />
       )}
 

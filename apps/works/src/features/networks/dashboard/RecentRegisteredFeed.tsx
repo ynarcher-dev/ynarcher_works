@@ -1,4 +1,4 @@
-import { Badge, type BadgeTone } from '@ynarcher/ui'
+import { Badge, IconButton, type BadgeTone } from '@ynarcher/ui'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
@@ -97,16 +97,17 @@ export function RecentRegisteredFeed({
   const goOlder = () => setOffset(Math.max(-totalWeeks, clamped - 1))
   const goNewer = () => setOffset(Math.min(0, clamped + 1))
 
-  const navBtn =
-    'grid size-7 shrink-0 place-items-center rounded-radius-sm text-gray-500 transition-colors duration-fast hover:bg-gray-100 hover:text-gray-700 disabled:pointer-events-none disabled:opacity-40'
-
   return (
     <div>
       {/* 주 선택 헤더 — 스크롤 시 상단에 고정 */}
       <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-gray-200 bg-white pb-2">
-        <button type="button" onClick={goOlder} disabled={!canOlder} aria-label="이전 주" className={navBtn}>
-          <ChevronLeft className="size-4" />
-        </button>
+        <IconButton
+          variant="ghost"
+          label="이전 주"
+          onClick={goOlder}
+          disabled={!canOlder}
+          icon={<ChevronLeft className="size-4" />}
+        />
         <div className="min-w-0 text-center">
           <p className="truncate text-caption font-semibold text-gray-800 tabular-nums">
             {fmtDate(start)} ~ {fmtDate(addDays(end, -1))}
@@ -116,9 +117,13 @@ export function RecentRegisteredFeed({
             <span className="font-semibold tabular-nums text-gray-700">{inWeek.length}</span>건 등록
           </p>
         </div>
-        <button type="button" onClick={goNewer} disabled={!canNewer} aria-label="다음 주" className={navBtn}>
-          <ChevronRight className="size-4" />
-        </button>
+        <IconButton
+          variant="ghost"
+          label="다음 주"
+          onClick={goNewer}
+          disabled={!canNewer}
+          icon={<ChevronRight className="size-4" />}
+        />
       </div>
 
       {inWeek.length === 0 ? (

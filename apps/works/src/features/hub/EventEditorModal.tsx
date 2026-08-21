@@ -259,10 +259,7 @@ export function EventEditorModal({
                 aria-label="종료 시간"
               />
             )}
-            <label className="flex items-center gap-1.5">
-              <Checkbox checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
-              <span className="text-body text-gray-900">종일</span>
-            </label>
+            <Checkbox checked={allDay} onChange={(e) => setAllDay(e.target.checked)} label="종일" />
           </div>
         </Row>
 

@@ -1,4 +1,4 @@
-import { Badge, IconButton } from '@ynarcher/ui'
+import { Badge, IconButton, tableText } from '@ynarcher/ui'
 import dayjs, { type Dayjs } from 'dayjs'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -102,8 +102,13 @@ function CalendarGrid({
           <button
             type="button"
             key={key}
-            disabled={disabled}
-            onClick={() => onSelect(key)}
+            aria-disabled={disabled}
+            aria-pressed={isSelected}
+            aria-current={isToday ? 'date' : undefined}
+            aria-label={`${day.format('YYYY년 M월 D일')}${isToday ? ', 오늘' : ''}${isSelected ? ', 선택됨' : ''}${disabled ? ', 사업 운영 기간 밖' : ''}`}
+            onClick={() => {
+              if (!disabled) onSelect(key)
+            }}
             className={`flex min-h-[3.25rem] flex-col gap-1 rounded-radius-sm border p-1 text-left transition-colors duration-fast ${
               disabled
                 ? 'cursor-not-allowed border-gray-100 bg-gray-50/60'
@@ -165,22 +170,22 @@ function SelectedDayDetail({
           {bars.map((b) => {
             const status = moduleStatusMeta(b.status)
             return (
-              <li key={b.moduleType} className="flex items-center gap-2 text-caption">
+              <li key={b.moduleType} className="flex items-center gap-2">
                 <Badge tone={status.tone}>
                   {status.label}
                 </Badge>
-                <span className="text-gray-800">{labelOf(b.moduleType)}</span>
-                <span className="ml-auto tabular-nums text-gray-700">
+                <span className={tableText.primary}>{labelOf(b.moduleType)}</span>
+                <span className={`ml-auto tabular-nums ${tableText.meta}`}>
                   {b.start} ~ {b.end}
                 </span>
               </li>
             )
           })}
           {items.map((it) => (
-            <li key={it.id} className="flex items-center gap-2 text-caption">
+            <li key={it.id} className="flex items-center gap-2">
               <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" aria-hidden />
-              <span className="text-gray-800">{it.title}</span>
-              <span className="ml-auto tabular-nums text-gray-700">
+              <span className={tableText.primary}>{it.title}</span>
+              <span className={`ml-auto tabular-nums ${tableText.meta}`}>
                 {it.starts_at ? dayjs(it.starts_at).format('HH:mm') : ''}
               </span>
             </li>

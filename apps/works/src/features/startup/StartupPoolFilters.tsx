@@ -1,4 +1,4 @@
-import { Input, MultiSelectFilter } from '@ynarcher/ui'
+import { FilterResetButton, Input, MultiSelectFilter } from '@ynarcher/ui'
 import { useTags } from '@/features/admin/hooks'
 import {
   EMPTY_STARTUP_FILTERS,
@@ -105,13 +105,7 @@ export function StartupPoolFilters({ filters, onChange }: StartupPoolFiltersProp
       </div>
 
       {active && (
-        <button
-          type="button"
-          onClick={() => onChange(EMPTY_STARTUP_FILTERS)}
-          className="flex h-ctl-page items-center rounded-radius-md border border-gray-300 bg-white px-3.5 text-body text-gray-700 shadow-soft transition-colors duration-fast hover:border-gray-400 hover:text-brand-700"
-        >
-          초기화
-        </button>
+        <FilterResetButton onClick={() => onChange(EMPTY_STARTUP_FILTERS)} />
       )}
     </div>
   )

@@ -104,19 +104,60 @@ export const pagerScale: Record<
 }
 
 /**
- * 데이터 테이블 격자 — 표는 언제나 `table` 맥락이므로 밀도별 분기 없이 단일 값이다.
- * 행 높이 36px는 셀 안 컨트롤(24px) 위아래로 6px씩 남긴다.
+ * 표가 놓인 자리(2026-08-20 신설).
+ *
+ * 크기를 가르는 축이 "놓이는 자리"라는 원칙은 표에도 그대로 적용된다. 목록 화면의 본문으로
+ * 페이지에 바로 놓인 표와, 상세 화면의 카드 한 칸을 채우는 표는 화면에서 맡은 역할이 다르다 —
+ * 앞의 것은 그 페이지에서 읽어야 할 내용 자체이고, 뒤의 것은 카드가 말하는 주제의 부속이다.
+ *
+ * 이전에는 `DataTable`이 자리를 가리지 않고 언제나 `table` 맥락(12px)으로 고정했다. 그래서
+ * 페이지 전체를 차지하는 목록의 글자가 카드 안 보조 표와 같은 크기로 서서, 화면의 주인공이
+ * 화면에서 가장 작은 글자가 되는 일이 생겼다.
+ */
+export type TableStage = 'page' | 'card'
+
+/**
+ * 데이터 테이블 격자 — 행 높이와 셀 좌우 여백.
+ *
+ * 두 값 모두 셀 안 컨트롤에서 따라 나온다. 여백은 셀 안 버튼의 좌우 여백과 같은 값이라야 열이
+ * 시각적으로 정렬되고(`card` 맥락 버튼은 `px-3`, `table` 맥락 버튼은 `px-2.5`), 행 높이는 그
+ * 컨트롤이 들어가고 위아래로 남는 여유다.
+ */
+export const tableGridScale: Record<
+  TableStage,
+  { row: string; cellX: string; cellXTight: string }
+> = {
+  page: { row: 'h-row-lg', cellX: 'px-3', cellXTight: 'px-2.5' },
+  card: { row: 'h-row', cellX: 'px-2.5', cellXTight: 'px-2' },
+}
+
+/**
+ * 셀 안 컨트롤·배지의 밀도 맥락.
+ *
+ * 셀 값이 14px인데 그 옆 버튼 라벨이 12px, 배지가 10px이면 한 행이 세 가지 크기로 읽힌다 —
+ * 표 글자를 한 단 올리면 그 안의 조작 요소도 함께 올라가야 "한 줄 안에서 크기를 갈라 위계를
+ * 만들지 않는다"가 지켜진다. 그래서 자리가 한 단 오를 때 셀 안 맥락도 한 단 오른다.
+ */
+export const tableCellDensity: Record<TableStage, Density> = {
+  page: 'card',
+  card: 'table',
+}
+
+/**
+ * 카드 안에 든 표(그리고 표처럼 읽히는 수제 목록)의 격자.
+ *
+ * `DataTable`은 자기 자리를 알므로 `tableGridScale`에서 골라 쓴다. 이 상수는 밀도 맥락을
+ * 내려받지 못하는 수제 표(`MiniTable` 등)를 위한 것이며, 그런 표는 전부 카드 안에 있다.
  */
 export const tableGrid = {
-  head: 'h-row',
-  row: 'h-row',
-  /** 셀 좌우 여백. 셀 안 버튼의 `px-2.5`와 같은 값이라 열이 시각적으로 정렬된다. */
-  cellX: 'px-2.5',
+  head: tableGridScale.card.row,
+  row: tableGridScale.card.row,
+  cellX: tableGridScale.card.cellX,
   /**
    * 열이 많은 표의 축소 여백. 폭을 고정한 표(`layout="fixed"`)와, 열 수가 많아 가로가 빠듯한
    * 표(`dense`, 예: 펀드 목록)가 함께 쓴다 — 둘 다 "한 줄에 열을 더 넣어야 한다"는 같은 사정이다.
    */
-  cellXTight: 'px-2',
+  cellXTight: tableGridScale.card.cellXTight,
 } as const
 
 /**
@@ -148,31 +189,67 @@ export const tableGrid = {
  *
  * 식별 열(`primary`)에는 폭을 주지 않는다 — `DataTable`이 남는 폭을 그 열에 몰아준다.
  */
-export const columnWidth = {
+export interface ColumnWidthSet {
   /** 순번. 세 자리까지 여유. */
-  seq: 'w-12 whitespace-nowrap',
+  seq: string
   /** 상태 배지 한 개. */
-  badge: 'w-20 whitespace-nowrap',
+  badge: string
   /** 사람 이름. */
-  person: 'w-24 whitespace-nowrap',
+  person: string
   /** 업종·분류 등 짧은 라벨. 한 줄에 들어가지 않을 만큼 길어질 수 있으면 `wide`를 쓴다. */
-  short: 'w-24 whitespace-nowrap',
+  short: string
   /** 날짜 `YYYY-MM-DD`. 표준 열 '수정일'과 같은 폭이라 표끼리 세로가 맞는다. */
-  date: 'w-28 whitespace-nowrap',
+  date: string
   /** 금액·수량 등 자릿수가 있는 수치. */
-  money: 'w-28 whitespace-nowrap',
+  money: string
   /** 건수·개수 등 세 자리 안쪽의 수치. */
-  count: 'w-20 whitespace-nowrap',
+  count: string
   /** 일시 `YYYY-MM-DD HH:MM:SS`. */
-  datetime: 'w-36 whitespace-nowrap',
+  datetime: string
   /**
    * 주소·비고 등 긴 텍스트 중 식별 열이 아닌 것.
    *
    * 유일하게 줄바꿈을 허용한다 — 길이를 예측할 수 없는 문장에 `whitespace-nowrap`을 걸면 열 하나가
    * 표 전체를 가로로 밀어낸다. 대신 이 열은 다른 열처럼 폭이 지켜지지 않을 수 있다.
    */
-  wide: 'w-44',
-} as const
+  wide: string
+}
+
+/**
+ * 폭도 표가 놓인 자리를 따른다.
+ *
+ * 폭은 글자에서 따라 나오기 때문이다 — 같은 `2026-07-23`이 12px에서 84px이면 14px에서는 98px이라,
+ * 글자만 키우고 폭을 그대로 두면 열이 자기 폭을 넘겨 표 전체가 가로로 밀린다(고정폭 합을 빼서
+ * 가변폭을 나누는 `DataTable`의 계산이 어긋난다). 그래서 두 벌을 함께 갖고, 자리가 바뀌면
+ * 글자와 폭이 같이 움직인다.
+ */
+export const columnWidthScale: Record<TableStage, ColumnWidthSet> = {
+  page: {
+    seq: 'w-14 whitespace-nowrap',
+    badge: 'w-24 whitespace-nowrap',
+    person: 'w-28 whitespace-nowrap',
+    short: 'w-28 whitespace-nowrap',
+    date: 'w-32 whitespace-nowrap',
+    money: 'w-32 whitespace-nowrap',
+    count: 'w-24 whitespace-nowrap',
+    datetime: 'w-44 whitespace-nowrap',
+    wide: 'w-52',
+  },
+  card: {
+    seq: 'w-12 whitespace-nowrap',
+    badge: 'w-20 whitespace-nowrap',
+    person: 'w-24 whitespace-nowrap',
+    short: 'w-24 whitespace-nowrap',
+    date: 'w-28 whitespace-nowrap',
+    money: 'w-28 whitespace-nowrap',
+    count: 'w-20 whitespace-nowrap',
+    datetime: 'w-36 whitespace-nowrap',
+    wide: 'w-44',
+  },
+}
+
+/** 카드 안에 든 표의 열 폭. 자리를 아는 `DataTable`은 `columnWidthScale`에서 골라 쓴다. */
+export const columnWidth: ColumnWidthSet = columnWidthScale.card
 
 /**
  * 카드 글자 위계 — 카드의 제목과 부제 규격.
@@ -238,35 +315,66 @@ export const cardText = {
   count: 'text-body font-semibold tabular-nums text-danger-700',
 } as const
 
+export interface TableTextSet {
+  /**
+   * 머리글. 값보다 한 단계 눌러 배경으로 물러나게 한다.
+   *
+   * 눌러 두되 gray-500까지 내리지는 않는다(2026-08-20). 카드 안 표의 글자는 12px인데, 한글 12px은
+   * 받침까지 획이 촘촘해 라틴 12px보다 훨씬 먼저 뭉갠다. gray-500은 흰 배경에서 6.06:1로 AA는
+   * 넘지만 이 크기에서는 흐리게 읽혔고, 머리글 배경(gray-50) 위에서는 5.60:1까지 떨어졌다.
+   * gray-600으로 한 단 올리면 7.77:1(머리글 배경 위 7.19:1)이 되어 굵기(semibold)가 살아난다.
+   * 값(gray-700)과의 위계는 여전히 색으로 갈린다. 페이지 직치 표는 14px이라 이 근거가 덜
+   * 급하지만 색은 같이 간다 — 같은 열이 화면을 옮겼다고 다른 색이면 위계가 자리마다 흔들린다.
+   */
+  head: string
+  /** 식별 값 — 그 행이 무엇인지 알려주는 열(이름·기업명). 행마다 하나만. */
+  primary: string
+  /** 일반 값 — 나머지 도메인 열 전부. */
+  body: string
+  /** 보조 값 — No.·생성자·수정일 등 레코드 자체가 아닌 메타. 근거는 `head`와 같다. */
+  meta: string
+  /** 빈 값 — 값이 없어 '-'로 대체한 자리. 실제 값과 구분되도록 한 단계 더 흐리게 둔다. */
+  empty: string
+}
+
 /**
- * 표 안 글자 위계 — 크기는 하나, 구분은 굵기와 색으로만 만든다.
+ * 표 안 글자 위계 — 한 표 안에서 크기는 하나, 구분은 굵기와 색으로만 만든다.
  *
- * 셀 텍스트도 `table` 맥락의 컨트롤과 같은 12px에 세운다. 본문만 14px로 남으면 한 행 안에서
- * 값(14px)·버튼 라벨(12px)·배지(10px)가 제각각 크기로 보인다.
+ * 크기를 가르는 것은 위계가 아니라 표가 놓인 자리다. 페이지에 바로 놓인 목록은 그 화면에서
+ * 읽어야 할 내용 자체이므로 본문(14px)에 서고, 카드 안에 든 표는 카드가 말하는 주제의 부속이라
+ * 한 단 내려 캡션(12px)에 선다. 어느 쪽이든 머리글·값·메타가 **같은 크기**인 것은 같다.
+ *
+ * 셀 안 컨트롤도 함께 움직인다(`tableCellDensity`) — 값만 키우면 한 행 안에서 값·버튼 라벨·배지가
+ * 제각각 크기로 보인다.
  *
  * 위계는 세 단계면 충분하다. 특히 `primary`(식별 열)를 행마다 하나로 제한하는 것이 핵심이다 —
  * 도메인 열 전체를 진하게 쓰면 한 행이 통째로 진해져 눈이 걸릴 곳이 없어진다.
  */
-export const tableText = {
-  /**
-   * 머리글. 값보다 한 단계 눌러 배경으로 물러나게 한다.
-   *
-   * 눌러 두되 gray-500까지 내리지는 않는다(2026-08-20). 표 안 글자는 전부 12px인데, 한글 12px은
-   * 받침까지 획이 촘촘해 라틴 12px보다 훨씬 먼저 뭉갠다. gray-500은 흰 배경에서 6.06:1로 AA는
-   * 넘지만 이 크기에서는 흐리게 읽혔고, 머리글 배경(gray-50) 위에서는 5.60:1까지 떨어졌다.
-   * gray-600으로 한 단 올리면 7.77:1(머리글 배경 위 7.19:1)이 되어 굵기(semibold)가 살아난다.
-   * 값(gray-700)과의 위계는 여전히 색으로 갈린다.
-   */
-  head: 'text-caption font-semibold text-gray-600',
-  /** 식별 값 — 그 행이 무엇인지 알려주는 열(이름·기업명). 행마다 하나만. */
-  primary: 'text-caption font-medium text-gray-900',
-  /** 일반 값 — 나머지 도메인 열 전부. */
-  body: 'text-caption text-gray-700',
-  /** 보조 값 — No.·생성자·수정일 등 레코드 자체가 아닌 메타. 근거는 `head`와 같다. */
-  meta: 'text-caption text-gray-600',
-  /** 빈 값 — 값이 없어 '-'로 대체한 자리. 실제 값과 구분되도록 한 단계 더 흐리게 둔다. */
-  empty: 'text-gray-400',
-} as const
+export const tableTextScale: Record<TableStage, TableTextSet> = {
+  page: {
+    head: 'text-body font-semibold text-gray-600',
+    primary: 'text-body font-medium text-gray-900',
+    body: 'text-body text-gray-700',
+    meta: 'text-body text-gray-600',
+    empty: 'text-gray-400',
+  },
+  card: {
+    head: 'text-caption font-semibold text-gray-600',
+    primary: 'text-caption font-medium text-gray-900',
+    body: 'text-caption text-gray-700',
+    meta: 'text-caption text-gray-600',
+    empty: 'text-gray-400',
+  },
+}
+
+/**
+ * 카드 안에 든 표의 글자 위계.
+ *
+ * 자리를 아는 `DataTable`은 `tableTextScale`에서 골라 쓴다. 이 상수는 밀도 맥락을 내려받지 못하는
+ * 수제 목록(변동 이력·자료 목록·MiniTable 등)을 위한 것이며, 그런 목록은 전부 카드 안에 있다 —
+ * 페이지에 바로 놓이는 표는 `DataTable`을 쓴다.
+ */
+export const tableText: TableTextSet = tableTextScale.card
 
 /** 스피너 — 로딩 자리를 차지하는 크기이므로 아이콘 격자보다 한 단계 작게 잡는다. */
 export const spinnerScale: Record<Density, string> = {

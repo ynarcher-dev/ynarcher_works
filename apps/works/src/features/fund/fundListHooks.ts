@@ -377,7 +377,7 @@ export function useFundListPage(
         // 존속기간 시작일 내림차순(최근 결성 순). 종전 기준이던 결성연도(vintage_year)는
         // 존속기간이 대체한 구 컬럼이라 비어 있는 펀드가 많아 정렬이 서지 않았다.
         // 20260731240000의 부분 인덱스와 같은 식이어야 한다.
-        order: { column: 'term_start', ascending: false, nullsFirst: false },
+        order: { column: 'updated_at', ascending: false, nullsFirst: false },
         page,
         pageSize,
         scope,

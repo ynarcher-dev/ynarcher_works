@@ -1,3 +1,4 @@
+import { Button } from '@ynarcher/ui'
 import {
   ProgramDepartmentEditor,
   type ProgramDepartmentSegment,
@@ -102,13 +103,9 @@ export function PhaseStaffingEditor({
           </span>
         </div>
         {previousPhase && (
-          <button
-            type="button"
-            onClick={copyFromPrevious}
-            className="shrink-0 rounded-radius-sm border border-gray-300 px-2 py-1 text-caption font-medium text-gray-600 transition-colors duration-fast hover:bg-gray-50"
-          >
+          <Button variant="outline" onClick={copyFromPrevious}>
             이전 단계 복사
-          </button>
+          </Button>
         )}
       </div>
 

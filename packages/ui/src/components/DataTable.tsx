@@ -1,7 +1,13 @@
-import { useContext, useState, type ReactNode } from 'react'
+import { useContext, useMemo, useState, type ReactNode } from 'react'
 import { cn } from '../utils/cn'
 import { DensityProvider, useDensity } from '../density'
-import { columnWidth, tableGrid, tableText } from '../densityScale'
+import {
+  columnWidthScale,
+  tableCellDensity,
+  tableGridScale,
+  tableTextScale,
+  type TableStage,
+} from '../densityScale'
 import { Checkbox } from './Checkbox'
 import { Button } from './Button'
 import { Pagination } from './Pagination'
@@ -44,36 +50,85 @@ export type ColumnType =
  * `flex` 값은 절대 폭이 아니라 서로에 대한 비율이다. 이름 3 : 업종 1.2는 "남는 폭을 이 비율로
  * 갈라라"라는 뜻이고, 실제 픽셀은 표가 컨테이너 폭에서 고정폭 합을 뺀 뒤 계산한다.
  */
-const columnTypeSpec: Record<
-  ColumnType,
-  {
-    width: string
-    align: 'left' | 'right' | 'center'
-    numeric: boolean
-    /** 고정폭(rem). 지정되면 남는 폭을 받지 않는다. */
-    rem?: number
-    /** 가변폭 가중치. 남는 폭을 이 비율로 나눠 갖는다. */
-    flex?: number
+interface ColumnSpec {
+  width: string
+  align: 'left' | 'right' | 'center'
+  numeric: boolean
+  /** 고정폭(rem). 지정되면 남는 폭을 받지 않는다. */
+  rem?: number
+  /** 가변폭 가중치. 남는 폭을 이 비율로 나눠 갖는다. */
+  flex?: number
+}
+
+/**
+ * 종류별 규격을 표가 놓인 자리에 맞춰 짓는다.
+ *
+ * 폭은 글자에서 따라 나오므로(`columnWidthScale` 참조) 자리마다 두 벌이 필요하다. `rem` 값은
+ * `width`가 가리키는 Tailwind 폭과 **반드시 같은 값**이어야 한다 — 이 숫자는 가변폭 열이 나눠
+ * 가질 몫을 계산할 때 컨테이너에서 빼는 고정폭 합이라, 어긋나면 표가 컨테이너를 넘거나 모자란다.
+ */
+const buildColumnSpec = (stage: TableStage): Record<ColumnType, ColumnSpec> => {
+  const w = columnWidthScale[stage]
+  const page = stage === 'page'
+  return {
+    /** 식별 값(이름·기업명). 가장 큰 몫을 받는다 — 잘리면 곤란한 값이라 여유가 가장 쓸모 있다. */
+    name: { width: '', align: 'left', numeric: false, flex: 3 },
+    /** 업종·분류 등 짧은 라벨. */
+    text: { width: '', align: 'left', numeric: false, flex: 1.2 },
+    /** 사람 이름. */
+    person: { width: '', align: 'left', numeric: false, flex: 1 },
+    /** 주소·비고 등 긴 텍스트. */
+    long: { width: '', align: 'left', numeric: false, flex: 2 },
+    /** 상태 배지 한 개. */
+    badge: { width: w.badge, align: 'left', numeric: false, rem: page ? 6 : 5 },
+    /** 날짜 `YYYY-MM-DD`. */
+    date: { width: w.date, align: 'left', numeric: false, rem: page ? 8 : 7 },
+    /** 일시 `YYYY-MM-DD HH:MM:SS`. */
+    datetime: { width: w.datetime, align: 'left', numeric: false, rem: page ? 11 : 9 },
+    /** 금액·수량. */
+    money: { width: w.money, align: 'right', numeric: true, rem: page ? 8 : 7 },
+    /** 건수·개수. */
+    count: { width: w.count, align: 'right', numeric: true, rem: page ? 6 : 5 },
   }
+}
+
+const columnSpecByStage: Record<TableStage, Record<ColumnType, ColumnSpec>> = {
+  page: buildColumnSpec('page'),
+  card: buildColumnSpec('card'),
+}
+
+/**
+ * 표준 열(선택·No.·작성자·수정일·관리)의 폭. 종류 열과 달리 화면이 지정하지 않으므로 여기서 짓는다.
+ * `rem`은 위와 같은 이유로 `w`의 Tailwind 폭과 일치해야 한다.
+ */
+interface StandardWidth {
+  /** Tailwind 폭 클래스. */
+  w: string
+  /** 같은 폭의 rem 값. 고정폭 합 계산과 sticky 오프셋이 함께 쓴다. */
+  rem: number
+}
+
+const standardWidthByStage: Record<
+  TableStage,
+  Record<'sel' | 'no' | 'author' | 'updated' | 'manage', StandardWidth>
 > = {
-  /** 식별 값(이름·기업명). 가장 큰 몫을 받는다 — 잘리면 곤란한 값이라 여유가 가장 쓸모 있다. */
-  name: { width: '', align: 'left', numeric: false, flex: 3 },
-  /** 업종·분류 등 짧은 라벨. */
-  text: { width: '', align: 'left', numeric: false, flex: 1.2 },
-  /** 사람 이름. */
-  person: { width: '', align: 'left', numeric: false, flex: 1 },
-  /** 주소·비고 등 긴 텍스트. */
-  long: { width: '', align: 'left', numeric: false, flex: 2 },
-  /** 상태 배지 한 개. */
-  badge: { width: columnWidth.badge, align: 'left', numeric: false, rem: 5 },
-  /** 날짜 `YYYY-MM-DD`. */
-  date: { width: columnWidth.date, align: 'left', numeric: false, rem: 7 },
-  /** 일시 `YYYY-MM-DD HH:MM:SS`. */
-  datetime: { width: columnWidth.datetime, align: 'left', numeric: false, rem: 9 },
-  /** 금액·수량. */
-  money: { width: columnWidth.money, align: 'right', numeric: true, rem: 7 },
-  /** 건수·개수. */
-  count: { width: columnWidth.count, align: 'right', numeric: true, rem: 5 },
+  page: {
+    // 선택 열은 체크박스 하나가 놓이는 자리다. card 맥락 체크박스(16px)에 좌우 여백(px-3)을
+    // 더해도 40px 안에 들어가므로 자리와 무관하게 같은 폭을 쓴다.
+    sel: { w: 'w-10', rem: 2.5 },
+    no: { w: 'w-14', rem: 3.5 },
+    author: { w: 'w-24', rem: 6 },
+    updated: { w: 'w-32', rem: 8 },
+    // 관리 열에는 card 맥락 버튼(32px·px-3·13px)이 둘까지 선다 — '수정'과 '비활성화'.
+    manage: { w: 'w-40', rem: 10 },
+  },
+  card: {
+    sel: { w: 'w-10', rem: 2.5 },
+    no: { w: 'w-12', rem: 3 },
+    author: { w: 'w-20', rem: 5 },
+    updated: { w: 'w-28', rem: 7 },
+    manage: { w: 'w-32', rem: 8 },
+  },
 }
 
 export interface Column<T> {
@@ -110,9 +165,20 @@ export interface Column<T> {
    * 두 개 이상 지정하지 않는다.
    */
   primary?: boolean
+  /**
+   * 값의 톤. 생략하면 식별 열은 `primary`, 나머지 도메인 열은 `body`다.
+   *
+   * `meta`는 조회수·작성자처럼 레코드 자체가 아니라 레코드를 **다룬 흔적**인 값에 쓴다(표준 열
+   * 생성자·수정일이 받는 것과 같은 톤). 이전에는 화면이 셀 안 `<span>`에 `tableText.meta`를
+   * 직접 붙여 이 톤을 만들었는데, 그 상수에는 크기가 함께 들어 있어 그 칸만 표가 놓인 자리를
+   * 따라오지 못했다 — 톤은 열이 말하고 크기는 표가 정한다.
+   */
+  tone?: 'primary' | 'body' | 'meta'
   /** 수치 서식(`tabular-nums`). `type`이 정한 값을 덮는다. */
   numeric?: boolean
   sortable?: boolean
+  /** 정렬에 사용할 원본 값. render가 가공된 값을 표시할 때 지정한다. */
+  sortValue?: (row: T) => unknown
   /** 헤더·셀에 함께 적용할 추가 클래스(폭·여백 조정 등). 기본 셀 여백 등과 twMerge로 충돌 해소된다. */
   className?: string
 }
@@ -331,21 +397,82 @@ export function DataTable<T>({
   dense = false,
   meta,
 }: DataTableProps<T>) {
+  const [internalSort, setInternalSort] = useState<{ key: string; dir: 'asc' | 'desc' }>(() => ({
+    key: standardColumns ? '__updatedAt' : '',
+    dir: 'desc',
+  }))
+  const effectiveSortKey = sortKey ?? internalSort.key
+  const effectiveSortDir = sortDir ?? internalSort.dir
+  const requestSort = (key: string) => {
+    if (onSort) {
+      onSort(key)
+      return
+    }
+    setInternalSort((current) => ({
+      key,
+      dir: current.key === key && current.dir === 'asc' ? 'desc' : 'asc',
+    }))
+  }
+
+  const displayedRows = useMemo(() => {
+    if (!effectiveSortKey) return rows
+    const column = columns.find((candidate) => candidate.key === effectiveSortKey)
+    const valueOf = (row: T): unknown => {
+      if (effectiveSortKey === '__updatedAt') {
+        const record = asRecord(row)
+        return record.updated_at ?? record.updatedAt ?? ''
+      }
+      return column?.sortValue?.(row) ?? asRecord(row)[effectiveSortKey]
+    }
+    const collator = new Intl.Collator('ko', { numeric: true, sensitivity: 'base' })
+    const isEmpty = (value: unknown) => value == null || value === ''
+    const compare = (left: unknown, right: unknown) => {
+      if (typeof left === 'number' && typeof right === 'number') return left - right
+      return collator.compare(String(left), String(right))
+    }
+    return rows
+      .map((row, index) => ({ row, index }))
+      .sort((a, b) => {
+        const left = valueOf(a.row)
+        const right = valueOf(b.row)
+        // 값이 없는 행은 정렬 방향과 무관하게 항상 아래에 둔다.
+        if (isEmpty(left) || isEmpty(right)) {
+          if (isEmpty(left) && isEmpty(right)) return a.index - b.index
+          return isEmpty(left) ? 1 : -1
+        }
+        const result = compare(left, right)
+        return result === 0 ? a.index - b.index : effectiveSortDir === 'asc' ? result : -result
+      })
+      .map(({ row }) => row)
+  }, [columns, effectiveSortDir, effectiveSortKey, rows])
   // ToastProvider 밖에서도 쓰일 수 있어 컨텍스트를 null-safe로 읽는다(복사 알림용).
   const toast = useContext(ToastContext)
   /*
-   * 표가 놓인 자리. `DataTable`은 내부를 `table` 밀도로 고정하지만, 그 provider는 반환하는
-   * JSX 안에 있으므로 여기서 읽는 값은 **부모가 내려준 맥락**이다 — 카드 안이면 'card',
-   * 페이지에 바로 놓였으면 'page'.
+   * 표가 놓인 자리. 아래 provider는 반환하는 JSX 안에 있으므로 여기서 읽는 값은 **부모가
+   * 내려준 맥락**이다 — 카드 안이면 'card', 페이지에 바로 놓였으면 'page'.
    */
   const placement = useDensity()
   const selectable = selectableProp ?? placement !== 'card'
+  /*
+   * 자리가 규격을 정한다(2026-08-20). 페이지에 바로 놓인 표는 그 화면에서 읽어야 할 내용
+   * 자체이므로 본문(14px)·행 40px에 서고, 카드 안에 든 표는 카드가 말하는 주제의 부속이라
+   * 한 단 내려 캡션(12px)·행 36px에 선다. 글자·행 높이·열 폭·셀 안 컨트롤이 한 벌로 움직인다.
+   *
+   * 셀 안에서 또 표를 여는 일(placement === 'table')은 카드 안 표와 같이 다룬다 — 더 내려갈
+   * 단이 없다.
+   */
+  const stage: TableStage = placement === 'page' ? 'page' : 'card'
+  const grid = tableGridScale[stage]
+  const text = tableTextScale[stage]
+  const columnTypeSpec = columnSpecByStage[stage]
+  const stdW = standardWidthByStage[stage]
   const fixed = layout === 'fixed'
   const truncate = fixed ? 'truncate' : ''
-  // 열이 많은 표는 여백을 좁혀(px-2) 각 컬럼의 내용 표시 폭을 넓힌다.
+  // 열이 많은 표는 여백을 좁혀 각 컬럼의 내용 표시 폭을 넓힌다.
   // 폭을 고정한 표(fixed)는 항상 그렇고, 자동 레이아웃이라도 dense를 켜면 같은 여백을 쓴다.
-  const pad = fixed || dense ? tableGrid.cellXTight : ''
-  const cellX = tableGrid.cellX
+  const pad = fixed || dense ? grid.cellXTight : ''
+  const cellX = grid.cellX
+  const rowH = grid.row
   // 명시 지정이 없으면 첫 도메인 열을 식별 열로 삼는다.
   const primaryKey = (columns.find((c) => c.primary) ?? columns[0])?.key
   /**
@@ -363,9 +490,11 @@ export function DataTable<T>({
    * 자동으로 정해진다.
    */
   const fixedRem =
-    (selectable ? 2.5 : 0) +
-    (numbered ? 3 : 0) +
-    (standardColumns ? (showAuthor ? 5 : 0) + 7 + (showManageColumn ? 8 : 0) : 0) +
+    (selectable ? stdW.sel.rem : 0) +
+    (numbered ? stdW.no.rem : 0) +
+    (standardColumns
+      ? (showAuthor ? stdW.author.rem : 0) + stdW.updated.rem + (showManageColumn ? stdW.manage.rem : 0)
+      : 0) +
     columns.reduce((sum, c) => sum + (c.type ? (columnTypeSpec[c.type].rem ?? 0) : 0), 0)
   const totalFlex = columns.reduce(
     (sum, c) => sum + (c.type ? (columnTypeSpec[c.type].flex ?? 0) : 0),
@@ -387,11 +516,10 @@ export function DataTable<T>({
     }
   }
 
-  // 선두 열 고정(stickyLead): 선택(w-10=2.5rem)·No.(w-12=3rem)가 앞설 때 각 고정 열의 left 오프셋을 누적한다.
-  const selRem = 2.5
-  const noRem = 3
-  const leftNo = selectable ? selRem : 0
-  const leftFirst = (selectable ? selRem : 0) + (numbered ? noRem : 0)
+  // 선두 열 고정(stickyLead): 선택·No.가 앞설 때 각 고정 열의 left 오프셋을 누적한다.
+  // 두 열의 폭은 자리에 따라 갈리므로 표준 열 표(standardWidthByStage)에서 그대로 가져온다.
+  const leftNo = selectable ? stdW.sel.rem : 0
+  const leftFirst = (selectable ? stdW.sel.rem : 0) + (numbered ? stdW.no.rem : 0)
   // 고정 셀 공통 클래스. 헤더는 gray-50, 본문은 white(+hover gray-25)로 불투명 배경을 깐다.
   // last(첫 도메인 열)에는 우측 seam을 은은하게 번지는 그림자로만 둬, 가로 스크롤 시 고정 영역이
   // 스크롤되는 셀 위로 부드럽게 떠 있게 한다(선명한 경계선 없이).
@@ -419,8 +547,8 @@ export function DataTable<T>({
 
   const [internalSelected, setInternalSelected] = useState<string[]>([])
   const selected = new Set(selectedKeys ?? internalSelected)
-  const allKeys = rows.map(rowKey)
-  const allSelected = rows.length > 0 && allKeys.every((k) => selected.has(k))
+  const allKeys = displayedRows.map(rowKey)
+  const allSelected = displayedRows.length > 0 && allKeys.every((k) => selected.has(k))
   const someSelected = allKeys.some((k) => selected.has(k))
 
   const commitSelection = (next: Set<string>) => {
@@ -441,7 +569,7 @@ export function DataTable<T>({
   const scroller = (
     // 표 내부는 밀도 맥락을 `table`로 고정한다 — 셀 안의 버튼·선택·배지가 별도 지정 없이
     // 표 규격(24px 계열)으로 렌더된다. 근거: 5_component_spec_rules.md §1.2
-    <DensityProvider value="table">
+    <DensityProvider value={tableCellDensity[stage]}>
     <div
       className={cn(
         'w-full overflow-x-auto rounded-radius-md border border-gray-300 bg-white shadow-soft',
@@ -478,7 +606,7 @@ export function DataTable<T>({
           <tr>
             {selectable && (
               <th
-                className={cn(`h-row w-10 border-b border-gray-300 ${cellX}`, pad, stickyCell(true))}
+                className={cn(`${rowH} ${stdW.sel.w} border-b border-gray-300 ${cellX}`, pad, stickyCell(true))}
                 style={stickyLead ? { left: 0 } : undefined}
               >
                 {/* 체크박스는 인라인 요소라 셀에 그냥 두면 글자 베이스라인에 걸려 위로 뜬다. */}
@@ -496,14 +624,15 @@ export function DataTable<T>({
             )}
             {numbered && (
               <th
-                className={cn(`h-row w-12 border-b border-gray-300 ${cellX} text-center ${tableText.head}`, pad, stickyCell(true))}
+                className={cn(`${rowH} ${stdW.no.w} border-b border-gray-300 ${cellX} text-center ${text.head}`, pad, stickyCell(true))}
                 style={stickyLead ? { left: `${leftNo}rem` } : undefined}
               >
                 No.
               </th>
             )}
             {columns.map((col, colIndex) => {
-              const active = sortKey === col.key
+              const sortable = col.sortable ?? col.type === 'name'
+              const active = effectiveSortKey === col.key
               const leadFrozen = stickyLead && colIndex === 0
               // 종류가 폭·정렬을 정하고, 열이 직접 준 값이 그것을 덮는다.
               const spec = col.type ? columnTypeSpec[col.type] : undefined
@@ -515,7 +644,7 @@ export function DataTable<T>({
                     // 가운데 고정이라, 왼쪽으로 선 이름 열이나 오른쪽으로 선 금액 열에서 머리글만
                     // 홀로 떠 있었다. 머리글이 어느 열의 것인지는 위치가 알려주는 것이므로,
                     // 값과 어긋나면 열을 훑을 기준선이 두 개가 된다.
-                    `h-row border-b border-gray-300 ${cellX} ${tableText.head}`,
+                    `${rowH} border-b border-gray-300 ${cellX} ${text.head}`,
                     alignClass[col.align ?? spec?.align ?? 'left'],
                     spec?.width,
                     // 고정폭 열의 머리글은 접힌다(2026-08-20). `columnWidth`의 `whitespace-nowrap`은
@@ -530,21 +659,21 @@ export function DataTable<T>({
                     spec?.width && 'whitespace-normal break-keep',
                     // 정렬 가능한 머리글의 hover. 머리글이 흰 바탕이 되었으므로 gray-100은 너무
                     // 진하다 — 마우스를 올렸을 뿐인데 걷어낸 회색 띠가 되돌아온 것처럼 보인다.
-                    col.sortable && 'cursor-pointer select-none hover:bg-gray-50',
+                    sortable && 'cursor-pointer select-none hover:bg-gray-50',
                     pad,
                     truncate,
                     col.className,
                     leadFrozen && stickyCell(true, true),
                   )}
                   style={cellStyle(col, leadFrozen)}
-                  onClick={col.sortable ? () => onSort?.(col.key) : undefined}
+                  onClick={sortable ? () => requestSort(col.key) : undefined}
                 >
                   <span className="inline-flex items-center gap-1">
                     {col.header}
-                    {col.sortable && (
+                    {sortable && (
                       <span className="shrink-0 text-gray-400" aria-hidden>
                         {active ? (
-                          sortDir === 'asc' ? (
+                          effectiveSortDir === 'asc' ? (
                             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
                           ) : (
                             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
@@ -561,13 +690,31 @@ export function DataTable<T>({
             {standardColumns && (
               <>
                 {showAuthor && (
-                  <th className={cn(`h-row w-20 border-b border-gray-300 ${cellX} text-center ${tableText.head}`, pad, truncate)}>{authorLabel}</th>
+                  <th className={cn(`${rowH} ${stdW.author.w} border-b border-gray-300 ${cellX} text-center ${text.head}`, pad, truncate)}>{authorLabel}</th>
                 )}
                 {/* 헤더는 값 정렬과 무관하게 항상 가운데. 머리글 줄이 하나의 띠로 읽히게 한다. */}
                 {/* 수정일 머리글도 값과 같은 쪽에 선다 — 값만 우측으로 보내면 머리글이 어긋난다. */}
-                <th className={cn(`h-row w-28 border-b border-gray-300 ${cellX} ${tableText.head}`, alignClass[updatedAtAlign], pad, truncate)}>수정일</th>
+                <th
+                  className={cn(`${rowH} ${stdW.updated.w} border-b border-gray-300 ${cellX} ${text.head}`, alignClass[updatedAtAlign], 'cursor-pointer select-none hover:bg-gray-50', pad, truncate)}
+                  onClick={() => requestSort('__updatedAt')}
+                >
+                  <span className="inline-flex items-center gap-1">
+                    수정일
+                    <span className="shrink-0 text-gray-400" aria-hidden>
+                      {effectiveSortKey === '__updatedAt' ? (
+                        effectiveSortDir === 'asc' ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                        )
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-40"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+                      )}
+                    </span>
+                  </span>
+                </th>
                 {showManageColumn && (
-                  <th className={cn(`h-row w-32 border-b border-gray-300 ${cellX} text-center ${tableText.head}`, pad)}>관리</th>
+                  <th className={cn(`${rowH} ${stdW.manage.w} border-b border-gray-300 ${cellX} text-center ${text.head}`, pad)}>관리</th>
                 )}
               </>
             )}
@@ -581,17 +728,17 @@ export function DataTable<T>({
           행 쪽 밑줄만 걷어낸다.
         */}
         <tbody className="[&>tr:last-child>td]:border-b-0">
-          {rows.length === 0 ? (
+          {displayedRows.length === 0 ? (
             <tr>
               <td
                 colSpan={colSpan}
-                className={cn('h-24 text-center', tableText.meta)}
+                className={cn('h-24 text-center', text.meta)}
               >
                 {emptyText}
               </td>
             </tr>
           ) : (
-            rows.map((row, index) => {
+            displayedRows.map((row, index) => {
               const active = standardColumns ? resolveActive(row, meta) : true
               const key = rowKey(row)
               return (
@@ -599,7 +746,7 @@ export function DataTable<T>({
                   key={key}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
                   className={cn(
-                    tableGrid.row,
+                    rowH,
                     // group: 고정 셀(sticky)이 자기 배경을 깔아도 행 hover 강조를 함께 받도록 한다.
                     // 세로 구분선 없음 — 근거는 머리글 행의 주석 참조.
                     'group transition-colors duration-fast hover:bg-gray-25',
@@ -626,7 +773,7 @@ export function DataTable<T>({
                   )}
                   {numbered && (
                     <td
-                      className={cn(`border-b border-gray-200 ${cellX} text-center tabular-nums ${tableText.meta}`, pad, stickyCell(false))}
+                      className={cn(`border-b border-gray-200 ${cellX} text-center tabular-nums ${text.meta}`, pad, stickyCell(false))}
                       style={stickyLead ? { left: `${leftNo}rem` } : undefined}
                     >
                       {meta?.rowMark?.(row) ?? numberFrom - index}
@@ -640,7 +787,11 @@ export function DataTable<T>({
                       key={col.key}
                       className={cn(
                         `border-b border-gray-200 ${cellX}`,
-                        col.key === primaryKey ? tableText.primary : tableText.body,
+                        col.tone
+                          ? text[col.tone]
+                          : col.key === primaryKey
+                            ? text.primary
+                            : text.body,
                         alignClass[col.align ?? spec?.align ?? 'left'],
                         spec?.width,
                         (col.numeric ?? spec?.numeric) && 'tabular-nums',
@@ -658,17 +809,17 @@ export function DataTable<T>({
                   {standardColumns && (
                     <>
                       {showAuthor && (
-                        <td className={cn(`whitespace-nowrap border-b border-gray-200 ${cellX} text-center ${tableText.meta}`, pad, truncate)}>
+                        <td className={cn(`whitespace-nowrap border-b border-gray-200 ${cellX} text-center ${text.meta}`, pad, truncate)}>
                           {resolveAuthor(row, meta)}
                         </td>
                       )}
                       {/* 수정일(날짜)은 어떤 레이아웃에서도 줄바꿈되지 않게 nowrap 고정. auto 레이아웃에서 컬럼이 좁혀질 때 하이픈에서 줄이 갈라지는 것을 방지한다. */}
-                      <td className={cn(`whitespace-nowrap border-b border-gray-200 ${cellX} tabular-nums ${tableText.meta}`, alignClass[updatedAtAlign], pad, truncate)}>
+                      <td className={cn(`whitespace-nowrap border-b border-gray-200 ${cellX} tabular-nums ${text.meta}`, alignClass[updatedAtAlign], pad, truncate)}>
                         {resolveUpdatedAt(row, meta)}
                       </td>
                       {showManageColumn && (
                         <td
-                          className={cn(`border-b border-gray-200 ${cellX} text-center ${tableText.body}`, pad)}
+                          className={cn(`border-b border-gray-200 ${cellX} text-center ${text.body}`, pad)}
                           onClick={(e) => e.stopPropagation()}
                         >
                           {/* 복사는 읽기 전용 액션이라 manageable과 무관하게 노출(HUB 조회 센터 포함). */}
@@ -721,7 +872,11 @@ export function DataTable<T>({
                                         비활성화
                                       </Button>
                                     )
-                                  : <span className="text-caption text-gray-400">비활성</span>)}
+                                  : (
+                                    // 크기는 셀(자리가 정한 규격)에서 물려받고 색만 흐리게 둔다 —
+                                    // 여기서 크기를 적으면 이 한 칸만 자리를 따라오지 못한다.
+                                    <span className="text-gray-400">비활성</span>
+                                  ))}
                             </div>
                           )}
                         </td>

@@ -1,4 +1,4 @@
-import { Button, Input, Spinner, useToast } from '@ynarcher/ui'
+import { Button, Card, Input, Spinner, useToast } from '@ynarcher/ui'
 import { useState } from 'react'
 import { useAddCriterion, useCriteria } from '@/features/program/evaluationHooks'
 
@@ -30,8 +30,7 @@ export function CriteriaManager({ formId }: { formId: string }) {
   }
 
   return (
-    <div className="space-y-3">
-      <h3 className="text-title-sm font-medium text-gray-900">평가 지표</h3>
+    <Card title="평가 지표" bodyClassName="space-y-3">
       {isLoading ? (
         <Spinner density="table" />
       ) : (
@@ -74,6 +73,6 @@ export function CriteriaManager({ formId }: { formId: string }) {
           추가
         </Button>
       </div>
-    </div>
+    </Card>
   )
 }

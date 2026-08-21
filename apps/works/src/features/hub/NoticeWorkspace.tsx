@@ -1,7 +1,7 @@
 import { DataTable, Input, PageHeader, Spinner, pinMark, type Column } from '@ynarcher/ui'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { NewBadge } from '@/features/hub/DashboardPanel'
+import { NewBadge } from '@/features/hub/PostFlagBadges'
 import { useNotices, useBoardPostAttachmentIds, type NoticeItem } from '@/features/hub/boardPostsApi'
 import { BOARD_PAGE_SIZE, isNewPost } from '@/features/hub/boardData'
 import { attachmentColumn, viewsColumn } from '@/features/hub/BoardPanel'
@@ -53,7 +53,7 @@ export function NoticeWorkspace() {
       header: '게시판',
       type: 'text',
       align: 'center',
-      // 셀 글자 규격은 DataTable(tableText.body)이 준다 — 화면에서 크기를 덧씌우지 않는다.
+      // 셀 글자 규격은 DataTable이 준다(표가 놓인 자리가 정한다) — 화면에서 크기를 덧씌우지 않는다.
       render: (n) => n.boardLabel,
     },
     viewsColumn<NoticeItem>((n) => n.post),
@@ -63,7 +63,6 @@ export function NoticeWorkspace() {
     <div className="flex h-full flex-col gap-5">
       <PageHeader
         title="공지사항"
-        description="각 게시판에서 ‘전체 공지’로 등록한 글을 모아 보여줍니다. 항목을 클릭하면 원본 게시판으로 이동합니다."
         search={
           <Input
             placeholder="제목·작성자·게시판 검색"

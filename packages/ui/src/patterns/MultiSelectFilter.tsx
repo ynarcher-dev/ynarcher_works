@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Checkbox } from '../components/Checkbox'
 import { Dropdown } from '../components/Dropdown'
 import { FilterButton } from './FilterButton'
 
@@ -60,18 +61,14 @@ export function MultiSelectFilter({
           약 열 줄까지는 그대로 늘고 그 뒤부터 팝오버 안에서 스크롤한다. */}
       <div className="max-h-80 min-w-40 overflow-y-auto overscroll-contain">
         {options.map((opt) => (
-          <label
+          <Checkbox
             key={opt.value}
-            className="flex cursor-pointer items-center gap-2 rounded-radius-md px-3 py-1.5 text-body text-gray-800 hover:bg-gray-50"
-          >
-            <input
-              type="checkbox"
-              checked={selected.includes(opt.value)}
-              onChange={() => toggle(opt.value)}
-              className="h-4 w-4 accent-brand"
-            />
-            <span>{opt.label}</span>
-          </label>
+            checked={selected.includes(opt.value)}
+            onChange={() => toggle(opt.value)}
+            label={opt.label}
+            // 항목 줄 전체가 누르는 자리라 팝오버 폭을 채우고 호버 면을 갖는다.
+            wrapperClassName="flex w-full rounded-radius-md px-3 py-1.5 hover:bg-gray-50"
+          />
         ))}
       </div>
     </Dropdown>

@@ -1,4 +1,5 @@
-import { Input, Select } from '@ynarcher/ui'
+import { IconButton, Input, Select } from '@ynarcher/ui'
+import { X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import type { ProgramManagerDraft } from '@/features/program/hooks'
 import type { ProgramDepartmentSegment } from '@/features/program/ProgramDepartmentEditor'
@@ -148,7 +149,7 @@ export function ProgramManagerEditor({
           className="relative z-dropdown min-h-ctl-page w-full rounded-radius-md border border-gray-300 bg-white px-3 py-1.5 text-body text-gray-900 outline-none transition-colors duration-fast placeholder:text-gray-400 focus:border-brand"
         />
         {open && (
-          <div className="absolute left-0 right-0 z-dropdown mt-1 max-h-56 overflow-auto rounded-radius-lg border border-gray-300 bg-white p-1 shadow-popover">
+          <div className="absolute left-0 right-0 z-dropdown mt-1 max-h-56 overflow-auto rounded-radius-md border border-gray-300 bg-white p-1 shadow-popover">
             {filtered.length === 0 ? (
               // 왜 비었는지를 구분해 적는다 — 후보를 지정 부서로 좁혔기 때문에, 아무 안내가 없으면
               // 사람이 없는 것인지 검색이 안 맞은 것인지 알 수 없다.
@@ -254,14 +255,15 @@ export function ProgramManagerEditor({
                     onChange={(e) => patch(row._key, { end_date: e.target.value })}
                   />
                 </label>
-                <button
-                  type="button"
-                  aria-label="구간 제거"
+                {/* 라벨이 한 줄 위에 있어 입력과 바닥을 맞춘다(라벨 높이만큼 내려 정렬). */}
+                <IconButton
+                  variant="ghost"
+                  danger
+                  className="mt-[1.375rem]"
+                  label="구간 제거"
                   onClick={() => remove(row._key)}
-                  className="flex h-ctl-page shrink-0 items-center text-gray-400 transition-colors duration-fast hover:text-brand"
-                >
-                  ×
-                </button>
+                  icon={<X className="size-4" aria-hidden />}
+                />
               </div>
             </li>
           ))}

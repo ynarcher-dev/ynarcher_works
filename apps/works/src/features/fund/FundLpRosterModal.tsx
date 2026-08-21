@@ -1,4 +1,4 @@
-import { Badge, Button, Input, Modal, Select, useToast } from '@ynarcher/ui'
+import { Badge, Button, IconButton, Input, Modal, Select, useToast } from '@ynarcher/ui'
 import { Plus, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { FUND_LP_TYPE_OPTIONS } from '@/features/fund/fundListHooks'
@@ -214,14 +214,13 @@ export function FundLpRosterModal({
                 value={d.email}
                 onChange={(e) => patch(d.key, { email: e.target.value })}
               />
-              <button
-                type="button"
-                aria-label={`${d.name || '빈 줄'} 삭제`}
+              <IconButton
+                variant="ghost"
+                danger
+                label={`${d.name || '빈 줄'} 삭제`}
                 onClick={() => remove(d)}
-                className="grid size-8 place-items-center rounded-radius-md text-gray-400 transition-colors duration-fast hover:bg-gray-50 hover:text-danger"
-              >
-                <X className="size-4" />
-              </button>
+                icon={<X className="size-4" />}
+              />
             </div>
           ))}
         </div>

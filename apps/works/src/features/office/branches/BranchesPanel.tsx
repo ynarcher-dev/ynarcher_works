@@ -7,7 +7,7 @@ import { useBranches, type Branch } from '@/features/office/branches/branchesApi
 /** 회의록 목록과 같은 한 페이지 분량(OFFICE 조회 목록 공통). */
 const PAGE_SIZE = 15
 
-/** 검색은 표에 보이는 세 열(지사명·주소·전화번호)만 훑는다 — 결과와 화면이 어긋나지 않게 한다. */
+/** 검색은 표의 글자 열(지사명·주소·전화번호)만 훑는다 — 결과와 화면이 어긋나지 않게 한다. */
 function matchesKeyword(b: Branch, kw: string): boolean {
   const q = kw.trim().toLowerCase()
   if (!q) return true
@@ -15,8 +15,8 @@ function matchesKeyword(b: Branch, kw: string): boolean {
 }
 
 /**
- * OFFICE 지사 정보(조회 전용). 표는 지사명·주소·전화번호만 두고, 상주인력을 포함한 전체 항목은
- * 행을 눌러 여는 상세 모달에서 순서대로 확인한다(상주인력이 늘어도 표 폭이 흔들리지 않게 한다).
+ * OFFICE 지사 정보(조회 전용). 표는 지사명·주소·전화번호에 상주인력 '수'까지만 두고, 누가 있는지
+ * 명단은 행을 눌러 여는 상세 모달에서 순서대로 확인한다 — 인원이 늘어도 표 폭이 흔들리지 않게 한다.
  * 원장은 ADMIN '지사 관리'가 소유하며, 여기서는 확인만 한다(회의록 등 다른 목록과 같은 표 규격).
  */
 export function BranchesPanel() {
@@ -43,6 +43,16 @@ export function BranchesPanel() {
       type: 'text',
       render: (b) =>
         b.phone ? <span className="tabular-nums">{b.phone}</span> : <EmptyValue />,
+    },
+    {
+      key: 'memberCount',
+      header: '상주인력',
+      type: 'count',
+      // 명단과 같은 근거(조회 가능한 계정)로 센다 — 표의 수와 모달의 줄 수가 어긋나지 않게 한다.
+      render: (b) => {
+        const count = entriesOf(b.id).length
+        return count > 0 ? `${count}명` : <EmptyValue />
+      },
     },
   ]
 

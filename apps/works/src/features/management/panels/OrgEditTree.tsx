@@ -127,7 +127,7 @@ function Row({ node, editing, selectedId, onSelect, collapsed, onToggle, drag }:
             className={cn(
               // 이름 칸은 8rem 아래로 줄지 않는다 — 레벨 셀렉트·액션이 고정폭이라 그냥 두면
               // 깊은 조직에서 이름만 0에 수렴해 무엇을 고치는지 알 수 없게 된다.
-              'min-w-[8rem] flex-1 truncate rounded px-1 py-1 text-left text-body-sm hover:bg-gray-100',
+              'min-w-[8rem] flex-1 truncate rounded-radius-sm px-1 py-1 text-left text-body-sm hover:bg-gray-100',
               node.hrHidden ? 'text-gray-400' : 'text-gray-800',
               isSelected && 'font-semibold text-brand-700',
             )}

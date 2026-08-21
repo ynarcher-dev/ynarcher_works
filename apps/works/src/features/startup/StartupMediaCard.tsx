@@ -1,4 +1,4 @@
-import { Badge, CardShell, cardText } from '@ynarcher/ui'
+import { Badge, CardHeading, CardShell } from '@ynarcher/ui'
 import { ExternalLink, ImageOff } from 'lucide-react'
 import { MEDIA_KINDS, type MediaItem } from '@/features/startup/startupMedia'
 
@@ -86,10 +86,13 @@ export function StartupMediaCard({ media }: { media: MediaItem[] }) {
               {/* 소제목 밑줄은 같은 화면의 '비즈니스 & 팀 역량' 소제목(SubHead)과 같은 내부
                   divider 단계(gray-200)를 쓴다 — 같은 층의 같은 요소가 화면 안에서 다른 굵기로
                   보이면 층이 하나 더 있는 것처럼 읽힌다. */}
-              <div className="mb-2 flex items-center gap-1 border-b border-gray-200 pb-1.5">
-                <span className={cardText.subhead}>{kind}</span>
-                <span className={cardText.count}>[{items.length}]</span>
-              </div>
+              <CardHeading
+                level="subhead"
+                count={items.length}
+                className="mb-2 border-b border-gray-200 pb-1.5"
+              >
+                {kind}
+              </CardHeading>
               <div className="space-y-2">
                 {items.map((item, i) => (
                   <MediaRow key={i} item={item} />

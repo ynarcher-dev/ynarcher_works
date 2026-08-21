@@ -153,10 +153,41 @@ export function useExpertiseDistribution() {
  * 글로벌 네트워크(global_networks)의 권역(region_tags)별 보유 건수 분포.
  * 권역 미지정(region_tag_id null)은 '미지정'으로 집계한다. 건수 내림차순.
  */
-export function useRegionDistribution() {
+export function useRegionDistribution(scope: 'mine' | 'all' = 'all') {
   return useQuery({
-    queryKey: ['networks', 'dashboard', 'regions'],
+    queryKey: ['networks', 'dashboard', 'regions', scope],
     queryFn: async (): Promise<{ label: string; count: number }[]> => {
+      if (scope === 'mine') {
+        const [tagRes, rowsRes] = await Promise.all([
+          supabase.from('region_tags').select('name').is('deleted_at', null),
+          supabase.rpc('global_network_entities', {
+            p_keyword: null,
+            p_mine: true,
+            p_regions: null,
+            p_countries: null,
+            p_categories: null,
+            p_search_email: false,
+            p_search_phone: false,
+            p_limit: 5000,
+            p_offset: 0,
+          }),
+        ])
+        const { data, error } = rowsRes
+        if (tagRes.error) throw tagRes.error
+        if (error) throw error
+
+        const counts = new Map<string, number>(
+          ((tagRes.data ?? []) as { name: string }[]).map((tag) => [tag.name, 0]),
+        )
+        for (const row of (data ?? []) as { region_name?: string | null }[]) {
+          const label = row.region_name?.trim() || '미지정'
+          counts.set(label, (counts.get(label) ?? 0) + 1)
+        }
+        return [...counts.entries()]
+          .map(([label, count]) => ({ label, count }))
+          .sort((a, b) => b.count - a.count)
+      }
+
       const [tagRes, rowRes] = await Promise.all([
         supabase.from('region_tags').select('id, name').is('deleted_at', null),
         supabase
@@ -166,10 +197,14 @@ export function useRegionDistribution() {
           .is('merged_into_id', null)
           .limit(5000),
       ])
+      if (tagRes.error) throw tagRes.error
+      if (rowRes.error) throw rowRes.error
       const nameById = new Map(
         ((tagRes.data ?? []) as { id: string; name: string }[]).map((t) => [t.id, t.name]),
       )
-      const counts = new Map<string, number>()
+      const counts = new Map<string, number>(
+        ((tagRes.data ?? []) as { id: string; name: string }[]).map((tag) => [tag.id, 0]),
+      )
       let none = 0
       for (const r of (rowRes.data ?? []) as { region_tag_id: string | null }[]) {
         if (!r.region_tag_id) {
@@ -287,4 +322,3 @@ export function useExpertRanking() {
     },
   })
 }
-

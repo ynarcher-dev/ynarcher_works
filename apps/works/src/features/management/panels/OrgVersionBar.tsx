@@ -167,13 +167,12 @@ export function OrgVersionBar({
         )}
         {onDelete && selectedUpcoming && (
           <Button
-            variant="outline"
+            variant="outline-danger"
             onClick={() => {
               setDelError(null)
               setDelOpen(true)
             }}
             disabled={deleting}
-            className="text-danger hover:bg-danger-subtle hover:text-danger"
           >
             <CalendarX size={14} /> 예약 취소
           </Button>
@@ -249,11 +248,7 @@ export function OrgVersionBar({
             <Button variant="outline" onClick={() => setDelOpen(false)} disabled={delBusy}>
               닫기
             </Button>
-            <Button
-              onClick={confirmDelete}
-              disabled={delBusy || deleting}
-              className="bg-danger hover:bg-danger/90"
-            >
+            <Button variant="danger" onClick={confirmDelete} disabled={delBusy || deleting}>
               {delBusy ? '취소 중…' : '예약 취소'}
             </Button>
           </div>

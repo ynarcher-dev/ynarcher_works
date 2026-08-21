@@ -4,6 +4,7 @@ import {
   DashedAddButton,
   Input,
   Select,
+  SettingRow,
   Switch,
   TextAction,
   type BadgeTone,
@@ -153,23 +154,19 @@ export function AttendanceStatusSection({ statuses, onSaved, onFailed }: Props) 
           </label>
         </div>
 
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-body text-gray-900">유급</p>
-          <Switch checked={draft.isPaid} onChange={(on) => set('isPaid', on)} aria-label="유급" />
-        </div>
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-body text-gray-900">사용</p>
-            <p className="text-caption text-gray-500">
-              끄면 새로 고를 수 없되 이미 그 상태로 기록된 날은 그대로 남습니다.
-            </p>
-          </div>
-          <Switch
-            checked={draft.isActive}
-            onChange={(on) => set('isActive', on)}
-            aria-label="사용"
-          />
-        </div>
+        <SettingRow
+          title="유급"
+          control={({ id }) => (
+            <Switch id={id} checked={draft.isPaid} onChange={(on) => set('isPaid', on)} />
+          )}
+        />
+        <SettingRow
+          title="사용"
+          hint="끄면 새로 고를 수 없되 이미 그 상태로 기록된 날은 그대로 남습니다."
+          control={({ id }) => (
+            <Switch id={id} checked={draft.isActive} onChange={(on) => set('isActive', on)} />
+          )}
+        />
 
         <div className="flex justify-end gap-2 border-t border-gray-100 pt-3">
           <Button

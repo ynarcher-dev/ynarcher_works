@@ -1,40 +1,26 @@
-import { Badge, Card, cardText } from '@ynarcher/ui'
 import { PersonalPanel } from '@/features/hub/dashboard/PersonalPanel'
+import { BusinessOperationsDashboard } from '@/features/hub/dashboard/BusinessOperationsDashboard'
+import { NoticeCard } from '@/features/hub/dashboard/NoticeCard'
+import { ChecklistCard } from '@/features/hub/dashboard/ChecklistCard'
 
 /**
- * 최근 72시간 내 게시글 표시 뱃지. 대시보드 외 게시판·자료실·회의록 목록이 함께 쓴다.
- * 규격(높이·글자·여백)은 `Badge`에 맡기고 이 파일은 "빨간 solid + NEW"라는 의미만 갖는다.
- */
-export function NewBadge() {
-  return (
-    <Badge tone="danger" solid className="font-bold uppercase tracking-wide">
-      NEW
-    </Badge>
-  )
-}
-
-/** 재설계 중인 대시보드의 빈 슬롯. 들어갈 내용이 정해지면 실제 카드로 교체한다. */
-function DashboardSlot({ title }: { title: string }) {
-  return (
-    <Card title={title} bodyClassName="min-h-40">
-      <p className={cardText.subtitle}>준비 중입니다.</p>
-    </Card>
-  )
-}
-
-/**
- * 전사 대시보드(OFFICE 홈) — 전면 재설계 중, 지금은 2:1 골격만 잡혀 있다.
+ * 전사 대시보드(OFFICE 홈). 좌측은 사용자의 사업 운영, 우측은 개인 업무를 보여 준다.
  * 상세 화면들과 같은 컴포지션을 쓴다: 좌측 본문 2/3 + 우측 사이드 1/3(lg 미만에서는 1열).
- * 각 칸의 실제 내용은 후속 작업에서 채운다. 재사용 가능한 요소는 그대로 남아 있다 —
- * 통합검색은 `@/features/hub/UnifiedSearchPanel`, 도메인 요약 집계는
- * `@/features/hub/hooks`(useHubSummary·useMyHireDate), 게시글 조회는
- * `@/features/hub/boardPostsApi`.
  */
 export function DashboardPanel() {
   return (
     <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
+      {/* 좌측(2/3): 사업 운영(요약 → 참여 목록) 아래에 공지사항·체크리스트 두 칸.
+          아래 두 칸은 운영 조회의 로딩·오류와 무관하게 서야 하므로 형제로 둔다.
+          공지사항이 앞자리다 — 전사에서 내려온 소식은 홈에 들어선 순간 먼저 눈에 닿아야 하고,
+          체크리스트는 내가 세워 둔 것이라 그다음이다. 퀵 메모는 이 자리에서 걷어 상단바
+          진입점(우측 슬라이드오버) 하나로 모았다 — 적고 고치는 자리는 거기 하나면 족하다. */}
       <div className="space-y-4 lg:col-span-2">
-        <DashboardSlot title="주요 영역" />
+        <BusinessOperationsDashboard />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <NoticeCard />
+          <ChecklistCard />
+        </div>
       </div>
       {/* 우측(1/3): 인사말 → 근무체크 → 전자결재. 같은 한 벌이 상단바 '개인 메뉴' 슬라이드오버에도
           그대로 서므로 구성은 PersonalPanel이 소유한다(전자결재는 배치만 잡힌 껍데기 — 건수 더미). */}

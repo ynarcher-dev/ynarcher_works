@@ -201,12 +201,7 @@ export function OrgReformPage() {
         actions={
           draft ? (
             <>
-              <Button
-                variant="outline"
-                onClick={() => setDiscardOpen(true)}
-                disabled={busy}
-                className="text-danger hover:bg-danger-subtle hover:text-danger"
-              >
+              <Button variant="outline-danger" onClick={() => setDiscardOpen(true)} disabled={busy}>
                 초안 폐기
               </Button>
               <Button variant="secondary" onClick={() => void saveStructure()} disabled={busy}>
@@ -305,11 +300,7 @@ export function OrgReformPage() {
             <Button variant="outline" onClick={() => setDiscardOpen(false)} disabled={busy}>
               닫기
             </Button>
-            <Button
-              onClick={() => void discard()}
-              disabled={busy}
-              className="bg-danger hover:bg-danger/90"
-            >
+            <Button variant="danger" onClick={() => void discard()} disabled={busy}>
               {busy ? '폐기 중…' : '초안 폐기'}
             </Button>
           </>

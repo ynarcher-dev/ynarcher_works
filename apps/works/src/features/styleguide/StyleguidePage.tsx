@@ -10,12 +10,13 @@ import {
   Radio,
   Select,
   Spinner,
+  SummaryTile,
   Switch,
   Tabs,
   TagChip,
   TextArea,
 } from '@ynarcher/ui'
-import { Pencil, Search, Trash2 } from 'lucide-react'
+import { BriefcaseBusiness, FolderKanban, Pencil, Search, Target, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { DensityHeader, DensityRow } from '@/features/styleguide/DensityRow'
 
@@ -40,14 +41,26 @@ export function StyleguidePage() {
       <Card title="액션">
         <div className="space-y-1">
           <DensityHeader />
+          {/* variant 6종을 무게 순으로 세운다(4_color_system_rules.md §5.1).
+              파괴적 액션 둘의 라벨이 다른 것은 의도다 — 적색 채움은 확인창에서 실제로
+              실행하는 버튼, 테두리형은 그 확인창을 여는 버튼이다. */}
           <DensityRow name="Button primary" render={() => <Button>저장</Button>} />
+          <DensityRow
+            name="Button secondary"
+            render={() => <Button variant="secondary">취소</Button>}
+          />
           <DensityRow
             name="Button outline"
             render={() => <Button variant="outline">수정</Button>}
           />
+          <DensityRow name="Button ghost" render={() => <Button variant="ghost">더 보기</Button>} />
           <DensityRow
             name="Button outline-danger"
             render={() => <Button variant="outline-danger">비활성화</Button>}
+          />
+          <DensityRow
+            name="Button danger"
+            render={() => <Button variant="danger">영구 삭제</Button>}
           />
           <DensityRow
             name="IconButton"
@@ -116,6 +129,17 @@ export function StyleguidePage() {
               />
             )}
           />
+        </div>
+      </Card>
+
+      <Card title="범주형 현황 요약">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+          <SummaryTile title="AC" eyebrow="액셀러레이팅" value={8} unit="개 운영" tone="blue"
+            icon={<Target className="size-[18px]" />} metrics={[{ label: 'PM', value: 3 }, { label: 'MEMBER', value: 5 }]} />
+          <SummaryTile title="M&A·PE" eyebrow="딜 운영" value={4} unit="개 운영" tone="purple"
+            icon={<BriefcaseBusiness className="size-[18px]" />} metrics={[{ label: 'PM', value: 2 }, { label: 'MEMBER', value: 2 }]} />
+          <SummaryTile title="PROJECT" eyebrow="프로젝트" value={6} unit="개 운영" tone="mint"
+            icon={<FolderKanban className="size-[18px]" />} metrics={[{ label: 'PM', value: 1 }, { label: 'MEMBER', value: 5 }]} />
         </div>
       </Card>
     </div>

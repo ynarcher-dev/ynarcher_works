@@ -8,7 +8,7 @@ import {
 } from 'react'
 
 /** 전역 우측 슬라이드오버가 담는 진입점. 넷이 하나의 패널 슬롯을 공유한다. */
-export type RightPanelKey = 'me' | 'ai' | 'calendar' | 'notifications'
+export type RightPanelKey = 'me' | 'ai' | 'calendar' | 'memo' | 'notifications'
 
 interface RightPanelContextValue {
   /** 현재 열린 패널(없으면 null). */

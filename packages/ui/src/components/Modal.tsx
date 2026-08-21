@@ -51,6 +51,7 @@ export function Modal({
         aria-modal="true"
         className={cn(
           // 헤더·푸터는 고정하고 본문만 스크롤되도록 flex 컬럼 + 최대 높이 제한(뷰포트-여백).
+          // eslint-disable-next-line no-restricted-syntax -- 다이얼로그의 정본. radius-lg는 카드와 모달이 함께 쓰는 단계이며(§1.1), 이 상자는 카드가 아니라 모달 자신이다.
           'relative z-modal flex max-h-[calc(100vh-2rem)] w-full flex-col overflow-hidden rounded-radius-lg border border-white/70 bg-white shadow-dialog transition-all duration-slow ease-decelerate',
           sizeClass[size],
         )}

@@ -30,20 +30,18 @@ export function ProgramHostField({ value, onChange }: ProgramHostFieldProps) {
         <label className="text-body font-medium text-gray-800" htmlFor="host_organization">
           주관
         </label>
-        <label className="flex items-center gap-1.5">
-          <Checkbox
-            checked={selfHosted}
-            onChange={(e) => {
-              if (e.target.checked) {
-                setRestore(value)
-                onChange(SELF_HOSTED_PROGRAM_HOST)
-              } else {
-                onChange(restore)
-              }
-            }}
-          />
-          <span className="text-body text-gray-800">{SELF_HOSTED_PROGRAM_HOST}</span>
-        </label>
+        <Checkbox
+          checked={selfHosted}
+          onChange={(e) => {
+            if (e.target.checked) {
+              setRestore(value)
+              onChange(SELF_HOSTED_PROGRAM_HOST)
+            } else {
+              onChange(restore)
+            }
+          }}
+          label={SELF_HOSTED_PROGRAM_HOST}
+        />
       </div>
       <Input
         id="host_organization"

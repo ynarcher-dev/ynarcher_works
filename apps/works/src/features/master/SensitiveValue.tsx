@@ -55,13 +55,10 @@ export function SensitiveValue({ field, contentKey, value, resourceType, resourc
   return (
     <span className="inline-flex items-center gap-2">
       <span>{masked}</span>
-      <button
-        type="button"
-        onClick={() => setAsking(true)}
-        className="rounded-radius-sm border border-gray-300 px-1.5 py-0.5 text-caption text-gray-700 transition-colors hover:bg-gray-50"
-      >
+      {/* 마스킹된 값 옆에 붙는 자리라 표 셀 규격(24px)을 명시한다. */}
+      <Button variant="outline" density="table" onClick={() => setAsking(true)}>
         보기
-      </button>
+      </Button>
 
       <Modal
         open={asking}

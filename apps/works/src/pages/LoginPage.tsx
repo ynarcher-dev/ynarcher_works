@@ -1,3 +1,4 @@
+import { Button } from '@ynarcher/ui'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -78,13 +79,10 @@ export function LoginPage() {
           </p>
         )}
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full rounded-radius-md bg-brand px-4 py-2 text-body font-medium text-white transition-all duration-fast hover:bg-brand-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10 active:scale-[0.98] active:bg-brand-700 disabled:scale-100 disabled:opacity-60"
-        >
+        {/* 로그인 화면은 카드·표 밖의 독립 폼이라 page 맥락(40px)에 선다. */}
+        <Button type="submit" density="page" className="w-full" disabled={isSubmitting}>
           {isSubmitting ? '로그인 중…' : '로그인'}
-        </button>
+        </Button>
       </form>
     </main>
   )

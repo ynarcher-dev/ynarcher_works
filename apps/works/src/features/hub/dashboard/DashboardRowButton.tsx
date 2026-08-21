@@ -13,6 +13,7 @@ import type { ReactNode } from 'react'
 export function DashboardRowButton({
   icon,
   label,
+  tag,
   trailing,
   active = false,
   disabled,
@@ -20,6 +21,13 @@ export function DashboardRowButton({
 }: {
   icon: ReactNode
   label: string
+  /**
+   * 라벨 바로 뒤에 붙는 배지 한 개 — 이 줄이 남긴 기록을 한마디로 평한다(근무체크의 '지각' 등).
+   *
+   * 우측(`trailing`)이 아니라 라벨 쪽에 세운다. 우측 끝은 값이 서는 자리라 세로로 줄이 맞아야
+   * 하는데, 배지가 끼면 줄마다 값의 시작 위치가 달라져 시각을 위아래로 견줄 수 없다.
+   */
+  tag?: ReactNode
   /** 우측 끝에 붙는 값(찍힌 시각·건수 등). 값이 없으면 비워 둔다. */
   trailing?: ReactNode
   active?: boolean
@@ -46,10 +54,16 @@ export function DashboardRowButton({
       >
         {icon}
       </span>
-      <span
-        className={cn('flex-1 text-body-sm font-medium', disabled ? 'text-gray-400' : 'text-gray-700')}
-      >
-        {label}
+      <span className="flex min-w-0 flex-1 items-center gap-1.5">
+        <span
+          className={cn(
+            'truncate text-body-sm font-medium',
+            disabled ? 'text-gray-400' : 'text-gray-700',
+          )}
+        >
+          {label}
+        </span>
+        {tag}
       </span>
       {trailing}
     </button>

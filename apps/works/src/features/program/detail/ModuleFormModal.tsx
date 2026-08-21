@@ -299,17 +299,13 @@ export function ModuleFormModal({
               {pool.map((p) => {
                 const on = assignees.includes(p.id)
                 return (
-                  <label
+                  <Checkbox
                     key={p.id}
-                    className={`flex cursor-pointer items-center gap-2 rounded-radius-md border px-3 py-1.5 text-body transition-colors duration-fast ${
-                      on
-                        ? 'border-brand/40 bg-brand-25 text-gray-900'
-                        : 'border-gray-300 text-gray-600 hover:bg-gray-25'
-                    }`}
-                  >
-                    <Checkbox checked={on} onChange={() => toggleAssignee(p.id)} />
-                    {p.name}
-                  </label>
+                    boxed
+                    checked={on}
+                    onChange={() => toggleAssignee(p.id)}
+                    label={p.name}
+                  />
                 )
               })}
             </div>

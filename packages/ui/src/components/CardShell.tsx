@@ -25,6 +25,7 @@ export function CardShell({ as: Comp = 'section', className, children }: CardShe
     <DensityProvider value="card">
       <Comp
         className={cn(
+          // eslint-disable-next-line no-restricted-syntax -- 카드 셸의 정본. 이 한 줄이 곧 규격이므로 가드의 대상이 아니라 대상의 근거다.
           'rounded-radius-lg border border-gray-300 bg-white p-5 shadow-soft',
           className,
         )}

@@ -1,6 +1,7 @@
 import { EmptyState, PageHeader, Spinner } from '@ynarcher/ui'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { ApprovalTable } from '@/features/approval/ApprovalTable'
+import { ApprovalSummaryMock } from '@/features/approval/ApprovalSummaryMock'
 import { ArchiveWorkspace } from '@/features/hub/ArchiveWorkspace'
 import { BoardWorkspace } from '@/features/hub/BoardWorkspace'
 import { DashboardPanel } from '@/features/hub/DashboardPanel'
@@ -122,6 +123,7 @@ export function OfficePage() {
       {tab === 'approval' && (
         <>
           <PageHeader title="전자결재" />
+          <ApprovalSummaryMock />
           <ApprovalTable />
         </>
       )}

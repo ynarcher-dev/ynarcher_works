@@ -1,3 +1,4 @@
+import { IconButton } from '@ynarcher/ui'
 import dayjs from 'dayjs'
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useRef } from 'react'
@@ -33,32 +34,38 @@ export function DateNav({ date, onChange, unit = 'day' }: DateNavProps) {
 
   // 달력 아이콘은 꺽쇠와 달리 글리프가 상자를 꽉 채워서, 같은 여백이면 더 밖으로 나와 보인다
   // → 오른쪽만 4px 더 준다.
+  //
+  // 알약 안의 아이콘 버튼은 `card` 맥락(28px)을 명시한다 — 페이지에 놓이지만 자기 상자
+  // 안이 아니라 알약 테두리 **안쪽**에 들어가므로, page(36px)를 쓰면 알약이 44px로 부풀어
+  // 같은 줄의 다른 컨트롤보다 커진다. 모서리만 알약을 따라 둥글게 덮어쓴다.
   return (
     <div className="mx-auto flex w-fit items-center gap-1 rounded-radius-full border border-gray-200 bg-white py-1 pl-1.5 pr-2.5">
-      <button
-        type="button"
-        aria-label={isMonth ? '이전 달' : '이전 날'}
+      <IconButton
+        variant="ghost"
+        density="card"
+        className="rounded-radius-full"
+        label={isMonth ? '이전 달' : '이전 날'}
         onClick={() => onChange(date.subtract(1, unit))}
-        className="rounded-radius-full p-1.5 text-gray-500 hover:bg-gray-100"
-      >
-        <ChevronLeft className="size-4" />
-      </button>
+        icon={<ChevronLeft className="size-4" />}
+      />
       <span className="min-w-24 text-center text-body font-medium text-gray-800">{label}</span>
-      <button
-        type="button"
-        aria-label={isMonth ? '다음 달' : '다음 날'}
+      <IconButton
+        variant="ghost"
+        density="card"
+        className="rounded-radius-full"
+        label={isMonth ? '다음 달' : '다음 날'}
         onClick={() => onChange(date.add(1, unit))}
-        className="rounded-radius-full p-1.5 text-gray-500 hover:bg-gray-100"
-      >
-        <ChevronRight className="size-4" />
-      </button>
+        icon={<ChevronRight className="size-4" />}
+      />
 
       <span className="mx-0.5 h-4 w-px bg-gray-200" />
 
       <div className="relative">
-        <button
-          type="button"
-          aria-label="날짜 선택"
+        <IconButton
+          variant="ghost"
+          density="card"
+          className="rounded-radius-full"
+          label="날짜 선택"
           onClick={() => {
             const el = pickerRef.current
             if (!el) return
@@ -66,10 +73,8 @@ export function DateNav({ date, onChange, unit = 'day' }: DateNavProps) {
             if (typeof el.showPicker === 'function') el.showPicker()
             else el.focus()
           }}
-          className="rounded-radius-full p-1.5 text-gray-500 hover:bg-gray-100"
-        >
-          <CalendarDays className="size-4" />
-        </button>
+          icon={<CalendarDays className="size-4" />}
+        />
         <input
           ref={pickerRef}
           type={isMonth ? 'month' : 'date'}

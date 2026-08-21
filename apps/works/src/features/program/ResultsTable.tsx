@@ -1,4 +1,4 @@
-import { Badge, DataTable, Spinner, type Column } from '@ynarcher/ui'
+import { Badge, Card, DataTable, Spinner, type Column } from '@ynarcher/ui'
 import { useFormResults, type FormResult } from '@/features/program/evaluationHooks'
 
 const columns: Column<FormResult>[] = [
@@ -43,14 +43,13 @@ export function ResultsTable({ formId }: { formId: string }) {
   const { data, isLoading } = useFormResults(formId)
   if (isLoading) return <Spinner density="table" />
   return (
-    <div className="space-y-2">
-      <h3 className="text-title-sm font-medium text-gray-900">집계 결과</h3>
+    <Card title="집계 결과">
       <DataTable
         columns={columns}
         rows={data ?? []}
         rowKey={(r) => r.target_id}
         emptyText="평가 대상이 없거나 제출된 평가가 없습니다."
       />
-    </div>
+    </Card>
   )
 }

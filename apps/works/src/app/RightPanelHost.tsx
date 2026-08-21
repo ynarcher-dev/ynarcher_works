@@ -1,12 +1,14 @@
-import { SlideOver } from '@ynarcher/ui'
+import { IconButton, SlideOver } from '@ynarcher/ui'
 import { X } from 'lucide-react'
 import { AiAgentPanel } from '@/features/hub/AiAgentPanel'
 import { CalendarPanel } from '@/features/hub/CalendarPanel'
 import { PersonalPanel } from '@/features/hub/dashboard/PersonalPanel'
 import { NotificationList } from '@/features/notifications/NotificationList'
+import { QuickMemoPanel } from '@/features/quick-memo/QuickMemoPanel'
 import { useRightPanel, type RightPanelKey } from '@/app/rightPanel'
 
 const TITLES: Record<RightPanelKey, string> = {
+  memo: '퀵 메모',
   me: '개인 메뉴',
   ai: 'AI 에이전트',
   calendar: '전사 캘린더',
@@ -26,14 +28,12 @@ export function RightPanelHost() {
     <SlideOver open={active != null} onClose={close} label={title}>
       <header className="flex shrink-0 items-center justify-between border-b border-gray-100 px-4 py-3">
         <h2 className="text-title-sm font-medium text-gray-900">{title}</h2>
-        <button
-          type="button"
+        <IconButton
+          variant="ghost"
+          label="패널 닫기"
           onClick={close}
-          aria-label="패널 닫기"
-          className="flex size-8 items-center justify-center rounded-radius-md text-gray-500 transition-colors duration-fast hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10"
-        >
-          <X aria-hidden className="size-5" strokeWidth={1.8} />
-        </button>
+          icon={<X aria-hidden className="size-5" strokeWidth={1.8} />}
+        />
       </header>
 
       {/* 개인 메뉴 — 대시보드 우측 열과 같은 한 벌(인사말·근무체크·전자결재). 어느 페이지에 있든
@@ -57,6 +57,11 @@ export function RightPanelHost() {
       {active === 'notifications' && (
         <div className="min-h-0 flex-1 overflow-hidden">
           <NotificationList onNavigate={close} />
+        </div>
+      )}
+      {active === 'memo' && (
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <QuickMemoPanel />
         </div>
       )}
     </SlideOver>

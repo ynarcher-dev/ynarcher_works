@@ -1,6 +1,7 @@
 import {
   Badge,
   Button,
+  Checkbox,
   cardText,
   InfoField,
   Input,
@@ -514,27 +515,27 @@ function PurposeChecklist({
               {rows.map((p) => {
                 const checked = selected.includes(p.id)
                 return (
-                  <label
+                  <Checkbox
                     key={p.id}
-                    className={`flex cursor-pointer items-start gap-2.5 rounded-radius-md border px-3 py-2 text-body-sm transition-colors duration-fast ${
-                      checked
-                        ? 'border-brand bg-brand-25'
-                        : 'border-gray-200 bg-gray-25 hover:bg-gray-50'
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => onToggle(p.id)}
-                      className="mt-0.5 size-4 shrink-0 accent-brand"
-                    />
-                    <span className="min-w-0 flex-1 whitespace-pre-wrap break-words text-gray-800">
-                      {p.label}
-                    </span>
-                    {p.target_pct != null && (
-                      <span className="mt-px shrink-0 tabular-nums text-gray-500">{p.target_pct}%</span>
-                    )}
-                  </label>
+                    checked={checked}
+                    onChange={() => onToggle(p.id)}
+                    boxed
+                    // 여러 줄로 접히는 긴 목적 문구라 체크박스를 첫 줄에 맞춰 세운다.
+                    wrapperClassName="flex items-start"
+                    className="mt-0.5"
+                    label={
+                      <>
+                        <span className="min-w-0 flex-1 whitespace-pre-wrap break-words">
+                          {p.label}
+                        </span>
+                        {p.target_pct != null && (
+                          <span className="mt-px shrink-0 tabular-nums text-gray-500">
+                            {p.target_pct}%
+                          </span>
+                        )}
+                      </>
+                    }
+                  />
                 )
               })}
             </div>

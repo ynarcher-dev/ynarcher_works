@@ -199,7 +199,7 @@ export function useProgramsPage(
         table: config.tables.programs,
         select: programListCols(config),
         liveColumns: PROGRAM_LIVE_COLUMNS,
-        order: { column: 'created_at', ascending: false },
+        order: { column: 'updated_at', ascending: false },
         page,
         pageSize,
         scope,

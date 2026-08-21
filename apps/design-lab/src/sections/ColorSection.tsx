@@ -97,7 +97,8 @@ export function ColorSection() {
             <Button variant="secondary">취소</Button>
             <Button variant="outline">내보내기</Button>
             <Button variant="ghost">더 보기</Button>
-            <Button variant="danger">비활성화</Button>
+            <Button variant="outline-danger">비활성화</Button>
+            <Button variant="danger">영구 삭제</Button>
           </div>
           <Tabs
             items={[

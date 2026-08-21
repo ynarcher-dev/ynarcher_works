@@ -1,4 +1,14 @@
-import { Badge, Button, Card, Input, Spinner, TextArea, useToast, type BadgeTone } from '@ynarcher/ui'
+import {
+  Badge,
+  Button,
+  Card,
+  Input,
+  SegmentedToggle,
+  Spinner,
+  TextArea,
+  useToast,
+  type BadgeTone,
+} from '@ynarcher/ui'
 import dayjs from 'dayjs'
 import { ExternalLink, ImageUp, Link2 } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
@@ -18,10 +28,10 @@ import {
   type PublicStatus,
 } from '@/features/program/recruitment/recruitmentHooks'
 
-const STATUS_OPTIONS: { value: PublicStatus; label: string }[] = [
-  { value: 'PRIVATE', label: '비공개' },
-  { value: 'OPEN', label: '공개 모집중' },
-  { value: 'CLOSED', label: '마감' },
+const STATUS_OPTIONS: { key: PublicStatus; label: string }[] = [
+  { key: 'PRIVATE', label: '비공개' },
+  { key: 'OPEN', label: '공개 모집중' },
+  { key: 'CLOSED', label: '마감' },
 ]
 
 /** datetime-local 입력 공통 스타일(UI Input과 시각적 정합). */
@@ -186,20 +196,12 @@ export function RecruitmentSettingsPanel({
         <div className="space-y-5">
           <Field label="공개 상태">
             <div className="flex flex-wrap items-center gap-3">
-              <div className="inline-flex rounded-radius-md border border-gray-300 p-0.5">
-                {STATUS_OPTIONS.map((o) => (
-                  <button
-                    key={o.value}
-                    type="button"
-                    onClick={() => setStatus(o.value)}
-                    className={`rounded-radius-sm px-3.5 py-1.5 text-caption font-medium transition-colors duration-fast ${
-                      status === o.value ? 'bg-brand text-white' : 'text-gray-700 hover:bg-gray-25'
-                    }`}
-                  >
-                    {o.label}
-                  </button>
-                ))}
-              </div>
+              <SegmentedToggle
+                label="공개 상태"
+                options={STATUS_OPTIONS}
+                value={status}
+                onChange={setStatus}
+              />
               <span className="inline-flex items-center gap-1.5 text-caption text-gray-700">
                 현재 <Badge tone={eff.tone}>{eff.label}</Badge>
               </span>

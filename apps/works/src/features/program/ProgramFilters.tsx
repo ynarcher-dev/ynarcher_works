@@ -1,4 +1,4 @@
-import { DateRangeFilter, MultiSelectFilter } from '@ynarcher/ui'
+import { DateRangeFilter, FilterResetButton, MultiSelectFilter } from '@ynarcher/ui'
 import { useMemo } from 'react'
 import { useDepartmentOptions } from '@/features/management/departmentOptions'
 import { PROGRAM_STATUS_LABEL, programStatusOptions } from '@/features/program/config'
@@ -87,13 +87,7 @@ export function ProgramFilters({ filters, onChange }: ProgramFiltersProps) {
       />
 
       {active && (
-        <button
-          type="button"
-          onClick={() => onChange(EMPTY_PROGRAM_FILTERS)}
-          className="flex h-ctl-page items-center rounded-radius-md border border-gray-300 bg-white px-3.5 text-body text-gray-700 shadow-soft transition-colors duration-fast hover:border-gray-400 hover:text-brand-700"
-        >
-          초기화
-        </button>
+        <FilterResetButton onClick={() => onChange(EMPTY_PROGRAM_FILTERS)} />
       )}
     </div>
   )

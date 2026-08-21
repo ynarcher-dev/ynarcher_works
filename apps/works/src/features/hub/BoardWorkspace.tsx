@@ -240,17 +240,27 @@ function PostEditor({
           )}
           <PanelCard title="게시 옵션">
             <div className="flex flex-col gap-2">
-              <label className="flex w-fit cursor-pointer items-center gap-2 text-body text-gray-700">
-                <Checkbox checked={pinned} onChange={(e) => setPinned(e.target.checked)} />
-                이 글을 게시판 <span className="font-semibold text-gray-900">최상단에 고정</span>
-              </label>
-              <label className="flex w-fit cursor-pointer items-center gap-2 text-body text-gray-700">
-                <Checkbox
-                  checked={globalNotice}
-                  onChange={(e) => toggleGlobalNotice(e.target.checked)}
-                />
-                <span className="font-semibold text-gray-900">전체 공지</span>로 등록하여 공지사항 메뉴에 노출
-              </label>
+              <Checkbox
+                checked={pinned}
+                onChange={(e) => setPinned(e.target.checked)}
+                wrapperClassName="w-fit"
+                label={
+                  <>
+                    이 글을 게시판 <span className="font-semibold text-gray-900">최상단에 고정</span>
+                  </>
+                }
+              />
+              <Checkbox
+                checked={globalNotice}
+                onChange={(e) => toggleGlobalNotice(e.target.checked)}
+                wrapperClassName="w-fit"
+                label={
+                  <>
+                    <span className="font-semibold text-gray-900">전체 공지</span>로 등록하여 공지사항
+                    메뉴에 노출
+                  </>
+                }
+              />
             </div>
             {!isEdit && (
               <p className={cn('mt-3 border-t border-gray-100 pt-3', cardText.subtitle)}>

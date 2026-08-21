@@ -1,4 +1,4 @@
-import { Badge, Button, EmptyState, cardText, cn } from '@ynarcher/ui'
+import { Badge, Button, CardHeading, EmptyState, cardText, cn } from '@ynarcher/ui'
 import {
   CHECKOUT_LABELS,
   CHECKOUT_TONES,
@@ -159,13 +159,18 @@ export function CheckoutHistoryList({
 }: CheckoutHistoryListProps) {
   return (
     <div>
-      <div className="mb-1.5 flex items-center gap-1.5">
-        <p className={cardText.subhead}>반출 이력</p>
-        {lines.length > 0 && <span className={cardText.count}>[{lines.length}]</span>}
-        {lines.length >= limit && (
-          <span className={cardText.label}>최근 {limit}건까지 표시</span>
-        )}
-      </div>
+      <CardHeading
+        level="subhead"
+        count={lines.length}
+        className="mb-1.5"
+        trailing={
+          lines.length >= limit && (
+            <span className={cn('shrink-0', cardText.label)}>최근 {limit}건까지 표시</span>
+          )
+        }
+      >
+        반출 이력
+      </CardHeading>
 
       {lines.length === 0 ? (
         <EmptyState

@@ -22,7 +22,7 @@ export function StarRating({
           aria-label={`${n}점`}
           disabled={disabled}
           onClick={() => onChange(n)}
-          className="flex size-12 items-center justify-center text-2xl disabled:opacity-50"
+          className="grid size-12 place-items-center rounded-radius-md text-2xl transition-colors duration-fast focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10 disabled:opacity-50"
         >
           <span className={n <= value ? 'text-warning' : 'text-gray-300'}>★</span>
         </button>

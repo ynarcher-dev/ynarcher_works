@@ -1,4 +1,14 @@
-import { Button, DataTable, Input, Select, Spinner, useToast, type Column } from '@ynarcher/ui'
+import {
+  Button,
+  DataTable,
+  Input,
+  SegmentedToggle,
+  Select,
+  Spinner,
+  Tabs,
+  useToast,
+  type Column,
+} from '@ynarcher/ui'
 import { useEffect, useMemo, useState } from 'react'
 import {
   useCreateTag,
@@ -155,9 +165,15 @@ export function TagAdminPanel({ config }: TagAdminPanelProps) {
     }
   }
 
-  /** 같은 방향을 다시 누르면 정렬을 풀어 저장된 노출순위 순서로 돌아간다. */
-  const toggleNameSort = (dir: Exclude<NameSort, null>) =>
-    setNameSort((prev) => (prev === dir ? null : dir))
+  /**
+   * 정렬 축은 셋 중 하나다 — 저장된 노출순위, 이름 오름차순, 이름 내림차순.
+   *
+   * 이전에는 버튼 두 개였고 같은 방향을 다시 누르면 정렬이 풀렸는데, 그 '풀린 상태'에는
+   * 화면에 이름이 없었다. 두 버튼이 모두 꺼져 있는 것이 무슨 뜻인지 알 방법이 없었던 셈이다.
+   * 세 칸짜리 세그먼트는 그 상태에 이름을 준다.
+   */
+  const applySort = (key: 'order' | Exclude<NameSort, null>) =>
+    setNameSort(key === 'order' ? null : key)
 
   const openEdit = (tag: Tag) => {
     setEditing(tag)
@@ -272,7 +288,7 @@ export function TagAdminPanel({ config }: TagAdminPanelProps) {
           <Button variant="outline" onClick={() => openEdit(t)}>
             수정
           </Button>
-          <Button variant="outline" onClick={() => del(t)}>
+          <Button variant="outline-danger" onClick={() => del(t)}>
             삭제
           </Button>
         </div>
@@ -307,22 +323,11 @@ export function TagAdminPanel({ config }: TagAdminPanelProps) {
       {/* 권역 탭 바(2뎁스 전용). 권역이 늘면 탭도 자동으로 늘어난다. */}
       {parent &&
         (parentTags?.length ? (
-          <nav className="flex flex-wrap gap-1 border-b border-gray-200">
-            {parentTabs.map((t) => (
-              <button
-                key={t.id || 'none'}
-                type="button"
-                onClick={() => setActiveParentId(t.id)}
-                className={
-                  activeParentId === t.id
-                    ? 'border-b-2 border-brand px-3 py-2 text-body font-medium text-brand'
-                    : 'px-3 py-2 text-body text-gray-600 hover:text-gray-800'
-                }
-              >
-                {t.label}
-              </button>
-            ))}
-          </nav>
+          <Tabs
+            items={parentTabs.map((t) => ({ key: t.id || 'none', label: t.label }))}
+            value={activeParentId || 'none'}
+            onChange={(key) => setActiveParentId(key === 'none' ? '' : key)}
+          />
         ) : (
           <p className="text-body text-gray-500">
             먼저 <span className="font-medium">권역태그 관리</span>에서 권역을 등록하세요.
@@ -333,20 +338,17 @@ export function TagAdminPanel({ config }: TagAdminPanelProps) {
           표기 방식 열이 붙는 직급·직책 태그만 셀렉트가 눌리지 않게 3/4로 넓힌다. */}
       <div className={`space-y-2 ${modes ? 'lg:w-3/4' : 'lg:w-1/2'}`}>
         <div className="flex flex-wrap items-center justify-end gap-1.5">
-          <Button
-            variant={nameSort === 'asc' ? 'primary' : 'outline'}
-            onClick={() => toggleNameSort('asc')}
+          <SegmentedToggle
+            label="태그 정렬"
+            value={nameSort ?? 'order'}
+            onChange={applySort}
             disabled={!rows.length}
-          >
-            이름 오름차순
-          </Button>
-          <Button
-            variant={nameSort === 'desc' ? 'primary' : 'outline'}
-            onClick={() => toggleNameSort('desc')}
-            disabled={!rows.length}
-          >
-            이름 내림차순
-          </Button>
+            options={[
+              { key: 'order', label: '노출순위' },
+              { key: 'asc', label: '이름 오름차순' },
+              { key: 'desc', label: '이름 내림차순' },
+            ]}
+          />
           <Button variant="outline" onClick={renumber} disabled={!rows.length || setOrders.isPending}>
             노출순위 10단위 재부여
           </Button>
@@ -362,7 +364,8 @@ export function TagAdminPanel({ config }: TagAdminPanelProps) {
             sortKey={nameSort ? 'name' : undefined}
             sortDir={nameSort ?? undefined}
             onSort={(key) => {
-              if (key === 'name') toggleNameSort(nameSort === 'asc' ? 'desc' : 'asc')
+              // 머리글 클릭은 방향만 뒤집는다(해제는 위 세그먼트의 '노출순위'가 맡는다).
+              if (key === 'name') setNameSort(nameSort === 'asc' ? 'desc' : 'asc')
             }}
             standardColumns={false}
             // 기본 No.(내림차순)는 노출순위와 정반대로 매겨져 서로 헷갈린다. 여기서 읽어야 할

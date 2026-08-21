@@ -32,7 +32,8 @@ function ControlSet() {
         <Button variant="secondary">취소</Button>
         <Button variant="outline">내보내기</Button>
         <Button variant="ghost">더 보기</Button>
-        <Button variant="danger">비활성화</Button>
+        <Button variant="outline-danger">비활성화</Button>
+        <Button variant="danger">영구 삭제</Button>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Input placeholder="검색어" className="max-w-[12rem]" />

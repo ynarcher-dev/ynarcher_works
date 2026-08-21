@@ -6,6 +6,7 @@ import { useMaskPolicy } from '@/features/admin/sensitiveStore'
 import { MasterListView } from '@/features/master/MasterListView'
 import type { MasterRow } from '@/features/master/types'
 import { GlobalNetworkFilters } from '@/features/networks/GlobalNetworkFilters'
+import { GlobalRegionFilteredSummary } from '@/features/networks/GlobalRegionFilteredSummary'
 import {
   EMPTY_GLOBAL_FILTERS,
   searchPlaceholderFor,
@@ -62,6 +63,8 @@ export function GlobalNetworkTab({ scope }: GlobalNetworkTabProps) {
 
   return (
     <div className="space-y-3">
+      <GlobalRegionFilteredSummary scope={scope} keyword={keyword} filters={filters} searchScope={searchScope} />
+
       <ListToolbar
         keyword={keyword}
         onKeywordChange={setKeyword}

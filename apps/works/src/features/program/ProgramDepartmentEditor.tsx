@@ -1,4 +1,5 @@
-import { Input, Select } from '@ynarcher/ui'
+import { Button, IconButton, Input, Select } from '@ynarcher/ui'
+import { Plus, X } from 'lucide-react'
 import type { ProgramDepartmentDraft } from '@/features/program/hooks'
 import { ratioSum } from '@/features/program/programManagerCoverage'
 import { useDepartmentOptions } from '@/features/management/departmentOptions'
@@ -74,18 +75,15 @@ export function ProgramDepartmentEditor({ value, onChange, versionId }: Props) {
                     </option>
                   ))}
               </Select>
-              <button
-                type="button"
+              {/* 켜짐/꺼짐을 색으로 가른다 — 켜지면 브랜드 채움(primary), 아니면 테두리(outline). */}
+              <Button
+                variant={row.kind === 'MAIN' ? 'primary' : 'outline'}
+                aria-pressed={row.kind === 'MAIN'}
                 onClick={() => setMain(row._key)}
-                className={`shrink-0 rounded-radius-sm border px-2 py-1 text-caption font-medium transition-colors duration-fast ${
-                  row.kind === 'MAIN'
-                    ? 'border-brand bg-brand text-gray-0'
-                    : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'
-                }`}
                 title="메인 부서로 지정"
               >
                 메인
-              </button>
+              </Button>
               <label className="flex shrink-0 items-center gap-1">
                 <Input
                   type="number"
@@ -102,27 +100,22 @@ export function ProgramDepartmentEditor({ value, onChange, versionId }: Props) {
                 />
                 <span className="text-caption text-gray-600">%</span>
               </label>
-              <button
-                type="button"
-                aria-label="부서 제거"
+              <IconButton
+                variant="ghost"
+                danger
+                label="부서 제거"
                 onClick={() => remove(row._key)}
-                className="shrink-0 text-gray-400 transition-colors duration-fast hover:text-brand"
-              >
-                ×
-              </button>
+                icon={<X className="size-4" aria-hidden />}
+              />
             </li>
           ))}
         </ul>
       )}
 
       <div className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={add}
-          className="rounded-radius-md border border-dashed border-gray-300 px-3 py-1.5 text-caption font-medium text-gray-600 transition-colors duration-fast hover:border-gray-400 hover:bg-gray-25 hover:text-gray-700"
-        >
-          + 부서 추가
-        </button>
+        <Button variant="outline" className="border-dashed" onClick={add}>
+          <Plus className="size-4" aria-hidden /> 부서 추가
+        </Button>
         {value.length > 0 && (
           <span className="flex items-center gap-2 text-caption">
             <span className={mainCount !== 1 ? 'font-medium text-danger' : 'text-gray-600'}>

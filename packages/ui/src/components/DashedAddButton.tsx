@@ -28,7 +28,11 @@ export function DashedAddButton({
       disabled={disabled}
       className={cn(
         'flex w-full items-center justify-center gap-1.5 rounded-radius-md border border-dashed border-gray-300 px-4 py-3 text-gray-700 transition-colors duration-fast',
-        'hover:border-gray-400 hover:bg-gray-25 hover:text-gray-900',
+        // 호버 배경은 Outline 버튼과 같은 gray-50이다(4_color_system_rules.md §5.1).
+        // gray-25는 리스트 행 호버 전용이라, 목록 끝에 붙는 이 버튼에 쓰면 바로 위 행을 짚은
+        // 것과 같은 색이 되어 지금 무엇을 가리키고 있는지 구분되지 않는다.
+        'hover:border-gray-400 hover:bg-gray-50 hover:text-gray-900',
+        'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10',
         'disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:border-gray-300 disabled:hover:bg-transparent',
         className,
       )}

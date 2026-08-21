@@ -32,3 +32,15 @@ export function PostFlagBadges({
     </>
   )
 }
+
+/**
+ * 최근 72시간 내 게시글 표시 뱃지. 게시판·자료실·공지사항·회의록 목록과 대시보드 공지 카드가
+ * 함께 쓴다. 규격(높이·글자·여백)은 `Badge`에 맡기고 이 파일은 "빨간 solid + NEW"라는 의미만 갖는다.
+ */
+export function NewBadge() {
+  return (
+    <Badge tone="danger" solid className="font-bold uppercase tracking-wide">
+      NEW
+    </Badge>
+  )
+}

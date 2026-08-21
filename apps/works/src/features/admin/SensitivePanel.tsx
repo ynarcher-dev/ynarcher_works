@@ -94,13 +94,10 @@ function ContentRow({
           {/* 콘텐츠명이 이 줄의 주어다 — 아래 상태 설명(회색)과 색으로만 위계를 만든다. */}
           <span className={cardText.value}>{content.label}</span>
           {/* 한 줄 전체 토글: 필드가 여러 개인 인물 원장에서 반복 클릭을 줄인다. */}
-          <button
-            type="button"
-            onClick={() => onToggleAll(!allMasked)}
-            className="rounded-radius-sm border border-gray-300 px-1.5 py-0.5 text-caption text-gray-600 transition-colors hover:bg-gray-50"
-          >
+          {/* 콘텐츠명과 같은 줄에 붙는 보조 액션이라 표 셀 규격(24px)을 명시한다. */}
+          <Button variant="outline" density="table" onClick={() => onToggleAll(!allMasked)}>
             {allMasked ? '전체 공개' : '전체 마스킹'}
-          </button>
+          </Button>
         </div>
         <p className="mt-0.5 truncate text-caption text-gray-500">
           {maskedCount === 0

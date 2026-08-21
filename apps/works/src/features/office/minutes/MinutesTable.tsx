@@ -1,8 +1,8 @@
-import { DataTable, EmptyValue, cn, tableText, type Column } from '@ynarcher/ui'
+import { DataTable, EmptyValue, type Column } from '@ynarcher/ui'
 import { Paperclip } from 'lucide-react'
 import { useState } from 'react'
 import { isNewPost } from '@/features/hub/boardData'
-import { NewBadge } from '@/features/hub/DashboardPanel'
+import { NewBadge } from '@/features/hub/PostFlagBadges'
 import { MINUTE_VISIBILITY_LABEL, type MinuteListItem } from '@/features/office/minutes/minutesApi'
 
 const PAGE_SIZE = 15
@@ -85,7 +85,9 @@ export function MinutesTable({
       header: '조회',
       type: 'count',
       align: 'center',
-      render: (m) => <span className={cn('tabular-nums', tableText.meta)}>{m.viewCount.toLocaleString()}</span>,
+      // 조회수는 회의록 자체가 아니라 그것이 열린 흔적이라 메타 톤이다. 크기는 표가 정한다.
+      tone: 'meta',
+      render: (m) => <span className="tabular-nums">{m.viewCount.toLocaleString()}</span>,
     },
     {
       // 작성자는 게시판류와 같이 가운데로 모은다(person 기본 좌측을 덮는 예외).
@@ -93,8 +95,9 @@ export function MinutesTable({
       header: '작성자',
       type: 'person',
       align: 'center',
-      render: (m) =>
-        m.authorName ? <span className={tableText.meta}>{m.authorName}</span> : <EmptyValue />,
+      // 표준 열의 생성자와 같은 톤 — 회의록을 다룬 사람이지 회의록의 내용은 아니다.
+      tone: 'meta',
+      render: (m) => m.authorName ?? <EmptyValue />,
     },
     {
       key: 'meetingDate',

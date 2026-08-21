@@ -62,9 +62,10 @@ export function WorkspaceSwitcher({
             aria-label="워크스페이스 전환"
             title={collapsed ? currentLabel : undefined}
             className={`flex w-full items-center rounded-radius-md border border-white/20 bg-white/10 text-body font-bold text-white transition-colors duration-fast hover:bg-white/20 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/20 ${
-              // 접힘 시 사이드바 메뉴 항목과 동일한 h-10 규격으로 맞춘다.
+              // 접힘 시 사이드바 메뉴 항목과 같은 규격으로 맞춘다. 그 값은 페이지 맥락의
+              // 컨트롤 높이(40px)와 같은 자리이므로 원시 h-10이 아니라 토큰으로 적는다.
               collapsed
-                ? 'h-10 justify-center px-0'
+                ? 'h-ctl-page justify-center px-0'
                 : 'justify-between gap-1.5 px-3 py-2'
             }`}
           >

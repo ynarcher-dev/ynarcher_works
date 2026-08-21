@@ -1,4 +1,4 @@
-import { Button, EmptyState, Spinner, StatStrip, Tabs } from '@ynarcher/ui'
+import { Button, Card, EmptyState, Skeleton, Spinner, StatStrip, Tabs } from '@ynarcher/ui'
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
 import { DateNav } from '@/components/DateNav'
@@ -60,7 +60,8 @@ export function AttendancePanel() {
   const monthFrom = date.startOf('month').format('YYYY-MM-DD')
   const monthTo = date.endOf('month').format('YYYY-MM-DD')
 
-  const { data: statuses } = useAttendanceStatuses()
+  const statusesQuery = useAttendanceStatuses()
+  const { data: statuses } = statusesQuery
   // 소속 컬럼의 눈금(뎁스)은 조직 관리가 정한다 — 인사 관리 목록과 같은 훅을 쓴다.
   const org = useOrgTiers()
   const boardQuery = useAttendanceBoard(dateKey)
@@ -126,18 +127,17 @@ export function AttendancePanel() {
 
   return (
     <div className="space-y-4">
-      {/*
-        통계 현황 — 화면 맨 위에서 "지금 보고 있는 범위가 어떤 상태로 갈리는가"를 먼저 말한다.
-        상태 원장 전체가 서므로 0건도 자리를 지킨다(0은 값이 없는 것이 아니라 값이 0인 것이다).
-        칸 수는 원장이 정하니 기본 5칸보다 촘촘히 깐다 — 칸 폭이 아니라 항목 수가 기준이다.
-      */}
-      {/* 원장을 아직 못 읽었으면 세우지 않는다 — '미출근' 한 칸만 덩그러니 떴다 사라진다. */}
-      {statusList.length > 0 && (
-        <StatStrip
-          tiles={list.tiles}
-          className="grid grid-cols-2 divide-gray-200 sm:grid-cols-4 sm:divide-x lg:grid-cols-6"
-        />
-      )}
+      {/* 상태 타일은 한 현황판 안에 묶고, 원장 항목 수에 맞춰 칸 너비가 자연스럽게 정렬된다. */}
+      <Card title="근태 현황">
+        {statusesQuery.isLoading ? (
+          <Skeleton className="h-[4.5rem] rounded-radius-md" />
+        ) : (
+          <StatStrip
+            tiles={list.tiles}
+            className="grid grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-1"
+          />
+        )}
+      </Card>
 
       {/* 축 전환 — 표뿐 아니라 아래 날짜 바의 이동 단위(일/월)와 조건 구성까지 이 탭이 정한다. */}
       <Tabs items={VIEW_TABS} value={view} onChange={(k) => setView(k as ViewAxis)} />

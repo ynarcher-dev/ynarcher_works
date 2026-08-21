@@ -1,4 +1,6 @@
+import { Card, TextArea } from '@ynarcher/ui'
 import { useMemo, useState } from 'react'
+import { GuestButton } from '@/components/GuestButton'
 import { StarRating } from '@/components/StarRating'
 import {
   useAvailableSlots,
@@ -13,9 +15,6 @@ function fmt(iso: string | null): string {
   return iso ? new Date(iso).toLocaleString('ko-KR') : '일정 미정'
 }
 
-const sectionClass = 'rounded-lg border border-gray-200 bg-white p-4'
-const btnClass =
-  'min-h-12 rounded bg-brand px-4 text-body font-medium text-white active:bg-brand-700 disabled:opacity-50'
 
 /** 스타트업 게스트 대시보드: 타임라인 · 예약 콘솔 · 만족도 평가지. */
 export function StartupDashboard() {
@@ -54,11 +53,8 @@ export function StartupDashboard() {
 
   return (
     <div className="space-y-5">
-      <section className={sectionClass}>
-        <h2 className="text-title-sm font-semibold text-gray-900">
-          보육 프로그램 타임라인
-        </h2>
-        <ol className="mt-3 space-y-2">
+      <Card title="보육 프로그램 타임라인">
+        <ol className="space-y-2">
           {(timeline ?? []).map((t) => (
             <li key={t.id} className="flex gap-3 border-l-2 border-brand/40 pl-3">
               <div>
@@ -73,27 +69,19 @@ export function StartupDashboard() {
             </p>
           )}
         </ol>
-      </section>
+      </Card>
 
-      <section className={sectionClass}>
-        <h2 className="text-title-sm font-semibold text-gray-900">
-          1:1 미팅 예약
-        </h2>
-        <div className="mt-3 space-y-2">
+      <Card title="1:1 미팅 예약">
+        <div className="space-y-2">
           {(slots ?? []).map((s) => (
             <div
               key={s.id}
               className="flex items-center justify-between rounded border border-gray-200 px-3 py-2"
             >
               <span className="text-body text-gray-800">{fmt(s.starts_at)}</span>
-              <button
-                type="button"
-                className={btnClass}
-                disabled={book.isPending}
-                onClick={() => book.mutate(s.id)}
-              >
+              <GuestButton disabled={book.isPending} onClick={() => book.mutate(s.id)}>
                 예약 신청
-              </button>
+              </GuestButton>
             </div>
           ))}
           {(slots ?? []).length === 0 && (
@@ -102,15 +90,12 @@ export function StartupDashboard() {
             </p>
           )}
         </div>
-      </section>
+      </Card>
 
-      <section className={sectionClass}>
-        <h2 className="text-title-sm font-semibold text-gray-900">
-          멘토 만족도 평가
-        </h2>
-        <div className="mt-3 space-y-2">
+      <Card title="멘토 만족도 평가">
+        <div className="space-y-2">
           {(sessions ?? []).map((s) => (
-            <div key={s.id} className="rounded border border-gray-200 p-3">
+            <div key={s.id} className="rounded-radius-md border border-gray-300 p-3">
               <div className="flex items-center justify-between">
                 <span className="text-body text-gray-800">
                   {s.round_no}회차 · {fmt(s.scheduled_at)}
@@ -118,35 +103,29 @@ export function StartupDashboard() {
                 {done.includes(s.id) ? (
                   <span className="text-caption text-success">제출 완료</span>
                 ) : (
-                  <button
-                    type="button"
-                    className="min-h-12 rounded border border-gray-300 px-3 text-body text-gray-700 active:bg-gray-50"
-                    onClick={() =>
-                      setEvalSession(evalSession === s.id ? null : s.id)
-                    }
+                  <GuestButton
+                    variant="outline"
+                    onClick={() => setEvalSession(evalSession === s.id ? null : s.id)}
                   >
                     평가하기
-                  </button>
+                  </GuestButton>
                 )}
               </div>
               {evalSession === s.id && (
                 <div className="mt-3 space-y-3 border-t border-gray-100 pt-3">
                   <StarRating value={score} onChange={setScore} />
-                  <textarea
+                  <TextArea
                     value={feedback}
                     onChange={(e) => setFeedback(e.target.value)}
                     rows={3}
                     placeholder="피드백 의견(선택)"
-                    className="w-full rounded border border-gray-300 px-3 py-2 text-body focus-visible:border-brand focus-visible:outline-none"
                   />
-                  <button
-                    type="button"
-                    className={btnClass}
+                  <GuestButton
                     disabled={score === 0 || submit.isPending}
                     onClick={() => void onSubmitEval()}
                   >
                     제출
-                  </button>
+                  </GuestButton>
                 </div>
               )}
             </div>
@@ -157,7 +136,7 @@ export function StartupDashboard() {
             </p>
           )}
         </div>
-      </section>
+      </Card>
     </div>
   )
 }

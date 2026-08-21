@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import { Button } from '../components/Button'
 import { cn } from '../utils/cn'
 import { useDensity, type Density } from '../density'
 import { controlScale } from '../densityScale'
@@ -31,14 +32,15 @@ export function FilterButton({
     <button
       type={type}
       className={cn(
-        'flex items-center rounded-radius-md border shadow-soft transition-colors duration-fast',
+        'flex items-center rounded-radius-md border transition-colors duration-fast',
+        'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10',
         s.height,
         s.text,
         s.padX,
         s.gap,
         active
           ? 'border-brand/50 bg-brand/5 text-brand-700'
-          : 'border-gray-300 bg-white text-gray-400 hover:border-gray-400',
+          : 'border-gray-300 bg-white text-gray-400 hover:bg-gray-50 active:bg-gray-100',
         className,
       )}
       {...props}
@@ -60,25 +62,21 @@ export interface FilterResetButtonProps {
   density?: Density
 }
 
-/** 필터 초기화 버튼(필터 칩과 동일 높이·톤, 활성 조건이 있을 때만 노출한다). */
+/**
+ * 필터 초기화 버튼(필터 칩과 동일 높이·톤, 활성 조건이 있을 때만 노출한다).
+ *
+ * 외형을 손수 그리지 않고 `Button`의 outline을 그대로 쓴다 — 이 버튼이 하는 일은 '초기화'라는
+ * 라벨과 노출 조건을 정하는 것뿐이고, 테두리·호버·포커스는 정본(§5.1)이 이미 답한 문제다.
+ * 손수 그리던 시절에는 이 클래스 문자열이 앱 곳곳에 다섯 벌 복제돼 여백이 제각각이었다.
+ */
 export function FilterResetButton({
   onClick,
   label = '초기화',
   density,
 }: FilterResetButtonProps) {
-  const s = controlScale[useDensity(density)]
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'flex items-center rounded-radius-md border border-gray-300 bg-white text-gray-700 shadow-soft transition-colors duration-fast hover:border-gray-400 hover:text-brand-700',
-        s.height,
-        s.text,
-        s.padX,
-      )}
-    >
+    <Button variant="outline" density={density} onClick={onClick}>
       {label}
-    </button>
+    </Button>
   )
 }

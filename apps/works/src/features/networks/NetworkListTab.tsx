@@ -6,6 +6,7 @@ import { useMaskPolicy } from '@/features/admin/sensitiveStore'
 import { NETWORK_PROFILE_COLUMNS } from '@/features/master/networkProfileColumns'
 import { MasterListView } from '@/features/master/MasterListView'
 import { NetworkListFilters } from '@/features/networks/NetworkListFilters'
+import { NetworkFilteredSummary } from '@/features/networks/NetworkFilteredSummary'
 import { DOMESTIC_LIST_ENTITIES, ENTITIES } from '@/features/networks/config'
 import {
   EMPTY_NETWORK_LIST_FILTERS,
@@ -77,6 +78,8 @@ export function NetworkListTab({ scope }: NetworkListTabProps) {
 
   return (
     <div className="space-y-3">
+      <NetworkFilteredSummary scope={scope} keyword={keyword} filters={filters} searchScope={searchScope} />
+
       <ListToolbar
         keyword={keyword}
         onKeywordChange={setKeyword}
@@ -87,7 +90,7 @@ export function NetworkListTab({ scope }: NetworkListTabProps) {
         // 메뉴가 갖고 있던 '{구분} 네트워크 등록'의 자리를 이 한 버튼이 이어받는다.
         actions={
           <ListActions
-            createLabel="네트워크 등록"
+            createLabel="신규 등록"
             // 항목은 구분 이름만 적는다 — 버튼이 이미 '네트워크 등록'이라 항목마다
             // '네트워크'를 붙이면 같은 말이 두 번 선다(구분 필터 표기와도 맞춘다).
             createOptions={CREATE_TARGETS.map((key) => ({

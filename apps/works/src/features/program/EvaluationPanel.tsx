@@ -33,21 +33,15 @@ export function EvaluationPanel({ programId }: { programId: string }) {
 
       <div className="flex flex-wrap gap-2">
         {forms.map((f) => (
-          <button
+          <Button
             key={f.id}
-            type="button"
+            variant={selected === f.id ? 'secondary' : 'outline'}
+            aria-pressed={selected === f.id}
             onClick={() => setSelected(f.id)}
-            className={
-              selected === f.id
-                ? 'rounded border border-brand bg-brand-25 px-3 py-1.5 text-body text-brand'
-                : 'rounded border border-gray-300 bg-white px-3 py-1.5 text-body text-gray-700 hover:bg-gray-50'
-            }
           >
-            <span className="inline-flex items-center gap-2">
-              <Badge tone="info">{FORM_TYPE_LABEL[f.form_type] ?? f.form_type}</Badge>
-              {f.title}
-            </span>
-          </button>
+            <Badge tone="info">{FORM_TYPE_LABEL[f.form_type] ?? f.form_type}</Badge>
+            {f.title}
+          </Button>
         ))}
         {forms.length === 0 && (
           <p className="text-caption text-gray-500">생성된 평가 폼이 없습니다.</p>

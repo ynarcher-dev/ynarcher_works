@@ -27,12 +27,15 @@ export function MiniPager({
   page,
   pageCount,
   onPage,
+  alwaysVisible = false,
 }: {
   page: number
   pageCount: number
   onPage: (next: number) => void
+  /** 한 페이지뿐이어도 현재 위치를 표시한다. 기본값은 기존 패널 동작과 같은 숨김. */
+  alwaysVisible?: boolean
 }) {
-  if (pageCount <= 1) return null
+  if (pageCount <= 1 && !alwaysVisible) return null
   // 현재/전체는 데이터가 아니라 내비 메타이므로 목록 행의 메타 단계와 같이 둔다.
   return (
     <div className={`mt-3 flex items-center justify-center gap-2 ${tableText.meta}`}>

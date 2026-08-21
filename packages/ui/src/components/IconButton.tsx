@@ -5,10 +5,13 @@ import { iconScale } from '../densityScale'
 
 export type IconButtonVariant = 'outline' | 'ghost' | 'selected'
 
+/** 상태색은 라벨 있는 버튼과 같은 정본(4_color_system_rules.md §5.1)을 따른다. */
 const variantClass: Record<IconButtonVariant, string> = {
   outline:
-    'border border-gray-300 bg-white text-gray-500 hover:bg-gray-25 hover:text-gray-700',
-  ghost: 'border border-transparent text-gray-500 hover:bg-gray-100 hover:text-gray-800',
+    'border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 hover:text-gray-700 active:bg-gray-100',
+  ghost:
+    'border border-transparent text-gray-500 hover:bg-gray-100 hover:text-gray-800 active:bg-gray-200',
+  // 켜져 있음의 표시 — 호버·클릭 같은 일시 상태가 아니라 '지금 선택된 뷰'가 유지되는 상태다.
   selected: 'border border-gray-400 bg-gray-100 text-gray-900',
 }
 

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { z } from 'zod'
+import { GuestButton } from '@/components/GuestButton'
 import { guestAuth, type GuestCredentials } from '@/auth/guestAuthService'
 
 const credsSchema = z.object({
@@ -107,13 +108,9 @@ export function GuestLoginPage() {
 
           {error && <p className="text-caption text-danger">{error}</p>}
 
-          <button
-            type="submit"
-            disabled={busy}
-            className="w-full rounded bg-brand px-4 py-2 text-body font-medium text-white transition-colors duration-fast hover:bg-brand-600 active:bg-brand-700 disabled:opacity-60"
-          >
+          <GuestButton type="submit" className="w-full" disabled={busy}>
             {busy ? '요청 중…' : '인증 번호 받기'}
-          </button>
+          </GuestButton>
         </form>
       ) : (
         <div className="mt-6 space-y-4">
@@ -133,14 +130,13 @@ export function GuestLoginPage() {
 
           {error && <p className="text-caption text-danger">{error}</p>}
 
-          <button
-            type="button"
+          <GuestButton
+            className="w-full"
             onClick={() => void onVerify()}
             disabled={busy || otp.length !== 6}
-            className="w-full rounded bg-brand px-4 py-2 text-body font-medium text-white transition-colors duration-fast hover:bg-brand-600 active:bg-brand-700 disabled:opacity-60"
           >
             {busy ? '확인 중…' : '로그인'}
-          </button>
+          </GuestButton>
         </div>
       )}
     </main>

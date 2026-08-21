@@ -137,7 +137,12 @@ export function MeetingRoomAdminPanel() {
           <Button variant="outline" onClick={() => setForm(r)}>
             수정
           </Button>
-          <Button variant="outline" onClick={() => void toggleRoom(r)}>
+          {/* 되돌리는 쪽(활성화)은 파괴적이지 않으므로 중립으로 둔다 — 같은 버튼이라도
+              지금 무엇을 하는가에 따라 무게가 갈린다. */}
+          <Button
+            variant={r.isActive ? 'outline-danger' : 'outline'}
+            onClick={() => void toggleRoom(r)}
+          >
             {r.isActive ? '비활성화' : '활성화'}
           </Button>
         </span>

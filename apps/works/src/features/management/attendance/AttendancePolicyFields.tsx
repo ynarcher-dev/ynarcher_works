@@ -1,6 +1,7 @@
-import { Input, Switch } from '@ynarcher/ui'
+import { Input, SettingRow, Switch } from '@ynarcher/ui'
+import { WeekdayPicker } from '@/components/WeekdayPicker'
 import type { AttendancePolicyInput } from '@/features/management/attendance/attendanceConfigApi'
-import { WEEKDAY_LABELS, workMinutesText } from '@/features/management/attendance/attendanceModel'
+import { workMinutesText } from '@/features/management/attendance/attendanceModel'
 
 interface Props {
   value: AttendancePolicyInput
@@ -18,12 +19,6 @@ export function AttendancePolicyFields({ value, onChange }: Props) {
   const set = <K extends keyof AttendancePolicyInput>(k: K, v: AttendancePolicyInput[K]) =>
     onChange({ ...value, [k]: v })
 
-  const toggleDay = (d: number) => {
-    const next = value.workdays.includes(d)
-      ? value.workdays.filter((x) => x !== d)
-      : [...value.workdays, d].sort()
-    set('workdays', next)
-  }
 
   return (
     <div className="space-y-4">
@@ -74,42 +69,24 @@ export function AttendancePolicyFields({ value, onChange }: Props) {
 
       <div className="space-y-1">
         <span className="text-caption text-gray-600">근무 요일</span>
-        <div className="flex flex-wrap gap-1.5">
-          {WEEKDAY_LABELS.map((label, d) => {
-            const on = value.workdays.includes(d)
-            return (
-              <button
-                key={label}
-                type="button"
-                onClick={() => toggleDay(d)}
-                aria-pressed={on}
-                className={
-                  'h-ctl-card w-10 rounded-radius-md border text-body-sm transition-colors duration-fast ' +
-                  (on
-                    ? 'border-brand bg-brand/10 font-semibold text-brand'
-                    : 'border-gray-300 bg-white text-gray-500 hover:border-gray-400')
-                }
-              >
-                {label}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-body text-gray-900">외부근무 허용</p>
-          <p className="text-caption text-gray-500">
-            끄면 근무체크에서 근무지를 고를 수 없고 사내 근무로만 기록됩니다.
-          </p>
-        </div>
-        <Switch
-          checked={value.allowExternal}
-          onChange={(on) => set('allowExternal', on)}
-          aria-label="외부근무 허용"
+        <WeekdayPicker
+          value={value.workdays}
+          onChange={(next) => set('workdays', next)}
+          label="근무 요일"
         />
       </div>
+
+      <SettingRow
+        title="외부근무 허용"
+        hint="끄면 근무체크에서 근무지를 고를 수 없고 사내 근무로만 기록됩니다."
+        control={({ id }) => (
+          <Switch
+            id={id}
+            checked={value.allowExternal}
+            onChange={(on) => set('allowExternal', on)}
+          />
+        )}
+      />
 
       <div className="space-y-1">
         <span className="text-caption text-gray-600">적용 시작일</span>

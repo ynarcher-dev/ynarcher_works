@@ -1,8 +1,8 @@
-import { DataTable, pinMark, tableText, type Column } from '@ynarcher/ui'
+import { DataTable, pinMark, type Column } from '@ynarcher/ui'
 import { Paperclip } from 'lucide-react'
 import { useState } from 'react'
 import { BOARD_PAGE_SIZE, isNewPost, type BoardPost } from '@/features/hub/boardData'
-import { NewBadge } from '@/features/hub/DashboardPanel'
+import { NewBadge } from '@/features/hub/PostFlagBadges'
 import { PostFlagBadges } from '@/features/hub/PostFlagBadges'
 
 /**
@@ -37,9 +37,9 @@ export function viewsColumn<T>(get: (row: T) => BoardPost): Column<T> {
     header: '조회',
     type: 'count',
     align: 'center',
-    render: (row) => (
-      <span className={tableText.meta}>{(get(row).views ?? 0).toLocaleString()}</span>
-    ),
+    // 조회수는 글 자체가 아니라 글이 읽힌 흔적이라 메타 톤이다. 크기는 표가 정한다.
+    tone: 'meta',
+    render: (row) => (get(row).views ?? 0).toLocaleString(),
   }
 }
 
@@ -105,7 +105,7 @@ export function BoardPanel({
       header: '게시판',
       type: 'text',
       align: 'center',
-      // 셀 글자 규격은 DataTable(tableText.body)이 준다 — 화면에서 크기를 덧씌우지 않는다.
+      // 셀 글자 규격은 DataTable이 준다(표가 놓인 자리가 정한다) — 화면에서 크기를 덧씌우지 않는다.
       render: () => boardLabel,
     })
   }

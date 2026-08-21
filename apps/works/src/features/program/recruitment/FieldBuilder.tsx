@@ -163,13 +163,11 @@ export function FieldBuilder({
               </div>
 
               <div className="flex flex-col items-end gap-1.5 pt-1">
-                <label className="flex cursor-pointer items-center gap-1 text-caption text-gray-700">
-                  <Checkbox
-                    checked={f.is_required}
-                    onChange={() => patch(idx, { is_required: !f.is_required })}
-                  />
-                  필수
-                </label>
+                <Checkbox
+                  checked={f.is_required}
+                  onChange={() => patch(idx, { is_required: !f.is_required })}
+                  label="필수"
+                />
                 <IconButton
                   variant="ghost"
                   danger

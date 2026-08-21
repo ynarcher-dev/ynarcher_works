@@ -1,4 +1,4 @@
-import { Button, Input } from '@ynarcher/ui'
+import { Button, IconButton, Input } from '@ynarcher/ui'
 import { Plus, X } from 'lucide-react'
 import type { OrgLevel } from '@/features/management/panels/departmentsMock'
 
@@ -51,24 +51,28 @@ export function OrgLevelEditor({
                   }}
                   className="h-6 w-24 border-0 px-1 text-caption focus-visible:ring-0"
                 />
-                <button
-                  type="button"
+                {/* 24px 입력과 같은 줄이라 `table` 맥락(24px)을 명시한다. 손수 만들던 시절에는
+                    20px이라 접근성 최소 탭 영역(24px)에 못 미쳤다. */}
+                <IconButton
+                  variant="ghost"
+                  danger
+                  density="table"
                   title="레벨 삭제"
+                  label="레벨 삭제"
                   onClick={() => onRemove(lv.id)}
-                  className="flex size-5 items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-brand-700"
-                >
-                  <X size={12} />
-                </button>
+                  icon={<X size={12} />}
+                />
               </div>
             ))}
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              density="table"
+              className="border-dashed"
               title="같은 계층에 병렬 레벨 추가"
               onClick={() => onAddParallel(t)}
-              className="flex items-center justify-center gap-0.5 rounded-radius-sm border border-dashed border-gray-300 py-0.5 text-caption text-gray-400 hover:border-gray-400 hover:text-gray-600"
             >
               <Plus size={11} /> 병렬
-            </button>
+            </Button>
           </div>
         </div>
       ))}

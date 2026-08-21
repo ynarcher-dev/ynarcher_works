@@ -61,12 +61,7 @@ export function AssetsSelectionBar({
             </Button>
           </>
         )}
-        <Button
-          variant="outline"
-          className="text-danger hover:bg-danger-subtle hover:text-danger"
-          onClick={onDeactivate}
-          disabled={busy}
-        >
+        <Button variant="outline-danger" onClick={onDeactivate} disabled={busy}>
           일괄 비활성화
         </Button>
       </div>

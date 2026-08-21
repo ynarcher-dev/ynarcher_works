@@ -121,7 +121,7 @@ function CompanyHead({ record, year, onClear }: { record: EntityRow; year?: numb
             type="button"
             onClick={onClear}
             aria-label="비교기업 해제"
-            className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-danger text-white shadow-popover transition-opacity hover:opacity-80"
+            className="absolute -right-1.5 -top-1.5 grid size-6 place-items-center rounded-full bg-danger text-white shadow-popover transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10"
           >
             <X className="size-3.5" strokeWidth={3} aria-hidden />
           </button>

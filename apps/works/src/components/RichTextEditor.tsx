@@ -25,6 +25,7 @@ import {
   Underline as UnderlineIcon,
   Undo2,
 } from 'lucide-react'
+import { IconButton } from '@ynarcher/ui'
 import { useEffect, useRef, type ReactNode } from 'react'
 
 function buildExtensions(placeholder: string) {
@@ -212,22 +213,18 @@ function Btn({
   children: ReactNode
 }) {
   return (
-    <button
-      type="button"
+    <IconButton
+      variant={active ? 'selected' : 'ghost'}
       title={label}
-      aria-label={label}
+      label={label}
       aria-pressed={active}
       disabled={disabled}
+      // 툴바 버튼을 누를 때 에디터가 포커스를 잃으면 선택 영역이 사라져 서식이 엉뚱한
+      // 자리에 걸린다 — mousedown 기본 동작을 막아 캐럿을 본문에 남겨 둔다.
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
-      className={`grid size-8 place-items-center rounded-radius-sm transition-colors duration-fast disabled:opacity-30 ${
-        active
-          ? 'bg-brand/10 text-brand'
-          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-      }`}
-    >
-      {children}
-    </button>
+      icon={children}
+    />
   )
 }
 

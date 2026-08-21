@@ -1,4 +1,4 @@
-import { Badge, CardShell, InfoField } from '@ynarcher/ui'
+import { Badge, EntityHeaderCard, EntityHeaderSection, InfoField, InfoGrid } from '@ynarcher/ui'
 import { useDepartmentLabels } from '@/features/management/departmentOptions'
 import { programIndustries, type Program, type ProgramDepartmentKind } from '@/features/program/hooks'
 import { ProgramPhotoBox } from '@/features/program/detail/ProgramPhotoBox'
@@ -88,21 +88,16 @@ export function ProgramInfoCard({ program }: { program: Program }) {
     )
 
   return (
-    <CardShell>
-      <div className="flex items-center gap-5">
-        <ProgramPhotoBox src={null} />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-title-md font-bold text-gray-900">{program.title}</h1>
-            <Badge tone={PROGRAM_STATUS_TONE[program.status] ?? 'neutral'}>
-              {PROGRAM_STATUS_LABEL[program.status] ?? program.status}
-            </Badge>
-          </div>
-          <p className="mt-1 text-body text-gray-700">{program.description || '-'}</p>
-        </div>
-      </div>
-
-      <div className="mt-5 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-3">
+    <EntityHeaderCard
+      photo={<ProgramPhotoBox src={null} />}
+      title={program.title}
+      badges={
+        <Badge tone={PROGRAM_STATUS_TONE[program.status] ?? 'neutral'}>
+          {PROGRAM_STATUS_LABEL[program.status] ?? program.status}
+        </Badge>
+      }
+      description={program.description}
+      info={<InfoGrid>
         <Info label="사업코드" value={program.code || '-'} />
         {/* 사업구분. 분류를 운용하지 않는 워크스페이스에서는 항목을 감춘다. */}
         {config.categories.length > 0 && (
@@ -120,12 +115,11 @@ export function ProgramInfoCard({ program }: { program: Program }) {
         <Info label="운영 기간" value={operationPeriod} />
         <Info label="생성자" value={program.creator?.name || '-'} />
         <Info label="수정일" value={formatDate(program.updated_at)} />
-      </div>
-
-      <div className="mt-4 border-t border-gray-100 pt-4">
-        <span className="text-caption text-gray-700">담당자</span>
+      </InfoGrid>}
+    >
+      <EntityHeaderSection label="담당자">
         {departments.length ? (
-          <div className="mt-2 flex flex-col gap-2">
+          <div className="flex flex-col gap-2">
             {departments.map((d) => (
               <div key={d.department_id} className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                 {/* 부서는 배지가 아니라 텍스트다 — 담당자(사람) 배지와 나란히 두면 같은 층위로 읽혀
@@ -160,9 +154,9 @@ export function ProgramInfoCard({ program }: { program: Program }) {
             ))}
           </div>
         ) : (
-          <p className="mt-2 text-body text-gray-800">-</p>
+          <p className="text-body text-gray-800">-</p>
         )}
-      </div>
-    </CardShell>
+      </EntityHeaderSection>
+    </EntityHeaderCard>
   )
 }

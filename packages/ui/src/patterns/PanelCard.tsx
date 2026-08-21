@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { CardShell } from '../components/CardShell'
-import { cardText } from '../densityScale'
+import { CardHeading } from '../components/CardHeading'
 import { cn } from '../utils/cn'
 
 export interface PanelCardProps {
@@ -29,14 +29,7 @@ export function PanelCard({
   return (
     <CardShell className={className}>
       <div className="mb-3 flex items-center justify-between gap-2">
-        {/* 건수는 제목보다 작고 대괄호가 아래로 뻗는 글자라, baseline이 아니라 세로 중앙에 맞춘다.
-            0건은 강조색(danger)을 걷어내고 회색으로 눌러, '있음'과 '없음'을 색으로 가른다. */}
-        <h2 className={cn('flex items-center gap-1', cardText.title)}>
-          {title}
-          {count !== undefined && (
-            <span className={cn(cardText.count, count === 0 && 'text-gray-400')}>[{count}]</span>
-          )}
-        </h2>
+        <CardHeading count={count}>{title}</CardHeading>
         {action}
       </div>
       <div className={cn(bodyClassName)}>{children}</div>

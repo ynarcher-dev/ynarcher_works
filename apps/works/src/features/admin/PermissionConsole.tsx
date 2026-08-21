@@ -1,4 +1,4 @@
-import { Select, Spinner, Switch, useToast } from '@ynarcher/ui'
+import { CardShell, Select, Spinner, Switch, useToast } from '@ynarcher/ui'
 import { useMemo, useState } from 'react'
 import {
   ROLES,
@@ -58,7 +58,8 @@ export function PermissionConsole() {
       {isLoading ? (
         <Spinner />
       ) : (
-        <div className="overflow-hidden rounded-radius-lg border border-gray-300 bg-white shadow-soft">
+        // 행이 스스로 좌우 여백을 갖는 표형 카드라 셸의 안쪽 여백은 걷는다.
+        <CardShell className="overflow-hidden p-0">
           <div className="grid grid-cols-[1fr_auto_auto] items-center border-b border-gray-100 bg-gray-50 px-4 py-2 text-caption font-semibold text-gray-600">
             <span>워크스페이스</span>
             <span className="w-20 text-center">읽기</span>
@@ -74,22 +75,26 @@ export function PermissionConsole() {
                 className="grid grid-cols-[1fr_auto_auto] items-center border-b border-gray-100 px-4 py-2 last:border-b-0"
               >
                 <span className="text-body text-gray-900">{ws.label}</span>
+                {/* 스위치는 글자를 품지 않으므로 어느 워크스페이스의 무엇인지를 이름으로 알린다 —
+                    열 머리글('읽기'·'쓰기')은 눈으로 훑을 때만 보이고 스크린리더에는 딸려오지 않는다. */}
                 <div className="flex w-20 justify-center">
                   <Switch
                     checked={read}
                     onChange={(v) => void apply(ws.key, 'read', v)}
+                    aria-label={`${ws.label} 읽기 권한`}
                   />
                 </div>
                 <div className="flex w-20 justify-center">
                   <Switch
                     checked={write}
                     onChange={(v) => void apply(ws.key, 'write', v)}
+                    aria-label={`${ws.label} 쓰기 권한`}
                   />
                 </div>
               </div>
             )
           })}
-        </div>
+        </CardShell>
       )}
       <p className="text-caption text-gray-600">
         토글 즉시 해당 역할 사용자 세션 권한과 GNB 노출이 갱신됩니다. 쓰기 활성 시 읽기가

@@ -1,4 +1,4 @@
-import { cardText, PhotoBox } from '@ynarcher/ui'
+import { CardHeading, PhotoBox } from '@ynarcher/ui'
 import { User } from 'lucide-react'
 import type { DirectoryMember, DirectorySection } from '@/features/management/panels/directoryModel'
 
@@ -60,10 +60,9 @@ export function OrgDirectorySections({ sections, onSelectMember }: OrgDirectoryS
     <div className="divide-y divide-gray-100">
       {sections.map((section) => (
         <section key={section.deptId} className="space-y-2 py-4 first:pt-0 last:pb-0">
-          <h3 className="flex items-center gap-2">
-            <span className={cardText.subhead}>{section.path}</span>
-            <span className={cardText.count}>[{section.members.length}]</span>
-          </h3>
+          <CardHeading level="subhead" count={section.members.length}>
+            {section.path}
+          </CardHeading>
           <div className="flex flex-wrap gap-x-3 gap-y-1">
             {section.members.map((m) => (
               <MemberCard key={m.id} member={m} onSelect={onSelectMember} />

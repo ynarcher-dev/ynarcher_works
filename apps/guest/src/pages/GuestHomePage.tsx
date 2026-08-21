@@ -1,4 +1,6 @@
+import { SegmentedToggle } from '@ynarcher/ui'
 import { useState } from 'react'
+import { GuestButton } from '@/components/GuestButton'
 import { guestAuth } from '@/auth/guestAuthService'
 import { useGuestStore } from '@/auth/guestStore'
 import { ExpertDashboard } from '@/features/ExpertDashboard'
@@ -19,33 +21,28 @@ export function GuestHomePage() {
         <h1 className="text-title-md font-bold text-gray-900">
           와이앤아처 <span className="text-brand">GUEST</span>
         </h1>
-        <button
-          type="button"
-          onClick={() => guestAuth.signOut()}
-          className="min-h-12 rounded border border-gray-300 px-3 text-caption text-gray-700 active:bg-gray-50"
-        >
+        <GuestButton variant="outline" onClick={() => guestAuth.signOut()}>
           로그아웃
-        </button>
+        </GuestButton>
       </div>
       <p className="mt-1 text-body text-gray-600">
         {user ? `${user.name}님, 환영합니다.` : ''}
       </p>
 
+      {/* 배타 선택은 손수 만들지 않고 공용 세그먼트 토글을 쓴다. 다만 GUEST의 48px 터치
+          규칙(3_9_workspace_guest.md §2)이 밀도 격자보다 우선이라 높이만 얹는다. */}
       {isExpert && (
-        <div className="mt-4 flex gap-1 rounded-lg bg-gray-100 p-1">
-          {(['expert', 'startup'] as const).map((v) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => setView(v)}
-              className={`min-h-12 flex-1 rounded text-body font-medium ${
-                view === v ? 'bg-white text-brand' : 'text-gray-600'
-              }`}
-            >
-              {v === 'expert' ? '전문가' : '스타트업'} 뷰
-            </button>
-          ))}
-        </div>
+        <SegmentedToggle
+          block
+          className="mt-4 h-auto min-h-12"
+          label="대시보드 뷰"
+          value={view}
+          onChange={setView}
+          options={[
+            { key: 'expert', label: '전문가 뷰' },
+            { key: 'startup', label: '스타트업 뷰' },
+          ]}
+        />
       )}
 
       <div className="mt-5">

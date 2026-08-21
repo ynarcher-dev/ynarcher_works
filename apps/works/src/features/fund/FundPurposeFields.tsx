@@ -1,4 +1,4 @@
-import { Button, Input, TextArea } from '@ynarcher/ui'
+import { Button, IconButton, Input, TextArea } from '@ynarcher/ui'
 import { Plus, X } from 'lucide-react'
 import { useLayoutEffect, useRef } from 'react'
 import { FUND_PURPOSE_KIND_LABEL } from '@/features/fund/fundListHooks'
@@ -140,14 +140,14 @@ function PurposeGroup({
                   %
                 </span>
               </div>
-              <button
-                type="button"
-                aria-label="목적 삭제"
+              <IconButton
+                variant="ghost"
+                danger
+                label="목적 삭제"
+                className="mt-1"
                 onClick={() => onRemove(d.key)}
-                className="mt-1 grid size-8 shrink-0 place-items-center rounded-radius-md text-gray-400 transition-colors duration-fast hover:bg-gray-50 hover:text-danger"
-              >
-                <X className="size-4" />
-              </button>
+                icon={<X className="size-4" />}
+              />
             </div>
           ))}
         </div>

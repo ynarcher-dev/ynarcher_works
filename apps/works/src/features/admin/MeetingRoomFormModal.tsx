@@ -1,19 +1,11 @@
-import { Button, Input, Modal, Select, cn } from '@ynarcher/ui'
+import { Button, Input, Modal, Select } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
+import { WeekdayPicker } from '@/components/WeekdayPicker'
 import { RoomPhotoPicker } from '@/features/office/rooms/RoomPhotoPicker'
 import { normalizeTime } from '@/features/office/rooms/availability'
 import type { MeetingRoom, RoomInput } from '@/features/office/rooms/meetingRoomsApi'
 
 const SLOT_OPTIONS = [10, 15, 20, 30, 60]
-const WEEKDAYS = [
-  { v: 0, label: '일' },
-  { v: 1, label: '월' },
-  { v: 2, label: '화' },
-  { v: 3, label: '수' },
-  { v: 4, label: '목' },
-  { v: 5, label: '금' },
-  { v: 6, label: '토' },
-]
 
 interface Props {
   open: boolean
@@ -52,8 +44,6 @@ export function MeetingRoomFormModal({ open, branchId, room, busy, onClose, onSu
     setErr('')
   }, [open, room])
 
-  const toggleDay = (v: number) =>
-    setWeekdays((prev) => (prev.includes(v) ? prev.filter((d) => d !== v) : [...prev, v].sort()))
 
   const submit = () => {
     if (!name.trim()) return setErr('회의실명을 입력하세요.')
@@ -143,24 +133,7 @@ export function MeetingRoomFormModal({ open, branchId, room, busy, onClose, onSu
           </label>
           <div>
             <span className="mb-1 block text-caption font-medium text-gray-600">예약 가능 요일</span>
-            <div className="flex gap-1">
-              {WEEKDAYS.map((d) => (
-                <button
-                  key={d.v}
-                  type="button"
-                  aria-pressed={weekdays.includes(d.v)}
-                  onClick={() => toggleDay(d.v)}
-                  className={cn(
-                    'size-8 rounded-radius-md border text-body font-medium transition-colors',
-                    weekdays.includes(d.v)
-                      ? 'border-brand bg-brand/10 text-brand'
-                      : 'border-gray-300 text-gray-500 hover:bg-gray-50',
-                  )}
-                >
-                  {d.label}
-                </button>
-              ))}
-            </div>
+            <WeekdayPicker value={weekdays} onChange={setWeekdays} label="예약 가능 요일" />
           </div>
         </div>
 

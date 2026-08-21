@@ -1,4 +1,4 @@
-import { cardText, cn } from '@ynarcher/ui'
+import { CardHeading } from '@ynarcher/ui'
 
 interface OrgScopeHeadingProps {
   /** 루트→선택 조직의 이름 조각. 비어 있으면 '조직'으로 적는다. */
@@ -18,14 +18,16 @@ export function OrgScopeHeading({ names, count }: OrgScopeHeadingProps) {
   const parents = names.slice(0, -1)
   const leaf = names[names.length - 1] ?? '조직'
   return (
-    <h2 className="flex items-center gap-2 border-b border-gray-200 pb-3">
-      <span className={cn(cardText.title, 'min-w-0 truncate')} title={names.join(' > ')}>
-        {parents.length > 0 && (
-          <span className="font-normal text-gray-500">{parents.join(' > ')} &gt; </span>
-        )}
-        {leaf}
-      </span>
-      <span className={cardText.count}>[{count}]</span>
-    </h2>
+    <CardHeading
+      count={count}
+      className="border-b border-gray-200 pb-3"
+      titleClassName="truncate"
+      titleTooltip={names.join(' > ')}
+    >
+      {parents.length > 0 && (
+        <span className="font-normal text-gray-500">{parents.join(' > ')} &gt; </span>
+      )}
+      {leaf}
+    </CardHeading>
   )
 }

@@ -3,6 +3,7 @@ import {
   Badge,
   Banner,
   Button,
+  CardHeading,
   CardShell,
   DensityProvider,
   InfoField,
@@ -227,7 +228,9 @@ export function FundDetailPage() {
                 <div className="space-y-4">
                   {/* 목적별 달성 현황: 규약 주목적·특수목적 목표비율 대비 부합 투자 집행 달성률. */}
                   <CardShell>
-                    <h3 className="mb-3 text-body font-semibold text-gray-900">목적별 달성 현황</h3>
+                    <CardHeading level="subhead" className="mb-3">
+                      목적별 달성 현황
+                    </CardHeading>
                     <FundPurposeProgress
                       purposes={purposes ?? []}
                       investments={investments ?? []}
