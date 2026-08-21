@@ -33,8 +33,13 @@ export function AttendanceStatusBadge({ statuses, code, entry }: Props) {
   return (
     <span className="inline-flex items-center gap-1">
       {badge}
+      {/*
+        크기를 적지 않는다 — 이 표식이 놓이는 자리(표 셀·카드)가 정한 크기를 그대로 받는다.
+        12px로 못박아 두면 페이지에 바로 놓인 14px 표에서 이 말머리만 작게 떠, 배지 하나와
+        표식 하나가 한 줄 안에서 두 크기로 읽힌다. 물러남은 색(gray-500)이 이미 말한다.
+      */}
       <Tooltip content={`자동 판정: ${auto.label}`}>
-        <span className="cursor-help text-caption text-gray-500">수정됨</span>
+        <span className="cursor-help text-gray-500">수정됨</span>
       </Tooltip>
     </span>
   )

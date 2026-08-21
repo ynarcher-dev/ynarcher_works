@@ -20,11 +20,13 @@ interface Props {
   onSelectionChange: (keys: string[]) => void
 }
 
-/** 시각 셀. 찍힌 시각이라 초까지 적는다(일간 표와 같은 규격). */
+/**
+ * 시각 셀. 찍힌 시각이라 초까지 적는다(일간 표와 같은 규격).
+ * 색·자릿수 고정을 셀 안에서 적지 않는 이유는 일간 표의 같은 컴포넌트 주석 참조.
+ */
 function TimeCell({ value }: { value: string | null }) {
   const text = timeTextSec(value)
-  if (!text) return <EmptyValue />
-  return <span className="tabular-nums text-gray-700">{text}</span>
+  return text ? <>{text}</> : <EmptyValue />
 }
 
 /**
@@ -47,13 +49,11 @@ export function AttendanceMonthTable({
       header: '날짜',
       primary: true,
       type: 'name',
+      // 날짜 숫자의 자릿수를 고정한다 — 규격은 셀 안 <span>이 아니라 열이 선언한다.
+      numeric: true,
       render: (r) => {
         const d = dayjs(r.workDate)
-        return (
-          <span className="tabular-nums">
-            {d.format('M월 D일')} ({WEEKDAY_LABELS[d.day()]})
-          </span>
-        )
+        return `${d.format('M월 D일')} (${WEEKDAY_LABELS[d.day()]})`
       },
     },
     {
@@ -74,18 +74,21 @@ export function AttendanceMonthTable({
       key: 'checkInAt',
       header: '출근',
       type: 'date',
+      numeric: true,
       render: (r) => <TimeCell value={r.checkInAt} />,
     },
     {
       key: 'checkOutAt',
       header: '퇴근',
       type: 'date',
+      numeric: true,
       render: (r) => <TimeCell value={r.checkOutAt} />,
     },
     {
       key: 'duration',
       header: '근무시간',
       type: 'date',
+      numeric: true,
       render: (r) => durationText(r.checkInAt, r.checkOutAt) ?? <EmptyValue />,
     },
     {
@@ -120,7 +123,8 @@ export function AttendanceMonthTable({
       // 날짜가 곧 순번이라 No. 열은 같은 말을 두 번 하는 자리가 된다.
       numbered={false}
       standardColumns={false}
-      rowClassName={(r) => (r.isWorkday ? undefined : 'bg-gray-25 text-gray-400')}
+      // 근무일이 아닌 날의 줄은 투명도로만 물린다(근거는 일간 표 주석 참조).
+      rowClassName={(r) => (r.isWorkday ? undefined : 'opacity-60')}
       emptyText="표시할 근태가 없습니다."
     />
   )

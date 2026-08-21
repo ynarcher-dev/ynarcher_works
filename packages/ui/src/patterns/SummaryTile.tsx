@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { cn } from '../utils/cn'
 
-export type SummaryTileTone = 'primary' | 'blue' | 'purple' | 'mint' | 'rose' | 'amber' | 'cyan' | 'lime' | 'peach' | 'indigo'
+export type SummaryTileTone = 'primary' | 'blue' | 'purple' | 'mint' | 'rose' | 'amber' | 'cyan' | 'lime' | 'peach' | 'indigo' | 'slate' | 'orchid'
 
 const toneClass: Record<SummaryTileTone, {
   surface: string
@@ -68,6 +68,18 @@ const toneClass: Record<SummaryTileTone, {
     icon: 'bg-summary-indigo-icon text-summary-indigo-icon-text',
     value: 'text-summary-indigo-value',
     chip: 'text-summary-indigo-chip',
+  },
+  slate: {
+    surface: 'bg-summary-slate-surface',
+    icon: 'bg-summary-slate-icon text-summary-slate-icon-text',
+    value: 'text-summary-slate-value',
+    chip: 'text-summary-slate-chip',
+  },
+  orchid: {
+    surface: 'bg-summary-orchid-surface',
+    icon: 'bg-summary-orchid-icon text-summary-orchid-icon-text',
+    value: 'text-summary-orchid-value',
+    chip: 'text-summary-orchid-chip',
   },
 }
 

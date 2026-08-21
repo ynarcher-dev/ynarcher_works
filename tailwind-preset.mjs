@@ -100,6 +100,14 @@ export default {
             surface: '#F0F2FF', icon: '#DCE1FA', 'icon-text': '#5264A8',
             value: '#435493', chip: '#58658F',
           },
+          slate: {
+            surface: '#F3F5F7', icon: '#E1E6EB', 'icon-text': '#536273',
+            value: '#3F4D5C', chip: '#5B6673',
+          },
+          orchid: {
+            surface: '#FCEFFC', icon: '#F1D7F0', 'icon-text': '#8A4389',
+            value: '#743573', chip: '#7C527B',
+          },
         },
         // 상태 신호색 — 텍스트(DEFAULT)/배경(subtle)/보더(border) 3단계 (토스 스타일 HSL 계열 튜닝)
         success: { DEFAULT: '#059669', subtle: '#ECFDF5', border: '#D1FAE5' },

@@ -1,5 +1,28 @@
-import { Button, Card, EmptyState, Skeleton, Spinner, StatStrip, Tabs } from '@ynarcher/ui'
+import {
+  Button,
+  Card,
+  EmptyState,
+  Skeleton,
+  Spinner,
+  SummaryTile,
+  Tabs,
+  type SummaryTileTone,
+} from '@ynarcher/ui'
 import dayjs from 'dayjs'
+import {
+  CalendarCheck,
+  CalendarClock,
+  CalendarDays,
+  CircleCheck,
+  Clock3,
+  LogOut,
+  Palmtree,
+  Stethoscope,
+  TimerOff,
+  UserRoundX,
+  UsersRound,
+} from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { DateNav } from '@/components/DateNav'
 import { AttendanceBulkBar } from '@/features/management/attendance/AttendanceBulkBar'
@@ -19,6 +42,37 @@ import {
   useAttendanceList,
 } from '@/features/management/attendance/useAttendanceList'
 import { useOrgTiers } from '@/features/management/orgTiers'
+
+const STATUS_ICONS: Record<string, LucideIcon> = {
+  NORMAL: CircleCheck,
+  LATE: Clock3,
+  EARLY_LEAVE: LogOut,
+  LATE_EARLY: TimerOff,
+  ABSENT: UserRoundX,
+  LEAVE_ANNUAL: Palmtree,
+  LEAVE_HALF: CalendarClock,
+  LEAVE_SICK: Stethoscope,
+  LEAVE_OFFICIAL: CalendarCheck,
+  LEAVE_PUBLIC: CalendarCheck,
+  HOLIDAY: CalendarDays,
+  __PENDING__: CalendarClock,
+}
+
+/** 상태 원장의 의미 톤은 배지에 쓰고, 현황 타일은 서로 겹치지 않는 고유 색을 쓴다. */
+const TILE_TONE_BY_STATUS: Record<string, SummaryTileTone> = {
+  NORMAL: 'mint',
+  LATE: 'amber',
+  EARLY_LEAVE: 'peach',
+  LATE_EARLY: 'rose',
+  ABSENT: 'purple',
+  LEAVE_ANNUAL: 'blue',
+  LEAVE_HALF: 'cyan',
+  LEAVE_SICK: 'lime',
+  LEAVE_OFFICIAL: 'orchid',
+  LEAVE_PUBLIC: 'orchid',
+  HOLIDAY: 'indigo',
+  __PENDING__: 'slate',
+}
 
 /** 무엇을 축으로 자를 것인가. 이 값이 표뿐 아니라 날짜 바의 이동 단위(일/월)까지 정한다. */
 type ViewAxis = 'day' | 'person'
@@ -130,12 +184,39 @@ export function AttendancePanel() {
       {/* 상태 타일은 한 현황판 안에 묶고, 원장 항목 수에 맞춰 칸 너비가 자연스럽게 정렬된다. */}
       <Card title="근태 현황">
         {statusesQuery.isLoading ? (
-          <Skeleton className="h-[4.5rem] rounded-radius-md" />
+          <Skeleton className="h-[15rem] rounded-radius-md" />
         ) : (
-          <StatStrip
-            tiles={list.tiles}
-            className="grid grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-1"
-          />
+          <section
+            aria-label="근태 상태별 현황"
+            className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6"
+          >
+            {list.tiles.map((tile) => {
+              const Icon = tile.key === '__TOTAL__' ? UsersRound : (STATUS_ICONS[tile.key] ?? CalendarDays)
+              const tone = tile.key === '__TOTAL__'
+                ? 'primary'
+                : (TILE_TONE_BY_STATUS[tile.key] ?? 'slate')
+
+              return (
+                <button
+                  key={tile.key}
+                  type="button"
+                  aria-pressed={tile.selected}
+                  onClick={tile.onClick}
+                  className="block min-w-0 rounded-[14px] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+                >
+                  <SummaryTile
+                    title={tile.label}
+                    value={tile.value}
+                    unit={tile.unit}
+                    tone={tone}
+                    compact
+                    icon={<Icon aria-hidden className="size-[18px]" strokeWidth={1.8} />}
+                    className={tile.selected ? 'ring-2 ring-brand-500 ring-offset-2' : undefined}
+                  />
+                </button>
+              )
+            })}
+          </section>
         )}
       </Card>
 
