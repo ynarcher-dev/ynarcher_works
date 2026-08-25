@@ -27,7 +27,6 @@ import { StartupBusinessTimeline } from '@/features/startup/StartupBusinessTimel
 import { readBusinessStatus, readGrowth, formatFounded, readIndustries } from '@/features/startup/startupGrowth'
 import { StartupShareholderCard } from '@/features/startup/StartupShareholderCard'
 import { readShareholderHistory } from '@/features/startup/startupShareholders'
-import { STARTUP_MATERIAL_SECTIONS } from '@/features/startup/startupMaterials'
 import { SectionHeading } from '@/features/startup/SectionHeading'
 import { PlaceholderCard } from '@/features/startup/PlaceholderCard'
 import { StartupMediaCard } from '@/features/startup/StartupMediaCard'
@@ -276,11 +275,9 @@ export function StartupDetailPage() {
             ))}
           </div>
 
-          {/* 우측(1/3): 자료(IR·재무제표·기타) → 피드백 → 변동 이력 → 기업 비교(좌우 비교 카드) */}
+          {/* 우측(1/3): 자료 관리 → 회의록 → 피드백 → 변동 이력 → 기업 비교(좌우 비교 카드) */}
           <div className="space-y-4 lg:col-span-1">
-            {STARTUP_MATERIAL_SECTIONS.map((s) => (
-              <MaterialPanel key={s.type} targetType={s.type} targetId={record.id} title={s.title} readOnly />
-            ))}
+            <MaterialPanel targetType={RESOURCE_TYPE} targetId={record.id} readOnly />
             <RelatedMinutesPanel targetType="startup" targetId={record.id} />
             <FeedbackPanel targetType={RESOURCE_TYPE} targetId={record.id} />
             <ChangeHistoryPanel contributions={contributions} />

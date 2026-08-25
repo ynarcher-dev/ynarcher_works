@@ -15,7 +15,6 @@ import { PendingMaterialPanel } from '@/features/networks/PendingMaterialPanel'
 import { usePendingMaterials } from '@/features/networks/pendingMaterials'
 import { TagSelect } from '@/features/admin/TagSelect'
 import { useTags } from '@/features/admin/hooks'
-import { STARTUP_MATERIAL_SECTIONS } from '@/features/startup/startupMaterials'
 import {
   checkDuplicateName,
   useCreateEntity,
@@ -43,6 +42,14 @@ const COMPANY_FORMS = ['법인', '개인', '예비'] as const
 
 /** 분야 태그 다중 선택 상한(networks 전문 영역과 동일 규칙). */
 const MAX_INDUSTRIES = 3
+
+/**
+ * 자료 첨부 대상 키. 스타트업 자료는 한때 IR·재무제표·기타 3분류로 나뉘어 각자 target_type을
+ * 썼으나(2026-08-25 통합), 분류 키가 attachments 정책의 소유 워크스페이스 판정
+ * (app.entity_key_workspace)에 없어 STARTUP이 아닌 NETWORKS 권한으로 열리는 문제가 있었고,
+ * 우측 패널도 같은 카드를 셋으로 늘려 세로 자리만 먹었다. 다른 상세페이지처럼 한 곳으로 모은다.
+ */
+const MATERIAL_TARGET_TYPE = 'startup'
 
 export interface StartupDetailFormValues {
   name: string
@@ -526,14 +533,12 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
           </CardShell>
         </div>
 
-        {/* 우측(1/3): 자료 관리(IR·재무제표·기타). 등록 모드에서는 보류 첨부 후 저장 시 함께 업로드한다. */}
+        {/* 우측(1/3): 자료 관리 한 곳. 등록 모드에서는 보류 첨부 후 저장 시 함께 업로드한다. */}
         <div className="space-y-4 lg:col-span-1">
-          {STARTUP_MATERIAL_SECTIONS.map((s) =>
-            isCreate ? (
-              <PendingMaterialPanel key={s.type} slot={s.type} pending={pending} title={s.title} />
-            ) : (
-              <MaterialPanel key={s.type} targetType={s.type} targetId={recordId} title={s.title} />
-            ),
+          {isCreate ? (
+            <PendingMaterialPanel slot={MATERIAL_TARGET_TYPE} pending={pending} />
+          ) : (
+            <MaterialPanel targetType={MATERIAL_TARGET_TYPE} targetId={recordId} />
           )}
         </div>
       </div>

@@ -15,7 +15,7 @@ export function PendingMaterialPanel({
   pending,
   title = '자료 관리',
 }: {
-  /** 자료 분류 키(스타트업은 분류별 target_type, 네트워크는 단일 슬롯). */
+  /** 자료 분류 키(= 업로드 시 target_type). */
   slot: string
   pending: PendingMaterials
   title?: string

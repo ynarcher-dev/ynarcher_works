@@ -9,8 +9,8 @@ import { uploadMaterialFile } from '@/features/networks/materialHooks'
  * 저장이 성공해 id가 생긴 직후 `flush(newId)`로 일괄 업로드한다.
  * (선업로드 방식은 등록을 취소했을 때 고아 파일이 남으므로 채택하지 않았다.)
  *
- * `slot`은 자료 분류 단위 키다. 스타트업은 분류 3종(IR/재무제표/기타)을 슬롯으로 쓰고,
- * 네트워크는 단일 슬롯을 쓴다.
+ * `slot`은 자료 분류 단위 키(= target_type)다. 지금은 모든 등록 폼이 단일 슬롯을 쓰지만,
+ * 한 레코드에 자료 분류가 여럿인 화면이 다시 생길 수 있어 슬롯 구조는 남겨 둔다.
  */
 export interface PendingMaterials {
   /** 슬롯에 담긴 파일 목록. */
