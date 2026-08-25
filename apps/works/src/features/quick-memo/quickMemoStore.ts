@@ -1,5 +1,3 @@
-import { useCallback, useSyncExternalStore } from 'react'
-
 export type QuickMemoType = 'NOTE' | 'CHECKLIST'
 export type QuickMemoColor = 'cream' | 'rose' | 'blue' | 'mint' | 'lavender'
 
@@ -21,82 +19,40 @@ export interface QuickMemo {
   updatedAt: string
 }
 
-const STORAGE_PREFIX = 'ynarcher:quick-memos:'
-
-function storageKey(userId: string) {
-  return `${STORAGE_PREFIX}${userId}`
-}
-
-export function loadQuickMemos(userId: string): QuickMemo[] {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(storageKey(userId)) ?? '[]')
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
-}
-
-/** 저장 알림 구독자(대시보드 카드 등 "읽기만 하는" 자리). 슬라이드오버가 저장하면 함께 갱신된다. */
-const listeners = new Set<() => void>()
-
-export function saveQuickMemos(userId: string, memos: QuickMemo[]) {
-  localStorage.setItem(storageKey(userId), JSON.stringify(memos))
-  listeners.forEach((listener) => listener())
-}
+/**
+ * 퀵 메모의 **순수 모델 계층** — 타입, 초안 생성, 상태 판정, 그리고 화면 간 인계 값만 둔다.
+ * 저장은 서버(`public.quick_memos`)가 맡고 그 경로는 `quickMemoApi.ts` 하나가 소유한다
+ * (2026-08-25, 그전까지는 이 파일이 localStorage에 직접 썼다 — 브라우저·오리진·기기가
+ * 바뀌면 통째로 사라지던 자리였다).
+ */
 
 /**
- * 스냅샷 캐시 — `useSyncExternalStore`는 값이 그대로면 **같은 배열 참조**를 받아야 한다.
- * 저장된 원본 문자열이 바뀌었을 때만 새로 파싱해 무한 렌더를 막는다.
+ * 슬라이드오버를 특정 상태로 열기 위한 인계 값. 대시보드 카드가 심어 두면 패널이 마운트하며
+ * 한 번 집어 가고 비운다(뒤로 가기·재열기 때 예전 선택이 되살아나지 않게).
+ *
+ * 두 가지를 인계한다 — 이미 있는 메모를 펼치기(`open`)와 **아직 저장하지 않은 새 초안**을
+ * 넘기기(`draft`). 초안을 넘기는 쪽이 필요한 이유는 "새 체크리스트" 버튼이 빈 행을 서버에
+ * 먼저 만들지 않기 때문이다 — 제목도 항목도 없이 닫으면 지워야 할 껍데기만 남는다.
  */
-let snapshot: { key: string; raw: string; memos: QuickMemo[] } | null = null
+export type QuickMemoIntent = { open: string } | { draft: QuickMemo }
 
-function quickMemoSnapshot(userId: string): QuickMemo[] {
-  const key = storageKey(userId)
-  let raw = '[]'
-  try {
-    raw = localStorage.getItem(key) ?? '[]'
-  } catch {
-    raw = '[]'
-  }
-  if (!snapshot || snapshot.key !== key || snapshot.raw !== raw) {
-    snapshot = { key, raw, memos: loadQuickMemos(userId) }
-  }
-  return snapshot.memos
-}
-
-/**
- * 메모 목록 읽기 훅. **쓰기는 퀵 메모 슬라이드오버가 소유**하고 이 훅은 결과만 비춘다 —
- * 두 자리가 각자의 상태로 같은 원장을 쓰면 나중에 저장한 쪽이 상대의 편집을 덮어쓴다.
- * 다른 탭에서의 변경(`storage` 이벤트)도 같은 경로로 들어온다.
- */
-export function useQuickMemos(userId: string): QuickMemo[] {
-  const subscribe = useCallback((listener: () => void) => {
-    listeners.add(listener)
-    window.addEventListener('storage', listener)
-    return () => {
-      listeners.delete(listener)
-      window.removeEventListener('storage', listener)
-    }
-  }, [])
-  return useSyncExternalStore(subscribe, () => quickMemoSnapshot(userId))
-}
-
-/**
- * 슬라이드오버를 "이 메모를 펼친 채로" 열기 위한 인계 값. 대시보드 타일이 심어 두면 패널이
- * 마운트하며 한 번 집어 가고 비운다(뒤로 가기·재열기 때 예전 선택이 되살아나지 않게).
- */
-let focusedMemoId: string | null = null
+let pendingIntent: QuickMemoIntent | null = null
 
 export function focusQuickMemo(id: string) {
-  focusedMemoId = id
+  pendingIntent = { open: id }
 }
 
-export function takeFocusedQuickMemo(): string | null {
-  const id = focusedMemoId
-  focusedMemoId = null
-  return id
+export function draftQuickMemo(memo: QuickMemo) {
+  pendingIntent = { draft: memo }
 }
 
+export function takeQuickMemoIntent(): QuickMemoIntent | null {
+  const intent = pendingIntent
+  pendingIntent = null
+  return intent
+}
+
+/** 새 메모 초안. id는 여기서 정해 서버 저장(upsert)까지 같은 값을 쓴다. */
 export function createQuickMemo(type: QuickMemoType): QuickMemo {
   const now = new Date().toISOString()
   return {
@@ -108,4 +64,25 @@ export function createQuickMemo(type: QuickMemoType): QuickMemo {
 
 export function isQuickMemoEmpty(memo: QuickMemo) {
   return !memo.title.trim() && !memo.content.trim() && !memo.items.some((item) => item.content.trim())
+}
+
+/**
+ * 다 끝낸 체크리스트인가 — 내용이 있는 항목이 하나 이상이고 그것들이 모두 완료된 상태.
+ *
+ * 비어 있는 줄(작성 중 남긴 빈 항목)은 세지 않는다. 세면 다 처리한 목록이 빈 줄 하나 때문에
+ * 영영 '진행중'으로 남아 대시보드에서도 사라지지 않는다.
+ *
+ * 판정을 여기 한곳에 둔 이유는 **감추는 쪽(대시보드)과 회색으로 칠하는 쪽(타일 배지)이 같은
+ * 답을 써야** 하기 때문이다 — 갈리면 배지는 '완료'인데 홈에는 그대로 남는 일이 생긴다.
+ */
+export function isChecklistDone(memo: QuickMemo) {
+  const items = memo.items.filter((item) => item.content.trim())
+  return memo.type === 'CHECKLIST' && items.length > 0 && items.every((item) => item.completed)
+}
+
+/** 패널 목록·대시보드 카드가 함께 쓰는 정렬: 고정 먼저, 그다음 최근 수정 순. */
+export function sortQuickMemos(memos: QuickMemo[]): QuickMemo[] {
+  return [...memos].sort(
+    (a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt.localeCompare(a.updatedAt),
+  )
 }

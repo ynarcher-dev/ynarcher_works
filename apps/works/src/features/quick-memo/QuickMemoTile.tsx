@@ -1,6 +1,6 @@
 import { Badge, cardText, cn, pinMark } from '@ynarcher/ui'
 import { memoSurface } from './quickMemoColors'
-import type { QuickMemo } from './quickMemoStore'
+import { isChecklistDone, type QuickMemo } from './quickMemoStore'
 
 function formatTime(value: string) {
   const date = new Date(value)
@@ -14,10 +14,15 @@ function preview(memo: QuickMemo) {
   return `${memo.items.filter((item) => item.completed).length}/${memo.items.length} 완료`
 }
 
+/**
+ * 체크리스트 상태 배지 — 다 끝낸 목록은 초록(성공)이 아니라 **중립(회색)**으로 내려앉는다.
+ * 끝난 일은 더 볼 것이 없으므로 남은 일보다 앞으로 나와서는 안 된다. 완료 판정은 배지 혼자
+ * 하지 않고 `isChecklistDone`을 쓴다 — 대시보드가 감추는 기준과 갈리면 안 된다.
+ */
 function checklistStatus(memo: QuickMemo) {
+  if (isChecklistDone(memo)) return { label: '완료', tone: 'neutral' as const }
   const completed = memo.items.filter((item) => item.completed).length
   if (completed === 0) return { label: '대기', tone: 'neutral' as const }
-  if (completed === memo.items.length) return { label: '완료', tone: 'success' as const }
   return { label: '진행중', tone: 'info' as const }
 }
 
@@ -39,20 +44,26 @@ export function QuickMemoTile({
   onClick: () => void
   titleOnly?: boolean
 }) {
+  // 다 끝낸 체크리스트는 고른 색(포스트잇 바탕)을 내려놓고 회색으로 가라앉는다 — 목록에서
+  // 끝난 것과 남은 것을 색 하나로 갈라 준다.
+  const done = isChecklistDone(memo)
+
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
         'w-full rounded-radius-md p-3 text-left transition-[filter] hover:brightness-[0.98]',
-        memoSurface(memo.color),
+        done ? 'bg-gray-50' : memoSurface(memo.color),
       )}
     >
       <div className={cn('flex justify-between gap-3', titleOnly ? 'items-center' : 'items-start')}>
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
             {pinMark(memo.pinned)}
-            <p className={`truncate ${cardText.subhead}`}>{memo.title || '제목 없는 메모'}</p>
+            <p className={cn('truncate', cardText.subhead, done && 'text-gray-500')}>
+              {memo.title || '제목 없는 메모'}
+            </p>
             {memo.type === 'CHECKLIST' && (
               <Badge tone={checklistStatus(memo).tone} dot>
                 {checklistStatus(memo).label}
