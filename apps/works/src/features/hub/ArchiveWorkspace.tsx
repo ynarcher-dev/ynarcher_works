@@ -1,6 +1,7 @@
-import { Button, Checkbox, DataTable, EmptyValue, Field, IconButton, Input, PageHeader, Spinner, pinMark, useToast, type Column } from '@ynarcher/ui'
+import { Banner, Button, Checkbox, DataTable, EmptyValue, Field, IconButton, Input, PageHeader, Spinner, pinMark, useToast, type Column } from '@ynarcher/ui'
 import { Download } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { ArchiveDetailModal } from '@/features/hub/ArchiveDetailModal'
 import { NewBadge } from '@/features/hub/PostFlagBadges'
 import { isNewPost, type BoardPost } from '@/features/hub/boardData'
 import {
@@ -23,6 +24,10 @@ import {
  * 게시판과 달리 상세페이지가 없고 목록 1행 = 파일 1건이므로, 행에서 바로 다운로드한다.
  * 자료 메타는 board_posts, 파일은 attachments(BOARD_POST) 실데이터다.
  * 설계: docs/docs_planning/3_1_1_board_archive_notice.md
+ *
+ * 표에 남는 조작은 다운로드 하나다. 수정·비활성화는 행을 눌러 여는 자료 모달
+ * (`ArchiveDetailModal`)이 갖는다 — 되돌리기 어려운 일은 무엇에 대고 하는 일인지 적힌
+ * 뒤에 놓여야 하고, 행마다 반복되는 버튼은 정작 자료명보다 먼저 읽힌다.
  */
 export interface ArchiveWorkspaceProps {
   /** 자료실 원장 id(board_posts.board_id). */
@@ -60,6 +65,7 @@ function DownloadCell({ material }: { material: Material | undefined }) {
 
 export function ArchiveWorkspace({ boardId, title }: ArchiveWorkspaceProps) {
   const [editing, setEditing] = useState<BoardPost | null | undefined>(undefined)
+  const [opened, setOpened] = useState<BoardPost | null>(null)
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(0)
   const toast = useToast()
@@ -86,6 +92,20 @@ export function ArchiveWorkspace({ boardId, title }: ArchiveWorkspaceProps) {
         initial={editing ?? undefined}
         onDone={() => setEditing(undefined)}
         onCancel={() => setEditing(undefined)}
+        onDeactivate={() => {
+          if (!editing) return
+          setActive.mutate(
+            { id: editing.id, active: false },
+            {
+              onSuccess: () => {
+                toast.show('자료를 비활성화했습니다.', 'success')
+                setEditing(undefined)
+              },
+              onError: () => toast.show('비활성화에 실패했습니다. 권한을 확인하세요.', 'danger'),
+            },
+          )
+        }}
+        deactivating={setActive.isPending}
       />
     )
   }
@@ -158,22 +178,16 @@ export function ArchiveWorkspace({ boardId, title }: ArchiveWorkspaceProps) {
           rows={pageRows}
           rowKey={(p) => p.id}
           emptyText={keyword.trim() ? '검색 결과가 없습니다.' : '등록된 자료가 없습니다.'}
+          onRowClick={setOpened}
+          // 수정·비활성화를 표에서 걷어내고 자료 모달로 옮겼다(2026-08-25) — 두 버튼이 행마다
+          // 반복되면서 자료명·설명보다 먼저 읽혔고, 되돌리기 어려운 비활성화가 목록을 훑는
+          // 손이 지나는 자리에 서 있었다. 관리 액션이 하나도 없으므로 열 자체를 내린다.
+          showManageColumn={false}
           meta={{
             author: (p) => p.author,
             updatedAt: (p) => p.date,
             active: (p) => !p.deletedAt,
             rowMark: (p) => pinMark(p.pinned),
-            // 자료실은 상세페이지가 없어 수정·비활성화를 목록의 관리 컬럼에서 수행한다.
-            onEdit: (p) => setEditing(p),
-            onDeactivate: (p) => {
-              setActive.mutate(
-                { id: p.id, active: false },
-                {
-                  onSuccess: () => toast.show('자료를 비활성화했습니다.', 'success'),
-                  onError: () => toast.show('비활성화에 실패했습니다. 권한을 확인하세요.', 'danger'),
-                },
-              )
-            },
           }}
           pagination={{
             page: safePage,
@@ -183,6 +197,19 @@ export function ArchiveWorkspace({ boardId, title }: ArchiveWorkspaceProps) {
           }}
         />
       )}
+
+      <ArchiveDetailModal
+        open={opened !== null}
+        post={opened}
+        material={opened ? matByPost.get(opened.id) : undefined}
+        busy={setActive.isPending}
+        onEdit={() => {
+          if (!opened) return
+          setEditing(opened)
+          setOpened(null)
+        }}
+        onClose={() => setOpened(null)}
+      />
     </div>
   )
 }
@@ -190,6 +217,11 @@ export function ArchiveWorkspace({ boardId, title }: ArchiveWorkspaceProps) {
 /**
  * 자료 등록/수정. 자료실은 1행 = 파일 1건이므로 신규 등록 시 파일 1개를 필수로 요구한다.
  * 수정은 메타(자료명·설명·고정)를 바꾸며, 파일을 새로 선택하면 교체(추가 업로드)된다.
+ *
+ * **비활성화(자료 내리기)도 이 화면이 갖는다.** 자료를 내리는 판단은 그 내용을 펼쳐 놓고
+ * 하는 일이지 목록의 요약을 훑다가 하는 일이 아니다. 확인은 새 창을 띄우지 않고 같은 화면에서
+ * 배너로 한 번 받는다 — 되돌리기 어려운 일이라 확인은 필요하지만, 그 확인 때문에 지금 보고
+ * 있는 자료가 창 뒤로 가려지면 무엇을 내리는 중인지가 흐려진다.
  */
 function ArchiveEditor({
   boardId,
@@ -197,12 +229,17 @@ function ArchiveEditor({
   initial,
   onDone,
   onCancel,
+  onDeactivate,
+  deactivating,
 }: {
   boardId: string
   title: string
   initial?: BoardPost
   onDone: () => void
   onCancel: () => void
+  /** 수정일 때만 쓰는 비활성화(soft delete). */
+  onDeactivate: () => void
+  deactivating: boolean
 }) {
   const toast = useToast()
   const isEdit = Boolean(initial)
@@ -213,6 +250,8 @@ function ArchiveEditor({
   const [pinned, setPinned] = useState(Boolean(initial?.pinned))
   const [file, setFile] = useState<File | null>(null)
   const [busy, setBusy] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+  const alive = isEdit && !initial?.deletedAt
 
   // 신규는 파일 필수. 수정은 파일 없이 메타만 변경할 수 있다.
   const canSubmit = Boolean(name.trim()) && (isEdit || Boolean(file))
@@ -249,6 +288,19 @@ function ArchiveEditor({
         title={isEdit ? `${title} 자료 수정` : `${title} 자료 등록`}
         actions={
           <>
+            {/*
+              비활성화는 저장과 성격이 다른 일(이 자료를 목록에 둘지)이라 확인/저장과 같은
+              무리로 읽히지 않아야 한다. 자리를 나란히 쓰는 대신 색으로 가른다.
+            */}
+            {alive && (
+              <Button
+                variant="outline-danger"
+                onClick={() => setConfirming(true)}
+                disabled={busy || deactivating || confirming}
+              >
+                비활성화
+              </Button>
+            )}
             <Button variant="outline" onClick={onCancel} disabled={busy}>
               취소
             </Button>
@@ -258,6 +310,24 @@ function ArchiveEditor({
           </>
         }
       />
+      {confirming && (
+        <Banner tone="danger">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <span className="min-w-0 flex-1">
+              <b>{initial?.title}</b> 자료를 목록에서 내립니다. 파일이 지워지지는 않지만 목록에서
+              비활성으로 흐려지며, 되돌리려면 관리자가 필요합니다.
+            </span>
+            <span className="flex shrink-0 gap-2">
+              <Button variant="outline" onClick={() => setConfirming(false)} disabled={deactivating}>
+                취소
+              </Button>
+              <Button variant="danger" onClick={onDeactivate} disabled={deactivating}>
+                {deactivating ? '처리 중…' : '비활성화'}
+              </Button>
+            </span>
+          </div>
+        </Banner>
+      )}
       <Field label="자료명">
         <Input
           autoFocus

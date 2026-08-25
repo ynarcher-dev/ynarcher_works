@@ -11,7 +11,7 @@ import { useBoardPostBoardId } from '@/features/hub/boardPostsApi'
 import { useBoards } from '@/features/hub/boardHooks'
 import { OfficeManagersPanel } from '@/features/office/OfficeManagersPanel'
 import { BranchesPanel } from '@/features/office/branches/BranchesPanel'
-import { CheckoutWorkspace } from '@/features/office/checkouts/CheckoutWorkspace'
+import { AssetListWorkspace } from '@/features/office/assets/AssetListWorkspace'
 import { MinutesWorkspace } from '@/features/office/minutes/MinutesWorkspace'
 import { RoomReservationWorkspace } from '@/features/office/rooms/RoomReservationWorkspace'
 
@@ -100,18 +100,14 @@ export function OfficePage() {
 
   return (
     <div className="flex h-full flex-col gap-5">
-      {/* 대시보드: HUB에서 이관. 다른 메뉴와 마찬가지로 '메뉴명 + 구분선'으로 시작한다. */}
-      {tab === 'dashboard' && (
-        <>
-          <PageHeader title="대시보드" />
-          <DashboardPanel />
-        </>
-      )}
+      {/* 대시보드: HUB에서 이관. 여기만 '메뉴명 + 구분선'을 두지 않는다 — 홈은 카드가 스스로
+          제목을 달고 서는 자리라, 페이지 제목까지 얹으면 첫 화면 한 줄을 제목이 먹는다. */}
+      {tab === 'dashboard' && <DashboardPanel />}
       {/* 임직원 정보: 목록은 조직 트리+인물 카드(구 부서 정보), 상세는 임직원 상세로 간다. */}
       {tab === 'managers' && <OfficeManagersPanel />}
-      {/* 반출대장: 물품 반출·반납 기록. 후보 자산의 기준값(반출 가능·승인 필요)은 MANAGEMENT가 소유한다. */}
+      {/* 자산 현황: 회사에 어떤 공용 물품이 어느 지사에 있나(조회 전용). 원장은 MANAGEMENT 자산 관리가 소유한다. */}
       {tab === 'outbound' && (
-        <CheckoutWorkspace initialAssetId={params.get('asset') ?? undefined} />
+        <AssetListWorkspace initialAssetId={params.get('asset') ?? undefined} />
       )}
       {/* 회의실 예약: 지사 탭 + 날짜 이동 + 회의실 카드. 설정은 ADMIN이 소유한다. */}
       {tab === 'rooms' && <RoomReservationWorkspace />}
