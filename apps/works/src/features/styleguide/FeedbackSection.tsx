@@ -3,6 +3,7 @@ import { MoreHorizontal } from 'lucide-react'
 import {
   Banner,
   Button,
+  Card,
   Dropdown,
   DropdownItem,
   EmptyState,
@@ -15,7 +16,7 @@ import {
   Tooltip,
   useToast,
 } from '@ynarcher/ui'
-import { Section, Spec } from '@/lib/Spec'
+import { GuideSection } from '@/features/styleguide/GuideSection'
 
 export function FeedbackSection() {
   const [modalOpen, setModalOpen] = useState(false)
@@ -24,21 +25,24 @@ export function FeedbackSection() {
   const toast = useToast()
 
   return (
-    <Section
+    <GuideSection
       id="feedback"
-      title="4. 상태와 대화"
+      title="상태와 대화"
       lede="같은 사건에는 언제나 같은 표현을 씁니다. 배너는 화면에 머무는 상태, 토스트는 방금 끝난 동작, 모달은 답이 필요한 질문입니다."
     >
-      <Spec label="배너" note="화면에 머무는 상태 고지. 4단 톤은 상태 신호색과 같은 값을 씁니다.">
+      <Card title="배너" subtitle="화면에 머무는 상태 고지. 4단 톤은 상태 신호색과 같은 값을 씁니다.">
         <div className="space-y-2">
           <Banner tone="info">이 목록은 5분마다 갱신됩니다.</Banner>
           <Banner tone="success">3건이 정상 반영되었습니다.</Banner>
           <Banner tone="warning">투자금액이 비어 있는 기업이 2곳 있습니다.</Banner>
           <Banner tone="danger">권한이 없어 일부 열이 마스킹되었습니다.</Banner>
         </div>
-      </Spec>
+      </Card>
 
-      <Spec label="토스트 · 모달 · 드롭다운" note="방금 끝난 동작 / 답이 필요한 질문 / 부가 액션 모음">
+      <Card
+        title="토스트 · 모달 · 드롭다운"
+        subtitle="방금 끝난 동작 / 답이 필요한 질문 / 부가 액션 모음"
+      >
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="secondary" onClick={() => toast.show('저장되었습니다.', 'success')}>
             토스트 띄우기
@@ -78,6 +82,7 @@ export function FeedbackSection() {
               <Button variant="secondary" onClick={() => setModalOpen(false)}>
                 취소
               </Button>
+              {/* 적색 채움은 확인창에서 실제로 실행하는 버튼 하나만의 것이다(4_color §5.1). */}
               <Button variant="danger" onClick={() => setModalOpen(false)}>
                 비활성화
               </Button>
@@ -91,9 +96,9 @@ export function FeedbackSection() {
             <TextArea rows={4} placeholder="사유를 입력하세요" />
           </div>
         </Modal>
-      </Spec>
+      </Card>
 
-      <Spec label="보기 전환 · 로딩 · 빈 상태" note="같은 자리를 지키는 세 가지 얼굴">
+      <Card title="보기 전환 · 로딩 · 빈 상태" subtitle="같은 자리를 지키는 세 가지 얼굴">
         <div className="space-y-5">
           <SegmentedToggle
             label="보기 방식"
@@ -120,22 +125,7 @@ export function FeedbackSection() {
             />
           </div>
         </div>
-      </Spec>
-    </Section>
+      </Card>
+    </GuideSection>
   )
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

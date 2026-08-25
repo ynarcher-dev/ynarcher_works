@@ -1,15 +1,7 @@
 import { useState } from 'react'
-import {
-  Badge,
-  Button,
-  Checkbox,
-  Input,
-  Radio,
-  Switch,
-  TagChip,
-  Tabs,
-} from '@ynarcher/ui'
-import { LiveSwatch, Section, Spec } from '@/lib/Spec'
+import { Badge, Button, Card, Input, Tabs, TagChip } from '@ynarcher/ui'
+import { GuideSection, Tag } from '@/features/styleguide/GuideSection'
+import { LiveSwatch } from '@/features/styleguide/LiveSwatch'
 
 /**
  * 램프는 hex 상수가 아니라 Tailwind 클래스로 칠하고 계산된 색을 되읽는다(`LiveSwatch`).
@@ -48,38 +40,36 @@ const STATUS_STEPS = [
 
 export function ColorSection() {
   const [tab, setTab] = useState('a')
-  const [on, setOn] = useState(true)
-  const [pick, setPick] = useState('x')
 
   return (
-    <Section
+    <GuideSection
       id="color"
-      title="1. 색"
+      title="색"
       lede="브랜드는 조작을, 상태 신호색은 상태를 말합니다. 두 축이 색으로 겹치지 않는 것이 이 팔레트의 전부입니다."
     >
-      <Spec
-        label="브랜드 램프 — 인디고 #2E5CB8"
-        note="화면 액센트는 이 램프가 담당합니다. CI Red는 로고·인쇄물 전용입니다. 흰 글씨 대비 6.3:1."
+      <Card
+        title="브랜드 램프 — 인디고 #2E5CB8"
+        subtitle="화면 액센트는 이 램프가 담당합니다. CI Red는 로고·인쇄물 전용입니다. 흰 글씨 대비 6.3:1."
       >
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
           {BRAND_STEPS.map(([name, cls]) => (
             <LiveSwatch key={name} name={name} className={cls} />
           ))}
         </div>
-      </Spec>
+      </Card>
 
-      <Spec
-        label="무채색 램프"
-        note="100~300은 경계선, 400~900은 글자입니다. 400도 KWCAG AA(4.5:1)를 충족합니다."
+      <Card
+        title="무채색 램프"
+        subtitle="100~300은 경계선, 400~900은 글자입니다. 400도 KWCAG AA(4.5:1)를 충족합니다."
       >
         <div className="grid grid-cols-4 gap-3 sm:grid-cols-6 lg:grid-cols-12">
           {GRAY_STEPS.map(([name, cls]) => (
             <LiveSwatch key={name} name={name} className={cls} />
           ))}
         </div>
-      </Spec>
+      </Card>
 
-      <Spec label="상태 신호색" note="글자색(DEFAULT)과 배경색(subtle)이 짝을 이룹니다.">
+      <Card title="상태 신호색" subtitle="글자색(DEFAULT)과 배경색(subtle)이 짝을 이룹니다.">
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           {STATUS_STEPS.map(([name, fg, bg]) => (
             <div key={name} className="grid grid-cols-2 gap-2">
@@ -88,49 +78,52 @@ export function ColorSection() {
             </div>
           ))}
         </div>
-      </Spec>
+      </Card>
 
-      <Spec label="브랜드가 놓이는 자리" note="넓은 면(버튼)·얇은 선(활성 탭)·작은 표식·포커스 링.">
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="primary">기업 등록</Button>
-            <Button variant="secondary">취소</Button>
-            <Button variant="outline">내보내기</Button>
-            <Button variant="ghost">더 보기</Button>
-            <Button variant="outline-danger">비활성화</Button>
-            <Button variant="danger">영구 삭제</Button>
+      {/*
+        브랜드가 닿는 자리는 넷뿐이다. 여기서 컴포넌트 목록을 다시 늘어놓지 않는다 —
+        variant 전량과 맥락별 크기는 아래 '컴포넌트 규격'이 이미 답하고 있고, 같은 것을
+        두 곳에서 그리면 한쪽이 먼저 낡는다. 그게 견본 앱을 하나로 합친 이유다.
+      */}
+      <Card
+        title="브랜드가 놓이는 자리"
+        subtitle="넓은 면 · 얇은 선 · 작은 표식 · 포커스 링. 컴포넌트별 전체 목록과 맥락별 크기는 아래 '컴포넌트 규격'이 답합니다."
+      >
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="space-y-2">
+            <Tag>넓은 면</Tag>
+            <div>
+              <Button variant="primary">기업 등록</Button>
+            </div>
           </div>
-          <Tabs
-            items={[
-              { key: 'a', label: '개요' },
-              { key: 'b', label: '투자 이력' },
-              { key: 'c', label: '자료' },
-            ]}
-            value={tab}
-            onChange={setTab}
-          />
-          <div className="flex flex-wrap items-center gap-4">
-            <label className="flex items-center gap-2 text-body text-gray-700">
-              <Checkbox defaultChecked />
-              체크됨
-            </label>
-            <label className="flex items-center gap-2 text-body text-gray-700">
-              <Radio name="brand-demo" checked={pick === 'x'} onChange={() => setPick('x')} />
-              선택됨
-            </label>
-            <Switch checked={on} onChange={setOn} aria-label="사용 여부" />
-            <TagChip selected>딥테크</TagChip>
-            <TagChip>바이오</TagChip>
+          <div className="space-y-2">
+            <Tag>얇은 선</Tag>
+            <Tabs
+              items={[
+                { key: 'a', label: '개요' },
+                { key: 'b', label: '자료' },
+              ]}
+              value={tab}
+              onChange={setTab}
+            />
           </div>
-          <div className="max-w-sm">
-            <Input placeholder="클릭하면 포커스 링(brand/10)이 보입니다" />
+          <div className="space-y-2">
+            <Tag>작은 표식</Tag>
+            <div className="flex flex-wrap items-center gap-2">
+              <TagChip selected>딥테크</TagChip>
+              <TagChip>바이오</TagChip>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Tag>포커스 링</Tag>
+            <Input placeholder="클릭하면 brand/10 링" />
           </div>
         </div>
-      </Spec>
+      </Card>
 
-      <Spec
-        label="조작과 상태는 겹치지 않는다"
-        note="브랜드 버튼 옆에 링크(info)와 상태 배지를 나란히 둔 검사입니다."
+      <Card
+        title="조작과 상태는 겹치지 않는다"
+        subtitle="브랜드 버튼 옆에 링크(info)와 상태 배지를 나란히 둔 검사입니다."
       >
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-3">
@@ -151,28 +144,16 @@ export function ColorSection() {
             </Badge>
           </div>
         </div>
-      </Spec>
+      </Card>
 
-      <Spec label="옅은 배경 — brand.25" note="선택된 행·강조 블록의 바탕으로 씁니다.">
+      <Card title="옅은 배경 — brand.25" subtitle="선택된 행·강조 블록의 바탕으로 씁니다.">
         <div className="rounded-radius-md border border-gray-200 bg-brand-25 p-4">
           <p className="text-body font-semibold text-brand">브랜드 25 배경 위의 브랜드 글자</p>
           <p className="text-body text-gray-700">
             옅은 바탕과 그 위 글자가 같은 램프에서 나오므로 강조 블록이 화면과 따로 놀지 않습니다.
           </p>
         </div>
-      </Spec>
-    </Section>
+      </Card>
+    </GuideSection>
   )
 }
-
-
-
-
-
-
-
-
-
-
-
-

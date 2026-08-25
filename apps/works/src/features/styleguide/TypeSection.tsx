@@ -1,5 +1,5 @@
-import { cardText, tableText } from '@ynarcher/ui'
-import { Section, Spec, Tag } from '@/lib/Spec'
+import { Card, cardText, tableText } from '@ynarcher/ui'
+import { GuideSection, Tag } from '@/features/styleguide/GuideSection'
 
 const LADDER = [
   ['text-title-lg', '30px / bold', '페이지 제목', 'text-title-lg font-bold text-gray-900'],
@@ -13,14 +13,14 @@ const LADDER = [
 
 export function TypeSection() {
   return (
-    <Section
+    <GuideSection
       id="type"
-      title="2. 글자"
+      title="글자"
       lede="한 줄 안에서 크기를 갈라 위계를 만들지 않습니다. 크기는 하나로 두고 구분은 굵기와 색이 맡습니다."
     >
-      <Spec
-        label="크기 사다리"
-        note="페이지 30 → 섹션 24 → 지표 20 → 카드 제목 16 → 본문 14 → 컨트롤 13 → 표 12"
+      <Card
+        title="크기 사다리"
+        subtitle="페이지 30 → 섹션 24 → 지표 20 → 카드 제목 16 → 본문 14 → 컨트롤 13 → 표 12"
       >
         <div className="space-y-3">
           {LADDER.map(([token, meta, use, cls]) => (
@@ -33,11 +33,11 @@ export function TypeSection() {
             </div>
           ))}
         </div>
-      </Spec>
+      </Card>
 
-      <Spec
-        label="카드 안 위계 — cardText"
-        note="카드가 소유합니다. 화면에서 규격 클래스를 직접 쓰지 않습니다."
+      <Card
+        title="카드 안 위계 — cardText"
+        subtitle="Card·PanelCard·InfoField가 소유합니다. 화면에서 규격 클래스를 직접 쓰지 않습니다."
       >
         <div className="space-y-1">
           <p className={cardText.title}>카드 제목 (title · 16 semibold)</p>
@@ -52,32 +52,22 @@ export function TypeSection() {
             <span className={cardText.count}>[3]</span>
           </p>
         </div>
-      </Spec>
+      </Card>
 
-      <Spec
-        label="표 안 위계 — tableText"
-        note="전부 12px입니다. 머리글·메타는 gray-600 — 한글 12px은 획이 촘촘해 gray-500에서 흐려집니다."
+      <Card
+        title="표 안 위계 — tableText"
+        subtitle="전부 12px입니다. 머리글·메타는 gray-600 — 한글 12px은 획이 촘촘해 gray-500에서 흐려집니다."
       >
         <div className="space-y-1.5">
           <p className={tableText.head}>머리글 (head · gray-600 semibold · 7.8:1)</p>
-          <p className={tableText.primary}>식별 값 — 그 행이 무엇인지 알려주는 열, 행마다 하나 (primary)</p>
+          <p className={tableText.primary}>
+            식별 값 — 그 행이 무엇인지 알려주는 열, 행마다 하나 (primary)
+          </p>
           <p className={tableText.body}>일반 값 — 나머지 도메인 열 전부 (body · gray-700)</p>
           <p className={tableText.meta}>보조 값 — 생성자·수정일 등 메타 (meta · gray-600)</p>
           <p className={`${tableText.body} ${tableText.empty}`}>- (empty · gray-400)</p>
         </div>
-      </Spec>
-    </Section>
+      </Card>
+    </GuideSection>
   )
 }
-
-
-
-
-
-
-
-
-
-
-
-
