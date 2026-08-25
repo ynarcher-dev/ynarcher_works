@@ -18,13 +18,13 @@ export function MiniTable({
     <div className={`w-full overflow-x-auto ${className ?? ''}`}>
       <table className="w-full border-separate border-spacing-0 text-caption">
         {/*
-          머리글에 회색 면을 깔지 않는다(2026-08-20 데이터 테이블 규격과 동일).
-          배경과 밑줄은 둘 다 "여기부터 머리글이다"라는 같은 말이라, 겹치면 머리글이 정작
-          읽어야 할 데이터보다 무거워진다. 머리글임은 굵기와 색(semibold + gray-600)이 이미
-          말하고 있고, 데이터와의 경계는 밑줄 하나가 긋는다.
+          머리글에 램프에서 가장 옅은 회색 면(gray-25)을 깐다(2026-08-25 데이터 테이블 규격과 동일).
+          카드섹션 안에서는 표도 카드도 같은 흰 면이라 밑줄 하나로는 머리글 띠가 서지 않는다.
+          면을 깔되 구 gray-50이 아니라 한 단계 옅은 값을 써, 머리글이 데이터보다 무거워지지
+          않는 선에서 최소한의 톤차만 남긴다.
           근거: 5_component_spec_rules.md §3.1
         */}
-        <thead>
+        <thead className="bg-gray-25">
           <tr>{head}</tr>
         </thead>
         <tbody>{children}</tbody>

@@ -520,17 +520,17 @@ export function DataTable<T>({
   // 두 열의 폭은 자리에 따라 갈리므로 표준 열 표(standardWidthByStage)에서 그대로 가져온다.
   const leftNo = selectable ? stdW.sel.rem : 0
   const leftFirst = (selectable ? stdW.sel.rem : 0) + (numbered ? stdW.no.rem : 0)
-  // 고정 셀 공통 클래스. 헤더는 gray-50, 본문은 white(+hover gray-25)로 불투명 배경을 깐다.
+  // 고정 셀 공통 클래스. 헤더는 gray-25, 본문은 white(+hover gray-25)로 불투명 배경을 깐다.
   // last(첫 도메인 열)에는 우측 seam을 은은하게 번지는 그림자로만 둬, 가로 스크롤 시 고정 영역이
   // 스크롤되는 셀 위로 부드럽게 떠 있게 한다(선명한 경계선 없이).
   const stickyCell = (isHeader: boolean, isLast = false) =>
     stickyLead
       ? cn(
           'sticky',
-          // 고정 셀은 스크롤되는 셀 위를 덮어야 하므로 반드시 불투명해야 한다. 머리글의 회색
-          // 면을 걷어냈으므로 머리글 고정 셀도 흰색을 깐다 — gray-50을 남기면 그 열만 회색으로
-          // 뜬다.
-          isHeader ? 'z-20 bg-white' : 'z-10 bg-white group-hover:bg-gray-25',
+          // 고정 셀은 스크롤되는 셀 위를 덮어야 하므로 반드시 불투명해야 한다. 머리글 고정 셀은
+          // thead와 같은 gray-25를 깐다 — 흰색을 남기면 가로 스크롤 시 그 열만 머리글 띠에서
+          // 빠져 보인다.
+          isHeader ? 'z-20 bg-gray-25' : 'z-10 bg-white group-hover:bg-gray-25',
           isLast && 'shadow-pinned',
         )
       : ''
@@ -582,7 +582,7 @@ export function DataTable<T>({
           fixed && 'table-fixed',
         )}
       >
-        <thead>
+        <thead className="bg-gray-25">
           {/*
             세로 구분선을 긋지 않는다(2026-08-20).
 
@@ -593,15 +593,18 @@ export function DataTable<T>({
             남기면 표가 훨씬 빨리 읽힌다.
           */}
           {/*
-            머리글에 회색 면을 깔지 않는다(2026-08-20).
+            머리글에 팔레트에서 가장 옅은 회색 면을 깐다(2026-08-25).
 
-            이전에는 `bg-gray-50` 배경과 진한 밑줄을 함께 썼다. 둘 다 "여기부터 머리글이다"라는
-            같은 말이라, 겹치면 머리글이 정작 읽어야 할 데이터보다 무거워진다. 표를 세로로 훑을 때
-            제일 먼저 눈에 걸리는 것이 회색 띠가 되는 것은 순서가 뒤바뀐 것이다.
+            2026-08-20에는 면을 완전히 걷어내고 굵기·색(`tableText.head` — semibold gray-600)과
+            밑줄만으로 머리글을 표시했다. 그러나 카드섹션 안에 든 표는 카드 자체가 이미 흰 면이라
+            머리글 줄과 첫 데이터 행이 같은 바탕 위에 연달아 놓였고, 밑줄 하나로는 띠가 서지 않아
+            어디까지가 머리글인지 한눈에 잡히지 않았다.
 
-            머리글임은 굵기와 색이 이미 말하고 있고(`tableText.head` — semibold gray-600), 데이터와의
-            경계는 밑줄 하나가 긋는다. 면을 걷어내면 글자가 흰 바탕 위로 올라와 대비도 7.19:1에서
-            7.77:1로 함께 오른다.
+            되돌린 값은 구 `gray-50`이 아니라 램프에서 가장 옅은 `gray-25`(#FAFBFC)다 — 머리글이
+            데이터보다 무거워지던 이유는 면을 깐 것 자체가 아니라 그 면이 진했던 것이므로, 띠가
+            서는 최소한의 톤차만 남긴다. 글자 대비는 7.77:1에서 7.65:1로만 내려가 KWCAG AA를
+            그대로 충족하고, 정렬 가능한 머리글의 hover(`gray-50`)는 이 바탕보다 한 단계 진해
+            그대로 구분된다.
           */}
           <tr>
             {selectable && (
