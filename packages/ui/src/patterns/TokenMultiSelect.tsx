@@ -308,15 +308,15 @@ export function TokenMultiSelect<T>({
         createPortal(
           <ul
             ref={listRef}
-            // fixed 로 뷰포트 기준 배치 → 모달 overflow 에 잘리지 않는다(모달보다 위 z).
+            // fixed 로 뷰포트 기준 배치 → 모달 overflow 에 잘리지 않는다. 위치만 인라인이고
+            // 층은 z 토큰이 답한다(모달 위 포털 팝오버 = z-popover, 8_z_index §3.1).
             style={{
               position: 'fixed',
               top: rect.bottom + 4,
               left: rect.left,
               width: rect.width,
-              zIndex: 9999,
             }}
-            className="max-h-56 overflow-auto rounded-radius-md border border-gray-200 bg-white shadow-popover"
+            className="z-popover max-h-56 overflow-auto rounded-radius-md border border-gray-200 bg-white shadow-popover"
           >
           {rows.map((o) => {
             const meta = getMeta?.(o)

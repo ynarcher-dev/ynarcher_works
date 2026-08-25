@@ -40,7 +40,7 @@
     @apply text-info underline;
   }
   .rte .ProseMirror code {
-    @apply rounded bg-gray-100 px-1 py-0.5 text-caption;
+    @apply rounded-radius-sm bg-gray-100 px-1 py-0.5 text-caption;
   }
   .rte .ProseMirror pre {
     @apply overflow-x-auto rounded-radius-sm bg-gray-900 p-3 text-caption text-gray-0;

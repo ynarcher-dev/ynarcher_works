@@ -85,7 +85,7 @@ export function PortfolioBoardCard({
 
       {expanded &&
         createPortal(
-          <div className="fixed inset-0 z-[500] flex flex-col bg-gray-25">
+          <div className="fixed inset-0 z-fullscreen flex flex-col bg-gray-25">
             <header className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-200 bg-white px-5 py-3">
               <div className="flex items-center gap-2">
                 <span className="text-title-sm font-medium text-gray-900">포트폴리오</span>

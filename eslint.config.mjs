@@ -90,7 +90,35 @@ const designSystemRules = () => [
   ...classStringSelectors('(^|\\s)shadow-(sm|md|lg|xl|2xl|inner|none)(\\s|$)').map((selector) => ({
     selector,
     message:
-      '그림자는 세 토큰(shadow-soft/popover/dialog)으로만 지정합니다. 기본 스케일은 정책 밖입니다. 근거: 5_component_spec_rules.md §1.2',
+      '그림자는 토큰(shadow-soft/popover/dialog/pinned)으로만 지정합니다. 기본 스케일은 정책 밖입니다. 근거: 5_component_spec_rules.md §1.2',
+  })),
+
+  // z-index 임의값 — 레이어 단계는 z 토큰(8_z_index §2)이 정하며, 문서가 z-[9999]류 직접
+  // 대입을 명시적으로 금지한다. 실제로 모달 위 팝오버(1100)와 전체 화면 패널(500)이 토큰에
+  // 없다는 이유로 z-[1100]·z-[500]·zIndex:9999 세 갈래 임의값이 살았다(2026-08-25 토큰 신설).
+  ...classStringSelectors('(^|\\s)-?z-\\[').map((selector) => ({
+    selector,
+    message:
+      'z-index를 직접 지정하지 마세요. 레이어 단계는 z 토큰(z-dropdown/navbar/sidebar/fullscreen/overlay/modal/popover/toast)이 정합니다. 필요한 단계가 없으면 tailwind-preset.mjs와 8_z_index_system_rules.md에 함께 추가하세요.',
+  })),
+
+  // 모서리 임의값 — radius 토큰(4/6/10) 밖 값. SummaryTile의 rounded-[14px]가 이 경로로 살았다.
+  ...classStringSelectors('(^|\\s)rounded(-(t|b|l|r|tl|tr|bl|br|s|e|ss|se|es|ee))?-\\[').map(
+    (selector) => ({
+      selector,
+      message:
+        '모서리는 radius 토큰(rounded-radius-sm/md/lg)을 쓰세요. 임의값은 라운드 위계를 화면마다 다르게 만듭니다. 근거: 5_component_spec_rules.md §1.1',
+    }),
+  ),
+
+  // 임의 hex/rgb 색 클래스 — 팔레트 토큰을 우회하는 마지막 통로. 외부 브랜드 식별색처럼
+  // 정당한 예외는 근거 주석과 함께 eslint-disable로 지나간다(현재 링크드인 1곳).
+  ...classStringSelectors(
+    '(^|\\s)(bg|text|border|ring|fill|stroke|from|to|via|outline|decoration|accent|caret|divide|shadow)-\\[(#|rgb)',
+  ).map((selector) => ({
+    selector,
+    message:
+      '임의 색상값 대신 프리셋 토큰(brand/gray/신호색/summary)을 쓰세요. 외부 브랜드 식별색 등 정당한 예외는 근거 주석과 함께 eslint-disable로 표시합니다. 근거: 4_color_system_rules.md',
   })),
 
   // 카드 셸 손수 제작 — 밀도 맥락(card)을 내려주지 못한다.

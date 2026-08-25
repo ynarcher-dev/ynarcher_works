@@ -2,15 +2,20 @@ import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recha
 import { CHART_COLORS, CHART_TEXT } from '@/features/startup/StartupMetricChart'
 import type { Shareholder } from '@/features/startup/startupShareholders'
 
-/** 도넛 슬라이스 색 순서: 브랜드 레드 → 웜그레이 단계별(현 UI 톤). 초과분은 순환. */
+/**
+ * 도넛 슬라이스 색 순서: 브랜드 인디고 → 쿨 슬레이트 명암 교차. 초과분은 순환.
+ * 값은 전부 프리셋 gray 램프에서 온다 — 구 순중립 회색(#525252 계열)은 쿨 슬레이트 전환(2026-08)
+ * 이전 톤이라 걷어냈다(2026-08-25). 5번째부터 명암을 교차시키는 이유는 램프 이웃 단계끼리
+ * 붙으면 인접 슬라이스가 한 덩어리로 읽히기 때문이다.
+ */
 const SLICE_COLORS = [
   CHART_COLORS.brand,
   CHART_COLORS.gray5,
   CHART_COLORS.gray4,
   CHART_COLORS.gray3,
-  '#525252',
-  '#8A8A8A',
-  '#C4C4C4',
+  '#39404B', // gray.700
+  '#DFE2E7', // gray.200
+  '#2B313A', // gray.800
 ]
 
 interface Slice {
@@ -33,7 +38,7 @@ function toSlices(shareholders: Shareholder[]): Slice[] {
 
 /**
  * 주주 구성 도넛 차트. 슬라이스 바깥에 "이름 지분율%" 라벨 + 하단 범례.
- * 현 UI 톤(브랜드 레드 + 웜그레이)에 맞춘 얇은 도넛 스타일.
+ * 현 UI 톤(브랜드 인디고 + 쿨 슬레이트)에 맞춘 얇은 도넛 스타일.
  */
 export function StartupShareholderChart({ shareholders }: { shareholders: Shareholder[] }) {
   const slices = toSlices(shareholders)

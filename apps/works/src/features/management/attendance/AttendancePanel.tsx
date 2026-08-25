@@ -202,7 +202,7 @@ export function AttendancePanel() {
                   type="button"
                   aria-pressed={tile.selected}
                   onClick={tile.onClick}
-                  className="block min-w-0 rounded-[14px] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+                  className="block min-w-0 rounded-radius-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
                 >
                   <SummaryTile
                     title={tile.label}

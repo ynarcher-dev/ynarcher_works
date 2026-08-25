@@ -117,7 +117,7 @@ export function ProgramPipeline({
                 }
               } : undefined}
               className={cn(
-                'rounded-[14px] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10',
+                'rounded-radius-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10',
                 canFilter && 'cursor-pointer transition-transform duration-fast hover:-translate-y-0.5',
                 selected && 'ring-2 ring-brand',
               )}

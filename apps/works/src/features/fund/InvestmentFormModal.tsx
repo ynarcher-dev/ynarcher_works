@@ -631,17 +631,17 @@ function Combobox({
         rect &&
         createPortal(
           <div
-            // fixed 로 뷰포트 기준 배치 → 모달 overflow 에 잘리지 않는다. 모달보다 위(z 큰 값).
+            // fixed 로 뷰포트 기준 배치 → 모달 overflow 에 잘리지 않는다. 위치만 인라인이고
+            // 층은 z 토큰이 답한다(모달 위 포털 팝오버 = z-popover, 8_z_index §3.1).
             style={{
               position: 'fixed',
               top: rect.bottom + 4,
               left: rect.left,
               width: rect.width,
-              zIndex: 9999,
             }}
             // 항목 클릭이 blur 보다 먼저 나가 목록이 사라지는 것을 막는다(포커스 유지).
             onMouseDown={(e) => e.preventDefault()}
-            className="rounded-radius-md border border-gray-300 bg-white shadow-popover"
+            className="z-popover rounded-radius-md border border-gray-300 bg-white shadow-popover"
           >
             {renderList(() => setOpen(false))}
           </div>,

@@ -531,7 +531,7 @@ export function DataTable<T>({
           // 면을 걷어냈으므로 머리글 고정 셀도 흰색을 깐다 — gray-50을 남기면 그 열만 회색으로
           // 뜬다.
           isHeader ? 'z-20 bg-white' : 'z-10 bg-white group-hover:bg-gray-25',
-          isLast && 'shadow-[10px_0_14px_-4px_rgba(17,24,39,0.16)]',
+          isLast && 'shadow-pinned',
         )
       : ''
   const colSpan =

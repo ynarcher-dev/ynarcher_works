@@ -119,13 +119,13 @@ export function SummaryTile({
   const colors = toneClass[tone]
   const primary = tone === 'primary'
   return (
-    <section className={cn('relative overflow-hidden rounded-[14px]', compact ? 'p-3' : 'p-4', colors.surface, className)}>
+    <section className={cn('relative overflow-hidden rounded-radius-lg', compact ? 'p-3' : 'p-4', colors.surface, className)}>
       <div className="relative flex items-start justify-between gap-3">
         <div>
           {eyebrow && <p className={cn('text-caption font-medium tracking-wide', primary ? 'text-white/70' : 'text-gray-600')}>{eyebrow}</p>}
           <h3 className={cn(eyebrow && 'mt-0.5', 'text-body-lg font-bold', primary ? 'text-white' : 'text-gray-900')}>{title}</h3>
         </div>
-        <span className={cn('flex shrink-0 items-center justify-center rounded-[10px]', compact ? 'size-8' : 'size-9', colors.icon)}>
+        <span className={cn('flex shrink-0 items-center justify-center rounded-radius-md', compact ? 'size-8' : 'size-9', colors.icon)}>
           {icon}
         </span>
       </div>

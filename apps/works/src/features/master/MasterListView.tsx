@@ -161,6 +161,9 @@ export function MasterListView({
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
+              // 링크드인 공식 브랜드색. 외부 서비스 식별색은 팔레트 밖 예외다 — 회색으로 누르면
+              // "링크드인으로 나간다"는 정보 자체가 사라진다. 이 아이콘 외의 자리에 쓰지 않는다.
+              // eslint-disable-next-line no-restricted-syntax
               className="inline-flex text-[#0A66C2] hover:opacity-80"
               title="링크드인 프로필 열기"
               aria-label="링크드인 프로필 열기"

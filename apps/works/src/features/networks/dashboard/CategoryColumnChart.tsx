@@ -4,7 +4,7 @@ import type { CategoryDatum } from '@/features/networks/dashboard/CategoryBarLis
 /**
  * 세로 막대(컬럼) 차트 — 대시보드 공용(NETWORKS·STARTUP 공통). 범주를 가로로 나란히 세워
  * 카드 안에서 세로 스크롤 없이 한눈에 보인다. 값은 막대 위, 라벨은 막대 아래(말줄임)에 두고,
- * 색은 범주별 팔레트 순환(0번=브랜드 레드), 기타·미지정은 무채색으로 마감한다.
+ * 색은 범주별 팔레트 순환(0번=브랜드 인디고), 기타·미지정은 무채색으로 마감한다.
  * `limit` 지정 시 상위 N개만, `minColWidth` 지정 시 각 열 최소폭을 강제해(모달) 넘치면 가로 스크롤한다.
  */
 export function CategoryColumnChart({
@@ -27,7 +27,7 @@ export function CategoryColumnChart({
       {cols.map((d, i) => {
         // 최댓값 막대도 꼭대기 숫자 공간이 남도록 82%까지만 채운다.
         const hPct = Math.max(8, Math.round((d.count / max) * 82))
-        // 범주별 다채로운 색(0번=브랜드 레드 순환). 기타·미지정은 무채색(공용 규칙).
+        // 범주별 다채로운 색(0번=브랜드 인디고 순환). 기타·미지정은 무채색(공용 규칙).
         const fill = categoricalFill(d.label, i)
         return (
           <div
@@ -38,7 +38,7 @@ export function CategoryColumnChart({
             <div className="flex w-full min-h-0 flex-1 items-end justify-center">
               {/* 값 라벨을 막대 꼭대기 바로 위에 얹어(absolute), 막대 높이를 따라 함께 오르내린다. */}
               <div
-                className="relative w-full max-w-[1.1rem] rounded-t-[3px] transition-all"
+                className="relative w-full max-w-[1.1rem] rounded-t-radius-sm transition-all"
                 style={{ height: `${hPct}%`, backgroundColor: fill }}
               >
                 <span className="absolute bottom-full left-1/2 mb-1 -translate-x-1/2 whitespace-nowrap text-caption font-semibold leading-none tabular-nums text-gray-900">
