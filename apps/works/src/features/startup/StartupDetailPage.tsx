@@ -275,12 +275,14 @@ export function StartupDetailPage() {
             ))}
           </div>
 
-          {/* 우측(1/3): 자료 관리 → 회의록 → 피드백 → 변동 이력 → 기업 비교(좌우 비교 카드) */}
+          {/* 우측(1/3): 자료 관리 → 관련 회의록 → 변동 이력 → 코멘트 → 기업 비교(좌우 비교 카드).
+              공용 순서에서 전자결재만 빠진다 — 스타트업은 결재를 올리는 단위가 아니라 사업이
+              결재를 올리는 대상이라, 여기에 빈 결재 상자를 두면 없는 흐름을 있는 것처럼 보인다. */}
           <div className="space-y-4 lg:col-span-1">
             <MaterialPanel targetType={RESOURCE_TYPE} targetId={record.id} readOnly />
             <RelatedMinutesPanel targetType="startup" targetId={record.id} />
-            <FeedbackPanel targetType={RESOURCE_TYPE} targetId={record.id} />
             <ChangeHistoryPanel contributions={contributions} />
+            <FeedbackPanel targetType={RESOURCE_TYPE} targetId={record.id} />
             {/* 벤치마크: 동종기업 대비 지표 좌우 비교 카드 */}
             <SectionHeading title="벤치마크" />
             <StartupComparePanel record={record} />

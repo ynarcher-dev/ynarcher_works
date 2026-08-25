@@ -1,10 +1,12 @@
 import { Select, TokenMultiSelect } from '@ynarcher/ui'
 import { useMemo, useState } from 'react'
 import {
+  DEFAULT_MINUTE_LINK_PICK_KIND,
+  MINUTE_LINK_PICK_KINDS,
   MINUTE_LINK_TARGETS,
-  MINUTE_LINK_TARGET_TYPES,
+  minuteLinkPickKind,
   type MinuteLink,
-  type MinuteLinkTargetType,
+  type MinuteLinkPickKind,
 } from '@/features/office/minutes/minuteLinks'
 import { useMinuteLinkPool } from '@/features/office/minutes/minuteLinkSearch'
 
@@ -18,14 +20,16 @@ interface Props {
 const linkKey = (l: { targetType: string; targetId: string }) => `${l.targetType}:${l.targetId}`
 
 /**
- * 회의록 연동 대상 선택기. 좌측 드롭다운으로 종류(AC/M&A/PROJECT/STARTUP)를 고르고,
+ * 회의록 연동 대상 선택기. 좌측 드롭다운으로 종류(AC/M&A/PROJECT/STARTUP/FUND/네트워크)를 고르고,
  * 우측 필드에서 검색해 태그로 추가한다 — 내부 참석자 피커(TokenMultiSelect)와 동일한 UX:
  * 선택 항목이 필드 안 인라인 칩으로 남고, 후보 드롭다운은 검색어를 입력할 때만 열린다.
  * 후보 풀은 종류별 접근 가능 원장(useMinuteLinkPool)이며, 저장 시 set_minute_links RPC가
  * 서버측에서 접근 권한을 재검증한다. 아무것도 고르지 않으면 일반 회의록이 된다.
+ * '네트워크'는 원장 10종을 한 항목으로 묶는다 — 태그에 붙는 종류 라벨은 고른 항목이 실제로
+ * 어느 원장 사람인지(전문가·투자사…)를 그대로 보여준다.
  */
 export function MinuteLinkPicker({ value, onChange }: Props) {
-  const [kind, setKind] = useState<MinuteLinkTargetType>('program')
+  const [kind, setKind] = useState<MinuteLinkPickKind>(DEFAULT_MINUTE_LINK_PICK_KIND)
   const { data: pool } = useMinuteLinkPool(kind)
 
   // 현재 종류의 후보를 TokenMultiSelect 옵션(MinuteLink)으로 변환한다.
@@ -43,20 +47,20 @@ export function MinuteLinkPicker({ value, onChange }: Props) {
   return (
     <div className="space-y-1.5">
       <p className="text-caption text-gray-500">
-        연동 콘텐츠 선택 / 검색 (선택) — 관련 사업·스타트업을 연결하면 상호 참조됩니다. 비워 두면 일반
-        회의록입니다.
+        연동 콘텐츠 선택 / 검색 (선택) — 관련 사업·스타트업·네트워크를 연결하면 상호 참조됩니다. 비워
+        두면 일반 회의록입니다.
       </p>
       <div className="flex items-start gap-2">
         {/* 종류 선택 드롭다운 */}
         <div className="w-32 shrink-0">
           <Select
-            value={kind}
-            onChange={(e) => setKind(e.target.value as MinuteLinkTargetType)}
+            value={kind.key}
+            onChange={(e) => setKind(minuteLinkPickKind(e.target.value))}
             aria-label="연동 콘텐츠 종류"
           >
-            {MINUTE_LINK_TARGET_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {MINUTE_LINK_TARGETS[t].kindLabel}
+            {MINUTE_LINK_PICK_KINDS.map((k) => (
+              <option key={k.key} value={k.key}>
+                {k.label}
               </option>
             ))}
           </Select>
@@ -74,7 +78,7 @@ export function MinuteLinkPicker({ value, onChange }: Props) {
             }
             getMeta={(l) => l.code ?? undefined}
             getSearchText={(l) => `${l.label ?? ''} ${l.code ?? ''}`}
-            placeholder={`${MINUTE_LINK_TARGETS[kind].kindLabel} 검색 후 선택`}
+            placeholder={`${kind.label} 검색 후 선택`}
           />
         </div>
       </div>

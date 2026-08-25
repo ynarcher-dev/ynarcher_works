@@ -9,6 +9,8 @@ import { ChangeHistoryPanel, uniqueContributors } from '@/features/networks/Chan
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { AffiliationHistoryPanel } from '@/features/networks/AffiliationHistoryPanel'
+import { RelatedMinutesPanel } from '@/features/office/minutes/RelatedMinutesPanel'
+import type { MinuteLinkTargetType } from '@/features/office/minutes/minuteLinks'
 import {
   ENTITIES,
   isCompactEntity,
@@ -50,12 +52,11 @@ function formatDate(v: unknown): string {
 
 /**
  * 네트워크 통합 상세 뷰(읽기 전용 카드). 8종 전체 공용.
- * 축약(compact) 유형(조직 5종 + 미분류)은 매칭 배지·전문영역·멘토링 만족도 섹션을 숨긴다.
+ * 축약(compact) 유형(조직 5종 + 미분류)은 매칭 배지·전문영역 섹션을 숨긴다.
  */
 function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow }) {
   const label = ENTITIES[entity].label
   const compact = isCompactEntity(entity)
-  const showMentoring = !compact
   const resourceType = PROFILE_RESOURCE_TYPE[entity] ?? entity
   // 민감정보 정책 콘텐츠 키 — 목록(DirectoryTab)과 같은 키를 써야 목록·상세가 함께 움직인다.
   const contentKey = `networks.${entity}`
@@ -80,7 +81,7 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-      {/* 좌측(2/3): 프로필 본문 — 이력·노트·멘토링 만족도·매칭 안내. */}
+      {/* 좌측(2/3): 프로필 본문 — 기본 정보·이력·노트. */}
       <div className="space-y-4 lg:col-span-2">
       <CardShell>
         <div className="flex items-center gap-5">
@@ -176,29 +177,20 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
           <p className="text-body text-gray-600">등록된 노트 내용이 없습니다.</p>
         )}
       </SectionCard>
-
-      {showMentoring && (
-        <SectionCard title="멘토링 만족도">
-          {/* 만족도 집계(mentor_satisfaction_records) 연동 전이라 값을 비워 둔다 —
-              예시 별점(5.0)을 띄우면 실제 평가와 구분되지 않는다. */}
-          <p className="text-body text-gray-600">집계된 멘토링 만족도 평가가 아직 없습니다.</p>
-        </SectionCard>
-      )}
-
-      {!compact && (
-        <Banner tone="info">
-          스타트업 자문 매칭 히스토리 — 자문 일자·대상 스타트업·담당 심사역·피드백 이력 연동은
-          프로젝트/스타트업 도메인(Phase 4) 개발 시 연결됩니다.
-          <span className="ml-1">(현재 매칭 상태: {matchOk ? '가능' : '불가능'})</span>
-        </Banner>
-      )}
       </div>
 
-      {/* 우측(1/3): 자료 관리 → 변동 이력 → 피드백. 8종 전체 공용 패널. */}
+      {/* 우측(1/3): 자료 관리 → 관련 회의록 → 변동 이력 → 코멘트. 8종 전체 공용 패널.
+          공용 순서에서 전자결재는 빠진다 — 네트워크 인물은 결재를 올리는 단위가 아니다.
+          회의록은 반대로 넣는다: 이들은 회의의 참석자가 되는 쪽이라, 사람 상세에서
+          "이 사람이 낀 회의"를 되짚는 일이 잦다(연동 키는 자료·코멘트와 같은 값). */}
       <div className="space-y-4 lg:col-span-1">
         <MaterialPanel targetType={resourceType} targetId={record.id as string} readOnly />
-        <FeedbackPanel targetType={resourceType} targetId={record.id as string} />
+        <RelatedMinutesPanel
+          targetType={resourceType as MinuteLinkTargetType}
+          targetId={record.id as string}
+        />
         <ChangeHistoryPanel contributions={contributions} />
+        <FeedbackPanel targetType={resourceType} targetId={record.id as string} />
       </div>
     </div>
   )

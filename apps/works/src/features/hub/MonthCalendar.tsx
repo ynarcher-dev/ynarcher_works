@@ -62,7 +62,6 @@ function buildWeeks(month: Dayjs): Dayjs[][] {
  * 전사 통합 캘린더(시스템 레이어 + 사용자 업무/휴가). 상하 배치 — 위는 월간 그리드(이벤트는
  * 레이어색 바로 표시), 아래는 선택한 날짜의 일정(업무/휴가/기타). 등록은 모달로 연다.
  * 좁은 우측 슬라이드오버에 담기므로 좌우 분할 대신 세로로 쌓는다.
- * 격자·상세 박스의 생김새는 사업 상세의 '통합 타임라인'(ProgramScheduleCard)을 기준으로 맞춘다.
  */
 export function MonthCalendar({ events }: { events: SystemEvent[] }) {
   const user = useAuthStore((s) => s.user)
@@ -122,7 +121,7 @@ export function MonthCalendar({ events }: { events: SystemEvent[] }) {
         </Button>
       </div>
 
-      {/* 그리드 — 통합 타임라인과 동일하게 칸을 띄운 라운드 셀로 그리고, 일정은 색 바로만 표시한다
+      {/* 그리드 — 칸을 띄운 라운드 셀로 그리고, 일정은 색 바로만 표시한다
           (제목은 아래 상세에서 본다). 표 테두리·카드 겹을 두지 않아 좁은 슬라이드오버에서도 가볍다. */}
       <div className="grid shrink-0 grid-cols-7 gap-1">
         {WEEKDAYS.map((w, i) => (
@@ -178,8 +177,7 @@ export function MonthCalendar({ events }: { events: SystemEvent[] }) {
         })}
       </div>
 
-      {/* 선택한 날짜의 일정(아래) — 업무/휴가/기타로 묶어 표시 + 등록 진입.
-          통합 타임라인의 선택일 상세와 같은 회색 박스 톤을 쓴다. */}
+      {/* 선택한 날짜의 일정(아래) — 업무/휴가/기타로 묶어 표시 + 등록 진입. */}
       <section className="flex min-h-0 flex-1 flex-col rounded-radius-sm border border-gray-200 bg-gray-25 px-3 py-2.5">
         <div className="mb-2 flex shrink-0 items-center justify-between">
           <CardHeading level="subhead" as="p" count={selectedEvents.length}>

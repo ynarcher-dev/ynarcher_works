@@ -276,14 +276,14 @@ export function FundDetailPage() {
           </div>
         </div>
 
-        {/* 우측(1/3): AC 상세와 동일한 공용 패널 — 전자결재·관련회의록·자료관리·코멘트·변동이력 */}
+        {/* 우측(1/3): AC 상세와 동일한 공용 패널 — 자료 관리 → 전자결재 → 관련 회의록 → 변동 이력 → 코멘트 */}
         <div className="space-y-4 lg:col-span-1">
-          <RelatedApprovalPanel />
-          <RelatedMinutesPanel targetType="fund" targetId={fund.id} />
           {/* 자료 업로드는 편집 페이지에서 — 상세는 읽기 전용 뷰. */}
           <MaterialPanel targetType="fund" targetId={fund.id} readOnly />
-          <FeedbackPanel targetType="fund" targetId={fund.id} />
+          <RelatedApprovalPanel />
+          <RelatedMinutesPanel targetType="fund" targetId={fund.id} />
           <ChangeHistoryPanel contributions={contributions} />
+          <FeedbackPanel targetType="fund" targetId={fund.id} />
         </div>
       </div>
 

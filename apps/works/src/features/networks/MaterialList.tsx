@@ -28,6 +28,7 @@ export function MaterialList({
   deletingId,
   emptyText = '등록된 자료가 없습니다.',
   pageSize,
+  showDescription = false,
 }: {
   materials: Material[]
   loading?: boolean
@@ -40,6 +41,11 @@ export function MaterialList({
   emptyText?: string
   /** 한 쪽에 보일 건수(기본 5 — usePaged 기본값). */
   pageSize?: number
+  /**
+   * 설명 줄을 함께 보일지 여부. 기본은 숨김 — 상세 우측 자료 관리 패널은 곁다리 자리라
+   * 한 건이 한 줄을 넘기면 본문이 밀린다. 설명을 붙이고 고치는 자리(파일첨부 모듈)에서만 켠다.
+   */
+  showDescription?: boolean
 }) {
   const { pageItems, page, setPage, pageCount } = usePaged(materials, pageSize)
   // 간이 뷰어 모달 대상(목록당 하나만 연다). pdf/이미지/동영상/텍스트를 종류별로 렌더한다.
@@ -67,6 +73,7 @@ export function MaterialList({
             onEdit={onEdit ? () => onEdit(m) : undefined}
             onDelete={onDelete ? () => onDelete(m.id) : undefined}
             deleting={deletingId === m.id}
+            showDescription={showDescription}
           />
         ))}
       </ul>
@@ -77,7 +84,7 @@ export function MaterialList({
 }
 
 /**
- * 자료 1건 행: 표시명·설명·파일명·용량 + (오디오면)재생 · (미리보기 지원 종류면)미리보기
+ * 자료 1건 행: 표시명·(선택)설명·파일명·용량 + (오디오면)재생 · (미리보기 지원 종류면)미리보기
  * + 다운로드/수정/삭제. 미리보기는 pdf·이미지·동영상·텍스트를 지원한다(그 외는 다운로드만).
  * `onDelete`·`onEdit`·`onPreview` 미지정 시 해당 버튼을 숨긴다.
  *
@@ -90,12 +97,15 @@ export function MaterialRow({
   onEdit,
   onDelete,
   deleting,
+  showDescription = false,
 }: {
   material: Material
   onPreview?: () => void
   onEdit?: () => void
   onDelete?: () => void
   deleting: boolean
+  /** 설명 줄 노출 여부(기본 숨김 — MaterialList 주석 참조). */
+  showDescription?: boolean
 }) {
   const [downloading, setDownloading] = useState(false)
   const audio = isAudioMaterial(material)
@@ -131,7 +141,7 @@ export function MaterialRow({
           <span className={`block truncate ${tableText.primary}`}>
             {materialDisplayName(material)}
           </span>
-          {material.description && (
+          {showDescription && material.description && (
             <span className={`block truncate ${tableText.meta}`}>{material.description}</span>
           )}
           {material.label?.trim() && (

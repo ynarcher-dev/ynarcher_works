@@ -212,13 +212,14 @@ export function EmployeeDetailPage({
             <EmployeeActivitySection userId={emp.id} />
           </div>
 
-          {/* 우측(1/3): 자료 관리 · 피드백 · 변동 이력(공용 패널 재사용). */}
+          {/* 우측(1/3): 자료 관리 → 변동 이력 → 코멘트(공용 패널 재사용).
+              전자결재·회의록은 임직원 개인에 붙는 축이 아니라 여기서는 뺀다. */}
           <div className="space-y-4 lg:col-span-1">
             {/* 조회 전용 진입(OFFICE 임직원 정보)에서는 자료도 목록·다운로드만 — 원장 쓰기는 MANAGEMENT 소관. */}
             <MaterialPanel targetType="employee" targetId={emp.id} readOnly={readOnly} />
-            <FeedbackPanel targetType="employee" targetId={emp.id} />
             {/* 변동 이력: 임직원용 이력 소스 연결 전이라 빈 상태로 골격만 노출한다. */}
             <ChangeHistoryPanel contributions={undefined} />
+            <FeedbackPanel targetType="employee" targetId={emp.id} />
           </div>
         </div>
       )}

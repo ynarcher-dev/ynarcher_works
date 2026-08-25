@@ -15,16 +15,15 @@ const APPROVAL_BOXES: { key: string; label: string; icon: LucideIcon }[] = [
 ]
 
 /**
- * 결재함별 건수. 원장이 아직 없어 **화면 확인용 더미**다 — 건수 조회 훅이 붙으면 통째로
- * 교체된다. '대기'에만 값을 넣어 둔 이유는 건이 있는 줄과 없는 줄이 나란히 섰을 때 어떻게
- * 갈리는지 보기 위함이다.
+ * 결재함별 건수. 원장이 아직 없으므로 **전부 0건**이다 — 없는 건수를 지어내면 화면이 거짓을
+ * 말하게 되므로 비워 둔다. 건수 조회 훅이 붙으면 이 상수가 통째로 교체된다.
  */
-const DUMMY_COUNTS: Record<string, number> = { pending: 3 }
+const APPROVAL_COUNTS: Record<string, number> = {}
 
 /**
  * 전자결재 위젯 — 결재함별 건수를 세로로 세워 둔 자리.
  *
- * 결재 원장·화면은 아직 없다. **지금은 배치만 잡아 둔 껍데기**이며, 건수는 더미이고 눌러도
+ * 결재 원장·화면은 아직 없다. **지금은 배치만 잡아 둔 껍데기**이며, 모든 줄이 0건이고 눌러도
  * 아무 일이 없다. 원장이 생기면 이 파일에서 바뀌는 것은 두 가지뿐이다 — 건수 조회 훅을
  * 붙이는 것과 각 줄에 이동 경로를 다는 것.
  *
@@ -33,7 +32,7 @@ const DUMMY_COUNTS: Record<string, number> = { pending: 3 }
  */
 export function ApprovalCard() {
   // 제목 옆 건수는 네 함의 합이다 — 카드를 펼치지 않고도 지금 처리할 것이 몇 건인지 알린다.
-  const total = APPROVAL_BOXES.reduce((sum, { key }) => sum + (DUMMY_COUNTS[key] ?? 0), 0)
+  const total = APPROVAL_BOXES.reduce((sum, { key }) => sum + (APPROVAL_COUNTS[key] ?? 0), 0)
   return (
     <Card
       title="전자결재"
@@ -43,7 +42,7 @@ export function ApprovalCard() {
     >
       <div className="space-y-2">
         {APPROVAL_BOXES.map(({ key, label, icon: Icon }) => {
-          const count = DUMMY_COUNTS[key] ?? 0
+          const count = APPROVAL_COUNTS[key] ?? 0
           return (
             <DashboardRowButton
               key={key}

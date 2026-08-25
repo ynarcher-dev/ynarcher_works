@@ -83,32 +83,6 @@ export function useUpdateModuleStatus(programId: string) {
   })
 }
 
-export interface TimelineItem {
-  id: string
-  title: string
-  item_type: string | null
-  starts_at: string | null
-  ends_at: string | null
-  program_module_id: string | null
-}
-
-/** 프로그램 통합 타임라인 아이템(모든 모듈 세션의 정규화 인덱스). */
-export function useTimelineItems(programId: string | undefined) {
-  const config = useProgramWorkspace()
-  return useQuery({
-    queryKey: [config.key, 'timeline', programId],
-    enabled: Boolean(programId),
-    queryFn: async (): Promise<TimelineItem[]> => {
-      const { data } = await supabase
-        .from(config.tables.timeline)
-        .select('id, title, item_type, starts_at, ends_at, program_module_id')
-        .eq('program_id', programId)
-        .order('starts_at', { ascending: true })
-      return (data ?? []) as TimelineItem[]
-    },
-  })
-}
-
 export interface PoolMember {
   id: string
   role: string

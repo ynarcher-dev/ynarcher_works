@@ -79,6 +79,7 @@ export function ModuleFileModal({
           {upload.isError && (
             <p className="text-caption text-danger">업로드에 실패했습니다. 다시 시도해 주세요.</p>
           )}
+          {/* 설명은 여기서 붙이고 고치는 값이라 이 목록에서만 펼쳐 보인다(상세 우측 자료 관리 패널은 숨김). */}
           <MaterialList
             materials={materials}
             loading={isLoading}
@@ -87,6 +88,7 @@ export function ModuleFileModal({
             deletingId={remove.isPending ? remove.variables : undefined}
             emptyText="등록된 파일이 없습니다. 위 영역에 파일을 끌어다 놓거나 업로드를 누르세요."
             pageSize={8}
+            showDescription
           />
           <p className="text-caption text-gray-600">
             여기에 올린 파일은 이 사업의 자료 관리에도 함께 표시됩니다.

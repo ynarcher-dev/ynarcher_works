@@ -8,6 +8,7 @@ import { ChangeHistoryPanel, uniqueContributors } from '@/features/networks/Chan
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { AffiliationHistoryPanel } from '@/features/networks/AffiliationHistoryPanel'
+import { RelatedMinutesPanel } from '@/features/office/minutes/RelatedMinutesPanel'
 import { SensitiveValue } from '@/features/master/SensitiveValue'
 import { type GlobalRow } from '@/features/networks/globalConfig'
 import { useDeactivateGlobal, useGlobalContributions, useGlobalEntity } from '@/features/networks/globalHooks'
@@ -147,11 +148,12 @@ function GlobalView({ record }: { record: GlobalRow }) {
       </PanelCard>
       </div>
 
-      {/* 우측(1/3): 자료 관리 → 변동 이력 → 피드백. 국내 상세와 공용 패널. */}
+      {/* 우측(1/3): 자료 관리 → 관련 회의록 → 변동 이력 → 코멘트. 국내 상세와 공용 패널. */}
       <div className="space-y-4 lg:col-span-1">
         <MaterialPanel targetType="global_network" targetId={record.id} readOnly />
-        <FeedbackPanel targetType="global_network" targetId={record.id} />
+        <RelatedMinutesPanel targetType="global_network" targetId={record.id} />
         <ChangeHistoryPanel contributions={contributions} />
+        <FeedbackPanel targetType="global_network" targetId={record.id} />
       </div>
     </div>
   )
