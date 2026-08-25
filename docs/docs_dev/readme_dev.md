@@ -20,10 +20,14 @@
 | **개발 규칙 및 컨벤션** | _(작성 예정)_ | 코딩 표준 규칙, 폴더링 및 파일당 제한 규정 가이드 | **대기 중** |
 | **배포 및 CI/CD 가이드** | [10_deployment_cicd_guide.md](./10_deployment_cicd_guide.md) | S3/CloudFront 정적 호스팅, SPA 폴백, GitHub Actions CI/CD, 롤백·알림 채널 | **작성 완료** |
 | **Supabase 마이그레이션 보안 게이트** | [11_migration_security_gate.md](./11_migration_security_gate.md) | 신규 테이블/RLS/RPC/Storage/SECURITY DEFINER 변경 시 반드시 통과할 보안 체크리스트 | **작성 완료** |
+| **데이터베이스 베이스라인 운영 가이드** | [12_database_baseline_operations.md](./12_database_baseline_operations.md) | 베이스라인 생성·검증·갱신 주기와 신규 환경 전환 절차 | **작성 완료** |
 
 ---
 
 ## ✍️ 히스토리 및 진행 예정 사항
+
+### 2026-08-25
+* **데이터베이스 베이스라인 운영 도입**: 전체 이력 재생 결과를 스키마 스냅샷으로 만들고 cutoff 이하 이력의 불변성을 SHA-256으로 검사하는 명령과 운영 가이드를 추가함.
 
 ### 2026-07-08
 * **Supabase 마이그레이션 보안 게이트 추가**: Claude/Codex/사람이 작성하는 모든 마이그레이션에 대해 RLS, 권한 Scope, 감사 로그, Storage, `SECURITY DEFINER` 함수 기준을 사전 점검하도록 [11_migration_security_gate.md](./11_migration_security_gate.md)를 추가함.

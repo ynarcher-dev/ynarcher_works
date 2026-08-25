@@ -21,6 +21,9 @@
     "db:reset": "supabase db reset",
     "db:diff": "supabase db diff",
     "db:migration": "supabase migration new",
+    "db:baseline:refresh": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/refresh-db-baseline.ps1",
+    "db:baseline:check": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-db-baseline.ps1",
+    "db:baseline:verify": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-db-baseline.ps1 -Full",
     "functions:serve": "supabase functions serve"
   },
   "devDependencies": {

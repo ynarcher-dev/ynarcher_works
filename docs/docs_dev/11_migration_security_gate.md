@@ -77,6 +77,10 @@ SECURITY DEFINER 함수는 search_path를 고정하고 함수 내부 권한 검�
 * **Service Role 최소화**: 일반 조회나 사용자 요청 처리에 `service_role` 의존이 없는가?
 * **테스트 갱신**: 새 테이블이나 새 위험 경계가 생겼다면 `supabase/tests/rls_regression_test.sql` 또는 동등 테스트가 갱신되었는가?
 
+추가로 베이스라인 cutoff 이하의 기존 마이그레이션을 수정하지 않았는지
+`pnpm db:baseline:check`로 확인합니다. 베이스라인 생성·갱신과 신규 환경 적용은
+[12_database_baseline_operations.md](./12_database_baseline_operations.md)를 따릅니다.
+
 ---
 
 ## 6. 관련 정본 문서
