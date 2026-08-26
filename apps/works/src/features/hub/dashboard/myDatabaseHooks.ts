@@ -38,12 +38,9 @@ export type LedgerKey = 'startup' | 'domestic' | 'global'
  */
 export const LEDGERS: { key: LedgerKey; label: string; workspace: WorkspaceKey; path: string }[] = [
   { key: 'startup', label: '스타트업 DB', workspace: 'startup', path: '/startup?tab=mine' },
-  { key: 'domestic', label: '네트워크 (국내)', workspace: 'networks', path: '/networks?tab=mine' },
-  { key: 'global', label: '네트워크 (글로벌)', workspace: 'networks', path: `/networks?tab=${GLOBAL_MINE_TAB}` },
+  { key: 'domestic', label: '국내 네트워크', workspace: 'networks', path: '/networks?tab=mine' },
+  { key: 'global', label: '글로벌 네트워크', workspace: 'networks', path: `/networks?tab=${GLOBAL_MINE_TAB}` },
 ]
-
-/** 미분류(분류 전 임시 저장소) 목록 경로 — 카드 하단 정리 안내가 여는 곳. */
-export const UNCLASSIFIED_PATH = '/networks?tab=others'
 
 /** 이번 달 1일 0시(로컬) ISO — '이번 달 등록'의 하한. */
 function startOfMonthISO(): string {
@@ -142,15 +139,6 @@ const FETCHERS: Record<LedgerKey, (userId: string, since: string) => Promise<Led
   global: fetchGlobalStat,
 }
 
-export interface MyDatabaseStats {
-  ledgers: LedgerStat[]
-  /**
-   * 내가 올린 미분류 잔량 — 분류 전 임시 저장소(`others`)에 남아 제 원장으로 못 간 것들.
-   * NETWORKS를 볼 수 없으면 null이며, 그때 카드는 그 줄을 아예 세우지 않는다(0과 다르다).
-   */
-  unclassified: number | null
-}
-
 /**
  * 내가 쌓은 데이터 현황 — 볼 수 있는 원장만 센다.
  *
@@ -163,20 +151,14 @@ export function useMyDatabaseStats(userId: string | undefined, keys: LedgerKey[]
     queryKey: ['office', 'dashboard', 'my-database', userId, scope],
     enabled: Boolean(userId) && keys.length > 0,
     staleTime: 60_000,
-    queryFn: async (): Promise<MyDatabaseStats> => {
+    queryFn: async (): Promise<LedgerStat[]> => {
       const since = startOfMonthISO()
-      const [ledgers, unclassified] = await Promise.all([
-        Promise.all(
-          LEDGERS.filter((ledger) => keys.includes(ledger.key)).map(async (ledger) => ({
-            ...ledger,
-            ...(await FETCHERS[ledger.key](userId!, since)),
-          })),
-        ),
-        keys.includes('domestic')
-          ? liveCount('others', `created_by.eq.${userId}`)
-          : Promise.resolve(null),
-      ])
-      return { ledgers, unclassified }
+      return Promise.all(
+        LEDGERS.filter((ledger) => keys.includes(ledger.key)).map(async (ledger) => ({
+          ...ledger,
+          ...(await FETCHERS[ledger.key](userId!, since)),
+        })),
+      )
     },
   })
 }

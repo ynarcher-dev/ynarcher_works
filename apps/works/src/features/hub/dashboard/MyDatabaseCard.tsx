@@ -1,56 +1,51 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight } from 'lucide-react'
-import { Card, DataTable, EmptyState, Skeleton, cardText, type Column } from '@ynarcher/ui'
+import { Globe, Network, Rocket, type LucideIcon } from 'lucide-react'
+import { Card, EmptyState, Skeleton, SummaryTile, type SummaryTileTone } from '@ynarcher/ui'
 import { hasWorkspaceRead, useAuthStore } from '@/auth/authStore'
 import {
   LEDGERS,
-  UNCLASSIFIED_PATH,
   useMyDatabaseStats,
+  type LedgerKey,
   type LedgerStat,
 } from './myDatabaseHooks'
 
 const n = (value: number) => value.toLocaleString('ko-KR')
 
-/** 전사 대비 내 비중. 전사가 0이면 비율 자체가 성립하지 않아 적지 않는다. */
-function share(row: LedgerStat): string | null {
-  if (row.total <= 0) return null
-  return `${Math.round((row.mine / row.total) * 100)}%`
+/**
+ * 타일의 겉모습 — 아이콘·색. 이 표가 아는 것은 **어떻게 보이는가**뿐이고, 무엇을 세는지와
+ * 어디로 가는지는 `LEDGERS`(hooks)가 소유한다.
+ *
+ * 색은 위 「나의 워크스페이스」가 쓰지 않는 넷에서 고른다(blue·purple·mint·amber 회피) —
+ * 나란히 선 두 카드가 같은 색을 쓰면 두 줄이 한 줄의 연장으로 읽힌다. 아이콘은 좌측 내비에서
+ * 그 원장을 가리키는 글리프를 그대로 가져온다(스타트업 Rocket · 글로벌 Globe).
+ */
+const TILE_LOOK: Record<LedgerKey, { eyebrow: string; icon: LucideIcon; tone: SummaryTileTone }> = {
+  startup: { eyebrow: 'STARTUP', icon: Rocket, tone: 'cyan' },
+  domestic: { eyebrow: 'NETWORKS', icon: Network, tone: 'indigo' },
+  global: { eyebrow: 'NETWORKS', icon: Globe, tone: 'orchid' },
 }
 
-const columns: Column<LedgerStat>[] = [
-  { key: 'label', header: '원장', type: 'name', primary: true, render: (row) => row.label },
-  { key: 'mine', header: '내 보유', type: 'count', render: (row) => n(row.mine) },
-  // 늘어난 것만 초록으로 든다. 0을 '0'으로 적으면 성적표처럼 읽히므로 '–'로 비워 둔다 —
-  // 이 열이 답하는 것은 "이번 달에 늘었나"이지 "이번 달에 얼마나 못 했나"가 아니다.
-  {
-    key: 'monthAdded',
-    header: '이번 달',
-    type: 'count',
-    render: (row) =>
-      row.monthAdded > 0 ? <span className="text-success">+{n(row.monthAdded)}</span> : '–',
-  },
-  // 전사 보유와 내 비중을 한 칸에 둔다. 비중은 두 수에서 따라 나오는 값이라 열을 따로 세울
-  // 만큼의 축이 아니고, 같은 칸에 두면 '무엇 중 얼마'가 눈에서 한 번에 이어진다.
-  // 크기는 가르지 않고 색으로만 물린다(한 줄 안에서 크기로 위계를 만들지 않는다).
-  {
-    key: 'total',
-    header: '전사 보유',
-    type: 'money',
-    render: (row) => {
-      const ratio = share(row)
-      return (
-        <>
-          {n(row.total)}
-          {ratio && <span className="text-gray-500"> ({ratio})</span>}
-        </>
-      )
-    },
-  },
-]
+/**
+ * 타일 아래 지표 칩 둘 — '이번 달'과 '전사'.
+ *
+ * 이번 달이 0이면 '0'이 아니라 '–'다. 0으로 적으면 성적표처럼 읽히는데, 이 칩이 답하는 것은
+ * "이번 달에 늘었나"이지 "이번 달에 얼마나 못 했나"가 아니다.
+ *
+ * 전사 칩은 절대 건수와 내 비중을 한 칸에 담는다. 비중은 두 수에서 따라 나오는 값이라 칩을
+ * 하나 더 세울 만한 축이 아니고, 같은 칸에 두면 '무엇 중 얼마'가 눈에서 한 번에 이어진다.
+ * 전사가 0이면 비율이 성립하지 않아 적지 않는다.
+ */
+function tileMetrics(row: LedgerStat) {
+  const ratio = row.total > 0 ? ` (${Math.round((row.mine / row.total) * 100)}%)` : ''
+  return [
+    { label: '이번 달', value: row.monthAdded > 0 ? `+${n(row.monthAdded)}` : '–' },
+    { label: '전사', value: `${n(row.total)}${ratio}` },
+  ]
+}
 
 /**
- * 나의 업로드 DB — 내가 쌓아 놓은 데이터 원장 셋의 보유·증감을 한 카드에 세운다.
+ * 나의 업로드 DB — 내가 쌓아 놓은 데이터 원장 셋의 보유·증감을 타일 석 장에 세운다.
  *
  * 이 자리에는 원래 '참여 중인 운영' 목록이 있었다. 바로 위 「나의 워크스페이스」 타일이 이미
  * "내가 몇 건 맡았나"를 세고 각 워크스페이스의 내 목록으로 보내 주므로, 같은 목록을 아래에
@@ -59,8 +54,10 @@ const columns: Column<LedgerStat>[] = [
  * 그래서 이 카드는 **다른 물음**에 답한다: 내가 쌓아 놓은 데이터가 지금 얼마고, 이번 달에
  * 얼마나 늘었는가. 사업(운영)이 아니라 원장(자산)이 축이라 위 카드와 겹치지 않는다.
  *
- * 표를 쓰는 것은 위가 타일 넉 장이기 때문이다. 타일을 또 세우면 두 카드가 같은 그림이 되고,
- * 표는 한 줄에 축 셋(내 보유·이번 달·전사 대비)을 담으면서 위와 다른 결로 선다.
+ * 표가 아니라 타일인 것은 이 카드가 하는 일이 **훑어보기**이기 때문이다. 줄이 셋뿐이고 각
+ * 줄의 주인공이 큰 수 하나(내 보유)라, 표로 세우면 머리글 넉 줄이 값보다 넓은 자리를 차지한다.
+ * 위 카드와 같은 컴포지션을 쓰는 것은 두 카드가 같은 문법("세고, 눌러서 내 목록으로 간다")을
+ * 갖기 때문이며, 색과 아이콘이 둘을 가른다.
  */
 export function MyDatabaseCard() {
   const navigate = useNavigate()
@@ -74,7 +71,7 @@ export function MyDatabaseCard() {
   )
   const { data, isLoading, isError } = useMyDatabaseStats(userId, keys)
 
-  // 셋 다 못 보는 사람에게는 카드를 세우지 않는다. 빈 표를 남기면 "내 데이터가 0건"으로 읽힌다.
+  // 셋 다 못 보는 사람에게는 카드를 세우지 않는다. 빈 자리를 남기면 "내 데이터가 0건"으로 읽힌다.
   if (keys.length === 0) return null
   if (isLoading) return <Skeleton className="h-52 rounded-radius-lg" />
   if (isError) {
@@ -85,46 +82,32 @@ export function MyDatabaseCard() {
     )
   }
 
-  const unclassified = data?.unclassified ?? null
-
   return (
-    <Card title="나의 업로드 DB" subtitle="내가 등록·기여한 데이터 원장의 보유량과 이번 달 증가분입니다.">
-      {/* 한 화면 분량(원장 셋) 자리를 미리 잡아 둔다 — 권한에 따라 줄 수가 달라져도 좌측 열
-          높이가 출렁이지 않게. 값의 근거: 머리글 36px + 행 36px × 3 = 144px. */}
-      <div className="min-h-[9rem] overflow-hidden">
-        <DataTable
-          columns={columns}
-          rows={data?.ledgers ?? []}
-          rowKey={(row) => row.key}
-          numbered={false}
-          selectable={false}
-          standardColumns={false}
-          emptyText="집계할 원장이 없습니다."
-          // 줄을 누르면 그 원장의 '내 목록'으로 간다 — 건수를 세어 놓고 누를 수 없으면 다음에
-          // 할 일이 사이드바를 다시 찾아가는 일밖에 남지 않는다(위 타일과 같은 규칙).
-          onRowClick={(row) => navigate(row.path)}
-        />
+    <Card title="나의 업로드 DB">
+      {/* 열 수는 위 카드와 다르다(넷 → 셋) — 타일 수가 다른데 격자를 맞추면 마지막 칸이 비고,
+          그 빈칸이 "여기 하나 더 있어야 하는데 없다"로 읽힌다. */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {(data ?? []).map((row) => {
+          const look = TILE_LOOK[row.key]
+          const Icon = look.icon
+          return (
+            <SummaryTile
+              key={row.key}
+              // 타일을 누르면 그 원장의 '내 목록'으로 간다 — 건수를 세어 놓고 누를 수 없으면
+              // 다음에 할 일이 사이드바를 다시 찾아가는 일밖에 남지 않는다(위 카드와 같은 규칙).
+              // 권한 판정은 이미 keys에서 끝났으므로 여기 선 타일은 모두 누를 수 있다.
+              onClick={() => navigate(row.path)}
+              title={row.label}
+              eyebrow={look.eyebrow}
+              value={n(row.mine)}
+              unit="건"
+              tone={look.tone}
+              icon={<Icon aria-hidden className="size-[18px]" strokeWidth={1.8} />}
+              metrics={tileMetrics(row)}
+            />
+          )
+        })}
       </div>
-      {/* 미분류는 카테고리가 아니라 분류 전 임시 저장소라 위 셋과 층이 다르다. 그래서 줄이
-          아니라 카드 바닥의 안내 한 줄로 둔다 — 여기만 '보아라'가 아니라 '치워라'를 말한다.
-          0건일 때도 자리를 지켜 카드 높이가 고정된다. */}
-      {unclassified !== null && (
-        <div className={`mt-3 flex items-center justify-between border-t border-gray-200 pt-3 ${cardText.meta}`}>
-          <span>미분류 정리 대기</span>
-          {unclassified > 0 ? (
-            <button
-              type="button"
-              onClick={() => navigate(UNCLASSIFIED_PATH)}
-              className="inline-flex items-center gap-1 font-semibold text-brand hover:underline"
-            >
-              {n(unclassified)}건 정리하기
-              <ArrowRight aria-hidden className="size-3.5" strokeWidth={1.8} />
-            </button>
-          ) : (
-            <span className="text-gray-500">없음</span>
-          )}
-        </div>
-      )}
     </Card>
   )
 }
