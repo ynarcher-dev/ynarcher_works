@@ -19,6 +19,14 @@ export interface LedgerStat {
   workspace: WorkspaceKey
   /** 줄을 눌렀을 때 열 '내 목록' 경로. 카드가 적은 수와 그 화면의 건수가 같아야 한다. */
   path: string
+  /**
+   * 세는 단위 — 원장에 담긴 것이 무엇인지가 정한다(스타트업은 '개사', 네트워크는 '명').
+   *
+   * 화면이 아니라 원장 정의가 갖는 이유는 타일이 이 말을 **두 곳**에서 쓰기 때문이다(큰 수
+   * 옆과 전사 칩). 화면에서 각각 적으면 한쪽만 바뀌어 같은 타일 안에서 '9 개사'와 '전사
+   * 14건'이 나란히 서는 날이 온다.
+   */
+  unit: string
   /** 내가 등록했거나 기여한 활성 건수. */
   mine: number
   /** 전사 활성 보유 건수. */
@@ -37,10 +45,10 @@ export type LedgerKey = 'startup' | 'domestic' | 'global'
  * 카드가 말했고, 타일까지 '내 업로드 DB (국내)'라고 적으면 석 장이 같은 말을 세 번 반복한다.
  * 타일이 답할 것은 **어느 원장인가**뿐이다.
  */
-export const LEDGERS: { key: LedgerKey; label: string; workspace: WorkspaceKey; path: string }[] = [
-  { key: 'startup', label: '스타트업 DB', workspace: 'startup', path: '/startup?tab=mine' },
-  { key: 'domestic', label: '국내 네트워크', workspace: 'networks', path: '/networks?tab=mine' },
-  { key: 'global', label: '글로벌 네트워크', workspace: 'networks', path: `/networks?tab=${GLOBAL_MINE_TAB}` },
+export const LEDGERS: Omit<LedgerStat, 'mine' | 'total'>[] = [
+  { key: 'startup', label: '스타트업 DB', workspace: 'startup', path: '/startup?tab=mine', unit: '개사' },
+  { key: 'domestic', label: '국내 네트워크', workspace: 'networks', path: '/networks?tab=mine', unit: '명' },
+  { key: 'global', label: '글로벌 네트워크', workspace: 'networks', path: `/networks?tab=${GLOBAL_MINE_TAB}`, unit: '명' },
 ]
 
 /**

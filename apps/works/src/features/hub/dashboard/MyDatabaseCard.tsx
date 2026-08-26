@@ -29,7 +29,7 @@ const TILE_LOOK: Record<LedgerKey, { eyebrow: string; icon: LucideIcon; tone: Su
 /**
  * 타일 아래 지표 칩 하나 — '전사'.
  *
- * 절대 건수와 내 몫의 비중을 한 칸에 담는다 — `전사 1,842건 (기여도 7%)`. 비중은 두 수에서
+ * 절대 건수와 내 몫의 비중을 한 칸에 담는다 — `전사 1,842명 (기여도 7%)`. 비중은 두 수에서
  * 따라 나오는 값이라 칩을 하나 더 세울 만한 축이 아니고, 같은 칸에 두면 '무엇 중 얼마'가
  * 눈에서 한 번에 이어진다. 전사가 0이면 비율이 성립하지 않아 괄호를 통째로 뺀다.
  *
@@ -39,7 +39,7 @@ const TILE_LOOK: Record<LedgerKey, { eyebrow: string; icon: LucideIcon; tone: Su
  */
 function tileMetrics(row: LedgerStat) {
   const ratio = row.total > 0 ? ` (기여도 ${Math.round((row.mine / row.total) * 100)}%)` : ''
-  return [{ label: '전사', value: `${n(row.total)}건${ratio}` }]
+  return [{ label: '전사', value: `${n(row.total)}${row.unit}${ratio}` }]
 }
 
 /**
@@ -98,7 +98,9 @@ export function MyDatabaseCard() {
               title={row.label}
               eyebrow={look.eyebrow}
               value={n(row.mine)}
-              unit="건"
+              // 단위는 원장이 갖는다 — 스타트업은 '개사', 네트워크(국내·글로벌)는 '명'.
+              // 큰 수 옆과 전사 칩이 같은 값을 읽어야 한 타일 안에서 말이 갈리지 않는다.
+              unit={row.unit}
               tone={look.tone}
               icon={<Icon aria-hidden className="size-[18px]" strokeWidth={1.8} />}
               metrics={tileMetrics(row)}
