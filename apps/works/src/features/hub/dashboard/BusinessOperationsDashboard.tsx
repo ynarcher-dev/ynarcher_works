@@ -134,7 +134,9 @@ export function BusinessOperationsDashboard() {
                 title={item.label}
                 eyebrow={item.caption}
                 value={summary.total}
-                unit="개 운영"
+                // 단위는 '개'까지다 — 카드 이름이 이미 '나의 워크스페이스'라 무엇을 세는지는
+                // 타일 제목이 답하고, 자리 칩(대펀·운용)까지 선 칸에서는 '운영'이 줄을 넘겨 접혔다.
+                unit="개"
                 tone={item.tone}
                 icon={<Icon aria-hidden className="size-[18px]" strokeWidth={1.8} />}
                 metrics={summary.metrics}
