@@ -65,7 +65,7 @@ describe('isMyTurn', () => {
     expect(isMyTurn(lines, ME)).toBe(true)
   })
 
-  it('합의는 병렬이라 결재 순서를 기다리지 않는다', () => {
+  it('합의 줄은 결재 줄의 순서를 기다리지 않는다', () => {
     const lines = [
       { approver_id: OTHER, step_order: 1, decision: 'PENDING' as const, kind: 'APPROVAL' as const },
       { approver_id: ME, step_order: 1, decision: 'PENDING' as const, kind: 'AGREEMENT' as const },
@@ -73,7 +73,7 @@ describe('isMyTurn', () => {
     expect(isMyTurn(lines, ME)).toBe(true)
   })
 
-  it('재무합의도 같은 병렬 규칙을 따른다', () => {
+  it('재무합의 줄도 자기 줄만 본다', () => {
     const lines = [
       { approver_id: OTHER, step_order: 1, decision: 'PENDING' as const, kind: 'APPROVAL' as const },
       {
@@ -84,6 +84,45 @@ describe('isMyTurn', () => {
       },
     ]
     expect(isMyTurn(lines, ME)).toBe(true)
+  })
+
+  it('합의 줄도 앞 순번이 남아 있으면 내 차례가 아니다', () => {
+    const lines = [
+      { approver_id: OTHER, step_order: 1, decision: 'PENDING' as const, kind: 'AGREEMENT' as const },
+      { approver_id: ME, step_order: 2, decision: 'PENDING' as const, kind: 'AGREEMENT' as const },
+    ]
+    expect(isMyTurn(lines, ME)).toBe(false)
+  })
+
+  it('합의 줄의 앞 순번이 처리되면 다음 합의자의 차례가 온다', () => {
+    const lines = [
+      {
+        approver_id: OTHER,
+        step_order: 1,
+        decision: 'APPROVED' as const,
+        kind: 'AGREEMENT' as const,
+      },
+      { approver_id: ME, step_order: 2, decision: 'PENDING' as const, kind: 'AGREEMENT' as const },
+    ]
+    expect(isMyTurn(lines, ME)).toBe(true)
+  })
+
+  it('재무합의 줄도 앞 순번을 기다린다', () => {
+    const lines = [
+      {
+        approver_id: OTHER,
+        step_order: 1,
+        decision: 'PENDING' as const,
+        kind: 'FINANCE_AGREEMENT' as const,
+      },
+      {
+        approver_id: ME,
+        step_order: 2,
+        decision: 'PENDING' as const,
+        kind: 'FINANCE_AGREEMENT' as const,
+      },
+    ]
+    expect(isMyTurn(lines, ME)).toBe(false)
   })
 
   it('이미 처리한 합의는 다시 내 차례가 아니다', () => {

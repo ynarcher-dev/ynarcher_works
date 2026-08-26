@@ -180,7 +180,7 @@ export function ApprovalStampTable({
   }
 
   // 결재 행의 맨 앞은 항상 기안자 — 문서를 낸 사람이 결재선의 출발점이다. 결재자가 아니라
-  // 순번은 붙이지 않고, 그 뒤의 결재자들만 순번대로 세운다(합의는 병렬이라 차례 그대로).
+  // 순번은 붙이지 않고, 그 뒤의 결재자들만 순번대로 세운다.
   const drafter: GridPerson[] = drafterId
     ? [
         {
@@ -191,14 +191,14 @@ export function ApprovalStampTable({
         },
       ]
     : []
-  const approval = [
-    ...drafter,
-    ...[...of('APPROVAL')]
-      .sort((a, b) => a.stepOrder - b.stepOrder)
-      .map((l, i) => toPerson(l, i + 1)),
-  ]
-  const agreement = of('AGREEMENT').map((l) => toPerson(l))
-  const finance = of('FINANCE_AGREEMENT').map((l) => toPerson(l))
+  // 세 구분 모두 자기 줄 안에서 순차라 순번대로 세운다. 배지의 숫자는 저장된 step_order가
+  // 아니라 **정렬 후의 자리**다 — 임시저장을 고치며 중간이 빠지면 원장 값에 구멍이 생기는데,
+  // 사람이 읽는 순번에 2·4·5가 남으면 없는 3번을 찾게 된다.
+  const seqOf = (kind: ApprovalLineKind) =>
+    [...of(kind)].sort((a, b) => a.stepOrder - b.stepOrder).map((l, i) => toPerson(l, i + 1))
+  const approval = [...drafter, ...seqOf('APPROVAL')]
+  const agreement = seqOf('AGREEMENT')
+  const finance = seqOf('FINANCE_AGREEMENT')
 
   return (
     <ApprovalLineGrid

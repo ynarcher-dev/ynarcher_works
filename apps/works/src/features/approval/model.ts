@@ -1,3 +1,4 @@
+import { LINE_KIND_ORDER } from '@/features/approval/config'
 import { FORM_TYPES } from '@/features/management/config'
 import type { ApprovalStatus } from '@/features/management/config'
 import type {
@@ -66,34 +67,32 @@ export function hasRead(row: ApprovalListRow, uid: string): boolean {
 const kindOf = (l: ApprovalLine): ApprovalLineKind => l.kind ?? 'APPROVAL'
 
 /**
- * 지금이 내 차례인가 — 구분마다 진행 방식이 달라 판정도 갈린다.
+ * 지금이 내 차례인가 — **세 구분 모두 자기 줄 안에서 순차**다(2026-08-26). 구분마다 결재선을
+ * 순번대로 훑어 아직 처리되지 않은 첫 행이 나이면 내 차례이고, 앞 순번이 남아 있으면 아니다.
  *
- * · **결재**는 순차다. 결재선만 순번대로 훑어 첫 PENDING이 나이면 내 차례이며, 앞 단계가
- *   반려됐으면 흐름이 끊긴 것이라 누구의 차례도 아니다.
- * · **합의·재무합의**는 병렬이다. 상신된 문서라면 내 합의 행이 PENDING인 동안 언제든 처리할
- *   수 있다 — 순서를 강제하면 합의자가 자리를 비운 동안 결재 전체가 멈춘다.
+ * 줄끼리는 서로를 기다리지 않는다 — 합의 1번과 결재 1번은 동시에 각자의 차례일 수 있다.
+ * 합의를 결재의 앞뒤에 못 박으면 두 줄이 사실은 한 줄이 되어, 결재선 표가 구분을 나눠
+ * 보여 주는 뜻이 사라진다.
  *
- * 문서 전체가 이미 반려됐으면(어느 행이든 REJECTED) 남은 차례는 없다.
+ * 문서 전체가 이미 반려됐으면(어느 행이든 REJECTED) 남은 차례는 없다 — 구분이 무엇이든
+ * 반려 한 건이 문서를 종결시키므로 다른 줄의 다음 순번도 함께 끊긴다.
  */
 export function isMyTurn(lines: ApprovalLine[], uid: string): boolean {
   if (lines.some((l) => l.decision === 'REJECTED')) return false
 
-  // 병렬 구분(합의·재무합의)은 순서를 보지 않는다.
-  if (lines.some((l) => l.approver_id === uid && l.decision === 'PENDING' && kindOf(l) !== 'APPROVAL'))
-    return true
-
-  const sequential = lines
-    .filter((l) => kindOf(l) === 'APPROVAL')
-    .sort((a, b) => a.step_order - b.step_order)
-  for (const l of sequential) {
-    if (l.decision === 'PENDING') return l.approver_id === uid
-  }
-  return false
+  return LINE_KIND_ORDER.some((kind) => {
+    const next = lines
+      .filter((l) => kindOf(l) === kind)
+      .sort((a, b) => a.step_order - b.step_order)
+      .find((l) => l.decision === 'PENDING')
+    return next?.approver_id === uid
+  })
 }
 
 /**
  * 문서를 끝낼 마지막 한 표인가 — 구분에 상관없이 나 말고 남은 미처리 결재선이 없으면 참.
- * 합의가 병렬이라 "순번이 뒤인가"로는 답할 수 없다.
+ * 구분이 셋으로 나뉜 뒤로는 "순번이 뒤인가"로 답할 수 없다 — 내 결재 줄이 끝나도 합의 줄에
+ * 남은 사람이 있으면 문서는 아직 끝나지 않는다.
  */
 export function isLastPending<T extends ApprovalLine & { id: string }>(
   lines: T[],

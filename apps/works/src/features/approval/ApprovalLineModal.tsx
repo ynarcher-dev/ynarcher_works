@@ -2,8 +2,14 @@ import { Button, IconButton, Input, Modal, TagChip, cn, useToast } from '@ynarch
 import { ArrowDown, ArrowUp, ChevronRight, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { ApprovalOrgTree, type OrgPerson } from '@/features/approval/ApprovalOrgTree'
+import { ApprovalSeqBadge } from '@/features/approval/ApprovalSeqBadge'
 import type { ApprovalLineInput } from '@/features/approval/approvalApi'
-import { LINE_KIND_LABEL, LINE_KIND_ORDER, approvalText } from '@/features/approval/config'
+import {
+  LINE_KIND_LABEL,
+  LINE_KIND_ORDER,
+  approvalText,
+  type ApprovalLineKind,
+} from '@/features/approval/config'
 
 interface ApprovalLineModalProps {
   open: boolean
@@ -27,6 +33,9 @@ const SLOTS: Slot[] = [...LINE_KIND_ORDER, 'CC']
 
 /**
  * 결재선 설정 — 조직에서 사람을 골라 결재 / 합의 / 재무합의 / 참조 네 자리로 보낸다.
+ *
+ * 앞의 세 자리는 **순서를 갖는다**(각 구분 안에서 순번대로 처리된다). 참조는 결재하지 않고
+ * 열람만 하므로 순서가 뜻을 갖지 않아 아래 칩 무리로 따로 선다 — 순번 배지도 이동 버튼도 없다.
  *
  * 기안 화면에 입력 칸을 늘어놓지 않고 창을 따로 여는 이유는, 결재선을 짜는 일이 문서를 쓰는
  * 일과 다른 종류의 작업이기 때문이다. 조직을 펼쳐 사람을 찾고, 자리를 정하고, 순서를 고치는
@@ -90,15 +99,18 @@ export function ApprovalLineModal({
       }))
   }
 
-  // 결재 순번 조정. 합의는 병렬이라 순서가 뜻을 갖지 않으므로 이동 버튼을 두지 않는다.
-  const move = (index: number, delta: number) => {
+  /**
+   * 순번 조정 — 세 구분 모두 자기 명단 안에서만 자리를 바꾼다. 구분을 넘나드는 이동은 없다
+   * (합의자를 결재자로 바꾸는 것은 순서가 아니라 자리를 다시 정하는 일이라 [제외] 후 재배정한다).
+   */
+  const move = (kind: ApprovalLineKind, index: number, delta: number) => {
     setDraft((prev) => {
-      const list = [...prev.APPROVAL]
+      const list = [...prev[kind]]
       const target = index + delta
       if (target < 0 || target >= list.length) return prev
       const [item] = list.splice(index, 1)
       list.splice(target, 0, item!)
-      return { ...prev, APPROVAL: list }
+      return { ...prev, [kind]: list }
     })
   }
 
@@ -179,10 +191,9 @@ export function ApprovalLineModal({
                     key={`${kind}-${id}`}
                     className="flex items-center gap-2 border-b border-gray-100 px-3 py-2 last:border-b-0"
                   >
-                    {/* 순번은 결재에만 붙는다 — 합의에 번호를 달면 순서가 있는 것처럼 읽힌다. */}
-                    <span className={cn('w-5 shrink-0 text-center', approvalText.meta)}>
-                      {kind === 'APPROVAL' ? i + 1 : ''}
-                    </span>
+                    {/* 순번은 세 구분에 모두 붙는다 — 셋 다 자기 명단 안에서 순차로 흐르므로
+                        번호가 곧 처리 차례다(참조만 순서를 갖지 않아 아래 칩으로 따로 선다). */}
+                    <ApprovalSeqBadge seq={i + 1} />
                     <span className={cn('w-16 shrink-0', approvalText.head)}>
                       {LINE_KIND_LABEL[kind]}
                     </span>
@@ -192,26 +203,22 @@ export function ApprovalLineModal({
                         <span className={cn('ml-2', approvalText.meta)}>{titleOf(id)}</span>
                       )}
                     </span>
-                    {kind === 'APPROVAL' && (
-                      <>
-                        <IconButton
-                          density="table"
-                          variant="ghost"
-                          label="위로"
-                          onClick={() => move(i, -1)}
-                          disabled={i === 0}
-                          icon={<ArrowUp size={14} />}
-                        />
-                        <IconButton
-                          density="table"
-                          variant="ghost"
-                          label="아래로"
-                          onClick={() => move(i, 1)}
-                          disabled={i === draft.APPROVAL.length - 1}
-                          icon={<ArrowDown size={14} />}
-                        />
-                      </>
-                    )}
+                    <IconButton
+                      density="table"
+                      variant="ghost"
+                      label="위로"
+                      onClick={() => move(kind, i, -1)}
+                      disabled={i === 0}
+                      icon={<ArrowUp size={14} />}
+                    />
+                    <IconButton
+                      density="table"
+                      variant="ghost"
+                      label="아래로"
+                      onClick={() => move(kind, i, 1)}
+                      disabled={i === draft[kind].length - 1}
+                      icon={<ArrowDown size={14} />}
+                    />
                     <IconButton
                       density="table"
                       variant="ghost"

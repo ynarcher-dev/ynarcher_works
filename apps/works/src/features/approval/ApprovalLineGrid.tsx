@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from '@ynarcher/ui'
+import { ApprovalSeqBadge } from '@/features/approval/ApprovalSeqBadge'
 import { InfoLabelCell, LABEL_COL_WIDTH } from '@/features/approval/ApprovalInfoTable'
 import { LINE_KIND_LABEL, approvalText } from '@/features/approval/config'
 
@@ -9,7 +10,10 @@ export interface GridPerson {
   /** 직급·직책(없으면 빈 칸으로 남긴다). */
   title: string
   name: string
-  /** 결재 순번. 결재(순차)에만 넘기고 합의(병렬)는 비운다 — 번호가 곧 순서로 읽힌다. */
+  /**
+   * 자기 구분 안에서의 처리 순번. 결재·합의·재무합의 세 구분이 모두 순차로 흐르므로 셋 다
+   * 붙고, 순번을 갖지 않는 자리(결재 행 맨 앞의 기안자 칸)만 비운다.
+   */
   seq?: number
   /** 도장 칸 내용. 상신 전 미리보기는 null로 자리만 잡는다. */
   stamp: ReactNode
@@ -60,10 +64,10 @@ function blockCells(people: GridPerson[], cols: number, part: CellPart): ReactNo
         {part === 'title' ? (
           p?.title || NBSP
         ) : p ? (
-          <>
-            {p.seq !== undefined && <span className={cn('mr-1', approvalText.meta)}>{p.seq}</span>}
+          <span className="inline-flex items-center justify-center gap-1.5">
+            {p.seq !== undefined && <ApprovalSeqBadge seq={p.seq} />}
             {p.name}
-          </>
+          </span>
         ) : (
           NBSP
         )}

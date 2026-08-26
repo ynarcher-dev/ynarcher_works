@@ -76,8 +76,9 @@ export function ApprovalLinePicker({
           ...(drafterId ? [toPerson(drafterId)] : []),
           ...lines.APPROVAL.map((id, i) => toPerson(id, i + 1)),
         ]}
-        agreement={lines.AGREEMENT.map((id) => toPerson(id))}
-        finance={lines.FINANCE_AGREEMENT.map((id) => toPerson(id))}
+        // 합의·재무합의도 자기 줄 안에서 순차라 순번이 붙는다(참조만 순서를 갖지 않는다).
+        agreement={lines.AGREEMENT.map((id, i) => toPerson(id, i + 1))}
+        finance={lines.FINANCE_AGREEMENT.map((id, i) => toPerson(id, i + 1))}
         cc={
           recipientIds.length === 0 ? (
             // 결재선처럼 클릭해서 바로 채우는 자리 — 안내문 대신 빈 입력칸 모양으로 둔다.

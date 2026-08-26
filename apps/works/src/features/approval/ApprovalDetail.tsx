@@ -17,6 +17,7 @@ import {
   DOC_STATUS_LABEL,
   DOC_STATUS_TONE,
   LINE_KIND_LABEL,
+  LINE_KIND_ORDER,
 } from '@/features/approval/config'
 import { formatMoney, parseFields } from '@/features/approval/fields'
 import { isLastPending, isMyTurn } from '@/features/approval/model'
@@ -238,12 +239,19 @@ export function ApprovalDetail({
               <ul className="space-y-2">
                 {lines
                   .filter((l) => l.comment)
-                  .sort((a, b) => a.step_order - b.step_order)
+                  // 구분 먼저, 그 안에서 순번. 세 구분 모두 1번부터 매겨지므로 순번만으로
+                  // 정렬하면 결재 1차와 합의 1차가 섞여 어느 줄의 이야기인지 흩어진다.
+                  .sort(
+                    (a, b) =>
+                      LINE_KIND_ORDER.indexOf(a.kind ?? 'APPROVAL') -
+                        LINE_KIND_ORDER.indexOf(b.kind ?? 'APPROVAL') ||
+                      a.step_order - b.step_order,
+                  )
                   .map((l) => (
                     <li key={l.id} className="border-b border-gray-100 pb-2 last:border-b-0">
                       <p className={cardText.meta}>
-                        {LINE_KIND_LABEL[l.kind ?? 'APPROVAL']}
-                        {(l.kind ?? 'APPROVAL') === 'APPROVAL' ? ` ${l.step_order}차` : ''} ·{' '}
+                        {/* 순번은 세 구분에 모두 붙는다 — 셋 다 자기 줄 안에서 순차다. */}
+                        {LINE_KIND_LABEL[l.kind ?? 'APPROVAL']} {l.step_order}차 ·{' '}
                         {nameOf(l.approver_id)} · {l.decision === 'APPROVED' ? '승인' : '반려'} ·{' '}
                         {dateTime(l.decided_at)}
                       </p>

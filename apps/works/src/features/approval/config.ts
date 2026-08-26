@@ -207,9 +207,15 @@ export const APPROVAL_ROLE_LABEL: Record<ApprovalRole, string> = {
 }
 
 /**
- * 결재선 구분. 진행 방식이 다르다 —
- * 결재는 순차(앞 사람이 처리해야 다음 차례), 합의·재무합의는 병렬(상신 즉시 모두 대기).
- * 참조는 결재하지 않으므로 이 축이 아니라 별도 원장(approval_recipients)이 담는다.
+ * 결재선 구분. **셋 다 자기 구분 안에서 순차로 흐른다** — 앞 순번이 처리해야 다음 차례가 온다
+ * (2026-08-26 확정. 종전에는 합의·재무합의만 병렬이었다).
+ *
+ * 구분끼리는 서로를 기다리지 않는다. 세 구분은 각자 하나의 줄이고, 문서는 그 줄 셋이 나란히
+ * 흐르다 마지막 하나가 끝나는 시점에 완료된다 — 합의 줄을 결재 줄의 앞뒤 어디에 못 박으면
+ * 결재선 표가 말하는 세 자리가 사실은 한 줄이라는 뜻이 되어, 구분을 나눈 이유가 사라진다.
+ *
+ * 참조는 결재하지 않으므로 이 축이 아니라 별도 원장(approval_recipients)이 담는다. 순번을
+ * 갖지 않는 유일한 자리이기도 하다.
  */
 export type ApprovalLineKind = 'APPROVAL' | 'AGREEMENT' | 'FINANCE_AGREEMENT'
 
@@ -222,7 +228,3 @@ export const LINE_KIND_LABEL: Record<ApprovalLineKind, string> = {
 /** 결재선 표·지정 화면에서 늘 이 순서로 놓는다(결재 → 합의 → 재무합의 → 참조). */
 export const LINE_KIND_ORDER: ApprovalLineKind[] = ['APPROVAL', 'AGREEMENT', 'FINANCE_AGREEMENT']
 
-/** 순차로 진행되는 구분인가(아니면 병렬). */
-export function isSequentialKind(kind: ApprovalLineKind): boolean {
-  return kind === 'APPROVAL'
-}
