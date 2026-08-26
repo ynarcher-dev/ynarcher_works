@@ -118,8 +118,10 @@ export function OfficePage() {
       {tab === 'approval' && (
         <ApprovalWorkspace
           initialDocumentId={params.get('doc') ?? undefined}
-          // 대시보드 전자결재 카드의 딥링크(?progress=waiting 등) — 그 칸이 켜진 채로 열린다.
+          // 대시보드 전자결재 카드의 딥링크 — 그 칸이 켜진 채로 열린다. 좌패널의 축이 둘이라
+          // 쿼리도 둘이다(진행 상태 ?progress= / 문서함 ?box=).
           initialProgress={params.get('progress') ?? undefined}
+          initialBox={params.get('box') ?? undefined}
         />
       )}
     </div>

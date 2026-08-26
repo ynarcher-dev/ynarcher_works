@@ -37,7 +37,13 @@ export const approvalText: TableTextSet = tableTextScale.page
  * 걸러진 목록을 보고 있는지가 두 곳에 흩어진다.
  */
 export type ApprovalBoxKey =
-  'mine-all' | 'mine-drafted' | 'mine-approver' | 'mine-cc' | 'mine-rejected' | 'dept-all'
+  | 'mine-all'
+  | 'mine-drafted'
+  | 'mine-approver'
+  | 'mine-cc'
+  | 'mine-confirm'
+  | 'mine-rejected'
+  | 'dept-all'
 
 export interface ApprovalBoxGroup {
   label: string
@@ -61,6 +67,11 @@ export const APPROVAL_BOX_GROUPS: ApprovalBoxGroup[] = [
       { key: 'mine-drafted', label: '기안', icon: PenLine },
       { key: 'mine-approver', label: '결재', icon: FileCheck },
       { key: 'mine-cc', label: '회람/참조', icon: Users },
+      // 확인: 완료(승인·반려)됐는데 아직 내가 열어 보지 않은 문서. 2026-08-26 '진행 중인 문서'
+      // 그룹에서 이리로 옮겼다 — 다 끝난 문서가 '진행 중'이라는 이름 아래 서 있는 것이 사실과
+      // 어긋났고, 완료된 문서를 찾는 자리는 내 문서함이 맞다. 열면 이 칸에서 빠진다(반려 칸처럼
+      // 상태로 좁힌 칸이라 함이 비는 것이 정상이다).
+      { key: 'mine-confirm', label: '확인', icon: CheckCheck },
       { key: 'mine-rejected', label: '반려', icon: Ban },
     ],
   },
@@ -76,9 +87,10 @@ export const APPROVAL_DEPT_GROUP: ApprovalBoxGroup = {
  * 진행 중인 문서 그룹 — 문서함과 같은 좌패널에 서지만 키 종류가 다르다(진행 상태 축).
  *
  * 하이웍스의 문서 상태 축(대기·예정·진행·완료·수신대기·회람대기)에서 우리 데이터에 있는
- * 것만 골라 세운다. '완료'와 '회람 대기'는 **확인** 하나로 합쳤다 — 다 끝난 문서는 시간이
- * 갈수록 쌓이기만 해서 "지금 신경 쓸 것"을 묻는 이 그룹의 성격과 어긋나고, 여기서 답해야
- * 하는 것은 "끝났는데 내가 아직 못 본 게 있나" 하나이기 때문이다.
+ * 것만 골라 세우되, **완료 계열은 여기 두지 않는다**(2026-08-26). 다 끝난 문서가 '진행 중인
+ * 문서'라는 이름 아래 서 있으면 그 이름이 사실과 어긋나고, 완료된 문서를 찾는 자리는 내
+ * 문서함이다 — 하이웍스가 '완료'·'회람 대기'로 두던 것을 우리는 내 문서함의 **확인** 칸
+ * 하나로 받는다(mine-confirm).
  *
  * **임시저장**이 이 그룹에 서는 이유(2026-08-26): 기안을 하고도 상신하지 않으면 그 문서는
  * 어느 칸에도 들지 않아, 분명히 만든 문서가 대시보드에서 0건으로 보였다. 쓰다 만 문서야말로
@@ -94,12 +106,64 @@ export const APPROVAL_PROGRESS_GROUP: {
   boxes: [
     { key: 'all', label: '전체', icon: Files },
     { key: 'waiting', label: '대기', icon: Hourglass },
-    { key: 'confirm', label: '확인', icon: CheckCheck },
     { key: 'upcoming', label: '예정', icon: CalendarClock },
     { key: 'ongoing', label: '진행', icon: Send },
     { key: 'draft', label: '임시저장', icon: FilePen },
   ],
 }
+
+/**
+ * 좌패널 한 칸을 가리키는 참조. 축이 둘(진행 상태 / 문서함)이라 키만으로는 어느 그룹의
+ * 칸인지 알 수 없어, 딥링크를 만들거나 두 축이 한 목록에 섞이는 자리에서 이 형태로 다닌다.
+ */
+export type ApprovalNavRef =
+  | { axis: 'progress'; key: ApprovalProgressKey }
+  | { axis: 'box'; key: ApprovalBoxKey }
+
+/** 그 칸이 켜진 문서함으로 가는 딥링크 쿼리(`/office?tab=approval` 뒤에 붙는다). */
+export const approvalNavQuery = (ref: ApprovalNavRef): string => `&${ref.axis}=${ref.key}`
+
+export interface ApprovalNavRow {
+  ref: ApprovalNavRef
+  label: string
+  icon: LucideIcon
+}
+
+const progressRow = (key: ApprovalProgressKey): ApprovalNavRow => {
+  const box = APPROVAL_PROGRESS_GROUP.boxes.find((b) => b.key === key)
+  if (!box) throw new Error(`알 수 없는 진행 상태 칸: ${key}`)
+  return { ref: { axis: 'progress', key }, label: box.label, icon: box.icon }
+}
+
+const boxRow = (key: ApprovalBoxKey): ApprovalNavRow => {
+  const box = [...APPROVAL_BOX_GROUPS, APPROVAL_DEPT_GROUP]
+    .flatMap((g) => g.boxes)
+    .find((b) => b.key === key)
+  if (!box) throw new Error(`알 수 없는 문서함 칸: ${key}`)
+  return { ref: { axis: 'box', key }, label: box.label, icon: box.icon }
+}
+
+/**
+ * OFFICE 대시보드 전자결재 카드에 세우는 줄. **두 축이 섞이는 유일한 자리**다 — 넷은 진행
+ * 상태 축이고 '확인'만 문서함 축이다.
+ *
+ * 완료 문서를 '진행 중인 문서'에서 내 문서함으로 옮기면서도(2026-08-26) 대시보드에서는 그
+ * 신호를 계속 세운다. 결재가 났다는 것을 알려 주는 자리가 앱에 여기 하나뿐이라(알림은 코멘트
+ * 멘션만 다룬다), 카드에서까지 빼면 자기 문서가 끝난 줄 모르고 지나간다.
+ *
+ * 다섯 칸은 서로 겹치지 않는다 — 앞의 넷은 상신 전이거나 흐르는 중인 문서이고 '확인'은 이미
+ * 끝난 문서라, 한 건이 두 줄에 동시에 서는 일이 없다. 그래서 카드 제목 옆 건수를 이 줄들의
+ * 단순 합으로 적어도 같은 문서를 두 번 세지 않는다.
+ *
+ * 라벨·아이콘은 좌패널 그룹에서 되찾는다(여기서 다시 적으면 좌패널만 고쳤을 때 어긋난다).
+ */
+export const APPROVAL_DASHBOARD_ROWS: ApprovalNavRow[] = [
+  progressRow('waiting'),
+  boxRow('mine-confirm'),
+  progressRow('upcoming'),
+  progressRow('ongoing'),
+  progressRow('draft'),
+]
 
 /**
  * 첨부·의견의 다형 키. 두 원장(attachments / entity_feedback) 모두 'approval'을 쓰며,
@@ -109,9 +173,8 @@ export const APPROVAL_PROGRESS_GROUP: {
 export const APPROVAL_ATTACHMENT_TYPE = 'approval'
 export const APPROVAL_FEEDBACK_TYPE = 'approval'
 
-/** 진행 상태 키. 전체 = 나머지 다섯의 합집합(문서 한 건은 한 칸에만 든다). */
-export type ApprovalProgressKey =
-  'all' | 'waiting' | 'confirm' | 'upcoming' | 'ongoing' | 'draft'
+/** 진행 상태 키. 전체 = 나머지 넷의 합집합(문서 한 건은 한 칸에만 든다). */
+export type ApprovalProgressKey = 'all' | 'waiting' | 'upcoming' | 'ongoing' | 'draft'
 
 /**
  * 문서함 목록의 상태 표기 — 목록에서는 결재 단계(1차 검토 등)까지 가르지 않고

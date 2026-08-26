@@ -1,9 +1,9 @@
 import { BackButton, Badge, Button, Card, EmptyState, Spinner, cardText } from '@ynarcher/ui'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAuthStore } from '@/auth/authStore'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
-import { ApprovalDecideBar } from '@/features/approval/ApprovalDecideBar'
+import { ApprovalDecideModal } from '@/features/approval/ApprovalDecideModal'
 import { ApprovalFieldsView } from '@/features/approval/ApprovalFieldsView'
 import { ApprovalInfoTable } from '@/features/approval/ApprovalInfoTable'
 import { approvalHeaderPairs } from '@/features/approval/approvalHeader'
@@ -39,7 +39,11 @@ function dateTime(v: string | null): string {
 
 /**
  * 결재 문서 상세 — 좌 2/3는 문서 자체(표준 머리 → 결재선 도장 → 제목·본문), 우 1/3은
- * 문서에 붙는 것들(결재 처리·첨부·의견).
+ * 문서에 붙는 것들(첨부·연동·참조·의견).
+ *
+ * **결재 처리는 우측에 두지 않는다**(2026-08-26). 승인·반려 칸이 문서 옆에 상시로 펼쳐져
+ * 있으면 다 읽기 전에 손이 먼저 나가므로, 상단 [○○ 처리] 버튼 → 창(ApprovalDecideModal)으로
+ * 옮겼다.
  *
  * 하이웍스는 별첨과 의견을 본문 아래에 세로로 쌓았지만, 이 서비스의 상세 화면은 본문과
  * 부속을 좌우로 가르는 문법을 이미 갖고 있다(회의록·스타트업·사업). 첨부·의견은 그 문법
@@ -57,6 +61,8 @@ export function ApprovalDetail({
   const { data: employees } = useEmployees()
   const { data: departments } = useDepartments(true)
   const markRead = useMarkApprovalRead()
+  // 결재 처리 창의 열림 여부. 문서를 다 읽고 [○○ 처리]를 누른 사람만 결정 앞에 선다.
+  const [deciding, setDeciding] = useState(false)
 
   const nameById = useMemo(() => {
     const m = new Map<string, string>()
@@ -124,16 +130,37 @@ export function ApprovalDetail({
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <BackButton onClick={onBack}>문서함</BackButton>
-        {/* 임시저장은 아직 조직에 내보내지 않은 문서라 기안자 본인이 고칠 수 있다.
-            상신된 뒤에는 이 길을 닫는다 — 결재가 돌기 시작한 문서의 내용이 바뀌면
-            이미 찍힌 도장이 무엇에 대한 것이었는지 판정할 근거가 사라진다.
-            (같은 조건을 서버 RPC가 다시 확인한다 — 화면에서 숨기는 것은 보안이 아니다.) */}
-        {onEdit && doc.status === 'DRAFT' && doc.drafter_id === uid && (
-          <Button variant="outline" onClick={() => onEdit(doc.id)}>
-            수정
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {/* 임시저장은 아직 조직에 내보내지 않은 문서라 기안자 본인이 고칠 수 있다.
+              상신된 뒤에는 이 길을 닫는다 — 결재가 돌기 시작한 문서의 내용이 바뀌면
+              이미 찍힌 도장이 무엇에 대한 것이었는지 판정할 근거가 사라진다.
+              (같은 조건을 서버 RPC가 다시 확인한다 — 화면에서 숨기는 것은 보안이 아니다.) */}
+          {onEdit && doc.status === 'DRAFT' && doc.drafter_id === uid && (
+            <Button variant="outline" onClick={() => onEdit(doc.id)}>
+              수정
+            </Button>
+          )}
+          {/* 결재 처리는 창으로 연다 — 승인·반려 버튼이 문서 옆에 상시로 서 있으면 다 읽기
+              전에 손이 먼저 나간다. 이 버튼은 "처리하겠다"는 의사를 밝히는 자리이고, 실제
+              결정은 창 안에서 한 번 더 고르고 [확인]을 눌러야 내려간다. */}
+          {canDecide && myLine && (
+            <Button onClick={() => setDeciding(true)}>
+              {LINE_KIND_LABEL[myLine.kind ?? 'APPROVAL']} 처리
+            </Button>
+          )}
+        </div>
       </div>
+
+      {canDecide && myLine && (
+        <ApprovalDecideModal
+          open={deciding}
+          onClose={() => setDeciding(false)}
+          documentId={doc.id}
+          lineId={myLine.id}
+          kind={myLine.kind ?? 'APPROVAL'}
+          isFinal={isFinal}
+        />
+      )}
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
@@ -224,14 +251,6 @@ export function ApprovalDetail({
         </div>
 
         <div className="space-y-4 lg:col-span-1">
-          {canDecide && myLine && (
-            <ApprovalDecideBar
-              documentId={doc.id}
-              lineId={myLine.id}
-              kind={myLine.kind ?? 'APPROVAL'}
-              isFinal={isFinal}
-            />
-          )}
           {/* 첨부·연동·참조는 **읽기 전용**이다 — 붙이는 일은 기안·수정 화면에서 끝난다.
               도장이 찍히기 시작한 문서에 나중에 파일이나 연동이 붙으면, 결재자가 무엇을 보고
               승인했는지 판정할 근거가 사라진다. 고칠 길은 임시저장 문서의 [수정]뿐이다. */}

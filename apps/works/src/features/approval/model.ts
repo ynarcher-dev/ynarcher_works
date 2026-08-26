@@ -103,13 +103,16 @@ export function isLastPending<T extends ApprovalLine & { id: string }>(
 }
 
 /**
- * 진행 상태 분류 — 지금 나의 처리·주의가 필요한 문서를 역할로 가른다.
+ * 진행 상태 분류 — **아직 끝나지 않은** 문서 중 나의 처리·주의가 필요한 것을 역할로 가른다.
  * · draft(임시저장): 내가 기안하다 만 문서(아직 상신 전)
  * · waiting(대기): 내 결재 차례
  * · upcoming(예정): 결재선에 있으나 아직 차례가 아님
  * · ongoing(진행): 내가 기안해 흐르는 중
- * · confirm(확인): 완료(승인·반려)됐는데 아직 내가 열람하지 않음
  * 해당 없으면 null. 우선순위는 처리 급한 순(waiting > upcoming > ongoing)이다.
+ *
+ * 완료(승인·반려)된 문서는 여기서 답하지 않는다(2026-08-26) — 다 끝난 문서가 '진행 중인
+ * 문서'에 서 있으면 그 이름이 사실과 어긋난다. 끝났는데 아직 못 본 문서는 내 문서함의
+ * '확인' 칸(inBox의 mine-confirm)이 받는다.
  */
 export function progressBucket(row: ApprovalListRow, uid: string): ApprovalProgressKey | null {
   // 임시저장은 상신 전이라 결재선을 볼 필요가 없다 — 아직 아무의 차례도 아니고, 오직
@@ -124,12 +127,11 @@ export function progressBucket(row: ApprovalListRow, uid: string): ApprovalProgr
     if (row.drafter_id === uid) return 'ongoing'
     return null
   }
-  if (isCompleted(row.status) && isInvolved(row, uid) && !hasRead(row, uid)) return 'confirm'
   return null
 }
 
 /**
- * 진행 분류별 건수. `all`은 나머지 다섯의 합(문서 한 건은 한 칸에만 든다).
+ * 진행 분류별 건수. `all`은 나머지 넷의 합(문서 한 건은 한 칸에만 든다).
  *
  * 두 자리가 같은 숫자를 말한다 — 문서함 좌패널의 '진행 중인 문서'와 OFFICE 대시보드의
  * 전자결재 카드다. 세는 규칙을 화면마다 적으면 같은 사람에게 두 곳이 다른 건수를 보이는
@@ -146,7 +148,6 @@ export function countByProgress(
   const counts: Record<ApprovalProgressKey, number> = {
     all: 0,
     waiting: 0,
-    confirm: 0,
     upcoming: 0,
     ongoing: 0,
     draft: 0,
@@ -193,11 +194,35 @@ export function inBox(
       return isApprover(row, uid)
     case 'mine-cc':
       return isRecipient(row, uid)
+    // 확인: 끝났는데 내가 아직 안 열어 본 문서. 다른 칸과 달리 **열면 빠진다** — 함이 아니라
+    // 할 일에 가깝지만, 완료된 문서를 찾는 자리가 내 문서함이라 여기 둔다(반려 칸도 상태로
+    // 좁힌 칸이다). 열람 표시는 상세를 열 때 useMarkApprovalRead가 남긴다.
+    case 'mine-confirm':
+      return isCompleted(row.status) && isInvolved(row, uid) && !hasRead(row, uid)
     case 'mine-rejected':
       return isInvolved(row, uid) && row.status === 'REJECTED'
     case 'dept-all':
       return Boolean(myDeptId) && row.department_id === myDeptId && row.status !== 'DRAFT'
   }
+}
+
+/**
+ * 문서함별 건수. 진행 상태 건수(countByProgress)와 달리 칸끼리 겹친다 — '전체'는 나머지를
+ * 품고, 한 문서가 기안이면서 결재일 수도 있다. 그래서 합을 내지 않고 칸마다 따로 센다.
+ *
+ * 세는 대상은 부르는 쪽이 넘긴 키 목록이다. 좌패널은 자기가 그리는 칸 전부를, 대시보드는
+ * 자기가 세우는 한 칸('확인')만 넘긴다 — 쓰지도 않을 칸을 세느라 목록을 여러 번 훑지 않는다.
+ */
+export function countByBox(
+  rows: ApprovalListRow[],
+  keys: ApprovalBoxKey[],
+  uid: string | null,
+  myDeptId: string | null,
+): Record<ApprovalBoxKey, number> {
+  const counts = Object.fromEntries(keys.map((k) => [k, 0])) as Record<ApprovalBoxKey, number>
+  if (!uid) return counts
+  for (const row of rows) for (const key of keys) if (inBox(row, key, uid, myDeptId)) counts[key] += 1
+  return counts
 }
 
 /** 검색 — 제목·문서 번호·문서 종류·기안자 이름을 함께 훑는다. */

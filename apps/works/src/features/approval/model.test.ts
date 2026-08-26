@@ -155,14 +155,19 @@ describe('progressBucket', () => {
     expect(progressBucket(r, ME)).toBe('ongoing')
   })
 
-  it('완료됐는데 아직 안 읽었으면 확인(confirm), 읽었으면 해당 없음이다', () => {
+  it('완료된 문서는 진행 상태 어디에도 들지 않는다', () => {
+    // 끝났는데 아직 못 본 문서는 내 문서함의 '확인' 칸이 받는다(inBox의 mine-confirm) —
+    // 다 끝난 문서가 '진행 중인 문서'에 서 있으면 그 그룹의 이름이 사실과 어긋난다.
     const done = row({
       status: 'APPROVED',
       completed_at: '2026-08-26T10:00:00Z',
       approval_recipients: [{ user_id: ME }],
     })
-    expect(progressBucket(done, ME)).toBe('confirm')
-    expect(progressBucket({ ...done, approval_reads: [{ user_id: ME }] }, ME)).toBe(null)
+    expect(progressBucket(done, ME)).toBe(null)
+    expect(inBox(done, 'mine-confirm', ME, null)).toBe(true)
+    expect(inBox({ ...done, approval_reads: [{ user_id: ME }] }, 'mine-confirm', ME, null)).toBe(
+      false,
+    )
   })
 
   it('내 임시저장은 draft, 남의 임시저장은 어디에도 들지 않는다', () => {
@@ -254,7 +259,6 @@ describe('countByProgress', () => {
       waiting: 1,
       upcoming: 1,
       ongoing: 1,
-      confirm: 0,
     })
   })
 
@@ -268,7 +272,6 @@ describe('countByProgress', () => {
       waiting: 0,
       upcoming: 0,
       ongoing: 0,
-      confirm: 0,
     })
   })
 })

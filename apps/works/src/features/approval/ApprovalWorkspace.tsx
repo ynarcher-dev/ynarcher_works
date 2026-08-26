@@ -14,7 +14,13 @@ import {
   type ApprovalBoxKey,
   type ApprovalProgressKey,
 } from '@/features/approval/config'
-import { countByProgress, inBox, matchesKeyword, progressBucket } from '@/features/approval/model'
+import {
+  countByBox,
+  countByProgress,
+  inBox,
+  matchesKeyword,
+  progressBucket,
+} from '@/features/approval/model'
 import { useEmployees } from '@/features/management/hooks'
 
 // 건수를 세는 대상은 좌패널에 서는 문서함 전부다 — 부서 문서함을 빠뜨리면 그 줄만 늘 0이 된다.
@@ -23,13 +29,18 @@ const ALL_BOXES: ApprovalBoxKey[] = [...APPROVAL_BOX_GROUPS, APPROVAL_DEPT_GROUP
 )
 
 /**
- * URL로 들어온 진행 필터(`?progress=`)를 좌패널 키로 옮긴다. 모르는 값이면 null —
+ * URL로 들어온 필터(`?progress=` / `?box=`)를 좌패널 키로 옮긴다. 모르는 값이면 null —
  * 손으로 고친 주소나 옛 링크가 "아무것도 안 걸린 목록"으로 떨어지게 두고, 임의의 칸을
  * 골라 주지 않는다(무엇으로 걸러진 목록인지 화면과 주소가 어긋나기 때문).
  */
 function parseProgress(raw: string | undefined): ApprovalProgressKey | null {
   if (!raw) return null
   return APPROVAL_PROGRESS_GROUP.boxes.find((b) => b.key === raw)?.key ?? null
+}
+
+function parseBox(raw: string | undefined): ApprovalBoxKey | null {
+  if (!raw) return null
+  return ALL_BOXES.find((k) => k === raw) ?? null
 }
 
 /** 목록 ↔ 상세 ↔ 기안 작성. 회의록 워크스페이스와 같은 판별 유니온 전환. */
@@ -48,7 +59,12 @@ type View =
 export function ApprovalWorkspace({
   initialDocumentId,
   initialProgress,
-}: { initialDocumentId?: string; initialProgress?: string } = {}) {
+  initialBox,
+}: {
+  initialDocumentId?: string
+  initialProgress?: string
+  initialBox?: string
+} = {}) {
   const uid = useAuthStore((s) => s.user?.id) ?? null
   const { data: docs, isLoading: docsLoading } = useApprovalDocuments()
   const { data: employees, isLoading: empLoading } = useEmployees()
@@ -56,9 +72,11 @@ export function ApprovalWorkspace({
   const [view, setView] = useState<View>(
     initialDocumentId ? { mode: 'detail', id: initialDocumentId } : { mode: 'list' },
   )
-  const [box, setBox] = useState<ApprovalBoxKey>('mine-all')
   // 대시보드 전자결재 카드가 한 칸을 눌러 들어오면 그 칸이 이미 켜진 채로 열린다
-  // (`/office?tab=approval&progress=waiting`). 이후 선택은 여느 때처럼 화면이 갖는다.
+  // (`?progress=waiting` 또는 `?box=mine-confirm`). 이후 선택은 여느 때처럼 화면이 갖는다.
+  // 둘이 함께 오면 진행 상태가 이긴다 — 한 번에 하나만 켜지는 축이라 어느 하나를 골라야 하고,
+  // 카드가 두 값을 함께 싣는 경우는 없으므로 여기 오는 것은 손으로 고친 주소뿐이다.
+  const [box, setBox] = useState<ApprovalBoxKey>(() => parseBox(initialBox) ?? 'mine-all')
   const [progress, setProgress] = useState<ApprovalProgressKey | null>(() =>
     parseProgress(initialProgress),
   )
@@ -85,16 +103,11 @@ export function ApprovalWorkspace({
   // 세는 일은 model이 갖는다(대시보드 전자결재 카드가 같은 함수로 같은 숫자를 낸다).
   const progressCounts = useMemo(() => countByProgress(rows, uid), [rows, uid])
 
-  const boxCounts = useMemo(() => {
-    const counts = Object.fromEntries(ALL_BOXES.map((k) => [k, 0])) as Record<
-      ApprovalBoxKey,
-      number
-    >
-    if (!uid) return counts
-    for (const row of rows)
-      for (const key of ALL_BOXES) if (inBox(row, key, uid, myDeptId)) counts[key] += 1
-    return counts
-  }, [rows, uid, myDeptId])
+  // 좌패널에 서는 문서함 전부를 센다 — 부서 문서함을 빠뜨리면 그 줄만 늘 0이 된다.
+  const boxCounts = useMemo(
+    () => countByBox(rows, ALL_BOXES, uid, myDeptId),
+    [rows, uid, myDeptId],
+  )
 
   const visibleRows = useMemo(() => {
     if (!uid) return []
