@@ -22,31 +22,44 @@ interface Editing {
 
 const AUTOSAVE_DELAY = 600
 
-/** 목록을 좁히는 탭의 키 — '전체' 또는 체크리스트 진행 상태 하나. */
-type MemoTab = 'ALL' | ChecklistStatus
+/** 목록을 좁히는 탭의 키 — '전체', 메모(NOTE), 또는 체크리스트 진행 상태 하나. */
+type MemoTab = 'ALL' | 'NOTE' | ChecklistStatus
 
 /**
- * 목록 탭 — 전체 · 대기 · 진행중 · 완료.
+ * 목록 탭 — 전체 · 메모 | 대기 · 진행중 · 완료.
  *
- * '전체'가 맨 앞이자 기본값인 이유는 이 목록이 체크리스트만의 자리가 아니기 때문이다. 메모
- * (NOTE)는 진행이라는 축이 없어 상태 탭 셋 어디에도 속하지 않으므로, 상태 탭만 두면 적어 둔
- * 글이 어느 탭에서도 보이지 않는 자리가 된다(패널을 열었는데 메모가 사라진 것으로 읽힌다).
+ * 두 축이 한 줄에 섞여 있다. 앞의 '메모'는 **종류**(NOTE)를 고르고, 뒤의 셋은 체크리스트의
+ * **진행 상태**를 고른다. 축이 갈리는 자리에 세로 구분선을 세워(`divider`) 다섯 칸이 한 줄로
+ * 읽히지 않게 한다 — 구분선이 없으면 '메모'가 '대기'와 같은 층의 상태처럼 보인다.
  *
- * 말과 순서는 타일 배지와 같다 — 배지에서 '대기'라고 읽은 것을 탭에서 다른 말로 찾게 하지
- * 않는다.
+ * '전체'가 맨 앞이자 기본값인 이유는 이 목록이 체크리스트만의 자리가 아니기 때문이다. 메모는
+ * 진행이라는 축이 없어 상태 탭 셋 어디에도 속하지 않으므로, 상태 탭만 두면 적어 둔 글이 어느
+ * 탭에서도 보이지 않는 자리가 된다(패널을 열었는데 메모가 사라진 것으로 읽힌다).
+ *
+ * 상태 탭의 말과 순서는 타일 배지와 같다 — 배지에서 '대기'라고 읽은 것을 탭에서 다른 말로
+ * 찾게 하지 않는다.
  */
-const MEMO_TABS: { key: MemoTab; label: string }[] = [
+const MEMO_TABS: { key: MemoTab; label: string; divider?: boolean }[] = [
   { key: 'ALL', label: '전체' },
-  { key: 'PENDING', label: CHECKLIST_STATUS_LABEL.PENDING },
+  { key: 'NOTE', label: '메모' },
+  { key: 'PENDING', label: CHECKLIST_STATUS_LABEL.PENDING, divider: true },
   { key: 'ACTIVE', label: CHECKLIST_STATUS_LABEL.ACTIVE },
   { key: 'DONE', label: CHECKLIST_STATUS_LABEL.DONE },
 ]
+
+/** 이 메모가 지금 켜진 탭에 서는가. 거르는 규칙을 한곳에 둬 건수와 목록이 갈리지 않게 한다. */
+function matchesTab(memo: QuickMemo, tab: MemoTab) {
+  if (tab === 'ALL') return true
+  if (tab === 'NOTE') return memo.type === 'NOTE'
+  return checklistStatus(memo) === tab
+}
 
 /** 목록이 빈 이유 — 검색어 · 좁혀 둔 탭 · 정말로 아무것도 없음 셋을 갈라 적는다. */
 function emptyMessage(query: string, tab: MemoTab) {
   if (query) return '검색 결과가 없습니다.'
   if (tab === 'ALL') return '아직 작성한 메모가 없습니다.'
-  return `${MEMO_TABS.find((item) => item.key === tab)?.label} 체크리스트가 없습니다.`
+  if (tab === 'NOTE') return '작성한 메모가 없습니다.'
+  return `${CHECKLIST_STATUS_LABEL[tab]} 체크리스트가 없습니다.`
 }
 
 /**
@@ -125,14 +138,15 @@ export function QuickMemoPanel() {
   }, [memos, query])
 
   const visibleMemos = useMemo(
-    () => tab === 'ALL' ? searched : searched.filter((memo) => checklistStatus(memo) === tab),
+    () => searched.filter((memo) => matchesTab(memo, tab)),
     [searched, tab],
   )
 
-  const tabItems = useMemo(() => MEMO_TABS.map(({ key, label }) => ({
+  const tabItems = useMemo(() => MEMO_TABS.map(({ key, label, divider }) => ({
     key,
     label,
-    count: key === 'ALL' ? searched.length : searched.filter((memo) => checklistStatus(memo) === key).length,
+    divider,
+    count: searched.filter((memo) => matchesTab(memo, key)).length,
   })), [searched])
 
   const updateSelected = (update: (memo: QuickMemo) => QuickMemo) => {
