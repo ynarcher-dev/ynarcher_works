@@ -32,9 +32,13 @@ function TreeRow({ node, selectedId, collapsed, onSelect, onToggle }: TreeRowPro
 
   return (
     <>
+      {/* 배경 hover는 행(div)이, 글자 hover는 이름 버튼이 갖는다. 둘을 각자 두면 버튼 밖
+          (들여쓰기·화살표 자리)에 마우스를 올렸을 때 배경만 바뀌고 글자는 그대로여서 한 행이
+          두 상태로 보인다. 행을 `group`으로 묶어 글자도 함께 반응하게 한다
+          (전자결재 문서함 좌패널과 같은 동작). */}
       <div
         className={cn(
-          'flex items-center gap-1 rounded-radius-md pr-1 hover:bg-gray-50',
+          'group flex items-center gap-1 rounded-radius-md pr-1 hover:bg-gray-50',
           isSelected && 'bg-brand-25 hover:bg-brand-25',
         )}
         style={{ paddingLeft: `${node.depth * 16 + 4}px` }}
@@ -60,7 +64,9 @@ function TreeRow({ node, selectedId, collapsed, onSelect, onToggle }: TreeRowPro
           onClick={() => onSelect(node.id)}
           className={cn(
             'min-w-0 flex-1 truncate py-1.5 text-left text-body-sm',
-            isSelected ? 'font-semibold text-brand-700' : 'text-gray-700 hover:text-gray-900',
+            isSelected
+              ? 'font-semibold text-brand-700'
+              : 'text-gray-700 group-hover:text-gray-900',
           )}
         >
           {node.name}

@@ -1,26 +1,57 @@
-import { Ban, FileCheck, Files, Inbox, PenLine, Users } from 'lucide-react'
+import {
+  Ban,
+  CalendarClock,
+  CheckCheck,
+  FileCheck,
+  Files,
+  Hourglass,
+  Inbox,
+  PenLine,
+  Send,
+  Users,
+} from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import type { BadgeTone } from '@ynarcher/ui'
+import { tableTextScale, type BadgeTone, type TableTextSet } from '@ynarcher/ui'
 import type { ApprovalStatus } from '@/features/management/config'
 
 /**
+ * 전자결재 문서의 글자 단 — 카드 안 표의 기본(12px)이 아니라 **페이지 표의 단(14px)**을 쓴다.
+ *
+ * 밀도 규칙은 "카드 안에 든 표는 카드가 말하는 주제의 부속이라 한 단 내린다"인데, 결재 문서는
+ * 카드에 담겼을 뿐 그 자체가 읽을거리다(화면이기 이전에 **양식**이고, 사람들이 종이와 기존
+ * 결재 시스템에서 익힌 크기가 본문 크기다). 결재는 한 글자를 잘못 읽으면 승인 여부가 갈리는
+ * 문서라 여기서만 예외를 둔다 — 2026-08-26 확정.
+ *
+ * 크기를 새로 만들지 않고 이미 있는 단(`tableTextScale.page`)을 고른다. 고르는 일은 이 한 줄이
+ * 전부이며, 화면은 규격 클래스를 직접 쓰지 않고 이 단만 가져다 쓴다.
+ */
+export const approvalText: TableTextSet = tableTextScale.page
+
+/**
  * 문서함(좌패널) 키. 내 문서함은 문서에서의 나의 자리(기안·결재·참조)로,
- * 부서 문서함은 소속으로 가른다. 하이웍스의 '진행 중인 문서' 그룹은 좌패널이 아니라
- * 상단 현황 타일(ApprovalProgressKey)이 담당한다 — 2026-08-26 설계 확정.
+ * 부서 문서함은 소속으로 가른다.
+ *
+ * '진행 중인 문서'는 한때 상단 현황 타일이 담당했으나 2026-08-26 좌패널로 합쳤다 —
+ * 둘 다 "목록을 어떤 기준으로 좁히는가"라는 같은 축이라, 자리를 나눠 두면 지금 무엇으로
+ * 걸러진 목록을 보고 있는지가 두 곳에 흩어진다.
  */
 export type ApprovalBoxKey =
-  | 'mine-all'
-  | 'mine-drafted'
-  | 'mine-approver'
-  | 'mine-cc'
-  | 'mine-rejected'
-  | 'dept-all'
+  'mine-all' | 'mine-drafted' | 'mine-approver' | 'mine-cc' | 'mine-rejected' | 'dept-all'
 
 export interface ApprovalBoxGroup {
   label: string
   boxes: { key: ApprovalBoxKey; label: string; icon: LucideIcon }[]
 }
 
+/**
+ * 좌패널 그룹 순서 = **지금 할 일 → 내 것 → 부서 것**.
+ * 진행 중인 문서(APPROVAL_PROGRESS_GROUP) → 내 문서함 → 부서 문서함 순으로 선다.
+ *
+ * 진행 그룹이 맨 위인 이유는 문서함을 열 때의 첫 질문이 "내 문서가 어디 있나"가 아니라
+ * "지금 내가 처리할 게 있나"이기 때문이다. 부서함은 남의 문서까지 포함하는 가장 넓은
+ * 범위라 맨 아래다. 그리는 순서는 ApprovalDocboxNav가 소유한다(키 종류가 둘이라 한 배열로
+ * 묶을 수 없다).
+ */
 export const APPROVAL_BOX_GROUPS: ApprovalBoxGroup[] = [
   {
     label: '내 문서함',
@@ -32,11 +63,28 @@ export const APPROVAL_BOX_GROUPS: ApprovalBoxGroup[] = [
       { key: 'mine-rejected', label: '반려', icon: Ban },
     ],
   },
-  {
-    label: '부서 문서함',
-    boxes: [{ key: 'dept-all', label: '전체', icon: Inbox }],
-  },
 ]
+
+/** 부서 문서함 — 가장 넓은 범위라 좌패널 맨 아래에 둔다. */
+export const APPROVAL_DEPT_GROUP: ApprovalBoxGroup = {
+  label: '부서 문서함',
+  boxes: [{ key: 'dept-all', label: '전체', icon: Inbox }],
+}
+
+/** 진행 중인 문서 그룹 — 문서함과 같은 좌패널에 서지만 키 종류가 다르다(진행 상태 축). */
+export const APPROVAL_PROGRESS_GROUP: {
+  label: string
+  boxes: { key: ApprovalProgressKey; label: string; icon: LucideIcon }[]
+} = {
+  label: '진행 중인 문서',
+  boxes: [
+    { key: 'all', label: '전체', icon: Files },
+    { key: 'waiting', label: '대기', icon: Hourglass },
+    { key: 'confirm', label: '확인', icon: CheckCheck },
+    { key: 'upcoming', label: '예정', icon: CalendarClock },
+    { key: 'ongoing', label: '진행', icon: Send },
+  ],
+}
 
 /**
  * 첨부·의견의 다형 키. 두 원장(attachments / entity_feedback) 모두 'approval'을 쓰며,

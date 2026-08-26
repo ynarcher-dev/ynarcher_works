@@ -1,14 +1,16 @@
-import { Checkbox, IconButton, cn, tableText } from '@ynarcher/ui'
+import { Checkbox, IconButton, cn } from '@ynarcher/ui'
 import { ChevronRight } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { buildTree, toNodes, type DeptTreeNode } from '@/features/management/panels/departmentsMock'
 import {
-  buildTree,
-  toNodes,
-  type DeptTreeNode,
-} from '@/features/management/panels/departmentsMock'
-import { useDepartments, useDeptMembers, useOrgVersions, activeOrgVersionId } from '@/features/management/orgHooks'
+  useDepartments,
+  useDeptMembers,
+  useOrgVersions,
+  activeOrgVersionId,
+} from '@/features/management/orgHooks'
 import { useEmployees } from '@/features/management/hooks'
 import { useJobTitleLabel } from '@/features/management/jobTitleHooks'
+import { approvalText } from '@/features/approval/config'
 
 export interface OrgPerson {
   id: string
@@ -61,10 +63,7 @@ export function ApprovalOrgTree({
 
   const nodes = useMemo(() => toNodes(deptRows ?? []), [deptRows])
   const tree = useMemo(() => buildTree(nodes), [nodes])
-  const deptNameById = useMemo(
-    () => new Map(nodes.map((n) => [n.id, n.name])),
-    [nodes],
-  )
+  const deptNameById = useMemo(() => new Map(nodes.map((n) => [n.id, n.name])), [nodes])
 
   // 부서 id → 그 부서에 직접 배치된 사람.
   const byDept = useMemo(() => {
@@ -95,11 +94,14 @@ export function ApprovalOrgTree({
     for (const list of byDept.values()) for (const p of list) m.set(p.id, p)
     return m
   }, [byDept])
-  const loadedRef = useMemo(() => ({ sent: false }), [])
-  if (!loadedRef.sent && allPeople.size > 0) {
-    loadedRef.sent = true
-    onPeopleLoaded?.(allPeople)
-  }
+  // 사람 원장을 부모(모달)에 올리는 일은 **렌더가 끝난 뒤**에 한다. 렌더 도중에 부르면
+  // 부모의 setState가 이 컴포넌트를 그리는 중에 일어나 React가 경고한다
+  // ("Cannot update a component while rendering a different component").
+  useEffect(() => {
+    if (allPeople.size > 0) onPeopleLoaded?.(allPeople)
+    // onPeopleLoaded는 부모가 매 렌더 새로 만드는 함수라 의존성에 넣으면 매번 다시 돈다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allPeople])
 
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const toggleCollapse = (id: string) =>
@@ -117,17 +119,6 @@ export function ApprovalOrgTree({
     onCheckedChange(next)
   }
 
-  const toggleDept = (node: DeptTreeNode) => {
-    const ids = collectMembers(node, byDept).filter((id) => !excludeIds.has(id))
-    const allChecked = ids.length > 0 && ids.every((id) => checked.has(id))
-    const next = new Set(checked)
-    for (const id of ids) {
-      if (allChecked) next.delete(id)
-      else next.add(id)
-    }
-    onCheckedChange(next)
-  }
-
   const q = keyword.trim().toLowerCase()
 
   // 검색 중에는 트리를 접고 맞는 사람만 평평하게 편다.
@@ -140,9 +131,9 @@ export function ApprovalOrgTree({
           p.deptName.toLowerCase().includes(q)),
     )
     return (
-      <div className="h-80 overflow-auto rounded-radius-md border border-gray-200 p-2">
+      <div className="h-[26rem] overflow-auto rounded-radius-md border border-gray-200 p-2">
         {matched.length === 0 ? (
-          <p className={cn('py-6 text-center', tableText.empty)}>검색 결과가 없습니다.</p>
+          <p className={cn('py-6 text-center', approvalText.empty)}>검색 결과가 없습니다.</p>
         ) : (
           matched.map((p) => (
             <PersonRow
@@ -159,9 +150,9 @@ export function ApprovalOrgTree({
   }
 
   return (
-    <div className="h-80 overflow-auto rounded-radius-md border border-gray-200 p-2">
+    <div className="h-[26rem] overflow-auto rounded-radius-md border border-gray-200 p-2">
       {tree.length === 0 ? (
-        <p className={cn('py-6 text-center', tableText.empty)}>조직 정보를 불러오는 중입니다.</p>
+        <p className={cn('py-6 text-center', approvalText.empty)}>조직 정보를 불러오는 중입니다.</p>
       ) : (
         tree.map((root) => (
           <DeptRow
@@ -173,7 +164,6 @@ export function ApprovalOrgTree({
             excludeIds={excludeIds}
             onToggleCollapse={toggleCollapse}
             onTogglePerson={togglePerson}
-            onToggleDept={toggleDept}
           />
         ))
       )}
@@ -200,10 +190,10 @@ function PersonRow({
       style={{ paddingLeft: `${depth * 16 + 24}px` }}
     >
       <Checkbox density="table" checked={checked} onChange={onToggle} />
-      <span className={tableText.body}>{person.name}</span>
-      {person.title && <span className={tableText.meta}>{person.title}</span>}
+      <span className={approvalText.body}>{person.name}</span>
+      {person.title && <span className={approvalText.meta}>{person.title}</span>}
       {showDept && person.deptName && (
-        <span className={cn('ml-auto', tableText.meta)}>{person.deptName}</span>
+        <span className={cn('ml-auto', approvalText.meta)}>{person.deptName}</span>
       )}
     </div>
   )
@@ -217,7 +207,6 @@ function DeptRow({
   excludeIds,
   onToggleCollapse,
   onTogglePerson,
-  onToggleDept,
 }: {
   node: DeptTreeNode
   byDept: Map<string, OrgPerson[]>
@@ -226,14 +215,10 @@ function DeptRow({
   excludeIds: Set<string>
   onToggleCollapse: (id: string) => void
   onTogglePerson: (id: string) => void
-  onToggleDept: (node: DeptTreeNode) => void
 }) {
   const isCollapsed = collapsed.has(node.id)
   const members = (byDept.get(node.id) ?? []).filter((p) => !excludeIds.has(p.id))
   const total = collectMembers(node, byDept).filter((id) => !excludeIds.has(id)).length
-  const allChecked = total > 0 && collectMembers(node, byDept)
-    .filter((id) => !excludeIds.has(id))
-    .every((id) => checked.has(id))
 
   return (
     <>
@@ -253,14 +238,18 @@ function DeptRow({
             />
           }
         />
-        <Checkbox
-          density="table"
-          checked={allChecked}
-          disabled={total === 0}
-          onChange={() => onToggleDept(node)}
-        />
-        <span className={cn(tableText.body, 'font-semibold')}>{node.name}</span>
-        <span className={tableText.meta}>({total})</span>
+        {/* 부서에는 체크 칸을 두지 않는다 — 결재선에 서는 것은 사람이지 조직이 아니다.
+            부서째 체크하면 그 부서의 전원이 한 번에 결재선에 들어가는데, 결재선은 몇 명이
+            어떤 차례로 서느냐가 곧 문서의 뜻이라 그런 일괄 지정이 맞는 자리가 아니다.
+            조직 줄은 펼치고 접는 길잡이 역할만 한다. */}
+        <button
+          type="button"
+          onClick={() => onToggleCollapse(node.id)}
+          className="flex min-w-0 items-center gap-1 text-left"
+        >
+          <span className={cn(approvalText.body, 'font-semibold')}>{node.name}</span>
+          <span className={approvalText.meta}>({total})</span>
+        </button>
       </div>
 
       {!isCollapsed && (
@@ -284,7 +273,6 @@ function DeptRow({
               excludeIds={excludeIds}
               onToggleCollapse={onToggleCollapse}
               onTogglePerson={onTogglePerson}
-              onToggleDept={onToggleDept}
             />
           ))}
         </>

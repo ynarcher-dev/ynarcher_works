@@ -1,10 +1,20 @@
-import { cn, tableText } from '@ynarcher/ui'
+import { cn } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
+import { approvalText } from '@/features/approval/config'
 
 export interface InfoPair {
   label: string
   value: ReactNode
 }
+
+/**
+ * 라벨 열 폭 — 머리 격자와 결재선 격자가 함께 쓴다(두 표가 다른 폭이면 위아래 카드에서
+ * 라벨 기둥이 어긋나 보인다).
+ *
+ * 글자 단을 14px로 올리면서(approvalText) 12px 기준의 `w-32`로는 '보존 연한 / 보안 등급'이
+ * 두 줄로 접혔다. 라벨이 접히면 그 행만 키가 커져 격자의 줄 높이가 들쭉날쭉해진다.
+ */
+export const LABEL_COL_WIDTH = 'w-44'
 
 interface ApprovalInfoTableProps {
   /** 라벨:값 쌍. 한 줄에 두 쌍씩 놓이며, 홀수면 마지막 값이 남은 폭을 채운다. */
@@ -17,16 +27,21 @@ interface ApprovalInfoTableProps {
 export function InfoLabelCell({
   children,
   className,
+  rowSpan,
 }: {
   children: ReactNode
   className?: string
+  /** 결재선 격자처럼 여러 단(직급/도장/이름)을 한 라벨이 이끌 때 쓴다. */
+  rowSpan?: number
 }) {
   return (
     <th
       scope="row"
+      rowSpan={rowSpan}
       className={cn(
-        'w-32 border border-gray-200 bg-gray-25 px-3 py-2 text-center font-medium',
-        tableText.head,
+        LABEL_COL_WIDTH,
+        'border border-gray-200 bg-gray-25 px-3 py-2 text-center font-medium',
+        approvalText.head,
         className,
       )}
     >
@@ -68,10 +83,7 @@ function InfoCellPair({ pair, span }: { pair: InfoPair; span: number }) {
   return (
     <>
       <InfoLabelCell>{pair.label}</InfoLabelCell>
-      <td
-        className={cn('border border-gray-200 px-3 py-2', tableText.body)}
-        colSpan={span}
-      >
+      <td className={cn('border border-gray-200 px-3 py-2', approvalText.body)} colSpan={span}>
         {pair.value}
       </td>
     </>

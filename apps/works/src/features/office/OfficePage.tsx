@@ -116,7 +116,11 @@ export function OfficePage() {
       {tab === 'branches' && <BranchesPanel />}
       {/* 전자결재: 진행 중 타일(필터) + 문서함 좌패널 + 문서 목록. */}
       {tab === 'approval' && (
-        <ApprovalWorkspace initialDocumentId={params.get('doc') ?? undefined} />
+        <ApprovalWorkspace
+          initialDocumentId={params.get('doc') ?? undefined}
+          // 대시보드 전자결재 카드의 딥링크(?progress=waiting 등) — 그 칸이 켜진 채로 열린다.
+          initialProgress={params.get('progress') ?? undefined}
+        />
       )}
     </div>
   )

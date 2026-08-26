@@ -17,7 +17,7 @@ export function PersonalPanel({ onNavigate }: { onNavigate?: () => void }) {
     <div className="space-y-4">
       <WelcomeCard onNavigate={onNavigate} />
       <WorkCheckCard />
-      <ApprovalCard />
+      <ApprovalCard onNavigate={onNavigate} />
     </div>
   )
 }

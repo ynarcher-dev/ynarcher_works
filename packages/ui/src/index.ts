@@ -20,6 +20,11 @@ export type { Density } from './density'
 // 일이 없다 — 화면이 쓰는 자리는 밀도 맥락을 내려받지 못하는 수제 목록뿐이고 그것들은 전부
 // 카드 안에 있다. 자리별 두 벌이 필요한 곳은 `DataTable` 내부이며 그 스케일은 닫아 둔다.
 export { cardText, tableText, formText } from './densityScale'
+// 단 전체(`tableTextScale`)는 2026-08-26에 열었다. 전자결재 문서는 카드 안에 들었지만 카드가
+// 말하는 주제의 **부속이 아니라 그 자체가 읽을거리**(종이 결재 양식)라 카드 단(12px)이 아닌
+// 페이지 단(14px)을 쓴다. 다만 화면이 단을 직접 고르면 자리마다 크기가 갈리므로, 고르는 일은
+// 도메인별로 한 곳에서만 한다(전자결재는 `features/approval/config.ts`의 `approvalText`).
+export { tableTextScale } from './densityScale'
 export type { TableStage, TableTextSet } from './densityScale'
 // 열 폭 스케일 — 컬럼 정의(화면 코드)가 직접 고르는 값이라 열어 둔다.
 // 폭을 감으로 붙이지 않게 하는 것이 목적이므로 `w-24` 같은 원시 값을 대신 쓰지 않는다.

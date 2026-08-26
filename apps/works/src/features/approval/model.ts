@@ -36,8 +36,14 @@ export interface ApprovalListRow {
 const inProgress = (s: ApprovalStatus) => s === 'PENDING' || s === 'IN_REVIEW'
 const isCompleted = (s: ApprovalStatus) => s === 'APPROVED' || s === 'REJECTED'
 
-/** 문서 종류 표기 — 양식 원장이 정본, 양식 없는 구(舊) 문서는 legacy form_type으로 폴백. */
-export function docTypeName(row: ApprovalListRow): string {
+/**
+ * 문서 종류 표기 — 양식 원장이 정본, 양식 없는 구(舊) 문서는 legacy form_type으로 폴백.
+ *
+ * 목록 행 전체가 아니라 **양식 두 칸만** 받는다. 같은 판정을 문서함 목록 바깥에서도 쓰기
+ * 때문이다(사업 상세의 '관련 전자결재' 패널은 목록과 다른 select로 문서를 읽는다) —
+ * 행 타입에 묶어 두면 부르는 쪽마다 쓰지도 않는 열을 채워 넣어야 한다.
+ */
+export function docTypeName(row: { form: { name: string } | null; form_type: string }): string {
   if (row.form?.name) return row.form.name
   return FORM_TYPES.find((f) => f.key === row.form_type)?.label ?? row.form_type
 }
@@ -114,6 +120,38 @@ export function progressBucket(row: ApprovalListRow, uid: string): ApprovalProgr
   }
   if (isCompleted(row.status) && isInvolved(row, uid) && !hasRead(row, uid)) return 'confirm'
   return null
+}
+
+/**
+ * 진행 분류별 건수. `all`은 나머지 넷의 합(문서 한 건은 한 칸에만 든다).
+ *
+ * 두 자리가 같은 숫자를 말한다 — 문서함 좌패널의 '진행 중인 문서'와 OFFICE 대시보드의
+ * 전자결재 카드다. 세는 규칙을 화면마다 적으면 같은 사람에게 두 곳이 다른 건수를 보이는
+ * 날이 오므로(분류 규칙은 progressBucket 하나뿐인데 집계를 각자 하면 필터가 갈린다),
+ * 세는 일까지 여기서 한 번에 끝낸다.
+ *
+ * uid가 없으면(로그인 정보 도착 전) 전부 0이다 — 모르는 상태를 0으로 적는 것이지 "없다"고
+ * 단정하는 것이 아니며, uid가 들어오는 즉시 다시 센다.
+ */
+export function countByProgress(
+  rows: ApprovalListRow[],
+  uid: string | null,
+): Record<ApprovalProgressKey, number> {
+  const counts: Record<ApprovalProgressKey, number> = {
+    all: 0,
+    waiting: 0,
+    confirm: 0,
+    upcoming: 0,
+    ongoing: 0,
+  }
+  if (!uid) return counts
+  for (const row of rows) {
+    const bucket = progressBucket(row, uid)
+    if (!bucket) continue
+    counts[bucket] += 1
+    counts.all += 1
+  }
+  return counts
 }
 
 /** 구분 열 값 — 문서에서 나의 자리(기안 > 결재 > 참조 > 부서 순으로 판정). */

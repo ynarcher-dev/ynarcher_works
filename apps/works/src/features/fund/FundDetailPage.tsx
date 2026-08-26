@@ -18,7 +18,6 @@ import { DetailDeleteButton } from '@/components/DetailDeleteButton'
 import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
-import { RelatedApprovalPanel } from '@/features/program/detail/RelatedApprovalPanel'
 import { RelatedMinutesPanel } from '@/features/office/minutes/RelatedMinutesPanel'
 import { CapitalCallPanel } from '@/features/fund/CapitalCallPanel'
 import { FundForm } from '@/features/fund/FundForm'
@@ -276,11 +275,14 @@ export function FundDetailPage() {
           </div>
         </div>
 
-        {/* 우측(1/3): AC 상세와 동일한 공용 패널 — 자료 관리 → 전자결재 → 관련 회의록 → 변동 이력 → 코멘트 */}
+        {/* 우측(1/3): AC 상세와 동일한 공용 패널 — 자료 관리 → 관련 회의록 → 변동 이력 → 코멘트.
+            '전자결재' 패널은 2026-08-26 걷어냈다 — 결재 문서의 워크스페이스 연동이 받는 대상은
+            사업 3종(AC·M&A·PROJECT)뿐이라(approval_program_links의 CHECK 제약), 조합은 걸릴 수
+            있는 대상이 아니어서 이 자리가 영원히 "연결된 전자결재가 없습니다"로 남는다. 없는
+            연결을 빈 칸으로 세워 두면 언젠가 채워질 자리로 읽힌다. */}
         <div className="space-y-4 lg:col-span-1">
           {/* 자료 업로드는 편집 페이지에서 — 상세는 읽기 전용 뷰. */}
           <MaterialPanel targetType="fund" targetId={fund.id} readOnly />
-          <RelatedApprovalPanel />
           <RelatedMinutesPanel targetType="fund" targetId={fund.id} />
           <ChangeHistoryPanel contributions={contributions} />
           <FeedbackPanel targetType="fund" targetId={fund.id} />

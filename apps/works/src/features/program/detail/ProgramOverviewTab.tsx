@@ -68,7 +68,9 @@ export function ProgramOverviewTab({
           코멘트는 다 보고 남기는 말이라 맨 아래에 둔다. 상세 화면 전부가 이 순서를 공유한다. */}
       <div className="space-y-4 lg:col-span-1">
         <MaterialPanel targetType="program" targetId={program.id} />
-        <RelatedApprovalPanel />
+        {/* 결재 연동의 대상 키도 회의록과 같은 워크스페이스별 entityKey다(program / ma_program /
+            project_program) — 셋을 공유하면 AC 결재가 M&A 딜에 붙어 보인다. */}
+        <RelatedApprovalPanel targetType={config.entityKey} targetId={program.id} />
         <RelatedMinutesPanel targetType={config.entityKey} targetId={program.id} />
         <ChangeHistoryPanel contributions={contributions} />
         <FeedbackPanel targetType={config.entityKey} targetId={program.id} />

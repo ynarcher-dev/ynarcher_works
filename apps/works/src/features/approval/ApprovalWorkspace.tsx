@@ -5,21 +5,39 @@ import { ListActions } from '@/components/ListActions'
 import { ApprovalDetail } from '@/features/approval/ApprovalDetail'
 import { ApprovalDocboxNav } from '@/features/approval/ApprovalDocboxNav'
 import { ApprovalEditor } from '@/features/approval/ApprovalEditor'
-import { ApprovalSummaryTiles } from '@/features/approval/ApprovalSummaryTiles'
 import { ApprovalTable } from '@/features/approval/ApprovalTable'
 import { useApprovalDocuments } from '@/features/approval/approvalApi'
 import {
   APPROVAL_BOX_GROUPS,
+  APPROVAL_DEPT_GROUP,
+  APPROVAL_PROGRESS_GROUP,
   type ApprovalBoxKey,
   type ApprovalProgressKey,
 } from '@/features/approval/config'
-import { inBox, matchesKeyword, progressBucket } from '@/features/approval/model'
+import { countByProgress, inBox, matchesKeyword, progressBucket } from '@/features/approval/model'
 import { useEmployees } from '@/features/management/hooks'
 
-const ALL_BOXES: ApprovalBoxKey[] = APPROVAL_BOX_GROUPS.flatMap((g) => g.boxes.map((b) => b.key))
+// 건수를 세는 대상은 좌패널에 서는 문서함 전부다 — 부서 문서함을 빠뜨리면 그 줄만 늘 0이 된다.
+const ALL_BOXES: ApprovalBoxKey[] = [...APPROVAL_BOX_GROUPS, APPROVAL_DEPT_GROUP].flatMap((g) =>
+  g.boxes.map((b) => b.key),
+)
+
+/**
+ * URL로 들어온 진행 필터(`?progress=`)를 좌패널 키로 옮긴다. 모르는 값이면 null —
+ * 손으로 고친 주소나 옛 링크가 "아무것도 안 걸린 목록"으로 떨어지게 두고, 임의의 칸을
+ * 골라 주지 않는다(무엇으로 걸러진 목록인지 화면과 주소가 어긋나기 때문).
+ */
+function parseProgress(raw: string | undefined): ApprovalProgressKey | null {
+  if (!raw) return null
+  return APPROVAL_PROGRESS_GROUP.boxes.find((b) => b.key === raw)?.key ?? null
+}
 
 /** 목록 ↔ 상세 ↔ 기안 작성. 회의록 워크스페이스와 같은 판별 유니온 전환. */
-type View = { mode: 'list' } | { mode: 'detail'; id: string } | { mode: 'create' }
+type View =
+  | { mode: 'list' }
+  | { mode: 'detail'; id: string }
+  // 기안 작성과 임시저장 수정은 같은 화면이다(id가 있으면 수정).
+  | { mode: 'create'; id?: string }
 
 /**
  * OFFICE 전자결재 문서함 — 상단 진행 중 타일(필터) + 좌측 문서함 패널 + 문서 목록.
@@ -27,7 +45,10 @@ type View = { mode: 'list' } | { mode: 'detail'; id: string } | { mode: 'create'
  * 타일이 꺼진다(같은 목록을 두 기준이 동시에 좁히면 지금 무엇을 보고 있는지 흐려진다).
  * 보이는 문서의 범위 자체는 서버 RLS가 가른다.
  */
-export function ApprovalWorkspace({ initialDocumentId }: { initialDocumentId?: string } = {}) {
+export function ApprovalWorkspace({
+  initialDocumentId,
+  initialProgress,
+}: { initialDocumentId?: string; initialProgress?: string } = {}) {
   const uid = useAuthStore((s) => s.user?.id) ?? null
   const { data: docs, isLoading: docsLoading } = useApprovalDocuments()
   const { data: employees, isLoading: empLoading } = useEmployees()
@@ -36,7 +57,11 @@ export function ApprovalWorkspace({ initialDocumentId }: { initialDocumentId?: s
     initialDocumentId ? { mode: 'detail', id: initialDocumentId } : { mode: 'list' },
   )
   const [box, setBox] = useState<ApprovalBoxKey>('mine-all')
-  const [progress, setProgress] = useState<ApprovalProgressKey | null>(null)
+  // 대시보드 전자결재 카드가 한 칸을 눌러 들어오면 그 칸이 이미 켜진 채로 열린다
+  // (`/office?tab=approval&progress=waiting`). 이후 선택은 여느 때처럼 화면이 갖는다.
+  const [progress, setProgress] = useState<ApprovalProgressKey | null>(() =>
+    parseProgress(initialProgress),
+  )
   const [keyword, setKeyword] = useState('')
 
   const nameById = useMemo(() => {
@@ -56,24 +81,9 @@ export function ApprovalWorkspace({ initialDocumentId }: { initialDocumentId?: s
 
   const rows = useMemo(() => docs ?? [], [docs])
 
-  // 진행 중 타일 건수 — 문서함·검색과 무관하게 "지금 나의 처리가 필요한 것"의 전량.
-  const progressCounts = useMemo(() => {
-    const counts: Record<ApprovalProgressKey, number> = {
-      all: 0,
-      waiting: 0,
-      confirm: 0,
-      upcoming: 0,
-      ongoing: 0,
-    }
-    if (!uid) return counts
-    for (const row of rows) {
-      const bucket = progressBucket(row, uid)
-      if (!bucket) continue
-      counts[bucket] += 1
-      counts.all += 1
-    }
-    return counts
-  }, [rows, uid])
+  // 진행 중 건수 — 문서함·검색과 무관하게 "지금 나의 처리가 필요한 것"의 전량.
+  // 세는 일은 model이 갖는다(대시보드 전자결재 카드가 같은 함수로 같은 숫자를 낸다).
+  const progressCounts = useMemo(() => countByProgress(rows, uid), [rows, uid])
 
   const boxCounts = useMemo(() => {
     const counts = Object.fromEntries(ALL_BOXES.map((k) => [k, 0])) as Record<
@@ -102,13 +112,21 @@ export function ApprovalWorkspace({ initialDocumentId }: { initialDocumentId?: s
   if (view.mode === 'create') {
     return (
       <ApprovalEditor
+        documentId={view.id}
         onSaved={(id) => setView({ mode: 'detail', id })}
         onCancel={() => setView({ mode: 'list' })}
       />
     )
   }
   if (view.mode === 'detail') {
-    return <ApprovalDetail documentId={view.id} onBack={() => setView({ mode: 'list' })} />
+    return (
+      <ApprovalDetail
+        documentId={view.id}
+        onBack={() => setView({ mode: 'list' })}
+        onEdit={(id) => setView({ mode: 'create', id })}
+        onOpenDocument={(id) => setView({ mode: 'detail', id })}
+      />
+    )
   }
 
   if ((docsLoading && !docs) || (empLoading && !employees)) {
@@ -125,19 +143,18 @@ export function ApprovalWorkspace({ initialDocumentId }: { initialDocumentId?: s
   return (
     <div className="space-y-5">
       <PageHeader title="전자결재" />
-      <ApprovalSummaryTiles
-        counts={progressCounts}
-        selected={progress}
-        onSelect={setProgress}
-      />
       <div className="flex gap-5">
+        {/* 문서함과 진행 상태는 같은 축(목록을 좁히는 기준)이라 한 번에 하나만 켠다. */}
         <ApprovalDocboxNav
-          selected={progress ? null : box}
-          onSelect={(key) => {
+          selectedBox={progress ? null : box}
+          onSelectBox={(key) => {
             setBox(key)
             setProgress(null)
           }}
           counts={boxCounts}
+          selectedProgress={progress}
+          onSelectProgress={setProgress}
+          progressCounts={progressCounts}
         />
         <div className="min-w-0 flex-1 space-y-4">
           <ListToolbar

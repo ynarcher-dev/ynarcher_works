@@ -23,7 +23,8 @@ export function DashboardPanel() {
         </div>
       </div>
       {/* 우측(1/3): 인사말 → 근무체크 → 전자결재. 같은 한 벌이 상단바 '개인 메뉴' 슬라이드오버에도
-          그대로 서므로 구성은 PersonalPanel이 소유한다(전자결재는 배치만 잡힌 껍데기 — 건수 더미). */}
+          그대로 서므로 구성은 PersonalPanel이 소유한다. 전자결재 건수는 문서함 좌패널과 같은
+          함수로 세며(model.countByProgress), 각 줄은 그 칸이 켜진 문서함으로 건너간다. */}
       <div className="lg:col-span-1">
         <PersonalPanel />
       </div>

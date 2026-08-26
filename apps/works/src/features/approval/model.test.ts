@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  countByProgress,
   inBox,
   isLastPending,
   isMyTurn,
@@ -208,5 +209,47 @@ describe('matchesKeyword', () => {
     expect(matchesKeyword(r, '김지연', '김지연')).toBe(true)
     expect(matchesKeyword(r, '휴가', '김지연')).toBe(false)
     expect(matchesKeyword(r, '  ', '김지연')).toBe(true)
+  })
+})
+
+describe('countByProgress', () => {
+  it('all은 나머지 넷의 합이고, 무관한 문서는 어디에도 세지 않는다', () => {
+    const rows = [
+      row({ id: 'a', approval_lines: [{ approver_id: ME, step_order: 1, decision: 'PENDING' }] }),
+      row({
+        id: 'b',
+        approval_lines: [
+          { approver_id: OTHER, step_order: 1, decision: 'PENDING' },
+          { approver_id: ME, step_order: 2, decision: 'PENDING' },
+        ],
+      }),
+      row({
+        id: 'c',
+        drafter_id: ME,
+        approval_lines: [{ approver_id: OTHER, step_order: 1, decision: 'PENDING' }],
+      }),
+      // 나와 무관한 문서(부서만 같아 목록에는 보이는 것) — 어느 칸에도 들지 않는다.
+      row({ id: 'd' }),
+    ]
+    expect(countByProgress(rows, ME)).toEqual({
+      all: 3,
+      waiting: 1,
+      upcoming: 1,
+      ongoing: 1,
+      confirm: 0,
+    })
+  })
+
+  it('로그인 정보가 아직 없으면 전부 0이다', () => {
+    const rows = [
+      row({ approval_lines: [{ approver_id: ME, step_order: 1, decision: 'PENDING' }] }),
+    ]
+    expect(countByProgress(rows, null)).toEqual({
+      all: 0,
+      waiting: 0,
+      upcoming: 0,
+      ongoing: 0,
+      confirm: 0,
+    })
   })
 })

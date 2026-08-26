@@ -110,7 +110,12 @@ export interface ApprovalDetail {
   department_id: string | null
   created_at: string
   completed_at: string | null
-  form: { name: string; category: string; retention: string; security_grade: string } | null
+  form: {
+    name: string
+    category: string
+    retention: string
+    security_grade: string
+  } | null
   version: { fields: unknown } | null
   approval_lines: {
     id: string
@@ -267,6 +272,54 @@ export function useCreateApproval() {
   })
 }
 
+export interface SaveDraftInput extends CreateApprovalInput {
+  /** 고칠 임시저장 문서. */
+  documentId: string
+}
+
+/**
+ * 임시저장 문서 수정 — 값과 결재선을 통째로 갈아끼운다.
+ *
+ * 결재선 교체가 `save_approval_draft` RPC 한 경로로만 이뤄지는 이유는, 기존 결재선 행을
+ * 지워야 하는데 `approval_lines`·`approval_recipients`에 DELETE 정책이 없기 때문이다
+ * (보안 게이트가 업무 테이블의 DELETE 정책을 금지한다). 삭제 권한을 테이블에 상시로 여는
+ * 대신 "내가 기안한 DRAFT 문서"라는 조건을 함수 안에서 확인하고 그 안에서만 교체한다.
+ * 문서 번호 채번은 상신 시 DB 트리거가 맡으므로 여기서 만들지 않는다.
+ */
+export function useSaveApprovalDraft() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (v: SaveDraftInput): Promise<string> => {
+      const lineRows = (Object.keys(v.lines) as (keyof ApprovalLineInput)[]).flatMap((kind) =>
+        v.lines[kind].map((approver_id, i) => ({
+          approver_id,
+          step_order: i + 1,
+          kind,
+        })),
+      )
+      const { error } = await supabase.rpc('save_approval_draft', {
+        p_document_id: v.documentId,
+        p_title: v.title,
+        p_form_id: v.formId,
+        p_form_version_id: v.formVersionId,
+        p_field_values: v.fieldValues,
+        p_department_id: v.departmentId,
+        p_lines: lineRows,
+        p_recipient_ids: v.recipientIds,
+        p_submit: !v.asDraft,
+      })
+      if (error) throw error
+      return v.documentId
+    },
+    onSuccess: (_data, v) => {
+      void qc.invalidateQueries({ queryKey: ['approval', 'documents'] })
+      void qc.invalidateQueries({
+        queryKey: ['approval', 'document', v.documentId],
+      })
+    },
+  })
+}
+
 /**
  * 결재 처리(승인/반려). 내 결재선 행을 찍고 문서 상태를 옮긴다.
  * 반려는 즉시 종결, 승인은 남은 단계가 있으면 진행(IN_REVIEW), 없으면 최종 승인이다.
@@ -302,7 +355,9 @@ export function useDecideApproval() {
     },
     onSuccess: (_data, v) => {
       void qc.invalidateQueries({ queryKey: ['approval', 'documents'] })
-      void qc.invalidateQueries({ queryKey: ['approval', 'document', v.documentId] })
+      void qc.invalidateQueries({
+        queryKey: ['approval', 'document', v.documentId],
+      })
     },
   })
 }
@@ -332,17 +387,21 @@ export function useMarkApprovalRead() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (v: { documentId: string; userId: string }) => {
-      const { error } = await supabase
-        .from('approval_reads')
-        .upsert(
-          { document_id: v.documentId, user_id: v.userId, read_at: new Date().toISOString() },
-          { onConflict: 'document_id,user_id' },
-        )
+      const { error } = await supabase.from('approval_reads').upsert(
+        {
+          document_id: v.documentId,
+          user_id: v.userId,
+          read_at: new Date().toISOString(),
+        },
+        { onConflict: 'document_id,user_id' },
+      )
       if (error) throw error
     },
     onSuccess: (_data, v) => {
       void qc.invalidateQueries({ queryKey: ['approval', 'documents'] })
-      void qc.invalidateQueries({ queryKey: ['approval', 'document', v.documentId] })
+      void qc.invalidateQueries({
+        queryKey: ['approval', 'document', v.documentId],
+      })
     },
   })
 }
