@@ -98,6 +98,22 @@ export interface SummaryTileProps {
   metrics?: SummaryTileMetric[]
   /** 좁은 타일을 한 줄에 여러 개 배치할 때 쓰는 저밀도 표현. */
   compact?: boolean
+  /**
+   * 클릭 동작(대개 필터 토글·해제). 준 타일만 누를 수 있다.
+   *
+   * 건수를 세어 놓고 누를 수 없으면 다음에 할 일이 표를 눈으로 훑는 일밖에 남지 않는다 —
+   * 지표 띠(`StatStrip`)에 `onClick`을 둔 것과 같은 판단이다. 종전에는 화면마다 타일을
+   * `<button>`이나 `role="button"` div로 제각기 감쌌고 그래서 선택 표현도 화면마다 갈렸다.
+   */
+  onClick?: () => void
+  /**
+   * 지금 이 타일이 목록을 좁히고 있음(필터 켜짐).
+   *
+   * 지표 띠는 상자가 없어 선택을 옅은 브랜드 면(`bg-brand-25`)으로 말하지만, 이 타일은 면이
+   * 이미 범주색으로 칠해져 있어 같은 방법을 쓸 수 없다. 그래서 면 바깥의 브랜드 링으로 말한다 —
+   * 표현은 다르되 색은 같은 브랜드다.
+   */
+  selected?: boolean
   className?: string
 }
 
@@ -114,12 +130,30 @@ export function SummaryTile({
   tone = 'blue',
   metrics = [],
   compact = false,
+  onClick,
+  selected,
   className,
 }: SummaryTileProps) {
   const colors = toneClass[tone]
   const primary = tone === 'primary'
+  const clickable = Boolean(onClick)
+  // 누를 수 있는 타일은 진짜 <button>이다. div에 role만 얹으면 키보드 처리를 화면마다 손으로
+  // 다시 써야 하고(그래서 실제로 한쪽은 쓰고 한쪽은 빠져 있었다) 폼 안에서 제출로 새는 것도
+  // 막지 못한다.
+  const Tag = clickable ? 'button' : 'section'
   return (
-    <section className={cn('relative overflow-hidden rounded-radius-lg', compact ? 'p-3' : 'p-4', colors.surface, className)}>
+    <Tag
+      {...(clickable ? { type: 'button' as const, onClick, 'aria-pressed': selected } : {})}
+      className={cn(
+        'relative block w-full overflow-hidden rounded-radius-lg text-left',
+        compact ? 'p-3' : 'p-4',
+        colors.surface,
+        clickable &&
+          'transition-transform duration-fast hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
+        selected && 'ring-2 ring-brand ring-offset-2',
+        className,
+      )}
+    >
       <div className="relative flex items-start justify-between gap-3">
         <div>
           {eyebrow && <p className={cn('text-caption font-medium tracking-wide', primary ? 'text-white/70' : 'text-gray-600')}>{eyebrow}</p>}
@@ -148,6 +182,6 @@ export function SummaryTile({
           </div>
         )}
       </div>
-    </section>
+    </Tag>
   )
 }

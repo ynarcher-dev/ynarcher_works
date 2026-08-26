@@ -12,14 +12,34 @@ interface Props {
   keyword: string
   filters: GlobalFilterState
   searchScope: NetworkSearchScope
+  /** 권역 타일 토글(다중선택). 값은 목록 필터와 같은 태그 id다. */
+  onToggleRegion: (regionId: string) => void
+  /** '전체' 타일 — 권역 조건을 푸는 문. */
+  onClearRegions: () => void
 }
 
-export function GlobalRegionFilteredSummary({ scope, keyword, filters, searchScope }: Props) {
+/** 권역 한 칸. id가 없는 '미지정'은 걸 조건이 없어 누르지 않는다. */
+interface RegionTile {
+  id: string | null
+  label: string
+  count: number
+}
+
+export function GlobalRegionFilteredSummary({
+  scope,
+  keyword,
+  filters,
+  searchScope,
+  onToggleRegion,
+  onClearRegions,
+}: Props) {
   const { data = [], isPending } = useQuery({
     queryKey: ['networks', 'global', 'filtered-region-summary', scope, keyword, filters, searchScope],
-    queryFn: async (): Promise<{ label: string; count: number }[]> => {
+    queryFn: async (): Promise<RegionTile[]> => {
       const [tagRes, rowsRes] = await Promise.all([
-        supabase.from('region_tags').select('name').is('deleted_at', null),
+        // 이름만이 아니라 id까지 읽는다 — 타일이 곧 권역 필터이고, 목록 필터는 이름이 아니라
+        // 태그 id로 거른다(같은 이름의 태그가 둘일 수 있다).
+        supabase.from('region_tags').select('id, name').is('deleted_at', null),
         supabase.rpc('global_network_entities', {
           p_keyword: keyword.trim() || null,
           p_mine: scope === 'mine',
@@ -35,16 +55,26 @@ export function GlobalRegionFilteredSummary({ scope, keyword, filters, searchSco
       if (tagRes.error) throw tagRes.error
       if (rowsRes.error) throw rowsRes.error
 
-      const counts = new Map<string, number>(
-        ((tagRes.data ?? []) as { name: string }[]).map((tag) => [tag.name, 0]),
-      )
-      for (const row of (rowsRes.data ?? []) as { region_name?: string | null }[]) {
-        const label = row.region_name?.trim() || '미지정'
-        counts.set(label, (counts.get(label) ?? 0) + 1)
+      // 집계는 태그 id로 센다 — 이름으로 뭉치면 동명 태그 둘이 한 칸에 합쳐져 그 칸을 눌렀을
+      // 때 목록이 절반만 나온다. 권역이 비어 있는 행은 걸 id가 없으므로 '미지정' 한 칸에 모은다.
+      const tags = (tagRes.data ?? []) as { id: string; name: string }[]
+      const labelById = new Map(tags.map((tag) => [tag.id, tag.name]))
+      const counts = new Map<string, number>(tags.map((tag) => [tag.id, 0]))
+      let unset = 0
+      for (const row of (rowsRes.data ?? []) as { region_tag_id?: string | null }[]) {
+        if (!row.region_tag_id) {
+          unset += 1
+          continue
+        }
+        counts.set(row.region_tag_id, (counts.get(row.region_tag_id) ?? 0) + 1)
       }
-      return [...counts.entries()]
-        .map(([label, count]) => ({ label, count }))
-        .sort((a, b) => b.count - a.count)
+      const tiles: RegionTile[] = [...counts.entries()].map(([id, count]) => ({
+        id,
+        label: labelById.get(id) ?? '알 수 없음',
+        count,
+      }))
+      if (unset > 0) tiles.push({ id: null, label: '미지정', count: unset })
+      return tiles.sort((a, b) => b.count - a.count)
     },
   })
 
@@ -62,16 +92,21 @@ export function GlobalRegionFilteredSummary({ scope, keyword, filters, searchSco
             unit="건"
             tone="primary"
             icon={<Globe2 aria-hidden className="size-[18px]" strokeWidth={1.8} />}
+            onClick={onClearRegions}
+            selected={filters.regionIds.length === 0}
           />
           {data.map((region, index) => (
             <SummaryTile
-              key={region.label}
+              key={region.id ?? '미지정'}
               title={region.label}
               eyebrow="권역"
               value={region.count}
               unit="건"
               tone={TONES[index % TONES.length]}
               icon={<MapPin aria-hidden className="size-[18px]" strokeWidth={1.8} />}
+              // 타일은 곧 권역 필터다(집계에서 권역 축을 뺀 p_regions: null과 짝을 이룬다).
+              onClick={region.id ? () => onToggleRegion(region.id as string) : undefined}
+              selected={region.id ? filters.regionIds.includes(region.id) : undefined}
             />
           ))}
         </section>

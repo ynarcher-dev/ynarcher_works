@@ -18,6 +18,7 @@ import {
   type NetworkListRow,
   type NetworkListScope,
 } from '@/features/networks/hooks'
+import { toggleAxisValue } from '@/lib/filterAxis'
 
 /** 목록 페이지당 행 수(글로벌·미분류와 동일). */
 const PAGE_SIZE = 30
@@ -78,7 +79,16 @@ export function NetworkListTab({ scope }: NetworkListTabProps) {
 
   return (
     <div className="space-y-3">
-      <NetworkFilteredSummary scope={scope} keyword={keyword} filters={filters} searchScope={searchScope} />
+      <NetworkFilteredSummary
+        scope={scope}
+        keyword={keyword}
+        filters={filters}
+        searchScope={searchScope}
+        onToggleEntity={(entity) =>
+          setFilters((f) => ({ ...f, entities: toggleAxisValue(f.entities, entity) }))
+        }
+        onClearEntities={() => setFilters((f) => ({ ...f, entities: [] }))}
+      />
 
       <ListToolbar
         keyword={keyword}

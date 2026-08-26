@@ -10,6 +10,7 @@ import {
   useFundListPage,
   type FundListFilterState,
 } from '@/features/fund/fundListHooks'
+import { toggleAxisValue } from '@/lib/filterAxis'
 
 /** 페이지당 행 수. */
 const PAGE_SIZE = 20
@@ -52,6 +53,10 @@ export function FundListTab({ mineUserId }: FundListTabProps) {
         filters={filters}
         mineUserId={mineUserId}
         listTotal={data?.total}
+        onToggleStrategy={(strategy) =>
+          setFilters((f) => ({ ...f, strategies: toggleAxisValue(f.strategies, strategy) }))
+        }
+        onClearStrategies={() => setFilters((f) => ({ ...f, strategies: [] }))}
       />
 
       <ListToolbar

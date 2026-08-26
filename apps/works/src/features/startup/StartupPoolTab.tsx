@@ -13,6 +13,7 @@ import {
   type StartupPoolFilters as Filters,
 } from '@/features/startup/startupPoolHooks'
 import { startupListContentKey } from '@/features/startup/startupClassification'
+import { toggleAxisValue } from '@/lib/filterAxis'
 
 /** 목록 페이지당 행 수(서버 사이드 페이지네이션). */
 const PAGE_SIZE = 30
@@ -77,6 +78,10 @@ export function StartupPoolTab({ mineUserId }: StartupPoolTabProps) {
         filters={filters}
         mineUserId={mineUserId}
         searchScope={searchScope}
+        onToggleCategory={(category) =>
+          setFilters((f) => ({ ...f, categories: toggleAxisValue(f.categories, category) }))
+        }
+        onClearCategories={() => setFilters((f) => ({ ...f, categories: [] }))}
       />
 
       <ListToolbar

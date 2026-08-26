@@ -28,6 +28,7 @@ import { GuideSection } from '@/features/styleguide/GuideSection'
 export function ComponentSpecSection() {
   const [on, setOn] = useState(true)
   const [tab, setTab] = useState('a')
+  const [tileAxis, setTileAxis] = useState<string | null>(null)
 
   return (
     <GuideSection
@@ -137,6 +138,23 @@ export function ComponentSpecSection() {
             icon={<BriefcaseBusiness className="size-[18px]" />} metrics={[{ label: 'PM', value: 2 }, { label: 'MEMBER', value: 2 }]} />
           <SummaryTile title="PROJECT" eyebrow="프로젝트" value={6} unit="개 운영" tone="mint"
             icon={<FolderKanban className="size-[18px]" />} metrics={[{ label: 'PM', value: 1 }, { label: 'MEMBER', value: 5 }]} />
+        </div>
+      </Card>
+
+      {/*
+        타일은 곧 그 축의 필터다. 누를 수 있음과 켜져 있음은 화면이 아니라 타일이 소유하며,
+        면이 이미 범주색이라 선택은 지표 띠처럼 옅은 면이 아니라 면 바깥의 브랜드 링으로 말한다.
+      */}
+      <Card title="범주형 현황 요약 — 필터로 쓰일 때">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+          <SummaryTile title="전체" eyebrow="필터 해제" value={18} unit="건" tone="primary"
+            icon={<Target className="size-[18px]" />} onClick={() => setTileAxis(null)}
+            selected={tileAxis === null} />
+          <SummaryTile title="진행중" eyebrow="누를 수 있음" value={11} unit="건" tone="blue"
+            icon={<FolderKanban className="size-[18px]" />} onClick={() => setTileAxis('ongoing')}
+            selected={tileAxis === 'ongoing'} />
+          <SummaryTile title="기타" eyebrow="누를 수 없음" value={7} unit="건" tone="slate"
+            icon={<BriefcaseBusiness className="size-[18px]" />} />
         </div>
       </Card>
     </GuideSection>

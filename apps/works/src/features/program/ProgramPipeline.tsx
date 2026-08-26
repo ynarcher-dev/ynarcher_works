@@ -1,12 +1,5 @@
 import { CircleHelp, Layers3 } from 'lucide-react'
-import {
-  Card,
-  Skeleton,
-  SummaryTile,
-  TextAction,
-  cn,
-  type SummaryTileTone,
-} from '@ynarcher/ui'
+import { Card, Skeleton, SummaryTile, type SummaryTileTone } from '@ynarcher/ui'
 import {
   PROGRAM_STATUS_ICON,
   PROGRAM_STATUS_LABEL,
@@ -90,48 +83,43 @@ export function ProgramPipeline({
   ]
 
   return (
-    <Card
-      title={`${config.entityNoun} 현황`}
-      actions={selectedStatuses.length > 0 ? <TextAction onClick={onClearStatuses}>상태 선택 해제</TextAction> : undefined}
-    >
+    <Card title={`${config.entityNoun} 현황`}>
       <section
         aria-label={`${config.entityNoun} 상태별 현황`}
         className="grid grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-3"
       >
         {tiles.map((tile, index) => {
           const Icon = tile.status ? PROGRAM_STATUS_ICON[tile.status] ?? CircleHelp : Layers3
-          const selected = tile.status !== null && selectedStatuses.includes(tile.status)
-          const canFilter = tile.status !== null
+          const isTotal = tile.key === 'TOTAL'
 
           return (
-            <div
+            <SummaryTile
               key={tile.key}
-              role={canFilter ? 'button' : undefined}
-              tabIndex={canFilter ? 0 : undefined}
-              aria-pressed={canFilter ? selected : undefined}
-              onClick={canFilter ? () => onToggleStatus(tile.status as string) : undefined}
-              onKeyDown={canFilter ? (event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault()
-                  onToggleStatus(tile.status as string)
-                }
-              } : undefined}
-              className={cn(
-                'rounded-radius-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10',
-                canFilter && 'cursor-pointer transition-transform duration-fast hover:-translate-y-0.5',
-                selected && 'ring-2 ring-brand',
-              )}
-            >
-              <SummaryTile
-                title={tile.label}
-                eyebrow={tile.eyebrow}
-                value={tile.count}
-                unit="건"
-                tone={tile.key === 'TOTAL' ? 'primary' : STATUS_TONES[(index - 1) % STATUS_TONES.length]}
-                className="h-full"
-                icon={<Icon aria-hidden className="size-[18px]" strokeWidth={1.8} />}
-              />
-            </div>
+              title={tile.label}
+              eyebrow={tile.eyebrow}
+              value={tile.count}
+              unit="건"
+              tone={isTotal ? 'primary' : STATUS_TONES[(index - 1) % STATUS_TONES.length]}
+              className="h-full"
+              icon={<Icon aria-hidden className="size-[18px]" strokeWidth={1.8} />}
+              // 상태 타일은 그 상태의 필터이고, '전체'는 그 조건을 푸는 문이다 — 총계라고 못
+              // 누르게 두면 되돌아올 자리가 필터 팝오버 안으로 숨는다(근태 현황과 같은 규약).
+              // '기타 상태'만은 원장에 없는 값들의 묶음이라 걸 조건이 없어 누르지 않는다.
+              onClick={
+                tile.status !== null
+                  ? () => onToggleStatus(tile.status as string)
+                  : isTotal
+                    ? onClearStatuses
+                    : undefined
+              }
+              selected={
+                tile.status !== null
+                  ? selectedStatuses.includes(tile.status)
+                  : isTotal
+                    ? selectedStatuses.length === 0
+                    : undefined
+              }
+            />
           )
         })}
       </section>

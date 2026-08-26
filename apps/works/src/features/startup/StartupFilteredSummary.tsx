@@ -11,6 +11,10 @@ interface StartupFilteredSummaryProps {
   filters: StartupPoolFilters
   mineUserId?: string | null
   searchScope: StartupSearchScope
+  /** 구분 타일 토글(다중선택). 타일이 곧 구분 필터다. */
+  onToggleCategory: (category: string) => void
+  /** '전체기업' 타일 — 구분 조건을 푸는 문. */
+  onClearCategories: () => void
 }
 
 const TILES: {
@@ -33,6 +37,8 @@ export function StartupFilteredSummary({
   filters,
   mineUserId,
   searchScope,
+  onToggleCategory,
+  onClearCategories,
 }: StartupFilteredSummaryProps) {
   const withoutCategory = { ...filters, categories: [] }
   const total = useStartupPoolPage(keyword, withoutCategory, 0, 1, mineUserId, searchScope)
@@ -60,6 +66,12 @@ export function StartupFilteredSummary({
               unit="개사"
               tone={tile.tone}
               icon={<Icon aria-hidden className="size-[18px]" strokeWidth={1.8} />}
+              // 타일은 곧 구분 필터다. 집계에서 구분 축을 뺀 이유(withoutCategory)도 여기에 있다 —
+              // 지금 걸린 구분으로 다시 세면 고르지 않은 타일이 전부 0이 되어 누를 수가 없다.
+              onClick={tile.status ? () => onToggleCategory(tile.status as string) : onClearCategories}
+              selected={
+                tile.status ? filters.categories.includes(tile.status) : filters.categories.length === 0
+              }
             />
           )
         })}

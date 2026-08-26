@@ -19,6 +19,10 @@ interface NetworkFilteredSummaryProps {
   keyword: string
   filters: NetworkListFilterState
   searchScope: NetworkSearchScope
+  /** 구분 타일 토글(다중선택). 값은 원장 테이블명(EntityKey)으로 목록 필터와 같다. */
+  onToggleEntity: (entity: string) => void
+  /** '전체' 타일 — 구분 조건을 푸는 문. */
+  onClearEntities: () => void
 }
 
 const TILES: {
@@ -39,7 +43,14 @@ const TILES: {
   { key: 'etc', label: '기타', eyebrow: '기타 분류', tone: 'mint', icon: Shapes },
 ]
 
-export function NetworkFilteredSummary({ scope, keyword, filters, searchScope }: NetworkFilteredSummaryProps) {
+export function NetworkFilteredSummary({
+  scope,
+  keyword,
+  filters,
+  searchScope,
+  onToggleEntity,
+  onClearEntities,
+}: NetworkFilteredSummaryProps) {
   const withoutEntity = { ...filters, entities: [] }
   const total = useNetworkListPage(scope, keyword, 0, 1, withoutEntity, searchScope)
   const van = useNetworkListPage(scope, keyword, 0, 1, { ...withoutEntity, entities: ['van'] }, searchScope)
@@ -61,6 +72,7 @@ export function NetworkFilteredSummary({ scope, keyword, filters, searchScope }:
       <section aria-label="필터가 반영된 구성 현황" className="grid grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-3">
         {TILES.map((tile) => {
           const Icon = tile.icon
+          const isTotal = tile.key === 'total'
           return (
             <SummaryTile
               key={tile.key}
@@ -70,6 +82,9 @@ export function NetworkFilteredSummary({ scope, keyword, filters, searchScope }:
               unit="명"
               tone={tile.tone}
               icon={<Icon aria-hidden className="size-[18px]" strokeWidth={1.8} />}
+              // 타일은 곧 구분 필터다(집계에서 구분 축을 뺀 withoutEntity와 짝을 이룬다).
+              onClick={isTotal ? onClearEntities : () => onToggleEntity(tile.key)}
+              selected={isTotal ? filters.entities.length === 0 : filters.entities.includes(tile.key)}
             />
           )
         })}

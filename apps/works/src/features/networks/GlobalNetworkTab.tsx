@@ -14,6 +14,7 @@ import {
 } from '@/features/networks/filters'
 import { GLOBAL_COLUMNS } from '@/features/networks/globalConfig'
 import { useGlobalPage, type GlobalListScope } from '@/features/networks/globalHooks'
+import { toggleAxisValue } from '@/lib/filterAxis'
 
 /** 목록 페이지당 행 수(국내 통합 목록과 동일). */
 const PAGE_SIZE = 30
@@ -63,7 +64,16 @@ export function GlobalNetworkTab({ scope }: GlobalNetworkTabProps) {
 
   return (
     <div className="space-y-3">
-      <GlobalRegionFilteredSummary scope={scope} keyword={keyword} filters={filters} searchScope={searchScope} />
+      <GlobalRegionFilteredSummary
+        scope={scope}
+        keyword={keyword}
+        filters={filters}
+        searchScope={searchScope}
+        onToggleRegion={(regionId) =>
+          setFilters((f) => ({ ...f, regionIds: toggleAxisValue(f.regionIds, regionId) }))
+        }
+        onClearRegions={() => setFilters((f) => ({ ...f, regionIds: [] }))}
+      />
 
       <ListToolbar
         keyword={keyword}

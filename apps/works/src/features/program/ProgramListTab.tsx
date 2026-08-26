@@ -13,6 +13,7 @@ import {
   type ProgramFilters as Filters,
 } from '@/features/program/programsPoolHooks'
 import { useProgramWorkspace } from '@/features/program/workspace'
+import { toggleAxisValue } from '@/lib/filterAxis'
 
 /** 목록 페이지당 행 수(서버 사이드 페이지네이션). */
 const PAGE_SIZE = 30
@@ -57,12 +58,7 @@ export function ProgramListTab({ scope, backTab }: ProgramListTabProps) {
 
   /** 단계 토글: 이미 걸린 상태면 빼고, 아니면 더한다(상태 필터와 같은 다중선택 규약). */
   const toggleStatus = (status: string) =>
-    setFilters((f) => ({
-      ...f,
-      statuses: f.statuses.includes(status)
-        ? f.statuses.filter((s) => s !== status)
-        : [...f.statuses, status],
-    }))
+    setFilters((f) => ({ ...f, statuses: toggleAxisValue(f.statuses, status) }))
 
   return (
     <div className="space-y-3">

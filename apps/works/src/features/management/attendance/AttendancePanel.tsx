@@ -197,23 +197,20 @@ export function AttendancePanel() {
                 : (TILE_TONE_BY_STATUS[tile.key] ?? 'slate')
 
               return (
-                <button
+                <SummaryTile
                   key={tile.key}
-                  type="button"
-                  aria-pressed={tile.selected}
+                  title={tile.label}
+                  value={tile.value}
+                  unit={tile.unit}
+                  tone={tone}
+                  compact
+                  icon={<Icon aria-hidden className="size-[18px]" strokeWidth={1.8} />}
+                  // 누를 수 있음·켜져 있음은 타일이 소유한다 — 종전에는 화면이 <button>으로
+                  // 감싸고 링을 직접 얹었고, 그래서 같은 뜻이 사업 현황과 다른 모양이 됐다.
                   onClick={tile.onClick}
-                  className="block min-w-0 rounded-radius-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
-                >
-                  <SummaryTile
-                    title={tile.label}
-                    value={tile.value}
-                    unit={tile.unit}
-                    tone={tone}
-                    compact
-                    icon={<Icon aria-hidden className="size-[18px]" strokeWidth={1.8} />}
-                    className={tile.selected ? 'ring-2 ring-brand-500 ring-offset-2' : undefined}
-                  />
-                </button>
+                  selected={tile.selected}
+                  className="min-w-0"
+                />
               )
             })}
           </section>

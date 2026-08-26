@@ -13,6 +13,7 @@ import {
   displayStatusCode,
   type AttendanceEntry,
 } from '@/features/management/attendance/attendanceModel'
+import { toggleAxisValue } from '@/lib/filterAxis'
 
 /**
  * 아직 찍지 않은 칸의 필터 값. 상태 원장에 없는 코드다 — 상태가 아니라 '아직 일어나지 않은 일'을
@@ -74,10 +75,5 @@ export function toggleStatusFilter(
   filters: AttendanceFilters,
   code: string,
 ): AttendanceFilters {
-  return {
-    ...filters,
-    statuses: filters.statuses.includes(code)
-      ? filters.statuses.filter((c) => c !== code)
-      : [...filters.statuses, code],
-  }
+  return { ...filters, statuses: toggleAxisValue(filters.statuses, code) }
 }
