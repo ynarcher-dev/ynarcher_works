@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, CheckSquare2, Pin, Search, StickyNote, Trash2 } from 'lucide-react'
-import { Button, IconButton, Input, Spinner, TextArea, cardText, formText, cn } from '@ynarcher/ui'
+import { Button, IconButton, Input, Spinner, Tabs, TextArea, cardText, formText, cn } from '@ynarcher/ui'
 import { useAuthStore } from '@/auth/authStore'
 import { ChecklistEditor } from './ChecklistEditor'
 import { QuickMemoTile } from './QuickMemoTile'
 import { MEMO_COLORS, memoSurface } from './quickMemoColors'
 import { useDeleteQuickMemo, useQuickMemos, useSaveQuickMemo } from './quickMemoApi'
 import {
-  createQuickMemo, isQuickMemoEmpty, takeQuickMemoIntent,
-  type QuickMemo, type QuickMemoType,
+  CHECKLIST_STATUS_LABEL, checklistStatus, createQuickMemo, isQuickMemoEmpty, takeQuickMemoIntent,
+  type ChecklistStatus, type QuickMemo, type QuickMemoType,
 } from './quickMemoStore'
 
 /** 편집 중인 메모 한 장. */
@@ -21,6 +21,33 @@ interface Editing {
 }
 
 const AUTOSAVE_DELAY = 600
+
+/** 목록을 좁히는 탭의 키 — '전체' 또는 체크리스트 진행 상태 하나. */
+type MemoTab = 'ALL' | ChecklistStatus
+
+/**
+ * 목록 탭 — 전체 · 대기 · 진행중 · 완료.
+ *
+ * '전체'가 맨 앞이자 기본값인 이유는 이 목록이 체크리스트만의 자리가 아니기 때문이다. 메모
+ * (NOTE)는 진행이라는 축이 없어 상태 탭 셋 어디에도 속하지 않으므로, 상태 탭만 두면 적어 둔
+ * 글이 어느 탭에서도 보이지 않는 자리가 된다(패널을 열었는데 메모가 사라진 것으로 읽힌다).
+ *
+ * 말과 순서는 타일 배지와 같다 — 배지에서 '대기'라고 읽은 것을 탭에서 다른 말로 찾게 하지
+ * 않는다.
+ */
+const MEMO_TABS: { key: MemoTab; label: string }[] = [
+  { key: 'ALL', label: '전체' },
+  { key: 'PENDING', label: CHECKLIST_STATUS_LABEL.PENDING },
+  { key: 'ACTIVE', label: CHECKLIST_STATUS_LABEL.ACTIVE },
+  { key: 'DONE', label: CHECKLIST_STATUS_LABEL.DONE },
+]
+
+/** 목록이 빈 이유 — 검색어 · 좁혀 둔 탭 · 정말로 아무것도 없음 셋을 갈라 적는다. */
+function emptyMessage(query: string, tab: MemoTab) {
+  if (query) return '검색 결과가 없습니다.'
+  if (tab === 'ALL') return '아직 작성한 메모가 없습니다.'
+  return `${MEMO_TABS.find((item) => item.key === tab)?.label} 체크리스트가 없습니다.`
+}
 
 /**
  * 퀵 메모 슬라이드오버 — 목록과 편집기를 한 자리에서 오간다.
@@ -47,6 +74,7 @@ export function QuickMemoPanel() {
   const [pendingOpenId, setPendingOpenId] = useState<string | null>(
     intent && 'open' in intent ? intent.open : null)
   const [query, setQuery] = useState('')
+  const [tab, setTab] = useState<MemoTab>('ALL')
   const [saved, setSaved] = useState(true)
 
   useEffect(() => {
@@ -86,13 +114,26 @@ export function QuickMemoPanel() {
   }, [saveMemo])
 
   // 정렬은 서버 훅이 이미 끝냈다(고정 우선 · 최근 수정 순). 여기서는 걸러내기만 한다.
-  const visibleMemos = useMemo(() => {
+  // 검색이 먼저고 탭이 그다음이다 — 탭의 건수는 **지금 검색어로 좁힌 안에서** 세어야 한다.
+  // 검색과 무관한 전체 건수를 적으면 '진행중 3'을 눌렀는데 한 장도 서지 않는 탭이 생긴다.
+  const searched = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase('ko-KR')
     return memos
       .filter((memo) => !isQuickMemoEmpty(memo))
       .filter((memo) => !needle || [memo.title, memo.content, ...memo.items.map((item) => item.content)]
         .join(' ').toLocaleLowerCase('ko-KR').includes(needle))
   }, [memos, query])
+
+  const visibleMemos = useMemo(
+    () => tab === 'ALL' ? searched : searched.filter((memo) => checklistStatus(memo) === tab),
+    [searched, tab],
+  )
+
+  const tabItems = useMemo(() => MEMO_TABS.map(({ key, label }) => ({
+    key,
+    label,
+    count: key === 'ALL' ? searched.length : searched.filter((memo) => checklistStatus(memo) === key).length,
+  })), [searched])
 
   const updateSelected = (update: (memo: QuickMemo) => QuickMemo) => {
     setSaved(false)
@@ -182,13 +223,18 @@ export function QuickMemoPanel() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="shrink-0 space-y-3 border-b border-gray-100 p-4">
+      <div className="shrink-0 space-y-3 p-4">
         <div className="grid grid-cols-2 gap-2">
           <Button variant="secondary" onClick={() => addMemo('NOTE')}><StickyNote aria-hidden className="size-4" /> 메모</Button>
           <Button variant="secondary" onClick={() => addMemo('CHECKLIST')}><CheckSquare2 aria-hidden className="size-4" /> 체크리스트</Button>
         </div>
         <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="메모 검색" aria-label="메모 검색"
           icon={<Search aria-hidden className="size-4" strokeWidth={1.8} />} />
+      </div>
+      {/* 탭의 밑줄이 머리와 목록을 가르는 선을 겸한다 — 머리에 테두리를 따로 두면 8px 사이에
+          가로선 둘이 겹쳐 선다. */}
+      <div className="shrink-0 px-4">
+        <Tabs items={tabItems} value={tab} onChange={(key) => setTab(key as MemoTab)} />
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         {isLoading ? (
@@ -198,8 +244,12 @@ export function QuickMemoPanel() {
         ) : visibleMemos.length === 0 ? (
           <div className="flex min-h-64 flex-col items-center justify-center text-center">
             <StickyNote aria-hidden className="mb-3 size-9 text-gray-300" strokeWidth={1.5} />
-            <p className={cardText.subhead}>{query ? '검색 결과가 없습니다.' : '아직 작성한 메모가 없습니다.'}</p>
-            {!query && <p className={`mt-1 ${cardText.subtitle}`}>생각이나 할 일을 빠르게 기록해보세요.</p>}
+            {/* 빈 이유를 그대로 적는다 — 탭을 좁혀 둔 채 '아직 작성한 메모가 없습니다'가 서면
+                쌓아 둔 것이 사라진 것으로 읽힌다. */}
+            <p className={cardText.subhead}>{emptyMessage(query, tab)}</p>
+            {!query && tab === 'ALL' && (
+              <p className={`mt-1 ${cardText.subtitle}`}>생각이나 할 일을 빠르게 기록해보세요.</p>
+            )}
           </div>
         ) : (
           <div className="space-y-2">

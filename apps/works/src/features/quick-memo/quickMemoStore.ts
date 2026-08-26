@@ -80,6 +80,33 @@ export function isChecklistDone(memo: QuickMemo) {
   return memo.type === 'CHECKLIST' && items.length > 0 && items.every((item) => item.completed)
 }
 
+/** 체크리스트의 진행 상태. 메모(NOTE)는 이 축을 갖지 않는다. */
+export type ChecklistStatus = 'PENDING' | 'ACTIVE' | 'DONE'
+
+/**
+ * 상태를 부르는 말 — 타일 배지와 패널 탭이 **같은 표**를 읽는다. 두 곳에 나눠 적으면 배지에서
+ * '대기'로 읽은 것을 탭에서는 다른 말로 찾게 되는 날이 온다.
+ */
+export const CHECKLIST_STATUS_LABEL: Record<ChecklistStatus, string> = {
+  PENDING: '대기',
+  ACTIVE: '진행중',
+  DONE: '완료',
+}
+
+/**
+ * 체크리스트 한 장의 진행 상태 — 하나도 안 했으면 `PENDING`, 다 했으면 `DONE`, 그 사이가
+ * `ACTIVE`. 메모(NOTE)는 진행이라는 축 자체가 없으므로 `null`이다(상태가 '없음'인 것과
+ * '대기'인 것은 다르다 — 메모를 대기로 세면 아직 할 일이 남은 것처럼 세어진다).
+ *
+ * 판정을 여기 한곳에 둔 이유는 **거르는 쪽(패널 탭)과 적는 쪽(타일 배지)이 같은 답을 써야**
+ * 하기 때문이다 — 갈리면 배지는 '진행중'인데 진행중 탭에는 서지 않는 줄이 생긴다.
+ */
+export function checklistStatus(memo: QuickMemo): ChecklistStatus | null {
+  if (memo.type !== 'CHECKLIST') return null
+  if (isChecklistDone(memo)) return 'DONE'
+  return memo.items.some((item) => item.completed) ? 'ACTIVE' : 'PENDING'
+}
+
 /** 패널 목록·대시보드 카드가 함께 쓰는 정렬: 고정 먼저, 그다음 최근 수정 순. */
 export function sortQuickMemos(memos: QuickMemo[]): QuickMemo[] {
   return [...memos].sort(

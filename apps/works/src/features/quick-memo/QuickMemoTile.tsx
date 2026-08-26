@@ -1,6 +1,9 @@
-import { Badge, cardText, cn, pinMark } from '@ynarcher/ui'
+import { Badge, cardText, cn, pinMark, type BadgeTone } from '@ynarcher/ui'
 import { memoSurface } from './quickMemoColors'
-import { isChecklistDone, type QuickMemo } from './quickMemoStore'
+import {
+  CHECKLIST_STATUS_LABEL, checklistStatus, isChecklistDone,
+  type ChecklistStatus, type QuickMemo,
+} from './quickMemoStore'
 
 /**
  * 수정 시각 표기 — 공지·게시판과 같은 `YYYY.MM.DD`(2026-08-26).
@@ -24,15 +27,17 @@ function preview(memo: QuickMemo) {
 }
 
 /**
- * 체크리스트 상태 배지 — 다 끝낸 목록은 초록(성공)이 아니라 **중립(회색)**으로 내려앉는다.
- * 끝난 일은 더 볼 것이 없으므로 남은 일보다 앞으로 나와서는 안 된다. 완료 판정은 배지 혼자
- * 하지 않고 `isChecklistDone`을 쓴다 — 대시보드가 감추는 기준과 갈리면 안 된다.
+ * 상태 배지의 색 — 다 끝낸 목록은 초록(성공)이 아니라 **중립(회색)**으로 내려앉는다. 끝난 일은
+ * 더 볼 것이 없으므로 남은 일보다 앞으로 나와서는 안 된다.
+ *
+ * 말(`CHECKLIST_STATUS_LABEL`)과 판정(`checklistStatus`)은 배지가 갖지 않고 store에서 읽는다 —
+ * 패널의 상태 탭이 거르고 부르는 기준과 갈리면 배지는 '진행중'인데 그 탭에는 서지 않는 줄이
+ * 생긴다.
  */
-function checklistStatus(memo: QuickMemo) {
-  if (isChecklistDone(memo)) return { label: '완료', tone: 'neutral' as const }
-  const completed = memo.items.filter((item) => item.completed).length
-  if (completed === 0) return { label: '대기', tone: 'neutral' as const }
-  return { label: '진행중', tone: 'info' as const }
+const STATUS_TONE: Record<ChecklistStatus, BadgeTone> = {
+  PENDING: 'neutral',
+  ACTIVE: 'info',
+  DONE: 'neutral',
 }
 
 /**
@@ -56,6 +61,7 @@ export function QuickMemoTile({
   // 다 끝낸 체크리스트는 고른 색(포스트잇 바탕)을 내려놓고 회색으로 가라앉는다 — 목록에서
   // 끝난 것과 남은 것을 색 하나로 갈라 준다.
   const done = isChecklistDone(memo)
+  const status = checklistStatus(memo)
 
   return (
     <button
@@ -73,9 +79,9 @@ export function QuickMemoTile({
             <p className={cn('truncate', cardText.subhead, done && 'text-gray-500')}>
               {memo.title || '제목 없는 메모'}
             </p>
-            {memo.type === 'CHECKLIST' && (
-              <Badge tone={checklistStatus(memo).tone} dot>
-                {checklistStatus(memo).label}
+            {status && (
+              <Badge tone={STATUS_TONE[status]} dot>
+                {CHECKLIST_STATUS_LABEL[status]}
               </Badge>
             )}
           </div>
