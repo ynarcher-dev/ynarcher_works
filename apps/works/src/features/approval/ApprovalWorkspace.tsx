@@ -1,5 +1,5 @@
 import { ListToolbar, PageHeader, Spinner } from '@ynarcher/ui'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuthStore } from '@/auth/authStore'
 import { ListActions } from '@/components/ListActions'
 import { ApprovalDetail } from '@/features/approval/ApprovalDetail'
@@ -22,6 +22,8 @@ import {
   progressBucket,
 } from '@/features/approval/model'
 import { useEmployees } from '@/features/management/hooks'
+
+const PAGE_SIZE = 15
 
 // 건수를 세는 대상은 좌패널에 서는 문서함 전부다 — 부서 문서함을 빠뜨리면 그 줄만 늘 0이 된다.
 const ALL_BOXES: ApprovalBoxKey[] = [...APPROVAL_BOX_GROUPS, APPROVAL_DEPT_GROUP].flatMap((g) =>
@@ -81,6 +83,11 @@ export function ApprovalWorkspace({
     parseProgress(initialProgress),
   )
   const [keyword, setKeyword] = useState('')
+  const [page, setPage] = useState(0)
+
+  // 문서함·진행 상태·검색어가 바뀌면 첫 페이지로 되돌린다 — 목록이 통째로 갈리는데 페이지만
+  // 남으면 3페이지짜리에서 5페이지를 보던 손이 빈 화면을 받는다(다른 목록 탭과 같은 규약).
+  useEffect(() => setPage(0), [box, progress, keyword])
 
   const nameById = useMemo(() => {
     const m = new Map<string, string>()
@@ -119,6 +126,12 @@ export function ApprovalWorkspace({
       : rows.filter((row) => inBox(row, box, uid, myDeptId))
     return scoped.filter((row) => matchesKeyword(row, keyword, nameOf(row.drafter_id)))
   }, [rows, uid, progress, box, myDeptId, keyword, nameOf])
+
+  // 페이지 자르기는 목록을 걸러 낸 이쪽이 갖는다(문서함마다 건수가 다르다). 목록이 줄어
+  // 마지막 페이지가 사라지면 safePage가 끝 페이지로 당겨 준다.
+  const pageCount = Math.max(1, Math.ceil(visibleRows.length / PAGE_SIZE))
+  const safePage = Math.min(page, pageCount - 1)
+  const pageRows = visibleRows.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE)
 
   // 기안 작성·상세는 문서함 전체를 대신 차지한다(문서 한 건에 집중하는 화면이라
   // 목록·현황판을 함께 띄우면 어디를 보고 있는지가 흐려진다).
@@ -179,12 +192,18 @@ export function ApprovalWorkspace({
             }
           />
           <ApprovalTable
-            rows={visibleRows}
+            rows={pageRows}
             uid={uid ?? ''}
             myDeptId={myDeptId}
             nameOf={nameOf}
             onRowClick={(row) => setView({ mode: 'detail', id: row.id })}
             emptyText={emptyText}
+            pagination={{
+              page: safePage,
+              pageSize: PAGE_SIZE,
+              total: visibleRows.length,
+              onChange: setPage,
+            }}
           />
         </div>
       </div>

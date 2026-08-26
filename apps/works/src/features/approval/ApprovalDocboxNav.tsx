@@ -49,6 +49,7 @@ export function ApprovalDocboxNav({
             label={box.label}
             icon={box.icon}
             count={progressCounts[box.key] ?? 0}
+            countStyle="pending"
             selected={box.key === selectedProgress}
             onClick={() => onSelectProgress(box.key)}
           />
@@ -105,12 +106,19 @@ function NavRow({
   label,
   icon: Icon,
   count,
+  countStyle = 'plain',
   selected,
   onClick,
 }: {
   label: string
   icon: LucideIcon
   count: number
+  /**
+   * 건수 표기 방식. 'pending'은 지금 손이 가야 할 건수(진행 중인 문서)라 `[3]` 말머리에
+   * 붉은색으로 눈에 걸리게 두고, 'plain'은 보관 범위를 세는 숫자(내 문서함·부서 문서함)라
+   * 그냥 숫자로 적는다 — 이쪽은 처리를 재촉하는 신호가 아니라 목록의 크기다.
+   */
+  countStyle?: 'pending' | 'plain'
   selected: boolean
   onClick: () => void
 }) {
@@ -142,8 +150,9 @@ function NavRow({
       >
         {label}
       </span>
-      {/* 건수 표기 — `[3]` 말머리에 0건만 회색으로 물러나는 규칙은 카드 제목 옆 건수
-          (cardText.count)에서 가져오되 **색과 굵기만** 가져온다.
+      {/* 건수 표기 — 0건만 회색으로 물러나는 규칙은 카드 제목 옆 건수(cardText.count)에서
+          가져오되 **색과 굵기만** 가져온다. `[3]` 말머리와 붉은색은 처리를 재촉하는 신호라
+          진행 중인 문서에만 붙이고, 내 문서함·부서 문서함은 그냥 숫자로 적는다(2026-08-26).
 
           크기는 그 토큰(14px)이 아니라 이 행의 크기(13px)를 쓴다. 그 값은 카드 제목(16px)
           옆에서 한 단 눌러 부속임을 드러내려고 정해진 것이라, 13px 메뉴 행에 그대로 얹으면
@@ -155,10 +164,14 @@ function NavRow({
       <span
         className={cn(
           'w-12 shrink-0 text-right text-body-sm font-semibold tabular-nums',
-          count === 0 ? 'text-gray-400' : 'text-danger-700',
+          count === 0
+            ? 'text-gray-400'
+            : countStyle === 'pending'
+              ? 'text-danger-700'
+              : 'text-gray-600',
         )}
       >
-        [{count}]
+        {countStyle === 'pending' ? `[${count}]` : count}
       </span>
     </button>
   )

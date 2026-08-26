@@ -1,4 +1,4 @@
-import { Badge, DataTable, type Column } from '@ynarcher/ui'
+import { Badge, DataTable, type Column, type DataTableProps } from '@ynarcher/ui'
 import {
   APPROVAL_ROLE_LABEL,
   DOC_STATUS_LABEL,
@@ -16,6 +16,11 @@ export interface ApprovalTableProps {
   nameOf: (id: string | null) => string
   onRowClick?: (row: ApprovalListRow) => void
   emptyText?: string
+  /**
+   * 페이저(공용 DataTable 규격). 문서함마다 걸러진 건수가 다르므로 자르기·페이지 상태는
+   * 목록을 걸러 내는 쪽(워크스페이스)이 갖고, 표는 받아 그대로 넘긴다.
+   */
+  pagination?: DataTableProps<ApprovalListRow>['pagination']
 }
 
 /**
@@ -30,6 +35,7 @@ export function ApprovalTable({
   nameOf,
   onRowClick,
   emptyText = '전자결재 문서가 없습니다.',
+  pagination,
 }: ApprovalTableProps) {
   const columns: Column<ApprovalListRow>[] = [
     { key: 'doc_no', header: '문서 번호', type: 'text', render: (r) => r.doc_no ?? '-' },
@@ -71,6 +77,7 @@ export function ApprovalTable({
       standardColumns={false}
       onRowClick={onRowClick}
       emptyText={emptyText}
+      pagination={pagination}
     />
   )
 }
