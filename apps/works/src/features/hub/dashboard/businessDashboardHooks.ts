@@ -1,36 +1,23 @@
 import { useQuery } from '@tanstack/react-query'
-import type { BadgeTone } from '@ynarcher/ui'
 import { supabase } from '@/lib/supabase'
 import { AC_WORKSPACE } from '@/features/ac/AcWorkspace'
 import { MNA_WORKSPACE } from '@/features/mna/MnaWorkspace'
 import { PROJECT_WORKSPACE } from '@/features/project/ProjectWorkspace'
-import { FUND_STATUS_TONE, fundStatusLabel } from '@/features/fund/fundListHooks'
-import { PROGRAM_STATUS_LABEL, PROGRAM_STATUS_TONE } from '@/features/program/config'
 import type { ProgramManagerRole } from '@/features/program/hooks'
 import type { ProgramWorkspaceConfig, ProgramWorkspaceKey } from '@/features/program/workspace'
 
 /**
- * 대시보드가 세는 '나의 운영' 한 건. 원장은 넷(AC·M&A·PROJECT 사업 + FUND 펀드)이고
- * 서로 컬럼도 상태값도 다르므로, **여기까지 올라온 뒤에는 같은 모양**이어야 한다.
+ * 대시보드가 세는 '나의 운영' 한 건 — **어느 워크스페이스에서 어느 자리인가**, 둘뿐이다.
  *
- * 그래서 상태의 **표기**(라벨·톤)까지 이 계층이 정해서 올린다. 화면에서 원장별 표를 다시
- * 고르면 같은 'OPERATING'이 사업에서는 '진행중', 펀드에서는 '운용 중'이라는 사실을 표가
- * 알아야 하고, 원장이 하나 늘 때마다 화면이 함께 늘어난다.
+ * 원장은 넷(AC·M&A·PROJECT 사업 + FUND 펀드)이고 컬럼도 상태값도 서로 다르지만, 이 값을
+ * 읽는 곳은 「나의 워크스페이스」 타일 하나이고 타일이 하는 일은 세는 것뿐이다. 제목·기간·
+ * 상태·투입률까지 실어 올리던 시절이 있었는데(2026-08-26 이전, '참여 중인 운영' 목록),
+ * 그 목록이 위 타일과 같은 물음에 두 번 답하고 있어 걷어냈다. 각 원장의 상세는 타일이 보내는
+ * 워크스페이스의 '내 목록'이 답한다 — 여기서 다시 조립할 이유가 없다.
  */
 export interface BusinessOperation {
-  id: string
   workspace: OperationWorkspaceKey
-  workspaceLabel: string
-  /** 눌렀을 때 열 상세 경로. 원장마다 경로 모양이 달라(사업 `/ac/programs/:id` vs 펀드 `/fund/:id`) 조립을 화면에 맡기지 않는다. */
-  detailPath: string
-  title: string
-  statusLabel: string
-  statusTone: BadgeTone
-  startDate: string | null
-  endDate: string | null
   roleKey: OperationRoleKey
-  /** 투입률(%). 펀드는 이 축이 없어 null이며, 표는 '-'로 적는다. */
-  allocationRate: number | null
 }
 
 /** 사업 3종 + 펀드. 펀드는 사업 원장(features/program)이 아니므로 키를 따로 잇는다. */
@@ -47,10 +34,7 @@ export type OperationWorkspaceKey = ProgramWorkspaceKey | 'fund'
  */
 export type OperationRoleKey = ProgramManagerRole | 'LEAD' | 'OPERATION' | 'ADMIN'
 
-/**
- * 자리의 표기 — 타일의 지표 칩과 목록의 역할 배지가 **같은 표**를 읽는다. 두 곳이 각자
- * 적으면 같은 사람이 타일에서는 '운용', 표에서는 'OPERATION'으로 보이는 날이 온다.
- */
+/** 자리의 표기 — 타일의 지표 칩이 읽는 표. */
 export const OPERATION_ROLE_LABEL: Record<OperationRoleKey, string> = {
   PM: 'PM',
   MEMBER: 'MEMBER',
@@ -67,9 +51,8 @@ export const OPERATION_ROLE_LABEL: Record<OperationRoleKey, string> = {
  * '내가 맡은 건수'이기 때문이다. 전체 목록으로 보내면 눌러서 도착한 화면의 건수가 타일의
  * 숫자와 달라, 방금 본 수가 무엇이었는지 되묻게 된다.
  *
- * 경로 조립을 화면에 맡기지 않는 것은 detailPath와 같은 이유다 — 사업 3종은 워크스페이스
- * config가 베이스를 갖고 있고 펀드는 갖고 있지 않아, 화면에서 만들면 넷 중 하나만 손으로
- * 적힌 경로가 된다.
+ * 경로 조립을 화면에 맡기지 않는 것은 사업 3종만 워크스페이스 config가 베이스를 갖고 있고
+ * 펀드는 갖고 있지 않기 때문이다 — 화면에서 만들면 넷 중 하나만 손으로 적힌 경로가 된다.
  */
 export const OPERATION_MINE_PATH: Record<OperationWorkspaceKey, string> = {
   ac: `${AC_WORKSPACE.basePath}?tab=mine`,
@@ -78,53 +61,35 @@ export const OPERATION_MINE_PATH: Record<OperationWorkspaceKey, string> = {
   fund: '/fund?tab=mine',
 }
 
-/** 그 운영을 이끄는 자리인가(목록 역할 배지의 강조 여부). */
-export function isLeadRole(role: OperationRoleKey): boolean {
-  return role === 'PM' || role === 'LEAD'
-}
-
 interface ManagerRow {
   program_id: string
   role: ProgramManagerRole
-  allocation_rate: number
   start_date: string
   end_date: string
 }
 
-interface ProgramRow {
-  id: string
-  title: string
-  status: string
-  start_date: string | null
-  end_date: string | null
-}
-
-const SOURCES: { config: ProgramWorkspaceConfig; label: string }[] = [
-  { config: AC_WORKSPACE, label: 'AC' },
-  { config: MNA_WORKSPACE, label: 'M&A·PE' },
-  { config: PROJECT_WORKSPACE, label: 'PROJECT' },
-]
+const SOURCES: ProgramWorkspaceConfig[] = [AC_WORKSPACE, MNA_WORKSPACE, PROJECT_WORKSPACE]
 
 const ACTIVE_STATUSES = new Set(['PROPOSED', 'SELECTED', 'DRAFT', 'OPERATING', 'RECRUITING', 'SCREENING', 'DEMO_DAY'])
 
 /** 아직 손이 가는 펀드 — 청산까지 마친 펀드(CLOSED)만 뺀다(사업의 종료·취소와 같은 자리). */
 const ACTIVE_FUND_STATUSES = new Set(['RAISING', 'OPERATING', 'LIQUIDATING'])
 
-function currentAssignment(rows: ManagerRow[]) {
+/**
+ * 한 사업에서 나의 자리 — 오늘에 걸친 배정을 먼저 보고, 없으면 전체 배정에서 고른다.
+ * PM 배정이 하나라도 있으면 PM이다(한 사업은 타일에서 한 칸만 차지해야 한다).
+ */
+function currentRole(rows: ManagerRow[]): ProgramManagerRole {
   const today = new Date().toISOString().slice(0, 10)
   const current = rows.filter((row) => row.start_date <= today && row.end_date >= today)
   const candidates = current.length > 0 ? current : rows
-  const role: ProgramManagerRole = candidates.some((row) => row.role === 'PM') ? 'PM' : 'MEMBER'
-  return {
-    role,
-    allocationRate: Math.max(...candidates.filter((row) => row.role === role).map((row) => row.allocation_rate), 0),
-  }
+  return candidates.some((row) => row.role === 'PM') ? 'PM' : 'MEMBER'
 }
 
-async function fetchWorkspaceOperations(config: ProgramWorkspaceConfig, label: string, userId: string) {
+async function fetchWorkspaceOperations(config: ProgramWorkspaceConfig, userId: string) {
   const { data: managerData, error: managerError } = await supabase
     .from(config.tables.managers)
-    .select('program_id, role, allocation_rate, start_date, end_date')
+    .select('program_id, role, start_date, end_date')
     .eq('user_id', userId)
   if (managerError) throw managerError
 
@@ -134,31 +99,19 @@ async function fetchWorkspaceOperations(config: ProgramWorkspaceConfig, label: s
 
   const { data: programData, error: programError } = await supabase
     .from(config.tables.programs)
-    .select('id, title, status, start_date, end_date')
+    .select('id, status')
     .in('id', ids)
   if (programError) throw programError
 
   const grouped = new Map<string, ManagerRow[]>()
   assignments.forEach((row) => grouped.set(row.program_id, [...(grouped.get(row.program_id) ?? []), row]))
 
-  return ((programData ?? []) as ProgramRow[])
+  return ((programData ?? []) as { id: string; status: string }[])
     .filter((program) => ACTIVE_STATUSES.has(program.status))
-    .map((program): BusinessOperation => {
-      const assignment = currentAssignment(grouped.get(program.id) ?? [])
-      return {
-        id: program.id,
-        workspace: config.key,
-        workspaceLabel: label,
-        detailPath: `${config.basePath}/programs/${program.id}`,
-        title: program.title,
-        statusLabel: PROGRAM_STATUS_LABEL[program.status] ?? program.status,
-        statusTone: PROGRAM_STATUS_TONE[program.status] ?? 'neutral',
-        startDate: program.start_date,
-        endDate: program.end_date,
-        roleKey: assignment.role,
-        allocationRate: assignment.allocationRate,
-      }
-    })
+    .map((program): BusinessOperation => ({
+      workspace: config.key,
+      roleKey: currentRole(grouped.get(program.id) ?? []),
+    }))
 }
 
 /**
@@ -179,15 +132,6 @@ function fundRole(
   return staff?.role === 'ADMIN' ? 'ADMIN' : 'OPERATION'
 }
 
-interface FundRow {
-  id: string
-  name: string
-  status: string
-  term_start: string | null
-  term_end: string | null
-  manager_id: string | null
-}
-
 /**
  * 내가 맡은 펀드 — 담당 축이 **둘**이라 양쪽을 함께 본다: 대표펀드매니저(`funds.manager_id`)와
  * 운용·관리 인력(`fund_managers`). 대표만 보면 인력으로 배정된 사람의 목록에서 그 펀드가
@@ -196,9 +140,6 @@ interface FundRow {
  * 다만 그 목록과 달리 **생성자(created_by)는 세지 않는다.** 여기는 "내가 지금 무엇을 굴리고
  * 있는가"를 묻는 자리이고, 생성자는 레코드를 만든 사람일 뿐 어떤 권한도 책임도 뜻하지 않는다
  * — 대신 등록해 준 펀드가 남의 운영 건수에 얹히면 안 된다.
- *
- * 투입률은 넘기지 않는다(null). 펀드에는 부서별 일별 투입률 같은 축이 없어, 0%를 적으면
- * "배정은 됐는데 투입이 없다"는 사실을 말하게 된다.
  */
 async function fetchFundOperations(userId: string): Promise<BusinessOperation[]> {
   const { data: staffData, error: staffError } = await supabase
@@ -216,25 +157,16 @@ async function fetchFundOperations(userId: string): Promise<BusinessOperation[]>
   if (staffIds.length) parts.push(`id.in.(${staffIds.join(',')})`)
   const { data: fundData, error: fundError } = await supabase
     .from('funds')
-    .select('id, name, status, term_start, term_end, manager_id')
+    .select('id, status, manager_id')
     .is('deleted_at', null)
     .or(parts.join(','))
   if (fundError) throw fundError
 
-  return ((fundData ?? []) as FundRow[])
+  return ((fundData ?? []) as { id: string; status: string; manager_id: string | null }[])
     .filter((fund) => ACTIVE_FUND_STATUSES.has(fund.status))
     .map((fund) => ({
-      id: fund.id,
       workspace: 'fund' as const,
-      workspaceLabel: 'FUND',
-      detailPath: `/fund/${fund.id}`,
-      title: fund.name,
-      statusLabel: fundStatusLabel(fund.status),
-      statusTone: FUND_STATUS_TONE[fund.status] ?? 'neutral',
-      startDate: fund.term_start,
-      endDate: fund.term_end,
       roleKey: fundRole(fund.manager_id === userId, staffOf.get(fund.id)),
-      allocationRate: null,
     }))
 }
 
@@ -244,7 +176,7 @@ export function useMyBusinessOperations(userId: string | undefined) {
     enabled: Boolean(userId),
     staleTime: 60_000,
     queryFn: async () => (await Promise.all([
-      ...SOURCES.map(({ config, label }) => fetchWorkspaceOperations(config, label, userId!)),
+      ...SOURCES.map((config) => fetchWorkspaceOperations(config, userId!)),
       fetchFundOperations(userId!),
     ])).flat(),
   })

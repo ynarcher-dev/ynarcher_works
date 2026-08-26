@@ -1,0 +1,182 @@
+import { useQuery } from '@tanstack/react-query'
+import type { WorkspaceKey } from '@/auth/types'
+import { GLOBAL_MINE_TAB } from '@/config/navigation'
+import { supabase } from '@/lib/supabase'
+import { managedRecordIds } from '@/features/master/ledgerPage'
+import { DOMESTIC_LIST_ENTITIES } from '@/features/networks/config'
+import { GLOBAL_TABLE } from '@/features/networks/globalConfig'
+
+/**
+ * 대시보드가 세는 '내 업로드 DB' 한 줄 — 원장 하나에서 **내 몫과 전사 규모를 함께** 답한다.
+ *
+ * 내 건수만 세면 128이 큰 수인지 작은 수인지 판단할 근거가 없고, 전사 건수만 세면 개인
+ * 대시보드 자리에서 누구에게나 같은 숫자를 보여 주는 카드가 된다. 두 값을 한 줄에 두면
+ * 비중이 따라 나오므로 축을 하나 더 두지 않아도 된다.
+ */
+export interface LedgerStat {
+  key: LedgerKey
+  label: string
+  /** 이 줄을 볼 수 있는가를 판정하는 워크스페이스 키(줄마다 다르다). */
+  workspace: WorkspaceKey
+  /** 줄을 눌렀을 때 열 '내 목록' 경로. 카드가 적은 수와 그 화면의 건수가 같아야 한다. */
+  path: string
+  /** 내가 등록했거나 기여한 활성 건수. */
+  mine: number
+  /** 이번 달 내가 등록한 건수(기여 로그의 `created`). */
+  monthAdded: number
+  /** 전사 활성 보유 건수. */
+  total: number
+}
+
+export type LedgerKey = 'startup' | 'domestic' | 'global'
+
+/**
+ * 원장별 정의 — 라벨·권한 키·목적지. 어느 줄을 세울지는 화면이 아니라 이 표가 답한다.
+ *
+ * 라벨과 경로는 사이드바(`WORKSPACE_SUBNAV`)와 같은 말·같은 탭에 맞춘다 — 카드가 적은 수를
+ * 눌러서 도착한 메뉴 이름이 다르면, 방금 본 수가 무엇이었는지 되묻게 된다.
+ */
+export const LEDGERS: { key: LedgerKey; label: string; workspace: WorkspaceKey; path: string }[] = [
+  { key: 'startup', label: '스타트업 DB', workspace: 'startup', path: '/startup?tab=mine' },
+  { key: 'domestic', label: '네트워크 (국내)', workspace: 'networks', path: '/networks?tab=mine' },
+  { key: 'global', label: '네트워크 (글로벌)', workspace: 'networks', path: `/networks?tab=${GLOBAL_MINE_TAB}` },
+]
+
+/** 미분류(분류 전 임시 저장소) 목록 경로 — 카드 하단 정리 안내가 여는 곳. */
+export const UNCLASSIFIED_PATH = '/networks?tab=others'
+
+/** 이번 달 1일 0시(로컬) ISO — '이번 달 등록'의 하한. */
+function startOfMonthISO(): string {
+  const now = new Date()
+  return new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+}
+
+/**
+ * 목록 RPC에서 총 건수만 받아 온다(`p_limit: 1`).
+ *
+ * 원장별 head 카운트를 합치지 않는 이유는 **눌러서 도착할 목록과 같은 수**여야 하기 때문이다.
+ * 국내는 9종을 union하며 중복을 걷어내고 '내 것' 판정이 기여 로그 조인이라, 원장 합계로는
+ * 재현되지 않는다. 총 건수는 모든 행에 같은 값으로 실려 오므로 한 행만 받으면 족하다.
+ */
+async function rpcTotal(fn: string, args: Record<string, unknown>): Promise<number> {
+  const { data, error } = await supabase.rpc(fn, { ...args, p_limit: 1, p_offset: 0 })
+  if (error) throw error
+  const rows = (data ?? []) as { total_count?: number | string }[]
+  return Number(rows[0]?.total_count ?? 0)
+}
+
+/** 활성 행 head 카운트(비활성·병합 제외). `scope`는 PostgREST `or` 식. */
+async function liveCount(table: string, scope?: string): Promise<number> {
+  let q = supabase
+    .from(table)
+    .select('id', { count: 'exact', head: true })
+    .is('deleted_at', null)
+    .is('merged_into_id', null)
+  if (scope) q = q.or(scope)
+  const { count, error } = await q
+  if (error) throw error
+  return count ?? 0
+}
+
+/**
+ * 이번 달 내가 등록한 건수 — 기여 로그(`entity_contributions`)의 `created`만 센다.
+ *
+ * 원장의 `created_at`이 아니라 기여 로그를 보는 이유는 축을 하나로 두기 위해서다. 국내 9종은
+ * '내 것' 자체가 기여 로그로 정의되므로(등록자 또는 기여자), 증감만 원장 컬럼으로 세면 같은
+ * 줄의 두 숫자가 서로 다른 기준을 갖게 된다. `edited`·`enriched`는 빼는데, 이 열이 답하는 것은
+ * "이번 달에 얼마나 **늘었나**"이지 "얼마나 손댔나"가 아니다.
+ */
+async function monthAdded(userId: string, tables: string[], since: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('entity_contributions')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('action', 'created')
+    .in('entity_table', tables)
+    .gte('created_at', since)
+  if (error) throw error
+  return count ?? 0
+}
+
+type LedgerCounts = Pick<LedgerStat, 'mine' | 'monthAdded' | 'total'>
+
+/**
+ * 스타트업 원장 — '내 것'은 생성자(`created_by`) **또는** 담당자(`startup_managers`)다.
+ *
+ * 담당은 원장 밖에 있어 조인으로 걸 수 없으므로 담당 기업 id를 먼저 모아 `or`로 묶는다
+ * (STARTUP '내 업로드 DB' 목록과 같은 조건이며, 그래서 두 화면의 건수가 일치한다).
+ */
+async function fetchStartupStat(userId: string, since: string): Promise<LedgerCounts> {
+  const ids = await managedRecordIds('startup_managers', 'startup_id', userId)
+  const parts = [`created_by.eq.${userId}`]
+  if (ids.length) parts.push(`id.in.(${ids.join(',')})`)
+  const [mine, total, added] = await Promise.all([
+    liveCount('startups', parts.join(',')),
+    liveCount('startups'),
+    monthAdded(userId, ['startups'], since),
+  ])
+  return { mine, total, monthAdded: added }
+}
+
+async function fetchDomesticStat(userId: string, since: string): Promise<LedgerCounts> {
+  const [mine, total, added] = await Promise.all([
+    rpcTotal('my_network_entities', { p_entities: DOMESTIC_LIST_ENTITIES }),
+    rpcTotal('all_network_entities', { p_entities: DOMESTIC_LIST_ENTITIES }),
+    monthAdded(userId, DOMESTIC_LIST_ENTITIES, since),
+  ])
+  return { mine, total, monthAdded: added }
+}
+
+async function fetchGlobalStat(userId: string, since: string): Promise<LedgerCounts> {
+  const [mine, total, added] = await Promise.all([
+    rpcTotal('global_network_entities', { p_mine: true }),
+    rpcTotal('global_network_entities', { p_mine: false }),
+    monthAdded(userId, [GLOBAL_TABLE], since),
+  ])
+  return { mine, total, monthAdded: added }
+}
+
+const FETCHERS: Record<LedgerKey, (userId: string, since: string) => Promise<LedgerCounts>> = {
+  startup: fetchStartupStat,
+  domestic: fetchDomesticStat,
+  global: fetchGlobalStat,
+}
+
+export interface MyDatabaseStats {
+  ledgers: LedgerStat[]
+  /**
+   * 내가 올린 미분류 잔량 — 분류 전 임시 저장소(`others`)에 남아 제 원장으로 못 간 것들.
+   * NETWORKS를 볼 수 없으면 null이며, 그때 카드는 그 줄을 아예 세우지 않는다(0과 다르다).
+   */
+  unclassified: number | null
+}
+
+/**
+ * 내가 쌓은 데이터 현황 — 볼 수 있는 원장만 센다.
+ *
+ * 권한 없는 원장을 함께 조회하면 RLS가 오류가 아니라 0을 돌려주므로, 카드에는 "그 원장에
+ * 아무것도 없다"로 적히게 된다 — 안 보이는 것과 없는 것이 같은 모양이 되면 안 된다.
+ */
+export function useMyDatabaseStats(userId: string | undefined, keys: LedgerKey[]) {
+  const scope = keys.join(',')
+  return useQuery({
+    queryKey: ['office', 'dashboard', 'my-database', userId, scope],
+    enabled: Boolean(userId) && keys.length > 0,
+    staleTime: 60_000,
+    queryFn: async (): Promise<MyDatabaseStats> => {
+      const since = startOfMonthISO()
+      const [ledgers, unclassified] = await Promise.all([
+        Promise.all(
+          LEDGERS.filter((ledger) => keys.includes(ledger.key)).map(async (ledger) => ({
+            ...ledger,
+            ...(await FETCHERS[ledger.key](userId!, since)),
+          })),
+        ),
+        keys.includes('domestic')
+          ? liveCount('others', `created_by.eq.${userId}`)
+          : Promise.resolve(null),
+      ])
+      return { ledgers, unclassified }
+    },
+  })
+}
