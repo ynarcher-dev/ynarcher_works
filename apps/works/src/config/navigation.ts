@@ -190,6 +190,8 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         { label: '권한 제어 콘솔', tab: 'permissions' },
         { label: '게시판 관리', tab: 'boards' },
         { label: '회의실 관리', tab: 'rooms' },
+        // 결재 양식: 전자결재가 무엇을 입력받을지(필드 정의) 정하는 곳. 문서 번호 약칭도 여기서 정한다.
+        { label: '결재 양식 관리', tab: 'approval-forms' },
         // 전사 기준정보 태그는 종류가 계속 늘어나므로 사이드바에 평탄 나열하지 않고
         // 상위 한 줄로 두고 우측 플라이아웃으로 편다(게시판·자료실과 같은 조작감).
         // 항목은 TAG_CONFIGS에서 파생되므로 태그를 추가할 때 이 파일은 손대지 않는다.
@@ -225,6 +227,8 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         // 위 인적·조직 블록을 떼어내는 구분선. 전자결재 워크스페이스에서 통합 이관한
         // 결재·거래처 블록을 공간·회의 블록보다 앞에 둔다.
         { label: '전자결재', tab: 'approval', dividerBefore: true },
+        // 결재 금액 집계: 양식이 값의 타입을 알기에 가능한 화면(구 수기 취합 대체).
+        { label: '결재 금액 집계', tab: 'approval-stats' },
         { label: '거래처 정보', tab: 'clients' },
         // 자산·공간·회의는 사내 자원을 쓰는 일 한 블록이다 — 셋 사이는 끊지 않고 위 결재·거래처
         // 블록과만 구분선으로 나눈다. 뒤는 아래 고정 게시판 그룹 경계가 끊는다.

@@ -1,5 +1,6 @@
 import { EmptyState, PageHeader, Spinner } from '@ynarcher/ui'
 import { Navigate, useSearchParams } from 'react-router-dom'
+import { ApprovalAggregatePanel } from '@/features/approval/ApprovalAggregatePanel'
 import { ApprovalWorkspace } from '@/features/approval/ApprovalWorkspace'
 import { ArchiveWorkspace } from '@/features/hub/ArchiveWorkspace'
 import { BoardWorkspace } from '@/features/hub/BoardWorkspace'
@@ -115,7 +116,11 @@ export function OfficePage() {
       {/* 지사 정보: ADMIN '지사 관리'가 소유한 지사 원장을 조회 전용 리스트뷰로 노출한다. */}
       {tab === 'branches' && <BranchesPanel />}
       {/* 전자결재: 진행 중 타일(필터) + 문서함 좌패널 + 문서 목록. */}
-      {tab === 'approval' && <ApprovalWorkspace />}
+      {tab === 'approval' && (
+        <ApprovalWorkspace initialDocumentId={params.get('doc') ?? undefined} />
+      )}
+      {/* 결재 금액 집계: 양식의 금액 필드를 문서 너머로 모아 본다(구 수기 취합). */}
+      {tab === 'approval-stats' && <ApprovalAggregatePanel />}
     </div>
   )
 }

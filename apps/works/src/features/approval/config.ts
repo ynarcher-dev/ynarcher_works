@@ -38,6 +38,14 @@ export const APPROVAL_BOX_GROUPS: ApprovalBoxGroup[] = [
   },
 ]
 
+/**
+ * 첨부·의견의 다형 키. 두 원장(attachments / entity_feedback) 모두 'approval'을 쓰며,
+ * 열람 경계는 서버 RLS가 app.can_read_approval(문서)로 판정한다.
+ * 리터럴을 화면마다 적지 않고 여기 한 곳에서 상수로 가져다 쓴다(오타가 타입에 걸리지 않는다).
+ */
+export const APPROVAL_ATTACHMENT_TYPE = 'approval'
+export const APPROVAL_FEEDBACK_TYPE = 'approval'
+
 /** 진행 중 현황 타일 키. 전체 = 나머지 넷의 합집합. */
 export type ApprovalProgressKey = 'all' | 'waiting' | 'confirm' | 'upcoming' | 'ongoing'
 

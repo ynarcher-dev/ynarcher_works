@@ -1,6 +1,7 @@
 import {
   Award,
   BadgeCheck,
+  BarChart3,
   BriefcaseBusiness,
   CalendarDays,
   ChartNoAxesCombined,
@@ -49,6 +50,7 @@ import {
   Building,
   Layers,
   Sprout,
+  FileSpreadsheet,
   FileText,
   ScanLine,
   Tag,
@@ -158,6 +160,10 @@ const sidebarIconByTab: Record<string, LucideIcon> = {
   audit: ReceiptText,
   downloads: Download,
   approval: BadgeCheck,
+  // 양식 관리는 결재 그 자체가 아니라 "무엇을 입력받을지"를 정하는 자리라 결재 도장(BadgeCheck)과
+  // 다른 글리프를 쓴다 — 사이드바에서 두 메뉴가 같은 일로 읽히면 안 된다.
+  'approval-forms': FileSpreadsheet,
+  'approval-stats': BarChart3,
   clients: Handshake,
   outbound: PackageOpen,
   rooms: DoorOpen,
