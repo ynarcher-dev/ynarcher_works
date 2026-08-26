@@ -48,7 +48,10 @@ export function NoticeCard() {
                 <button
                   type="button"
                   onClick={() => openNotice(notice.boardSlug, notice.post.id)}
-                  className="flex w-full items-center gap-2 rounded-radius-md bg-gray-50 px-3 py-2 text-left transition-colors duration-fast hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10"
+                  // 여백은 옆 칸 체크리스트 타일과 같은 p-3이다(2026-08-26). 종전 py-2는 줄
+                  // 높이를 37px로 만들어, 같은 세 줄인데도 나란히 선 두 카드의 줄이 8px씩
+                  // 어긋나고 잡아 둔 자리(45px×3)의 아래가 공지 쪽만 비었다.
+                  className="flex w-full items-center gap-2 rounded-radius-md bg-gray-50 p-3 text-left transition-colors duration-fast hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10"
                 >
                   {pinMark(notice.post.pinned)}
                   <span className={`min-w-0 flex-1 truncate ${cardText.subhead}`}>
