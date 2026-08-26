@@ -216,16 +216,15 @@ export function ApprovalEditor({ onSaved, onCancel }: ApprovalEditorProps) {
           </Card>
 
           {/* 결재선은 기본 설정 바로 아래, 본문과 같은 흐름에 둔다 — 문서를 누가 어떤 순서로
-              보게 될지는 첨부처럼 곁들이는 정보가 아니라 기안의 본체다. */}
-          <Card title="결재선">
-            <ApprovalLinePicker
-              lines={lines}
-              onLinesChange={setLines}
-              recipientIds={recipientIds}
-              onRecipientsChange={setRecipientIds}
-              excludeId={uid}
-            />
-          </Card>
+              보게 될지는 첨부처럼 곁들이는 정보가 아니라 기안의 본체다.
+              (카드와 [결재선 설정] 창은 ApprovalLinePicker가 스스로 갖는다.) */}
+          <ApprovalLinePicker
+            lines={lines}
+            onLinesChange={setLines}
+            recipientIds={recipientIds}
+            onRecipientsChange={setRecipientIds}
+            excludeId={uid}
+          />
 
           {form && (
             <Card
