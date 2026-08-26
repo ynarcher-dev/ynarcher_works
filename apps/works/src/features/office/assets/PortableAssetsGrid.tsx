@@ -43,9 +43,15 @@ export function PortableAssetsGrid({
           <p className={cardText.label}>조건에 맞는 물품이 없습니다.</p>
         </CardShell>
       ) : (
-        // 한 줄에 2·3·4장. 페이지 크기(24)가 세 배치 모두에서 줄을 딱 맞게 채우는 수라,
-        // 마지막 줄만 한두 장 남아 격자가 이 빠진 모양이 되지 않는다.
-        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        // 열 수를 breakpoint로 못 박지 않고 **카드 폭을 밴드로 묶는다**(auto-fill + 최소 224px).
+        //
+        // 열 수를 고정하면 카드 폭이 화면 폭을 그대로 따라가, 넓은 화면에서 목록이 아니라 상세
+        // 화면처럼 커진다 — 처음의 `xl:4열`이 1920px에서 카드 396px(사진만 297px)이 된 이유다.
+        // 끊는 지점을 더 두어도 계단이 생길 뿐이다(1535px에서 276px이던 카드가 1536px에서 195px).
+        // 최소 폭만 정하고 열 수를 화면에 맡기면 어느 폭에서도 236~276px 사이에 머문다.
+        //
+        // 페이지 크기(24)는 4·6열에서 줄이 딱 떨어지고 나머지 열 수에서도 크게 남지 않는 수다.
+        <ul className="grid grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] gap-3">
           {rows.map((asset) => (
             <li key={asset.id}>
               <AssetCard
@@ -93,7 +99,7 @@ function AssetCard({ asset, url, managerName, onOpen }: AssetCardProps) {
       >
         <AssetCover url={url} name={asset.name} />
 
-        <div className="space-y-1.5 p-4">
+        <div className="space-y-1 p-3">
           <div className="flex items-baseline gap-1.5">
             {/*
               중요 표시 물품은 이름 순을 건너뛰고 맨 앞에 선다. 표에서는 뜻을 잃은 순번 자리를
@@ -133,8 +139,8 @@ function AssetCover({ url, name }: { url: string | undefined; name: string }) {
       {url ? (
         <img src={url} alt={name} className="size-full object-cover object-center" />
       ) : (
-        <div className="flex size-full flex-col items-center justify-center gap-1.5 text-gray-400">
-          <ImageOff className="size-7" />
+        <div className="flex size-full flex-col items-center justify-center gap-1 text-gray-400">
+          <ImageOff className="size-6" />
           <span className="text-caption">사진 없음</span>
         </div>
       )}
