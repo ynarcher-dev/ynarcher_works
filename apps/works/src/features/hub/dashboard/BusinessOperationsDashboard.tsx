@@ -4,37 +4,51 @@ import { BriefcaseBusiness, FolderKanban, Target, WalletCards, type LucideIcon }
 import { Badge, Card, DataTable, EmptyState, Skeleton, SummaryTile, type Column, type SummaryTileTone } from '@ynarcher/ui'
 import { useAuthStore } from '@/auth/authStore'
 import { MiniPager } from '@/features/networks/MiniPager'
-import { useMyBusinessOperations, type BusinessOperation } from './businessDashboardHooks'
+import {
+  OPERATION_ROLE_LABEL,
+  isLeadRole,
+  useMyBusinessOperations,
+  type BusinessOperation,
+  type OperationRoleKey,
+} from './businessDashboardHooks'
 
 /** 한 화면에 세우는 운영 수. 대시보드 좌측 열이 우측(인사말·근무체크·전자결재)보다 길어지지
  *  않도록 세 줄로 묶고, 나머지는 페이저로 넘긴다. */
 const PAGE_SIZE = 3
 
+/**
+ * 타일 한 칸 — 어느 원장을 세는가와, **그 원장에서 자리를 어떻게 가르는가**.
+ *
+ * 자리 목록을 타일마다 적는 이유는 원장마다 자리의 수가 다르기 때문이다(사업 둘 / 펀드 셋).
+ * 화면에 PM·MEMBER 두 칩을 못 박아 두면 펀드의 운용·관리가 한 칸에 뭉쳐, 관리인력에게는
+ * 자기 일이 아닌 숫자가 남는다.
+ */
 const WORKSPACE_SUMMARIES: {
   key: BusinessOperation['workspace']
   label: string
   caption: string
   icon: LucideIcon
   tone: SummaryTileTone
+  roles: OperationRoleKey[]
 }[] = [
   {
     key: 'ac', label: 'AC', caption: '액셀러레이팅', icon: Target,
-    tone: 'blue',
+    tone: 'blue', roles: ['PM', 'MEMBER'],
   },
   {
     key: 'mna', label: 'M&A·PE', caption: '딜 운영', icon: BriefcaseBusiness,
-    tone: 'purple',
+    tone: 'purple', roles: ['PM', 'MEMBER'],
   },
   {
     key: 'project', label: 'PROJECT', caption: '프로젝트', icon: FolderKanban,
-    tone: 'mint',
+    tone: 'mint', roles: ['PM', 'MEMBER'],
   },
   // 펀드는 사업 원장(features/program)이 아니지만 "내가 지금 무엇을 굴리고 있는가"라는
   // 물음에는 함께 답해야 한다 — 운용역에게는 펀드가 곧 자기 운영이라, 이 칸이 없으면
   // 대시보드가 자기 일의 절반만 세어 준다. 아이콘은 좌측 내비의 FUND와 같은 것을 쓴다.
   {
     key: 'fund', label: 'FUND', caption: '펀드 운용', icon: WalletCards,
-    tone: 'amber',
+    tone: 'amber', roles: ['LEAD', 'OPERATION', 'ADMIN'],
   },
 ]
 
@@ -53,7 +67,7 @@ function daysUntil(date: string | null) {
 const columns: Column<BusinessOperation>[] = [
   { key: 'title', header: '운영명', type: 'name', primary: true, render: (row) => row.title },
   { key: 'workspace', header: '워크스페이스', type: 'badge', render: (row) => <Badge tone="neutral">{row.workspaceLabel}</Badge> },
-  { key: 'role', header: '역할', type: 'badge', render: (row) => <Badge tone={row.role === 'PM' ? 'info' : 'neutral'}>{row.role}</Badge> },
+  { key: 'role', header: '역할', type: 'badge', render: (row) => <Badge tone={isLeadRole(row.roleKey) ? 'info' : 'neutral'}>{OPERATION_ROLE_LABEL[row.roleKey]}</Badge> },
   // 상태의 라벨·톤은 원장마다 다르므로 훅이 정해서 올린다(같은 'OPERATING'이 사업에서는
   // '진행중', 펀드에서는 '운용 중'이다) — 표는 받은 말을 적기만 한다.
   { key: 'status', header: '상태', type: 'badge', render: (row) => (
@@ -88,11 +102,20 @@ export function BusinessOperationsDashboard() {
     if (page >= pageCount) setPage(pageCount - 1)
   }, [page, pageCount])
 
-  const workspaceSummary = (workspace: BusinessOperation['workspace']) => {
+  // 자리별 건수는 타일이 선언한 목록만 센다 — 원장에 없는 자리를 0으로 적으면 그 자리가
+  // 있는데 아무도 없는 것처럼 읽힌다(사업에 '관리 0'이 서면 안 된다).
+  const workspaceSummary = (
+    workspace: BusinessOperation['workspace'],
+    roles: OperationRoleKey[],
+  ) => {
     const rows = data.filter((item) => item.workspace === workspace)
-    const pmCount = rows.filter((item) => item.role === 'PM').length
-    const memberCount = rows.length - pmCount
-    return { total: rows.length, pmCount, memberCount }
+    return {
+      total: rows.length,
+      metrics: roles.map((role) => ({
+        label: OPERATION_ROLE_LABEL[role],
+        value: rows.filter((item) => item.roleKey === role).length,
+      })),
+    }
   }
 
   if (isLoading) return <Skeleton className="h-80 rounded-radius-lg" />
@@ -100,11 +123,11 @@ export function BusinessOperationsDashboard() {
 
   return (
     <div className="space-y-4">
-      <Card title="나의 사업 운영">
+      <Card title="나의 워크스페이스">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {WORKSPACE_SUMMARIES.map((item) => {
             const Icon = item.icon
-            const summary = workspaceSummary(item.key)
+            const summary = workspaceSummary(item.key, item.roles)
             return (
               <SummaryTile
                 key={item.key}
@@ -114,10 +137,7 @@ export function BusinessOperationsDashboard() {
                 unit="개 운영"
                 tone={item.tone}
                 icon={<Icon aria-hidden className="size-[18px]" strokeWidth={1.8} />}
-                metrics={[
-                  { label: 'PM', value: summary.pmCount },
-                  { label: 'MEMBER', value: summary.memberCount },
-                ]}
+                metrics={summary.metrics}
               />
             )
           })}

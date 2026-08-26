@@ -28,13 +28,42 @@ export interface BusinessOperation {
   statusTone: BadgeTone
   startDate: string | null
   endDate: string | null
-  role: ProgramManagerRole
+  roleKey: OperationRoleKey
   /** 투입률(%). 펀드는 이 축이 없어 null이며, 표는 '-'로 적는다. */
   allocationRate: number | null
 }
 
 /** 사업 3종 + 펀드. 펀드는 사업 원장(features/program)이 아니므로 키를 따로 잇는다. */
 export type OperationWorkspaceKey = ProgramWorkspaceKey | 'fund'
+
+/**
+ * 운영 한 건에서 나의 자리. **원장마다 자리의 종류가 다르다** — 사업은 PM/MEMBER 둘이지만
+ * 펀드는 대표펀드매니저·운용인력·관리인력 셋이다(funds.manager_id와 fund_managers.role의
+ * OPERATION/ADMIN).
+ *
+ * 펀드의 셋을 PM/MEMBER 둘로 눌러 담지 않는 이유는, 그러면 운용과 관리가 한 칸에 뭉쳐
+ * "내가 이 펀드에서 무엇을 하는 사람인가"라는 물음에 답하지 못하기 때문이다. 관리인력에게
+ * 'MEMBER 3'은 자기 일이 아닌 숫자다.
+ */
+export type OperationRoleKey = ProgramManagerRole | 'LEAD' | 'OPERATION' | 'ADMIN'
+
+/**
+ * 자리의 표기 — 타일의 지표 칩과 목록의 역할 배지가 **같은 표**를 읽는다. 두 곳이 각자
+ * 적으면 같은 사람이 타일에서는 '운용', 표에서는 'OPERATION'으로 보이는 날이 온다.
+ */
+export const OPERATION_ROLE_LABEL: Record<OperationRoleKey, string> = {
+  PM: 'PM',
+  MEMBER: 'MEMBER',
+  // 펀드의 세 자리는 펀드 화면에서 부르는 말을 그대로 줄여 적는다(타일 칩이 좁다).
+  LEAD: '대펀',
+  OPERATION: '운용',
+  ADMIN: '관리',
+}
+
+/** 그 운영을 이끄는 자리인가(목록 역할 배지의 강조 여부). */
+export function isLeadRole(role: OperationRoleKey): boolean {
+  return role === 'PM' || role === 'LEAD'
+}
 
 interface ManagerRow {
   program_id: string
@@ -108,10 +137,28 @@ async function fetchWorkspaceOperations(config: ProgramWorkspaceConfig, label: s
         statusTone: PROGRAM_STATUS_TONE[program.status] ?? 'neutral',
         startDate: program.start_date,
         endDate: program.end_date,
-        role: assignment.role,
+        roleKey: assignment.role,
         allocationRate: assignment.allocationRate,
       }
     })
+}
+
+/**
+ * 펀드에서 나의 자리 — 대표 > 운용 > 관리 순으로 하나만 고른다.
+ *
+ * 대표는 funds.manager_id가 정본이다(set_fund_staffing은 인력 원장에 is_lead=false로만
+ * 넣는다). 그래도 is_lead를 함께 보는 것은 그 규칙이 서기 전에 쌓인 행 때문이다.
+ *
+ * 인력 원장의 PK가 (fund_id, user_id)라 한 펀드에서 운용·관리를 겸할 수는 없지만, 대표로도
+ * 지정되면서 인력 행까지 가진 경우는 있다 — 그때 세는 자리는 대표 하나다. 한 사람이 한
+ * 펀드에서 두 칸에 잡히면 타일의 세 숫자를 더한 값이 운영 건수보다 커진다.
+ */
+function fundRole(
+  isManager: boolean,
+  staff: { is_lead: boolean; role: string } | undefined,
+): OperationRoleKey {
+  if (isManager || staff?.is_lead) return 'LEAD'
+  return staff?.role === 'ADMIN' ? 'ADMIN' : 'OPERATION'
 }
 
 interface FundRow {
@@ -138,13 +185,13 @@ interface FundRow {
 async function fetchFundOperations(userId: string): Promise<BusinessOperation[]> {
   const { data: staffData, error: staffError } = await supabase
     .from('fund_managers')
-    .select('fund_id, is_lead')
+    .select('fund_id, role, is_lead')
     .eq('user_id', userId)
   if (staffError) throw staffError
 
-  const staff = (staffData ?? []) as { fund_id: string; is_lead: boolean }[]
-  const leadOf = new Set(staff.filter((r) => r.is_lead).map((r) => r.fund_id))
-  const staffIds = [...new Set(staff.map((r) => r.fund_id))]
+  const staff = (staffData ?? []) as { fund_id: string; role: string; is_lead: boolean }[]
+  const staffOf = new Map(staff.map((r) => [r.fund_id, r] as const))
+  const staffIds = [...staffOf.keys()]
 
   // 대표펀드매니저 지정만 있고 인력 원장에는 행이 없는 펀드도 있으므로 두 조건을 or로 묶는다.
   const parts = [`manager_id.eq.${userId}`]
@@ -168,8 +215,7 @@ async function fetchFundOperations(userId: string): Promise<BusinessOperation[]>
       statusTone: FUND_STATUS_TONE[fund.status] ?? 'neutral',
       startDate: fund.term_start,
       endDate: fund.term_end,
-      // 대표펀드매니저와 인력 리드가 이 펀드의 PM 자리다(사업의 PM과 같은 뜻).
-      role: fund.manager_id === userId || leadOf.has(fund.id) ? 'PM' : 'MEMBER',
+      roleKey: fundRole(fund.manager_id === userId, staffOf.get(fund.id)),
       allocationRate: null,
     }))
 }

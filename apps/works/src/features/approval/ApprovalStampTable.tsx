@@ -84,20 +84,31 @@ function StampMark({
     <span className="inline-flex flex-col items-center gap-2">
       <span
         className={cn(
-          'flex size-10 items-center justify-center rounded-full border-2 border-current bg-white font-bold',
+          'relative flex size-10 items-center justify-center rounded-full border-2 border-current bg-white font-bold',
           STAMP_TONE[tone],
         )}
       >
         {label}
+        {/* 말풍선은 **도장 원의 모서리에 얹는다.**
+            처음에는 일시 옆에 세웠는데, 결재선 격자는 열 폭이 고정(table-fixed)이라 한 칸이
+            딱 날짜 하나 폭이다 — 아이콘이 그 줄에 들어서자 '2026-08-26'이 두 줄로 접히면서
+            칸 키가 늘고 격자 전체가 어긋났다. 흐름에서 빼내 절대 위치로 올리면 폭을 한 글자도
+            쓰지 않으므로, 인원이 몇이든 칸의 생김새가 달라지지 않는다.
+            테두리 색은 도장을 그대로 따라간다(border-current) — 이 표식은 도장에 붙은 사실이지
+            그 옆에 따로 선 다른 표식이 아니다. */}
+        {hasComment && (
+          <span
+            className="absolute -right-1 -top-1 flex size-[1.125rem] items-center justify-center rounded-full border border-current bg-white"
+            aria-hidden
+          >
+            <MessageSquareText size={10} strokeWidth={2.25} />
+          </span>
+        )}
       </span>
       {/* 일시 자리는 도장이 찍혔을 때만 만든다 — 빈 줄을 두면 대기 칸만 키가 커진다.
-          말풍선은 그 줄에 얹는다: 언제 처리했는가와 무엇이라 했는가는 같은 도장에 붙은
-          한 사실이라, 표식을 따로 세우면 칸이 한 단 더 길어지고 격자의 키가 들쭉날쭉해진다. */}
+          칸 폭이 날짜 하나 폭이라 접히면 곧 격자가 어긋나므로 줄바꿈을 막는다. */}
       {date && (
-        <span className={cn('inline-flex items-center gap-1', approvalText.meta)}>
-          {date.slice(0, 10)}
-          {hasComment && <MessageSquareText size={13} className="text-gray-500" />}
-        </span>
+        <span className={cn('whitespace-nowrap', approvalText.meta)}>{date.slice(0, 10)}</span>
       )}
     </span>
   )
@@ -131,9 +142,11 @@ function Stamp({ line, onOpenComment }: { line: StampLine; onOpenComment?: () =>
       type="button"
       onClick={onOpenComment}
       title="결재 의견 보기"
+      // 누르는 표적은 도장 원 자체다. 칸을 넓히는 좌우 여백을 두르면 고정 폭 격자에서
+      // 그만큼 이름·일시가 접히므로, 강조는 면색이 아니라 원의 살짝 커짐으로만 말한다.
       className={cn(
-        'rounded-radius-md px-2 py-1 transition-colors',
-        'hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10',
+        'inline-flex rounded-radius-md transition-transform',
+        'hover:scale-105 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10',
       )}
     >
       {mark}
