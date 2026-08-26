@@ -3,7 +3,7 @@ import { Button, Card, EmptyState, Spinner } from '@ynarcher/ui'
 import { useAuthStore } from '@/auth/authStore'
 import { useRightPanel } from '@/app/rightPanel'
 import { QuickMemoTile } from '@/features/quick-memo/QuickMemoTile'
-import { DASHBOARD_TILE_AREA } from '@/features/hub/dashboard/tileArea'
+import { DASHBOARD_CARD_FOOTER, DASHBOARD_TILE_AREA } from '@/features/hub/dashboard/tileArea'
 import { useQuickMemos } from '@/features/quick-memo/quickMemoApi'
 import {
   createQuickMemo, draftQuickMemo, focusQuickMemo, isChecklistDone, isQuickMemoEmpty,
@@ -68,17 +68,9 @@ export function ChecklistCard() {
     <Card
       title="체크리스트"
       count={pendingCount}
-      actions={
-        <>
-          {/* '전체 보기'는 옆 칸 공지사항과 같은 자리(헤더)에 둔다 — 종전에는 넘칠 때만 카드
-              아래에 '전체 N개 보기'를 세웠는데, 그 버튼이 잡아 둔 자리 밖이라 4건째부터
-              체크리스트 카드만 40px쯤 길어졌다(나란히 선 공지 카드는 stretch로 따라 늘고
-              안쪽 빈 자리만 커졌다). 헤더로 올리면 카드 높이가 건수와 무관하게 고정된다.
-              건수를 버튼에 적지 않는 것도 공지와 같다 — 머리의 [N]이 이미 세어 두었다. */}
-          <Button variant="outline" onClick={() => open('memo')}>전체 보기</Button>
-          <Button variant="outline" onClick={createChecklist}>새 체크리스트</Button>
-        </>
-      }
+      // 머리에는 이 카드에서만 할 수 있는 일(새로 만들기)만 둔다. '전체 보기'는 두 카드 모두
+      // 자리 아래 한 줄로 내려갔다 — 건수와 무관하게 늘 서므로 짝의 높이도 어긋나지 않는다.
+      actions={<Button variant="outline" onClick={createChecklist}>새 체크리스트</Button>}
     >
       <div className={`flex flex-col ${DASHBOARD_TILE_AREA}`}>
         {isLoading ? (
@@ -100,6 +92,9 @@ export function ChecklistCard() {
           </div>
         )}
       </div>
+      <Button variant="ghost" className={DASHBOARD_CARD_FOOTER} onClick={() => open('memo')}>
+        전체 보기
+      </Button>
     </Card>
   )
 }

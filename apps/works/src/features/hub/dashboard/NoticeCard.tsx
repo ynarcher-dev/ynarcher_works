@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { isNewPost } from '@/features/hub/boardData'
 import { useNotices } from '@/features/hub/boardPostsApi'
 import { NewBadge } from '@/features/hub/PostFlagBadges'
-import { DASHBOARD_TILE_AREA } from '@/features/hub/dashboard/tileArea'
+import { DASHBOARD_CARD_FOOTER, DASHBOARD_TILE_AREA } from '@/features/hub/dashboard/tileArea'
 
 /** 대시보드에서 바로 훑을 공지 수. 체크리스트 카드와 같은 세 줄 높이를 쓴다. */
 const VISIBLE_NOTICES = 3
@@ -21,15 +21,7 @@ export function NoticeCard() {
   }
 
   return (
-    <Card
-      title="공지사항"
-      count={notices.length}
-      actions={
-        <Button variant="outline" onClick={() => navigate('/office?tab=notices')}>
-          전체 보기
-        </Button>
-      }
-    >
+    <Card title="공지사항" count={notices.length}>
       <div className={`flex flex-col ${DASHBOARD_TILE_AREA}`}>
         {isLoading ? (
           <div className="flex flex-1 items-center justify-center">
@@ -73,6 +65,10 @@ export function NoticeCard() {
           </ul>
         )}
       </div>
+      <Button variant="ghost" className={DASHBOARD_CARD_FOOTER}
+        onClick={() => navigate('/office?tab=notices')}>
+        전체 보기
+      </Button>
     </Card>
   )
 }

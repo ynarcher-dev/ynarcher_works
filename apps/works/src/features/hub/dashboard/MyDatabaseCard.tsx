@@ -13,17 +13,28 @@ import {
 const n = (value: number) => value.toLocaleString('ko-KR')
 
 /**
- * 타일의 겉모습 — 아이콘·색. 이 표가 아는 것은 **어떻게 보이는가**뿐이고, 무엇을 세는지와
- * 어디로 가는지는 `LEDGERS`(hooks)가 소유한다.
+ * 타일의 겉모습 — 아이콘·색·세는 단위. 이 표가 아는 것은 **어떻게 보이는가**뿐이고, 무엇을
+ * 세는지와 어디로 가는지는 `LEDGERS`(hooks)가 소유한다.
  *
  * 색은 위 「나의 워크스페이스」가 쓰지 않는 넷에서 고른다(blue·purple·mint·amber 회피) —
  * 나란히 선 두 카드가 같은 색을 쓰면 두 줄이 한 줄의 연장으로 읽힌다. 아이콘은 좌측 내비에서
  * 그 원장을 가리키는 글리프를 그대로 가져온다(스타트업 Rocket · 글로벌 Globe).
+ *
+ * 단위(스타트업 '개사' · 네트워크 '명')가 조회 결과가 아니라 이 표에 있는 이유: 단위는 서버가
+ * 답하는 값이 아니라 화면이 아는 말인데, 조회 결과에 실으면 **캐시에 남아 있던 지난 행**이
+ * 새 화면 코드와 만나 `14undefined`처럼 적히는 구간이 생긴다(react-query는 새로 받아 오기
+ * 전까지 이전 행을 그대로 내준다). 정적인 말은 정적인 표에서 읽는다.
  */
-const TILE_LOOK: Record<LedgerKey, { eyebrow: string; icon: LucideIcon; tone: SummaryTileTone }> = {
-  startup: { eyebrow: 'STARTUP', icon: Rocket, tone: 'cyan' },
-  domestic: { eyebrow: 'NETWORKS', icon: Network, tone: 'indigo' },
-  global: { eyebrow: 'NETWORKS', icon: Globe, tone: 'orchid' },
+const TILE_LOOK: Record<LedgerKey, {
+  eyebrow: string
+  icon: LucideIcon
+  tone: SummaryTileTone
+  /** 큰 수와 전사 칩이 함께 쓰는 세는 단위 — 원장에 담긴 것이 무엇인지가 정한다. */
+  unit: string
+}> = {
+  startup: { eyebrow: 'STARTUP', icon: Rocket, tone: 'cyan', unit: '개사' },
+  domestic: { eyebrow: 'NETWORKS', icon: Network, tone: 'indigo', unit: '명' },
+  global: { eyebrow: 'NETWORKS', icon: Globe, tone: 'orchid', unit: '명' },
 }
 
 /**
@@ -37,9 +48,9 @@ const TILE_LOOK: Record<LedgerKey, { eyebrow: string; icon: LucideIcon; tone: Su
  * 두었는가**이고, 한 달이라는 창은 그 물음의 축이 아니다 — 달이 바뀌면 같은 데이터가 '–'로
  * 내려앉아, 쌓아 둔 것이 그대로인데도 비어 보이는 자리를 만든다.
  */
-function tileMetrics(row: LedgerStat) {
+function tileMetrics(row: LedgerStat, unit: string) {
   const ratio = row.total > 0 ? ` (기여도 ${Math.round((row.mine / row.total) * 100)}%)` : ''
-  return [{ label: '전사', value: `${n(row.total)}${row.unit}${ratio}` }]
+  return [{ label: '전사', value: `${n(row.total)}${unit}${ratio}` }]
 }
 
 /**
@@ -100,10 +111,10 @@ export function MyDatabaseCard() {
               value={n(row.mine)}
               // 단위는 원장이 갖는다 — 스타트업은 '개사', 네트워크(국내·글로벌)는 '명'.
               // 큰 수 옆과 전사 칩이 같은 값을 읽어야 한 타일 안에서 말이 갈리지 않는다.
-              unit={row.unit}
+              unit={look.unit}
               tone={look.tone}
               icon={<Icon aria-hidden className="size-[18px]" strokeWidth={1.8} />}
-              metrics={tileMetrics(row)}
+              metrics={tileMetrics(row, look.unit)}
             />
           )
         })}
