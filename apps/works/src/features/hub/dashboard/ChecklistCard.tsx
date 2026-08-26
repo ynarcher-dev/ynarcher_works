@@ -19,7 +19,12 @@ const VISIBLE_TILES = 3
  *
  * 메모(NOTE)는 이 자리에서 걷었다(2026-08-21) — 적어 둔 글은 상단바 슬라이드오버에서 읽고
  * 고치면 되고, 대시보드 앞자리는 전사 공지가 가져간다. 체크리스트는 "아직 남은 것"이라
- * 훑는 목적이 달라 홈에 남는다 — 같은 이유로 **다 끝낸 목록은 이 자리에서 사라진다.**
+ * 훑는 목적이 달라 홈에 남는다.
+ *
+ * 다 끝낸 목록은 **목록에는 남되 머리의 숫자에서는 빠진다**(2026-08-26). 숫자는 "아직 할 일이
+ * 몇 건인가"를 답하는 자리라 끝난 것을 세면 답이 틀리고, 반대로 목록에서까지 지워 버리면
+ * 오늘 처리한 것이 홈에서 흔적 없이 사라져 "내가 지웠나" 싶은 자리가 된다. 대신 끝난 것은
+ * 뒤로 내려앉혀(정렬) 남은 일이 세 장 자리를 먼저 차지하게 한다.
  *
  * 쓰기(작성·수정·삭제)는 계속 슬라이드오버가 소유하고 여기서는 읽기와 열기만 한다 — 두 자리가
  * 각자의 상태로 같은 원장을 저장하면 나중에 저장한 쪽이 상대의 편집을 덮어쓴다. 타일을 누르면
@@ -33,12 +38,19 @@ export function ChecklistCard() {
   const { data: memos = [], isLoading } = useQuickMemos(userId)
 
   // 정렬은 서버 훅이 끝냈다(고정 우선 · 최근 수정 순). 빈 항목(작성 중 이탈)은 감춘다.
-  // 다 끝낸 목록도 여기서 걷는다 — 이 카드는 "아직 남은 것"을 훑는 자리라, 완료분이 섞이면
-  // 남은 일을 세 장 자리 밖으로 밀어낸다. 끝난 목록은 패널에 회색으로 남으니 사라지지는 않는다.
+  // 그 위에 "끝난 것은 뒤로" 한 겹만 얹는다 — sort는 안정 정렬이라 두 무리 안에서는 서버가
+  // 정한 순서가 그대로 유지된다.
   const checklists = useMemo(
-    () => memos.filter((memo) =>
-      memo.type === 'CHECKLIST' && !isQuickMemoEmpty(memo) && !isChecklistDone(memo)),
+    () => memos
+      .filter((memo) => memo.type === 'CHECKLIST' && !isQuickMemoEmpty(memo))
+      .sort((a, b) => Number(isChecklistDone(a)) - Number(isChecklistDone(b))),
     [memos],
+  )
+
+  // 머리의 숫자는 남은 건수만 답한다(끝난 것은 목록에만 남는다).
+  const pendingCount = useMemo(
+    () => checklists.filter((memo) => !isChecklistDone(memo)).length,
+    [checklists],
   )
 
   const openMemo = (memo: QuickMemo) => {
@@ -55,7 +67,7 @@ export function ChecklistCard() {
   return (
     <Card
       title="체크리스트"
-      count={checklists.length}
+      count={pendingCount}
       actions={<Button variant="outline" onClick={createChecklist}>새 체크리스트</Button>}
     >
       <div className={`flex flex-col ${DASHBOARD_TILE_AREA}`}>
@@ -80,6 +92,7 @@ export function ChecklistCard() {
       </div>
       {checklists.length > VISIBLE_TILES && (
         // "전체 보기"는 잡아 둔 자리 밖에 둔다 — 자리 안에 넣으면 타일 한 장을 밀어낸다.
+        // 여기 숫자는 머리의 건수와 달리 끝난 것까지 센다 — 패널을 열면 그것들도 서기 때문이다.
         <Button
           variant="ghost"
           className="mt-2 w-full justify-center text-gray-500"
