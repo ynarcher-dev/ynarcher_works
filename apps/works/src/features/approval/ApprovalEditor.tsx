@@ -6,7 +6,13 @@ import { usePendingMaterials } from '@/features/networks/pendingMaterials'
 import { ApprovalFieldsForm } from '@/features/approval/ApprovalFieldsForm'
 import { ApprovalInfoTable } from '@/features/approval/ApprovalInfoTable'
 import { ApprovalLinePicker } from '@/features/approval/ApprovalLinePicker'
-import { useApprovalForms, useCreateApproval } from '@/features/approval/approvalApi'
+import {
+  EMPTY_LINES,
+  groupFormsByCategory,
+  useApprovalForms,
+  useCreateApproval,
+  type ApprovalLineInput,
+} from '@/features/approval/approvalApi'
 import { APPROVAL_ATTACHMENT_TYPE } from '@/features/approval/config'
 import {
   emptyValues,
@@ -45,12 +51,16 @@ export function ApprovalEditor({ onSaved, onCancel }: ApprovalEditorProps) {
   const pending = usePendingMaterials()
 
   const activeForms = useMemo(() => (forms ?? []).filter((f) => f.is_active), [forms])
+  const groups = useMemo(() => groupFormsByCategory(activeForms), [activeForms])
+
+  const [category, setCategory] = useState('')
   const [formId, setFormId] = useState('')
   const [title, setTitle] = useState('')
   const [values, setValues] = useState<FieldValues>({})
-  const [approverIds, setApproverIds] = useState<string[]>([])
+  const [lines, setLines] = useState<ApprovalLineInput>(EMPTY_LINES)
   const [recipientIds, setRecipientIds] = useState<string[]>([])
 
+  const categoryForms = groups.find((g) => g.category === category)?.forms ?? []
   const form = activeForms.find((f) => f.id === formId) ?? null
   const fields = useMemo(() => parseFields(form?.current_version?.fields), [form])
 
@@ -78,6 +88,14 @@ export function ApprovalEditor({ onSaved, onCancel }: ApprovalEditorProps) {
     setValues(emptyValues(parseFields(next?.current_version?.fields)))
   }
 
+  // 대분류를 바꾸면 그 아래 양식 선택과 입력 값을 함께 비운다 — 필드 키가 달라
+  // 이전 값을 그대로 옮기면 어느 칸에 들어가야 할지 알 수 없는 값이 남는다.
+  const selectCategory = (next: string) => {
+    setCategory(next)
+    setFormId('')
+    setValues({})
+  }
+
   const amount = primaryAmount(fields, values)
   const amountLabel = primaryAmountLabel(fields)
 
@@ -97,8 +115,8 @@ export function ApprovalEditor({ onSaved, onCancel }: ApprovalEditorProps) {
         toast.show(`필수 항목을 입력하세요: ${missing.join(', ')}`, 'warning')
         return
       }
-      if (approverIds.length === 0) {
-        toast.show('결재선을 한 명 이상 지정하세요.', 'warning')
+      if (lines.APPROVAL.length === 0) {
+        toast.show('결재자를 한 명 이상 지정하세요.', 'warning')
         return
       }
     }
@@ -110,7 +128,7 @@ export function ApprovalEditor({ onSaved, onCancel }: ApprovalEditorProps) {
         formVersionId: form.current_version_id,
         fieldValues: pruneValues(fields, values),
         departmentId: myDeptId,
-        approverIds,
+        lines,
         recipientIds,
         asDraft,
       })
@@ -149,20 +167,41 @@ export function ApprovalEditor({ onSaved, onCancel }: ApprovalEditorProps) {
               <ApprovalInfoTable
                 pairs={[
                   {
+                    // 문서 종류는 두 단이다 — 대분류를 고른 뒤 그 안의 양식을 고른다.
+                    // 양식이 늘어날수록 한 줄짜리 목록은 훑기 어려워진다.
                     label: '문서 종류',
                     value: (
-                      <Select
-                        density="table"
-                        value={formId}
-                        onChange={(e) => selectForm(e.target.value)}
-                      >
-                        <option value="">양식 선택</option>
-                        {activeForms.map((f) => (
-                          <option key={f.id} value={f.id}>
-                            {f.name}
-                          </option>
-                        ))}
-                      </Select>
+                      // 대분류와 양식은 한 줄에 나란히 선다(`대분류 > 양식`을 읽는 순서 그대로).
+                      // 줄바꿈을 허용하면 좁은 칸에서 둘이 위아래로 갈려 두 단 관계가 흐려진다.
+                      <div className="flex items-center gap-2">
+                        <Select
+                          density="table"
+                          className="min-w-0 flex-1"
+                          value={category}
+                          onChange={(e) => selectCategory(e.target.value)}
+                        >
+                          <option value="">분류 선택</option>
+                          {groups.map((g) => (
+                            <option key={g.category} value={g.category}>
+                              {g.category}
+                            </option>
+                          ))}
+                        </Select>
+                        <Select
+                          density="table"
+                          className="min-w-0 flex-1"
+                          value={formId}
+                          onChange={(e) => selectForm(e.target.value)}
+                          disabled={!category}
+                        >
+                          <option value="">양식 선택</option>
+                          {categoryForms.map((f) => (
+                            <option key={f.id} value={f.id}>
+                              {f.name}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
                     ),
                   },
                   { label: '작성자', value: drafterLabel },
@@ -173,10 +212,19 @@ export function ApprovalEditor({ onSaved, onCancel }: ApprovalEditorProps) {
                   { label: '기안 부서', value: myDeptName || '-' },
                 ]}
               />
-              <Field label="제목" required>
-                <Input value={title} onChange={(e) => setTitle(e.target.value)} />
-              </Field>
             </div>
+          </Card>
+
+          {/* 결재선은 기본 설정 바로 아래, 본문과 같은 흐름에 둔다 — 문서를 누가 어떤 순서로
+              보게 될지는 첨부처럼 곁들이는 정보가 아니라 기안의 본체다. */}
+          <Card title="결재선">
+            <ApprovalLinePicker
+              lines={lines}
+              onLinesChange={setLines}
+              recipientIds={recipientIds}
+              onRecipientsChange={setRecipientIds}
+              excludeId={uid}
+            />
           </Card>
 
           {form && (
@@ -188,27 +236,33 @@ export function ApprovalEditor({ onSaved, onCancel }: ApprovalEditorProps) {
                   : undefined
               }
             >
-              {fields.length === 0 ? (
-                <p className="py-6 text-center text-body text-gray-500">
-                  이 양식에 정의된 필드가 없습니다. ADMIN 결재 양식 관리에서 필드를 추가하세요.
-                </p>
-              ) : (
-                <ApprovalFieldsForm fields={fields} values={values} onChange={setValues} />
-              )}
+              <div className="space-y-4">
+                <Field label="제목" required>
+                  <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+                </Field>
+                {fields.length === 0 ? (
+                  <p className="py-6 text-center text-body text-gray-500">
+                    이 양식에 정의된 필드가 없습니다. ADMIN 결재 양식 관리에서 필드를 추가하세요.
+                  </p>
+                ) : (
+                  <ApprovalFieldsForm fields={fields} values={values} onChange={setValues} />
+                )}
+              </div>
+            </Card>
+          )}
+
+          {/* 양식을 고르기 전에도 제목은 적어 둘 수 있게 한다(임시저장 경로). */}
+          {!form && (
+            <Card title="제목">
+              <Field label="제목" required>
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+              </Field>
             </Card>
           )}
         </div>
 
+        {/* 우측에는 문서에 곁들이는 것만 남는다(상세 화면의 우측 패널과 같은 성격). */}
         <div className="space-y-4 lg:col-span-1">
-          <Card title="결재선">
-            <ApprovalLinePicker
-              approverIds={approverIds}
-              onApproversChange={setApproverIds}
-              recipientIds={recipientIds}
-              onRecipientsChange={setRecipientIds}
-              excludeId={uid}
-            />
-          </Card>
           <PendingMaterialPanel
             slot={APPROVAL_ATTACHMENT_TYPE}
             pending={pending}

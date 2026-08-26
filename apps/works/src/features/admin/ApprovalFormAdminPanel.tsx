@@ -1,5 +1,5 @@
 import { Badge, Button, DataTable, Spinner, useToast, type Column } from '@ynarcher/ui'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ApprovalFormModal, type ApprovalFormSubmit } from '@/features/admin/ApprovalFormModal'
 import { useApprovalForms, type ApprovalForm } from '@/features/approval/approvalApi'
 import {
@@ -32,9 +32,16 @@ export function ApprovalFormAdminPanel() {
   const [form, setForm] = useState<'create' | ApprovalForm | null>(null)
   const editing = form && form !== 'create' ? form : undefined
 
+  // 분류 선택지는 지금 살아 있는 양식들이 쓰는 값에서 파생한다(별도 원장 없음).
+  const categories = useMemo(
+    () => [...new Set((forms ?? []).map((f) => f.category || '공통'))].sort(),
+    [forms],
+  )
+
   const submit = async (v: ApprovalFormSubmit) => {
     const meta = {
       name: v.name,
+      category: v.category,
       abbrev: v.abbrev,
       retention: v.retention,
       security_grade: v.security_grade,
@@ -74,6 +81,7 @@ export function ApprovalFormAdminPanel() {
   }
 
   const columns: Column<ApprovalForm>[] = [
+    { key: 'category', header: '분류', type: 'text', render: (r) => r.category || '공통' },
     { key: 'name', header: '양식명', type: 'name', primary: true, render: (r) => r.name },
     { key: 'abbrev', header: '번호 약칭', type: 'text', render: (r) => r.abbrev },
     {
@@ -143,6 +151,7 @@ export function ApprovalFormAdminPanel() {
       <ApprovalFormModal
         open={form !== null}
         form={editing}
+        categories={categories}
         onClose={() => setForm(null)}
         onSubmit={submit}
       />

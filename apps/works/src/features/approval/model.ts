@@ -1,11 +1,18 @@
 import { FORM_TYPES } from '@/features/management/config'
 import type { ApprovalStatus } from '@/features/management/config'
-import type { ApprovalBoxKey, ApprovalProgressKey, ApprovalRole } from '@/features/approval/config'
+import type {
+  ApprovalBoxKey,
+  ApprovalLineKind,
+  ApprovalProgressKey,
+  ApprovalRole,
+} from '@/features/approval/config'
 
 export interface ApprovalLine {
   approver_id: string | null
   step_order: number
   decision: 'PENDING' | 'APPROVED' | 'REJECTED'
+  /** 구분. 미지정 행(구 데이터)은 결재로 본다. */
+  kind?: ApprovalLineKind
 }
 
 /** 문서함 목록 한 행 — approvalApi의 LIST_SELECT와 형태가 일치해야 한다. */
@@ -50,17 +57,43 @@ export function hasRead(row: ApprovalListRow, uid: string): boolean {
   return row.approval_reads.some((r) => r.user_id === uid)
 }
 
+const kindOf = (l: ApprovalLine): ApprovalLineKind => l.kind ?? 'APPROVAL'
+
 /**
- * 지금이 내 결재 차례인가 — 순번대로 훑어 첫 PENDING 결재선이 나이면 참.
- * 앞 단계가 반려됐으면 흐름이 끊긴 것이므로 누구의 차례도 아니다.
+ * 지금이 내 차례인가 — 구분마다 진행 방식이 달라 판정도 갈린다.
+ *
+ * · **결재**는 순차다. 결재선만 순번대로 훑어 첫 PENDING이 나이면 내 차례이며, 앞 단계가
+ *   반려됐으면 흐름이 끊긴 것이라 누구의 차례도 아니다.
+ * · **합의·재무합의**는 병렬이다. 상신된 문서라면 내 합의 행이 PENDING인 동안 언제든 처리할
+ *   수 있다 — 순서를 강제하면 합의자가 자리를 비운 동안 결재 전체가 멈춘다.
+ *
+ * 문서 전체가 이미 반려됐으면(어느 행이든 REJECTED) 남은 차례는 없다.
  */
 export function isMyTurn(lines: ApprovalLine[], uid: string): boolean {
-  const sorted = [...lines].sort((a, b) => a.step_order - b.step_order)
-  for (const l of sorted) {
-    if (l.decision === 'REJECTED') return false
+  if (lines.some((l) => l.decision === 'REJECTED')) return false
+
+  // 병렬 구분(합의·재무합의)은 순서를 보지 않는다.
+  if (lines.some((l) => l.approver_id === uid && l.decision === 'PENDING' && kindOf(l) !== 'APPROVAL'))
+    return true
+
+  const sequential = lines
+    .filter((l) => kindOf(l) === 'APPROVAL')
+    .sort((a, b) => a.step_order - b.step_order)
+  for (const l of sequential) {
     if (l.decision === 'PENDING') return l.approver_id === uid
   }
   return false
+}
+
+/**
+ * 문서를 끝낼 마지막 한 표인가 — 구분에 상관없이 나 말고 남은 미처리 결재선이 없으면 참.
+ * 합의가 병렬이라 "순번이 뒤인가"로는 답할 수 없다.
+ */
+export function isLastPending<T extends ApprovalLine & { id: string }>(
+  lines: T[],
+  lineId: string,
+): boolean {
+  return !lines.some((l) => l.id !== lineId && l.decision === 'PENDING')
 }
 
 /**

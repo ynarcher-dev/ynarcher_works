@@ -13,9 +13,10 @@ import {
   APPROVAL_FEEDBACK_TYPE,
   DOC_STATUS_LABEL,
   DOC_STATUS_TONE,
+  LINE_KIND_LABEL,
 } from '@/features/approval/config'
 import { formatMoney, parseFields } from '@/features/approval/fields'
-import { isMyTurn } from '@/features/approval/model'
+import { isLastPending, isMyTurn } from '@/features/approval/model'
 import { useEmployees } from '@/features/management/hooks'
 import { useDepartments } from '@/features/management/orgHooks'
 
@@ -88,9 +89,9 @@ export function ApprovalDetail({ documentId, onBack }: ApprovalDetailProps) {
     Boolean(myLine) &&
     (doc.status === 'PENDING' || doc.status === 'IN_REVIEW') &&
     isMyTurn(lines, uid ?? '')
-  // 내가 마지막 결재자인가 — 나보다 뒤 순번에 아직 처리 안 된 결재선이 없으면 최종이다.
-  const isFinal =
-    !!myLine && !lines.some((l) => l.step_order > myLine.step_order && l.decision === 'PENDING')
+  // 내가 문서를 끝낼 마지막 한 표인가 — 구분(결재·합의)에 상관없이 나 말고 남은 미처리 결재선이
+  // 없으면 최종이다. 합의가 병렬이라 "순번이 뒤인가"로는 답할 수 없다.
+  const isFinal = !!myLine && isLastPending(lines, myLine.id)
 
   return (
     <div className="space-y-5">
@@ -112,7 +113,13 @@ export function ApprovalDetail({ documentId, onBack }: ApprovalDetailProps) {
 
               <ApprovalInfoTable
                 pairs={[
-                  { label: '문서 종류', value: doc.form?.name ?? '-' },
+                  {
+                    // 문서 종류는 두 단으로 적는다(대분류 > 양식) — 기안 화면에서 고른 경로 그대로.
+                    label: '문서 종류',
+                    value: doc.form
+                      ? `${doc.form.category || '공통'} > ${doc.form.name}`
+                      : '-',
+                  },
                   { label: '문서 번호', value: doc.doc_no ?? '미채번' },
                   { label: '기안 부서', value: deptName },
                   { label: '기안자', value: nameOf(doc.drafter_id) },
@@ -131,6 +138,7 @@ export function ApprovalDetail({ documentId, onBack }: ApprovalDetailProps) {
                     approverId: l.approver_id,
                     stepOrder: l.step_order,
                     decision: l.decision,
+                    kind: l.kind ?? 'APPROVAL',
                     decidedAt: l.decided_at,
                   }))}
                   recipients={doc.approval_recipients.map((r) => ({
@@ -161,7 +169,9 @@ export function ApprovalDetail({ documentId, onBack }: ApprovalDetailProps) {
                   .map((l) => (
                     <li key={l.id} className="border-b border-gray-100 pb-2 last:border-b-0">
                       <p className={cardText.meta}>
-                        {l.step_order}차 {nameOf(l.approver_id)} ·{' '}
+                        {LINE_KIND_LABEL[l.kind ?? 'APPROVAL']}
+                        {(l.kind ?? 'APPROVAL') === 'APPROVAL' ? ` ${l.step_order}차` : ''} ·{' '}
+                        {nameOf(l.approver_id)} ·{' '}
                         {l.decision === 'APPROVED' ? '승인' : '반려'} · {dateTime(l.decided_at)}
                       </p>
                       <p className={`mt-1 whitespace-pre-wrap ${cardText.value}`}>{l.comment}</p>
@@ -174,7 +184,12 @@ export function ApprovalDetail({ documentId, onBack }: ApprovalDetailProps) {
 
         <div className="space-y-4 lg:col-span-1">
           {canDecide && myLine && (
-            <ApprovalDecideBar documentId={doc.id} lineId={myLine.id} isFinal={isFinal} />
+            <ApprovalDecideBar
+              documentId={doc.id}
+              lineId={myLine.id}
+              kind={myLine.kind ?? 'APPROVAL'}
+              isFinal={isFinal}
+            />
           )}
           <MaterialPanel
             targetType={APPROVAL_ATTACHMENT_TYPE}

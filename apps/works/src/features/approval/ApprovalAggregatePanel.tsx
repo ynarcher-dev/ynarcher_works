@@ -9,7 +9,11 @@ import {
   type Column,
 } from '@ynarcher/ui'
 import { useMemo, useState } from 'react'
-import { useApprovalAggregateSource, useApprovalForms } from '@/features/approval/approvalApi'
+import {
+  groupFormsByCategory,
+  useApprovalAggregateSource,
+  useApprovalForms,
+} from '@/features/approval/approvalApi'
 import {
   aggregate,
   inPeriod,
@@ -107,12 +111,17 @@ export function ApprovalAggregatePanel() {
       <Card title="집계 조건">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <Field label="문서 양식">
+            {/* 분류로 묶어 편다 — 양식이 늘어날수록 한 줄짜리 목록은 훑기 어려워진다. */}
             <Select value={formId} onChange={(e) => setFormId(e.target.value)}>
               <option value="">양식 선택</option>
-              {countableForms.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
+              {groupFormsByCategory(countableForms).map((g) => (
+                <optgroup key={g.category} label={g.category}>
+                  {g.forms.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.name}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </Select>
           </Field>

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { inBox, isMyTurn, matchesKeyword, progressBucket, type ApprovalListRow } from './model'
+import {
+  inBox,
+  isLastPending,
+  isMyTurn,
+  matchesKeyword,
+  progressBucket,
+  type ApprovalListRow,
+} from './model'
 
 const ME = 'me'
 const OTHER = 'other'
@@ -55,6 +62,69 @@ describe('isMyTurn', () => {
       { approver_id: OTHER, step_order: 1, decision: 'APPROVED' as const },
     ]
     expect(isMyTurn(lines, ME)).toBe(true)
+  })
+
+  it('합의는 병렬이라 결재 순서를 기다리지 않는다', () => {
+    const lines = [
+      { approver_id: OTHER, step_order: 1, decision: 'PENDING' as const, kind: 'APPROVAL' as const },
+      { approver_id: ME, step_order: 1, decision: 'PENDING' as const, kind: 'AGREEMENT' as const },
+    ]
+    expect(isMyTurn(lines, ME)).toBe(true)
+  })
+
+  it('재무합의도 같은 병렬 규칙을 따른다', () => {
+    const lines = [
+      { approver_id: OTHER, step_order: 1, decision: 'PENDING' as const, kind: 'APPROVAL' as const },
+      {
+        approver_id: ME,
+        step_order: 1,
+        decision: 'PENDING' as const,
+        kind: 'FINANCE_AGREEMENT' as const,
+      },
+    ]
+    expect(isMyTurn(lines, ME)).toBe(true)
+  })
+
+  it('이미 처리한 합의는 다시 내 차례가 아니다', () => {
+    const lines = [
+      { approver_id: ME, step_order: 1, decision: 'APPROVED' as const, kind: 'AGREEMENT' as const },
+      { approver_id: OTHER, step_order: 1, decision: 'PENDING' as const, kind: 'APPROVAL' as const },
+    ]
+    expect(isMyTurn(lines, ME)).toBe(false)
+  })
+
+  it('어느 행이든 반려됐으면 합의자에게도 차례가 없다', () => {
+    const lines = [
+      { approver_id: OTHER, step_order: 1, decision: 'REJECTED' as const, kind: 'APPROVAL' as const },
+      { approver_id: ME, step_order: 1, decision: 'PENDING' as const, kind: 'AGREEMENT' as const },
+    ]
+    expect(isMyTurn(lines, ME)).toBe(false)
+  })
+
+  it('구분이 없는 구 데이터는 결재로 본다', () => {
+    const lines = [
+      { approver_id: OTHER, step_order: 1, decision: 'PENDING' as const },
+      { approver_id: ME, step_order: 2, decision: 'PENDING' as const },
+    ]
+    expect(isMyTurn(lines, ME)).toBe(false)
+  })
+})
+
+describe('isLastPending', () => {
+  it('구분에 상관없이 나 말고 미처리가 없으면 마지막 한 표다', () => {
+    const lines = [
+      { id: 'l1', approver_id: ME, step_order: 1, decision: 'PENDING' as const, kind: 'APPROVAL' as const },
+      { id: 'l2', approver_id: OTHER, step_order: 1, decision: 'APPROVED' as const, kind: 'AGREEMENT' as const },
+    ]
+    expect(isLastPending(lines, 'l1')).toBe(true)
+  })
+
+  it('합의가 아직 남아 있으면 결재자가 마지막이 아니다', () => {
+    const lines = [
+      { id: 'l1', approver_id: ME, step_order: 2, decision: 'PENDING' as const, kind: 'APPROVAL' as const },
+      { id: 'l2', approver_id: OTHER, step_order: 1, decision: 'PENDING' as const, kind: 'AGREEMENT' as const },
+    ]
+    expect(isLastPending(lines, 'l1')).toBe(false)
   })
 })
 

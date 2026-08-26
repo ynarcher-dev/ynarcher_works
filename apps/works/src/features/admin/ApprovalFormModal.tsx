@@ -6,6 +6,7 @@ import { parseFields, validateSchema, type FormField } from '@/features/approval
 
 export interface ApprovalFormSubmit {
   name: string
+  category: string
   abbrev: string
   retention: string
   security_grade: string
@@ -19,6 +20,8 @@ interface ApprovalFormModalProps {
   open: boolean
   /** 수정 대상. 없으면 신규 양식. */
   form?: ApprovalForm
+  /** 이미 쓰이고 있는 분류(입력 자동완성). 새 이름을 적으면 새 분류가 된다. */
+  categories: string[]
   onClose: () => void
   onSubmit: (v: ApprovalFormSubmit) => Promise<void> | void
 }
@@ -31,9 +34,16 @@ const EMPTY_FIELDS: FormField[] = [{ key: 'body', label: '내용', type: 'RICHTE
  * 약칭은 문서 번호의 접두라서 한 번 정하면 그 양식으로 쓴 문서 번호 체계가 된다.
  * 수정 시 필드 스키마를 건드리면 새 버전이 발행되고, 이미 쓴 문서는 자기 버전을 계속 본다.
  */
-export function ApprovalFormModal({ open, form, onClose, onSubmit }: ApprovalFormModalProps) {
+export function ApprovalFormModal({
+  open,
+  form,
+  categories,
+  onClose,
+  onSubmit,
+}: ApprovalFormModalProps) {
   const toast = useToast()
   const [name, setName] = useState('')
+  const [category, setCategory] = useState('공통')
   const [abbrev, setAbbrev] = useState('')
   const [retention, setRetention] = useState('영구')
   const [grade, setGrade] = useState('A등급')
@@ -47,6 +57,7 @@ export function ApprovalFormModal({ open, form, onClose, onSubmit }: ApprovalFor
     if (!open) return
     const loaded = form ? parseFields(form.current_version?.fields) : EMPTY_FIELDS
     setName(form?.name ?? '')
+    setCategory(form?.category ?? '공통')
     setAbbrev(form?.abbrev ?? '')
     setRetention(form?.retention ?? '영구')
     setGrade(form?.security_grade ?? 'A등급')
@@ -73,6 +84,7 @@ export function ApprovalFormModal({ open, form, onClose, onSubmit }: ApprovalFor
     try {
       await onSubmit({
         name: name.trim(),
+        category: category.trim() || '공통',
         abbrev: abbrev.trim(),
         retention: retention.trim() || '영구',
         security_grade: grade.trim() || 'A등급',
@@ -104,8 +116,30 @@ export function ApprovalFormModal({ open, form, onClose, onSubmit }: ApprovalFor
     >
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field
+            label="분류(대분류)"
+            hint="같은 분류끼리 기안 화면에서 묶입니다. 새 이름을 적으면 새 분류가 됩니다."
+          >
+            <Input
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              list="approval-form-categories"
+              placeholder="지출결의서"
+            />
+            {/* 선택지는 살아 있는 양식이 쓰는 분류에서 파생한다 — 별도 원장이 없으므로
+                빈 분류가 목록에 남지 않는다. */}
+            <datalist id="approval-form-categories">
+              {categories.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
+          </Field>
           <Field label="양식 이름" required>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="지출결의서" />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="법인카드 지출결의서"
+            />
           </Field>
           <Field
             label="문서 번호 약칭"

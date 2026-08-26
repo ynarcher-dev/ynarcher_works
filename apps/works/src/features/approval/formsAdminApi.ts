@@ -4,6 +4,7 @@ import type { FormField } from '@/features/approval/fields'
 
 interface FormMeta {
   name: string
+  category: string
   abbrev: string
   retention: string
   security_grade: string
@@ -19,6 +20,7 @@ export function useCreateApprovalForm() {
         .from('approval_forms')
         .insert({
           name: v.name,
+          category: v.category,
           abbrev: v.abbrev,
           retention: v.retention,
           security_grade: v.security_grade,
