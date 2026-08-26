@@ -4,7 +4,6 @@ import { GLOBAL_MINE_TAB } from '@/config/navigation'
 import { supabase } from '@/lib/supabase'
 import { managedRecordIds } from '@/features/master/ledgerPage'
 import { DOMESTIC_LIST_ENTITIES } from '@/features/networks/config'
-import { GLOBAL_TABLE } from '@/features/networks/globalConfig'
 
 /**
  * 대시보드 「나의 데이터베이스」가 세는 원장 하나 — **내 몫과 전사 규모를 함께** 답한다.
@@ -22,8 +21,6 @@ export interface LedgerStat {
   path: string
   /** 내가 등록했거나 기여한 활성 건수. */
   mine: number
-  /** 이번 달 내가 등록한 건수(기여 로그의 `created`). */
-  monthAdded: number
   /** 전사 활성 보유 건수. */
   total: number
 }
@@ -45,12 +42,6 @@ export const LEDGERS: { key: LedgerKey; label: string; workspace: WorkspaceKey; 
   { key: 'domestic', label: '국내 네트워크', workspace: 'networks', path: '/networks?tab=mine' },
   { key: 'global', label: '글로벌 네트워크', workspace: 'networks', path: `/networks?tab=${GLOBAL_MINE_TAB}` },
 ]
-
-/** 이번 달 1일 0시(로컬) ISO — '이번 달 등록'의 하한. */
-function startOfMonthISO(): string {
-  const now = new Date()
-  return new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-}
 
 /**
  * 목록 RPC에서 총 건수만 받아 온다(`p_limit: 1`).
@@ -79,27 +70,7 @@ async function liveCount(table: string, scope?: string): Promise<number> {
   return count ?? 0
 }
 
-/**
- * 이번 달 내가 등록한 건수 — 기여 로그(`entity_contributions`)의 `created`만 센다.
- *
- * 원장의 `created_at`이 아니라 기여 로그를 보는 이유는 축을 하나로 두기 위해서다. 국내 9종은
- * '내 것' 자체가 기여 로그로 정의되므로(등록자 또는 기여자), 증감만 원장 컬럼으로 세면 같은
- * 줄의 두 숫자가 서로 다른 기준을 갖게 된다. `edited`·`enriched`는 빼는데, 이 열이 답하는 것은
- * "이번 달에 얼마나 **늘었나**"이지 "얼마나 손댔나"가 아니다.
- */
-async function monthAdded(userId: string, tables: string[], since: string): Promise<number> {
-  const { count, error } = await supabase
-    .from('entity_contributions')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .eq('action', 'created')
-    .in('entity_table', tables)
-    .gte('created_at', since)
-  if (error) throw error
-  return count ?? 0
-}
-
-type LedgerCounts = Pick<LedgerStat, 'mine' | 'monthAdded' | 'total'>
+type LedgerCounts = Pick<LedgerStat, 'mine' | 'total'>
 
 /**
  * 스타트업 원장 — '내 것'은 생성자(`created_by`) **또는** 담당자(`startup_managers`)다.
@@ -107,37 +78,34 @@ type LedgerCounts = Pick<LedgerStat, 'mine' | 'monthAdded' | 'total'>
  * 담당은 원장 밖에 있어 조인으로 걸 수 없으므로 담당 기업 id를 먼저 모아 `or`로 묶는다
  * (STARTUP '내 업로드 DB' 목록과 같은 조건이며, 그래서 두 화면의 건수가 일치한다).
  */
-async function fetchStartupStat(userId: string, since: string): Promise<LedgerCounts> {
+async function fetchStartupStat(userId: string): Promise<LedgerCounts> {
   const ids = await managedRecordIds('startup_managers', 'startup_id', userId)
   const parts = [`created_by.eq.${userId}`]
   if (ids.length) parts.push(`id.in.(${ids.join(',')})`)
-  const [mine, total, added] = await Promise.all([
+  const [mine, total] = await Promise.all([
     liveCount('startups', parts.join(',')),
     liveCount('startups'),
-    monthAdded(userId, ['startups'], since),
   ])
-  return { mine, total, monthAdded: added }
+  return { mine, total }
 }
 
-async function fetchDomesticStat(userId: string, since: string): Promise<LedgerCounts> {
-  const [mine, total, added] = await Promise.all([
+async function fetchDomesticStat(): Promise<LedgerCounts> {
+  const [mine, total] = await Promise.all([
     rpcTotal('my_network_entities', { p_entities: DOMESTIC_LIST_ENTITIES }),
     rpcTotal('all_network_entities', { p_entities: DOMESTIC_LIST_ENTITIES }),
-    monthAdded(userId, DOMESTIC_LIST_ENTITIES, since),
   ])
-  return { mine, total, monthAdded: added }
+  return { mine, total }
 }
 
-async function fetchGlobalStat(userId: string, since: string): Promise<LedgerCounts> {
-  const [mine, total, added] = await Promise.all([
+async function fetchGlobalStat(): Promise<LedgerCounts> {
+  const [mine, total] = await Promise.all([
     rpcTotal('global_network_entities', { p_mine: true }),
     rpcTotal('global_network_entities', { p_mine: false }),
-    monthAdded(userId, [GLOBAL_TABLE], since),
   ])
-  return { mine, total, monthAdded: added }
+  return { mine, total }
 }
 
-const FETCHERS: Record<LedgerKey, (userId: string, since: string) => Promise<LedgerCounts>> = {
+const FETCHERS: Record<LedgerKey, (userId: string) => Promise<LedgerCounts>> = {
   startup: fetchStartupStat,
   domestic: fetchDomesticStat,
   global: fetchGlobalStat,
@@ -155,14 +123,12 @@ export function useMyDatabaseStats(userId: string | undefined, keys: LedgerKey[]
     queryKey: ['office', 'dashboard', 'my-database', userId, scope],
     enabled: Boolean(userId) && keys.length > 0,
     staleTime: 60_000,
-    queryFn: async (): Promise<LedgerStat[]> => {
-      const since = startOfMonthISO()
-      return Promise.all(
+    queryFn: async (): Promise<LedgerStat[]> =>
+      Promise.all(
         LEDGERS.filter((ledger) => keys.includes(ledger.key)).map(async (ledger) => ({
           ...ledger,
-          ...(await FETCHERS[ledger.key](userId!, since)),
+          ...(await FETCHERS[ledger.key](userId!)),
         })),
-      )
-    },
+      ),
   })
 }

@@ -2,11 +2,20 @@ import { Badge, cardText, cn, pinMark } from '@ynarcher/ui'
 import { memoSurface } from './quickMemoColors'
 import { isChecklistDone, type QuickMemo } from './quickMemoStore'
 
-function formatTime(value: string) {
+/**
+ * 수정 시각 표기 — 공지·게시판과 같은 `YYYY.MM.DD`(2026-08-26).
+ *
+ * 전에는 오늘 고친 메모만 시각(`14:20`)으로, 그 밖은 `8월 25일`로 적었다. 같은 대시보드에서
+ * 공지는 `2026.07.23`인데 바로 옆 체크리스트는 `8월 25일`이라 두 줄의 날짜가 같은 축으로
+ * 읽히지 않았다. 연도까지 적으므로 해가 바뀐 메모도 오늘 것처럼 보이지 않는다.
+ *
+ * ISO 문자열을 자르지 않고 로컬 시각으로 풀어 쓴다 — 저장 값은 UTC라, 잘라 쓰면 밤늦게 고친
+ * 메모가 하루 앞선 날짜로 적힌다.
+ */
+function formatDate(value: string) {
   const date = new Date(value)
-  return date.toDateString() === new Date().toDateString()
-    ? date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
-    : date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
+  const pad = (part: number) => String(part).padStart(2, '0')
+  return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())}`
 }
 
 function preview(memo: QuickMemo) {
@@ -72,7 +81,7 @@ export function QuickMemoTile({
           </div>
           {!titleOnly && <p className={`mt-1 line-clamp-2 ${cardText.subtitle}`}>{preview(memo)}</p>}
         </div>
-        <span className={`shrink-0 ${cardText.meta}`}>{formatTime(memo.updatedAt)}</span>
+        <span className={`shrink-0 ${cardText.meta}`}>{formatDate(memo.updatedAt)}</span>
       </div>
     </button>
   )

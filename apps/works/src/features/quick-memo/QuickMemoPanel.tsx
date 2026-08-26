@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeft, CheckSquare2, Pin, Plus, Search, StickyNote, Trash2 } from 'lucide-react'
-import { Button, Checkbox, IconButton, Input, Spinner, TextArea, cardText, formText, cn } from '@ynarcher/ui'
+import { ArrowLeft, CheckSquare2, Pin, Search, StickyNote, Trash2 } from 'lucide-react'
+import { Button, IconButton, Input, Spinner, TextArea, cardText, formText, cn } from '@ynarcher/ui'
 import { useAuthStore } from '@/auth/authStore'
+import { ChecklistEditor } from './ChecklistEditor'
 import { QuickMemoTile } from './QuickMemoTile'
 import { MEMO_COLORS, memoSurface } from './quickMemoColors'
 import { useDeleteQuickMemo, useQuickMemos, useSaveQuickMemo } from './quickMemoApi'
@@ -171,24 +172,8 @@ export function QuickMemoPanel() {
               placeholder="내용을 입력하세요…" aria-label="메모 내용"
               className="mt-3 min-h-[24rem] resize-none" />
           ) : (
-            <div className="mt-3 space-y-2">
-              {selected.items.map((item) => (
-                <div key={item.id} className="flex items-center gap-2">
-                  <Checkbox checked={item.completed} aria-label={`${item.content || '빈 항목'} 완료`}
-                    onChange={(event) => updateSelected((memo) => ({ ...memo, items: memo.items.map((row) => row.id === item.id ? { ...row, completed: event.target.checked } : row) }))} />
-                  <Input value={item.content} placeholder="할 일을 입력하세요"
-                    onChange={(event) => updateSelected((memo) => ({ ...memo, items: memo.items.map((row) => row.id === item.id ? { ...row, content: event.target.value } : row) }))}
-                    className={cn(item.completed && 'text-gray-400 line-through')} />
-                  <IconButton variant="ghost" label="항목 삭제"
-                    onClick={() => updateSelected((memo) => ({ ...memo, items: memo.items.filter((row) => row.id !== item.id) }))}
-                    icon={<Trash2 aria-hidden className="size-4" strokeWidth={1.8} />} />
-                </div>
-              ))}
-              <Button variant="ghost" className="w-full justify-start text-gray-500"
-                onClick={() => updateSelected((memo) => ({ ...memo, items: [...memo.items, { id: crypto.randomUUID(), content: '', completed: false }] }))}>
-                <Plus aria-hidden className="size-4" /> 항목 추가
-              </Button>
-            </div>
+            <ChecklistEditor items={selected.items}
+              onChange={(items) => updateSelected((memo) => ({ ...memo, items }))} />
           )}
         </div>
       </div>
