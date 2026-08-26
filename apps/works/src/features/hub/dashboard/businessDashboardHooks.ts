@@ -60,6 +60,24 @@ export const OPERATION_ROLE_LABEL: Record<OperationRoleKey, string> = {
   ADMIN: '관리',
 }
 
+/**
+ * 타일을 눌렀을 때 갈 곳 — 그 워크스페이스의 **내 목록**이다('내 프로젝트' / '내 운용펀드').
+ *
+ * 워크스페이스 첫 화면(전체 목록)이 아니라 내 목록으로 보내는 이유는, 타일이 방금 말한 숫자가
+ * '내가 맡은 건수'이기 때문이다. 전체 목록으로 보내면 눌러서 도착한 화면의 건수가 타일의
+ * 숫자와 달라, 방금 본 수가 무엇이었는지 되묻게 된다.
+ *
+ * 경로 조립을 화면에 맡기지 않는 것은 detailPath와 같은 이유다 — 사업 3종은 워크스페이스
+ * config가 베이스를 갖고 있고 펀드는 갖고 있지 않아, 화면에서 만들면 넷 중 하나만 손으로
+ * 적힌 경로가 된다.
+ */
+export const OPERATION_MINE_PATH: Record<OperationWorkspaceKey, string> = {
+  ac: `${AC_WORKSPACE.basePath}?tab=mine`,
+  mna: `${MNA_WORKSPACE.basePath}?tab=mine`,
+  project: `${PROJECT_WORKSPACE.basePath}?tab=mine`,
+  fund: '/fund?tab=mine',
+}
+
 /** 그 운영을 이끄는 자리인가(목록 역할 배지의 강조 여부). */
 export function isLeadRole(role: OperationRoleKey): boolean {
   return role === 'PM' || role === 'LEAD'

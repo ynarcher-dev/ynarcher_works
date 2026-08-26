@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BriefcaseBusiness, FolderKanban, Target, WalletCards, type LucideIcon } from 'lucide-react'
 import { Badge, Card, DataTable, EmptyState, Skeleton, SummaryTile, type Column, type SummaryTileTone } from '@ynarcher/ui'
-import { useAuthStore } from '@/auth/authStore'
+import { hasWorkspaceRead, useAuthStore } from '@/auth/authStore'
 import { MiniPager } from '@/features/networks/MiniPager'
 import {
+  OPERATION_MINE_PATH,
   OPERATION_ROLE_LABEL,
   isLeadRole,
   useMyBusinessOperations,
@@ -87,7 +88,8 @@ const columns: Column<BusinessOperation>[] = [
 
 export function BusinessOperationsDashboard() {
   const navigate = useNavigate()
-  const userId = useAuthStore((state) => state.user?.id)
+  const user = useAuthStore((state) => state.user)
+  const userId = user?.id
   const { data = [], isLoading, isError } = useMyBusinessOperations(userId)
   const [page, setPage] = useState(0)
   // 최신순 — 최근 시작한 운영이 위. 기간이 비어 있으면 뒤로 밀고, 같은 날 시작이면 늦게 끝나는 쪽이 위.
@@ -131,6 +133,15 @@ export function BusinessOperationsDashboard() {
             return (
               <SummaryTile
                 key={item.key}
+                // 타일을 누르면 그 워크스페이스의 내 목록으로 간다 — 건수를 세어 놓고 누를 수
+                // 없으면 다음에 할 일이 사이드바를 다시 찾아가는 일밖에 남지 않는다.
+                // 열람 권한이 없는 워크스페이스는 누를 수 없게 둔다: 누르면 권한 안내만 뜨는
+                // 자리로 보내는 것은 안내가 아니라 막다른 길이다(RequireWorkspace와 같은 판정).
+                onClick={
+                  hasWorkspaceRead(user, item.key)
+                    ? () => navigate(OPERATION_MINE_PATH[item.key])
+                    : undefined
+                }
                 title={item.label}
                 eyebrow={item.caption}
                 value={summary.total}
