@@ -7,7 +7,7 @@ import { DOMESTIC_LIST_ENTITIES } from '@/features/networks/config'
 import { GLOBAL_TABLE } from '@/features/networks/globalConfig'
 
 /**
- * 대시보드가 세는 '내 업로드 DB' 한 줄 — 원장 하나에서 **내 몫과 전사 규모를 함께** 답한다.
+ * 대시보드 「나의 데이터베이스」가 세는 원장 하나 — **내 몫과 전사 규모를 함께** 답한다.
  *
  * 내 건수만 세면 128이 큰 수인지 작은 수인지 판단할 근거가 없고, 전사 건수만 세면 개인
  * 대시보드 자리에서 누구에게나 같은 숫자를 보여 주는 카드가 된다. 두 값을 한 줄에 두면
@@ -31,10 +31,14 @@ export interface LedgerStat {
 export type LedgerKey = 'startup' | 'domestic' | 'global'
 
 /**
- * 원장별 정의 — 라벨·권한 키·목적지. 어느 줄을 세울지는 화면이 아니라 이 표가 답한다.
+ * 원장별 정의 — 라벨·권한 키·목적지. 어느 원장을 세울지는 화면이 아니라 이 표가 답한다.
  *
- * 라벨과 경로는 사이드바(`WORKSPACE_SUBNAV`)와 같은 말·같은 탭에 맞춘다 — 카드가 적은 수를
- * 눌러서 도착한 메뉴 이름이 다르면, 방금 본 수가 무엇이었는지 되묻게 된다.
+ * 경로는 사이드바(`WORKSPACE_SUBNAV`)의 '내 업로드 DB' 셋과 **같은 탭**을 가리킨다 — 카드가
+ * 적은 수와 눌러서 도착한 목록의 건수가 다르면, 방금 본 수가 무엇이었는지 되묻게 된다.
+ *
+ * 라벨은 사이드바의 말을 그대로 쓰지 않는다. 카드 이름이 이미 '나의 데이터베이스'라 '내 것'은
+ * 카드가 말했고, 타일까지 '내 업로드 DB (국내)'라고 적으면 석 장이 같은 말을 세 번 반복한다.
+ * 타일이 답할 것은 **어느 원장인가**뿐이다.
  */
 export const LEDGERS: { key: LedgerKey; label: string; workspace: WorkspaceKey; path: string }[] = [
   { key: 'startup', label: '스타트업 DB', workspace: 'startup', path: '/startup?tab=mine' },

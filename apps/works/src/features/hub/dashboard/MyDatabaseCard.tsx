@@ -32,20 +32,20 @@ const TILE_LOOK: Record<LedgerKey, { eyebrow: string; icon: LucideIcon; tone: Su
  * 이번 달이 0이면 '0'이 아니라 '–'다. 0으로 적으면 성적표처럼 읽히는데, 이 칩이 답하는 것은
  * "이번 달에 늘었나"이지 "이번 달에 얼마나 못 했나"가 아니다.
  *
- * 전사 칩은 절대 건수와 내 비중을 한 칸에 담는다. 비중은 두 수에서 따라 나오는 값이라 칩을
- * 하나 더 세울 만한 축이 아니고, 같은 칸에 두면 '무엇 중 얼마'가 눈에서 한 번에 이어진다.
- * 전사가 0이면 비율이 성립하지 않아 적지 않는다.
+ * 전사 칩은 절대 건수와 내 비중을 한 칸에 담는다 — `전사 1,842건 (전사 대비 7%)`. 비중은 두
+ * 수에서 따라 나오는 값이라 칩을 하나 더 세울 만한 축이 아니고, 같은 칸에 두면 '무엇 중
+ * 얼마'가 눈에서 한 번에 이어진다. 전사가 0이면 비율이 성립하지 않아 괄호를 통째로 뺀다.
  */
 function tileMetrics(row: LedgerStat) {
-  const ratio = row.total > 0 ? ` (${Math.round((row.mine / row.total) * 100)}%)` : ''
+  const ratio = row.total > 0 ? ` (전사 대비 ${Math.round((row.mine / row.total) * 100)}%)` : ''
   return [
     { label: '이번 달', value: row.monthAdded > 0 ? `+${n(row.monthAdded)}` : '–' },
-    { label: '전사', value: `${n(row.total)}${ratio}` },
+    { label: '전사', value: `${n(row.total)}건${ratio}` },
   ]
 }
 
 /**
- * 나의 업로드 DB — 내가 쌓아 놓은 데이터 원장 셋의 보유·증감을 타일 석 장에 세운다.
+ * 나의 데이터베이스 — 내가 쌓아 놓은 데이터 원장 셋의 보유·증감을 타일 석 장에 세운다.
  *
  * 이 자리에는 원래 '참여 중인 운영' 목록이 있었다. 바로 위 「나의 워크스페이스」 타일이 이미
  * "내가 몇 건 맡았나"를 세고 각 워크스페이스의 내 목록으로 보내 주므로, 같은 목록을 아래에
@@ -76,14 +76,14 @@ export function MyDatabaseCard() {
   if (isLoading) return <Skeleton className="h-52 rounded-radius-lg" />
   if (isError) {
     return (
-      <Card title="나의 업로드 DB">
+      <Card title="나의 데이터베이스">
         <EmptyState title="데이터 현황을 불러오지 못했습니다." description="잠시 후 다시 시도해주세요." />
       </Card>
     )
   }
 
   return (
-    <Card title="나의 업로드 DB">
+    <Card title="나의 데이터베이스">
       {/* 열 수는 위 카드와 다르다(넷 → 셋) — 타일 수가 다른데 격자를 맞추면 마지막 칸이 비고,
           그 빈칸이 "여기 하나 더 있어야 하는데 없다"로 읽힌다. */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
