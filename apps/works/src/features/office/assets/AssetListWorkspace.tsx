@@ -1,8 +1,11 @@
 import { Banner, Input, PageHeader, Spinner, Tabs } from '@ynarcher/ui'
 import { useEffect, useMemo, useState } from 'react'
 import { useEmployees } from '@/features/hub/hooks'
+// 사진 서명은 자산 원장이 소유한 헬퍼를 그대로 쓴다 — 같은 버킷을 두 곳에서 다르게 다루면
+// 만료 시간과 실패 처리가 갈린다(상세 모달과 같은 이유).
+import { useAssetPhotoUrls } from '@/features/management/assets/assetPhotos'
 import { AssetDetailModal } from '@/features/office/assets/AssetDetailModal'
-import { PortableAssetsTable } from '@/features/office/assets/PortableAssetsTable'
+import { PortableAssetsGrid } from '@/features/office/assets/PortableAssetsGrid'
 import {
   useAssetBranchIds,
   usePortableAssets,
@@ -11,10 +14,12 @@ import {
 } from '@/features/office/assets/portableAssetsApi'
 import { useBranches } from '@/features/office/branches/branchesApi'
 
-const PAGE_SIZE = 30
+// 카드 격자가 한 줄에 2·3·4장이라 24는 세 배치 모두에서 줄을 딱 맞게 채운다 —
+// 마지막 줄만 한두 장 남는 이 빠진 격자가 되지 않는다.
+const PAGE_SIZE = 24
 
 /**
- * OFFICE 자산 현황 — 지사 탭 → 공용 물품 표 → 물품 상세 모달. **조회 전용 화면이다.**
+ * OFFICE 자산 현황 — 지사 탭 → 공용 물품 카드 격자 → 물품 상세 모달. **조회 전용 화면이다.**
  * 기획: docs_planning/3_1_2_office_asset_checkout.md
  *
  * 답하는 질문은 하나다: **회사에 이런 물건이 있나, 있다면 어느 지사에 있고 누가 맡고 있나.**
@@ -23,6 +28,9 @@ const PAGE_SIZE = 30
  * 오프라인 현황판이 맡는다 — 앱이 그 흐름을 담으려면 누군가 반납을 눌러 주어야 하는데,
  * 그 한 번의 클릭에 재고 전체가 걸려 있는 구조는 한 사람이 잊는 순간 원장이 굳는다.
  * 물품의 등록·수정·수량·폐기는 MANAGEMENT `자산 관리`가 소유하고 이 화면은 읽기만 한다.
+ *
+ * 목록을 표에서 카드로 바꾼 것은 2026-08-26이다. 근거는 `PortableAssetsGrid`에 적었다 — 요지는
+ * 이 화면에 세로로 훑어 비교할 열이 없고, 정작 답해야 할 식별 질문의 답은 사진이 쥐고 있다는 것이다.
  *
  * 이 컴포넌트는 목록의 상태(지사·검색·페이지·열린 물품)만 소유한다.
  *
@@ -82,6 +90,15 @@ export function AssetListWorkspace({ initialAssetId }: { initialAssetId?: string
     () => filtered.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE),
     [filtered, page],
   )
+
+  // 이 페이지에 보이는 물품의 **대표사진 한 장씩**을 한 번에 서명한다. 카드마다 훅을 부르면
+  // 스물네 장이 스물네 번의 왕복이 되므로, 경로를 여기서 모아 `createSignedUrls` 한 번으로 받는다.
+  // 사진은 선택 항목이라 없는 물품은 애초에 이 목록에서 빠진다(카드가 그 자리에 자리표시를 둔다).
+  const coverPaths = useMemo(
+    () => pageRows.map((a) => a.photoPaths[0]).filter((p): p is string => Boolean(p)),
+    [pageRows],
+  )
+  const { data: coverUrls } = useAssetPhotoUrls(coverPaths)
 
   // 딥링크로 지정된 물품을 목록이 도착하는 대로 연다. 이미 처리한 id는 기억해 두어
   // 닫은 뒤에 되살아나지 않게 한다.
@@ -144,8 +161,9 @@ export function AssetListWorkspace({ initialAssetId }: { initialAssetId?: string
               <Spinner />
             </div>
           ) : (
-            <PortableAssetsTable
+            <PortableAssetsGrid
               rows={pageRows}
+              urlOf={(p) => coverUrls?.[p]}
               nameOf={managerNameOf}
               onOpen={setOpened}
               pagination={{
