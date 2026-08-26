@@ -103,7 +103,8 @@ export function isLastPending<T extends ApprovalLine & { id: string }>(
 }
 
 /**
- * 진행 중 타일 분류 — 지금 나의 처리·주의가 필요한 문서를 역할로 가른다.
+ * 진행 상태 분류 — 지금 나의 처리·주의가 필요한 문서를 역할로 가른다.
+ * · draft(임시저장): 내가 기안하다 만 문서(아직 상신 전)
  * · waiting(대기): 내 결재 차례
  * · upcoming(예정): 결재선에 있으나 아직 차례가 아님
  * · ongoing(진행): 내가 기안해 흐르는 중
@@ -111,6 +112,11 @@ export function isLastPending<T extends ApprovalLine & { id: string }>(
  * 해당 없으면 null. 우선순위는 처리 급한 순(waiting > upcoming > ongoing)이다.
  */
 export function progressBucket(row: ApprovalListRow, uid: string): ApprovalProgressKey | null {
+  // 임시저장은 상신 전이라 결재선을 볼 필요가 없다 — 아직 아무의 차례도 아니고, 오직
+  // 쓴 사람만의 일이다. 남의 임시저장은 서버가 애초에 내려보내지 않지만(RLS: DRAFT는
+  // 기안자만), 화면 분류도 같은 기준을 다시 적어 목록 필터가 서버보다 넓어지지 않게 한다.
+  if (row.status === 'DRAFT') return row.drafter_id === uid ? 'draft' : null
+
   if (inProgress(row.status)) {
     if (isMyTurn(row.approval_lines, uid)) return 'waiting'
     if (row.approval_lines.some((l) => l.approver_id === uid && l.decision === 'PENDING'))
@@ -123,7 +129,7 @@ export function progressBucket(row: ApprovalListRow, uid: string): ApprovalProgr
 }
 
 /**
- * 진행 분류별 건수. `all`은 나머지 넷의 합(문서 한 건은 한 칸에만 든다).
+ * 진행 분류별 건수. `all`은 나머지 다섯의 합(문서 한 건은 한 칸에만 든다).
  *
  * 두 자리가 같은 숫자를 말한다 — 문서함 좌패널의 '진행 중인 문서'와 OFFICE 대시보드의
  * 전자결재 카드다. 세는 규칙을 화면마다 적으면 같은 사람에게 두 곳이 다른 건수를 보이는
@@ -143,6 +149,7 @@ export function countByProgress(
     confirm: 0,
     upcoming: 0,
     ongoing: 0,
+    draft: 0,
   }
   if (!uid) return counts
   for (const row of rows) {

@@ -165,6 +165,23 @@ describe('progressBucket', () => {
     expect(progressBucket({ ...done, approval_reads: [{ user_id: ME }] }, ME)).toBe(null)
   })
 
+  it('내 임시저장은 draft, 남의 임시저장은 어디에도 들지 않는다', () => {
+    const mine = row({ status: 'DRAFT', drafter_id: ME })
+    expect(progressBucket(mine, ME)).toBe('draft')
+    expect(progressBucket(row({ status: 'DRAFT', drafter_id: OTHER }), ME)).toBe(null)
+  })
+
+  it('임시저장은 결재선이 이미 지정돼 있어도 대기·예정으로 새지 않는다', () => {
+    // 상신 전이라 아직 아무의 차례도 아니다 — 결재선을 미리 짜 두었다는 이유로
+    // 결재자의 '대기'에 뜨면 처리할 수 없는 문서가 할 일 목록에 선다.
+    const r = row({
+      status: 'DRAFT',
+      drafter_id: OTHER,
+      approval_lines: [{ approver_id: ME, step_order: 1, decision: 'PENDING' }],
+    })
+    expect(progressBucket(r, ME)).toBe(null)
+  })
+
   it('나와 무관한 문서는 어느 타일에도 들지 않는다', () => {
     expect(progressBucket(row(), ME)).toBe(null)
   })
@@ -233,6 +250,7 @@ describe('countByProgress', () => {
     ]
     expect(countByProgress(rows, ME)).toEqual({
       all: 3,
+      draft: 0,
       waiting: 1,
       upcoming: 1,
       ongoing: 1,
@@ -246,6 +264,7 @@ describe('countByProgress', () => {
     ]
     expect(countByProgress(rows, null)).toEqual({
       all: 0,
+      draft: 0,
       waiting: 0,
       upcoming: 0,
       ongoing: 0,

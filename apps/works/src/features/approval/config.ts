@@ -3,6 +3,7 @@ import {
   CalendarClock,
   CheckCheck,
   FileCheck,
+  FilePen,
   Files,
   Hourglass,
   Inbox,
@@ -71,7 +72,20 @@ export const APPROVAL_DEPT_GROUP: ApprovalBoxGroup = {
   boxes: [{ key: 'dept-all', label: '전체', icon: Inbox }],
 }
 
-/** 진행 중인 문서 그룹 — 문서함과 같은 좌패널에 서지만 키 종류가 다르다(진행 상태 축). */
+/**
+ * 진행 중인 문서 그룹 — 문서함과 같은 좌패널에 서지만 키 종류가 다르다(진행 상태 축).
+ *
+ * 하이웍스의 문서 상태 축(대기·예정·진행·완료·수신대기·회람대기)에서 우리 데이터에 있는
+ * 것만 골라 세운다. '완료'와 '회람 대기'는 **확인** 하나로 합쳤다 — 다 끝난 문서는 시간이
+ * 갈수록 쌓이기만 해서 "지금 신경 쓸 것"을 묻는 이 그룹의 성격과 어긋나고, 여기서 답해야
+ * 하는 것은 "끝났는데 내가 아직 못 본 게 있나" 하나이기 때문이다.
+ *
+ * **임시저장**이 이 그룹에 서는 이유(2026-08-26): 기안을 하고도 상신하지 않으면 그 문서는
+ * 어느 칸에도 들지 않아, 분명히 만든 문서가 대시보드에서 0건으로 보였다. 쓰다 만 문서야말로
+ * 내 손이 가야 할 것이라 여기가 제자리다(하이웍스의 '임시보관함'과 같은 자리). 내 문서함의
+ * '기안'과 겹치지 않는다 — 저쪽은 상신 여부와 무관한 **내가 기안한 전부**이고, 이쪽은 아직
+ * 조직에 올라가지 않은 것만이다.
+ */
 export const APPROVAL_PROGRESS_GROUP: {
   label: string
   boxes: { key: ApprovalProgressKey; label: string; icon: LucideIcon }[]
@@ -83,6 +97,7 @@ export const APPROVAL_PROGRESS_GROUP: {
     { key: 'confirm', label: '확인', icon: CheckCheck },
     { key: 'upcoming', label: '예정', icon: CalendarClock },
     { key: 'ongoing', label: '진행', icon: Send },
+    { key: 'draft', label: '임시저장', icon: FilePen },
   ],
 }
 
@@ -94,8 +109,9 @@ export const APPROVAL_PROGRESS_GROUP: {
 export const APPROVAL_ATTACHMENT_TYPE = 'approval'
 export const APPROVAL_FEEDBACK_TYPE = 'approval'
 
-/** 진행 중 현황 타일 키. 전체 = 나머지 넷의 합집합. */
-export type ApprovalProgressKey = 'all' | 'waiting' | 'confirm' | 'upcoming' | 'ongoing'
+/** 진행 상태 키. 전체 = 나머지 다섯의 합집합(문서 한 건은 한 칸에만 든다). */
+export type ApprovalProgressKey =
+  'all' | 'waiting' | 'confirm' | 'upcoming' | 'ongoing' | 'draft'
 
 /**
  * 문서함 목록의 상태 표기 — 목록에서는 결재 단계(1차 검토 등)까지 가르지 않고

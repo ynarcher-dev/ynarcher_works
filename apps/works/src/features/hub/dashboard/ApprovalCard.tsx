@@ -8,11 +8,12 @@ import { countByProgress } from '@/features/approval/model'
 import { DashboardRowButton } from '@/features/hub/dashboard/DashboardRowButton'
 
 /**
- * 카드에 세우는 결재함 네 칸 — 대기·확인·예정·진행.
+ * 카드에 세우는 결재함 다섯 칸 — 대기·확인·예정·진행·임시저장.
  *
  * 목록·라벨·아이콘·순서를 여기서 새로 적지 않고 문서함 좌패널이 쓰는 것(APPROVAL_PROGRESS_GROUP)을
  * 그대로 가져와 '전체'만 뺀다. 전체는 카드 제목 옆 건수가 이미 말하고 있고, 두 자리가 같은 칸을
- * 각자 적으면 한쪽에 칸이 늘었을 때 다른 쪽만 옛 네 칸으로 남는다.
+ * 각자 적으면 한쪽에 칸이 늘었을 때 다른 쪽만 옛 구성으로 남는다(임시저장을 더할 때 이 한 줄
+ * 덕분에 두 자리가 함께 따라왔다).
  */
 const BOXES = APPROVAL_PROGRESS_GROUP.boxes.filter((b) => b.key !== 'all')
 
@@ -28,7 +29,7 @@ const BOXES = APPROVAL_PROGRESS_GROUP.boxes.filter((b) => b.key !== 'all')
  * 누를 수 있다 — 비어 있음을 확인하러 가는 것도 답이며, 눌리는 줄과 안 눌리는 줄이 섞이면 어느
  * 것이 버튼인지 매번 다시 살펴야 한다.
  *
- * 네 칸을 2열 격자로 접지 않고 한 줄에 하나씩 세운다. 바로 위 근무체크의 출근·퇴근 줄과
+ * 다섯 칸을 2열 격자로 접지 않고 한 줄에 하나씩 세운다. 바로 위 근무체크의 출근·퇴근 줄과
  * 같은 규격(DashboardRowButton)이라, 우측 열 전체가 하나의 목록처럼 읽힌다.
  *
  * `onNavigate`는 페이지를 옮길 때 호출된다 — 슬라이드오버(개인 메뉴) 안에서 열렸을 때 패널을
@@ -48,7 +49,7 @@ export function ApprovalCard({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <Card
       title="전자결재"
-      // 제목 옆 건수는 네 함의 합이다 — 카드를 펼치지 않고도 지금 걸린 것이 몇 건인지 알린다.
+      // 제목 옆 건수는 다섯 칸의 합이다 — 카드를 펼치지 않고도 지금 걸린 것이 몇 건인지 알린다.
       count={counts.all}
       actions={
         <Button variant="outline" onClick={() => go('')}>
