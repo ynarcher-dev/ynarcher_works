@@ -1,7 +1,7 @@
 import { cn } from '@ynarcher/ui'
 import { Check } from 'lucide-react'
 import { ApprovalLineGrid, type GridPerson } from '@/features/approval/ApprovalLineGrid'
-import { approvalText, type ApprovalLineKind } from '@/features/approval/config'
+import { LINE_KIND_LABEL, approvalText, type ApprovalLineKind } from '@/features/approval/config'
 
 export interface StampLine {
   id: string
@@ -27,6 +27,13 @@ interface ApprovalStampTableProps {
   nameOf: (id: string | null) => string
   /** 직급·직책 표기(있으면 도장 위 칸에 적는다). */
   titleOf?: (id: string | null) => string
+  /**
+   * 지금 내가 찍을 수 있는 결재선 행 id. 이 칸의 도장만 '대기'가 아니라 누를 수 있는
+   * [처리] 자리로 바뀐다(차례가 아니면 null — 판정은 화면이 아니라 model.isMyTurn이 한다).
+   */
+  actionableLineId?: string | null
+  /** [처리] 자리를 눌렀을 때. 실제 결정은 결재 처리 창에서 한 번 더 고른다. */
+  onAction?: () => void
   className?: string
 }
 
@@ -96,6 +103,44 @@ function Stamp({ line }: { line: StampLine }) {
 }
 
 /**
+ * 내 차례의 도장 자리 — '대기'가 아니라 **누르면 찍히는 빈 자리**로 그린다.
+ *
+ * 형태가 다른 이유: 찍힌 도장(승인·반려·기안)과 남의 대기 칸은 모두 실선 원이라 '지금 상태'를
+ * 읽는 표식이지만, 이 칸만은 상태가 아니라 **할 일**이다. 종이 결재에서 도장을 찍을 자리에
+ * 점선을 그어 두는 것과 같은 문법으로, 점선 원 + 브랜드색으로 "여기가 비어 있고 네가 채운다"를
+ * 말한다(공용 DashedAddButton이 빈 자리를 점선으로 그리는 것과 같은 판단).
+ *
+ * 글자는 '처리'로 적어 상단 [○○ 처리] 버튼과 같은 말로 맞춘다 — 두 자리가 같은 창을 열므로
+ * 이름이 갈리면 다른 일로 읽힌다. 어느 구분의 처리인지는 도장 아래 한 줄이 답한다.
+ */
+function ActionStamp({ kindLabel, onClick }: { kindLabel: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      // 누를 수 있는 자리라는 것은 색·테두리만이 아니라 **면적**으로도 말한다 — 원만 누르게
+      // 두면 표 안에서 표적이 너무 작다. 칸 안쪽을 넉넉히 감싸고 hover에 면색을 깐다.
+      className={cn(
+        'group inline-flex flex-col items-center gap-1 rounded-radius-md px-3 py-1.5 transition-colors',
+        'hover:bg-brand-25 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10',
+      )}
+      title={`${kindLabel} 처리`}
+    >
+      <span
+        className={cn(
+          'flex size-10 items-center justify-center rounded-full border-2 border-dashed border-current bg-white font-bold text-brand',
+          'group-hover:border-solid',
+        )}
+      >
+        처리
+      </span>
+      {/* 도장이 찍힌 칸의 일시가 서던 자리 — 아직 결정이 없으니 대신 무엇을 하는 자리인지 적는다. */}
+      <span className={cn(approvalText.meta, 'whitespace-nowrap text-brand')}>{kindLabel}</span>
+    </button>
+  )
+}
+
+/**
  * 완성된 문서의 결재선 표 — 골격은 ApprovalLineGrid가 소유하고, 여기서는 결재선 원장을
  * 격자의 사람 칸(직급/도장/이름)으로 변환만 한다.
  *
@@ -112,16 +157,27 @@ export function ApprovalStampTable({
   draftedAt,
   nameOf,
   titleOf,
+  actionableLineId,
+  onAction,
   className,
 }: ApprovalStampTableProps) {
   const of = (kind: ApprovalLineKind) => lines.filter((l) => (l.kind ?? 'APPROVAL') === kind)
-  const toPerson = (line: StampLine, seq?: number): GridPerson => ({
-    key: line.id,
-    title: titleOf?.(line.approverId) ?? '',
-    name: nameOf(line.approverId),
-    seq,
-    stamp: <Stamp line={line} />,
-  })
+  const toPerson = (line: StampLine, seq?: number): GridPerson => {
+    // 누를 수 있는 자리는 오직 하나 — 상세 화면이 "지금 내 차례"라고 알려준 그 행뿐이다.
+    // 여기서 다시 판정하지 않는다(차례 규칙은 model이 소유하고, 서버가 다시 확인한다).
+    const actionable = onAction && line.id === actionableLineId && line.decision === 'PENDING'
+    return {
+      key: line.id,
+      title: titleOf?.(line.approverId) ?? '',
+      name: nameOf(line.approverId),
+      seq,
+      stamp: actionable ? (
+        <ActionStamp kindLabel={LINE_KIND_LABEL[line.kind ?? 'APPROVAL']} onClick={onAction} />
+      ) : (
+        <Stamp line={line} />
+      ),
+    }
+  }
 
   // 결재 행의 맨 앞은 항상 기안자 — 문서를 낸 사람이 결재선의 출발점이다. 결재자가 아니라
   // 순번은 붙이지 않고, 그 뒤의 결재자들만 순번대로 세운다(합의는 병렬이라 차례 그대로).

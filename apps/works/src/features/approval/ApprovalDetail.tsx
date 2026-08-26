@@ -216,6 +216,11 @@ export function ApprovalDetail({
               }))}
               nameOf={nameOf}
               titleOf={titleOf}
+              // 내 차례의 도장 칸은 '대기'가 아니라 누를 수 있는 [처리] 자리가 된다 —
+              // 상단 버튼과 같은 창을 연다. 결재선을 보다가 자기 칸에서 바로 손이 가는 것이
+              // 자연스럽고, 어느 칸이 내 차례인지도 그 자리에서 답한다.
+              actionableLineId={canDecide && myLine ? myLine.id : null}
+              onAction={() => setDeciding(true)}
             />
           </Card>
 
