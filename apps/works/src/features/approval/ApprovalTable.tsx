@@ -1,67 +1,76 @@
 import { Badge, DataTable, type Column } from '@ynarcher/ui'
-
-/** 전자결재 문서 한 건(목록 행). 세부 필드·상태값은 후속 작업에서 확정한다. */
-export interface ApprovalDocument {
-  id: string
-  /** 문서 종류(예: 지출결의서, 휴가신청서). */
-  docType: string
-  /** 문서 번호. */
-  docNo: string
-  /** 제목. */
-  title: string
-  /** 부서명. */
-  department: string
-  /** 기안자. */
-  drafter: string
-  /** 기안일(YYYY-MM-DD). */
-  draftedAt: string
-  /** 완료일(YYYY-MM-DD). 미완료 시 null. */
-  completedAt: string | null
-  /** 상태(예: 진행중, 완료, 반려). */
-  status: string
-  /** 구분(예: 수신, 발신). */
-  category: string
-}
-
-// 폭·정렬·수치서식은 열마다의 종류(type)가 정한다(2026-08 디자인 리프레시).
-const columns: Column<ApprovalDocument>[] = [
-  { key: 'docType', header: '문서 종류', type: 'text', render: (r) => r.docType },
-  { key: 'docNo', header: '문서 번호', type: 'text', render: (r) => r.docNo },
-  { key: 'title', header: '제목', type: 'name', primary: true, render: (r) => r.title },
-  { key: 'department', header: '부서명', type: 'text', render: (r) => r.department },
-  { key: 'drafter', header: '기안자', type: 'person', render: (r) => r.drafter },
-  { key: 'draftedAt', header: '기안일', type: 'date', render: (r) => r.draftedAt },
-  { key: 'completedAt', header: '완료일', type: 'date', render: (r) => r.completedAt ?? '-' },
-  { key: 'status', header: '상태', type: 'badge', render: (r) => <Badge tone="neutral">{r.status}</Badge> },
-  { key: 'category', header: '구분', type: 'text', render: (r) => r.category },
-]
+import {
+  APPROVAL_ROLE_LABEL,
+  DOC_STATUS_LABEL,
+  DOC_STATUS_TONE,
+} from '@/features/approval/config'
+import { docTypeName, myRole, type ApprovalListRow } from '@/features/approval/model'
 
 export interface ApprovalTableProps {
-  /** 표시할 문서 목록. 미지정 시 빈 테이블. */
-  rows?: ApprovalDocument[]
-  /** 선택된 행 키(제어 모드). */
-  selectedKeys?: string[]
-  /** 선택 변경 콜백. */
-  onSelectionChange?: (keys: string[]) => void
+  rows: ApprovalListRow[]
+  /** 현재 사용자 id — 구분(나의 자리) 열 판정. */
+  uid: string
+  /** 현재 사용자의 부서 id(부서 문서함 구분 표기). */
+  myDeptId: string | null
+  /** 임직원 id → 이름(기안자 열). */
+  nameOf: (id: string | null) => string
+  onRowClick?: (row: ApprovalListRow) => void
+  emptyText?: string
 }
 
 /**
- * 전자결재 문서 목록 데이터 테이블.
- * 공용 DataTable을 기반으로 체크박스 선택 + 전자결재 전용 컬럼(문서 종류~구분)을 구성한다.
- * 표준 메타 컬럼(작성자/수정일/관리)과 No. 넘버링은 사용하지 않는다.
+ * 전자결재 문서 목록. 폭·정렬은 열의 종류(type)가 정한다.
+ * 표준 메타 컬럼과 No. 넘버링은 쓰지 않고(문서 번호가 그 자리를 대신한다),
+ * 일괄 처리가 없으므로 선택 체크박스도 내린다.
  */
-export function ApprovalTable({ rows = [], selectedKeys, onSelectionChange }: ApprovalTableProps) {
+export function ApprovalTable({
+  rows,
+  uid,
+  myDeptId,
+  nameOf,
+  onRowClick,
+  emptyText = '전자결재 문서가 없습니다.',
+}: ApprovalTableProps) {
+  const columns: Column<ApprovalListRow>[] = [
+    { key: 'doc_no', header: '문서 번호', type: 'text', render: (r) => r.doc_no ?? '-' },
+    { key: 'title', header: '제목', type: 'name', primary: true, render: (r) => r.title },
+    { key: 'docType', header: '문서 종류', type: 'text', render: (r) => docTypeName(r) },
+    { key: 'drafter', header: '기안자', type: 'person', render: (r) => nameOf(r.drafter_id) },
+    { key: 'draftedAt', header: '기안일', type: 'date', render: (r) => r.created_at.slice(0, 10) },
+    {
+      key: 'completedAt',
+      header: '완료일',
+      type: 'date',
+      render: (r) => r.completed_at?.slice(0, 10) ?? '-',
+    },
+    {
+      // 구분(나의 자리)은 대등한 분류라 배지 없이 텍스트로 적는다(자산 상태 열과 같은 판단).
+      key: 'role',
+      header: '구분',
+      type: 'text',
+      render: (r) => {
+        const role = myRole(r, uid, myDeptId)
+        return role ? APPROVAL_ROLE_LABEL[role] : '-'
+      },
+    },
+    {
+      key: 'status',
+      header: '상태',
+      type: 'badge',
+      render: (r) => <Badge tone={DOC_STATUS_TONE[r.status]}>{DOC_STATUS_LABEL[r.status]}</Badge>,
+    },
+  ]
+
   return (
     <DataTable
       columns={columns}
       rows={rows}
       rowKey={(r) => r.id}
-      // selectable은 자리 기본값(페이지에 바로 놓인 표 = 켬)을 그대로 따른다.
+      selectable={false}
       numbered={false}
       standardColumns={false}
-      selectedKeys={selectedKeys}
-      onSelectionChange={onSelectionChange}
-      emptyText="전자결재 문서가 없습니다."
+      onRowClick={onRowClick}
+      emptyText={emptyText}
     />
   )
 }

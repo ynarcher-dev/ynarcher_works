@@ -1,0 +1,70 @@
+import type { BadgeTone } from '@ynarcher/ui'
+import type { ApprovalStatus } from '@/features/management/config'
+
+/**
+ * 문서함(좌패널) 키. 내 문서함은 문서에서의 나의 자리(기안·결재·참조)로,
+ * 부서 문서함은 소속으로 가른다. 하이웍스의 '진행 중인 문서' 그룹은 좌패널이 아니라
+ * 상단 현황 타일(ApprovalProgressKey)이 담당한다 — 2026-08-26 설계 확정.
+ */
+export type ApprovalBoxKey =
+  | 'mine-all'
+  | 'mine-drafted'
+  | 'mine-approver'
+  | 'mine-cc'
+  | 'mine-rejected'
+  | 'dept-all'
+
+export interface ApprovalBoxGroup {
+  label: string
+  boxes: { key: ApprovalBoxKey; label: string }[]
+}
+
+export const APPROVAL_BOX_GROUPS: ApprovalBoxGroup[] = [
+  {
+    label: '내 문서함',
+    boxes: [
+      { key: 'mine-all', label: '전체' },
+      { key: 'mine-drafted', label: '기안' },
+      { key: 'mine-approver', label: '결재' },
+      { key: 'mine-cc', label: '회람/참조' },
+      { key: 'mine-rejected', label: '반려' },
+    ],
+  },
+  {
+    label: '부서 문서함',
+    boxes: [{ key: 'dept-all', label: '전체' }],
+  },
+]
+
+/** 진행 중 현황 타일 키. 전체 = 나머지 넷의 합집합. */
+export type ApprovalProgressKey = 'all' | 'waiting' | 'confirm' | 'upcoming' | 'ongoing'
+
+/**
+ * 문서함 목록의 상태 표기 — 목록에서는 결재 단계(1차 검토 등)까지 가르지 않고
+ * 임시저장/진행/완료/반려 네 단으로 접는다. 단계는 상세의 결재선 도장 표가 답한다.
+ */
+export const DOC_STATUS_LABEL: Record<ApprovalStatus, string> = {
+  DRAFT: '임시저장',
+  PENDING: '진행',
+  IN_REVIEW: '진행',
+  APPROVED: '완료',
+  REJECTED: '반려',
+}
+
+export const DOC_STATUS_TONE: Record<ApprovalStatus, BadgeTone> = {
+  DRAFT: 'neutral',
+  PENDING: 'info',
+  IN_REVIEW: 'info',
+  APPROVED: 'success',
+  REJECTED: 'danger',
+}
+
+/** 구분 열 — 이 문서에서 나의 자리. 값이 대등한 분류라 배지가 아니라 텍스트로 적는다. */
+export type ApprovalRole = 'drafter' | 'approver' | 'cc' | 'dept'
+
+export const APPROVAL_ROLE_LABEL: Record<ApprovalRole, string> = {
+  drafter: '기안',
+  approver: '결재',
+  cc: '참조',
+  dept: '부서',
+}

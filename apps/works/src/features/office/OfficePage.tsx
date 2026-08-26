@@ -1,7 +1,6 @@
 import { EmptyState, PageHeader, Spinner } from '@ynarcher/ui'
 import { Navigate, useSearchParams } from 'react-router-dom'
-import { ApprovalTable } from '@/features/approval/ApprovalTable'
-import { ApprovalSummaryMock } from '@/features/approval/ApprovalSummaryMock'
+import { ApprovalWorkspace } from '@/features/approval/ApprovalWorkspace'
 import { ArchiveWorkspace } from '@/features/hub/ArchiveWorkspace'
 import { BoardWorkspace } from '@/features/hub/BoardWorkspace'
 import { DashboardPanel } from '@/features/hub/DashboardPanel'
@@ -115,14 +114,8 @@ export function OfficePage() {
       {tab === 'minutes' && <MinutesWorkspace initialMinuteId={params.get('minute') ?? undefined} />}
       {/* 지사 정보: ADMIN '지사 관리'가 소유한 지사 원장을 조회 전용 리스트뷰로 노출한다. */}
       {tab === 'branches' && <BranchesPanel />}
-      {/* 전자결재: 전자결재 워크스페이스에서 이관한 결재 문서 테이블. */}
-      {tab === 'approval' && (
-        <>
-          <PageHeader title="전자결재" />
-          <ApprovalSummaryMock />
-          <ApprovalTable />
-        </>
-      )}
+      {/* 전자결재: 진행 중 타일(필터) + 문서함 좌패널 + 문서 목록. */}
+      {tab === 'approval' && <ApprovalWorkspace />}
     </div>
   )
 }
