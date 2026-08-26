@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BriefcaseBusiness, FolderKanban, Target, type LucideIcon } from 'lucide-react'
+import { BriefcaseBusiness, FolderKanban, Target, WalletCards, type LucideIcon } from 'lucide-react'
 import { Badge, Card, DataTable, EmptyState, Skeleton, SummaryTile, type Column, type SummaryTileTone } from '@ynarcher/ui'
 import { useAuthStore } from '@/auth/authStore'
-import { PROGRAM_STATUS_LABEL, PROGRAM_STATUS_TONE } from '@/features/program/config'
 import { MiniPager } from '@/features/networks/MiniPager'
 import { useMyBusinessOperations, type BusinessOperation } from './businessDashboardHooks'
 
@@ -30,6 +29,13 @@ const WORKSPACE_SUMMARIES: {
     key: 'project', label: 'PROJECT', caption: '프로젝트', icon: FolderKanban,
     tone: 'mint',
   },
+  // 펀드는 사업 원장(features/program)이 아니지만 "내가 지금 무엇을 굴리고 있는가"라는
+  // 물음에는 함께 답해야 한다 — 운용역에게는 펀드가 곧 자기 운영이라, 이 칸이 없으면
+  // 대시보드가 자기 일의 절반만 세어 준다. 아이콘은 좌측 내비의 FUND와 같은 것을 쓴다.
+  {
+    key: 'fund', label: 'FUND', caption: '펀드 운용', icon: WalletCards,
+    tone: 'amber',
+  },
 ]
 
 function formatDate(date: string | null) {
@@ -48,11 +54,14 @@ const columns: Column<BusinessOperation>[] = [
   { key: 'title', header: '운영명', type: 'name', primary: true, render: (row) => row.title },
   { key: 'workspace', header: '워크스페이스', type: 'badge', render: (row) => <Badge tone="neutral">{row.workspaceLabel}</Badge> },
   { key: 'role', header: '역할', type: 'badge', render: (row) => <Badge tone={row.role === 'PM' ? 'info' : 'neutral'}>{row.role}</Badge> },
+  // 상태의 라벨·톤은 원장마다 다르므로 훅이 정해서 올린다(같은 'OPERATING'이 사업에서는
+  // '진행중', 펀드에서는 '운용 중'이다) — 표는 받은 말을 적기만 한다.
   { key: 'status', header: '상태', type: 'badge', render: (row) => (
-    <Badge tone={PROGRAM_STATUS_TONE[row.status] ?? 'neutral'} dot>{PROGRAM_STATUS_LABEL[row.status] ?? row.status}</Badge>
+    <Badge tone={row.statusTone} dot>{row.statusLabel}</Badge>
   ) },
   { key: 'period', header: '운영 기간', type: 'long', render: (row) => `${formatDate(row.startDate)} – ${formatDate(row.endDate)}` },
-  { key: 'allocation', header: '투입률', type: 'count', render: (row) => `${row.allocationRate}%` },
+  // 투입률이 없는 원장(펀드)은 0%가 아니라 '-'다 — 0%는 "배정은 됐는데 투입이 없다"는 뜻이 된다.
+  { key: 'allocation', header: '투입률', type: 'count', render: (row) => (row.allocationRate == null ? '-' : `${row.allocationRate}%`) },
   { key: 'deadline', header: '종료 일정', type: 'text', render: (row) => {
     const remaining = daysUntil(row.endDate)
     if (remaining == null) return '미정'
@@ -92,7 +101,7 @@ export function BusinessOperationsDashboard() {
   return (
     <div className="space-y-4">
       <Card title="나의 사업 운영">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {WORKSPACE_SUMMARIES.map((item) => {
             const Icon = item.icon
             const summary = workspaceSummary(item.key)
@@ -126,7 +135,7 @@ export function BusinessOperationsDashboard() {
             selectable={false}
             standardColumns={false}
             emptyText="참여 중인 운영이 없습니다."
-            onRowClick={(row) => navigate(`${row.basePath}/programs/${row.id}`)}
+            onRowClick={(row) => navigate(row.detailPath)}
           />
         </div>
         <MiniPager page={page} pageCount={pageCount} onPage={setPage} alwaysVisible />

@@ -1,4 +1,4 @@
-import { Badge, Button, Card, EmptyState, Spinner, cardText, pinMark } from '@ynarcher/ui'
+import { Button, Card, EmptyState, Spinner, cardText, pinMark } from '@ynarcher/ui'
 import { useNavigate } from 'react-router-dom'
 import { isNewPost } from '@/features/hub/boardData'
 import { useNotices } from '@/features/hub/boardPostsApi'
@@ -55,7 +55,15 @@ export function NoticeCard() {
                     {notice.post.title}
                   </span>
                   {isNewPost(notice.post.date) && <NewBadge />}
-                  <Badge tone="neutral">{notice.boardLabel}</Badge>
+                  {/* 줄 끝은 **언제 올라왔는가**다. 종전에는 어느 게시판에서 온 공지인지를
+                      배지로 적었지만, 이 카드는 전사 공지만 모아 보이는 자리라 출처가 갈리는
+                      일이 드물고(대개 전부 '공용게시판'이다) 같은 말이 매 줄 반복됐다.
+                      공지를 훑을 때 실제로 묻는 것은 '새 소식인가'이며, NEW 배지가 72시간
+                      안쪽만 답하므로 그 뒤로는 날짜가 그 물음을 이어받는다. 출처는 눌러서
+                      건너간 원본 게시판이 답한다. */}
+                  <span className={`shrink-0 tabular-nums ${cardText.meta}`}>
+                    {notice.post.date}
+                  </span>
                 </button>
               </li>
             ))}

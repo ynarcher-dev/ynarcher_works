@@ -46,19 +46,21 @@ export function ApprovalDocLinkField({ documentId, userId, value, onChange }: Pr
       {value.length === 0 ? (
         <p className={cn('py-4 text-center', approvalText.empty)}>연결된 문서가 없습니다.</p>
       ) : (
-        <ul className="space-y-1">
+        // 바로 위 '워크스페이스 연동'과 같은 한 줄 규격 — 배지·제목·식별자가 왼쪽부터 오른쪽
+        // 끝까지 자리를 나눠 갖는다. 문서 번호를 제목 **아래**로 내리면 두 패널이 나란히 선
+        // 자리에서 행 높이와 눈이 훑는 경로가 갈리고, 사업코드와 문서 번호는 둘 다 "그래서
+        // 어느 건인가"에 답하는 같은 성격의 값이라 같은 자리(오른쪽 끝)에 서야 한다.
+        <ul className="space-y-1.5">
           {value.map((d) => (
             <li
               key={d.id}
-              className="flex items-start gap-2 rounded-radius-sm border border-gray-200 px-3 py-2"
+              className="flex min-w-0 items-center gap-2 rounded-radius-md border border-gray-300 bg-white px-3 py-2"
             >
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <Badge tone={DOC_STATUS_TONE[d.status]}>{DOC_STATUS_LABEL[d.status]}</Badge>
-                  <span className={cn('truncate', approvalText.primary)}>{d.title}</span>
-                </div>
-                <p className={cn('mt-0.5 truncate', approvalText.meta)}>{d.docNo ?? '미채번'}</p>
-              </div>
+              <Badge tone={DOC_STATUS_TONE[d.status]}>{DOC_STATUS_LABEL[d.status]}</Badge>
+              <span className={cn('min-w-0 flex-1 truncate', approvalText.primary)}>{d.title}</span>
+              <span className={cn('shrink-0 tabular-nums', approvalText.meta)}>
+                {d.docNo ?? '미채번'}
+              </span>
               <IconButton
                 density="table"
                 variant="ghost"

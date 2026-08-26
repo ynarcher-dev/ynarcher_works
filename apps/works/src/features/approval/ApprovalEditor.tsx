@@ -153,8 +153,9 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
   const me = useMemo(() => (employees ?? []).find((e) => e.id === uid) ?? null, [employees, uid])
   const myDeptId = me?.department_id ?? null
 
-  // 기안자 표기의 형식(이름 / 소속 / 직책)은 approvalDrafterLabel이 정한다 — 여기서는
-  // 조각만 모은다. 상세 화면과 같은 함수를 거치므로 두 화면의 표기가 갈리지 않는다.
+  // 기안자 표기의 형식(이름 / 직책)은 approvalDrafterLabel이 정한다 — 여기서는 조각만
+  // 모은다. 상세 화면과 같은 함수를 거치므로 두 화면의 표기가 갈리지 않는다.
+  // 소속은 넘기지 않는다 — 같은 표의 '기안 부서' 칸이 이미 그 사실을 말한다.
   const { data: departments } = useDepartments()
   const jobTitle = useJobTitleLabel()
   const myDeptName = useMemo(
@@ -167,10 +168,9 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
     const position = typeof profile.position === 'string' ? profile.position : ''
     return {
       name: me?.name ?? '',
-      deptName: myDeptName,
       jobTitle: me ? jobTitle(rank, position) : '',
     }
-  }, [me, myDeptName, jobTitle])
+  }, [me, jobTitle])
 
   const selectForm = (id: string) => {
     setFormId(id)

@@ -1,5 +1,5 @@
 import { cn } from '@ynarcher/ui'
-import { Check } from 'lucide-react'
+import { Check, MessageSquareText } from 'lucide-react'
 import { ApprovalLineGrid, type GridPerson } from '@/features/approval/ApprovalLineGrid'
 import { LINE_KIND_LABEL, approvalText, type ApprovalLineKind } from '@/features/approval/config'
 
@@ -10,6 +10,8 @@ export interface StampLine {
   decision: 'PENDING' | 'APPROVED' | 'REJECTED'
   kind: ApprovalLineKind
   decidedAt: string | null
+  /** 처리하며 남긴 의견(없으면 null). 있으면 도장이 눌러서 읽는 자리가 된다. */
+  comment: string | null
 }
 
 export interface StampRecipient {
@@ -34,6 +36,11 @@ interface ApprovalStampTableProps {
   actionableLineId?: string | null
   /** [처리] 자리를 눌렀을 때. 실제 결정은 결재 처리 창에서 한 번 더 고른다. */
   onAction?: () => void
+  /**
+   * 의견이 남은 도장을 눌렀을 때. 넘기지 않으면 도장은 읽기만 하는 표식으로 남는다
+   * (기안 미리보기처럼 아직 아무 처리도 없는 자리).
+   */
+  onOpenComment?: (lineId: string) => void
   className?: string
 }
 
@@ -65,10 +72,13 @@ function StampMark({
   label,
   tone,
   date,
+  hasComment,
 }: {
   label: string
   tone: keyof typeof STAMP_TONE
   date: string | null
+  /** 의견이 남았음을 알리는 말풍선 표식을 일시 옆에 세운다. */
+  hasComment?: boolean
 }) {
   return (
     <span className="inline-flex flex-col items-center gap-2">
@@ -80,8 +90,15 @@ function StampMark({
       >
         {label}
       </span>
-      {/* 일시 자리는 도장이 찍혔을 때만 만든다 — 빈 줄을 두면 대기 칸만 키가 커진다. */}
-      {date && <span className={approvalText.meta}>{date.slice(0, 10)}</span>}
+      {/* 일시 자리는 도장이 찍혔을 때만 만든다 — 빈 줄을 두면 대기 칸만 키가 커진다.
+          말풍선은 그 줄에 얹는다: 언제 처리했는가와 무엇이라 했는가는 같은 도장에 붙은
+          한 사실이라, 표식을 따로 세우면 칸이 한 단 더 길어지고 격자의 키가 들쭉날쭉해진다. */}
+      {date && (
+        <span className={cn('inline-flex items-center gap-1', approvalText.meta)}>
+          {date.slice(0, 10)}
+          {hasComment && <MessageSquareText size={13} className="text-gray-500" />}
+        </span>
+      )}
     </span>
   )
 }
@@ -92,13 +109,35 @@ const DECISION_LABEL: Record<StampLine['decision'], string> = {
   REJECTED: '반려',
 }
 
-function Stamp({ line }: { line: StampLine }) {
-  return (
+/**
+ * 찍힌 도장 한 칸. **의견이 남았으면 눌러서 읽는 자리**가 되고, 그 사실을 일시 옆의 말풍선
+ * 표식이 알린다 — 눌러야만 알 수 있는 내용은 눌러 볼 이유도 함께 보여야 한다.
+ *
+ * 의견이 없는 도장은 누를 수 없게 둔다. 전부 누르게 하고 "남긴 의견이 없습니다"를 띄우면
+ * 대부분의 클릭이 빈 창으로 끝나, 표식이 있고 없고가 뜻하는 바가 흐려진다.
+ */
+function Stamp({ line, onOpenComment }: { line: StampLine; onOpenComment?: () => void }) {
+  const mark = (
     <StampMark
       label={DECISION_LABEL[line.decision]}
       tone={line.decision}
       date={line.decision === 'PENDING' ? null : line.decidedAt}
+      hasComment={Boolean(line.comment)}
     />
+  )
+  if (!line.comment || !onOpenComment) return mark
+  return (
+    <button
+      type="button"
+      onClick={onOpenComment}
+      title="결재 의견 보기"
+      className={cn(
+        'rounded-radius-md px-2 py-1 transition-colors',
+        'hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10',
+      )}
+    >
+      {mark}
+    </button>
   )
 }
 
@@ -159,6 +198,7 @@ export function ApprovalStampTable({
   titleOf,
   actionableLineId,
   onAction,
+  onOpenComment,
   className,
 }: ApprovalStampTableProps) {
   const of = (kind: ApprovalLineKind) => lines.filter((l) => (l.kind ?? 'APPROVAL') === kind)
@@ -174,7 +214,10 @@ export function ApprovalStampTable({
       stamp: actionable ? (
         <ActionStamp kindLabel={LINE_KIND_LABEL[line.kind ?? 'APPROVAL']} onClick={onAction} />
       ) : (
-        <Stamp line={line} />
+        <Stamp
+          line={line}
+          onOpenComment={onOpenComment ? () => onOpenComment(line.id) : undefined}
+        />
       ),
     }
   }

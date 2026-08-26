@@ -10,8 +10,8 @@ export interface ApprovalHeaderFacts {
   formPath: ReactNode
   docNo: string | null
   deptName: string
-  /** 기안자 — 이름·소속·직책(직급)을 넘기면 표기 형식은 approvalDrafterLabel()이 정한다. */
-  drafter: { name: string; deptName: string; jobTitle: string }
+  /** 기안자 — 이름·직책(직급)을 넘기면 표기 형식은 approvalDrafterLabel()이 정한다. */
+  drafter: { name: string; jobTitle: string }
   /** '영구 / A등급'. 양식이 정하므로 양식을 고르기 전에는 null. */
   retentionGrade: string | null
   amount: ReactNode
@@ -22,21 +22,22 @@ export interface ApprovalHeaderFacts {
 const dash = (v: string | null | undefined) => (v && v.trim() ? v : '-')
 
 /**
- * 기안자 표기 — `이름 / 소속 / 직책(직급)`.
+ * 기안자 표기 — `이름 / 직책(직급)`.
+ *
+ * **소속은 적지 않는다**(2026-08-26). 바로 왼쪽 칸이 '기안 부서'이고 그 값이 곧 기안자의
+ * 소속이라, 같은 사실이 한 줄 안에 두 번 적혀 있었다. 같은 값을 두 자리에 두면 언젠가
+ * 서로 다른 값을 말하는 날이 오고(대리 기안·부서 이동), 그때 어느 쪽이 진짜인지 판정할
+ * 근거가 없다.
  *
  * 구분자는 같은 표의 '보존 연한 / 보안 등급'과 같은 ` / `를 쓴다 — 한 칸 안에 여러 사실을
  * 담을 때의 표기가 행마다 다르면 같은 표가 두 규칙으로 읽힌다.
  *
  * 직책과 직급 중 무엇을 적을지는 여기서 정하지 않는다 — 태그 원장의 표기 방식을 읽는
  * `jobTitleLabel`(useJobTitleLabel)이 이미 답을 갖고 있고, 화면은 그 결과를 받아 놓기만 한다.
- * 비어 있는 조각은 건너뛴다(소속 미배치자에게 빈 슬래시가 남지 않도록).
+ * 비어 있는 조각은 건너뛴다(직책이 없는 사람에게 빈 슬래시가 남지 않도록).
  */
-export function approvalDrafterLabel(d: {
-  name: string
-  deptName: string
-  jobTitle: string
-}): string {
-  return [d.name, d.deptName, d.jobTitle]
+export function approvalDrafterLabel(d: { name: string; jobTitle: string }): string {
+  return [d.name, d.jobTitle]
     .map((v) => v.trim())
     .filter(Boolean)
     .join(' / ')

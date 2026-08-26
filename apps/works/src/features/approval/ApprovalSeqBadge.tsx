@@ -1,5 +1,4 @@
 import { cn } from '@ynarcher/ui'
-import { approvalText } from '@/features/approval/config'
 
 interface ApprovalSeqBadgeProps {
   /** 자기 구분 안에서의 순번(1부터). */
@@ -13,21 +12,23 @@ interface ApprovalSeqBadgeProps {
  *
  * 숫자를 맨숭맨숭 적지 않고 원으로 감싸는 이유는, 그 자리에 이름·직책이 함께 서기 때문이다.
  * 벌거벗은 숫자는 이름 옆에서 글자와 같은 층에 놓여 "박민준" 앞의 "1"이 이름의 일부처럼
- * 읽힌다 — 원이 둘러지면 그것이 글이 아니라 **표식**임이 형태로 먼저 읽힌다(도장 칸의 원과
- * 같은 문법이고, 결재선 표는 원래 원형 표식으로 읽는 양식이다).
+ * 읽힌다 — 원이 둘러지면 그것이 글이 아니라 **표식**임이 형태로 먼저 읽힌다.
  *
- * 크기는 줄의 글자 크기를 따라간다(`1.5em`) — 한 줄 안에서 크기를 갈라 위계를 만들지 않는다는
- * 원칙대로, 배지는 이름보다 크지도 작지도 않고 면색으로만 물러선다. 채우는 색을 브랜드색이
- * 아니라 회색으로 두는 것도 같은 이유다: 순번은 읽는 사람이 찾아야 할 정보가 아니라 순서를
- * 확인할 때만 보는 눈금이라, 도장(브랜드·정보색)보다 앞으로 나서면 안 된다.
+ * 원은 **면을 채우지 않고 헤어라인으로 두른다.** 이 화면의 원형 표식은 도장(StampMark)이
+ * 먼저 정의했고, 도장은 "속을 비우고 테두리와 글자를 같은 한 가지 색으로" 찍는다 —
+ * 종이 결재의 문법이다. 순번만 회색 알약처럼 면을 채우면 같은 표 안에 성격이 다른 두 종류의
+ * 원이 서고, 채워진 쪽이 비워진 도장보다 무겁게 읽혀 눈금이 도장보다 앞으로 나선다.
+ *
+ * 크기는 고정(1.25rem)이고 숫자는 캡션 단이다. 줄의 글자를 그대로 따라가게 두면(1.5em)
+ * 본문 14px 자리에서 원이 21px까지 부풀어 이름보다 덩치가 커진다 — 한 줄 안에서 크기로
+ * 위계를 만들지 않는다는 원칙은 **읽는 글자**들 사이의 약속이고, 이건 글이 아니라 눈금이다.
  */
 export function ApprovalSeqBadge({ seq, className }: ApprovalSeqBadgeProps) {
   return (
     <span
       className={cn(
-        approvalText.body,
-        'inline-flex size-[1.5em] shrink-0 items-center justify-center rounded-full',
-        'bg-gray-100 font-semibold leading-none tabular-nums text-gray-700',
+        'inline-flex size-5 shrink-0 items-center justify-center rounded-full',
+        'border border-gray-300 text-caption font-medium leading-none tabular-nums text-gray-500',
         className,
       )}
     >

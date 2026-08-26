@@ -20,6 +20,7 @@ import {
   LINE_KIND_ORDER,
 } from '@/features/approval/config'
 import { formatMoney, parseFields } from '@/features/approval/fields'
+import { ApprovalCommentModal } from '@/features/approval/ApprovalCommentModal'
 import { isLastPending, isMyTurn } from '@/features/approval/model'
 import { useEmployees } from '@/features/management/hooks'
 import { useJobTitleLabel } from '@/features/management/jobTitleHooks'
@@ -64,6 +65,8 @@ export function ApprovalDetail({
   const markRead = useMarkApprovalRead()
   // 결재 처리 창의 열림 여부. 문서를 다 읽고 [○○ 처리]를 누른 사람만 결정 앞에 선다.
   const [deciding, setDeciding] = useState(false)
+  // 지금 열어 읽고 있는 결재 의견의 결재선 행. 의견은 도장을 눌러야 열린다.
+  const [commentLineId, setCommentLineId] = useState<string | null>(null)
 
   const nameById = useMemo(() => {
     const m = new Map<string, string>()
@@ -124,8 +127,30 @@ export function ApprovalDetail({
     (doc.status === 'PENDING' || doc.status === 'IN_REVIEW') &&
     isMyTurn(lines, uid ?? '')
   // 내가 문서를 끝낼 마지막 한 표인가 — 구분(결재·합의)에 상관없이 나 말고 남은 미처리 결재선이
-  // 없으면 최종이다. 합의가 병렬이라 "순번이 뒤인가"로는 답할 수 없다.
+  // 없으면 최종이다. 구분이 셋으로 나뉜 뒤로는 "순번이 뒤인가"로 답할 수 없다.
   const isFinal = !!myLine && isLastPending(lines, myLine.id)
+
+  /**
+   * 결재선 표에 세울 도장 행 — 구분마다 순번대로 세운다. 순번을 여기서 매기는 이유는
+   * 의견 창이 **표에 선 것과 같은 숫자**를 적어야 하기 때문이다(저장된 step_order를 그대로
+   * 쓰면 임시저장을 고치며 중간이 빠졌을 때 표는 1·2인데 창은 2·4를 말한다).
+   */
+  const stampLines = LINE_KIND_ORDER.flatMap((kind) =>
+    lines
+      .filter((l) => (l.kind ?? 'APPROVAL') === kind)
+      .sort((a, b) => a.step_order - b.step_order)
+      .map((l, i) => ({
+        id: l.id,
+        approverId: l.approver_id,
+        stepOrder: l.step_order,
+        seq: i + 1,
+        decision: l.decision,
+        kind,
+        decidedAt: l.decided_at,
+        comment: l.comment,
+      })),
+  )
+  const openedComment = stampLines.find((l) => l.id === commentLineId)
 
   return (
     <div className="space-y-5">
@@ -185,7 +210,6 @@ export function ApprovalDetail({
                   deptName,
                   drafter: {
                     name: nameOf(doc.drafter_id),
-                    deptName: deptName === '-' ? '' : deptName,
                     jobTitle: titleOf(doc.drafter_id),
                   },
                   retentionGrade: doc.form
@@ -203,14 +227,7 @@ export function ApprovalDetail({
             <ApprovalStampTable
               drafterId={doc.drafter_id}
               draftedAt={doc.created_at}
-              lines={lines.map((l) => ({
-                id: l.id,
-                approverId: l.approver_id,
-                stepOrder: l.step_order,
-                decision: l.decision,
-                kind: l.kind ?? 'APPROVAL',
-                decidedAt: l.decided_at,
-              }))}
+              lines={stampLines}
               recipients={doc.approval_recipients.map((r) => ({
                 userId: r.user_id,
                 read: doc.approval_reads.some((rd) => rd.user_id === r.user_id),
@@ -222,8 +239,27 @@ export function ApprovalDetail({
               // 자연스럽고, 어느 칸이 내 차례인지도 그 자리에서 답한다.
               actionableLineId={canDecide && myLine ? myLine.id : null}
               onAction={() => setDeciding(true)}
+              // 의견이 남은 도장은 눌러 읽는다 — 특히 반려는 사유가 곧 다음에 할 일이라,
+              // 본문 아래까지 내려가지 않고 그 칸에서 바로 열리는 편이 맞다.
+              onOpenComment={setCommentLineId}
             />
           </Card>
+
+          {openedComment && (
+            <ApprovalCommentModal
+              view={{
+                kind: openedComment.kind,
+                seq: openedComment.seq,
+                name: nameOf(openedComment.approverId),
+                title: titleOf(openedComment.approverId),
+                // 의견이 있는 도장만 눌리므로 여기 오는 행은 반드시 처리된 행이다.
+                decision: openedComment.decision === 'REJECTED' ? 'REJECTED' : 'APPROVED',
+                decidedAt: openedComment.decidedAt,
+                comment: openedComment.comment ?? '',
+              }}
+              onClose={() => setCommentLineId(null)}
+            />
+          )}
 
           <Card title={doc.title}>
             <ApprovalFieldsView fields={fields} values={doc.field_values ?? {}} />
@@ -233,34 +269,6 @@ export function ApprovalDetail({
             )}
           </Card>
 
-          {/* 결재 의견 — 승인·반려에 붙은 기록. 코멘트(우측)와는 축이 다르다. */}
-          {lines.some((l) => l.comment) && (
-            <Card title="결재 의견">
-              <ul className="space-y-2">
-                {lines
-                  .filter((l) => l.comment)
-                  // 구분 먼저, 그 안에서 순번. 세 구분 모두 1번부터 매겨지므로 순번만으로
-                  // 정렬하면 결재 1차와 합의 1차가 섞여 어느 줄의 이야기인지 흩어진다.
-                  .sort(
-                    (a, b) =>
-                      LINE_KIND_ORDER.indexOf(a.kind ?? 'APPROVAL') -
-                        LINE_KIND_ORDER.indexOf(b.kind ?? 'APPROVAL') ||
-                      a.step_order - b.step_order,
-                  )
-                  .map((l) => (
-                    <li key={l.id} className="border-b border-gray-100 pb-2 last:border-b-0">
-                      <p className={cardText.meta}>
-                        {/* 순번은 세 구분에 모두 붙는다 — 셋 다 자기 줄 안에서 순차다. */}
-                        {LINE_KIND_LABEL[l.kind ?? 'APPROVAL']} {l.step_order}차 ·{' '}
-                        {nameOf(l.approver_id)} · {l.decision === 'APPROVED' ? '승인' : '반려'} ·{' '}
-                        {dateTime(l.decided_at)}
-                      </p>
-                      <p className={`mt-1 whitespace-pre-wrap ${cardText.value}`}>{l.comment}</p>
-                    </li>
-                  ))}
-              </ul>
-            </Card>
-          )}
         </div>
 
         <div className="space-y-4 lg:col-span-1">
