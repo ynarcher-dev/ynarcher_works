@@ -1,6 +1,5 @@
 import { EmptyState, PageHeader, Spinner } from '@ynarcher/ui'
 import { Navigate, useSearchParams } from 'react-router-dom'
-import { ApprovalAggregatePanel } from '@/features/approval/ApprovalAggregatePanel'
 import { ApprovalWorkspace } from '@/features/approval/ApprovalWorkspace'
 import { ArchiveWorkspace } from '@/features/hub/ArchiveWorkspace'
 import { BoardWorkspace } from '@/features/hub/BoardWorkspace'
@@ -119,8 +118,6 @@ export function OfficePage() {
       {tab === 'approval' && (
         <ApprovalWorkspace initialDocumentId={params.get('doc') ?? undefined} />
       )}
-      {/* 결재 금액 집계: 양식의 금액 필드를 문서 너머로 모아 본다(구 수기 취합). */}
-      {tab === 'approval-stats' && <ApprovalAggregatePanel />}
     </div>
   )
 }

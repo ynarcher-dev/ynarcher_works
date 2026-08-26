@@ -1,20 +1,12 @@
-import {
-  BackButton,
-  Badge,
-  Card,
-  EmptyState,
-  InfoField,
-  InfoGrid,
-  Spinner,
-  cardText,
-} from '@ynarcher/ui'
+import { BackButton, Badge, Card, EmptyState, Spinner, cardText } from '@ynarcher/ui'
 import { useEffect, useMemo } from 'react'
 import { useAuthStore } from '@/auth/authStore'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { ApprovalDecideBar } from '@/features/approval/ApprovalDecideBar'
 import { ApprovalFieldsView } from '@/features/approval/ApprovalFieldsView'
-import { ApprovalStampTable } from '@/features/approval/ApprovalStampTable'
+import { ApprovalInfoTable } from '@/features/approval/ApprovalInfoTable'
+import { ApprovalStampRows } from '@/features/approval/ApprovalStampRows'
 import { useApprovalDocument, useMarkApprovalRead } from '@/features/approval/approvalApi'
 import {
   APPROVAL_ATTACHMENT_TYPE,
@@ -106,48 +98,52 @@ export function ApprovalDetail({ documentId, onBack }: ApprovalDetailProps) {
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
-          {/* 표준 머리 — 모든 문서가 공유한다(양식이 정의하지 않는 부분). */}
-          <Card
-            title={doc.form?.name ?? '결재 문서'}
-            actions={<Badge tone={DOC_STATUS_TONE[doc.status]}>{DOC_STATUS_LABEL[doc.status]}</Badge>}
-          >
+          {/* 표준 머리 — 모든 문서가 공유한다(양식이 정의하지 않는 부분).
+              양식 이름을 문서 제목처럼 가운데에 세우고 그 아래 한 표 안에서 정보·결재선·참조가
+              이어진다 — 결재 문서가 종이와 기존 시스템에서 갖던 모양이다. */}
+          <Card>
             <div className="space-y-4">
-              <InfoGrid columns={3}>
-                <InfoField label="문서 번호" value={doc.doc_no ?? '미채번'} />
-                <InfoField label="기안 부서" value={deptName} />
-                <InfoField label="기안자" value={nameOf(doc.drafter_id)} />
-                <InfoField label="기안 일시" value={dateTime(doc.created_at)} meta />
-                <InfoField label="완료 일시" value={dateTime(doc.completed_at)} meta />
-                <InfoField
-                  label="보존/보안"
-                  value={
-                    doc.form ? `${doc.form.retention} / ${doc.form.security_grade}` : '-'
-                  }
-                  meta
-                />
-              </InfoGrid>
+              <div className="flex items-center justify-center gap-2">
+                <h2 className="text-title-md font-bold text-gray-900">
+                  {doc.form?.name ?? '결재 문서'}
+                </h2>
+                <Badge tone={DOC_STATUS_TONE[doc.status]}>{DOC_STATUS_LABEL[doc.status]}</Badge>
+              </div>
 
-              <ApprovalStampTable
-                lines={lines.map((l) => ({
-                  id: l.id,
-                  approverId: l.approver_id,
-                  stepOrder: l.step_order,
-                  decision: l.decision,
-                  decidedAt: l.decided_at,
-                }))}
-                recipients={doc.approval_recipients.map((r) => ({
-                  userId: r.user_id,
-                  read: doc.approval_reads.some((rd) => rd.user_id === r.user_id),
-                }))}
-                nameOf={nameOf}
-              />
+              <ApprovalInfoTable
+                pairs={[
+                  { label: '문서 종류', value: doc.form?.name ?? '-' },
+                  { label: '문서 번호', value: doc.doc_no ?? '미채번' },
+                  { label: '기안 부서', value: deptName },
+                  { label: '기안자', value: nameOf(doc.drafter_id) },
+                  {
+                    label: '보존 연한 / 보안 등급',
+                    value: doc.form ? `${doc.form.retention} / ${doc.form.security_grade}` : '-',
+                  },
+                  { label: '문서 금액', value: formatMoney(doc.amount) },
+                  { label: '기안 일시', value: dateTime(doc.created_at) },
+                  { label: '완료 일시', value: dateTime(doc.completed_at) },
+                ]}
+              >
+                <ApprovalStampRows
+                  lines={lines.map((l) => ({
+                    id: l.id,
+                    approverId: l.approver_id,
+                    stepOrder: l.step_order,
+                    decision: l.decision,
+                    decidedAt: l.decided_at,
+                  }))}
+                  recipients={doc.approval_recipients.map((r) => ({
+                    userId: r.user_id,
+                    read: doc.approval_reads.some((rd) => rd.user_id === r.user_id),
+                  }))}
+                  nameOf={nameOf}
+                />
+              </ApprovalInfoTable>
             </div>
           </Card>
 
-          <Card
-            title={doc.title}
-            subtitle={doc.amount !== null ? `문서 금액 ${formatMoney(doc.amount)}` : undefined}
-          >
+          <Card title={doc.title}>
             <ApprovalFieldsView fields={fields} values={doc.field_values ?? {}} />
             {/* 양식 도입 전 문서(구 body 단일 텍스트)도 그대로 읽힌다. */}
             {fields.length === 0 && doc.body && (

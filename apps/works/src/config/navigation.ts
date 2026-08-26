@@ -226,9 +226,9 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         { label: '지사 정보', tab: 'branches' },
         // 위 인적·조직 블록을 떼어내는 구분선. 전자결재 워크스페이스에서 통합 이관한
         // 결재·거래처 블록을 공간·회의 블록보다 앞에 둔다.
+        // 결재는 전사 업무라 OFFICE가 화면을 갖는다. 다만 결재된 '금액'을 모아 보는 일은
+        // 재무 관리와 같은 축이라 MANAGEMENT '결재 금액 집계'가 소유한다.
         { label: '전자결재', tab: 'approval', dividerBefore: true },
-        // 결재 금액 집계: 양식이 값의 타입을 알기에 가능한 화면(구 수기 취합 대체).
-        { label: '결재 금액 집계', tab: 'approval-stats' },
         { label: '거래처 정보', tab: 'clients' },
         // 자산·공간·회의는 사내 자원을 쓰는 일 한 블록이다 — 셋 사이는 끊지 않고 위 결재·거래처
         // 블록과만 구분선으로 나눈다. 뒤는 아래 고정 게시판 그룹 경계가 끊는다.
@@ -269,6 +269,9 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         { label: '근태 관리', tab: 'attendance' },
         { label: '자산 관리', tab: 'assets' },
         { label: '재무 관리', tab: 'finance' },
+        // 승인된 결재 문서의 금액을 항목·문서·월로 모은다(양식의 금액 필드가 원천).
+        // 재무 관리 바로 뒤 — 예산 대비 실지출을 보다가 그 실지출의 내역으로 들어가는 동선.
+        { label: '결재 금액 집계', tab: 'approval-stats' },
         { label: 'KPI 관리', tab: 'kpi', dividerBefore: true },
       ],
     },

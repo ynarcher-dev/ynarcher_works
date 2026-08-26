@@ -1,6 +1,7 @@
 import { Button, Input, PageHeader } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { ApprovalAggregatePanel } from '@/features/approval/ApprovalAggregatePanel'
 import { AssetsPanel } from '@/features/management/assets/AssetsPanel'
 import { AttendancePanel } from '@/features/management/attendance/AttendancePanel'
 import { DashboardPanel } from '@/features/management/panels/DashboardPanel'
@@ -18,6 +19,7 @@ const HEADINGS: Record<string, string> = {
   attendance: '근태 관리',
   assets: '자산 관리',
   finance: '재무 관리',
+  'approval-stats': '결재 금액 집계',
   kpi: 'KPI 관리',
 }
 
@@ -71,6 +73,9 @@ export function ManagementPage() {
       {tab === 'attendance' && <AttendancePanel />}
       {tab === 'assets' && <AssetsPanel />}
       {tab === 'finance' && <FinancePanel />}
+      {/* 결재 금액 집계: 승인된 결재 문서의 금액을 항목·문서·월로 모은다. 결재 자체는 OFFICE가
+          담당하고, 그 돈을 집계해 읽는 일은 재무 관리와 같은 축이라 여기가 자리다. */}
+      {tab === 'approval-stats' && <ApprovalAggregatePanel />}
       {tab === 'kpi' && <KpiPanel />}
       {/* 모르는 탭(이관된 직책·직급·호봉의 옛 링크 포함)은 이 워크스페이스의 첫 화면으로 받는다. */}
       {(tab === 'dashboard' || !HEADINGS[tab]) && <DashboardPanel />}

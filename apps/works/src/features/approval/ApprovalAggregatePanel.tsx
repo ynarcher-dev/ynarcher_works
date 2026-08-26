@@ -4,7 +4,6 @@ import {
   DataTable,
   Field,
   Input,
-  PageHeader,
   Select,
   Spinner,
   type Column,
@@ -36,6 +35,10 @@ const GROUP_OPTIONS: { key: GroupBy; label: string }[] = [
  *
  * 기본은 **승인 완료분만** 센다. 진행 중인 문서까지 더하면 아직 확정되지 않은 돈이 실지출로
  * 읽히고, 재무 대시보드가 보는 숫자(승인 완료 금액)와도 어긋난다.
+ *
+ * 자리는 MANAGEMENT(경영지원)다 — 결재를 하는 일은 OFFICE의 전사 업무지만, 결재된 돈을
+ * 모아 보는 일은 재무 관리와 같은 축이고 실제로 그 숫자를 쓰는 사람도 경영지원이다.
+ * 페이지 제목은 ManagementPage가 그리므로 이 패널은 제목을 갖지 않는다.
  */
 export function ApprovalAggregatePanel() {
   const { data: forms, isLoading: formsLoading } = useApprovalForms()
@@ -101,8 +104,6 @@ export function ApprovalAggregatePanel() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="결재 금액 집계" />
-
       <Card title="집계 조건">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <Field label="문서 양식">

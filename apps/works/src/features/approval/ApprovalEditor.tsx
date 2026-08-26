@@ -1,19 +1,10 @@
-import {
-  BackButton,
-  Button,
-  Card,
-  Field,
-  Input,
-  PageHeader,
-  Select,
-  Spinner,
-  useToast,
-} from '@ynarcher/ui'
+import { BackButton, Button, Card, Field, Input, Select, Spinner, useToast } from '@ynarcher/ui'
 import { useMemo, useState } from 'react'
 import { useAuthStore } from '@/auth/authStore'
 import { PendingMaterialPanel } from '@/features/networks/PendingMaterialPanel'
 import { usePendingMaterials } from '@/features/networks/pendingMaterials'
 import { ApprovalFieldsForm } from '@/features/approval/ApprovalFieldsForm'
+import { ApprovalInfoTable } from '@/features/approval/ApprovalInfoTable'
 import { ApprovalLinePicker } from '@/features/approval/ApprovalLinePicker'
 import { useApprovalForms, useCreateApproval } from '@/features/approval/approvalApi'
 import { APPROVAL_ATTACHMENT_TYPE } from '@/features/approval/config'
@@ -28,6 +19,8 @@ import {
   type FieldValues,
 } from '@/features/approval/fields'
 import { useEmployees } from '@/features/management/hooks'
+import { useJobTitleLabel } from '@/features/management/jobTitleHooks'
+import { useDepartments } from '@/features/management/orgHooks'
 
 interface ApprovalEditorProps {
   onSaved: (id: string) => void
@@ -61,10 +54,23 @@ export function ApprovalEditor({ onSaved, onCancel }: ApprovalEditorProps) {
   const form = activeForms.find((f) => f.id === formId) ?? null
   const fields = useMemo(() => parseFields(form?.current_version?.fields), [form])
 
-  const myDeptId = useMemo(
-    () => (employees ?? []).find((e) => e.id === uid)?.department_id ?? null,
-    [employees, uid],
+  const me = useMemo(() => (employees ?? []).find((e) => e.id === uid) ?? null, [employees, uid])
+  const myDeptId = me?.department_id ?? null
+
+  // 작성자 표기 = 소속 + 직급·직책 + 이름(기존 결재 시스템의 기안자 표기와 같은 순서).
+  const { data: departments } = useDepartments()
+  const jobTitle = useJobTitleLabel()
+  const myDeptName = useMemo(
+    () => (departments ?? []).find((d) => d.id === myDeptId)?.name ?? '',
+    [departments, myDeptId],
   )
+  const drafterLabel = useMemo(() => {
+    if (!me) return '-'
+    const profile = (me.profile ?? {}) as Record<string, unknown>
+    const rank = typeof profile.rank === 'string' ? profile.rank : ''
+    const position = typeof profile.position === 'string' ? profile.position : ''
+    return [myDeptName, jobTitle(rank, position), me.name].filter(Boolean).join(' ')
+  }, [me, myDeptName, jobTitle])
 
   const selectForm = (id: string) => {
     setFormId(id)
@@ -133,22 +139,40 @@ export function ApprovalEditor({ onSaved, onCancel }: ApprovalEditorProps) {
         </div>
       </div>
 
-      <PageHeader title="기안 작성" />
-
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
-          <Card title="문서 정보">
+          {/* 기본 설정 — 상세 화면과 같은 격자 표. 무엇을 적고 있는지와 무엇이 적혔는지가
+              같은 모양으로 읽히도록 기안·상세가 같은 머리를 쓴다. 보존 연한·보안 등급은
+              양식이 정하므로 여기서는 고르지 않고 고른 양식의 값을 그대로 보인다. */}
+          <Card title="기본 설정">
             <div className="space-y-4">
-              <Field label="문서 양식" required>
-                <Select value={formId} onChange={(e) => selectForm(e.target.value)}>
-                  <option value="">양식 선택</option>
-                  {activeForms.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.name}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
+              <ApprovalInfoTable
+                pairs={[
+                  {
+                    label: '문서 종류',
+                    value: (
+                      <Select
+                        density="table"
+                        value={formId}
+                        onChange={(e) => selectForm(e.target.value)}
+                      >
+                        <option value="">양식 선택</option>
+                        {activeForms.map((f) => (
+                          <option key={f.id} value={f.id}>
+                            {f.name}
+                          </option>
+                        ))}
+                      </Select>
+                    ),
+                  },
+                  { label: '작성자', value: drafterLabel },
+                  {
+                    label: '보존 연한 / 보안 등급',
+                    value: form ? `${form.retention} / ${form.security_grade}` : '-',
+                  },
+                  { label: '기안 부서', value: myDeptName || '-' },
+                ]}
+              />
               <Field label="제목" required>
                 <Input value={title} onChange={(e) => setTitle(e.target.value)} />
               </Field>
