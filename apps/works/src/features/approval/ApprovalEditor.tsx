@@ -259,8 +259,12 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
           <Button variant="secondary" onClick={() => void submit(true)} disabled={busy}>
             임시저장
           </Button>
+          {/* 버튼은 이 화면에서 하는 일의 이름으로 적는다 — '상신'은 문서가 결재선을 타고
+              올라가는 결과 쪽 용어라, 지금 기안서를 쓰고 있는 손에게는 '기안하기'가 자기가
+              누르는 일의 이름이다(임시저장과 짝이 맞는다). 결과를 알리는 토스트·상태 표기는
+              도메인 용어인 '상신'을 그대로 쓴다. */}
           <Button onClick={() => void submit(false)} disabled={busy}>
-            상신
+            기안하기
           </Button>
         </div>
       </div>
