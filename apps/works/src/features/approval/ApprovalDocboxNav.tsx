@@ -21,28 +21,46 @@ export function ApprovalDocboxNav({ selected, onSelect, counts }: ApprovalDocbox
       {APPROVAL_BOX_GROUPS.map((group) => (
         <div key={group.label} className="mb-4">
           <p className="mb-1 pl-1 text-caption font-semibold text-gray-500">{group.label}</p>
-          {group.boxes.map((box) => {
-            const isSelected = box.key === selected
+          {group.boxes.map(({ key, label, icon: Icon }) => {
+            const isSelected = key === selected
             return (
+              // 행 규격은 임직원정보 조직 트리(OrgTreeNav.TreeRow)와 동일하게 맞춘다 —
+              // 좌측 24px 아이콘 슬롯(w-icon-table) 뒤에 글자가 서는 리듬까지 같아야
+              // 두 화면의 좌패널이 한 부품으로 읽힌다. 건수 열만 문서함의 추가분이다.
               <button
-                key={box.key}
+                key={key}
                 type="button"
-                onClick={() => onSelect(box.key)}
+                onClick={() => onSelect(key)}
                 className={cn(
-                  'flex w-full items-center justify-between gap-2 rounded-radius-md px-2 py-1.5 text-left text-body-sm',
-                  isSelected
-                    ? 'bg-brand-25 font-semibold text-brand-700'
-                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900',
+                  'group flex w-full items-center gap-1 rounded-radius-md pl-1 pr-1 text-left',
+                  isSelected ? 'bg-brand-25' : 'hover:bg-gray-50',
                 )}
               >
-                <span className="min-w-0 truncate">{box.label}</span>
+                <span
+                  className={cn(
+                    'flex w-icon-table shrink-0 items-center justify-center',
+                    isSelected ? 'text-brand-700' : 'text-gray-500',
+                  )}
+                >
+                  <Icon aria-hidden size={14} strokeWidth={1.8} />
+                </span>
+                <span
+                  className={cn(
+                    'min-w-0 flex-1 truncate py-1.5 text-body-sm',
+                    isSelected
+                      ? 'font-semibold text-brand-700'
+                      : 'text-gray-700 group-hover:text-gray-900',
+                  )}
+                >
+                  {label}
+                </span>
                 <span
                   className={cn(
                     'shrink-0 text-caption tabular-nums',
                     isSelected ? 'text-brand-700' : 'text-gray-500',
                   )}
                 >
-                  {counts[box.key] ?? 0}
+                  {counts[key] ?? 0}
                 </span>
               </button>
             )

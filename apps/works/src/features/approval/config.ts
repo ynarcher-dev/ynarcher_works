@@ -1,3 +1,5 @@
+import { Ban, FileCheck, Files, Inbox, PenLine, Users } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import type { BadgeTone } from '@ynarcher/ui'
 import type { ApprovalStatus } from '@/features/management/config'
 
@@ -16,23 +18,23 @@ export type ApprovalBoxKey =
 
 export interface ApprovalBoxGroup {
   label: string
-  boxes: { key: ApprovalBoxKey; label: string }[]
+  boxes: { key: ApprovalBoxKey; label: string; icon: LucideIcon }[]
 }
 
 export const APPROVAL_BOX_GROUPS: ApprovalBoxGroup[] = [
   {
     label: '내 문서함',
     boxes: [
-      { key: 'mine-all', label: '전체' },
-      { key: 'mine-drafted', label: '기안' },
-      { key: 'mine-approver', label: '결재' },
-      { key: 'mine-cc', label: '회람/참조' },
-      { key: 'mine-rejected', label: '반려' },
+      { key: 'mine-all', label: '전체', icon: Files },
+      { key: 'mine-drafted', label: '기안', icon: PenLine },
+      { key: 'mine-approver', label: '결재', icon: FileCheck },
+      { key: 'mine-cc', label: '회람/참조', icon: Users },
+      { key: 'mine-rejected', label: '반려', icon: Ban },
     ],
   },
   {
     label: '부서 문서함',
-    boxes: [{ key: 'dept-all', label: '전체' }],
+    boxes: [{ key: 'dept-all', label: '전체', icon: Inbox }],
   },
 ]
 
