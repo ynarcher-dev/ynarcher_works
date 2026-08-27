@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { ProgramModule } from '@/features/program/hooks'
 import { useProgramWorkspace } from '@/features/program/workspace'
@@ -80,85 +80,5 @@ export function useUpdateModuleStatus(programId: string) {
       if (ctx?.prev) qc.setQueryData(key, ctx.prev)
     },
     onSettled: () => qc.invalidateQueries({ queryKey: key }),
-  })
-}
-
-export interface PoolMember {
-  id: string
-  role: string
-  status: string
-  /** 마스터(스타트업/전문가) 또는 연결 계정 이름. */
-  name: string
-  /** 보조 정보: 대표자명(스타트업)·소속(전문가) 등. */
-  detail: string
-  email: string
-  linked: boolean
-}
-
-interface ParticipantRow {
-  id: string
-  role: string
-  status: string
-  user_id: string | null
-  master_id: string | null
-  user: { name: string; email: string | null } | null
-}
-
-const EXPERT_ROLES = ['EXPERT', 'MENTOR', 'JUDGE']
-
-/** 참가자 풀(마스터·계정 이름 합성). NETWORKS 마스터는 soft ref라 별도 조회로 조인한다. */
-export function useParticipantPool(programId: string | undefined) {
-  const config = useProgramWorkspace()
-  return useQuery({
-    queryKey: [config.key, 'participant-pool', programId],
-    enabled: Boolean(programId),
-    queryFn: async (): Promise<PoolMember[]> => {
-      const { data } = await supabase
-        .from(config.tables.participants)
-        .select('id, role, status, user_id, master_id, user:users(name, email)')
-        .eq('program_id', programId)
-        .order('created_at', { ascending: true })
-      const rows = (data ?? []) as unknown as ParticipantRow[]
-
-      const startupIds = rows
-        .filter((r) => r.role === 'STARTUP' && r.master_id)
-        .map((r) => r.master_id as string)
-      const expertIds = rows
-        .filter((r) => EXPERT_ROLES.includes(r.role) && r.master_id)
-        .map((r) => r.master_id as string)
-
-      const [startupsRes, expertsRes] = await Promise.all([
-        startupIds.length
-          ? supabase.from('startups').select('id, name, representative').in('id', startupIds)
-          : Promise.resolve({ data: [] }),
-        expertIds.length
-          ? supabase.from('experts').select('id, name, affiliation, email').in('id', expertIds)
-          : Promise.resolve({ data: [] }),
-      ])
-      const startups = new Map(
-        ((startupsRes.data ?? []) as { id: string; name: string; representative: string | null }[]).map(
-          (s) => [s.id, s],
-        ),
-      )
-      const experts = new Map(
-        ((expertsRes.data ?? []) as { id: string; name: string; affiliation: string | null; email: string | null }[]).map(
-          (e) => [e.id, e],
-        ),
-      )
-
-      return rows.map((r) => {
-        const startup = r.master_id ? startups.get(r.master_id) : undefined
-        const expert = r.master_id ? experts.get(r.master_id) : undefined
-        return {
-          id: r.id,
-          role: r.role,
-          status: r.status,
-          name: startup?.name ?? expert?.name ?? r.user?.name ?? '미지정',
-          detail: startup?.representative ?? expert?.affiliation ?? '',
-          email: r.user?.email ?? expert?.email ?? '',
-          linked: r.user_id != null,
-        }
-      })
-    },
   })
 }

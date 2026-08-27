@@ -63,8 +63,18 @@ interface RawParticipant {
   user: { name: string | null; email: string | null } | null
 }
 
-const PARTICIPANT_COLS =
-  'id, role, master_table, master_id, user_id, login_status, user:users(name, email)'
+/**
+ * 명부 select. 계정 임베드에는 FK 힌트를 반드시 단다 — 명부에서 users로 가는 길이 둘이라
+ * (`user_id` = 로그인 주체, `login_opened_by` = 문을 연 담당자) 힌트가 없으면 PostgREST가
+ * 어느 쪽인지 판정하지 못하고 조회 전체를 거절한다(PGRST201). 제약 이름은 원장마다 다르므로
+ * 물리 테이블명으로 조립한다(programCols가 임베드를 조립하는 것과 같은 축).
+ */
+function participantCols(table: string): string {
+  return (
+    'id, role, master_table, master_id, user_id, login_status, ' +
+    `user:users!${table}_user_id_fkey(name, email)`
+  )
+}
 
 interface StartupMaster {
   id: string
@@ -93,11 +103,14 @@ export function useProgramParticipants(programId: string | undefined) {
     queryKey: [config.key, 'participants', programId],
     enabled: Boolean(programId),
     queryFn: async (): Promise<ParticipantRow[]> => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from(config.tables.participants)
-        .select(PARTICIPANT_COLS)
+        .select(participantCols(config.tables.participants))
         .eq('program_id', programId)
         .order('created_at', { ascending: true })
+      // 조회 실패를 삼키지 않는다 — 삼키면 "권한이 없다"와 "명부가 비었다"가 같은 화면이 되고,
+      // 실제로 임베드가 깨졌을 때 빈 목록만 남아 원인을 짚을 수 없다.
+      if (error) throw error
       const rows = (data ?? []) as unknown as RawParticipant[]
 
       const startupIds = rows.filter((r) => r.master_table === 'startups' && r.master_id).map((r) => r.master_id!)
@@ -167,7 +180,7 @@ export function useMasterCandidates(
             : query.or(`name.ilike.%${kw}%,affiliation.ilike.%${kw}%`)
       }
 
-      const [{ data }, mapped] = await Promise.all([
+      const [{ data, error }, mapped] = await Promise.all([
         query,
         supabase
           .from(config.tables.participants)
@@ -176,6 +189,8 @@ export function useMasterCandidates(
           .eq('master_table', master)
           .eq('role', role),
       ])
+      if (error) throw error
+      if (mapped.error) throw mapped.error
 
       const taken = new Set(
         ((mapped.data ?? []) as { master_id: string | null }[]).map((r) => r.master_id).filter(Boolean) as string[],

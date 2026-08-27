@@ -49,7 +49,7 @@ export function ParticipantPool({ program }: { program: Program }) {
   const [selected, setSelected] = useState<string[]>([])
   const [addOpen, setAddOpen] = useState(false)
 
-  const { data, isLoading } = useProgramParticipants(program.id)
+  const { data, isLoading, isError } = useProgramParticipants(program.id)
   const open = useOpenGuestAccess(program.id)
   const close = useCloseGuestAccess(program.id)
 
@@ -165,7 +165,8 @@ export function ParticipantPool({ program }: { program: Program }) {
             selectable={canOpenDoor}
             selectedKeys={selected}
             onSelectionChange={setSelected}
-            emptyText="명부가 비어 있습니다."
+            // 조회 실패와 빈 명부는 다른 사실이다 — 한 문장으로 뭉뚱그리면 원인을 짚을 수 없다.
+            emptyText={isError ? '명부를 불러오지 못했습니다.' : '명부가 비어 있습니다.'}
           />
         </div>
       </Card>
