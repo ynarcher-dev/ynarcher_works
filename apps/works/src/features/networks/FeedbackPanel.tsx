@@ -4,7 +4,7 @@ import { Fragment, useState } from 'react'
 import { useAuthStore } from '@/auth/authStore'
 import { DetailPanelCard } from '@/features/networks/DetailPanelCard'
 import { MentionInput } from '@/features/networks/MentionInput'
-import { MiniPager, usePaged } from '@/features/networks/MiniPager'
+import { MiniPager, usePaged } from '@ynarcher/ui'
 import {
   useCreateFeedback,
   useDeleteFeedback,

@@ -1,6 +1,6 @@
 import { tableText } from '@ynarcher/ui'
 import { DetailPanelCard } from '@/features/networks/DetailPanelCard'
-import { MiniPager, usePaged } from '@/features/networks/MiniPager'
+import { MiniPager, usePaged } from '@ynarcher/ui'
 import type { Contribution } from '@/features/networks/hooks'
 
 /** 기여 행위 라벨(변동 이력 말머리). */

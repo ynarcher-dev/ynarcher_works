@@ -28,11 +28,7 @@ import { readBusinessStatus, readGrowth, formatFounded, readIndustries } from '@
 import { StartupShareholderCard } from '@/features/startup/StartupShareholderCard'
 import { readShareholderHistory } from '@/features/startup/startupShareholders'
 import { SectionHeading } from '@/features/startup/SectionHeading'
-import { AC_WORKSPACE } from '@/features/ac/AcWorkspace'
-import { MNA_WORKSPACE } from '@/features/mna/MnaWorkspace'
-import { PROJECT_WORKSPACE } from '@/features/project/ProjectWorkspace'
-import { StartupManagerCard } from '@/features/startup/StartupManagerCard'
-import { StartupProgramCard } from '@/features/startup/StartupProgramCard'
+import { StartupManagementSection } from '@/features/startup/StartupManagementSection'
 import { StartupMediaCard } from '@/features/startup/StartupMediaCard'
 import { readMedia } from '@/features/startup/startupMedia'
 
@@ -41,18 +37,6 @@ const RESOURCE_TYPE = 'startup'
 
 /** 발굴기업 목록 경로(뒤로가기 목적지). */
 const LIST_PATH = '/startup?tab=all'
-
-/**
- * 관리 현황의 참여 목록 카드 3장 — 이 기업이 **지금 걸려 있는** 사업 원장 3종.
- *
- * 회의록은 우측 연동 패널(RelatedMinutesPanel)이 답하므로 여기 두지 않는다.
- * A-STREAM·기업 진단·멘토링 & 컨설팅은 담을 원장이 아직 없어 걷어냈다 — 데이터가 서면 다시 세운다.
- */
-const PARTICIPATION_CARDS = [
-  { config: AC_WORKSPACE, title: '참여 사업' },
-  { config: MNA_WORKSPACE, title: '참여 M&A' },
-  { config: PROJECT_WORKSPACE, title: '참여 프로젝트' },
-]
 
 /** 라벨: 값 한 줄 — 규격은 공용 `InfoField`가 소유한다. */
 const Info = InfoField
@@ -257,17 +241,11 @@ export function StartupDetailPage() {
             <StartupMediaCard media={readMedia(record)} />
 
             {/* 관리 현황: 담당자(최상단) + 사업 원장 3종 참여 목록 */}
-            <SectionHeading title="관리 현황" />
-            <StartupManagerCard invested={invested} managers={managers ?? []} />
-            {/* 참여 목록 카드: 참가자 원장을 master_id로 역참조해 지금 걸려 있는 건만 표로 세운다. */}
-            {PARTICIPATION_CARDS.map(({ config, title }) => (
-              <StartupProgramCard
-                key={config.key}
-                config={config}
-                title={title}
-                startupId={record.id}
-              />
-            ))}
+            <StartupManagementSection
+              startupId={record.id}
+              invested={invested}
+              managers={managers ?? []}
+            />
           </div>
 
           {/* 우측(1/3): 자료 관리 → 관련 회의록 → 변동 이력 → 코멘트.

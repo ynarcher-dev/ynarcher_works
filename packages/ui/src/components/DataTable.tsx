@@ -11,6 +11,7 @@ import {
 import { Checkbox } from './Checkbox'
 import { Button } from './Button'
 import { Pagination } from './Pagination'
+import { MiniPager } from '../patterns/MiniPager'
 import { ToastContext } from './toast/ToastContext'
 
 /**
@@ -245,6 +246,15 @@ export interface DataTableProps<T> {
     totalAll?: number
     /** 페이지 변경 콜백(0-base). */
     onChange: (page: number) => void
+    /**
+     * 번호줄 없는 미니 페이저(`< 1/3 >`)로 대체한다. 카드 안에 놓인 보조 목록용이며,
+     * 상세의 우측 패널 목록이 쓰는 것과 같은 `MiniPager`다.
+     *
+     * 자리가 가르는 축은 `selectable`과 같다 — 페이지에 바로 놓인 표는 그 화면의 작업
+     * 대상이라 번호를 펴 보이고, 카드 안 표는 번호줄이 카드 폭의 절반을 먹는다.
+     * `totalAll`은 미니 페이저에 표기 자리가 없어 무시된다.
+     */
+    compact?: boolean
   }
   /**
    * 최좌측 선택 체크박스 컬럼(헤더 전체선택 + 행별 선택).
@@ -898,6 +908,15 @@ export function DataTable<T>({
 
   if (!pagination) return scroller
   const { total, totalAll } = pagination
+  const pageCount = Math.max(1, Math.ceil(total / pagination.pageSize))
+  if (pagination.compact) {
+    return (
+      <div className="w-full">
+        {scroller}
+        <MiniPager page={pagination.page} pageCount={pageCount} onPage={pagination.onChange} />
+      </div>
+    )
+  }
   return (
     <div className="w-full">
       {scroller}

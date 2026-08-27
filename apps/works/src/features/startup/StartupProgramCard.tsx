@@ -1,14 +1,16 @@
-import { Badge, DataTable, PanelCard, Spinner, type Column } from '@ynarcher/ui'
+import { Badge, DataTable, PanelCard, usePaged, type Column } from '@ynarcher/ui'
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore, hasWorkspaceRead } from '@/auth/authStore'
 import { PROGRAM_STATUS_LABEL, PROGRAM_STATUS_TONE } from '@/features/program/config'
 import { programManagerLabel } from '@/features/program/programManagerLabel'
 import { categoryLabel, type ProgramWorkspaceConfig } from '@/features/program/workspace'
-import { useStartupPrograms, type StartupProgramRow } from '@/features/startup/startupProgramHooks'
+import type { StartupProgramRow } from '@/features/startup/startupProgramHooks'
 
 /** 값이 없는 칸의 표기 — 표 안에서 '비어 있음'은 문장이 아니라 기호 하나로 답한다. */
 const Dash = () => <span className="text-gray-400">-</span>
+
+/** 카드 안 목록의 한 장 크기. 상세 우측 패널 목록(usePaged 기본값)과 같은 5건이다. */
+const PAGE_SIZE = 5
 
 /** 운영 기간 한 칸. 시작·종료를 두 열로 벌리면 카드 폭에서 사업명이 먼저 잘린다. */
 function periodText(row: StartupProgramRow): string {
@@ -22,25 +24,21 @@ function periodText(row: StartupProgramRow): string {
  * 세 카드가 한 컴포넌트인 것은 사업 공용 모듈 원칙과 같은 축이다 — 원장만 물리적으로 다르고
  * 표가 답하는 물음은 동일하므로, 차이는 `ProgramWorkspaceConfig` 주입으로만 표현한다.
  *
- * **빈 표와 '볼 수 없는 표'를 구분해 말한다.** 참가자 원장의 RLS는 그 워크스페이스 열람
- * 권한을 먼저 보므로, 권한이 없는 사람에게는 참여 중인 사업이 있어도 0건이 온다. 그것을
- * '참여 없음'이라고 적으면 화면이 사실이 아닌 말을 하게 된다.
+ * 조회·노출 판정은 이 카드가 아니라 상위 섹션(StartupManagementSection)이 갖는다. 걸린 건이
+ * 없으면 카드 자체가 서지 않으므로 여기에 빈 상태가 없다 — 이 컴포넌트는 행이 있을 때만 불린다.
  */
 export function StartupProgramCard({
   config,
   title,
-  startupId,
+  rows,
 }: {
   config: ProgramWorkspaceConfig
   /** 카드 제목(참여 사업·참여 M&A·참여 프로젝트). 워크스페이스 명사와 별개로 화면이 정한다. */
   title: string
-  startupId: string
+  rows: StartupProgramRow[]
 }) {
   const navigate = useNavigate()
-  const user = useAuthStore((s) => s.user)
-  const readable = hasWorkspaceRead(user, config.key)
-  const { data, isLoading } = useStartupPrograms(config, readable ? startupId : undefined)
-  const rows = data ?? []
+  const { pageItems, page, setPage } = usePaged(rows, PAGE_SIZE)
 
   // 참여 성격 태그는 운용하는 사업에서만 채워진다 — 전 행이 비면 열 자체를 세우지 않는다.
   // 영원히 '-'만 찬 칸은 폭만 먹고 아무것도 답하지 않는다(목록의 '주관' 열과 같은 규칙).
@@ -117,24 +115,17 @@ export function StartupProgramCard({
   )
 
   return (
-    <PanelCard title={title} count={readable ? rows.length : undefined}>
-      {!readable ? (
-        <p className="text-body text-gray-600">
-          열람 권한이 없어 표시할 수 없습니다.
-        </p>
-      ) : isLoading ? (
-        <Spinner />
-      ) : (
-        <DataTable
-          columns={columns}
-          rows={rows}
-          rowKey={(r) => r.id}
-          layout="fixed"
-          onRowClick={(r) => navigate(`${config.basePath}/programs/${r.id}`)}
-          standardColumns={false}
-          emptyText="참여 중인 건이 없습니다."
-        />
-      )}
+    <PanelCard title={title} count={rows.length}>
+      <DataTable
+        columns={columns}
+        rows={pageItems}
+        rowKey={(r) => r.id}
+        layout="fixed"
+        onRowClick={(r) => navigate(`${config.basePath}/programs/${r.id}`)}
+        standardColumns={false}
+        // 카드 안 보조 목록이라 번호줄 없는 미니 페이저를 쓴다(우측 패널 목록과 같은 규격).
+        pagination={{ page, pageSize: PAGE_SIZE, total: rows.length, onChange: setPage, compact: true }}
+      />
     </PanelCard>
   )
 }

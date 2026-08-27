@@ -2,7 +2,7 @@ import { IconButton, Spinner, tableText } from '@ynarcher/ui'
 import { Download, Eye, File as FileIcon, Music, Pause, Pencil, Play, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { MaterialPreviewModal } from '@/features/networks/MaterialPreview'
-import { MiniPager, usePaged } from '@/features/networks/MiniPager'
+import { MiniPager, usePaged } from '@ynarcher/ui'
 import {
   downloadMaterial,
   fetchMaterialUrl,

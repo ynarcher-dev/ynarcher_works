@@ -1,7 +1,7 @@
 import { Badge } from '@ynarcher/ui'
 import { Link } from 'react-router-dom'
 import { DetailPanelCard } from '@/features/networks/DetailPanelCard'
-import { MiniPager, usePaged } from '@/features/networks/MiniPager'
+import { MiniPager, usePaged } from '@ynarcher/ui'
 import { DOC_STATUS_LABEL, DOC_STATUS_TONE } from '@/features/approval/config'
 import type { ProgramLinkType } from '@/features/approval/programLinkApi'
 import { useRelatedApprovals } from '@/features/approval/relatedApprovalsApi'

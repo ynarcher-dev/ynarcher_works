@@ -1,7 +1,7 @@
 import { Badge } from '@ynarcher/ui'
 import { Link } from 'react-router-dom'
 import { DetailPanelCard } from '@/features/networks/DetailPanelCard'
-import { MiniPager, usePaged } from '@/features/networks/MiniPager'
+import { MiniPager, usePaged } from '@ynarcher/ui'
 import { MINUTE_VISIBILITY_LABEL } from '@/features/office/minutes/minutesApi'
 import type { MinuteLinkTargetType } from '@/features/office/minutes/minuteLinks'
 import { useRelatedMinutes } from '@/features/office/minutes/relatedMinutesApi'

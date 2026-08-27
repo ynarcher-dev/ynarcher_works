@@ -127,6 +127,7 @@ export type {
   EntityHeaderCardProps,
   EntityHeaderSectionProps,
 } from './patterns/EntityHeaderCard'
+export { MiniPager, usePaged } from './patterns/MiniPager'
 export { PanelCard } from './patterns/PanelCard'
 export type { PanelCardProps } from './patterns/PanelCard'
 // 설정 한 줄(제목·설명 + 오른쪽 토글)의 소유자.

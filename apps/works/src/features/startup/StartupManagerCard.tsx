@@ -1,10 +1,13 @@
-import { Badge, DataTable, PanelCard, type Column } from '@ynarcher/ui'
+import { Badge, DataTable, PanelCard, usePaged, type Column } from '@ynarcher/ui'
 import { useMemo } from 'react'
 import { useDepartmentLabels } from '@/features/management/departmentOptions'
 import type { StartupManagerRow } from '@/features/startup/startupPoolHooks'
 
 /** 값이 없는 칸의 표기 — 표 안에서 '비어 있음'은 문장이 아니라 기호 하나로 답한다. */
 const Dash = () => <span className="text-gray-400">-</span>
+
+/** 카드 안 목록의 한 장 크기. 참여 목록 카드·우측 패널 목록과 같은 5건이다. */
+const PAGE_SIZE = 5
 
 /**
  * 관리 현황 최상단의 담당자 카드 — **관리 주체만 답한다.**
@@ -27,6 +30,7 @@ export function StartupManagerCard({
 }) {
   // 부서 표기는 상위 경로가 필요해 조직도 원장을 경유한다(임베드로는 자기 이름까지만 온다).
   const { pathLabelOf } = useDepartmentLabels()
+  const { pageItems, page, setPage } = usePaged(managers, PAGE_SIZE)
 
   const columns = useMemo<Column<StartupManagerRow>[]>(
     () => [
@@ -85,11 +89,19 @@ export function StartupManagerCard({
       {invested ? (
         <DataTable
           columns={columns}
-          rows={managers}
+          rows={pageItems}
           rowKey={(r) => r.user_id}
           layout="fixed"
           standardColumns={false}
           emptyText="지정된 담당자가 없습니다."
+          // 카드 안 보조 목록이라 번호줄 없는 미니 페이저를 쓴다(우측 패널 목록과 같은 규격).
+          pagination={{
+            page,
+            pageSize: PAGE_SIZE,
+            total: managers.length,
+            onChange: setPage,
+            compact: true,
+          }}
         />
       ) : (
         <p className="text-body text-gray-600">

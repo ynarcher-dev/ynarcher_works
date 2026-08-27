@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { hasWorkspaceRead, useAuthStore } from '@/auth/authStore'
 import type { WorkspaceKey } from '@/auth/types'
-import { MiniPager, usePaged } from '@/features/networks/MiniPager'
+import { MiniPager, usePaged } from '@ynarcher/ui'
 import { MiniTable, td, tdL, tdP, th, thL } from '@/features/startup/MiniTable'
 
 /**
