@@ -35,6 +35,8 @@ export const MNA_WORKSPACE: ProgramWorkspaceConfig = {
   hasProposalStage: false,
   // 딜은 우리가 스스로 여는 일이라 발주·주관하는 바깥 기관이 없다.
   hasHostOrganization: false,
+  // 명부는 구성하되 게스트 로그인은 열지 않는다(후속 과제).
+  guestAccess: false,
   categories: MNA_CATEGORIES,
   // 딜은 정형 평가·모집 절차가 없어 기본 3종(글쓰기·URL첨부·파일첨부)만 운용한다.
   allowedModuleTypes: BASE_MODULE_TYPES.map((def) => def.type),

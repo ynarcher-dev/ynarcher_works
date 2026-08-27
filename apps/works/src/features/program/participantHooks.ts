@@ -1,0 +1,288 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase'
+import { sanitizeOrValue } from '@/features/master/ledgerPage'
+import { useProgramWorkspace } from '@/features/program/workspace'
+
+/**
+ * 연동 DB(참가자 명부) 데이터 계층.
+ *
+ * 명부의 값은 원장(NETWORKS 기업·전문가)이 소유한다 — 여기서는 복제하지 않고 조회로 합성한다.
+ * master_id는 FK가 아닌 soft ref라 임베드가 되지 않으므로, 명부를 읽은 뒤 원장을 한 번 더
+ * 읽어 이름·연락처를 붙인다(useParticipantPool이 쓰던 방식과 같은 축).
+ *
+ * 근거: docs/docs_planning/3_4_4_ac_participant_pool.md
+ */
+
+/** 명부 행의 게스트 로그인 개방 상태(participant_login_status). */
+export type ParticipantLoginStatus =
+  | 'NOT_APPLICABLE'
+  | 'NOT_ALLOWED'
+  | 'INVITED'
+  | 'ACTIVE'
+  | 'BLOCKED'
+
+/** 원장 출처. 내부 임직원 참가자는 원장이 없다(null). */
+export type MasterTable = 'startups' | 'experts'
+
+export interface ParticipantRow {
+  id: string
+  role: string
+  master_table: MasterTable | null
+  master_id: string | null
+  user_id: string | null
+  login_status: ParticipantLoginStatus
+  /** 원장에서 온 대상 이름(기업명 또는 전문가명). 원장이 없으면 계정 이름. */
+  targetName: string
+  /** 부제(기업은 대표자, 전문가는 소속). */
+  subtitle: string
+  /** 로그인 주체의 성명(기업=대표자, 전문가=본인). 원장이 없으면 null. */
+  loginName: string | null
+  email: string | null
+  phone: string | null
+}
+
+/** 원장에서 고를 수 있는 후보 1건. */
+export interface MasterCandidate {
+  id: string
+  name: string
+  /** 로그인 명의(기업=대표자, 전문가=본인 이름). 없으면 매핑 불가. */
+  loginName: string | null
+  email: string | null
+  phone: string | null
+  /** 이미 이 사업에 같은 역할로 올라 있는가. */
+  alreadyMapped: boolean
+}
+
+interface RawParticipant {
+  id: string
+  role: string
+  master_table: MasterTable | null
+  master_id: string | null
+  user_id: string | null
+  login_status: ParticipantLoginStatus
+  user: { name: string | null; email: string | null } | null
+}
+
+const PARTICIPANT_COLS =
+  'id, role, master_table, master_id, user_id, login_status, user:users(name, email)'
+
+interface StartupMaster {
+  id: string
+  name: string
+  representative: string | null
+  contact: { email?: string; phone?: string } | null
+}
+
+interface ExpertMaster {
+  id: string
+  name: string
+  affiliation: string | null
+  email: string | null
+  phone: string | null
+}
+
+function startupContact(row: StartupMaster): { email: string | null; phone: string | null } {
+  const c = row.contact ?? {}
+  return { email: c.email?.trim() || null, phone: c.phone?.trim() || null }
+}
+
+/** 명부 전체(역할 탭은 화면이 거른다). 원장 값은 조회로 합성한다. */
+export function useProgramParticipants(programId: string | undefined) {
+  const config = useProgramWorkspace()
+  return useQuery({
+    queryKey: [config.key, 'participants', programId],
+    enabled: Boolean(programId),
+    queryFn: async (): Promise<ParticipantRow[]> => {
+      const { data } = await supabase
+        .from(config.tables.participants)
+        .select(PARTICIPANT_COLS)
+        .eq('program_id', programId)
+        .order('created_at', { ascending: true })
+      const rows = (data ?? []) as unknown as RawParticipant[]
+
+      const startupIds = rows.filter((r) => r.master_table === 'startups' && r.master_id).map((r) => r.master_id!)
+      const expertIds = rows.filter((r) => r.master_table === 'experts' && r.master_id).map((r) => r.master_id!)
+
+      const [startupsRes, expertsRes] = await Promise.all([
+        startupIds.length
+          ? supabase.from('startups').select('id, name, representative, contact').in('id', startupIds)
+          : Promise.resolve({ data: [] }),
+        expertIds.length
+          ? supabase.from('experts').select('id, name, affiliation, email, phone').in('id', expertIds)
+          : Promise.resolve({ data: [] }),
+      ])
+
+      const startups = new Map(((startupsRes.data ?? []) as StartupMaster[]).map((s) => [s.id, s]))
+      const experts = new Map(((expertsRes.data ?? []) as ExpertMaster[]).map((e) => [e.id, e]))
+
+      return rows.map((r) => {
+        const startup = r.master_table === 'startups' && r.master_id ? startups.get(r.master_id) : undefined
+        const expert = r.master_table === 'experts' && r.master_id ? experts.get(r.master_id) : undefined
+        const contact = startup ? startupContact(startup) : { email: expert?.email ?? null, phone: expert?.phone ?? null }
+        return {
+          id: r.id,
+          role: r.role,
+          master_table: r.master_table,
+          master_id: r.master_id,
+          user_id: r.user_id,
+          login_status: r.login_status,
+          targetName: startup?.name ?? expert?.name ?? r.user?.name ?? '미지정',
+          subtitle: startup?.representative ?? expert?.affiliation ?? '',
+          loginName: startup?.representative ?? expert?.name ?? null,
+          email: contact.email ?? r.user?.email ?? null,
+          phone: contact.phone,
+        }
+      })
+    },
+  })
+}
+
+/**
+ * 원장 후보 검색(매핑 모달). 성명·연락처가 없는 대상도 함께 돌려주고 화면이 사유를 표시한다 —
+ * 목록에서 빼 버리면 "왜 안 보이지"가 되고, 보이되 고를 수 없어야 "무엇을 보완해야 하는지"가 남는다.
+ */
+export function useMasterCandidates(
+  programId: string | undefined,
+  master: MasterTable,
+  role: string,
+  search: string,
+) {
+  const config = useProgramWorkspace()
+  const term = search.trim()
+  return useQuery({
+    queryKey: [config.key, 'master-candidates', programId, master, role, term],
+    enabled: Boolean(programId),
+    queryFn: async (): Promise<MasterCandidate[]> => {
+      const base =
+        master === 'startups'
+          ? supabase.from('startups').select('id, name, representative, contact')
+          : supabase.from('experts').select('id, name, affiliation, email, phone')
+
+      let query = base.is('deleted_at', null).order('name', { ascending: true }).limit(50)
+      const kw = sanitizeOrValue(term)
+      if (kw) {
+        query =
+          master === 'startups'
+            ? query.or(`name.ilike.%${kw}%,representative.ilike.%${kw}%`)
+            : query.or(`name.ilike.%${kw}%,affiliation.ilike.%${kw}%`)
+      }
+
+      const [{ data }, mapped] = await Promise.all([
+        query,
+        supabase
+          .from(config.tables.participants)
+          .select('master_id')
+          .eq('program_id', programId)
+          .eq('master_table', master)
+          .eq('role', role),
+      ])
+
+      const taken = new Set(
+        ((mapped.data ?? []) as { master_id: string | null }[]).map((r) => r.master_id).filter(Boolean) as string[],
+      )
+
+      if (master === 'startups') {
+        return ((data ?? []) as StartupMaster[]).map((s) => {
+          const contact = startupContact(s)
+          return {
+            id: s.id,
+            name: s.name,
+            loginName: s.representative?.trim() || null,
+            email: contact.email,
+            phone: contact.phone,
+            alreadyMapped: taken.has(s.id),
+          }
+        })
+      }
+      return ((data ?? []) as ExpertMaster[]).map((e) => ({
+        id: e.id,
+        name: e.name,
+        loginName: e.name?.trim() || null,
+        email: e.email?.trim() || null,
+        phone: e.phone?.trim() || null,
+        alreadyMapped: taken.has(e.id),
+      }))
+    },
+  })
+}
+
+/** 후보가 로그인 대상이 될 수 있는가(성명 + 연락처 하나 이상). */
+export function canMapCandidate(c: MasterCandidate): boolean {
+  return Boolean(c.loginName) && Boolean(c.email || c.phone)
+}
+
+/** 매핑 불가 사유(화면 표시용). 가능하면 null. */
+export function mapBlockReason(c: MasterCandidate): string | null {
+  if (c.alreadyMapped) return '이미 이 역할로 명부에 있음'
+  if (!c.loginName) return '대표자·성명 없음 · NETWORKS에서 먼저 등록'
+  if (!c.email && !c.phone) return '연락처 없음 · NETWORKS에서 먼저 등록'
+  return null
+}
+
+/** 원장에서 고른 대상을 명부에 올린다(로그인은 열리지 않는다). */
+export function useAddParticipants(programId: string) {
+  const config = useProgramWorkspace()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { master: MasterTable; role: string; ids: string[] }) => {
+      const rows = input.ids.map((id) => ({
+        program_id: programId,
+        master_table: input.master,
+        master_id: id,
+        role: input.role,
+      }))
+      const { error } = await supabase.from(config.tables.participants).insert(rows)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: [config.key, 'participants', programId] })
+      void qc.invalidateQueries({ queryKey: [config.key, 'master-candidates', programId] })
+    },
+  })
+}
+
+export interface OpenAccessResult {
+  opened: number
+  notified: number
+  failed: number
+}
+
+/**
+ * 게스트 로그인 개방 + 접속 안내 발송. 인가(사업 담당자 여부)는 서버 RPC가 지며,
+ * 함수는 그 결과로 받은 연락처로만 안내를 보낸다.
+ */
+export function useOpenGuestAccess(programId: string) {
+  const config = useProgramWorkspace()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (participantIds: string[]): Promise<OpenAccessResult> => {
+      const { data, error } = await supabase.functions.invoke<OpenAccessResult & { message?: string }>(
+        'guest-access-invite',
+        { body: { participantIds } },
+      )
+      if (error) throw new Error(data?.message ?? error.message)
+      return { opened: data?.opened ?? 0, notified: data?.notified ?? 0, failed: data?.failed ?? 0 }
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: [config.key, 'participants', programId] })
+    },
+  })
+}
+
+/** 게스트 로그인 차단(접속 중인 세션까지 즉시 무효화). */
+export function useCloseGuestAccess(programId: string) {
+  const config = useProgramWorkspace()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (participantIds: string[]): Promise<number> => {
+      const { data, error } = await supabase.rpc('close_program_guest_access', {
+        p_participant_ids: participantIds,
+      })
+      if (error) throw error
+      return (data as number | null) ?? 0
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: [config.key, 'participants', programId] })
+    },
+  })
+}

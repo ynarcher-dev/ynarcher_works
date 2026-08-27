@@ -58,7 +58,7 @@ export function ProgramOverviewTab({
             {leftTab === 'modules' && (
               <ModuleBoardCard program={program} onOpenModule={onOpenModule} />
             )}
-            {leftTab === 'participants' && <ParticipantPool programId={program.id} />}
+            {leftTab === 'participants' && <ParticipantPool program={program} />}
           </div>
         </div>
       </div>

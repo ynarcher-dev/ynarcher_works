@@ -96,9 +96,14 @@ export function GuestLoginPage() {
             <input
               id="businessCode"
               className={inputClass}
-              placeholder="예: AC-2026-003"
+              placeholder="예: 7KQ2M9"
+              autoCapitalize="characters"
               {...register('businessCode')}
             />
+            <p className="mt-1 text-caption text-gray-600">
+              참여 안내에 적힌 6자리 코드입니다. 코드가 곧 사업이라, 참여 중인 사업이
+              여럿이면 그 사업의 코드로 각각 로그인합니다.
+            </p>
             {errors.businessCode && (
               <p className="mt-1 text-caption text-danger">
                 {errors.businessCode.message}

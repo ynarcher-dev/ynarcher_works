@@ -77,6 +77,17 @@ export interface ProgramWorkspaceConfig {
    * 조회 select는 갈라지지 않고, 이 플래그는 화면과 저장 페이로드만 가른다.
    */
   hasHostOrganization: boolean
+  /**
+   * 연동 DB 명부의 게스트 로그인 개방 운용 여부.
+   *
+   * AC만 true다 — 게스트 포털이 읽는 원장(program_participants)과 조회 범위 판정이
+   * AC 사업을 기준으로 서 있어, M&A·PROJECT 참가자는 명부에 올라도 로그인해서 볼 것이
+   * 없다. false면 명부 구성까지만 동작하고 사업 코드·허용·차단 영역은 안내로 대체한다.
+   * 눌리지 않는 버튼을 남기면 문의만 늘어나므로 동작 버튼 자체를 노출하지 않는다.
+   *
+   * 근거: docs/docs_planning/3_4_4_ac_participant_pool.md §12
+   */
+  guestAccess: boolean
   /** 사업구분 선택지. 빈 배열이면 분류 UI를 감춘다. */
   categories: readonly ProgramCategoryOption[]
   /**

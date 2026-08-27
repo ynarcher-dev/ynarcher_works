@@ -11,6 +11,7 @@ type View = 'startup' | 'expert'
 /** 게스트 홈: 역할(스타트업/전문가)에 따른 대시보드 라우팅 + 역할 전환 스위치. */
 export function GuestHomePage() {
   const user = useGuestStore((s) => s.user)
+  const program = useGuestStore((s) => s.program)
   // 기본 뷰는 역할 기반. 전문가는 스타트업 뷰로 전환할 수 없으나, 겸직 계정을 위해 스위치 제공.
   const isExpert = user?.role === 'external_expert'
   const [view, setView] = useState<View>(isExpert ? 'expert' : 'startup')
@@ -28,6 +29,18 @@ export function GuestHomePage() {
       <p className="mt-1 text-body text-gray-600">
         {user ? `${user.name}님, 환영합니다.` : ''}
       </p>
+
+      {/* 지금 어느 사업으로 들어와 있는지. 세션은 로그인에 쓴 사업 코드에 고정되므로
+          다른 사업은 그 사업의 코드로 다시 들어와야 한다(사업 전환 스위치는 없다). */}
+      {program && (
+        <div className="mt-3 rounded border border-gray-300 bg-white px-3 py-2">
+          <p className="text-body font-medium text-gray-900">{program.title}</p>
+          <p className="mt-0.5 text-caption text-gray-600">
+            이 화면은 위 사업의 일정과 과제만 보여 줍니다. 다른 사업은 해당 사업의 코드로
+            로그인해 주세요.
+          </p>
+        </div>
+      )}
 
       {/* 배타 선택은 손수 만들지 않고 공용 세그먼트 토글을 쓴다. 다만 GUEST의 48px 터치
           규칙(3_9_workspace_guest.md §2)이 밀도 격자보다 우선이라 높이만 얹는다. */}

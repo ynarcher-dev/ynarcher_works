@@ -66,6 +66,11 @@ export function applicantContentKey(workspaceKey: string): string {
   return `${workspaceKey}.applicants`
 }
 
+/** 사업 워크스페이스의 연동 DB(참가자 명부) 콘텐츠 키. */
+export function participantContentKey(workspaceKey: string): string {
+  return `${workspaceKey}.participants`
+}
+
 /** 사업 워크스페이스는 화면(features/program)을 공유하므로 콘텐츠 구성도 같다. */
 function programContents(ws: string, noun: string): SensitiveContent[] {
   return [
@@ -74,6 +79,13 @@ function programContents(ws: string, noun: string): SensitiveContent[] {
       label: `신청 기업 정보(${noun} 신청 현황)`,
       fields: PERSON,
       hint: '신청서의 대표자명 · 이메일 · 연락처',
+    },
+    {
+      // 명부의 값은 원장에서 온 것이지만, 이 화면이 실제로 렌더하므로 정책 스위치도 여기 둔다.
+      key: participantContentKey(ws),
+      label: `연동 DB(${noun} 참가자 명부)`,
+      fields: PERSON,
+      hint: '참가자 성명 · 이메일 · 연락처',
     },
   ]
 }

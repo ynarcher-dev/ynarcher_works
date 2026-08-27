@@ -1,5 +1,5 @@
 import { anonHeaders, functionsBase } from '@/lib/supabase'
-import { useGuestStore, type GuestUser } from '@/auth/guestStore'
+import { useGuestStore, type GuestProgram, type GuestUser } from '@/auth/guestStore'
 
 export interface GuestCredentials {
   name: string
@@ -31,15 +31,16 @@ export const guestAuth = {
       return
     }
     try {
-      const { accessToken, user } = JSON.parse(raw) as {
+      const { accessToken, user, program } = JSON.parse(raw) as {
         accessToken: string
         user: GuestUser
+        program?: GuestProgram | null
       }
       if (jwtExp(accessToken) * 1000 < Date.now()) {
         useGuestStore.getState().reset()
         return
       }
-      useGuestStore.getState().setSession(accessToken, user)
+      useGuestStore.getState().setSession(accessToken, user, program ?? null)
     } catch {
       useGuestStore.getState().reset()
     }
@@ -65,12 +66,17 @@ export const guestAuth = {
     const data = (await res.json()) as {
       accessToken: string
       user: { id: string; name: string; user_type: string }
+      program?: { id: string; title: string; code: string | null } | null
     }
-    useGuestStore.getState().setSession(data.accessToken, {
-      id: data.user.id,
-      name: data.user.name,
-      role: data.user.user_type,
-    })
+    useGuestStore.getState().setSession(
+      data.accessToken,
+      {
+        id: data.user.id,
+        name: data.user.name,
+        role: data.user.user_type,
+      },
+      data.program ?? null,
+    )
   },
 
   signOut(): void {

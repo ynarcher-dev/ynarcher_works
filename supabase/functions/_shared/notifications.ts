@@ -20,6 +20,12 @@ export const TEMPLATES: Record<
     title: '[와이앤아처] 인증번호',
     body: '인증번호 [{{otp}}]를 3분 이내 입력해 주세요.',
   },
+  GUEST_INVITE: {
+    title: '[와이앤아처] 참여자 포털 접속 안내',
+    body:
+      '{{name}}님, "{{program}}" 참여자 포털 접속이 열렸습니다. ' +
+      '접속 후 성명·연락처와 함께 사업 코드 [{{code}}]를 입력해 주세요.',
+  },
   APPROVAL_REQUESTED: {
     title: '[와이앤아처] 결재 요청',
     body: '{{drafter}}님이 상신한 "{{title}}" 문서의 결재를 요청했습니다.',

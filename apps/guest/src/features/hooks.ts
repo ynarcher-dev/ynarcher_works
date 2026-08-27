@@ -27,7 +27,13 @@ export interface TimelineItem {
   ends_at: string | null
 }
 
-/** 참여 프로그램 공식 일정(내부 전용 제외). */
+/**
+ * 참여 사업의 공개 일정.
+ *
+ * 무엇이 공개인지는 항목이 아니라 **소속 메뉴(모듈)의 공유 범위**가 정한다(일부공개·전체공개).
+ * 판정은 전적으로 RLS가 하므로 여기서 공개 조건을 다시 걸지 않는다 — 종전에는 항목의
+ * visibility로 걸렀는데, 그 값은 아무도 채우지 않아 전량 비공개였다(2026-08-27).
+ */
 export function useTimeline(programIds: string[]) {
   const client = useGuestClient()
   return useQuery({
@@ -36,9 +42,8 @@ export function useTimeline(programIds: string[]) {
     queryFn: async (): Promise<TimelineItem[]> => {
       const { data } = await client!
         .from('program_timeline_items')
-        .select('id, title, item_type, starts_at, ends_at, visibility')
+        .select('id, title, item_type, starts_at, ends_at')
         .in('program_id', programIds)
-        .neq('visibility', 'INTERNAL_ONLY')
         .order('starts_at', { ascending: true })
       return (data ?? []) as TimelineItem[]
     },

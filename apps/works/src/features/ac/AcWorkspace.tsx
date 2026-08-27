@@ -34,6 +34,8 @@ export const AC_WORKSPACE: ProgramWorkspaceConfig = {
   hasProposalStage: true,
   // 공고를 낸 주관기관/기업이 있어야 제안이 성립하므로 '주관'을 운용한다(AC 전용).
   hasHostOrganization: true,
+  // 게스트 포털의 조회 범위가 AC 사업 원장을 기준으로 서 있어, 로그인 개방은 AC만 연다.
+  guestAccess: true,
   categories: AC_CATEGORIES,
   // AC는 기본 3종 + 정형 운영 모듈 8종을 모두 운용한다.
   allowedModuleTypes: MODULE_TYPES.map((def) => def.type),

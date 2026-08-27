@@ -34,6 +34,8 @@ export const PROJECT_WORKSPACE: ProgramWorkspaceConfig = {
   hasProposalStage: false,
   // 프로젝트도 발주·주관하는 바깥 기관 없이 우리가 여는 일이라 '주관'을 묻지 않는다.
   hasHostOrganization: false,
+  // 명부는 구성하되 게스트 로그인은 열지 않는다(후속 과제).
+  guestAccess: false,
   categories: PROJECT_CATEGORIES,
   // 프로젝트도 정형 평가·모집 절차가 없어 기본 3종(글쓰기·URL첨부·파일첨부)만 운용한다.
   allowedModuleTypes: BASE_MODULE_TYPES.map((def) => def.type),
