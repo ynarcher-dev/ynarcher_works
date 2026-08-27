@@ -30,15 +30,10 @@ export function GuestHomePage() {
         {user ? `${user.name}님, 환영합니다.` : ''}
       </p>
 
-      {/* 지금 어느 사업으로 들어와 있는지. 세션은 로그인에 쓴 사업 코드에 고정되므로
-          다른 사업은 그 사업의 코드로 다시 들어와야 한다(사업 전환 스위치는 없다). */}
+      {/* 지금 어느 사업으로 들어와 있는지. 세션은 로그인에 쓴 사업 코드에 고정된다. */}
       {program && (
         <div className="mt-3 rounded border border-gray-300 bg-white px-3 py-2">
           <p className="text-body font-medium text-gray-900">{program.title}</p>
-          <p className="mt-0.5 text-caption text-gray-600">
-            이 화면은 위 사업의 일정과 과제만 보여 줍니다. 다른 사업은 해당 사업의 코드로
-            로그인해 주세요.
-          </p>
         </div>
       )}
 

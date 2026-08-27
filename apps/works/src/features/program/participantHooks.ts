@@ -211,11 +211,11 @@ export function canMapCandidate(c: MasterCandidate): boolean {
   return Boolean(c.loginName) && Boolean(c.email || c.phone)
 }
 
-/** 매핑 불가 사유(화면 표시용). 가능하면 null. */
+/** 매핑 불가 사유(짧은 라벨). 가능하면 null. */
 export function mapBlockReason(c: MasterCandidate): string | null {
-  if (c.alreadyMapped) return '이미 이 역할로 명부에 있음'
-  if (!c.loginName) return '대표자·성명 없음 · NETWORKS에서 먼저 등록'
-  if (!c.email && !c.phone) return '연락처 없음 · NETWORKS에서 먼저 등록'
+  if (c.alreadyMapped) return '등록됨'
+  if (!c.loginName) return '성명 없음'
+  if (!c.email && !c.phone) return '연락처 없음'
   return null
 }
 

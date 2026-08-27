@@ -1,4 +1,4 @@
-import { Button, DataTable, Spinner, useToast } from '@ynarcher/ui'
+import { Button, Card, DataTable, ListToolbar, MultiSelectFilter, Spinner, useToast } from '@ynarcher/ui'
 import { useMemo, useState } from 'react'
 import { useAuthStore } from '@/auth/authStore'
 import { participantContentKey } from '@/features/admin/sensitiveContents'
@@ -11,8 +11,18 @@ import {
   useCloseGuestAccess,
   useOpenGuestAccess,
   useProgramParticipants,
+  type ParticipantRow,
 } from '@/features/program/participantHooks'
 import { useProgramWorkspace } from '@/features/program/workspace'
+
+/** 검색이 걸리는 축 — 대상명과 로그인 계정(성명·연락처). 명부에서 사람을 찾는 길은 이 넷뿐이다. */
+function matches(row: ParticipantRow, keyword: string): boolean {
+  const kw = keyword.trim().toLowerCase()
+  if (!kw) return true
+  return [row.targetName, row.loginName, row.email, row.phone]
+    .filter(Boolean)
+    .some((v) => String(v).toLowerCase().includes(kw))
+}
 
 /**
  * 사업 상세 개요 좌측 '연동 DB' 탭.
@@ -22,7 +32,11 @@ import { useProgramWorkspace } from '@/features/program/workspace'
  * 화면의 숨김은 편의일 뿐 실제 강제는 서버(RPC)가 한다.
  *
  * 게스트 로그인 개방은 AC만 열려 있다(ProgramWorkspaceConfig.guestAccess).
- * M&A·PROJECT는 같은 화면을 공유하므로 명부까지만 동작하고 개방 영역은 안내로 대체한다.
+ * M&A·PROJECT는 같은 화면을 공유하므로 명부까지만 동작하고 개방 영역은 서지 않는다.
+ *
+ * 셸·툴바·표는 전부 공용 규격이다 — 카드는 형제 탭(일정관리)과 같은 `Card`, 검색·필터·액션
+ * 한 줄은 원장 목록과 같은 `ListToolbar`, 역할은 손수 만든 칩 나열이 아니라 목록 필터와 같은
+ * `MultiSelectFilter`이며 건수는 그 선택지가 함께 답한다. 총 건수는 카드 제목 옆 한자리다.
  */
 export function ParticipantPool({ program }: { program: Program }) {
   const config = useProgramWorkspace()
@@ -30,7 +44,8 @@ export function ParticipantPool({ program }: { program: Program }) {
   const myId = useAuthStore((s) => s.user?.id)
   const masked = useMaskPolicy(participantContentKey(config.key))
 
-  const [roleFilter, setRoleFilter] = useState<string | null>(null)
+  const [keyword, setKeyword] = useState('')
+  const [roles, setRoles] = useState<string[]>([])
   const [selected, setSelected] = useState<string[]>([])
   const [addOpen, setAddOpen] = useState(false)
 
@@ -38,13 +53,26 @@ export function ParticipantPool({ program }: { program: Program }) {
   const open = useOpenGuestAccess(program.id)
   const close = useCloseGuestAccess(program.id)
 
-  const rows = data ?? []
+  const rows = useMemo(() => data ?? [], [data])
   const isManager = useMemo(
     () => (program.managers ?? []).some((m) => m.user_id === myId),
     [program.managers, myId],
   )
   const canOpenDoor = config.guestAccess && isManager
-  const filtered = roleFilter ? rows.filter((r) => r.role === roleFilter) : rows
+
+  const roleOptions = useMemo(
+    () =>
+      PARTICIPANT_ROLES.map((role) => ({
+        value: role,
+        label: `${role} ${rows.filter((r) => r.role === role).length}`,
+      })),
+    [rows],
+  )
+
+  const filtered = useMemo(
+    () => rows.filter((r) => (roles.length === 0 || roles.includes(r.role)) && matches(r, keyword)),
+    [rows, roles, keyword],
+  )
 
   const columns = useMemo(
     () => participantColumns(masked, program.status),
@@ -56,12 +84,9 @@ export function ParticipantPool({ program }: { program: Program }) {
       onSuccess: (res) => {
         setSelected([])
         if (res.failed > 0) {
-          toast.show(
-            `${res.opened}건의 로그인을 열었습니다. 안내 발송 ${res.failed}건 실패 — 사업 코드를 직접 안내하세요.`,
-            'warning',
-          )
+          toast.show(`로그인 ${res.opened}건 개방 · 안내 발송 ${res.failed}건 실패`, 'warning')
         } else {
-          toast.show(`${res.opened}건의 로그인을 열고 안내를 보냈습니다.`, 'success')
+          toast.show(`로그인 ${res.opened}건을 열고 안내를 보냈습니다.`, 'success')
         }
       },
       onError: (e: unknown) =>
@@ -73,96 +98,79 @@ export function ParticipantPool({ program }: { program: Program }) {
     close.mutate(selected, {
       onSuccess: (n) => {
         setSelected([])
-        toast.show(`${n}건의 로그인을 닫았습니다. 접속 중이던 세션도 끊겼습니다.`, 'success')
+        toast.show(`로그인 ${n}건을 닫았습니다.`, 'success')
       },
       onError: (e: unknown) =>
         toast.show(e instanceof Error ? e.message : '로그인 차단에 실패했습니다.', 'danger'),
     })
   }
 
-  if (isLoading) return <Spinner />
+  if (isLoading) {
+    return (
+      <Card title="연동 DB">
+        <Spinner />
+      </Card>
+    )
+  }
 
   return (
-    <div className="space-y-4">
-      {/* 사업 코드: 참가자 전원이 같은 코드로 들어오므로 현장 안내의 출발점이다. */}
-      {config.guestAccess && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-radius-md border border-gray-300 bg-white px-3 py-2">
-          <span className="text-caption text-gray-600">
-            사업 코드{' '}
-            <span className="font-mono text-body font-medium tracking-wider text-gray-900">
-              {program.code || '미발급'}
-            </span>
-          </span>
-          <span className="text-caption text-gray-500">
-            참가자는 이 코드와 성명·연락처로 GUEST 포털에 로그인합니다.
-          </span>
+    <>
+      <Card
+        title="연동 DB"
+        count={rows.length}
+        subtitle={config.guestAccess ? `사업 코드 ${program.code || '미발급'}` : undefined}
+      >
+        <div className="space-y-3">
+          <ListToolbar
+            keyword={keyword}
+            onKeywordChange={setKeyword}
+            searchPlaceholder="대상 · 로그인 계정 검색"
+            filters={
+              <MultiSelectFilter
+                label="역할"
+                options={roleOptions}
+                selected={roles}
+                onChange={setRoles}
+              />
+            }
+            actions={
+              <div className="flex items-center gap-2">
+                {canOpenDoor && (
+                  <>
+                    <Button
+                      variant="secondary"
+                      disabled={selected.length === 0 || open.isPending}
+                      onClick={runOpen}
+                    >
+                      로그인 허용
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      disabled={selected.length === 0 || close.isPending}
+                      onClick={runClose}
+                    >
+                      차단
+                    </Button>
+                  </>
+                )}
+                <Button onClick={() => setAddOpen(true)}>원장에서 추가</Button>
+              </div>
+            }
+          />
+
+          <DataTable
+            columns={columns}
+            rows={filtered}
+            rowKey={(r) => r.id}
+            selectable={canOpenDoor}
+            selectedKeys={selected}
+            onSelectionChange={setSelected}
+            emptyText="명부가 비어 있습니다."
+          />
         </div>
-      )}
-
-      <div className="flex flex-wrap items-center gap-2">
-        {PARTICIPANT_ROLES.map((role) => {
-          const count = rows.filter((r) => r.role === role).length
-          const active = roleFilter === role
-          return (
-            <button
-              key={role}
-              type="button"
-              onClick={() => setRoleFilter(active ? null : role)}
-              className={`rounded-radius-md border px-3 py-1.5 text-caption transition-colors ${
-                active ? 'border-brand bg-brand/5 text-brand' : 'border-gray-300 bg-white text-gray-600'
-              }`}
-            >
-              {role} <span className="font-medium tabular-nums text-gray-900">{count}</span>
-            </button>
-          )
-        })}
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <Button onClick={() => setAddOpen(true)}>
-          + 원장에서 추가
-        </Button>
-        {canOpenDoor && (
-          <>
-            <Button
-              variant="secondary"
-              disabled={selected.length === 0 || open.isPending}
-              onClick={runOpen}
-            >
-              로그인 허용 ({selected.length})
-            </Button>
-            <Button
-              variant="ghost"
-              disabled={selected.length === 0 || close.isPending}
-              onClick={runClose}
-            >
-              차단
-            </Button>
-          </>
-        )}
-        {config.guestAccess && !isManager && (
-          <span className="text-caption text-gray-600">
-            로그인 개방·차단은 이 사업의 담당자(PM·MEMBER)만 할 수 있습니다.
-          </span>
-        )}
-        {!config.guestAccess && (
-          <span className="text-caption text-gray-600">
-            게스트 로그인 개방은 AC 사업에서 지원합니다(추후 지원).
-          </span>
-        )}
-      </div>
-
-      <DataTable
-        columns={columns}
-        rows={filtered}
-        rowKey={(r) => r.id}
-        selectable={canOpenDoor}
-        selectedKeys={selected}
-        onSelectionChange={setSelected}
-        emptyText="명부가 비어 있습니다. [원장에서 추가]로 NETWORKS 기업·전문가를 올리세요."
-      />
+      </Card>
 
       <ParticipantAddModal open={addOpen} onClose={() => setAddOpen(false)} programId={program.id} />
-    </div>
+    </>
   )
 }
