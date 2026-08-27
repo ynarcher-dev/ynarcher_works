@@ -6,7 +6,7 @@ import {
 } from '@ynarcher/ui'
 import { useMemo } from 'react'
 import { useDepartmentLabels } from '@/features/management/departmentOptions'
-import { memberSummary } from '@/lib/memberLabel'
+import { programManagerLabel } from '@/features/program/programManagerLabel'
 import {
   PROGRAM_STATUS_LABEL,
   PROGRAM_STATUS_TONE,
@@ -26,27 +26,6 @@ interface ProgramTableProps {
   onSelectionChange?: (keys: string[]) => void
   /** 서버 사이드 페이지네이션(0-base). DataTable로 그대로 전달된다. */
   pagination?: DataTableProps<Program>['pagination']
-}
-
-/**
- * 사업 담당자 표시명: 대표(PM) 1명 + "외 N"(공용 규격 memberSummary).
- * 담당자 원장은 사람당 복수 구간(단계·기간별)을 담으므로 user_id로 먼저 접는다 —
- * 접지 않으면 한 사람이 구간 수만큼 세어져 "외 N"이 부풀어 오른다.
- * 지정 담당자가 없으면 null(→ "미지정").
- */
-function managerLabel(r: Program): string | null {
-  const byUser = new Map<string, { name: string | null | undefined; isPm: boolean }>()
-  for (const m of r.managers ?? []) {
-    const prev = byUser.get(m.user_id)
-    byUser.set(m.user_id, {
-      name: m.user?.name ?? prev?.name,
-      isPm: (prev?.isPm ?? false) || m.role === 'PM',
-    })
-  }
-  const people = [...byUser.values()]
-  const pm = people.find((p) => p.isPm)
-  const ordered = pm ? [pm, ...people.filter((p) => p !== pm)] : people
-  return memberSummary(ordered.map((p) => p.name))
 }
 
 /**
@@ -190,7 +169,7 @@ export function ProgramTable({
         type: 'person',
         // 대표(PM) 1명 + "외 N" 공용 규격. 담당자는 사람당 구간이 여러 개일 수 있으므로
         // 먼저 사람 단위로 접은 뒤 세어야 같은 사람이 두 번 세어지지 않는다.
-        render: (r) => managerLabel(r) ?? <span className="text-gray-400">미지정</span>,
+        render: (r) => programManagerLabel(r.managers) ?? <span className="text-gray-400">미지정</span>,
       },
     ],
     [config, pathLabelOf, lineageOf],

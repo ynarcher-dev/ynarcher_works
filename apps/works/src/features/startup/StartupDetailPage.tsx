@@ -28,7 +28,10 @@ import { readBusinessStatus, readGrowth, formatFounded, readIndustries } from '@
 import { StartupShareholderCard } from '@/features/startup/StartupShareholderCard'
 import { readShareholderHistory } from '@/features/startup/startupShareholders'
 import { SectionHeading } from '@/features/startup/SectionHeading'
-import { PlaceholderCard } from '@/features/startup/PlaceholderCard'
+import { AC_WORKSPACE } from '@/features/ac/AcWorkspace'
+import { MNA_WORKSPACE } from '@/features/mna/MnaWorkspace'
+import { PROJECT_WORKSPACE } from '@/features/project/ProjectWorkspace'
+import { StartupProgramCard } from '@/features/startup/StartupProgramCard'
 import { StartupMediaCard } from '@/features/startup/StartupMediaCard'
 import { readMedia } from '@/features/startup/startupMedia'
 
@@ -38,9 +41,17 @@ const RESOURCE_TYPE = 'startup'
 /** 발굴기업 목록 경로(뒤로가기 목적지). */
 const LIST_PATH = '/startup?tab=all'
 
-/** 관리 현황 카드 섹션(플랫폼 전반 참여·관리 이력). 현재는 헤드라인만, 내용은 후속 구현.
- *  회의록은 실제 연동 패널(우측 RelatedMinutesPanel)로 구현되어 이 placeholder 목록에서 뺐다. */
-const ACTIVITY_SECTIONS = ['참여 사업', '참여 M&A', '참여 프로젝트', 'A-STREAM', '기업 진단', '멘토링 & 컨설팅']
+/**
+ * 관리 현황의 참여 목록 카드 3장 — 이 기업이 **지금 걸려 있는** 사업 원장 3종.
+ *
+ * 회의록은 우측 연동 패널(RelatedMinutesPanel)이 답하므로 여기 두지 않는다.
+ * A-STREAM·기업 진단·멘토링 & 컨설팅은 담을 원장이 아직 없어 걷어냈다 — 데이터가 서면 다시 세운다.
+ */
+const PARTICIPATION_CARDS = [
+  { config: AC_WORKSPACE, title: '참여 사업' },
+  { config: MNA_WORKSPACE, title: '참여 M&A' },
+  { config: PROJECT_WORKSPACE, title: '참여 프로젝트' },
+]
 
 /** 라벨: 값 한 줄 — 규격은 공용 `InfoField`가 소유한다. */
 const Info = InfoField
@@ -268,9 +279,14 @@ export function StartupDetailPage() {
                 </p>
               )}
             </PanelCard>
-            {/* 관리 현황 로그 카드: 기능은 후속 구현, 지금은 건수 뱃지(0) 디자인만 잡아둔다. */}
-            {ACTIVITY_SECTIONS.map((title) => (
-              <PlaceholderCard key={title} title={title} count={0} />
+            {/* 참여 목록 카드: 참가자 원장을 master_id로 역참조해 지금 걸려 있는 건만 표로 세운다. */}
+            {PARTICIPATION_CARDS.map(({ config, title }) => (
+              <StartupProgramCard
+                key={config.key}
+                config={config}
+                title={title}
+                startupId={record.id}
+              />
             ))}
           </div>
 
