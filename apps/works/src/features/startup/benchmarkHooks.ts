@@ -8,10 +8,12 @@ import type { EntityRow } from '@/features/networks/hooks'
 /**
  * 한 화면에서 나란히 세울 수 있는 기업 수.
  *
- * 폭으로는 더 들어가지만 넷을 넘기면 좌우 스캔이 안 된다 — 그때부터는 비교가 아니라 목록이고,
- * 목록은 스타트업 DB의 정렬·필터가 답한다. 벤치마크(피어그룹) 관행도 3~5사다.
+ * 다섯이 상한이다 — 항목열 6.5rem + 열당 최소 9.5rem이라 다섯 열이 54rem에 들어가고, 이는
+ * 사이드바를 뺀 본문 폭 안이다. 여섯을 넘기면 가로 스크롤이 상시가 되어 좌우 스캔이 끊기고,
+ * 그때부터는 비교가 아니라 목록이다 — 목록은 스타트업 DB의 정렬·필터가 답한다.
+ * 벤치마크(피어그룹) 관행도 3~5사다.
  */
-export const BENCHMARK_MAX = 4
+export const BENCHMARK_MAX = 5
 
 /** 비교군·기준연도를 담은 벤치마크 화면 주소. 상세페이지 진입점이 이 함수로 링크를 만든다. */
 export function benchmarkPath(ids: string[], year?: number | null): string {
