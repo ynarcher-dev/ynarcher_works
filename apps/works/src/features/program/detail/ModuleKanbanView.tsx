@@ -5,6 +5,7 @@ import type { ProgramModule } from '@/features/program/hooks'
 import { useUpdateModuleStatus } from '@/features/program/detail/detailHooks'
 import {
   MODULE_META,
+  formatModulePeriod,
   moduleStatusMeta,
   readModuleSettings,
 } from '@/features/program/detail/moduleMeta'
@@ -155,12 +156,10 @@ export function ModuleKanbanView({
                       </span>
                       <span className="mt-1.5 flex items-center gap-2">
                         <Badge tone={MODULE_VISIBILITY_TONE[mod.visibility] ?? 'neutral'}>
-                          {MODULE_VISIBILITY_LABEL[mod.visibility] ?? '비공개'}
+                          {MODULE_VISIBILITY_LABEL[mod.visibility] ?? 'WORKS ONLY'}
                         </Badge>
                         <span className="text-caption tabular-nums text-gray-700">
-                          {settings.start_date && settings.end_date
-                            ? `${settings.start_date} ~ ${settings.end_date}`
-                            : '일정 미등록'}
+                          {formatModulePeriod(settings)}
                         </span>
                       </span>
                     </button>

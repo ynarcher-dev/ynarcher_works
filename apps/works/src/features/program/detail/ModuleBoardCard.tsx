@@ -42,6 +42,7 @@ import { ModuleFileModal } from '@/features/program/panels/ModuleFileModal'
 import { ModuleLinkModal } from '@/features/program/panels/ModuleLinkModal'
 import {
   MODULE_META,
+  formatModulePeriod,
   moduleStatusMeta,
   readModuleSettings,
 } from '@/features/program/detail/moduleMeta'
@@ -161,7 +162,7 @@ export function ModuleBoardCard({
       {view === 'gantt' && <ModuleGanttView modules={enabled} onOpenModule={openModule} />}
       {view === 'list' && (
         <>
-          <ul className="space-y-3">
+          <ul className="space-y-2">
             {enabled.map((mod) => {
               const meta = MODULE_META[mod.module_type]
               const status = moduleStatusMeta(mod.status)
@@ -176,7 +177,7 @@ export function ModuleBoardCard({
                       <>
                         <Badge tone={status.tone}>{status.label}</Badge>
                         <Badge tone={MODULE_VISIBILITY_TONE[mod.visibility] ?? 'neutral'}>
-                          {MODULE_VISIBILITY_LABEL[mod.visibility] ?? '비공개'}
+                          {MODULE_VISIBILITY_LABEL[mod.visibility] ?? 'WORKS ONLY'}
                         </Badge>
                         {/* 파생 템플릿 배지 — 원천 템플릿을 다른 배지와 함께 표기. */}
                         <Badge tone="neutral">{labelOf(mod.module_type)}</Badge>
@@ -186,9 +187,7 @@ export function ModuleBoardCard({
                     meta={
                       <>
                         <span className="tabular-nums">
-                          {settings.start_date && settings.end_date
-                            ? `${settings.start_date} ~ ${settings.end_date}`
-                            : '일정 미등록'}
+                          {formatModulePeriod(settings)}
                         </span>
                         {mod.assignees.length > 0 && (
                           <span className="border-l border-gray-200 pl-2">
@@ -230,7 +229,7 @@ export function ModuleBoardCard({
           </ul>
 
           <DashedAddButton
-            className="mt-3"
+            className="mt-2"
             onClick={() => setAddOpen(true)}
             icon={<Plus className="h-4 w-4" />}
           >

@@ -5,3 +5,15 @@
  * 실제 구현은 PROGRESS.md Phase 6(NETWORKS) 이후에서 채웁니다.
  */
 export const MASTER_DATA_PACKAGE_NAME = '@ynarcher/master-data'
+
+// 사업 모듈 공통 어휘 — WORKS와 GUEST가 같은 행을 같은 이름으로 부르게 한다.
+export {
+  MODULE_TYPE_LABEL,
+  MODULE_STATUS_LABEL,
+  moduleTypeLabel,
+  moduleStatusLabel,
+  readModuleSettings,
+  formatModulePeriod,
+  moduleDisplayName,
+} from './programModule'
+export type { ModuleSettings } from './programModule'

@@ -1,54 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useGuestClient } from '@/lib/useGuestClient'
-import { useGuestStore } from '@/auth/guestStore'
-
-/** 내가 참여 중인 프로그램(program_participants) 목록. */
-export function useMyPrograms() {
-  const client = useGuestClient()
-  const me = useGuestStore((s) => s.user)?.id
-  return useQuery({
-    queryKey: ['guest', 'my-programs', me],
-    enabled: Boolean(client && me),
-    queryFn: async (): Promise<{ program_id: string; role: string }[]> => {
-      const { data } = await client!
-        .from('program_participants')
-        .select('program_id, role')
-        .eq('user_id', me)
-      return (data ?? []) as { program_id: string; role: string }[]
-    },
-  })
-}
-
-export interface TimelineItem {
-  id: string
-  title: string
-  item_type: string | null
-  starts_at: string | null
-  ends_at: string | null
-}
-
-/**
- * 참여 사업의 공개 일정.
- *
- * 무엇이 공개인지는 항목이 아니라 **소속 메뉴(모듈)의 공유 범위**가 정한다(일부공개·전체공개).
- * 판정은 전적으로 RLS가 하므로 여기서 공개 조건을 다시 걸지 않는다 — 종전에는 항목의
- * visibility로 걸렀는데, 그 값은 아무도 채우지 않아 전량 비공개였다(2026-08-27).
- */
-export function useTimeline(programIds: string[]) {
-  const client = useGuestClient()
-  return useQuery({
-    queryKey: ['guest', 'timeline', programIds],
-    enabled: Boolean(client) && programIds.length > 0,
-    queryFn: async (): Promise<TimelineItem[]> => {
-      const { data } = await client!
-        .from('program_timeline_items')
-        .select('id, title, item_type, starts_at, ends_at')
-        .in('program_id', programIds)
-        .order('starts_at', { ascending: true })
-      return (data ?? []) as TimelineItem[]
-    },
-  })
-}
 
 export interface Slot {
   id: string
@@ -57,25 +8,33 @@ export interface Slot {
   status: string
 }
 
-/** 예약 가능한 매칭 슬롯(AVAILABLE). */
-export function useAvailableSlots() {
+/**
+ * 이 메뉴에서 예약할 수 있는 시간대.
+ *
+ * 사업 전체가 아니라 **모듈 하나**로 좁힌다 — 게스트 메뉴가 곧 모듈이므로, 사업에 매칭 메뉴가
+ * 둘 이상 열리면 한 화면에 남의 시간대가 섞여 어느 메뉴의 예약인지 알 수 없게 된다.
+ * (RLS는 여전히 '공개 모듈의 슬롯'까지만 열어 주므로, 이 조건은 범위를 넓히지 않는다.)
+ */
+export function useModuleSlots(moduleId: string | undefined) {
   const client = useGuestClient()
   return useQuery({
-    queryKey: ['guest', 'slots'],
-    enabled: Boolean(client),
+    queryKey: ['guest', 'slots', moduleId],
+    enabled: Boolean(client && moduleId),
     queryFn: async (): Promise<Slot[]> => {
-      const { data } = await client!
+      const { data, error } = await client!
         .from('matching_slots')
-        .select('id, starts_at, ends_at, status')
+        .select('id, starts_at, ends_at, status, matching_events!inner(program_module_id)')
+        .eq('matching_events.program_module_id', moduleId)
         .eq('status', 'AVAILABLE')
         .order('starts_at', { ascending: true })
-      return (data ?? []) as Slot[]
+      if (error) throw error
+      return (data ?? []) as unknown as Slot[]
     },
   })
 }
 
 /** 슬롯 예약 신청(간편 예약). */
-export function useBookSlot() {
+export function useBookSlot(moduleId: string | undefined) {
   const client = useGuestClient()
   const qc = useQueryClient()
   return useMutation({
@@ -85,7 +44,7 @@ export function useBookSlot() {
         .insert({ slot_id: slotId, allocation_type: 'FCFS' })
       if (error) throw error
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['guest', 'slots'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['guest', 'slots', moduleId] }),
   })
 }
 
@@ -96,18 +55,44 @@ export interface MentoringSession {
   status: string
 }
 
-/** 내 멘토링 세션(만족도 평가 대상). */
+/** 이 메뉴의 멘토링 세션(만족도 평가 대상). 슬롯과 같은 이유로 모듈 스코프다. */
+export function useModuleMentoringSessions(moduleId: string | undefined) {
+  const client = useGuestClient()
+  return useQuery({
+    queryKey: ['guest', 'mentoring-sessions', moduleId],
+    enabled: Boolean(client && moduleId),
+    queryFn: async (): Promise<MentoringSession[]> => {
+      const { data, error } = await client!
+        .from('mentoring_sessions')
+        .select(
+          'id, round_no, scheduled_at, status, mentoring_relationships!inner(program_module_id)',
+        )
+        .eq('mentoring_relationships.program_module_id', moduleId)
+        .order('scheduled_at', { ascending: false })
+      if (error) throw error
+      return (data ?? []) as unknown as MentoringSession[]
+    },
+  })
+}
+
+/**
+ * 전문가 뷰의 세션 목록.
+ *
+ * 모듈 스코프가 아니다 — 전문가에게 보이는 것은 사업이 연 메뉴가 아니라 **본인에게 배정된
+ * 일**이며, 범위는 RLS(app.guest_mentoring_session_ids)가 정한다.
+ */
 export function useMentoringSessions() {
   const client = useGuestClient()
   return useQuery({
     queryKey: ['guest', 'mentoring-sessions'],
     enabled: Boolean(client),
     queryFn: async (): Promise<MentoringSession[]> => {
-      const { data } = await client!
+      const { data, error } = await client!
         .from('mentoring_sessions')
         .select('id, round_no, scheduled_at, status')
         .order('scheduled_at', { ascending: false })
-      return (data ?? []) as MentoringSession[]
+      if (error) throw error
+      return (data ?? []) as unknown as MentoringSession[]
     },
   })
 }
@@ -165,6 +150,32 @@ export function useSubmitFeedback() {
     }) => {
       const { error } = await client!.from('mentor_feedback_records').insert(v)
       if (error) throw error
+    },
+  })
+}
+
+/**
+ * 파일첨부 모듈의 파일 다운로드.
+ *
+ * 클라이언트가 스스로 서명 URL을 만들지 않는다 — Storage의 직접 접근 경로는 닫혀 있고,
+ * material-download Edge Function만이 RLS 재검증과 access_logs 적재를 거쳐 60초짜리 URL을
+ * 내준다. 로그를 남기지 못하면 URL도 없다(로그 없는 반출 금지).
+ */
+export function useDownloadModuleFile() {
+  const client = useGuestClient()
+  return useMutation({
+    mutationFn: async (file: { id: string; file_name: string }) => {
+      const { data, error } = await client!.functions.invoke<{
+        url: string
+        fileName: string
+      }>('material-download', { body: { attachmentId: file.id } })
+      if (error || !data?.url) throw error ?? new Error('download_failed')
+      const a = document.createElement('a')
+      a.href = data.url
+      a.download = file.file_name
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
     },
   })
 }

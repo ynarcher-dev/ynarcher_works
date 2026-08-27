@@ -1,5 +1,7 @@
-import { CalendarClock, CalendarDays, ClipboardList, Star } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import { CalendarDays, ClipboardList, type LucideIcon } from 'lucide-react'
+import { moduleDisplayName } from '@ynarcher/master-data'
+import { moduleIcon } from '@/features/moduleMeta'
+import type { GuestModule } from '@/features/moduleHooks'
 
 /**
  * 게스트가 보고 있는 화면 묶음. **역할 전환이지 사업 전환이 아니다** — 사업은 로그인에 쓴
@@ -16,24 +18,38 @@ export interface GuestNavItem {
 }
 
 /**
- * 역할별 메뉴. 화면 구성의 근거는 3_9_workspace_guest.md §1.1(스타트업)·§1.2(전문가)이며,
- * 아직 만들지 않은 화면은 자리만 잡아 두지 않는다 — 눌러서 빈 화면이 나오는 메뉴는
- * 없는 메뉴보다 나쁘다.
+ * 스타트업 뷰의 메뉴는 **코드에 없다.**
  *
- * 타입이 **비어 있지 않은 목록**인 것은 의도다. `homePathOf()`가 첫 항목을 착지점으로 쓰므로,
- * 메뉴를 전부 지운 뷰가 생기면 착지할 곳이 없어진다 — 그 사실을 런타임이 아니라 타입이 막는다.
+ * WORKS 사업 상세의 '일정관리'에서 담당자가 공유 범위를 WORKS+GUEST 또는 전체공개로 올린
+ * 모듈이 그대로 한 줄씩 선다(2026-08-27 확정). 메뉴를 여기에 박아 두면 담당자가 WORKS에서
+ * 메뉴를 켜고 꺼도 게스트 화면은 그대로여서, 운영자가 보는 구성과 참여자가 보는 구성이
+ * 갈린다 — 그 어긋남을 없애려면 목록을 코드가 아니라 원장이 들고 있어야 한다.
+ * 무엇이 공개인지의 판정은 RLS(`app.guest_module_ids()`)가 하며, 화면은 돌아온 것을 그린다.
  */
-export const GUEST_NAV: Record<GuestView, readonly [GuestNavItem, ...GuestNavItem[]]> = {
-  startup: [
-    { path: '/schedule', label: '보육 일정', icon: CalendarDays },
-    { path: '/booking', label: '멘토링 예약', icon: CalendarClock },
-    { path: '/satisfaction', label: '멘토 만족도', icon: Star },
-  ],
-  expert: [
-    { path: '/sessions', label: '멘토링 스케줄', icon: CalendarDays },
-    { path: '/feedback', label: '상담 평가지', icon: ClipboardList },
-  ],
+export function moduleNavItems(modules: readonly GuestModule[]): GuestNavItem[] {
+  return modules.map((mod) => ({
+    path: modulePath(mod.id),
+    label: moduleDisplayName(mod),
+    icon: moduleIcon(mod.module_type),
+  }))
 }
+
+/** 모듈 화면 경로. 라우터와 사이드바가 같은 규칙을 쓰도록 한곳에서 만든다. */
+export function modulePath(moduleId: string): string {
+  return `/m/${moduleId}`
+}
+
+/**
+ * 전문가 뷰의 메뉴는 여전히 고정이다.
+ *
+ * 전문가에게 보이는 것은 사업이 연 메뉴가 아니라 **본인에게 배정된 일**(스케줄·평가지)이며,
+ * 이는 공유 범위 스위치가 아니라 배정 여부가 정한다. 축이 다른 목록을 같은 규칙으로 묶으면
+ * 어느 쪽 기준으로 열렸는지 설명할 수 없게 된다.
+ */
+export const EXPERT_NAV: readonly [GuestNavItem, ...GuestNavItem[]] = [
+  { path: '/sessions', label: '멘토링 스케줄', icon: CalendarDays },
+  { path: '/feedback', label: '상담 평가지', icon: ClipboardList },
+]
 
 /** 로그인 직후 열 기본 뷰. 전문가 계정만 전문가 화면에서 시작한다. */
 export function defaultView(role: string | undefined): GuestView {
@@ -45,18 +61,20 @@ export function defaultView(role: string | undefined): GuestView {
  * 뒤로가기에서 주소와 사이드바가 어긋난다(주소는 전문가 화면인데 메뉴는 스타트업 것).
  */
 export function viewOfPath(pathname: string): GuestView | undefined {
-  const views: GuestView[] = ['startup', 'expert']
-  return views.find((v) => GUEST_NAV[v].some((item) => item.path === pathname))
+  if (EXPERT_NAV.some((item) => item.path === pathname)) return 'expert'
+  if (pathname.startsWith('/m/')) return 'startup'
+  return undefined
 }
 
-/** 그 뷰의 첫 메뉴 경로(뷰 전환·루트 진입의 착지점). */
-export function homePathOf(view: GuestView): string {
-  return GUEST_NAV[view][0].path
-}
-
-/** 현재 경로의 메뉴 항목(상단바의 현재 위치 표시용). */
-export function navItemOfPath(pathname: string): GuestNavItem | undefined {
-  return Object.values(GUEST_NAV)
-    .flat()
-    .find((item) => item.path === pathname)
+/**
+ * 그 뷰의 착지점(뷰 전환·루트 진입). 스타트업 뷰는 공개 메뉴가 하나도 없을 수 있으므로
+ * `undefined`가 정상 결과다 — 그때는 '열린 메뉴가 없다'는 사실을 화면이 말한다.
+ */
+export function homePathOf(
+  view: GuestView,
+  modules: readonly GuestModule[],
+): string | undefined {
+  if (view === 'expert') return EXPERT_NAV[0].path
+  const first = modules[0]
+  return first ? modulePath(first.id) : undefined
 }

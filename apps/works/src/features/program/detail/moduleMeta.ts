@@ -1,3 +1,4 @@
+import { MODULE_STATUS_LABEL } from '@ynarcher/master-data'
 import type { BadgeTone } from '@ynarcher/ui'
 import {
   ChartColumn,
@@ -14,7 +15,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 
-/** 모듈 카드 표시 메타(아이콘·기본 설명·진입 방식). 라벨은 config.ts MODULE_TYPES가 원천. */
+/** 모듈 카드 표시 메타(아이콘·기본 설명·진입 방식). 라벨은 `@ynarcher/master-data`가 원천. */
 export interface ModuleMeta {
   icon: LucideIcon
   /** 템플릿 선택 화면 타일·설명 패널에 노출할 이모지. */
@@ -139,13 +140,21 @@ export const MODULE_META: Record<string, ModuleMeta> = {
   },
 }
 
-/** module_status enum(DRAFT/OPEN/CLOSED/CANCELLED) → 표시 라벨·톤. */
-export const MODULE_STATUS_META: Record<string, { label: string; tone: BadgeTone }> = {
-  DRAFT: { label: '준비', tone: 'neutral' },
-  OPEN: { label: '진행', tone: 'success' },
-  CLOSED: { label: '완료', tone: 'info' },
-  CANCELLED: { label: '취소', tone: 'danger' },
+/** module_status enum(DRAFT/OPEN/CLOSED/CANCELLED) → 표시 톤. 라벨은 공통 어휘가 소유한다. */
+const MODULE_STATUS_TONE: Record<string, BadgeTone> = {
+  DRAFT: 'neutral',
+  OPEN: 'success',
+  CLOSED: 'info',
+  CANCELLED: 'danger',
 }
+
+export const MODULE_STATUS_META: Record<string, { label: string; tone: BadgeTone }> =
+  Object.fromEntries(
+    Object.entries(MODULE_STATUS_LABEL).map(([key, label]) => [
+      key,
+      { label, tone: MODULE_STATUS_TONE[key] ?? 'neutral' },
+    ]),
+  )
 
 const FALLBACK_STATUS = { label: '준비', tone: 'neutral' as BadgeTone }
 
@@ -162,21 +171,9 @@ export const MODULE_BAR_CLASS: Record<string, string> = {
   CANCELLED: 'bg-danger/50',
 }
 
-/** program_modules.settings(jsonb)에 담는 운영 설정(일정·메모). */
-export interface ModuleSettings {
-  start_date?: string
-  end_date?: string
-  memo?: string
-}
-
-/** settings jsonb에서 일정·메모를 방어적으로 읽는다(다른 키는 보존 대상). */
-export function readModuleSettings(settings: unknown): ModuleSettings {
-  if (!settings || typeof settings !== 'object') return {}
-  const rec = settings as Record<string, unknown>
-  const str = (v: unknown) => (typeof v === 'string' && v.length > 0 ? v : undefined)
-  return {
-    start_date: str(rec.start_date),
-    end_date: str(rec.end_date),
-    memo: str(rec.memo),
-  }
-}
+/**
+ * 일정·메모의 읽기 규약은 `@ynarcher/master-data`가 소유한다 — GUEST 사이드바가 같은 행의
+ * 같은 값을 읽으므로, 규약이 두 벌이면 한쪽만 고치는 날 두 화면의 일정이 갈린다.
+ */
+export { readModuleSettings, formatModulePeriod } from '@ynarcher/master-data'
+export type { ModuleSettings } from '@ynarcher/master-data'

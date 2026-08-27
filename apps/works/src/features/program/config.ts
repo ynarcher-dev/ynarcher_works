@@ -1,3 +1,4 @@
+import { moduleTypeLabel } from '@ynarcher/master-data'
 import type { BadgeTone } from '@ynarcher/ui'
 import {
   Ban,
@@ -27,9 +28,9 @@ export interface ModuleTypeDef {
  * 어떤 활동인지 정하지 못했을 때의 출발점은 셋 중 가장 범용인 글쓰기다.
  */
 export const BASE_MODULE_TYPES: ModuleTypeDef[] = [
-  { type: 'POST', label: '글쓰기', implemented: true },
-  { type: 'LINK', label: 'URL첨부', implemented: true },
-  { type: 'FILE', label: '파일첨부', implemented: true },
+  { type: 'POST', label: moduleTypeLabel('POST'), implemented: true },
+  { type: 'LINK', label: moduleTypeLabel('LINK'), implemented: true },
+  { type: 'FILE', label: moduleTypeLabel('FILE'), implemented: true },
 ]
 
 /** 기본 템플릿 여부(모듈 추가 모달의 '기본 템플릿' 섹션 대상). */
@@ -37,32 +38,37 @@ export function isBaseModuleType(moduleType: string): boolean {
   return BASE_MODULE_TYPES.some((d) => d.type === moduleType)
 }
 
+/**
+ * 모듈 보드에 서는 템플릿 순서. 라벨은 `@ynarcher/master-data`의 공통 어휘가 소유한다 —
+ * 같은 모듈이 GUEST 사이드바에도 서므로, 이름을 두 벌 들면 두 화면이 다른 말을 하게 된다.
+ */
 export const MODULE_TYPES: ModuleTypeDef[] = [
-  { type: 'RECRUITMENT', label: '모집/신청서', implemented: true },
-  { type: 'DOC_REVIEW', label: '서면평가', implemented: true },
-  { type: 'ONSITE_EVAL', label: '대면평가', implemented: true },
-  { type: 'ORIENTATION', label: 'OT/공통세션', implemented: true },
-  { type: 'MENTORING', label: 'N:N 멘토링', implemented: true },
-  { type: 'BUSINESS_MATCHING', label: '1:1 비즈니스 매칭', implemented: true },
-  { type: 'DEMO_DAY', label: '데모데이', implemented: true },
-  { type: 'OUTCOMES', label: '성과/KPI', implemented: true },
-  ...BASE_MODULE_TYPES,
+  'RECRUITMENT',
+  'DOC_REVIEW',
+  'ONSITE_EVAL',
+  'ORIENTATION',
+  'MENTORING',
+  'BUSINESS_MATCHING',
+  'DEMO_DAY',
+  'OUTCOMES',
 ]
+  .map((type) => ({ type, label: moduleTypeLabel(type), implemented: true }))
+  .concat(BASE_MODULE_TYPES)
 
 /**
  * 모듈 공유 범위(participation과 별개 축). GUEST/공개 노출 여부를 정한다.
- * DB module_visibility enum: INTERNAL_ONLY/GUEST_ONLY/PUBLIC. 기본값은 최소 공개(비공개).
+ * DB module_visibility enum: INTERNAL_ONLY/GUEST_ONLY/PUBLIC. 기본값은 최소 공개(WORKS ONLY).
  */
 export const MODULE_VISIBILITY_OPTIONS = [
-  { value: 'PUBLIC', label: '전체공개', hint: '공개 URL로 누구나 열람(모집형)' },
-  { value: 'GUEST_ONLY', label: '일부공개', hint: 'GUEST 포털의 참여 기업/전문가만' },
-  { value: 'INTERNAL_ONLY', label: '비공개', hint: 'WORKS 내부 운영자만' },
+  { value: 'PUBLIC', label: '전체공개(누구나)', hint: '공개 URL로 누구나 열람(모집형)' },
+  { value: 'GUEST_ONLY', label: 'WORKS+GUEST', hint: 'GUEST 포털의 참여 기업/전문가만' },
+  { value: 'INTERNAL_ONLY', label: 'WORKS ONLY', hint: 'WORKS 내부 운영자만' },
 ] as const
 
 export const MODULE_VISIBILITY_LABEL: Record<string, string> = {
-  PUBLIC: '전체공개',
-  GUEST_ONLY: '일부공개',
-  INTERNAL_ONLY: '비공개',
+  PUBLIC: '전체공개(누구나)',
+  GUEST_ONLY: 'WORKS+GUEST',
+  INTERNAL_ONLY: 'WORKS ONLY',
 }
 
 export const MODULE_VISIBILITY_TONE: Record<string, BadgeTone> = {

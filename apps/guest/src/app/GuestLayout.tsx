@@ -5,13 +5,14 @@ import logo from '@/assets/logo.png'
 import { guestAuth } from '@/auth/guestAuthService'
 import { useGuestStore } from '@/auth/guestStore'
 import {
-  GUEST_NAV,
+  EXPERT_NAV,
   defaultView,
   homePathOf,
-  navItemOfPath,
+  moduleNavItems,
   viewOfPath,
   type GuestView,
 } from '@/config/navigation'
+import { useGuestModules } from '@/features/moduleHooks'
 
 /**
  * GUEST 앱 셸 — WORKS와 **같은 부품**(`AppShell`·`Sidebar`·`SidebarItem`)으로 조립한다.
@@ -22,6 +23,9 @@ import {
  * 부품은 이미 `@ynarcher/ui`에 있다.
  *
  * 모바일에서는 `AppShell`이 사이드바를 드로어로 바꾸므로 모바일 우선 원칙과 충돌하지 않는다.
+ *
+ * 스타트업 뷰의 메뉴 목록은 코드가 아니라 **원장**에서 온다 — WORKS에서 공개로 올린 모듈이
+ * 그대로 한 줄씩 선다(3_9_workspace_guest.md §1.1). 그래서 셸이 모듈을 직접 조회한다.
  */
 export function GuestLayout() {
   const location = useLocation()
@@ -29,16 +33,21 @@ export function GuestLayout() {
   const user = useGuestStore((s) => s.user)
   const program = useGuestStore((s) => s.program)
 
+  const { data: modules } = useGuestModules()
   const isExpert = user?.role === 'external_expert'
   const view: GuestView =
     viewOfPath(location.pathname) ?? defaultView(user?.role)
-  const current = navItemOfPath(location.pathname)
+  const items = view === 'expert' ? [...EXPERT_NAV] : moduleNavItems(modules ?? [])
+  const current = items.find((item) => item.path === location.pathname)
+  // 공개 메뉴가 하나도 없는 사업이 있을 수 있다. 그때 로고와 뷰 전환은 루트로 보내고,
+  // '열린 메뉴가 없다'는 사실은 루트 화면이 말한다.
+  const home = (target: GuestView) => homePathOf(target, modules ?? []) ?? '/'
 
   const sidebar = (
     <Sidebar
       header={
         <div className="flex w-full items-center justify-center">
-          <Link to={homePathOf(view)} className="min-w-0 shrink">
+          <Link to={home(view)} className="min-w-0 shrink">
             <img src={logo} alt="Y&ARCHER" className="h-7 object-contain" />
           </Link>
         </div>
@@ -73,7 +82,7 @@ export function GuestLayout() {
       }
     >
       <div className="flex flex-col gap-1">
-        {GUEST_NAV[view].map((item) => {
+        {items.map((item) => {
           const Icon = item.icon
           return (
             <SidebarItem
@@ -107,7 +116,7 @@ export function GuestLayout() {
           <SegmentedToggle
             label="화면 전환"
             value={view}
-            onChange={(next) => navigate(homePathOf(next as GuestView))}
+            onChange={(next) => navigate(home(next as GuestView))}
             options={[
               { key: 'expert', label: '전문가' },
               { key: 'startup', label: '스타트업' },
