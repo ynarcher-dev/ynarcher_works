@@ -18,6 +18,7 @@ import {
   PanelLeftOpen,
   ReceiptText,
   Rocket,
+  Scale,
   Search,
   Sparkles,
   Star,
@@ -125,6 +126,8 @@ const sidebarIconByTab: Record<string, LucideIcon> = {
   ac: Target,
   mine: User,
   all: LayoutGrid,
+  // STARTUP 벤치마크 — 여러 기업을 저울에 올려 견주는 화면.
+  benchmark: Scale,
   mna: BriefcaseBusiness,
   project: Folder,
 

@@ -9,21 +9,21 @@ interface Props {
   onClose: () => void
   /** 선택 확정 콜백(선택된 기업 id 전달). */
   onPick: (id: string) => void
-  /** 목록에서 제외할 기업 id(현재 기업 자기 자신). */
-  excludeId?: string
+  /** 목록에서 제외할 기업 id(이미 비교군에 담긴 기업들). */
+  excludeIds?: string[]
 }
 
 /**
- * 비교기업 선택 모달. 기업명 검색(ilike) 결과를 로고·이름·분야 리스트로 보여주고,
- * 행을 클릭하면 해당 기업을 비교 대상으로 확정한다. 현재 기업 자신은 목록에서 제외한다.
+ * 비교기업 추가 모달. 기업명 검색(ilike) 결과를 로고·이름·분야 리스트로 보여주고,
+ * 행을 클릭하면 해당 기업을 비교군에 더한다. 이미 담긴 기업은 목록에서 제외한다.
  */
-export function StartupComparePicker({ open, onClose, onPick, excludeId }: Props) {
+export function StartupBenchmarkPicker({ open, onClose, onPick, excludeIds = [] }: Props) {
   const [keyword, setKeyword] = useState('')
   const { data, isLoading } = useEntityList('startups', keyword)
-  const rows = ((data ?? []) as EntityRow[]).filter((r) => r.id !== excludeId)
+  const rows = ((data ?? []) as EntityRow[]).filter((r) => !excludeIds.includes(r.id))
 
   return (
-    <Modal open={open} onClose={onClose} title="비교기업 선택" size="md">
+    <Modal open={open} onClose={onClose} title="비교기업 추가" size="md">
       <div className="space-y-3">
         <Input
           autoFocus

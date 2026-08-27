@@ -47,6 +47,9 @@ export const LIST_ALL_TAB = 'all'
  */
 export const GLOBAL_MINE_TAB = 'global_mine'
 
+/** STARTUP 벤치마크 화면의 탭 키(`/startup?tab=benchmark`). */
+export const BENCHMARK_TAB = 'benchmark'
+
 /**
  * 사이드바에서 물러난 옛 탭 키 → 현재 키.
  * '전체 ~'는 원래 대시보드 자리(`?tab=dashboard`)였다가 목록으로 바뀌었으므로, 기존 북마크와
@@ -117,6 +120,10 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         { label: '내 업로드 DB', tab: 'mine' },
         // 구분 무관, 볼 수 있는 전부. '내 업로드 DB'와 같은 목록을 범위만 넓혀 쓴다.
         { label: '스타트업 DB', tab: LIST_ALL_TAB },
+        // 벤치마크 — 위 두 목록이 '어느 기업이 있는가'에 답한다면 이 화면은 '이 기업들이
+        // 서로 어떻게 다른가'에 답한다. 목록의 필터 축으로는 만들 수 없는 화면이라(필터는 행을
+        // 고를 뿐 열로 세우지 못한다) 구분 세분화 메뉴를 내린 것과 달리 제 항목을 갖는다.
+        { label: '벤치마크', tab: BENCHMARK_TAB, dividerBefore: true },
         // 2026-08-20: 구분(투자·보육·발굴·기타)별 세분화 항목을 내렸다. AC 사업구분이 2026-08-03에
         // 밟은 길과 같은 이유다 — 분류를 메뉴로 두면 그것이 '어디에 있는가'가 되어 소재지·단계 같은
         // 다른 축과 함께 걸 수 없고(보육기업 중 시드 단계만, 같은 질문에 답할 수 없다), 분류를 하나

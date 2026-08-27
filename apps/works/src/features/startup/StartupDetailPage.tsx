@@ -31,7 +31,7 @@ import { SectionHeading } from '@/features/startup/SectionHeading'
 import { PlaceholderCard } from '@/features/startup/PlaceholderCard'
 import { StartupMediaCard } from '@/features/startup/StartupMediaCard'
 import { readMedia } from '@/features/startup/startupMedia'
-import { StartupComparePanel } from '@/features/startup/StartupComparePanel'
+import { StartupBenchmarkEntry } from '@/features/startup/StartupBenchmarkEntry'
 
 /** 첨부/피드백/기여 로그 대상 유형(다형 테이블 target_type). */
 const RESOURCE_TYPE = 'startup'
@@ -283,9 +283,9 @@ export function StartupDetailPage() {
             <RelatedMinutesPanel targetType="startup" targetId={record.id} />
             <ChangeHistoryPanel contributions={contributions} />
             <FeedbackPanel targetType={RESOURCE_TYPE} targetId={record.id} />
-            {/* 벤치마크: 동종기업 대비 지표 좌우 비교 카드 */}
-            <SectionHeading title="벤치마크" />
-            <StartupComparePanel record={record} />
+            {/* 벤치마크 — 비교 자체는 전역 우측 패널이 맡는다. 폭이 1/3 열에 묶여 두 기업에
+                갇혀 있던 것을 밖으로 꺼냈고, 여기에는 이 기업을 첫 열로 세우는 진입점만 둔다. */}
+            <StartupBenchmarkEntry record={record} />
           </div>
         </div>
       )}
