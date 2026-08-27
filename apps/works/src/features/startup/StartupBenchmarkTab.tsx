@@ -4,7 +4,6 @@ import {
   ListToolbar,
   Select,
   Spinner,
-  TextAction,
   cn,
   formText,
   tableTextScale,
@@ -93,7 +92,14 @@ export function StartupBenchmarkTab() {
             <span className={cn(tableTextScale.page.meta, 'tabular-nums')}>
               {ids.length}/{BENCHMARK_MAX}
             </span>
-            {ids.length > 0 && <TextAction onClick={clear}>초기화</TextAction>}
+            {/* 초기화 — 바로 옆 '기업 추가'와 같은 줄에서 같은 일(비교군 편집)을 하므로 같은
+                생김새로 세운다. 글자 링크로 두었더니 버튼 옆에서 누를 수 있는 것으로 읽히지
+                않았다. */}
+            {ids.length > 0 && (
+              <Button variant="outline" onClick={clear}>
+                초기화
+              </Button>
+            )}
             {addButton}
           </div>
         }

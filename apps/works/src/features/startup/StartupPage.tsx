@@ -13,12 +13,6 @@ const HEADINGS: Record<string, string> = {
   archerscan: '아처스캔',
 }
 
-/** 메뉴명만으로 무엇을 하는 화면인지 읽히지 않는 탭의 한 줄 설명. */
-const DESCRIPTIONS: Record<string, string> = {
-  [BENCHMARK_TAB]:
-    '기업을 나란히 세워 같은 기준연도의 재무·매출·고용·투자 지표를 비교합니다. 비교군은 주소에 남으므로 링크를 그대로 공유할 수 있습니다.',
-}
-
 const RETIRED_CATEGORY_TABS = new Set(['invested', 'incubated', 'discovered', 'etc'])
 
 export function StartupPage() {
@@ -34,7 +28,7 @@ export function StartupPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title={HEADINGS[tab] ?? HEADINGS[LIST_ALL_TAB]} description={DESCRIPTIONS[tab]} />
+      <PageHeader title={HEADINGS[tab] ?? HEADINGS[LIST_ALL_TAB]} />
       {tab === 'mine' ? (
         <StartupPoolTab key="mine" mineUserId={userId ?? null} />
       ) : tab === LIST_ALL_TAB ? (
