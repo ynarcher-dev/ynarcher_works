@@ -9,6 +9,12 @@ export interface SidebarItemProps {
   collapsed?: boolean
   /** 우측 끝에 표시할 요소(예: 아코디언 chevron). 접힘 상태에서는 표시하지 않는다. */
   trailing?: ReactNode
+  /**
+   * 항목 한 줄에 덧붙일 클래스. 화면이 크기·색을 마음대로 바꾸라는 뜻이 아니라, 밀도 격자와
+   * **다른 축의 규칙**이 겹치는 자리를 위해 연다 — GUEST 앱은 모바일 우선이라 터치 영역
+   * 하한(48px)이 따로 정해져 있다(3_9_workspace_guest.md §3, `GuestButton`과 같은 이유).
+   */
+  className?: string
 }
 
 /**
@@ -21,6 +27,7 @@ export function SidebarItem({
   onClick,
   collapsed = false,
   trailing,
+  className,
 }: SidebarItemProps) {
   return (
     <button
@@ -35,6 +42,7 @@ export function SidebarItem({
         active
           ? 'bg-white text-brand shadow-soft'
           : 'text-white hover:bg-white/15',
+        className,
       )}
     >
       {/* 좌측 세로 인디케이터 바 */}

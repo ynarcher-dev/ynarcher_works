@@ -1,13 +1,9 @@
-import { Card, TextArea } from '@ynarcher/ui'
+import { Card, PageHeader, TextArea } from '@ynarcher/ui'
 import { useState } from 'react'
 import { GuestButton } from '@/components/GuestButton'
 import { StarRating } from '@/components/StarRating'
 import { useMentoringSessions, useSubmitFeedback } from '@/features/hooks'
-
-function fmt(iso: string | null): string {
-  return iso ? new Date(iso).toLocaleString('ko-KR') : '일정 미정'
-}
-
+import { formatDateTime } from '@/lib/format'
 
 const METRICS = [
   { key: 'score_technology', label: '기술성' },
@@ -19,21 +15,25 @@ const METRICS = [
 
 type MetricKey = (typeof METRICS)[number]['key']
 
-/** 전문가 게스트 대시보드: 스케줄 보드 · 상담일지/평가지 작성. */
-export function ExpertDashboard() {
+const EMPTY_SCORES: Record<MetricKey, number> = {
+  score_technology: 0,
+  score_business_model: 0,
+  score_credibility: 0,
+  score_collaboration: 0,
+  score_matching_feasibility: 0,
+}
+
+/** 상담 평가지 — 전문가가 스타트업을 진단하는 5대 정량지표 + 종합 코멘트(3_9 §1.2). */
+export function MentorFeedbackPage() {
   const { data: sessions } = useMentoringSessions()
   const submitFeedback = useSubmitFeedback()
 
   const [openId, setOpenId] = useState<string | null>(null)
-  const [scores, setScores] = useState<Record<MetricKey, number>>({
-    score_technology: 0,
-    score_business_model: 0,
-    score_credibility: 0,
-    score_collaboration: 0,
-    score_matching_feasibility: 0,
-  })
+  const [scores, setScores] = useState<Record<MetricKey, number>>(EMPTY_SCORES)
   const [comment, setComment] = useState('')
   const [done, setDone] = useState<string[]>([])
+
+  const items = sessions ?? []
 
   const setScore = (k: MetricKey, v: number) =>
     setScores((prev) => ({ ...prev, [k]: v }))
@@ -48,13 +48,7 @@ export function ExpertDashboard() {
       })
       setDone((d) => [...d, sessionId])
       setOpenId(null)
-      setScores({
-        score_technology: 0,
-        score_business_model: 0,
-        score_credibility: 0,
-        score_collaboration: 0,
-        score_matching_feasibility: 0,
-      })
+      setScores(EMPTY_SCORES)
       setComment('')
     } catch {
       /* RLS/네트워크 오류 시 무시 */
@@ -63,13 +57,14 @@ export function ExpertDashboard() {
 
   return (
     <div className="space-y-5">
-      <Card title="멘토링 스케줄 보드">
+      <PageHeader title="상담 평가지" />
+      <Card title="작성 대상 세션" count={items.length}>
         <div className="space-y-2">
-          {(sessions ?? []).map((s) => (
+          {items.map((s) => (
             <div key={s.id} className="rounded-radius-md border border-gray-300 p-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3">
                 <span className="text-body text-gray-800">
-                  {s.round_no}회차 · {fmt(s.scheduled_at)}
+                  {s.round_no}회차 · {formatDateTime(s.scheduled_at)}
                 </span>
                 {done.includes(s.id) ? (
                   <span className="text-caption text-success">평가 완료</span>
@@ -86,10 +81,7 @@ export function ExpertDashboard() {
               {openId === s.id && (
                 <div className="mt-3 space-y-3 border-t border-gray-100 pt-3">
                   {METRICS.map((m) => (
-                    <div
-                      key={m.key}
-                      className="flex items-center justify-between"
-                    >
+                    <div key={m.key} className="flex items-center justify-between gap-3">
                       <span className="text-body text-gray-700">{m.label}</span>
                       <StarRating
                         value={scores[m.key]}
@@ -113,14 +105,13 @@ export function ExpertDashboard() {
               )}
             </div>
           ))}
-          {(sessions ?? []).length === 0 && (
+          {items.length === 0 && (
             <p className="py-4 text-center text-caption text-gray-500">
-              배정된 멘토링 일정이 없습니다.
+              작성할 멘토링 세션이 없습니다.
             </p>
           )}
         </div>
       </Card>
-
       <p className="text-caption text-gray-600">
         상담일지는 확정 예약(booking) 완료 후 활성화됩니다.
       </p>
