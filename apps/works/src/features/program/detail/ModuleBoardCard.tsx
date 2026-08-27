@@ -97,7 +97,7 @@ export function ModuleBoardCard({
 
   if (isLoading) {
     return (
-      <Card title="세부일정">
+      <Card title="일정관리">
         <Spinner />
       </Card>
     )
@@ -234,7 +234,7 @@ export function ModuleBoardCard({
             onClick={() => setAddOpen(true)}
             icon={<Plus className="h-4 w-4" />}
           >
-            세부일정 추가
+            일정 추가
           </DashedAddButton>
         </>
       )}
@@ -244,7 +244,7 @@ export function ModuleBoardCard({
   return (
     <>
       <Card
-        title="세부일정"
+        title="일정관리"
         actions={
           <div className="flex items-center gap-2">
             {viewToggle}
@@ -260,7 +260,7 @@ export function ModuleBoardCard({
         onClose={() => setExpanded(false)}
         title={
           <>
-            <span className="text-title-sm font-medium text-gray-900">세부일정</span>
+            <span className="text-title-sm font-medium text-gray-900">일정관리</span>
             <Badge tone="neutral">{program.title}</Badge>
           </>
         }

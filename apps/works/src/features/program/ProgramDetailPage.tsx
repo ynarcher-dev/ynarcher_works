@@ -21,7 +21,7 @@ import { useProgram } from '@/features/program/hooks'
 import { PROGRAM_STATUS_LABEL, PROGRAM_STATUS_TONE } from '@/features/program/config'
 import { useProgramWorkspace } from '@/features/program/workspace'
 
-// 참가자 풀·평가 엔진은 개요 좌측 서브 탭에서 렌더하므로 전체 화면 라우팅 대상이 아니다.
+// 연동 DB(참가자)는 개요 좌측 서브 탭에서 렌더하므로 전체 화면 라우팅 대상이 아니다.
 type Tab =
   | 'overview'
   | 'recruitment'

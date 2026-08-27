@@ -8,7 +8,7 @@ const columns: Column<Participant>[] = [
   { key: 'user_id', header: '연결 계정', type: 'text', render: (r) => (r.user_id ? '연결됨' : '미연결') },
 ]
 
-/** 참가자 풀 및 역할 요약. (7-3 — CSV 대량 업로드/매직링크 초대는 후속 확장) */
+/** 개요 좌측 '연동 DB' 탭 본문: 참가자 및 역할 요약. (7-3 — CSV 대량 업로드/매직링크 초대는 후속 확장) */
 export function ParticipantPool({ programId }: { programId: string }) {
   const { data, isLoading } = useParticipants(programId)
   if (isLoading) return <Spinner />

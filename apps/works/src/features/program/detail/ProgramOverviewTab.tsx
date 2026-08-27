@@ -1,7 +1,6 @@
 import { Tabs } from '@ynarcher/ui'
 import { useState } from 'react'
 import type { Program, ProgramModule } from '@/features/program/hooks'
-import { EvaluationPanel } from '@/features/program/EvaluationPanel'
 import { ParticipantPool } from '@/features/program/ParticipantPool'
 import { ModuleBoardCard } from '@/features/program/detail/ModuleBoardCard'
 import { ProgramInfoCard } from '@/features/program/detail/ProgramInfoCard'
@@ -13,20 +12,21 @@ import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 
-type LeftTab = 'modules' | 'participants' | 'evaluation'
+type LeftTab = 'modules' | 'participants'
 
 const LEFT_TABS: { key: LeftTab; label: string }[] = [
-  { key: 'modules', label: '세부일정' },
-  { key: 'participants', label: '참가자 풀' },
-  { key: 'evaluation', label: '평가 엔진' },
+  { key: 'modules', label: '일정관리' },
+  { key: 'participants', label: '연동 DB' },
 ]
 
 /**
  * 프로그램 상세 개요(NETWORKS·STARTUP 상세와 동일한 2/3 + 1/3 카드섹션 컴포지션).
- * 좌측 본문(2/3): 기본 데이터 카드 → 서브 탭(세부일정 · 참가자 풀 · 평가 엔진).
+ * 좌측 본문(2/3): 기본 데이터 카드 → 서브 탭(일정관리 · 연동 DB).
+ * '평가 엔진' 탭은 2026-08-27 걷어냈다 — 평가는 사업 상세에 늘 떠 있어야 하는 축이 아니라
+ * 서면평가·대면평가 모듈을 켰을 때의 운영 화면이라, 모듈과 무관한 상시 탭 자리를 차지할 이유가 없다.
  * 우측(1/3): 자료 관리 → 관련 전자결재 → 관련 회의록 → 변동 이력 → 코멘트(상세 공통 순서).
  * 우측에 있던 월간 캘린더('통합 타임라인')는 2026-08-25 걷어냈다 — 같은 모듈 일정을
- * 세부일정 탭(목록·칸반·간트)이 이미 더 넓은 자리에서 보여 주고 있어, 좁은 우측에 달력을
+ * 일정관리 탭(목록·칸반·간트)이 이미 더 넓은 자리에서 보여 주고 있어, 좁은 우측에 달력을
  * 하나 더 두면 같은 사실을 두 곳에서 각자 그리게 된다.
  * 자료/코멘트/변동이력 패널은 NETWORKS 공용 패널을 재사용한다. 코멘트·변동이력의 다형 키는
  * 워크스페이스별로 갈리므로(config.entityKey) 그것을 넘기고, 첨부는 정책이 워크스페이스 무관이라
@@ -59,7 +59,6 @@ export function ProgramOverviewTab({
               <ModuleBoardCard program={program} onOpenModule={onOpenModule} />
             )}
             {leftTab === 'participants' && <ParticipantPool programId={program.id} />}
-            {leftTab === 'evaluation' && <EvaluationPanel programId={program.id} />}
           </div>
         </div>
       </div>
