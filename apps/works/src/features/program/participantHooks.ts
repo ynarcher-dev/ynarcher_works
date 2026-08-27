@@ -39,6 +39,11 @@ export interface ParticipantRow {
   loginName: string | null
   email: string | null
   phone: string | null
+  /**
+   * 원장이 이 대상을 무엇으로 분류하는가 — 기업은 STARTUP 구분(management_status),
+   * 전문가는 원장 이름 자체다. 명부가 스스로 분류하지 않고 원장의 분류를 그대로 비춘다.
+   */
+  masterCategory: string | null
 }
 
 /** 원장에서 고를 수 있는 후보 1건. */
@@ -82,6 +87,8 @@ interface StartupMaster {
   representative: string | null
   email: string | null
   phone: string | null
+  /** 구분(management_status: sourced·incubated·invested·other). 원장이 분류하는 축. */
+  management_status: string | null
 }
 
 interface ExpertMaster {
@@ -114,7 +121,7 @@ export function useProgramParticipants(programId: string | undefined) {
 
       const [startupsRes, expertsRes] = await Promise.all([
         startupIds.length
-          ? supabase.from('startups').select('id, name, representative, email, phone').in('id', startupIds)
+          ? supabase.from('startups').select('id, name, representative, email, phone, management_status').in('id', startupIds)
           : Promise.resolve({ data: [] }),
         expertIds.length
           ? supabase.from('experts').select('id, name, affiliation, email, phone').in('id', expertIds)
@@ -142,6 +149,7 @@ export function useProgramParticipants(programId: string | undefined) {
           loginName: startup?.representative ?? expert?.name ?? null,
           email: master?.email?.trim() || r.user?.email || null,
           phone: master?.phone?.trim() || null,
+          masterCategory: startup?.management_status ?? null,
         }
       })
     },
@@ -166,7 +174,7 @@ export function useMasterCandidates(
     queryFn: async (): Promise<MasterCandidate[]> => {
       const base =
         master === 'startups'
-          ? supabase.from('startups').select('id, name, representative, email, phone')
+          ? supabase.from('startups').select('id, name, representative, email, phone, management_status')
           : supabase.from('experts').select('id, name, affiliation, email, phone')
 
       let query = base.is('deleted_at', null).order('name', { ascending: true }).limit(50)

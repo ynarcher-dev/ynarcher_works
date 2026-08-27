@@ -91,7 +91,9 @@ Deno.serve(withCors(async (req: Request) => {
       }
       const programId = partProgram.get(row.participant_id) ?? ''
       try {
-        await sendNotification({
+        // 디스패처는 프로바이더가 없으면 예외가 아니라 { ok: false }를 돌려준다.
+        // 반환값을 보지 않으면 한 통도 나가지 않은 발송이 "보냈습니다"로 집계된다.
+        const res = await sendNotification({
           channel: to.includes('@') ? 'EMAIL' : 'ALIMTALK',
           to,
           templateCode: 'GUEST_INVITE',
@@ -101,7 +103,8 @@ Deno.serve(withCors(async (req: Request) => {
             code: row.program_code,
           },
         })
-        notified += 1
+        if (res.ok) notified += 1
+        else failed += 1
       } catch (_e) {
         // 발송 실패가 개방을 되돌리지는 않는다. 담당자가 코드를 직접 안내할 수 있다.
         failed += 1

@@ -2,14 +2,19 @@ import { Badge, type BadgeTone, type Column } from '@ynarcher/ui'
 import { Link } from 'react-router-dom'
 import { maskEmail, maskName, maskPhone } from '@/lib/mask'
 import type { SensitiveField } from '@/features/admin/sensitiveContents'
+import {
+  MANAGEMENT_STATUS_LABEL,
+  MANAGEMENT_STATUS_TONE,
+  type ManagementStatus,
+} from '@/features/startup/startupClassification'
 import type { ParticipantRow } from '@/features/program/participantHooks'
 
 /** 게스트가 진입할 수 없는 사업 상태. 이때 열린 문은 화면에서 '닫힘'으로 읽힌다. */
 const DEAD_STATUSES = ['FINISHED', 'CANCELLED']
 
-const MASTER_LABEL: Record<string, string> = {
-  startups: 'NETWORKS 기업',
-  experts: 'NETWORKS 전문가',
+interface LoginBadge {
+  label: string
+  tone: BadgeTone
 }
 
 /**
@@ -24,9 +29,19 @@ function masterPath(row: ParticipantRow): string | null {
   return null
 }
 
-interface LoginBadge {
-  label: string
-  tone: BadgeTone
+/**
+ * 구분 표기. 기업은 STARTUP 원장의 구분(발굴·보육·투자·기타)을 그대로 비추고, 전문가는
+ * NETWORKS 원장 이름을 쓴다. 명부가 스스로 분류를 만들지 않는다 — 분류는 원장이 소유하고
+ * 여기서는 라벨·톤 매핑(startupClassification)만 빌린다.
+ */
+function categoryBadge(row: ParticipantRow): LoginBadge | null {
+  if (row.master_table === 'startups') {
+    const code = row.masterCategory as ManagementStatus | null
+    if (!code || !(code in MANAGEMENT_STATUS_LABEL)) return { label: '기업(구분 미지정)', tone: 'neutral' }
+    return { label: MANAGEMENT_STATUS_LABEL[code], tone: MANAGEMENT_STATUS_TONE[code] }
+  }
+  if (row.master_table === 'experts') return { label: '전문가', tone: 'neutral' }
+  return null
 }
 
 /**
@@ -57,9 +72,10 @@ export function loginBadge(row: ParticipantRow, programStatus: string): LoginBad
 /**
  * 연동 DB 표의 컬럼.
  *
- * '로그인 계정' 열은 이 사업에 진입할 사람을 답한다 — 기업은 원장의 대표자, 전문가는 본인이며
- * 내부 임직원 참가자는 WORKS로 들어오므로 비운다. 표기는 ADMIN '민감정보 관리'의 정책을
- * 그대로 따르고(마스킹 여부는 화면이 정하지 않는다), 원본이 필요한 조회는 원장 상세가 맡는다.
+ * 로그인 주체는 성명과 연락처 두 열로 나눈다 — 둘은 다른 축이다. 성명은 이 사업에 누가
+ * 들어오는가(기업은 원장의 대표자, 전문가는 본인)이고, 연락처는 인증번호가 어디로 가는가다.
+ * 한 칸에 붙여 두면 어느 쪽이 잘못돼 매핑이 막혔는지 눈으로 가릴 수 없다.
+ * 표기는 ADMIN '민감정보 관리'의 정책을 그대로 따른다.
  */
 export function participantColumns(
   masked: Record<SensitiveField, boolean>,
@@ -86,10 +102,13 @@ export function participantColumns(
       },
     },
     {
-      key: 'master_table',
-      header: '원본 원장',
-      type: 'text',
-      render: (r) => (r.master_table ? MASTER_LABEL[r.master_table] : '임직원'),
+      key: 'masterCategory',
+      header: '구분',
+      type: 'badge',
+      render: (r) => {
+        const b = categoryBadge(r)
+        return b ? <Badge tone={b.tone}>{b.label}</Badge> : '임직원'
+      },
     },
     {
       key: 'role',
@@ -99,25 +118,23 @@ export function participantColumns(
     },
     {
       key: 'loginName',
-      header: '로그인 계정',
+      header: '성명',
       type: 'person',
       render: (r) => {
         if (!r.master_id) return '—'
-        const name = r.loginName ? (masked.name ? maskName(r.loginName) : r.loginName) : '성명 없음'
-        const contact = r.email
-          ? masked.email
-            ? maskEmail(r.email)
-            : r.email
-          : r.phone
-            ? masked.phone
-              ? maskPhone(r.phone)
-              : r.phone
-            : '연락처 없음'
-        return (
-          <span className="block truncate">
-            {name} <span className="text-gray-500">{contact}</span>
-          </span>
-        )
+        if (!r.loginName) return '성명 없음'
+        return masked.name ? maskName(r.loginName) : r.loginName
+      },
+    },
+    {
+      key: 'contact',
+      header: '연락처',
+      type: 'text',
+      render: (r) => {
+        if (!r.master_id) return '—'
+        if (r.email) return masked.email ? maskEmail(r.email) : r.email
+        if (r.phone) return masked.phone ? maskPhone(r.phone) : r.phone
+        return '연락처 없음'
       },
     },
     {
