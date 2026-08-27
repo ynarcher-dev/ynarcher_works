@@ -31,7 +31,6 @@ import { SectionHeading } from '@/features/startup/SectionHeading'
 import { PlaceholderCard } from '@/features/startup/PlaceholderCard'
 import { StartupMediaCard } from '@/features/startup/StartupMediaCard'
 import { readMedia } from '@/features/startup/startupMedia'
-import { StartupBenchmarkEntry } from '@/features/startup/StartupBenchmarkEntry'
 
 /** 첨부/피드백/기여 로그 대상 유형(다형 테이블 target_type). */
 const RESOURCE_TYPE = 'startup'
@@ -275,17 +274,16 @@ export function StartupDetailPage() {
             ))}
           </div>
 
-          {/* 우측(1/3): 자료 관리 → 관련 회의록 → 변동 이력 → 코멘트 → 기업 비교(좌우 비교 카드).
+          {/* 우측(1/3): 자료 관리 → 관련 회의록 → 변동 이력 → 코멘트.
               공용 순서에서 전자결재만 빠진다 — 스타트업은 결재를 올리는 단위가 아니라 사업이
-              결재를 올리는 대상이라, 여기에 빈 결재 상자를 두면 없는 흐름을 있는 것처럼 보인다. */}
+              결재를 올리는 대상이라, 여기에 빈 결재 상자를 두면 없는 흐름을 있는 것처럼 보인다.
+              벤치마크는 사이드바 '벤치마크' 화면이 전부 맡는다 — 여기 있던 진입점 카드는
+              비교군을 직접 담는 그 화면과 하는 일이 겹쳐 걷어냈다. */}
           <div className="space-y-4 lg:col-span-1">
             <MaterialPanel targetType={RESOURCE_TYPE} targetId={record.id} readOnly />
             <RelatedMinutesPanel targetType="startup" targetId={record.id} />
             <ChangeHistoryPanel contributions={contributions} />
             <FeedbackPanel targetType={RESOURCE_TYPE} targetId={record.id} />
-            {/* 벤치마크 — 비교 자체는 전역 우측 패널이 맡는다. 폭이 1/3 열에 묶여 두 기업에
-                갇혀 있던 것을 밖으로 꺼냈고, 여기에는 이 기업을 첫 열로 세우는 진입점만 둔다. */}
-            <StartupBenchmarkEntry record={record} />
           </div>
         </div>
       )}

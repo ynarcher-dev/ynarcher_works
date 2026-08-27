@@ -1,4 +1,4 @@
-import { Badge, CardHeading, CardShell } from '@ynarcher/ui'
+import { Badge, Card, CardShell } from '@ynarcher/ui'
 import { ExternalLink, ImageOff } from 'lucide-react'
 import { MEDIA_KINDS, type MediaItem } from '@/features/startup/startupMedia'
 
@@ -70,38 +70,34 @@ function groupByKind(media: MediaItem[]): { kind: string; items: MediaItem[] }[]
 
 /**
  * 미디어 카드(스타트업 상세, 활동 내역 아래). 읽기 전용.
- * 언론기사·영상 등 URL을 OG 메타데이터(제목·설명·썸네일·출처)와 함께,
- * 분류별 소제목 아래 1열 리스트로 묶어 보여준다(혼재 방지).
+ * 언론기사·영상 등 URL을 OG 메타데이터(제목·설명·썸네일·출처)와 함께 보여준다.
  * 편집·URL 첨부는 통합 수정 폼에서 관리한다.
+ *
+ * **분류마다 카드 하나**다. 한 카드 안에 소제목으로 언론기사·영상을 나눠 담았더니 상자는
+ * 하나인데 그 안에서 다시 구획이 생겨, 분류가 카드의 층인지 목록의 층인지 읽히지 않았다.
+ * '미디어'라는 묶음은 위의 SectionHeading이 이미 답하고 있으므로, 그 아래에서는 분류가
+ * 곧 카드다 — 같은 열의 다른 카드들과 같은 간격(부모 space-y-4)으로 선다.
  */
 export function StartupMediaCard({ media }: { media: MediaItem[] }) {
-  return (
-    <CardShell>
-      {media.length === 0 ? (
+  const groups = groupByKind(media)
+  if (groups.length === 0) {
+    return (
+      <CardShell>
         <p className="text-body text-gray-600">등록된 미디어가 없습니다.</p>
-      ) : (
-        <div className="space-y-5">
-          {groupByKind(media).map(({ kind, items }) => (
-            <div key={kind}>
-              {/* 소제목 밑줄은 같은 화면의 '비즈니스 & 팀 역량' 소제목(SubHead)과 같은 내부
-                  divider 단계(gray-200)를 쓴다 — 같은 층의 같은 요소가 화면 안에서 다른 굵기로
-                  보이면 층이 하나 더 있는 것처럼 읽힌다. */}
-              <CardHeading
-                level="subhead"
-                count={items.length}
-                className="mb-2 border-b border-gray-200 pb-1.5"
-              >
-                {kind}
-              </CardHeading>
-              <div className="space-y-2">
-                {items.map((item, i) => (
-                  <MediaRow key={i} item={item} />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </CardShell>
+      </CardShell>
+    )
+  }
+  return (
+    <>
+      {groups.map(({ kind, items }) => (
+        <Card key={kind} title={kind} count={items.length}>
+          <div className="space-y-2">
+            {items.map((item, i) => (
+              <MediaRow key={i} item={item} />
+            ))}
+          </div>
+        </Card>
+      ))}
+    </>
   )
 }

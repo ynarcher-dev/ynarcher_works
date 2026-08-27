@@ -15,14 +15,6 @@ import type { EntityRow } from '@/features/networks/hooks'
  */
 export const BENCHMARK_MAX = 5
 
-/** 비교군·기준연도를 담은 벤치마크 화면 주소. 상세페이지 진입점이 이 함수로 링크를 만든다. */
-export function benchmarkPath(ids: string[], year?: number | null): string {
-  const params = new URLSearchParams({ tab: BENCHMARK_TAB })
-  if (ids.length > 0) params.set('ids', ids.slice(0, BENCHMARK_MAX).join(','))
-  if (year != null) params.set('year', String(year))
-  return `/startup?${params.toString()}`
-}
-
 export interface BenchmarkSelection {
   /** 비교 대상 기업 id(왼쪽부터의 열 순서). */
   ids: string[]
