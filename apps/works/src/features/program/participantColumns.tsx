@@ -1,4 +1,5 @@
 import { Badge, type BadgeTone, type Column } from '@ynarcher/ui'
+import { Link } from 'react-router-dom'
 import { maskEmail, maskName, maskPhone } from '@/lib/mask'
 import type { SensitiveField } from '@/features/admin/sensitiveContents'
 import type { ParticipantRow } from '@/features/program/participantHooks'
@@ -9,6 +10,18 @@ const DEAD_STATUSES = ['FINISHED', 'CANCELLED']
 const MASTER_LABEL: Record<string, string> = {
   startups: 'NETWORKS 기업',
   experts: 'NETWORKS 전문가',
+}
+
+/**
+ * 대상 → 원장 상세 경로. 명부는 값을 복제하지 않고 원장을 가리키므로, 이름을 누르면
+ * 그 원장으로 간다(기업은 STARTUP 상세, 전문가는 NETWORKS 상세).
+ * 원장이 없는 내부 임직원 행은 갈 곳이 없어 링크를 걸지 않는다.
+ */
+function masterPath(row: ParticipantRow): string | null {
+  if (!row.master_id) return null
+  if (row.master_table === 'startups') return `/startup/discovered/${row.master_id}`
+  if (row.master_table === 'experts') return `/networks/experts/${row.master_id}`
+  return null
 }
 
 interface LoginBadge {
@@ -53,7 +66,25 @@ export function participantColumns(
   programStatus: string,
 ): Column<ParticipantRow>[] {
   return [
-    { key: 'targetName', header: '대상', type: 'name', render: (r) => r.targetName },
+    {
+      key: 'targetName',
+      header: '대상',
+      type: 'name',
+      render: (r) => {
+        const to = masterPath(r)
+        return to ? (
+          <Link
+            to={to}
+            onClick={(e) => e.stopPropagation()}
+            className="font-medium text-info underline underline-offset-2 transition-opacity duration-fast hover:opacity-80"
+          >
+            {r.targetName}
+          </Link>
+        ) : (
+          r.targetName
+        )
+      },
+    },
     {
       key: 'master_table',
       header: '원본 원장',

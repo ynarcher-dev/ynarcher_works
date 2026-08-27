@@ -163,6 +163,7 @@ export default {
         // 컨트롤(버튼·탭·인라인 액션) 라벨 전용 단계(13px). 본문(14)보다 한 단계 작게 눌러
         // 조작 요소가 읽을거리보다 앞으로 튀어나오지 않게 한다.
         'body-sm': ['0.8125rem', { lineHeight: '1.4', letterSpacing: '-0.01em' }],
+        'table-card': ['0.8125rem', { lineHeight: '1.4', letterSpacing: '0em' }],
         caption: ['0.75rem', { lineHeight: '1.4', letterSpacing: '0em' }],
         // 배지·태그 전용 단계(밀도 맥락 3종). 줄바꿈이 없는 한 줄 라벨이므로 line-height를 1로
         // 고정해 부모의 leading을 상속하지 않게 한다 — 상속하면 같은 배지가 화면마다 달라진다.

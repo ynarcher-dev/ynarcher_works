@@ -359,10 +359,10 @@ export const tableTextScale: Record<TableStage, TableTextSet> = {
     empty: 'text-gray-400',
   },
   card: {
-    head: 'text-caption font-semibold text-gray-600',
-    primary: 'text-caption font-medium text-gray-900',
-    body: 'text-caption text-gray-700',
-    meta: 'text-caption text-gray-600',
+    head: 'text-table-card font-semibold text-gray-600',
+    primary: 'text-table-card font-medium text-gray-900',
+    body: 'text-table-card text-gray-700',
+    meta: 'text-table-card text-gray-600',
     empty: 'text-gray-400',
   },
 }

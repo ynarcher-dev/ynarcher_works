@@ -80,7 +80,8 @@ interface StartupMaster {
   id: string
   name: string
   representative: string | null
-  contact: { email?: string; phone?: string } | null
+  email: string | null
+  phone: string | null
 }
 
 interface ExpertMaster {
@@ -89,11 +90,6 @@ interface ExpertMaster {
   affiliation: string | null
   email: string | null
   phone: string | null
-}
-
-function startupContact(row: StartupMaster): { email: string | null; phone: string | null } {
-  const c = row.contact ?? {}
-  return { email: c.email?.trim() || null, phone: c.phone?.trim() || null }
 }
 
 /** 명부 전체(역할 탭은 화면이 거른다). 원장 값은 조회로 합성한다. */
@@ -118,7 +114,7 @@ export function useProgramParticipants(programId: string | undefined) {
 
       const [startupsRes, expertsRes] = await Promise.all([
         startupIds.length
-          ? supabase.from('startups').select('id, name, representative, contact').in('id', startupIds)
+          ? supabase.from('startups').select('id, name, representative, email, phone').in('id', startupIds)
           : Promise.resolve({ data: [] }),
         expertIds.length
           ? supabase.from('experts').select('id, name, affiliation, email, phone').in('id', expertIds)
@@ -131,7 +127,9 @@ export function useProgramParticipants(programId: string | undefined) {
       return rows.map((r) => {
         const startup = r.master_table === 'startups' && r.master_id ? startups.get(r.master_id) : undefined
         const expert = r.master_table === 'experts' && r.master_id ? experts.get(r.master_id) : undefined
-        const contact = startup ? startupContact(startup) : { email: expert?.email ?? null, phone: expert?.phone ?? null }
+        // 연락처는 원장 화면이 쓰는 자리(email·phone 컬럼)에서만 읽는다. 옛 contact jsonb는
+        // 어느 화면도 읽지 않는 레거시라, 그쪽을 보면 명부와 원장이 서로 다른 값을 말한다.
+        const master = startup ?? expert
         return {
           id: r.id,
           role: r.role,
@@ -139,11 +137,11 @@ export function useProgramParticipants(programId: string | undefined) {
           master_id: r.master_id,
           user_id: r.user_id,
           login_status: r.login_status,
-          targetName: startup?.name ?? expert?.name ?? r.user?.name ?? '미지정',
+          targetName: master?.name ?? r.user?.name ?? '미지정',
           subtitle: startup?.representative ?? expert?.affiliation ?? '',
           loginName: startup?.representative ?? expert?.name ?? null,
-          email: contact.email ?? r.user?.email ?? null,
-          phone: contact.phone,
+          email: master?.email?.trim() || r.user?.email || null,
+          phone: master?.phone?.trim() || null,
         }
       })
     },
@@ -168,7 +166,7 @@ export function useMasterCandidates(
     queryFn: async (): Promise<MasterCandidate[]> => {
       const base =
         master === 'startups'
-          ? supabase.from('startups').select('id, name, representative, contact')
+          ? supabase.from('startups').select('id, name, representative, email, phone')
           : supabase.from('experts').select('id, name, affiliation, email, phone')
 
       let query = base.is('deleted_at', null).order('name', { ascending: true }).limit(50)
@@ -197,17 +195,14 @@ export function useMasterCandidates(
       )
 
       if (master === 'startups') {
-        return ((data ?? []) as StartupMaster[]).map((s) => {
-          const contact = startupContact(s)
-          return {
-            id: s.id,
-            name: s.name,
-            loginName: s.representative?.trim() || null,
-            email: contact.email,
-            phone: contact.phone,
-            alreadyMapped: taken.has(s.id),
-          }
-        })
+        return ((data ?? []) as StartupMaster[]).map((s) => ({
+          id: s.id,
+          name: s.name,
+          loginName: s.representative?.trim() || null,
+          email: s.email?.trim() || null,
+          phone: s.phone?.trim() || null,
+          alreadyMapped: taken.has(s.id),
+        }))
       }
       return ((data ?? []) as ExpertMaster[]).map((e) => ({
         id: e.id,

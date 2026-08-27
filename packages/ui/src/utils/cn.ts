@@ -25,6 +25,7 @@ const FONT_SIZE_TOKENS = [
   'body-lg',
   'body',
   'body-sm',
+  'table-card',
   'caption',
   'tag-page',
   'tag-card',
