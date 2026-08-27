@@ -58,7 +58,7 @@ Deno.serve(withCors(async (req: Request) => {
     }
 
     if (initial) {
-      const secret = Deno.env.get('SUPABASE_JWT_SECRET') ?? ''
+      const secret = Deno.env.get('GUEST_JWT_SECRET') ?? ''
       if (!secret) return jsonResponse({ error: 'jwt_secret_missing' }, 500)
       const nowSec = Math.floor(Date.now() / 1000)
       const changeTicket = await signJwt(

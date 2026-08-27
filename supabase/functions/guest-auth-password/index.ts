@@ -23,7 +23,7 @@ Deno.serve(withCors(async (req: Request) => {
     const { changeTicket, newPassword } = await req.json()
     if (!changeTicket || !newPassword) return jsonResponse({ error: 'invalid_request' }, 400)
 
-    const secret = Deno.env.get('SUPABASE_JWT_SECRET') ?? ''
+    const secret = Deno.env.get('GUEST_JWT_SECRET') ?? ''
     if (!secret) return jsonResponse({ error: 'jwt_secret_missing' }, 500)
 
     const claims = await verifyJwt(String(changeTicket), secret, 'guest-password-change')

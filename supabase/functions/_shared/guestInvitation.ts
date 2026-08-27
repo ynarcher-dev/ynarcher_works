@@ -227,7 +227,7 @@ export async function issueGuestSession(
     .eq('id', participant.program_id)
     .maybeSingle()
 
-  const secret = Deno.env.get('SUPABASE_JWT_SECRET') ?? ''
+  const secret = Deno.env.get('GUEST_JWT_SECRET') ?? ''
   if (!secret) {
     // 서명 키가 없으면 토큰은 발급되어도 PostgREST가 거절한다 — 조용히 나가면
     // "로그인은 됐는데 아무것도 안 보이는" 증상으로 나타나므로 여기서 멈춘다.
