@@ -1,4 +1,4 @@
-import { BackButton, Badge, Banner, Button, CardShell, cardText, DensityProvider, InfoField, PanelCard, Spinner } from '@ynarcher/ui'
+import { BackButton, Badge, Banner, Button, CardShell, cardText, DensityProvider, InfoField, Spinner } from '@ynarcher/ui'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { DetailDeleteButton } from '@/components/DetailDeleteButton'
@@ -31,6 +31,7 @@ import { SectionHeading } from '@/features/startup/SectionHeading'
 import { AC_WORKSPACE } from '@/features/ac/AcWorkspace'
 import { MNA_WORKSPACE } from '@/features/mna/MnaWorkspace'
 import { PROJECT_WORKSPACE } from '@/features/project/ProjectWorkspace'
+import { StartupManagerCard } from '@/features/startup/StartupManagerCard'
 import { StartupProgramCard } from '@/features/startup/StartupProgramCard'
 import { StartupMediaCard } from '@/features/startup/StartupMediaCard'
 import { readMedia } from '@/features/startup/startupMedia'
@@ -255,30 +256,9 @@ export function StartupDetailPage() {
             <SectionHeading title="미디어" />
             <StartupMediaCard media={readMedia(record)} />
 
-            {/* 관리 현황: 담당자(최상단) + 플랫폼 전반 참여·관리 이력(현재는 헤드라인만, 내용은 후속) */}
+            {/* 관리 현황: 담당자(최상단) + 사업 원장 3종 참여 목록 */}
             <SectionHeading title="관리 현황" />
-            {/* 담당자 카드(관리 현황 최상단). 관리 주체만 답한다 — 생성자는 별개 축이라 위 기본 데이터
-                카드의 기록 정보(수정일 옆)에 둔다. 투자기업만 지정 담당자(리드/지원)를 가지며,
-                비투자는 공동관리(특정 담당자 없음)다. */}
-            <PanelCard title="담당자">
-              {invested ? (
-                (managers ?? []).length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5">
-                    {(managers ?? []).map((m) => (
-                      <Badge key={m.user_id} tone={m.is_lead ? 'success' : 'neutral'}>
-                        {(m.user?.name ?? '-') + (m.is_lead ? ' (리드)' : '')}
-                      </Badge>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-body text-gray-600">지정된 담당자가 없습니다.</p>
-                )
-              ) : (
-                <p className="text-body text-gray-600">
-                  공동관리 — STARTUP 쓰기 권한자 누구나 수정할 수 있습니다.
-                </p>
-              )}
-            </PanelCard>
+            <StartupManagerCard invested={invested} managers={managers ?? []} />
             {/* 참여 목록 카드: 참가자 원장을 master_id로 역참조해 지금 걸려 있는 건만 표로 세운다. */}
             {PARTICIPATION_CARDS.map(({ config, title }) => (
               <StartupProgramCard

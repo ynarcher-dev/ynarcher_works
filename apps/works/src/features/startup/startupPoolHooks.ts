@@ -210,7 +210,15 @@ async function searchCondition(
 export interface StartupManagerRow {
   user_id: string
   is_lead: boolean
-  user: { id: string; name: string | null } | null
+  /** 배정 시점·배정한 사람 — 상세의 담당자 표가 읽는다(승격 RPC가 채운다). */
+  assigned_at: string | null
+  user: {
+    id: string
+    name: string | null
+    email: string | null
+    department_id: string | null
+  } | null
+  assigner: { name: string | null } | null
 }
 
 /** 특정 스타트업의 담당자 목록(리드 우선). id 미지정 시 비활성. */
@@ -221,7 +229,11 @@ export function useStartupManagers(startupId: string | undefined) {
     queryFn: async (): Promise<StartupManagerRow[]> => {
       const { data, error } = await supabase
         .from('startup_managers')
-        .select('user_id, is_lead, user:users!startup_managers_user_id_fkey(id, name)')
+        .select(
+          'user_id, is_lead, assigned_at, ' +
+            'user:users!startup_managers_user_id_fkey(id, name, email, department_id), ' +
+            'assigner:users!startup_managers_assigned_by_fkey(name)',
+        )
         .eq('startup_id', startupId)
         .order('is_lead', { ascending: false })
       if (error) throw error
