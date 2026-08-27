@@ -224,16 +224,21 @@ export function useMasterCandidates(
   })
 }
 
-/** 후보가 로그인 대상이 될 수 있는가(성명 + 연락처 하나 이상). */
+/**
+ * 후보가 로그인 대상이 될 수 있는가.
+ * 이메일과 연락처가 **둘 다** 있어야 한다 — 이메일은 ID이고 연락처는 초기 비밀번호라,
+ * 한쪽만으로는 로그인이 성립하지 않는다(2026-08-27 비밀번호 인증 전환).
+ */
 export function canMapCandidate(c: MasterCandidate): boolean {
-  return Boolean(c.loginName) && Boolean(c.email || c.phone)
+  return Boolean(c.loginName) && Boolean(c.email) && Boolean(c.phone)
 }
 
 /** 매핑 불가 사유(짧은 라벨). 가능하면 null. */
 export function mapBlockReason(c: MasterCandidate): string | null {
   if (c.alreadyMapped) return '등록됨'
   if (!c.loginName) return '성명 없음'
-  if (!c.email && !c.phone) return '연락처 없음'
+  if (!c.email) return '이메일 없음'
+  if (!c.phone) return '연락처 없음'
   return null
 }
 
@@ -280,6 +285,27 @@ export function useOpenGuestAccess(programId: string) {
       )
       if (error) throw new Error(data?.message ?? error.message)
       return { opened: data?.opened ?? 0, notified: data?.notified ?? 0, failed: data?.failed ?? 0 }
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: [config.key, 'participants', programId] })
+    },
+  })
+}
+
+/**
+ * 게스트 비밀번호 초기화. 다시 원장의 연락처가 초기 비밀번호가 되고, 다음 로그인 때
+ * 새 비밀번호를 정하게 된다(분실 대응).
+ */
+export function useResetGuestPassword(programId: string) {
+  const config = useProgramWorkspace()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (participantIds: string[]): Promise<number> => {
+      const { data, error } = await supabase.rpc('reset_program_guest_password', {
+        p_participant_ids: participantIds,
+      })
+      if (error) throw error
+      return (data as number | null) ?? 0
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: [config.key, 'participants', programId] })

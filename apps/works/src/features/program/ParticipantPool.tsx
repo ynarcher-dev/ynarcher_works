@@ -11,6 +11,7 @@ import {
   useCloseGuestAccess,
   useOpenGuestAccess,
   useProgramParticipants,
+  useResetGuestPassword,
   type ParticipantRow,
 } from '@/features/program/participantHooks'
 import { useProgramWorkspace } from '@/features/program/workspace'
@@ -52,6 +53,7 @@ export function ParticipantPool({ program }: { program: Program }) {
   const { data, isLoading, isError } = useProgramParticipants(program.id)
   const open = useOpenGuestAccess(program.id)
   const close = useCloseGuestAccess(program.id)
+  const resetPw = useResetGuestPassword(program.id)
 
   const rows = useMemo(() => data ?? [], [data])
   const isManager = useMemo(
@@ -105,6 +107,17 @@ export function ParticipantPool({ program }: { program: Program }) {
     })
   }
 
+  const runResetPassword = () => {
+    resetPw.mutate(selected, {
+      onSuccess: (n) => {
+        setSelected([])
+        toast.show(`비밀번호 ${n}건을 초기화했습니다.`, 'success')
+      },
+      onError: (e: unknown) =>
+        toast.show(e instanceof Error ? e.message : '초기화에 실패했습니다.', 'danger'),
+    })
+  }
+
   if (isLoading) {
     return (
       <Card title="연동 DB">
@@ -143,6 +156,13 @@ export function ParticipantPool({ program }: { program: Program }) {
                       onClick={runOpen}
                     >
                       로그인 허용
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      disabled={selected.length === 0 || resetPw.isPending}
+                      onClick={runResetPassword}
+                    >
+                      비밀번호 초기화
                     </Button>
                     <Button
                       variant="ghost"
