@@ -1,4 +1,4 @@
-import { Input, Modal, Spinner } from '@ynarcher/ui'
+import { EmptyState, Input, Modal, Spinner, cn, tableTextScale } from '@ynarcher/ui'
 import { useState } from 'react'
 import { PhotoBox } from '@/features/networks/PhotoBox'
 import { useEntityList, type EntityRow } from '@/features/networks/hooks'
@@ -38,9 +38,9 @@ export function StartupBenchmarkPicker({ open, onClose, onPick, excludeIds = [] 
               <Spinner />
             </div>
           ) : rows.length === 0 ? (
-            <p className="py-8 text-center text-body text-gray-500">검색 결과가 없습니다.</p>
+            <EmptyState title="검색 결과가 없습니다" />
           ) : (
-            <ul className="divide-y divide-gray-100">
+            <ul className="divide-y divide-gray-200">
               {rows.map((r) => {
                 const logo = r.logo_url ? String(r.logo_url) : null
                 const industry = readIndustries(r).join(' · ')
@@ -52,12 +52,12 @@ export function StartupBenchmarkPicker({ open, onClose, onPick, excludeIds = [] 
                         onPick(r.id)
                         onClose()
                       }}
-                      className="flex w-full items-center gap-3 rounded-radius-md px-2 py-2 text-left transition-colors hover:bg-gray-50"
+                      className="flex w-full items-center gap-3 rounded-radius-md px-2 py-2 text-left transition-colors hover:bg-gray-25"
                     >
                       <PhotoBox src={logo} className="size-9 rounded-radius-md" />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-body font-medium text-gray-900">{r.name}</p>
-                        {industry && <p className="truncate text-caption text-gray-600">{industry}</p>}
+                        <p className={cn('truncate', tableTextScale.page.primary)}>{r.name}</p>
+                        {industry && <p className={cn('truncate', tableTextScale.page.meta)}>{industry}</p>}
                       </div>
                     </button>
                   </li>

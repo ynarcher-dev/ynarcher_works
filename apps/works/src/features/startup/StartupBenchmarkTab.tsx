@@ -1,4 +1,14 @@
-import { Button, EmptyState, ListToolbar, Select, Spinner, TextAction, cardText, cn } from '@ynarcher/ui'
+import {
+  Button,
+  EmptyState,
+  ListToolbar,
+  Select,
+  Spinner,
+  TextAction,
+  cn,
+  formText,
+  tableTextScale,
+} from '@ynarcher/ui'
 import { Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { StartupBenchmarkMatrix } from '@/features/startup/StartupBenchmarkMatrix'
@@ -58,7 +68,7 @@ export function StartupBenchmarkTab() {
             {/* 기준연도 — 열마다 다른 연도의 실적을 나란히 놓으면 그것은 비교가 아니다.
                 기본값('각사 최신')은 데이터가 성긴 초기 기업까지 한 줄이라도 보여주기 위한 것이고,
                 연도를 고정하면 그 해 실적이 없는 열은 '정보 없음'으로 정직하게 비워진다. */}
-            <label className={cardText.label} htmlFor="benchmark-base-year">
+            <label className={formText.label} htmlFor="benchmark-base-year">
               기준연도
             </label>
             <Select
@@ -78,7 +88,9 @@ export function StartupBenchmarkTab() {
         }
         actions={
           <div className="flex items-center gap-2">
-            <span className={cn(cardText.meta, 'tabular-nums')}>
+            {/* 담긴 수/상한 — 옆 버튼과 같은 크기(본문)에 색만 한 단 연하게 둔다. 크기를 줄이면
+                한 줄 안에서 크기로 위계를 만드는 셈이라 원칙(densityScale)에 어긋난다. */}
+            <span className={cn(tableTextScale.page.meta, 'tabular-nums')}>
               {ids.length}/{BENCHMARK_MAX}
             </span>
             {ids.length > 0 && <TextAction onClick={clear}>초기화</TextAction>}
@@ -88,13 +100,11 @@ export function StartupBenchmarkTab() {
       />
 
       {ids.length === 0 ? (
-        <div className="rounded-radius-md border border-dashed border-gray-300 bg-white">
-          <EmptyState
-            title="비교할 기업이 없습니다"
-            description={`기업을 골라 나란히 세웁니다. 최대 ${BENCHMARK_MAX}곳까지 담을 수 있습니다.`}
-            action={addButton}
-          />
-        </div>
+        <EmptyState
+          title="비교할 기업이 없습니다"
+          description={`기업을 골라 나란히 세웁니다. 최대 ${BENCHMARK_MAX}곳까지 담을 수 있습니다.`}
+          action={addButton}
+        />
       ) : isLoading && rows.length === 0 ? (
         <div className="py-16">
           <Spinner />

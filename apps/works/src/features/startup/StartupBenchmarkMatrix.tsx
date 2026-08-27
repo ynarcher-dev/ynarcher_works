@@ -45,7 +45,7 @@ function Head({ snapshot, onRemove }: { snapshot: CompanySnapshot; onRemove: () 
           type="button"
           onClick={onRemove}
           aria-label={`${record.name} 비교에서 빼기`}
-          className="absolute -right-1.5 -top-1.5 grid size-5 place-items-center rounded-full bg-danger text-white shadow-popover transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10"
+          className="absolute -right-1.5 -top-1.5 grid size-5 place-items-center rounded-full bg-danger text-white transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10"
         >
           <X className="size-3" strokeWidth={3} aria-hidden />
         </button>
@@ -95,15 +95,15 @@ export function StartupBenchmarkMatrix({ snapshots, onRemove }: Props) {
   // 페이지가 아니라 이 상자여야 한다. 세로 상한은 화면 높이에 맞춰 잡는다.
   return (
     <div className="max-h-[70vh] overflow-auto rounded-radius-md border border-gray-300 bg-white">
-      <div className="min-w-full" style={{ gridTemplateColumns: columns, display: 'grid' }}>
+      <div className="grid min-w-full" style={{ gridTemplateColumns: columns }}>
         {/* 기업 헤더 행 — 세로 스크롤 중에도 어느 열이 어느 기업인지 남아 있어야 한다.
             좌상단 모서리는 가로·세로 양쪽으로 고정되므로 다른 고정 셀보다 위에 있어야 한다.
             같은 단계에 두면 DOM 뒤에 오는 항목열 셀이 스크롤 중 이 자리를 덮고 지나간다. */}
-        <div className="sticky left-0 top-0 z-dropdown border-b border-gray-300 bg-white" />
+        <div className="sticky left-0 top-0 z-dropdown border-b border-gray-300 bg-gray-25" />
         {snapshots.map((s, i) => (
           <div
             key={s.record.id}
-            className={cn('sticky top-0 z-sticky border-b border-gray-300 bg-white pt-3', ruleOf(i))}
+            className={cn('sticky top-0 z-sticky border-b border-gray-300 bg-gray-25 pt-3', ruleOf(i))}
           >
             <Head snapshot={s} onRemove={() => onRemove(s.record.id)} />
           </div>
@@ -115,7 +115,7 @@ export function StartupBenchmarkMatrix({ snapshots, onRemove }: Props) {
                 열 경계선을 끊고 지나가므로 띄우지 않고 표에 붙여 둔다(띄우면 세로선이 두 번
                 끊겨 표가 여러 덩이로 보인다). */}
             <div
-              className="col-span-full flex items-center justify-between border-y border-gray-300 bg-gray-50 px-2.5 py-1.5"
+              className="col-span-full flex items-center justify-between border-y border-gray-300 bg-gray-25 px-2.5 py-1.5"
               style={{ gridColumn: '1 / -1' }}
             >
               <span className={cn(text.head, 'text-gray-900')}>{group.title}</span>
