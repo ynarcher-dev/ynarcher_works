@@ -103,7 +103,7 @@ export function StartupBenchmarkMatrix({ snapshots, onRemove }: Props) {
         {snapshots.map((s, i) => (
           <div
             key={s.record.id}
-            className={cn('sticky top-0 z-sticky border-b border-gray-300 bg-white pt-2', ruleOf(i))}
+            className={cn('sticky top-0 z-sticky border-b border-gray-300 bg-white pt-3', ruleOf(i))}
           >
             <Head snapshot={s} onRemove={() => onRemove(s.record.id)} />
           </div>
