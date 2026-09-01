@@ -6,24 +6,20 @@ import type { BadgeTone } from '@ynarcher/ui'
  * 상태 라벨·톤은 WORKS의 표시 규격(apps/works/src/features/program/config.ts)을 그대로
  * 옮긴 부분집합이다 — 게스트는 상태를 고르지 않으므로 수명주기 로직은 가져오지 않고,
  * 이미 붙은 값을 읽는 데 필요한 표만 든다. WORKS에서 라벨을 바꾸면 여기도 함께 맞출 것.
+ * AC 제안 단계(시도·선정·미선정)는 내부 사업현황이라 guest-auth-refresh가 null로 지워
+ * 보내므로 이 표에 없다.
  */
 export const PROGRAM_STATUS_LABEL: Record<string, string> = {
-  PROPOSED: '시도',
-  SELECTED: '선정',
   DRAFT: '준비',
   OPERATING: '진행중',
   FINISHED: '종료',
   CANCELLED: '취소',
-  NOT_SELECTED: '미선정',
   RECRUITING: '모집',
   SCREENING: '심사',
   DEMO_DAY: '데모데이',
 }
 
 export const PROGRAM_STATUS_TONE: Record<string, BadgeTone> = {
-  PROPOSED: 'warning',
-  SELECTED: 'success',
-  NOT_SELECTED: 'danger',
   DRAFT: 'neutral',
   OPERATING: 'info',
   FINISHED: 'success',

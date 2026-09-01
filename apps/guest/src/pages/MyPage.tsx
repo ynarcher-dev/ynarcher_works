@@ -54,9 +54,12 @@ export function MyPage() {
       <Card
         title="참여 중인 사업"
         actions={
-          <Badge tone={PROGRAM_STATUS_TONE[me.program.status] ?? 'neutral'}>
-            {PROGRAM_STATUS_LABEL[me.program.status] ?? me.program.status}
-          </Badge>
+          // 라벨 표에 있는 운영 상태만 배지로 그린다 — 내부 상태 코드를 원문으로 흘리지 않는다.
+          me.program.status && PROGRAM_STATUS_LABEL[me.program.status] && (
+            <Badge tone={PROGRAM_STATUS_TONE[me.program.status] ?? 'neutral'}>
+              {PROGRAM_STATUS_LABEL[me.program.status]}
+            </Badge>
+          )
         }
       >
         <InfoGrid columns={2}>

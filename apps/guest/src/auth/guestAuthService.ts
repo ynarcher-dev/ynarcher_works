@@ -41,7 +41,8 @@ export interface GuestMe {
     id: string
     title: string
     code: string | null
-    status: string
+    /** 운영 상태만 온다 — AC 제안 단계(시도·선정·미선정)는 내부 정보라 서버가 null로 지운다. */
+    status: string | null
     start_date: string | null
     end_date: string | null
     host_organization: string | null

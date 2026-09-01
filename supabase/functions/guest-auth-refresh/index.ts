@@ -27,6 +27,12 @@ const EXPIRED = {
 /** 게스트가 진입할 수 없는 사업 상태(로그인과 같은 기준). */
 const DEAD_PROGRAM_STATUSES = new Set(['FINISHED', 'CANCELLED'])
 
+/**
+ * AC 제안 단계(사업 유치) 상태 — 와이앤아처 내부의 사업현황이지 참여자의 선정 여부가
+ * 아니므로 게스트에게 보내지 않는다('미선정' 배지를 참여기업이 자기 일로 오독한다).
+ */
+const INTERNAL_ONLY_STATUSES = new Set(['PROPOSED', 'SELECTED', 'NOT_SELECTED'])
+
 Deno.serve(withCors(async (req: Request) => {
   if (req.method !== 'POST') return jsonResponse({ error: 'method_not_allowed' }, 405)
 
@@ -77,7 +83,10 @@ Deno.serve(withCors(async (req: Request) => {
         name,
         email: session.user.email,
       },
-      program: programOut,
+      program: {
+        ...programOut,
+        status: INTERNAL_ONLY_STATUSES.has(program.status) ? null : program.status,
+      },
       participation: {
         roles: [...new Set(participations.map((p) => p.role))],
         joined_at: participations[0].joined_at,
