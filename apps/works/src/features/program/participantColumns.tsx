@@ -70,7 +70,7 @@ export function loginBadge(row: ParticipantRow, programStatus: string): LoginBad
 }
 
 /**
- * 연동 DB 표의 컬럼.
+ * 참가자/전문가 표의 컬럼.
  *
  * 로그인 주체는 성명과 연락처 두 열로 나눈다 — 둘은 다른 축이다. 성명은 이 사업에 누가
  * 들어오는가(기업은 원장의 대표자, 전문가는 본인)이고, 연락처는 인증번호가 어디로 가는가다.

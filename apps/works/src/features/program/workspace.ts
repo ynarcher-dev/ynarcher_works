@@ -99,7 +99,7 @@ export interface ProgramWorkspaceConfig {
    */
   hasHostOrganization: boolean
   /**
-   * 연동 DB 명부의 게스트 로그인 개방 운용 여부.
+   * 참가자/전문가 명부의 게스트 로그인 개방 운용 여부.
    *
    * AC만 true다 — 게스트 포털이 읽는 원장(program_participants)과 조회 범위 판정이
    * AC 사업을 기준으로 서 있어, M&A·PROJECT 참가자는 명부에 올라도 로그인해서 볼 것이

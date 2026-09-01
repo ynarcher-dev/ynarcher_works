@@ -26,7 +26,7 @@ function matches(row: ParticipantRow, keyword: string): boolean {
 }
 
 /**
- * 사업 상세 개요 좌측 '연동 DB' 탭.
+ * 사업 상세 개요 좌측 '참가자/전문가' 탭.
  *
  * 명부에 올리는 일과 로그인을 여는 일이 갈려 있다 — 참여 후보를 쌓아 두더라도 확정 전에는
  * 문이 열리지 않는다. 문을 여닫을 수 있는 사람은 그 사업의 담당자(PM·MEMBER)뿐이며,
@@ -35,7 +35,7 @@ function matches(row: ParticipantRow, keyword: string): boolean {
  * 게스트 로그인 개방은 AC만 열려 있다(ProgramWorkspaceConfig.guestAccess).
  * M&A·PROJECT는 같은 화면을 공유하므로 명부까지만 동작하고 개방 영역은 서지 않는다.
  *
- * 셸·툴바·표는 전부 공용 규격이다 — 카드는 형제 탭(일정관리)과 같은 `Card`, 검색·필터·액션
+ * 셸·툴바·표는 전부 공용 규격이다 — 카드는 형제 탭(프로그램)과 같은 `Card`, 검색·필터·액션
  * 한 줄은 원장 목록과 같은 `ListToolbar`, 역할은 손수 만든 칩 나열이 아니라 목록 필터와 같은
  * `MultiSelectFilter`이며 건수는 그 선택지가 함께 답한다. 총 건수는 카드 제목 옆 한자리다.
  */
@@ -120,7 +120,7 @@ export function ParticipantPool({ program }: { program: Program }) {
 
   if (isLoading) {
     return (
-      <Card title="연동 DB">
+      <Card title="참가자/전문가">
         <Spinner />
       </Card>
     )
@@ -129,7 +129,7 @@ export function ParticipantPool({ program }: { program: Program }) {
   return (
     <>
       <Card
-        title="연동 DB"
+        title="참가자/전문가"
         count={rows.length}
         subtitle={config.guestAccess ? `사업 코드 ${program.code || '미발급'}` : undefined}
       >

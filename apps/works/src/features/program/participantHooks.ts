@@ -4,7 +4,7 @@ import { sanitizeOrValue } from '@/features/master/ledgerPage'
 import { useProgramWorkspace } from '@/features/program/workspace'
 
 /**
- * 연동 DB(참가자 명부) 데이터 계층.
+ * 참가자/전문가(참가자 명부) 데이터 계층.
  *
  * 명부의 값은 원장(NETWORKS 기업·전문가)이 소유한다 — 여기서는 복제하지 않고 조회로 합성한다.
  * master_id는 FK가 아닌 soft ref라 임베드가 되지 않으므로, 명부를 읽은 뒤 원장을 한 번 더
