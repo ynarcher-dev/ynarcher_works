@@ -1,7 +1,9 @@
-import { EmptyState, PageHeader, Spinner } from '@ynarcher/ui'
+import { Badge, EmptyState, PageHeader, Spinner } from '@ynarcher/ui'
 import {
+  MODULE_STATUS_TONE,
   formatModulePeriod,
   moduleDisplayName,
+  moduleStatusLabel,
   readModuleSettings,
 } from '@ynarcher/master-data'
 import { useParams } from 'react-router-dom'
@@ -21,8 +23,11 @@ import { SatisfactionModule } from '@/pages/modules/SatisfactionModule'
  * 일정이 게스트 쪽에서 도달하는 자리가 바로 여기이며, 어떤 템플릿이든 최소한 '무엇을 하라는
  * 것인가'와 '언제까지의 일인가'는 답한다. 몸통만 템플릿이 가른다.
  *
- * 상태·템플릿 배지는 세우지 않는다(2026-09-01) — 게스트에게 메뉴가 열려 있다는 사실은 메뉴가
- * 서 있는 것 자체가 말하고, 템플릿 이름은 내부 운영 용어라 참여자에게 답하는 것이 없다.
+ * **상태 배지는 제목 옆에 선다**(2026-09-01 사용자 지정 — 같은 날 아침의 '세우지 않는다'를
+ * 뒤집었다). 메뉴가 서 있다는 것은 '열려 있다'만 말할 뿐, 준비 중인지 진행 중인지 이미
+ * 끝났는지는 답하지 못한다 — 참여자가 지금 무엇을 해야 하는지가 그 한 칸에 걸린다.
+ * 라벨·톤은 공통 어휘(master-data)가 소유하므로 WORKS 모듈 카드의 배지와 같은 말·같은 색이다.
+ * 템플릿 배지는 여전히 세우지 않는다 — 내부 운영 용어라 참여자에게 답하는 것이 없다.
  */
 export function ModulePage() {
   const { moduleId } = useParams<{ moduleId: string }>()
@@ -53,6 +58,11 @@ export function ModulePage() {
           같은 자리), 그 외에는 NOTICE. 세울 것이 없으면 empty:hidden으로 칸째 사라진다. */}
       <PageHeader
         title={moduleDisplayName(mod)}
+        titleExtra={
+          <Badge tone={MODULE_STATUS_TONE[mod.status] ?? 'neutral'}>
+            {moduleStatusLabel(mod.status)}
+          </Badge>
+        }
         description={
           <>
             {/* 안내는 메타가 아니라 지시문이므로 본문 색으로 세운다. */}

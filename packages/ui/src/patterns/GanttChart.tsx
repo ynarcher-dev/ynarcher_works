@@ -46,6 +46,11 @@ export interface GanttRow {
   title?: string
   /** 막대·라벨 클릭. 없으면 클릭 대상이 아닌 정적 행으로 그린다. */
   onClick?: () => void
+  /**
+   * 라벨 칸 오른쪽 끝의 액션(설정·끄기 등). 라벨 버튼 **바깥**에 형제로 놓는다 —
+   * 버튼 안에 버튼을 넣으면 마크업이 무효고 클릭이 서로를 삼킨다.
+   */
+  labelAction?: ReactNode
 }
 
 export interface GanttChartProps {
@@ -166,29 +171,31 @@ export function GanttChart({
             >
               {labelHeader}
             </div>
-            {items.map(({ row }) =>
-              row.onClick ? (
-                <button
-                  key={row.key}
-                  type="button"
-                  onClick={row.onClick}
-                  className="flex w-full items-center gap-2 border-b border-gray-100 px-3 text-left transition-colors duration-fast hover:bg-gray-25 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10"
-                  style={{ height: rowHeight }}
-                  title={row.title}
-                >
-                  {row.label}
-                </button>
-              ) : (
-                <div
-                  key={row.key}
-                  className="flex w-full items-center gap-2 border-b border-gray-100 px-3"
-                  style={{ height: rowHeight }}
-                  title={row.title}
-                >
-                  {row.label}
-                </div>
-              ),
-            )}
+            {items.map(({ row }) => (
+              <div
+                key={row.key}
+                className="flex w-full items-center border-b border-gray-100 pr-2"
+                style={{ height: rowHeight }}
+              >
+                {row.onClick ? (
+                  <button
+                    type="button"
+                    onClick={row.onClick}
+                    className="flex h-full min-w-0 flex-1 items-center gap-2 px-3 text-left transition-colors duration-fast hover:bg-gray-25 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10"
+                    title={row.title}
+                  >
+                    {row.label}
+                  </button>
+                ) : (
+                  <div className="flex h-full min-w-0 flex-1 items-center gap-2 px-3" title={row.title}>
+                    {row.label}
+                  </div>
+                )}
+                {row.labelAction && (
+                  <span className="flex shrink-0 items-center gap-1 pl-1">{row.labelAction}</span>
+                )}
+              </div>
+            ))}
           </div>
 
           {/* 타임라인(flex-1: 넓은 화면에선 늘어나 여백 제거, 좁으면 최소폭에서 스크롤) */}

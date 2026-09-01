@@ -1,4 +1,5 @@
-import { Badge, Select, useToast } from '@ynarcher/ui'
+import { Badge, IconButton, Select, useToast } from '@ynarcher/ui'
+import { Pencil, X } from 'lucide-react'
 import { useState } from 'react'
 import { MODULE_TYPES, MODULE_VISIBILITY_LABEL, MODULE_VISIBILITY_TONE } from '@/features/program/config'
 import type { ProgramModule } from '@/features/program/hooks'
@@ -32,16 +33,23 @@ type Dragging = { id: string; status: string }
 /**
  * 운영 모듈 칸반 보드 뷰. 모듈을 상태(준비/진행/완료/취소) 컬럼으로 배치한다.
  * 카드를 다른 컬럼으로 드래그앤드롭하면 해당 상태로 변경한다(낙관적 업데이트, 실패 시 롤백).
- * 카드 클릭은 목록 뷰와 동일하게 해당 운영 화면으로 진입한다(설정/비활성은 목록 뷰에서).
+ * 카드 클릭은 해당 운영 화면으로 진입하고, 카드 아래 줄에 상태 셀렉트와 설정·끄기가 선다
+ * (2026-09-01 목록 뷰를 걷어내면서 그 뷰에만 있던 두 액션이 칸반·간트로 옮겨 왔다).
  */
 export function ModuleKanbanView({
   programId,
   modules,
   onOpenModule,
+  onEditModule,
+  onDisableModule,
 }: {
   programId: string
   modules: ProgramModule[]
   onOpenModule: (module: ProgramModule) => void
+  /** 모듈 설정 열기. 목록 뷰를 걷어낸 뒤(2026-09-01) 설정·끄기가 칸반·간트로 왔다. */
+  onEditModule?: (module: ProgramModule) => void
+  /** 모듈 끄기(비활성). */
+  onDisableModule?: (module: ProgramModule) => void
 }) {
   const toast = useToast()
   const updateStatus = useUpdateModuleStatus(programId)
@@ -163,11 +171,14 @@ export function ModuleKanbanView({
                         </span>
                       </span>
                     </button>
-                    <div className="border-t border-gray-100 px-2 py-2">
+                    {/* 카드 아래 한 줄: 상태 셀렉트 + 설정·끄기. 목록 뷰를 걷어내면서
+                        그 뷰에만 있던 두 액션이 여기로 왔다(간트도 같은 짝을 갖는다). */}
+                    <div className="flex items-center gap-1 border-t border-gray-100 px-2 py-2">
                       <label className="sr-only" htmlFor={`module-status-${mod.id}`}>
                         {nameOf(mod)} 상태 변경
                       </label>
                       <Select
+                        className="min-w-0 flex-1"
                         id={`module-status-${mod.id}`}
                         density="table"
                         value={mod.status ?? 'DRAFT'}
@@ -180,6 +191,23 @@ export function ModuleKanbanView({
                           </option>
                         ))}
                       </Select>
+                      {onEditModule && (
+                        <IconButton
+                          title="모듈 설정"
+                          label={`${nameOf(mod)} 설정`}
+                          onClick={() => onEditModule(mod)}
+                          icon={<Pencil className="h-3.5 w-3.5" />}
+                        />
+                      )}
+                      {onDisableModule && (
+                        <IconButton
+                          title="모듈 끄기"
+                          label={`${nameOf(mod)} 끄기`}
+                          danger
+                          onClick={() => onDisableModule(mod)}
+                          icon={<X className="h-3.5 w-3.5" />}
+                        />
+                      )}
                     </div>
                   </li>
                 )

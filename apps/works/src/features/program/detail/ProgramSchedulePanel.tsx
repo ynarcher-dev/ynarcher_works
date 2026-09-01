@@ -1,9 +1,11 @@
 import { Card, ScheduleBoard, Spinner, ViewToggleGroup, type ScheduleView } from '@ynarcher/ui'
 import {
   MODULE_STATUS_BAR_CLASS,
+  MODULE_STATUS_TONE,
   MODULE_STATUS_COLUMNS,
   isGuestSharedModule,
   moduleDisplayName,
+  moduleStatusLabel,
   readModuleSettings,
 } from '@ynarcher/master-data'
 import { CalendarDays, ChartGantt, ChevronLeft, ChevronRight, SquareKanban } from 'lucide-react'
@@ -51,6 +53,9 @@ export function ProgramSchedulePanel({
       start: settings.start_date ?? null,
       end: settings.end_date ?? null,
       status: mod.status ?? 'DRAFT',
+      // 제목 옆 상태 태그 — 프로그램 탭 간트와 같은 말·같은 색(라벨·톤은 공통 어휘 소유).
+      statusLabel: moduleStatusLabel(mod.status),
+      statusTone: MODULE_STATUS_TONE[mod.status ?? 'DRAFT'] ?? 'neutral',
       barClass: MODULE_STATUS_BAR_CLASS[mod.status ?? 'DRAFT'],
       onClick: () => onOpenModule(mod),
     }

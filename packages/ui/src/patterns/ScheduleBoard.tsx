@@ -20,6 +20,9 @@ export interface ScheduleEvent {
   end?: string | null
   /** 칸반 열을 가르는 키(상태). columns의 key와 맞춘다. */
   status?: string
+  /** 제목 옆 상태 태그. 프로그램 탭 간트와 같은 자리·같은 말이라 두 화면이 같게 읽힌다. */
+  statusLabel?: string
+  statusTone?: BadgeTone
   /** 캘린더 바·간트 막대 색. */
   barClass?: string
   onClick?: () => void
@@ -276,9 +279,12 @@ function ScheduleGantt({ events, emptyText }: { events: ScheduleEvent[]; emptyTe
       title: `${e.title} · ${periodLabel(e)}`,
       onClick: e.onClick,
       label: (
-        <span className="min-w-0 flex-1 truncate text-body font-semibold text-gray-900">
-          {e.title}
-        </span>
+        <>
+          <span className="min-w-0 flex-1 truncate text-body font-semibold text-gray-900">
+            {e.title}
+          </span>
+          {e.statusLabel && <Badge tone={e.statusTone ?? 'neutral'}>{e.statusLabel}</Badge>}
+        </>
       ),
     })
   }
