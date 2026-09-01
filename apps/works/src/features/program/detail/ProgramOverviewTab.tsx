@@ -15,7 +15,7 @@ import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 
-type LeftTab = 'intro' | 'announcements' | 'qna' | 'modules' | 'participants'
+type LeftTab = 'modules' | 'participants' | 'intro' | 'announcements' | 'qna'
 
 const BASE_TABS: { key: LeftTab; label: string }[] = [
   { key: 'modules', label: '일정관리' },
@@ -24,9 +24,10 @@ const BASE_TABS: { key: LeftTab; label: string }[] = [
 
 /**
  * 프로그램 상세 개요(NETWORKS·STARTUP 상세와 동일한 2/3 + 1/3 카드섹션 컴포지션).
- * 좌측 본문(2/3): 기본 데이터 카드 → 서브 탭(사업개요 · 공지사항 · QNA · 일정관리 · 연동 DB).
- * 앞의 세 탭은 게스트 고정 메뉴로 나가는 화면이라 원장을 둔 워크스페이스(AC)에서만 서고,
- * 사업개요가 설 때는 첫 탭이자 기본 탭이다 — 게스트가 로그인 직후 처음 보는 것과 같은 순서다.
+ * 좌측 본문(2/3): 기본 데이터 카드 → 서브 탭(일정관리 · 연동 DB ┃ 사업개요 · 공지사항 · QNA).
+ * 구분선 뒤 세 탭은 **게스트에게 그대로 나가는 화면**이라 내부 운영 탭과 층이 다르다
+ * (2026-09-01 사용자 지정 순서) — 원장을 둔 워크스페이스(AC)에서만 서며, 기본 탭은 언제나
+ * 첫 탭인 일정관리다.
  * '평가 엔진' 탭은 2026-08-27 걷어냈다 — 평가는 사업 상세에 늘 떠 있어야 하는 축이 아니라
  * 서면평가·대면평가 모듈을 켰을 때의 운영 화면이라, 모듈과 무관한 상시 탭 자리를 차지할 이유가 없다.
  * 우측(1/3): 자료 관리 → 관련 전자결재 → 관련 회의록 → 변동 이력 → 코멘트(상세 공통 순서).
@@ -47,17 +48,20 @@ export function ProgramOverviewTab({
 }) {
   const config = useProgramWorkspace()
   const { data: contributions } = useProgramContributions(program.id)
-  const hasIntro = Boolean(config.tables.overviews)
-  // 게스트향 고정 화면 3종(사업개요·공지사항·QNA)은 원장을 둔 워크스페이스(AC)에서만 선다.
-  const leftTabs: { key: LeftTab; label: string }[] = [
-    ...(hasIntro ? [{ key: 'intro' as const, label: '사업개요' }] : []),
+  // 게스트향 화면 3종(사업개요·공지사항·QNA)은 원장을 둔 워크스페이스(AC)에서만 서고,
+  // 내부 운영 탭 뒤에 구분선으로 갈라 세운다 — 첫 줄에만 divider를 달아 묶음의 시작을 알린다.
+  const guestTabs: { key: LeftTab; label: string }[] = [
+    ...(config.tables.overviews ? [{ key: 'intro' as const, label: '사업개요' }] : []),
     ...(config.tables.announcements
       ? [{ key: 'announcements' as const, label: '공지사항' }]
       : []),
     ...(config.tables.questions ? [{ key: 'qna' as const, label: 'QNA' }] : []),
-    ...BASE_TABS,
   ]
-  const [leftTab, setLeftTab] = useState<LeftTab>(hasIntro ? 'intro' : 'modules')
+  const leftTabs = [
+    ...BASE_TABS,
+    ...guestTabs.map((tab, i) => (i === 0 ? { ...tab, divider: true } : tab)),
+  ]
+  const [leftTab, setLeftTab] = useState<LeftTab>('modules')
 
   return (
     <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">

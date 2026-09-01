@@ -1,22 +1,25 @@
 import {
   Badge,
   Card,
+  DataTable,
+  EmptyValue,
   Input,
-  MiniPager,
+  ListToolbar,
   PageHeader,
   Spinner,
   TextArea,
-  usePaged,
   useToast,
+  type Column,
 } from '@ynarcher/ui'
 import { useState } from 'react'
 import { GuestButton } from '@/components/GuestButton'
+import { GUEST_LIST_PAGE_SIZE, matchesKeyword, pageSlice } from '@/features/listFilter'
 import { useCreateQuestion, useMyQuestions, type GuestQuestion } from '@/features/qnaHooks'
 import { RICH_BODY_CLASS, sanitizeRichText } from '@/lib/richText'
 
 /**
  * QNA — 고정 메뉴 세 번째 줄이자 **게스트가 처음으로 글을 쓰는 화면**(1:1 문의함).
- * 좌측(2)은 내 질문과 답변, 우측(1)은 질문 작성이다(메뉴 화면과 같은 2:1 비율).
+ * 좌측(2)은 내 질문 표, 우측(1)은 질문 작성이다(메뉴 화면과 같은 2:1 비율).
  * 다른 참여자의 질문은 보이지 않는다 — 판정은 화면이 아니라 RLS가 한다(qnaHooks 머리말).
  * 답변은 담당자가 WORKS 에디터로 쓰므로 글쓰기·공지와 같은 정화기·조판으로 그린다.
  */
@@ -44,68 +47,113 @@ export function QnaPage() {
   )
 }
 
-/** 내 질문 목록(제목 줄 → 펼쳐 읽기). 답변 여부는 배지가 답한다. */
+/**
+ * 내 질문 — 데이터테이블 + 검색(2026-09-01 사용자 요청, 종전 펼침 목록 대체). 행을 누르면
+ * 표 아래에 질문·답변 상세가 선다 — 표의 행은 훑는 자리고 본문은 읽는 자리라, 행 안에
+ * 본문을 펼치면 열 위치가 흔들린다. 순번·표준 메타 열은 두지 않는다(작성자는 언제나
+ * 본인이고, 이 표가 답하는 것은 "무엇을 물었고 답이 왔는가"뿐이다).
+ * 검색 대상에 답변 본문도 넣는다 — 찾는 사람이 기억하는 말이 질문이 아니라 답에 있을 수 있다.
+ */
 function MyQuestionsCard({ list }: { list: GuestQuestion[] }) {
-  const [openId, setOpenId] = useState<string | null>(null)
-  const { pageItems, page, setPage, pageCount } = usePaged(list)
+  const [keyword, setKeyword] = useState('')
+  const [page, setPage] = useState(0)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const filtered = list.filter((q) => matchesKeyword(keyword, q, q.answer_body))
+  const { pageRows, safePage } = pageSlice(filtered, page)
+  const selected = list.find((q) => q.id === selectedId) ?? null
+
+  const columns: Column<GuestQuestion>[] = [
+    {
+      key: 'status',
+      header: '상태',
+      type: 'badge',
+      render: (q) => (
+        <Badge tone={q.answer_body ? 'success' : 'warning'}>
+          {q.answer_body ? '답변완료' : '답변대기'}
+        </Badge>
+      ),
+    },
+    { key: 'title', header: '제목', type: 'name', primary: true },
+    {
+      key: 'created_at',
+      header: '질문일',
+      type: 'date',
+      render: (q) => q.created_at.slice(0, 10),
+    },
+    {
+      key: 'answered_at',
+      header: '답변일',
+      type: 'date',
+      render: (q) => (q.answered_at ? q.answered_at.slice(0, 10) : <EmptyValue />),
+    },
+  ]
 
   return (
-    <Card title="내 질문" count={list.length}>
-      {list.length === 0 ? (
-        <p className="py-6 text-center text-body text-gray-600">
-          아직 남긴 질문이 없습니다. 오른쪽에서 첫 질문을 남겨 보세요.
-        </p>
-      ) : (
-        <>
-          <ul className="divide-y divide-gray-200">
-            {pageItems.map((q) => (
-              <li key={q.id}>
-                {/* GUEST 터치 하한(48px)을 행에도 얹는다(3_9 §3). */}
-                <button
-                  type="button"
-                  className="flex min-h-12 w-full items-center gap-2 py-2.5 text-left hover:bg-gray-25"
-                  aria-expanded={openId === q.id}
-                  onClick={() => setOpenId(openId === q.id ? null : q.id)}
-                >
-                  <Badge tone={q.answer_body ? 'success' : 'warning'}>
-                    {q.answer_body ? '답변완료' : '답변대기'}
-                  </Badge>
-                  <span className="min-w-0 flex-1 truncate text-body font-semibold text-gray-900">
-                    {q.title}
-                  </span>
-                  <span className="shrink-0 text-caption tabular-nums text-gray-500">
-                    {q.created_at.slice(0, 10)}
-                  </span>
-                </button>
-                {openId === q.id && (
-                  <div className="space-y-3 pb-3">
-                    {q.body && (
-                      <p className="whitespace-pre-line text-body text-gray-800">{q.body}</p>
-                    )}
-                    {/* 답변은 질문 아래 응답이므로 브랜드 선으로 들여 세운다(WORKS와 같은 자리). */}
-                    <div className="border-l-2 border-brand/40 pl-3">
-                      {q.answer_body ? (
-                        <div
-                          className={RICH_BODY_CLASS}
-                          dangerouslySetInnerHTML={{
-                            __html: sanitizeRichText(q.answer_body),
-                          }}
-                        />
-                      ) : (
-                        <p className="text-body text-gray-600">
-                          담당자의 답변을 기다리고 있습니다.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
-          <MiniPager page={page} pageCount={pageCount} onPage={setPage} />
-        </>
-      )}
+    <Card title="내 질문" count={filtered.length}>
+      <div className="space-y-3">
+        <ListToolbar
+          keyword={keyword}
+          onKeywordChange={(v) => {
+            setKeyword(v)
+            setPage(0)
+          }}
+          searchPlaceholder="제목·내용·답변 검색"
+        />
+        <DataTable
+          columns={columns}
+          rows={pageRows}
+          rowKey={(q) => q.id}
+          numbered={false}
+          standardColumns={false}
+          emptyText={
+            keyword
+              ? '검색 결과가 없습니다.'
+              : '아직 남긴 질문이 없습니다. 오른쪽에서 첫 질문을 남겨 보세요.'
+          }
+          onRowClick={(q) => setSelectedId(selectedId === q.id ? null : q.id)}
+          rowClassName={(q) => (q.id === selectedId ? 'bg-brand/5' : undefined)}
+          pagination={{
+            page: safePage,
+            pageSize: GUEST_LIST_PAGE_SIZE,
+            total: filtered.length,
+            onChange: setPage,
+            compact: true,
+          }}
+        />
+        {selected && <QuestionDetail question={selected} />}
+      </div>
     </Card>
+  )
+}
+
+/** 표 아래에 서는 질문 1건의 상세: 머리 한 줄 → 질문 본문 → 답변. */
+function QuestionDetail({ question }: { question: GuestQuestion }) {
+  return (
+    <div className="mt-4 space-y-3 border-t border-gray-200 pt-4">
+      <div className="flex items-center gap-2">
+        <span aria-hidden className="h-3.5 w-0.5 shrink-0 rounded-full bg-brand" />
+        <p className="min-w-0 flex-1 truncate text-body font-semibold text-gray-900">
+          {question.title}
+        </p>
+        <span className="shrink-0 text-caption tabular-nums text-gray-500">
+          {question.created_at.slice(0, 10)}
+        </span>
+      </div>
+      {question.body && (
+        <p className="whitespace-pre-line text-body text-gray-800">{question.body}</p>
+      )}
+      {/* 답변은 질문 아래 응답이므로 브랜드 선으로 들여 세운다(WORKS와 같은 자리). */}
+      <div className="border-l-2 border-brand/40 pl-3">
+        {question.answer_body ? (
+          <div
+            className={RICH_BODY_CLASS}
+            dangerouslySetInnerHTML={{ __html: sanitizeRichText(question.answer_body) }}
+          />
+        ) : (
+          <p className="text-body text-gray-600">담당자의 답변을 기다리고 있습니다.</p>
+        )}
+      </div>
+    </div>
   )
 }
 
