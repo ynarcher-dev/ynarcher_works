@@ -58,9 +58,9 @@ export function ProgramDepartmentEditor({ value, onChange, versionId }: Props) {
   return (
     <div className="space-y-2">
       {value.length > 0 && (
-        <ul className="space-y-2">
+        <ul className="space-y-1.5">
           {value.map((row) => (
-            <li key={row._key} className="flex items-center gap-2 rounded-radius-md border border-gray-200 bg-gray-25 p-2">
+            <li key={row._key} className="flex items-center gap-2 rounded-radius-md border border-gray-200 bg-gray-25 px-2.5 py-1.5">
               <Select
                 value={row.department_id}
                 onChange={(e) => patch(row._key, { department_id: e.target.value })}
@@ -77,6 +77,7 @@ export function ProgramDepartmentEditor({ value, onChange, versionId }: Props) {
               </Select>
               {/* 켜짐/꺼짐을 색으로 가른다 — 켜지면 브랜드 채움(primary), 아니면 테두리(outline). */}
               <Button
+                className="shrink-0"
                 variant={row.kind === 'MAIN' ? 'primary' : 'outline'}
                 aria-pressed={row.kind === 'MAIN'}
                 onClick={() => setMain(row._key)}
@@ -84,21 +85,24 @@ export function ProgramDepartmentEditor({ value, onChange, versionId }: Props) {
               >
                 메인
               </Button>
+              {/* 단위(%)는 입력과 같은 줄에 서므로 같은 크기로 둔다 — 한 줄 안에서 크기를 갈라
+                  위계를 만들지 않는다. 폭은 바깥 칸이 갖는다(Input이 w-full 래퍼를 두므로). */}
               <label className="flex shrink-0 items-center gap-1">
-                <Input
-                  type="number"
-                  min={1}
-                  max={100}
-                  value={row.collaboration_ratio || ''}
-                  onChange={(e) =>
-                    patch(row._key, {
-                      collaboration_ratio: Math.max(0, Math.min(100, Number(e.target.value) || 0)),
-                    })
-                  }
-                  className="w-16"
-                  aria-label={`${nameOf(row.department_id)} 협업비율`}
-                />
-                <span className="text-caption text-gray-600">%</span>
+                <span className="w-16">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={row.collaboration_ratio || ''}
+                    onChange={(e) =>
+                      patch(row._key, {
+                        collaboration_ratio: Math.max(0, Math.min(100, Number(e.target.value) || 0)),
+                      })
+                    }
+                    aria-label={`${nameOf(row.department_id)} 협업비율`}
+                  />
+                </span>
+                <span className="text-body-sm text-gray-600">%</span>
               </label>
               <IconButton
                 variant="ghost"

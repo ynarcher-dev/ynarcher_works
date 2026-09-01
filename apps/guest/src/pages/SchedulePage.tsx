@@ -1,5 +1,8 @@
 import {
+  Badge,
   Card,
+  ExpandToggleButton,
+  FullscreenPanel,
   PageHeader,
   ScheduleBoard,
   Spinner,
@@ -14,10 +17,11 @@ import {
   moduleStatusLabel,
   readModuleSettings,
 } from '@ynarcher/master-data'
-import { ChartGantt, SquareKanban } from 'lucide-react'
+import { ChartGantt, Maximize2, Minimize2, SquareKanban } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useGuestModules } from '@/features/moduleHooks'
+import { useGuestStore } from '@/auth/guestStore'
 import { modulePath } from '@/config/navigation'
 
 /**
@@ -46,7 +50,9 @@ const VIEWS = [
 export function SchedulePage() {
   const navigate = useNavigate()
   const { data: modules, isLoading } = useGuestModules()
+  const program = useGuestStore((s) => s.program)
   const [view, setView] = useState<ScheduleView>('gantt')
+  const [expanded, setExpanded] = useState(false)
 
   if (isLoading) return <Spinner />
 
@@ -67,24 +73,73 @@ export function SchedulePage() {
     }
   })
 
+  const viewToggle = <ViewToggleGroup options={VIEWS} value={view} onChange={setView} />
+  const expandButton = (
+    <ExpandToggleButton
+      expanded={expanded}
+      onToggle={() => setExpanded((v) => !v)}
+      expandIcon={<Maximize2 className="size-4" />}
+      collapseIcon={<Minimize2 className="size-4" />}
+    />
+  )
+
+  const board = (
+    <ScheduleBoard
+      events={events}
+      view={view}
+      columns={[...MODULE_STATUS_COLUMNS]}
+      emptyText="아직 공유된 일정이 없습니다."
+    />
+  )
+
   return (
     <div className="space-y-5">
       <PageHeader title="일정안내" />
       {/* 이 화면은 공지·사업개요의 2:1 분할을 쓰지 않고 전체 폭으로 선다 — 간트 축은 폭이 곧
           정보량이라, 3분의 2 칸에 넣으면 눈금만 보이고 막대는 뭉갠다. 곁칸에 세울 것도
           없다(상세는 메뉴 화면으로 넘어가 열린다). */}
+      {/*
+        카드 제목은 '공유된 일정'이 아니라 **사업명**이다. 무엇이 공유되었는지는 이미 페이지
+        제목(일정안내)과 이 화면의 존재 자체가 말하고 있고, 게스트가 정작 확인하고 싶은 것은
+        '내가 지금 어느 사업을 보고 있나'다 — 한 계정이 사업을 옮겨 다니므로 그 답이 화면
+        안에 서 있어야 한다. 세션이 아직 사업을 물고 있지 않은 드문 경우에만 옛 제목으로 돌아간다.
+      */}
       <Card
-        title="공유된 일정"
+        title={program?.title ?? '공유된 일정'}
         count={events.length}
-        actions={<ViewToggleGroup options={VIEWS} value={view} onChange={setView} />}
+        actions={
+          <div className="flex items-center gap-2">
+            {viewToggle}
+            {expandButton}
+          </div>
+        }
       >
-        <ScheduleBoard
-          events={events}
-          view={view}
-          columns={[...MODULE_STATUS_COLUMNS]}
-          emptyText="아직 공유된 일정이 없습니다."
-        />
+        {board}
       </Card>
+
+      {/*
+        확대보기. 간트는 가로축이 곧 정보량이고 칸반은 세로로 카드가 쌓이므로, 둘 다 사이드바와
+        페이지 여백을 걷어낸 폭에서 제 모습이 된다 — WORKS 사업 상세의 프로그램 보드와 같은 장치다.
+        전체 화면에서는 페이지 제목이 사라지므로 화면 이름(일정안내)과 사업명을 함께 세운다.
+      */}
+      <FullscreenPanel
+        open={expanded}
+        onClose={() => setExpanded(false)}
+        title={
+          <>
+            <span className="text-title-sm font-medium text-gray-900">일정안내</span>
+            {program && <Badge tone="neutral">{program.title}</Badge>}
+          </>
+        }
+        actions={
+          <>
+            {viewToggle}
+            {expandButton}
+          </>
+        }
+      >
+        {board}
+      </FullscreenPanel>
     </div>
   )
 }

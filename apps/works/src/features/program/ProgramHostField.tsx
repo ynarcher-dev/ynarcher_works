@@ -1,4 +1,4 @@
-import { Checkbox, Input } from '@ynarcher/ui'
+import { Checkbox, Field, Input } from '@ynarcher/ui'
 import { useState } from 'react'
 import { SELF_HOSTED_PROGRAM_HOST } from '@/features/program/config'
 
@@ -23,13 +23,30 @@ export function ProgramHostField({ value, onChange }: ProgramHostFieldProps) {
   const selfHosted = value === SELF_HOSTED_PROGRAM_HOST
   const [restore, setRestore] = useState('')
   return (
-    <div>
-      {/* 체크는 라벨 줄 오른쪽 끝에 둔다 — 입력 칸의 성격을 바꾸는 스위치라 칸보다 앞서 읽혀야 하고,
-          아래에 두면 무엇을 적으라는 안내(캡션)와 층위가 겹친다. */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <label className="text-body font-medium text-gray-800" htmlFor="host_organization">
-          주관
-        </label>
+    // 라벨 층은 Field가 소유한다 — 규격을 화면에서 적으면 같은 모달 안에서도 칸마다 라벨이 달라진다.
+    <Field
+      as="div"
+      label="주관"
+      hint={`이 사업을 발주·주관하는 기관 또는 기업 · 받아 온 사업이 아니면 '${SELF_HOSTED_PROGRAM_HOST}'`}
+    >
+      {/*
+        체크는 입력 칸 **바로 옆**에 선다. 라벨 줄 오른쪽 끝에 두었을 때는 폼 폭이 넓어질수록
+        스위치가 자기가 바꾸는 칸에서 멀어져, 화면 반대편의 체크가 왼쪽 칸을 잠그는 것으로
+        보였다 — 붙여 두면 무엇을 바꾸는 스위치인지 자리로 드러난다.
+
+        칸 자체도 폭을 줄인다. 기관명은 한 줄에 몇 글자 들어가지 않는데 모달 폭을 다 쓰면
+        빈 칸이 사업명·설명과 같은 무게로 서서, 짧은 값이 들어갈 칸이라는 사실을 숨긴다.
+      */}
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="min-w-0 max-w-lg flex-1">
+          <Input
+            id="host_organization"
+            placeholder="예: 중소벤처기업부, 창업진흥원"
+            disabled={selfHosted}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+          />
+        </span>
         <Checkbox
           checked={selfHosted}
           onChange={(e) => {
@@ -41,18 +58,9 @@ export function ProgramHostField({ value, onChange }: ProgramHostFieldProps) {
             }
           }}
           label={SELF_HOSTED_PROGRAM_HOST}
+          wrapperClassName="shrink-0"
         />
       </div>
-      <Input
-        id="host_organization"
-        placeholder="예: 중소벤처기업부, 창업진흥원"
-        disabled={selfHosted}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      />
-      <p className="mt-1 text-caption text-gray-700">
-        이 사업을 발주·주관하는 기관 또는 기업 · 받아 온 사업이 아니면 '{SELF_HOSTED_PROGRAM_HOST}'
-      </p>
-    </div>
+    </Field>
   )
 }

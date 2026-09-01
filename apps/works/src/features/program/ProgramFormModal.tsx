@@ -1,5 +1,17 @@
-import { Button, Input, Modal, Select, TagChip, TextArea, useToast } from '@ynarcher/ui'
-import { useEffect, useState } from 'react'
+import {
+  Button,
+  DensityProvider,
+  Field,
+  cn,
+  formText,
+  Input,
+  Modal,
+  Select,
+  TextArea,
+  TokenMultiSelect,
+  useToast,
+} from '@ynarcher/ui'
+import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTags } from '@/features/admin/hooks'
 import {
@@ -98,14 +110,14 @@ export function ProgramFormModal({
   // 상태로 따로 든다 — react-hook-form의 register는 단일 값 입력을 전제로 한다.
   const { data: industryTags } = useTags('industry_tags')
   const [industries, setIndustries] = useState<string[]>(() => programIndustries(program))
-  const toggleIndustry = (name: string) =>
-    setIndustries((prev) =>
-      prev.includes(name)
-        ? prev.filter((n) => n !== name)
-        : prev.length >= MAX_PROGRAM_INDUSTRIES
-          ? prev
-          : [...prev, name],
-    )
+  /**
+   * 후보는 원장 태그 + 이미 저장된 값이다. 원장에서 지워진 태그를 달고 있던 사업도 칩이 남아야
+   * 편집 중에 조용히 사라지지 않는다.
+   */
+  const industryOptions = useMemo(() => {
+    const names = (industryTags ?? []).map((t) => t.name)
+    return [...names, ...industries.filter((n) => !names.includes(n))]
+  }, [industryTags, industries])
   // 원장에 저장되는 값은 상태 하나뿐이므로 폼도 하나만 든다. 단계(제안/운영)는 이 값에서
   // 따라 나오는 것이라(`programStage()`) 따로 묻지 않는다.
   const [status, setStatus] = useState(() => initialStatusOf(config, program))
@@ -222,25 +234,16 @@ export function ProgramFormModal({
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
         {reasonModal}
-        <div>
-          <label className="text-body font-medium text-gray-800" htmlFor="title">
-            사업명 <span className="text-brand">*</span>
-          </label>
+        <Field label="사업명" required error={errors.title?.message}>
           <Input
             id="title"
             invalid={Boolean(errors.title)}
             {...register('title', { required: '사업명은 필수입니다.' })}
           />
-          {errors.title && (
-            <p className="mt-1 text-caption text-danger">{errors.title.message}</p>
-          )}
-        </div>
+        </Field>
         {/* 사업구분. 분류를 운용하지 않는 워크스페이스(categories 비어 있음)에서는 필드를 감춘다. */}
         {config.categories.length > 0 && (
-          <div>
-            <label className="text-body font-medium text-gray-800" htmlFor="category">
-              사업구분
-            </label>
+          <Field label="사업구분">
             <Select id="category" {...register('category')}>
               <option value="">미지정</option>
               {config.categories.map((c) => (
@@ -249,7 +252,7 @@ export function ProgramFormModal({
                 </option>
               ))}
             </Select>
-          </div>
+          </Field>
         )}
         {/* 주관. 사업구분 바로 아래, 분야 위에 둔다 — '이 사업이 어디서 왔나'는 '무엇인가'와
             같은 층위의 분류 축이고, 기간·배치처럼 운영을 적는 칸보다 앞선다.
@@ -262,47 +265,60 @@ export function ProgramFormModal({
             onChange={(next) => setValue('host_organization', next)}
           />
         )}
-        {/* 분야. 사업구분 바로 아래에 둔다 — 둘 다 '이 사업이 무엇인가'를 가르는 분류 축이고,
-            기간·배치처럼 운영을 적는 칸과는 층위가 다르다. 태그 원장은 스타트업과 공유한다. */}
-        <div>
-          <label className="text-body font-medium text-gray-800">분야</label>
-          <div className="mt-1 flex flex-wrap gap-1.5">
-            {(industryTags ?? []).map((tag) => {
-              const on = industries.includes(tag.name)
-              return (
-                <TagChip
-                  key={tag.id}
-                  selected={on}
-                  disabled={!on && industries.length >= MAX_PROGRAM_INDUSTRIES}
-                  onClick={() => toggleIndustry(tag.name)}
-                >
-                  {tag.name}
-                </TagChip>
-              )
-            })}
-            {(industryTags ?? []).length === 0 && (
-              <span className="text-caption text-gray-600">
-                등록된 분야 태그가 없습니다. (ADMIN › 분야 관리)
-              </span>
-            )}
-          </div>
-          <p className="mt-1 text-caption text-gray-700">
-            이 사업이 발굴·대상으로 하는 분야 · 최대 {MAX_PROGRAM_INDUSTRIES}개 선택
-          </p>
-        </div>
+        {/*
+          분야. 사업구분 바로 아래에 둔다 — 둘 다 '이 사업이 무엇인가'를 가르는 분류 축이고,
+          기간·배치처럼 운영을 적는 칸과는 층위가 다르다. 태그 원장은 스타트업과 공유한다.
+
+          형태는 태그판이 아니라 입력 칸 하나다(표준 A패턴 TokenMultiSelect). 원장 태그가
+          늘어날수록 태그판은 폼 한가운데를 몇 줄씩 차지하면서 '고를 수 있는 것'과 '고른 것'이
+          색 하나로만 갈렸다. 토큰 입력은 고른 것만 칸 안에 남고 나머지는 돋보기로 펼쳐 찾는다 —
+          임직원 관심분야 칸(EmployeeNoteFields)과 같은 규약이다.
+        */}
+        <Field
+          label="분야"
+          hint={
+            (industryTags ?? []).length === 0
+              ? '등록된 분야 태그가 없습니다. (ADMIN › 분야 관리)'
+              : `이 사업이 발굴·대상으로 하는 분야 · 최대 ${MAX_PROGRAM_INDUSTRIES}개 선택`
+          }
+        >
+          <TokenMultiSelect<string>
+            selected={industries}
+            onChange={setIndustries}
+            getKey={(n) => n}
+            getLabel={(n) => n}
+            options={industryOptions}
+            max={MAX_PROGRAM_INDUSTRIES}
+            placeholder="분야 태그 검색"
+            browsable
+          />
+        </Field>
         <ProgramStatusFields
           hasProposalStage={config.hasProposalStage}
           status={status}
           onStatusChange={setStatus}
           register={register}
         />
-        <div>
-          <label className="text-body font-medium text-gray-800">
-            배치 (부서 구성 + 담당자) <span className="text-brand">*</span>
-            <span className="ml-1 text-caption font-normal text-gray-600">
-              조직개편 경계마다 단계로 나눠 독립 설정 · 담당자 1명 이상 필수
-            </span>
-          </label>
+        {/*
+          배치 블록만 카드 밀도로 내린다. 크기를 가르는 축은 중요도가 아니라 **놓이는 자리**이고,
+          이 블록은 폼 위에 얹힌 카드섹션(테두리 상자) 안이다. 모달이 강제하는 page 밀도(40px·14px)를
+          그대로 물려받으면 한 줄에 담당자·부서·역할·투입률·기간 여섯 칸이 서는 표에서 칸마다
+          글자가 잘린다 — 화면에서 본 'MEMBEI'·'8C'가 그것이다.
+        */}
+        <Field
+          as="div"
+          label={
+            <>
+              배치 (부서 구성 + 담당자)
+              {/* 필수 표식은 이름 바로 뒤에 붙어야 한다 — Field의 `required`는 라벨 노드 끝에
+                  붙으므로 뒤에 설명이 딸린 라벨에서는 표식이 문장 끝으로 밀린다. */}
+              <span className={cn('ml-0.5', formText.required)}>*</span>{' '}
+              <span className="font-normal text-gray-600">
+                조직개편 경계마다 단계로 나눠 독립 설정 · 담당자 1명 이상 필수
+              </span>
+            </>
+          }
+        >
           {(() => {
             const phases = computePhases(orgVersions ?? [], watch('start_date'), watch('end_date'))
             if (!watch('start_date') || !watch('end_date')) {
@@ -321,6 +337,7 @@ export function ProgramFormModal({
             }
             const lastEnd = phases[phases.length - 1]!.end
             return (
+              <DensityProvider value="card">
               <div className="space-y-2">
                 {phases.map((phase, i) => (
                   <PhaseStaffingEditor
@@ -339,20 +356,18 @@ export function ProgramFormModal({
                   </p>
                 )}
               </div>
+              </DensityProvider>
             )
           })()}
-        </div>
-        <div>
-          <label className="text-body font-medium text-gray-800" htmlFor="description">
-            설명
-          </label>
+        </Field>
+        <Field label="설명">
           <TextArea
             id="description"
             rows={3}
             placeholder="상세 헤더에 표시할 사업 소개"
             {...register('description')}
           />
-        </div>
+        </Field>
       </form>
     </Modal>
   )

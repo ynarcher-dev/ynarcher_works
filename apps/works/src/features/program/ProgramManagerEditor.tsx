@@ -1,4 +1,4 @@
-import { IconButton, Input, Select } from '@ynarcher/ui'
+import { IconButton, Input, Select, cn, tableText } from '@ynarcher/ui'
 import { X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import type { ProgramManagerDraft } from '@/features/program/hooks'
@@ -12,6 +12,23 @@ import {
   useOrgVersions,
 } from '@/features/management/orgHooks'
 import { useEmployees } from '@/features/hub/hooks'
+
+/**
+ * 구간 행의 열 폭 — 머리글 한 줄과 모든 행이 **같은 값**을 나눠 쓴다.
+ *
+ * 값은 그 칸에 들어가는 것이 정한다(densityScale의 `columnWidth`와 같은 원리). 카드 밀도의
+ * 컨트롤은 좌우 여백 12px, 셀렉트는 오른쪽 화살표 자리로 36px을 더 먹으므로, 폭은
+ * "글자 + 그 여백"으로 잡아야 값이 잘리지 않는다 — 역할 셀렉트가 `w-28`보다 좁으면
+ * `MEMBER`가 `MEMBEI`로 잘리던 것이 그 예다.
+ */
+const col = {
+  person: 'w-24',
+  role: 'w-28',
+  rate: 'w-16',
+  date: 'w-32',
+  /** 제거 버튼(아이콘 28px) 자리 — 머리글에서는 빈 칸으로 자리만 지킨다. */
+  action: 'w-icon-card',
+} as const
 
 /** 편집용 구간(저장 payload인 Draft + React 리스트 키). _key는 RPC에서 무시된다. */
 export interface ProgramManagerSegment extends ProgramManagerDraft {
@@ -134,19 +151,21 @@ export function ProgramManagerEditor({
       {/* 담당자(구간) 추가 typeahead */}
       <div className="relative">
         {open && <div className="fixed inset-0 z-dropdown" aria-hidden onClick={() => setOpen(false)} />}
-        <input
+        {/* 규격은 공용 Input이 갖는다 — 손으로 적어 두면 이 칸만 아래 구간 행과 다른 높이·글자로 남는다. */}
+        <Input
           value={query}
           onChange={(e) => {
             setQuery(e.target.value)
             setOpen(true)
           }}
           onFocus={() => setOpen(true)}
+          aria-label="담당자 검색"
           placeholder={
             scope.size === 0
               ? '먼저 위에서 부서 구성을 지정하세요'
               : '담당자 검색 후 추가 (같은 사람을 다시 추가하면 구간이 늘어납니다)'
           }
-          className="relative z-dropdown min-h-ctl-page w-full rounded-radius-md border border-gray-300 bg-white px-3 py-1.5 text-body text-gray-900 outline-none transition-colors duration-fast placeholder:text-gray-400 focus:border-brand"
+          className="relative z-dropdown"
         />
         {open && (
           <div className="absolute left-0 right-0 z-dropdown mt-1 max-h-56 overflow-auto rounded-radius-md border border-gray-300 bg-white p-1 shadow-popover">
@@ -185,49 +204,59 @@ export function ProgramManagerEditor({
         )}
       </div>
 
-      {/* 구간 행 */}
+      {/*
+        구간 행. 열 이름은 행마다 반복하지 않고 머리글 한 줄로 접는다 — 모든 행이 같은 칸을
+        갖는 표이므로, 라벨을 행마다 다시 적으면 같은 말이 구간 수만큼 늘어나고 그 라벨 높이만큼
+        행이 세로로 부풀어 정작 값이 좁아진다. 머리글과 행은 `col`의 같은 폭을 나눠 쓴다.
+      */}
       {value.length > 0 && (
-        <ul className="space-y-2">
-          {value.map((row) => (
-            <li key={row._key} className="rounded-radius-md border border-gray-200 bg-gray-25 p-2.5">
-              <div className="flex items-end gap-2">
-                <div className="w-20 shrink-0">
-                  <span className="mb-0.5 block text-caption text-gray-600">담당자</span>
-                  <div className="flex h-ctl-page items-center">
-                    <span className="truncate text-body font-medium text-gray-900">
-                      {byId.get(row.user_id)?.name ?? '알 수 없음'}
-                    </span>
-                  </div>
-                </div>
+        <div className="space-y-1.5">
+          <div className={cn('flex items-center gap-2 px-2.5', tableText.head)}>
+            <span className={cn(col.person, 'shrink-0')}>담당자</span>
+            <span className="min-w-0 flex-1">부서</span>
+            <span className={cn(col.role, 'shrink-0')}>역할</span>
+            <span className={cn(col.rate, 'shrink-0')}>투입률</span>
+            <span className={cn(col.date, 'shrink-0')}>시작일</span>
+            <span className={cn(col.date, 'shrink-0')}>종료일</span>
+            <span className={cn(col.action, 'shrink-0')} aria-hidden />
+          </div>
+          <ul className="space-y-1.5">
+            {value.map((row) => (
+              <li
+                key={row._key}
+                className="flex items-center gap-2 rounded-radius-md border border-gray-200 bg-gray-25 px-2.5 py-1.5"
+              >
+                <span className={cn(col.person, 'shrink-0 truncate text-body-sm font-medium text-gray-900')}>
+                  {byId.get(row.user_id)?.name ?? '알 수 없음'}
+                </span>
                 {/* 부서는 고르는 값이 아니라 사람에게 딸려오는 값이라 입력이 아닌 표시다.
                     바꾸려면 사람의 소속(조직 관리)이나 사업의 부서 구성을 바꿔야 한다. */}
-                <div className="block min-w-0 flex-1">
-                  <span className="mb-0.5 block text-caption text-gray-600">부서</span>
-                  <div className="flex h-ctl-page items-center">
-                    {row.department_id ? (
-                      <span className="truncate text-body text-gray-800">
-                        {deptName(row.department_id)}
-                      </span>
-                    ) : (
-                      <span className="truncate text-body font-medium text-danger">
-                        지정 부서 밖
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <label className="block w-28 shrink-0">
-                  <span className="mb-0.5 block text-caption text-gray-600">역할</span>
+                {row.department_id ? (
+                  <span
+                    className="min-w-0 flex-1 truncate text-body-sm text-gray-800"
+                    title={deptName(row.department_id)}
+                  >
+                    {deptName(row.department_id)}
+                  </span>
+                ) : (
+                  <span className="min-w-0 flex-1 truncate text-body-sm font-medium text-danger">
+                    지정 부서 밖
+                  </span>
+                )}
+                {/* Input·Select는 스스로 w-full 래퍼를 두므로 폭은 바깥 칸이 갖는다. */}
+                <div className={cn(col.role, 'shrink-0')}>
                   <Select
+                    aria-label="역할"
                     value={row.role}
                     onChange={(e) => patch(row._key, { role: e.target.value as ProgramManagerDraft['role'] })}
                   >
                     <option value="PM">PM</option>
                     <option value="MEMBER">MEMBER</option>
                   </Select>
-                </label>
-                <label className="block w-16 shrink-0">
-                  <span className="mb-0.5 block text-caption text-gray-600">투입률</span>
+                </div>
+                <div className={cn(col.rate, 'shrink-0')}>
                   <Input
+                    aria-label="투입률(%)"
                     type="number"
                     min={1}
                     max={100}
@@ -238,36 +267,35 @@ export function ProgramManagerEditor({
                       })
                     }
                   />
-                </label>
-                <label className="block w-36 shrink-0">
-                  <span className="mb-0.5 block text-caption text-gray-600">시작일</span>
+                </div>
+                <div className={cn(col.date, 'shrink-0')}>
                   <Input
+                    aria-label="시작일"
                     type="date"
                     value={row.start_date}
                     onChange={(e) => patch(row._key, { start_date: e.target.value })}
                   />
-                </label>
-                <label className="block w-36 shrink-0">
-                  <span className="mb-0.5 block text-caption text-gray-600">종료일</span>
+                </div>
+                <div className={cn(col.date, 'shrink-0')}>
                   <Input
+                    aria-label="종료일"
                     type="date"
                     value={row.end_date}
                     onChange={(e) => patch(row._key, { end_date: e.target.value })}
                   />
-                </label>
-                {/* 라벨이 한 줄 위에 있어 입력과 바닥을 맞춘다(라벨 높이만큼 내려 정렬). */}
+                </div>
                 <IconButton
                   variant="ghost"
                   danger
-                  className="mt-[1.375rem]"
+                  className="shrink-0"
                   label="구간 제거"
                   onClick={() => remove(row._key)}
                   icon={<X className="size-4" aria-hidden />}
                 />
-              </div>
-            </li>
-          ))}
-        </ul>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {/* 부서별 커버리지: 각 부서를 수행 기간 전 구간에서 협업비율만큼 채웠는지 */}

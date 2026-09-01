@@ -1,4 +1,4 @@
-import { Button } from '@ynarcher/ui'
+import { Button, Field, cardText } from '@ynarcher/ui'
 import {
   ProgramDepartmentEditor,
   type ProgramDepartmentSegment,
@@ -95,31 +95,46 @@ export function PhaseStaffingEditor({
 
   return (
     <section className="rounded-radius-md border border-gray-200 p-3">
+      {/* 단계 이름과 그 기간은 한 줄에 나란히 서므로 같은 크기로 둔다 — 구분은 굵기와 색이 맡는다. */}
       <div className="mb-2 flex items-center justify-between gap-2">
-        <div>
-          <span className="text-body font-semibold text-gray-900">{phase.label}</span>
-          <span className="ml-2 text-caption tabular-nums text-gray-600">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className={cardText.subhead}>{phase.label}</span>
+          <span className="tabular-nums text-body text-gray-600">
             {phase.start} ~ {phase.end}
           </span>
         </div>
         {previousPhase && (
-          <Button variant="outline" onClick={copyFromPrevious}>
+          <Button variant="outline" className="shrink-0" onClick={copyFromPrevious}>
             이전 단계 복사
           </Button>
         )}
       </div>
 
+      {/*
+        규칙 설명은 라벨과 같은 줄에 두되 크기는 같게 하고 색·굵기로만 물러나게 한다.
+        Field의 hint는 컨트롤 **아래** 줄이라, 편집기 한 덩어리를 지나 저 밑에 붙으면
+        무엇에 대한 설명인지 이어지지 않는다.
+      */}
       <div className="space-y-3">
-        <div>
-          <span className="mb-1 block text-caption font-medium text-gray-600">
-            부서 구성 (메인 1 + 협업 n, 협업비율 합 100%)
-          </span>
+        <Field
+          as="div"
+          label={
+            <>
+              부서 구성{' '}
+              <span className="font-normal text-gray-600">(메인 1 + 협업 n, 협업비율 합 100%)</span>
+            </>
+          }
+        >
           <ProgramDepartmentEditor value={deptSlice} onChange={setDeptSlice} versionId={phase.versionId} />
-        </div>
-        <div>
-          <span className="mb-1 block text-caption font-medium text-gray-600">
-            담당자 배치 (부서별 합 = 협업비율)
-          </span>
+        </Field>
+        <Field
+          as="div"
+          label={
+            <>
+              담당자 배치 <span className="font-normal text-gray-600">(부서별 합 = 협업비율)</span>
+            </>
+          }
+        >
           <ProgramManagerEditor
             value={mgrSlice}
             onChange={setMgrSlice}
@@ -128,7 +143,7 @@ export function PhaseStaffingEditor({
             phaseStart={phase.start}
             phaseEnd={phase.end}
           />
-        </div>
+        </Field>
       </div>
     </section>
   )
