@@ -2,6 +2,7 @@ import { Button, Card, IconButton, Input, Spinner, useToast } from '@ynarcher/ui
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { RichTextEditor, RichTextViewer } from '@/components/RichTextEditor'
+import { isEmptyRichText } from '@/lib/richText'
 import {
   useDeleteNotice,
   useModuleNotices,
@@ -9,11 +10,6 @@ import {
   type ProgramNotice,
 } from '@/features/program/noticeHooks'
 import { useProgramWorkspace } from '@/features/program/workspace'
-
-/** TipTap이 내는 빈 본문(`<p></p>`)을 걸러낸다 — 이미지 한 장만 있는 본문은 빈 것이 아니다. */
-function isEmptyHtml(html: string): boolean {
-  return !html.includes('<img') && html.replace(/<[^>]*>/g, '').trim() === ''
-}
 
 /**
  * 메뉴별 NOTICE(알림) 패널. GUEST 메뉴 우측의 NOTICE 칸과 **같은 구성**이며, 차이는 편집
@@ -149,7 +145,7 @@ function NoticeForm({
       await save.mutateAsync({
         id: notice?.id,
         title: title.trim(),
-        body: isEmptyHtml(body) ? null : body,
+        body: isEmptyRichText(body) ? null : body,
       })
       onDone()
     } catch {

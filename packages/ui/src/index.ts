@@ -160,5 +160,8 @@ export type {
 } from './patterns/FullscreenPanel'
 export { BoardItemCard, BoardEmptyRow } from './patterns/BoardItemCard'
 export type { BoardItemCardProps } from './patterns/BoardItemCard'
+// 첨부 파일 1건 행 — WORKS 자료 관리와 GUEST 파일 목록이 같은 표시 규격을 쓴다.
+export { AttachmentRow } from './patterns/AttachmentRow'
+export type { AttachmentRowProps } from './patterns/AttachmentRow'
 export { MonthCalendar, CalendarDayDetail } from './patterns/MonthCalendar'
 export type { MonthCalendarProps, CalendarDayMeta } from './patterns/MonthCalendar'

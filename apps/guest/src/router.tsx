@@ -1,41 +1,27 @@
-import { EmptyState, Spinner } from '@ynarcher/ui'
 import { Navigate, createBrowserRouter } from 'react-router-dom'
 import { GuestLayout } from '@/app/GuestLayout'
 import { RequireGuestAuth } from '@/auth/RequireGuestAuth'
 import { useGuestStore } from '@/auth/guestStore'
 import { defaultView, homePathOf } from '@/config/navigation'
-import { useGuestModules } from '@/features/moduleHooks'
 import { ApplyPage } from '@/pages/ApplyPage'
 import { GuestLoginPage } from '@/pages/GuestLoginPage'
 import { MentorFeedbackPage } from '@/pages/MentorFeedbackPage'
 import { ModulePage } from '@/pages/ModulePage'
 import { MyPage } from '@/pages/MyPage'
+import { OverviewPage } from '@/pages/OverviewPage'
 import { RootLayout } from '@/pages/RootLayout'
 import { SessionBoardPage } from '@/pages/SessionBoardPage'
 import { TempGuestPage } from '@/pages/TempGuestPage'
 
 /**
- * 루트(`/`) 착지점: 계정 역할이 정하는 기본 뷰의 첫 메뉴로 보낸다.
+ * 루트(`/`) 착지점: 계정 역할이 정하는 기본 뷰의 첫 화면으로 보낸다.
  *
- * 스타트업 뷰의 첫 메뉴는 WORKS에서 공개로 올린 첫 모듈이므로 조회를 기다려야 하고, 공개된
- * 것이 하나도 없을 수 있다. 그때 리다이렉트할 곳이 없다는 사실을 빈 화면으로 흘리지 않고
- * 여기서 말한다 — 로그인은 됐는데 아무 데도 못 가는 상태가 게스트에게는 가장 알기 어렵다.
+ * 스타트업 뷰의 착지점은 언제나 사업개요다(고정 메뉴) — 종전처럼 첫 공개 모듈을 기다렸다가
+ * 없으면 '열린 메뉴가 없다'를 말하던 분기가 사라졌다. 공개 메뉴가 없어도 사업소개는 있다.
  */
 function GuestEntry() {
   const role = useGuestStore((s) => s.user?.role)
-  const { data: modules, isLoading } = useGuestModules()
-
-  if (isLoading) return <Spinner />
-
-  const home = homePathOf(defaultView(role), modules ?? [])
-  if (home) return <Navigate to={home} replace />
-
-  return (
-    <EmptyState
-      title="아직 열린 메뉴가 없습니다"
-      description="담당자가 사업 메뉴를 공개하면 이 자리에 나타납니다. 잠시 후 다시 확인해 주십시오."
-    />
-  )
+  return <Navigate to={homePathOf(defaultView(role))} replace />
 }
 
 /**
@@ -63,8 +49,10 @@ export const router = createBrowserRouter([
         ),
         children: [
           { path: '/', element: <GuestEntry /> },
-          // 스타트업 뷰 — 화면 하나가 공개 메뉴(모듈) 하나에 대응한다. 경로가 코드에 고정된
-          // 메뉴는 더 이상 없다(3_9_workspace_guest.md §1.1).
+          // 스타트업 뷰 — 최상단 고정 메뉴이자 로그인 직후 첫 화면(사업개요).
+          { path: '/overview', element: <OverviewPage /> },
+          // 그 아래는 화면 하나가 공개 메뉴(모듈) 하나에 대응한다. 경로가 코드에 고정된
+          // 모듈 메뉴는 없다(3_9_workspace_guest.md §1.1).
           { path: '/m/:moduleId', element: <ModulePage /> },
           // 전문가 뷰
           { path: '/sessions', element: <SessionBoardPage /> },

@@ -5,10 +5,12 @@ import { GuestUserMenu } from '@/app/GuestUserMenu'
 import { useGuestStore } from '@/auth/guestStore'
 import {
   EXPERT_NAV,
+  OVERVIEW_NAV_ITEM,
   defaultView,
   homePathOf,
   moduleNavItems,
   viewOfPath,
+  type GuestNavItem,
   type GuestView,
 } from '@/config/navigation'
 import { useGuestModules } from '@/features/moduleHooks'
@@ -37,15 +39,28 @@ export function GuestLayout() {
   const view: GuestView =
     viewOfPath(location.pathname) ?? defaultView(user?.role)
   const items = view === 'expert' ? [...EXPERT_NAV] : moduleNavItems(modules ?? [])
-  // 공개 메뉴가 하나도 없는 사업이 있을 수 있다. 그때 로고와 뷰 전환은 루트로 보내고,
-  // '열린 메뉴가 없다'는 사실은 루트 화면이 말한다.
-  const home = (target: GuestView) => homePathOf(target, modules ?? []) ?? '/'
+
+  /** 사이드바 한 줄. 고정 메뉴(사업개요)와 원장이 세우는 메뉴가 같은 규격으로 선다. */
+  const renderItem = (item: GuestNavItem) => {
+    const Icon = item.icon
+    return (
+      <SidebarItem
+        key={item.path}
+        icon={<Icon aria-hidden className="size-4" />}
+        label={item.label}
+        active={item.path === location.pathname}
+        // 밀도 격자(page 40px) 위에 GUEST 터치 하한(48px)을 얹는다. 근거: 3_9 §3
+        className="min-h-12"
+        onClick={() => navigate(item.path)}
+      />
+    )
+  }
 
   const sidebar = (
     <Sidebar
       header={
         <div className="flex w-full items-center justify-center">
-          <Link to={home(view)} className="min-w-0 shrink">
+          <Link to={homePathOf(view)} className="min-w-0 shrink">
             <img src={logo} alt="Y&ARCHER" className="h-7 object-contain" />
           </Link>
         </div>
@@ -63,20 +78,17 @@ export function GuestLayout() {
       }
     >
       <div className="flex flex-col gap-1">
-        {items.map((item) => {
-          const Icon = item.icon
-          return (
-            <SidebarItem
-              key={item.path}
-              icon={<Icon aria-hidden className="size-4" />}
-              label={item.label}
-              active={item.path === location.pathname}
-              // 밀도 격자(page 40px) 위에 GUEST 터치 하한(48px)을 얹는다. 근거: 3_9 §3
-              className="min-h-12"
-              onClick={() => navigate(item.path)}
-            />
-          )
-        })}
+        {/* 스타트업 뷰 최상단은 고정 메뉴 '사업개요'(로그인 직후 착지점)다. 원장이 세우는
+            하위 메뉴와는 구분선으로 가른다 — 층이 다른 메뉴임을 선 하나가 답한다. */}
+        {view === 'startup' && (
+          <>
+            {renderItem(OVERVIEW_NAV_ITEM)}
+            {items.length > 0 && (
+              <div aria-hidden className="my-1 border-t border-white/20" />
+            )}
+          </>
+        )}
+        {items.map(renderItem)}
       </div>
     </Sidebar>
   )
@@ -93,7 +105,7 @@ export function GuestLayout() {
             <SegmentedToggle
               label="화면 전환"
               value={view}
-              onChange={(next) => navigate(home(next as GuestView))}
+              onChange={(next) => navigate(homePathOf(next as GuestView))}
               options={[
                 { key: 'expert', label: '전문가' },
                 { key: 'startup', label: '스타트업' },

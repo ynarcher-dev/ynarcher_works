@@ -57,6 +57,12 @@ export interface ProgramWorkspaceConfig {
      * NOTICE 칸을 세우지 않는다(읽을 사람이 없는 쓰기 화면을 남기지 않는다).
      */
     notices?: string
+    /**
+     * 사업개요(사업소개문) 원장 — 사업 1건당 1건. 게스트 로그인 직후 첫 화면에 나가는
+     * 소개문이라 게스트 로그인을 개방한 AC만 값을 둔다(NOTICE와 같은 경계) — 없으면
+     * 상세의 사업개요 탭도 서지 않는다.
+     */
+    overviews?: string
   }
   rpcs: {
     setStaffing: string

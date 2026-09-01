@@ -4,6 +4,7 @@ import type { Program, ProgramModule } from '@/features/program/hooks'
 import { ParticipantPool } from '@/features/program/ParticipantPool'
 import { ModuleBoardCard } from '@/features/program/detail/ModuleBoardCard'
 import { ProgramInfoCard } from '@/features/program/detail/ProgramInfoCard'
+import { ProgramIntroPanel } from '@/features/program/detail/ProgramIntroPanel'
 import { RelatedApprovalPanel } from '@/features/program/detail/RelatedApprovalPanel'
 import { RelatedMinutesPanel } from '@/features/office/minutes/RelatedMinutesPanel'
 import { useProgramContributions } from '@/features/program/detail/programContributions'
@@ -12,16 +13,18 @@ import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 
-type LeftTab = 'modules' | 'participants'
+type LeftTab = 'intro' | 'modules' | 'participants'
 
-const LEFT_TABS: { key: LeftTab; label: string }[] = [
+const BASE_TABS: { key: LeftTab; label: string }[] = [
   { key: 'modules', label: '일정관리' },
   { key: 'participants', label: '연동 DB' },
 ]
 
 /**
  * 프로그램 상세 개요(NETWORKS·STARTUP 상세와 동일한 2/3 + 1/3 카드섹션 컴포지션).
- * 좌측 본문(2/3): 기본 데이터 카드 → 서브 탭(일정관리 · 연동 DB).
+ * 좌측 본문(2/3): 기본 데이터 카드 → 서브 탭(사업개요 · 일정관리 · 연동 DB).
+ * '사업개요'는 게스트 첫 화면에 나가는 소개문이라 원장을 둔 워크스페이스(AC)에서만 서고,
+ * 설 때는 첫 탭이자 기본 탭이다 — 게스트가 로그인 직후 처음 보는 것과 같은 순서로 선다.
  * '평가 엔진' 탭은 2026-08-27 걷어냈다 — 평가는 사업 상세에 늘 떠 있어야 하는 축이 아니라
  * 서면평가·대면평가 모듈을 켰을 때의 운영 화면이라, 모듈과 무관한 상시 탭 자리를 차지할 이유가 없다.
  * 우측(1/3): 자료 관리 → 관련 전자결재 → 관련 회의록 → 변동 이력 → 코멘트(상세 공통 순서).
@@ -42,7 +45,11 @@ export function ProgramOverviewTab({
 }) {
   const config = useProgramWorkspace()
   const { data: contributions } = useProgramContributions(program.id)
-  const [leftTab, setLeftTab] = useState<LeftTab>('modules')
+  const hasIntro = Boolean(config.tables.overviews)
+  const leftTabs = hasIntro
+    ? [{ key: 'intro' as const, label: '사업개요' }, ...BASE_TABS]
+    : BASE_TABS
+  const [leftTab, setLeftTab] = useState<LeftTab>(hasIntro ? 'intro' : 'modules')
 
   return (
     <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
@@ -50,11 +57,12 @@ export function ProgramOverviewTab({
         <ProgramInfoCard program={program} />
         <div>
           <Tabs
-            items={LEFT_TABS}
+            items={leftTabs}
             value={leftTab}
             onChange={(key) => setLeftTab(key as LeftTab)}
           />
           <div className="mt-4">
+            {leftTab === 'intro' && <ProgramIntroPanel programId={program.id} />}
             {leftTab === 'modules' && (
               <ModuleBoardCard program={program} onOpenModule={onOpenModule} />
             )}

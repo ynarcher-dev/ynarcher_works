@@ -1,4 +1,4 @@
-import { IconButton, Spinner, tableText } from '@ynarcher/ui'
+import { AttachmentRow, IconButton, Spinner } from '@ynarcher/ui'
 import { Download, Eye, File as FileIcon, Music, Pause, Pencil, Play, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { MaterialPreviewModal } from '@/features/networks/MaterialPreview'
@@ -128,92 +128,90 @@ export function MaterialRow({
   }
 
   return (
-    <li className="rounded-radius-sm border border-gray-200 bg-white px-3 py-2">
-      <div className="flex items-center gap-2">
-        {/* 오디오는 파일 아이콘 대신 음표 아이콘으로 한눈에 구분한다. */}
-        {audio ? (
+    // 행의 상자·간격·글자 단계는 공용 AttachmentRow(@ynarcher/ui)가 소유한다 —
+    // GUEST 파일 목록과 같은 표시 규격이며, 여기서는 WORKS 쪽 액션만 슬롯에 채운다.
+    <AttachmentRow
+      // 오디오는 파일 아이콘 대신 음표 아이콘으로 한눈에 구분한다.
+      icon={
+        audio ? (
           <Music className="size-4 shrink-0 text-brand" />
         ) : (
           <FileIcon className="size-4 shrink-0 text-gray-500" />
-        )}
-        {/* 이름은 이 행의 식별 값, 설명·파일명·용량은 메타 — 크기는 하나로 두고 색으로만 가른다. */}
-        <span className="min-w-0 flex-1">
-          <span className={`block truncate ${tableText.primary}`}>
-            {materialDisplayName(material)}
-          </span>
-          {showDescription && material.description && (
-            <span className={`block truncate ${tableText.meta}`}>{material.description}</span>
+        )
+      }
+      name={materialDisplayName(material)}
+      metaLines={[
+        showDescription ? material.description : null,
+        material.label?.trim() ? material.file_name : null,
+      ]}
+      size={formatBytes(material.byte_size)}
+      actions={
+        <>
+          {/*
+            재생(오디오)·미리보기(눈)는 상호배타라 한 자리를 공유한다. 해당 없는 파일도
+            같은 크기의 빈 칸을 둬, 용량·다운로드 열이 행마다 같은 위치에 오도록 고정한다.
+          */}
+          {audio ? (
+            <IconButton
+              variant="ghost"
+              label={audioUrl ? `${material.file_name} 접기` : `${material.file_name} 재생`}
+              disabled={loadingUrl}
+              onClick={() => (audioUrl ? setAudioUrl(null) : void openPlayer())}
+              icon={
+                loadingUrl ? (
+                  <Spinner />
+                ) : audioUrl ? (
+                  <Pause className="size-4" />
+                ) : (
+                  <Play className="size-4" />
+                )
+              }
+            />
+          ) : onPreview ? (
+            <IconButton
+              variant="ghost"
+              label={`${material.file_name} 미리보기`}
+              onClick={onPreview}
+              icon={<Eye className="size-4" />}
+            />
+          ) : (
+            <span className="size-icon-card shrink-0" aria-hidden />
           )}
-          {material.label?.trim() && (
-            <span className={`block truncate ${tableText.meta}`}>{material.file_name}</span>
+          {onEdit && (
+            <IconButton
+              variant="ghost"
+              label={`${materialDisplayName(material)} 표시명·설명 수정`}
+              onClick={onEdit}
+              icon={<Pencil className="size-4" />}
+            />
           )}
-        </span>
-        <span className={`shrink-0 tabular-nums ${tableText.meta}`}>
-          {formatBytes(material.byte_size)}
-        </span>
-        {/*
-          재생(오디오)·미리보기(눈)는 상호배타라 한 자리를 공유한다. 해당 없는 파일도
-          같은 크기의 빈 칸을 둬, 용량·다운로드 열이 행마다 같은 위치에 오도록 고정한다.
-        */}
-        {audio ? (
           <IconButton
             variant="ghost"
-            label={audioUrl ? `${material.file_name} 접기` : `${material.file_name} 재생`}
-            disabled={loadingUrl}
-            onClick={() => (audioUrl ? setAudioUrl(null) : void openPlayer())}
-            icon={
-              loadingUrl ? (
-                <Spinner />
-              ) : audioUrl ? (
-                <Pause className="size-4" />
-              ) : (
-                <Play className="size-4" />
-              )
-            }
+            label={`${material.file_name} 다운로드`}
+            disabled={downloading}
+            onClick={async () => {
+              setDownloading(true)
+              try {
+                await downloadMaterial(material)
+              } finally {
+                setDownloading(false)
+              }
+            }}
+            icon={<Download className="size-4" />}
           />
-        ) : onPreview ? (
-          <IconButton
-            variant="ghost"
-            label={`${material.file_name} 미리보기`}
-            onClick={onPreview}
-            icon={<Eye className="size-4" />}
-          />
-        ) : (
-          <span className="size-icon-card shrink-0" aria-hidden />
-        )}
-        {onEdit && (
-          <IconButton
-            variant="ghost"
-            label={`${materialDisplayName(material)} 표시명·설명 수정`}
-            onClick={onEdit}
-            icon={<Pencil className="size-4" />}
-          />
-        )}
-        <IconButton
-          variant="ghost"
-          label={`${material.file_name} 다운로드`}
-          disabled={downloading}
-          onClick={async () => {
-            setDownloading(true)
-            try {
-              await downloadMaterial(material)
-            } finally {
-              setDownloading(false)
-            }
-          }}
-          icon={<Download className="size-4" />}
-        />
-        {onDelete && (
-          <IconButton
-            variant="ghost"
-            danger
-            label={`${material.file_name} 삭제`}
-            disabled={deleting}
-            onClick={onDelete}
-            icon={<Trash2 className="size-4" />}
-          />
-        )}
-      </div>
+          {onDelete && (
+            <IconButton
+              variant="ghost"
+              danger
+              label={`${material.file_name} 삭제`}
+              disabled={deleting}
+              onClick={onDelete}
+              icon={<Trash2 className="size-4" />}
+            />
+          )}
+        </>
+      }
+    >
       {audioUrl && (
         // eslint-disable-next-line jsx-a11y/media-has-caption
         <audio className="mt-2 h-9 w-full" src={audioUrl} controls autoPlay />
@@ -221,6 +219,6 @@ export function MaterialRow({
       {urlError && (
         <p className="mt-1 text-caption text-danger">재생 URL을 불러오지 못했습니다.</p>
       )}
-    </li>
+    </AttachmentRow>
   )
 }

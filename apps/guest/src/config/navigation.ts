@@ -1,4 +1,4 @@
-import { CalendarDays, ClipboardList, type LucideIcon } from 'lucide-react'
+import { BookOpen, CalendarDays, ClipboardList, type LucideIcon } from 'lucide-react'
 import { moduleDisplayName } from '@ynarcher/master-data'
 import { moduleIcon } from '@/features/moduleMeta'
 import type { GuestModule } from '@/features/moduleHooks'
@@ -40,6 +40,20 @@ export function modulePath(moduleId: string): string {
 }
 
 /**
+ * 사업개요 — 스타트업 뷰 사이드바 **최상단의 고정 메뉴**이자 로그인 직후 착지점.
+ *
+ * 모듈 메뉴는 원장이 세우지만(위 moduleNavItems), 사업개요는 메뉴(모듈)가 아니라 사업
+ * 자체의 소개라 코드에 고정으로 선다 — 담당자가 켜고 끄는 대상이 아니고, 공개 메뉴가
+ * 하나도 없는 사업이어도 로그인이 열렸다면 소개는 읽을 수 있어야 한다. 원장이 세우는
+ * 하위 메뉴와는 사이드바가 구분선으로 가른다(GuestLayout).
+ */
+export const OVERVIEW_NAV_ITEM: GuestNavItem = {
+  path: '/overview',
+  label: '사업개요',
+  icon: BookOpen,
+}
+
+/**
  * 전문가 뷰의 메뉴는 여전히 고정이다.
  *
  * 전문가에게 보이는 것은 사업이 연 메뉴가 아니라 **본인에게 배정된 일**(스케줄·평가지)이며,
@@ -62,19 +76,15 @@ export function defaultView(role: string | undefined): GuestView {
  */
 export function viewOfPath(pathname: string): GuestView | undefined {
   if (EXPERT_NAV.some((item) => item.path === pathname)) return 'expert'
-  if (pathname.startsWith('/m/')) return 'startup'
+  if (pathname === OVERVIEW_NAV_ITEM.path || pathname.startsWith('/m/')) return 'startup'
   return undefined
 }
 
 /**
- * 그 뷰의 착지점(뷰 전환·루트 진입). 스타트업 뷰는 공개 메뉴가 하나도 없을 수 있으므로
- * `undefined`가 정상 결과다 — 그때는 '열린 메뉴가 없다'는 사실을 화면이 말한다.
+ * 그 뷰의 착지점(뷰 전환·루트 진입·로그인 직후). 스타트업 뷰는 언제나 사업개요다 —
+ * 공개 메뉴가 하나도 없어도 사업소개는 읽을 수 있으므로, 종전의 '갈 곳 없음'(undefined)
+ * 이라는 결과 자체가 사라졌다.
  */
-export function homePathOf(
-  view: GuestView,
-  modules: readonly GuestModule[],
-): string | undefined {
-  if (view === 'expert') return EXPERT_NAV[0].path
-  const first = modules[0]
-  return first ? modulePath(first.id) : undefined
+export function homePathOf(view: GuestView): string {
+  return view === 'expert' ? EXPERT_NAV[0].path : OVERVIEW_NAV_ITEM.path
 }

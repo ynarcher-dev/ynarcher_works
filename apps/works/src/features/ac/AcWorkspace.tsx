@@ -27,6 +27,8 @@ export const AC_WORKSPACE: ProgramWorkspaceConfig = {
     links: 'program_links',
     // 게스트향 메뉴별 알림. 게스트 로그인을 개방한 AC만 원장을 둔다(20260901120000).
     notices: 'program_notices',
+    // 게스트 첫 화면에 나가는 사업소개. NOTICE와 같은 경계(AC만, 20260901140000).
+    overviews: 'program_overviews',
   },
   rpcs: {
     setStaffing: 'set_program_staffing',
