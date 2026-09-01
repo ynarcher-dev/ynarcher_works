@@ -1,23 +1,33 @@
 import {
   Badge,
-  Button,
+  BoardEmptyRow,
+  BoardItemCard,
   Card,
+  DashedAddButton,
   ExpandToggleButton,
   FullscreenPanel,
+  IconButton,
   Spinner,
   ViewToggleGroup,
   useToast,
 } from '@ynarcher/ui'
 import {
   ChartGantt,
+  List,
   Maximize2,
   Minimize2,
+  Pencil,
   Plus,
   SquareKanban,
+  X,
   type LucideIcon,
 } from 'lucide-react'
 import { useState } from 'react'
-import { MODULE_TYPES } from '@/features/program/config'
+import {
+  MODULE_TYPES,
+  MODULE_VISIBILITY_LABEL,
+  MODULE_VISIBILITY_TONE,
+} from '@/features/program/config'
 import {
   useProgramModules,
   useToggleModule,
@@ -28,17 +38,17 @@ import { AddModulesModal } from '@/features/program/detail/AddModulesModal'
 import { ModuleFormModal } from '@/features/program/detail/ModuleFormModal'
 import { ModuleGanttView } from '@/features/program/detail/ModuleGanttView'
 import { ModuleKanbanView } from '@/features/program/detail/ModuleKanbanView'
-import { readModuleSettings } from '@/features/program/detail/moduleMeta'
+import {
+  MODULE_META,
+  formatModulePeriod,
+  moduleStatusMeta,
+  readModuleSettings,
+} from '@/features/program/detail/moduleMeta'
 
-type BoardView = 'kanban' | 'gantt'
+type BoardView = 'list' | 'kanban' | 'gantt'
 
-/**
- * 뷰는 둘이다 — 칸반(지금 어느 단계인가)과 간트(무엇과 무엇이 겹치는가).
- * 목록 뷰는 2026-09-01 사용자 지정으로 걷어냈고, 그 뷰에만 있던 설정·끄기는 두 뷰의
- * 카드·라벨로, '프로그램 추가'는 카드 헤더로 옮겼다 — 뷰 하나가 사라진다고 그 뷰에
- * 얹혀 있던 동작까지 사라지면 안 된다.
- */
 const VIEW_OPTIONS: { key: BoardView; label: string; icon: LucideIcon }[] = [
+  { key: 'list', label: '목록', icon: List },
   { key: 'kanban', label: '칸반', icon: SquareKanban },
   { key: 'gantt', label: '간트', icon: ChartGantt },
 ]
@@ -60,10 +70,9 @@ function sortModules(modules: ProgramModule[]): ProgramModule[] {
 }
 
 /**
- * 운영 모듈 보드(상세 개요 좌측 카드). 헤더 토글로 **칸반·간트** 두 뷰를 전환하며 기본은 간트다.
- * 칸반은 상태 컬럼(드래그로 상태 변경), 간트는 기간 막대다. 두 뷰 모두 카드·라벨에서
- * 모듈 설정(연필)·끄기(X)를 열 수 있고, 모듈 추가는 카드 헤더의 버튼이 받는다.
- * 추가는 2단계(템플릿 선택 → 세팅)이며, 편집은 세팅 폼을 재사용한다.
+ * 운영 모듈 보드(상세 개요 좌측 카드). 헤더 토글로 목록·칸반·간트 3개 뷰를 전환한다.
+ * 목록 뷰: 활성 인스턴스 카드 나열(모듈명·템플릿 배지·상태·공유·기간·담당자, 호버 시 설정/끄기) + 하단 점선 카드로 모듈 추가.
+ * 추가는 2단계(템플릿 선택 → 세팅)이며, 편집은 세팅 폼을 재사용한다. 칸반: 상태 컬럼. 간트: 일정 막대.
  */
 export function ModuleBoardCard({
   program,
@@ -80,9 +89,7 @@ export function ModuleBoardCard({
   // 2단계 마법사: 템플릿 선택(addOpen) → 세팅(createType 지정 시 폼).
   const [addOpen, setAddOpen] = useState(false)
   const [createType, setCreateType] = useState<string | null>(null)
-  // 기본 뷰는 간트다(2026-09-01 사용자 지정) — 사업 상세를 열고 가장 먼저 묻는 것이
-  // '지금 무엇이 돌아가고 언제 끝나는가'이며, 그 물음에 답하는 것은 시간 축이다.
-  const [view, setView] = useState<BoardView>('gantt')
+  const [view, setView] = useState<BoardView>('list')
   const [expanded, setExpanded] = useState(false)
 
   if (isLoading) {
@@ -129,17 +136,6 @@ export function ModuleBoardCard({
     />
   )
 
-  /**
-   * 모듈 추가 — 종전에는 목록 뷰 하단의 점선 카드가 받던 동작이다. 목록을 걷어내면서
-   * 뷰와 무관하게 늘 같은 자리에 있어야 하는 동작이 되어 카드 헤더로 올렸다.
-   */
-  const addButton = (
-    <Button variant="secondary" onClick={() => setAddOpen(true)}>
-      <Plus className="h-4 w-4" />
-      프로그램 추가
-    </Button>
-  )
-
   const expandButton = (
     <ExpandToggleButton
       expanded={expanded}
@@ -149,23 +145,91 @@ export function ModuleBoardCard({
     />
   )
 
-  const body =
-    view === 'kanban' ? (
-      <ModuleKanbanView
-        programId={programId}
-        modules={enabled}
-        onOpenModule={openModule}
-        onEditModule={setEditTarget}
-        onDisableModule={(mod) => void onDisable(mod)}
-      />
-    ) : (
-      <ModuleGanttView
-        modules={enabled}
-        onOpenModule={openModule}
-        onEditModule={setEditTarget}
-        onDisableModule={(mod) => void onDisable(mod)}
-      />
-    )
+  const body = (
+    <>
+      {view === 'kanban' && (
+        <ModuleKanbanView programId={programId} modules={enabled} onOpenModule={openModule} />
+      )}
+      {view === 'gantt' && <ModuleGanttView modules={enabled} onOpenModule={openModule} />}
+      {view === 'list' && (
+        <>
+          <ul className="space-y-2">
+            {enabled.map((mod) => {
+              const meta = MODULE_META[mod.module_type]
+              const status = moduleStatusMeta(mod.status)
+              const settings = readModuleSettings(mod.settings)
+              return (
+                <li key={mod.id}>
+                  <BoardItemCard
+                    onClick={() => openModule(mod)}
+                    leading={meta?.emoji}
+                    title={nameOf(mod)}
+                    badges={
+                      <>
+                        <Badge tone={status.tone}>{status.label}</Badge>
+                        <Badge tone={MODULE_VISIBILITY_TONE[mod.visibility] ?? 'neutral'}>
+                          {MODULE_VISIBILITY_LABEL[mod.visibility] ?? 'WORKS ONLY'}
+                        </Badge>
+                        {/* 파생 템플릿 배지 — 원천 템플릿을 다른 배지와 함께 표기. */}
+                        <Badge tone="neutral">{labelOf(mod.module_type)}</Badge>
+                      </>
+                    }
+                    description={settings.memo ?? meta?.description ?? ''}
+                    meta={
+                      <>
+                        <span className="tabular-nums">
+                          {formatModulePeriod(settings)}
+                        </span>
+                        {mod.assignees.length > 0 && (
+                          <span className="border-l border-gray-200 pl-2">
+                            <span className="font-semibold">담당</span>{' '}
+                            {mod.assignees.map((a) => a.user?.name ?? '이름 미상').join(', ')}
+                          </span>
+                        )}
+                      </>
+                    }
+                    /* 상시 노출 액션: 설정(연필)/끄기(X). 카드 클릭과 겹치지 않는 레이어에 놓인다. */
+                    actions={
+                      <>
+                        <IconButton
+                          title="모듈 설정"
+                          label={`${nameOf(mod)} 설정`}
+                          onClick={() => setEditTarget(mod)}
+                          icon={<Pencil className="h-3.5 w-3.5" />}
+                        />
+                        <IconButton
+                          title="모듈 끄기"
+                          label={`${nameOf(mod)} 끄기`}
+                          danger
+                          onClick={() => void onDisable(mod)}
+                          icon={<X className="h-3.5 w-3.5" />}
+                        />
+                      </>
+                    }
+                  />
+                </li>
+              )
+            })}
+            {enabled.length === 0 && (
+              <li>
+                <BoardEmptyRow>
+                  활성화된 모듈이 없습니다. 아래에서 모듈을 추가하세요.
+                </BoardEmptyRow>
+              </li>
+            )}
+          </ul>
+
+          <DashedAddButton
+            className="mt-2"
+            onClick={() => setAddOpen(true)}
+            icon={<Plus className="h-4 w-4" />}
+          >
+            프로그램 추가
+          </DashedAddButton>
+        </>
+      )}
+    </>
+  )
 
   return (
     <>
@@ -174,7 +238,6 @@ export function ModuleBoardCard({
         actions={
           <div className="flex items-center gap-2">
             {viewToggle}
-            {addButton}
             {expandButton}
           </div>
         }
@@ -194,7 +257,6 @@ export function ModuleBoardCard({
         actions={
           <>
             {viewToggle}
-            {addButton}
             {expandButton}
           </>
         }

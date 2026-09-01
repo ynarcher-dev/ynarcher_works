@@ -1,5 +1,4 @@
-import { Badge, GanttChart, IconButton, type GanttRow } from '@ynarcher/ui'
-import { Pencil, X } from 'lucide-react'
+import { Badge, GanttChart, type GanttRow } from '@ynarcher/ui'
 import { MODULE_TYPES } from '@/features/program/config'
 import type { ProgramModule } from '@/features/program/hooks'
 import {
@@ -25,15 +24,9 @@ const nameOf = (mod: ProgramModule) => mod.title?.trim() || labelOf(mod.module_t
 export function ModuleGanttView({
   modules,
   onOpenModule,
-  onEditModule,
-  onDisableModule,
 }: {
   modules: ProgramModule[]
   onOpenModule: (module: ProgramModule) => void
-  /** 모듈 설정 열기. 목록 뷰를 걷어낸 뒤(2026-09-01) 설정·끄기가 여기로 왔다. */
-  onEditModule?: (module: ProgramModule) => void
-  /** 모듈 끄기(비활성). */
-  onDisableModule?: (module: ProgramModule) => void
 }) {
   const dated = modules
     .map((mod) => ({ mod, settings: readModuleSettings(mod.settings) }))
@@ -57,30 +50,6 @@ export function ModuleGanttView({
       barClass: MODULE_BAR_CLASS[mod.status] ?? 'bg-gray-300',
       title: `${nameOf(mod)} · ${settings.start_date} ~ ${settings.end_date} · ${status.label}`,
       onClick: () => onOpenModule(mod),
-      // 설정·끄기는 라벨 버튼 바깥의 액션 슬롯에 선다 — 막대·라벨 클릭은 운영 화면 진입이라
-      // 같은 자리에 두면 두 동작이 서로를 삼킨다.
-      labelAction:
-        onEditModule || onDisableModule ? (
-          <>
-            {onEditModule && (
-              <IconButton
-                title="모듈 설정"
-                label={`${nameOf(mod)} 설정`}
-                onClick={() => onEditModule(mod)}
-                icon={<Pencil className="h-3.5 w-3.5" />}
-              />
-            )}
-            {onDisableModule && (
-              <IconButton
-                title="모듈 끄기"
-                label={`${nameOf(mod)} 끄기`}
-                danger
-                onClick={() => onDisableModule(mod)}
-                icon={<X className="h-3.5 w-3.5" />}
-              />
-            )}
-          </>
-        ) : undefined,
       label: (
         <>
           {Icon && (
