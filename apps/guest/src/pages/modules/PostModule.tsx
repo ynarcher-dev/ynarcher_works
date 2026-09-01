@@ -1,7 +1,5 @@
-import { Card, Spinner } from '@ynarcher/ui'
-import { useState } from 'react'
-import { useModulePosts, type GuestPost } from '@/features/moduleHooks'
-import { formatDate } from '@/lib/format'
+import { Spinner } from '@ynarcher/ui'
+import { useModulePosts } from '@/features/moduleHooks'
 import { sanitizeRichText } from '@/lib/richText'
 
 /** 본문 서식(문단·목록·링크)의 최소 조판. 에디터 런타임 없이 클래스만으로 세운다. */
@@ -14,73 +12,28 @@ const BODY_CLASS =
 /**
  * 글쓰기 메뉴 — 운영자가 남긴 글을 읽는다(게스트는 읽기 전용).
  *
- * 제목을 눌러 그 자리에서 펼친다. 글마다 경로를 따로 내지 않는 이유는 게스트에서 메뉴 하나가
- * 곧 화면 하나이기 때문이다 — 상세 경로를 만들면 사이드바가 가리키는 곳과 주소창이 어긋난다.
+ * **모듈 하나가 곧 글 하나**이므로 목록을 거치지 않고 본문이 바로 열린다 — WORKS의 글쓰기
+ * 화면과 같은 구성이며 편집만 없다. 글의 제목은 모듈명이 대신하므로(머리에 이미 서 있다)
+ * 본문 위에 제목을 다시 세우지 않는다. 과거 커스텀 활동에서 여러 건이 넘어온 모듈은
+ * WORKS와 같은 판정으로 최신 글을 본문으로 본다.
  */
 export function PostModule({ moduleId }: { moduleId: string }) {
   const { data, isLoading } = useModulePosts(moduleId)
-  const [openId, setOpenId] = useState<string | null>(null)
-  const posts = data ?? []
+
+  if (isLoading) return <Spinner />
+
+  const post = (data ?? [])[0]
+  const body = post ? sanitizeRichText(post.body) : ''
 
   return (
-    <Card title="글" count={posts.length}>
-      {isLoading ? (
-        <Spinner />
+    <article className="rounded-radius-md border border-gray-200 bg-white p-6">
+      {body ? (
+        <div className={BODY_CLASS} dangerouslySetInnerHTML={{ __html: body }} />
       ) : (
-        <div className="space-y-2">
-          {posts.map((post) => (
-            <PostRow
-              key={post.id}
-              post={post}
-              open={openId === post.id}
-              onToggle={() => setOpenId(openId === post.id ? null : post.id)}
-            />
-          ))}
-          {posts.length === 0 && (
-            <p className="py-4 text-center text-caption text-gray-500">
-              등록된 글이 없습니다.
-            </p>
-          )}
-        </div>
+        <p className="py-8 text-center text-body text-gray-600">
+          아직 작성된 내용이 없습니다.
+        </p>
       )}
-    </Card>
-  )
-}
-
-function PostRow({
-  post,
-  open,
-  onToggle,
-}: {
-  post: GuestPost
-  open: boolean
-  onToggle: () => void
-}) {
-  const body = open ? sanitizeRichText(post.body) : ''
-  return (
-    <div className="rounded-radius-md border border-gray-300">
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={open}
-        className="flex min-h-12 w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors duration-fast hover:bg-gray-25 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10"
-      >
-        <span className="min-w-0 truncate text-body font-medium text-gray-900">
-          {post.title}
-        </span>
-        <span className="shrink-0 text-caption tabular-nums text-gray-600">
-          {formatDate(post.activity_date ?? post.created_at)}
-        </span>
-      </button>
-      {open && (
-        <div className="border-t border-gray-100 px-3 py-3">
-          {body ? (
-            <div className={BODY_CLASS} dangerouslySetInnerHTML={{ __html: body }} />
-          ) : (
-            <p className="text-caption text-gray-500">본문이 없습니다.</p>
-          )}
-        </div>
-      )}
-    </div>
+    </article>
   )
 }
