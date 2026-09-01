@@ -16,9 +16,12 @@ function isEmptyHtml(html: string): boolean {
 }
 
 /**
- * 메뉴별 NOTICE(알림) 패널. GUEST 메뉴 우측의 NOTICE 칸과 **같은 구성**(제목·본문·날짜
- * 목록)이며, 차이는 편집 가능 여부뿐이다 — WORKS에서 세우고 게스트가 같은 자리에서 읽는다.
- * 글쓰기(POST) 화면에는 세우지 않는다(그 자체가 글쓰기 기능이라 알림 글이 중복된다).
+ * 메뉴별 NOTICE(알림) 패널. GUEST 메뉴 우측의 NOTICE 칸과 **같은 구성**이며, 차이는 편집
+ * 가능 여부뿐이다 — WORKS에서 세우고 게스트가 같은 자리에서 읽는다.
+ *
+ * **메뉴 하나 = 알림 하나**다(글쓰기 모듈의 "모듈 하나 = 글 하나"와 같은 판정) — 목록을
+ * 두지 않고 최신 미삭제 한 건을 알림으로 본다. 여러 소식을 알리고 싶으면 본문을 고쳐 쓰는
+ * 것이지 글을 쌓는 것이 아니다. 글쓰기(POST) 화면에는 세우지 않는다(그 자체가 글이다).
  * 본문 에디터·뷰어는 게시판·글쓰기와 같은 공용 리치텍스트(RichTextEditor) 하나를 쓴다 —
  * 에디터가 바뀌면 NOTICE도 함께 바뀐다.
  */
@@ -29,69 +32,17 @@ export function NoticePanel({
   programId: string
   moduleId: string
 }) {
-  const { data: notices = [], isLoading } = useModuleNotices(moduleId)
-  // undefined=목록 / null=신규 작성 / ProgramNotice=수정
-  const [editing, setEditing] = useState<ProgramNotice | null | undefined>(undefined)
-
-  return (
-    <Card
-      title="NOTICE"
-      count={notices.length}
-      actions={
-        editing === undefined ? (
-          <Button variant="secondary" onClick={() => setEditing(null)}>
-            <Plus className="size-4" />
-            알림 추가
-          </Button>
-        ) : undefined
-      }
-    >
-      {editing !== undefined ? (
-        <NoticeForm
-          key={editing?.id ?? 'new'}
-          programId={programId}
-          moduleId={moduleId}
-          notice={editing ?? undefined}
-          onDone={() => setEditing(undefined)}
-          onCancel={() => setEditing(undefined)}
-        />
-      ) : isLoading ? (
-        <Spinner />
-      ) : notices.length === 0 ? (
-        <p className="py-6 text-center text-body text-gray-600">
-          등록된 알림이 없습니다. 게스트 화면 우측에 이 목록이 그대로 보입니다.
-        </p>
-      ) : (
-        <ul className="space-y-2">
-          {notices.map((notice) => (
-            <NoticeRow
-              key={notice.id}
-              notice={notice}
-              moduleId={moduleId}
-              onEdit={() => setEditing(notice)}
-            />
-          ))}
-        </ul>
-      )}
-    </Card>
-  )
-}
-
-/** 알림 1건: 제목·본문·게시일 + 수정·삭제. */
-function NoticeRow({
-  notice,
-  moduleId,
-  onEdit,
-}: {
-  notice: ProgramNotice
-  moduleId: string
-  onEdit: () => void
-}) {
   const toast = useToast()
+  const { data: notices = [], isLoading } = useModuleNotices(moduleId)
   const remove = useDeleteNotice(moduleId)
+  const [editing, setEditing] = useState(false)
+
+  // 이 메뉴의 알림 한 건. 과거에 여러 건이 쌓였다면 최신 글을 알림으로 본다.
+  const notice = notices[0]
 
   const onDelete = async () => {
-    if (!window.confirm(`'${notice.title}' 알림을 삭제하시겠습니까?`)) return
+    if (!notice) return
+    if (!window.confirm(`'${notice.title}' 알림을 내리시겠습니까?`)) return
     try {
       await remove.mutateAsync(notice.id)
     } catch {
@@ -100,40 +51,78 @@ function NoticeRow({
   }
 
   return (
-    <li className="relative rounded-radius-md border border-gray-300 bg-white py-3 pl-4 pr-20">
-      {/* 머리(공지명·게시일)와 콘텐츠(본문)를 헤어라인으로 가른다 — 본문이 제목(h1)으로
-          시작해도 어디까지가 알림의 이름인지 선이 답한다. min-h-0은 에디터용 최소 높이
-          (16rem)가 읽기 전용 뷰어에 빈 공간으로 남는 것을 이 자리에서만 눕힌다. */}
-      <p className="text-body font-semibold text-gray-900">{notice.title}</p>
-      <p className="mt-0.5 text-caption tabular-nums text-gray-500">
-        {notice.created_at.slice(0, 10)}
-      </p>
-      {notice.body && (
-        <div className="mt-2 border-t border-gray-200 pt-2 [&_.ProseMirror]:min-h-0">
-          <RichTextViewer html={notice.body} />
-        </div>
+    <Card
+      title="NOTICE"
+      actions={
+        !editing ? (
+          <span className="flex items-center gap-1">
+            {notice && (
+              <IconButton
+                variant="ghost"
+                danger
+                label="알림 내리기"
+                disabled={remove.isPending}
+                onClick={() => void onDelete()}
+                icon={<Trash2 className="size-4" />}
+              />
+            )}
+            <Button variant="secondary" onClick={() => setEditing(true)}>
+              {notice ? <Pencil className="size-4" /> : <Plus className="size-4" />}
+              {notice ? '수정' : '작성'}
+            </Button>
+          </span>
+        ) : undefined
+      }
+    >
+      {editing ? (
+        <NoticeForm
+          programId={programId}
+          moduleId={moduleId}
+          notice={notice}
+          onDone={() => setEditing(false)}
+          onCancel={() => setEditing(false)}
+        />
+      ) : isLoading ? (
+        <Spinner />
+      ) : !notice ? (
+        <p className="py-6 text-center text-body text-gray-600">
+          등록된 알림이 없습니다. 작성하면 게스트 메뉴 우측 같은 자리에 보입니다.
+        </p>
+      ) : (
+        <NoticeView notice={notice} />
       )}
-      <span className="absolute right-3 top-3 z-10 flex items-center gap-1">
-        <IconButton
-          variant="ghost"
-          label={`${notice.title} 수정`}
-          onClick={onEdit}
-          icon={<Pencil className="size-4" />}
-        />
-        <IconButton
-          variant="ghost"
-          danger
-          label={`${notice.title} 삭제`}
-          disabled={remove.isPending}
-          onClick={() => void onDelete()}
-          icon={<Trash2 className="size-4" />}
-        />
-      </span>
-    </li>
+    </Card>
   )
 }
 
-/** 알림 작성·수정 폼(카드 안에서 목록과 자리를 바꾼다 — LinkPanel과 같은 방식). */
+/**
+ * 알림 한 건의 표시. 머리는 [브랜드 바 | 공지명 | 게시일] 한 줄 — 바가 어디까지가 알림의
+ * 이름인지 답하고(본문이 h1로 시작해도), 화면의 포인트 색 역할을 겸한다. 본문은 바 폭만큼
+ * 들여 머리와 같은 축에 선다. min-h-0은 에디터용 최소 높이(16rem)가 읽기 전용 뷰어에
+ * 빈 공간으로 남는 것을 이 자리에서만 눕힌다.
+ */
+function NoticeView({ notice }: { notice: ProgramNotice }) {
+  return (
+    <div>
+      <div className="flex items-center gap-2">
+        <span aria-hidden className="h-3.5 w-0.5 shrink-0 rounded-full bg-brand" />
+        <p className="min-w-0 flex-1 truncate text-body font-semibold text-gray-900">
+          {notice.title}
+        </p>
+        <span className="shrink-0 text-caption tabular-nums text-gray-500">
+          {notice.created_at.slice(0, 10)}
+        </span>
+      </div>
+      {notice.body && (
+        <div className="mt-1.5 pl-2.5 [&_.ProseMirror]:min-h-0">
+          <RichTextViewer html={notice.body} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** 알림 작성·수정 폼(카드 안에서 표시와 자리를 바꾼다). */
 function NoticeForm({
   programId,
   moduleId,
@@ -171,7 +160,7 @@ function NoticeForm({
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <label className="text-caption font-semibold text-gray-600">제목</label>
+        <label className="text-caption font-semibold text-gray-600">공지명</label>
         <Input
           autoFocus
           placeholder="예: 제출 마감 연장 안내"
@@ -193,7 +182,7 @@ function NoticeForm({
           취소
         </Button>
         <Button onClick={() => void submit()} disabled={!canSubmit}>
-          {save.isPending ? '저장 중…' : notice ? '수정 완료' : '추가'}
+          {save.isPending ? '저장 중…' : notice ? '수정 완료' : '등록'}
         </Button>
       </div>
     </div>

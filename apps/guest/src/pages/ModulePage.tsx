@@ -6,7 +6,7 @@ import {
 } from '@ynarcher/master-data'
 import { useParams } from 'react-router-dom'
 import { GuestNoticeRail } from '@/app/GuestNoticeRail'
-import { useGuestModules, type GuestModule } from '@/features/moduleHooks'
+import { useGuestModules, useModuleFiles, type GuestModule } from '@/features/moduleHooks'
 import { moduleNotice } from '@/features/moduleMeta'
 import { BookingModule } from '@/pages/modules/BookingModule'
 import { FileModule } from '@/pages/modules/FileModule'
@@ -44,13 +44,13 @@ export function ModulePage() {
 
   const settings = readModuleSettings(mod.settings)
   const notice = moduleNotice(mod.module_type, settings.memo)
-  // 글쓰기 메뉴는 NOTICE를 세우지 않는다 — 그 화면 자체가 글이다.
-  const hasNoticeRail = mod.module_type !== 'POST'
 
   return (
     <div className="space-y-5">
-      {/* 머리와 그 밑 구분선은 전체 폭으로 선다. NOTICE는 구분선 아래에서 본문과 나란히
-          2:1로 갈리고(데스크톱), 모바일에서는 본문 아래로 이어 붙는다. */}
+      {/* 머리와 그 밑 구분선은 전체 폭으로 선다. 본문은 구분선 아래에서 2:1로 갈리고
+          (데스크톱), 모바일에서는 우측 칸이 본문 아래로 이어 붙는다. 우측 칸의 내용은
+          템플릿이 가른다 — 글쓰기는 본문에 딸린 파일(WORKS 글쓰기 화면의 자료 패널과
+          같은 자리), 그 외에는 NOTICE. 세울 것이 없으면 empty:hidden으로 칸째 사라진다. */}
       <PageHeader
         title={moduleDisplayName(mod)}
         description={
@@ -65,20 +65,30 @@ export function ModulePage() {
           </>
         }
       />
-      {hasNoticeRail ? (
-        <div className="lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:gap-6">
-          <div className="min-w-0">
-            <ModuleBody module={mod} />
-          </div>
-          <div className="mt-5 min-w-0 lg:mt-0">
-            <GuestNoticeRail moduleId={mod.id} />
-          </div>
+      <div className="lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:gap-6">
+        <div className="min-w-0">
+          <ModuleBody module={mod} />
         </div>
-      ) : (
-        <ModuleBody module={mod} />
-      )}
+        <div className="mt-5 min-w-0 empty:hidden lg:mt-0">
+          {mod.module_type === 'POST' ? (
+            <PostFilesRail moduleId={mod.id} />
+          ) : (
+            <GuestNoticeRail moduleId={mod.id} />
+          )}
+        </div>
+      </div>
     </div>
   )
+}
+
+/**
+ * 글쓰기 메뉴 우측의 첨부 파일 — WORKS 글쓰기 화면이 우측에 두는 자료 패널의 게스트판으로,
+ * 본문에 딸린 파일을 내려받는 자리다. 파일이 없으면 칸을 세우지 않는다.
+ */
+function PostFilesRail({ moduleId }: { moduleId: string }) {
+  const { data } = useModuleFiles(moduleId)
+  if (!data?.length) return null
+  return <FileModule moduleId={moduleId} />
 }
 
 /**
