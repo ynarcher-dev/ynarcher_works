@@ -74,14 +74,15 @@ export function normalizePhone(raw: unknown): string {
 }
 
 /**
- * 새 비밀번호 규칙. 외부 참여자가 쓰는 자리라 복잡도보다 길이를 본다 —
- * 기억하지 못할 규칙은 결국 메모지에 적힌다.
+ * 새 비밀번호 규칙 — 영문+숫자 조합 8자 이상(특수문자는 자유). 외부 참여자가 쓰는
+ * 자리라 이 이상의 복잡도는 요구하지 않는다 — 기억하지 못할 규칙은 결국 메모지에 적힌다.
+ * 클라이언트 사전 검사(apps/guest/src/lib/passwordRule.ts)와 안내 문구를 함께 맞출 것.
  */
 export function passwordPolicyError(password: string, initialPassword: string): string | null {
   const pw = String(password ?? '')
   if (pw.length < 8) return '비밀번호는 8자 이상이어야 합니다.'
   if (pw.length > 72) return '비밀번호는 72자 이하여야 합니다.'
-  if (/^\d+$/.test(pw)) return '숫자로만 이루어진 비밀번호는 사용할 수 없습니다.'
+  if (!/[A-Za-z]/.test(pw) || !/\d/.test(pw)) return '영문과 숫자를 모두 포함해야 합니다.'
   if (normalizePhone(pw) && normalizePhone(pw) === normalizePhone(initialPassword)) {
     return '초기 비밀번호(연락처)와 다른 값을 사용하세요.'
   }

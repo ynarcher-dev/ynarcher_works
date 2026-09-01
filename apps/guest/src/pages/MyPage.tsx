@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Badge, Card, EmptyState, InfoField, InfoGrid, Spinner } from '@ynarcher/ui'
+import { Badge, Banner, Card, EmptyState, InfoField, InfoGrid, Spinner } from '@ynarcher/ui'
 import { guestAuth, type GuestMe } from '@/auth/guestAuthService'
 import { PasswordChangeCard } from '@/pages/PasswordChangeCard'
 import {
@@ -53,7 +53,6 @@ export function MyPage() {
 
       <Card
         title="참여 중인 사업"
-        subtitle="사업은 로그인에 쓴 사업 코드에 고정됩니다. 다른 사업은 그 사업의 코드로 다시 로그인해 주세요."
         actions={
           <Badge tone={PROGRAM_STATUS_TONE[me.program.status] ?? 'neutral'}>
             {PROGRAM_STATUS_LABEL[me.program.status] ?? me.program.status}
@@ -71,9 +70,17 @@ export function MyPage() {
             meta
           />
         </InfoGrid>
+        <Banner tone="info" className="mt-4">
+          사업은 로그인에 쓴 사업 코드에 고정됩니다. 다른 사업은 그 사업의 코드로 다시
+          로그인해 주세요.
+        </Banner>
       </Card>
 
       <PasswordChangeCard />
+
+      <Banner tone="info">
+        수집된 개인정보는 사업 종료 후 보존이 필요한 사항을 제외하고 파기됩니다.
+      </Banner>
     </div>
   )
 }

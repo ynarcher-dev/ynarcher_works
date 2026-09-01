@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { GuestButton } from '@/components/GuestButton'
 import { guestAuth, type GuestCredentials } from '@/auth/guestAuthService'
+import { passwordRuleOk } from '@/lib/passwordRule'
 
 const credsSchema = z.object({
   businessCode: z.string().min(1, '사업 코드를 입력하세요.'),
@@ -139,7 +140,7 @@ export function GuestLoginPage() {
         <div className="mt-6 space-y-4">
           <div>
             <label className="text-body font-medium text-gray-800" htmlFor="newPassword">
-              새 비밀번호 (8자 이상)
+              새 비밀번호 (영문+숫자 조합, 8자 이상)
             </label>
             <input
               id="newPassword"
@@ -169,7 +170,7 @@ export function GuestLoginPage() {
           <GuestButton
             className="w-full"
             onClick={() => void onSetPassword()}
-            disabled={busy || newPassword.length < 8}
+            disabled={busy || !passwordRuleOk(newPassword)}
           >
             {busy ? '설정 중…' : '설정하고 시작'}
           </GuestButton>
