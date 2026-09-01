@@ -31,10 +31,9 @@ export function QnaPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        title="QNA"
-        description="사업에 대해 궁금한 점을 남기면 담당자가 답변합니다. 질문과 답변은 본인에게만 보입니다."
-      />
+      {/* 설명 줄은 두지 않는다(2026-09-01) — 무엇을 하는 화면인지는 '질문하기' 카드와
+          '내 질문' 목록이 이미 말하고, 본인에게만 보인다는 사실도 그 두 이름에 들어 있다. */}
+      <PageHeader title="QNA" />
       <div className="lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:gap-6">
         <div className="min-w-0">
           <MyQuestionsCard list={list} />

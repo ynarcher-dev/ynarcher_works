@@ -7,16 +7,23 @@ import {
   type Column,
 } from '@ynarcher/ui'
 import { useState } from 'react'
-import { useProgramAnnouncements, type GuestAnnouncement } from '@/features/announcementHooks'
+import {
+  useAnnouncementFiles,
+  useProgramAnnouncements,
+  type GuestAnnouncement,
+} from '@/features/announcementHooks'
 import { GUEST_LIST_PAGE_SIZE, matchesKeyword, pageSlice } from '@/features/listFilter'
+import { GuestFileCard } from '@/pages/modules/FileModule'
 import { RICH_BODY_CLASS, sanitizeRichText } from '@/lib/richText'
 
 /**
- * 공지사항 — 고정 메뉴 두 번째 줄. WORKS 사업 상세의 공지사항 탭과 **같은 구성**(2:1 분할,
- * 목록 표 + 검색, 행을 누르면 우측에 본문)이며 작성·수정만 없다.
+ * 공지사항 — 고정 메뉴 두 번째 줄. 좌측(2)이 목록 표 + 검색, 우측(1)이 고른 공지의 본문과
+ * 그 공지에 딸린 파일이다. **좌우 배치는 GUEST 쪽만의 것이다**(2026-09-01 지정) — 같은
+ * 내용을 WORKS는 상하로 세운다. 여기는 읽기만 하는 자리라 곁칸으로 충분하고, 저쪽은 쓰는
+ * 자리라 에디터와 업로드가 전체 폭을 받아야 한다.
  *
- * 좌측(2)이 목록이고 우측(1)이 읽는 자리다 — 표의 행은 훑는 자리고 본문은 읽는 자리라,
- * 행 안에 본문을 펼치면 열 위치가 흔들린다. 본문 정화기·조판은 글쓰기·QNA와 같은 한 벌이다.
+ * 표의 행은 훑는 자리고 본문은 읽는 자리라, 행 안에 본문을 펼치지 않는다.
+ * 본문 정화기·조판은 글쓰기·QNA와 같은 한 벌이다.
  */
 export function AnnouncementsPage() {
   const { data, isLoading } = useProgramAnnouncements()
@@ -78,12 +85,24 @@ export function AnnouncementsPage() {
             </div>
           </Card>
         </div>
-        <div className="mt-5 min-w-0 lg:mt-0">
+        <div className="mt-5 min-w-0 space-y-5 lg:mt-0">
           <AnnouncementBody announcement={selected} />
+          {/* 그 공지에 딸린 파일. 고른 공지가 없거나 파일이 없으면 칸을 세우지 않는다. */}
+          {selected && <AnnouncementFilesRail announcementId={selected.id} />}
         </div>
       </div>
     </div>
   )
+}
+
+/**
+ * 고른 공지의 첨부 파일 — 사업개요·글쓰기의 파일 칸과 같은 판정으로, 파일이 없으면
+ * 칸을 세우지 않는다. 행 규격은 WORKS 자료 목록과 같은 공용 카드다.
+ */
+function AnnouncementFilesRail({ announcementId }: { announcementId: string }) {
+  const { data } = useAnnouncementFiles(announcementId)
+  if (!data?.length) return null
+  return <GuestFileCard files={data} />
 }
 
 /** 우측에 서는 공지 1건. 고르기 전에는 무엇을 하라는 화면인지 말한다. */

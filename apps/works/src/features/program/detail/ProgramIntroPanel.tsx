@@ -10,21 +10,21 @@ import {
 } from '@/features/program/overviewHooks'
 
 /**
- * 사업개요(사업소개문) 탭. GUEST 로그인 직후 첫 화면(사이드바 최상단 '사업개요')과
- * **같은 구성**이며, 차이는 편집 가능 여부뿐이다 — 소개문(2)과 소개문에 딸린 파일(1)의
- * 2:1 분할로, WORKS에서 쓰고·올리고 게스트가 첫 화면 같은 자리에서 읽고·내려받는다.
+ * 사업개요(사업소개문) 탭. 소개문 위, 그 소개문에 딸린 파일 아래의 **상하 배치**다
+ * (2026-09-01 사용자 지정) — WORKS는 쓰는 화면이라 에디터와 업로드 드롭존이 모두 전체
+ * 폭을 받아야 하고, 읽기만 하는 GUEST 쪽은 같은 내용을 좌우 2:1로 세운다. 같은 자료를
+ * 두 앱이 다른 배치로 보는 이유가 이것 하나다: 한쪽은 쓰는 자리, 한쪽은 읽는 자리다.
  *
  * 파일은 새 원장 없이 attachments 행에 target_type='program_overview'로 귀속만 표시한다
  * (파일첨부 모듈이 program_module_id로 하는 것과 같은 판정 — 사업개요는 모듈이 아니라
  * 모듈 마커를 쓸 수 없고, 사업 자료 관리(target_type='program')와는 목록의 축이 다르다).
+ * 사업당 개요가 하나뿐이라 여기서는 사업 id가 곧 그 개요를 가리킨다.
  * 게스트 쪽 읽기는 RLS(20260901160000)가 연다.
  */
 export function ProgramIntroPanel({ programId }: { programId: string }) {
   return (
-    <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
-      <div className="lg:col-span-2">
-        <IntroCard programId={programId} />
-      </div>
+    <div className="space-y-4">
+      <IntroCard programId={programId} />
       <MaterialPanel targetType="program_overview" targetId={programId} title="파일" />
     </div>
   )

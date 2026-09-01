@@ -13,6 +13,7 @@ import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { RichTextEditor, RichTextViewer } from '@/components/RichTextEditor'
 import { isEmptyRichText } from '@/lib/richText'
+import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import {
   useAnnouncements,
   useDeleteAnnouncement,
@@ -22,9 +23,16 @@ import {
 import { LIST_PAGE_SIZE, matchesKeyword, pageSlice } from '@/features/program/detail/listFilter'
 
 /**
- * 공지사항 탭 — 사업 단위 게시판. GUEST 고정 메뉴 '공지사항'과 **같은 구성**(2:1 분할,
- * 목록 표 + 검색, 행을 누르면 우측에 본문)이며 차이는 작성·수정·삭제뿐이다.
+ * 공지사항 탭 — 사업 단위 게시판. 목록 표 위, 고른 공지의 본문과 첨부 파일 아래의
+ * **상하 배치**다(2026-09-01 사용자 지정) — 사업개요 탭과 같은 이유로, 쓰는 화면인
+ * WORKS는 본문 에디터와 업로드 드롭존이 전체 폭을 받는다. 읽기만 하는 GUEST 쪽은 같은
+ * 내용을 좌우 2:1로 세운다.
  * 모듈별 NOTICE(메뉴당 한 건)와 축이 다르다 — 이쪽은 사업 전체를 향한 글이 여러 건 쌓인다.
+ *
+ * 첨부의 귀속은 화면이 아니라 **공지 1건**이다(target_type='program_announcement',
+ * target_id=공지 id) — 공지가 여러 건인데 파일함을 화면에 하나 두면 어느 공지의 파일인지
+ * 알 수 없다. 사업개요 파일과 축이 갈리는 지점이 여기다(그쪽은 사업당 개요가 하나라
+ * target_id가 사업이다). 게스트 쪽 읽기는 RLS(20260901180000)가 연다.
  */
 export function ProgramAnnouncementsPanel({ programId }: { programId: string }) {
   const toast = useToast()
@@ -73,87 +81,86 @@ export function ProgramAnnouncementsPanel({ programId }: { programId: string }) 
   }
 
   return (
-    <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
-      <div className="lg:col-span-2">
-        <Card
-          title="공지사항"
-          count={filtered.length}
-          actions={
-            <Button variant="secondary" onClick={() => setEditing('new')}>
-              <Plus className="size-4" />
-              작성
-            </Button>
-          }
-        >
-          {isLoading ? (
-            <Spinner />
-          ) : (
-            <div className="space-y-3">
-              <ListToolbar
-                keyword={keyword}
-                onKeywordChange={(v) => {
-                  setKeyword(v)
-                  setPage(0)
-                }}
-                searchPlaceholder="제목·내용 검색"
-              />
-              <DataTable
-                columns={columns}
-                rows={pageRows}
-                rowKey={(a) => a.id}
-                numbered={false}
-                standardColumns={false}
-                emptyText={
-                  keyword
-                    ? '검색 결과가 없습니다.'
-                    : '등록된 공지가 없습니다. 작성하면 게스트 공지사항 메뉴에 보입니다.'
-                }
-                onRowClick={(a) => setSelectedId(selectedId === a.id ? null : a.id)}
-                rowClassName={(a) => (a.id === selectedId ? 'bg-brand/5' : undefined)}
-                pagination={{
-                  page: safePage,
-                  pageSize: LIST_PAGE_SIZE,
-                  total: filtered.length,
-                  onChange: setPage,
-                  compact: true,
-                }}
-              />
-            </div>
-          )}
-        </Card>
-      </div>
-      <AnnouncementBody
-        announcement={selected}
-        onEdit={() => selected && setEditing(selected)}
-        onDelete={() => selected && void onDelete(selected)}
-        deleting={remove.isPending}
-      />
+    <div className="space-y-4">
+      <Card
+        title="공지사항"
+        count={filtered.length}
+        actions={
+          <Button variant="secondary" onClick={() => setEditing('new')}>
+            <Plus className="size-4" />
+            작성
+          </Button>
+        }
+      >
+        {isLoading ? (
+          <Spinner />
+        ) : (
+          <div className="space-y-3">
+            <ListToolbar
+              keyword={keyword}
+              onKeywordChange={(v) => {
+                setKeyword(v)
+                setPage(0)
+              }}
+              searchPlaceholder="제목·내용 검색"
+            />
+            <DataTable
+              columns={columns}
+              rows={pageRows}
+              rowKey={(a) => a.id}
+              numbered={false}
+              standardColumns={false}
+              emptyText={
+                keyword
+                  ? '검색 결과가 없습니다.'
+                  : '등록된 공지가 없습니다. 작성하면 게스트 공지사항 메뉴에 보입니다.'
+              }
+              onRowClick={(a) => setSelectedId(selectedId === a.id ? null : a.id)}
+              rowClassName={(a) => (a.id === selectedId ? 'bg-brand/5' : undefined)}
+              pagination={{
+                page: safePage,
+                pageSize: LIST_PAGE_SIZE,
+                total: filtered.length,
+                onChange: setPage,
+                compact: true,
+              }}
+            />
+          </div>
+        )}
+      </Card>
+      {/* 고른 공지의 본문과 그 공지에 딸린 파일. 아무것도 고르지 않았으면 세우지 않는다 —
+          상하 배치에서는 빈 카드가 목록 바로 아래를 차지해 다음 할 일을 가린다. */}
+      {selected && (
+        <>
+          <AnnouncementBody
+            announcement={selected}
+            onEdit={() => setEditing(selected)}
+            onDelete={() => void onDelete(selected)}
+            deleting={remove.isPending}
+          />
+          <MaterialPanel
+            targetType="program_announcement"
+            targetId={selected.id}
+            title="파일"
+          />
+        </>
+      )}
     </div>
   )
 }
 
-/** 우측에 서는 공지 1건(본문 + 수정·삭제). 고르기 전에는 무엇을 하라는 화면인지 말한다. */
+/** 목록 아래에 서는 공지 1건(본문 + 수정·삭제). 고른 공지가 있을 때만 렌더된다. */
 function AnnouncementBody({
   announcement,
   onEdit,
   onDelete,
   deleting,
 }: {
-  announcement: ProgramAnnouncement | null
+  announcement: ProgramAnnouncement
   onEdit: () => void
   onDelete: () => void
   deleting: boolean
 }) {
-  if (!announcement) {
-    return (
-      <Card title="본문">
-        <p className="py-6 text-center text-body text-gray-600">
-          왼쪽 목록에서 공지를 선택하면 내용이 표시됩니다.
-        </p>
-      </Card>
-    )
-  }
-
   return (
     <Card
       title="본문"
