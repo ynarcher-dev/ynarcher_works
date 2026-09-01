@@ -108,19 +108,3 @@ export const MODULE_STATUS_COLUMNS: readonly { key: string; label: string; tone:
     label: moduleStatusLabel(key),
     tone: MODULE_STATUS_TONE[key] ?? 'neutral',
   }))
-
-/**
- * 게스트에게 공유된 메뉴인가 — 공유범위가 **WORKS+GUEST(GUEST_ONLY)** 또는
- * 전체공개(PUBLIC)인 것. 일정안내가 무엇을 보여 줄지는 이 판정 하나가 답한다.
- *
- * 게스트 앱에서는 RLS(app.guest_module_ids())가 이미 같은 기준으로 걸러 주므로 이 함수는
- * WORKS 화면이 "참여자가 볼 목록"을 자기 화면에서 재현하는 데 쓴다 — 두 곳의 기준이
- * 갈리면 담당자가 보는 일정과 참여자가 보는 일정이 달라진다.
- */
-export function isGuestSharedModule(mod: {
-  visibility?: string | null
-  enabled?: boolean
-}): boolean {
-  if (mod.enabled === false) return false
-  return mod.visibility === 'GUEST_ONLY' || mod.visibility === 'PUBLIC'
-}

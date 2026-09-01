@@ -21,6 +21,5 @@ export {
   MODULE_STATUS_TONE,
   MODULE_STATUS_BAR_CLASS,
   MODULE_STATUS_COLUMNS,
-  isGuestSharedModule,
 } from './programModule'
 export type { ModuleStatusTone } from './programModule'

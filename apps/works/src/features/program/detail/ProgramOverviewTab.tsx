@@ -7,7 +7,6 @@ import { ProgramAnnouncementsPanel } from '@/features/program/detail/ProgramAnno
 import { ProgramInfoCard } from '@/features/program/detail/ProgramInfoCard'
 import { ProgramIntroPanel } from '@/features/program/detail/ProgramIntroPanel'
 import { ProgramQnaPanel } from '@/features/program/detail/ProgramQnaPanel'
-import { ProgramSchedulePanel } from '@/features/program/detail/ProgramSchedulePanel'
 import { RelatedApprovalPanel } from '@/features/program/detail/RelatedApprovalPanel'
 import { RelatedMinutesPanel } from '@/features/office/minutes/RelatedMinutesPanel'
 import { useProgramContributions } from '@/features/program/detail/programContributions'
@@ -16,7 +15,7 @@ import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 
-type LeftTab = 'modules' | 'participants' | 'intro' | 'announcements' | 'schedule' | 'qna'
+type LeftTab = 'modules' | 'participants' | 'intro' | 'announcements' | 'qna'
 
 const BASE_TABS: { key: LeftTab; label: string }[] = [
   { key: 'modules', label: '프로그램' },
@@ -25,8 +24,8 @@ const BASE_TABS: { key: LeftTab; label: string }[] = [
 
 /**
  * 프로그램 상세 개요(NETWORKS·STARTUP 상세와 동일한 2/3 + 1/3 카드섹션 컴포지션).
- * 좌측 본문(2/3): 기본 데이터 카드 → 서브 탭(프로그램 · 참가자/전문가 ┃ 사업개요 · 공지사항 · 일정안내 · QNA).
- * 구분선 뒤 네 탭은 **게스트에게 그대로 나가는 화면**이라 내부 운영 탭과 층이 다르다
+ * 좌측 본문(2/3): 기본 데이터 카드 → 서브 탭(프로그램 · 참가자/전문가 ┃ 사업개요 · 공지사항 · QNA).
+ * 구분선 뒤 세 탭은 **게스트에게 그대로 나가는 화면**이라 내부 운영 탭과 층이 다르다
  * (2026-09-01 사용자 지정 순서) — 원장을 둔 워크스페이스(AC)에서만 서며, 기본 탭은 언제나
  * 첫 탭인 프로그램다.
  * '평가 엔진' 탭은 2026-08-27 걷어냈다 — 평가는 사업 상세에 늘 떠 있어야 하는 축이 아니라
@@ -35,6 +34,11 @@ const BASE_TABS: { key: LeftTab; label: string }[] = [
  * 우측에 있던 월간 캘린더('통합 타임라인')는 2026-08-25 걷어냈다 — 같은 모듈 일정을
  * 프로그램 탭(목록·칸반·간트)이 이미 더 넓은 자리에서 보여 주고 있어, 좁은 우측에 달력을
  * 하나 더 두면 같은 사실을 두 곳에서 각자 그리게 된다.
+ * **일정안내 탭도 같은 이유로 걷어냈다(2026-09-01, 세운 당일)** — 게스트에게 공유된 메뉴의
+ * 기간을 그리는 화면이었는데, 그 행은 프로그램 탭 간트가 이미 그리고 있고 공유 여부는 각
+ * 모듈의 공유범위 배지가 이미 답한다. 담당자에게 필요한 것은 '참여자용으로 한 번 더 거른
+ * 화면'이 아니라 어느 메뉴가 나가 있는지이며, 그것은 프로그램 탭에서 읽힌다.
+ * 게스트 쪽 일정안내 메뉴는 그대로 선다(그쪽은 프로그램 탭이 없다).
  * 자료/코멘트/변동이력 패널은 NETWORKS 공용 패널을 재사용한다. 코멘트·변동이력의 다형 키는
  * 워크스페이스별로 갈리므로(config.entityKey) 그것을 넘기고, 첨부는 정책이 워크스페이스 무관이라
  * 'program'을 그대로 쓴다.
@@ -49,16 +53,13 @@ export function ProgramOverviewTab({
 }) {
   const config = useProgramWorkspace()
   const { data: contributions } = useProgramContributions(program.id)
-  // 게스트향 화면 4종(사업개요·공지사항·일정안내·QNA)은 원장을 둔 워크스페이스(AC)에서만 서고,
+  // 게스트향 화면 3종(사업개요·공지사항·QNA)은 원장을 둔 워크스페이스(AC)에서만 서고,
   // 내부 운영 탭 뒤에 구분선으로 갈라 세운다 — 첫 줄에만 divider를 달아 묶음의 시작을 알린다.
   const guestTabs: { key: LeftTab; label: string }[] = [
     ...(config.tables.overviews ? [{ key: 'intro' as const, label: '사업개요' }] : []),
     ...(config.tables.announcements
       ? [{ key: 'announcements' as const, label: '공지사항' }]
       : []),
-    // 일정안내는 원장이 아니라 **공유된 메뉴의 기간**을 그리는 화면이라, 서는 조건도 원장
-    // 유무가 아니라 게스트 로그인 개방 여부(guestAccess)다.
-    ...(config.guestAccess ? [{ key: 'schedule' as const, label: '일정안내' }] : []),
     ...(config.tables.questions ? [{ key: 'qna' as const, label: 'QNA' }] : []),
   ]
   const leftTabs = [
@@ -81,9 +82,6 @@ export function ProgramOverviewTab({
             {leftTab === 'intro' && <ProgramIntroPanel programId={program.id} />}
             {leftTab === 'announcements' && (
               <ProgramAnnouncementsPanel programId={program.id} />
-            )}
-            {leftTab === 'schedule' && (
-              <ProgramSchedulePanel programId={program.id} onOpenModule={onOpenModule} />
             )}
             {leftTab === 'qna' && <ProgramQnaPanel programId={program.id} />}
             {leftTab === 'modules' && (
