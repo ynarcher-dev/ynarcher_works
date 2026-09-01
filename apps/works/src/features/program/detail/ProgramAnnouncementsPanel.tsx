@@ -14,7 +14,10 @@ import { useState } from 'react'
 import { RichTextEditor, RichTextViewer } from '@/components/RichTextEditor'
 import { isEmptyRichText } from '@/lib/richText'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
+import { PendingMaterialPanel } from '@/features/networks/PendingMaterialPanel'
+import { usePendingMaterials } from '@/features/networks/pendingMaterials'
 import {
+  ANNOUNCEMENT_ATTACHMENT_TYPE,
   useAnnouncements,
   useDeleteAnnouncement,
   useSaveAnnouncement,
@@ -67,16 +70,19 @@ export function ProgramAnnouncementsPanel({ programId }: { programId: string }) 
     },
   ]
 
-  // 작성·수정 중에는 분할을 접고 폼이 전체 폭을 쓴다 — 에디터는 좁은 칸에서 쓸 화면이 아니다.
+  // 작성·수정 중에는 목록을 접고 폼이 전체 폭을 쓴다 — 에디터는 좁은 칸에서 쓸 화면이 아니다.
   if (editing) {
     return (
-      <Card title={editing === 'new' ? '공지 작성' : '공지 수정'}>
-        <AnnouncementForm
-          programId={programId}
-          announcement={editing === 'new' ? undefined : editing}
-          onClose={() => setEditing(null)}
-        />
-      </Card>
+      <AnnouncementForm
+        programId={programId}
+        announcement={editing === 'new' ? undefined : editing}
+        onClose={() => setEditing(null)}
+        onSaved={(id) => {
+          // 저장한 공지를 곧바로 펼쳐 둔다 — 방금 쓴 글과 그 첨부가 바로 눈에 든다.
+          setSelectedId(id)
+          setEditing(null)
+        }}
+      />
     )
   }
 
@@ -139,7 +145,7 @@ export function ProgramAnnouncementsPanel({ programId }: { programId: string }) 
             deleting={remove.isPending}
           />
           <MaterialPanel
-            targetType="program_announcement"
+            targetType={ANNOUNCEMENT_ATTACHMENT_TYPE}
             targetId={selected.id}
             title="파일"
           />
@@ -206,18 +212,28 @@ function AnnouncementBody({
   )
 }
 
-/** 공지 작성·수정 폼(전체 폭). NOTICE 폼과 같은 구성이다. */
+/**
+ * 공지 작성·수정 폼(전체 폭) — 제목 → 내용 → 파일 → 버튼의 상하 구성.
+ *
+ * 파일이 붙는 방식은 신규와 수정이 갈린다. 첨부는 `target_id`(NOT NULL)로 공지에 매이므로
+ * **아직 공지가 없는 신규에서는 올릴 대상이 없다** — 그래서 브라우저에 담아 두었다가
+ * 저장으로 id가 생긴 직후 일괄 업로드한다(`usePendingMaterials`, 등록 폼 공통 패턴).
+ * 미리 올리는 방식은 작성을 취소했을 때 주인 없는 파일이 남아 채택하지 않는다.
+ */
 function AnnouncementForm({
   programId,
   announcement,
   onClose,
+  onSaved,
 }: {
   programId: string
   announcement?: ProgramAnnouncement
   onClose: () => void
+  onSaved: (id: string) => void
 }) {
   const toast = useToast()
   const save = useSaveAnnouncement(programId)
+  const pending = usePendingMaterials()
   const [title, setTitle] = useState(announcement?.title ?? '')
   const [body, setBody] = useState(announcement?.body ?? '')
 
@@ -225,37 +241,66 @@ function AnnouncementForm({
 
   const submit = async () => {
     if (!canSubmit) return
+    let id: string
     try {
-      await save.mutateAsync({
+      id = await save.mutateAsync({
         id: announcement?.id,
         title: title.trim(),
         body: isEmptyRichText(body) ? null : body,
       })
-      onClose()
     } catch {
       toast.show('저장에 실패했습니다. 권한을 확인하세요.', 'danger')
+      return
     }
+    // 공지는 이미 저장됐다. 첨부 업로드가 일부 실패해도 되돌리지 않고 실패만 알린다.
+    if (!announcement && pending.count > 0) {
+      const { failed } = await pending.flush(id, () => ANNOUNCEMENT_ATTACHMENT_TYPE)
+      if (failed > 0) {
+        toast.show(`첨부 ${failed}건을 올리지 못했습니다. 공지 저장 후 다시 올려 주세요.`, 'danger')
+      }
+    }
+    onSaved(id)
   }
 
   return (
     <div className="space-y-4">
-      <div className="space-y-1.5">
-        <label className="text-caption font-semibold text-gray-600">제목</label>
-        <Input
-          autoFocus
-          placeholder="예: 1차 멘토링 일정 안내"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
+      <Card title={announcement ? '공지 수정' : '공지 작성'}>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-caption font-semibold text-gray-600">제목</label>
+            <Input
+              autoFocus
+              placeholder="예: 1차 멘토링 일정 안내"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-caption font-semibold text-gray-600">내용</label>
+            <RichTextEditor
+              value={body}
+              onChange={setBody}
+              placeholder="참여자에게 알릴 내용을 적어 주세요."
+            />
+          </div>
+        </div>
+      </Card>
+
+      {/* 수정은 대상이 이미 있으므로 즉시 업로드, 신규는 저장 때 함께 올린다. */}
+      {announcement ? (
+        <MaterialPanel
+          targetType={ANNOUNCEMENT_ATTACHMENT_TYPE}
+          targetId={announcement.id}
+          title="파일"
         />
-      </div>
-      <div className="space-y-1.5">
-        <label className="text-caption font-semibold text-gray-600">내용</label>
-        <RichTextEditor
-          value={body}
-          onChange={setBody}
-          placeholder="참여자에게 알릴 내용을 적어 주세요."
+      ) : (
+        <PendingMaterialPanel
+          slot={ANNOUNCEMENT_ATTACHMENT_TYPE}
+          pending={pending}
+          title="파일"
         />
-      </div>
+      )}
+
       <div className="flex justify-end gap-2">
         <Button variant="outline" onClick={onClose} disabled={save.isPending}>
           취소
