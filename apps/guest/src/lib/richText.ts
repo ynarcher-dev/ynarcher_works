@@ -14,17 +14,32 @@
 /** 허용 태그. 서식 표현에 필요한 최소 집합이며, 그 밖의 태그는 내용만 남기고 벗긴다. */
 const ALLOWED_TAGS = new Set([
   'P', 'BR', 'STRONG', 'B', 'EM', 'I', 'U', 'S', 'CODE', 'PRE',
-  'UL', 'OL', 'LI', 'BLOCKQUOTE', 'A',
+  'UL', 'OL', 'LI', 'BLOCKQUOTE', 'A', 'IMG',
   'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'HR',
 ])
 
-/** 허용 속성. 링크의 주소 하나뿐이다 — style·class·on*은 전부 떨어진다. */
-const ALLOWED_ATTRS: Record<string, Set<string>> = { A: new Set(['href']) }
+/** 허용 속성. 링크의 주소와 이미지의 주소·대체 텍스트뿐이다 — style·class·on*은 전부 떨어진다. */
+const ALLOWED_ATTRS: Record<string, Set<string>> = {
+  A: new Set(['href']),
+  IMG: new Set(['src', 'alt']),
+}
 
 /** 링크 주소 허용 스킴. javascript:·data:는 그 자체가 실행 경로다. */
 function safeHref(href: string | null): string | null {
   if (!href) return null
   return /^https?:\/\//i.test(href.trim()) ? href.trim() : null
+}
+
+/**
+ * 이미지 주소 허용 스킴. WORKS 에디터는 이미지를 base64 `data:image/…`로 본문에 인라인
+ * 저장하므로 이것을 막으면 사진이 통째로 사라진다. `<img>`의 src는 링크 href와 달리 실행
+ * 경로가 아니다 — data: SVG를 포함해 img 문맥에서는 스크립트가 돌지 않는다. 그래도 이미지
+ * MIME으로 좁혀 두고, 추후 업로드 경로 전환에 대비해 https도 함께 허용한다.
+ */
+function safeImgSrc(src: string | null): string | null {
+  if (!src) return null
+  const trimmed = src.trim()
+  return /^(data:image\/|https:\/\/)/i.test(trimmed) ? trimmed : null
 }
 
 function scrub(node: Element): void {
@@ -39,6 +54,17 @@ function scrub(node: Element): void {
   const allowed = ALLOWED_ATTRS[node.tagName]
   for (const attr of Array.from(node.attributes)) {
     if (!allowed?.has(attr.name)) node.removeAttribute(attr.name)
+  }
+
+  if (node.tagName === 'IMG') {
+    const src = safeImgSrc(node.getAttribute('src'))
+    if (!src) {
+      // 이미지는 남길 글자가 없으므로 통째로 지운다.
+      node.remove()
+      return
+    }
+    node.setAttribute('src', src)
+    node.setAttribute('loading', 'lazy')
   }
 
   if (node.tagName === 'A') {

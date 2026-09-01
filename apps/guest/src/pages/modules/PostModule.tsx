@@ -7,7 +7,8 @@ const BODY_CLASS =
   'text-body text-gray-800 [&_p]:mb-2 [&_ul]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 ' +
   '[&_ol]:mb-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-brand [&_a]:underline ' +
   '[&_strong]:font-semibold [&_blockquote]:border-l-2 [&_blockquote]:border-gray-300 ' +
-  '[&_blockquote]:pl-3 [&_blockquote]:text-gray-600'
+  '[&_blockquote]:pl-3 [&_blockquote]:text-gray-600 ' +
+  '[&_img]:my-2 [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-radius-sm'
 
 /**
  * 글쓰기 메뉴 — 운영자가 남긴 글을 읽는다(게스트는 읽기 전용).
