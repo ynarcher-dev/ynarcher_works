@@ -13,7 +13,6 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react'
-import type { BadgeTone } from '@ynarcher/ui'
 
 /**
  * 게스트 화면에서의 모듈 표시 메타 — **아이콘과 톤만** 여기 둔다.
@@ -40,14 +39,6 @@ export const MODULE_ICON: Record<string, LucideIcon> = {
 /** 메뉴 아이콘(미지의 템플릿은 일정 아이콘으로 떨어진다 — 모든 모듈은 최소한 기간을 가진다). */
 export function moduleIcon(moduleType: string): LucideIcon {
   return MODULE_ICON[moduleType] ?? CalendarDays
-}
-
-/** 상태 배지 톤(라벨은 공통 어휘의 moduleStatusLabel). */
-export const MODULE_STATUS_TONE: Record<string, BadgeTone> = {
-  DRAFT: 'neutral',
-  OPEN: 'success',
-  CLOSED: 'info',
-  CANCELLED: 'danger',
 }
 
 /**

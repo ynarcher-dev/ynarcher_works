@@ -1,14 +1,12 @@
-import { Badge, Card, EmptyState, PageHeader, Spinner } from '@ynarcher/ui'
+import { EmptyState, PageHeader, Spinner } from '@ynarcher/ui'
 import {
   formatModulePeriod,
   moduleDisplayName,
-  moduleStatusLabel,
-  moduleTypeLabel,
   readModuleSettings,
 } from '@ynarcher/master-data'
 import { useParams } from 'react-router-dom'
 import { useGuestModules, type GuestModule } from '@/features/moduleHooks'
-import { MODULE_STATUS_TONE, moduleNotice } from '@/features/moduleMeta'
+import { moduleNotice } from '@/features/moduleMeta'
 import { BookingModule } from '@/pages/modules/BookingModule'
 import { FileModule } from '@/pages/modules/FileModule'
 import { LinkModule } from '@/pages/modules/LinkModule'
@@ -18,9 +16,12 @@ import { SatisfactionModule } from '@/pages/modules/SatisfactionModule'
 /**
  * 공개 메뉴 한 개의 화면.
  *
- * 머리(이름·상태·기간)는 모든 템플릿이 공유한다 — WORKS 모듈 카드에서 세팅한 일정이 게스트
- * 쪽에서 도달하는 자리가 바로 여기이며, 어떤 템플릿이든 최소한 '언제까지의 일인가'는 답한다.
- * 몸통만 템플릿이 가른다.
+ * 머리(이름 → 안내 → 진행기간)는 모든 템플릿이 공유한다 — WORKS 모듈 카드에서 세팅한 안내와
+ * 일정이 게스트 쪽에서 도달하는 자리가 바로 여기이며, 어떤 템플릿이든 최소한 '무엇을 하라는
+ * 것인가'와 '언제까지의 일인가'는 답한다. 몸통만 템플릿이 가른다.
+ *
+ * 상태·템플릿 배지는 세우지 않는다(2026-09-01) — 게스트에게 메뉴가 열려 있다는 사실은 메뉴가
+ * 서 있는 것 자체가 말하고, 템플릿 이름은 내부 운영 용어라 참여자에게 답하는 것이 없다.
  */
 export function ModulePage() {
   const { moduleId } = useParams<{ moduleId: string }>()
@@ -47,23 +48,18 @@ export function ModulePage() {
     <div className="space-y-5">
       <PageHeader
         title={moduleDisplayName(mod)}
-        titleExtra={
-          <span className="flex items-center gap-2">
-            <Badge tone={MODULE_STATUS_TONE[mod.status] ?? 'neutral'}>
-              {moduleStatusLabel(mod.status)}
-            </Badge>
-            <Badge tone="neutral">{moduleTypeLabel(mod.module_type)}</Badge>
-          </span>
-        }
         description={
-          <span className="tabular-nums">{formatModulePeriod(settings)}</span>
+          <>
+            {/* 안내는 메타가 아니라 지시문이므로 본문 색으로 세운다. */}
+            {notice && (
+              <span className="block whitespace-pre-line text-gray-800">{notice}</span>
+            )}
+            <span className={notice ? 'mt-1 block' : 'block'}>
+              진행기간 : <span className="tabular-nums">{formatModulePeriod(settings)}</span>
+            </span>
+          </>
         }
       />
-      {notice && (
-        <Card title="안내">
-          <p className="whitespace-pre-line text-body text-gray-800">{notice}</p>
-        </Card>
-      )}
       <ModuleBody module={mod} />
     </div>
   )
