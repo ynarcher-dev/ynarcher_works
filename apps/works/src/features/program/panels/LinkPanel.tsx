@@ -1,4 +1,4 @@
-import { Button, IconButton, Input, Modal, Spinner, TextArea, useToast } from '@ynarcher/ui'
+import { Button, Card, IconButton, Input, Spinner, TextArea, useToast } from '@ynarcher/ui'
 import { ExternalLink, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import {
@@ -12,43 +12,31 @@ import {
 const URL_PATTERN = /^https?:\/\/\S+$/i
 
 /**
- * URL첨부 모듈(모달). 모듈 카드를 누르면 이 모달이 열려 "어디로 갈지" 버튼으로 고르게 한다.
- *
- * 전체 화면 탭으로 만들지 않은 이유는 한 번의 선택으로 끝나는 일이기 때문이다 — 링크를 고르면
- * 새 탭으로 나가므로, 화면을 갈아 끼우면 돌아올 자리만 잃는다.
- * 편집(추가·수정·삭제)은 같은 모달 안에서 목록과 자리를 바꿔 가며 처리한다.
+ * URL첨부 모듈(전체 화면). GUEST의 URL첨부 메뉴와 **같은 구성**(라벨 버튼 목록)이며,
+ * 차이는 편집 가능 여부뿐이다 — WORKS에서 모아 적고, 공유 범위를 올리면 GUEST가 같은
+ * 목록을 읽기 전용으로 본다. 편집(추가·수정)은 카드 안에서 목록과 자리를 바꿔 처리한다.
  */
-export function ModuleLinkModal({
+export function LinkPanel({
   programId,
   moduleId,
-  title,
-  onClose,
 }: {
   programId: string
   moduleId: string
-  /** 모달 제목(모듈명). */
-  title: string
-  onClose: () => void
 }) {
   const { data: links = [], isLoading } = useModuleLinks(moduleId)
   // undefined=목록 / null=신규 추가 / ProgramLink=수정
   const [editing, setEditing] = useState<ProgramLink | null | undefined>(undefined)
 
   return (
-    <Modal
-      open
-      onClose={onClose}
-      size="lg"
-      title={title}
-      footer={
+    <Card
+      title="링크"
+      count={links.length}
+      actions={
         editing === undefined ? (
-          <>
-            <Button variant="secondary" onClick={() => setEditing(null)}>
-              <Plus className="size-4" />
-              링크 추가
-            </Button>
-            <Button onClick={onClose}>닫기</Button>
-          </>
+          <Button variant="secondary" onClick={() => setEditing(null)}>
+            <Plus className="size-4" />
+            링크 추가
+          </Button>
         ) : undefined
       }
     >
@@ -66,7 +54,7 @@ export function ModuleLinkModal({
         <Spinner />
       ) : links.length === 0 ? (
         <p className="py-6 text-center text-body text-gray-600">
-          등록된 링크가 없습니다. 아래 &lsquo;링크 추가&rsquo;로 첫 링크를 넣어 보세요.
+          등록된 링크가 없습니다. 오른쪽 위 &lsquo;링크 추가&rsquo;로 첫 링크를 넣어 보세요.
         </p>
       ) : (
         <ul className="space-y-2">
@@ -75,7 +63,7 @@ export function ModuleLinkModal({
           ))}
         </ul>
       )}
-    </Modal>
+    </Card>
   )
 }
 
@@ -144,7 +132,7 @@ function LinkRow({
   )
 }
 
-/** 링크 추가·수정 폼(모달 안에서 목록과 자리를 바꾼다). */
+/** 링크 추가·수정 폼(카드 안에서 목록과 자리를 바꾼다). */
 function LinkForm({
   programId,
   moduleId,

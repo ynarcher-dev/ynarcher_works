@@ -1,4 +1,4 @@
-import { Button, Input, Modal, TextArea, useToast } from '@ynarcher/ui'
+import { Button, Card, Input, TextArea, useToast } from '@ynarcher/ui'
 import { useRef, useState } from 'react'
 import { MaterialDropZone } from '@/features/networks/MaterialDropZone'
 import { MaterialList } from '@/features/networks/MaterialList'
@@ -11,7 +11,9 @@ import {
 } from '@/features/networks/materialHooks'
 
 /**
- * 파일첨부 모듈(모달). 모듈 카드를 누르면 파일 목록이 열려 바로 미리보기·다운로드한다.
+ * 파일첨부 모듈(전체 화면). GUEST의 파일첨부 메뉴와 **같은 구성**(파일 목록)이며, 차이는
+ * 편집 가능 여부뿐이다 — WORKS에서 올려 두고, 공유 범위를 올리면 GUEST가 같은 목록을
+ * 내려받기 전용으로 본다.
  *
  * 여기서 올린 파일은 사업 상세의 자료 관리 패널에도 **같은 행**으로 나타난다. 첨부 대상은
  * 어디까지나 사업(target_type='program', target_id=사업id)이고 모듈은 귀속 표시
@@ -23,19 +25,14 @@ import {
  * 않기 위해 올린 뒤에 붙인다 — 여러 파일을 한꺼번에 끌어다 놓는 흐름을 폼이 가로막으면
  * 정작 파일이 안 올라간다.
  */
-export function ModuleFileModal({
+export function FilePanel({
   programId,
   moduleId,
-  title,
-  onClose,
 }: {
   programId: string
   moduleId: string
-  /** 모달 제목(모듈명). */
-  title: string
-  onClose: () => void
 }) {
-  // 드롭존이 소유한 파일 입력을 하단 '업로드' 버튼에서도 열기 위한 핸들.
+  // 드롭존이 소유한 파일 입력을 카드 헤더 '업로드' 버튼에서도 열기 위한 핸들.
   const openPicker = useRef<(() => void) | null>(null)
   const { data: materials = [], isLoading } = useMaterials('program', programId, moduleId)
   const upload = useUploadMaterial('program', programId, moduleId)
@@ -46,19 +43,14 @@ export function ModuleFileModal({
   const busy = upload.isPending
 
   return (
-    <Modal
-      open
-      onClose={onClose}
-      size="lg"
-      title={title}
-      footer={
+    <Card
+      title="파일"
+      count={materials.length}
+      actions={
         editing ? undefined : (
-          <>
-            <Button variant="secondary" disabled={busy} onClick={() => openPicker.current?.()}>
-              {busy ? '업로드 중…' : '업로드'}
-            </Button>
-            <Button onClick={onClose}>닫기</Button>
-          </>
+          <Button variant="secondary" disabled={busy} onClick={() => openPicker.current?.()}>
+            {busy ? '업로드 중…' : '업로드'}
+          </Button>
         )
       }
     >
@@ -95,7 +87,7 @@ export function ModuleFileModal({
           </p>
         </div>
       )}
-    </Modal>
+    </Card>
   )
 }
 

@@ -10,6 +10,8 @@ import { MODULE_META } from '@/features/program/detail/moduleMeta'
 import type { ProgramModule } from '@/features/program/hooks'
 import { DemoDayPanel } from '@/features/program/panels/DemoDayPanel'
 import { DocReviewPanel } from '@/features/program/panels/DocReviewPanel'
+import { FilePanel } from '@/features/program/panels/FilePanel'
+import { LinkPanel } from '@/features/program/panels/LinkPanel'
 import { MatchingPanel } from '@/features/program/panels/MatchingPanel'
 import { OnsitePanel } from '@/features/program/panels/OnsitePanel'
 import { OrientationPanel } from '@/features/program/panels/OrientationPanel'
@@ -34,6 +36,8 @@ type Tab =
   | 'timeline'
   | 'outcomes'
   | 'post'
+  | 'link'
+  | 'file'
 
 const TAB_KEYS = new Set<string>([
   'overview',
@@ -47,6 +51,8 @@ const TAB_KEYS = new Set<string>([
   'timeline',
   'outcomes',
   'post',
+  'link',
+  'file',
 ])
 
 /** 운영(개요 외) 화면의 상단 라벨. 뒤로가기 헤더 제목에 사용한다. */
@@ -61,6 +67,8 @@ const PANEL_LABEL: Record<Exclude<Tab, 'overview'>, string> = {
   timeline: '타임라인',
   outcomes: '성과/KPI',
   post: '글쓰기',
+  link: 'URL첨부',
+  file: '파일첨부',
 }
 
 /**
@@ -158,6 +166,9 @@ export function ProgramDetailPage() {
               onBack={backToOverview}
             />
           )}
+          {/* 기본 템플릿(URL첨부·파일첨부): GUEST와 같은 카드 구성의 편집 화면. 헤더는 위 공통 헤더를 쓴다. */}
+          {moduleId && tab === 'link' && <LinkPanel programId={id} moduleId={moduleId} />}
+          {moduleId && tab === 'file' && <FilePanel programId={id} moduleId={moduleId} />}
           {moduleId && tab === 'recruitment' && (
             <RecruitmentPanel programId={id} moduleId={moduleId} />
           )}
