@@ -75,3 +75,52 @@ export function formatModulePeriod(settings: ModuleSettings): string {
 export function moduleDisplayName(mod: { title?: string | null; module_type: string }): string {
   return mod.title?.trim() || moduleTypeLabel(mod.module_type)
 }
+
+/**
+ * 상태 톤(배지 색 키). `@ynarcher/ui`의 BadgeTone과 같은 값 집합이되, 이 패키지는 UI에
+ * 의존하지 않으므로 문자열 합집합으로 둔다 — 어휘가 부품을 끌어오면 순수 TS가 아니게 된다.
+ */
+export type ModuleStatusTone = 'neutral' | 'success' | 'info' | 'warning' | 'danger'
+
+/** module_status enum → 표시 톤. WORKS 배지와 GUEST 일정 카드가 같은 색을 쓴다. */
+export const MODULE_STATUS_TONE: Record<string, ModuleStatusTone> = {
+  DRAFT: 'neutral',
+  OPEN: 'success',
+  CLOSED: 'info',
+  CANCELLED: 'danger',
+}
+
+/**
+ * 상태별 기간 바 색(캘린더 바·간트 막대). 배지 팔레트와 같은 계열이라 같은 상태가
+ * 화면 어디서나 같은 색으로 읽힌다.
+ */
+export const MODULE_STATUS_BAR_CLASS: Record<string, string> = {
+  DRAFT: 'bg-gray-300',
+  OPEN: 'bg-success',
+  CLOSED: 'bg-info',
+  CANCELLED: 'bg-danger/50',
+}
+
+/** 칸반 열 순서: 준비 → 진행 → 완료 → 취소(module_status enum 순). */
+export const MODULE_STATUS_COLUMNS: readonly { key: string; label: string; tone: ModuleStatusTone }[] =
+  ['DRAFT', 'OPEN', 'CLOSED', 'CANCELLED'].map((key) => ({
+    key,
+    label: moduleStatusLabel(key),
+    tone: MODULE_STATUS_TONE[key] ?? 'neutral',
+  }))
+
+/**
+ * 게스트에게 공유된 메뉴인가 — 공유범위가 **WORKS+GUEST(GUEST_ONLY)** 또는
+ * 전체공개(PUBLIC)인 것. 일정안내가 무엇을 보여 줄지는 이 판정 하나가 답한다.
+ *
+ * 게스트 앱에서는 RLS(app.guest_module_ids())가 이미 같은 기준으로 걸러 주므로 이 함수는
+ * WORKS 화면이 "참여자가 볼 목록"을 자기 화면에서 재현하는 데 쓴다 — 두 곳의 기준이
+ * 갈리면 담당자가 보는 일정과 참여자가 보는 일정이 달라진다.
+ */
+export function isGuestSharedModule(mod: {
+  visibility?: string | null
+  enabled?: boolean
+}): boolean {
+  if (mod.enabled === false) return false
+  return mod.visibility === 'GUEST_ONLY' || mod.visibility === 'PUBLIC'
+}

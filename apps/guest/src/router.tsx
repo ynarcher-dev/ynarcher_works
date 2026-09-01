@@ -12,6 +12,7 @@ import { ModulePage } from '@/pages/ModulePage'
 import { MyPage } from '@/pages/MyPage'
 import { OverviewPage } from '@/pages/OverviewPage'
 import { RootLayout } from '@/pages/RootLayout'
+import { SchedulePage } from '@/pages/SchedulePage'
 import { SessionBoardPage } from '@/pages/SessionBoardPage'
 import { TempGuestPage } from '@/pages/TempGuestPage'
 
@@ -51,9 +52,10 @@ export const router = createBrowserRouter([
         ),
         children: [
           { path: '/', element: <GuestEntry /> },
-          // 스타트업 뷰 — 상단 고정 메뉴 3종(사업개요는 로그인 직후 첫 화면).
+          // 스타트업 뷰 — 상단 고정 메뉴 4종(사업개요는 로그인 직후 첫 화면).
           { path: '/overview', element: <OverviewPage /> },
           { path: '/announcements', element: <AnnouncementsPage /> },
+          { path: '/schedule', element: <SchedulePage /> },
           { path: '/qna', element: <QnaPage /> },
           // 그 아래는 화면 하나가 공개 메뉴(모듈) 하나에 대응한다. 경로가 코드에 고정된
           // 모듈 메뉴는 없다(3_9_workspace_guest.md §1.1).

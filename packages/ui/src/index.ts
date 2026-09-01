@@ -165,3 +165,16 @@ export { AttachmentRow } from './patterns/AttachmentRow'
 export type { AttachmentRowProps } from './patterns/AttachmentRow'
 export { MonthCalendar, CalendarDayDetail } from './patterns/MonthCalendar'
 export type { MonthCalendarProps, CalendarDayMeta } from './patterns/MonthCalendar'
+// 간트(기간 막대) 공용 부품 — WORKS 모듈 운영 기간과 WORKS·GUEST 사업 일정안내가 함께 쓴다.
+export { GanttChart } from './patterns/GanttChart'
+export type { GanttChartProps, GanttRow } from './patterns/GanttChart'
+// 공휴일 조회는 간트·캘린더의 음영 판정에 쓰이므로 UI 패키지가 소유한다(두 앱이 함께 읽는다).
+export { koreanHolidayName } from './utils/koreanHolidays'
+// 일정안내 보드(캘린더·칸반·간트) — WORKS 일정안내 탭과 GUEST 일정안내 메뉴가 함께 쓴다.
+export { ScheduleBoard } from './patterns/ScheduleBoard'
+export type {
+  ScheduleBoardProps,
+  ScheduleColumn,
+  ScheduleEvent,
+  ScheduleView,
+} from './patterns/ScheduleBoard'

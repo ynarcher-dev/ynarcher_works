@@ -7,6 +7,7 @@ import { ProgramAnnouncementsPanel } from '@/features/program/detail/ProgramAnno
 import { ProgramInfoCard } from '@/features/program/detail/ProgramInfoCard'
 import { ProgramIntroPanel } from '@/features/program/detail/ProgramIntroPanel'
 import { ProgramQnaPanel } from '@/features/program/detail/ProgramQnaPanel'
+import { ProgramSchedulePanel } from '@/features/program/detail/ProgramSchedulePanel'
 import { RelatedApprovalPanel } from '@/features/program/detail/RelatedApprovalPanel'
 import { RelatedMinutesPanel } from '@/features/office/minutes/RelatedMinutesPanel'
 import { useProgramContributions } from '@/features/program/detail/programContributions'
@@ -15,7 +16,7 @@ import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 
-type LeftTab = 'modules' | 'participants' | 'intro' | 'announcements' | 'qna'
+type LeftTab = 'modules' | 'participants' | 'intro' | 'announcements' | 'schedule' | 'qna'
 
 const BASE_TABS: { key: LeftTab; label: string }[] = [
   { key: 'modules', label: '프로그램' },
@@ -24,8 +25,8 @@ const BASE_TABS: { key: LeftTab; label: string }[] = [
 
 /**
  * 프로그램 상세 개요(NETWORKS·STARTUP 상세와 동일한 2/3 + 1/3 카드섹션 컴포지션).
- * 좌측 본문(2/3): 기본 데이터 카드 → 서브 탭(프로그램 · 참가자/전문가 ┃ 사업개요 · 공지사항 · QNA).
- * 구분선 뒤 세 탭은 **게스트에게 그대로 나가는 화면**이라 내부 운영 탭과 층이 다르다
+ * 좌측 본문(2/3): 기본 데이터 카드 → 서브 탭(프로그램 · 참가자/전문가 ┃ 사업개요 · 공지사항 · 일정안내 · QNA).
+ * 구분선 뒤 네 탭은 **게스트에게 그대로 나가는 화면**이라 내부 운영 탭과 층이 다르다
  * (2026-09-01 사용자 지정 순서) — 원장을 둔 워크스페이스(AC)에서만 서며, 기본 탭은 언제나
  * 첫 탭인 프로그램다.
  * '평가 엔진' 탭은 2026-08-27 걷어냈다 — 평가는 사업 상세에 늘 떠 있어야 하는 축이 아니라
@@ -48,13 +49,16 @@ export function ProgramOverviewTab({
 }) {
   const config = useProgramWorkspace()
   const { data: contributions } = useProgramContributions(program.id)
-  // 게스트향 화면 3종(사업개요·공지사항·QNA)은 원장을 둔 워크스페이스(AC)에서만 서고,
+  // 게스트향 화면 4종(사업개요·공지사항·일정안내·QNA)은 원장을 둔 워크스페이스(AC)에서만 서고,
   // 내부 운영 탭 뒤에 구분선으로 갈라 세운다 — 첫 줄에만 divider를 달아 묶음의 시작을 알린다.
   const guestTabs: { key: LeftTab; label: string }[] = [
     ...(config.tables.overviews ? [{ key: 'intro' as const, label: '사업개요' }] : []),
     ...(config.tables.announcements
       ? [{ key: 'announcements' as const, label: '공지사항' }]
       : []),
+    // 일정안내는 원장이 아니라 **공유된 메뉴의 기간**을 그리는 화면이라, 서는 조건도 원장
+    // 유무가 아니라 게스트 로그인 개방 여부(guestAccess)다.
+    ...(config.guestAccess ? [{ key: 'schedule' as const, label: '일정안내' }] : []),
     ...(config.tables.questions ? [{ key: 'qna' as const, label: 'QNA' }] : []),
   ]
   const leftTabs = [
@@ -77,6 +81,9 @@ export function ProgramOverviewTab({
             {leftTab === 'intro' && <ProgramIntroPanel programId={program.id} />}
             {leftTab === 'announcements' && (
               <ProgramAnnouncementsPanel programId={program.id} />
+            )}
+            {leftTab === 'schedule' && (
+              <ProgramSchedulePanel programId={program.id} onOpenModule={onOpenModule} />
             )}
             {leftTab === 'qna' && <ProgramQnaPanel programId={program.id} />}
             {leftTab === 'modules' && (

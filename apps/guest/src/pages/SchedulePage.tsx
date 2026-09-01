@@ -1,0 +1,81 @@
+import {
+  Card,
+  PageHeader,
+  ScheduleBoard,
+  Spinner,
+  ViewToggleGroup,
+  type ScheduleView,
+} from '@ynarcher/ui'
+import {
+  MODULE_STATUS_BAR_CLASS,
+  MODULE_STATUS_COLUMNS,
+  moduleDisplayName,
+  readModuleSettings,
+} from '@ynarcher/master-data'
+import { CalendarDays, ChartGantt, ChevronLeft, ChevronRight, SquareKanban } from 'lucide-react'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useGuestModules } from '@/features/moduleHooks'
+import { modulePath } from '@/config/navigation'
+
+const VIEWS = [
+  { key: 'calendar' as const, label: '캘린더', icon: <CalendarDays className="size-4" /> },
+  { key: 'kanban' as const, label: '칸반', icon: <SquareKanban className="size-4" /> },
+  { key: 'gantt' as const, label: '간트', icon: <ChartGantt className="size-4" /> },
+]
+
+/**
+ * 일정안내 — 고정 메뉴 세 번째 줄. **사이드바에 선 메뉴들의 기간**을 캘린더·칸반·간트로
+ * 보여 준다. WORKS 사업 상세의 일정안내 탭과 같은 부품·같은 그림이며, 담기는 것은
+ * 행사명·설명·날짜 셋뿐이다.
+ *
+ * 목록의 출처가 사이드바와 같다는 점이 이 화면의 요지다 — 담당자가 WORKS에서 메뉴의
+ * 공유범위를 WORKS+GUEST로 올리고 기간을 넣으면 그 메뉴가 사이드바에 서고 여기 일정에도
+ * 함께 선다. 무엇이 공개인지의 판정은 RLS(app.guest_module_ids())가 하며, 화면은 돌아온
+ * 것을 그린다(별도 일정 원장이 없으므로 두 목록이 어긋날 여지도 없다).
+ * 일정을 누르면 그 메뉴 화면으로 넘어간다.
+ */
+export function SchedulePage() {
+  const navigate = useNavigate()
+  const { data: modules, isLoading } = useGuestModules()
+  const [view, setView] = useState<ScheduleView>('calendar')
+
+  if (isLoading) return <Spinner />
+
+  const events = (modules ?? []).map((mod) => {
+    const settings = readModuleSettings(mod.settings)
+    return {
+      id: mod.id,
+      title: moduleDisplayName(mod),
+      description: settings.memo ?? null,
+      start: settings.start_date ?? null,
+      end: settings.end_date ?? null,
+      status: mod.status ?? 'DRAFT',
+      barClass: MODULE_STATUS_BAR_CLASS[mod.status ?? 'DRAFT'],
+      onClick: () => navigate(modulePath(mod.id)),
+    }
+  })
+
+  return (
+    <div className="space-y-5">
+      <PageHeader title="일정안내" />
+      {/* 이 화면은 공지·사업개요의 2:1 분할을 쓰지 않고 전체 폭으로 선다 — 캘린더 격자와
+          간트 축은 폭이 곧 정보량이라, 3분의 2 칸에 넣으면 날짜만 보이고 일정은 보이지
+          않는다. 곁칸에 세울 것도 없다(상세는 메뉴 화면으로 넘어가 열린다). */}
+      <Card
+        title="공유된 일정"
+        count={events.length}
+        actions={<ViewToggleGroup options={VIEWS} value={view} onChange={setView} />}
+      >
+        <ScheduleBoard
+          events={events}
+          view={view}
+          columns={[...MODULE_STATUS_COLUMNS]}
+          emptyText="아직 공유된 일정이 없습니다."
+          prevIcon={<ChevronLeft className="size-4" />}
+          nextIcon={<ChevronRight className="size-4" />}
+        />
+      </Card>
+    </div>
+  )
+}

@@ -49,14 +49,17 @@ export function modulePath(moduleId: string): string {
 /**
  * 스타트업 뷰 사이드바 **상단의 고정 메뉴 묶음**. 첫 줄(사업개요)이 로그인 직후 착지점이다.
  *
- * 모듈 메뉴는 원장이 세우지만(위 moduleNavItems), 이 셋은 메뉴(모듈)가 아니라 사업 자체를
+ * 모듈 메뉴는 원장이 세우지만(위 moduleNavItems), 이 넷은 메뉴(모듈)가 아니라 사업 자체를
  * 향한 화면이라 코드에 고정으로 선다 — 담당자가 켜고 끄는 대상이 아니고, 공개 메뉴가
  * 하나도 없는 사업이어도 로그인이 열렸다면 소개·공지·문의는 닿을 수 있어야 한다.
+ * 일정안내만은 성격이 반쯤 다르다 — 보여 주는 내용 자체가 공개 메뉴들의 기간이라
+ * 공개 메뉴가 없으면 빈 화면이 되지만, 자리는 고정으로 지킨다(메뉴가 열리는 날 바로 선다).
  * 원장이 세우는 하위 메뉴와는 사이드바가 구분선으로 가른다(GuestLayout).
  */
 export const STARTUP_FIXED_NAV: readonly [GuestNavItem, ...GuestNavItem[]] = [
   { path: '/overview', label: '사업개요', icon: BookOpen },
   { path: '/announcements', label: '공지사항', icon: Bell },
+  { path: '/schedule', label: '일정안내', icon: CalendarDays },
   { path: '/qna', label: 'QNA', icon: CircleHelp },
 ]
 

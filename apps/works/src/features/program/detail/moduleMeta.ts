@@ -1,4 +1,4 @@
-import { MODULE_STATUS_LABEL } from '@ynarcher/master-data'
+import { MODULE_STATUS_BAR_CLASS, MODULE_STATUS_LABEL, MODULE_STATUS_TONE } from '@ynarcher/master-data'
 import type { BadgeTone } from '@ynarcher/ui'
 import {
   ChartColumn,
@@ -123,14 +123,7 @@ export const MODULE_META: Record<string, ModuleMeta> = {
   },
 }
 
-/** module_status enum(DRAFT/OPEN/CLOSED/CANCELLED) → 표시 톤. 라벨은 공통 어휘가 소유한다. */
-const MODULE_STATUS_TONE: Record<string, BadgeTone> = {
-  DRAFT: 'neutral',
-  OPEN: 'success',
-  CLOSED: 'info',
-  CANCELLED: 'danger',
-}
-
+/** 상태 라벨·톤은 공통 어휘(master-data)가 소유하고, 여기서는 배지가 쓸 한 벌로 묶기만 한다. */
 export const MODULE_STATUS_META: Record<string, { label: string; tone: BadgeTone }> =
   Object.fromEntries(
     Object.entries(MODULE_STATUS_LABEL).map(([key, label]) => [
@@ -146,13 +139,11 @@ export function moduleStatusMeta(status: string): { label: string; tone: BadgeTo
   return MODULE_STATUS_META[status] ?? FALLBACK_STATUS
 }
 
-/** 캘린더 기간 바 색상(모듈 상태별). Badge 팔레트와 동일 계열. */
-export const MODULE_BAR_CLASS: Record<string, string> = {
-  DRAFT: 'bg-gray-300',
-  OPEN: 'bg-success',
-  CLOSED: 'bg-info',
-  CANCELLED: 'bg-danger/50',
-}
+/**
+ * 캘린더 기간 바 색상(모듈 상태별) — 값은 공통 어휘가 소유한다. GUEST 일정안내가 같은 상태를
+ * 같은 색으로 그려야 하므로 표를 앱에 두면 한쪽만 고치는 날 두 화면의 색이 갈린다.
+ */
+export const MODULE_BAR_CLASS = MODULE_STATUS_BAR_CLASS
 
 /**
  * 일정·메모의 읽기 규약은 `@ynarcher/master-data`가 소유한다 — GUEST 사이드바가 같은 행의
