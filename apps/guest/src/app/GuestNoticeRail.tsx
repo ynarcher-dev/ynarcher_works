@@ -22,16 +22,17 @@ export function GuestNoticeRail({ moduleId }: { moduleId: string }) {
           const body = sanitizeRichText(notice.body)
           return (
             <div key={notice.id} className="rounded-radius-md border border-gray-300 px-3 py-2">
+              {/* 머리(공지명·게시일)와 본문을 헤어라인으로 가른다 — WORKS NOTICE 행과 같은 구성. */}
               <p className="text-body font-medium text-gray-900">{notice.title}</p>
+              <p className="mt-0.5 text-caption tabular-nums text-gray-500">
+                {notice.created_at.slice(0, 10)}
+              </p>
               {body && (
                 <div
-                  className={`mt-1 ${RICH_BODY_CLASS}`}
+                  className={`mt-2 border-t border-gray-200 pt-2 ${RICH_BODY_CLASS}`}
                   dangerouslySetInnerHTML={{ __html: body }}
                 />
               )}
-              <p className="mt-1 text-caption tabular-nums text-gray-500">
-                {notice.created_at.slice(0, 10)}
-              </p>
             </div>
           )
         })}

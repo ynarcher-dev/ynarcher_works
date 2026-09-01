@@ -101,15 +101,18 @@ function NoticeRow({
 
   return (
     <li className="relative rounded-radius-md border border-gray-300 bg-white py-3 pl-4 pr-20">
+      {/* 머리(공지명·게시일)와 콘텐츠(본문)를 헤어라인으로 가른다 — 본문이 제목(h1)으로
+          시작해도 어디까지가 알림의 이름인지 선이 답한다. min-h-0은 에디터용 최소 높이
+          (16rem)가 읽기 전용 뷰어에 빈 공간으로 남는 것을 이 자리에서만 눕힌다. */}
       <p className="text-body font-semibold text-gray-900">{notice.title}</p>
+      <p className="mt-0.5 text-caption tabular-nums text-gray-500">
+        {notice.created_at.slice(0, 10)}
+      </p>
       {notice.body && (
-        <div className="mt-1">
+        <div className="mt-2 border-t border-gray-200 pt-2 [&_.ProseMirror]:min-h-0">
           <RichTextViewer html={notice.body} />
         </div>
       )}
-      <p className="mt-1 text-caption tabular-nums text-gray-500">
-        {notice.created_at.slice(0, 10)}
-      </p>
       <span className="absolute right-3 top-3 z-10 flex items-center gap-1">
         <IconButton
           variant="ghost"

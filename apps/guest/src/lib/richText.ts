@@ -12,16 +12,25 @@
  */
 
 /**
- * 정화된 본문의 최소 조판(문단·목록·링크·이미지). 에디터 런타임 없이 클래스만으로 세운다.
- * 글쓰기 본문과 NOTICE가 같은 한 벌을 쓴다 — 같은 에디터로 쓴 글은 어느 화면에서든
- * 같은 모양이어야 한다.
+ * 정화된 본문의 조판. 에디터 런타임 없이 클래스만으로, WORKS `.rte`(global.css)와 같은
+ * 모양을 세운다 — 같은 에디터로 쓴 글은 어느 화면에서든 같은 모양이어야 한다.
+ * 글쓰기 본문과 NOTICE가 같은 한 벌을 쓴다. Tailwind 리셋이 제목·코드·구분선을 본문
+ * 크기로 눕혀 두므로, 허용 태그에는 반드시 여기 조판이 한 줄씩 있어야 한다.
  */
 export const RICH_BODY_CLASS =
   'text-body text-gray-800 [&_p]:mb-2 [&_ul]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 ' +
   '[&_ol]:mb-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-brand [&_a]:underline ' +
   '[&_strong]:font-semibold [&_blockquote]:border-l-2 [&_blockquote]:border-gray-300 ' +
   '[&_blockquote]:pl-3 [&_blockquote]:text-gray-600 ' +
-  '[&_img]:my-2 [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-radius-sm'
+  '[&_img]:my-2 [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-radius-sm ' +
+  '[&_h1]:mb-2 [&_h1]:text-title-md [&_h1]:font-bold [&_h1]:text-gray-900 ' +
+  '[&_h2]:mb-2 [&_h2]:text-title-sm [&_h2]:font-bold [&_h2]:text-gray-900 ' +
+  '[&_h3]:mb-2 [&_h3]:font-semibold [&_h3]:text-gray-900 ' +
+  '[&_code]:rounded-radius-sm [&_code]:bg-gray-100 [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-caption ' +
+  '[&_pre]:mb-2 [&_pre]:overflow-x-auto [&_pre]:rounded-radius-sm [&_pre]:bg-gray-900 ' +
+  '[&_pre]:p-3 [&_pre]:text-caption [&_pre]:text-gray-0 ' +
+  '[&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-gray-0 ' +
+  '[&_hr]:my-3 [&_hr]:border-t [&_hr]:border-gray-300'
 
 /** 허용 태그. 서식 표현에 필요한 최소 집합이며, 그 밖의 태그는 내용만 남기고 벗긴다. */
 const ALLOWED_TAGS = new Set([
@@ -54,6 +63,10 @@ function safeImgSrc(src: string | null): string | null {
   return /^(data:image\/|https:\/\/)/i.test(trimmed) ? trimmed : null
 }
 
+/** 정렬을 보존할 블록 태그와 값. 에디터(TextAlign 확장)는 문단·제목에만 정렬을 건다. */
+const ALIGNABLE_TAGS = new Set(['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6'])
+const ALIGN_VALUES = new Set(['left', 'center', 'right', 'justify'])
+
 function scrub(node: Element): void {
   for (const child of Array.from(node.children)) scrub(child)
 
@@ -63,9 +76,20 @@ function scrub(node: Element): void {
     return
   }
 
+  // style은 통째로 벗기되 정렬 하나만 값 검증 후 되살린다 — 에디터의 가운데·오른쪽
+  // 정렬은 클래스가 아니라 인라인 text-align으로 저장되기 때문이다.
+  const align =
+    node instanceof HTMLElement && ALIGNABLE_TAGS.has(node.tagName)
+      ? node.style.textAlign
+      : ''
+
   const allowed = ALLOWED_ATTRS[node.tagName]
   for (const attr of Array.from(node.attributes)) {
     if (!allowed?.has(attr.name)) node.removeAttribute(attr.name)
+  }
+
+  if (align && ALIGN_VALUES.has(align) && node instanceof HTMLElement) {
+    node.style.textAlign = align
   }
 
   if (node.tagName === 'IMG') {
