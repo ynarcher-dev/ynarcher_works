@@ -101,6 +101,21 @@ export async function uploadMaterialFile(
 }
 
 /**
+ * 첨부 건수 목록(목록 화면의 클립 표식 등)의 쿼리 키 접두사.
+ *
+ * 첨부가 늘거나 줄면 그 대상의 자료 목록만이 아니라 **그 대상을 세고 있던 목록 화면**도
+ * 함께 낡는다. 두 키는 접두사가 달라 한 번의 무효화로 함께 걸리지 않으므로, 첨부를
+ * 바꾸는 뮤테이션이 둘 다 무효화한다(그 키를 쓰는 화면이 없으면 아무 일도 일어나지 않는다).
+ */
+export const ATTACHMENT_COUNT_KEY = 'attachment-counts'
+
+/** 첨부 변경 후 무효화할 키 두 벌 — 그 대상의 자료 목록과, 그 종류를 세던 목록 화면. */
+function invalidateMaterials(qc: ReturnType<typeof useQueryClient>, targetType: string, targetId: string) {
+  void qc.invalidateQueries({ queryKey: ['materials', targetType, targetId] })
+  void qc.invalidateQueries({ queryKey: [ATTACHMENT_COUNT_KEY, targetType] })
+}
+
+/**
  * 자료 업로드 뮤테이션(상세·수정 모드). 성공 시 해당 대상의 목록을 무효화한다.
  * `moduleId`를 주면 그 모듈 귀속으로 올린다(파일첨부 모듈).
  */
@@ -108,8 +123,7 @@ export function useUploadMaterial(targetType: string, targetId: string, moduleId
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (file: File) => uploadMaterialFile(targetType, targetId, file, moduleId),
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: ['materials', targetType, targetId] }),
+    onSuccess: () => invalidateMaterials(qc, targetType, targetId),
   })
 }
 
@@ -142,8 +156,7 @@ export function useDeleteMaterial(targetType: string, targetId: string) {
         .eq('id', id)
       if (error) throw error
     },
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: ['materials', targetType, targetId] }),
+    onSuccess: () => invalidateMaterials(qc, targetType, targetId),
   })
 }
 

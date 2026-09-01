@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useGuestStore } from '@/auth/guestStore'
 import { useGuestClient } from '@/lib/useGuestClient'
+import type { GuestFile } from '@/features/moduleHooks'
 
 /**
  * 사업 QNA(1:1 문의함) — 게스트 쪽. **게스트 쓰기가 콘텐츠 원장에 열리는 첫 자리**다
@@ -35,6 +36,30 @@ export function useMyQuestions() {
         .limit(200)
       if (error) throw error
       return (data ?? []) as unknown as GuestQuestion[]
+    },
+  })
+}
+
+/**
+ * 내 질문 1건에 딸린 파일(담당자가 답변에 곁들인 것). 조회 범위 판정은
+ * RLS(attachments_question_guest_select — 본인 질문의 첨부만)가 하며, 게스트는 읽고
+ * 내려받기만 한다. 다운로드는 다른 첨부와 같은 Edge Function 경로를 탄다.
+ */
+export function useQuestionFiles(questionId: string | undefined) {
+  const client = useGuestClient()
+  return useQuery({
+    queryKey: ['guest', 'question-files', questionId],
+    enabled: Boolean(client && questionId),
+    queryFn: async (): Promise<GuestFile[]> => {
+      const { data, error } = await client!
+        .from('attachments')
+        .select('id, file_name, content_type, byte_size, created_at')
+        .eq('target_type', 'program_question')
+        .eq('target_id', questionId)
+        .order('created_at', { ascending: false })
+        .limit(100)
+      if (error) throw error
+      return (data ?? []) as unknown as GuestFile[]
     },
   })
 }

@@ -6,38 +6,60 @@ import {
   Spinner,
   type Column,
 } from '@ynarcher/ui'
+import { Paperclip } from 'lucide-react'
 import { useState } from 'react'
+import { BoardDetailModal } from '@/components/BoardDetailModal'
 import {
   useAnnouncementFiles,
   useProgramAnnouncements,
   type GuestAnnouncement,
 } from '@/features/announcementHooks'
+import { useAttachmentCounts } from '@/features/attachmentCounts'
 import { GUEST_LIST_PAGE_SIZE, matchesKeyword, pageSlice } from '@/features/listFilter'
-import { GuestFileCard } from '@/pages/modules/FileModule'
 import { RICH_BODY_CLASS, sanitizeRichText } from '@/lib/richText'
 
+const ANNOUNCEMENT_ATTACHMENT_TYPE = 'program_announcement'
+
 /**
- * 공지사항 — 고정 메뉴 두 번째 줄. 좌측(2)이 목록 표 + 검색, 우측(1)이 고른 공지의 본문과
- * 그 공지에 딸린 파일이다. **좌우 배치는 GUEST 쪽만의 것이다**(2026-09-01 지정) — 같은
- * 내용을 WORKS는 상하로 세운다. 여기는 읽기만 하는 자리라 곁칸으로 충분하고, 저쪽은 쓰는
- * 자리라 에디터와 업로드가 전체 폭을 받아야 한다.
- *
- * 표의 행은 훑는 자리고 본문은 읽는 자리라, 행 안에 본문을 펼치지 않는다.
- * 본문 정화기·조판은 글쓰기·QNA와 같은 한 벌이다.
+ * 공지사항 — 고정 메뉴 두 번째 줄. 목록 표가 전체 폭으로 서고, 행을 누르면 **상세 모달**이
+ * 열린다(2026-09-01 사용자 지정) — WORKS 공지사항 탭과 같은 구성이며 작성·수정만 없다.
+ * 모달은 QNA와 같은 부품(BoardDetailModal)이라 두 화면이 같은 구조로 글과 첨부를 보여 준다.
  */
 export function AnnouncementsPage() {
   const { data, isLoading } = useProgramAnnouncements()
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(0)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [openId, setOpenId] = useState<string | null>(null)
 
   const all = data ?? []
   const filtered = all.filter((a) => matchesKeyword(keyword, a))
   const { pageRows, safePage } = pageSlice(filtered, page)
-  const selected = all.find((a) => a.id === selectedId) ?? null
+  const opened = all.find((a) => a.id === openId) ?? null
+  // 클립 표식은 화면에 뜬 행만 센다 — 목록 전체를 세면 안 보이는 행까지 왕복에 싣는다.
+  const { data: fileCounts } = useAttachmentCounts(
+    ANNOUNCEMENT_ATTACHMENT_TYPE,
+    pageRows.map((a) => a.id),
+  )
 
   const columns: Column<GuestAnnouncement>[] = [
-    { key: 'title', header: '제목', type: 'name', primary: true },
+    {
+      key: 'title',
+      header: '제목',
+      type: 'name',
+      primary: true,
+      // 첨부가 있으면 제목 뒤에 클립을 단다 — 열어 보기 전에 "받을 것이 있는가"를 답한다.
+      render: (a) => (
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="min-w-0 truncate">{a.title}</span>
+          {(fileCounts?.[a.id] ?? 0) > 0 && (
+            <Paperclip
+              className="size-3.5 shrink-0 text-gray-500"
+              aria-label={`첨부 ${fileCounts?.[a.id]}건`}
+            />
+          )}
+        </span>
+      ),
+    },
     {
       key: 'created_at',
       header: '게시일',
@@ -51,93 +73,65 @@ export function AnnouncementsPage() {
   return (
     <div className="space-y-5">
       <PageHeader title="공지사항" />
-      <div className="lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:gap-6">
-        <div className="min-w-0">
-          <Card title="공지" count={filtered.length}>
-            <div className="space-y-3">
-              <ListToolbar
-                keyword={keyword}
-                onKeywordChange={(v) => {
-                  setKeyword(v)
-                  setPage(0)
-                }}
-                searchPlaceholder="제목·내용 검색"
-              />
-              <DataTable
-                columns={columns}
-                rows={pageRows}
-                rowKey={(a) => a.id}
-                numbered={false}
-                standardColumns={false}
-                emptyText={
-                  keyword ? '검색 결과가 없습니다.' : '아직 등록된 공지가 없습니다.'
-                }
-                onRowClick={(a) => setSelectedId(selectedId === a.id ? null : a.id)}
-                rowClassName={(a) => (a.id === selectedId ? 'bg-brand/5' : undefined)}
-                pagination={{
-                  page: safePage,
-                  pageSize: GUEST_LIST_PAGE_SIZE,
-                  total: filtered.length,
-                  onChange: setPage,
-                  compact: true,
-                }}
-              />
-            </div>
-          </Card>
+      <Card title="공지" count={filtered.length}>
+        <div className="space-y-3">
+          <ListToolbar
+            keyword={keyword}
+            onKeywordChange={(v) => {
+              setKeyword(v)
+              setPage(0)
+            }}
+            searchPlaceholder="제목·내용 검색"
+          />
+          <DataTable
+            columns={columns}
+            rows={pageRows}
+            rowKey={(a) => a.id}
+            numbered={false}
+            standardColumns={false}
+            emptyText={keyword ? '검색 결과가 없습니다.' : '아직 등록된 공지가 없습니다.'}
+            onRowClick={(a) => setOpenId(a.id)}
+            pagination={{
+              page: safePage,
+              pageSize: GUEST_LIST_PAGE_SIZE,
+              total: filtered.length,
+              onChange: setPage,
+              compact: true,
+            }}
+          />
         </div>
-        <div className="mt-5 min-w-0 space-y-5 lg:mt-0">
-          <AnnouncementBody announcement={selected} />
-          {/* 그 공지에 딸린 파일. 고른 공지가 없거나 파일이 없으면 칸을 세우지 않는다. */}
-          {selected && <AnnouncementFilesRail announcementId={selected.id} />}
-        </div>
-      </div>
+      </Card>
+      {opened && <AnnouncementModal announcement={opened} onClose={() => setOpenId(null)} />}
     </div>
   )
 }
 
-/**
- * 고른 공지의 첨부 파일 — 사업개요·글쓰기의 파일 칸과 같은 판정으로, 파일이 없으면
- * 칸을 세우지 않는다. 행 규격은 WORKS 자료 목록과 같은 공용 카드다.
- */
-function AnnouncementFilesRail({ announcementId }: { announcementId: string }) {
-  const { data } = useAnnouncementFiles(announcementId)
-  if (!data?.length) return null
-  return <GuestFileCard files={data} />
-}
-
-/** 우측에 서는 공지 1건. 고르기 전에는 무엇을 하라는 화면인지 말한다. */
-function AnnouncementBody({ announcement }: { announcement: GuestAnnouncement | null }) {
-  if (!announcement) {
-    return (
-      <Card title="본문">
-        <p className="py-6 text-center text-body text-gray-600">
-          왼쪽 목록에서 공지를 선택하면 내용이 표시됩니다.
-        </p>
-      </Card>
-    )
-  }
+/** 공지 1건의 상세 모달. 첨부는 열린 공지의 것만 조회한다. */
+function AnnouncementModal({
+  announcement,
+  onClose,
+}: {
+  announcement: GuestAnnouncement
+  onClose: () => void
+}) {
+  const { data: files } = useAnnouncementFiles(announcement.id)
+  const html = sanitizeRichText(announcement.body)
 
   return (
-    <Card title="본문">
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <span aria-hidden className="h-3.5 w-0.5 shrink-0 rounded-full bg-brand" />
-          <p className="min-w-0 flex-1 text-body font-semibold text-gray-900">
-            {announcement.title}
-          </p>
-          <span className="shrink-0 text-caption tabular-nums text-gray-500">
-            {announcement.created_at.slice(0, 10)}
-          </span>
-        </div>
-        {announcement.body ? (
-          <div
-            className={RICH_BODY_CLASS}
-            dangerouslySetInnerHTML={{ __html: sanitizeRichText(announcement.body) }}
-          />
+    <BoardDetailModal
+      open
+      onClose={onClose}
+      meta="공지사항"
+      title={announcement.title}
+      date={announcement.created_at.slice(0, 10)}
+      body={
+        html ? (
+          <div className={RICH_BODY_CLASS} dangerouslySetInnerHTML={{ __html: html }} />
         ) : (
           <p className="text-body text-gray-600">본문이 없는 공지입니다.</p>
-        )}
-      </div>
-    </Card>
+        )
+      }
+      files={files ?? []}
+    />
   )
 }

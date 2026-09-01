@@ -2,14 +2,13 @@ import {
   Button,
   Card,
   DataTable,
-  IconButton,
   Input,
   ListToolbar,
   Spinner,
   useToast,
   type Column,
 } from '@ynarcher/ui'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { Paperclip, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { RichTextEditor, RichTextViewer } from '@/components/RichTextEditor'
 import { isEmptyRichText } from '@/lib/richText'
@@ -23,13 +22,14 @@ import {
   useSaveAnnouncement,
   type ProgramAnnouncement,
 } from '@/features/program/announcementHooks'
+import { useAttachmentCounts } from '@/features/program/detail/attachmentCounts'
+import { BoardDetailModal } from '@/features/program/detail/BoardDetailModal'
 import { LIST_PAGE_SIZE, matchesKeyword, pageSlice } from '@/features/program/detail/listFilter'
 
 /**
- * 공지사항 탭 — 사업 단위 게시판. 목록 표 위, 고른 공지의 본문과 첨부 파일 아래의
- * **상하 배치**다(2026-09-01 사용자 지정) — 사업개요 탭과 같은 이유로, 쓰는 화면인
- * WORKS는 본문 에디터와 업로드 드롭존이 전체 폭을 받는다. 읽기만 하는 GUEST 쪽은 같은
- * 내용을 좌우 2:1로 세운다.
+ * 공지사항 탭 — 사업 단위 게시판. 목록 표가 전체 폭으로 서고, 행을 누르면 **상세 모달**이
+ * 열린다(2026-09-01 사용자 지정). 모달은 QNA와 같은 부품(BoardDetailModal)이라 두 화면이
+ * 같은 구조로 글과 첨부를 보여 준다. GUEST 공지사항 화면도 같은 구성이며 편집만 없다.
  * 모듈별 NOTICE(메뉴당 한 건)와 축이 다르다 — 이쪽은 사업 전체를 향한 글이 여러 건 쌓인다.
  *
  * 첨부의 귀속은 화면이 아니라 **공지 1건**이다(target_type='program_announcement',
@@ -43,25 +43,47 @@ export function ProgramAnnouncementsPanel({ programId }: { programId: string }) 
   const remove = useDeleteAnnouncement(programId)
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(0)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [openId, setOpenId] = useState<string | null>(null)
   const [editing, setEditing] = useState<ProgramAnnouncement | 'new' | null>(null)
 
   const filtered = list.filter((a) => matchesKeyword(keyword, a))
   const { pageRows, safePage } = pageSlice(filtered, page)
-  const selected = list.find((a) => a.id === selectedId) ?? null
+  const opened = list.find((a) => a.id === openId) ?? null
+  // 클립 표식은 화면에 뜬 행만 센다 — 목록 전체를 세면 안 보이는 행까지 왕복에 싣는다.
+  const { data: fileCounts } = useAttachmentCounts(
+    ANNOUNCEMENT_ATTACHMENT_TYPE,
+    pageRows.map((a) => a.id),
+  )
 
   const onDelete = async (a: ProgramAnnouncement) => {
     if (!window.confirm(`'${a.title}' 공지를 내리시겠습니까?`)) return
     try {
       await remove.mutateAsync(a.id)
-      setSelectedId(null)
+      setOpenId(null)
     } catch {
       toast.show('삭제에 실패했습니다. 권한을 확인하세요.', 'danger')
     }
   }
 
   const columns: Column<ProgramAnnouncement>[] = [
-    { key: 'title', header: '제목', type: 'name', primary: true },
+    {
+      key: 'title',
+      header: '제목',
+      type: 'name',
+      primary: true,
+      // 첨부가 있으면 제목 뒤에 클립을 단다 — 열어 보기 전에 "받을 것이 있는가"를 답한다.
+      render: (a) => (
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="min-w-0 truncate">{a.title}</span>
+          {(fileCounts?.[a.id] ?? 0) > 0 && (
+            <Paperclip
+              className="size-3.5 shrink-0 text-gray-500"
+              aria-label={`첨부 ${fileCounts?.[a.id]}건`}
+            />
+          )}
+        </span>
+      ),
+    },
     {
       key: 'created_at',
       header: '게시일',
@@ -79,15 +101,15 @@ export function ProgramAnnouncementsPanel({ programId }: { programId: string }) 
         onClose={() => setEditing(null)}
         onSaved={(id) => {
           // 저장한 공지를 곧바로 펼쳐 둔다 — 방금 쓴 글과 그 첨부가 바로 눈에 든다.
-          setSelectedId(id)
           setEditing(null)
+          setOpenId(id)
         }}
       />
     )
   }
 
   return (
-    <div className="space-y-4">
+    <>
       <Card
         title="공지사항"
         count={filtered.length}
@@ -121,8 +143,7 @@ export function ProgramAnnouncementsPanel({ programId }: { programId: string }) 
                   ? '검색 결과가 없습니다.'
                   : '등록된 공지가 없습니다. 작성하면 게스트 공지사항 메뉴에 보입니다.'
               }
-              onRowClick={(a) => setSelectedId(selectedId === a.id ? null : a.id)}
-              rowClassName={(a) => (a.id === selectedId ? 'bg-brand/5' : undefined)}
+              onRowClick={(a) => setOpenId(a.id)}
               pagination={{
                 page: safePage,
                 pageSize: LIST_PAGE_SIZE,
@@ -134,81 +155,46 @@ export function ProgramAnnouncementsPanel({ programId }: { programId: string }) 
           </div>
         )}
       </Card>
-      {/* 고른 공지의 본문과 그 공지에 딸린 파일. 아무것도 고르지 않았으면 세우지 않는다 —
-          상하 배치에서는 빈 카드가 목록 바로 아래를 차지해 다음 할 일을 가린다. */}
-      {selected && (
-        <>
-          <AnnouncementBody
-            announcement={selected}
-            onEdit={() => setEditing(selected)}
-            onDelete={() => void onDelete(selected)}
-            deleting={remove.isPending}
-          />
-          <MaterialPanel
-            targetType={ANNOUNCEMENT_ATTACHMENT_TYPE}
-            targetId={selected.id}
-            title="파일"
-          />
-        </>
-      )}
-    </div>
-  )
-}
 
-/** 목록 아래에 서는 공지 1건(본문 + 수정·삭제). 고른 공지가 있을 때만 렌더된다. */
-function AnnouncementBody({
-  announcement,
-  onEdit,
-  onDelete,
-  deleting,
-}: {
-  announcement: ProgramAnnouncement
-  onEdit: () => void
-  onDelete: () => void
-  deleting: boolean
-}) {
-  return (
-    <Card
-      title="본문"
-      actions={
-        <span className="flex items-center gap-1">
-          <IconButton
-            variant="ghost"
-            label={`'${announcement.title}' 수정`}
-            onClick={onEdit}
-            icon={<Pencil className="size-4" />}
-          />
-          <IconButton
-            variant="ghost"
-            danger
-            label={`'${announcement.title}' 내리기`}
-            disabled={deleting}
-            onClick={onDelete}
-            icon={<Trash2 className="size-4" />}
-          />
-        </span>
-      }
-    >
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <span aria-hidden className="h-3.5 w-0.5 shrink-0 rounded-full bg-brand" />
-          <p className="min-w-0 flex-1 text-body font-semibold text-gray-900">
-            {announcement.title}
-          </p>
-          <span className="shrink-0 text-caption tabular-nums text-gray-500">
-            {announcement.created_at.slice(0, 10)}
-          </span>
-        </div>
-        {announcement.body ? (
-          // 에디터용 최소 높이(16rem)가 읽기 전용 뷰어에 빈 공간으로 남지 않게 눕힌다.
-          <div className="[&_.ProseMirror]:min-h-0">
-            <RichTextViewer html={announcement.body} />
-          </div>
-        ) : (
-          <p className="text-body text-gray-600">본문이 없는 공지입니다.</p>
-        )}
-      </div>
-    </Card>
+      {opened && (
+        <BoardDetailModal
+          open
+          onClose={() => setOpenId(null)}
+          meta="공지사항"
+          title={opened.title}
+          date={opened.created_at.slice(0, 10)}
+          body={
+            opened.body ? (
+              // 에디터용 최소 높이(16rem)가 읽기 전용 뷰어에 빈 공간으로 남지 않게 눕힌다.
+              <div className="[&_.ProseMirror]:min-h-0">
+                <RichTextViewer html={opened.body} />
+              </div>
+            ) : (
+              <p className="text-body text-gray-600">본문이 없는 공지입니다.</p>
+            )
+          }
+          attachmentType={ANNOUNCEMENT_ATTACHMENT_TYPE}
+          attachmentId={opened.id}
+          footer={
+            <>
+              <Button variant="outline-danger" onClick={() => void onDelete(opened)}>
+                삭제
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setOpenId(null)
+                  setEditing(opened)
+                }}
+              >
+                수정
+              </Button>
+              <Button onClick={() => setOpenId(null)}>닫기</Button>
+            </>
+          }
+        />
+      )}
+    </>
   )
 }
 
@@ -291,13 +277,13 @@ function AnnouncementForm({
         <MaterialPanel
           targetType={ANNOUNCEMENT_ATTACHMENT_TYPE}
           targetId={announcement.id}
-          title="파일"
+          title="첨부 파일"
         />
       ) : (
         <PendingMaterialPanel
           slot={ANNOUNCEMENT_ATTACHMENT_TYPE}
           pending={pending}
-          title="파일"
+          title="첨부 파일"
         />
       )}
 

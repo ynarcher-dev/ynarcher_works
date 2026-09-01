@@ -10,6 +10,13 @@ import { useProgramWorkspace } from '@/features/program/workspace'
  * 원장은 게스트 로그인을 개방한 워크스페이스에만 있다(config.tables.questions 유무).
  */
 
+/**
+ * 질문 첨부의 다형 키. 귀속 단위는 **질문 1건**이며(target_id=질문 id), 담당자가 답변에
+ * 곁들이는 파일이 여기 붙는다 — 게스트는 읽고 내려받기만 한다(게스트에게 첨부 업로드를
+ * 열려면 attachments INSERT와 Storage 정책을 함께 열어야 하므로 별도 결정 사항이다).
+ */
+export const QUESTION_ATTACHMENT_TYPE = 'program_question'
+
 /** 질문 1건(작성자 이름 포함). answer_body가 비어 있으면 답변 대기다. */
 export interface ProgramQuestion {
   id: string

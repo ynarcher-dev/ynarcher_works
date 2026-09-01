@@ -19,10 +19,17 @@ export function FileModule({ moduleId }: { moduleId: string }) {
 }
 
 /**
- * 파일 목록 카드(표시 단위). 파일첨부 메뉴·글쓰기 우측 칸·사업개요 우측 칸이 같은 카드를
- * 쓴다 — 조회 범위(모듈 귀속 / 사업개요 귀속)만 호출부가 가른다.
+ * 파일 목록 카드(표시 단위). 파일첨부 메뉴·글쓰기 우측 칸·사업개요 우측 칸·게시판 상세
+ * 모달이 같은 카드를 쓴다 — 조회 범위(모듈 / 사업개요 / 공지 / 질문 귀속)만 호출부가 가른다.
  */
-export function GuestFileCard({ files }: { files: GuestFile[] }) {
+export function GuestFileCard({
+  files,
+  title = '파일',
+}: {
+  files: GuestFile[]
+  /** 카드 제목. 메뉴에서는 '파일', 게시판 상세에서는 '첨부 파일'. */
+  title?: string
+}) {
   const download = useDownloadModuleFile()
   const toast = useToast()
   const { pageItems, page, setPage, pageCount } = usePaged(files)
@@ -36,7 +43,7 @@ export function GuestFileCard({ files }: { files: GuestFile[] }) {
   }
 
   return (
-    <Card title="파일" count={files.length}>
+    <Card title={title} count={files.length}>
       {files.length === 0 ? (
         <p className="text-body text-gray-600">등록된 파일이 없습니다.</p>
       ) : (

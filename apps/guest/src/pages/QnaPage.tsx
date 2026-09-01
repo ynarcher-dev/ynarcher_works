@@ -11,17 +11,28 @@ import {
   useToast,
   type Column,
 } from '@ynarcher/ui'
+import { Paperclip } from 'lucide-react'
 import { useState } from 'react'
+import { BoardDetailModal } from '@/components/BoardDetailModal'
 import { GuestButton } from '@/components/GuestButton'
+import { useAttachmentCounts } from '@/features/attachmentCounts'
 import { GUEST_LIST_PAGE_SIZE, matchesKeyword, pageSlice } from '@/features/listFilter'
-import { useCreateQuestion, useMyQuestions, type GuestQuestion } from '@/features/qnaHooks'
+import {
+  useCreateQuestion,
+  useMyQuestions,
+  useQuestionFiles,
+  type GuestQuestion,
+} from '@/features/qnaHooks'
 import { RICH_BODY_CLASS, sanitizeRichText } from '@/lib/richText'
+
+const QUESTION_ATTACHMENT_TYPE = 'program_question'
 
 /**
  * QNA — 고정 메뉴 세 번째 줄이자 **게스트가 처음으로 글을 쓰는 화면**(1:1 문의함).
  * 좌측(2)은 내 질문 표, 우측(1)은 질문 작성이다(메뉴 화면과 같은 2:1 비율).
+ * 행을 누르면 **상세 모달**에서 질문·답변·첨부를 읽는다 — WORKS QNA 탭과 같은 부품
+ * (BoardDetailModal)이라 두 앱이 같은 구조로 글과 첨부를 보여 준다(2026-09-01 지정).
  * 다른 참여자의 질문은 보이지 않는다 — 판정은 화면이 아니라 RLS가 한다(qnaHooks 머리말).
- * 답변은 담당자가 WORKS 에디터로 쓰므로 글쓰기·공지와 같은 정화기·조판으로 그린다.
  */
 export function QnaPage() {
   const { data, isLoading } = useMyQuestions()
@@ -47,19 +58,21 @@ export function QnaPage() {
 }
 
 /**
- * 내 질문 — 데이터테이블 + 검색(2026-09-01 사용자 요청, 종전 펼침 목록 대체). 행을 누르면
- * 표 아래에 질문·답변 상세가 선다 — 표의 행은 훑는 자리고 본문은 읽는 자리라, 행 안에
- * 본문을 펼치면 열 위치가 흔들린다. 순번·표준 메타 열은 두지 않는다(작성자는 언제나
- * 본인이고, 이 표가 답하는 것은 "무엇을 물었고 답이 왔는가"뿐이다).
+ * 내 질문 — 데이터테이블 + 검색. 행을 누르면 상세 모달이 열린다. 순번·표준 메타 열은
+ * 두지 않는다(작성자는 언제나 본인이고, 이 표가 답하는 것은 "무엇을 물었고 답이 왔는가"뿐).
  * 검색 대상에 답변 본문도 넣는다 — 찾는 사람이 기억하는 말이 질문이 아니라 답에 있을 수 있다.
  */
 function MyQuestionsCard({ list }: { list: GuestQuestion[] }) {
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(0)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [openId, setOpenId] = useState<string | null>(null)
   const filtered = list.filter((q) => matchesKeyword(keyword, q, q.answer_body))
   const { pageRows, safePage } = pageSlice(filtered, page)
-  const selected = list.find((q) => q.id === selectedId) ?? null
+  const opened = list.find((q) => q.id === openId) ?? null
+  const { data: fileCounts } = useAttachmentCounts(
+    QUESTION_ATTACHMENT_TYPE,
+    pageRows.map((q) => q.id),
+  )
 
   const columns: Column<GuestQuestion>[] = [
     {
@@ -72,7 +85,23 @@ function MyQuestionsCard({ list }: { list: GuestQuestion[] }) {
         </Badge>
       ),
     },
-    { key: 'title', header: '제목', type: 'name', primary: true },
+    {
+      key: 'title',
+      header: '제목',
+      type: 'name',
+      primary: true,
+      render: (q) => (
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="min-w-0 truncate">{q.title}</span>
+          {(fileCounts?.[q.id] ?? 0) > 0 && (
+            <Paperclip
+              className="size-3.5 shrink-0 text-gray-500"
+              aria-label={`첨부 ${fileCounts?.[q.id]}건`}
+            />
+          )}
+        </span>
+      ),
+    },
     {
       key: 'created_at',
       header: '질문일',
@@ -88,71 +117,83 @@ function MyQuestionsCard({ list }: { list: GuestQuestion[] }) {
   ]
 
   return (
-    <Card title="내 질문" count={filtered.length}>
-      <div className="space-y-3">
-        <ListToolbar
-          keyword={keyword}
-          onKeywordChange={(v) => {
-            setKeyword(v)
-            setPage(0)
-          }}
-          searchPlaceholder="제목·내용·답변 검색"
-        />
-        <DataTable
-          columns={columns}
-          rows={pageRows}
-          rowKey={(q) => q.id}
-          numbered={false}
-          standardColumns={false}
-          emptyText={
-            keyword
-              ? '검색 결과가 없습니다.'
-              : '아직 남긴 질문이 없습니다. 오른쪽에서 첫 질문을 남겨 보세요.'
-          }
-          onRowClick={(q) => setSelectedId(selectedId === q.id ? null : q.id)}
-          rowClassName={(q) => (q.id === selectedId ? 'bg-brand/5' : undefined)}
-          pagination={{
-            page: safePage,
-            pageSize: GUEST_LIST_PAGE_SIZE,
-            total: filtered.length,
-            onChange: setPage,
-            compact: true,
-          }}
-        />
-        {selected && <QuestionDetail question={selected} />}
-      </div>
-    </Card>
+    <>
+      <Card title="내 질문" count={filtered.length}>
+        <div className="space-y-3">
+          <ListToolbar
+            keyword={keyword}
+            onKeywordChange={(v) => {
+              setKeyword(v)
+              setPage(0)
+            }}
+            searchPlaceholder="제목·내용·답변 검색"
+          />
+          <DataTable
+            columns={columns}
+            rows={pageRows}
+            rowKey={(q) => q.id}
+            numbered={false}
+            standardColumns={false}
+            emptyText={
+              keyword
+                ? '검색 결과가 없습니다.'
+                : '아직 남긴 질문이 없습니다. 오른쪽에서 첫 질문을 남겨 보세요.'
+            }
+            onRowClick={(q) => setOpenId(q.id)}
+            pagination={{
+              page: safePage,
+              pageSize: GUEST_LIST_PAGE_SIZE,
+              total: filtered.length,
+              onChange: setPage,
+              compact: true,
+            }}
+          />
+        </div>
+      </Card>
+      {opened && <QuestionModal question={opened} onClose={() => setOpenId(null)} />}
+    </>
   )
 }
 
-/** 표 아래에 서는 질문 1건의 상세: 머리 한 줄 → 질문 본문 → 답변. */
-function QuestionDetail({ question }: { question: GuestQuestion }) {
+/** 질문 1건의 상세 모달(질문 본문 → 답변 → 첨부). 첨부는 열린 질문의 것만 조회한다. */
+function QuestionModal({
+  question,
+  onClose,
+}: {
+  question: GuestQuestion
+  onClose: () => void
+}) {
+  const { data: files } = useQuestionFiles(question.id)
+
   return (
-    <div className="mt-4 space-y-3 border-t border-gray-200 pt-4">
-      <div className="flex items-center gap-2">
-        <span aria-hidden className="h-3.5 w-0.5 shrink-0 rounded-full bg-brand" />
-        <p className="min-w-0 flex-1 truncate text-body font-semibold text-gray-900">
-          {question.title}
-        </p>
-        <span className="shrink-0 text-caption tabular-nums text-gray-500">
-          {question.created_at.slice(0, 10)}
-        </span>
-      </div>
-      {question.body && (
-        <p className="whitespace-pre-line text-body text-gray-800">{question.body}</p>
-      )}
-      {/* 답변은 질문 아래 응답이므로 브랜드 선으로 들여 세운다(WORKS와 같은 자리). */}
-      <div className="border-l-2 border-brand/40 pl-3">
-        {question.answer_body ? (
-          <div
-            className={RICH_BODY_CLASS}
-            dangerouslySetInnerHTML={{ __html: sanitizeRichText(question.answer_body) }}
-          />
+    <BoardDetailModal
+      open
+      onClose={onClose}
+      meta="QNA"
+      title={question.title}
+      date={question.created_at.slice(0, 10)}
+      body={
+        question.body ? (
+          <p className="whitespace-pre-line text-body text-gray-800">{question.body}</p>
         ) : (
-          <p className="text-body text-gray-600">담당자의 답변을 기다리고 있습니다.</p>
-        )}
-      </div>
-    </div>
+          <p className="text-body text-gray-600">본문이 없는 질문입니다.</p>
+        )
+      }
+      extra={
+        // 답변은 질문 아래 응답이므로 브랜드 선으로 들여 세운다(WORKS와 같은 자리).
+        <div className="border-l-2 border-brand/40 pl-3">
+          {question.answer_body ? (
+            <div
+              className={RICH_BODY_CLASS}
+              dangerouslySetInnerHTML={{ __html: sanitizeRichText(question.answer_body) }}
+            />
+          ) : (
+            <p className="text-body text-gray-600">담당자의 답변을 기다리고 있습니다.</p>
+          )}
+        </div>
+      }
+      files={files ?? []}
+    />
   )
 }
 
