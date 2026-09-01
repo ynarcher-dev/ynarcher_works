@@ -1,5 +1,5 @@
-import { Button, Card, Spinner, useToast } from '@ynarcher/ui'
-import { Pencil, Plus } from 'lucide-react'
+import { Button, Card, IconButton, Spinner, useToast } from '@ynarcher/ui'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { RichTextEditor, RichTextViewer } from '@/components/RichTextEditor'
 import { isEmptyRichText } from '@/lib/richText'
@@ -32,18 +32,52 @@ export function ProgramIntroPanel({ programId }: { programId: string }) {
 
 /** 소개문 카드 — 카드 안에서 공용 리치텍스트 뷰어와 에디터가 자리를 바꾼다. */
 function IntroCard({ programId }: { programId: string }) {
+  const toast = useToast()
   const { data: overview, isLoading } = useProgramOverview(programId)
+  const save = useSaveProgramOverview(programId)
   const [editing, setEditing] = useState(false)
+
+  /**
+   * 소개문 삭제 — 원장의 행은 남기고 본문만 비운다. 이 원장은 사업 1건당 한 행이 '개요'라는
+   * 자리 그 자체라(program_id가 PK), 내리는 것과 비우는 것이 같은 사실이다.
+   * 우측 파일은 별개 축이므로 함께 지우지 않는다 — 그 사실을 확인 문구가 미리 말한다.
+   */
+  const onDelete = async () => {
+    if (
+      !window.confirm(
+        '사업소개를 삭제하시겠습니까? 게스트 첫 화면에서도 사라집니다. 첨부한 파일은 그대로 남습니다.',
+      )
+    ) {
+      return
+    }
+    try {
+      await save.mutateAsync(null)
+    } catch {
+      toast.show('삭제에 실패했습니다. 권한을 확인하세요.', 'danger')
+    }
+  }
 
   return (
     <Card
       title="사업개요"
       actions={
         !editing ? (
-          <Button variant="secondary" onClick={() => setEditing(true)}>
-            {overview?.body ? <Pencil className="size-4" /> : <Plus className="size-4" />}
-            {overview?.body ? '수정' : '작성'}
-          </Button>
+          <span className="flex items-center gap-1">
+            {overview?.body && (
+              <IconButton
+                variant="ghost"
+                danger
+                label="사업소개 삭제"
+                disabled={save.isPending}
+                onClick={() => void onDelete()}
+                icon={<Trash2 className="size-4" />}
+              />
+            )}
+            <Button variant="secondary" onClick={() => setEditing(true)}>
+              {overview?.body ? <Pencil className="size-4" /> : <Plus className="size-4" />}
+              {overview?.body ? '수정' : '작성'}
+            </Button>
+          </span>
         ) : undefined
       }
     >
