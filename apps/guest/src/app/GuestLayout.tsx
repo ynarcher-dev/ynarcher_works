@@ -1,7 +1,6 @@
 import { AppShell, SegmentedToggle, Sidebar, SidebarItem } from '@ynarcher/ui'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import logo from '@/assets/logo.png'
-import { GuestNoticeRail } from '@/app/GuestNoticeRail'
 import { GuestUserMenu } from '@/app/GuestUserMenu'
 import { useGuestStore } from '@/auth/guestStore'
 import {
@@ -107,17 +106,9 @@ export function GuestLayout() {
         </>
       }
     >
-      {/* 콘텐츠 영역 2:1 분할 — 본문은 좌측 2 비율, 우측 1 비율은 NOTICE 자리다.
-          데스크톱(lg 이상)에서만 가르고 모바일은 본문 아래로 이어 붙인다.
-          NOTICE가 서지 않는 화면(글쓰기·개인 메뉴)에서는 empty:hidden으로 칸째 사라진다. */}
-      <div className="lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:gap-6">
-        <div className="min-w-0">
-          <Outlet />
-        </div>
-        <div className="mt-5 min-w-0 empty:hidden lg:mt-0">
-          <GuestNoticeRail />
-        </div>
-      </div>
+      {/* NOTICE 우측 칸은 셸이 아니라 메뉴 화면(ModulePage)이 가른다 — 머리(이름·안내·
+          진행기간)와 그 밑 구분선은 전체 폭으로 서고, 분할은 구분선 아래에서 시작해야 한다. */}
+      <Outlet />
     </AppShell>
   )
 }

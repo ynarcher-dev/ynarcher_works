@@ -1,6 +1,7 @@
-import { Button, Card, IconButton, Input, Spinner, TextArea, useToast } from '@ynarcher/ui'
+import { Button, Card, IconButton, Input, Spinner, useToast } from '@ynarcher/ui'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
+import { RichTextEditor, RichTextViewer } from '@/components/RichTextEditor'
 import {
   useDeleteNotice,
   useModuleNotices,
@@ -9,10 +10,17 @@ import {
 } from '@/features/program/noticeHooks'
 import { useProgramWorkspace } from '@/features/program/workspace'
 
+/** TipTap이 내는 빈 본문(`<p></p>`)을 걸러낸다 — 이미지 한 장만 있는 본문은 빈 것이 아니다. */
+function isEmptyHtml(html: string): boolean {
+  return !html.includes('<img') && html.replace(/<[^>]*>/g, '').trim() === ''
+}
+
 /**
  * 메뉴별 NOTICE(알림) 패널. GUEST 메뉴 우측의 NOTICE 칸과 **같은 구성**(제목·본문·날짜
  * 목록)이며, 차이는 편집 가능 여부뿐이다 — WORKS에서 세우고 게스트가 같은 자리에서 읽는다.
  * 글쓰기(POST) 화면에는 세우지 않는다(그 자체가 글쓰기 기능이라 알림 글이 중복된다).
+ * 본문 에디터·뷰어는 게시판·글쓰기와 같은 공용 리치텍스트(RichTextEditor) 하나를 쓴다 —
+ * 에디터가 바뀌면 NOTICE도 함께 바뀐다.
  */
 export function NoticePanel({
   programId,
@@ -95,7 +103,9 @@ function NoticeRow({
     <li className="relative rounded-radius-md border border-gray-300 bg-white py-3 pl-4 pr-20">
       <p className="text-body font-semibold text-gray-900">{notice.title}</p>
       {notice.body && (
-        <p className="mt-1 whitespace-pre-line text-caption text-gray-700">{notice.body}</p>
+        <div className="mt-1">
+          <RichTextViewer html={notice.body} />
+        </div>
       )}
       <p className="mt-1 text-caption tabular-nums text-gray-500">
         {notice.created_at.slice(0, 10)}
@@ -147,7 +157,7 @@ function NoticeForm({
       await save.mutateAsync({
         id: notice?.id,
         title: title.trim(),
-        body: body.trim() || null,
+        body: isEmptyHtml(body) ? null : body,
       })
       onDone()
     } catch {
@@ -168,11 +178,11 @@ function NoticeForm({
       </div>
       <div className="space-y-1.5">
         <label className="text-caption font-semibold text-gray-600">내용</label>
-        <TextArea
-          rows={4}
-          placeholder="게스트에게 전할 내용을 적어 주세요. 줄바꿈이 그대로 보입니다."
+        {/* 게시판·글쓰기와 같은 공용 에디터. 저장 값은 HTML이다. */}
+        <RichTextEditor
           value={body}
-          onChange={(e) => setBody(e.target.value)}
+          onChange={setBody}
+          placeholder="게스트에게 전할 내용을 적어 주세요."
         />
       </div>
       <div className="flex justify-end gap-2">

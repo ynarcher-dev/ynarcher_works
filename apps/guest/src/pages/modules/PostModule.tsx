@@ -1,14 +1,6 @@
 import { Spinner } from '@ynarcher/ui'
 import { useModulePosts } from '@/features/moduleHooks'
-import { sanitizeRichText } from '@/lib/richText'
-
-/** 본문 서식(문단·목록·링크)의 최소 조판. 에디터 런타임 없이 클래스만으로 세운다. */
-const BODY_CLASS =
-  'text-body text-gray-800 [&_p]:mb-2 [&_ul]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 ' +
-  '[&_ol]:mb-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-brand [&_a]:underline ' +
-  '[&_strong]:font-semibold [&_blockquote]:border-l-2 [&_blockquote]:border-gray-300 ' +
-  '[&_blockquote]:pl-3 [&_blockquote]:text-gray-600 ' +
-  '[&_img]:my-2 [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-radius-sm'
+import { RICH_BODY_CLASS, sanitizeRichText } from '@/lib/richText'
 
 /**
  * 글쓰기 메뉴 — 운영자가 남긴 글을 읽는다(게스트는 읽기 전용).
@@ -29,7 +21,7 @@ export function PostModule({ moduleId }: { moduleId: string }) {
   return (
     <article className="rounded-radius-md border border-gray-200 bg-white p-6">
       {body ? (
-        <div className={BODY_CLASS} dangerouslySetInnerHTML={{ __html: body }} />
+        <div className={RICH_BODY_CLASS} dangerouslySetInnerHTML={{ __html: body }} />
       ) : (
         <p className="py-8 text-center text-body text-gray-600">
           아직 작성된 내용이 없습니다.

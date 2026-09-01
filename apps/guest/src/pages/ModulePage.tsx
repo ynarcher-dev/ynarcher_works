@@ -5,6 +5,7 @@ import {
   readModuleSettings,
 } from '@ynarcher/master-data'
 import { useParams } from 'react-router-dom'
+import { GuestNoticeRail } from '@/app/GuestNoticeRail'
 import { useGuestModules, type GuestModule } from '@/features/moduleHooks'
 import { moduleNotice } from '@/features/moduleMeta'
 import { BookingModule } from '@/pages/modules/BookingModule'
@@ -43,9 +44,13 @@ export function ModulePage() {
 
   const settings = readModuleSettings(mod.settings)
   const notice = moduleNotice(mod.module_type, settings.memo)
+  // 글쓰기 메뉴는 NOTICE를 세우지 않는다 — 그 화면 자체가 글이다.
+  const hasNoticeRail = mod.module_type !== 'POST'
 
   return (
     <div className="space-y-5">
+      {/* 머리와 그 밑 구분선은 전체 폭으로 선다. NOTICE는 구분선 아래에서 본문과 나란히
+          2:1로 갈리고(데스크톱), 모바일에서는 본문 아래로 이어 붙는다. */}
       <PageHeader
         title={moduleDisplayName(mod)}
         description={
@@ -60,7 +65,18 @@ export function ModulePage() {
           </>
         }
       />
-      <ModuleBody module={mod} />
+      {hasNoticeRail ? (
+        <div className="lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:gap-6">
+          <div className="min-w-0">
+            <ModuleBody module={mod} />
+          </div>
+          <div className="mt-5 min-w-0 lg:mt-0">
+            <GuestNoticeRail moduleId={mod.id} />
+          </div>
+        </div>
+      ) : (
+        <ModuleBody module={mod} />
+      )}
     </div>
   )
 }

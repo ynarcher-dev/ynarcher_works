@@ -11,6 +11,18 @@
  * "UI에서 숨기는 것은 보안이 아니다"의 짝은 "출처를 믿는 것도 보안이 아니다"이다.
  */
 
+/**
+ * 정화된 본문의 최소 조판(문단·목록·링크·이미지). 에디터 런타임 없이 클래스만으로 세운다.
+ * 글쓰기 본문과 NOTICE가 같은 한 벌을 쓴다 — 같은 에디터로 쓴 글은 어느 화면에서든
+ * 같은 모양이어야 한다.
+ */
+export const RICH_BODY_CLASS =
+  'text-body text-gray-800 [&_p]:mb-2 [&_ul]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 ' +
+  '[&_ol]:mb-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-brand [&_a]:underline ' +
+  '[&_strong]:font-semibold [&_blockquote]:border-l-2 [&_blockquote]:border-gray-300 ' +
+  '[&_blockquote]:pl-3 [&_blockquote]:text-gray-600 ' +
+  '[&_img]:my-2 [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-radius-sm'
+
 /** 허용 태그. 서식 표현에 필요한 최소 집합이며, 그 밖의 태그는 내용만 남기고 벗긴다. */
 const ALLOWED_TAGS = new Set([
   'P', 'BR', 'STRONG', 'B', 'EM', 'I', 'U', 'S', 'CODE', 'PRE',
