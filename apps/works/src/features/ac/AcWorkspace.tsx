@@ -29,6 +29,9 @@ export const AC_WORKSPACE: ProgramWorkspaceConfig = {
     notices: 'program_notices',
     // 게스트 첫 화면에 나가는 사업소개. NOTICE와 같은 경계(AC만, 20260901140000).
     overviews: 'program_overviews',
+    // 게스트 고정 메뉴로 나가는 사업 공지사항·QNA. 같은 경계(AC만, 20260901170000).
+    announcements: 'program_announcements',
+    questions: 'program_questions',
   },
   rpcs: {
     setStaffing: 'set_program_staffing',

@@ -5,7 +5,7 @@ import { GuestUserMenu } from '@/app/GuestUserMenu'
 import { useGuestStore } from '@/auth/guestStore'
 import {
   EXPERT_NAV,
-  OVERVIEW_NAV_ITEM,
+  STARTUP_FIXED_NAV,
   defaultView,
   homePathOf,
   moduleNavItems,
@@ -78,11 +78,12 @@ export function GuestLayout() {
       }
     >
       <div className="flex flex-col gap-1">
-        {/* 스타트업 뷰 최상단은 고정 메뉴 '사업개요'(로그인 직후 착지점)다. 원장이 세우는
-            하위 메뉴와는 구분선으로 가른다 — 층이 다른 메뉴임을 선 하나가 답한다. */}
+        {/* 스타트업 뷰 상단은 고정 메뉴 묶음(사업개요·공지사항·QNA — 첫 줄이 로그인 직후
+            착지점)이다. 원장이 세우는 하위 메뉴와는 구분선으로 가른다 — 층이 다른 메뉴임을
+            선 하나가 답한다. */}
         {view === 'startup' && (
           <>
-            {renderItem(OVERVIEW_NAV_ITEM)}
+            {STARTUP_FIXED_NAV.map(renderItem)}
             {items.length > 0 && (
               <div aria-hidden className="my-1 border-t border-white/20" />
             )}

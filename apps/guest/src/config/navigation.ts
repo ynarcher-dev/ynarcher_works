@@ -1,4 +1,11 @@
-import { BookOpen, CalendarDays, ClipboardList, type LucideIcon } from 'lucide-react'
+import {
+  Bell,
+  BookOpen,
+  CalendarDays,
+  CircleHelp,
+  ClipboardList,
+  type LucideIcon,
+} from 'lucide-react'
 import { moduleDisplayName } from '@ynarcher/master-data'
 import { moduleIcon } from '@/features/moduleMeta'
 import type { GuestModule } from '@/features/moduleHooks'
@@ -40,18 +47,18 @@ export function modulePath(moduleId: string): string {
 }
 
 /**
- * 사업개요 — 스타트업 뷰 사이드바 **최상단의 고정 메뉴**이자 로그인 직후 착지점.
+ * 스타트업 뷰 사이드바 **상단의 고정 메뉴 묶음**. 첫 줄(사업개요)이 로그인 직후 착지점이다.
  *
- * 모듈 메뉴는 원장이 세우지만(위 moduleNavItems), 사업개요는 메뉴(모듈)가 아니라 사업
- * 자체의 소개라 코드에 고정으로 선다 — 담당자가 켜고 끄는 대상이 아니고, 공개 메뉴가
- * 하나도 없는 사업이어도 로그인이 열렸다면 소개는 읽을 수 있어야 한다. 원장이 세우는
- * 하위 메뉴와는 사이드바가 구분선으로 가른다(GuestLayout).
+ * 모듈 메뉴는 원장이 세우지만(위 moduleNavItems), 이 셋은 메뉴(모듈)가 아니라 사업 자체를
+ * 향한 화면이라 코드에 고정으로 선다 — 담당자가 켜고 끄는 대상이 아니고, 공개 메뉴가
+ * 하나도 없는 사업이어도 로그인이 열렸다면 소개·공지·문의는 닿을 수 있어야 한다.
+ * 원장이 세우는 하위 메뉴와는 사이드바가 구분선으로 가른다(GuestLayout).
  */
-export const OVERVIEW_NAV_ITEM: GuestNavItem = {
-  path: '/overview',
-  label: '사업개요',
-  icon: BookOpen,
-}
+export const STARTUP_FIXED_NAV: readonly [GuestNavItem, ...GuestNavItem[]] = [
+  { path: '/overview', label: '사업개요', icon: BookOpen },
+  { path: '/announcements', label: '공지사항', icon: Bell },
+  { path: '/qna', label: 'QNA', icon: CircleHelp },
+]
 
 /**
  * 전문가 뷰의 메뉴는 여전히 고정이다.
@@ -76,7 +83,12 @@ export function defaultView(role: string | undefined): GuestView {
  */
 export function viewOfPath(pathname: string): GuestView | undefined {
   if (EXPERT_NAV.some((item) => item.path === pathname)) return 'expert'
-  if (pathname === OVERVIEW_NAV_ITEM.path || pathname.startsWith('/m/')) return 'startup'
+  if (
+    STARTUP_FIXED_NAV.some((item) => item.path === pathname) ||
+    pathname.startsWith('/m/')
+  ) {
+    return 'startup'
+  }
   return undefined
 }
 
@@ -86,5 +98,5 @@ export function viewOfPath(pathname: string): GuestView | undefined {
  * 이라는 결과 자체가 사라졌다.
  */
 export function homePathOf(view: GuestView): string {
-  return view === 'expert' ? EXPERT_NAV[0].path : OVERVIEW_NAV_ITEM.path
+  return view === 'expert' ? EXPERT_NAV[0].path : STARTUP_FIXED_NAV[0].path
 }

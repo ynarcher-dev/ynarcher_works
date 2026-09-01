@@ -63,6 +63,15 @@ export interface ProgramWorkspaceConfig {
      * 상세의 사업개요 탭도 서지 않는다.
      */
     overviews?: string
+    /**
+     * 사업 공지사항 원장(사업 단위 게시판 — 모듈별 NOTICE와 축이 다르다).
+     * 게스트 고정 메뉴로 나가는 기능이라 overviews와 같은 경계(AC만)다.
+     */
+    announcements?: string
+    /**
+     * 사업 QNA 원장(게스트 질문 + 담당자 답변, 1:1 문의함). 같은 경계(AC만)다.
+     */
+    questions?: string
   }
   rpcs: {
     setStaffing: string
