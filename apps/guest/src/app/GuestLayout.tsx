@@ -53,12 +53,11 @@ export function GuestLayout() {
       subheader={
         // WORKS의 워크스페이스 스위처가 서는 자리. 게스트는 사업이 세션에 고정되어 있어
         // 고를 것이 없으므로, 같은 규격의 **읽기 전용 표시**로 지금 어느 사업인지만 답한다.
+        // 사업 코드는 세우지 않는다(2026-09-01) — 로그인 열쇠일 뿐, 들어온 뒤에는 답하는
+        // 것이 없다.
         program && (
           <div className="rounded-radius-md border border-white/20 bg-white/10 px-3 py-2">
             <p className="truncate text-body font-bold text-white">{program.title}</p>
-            {program.code && (
-              <p className="truncate text-caption text-white/70">{program.code}</p>
-            )}
           </div>
         )
       }
