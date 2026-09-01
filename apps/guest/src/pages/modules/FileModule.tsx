@@ -15,9 +15,16 @@ import { formatBytes } from '@/lib/format'
  */
 export function FileModule({ moduleId }: { moduleId: string }) {
   const { data } = useModuleFiles(moduleId)
+  return <GuestFileCard files={data ?? []} />
+}
+
+/**
+ * 파일 목록 카드(표시 단위). 파일첨부 메뉴·글쓰기 우측 칸·사업개요 우측 칸이 같은 카드를
+ * 쓴다 — 조회 범위(모듈 귀속 / 사업개요 귀속)만 호출부가 가른다.
+ */
+export function GuestFileCard({ files }: { files: GuestFile[] }) {
   const download = useDownloadModuleFile()
   const toast = useToast()
-  const files = data ?? []
   const { pageItems, page, setPage, pageCount } = usePaged(files)
 
   const onDownload = async (file: GuestFile) => {

@@ -3,6 +3,7 @@ import { Pencil, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { RichTextEditor, RichTextViewer } from '@/components/RichTextEditor'
 import { isEmptyRichText } from '@/lib/richText'
+import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import {
   useProgramOverview,
   useSaveProgramOverview,
@@ -10,11 +11,27 @@ import {
 
 /**
  * 사업개요(사업소개문) 탭. GUEST 로그인 직후 첫 화면(사이드바 최상단 '사업개요')과
- * **같은 내용**이며, 차이는 편집 가능 여부뿐이다 — WORKS에서 쓰고 게스트가 첫 화면에서
- * 읽는다. 사업 1건 = 개요 1건이므로 목록 없이 본문이 바로 서고, 에디터·뷰어는 게시판·
- * 글쓰기·NOTICE와 같은 공용 리치텍스트(RichTextEditor) 하나를 쓴다.
+ * **같은 구성**이며, 차이는 편집 가능 여부뿐이다 — 소개문(2)과 소개문에 딸린 파일(1)의
+ * 2:1 분할로, WORKS에서 쓰고·올리고 게스트가 첫 화면 같은 자리에서 읽고·내려받는다.
+ *
+ * 파일은 새 원장 없이 attachments 행에 target_type='program_overview'로 귀속만 표시한다
+ * (파일첨부 모듈이 program_module_id로 하는 것과 같은 판정 — 사업개요는 모듈이 아니라
+ * 모듈 마커를 쓸 수 없고, 사업 자료 관리(target_type='program')와는 목록의 축이 다르다).
+ * 게스트 쪽 읽기는 RLS(20260901160000)가 연다.
  */
 export function ProgramIntroPanel({ programId }: { programId: string }) {
+  return (
+    <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
+      <div className="lg:col-span-2">
+        <IntroCard programId={programId} />
+      </div>
+      <MaterialPanel targetType="program_overview" targetId={programId} title="파일" />
+    </div>
+  )
+}
+
+/** 소개문 카드 — 카드 안에서 공용 리치텍스트 뷰어와 에디터가 자리를 바꾼다. */
+function IntroCard({ programId }: { programId: string }) {
   const { data: overview, isLoading } = useProgramOverview(programId)
   const [editing, setEditing] = useState(false)
 
