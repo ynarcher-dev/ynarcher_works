@@ -13,6 +13,7 @@ import { DocReviewPanel } from '@/features/program/panels/DocReviewPanel'
 import { FilePanel } from '@/features/program/panels/FilePanel'
 import { LinkPanel } from '@/features/program/panels/LinkPanel'
 import { MatchingPanel } from '@/features/program/panels/MatchingPanel'
+import { ModuleNoticeSplit } from '@/features/program/panels/NoticePanel'
 import { OnsitePanel } from '@/features/program/panels/OnsitePanel'
 import { OrientationPanel } from '@/features/program/panels/OrientationPanel'
 import { OutcomesPanel } from '@/features/program/panels/OutcomesPanel'
@@ -166,9 +167,18 @@ export function ProgramDetailPage() {
               onBack={backToOverview}
             />
           )}
-          {/* 기본 템플릿(URL첨부·파일첨부): GUEST와 같은 카드 구성의 편집 화면. 헤더는 위 공통 헤더를 쓴다. */}
-          {moduleId && tab === 'link' && <LinkPanel programId={id} moduleId={moduleId} />}
-          {moduleId && tab === 'file' && <FilePanel programId={id} moduleId={moduleId} />}
+          {/* 기본 템플릿(URL첨부·파일첨부): GUEST와 같은 카드 구성의 편집 화면. 헤더는 위 공통 헤더를 쓴다.
+              우측 NOTICE도 GUEST 메뉴 우측과 같은 자리·같은 비율이다(글쓰기는 제외 — 그 자체가 글이다). */}
+          {moduleId && tab === 'link' && (
+            <ModuleNoticeSplit programId={id} moduleId={moduleId}>
+              <LinkPanel programId={id} moduleId={moduleId} />
+            </ModuleNoticeSplit>
+          )}
+          {moduleId && tab === 'file' && (
+            <ModuleNoticeSplit programId={id} moduleId={moduleId}>
+              <FilePanel programId={id} moduleId={moduleId} />
+            </ModuleNoticeSplit>
+          )}
           {moduleId && tab === 'recruitment' && (
             <RecruitmentPanel programId={id} moduleId={moduleId} />
           )}

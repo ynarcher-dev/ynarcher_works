@@ -1,6 +1,7 @@
 import { AppShell, SegmentedToggle, Sidebar, SidebarItem } from '@ynarcher/ui'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import logo from '@/assets/logo.png'
+import { GuestNoticeRail } from '@/app/GuestNoticeRail'
 import { GuestUserMenu } from '@/app/GuestUserMenu'
 import { useGuestStore } from '@/auth/guestStore'
 import {
@@ -37,9 +38,6 @@ export function GuestLayout() {
   const view: GuestView =
     viewOfPath(location.pathname) ?? defaultView(user?.role)
   const items = view === 'expert' ? [...EXPERT_NAV] : moduleNavItems(modules ?? [])
-  const current = items.find((item) => item.path === location.pathname)
-  // 사이드바 메뉴에 없는 화면(개인 메뉴로 진입)의 상단바 제목.
-  const pageTitle = current?.label ?? (location.pathname === '/me' ? '마이페이지' : undefined)
   // 공개 메뉴가 하나도 없는 사업이 있을 수 있다. 그때 로고와 뷰 전환은 루트로 보내고,
   // '열린 메뉴가 없다'는 사실은 루트 화면이 말한다.
   const home = (target: GuestView) => homePathOf(target, modules ?? []) ?? '/'
@@ -85,16 +83,11 @@ export function GuestLayout() {
     </Sidebar>
   )
 
+  // 상단바에 메뉴명(topbarLeft)을 세우지 않는다(2026-09-01) — 지금 어디인가는
+  // 사이드바의 활성 표시와 본문 머리(메뉴명)가 이미 두 번 답하고 있다.
   return (
     <AppShell
       sidebar={sidebar}
-      topbarLeft={
-        pageTitle && (
-          <span className="truncate text-body-lg font-semibold text-gray-900">
-            {pageTitle}
-          </span>
-        )
-      }
       topbarRight={
         <>
           {/* 겸직 전문가 계정의 역할 전환. 사업 전환이 아니라는 점을 라벨로 못박는다. */}
@@ -114,7 +107,17 @@ export function GuestLayout() {
         </>
       }
     >
-      <Outlet />
+      {/* 콘텐츠 영역 2:1 분할 — 본문은 좌측 2 비율, 우측 1 비율은 NOTICE 자리다.
+          데스크톱(lg 이상)에서만 가르고 모바일은 본문 아래로 이어 붙인다.
+          NOTICE가 서지 않는 화면(글쓰기·개인 메뉴)에서는 empty:hidden으로 칸째 사라진다. */}
+      <div className="lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:gap-6">
+        <div className="min-w-0">
+          <Outlet />
+        </div>
+        <div className="mt-5 min-w-0 empty:hidden lg:mt-0">
+          <GuestNoticeRail />
+        </div>
+      </div>
     </AppShell>
   )
 }

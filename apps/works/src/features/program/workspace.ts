@@ -51,6 +51,12 @@ export interface ProgramWorkspaceConfig {
     posts: string
     /** URL첨부 모듈의 링크 원장. */
     links: string
+    /**
+     * 메뉴별 NOTICE(알림) 원장. 담당자가 모듈 화면 우측에서 쓰고 게스트가 같은 자리에서
+     * 읽는 게스트향 기능이라, 게스트 로그인을 개방한 AC만 값을 둔다 — 없으면 화면도
+     * NOTICE 칸을 세우지 않는다(읽을 사람이 없는 쓰기 화면을 남기지 않는다).
+     */
+    notices?: string
   }
   rpcs: {
     setStaffing: string
