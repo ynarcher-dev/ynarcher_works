@@ -3,15 +3,17 @@ import {
   Card,
   DataTable,
   EmptyValue,
+  Field,
   Input,
   ListToolbar,
+  Modal,
   PageHeader,
   Spinner,
   TextArea,
   useToast,
   type Column,
 } from '@ynarcher/ui'
-import { Paperclip } from 'lucide-react'
+import { MessageCirclePlus, Paperclip } from 'lucide-react'
 import { useState } from 'react'
 import { BoardDetailModal } from '@/components/BoardDetailModal'
 import { GuestButton } from '@/components/GuestButton'
@@ -29,9 +31,11 @@ const QUESTION_ATTACHMENT_TYPE = 'program_question'
 
 /**
  * QNA — 고정 메뉴 세 번째 줄이자 **게스트가 처음으로 글을 쓰는 화면**(1:1 문의함).
- * 좌측(2)은 내 질문 표, 우측(1)은 질문 작성이다(메뉴 화면과 같은 2:1 비율).
- * 행을 누르면 **상세 모달**에서 질문·답변·첨부를 읽는다 — WORKS QNA 탭과 같은 부품
- * (BoardDetailModal)이라 두 앱이 같은 구조로 글과 첨부를 보여 준다(2026-09-01 지정).
+ *
+ * 목록이 전체 폭으로 서고, 쓰는 일과 읽는 일이 모두 **모달**에서 일어난다(2026-09-01
+ * 사용자 지정) — 질문 작성 폼을 우측에 상시로 세워 두면 대개 비어 있는 폼이 화면 절반을
+ * 계속 차지하고, 정작 자주 하는 일(내 질문과 답변을 훑는 것)이 좁은 칸으로 밀린다.
+ * 상세 모달은 WORKS QNA 탭과 같은 부품(BoardDetailModal)이라 두 앱이 같은 구조로 보여 준다.
  * 다른 참여자의 질문은 보이지 않는다 — 판정은 화면이 아니라 RLS가 한다(qnaHooks 머리말).
  */
 export function QnaPage() {
@@ -42,30 +46,25 @@ export function QnaPage() {
 
   return (
     <div className="space-y-5">
-      {/* 설명 줄은 두지 않는다(2026-09-01) — 무엇을 하는 화면인지는 '질문하기' 카드와
+      {/* 설명 줄은 두지 않는다(2026-09-01) — 무엇을 하는 화면인지는 '질문하기' 버튼과
           '내 질문' 목록이 이미 말하고, 본인에게만 보인다는 사실도 그 두 이름에 들어 있다. */}
       <PageHeader title="QNA" />
-      <div className="lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:gap-6">
-        <div className="min-w-0">
-          <MyQuestionsCard list={list} />
-        </div>
-        <div className="mt-5 min-w-0 lg:mt-0">
-          <AskCard />
-        </div>
-      </div>
+      <MyQuestionsCard list={list} />
     </div>
   )
 }
 
 /**
- * 내 질문 — 데이터테이블 + 검색. 행을 누르면 상세 모달이 열린다. 순번·표준 메타 열은
- * 두지 않는다(작성자는 언제나 본인이고, 이 표가 답하는 것은 "무엇을 물었고 답이 왔는가"뿐).
+ * 내 질문 — 데이터테이블 + 검색. 행을 누르면 상세 모달이, 우측 위 버튼을 누르면 질문 작성
+ * 모달이 열린다. 순번·표준 메타 열은 두지 않는다(작성자는 언제나 본인이고, 이 표가 답하는
+ * 것은 "무엇을 물었고 답이 왔는가"뿐이다).
  * 검색 대상에 답변 본문도 넣는다 — 찾는 사람이 기억하는 말이 질문이 아니라 답에 있을 수 있다.
  */
 function MyQuestionsCard({ list }: { list: GuestQuestion[] }) {
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(0)
   const [openId, setOpenId] = useState<string | null>(null)
+  const [asking, setAsking] = useState(false)
   const filtered = list.filter((q) => matchesKeyword(keyword, q, q.answer_body))
   const { pageRows, safePage } = pageSlice(filtered, page)
   const opened = list.find((q) => q.id === openId) ?? null
@@ -118,7 +117,16 @@ function MyQuestionsCard({ list }: { list: GuestQuestion[] }) {
 
   return (
     <>
-      <Card title="내 질문" count={filtered.length}>
+      <Card
+        title="내 질문"
+        count={filtered.length}
+        actions={
+          <GuestButton onClick={() => setAsking(true)}>
+            <MessageCirclePlus className="size-4" />
+            질문하기
+          </GuestButton>
+        }
+      >
         <div className="space-y-3">
           <ListToolbar
             keyword={keyword}
@@ -137,7 +145,7 @@ function MyQuestionsCard({ list }: { list: GuestQuestion[] }) {
             emptyText={
               keyword
                 ? '검색 결과가 없습니다.'
-                : '아직 남긴 질문이 없습니다. 오른쪽에서 첫 질문을 남겨 보세요.'
+                : '아직 남긴 질문이 없습니다. 오른쪽 위 ‘질문하기’로 첫 질문을 남겨 보세요.'
             }
             onRowClick={(q) => setOpenId(q.id)}
             pagination={{
@@ -151,6 +159,7 @@ function MyQuestionsCard({ list }: { list: GuestQuestion[] }) {
         </div>
       </Card>
       {opened && <QuestionModal question={opened} onClose={() => setOpenId(null)} />}
+      {asking && <AskModal onClose={() => setAsking(false)} />}
     </>
   )
 }
@@ -179,26 +188,23 @@ function QuestionModal({
           <p className="text-body text-gray-600">본문이 없는 질문입니다.</p>
         )
       }
-      extra={
-        // 답변은 질문 아래 응답이므로 브랜드 선으로 들여 세운다(WORKS와 같은 자리).
-        <div className="border-l-2 border-brand/40 pl-3">
-          {question.answer_body ? (
-            <div
-              className={RICH_BODY_CLASS}
-              dangerouslySetInnerHTML={{ __html: sanitizeRichText(question.answer_body) }}
-            />
-          ) : (
-            <p className="text-body text-gray-600">담당자의 답변을 기다리고 있습니다.</p>
-          )}
-        </div>
+      answer={
+        question.answer_body ? (
+          <div
+            className={RICH_BODY_CLASS}
+            dangerouslySetInnerHTML={{ __html: sanitizeRichText(question.answer_body) }}
+          />
+        ) : (
+          <p className="text-body text-gray-600">담당자의 답변을 기다리고 있습니다.</p>
+        )
       }
       files={files ?? []}
     />
   )
 }
 
-/** 질문 작성 카드. 등록되면 목록 맨 위에 답변대기로 선다. */
-function AskCard() {
+/** 질문 작성 모달. 등록되면 목록 맨 위에 답변대기로 선다. */
+function AskModal({ onClose }: { onClose: () => void }) {
   const toast = useToast()
   const create = useCreateQuestion()
   const [title, setTitle] = useState('')
@@ -210,38 +216,49 @@ function AskCard() {
     if (!canSubmit) return
     try {
       await create.mutateAsync({ title: title.trim(), body: body.trim() })
-      setTitle('')
-      setBody('')
       toast.show('질문을 등록했습니다. 담당자가 확인 후 답변합니다.', 'success')
+      onClose()
     } catch {
       toast.show('질문을 등록하지 못했습니다. 잠시 후 다시 시도해 주십시오.', 'danger')
     }
   }
 
   return (
-    <Card title="질문하기">
+    <Modal
+      open
+      onClose={onClose}
+      title="질문하기"
+      size="lg"
+      footer={
+        <>
+          <GuestButton variant="outline" onClick={onClose} disabled={create.isPending}>
+            취소
+          </GuestButton>
+          <GuestButton disabled={!canSubmit} onClick={() => void submit()}>
+            {create.isPending ? '등록 중…' : '질문 등록'}
+          </GuestButton>
+        </>
+      }
+    >
+      {/* 폼 라벨 규격은 화면이 아니라 `Field`가 소유한다(densityScale.formText). */}
       <div className="space-y-4">
-        <div className="space-y-1.5">
-          <label className="text-caption font-semibold text-gray-600">제목</label>
+        <Field label="제목" required>
           <Input
+            autoFocus
             placeholder="예: 중간보고서 제출 방법 문의"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
-        </div>
-        <div className="space-y-1.5">
-          <label className="text-caption font-semibold text-gray-600">내용</label>
+        </Field>
+        <Field label="내용" required>
           <TextArea
-            rows={6}
+            rows={8}
             placeholder="궁금한 내용을 적어 주세요."
             value={body}
             onChange={(e) => setBody(e.target.value)}
           />
-        </div>
-        <GuestButton className="w-full" disabled={!canSubmit} onClick={() => void submit()}>
-          {create.isPending ? '등록 중…' : '질문 등록'}
-        </GuestButton>
+        </Field>
       </div>
-    </Card>
+    </Modal>
   )
 }

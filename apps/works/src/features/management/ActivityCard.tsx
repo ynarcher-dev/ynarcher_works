@@ -1,14 +1,13 @@
-import { EmptyValue, PanelCard } from '@ynarcher/ui'
+import { DataTable, EmptyValue, PanelCard, type Column } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { hasWorkspaceRead, useAuthStore } from '@/auth/authStore'
 import type { WorkspaceKey } from '@/auth/types'
-import { MiniPager, usePaged } from '@ynarcher/ui'
-import { MiniTable, td, tdL, tdP, th, thL } from '@/features/startup/MiniTable'
+import { usePaged } from '@ynarcher/ui'
 
 /**
- * 활동 이력 카드의 열 정의. 표 규격(머리글·본문 위계, 식별 열)은 STARTUP 성장 지표가 쓰는
- * 공용 소형 표(MiniTable)를 그대로 재사용하므로 여기서는 "무엇을 적을지"만 정한다.
+ * 활동 이력 카드의 열 정의. 표 규격(머리글·본문 위계, 식별 열)은 공용 DataTable이 소유하므로
+ * 여기서는 "무엇을 적을지"만 정한다.
  */
 export interface ActivityColumn<T> {
   header: string
@@ -65,7 +64,7 @@ export function ActivityCard<T>({
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
   const canOpen = hasWorkspaceRead(user, workspace)
-  const { pageItems, page, setPage, pageCount } = usePaged(rows)
+  const { pageItems, page, setPage } = usePaged(rows)
   return (
     <PanelCard title={title} count={isLoading ? undefined : rows.length}>
       {isLoading ? (
@@ -74,34 +73,30 @@ export function ActivityCard<T>({
         <p className="text-body text-gray-600">{emptyText}</p>
       ) : (
         <>
-          <MiniTable
-            head={columns.map((c) => (
-              <th key={c.header} className={`${c.align === 'right' ? th : thL} ${c.className ?? ''}`}>
-                {c.header}
-              </th>
-            ))}
-          >
-            {pageItems.map((row) => (
-              <tr
-                key={rowKey(row)}
-                onClick={canOpen ? () => navigate(rowTo(row)) : undefined}
-                // 행 강조는 목록 표(DataTable)와 같은 톤을 쓴다 — 같은 동작에 같은 반응.
-                className={
-                  canOpen ? 'cursor-pointer transition-colors duration-fast hover:bg-gray-25' : undefined
-                }
-              >
-                {columns.map((c) => (
-                  <td
-                    key={c.header}
-                    className={`${c.primary ? tdP : c.align === 'right' ? td : tdL} ${c.className ?? ''}`}
-                  >
-                    {c.render(row)}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </MiniTable>
-          <MiniPager page={page} pageCount={pageCount} onPage={setPage} />
+          <DataTable
+            columns={columns.map((c): Column<T> => ({
+              key: c.header,
+              header: c.header,
+              align: c.align ?? 'left',
+              primary: c.primary,
+              type: c.align === 'right' ? 'count' : c.primary ? 'name' : 'text',
+              className: c.className,
+              render: c.render,
+            }))}
+            rows={pageItems}
+            rowKey={rowKey}
+            numbered={false}
+            standardColumns={false}
+            layout="fixed"
+            onRowClick={canOpen ? (row) => navigate(rowTo(row)) : undefined}
+            pagination={{
+              page,
+              pageSize: 5,
+              total: rows.length,
+              onChange: setPage,
+              compact: true,
+            }}
+          />
         </>
       )}
     </PanelCard>

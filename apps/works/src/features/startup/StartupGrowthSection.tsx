@@ -1,10 +1,9 @@
-import { EmptyValue, PanelCard, cardText } from '@ynarcher/ui'
+import { DataTable, EmptyValue, PanelCard, cardText, type Column } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { type GrowthMetrics } from '@/features/startup/startupGrowth'
+import { type EmployeeEntry, type FinanceEntry, type GrowthMetrics, type RevenueEntry } from '@/features/startup/startupGrowth'
 import { useStartupFundInvestments } from '@/features/fund/hooks'
 import { CHART_COLORS, StartupMetricChart, type ChartSeries } from '@/features/startup/StartupMetricChart'
-import { MiniTable, td, tdL, tdP, th, thL } from '@/features/startup/MiniTable'
 import { SectionHeading } from '@/features/startup/SectionHeading'
 
 const C = CHART_COLORS
@@ -30,7 +29,7 @@ function MetricCard({ title, unit, children }: { title: string; unit?: string; c
 function Won({ v }: { v?: number | null }) {
   if (v == null || Number.isNaN(Number(v))) return <EmptyValue />
   const n = Math.round(Number(v) / 1_000_000)
-  if (n < 0) return <span className="text-info">-{Math.abs(n).toLocaleString()}</span>
+  if (n < 0) return <span>-{Math.abs(n).toLocaleString()}</span>
   return <span>{n.toLocaleString()}</span>
 }
 
@@ -52,11 +51,26 @@ const REVENUE_SERIES: ChartSeries[] = [
 ]
 
 /** 차트↔표 간격(mt-4)을 준 공용 소형 표. */
-function Table({ head, children }: { head: ReactNode; children: ReactNode }) {
+function MetricTable<T>({
+  columns,
+  rows,
+  rowKey,
+}: {
+  columns: Column<T>[]
+  rows: T[]
+  rowKey: (row: T) => string
+}) {
   return (
-    <MiniTable className="mt-4" head={head}>
-      {children}
-    </MiniTable>
+    <div className="mt-4">
+      <DataTable
+        columns={columns}
+        rows={rows}
+        rowKey={rowKey}
+        numbered={false}
+        standardColumns={false}
+        layout="fixed"
+      />
+    </div>
   )
 }
 
@@ -79,6 +93,56 @@ interface InvestmentRow {
 
 const byDateDesc = (a: InvestmentRow, b: InvestmentRow) =>
   String(b.date ?? '').localeCompare(String(a.date ?? ''))
+
+const financeColumns: Column<FinanceEntry>[] = [
+  { key: 'year', header: '연도', type: 'date', primary: true, render: (m) => m.year },
+  { key: 'assets', header: '자산', type: 'money', render: (m) => <Won v={m.assets} /> },
+  { key: 'liabilities', header: '부채', type: 'money', render: (m) => <Won v={m.liabilities} /> },
+  { key: 'equity', header: '자본', type: 'money', render: (m) => <Won v={m.equity} /> },
+]
+
+const revenueColumns: Column<RevenueEntry>[] = [
+  { key: 'year', header: '연도', type: 'date', primary: true, render: (m) => m.year },
+  { key: 'revenue', header: '매출액', type: 'money', render: (m) => <Won v={m.revenue} /> },
+  { key: 'operatingProfit', header: '영업이익', type: 'money', render: (m) => <Won v={m.operatingProfit} /> },
+  { key: 'netIncome', header: '당기순이익', type: 'money', render: (m) => <Won v={m.netIncome} /> },
+]
+
+const employeeColumns: Column<EmployeeEntry>[] = [
+  { key: 'year', header: '연도', type: 'date', primary: true, render: (m) => m.year },
+  {
+    key: 'employeeCount',
+    header: '고용 인원',
+    type: 'count',
+    render: (m) => (m.employeeCount == null ? <EmptyValue /> : Number(m.employeeCount).toLocaleString()),
+  },
+]
+
+const investmentColumns: Column<InvestmentRow>[] = [
+  { key: 'date', header: '기준월', type: 'date', primary: true, render: (m) => m.date || <EmptyValue /> },
+  { key: 'round', header: '라운드', type: 'text', render: (m) => m.round || <EmptyValue /> },
+  { key: 'valuation', header: '기업 가치(Pre)', type: 'money', render: (m) => <Won v={m.valuation} /> },
+  { key: 'fundingAmount', header: '투자유치액', type: 'money', render: (m) => <Won v={m.fundingAmount} /> },
+  {
+    key: 'investor',
+    header: '투자자',
+    type: 'long',
+    render: (m) =>
+      m.isFund && m.fundId ? (
+        <Link
+          to={`/fund/${m.fundId}`}
+          title={m.investor ?? ''}
+          className="block max-w-[11rem] truncate text-info underline underline-offset-2 hover:text-info/80"
+        >
+          {m.investor || <EmptyValue />}
+        </Link>
+      ) : (
+        <span className="block max-w-[11rem] truncate" title={m.investor ?? ''}>
+          {m.investor || <EmptyValue />}
+        </span>
+      ),
+  },
+]
 
 interface Props {
   growth: GrowthMetrics
@@ -127,16 +191,7 @@ export function StartupGrowthSection({ growth, startupId }: Props) {
           ) : (
             <>
             <StartupMetricChart data={[...finance].reverse()} series={FINANCE_SERIES} />
-            <Table head={<><th className={thL}>연도</th><th className={th}>자산</th><th className={th}>부채</th><th className={th}>자본</th></>}>
-              {finance.map((m) => (
-                <tr key={m.year}>
-                  <td className={tdP}>{m.year}</td>
-                  <td className={td}><Won v={m.assets} /></td>
-                  <td className={td}><Won v={m.liabilities} /></td>
-                  <td className={td}><Won v={m.equity} /></td>
-                </tr>
-              ))}
-            </Table>
+            <MetricTable columns={financeColumns} rows={finance} rowKey={(m) => String(m.year)} />
             </>
           )}
         </MetricCard>
@@ -148,16 +203,7 @@ export function StartupGrowthSection({ growth, startupId }: Props) {
           ) : (
             <>
             <StartupMetricChart data={[...revenue].reverse()} series={REVENUE_SERIES} />
-            <Table head={<><th className={thL}>연도</th><th className={th}>매출액</th><th className={th}>영업이익</th><th className={th}>당기순이익</th></>}>
-              {revenue.map((m) => (
-                <tr key={m.year}>
-                  <td className={tdP}>{m.year}</td>
-                  <td className={td}><Won v={m.revenue} /></td>
-                  <td className={td}><Won v={m.operatingProfit} /></td>
-                  <td className={td}><Won v={m.netIncome} /></td>
-                </tr>
-              ))}
-            </Table>
+            <MetricTable columns={revenueColumns} rows={revenue} rowKey={(m) => String(m.year)} />
             </>
           )}
         </MetricCard>
@@ -167,16 +213,7 @@ export function StartupGrowthSection({ growth, startupId }: Props) {
           {employee.length === 0 ? (
             <Empty text="등록된 고용 정보가 없습니다." />
           ) : (
-            <MiniTable head={<><th className={thL}>연도</th><th className={th}>고용 인원</th></>}>
-              {employee.map((m) => (
-                <tr key={m.year}>
-                  <td className={tdP}>{m.year}</td>
-                  <td className={td}>
-                    {m.employeeCount == null ? <EmptyValue /> : Number(m.employeeCount).toLocaleString()}
-                  </td>
-                </tr>
-              ))}
-            </MiniTable>
+            <MetricTable columns={employeeColumns} rows={employee} rowKey={(m) => String(m.year)} />
           )}
         </MetricCard>
 
@@ -185,32 +222,11 @@ export function StartupGrowthSection({ growth, startupId }: Props) {
           {investment.length === 0 ? (
             <Empty text="등록된 투자 정보가 없습니다." />
           ) : (
-            <MiniTable head={<><th className={thL}>기준월</th><th className={thL}>라운드</th><th className={th}>기업 가치(Pre)</th><th className={th}>투자유치액</th><th className={thL}>투자자</th></>}>
-              {investment.map((m, i) => (
-                <tr key={`${m.date}-${i}`}>
-                  <td className={tdP}>{m.date || <EmptyValue />}</td>
-                  <td className={tdL}>{m.round || <EmptyValue />}</td>
-                  <td className={td}><Won v={m.valuation} /></td>
-                  <td className={td}><Won v={m.fundingAmount} /></td>
-                  {/* 투자자명은 길어지면 말줄임(가로 스크롤 방지). 자사 펀드 투자는 펀드 상세로 링크한다. */}
-                  <td className={tdL}>
-                    {m.isFund && m.fundId ? (
-                      <Link
-                        to={`/fund/${m.fundId}`}
-                        title={m.investor ?? ''}
-                        className="block max-w-[11rem] truncate text-info underline underline-offset-2 hover:text-info/80"
-                      >
-                        {m.investor || <EmptyValue />}
-                      </Link>
-                    ) : (
-                      <span className="block max-w-[11rem] truncate" title={m.investor ?? ''}>
-                        {m.investor || <EmptyValue />}
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </MiniTable>
+            <MetricTable
+              columns={investmentColumns}
+              rows={investment}
+              rowKey={(m) => `${m.date || 'empty'}-${m.round || 'round'}-${m.investor || 'investor'}-${m.fundingAmount ?? 'amount'}`}
+            />
           )}
         </MetricCard>
       </div>

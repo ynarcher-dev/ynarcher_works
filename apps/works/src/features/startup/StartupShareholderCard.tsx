@@ -1,6 +1,5 @@
-import { Button, EmptyValue, Modal, PanelCard, tableText } from '@ynarcher/ui'
+import { Button, DataTable, EmptyValue, Modal, PanelCard, tableText, type Column } from '@ynarcher/ui'
 import { useState } from 'react'
-import { MiniTable, td, tdP, th, thL } from '@/features/startup/MiniTable'
 import { StartupShareholderChart } from '@/features/startup/StartupShareholderChart'
 import type { Shareholder, ShareholderSnapshot } from '@/features/startup/startupShareholders'
 
@@ -11,35 +10,39 @@ function pctOf(h: Shareholder, totalShares: number): number | null {
   return null
 }
 
+function shareholderColumns(totalShares: number): Column<Shareholder>[] {
+  return [
+    { key: 'name', header: '주주명', type: 'name', primary: true, render: (h) => h.name || <EmptyValue /> },
+    {
+      key: 'shares',
+      header: '보유 주식 수',
+      type: 'count',
+      render: (h) => (h.shares == null ? <EmptyValue /> : Number(h.shares).toLocaleString()),
+    },
+    {
+      key: 'percentage',
+      header: '지분율',
+      type: 'count',
+      render: (h) => {
+        const pct = pctOf(h, totalShares)
+        return pct == null ? <EmptyValue /> : `${pct.toFixed(1)}%`
+      },
+    },
+  ]
+}
+
 /** 스냅샷 1건의 주주 표(주주명/보유 주식 수/지분율). */
 function HolderTable({ holders }: { holders: Shareholder[] }) {
   const total = holders.reduce((s, h) => s + (Number(h.shares) || 0), 0)
   return (
-    <MiniTable
-      head={
-        <>
-          <th className={thL}>주주명</th>
-          <th className={th}>보유 주식 수</th>
-          <th className={th}>지분율</th>
-        </>
-      }
-    >
-      {holders.map((h, i) => {
-        const pct = pctOf(h, total)
-        return (
-          <tr key={i}>
-            {/* 주주명이 이 행의 식별 값 — 없으면 숫자 열과 같은 무게로 읽힌다. */}
-            <td className={tdP}>{h.name || <EmptyValue />}</td>
-            <td className={td}>
-              {h.shares == null ? <EmptyValue /> : Number(h.shares).toLocaleString()}
-            </td>
-            <td className={td}>
-              {pct == null ? <EmptyValue /> : `${pct.toFixed(1)}%`}
-            </td>
-          </tr>
-        )
-      })}
-    </MiniTable>
+    <DataTable
+      columns={shareholderColumns(total)}
+      rows={holders}
+      rowKey={(h) => `${h.name || 'holder'}-${h.shares ?? 'shares'}-${h.percentage ?? 'pct'}`}
+      numbered={false}
+      standardColumns={false}
+      layout="fixed"
+    />
   )
 }
 

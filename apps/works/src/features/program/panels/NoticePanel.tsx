@@ -1,4 +1,4 @@
-import { Button, Card, IconButton, Input, Spinner, useToast } from '@ynarcher/ui'
+import { Button, Card, Field, IconButton, Input, Spinner, useToast } from '@ynarcher/ui'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { RichTextEditor, RichTextViewer } from '@/components/RichTextEditor'
@@ -153,26 +153,25 @@ function NoticeForm({
     }
   }
 
+  // 폼 라벨 규격은 화면이 아니라 `Field`가 소유한다(densityScale.formText).
   return (
     <div className="space-y-4">
-      <div className="space-y-1.5">
-        <label className="text-caption font-semibold text-gray-600">공지명</label>
+      <Field label="공지명" required>
         <Input
           autoFocus
           placeholder="예: 제출 마감 연장 안내"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
-      </div>
-      <div className="space-y-1.5">
-        <label className="text-caption font-semibold text-gray-600">내용</label>
+      </Field>
+      <Field as="div" label="내용">
         {/* 게시판·글쓰기와 같은 공용 에디터. 저장 값은 HTML이다. */}
         <RichTextEditor
           value={body}
           onChange={setBody}
           placeholder="게스트에게 전할 내용을 적어 주세요."
         />
-      </div>
+      </Field>
       <div className="flex justify-end gap-2">
         <Button variant="outline" onClick={onCancel} disabled={save.isPending}>
           취소

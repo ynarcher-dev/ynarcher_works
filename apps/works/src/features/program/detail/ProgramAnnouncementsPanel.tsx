@@ -2,8 +2,10 @@ import {
   Button,
   Card,
   DataTable,
+  Field,
   Input,
   ListToolbar,
+  Modal,
   Spinner,
   useToast,
   type Column,
@@ -92,22 +94,6 @@ export function ProgramAnnouncementsPanel({ programId }: { programId: string }) 
     },
   ]
 
-  // 작성·수정 중에는 목록을 접고 폼이 전체 폭을 쓴다 — 에디터는 좁은 칸에서 쓸 화면이 아니다.
-  if (editing) {
-    return (
-      <AnnouncementForm
-        programId={programId}
-        announcement={editing === 'new' ? undefined : editing}
-        onClose={() => setEditing(null)}
-        onSaved={(id) => {
-          // 저장한 공지를 곧바로 펼쳐 둔다 — 방금 쓴 글과 그 첨부가 바로 눈에 든다.
-          setEditing(null)
-          setOpenId(id)
-        }}
-      />
-    )
-  }
-
   return (
     <>
       <Card
@@ -144,19 +130,33 @@ export function ProgramAnnouncementsPanel({ programId }: { programId: string }) 
                   : '등록된 공지가 없습니다. 작성하면 게스트 공지사항 메뉴에 보입니다.'
               }
               onRowClick={(a) => setOpenId(a.id)}
+              // 페이저는 목록 화면의 기본 양식(번호줄·건수)을 그대로 쓴다 — 한 쪽뿐이어도
+              // 노출되어 지금 어디인지·전부 몇 건인지를 항상 답한다(2026-09-01 사용자 지정).
               pagination={{
                 page: safePage,
                 pageSize: LIST_PAGE_SIZE,
                 total: filtered.length,
                 onChange: setPage,
-                compact: true,
               }}
             />
           </div>
         )}
       </Card>
 
-      {opened && (
+      {editing && (
+        <AnnouncementFormModal
+          programId={programId}
+          announcement={editing === 'new' ? undefined : editing}
+          onClose={() => setEditing(null)}
+          onSaved={(id) => {
+            // 저장한 공지를 곧바로 상세로 이어 연다 — 방금 쓴 글과 그 첨부가 바로 눈에 든다.
+            setEditing(null)
+            setOpenId(id)
+          }}
+        />
+      )}
+
+      {opened && !editing && (
         <BoardDetailModal
           open
           onClose={() => setOpenId(null)}
@@ -175,11 +175,13 @@ export function ProgramAnnouncementsPanel({ programId }: { programId: string }) 
           }
           attachmentType={ANNOUNCEMENT_ATTACHMENT_TYPE}
           attachmentId={opened.id}
-          footer={
+          destructiveAction={
+            <Button variant="outline-danger" onClick={() => void onDelete(opened)}>
+              삭제
+            </Button>
+          }
+          actions={
             <>
-              <Button variant="outline-danger" onClick={() => void onDelete(opened)}>
-                삭제
-              </Button>
               <Button
                 variant="secondary"
                 onClick={() => {
@@ -199,14 +201,15 @@ export function ProgramAnnouncementsPanel({ programId }: { programId: string }) 
 }
 
 /**
- * 공지 작성·수정 폼(전체 폭) — 제목 → 내용 → 파일 → 버튼의 상하 구성.
+ * 공지 작성·수정 **모달** — 제목 → 내용 → 첨부 파일의 카드 구성(2026-09-01 사용자 지정).
+ * 상세 모달과 같은 자리에서 열리고 닫히므로, 목록은 그 사이에도 화면에 남는다.
  *
  * 파일이 붙는 방식은 신규와 수정이 갈린다. 첨부는 `target_id`(NOT NULL)로 공지에 매이므로
  * **아직 공지가 없는 신규에서는 올릴 대상이 없다** — 그래서 브라우저에 담아 두었다가
  * 저장으로 id가 생긴 직후 일괄 업로드한다(`usePendingMaterials`, 등록 폼 공통 패턴).
  * 미리 올리는 방식은 작성을 취소했을 때 주인 없는 파일이 남아 채택하지 않는다.
  */
-function AnnouncementForm({
+function AnnouncementFormModal({
   programId,
   announcement,
   onClose,
@@ -249,52 +252,60 @@ function AnnouncementForm({
   }
 
   return (
-    <div className="space-y-4">
-      <Card title={announcement ? '공지 수정' : '공지 작성'}>
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-caption font-semibold text-gray-600">제목</label>
-            <Input
-              autoFocus
-              placeholder="예: 1차 멘토링 일정 안내"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
+    <Modal
+      open
+      onClose={onClose}
+      title={announcement ? '공지 수정' : '공지 작성'}
+      size="xl"
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose} disabled={save.isPending}>
+            취소
+          </Button>
+          <Button onClick={() => void submit()} disabled={!canSubmit}>
+            {save.isPending ? '저장 중…' : announcement ? '수정 완료' : '등록'}
+          </Button>
+        </>
+      }
+    >
+      {/* 상세 모달과 같은 바닥·카드 구성 — 쓰는 화면과 읽는 화면이 같은 모양이어야 한다. */}
+      <div className="-mx-5 -my-4 space-y-3 bg-gray-100 px-5 py-4">
+        <Card title="내용">
+          {/* 폼 라벨 규격은 화면이 아니라 `Field`가 소유한다(densityScale.formText). */}
+          <div className="space-y-4">
+            <Field label="제목" required>
+              <Input
+                autoFocus
+                placeholder="예: 1차 멘토링 일정 안내"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </Field>
+            <Field as="div" label="본문">
+              <RichTextEditor
+                value={body}
+                onChange={setBody}
+                placeholder="참여자에게 알릴 내용을 적어 주세요."
+              />
+            </Field>
           </div>
-          <div className="space-y-1.5">
-            <label className="text-caption font-semibold text-gray-600">내용</label>
-            <RichTextEditor
-              value={body}
-              onChange={setBody}
-              placeholder="참여자에게 알릴 내용을 적어 주세요."
-            />
-          </div>
-        </div>
-      </Card>
+        </Card>
 
-      {/* 수정은 대상이 이미 있으므로 즉시 업로드, 신규는 저장 때 함께 올린다. */}
-      {announcement ? (
-        <MaterialPanel
-          targetType={ANNOUNCEMENT_ATTACHMENT_TYPE}
-          targetId={announcement.id}
-          title="첨부 파일"
-        />
-      ) : (
-        <PendingMaterialPanel
-          slot={ANNOUNCEMENT_ATTACHMENT_TYPE}
-          pending={pending}
-          title="첨부 파일"
-        />
-      )}
-
-      <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={onClose} disabled={save.isPending}>
-          취소
-        </Button>
-        <Button onClick={() => void submit()} disabled={!canSubmit}>
-          {save.isPending ? '저장 중…' : announcement ? '수정 완료' : '등록'}
-        </Button>
+        {/* 수정은 대상이 이미 있으므로 즉시 업로드, 신규는 저장 때 함께 올린다. */}
+        {announcement ? (
+          <MaterialPanel
+            targetType={ANNOUNCEMENT_ATTACHMENT_TYPE}
+            targetId={announcement.id}
+            title="첨부 파일"
+          />
+        ) : (
+          <PendingMaterialPanel
+            slot={ANNOUNCEMENT_ATTACHMENT_TYPE}
+            pending={pending}
+            title="첨부 파일"
+          />
+        )}
       </div>
-    </div>
+    </Modal>
   )
 }

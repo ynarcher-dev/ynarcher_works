@@ -19,17 +19,29 @@ export function FileModule({ moduleId }: { moduleId: string }) {
 }
 
 /**
- * 파일 목록 카드(표시 단위). 파일첨부 메뉴·글쓰기 우측 칸·사업개요 우측 칸·게시판 상세
- * 모달이 같은 카드를 쓴다 — 조회 범위(모듈 / 사업개요 / 공지 / 질문 귀속)만 호출부가 가른다.
+ * 파일 목록 카드 — 목록을 카드로 감싼 것. 메뉴 화면과 사업개요의 곁칸이 쓴다.
+ * 게시판 상세 모달은 카드 없이 `GuestFileList`만 쓴다(모달 자체가 이미 상자다).
  */
 export function GuestFileCard({
   files,
   title = '파일',
 }: {
   files: GuestFile[]
-  /** 카드 제목. 메뉴에서는 '파일', 게시판 상세에서는 '첨부 파일'. */
+  /** 카드 제목. 메뉴에서는 '파일', 게시판 곁칸에서는 '첨부 파일'. */
   title?: string
 }) {
+  return (
+    <Card title={title} count={files.length}>
+      <GuestFileList files={files} />
+    </Card>
+  )
+}
+
+/**
+ * 파일 목록(상자 없는 표시 단위). 카드 안과 모달 안이 같은 행 규격을 공유한다 —
+ * 같은 첨부가 놓이는 자리에 따라 다른 모양이 되면 안 된다.
+ */
+export function GuestFileList({ files }: { files: GuestFile[] }) {
   const download = useDownloadModuleFile()
   const toast = useToast()
   const { pageItems, page, setPage, pageCount } = usePaged(files)
@@ -42,34 +54,32 @@ export function GuestFileCard({
     }
   }
 
+  if (files.length === 0) {
+    return <p className="text-body text-gray-600">첨부된 파일이 없습니다.</p>
+  }
+
   return (
-    <Card title={title} count={files.length}>
-      {files.length === 0 ? (
-        <p className="text-body text-gray-600">등록된 파일이 없습니다.</p>
-      ) : (
-        <>
-          <ul className="space-y-1.5">
-            {pageItems.map((file) => (
-              <AttachmentRow
-                key={file.id}
-                icon={<FileIcon className="size-4 shrink-0 text-gray-500" />}
-                name={file.file_name}
-                size={formatBytes(file.byte_size)}
-                actions={
-                  <IconButton
-                    variant="ghost"
-                    label={`${file.file_name} 다운로드`}
-                    disabled={download.isPending}
-                    onClick={() => void onDownload(file)}
-                    icon={<Download className="size-4" />}
-                  />
-                }
+    <>
+      <ul className="space-y-1.5">
+        {pageItems.map((file) => (
+          <AttachmentRow
+            key={file.id}
+            icon={<FileIcon className="size-4 shrink-0 text-gray-500" />}
+            name={file.file_name}
+            size={formatBytes(file.byte_size)}
+            actions={
+              <IconButton
+                variant="ghost"
+                label={`${file.file_name} 다운로드`}
+                disabled={download.isPending}
+                onClick={() => void onDownload(file)}
+                icon={<Download className="size-4" />}
               />
-            ))}
-          </ul>
-          <MiniPager page={page} pageCount={pageCount} onPage={setPage} />
-        </>
-      )}
-    </Card>
+            }
+          />
+        ))}
+      </ul>
+      <MiniPager page={page} pageCount={pageCount} onPage={setPage} />
+    </>
   )
 }

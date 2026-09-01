@@ -152,12 +152,13 @@ export function ProgramQnaPanel({ programId }: { programId: string }) {
               setOpenId(q.id)
               setAnswering(false)
             }}
+            // 페이저는 목록 화면의 기본 양식(번호줄·건수)을 그대로 쓴다 — 한 쪽뿐이어도
+            // 노출되어 지금 어디인지·전부 몇 건인지를 항상 답한다(2026-09-01 사용자 지정).
             pagination={{
               page: safePage,
               pageSize: LIST_PAGE_SIZE,
               total: filtered.length,
               onChange: setPage,
-              compact: true,
             }}
           />
         </div>
@@ -177,32 +178,33 @@ export function ProgramQnaPanel({ programId }: { programId: string }) {
               <p className="text-body text-gray-600">본문이 없는 질문입니다.</p>
             )
           }
-          extra={
-            // 답변은 질문과 같은 축이 아니라 그 아래 응답이므로 브랜드 선으로 들여 세운다.
-            <div className="border-l-2 border-brand/40 pl-3">
-              {answering ? (
-                <AnswerForm
-                  programId={programId}
-                  question={opened}
-                  onClose={() => setAnswering(false)}
-                />
-              ) : opened.answer_body ? (
-                <div className="[&_.ProseMirror]:min-h-0">
-                  <RichTextViewer html={opened.answer_body} />
-                </div>
-              ) : (
-                <p className="text-body text-gray-600">아직 답변하지 않았습니다.</p>
-              )}
-            </div>
+          answer={
+            answering ? (
+              <AnswerForm
+                programId={programId}
+                question={opened}
+                onClose={() => setAnswering(false)}
+              />
+            ) : opened.answer_body ? (
+              <div className="[&_.ProseMirror]:min-h-0">
+                <RichTextViewer html={opened.answer_body} />
+              </div>
+            ) : (
+              <p className="text-body text-gray-600">아직 답변하지 않았습니다.</p>
+            )
           }
           attachmentType={QUESTION_ATTACHMENT_TYPE}
           attachmentId={opened.id}
-          footer={
+          destructiveAction={
+            !answering ? (
+              <Button variant="outline-danger" onClick={() => void onDelete(opened)}>
+                삭제
+              </Button>
+            ) : undefined
+          }
+          actions={
             !answering ? (
               <>
-                <Button variant="outline-danger" onClick={() => void onDelete(opened)}>
-                  삭제
-                </Button>
                 <Button variant="secondary" onClick={() => setAnswering(true)}>
                   {opened.answer_body ? '답변 수정' : '답변 작성'}
                 </Button>
