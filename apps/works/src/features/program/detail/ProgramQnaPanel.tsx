@@ -195,6 +195,8 @@ export function ProgramQnaPanel({ programId }: { programId: string }) {
           }
           attachmentType={QUESTION_ATTACHMENT_TYPE}
           attachmentId={opened.id}
+          // 답변을 쓰는 동안에는 바깥 클릭으로 닫히지 않는다(쓰던 글이 사라진다).
+          locked={answering}
           destructiveAction={
             !answering ? (
               <Button variant="outline-danger" onClick={() => void onDelete(opened)}>

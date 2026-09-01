@@ -21,6 +21,14 @@ export interface ModalProps {
   size?: ModalSize
   children: ReactNode
   footer?: ReactNode
+  /**
+   * 딤(바깥 영역) 클릭으로 닫을 수 있는지(기본 true).
+   *
+   * 가르는 축은 **잃을 것이 있는가**다. 읽기만 하는 모달은 바깥을 눌러 가볍게 닫히는 편이
+   * 낫고(닫아도 잃는 것이 없다), 무언가 쓰고 있는 모달은 클릭 한 번에 쓰던 글이 사라지면
+   * 안 되므로 `false`로 잠가 닫는 길을 푸터의 취소 버튼 하나로 좁힌다.
+   */
+  dismissible?: boolean
 }
 
 /**
@@ -34,6 +42,7 @@ export function Modal({
   size = 'md',
   children,
   footer,
+  dismissible = true,
 }: ModalProps) {
   if (!open) return null
   return createPortal(
@@ -43,7 +52,7 @@ export function Modal({
     <div className="fixed inset-0 z-overlay flex items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-gray-900/35 backdrop-blur-[2px] transition-opacity duration-slow ease-decelerate"
-        onClick={onClose}
+        onClick={dismissible ? onClose : undefined}
         aria-hidden
       />
       <div

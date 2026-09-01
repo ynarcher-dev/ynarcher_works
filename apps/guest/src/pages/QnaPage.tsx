@@ -1,5 +1,6 @@
 import {
   Badge,
+  Button,
   Card,
   DataTable,
   EmptyValue,
@@ -49,7 +50,14 @@ export function QnaPage() {
       {/* 설명 줄은 두지 않는다(2026-09-01) — 무엇을 하는 화면인지는 '질문하기' 버튼과
           '내 질문' 목록이 이미 말하고, 본인에게만 보인다는 사실도 그 두 이름에 들어 있다. */}
       <PageHeader title="QNA" />
-      <MyQuestionsCard list={list} />
+      {/* 본문 폭은 다른 GUEST 화면과 같은 2:1 격자를 따른다(2026-09-01 사용자 지정) —
+          목록이 화면 전체를 가로지르면 메뉴마다 콘텐츠의 좌우 끝이 달라진다. 우측 칸은
+          비워 두되 자리는 지킨다(상세·작성이 모달로 열려 곁칸에 세울 것이 없다). */}
+      <div className="lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:gap-6">
+        <div className="min-w-0">
+          <MyQuestionsCard list={list} />
+        </div>
+      </div>
     </div>
   )
 }
@@ -120,11 +128,14 @@ function MyQuestionsCard({ list }: { list: GuestQuestion[] }) {
       <Card
         title="내 질문"
         count={filtered.length}
+        // 카드 헤더의 진입 버튼은 카드 밀도(32px)를 따른다 — GUEST의 48px 하한은 별점·
+        // 확인 버튼·사이드바 항목에 걸리는 규정이고(3_9 §3), 여기서 48px을 쓰면 카드 제목
+        // 줄에서 버튼만 홀로 커진다. 실제 확인 버튼인 모달의 '질문 등록'은 GuestButton이다.
         actions={
-          <GuestButton onClick={() => setAsking(true)}>
+          <Button variant="secondary" onClick={() => setAsking(true)}>
             <MessageCirclePlus className="size-4" />
             질문하기
-          </GuestButton>
+          </Button>
         }
       >
         <div className="space-y-3">
@@ -148,12 +159,13 @@ function MyQuestionsCard({ list }: { list: GuestQuestion[] }) {
                 : '아직 남긴 질문이 없습니다. 오른쪽 위 ‘질문하기’로 첫 질문을 남겨 보세요.'
             }
             onRowClick={(q) => setOpenId(q.id)}
+            // 페이저는 목록 화면의 기본 양식(번호줄·건수)을 쓴다 — 한 쪽뿐이어도 노출되어
+            // 지금 어디인지·전부 몇 건인지를 항상 답한다(WORKS 목록과 같은 규칙).
             pagination={{
               page: safePage,
               pageSize: GUEST_LIST_PAGE_SIZE,
               total: filtered.length,
               onChange: setPage,
-              compact: true,
             }}
           />
         </div>
@@ -227,6 +239,8 @@ function AskModal({ onClose }: { onClose: () => void }) {
     <Modal
       open
       onClose={onClose}
+      // 쓰던 글이 바깥 클릭 한 번에 사라지면 안 된다 — 닫는 길은 취소 버튼뿐이다.
+      dismissible={false}
       title="질문하기"
       size="lg"
       footer={

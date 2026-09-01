@@ -73,34 +73,42 @@ export function AnnouncementsPage() {
   return (
     <div className="space-y-5">
       <PageHeader title="공지사항" />
-      <Card title="공지" count={filtered.length}>
-        <div className="space-y-3">
-          <ListToolbar
-            keyword={keyword}
-            onKeywordChange={(v) => {
-              setKeyword(v)
-              setPage(0)
-            }}
-            searchPlaceholder="제목·내용 검색"
-          />
-          <DataTable
-            columns={columns}
-            rows={pageRows}
-            rowKey={(a) => a.id}
-            numbered={false}
-            standardColumns={false}
-            emptyText={keyword ? '검색 결과가 없습니다.' : '아직 등록된 공지가 없습니다.'}
-            onRowClick={(a) => setOpenId(a.id)}
-            pagination={{
-              page: safePage,
-              pageSize: GUEST_LIST_PAGE_SIZE,
-              total: filtered.length,
-              onChange: setPage,
-              compact: true,
-            }}
-          />
+      {/* 본문 폭은 다른 GUEST 화면과 같은 2:1 격자를 따른다(2026-09-01 사용자 지정) —
+          목록이 화면 전체를 가로지르면 메뉴마다 콘텐츠의 좌우 끝이 달라진다. 우측 칸은
+          비워 두되 자리는 지킨다(상세가 모달로 열려 곁칸에 세울 것이 없다). */}
+      <div className="lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:gap-6">
+        <div className="min-w-0">
+          <Card title="공지" count={filtered.length}>
+            <div className="space-y-3">
+              <ListToolbar
+                keyword={keyword}
+                onKeywordChange={(v) => {
+                  setKeyword(v)
+                  setPage(0)
+                }}
+                searchPlaceholder="제목·내용 검색"
+              />
+              <DataTable
+                columns={columns}
+                rows={pageRows}
+                rowKey={(a) => a.id}
+                numbered={false}
+                standardColumns={false}
+                emptyText={keyword ? '검색 결과가 없습니다.' : '아직 등록된 공지가 없습니다.'}
+                onRowClick={(a) => setOpenId(a.id)}
+                // 페이저는 목록 화면의 기본 양식(번호줄·건수)을 쓴다 — 한 쪽뿐이어도
+                // 노출된다(WORKS 목록과 같은 규칙).
+                pagination={{
+                  page: safePage,
+                  pageSize: GUEST_LIST_PAGE_SIZE,
+                  total: filtered.length,
+                  onChange: setPage,
+                }}
+              />
+            </div>
+          </Card>
         </div>
-      </Card>
+      </div>
       {opened && <AnnouncementModal announcement={opened} onClose={() => setOpenId(null)} />}
     </div>
   )

@@ -1,4 +1,4 @@
-import { Button, Card, IconButton, Spinner, useToast } from '@ynarcher/ui'
+import { Button, Card, IconButton, Modal, Spinner, useToast } from '@ynarcher/ui'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { RichTextEditor, RichTextViewer } from '@/components/RichTextEditor'
@@ -81,13 +81,7 @@ function IntroCard({ programId }: { programId: string }) {
         ) : undefined
       }
     >
-      {editing ? (
-        <IntroForm
-          programId={programId}
-          initialBody={overview?.body ?? ''}
-          onClose={() => setEditing(false)}
-        />
-      ) : isLoading ? (
+      {isLoading ? (
         <Spinner />
       ) : overview?.body ? (
         // 에디터용 최소 높이(16rem)가 읽기 전용 뷰어에 빈 공간으로 남지 않게 이 자리에서만 눕힌다.
@@ -99,12 +93,28 @@ function IntroCard({ programId }: { programId: string }) {
           아직 작성된 사업소개가 없습니다. 작성하면 게스트 로그인 직후 첫 화면에 보입니다.
         </p>
       )}
+      {editing && (
+        <IntroFormModal
+          programId={programId}
+          initialBody={overview?.body ?? ''}
+          onClose={() => setEditing(false)}
+        />
+      )}
     </Card>
   )
 }
 
-/** 개요 작성·수정 폼(카드 안에서 표시와 자리를 바꾼다). */
-function IntroForm({
+/**
+ * 개요 작성·수정 **모달** — 공지사항·QNA의 작성 모달과 같은 방식이다(2026-09-01 사용자
+ * 지정: "그렇게 해야 유저 경험이 일관될 것"). 쓰는 동안 딤 클릭으로 닫히지 않게 잠가
+ * 두므로(`dismissible={false}`) 닫는 길은 취소 버튼뿐이다.
+ *
+ * 공지 작성 모달과 달리 **첨부 카드를 안에 두지 않는다** — 사업개요는 사업당 한 건이라
+ * 대상(program_id)이 언제나 존재하므로 파일을 탭 화면의 파일 카드에서 곧바로 올리면 되고,
+ * 모달에 하나 더 두면 같은 파일함이 두 곳에 생긴다. 공지가 첨부를 폼 안에 둔 이유는
+ * 신규 작성 시점에 붙일 대상이 아직 없기 때문이다.
+ */
+function IntroFormModal({
   programId,
   initialBody,
   onClose,
@@ -127,20 +137,33 @@ function IntroForm({
   }
 
   return (
-    <div className="space-y-4">
-      <RichTextEditor
-        value={body}
-        onChange={setBody}
-        placeholder="참여자에게 보일 사업소개를 적어 주세요."
-      />
-      <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={onClose} disabled={save.isPending}>
-          취소
-        </Button>
-        <Button onClick={() => void submit()} disabled={save.isPending}>
-          {save.isPending ? '저장 중…' : '저장'}
-        </Button>
+    <Modal
+      open
+      onClose={onClose}
+      dismissible={false}
+      title={initialBody ? '사업개요 수정' : '사업개요 작성'}
+      size="xl"
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose} disabled={save.isPending}>
+            취소
+          </Button>
+          <Button onClick={() => void submit()} disabled={save.isPending}>
+            {save.isPending ? '저장 중…' : '저장'}
+          </Button>
+        </>
+      }
+    >
+      {/* 게시판 작성 모달과 같은 바닥·카드 구성 — 쓰는 화면끼리 모양이 같아야 한다. */}
+      <div className="-mx-5 -my-4 bg-gray-100 px-5 py-4">
+        <Card title="사업소개">
+          <RichTextEditor
+            value={body}
+            onChange={setBody}
+            placeholder="참여자에게 보일 사업소개를 적어 주세요."
+          />
+        </Card>
       </div>
-    </div>
+    </Modal>
   )
 }

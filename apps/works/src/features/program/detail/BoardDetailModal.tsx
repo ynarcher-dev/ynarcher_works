@@ -30,6 +30,7 @@ export function BoardDetailModal({
   attachmentType,
   attachmentId,
   readOnlyFiles = false,
+  locked = false,
   destructiveAction,
   actions,
 }: {
@@ -50,6 +51,12 @@ export function BoardDetailModal({
   /** 첨부를 조회·다운로드만 허용(업로드·삭제 숨김). */
   readOnlyFiles?: boolean
   /**
+   * 바깥(딤) 클릭으로 닫히지 않게 잠근다. 읽기만 하는 동안에는 가볍게 닫히는 편이 낫지만
+   * (닫아도 잃는 것이 없다), 이 모달 안에서 무언가 쓰고 있는 동안에는 클릭 한 번에 그 글이
+   * 사라지면 안 된다 — QNA 답변을 쓰는 중이 그 경우다.
+   */
+  locked?: boolean
+  /**
    * 삭제 등 파괴적 액션. 푸터 **왼쪽 끝**에 세운다(2026-09-01 사용자 지정) —
    * 되돌릴 수 없는 것과 흐름을 잇는 것(닫기·수정)이 손가락 하나 거리에 붙어 있으면 안 된다.
    */
@@ -61,6 +68,7 @@ export function BoardDetailModal({
     <Modal
       open={open}
       onClose={onClose}
+      dismissible={!locked}
       title={meta}
       size="xl"
       footer={

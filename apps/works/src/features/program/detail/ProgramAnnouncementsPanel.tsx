@@ -255,6 +255,8 @@ function AnnouncementFormModal({
     <Modal
       open
       onClose={onClose}
+      // 쓰던 글이 바깥 클릭 한 번에 사라지면 안 된다 — 닫는 길은 취소 버튼뿐이다.
+      dismissible={false}
       title={announcement ? '공지 수정' : '공지 작성'}
       size="xl"
       footer={
