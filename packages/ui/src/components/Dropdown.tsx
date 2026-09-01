@@ -72,10 +72,12 @@ export interface DropdownItemProps {
   onClick?: () => void
   children: ReactNode
   disabled?: boolean
+  /** 높이 보정용(GUEST 터치 하한 48px 등). 규격 자체는 카드 스케일이 소유한다. */
+  className?: string
 }
 
 /** 드롭다운 항목. */
-export function DropdownItem({ onClick, children, disabled }: DropdownItemProps) {
+export function DropdownItem({ onClick, children, disabled, className }: DropdownItemProps) {
   // 메뉴는 카드 규격(32px)으로 고정한다 — 가변 py는 항목마다 높이가 달라진다.
   const s = controlScale.card
   return (
@@ -90,6 +92,7 @@ export function DropdownItem({ onClick, children, disabled }: DropdownItemProps)
         s.height,
         s.text,
         s.padX,
+        className,
       )}
     >
       {children}

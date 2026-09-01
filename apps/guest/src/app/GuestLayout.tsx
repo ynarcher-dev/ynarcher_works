@@ -1,8 +1,7 @@
 import { AppShell, SegmentedToggle, Sidebar, SidebarItem } from '@ynarcher/ui'
-import { LogOut } from 'lucide-react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import logo from '@/assets/logo.png'
-import { guestAuth } from '@/auth/guestAuthService'
+import { GuestUserMenu } from '@/app/GuestUserMenu'
 import { useGuestStore } from '@/auth/guestStore'
 import {
   EXPERT_NAV,
@@ -39,6 +38,8 @@ export function GuestLayout() {
     viewOfPath(location.pathname) ?? defaultView(user?.role)
   const items = view === 'expert' ? [...EXPERT_NAV] : moduleNavItems(modules ?? [])
   const current = items.find((item) => item.path === location.pathname)
+  // 사이드바 메뉴에 없는 화면(개인 메뉴로 진입)의 상단바 제목.
+  const pageTitle = current?.label ?? (location.pathname === '/me' ? '마이페이지' : undefined)
   // 공개 메뉴가 하나도 없는 사업이 있을 수 있다. 그때 로고와 뷰 전환은 루트로 보내고,
   // '열린 메뉴가 없다'는 사실은 루트 화면이 말한다.
   const home = (target: GuestView) => homePathOf(target, modules ?? []) ?? '/'
@@ -64,22 +65,6 @@ export function GuestLayout() {
           </div>
         )
       }
-      footer={
-        // 로그아웃은 밝은 표면용 `Button`을 어두운 배경에 맞게 다시 칠하지 않고, 사이드바가
-        // 이미 가진 항목 규격(`SidebarItem`)을 그대로 쓴다 — 같은 면 위의 컨트롤이 두 가지
-        // 색 규칙 위에 서면 어느 쪽이 이 사이드바의 규격인지 알 수 없게 된다.
-        <div className="space-y-1">
-          {user && (
-            <p className="truncate px-3.5 text-caption text-white/70">{user.name}님</p>
-          )}
-          <SidebarItem
-            icon={<LogOut aria-hidden className="size-4" />}
-            label="로그아웃"
-            className="min-h-12"
-            onClick={() => guestAuth.signOut()}
-          />
-        </div>
-      }
     >
       <div className="flex flex-col gap-1">
         {items.map((item) => {
@@ -104,25 +89,29 @@ export function GuestLayout() {
     <AppShell
       sidebar={sidebar}
       topbarLeft={
-        current && (
+        pageTitle && (
           <span className="truncate text-body-lg font-semibold text-gray-900">
-            {current.label}
+            {pageTitle}
           </span>
         )
       }
       topbarRight={
-        // 겸직 전문가 계정의 역할 전환. 사업 전환이 아니라는 점을 라벨로 못박는다.
-        isExpert && (
-          <SegmentedToggle
-            label="화면 전환"
-            value={view}
-            onChange={(next) => navigate(home(next as GuestView))}
-            options={[
-              { key: 'expert', label: '전문가' },
-              { key: 'startup', label: '스타트업' },
-            ]}
-          />
-        )
+        <>
+          {/* 겸직 전문가 계정의 역할 전환. 사업 전환이 아니라는 점을 라벨로 못박는다. */}
+          {isExpert && (
+            <SegmentedToggle
+              label="화면 전환"
+              value={view}
+              onChange={(next) => navigate(home(next as GuestView))}
+              options={[
+                { key: 'expert', label: '전문가' },
+                { key: 'startup', label: '스타트업' },
+              ]}
+            />
+          )}
+          {/* 계정 표시·마이페이지·로그아웃 — WORKS와 같은 자리(우측 끝)의 개인 메뉴. */}
+          <GuestUserMenu />
+        </>
       }
     >
       <Outlet />

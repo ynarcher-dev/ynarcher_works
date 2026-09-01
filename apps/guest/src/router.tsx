@@ -9,6 +9,7 @@ import { ApplyPage } from '@/pages/ApplyPage'
 import { GuestLoginPage } from '@/pages/GuestLoginPage'
 import { MentorFeedbackPage } from '@/pages/MentorFeedbackPage'
 import { ModulePage } from '@/pages/ModulePage'
+import { MyPage } from '@/pages/MyPage'
 import { RootLayout } from '@/pages/RootLayout'
 import { SessionBoardPage } from '@/pages/SessionBoardPage'
 import { TempGuestPage } from '@/pages/TempGuestPage'
@@ -68,6 +69,8 @@ export const router = createBrowserRouter([
           // 전문가 뷰
           { path: '/sessions', element: <SessionBoardPage /> },
           { path: '/feedback', element: <MentorFeedbackPage /> },
+          // 개인 메뉴(상단바 드롭다운)에서 들어오는 화면 — 사이드바 메뉴에는 서지 않는다.
+          { path: '/me', element: <MyPage /> },
         ],
       },
     ],

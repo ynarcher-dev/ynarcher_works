@@ -34,6 +34,22 @@ interface LoginResponse extends Partial<SessionResponse> {
   message?: string
 }
 
+/** guest-auth-refresh가 돌려주는 원장 기준의 현재 값. 마이페이지의 데이터 원본이기도 하다. */
+export interface GuestMe {
+  user: { id: string; name: string; user_type: string; email: string | null }
+  program: {
+    id: string
+    title: string
+    code: string | null
+    status: string
+    start_date: string | null
+    end_date: string | null
+    host_organization: string | null
+  }
+  participation: { roles: string[]; joined_at: string | null }
+  company: { name: string } | null
+}
+
 function applySession(data: SessionResponse): void {
   useGuestStore.getState().setSession(
     data.accessToken,
@@ -46,13 +62,19 @@ function applySession(data: SessionResponse): void {
   )
 }
 
-async function post<T>(path: string, body: unknown): Promise<{ ok: boolean; data: T }> {
+async function post<T>(
+  path: string,
+  body: unknown,
+  accessToken?: string,
+): Promise<{ ok: boolean; status: number; data: T }> {
   const res = await fetch(`${functionsBase}/${path}`, {
     method: 'POST',
-    headers: anonHeaders,
+    headers: accessToken
+      ? { ...anonHeaders, Authorization: `Bearer ${accessToken}` }
+      : anonHeaders,
     body: JSON.stringify(body),
   })
-  return { ok: res.ok, data: (await res.json()) as T }
+  return { ok: res.ok, status: res.status, data: (await res.json()) as T }
 }
 
 /**
@@ -109,6 +131,46 @@ export const guestAuth = {
     )
     if (!ok) throw new Error(data?.message ?? '비밀번호 설정에 실패했습니다.')
     applySession(data)
+  },
+
+  /**
+   * 세션 새로고침 — 원장의 현재 값(이름·사업 정보)을 되받아 저장한다.
+   *
+   * 이름은 로그인 시점의 복사본이 localStorage에 남는 구조라, WORKS에서 원장을 고쳐도
+   * 이 호출 없이는 게스트 화면이 영영 옛 이름을 보여준다. 앱 구동과 마이페이지 진입에서 부른다.
+   * 401은 '접근이 닫혔다'는 뜻이므로 그 자리에서 로그아웃한다(즉시 차단 규칙).
+   */
+  async refreshSession(): Promise<GuestMe | null> {
+    const token = useGuestStore.getState().accessToken
+    if (!token) return null
+    const { ok, status, data } = await post<GuestMe & { message?: string }>(
+      'guest-auth-refresh',
+      {},
+      token,
+    )
+    if (status === 401) {
+      useGuestStore.getState().reset()
+      return null
+    }
+    if (!ok) throw new Error(data?.message ?? '세션 정보를 불러오지 못했습니다.')
+    useGuestStore.getState().setSession(
+      token,
+      { id: data.user.id, name: data.user.name, role: data.user.user_type },
+      { id: data.program.id, title: data.program.title, code: data.program.code },
+    )
+    return data
+  },
+
+  /** 비밀번호 변경(로그인 상태). 현재 비밀번호 재확인을 거친다. */
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    const token = useGuestStore.getState().accessToken
+    if (!token) throw new Error('로그인이 필요합니다.')
+    const { ok, data } = await post<{ ok?: boolean; message?: string }>(
+      'guest-auth-password',
+      { currentPassword, newPassword },
+      token,
+    )
+    if (!ok) throw new Error(data?.message ?? '비밀번호 변경에 실패했습니다.')
   },
 
   signOut(): void {
