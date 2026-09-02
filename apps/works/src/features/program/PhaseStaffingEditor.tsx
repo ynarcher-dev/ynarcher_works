@@ -111,29 +111,23 @@ export function PhaseStaffingEditor({
       </div>
 
       {/*
-        규칙 설명은 라벨과 같은 줄에 두되 크기는 같게 하고 색·굵기로만 물러나게 한다.
-        Field의 hint는 컨트롤 **아래** 줄이라, 편집기 한 덩어리를 지나 저 밑에 붙으면
-        무엇에 대한 설명인지 이어지지 않는다.
+        규칙 설명은 `Field`의 `hint`가 라벨 **옆**에 접어 둔다(2026-09-01).
+        종전에는 규칙을 라벨과 같은 줄에 괄호로 붙였다 — `hint`가 컨트롤 아래 줄이던 시절에는
+        편집기 한 덩어리를 지나 저 밑에 붙어 무엇에 대한 설명인지 이어지지 않았기 때문이다.
+        지금은 `hint`가 라벨 옆에 서므로 그 이유가 사라졌고, 괄호를 걷어 라벨이 이름만 말한다.
       */}
       <div className="space-y-3">
         <Field
           as="div"
-          label={
-            <>
-              부서 구성{' '}
-              <span className="font-normal text-gray-600">(메인 1 + 협업 n, 협업비율 합 100%)</span>
-            </>
-          }
+          label="부서 구성"
+          hint={'메인 부서는 1개이고 협업 부서는 여러 개를 둘 수 있습니다.\n협업비율의 합은 100%가 되어야 합니다.'}
         >
           <ProgramDepartmentEditor value={deptSlice} onChange={setDeptSlice} versionId={phase.versionId} />
         </Field>
         <Field
           as="div"
-          label={
-            <>
-              담당자 배치 <span className="font-normal text-gray-600">(부서별 합 = 협업비율)</span>
-            </>
-          }
+          label="담당자 배치"
+          hint={'부서별 투입률의 합은 그 부서의 협업비율과 같아야 합니다.\n같은 사람을 다시 추가하면 그 사람의 구간이 늘어납니다.'}
         >
           <ProgramManagerEditor
             value={mgrSlice}

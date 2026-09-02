@@ -1,4 +1,4 @@
-import { Button, CardShell, useToast } from '@ynarcher/ui'
+import { Button, CardShell, Tooltip, tooltipScale, useToast } from '@ynarcher/ui'
 import { useState, type ReactNode } from 'react'
 import { PasswordInput } from '@/components/PasswordInput'
 import { supabase } from '@/lib/supabase'
@@ -7,12 +7,21 @@ import { supabase } from '@/lib/supabase'
 const MIN_LENGTH = 8
 
 /** 필드 래퍼(라벨 + 입력). 인사 관리 폼과 같은 모양. */
-function Field({ label, children }: { label: string; children: ReactNode }) {
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string
+  hint?: string
+  children: ReactNode
+}) {
   return (
     <div>
       <label className="mb-1 block text-caption font-medium text-gray-700">
         {label}
         <span className="text-brand"> *</span>
+        {hint && <Tooltip label={label} content={hint} className={tooltipScale.gap} />}
       </label>
       {children}
     </div>
@@ -101,7 +110,10 @@ export function MyPasswordCard() {
           />
         </Field>
         <div className="hidden sm:block" />
-        <Field label="새 비밀번호">
+        <Field
+          label="새 비밀번호"
+          hint={`${MIN_LENGTH}자 이상으로, 다른 서비스와 겹치지 않는 값을 쓰세요.`}
+        >
           <PasswordInput
             value={next}
             onChange={(e) => setNext(e.target.value)}
@@ -116,10 +128,9 @@ export function MyPasswordCard() {
           />
         </Field>
       </div>
-      {/* 안내 문구 자리에 그대로 사유를 띄운다 — 줄이 늘었다 줄었다 하지 않게. */}
-      <p className={`mt-2 text-caption ${localError ? 'text-danger' : 'text-gray-700'}`}>
-        {localError || `${MIN_LENGTH}자 이상으로, 다른 서비스와 겹치지 않는 값을 쓰세요.`}
-      </p>
+      {/* 규칙은 라벨 옆 ⓘ로 접었고 이 줄은 오류만 맡는다. 오류가 없어도 높이를 비워 두어
+          오류가 뜨는 순간 아래 버튼이 밀리지 않게 한다 — 종전에 안내 문구가 하던 일이다. */}
+      <p className="mt-2 min-h-[1.125rem] text-caption text-danger">{localError}</p>
       <div className="mt-4 flex justify-end">
         <Button type="button" onClick={() => void submit()} disabled={!ready || busy}>
           비밀번호 변경

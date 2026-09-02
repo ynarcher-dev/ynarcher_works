@@ -1,4 +1,4 @@
-import { Badge, Button, IconButton, Input, Modal, Select, useToast } from '@ynarcher/ui'
+import { Button, IconButton, Input, Modal, Select, useToast } from '@ynarcher/ui'
 import { Plus, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { FUND_LP_TYPE_OPTIONS } from '@/features/fund/fundListHooks'
@@ -151,6 +151,9 @@ export function FundLpRosterModal({
       onClose={onClose}
       size="2xl"
       title="출자자(LP) 명부"
+      help={
+        '지분율은 약정액 ÷ 약정총액으로 자동 계산되고, 납입액은 캐피탈 콜에서 집계되는 파생 값입니다.\n줄을 지우고 저장하면 그 조합원의 납입 현황도 함께 빠집니다.'
+      }
       footer={
         <>
           <span className="mr-auto text-body-sm text-gray-500">
@@ -235,11 +238,6 @@ export function FundLpRosterModal({
           조합원 추가
         </Button>
 
-        <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-gray-100 pt-3 text-body-sm text-gray-500">
-          <Badge tone="neutral">파생</Badge>
-          지분율은 약정액 ÷ 약정총액으로 자동 계산되고, 납입액은 캐피탈 콜에서 집계됩니다. 줄을 지우고
-          저장하면 그 조합원의 납입 현황도 함께 빠집니다.
-        </p>
       </div>
     </Modal>
   )

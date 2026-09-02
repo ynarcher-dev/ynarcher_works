@@ -45,7 +45,7 @@ export function PasswordChangeCard() {
   }
 
   return (
-    <Card title="비밀번호 변경" subtitle={PASSWORD_RULE_TEXT}>
+    <Card title="비밀번호 변경" help={PASSWORD_RULE_TEXT}>
       <form
         className="space-y-4"
         onSubmit={(e) => {

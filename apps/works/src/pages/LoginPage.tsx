@@ -12,6 +12,17 @@ const schema = z.object({
 })
 type LoginForm = z.infer<typeof schema>
 
+/** GUEST 앱 로그인 주소. 신청 랜딩 주소(.../apply)와 같은 오리진을 쓴다. */
+const GUEST_LOGIN_URL = (() => {
+  const apply = (import.meta.env.VITE_APPLY_BASE_URL as string | undefined)?.replace(/\/+$/, '')
+  if (!apply) return null
+  try {
+    return `${new URL(apply).origin}/login`
+  } catch {
+    return null
+  }
+})()
+
 export function LoginPage() {
   const navigate = useNavigate()
   const [formError, setFormError] = useState<string | null>(null)
@@ -84,6 +95,17 @@ export function LoginPage() {
           {isSubmitting ? '로그인 중…' : '로그인'}
         </Button>
       </form>
+
+      {GUEST_LOGIN_URL && (
+        <p className="mt-4 text-center text-caption text-gray-600">
+          <a
+            href={GUEST_LOGIN_URL}
+            className="text-brand underline underline-offset-2 transition-opacity duration-fast hover:opacity-80"
+          >
+            GUEST로 로그인하기
+          </a>
+        </p>
+      )}
     </main>
   )
 }

@@ -1,4 +1,14 @@
-import { Button, CardShell, Input, Select, TagChip, TextArea, useToast } from '@ynarcher/ui'
+import {
+  Button,
+  CardShell,
+  Input,
+  Select,
+  TagChip,
+  TextArea,
+  Tooltip,
+  tooltipScale,
+  useToast,
+} from '@ynarcher/ui'
 import type { ChangeEvent, ReactNode } from 'react'
 import { useMemo, useState } from 'react'
 import { FormTopBar } from '@/components/FormTopBar'
@@ -38,10 +48,13 @@ interface Props {
 function Field({
   label,
   required,
+  hint,
   children,
 }: {
   label: string
   required?: boolean
+  /** 이 칸의 규칙. 라벨 옆 도움말(ⓘ) 말풍선으로 접힌다(공용 `Field`와 같은 규약). */
+  hint?: string
   children: ReactNode
 }) {
   return (
@@ -49,6 +62,7 @@ function Field({
       <label className="mb-1 block text-caption font-medium text-gray-700">
         {label}
         {required && <span className="text-brand"> *</span>}
+        {hint && <Tooltip label={label} content={hint} className={tooltipScale.gap} />}
       </label>
       {children}
     </div>
@@ -275,10 +289,10 @@ export function GlobalNetworkForm({
                 </Select>
               </Field>
               <div className="sm:col-span-2">
-                <Field label="전문 영역">
-                  <span className="mb-1 block text-caption font-normal text-gray-700">
-                    영역 관리 태그에서 최대 {MAX_FIELDS}개
-                  </span>
+                <Field
+                  label="전문 영역"
+                  hint={`영역 관리 태그에서 최대 ${MAX_FIELDS}개 선택합니다.`}
+                >
                   <div className="flex flex-wrap gap-1.5">
                     {(fieldTags.data ?? []).map((t) => {
                       const on = fields.includes(t.name)

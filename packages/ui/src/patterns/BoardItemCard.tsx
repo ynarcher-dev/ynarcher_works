@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from '../utils/cn'
+import { DensityProvider } from '../density'
 import { iconScale } from '../densityScale'
 
 export interface BoardItemCardProps {
@@ -38,18 +39,18 @@ export function BoardItemCard({
       <button
         type="button"
         onClick={onClick}
-        className="w-full rounded-radius-md border border-gray-300 bg-white px-4 py-3 text-left transition-colors duration-fast hover:border-gray-400 hover:bg-gray-25"
+        className="w-full rounded-radius-md border border-gray-300 bg-white px-3 py-2 text-left transition-colors duration-fast hover:border-gray-400 hover:bg-gray-25"
       >
-        {/* 우상단 액션과 겹치지 않도록 우측 여백을 확보한다. */}
+        {/* 우상단 액션과 겹치지 않도록 우측 여백을 확보한다(24px 액션 2개 + 간격 + 우측 오프셋). */}
         <span
           className={cn(
-            'flex min-w-0 flex-wrap items-center gap-2',
-            actions && 'pr-16',
+            'flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1',
+            actions && 'pr-14',
           )}
         >
           {leading && (
             <span
-              className={cn(iconScale.card.box, 'grid shrink-0 place-items-center rounded-radius-sm bg-gray-50 text-base leading-none')}
+              className={cn(iconScale.table.box, 'grid shrink-0 place-items-center rounded-radius-sm bg-gray-50 text-sm leading-none')}
               aria-hidden
             >
               {leading}
@@ -58,19 +59,21 @@ export function BoardItemCard({
           <span className="text-body font-semibold text-gray-900">{title}</span>
           {badges}
         </span>
-        {description !== undefined && (
-          <span className="mt-2 block text-body text-gray-700">{description}</span>
+        {/* 메모가 비어 있으면 줄 자체를 만들지 않는다 — 빈 칸이 카드 높이만 늘린다. */}
+        {description !== undefined && description !== '' && (
+          <span className="mt-1 block text-body-sm text-gray-700">{description}</span>
         )}
         {meta && (
-          <span className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5 border-t border-gray-200 pt-2 text-body text-gray-700">
+          <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 border-t border-gray-200 pt-1.5 text-body-sm text-gray-700">
             {meta}
           </span>
         )}
       </button>
+      {/* 액션은 표 밀도(24px)로 고정한다 — 카드 밀도(28px)면 항목 제목 줄보다 액션이 높아진다. */}
       {actions && (
-        <span className="absolute right-3 top-3 flex items-center gap-1.5">
-          {actions}
-        </span>
+        <DensityProvider value="table">
+          <span className="absolute right-2 top-2 flex items-center gap-1">{actions}</span>
+        </DensityProvider>
       )}
     </div>
   )

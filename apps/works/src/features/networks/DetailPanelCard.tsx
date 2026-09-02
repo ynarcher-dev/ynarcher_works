@@ -11,17 +11,20 @@ import type { ReactNode } from 'react'
 export function DetailPanelCard({
   title,
   count,
+  help,
   action,
   children,
 }: {
   title: string
   /** 제목 옆 건수(미지정 시 숨김). */
   count?: number
+  /** 이 패널의 규칙·파급 효과. 제목 옆 도움말(ⓘ) 말풍선으로 접힌다. */
+  help?: ReactNode
   action?: ReactNode
   children: ReactNode
 }) {
   return (
-    <PanelCard title={title} count={count} action={action}>
+    <PanelCard title={title} count={count} help={help} action={action}>
       {children}
     </PanelCard>
   )

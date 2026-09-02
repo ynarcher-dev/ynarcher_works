@@ -30,9 +30,12 @@ import { ToastContext } from './toast/ToastContext'
 export type ColumnType =
   | 'name'
   | 'text'
+  | 'code'
   | 'person'
+  | 'tags'
   | 'badge'
   | 'date'
+  | 'period'
   | 'datetime'
   | 'money'
   | 'count'
@@ -74,16 +77,43 @@ const buildColumnSpec = (stage: TableStage): Record<ColumnType, ColumnSpec> => {
   return {
     /** 식별 값(이름·기업명). 가장 큰 몫을 받는다 — 잘리면 곤란한 값이라 여유가 가장 쓸모 있다. */
     name: { width: '', align: 'left', numeric: false, flex: 3 },
-    /** 업종·분류 등 짧은 라벨. */
+    /**
+     * 업종·분류 등 짧은 라벨 중 **길이의 상한을 모르는** 것.
+     *
+     * 상한을 아는 값(코드·구분·단계)은 `code`로 보낸다. 둘을 가르지 않던 동안 `text`가 사실상의
+     * 기본값이 되어, 두 글자짜리 값이 사업명과 같은 비율로 폭을 받았다 — 펀드 목록에서는 다섯 개의
+     * `text` 열(코드·재원·성격·구분·펀드유형, 값은 모두 5자 이하)이 남는 폭의 절반을 가져갔다.
+     */
     text: { width: '', align: 'left', numeric: false, flex: 1.2 },
+    /**
+     * 길이의 상한이 정해진 값(코드·구분·단계·재원). 넓혀 봐야 빈 칸만 늘어나므로 고정폭이다.
+     * 자동 레이아웃에서는 이 폭이 하한이라, 예외적으로 긴 값이 와도 잘리지 않고 열이 늘어난다.
+     */
+    code: { width: w.code, align: 'left', numeric: false, rem: page ? 6 : 5 },
     /** 사람 이름. */
     person: { width: '', align: 'left', numeric: false, flex: 1 },
+    /**
+     * 값이 여러 개인 분류 태그(분야·업종). 개수만큼 폭이 널뛰므로 가변 열이다.
+     * 목록에서는 배지가 아니라 한 줄 텍스트로 적는다 — 근거는 `TagCell` 주석 참조.
+     */
+    tags: { width: '', align: 'left', numeric: false, flex: 1.6 },
     /** 주소·비고 등 긴 텍스트. */
     long: { width: '', align: 'left', numeric: false, flex: 2 },
     /** 상태 배지 한 개. */
     badge: { width: w.badge, align: 'left', numeric: false, rem: page ? 6 : 5 },
     /** 날짜 `YYYY-MM-DD`. */
     date: { width: w.date, align: 'left', numeric: false, rem: page ? 8 : 7 },
+    /**
+     * 기간(날짜 범위) `2026-08-01 ~ 2026-12-31`. **한 줄**에 서고, 폭은 그 23자를 받는다
+     * (`PeriodCell`).
+     *
+     * 폭을 아끼려고 날짜 한 개 폭에 두 줄로 접던 것을 2026-09-02에 되돌렸다 — 접으면 그 열만
+     * 행 높이가 두 배가 되어, 한 표 안에 한 줄짜리 열과 두 줄짜리 열이 섞이고 행의 기준선이
+     * 하나로 읽히지 않는다. 폭을 줄이지 **않는** 것이 이 종류의 요점이다: 폭이 모자라
+     * `2026-08-01 ~ 2026-`처럼 잘린 값은 짧아진 것이 아니라 종료일이 없는 기간과 구분되지 않는
+     * 틀린 값이라, 애초에 잘릴 수 없는 폭을 준다.
+     */
+    period: { width: w.period, align: 'left', numeric: false, rem: page ? 14 : 13 },
     /** 일시 `YYYY-MM-DD HH:MM:SS`. */
     datetime: { width: w.datetime, align: 'left', numeric: false, rem: page ? 11 : 9 },
     /** 금액·수량. */
@@ -329,6 +359,15 @@ export interface DataTableProps<T> {
    * 표(NETWORKS 원장)는 이 열을 유지한 채 비활성화 핸들러만 빼면 된다.
    */
   showManageColumn?: boolean
+  /**
+   * 표 전체에 한 번만 적히는 단서 — 금액 열의 단위가 대표적이다(`단위: 백만원`).
+   *
+   * 자리는 표 **테두리 안**, 머리글 줄 위 오른쪽이다. 단위를 값에 붙이면(`50,000백만원`) 세 글자가
+   * 행 수만큼 반복되며 열 폭을 먹고 자릿수 비교도 어긋나고, 머리글에 넣으면(`약정총액(백만원)`)
+   * 고정폭 열의 머리글이 접히거나 열을 밀어 넓혀 값에서 뺀 폭을 그대로 돌려준다. 표 밖에 두지
+   * 않는 이유는 캡처다 — 표만 잘라 공유해도 단위가 함께 따라와야 한다.
+   */
+  caption?: ReactNode
   /** 표준 컬럼 값 접근자(미지정 시 관례 필드에서 자동 추론). */
   meta?: DataTableMeta<T>
 }
@@ -405,6 +444,7 @@ export function DataTable<T>({
   rowClassName,
   layout = 'auto',
   dense = false,
+  caption,
   meta,
 }: DataTableProps<T>) {
   const [internalSort, setInternalSort] = useState<{ key: string; dir: 'asc' | 'desc' }>(() => ({
@@ -582,10 +622,18 @@ export function DataTable<T>({
     <DensityProvider value={tableCellDensity[stage]}>
     <div
       className={cn(
-        'w-full overflow-x-auto rounded-radius-md border border-gray-300 bg-white shadow-soft',
+        // 가로 스크롤은 안쪽 상자가 맡는다 — 단서 줄(caption)은 표와 함께 스크롤되면 안 되고,
+        // 바깥 상자가 테두리·모서리를 그리므로 여기서 넘치는 것을 잘라 둔다.
+        'w-full overflow-hidden rounded-radius-md border border-gray-300 bg-white shadow-soft',
         className,
       )}
     >
+      {caption && (
+        <div className={cn('flex justify-end border-b border-gray-200', cellX, 'py-1', text.meta)}>
+          {caption}
+        </div>
+      )}
+      <div className="w-full overflow-x-auto">
       <table
         className={cn(
           'w-full border-separate border-spacing-0',
@@ -902,6 +950,7 @@ export function DataTable<T>({
           )}
         </tbody>
       </table>
+      </div>
     </div>
     </DensityProvider>
   )

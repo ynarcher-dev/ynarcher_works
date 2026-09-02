@@ -147,7 +147,7 @@ export const tableCellDensity: Record<TableStage, Density> = {
  * 카드 안에 든 표(그리고 표처럼 읽히는 수제 목록)의 격자.
  *
  * `DataTable`은 자기 자리를 알므로 `tableGridScale`에서 골라 쓴다. 이 상수는 밀도 맥락을
- * 내려받지 못하는 수제 표(`MiniTable` 등)를 위한 것이며, 그런 표는 전부 카드 안에 있다.
+ * 내려받지 못하는 소형 표를 위한 것이며, 그런 표는 전부 카드 안에 있다.
  */
 export const tableGrid = {
   head: tableGridScale.card.row,
@@ -198,8 +198,29 @@ export interface ColumnWidthSet {
   person: string
   /** 업종·분류 등 짧은 라벨. 한 줄에 들어가지 않을 만큼 길어질 수 있으면 `wide`를 쓴다. */
   short: string
+  /**
+   * 글자 수 상한이 정해진 값 — 사업코드(6자)·구분(2자)·단계(`SEED`)·재원처럼 원장이 고르는
+   * 선택지이거나 자릿수가 고정된 식별자.
+   *
+   * `short`(가변폭)와 갈리는 축은 값의 성격이 아니라 **길이의 상한을 아는가**다. 상한을 아는 값에
+   * 가변폭을 주면 남는 폭이 그 칸의 빈자리로 사라진다 — 두 글자짜리 '구분'이 사업명과 같은
+   * 비율로 폭을 받아 60~80px씩 비우는 동안 정작 이름과 태그가 잘리던 것이 그 결과다.
+   */
+  code: string
   /** 날짜 `YYYY-MM-DD`. 표준 열 '수정일'과 같은 폭이라 표끼리 세로가 맞는다. */
   date: string
+  /**
+   * 기간 `YYYY-MM-DD ~ YYYY-MM-DD`(23자) — 날짜 두 개가 한 줄에 서는 폭.
+   *
+   * 한동안 날짜와 같은 폭에 두고 값만 두 줄로 접었으나, 2026-09-02에 **표의 모든 값은 한 줄에
+   * 선다**로 정리하며 폭을 값에 맞췄다. 접는 쪽은 폭을 아꼈지만 그 열만 행 높이가 두 배가 되어
+   * 표를 세로로 훑는 눈이 걸렸고, 한 표 안에 한 줄짜리 열과 두 줄짜리 열이 섞여 행의 기준선이
+   * 하나로 읽히지 않았다. 폭을 아끼려다 표 전체의 리듬을 내주는 거래였다.
+   *
+   * 대신 이 폭은 고정폭 중 가장 넓으므로, 열이 많은 표에서는 기간을 열로 두는 것 자체를 먼저
+   * 의심할 것 — 상세에서만 읽어도 되는 값이면 목록에서 빼는 편이 낫다.
+   */
+  period: string
   /** 금액·수량 등 자릿수가 있는 수치. */
   money: string
   /** 건수·개수 등 세 자리 안쪽의 수치. */
@@ -229,7 +250,9 @@ export const columnWidthScale: Record<TableStage, ColumnWidthSet> = {
     badge: 'w-24 whitespace-nowrap',
     person: 'w-28 whitespace-nowrap',
     short: 'w-28 whitespace-nowrap',
+    code: 'w-24 whitespace-nowrap',
     date: 'w-32 whitespace-nowrap',
+    period: 'w-56 whitespace-nowrap',
     money: 'w-32 whitespace-nowrap',
     count: 'w-24 whitespace-nowrap',
     datetime: 'w-44 whitespace-nowrap',
@@ -240,7 +263,9 @@ export const columnWidthScale: Record<TableStage, ColumnWidthSet> = {
     badge: 'w-20 whitespace-nowrap',
     person: 'w-24 whitespace-nowrap',
     short: 'w-24 whitespace-nowrap',
+    code: 'w-20 whitespace-nowrap',
     date: 'w-28 whitespace-nowrap',
+    period: 'w-52 whitespace-nowrap',
     money: 'w-28 whitespace-nowrap',
     count: 'w-20 whitespace-nowrap',
     datetime: 'w-36 whitespace-nowrap',
@@ -371,7 +396,7 @@ export const tableTextScale: Record<TableStage, TableTextSet> = {
  * 카드 안에 든 표의 글자 위계.
  *
  * 자리를 아는 `DataTable`은 `tableTextScale`에서 골라 쓴다. 이 상수는 밀도 맥락을 내려받지 못하는
- * 수제 목록(변동 이력·자료 목록·MiniTable 등)을 위한 것이며, 그런 목록은 전부 카드 안에 있다 —
+ * 수제 목록(변동 이력·자료 목록 등)을 위한 것이며, 그런 목록은 전부 카드 안에 있다 —
  * 페이지에 바로 놓이는 표는 `DataTable`을 쓴다.
  */
 export const tableText: TableTextSet = tableTextScale.card
@@ -412,6 +437,48 @@ export const formText = {
   /** 검증 실패 안내. 도움말과 같은 크기에서 색만 갈린다. */
   error: 'text-caption text-danger',
 } as const
+
+/**
+ * 도움말 말풍선(툴팁) 규격 — 지금은 `Tooltip` 하나만 쓰는 값이지만 여기에 둔다.
+ *
+ * 안내 문구를 화면에 상시 노출하지 않고 호버 뒤로 접는 것이 works의 기본이다(2026-09-01). 접는
+ * 이유는 자리 절약이 아니라 **읽는 순서**다 — 라벨·컨트롤·값이 서야 할 줄에 규칙 설명이 같은
+ * 무게로 끼어들면, 폼을 처음 보는 사람은 무엇을 입력하는 칸인지보다 규칙을 먼저 읽는다. 규칙은
+ * 그 칸을 채우려는 사람만 필요로 하므로 물어볼 때 답한다.
+ *
+ * 다만 **다음 행동을 지시하는 안내**(막힌 이유·차단 조건·빈 상태·오류)는 접지 않는다. 호버해야
+ * 보이는 안내는 "왜 못 누르는가"의 답이 될 수 없다. 접을지 말지는 화면이 판정하고, 이 스케일은
+ * 접기로 결정된 문구의 생김새만 갖는다.
+ *
+ * 말풍선 자체는 밀도를 타지 않는다 — 표 셀에서 열든 페이지에서 열든 떠 있는 층은 같은 크기여야
+ * 읽힌다. 밀도를 타는 것은 줄 안에 함께 서는 트리거 아이콘뿐이다.
+ */
+export const tooltipScale = {
+  /** 말풍선 표면(바탕·모서리·여백·그림자). */
+  surface: 'rounded-radius-sm bg-gray-800 px-2.5 py-1.5 shadow-popover',
+  /** 말풍선 글자 — 어두운 바탕 위 흰 글씨라 캡션 크기에서도 대비가 선다. */
+  text: 'text-caption font-normal leading-snug text-white',
+  /** 말풍선 최대 폭. JS 좌표 계산(`TOOLTIP_MAX_W`)과 짝이므로 함께 바꾼다. */
+  width: 'w-max max-w-[18rem]',
+  /**
+   * 트리거(ⓘ) 색 4상태. 라벨보다 확실히 물러나되(gray-400) 호버·포커스에서 라벨 단계까지 올라온다
+   * — 건드릴 수 있는 표식임을 색 변화만으로 알린다.
+   */
+  trigger:
+    'text-gray-400 transition-colors duration-fast hover:text-gray-600 focus-visible:text-gray-600',
+  /**
+   * 트리거 아이콘 크기 — 자기가 딸린 글자보다 반 단 작게 선다.
+   *
+   * 라벨(14px) 옆과 표 셀(12px) 옆에 같은 원이 서면, 표에서는 표식이 값보다 커져 먼저 눈에
+   * 들어온다. 도움말 표식이 값을 이기면 안 된다.
+   */
+  icon: { page: 'h-3.5 w-3.5', card: 'h-3.5 w-3.5', table: 'h-3 w-3' },
+  /** 라벨·제목과 트리거 사이 간격. 제목의 부속이므로 한 칸만 띄운다. */
+  gap: 'ml-1',
+} as const
+
+/** 말풍선 최대 폭(px) — `tooltipScale.width`의 `max-w-[18rem]`과 같은 값이다. */
+export const TOOLTIP_MAX_W = 288
 
 /** 폼 컨트롤 4상태(기본·호버·포커스·비활성) 공통 외형. 밀도와 무관하다. */
 export const formBaseClass =

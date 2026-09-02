@@ -7,11 +7,15 @@ import {
   Dropdown,
   DropdownItem,
   EmptyState,
+  Field,
   IconButton,
+  Input,
   Modal,
   SegmentedToggle,
+  SettingRow,
   Skeleton,
   Spinner,
+  Switch,
   TextArea,
   Tooltip,
   useToast,
@@ -22,6 +26,7 @@ export function FeedbackSection() {
   const [modalOpen, setModalOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [view, setView] = useState<'card' | 'table'>('table')
+  const [external, setExternal] = useState(true)
   const toast = useToast()
 
   return (
@@ -36,6 +41,47 @@ export function FeedbackSection() {
           <Banner tone="success">3건이 정상 반영되었습니다.</Banner>
           <Banner tone="warning">투자금액이 비어 있는 기업이 2곳 있습니다.</Banner>
           <Banner tone="danger">권한이 없어 일부 열이 마스킹되었습니다.</Banner>
+        </div>
+      </Card>
+
+      {/*
+        도움말(ⓘ)은 works의 안내 문구가 사는 단 하나의 자리다. 여기서 보여줄 것은 말풍선의
+        생김새가 아니라 **어디에 붙는가** — 화면이 `Tooltip`을 직접 놓는 일이 드물고, 폼 칸은
+        `Field`의 `hint`, 설정 줄은 `SettingRow`의 `hint`, 제목 줄은 `Card`·`PanelCard`·
+        `Modal`·`PageHeader`의 `help`가 대신 놓는다는 사실이다.
+      */}
+      <Card
+        title="도움말"
+        help={
+          '안내 문구는 화면에 펴 두지 않고 이 자리에 접는다.\n막힌 이유·빈 상태·오류만 펴 둔다 — 호버해야 보이는 문구는 왜 못 하는지의 답이 될 수 없다.'
+        }
+      >
+        <div className="space-y-4">
+          <Field label="주관" hint="이 사업을 발주·주관하는 기관 또는 기업.">
+            <Input placeholder="예: 중소벤처기업부" />
+          </Field>
+          <Field
+            label="분야"
+            hintInline
+            hint="등록된 분야 태그가 없습니다. (ADMIN › 분야 관리)"
+          >
+            <Input placeholder="다음 행동을 지시하는 안내는 접지 않고 편다" />
+          </Field>
+          <SettingRow
+            title="외부근무 허용"
+            hint="끄면 근무체크에서 근무지를 고를 수 없고 사내 근무로만 기록됩니다."
+            control={({ id }) => (
+              <Switch id={id} checked={external} onChange={setExternal} />
+            )}
+          />
+          <p className="text-caption text-gray-600">
+            트리거를 직접 씌울 수도 있다 —{' '}
+            <Tooltip content="담당자 원장이 비어 있으면 공동관리입니다.">
+              <span className="text-body text-gray-600 underline decoration-dotted">
+                담당자란?
+              </span>
+            </Tooltip>
+          </p>
         </div>
       </Card>
 
@@ -67,15 +113,13 @@ export function FeedbackSection() {
             <DropdownItem onClick={() => setMenuOpen(false)}>담당자 변경</DropdownItem>
             <DropdownItem disabled>비활성화</DropdownItem>
           </Dropdown>
-          <Tooltip content="담당자 원장이 비어 있으면 공동관리입니다.">
-            <span className="text-body text-gray-600 underline decoration-dotted">담당자란?</span>
-          </Tooltip>
         </div>
 
         <Modal
           open={modalOpen}
           onClose={() => setModalOpen(false)}
           title="비활성화 사유"
+          help="물리 삭제가 아니라 비활성화입니다. 기록은 남고 목록에서만 내려갑니다."
           size="md"
           footer={
             <>

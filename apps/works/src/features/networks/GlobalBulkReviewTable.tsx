@@ -1,4 +1,13 @@
-import { Button, cn, DataTable, EmptyValue, Select, type Column } from '@ynarcher/ui'
+import {
+  Button,
+  cn,
+  DataTable,
+  EmptyValue,
+  Select,
+  Tooltip,
+  tooltipScale,
+  type Column,
+} from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import { GLOBAL_CATEGORY_OPTIONS, type GlobalCategory } from '@/features/networks/globalConfig'
 import type { GlobalExistingRef, GlobalParsedRow } from '@/features/networks/globalBulkUpload'
@@ -164,9 +173,13 @@ export function GlobalBulkReviewTable({
     {
       key: 'dup',
       header: (
-        <span className="whitespace-nowrap">
-          중복 여부{' '}
-          <span className="font-normal normal-case text-gray-600">(이름·전화·이메일 중 2개 이상 일치)</span>
+        <span className="flex items-center whitespace-nowrap">
+          중복 여부
+          <Tooltip
+            label="중복 여부"
+            content="이름·전화·이메일 중 2개 이상 일치하면 중복으로 봅니다."
+            className={tooltipScale.gap}
+          />
         </span>
       ),
       className: 'w-72 pl-1 pr-8',

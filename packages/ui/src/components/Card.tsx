@@ -9,8 +9,13 @@ export interface CardProps {
   title?: ReactNode
   /** 제목 옆 건수(미지정 시 숨김). `[3]` 말머리 형태로 렌더한다. */
   count?: number
-  /** 제목 하단 보조 설명(캡션). */
+  /**
+   * 제목 하단 보조 **값**(캡션) — `문서 3건 · 기준 지출결의`처럼 카드가 지금 무엇을 보고 있는지
+   * 말하는 데이터. 설명 문구는 여기가 아니라 `help`(제목 옆 말풍선)로 간다.
+   */
   subtitle?: ReactNode
+  /** 이 카드가 무엇을 다루는지에 대한 설명. 제목 옆 도움말(ⓘ) 말풍선으로 접힌다. */
+  help?: ReactNode
   /** 헤더 우측 액션 영역(배지·버튼 등). */
   actions?: ReactNode
   className?: string
@@ -33,6 +38,7 @@ export function Card({
   title,
   count,
   subtitle,
+  help,
   actions,
   className,
   bodyClassName,
@@ -43,7 +49,11 @@ export function Card({
       {(title || actions) && (
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="min-w-0 space-y-1">
-            {title && <CardHeading count={count}>{title}</CardHeading>}
+            {title && (
+              <CardHeading count={count} help={help}>
+                {title}
+              </CardHeading>
+            )}
             {subtitle && <p className={cardText.subtitle}>{subtitle}</p>}
           </div>
           {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}

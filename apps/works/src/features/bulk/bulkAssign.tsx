@@ -8,7 +8,7 @@
  * 공동관리로 열린다(CLAUDE.md 판정 규칙). 등록 폼이 담당자를 필수로 막는 것도 같은 이유이므로,
  * 업로드도 같은 선을 지킨다 — 한쪽으로만 열려 있으면 그쪽이 규칙의 우회로가 된다.
  */
-import { TokenMultiSelect } from '@ynarcher/ui'
+import { TokenMultiSelect, Tooltip, tooltipScale } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useEmployees } from '@/features/hub/hooks'
@@ -107,9 +107,15 @@ function ProgramManagerPicker({
         max={1}
         placeholder="임직원 검색 후 담당자 지정(1명)"
       />
-      <p className="text-caption text-gray-600">
-        담당 부서는 각 단계(조직 버전)에서 이 담당자가 배치된 부서를 그대로 씁니다. 협업비율·투입률은
-        100%로 들어가며, 여러 부서가 나눠 맡는 사업은 등록 후 상세에서 조정하세요.
+      <p className="flex items-center text-caption text-gray-600">
+        부서 배치는 자동
+        <Tooltip
+          label="부서 배치"
+          content={
+            '담당 부서는 각 단계(조직 버전)에서 이 담당자가 배치된 부서를 그대로 씁니다.\n협업비율·투입률은 100%로 들어가며, 여러 부서가 나눠 맡는 사업은 등록 후 상세에서 조정합니다.'
+          }
+          className={tooltipScale.gap}
+        />
       </p>
     </div>
   )

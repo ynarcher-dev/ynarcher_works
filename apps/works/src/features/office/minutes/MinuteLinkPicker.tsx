@@ -1,4 +1,4 @@
-import { Select, TokenMultiSelect } from '@ynarcher/ui'
+import { Select, TokenMultiSelect, Tooltip, tooltipScale } from '@ynarcher/ui'
 import { useMemo, useState } from 'react'
 import {
   DEFAULT_MINUTE_LINK_PICK_KIND,
@@ -46,9 +46,15 @@ export function MinuteLinkPicker({ value, onChange }: Props) {
 
   return (
     <div className="space-y-1.5">
-      <p className="text-caption text-gray-500">
-        연동 콘텐츠 선택 / 검색 (선택) — 관련 사업·스타트업·네트워크를 연결하면 상호 참조됩니다. 비워
-        두면 일반 회의록입니다.
+      <p className="flex items-center text-caption text-gray-500">
+        연동 콘텐츠 선택 / 검색 (선택)
+        <Tooltip
+          label="연동 콘텐츠"
+          content={
+            '관련 사업·스타트업·네트워크를 연결하면 상호 참조됩니다.\n비워 두면 일반 회의록입니다.'
+          }
+          className={tooltipScale.gap}
+        />
       </p>
       <div className="flex items-start gap-2">
         {/* 종류 선택 드롭다운 */}

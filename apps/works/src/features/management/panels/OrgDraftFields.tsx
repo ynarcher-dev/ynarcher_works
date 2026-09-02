@@ -1,4 +1,4 @@
-import { Input } from '@ynarcher/ui'
+import { Input, Tooltip, tooltipScale } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 
 interface OrgDraftFieldsProps {
@@ -17,10 +17,22 @@ interface OrgDraftFieldsProps {
 }
 
 /** 라벨 + 입력 한 칸. */
-function Field({ label, children }: { label: string; children: ReactNode }) {
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string
+  /** 이 칸의 규칙. 라벨 옆 도움말(ⓘ) 말풍선으로 접힌다(공용 `Field`와 같은 규약). */
+  hint?: string
+  children: ReactNode
+}) {
   return (
     <label className="block space-y-1">
-      <span className="text-caption font-semibold text-gray-600">{label}</span>
+      <span className="text-caption font-semibold text-gray-600">
+        {label}
+        {hint && <Tooltip label={label} content={hint} className={tooltipScale.gap} />}
+      </span>
       {children}
     </label>
   )
@@ -49,7 +61,7 @@ export function OrgDraftFields({
           onBlur={onLabelCommit}
         />
       </Field>
-      <Field label="시작일(내일부터)">
+      <Field label="시작일" hint="내일 이후 날짜부터 고를 수 있습니다.">
         <Input
           type="date"
           value={from}
@@ -57,7 +69,7 @@ export function OrgDraftFields({
           onChange={(e) => onFromChange(e.target.value)}
         />
       </Field>
-      <Field label="종료 예정일(비우면 무기한)">
+      <Field label="종료 예정일" hint="비워 두면 무기한입니다.">
         <Input
           type="date"
           value={to}

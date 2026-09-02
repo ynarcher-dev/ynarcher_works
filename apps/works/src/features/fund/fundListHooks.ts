@@ -125,13 +125,25 @@ export function formatEok(won: number): string {
 }
 
 /**
- * 원(₩) 정수 → "n백만원" 표기(소수점 없음, 반올림).
- * 펀드 금액 4종(약정총액·실출자금액·집행액·잔액)의 목록 표기 단위다 — 억 단위로는
- * 소액 집행이 `0.01억`처럼 뭉개져 자릿수를 비교할 수 없다.
+ * 원(₩) 정수 → 백만원 단위 수치(소수점 없음, 반올림). **단위 글자는 붙이지 않는다.**
+ *
+ * 펀드 금액 4종(약정총액·실출자금액·집행액·잔액)의 목록 표기 단위다 — 억 단위로는 소액 집행이
+ * `0.01억`처럼 뭉개져 자릿수를 비교할 수 없다.
+ *
+ * 2026-09-01에 값에서 '백만원' 세 글자를 뺐다(구 `formatMillion`). 단위는 표 전체에 한 번만
+ * 있으면 되는 정보인데 값에 붙이면 **행 수 × 금액 열 수**만큼 반복되어 열 폭을 먹고, 숫자 뒤에
+ * 글자가 붙어 자릿수를 세로로 견주는 일도 어긋난다. 단위가 서는 자리는 표의 `caption`이다
+ * (`MILLION_UNIT_NOTE`).
  */
-export function formatMillion(won: number): string {
-  return `${Math.round(won / 1_000_000).toLocaleString()}백만원`
+export function amountInMillions(won: number): string {
+  return Math.round(won / 1_000_000).toLocaleString()
 }
+
+/**
+ * 백만원 단위 표에 붙이는 단서. 표마다 문구가 갈리지 않도록 한 곳에서 소유한다.
+ * 자리는 표 테두리 **안**, 머리글 줄 위 오른쪽이다 — 표만 잘라 캡처해도 단위가 함께 따라온다.
+ */
+export const MILLION_UNIT_NOTE = '단위: 백만원'
 
 /** 원(₩) 정수 → 천단위 콤마 + "원" 표기(전액 표기). */
 export function formatWon(won: number): string {
@@ -149,15 +161,8 @@ export function fundPeriod(start: string | null, end: string | null): string | n
   return `${fundDate(start) ?? '?'} ~ ${fundDate(end) ?? '?'}`
 }
 
-/**
- * 존속기간을 시작·종료 두 줄로(목록용). 둘 다 없으면 null.
- * 목록의 열 폭에서는 한 줄 표기가 임의의 지점에서 접혀 날짜가 반토막 나므로,
- * 접히는 자리를 표기 쪽에서 시작/종료 경계로 못박는다.
- */
-export function fundPeriodLines(start: string | null, end: string | null): [string, string] | null {
-  if (!start && !end) return null
-  return [fundDate(start) ?? '?', fundDate(end) ?? '?']
-}
+// 존속기간의 두 줄 표기(구 `fundPeriodLines`)는 공용 `PeriodCell`(`type: 'period'`)로 승격했다.
+// 기간을 자르지 않고 접는다는 규칙은 펀드만의 사정이 아니라 기간 열 전부의 사정이다.
 
 /**
  * 인력 목록을 표시명으로. full=true(상세)면 전원 나열, 아니면 목록 공용 규격("대표 1명 외 N").

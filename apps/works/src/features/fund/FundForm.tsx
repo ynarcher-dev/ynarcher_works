@@ -242,11 +242,12 @@ export function FundForm({ fundId, initial, onCancel, onDone }: FundFormProps) {
           <PanelCard title="인력 배정">
             <FundStaffingFields value={staff} onChange={setStaff} />
           </PanelCard>
-          <PanelCard title="목적관리">
-            <p className="mb-3 text-body-sm text-gray-500">
-              주목적·특수목적(각 N개)에 약정총액 대비 달성 기준선(%)을 둡니다. 투자 등록 시 부합 여부를
-              체크하고, 어디에도 부합하지 않는 투자는 일반으로 집계됩니다.
-            </p>
+          <PanelCard
+            title="목적관리"
+            help={
+              '주목적·특수목적(각 N개)에 약정총액 대비 달성 기준선(%)을 둡니다.\n투자 등록 시 부합 여부를 체크하고, 어디에도 부합하지 않는 투자는 일반으로 집계됩니다.\n\n비율은 목적별 독립 달성 기준선이며 서로 합산되지 않습니다.'
+            }
+          >
             <FundPurposeFields value={purposes} onChange={setPurposes_} />
           </PanelCard>
         </div>

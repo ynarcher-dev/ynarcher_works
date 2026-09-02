@@ -1,4 +1,4 @@
-import { Avatar, Checkbox, Input } from '@ynarcher/ui'
+import { Avatar, Checkbox, Input, Tooltip, tooltipScale } from '@ynarcher/ui'
 import { useMemo, useState } from 'react'
 import type { OrgEditing } from '@/features/management/orgEditHooks'
 
@@ -27,9 +27,13 @@ export function DeptMemberPicker({ editing, deptId }: DeptMemberPickerProps) {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-caption text-gray-600">
-          이 조직 소속 <span className="font-semibold text-gray-800">{assigned.length}명</span> · 체크로
-          배치하고 해제로 미배치로 되돌립니다.
+        <p className="flex items-center text-caption text-gray-600">
+          이 조직 소속 <span className="font-semibold text-gray-800">{assigned.length}명</span>
+          <Tooltip
+            label="소속 인력"
+            content="체크로 배치하고, 해제로 미배치로 되돌립니다."
+            className={tooltipScale.gap}
+          />
         </p>
         <Input
           placeholder="임직원 이름 검색"

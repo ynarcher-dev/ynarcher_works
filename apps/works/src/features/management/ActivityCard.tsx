@@ -1,4 +1,4 @@
-import { DataTable, EmptyValue, PanelCard, type Column } from '@ynarcher/ui'
+import { DataTable, EmptyValue, PanelCard, type Column, type ColumnType } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { hasWorkspaceRead, useAuthStore } from '@/auth/authStore'
@@ -11,12 +11,17 @@ import { usePaged } from '@ynarcher/ui'
  */
 export interface ActivityColumn<T> {
   header: string
-  /** 우측 정렬(숫자). 날짜·기간은 좌측에 두고 nowrap만 준다. */
-  align?: 'right'
+  /**
+   * 열의 종류. 폭·정렬·수치서식·줄바꿈을 한 번에 정한다(공용 `DataTable`의 `ColumnType`).
+   *
+   * 2026-09-01에 열었다. 그전에는 이 카드가 종류를 스스로 지어냈고(식별 열은 `name`, 우측 정렬은
+   * `count`, 나머지는 전부 `text`), 그래서 기간이 짧은 라벨 폭에, 금액이 건수 폭에 담겼다 —
+   * `2026-08-01 ~ 2026-`, `50,000...`처럼 **끝이 잘려 뜻이 달라진 값**이 그 결과다.
+   * 무엇이 담기는지는 열을 적는 쪽만 아는 사실이므로 그 판단을 여기서 대신하지 않는다.
+   */
+  type: ColumnType
   /** 행을 식별하는 열 — 행마다 하나만. 없으면 모든 열이 같은 무게로 읽힌다. */
   primary?: boolean
-  /** 셀 추가 클래스(폭·줄바꿈 제어). */
-  className?: string
   render: (row: T) => ReactNode
 }
 
@@ -37,6 +42,8 @@ interface ActivityCardProps<T> {
   rowTo: (row: T) => string
   /** 이동 대상 워크스페이스. 읽기 권한이 없으면 행을 클릭 불가로 둔다. */
   workspace: WorkspaceKey
+  /** 표 전체에 한 번만 적는 단서(금액 열의 단위 등). 표 테두리 안 머리글 위에 선다. */
+  caption?: ReactNode
   isLoading?: boolean
   emptyText: string
 }
@@ -58,6 +65,7 @@ export function ActivityCard<T>({
   rowKey,
   rowTo,
   workspace,
+  caption,
   isLoading,
   emptyText,
 }: ActivityCardProps<T>) {
@@ -77,10 +85,8 @@ export function ActivityCard<T>({
             columns={columns.map((c): Column<T> => ({
               key: c.header,
               header: c.header,
-              align: c.align ?? 'left',
               primary: c.primary,
-              type: c.align === 'right' ? 'count' : c.primary ? 'name' : 'text',
-              className: c.className,
+              type: c.type,
               render: c.render,
             }))}
             rows={pageItems}
@@ -88,6 +94,7 @@ export function ActivityCard<T>({
             numbered={false}
             standardColumns={false}
             layout="fixed"
+            caption={caption}
             onRowClick={canOpen ? (row) => navigate(rowTo(row)) : undefined}
             pagination={{
               page,

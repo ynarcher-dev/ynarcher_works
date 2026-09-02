@@ -1,4 +1,4 @@
-import { Button, Field, Input, Modal, useToast } from '@ynarcher/ui'
+import { Button, Field, Input, Modal, Tooltip, tooltipScale, useToast } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { FieldSchemaEditor } from '@/features/approval/FieldSchemaEditor'
 import type { ApprovalForm } from '@/features/approval/approvalApi'
@@ -164,13 +164,16 @@ export function ApprovalFormModal({
         </div>
 
         <section className="space-y-2 border-t border-gray-200 pt-4">
-          <div>
-            <h4 className="text-body font-semibold text-gray-900">양식 필드</h4>
-            <p className="text-caption text-gray-600">
-              금액은 금액 타입으로 받아야 집계됩니다. 표(TABLE) 안의 금액 열에 &lsquo;대표 금액&rsquo;을
-              지정하면 그 합계가 문서 금액이 되어 재무 집계로 이어집니다.
-            </p>
-          </div>
+          <h4 className="flex items-center text-body font-semibold text-gray-900">
+            양식 필드
+            <Tooltip
+              label="양식 필드"
+              content={
+                '금액은 금액 타입으로 받아야 집계됩니다.\n표(TABLE) 안의 금액 열에 ‘대표 금액’을 지정하면 그 합계가 문서 금액이 되어 재무 집계로 이어집니다.'
+              }
+              className={tooltipScale.gap}
+            />
+          </h4>
           <FieldSchemaEditor fields={fields} onChange={setFields} />
         </section>
       </div>

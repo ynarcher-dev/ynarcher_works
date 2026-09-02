@@ -1,4 +1,4 @@
-import { Badge, type BadgeTone, type Column } from '@ynarcher/ui'
+import { Badge, TagCell, type BadgeTone, type Column } from '@ynarcher/ui'
 import { Link } from 'react-router-dom'
 import { maskName } from '@/lib/mask'
 import {
@@ -161,20 +161,11 @@ export function buildPortfolioColumns({
   const industriesColumn: Column<Investment> = {
     key: 'industries',
     header: '업종',
-    type: 'long',
-    render: (r) =>
-      r.startup_industries.length ? (
-        // 표는 한 줄 유지(전체보기 가로 스크롤) — 배지도 줄바꿈 없이 나란히 둔다.
-        <span className="flex gap-1">
-          {r.startup_industries.map((ind) => (
-            <Badge key={ind} tone="info">
-              {ind}
-            </Badge>
-          ))}
-        </span>
-      ) : (
-        '-'
-      ),
+    // 값이 여러 개인 분류 태그는 목록에서 한 줄 텍스트로 적는다(2026-09-01) — 근거는 TagCell.
+    // 색을 상태에만 남기면 이 표에서 색이 붙은 것은 투자 상태뿐이 되어, 훑을 때 확인할 행이
+    // 색으로 바로 드러난다.
+    type: 'tags',
+    render: (r) => <TagCell items={r.startup_industries} />,
   }
 
   const investedAtColumn: Column<Investment> = {

@@ -19,6 +19,9 @@ export function DeletedDeptModal({ open, onClose, editing }: DeletedDeptModalPro
       onClose={onClose}
       size="md"
       title="삭제된 조직"
+      help={
+        '복원하면 하위 조직까지 함께 되살아납니다.\n다만 삭제 시 끊긴 인력 배치는 되돌아오지 않으므로, 복원 후 다시 배치해야 합니다.'
+      }
       footer={
         <Button variant="outline" onClick={onClose}>
           닫기
@@ -30,10 +33,6 @@ export function DeletedDeptModal({ open, onClose, editing }: DeletedDeptModalPro
       ) : (
         <div className="space-y-2">
           <DeletedDeptList nodes={editing.removed} onRestore={editing.restore} />
-          <p className="text-caption text-gray-600">
-            · 복원하면 하위 조직까지 함께 되살아납니다. 다만 삭제 시 끊긴 인력 배치는 되돌아오지
-            않으므로, 복원 후 다시 배치해야 합니다.
-          </p>
         </div>
       )}
     </Modal>

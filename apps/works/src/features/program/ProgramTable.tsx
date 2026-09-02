@@ -1,6 +1,7 @@
 import {
   Badge,
   DataTable,
+  TagCell,
   type Column,
   type DataTableProps,
 } from '@ynarcher/ui'
@@ -30,8 +31,8 @@ interface ProgramTableProps {
 
 /**
  * 프로그램 원장 공용 데이터 테이블(STARTUP StartupPoolTable과 동일 규격).
- * 컬럼: 체크박스·No.·사업명·코드·카테고리·주관·담당 부서·분야·상태·운영 시작일·운영 종료일·담당자.
- * 카테고리·주관은 워크스페이스가 그 축을 운용할 때만 선다(config 주입).
+ * 컬럼: 체크박스·No.·사업명·코드·카테고리·담당 부서·분야·상태·운영 시작일·운영 종료일·담당자.
+ * 카테고리는 워크스페이스가 그 축을 운용할 때만 선다(config 주입). 주관은 상세에만 둔다.
  * 비활성화(삭제)는 목록이 아니라 상세 페이지에서 수행하므로 관리 컬럼(showManageColumn=false)은 두지 않는다.
  */
 export function ProgramTable({
@@ -59,7 +60,8 @@ export function ProgramTable({
         // 사업코드(6자리 영숫자 난수). 목록에서는 다른 컬럼과 동일한 본문 텍스트로 노출한다.
         key: 'code',
         header: '코드',
-        type: 'text',
+        // 6자리 영숫자 난수라 길이의 상한이 정해져 있다 — 가변폭으로 두면 폭만 비운다.
+        type: 'code',
         render: (r) => r.code ?? <span className="text-gray-400">-</span>,
       },
       // 사업구분. 워크스페이스가 분류를 운용하지 않으면(categories 비어 있음) 컬럼 자체를 감춘다.
@@ -69,7 +71,8 @@ export function ProgramTable({
               // 다른 컬럼과 동일한 본문 텍스트로 노출한다.
               key: 'category',
               header: '카테고리',
-              type: 'text',
+              // 선택지가 정해진 값(공공·민간·매출·신규·기타)이라 두 글자에 고정폭이면 충분하다.
+              type: 'code',
               render: (r: Program) =>
                 r.category ? (
                   categoryLabel(config, r.category) ?? r.category
@@ -79,26 +82,9 @@ export function ProgramTable({
             } satisfies Column<Program>,
           ]
         : []),
-      // 주관(발주·주관 기관/기업). 운용하지 않는 워크스페이스에서는 열 자체를 감춘다 —
-      // M&A·PROJECT는 우리가 스스로 여는 일이라 영원히 '-'만 차는 칸이 된다.
-      // 자리는 사업구분 바로 뒤다. 둘 다 '이 사업이 어디서 왔고 무엇인가'를 가르는 축이라
-      // 우리 쪽 수행 주체(담당 부서·담당자)보다 앞에 모은다.
-      ...(config.hasHostOrganization
-        ? [
-            {
-              key: 'host_organization',
-              header: '주관',
-              // 기관명은 길이가 널뛰므로 가변 열로 두고 넘치면 말줄임한다.
-              type: 'text',
-              render: (r: Program) =>
-                r.host_organization ? (
-                  <span title={r.host_organization}>{r.host_organization}</span>
-                ) : (
-                  <span className="text-gray-400">-</span>
-                ),
-            } satisfies Column<Program>,
-          ]
-        : []),
+      // 주관(발주·주관 기관/기업)은 목록에 두지 않는다(2026-09-01) — AC에서만 값이 차는 열이라
+      // M&A·PROJECT에서는 영원히 비고, AC에서도 사업을 고르는 축이 아니라 고른 뒤 확인할 값이다.
+      // 상세(ProgramInfoCard)에 남기고, 목록에서 그 몫의 폭은 사업명·담당 부서·분야가 나눠 갖는다.
       {
         // 담당 부서: 메인 부서 한 곳만 경로로 적고 나머지는 '외 N'으로 접는다.
         // 경로가 길어지면 칸을 넓히지 않고 말줄임한다(넓히면 분야가 그만큼 사라진다).
@@ -118,28 +104,17 @@ export function ProgramTable({
       },
       {
         // 분야. 값이 여러 개인 태그라 스타트업 목록(StartupPoolTable)과 같은 규격으로 적는다 —
-        // 같은 태그 원장(industry_tags)을 읽는 두 열이 한쪽은 배지, 한쪽은 가운뎃점 텍스트면
-        // 같은 값을 두 화면이 다르게 부르는 것이 된다.
-        // 상태 배지와 층위가 겹치지 않는 이유는 톤이다 — 분야는 항상 중립(회색)이고
-        // 상태만 색을 갖는다. 색이 있는 배지가 행마다 하나라 '이 행의 상태'는 그대로 읽힌다.
-        // 최대 3개를 한 줄에 세울 수 있도록 이 표에서 가장 넓은 칸을 준다 — 접히면 그 행만
-        // 두 줄이 되어 표 전체의 행 높이가 들쭉날쭉해진다(줄바꿈 금지 · 넘치면 잘림).
+        // 같은 태그 원장(industry_tags)을 읽는 두 열이 서로 다르게 그려지면 같은 값을 두 화면이
+        // 다르게 부르는 것이 된다.
+        //
+        // 2026-09-01에 배지 나열에서 한 줄 텍스트(TagCell)로 되돌렸다. 이 주석은 원래 "StartupPool과
+        // 같은 규격"이라 적혀 있었지만 그 화면은 2026-08-20에 텍스트로 옮겨 갔고, 그 뒤로는 근거가
+        // 뒤집힌 채 배지만 남아 있었다. 배지 줄은 폭이 모자랄 때 배지 한 개의 중간에서 잘려
+        // 반쪽이 남는데, 그것은 압축이 아니라 화면이 깨진 것으로 읽힌다.
         key: 'industries',
         header: '분야',
-        type: 'long',
-        render: (r) => {
-          const list = programIndustries(r)
-          if (!list.length) return <span className="text-gray-400">-</span>
-          return (
-            <div className="flex gap-1" title={list.join(' · ')}>
-              {list.map((ind) => (
-                <Badge key={ind} tone="neutral">
-                  {ind}
-                </Badge>
-              ))}
-            </div>
-          )
-        },
+        type: 'tags',
+        render: (r) => <TagCell items={programIndustries(r)} />,
       },
       {
         key: 'status',

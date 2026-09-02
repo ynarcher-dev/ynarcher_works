@@ -1,4 +1,15 @@
-import { Button, CardShell, Input, PanelCard, Select, TagChip, TextArea, useToast } from '@ynarcher/ui'
+import {
+  Button,
+  CardShell,
+  Input,
+  PanelCard,
+  Select,
+  TagChip,
+  TextArea,
+  Tooltip,
+  tooltipScale,
+  useToast,
+} from '@ynarcher/ui'
 import { useState, type ChangeEvent, type ReactNode } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { FormTopBar } from '@/components/FormTopBar'
@@ -79,11 +90,14 @@ export interface StartupDetailFormValues {
 function Field({
   label,
   required,
+  hint,
   className,
   children,
 }: {
   label: string
   required?: boolean
+  /** 이 칸의 규칙. 라벨 옆 도움말(ⓘ) 말풍선으로 접힌다(공용 `Field`와 같은 규약). */
+  hint?: string
   className?: string
   children: ReactNode
 }) {
@@ -92,6 +106,7 @@ function Field({
       <p className="mb-1 text-body font-medium text-gray-800">
         {label}
         {required && <span className="text-brand"> *</span>}
+        {hint && <Tooltip label={label} content={hint} className={tooltipScale.gap} />}
       </p>
       {children}
     </div>
@@ -404,7 +419,11 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
               <Field label="사업자등록번호">
                 <Input {...register('biz_reg_no')} />
               </Field>
-              <Field label="분야" className="sm:col-span-2">
+              <Field
+                label="분야"
+                hint={`분야 관리 태그에서 최대 ${MAX_INDUSTRIES}개 선택합니다.`}
+                className="sm:col-span-2"
+              >
                 <div className="flex flex-wrap gap-1.5">
                   {(industryTags ?? []).map((tag) => {
                     const on = industries.includes(tag.name)
@@ -426,7 +445,6 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
                     </span>
                   )}
                 </div>
-                <p className="mt-1 text-caption text-gray-700">분야 관리 태그에서 최대 {MAX_INDUSTRIES}개 선택</p>
               </Field>
               {tagField('stage', 'investment_stage_tags', '단계')}
               <Field label="구분">
@@ -481,10 +499,12 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
 
           {/* 담당자·현황 카드(투자기업 전용, 읽기 전용): 지정·전환은 FUND 투자 집행에서 처리한다. */}
           {alreadyInvested && (
-            <PanelCard title="담당자 · 현황 (투자기업)">
-              <p className="mb-4 text-body text-gray-500">
-                투자기업의 딜메이커·관리현황은 FUND 투자 집행에서 지정·관리합니다. 이 화면에서는 조회만 됩니다.
-              </p>
+            <PanelCard
+              title="담당자 · 현황 (투자기업)"
+              help={
+                '투자기업의 딜메이커·관리현황은 FUND 투자 집행에서 지정·관리합니다.\n이 화면에서는 조회만 됩니다.'
+              }
+            >
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="딜메이커">
                   <div className="py-2 text-body text-gray-900">{leadName || '-'}</div>

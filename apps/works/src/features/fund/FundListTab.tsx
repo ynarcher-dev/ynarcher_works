@@ -60,9 +60,13 @@ export function FundListTab({ mineUserId }: FundListTabProps) {
       />
 
       <ListToolbar
+        // 필터 축이 일곱(다중선택 5 + 존속기간 + 잔액 범위)이라 works에서 가장 빠듯한 툴바다 —
+        // 검색창을 한 단 좁혀 등록·업로드 액션이 아랫줄로 밀리지 않게 한다.
+        dense
         keyword={keyword}
         onKeywordChange={setKeyword}
-        searchPlaceholder="펀드명·펀드코드·대표펀드매니저 검색"
+        // '펀드코드'의 '펀드'는 앞의 '펀드명'이 이미 말했다.
+        searchPlaceholder="펀드명·코드·대표펀드매니저 검색"
         filters={<FundListFilters filters={filters} onChange={setFilters} />}
         actions={
           <ListActions

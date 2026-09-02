@@ -101,6 +101,9 @@ export function ApprovalFieldsForm({ fields, values, onChange }: ApprovalFieldsF
             as={field.type === 'RICHTEXT' ? 'div' : 'label'}
             label={field.label}
             required={field.required}
+            // 숫자를 적은 동안 이 자리는 설명이 아니라 '이렇게 저장됩니다'의 되읽기다.
+            // 되읽기를 호버 뒤로 접으면 확인하려고 띄운 값을 확인할 수 없다.
+            hintInline={parsed !== null}
             hint={hint}
           >
             <ScalarInput field={field} value={raw} onChange={(v) => set(field.key, v)} />

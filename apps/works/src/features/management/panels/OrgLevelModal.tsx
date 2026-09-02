@@ -26,6 +26,9 @@ export function OrgLevelModal({ open, onClose, editing }: OrgLevelModalProps) {
       onClose={close}
       size="lg"
       title="조직 레벨"
+      help={
+        '오른쪽으로 갈수록 하위 계층이고, 세로로 쌓인 것은 같은 계층의 병렬 레벨(본부·실 같은 볼륨)입니다.\n\n조직 레벨은 이 버전에만 적용되는 스냅샷입니다. 예정 버전에서의 변경은 발효 전까지 현재 조직·인사에 영향을 주지 않습니다.'
+      }
       footer={<Button onClick={close}>완료</Button>}
     >
       <div className="space-y-2">
@@ -39,14 +42,6 @@ export function OrgLevelModal({ open, onClose, editing }: OrgLevelModalProps) {
           onSave={() => void editing.save()}
           onCancel={editing.cancel}
         />
-        <p className="text-caption text-gray-600">
-          · 오른쪽으로 갈수록 하위 계층이고, 세로로 쌓인 것은 같은 계층의 병렬 레벨(본부·실 같은
-          볼륨)입니다.
-        </p>
-        <p className="text-caption text-gray-600">
-          · 조직 레벨은 이 버전에만 적용되는 스냅샷입니다. 예정 버전에서의 변경은 발효 전까지 현재
-          조직·인사에 영향을 주지 않습니다.
-        </p>
       </div>
     </Modal>
   )

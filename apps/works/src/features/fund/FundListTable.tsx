@@ -1,4 +1,11 @@
-import { Badge, DataTable, EmptyValue, type Column, type DataTableProps } from '@ynarcher/ui'
+import {
+  Badge,
+  DataTable,
+  EmptyValue,
+  PeriodCell,
+  type Column,
+  type DataTableProps,
+} from '@ynarcher/ui'
 import { useMemo } from 'react'
 import {
   FUND_CHARACTER_LABEL,
@@ -6,10 +13,9 @@ import {
   FUND_STATUS_TONE,
   FUND_STRATEGY_LABEL,
   FUND_TYPE_LABEL,
-  formatMillion,
+  MILLION_UNIT_NOTE,
+  amountInMillions,
   fundManagerLabel,
-  fundOperatorLabel,
-  fundPeriodLines,
   fundStatusLabel,
   type FundListRow,
 } from '@/features/fund/fundListHooks'
@@ -28,7 +34,7 @@ const dash = <EmptyValue />
 
 /**
  * 펀드(조합) 목록 데이터 테이블. STARTUP 풀 테이블 골격 재사용.
- * 컬럼: 펀드명·재원·성격·유형·상태·존속기간·약정총액·실출자금액·집행액·잔액·대표펀드매니저·운용인력·관리인력.
+ * 컬럼: 펀드명·코드·재원·성격·구분·펀드유형·상태·존속기간·약정총액·실출자금액·집행액·잔액·관리인력.
  * 생성자(created_by) 컬럼은 두지 않는다 — 관리 주체는 배정 인력이며 생성자는 상세 페이지에만 남긴다.
  */
 export function FundListTable({
@@ -39,7 +45,7 @@ export function FundListTable({
   onSelectionChange,
   pagination,
 }: FundListTableProps) {
-  // 대표펀드매니저·운용인력·관리자는 모두 내부 임직원이라 민감정보 마스킹 대상이 아니다.
+  // 관리인력은 내부 임직원이라 민감정보 마스킹 대상이 아니다.
   const columns = useMemo<Column<FundListRow>[]>(
     () => [
       // 폭·정렬·수치서식은 열마다의 종류(type)가 정한다 — 수동 w-* 폭을 적지 않는다(2026-08 디자인 리프레시).
@@ -49,7 +55,9 @@ export function FundListTable({
         // 워크스페이스가 달라도 값이 겹치지 않는다. 목록에서는 본문 텍스트로 노출한다.
         key: 'code',
         header: '코드',
-        type: 'text',
+        // 펀드코드는 자릿수가 정해진 식별자라 고정폭이다. 이 다섯 열(코드·재원·성격·구분·펀드유형)이
+        // 가변폭이던 동안 값은 모두 5자 이하인데 남는 폭의 절반을 가져갔다(2026-09-01 정정).
+        type: 'code',
         render: (f) => f.code ?? dash,
       },
       // 재원·성격·구분·펀드유형은 펀드를 서술하는 고정 속성이라 본문 텍스트로 적는다.
@@ -57,27 +65,27 @@ export function FundListTable({
       {
         key: 'source_type',
         header: '재원',
-        type: 'text',
+        type: 'code',
         render: (f) => (f.source_type ? (FUND_SOURCE_LABEL[f.source_type] ?? f.source_type) : dash),
       },
       {
         key: 'character_type',
         header: '성격',
-        type: 'text',
+        type: 'code',
         render: (f) =>
           f.character_type ? (FUND_CHARACTER_LABEL[f.character_type] ?? f.character_type) : dash,
       },
       {
         key: 'strategy_type',
         header: '구분',
-        type: 'text',
+        type: 'code',
         render: (f) =>
           f.strategy_type ? (FUND_STRATEGY_LABEL[f.strategy_type] ?? f.strategy_type) : dash,
       },
       {
         key: 'fund_type',
         header: '펀드유형',
-        type: 'text',
+        type: 'code',
         render: (f) => (f.fund_type ? (FUND_TYPE_LABEL[f.fund_type] ?? f.fund_type) : dash),
       },
       {
@@ -87,60 +95,44 @@ export function FundListTable({
         render: (f) => <Badge tone={FUND_STATUS_TONE[f.status] ?? 'neutral'}>{fundStatusLabel(f.status)}</Badge>,
       },
       {
-        // 존속기간은 항상 시작/종료 두 줄로 적는다 — 한 줄로 두면 열 폭에 따라 날짜 중간에서 접힌다.
+        // 기간 열 공용 규격(type: 'period' + PeriodCell) — 시작/종료를 한 줄에 적고, 날짜 중간에서
+        // 접히지 않도록 폭은 종류가 23자에 맞춰 잡는다(2026-09-02 두 줄 표기에서 전환).
         key: 'term',
         header: '존속기간',
-        type: 'date',
-        render: (f) => {
-          const lines = fundPeriodLines(f.term_start, f.term_end)
-          if (!lines) return dash
-          return (
-            // 물결(~)은 첫 줄 끝에 붙인다 — 기간이라는 사실이 두 번째 줄을 읽기 전에 드러난다.
-            <div className="whitespace-nowrap leading-snug tabular-nums">
-              <div>{lines[0]} ~</div>
-              <div>{lines[1]}</div>
-            </div>
-          )
-        },
+        type: 'period',
+        render: (f) => <PeriodCell start={f.term_start} end={f.term_end} />,
       },
       {
         key: 'total_commitment',
         header: '약정총액',
         type: 'money',
-        render: (f) => formatMillion(f.total_commitment),
+        render: (f) => amountInMillions(f.total_commitment),
       },
       {
         key: 'paid_in_amount',
         header: '실출자금액',
         type: 'money',
-        render: (f) => (f.paid_in_amount == null ? dash : formatMillion(f.paid_in_amount)),
+        render: (f) => (f.paid_in_amount == null ? dash : amountInMillions(f.paid_in_amount)),
       },
       {
         key: 'drawn_amount',
         header: '집행액',
         type: 'money',
-        render: (f) => formatMillion(f.drawn_amount),
+        render: (f) => amountInMillions(f.drawn_amount),
       },
       {
         key: 'balance',
         header: '잔액',
         type: 'money',
-        render: (f) => formatMillion(f.total_commitment - f.drawn_amount),
+        render: (f) => amountInMillions(f.total_commitment - f.drawn_amount),
       },
       {
-        key: 'manager',
-        header: '대표펀드매니저',
-        type: 'person',
-        render: (f) => f.manager?.name || dash,
-      },
-      {
-        key: 'operators',
-        header: '운용인력',
-        type: 'person',
-        render: (f) => fundOperatorLabel(f.operators) ?? dash,
-      },
-      {
-        // 관리인력(role=ADMIN)은 조합 행정·보고·사후관리 축이라 운용인력과 별개 열로 세운다.
+        // 인력 세 축(대표펀드매니저·운용인력·관리인력) 중 목록에는 관리인력만 세운다
+        // (2026-09-02 사용자 지정). 목록에서 인력 열이 답할 물음은 "이 펀드를 지금 누구에게
+        // 물어야 하는가" 하나이고, 그 창구는 조합 행정·보고·사후관리를 맡는 관리인력이다.
+        // 대표펀드매니저·운용인력은 상세에서 읽어도 되는 값인데 목록에서 사람 이름 열 셋을
+        // 나란히 세우느라(`외 N`까지 붙어) 금액 네 열이 그만큼 좁아져 있었다.
+        // 대표펀드매니저는 열이 없어도 검색어가 답한다(툴바 placeholder 참조).
         key: 'admins',
         header: '관리인력',
         type: 'person',
@@ -160,12 +152,15 @@ export function FundListTable({
       selectedKeys={selectedKeys}
       onSelectionChange={onSelectionChange}
       pagination={pagination}
-      // 인력 3열까지 붙어 가로가 빠듯하다. 열 폭은 내용에 맞추되(자동 레이아웃) 셀 여백만 좁힌다 —
+      // 금액 4열의 단위. 값마다 '백만원'을 붙이면 행 수 × 4번 반복되어 열 폭을 먹으므로
+      // 표 전체에 한 번만 적는다(자리는 표 테두리 안, 머리글 줄 위).
+      caption={MILLION_UNIT_NOTE}
+      // 금액만 네 열이라 가로가 빠듯하다. 열 폭은 내용에 맞추되(자동 레이아웃) 셀 여백만 좁힌다 —
       // 존속기간·금액처럼 끝이 잘리면 뜻이 달라지는 값이 있어 말줄임(fixed)을 쓰지 않는다.
       dense
       showManageColumn={false}
       // 생성자(created_by)를 '관리자'로 재라벨해 노출하던 우측 표준 컬럼을 내린다 — 관리 주체는
-      // 생성자가 아니라 배정된 인력이고, 그 답은 대표펀드매니저·운용인력 컬럼이 이미 하고 있다.
+      // 생성자가 아니라 배정된 인력이고, 그 답은 관리인력 컬럼이 이미 하고 있다.
       showAuthor={false}
       emptyText={emptyText ?? '등록된 펀드가 없습니다.'}
     />

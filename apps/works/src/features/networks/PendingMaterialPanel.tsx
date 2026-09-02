@@ -23,7 +23,11 @@ export function PendingMaterialPanel({
   const list = pending.files(slot)
 
   return (
-    <DetailPanelCard title={title} count={list.length}>
+    <DetailPanelCard
+      title={title}
+      count={list.length}
+      help="첨부한 자료는 등록을 저장할 때 함께 업로드됩니다."
+    >
       <MaterialDropZone onFiles={(files) => pending.add(slot, files)} />
 
       <div className="mt-3">
@@ -56,9 +60,6 @@ export function PendingMaterialPanel({
         ) : (
           <p className="text-body text-gray-600">첨부한 자료가 없습니다.</p>
         )}
-        <p className={`mt-2 ${tableText.meta}`}>
-          첨부한 자료는 등록을 저장할 때 함께 업로드됩니다.
-        </p>
       </div>
     </DetailPanelCard>
   )

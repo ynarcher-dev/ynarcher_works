@@ -37,6 +37,7 @@ export function useEditReasonPrompt() {
       open={resolver !== null}
       onClose={() => settle(null)}
       title="수정 사유"
+      help={'무엇을 왜 바꿨는지 30자 이내로 입력하세요.\n변동 이력에 그대로 기록됩니다.'}
       size="sm"
       footer={
         <>
@@ -50,9 +51,6 @@ export function useEditReasonPrompt() {
       }
     >
       <div className="space-y-2">
-        <p className="text-caption text-gray-600">
-          무엇을 왜 바꿨는지 30자 이내로 입력하세요. 변동 이력에 그대로 기록됩니다.
-        </p>
         <Input
           autoFocus
           value={reason}

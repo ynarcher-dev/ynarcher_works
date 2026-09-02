@@ -191,7 +191,9 @@ export function RecruitmentSettingsPanel({
       {/* 1. 기본 세팅 */}
       <Card
         title="기본 세팅"
-        subtitle="공개 상태·배포 URL·랜딩 제목·포스터를 설정합니다. 최초 저장 시 공개 URL이 생성됩니다."
+        help={
+          '공개 상태·배포 URL·랜딩 제목·포스터를 설정합니다.\n최초 저장 시 공개 URL이 생성됩니다.'
+        }
       >
         <div className="space-y-5">
           <Field label="공개 상태">
@@ -210,7 +212,7 @@ export function RecruitmentSettingsPanel({
 
           <Field
             label="모집 기간"
-            hint="(공개 모집중일 때 이 기간에만 자동으로 열립니다 · 비우면 무기한)"
+            hint="공개 모집중일 때 이 기간에만 자동으로 열립니다. 비우면 무기한입니다."
           >
             <div className="flex flex-wrap items-center gap-2">
               <input
@@ -272,7 +274,7 @@ export function RecruitmentSettingsPanel({
             />
           </Field>
 
-          <Field label="포스터 이미지" hint="(JPG·PNG·WEBP · 최대 5MB)">
+          <Field label="포스터 이미지" hint="JPG·PNG·WEBP · 최대 5MB.">
             <div className="flex items-start gap-4">
               <div className="grid h-40 w-32 shrink-0 place-items-center overflow-hidden rounded-radius-md border border-gray-200 bg-gray-25">
                 {poster ? (
@@ -304,13 +306,15 @@ export function RecruitmentSettingsPanel({
       {/* 2. 안내 설정 */}
       <Card
         title="안내 설정"
-        subtitle="공개 신청 페이지에 노출될 안내 문구를 구성합니다. 섹션은 자유롭게 추가·정렬할 수 있습니다."
+        help={
+          '공개 신청 페이지에 노출될 안내 문구를 구성합니다.\n섹션은 자유롭게 추가·정렬할 수 있습니다.'
+        }
       >
         <div className="space-y-5">
           <GuideBuilder sections={sections} onChange={setSections} />
 
           <div className="space-y-5 border-t border-gray-100 pt-5">
-            <Field label="문의처" hint="(선택 · 공개 페이지 하단 노출)" htmlFor="lp-contact">
+            <Field label="문의처" hint="선택 입력입니다. 공개 페이지 하단에 노출됩니다." htmlFor="lp-contact">
               <TextArea
                 id="lp-contact"
                 rows={2}
@@ -326,13 +330,13 @@ export function RecruitmentSettingsPanel({
       {/* 3. 신청 설정 */}
       <Card
         title="신청 설정"
-        subtitle="지원자가 작성할 신청 항목과 개인정보 동의 문구를 구성합니다."
+        help="지원자가 작성할 신청 항목과 개인정보 동의 문구를 구성합니다."
         actions={<Badge tone="neutral">{`항목 ${fields.length}`}</Badge>}
       >
         <div className="space-y-5">
           <Field
             label="개인정보 수집·이용 동의 문구"
-            hint="(동의 체크 영역에 노출)"
+            hint="동의 체크 영역에 노출됩니다."
             htmlFor="lp-privacy"
           >
             <TextArea

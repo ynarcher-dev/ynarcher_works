@@ -1,4 +1,4 @@
-import { BackButton, Badge, Banner, Button, Spinner } from '@ynarcher/ui'
+import { BackButton, Banner, Button, Spinner } from '@ynarcher/ui'
 import { useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { DetailDeleteButton } from '@/components/DetailDeleteButton'
@@ -21,7 +21,6 @@ import { PostPanel } from '@/features/program/panels/PostPanel'
 import { RecruitmentPanel } from '@/features/program/panels/RecruitmentPanel'
 import { TimelinePanel } from '@/features/program/panels/TimelinePanel'
 import { useProgram } from '@/features/program/hooks'
-import { PROGRAM_STATUS_LABEL, PROGRAM_STATUS_TONE } from '@/features/program/config'
 import { useProgramWorkspace } from '@/features/program/workspace'
 
 // 참가자/전문가(참가자)는 개요 좌측 서브 탭에서 렌더하므로 전체 화면 라우팅 대상이 아니다.
@@ -55,22 +54,6 @@ const TAB_KEYS = new Set<string>([
   'link',
   'file',
 ])
-
-/** 운영(개요 외) 화면의 상단 라벨. 뒤로가기 헤더 제목에 사용한다. */
-const PANEL_LABEL: Record<Exclude<Tab, 'overview'>, string> = {
-  recruitment: '모집',
-  docreview: '서면평가',
-  onsite: '대면평가',
-  orientation: 'OT/세션',
-  mentoring: '멘토링',
-  matching: '매칭',
-  demoday: '데모데이',
-  timeline: '타임라인',
-  outcomes: '성과/KPI',
-  post: '글쓰기',
-  link: 'URL첨부',
-  file: '파일첨부',
-}
 
 /**
  * 프로그램 상세: NETWORKS·STARTUP 상세와 동일한 카드섹션 구조.
@@ -139,22 +122,13 @@ export function ProgramDetailPage() {
       ) : (
         <>
           {/*
-            글쓰기는 헤더를 자기가 들고 있다 — 뒤로가기와 수정이 한 줄에 서야 하고,
-            모듈명·사업 상태는 본문을 읽는 데 필요한 정보가 아니다(모듈명은 이미 글의 제목이다).
+            운영 화면의 머리는 **뒤로가기 하나**다(2026-09-01 사용자 지정).
+            모듈명은 방금 누르고 들어온 카드가 이미 말했고, 여기 서던 배지는 모듈 상태가 아니라
+            **사업 상태**('미선정' 등)라서 이 화면에서 하는 일과 무관한 사실을 답하고 있었다.
+            사업 상태는 개요가 답하는 자리다. 글쓰기는 종전대로 헤더를 자기가 들고 있다 —
+            뒤로가기와 수정이 한 줄에 서야 한다.
           */}
-          {tab !== 'post' && (
-            <div className="flex items-center justify-between gap-3">
-              <BackButton onClick={backToOverview} />
-              <div className="flex items-center gap-2">
-                <span className="text-body font-semibold text-gray-900">
-                  {openMod?.title?.trim() || PANEL_LABEL[tab]}
-                </span>
-                <Badge tone={PROGRAM_STATUS_TONE[program.status] ?? 'neutral'}>
-                  {PROGRAM_STATUS_LABEL[program.status] ?? program.status}
-                </Badge>
-              </div>
-            </div>
-          )}
+          {tab !== 'post' && <BackButton onClick={backToOverview} />}
 
           {/* 프로그램 단위 화면(집계·타임라인)은 programId, 인스턴스 단위 운영 화면은 moduleId로 렌더한다. */}
           {tab === 'timeline' && <TimelinePanel programId={id} />}

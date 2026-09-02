@@ -58,6 +58,11 @@ export function BoardFormModal({
       open={open}
       onClose={onClose}
       title={editing ? `${kindLabel} 수정` : '게시판·자료실 생성'}
+      help={
+        editing
+          ? '이름과 아이콘 변경은 OFFICE 사이드바와 페이지 제목에 즉시 반영됩니다.'
+          : `생성 시 즉시 활성화되어 OFFICE 사이드바의 ${kindLabel} 그룹에 선택한 아이콘으로 노출됩니다.\n공지사항은 게시판이 아니라 각 게시판의 전체 공지 글을 모아 보여주는 메뉴이므로 별도로 생성하지 않습니다.`
+      }
       footer={
         <>
           <Button variant="outline" onClick={onClose}>
@@ -146,11 +151,6 @@ export function BoardFormModal({
           </div>
         </div>
 
-        <p className="text-caption text-gray-600">
-          {editing
-            ? '이름과 아이콘 변경은 OFFICE 사이드바와 페이지 제목에 즉시 반영됩니다.'
-            : `생성 시 즉시 활성화되어 OFFICE 사이드바의 ${kindLabel} 그룹에 선택한 아이콘으로 노출됩니다. 공지사항은 게시판이 아니라 각 게시판의 전체 공지 글을 모아 보여주는 메뉴이므로 별도로 생성하지 않습니다.`}
-        </p>
       </div>
     </Modal>
   )

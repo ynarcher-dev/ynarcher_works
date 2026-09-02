@@ -1,4 +1,13 @@
-import { Button, Card, DataTable, ListToolbar, MultiSelectFilter, Spinner, useToast } from '@ynarcher/ui'
+import {
+  Button,
+  Card,
+  DataTable,
+  ListToolbar,
+  MultiSelectFilter,
+  Spinner,
+  usePaged,
+  useToast,
+} from '@ynarcher/ui'
 import { useMemo, useState } from 'react'
 import { useAuthStore } from '@/auth/authStore'
 import { participantContentKey } from '@/features/admin/sensitiveContents'
@@ -75,6 +84,12 @@ export function ParticipantPool({ program }: { program: Program }) {
     () => rows.filter((r) => (roles.length === 0 || roles.includes(r.role)) && matches(r, keyword)),
     [rows, roles, keyword],
   )
+
+  // 명부는 사업이 굴러갈수록 길어지는 목록이라 페이저를 단다. 카드 안이므로 번호줄이 아니라
+  // 미니 페이저(compact)이며, 이는 형제 탭의 관련 목록이 쓰는 것과 같은 규격이다.
+  // 선택(selected)은 페이지를 넘겨도 유지된다 — 일괄 처리는 화면에 보이는 행이 아니라 고른 행이
+  // 대상이고, 페이지를 넘겼다는 이유로 방금 고른 건이 빠지면 그것이 더 놀라운 동작이다.
+  const { pageItems, page, setPage } = usePaged(filtered, 10)
 
   const columns = useMemo(
     () => participantColumns(masked, program.status),
@@ -180,13 +195,14 @@ export function ParticipantPool({ program }: { program: Program }) {
 
           <DataTable
             columns={columns}
-            rows={filtered}
+            rows={pageItems}
             rowKey={(r) => r.id}
             selectable={canOpenDoor}
             selectedKeys={selected}
             onSelectionChange={setSelected}
             // 조회 실패와 빈 명부는 다른 사실이다 — 한 문장으로 뭉뚱그리면 원인을 짚을 수 없다.
             emptyText={isError ? '명부를 불러오지 못했습니다.' : '명부가 비어 있습니다.'}
+            pagination={{ page, pageSize: 10, total: filtered.length, onChange: setPage, compact: true }}
           />
         </div>
       </Card>

@@ -1,4 +1,14 @@
-import { Badge, Banner, Button, cn, Modal, Select, useToast } from '@ynarcher/ui'
+import {
+  Badge,
+  Banner,
+  Button,
+  cn,
+  Modal,
+  Select,
+  Tooltip,
+  tooltipScale,
+  useToast,
+} from '@ynarcher/ui'
 import { useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState, type DragEvent } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -250,9 +260,16 @@ export function BulkUploadPanel() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-body text-gray-600">
-          CSV를 올리면 각 행의 <b>구분</b>에 맞춰 등록됩니다. 기존 인물과 같으면 <b>합치기</b>로
-          이력을 이어붙이고, 구분을 바꾸면 그 네트워크로 재분류됩니다.
+        {/* 무엇을 하는 화면인지는 남기고, 중복·재분류가 어떻게 처리되는지의 규칙만 접는다. */}
+        <p className="flex items-center text-body text-gray-600">
+          CSV를 올리면 각 행의 <b className="mx-1">구분</b>에 맞춰 등록됩니다.
+          <Tooltip
+            label="CSV 업로드 규칙"
+            content={
+              '기존 인물과 같으면 합치기로 이력을 이어붙입니다.\n구분을 바꾸면 그 네트워크로 재분류됩니다.'
+            }
+            className={tooltipScale.gap}
+          />
         </p>
         <Button variant="outline" onClick={() => downloadCsv('네트워크_업로드_템플릿.csv', buildTemplateCsv())}>
           템플릿 다운로드

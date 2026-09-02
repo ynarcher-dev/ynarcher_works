@@ -2,6 +2,8 @@ import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '../utils/cn'
 import { DensityProvider } from '../density'
+import { tooltipScale } from '../densityScale'
+import { Tooltip } from './Tooltip'
 
 export type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl'
 
@@ -18,6 +20,14 @@ export interface ModalProps {
   open: boolean
   onClose: () => void
   title?: ReactNode
+  /**
+   * 이 모달에서 하는 일의 규칙·파급 효과. 제목 옆 도움말(ⓘ) 말풍선으로 접힌다.
+   *
+   * 본문 맨 위나 맨 아래에 안내 문단으로 깔려 있던 자리다(2026-09-01). 모달은 본문이 곧
+   * 작업 영역이라 안내 문단이 그 앞에 서면, 열자마자 읽어야 할 것이 입력 칸이 아니라 설명이
+   * 된다. 다만 **막힌 이유·되돌릴 수 없음 경고**는 접지 않고 본문에 그대로 둔다.
+   */
+  help?: ReactNode
   size?: ModalSize
   children: ReactNode
   footer?: ReactNode
@@ -39,6 +49,7 @@ export function Modal({
   open,
   onClose,
   title,
+  help,
   size = 'md',
   children,
   footer,
@@ -67,7 +78,16 @@ export function Modal({
       >
         {title && (
           <header className="shrink-0 border-b border-gray-200 bg-gray-25/70 px-5 py-3.5">
-            <h2 className="text-title-sm font-medium text-gray-900">{title}</h2>
+            <h2 className="flex items-center text-title-sm font-medium text-gray-900">
+              {title}
+              {help && (
+                <Tooltip
+                  content={help}
+                  label={typeof title === 'string' ? title : undefined}
+                  className={cn('shrink-0', tooltipScale.gap)}
+                />
+              )}
+            </h2>
           </header>
         )}
         <div className="flex-1 overflow-y-auto px-5 py-4 text-body text-gray-800">

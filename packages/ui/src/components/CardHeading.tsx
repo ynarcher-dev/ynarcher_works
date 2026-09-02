@@ -1,6 +1,7 @@
 import type { ElementType, ReactNode } from 'react'
 import { cn } from '../utils/cn'
 import { cardText } from '../densityScale'
+import { Tooltip } from './Tooltip'
 
 export interface CardHeadingProps {
   /** 제목 본문. */
@@ -16,6 +17,15 @@ export interface CardHeadingProps {
   level?: 'title' | 'subhead'
   /** 렌더할 태그. 생략하면 단계를 따른다(title → `h2`, subhead → `h3`). */
   as?: ElementType
+  /**
+   * 이 카드·섹션이 무엇을 다루는지, 여기서 한 일이 어디에 반영되는지에 대한 설명.
+   * 제목 옆 도움말(ⓘ) 말풍선으로 선다.
+   *
+   * 제목 아래로 펼치던 부제(`Card`의 `subtitle`)를 대체한다(2026-09-01). 부제는 카드가 세로로
+   * 쌓일수록 제목 사이 간격을 벌려, 화면에 무슨 카드들이 있는지 훑는 일을 방해했다. 다만
+   * **값을 말하는 부제**(`문서 3건 · 기준 …`)는 설명이 아니라 데이터이므로 `subtitle`에 남긴다.
+   */
+  help?: ReactNode
   /** 건수 뒤에 붙는 보조 한 줄('최근 20건까지 표시' 등). */
   trailing?: ReactNode
   /** 제목 줄 전체에 붙일 클래스(아래 divider·여백 등). */
@@ -41,6 +51,7 @@ export function CardHeading({
   count,
   level = 'title',
   as,
+  help,
   trailing,
   className,
   titleClassName,
@@ -64,6 +75,13 @@ export function CardHeading({
         <span className={cn('shrink-0', cardText.count, count === 0 && 'text-gray-400')}>
           [{count}]
         </span>
+      )}
+      {help && (
+        <Tooltip
+          content={help}
+          label={typeof children === 'string' ? children : undefined}
+          className="shrink-0"
+        />
       )}
       {trailing}
     </Comp>

@@ -1,4 +1,14 @@
-import { Badge, Banner, Button, cn, Modal, Select, useToast } from '@ynarcher/ui'
+import {
+  Badge,
+  Banner,
+  Button,
+  cn,
+  Modal,
+  Select,
+  Tooltip,
+  tooltipScale,
+  useToast,
+} from '@ynarcher/ui'
 import { useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState, type DragEvent } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -224,9 +234,15 @@ export function GlobalBulkUploadPanel() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-body text-gray-600">
-          CSV를 올리면 <b>글로벌 네트워크</b>로 등록됩니다. 기존 인물과 같으면 <b>합치기</b>로 이력을
-          이어붙이고, 권역·국가는 이름으로 적으면 태그로 매칭됩니다(못 찾으면 비워 둡니다).
+        <p className="flex items-center text-body text-gray-600">
+          CSV를 올리면 <b className="mx-1">글로벌 네트워크</b>로 등록됩니다.
+          <Tooltip
+            label="CSV 업로드 규칙"
+            content={
+              '기존 인물과 같으면 합치기로 이력을 이어붙입니다.\n권역·국가는 이름으로 적으면 태그로 매칭되며, 못 찾으면 비워 둡니다.'
+            }
+            className={tooltipScale.gap}
+          />
         </p>
         <Button variant="outline" onClick={() => downloadCsv('글로벌네트워크_업로드_템플릿.csv', buildGlobalTemplateCsv())}>
           템플릿 다운로드

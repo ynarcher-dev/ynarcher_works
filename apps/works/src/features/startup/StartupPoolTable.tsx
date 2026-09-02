@@ -1,4 +1,4 @@
-import { DataTable, type Column, type DataTableProps } from '@ynarcher/ui'
+import { DataTable, TagCell, type Column, type DataTableProps } from '@ynarcher/ui'
 import { useMemo } from 'react'
 import { maskName } from '@/lib/mask'
 import { memberSummary } from '@/lib/memberLabel'
@@ -124,38 +124,29 @@ export function StartupPoolTable({
         // 소재지는 시·도 태그명 한 덩어리(짧고 값이 항상 하나)라 폭이 널뛰는 분야 열 앞에 둔다.
         key: 'location',
         header: '소재지',
-        type: 'text',
+        // 시·도 태그명 한 덩어리라 길이의 상한이 정해져 있다.
+        type: 'code',
         render: (r) => r.location || <span className="text-gray-400">-</span>,
       },
       {
-        // 분야는 값이 최대 3개 이어지는 가변 폭 열이라 badge(한 개 고정폭)가 아니라 long이다.
-        // 배지가 아니라 한 줄 텍스트다(2026-08-20) — 배지는 그 자체가 강세라 값이 여러 개인
-        // 열에서는 색 덩어리가 줄마다 다른 길이로 서고, 개수에 따라 줄 높이가 흔들린다.
-        // 색은 상태에만 쓰고 분류는 텍스트로 둔다는 규칙과도 같은 방향이다.
+        // 값이 여러 개인 분류 태그라 전용 종류 tags다 — 폭과 정렬은 종류가, 표기(한 줄 텍스트·
+        // 상한 초과 '외 N'·전체 값 title)는 TagCell이 갖는다. 배지를 쓰지 않는 근거는 그 주석에 있다.
         key: 'industry',
         header: '분야',
-        type: 'long',
-        render: (r) => {
-          const inds = readIndustries(r).slice(0, 3)
-          if (inds.length === 0) return <span className="text-gray-400">-</span>
-          const text = inds.join(', ')
-          return (
-            <span className="block truncate" title={text}>
-              {text}
-            </span>
-          )
-        },
+        type: 'tags',
+        render: (r) => <TagCell items={readIndustries(r)} />,
       },
       {
         key: 'stage',
         header: '단계',
-        type: 'text',
+        type: 'code',
         render: (r) => r.stage || <span className="text-gray-400">-</span>,
       },
       {
         key: 'management_status',
         header: '구분',
-        type: 'text',
+        // 발굴·보육·투자·기타 네 값 중 하나다.
+        type: 'code',
         render: (r) =>
           managementStatusLabel(r.management_status) || <span className="text-gray-400">-</span>,
       },

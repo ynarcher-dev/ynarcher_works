@@ -257,7 +257,7 @@ export function NetworkForm({
                   <p className="mt-1 text-caption text-danger">{errors.name.message}</p>
                 )}
               </Field>
-              <Field label="구분" hint="(선택한 네트워크로 저장됩니다)">
+              <Field label="구분" hint="선택한 네트워크로 저장됩니다.">
                 <Select {...register('category')}>
                   {CATEGORY_OPTIONS.map((o) => (
                     <option key={o.key} value={o.label}>
@@ -291,7 +291,7 @@ export function NetworkForm({
               )}
               {!compact && (
                 <div className="sm:col-span-2">
-                  <Field label="전문 영역" hint={`(영역 관리 태그에서 최대 ${MAX_FIELDS}개)`}>
+                  <Field label="전문 영역" hint={`영역 관리 태그에서 최대 ${MAX_FIELDS}개 선택합니다.`}>
                     <div className="flex flex-wrap gap-1.5">
                       {(fieldTags ?? []).map((t) => {
                         const on = fields.includes(t.name)

@@ -64,6 +64,9 @@ export function AssetImportModal({ open, onClose, branches }: AssetImportModalPr
       open={open}
       onClose={onClose}
       title="자산 대용량 업로드"
+      help={
+        '템플릿의 열 순서대로 CSV를 붙여 넣거나 파일을 선택하세요.\n지사·관리자·할당 대상은 이름으로 적고, 분류·상태·결제주기는 화면에서 쓰는 말(구매 · 보유 · 월 구독)을 그대로 적으면 됩니다.\n빈 칸은 기본값(구매 · 보유 · 완납 · 반출 불가)으로 들어가며, 만료일은 상태가 폐기면 폐기일자로 저장됩니다.'
+      }
       size="lg"
       footer={
         <>
@@ -84,13 +87,6 @@ export function AssetImportModal({ open, onClose, branches }: AssetImportModalPr
       }
     >
       <div className="space-y-3">
-        <p className="text-body text-gray-600">
-          템플릿의 열 순서대로 CSV를 붙여 넣거나 파일을 선택하세요. 지사·관리자·할당 대상은{' '}
-          <b>이름</b>으로 적고, 분류·상태·결제주기는 화면에서 쓰는 말(구매 · 보유 · 월 구독)을
-          그대로 적으면 됩니다. 빈 칸은 기본값(구매 · 보유 · 완납 · 반출 불가)으로 들어갑니다.
-          만료일은 상태가 <b>폐기</b>면 폐기일자로 저장됩니다.
-        </p>
-
         <input
           type="file"
           accept=".csv,text/csv"

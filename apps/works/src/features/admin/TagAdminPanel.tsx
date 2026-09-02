@@ -6,6 +6,8 @@ import {
   Select,
   Spinner,
   Tabs,
+  Tooltip,
+  tooltipScale,
   useToast,
   type Column,
 } from '@ynarcher/ui'
@@ -259,7 +261,18 @@ export function TagAdminPanel({ config }: TagAdminPanelProps) {
       ? [
           {
             key: 'mode',
-            header: '표기 방식',
+            header: (
+              <>
+                표기 방식
+                <Tooltip
+                  label="표기 방식"
+                  content={
+                    '임직원 이름 옆 호칭을 정하는 값입니다.\n직급과 직책 설정이 부딪히면 직급이 이깁니다.'
+                  }
+                  className={tooltipScale.gap}
+                />
+              </>
+            ),
             // 드롭다운이 들어가는 가변 열 — long 규격의 몫을 받는다.
             type: 'long' as const,
             render: (t: Tag) => (
@@ -375,12 +388,6 @@ export function TagAdminPanel({ config }: TagAdminPanelProps) {
           />
         )}
 
-        {/* 두 원장의 설정이 부딪힐 때 어느 쪽이 이기는지는 화면에서 읽히지 않는다 — 적어 둔다. */}
-        {modes && (
-          <p className="text-caption text-gray-600">
-            임직원 이름 옆 호칭을 정하는 값입니다. 직급과 직책 설정이 부딪히면 직급이 이깁니다.
-          </p>
-        )}
       </div>
 
       <TagEditModal

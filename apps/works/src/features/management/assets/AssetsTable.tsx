@@ -85,14 +85,15 @@ export function AssetsTable({
     {
       key: 'acquisitionType',
       header: '분류',
-      type: 'text',
+      // 구매·리스·렌탈·기타 네 값. 선택지가 정해진 값은 고정폭으로 세운다.
+      type: 'code',
       render: (a) => ACQUISITION_LABELS[a.acquisitionType],
     },
     // 상태는 네 값이 대등한 분류라 배지로 칠하지 않는다(색을 입히면 없는 위계가 생긴다).
     {
       key: 'status',
       header: '상태',
-      type: 'text',
+      type: 'code',
       render: (a) => ASSET_LABELS[a.status],
     },
     // 관리자와 할당은 이웃한 두 열이다 — 맡은 사람과 쓰는 사람이 한눈에 갈려야 한다.
@@ -117,7 +118,7 @@ export function AssetsTable({
     {
       key: 'billingCycle',
       header: '결제 주기',
-      type: 'text',
+      type: 'code',
       render: (a) => BILLING_LABELS[a.billingCycle],
     },
     {

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from '../utils/cn'
+import { Tooltip } from '../components/Tooltip'
 
 export interface PageHeaderProps {
   /** 
@@ -15,8 +16,13 @@ export interface PageHeaderProps {
   search?: ReactNode
   /** 액션 버튼 영역 */
   actions?: ReactNode
-  /** 타이틀 하단의 부가 설명 */
+  /**
+   * 타이틀 하단의 부가 설명. **화면 자체가 읽을거리인 문서형 페이지**(스타일 가이드 등)에만 쓴다.
+   * 이 화면에서 무엇을 어떻게 해야 하는지에 대한 안내는 `help`(제목 옆 말풍선)로 접는다.
+   */
   description?: ReactNode
+  /** 이 화면의 규칙·주의사항. 제목 옆 도움말(ⓘ) 말풍선으로 접힌다. */
+  help?: ReactNode
   /**
    * 헤더와 본문을 가르는 하단 구분선. **기본 노출**이며, 모든 화면이
    * `메뉴명 → 구분선 → 콘텐츠` 구조를 갖도록 강제하기 위한 것이다.
@@ -37,6 +43,7 @@ export function PageHeader({
   back,
   title,
   titleExtra,
+  help,
   search,
   actions,
   description,
@@ -63,6 +70,13 @@ export function PageHeader({
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-title-lg font-bold text-gray-900">{title}</h1>
+            {help && (
+              <Tooltip
+                content={help}
+                label={typeof title === 'string' ? title : undefined}
+                className="shrink-0"
+              />
+            )}
             {titleExtra}
           </div>
           {/*

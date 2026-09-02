@@ -8,6 +8,8 @@ export interface PanelCardProps {
   /** 제목 옆 건수(미지정 시 숨김). `[3]` 말머리 형태로 렌더한다. */
   count?: number
   /** 헤더 우측 액션(‘전체 보기 →’·아이콘 버튼 등). */
+  /** 이 패널이 무엇을 다루는지에 대한 설명. 제목 옆 도움말(ⓘ) 말풍선으로 접힌다. */
+  help?: ReactNode
   action?: ReactNode
   className?: string
   bodyClassName?: string
@@ -21,6 +23,7 @@ export interface PanelCardProps {
 export function PanelCard({
   title,
   count,
+  help,
   action,
   className,
   bodyClassName,
@@ -29,7 +32,9 @@ export function PanelCard({
   return (
     <CardShell className={className}>
       <div className="mb-3 flex items-center justify-between gap-2">
-        <CardHeading count={count}>{title}</CardHeading>
+        <CardHeading count={count} help={help}>
+          {title}
+        </CardHeading>
         {action}
       </div>
       <div className={cn(bodyClassName)}>{children}</div>

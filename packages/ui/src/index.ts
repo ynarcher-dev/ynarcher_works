@@ -20,6 +20,9 @@ export type { Density } from './density'
 // 일이 없다 — 화면이 쓰는 자리는 밀도 맥락을 내려받지 못하는 수제 목록뿐이고 그것들은 전부
 // 카드 안에 있다. 자리별 두 벌이 필요한 곳은 `DataTable` 내부이며 그 스케일은 닫아 둔다.
 export { cardText, tableText, formText } from './densityScale'
+// 툴팁 규격 — 안내 문구가 사는 자리의 값. 말풍선은 `Tooltip`이 그리므로 화면이 쓰는 것은
+// 도움말 표식을 자기 트리거로 감쌀 때의 간격(`gap`)뿐이다.
+export { tooltipScale } from './densityScale'
 // 단 전체(`tableTextScale`)는 2026-08-26에 열었다. 전자결재 문서는 카드 안에 들었지만 카드가
 // 말하는 주제의 **부속이 아니라 그 자체가 읽을거리**(종이 결재 양식)라 카드 단(12px)이 아닌
 // 페이지 단(14px)을 쓴다. 다만 화면이 단을 직접 고르면 자리마다 크기가 갈리므로, 고르는 일은
@@ -83,6 +86,12 @@ export type { DashedAddButtonProps } from './components/DashedAddButton'
 // 데이터 테이블
 export { DataTable } from './components/DataTable'
 export type { Column, ColumnType, DataTableProps, DataTableMeta } from './components/DataTable'
+// 셀 규격 — 종류(`ColumnType`)가 폭을 정하고, 그 폭 안에서 값을 어떻게 세우는지는 이 둘이 정한다.
+// 화면이 두 줄 접기나 태그 나열을 직접 조립하면 표마다 규격이 갈린다.
+export { PeriodCell } from './components/PeriodCell'
+export type { PeriodCellProps } from './components/PeriodCell'
+export { TagCell } from './components/TagCell'
+export type { TagCellProps } from './components/TagCell'
 export { pinMark } from './components/pinMark'
 export { Pagination } from './components/Pagination'
 

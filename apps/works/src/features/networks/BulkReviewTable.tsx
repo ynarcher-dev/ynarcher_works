@@ -5,6 +5,8 @@ import {
   DataTable,
   EmptyValue,
   Select,
+  Tooltip,
+  tooltipScale,
   type BadgeTone,
   type Column,
 } from '@ynarcher/ui'
@@ -160,9 +162,13 @@ export function BulkReviewTable({
     {
       key: 'dup',
       header: (
-        <span className="whitespace-nowrap">
-          중복 여부{' '}
-          <span className="font-normal normal-case text-gray-600">(이름·전화·이메일 중 2개 이상 일치)</span>
+        <span className="flex items-center whitespace-nowrap">
+          중복 여부
+          <Tooltip
+            label="중복 여부"
+            content="이름·전화·이메일 중 2개 이상 일치하면 중복으로 봅니다."
+            className={tooltipScale.gap}
+          />
         </span>
       ),
       // 왼쪽은 좁혀(pl-1) 구분 열에 붙이고, 오른쪽은 키워(pr-8) 주황 '중복' 뱃지가 결정 열에 붙지 않게 한다.

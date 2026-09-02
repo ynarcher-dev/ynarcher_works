@@ -1,4 +1,4 @@
-import { Input, SettingRow, Switch } from '@ynarcher/ui'
+import { Input, SettingRow, Switch, Tooltip, tooltipScale } from '@ynarcher/ui'
 import { WeekdayPicker } from '@/components/WeekdayPicker'
 import type { AttendancePolicyInput } from '@/features/management/attendance/attendanceConfigApi'
 import { workMinutesText } from '@/features/management/attendance/attendanceModel'
@@ -23,7 +23,14 @@ export function AttendancePolicyFields({ value, onChange }: Props) {
   return (
     <div className="space-y-4">
       <div className="space-y-1">
-        <span className="text-caption text-gray-600">출근 가능 시간</span>
+        <span className="text-caption text-gray-600">
+          출근 가능 시간
+          <Tooltip
+            label="출근 가능 시간"
+            content={`뒤 시각(${value.checkInTo.slice(0, 5)})을 넘겨 찍으면 지각으로 판정합니다.`}
+            className={tooltipScale.gap}
+          />
+        </span>
         <div className="flex items-center gap-2">
           <Input
             type="time"
@@ -39,13 +46,17 @@ export function AttendancePolicyFields({ value, onChange }: Props) {
             onChange={(e) => set('checkInTo', e.target.value)}
           />
         </div>
-        <p className="text-caption text-gray-500">
-          뒤 시각({value.checkInTo.slice(0, 5)})을 넘겨 찍으면 지각으로 판정합니다.
-        </p>
       </div>
 
       <div className="space-y-1">
-        <span className="text-caption text-gray-600">소정 근무시간</span>
+        <span className="text-caption text-gray-600">
+          소정 근무시간
+          <Tooltip
+            label="소정 근무시간"
+            content={`퇴근 가능 시각 = 출근 시각 + ${workMinutesText(value.workMinutes)}.\n그 전에 퇴근하면 조기퇴근으로 판정합니다.`}
+            className={tooltipScale.gap}
+          />
+        </span>
         <div className="flex items-center gap-2">
           <Input
             type="number"
@@ -61,10 +72,6 @@ export function AttendancePolicyFields({ value, onChange }: Props) {
           />
           <span className="text-body text-gray-500">시간</span>
         </div>
-        <p className="text-caption text-gray-500">
-          퇴근 가능 시각 = 출근 시각 + {workMinutesText(value.workMinutes)}. 그 전에 퇴근하면
-          조기퇴근으로 판정합니다.
-        </p>
       </div>
 
       <div className="space-y-1">
@@ -89,16 +96,20 @@ export function AttendancePolicyFields({ value, onChange }: Props) {
       />
 
       <div className="space-y-1">
-        <span className="text-caption text-gray-600">적용 시작일</span>
+        <span className="text-caption text-gray-600">
+          적용 시작일
+          <Tooltip
+            label="적용 시작일"
+            content={'이 날짜부터 적용됩니다.\n이전 날짜의 판정은 그때의 기준을 그대로 유지합니다.'}
+            className={tooltipScale.gap}
+          />
+        </span>
         <Input
           type="date"
           className="w-44"
           value={value.effectiveFrom}
           onChange={(e) => set('effectiveFrom', e.target.value)}
         />
-        <p className="text-caption text-gray-500">
-          이 날짜부터 적용됩니다. 이전 날짜의 판정은 그때의 기준을 그대로 유지합니다.
-        </p>
       </div>
     </div>
   )

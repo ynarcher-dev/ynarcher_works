@@ -27,6 +27,9 @@ export function HrReflectPreview({ open, onClose, levels, nodes, employees }: Hr
       onClose={onClose}
       size="lg"
       title="인사관리 반영 미리보기"
+      help={
+        '조직 레벨 정의가 그대로 인사관리 컬럼이 됩니다.\n레벨을 추가하거나 이름을 바꾸면 아래 컬럼도 바뀝니다.'
+      }
       footer={
         <Button variant="outline" onClick={onClose}>
           닫기
@@ -34,9 +37,6 @@ export function HrReflectPreview({ open, onClose, levels, nodes, employees }: Hr
       }
     >
       <div className="space-y-2">
-        <p className="text-caption text-gray-600">
-          조직 레벨 정의가 그대로 인사관리 컬럼이 됩니다. 레벨을 추가/이름변경하면 아래 컬럼도 바뀝니다.
-        </p>
         <div className="max-h-96 overflow-auto rounded-radius-md border border-gray-200">
           <table className="w-full border-collapse text-caption">
             <thead className="sticky top-0 bg-gray-50 text-gray-600">

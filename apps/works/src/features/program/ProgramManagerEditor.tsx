@@ -163,7 +163,7 @@ export function ProgramManagerEditor({
           placeholder={
             scope.size === 0
               ? '먼저 위에서 부서 구성을 지정하세요'
-              : '담당자 검색 후 추가 (같은 사람을 다시 추가하면 구간이 늘어납니다)'
+              : '담당자 검색 후 추가'
           }
           className="relative z-dropdown"
         />

@@ -230,7 +230,7 @@ export function OrgReformPage() {
 
       <Card
         title="조직 개편"
-        subtitle={
+        help={
           draft
             ? '설계 내용은 초안 버전에 저장되어, 페이지를 나갔다 돌아와도 이어서 편집할 수 있습니다.'
             : '현재 조직 구조를 복제해 새 조직을 설계합니다. 시작일·종료 예정일을 정하고 설계를 시작하세요.'
@@ -280,7 +280,7 @@ export function OrgReformPage() {
       {draft && (
         <Card
           title="새 조직 구조"
-          subtitle="왼쪽에서 조직을 만들고 이름·레벨을 정하고, 오른쪽에서 그 조직에 인력을 배치합니다."
+          help="왼쪽에서 조직을 만들고 이름·레벨을 정하고, 오른쪽에서 그 조직에 인력을 배치합니다."
         >
           <OrgReformStructure
             ref={editorRef}

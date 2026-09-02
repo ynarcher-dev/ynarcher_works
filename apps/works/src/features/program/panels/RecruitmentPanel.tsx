@@ -13,7 +13,9 @@ export function RecruitmentPanel({ programId, moduleId }: { programId: string; m
 
       <Card
         title="신청 현황"
-        subtitle="공개 랜딩페이지로 접수된 신청 기업입니다. 행을 열어 응답·첨부서류를 확인하고, 선발 기업은 계정을 발급합니다."
+        help={
+          '공개 랜딩페이지로 접수된 신청 기업입니다.\n행을 열어 응답·첨부서류를 확인하고, 선발 기업은 계정을 발급합니다.'
+        }
       >
         <SubmissionsPanel moduleId={moduleId} />
       </Card>

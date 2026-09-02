@@ -112,13 +112,13 @@ export function EmployeeDirectory({
       key: 'position',
       header: '직책',
       render: (r) => str(r.profile?.position) || DASH,
-      type: 'text',
+      type: 'code',
     },
     {
       key: 'rank',
       header: '직급',
       render: (r) => str(r.profile?.rank) || DASH,
-      type: 'text',
+      type: 'code',
     },
     // 호봉은 인사 관리 맥락에서만 쓰는 처우 정보다 — OFFICE 임직원 정보에서는 컬럼째 빼둔다.
     ...(showPayStep
@@ -135,7 +135,9 @@ export function EmployeeDirectory({
       key: 'email',
       header: '이메일',
       render: (r) => r.email ?? '-',
-      type: 'text',
+      // 회사 메일은 25~30자라 짧은 라벨 폭으로는 늘 모자랐다. 직책·직급이 고정폭으로 내려간
+      // 몫이 이 열로 온다.
+      type: 'long',
     },
     {
       key: 'phone',

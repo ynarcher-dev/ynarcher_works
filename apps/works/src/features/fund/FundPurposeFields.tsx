@@ -90,9 +90,6 @@ export function FundPurposeFields({
         onAdd={() => add('SPECIAL')}
       />
 
-      <p className="border-t border-gray-100 pt-3 text-body-sm text-gray-500">
-        비율은 목적별 <b className="text-gray-700">독립 달성 기준선</b>입니다(약정총액 대비, 서로 합산되지 않음).
-      </p>
     </div>
   )
 }

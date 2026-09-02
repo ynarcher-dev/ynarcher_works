@@ -152,13 +152,10 @@ export function BulkImportPage({ spec }: { spec: BulkImportSpec }) {
         }
       />
 
-      <PageHeader title={`${spec.noun} 대용량 업로드`} />
-
-      <p className="text-body text-gray-600">{spec.guide}</p>
+      <PageHeader title={`${spec.noun} 대용량 업로드`} help={spec.guide} />
 
       {spec.assignment && (
-        <PanelCard title={spec.assignment.title}>
-          <p className="mb-3 text-body-sm text-gray-500">{spec.assignment.hint}</p>
+        <PanelCard title={spec.assignment.title} help={spec.assignment.hint}>
           {spec.assignment.render(assignValue, setAssignValue)}
         </PanelCard>
       )}

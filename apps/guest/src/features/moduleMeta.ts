@@ -61,3 +61,22 @@ export const MODULE_GUEST_NOTICE: Record<string, string> = {
 export function moduleNotice(moduleType: string, memo: string | undefined): string | null {
   return memo ?? MODULE_GUEST_NOTICE[moduleType] ?? null
 }
+
+/**
+ * 내용이 열리지 않는 상태 — 준비(DRAFT)와 취소(CANCELLED).
+ *
+ * 메뉴 줄은 사이드바에 그대로 서고 배지가 '준비'·'취소'라 말하지만 **몸통은 열지 않는다.**
+ * 아직 확정되지 않은 자료나 없던 일이 된 자료를 참여자가 먼저 받아 가면, 나중에 바뀐
+ * 내용과 어긋난 채로 일이 진행된다. 완료(CLOSED)는 닫지 않는다 — 끝난 메뉴의 자료를
+ * 되돌아보는 것은 정당한 용도다.
+ *
+ * 판정은 화면 혼자 하지 않는다 — RLS의 `app.guest_open_module_ids()`가 같은 규칙으로
+ * 글·링크·파일·매칭·멘토링을 내주지 않는다. 여기 있는 것은 그 사실을 참여자에게 말해 주는
+ * 안내일 뿐이며, 이 함수를 고칠 때는 그 함수도 함께 고쳐야 한다.
+ */
+const LOCKED_MODULE_STATUS = ['DRAFT', 'CANCELLED']
+
+/** 이 메뉴는 머리(이름·안내·기간)만 서고 몸통은 잠긴다. */
+export function isModuleLocked(status: string | null | undefined): boolean {
+  return LOCKED_MODULE_STATUS.includes(status ?? 'DRAFT')
+}

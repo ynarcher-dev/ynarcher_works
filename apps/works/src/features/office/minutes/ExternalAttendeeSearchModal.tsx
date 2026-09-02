@@ -1,4 +1,14 @@
-import { Button, cn, formText, Input, Modal, Select, Spinner, useToast } from '@ynarcher/ui'
+import {
+  Button,
+  cn,
+  Input,
+  Modal,
+  Select,
+  Spinner,
+  Tooltip,
+  tooltipScale,
+  useToast,
+} from '@ynarcher/ui'
 import { Check } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { CATEGORY_OPTIONS, ENTITIES, type EntityKey } from '@/features/networks/config'
@@ -178,7 +188,14 @@ export function ExternalAttendeeSearchModal({
 
         {/* 간이 등록: 검색해도 없을 때 이름·소속·구분만 받아 원장에 만들고 곧바로 추가 */}
         <section className="space-y-2 border-t border-gray-200 pt-4">
-          <p className="text-body-sm font-medium text-gray-700">없나요? 간이 등록 후 바로 추가</p>
+          <p className="flex items-center text-body-sm font-medium text-gray-700">
+            없나요? 간이 등록 후 바로 추가
+            <Tooltip
+              label="간이 등록"
+              content="선택한 구분의 networks 원장에 새 인물로 등록되고, 회의록 참석자 명단에도 함께 담깁니다."
+              className={tooltipScale.gap}
+            />
+          </p>
           <div className="flex flex-wrap items-start gap-2">
             <div className="w-40">
               <Input
@@ -213,9 +230,6 @@ export function ExternalAttendeeSearchModal({
               {create.isPending ? '등록 중…' : '등록 후 추가'}
             </Button>
           </div>
-          <p className={formText.hint}>
-            선택한 구분의 networks 원장에 새 인물로 등록되고, 회의록 참석자 명단에도 함께 담깁니다.
-          </p>
         </section>
       </div>
     </Modal>

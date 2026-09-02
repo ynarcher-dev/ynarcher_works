@@ -1,6 +1,8 @@
 import {
   Checkbox,
   Input,
+  Tooltip,
+  tooltipScale,
   Select,
   SettingRow,
   Switch,
@@ -167,9 +169,11 @@ export function AssetFormFields({
         label={
           <>
             중요
-            <span className="text-caption text-gray-500">
-              목록에서 자산명 순을 건너뛰고 맨 위에 고정합니다(번호 대신 📌).
-            </span>
+            <Tooltip
+              label="중요"
+              content="목록에서 자산명 순을 건너뛰고 맨 위에 고정합니다(번호 대신 📌)."
+              className={tooltipScale.gap}
+            />
           </>
         }
       />

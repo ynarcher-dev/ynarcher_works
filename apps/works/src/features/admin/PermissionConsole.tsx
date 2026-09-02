@@ -1,4 +1,4 @@
-import { CardShell, Select, Spinner, Switch, useToast } from '@ynarcher/ui'
+import { CardShell, Select, Spinner, Switch, Tooltip, tooltipScale, useToast } from '@ynarcher/ui'
 import { useMemo, useState } from 'react'
 import {
   ROLES,
@@ -61,7 +61,16 @@ export function PermissionConsole() {
         // 행이 스스로 좌우 여백을 갖는 표형 카드라 셸의 안쪽 여백은 걷는다.
         <CardShell className="overflow-hidden p-0">
           <div className="grid grid-cols-[1fr_auto_auto] items-center border-b border-gray-100 bg-gray-50 px-4 py-2 text-caption font-semibold text-gray-600">
-            <span>워크스페이스</span>
+            <span className="flex items-center">
+              워크스페이스
+              <Tooltip
+                label="권한 토글"
+                content={
+                  '토글 즉시 해당 역할 사용자의 세션 권한과 GNB 노출이 갱신됩니다.\n쓰기를 켜면 읽기가 자동 부여되며, 최고 관리자의 ADMIN 권한은 해제할 수 없습니다.'
+                }
+                className={tooltipScale.gap}
+              />
+            </span>
             <span className="w-20 text-center">읽기</span>
             <span className="w-20 text-center">쓰기</span>
           </div>
@@ -96,10 +105,6 @@ export function PermissionConsole() {
           })}
         </CardShell>
       )}
-      <p className="text-caption text-gray-600">
-        토글 즉시 해당 역할 사용자 세션 권한과 GNB 노출이 갱신됩니다. 쓰기 활성 시 읽기가
-        자동 부여되며, 최고 관리자의 ADMIN 권한은 해제할 수 없습니다.
-      </p>
     </div>
   )
 }

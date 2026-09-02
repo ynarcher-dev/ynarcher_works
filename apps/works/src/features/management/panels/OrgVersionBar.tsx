@@ -1,4 +1,4 @@
-import { Button, Input, Modal, Select } from '@ynarcher/ui'
+import { Button, Input, Modal, Select, Tooltip, tooltipScale } from '@ynarcher/ui'
 import { CalendarX, CopyPlus } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type { OrgVersion } from '@/features/management/hooks'
@@ -190,6 +190,9 @@ export function OrgVersionBar({
         onClose={() => setOpen(false)}
         size="sm"
         title="새 조직 버전 복제"
+        help={
+          "시작일부터 이 조직도가 유효합니다.\n오늘 이하 시작일 중 가장 최근 버전이 '현재'가 됩니다."
+        }
         footer={
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setOpen(false)} disabled={busy}>
@@ -221,7 +224,14 @@ export function OrgVersionBar({
               />
             </label>
             <label className="block space-y-1">
-              <span className="text-caption font-semibold text-gray-600">종료일(비우면 무기한)</span>
+              <span className="text-caption font-semibold text-gray-600">
+                종료일
+                <Tooltip
+                  label="종료일"
+                  content="비워 두면 무기한입니다."
+                  className={tooltipScale.gap}
+                />
+              </span>
               <Input
                 type="date"
                 value={to}
@@ -231,9 +241,6 @@ export function OrgVersionBar({
             </label>
           </div>
           {error && <p className="text-caption text-danger">{error}</p>}
-          <p className="text-caption text-gray-600">
-            · 시작일부터 이 조직도가 유효합니다. 오늘 이하 시작일 중 가장 최근 버전이 '현재'가 됩니다.
-          </p>
         </div>
       </Modal>
 

@@ -1,4 +1,4 @@
-import { cn, useToast } from '@ynarcher/ui'
+import { cn, Tooltip, tooltipScale, useToast } from '@ynarcher/ui'
 import { ImagePlus, X } from 'lucide-react'
 import { type ChangeEvent, useState } from 'react'
 import { ASSET_PHOTO_MAX, ASSET_PHOTO_MAX_BYTES } from '@/features/management/config'
@@ -115,7 +115,12 @@ export function AssetPhotoPicker({ value, onChange, disabled }: AssetPhotoPicker
         )}
       </div>
       <p className="text-caption text-gray-500">
-        {value.length}/{ASSET_PHOTO_MAX}장 · 한 장당 5MB 이하. 목록은 저장을 눌러야 자산에 반영됩니다.
+        {value.length}/{ASSET_PHOTO_MAX}장
+        <Tooltip
+          label="사진"
+          content={'한 장당 5MB 이하입니다.\n목록은 저장을 눌러야 자산에 반영됩니다.'}
+          className={tooltipScale.gap}
+        />
       </p>
     </div>
   )

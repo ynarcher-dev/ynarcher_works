@@ -2,8 +2,6 @@ import {
   Button,
   DensityProvider,
   Field,
-  cn,
-  formText,
   Input,
   Modal,
   Select,
@@ -276,6 +274,8 @@ export function ProgramFormModal({
         */}
         <Field
           label="분야"
+          // 고를 태그가 없다는 말은 규칙이 아니라 '어디로 가서 무엇을 하라'는 지시다 — 접지 않는다.
+          hintInline={(industryTags ?? []).length === 0}
           hint={
             (industryTags ?? []).length === 0
               ? '등록된 분야 태그가 없습니다. (ADMIN › 분야 관리)'
@@ -305,19 +305,16 @@ export function ProgramFormModal({
           그대로 물려받으면 한 줄에 담당자·부서·역할·투입률·기간 여섯 칸이 서는 표에서 칸마다
           글자가 잘린다 — 화면에서 본 'MEMBEI'·'8C'가 그것이다.
         */}
+        {/*
+          설명이 라벨 노드 안에 끼어 있던 자리다. 라벨 줄에 규칙 한 문장이 같은 크기로 붙으면
+          '무엇을 묻는 칸인지'가 규칙에 밀리므로, 접어서 라벨 옆 ⓘ로 보낸다(2026-09-01).
+          그러면 필수 표식도 `required`가 붙이는 제자리(이름 바로 뒤)로 돌아온다.
+        */}
         <Field
           as="div"
-          label={
-            <>
-              배치 (부서 구성 + 담당자)
-              {/* 필수 표식은 이름 바로 뒤에 붙어야 한다 — Field의 `required`는 라벨 노드 끝에
-                  붙으므로 뒤에 설명이 딸린 라벨에서는 표식이 문장 끝으로 밀린다. */}
-              <span className={cn('ml-0.5', formText.required)}>*</span>{' '}
-              <span className="font-normal text-gray-600">
-                조직개편 경계마다 단계로 나눠 독립 설정 · 담당자 1명 이상 필수
-              </span>
-            </>
-          }
+          label="배치 (부서 구성 + 담당자)"
+          required
+          hint={'조직개편 경계마다 단계로 나눠 독립 설정합니다.\n담당자는 1명 이상이어야 합니다.'}
         >
           {(() => {
             const phases = computePhases(orgVersions ?? [], watch('start_date'), watch('end_date'))

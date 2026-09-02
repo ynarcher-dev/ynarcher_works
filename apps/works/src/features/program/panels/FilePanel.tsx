@@ -1,4 +1,4 @@
-import { Button, Card, Input, TextArea, useToast } from '@ynarcher/ui'
+import { Button, Card, Input, TextArea, Tooltip, tooltipScale, useToast } from '@ynarcher/ui'
 import { useRef, useState } from 'react'
 import { MaterialDropZone } from '@/features/networks/MaterialDropZone'
 import { MaterialList } from '@/features/networks/MaterialList'
@@ -46,6 +46,7 @@ export function FilePanel({
     <Card
       title="파일"
       count={materials.length}
+      help="여기에 올린 파일은 이 사업의 자료 관리에도 함께 표시됩니다."
       actions={
         editing ? undefined : (
           <Button variant="secondary" disabled={busy} onClick={() => openPicker.current?.()}>
@@ -82,9 +83,6 @@ export function FilePanel({
             pageSize={8}
             showDescription
           />
-          <p className="text-caption text-gray-600">
-            여기에 올린 파일은 이 사업의 자료 관리에도 함께 표시됩니다.
-          </p>
         </div>
       )}
     </Card>
@@ -125,16 +123,20 @@ function FileMetaForm({
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <label className="text-caption font-semibold text-gray-600">표시명</label>
+        <label className="text-caption font-semibold text-gray-600">
+          표시명
+          <Tooltip
+            label="표시명"
+            content={`비워 두면 파일명(${material.file_name})이 그대로 표시됩니다.`}
+            className={tooltipScale.gap}
+          />
+        </label>
         <Input
           autoFocus
           placeholder={material.file_name}
           value={label}
           onChange={(e) => setLabel(e.target.value)}
         />
-        <p className="text-caption text-gray-600">
-          비워 두면 파일명({material.file_name})이 그대로 표시됩니다.
-        </p>
       </div>
       <div className="space-y-1.5">
         <label className="text-caption font-semibold text-gray-600">설명</label>

@@ -1,4 +1,15 @@
-import { Badge, Button, Checkbox, Input, Modal, Select, TextArea, useToast } from '@ynarcher/ui'
+import {
+  Badge,
+  Button,
+  Checkbox,
+  Input,
+  Modal,
+  Select,
+  TextArea,
+  Tooltip,
+  tooltipScale,
+  useToast,
+} from '@ynarcher/ui'
 import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import {
@@ -175,6 +186,18 @@ export function ModuleFormModal({
   }
 
   const operationRange = allowedRanges.find((r) => r !== proposalRange) ?? null
+  // 허용 범위는 시작일·종료일 두 칸에 함께 걸리는 규칙이라 두 칸이 같은 문구를 나눠 갖는다.
+  // 한 칸에만 달면 다른 칸을 채우다 막힌 사람은 규칙이 어디 적혀 있는지 찾지 못한다.
+  const rangeHelp =
+    allowedRanges.length === 0
+      ? undefined
+      : '모듈 기간은 다음 범위 안에서만 설정할 수 있습니다.\n' +
+        [
+          proposalRange && `제안 ${periodLabel(proposalRange)}`,
+          operationRange && `운영 ${periodLabel(operationRange)}`,
+        ]
+          .filter(Boolean)
+          .join('\n')
   const Icon = MODULE_META[moduleType]?.icon
 
   return (
@@ -267,23 +290,17 @@ export function ModuleFormModal({
           <div>
             <label className="text-body font-medium text-gray-800" htmlFor="mod-start">
               시작일 <span className="text-brand">*</span>
+              <Tooltip label="시작일" content={rangeHelp} className={tooltipScale.gap} />
             </label>
             <Input id="mod-start" type="date" {...register('start_date')} />
           </div>
           <div>
             <label className="text-body font-medium text-gray-800" htmlFor="mod-end">
               종료일 <span className="text-brand">*</span>
+              <Tooltip label="종료일" content={rangeHelp} className={tooltipScale.gap} />
             </label>
             <Input id="mod-end" type="date" {...register('end_date')} />
           </div>
-          {allowedRanges.length > 0 && (
-            <p className="col-span-2 text-caption text-gray-600">
-              모듈 기간은 다음 범위 안에서만 설정할 수 있습니다 —{' '}
-              {proposalRange && <>제안 {periodLabel(proposalRange)}</>}
-              {proposalRange && operationRange && ' · '}
-              {operationRange && <>운영 {periodLabel(operationRange)}</>}
-            </p>
-          )}
         </div>
 
         <div>

@@ -9,10 +9,11 @@ import {
 import { useParams } from 'react-router-dom'
 import { GuestNoticeRail } from '@/app/GuestNoticeRail'
 import { useGuestModules, useModuleFiles, type GuestModule } from '@/features/moduleHooks'
-import { moduleNotice } from '@/features/moduleMeta'
+import { isModuleLocked, moduleNotice } from '@/features/moduleMeta'
 import { BookingModule } from '@/pages/modules/BookingModule'
 import { FileModule } from '@/pages/modules/FileModule'
 import { LinkModule } from '@/pages/modules/LinkModule'
+import { LockedModuleBody } from '@/pages/modules/LockedModuleBody'
 import { PostModule } from '@/pages/modules/PostModule'
 import { SatisfactionModule } from '@/pages/modules/SatisfactionModule'
 
@@ -49,6 +50,9 @@ export function ModulePage() {
 
   const settings = readModuleSettings(mod.settings)
   const notice = moduleNotice(mod.module_type, settings.memo)
+  // 준비·취소 메뉴는 머리만 세우고 몸통은 열지 않는다. 화면은 안내일 뿐이고 판정은
+  // RLS(app.guest_open_module_ids)가 하므로, 잠긴 동안에는 글·링크·파일을 부르지도 않는다.
+  const locked = isModuleLocked(mod.status)
 
   return (
     <div className="space-y-5">
@@ -75,18 +79,26 @@ export function ModulePage() {
           </>
         }
       />
-      <div className="lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:gap-6">
-        <div className="min-w-0">
-          <ModuleBody module={mod} />
+      {/* 글쓰기의 우측 칸은 NOTICE가 아니라 '본문에 딸린 파일'이다. 그래서 잠겼을 때는
+          두 칸을 가르지 않고 전체 폭 하나로 덮는다 — 가린 본문 옆에 그 본문의 첨부만
+          남으면 가린 의미가 없다. 그 외 템플릿의 우측 NOTICE는 잠금과 무관하게 선다
+          (공지는 '지금 무엇을 기다리는 중인가'를 답하는 자리라 오히려 이때 필요하다). */}
+      {locked && mod.module_type === 'POST' ? (
+        <LockedModuleBody status={mod.status} />
+      ) : (
+        <div className="lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:gap-6">
+          <div className="min-w-0">
+            {locked ? <LockedModuleBody status={mod.status} /> : <ModuleBody module={mod} />}
+          </div>
+          <div className="mt-5 min-w-0 empty:hidden lg:mt-0">
+            {mod.module_type === 'POST' ? (
+              <PostFilesRail moduleId={mod.id} />
+            ) : (
+              <GuestNoticeRail moduleId={mod.id} />
+            )}
+          </div>
         </div>
-        <div className="mt-5 min-w-0 empty:hidden lg:mt-0">
-          {mod.module_type === 'POST' ? (
-            <PostFilesRail moduleId={mod.id} />
-          ) : (
-            <GuestNoticeRail moduleId={mod.id} />
-          )}
-        </div>
-      </div>
+      )}
     </div>
   )
 }
