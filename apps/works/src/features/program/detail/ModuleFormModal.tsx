@@ -21,6 +21,7 @@ import {
 import type { Program, ProgramModule } from '@/features/program/hooks'
 import { useSetProgramModule } from '@/features/program/hooks'
 import { MODULE_META, MODULE_STATUS_META, readModuleSettings } from '@/features/program/detail/moduleMeta'
+import { failureText } from '@/lib/failureText'
 import { ModulePublicLinkFields } from '@/features/program/detail/ModulePublicLinkFields'
 import { useModuleTemplateMap } from '@/features/program/moduleTemplateHooks'
 import { useModulePublicLinkForm } from '@/features/program/detail/publicLinkForm'
@@ -213,8 +214,10 @@ export function ModuleFormModal({
       toast.show(isEdit ? '모듈 설정을 저장했습니다.' : '모듈을 추가했습니다.', 'success')
       onSaved?.(id)
       onClose()
-    } catch {
-      toast.show('저장에 실패했습니다. 권한과 입력값을 확인하세요.', 'danger')
+    } catch (e) {
+      // 서버가 이유를 말해 준다(모듈명 중복·기간 범위·담당자 풀·권한). 일반 문구로 덮으면
+      // 담당자는 같은 값을 다시 넣어 보는 것 말고 할 수 있는 일이 없다.
+      toast.show(failureText(e, '저장에 실패했습니다. 권한과 입력값을 확인하세요.'), 'danger')
     }
   }
 

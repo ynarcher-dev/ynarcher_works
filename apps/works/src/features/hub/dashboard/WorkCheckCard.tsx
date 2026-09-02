@@ -20,16 +20,7 @@ import {
   type AttendancePlace,
 } from '@/features/management/attendance/attendanceModel'
 import { DashboardRowButton } from '@/features/hub/dashboard/DashboardRowButton'
-
-/**
- * 서버가 거절한 이유를 그대로 보여 준다 — '근무일이 아닙니다', '출근 기록이 없어...'처럼
- * 판정 근거가 문구에 담겨 있어, 일반화된 실패 문구로 덮으면 왜 안 되는지 알 수 없다.
- * (Supabase 오류는 Error 인스턴스가 아니라 message를 가진 평범한 객체로 온다.)
- */
-function failureText(e: unknown, fallback: string): string {
-  const message = (e as { message?: unknown } | null)?.message
-  return typeof message === 'string' && message ? message : fallback
-}
+import { failureText } from '@/lib/failureText'
 
 /** 1초마다 다시 그리는 현재 시각. 시계가 멈춰 있으면 '지금 찍는다'는 감각이 사라진다. */
 function useClock() {
