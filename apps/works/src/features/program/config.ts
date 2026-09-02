@@ -42,16 +42,7 @@ export function isBaseModuleType(moduleType: string): boolean {
  * 모듈 보드에 서는 템플릿 순서. 라벨은 `@ynarcher/master-data`의 공통 어휘가 소유한다 —
  * 같은 모듈이 GUEST 사이드바에도 서므로, 이름을 두 벌 들면 두 화면이 다른 말을 하게 된다.
  */
-export const MODULE_TYPES: ModuleTypeDef[] = [
-  'RECRUITMENT',
-  'DOC_REVIEW',
-  'ONSITE_EVAL',
-  'ORIENTATION',
-  'MENTORING',
-  'BUSINESS_MATCHING',
-  'DEMO_DAY',
-  'OUTCOMES',
-]
+export const MODULE_TYPES: ModuleTypeDef[] = ['RECRUITMENT']
   .map((type) => ({ type, label: moduleTypeLabel(type), implemented: true }))
   .concat(BASE_MODULE_TYPES)
 
@@ -98,21 +89,15 @@ export const PARTICIPATION_MODE_LABEL: Record<string, string> = {
 
 /**
  * 모듈 타입별 배정 방식 정책. `default`는 강제 기본값이며, `options`가 있는 모듈만
- * 운영자가 그 범위 안에서 선택할 수 있다(현재 비즈니스 매칭만 선택형). 나머지는 고정.
+ * 운영자가 그 범위 안에서 선택할 수 있다. 나머지는 고정.
+ *
+ * 2026-09-03 — 정형 운영 모듈 7종을 걷으면서 선택형(비즈니스 매칭)이 사라져, 지금은
+ * 모든 템플릿이 고정 기본값만 갖는다. `options`를 다루는 갈래는 남겨 둔다 — 배정 방식이
+ * 여러 개일 수 있다는 것은 이 표의 성질이지 지금 남은 네 종류의 사정이 아니다.
  * 근거: docs/docs_planning/3_4_2_ac_program_overview.md §6.3
  */
 export const MODULE_PARTICIPATION: Record<string, { default: string; options?: string[] }> = {
   RECRUITMENT: { default: 'OPEN_APPLICATION' },
-  DOC_REVIEW: { default: 'REVIEWER_ASSIGNMENT' },
-  ONSITE_EVAL: { default: 'REVIEWER_ASSIGNMENT' },
-  ORIENTATION: { default: 'ADMIN_ONLY' },
-  MENTORING: { default: 'MANUAL_ALLOCATION' },
-  BUSINESS_MATCHING: {
-    default: 'STARTUP_FCFS',
-    options: ['STARTUP_FCFS', 'AI_ALLOCATION', 'MANUAL_ALLOCATION'],
-  },
-  DEMO_DAY: { default: 'REVIEWER_ASSIGNMENT' },
-  OUTCOMES: { default: 'ADMIN_ONLY' },
   // 기본 템플릿 3종은 운영자가 직접 남기는 기록이라 배정 개념이 없다.
   POST: { default: 'ADMIN_ONLY' },
   LINK: { default: 'ADMIN_ONLY' },

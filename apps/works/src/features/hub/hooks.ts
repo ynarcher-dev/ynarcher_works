@@ -193,25 +193,6 @@ export function useDeleteSystemEvent() {
   })
 }
 
-export interface ExpertRank {
-  expert_id: string
-  expert_name: string
-  avg_score: number
-  session_count: number
-}
-
-/** 전문가 만족도 랭킹(mentor_satisfaction_records 평균 내림차순, RPC 집계). */
-export function useExpertRanking() {
-  return useQuery({
-    queryKey: ['hub', 'ranking'],
-    queryFn: async (): Promise<ExpertRank[]> => {
-      const { data, error } = await supabase.rpc('hub_expert_ranking')
-      if (error) throw error
-      return (data ?? []) as ExpertRank[]
-    },
-  })
-}
-
 /** HUB 대시보드 좌측 인포 — 각 워크스페이스의 대표 지표 하나씩 집계. */
 export interface HubSummary {
   ac: { operating: number; total: number }

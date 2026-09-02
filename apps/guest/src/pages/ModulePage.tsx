@@ -10,12 +10,10 @@ import { useParams } from 'react-router-dom'
 import { GuestNoticeRail } from '@/app/GuestNoticeRail'
 import { useGuestModules, useModuleFiles, type GuestModule } from '@/features/moduleHooks'
 import { isModuleLocked, moduleNotice } from '@/features/moduleMeta'
-import { BookingModule } from '@/pages/modules/BookingModule'
 import { FileModule } from '@/pages/modules/FileModule'
 import { LinkModule } from '@/pages/modules/LinkModule'
 import { LockedModuleBody } from '@/pages/modules/LockedModuleBody'
 import { PostModule } from '@/pages/modules/PostModule'
-import { SatisfactionModule } from '@/pages/modules/SatisfactionModule'
 
 /**
  * 공개 메뉴 한 개의 화면.
@@ -125,10 +123,6 @@ function ModuleBody({ module: mod }: { module: GuestModule }) {
       return <LinkModule moduleId={mod.id} />
     case 'FILE':
       return <FileModule moduleId={mod.id} />
-    case 'BUSINESS_MATCHING':
-      return <BookingModule moduleId={mod.id} />
-    case 'MENTORING':
-      return <SatisfactionModule moduleId={mod.id} />
     default:
       return null
   }

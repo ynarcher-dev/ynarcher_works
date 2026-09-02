@@ -9,15 +9,6 @@ import { useProgramWorkspace } from '@/features/program/workspace'
 /** 최초 선택값 — 기본 3종 중 가장 범용인 글쓰기. 활동 유형을 정하지 못했을 때의 출발점이다. */
 const DEFAULT_TYPE = 'POST'
 /**
- * 이 화면에서 배치하지 않는 타입: 성과/KPI는 사업당 하나이고 다른 경로로 생긴다.
- *
- * 카탈로그(`module_templates`)가 아니라 **이 화면의 규칙**이라 여기 남는다 — ADMIN이
- * 카탈로그에서 끄는 것과 뜻이 다르다(끄는 것은 "이 종류를 더는 쓰지 않는다"이고,
- * 이것은 "여기서 만드는 것이 아니다"이다).
- */
-const EXCLUDED = new Set(['OUTCOMES'])
-
-/**
  * 모듈 추가 1단계 — 템플릿 선택(단일). 좌측은 정방형 타일 그리드(기본/운영 템플릿),
  * 우측은 마우스를 올리거나 선택한 템플릿의 상세 설명 패널이다. 선택 후 2단계(세팅)로 넘긴다.
  */
@@ -40,7 +31,7 @@ export function AddModulesModal({
   const { data: templates = [] } = useModuleTemplates()
   const sections = useMemo(() => {
     const usable = templates.filter(
-      (t) => t.is_active && t.workspaces.includes(config.key) && !EXCLUDED.has(t.key),
+      (t) => t.is_active && t.workspaces.includes(config.key),
     )
     return MODULE_CATEGORIES.map((c) => ({
       label: c.label,

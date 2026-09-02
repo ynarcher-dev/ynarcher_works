@@ -7,16 +7,15 @@
  * 사정이므로 각 앱이 가진다.
  */
 
-/** module_type enum → 표시 라벨. */
+/**
+ * module_type enum → 표시 라벨.
+ *
+ * 2026-09-03 — 정형 운영 모듈 7종(서면·대면평가, OT, 멘토링, 매칭, 데모데이, 성과)을
+ * 걷었다. enum 값은 남아 있으나 카탈로그(`module_templates`)에서 빠져 배치할 수 없으므로,
+ * 여기서도 이름을 갖지 않는다. 미지의 값은 `moduleTypeLabel()`이 원문 그대로 돌려준다.
+ */
 export const MODULE_TYPE_LABEL: Record<string, string> = {
   RECRUITMENT: '모집/신청서',
-  DOC_REVIEW: '서면평가',
-  ONSITE_EVAL: '대면평가',
-  ORIENTATION: 'OT/공통세션',
-  MENTORING: 'N:N 멘토링',
-  BUSINESS_MATCHING: '1:1 비즈니스 매칭',
-  DEMO_DAY: '데모데이',
-  OUTCOMES: '성과/KPI',
   POST: '글쓰기',
   LINK: 'URL첨부',
   FILE: '파일첨부',

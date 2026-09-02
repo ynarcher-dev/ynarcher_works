@@ -1,17 +1,13 @@
-import { AppShell, SegmentedToggle, Sidebar, SidebarItem } from '@ynarcher/ui'
+import { AppShell, Sidebar, SidebarItem } from '@ynarcher/ui'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import logo from '@/assets/logo.png'
 import { GuestUserMenu } from '@/app/GuestUserMenu'
 import { useGuestStore } from '@/auth/guestStore'
 import {
-  EXPERT_NAV,
+  GUEST_HOME_PATH,
   STARTUP_FIXED_NAV,
-  defaultView,
-  homePathOf,
   moduleNavItems,
-  viewOfPath,
   type GuestNavItem,
-  type GuestView,
 } from '@/config/navigation'
 import { useGuestModules } from '@/features/moduleHooks'
 
@@ -31,14 +27,12 @@ import { useGuestModules } from '@/features/moduleHooks'
 export function GuestLayout() {
   const location = useLocation()
   const navigate = useNavigate()
-  const user = useGuestStore((s) => s.user)
   const program = useGuestStore((s) => s.program)
 
   const { data: modules } = useGuestModules()
-  const isExpert = user?.role === 'external_expert'
-  const view: GuestView =
-    viewOfPath(location.pathname) ?? defaultView(user?.role)
-  const items = view === 'expert' ? [...EXPERT_NAV] : moduleNavItems(modules ?? [])
+  // 사이드바 하위 메뉴는 원장이 세운다. 뷰 축(스타트업/전문가)은 2026-09-03에 걷혔다 —
+  // 전문가 전용 화면이 멘토링·매칭과 함께 사라져 전환할 곳이 없다.
+  const items = moduleNavItems(modules ?? [])
 
   /** 사이드바 한 줄. 고정 메뉴(사업개요)와 원장이 세우는 메뉴가 같은 규격으로 선다. */
   const renderItem = (item: GuestNavItem) => {
@@ -60,7 +54,7 @@ export function GuestLayout() {
     <Sidebar
       header={
         <div className="flex w-full items-center justify-center">
-          <Link to={homePathOf(view)} className="min-w-0 shrink">
+          <Link to={GUEST_HOME_PATH} className="min-w-0 shrink">
             <img src={logo} alt="Y&ARCHER" className="h-7 object-contain" />
           </Link>
         </div>
@@ -78,17 +72,11 @@ export function GuestLayout() {
       }
     >
       <div className="flex flex-col gap-1">
-        {/* 스타트업 뷰 상단은 고정 메뉴 묶음(사업개요·공지사항·QNA — 첫 줄이 로그인 직후
+        {/* 상단은 고정 메뉴 묶음(사업개요·공지사항·일정안내·QNA — 첫 줄이 로그인 직후
             착지점)이다. 원장이 세우는 하위 메뉴와는 구분선으로 가른다 — 층이 다른 메뉴임을
             선 하나가 답한다. */}
-        {view === 'startup' && (
-          <>
-            {STARTUP_FIXED_NAV.map(renderItem)}
-            {items.length > 0 && (
-              <div aria-hidden className="my-1 border-t border-white/20" />
-            )}
-          </>
-        )}
+        {STARTUP_FIXED_NAV.map(renderItem)}
+        {items.length > 0 && <div aria-hidden className="my-1 border-t border-white/20" />}
         {items.map(renderItem)}
       </div>
     </Sidebar>
@@ -100,22 +88,8 @@ export function GuestLayout() {
     <AppShell
       sidebar={sidebar}
       topbarRight={
-        <>
-          {/* 겸직 전문가 계정의 역할 전환. 사업 전환이 아니라는 점을 라벨로 못박는다. */}
-          {isExpert && (
-            <SegmentedToggle
-              label="화면 전환"
-              value={view}
-              onChange={(next) => navigate(homePathOf(next as GuestView))}
-              options={[
-                { key: 'expert', label: '전문가' },
-                { key: 'startup', label: '스타트업' },
-              ]}
-            />
-          )}
-          {/* 계정 표시·마이페이지·로그아웃 — WORKS와 같은 자리(우측 끝)의 개인 메뉴. */}
-          <GuestUserMenu />
-        </>
+        /* 계정 표시·마이페이지·로그아웃 — WORKS와 같은 자리(우측 끝)의 개인 메뉴. */
+        <GuestUserMenu />
       }
     >
       {/* NOTICE 우측 칸은 셸이 아니라 메뉴 화면(ModulePage)이 가른다 — 머리(이름·안내·

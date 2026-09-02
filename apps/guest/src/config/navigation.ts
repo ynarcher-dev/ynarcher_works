@@ -3,7 +3,6 @@ import {
   BookOpen,
   CalendarDays,
   CircleHelp,
-  ClipboardList,
   type LucideIcon,
 } from 'lucide-react'
 import { moduleDisplayName } from '@ynarcher/master-data'
@@ -11,13 +10,12 @@ import { moduleIcon } from '@/features/moduleMeta'
 import type { GuestModule } from '@/features/moduleHooks'
 
 /**
- * 게스트가 보고 있는 화면 묶음. **역할 전환이지 사업 전환이 아니다** — 사업은 로그인에 쓴
- * 고정코드로 세션에 박히며 전환 스위치를 제공하지 않는다(3_9_workspace_guest.md §2).
- * 전문가 계정이 겸직으로 스타트업 화면을 볼 때만 이 축이 움직인다.
+ * 사이드바 메뉴 한 줄. WORKS와 달리 하위 항목·플라이아웃이 없어 경로 하나가 곧 한 줄이다.
+ *
+ * 2026-09-03 — 뷰 축(스타트업/전문가)을 걷었다. 전문가 뷰의 메뉴는 멘토링 스케줄과 상담
+ * 평가지 둘뿐이었는데 그 원장과 화면이 함께 사라졌고, 갈 곳이 없는 뷰를 남기면 전환
+ * 스위치가 빈 화면으로 데려간다. 멘토링을 다시 설계하는 날 뷰도 함께 다시 세운다.
  */
-export type GuestView = 'startup' | 'expert'
-
-/** 사이드바 메뉴 한 줄. WORKS와 달리 하위 항목·플라이아웃이 없어 경로 하나가 곧 한 줄이다. */
 export interface GuestNavItem {
   path: string
   label: string
@@ -64,42 +62,7 @@ export const STARTUP_FIXED_NAV: readonly [GuestNavItem, ...GuestNavItem[]] = [
 ]
 
 /**
- * 전문가 뷰의 메뉴는 여전히 고정이다.
- *
- * 전문가에게 보이는 것은 사업이 연 메뉴가 아니라 **본인에게 배정된 일**(스케줄·평가지)이며,
- * 이는 공유 범위 스위치가 아니라 배정 여부가 정한다. 축이 다른 목록을 같은 규칙으로 묶으면
- * 어느 쪽 기준으로 열렸는지 설명할 수 없게 된다.
+ * 로그인 직후·루트 진입의 착지점. 언제나 사업개요다 — 공개 메뉴가 하나도 없어도 사업소개는
+ * 읽을 수 있으므로 '갈 곳 없음'이라는 결과가 없다.
  */
-export const EXPERT_NAV: readonly [GuestNavItem, ...GuestNavItem[]] = [
-  { path: '/sessions', label: '멘토링 스케줄', icon: CalendarDays },
-  { path: '/feedback', label: '상담 평가지', icon: ClipboardList },
-]
-
-/** 로그인 직후 열 기본 뷰. 전문가 계정만 전문가 화면에서 시작한다. */
-export function defaultView(role: string | undefined): GuestView {
-  return role === 'external_expert' ? 'expert' : 'startup'
-}
-
-/**
- * 현재 경로가 속한 뷰. 뷰를 별도 상태로 들지 않고 경로에서 되읽는다 — 상태로 들면 새로고침·
- * 뒤로가기에서 주소와 사이드바가 어긋난다(주소는 전문가 화면인데 메뉴는 스타트업 것).
- */
-export function viewOfPath(pathname: string): GuestView | undefined {
-  if (EXPERT_NAV.some((item) => item.path === pathname)) return 'expert'
-  if (
-    STARTUP_FIXED_NAV.some((item) => item.path === pathname) ||
-    pathname.startsWith('/m/')
-  ) {
-    return 'startup'
-  }
-  return undefined
-}
-
-/**
- * 그 뷰의 착지점(뷰 전환·루트 진입·로그인 직후). 스타트업 뷰는 언제나 사업개요다 —
- * 공개 메뉴가 하나도 없어도 사업소개는 읽을 수 있으므로, 종전의 '갈 곳 없음'(undefined)
- * 이라는 결과 자체가 사라졌다.
- */
-export function homePathOf(view: GuestView): string {
-  return view === 'expert' ? EXPERT_NAV[0].path : STARTUP_FIXED_NAV[0].path
-}
+export const GUEST_HOME_PATH: string = STARTUP_FIXED_NAV[0].path

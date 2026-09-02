@@ -1,31 +1,28 @@
 import { Navigate, createBrowserRouter } from 'react-router-dom'
 import { GuestLayout } from '@/app/GuestLayout'
 import { RequireGuestAuth } from '@/auth/RequireGuestAuth'
-import { useGuestStore } from '@/auth/guestStore'
-import { defaultView, homePathOf } from '@/config/navigation'
+import { GUEST_HOME_PATH } from '@/config/navigation'
 import { AnnouncementsPage } from '@/pages/AnnouncementsPage'
 import { ApplyPage } from '@/pages/ApplyPage'
 import { GuestLoginPage } from '@/pages/GuestLoginPage'
 import { QnaPage } from '@/pages/QnaPage'
-import { MentorFeedbackPage } from '@/pages/MentorFeedbackPage'
 import { ModulePage } from '@/pages/ModulePage'
 import { MyPage } from '@/pages/MyPage'
 import { OverviewPage } from '@/pages/OverviewPage'
 import { PublicModulePage } from '@/pages/PublicModulePage'
 import { RootLayout } from '@/pages/RootLayout'
 import { SchedulePage } from '@/pages/SchedulePage'
-import { SessionBoardPage } from '@/pages/SessionBoardPage'
 import { TempGuestPage } from '@/pages/TempGuestPage'
 
 /**
- * 루트(`/`) 착지점: 계정 역할이 정하는 기본 뷰의 첫 화면으로 보낸다.
+ * 루트(`/`) 착지점: 언제나 사업개요다(고정 메뉴).
  *
- * 스타트업 뷰의 착지점은 언제나 사업개요다(고정 메뉴) — 종전처럼 첫 공개 모듈을 기다렸다가
- * 없으면 '열린 메뉴가 없다'를 말하던 분기가 사라졌다. 공개 메뉴가 없어도 사업소개는 있다.
+ * 종전에는 계정 역할이 뷰(스타트업/전문가)를 갈랐으나 2026-09-03에 전문가 뷰가 걷혔고,
+ * 그보다 앞서 첫 공개 모듈을 기다렸다가 없으면 '열린 메뉴가 없다'를 말하던 분기도
+ * 사라졌다. 공개 메뉴가 없어도 사업소개는 있다.
  */
 function GuestEntry() {
-  const role = useGuestStore((s) => s.user?.role)
-  return <Navigate to={homePathOf(defaultView(role))} replace />
+  return <Navigate to={GUEST_HOME_PATH} replace />
 }
 
 /**
@@ -65,9 +62,6 @@ export const router = createBrowserRouter([
           // 그 아래는 화면 하나가 공개 메뉴(모듈) 하나에 대응한다. 경로가 코드에 고정된
           // 모듈 메뉴는 없다(3_9_workspace_guest.md §1.1).
           { path: '/m/:moduleId', element: <ModulePage /> },
-          // 전문가 뷰
-          { path: '/sessions', element: <SessionBoardPage /> },
-          { path: '/feedback', element: <MentorFeedbackPage /> },
           // 개인 메뉴(상단바 드롭다운)에서 들어오는 화면 — 사이드바 메뉴에는 서지 않는다.
           { path: '/me', element: <MyPage /> },
         ],

@@ -301,33 +301,6 @@ export function useSetProgramModule(programId: string) {
   })
 }
 
-export interface MentoringRelationship {
-  id: string
-  startup_id: string | null
-  mentor_participant_id: string | null
-  status: string
-}
-
-/** 프로그램의 멘토링 관계 목록(MENTORING 모듈 기준). */
-/**
- * 멘토링 관계(특정 멘토링 인스턴스 단위). moduleId = 모듈 인스턴스 id.
- * mentoring_relationships는 AC 전용 하위 테이블이라 테이블명은 주입하지 않고 쿼리 키만 워크스페이스로 분리한다.
- */
-export function useMentoringRelationships(moduleId: string | undefined) {
-  const config = useProgramWorkspace()
-  return useQuery({
-    queryKey: [config.key, 'mentoring', moduleId],
-    enabled: Boolean(moduleId),
-    queryFn: async (): Promise<MentoringRelationship[]> => {
-      const { data } = await supabase
-        .from('mentoring_relationships')
-        .select('id, startup_id, mentor_participant_id, status')
-        .eq('program_module_id', moduleId)
-      return (data ?? []) as MentoringRelationship[]
-    },
-  })
-}
-
 export interface Participant {
   id: string
   role: string

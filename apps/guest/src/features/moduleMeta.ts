@@ -1,16 +1,9 @@
 import {
   CalendarDays,
-  ChartColumn,
-  FileText,
-  GraduationCap,
-  Handshake,
   Link as LinkIcon,
   Megaphone,
   Paperclip,
   PenLine,
-  Presentation,
-  Rocket,
-  Users,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -24,13 +17,6 @@ import {
  */
 export const MODULE_ICON: Record<string, LucideIcon> = {
   RECRUITMENT: Megaphone,
-  DOC_REVIEW: FileText,
-  ONSITE_EVAL: Presentation,
-  ORIENTATION: GraduationCap,
-  MENTORING: Users,
-  BUSINESS_MATCHING: Handshake,
-  DEMO_DAY: Rocket,
-  OUTCOMES: ChartColumn,
   POST: PenLine,
   LINK: LinkIcon,
   FILE: Paperclip,
@@ -50,11 +36,6 @@ export function moduleIcon(moduleType: string): LucideIcon {
  */
 export const MODULE_GUEST_NOTICE: Record<string, string> = {
   RECRUITMENT: '모집 신청은 담당자가 안내한 공개 신청 링크에서 진행합니다.',
-  DOC_REVIEW: '서면평가가 진행되는 기간입니다. 결과는 담당자가 별도로 안내합니다.',
-  ONSITE_EVAL: '대면평가(발표·인터뷰) 일정입니다. 상세 시간은 담당자가 안내합니다.',
-  ORIENTATION: '오리엔테이션·공통 세션 일정입니다.',
-  DEMO_DAY: '데모데이 일정입니다. 발표 순서는 담당자가 안내합니다.',
-  OUTCOMES: '성과 집계 기간입니다. 제출이 필요한 자료는 담당자가 안내합니다.',
 }
 
 /** 안내 문구(메모 우선). 둘 다 없으면 기간만으로 충분한 메뉴다. */

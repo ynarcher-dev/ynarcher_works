@@ -3,20 +3,13 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { DetailDeleteButton } from '@/components/DetailDeleteButton'
 import { useDeactivateProgram } from '@/features/program/programsPoolHooks'
-import { MentoringPanel } from '@/features/program/MentoringPanel'
 import { ProgramFormModal } from '@/features/program/ProgramFormModal'
 import { ProgramOverviewTab } from '@/features/program/detail/ProgramOverviewTab'
 import { MODULE_META } from '@/features/program/detail/moduleMeta'
 import type { ProgramModule } from '@/features/program/hooks'
-import { DemoDayPanel } from '@/features/program/panels/DemoDayPanel'
-import { DocReviewPanel } from '@/features/program/panels/DocReviewPanel'
 import { FilePanel } from '@/features/program/panels/FilePanel'
 import { LinkPanel } from '@/features/program/panels/LinkPanel'
-import { MatchingPanel } from '@/features/program/panels/MatchingPanel'
 import { ModuleNoticeSplit } from '@/features/program/panels/NoticePanel'
-import { OnsitePanel } from '@/features/program/panels/OnsitePanel'
-import { OrientationPanel } from '@/features/program/panels/OrientationPanel'
-import { OutcomesPanel } from '@/features/program/panels/OutcomesPanel'
 import { PostPanel } from '@/features/program/panels/PostPanel'
 import { RecruitmentPanel } from '@/features/program/panels/RecruitmentPanel'
 import { TimelinePanel } from '@/features/program/panels/TimelinePanel'
@@ -27,14 +20,7 @@ import { useProgramWorkspace } from '@/features/program/workspace'
 type Tab =
   | 'overview'
   | 'recruitment'
-  | 'docreview'
-  | 'onsite'
-  | 'orientation'
-  | 'mentoring'
-  | 'matching'
-  | 'demoday'
   | 'timeline'
-  | 'outcomes'
   | 'post'
   | 'link'
   | 'file'
@@ -42,14 +28,7 @@ type Tab =
 const TAB_KEYS = new Set<string>([
   'overview',
   'recruitment',
-  'docreview',
-  'onsite',
-  'orientation',
-  'mentoring',
-  'matching',
-  'demoday',
   'timeline',
-  'outcomes',
   'post',
   'link',
   'file',
@@ -130,9 +109,8 @@ export function ProgramDetailPage() {
           */}
           {tab !== 'post' && <BackButton onClick={backToOverview} />}
 
-          {/* 프로그램 단위 화면(집계·타임라인)은 programId, 인스턴스 단위 운영 화면은 moduleId로 렌더한다. */}
+          {/* 프로그램 단위 화면(타임라인)은 programId, 인스턴스 단위 운영 화면은 moduleId로 렌더한다. */}
           {tab === 'timeline' && <TimelinePanel programId={id} />}
-          {tab === 'outcomes' && <OutcomesPanel programId={id} />}
           {moduleId && tab === 'post' && (
             <PostPanel
               programId={id}
@@ -156,12 +134,6 @@ export function ProgramDetailPage() {
           {moduleId && tab === 'recruitment' && (
             <RecruitmentPanel programId={id} moduleId={moduleId} />
           )}
-          {moduleId && tab === 'docreview' && <DocReviewPanel moduleId={moduleId} />}
-          {moduleId && tab === 'onsite' && <OnsitePanel moduleId={moduleId} />}
-          {moduleId && tab === 'orientation' && <OrientationPanel moduleId={moduleId} />}
-          {moduleId && tab === 'mentoring' && <MentoringPanel moduleId={moduleId} />}
-          {moduleId && tab === 'matching' && <MatchingPanel moduleId={moduleId} />}
-          {moduleId && tab === 'demoday' && <DemoDayPanel moduleId={moduleId} />}
         </>
       )}
 
