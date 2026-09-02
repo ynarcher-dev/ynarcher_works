@@ -284,6 +284,10 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         // 본인 기록을 찍기만 하고, 판독·정정은 여기서만 한다.
         { label: '근태 관리', tab: 'attendance' },
         { label: '재무 관리', tab: 'finance', dividerBefore: true },
+        // 거래처 원장(코드·상호·구분·등록번호·계좌·증빙)의 단일 세팅 지점. 돈이 나가는 상대를
+        // 다루는 일이라 재무 블록에 둔다. OFFICE '거래처 정보'는 이 원장을 조회할 자리이며
+        // 노출 범위(계좌·등록번호 마스킹)를 정한 뒤 연결한다.
+        { label: '거래처 정보', tab: 'partners' },
         // 승인된 결재 문서의 금액을 항목·문서·월로 모은다(양식의 금액 필드가 원천).
         // KPI 관리와 같은 성과·집계 블록에 둔다.
         { label: 'KPI 관리', tab: 'kpi' },

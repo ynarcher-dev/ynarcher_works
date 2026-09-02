@@ -9,6 +9,7 @@ import { DepartmentsPanel } from '@/features/management/panels/DepartmentsPanel'
 import { FinancePanel } from '@/features/management/panels/FinancePanel'
 import { HrPanel } from '@/features/management/panels/HrPanel'
 import { KpiPanel } from '@/features/management/panels/KpiPanel'
+import { PartnersPanel } from '@/features/management/partners/PartnersPanel'
 import { BranchAdminPanel } from '@/features/management/panels/BranchAdminPanel'
 
 const HEADINGS: Record<string, string> = {
@@ -19,6 +20,7 @@ const HEADINGS: Record<string, string> = {
   attendance: '근태 관리',
   assets: '자산 관리',
   finance: '재무 관리',
+  partners: '거래처 정보',
   'approval-stats': '결재 금액 집계',
   kpi: 'KPI 관리',
 }
@@ -39,15 +41,21 @@ export function ManagementPage() {
     setKeyword('')
   }, [tab])
 
-  // 검색 필드는 인사 관리(리스트뷰)에서만 노출한다. NETWORKS와 동일하게 헤더 슬롯에 둔다.
-  const searchField =
-    tab === 'hr' ? (
-      <Input
-        placeholder="임직원 이름 검색"
-        value={keyword}
-        onChange={(e) => setKeyword(e.target.value)}
-      />
-    ) : undefined
+  // 검색 필드는 원장 리스트뷰(인사·거래처)에서만 노출한다. NETWORKS와 동일하게 헤더 슬롯에 둔다.
+  const searchPlaceholder =
+    tab === 'hr'
+      ? '임직원 이름 검색'
+      : tab === 'partners'
+        ? '거래처명·코드·사업자등록번호·예금주 검색'
+        : undefined
+
+  const searchField = searchPlaceholder ? (
+    <Input
+      placeholder={searchPlaceholder}
+      value={keyword}
+      onChange={(e) => setKeyword(e.target.value)}
+    />
+  ) : undefined
 
   // 등록 액션은 인사 관리 리스트뷰에서만 노출한다.
   // 문구는 `{대상 명사} 등록` 규칙을 따른다 — 하는 일은 로그인 계정 발급이지만, 이 화면이
@@ -73,6 +81,10 @@ export function ManagementPage() {
       {tab === 'attendance' && <AttendancePanel />}
       {tab === 'assets' && <AssetsPanel />}
       {tab === 'finance' && <FinancePanel />}
+      {/* 거래처 원장: 지급 상대(코드·상호·구분·등록번호·계좌·증빙)의 단일 세팅 지점.
+          NETWORKS 외주/거래 마스터와는 다른 원장이다 — 저쪽은 누구와 일하는가, 여기는
+          누구에게 어느 계좌로 보내는가를 담는다. */}
+      {tab === 'partners' && <PartnersPanel keyword={keyword} />}
       {/* 결재 금액 집계: 승인된 결재 문서의 금액을 항목·문서·월로 모은다. 결재 자체는 OFFICE가
           담당하고, 그 돈을 집계해 읽는 일은 재무 관리와 같은 축이라 여기가 자리다. */}
       {tab === 'approval-stats' && <ApprovalAggregatePanel />}
