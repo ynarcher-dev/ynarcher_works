@@ -43,10 +43,21 @@ pnpm db:stop
 
 ### 2.2 환경 변수 원칙
 
-* **클라이언트 공개 변수**: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_APP_ENV`만 앱 번들에 사용합니다.
+* **클라이언트 공개 변수**: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_APP_ENV`가 두 앱 공통이며, WORKS는 바깥에 뿌리는 주소의 오리진 두 개를 더 씁니다(아래).
 * **서버 시크릿**: 서비스 역할 키, 이메일·카카오·SMS 공급자 키는 Supabase Secrets 또는 배포 환경의 비밀 저장소에 둡니다.
 * **금지 사항**: 서버 시크릿에 `VITE_` 접두사를 붙이거나 `.env.local`을 커밋하지 않습니다.
 * **운영 CORS**: 운영 도메인 확정 후 `ALLOWED_ORIGINS`를 명시합니다.
+
+**공개 전용 도메인은 세 가지를 한 건으로 묶습니다**(2026-09-03 현재 도메인 미정 — 준비만 되어 있습니다).
+
+| 할 일 | 어디서 |
+| :--- | :--- |
+| 같은 GUEST 배포에 도메인 별칭 하나(`open.<회사>.com`) 붙이기 | 배포 설정(CloudFront) |
+| `VITE_PUBLIC_MODULE_BASE_URL`·`VITE_APPLY_BASE_URL`에 그 도메인 채우기 | WORKS 빌드 환경 |
+| 그 도메인을 `ALLOWED_ORIGINS`에 등록 | `supabase secrets set` |
+
+* **셋을 나눠 하면 조용히 깨집니다.** 지금은 `ALLOWED_ORIGINS`가 미설정(유예 모드)이라 등록하지 않아도 돌지만, 목록을 켜는 날 새 도메인이 빠져 있으면 **공개 화면만** 죽습니다 — 내부 화면은 멀쩡하므로 원인을 찾기까지 시간이 걸립니다.
+* **두 변수를 비워 두면** 앱이 자기 배포 오리진을 씁니다. 값을 바꿔도 이미 배포된 주소는 토큰이 같아 두 도메인 모두에서 살아 있으므로 **기존 링크는 죽지 않습니다**. 근거: [3_4_15 §5.3.1](./docs_planning/3_4_15_ac_public_links.md).
 
 ---
 

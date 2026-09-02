@@ -36,14 +36,18 @@ export interface ModuleTemplate {
   is_active: boolean
   /** 카탈로그: 목록에 서는 워크스페이스(ac | mna | project). */
   workspaces: string[]
-  /** 상한: 공유 범위를 WORKS+GUEST까지 올릴 수 있는가. */
-  allow_guest: boolean
-  /** 상한: 로그인 없는 공개 링크를 열 수 있는가. */
-  allow_public_link: boolean
+  /**
+   * 성격: 이 종류가 쓰는 공유 범위(PUBLIC_LINK | GUEST_ONLY | INTERNAL_ONLY).
+   *
+   * 종전의 상한 2종(allow_guest·allow_public_link)을 대체한다 — 상한 두 개를 각각 올리고
+   * 내리면 담당자 화면에 스위치가 둘 서게 되고, 그러면 무엇을 만져야 밖에 열리는지 이름만
+   * 봐서는 알 수 없다. `PUBLIC_LINK`는 상한이 아니라 배타이며, 담당자는 그 결과를 받을 뿐
+   * 고르지 않는다. 근거: docs/docs_planning/3_2_1_admin_module_registry.md
+   */
+  visibility: string
 }
 
-const TEMPLATE_COLS =
-  'key, category, sort_order, is_active, workspaces, allow_guest, allow_public_link'
+const TEMPLATE_COLS = 'key, category, sort_order, is_active, workspaces, visibility'
 
 /** 카탈로그 전체(분류·순서대로). ADMIN 화면과 담당자 화면이 같은 목록을 본다. */
 export function useModuleTemplates() {

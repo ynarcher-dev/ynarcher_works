@@ -104,16 +104,19 @@ export async function resolvePublicLink(
     programTitle = (program?.title as string | undefined) ?? ''
   }
 
-  // 템플릿 상한. ADMIN이 이 종류를 닫아 두면 개별 스위치와 무관하게 닫힌다(3_2_1 §6.4).
-  // 행이 없으면 닫힌 것으로 본다 — 카탈로그에 없는 종류를 밖으로 내보낼 근거가 없다.
+  // 템플릿 성격. ADMIN이 이 종류를 바깥용으로 두지 않았으면 개별 스위치와 무관하게 닫힌다
+  // (3_2_1 §6.4). 행이 없으면 닫힌 것으로 본다 — 카탈로그에 없는 종류를 밖으로 내보낼 근거가 없다.
+  //
+  // `is_active`는 보지 않는다(2026-09-03). 카탈로그를 끄는 것은 "앞으로 새로 배치하지 않는다"이지
+  // "지금 열려 있는 문을 닫는다"가 아니며(3_2_1 §6.5), 문을 닫는 것은 성격 축의 일이다.
   let templateAllowsLink = false
   if (mod) {
     const { data: tpl } = await db
       .from('module_templates')
-      .select('allow_public_link, is_active')
+      .select('visibility')
       .eq('key', mod.module_type)
       .maybeSingle()
-    templateAllowsLink = Boolean(tpl?.is_active && tpl?.allow_public_link)
+    templateAllowsLink = tpl?.visibility === 'PUBLIC_LINK'
   }
 
   const settings = ((mod?.settings ?? {}) as Record<string, unknown>) ?? {}

@@ -29,9 +29,9 @@ export interface GateInput {
   /** 사업이 살아 있는가(삭제·종료·취소가 아닌가). */
   programAlive: boolean
   /**
-   * 템플릿 상한 — ADMIN이 이 종류의 링크 공유를 허용해 두었는가
-   * (`module_templates.allow_public_link`, 3_2_1). 내려가면 이미 열린 링크도 닫히되
-   * 주소는 보존되므로, 다시 올리면 같은 주소로 돌아온다.
+   * 템플릿 성격 — ADMIN이 이 종류를 바깥용으로 두었는가
+   * (`module_templates.visibility = 'PUBLIC_LINK'`, 3_2_1). 성격을 내리면 이미 열린 링크도
+   * 닫히되 주소는 보존되므로, 다시 올리면 같은 주소로 돌아온다.
    */
   templateAllowsLink: boolean
 }
@@ -94,8 +94,8 @@ export function gate(input: GateInput, now: number = Date.now()): GateResult {
   // (3) 사업 생존 — 종료·취소·삭제된 사업의 문은 함께 닫힌다.
   if (!input.programAlive) return deny('module_closed')
 
-  // (4) 템플릿 상한 — ADMIN이 이 종류를 닫아 두었으면 개별 스위치와 무관하게 닫힌다.
-  //     상한은 정책이고 스위치는 운영이라, 정책이 닫으면 운영값은 그대로 둔 채 문만 닫는다.
+  // (4) 템플릿 성격 — ADMIN이 이 종류를 바깥용으로 두지 않았으면 개별 스위치와 무관하게 닫힌다.
+  //     성격은 정책이고 스위치는 운영이라, 정책이 닫으면 운영값은 그대로 둔 채 문만 닫는다.
   if (!input.templateAllowsLink) return deny('module_closed')
 
   return { reason: null, openAt, closeAt }

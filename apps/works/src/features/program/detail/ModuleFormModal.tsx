@@ -15,7 +15,8 @@ import { useForm } from 'react-hook-form'
 import {
   MODULE_PARTICIPATION,
   MODULE_TYPES,
-  MODULE_VISIBILITY_OPTIONS,
+  MODULE_VISIBILITY_LABEL,
+  moduleVisibilityOptions,
   PARTICIPATION_MODE_LABEL,
 } from '@/features/program/config'
 import type { Program, ProgramModule } from '@/features/program/hooks'
@@ -108,18 +109,28 @@ export function ModuleFormModal({
   // ADMIN이 고친 상한이 여기만 안 바뀐다.
   const { map: templates } = useModuleTemplateMap()
   const template = templates.get(moduleType)
-  // 링크 공유는 모듈 저장과 별개 축이라 상태·저장 경로가 따로다(버튼만 하나로 묶는다).
+  // 링크 공유는 모듈 저장과 별개 원장이라 상태·저장 경로가 따로다(버튼만 하나로 묶는다).
   //
-  // 모집만 예외로 칸을 세우지 않는다 — 상한은 켜져 있지만(공개 주소가 그 템플릿의 존재
+  // 모집만 예외로 칸을 세우지 않는다 — 성격은 PUBLIC_LINK이지만(공개 주소가 그 템플릿의 존재
   // 이유다) 주소·상태·기간을 **모집 설정 패널이 이미 소유**하기 때문이다. 같은 스위치를 두
   // 곳에 두면 어긋났을 때 어느 쪽이 진짜인지 판정할 근거가 없다. 담기는 원장은 이제 하나이되
   // (2026-09-02 이관), 만지는 자리는 그 모듈의 운영 화면 한 곳이다.
-  const linkCardable = Boolean(template?.allow_public_link) && moduleType !== 'RECRUITMENT'
+  const linkCardable = template?.visibility === 'PUBLIC_LINK' && moduleType !== 'RECRUITMENT'
   const linkForm = useModulePublicLinkForm(module?.id, linkCardable)
-  // 상한이 닫혀 있으면 WORKS ONLY 한 칸만 남는다. 서버는 모듈 원장 트리거가 같은 판정을 한다.
-  const visibilityOptions = MODULE_VISIBILITY_OPTIONS.filter(
-    (v) => v.value !== 'GUEST_ONLY' || template?.allow_guest !== false,
+
+  // 고를 수 있는 값은 ADMIN이 템플릿에 박은 성격이 정한다. 서버는 모듈 원장 트리거가 같은
+  // 판정을 한다 — 화면에서 감추는 것은 보안이 아니다.
+  const visibilityOptions = moduleVisibilityOptions(template?.visibility)
+  const storedVisibility = module?.visibility || null
+  // 값이 하나뿐이면 셀렉트로 두지 않는다(고를 것이 없는 셀렉트는 고를 수 있다고 말하는
+  // 컨트롤이다). 저장값이 지금의 성격 밖이면 — ADMIN이 나중에 성격을 바꾼 경우 — **고쳐 쓰지
+  // 않고 사실대로 보이되 고칠 수 없게** 둔다. 담당자가 설정한 적 없는 값이 원장에 남으면
+  // 이력이 거짓말을 하고, 실제 노출은 어느 쪽이든 성격 축이 판정한다.
+  const offTemplate = Boolean(
+    storedVisibility && !visibilityOptions.some((v) => v.value === storedVisibility),
   )
+  const visibilityFixed = visibilityOptions.length <= 1 || offTemplate
+  const fixedVisibility = storedVisibility ?? visibilityOptions[0]?.value ?? 'INTERNAL_ONLY'
   const modePolicy = MODULE_PARTICIPATION[moduleType]
   const fixedMode = modePolicy?.default ?? null
   const takenTitles = useMemo(() => new Set(existingTitles.map(normTitle)), [existingTitles])
@@ -190,7 +201,9 @@ export function ModuleFormModal({
         moduleType,
         title,
         status: values.status,
-        visibility: values.visibility,
+        // 고를 수 없는 칸은 폼 값을 쓰지 않는다 — 셀렉트가 서지 않았으므로 폼에는 초기값이
+        // 그대로 남아 있고, 그 값을 보내면 서버가 성격 밖 저장으로 거부한다.
+        visibility: visibilityFixed ? fixedVisibility : values.visibility,
         participationMode,
         settings: {
           ...(module?.settings ?? {}),
@@ -294,16 +307,35 @@ export function ModuleFormModal({
             </Select>
           </div>
           <div>
-            <label className="text-body font-medium text-gray-800" htmlFor="mod-visibility">
-              공유 범위
-            </label>
-            <Select id="mod-visibility" {...register('visibility')}>
-              {visibilityOptions.map((v) => (
-                <option key={v.value} value={v.value}>
-                  {v.label}
-                </option>
-              ))}
-            </Select>
+            {visibilityFixed ? (
+              <>
+                <span className="text-body font-medium text-gray-800">공유 범위</span>
+                <p className="mt-1 rounded-radius-sm border border-gray-200 bg-gray-25 px-3 py-2 text-body text-gray-700">
+                  {MODULE_VISIBILITY_LABEL[fixedVisibility] ?? fixedVisibility}
+                </p>
+                {/* 되읽기·차단 안내는 접지 않는다 — 왜 고를 수 없는지가 이 줄의 내용이다. */}
+                <p className="mt-1 text-caption text-gray-500">
+                  {offTemplate
+                    ? `이 종류는 지금 ${
+                        MODULE_VISIBILITY_LABEL[visibilityOptions[0]?.value ?? ''] ?? '다른 범위'
+                      }만 씁니다. 저장된 값은 그대로 두되 노출은 종류의 성격이 정합니다.`
+                    : '이 종류의 공유 범위는 ADMIN 모듈 관리가 정합니다.'}
+                </p>
+              </>
+            ) : (
+              <>
+                <label className="text-body font-medium text-gray-800" htmlFor="mod-visibility">
+                  공유 범위
+                </label>
+                <Select id="mod-visibility" {...register('visibility')}>
+                  {visibilityOptions.map((v) => (
+                    <option key={v.value} value={v.value}>
+                      {v.label}
+                    </option>
+                  ))}
+                </Select>
+              </>
+            )}
           </div>
         </div>
 

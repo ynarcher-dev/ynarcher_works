@@ -1,6 +1,7 @@
 import { Badge, PersonCell, useToast } from '@ynarcher/ui'
 import { useState } from 'react'
-import { MODULE_TYPES, MODULE_VISIBILITY_LABEL, MODULE_VISIBILITY_TONE } from '@/features/program/config'
+import { MODULE_TYPES } from '@/features/program/config'
+import { ModuleVisibilityBadge } from '@/features/program/detail/ModuleVisibilityBadge'
 import type { ProgramModule } from '@/features/program/hooks'
 import { useUpdateModuleStatus } from '@/features/program/detail/detailHooks'
 import { useOpenPublicLinkModuleIds } from '@/features/program/publicLinkHooks'
@@ -159,15 +160,11 @@ export function ModuleKanbanView({
                         <Badge tone="neutral">{labelOf(mod.module_type)}</Badge>
                       </span>
                       <span className="mt-1 flex">
-                        <Badge tone={MODULE_VISIBILITY_TONE[mod.visibility] ?? 'neutral'}>
-                          {MODULE_VISIBILITY_LABEL[mod.visibility] ?? 'WORKS ONLY'}
-                        </Badge>
-                        {/* 링크 공유는 다른 축이라 배지를 합치지 않고 같은 줄에 나란히 둔다. */}
-                        {openLinkIds?.has(mod.id) && (
-                          <Badge tone="warning" className="ml-1">
-                            링크 공유
-                          </Badge>
-                        )}
+                        {/* 공유 범위는 한 축이라 배지도 하나다. 톤만 지금 열려 있는지를 말한다. */}
+                        <ModuleVisibilityBadge
+                          visibility={mod.visibility}
+                          linkOpen={Boolean(openLinkIds?.has(mod.id))}
+                        />
                       </span>
                       <span className="mt-1 block truncate text-caption tabular-nums text-gray-700">
                         {formatModulePeriod(settings)}

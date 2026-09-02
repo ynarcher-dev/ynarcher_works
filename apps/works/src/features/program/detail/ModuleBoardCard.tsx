@@ -24,11 +24,8 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { useState } from 'react'
-import {
-  MODULE_TYPES,
-  MODULE_VISIBILITY_LABEL,
-  MODULE_VISIBILITY_TONE,
-} from '@/features/program/config'
+import { MODULE_TYPES } from '@/features/program/config'
+import { ModuleVisibilityBadge } from '@/features/program/detail/ModuleVisibilityBadge'
 import {
   useIsProgramPm,
   useProgramModules,
@@ -180,12 +177,13 @@ export function ModuleBoardCard({
                     badges={
                       <>
                         <Badge tone={status.tone}>{status.label}</Badge>
-                        <Badge tone={MODULE_VISIBILITY_TONE[mod.visibility] ?? 'neutral'}>
-                          {MODULE_VISIBILITY_LABEL[mod.visibility] ?? 'WORKS ONLY'}
-                        </Badge>
-                        {/* 링크 공유는 공유 범위와 다른 축이라 배지도 따로 선다 — 하나로
-                            합치면 '누가 보는가'와 '밖에 열렸는가'가 한 칸에 섞인다. */}
-                        {openLinkIds?.has(mod.id) && <Badge tone="warning">링크 공유</Badge>}
+                        {/* 공유 범위는 한 축이므로 배지도 하나다(2026-09-03). PUBLIC_LINK
+                            배지 자체가 "밖으로 나간다"를 말하고, 지금 실제로 열려 있는지는
+                            라벨이 아니라 톤이 답한다. */}
+                        <ModuleVisibilityBadge
+                          visibility={mod.visibility}
+                          linkOpen={Boolean(openLinkIds?.has(mod.id))}
+                        />
                         {/* 파생 템플릿 배지 — 원천 템플릿을 다른 배지와 함께 표기. */}
                         <Badge tone="neutral">{labelOf(mod.module_type)}</Badge>
                       </>

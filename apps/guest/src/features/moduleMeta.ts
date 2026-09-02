@@ -30,13 +30,16 @@ export function moduleIcon(moduleType: string): LucideIcon {
 /**
  * 전용 화면이 없는 템플릿의 안내 문구.
  *
- * 게스트에게 열린 메뉴 중에는 운영자용 화면(평가·성과 집계 등)이 원본인 것이 있다. 그런
- * 메뉴에서 게스트가 받을 수 있는 사실은 **일정과 안내**뿐이므로, 빈 화면 대신 그 사실을
- * 말한다. 운영자가 메모를 적어 두었으면 이 문구 대신 메모가 나간다.
+ * 게스트에게 열린 메뉴 중에는 운영자용 화면이 원본인 것이 있다. 그런 메뉴에서 게스트가 받을
+ * 수 있는 사실은 **일정과 안내**뿐이므로, 빈 화면 대신 그 사실을 말한다. 운영자가 메모를
+ * 적어 두었으면 이 문구 대신 메모가 나간다.
+ *
+ * 2026-09-03 현재 표는 비어 있다. 유일한 항목이던 모집(RECRUITMENT)이 공유 범위 세 값이
+ * 배타가 되면서 **게스트 메뉴에 아예 서지 않게** 되었기 때문이다 — 게스트 계정은 모집의
+ * 결과물이라 모집이 게스트에게 보이려면 자기 결과가 자기보다 먼저 있어야 한다(3_4_15 §11).
+ * 몸통 없는 안내 한 줄이 사라지는 것이므로 게스트가 잃는 기능은 없다.
  */
-export const MODULE_GUEST_NOTICE: Record<string, string> = {
-  RECRUITMENT: '모집 신청은 담당자가 안내한 공개 신청 링크에서 진행합니다.',
-}
+export const MODULE_GUEST_NOTICE: Record<string, string> = {}
 
 /** 안내 문구(메모 우선). 둘 다 없으면 기간만으로 충분한 메뉴다. */
 export function moduleNotice(moduleType: string, memo: string | undefined): string | null {

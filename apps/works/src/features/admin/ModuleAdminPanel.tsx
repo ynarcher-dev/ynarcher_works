@@ -1,8 +1,9 @@
 import { moduleTypeLabel } from '@ynarcher/master-data'
-import { Card, IconButton, Spinner, Switch, useToast } from '@ynarcher/ui'
+import { Card, IconButton, Select, Spinner, Switch, useToast } from '@ynarcher/ui'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useModuleInstanceCounts } from '@/features/admin/moduleAdminHooks'
+import { MODULE_VISIBILITY_OPTIONS } from '@/features/program/config'
 import {
   MODULE_CATEGORIES,
   useModuleTemplates,
@@ -21,7 +22,7 @@ const WORKSPACES = [
  * 모듈 관리(ADMIN): 사업 운영 모듈의 **템플릿 카탈로그**를 배치한다.
  *
  * 행을 만들지도 지우지도 않는다 — 템플릿은 화면 구현과 함께 오므로 행은 마이그레이션이 심고
- * 여기서는 배치 값(분류·순서·사용 여부·워크스페이스 노출·공유 상한)만 고친다.
+ * 여기서는 배치 값(분류·순서·사용 여부·워크스페이스 노출·공유 범위 성격)만 고친다.
  *
  * **누르면 곧 저장된다.** 처음에는 초안을 손에 들고 [저장]을 누르게 했는데, 토글은 눌린 순간
  * 반영됐다고 읽히는 컨트롤이라 담당자 화면이 안 바뀌는 것을 버그로 오해하게 만들었다.
@@ -29,8 +30,13 @@ const WORKSPACES = [
  * 두 행의 sort_order를 맞바꿔 한 번에 보내며, RPC가 원자적이라 부분 반영이 없다.
  *
  * 끄는 것이 기존 인스턴스에 미치는 영향은 **축마다 다르다**. 카탈로그(사용·워크스페이스)는
- * 새로 못 만들게 할 뿐 진행 중인 인스턴스를 건드리지 않고, 상한(GUEST·링크)은 이미 열린
+ * 새로 못 만들게 할 뿐 진행 중인 인스턴스를 건드리지 않고, 성격(공유 범위)은 이미 열린
  * 것까지 닫는다. 그래서 확인 문구도 갈린다.
+ *
+ * 공유 범위는 2026-09-03에 상한 2종(GUEST·링크)에서 **한 축 세 값**으로 합쳐졌다. 상한을
+ * 따로 올리고 내리면 담당자 화면에도 스위치가 둘 서게 되고, 그러면 무엇을 만져야 밖에
+ * 열리는지 이름만 봐서는 알 수 없다. 여기서 고른 값이 곧 그 종류의 성격이며, 담당자는 그
+ * 결과를 받을 뿐 고르지 않는다.
  *
  * 근거 기획: docs/docs_planning/3_2_1_admin_module_registry.md
  */
@@ -84,13 +90,43 @@ export function ModuleAdminPanel() {
    * 끄기 전 확인. 축에 따라 다른 사실을 말한다 — 카탈로그는 "새로 못 만든다",
    * 상한은 "이미 열린 것도 닫힌다". 되돌릴 수 없다는 고지는 하지 않는다(사실이 아니다).
    */
-  const confirmOff = (t: ModuleTemplate, kind: 'catalog' | 'exposure', what: string): boolean => {
+  const confirmOff = (t: ModuleTemplate, what: string): boolean => {
     const n = counts?.get(t.key) ?? 0
-    const body =
-      kind === 'catalog'
-        ? `앞으로 새로 배치할 수 없습니다. 이미 배치된 ${n}건은 그대로 동작합니다.`
-        : `이미 배치된 ${n}건 중 열려 있던 것도 즉시 닫힙니다. 설정값과 주소는 남아 있어 다시 켜면 돌아옵니다.`
-    return window.confirm(`'${moduleTypeLabel(t.key)}'의 ${what}을(를) 끕니다.\n${body}\n\n계속할까요?`)
+    return window.confirm(
+      `'${moduleTypeLabel(t.key)}'의 ${what}을(를) 끕니다.\n` +
+        `앞으로 새로 배치할 수 없습니다. 이미 배치된 ${n}건은 그대로 동작합니다.\n\n계속할까요?`,
+    )
+  }
+
+  /**
+   * 공유 범위(성격)를 바꾸기 전 확인. 넓히는 방향은 묻지 않고 **닫히는 것이 생길 때만** 묻는다.
+   * 되돌릴 수 없다는 고지는 하지 않는다 — 사실이 아니다(저장값·주소는 보존되어 되돌리면 복구된다).
+   */
+  const confirmVisibility = (t: ModuleTemplate, next: string): boolean => {
+    const n = counts?.get(t.key) ?? 0
+    const name = moduleTypeLabel(t.key)
+    if (next === 'PUBLIC_LINK') {
+      return window.confirm(
+        `'${name}'을(를) 바깥용 종류로 바꿉니다.\n` +
+          `세 값은 배타라 이 종류의 ${n}건은 게스트 포털에서 사라지고, 담당자가 연 공개 주소로만 열립니다.\n\n` +
+          '계속할까요?',
+      )
+    }
+    if (t.visibility === 'PUBLIC_LINK') {
+      return window.confirm(
+        `'${name}'을(를) 더 이상 바깥으로 내보내지 않습니다.\n` +
+          `열려 있던 공개 주소는 즉시 닫힙니다. 주소·기간·문의처는 남아 있어 되돌리면 같은 주소로 돌아옵니다.\n\n` +
+          '계속할까요?',
+      )
+    }
+    if (t.visibility === 'GUEST_ONLY' && next === 'INTERNAL_ONLY') {
+      return window.confirm(
+        `'${name}'을(를) 내부 전용으로 바꿉니다.\n` +
+          `이미 배치된 ${n}건 중 게스트에게 보이던 것도 즉시 닫힙니다. 설정값은 남아 있어 되돌리면 돌아옵니다.\n\n` +
+          '계속할까요?',
+      )
+    }
+    return true
   }
 
   return (
@@ -100,7 +136,8 @@ export function ModuleAdminPanel() {
       help={
         '사업 운영 모듈의 템플릿 목록을 배치합니다. 누르면 곧바로 저장됩니다.\n' +
         '사용·워크스페이스를 끄면 새로 배치할 수 없을 뿐 기존 모듈은 그대로 동작합니다.\n' +
-        'GUEST·링크 상한을 내리면 이미 열려 있던 것도 즉시 닫힙니다(설정값은 보존).'
+        '공유 범위는 그 종류가 어디까지 나가는가(성격)이며, 세 값은 서로 배타입니다.\n' +
+        '좁히면 이미 열려 있던 것도 즉시 닫히되 설정값·주소는 남아 되돌리면 복구됩니다.'
       }
     >
       <div className="space-y-5">
@@ -148,7 +185,7 @@ export function ModuleAdminPanel() {
                         label="사용"
                         checked={t.is_active}
                         onChange={(on) => {
-                          if (!on && !confirmOff(t, 'catalog', '사용')) return
+                          if (!on && !confirmOff(t, '사용')) return
                           patch(t, { is_active: on })
                         }}
                         name={`${t.key}-active`}
@@ -161,7 +198,7 @@ export function ModuleAdminPanel() {
                           checked={t.workspaces.includes(w.key)}
                           disabled={!t.is_active}
                           onChange={(on) => {
-                            if (!on && !confirmOff(t, 'catalog', `${w.label} 노출`)) return
+                            if (!on && !confirmOff(t, `${w.label} 노출`)) return
                             patch(t, {
                               workspaces: on
                                 ? [...t.workspaces, w.key]
@@ -172,26 +209,29 @@ export function ModuleAdminPanel() {
                         />
                       ))}
 
-                      <Toggle
-                        label="GUEST"
-                        checked={t.allow_guest}
-                        disabled={!t.is_active}
-                        onChange={(on) => {
-                          if (!on && !confirmOff(t, 'exposure', 'GUEST 공개 허용')) return
-                          patch(t, { allow_guest: on })
-                        }}
-                        name={`${t.key}-guest`}
-                      />
-                      <Toggle
-                        label="링크"
-                        checked={t.allow_public_link}
-                        disabled={!t.is_active}
-                        onChange={(on) => {
-                          if (!on && !confirmOff(t, 'exposure', '링크 공유 허용')) return
-                          patch(t, { allow_public_link: on })
-                        }}
-                        name={`${t.key}-link`}
-                      />
+                      {/* 공유 범위는 상한 두 개가 아니라 성격 한 축이다. 담당자는 이 결과를
+                          받을 뿐 고르지 않으므로, 여기서 고른 값이 곧 그 종류의 성격이 된다. */}
+                      <span className="flex shrink-0 items-center gap-1.5">
+                        <span className="text-caption text-gray-600">공유 범위</span>
+                        <Select
+                          aria-label={`${moduleTypeLabel(t.key)} 공유 범위`}
+                          className="w-40"
+                          value={t.visibility}
+                          disabled={!t.is_active}
+                          onChange={(e) => {
+                            const next = e.target.value
+                            if (next === t.visibility) return
+                            if (!confirmVisibility(t, next)) return
+                            patch(t, { visibility: next })
+                          }}
+                        >
+                          {MODULE_VISIBILITY_OPTIONS.map((v) => (
+                            <option key={v.value} value={v.value}>
+                              {v.label}
+                            </option>
+                          ))}
+                        </Select>
+                      </span>
 
                       {/* 끄기 전에 영향 범위가 같은 줄에 서 있어야 한다. */}
                       <span className="w-20 shrink-0 text-right text-caption tabular-nums text-gray-600">

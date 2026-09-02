@@ -47,25 +47,69 @@ export const MODULE_TYPES: ModuleTypeDef[] = ['RECRUITMENT']
   .concat(BASE_MODULE_TYPES)
 
 /**
- * 모듈 공유 범위 — **로그인한 사람 중 누가 보는가**만 답하는 축이다(참여/배정 방식과 별개).
- * DB module_visibility enum에는 PUBLIC이 남아 있으나 2026-09-02 폐지되어 CHECK가 저장을 막는다:
- * 익명 접근 경로가 없어 판정에서 GUEST_ONLY와 동일하게 취급되었고, 그래서 고르면 밖에 열었다고
- * 믿는데 아무도 못 보는 상태가 됐다. 로그인 없는 외부 노출은 별도 축(모듈 링크 공유)이 답한다.
+ * 모듈 공유 범위 — **이 모듈이 어디까지 나가는가**를 답하는 한 축이며 세 값은 서로 배타다.
+ *
+ * 2026-09-02에는 '누가 보는가'(공유 범위)와 '바깥에 문을 여는가'(링크 공유)를 두 축으로 갈랐으나,
+ * 갈라 놓으니 담당자가 만질 스위치가 둘이 되어 **PUBLIC을 걷어내며 없앴던 오인이 이름만 바꿔
+ * 되살아났다**(전체공개를 골랐는데 아무 일도 안 일어남). 2026-09-03에 한 축으로 되합치고
+ * 세 번째 값 `PUBLIC_LINK`를 세운다.
+ *
+ * **값은 담당자가 고르지 않는다** — ADMIN이 템플릿에 성격을 지정하고(`module_templates.visibility`),
+ * 화면은 그 템플릿에서 고를 수 있는 값만 세운다(`moduleVisibilityOptions`). 폐기된 `PUBLIC`은
+ * enum에 남아 있으나 CHECK가 저장을 막는다.
  * 근거: docs/docs_planning/3_4_15_ac_public_links.md
  */
 export const MODULE_VISIBILITY_OPTIONS = [
+  { value: 'PUBLIC_LINK', label: 'PUBLIC_LINK', hint: '주소를 아는 누구나(로그인 불필요)' },
   { value: 'GUEST_ONLY', label: 'WORKS+GUEST', hint: 'GUEST 포털의 참여 기업/전문가까지' },
   { value: 'INTERNAL_ONLY', label: 'WORKS ONLY', hint: 'WORKS 내부 운영자만' },
 ] as const
 
 export const MODULE_VISIBILITY_LABEL: Record<string, string> = {
+  PUBLIC_LINK: 'PUBLIC_LINK',
   GUEST_ONLY: 'WORKS+GUEST',
   INTERNAL_ONLY: 'WORKS ONLY',
 }
 
 export const MODULE_VISIBILITY_TONE: Record<string, BadgeTone> = {
+  PUBLIC_LINK: 'warning',
   GUEST_ONLY: 'info',
   INTERNAL_ONLY: 'neutral',
+}
+
+/**
+ * 모듈 카드의 공유 범위 배지 — **배지는 성격을, 톤은 지금을 말한다.**
+ *
+ * 축이 하나가 되었으므로 `PUBLIC_LINK` 배지 자체가 "밖으로 나가는 모듈"을 말한다(2026-09-03
+ * 개정 전에는 공유 범위 배지와 링크 배지가 나란히 섰다). 다만 그 모듈이라도 공개 상태가
+ * 비공개거나 기간 밖이면 실제로는 닫혀 있으므로, **실제로 열려 있는 것만 강조 톤**을 준다 —
+ * 배지만 보고 "지금 열려 있다"로 읽히면 담당자가 사업을 훑을 때 열린 문의 개수를 잘못 센다.
+ */
+export function moduleVisibilityBadge(
+  visibility: string,
+  linkOpen: boolean,
+): { label: string; tone: BadgeTone } {
+  const label = MODULE_VISIBILITY_LABEL[visibility] ?? 'WORKS ONLY'
+  if (visibility === 'PUBLIC_LINK' && !linkOpen) return { label, tone: 'neutral' }
+  return { label, tone: MODULE_VISIBILITY_TONE[visibility] ?? 'neutral' }
+}
+
+/**
+ * 이 템플릿에서 고를 수 있는 공유 범위. DB의 `app.module_template_visibilities()`와 같은 표이며,
+ * 서버가 트리거로 최종 강제한다 — 화면에서 감추는 것은 보안이 아니다.
+ *
+ * `PUBLIC_LINK`는 상한이 아니라 **배타**다: 그 성격의 템플릿에서는 다른 값을 고를 수 없다.
+ * 모집으로 받아 선발하고 계정을 발급해야 GUEST 활동이 시작되므로, 한 모듈이 두 구간에 동시에
+ * 설 수 없기 때문이다(구간이 바뀔 때 이동하는 것은 모듈이 아니라 사람이다).
+ */
+export function moduleVisibilityOptions(templateVisibility: string | undefined) {
+  if (templateVisibility === 'PUBLIC_LINK') {
+    return MODULE_VISIBILITY_OPTIONS.filter((v) => v.value === 'PUBLIC_LINK')
+  }
+  if (templateVisibility === 'GUEST_ONLY') {
+    return MODULE_VISIBILITY_OPTIONS.filter((v) => v.value !== 'PUBLIC_LINK')
+  }
+  return MODULE_VISIBILITY_OPTIONS.filter((v) => v.value === 'INTERNAL_ONLY')
 }
 
 /** 배정 방식(participation_mode) enum 전체. 표시 라벨은 아래 맵을 사용한다. */
