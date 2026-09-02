@@ -101,6 +101,7 @@ declare
   --   kind='program' : a=사업 id 컬럼
   --   kind='module'  : a=모듈 id 컬럼
   --   kind='parent'  : a=부모 테이블, b=부모를 가리키는 FK 컬럼
+  --   kind='unified' : a=워크스페이스 키 컬럼(entity_key), b=사업 id 컬럼
   anchors  text[][] := array[
     -- 모집 —------------------------------------------------------------
     array['application_forms',           'program', 'program_id',        ''],
@@ -154,6 +155,24 @@ declare
     array['activity_attachments',        'parent',  'program_posts',     'custom_activity_id'],
     array['activity_attendees',          'parent',  'program_posts',     'custom_activity_id']
   ];
+  -- 경로만 세우고 정책은 만들지 않는 뿌리.
+  --
+  -- program_posts는 통합 원장이라 자기 정책을 선행 마이그레이션(20260903100000)이 이미
+  -- 소유한다. 그런데 글쓰기 하위 4종은 이 표를 부모로 타고 올라가므로, 경로 표에 없으면
+  -- 재귀가 '경로가 정의되지 않은 원장입니다'로 멈춘다.
+  --
+  -- 그렇다고 anchors에 넣을 수는 없다 — 그러면 이 파일이 program_posts의 정책을 다시
+  -- 만들어, 같은 표의 정책을 두 마이그레이션이 각자 소유하게 된다. 나중에 한쪽만 고치면
+  -- 어느 쪽이 진짜인지 판정할 근거가 없다. **경로를 아는 것과 정책을 소유하는 것은 다른
+  -- 일이므로 배열을 가른다.**
+  --
+  -- 식은 부모의 실제 정책과 같은 모양이어야 한다(entity_key가 워크스페이스를 답하고,
+  -- 사업 접근을 함께 묻는다). 부모 정책에 EXISTS로 기대지 않고 펼치는 이유는 파일 머리에
+  -- 적은 그대로다 — EXISTS 한 줄은 부모의 SELECT 정책만 태워 읽기 전용 사용자가 자식 행을
+  -- 넣게 된다.
+  paths    text[][] := array[
+    array['program_posts', 'unified', 'entity_key', 'program_id']
+  ];
   i        int;
   t        text;
   sel_expr text;
@@ -164,6 +183,10 @@ begin
   for i in 1 .. array_length(anchors, 1) loop
     insert into pg_temp.rls_spec (tbl, kind, a, b)
     values (anchors[i][1], anchors[i][2], anchors[i][3], nullif(anchors[i][4], ''));
+  end loop;
+  for i in 1 .. array_length(paths, 1) loop
+    insert into pg_temp.rls_spec (tbl, kind, a, b)
+    values (paths[i][1], paths[i][2], paths[i][3], nullif(paths[i][4], ''));
   end loop;
 
   -- 지정한 별칭 기준으로 그 테이블의 게이트 식을 만든다(부모는 재귀).
@@ -199,6 +222,12 @@ begin
       return format(
         'app.can_%s_workspace(%s) and app.can_access_ws_program(%s, app.module_program(%I.%I))',
         p_mode, ws, ws, p_alias, a);
+    elsif kind = 'unified' then
+      -- 통합 원장은 행 자신이 소속을 안다. 사업 원장을 뒤져 묻지 않는다.
+      ws := format('app.entity_key_workspace(%I.%I)', p_alias, a);
+      return format(
+        'app.can_%s_workspace(%s) and app.can_access_ws_program(%s, %I.%I)',
+        p_mode, ws, ws, p_alias, b);
     else
       palias := 'p_' || replace(a, '.', '_') || '_' || length(p_alias)::text;
       return format(
