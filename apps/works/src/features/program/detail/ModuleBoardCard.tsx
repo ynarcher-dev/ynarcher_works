@@ -37,6 +37,7 @@ import {
   type ProgramModule,
 } from '@/features/program/hooks'
 import { AddModulesModal } from '@/features/program/detail/AddModulesModal'
+import { DisabledModuleSection } from '@/features/program/detail/DisabledModuleSection'
 import { ModuleDeleteModal } from '@/features/program/detail/ModuleDeleteModal'
 import { ModuleFormModal } from '@/features/program/detail/ModuleFormModal'
 import { ModuleGanttView } from '@/features/program/detail/ModuleGanttView'
@@ -112,6 +113,8 @@ export function ModuleBoardCard({
 
   const modules = data ?? []
   const enabled = sortModules(modules.filter((m) => m.enabled))
+  // 꺼진 인스턴스는 운영 목록에서 빠지되 사라지지는 않는다 — 되돌리는 자리는 목록 하단이다.
+  const disabled = sortModules(modules.filter((m) => !m.enabled))
   // 모듈명 중복 검증용: 편집 대상 자신은 제외한 나머지 인스턴스 제목.
   const titlesExcept = (id: string | undefined) =>
     modules.filter((m) => m.id !== id).map((m) => m.title ?? '').filter((t) => t.length > 0)
@@ -248,6 +251,14 @@ export function ModuleBoardCard({
           >
             프로그램 추가
           </DashedAddButton>
+
+          <DisabledModuleSection
+            modules={disabled}
+            programId={programId}
+            canDelete={Boolean(isPm)}
+            onDelete={setDeleteTarget}
+            onOpenSettings={setEditTarget}
+          />
         </>
       )}
     </>
