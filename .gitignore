@@ -35,3 +35,7 @@ supabase/.temp/
 
 # Claude Code 개인 설정(권한 등) — 커밋 금지
 .claude/settings.local.json
+
+# 하이웍스 원본 백업(우리 소스가 아니다). 커밋 대상이 아니고, 추적되지 않은 채 남아 있으면
+# git status가 늘 시끄러워 `git add -A` 한 번에 통째로 딸려 들어갈 위험이 있다.
+hiworks_backup/
