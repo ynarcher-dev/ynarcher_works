@@ -141,6 +141,9 @@ export function ModuleFormModal({
   })
 
   const titleValue = watch('title')
+  // 링크 칸이 '기간을 비우면 어떻게 되는지'를 말하려면 지금 편집 중인 모듈 기간이 필요하다.
+  const startValue = watch('start_date')
+  const endValue = watch('end_date')
   const dupTitle = titleValue.trim().length > 0 && takenTitles.has(normTitle(titleValue))
 
   const onSubmit = async (values: FormValues) => {
@@ -301,7 +304,11 @@ export function ModuleFormModal({
           </div>
         </div>
 
-        <ModulePublicLinkFields form={linkForm} />
+        <ModulePublicLinkFields
+          form={linkForm}
+          moduleStartDate={startValue}
+          moduleEndDate={endValue}
+        />
 
         {modePolicy?.options && (
           <div>

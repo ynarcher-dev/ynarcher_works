@@ -12,6 +12,13 @@ import {
 import dayjs from 'dayjs'
 import { ExternalLink, ImageUp, Link2 } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { readModuleSettings } from '@/features/program/detail/moduleMeta'
+import {
+  effectiveLinkWindow,
+  windowReadback,
+  type LinkWindow,
+} from '@/features/program/detail/publicLinkWindow'
+import { useProgramModules } from '@/features/program/hooks'
 import { FieldBuilder } from '@/features/program/recruitment/FieldBuilder'
 import { GuideBuilder } from '@/features/program/recruitment/GuideBuilder'
 import {
@@ -45,19 +52,23 @@ const toDatetimeInput = (iso: string | null): string => (iso ? dayjs(iso).format
 const fromDatetimeInput = (local: string): string | null => (local ? dayjs(local).toISOString() : null)
 
 /**
- * 공개 상태 + 공개 기간으로 "지금 실제로 공개 중인지"를 계산한다(서버 게이트와 동일 규칙).
- * 운영자에게 현재 노출 상태를 배지로 알려주기 위한 표시용.
+ * 공개 상태 + **상속을 적용한** 공개 기간으로 "지금 실제로 공개 중인지"를 계산한다.
+ *
+ * 종전에는 링크에 적힌 기간만 보아서, 모집 기간을 비워 둔 모집이 모듈 종료일에 바깥에서
+ * 닫힌 뒤에도 여기서는 '공개중'이라 답했다. 담당자가 확인할 수 있는 유일한 자리가 사실과
+ * 다른 문장을 말하면, 지원자가 못 들어온다는 것을 알려 줄 사람이 아무도 없다.
+ *
+ * 상속된 경계 때문에 닫힌 경우에는 **어디서 온 시각인지**까지 말한다 — 자기가 넣지 않은
+ * 기간으로 마감됐다는 사실이 배지에서 읽혀야 무엇을 고칠지 알 수 있다.
  */
-function effectiveStatus(
-  status: PublicStatus,
-  openAt: string | null,
-  closeAt: string | null,
-): { label: string; tone: BadgeTone } {
+function effectiveStatus(status: PublicStatus, win: LinkWindow): { label: string; tone: BadgeTone } {
   if (status === 'PRIVATE') return { label: '비공개', tone: 'neutral' }
   if (status === 'CLOSED') return { label: '마감', tone: 'neutral' }
   const now = dayjs()
-  if (openAt && now.isBefore(dayjs(openAt))) return { label: '시작 예정', tone: 'warning' }
-  if (closeAt && now.isAfter(dayjs(closeAt))) return { label: '기간 종료(마감)', tone: 'neutral' }
+  if (win.openAt && now.isBefore(dayjs(win.openAt)))
+    return { label: win.openInherited ? '시작 전(모듈 기간)' : '시작 예정', tone: 'warning' }
+  if (win.closeAt && now.isAfter(dayjs(win.closeAt)))
+    return { label: win.closeInherited ? '마감(모듈 기간 종료)' : '기간 종료(마감)', tone: 'neutral' }
   return { label: '공개중', tone: 'success' }
 }
 
@@ -98,6 +109,10 @@ export function RecruitmentSettingsPanel({
 }) {
   const toast = useToast()
   const { data: form, isLoading } = useApplicationForm(moduleId)
+  // 모집 기간을 비우면 이 모듈의 기간이 그대로 적용된다(서버 게이트의 상속 규칙). 그 값을
+  // 읽지 않으면 화면은 '무기한'이라 말하고 바깥은 모듈 종료일에 닫힌다.
+  const { data: modules } = useProgramModules(programId)
+  const modulePeriod = readModuleSettings(modules?.find((m) => m.id === moduleId)?.settings)
   const save = useSetApplicationForm(programId, moduleId)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -128,7 +143,13 @@ export function RecruitmentSettingsPanel({
 
   const url = applyUrl(form?.public_token)
   const poster = posterUrl(landing.poster_path)
-  const eff = effectiveStatus(status, openAt, closeAt)
+  const win = effectiveLinkWindow({
+    linkOpenAt: openAt,
+    linkCloseAt: closeAt,
+    moduleStartDate: modulePeriod.start_date ?? null,
+    moduleEndDate: modulePeriod.end_date ?? null,
+  })
+  const eff = effectiveStatus(status, win)
   const patchLanding = (part: Partial<LandingContent>) => setLanding((prev) => ({ ...prev, ...part }))
 
   const onPickPoster = async (file: File | undefined) => {
@@ -212,7 +233,7 @@ export function RecruitmentSettingsPanel({
 
           <Field
             label="모집 기간"
-            hint="공개 모집중일 때 이 기간에만 자동으로 열립니다. 비우면 무기한입니다."
+            hint="공개 모집중일 때 이 기간에만 자동으로 열립니다. 비우면 이 모듈의 기간을 따릅니다."
           >
             <div className="flex flex-wrap items-center gap-2">
               <input
@@ -243,6 +264,7 @@ export function RecruitmentSettingsPanel({
                 </button>
               )}
             </div>
+            <p className="mt-1.5 text-caption text-gray-700">{windowReadback(win)}</p>
           </Field>
 
           <Field label="공개 URL">

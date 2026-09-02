@@ -1,6 +1,8 @@
 import { Button, Field, Input, Select, Switch, useToast } from '@ynarcher/ui'
 import { publicModuleUrl, type PublicLinkStatus } from '@/features/program/publicLinkHooks'
 import type { PublicLinkForm } from '@/features/program/detail/publicLinkForm'
+import { localToIso } from '@/features/program/detail/publicLinkTime'
+import { effectiveLinkWindow, windowReadback } from '@/features/program/detail/publicLinkWindow'
 
 const STATUS_OPTIONS: { value: PublicLinkStatus; label: string }[] = [
   { value: 'OPEN', label: '공개중' },
@@ -22,11 +24,28 @@ const STATUS_OPTIONS: { value: PublicLinkStatus; label: string }[] = [
  *
  * 근거 기획: docs/docs_planning/3_4_15_ac_public_links.md §5.1
  */
-export function ModulePublicLinkFields({ form }: { form: PublicLinkForm }) {
+export function ModulePublicLinkFields({
+  form,
+  moduleStartDate,
+  moduleEndDate,
+}: {
+  form: PublicLinkForm
+  /** 편집 중인 모듈 기간('YYYY-MM-DD'). 기간 칸을 비우면 이 값이 그대로 적용된다. */
+  moduleStartDate?: string
+  moduleEndDate?: string
+}) {
   const toast = useToast()
   if (!form.available) return null
 
   const url = publicModuleUrl(form.token)
+  // 저장 전 폼 값으로 계산한다 — 담당자가 지금 고치고 있는 기간이 링크에 어떻게 적용되는지를
+  // 저장 후에야 알게 되면, 되돌리려고 창을 다시 여는 왕복이 생긴다.
+  const win = effectiveLinkWindow({
+    linkOpenAt: localToIso(form.openAt),
+    linkCloseAt: localToIso(form.closeAt),
+    moduleStartDate: moduleStartDate ?? null,
+    moduleEndDate: moduleEndDate ?? null,
+  })
 
   const copy = async () => {
     if (!url) return
@@ -143,6 +162,9 @@ export function ModulePublicLinkFields({ form }: { form: PublicLinkForm }) {
               />
             </Field>
           </div>
+          {/* 비워 둔 칸이 무엇으로 채워지는지를 되읽어 준다 — 상속은 규칙 설명이 아니라
+              지금 이 주소에 실제로 적용되는 값이라 접지 않는다. */}
+          <p className="text-caption text-gray-700">{windowReadback(win)}</p>
         </>
       )}
     </div>
