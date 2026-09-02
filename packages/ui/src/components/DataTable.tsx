@@ -62,6 +62,16 @@ interface ColumnSpec {
   rem?: number
   /** 가변폭 가중치. 남는 폭을 이 비율로 나눠 갖는다. */
   flex?: number
+  /**
+   * 가변폭 열의 하한(rem). **선언한 폭은 하한이기도 하다**(2026-09-02).
+   *
+   * 열이 많아 표가 컨테이너를 넘치면 `flex` 계산의 전제(남는 폭이 있다)가 깨진다. 그때 브라우저는
+   * 각 열이 요구한 폭을 비율대로 깎는데, 값이 한 줄로 고정된 열(`whitespace-nowrap`)은 내용이
+   * 폭을 지켜 주는 반면 **말줄임되는 셀(`TagCell` 등)은 지켜 줄 내용이 없어 한 글자 폭까지 눌린다.**
+   * 실제로 포트폴리오 전체보기에서 업종 열이 15px짜리 띠로 짜부라졌다. 하한을 주면 그 열은
+   * 짜부라지는 대신 표를 넓히고, 넘친 폭은 가로 스크롤이 받는다 — 표는 잘리는 대신 스크롤한다.
+   */
+  minRem?: number
 }
 
 /**
@@ -76,7 +86,7 @@ const buildColumnSpec = (stage: TableStage): Record<ColumnType, ColumnSpec> => {
   const page = stage === 'page'
   return {
     /** 식별 값(이름·기업명). 가장 큰 몫을 받는다 — 잘리면 곤란한 값이라 여유가 가장 쓸모 있다. */
-    name: { width: '', align: 'left', numeric: false, flex: 3 },
+    name: { width: '', align: 'left', numeric: false, flex: 3, minRem: page ? 10 : 8 },
     /**
      * 업종·분류 등 짧은 라벨 중 **길이의 상한을 모르는** 것.
      *
@@ -84,7 +94,7 @@ const buildColumnSpec = (stage: TableStage): Record<ColumnType, ColumnSpec> => {
      * 기본값이 되어, 두 글자짜리 값이 사업명과 같은 비율로 폭을 받았다 — 펀드 목록에서는 다섯 개의
      * `text` 열(코드·재원·성격·구분·펀드유형, 값은 모두 5자 이하)이 남는 폭의 절반을 가져갔다.
      */
-    text: { width: '', align: 'left', numeric: false, flex: 1.2 },
+    text: { width: '', align: 'left', numeric: false, flex: 1.2, minRem: 4 },
     /**
      * 길이의 상한이 정해진 값(코드·구분·단계·재원). 넓혀 봐야 빈 칸만 늘어나므로 고정폭이다.
      * 자동 레이아웃에서는 이 폭이 하한이라, 예외적으로 긴 값이 와도 잘리지 않고 열이 늘어난다.
@@ -97,14 +107,14 @@ const buildColumnSpec = (stage: TableStage): Record<ColumnType, ColumnSpec> => {
      * 열은 대개 `심재훈 외 1` 꼴이라 두 글자짜리 분류 라벨보다 길다. 1.0이던 동안 이 열은
      * 남는 폭을 나눌 때 언제나 마지막이었고, 고정폭이 많은 표에서는 `외 1`만 다음 줄로 접혔다.
      */
-    person: { width: '', align: 'left', numeric: false, flex: 1.3 },
+    person: { width: '', align: 'left', numeric: false, flex: 1.3, minRem: 4.5 },
     /**
      * 값이 여러 개인 분류 태그(분야·업종). 개수만큼 폭이 널뛰므로 가변 열이다.
      * 목록에서는 배지가 아니라 한 줄 텍스트로 적는다 — 근거는 `TagCell` 주석 참조.
      */
-    tags: { width: '', align: 'left', numeric: false, flex: 1.6 },
+    tags: { width: '', align: 'left', numeric: false, flex: 1.6, minRem: 5.5 },
     /** 주소·비고 등 긴 텍스트. */
-    long: { width: '', align: 'left', numeric: false, flex: 2 },
+    long: { width: '', align: 'left', numeric: false, flex: 2, minRem: page ? 7 : 6 },
     /** 상태 배지 한 개. */
     badge: { width: w.badge, align: 'left', numeric: false, rem: 5 },
     /** 날짜 `YYYY-MM-DD`. */
@@ -283,12 +293,13 @@ export interface DataTableProps<T> {
     /** 페이지 변경 콜백(0-base). */
     onChange: (page: number) => void
     /**
-     * 번호줄 없는 미니 페이저(`< 1/3 >`)로 대체한다. 카드 안에 놓인 보조 목록용이며,
-     * 상세의 우측 패널 목록이 쓰는 것과 같은 `MiniPager`다.
+     * 번호줄 없는 미니 페이저(`< 1/3 >`)로 대체한다. 상세 우측 패널의 변동 이력·코멘트처럼
+     * 본문을 **받치는 보조 목록**용이며, 한 페이지뿐이면 사라진다.
      *
-     * 자리가 가르는 축은 `selectable`과 같다 — 페이지에 바로 놓인 표는 그 화면의 작업
-     * 대상이라 번호를 펴 보이고, 카드 안 표는 번호줄이 카드 폭의 절반을 먹는다.
-     * `totalAll`은 미니 페이저에 표기 자리가 없어 무시된다.
+     * 가르는 축은 '카드 안인가'가 아니라 '보조 목록인가'다(2026-09-02 정정). 카드 안에 있어도
+     * 그 탭의 작업 대상인 표(FUND 포트폴리오 등)는 목록 화면과 같은 번호줄 페이저를 상시
+     * 노출한다 — 페이저가 화면마다 다르게 생기거나 건수에 따라 사라지면, 자리를 아껴 얻는
+     * 것보다 잃는 것이 크다. `totalAll`은 미니 페이저에 표기 자리가 없어 무시된다.
      */
     compact?: boolean
   }
@@ -562,13 +573,22 @@ export function DataTable<T>({
     if (!w || !totalFlex) return undefined
     return `calc((100% - ${fixedRem}rem) * ${(w / totalFlex).toFixed(4)})`
   }
-  /** 셀 인라인 스타일 — 고정 열의 left 오프셋과 가변폭을 함께 얹는다. */
+  /**
+   * 셀 인라인 스타일 — 고정 열의 left 오프셋과 가변폭(+하한)을 함께 얹는다.
+   *
+   * 하한을 함께 주는 이유는 `ColumnSpec.minRem` 주석 참조. 고정폭 열(`rem`)도 같은 값을 하한으로
+   * 걸어, 표가 넘칠 때 브라우저가 선언한 규격을 깎지 못하게 한다 — 이 깎임은 `stickyLead`의
+   * 오프셋 계산(선언한 rem 폭의 누적)을 곧바로 어긋나게 한다.
+   */
   const cellStyle = (col: Column<T>, leadFrozen: boolean) => {
+    const spec = col.type ? columnTypeSpec[col.type] : undefined
     const width = flexWidth(col)
-    if (!leadFrozen && !width) return undefined
+    const minRem = spec?.rem ?? spec?.minRem
+    if (!leadFrozen && !width && !minRem) return undefined
     return {
       ...(leadFrozen ? { left: `${leftFirst}rem` } : {}),
       ...(width ? { width } : {}),
+      ...(minRem ? { minWidth: `${minRem}rem` } : {}),
     }
   }
 
@@ -577,9 +597,9 @@ export function DataTable<T>({
   const leftNo = selectable ? stdW.sel.rem : 0
   const leftFirst = (selectable ? stdW.sel.rem : 0) + (numbered ? stdW.no.rem : 0)
   // 고정 셀 공통 클래스. 헤더는 gray-25, 본문은 white(+hover gray-25)로 불투명 배경을 깐다.
-  // last(첫 도메인 열)에는 우측 seam을 은은하게 번지는 그림자로만 둬, 가로 스크롤 시 고정 영역이
-  // 스크롤되는 셀 위로 부드럽게 떠 있게 한다(선명한 경계선 없이).
-  const stickyCell = (isHeader: boolean, isLast = false) =>
+  // 고정 영역의 우측 seam은 두지 않는다(2026-09-02) — 번져 나가는 그림자가 표 한가운데를
+  // 세로로 가르는 띠로 읽혀, 스크롤하지 않는 상태에서는 있지도 않은 경계를 만들었다.
+  const stickyCell = (isHeader: boolean) =>
     stickyLead
       ? cn(
           'sticky',
@@ -587,7 +607,6 @@ export function DataTable<T>({
           // thead와 같은 gray-25를 깐다 — 흰색을 남기면 가로 스크롤 시 그 열만 머리글 띠에서
           // 빠져 보인다.
           isHeader ? 'z-20 bg-gray-25' : 'z-10 bg-white group-hover:bg-gray-25',
-          isLast && 'shadow-pinned',
         )
       : ''
   const colSpan =
@@ -674,7 +693,7 @@ export function DataTable<T>({
             {selectable && (
               <th
                 className={cn(`${rowH} ${stdW.sel.w} border-b border-gray-300 ${cellX}`, pad, stickyCell(true))}
-                style={stickyLead ? { left: 0 } : undefined}
+                style={{ minWidth: `${stdW.sel.rem}rem`, ...(stickyLead ? { left: 0 } : {}) }}
               >
                 {/* 체크박스는 인라인 요소라 셀에 그냥 두면 글자 베이스라인에 걸려 위로 뜬다. */}
                 <div className="flex items-center justify-center">
@@ -692,7 +711,7 @@ export function DataTable<T>({
             {numbered && (
               <th
                 className={cn(`${rowH} ${stdW.no.w} border-b border-gray-300 ${cellX} text-center ${text.head}`, pad, stickyCell(true))}
-                style={stickyLead ? { left: `${leftNo}rem` } : undefined}
+                style={{ minWidth: `${stdW.no.rem}rem`, ...(stickyLead ? { left: `${leftNo}rem` } : {}) }}
               >
                 No.
               </th>
@@ -730,7 +749,7 @@ export function DataTable<T>({
                     pad,
                     truncate,
                     col.className,
-                    leadFrozen && stickyCell(true, true),
+                    leadFrozen && stickyCell(true),
                   )}
                   style={cellStyle(col, leadFrozen)}
                   onClick={sortable ? () => requestSort(col.key) : undefined}
@@ -757,12 +776,13 @@ export function DataTable<T>({
             {standardColumns && (
               <>
                 {showAuthor && (
-                  <th className={cn(`${rowH} ${stdW.author.w} border-b border-gray-300 ${cellX} text-center ${text.head}`, pad, truncate)}>{authorLabel}</th>
+                  <th className={cn(`${rowH} ${stdW.author.w} border-b border-gray-300 ${cellX} text-center ${text.head}`, pad, truncate)} style={{ minWidth: `${stdW.author.rem}rem` }}>{authorLabel}</th>
                 )}
                 {/* 헤더는 값 정렬과 무관하게 항상 가운데. 머리글 줄이 하나의 띠로 읽히게 한다. */}
                 {/* 수정일 머리글도 값과 같은 쪽에 선다 — 값만 우측으로 보내면 머리글이 어긋난다. */}
                 <th
                   className={cn(`${rowH} ${stdW.updated.w} border-b border-gray-300 ${cellX} ${text.head}`, alignClass[updatedAtAlign], 'cursor-pointer select-none hover:bg-gray-50', pad, truncate)}
+                  style={{ minWidth: `${stdW.updated.rem}rem` }}
                   onClick={() => requestSort('__updatedAt')}
                 >
                   <span className="inline-flex items-center gap-1">
@@ -781,7 +801,7 @@ export function DataTable<T>({
                   </span>
                 </th>
                 {showManageColumn && (
-                  <th className={cn(`${rowH} ${stdW.manage.w} border-b border-gray-300 ${cellX} text-center ${text.head}`, pad)}>관리</th>
+                  <th className={cn(`${rowH} ${stdW.manage.w} border-b border-gray-300 ${cellX} text-center ${text.head}`, pad)} style={{ minWidth: `${stdW.manage.rem}rem` }}>관리</th>
                 )}
               </>
             )}
@@ -865,7 +885,7 @@ export function DataTable<T>({
                         pad,
                         truncate,
                         col.className,
-                        leadFrozen && stickyCell(false, true),
+                        leadFrozen && stickyCell(false),
                       )}
                       style={cellStyle(col, leadFrozen)}
                     >

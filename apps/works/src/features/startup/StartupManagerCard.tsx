@@ -85,7 +85,7 @@ export function StartupManagerCard({
   )
 
   return (
-    <PanelCard title="담당자" count={invested ? managers.length : undefined}>
+    <PanelCard title="딜메이커" count={invested ? managers.length : undefined}>
       {invested ? (
         <DataTable
           columns={columns}
@@ -93,7 +93,7 @@ export function StartupManagerCard({
           rowKey={(r) => r.user_id}
           layout="fixed"
           standardColumns={false}
-          emptyText="지정된 담당자가 없습니다."
+          emptyText="지정된 딜메이커가 없습니다."
           // 카드 안 보조 목록이라 번호줄 없는 미니 페이저를 쓴다(우측 패널 목록과 같은 규격).
           pagination={{
             page,

@@ -42,10 +42,12 @@ export function RelatedMinutesPanel({
                   <span className="min-w-0 flex-1 truncate text-body font-semibold text-gray-900">
                     {m.title}
                   </span>
-                  <span className="flex shrink-0 items-center gap-x-2 text-caption text-gray-700">
+                  <span className="flex shrink-0 items-center gap-x-2 text-body-sm text-gray-700">
                     <span className="tabular-nums">{m.meetingDate ?? '일자 미정'}</span>
                     {m.authorName && (
-                      <span className="border-l border-gray-200 pl-2">{m.authorName}</span>
+                      <span className="border-l border-gray-200 pl-2 font-medium text-gray-800">
+                        {m.authorName}
+                      </span>
                     )}
                   </span>
                 </Link>

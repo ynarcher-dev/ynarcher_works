@@ -38,13 +38,6 @@ export function BranchesPanel() {
     { key: 'name', header: '지사명', primary: true, type: 'name', render: (b) => b.name },
     { key: 'address', header: '주소', type: 'long', render: (b) => b.address ?? <EmptyValue /> },
     {
-      key: 'phone',
-      header: '전화번호',
-      type: 'text',
-      render: (b) =>
-        b.phone ? <span className="tabular-nums">{b.phone}</span> : <EmptyValue />,
-    },
-    {
       key: 'memberCount',
       header: '상주인력',
       type: 'count',
@@ -53,6 +46,13 @@ export function BranchesPanel() {
         const count = entriesOf(b.id).length
         return count > 0 ? `${count}명` : <EmptyValue />
       },
+    },
+    {
+      key: 'phone',
+      header: '전화번호',
+      type: 'text',
+      render: (b) =>
+        b.phone ? <span className="tabular-nums">{b.phone}</span> : <EmptyValue />,
     },
   ]
 

@@ -1,7 +1,6 @@
-import { Badge, DataTable, PanelCard, PersonCell, usePaged, type Column } from '@ynarcher/ui'
+import { DataTable, PanelCard, PersonCell, usePaged, type Column } from '@ynarcher/ui'
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { PROGRAM_STATUS_LABEL, PROGRAM_STATUS_TONE } from '@/features/program/config'
 import { programManagerNames } from '@/features/program/programManagerLabel'
 import { categoryLabel, type ProgramWorkspaceConfig } from '@/features/program/workspace'
 import type { StartupProgramRow } from '@/features/startup/startupProgramHooks'
@@ -78,16 +77,6 @@ export function StartupProgramCard({
             } satisfies Column<StartupProgramRow>,
           ]
         : []),
-      {
-        key: 'status',
-        header: '상태',
-        type: 'badge',
-        render: (r) => (
-          <Badge tone={PROGRAM_STATUS_TONE[r.status] ?? 'neutral'}>
-            {PROGRAM_STATUS_LABEL[r.status] ?? r.status}
-          </Badge>
-        ),
-      },
       {
         key: 'period',
         header: '운영 기간',
