@@ -63,6 +63,30 @@ function sameEmail(a: string | null, b: string): boolean {
 }
 
 /**
+ * ADMIN이 이 계정을 재워 두었는가(users.is_active = false 또는 삭제).
+ *
+ * 정지된 계정은 RLS가 이미 모든 요청을 막지만(app.current_app_user_id()가 is_active를 본다),
+ * **로그인 자체는 service_role이 처리하므로 RLS가 가로막지 않는다.** 여기서 막지 않으면
+ * 토큰은 정상 발급되고 화면만 비어 "로그인은 됐는데 아무것도 안 보이는" 상태가 된다 —
+ * 이 파일이 서명 키가 없을 때 굳이 멈추는 것과 같은 이유다.
+ *
+ * 아직 계정이 만들어지지 않은 초대(app_user_id = null)는 정지 대상이 없으므로 통과한다.
+ * 판정 불가(조회 실패)는 막는 쪽으로 답한다 — 열어 두는 폴백은 정지를 무력화한다.
+ * 근거: 20260903180000_admin_guest_accounts.sql
+ */
+async function isAccountSuspended(db: SupabaseClient, appUserId: string | null): Promise<boolean> {
+  if (!appUserId) return false
+  const { data, error } = await db
+    .from('users')
+    .select('is_active, deleted_at')
+    .eq('id', appUserId)
+    .maybeSingle()
+  if (error || !data) return true
+  const row = data as { is_active: boolean; deleted_at: string | null }
+  return !row.is_active || Boolean(row.deleted_at)
+}
+
+/**
  * 사업코드 + 이메일로 열려 있는 초대를 찾는다. 하나라도 어긋나면 null이다.
  * 호출부는 null을 사유 구분 없이 같은 응답으로 처리해 계정 열거를 막는다.
  */
@@ -94,6 +118,9 @@ export async function findOpenInvitation(
 
   const p = participant as GuestParticipant | null
   if (!p || !OPEN_STATUSES.has(p.login_status)) return null
+
+  // 계정 축(ADMIN 정지)은 사업 축(담당자가 닫은 문)과 별개로 먼저 막는다.
+  if (await isAccountSuspended(db, invitation.app_user_id)) return null
 
   // 사업이 어느 원장에 있는지는 명부 행에 적혀 있지 않으므로 세 원장을 훑어 찾는다.
   const prog = await loadProgramAnywhere<{ status: string; deleted_at: string | null }>(
@@ -128,6 +155,7 @@ export async function loadInvitation(
 
   const p = participant as GuestParticipant | null
   if (!p || !OPEN_STATUSES.has(p.login_status)) return null
+  if (await isAccountSuspended(db, invitation.app_user_id)) return null
   return { invitation, participant: p }
 }
 

@@ -1,5 +1,6 @@
 import { maskBy } from '@/lib/mask'
 import { supabase } from '@/lib/supabase'
+import { GUEST_USER_TYPE_FILTER } from '@/lib/userTypes'
 import {
   isMasked,
   type MaskOverrides,
@@ -362,7 +363,7 @@ async function searchEmployees(kw: string): Promise<SearchResult[]> {
     supabase
       .from('users')
       .select('id, name, email, phone')
-      .not('user_type', 'in', '(external_startup,external_expert,temporary_guest)')
+      .not('user_type', 'in', GUEST_USER_TYPE_FILTER)
       .is('deleted_at', null)
       .or(orClause(['name', 'email', 'phone'], kw))
       .order('name', { ascending: true })

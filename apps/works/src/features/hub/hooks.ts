@@ -9,6 +9,7 @@ import {
   type SearchResult,
 } from '@/features/hub/globalSearch'
 import { supabase } from '@/lib/supabase'
+import { GUEST_USER_TYPE_FILTER } from '@/lib/userTypes'
 
 /**
  * 현재 로그인 사용자의 입사일(users.profile.hire_date). 미입력이면 null.
@@ -251,7 +252,7 @@ export function useHubSummary() {
           .from('users')
           .select('*', { count: 'exact', head: true })
           .is('deleted_at', null)
-          .not('user_type', 'in', '(external_startup,external_expert,temporary_guest)'),
+          .not('user_type', 'in', GUEST_USER_TYPE_FILTER),
         headCount('startups'),
         headCount('experts'),
         headCount('van'),
@@ -322,7 +323,7 @@ export function useEmployees() {
       const { data } = await supabase
         .from('users')
         .select('id, name, email, user_type, department_id')
-        .not('user_type', 'in', '(external_startup,external_expert,temporary_guest)')
+        .not('user_type', 'in', GUEST_USER_TYPE_FILTER)
         .is('deleted_at', null)
         .order('name', { ascending: true })
         .limit(200)

@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { GUEST_USER_TYPE_FILTER } from '@/lib/userTypes'
 
 /**
  * 원장 목록 조회 공통 규약.
@@ -160,9 +161,16 @@ export function sanitizeOrValue(v: string): string {
  * 이름으로 사용자 id를 역조회한다. 담당자·생성자를 이름으로 검색하는 경로는 원장마다 있고,
  * 사람 이름은 원장에 없으므로(참조만 있다) 어느 목록이든 이 한 번의 조회를 거친다.
  * `users.name`에는 부분일치 인덱스가 있다(20260731220000).
+ *
+ * 게스트 계정은 제외한다 — 담당자·생성자는 내부 임직원만 될 수 있으므로 게스트 id를 섞어
+ * 돌려주면 검색 결과에 아무 레코드도 걸리지 않는 id가 조건에 들어갈 뿐이다.
  */
 export async function userIdsByName(keyword: string): Promise<string[]> {
-  const { data } = await supabase.from('users').select('id').ilike('name', `%${keyword}%`)
+  const { data } = await supabase
+    .from('users')
+    .select('id')
+    .ilike('name', `%${keyword}%`)
+    .not('user_type', 'in', GUEST_USER_TYPE_FILTER)
   return ((data ?? []) as { id: string }[]).map((u) => u.id)
 }
 

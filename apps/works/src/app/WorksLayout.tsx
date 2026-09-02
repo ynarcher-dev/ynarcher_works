@@ -32,6 +32,7 @@ import {
   Factory,
   Tags,
   UserCog,
+  UserRoundCheck,
   Medal,
   Shapes,
   Coins,
@@ -159,6 +160,9 @@ const sidebarIconByTab: Record<string, LucideIcon> = {
   matching: LayoutGrid,
   permissions: LockKeyhole,
   boards: ClipboardList,
+  // 게스트 계정 관리: 사람(User) 계열이되 인사(User)·생성자(UserCog)와 다른 글리프를 쓴다 —
+  // 사이드바에서 세 메뉴가 같은 일로 읽히면 안 된다.
+  'guest-accounts': UserRoundCheck,
   sensitive: EyeOff,
   audit: ReceiptText,
   downloads: Download,

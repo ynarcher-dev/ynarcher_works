@@ -5,6 +5,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { GUEST_USER_TYPE_FILTER } from '@/lib/userTypes'
 import { useActivePlacementMap } from '@/features/management/orgHooks'
 import type { ApprovalStatus } from '@/features/management/config'
 
@@ -121,6 +122,16 @@ export interface Employee {
 /** 목록/상세 공용 select 컬럼(프로필 필드 포함). */
 const EMPLOYEE_COLUMNS = 'id, name, email, user_type, department_id, updated_at, phone, profile'
 
+/**
+ * 아래 네 조회는 모두 `.is('deleted_at', null).not('user_type', 'in', GUEST_USER_TYPE_FILTER)`로
+ * 연다 — **미삭제 + 내부 임직원만**.
+ *
+ * 게스트 계정도 같은 `users` 원장에 앉으므로(로그인 개방 시 Edge Function이 삽입) 유형을
+ * 걸지 않으면 인사 관리 목록에 섞여 나온다. 그리고 이 훅이 답하는 목록은 인사 화면에만
+ * 쓰이지 않는다 — **결재선·딜메이커 후보·생성자 교체 후보·멘션 후보**가 모두 이것을 읽으므로,
+ * 여기서 새면 게스트를 결재자나 담당자로 고를 수 있게 된다. 그래서 각 화면이 아니라
+ * 원천에서 건다. 게스트 계정 자체는 ADMIN '게스트 계정 관리'가 답한다(2026-09-03).
+ */
 export function useEmployees() {
   const { map, ready } = useActivePlacementMap()
   return useQuery({
@@ -130,6 +141,7 @@ export function useEmployees() {
         .from('users')
         .select(EMPLOYEE_COLUMNS)
         .is('deleted_at', null)
+        .not('user_type', 'in', GUEST_USER_TYPE_FILTER)
         .order('name', { ascending: true })
       return (data ?? []) as Employee[]
     },
@@ -151,6 +163,7 @@ export function useEmployee(id: string | undefined) {
         .select(EMPLOYEE_COLUMNS)
         .eq('id', id)
         .is('deleted_at', null)
+        .not('user_type', 'in', GUEST_USER_TYPE_FILTER)
         .maybeSingle()
       if (error) throw error
       return (data ?? null) as Employee | null
@@ -195,6 +208,7 @@ export function useEmployeesPage(keyword: string, page: number, pageSize: number
         .from('users')
         .select(EMPLOYEE_COLUMNS, { count: 'exact' })
         .is('deleted_at', null)
+        .not('user_type', 'in', GUEST_USER_TYPE_FILTER)
         .order('name', { ascending: true })
         .range(from, to)
       const trimmed = keyword.trim()
@@ -209,6 +223,7 @@ export function useEmployeesPage(keyword: string, page: number, pageSize: number
           .from('users')
           .select('id', { count: 'exact', head: true })
           .is('deleted_at', null)
+          .not('user_type', 'in', GUEST_USER_TYPE_FILTER)
         totalAll = allCount ?? total
       }
       return { rows: (data ?? []) as Employee[], total, totalAll }
