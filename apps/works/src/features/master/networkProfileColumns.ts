@@ -18,8 +18,8 @@ import type { MasterColumn } from '@/features/master/types'
  *   값 설정은 상세 페이지 드롭다운에서 수행하며 `profile`(jsonb)에 저장한다.
  * - `activity_count`(활동): 그 인물이 참여한 사업 수. 목록 RPC(`network_directory_entities`)가
  *   AC 참여 원장(program_participants)에서 집계해 실어 준다.
- * - `satisfaction_avg`(만족도): 멘토로 참여한 세션의 스타트업 평가 평균(5점). 같은 RPC가 집계한다.
- *   평가가 한 건도 없으면 값이 비어 '-'로 남는다(0.0으로 채우면 '최하 평가'와 구분되지 않는다).
+ * - `satisfaction_avg`(만족도): 멘토로 참여한 세션의 스타트업 평가 평균(5점). 근거 원장이
+ *   20260903150000에서 걷혀 현재는 항상 비어 '-'로 남는다 — 멘토링을 다시 설계할 때 되살린다.
  */
 // 폭·정렬은 열마다의 종류(type)가 정한다 — 수동 w-* 폭을 적지 않는다(2026-08 디자인 리프레시).
 export const NETWORK_PROFILE_COLUMNS: MasterColumn[] = [

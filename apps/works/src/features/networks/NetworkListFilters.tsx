@@ -66,7 +66,7 @@ export function NetworkListFilters({ filters, onChange }: NetworkListFiltersProp
         onChange={(expertise) => onChange({ ...filters, expertise })}
       />
 
-      {/* 활동·만족도는 값이 연속이라 선택지로 나눌 수 없다 — 최소~최대 두 칸으로 받는다.
+      {/* 활동은 값이 연속이라 선택지로 나눌 수 없다 — 최소~최대 두 칸으로 받는다.
           한쪽만 채우면 그쪽만 경계가 된다(빈 칸 = 경계 없음).
           폭은 자리표시자가 잘리지 않는 값이 기준이다 — 숫자 입력은 오른쪽 증감 화살표가
           글자 자리를 먹어서 같은 글자 수라도 텍스트 입력보다 넓어야 한다. */}
@@ -88,30 +88,6 @@ export function NetworkListFilters({ filters, onChange }: NetworkListFiltersProp
           placeholder="활동(최대)"
           value={filters.activityMax}
           onChange={(e) => onChange({ ...filters, activityMax: e.target.value })}
-        />
-      </div>
-      <div className="w-36">
-        <Input
-          type="number"
-          min={0}
-          max={5}
-          step={0.1}
-          inputMode="decimal"
-          placeholder="만족도(최소)"
-          value={filters.satisfactionMin}
-          onChange={(e) => onChange({ ...filters, satisfactionMin: e.target.value })}
-        />
-      </div>
-      <div className="w-36">
-        <Input
-          type="number"
-          min={0}
-          max={5}
-          step={0.1}
-          inputMode="decimal"
-          placeholder="만족도(최대)"
-          value={filters.satisfactionMax}
-          onChange={(e) => onChange({ ...filters, satisfactionMax: e.target.value })}
         />
       </div>
 

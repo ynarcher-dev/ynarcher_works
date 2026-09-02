@@ -36,7 +36,7 @@ export type EntityRow = Record<string, unknown> & {
   merged_into_id?: string | null
   /** 활동(참여 사업 수) 집계. 목록 RPC가 실어 준다. */
   activity_count?: number
-  /** 만족도(멘토 평가 평균) 집계. 평가가 없으면 null이다. */
+  /** 만족도(멘토 평가 평균) 집계. 근거 원장이 걷혀(20260903150000) 현재는 항상 null이다. */
   satisfaction_avg?: number | null
   /**
    * 생성자(생성자, created_by → users) FK 임베드. 목록·상세의 생성자 표시 원천.
@@ -113,8 +113,6 @@ export function useEntityPage(
         p_match: filters.match.length === 1 ? filters.match[0] : null,
         p_activity_min: rangeBound(filters.activityMin),
         p_activity_max: rangeBound(filters.activityMax),
-        p_satisfaction_min: rangeBound(filters.satisfactionMin),
-        p_satisfaction_max: rangeBound(filters.satisfactionMax),
         p_limit: pageSize,
         p_offset: page * pageSize,
       })
@@ -182,7 +180,7 @@ export type NetworkListRow = Record<string, unknown> & {
   last_contributed_at: string | null
   /** 활동(참여 사업 수). 참여 이력이 없으면 0. */
   activity_count: number
-  /** 만족도(멘토 평가 평균). 평가가 없으면 null이라 목록에서 '-'로 남는다. */
+  /** 만족도(멘토 평가 평균). 근거 원장이 걷혀(20260903150000) 항상 null이라 목록에서 '-'로 남는다. */
   satisfaction_avg: number | null
 }
 
@@ -246,8 +244,6 @@ export function useNetworkListPage(
         p_match: filters.match.length === 1 ? filters.match[0] : null,
         p_activity_min: rangeBound(filters.activityMin),
         p_activity_max: rangeBound(filters.activityMax),
-        p_satisfaction_min: rangeBound(filters.satisfactionMin),
-        p_satisfaction_max: rangeBound(filters.satisfactionMax),
       })
       if (error) throw error
       // RPC 원본 행: 생성자가 평면 컬럼(creator_name), 총 건수가 행마다 같은 값으로 실린다.
