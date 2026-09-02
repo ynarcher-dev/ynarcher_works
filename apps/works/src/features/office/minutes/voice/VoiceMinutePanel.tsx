@@ -172,7 +172,6 @@ export function VoiceMinutePanel({ context, onApplyDraft, onSaveAudio }: Props) 
 
             {/* 미리듣기: 저장 전에 바로 들어볼 수 있다. */}
             {audioUrl && (
-              // eslint-disable-next-line jsx-a11y/media-has-caption
               <audio className="h-9 w-full" src={audioUrl} controls />
             )}
 

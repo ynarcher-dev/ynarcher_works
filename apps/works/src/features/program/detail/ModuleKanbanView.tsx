@@ -1,8 +1,9 @@
-import { Badge, Select, useToast } from '@ynarcher/ui'
+import { Badge, PersonCell, useToast } from '@ynarcher/ui'
 import { useState } from 'react'
 import { MODULE_TYPES, MODULE_VISIBILITY_LABEL, MODULE_VISIBILITY_TONE } from '@/features/program/config'
 import type { ProgramModule } from '@/features/program/hooks'
 import { useUpdateModuleStatus } from '@/features/program/detail/detailHooks'
+import { useOpenPublicLinkModuleIds } from '@/features/program/publicLinkHooks'
 import {
   MODULE_META,
   formatModulePeriod,
@@ -32,6 +33,9 @@ type Dragging = { id: string; status: string }
 /**
  * 운영 모듈 칸반 보드 뷰. 모듈을 상태(준비/진행/완료/취소) 컬럼으로 배치한다.
  * 카드를 다른 컬럼으로 드래그앤드롭하면 해당 상태로 변경한다(낙관적 업데이트, 실패 시 롤백).
+ * **상태를 바꾸는 길은 드롭 하나뿐이다** — 카드마다 달려 있던 상태 선택 상자는 걷어냈다
+ * (2026-09-02). 카드가 이미 상태 열 안에 서 있는데 그 안에서 상태를 또 고르게 하면, 같은 값을
+ * 말하는 자리가 둘이 되어 어느 쪽이 지금 상태인지 카드마다 되읽어야 했다.
  * 카드 클릭은 목록 뷰와 동일하게 해당 운영 화면으로 진입한다(설정/비활성은 목록 뷰에서).
  */
 export function ModuleKanbanView({
@@ -48,26 +52,22 @@ export function ModuleKanbanView({
   const [dragging, setDragging] = useState<Dragging | null>(null)
   const [overStatus, setOverStatus] = useState<string | null>(null)
   const [announcement, setAnnouncement] = useState('')
-
-  const changeStatus = (module: ProgramModule, status: string) => {
-    const current = module.status ?? 'DRAFT'
-    if (current === status) return
-    updateStatus.mutate(
-      { moduleId: module.id, status },
-      {
-        onSuccess: () => {
-          setAnnouncement(`${nameOf(module)} 상태를 ${moduleStatusMeta(status).label}(으)로 변경했습니다.`)
-        },
-        onError: () => toast.show('상태 변경에 실패했습니다. 권한을 확인하세요.', 'danger'),
-      },
-    )
-  }
+  const { data: openLinkIds } = useOpenPublicLinkModuleIds(modules.map((m) => m.id))
 
   const drop = (status: string) => {
     if (dragging && dragging.status !== status) {
+      const moved = modules.find((m) => m.id === dragging.id)
       updateStatus.mutate(
         { moduleId: dragging.id, status },
         {
+          // 옮긴 결과는 카드가 다른 열에 가 있는 것으로 눈에 보이지만, 그 이동은 화면을 보는
+          // 사람만 읽는다 — 상태 변경을 말로도 한 번 알린다.
+          onSuccess: () =>
+            setAnnouncement(
+              `${moved ? nameOf(moved) : '모듈'} 상태를 ${moduleStatusMeta(status).label}${particleRo(
+                moduleStatusMeta(status).label,
+              )} 변경했습니다.`,
+            ),
           onError: () => toast.show('상태 변경에 실패했습니다. 권한을 확인하세요.', 'danger'),
         },
       )
@@ -137,7 +137,7 @@ export function ModuleKanbanView({
                         setOverStatus(null)
                       }}
                       onClick={() => onOpenModule(mod)}
-                      className={`w-full cursor-grab rounded-t-radius-md px-3 py-2.5 text-left transition-colors duration-fast hover:bg-gray-25 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10 active:cursor-grabbing ${
+                      className={`w-full cursor-grab rounded-radius-md px-3 py-2.5 text-left transition-colors duration-fast hover:bg-gray-25 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10 active:cursor-grabbing ${
                         isDragging ? 'opacity-40' : ''
                       }`}
                     >
@@ -150,37 +150,36 @@ export function ModuleKanbanView({
                         <span className="truncate text-body font-semibold text-gray-900">
                           {nameOf(mod)}
                         </span>
-                        <Badge tone="neutral">
-                          {labelOf(mod.module_type)}
-                        </Badge>
                       </span>
-                      <span className="mt-1.5 flex items-center gap-2">
+                      {/* 세션 종류 → 공개범위 → 기간 → 담당자를 각각 한 줄로 세운다. 배지 둘을
+                          제목 줄과 나눠 세로로 세우는 이유는, 카드 폭이 좁아 셋이 한 줄에 서면
+                          긴 모듈명부터 잘려 무엇의 카드인지가 배지에 밀리기 때문이다. 세로로
+                          서면 같은 자리가 카드마다 같은 것을 말해 위에서 아래로 훑을 수 있다. */}
+                      <span className="mt-1.5 flex">
+                        <Badge tone="neutral">{labelOf(mod.module_type)}</Badge>
+                      </span>
+                      <span className="mt-1 flex">
                         <Badge tone={MODULE_VISIBILITY_TONE[mod.visibility] ?? 'neutral'}>
                           {MODULE_VISIBILITY_LABEL[mod.visibility] ?? 'WORKS ONLY'}
                         </Badge>
-                        <span className="text-caption tabular-nums text-gray-700">
-                          {formatModulePeriod(settings)}
-                        </span>
+                        {/* 링크 공유는 다른 축이라 배지를 합치지 않고 같은 줄에 나란히 둔다. */}
+                        {openLinkIds?.has(mod.id) && (
+                          <Badge tone="warning" className="ml-1">
+                            링크 공유
+                          </Badge>
+                        )}
+                      </span>
+                      <span className="mt-1 block truncate text-caption tabular-nums text-gray-700">
+                        {formatModulePeriod(settings)}
+                      </span>
+                      {/* 몇 명까지 적을지는 개수가 아니라 카드 폭이 정한다(PersonCell). */}
+                      <span className="mt-1 flex min-w-0 text-caption text-gray-700">
+                        <PersonCell
+                          names={mod.assignees.map((a) => a.user?.name)}
+                          empty="담당자 미지정"
+                        />
                       </span>
                     </button>
-                    <div className="border-t border-gray-100 px-2 py-2">
-                      <label className="sr-only" htmlFor={`module-status-${mod.id}`}>
-                        {nameOf(mod)} 상태 변경
-                      </label>
-                      <Select
-                        id={`module-status-${mod.id}`}
-                        density="table"
-                        value={mod.status ?? 'DRAFT'}
-                        onChange={(event) => changeStatus(mod, event.target.value)}
-                        aria-label={`${nameOf(mod)} 상태 변경`}
-                      >
-                        {COLUMNS.map((option) => (
-                          <option key={option} value={option}>
-                            {moduleStatusMeta(option).label}
-                          </option>
-                        ))}
-                      </Select>
-                    </div>
                   </li>
                 )
               })}

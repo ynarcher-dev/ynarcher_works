@@ -213,7 +213,6 @@ export function MaterialRow({
       }
     >
       {audioUrl && (
-        // eslint-disable-next-line jsx-a11y/media-has-caption
         <audio className="mt-2 h-9 w-full" src={audioUrl} controls autoPlay />
       )}
       {urlError && (

@@ -193,6 +193,10 @@ export default tseslint.config(
       'docs/**',
       // Supabase Edge Functions은 Deno 런타임/URL 임포트 사용 → 별도 툴체인
       'supabase/functions/**',
+      // 하이웍스에서 내려받은 원본 백업(우리 소스가 아니다). 압축된 정적 파일이 들어 있어
+      // 검사하면 에러 수천 건이 쏟아지고, 그 소음에 정작 우리 코드의 에러가 묻힌다 —
+      // 규칙을 지킬 주체가 없는 파일에 규칙을 들이대면 린트 자체가 못 쓰는 도구가 된다.
+      'hiworks_backup/**',
     ],
   },
   js.configs.recommended,

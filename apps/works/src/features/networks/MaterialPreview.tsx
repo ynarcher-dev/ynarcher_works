@@ -170,7 +170,6 @@ function PreviewBody({
   if (kind === 'video') {
     return (
       <div className="flex h-full w-full items-center justify-center rounded-radius-sm border border-gray-200 bg-black">
-        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
         <video src={blobUrl} controls className="max-h-full max-w-full" />
       </div>
     )

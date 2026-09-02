@@ -1,4 +1,4 @@
-import { Badge, GanttChart, type GanttRow } from '@ynarcher/ui'
+import { Badge, GanttChart, PersonCell, type GanttRow } from '@ynarcher/ui'
 import { MODULE_TYPES } from '@/features/program/config'
 import type { ProgramModule } from '@/features/program/hooks'
 import {
@@ -43,13 +43,19 @@ export function ModuleGanttView({
   const rows: GanttRow[] = dated.map(({ mod, settings }) => {
     const status = moduleStatusMeta(mod.status)
     const Icon = MODULE_META[mod.module_type]?.icon
+    const names = mod.assignees.map((a) => a.user?.name).filter((n): n is string => Boolean(n))
     return {
       key: mod.id,
       start: settings.start_date!,
       end: settings.end_date!,
       barClass: MODULE_BAR_CLASS[mod.status] ?? 'bg-gray-300',
-      title: `${nameOf(mod)} · ${settings.start_date} ~ ${settings.end_date} · ${status.label}`,
+      title: `${nameOf(mod)} · ${settings.start_date} ~ ${settings.end_date} · ${status.label}${
+        names.length > 0 ? ` · 담당 ${names.join(', ')}` : ''
+      }`,
       onClick: () => onOpenModule(mod),
+      // 1열은 모듈명 아래 담당자를 한 줄 더 세운다 — GUEST 일정안내가 같은 자리에 기간을 세우는
+      // 것과 갈리는 지점이다. 그쪽은 날짜가 전부인 화면이지만, 여기서는 막대가 이미 기간을
+      // 말하므로 되풀이할 자리가 아니고 담당자에게 남는 물음은 '누구에게 물어야 하는가'다.
       label: (
         <>
           {Icon && (
@@ -57,8 +63,13 @@ export function ModuleGanttView({
               <Icon className="h-4 w-4" aria-hidden />
             </span>
           )}
-          <span className="min-w-0 flex-1 truncate text-body font-semibold text-gray-900">
-            {nameOf(mod)}
+          <span className="flex min-w-0 flex-1 flex-col justify-center">
+            <span className="truncate text-body font-semibold text-gray-900">{nameOf(mod)}</span>
+            {/* 몇 명까지 적을지는 개수가 아니라 열 폭이 정한다(PersonCell) — 다 들어가면 다 적고
+                모자라면 그때부터 `+N`으로 접는다. */}
+            <span className="flex min-w-0 text-caption text-gray-700">
+              <PersonCell names={names} empty="담당자 미지정" />
+            </span>
           </span>
           <Badge tone={status.tone}>{status.label}</Badge>
         </>
