@@ -41,21 +41,18 @@ export function ManagementPage() {
     setKeyword('')
   }, [tab])
 
-  // 검색 필드는 원장 리스트뷰(인사·거래처)에서만 노출한다. NETWORKS와 동일하게 헤더 슬롯에 둔다.
-  const searchPlaceholder =
-    tab === 'hr'
-      ? '임직원 이름 검색'
-      : tab === 'partners'
-        ? '거래처명·코드·사업자등록번호·예금주 검색'
-        : undefined
-
-  const searchField = searchPlaceholder ? (
-    <Input
-      placeholder={searchPlaceholder}
-      value={keyword}
-      onChange={(e) => setKeyword(e.target.value)}
-    />
-  ) : undefined
+  // 검색 필드가 서는 자리는 그 목록에 필터가 있는지가 정한다(2026-09-03).
+  // 필터가 없는 목록(인사 관리)은 NETWORKS와 같이 헤더 슬롯에 두고, 필터가 있는 목록
+  // (자산·거래처)은 패널이 검색을 조건 줄에 함께 세운다 — 검색어와 필터는 "무엇을 보여줄지"를
+  // 정하는 같은 층의 조건이라, 줄을 갈라 두면 헤더와 본문 사이에 조건이 두 군데로 흩어진다.
+  const searchField =
+    tab === 'hr' ? (
+      <Input
+        placeholder="임직원 이름 검색"
+        value={keyword}
+        onChange={(e) => setKeyword(e.target.value)}
+      />
+    ) : undefined
 
   // 등록 액션은 인사 관리 리스트뷰에서만 노출한다.
   // 문구는 `{대상 명사} 등록` 규칙을 따른다 — 하는 일은 로그인 계정 발급이지만, 이 화면이
@@ -84,7 +81,7 @@ export function ManagementPage() {
       {/* 거래처 원장: 지급 상대(코드·상호·구분·등록번호·계좌·증빙)의 단일 세팅 지점.
           NETWORKS 외주/거래 마스터와는 다른 원장이다 — 저쪽은 누구와 일하는가, 여기는
           누구에게 어느 계좌로 보내는가를 담는다. */}
-      {tab === 'partners' && <PartnersPanel keyword={keyword} />}
+      {tab === 'partners' && <PartnersPanel />}
       {/* 결재 금액 집계: 승인된 결재 문서의 금액을 항목·문서·월로 모은다. 결재 자체는 OFFICE가
           담당하고, 그 돈을 집계해 읽는 일은 재무 관리와 같은 축이라 여기가 자리다. */}
       {tab === 'approval-stats' && <ApprovalAggregatePanel />}

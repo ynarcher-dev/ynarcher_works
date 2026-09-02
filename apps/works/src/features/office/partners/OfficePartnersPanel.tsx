@@ -118,18 +118,17 @@ export function OfficePartnersPanel() {
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        title="거래처 정보"
-        search={
+      <PageHeader title="거래처 정보" />
+
+      {/* 검색과 필터는 같은 층의 조건이라 한 줄에 세운다(MANAGEMENT 거래처·자산과 같은 규격). */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="w-full sm:w-80">
           <Input
             placeholder="거래처명·코드·사업자등록번호·예금주 검색"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
           />
-        }
-      />
-
-      <div className="flex flex-wrap items-center gap-2">
+        </div>
         <MultiSelectFilter
           label="구분"
           options={PARTNER_TYPE_ORDER.map((v) => ({ value: v, label: PARTNER_TYPE_LABELS[v] }))}

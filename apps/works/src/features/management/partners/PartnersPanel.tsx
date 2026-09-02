@@ -1,6 +1,7 @@
 import {
   Button,
   FilterResetButton,
+  Input,
   MultiSelectFilter,
   Spinner,
   useToast,
@@ -44,8 +45,9 @@ const ACTIVE_OPTIONS = [
  * 이 컴포넌트는 목록의 상태(검색어·필터·페이지·선택)만 소유한다. 표는 PartnersTable이,
  * 값 규칙은 partnerForm이, 서류 업로드·열람은 partnerDocs가 갖는다.
  */
-export function PartnersPanel({ keyword }: { keyword: string }) {
+export function PartnersPanel() {
   const toast = useToast()
+  const [keyword, setKeyword] = useState('')
   const [filters, setFilters] = useState<PartnerFilters>(EMPTY_PARTNER_FILTERS)
   const [page, setPage] = useState(0)
   const [selected, setSelected] = useState<string[]>([])
@@ -108,7 +110,15 @@ export function PartnersPanel({ keyword }: { keyword: string }) {
 
   return (
     <div className="space-y-3">
+      {/* 검색과 필터는 같은 층의 조건이라 한 줄에 세운다(자산 관리와 같은 규격). */}
       <div className="flex flex-wrap items-center gap-2">
+        <div className="w-full sm:w-80">
+          <Input
+            placeholder="거래처명·코드·사업자등록번호·예금주 검색"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+          />
+        </div>
         <MultiSelectFilter
           label="구분"
           options={PARTNER_TYPE_ORDER.map((v) => ({ value: v, label: PARTNER_TYPE_LABELS[v] }))}
