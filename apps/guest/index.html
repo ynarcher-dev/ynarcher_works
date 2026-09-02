@@ -3,6 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!--
+      검색엔진 색인 차단. 이 앱의 공개 진입점(모집 /apply/:token, 모듈 공개 링크 /p/:token)이
+      약속하는 것은 "링크를 아는 사람에게 공개"이지 "인터넷 전체에 공개"가 아니다. 두 문장은
+      다른 약속이며, 색인되는 순간 담당자가 고른 쪽이 아닌 쪽이 된다.
+      근거: docs/docs_planning/3_4_15_ac_public_links.md §9
+    -->
+    <meta name="robots" content="noindex, nofollow" />
     <title>와이앤아처 GUEST</title>
   </head>
   <body>

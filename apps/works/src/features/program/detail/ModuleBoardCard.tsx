@@ -44,6 +44,7 @@ import {
   moduleStatusMeta,
   readModuleSettings,
 } from '@/features/program/detail/moduleMeta'
+import { useOpenPublicLinkModuleIds } from '@/features/program/publicLinkHooks'
 
 type BoardView = 'list' | 'kanban' | 'gantt'
 
@@ -91,6 +92,8 @@ export function ModuleBoardCard({
   const [createType, setCreateType] = useState<string | null>(null)
   const [view, setView] = useState<BoardView>('list')
   const [expanded, setExpanded] = useState(false)
+  // 밖에 열린 문이 어느 카드인지 — 목록 로딩보다 먼저 서야 하므로 조기 반환 위에서 부른다.
+  const { data: openLinkIds } = useOpenPublicLinkModuleIds((data ?? []).map((m) => m.id))
 
   if (isLoading) {
     return (
@@ -170,6 +173,9 @@ export function ModuleBoardCard({
                         <Badge tone={MODULE_VISIBILITY_TONE[mod.visibility] ?? 'neutral'}>
                           {MODULE_VISIBILITY_LABEL[mod.visibility] ?? 'WORKS ONLY'}
                         </Badge>
+                        {/* 링크 공유는 공유 범위와 다른 축이라 배지도 따로 선다 — 하나로
+                            합치면 '누가 보는가'와 '밖에 열렸는가'가 한 칸에 섞인다. */}
+                        {openLinkIds?.has(mod.id) && <Badge tone="warning">링크 공유</Badge>}
                         {/* 파생 템플릿 배지 — 원천 템플릿을 다른 배지와 함께 표기. */}
                         <Badge tone="neutral">{labelOf(mod.module_type)}</Badge>
                       </>

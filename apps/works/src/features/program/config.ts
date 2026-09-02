@@ -56,23 +56,23 @@ export const MODULE_TYPES: ModuleTypeDef[] = [
   .concat(BASE_MODULE_TYPES)
 
 /**
- * 모듈 공유 범위(participation과 별개 축). GUEST/공개 노출 여부를 정한다.
- * DB module_visibility enum: INTERNAL_ONLY/GUEST_ONLY/PUBLIC. 기본값은 최소 공개(WORKS ONLY).
+ * 모듈 공유 범위 — **로그인한 사람 중 누가 보는가**만 답하는 축이다(참여/배정 방식과 별개).
+ * DB module_visibility enum에는 PUBLIC이 남아 있으나 2026-09-02 폐지되어 CHECK가 저장을 막는다:
+ * 익명 접근 경로가 없어 판정에서 GUEST_ONLY와 동일하게 취급되었고, 그래서 고르면 밖에 열었다고
+ * 믿는데 아무도 못 보는 상태가 됐다. 로그인 없는 외부 노출은 별도 축(모듈 링크 공유)이 답한다.
+ * 근거: docs/docs_planning/3_4_15_ac_public_links.md
  */
 export const MODULE_VISIBILITY_OPTIONS = [
-  { value: 'PUBLIC', label: '전체공개(누구나)', hint: '공개 URL로 누구나 열람(모집형)' },
-  { value: 'GUEST_ONLY', label: 'WORKS+GUEST', hint: 'GUEST 포털의 참여 기업/전문가만' },
+  { value: 'GUEST_ONLY', label: 'WORKS+GUEST', hint: 'GUEST 포털의 참여 기업/전문가까지' },
   { value: 'INTERNAL_ONLY', label: 'WORKS ONLY', hint: 'WORKS 내부 운영자만' },
 ] as const
 
 export const MODULE_VISIBILITY_LABEL: Record<string, string> = {
-  PUBLIC: '전체공개(누구나)',
   GUEST_ONLY: 'WORKS+GUEST',
   INTERNAL_ONLY: 'WORKS ONLY',
 }
 
 export const MODULE_VISIBILITY_TONE: Record<string, BadgeTone> = {
-  PUBLIC: 'success',
   GUEST_ONLY: 'info',
   INTERNAL_ONLY: 'neutral',
 }

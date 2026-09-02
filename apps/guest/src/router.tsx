@@ -11,6 +11,7 @@ import { MentorFeedbackPage } from '@/pages/MentorFeedbackPage'
 import { ModulePage } from '@/pages/ModulePage'
 import { MyPage } from '@/pages/MyPage'
 import { OverviewPage } from '@/pages/OverviewPage'
+import { PublicModulePage } from '@/pages/PublicModulePage'
 import { RootLayout } from '@/pages/RootLayout'
 import { SchedulePage } from '@/pages/SchedulePage'
 import { SessionBoardPage } from '@/pages/SessionBoardPage'
@@ -33,13 +34,17 @@ function GuestEntry() {
  * 셸(`GuestLayout`)은 **인증된 업무 화면에만** 씌운다. 로그인은 아직 사업이 정해지기 전이라
  * 사이드바에 채울 것이 없고, 임시 게스트 뷰(`/g/:token`)는 내비게이션 요소를 전혀 렌더링하지
  * 않는 것이 기획 요건이며(3_9_workspace_guest.md §1.3), 공개 모집(`/apply/:token`)은 로그인
- * 이전의 외부 랜딩이다. 세 진입점 모두 셸 밖에 남는다.
+ * 이전의 외부 랜딩이며, 모듈 공개 링크(`/p/:token`)는 메뉴 하나만 여는 격리 뷰다.
+ * 네 진입점 모두 셸 밖에 남는다.
  */
 export const router = createBrowserRouter([
   // 공개 모집 신청 랜딩: 인증 가드 없이 배포 URL 토큰만으로 렌더링/접수.
   { path: '/apply/:token', element: <ApplyPage /> },
   // 임시 게스트 뷰: 인증 가드 없이 일회성 토큰만으로 격리 렌더링.
   { path: '/g/:token', element: <TempGuestPage /> },
+  // 모듈 공개 링크: 인증 가드 없이 토큰만으로 **모듈 하나만** 격리 렌더링.
+  // 여기 들어온 사람은 게스트가 아니다 — 세션도 사업 고정 코드도 없고 셸도 씌우지 않는다.
+  { path: '/p/:token', element: <PublicModulePage /> },
   {
     element: <RootLayout />,
     children: [

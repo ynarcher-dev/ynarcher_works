@@ -21,6 +21,8 @@ import {
 import type { Program, ProgramModule } from '@/features/program/hooks'
 import { useSetProgramModule } from '@/features/program/hooks'
 import { MODULE_META, MODULE_STATUS_META, readModuleSettings } from '@/features/program/detail/moduleMeta'
+import { ModulePublicLinkFields } from '@/features/program/detail/ModulePublicLinkFields'
+import { useModulePublicLinkForm } from '@/features/program/detail/publicLinkForm'
 import { isCompleteRange, moduleWithin, type CompleteRange } from '@/features/program/programPeriods'
 
 interface FormValues {
@@ -100,6 +102,8 @@ export function ModuleFormModal({
     setAssignees((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
 
   const settings = readModuleSettings(module?.settings)
+  // 링크 공유는 모듈 저장과 별개 축이라 상태·저장 경로가 따로다(버튼만 하나로 묶는다).
+  const linkForm = useModulePublicLinkForm(module?.id, Boolean(MODULE_META[moduleType]?.publicLinkable))
   const modePolicy = MODULE_PARTICIPATION[moduleType]
   const fixedMode = modePolicy?.default ?? null
   const takenTitles = useMemo(() => new Set(existingTitles.map(normTitle)), [existingTitles])
@@ -177,6 +181,17 @@ export function ModuleFormModal({
         },
         assigneeUserIds: assignees,
       })
+      // 링크 공유는 별개 원장이라 저장도 뒤이어 따로 간다. 실패해도 모듈 저장은 이미 끝났으므로
+      // 무엇이 반영되고 무엇이 안 됐는지를 문구로 가른다 — 한 문장으로 뭉치면 담당자가
+      // 모듈 설정까지 다시 입력한다.
+      try {
+        await linkForm.apply()
+      } catch {
+        toast.show('모듈은 저장했지만 링크 공유 설정은 반영하지 못했습니다.', 'danger')
+        onSaved?.(id)
+        onClose()
+        return
+      }
       toast.show(isEdit ? '모듈 설정을 저장했습니다.' : '모듈을 추가했습니다.', 'success')
       onSaved?.(id)
       onClose()
@@ -270,6 +285,8 @@ export function ModuleFormModal({
             </Select>
           </div>
         </div>
+
+        <ModulePublicLinkFields form={linkForm} />
 
         {modePolicy?.options && (
           <div>
