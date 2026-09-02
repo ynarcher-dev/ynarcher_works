@@ -21,6 +21,7 @@ function open(over: Partial<GateInput> = {}): GateInput {
     moduleEnabled: true,
     moduleStatus: 'OPEN',
     programAlive: true,
+    templateAllowsLink: true,
     ...over,
   }
 }
@@ -121,6 +122,22 @@ describe('모듈·사업 생존', () => {
 
   it('사업이 종료·취소·삭제되면 링크도 함께 닫힌다', () => {
     expect(gate(open({ programAlive: false })).reason).toBe('module_closed')
+  })
+})
+
+describe('템플릿 상한(ADMIN)', () => {
+  it('상한이 닫혀 있으면 개별 스위치가 켜져 있어도 닫힌다 — 정책이 운영을 이긴다', () => {
+    expect(gate(open({ templateAllowsLink: false })).reason).toBe('module_closed')
+  })
+
+  it('상한을 내려도 기간 계산은 그대로다 — 저장값을 지우는 것이 아니라 문만 닫는다', () => {
+    const r = gate(open({ templateAllowsLink: false, linkCloseAt: '2026-09-20T00:00:00Z' }))
+    expect(r.closeAt).toBe('2026-09-20T00:00:00Z')
+  })
+
+  it('상한은 링크 상태·기간보다 나중에 본다 — 마감된 링크는 마감으로 답해야 한다', () => {
+    const input = open({ templateAllowsLink: false, linkStatus: 'CLOSED' })
+    expect(gate(input).reason).toBe('closed')
   })
 })
 

@@ -66,11 +66,17 @@ export function ModulePublicLinkFields({ form }: { form: PublicLinkForm }) {
             id="mod-public-link"
             checked={form.enabled}
             onChange={form.setEnabled}
+            disabled={!form.editable}
             aria-label="링크 공유"
           />
           <span className="text-caption text-gray-600">
             {form.enabled ? '주소를 아는 사람에게 공개' : '공개하지 않음'}
           </span>
+          {!form.editable && (
+            // 왜 못 누르는지를 말하는 차단 안내라 접지 않는다. 상태 자체는 그대로 보인다 —
+            // 감추면 자기 모듈이 밖에 열려 있다는 사실을 모르게 된다.
+            <span className="text-caption text-gray-500">· 켜고 끄기는 ADMIN이 합니다</span>
+          )}
         </div>
       </Field>
 
@@ -83,9 +89,11 @@ export function ModulePublicLinkFields({ form }: { form: PublicLinkForm }) {
                 <Button variant="secondary" onClick={copy}>
                   복사
                 </Button>
-                <Button variant="secondary" disabled={form.rotating} onClick={onRotate}>
-                  주소 재발급
-                </Button>
+                {form.editable && (
+                  <Button variant="secondary" disabled={form.rotating} onClick={onRotate}>
+                    주소 재발급
+                  </Button>
+                )}
               </div>
             ) : (
               // 다음 행동을 지시하는 안내라 접지 않는다(Field의 hintInline 예외와 같은 기준).
@@ -99,6 +107,7 @@ export function ModulePublicLinkFields({ form }: { form: PublicLinkForm }) {
             <Field label="공개 상태">
               <Select
                 value={form.status}
+                disabled={!form.editable}
                 onChange={(e) => form.setStatus(e.target.value as PublicLinkStatus)}
               >
                 {STATUS_OPTIONS.map((o) => (
@@ -114,6 +123,7 @@ export function ModulePublicLinkFields({ form }: { form: PublicLinkForm }) {
             >
               <Input
                 placeholder="예: 02-000-0000 / ac@ynarcher.com"
+                disabled={!form.editable}
                 value={form.contact}
                 onChange={(e) => form.setContact(e.target.value)}
               />
@@ -127,6 +137,7 @@ export function ModulePublicLinkFields({ form }: { form: PublicLinkForm }) {
             >
               <Input
                 type="datetime-local"
+                disabled={!form.editable}
                 value={form.openAt}
                 onChange={(e) => form.setOpenAt(e.target.value)}
               />
@@ -134,6 +145,7 @@ export function ModulePublicLinkFields({ form }: { form: PublicLinkForm }) {
             <Field label="공개 마감" hint="비워 두면 이 메뉴의 종료일까지 열립니다.">
               <Input
                 type="datetime-local"
+                disabled={!form.editable}
                 value={form.closeAt}
                 onChange={(e) => form.setCloseAt(e.target.value)}
               />

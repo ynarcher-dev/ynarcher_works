@@ -199,6 +199,10 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         { label: '회의실 관리', tab: 'rooms' },
         // 결재 양식: 전자결재가 무엇을 입력받을지(필드 정의) 정하는 곳. 문서 번호 약칭도 여기서 정한다.
         { label: '결재 양식 관리', tab: 'approval-forms' },
+        // 사업 운영 모듈의 템플릿 카탈로그. 게시판·회의실과 같은 성격이되, 끄는 것이 기존
+        // 인스턴스에 미치는 영향이 축마다 갈린다(3_2_1) — 카탈로그는 새로 못 만들게만 하고
+        // 노출 상한은 이미 열린 것까지 닫는다.
+        { label: '모듈 관리', tab: 'modules' },
         // 전사 기준정보 태그는 종류가 계속 늘어나므로 사이드바에 평탄 나열하지 않고
         // 상위 한 줄로 두고 우측 플라이아웃으로 편다(게시판·자료실과 같은 조작감).
         // 항목은 TAG_CONFIGS에서 파생되므로 태그를 추가할 때 이 파일은 손대지 않는다.
@@ -268,18 +272,18 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         // 지사 원장(지사명·주소·전화번호·상주인력)의 단일 세팅 지점. 조직 관리와 같은 조직
         // 축이라 MANAGEMENT가 소유하고, OFFICE '지사 정보'와 회의실 예약의 지사 탭이 조회한다.
         { label: '지사 관리', tab: 'branches' },
+        { label: '자산 관리', tab: 'assets' },
         // 직책·직급·호봉 태그는 ADMIN '태그 관리'로 이관했다(2026-08-03) — 쓰기 정책이
         // is_admin() 하나뿐이라 여기 두면 MANAGEMENT 사용자는 볼 수만 있었다.
         { label: '인사 관리', tab: 'hr', dividerBefore: true },
         // 근태 원장(정책·상태·일별 기록)의 소유 자리. OFFICE 대시보드 '근무체크' 위젯은
         // 본인 기록을 찍기만 하고, 판독·정정은 여기서만 한다.
         { label: '근태 관리', tab: 'attendance' },
-        { label: '자산 관리', tab: 'assets' },
-        { label: '재무 관리', tab: 'finance' },
+        { label: '재무 관리', tab: 'finance', dividerBefore: true },
         // 승인된 결재 문서의 금액을 항목·문서·월로 모은다(양식의 금액 필드가 원천).
-        // 재무 관리 바로 뒤 — 예산 대비 실지출을 보다가 그 실지출의 내역으로 들어가는 동선.
+        // KPI 관리와 같은 성과·집계 블록에 둔다.
+        { label: 'KPI 관리', tab: 'kpi' },
         { label: '결재 금액 집계', tab: 'approval-stats' },
-        { label: 'KPI 관리', tab: 'kpi', dividerBefore: true },
       ],
     },
   ],

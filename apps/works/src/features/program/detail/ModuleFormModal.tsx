@@ -22,6 +22,7 @@ import type { Program, ProgramModule } from '@/features/program/hooks'
 import { useSetProgramModule } from '@/features/program/hooks'
 import { MODULE_META, MODULE_STATUS_META, readModuleSettings } from '@/features/program/detail/moduleMeta'
 import { ModulePublicLinkFields } from '@/features/program/detail/ModulePublicLinkFields'
+import { useModuleTemplateMap } from '@/features/program/moduleTemplateHooks'
 import { useModulePublicLinkForm } from '@/features/program/detail/publicLinkForm'
 import { isCompleteRange, moduleWithin, type CompleteRange } from '@/features/program/programPeriods'
 
@@ -102,8 +103,16 @@ export function ModuleFormModal({
     setAssignees((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
 
   const settings = readModuleSettings(module?.settings)
+  // 선택지의 상한은 ADMIN이 배치한 템플릿 카탈로그가 답한다(3_2_1). 화면이 목록을 따로 들면
+  // ADMIN이 고친 상한이 여기만 안 바뀐다.
+  const { map: templates } = useModuleTemplateMap()
+  const template = templates.get(moduleType)
   // 링크 공유는 모듈 저장과 별개 축이라 상태·저장 경로가 따로다(버튼만 하나로 묶는다).
-  const linkForm = useModulePublicLinkForm(module?.id, Boolean(MODULE_META[moduleType]?.publicLinkable))
+  const linkForm = useModulePublicLinkForm(module?.id, Boolean(template?.allow_public_link))
+  // 상한이 닫혀 있으면 WORKS ONLY 한 칸만 남는다. 서버는 모듈 원장 트리거가 같은 판정을 한다.
+  const visibilityOptions = MODULE_VISIBILITY_OPTIONS.filter(
+    (v) => v.value !== 'GUEST_ONLY' || template?.allow_guest !== false,
+  )
   const modePolicy = MODULE_PARTICIPATION[moduleType]
   const fixedMode = modePolicy?.default ?? null
   const takenTitles = useMemo(() => new Set(existingTitles.map(normTitle)), [existingTitles])
@@ -277,7 +286,7 @@ export function ModuleFormModal({
               공유 범위
             </label>
             <Select id="mod-visibility" {...register('visibility')}>
-              {MODULE_VISIBILITY_OPTIONS.map((v) => (
+              {visibilityOptions.map((v) => (
                 <option key={v.value} value={v.value}>
                   {v.label}
                 </option>

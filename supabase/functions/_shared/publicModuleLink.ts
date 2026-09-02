@@ -100,6 +100,18 @@ export async function resolvePublicLink(
     programTitle = (program?.title as string | undefined) ?? ''
   }
 
+  // 템플릿 상한. ADMIN이 이 종류를 닫아 두면 개별 스위치와 무관하게 닫힌다(3_2_1 §6.4).
+  // 행이 없으면 닫힌 것으로 본다 — 카탈로그에 없는 종류를 밖으로 내보낼 근거가 없다.
+  let templateAllowsLink = false
+  if (mod) {
+    const { data: tpl } = await db
+      .from('module_templates')
+      .select('allow_public_link, is_active')
+      .eq('key', mod.module_type)
+      .maybeSingle()
+    templateAllowsLink = Boolean(tpl?.is_active && tpl?.allow_public_link)
+  }
+
   const settings = ((mod?.settings ?? {}) as Record<string, unknown>) ?? {}
   const verdict = gate(
     {
@@ -112,6 +124,7 @@ export async function resolvePublicLink(
       moduleEnabled: Boolean(mod?.enabled),
       moduleStatus: (mod?.status as string | undefined) ?? '',
       programAlive,
+      templateAllowsLink,
     },
     now,
   )

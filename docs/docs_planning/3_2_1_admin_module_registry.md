@@ -184,17 +184,18 @@ CREATE INDEX idx_module_templates_order ON module_templates (category, sort_orde
 ```sql
 INSERT INTO module_templates (key, category, sort_order, workspaces, allow_guest, allow_public_link)
 VALUES
-    ('POST',   'BASE', 10, ARRAY['ac','mna','project'], TRUE,  FALSE),
-    ('LINK',   'BASE', 20, ARRAY['ac','mna','project'], TRUE,  FALSE),
-    ('FILE',   'BASE', 30, ARRAY['ac','mna','project'], TRUE,  FALSE),
-    ('RECRUITMENT', 'INTAKE', 10, ARRAY['ac'], FALSE, TRUE),
+    ('POST',        'BASE',   10, ARRAY['ac','mna','project'], TRUE, FALSE),
+    ('LINK',        'BASE',   20, ARRAY['ac','mna','project'], TRUE, FALSE),
+    ('FILE',        'BASE',   30, ARRAY['ac','mna','project'], TRUE, FALSE),
+    ('RECRUITMENT', 'INTAKE', 10, ARRAY['ac'],                 TRUE, FALSE),
     -- ... 이하 동일 (현행 MODULE_TYPES 순서 · allowedModuleTypes 노출 그대로)
 ON CONFLICT (key) DO NOTHING;
 ```
 
 * **`DO NOTHING`이 핵심입니다.** 마이그레이션을 다시 돌려도 ADMIN이 바꿔 둔 배치를 덮지 않습니다. 시드는 *처음 한 번의 초기값*이지 *정답*이 아닙니다.
 * 신규 템플릿이 생기면 그 기능의 마이그레이션이 자기 행을 같은 방식으로 넣습니다.
-* **기존 동작을 그대로 옮기는 시드입니다** — 이 기능을 켠 직후 담당자 화면은 어제와 똑같아야 합니다. 링크 공유는 [3_4_15](./3_4_15_ac_public_links.md)의 허용 4종만 `TRUE`로 시작합니다.
+* **`allow_guest`는 전부 `TRUE`로 시작합니다** — 지금까지 공유 범위는 템플릿을 가리지 않고 올릴 수 있었고, 이 기능을 켠 직후 담당자 화면은 어제와 똑같아야 합니다(§14 DoD 1).
+* **`allow_public_link`는 전부 `FALSE`로 시작합니다** — 링크 공유는 아직 운영에 나간 적이 없어 지킬 기존 동작이 없고, 밖으로 나가는 것은 ADMIN이 명시적으로 열기 전까지 닫혀 있어야 합니다(§7.1의 Default Deny). ADMIN이 실제로 쓸 템플릿만 골라 켭니다.
 
 ---
 

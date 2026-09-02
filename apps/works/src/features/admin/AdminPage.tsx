@@ -7,6 +7,7 @@ import { BoardAdminPanel } from '@/features/admin/BoardAdminPanel'
 import { CreatorTransferPanel } from '@/features/admin/CreatorTransferPanel'
 import { DownloadLogView } from '@/features/admin/DownloadLogView'
 import { MeetingRoomAdminPanel } from '@/features/admin/MeetingRoomAdminPanel'
+import { ModuleAdminPanel } from '@/features/admin/ModuleAdminPanel'
 import { PermissionConsole } from '@/features/admin/PermissionConsole'
 import { SensitivePanel } from '@/features/admin/SensitivePanel'
 import { TagAdminPanel } from '@/features/admin/TagAdminPanel'
@@ -17,6 +18,7 @@ const HEADINGS: Record<string, string> = {
   boards: '게시판 관리',
   rooms: '회의실 관리',
   'approval-forms': '결재 양식 관리',
+  modules: '모듈 관리',
   sensitive: '민감정보 관리',
   merge: '중복 병합 검증',
   creators: '생성자 교체',
@@ -31,6 +33,7 @@ const NON_TAG_TABS = new Set([
   'boards',
   'rooms',
   'approval-forms',
+  'modules',
   'sensitive',
   'merge',
   'creators',
@@ -55,6 +58,7 @@ export function AdminPage() {
       {tab === 'boards' && <BoardAdminPanel />}
       {tab === 'rooms' && <MeetingRoomAdminPanel />}
       {tab === 'approval-forms' && <ApprovalFormAdminPanel />}
+      {tab === 'modules' && <ModuleAdminPanel />}
       {tagConfig && <TagAdminPanel config={tagConfig} />}
       {tab === 'sensitive' && <SensitivePanel />}
       {tab === 'merge' && <AdminMergePanel />}

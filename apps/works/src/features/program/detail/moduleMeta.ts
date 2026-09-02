@@ -30,22 +30,6 @@ export interface ModuleMeta {
    * 공유하고 편집 가능 여부만 다르도록, 작성하는 자리도 같은 골격의 페이지로 통일했다.)
    */
   tab: string
-  /**
-   * 로그인 없는 외부 주소(모듈 링크 공유)를 켤 수 있는 템플릿인가.
-   *
-   * 기준은 하나 — **이 화면이 보는 사람이 누구인지 알아야 성립하는가**. 몰라도 되면 링크로
-   * 충분하고, 알아야 하면 로그인이 필요하다. 그래서 평가·멘토링·매칭·OT는 켤 수 없다
-   * (채점·예약·출석이 특정 사람에 매인다).
-   *
-   * 모집은 규격상 허용 대상이지만 여기서는 false다 — 공개 주소·접수 기간·랜딩·동의를
-   * 모집 설정 패널이 이미 소유하고 있어, 같은 스위치를 두 곳에 두면 어느 쪽이 진짜인지
-   * 판정할 근거가 없다. 링크 원장으로 이관할 때(2단계) 이 자리로 합친다.
-   *
-   * 화면과 별개로 DB의 app.module_public_linkable()이 같은 목록을 최종 강제한다 —
-   * UI에서 숨기는 것은 보안이 아니다.
-   * 근거: docs/docs_planning/3_4_15_ac_public_links.md §6.1
-   */
-  publicLinkable?: boolean
 }
 
 export const MODULE_META: Record<string, ModuleMeta> = {
@@ -120,7 +104,6 @@ export const MODULE_META: Record<string, ModuleMeta> = {
     detail:
       '회의록·활동 기록·공지 등 사업 운영 중 남길 글을 게시판처럼 관리합니다. 리치텍스트 에디터로 작성하고, 목록에서 골라 읽거나 언제든 수정할 수 있습니다. 무엇을 넣을지 정하지 못했다면 이 템플릿으로 시작하세요.',
     tab: 'post',
-    publicLinkable: true,
   },
   LINK: {
     icon: LinkIcon,
@@ -129,7 +112,6 @@ export const MODULE_META: Record<string, ModuleMeta> = {
     detail:
       '설문 폼·외부 자료·협업 문서 등 사업과 관련된 주소를 여러 개 모아 둡니다. 각 링크에 설명을 달아 두면, 모듈을 누를 때 어디로 갈지 고르는 버튼 목록이 바로 열립니다.',
     tab: 'link',
-    publicLinkable: true,
   },
   FILE: {
     icon: Paperclip,
@@ -138,7 +120,6 @@ export const MODULE_META: Record<string, ModuleMeta> = {
     detail:
       '양식·산출물 등 나눠 줄 파일을 여러 개 올려 둡니다. 모듈을 누르면 파일 목록이 열려 바로 미리보기하거나 내려받을 수 있습니다. 여기 올린 파일은 이 사업의 자료 관리에도 같은 파일로 나타납니다.',
     tab: 'file',
-    publicLinkable: true,
   },
 }
 
