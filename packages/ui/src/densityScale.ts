@@ -243,16 +243,31 @@ export interface ColumnWidthSet {
  * 글자만 키우고 폭을 그대로 두면 열이 자기 폭을 넘겨 표 전체가 가로로 밀린다(고정폭 합을 빼서
  * 가변폭을 나누는 `DataTable`의 계산이 어긋난다). 그래서 두 벌을 함께 갖고, 자리가 바뀌면
  * 글자와 폭이 같이 움직인다.
+ *
+ * > [!NOTE]
+ * > 고정폭은 **값이 필요로 하는 만큼**이어야지 넉넉하면 안 된다(2026-09-02). 고정폭 열의 남는
+ * > 여유는 그 칸의 빈자리로 끝나지 않고, 가변폭 열이 나눠 가질 몫(`100% - 고정폭 합`)에서
+ * > 그대로 빠진다. 고정폭 열이 열 개를 넘는 표에서는 열마다의 작은 여유가 쌓여 식별 열이 굶는다
+ * > — 펀드 목록에서 고정폭 합이 96rem까지 불어나 컨테이너를 거의 다 먹었고, 남은 116px을
+ * > 펀드명과 관리인력이 3:1로 나눠 갖느라 정작 그 행이 무엇인지 알려주는 펀드명이 세 줄로
+ * > 접혔다. 그래서 이 표의 값은 종류별 최대 길이에 맞춰 조인다.
  */
 export const columnWidthScale: Record<TableStage, ColumnWidthSet> = {
   page: {
     seq: 'w-14 whitespace-nowrap',
-    badge: 'w-24 whitespace-nowrap',
+    // 배지 한 개(11px·px-2)는 네 글자까지 80px 안에 든다.
+    badge: 'w-20 whitespace-nowrap',
     person: 'w-28 whitespace-nowrap',
     short: 'w-28 whitespace-nowrap',
-    code: 'w-24 whitespace-nowrap',
+    // 코드(6자 영숫자)·2~4자 라벨의 상한이 80px이라 카드 자리와 같은 값이 된다 — 이 종류는
+    // 담기는 값이 짧아 14px과 13px의 차이가 폭을 가를 만큼 쌓이지 않는다.
+    code: 'w-20 whitespace-nowrap',
     date: 'w-32 whitespace-nowrap',
-    period: 'w-56 whitespace-nowrap',
+    // `2026-07-13 ~ 2026-07-30`(23자)이 14px에서 약 190px(여백 포함). 192px은 딱 맞아떨어져
+    // 반올림 한 픽셀에 말줄임이 났다 — 한 칸 위(208px)에 두어 여유를 남긴다.
+    period: 'w-52 whitespace-nowrap',
+    // 값(열 자리 `1,234,567,890`)만이면 112px로 족하지만, 폭을 정하는 쪽은 머리글이다 —
+    // `약정총액 (백만)`처럼 단위를 병기하면 14px+12px로 112px을 딱 채워 두 줄로 접힌다.
     money: 'w-32 whitespace-nowrap',
     count: 'w-24 whitespace-nowrap',
     datetime: 'w-44 whitespace-nowrap',
@@ -265,7 +280,8 @@ export const columnWidthScale: Record<TableStage, ColumnWidthSet> = {
     short: 'w-24 whitespace-nowrap',
     code: 'w-20 whitespace-nowrap',
     date: 'w-28 whitespace-nowrap',
-    period: 'w-52 whitespace-nowrap',
+    // 같은 23자가 13px에서 약 176px(여백 포함). 페이지 자리와 같은 이유로 한 칸 위(192px)에 둔다.
+    period: 'w-48 whitespace-nowrap',
     money: 'w-28 whitespace-nowrap',
     count: 'w-20 whitespace-nowrap',
     datetime: 'w-36 whitespace-nowrap',

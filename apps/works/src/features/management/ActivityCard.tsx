@@ -10,7 +10,12 @@ import { usePaged } from '@ynarcher/ui'
  * 여기서는 "무엇을 적을지"만 정한다.
  */
 export interface ActivityColumn<T> {
-  header: string
+  /**
+   * 열 키. 생략하면 머리글 문자열을 그대로 쓴다 — 머리글에 단위를 병기하는 등 노드를 넣을 때만
+   * 적는다(노드에서는 키를 뽑을 수 없다).
+   */
+  key?: string
+  header: ReactNode
   /**
    * 열의 종류. 폭·정렬·수치서식·줄바꿈을 한 번에 정한다(공용 `DataTable`의 `ColumnType`).
    *
@@ -82,8 +87,8 @@ export function ActivityCard<T>({
       ) : (
         <>
           <DataTable
-            columns={columns.map((c): Column<T> => ({
-              key: c.header,
+            columns={columns.map((c, index): Column<T> => ({
+              key: c.key ?? (typeof c.header === 'string' ? c.header : `col-${index}`),
               header: c.header,
               primary: c.primary,
               type: c.type,

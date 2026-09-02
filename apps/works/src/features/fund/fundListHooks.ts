@@ -7,7 +7,7 @@ import {
   type LedgerCondition,
   type LedgerPage,
 } from '@/features/master/ledgerPage'
-import { joinNames, memberSummary } from '@/lib/memberLabel'
+import { joinNames, memberNames, memberSummary } from '@/lib/memberLabel'
 
 /**
  * 펀드 상태(fund_status enum) 한글 라벨. 저장값은 코드 그대로 두고 화면에서만 매핑한다
@@ -130,20 +130,13 @@ export function formatEok(won: number): string {
  * 펀드 금액 4종(약정총액·실출자금액·집행액·잔액)의 목록 표기 단위다 — 억 단위로는 소액 집행이
  * `0.01억`처럼 뭉개져 자릿수를 비교할 수 없다.
  *
- * 2026-09-01에 값에서 '백만원' 세 글자를 뺐다(구 `formatMillion`). 단위는 표 전체에 한 번만
- * 있으면 되는 정보인데 값에 붙이면 **행 수 × 금액 열 수**만큼 반복되어 열 폭을 먹고, 숫자 뒤에
- * 글자가 붙어 자릿수를 세로로 견주는 일도 어긋난다. 단위가 서는 자리는 표의 `caption`이다
- * (`MILLION_UNIT_NOTE`).
+ * 2026-09-01에 값에서 '백만원' 세 글자를 뺐다(구 `formatMillion`). 값에 붙이면 **행 수 × 금액
+ * 열 수**만큼 반복되어 열 폭을 먹고, 숫자 뒤에 글자가 붙어 자릿수를 세로로 견주는 일도 어긋난다.
+ * 단위가 서는 자리는 금액 열의 **머리글**이다(2026-09-02, 구 표 위 단서 줄) — 공용 `ColumnUnit`.
  */
 export function amountInMillions(won: number): string {
   return Math.round(won / 1_000_000).toLocaleString()
 }
-
-/**
- * 백만원 단위 표에 붙이는 단서. 표마다 문구가 갈리지 않도록 한 곳에서 소유한다.
- * 자리는 표 테두리 **안**, 머리글 줄 위 오른쪽이다 — 표만 잘라 캡처해도 단위가 함께 따라온다.
- */
-export const MILLION_UNIT_NOTE = '단위: 백만원'
 
 /** 원(₩) 정수 → 천단위 콤마 + "원" 표기(전액 표기). */
 export function formatWon(won: number): string {
@@ -185,6 +178,14 @@ export function fundOperatorLabel(operators: FundListRow['operators'], full = fa
 /** 관리인력 표시명: 조합 행정·보고·사후관리 담당(role=ADMIN). 운용인력과 별개 축. full=true면 전원 나열. */
 export function fundManagerLabel(operators: FundListRow['operators'], full = false): string | null {
   return memberLabel(operators.filter((o) => o.role === 'ADMIN'), full)
+}
+
+/**
+ * 관리인력 이름 목록 — 목록 셀(`PersonCell`)이 열 폭에 맞춰 접는다.
+ * 상세는 전원을 한 줄에 펴야 하므로 계속 `fundManagerLabel(operators, true)`를 쓴다.
+ */
+export function fundManagerNames(operators: FundListRow['operators']): string[] {
+  return memberNames(operators.filter((o) => o.role === 'ADMIN').map((o) => o.user?.name))
 }
 
 /** 펀드 리스트 행. `funds` 표시 컬럼 + 대표펀드매니저·관리자(생성자) 임베드. */

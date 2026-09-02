@@ -1,8 +1,10 @@
 import {
   Badge,
+  ColumnUnit,
   DataTable,
   EmptyValue,
   PeriodCell,
+  PersonCell,
   type Column,
   type DataTableProps,
 } from '@ynarcher/ui'
@@ -13,9 +15,8 @@ import {
   FUND_STATUS_TONE,
   FUND_STRATEGY_LABEL,
   FUND_TYPE_LABEL,
-  MILLION_UNIT_NOTE,
   amountInMillions,
-  fundManagerLabel,
+  fundManagerNames,
   fundStatusLabel,
   type FundListRow,
 } from '@/features/fund/fundListHooks'
@@ -32,9 +33,12 @@ interface FundListTableProps {
 /** 빈 칸 표기(규격은 공용 `EmptyValue`가 소유). */
 const dash = <EmptyValue />
 
+/** 금액 머리글의 단위 병기 — 규격은 공용 `ColumnUnit`이 소유한다(2026-09-02 사용자 지정). */
+const millionUnit = <ColumnUnit>백만</ColumnUnit>
+
 /**
  * 펀드(조합) 목록 데이터 테이블. STARTUP 풀 테이블 골격 재사용.
- * 컬럼: 펀드명·코드·재원·성격·구분·펀드유형·상태·존속기간·약정총액·실출자금액·집행액·잔액·관리인력.
+ * 컬럼: 펀드명·코드·재원·성격·구분·펀드유형·상태·존속기간·약정총액·집행액·잔액·관리인력.
  * 생성자(created_by) 컬럼은 두지 않는다 — 관리 주체는 배정 인력이며 생성자는 상세 페이지에만 남긴다.
  */
 export function FundListTable({
@@ -104,25 +108,22 @@ export function FundListTable({
       },
       {
         key: 'total_commitment',
-        header: '약정총액',
+        header: <>약정총액 {millionUnit}</>,
         type: 'money',
         render: (f) => amountInMillions(f.total_commitment),
       },
-      {
-        key: 'paid_in_amount',
-        header: '실출자금액',
-        type: 'money',
-        render: (f) => (f.paid_in_amount == null ? dash : amountInMillions(f.paid_in_amount)),
-      },
+      // 실출자금액은 목록에서 내린다(2026-09-02 사용자 지정). 금액 열 넷이 고정폭 32rem을
+      // 차지하는 동안 정작 식별 열인 펀드명이 세 줄로 접혔고, 넷 중 실출자금액은 캐피탈 콜의
+      // 누적 결과라 상세의 출자 이력에서 읽는 편이 자연스럽다(FundDetailPage가 이미 답한다).
       {
         key: 'drawn_amount',
-        header: '집행액',
+        header: <>집행액 {millionUnit}</>,
         type: 'money',
         render: (f) => amountInMillions(f.drawn_amount),
       },
       {
         key: 'balance',
-        header: '잔액',
+        header: <>잔액 {millionUnit}</>,
         type: 'money',
         render: (f) => amountInMillions(f.total_commitment - f.drawn_amount),
       },
@@ -136,7 +137,7 @@ export function FundListTable({
         key: 'admins',
         header: '관리인력',
         type: 'person',
-        render: (f) => fundManagerLabel(f.operators) ?? dash,
+        render: (f) => <PersonCell names={fundManagerNames(f.operators)} />,
       },
     ],
     [],
@@ -152,10 +153,8 @@ export function FundListTable({
       selectedKeys={selectedKeys}
       onSelectionChange={onSelectionChange}
       pagination={pagination}
-      // 금액 4열의 단위. 값마다 '백만원'을 붙이면 행 수 × 4번 반복되어 열 폭을 먹으므로
-      // 표 전체에 한 번만 적는다(자리는 표 테두리 안, 머리글 줄 위).
-      caption={MILLION_UNIT_NOTE}
-      // 금액만 네 열이라 가로가 빠듯하다. 열 폭은 내용에 맞추되(자동 레이아웃) 셀 여백만 좁힌다 —
+      // 단위는 표 위 단서 줄이 아니라 금액 머리글 셋이 직접 적는다(`millionUnit`).
+      // 열이 열둘이라 가로가 빠듯하다. 열 폭은 내용에 맞추되(자동 레이아웃) 셀 여백만 좁힌다 —
       // 존속기간·금액처럼 끝이 잘리면 뜻이 달라지는 값이 있어 말줄임(fixed)을 쓰지 않는다.
       dense
       showManageColumn={false}

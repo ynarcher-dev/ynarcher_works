@@ -92,6 +92,11 @@ export { PeriodCell } from './components/PeriodCell'
 export type { PeriodCellProps } from './components/PeriodCell'
 export { TagCell } from './components/TagCell'
 export type { TagCellProps } from './components/TagCell'
+export { PersonCell } from './components/PersonCell'
+export type { PersonCellProps } from './components/PersonCell'
+// 머리글 규격 — 단위는 값이 아니라 열 이름 옆에 12px로 병기한다.
+export { ColumnUnit } from './components/ColumnUnit'
+export type { ColumnUnitProps } from './components/ColumnUnit'
 export { pinMark } from './components/pinMark'
 export { Pagination } from './components/Pagination'
 

@@ -1,8 +1,8 @@
-import { Badge, DataTable, PanelCard, usePaged, type Column } from '@ynarcher/ui'
+import { Badge, DataTable, PanelCard, PersonCell, usePaged, type Column } from '@ynarcher/ui'
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PROGRAM_STATUS_LABEL, PROGRAM_STATUS_TONE } from '@/features/program/config'
-import { programManagerLabel } from '@/features/program/programManagerLabel'
+import { programManagerNames } from '@/features/program/programManagerLabel'
 import { categoryLabel, type ProgramWorkspaceConfig } from '@/features/program/workspace'
 import type { StartupProgramRow } from '@/features/startup/startupProgramHooks'
 
@@ -107,8 +107,13 @@ export function StartupProgramCard({
         key: 'managers',
         header: '담당자',
         type: 'person',
-        // 대표(PM) 1명 + "외 N". 사업 목록과 같은 규격을 공유한다(programManagerLabel).
-        render: (r) => programManagerLabel(r.managers) ?? <span className="text-gray-400">미지정</span>,
+        // 폭이 허락하는 만큼 + `+N`. 사업 목록과 같은 규격을 공유한다(programManagerNames).
+        render: (r) => (
+          <PersonCell
+            names={programManagerNames(r.managers)}
+            empty={<span className="text-gray-400">미지정</span>}
+          />
+        ),
       },
     ],
     [config, hasRoleTags],

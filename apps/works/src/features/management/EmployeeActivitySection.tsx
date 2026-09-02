@@ -1,4 +1,4 @@
-import { PeriodCell, TagCell } from '@ynarcher/ui'
+import { ColumnUnit, PeriodCell, TagCell } from '@ynarcher/ui'
 import { ActivityCard, Dash, type ActivityColumn } from '@/features/management/ActivityCard'
 import {
   useEmployeeFunds,
@@ -10,7 +10,7 @@ import {
   type FundSeat,
   type ProgramLedgerKey,
 } from '@/features/management/employeeActivity'
-import { MILLION_UNIT_NOTE, amountInMillions } from '@/features/fund/fundListHooks'
+import { amountInMillions } from '@/features/fund/fundListHooks'
 import { SectionHeading } from '@/features/startup/SectionHeading'
 
 /**
@@ -132,8 +132,17 @@ const FUND_COLUMNS: ActivityColumn<ActivityFund>[] = [
   },
   { header: '역할', type: 'code', render: (f) => fundSeatText(f) || <Dash /> },
   // 금액 단위는 목록(FundListTable)과 같은 백만원으로 맞춘다 — 같은 값이 화면마다 다른 자릿수로
-  // 보이면 비교가 서지 않는다. 단위는 값이 아니라 표 머리의 단서(caption)가 말한다.
-  { header: '약정총액', type: 'money', render: (f) => amountInMillions(f.total_commitment) },
+  // 보이면 비교가 서지 않는다. 단위가 서는 자리도 같다: 값도 표 위 단서 줄도 아닌 머리글이다.
+  {
+    key: 'total_commitment',
+    header: (
+      <>
+        약정총액 <ColumnUnit>백만</ColumnUnit>
+      </>
+    ),
+    type: 'money',
+    render: (f) => amountInMillions(f.total_commitment),
+  },
   { header: '', type: 'long', render: () => null },
 ]
 
@@ -192,7 +201,6 @@ export function EmployeeActivitySection({ userId }: { userId: string }) {
         rowKey={(f) => f.id}
         rowTo={(f) => `/fund/${f.id}`}
         workspace="fund"
-        caption={MILLION_UNIT_NOTE}
         isLoading={fundsLoading}
         emptyText="배정된 펀드가 없습니다."
       />

@@ -1,13 +1,14 @@
 import {
   Badge,
   DataTable,
+  PersonCell,
   TagCell,
   type Column,
   type DataTableProps,
 } from '@ynarcher/ui'
 import { useMemo } from 'react'
 import { useDepartmentLabels } from '@/features/management/departmentOptions'
-import { programManagerLabel } from '@/features/program/programManagerLabel'
+import { programManagerNames } from '@/features/program/programManagerLabel'
 import {
   PROGRAM_STATUS_LABEL,
   PROGRAM_STATUS_TONE,
@@ -142,9 +143,14 @@ export function ProgramTable({
         key: 'managers',
         header: '담당자',
         type: 'person',
-        // 대표(PM) 1명 + "외 N" 공용 규격. 담당자는 사람당 구간이 여러 개일 수 있으므로
-        // 먼저 사람 단위로 접은 뒤 세어야 같은 사람이 두 번 세어지지 않는다.
-        render: (r) => programManagerLabel(r.managers) ?? <span className="text-gray-400">미지정</span>,
+        // 열 폭이 허락하는 만큼 이름을 적고 넘치는 수만 `+N`으로 알린다(공용 `PersonCell`).
+        // 담당자는 사람당 구간이 여러 개일 수 있으므로 먼저 사람 단위로 접은 뒤 넘긴다.
+        render: (r) => (
+          <PersonCell
+            names={programManagerNames(r.managers)}
+            empty={<span className="text-gray-400">미지정</span>}
+          />
+        ),
       },
     ],
     [config, pathLabelOf, lineageOf],

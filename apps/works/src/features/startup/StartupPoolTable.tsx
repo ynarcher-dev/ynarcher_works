@@ -1,7 +1,7 @@
-import { DataTable, TagCell, type Column, type DataTableProps } from '@ynarcher/ui'
+import { DataTable, PersonCell, TagCell, type Column, type DataTableProps } from '@ynarcher/ui'
 import { useMemo } from 'react'
 import { maskName } from '@/lib/mask'
-import { memberSummary } from '@/lib/memberLabel'
+import { memberNames } from '@/lib/memberLabel'
 import { useMaskPolicy } from '@/features/admin/sensitiveStore'
 import { formatFounded, readIndustries } from '@/features/startup/startupGrowth'
 import { isInvested, managementStatusLabel } from '@/features/startup/startupClassification'
@@ -68,15 +68,16 @@ interface StartupPoolTableProps {
  * 담당자 컬럼은 투자=지정 담당자·그 외=공동관리를 뜻한다(생성자 축은 목록에서 제외).
  */
 /**
- * 투자기업 담당자 표시명: 대표(리드) 1명 + "외 N"(공용 규격 memberSummary).
- * 지정 담당자가 없으면 null(→ "미지정"). 생성자로 폴백하지 않는다.
+ * 투자기업 담당자 이름 목록 — 대표(리드)를 맨 앞에 세운 전원.
+ * 몇 명을 적을지는 열 폭이 정한다(`PersonCell`). 지정 담당자가 없으면 빈 배열(→ "미지정")이며
+ * 생성자로 폴백하지 않는다 — 두 축은 별개이고 생성자는 권한이 없다.
  */
-function managerLabel(r: StartupPoolRow): string | null {
+function managerNames(r: StartupPoolRow): string[] {
   const ms = r.managers ?? []
   const lead = ms.find((m) => m.is_lead)
   // 리드를 맨 앞에 세우고 나머지를 뒤로 — 대표가 누구인지는 도메인이, 표기는 공용 규격이 정한다.
   const ordered = lead ? [lead, ...ms.filter((m) => m !== lead)] : ms
-  return memberSummary(ordered.map((m) => m.user?.name))
+  return memberNames(ordered.map((m) => m.user?.name))
 }
 
 export function StartupPoolTable({
@@ -159,7 +160,8 @@ export function StartupPoolTable({
         render: (r) => r.pool_status || <span className="text-gray-400">-</span>,
       },
       {
-        // 담당자(관리 주체): 투자기업은 지정 담당자(리드, 외 N), 그 외는 공동관리(쓰기 권한자 누구나).
+        // 담당자(관리 주체): 투자기업은 지정 담당자(리드부터 폭이 허락하는 만큼 + `+N`),
+        // 그 외는 공동관리(쓰기 권한자 누구나).
         // 지정 담당자가 없어도 생성자로 폴백하지 않는다 — 두 축은 별개이고 생성자는 권한이 없다.
         key: 'managers',
         header: '담당자',
@@ -167,8 +169,12 @@ export function StartupPoolTable({
         render: (r) => {
           if (isInvested(r.management_status)) {
             // 담당자는 내부 임직원이라 마스킹하지 않는다.
-            const label = managerLabel(r)
-            return label ?? <span className="text-gray-400">미지정</span>
+            return (
+              <PersonCell
+                names={managerNames(r)}
+                empty={<span className="text-gray-400">미지정</span>}
+              />
+            )
           }
           return '공동관리'
         },

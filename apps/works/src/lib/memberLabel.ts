@@ -26,6 +26,17 @@ export function memberSummary(names: readonly (string | null | undefined)[]): st
   return rest.length > 0 ? `${first} 외 ${rest.length}` : first!
 }
 
+/**
+ * 목록 셀에 넘길 이름 배열 — 접는 일은 셀이 한다(`PersonCell`).
+ *
+ * 2026-09-02부터 목록의 인원 열은 **폭이 허락하는 만큼** 이름을 적고 넘치는 수만 `+N`으로
+ * 알린다. 몇 명을 접을지는 글자 폭을 재 봐야 알 수 있어 문자열을 만드는 이 단계에서는 정할 수
+ * 없으므로, 여기서는 순서와 빈 이름 처리만 마친 배열을 돌려준다.
+ */
+export function memberNames(names: readonly (string | null | undefined)[]): string[] {
+  return normalize(names)
+}
+
 /** 전원 나열(상세 화면용). 인원이 없으면 null. */
 export function joinNames(names: readonly (string | null | undefined)[]): string | null {
   const list = normalize(names)

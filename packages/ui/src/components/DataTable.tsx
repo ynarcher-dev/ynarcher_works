@@ -89,9 +89,15 @@ const buildColumnSpec = (stage: TableStage): Record<ColumnType, ColumnSpec> => {
      * 길이의 상한이 정해진 값(코드·구분·단계·재원). 넓혀 봐야 빈 칸만 늘어나므로 고정폭이다.
      * 자동 레이아웃에서는 이 폭이 하한이라, 예외적으로 긴 값이 와도 잘리지 않고 열이 늘어난다.
      */
-    code: { width: w.code, align: 'left', numeric: false, rem: page ? 6 : 5 },
-    /** 사람 이름. */
-    person: { width: '', align: 'left', numeric: false, flex: 1 },
+    code: { width: w.code, align: 'left', numeric: false, rem: 5 },
+    /**
+     * 사람 이름.
+     *
+     * 가중치가 `text`(1.2)보다 높은 이유는 값이 이름 하나로 끝나지 않기 때문이다 — 목록의 인력
+     * 열은 대개 `심재훈 외 1` 꼴이라 두 글자짜리 분류 라벨보다 길다. 1.0이던 동안 이 열은
+     * 남는 폭을 나눌 때 언제나 마지막이었고, 고정폭이 많은 표에서는 `외 1`만 다음 줄로 접혔다.
+     */
+    person: { width: '', align: 'left', numeric: false, flex: 1.3 },
     /**
      * 값이 여러 개인 분류 태그(분야·업종). 개수만큼 폭이 널뛰므로 가변 열이다.
      * 목록에서는 배지가 아니라 한 줄 텍스트로 적는다 — 근거는 `TagCell` 주석 참조.
@@ -100,7 +106,7 @@ const buildColumnSpec = (stage: TableStage): Record<ColumnType, ColumnSpec> => {
     /** 주소·비고 등 긴 텍스트. */
     long: { width: '', align: 'left', numeric: false, flex: 2 },
     /** 상태 배지 한 개. */
-    badge: { width: w.badge, align: 'left', numeric: false, rem: page ? 6 : 5 },
+    badge: { width: w.badge, align: 'left', numeric: false, rem: 5 },
     /** 날짜 `YYYY-MM-DD`. */
     date: { width: w.date, align: 'left', numeric: false, rem: page ? 8 : 7 },
     /**
@@ -113,7 +119,7 @@ const buildColumnSpec = (stage: TableStage): Record<ColumnType, ColumnSpec> => {
      * `2026-08-01 ~ 2026-`처럼 잘린 값은 짧아진 것이 아니라 종료일이 없는 기간과 구분되지 않는
      * 틀린 값이라, 애초에 잘릴 수 없는 폭을 준다.
      */
-    period: { width: w.period, align: 'left', numeric: false, rem: page ? 14 : 13 },
+    period: { width: w.period, align: 'left', numeric: false, rem: page ? 13 : 12 },
     /** 일시 `YYYY-MM-DD HH:MM:SS`. */
     datetime: { width: w.datetime, align: 'left', numeric: false, rem: page ? 11 : 9 },
     /** 금액·수량. */
