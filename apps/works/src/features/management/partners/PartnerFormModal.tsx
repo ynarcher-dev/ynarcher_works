@@ -55,7 +55,7 @@ export function PartnerFormModal({
   }
 
   const submit = () => {
-    const found = validatePartnerDraft(draft, editing)
+    const found = validatePartnerDraft(draft)
     if (found) return setError(found)
     onSubmit(toPartnerInput(draft))
   }

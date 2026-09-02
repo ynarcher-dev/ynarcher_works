@@ -17,10 +17,8 @@ import {
 } from '@/features/management/partners/config'
 import type { TradePartner, TradePartnerInput } from '@/features/management/partners/partnersApi'
 
-/** 폼이 들고 있는 값. 번호류는 입력 중간 상태를 담기 위해 문자열로 둔다. */
+/** 폼이 들고 있는 값. 번호류는 입력 중간 상태를 담기 위해 문자열로 둔다. 코드는 서버가 매기므로 없다. */
 export interface PartnerDraft {
-  /** 코드 접두어(영문 2글자). 등록에만 쓰이며 일련번호는 서버가 매긴다. */
-  codePrefix: string
   name: string
   partnerType: PartnerType
   /** 숫자만. 법인 10자리 / 개인 8자리. 빈 문자열이면 미입력. */
@@ -44,7 +42,6 @@ export interface PartnerFormError {
 
 export function emptyPartnerDraft(): PartnerDraft {
   return {
-    codePrefix: '',
     name: '',
     partnerType: 'CORPORATE',
     registrationNo: '',
@@ -61,7 +58,6 @@ export function emptyPartnerDraft(): PartnerDraft {
 
 export function draftFromPartner(p: TradePartner): PartnerDraft {
   return {
-    codePrefix: p.codePrefix,
     name: p.name,
     partnerType: p.partnerType,
     registrationNo: p.registrationNo ?? '',
@@ -88,6 +84,14 @@ export function withPartnerType(draft: PartnerDraft, partnerType: PartnerType): 
   return { ...draft, partnerType, registrationNo: '' }
 }
 
+/**
+ * 번호 → 표시용 코드. 원장의 생성 열 식(`'YN-' || lpad(seq, 5, '0')`)과 같은 규칙이며,
+ * 등록 폼의 다음 코드 미리보기가 쓴다. 두 곳이 어긋나면 저장 후 코드가 미리 본 것과 달라진다.
+ */
+export function formatPartnerCode(seq: number): string {
+  return `YN-${String(seq).padStart(5, '0')}`
+}
+
 /** 숫자만 남긴다(하이픈이 든 채로 붙여 넣어도 그대로 받는다). */
 export function digitsOnly(value: string): string {
   return value.replace(/\D/g, '')
@@ -96,11 +100,6 @@ export function digitsOnly(value: string): string {
 /** 계좌번호 입력 — 숫자와 하이픈만 남긴다(구분 기호는 은행마다 달라 그대로 둔다). */
 export function normalizeAccountNo(value: string): string {
   return value.replace(/[^\d-]/g, '')
-}
-
-/** 코드 접두어 입력 — 영문 2글자 대문자. */
-export function normalizeCodePrefix(value: string): string {
-  return value.replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase()
 }
 
 /**
@@ -162,15 +161,9 @@ export function registrationLength(type: PartnerType): number {
 
 /**
  * 저장 전 검증. 첫 번째로 어긋난 규칙 하나만 돌려준다 — 한 번에 여러 줄을 읽게 하지 않는다.
- * `editing`이면 코드 접두어를 보지 않는다(코드는 발급 후 바뀌지 않으므로 폼에 없다).
+ * 등록과 수정이 같은 규칙을 본다 — 코드는 서버가 매기고 발급 후 바뀌지 않아 폼에 없다.
  */
-export function validatePartnerDraft(
-  draft: PartnerDraft,
-  editing: boolean,
-): PartnerFormError | null {
-  if (!editing && !/^[A-Z]{2}$/.test(draft.codePrefix)) {
-    return { field: 'codePrefix', message: '코드 접두어는 영문 2글자로 입력하세요.' }
-  }
+export function validatePartnerDraft(draft: PartnerDraft): PartnerFormError | null {
   if (!draft.name.trim()) {
     return { field: 'name', message: '거래처명을 입력하세요.' }
   }
@@ -216,7 +209,6 @@ export function toPartnerInput(draft: PartnerDraft): TradePartnerInput {
   const holder = draft.accountHolder.trim()
   const hasAccount = Boolean(draft.bankCode && account && holder)
   return {
-    codePrefix: draft.codePrefix,
     name: draft.name.trim(),
     partnerType: draft.partnerType,
     registrationNo: digitsOnly(draft.registrationNo) || null,

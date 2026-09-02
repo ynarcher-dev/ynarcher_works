@@ -12,7 +12,6 @@ import { PartnerDocField } from '@/features/management/partners/PartnerDocField'
 import {
   digitsOnly,
   normalizeAccountNo,
-  normalizeCodePrefix,
   registrationLength,
   withPartnerType,
   type PartnerDraft,
@@ -43,8 +42,8 @@ function Row({ children }: { children: ReactNode }) {
  * 눈이 헤매지 않는다. 줄 묶음은 함께 정하는 값끼리다: 누구인가(코드·거래처명) /
  * 어떤 상대인가(구분·등록번호) / 어디로 보내나(은행·계좌번호·예금주) / 무엇으로 증명하나(서류 2종).
  *
- * 코드 칸은 등록과 수정에서 다른 것을 보여 준다 — 등록에서는 접두어만 받고 번호는 서버가 매기고,
- * 수정에서는 발급된 코드를 읽기 전용으로 적는다. 고칠 수 없는 값에 입력 칸 모양을 주지 않는다.
+ * 코드 칸은 등록과 수정에서 다른 값을 보여 준다 — 등록은 저장할 때 붙을 번호, 수정은 이미
+ * 발급된 코드다. 어느 쪽도 고칠 수 없으므로 읽기 전용으로만 적는다.
  */
 export function PartnerFormFields({
   draft,
@@ -55,7 +54,7 @@ export function PartnerFormFields({
 }: PartnerFormFieldsProps) {
   const invalid = (field: keyof PartnerDraft) => error?.field === field
   const editing = Boolean(code)
-  const { data: nextCode } = useNextPartnerCode(editing ? '' : draft.codePrefix)
+  const { data: nextCode } = useNextPartnerCode()
   const regDigits = digitsOnly(draft.registrationNo)
   const { data: duplicate } = useDuplicateRegistrationNo(
     regDigits.length === registrationLength(draft.partnerType) ? regDigits : '',
@@ -66,41 +65,28 @@ export function PartnerFormFields({
   return (
     <div className="space-y-4">
       <Row>
-        {editing ? (
-          <Field label="거래처 코드" hint="발급된 코드는 바뀌지 않습니다(전표가 이 값으로 거래처를 가리킵니다).">
-            <Input value={code} readOnly disabled />
-          </Field>
-        ) : (
-          <Field
-            label="거래처 코드"
-            required
-            hint="영문 2글자 접두어만 정하면 일련번호 5자리는 저장할 때 자동으로 붙습니다."
-          >
-            <div className="flex items-center gap-2">
-              <Input
-                value={draft.codePrefix}
-                invalid={invalid('codePrefix')}
-                onChange={(e) =>
-                  onChange({ ...draft, codePrefix: normalizeCodePrefix(e.target.value) })
-                }
-                placeholder="YN"
-                className="w-20"
-                autoFocus
-              />
-              {/* 저장 시점에 확정되는 값이라 입력 칸이 아니라 곁글로 적는다. */}
-              <span className="tabular-nums text-body text-gray-500">
-                {nextCode ? `→ ${nextCode}` : '→ 접두어 2글자'}
-              </span>
-            </div>
-          </Field>
-        )}
+        {/*
+          코드는 등록·수정 어느 쪽에서도 고칠 수 없다. 다만 보여 주는 값이 다르다 — 수정은 이미
+          발급된 코드, 등록은 저장할 때 붙을 번호다. 고를 것이 없으므로 입력 칸을 두지 않는다.
+        */}
+        <Field
+          label="거래처 코드"
+          hint={
+            editing
+              ? '발급된 코드는 바뀌지 않습니다(전표가 이 값으로 거래처를 가리킵니다).'
+              : '등록순으로 자동 부여됩니다. 최종 번호는 저장 시점에 정해집니다.'
+          }
+          as="div"
+        >
+          <Input value={editing ? code : (nextCode ?? '')} readOnly disabled />
+        </Field>
         <Field label="거래처명" required>
           <Input
             value={draft.name}
             invalid={invalid('name')}
             onChange={(e) => onChange({ ...draft, name: e.target.value })}
             placeholder="예: 미성OA시스템"
-            autoFocus={editing}
+            autoFocus
           />
         </Field>
       </Row>

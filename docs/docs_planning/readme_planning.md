@@ -14,7 +14,7 @@
 | **역할 및 권한 정책** | [1_roles_permissions.md](./1_roles_permissions.md) | 내부 임직원 및 외부 파트너 역할 정의, 상세 권한 매트릭스 및 게스트 일회성 인증/로그인 프로세스 | 작성 완료 |
 | **비즈니스 유기성 시나리오** | [2_business_scenarios.md](./2_business_scenarios.md) | 스타트업 발굴 ➔ 보육 ➔ 투자 ➔ 멘토링 ➔ 양방향 평가의 데이터 연결성 규격 | 작성 완료 |
 | **워크스페이스 요건 개요** | [3_0_workspace_overview.md](./3_0_workspace_overview.md) | 9개 내부 워크스페이스 및 외부 채널 요건의 최상위 인덱스 | 구현 반영 |
-| **3-1. OFFICE (전사 업무 허브)** | [3_1_workspace_hub.md](./3_1_workspace_hub.md) | OFFICE 상단바 전역 도구와 임직원·지사·결재·반출·회의·게시 화면. 대시보드/거래처는 재설계·후속 | 혼합 |
+| **3-1. OFFICE (전사 업무 허브)** | [3_1_workspace_hub.md](./3_1_workspace_hub.md) | OFFICE 상단바 전역 도구와 임직원·지사·결재·거래처·반출·회의·게시 화면. 대시보드는 재설계·후속 | 혼합 |
 | **3-1-1. OFFICE 게시·자료·공지** | [3_1_1_board_archive_notice.md](./3_1_1_board_archive_notice.md) | 공지 고정 뷰, 동적 게시판/자료실 레지스트리와 작성·다운로드 흐름 | 구현 반영 |
 | **3-1-2. OFFICE 반출대장** | [3_1_2_office_asset_checkout.md](./3_1_2_office_asset_checkout.md) | 자산 중심 예약·승인·반출·반납·연체·재고·이력 규칙 | 구현 반영 |
 | **3-2. ADMIN (관리자)** | [3_2_workspace_admin.md](./3_2_workspace_admin.md) | 사용자 권한 통제 콘솔, 게시판/태그/민감정보 관리, 보안 감사 로그 요건 | 구현 반영 |
@@ -29,7 +29,7 @@
 | **3-7-1. MANAGEMENT KPI** | [3_7_1_management_performance_kpi.md](./3_7_1_management_performance_kpi.md) | 조직·개인 KPI 스코어링 룰 엔진 및 성과관리 사이클 | 기획 완료 |
 | **3-7-2. MANAGEMENT 자산** | [3_7_2_management_assets.md](./3_7_2_management_assets.md) | 지사 귀속 자산·비용·사진·검색/필터·대량 업로드·반출 연계 | 구현 반영 |
 | **3-7-3. MANAGEMENT 근태** | [3_7_3_management_attendance.md](./3_7_3_management_attendance.md) | 근무 정책·상태 원장, 날짜별/인력별 조회와 사유 필수 정정, 근무체크 위젯 | 구현 반영 |
-| **3-7-4. MANAGEMENT 거래처** | [3_7_4_management_partners.md](./3_7_4_management_partners.md) | 거래처 원장(코드 자동 채번·구분·등록번호·계좌·증빙 2종·사용 여부)과 OFFICE 조회 목록의 선행 조건 | 구현 반영 |
+| **3-7-4. MANAGEMENT 거래처** | [3_7_4_management_partners.md](./3_7_4_management_partners.md) | 거래처 원장(코드 자동 채번·구분·등록번호·계좌·증빙 2종·사용 여부)과 OFFICE 가려진 조회면 | 구현 반영 |
 | **3-8. PROJECT (프로젝트)** | [3_8_workspace_project.md](./3_8_workspace_project.md) | 공용 사업 원장의 프로젝트 목록/상세와 기본 템플릿 3종. 태스크/의존 간트는 후속 | 혼합 |
 | **3-9. GUEST (외부 파트너)** | [3_9_workspace_guest.md](./3_9_workspace_guest.md) | 외부 스타트업/전문가 전용 대시보드 및 미팅 예약, 만족도 평가지 작성 요건 | 구현 반영 |
 

@@ -12,13 +12,14 @@ import { OfficeManagersPanel } from '@/features/office/OfficeManagersPanel'
 import { BranchesPanel } from '@/features/office/branches/BranchesPanel'
 import { AssetListWorkspace } from '@/features/office/assets/AssetListWorkspace'
 import { MinutesWorkspace } from '@/features/office/minutes/MinutesWorkspace'
+import { OfficePartnersPanel } from '@/features/office/partners/OfficePartnersPanel'
 import { RoomReservationWorkspace } from '@/features/office/rooms/RoomReservationWorkspace'
 
-/** 페이지 골격만 있는 준비 중 메뉴(탭 → 제목). */
-const PLACEHOLDER_TITLES: Record<string, string> = {
-  // 거래처 정보: 전자결재 워크스페이스에서 이관, 세부 기능은 후속 작업(골격만).
-  clients: '거래처 정보',
-}
+/**
+ * 페이지 골격만 있는 준비 중 메뉴(탭 → 제목).
+ * 지금은 비어 있다 — 마지막 골격이던 `거래처 정보`가 2026-09-03에 조회면으로 연결되었다.
+ */
+const PLACEHOLDER_TITLES: Record<string, string> = {}
 
 /**
  * OFFICE 워크스페이스: 대시보드 + 임직원 정보·회의실 예약 + 전자결재·거래처 정보 + 게시판 홈.
@@ -114,6 +115,9 @@ export function OfficePage() {
       {tab === 'minutes' && <MinutesWorkspace initialMinuteId={params.get('minute') ?? undefined} />}
       {/* 지사 정보: ADMIN '지사 관리'가 소유한 지사 원장을 조회 전용 리스트뷰로 노출한다. */}
       {tab === 'branches' && <BranchesPanel />}
+      {/* 거래처 정보: 원장은 MANAGEMENT가 소유하고 여기서는 확인만 한다. 원장을 그대로 읽지 않고
+          가려진 뷰(trade_partners_directory)를 읽는다 — 계좌 원본·증빙 서류는 나오지 않는다. */}
+      {tab === 'clients' && <OfficePartnersPanel />}
       {/* 전자결재: 진행 중 타일(필터) + 문서함 좌패널 + 문서 목록. */}
       {tab === 'approval' && (
         <ApprovalWorkspace

@@ -244,6 +244,8 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         // 결재는 전사 업무라 OFFICE가 화면을 갖는다. 다만 결재된 '금액'을 모아 보는 일은
         // 재무 관리와 같은 축이라 MANAGEMENT '결재 금액 집계'가 소유한다.
         { label: '전자결재', tab: 'approval', dividerBefore: true },
+        // 거래처 조회 전용. 원장·등록은 MANAGEMENT '거래처 정보'가 소유하고, 여기서 읽는 것은
+        // 가려진 뷰(계좌번호 뒤 4자리·개인 생년월일은 연도까지, 증빙 서류 없음)다.
         { label: '거래처 정보', tab: 'clients' },
         // 자산·공간·회의는 사내 자원을 쓰는 일 한 블록이다 — 셋 사이는 끊지 않고 위 결재·거래처
         // 블록과만 구분선으로 나눈다. 뒤는 아래 고정 게시판 그룹 경계가 끊는다.

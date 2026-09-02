@@ -6,19 +6,19 @@
  * 값 규칙(코드 형식·등록번호 자릿수·계좌 세 값 동반)은 DB check 제약이 최종 판정한다 —
  * 여기서 미리 걸러 주는 것(partnerForm.ts)은 저장을 눌러서야 알게 되지 않도록 하기 위해서다.
  *
- * 거래처 코드는 클라이언트가 만들지 않는다. 접두어만 보내고 일련번호는 원장 트리거가 채번한다 —
- * 화면이 "다음 번호"를 읽어 그 값을 그대로 저장하면, 두 사람이 같은 순간에 등록할 때 같은 번호가
- * 두 번 발급된다.
+ * 거래처 코드는 클라이언트가 만들지 않는다. `YN-` + 등록순 5자리를 원장 트리거가 잠금 아래에서
+ * 채번한다 — 화면이 "다음 번호"를 읽어 그 값을 그대로 저장하면, 두 사람이 같은 순간에 등록할 때
+ * 같은 번호가 두 번 발급된다.
  */
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { PartnerType } from '@/features/management/partners/config'
+import { formatPartnerCode } from '@/features/management/partners/partnerForm'
 
 export interface TradePartner {
   id: string
-  /** 표시용 코드(접두어 2글자 + 일련번호 5자리). 생성 열이라 발급 후 바뀌지 않는다. */
+  /** 표시용 코드(`YN-` + 등록순 5자리). 생성 열이라 발급 후 바뀌지 않는다. */
   code: string
-  codePrefix: string
   name: string
   partnerType: PartnerType
   /** 법인=사업자등록번호 10자리, 개인=생년월일 8자리. 숫자만 담긴다(표기는 화면이 만든다). */
@@ -37,9 +37,8 @@ export interface TradePartner {
   updatedAt: string | null
 }
 
-/** 등록·수정 공용 입력. 코드 접두어는 등록 때만 쓰이고 수정 시에는 무시된다(코드는 불변). */
+/** 등록·수정 공용 입력. 코드는 서버가 붙이므로 여기에 없다(등록·수정 모두). */
 export interface TradePartnerInput {
-  codePrefix: string
   name: string
   partnerType: PartnerType
   registrationNo: string | null
@@ -56,7 +55,6 @@ export interface TradePartnerInput {
 interface PartnerRow {
   id: string
   code: string
-  code_prefix: string
   name: string
   partner_type: PartnerType
   registration_no: string | null
@@ -73,12 +71,11 @@ interface PartnerRow {
 }
 
 const COLUMNS =
-  'id, code, code_prefix, name, partner_type, registration_no, bank_code, account_no, account_holder, license_path, license_name, bankbook_path, bankbook_name, is_active, created_by, updated_at'
+  'id, code, name, partner_type, registration_no, bank_code, account_no, account_holder, license_path, license_name, bankbook_path, bankbook_name, is_active, created_by, updated_at'
 
 const toPartner = (r: PartnerRow): TradePartner => ({
   id: r.id,
   code: r.code,
-  codePrefix: r.code_prefix,
   name: r.name,
   partnerType: r.partner_type,
   registrationNo: r.registration_no,
@@ -94,7 +91,7 @@ const toPartner = (r: PartnerRow): TradePartner => ({
   updatedAt: r.updated_at,
 })
 
-/** 저장 페이로드. 코드 접두어는 등록에만 실린다(수정 페이로드에서는 빠진다). */
+/** 저장 페이로드. 코드는 원장 트리거가 붙이므로 여기에 담기지 않는다. */
 const toPartnerRow = (v: TradePartnerInput) => ({
   name: v.name.trim(),
   partner_type: v.partnerType,
@@ -204,22 +201,18 @@ export function usePartnersPage(
  * 트리거가 잠금 아래에서 매긴다. 보여 주는 이유는 코드가 자동으로 붙는다는 사실 자체가
  * 화면에 드러나야 하기 때문이고, 그래서 폼은 이 값을 저장하지 않고 읽기 전용으로만 적는다.
  */
-export function useNextPartnerCode(prefix: string) {
-  const valid = /^[A-Za-z]{2}$/.test(prefix)
-  const upper = prefix.toUpperCase()
+export function useNextPartnerCode() {
   return useQuery({
-    queryKey: [...PARTNERS_KEY, 'next-code', upper],
-    enabled: valid,
+    queryKey: [...PARTNERS_KEY, 'next-code'],
     queryFn: async (): Promise<string> => {
       const { data, error } = await supabase
         .from('trade_partners')
         .select('code_seq')
-        .eq('code_prefix', upper)
         .order('code_seq', { ascending: false })
         .limit(1)
       if (error) throw error
       const last = (data?.[0] as { code_seq: number } | undefined)?.code_seq ?? 0
-      return `${upper}${String(last + 1).padStart(5, '0')}`
+      return formatPartnerCode(last + 1)
     },
   })
 }
@@ -253,10 +246,8 @@ export function useCreatePartner() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (v: TradePartnerInput) => {
-      const { error } = await supabase
-        .from('trade_partners')
-        // 접두어만 보낸다. 일련번호와 생성자는 원장 트리거가 채운다.
-        .insert({ ...toPartnerRow(v), code_prefix: v.codePrefix.trim().toUpperCase() })
+      // 코드(일련번호)와 생성자는 보내지 않는다 — 원장 트리거가 잠금 아래에서 채운다.
+      const { error } = await supabase.from('trade_partners').insert(toPartnerRow(v))
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: PARTNERS_KEY }),

@@ -3,11 +3,11 @@ import {
   digitsOnly,
   draftFromPartner,
   emptyPartnerDraft,
+  formatPartnerCode,
   formatRegistrationNo,
   isValidBirthDate,
   isValidBusinessNo,
   normalizeAccountNo,
-  normalizeCodePrefix,
   toPartnerInput,
   validatePartnerDraft,
   withPartnerType,
@@ -24,63 +24,53 @@ import type { TradePartner } from '@/features/management/partners/partnersApi'
 const VALID_BIZ_NO = '1234567891'
 
 function draft(over: Partial<PartnerDraft> = {}): PartnerDraft {
-  return { ...emptyPartnerDraft(), codePrefix: 'YN', name: '와이앤아처', ...over }
+  return { ...emptyPartnerDraft(), name: '와이앤아처', ...over }
 }
 
 describe('validatePartnerDraft', () => {
   it('필수값만 채운 초안은 통과한다', () => {
-    expect(validatePartnerDraft(draft(), false)).toBeNull()
-  })
-
-  it('등록 시 코드 접두어가 영문 2글자가 아니면 막는다', () => {
-    expect(validatePartnerDraft(draft({ codePrefix: '' }), false)?.field).toBe('codePrefix')
-    expect(validatePartnerDraft(draft({ codePrefix: 'Y' }), false)?.field).toBe('codePrefix')
-  })
-
-  it('수정 시에는 코드 접두어를 보지 않는다(코드는 발급 후 불변)', () => {
-    expect(validatePartnerDraft(draft({ codePrefix: '' }), true)).toBeNull()
+    expect(validatePartnerDraft(draft())).toBeNull()
   })
 
   it('거래처명은 공백만으로 채울 수 없다', () => {
-    expect(validatePartnerDraft(draft({ name: '   ' }), false)?.field).toBe('name')
+    expect(validatePartnerDraft(draft({ name: '   ' }))?.field).toBe('name')
   })
 
   it('법인은 사업자등록번호 10자리를 받는다', () => {
-    expect(validatePartnerDraft(draft({ registrationNo: VALID_BIZ_NO }), false)).toBeNull()
-    expect(validatePartnerDraft(draft({ registrationNo: '12345678' }), false)?.field).toBe(
+    expect(validatePartnerDraft(draft({ registrationNo: VALID_BIZ_NO }))).toBeNull()
+    expect(validatePartnerDraft(draft({ registrationNo: '12345678' }))?.field).toBe(
       'registrationNo',
     )
   })
 
   it('자릿수가 맞아도 검증식에 어긋난 사업자등록번호는 막는다', () => {
-    const found = validatePartnerDraft(draft({ registrationNo: '1234567890' }), false)
+    const found = validatePartnerDraft(draft({ registrationNo: '1234567890' }))
     expect(found?.field).toBe('registrationNo')
   })
 
   it('개인은 생년월일 8자리를 받고 실재하지 않는 날짜는 막는다', () => {
     const person = { partnerType: 'INDIVIDUAL' as const }
-    expect(validatePartnerDraft(draft({ ...person, registrationNo: '19900101' }), false)).toBeNull()
+    expect(validatePartnerDraft(draft({ ...person, registrationNo: '19900101' }))).toBeNull()
     expect(
-      validatePartnerDraft(draft({ ...person, registrationNo: '19900230' }), false)?.field,
+      validatePartnerDraft(draft({ ...person, registrationNo: '19900230' }))?.field,
     ).toBe('registrationNo')
   })
 
   it('등록번호는 비워 둘 수 있다(아직 서류를 못 받은 거래처)', () => {
-    expect(validatePartnerDraft(draft({ registrationNo: '' }), false)).toBeNull()
+    expect(validatePartnerDraft(draft({ registrationNo: '' }))).toBeNull()
   })
 
   it('계좌 세 값 중 하나만 적으면 나머지를 요구한다', () => {
-    expect(validatePartnerDraft(draft({ bankCode: '004' }), false)?.field).toBe('accountNo')
-    expect(validatePartnerDraft(draft({ accountNo: '123-456' }), false)?.field).toBe('bankCode')
+    expect(validatePartnerDraft(draft({ bankCode: '004' }))?.field).toBe('accountNo')
+    expect(validatePartnerDraft(draft({ accountNo: '123-456' }))?.field).toBe('bankCode')
     expect(
-      validatePartnerDraft(draft({ bankCode: '004', accountNo: '123-456' }), false)?.field,
+      validatePartnerDraft(draft({ bankCode: '004', accountNo: '123-456' }))?.field,
     ).toBe('accountHolder')
   })
 
   it('계좌 세 값이 모두 있으면 통과한다', () => {
     const found = validatePartnerDraft(
       draft({ bankCode: '004', accountNo: '349401-04-350803', accountHolder: '와이앤아처(주)' }),
-      false,
     )
     expect(found).toBeNull()
   })
@@ -88,7 +78,6 @@ describe('validatePartnerDraft', () => {
   it('계좌번호에 숫자·하이픈 외의 글자가 있으면 막는다', () => {
     const found = validatePartnerDraft(
       draft({ bankCode: '004', accountNo: '계좌 없음', accountHolder: '홍길동' }),
-      false,
     )
     expect(found?.field).toBe('accountNo')
   })
@@ -155,11 +144,13 @@ describe('입력 정규화', () => {
   it('계좌번호는 숫자와 하이픈만 남긴다', () => {
     expect(normalizeAccountNo('602-910435-43607 (하나)')).toBe('602-910435-43607')
   })
+})
 
-  it('코드 접두어는 영문 2글자 대문자로 자른다', () => {
-    expect(normalizeCodePrefix('yn1')).toBe('YN')
-    expect(normalizeCodePrefix('abc')).toBe('AB')
-    expect(normalizeCodePrefix('12')).toBe('')
+describe('formatPartnerCode', () => {
+  it('원장의 생성 열과 같은 규칙으로 적는다(YN- + 5자리)', () => {
+    expect(formatPartnerCode(1)).toBe('YN-00001')
+    expect(formatPartnerCode(13)).toBe('YN-00013')
+    expect(formatPartnerCode(99999)).toBe('YN-99999')
   })
 })
 
@@ -188,8 +179,7 @@ describe('draftFromPartner', () => {
   it('원장의 null을 빈 문자열로 편다', () => {
     const partner: TradePartner = {
       id: 'p1',
-      code: 'YN00001',
-      codePrefix: 'YN',
+      code: 'YN-00001',
       name: '미성OA시스템',
       partnerType: 'CORPORATE',
       registrationNo: null,
@@ -206,7 +196,6 @@ describe('draftFromPartner', () => {
     }
     const d = draftFromPartner(partner)
     expect(d.registrationNo).toBe('')
-    expect(d.codePrefix).toBe('YN')
     expect(d.isActive).toBe(true)
   })
 })
