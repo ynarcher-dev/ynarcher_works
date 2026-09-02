@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useAuthStore } from '@/auth/authStore'
 import { isoToLocal, localToIso } from '@/features/program/detail/publicLinkTime'
 import {
   useModulePublicLink,
@@ -17,17 +16,14 @@ import {
  *
  * 켤 수 있는 자리는 **이미 만들어진 모듈**뿐이다. 링크는 모듈 하나를 가리키는 주소라
  * 대상이 존재해야 발급되며, 신규 생성 중에는 가리킬 것이 아직 없다.
+ *
+ * **켜고 끄는 것은 사업 담당자다.** ADMIN이 정하는 것은 그 종류가 밖에 나갈 수 있는지의
+ * 상한(`module_templates.allow_public_link`)이며, 담당자는 ADMIN이 열어 둔 템플릿 안에서
+ * 자기 사업의 이 건을 지금 열지 말지를 고른다 — 정책과 운영은 다른 층이다.
  */
 export interface PublicLinkForm {
   /** 이 모듈에서 링크 공유 칸을 세울 수 있는가(허용 템플릿 + 편집 모드). */
   available: boolean
-  /**
-   * 켜고 끌 수 있는가. ADMIN만 true다 — 밖으로 문을 여는 결정은 되돌릴 수 없는 쪽이라
-   * (이미 내려간 파일은 회수하지 못한다) 담당자 전원이 상시 쥐고 있을 손잡이가 아니다.
-   * 담당자에게도 **읽기는 열어 둔다**: 감추면 자기 모듈이 밖에 열려 있다는 사실 자체를
-   * 모르게 되는데, 그것은 권한을 좁히는 것이 아니라 정보를 숨기는 것이다.
-   */
-  editable: boolean
   enabled: boolean
   setEnabled: (v: boolean) => void
   status: PublicLinkStatus
@@ -52,9 +48,6 @@ export function useModulePublicLinkForm(
   publicLinkable: boolean,
 ): PublicLinkForm {
   const available = Boolean(moduleId) && publicLinkable
-  // 화면은 ADMIN에게만 손잡이를 준다. 서버는 링크 원장 정책이 같은 판정을 다시 한다 —
-  // UI에서 숨기는 것은 보안이 아니다.
-  const editable = useAuthStore((s) => s.user?.role) === 'super_admin'
   const { data: link } = useModulePublicLink(available ? moduleId : undefined)
   const save = useSetModulePublicLink(moduleId ?? '')
   const rotateMutation = useRotateModulePublicLink(moduleId ?? '')
@@ -77,8 +70,7 @@ export function useModulePublicLinkForm(
   }, [link])
 
   const apply = async () => {
-    // 담당자가 저장을 눌러도 링크 축은 건드리지 않는다(폼 값이 바뀔 수도 없다).
-    if (!available || !editable) return
+    if (!available) return
     const next: PublicLinkStatus = enabled ? status : 'PRIVATE'
     // 켠 적도 없고 지금도 끄는 중이면 원장에 행을 만들 이유가 없다 — 주소를 발급해 두고
     // 아무 데도 쓰지 않으면 그 주소가 언젠가 왜 있는지 모를 채로 남는다.
@@ -97,7 +89,6 @@ export function useModulePublicLinkForm(
 
   return {
     available,
-    editable,
     enabled,
     setEnabled,
     status,

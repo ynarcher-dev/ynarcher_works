@@ -13,8 +13,12 @@ const STATUS_OPTIONS: { value: PublicLinkStatus; label: string }[] = [
  * 공유 범위 셀렉트 아래에 서지만 **다른 축**이다 — 위는 로그인한 사람 중 누가 보는가를,
  * 여기는 로그인 없는 바깥에 문을 여는가를 정한다. 그래서 값을 합치지 않고 칸을 나눈다.
  *
- * 허용되지 않는 템플릿에서는 칸 자체를 두지 않는다. 꺼진 채 비활성으로 두면 언젠가 켜질 수
- * 있는 것처럼 읽히는데, 평가·멘토링·매칭은 상대가 누구인지 알아야 성립해서 영영 켜지지 않는다.
+ * 칸이 서는지는 **ADMIN이 정한 상한**이 답한다(module_templates.allow_public_link). 상한이
+ * 닫힌 템플릿에서는 칸 자체를 두지 않는다 — 꺼진 채 비활성으로 두면 언젠가 켜질 수 있는
+ * 것처럼 읽히는데, 그것을 켜는 자리는 여기가 아니라 ADMIN 모듈 관리다.
+ *
+ * 칸이 선 뒤 **켜고 끄는 것은 담당자**다. ADMIN은 종류를 열어 두었을 뿐이고, 이 건을 지금
+ * 열지 말지는 그 사업을 아는 사람이 정한다.
  *
  * 근거 기획: docs/docs_planning/3_4_15_ac_public_links.md §5.1
  */
@@ -66,17 +70,11 @@ export function ModulePublicLinkFields({ form }: { form: PublicLinkForm }) {
             id="mod-public-link"
             checked={form.enabled}
             onChange={form.setEnabled}
-            disabled={!form.editable}
             aria-label="링크 공유"
           />
           <span className="text-caption text-gray-600">
             {form.enabled ? '주소를 아는 사람에게 공개' : '공개하지 않음'}
           </span>
-          {!form.editable && (
-            // 왜 못 누르는지를 말하는 차단 안내라 접지 않는다. 상태 자체는 그대로 보인다 —
-            // 감추면 자기 모듈이 밖에 열려 있다는 사실을 모르게 된다.
-            <span className="text-caption text-gray-500">· 켜고 끄기는 ADMIN이 합니다</span>
-          )}
         </div>
       </Field>
 
@@ -89,11 +87,9 @@ export function ModulePublicLinkFields({ form }: { form: PublicLinkForm }) {
                 <Button variant="secondary" onClick={copy}>
                   복사
                 </Button>
-                {form.editable && (
-                  <Button variant="secondary" disabled={form.rotating} onClick={onRotate}>
-                    주소 재발급
-                  </Button>
-                )}
+                <Button variant="secondary" disabled={form.rotating} onClick={onRotate}>
+                  주소 재발급
+                </Button>
               </div>
             ) : (
               // 다음 행동을 지시하는 안내라 접지 않는다(Field의 hintInline 예외와 같은 기준).
@@ -107,8 +103,7 @@ export function ModulePublicLinkFields({ form }: { form: PublicLinkForm }) {
             <Field label="공개 상태">
               <Select
                 value={form.status}
-                disabled={!form.editable}
-                onChange={(e) => form.setStatus(e.target.value as PublicLinkStatus)}
+                    onChange={(e) => form.setStatus(e.target.value as PublicLinkStatus)}
               >
                 {STATUS_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -123,8 +118,7 @@ export function ModulePublicLinkFields({ form }: { form: PublicLinkForm }) {
             >
               <Input
                 placeholder="예: 02-000-0000 / ac@ynarcher.com"
-                disabled={!form.editable}
-                value={form.contact}
+                    value={form.contact}
                 onChange={(e) => form.setContact(e.target.value)}
               />
             </Field>
@@ -137,16 +131,14 @@ export function ModulePublicLinkFields({ form }: { form: PublicLinkForm }) {
             >
               <Input
                 type="datetime-local"
-                disabled={!form.editable}
-                value={form.openAt}
+                    value={form.openAt}
                 onChange={(e) => form.setOpenAt(e.target.value)}
               />
             </Field>
             <Field label="공개 마감" hint="비워 두면 이 메뉴의 종료일까지 열립니다.">
               <Input
                 type="datetime-local"
-                disabled={!form.editable}
-                value={form.closeAt}
+                    value={form.closeAt}
                 onChange={(e) => form.setCloseAt(e.target.value)}
               />
             </Field>
