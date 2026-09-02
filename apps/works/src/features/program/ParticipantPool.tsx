@@ -25,6 +25,9 @@ import {
 } from '@/features/program/participantHooks'
 import { useProgramWorkspace } from '@/features/program/workspace'
 
+/** 한 페이지에 세우는 행 수 — 페이징 훅과 표 페이저가 같은 값을 봐야 한다. */
+const PAGE_SIZE = 10
+
 /** 검색이 걸리는 축 — 대상명과 로그인 계정(성명·연락처). 명부에서 사람을 찾는 길은 이 넷뿐이다. */
 function matches(row: ParticipantRow, keyword: string): boolean {
   const kw = keyword.trim().toLowerCase()
@@ -85,11 +88,15 @@ export function ParticipantPool({ program }: { program: Program }) {
     [rows, roles, keyword],
   )
 
-  // 명부는 사업이 굴러갈수록 길어지는 목록이라 페이저를 단다. 카드 안이므로 번호줄이 아니라
-  // 미니 페이저(compact)이며, 이는 형제 탭의 관련 목록이 쓰는 것과 같은 규격이다.
+  // 명부는 사업이 굴러갈수록 길어지는 목록이라 페이저를 단다. 카드 안이지만 미니 페이저가
+  // 아니라 원장 목록과 같은 번호줄 페이저다 — 자리가 아니라 쓰임이 갈라서다. 이 표는 상세를
+  // 받치는 보조 목록이 아니라 행을 골라 로그인을 여닫는 그 탭의 작업 대상이고(그래서 선택
+  // 체크박스도 선다), 작업 대상인 표는 몇 페이지가 있고 지금 어디인지를 번호로 펴 보여야 한다.
+  // 한 페이지뿐이어도 페이저는 그대로 선다(공용 `Pagination`의 기본 동작) — 명부가 짧다는
+  // 이유로 페이저가 사라지면 행이 늘어난 순간 표 아래에서 줄 하나가 솟는다.
   // 선택(selected)은 페이지를 넘겨도 유지된다 — 일괄 처리는 화면에 보이는 행이 아니라 고른 행이
   // 대상이고, 페이지를 넘겼다는 이유로 방금 고른 건이 빠지면 그것이 더 놀라운 동작이다.
-  const { pageItems, page, setPage } = usePaged(filtered, 10)
+  const { pageItems, page, setPage } = usePaged(filtered, PAGE_SIZE)
 
   const columns = useMemo(
     () => participantColumns(masked, program.status),
@@ -202,7 +209,14 @@ export function ParticipantPool({ program }: { program: Program }) {
             onSelectionChange={setSelected}
             // 조회 실패와 빈 명부는 다른 사실이다 — 한 문장으로 뭉뚱그리면 원인을 짚을 수 없다.
             emptyText={isError ? '명부를 불러오지 못했습니다.' : '명부가 비어 있습니다.'}
-            pagination={{ page, pageSize: 10, total: filtered.length, onChange: setPage, compact: true }}
+            // 좌측 건수는 '필터 반영 / 전체'로 읽힌다 — 검색·역할로 좁힌 뒤에도 명부 총량을 잃지 않는다.
+            pagination={{
+              page,
+              pageSize: PAGE_SIZE,
+              total: filtered.length,
+              totalAll: rows.length,
+              onChange: setPage,
+            }}
           />
         </div>
       </Card>

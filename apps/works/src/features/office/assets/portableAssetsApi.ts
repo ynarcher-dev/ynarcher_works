@@ -10,7 +10,8 @@
  * `assets` 원장을 직접 읽지 않는 이유는 그 조회 권한이 `can_read_workspace('management')`라,
  * 권한이 없는 임직원에게는 빈 화면이 되기 때문이다. 뷰가 필요한 만큼만 내려보낸다 —
  * 금액·결제 주기·할당 대상은 오지 않는다(물건을 찾는 데 필요한 정보가 아니고 각각 비용
- * 정보와 인사 정보다).
+ * 정보와 인사 정보다). 시리얼 번호도 2026-09-02에 뷰에서 걷어냈다 — 이 화면에 적지 않기로
+ * 한 값이라, 화면에서만 지우고 내려보내면 "숨겼을 뿐 오는" 상태가 된다.
  */
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -20,8 +21,12 @@ export interface PortableAsset {
   id: string
   name: string
   itemType: string | null
-  serialNo: string | null
   branchId: string | null
+  /**
+   * 보관 위치(assets.location) — 지사 안에서 어디로 가면 되는지.
+   * 지사는 탭으로 이미 골라 놓은 값이라, 목록에서 "어디 있나"에 실제로 답하는 것은 이 값이다.
+   */
+  location: string | null
   /** 자산 원장의 비고 — 이 물건이 어떤 물건인지 알려 주는 설명 자리다. */
   note: string | null
   photoPaths: string[]
@@ -40,8 +45,8 @@ interface PortableRow {
   id: string
   name: string
   item_type: string | null
-  serial_no: string | null
   branch_id: string | null
+  location: string | null
   note: string | null
   photo_paths: string[] | null
   quantity: number
@@ -50,14 +55,14 @@ interface PortableRow {
 }
 
 const COLUMNS =
-  'id, name, item_type, serial_no, branch_id, note, photo_paths, quantity, manager_id, is_pinned'
+  'id, name, item_type, branch_id, location, note, photo_paths, quantity, manager_id, is_pinned'
 
 const toAsset = (r: PortableRow): PortableAsset => ({
   id: r.id,
   name: r.name,
   itemType: r.item_type,
-  serialNo: r.serial_no,
   branchId: r.branch_id,
+  location: r.location,
   note: r.note,
   photoPaths: r.photo_paths ?? [],
   quantity: r.quantity,

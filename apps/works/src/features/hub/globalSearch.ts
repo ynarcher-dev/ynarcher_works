@@ -460,17 +460,22 @@ interface AssetRow {
   id: string
   name: string
   item_type: string | null
-  serial_no: string | null
+  location: string | null
 }
 
+/**
+ * 검색은 시리얼 번호로도 걸지만(현장에서 기기 뒷면을 보고 찾는 경로다) 결과 줄에는 적지 않는다.
+ * 이 결과가 데려가는 곳이 OFFICE 자산 현황이고, 그 화면은 시리얼을 노출하지 않는 화면이기
+ * 때문이다 — 검색 결과에만 적으면 눌러 들어간 화면에서 그 값이 사라진다.
+ */
 async function searchPortableAssets(kw: string): Promise<SearchResult[]> {
   const rows = await safeRows<AssetRow>(
     supabase
       .from('assets')
-      .select('id, name, item_type, serial_no')
+      .select('id, name, item_type, location')
       .is('deleted_at', null)
       .eq('is_portable', true)
-      .or(orClause(['name', 'item_type', 'serial_no'], kw))
+      .or(orClause(['name', 'item_type', 'serial_no', 'location'], kw))
       .order('name', { ascending: true })
       .limit(SOURCE_LIMIT),
   )
@@ -479,7 +484,7 @@ async function searchPortableAssets(kw: string): Promise<SearchResult[]> {
     id: `asset:${row.id}`,
     name: row.name,
     kind: 'asset' as const,
-    detail: detail(['워크스페이스', '자산 현황', row.item_type, row.serial_no]),
+    detail: detail(['워크스페이스', '자산 현황', row.item_type, row.location]),
     badge: '자산',
     tone: 'neutral' as const,
     path: `/office?tab=outbound&asset=${row.id}`,

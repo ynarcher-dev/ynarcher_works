@@ -48,6 +48,7 @@ export const ASSET_IMPORT_HEADERS = [
   '반출가능',
   '반출승인',
   '지사',
+  '위치',
   '비고',
 ] as const
 
@@ -55,6 +56,7 @@ export const ASSET_IMPORT_HEADERS = [
 const HEADER_ALIASES: Record<string, string> = {
   자산명: '자산명', name: '자산명',
   지사: '지사', branch: '지사',
+  위치: '위치', location: '위치', 보관위치: '위치',
   품목: '품목', item_type: '품목',
   수량: '수량', quantity: '수량', 보유수량: '수량',
   분류: '분류', acquisition_type: '분류',
@@ -136,8 +138,8 @@ function uniqueIdByName(list: { id: string; name: string }[], name: string) {
 export function buildAssetTemplateCsv(): string {
   return [
     ASSET_IMPORT_HEADERS.join(','),
-    '"MacBook Pro 16 (2025)",C02X1234ABCD,노트북,1,구매,보유,,,2500000,완납,2026-03-01,,O,X,본사,',
-    'Figma 엔터프라이즈,,라이선스,5,렌탈,보유,,,55000,월 구독,2026-01-01,2027-12-31,X,X,본사,연 단위 갱신',
+    '"MacBook Pro 16 (2025)",C02X1234ABCD,노트북,1,구매,보유,,,2500000,완납,2026-03-01,,O,X,본사,3층 사무실,',
+    'Figma 엔터프라이즈,,라이선스,5,렌탈,보유,,,55000,월 구독,2026-01-01,2027-12-31,X,X,본사,,연 단위 갱신',
   ].join('\n')
 }
 
@@ -253,6 +255,7 @@ export function parseAssetCsv(text: string, refs: ImportRefs): ImportParseResult
       ...emptyDraft(branchId),
       name: cell('자산명'),
       itemType: cell('품목'),
+      location: cell('위치'),
       acquisitionType,
       status: finalStatus,
       // 폐기한 물건에는 소유자를 남기지 않는다(화면의 상태 전이와 같은 규칙).

@@ -6,8 +6,6 @@ interface PortableAssetsGridProps {
   rows: PortableAsset[]
   /** 대표사진 경로 → Signed URL. 목록 전체를 한 번에 서명한 결과를 화면이 내려준다. */
   urlOf: (path: string) => string | undefined
-  /** 사용자 id → 이름(없으면 빈 칸). 관리자 칸이 쓴다. */
-  nameOf: (id: string | null) => string | null
   onOpen: (asset: PortableAsset) => void
   pagination: { page: number; pageSize: number; total: number; totalAll: number; onChange: (page: number) => void }
 }
@@ -24,13 +22,17 @@ interface PortableAssetsGridProps {
  * 전수 대사(재물조사)처럼 표가 필요한 용도는 이 화면에 없다 — 원장의 편집·대사는 MANAGEMENT
  * `자산 관리`가 소유한다. 그래서 표/카드 보기 토글을 두지 않는다(무엇으로 볼지는 화면이 정한다).
  *
- * 시리얼 번호는 카드에서 빼고 상세 모달에 둔다. 눈으로 훑어 찾는 값이 아니라 검색으로 거는
- * 값이며, 검색 대상에는 그대로 남아 있다.
+ * 카드에 적는 값은 **품목명·위치·보유 수량 셋뿐**이다(2026-09-02). 목록에서 하는 일은 물건을
+ * 골라내는 것 하나이고, 고르는 데 쓰이는 값은 "그 물건인가(이름·사진)", "가지러 어디로
+ * 가나(위치)", "몇 개 있나(수량)"다. 품목·관리자는 고른 다음에 필요한 값이라 상세로 내렸다 —
+ * 카드마다 줄이 늘면 격자가 촘촘해지는 것이 아니라 훑는 속도가 느려진다.
+ *
+ * 시리얼 번호는 이 화면 어디에도 적지 않는다(뷰에서도 내려오지 않는다) — 물건을 찾아가는 데
+ * 쓰는 값이 아니라 원장을 대사할 때 쓰는 값이고, 그 일은 MANAGEMENT 자산 관리가 한다.
  */
 export function PortableAssetsGrid({
   rows,
   urlOf,
-  nameOf,
   onOpen,
   pagination,
 }: PortableAssetsGridProps) {
@@ -57,7 +59,6 @@ export function PortableAssetsGrid({
               <AssetCard
                 asset={asset}
                 url={asset.photoPaths[0] ? urlOf(asset.photoPaths[0]) : undefined}
-                managerName={nameOf(asset.managerId)}
                 onOpen={onOpen}
               />
             </li>
@@ -79,7 +80,6 @@ interface AssetCardProps {
   asset: PortableAsset
   /** 대표사진 Signed URL. 사진이 없거나 아직 서명 전이면 없다. */
   url: string | undefined
-  managerName: string | null
   onOpen: (asset: PortableAsset) => void
 }
 
@@ -89,7 +89,7 @@ interface AssetCardProps {
  * 카드 전체가 누르는 자리다 — 사진과 이름 중 어느 쪽을 눌러야 열리는지 고민하게 만들 이유가 없다.
  * 셸을 `CardShell`에 맡기는 이유는 클래스 재사용이 아니라 밀도 맥락(card) 전달이다.
  */
-function AssetCard({ asset, url, managerName, onOpen }: AssetCardProps) {
+function AssetCard({ asset, url, onOpen }: AssetCardProps) {
   return (
     <CardShell className="h-full overflow-hidden p-0 transition-colors hover:border-gray-400">
       <button
@@ -115,10 +115,12 @@ function AssetCard({ asset, url, managerName, onOpen }: AssetCardProps) {
             </h3>
           </div>
 
-          <InfoField label="품목" value={asset.itemType} valueClassName="truncate" />
+          {/*
+            위치가 수량보다 위다 — 목록을 훑는 사람의 다음 행동은 그 물건을 가지러 가는 것이고,
+            몇 개인지는 도착해서 세면 되지만 어디인지는 여기서 알아야 움직일 수 있다.
+          */}
+          <InfoField label="위치" value={asset.location} valueClassName="truncate" />
           <InfoField label="보유" value={`${asset.quantity}개`} />
-          {/* 관리자는 이 물건을 쓰려면 물어볼 상대다 — 목록에 남기는 세 값 중 하나인 이유가 그것이다. */}
-          <InfoField label="관리자" value={managerName} valueClassName="truncate" />
         </div>
       </button>
     </CardShell>

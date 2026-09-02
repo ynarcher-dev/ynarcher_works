@@ -1,5 +1,6 @@
 import {
   Checkbox,
+  Field,
   Input,
   Tooltip,
   tooltipScale,
@@ -50,29 +51,6 @@ interface AssetFormFieldsProps {
   error: AssetFormError | null
 }
 
-function Field({
-  label,
-  required,
-  hint,
-  children,
-}: {
-  label: string
-  required?: boolean
-  hint?: string
-  children: ReactNode
-}) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-caption font-medium text-gray-600">
-        {label}
-        {required && <span className="ml-0.5 text-danger">*</span>}
-      </span>
-      {children}
-      {hint && <span className="mt-1 block text-caption text-gray-500">{hint}</span>}
-    </label>
-  )
-}
-
 function Row({ children }: { children: ReactNode }) {
   return <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">{children}</div>
 }
@@ -120,10 +98,14 @@ function PersonPicker({
  *
  * 필드 차례는 표의 열 차례와 같다 — 표에서 보던 순서대로 폼이 이어져야 무엇을 고치는 중인지
  * 눈이 헤매지 않는다. 줄 묶음은 함께 정하는 값끼리다: 무엇인가(자산명·시리얼) /
- * 어떤 물건인가(품목·분류) / 어디·어떤 상태(지사·상태) / 누구의 물건인가(관리자·할당) /
- * 얼마(금액·결제 주기) / 언제부터 언제까지(취득일자·끝나는 날).
+ * 어떤 물건인가(품목·분류) / 몇 개이고 어떤 상태인가(보유 수량·상태) / 어디 있나(지사·보관 위치) /
+ * 누구의 물건인가(관리자·할당) / 얼마(금액·결제 주기) / 언제부터 언제까지(취득일자·끝나는 날).
  *
  * 비용 계산 결과는 금액·기간 줄 바로 아래에 붙인다 — 값을 고치는 자리에서 결과가 바뀌어야 한다.
+ *
+ * 라벨·도움말의 규격은 공용 `Field`가 소유한다(2026-09-02에 이 파일의 사본을 걷어냈다). 사본을
+ * 쓰던 동안 도움말이 이 모달에서만 상시 캡션으로 남아, 같은 works 안에서 규칙이 어느 화면은
+ * 말풍선·어느 화면은 캡션으로 갈렸다 — 접기/펴기는 화면이 아니라 소유자가 정한다.
  */
 export function AssetFormFields({
   draft,
@@ -228,24 +210,6 @@ export function AssetFormFields({
             placeholder="1"
           />
         </Field>
-        <div />
-      </Row>
-
-      <Row>
-        <Field label="지사" required>
-          <Select
-            value={draft.branchId}
-            invalid={invalid('branchId')}
-            onChange={(e) => onChange({ ...draft, branchId: e.target.value })}
-          >
-            <option value="">선택하세요</option>
-            {branches.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </Select>
-        </Field>
         <Field label="상태" required>
           <Select
             value={draft.status}
@@ -262,11 +226,46 @@ export function AssetFormFields({
       </Row>
 
       {/*
+        지사와 보관 위치는 한 줄이다 — 둘이 합쳐 "어디 있나" 하나에 답한다. 지사는 OFFICE 자산
+        현황의 탭이라 목록에서는 이미 골라 놓은 값이고, 그 안에서 어디로 가면 되는지는 위치가
+        답한다. 위치를 원장으로 승격하지 않는 이유는 품목과 같다 — 자리 이름은 지사마다 달라
+        조합을 관리해야 하는데 그 비용을 치를 만큼 값의 종류가 많지 않다.
+      */}
+      <Row>
+        <Field label="지사" required>
+          <Select
+            value={draft.branchId}
+            invalid={invalid('branchId')}
+            onChange={(e) => onChange({ ...draft, branchId: e.target.value })}
+          >
+            <option value="">선택하세요</option>
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="보관 위치" hint="지사 안에서 물건이 놓인 자리. OFFICE 자산 현황에 표시됩니다.">
+          <Input
+            value={draft.location}
+            onChange={(e) => onChange({ ...draft, location: e.target.value })}
+            placeholder="예: 3층 회의실"
+          />
+        </Field>
+      </Row>
+
+      {/*
         관리자와 할당은 다른 질문이라 한 줄에 나란히 둔다 — 이 물건을 맡은 사람과 지금 쓰는
         사람이다. 공용 비품은 누구에게도 지급되지 않아 할당은 비어 있고 관리자만 있다.
       */}
       <Row>
-        <Field label="관리자" hint="반출 요청·승인을 받는 사람. OFFICE 반출대장에 표시됩니다.">
+        {/* 사람 고르는 칸은 label로 감싸지 않는다 — 안에 토큰 삭제 버튼과 후보 목록이 들어 있다. */}
+        <Field
+          as="div"
+          label="관리자"
+          hint="반출 요청·승인을 받는 사람. OFFICE 반출대장에 표시됩니다."
+        >
           <PersonPicker
             value={draft.managerId}
             employees={employees}
@@ -275,6 +274,7 @@ export function AssetFormFields({
           />
         </Field>
         <Field
+          as="div"
           label="할당"
           required={draft.status === 'ASSIGNED'}
           hint={
@@ -282,6 +282,8 @@ export function AssetFormFields({
               ? '폐기 자산에는 할당 대상을 두지 않습니다.'
               : '이 물건을 지급받아 쓰는 사람.'
           }
+          // 폐기 자산의 안내는 편다 — 칸이 왜 잠겼는지의 답이라, 호버해야 보이면 답이 되지 못한다.
+          hintInline={draft.status === 'RETIRED'}
         >
           <PersonPicker
             value={draft.assignedTo}
@@ -392,14 +394,13 @@ export function AssetFormFields({
         사진은 값 입력이 끝난 뒤에 둔다 — 파일을 고르는 동안 폼이 멈춘 것처럼 보이는 자리라,
         이름·금액 같은 필수 값을 적는 흐름 중간에 끼우지 않는다.
       */}
-      {/* Field(=label)로 감싸지 않는다 — 안에 파일 입력 label과 삭제 버튼이 있어 label이 중첩된다. */}
-      <div className="block">
-        <span className="mb-1 block text-caption font-medium text-gray-600">사진</span>
+      {/* label로 감싸지 않는다(as="div") — 안에 파일 입력 label과 삭제 버튼이 있어 label이 중첩된다. */}
+      <Field as="div" label="사진">
         <AssetPhotoPicker
           value={draft.photoPaths}
           onChange={(photoPaths) => onChange({ ...draft, photoPaths })}
         />
-      </div>
+      </Field>
 
       <Field label="비고">
         <TextArea

@@ -26,6 +26,8 @@ export interface AssetDraft {
   acquisitionType: AssetAcquisition
   status: AssetStatus
   branchId: string
+  /** 지사 안에서 물건이 놓인 자리. 빈 문자열이면 미입력. */
+  location: string
   /** 빈 문자열이면 미지정. */
   assignedTo: string
   /** 이 물건을 맡은 사람. 빈 문자열이면 미지정. 할당 대상과 다른 축이다(§AssetsApi). */
@@ -68,6 +70,7 @@ export function emptyDraft(branchId: string): AssetDraft {
     acquisitionType: 'PURCHASE',
     status: 'AVAILABLE',
     branchId,
+    location: '',
     assignedTo: '',
     managerId: '',
     serialNo: '',
@@ -95,6 +98,7 @@ export function draftFromAsset(a: Asset): AssetDraft {
     acquisitionType: a.acquisitionType,
     status: a.status,
     branchId: a.branchId ?? '',
+    location: a.location ?? '',
     assignedTo: a.assignedTo ?? '',
     managerId: a.managerId ?? '',
     serialNo: a.serialNo ?? '',
@@ -189,6 +193,7 @@ export function toAssetInput(draft: AssetDraft): AssetInput {
     acquisitionType: draft.acquisitionType,
     status: draft.status,
     branchId: draft.branchId,
+    location: draft.location.trim() || null,
     assignedTo: draft.assignedTo || null,
     managerId: draft.managerId || null,
     serialNo: draft.serialNo.trim() || null,

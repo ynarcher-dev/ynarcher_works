@@ -22,7 +22,8 @@ const PAGE_SIZE = 24
  * OFFICE 자산 현황 — 지사 탭 → 공용 물품 카드 격자 → 물품 상세 모달. **조회 전용 화면이다.**
  * 기획: docs_planning/3_1_2_office_asset_checkout.md
  *
- * 답하는 질문은 하나다: **회사에 이런 물건이 있나, 있다면 어느 지사에 있고 누가 맡고 있나.**
+ * 답하는 질문은 하나다: **회사에 이런 물건이 있나, 있다면 어디로 가면 되나.**
+ * 지사는 탭이 답하고 그 안의 자리는 카드의 위치가 답한다(2026-09-02에 위치를 원장에 들였다).
  *
  * 2026-08-25에 예약·반출 흐름을 통째로 걷어냈다. 실제로 빌려 가고 돌려놓는 일은 창고의
  * 오프라인 현황판이 맡는다 — 앱이 그 흐름을 담으려면 누군가 반납을 눌러 주어야 하는데,
@@ -80,7 +81,7 @@ export function AssetListWorkspace({ initialAssetId }: { initialAssetId?: string
     const kw = keyword.trim().toLowerCase()
     if (!kw) return assets
     return assets.filter((a) =>
-      [a.name, a.itemType, a.serialNo, a.note]
+      [a.name, a.itemType, a.location, a.note]
         .filter(Boolean)
         .some((v) => v!.toLowerCase().includes(kw)),
     )
@@ -137,7 +138,7 @@ export function AssetListWorkspace({ initialAssetId }: { initialAssetId?: string
         title="자산 현황"
         search={
           <Input
-            placeholder="물품명·품목·시리얼 번호 검색"
+            placeholder="물품명·품목·위치 검색"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
           />
@@ -164,7 +165,6 @@ export function AssetListWorkspace({ initialAssetId }: { initialAssetId?: string
             <PortableAssetsGrid
               rows={pageRows}
               urlOf={(p) => coverUrls?.[p]}
-              nameOf={managerNameOf}
               onOpen={setOpened}
               pagination={{
                 page,

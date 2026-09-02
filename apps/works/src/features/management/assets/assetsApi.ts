@@ -25,6 +25,11 @@ export interface Asset {
   acquisitionType: AssetAcquisition
   status: AssetStatus
   branchId: string | null
+  /**
+   * 보관 위치 — 지사 안에서 물건이 놓인 자리(예: 3층 회의실). 지사의 하위 값이며 자유입력이다.
+   * OFFICE 자산 현황이 "어디로 가면 되나"에 답하는 값이다.
+   */
+  location: string | null
   /** 이 물건을 지금 쓰는 사람(지급 대상). 상태가 ASSIGNED면 필수다. */
   assignedTo: string | null
   /**
@@ -60,6 +65,7 @@ export interface AssetInput {
   acquisitionType: AssetAcquisition
   status: AssetStatus
   branchId: string
+  location: string | null
   assignedTo: string | null
   managerId: string | null
   serialNo: string | null
@@ -83,6 +89,7 @@ interface AssetRow {
   acquisition_type: AssetAcquisition
   status: AssetStatus
   branch_id: string | null
+  location: string | null
   assigned_to: string | null
   manager_id: string | null
   serial_no: string | null
@@ -101,7 +108,7 @@ interface AssetRow {
 }
 
 const COLUMNS =
-  'id, name, item_type, acquisition_type, status, branch_id, assigned_to, manager_id, serial_no, acquired_on, disposed_on, amount, billing_cycle, quantity, is_portable, requires_approval, is_pinned, return_due, note, photo_paths, updated_at'
+  'id, name, item_type, acquisition_type, status, branch_id, location, assigned_to, manager_id, serial_no, acquired_on, disposed_on, amount, billing_cycle, quantity, is_portable, requires_approval, is_pinned, return_due, note, photo_paths, updated_at'
 
 const toAsset = (r: AssetRow): Asset => ({
   id: r.id,
@@ -110,6 +117,7 @@ const toAsset = (r: AssetRow): Asset => ({
   acquisitionType: r.acquisition_type,
   status: r.status,
   branchId: r.branch_id,
+  location: r.location,
   assignedTo: r.assigned_to,
   managerId: r.manager_id,
   serialNo: r.serial_no,
@@ -136,6 +144,7 @@ export const toAssetRow = (v: AssetInput) => ({
   acquisition_type: v.acquisitionType,
   status: v.status,
   branch_id: v.branchId,
+  location: v.location?.trim() || null,
   assigned_to: v.assignedTo,
   manager_id: v.managerId,
   serial_no: v.serialNo?.trim() || null,
@@ -201,7 +210,7 @@ function sanitizeOrValue(v: string): string {
  * 중요 정렬은 서버에서 건다 — 페이지 안에서만 올리면 2페이지의 중요 자산이 1페이지 맨
  * 위에 서지 못해, 고정이 "맨 위"가 아니라 "이 페이지 맨 위"라는 다른 뜻이 된다.
  * 폐기 자산도 목록에 남긴다(하단으로 밀지 않고 상태 배지로만 구분).
- * 검색은 자산명·품목·시리얼 번호를 함께 훑는다(현장에서 자산을 찾는 세 가지 단서다).
+ * 검색은 자산명·품목·시리얼 번호·보관 위치를 함께 훑는다(현장에서 자산을 찾는 단서들이다).
  */
 export function useAssetsPage(
   branchId: string | undefined,
@@ -229,7 +238,12 @@ export function useAssetsPage(
 
       if (kw) {
         q = q.or(
-          [`name.ilike.%${kw}%`, `item_type.ilike.%${kw}%`, `serial_no.ilike.%${kw}%`].join(','),
+          [
+            `name.ilike.%${kw}%`,
+            `item_type.ilike.%${kw}%`,
+            `serial_no.ilike.%${kw}%`,
+            `location.ilike.%${kw}%`,
+          ].join(','),
         )
       }
       if (filters.statuses.length) q = q.in('status', filters.statuses)

@@ -2,25 +2,56 @@ import { cn } from '@ynarcher/ui'
 import { ChevronLeft, ChevronRight, ImageOff } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
+/**
+ * 사진 틀의 모양.
+ *
+ * `square`는 옆에 정보 열을 둔 배치에서 쓴다(좁은 열에 세로로 긴 자리). `wide`는 정보 위에
+ * 가로로 눕는 배치에서 쓴다 — 폭이 모달 전체가 되므로 정사각형이면 사진 한 장이 첫 화면을
+ * 다 차지해 정보가 스크롤 아래로 밀린다.
+ */
+type CarouselVariant = 'square' | 'wide'
+
+const VARIANT_FRAME: Record<CarouselVariant, string> = {
+  square: 'aspect-square',
+  wide: 'aspect-[16/9]',
+}
+
+/**
+ * 사진을 틀에 맞추는 방식. 좁은 정사각 틀은 잘라 채우고(`cover`), 넓은 틀은 넣어 보인다
+ * (`contain`). 16:9는 세로로 긴 물건 사진을 cover로 채우면 위아래가 크게 잘려 나가 정작
+ * 물건을 알아보지 못한다 — 틀이 넉넉한 자리에서는 여백을 남기는 편이 낫다.
+ */
+const VARIANT_FIT: Record<CarouselVariant, string> = {
+  square: 'object-cover',
+  wide: 'object-contain',
+}
+
 interface AssetPhotoCarouselProps {
   /** 사진 경로(표시 순서 = 원장의 배열 순서). */
   paths: string[]
   /** 경로 → Signed URL. 아직 서명 전이거나 실패하면 없다. */
   urlOf: (path: string) => string | undefined
+  /** 틀의 모양(기본 정사각). 위아래로 쌓는 배치에서는 `wide`. */
+  variant?: CarouselVariant
   className?: string
 }
 
 /**
  * 물품 사진 캐러셀 — 한 자리에 한 장씩, 좌우 버튼으로 넘긴다.
  *
- * **틀의 크기는 고정하고 사진을 잘라 맞춘다**(`object-cover` + 가운데 기준). 사진마다 비율이
- * 달라 틀을 사진에 맞추면 넘길 때마다 모달 높이가 출렁이고, 옆의 정보 열까지 함께 밀린다.
- * 잘려 나가는 가장자리보다 자리가 흔들리지 않는 편이 물건을 알아보는 데 낫다.
+ * **틀의 크기는 고정한다.** 사진마다 비율이 달라 틀을 사진에 맞추면 넘길 때마다 모달 높이가
+ * 출렁이고, 아래의 정보가 함께 밀린다. 사진을 그 고정 틀에 어떻게 앉힐지(잘라 채울지, 넣어
+ * 보일지)만 `variant`가 정한다.
  *
  * 넘김은 끝에서 처음으로 이어진다 — 다섯 장뿐인 목록에서 마지막 장에 도달했을 때 버튼이
  * 죽어 있으면, 되돌아가려고 왼쪽 버튼을 네 번 누르게 된다.
  */
-export function AssetPhotoCarousel({ paths, urlOf, className }: AssetPhotoCarouselProps) {
+export function AssetPhotoCarousel({
+  paths,
+  urlOf,
+  variant = 'square',
+  className,
+}: AssetPhotoCarouselProps) {
   const [index, setIndex] = useState(0)
   const count = paths.length
 
@@ -35,9 +66,14 @@ export function AssetPhotoCarousel({ paths, urlOf, className }: AssetPhotoCarous
 
   return (
     <div className={cn('space-y-2', className)}>
-      <div className="relative aspect-square w-full overflow-hidden rounded-radius-md border border-gray-200 bg-gray-50">
+      <div
+        className={cn(
+          'relative w-full overflow-hidden rounded-radius-md border border-gray-200 bg-gray-50',
+          VARIANT_FRAME[variant],
+        )}
+      >
         {url ? (
-          <img src={url} alt="" className="size-full object-cover object-center" />
+          <img src={url} alt="" className={cn('size-full object-center', VARIANT_FIT[variant])} />
         ) : (
           <div className="flex size-full items-center justify-center">
             <ImageOff className="size-8 text-gray-300" />
