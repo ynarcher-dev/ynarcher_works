@@ -370,15 +370,23 @@ export function useIsProgramPm(programId: string | undefined) {
   })
 }
 
-/** 모듈 삭제를 막는 잔존 데이터 1줄(원장명 + 건수). 한글 라벨은 화면이 붙인다. */
+/**
+ * 모듈 삭제 시 남아 있는 데이터 1줄. 한글 라벨은 화면이 붙인다.
+ *
+ * `blocking`이 두 목록을 가른다 — 참이면 밖에서 들어온 기록이라 삭제를 막고, 거짓이면
+ * 모듈과 함께 사라지므로 막지 않고 알리기만 한다. 막지 않는 것과 말없이 지우는 것은
+ * 다르다는 것이 이 필드가 있는 이유다.
+ */
 export interface ModuleDeleteBlocker {
   rel_name: string
   row_count: number
+  blocking: boolean
 }
 
 /**
- * 삭제 차단 사유. 삭제창을 열 때 미리 불러 '왜 못 지우는지'를 버튼을 누르기 전에 보여 준다
- * — 눌러 본 뒤에 실패로 알려 주면 되돌릴 수 없는 작업 앞에서 사용자가 한 번 더 시도한다.
+ * 삭제 전 잔존 데이터. 삭제창을 열 때 미리 불러 '왜 못 지우는지'와 '무엇이 함께 사라지는지'를
+ * 버튼을 누르기 전에 보여 준다 — 눌러 본 뒤에 실패로 알려 주면 되돌릴 수 없는 작업 앞에서
+ * 사용자가 한 번 더 시도한다.
  */
 export function useModuleDeleteBlockers(moduleId: string | undefined) {
   const config = useProgramWorkspace()

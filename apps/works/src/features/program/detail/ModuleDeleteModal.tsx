@@ -62,7 +62,13 @@ export function ModuleDeleteModal({
   const [typed, setTyped] = useState('')
 
   const name = moduleName(mod)
-  const blocked = (blockers ?? []).length > 0
+  const rows = blockers ?? []
+  // 막는 것(밖에서 들어온 기록)과 알리는 것(함께 사라지는 내부 배치)은 다른 목록이다.
+  const blockingRows = rows.filter((b) => b.blocking)
+  // 첨부는 지워지지 않고 사업 자료로 귀속만 풀리므로 세 번째 자리에 따로 선다.
+  const cascadeRows = rows.filter((b) => !b.blocking && b.rel_name !== 'attachments')
+  const detachedRow = rows.find((b) => b.rel_name === 'attachments')
+  const blocked = blockingRows.length > 0
   const matched = matchesPhrase(typed)
 
   const onSubmit = async () => {
@@ -120,17 +126,41 @@ export function ModuleDeleteModal({
 
         {!isLoading && blocked && (
           <Banner tone="warning">
-            <div className="mb-1 font-semibold">남아 있는 데이터가 있어 삭제할 수 없습니다.</div>
+            <div className="mb-1 font-semibold">
+              밖에서 들어온 기록이 있어 삭제할 수 없습니다.
+            </div>
             <ul className="list-disc space-y-0.5 pl-4">
-              {(blockers ?? []).map((b) => (
+              {blockingRows.map((b) => (
                 <li key={b.rel_name} className="tabular-nums">
                   {moduleContentLabel(b.rel_name)} {b.row_count}건
                 </li>
               ))}
             </ul>
             <div className="mt-1">
-              업무 기록은 이 창에서 지울 수 없습니다. 각 화면에서 정리한 뒤 다시 시도하세요.
+              지원서·평가 제출처럼 밖에서 받은 것은 이 창에서 지울 수 없습니다. 각 화면에서
+              정리한 뒤 다시 시도하세요.
             </div>
+          </Banner>
+        )}
+
+        {/* 막지 않는 것도 말없이 지우지는 않는다 — 무엇이 함께 사라지는지 먼저 밝힌다. */}
+        {!isLoading && !blocked && cascadeRows.length > 0 && (
+          <Banner tone="warning">
+            <div className="mb-1 font-semibold">함께 삭제됩니다.</div>
+            <ul className="list-disc space-y-0.5 pl-4">
+              {cascadeRows.map((b) => (
+                <li key={b.rel_name} className="tabular-nums">
+                  {moduleContentLabel(b.rel_name)} {b.row_count}건
+                </li>
+              ))}
+            </ul>
+          </Banner>
+        )}
+
+        {!isLoading && !blocked && detachedRow && (
+          <Banner tone="info">
+            첨부 파일 <span className="tabular-nums font-semibold">{detachedRow.row_count}</span>건은
+            지워지지 않고 <strong>사업 자료</strong>로 옮겨집니다.
           </Banner>
         )}
 

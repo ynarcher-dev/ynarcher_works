@@ -39,6 +39,7 @@
 * [ ] 테이블 생성 즉시 `alter table ... enable row level security;`를 선언한다.
 * [ ] `SELECT`, `INSERT`, `UPDATE` 정책을 분리한다.
 * [ ] 일반 업무 테이블에는 `DELETE` 정책을 만들지 않고 `deleted_at` 기반 soft delete를 사용한다.
+* [ ] 운영 모듈(`program_module_id`)에 딸린 원장을 새로 만들었다면, **밖에서 들어오는 기록인지 분류**해 그렇다면 `app.module_external_record()`에 추가한다. 이 판정이 모듈 하드 삭제를 막는 유일한 기준이며, 기본값은 '차단하지 않음'이라 빠뜨리면 모듈 삭제 시 조용히 함께 지워진다.
   * 물리 삭제가 꼭 필요한 예외는 **정책이 아니라 RPC로** 연다. `DELETE` 정책을 열면 정당 경로 밖에서도 지울 수 있게 되어 RPC가 강제하는 조건(권한·확인 문구·잔존 데이터)이 전부 우회된다. 선례는 `delete_program_module`(20260902180000) — 모듈 원장에 `DELETE` 정책 없이 자체 인가하는 `SECURITY DEFINER` RPC 하나만 두고, 되돌릴 수 없으므로 `audit_logs` 적재를 함께 강제한다.
 * [ ] 정책은 `auth.jwt()`를 직접 파싱하지 않고 `app.current_app_user_id()`, `app.current_app_role()`, `app.can_read_workspace()`, `app.can_write_workspace()`, `app.can_access_*()` 헬퍼를 경유한다.
 * [ ] `WITH CHECK`가 필요한 `INSERT`/`UPDATE` 정책에 누락이 없다.
