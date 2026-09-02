@@ -3,7 +3,10 @@
 // 응답: { ok: true } | 4xx
 //
 // 보안(11_migration_security_gate.md):
-// - 공개 상태(OPEN)인 신청서에만 접수. 개인정보 수집·이용 동의(consent) 없으면 거부.
+// - 접수 가능 여부는 **모듈 공개 링크와 같은 게이트**가 판정한다(2026-09-02 이관) —
+//   링크 상태·기간뿐 아니라 모듈 생존·사업 생존·ADMIN 상한을 함께 본다. 종전에는 신청서의
+//   공개 상태만 보아, 담당자가 모듈을 꺼도 접수가 계속 열려 있었다.
+//   개인정보 수집·이용 동의(consent) 없으면 거부한다.
 // - service_role로 접수 행을 기록한다(익명 신청자에겐 세션이 없으므로 대행 삽입).
 //   반환하는 값은 성공 여부뿐이며 어떤 내부/타 신청 데이터도 노출하지 않는다.
 // - 첨부는 비공개 attachments 버킷에 저장하고 attachments 메타로 남겨,
@@ -11,7 +14,7 @@
 // - source='PUBLIC', consented_at 기록으로 공개 접수·동의 시각을 감사 가능하게 남긴다.
 import { jsonResponse, withCors } from '../_shared/cors.ts'
 import { supabaseAdmin } from '../_shared/supabaseAdmin.ts'
-import { windowState } from '../_shared/recruitmentWindow.ts'
+import { denyStatus, resolvePublicLink } from '../_shared/publicModuleLink.ts'
 
 const ATTACH_BUCKET = 'attachments'
 const MAX_FILE_BYTES = 20 * 1024 * 1024 // 20MB/파일
@@ -54,20 +57,25 @@ Deno.serve(withCors(async (req: Request) => {
     if (files.length > MAX_FILES) return jsonResponse({ error: 'too_many_files' }, 400)
 
     const db = supabaseAdmin()
+
+    // 게이트를 먼저 통과해야 한다. 여기서 막히면 신청서의 존재조차 답하지 않는다.
+    const resolved = await resolvePublicLink(db, token)
+    if (resolved.reason) {
+      return jsonResponse(
+        { error: resolved.reason === 'not_found' ? 'not_found' : 'not_open', reason: resolved.reason },
+        denyStatus(resolved.reason),
+      )
+    }
+    if (resolved.link.moduleType !== 'RECRUITMENT') return jsonResponse({ error: 'not_found' }, 404)
+
     const { data: form, error: formErr } = await db
       .from('application_forms')
-      .select(
-        'id, program_id, public_status, open_at, close_at, ' +
-          'fields:application_form_fields(id, field_type, label, is_required)',
-      )
-      .eq('public_token', token)
+      .select('id, program_id, fields:application_form_fields(id, field_type, label, is_required)')
+      .eq('program_module_id', resolved.link.moduleId)
       .maybeSingle()
 
     if (formErr) return jsonResponse({ error: 'internal_error' }, 500)
     if (!form) return jsonResponse({ error: 'not_found' }, 404)
-    // 공개 상태 + 공개 기간(타이머) 게이트를 서버가 강제한다.
-    const gate = windowState(form.public_status, form.open_at, form.close_at)
-    if (gate.reason) return jsonResponse({ error: 'not_open', reason: gate.reason }, 403)
 
     const fields = (form.fields as FieldRow[] | null) ?? []
     const fieldMap = new Map(fields.map((f) => [f.id, f]))

@@ -108,7 +108,13 @@ export function ModuleFormModal({
   const { map: templates } = useModuleTemplateMap()
   const template = templates.get(moduleType)
   // 링크 공유는 모듈 저장과 별개 축이라 상태·저장 경로가 따로다(버튼만 하나로 묶는다).
-  const linkForm = useModulePublicLinkForm(module?.id, Boolean(template?.allow_public_link))
+  //
+  // 모집만 예외로 칸을 세우지 않는다 — 상한은 켜져 있지만(공개 주소가 그 템플릿의 존재
+  // 이유다) 주소·상태·기간을 **모집 설정 패널이 이미 소유**하기 때문이다. 같은 스위치를 두
+  // 곳에 두면 어긋났을 때 어느 쪽이 진짜인지 판정할 근거가 없다. 담기는 원장은 이제 하나이되
+  // (2026-09-02 이관), 만지는 자리는 그 모듈의 운영 화면 한 곳이다.
+  const linkCardable = Boolean(template?.allow_public_link) && moduleType !== 'RECRUITMENT'
+  const linkForm = useModulePublicLinkForm(module?.id, linkCardable)
   // 상한이 닫혀 있으면 WORKS ONLY 한 칸만 남는다. 서버는 모듈 원장 트리거가 같은 판정을 한다.
   const visibilityOptions = MODULE_VISIBILITY_OPTIONS.filter(
     (v) => v.value !== 'GUEST_ONLY' || template?.allow_guest !== false,

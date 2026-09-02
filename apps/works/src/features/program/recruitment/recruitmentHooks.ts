@@ -132,11 +132,18 @@ export const FIELD_TYPE_LABEL: Record<FieldType, string> = {
 
 const POSTER_BUCKET = 'program-posters'
 
+// 공개 메타(주소·상태·기간)는 더 이상 application_forms가 갖지 않는다 — 2026-09-02에
+// program_module_public_links로 이관했다(3_4_15 §6.5). 폼 본문만 여기서 읽는다.
 const FORM_COLS =
-  'id, program_id, program_module_id, title, public_token, public_status, open_at, close_at, landing, ' +
+  'id, program_id, program_module_id, title, landing, ' +
   'fields:application_form_fields(id, field_type, label, is_required, options, file_constraints, sort_order)'
 
-/** 모집 인스턴스(program_module_id)에 연결된 신청서 + 필드 조회. 없으면 null(미생성). */
+/**
+ * 모집 인스턴스(program_module_id)에 연결된 신청서 + 필드 조회. 없으면 null(미생성).
+ *
+ * 폼 본문과 공개 메타를 두 원장에서 읽어 한 덩이로 합쳐 돌려준다 — 화면에게는 여전히
+ * '이 모집의 설정' 하나이며, 어느 원장에 담기는지는 화면이 알 필요가 없다.
+ */
 export function useApplicationForm(moduleId: string | undefined) {
   const config = useProgramWorkspace()
   return useQuery({
@@ -150,9 +157,24 @@ export function useApplicationForm(moduleId: string | undefined) {
         .maybeSingle()
       if (error) throw error
       if (!data) return null
+
+      const { data: link, error: linkError } = await supabase
+        .from('program_module_public_links')
+        .select('token, status, open_at, close_at')
+        .eq('entity_key', 'program')
+        .eq('program_module_id', moduleId)
+        .maybeSingle()
+      // 조회 실패를 삼키지 않는다 — '아직 공개한 적 없음'과 '못 읽었음'은 다른 문장이고,
+      // 후자를 비공개로 그리면 담당자가 열려 있는 모집을 닫힌 것으로 읽는다.
+      if (linkError) throw linkError
+
       const row = data as unknown as ApplicationForm & { fields?: FormField[] }
       return {
         ...row,
+        public_token: link?.token ?? null,
+        public_status: (link?.status as PublicStatus | undefined) ?? 'PRIVATE',
+        open_at: link?.open_at ?? null,
+        close_at: link?.close_at ?? null,
         landing: (row.landing ?? {}) as LandingContent,
         fields: [...(row.fields ?? [])].sort((a, b) => a.sort_order - b.sort_order),
       }
