@@ -60,21 +60,29 @@
 -- ---------------------------------------------------------------------
 create or replace function app.ws_module_row(p_entity_key text, p_module_id uuid)
 returns table (program_id uuid, module_type text, enabled boolean, status text)
-language sql
+language plpgsql
 stable
 set search_path = app, public
 as $$
-  select m.program_id, m.module_type::text, m.enabled, m.status::text
-    from public.program_modules m
-   where p_entity_key = 'program' and m.id = p_module_id
-  union all
-  select m.program_id, m.module_type::text, m.enabled, m.status::text
-    from public.ma_program_modules m
-   where p_entity_key = 'ma_program' and m.id = p_module_id
-  union all
-  select m.program_id, m.module_type::text, m.enabled, m.status::text
-    from public.project_program_modules m
-   where p_entity_key = 'project_program' and m.id = p_module_id;
+declare
+  v_table text;
+begin
+  -- 화이트리스트로만 테이블명을 얻는다(주입면 없음). UNION ALL로 세 원장을 한 번에 훑지
+  -- 않는 이유는, 권한 검사가 실행이 아니라 **계획 단계**에서 일어나기 때문이다 — 조건이
+  -- 상수 false여서 한 줄도 읽지 않을 원장까지 호출자가 접근 권한을 갖고 있어야 하고,
+  -- 그러면 AC 사용자의 링크 설정이 M&A 원장 권한에 매이게 된다.
+  v_table := case p_entity_key
+               when 'program'         then 'program_modules'
+               when 'ma_program'      then 'ma_program_modules'
+               when 'project_program' then 'project_program_modules'
+             end;
+  if v_table is null then return; end if;
+
+  return query execute format(
+    'select m.program_id, m.module_type::text, m.enabled, m.status::text
+       from public.%I m where m.id = $1', v_table)
+  using p_module_id;
+end;
 $$;
 
 grant execute on function app.ws_module_row(text, uuid) to authenticated;
@@ -207,6 +215,11 @@ set search_path = app, public
 as $$
   select replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '');
 $$;
+
+-- 발급 RPC가 SECURITY INVOKER라 호출자(authenticated)에게 EXECUTE가 필요하다.
+-- 기본 PUBLIC 권한에 기대지 않고 명시한다 — 나중에 app 스키마의 기본 권한을 조이는 날
+-- 링크 발급만 조용히 42501로 죽는 형태로 나타난다(이미 한 번 겪은 함정이다).
+grant execute on function app.new_public_link_token() to authenticated;
 
 create or replace function public.set_module_public_link(
   p_entity_key text,

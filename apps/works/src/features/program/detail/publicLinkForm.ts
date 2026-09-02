@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { isoToLocal, localToIso } from '@/features/program/detail/publicLinkTime'
 import {
   useModulePublicLink,
   useRotateModulePublicLink,
@@ -38,22 +39,6 @@ export interface PublicLinkForm {
   apply: () => Promise<void>
 }
 
-/** 'YYYY-MM-DDTHH:mm'(로컬) → ISO. 빈 값은 null(상속). */
-function toIso(local: string): string | null {
-  if (!local) return null
-  const d = new Date(local)
-  return Number.isNaN(d.getTime()) ? null : d.toISOString()
-}
-
-/** ISO → 'YYYY-MM-DDTHH:mm'(로컬). datetime-local 입력이 읽을 수 있는 형태. */
-function toLocal(iso: string | null): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return ''
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
 export function useModulePublicLinkForm(
   moduleId: string | undefined,
   publicLinkable: boolean,
@@ -75,8 +60,8 @@ export function useModulePublicLinkForm(
     if (!link) return
     setEnabled(link.status !== 'PRIVATE')
     setStatus(link.status === 'PRIVATE' ? 'OPEN' : link.status)
-    setOpenAt(toLocal(link.open_at))
-    setCloseAt(toLocal(link.close_at))
+    setOpenAt(isoToLocal(link.open_at))
+    setCloseAt(isoToLocal(link.close_at))
     setContact(link.contact ?? '')
   }, [link])
 
@@ -88,8 +73,8 @@ export function useModulePublicLinkForm(
     if (!link && next === 'PRIVATE') return
     await save.mutateAsync({
       status: next,
-      openAt: toIso(openAt),
-      closeAt: toIso(closeAt),
+      openAt: localToIso(openAt),
+      closeAt: localToIso(closeAt),
       contact: contact.trim() || null,
     })
   }
