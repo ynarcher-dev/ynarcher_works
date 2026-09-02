@@ -17,15 +17,20 @@ export { denyStatus } from './publicModuleLinkGate.ts'
 export type { LinkDenyReason } from './publicModuleLinkGate.ts'
 
 /**
- * 사업 3종의 원장 이름표. 모듈 원장이 물리적으로 분리되어 있으므로 다형 키에서 접두사를 얻는다.
- * 여기 없는 키는 해석 자체가 성립하지 않는다(링크 원장 CHECK가 이미 막지만, 공개 경로는
- * 스스로 한 번 더 확인한다 — 이 함수는 인증 없는 입구다).
+ * 다형 키 → 사업 원장 이름표. 모듈·글·링크 원장은 2026-09-03에 한 벌로 통합되어 키와
+ * 무관하고, 갈리는 것은 사업 본체 원장뿐이다.
+ *
+ * 그래도 키를 여기서 한 번 더 확인한다 — 링크 원장 CHECK가 이미 막지만 이 함수는 인증 없는
+ * 입구이고, 모르는 키가 들어왔을 때 '조용히 AC로 해석'하는 것이 최악의 실패 방식이다.
  */
 const LEDGERS = {
-  program: { prefix: '', programs: 'programs' },
-  ma_program: { prefix: 'ma_', programs: 'ma_programs' },
-  project_program: { prefix: 'project_', programs: 'project_programs' },
+  program: 'programs',
+  ma_program: 'ma_programs',
+  project_program: 'project_programs',
 } as const
+
+/** 세 워크스페이스가 공유하는 통합 원장. 소속은 테이블 이름이 아니라 entity_key가 답한다. */
+const SHARED = { modules: 'program_modules', posts: 'program_posts', links: 'program_links' } as const
 
 export type EntityKey = keyof typeof LEDGERS
 
@@ -71,18 +76,17 @@ export async function resolvePublicLink(
     .maybeSingle()
   if (!link) return { reason: 'not_found' }
 
-  const ledger = LEDGERS[link.entity_key as EntityKey]
-  if (!ledger) return { reason: 'not_found' }
-  const tables = {
-    modules: `${ledger.prefix}program_modules`,
-    posts: `${ledger.prefix}program_posts`,
-    links: `${ledger.prefix}program_links`,
-  }
+  const programsTable = LEDGERS[link.entity_key as EntityKey]
+  if (!programsTable) return { reason: 'not_found' }
+  const tables = { ...SHARED }
 
+  // entity_key를 조건에 함께 건다. id만으로 찾으면 다른 워크스페이스의 모듈을 자기 키로
+  // 가리키는 링크가 통과하고, 그 순간 사업 생존 판정이 엉뚱한 원장을 보게 된다.
   const { data: mod } = await db
     .from(tables.modules)
     .select('id, program_id, module_type, title, enabled, status, settings')
     .eq('id', link.program_module_id)
+    .eq('entity_key', link.entity_key)
     .maybeSingle()
 
   // 사업 조회는 모듈이 있을 때만 의미가 있다. 없으면 gate가 moduleExists=false로 닫는다.
@@ -90,7 +94,7 @@ export async function resolvePublicLink(
   let programTitle = ''
   if (mod) {
     const { data: program } = await db
-      .from(ledger.programs)
+      .from(programsTable)
       .select('id, title, status, deleted_at')
       .eq('id', mod.program_id)
       .maybeSingle()

@@ -18,6 +18,7 @@ import {
   verifyGuestSession,
 } from '../_shared/guestSession.ts'
 import { supabaseAdmin } from '../_shared/supabaseAdmin.ts'
+import { loadProgramAnywhere } from '../_shared/programLedger.ts'
 
 const EXPIRED = {
   error: 'session_expired',
@@ -51,23 +52,20 @@ Deno.serve(withCors(async (req: Request) => {
 
     // 게스트에게 보여줄 표시용 컬럼만 고른다 — 사업구분(category)·내부 제목 같은 내부 분류는
     // 외부 참여자의 화면 요소가 아니므로 응답에 싣지 않는다.
-    const { data: programRow } = await db
-      .from('programs')
-      .select('id, title, code, status, start_date, end_date, host_organization, deleted_at')
-      .eq('id', session.programId)
-      .maybeSingle()
-    const program = programRow as
-      | {
-          id: string
-          title: string
-          code: string | null
-          status: string
-          start_date: string | null
-          end_date: string | null
-          host_organization: string | null
-          deleted_at: string | null
-        }
-      | null
+    const program = await loadProgramAnywhere<{
+      id: string
+      title: string
+      code: string | null
+      status: string
+      start_date: string | null
+      end_date: string | null
+      host_organization: string | null
+      deleted_at: string | null
+    }>(
+      db,
+      session.programId,
+      'id, title, code, status, start_date, end_date, host_organization, deleted_at',
+    )
     if (!program || program.deleted_at || DEAD_PROGRAM_STATUSES.has(program.status)) {
       return jsonResponse(EXPIRED, 401)
     }

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { sanitizeOrValue } from '@/features/master/ledgerPage'
-import { useProgramWorkspace } from '@/features/program/workspace'
+import { SHARED_TABLES, useProgramWorkspace } from '@/features/program/workspace'
 
 /**
  * 참가자/전문가(참가자 명부) 데이터 계층.
@@ -107,8 +107,8 @@ export function useProgramParticipants(programId: string | undefined) {
     enabled: Boolean(programId),
     queryFn: async (): Promise<ParticipantRow[]> => {
       const { data, error } = await supabase
-        .from(config.tables.participants)
-        .select(participantCols(config.tables.participants))
+        .from(SHARED_TABLES.participants)
+        .select(participantCols(SHARED_TABLES.participants))
         .eq('program_id', programId)
         .order('created_at', { ascending: true })
       // 조회 실패를 삼키지 않는다 — 삼키면 "권한이 없다"와 "명부가 비었다"가 같은 화면이 되고,
@@ -189,7 +189,7 @@ export function useMasterCandidates(
       const [{ data, error }, mapped] = await Promise.all([
         query,
         supabase
-          .from(config.tables.participants)
+          .from(SHARED_TABLES.participants)
           .select('master_id')
           .eq('program_id', programId)
           .eq('master_table', master)
@@ -249,12 +249,13 @@ export function useAddParticipants(programId: string) {
   return useMutation({
     mutationFn: async (input: { master: MasterTable; role: string; ids: string[] }) => {
       const rows = input.ids.map((id) => ({
+        entity_key: config.entityKey,
         program_id: programId,
         master_table: input.master,
         master_id: id,
         role: input.role,
       }))
-      const { error } = await supabase.from(config.tables.participants).insert(rows)
+      const { error } = await supabase.from(SHARED_TABLES.participants).insert(rows)
       if (error) throw error
     },
     onSuccess: () => {

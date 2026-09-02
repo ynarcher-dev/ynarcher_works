@@ -6,6 +6,7 @@ import {
 import { useAuthStore } from '@/auth/authStore'
 import { supabase } from '@/lib/supabase'
 import {
+  SHARED_TABLES,
   useProgramWorkspace,
   type ProgramWorkspaceConfig,
 } from '@/features/program/workspace'
@@ -215,12 +216,16 @@ export interface ProgramModule {
   assignees: ModuleAssignee[]
 }
 
-/** 모듈 임베드 select 문자열. 담당자 임베드 테이블명·FK 힌트를 config로 조립한다. */
-export function moduleCols(config: ProgramWorkspaceConfig): string {
-  const { moduleAssignees } = config.tables
+/**
+ * 모듈 임베드 select 문자열. 담당자 원장이 통합된 뒤로 워크스페이스별로 갈릴 것이 없어
+ * 인자를 받지 않는다 — 갈리지 않는 값을 인자로 받으면 호출부가 "여기 뭔가 다를 수 있다"고
+ * 읽는다.
+ */
+export function moduleCols(): string {
+  const t = SHARED_TABLES.moduleAssignees
   return (
     'id, module_type, title, enabled, participation_mode, visibility, status, settings, ' +
-    `assignees:${moduleAssignees}(user_id, user:users!${moduleAssignees}_user_id_fkey(id, name))`
+    `assignees:${t}(user_id, user:users!${t}_user_id_fkey(id, name))`
   )
 }
 
@@ -231,8 +236,8 @@ export function useProgramModules(programId: string | undefined) {
     enabled: Boolean(programId),
     queryFn: async (): Promise<ProgramModule[]> => {
       const { data } = await supabase
-        .from(config.tables.modules)
-        .select(moduleCols(config))
+        .from(SHARED_TABLES.modules)
+        .select(moduleCols())
         .eq('program_id', programId)
       return (data ?? []) as unknown as ProgramModule[]
     },
@@ -246,7 +251,7 @@ export function useToggleModule(programId: string) {
   return useMutation({
     mutationFn: async (input: { moduleId: string; enabled: boolean }) => {
       const { error } = await supabase
-        .from(config.tables.modules)
+        .from(SHARED_TABLES.modules)
         .update({ enabled: input.enabled })
         .eq('id', input.moduleId)
       if (error) throw error
@@ -257,8 +262,9 @@ export function useToggleModule(programId: string) {
 }
 
 /**
- * 운영 모듈 인스턴스 생성/수정 + 담당자 전량 교체(원자). 유일한 쓰기 경로는 워크스페이스별 모듈 RPC이며,
- * 모듈명 유일·담당자 풀 소속·OUTCOMES 단일·기간 포함 검증을 서버에서 강제한다. 생성된 인스턴스 id를 반환한다.
+ * 운영 모듈 인스턴스 생성/수정 + 담당자 전량 교체(원자). 유일한 쓰기 경로는 공용 RPC `set_program_module`이며,
+ * 소유 원장은 p_entity_key가 정한다. 모듈명 유일·담당자 풀 소속·OUTCOMES 단일·기간 포함·템플릿
+ * 카탈로그 허용을 서버에서 강제한다. 생성된 인스턴스 id를 반환한다.
  */
 export function useSetProgramModule(programId: string) {
   const qc = useQueryClient()
@@ -276,7 +282,8 @@ export function useSetProgramModule(programId: string) {
       settings: Record<string, unknown>
       assigneeUserIds: string[]
     }): Promise<string> => {
-      const { data, error } = await supabase.rpc(config.rpcs.setModule, {
+      const { data, error } = await supabase.rpc('set_program_module', {
+        p_entity_key: config.entityKey,
         p_program_id: programId,
         p_module_id: input.moduleId,
         p_module_type: input.moduleType,
@@ -335,7 +342,7 @@ export function useParticipants(programId: string | undefined) {
     enabled: Boolean(programId),
     queryFn: async (): Promise<Participant[]> => {
       const { data } = await supabase
-        .from(config.tables.participants)
+        .from(SHARED_TABLES.participants)
         .select('id, role, status, user_id')
         .eq('program_id', programId)
         .order('role', { ascending: true })

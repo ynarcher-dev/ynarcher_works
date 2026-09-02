@@ -1,13 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { useProgramWorkspace } from '@/features/program/workspace'
+import { SHARED_TABLES, useProgramWorkspace } from '@/features/program/workspace'
 
 /**
  * 메뉴별 NOTICE(알림) 데이터 접근.
  *
- * 원장은 게스트 로그인을 개방한 워크스페이스에만 있다(config.tables.notices 유무) —
- * 값이 없으면 질의 자체를 걸지 않는다. 원장이 AC 하나뿐이라도 테이블명은 config에서
- * 받는다(사업 공용 모듈의 다른 훅과 같은 규약).
+ * 원장은 세 사업 워크스페이스가 공유한다. 소속을 답하는 것은 이 표의 컬럼이 아니라
+ * 매달린 모듈(program_module_id)이다 — 같은 사실을 두 곳에 적으면 어긋날 자리가 생긴다.
  */
 
 /** NOTICE 알림 글 1건. */
@@ -24,13 +23,13 @@ const NOTICE_COLS = 'id, title, body, created_at, updated_at'
 /** 모듈에 속한 알림 목록(미삭제, 최신순). */
 export function useModuleNotices(moduleId: string | undefined) {
   const config = useProgramWorkspace()
-  const table = config.tables.notices
+  const table = SHARED_TABLES.notices
   return useQuery({
     queryKey: [config.key, 'module-notices', moduleId],
-    enabled: Boolean(moduleId && table),
+    enabled: Boolean(moduleId),
     queryFn: async (): Promise<ProgramNotice[]> => {
       const { data, error } = await supabase
-        .from(table!)
+        .from(table)
         .select(NOTICE_COLS)
         .eq('program_module_id', moduleId)
         .is('deleted_at', null)
@@ -48,8 +47,7 @@ export function useSaveNotice(programId: string, moduleId: string) {
   const config = useProgramWorkspace()
   return useMutation({
     mutationFn: async (input: { id?: string; title: string; body: string | null }) => {
-      const table = config.tables.notices
-      if (!table) throw new Error('이 워크스페이스는 NOTICE를 운용하지 않습니다.')
+      const table = SHARED_TABLES.notices
       if (input.id) {
         const { error } = await supabase
           .from(table)
@@ -76,8 +74,7 @@ export function useDeleteNotice(moduleId: string) {
   const config = useProgramWorkspace()
   return useMutation({
     mutationFn: async (id: string) => {
-      const table = config.tables.notices
-      if (!table) throw new Error('이 워크스페이스는 NOTICE를 운용하지 않습니다.')
+      const table = SHARED_TABLES.notices
       const { error } = await supabase
         .from(table)
         .update({ deleted_at: new Date().toISOString() })

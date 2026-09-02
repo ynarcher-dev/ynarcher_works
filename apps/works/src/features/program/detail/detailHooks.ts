@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { ProgramModule } from '@/features/program/hooks'
-import { useProgramWorkspace } from '@/features/program/workspace'
+import { SHARED_TABLES, useProgramWorkspace } from '@/features/program/workspace'
 
 /**
  * 프로그램 마스터 수정(제목/상태/기간/설명/분류 — 편집 모달용, 사유 필수).
@@ -63,7 +63,7 @@ export function useUpdateModuleStatus(programId: string) {
   return useMutation({
     mutationFn: async (input: { moduleId: string; status: string }) => {
       const { error } = await supabase
-        .from(config.tables.modules)
+        .from(SHARED_TABLES.modules)
         .update({ status: input.status })
         .eq('id', input.moduleId)
       if (error) throw error

@@ -1,5 +1,4 @@
 import { MNA_CATEGORIES } from '@/config/programCategories'
-import { BASE_MODULE_TYPES } from '@/features/program/config'
 import { ProgramBulkPage } from '@/features/program/ProgramBulkPage'
 import { ProgramDetailPage } from '@/features/program/ProgramDetailPage'
 import { ProgramWorkspacePage } from '@/features/program/ProgramWorkspacePage'
@@ -7,8 +6,9 @@ import { ProgramWorkspaceProvider, type ProgramWorkspaceConfig } from '@/feature
 
 /**
  * M&A/PE 워크스페이스 설정. 화면은 AC와 동일한 features/program 공용 모듈을 그대로 사용하며,
- * 원장만 ma_* 테이블로 분리된다. 근거: docs/docs_planning/3_6_workspace_ma.md
- * 모듈 템플릿은 기본 템플릿인 커스텀 활동만 운용한다(정형 운영 모듈은 AC 전용).
+ * 사업 원장만 ma_* 테이블로 분리된다. 근거: docs/docs_planning/3_6_workspace_ma.md
+ * 모듈 원장은 2026-09-03 통합되어 정형 운영 모듈까지 AC와 동일하게 운용하며, 어떤 템플릿을
+ * 배치할 수 있는지는 코드가 아니라 ADMIN 카탈로그(module_templates.workspaces)가 답한다.
  */
 export const MNA_WORKSPACE: ProgramWorkspaceConfig = {
   key: 'mna',
@@ -18,28 +18,18 @@ export const MNA_WORKSPACE: ProgramWorkspaceConfig = {
   entityNoun: '프로젝트',
   tables: {
     programs: 'ma_programs',
-    modules: 'ma_program_modules',
-    moduleAssignees: 'ma_program_module_assignees',
     managers: 'ma_program_managers',
     departments: 'ma_program_departments',
-    participants: 'ma_program_participants',
     timeline: 'ma_program_timeline_items',
-    posts: 'ma_program_posts',
-    links: 'ma_program_links',
   },
   rpcs: {
     setStaffing: 'set_ma_program_staffing',
-    setModule: 'set_ma_program_module',
   },
   // 딜은 착수 결정이 곧 시작이라 제안 단계를 밟지 않는다 — 운영 4단계만 쓴다.
   hasProposalStage: false,
   // 딜은 우리가 스스로 여는 일이라 발주·주관하는 바깥 기관이 없다.
   hasHostOrganization: false,
-  // 명부는 구성하되 게스트 로그인은 열지 않는다(후속 과제).
-  guestAccess: false,
   categories: MNA_CATEGORIES,
-  // 딜은 정형 평가·모집 절차가 없어 기본 3종(글쓰기·URL첨부·파일첨부)만 운용한다.
-  allowedModuleTypes: BASE_MODULE_TYPES.map((def) => def.type),
 }
 
 export function MnaWorkspacePage() {

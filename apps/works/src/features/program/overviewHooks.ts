@@ -1,11 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { useProgramWorkspace } from '@/features/program/workspace'
+import { SHARED_TABLES, useProgramWorkspace } from '@/features/program/workspace'
 
 /**
  * 사업개요(사업소개문) 데이터 접근. **사업 1건 = 개요 1건**(program_id가 PK)이라 목록이
- * 없고, 원장은 게스트 로그인을 개방한 워크스페이스에만 있다(config.tables.overviews 유무)
- * — 값이 없으면 질의 자체를 걸지 않는다(NOTICE 훅과 같은 규약).
+ * 없다. 원장은 세 사업 워크스페이스가 공유하며 소속은 entity_key가 답한다(2026-09-03 통합).
  */
 
 /** 사업개요 1건. */
@@ -18,13 +17,13 @@ export interface ProgramOverview {
 /** 사업의 개요(없으면 null — 아직 아무도 쓰지 않은 상태). */
 export function useProgramOverview(programId: string | undefined) {
   const config = useProgramWorkspace()
-  const table = config.tables.overviews
+  const table = SHARED_TABLES.overviews
   return useQuery({
     queryKey: [config.key, 'program-overview', programId],
-    enabled: Boolean(programId && table),
+    enabled: Boolean(programId),
     queryFn: async (): Promise<ProgramOverview | null> => {
       const { data, error } = await supabase
-        .from(table!)
+        .from(table)
         .select('program_id, body, updated_at')
         .eq('program_id', programId)
         .maybeSingle()
@@ -43,11 +42,13 @@ export function useSaveProgramOverview(programId: string) {
   const config = useProgramWorkspace()
   return useMutation({
     mutationFn: async (body: string | null) => {
-      const table = config.tables.overviews
-      if (!table) throw new Error('이 워크스페이스는 사업개요를 운용하지 않습니다.')
+      const table = SHARED_TABLES.overviews
       const { error } = await supabase
         .from(table)
-        .upsert({ program_id: programId, body }, { onConflict: 'program_id' })
+        .upsert(
+          { entity_key: config.entityKey, program_id: programId, body },
+          { onConflict: 'program_id' },
+        )
       if (error) throw error
     },
     onSuccess: () =>

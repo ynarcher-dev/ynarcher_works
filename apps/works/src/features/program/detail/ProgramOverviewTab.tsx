@@ -53,14 +53,13 @@ export function ProgramOverviewTab({
 }) {
   const config = useProgramWorkspace()
   const { data: contributions } = useProgramContributions(program.id)
-  // 게스트향 화면 3종(사업개요·공지사항·QNA)은 원장을 둔 워크스페이스(AC)에서만 서고,
-  // 내부 운영 탭 뒤에 구분선으로 갈라 세운다 — 첫 줄에만 divider를 달아 묶음의 시작을 알린다.
+  // 게스트향 화면 3종(사업개요·공지사항·QNA)은 내부 운영 탭 뒤에 구분선으로 갈라 세운다
+  // — 첫 줄에만 divider를 달아 묶음의 시작을 알린다. 2026-09-03 원장 통합 이후 세 사업
+  // 워크스페이스가 모두 운용하므로 워크스페이스별 노출 분기는 없다.
   const guestTabs: { key: LeftTab; label: string }[] = [
-    ...(config.tables.overviews ? [{ key: 'intro' as const, label: '사업개요' }] : []),
-    ...(config.tables.announcements
-      ? [{ key: 'announcements' as const, label: '공지사항' }]
-      : []),
-    ...(config.tables.questions ? [{ key: 'qna' as const, label: 'QNA' }] : []),
+    { key: 'intro', label: '사업개요' },
+    { key: 'announcements', label: '공지사항' },
+    { key: 'qna', label: 'QNA' },
   ]
   const leftTabs = [
     ...BASE_TABS,

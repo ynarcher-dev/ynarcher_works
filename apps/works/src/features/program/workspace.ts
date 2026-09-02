@@ -39,43 +39,20 @@ export interface ProgramWorkspaceConfig {
    * 따로 관리되어 어긋난다.
    */
   entityNoun: string
+  /**
+   * 워크스페이스별로 갈려 있는 원장만 여기 적는다.
+   * 모듈 계열·명부·게스트향 원장은 2026-09-03에 한 벌로 통합되어 `SHARED_TABLES`가 소유하며,
+   * 그 행의 소속은 테이블 이름이 아니라 `entity_key`가 답한다. 같은 이름을 세 config에
+   * 세 번 적으면 "갈릴 수 있는 값"으로 읽혀, 실제로는 하나인 원장을 갈라 놓으려는 시도가 는다.
+   */
   tables: {
     programs: string
-    modules: string
-    moduleAssignees: string
     managers: string
     departments: string
-    participants: string
     timeline: string
-    /** 글쓰기 모듈의 글 원장(구 커스텀 활동 원장을 2026-08-03 개명한 것). */
-    posts: string
-    /** URL첨부 모듈의 링크 원장. */
-    links: string
-    /**
-     * 메뉴별 NOTICE(알림) 원장. 담당자가 모듈 화면 우측에서 쓰고 게스트가 같은 자리에서
-     * 읽는 게스트향 기능이라, 게스트 로그인을 개방한 AC만 값을 둔다 — 없으면 화면도
-     * NOTICE 칸을 세우지 않는다(읽을 사람이 없는 쓰기 화면을 남기지 않는다).
-     */
-    notices?: string
-    /**
-     * 사업개요(사업소개문) 원장 — 사업 1건당 1건. 게스트 로그인 직후 첫 화면에 나가는
-     * 소개문이라 게스트 로그인을 개방한 AC만 값을 둔다(NOTICE와 같은 경계) — 없으면
-     * 상세의 사업개요 탭도 서지 않는다.
-     */
-    overviews?: string
-    /**
-     * 사업 공지사항 원장(사업 단위 게시판 — 모듈별 NOTICE와 축이 다르다).
-     * 게스트 고정 메뉴로 나가는 기능이라 overviews와 같은 경계(AC만)다.
-     */
-    announcements?: string
-    /**
-     * 사업 QNA 원장(게스트 질문 + 담당자 답변, 1:1 문의함). 같은 경계(AC만)다.
-     */
-    questions?: string
   }
   rpcs: {
     setStaffing: string
-    setModule: string
   }
   /**
    * 제안 단계(시도·선정·미선정) 운용 여부. false면 상태 수명주기가 운영 4단계
@@ -98,25 +75,39 @@ export interface ProgramWorkspaceConfig {
    * 조회 select는 갈라지지 않고, 이 플래그는 화면과 저장 페이로드만 가른다.
    */
   hasHostOrganization: boolean
-  /**
-   * 참가자/전문가 명부의 게스트 로그인 개방 운용 여부.
-   *
-   * AC만 true다 — 게스트 포털이 읽는 원장(program_participants)과 조회 범위 판정이
-   * AC 사업을 기준으로 서 있어, M&A·PROJECT 참가자는 명부에 올라도 로그인해서 볼 것이
-   * 없다. false면 명부 구성까지만 동작하고 사업 코드·허용·차단 영역은 안내로 대체한다.
-   * 눌리지 않는 버튼을 남기면 문의만 늘어나므로 동작 버튼 자체를 노출하지 않는다.
-   *
-   * 근거: docs/docs_planning/3_4_4_ac_participant_pool.md §12
-   */
-  guestAccess: boolean
   /** 사업구분 선택지. 빈 배열이면 분류 UI를 감춘다. */
   categories: readonly ProgramCategoryOption[]
-  /**
-   * 모듈 추가 모달에 노출할 템플릿(module_type) 목록.
-   * AC는 전체 11종, M&A·PROJECT는 기본 3종(글쓰기·URL첨부·파일첨부)만 운용한다.
-   */
-  allowedModuleTypes: readonly string[]
 }
+
+/**
+ * 세 워크스페이스가 공유하는 통합 원장(2026-09-03).
+ *
+ * 종전에는 모듈·배정·글·링크·명부가 워크스페이스마다 한 벌씩 있었고, 그 결과 정형 운영 모듈
+ * 8종의 내용물 원장 30여 종이 전부 AC 모듈 원장에 FK로 매여 M&A·PROJECT에서는 모듈을 만들어도
+ * 안을 채울 수 없었다. 원장을 한 벌로 합치고 **행마다 `entity_key`가 소속을 답하게** 하면서,
+ * 그 위에 올라가는 기능은 워크스페이스를 가리지 않게 되었다.
+ *
+ * 그래서 화면이 지켜야 할 규칙이 하나 생긴다 — **사업으로 좁히지 않는 조회에는 반드시
+ * `entity_key`를 함께 건다.** 사업 id로 좁히는 조회는 id 자체가 한 원장에만 있으므로 안전하지만,
+ * (스타트업 참여 이력처럼) 사업을 가로지르는 조회는 세 워크스페이스의 행을 한꺼번에 집어 온다.
+ */
+export const SHARED_TABLES = {
+  modules: 'program_modules',
+  moduleAssignees: 'program_module_assignees',
+  participants: 'program_participants',
+  /** 글쓰기 모듈의 글 원장(구 커스텀 활동 원장을 2026-08-03 개명한 것). */
+  posts: 'program_posts',
+  /** URL첨부 모듈의 링크 원장. */
+  links: 'program_links',
+  /** 메뉴별 NOTICE(알림) — 모듈에 매달리므로 소속은 모듈이 답한다. */
+  notices: 'program_notices',
+  /** 사업개요(사업소개문) — 사업 1건당 1건. */
+  overviews: 'program_overviews',
+  /** 사업 공지사항(사업 단위 게시판 — 모듈별 NOTICE와 축이 다르다). */
+  announcements: 'program_announcements',
+  /** 사업 QNA(게스트 질문 + 담당자 답변, 1:1 문의함). */
+  questions: 'program_questions',
+} as const
 
 const ProgramWorkspaceContext = createContext<ProgramWorkspaceConfig | null>(null)
 

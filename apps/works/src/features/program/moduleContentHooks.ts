@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { useProgramWorkspace } from '@/features/program/workspace'
+import { SHARED_TABLES, useProgramWorkspace } from '@/features/program/workspace'
 
 /**
  * 기본 템플릿 3종(글쓰기·URL첨부·파일첨부)의 데이터 접근.
@@ -31,7 +31,7 @@ export function useModulePosts(moduleId: string | undefined) {
     enabled: Boolean(moduleId),
     queryFn: async (): Promise<ProgramPost[]> => {
       const { data, error } = await supabase
-        .from(config.tables.posts)
+        .from(SHARED_TABLES.posts)
         .select(POST_COLS)
         .eq('program_module_id', moduleId)
         .is('deleted_at', null)
@@ -51,13 +51,14 @@ export function useSavePost(programId: string, moduleId: string) {
     mutationFn: async (input: { id?: string; title: string; body: string }) => {
       if (input.id) {
         const { error } = await supabase
-          .from(config.tables.posts)
+          .from(SHARED_TABLES.posts)
           .update({ title: input.title, body: input.body })
           .eq('id', input.id)
         if (error) throw error
         return
       }
-      const { error } = await supabase.from(config.tables.posts).insert({
+      const { error } = await supabase.from(SHARED_TABLES.posts).insert({
+        entity_key: config.entityKey,
         program_id: programId,
         program_module_id: moduleId,
         title: input.title,
@@ -76,7 +77,7 @@ export function useDeletePost(moduleId: string) {
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from(config.tables.posts)
+        .from(SHARED_TABLES.posts)
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', id)
       if (error) throw error
@@ -104,7 +105,7 @@ export function useModuleLinks(moduleId: string | undefined) {
     enabled: Boolean(moduleId),
     queryFn: async (): Promise<ProgramLink[]> => {
       const { data, error } = await supabase
-        .from(config.tables.links)
+        .from(SHARED_TABLES.links)
         .select(LINK_COLS)
         .eq('program_module_id', moduleId)
         .is('deleted_at', null)
@@ -140,15 +141,20 @@ export function useSaveLink(programId: string, moduleId: string) {
       }
       if (input.id) {
         const { error } = await supabase
-          .from(config.tables.links)
+          .from(SHARED_TABLES.links)
           .update(values)
           .eq('id', input.id)
         if (error) throw error
         return
       }
       const { error } = await supabase
-        .from(config.tables.links)
-        .insert({ ...values, program_id: programId, program_module_id: moduleId })
+        .from(SHARED_TABLES.links)
+        .insert({
+          ...values,
+          entity_key: config.entityKey,
+          program_id: programId,
+          program_module_id: moduleId,
+        })
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: [config.key, 'module-links', moduleId] }),
@@ -162,7 +168,7 @@ export function useDeleteLink(moduleId: string) {
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from(config.tables.links)
+        .from(SHARED_TABLES.links)
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', id)
       if (error) throw error

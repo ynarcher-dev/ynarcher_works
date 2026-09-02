@@ -9,6 +9,7 @@
 
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { signJwt } from './crypto.ts'
+import { loadProgramAnywhere } from './programLedger.ts'
 
 /** 명부에서 문이 열려 있다고 보는 상태. */
 const OPEN_STATUSES = new Set(['INVITED', 'ACTIVE'])
@@ -94,13 +95,12 @@ export async function findOpenInvitation(
   const p = participant as GuestParticipant | null
   if (!p || !OPEN_STATUSES.has(p.login_status)) return null
 
-  const { data: program } = await db
-    .from('programs')
-    .select('id, status, deleted_at')
-    .eq('id', p.program_id)
-    .maybeSingle()
-
-  const prog = program as { status: string; deleted_at: string | null } | null
+  // 사업이 어느 원장에 있는지는 명부 행에 적혀 있지 않으므로 세 원장을 훑어 찾는다.
+  const prog = await loadProgramAnywhere<{ status: string; deleted_at: string | null }>(
+    db,
+    p.program_id,
+    'id, status, deleted_at',
+  )
   if (!prog || prog.deleted_at || DEAD_PROGRAM_STATUSES.has(prog.status)) return null
 
   return { invitation, participant: p }
@@ -221,11 +221,11 @@ export async function issueGuestSession(
     .eq('id', appUserId)
     .single()
 
-  const { data: program } = await db
-    .from('programs')
-    .select('id, title, code')
-    .eq('id', participant.program_id)
-    .maybeSingle()
+  const program = await loadProgramAnywhere<{ id: string; title: string; code: string | null }>(
+    db,
+    participant.program_id,
+    'id, title, code',
+  )
 
   const secret = Deno.env.get('GUEST_JWT_SECRET') ?? ''
   if (!secret) {

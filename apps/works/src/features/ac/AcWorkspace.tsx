@@ -1,5 +1,4 @@
 import { AC_CATEGORIES } from '@/config/programCategories'
-import { MODULE_TYPES } from '@/features/program/config'
 import { ProgramBulkPage } from '@/features/program/ProgramBulkPage'
 import { ProgramDetailPage } from '@/features/program/ProgramDetailPage'
 import { ProgramWorkspacePage } from '@/features/program/ProgramWorkspacePage'
@@ -17,35 +16,18 @@ export const AC_WORKSPACE: ProgramWorkspaceConfig = {
   entityNoun: '사업',
   tables: {
     programs: 'programs',
-    modules: 'program_modules',
-    moduleAssignees: 'program_module_assignees',
     managers: 'program_managers',
     departments: 'program_departments',
-    participants: 'program_participants',
     timeline: 'program_timeline_items',
-    posts: 'program_posts',
-    links: 'program_links',
-    // 게스트향 메뉴별 알림. 게스트 로그인을 개방한 AC만 원장을 둔다(20260901120000).
-    notices: 'program_notices',
-    // 게스트 첫 화면에 나가는 사업소개. NOTICE와 같은 경계(AC만, 20260901140000).
-    overviews: 'program_overviews',
-    // 게스트 고정 메뉴로 나가는 사업 공지사항·QNA. 같은 경계(AC만, 20260901170000).
-    announcements: 'program_announcements',
-    questions: 'program_questions',
   },
   rpcs: {
     setStaffing: 'set_program_staffing',
-    setModule: 'set_program_module',
   },
   // 공고에 제안해 선정되어야 사업이 열리므로 제안 단계(시도·선정·미선정)를 운용한다.
   hasProposalStage: true,
   // 공고를 낸 주관기관/기업이 있어야 제안이 성립하므로 '주관'을 운용한다(AC 전용).
   hasHostOrganization: true,
-  // 게스트 포털의 조회 범위가 AC 사업 원장을 기준으로 서 있어, 로그인 개방은 AC만 연다.
-  guestAccess: true,
   categories: AC_CATEGORIES,
-  // AC는 기본 3종 + 정형 운영 모듈 8종을 모두 운용한다.
-  allowedModuleTypes: MODULE_TYPES.map((def) => def.type),
 }
 
 export function AcWorkspacePage() {

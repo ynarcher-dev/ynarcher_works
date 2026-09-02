@@ -9,7 +9,6 @@ import {
   useSaveNotice,
   type ProgramNotice,
 } from '@/features/program/noticeHooks'
-import { useProgramWorkspace } from '@/features/program/workspace'
 
 /**
  * 메뉴별 NOTICE(알림) 패널. GUEST 메뉴 우측의 NOTICE 칸과 **같은 구성**이며, 차이는 편집
@@ -185,8 +184,8 @@ function NoticeForm({
 }
 
 /**
- * 모듈 본문 + NOTICE의 2:1 분할(GUEST 메뉴 화면과 같은 비율). NOTICE 원장이 없는
- * 워크스페이스(M&A·PROJECT)는 분할 없이 본문을 전체 폭 그대로 둔다.
+ * 모듈 본문 + NOTICE의 2:1 분할(GUEST 메뉴 화면과 같은 비율). 세 사업 워크스페이스가
+ * 같은 NOTICE 원장을 공유하므로 분기 없이 언제나 분할한다(2026-09-03 원장 통합).
  */
 export function ModuleNoticeSplit({
   programId,
@@ -197,8 +196,6 @@ export function ModuleNoticeSplit({
   moduleId: string
   children: ReactNode
 }) {
-  const config = useProgramWorkspace()
-  if (!config.tables.notices) return <>{children}</>
   return (
     <div className="space-y-5 lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:gap-6 lg:space-y-0">
       <div className="min-w-0">{children}</div>

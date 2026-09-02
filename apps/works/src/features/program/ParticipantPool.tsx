@@ -44,8 +44,8 @@ function matches(row: ParticipantRow, keyword: string): boolean {
  * 문이 열리지 않는다. 문을 여닫을 수 있는 사람은 그 사업의 담당자(PM·MEMBER)뿐이며,
  * 화면의 숨김은 편의일 뿐 실제 강제는 서버(RPC)가 한다.
  *
- * 게스트 로그인 개방은 AC만 열려 있다(ProgramWorkspaceConfig.guestAccess).
- * M&A·PROJECT는 같은 화면을 공유하므로 명부까지만 동작하고 개방 영역은 서지 않는다.
+ * 게스트 로그인은 세 사업 워크스페이스 모두 열려 있다(2026-09-03 — 명부·게스트 원장 통합).
+ * 문을 여는 판정은 사업이 속한 원장의 담당자 표를 보는 app.is_program_manager()가 한다.
  *
  * 셸·툴바·표는 전부 공용 규격이다 — 카드는 형제 탭(프로그램)과 같은 `Card`, 검색·필터·액션
  * 한 줄은 원장 목록과 같은 `ListToolbar`, 역할은 손수 만든 칩 나열이 아니라 목록 필터와 같은
@@ -72,7 +72,7 @@ export function ParticipantPool({ program }: { program: Program }) {
     () => (program.managers ?? []).some((m) => m.user_id === myId),
     [program.managers, myId],
   )
-  const canOpenDoor = config.guestAccess && isManager
+  const canOpenDoor = isManager
 
   const roleOptions = useMemo(
     () =>
@@ -153,7 +153,7 @@ export function ParticipantPool({ program }: { program: Program }) {
       <Card
         title="참가자/전문가"
         count={rows.length}
-        subtitle={config.guestAccess ? `사업 코드 ${program.code || '미발급'}` : undefined}
+        subtitle={`사업 코드 ${program.code || '미발급'}`}
       >
         <div className="space-y-3">
           <ListToolbar

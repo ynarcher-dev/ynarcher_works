@@ -12,6 +12,7 @@
 // 근거: docs/docs_planning/3_4_4_ac_participant_pool.md §6.4, §10
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { jsonResponse, withCors } from '../_shared/cors.ts'
+import { loadProgramTitles } from '../_shared/programLedger.ts'
 import { sendNotification } from '../_shared/notifications.ts'
 
 interface OpenedRow {
@@ -62,7 +63,6 @@ Deno.serve(withCors(async (req: Request) => {
     const rows = (data ?? []) as OpenedRow[]
 
     // 안내문에 사업명을 싣기 위한 조회. 실패해도 발송은 코드만으로 성립한다.
-    const titles = new Map<string, string>()
     const { data: parts } = await caller
       .from('program_participants')
       .select('id, program_id')
@@ -70,16 +70,7 @@ Deno.serve(withCors(async (req: Request) => {
     const partProgram = new Map<string, string>(
       ((parts ?? []) as { id: string; program_id: string }[]).map((p) => [p.id, p.program_id]),
     )
-    const programIds = [...new Set([...partProgram.values()])]
-    if (programIds.length > 0) {
-      const { data: progs } = await caller
-        .from('programs')
-        .select('id, title')
-        .in('id', programIds)
-      for (const p of (progs ?? []) as { id: string; title: string }[]) {
-        titles.set(p.id, p.title)
-      }
-    }
+    const titles = await loadProgramTitles(caller, [...new Set([...partProgram.values()])])
 
     let notified = 0
     let failed = 0

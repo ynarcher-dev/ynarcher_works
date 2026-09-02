@@ -1,13 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/auth/authStore'
 import { supabase } from '@/lib/supabase'
-import { useProgramWorkspace } from '@/features/program/workspace'
+import { SHARED_TABLES, useProgramWorkspace } from '@/features/program/workspace'
 
 /**
  * 사업 QNA(1:1 문의함) 데이터 접근 — 담당자 쪽. 질문은 게스트가 쓰고(INSERT 정책이 게스트
  * 전용) 담당자는 전체를 읽어 답변·소프트 삭제만 한다. 게스트에게는 본인 질문만 보이므로
  * 작성자 표시는 이 화면(WORKS)만의 요구다 — users 임베드로 이름을 얻는다.
- * 원장은 게스트 로그인을 개방한 워크스페이스에만 있다(config.tables.questions 유무).
+ * 원장은 세 사업 워크스페이스가 공유하며 소속은 entity_key가 답한다(2026-09-03 통합).
  */
 
 /**
@@ -34,13 +34,13 @@ const COLS =
 /** 사업의 질문 전체(미삭제, 최신순). */
 export function useQuestions(programId: string | undefined) {
   const config = useProgramWorkspace()
-  const table = config.tables.questions
+  const table = SHARED_TABLES.questions
   return useQuery({
     queryKey: [config.key, 'program-questions', programId],
-    enabled: Boolean(programId && table),
+    enabled: Boolean(programId),
     queryFn: async (): Promise<ProgramQuestion[]> => {
       const { data, error } = await supabase
-        .from(table!)
+        .from(table)
         .select(COLS)
         .eq('program_id', programId)
         .is('deleted_at', null)
@@ -59,8 +59,7 @@ export function useAnswerQuestion(programId: string) {
   const userId = useAuthStore((s) => s.user?.id)
   return useMutation({
     mutationFn: async (input: { id: string; answerBody: string | null }) => {
-      const table = config.tables.questions
-      if (!table) throw new Error('이 워크스페이스는 QNA를 운용하지 않습니다.')
+      const table = SHARED_TABLES.questions
       const answered = input.answerBody !== null
       const { error } = await supabase
         .from(table)
@@ -83,8 +82,7 @@ export function useDeleteQuestion(programId: string) {
   const config = useProgramWorkspace()
   return useMutation({
     mutationFn: async (id: string) => {
-      const table = config.tables.questions
-      if (!table) throw new Error('이 워크스페이스는 QNA를 운용하지 않습니다.')
+      const table = SHARED_TABLES.questions
       const { error } = await supabase
         .from(table)
         .update({ deleted_at: new Date().toISOString() })

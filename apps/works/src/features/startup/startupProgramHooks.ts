@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { ProgramManagerRole } from '@/features/program/hooks'
-import type { ProgramWorkspaceConfig } from '@/features/program/workspace'
+import { SHARED_TABLES, type ProgramWorkspaceConfig } from '@/features/program/workspace'
 
 /**
  * 기업 상세의 '참여 사업/M&A/프로젝트' 한 줄 — **지금 이 기업이 걸려 있는 사업**이다.
@@ -56,8 +56,11 @@ export function useStartupPrograms(config: ProgramWorkspaceConfig, startupId: st
     enabled: Boolean(startupId),
     queryFn: async (): Promise<StartupProgramRow[]> => {
       const { data: partData, error: partError } = await supabase
-        .from(config.tables.participants)
+        .from(SHARED_TABLES.participants)
         .select('program_id, role_tags')
+        // 사업으로 좁히지 않는 조회라 entity_key를 반드시 건다. 명부가 세 워크스페이스
+        // 공용이 된 뒤로, 이 조건이 없으면 AC 카드에 M&A 참여 이력이 함께 딸려 온다.
+        .eq('entity_key', config.entityKey)
         .eq('master_id', startupId)
         .eq('role', 'STARTUP')
       if (partError) throw partError

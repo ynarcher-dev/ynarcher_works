@@ -127,8 +127,9 @@ export const FIELD_TYPE_LABEL: Record<FieldType, string> = {
 }
 
 // 모집 하위 테이블(application_forms/application_form_fields/application_submissions)과
-// set_application_form RPC는 AC 전용이라 테이블명을 주입하지 않는다.
-// M&A/PROJECT는 allowedModuleTypes로 RECRUITMENT 모듈 자체가 노출되지 않는다.
+// set_application_form RPC는 세 사업 워크스페이스가 그대로 공유한다 — 테이블명을 주입하지
+// 않는 이유가 'AC 전용이라서'에서 '갈릴 것이 없어서'로 바뀌었다(2026-09-03 모듈 원장 통합).
+// 소유 워크스페이스는 이 표들의 컬럼이 아니라 매달린 모듈·사업이 답하며, RLS가 그 경로로 판정한다.
 
 const POSTER_BUCKET = 'program-posters'
 

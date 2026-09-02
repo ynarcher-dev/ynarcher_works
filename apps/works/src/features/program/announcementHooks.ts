@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { useProgramWorkspace } from '@/features/program/workspace'
+import { SHARED_TABLES, useProgramWorkspace } from '@/features/program/workspace'
 
 /**
  * 사업 공지사항(사업 단위 게시판) 데이터 접근. 모듈별 NOTICE(noticeHooks)와 축이 다르다 —
  * 이쪽은 사업 전체를 향한 글 목록이라 모듈에 매이지 않는다.
- * 원장은 게스트 로그인을 개방한 워크스페이스에만 있다(config.tables.announcements 유무).
+ * 원장은 세 사업 워크스페이스가 공유하며 소속은 entity_key가 답한다(2026-09-03 통합).
  */
 
 /**
@@ -29,13 +29,13 @@ const COLS = 'id, title, body, created_at, updated_at'
 /** 사업의 공지 목록(미삭제, 최신순). */
 export function useAnnouncements(programId: string | undefined) {
   const config = useProgramWorkspace()
-  const table = config.tables.announcements
+  const table = SHARED_TABLES.announcements
   return useQuery({
     queryKey: [config.key, 'program-announcements', programId],
-    enabled: Boolean(programId && table),
+    enabled: Boolean(programId),
     queryFn: async (): Promise<ProgramAnnouncement[]> => {
       const { data, error } = await supabase
-        .from(table!)
+        .from(table)
         .select(COLS)
         .eq('program_id', programId)
         .is('deleted_at', null)
@@ -60,8 +60,7 @@ export function useSaveAnnouncement(programId: string) {
       title: string
       body: string | null
     }): Promise<string> => {
-      const table = config.tables.announcements
-      if (!table) throw new Error('이 워크스페이스는 공지사항을 운용하지 않습니다.')
+      const table = SHARED_TABLES.announcements
       if (input.id) {
         const { error } = await supabase
           .from(table)
@@ -72,7 +71,7 @@ export function useSaveAnnouncement(programId: string) {
       }
       const { data, error } = await supabase
         .from(table)
-        .insert({ program_id: programId, title: input.title, body: input.body })
+        .insert({ entity_key: config.entityKey, program_id: programId, title: input.title, body: input.body })
         .select('id')
         .single()
       if (error) throw error
@@ -89,8 +88,7 @@ export function useDeleteAnnouncement(programId: string) {
   const config = useProgramWorkspace()
   return useMutation({
     mutationFn: async (id: string) => {
-      const table = config.tables.announcements
-      if (!table) throw new Error('이 워크스페이스는 공지사항을 운용하지 않습니다.')
+      const table = SHARED_TABLES.announcements
       const { error } = await supabase
         .from(table)
         .update({ deleted_at: new Date().toISOString() })
