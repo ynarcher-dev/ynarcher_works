@@ -196,12 +196,17 @@ export function ModuleBoardCard({
                         <span className="tabular-nums">
                           {formatModulePeriod(settings)}
                         </span>
-                        {mod.assignees.length > 0 && (
-                          <span className="border-l border-gray-200 pl-2">
-                            <span className="font-semibold">담당</span>{' '}
-                            {mod.assignees.map((a) => a.user?.name ?? '이름 미상').join(', ')}
-                          </span>
-                        )}
+                        {/* 비어 있을 때 칸을 지우지 않는다 — 담당자가 없는 것과 아직 못 읽은
+                            것이 같은 모양이 되고, 사업 담당자에서 빠지며 모듈 담당이 함께
+                            비워진 모듈을 아무도 알아채지 못한다. 다시 정해야 하는 상태다. */}
+                        <span className="border-l border-gray-200 pl-2">
+                          <span className="font-semibold">담당</span>{' '}
+                          {mod.assignees.length > 0 ? (
+                            mod.assignees.map((a) => a.user?.name ?? '이름 미상').join(', ')
+                          ) : (
+                            <span className="text-warning">미지정</span>
+                          )}
+                        </span>
                       </>
                     }
                     /* 상시 노출 액션: 설정(연필)/끄기(X). 카드 클릭과 겹치지 않는 레이어에 놓인다. */
