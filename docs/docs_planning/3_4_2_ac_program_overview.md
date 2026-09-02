@@ -117,6 +117,8 @@
 * **모듈명(자율 입력) 및 템플릿 배지**: 인스턴스 이름은 사업별로 자유롭게 짓되(예: "1차 멘토링"), 카드에는 파생 템플릿을 배지로 항상 함께 표시합니다. 모듈명 미입력 시 템플릿 라벨을 폴백으로 사용합니다.
   * **모듈명 중복 금지**: 동일 프로그램 내에서 모듈명은 유일해야 합니다(앞뒤 공백 제거 및 대소문자 무시로 정규화 비교). 마법사에서 실시간 검증하고, 서버에서 유니크 인덱스로 최종 강제합니다.
 * **인스턴스 세팅**: 각 인스턴스는 `상태 · 공유 범위(visibility) · 시작일 · 종료일 · 담당자(다중) · 설명(메모)`을 개별 보유합니다.
+  * **공유 범위는 두 값입니다**(2026-09-02 확정): `INTERNAL_ONLY`(WORKS ONLY) / `GUEST_ONLY`(WORKS+GUEST). 종전의 세 번째 값 `PUBLIC`(전체공개)은 이름만 있고 익명 접근 경로가 없어 모든 판정에서 `GUEST_ONLY`와 동일하게 취급되었으므로, 저장을 막고 로그인 없는 외부 노출은 **링크 공유**라는 별도 축으로 옮겼습니다. 상세는 [3_4_15](./3_4_15_ac_public_links.md)가 소유합니다.
+  * **링크 공유는 공유 범위와 독립입니다**: 공유 범위가 답하는 것은 *로그인한 사람 중 누가 보는가*이고, 링크 공유가 답하는 것은 *로그인 없는 바깥에 문을 여는가*입니다. 모집처럼 명부가 아직 비어 있는 시점에는 `INTERNAL_ONLY` + 링크 공유 켜짐이 정상 조합이므로 두 축을 한 셀렉트에 묶을 수 없습니다.
   * **담당자 다중 지정**: 해당 프로그램의 담당자 풀(`program_managers`)에 존재하는 임직원 중에서 다중 선택합니다. 풀 밖의 사용자는 선택할 수 없도록 서버에서 강제합니다(대표 담당자 구분 없이 전원 동등).
 * **인스턴스 끄기(soft off)**: 카드의 '끄기(✕)'는 물리 삭제가 아니라 `enabled` 플래그를 내리는 논리적 비활성화입니다. 데이터는 보존되며 GUEST 및 상세 탭에서 비노출 처리됩니다.
 * **종속성 비즈니스 룰**: 서면평가(`DOC_REVIEW`)·대면평가(`ONSITE_EVAL`) 인스턴스는 모집 신청서와 연결되므로, 프로그램에 활성화된 모집(`RECRUITMENT`) 인스턴스가 최소 1개 존재하는 것을 전제로 운영합니다.
@@ -163,7 +165,7 @@ CREATE TABLE program_modules (
     enabled BOOLEAN NOT NULL DEFAULT TRUE,      -- 인스턴스 논리적 활성 플래그(끄기=soft off)
     status module_status NOT NULL DEFAULT 'DRAFT',   -- DRAFT/OPEN/CLOSED/CANCELLED
     participation_mode participation_mode,     -- 템플릿 기본값 자동(매칭만 선택형)
-    visibility module_visibility NOT NULL DEFAULT 'INTERNAL_ONLY', -- 공유 범위
+    visibility module_visibility NOT NULL DEFAULT 'INTERNAL_ONLY', -- 공유 범위(INTERNAL_ONLY | GUEST_ONLY)
     settings JSONB NOT NULL DEFAULT '{}'::jsonb,-- 일정(start_date/end_date)·설명(memo) 등
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
@@ -174,6 +176,11 @@ CREATE TABLE program_modules (
 CREATE UNIQUE INDEX uq_program_modules_title
     ON program_modules (program_id, lower(btrim(title)))
     WHERE title IS NOT NULL;
+
+-- 공유 범위는 두 값만 유효(2026-09-02). enum의 PUBLIC은 의존 객체 재작성을 피해 남기되 저장을 막는다.
+ALTER TABLE program_modules
+    ADD CONSTRAINT program_modules_visibility_check
+    CHECK (visibility IN ('INTERNAL_ONLY', 'GUEST_ONLY'));
 
 -- OUTCOMES는 프로그램당 1개만 허용(단일 인스턴스 유지).
 CREATE UNIQUE INDEX uq_program_modules_outcomes_singleton
@@ -221,7 +228,7 @@ CREATE TABLE program_module_assignees (
   * 본인이 소속된 프로그램의 `programs`, `program_modules`, `program_module_assignees` 레코드에 대해 읽기/쓰기(`SELECT`, `INSERT`, `UPDATE`) 권한을 가집니다.
 * **외부 참여자 (guest_startup, guest_expert 등)**:
   * 프로그램 설정 및 운영 모듈 보드에 대해 접근 및 조회 권한이 원천 차단됩니다. (GUEST API 호출 시 RLS 위반 에러 반환)
-  * GUEST 포털에는 `visibility`가 `GUEST_ONLY`/`PUBLIC`이고 `enabled`가 참인 인스턴스의 운영 데이터만 노출됩니다.
+  * GUEST 포털에는 `visibility`가 `GUEST_ONLY`이고 `enabled`가 참이며 취소되지 않은 인스턴스의 운영 데이터만 노출됩니다. 로그인 없는 외부 노출은 이 축이 아니라 모듈 공개 링크가 판정합니다([3_4_15](./3_4_15_ac_public_links.md)).
 
 ---
 
@@ -244,6 +251,7 @@ CREATE TABLE program_module_assignees (
 ## 11. GUEST 연동
 * GUEST 앱은 주기적으로 `program_modules`의 `enabled` 및 `visibility` 상태를 fetch하여, 인스턴스가 Off(비활성화)되거나 공유 범위에서 벗어나면 모바일 GUEST 포털 메뉴 내의 해당 항목(예: 멘토링 예약, 만족도 작성 등)을 즉시 마스킹 및 진입 불가 처리합니다.
 * 인스턴스별로 이름과 기간이 다르므로, GUEST 포털 메뉴는 템플릿명이 아니라 **인스턴스 모듈명**으로 노출합니다(예: "1차 멘토링", "후속 멘토링").
+* **링크로 들어온 사람은 게스트가 아닙니다**: 모듈 공개 링크(`/p/:token`)는 게스트 세션·사업 고정 코드·사이드바와 무관한 격리 뷰포트이며, 같은 모듈을 참여기업은 로그인해서 그 밖의 사람은 링크로 보게 됩니다. 규칙은 [3_4_15](./3_4_15_ac_public_links.md)가 소유합니다.
 
 ---
 

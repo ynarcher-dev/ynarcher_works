@@ -42,8 +42,9 @@
   * **[3_3_1_startup_pool_classification.md](../docs_planning/3_3_1_startup_pool_classification.md) (STARTUP 워크스페이스 / 스타트업 풀 구분·담당자·관리현황)**: 스타트업 마스터의 구분(발굴/보육/투자/기타) 라이프사이클, 담당자 권한 모델, 관리현황 적용 범위 및 STARTUP 워크스페이스의 4개 목록 뷰를 규정합니다.
   * **[3_3_2_networks_dashboard.md](../docs_planning/3_3_2_networks_dashboard.md) (NETWORKS 대시보드 및 최근 업로드 현황)**: 네트워크 자산의 규모·구성·성장 추이·데이터 건강도 인포그래픽과 8종 통합 최근 업로드 리스트 화면을 명세합니다.
   * **[3_3_3_startup_menu_stat_cards.md](../docs_planning/3_3_3_startup_menu_stat_cards.md) (STARTUP 메뉴별 통계 카드 섹션)**: 대시보드에 지표를 몰아넣는 대신 각 목록 메뉴(내 기업 관리·투자·보육·발굴·기타)가 메뉴명 아래에 자기 통계 카드 4장을 이고 가는 구조를 기획합니다. 카드별 집계 정의와 데이터 원천, 현행 스키마 기준 실현 가능성(즉시/조인/신규) 판정을 담은 후보안 단계 문서입니다.
-* **[3_4_workspace_ac.md ~ 3_4_14_ac_custom_activities.md](../docs_planning/3_4_workspace_ac.md) (AC 워크스페이스 시리즈)**
+* **[3_4_workspace_ac.md ~ 3_4_15_ac_public_links.md](../docs_planning/3_4_workspace_ac.md) (AC 워크스페이스 시리즈)**
   * **의미**: Program First 기반의 모듈형 스타트업 보육 프로그램 운영 플랫폼 명세로서, 프로그램 개요 및 모듈 보드, 모집 랜딩 및 신청 DB, 통합 참가자 풀, 공통 평가 엔진 및 서면/대면 심사, OT 및 출석 세션, N:N 멘토링 관계, 1:1 비즈니스 매칭 및 AI 자동 배정, 데모데이 피칭 및 투자자 관심 매칭, 통합 타임라인 충돌 방지, KPI 성과 요약 및 통합 엑셀 다운로더, 기본 템플릿 3종(글쓰기·URL첨부·파일첨부) 기록 등을 포함하는 액셀러레이팅 핵심 흐름을 담고 있습니다.
+  * **[3_4_15_ac_public_links.md](../docs_planning/3_4_15_ac_public_links.md) (모듈 링크 공유 기획서)**: 운영 모듈 하나를 로그인 없이 열람·제출할 수 있는 단독 주소로 내보내는 축을 정의합니다. 종전 공유 범위의 세 번째 값 `PUBLIC`이 이름만 있고 익명 접근 경로가 없어 `GUEST_ONLY`와 동일하게 동작하던 상태를 정리하고, 공유 범위는 로그인 사용자 사이의 노출(2값)만 답하도록 좁힙니다. 가르는 기준은 *이 화면이 보는 사람이 누구인지 알아야 성립하는가*이며, 허용 템플릿 4종(모집·글쓰기·URL첨부·파일첨부)·주소 발급과 재발급·공개 상태와 기간·링크가 죽는 조건 4종·익명 RLS 정책을 두지 않는 보안 경로를 담습니다. AC·M&A·PROJECT 공통 적용.
 * **[3_5_workspace_fund.md](../docs_planning/3_5_workspace_fund.md) (FUND 워크스페이스 상세 기획서)**
   * **의미**: 결성 펀드 개요, 출자자(LP) 명부 관리, 분기별 자본금 납입 요청(캐피탈 콜) 관리 및 피투자 스타트업의 지분율 현황과 재무 정보 추적 화면 요건을 정의합니다.
 * **[3_6_workspace_ma.md](../docs_planning/3_6_workspace_ma.md) (M&A 워크스페이스 상세 기획서)**
