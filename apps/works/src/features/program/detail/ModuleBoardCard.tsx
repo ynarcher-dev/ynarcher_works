@@ -19,6 +19,7 @@ import {
   Pencil,
   Plus,
   SquareKanban,
+  Trash2,
   X,
   type LucideIcon,
 } from 'lucide-react'
@@ -29,12 +30,14 @@ import {
   MODULE_VISIBILITY_TONE,
 } from '@/features/program/config'
 import {
+  useIsProgramPm,
   useProgramModules,
   useToggleModule,
   type Program,
   type ProgramModule,
 } from '@/features/program/hooks'
 import { AddModulesModal } from '@/features/program/detail/AddModulesModal'
+import { ModuleDeleteModal } from '@/features/program/detail/ModuleDeleteModal'
 import { ModuleFormModal } from '@/features/program/detail/ModuleFormModal'
 import { ModuleGanttView } from '@/features/program/detail/ModuleGanttView'
 import { ModuleKanbanView } from '@/features/program/detail/ModuleKanbanView'
@@ -86,7 +89,11 @@ export function ModuleBoardCard({
   const toast = useToast()
   const { data, isLoading } = useProgramModules(programId)
   const toggle = useToggleModule(programId)
+  // 삭제는 이 사업의 PM만 한다(서버가 최종 판정). 아닌 사람에게는 버튼을 세우지 않는다 —
+  // 누를 수 있게 보여 두고 눌렀을 때 거절하는 것은 파괴적 액션에서 특히 나쁜 안내다.
+  const { data: isPm } = useIsProgramPm(programId)
   const [editTarget, setEditTarget] = useState<ProgramModule | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<ProgramModule | null>(null)
   // 2단계 마법사: 템플릿 선택(addOpen) → 세팅(createType 지정 시 폼).
   const [addOpen, setAddOpen] = useState(false)
   const [createType, setCreateType] = useState<string | null>(null)
@@ -210,6 +217,15 @@ export function ModuleBoardCard({
                           onClick={() => void onDisable(mod)}
                           icon={<X className="h-3.5 w-3.5" />}
                         />
+                        {isPm && (
+                          <IconButton
+                            title="모듈 삭제"
+                            label={`${nameOf(mod)} 삭제`}
+                            danger
+                            onClick={() => setDeleteTarget(mod)}
+                            icon={<Trash2 className="h-3.5 w-3.5" />}
+                          />
+                        )}
                       </>
                     }
                   />
@@ -278,6 +294,16 @@ export function ModuleBoardCard({
           module={editTarget}
           existingTitles={titlesExcept(editTarget.id)}
           onClose={() => setEditTarget(null)}
+        />
+      )}
+
+      {/* 삭제: 되돌릴 수 없는 물리 삭제. 끄기와 다른 창을 쓴다. */}
+      {deleteTarget && (
+        <ModuleDeleteModal
+          module={deleteTarget}
+          programId={programId}
+          onClose={() => setDeleteTarget(null)}
+          onDeleted={() => setDeleteTarget(null)}
         />
       )}
 

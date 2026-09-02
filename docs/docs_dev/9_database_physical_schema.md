@@ -144,7 +144,7 @@ erDiagram
 ## 5. RLS 정책 원칙
 
 1. **Default Deny**: 모든 비즈니스 테이블에는 `ENABLE ROW LEVEL SECURITY`가 의무 적용되어 있으며, 화이트리스트 정책이 없는 한 외부 접근이 전면 차단됩니다.
-2. **소프트 삭제(Soft Delete)**: `deleted_at` 컬럼을 통한 논리적 삭제만 허용하므로, `DELETE` DML에 대한 RLS 정책은 작성하지 않으며 원격 차단합니다.
+2. **소프트 삭제(Soft Delete)**: `deleted_at` 컬럼을 통한 논리적 삭제만 허용하므로, `DELETE` DML에 대한 RLS 정책은 작성하지 않으며 원격 차단합니다. 물리 삭제가 필요한 예외(운영 모듈 인스턴스)에도 `DELETE` 정책은 만들지 않고, 자체 인가하는 `SECURITY DEFINER` RPC 하나만을 정당 경로로 둡니다(`delete_program_module`).
 3. **부서 격리(M&A / HR)**: M&A팀과 관리자/경영진을 제외한 타 부서 임직원이 `deals` 테이블 및 `hr_profiles` 테이블의 개별 행에 액세스하는 것을 방지하기 위해, RLS 업무 헬퍼를 결합한 접근 제어를 수행합니다.
 4. **버전별 조직도 격리**: `org_versions`에 RLS 정책을 구성하여 일반 직원들은 `PUBLISHED` 상태인 버전만 조회하도록 유도하고, `DRAFT` 상태는 오직 경영진과 시스템 관리자(management write 보유자)만 볼 수 있도록 통제합니다.
 

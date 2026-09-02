@@ -39,6 +39,7 @@
 * [ ] 테이블 생성 즉시 `alter table ... enable row level security;`를 선언한다.
 * [ ] `SELECT`, `INSERT`, `UPDATE` 정책을 분리한다.
 * [ ] 일반 업무 테이블에는 `DELETE` 정책을 만들지 않고 `deleted_at` 기반 soft delete를 사용한다.
+  * 물리 삭제가 꼭 필요한 예외는 **정책이 아니라 RPC로** 연다. `DELETE` 정책을 열면 정당 경로 밖에서도 지울 수 있게 되어 RPC가 강제하는 조건(권한·확인 문구·잔존 데이터)이 전부 우회된다. 선례는 `delete_program_module`(20260902180000) — 모듈 원장에 `DELETE` 정책 없이 자체 인가하는 `SECURITY DEFINER` RPC 하나만 두고, 되돌릴 수 없으므로 `audit_logs` 적재를 함께 강제한다.
 * [ ] 정책은 `auth.jwt()`를 직접 파싱하지 않고 `app.current_app_user_id()`, `app.current_app_role()`, `app.can_read_workspace()`, `app.can_write_workspace()`, `app.can_access_*()` 헬퍼를 경유한다.
 * [ ] `WITH CHECK`가 필요한 `INSERT`/`UPDATE` 정책에 누락이 없다.
 * [ ] 외부 게스트가 내부 마스터, FUND, M&A, HR, 감사 로그를 직접 조회할 수 없다.

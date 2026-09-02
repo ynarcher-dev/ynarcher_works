@@ -3,6 +3,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
+import { useAuthStore } from '@/auth/authStore'
 import { supabase } from '@/lib/supabase'
 import {
   useProgramWorkspace,
@@ -340,5 +341,77 @@ export function useParticipants(programId: string | undefined) {
         .order('role', { ascending: true })
       return (data ?? []) as Participant[]
     },
+  })
+}
+
+/**
+ * 이 사업의 PM인지 여부. 모듈 삭제 한 가지에만 쓰는 판정이라 담당자 전체를 끌어오지 않고
+ * 본인 행만 확인한다(RLS가 이미 사업 범위를 좁히므로 결과는 항상 본인 것이다).
+ *
+ * 화면에서 감추는 것은 보안이 아니다 — 실제 차단은 delete_program_module RPC가 한다.
+ * 이 훅은 누를 수 없는 버튼을 보여 주지 않기 위한 것뿐이다.
+ */
+export function useIsProgramPm(programId: string | undefined) {
+  const config = useProgramWorkspace()
+  const userId = useAuthStore((s) => s.user?.id)
+  return useQuery({
+    queryKey: [config.key, 'is-pm', programId, userId],
+    enabled: Boolean(programId && userId),
+    queryFn: async (): Promise<boolean> => {
+      const { data } = await supabase
+        .from(config.tables.managers)
+        .select('id')
+        .eq('program_id', programId)
+        .eq('user_id', userId)
+        .eq('role', 'PM')
+        .limit(1)
+      return (data ?? []).length > 0
+    },
+  })
+}
+
+/** 모듈 삭제를 막는 잔존 데이터 1줄(원장명 + 건수). 한글 라벨은 화면이 붙인다. */
+export interface ModuleDeleteBlocker {
+  rel_name: string
+  row_count: number
+}
+
+/**
+ * 삭제 차단 사유. 삭제창을 열 때 미리 불러 '왜 못 지우는지'를 버튼을 누르기 전에 보여 준다
+ * — 눌러 본 뒤에 실패로 알려 주면 되돌릴 수 없는 작업 앞에서 사용자가 한 번 더 시도한다.
+ */
+export function useModuleDeleteBlockers(moduleId: string | undefined) {
+  const config = useProgramWorkspace()
+  return useQuery({
+    queryKey: [config.key, 'module-delete-blockers', moduleId],
+    enabled: Boolean(moduleId),
+    queryFn: async (): Promise<ModuleDeleteBlocker[]> => {
+      const { data, error } = await supabase.rpc('program_module_delete_blockers', {
+        p_entity_key: config.entityKey,
+        p_module_id: moduleId,
+      })
+      if (error) throw error
+      return (data ?? []) as ModuleDeleteBlocker[]
+    },
+  })
+}
+
+/**
+ * 모듈 인스턴스 물리 삭제(PM 전용). 끄기(useToggleModule)와 다른 축이다 — 끄기는 되돌릴 수
+ * 있는 운영 중단이고 이쪽은 원장에서 사라진다. 확인 문구·PM·잔존 데이터는 모두 서버가 판정한다.
+ */
+export function useDeleteProgramModule(programId: string) {
+  const qc = useQueryClient()
+  const config = useProgramWorkspace()
+  return useMutation({
+    mutationFn: async (input: { moduleId: string; confirmText: string }) => {
+      const { error } = await supabase.rpc('delete_program_module', {
+        p_entity_key: config.entityKey,
+        p_module_id: input.moduleId,
+        p_confirm_text: input.confirmText,
+      })
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: [config.key, 'modules', programId] }),
   })
 }
