@@ -9,12 +9,14 @@ import {
   Input,
   PageHeader,
   PanelCard,
+  RefLinkList,
   Spinner,
   cardText,
   cn,
   useToast,
 } from '@ynarcher/ui'
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { RichTextEditor, RichTextViewer } from '@/components/RichTextEditor'
 import { BoardPanel } from '@/features/hub/BoardPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
@@ -149,7 +151,7 @@ export function BoardWorkspace({ boardId, title, initialPostId }: BoardWorkspace
 /**
  * 게시글 작성/수정 화면. postId가 있으면 수정(기존 값 로드), 없으면 신규 작성.
  * 첨부는 attachments(BOARD_POST)로 저장한다 — 신규는 등록 성공 후 보류 첨부를 일괄 업로드하고,
- * 수정은 자료 관리 패널에서 즉시 업로드/삭제한다.
+ * 수정은 첨부파일 패널에서 즉시 업로드/삭제한다.
  */
 function PostEditor({
   boardId,
@@ -275,7 +277,7 @@ function PostEditor({
 }
 
 /**
- * 게시글 상세. 헤더(뒤로가기 · 삭제 · 수정) + 좌측 2/3 본문 · 우측 1/3 공용 패널(자료 관리 · 코멘트).
+ * 게시글 상세. 헤더(뒤로가기 · 삭제 · 수정) + 좌측 2/3 본문 · 우측 1/3 공용 패널(첨부파일 · 코멘트).
  * 게시글 본문·조회수·첨부·코멘트 모두 실데이터이며, 쓰기 권한은 DB RLS가 강제한다.
  */
 function DetailView({
@@ -341,7 +343,28 @@ function DetailView({
             }
             info={
               <InfoGrid columns={3}>
-                <InfoField label="작성자" value={post.author} meta />
+                <InfoField
+                  label="작성자"
+                  meta
+                  // 이름은 그 사람으로 가는 길이다 — 계정을 알 때만 링크가 되고, 옛 글처럼
+                  // 계정이 비어 있으면 이름 그대로 선다(회의록 상세와 같은 규약).
+                  value={
+                    post.authorId ? (
+                      <RefLinkList
+                        as={Link}
+                        items={[
+                          {
+                            key: post.authorId,
+                            label: post.author,
+                            to: `/office/managers/${post.authorId}`,
+                          },
+                        ]}
+                      />
+                    ) : (
+                      post.author
+                    )
+                  }
+                />
                 <InfoField label="게시일" value={post.date} meta />
                 <InfoField label="조회" value={(post.views ?? 0).toLocaleString()} meta />
               </InfoGrid>
@@ -357,9 +380,9 @@ function DetailView({
           </EntityHeaderCard>
         </div>
 
-        {/* 우측(1/3): 공용 패널 — 자료 관리(조회 전용) → 코멘트(다른 상세페이지와 동일) */}
+        {/* 우측(1/3): 공용 패널 — 첨부파일(조회 전용) → 코멘트(다른 상세페이지와 동일) */}
         <div className="space-y-4 lg:col-span-1">
-          <MaterialPanel targetType={BOARD_POST_ATTACHMENT_TYPE} targetId={postId} title="자료 관리" readOnly />
+          <MaterialPanel targetType={BOARD_POST_ATTACHMENT_TYPE} targetId={postId} title="첨부파일" readOnly />
           <FeedbackPanel targetType="board_post" targetId={postId} />
         </div>
       </div>

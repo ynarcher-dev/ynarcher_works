@@ -4,6 +4,7 @@ import {
   MINUTE_LINK_TARGETS,
   type MinuteLink,
   type MinuteLinkRef,
+  type MinuteLinkRole,
   type MinuteLinkTargetType,
 } from '@/features/office/minutes/minuteLinks'
 
@@ -28,7 +29,7 @@ export const MINUTE_VISIBILITY_LABEL: Record<MinuteVisibility, string> = {
 export const MINUTE_ATTACHMENT_TYPE = 'office_minute'
 
 /**
- * 회의록 음성 기록 전용 첨부의 attachments.target_type. 일반 첨부(office_minute)와 슬롯을 나눠
+ * 회의록 '회의 녹음' 전용 첨부의 attachments.target_type. 일반 첨부(office_minute)와 슬롯을 나눠
  * 서로 섞이지 않게 저장한다(스타트업 자료 분류와 동일 방식). 접근범위는 office_minute과 같은
  * 회의록 종속(RLS: can_read_minute / is_minute_author) — 20260723236000 마이그레이션.
  */
@@ -61,7 +62,13 @@ export interface MinuteDetail extends MinuteListItem {
   agenda: string | null
   body: string | null
   people: MinutePerson[]
+  /**
+   * 외부 참석자 잔존 표기('이름/소속' 문자열). 링크로 승격되지 못한 옛 명단만 남는다
+   * (20260903240000 백필) — 새 입력은 전부 `externalPeople`로 들어간다.
+   */
   externalAttendees: string[]
+  /** 외부 참석자(networks 원장 상호참조). 접근 불가 대상은 label=null. */
+  externalPeople: MinuteLink[]
   /** 연동된 사업/스타트업(cross-reference). 접근 불가 대상은 label=null. */
   links: MinuteLink[]
 }
@@ -76,7 +83,10 @@ export interface MinuteDraft {
   body: string | null
   visibility: MinuteVisibility
   people: { userId: string; role: MinutePersonRole }[]
+  /** 링크로 승격되지 못한 옛 표기(빼는 것만 가능 — 새로 담는 경로는 없다). */
   externalAttendees: string[]
+  /** 외부 참석자(networks 상호참조). 연동과 같은 원장에 role만 달리해 함께 저장된다. */
+  externalPeople: MinuteLinkRef[]
   /** 연동 대상(종류+id). 저장 시 set_minute_links RPC로 일괄 교체. */
   links: MinuteLinkRef[]
 }
@@ -155,10 +165,14 @@ export function useIncrementMinuteView() {
 async function loadMinuteLinks(minuteId: string): Promise<MinuteLink[]> {
   const { data, error } = await supabase
     .from('meeting_minute_links')
-    .select('target_type, target_id')
+    .select('target_type, target_id, role')
     .eq('minute_id', minuteId)
   if (error) throw error
-  const rows = (data ?? []) as { target_type: MinuteLinkTargetType; target_id: string }[]
+  const rows = (data ?? []) as {
+    target_type: MinuteLinkTargetType
+    target_id: string
+    role: MinuteLinkRole | null
+  }[]
   if (rows.length === 0) return []
 
   // 종류별로 id를 모아 원장 한 번씩만 조회한다.
@@ -194,6 +208,7 @@ async function loadMinuteLinks(minuteId: string): Promise<MinuteLink[]> {
     return {
       targetType: r.target_type,
       targetId: r.target_id,
+      role: r.role ?? 'SUBJECT',
       label: hit?.label ?? null,
       code: hit?.code ?? null,
     }
@@ -227,18 +242,20 @@ export function useMinute(id: string | null) {
           users: { name: string } | { name: string }[] | null
         }[]
       }
-      const links = await loadMinuteLinks(row.id)
+      // 연동과 외부 참석자는 원장 한 벌에 함께 살고 role이 이유를 말한다 — 화면이 다시 가른다.
+      const allLinks = await loadMinuteLinks(row.id)
       return {
         ...toListItem(row),
         location: row.location,
         agenda: row.agenda,
         body: row.body,
         externalAttendees: row.external_attendees ?? [],
+        externalPeople: allLinks.filter((l) => l.role === 'EXTERNAL_ATTENDEE'),
         people: (row.meeting_minute_people ?? []).map((p) => {
           const u = Array.isArray(p.users) ? p.users[0] : p.users
           return { userId: p.user_id, name: u?.name ?? '알 수 없음', role: p.role }
         }),
-        links,
+        links: allLinks.filter((l) => l.role !== 'EXTERNAL_ATTENDEE'),
       }
     },
   })
@@ -281,12 +298,22 @@ export function useSaveMinute() {
       })
       if (peopleError) throw peopleError
 
+      // 연동과 외부 참석자를 한 번의 호출로 함께 교체한다 — 원장이 한 벌이라 따로 쏘면
+      // 한쪽만 반영된 순간에 상대편 행이 통째로 지워진다(RPC가 delete-all 후 재삽입한다).
       const { error: linksError } = await supabase.rpc('set_minute_links', {
         p_minute_id: minuteId,
-        p_links: draft.links.map((l) => ({
-          target_type: l.targetType,
-          target_id: l.targetId,
-        })),
+        p_links: [
+          ...draft.links.map((l) => ({
+            target_type: l.targetType,
+            target_id: l.targetId,
+            role: 'SUBJECT',
+          })),
+          ...draft.externalPeople.map((l) => ({
+            target_type: l.targetType,
+            target_id: l.targetId,
+            role: 'EXTERNAL_ATTENDEE',
+          })),
+        ],
       })
       if (linksError) throw linksError
       return minuteId

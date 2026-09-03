@@ -13,7 +13,7 @@ interface Props {
   context: DraftContext
   /** 생성된 초안을 상위 폼(제목·안건·본문)에 반영. */
   onApplyDraft: (draft: MinuteDraft) => void
-  /** 녹음·업로드한 오디오를 회의록 '음성 기록' 전용 슬롯에 저장. 신규는 보류 첨부, 수정은 즉시 업로드된다. */
+  /** 녹음·업로드한 오디오를 회의록 '회의 녹음' 전용 슬롯에 저장. 신규는 보류 첨부, 수정은 즉시 업로드된다. */
   onSaveAudio: (file: File) => Promise<void>
 }
 
@@ -31,7 +31,7 @@ function audioFileName(meetingDate?: string | null): string {
 
 /**
  * 회의록 음성 패널. 두 기능을 독립적으로 다룬다.
- *  - 음성 기록: 마이크 녹음 또는 오디오 파일 업로드 → Gemini 전사(텍스트) + 원본 오디오 첨부 저장.
+ *  - 회의 녹음: 마이크 녹음 또는 오디오 파일 업로드 → Gemini 전사(텍스트) + 원본 오디오 첨부 저장.
  *  - AI 초안: 전사·직접 입력·붙여넣기 등 어떤 텍스트든 있으면 Gemini로 초안 생성.
  * 두 버튼은 서로를 강제하지 않는다(전사 없이 초안만, 초안 없이 오디오 저장만 가능).
  */
@@ -126,7 +126,7 @@ export function VoiceMinutePanel({ context, onApplyDraft, onSaveAudio }: Props) 
   }
 
   return (
-    <PanelCard title="음성 기록 · AI 초안">
+    <PanelCard title="회의 녹음 · AI 초안">
       <div className="space-y-3">
         <p className={cardText.subtitle}>
           회의 음성을 녹음하거나 녹취파일을 올려 텍스트로 옮기고, 필요하면 AI가 초안(제목·안건·본문)을
@@ -136,7 +136,7 @@ export function VoiceMinutePanel({ context, onApplyDraft, onSaveAudio }: Props) 
         {/* 주파수 시각화 — 마이크에 소리가 들어오면 막대가 반응해 정상 동작을 확인시킨다. */}
         <FrequencyVisualizer analyserRef={rec.analyserRef} active={micLive} />
 
-        {/* ── 음성 기록: 녹음/업로드 → 전사 ──────────────────────────────── */}
+        {/* ── 회의 녹음: 녹음/업로드 → 전사 ──────────────────────────────── */}
         <RecorderControls
           rec={rec}
           busy={busy !== null}
@@ -156,7 +156,7 @@ export function VoiceMinutePanel({ context, onApplyDraft, onSaveAudio }: Props) 
         )}
 
         {/* 녹음본 준비됨 — 녹취파일 업로드(위)와 한 묶음으로, 파일명 칩 + 미리듣기 + 저장을 2행으로 둔다.
-            저장은 녹음/업로드본을 회의록 '음성 기록' 슬롯에 남긴다(전사와 무관). */}
+            저장은 녹음/업로드본을 회의록 '회의 녹음' 슬롯에 남긴다(전사와 무관). */}
         {audio && !recording && (
           <div className="space-y-2 rounded-radius-md border border-gray-200 bg-gray-50 p-2">
             {/* 1행: 파일명 칩(아이콘 + 이름 + 용량) — 덜렁 텍스트 대신 파일임을 한눈에. */}
@@ -189,7 +189,7 @@ export function VoiceMinutePanel({ context, onApplyDraft, onSaveAudio }: Props) 
               ) : (
                 <Save className="h-4 w-4" strokeWidth={1.75} />
               )}
-              {saveState === 'saved' ? '음성 기록에 저장됨' : '음성 파일을 음성 기록에 저장'}
+              {saveState === 'saved' ? '회의 녹음에 저장됨' : '음성 파일을 회의 녹음에 저장'}
             </Button>
             {saveError && (
               <p className="flex items-start gap-1.5 text-caption text-danger">

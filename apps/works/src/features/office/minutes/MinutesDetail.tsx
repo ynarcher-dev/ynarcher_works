@@ -2,14 +2,16 @@ import {
   Badge,
   BackButton,
   Button,
-  CardShell,
   EmptyState,
   EntityHeaderCard,
   InfoField,
   InfoGrid,
+  InfoRows,
+  RefLinkList,
   Spinner,
   cardText,
-  cn,
+  type RefLinkItem,
+  type InfoRowItem,
 } from '@ynarcher/ui'
 import { Link } from 'react-router-dom'
 import { RichTextViewer } from '@/components/RichTextEditor'
@@ -36,55 +38,30 @@ interface Props {
   onEdit: () => void
 }
 
-/** 참석자·외부참석자·참조를 라벨 + 태그(칩) 행으로 표시한다(조회 전용). */
-function TagRow({ label, names }: { label: string; names: string[] }) {
-  if (names.length === 0) return null
-  return (
-    <div className="flex items-start gap-2">
-      <span className={cn('w-20 shrink-0 pt-0.5', cardText.label)}>{label}</span>
-      <div className="flex flex-wrap gap-1.5">
-        {names.map((name, i) => (
-          <Badge key={`${name}-${i}`}>{name}</Badge>
-        ))}
-      </div>
-    </div>
-  )
+/** 임직원 상세(OFFICE 임직원 정보, 조회 전용) 경로. 회의록의 사람은 전부 여기로 간다. */
+const employeePath = (userId: string) => `/office/managers/${userId}`
+
+/** 내부 인원(참석자·참조) 한 사람 → 링크 항목. 임직원이라 종류 표기 없이 이름만 선다. */
+function personItem(p: { userId: string; name: string }): RefLinkItem {
+  return { key: p.userId, label: p.name, to: employeePath(p.userId) }
 }
 
-/** 연동된 사업/스타트업을 종류 라벨 + 이름 칩으로 표시한다. 접근 가능하면 상세로 링크한다. */
-function LinkRow({ links }: { links: MinuteLink[] }) {
-  if (links.length === 0) return null
-  return (
-    <div className="flex items-start gap-2">
-      <span className={cn('w-20 shrink-0 pt-0.5', cardText.label)}>연동</span>
-      <div className="flex flex-wrap gap-1.5">
-        {links.map((l) => {
-          const kind = MINUTE_LINK_TARGETS[l.targetType].kindLabel
-          const path = l.label ? minuteLinkPath(l.targetType, l.targetId) : null
-          const content = (
-            <>
-              <span className="mr-1 text-gray-400">{kind}</span>
-              {l.label ?? '접근 권한 없음'}
-              {l.code && <span className="ml-1 text-gray-400">{l.code}</span>}
-            </>
-          )
-          const key = `${l.targetType}:${l.targetId}`
-          // 열 수 있으면 info(파랑)로 눌러볼 수 있음을, 아니면 neutral로 죽어 있음을 알린다.
-          return path ? (
-            <Link key={key} to={path} className="inline-flex">
-              <Badge tone="info" className="hover:bg-info-border">
-                {content}
-              </Badge>
-            </Link>
-          ) : (
-            <Badge key={key} title="접근 권한이 없어 열 수 없는 대상입니다">
-              {content}
-            </Badge>
-          )
-        })}
-      </div>
-    </div>
-  )
+/**
+ * 연동·외부 참석자 한 건 → 링크 항목.
+ * `label`이 비어 있으면 원장 RLS가 막은 대상이라 갈 곳이 없다 — 이름 대신 그 사실을 적고
+ * 링크를 걸지 않는다(`RefLinkList`가 회색 텍스트로 물러나게 처리한다).
+ */
+function linkItem(l: MinuteLink, opts: { showKind: boolean }): RefLinkItem {
+  const kind = MINUTE_LINK_TARGETS[l.targetType].kindLabel
+  return {
+    key: `${l.targetType}:${l.targetId}`,
+    label: l.label ?? '접근 권한 없음',
+    kind: opts.showKind ? kind : null,
+    // 외부 참석자는 종류 대신 소속이 동명이인을 가른다 — 이름 뒤에 붙는 자리는 하나뿐이다.
+    note: opts.showKind ? l.code : (l.code ?? kind),
+    to: l.label ? minuteLinkPath(l.targetType, l.targetId) : null,
+    title: l.label ? undefined : '접근 권한이 없어 열 수 없는 대상입니다',
+  }
 }
 
 /** 회의록 상세. 작성자 본인·admin에게만 수정/삭제 버튼을 노출한다(실권한은 RLS가 강제). */
@@ -103,10 +80,48 @@ export function MinutesDetail({ minuteId, currentUserId, onBack, onEdit }: Props
   }
 
   const canEdit = !!currentUserId && minute.authorId === currentUserId
-  const attendees = minute.people.filter((p) => p.role === 'ATTENDEE').map((p) => p.name)
-  const references = minute.people.filter((p) => p.role === 'REFERENCE').map((p) => p.name)
-  const hasPeople =
-    attendees.length > 0 || references.length > 0 || minute.externalAttendees.length > 0
+  const attendees = minute.people.filter((p) => p.role === 'ATTENDEE')
+  const references = minute.people.filter((p) => p.role === 'REFERENCE')
+  // 원장 참조로 승격된 외부 참석자가 먼저 서고, 승격되지 못한 옛 표기가 뒤에 링크 없이 붙는다.
+  const externals: RefLinkItem[] = [
+    ...minute.externalPeople.map((l) => linkItem(l, { showKind: false })),
+    ...minute.externalAttendees.map((name, i) => ({
+      key: `legacy-${i}-${name}`,
+      label: name,
+      to: null,
+      title: 'networks 원장에서 확인되지 않은 옛 표기입니다',
+    })),
+  ]
+
+  /**
+   * 값이 있는 줄만 세운다 — 여섯 줄 중 넷이 `-`면 그 카드는 없는 것을 알리느라 있는 것을 가린다
+   * (`InfoRows`의 빈 값 표기는 자리가 반드시 있어야 하는 그리드 항목을 위한 것이다).
+   */
+  const rows: InfoRowItem[] = []
+  if (minute.location) rows.push({ label: '장소', value: minute.location })
+  if (attendees.length > 0) {
+    rows.push({
+      label: '내부 참석자',
+      value: <RefLinkList as={Link} items={attendees.map(personItem)} />,
+    })
+  }
+  if (externals.length > 0) {
+    rows.push({ label: '외부 참석자', value: <RefLinkList as={Link} items={externals} /> })
+  }
+  if (references.length > 0) {
+    rows.push({ label: '참조', value: <RefLinkList as={Link} items={references.map(personItem)} /> })
+  }
+  if (minute.links.length > 0) {
+    rows.push({
+      label: '연동',
+      value: (
+        <RefLinkList as={Link} items={minute.links.map((l) => linkItem(l, { showKind: true }))} />
+      ),
+    })
+  }
+  if (minute.agenda) {
+    rows.push({ label: '주요 안건', value: minute.agenda, valueClassName: 'whitespace-pre-line' })
+  }
 
   const onDelete = () => {
     if (!window.confirm('이 회의록을 삭제할까요?')) return
@@ -128,12 +143,13 @@ export function MinutesDetail({ minuteId, currentUserId, onBack, onEdit }: Props
       </div>
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
-        {/* 좌: 2/3 — 회의 정보 카드와 본문 카드를 별도 섹션으로 분리한다. */}
-        <div className="space-y-4 lg:col-span-2">
-          {/* 회의 정보 카드: 제목·공개범위·메타 + 참석자/참조 태그.
-              상세 최상단 카드는 전 워크스페이스 공용 규격(EntityHeaderCard)을 쓰고, 메타 줄은
-              상세 공통 '라벨: 값'(InfoField)에 맡긴다 — 작성자·조회는 회의 자체가 아니라 기록을
-              다룬 흔적이라 meta 톤으로 한 단 물러난다. 회의일은 회의의 사실이므로 값 톤 그대로다. */}
+        {/*
+          좌: 2/3 — 회의록 한 건은 문서 한 건이라 머리와 몸이 한 카드에 선다(게시판 상세와 동일).
+          종전에는 본문이 별도 카드였는데, 회의록 본문은 한 줄로 끝나는 일이 흔해서 짧은 회의록일수록
+          빈 카드가 화면의 절반을 차지했다 — 카드는 묶음의 경계를 그리는 것이지 자리를 채우는 것이
+          아니다. 안에서는 구분선이 성격이 다른 층(메타 / 회의의 사실 / 본문)만 가른다.
+        */}
+        <div className="lg:col-span-2">
           <EntityHeaderCard
             title={minute.title}
             badges={
@@ -142,55 +158,47 @@ export function MinutesDetail({ minuteId, currentUserId, onBack, onEdit }: Props
               </Badge>
             }
             info={
+              // 작성자·조회는 회의 자체가 아니라 기록을 다룬 흔적이라 meta 톤으로 한 단 물러난다.
+              // 회의일은 회의의 사실이므로 값 톤 그대로다.
               <InfoGrid columns={3}>
-                {minute.authorName && <InfoField label="작성자" value={minute.authorName} meta />}
-                {minute.meetingDate && <InfoField label="회의일" value={minute.meetingDate} />}
+                <InfoField label="회의일" value={minute.meetingDate} />
+                <InfoField
+                  label="작성자"
+                  meta
+                  value={
+                    minute.authorName && minute.authorId ? (
+                      <RefLinkList
+                        as={Link}
+                        items={[personItem({ userId: minute.authorId, name: minute.authorName })]}
+                      />
+                    ) : (
+                      minute.authorName
+                    )
+                  }
+                />
                 <InfoField label="조회" value={minute.viewCount.toLocaleString()} meta />
               </InfoGrid>
             }
           >
-            {(hasPeople || minute.links.length > 0) && (
-              <div className="mt-4 space-y-2 border-t border-gray-100 pt-4">
-                <TagRow label="내부 참석자" names={attendees} />
-                <TagRow label="외부 참석자" names={minute.externalAttendees} />
-                <TagRow label="참조" names={references} />
-                <LinkRow links={minute.links} />
+            {rows.length > 0 && (
+              <div className="mt-4 border-t border-gray-100 pt-4">
+                <InfoRows items={rows} />
               </div>
             )}
-            {(minute.location || minute.agenda) && (
-              <div className="mt-4 space-y-2 border-t border-gray-100 pt-4">
-                {minute.location && (
-                  <div className="flex items-start gap-2">
-                    <span className={cn('w-20 shrink-0 pt-0.5', cardText.label)}>장소</span>
-                    <p className={cn('min-w-0', cardText.value)}>{minute.location}</p>
-                  </div>
-                )}
-                {minute.agenda && (
-                  <div className="flex items-start gap-2">
-                    <span className={cn('w-20 shrink-0 pt-0.5', cardText.label)}>주요 안건</span>
-                    <p className={cn('min-w-0 whitespace-pre-line', cardText.value)}>
-                      {minute.agenda}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
+            <div className="mt-4 border-t border-gray-100 pt-4">
+              {minute.body ? (
+                <RichTextViewer html={minute.body} />
+              ) : (
+                <p className={cardText.subtitle}>본문이 없습니다.</p>
+              )}
+            </div>
           </EntityHeaderCard>
-
-          {/* 본문 카드 */}
-          <CardShell>
-            {minute.body ? (
-              <RichTextViewer html={minute.body} />
-            ) : (
-              <p className={cardText.subtitle}>본문이 없습니다.</p>
-            )}
-          </CardShell>
         </div>
 
-        {/* 우: 1/3 — 첨부 파일 → 음성 기록(조회 전용) → 코멘트 */}
+        {/* 우: 1/3 — 첨부 파일 → 회의 녹음(조회 전용) → 코멘트 */}
         <div className="space-y-4 lg:col-span-1">
           <MaterialPanel targetType={MINUTE_ATTACHMENT_TYPE} targetId={minuteId} title="첨부 파일" readOnly />
-          <MaterialPanel targetType={MINUTE_VOICE_ATTACHMENT_TYPE} targetId={minuteId} title="음성 기록" readOnly />
+          <MaterialPanel targetType={MINUTE_VOICE_ATTACHMENT_TYPE} targetId={minuteId} title="회의 녹음" readOnly />
           <FeedbackPanel targetType={MINUTE_FEEDBACK_TYPE} targetId={minuteId} />
         </div>
       </div>

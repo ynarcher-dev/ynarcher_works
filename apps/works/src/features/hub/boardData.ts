@@ -22,6 +22,11 @@ export interface BoardPost {
   id: string
   title: string
   author: string
+  /**
+   * 작성자 계정(board_posts.author_id). 상세에서 작성자 이름에 임직원 상세 링크를 걸 때 쓴다 —
+   * 이름 문자열(author)은 서버가 스탬프한 표시용 사본이라 그것만으로는 누구인지 가리키지 못한다.
+   */
+  authorId?: string | null
   /** 게시일. `YYYY.MM.DD` 표기. */
   date: string
   /** 본문(리치 텍스트 HTML). 게시판 상세에서만 렌더링하며 자료실은 사용하지 않는다. */

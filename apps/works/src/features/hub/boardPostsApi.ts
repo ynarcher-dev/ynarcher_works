@@ -15,7 +15,7 @@ export const BOARD_POST_ATTACHMENT_TYPE = 'BOARD_POST'
 const POSTS_KEY = ['office', 'board-posts']
 
 const LIST_COLUMNS =
-  'id, board_id, title, summary, author_name, pinned, global_notice, notice_until, view_count, created_at, deleted_at'
+  'id, board_id, title, summary, author_id, author_name, pinned, global_notice, notice_until, view_count, created_at, deleted_at'
 const DETAIL_COLUMNS = `${LIST_COLUMNS}, body`
 
 interface PostRow {
@@ -24,6 +24,7 @@ interface PostRow {
   title: string
   summary: string | null
   body?: string | null
+  author_id: string | null
   author_name: string | null
   pinned: boolean
   global_notice: boolean
@@ -44,6 +45,7 @@ function toBoardPost(r: PostRow): BoardPost {
     id: r.id,
     title: r.title,
     author: r.author_name ?? '-',
+    authorId: r.author_id,
     date: dot(r.created_at) ?? '',
     content: r.body ?? undefined,
     summary: r.summary ?? undefined,

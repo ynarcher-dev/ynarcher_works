@@ -49,8 +49,15 @@ export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
   const [people, setPeople] = useState<PickerPerson[]>(
     (initial?.people ?? []).map((p) => ({ userId: p.userId, role: p.role })),
   )
+  const [externalPeople, setExternalPeople] = useState<MinuteLink[]>(initial?.externalPeople ?? [])
   const [externalAttendees, setExternalAttendees] = useState<string[]>(initial?.externalAttendees ?? [])
   const [links, setLinks] = useState<MinuteLink[]>(initial?.links ?? [])
+
+  /** 음성 초안(STT)에 힌트로 넘길 외부 참석자 이름 — 참조든 옛 표기든 화면에 적힌 이름 그대로. */
+  const externalNames = [
+    ...externalPeople.map((p) => p.label ?? ''),
+    ...externalAttendees,
+  ].filter(Boolean)
 
   const submit = () => {
     save.mutate(
@@ -64,6 +71,10 @@ export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
         visibility,
         people,
         externalAttendees,
+        externalPeople: externalPeople.map((l) => ({
+          targetType: l.targetType,
+          targetId: l.targetId,
+        })),
         links: links.map((l) => ({ targetType: l.targetType, targetId: l.targetId })),
       },
       {
@@ -171,7 +182,12 @@ export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
             disabled={visibility === 'OFFICE'}
           />
 
-          <ExternalAttendeePicker value={externalAttendees} onChange={setExternalAttendees} />
+          <ExternalAttendeePicker
+            people={externalPeople}
+            onPeopleChange={setExternalPeople}
+            legacyNames={externalAttendees}
+            onLegacyChange={setExternalAttendees}
+          />
 
           <MinuteLinkPicker value={links} onChange={setLinks} />
 
@@ -185,7 +201,7 @@ export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
           <RichTextEditor value={body} onChange={setBody} placeholder="회의 내용을 입력하세요…" />
         </div>
 
-        {/* 우: 파일첨부 + 음성 기록 + 음성/AI 초안 1/3 */}
+        {/* 우: 파일첨부 + 회의 녹음 + 음성/AI 초안 1/3 */}
         <div className="space-y-4 lg:col-span-1">
           {initial?.id ? (
             <MaterialPanel targetType={MINUTE_ATTACHMENT_TYPE} targetId={initial.id} title="첨부 파일" />
@@ -193,15 +209,15 @@ export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
             <PendingMaterialPanel slot={MINUTE_ATTACHMENT_TYPE} pending={pending} title="첨부 파일" />
           )}
 
-          {/* 음성 기록: 일반 첨부와 분리된 전용 슬롯. 아래 녹음기가 저장한 오디오가 여기에 쌓인다. */}
+          {/* 회의 녹음: 일반 첨부와 분리된 전용 슬롯. 아래 녹음기가 저장한 오디오가 여기에 쌓인다. */}
           {initial?.id ? (
-            <MaterialPanel targetType={MINUTE_VOICE_ATTACHMENT_TYPE} targetId={initial.id} title="음성 기록" />
+            <MaterialPanel targetType={MINUTE_VOICE_ATTACHMENT_TYPE} targetId={initial.id} title="회의 녹음" />
           ) : (
-            <PendingMaterialPanel slot={MINUTE_VOICE_ATTACHMENT_TYPE} pending={pending} title="음성 기록" />
+            <PendingMaterialPanel slot={MINUTE_VOICE_ATTACHMENT_TYPE} pending={pending} title="회의 녹음" />
           )}
 
           <VoiceMinutePanel
-            context={{ title, meetingDate, attendees: externalAttendees, agenda }}
+            context={{ title, meetingDate, attendees: externalNames, agenda }}
             onApplyDraft={applyDraft}
             onSaveAudio={saveAudio}
           />

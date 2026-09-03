@@ -13,27 +13,28 @@ import { Check } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { CATEGORY_OPTIONS, ENTITIES, type EntityKey } from '@/features/networks/config'
 import { checkDuplicateName, useCreateEntity } from '@/features/networks/hooks'
-import { useDebounced, useNetworkPeopleSearch } from '@/features/office/minutes/networkPeopleSearch'
+import {
+  toExternalPersonLink,
+  useDebounced,
+  useNetworkPeopleSearch,
+} from '@/features/office/minutes/networkPeopleSearch'
+import { networkMinuteLinkType, type MinuteLink } from '@/features/office/minutes/minuteLinks'
 
 interface Props {
   open: boolean
   onClose: () => void
-  /** 이미 명단에 있는 표기(토글 상태 표시). */
-  existing: string[]
-  /** 외부 참석자 표기('이름/소속' 또는 '이름')를 명단에 추가한다. */
-  onAdd: (display: string) => void
-  /** 명단에서 표기를 뺀다(행 재클릭 토글 해제). */
-  onRemove: (display: string) => void
+  /** 이미 명단에 있는 참조(토글 상태 표시). */
+  existing: MinuteLink[]
+  /** networks 인물 참조를 명단에 담는다. */
+  onAdd: (link: MinuteLink) => void
+  /** 명단에서 참조를 뺀다(행 재클릭 토글 해제). */
+  onRemove: (link: MinuteLink) => void
   /** 열 때 간이 등록 '이름'에 미리 채울 값(인라인에서 검색해도 없을 때 넘어온 이름). */
   initialName?: string
 }
 
-/** 외부 참석자 표기 문자열 — 소속이 있으면 '이름/소속', 없으면 '이름'(기존 자유입력 예시와 동일). */
-function toDisplay(name: string, affiliation: string | null | undefined): string {
-  const n = name.trim()
-  const a = (affiliation ?? '').trim()
-  return a ? `${n}/${a}` : n
-}
+/** 참조 키 — 종류:id. 명단 포함 여부 판정에 쓴다. */
+const linkKey = (l: { targetType: string; targetId: string }) => `${l.targetType}:${l.targetId}`
 
 /**
  * 외부 참석자 검색·간이 등록 모달. 상단 검색은 networks 원장(디렉토리 9종) 통합 검색으로,
@@ -42,9 +43,10 @@ function toDisplay(name: string, affiliation: string | null | undefined): string
  * 하단은 검색해도 없을 때 쓰는 간이 등록 — 이름·소속·구분만 받아 해당 구분 원장에 새 인물을
  * 만들고 곧바로 명단에 담는다.
  *
- * 회의록 외부 참석자는 문자열 명단(영구 FK 아님)이라, 여기서 하는 일은 (1) networks에서 이름을
- * 끌어오거나 (2) networks에 인물을 채우면서 그 이름을 끌어오는 두 가지 편의다. 실제 열람/쓰기
- * 권한은 각 원장 RLS가 강제한다(간이 등록은 networks 쓰기 권한이 없으면 서버가 거절).
+ * 명단에 담기는 것은 이름이 아니라 **원장 레코드로 가는 참조**다 — 여기서 하는 일은
+ * (1) networks에서 사람을 찾아 담거나 (2) networks에 인물을 만들면서 그 참조를 담는 두 가지다.
+ * 실제 열람/쓰기 권한은 각 원장 RLS가 강제한다(간이 등록은 networks 쓰기 권한이 없으면 서버가
+ * 거절하고, 담긴 참조는 저장 시 set_minute_links가 다시 검증한다).
  */
 export function ExternalAttendeeSearchModal({
   open,
@@ -72,13 +74,14 @@ export function ExternalAttendeeSearchModal({
     setKeyword(initialName ?? '')
   }, [open, initialName])
 
-  const has = (display: string) => existing.includes(display)
+  const existingKeys = new Set(existing.map(linkKey))
+  const has = (link: MinuteLink) => existingKeys.has(linkKey(link))
   const showDropdown = keyword.trim() !== ''
 
   // 행을 누르면 추가, 다시 누르면 해제(토글).
-  const toggle = (display: string) => {
-    if (has(display)) onRemove(display)
-    else onAdd(display)
+  const toggle = (link: MinuteLink) => {
+    if (has(link)) onRemove(link)
+    else onAdd(link)
   }
 
   const submitCreate = async () => {
@@ -87,19 +90,31 @@ export function ExternalAttendeeSearchModal({
       toast.show('이름을 입력하세요.', 'warning')
       return
     }
+    const targetType = networkMinuteLinkType(newCategory)
+    if (!targetType) {
+      toast.show('이 구분은 회의록 참석자로 담을 수 없습니다.', 'warning')
+      return
+    }
     try {
       // 이미 같은 구분에 동일 이름이 있으면 새로 만들지 않고 검색해서 고르도록 안내한다.
       if (await checkDuplicateName(newCategory, name)) {
         toast.show('같은 구분에 동일한 이름이 이미 있습니다. 위에서 검색해 선택하세요.', 'warning')
         return
       }
-      await create.mutateAsync({
+      const createdId = await create.mutateAsync({
         name,
         affiliation: newAffiliation.trim() || null,
         // 구분은 원장 테이블이 결정하지만, 목록 표시(profile.category)와 일관되게 라벨도 함께 남긴다.
         profile: { category: ENTITIES[newCategory].label },
       })
-      onAdd(toDisplay(name, newAffiliation))
+      // 방금 만든 레코드의 참조를 그대로 담는다 — 이름을 베껴 적으면 상호참조가 끊긴다.
+      onAdd({
+        targetType,
+        targetId: createdId,
+        role: 'EXTERNAL_ATTENDEE',
+        label: name,
+        code: newAffiliation.trim() || null,
+      })
       toast.show(`${ENTITIES[newCategory].label} 네트워크에 등록하고 참석자로 추가했습니다.`, 'success')
       setNewName('')
       setNewAffiliation('')
@@ -142,14 +157,16 @@ export function ExternalAttendeeSearchModal({
               ) : (
                 <ul className="max-h-[15rem] divide-y divide-gray-100 overflow-y-auto">
                   {(hits ?? []).map((h) => {
-                    const display = toDisplay(h.name, h.affiliation)
-                    const added = has(display)
+                    const link = toExternalPersonLink(h)
+                    // 회의록이 가리킬 수 없는 원장(은퇴 원장 등)은 고를 수 없으니 줄에서 뺀다.
+                    if (!link) return null
+                    const added = has(link)
                     return (
                       <li key={`${h.entityTable}:${h.id}`}>
                         {/* 행 클릭 토글: 추가 ↔ 해제. 별도 버튼 없음. */}
                         <button
                           type="button"
-                          onClick={() => toggle(display)}
+                          onClick={() => toggle(link)}
                           className={cn(
                             'flex w-full items-center gap-3 px-3 py-2 text-left transition-colors duration-fast',
                             added ? 'bg-brand/10 hover:bg-brand/15' : 'hover:bg-gray-50',

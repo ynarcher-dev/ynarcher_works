@@ -78,6 +78,8 @@ export { PhotoBox } from './components/PhotoBox'
 export type { PhotoBoxProps, PhotoBoxSize } from './components/PhotoBox'
 export { TextAction } from './components/TextAction'
 export type { TextActionProps } from './components/TextAction'
+export { RefLinkList } from './components/RefLink'
+export type { RefLinkItem, RefLinkListProps } from './components/RefLink'
 export { BackButton } from './components/BackButton'
 export type { BackButtonProps } from './components/BackButton'
 export { DashedAddButton } from './components/DashedAddButton'
@@ -134,8 +136,8 @@ export type { PageHeaderProps } from './layout/PageHeader'
 
 // 화면 패턴(순수 UI 컴포지션) — 상세·목록·보드 화면의 공통 뼈대.
 // 데이터 조회는 하지 않고 슬롯(ReactNode)만 배치하므로 워크스페이스 간 재사용이 가능하다.
-export { InfoField, InfoGrid } from './patterns/InfoGrid'
-export type { InfoFieldProps, InfoGridProps } from './patterns/InfoGrid'
+export { InfoField, InfoGrid, InfoRows } from './patterns/InfoGrid'
+export type { InfoFieldProps, InfoGridProps, InfoRowItem, InfoRowsProps } from './patterns/InfoGrid'
 export { EntityHeaderCard, EntityHeaderSection } from './patterns/EntityHeaderCard'
 export type {
   EntityHeaderCardProps,

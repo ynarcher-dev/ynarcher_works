@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { DIRECTORY_ENTITIES, ENTITIES, type EntityKey } from '@/features/networks/config'
+import { networkMinuteLinkType, type MinuteLink } from '@/features/office/minutes/minuteLinks'
 
 /** 입력값을 지연시켜 반환한다 — 매 키 입력마다 원장 9종을 병렬 조회하지 않도록 검색어를 눅인다. */
 export function useDebounced<T>(value: T, delay = 250): T {
@@ -74,4 +75,22 @@ export function useNetworkPeopleSearch(keyword: string, enabled = true) {
         .slice(0, 40)
     },
   })
+}
+
+/**
+ * 검색 결과 1건 → 회의록이 저장할 상호참조. 회의록이 가리킬 수 없는 원장이면 null이다.
+ *
+ * 이 변환이 있어야 하는 이유가 곧 2026-09-03 변경의 요지다 — 종전에는 여기서 '이름/소속'
+ * 문자열만 뽑아 명단에 담았고, 그 순간 어느 레코드에서 온 사람인지가 사라졌다.
+ */
+export function toExternalPersonLink(hit: NetworkPersonHit): MinuteLink | null {
+  const targetType = networkMinuteLinkType(hit.entityTable)
+  if (!targetType) return null
+  return {
+    targetType,
+    targetId: hit.id,
+    role: 'EXTERNAL_ATTENDEE',
+    label: hit.name,
+    code: hit.affiliation,
+  }
 }
