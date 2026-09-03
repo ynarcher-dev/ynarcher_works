@@ -7,6 +7,9 @@ import type { MinuteVisibility } from '@/features/office/minutes/minutesApi'
  * 역방향 조회 — 특정 사업/스타트업에 연동된 회의록 목록.
  * meeting_minute_links를 target으로 걸어 조회하되, 링크 SELECT RLS(app.can_read_minute)가
  * 열람 불가·삭제된 회의록의 링크 행을 애초에 제거하므로 별도 필터 없이 볼 수 있는 것만 돌아온다.
+ * 삭제 판정이 관리자 우회보다 앞선다는 전제 위에 서 있다(마이그레이션 20260903250000) — 이 패널은
+ * 회의록을 직접 조회하는 화면과 달리 deleted_at을 손으로 걸지 않으므로, 그 순서가 뒤집히면
+ * 지운 회의록이 여기에만 남는다.
  * 프로그램/스타트업 상세의 '관련 회의록' 패널에서 사용한다.
  */
 export interface RelatedMinute {
