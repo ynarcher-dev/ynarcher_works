@@ -230,7 +230,11 @@ export function useNetworkList(keyword: string, category?: NetworkCategory) {
 
 // ── 단건 ──────────────────────────────────────────────────────────────────
 
-/** 단건 조회(상세페이지). id 미지정 시 비활성. 권역·국가는 태그명을 조인해 함께 읽는다. */
+/**
+ * 단건 조회(상세페이지). id 미지정 시 비활성.
+ * 국가는 태그명을 조인해 읽고, 권역은 원장이 아니라 그 국가를 거쳐 얻는다 —
+ * 권역은 행에 저장되지 않으므로(20260904120000) networks에는 걸 FK가 없다.
+ */
 export function useNetworkRecord(id: string | undefined) {
   return useQuery({
     queryKey: ['networks', 'detail', id],
@@ -239,19 +243,18 @@ export function useNetworkRecord(id: string | undefined) {
       const { data, error } = await supabase
         .from(NETWORK_TABLE)
         .select(
-          '*, creator:users!created_by(id, name), region:region_tags!region_tag_id(name), country:country_tags!country_tag_id(name)',
+          '*, creator:users!created_by(id, name), country:country_tags!country_tag_id(name, region:region_tags!region_tag_id(name))',
         )
         .eq('id', id)
         .maybeSingle()
       if (error) throw error
       if (!data) return null
       const row = data as NetworkRow & {
-        region?: { name: string } | null
-        country?: { name: string } | null
+        country?: { name: string; region?: { name: string } | null } | null
       }
       return {
         ...row,
-        region_name: row.region?.name ?? null,
+        region_name: row.country?.region?.name ?? null,
         country_name: row.country?.name ?? null,
         category_label: categoryLabel(row.category),
         country_label: countryLabelOf({
