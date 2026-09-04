@@ -60,35 +60,6 @@ const DEAL_PROGRAM_COLUMNS: ActivityColumn<ActivityProgram>[] = [
   { header: '설명', type: 'long', render: (r) => <Text value={r.description} /> },
 ]
 
-/** 사업 카드(AC 운영사업 · M&A · 프로젝트). 워크스페이스와 상세 경로만 갈아 끼운다. */
-function ProgramActivityCard({
-  title,
-  workspace,
-  basePath,
-  columns,
-  userId,
-}: {
-  title: string
-  workspace: ProgramLedgerKey
-  basePath: string
-  columns: ActivityColumn<ActivityProgram>[]
-  userId: string
-}) {
-  const { data, isLoading } = useEmployeePrograms(workspace, userId)
-  return (
-    <ActivityCard
-      title={title}
-      columns={columns}
-      rows={data ?? []}
-      rowKey={(r) => r.id}
-      rowTo={(r) => `${basePath}/${r.id}`}
-      workspace={workspace}
-      isLoading={isLoading}
-      emptyText="담당자로 배정된 건이 없습니다."
-    />
-  )
-}
-
 /** 투자(관리)기업 열 구성. 그 기업이 무엇을 하는 곳인지가 한 줄에 서도록 골랐다. */
 const STARTUP_COLUMNS: ActivityColumn<ActivityStartup>[] = [
   { header: '기업명', primary: true, type: 'name', render: (s) => s.name },
@@ -146,64 +117,93 @@ const FUND_COLUMNS: ActivityColumn<ActivityFund>[] = [
   { header: '', type: 'long', render: () => null },
 ]
 
+/** 사업 카드 한 장(제목·이동 경로·열 구성 + 조회 결과). 원장별로 갈리는 것은 이 넷뿐이다. */
+interface ProgramCard {
+  title: string
+  workspace: ProgramLedgerKey
+  basePath: string
+  columns: ActivityColumn<ActivityProgram>[]
+  rows: ActivityProgram[]
+}
+
 /**
  * 임직원 상세 '활동 이력' — 담당자로 배정된 레코드를 도메인별 카드에 데이터 표로 편다.
  *
  * 각 표는 근원 목록 화면의 열 중 사람 단위로 읽히는 것만 골라 담고, 나머지는 행을 눌러 들어간다.
  * 카드마다 5건 단위 미니 페이저를 두므로 활동이 많아도 상세 페이지 길이가 늘지 않는다.
+ *
+ * **맡은 건이 없으면 카드도 헤딩도 서지 않는다**(기업 상세 '관리 현황'과 같은 규칙). 빈 카드는
+ * 두 가지를 한꺼번에 잘못 말한다 — 있지도 않은 관계가 있는 것처럼 자리를 잡고, 정작 실제로
+ * 맡고 있는 한 장을 네 장의 빈 상자 사이에 묻는다. 열람 권한이 없어 0건인 경우도 함께 감춘다 —
+ * 권한이 없다는 사실은 그 워크스페이스에서 답할 일이지 임직원 상세가 늘어놓을 목록이 아니다.
  */
 export function EmployeeActivitySection({ userId }: { userId: string }) {
-  const { data: startups, isLoading: startupsLoading } = useEmployeeStartups(userId)
-  const { data: funds, isLoading: fundsLoading } = useEmployeeFunds(userId)
+  const startups = useEmployeeStartups(userId)
+  const funds = useEmployeeFunds(userId)
+  // 훅은 배열로 접지 않고 한 줄씩 부른다 — 호출 순서·개수가 렌더마다 고정되어야 한다.
+  const ac = useEmployeePrograms('ac', userId)
+  const mna = useEmployeePrograms('mna', userId)
+  const project = useEmployeePrograms('project', userId)
+
+  // 조회 중에는 아직 아무것도 판정하지 않는다 — 빈 카드가 잠깐 떴다 사라지는 편보다
+  // 결론이 난 뒤 한 번에 서는 편이 낫다.
+  if ([startups, funds, ac, mna, project].some((q) => q.isLoading)) return null
+
+  const startupRows = startups.data ?? []
+  const fundRows = funds.data ?? []
+  // 사업 카드 3종은 원장만 다르고 표가 답하는 물음은 같다(features/program 공유 원칙과 같은 축).
+  const programCards: ProgramCard[] = [
+    { title: '운영사업', workspace: 'ac', basePath: '/ac/programs', columns: AC_PROGRAM_COLUMNS, rows: ac.data ?? [] },
+    { title: 'M&A', workspace: 'mna', basePath: '/mna/programs', columns: DEAL_PROGRAM_COLUMNS, rows: mna.data ?? [] },
+    {
+      title: '프로젝트',
+      workspace: 'project',
+      basePath: '/project/programs',
+      columns: DEAL_PROGRAM_COLUMNS,
+      rows: project.data ?? [],
+    },
+  ]
+  const filledPrograms = programCards.filter((c) => c.rows.length > 0)
+  if (!startupRows.length && !fundRows.length && !filledPrograms.length) return null
 
   return (
     <>
       <SectionHeading title="활동 이력" />
 
       {/* 담당자 원장이 투자기업에만 채워지므로 카드 이름도 그 범위를 그대로 말한다. */}
-      <ActivityCard
-        title="투자(관리)기업"
-        columns={STARTUP_COLUMNS}
-        rows={startups ?? []}
-        rowKey={(s) => s.id}
-        rowTo={(s) => `/startup/discovered/${s.id}`}
-        workspace="startup"
-        isLoading={startupsLoading}
-        emptyText="담당자로 지정된 투자기업이 없습니다."
-      />
+      {startupRows.length > 0 && (
+        <ActivityCard
+          title="투자(관리)기업"
+          columns={STARTUP_COLUMNS}
+          rows={startupRows}
+          rowKey={(s) => s.id}
+          rowTo={(s) => `/startup/discovered/${s.id}`}
+          workspace="startup"
+        />
+      )}
 
-      <ProgramActivityCard
-        title="운영사업"
-        workspace="ac"
-        basePath="/ac/programs"
-        columns={AC_PROGRAM_COLUMNS}
-        userId={userId}
-      />
-      <ProgramActivityCard
-        title="M&A"
-        workspace="mna"
-        basePath="/mna/programs"
-        columns={DEAL_PROGRAM_COLUMNS}
-        userId={userId}
-      />
-      <ProgramActivityCard
-        title="프로젝트"
-        workspace="project"
-        basePath="/project/programs"
-        columns={DEAL_PROGRAM_COLUMNS}
-        userId={userId}
-      />
+      {filledPrograms.map((c) => (
+        <ActivityCard
+          key={c.workspace}
+          title={c.title}
+          columns={c.columns}
+          rows={c.rows}
+          rowKey={(r) => r.id}
+          rowTo={(r) => `${c.basePath}/${r.id}`}
+          workspace={c.workspace}
+        />
+      ))}
 
-      <ActivityCard
-        title="펀드"
-        columns={FUND_COLUMNS}
-        rows={funds ?? []}
-        rowKey={(f) => f.id}
-        rowTo={(f) => `/fund/${f.id}`}
-        workspace="fund"
-        isLoading={fundsLoading}
-        emptyText="배정된 펀드가 없습니다."
-      />
+      {fundRows.length > 0 && (
+        <ActivityCard
+          title="펀드"
+          columns={FUND_COLUMNS}
+          rows={fundRows}
+          rowKey={(f) => f.id}
+          rowTo={(f) => `/fund/${f.id}`}
+          workspace="fund"
+        />
+      )}
     </>
   )
 }

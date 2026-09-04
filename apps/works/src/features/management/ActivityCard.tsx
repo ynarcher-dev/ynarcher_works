@@ -49,8 +49,6 @@ interface ActivityCardProps<T> {
   workspace: WorkspaceKey
   /** 표 전체에 한 번만 적는 단서(금액 열의 단위 등). 표 테두리 안 머리글 위에 선다. */
   caption?: ReactNode
-  isLoading?: boolean
-  emptyText: string
 }
 
 /**
@@ -62,6 +60,9 @@ interface ActivityCardProps<T> {
  *
  * 보는 사람에게 그 워크스페이스 읽기 권한이 없으면 행이 클릭되지 않는다 — 눌러 봐야 접근 거부
  * 화면이 나오므로 헛걸음을 막는 것이고, 실제 통제는 라우트 가드와 RLS가 한다.
+ *
+ * 조회·노출 판정은 이 카드가 아니라 상위 섹션(EmployeeActivitySection)이 갖는다. 맡은 건이
+ * 없으면 카드 자체가 서지 않으므로 여기에 빈 상태가 없다 — 이 컴포넌트는 행이 있을 때만 불린다.
  */
 export function ActivityCard<T>({
   title,
@@ -71,46 +72,36 @@ export function ActivityCard<T>({
   rowTo,
   workspace,
   caption,
-  isLoading,
-  emptyText,
 }: ActivityCardProps<T>) {
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
   const canOpen = hasWorkspaceRead(user, workspace)
   const { pageItems, page, setPage } = usePaged(rows)
   return (
-    <PanelCard title={title} count={isLoading ? undefined : rows.length}>
-      {isLoading ? (
-        <p className="text-body text-gray-600">불러오는 중입니다.</p>
-      ) : rows.length === 0 ? (
-        <p className="text-body text-gray-600">{emptyText}</p>
-      ) : (
-        <>
-          <DataTable
-            columns={columns.map((c, index): Column<T> => ({
-              key: c.key ?? (typeof c.header === 'string' ? c.header : `col-${index}`),
-              header: c.header,
-              primary: c.primary,
-              type: c.type,
-              render: c.render,
-            }))}
-            rows={pageItems}
-            rowKey={rowKey}
-            numbered={false}
-            standardColumns={false}
-            layout="fixed"
-            caption={caption}
-            onRowClick={canOpen ? (row) => navigate(rowTo(row)) : undefined}
-            pagination={{
-              page,
-              pageSize: 5,
-              total: rows.length,
-              onChange: setPage,
-              compact: true,
-            }}
-          />
-        </>
-      )}
+    <PanelCard title={title} count={rows.length}>
+      <DataTable
+        columns={columns.map((c, index): Column<T> => ({
+          key: c.key ?? (typeof c.header === 'string' ? c.header : `col-${index}`),
+          header: c.header,
+          primary: c.primary,
+          type: c.type,
+          render: c.render,
+        }))}
+        rows={pageItems}
+        rowKey={rowKey}
+        numbered={false}
+        standardColumns={false}
+        layout="fixed"
+        caption={caption}
+        onRowClick={canOpen ? (row) => navigate(rowTo(row)) : undefined}
+        pagination={{
+          page,
+          pageSize: 5,
+          total: rows.length,
+          onChange: setPage,
+          compact: true,
+        }}
+      />
     </PanelCard>
   )
 }
