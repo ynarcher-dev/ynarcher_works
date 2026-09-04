@@ -13,11 +13,13 @@ import {
   type RegionScope,
 } from '@/features/networks/config'
 import {
+  categoryCodes,
   CLOSED_SEARCH_SCOPE,
   EMPTY_NETWORK_FILTERS,
   hasActiveNetworkFilters,
   regionScopeValues,
   wantsCountryUnset,
+  wantsUncategorized,
   type NetworkFilterState,
   type NetworkSearchScope,
 } from '@/features/networks/filters'
@@ -137,8 +139,10 @@ const SCOPE_RPC: Record<NetworkListScope, string> = {
  * 30건 안에서만 걸러져 2페이지의 대상이 사라진 것처럼 보인다. '내 것' 범위 판정도 기여
  * 로그와의 조인이라 같은 이유로 서버 몫이다.
  *
- * `uncategorized`는 미분류 축이다(null=상관없음, true=미분류만, false=분류된 것만).
- * 미분류는 카테고리가 아니라 '값이 없음'이라 구분 배열로 표현할 수 없어 별도 인자다.
+ * 구분이 비어 있는 행(미지정)은 별도 인자가 아니라 구분 필터 축의 한 값이다 — 화면에서
+ * '미지정'이 구분 선택지 옆에 서고, 서버가 그 둘을 OR로 합쳐 판정한다(20260904140000).
+ * 종전에는 전용 메뉴가 있어 목록이 미지정을 통째로 빼고 셌으나, 메뉴를 접은 뒤로는 이
+ * 목록이 원장 전부를 담는다 — 어느 화면에도 나타나지 않는 행이 있으면 안 된다.
  */
 export function useNetworkListPage(
   scope: NetworkListScope,
@@ -147,25 +151,24 @@ export function useNetworkListPage(
   pageSize: number,
   filters: NetworkFilterState = EMPTY_NETWORK_FILTERS,
   searchScope: NetworkSearchScope = CLOSED_SEARCH_SCOPE,
-  uncategorized: boolean | null = false,
 ) {
   // 필터 객체는 매 렌더 새로 만들어지므로 값으로 직렬화해 캐시 키를 안정시킨다.
   // 정책이 바뀌면 같은 검색어라도 결과가 달라지므로 검색 범위도 캐시 키에 넣는다.
   const filtersKey = JSON.stringify(filters)
   const scopeKey = JSON.stringify(searchScope)
   return useQuery({
-    queryKey: [
-      'networks', scope, 'page', keyword, filtersKey, scopeKey, uncategorized, page, pageSize,
-    ],
+    queryKey: ['networks', scope, 'page', keyword, filtersKey, scopeKey, page, pageSize],
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<NetworkPage> => {
       const trimmed = keyword.trim()
+      // 구분 축은 코드와 '미지정'이 한 배열에 섞여 온다 — 서버 인자는 둘로 갈리므로 여기서 나눈다.
+      const codes = categoryCodes(filters)
       const { data, error } = await supabase.rpc(SCOPE_RPC[scope], {
         p_keyword: trimmed || null,
         p_limit: pageSize,
         p_offset: page * pageSize,
-        p_categories: filters.categories.length ? filters.categories : null,
-        p_uncategorized: uncategorized,
+        p_categories: codes.length ? codes : null,
+        p_uncategorized: wantsUncategorized(filters) ? true : null,
         p_region_scope: regionScopeValues(filters).length ? regionScopeValues(filters) : null,
         p_regions: filters.regionIds.length ? filters.regionIds : null,
         p_countries: filters.countryIds.length ? filters.countryIds : null,
@@ -185,14 +188,12 @@ export function useNetworkListPage(
       // 검색어·필터가 모두 없으면 반영 건수 == 전체 건수. 하나라도 걸렸을 때만 별도 조회한다.
       let totalAll = total
       if (trimmed || hasActiveNetworkFilters(filters)) {
-        let q = supabase
+        // 전체 건수는 구분을 가리지 않는다 — 미지정도 이 목록의 행이므로 분모에 든다.
+        const { count: allCount } = await supabase
           .from(NETWORK_TABLE)
           .select('*', { count: 'exact', head: true })
           .is('deleted_at', null)
           .is('merged_into_id', null)
-        if (uncategorized === true) q = q.is('category', null)
-        if (uncategorized === false) q = q.not('category', 'is', null)
-        const { count: allCount } = await q
         totalAll = allCount ?? total
       }
 
@@ -323,35 +324,6 @@ export function useUpdateNetwork() {
       void qc.invalidateQueries({ queryKey: ['networks'] })
       void qc.invalidateQueries({ queryKey: ['networks', 'contributions', id] })
     },
-  })
-}
-
-/**
- * 구분 지정·변경. 통합 전에는 원장 사이의 행 이동(등록 + 원본 비활성화)이었고 그때마다
- * id가 바뀌어 그 레코드에 붙은 자료·피드백·회의록 링크가 원본을 잃었다. 지금은 한 칸을
- * 고치는 일이라 id가 그대로다. 미분류 인라인 지정과 상세 폼의 구분 변경이 공유한다.
- */
-export function useAssignCategory() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async ({
-      id,
-      category,
-      note,
-    }: {
-      id: string
-      category: NetworkCategory | null
-      note?: string
-    }) => {
-      const { error } = await supabase.rpc('update_entity', {
-        p_table: NETWORK_TABLE,
-        p_id: id,
-        p_values: { category },
-        p_note: note ?? '구분 지정',
-      })
-      if (error) throw error
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['networks'] }),
   })
 }
 

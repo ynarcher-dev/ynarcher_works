@@ -88,10 +88,11 @@ async function fetchStartupStat(userId: string): Promise<LedgerCounts> {
 }
 
 async function fetchNetworkStat(): Promise<LedgerCounts> {
-  // 미분류(구분 없음)는 목록에서 자기 메뉴로 빠져 있으므로 여기서도 빼야 두 수가 맞는다.
+  // 구분이 비어 있는 행도 목록에 담기므로(2026-09-04 미분류 메뉴 폐지) 여기서도 빼지 않는다 —
+  // 카드의 수와 목록의 수가 어긋나면 어느 쪽이 사실인지 화면이 답하지 못한다.
   const [mine, total] = await Promise.all([
-    rpcTotal('my_network_entities', { p_uncategorized: false }),
-    rpcTotal('all_network_entities', { p_uncategorized: false }),
+    rpcTotal('my_network_entities', { p_uncategorized: null }),
+    rpcTotal('all_network_entities', { p_uncategorized: null }),
   ])
   return { mine, total }
 }

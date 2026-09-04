@@ -1,6 +1,7 @@
 import {
   Building2,
   BriefcaseBusiness,
+  CircleDashed,
   GraduationCap,
   Landmark,
   Network,
@@ -10,7 +11,7 @@ import {
   UserRoundSearch,
 } from 'lucide-react'
 import { Card, Skeleton, SummaryTile, type SummaryTileTone } from '@ynarcher/ui'
-import type { NetworkCategory } from '@/features/networks/config'
+import { CATEGORY_UNSET, type NetworkCategory } from '@/features/networks/config'
 import type { NetworkFilterState, NetworkSearchScope } from '@/features/networks/filters'
 import { useNetworkListPage, type NetworkListScope } from '@/features/networks/hooks'
 
@@ -26,7 +27,7 @@ interface NetworkFilteredSummaryProps {
 }
 
 const TILES: {
-  key: NetworkCategory | 'total'
+  key: NetworkCategory | 'total' | typeof CATEGORY_UNSET
   label: string
   eyebrow: string
   tone: SummaryTileTone
@@ -41,11 +42,16 @@ const TILES: {
   { key: 'institutions', label: '기관', eyebrow: '지원 기관', tone: 'rose', icon: Landmark },
   { key: 'universities', label: '대학', eyebrow: '산학 분야', tone: 'lime', icon: GraduationCap },
   { key: 'etc', label: '기타', eyebrow: '기타 분류', tone: 'mint', icon: Shapes },
+  // 미지정은 구분이 아니라 구분이 비어 있는 상태다. 그래도 타일로 세우는 것은 이 칸이 곧
+  // 채워 넣어야 할 일감의 크기이고, 전용 메뉴를 접은 뒤(2026-09-04) 그 크기가 보이는 자리가
+  // 여기이기 때문이다. 톤은 채도 없는 회색이다 — 분류가 아니라 빈자리라고 색이 먼저 말한다.
+  { key: CATEGORY_UNSET, label: '미지정', eyebrow: '구분 없음', tone: 'slate', icon: CircleDashed },
 ]
 
 /**
  * 구분별 구성 현황. 타일이 곧 구분 필터이므로 집계에서는 구분 축만 뺀다 —
  * 지역·권역·영역 등 다른 축은 그대로 반영되어야 "지금 보고 있는 목록의 구성"이 된다.
+ * '전체'는 미지정까지 포함한 수다 — 목록이 원장 전부를 담으므로 분모도 전부여야 한다.
  */
 export function NetworkFilteredSummary({
   scope,
@@ -66,7 +72,13 @@ export function NetworkFilteredSummary({
   const institutions = useNetworkListPage(scope, keyword, 0, 1, one('institutions'), searchScope)
   const universities = useNetworkListPage(scope, keyword, 0, 1, one('universities'), searchScope)
   const etc = useNetworkListPage(scope, keyword, 0, 1, one('etc'), searchScope)
-  const queries = { total, van, exp, experts, investors, corporates, institutions, universities, etc }
+  const unset = useNetworkListPage(
+    scope, keyword, 0, 1, { ...base, categories: [CATEGORY_UNSET] }, searchScope,
+  )
+  const queries = {
+    total, van, exp, experts, investors, corporates, institutions, universities, etc,
+    [CATEGORY_UNSET]: unset,
+  }
 
   if (Object.values(queries).some((query) => query.isPending)) {
     return <Card title="구성 현황"><Skeleton className="h-[7.5rem] rounded-radius-lg" /></Card>

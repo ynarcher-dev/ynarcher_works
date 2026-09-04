@@ -125,7 +125,6 @@ export const SENSITIVE_CONTENT_GROUPS: readonly SensitiveContentGroup[] = [
       // 곧 노출 확대다(DB에 남은 옛 키의 값은 읽히지 않을 뿐 지워지지 않는다).
       { key: 'networks.mine', label: '내 업로드 DB', fields: PERSON },
       { key: 'networks.all', label: '전체 네트워크 · 상세', fields: PERSON },
-      { key: 'networks.others', label: '미분류 데이터베이스', fields: PERSON },
     ],
   },
   { key: 'ac', label: 'AC', contents: programContents('ac', '사업') },

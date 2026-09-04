@@ -19,7 +19,7 @@ export interface NetworkPersonHit {
   id: string
   name: string
   affiliation: string | null
-  /** 구분 라벨(전문가/투자사/기관 등). 미분류면 빈 문자열. */
+  /** 구분 라벨(전문가/투자사/기관 등). 구분이 비어 있으면 빈 문자열. */
   categoryLabel: string
 }
 

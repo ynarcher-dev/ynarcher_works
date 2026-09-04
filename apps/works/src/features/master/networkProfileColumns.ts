@@ -69,20 +69,3 @@ export const NETWORK_ORG_COLUMNS: MasterColumn[] = NETWORK_PROFILE_COLUMNS.filte
   (c) => !ORG_OMIT_COLUMNS.has(c.name),
 ).flatMap((c) => (c.name === 'affiliation' ? [c, ORG_DEPARTMENT_COLUMN] : [c]))
 
-/**
- * 미분류 목록 컬럼. 분류가 없거나 미분류 상태로 유입된 인물이 모이는 임시 저장소로,
- * 목록에서 바로 '구분'을 선택해 대상 네트워크로 이관할 수 있도록 구분을 드롭다운(kind: 'category')으로
- * 노출한다. 영역/활동/만족도/매칭 등 개인 지표는 배정 전이라 표시하지 않는다.
- * (생성자·수정일·관리 컬럼은 DataTable이 자동 렌더한다.)
- */
-export const NETWORK_UNCLASSIFIED_COLUMNS: MasterColumn[] = [
-  { name: 'name', label: '이름', mask: 'name', type: 'name' },
-  { name: 'affiliation', label: '소속', type: 'long' },
-  { name: 'profile.department', label: '부서명', type: 'text' },
-  { name: 'profile.position', label: '직책/직급', type: 'text' },
-  { name: 'email', label: '이메일', mask: 'email', type: 'text' },
-  { name: 'phone', label: '연락처', mask: 'phone', type: 'text' },
-  { name: 'country_label', label: '국가', type: 'text' },
-  // 구분은 인라인 드롭다운(Select)이 들어가는 열이라 태그 열보다 넓게 — long.
-  { name: 'category', label: '구분', kind: 'category', type: 'long' },
-]

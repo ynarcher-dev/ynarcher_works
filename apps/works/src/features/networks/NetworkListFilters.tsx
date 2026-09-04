@@ -3,8 +3,7 @@ import { useMemo } from 'react'
 import { useTags } from '@/features/admin/hooks'
 import { useCountryOptions } from '@/features/networks/countryOptions'
 import {
-  CATEGORY_LABEL,
-  CATEGORY_ORDER,
+  CATEGORY_FILTER_OPTIONS,
   REGION_SCOPE_OPTIONS,
   REGION_TAG_TABLE,
 } from '@/features/networks/config'
@@ -19,8 +18,6 @@ import {
 interface NetworkListFiltersProps {
   filters: NetworkFilterState
   onChange: (next: NetworkFilterState) => void
-  /** 미분류 목록처럼 구분이 이미 고정된 화면에서는 구분 축을 세우지 않는다. */
-  showCategory?: boolean
 }
 
 /**
@@ -38,22 +35,10 @@ interface NetworkListFiltersProps {
  *
  * 영역 선택지는 ADMIN 태그 원장(field_tags)에서 읽는다(코드에 목록을 박지 않는다).
  */
-export function NetworkListFilters({
-  filters,
-  onChange,
-  showCategory = true,
-}: NetworkListFiltersProps) {
+export function NetworkListFilters({ filters, onChange }: NetworkListFiltersProps) {
   const { data: fieldTags } = useTags('field_tags')
   const { data: regionTags } = useTags(REGION_TAG_TABLE)
   const { data: countries } = useCountryOptions()
-
-  // 은퇴 구분(vendors)은 새로 고를 이유가 없어 선택지에서만 빠지고 목록에는 그대로 담긴다.
-  // 라벨은 구분 이름 그대로다 — 필터 이름이 이미 '구분'이라 항목마다 '네트워크'를 붙이면
-  // 같은 말이 두 번 서고, 표의 구분 열에 찍히는 값과도 표기가 어긋난다.
-  const categoryOptions = useMemo(
-    () => CATEGORY_ORDER.map((key) => ({ value: key, label: CATEGORY_LABEL[key] })),
-    [],
-  )
 
   const fieldOptions = useMemo(
     () => (fieldTags ?? []).map((t) => ({ value: t.name, label: t.name })),
@@ -128,14 +113,17 @@ export function NetworkListFilters({
         </>
       )}
 
-      {showCategory && (
-        <MultiSelectFilter
-          label="구분"
-          options={categoryOptions}
-          selected={filters.categories}
-          onChange={(categories) => onChange({ ...filters, categories })}
-        />
-      )}
+      {/* 구분 선택지 끝에 '미지정'이 함께 선다(CATEGORY_FILTER_OPTIONS) — 구분이 비어 있는
+          행을 찾는 일은 같은 물음의 마지막 답이라 축을 따로 만들지 않는다. 은퇴 구분(vendors)은
+          새로 고를 이유가 없어 선택지에서만 빠지고 목록에는 그대로 담긴다. 라벨은 구분 이름
+          그대로다 — 필터 이름이 이미 '구분'이라 항목마다 '네트워크'를 붙이면 같은 말이 두 번
+          서고, 표의 구분 열에 찍히는 값과도 표기가 어긋난다. */}
+      <MultiSelectFilter
+        label="구분"
+        options={CATEGORY_FILTER_OPTIONS}
+        selected={filters.categories}
+        onChange={(categories) => onChange({ ...filters, categories })}
+      />
 
       <MultiSelectFilter
         label="영역"

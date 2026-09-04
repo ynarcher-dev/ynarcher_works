@@ -66,8 +66,9 @@ export function ExternalAttendeeSearchModal({
   const debouncedKeyword = useDebounced(keyword)
   const { data: hits, isFetching } = useNetworkPeopleSearch(debouncedKeyword, open)
 
-  // 간이 등록 폼(이름·소속·구분). 구분은 저장 대상 원장이 아니라 한 컬럼의 값이며,
-  // 비워 두면 미분류로 들어가 나중에 미분류 데이터베이스에서 지정한다.
+  // 간이 등록 폼(이름·소속·구분). 구분은 저장 대상 원장이 아니라 한 컬럼의 값이고, 여기서
+  // 반드시 고른다 — 나중에 모아서 분류하던 자리(미분류 데이터베이스)를 접었으므로(2026-09-04)
+  // 만드는 시점이 구분을 정하는 유일한 자리다.
   const [newName, setNewName] = useState('')
   const [newAffiliation, setNewAffiliation] = useState('')
   const [newCategory, setNewCategory] = useState<NetworkCategory | ''>('')
@@ -96,6 +97,10 @@ export function ExternalAttendeeSearchModal({
       toast.show('이름을 입력하세요.', 'warning')
       return
     }
+    if (!newCategory) {
+      toast.show('구분을 선택하세요.', 'warning')
+      return
+    }
     try {
       // 이미 동일 이름이 있으면 새로 만들지 않고 검색해서 고르도록 안내한다.
       if (await checkDuplicateName(name)) {
@@ -105,7 +110,7 @@ export function ExternalAttendeeSearchModal({
       const createdId = await create.mutateAsync({
         name,
         affiliation: newAffiliation.trim() || null,
-        category: newCategory || null,
+        category: newCategory,
       })
       // 방금 만든 레코드의 참조를 그대로 담는다 — 이름을 베껴 적으면 상호참조가 끊긴다.
       onAdd({
@@ -115,10 +120,7 @@ export function ExternalAttendeeSearchModal({
         label: name,
         code: newAffiliation.trim() || null,
       })
-      toast.show(
-        `${categoryLabel(newCategory) || '미분류'}(으)로 등록하고 참석자로 추가했습니다.`,
-        'success',
-      )
+      toast.show(`${categoryLabel(newCategory)}(으)로 등록하고 참석자로 추가했습니다.`, 'success')
       setNewName('')
       setNewAffiliation('')
     } catch {
@@ -237,8 +239,8 @@ export function ExternalAttendeeSearchModal({
                 onChange={(e) => setNewCategory(e.target.value as NetworkCategory | '')}
                 aria-label="구분"
               >
-                {/* 비워 두면 미분류로 들어간다 — 회의 중에 구분까지 정하게 하지 않는다. */}
-                <option value="">미분류</option>
+                {/* 고르지 않으면 등록 버튼이 서지 않는다 — 뒤에 모아서 분류할 자리가 없다. */}
+                <option value="">구분 선택</option>
                 {CATEGORY_OPTIONS.map((o) => (
                   <option key={o.key} value={o.key}>
                     {o.label}
@@ -246,7 +248,10 @@ export function ExternalAttendeeSearchModal({
                 ))}
               </Select>
             </div>
-            <Button onClick={submitCreate} disabled={create.isPending || !newName.trim()}>
+            <Button
+              onClick={submitCreate}
+              disabled={create.isPending || !newName.trim() || !newCategory}
+            >
               {create.isPending ? '등록 중…' : '등록 후 추가'}
             </Button>
           </div>

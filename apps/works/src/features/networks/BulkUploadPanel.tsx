@@ -13,7 +13,12 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState, type DragEvent } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useTags } from '@/features/admin/hooks'
-import { CATEGORY_OPTIONS, NETWORK_TABLE, type NetworkCategory } from '@/features/networks/config'
+import {
+  CATEGORY_OPTIONS,
+  NETWORK_TABLE,
+  suggestCategory,
+  type NetworkCategory,
+} from '@/features/networks/config'
 import { useCountryOptions } from '@/features/networks/countryOptions'
 import { createUploadBatch, findPriorBatchByHash } from '@/features/networks/hooks'
 import {
@@ -29,14 +34,19 @@ import {
 } from '@/features/networks/bulkUpload'
 import { BulkReviewTable, type Decision, type ReviewRow } from '@/features/networks/BulkReviewTable'
 
-// 선택지 값은 저장되는 코드 그대로다. 빈 값은 미분류(구분을 정하지 않고 올린다).
+/**
+ * 구분 선택지. 값은 저장되는 코드 그대로이고, 선두의 빈 값은 저장되는 값이 아니라 '아직
+ * 고르지 않았다'는 표시다 — 종전에는 이 자리가 '미분류'였고 그대로 올리면 분류 대기열로
+ * 떨어졌다. 그 대기열(미분류 데이터베이스)을 접은 지금(2026-09-04) 구분이 정해지는 자리는
+ * 올리는 이 화면 하나뿐이라, 빈 칸이 남아 있으면 업로드 자체가 막힌다.
+ */
 const CATEGORY_SELECT = [
-  { value: '', label: '미분류' },
+  { value: '', label: '구분 선택' },
   ...CATEGORY_OPTIONS.map((o) => ({ value: o.key, label: o.label })),
 ]
 
 /**
- * 중복 매칭 시 구분 재결정의 프리셋: 기존이 미분류면 CSV 구분, 이미 구분이 있으면 기존 값(보수적).
+ * 중복 매칭 시 구분 재결정의 프리셋: 기존 구분이 있으면 그 값(보수적), 없으면 파일에서 온 값.
  * 통합 원장에서는 구분이 한 칸의 값이라 이 선택이 행 이동을 뜻하지 않는다.
  */
 function presetCategory(fromCsv: NetworkCategory | null, match: ExistingRef): NetworkCategory | '' {
@@ -44,7 +54,7 @@ function presetCategory(fromCsv: NetworkCategory | null, match: ExistingRef): Ne
 }
 
 /**
- * 대용량 업로드(미분류 데이터베이스 하위). 드래그앤드랍 → 리뷰(구분 재결정·중복·결정) → 업로드.
+ * 대용량 업로드(네트워크 목록 상단 버튼으로 진입). 드래그앤드랍 → 리뷰(구분 확정·중복·결정) → 업로드.
  * 합치기+같은구분=보강, 합치기+다른구분=재분류 이관+보강, 신규=새 등록, 건너뛰기=무시.
  */
 export function BulkUploadPanel() {
@@ -100,7 +110,11 @@ export function BulkUploadPanel() {
         const hit = countryByName.get(r.country.trim().toLowerCase())
         return {
           ...r,
-          targetCategory: (csvCategory(r.category) ?? '') as NetworkCategory | '',
+          // 파일에 구분이 없으면 소속·이메일 도메인으로 추천해 미리 채운다 — 사람이 고쳐 쓰는
+          // 출발점이지 확정이 아니고, 추천이 없으면 빈 칸으로 남아 업로드를 막는다.
+          targetCategory: (csvCategory(r.category) ??
+            suggestCategory(r.affiliation, r.email) ??
+            '') as NetworkCategory | '',
           countryTagId: hit?.id ?? null,
           countryLabel: hit?.name ?? r.country.trim(),
           match: null,
@@ -123,7 +137,10 @@ export function BulkUploadPanel() {
             match: m,
             // 비활성 중복은 기본 건너뛰기(보수적) — 복구는 명시적으로 선택.
             decision: !r.name ? 'skip' : m.deleted ? 'skip' : 'merge',
-            targetCategory: presetCategory(csvCategory(r.category), m),
+            targetCategory: presetCategory(
+              csvCategory(r.category) ?? suggestCategory(r.affiliation, r.email),
+              m,
+            ),
           }
         }),
       )
@@ -191,10 +208,16 @@ export function BulkUploadPanel() {
   // 아직 복구하기를 누르지 않은 비활성 매칭 — 미업로드(건너뜀) 표시에서 분리해 별도 노출.
   const deletedPending = rows.filter((r) => r.match?.deleted && !revivedLines.includes(r.line)).length
   const displaySkip = skipCount - deletedPending
+  // 실제로 올라가는 행 중 구분이 빈 것 — 여기가 구분을 정하는 마지막 문이라 통과시키지 않는다.
+  const missingCategory = [...newRows, ...mergeRows].filter((r) => !r.targetCategory)
 
   const commit = async () => {
     if (newRows.length === 0 && mergeRows.length === 0) {
       toast.show('처리할 행이 없습니다.', 'warning')
+      return
+    }
+    if (missingCategory.length > 0) {
+      toast.show(`구분이 비어 있는 행이 ${missingCategory.length}건 있습니다.`, 'warning')
       return
     }
     setBusy(true)
@@ -324,7 +347,10 @@ export function BulkUploadPanel() {
             </div>
             <div className="flex gap-2">
               <Button variant="secondary" onClick={reset} disabled={busy}>다시 선택</Button>
-              <Button onClick={() => void commit()} disabled={busy || checking}>
+              <Button
+                onClick={() => void commit()}
+                disabled={busy || checking || missingCategory.length > 0}
+              >
                 최종 업로드 ({newRows.length + mergeRows.length})
               </Button>
             </div>
@@ -334,6 +360,15 @@ export function BulkUploadPanel() {
             <Banner tone="warning">
               동일한 내용의 파일이 <b>{priorUpload.created_at.slice(0, 10)}</b>에 이미 업로드된 이력이
               있습니다{priorUpload.filename ? ` (${priorUpload.filename})` : ''}. 중복 업로드가 아닌지 확인하세요.
+            </Banner>
+          )}
+
+          {/* 왜 못 누르는지를 말하는 차단 안내라 접지 않는다(CLAUDE.md 안내 문구 규칙). */}
+          {missingCategory.length > 0 && (
+            <Banner tone="warning">
+              구분이 비어 있는 행이 <b>{missingCategory.length}건</b> 있습니다. 각 행의 구분을 고른 뒤
+              올릴 수 있습니다 — 올린 다음에 모아서 분류하는 자리는 없습니다(행을 선택해 '구분 일괄'로
+              한 번에 지정할 수 있습니다).
             </Banner>
           )}
 

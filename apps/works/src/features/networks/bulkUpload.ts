@@ -144,7 +144,7 @@ export interface ExistingRef {
   affiliation: string | null
   expertise: unknown[]
   profile: Record<string, unknown>
-  /** 기존 레코드의 현재 구분 코드. null이면 미분류. */
+  /** 기존 레코드의 현재 구분 코드. null이면 구분 미지정. */
   category: NetworkCategory | null
   /** 기존 레코드의 현재 국가 태그. null이면 국가 미확인. */
   countryTagId: string | null
@@ -388,7 +388,7 @@ export function rowToPayload(
   }
 }
 
-/** CSV의 구분 원값 → 코드. 알 수 없으면 미분류(null). */
+/** CSV의 구분 원값 → 코드. 알 수 없으면 null(리뷰 화면에서 사람이 채운다). */
 export function csvCategory(raw: string): NetworkCategory | null {
   return resolveCategory(raw)
 }

@@ -2,7 +2,12 @@ import { useQuery } from '@tanstack/react-query'
 import { Globe2, MapPin } from 'lucide-react'
 import { Card, Skeleton, SummaryTile, type SummaryTileTone } from '@ynarcher/ui'
 import { REGION_TAG_TABLE } from '@/features/networks/config'
-import type { NetworkFilterState, NetworkSearchScope } from '@/features/networks/filters'
+import {
+  categoryCodes,
+  wantsUncategorized,
+  type NetworkFilterState,
+  type NetworkSearchScope,
+} from '@/features/networks/filters'
 import type { NetworkListScope } from '@/features/networks/hooks'
 import { supabase } from '@/lib/supabase'
 
@@ -51,8 +56,9 @@ export function RegionFilteredSummary({
           p_keyword: keyword.trim() || null,
           p_limit: 5000,
           p_offset: 0,
-          p_categories: filters.categories.length ? filters.categories : null,
-          p_uncategorized: false,
+          // 구분 축은 코드와 '미지정'이 한 배열에 섞여 오므로 서버 인자 둘로 나눠 보낸다.
+          p_categories: categoryCodes(filters).length ? categoryCodes(filters) : null,
+          p_uncategorized: wantsUncategorized(filters) ? true : null,
           // 이 카드는 해외만 센다. 권역 축은 집계에서 빼야 타일이 필터로 동작한다.
           p_region_scope: ['OVERSEAS'],
           p_regions: null,

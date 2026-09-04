@@ -17,7 +17,7 @@ import type { ExistingRef, ParsedRow } from '@/features/networks/bulkUpload'
 export type Decision = 'new' | 'merge' | 'skip'
 
 export interface ReviewRow extends ParsedRow {
-  /** 편집 가능한 저장 대상 구분(코드). 빈 값이면 미분류. 중복이면 재결정의 출발점(보수적 프리셋). */
+  /** 편집 가능한 저장 대상 구분(코드). 빈 값이면 아직 고르지 않은 상태라 업로드가 막힌다. */
   targetCategory: NetworkCategory | ''
   /** CSV의 국가명을 태그 원장과 대조한 결과. 못 찾으면 null(국가 미확인). */
   countryTagId: string | null
@@ -98,7 +98,7 @@ function DupCell({ row, match, revived }: { row: ReviewRow; match: ExistingRef; 
   return (
     <div className="inline-flex items-center gap-2.5 whitespace-nowrap text-caption leading-snug">
       <Seg label="생성자" value={match.contributor ?? '미상'} widthCls="min-w-[6rem]" />
-      <Seg label="구분" value={categoryLabel(match.category) || '미분류'} widthCls="min-w-[6.5rem]" />
+      <Seg label="구분" value={categoryLabel(match.category) || '미지정'} widthCls="min-w-[6.5rem]" />
       <Seg label="중복" tone="warning" value={dups} />
     </div>
   )

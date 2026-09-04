@@ -17,7 +17,10 @@ import {
  */
 const STATUS_SLOTS: { key: string; label: string; category: NetworkCategory | null }[] = [
   ...CATEGORY_ORDER.map((key) => ({ key, label: CATEGORY_LABEL[key], category: key })),
-  { key: 'others', label: '미분류', category: null },
+  // 미지정은 구분이 아니라 구분이 비어 있는 상태다(저장값 null). 슬롯으로 세우는 것은 이
+  // 칸이 곧 채워 넣어야 할 일감의 크기이고, 전용 메뉴를 접은 뒤(2026-09-04) 그 크기가
+  // 보이는 자리가 여기와 목록의 구성 현황 타일뿐이기 때문이다.
+  { key: 'unset', label: '미지정', category: null },
 ]
 
 /** 이번 달 1일 0시(로컬) ISO — 전월 대비 증감 집계 하한. */
@@ -27,7 +30,7 @@ function startOfMonthISO(): string {
 }
 
 /**
- * 통합 원장 head 카운트(행 미전송). category=null이면 미분류만,
+ * 통합 원장 head 카운트(행 미전송). category=null이면 구분이 비어 있는 행만,
  * category를 주면 그 구분만, 생략하면 전체.
  */
 async function headCount(
@@ -63,7 +66,7 @@ export interface StatusItem {
 }
 
 export interface NetworksSummary {
-  /** 총보유(맨 앞) + 구분 8종 + 미분류. 표시 순서 고정. */
+  /** 총보유(맨 앞) + 구분 8종 + 미지정. 표시 순서 고정. */
   items: StatusItem[]
   /** 구분별 분포 도넛용(내림차순). */
   byCategory: { key: NetworkCategory; label: string; count: number }[]
@@ -184,7 +187,7 @@ export interface RecentNetworkRow {
   id: string
   name: string
   created_at: string
-  /** 구분 코드(배지 표기용). 미분류면 null. */
+  /** 구분 코드(배지 표기용). 구분이 비어 있으면 null. */
   category: NetworkCategory | null
 }
 
@@ -209,7 +212,7 @@ export function useRecentNetworks() {
 export interface ExpertRankRow {
   id: string
   name: string
-  /** 구분 라벨. 미분류면 빈 문자열. */
+  /** 구분 라벨. 구분이 비어 있으면 빈 문자열. */
   category: string
   /** 영역(expertise 태그). */
   fields: string[]

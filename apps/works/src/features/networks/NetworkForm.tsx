@@ -152,7 +152,7 @@ export function NetworkForm({
     },
   })
 
-  // 조직 유형이면 매칭/전문영역을 숨긴다. 미분류(빈 값)도 분류 전이라 같은 축약 형태다.
+  // 조직 유형이면 매칭/전문영역을 숨긴다. 구분이 비어 있는 값도 같은 축약 형태다.
   const selectedCategory = watch('category')
   const compact = isCompactCategory(selectedCategory || null)
 

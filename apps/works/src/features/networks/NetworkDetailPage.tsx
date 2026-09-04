@@ -60,7 +60,7 @@ function formatDate(v: unknown): string {
 
 /**
  * 네트워크 상세 뷰(읽기 전용 카드). 전 구분·전 국가 공용 한 벌이다.
- * 축약(compact) 유형(조직형 + 미분류)은 매칭 배지·전문영역 섹션을 숨긴다.
+ * 축약(compact) 유형(조직형 + 구분 미지정)은 매칭 배지·전문영역 섹션을 숨긴다.
  */
 function NetworkView({ record }: { record: NetworkRow }) {
   const category = (record.category as string) ?? ''

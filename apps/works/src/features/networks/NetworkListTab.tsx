@@ -20,7 +20,7 @@ import {
 } from '@/features/networks/hooks'
 import { toggleAxisValue } from '@/lib/filterAxis'
 
-/** 목록 페이지당 행 수(미분류 목록과 동일). */
+/** 목록 페이지당 행 수. */
 const PAGE_SIZE = 30
 
 /**
@@ -44,7 +44,8 @@ interface NetworkListTabProps {
  * 원장이 하나이므로(2026-09-04 통합) 국내·해외가 한 표에 서고, 갈리는 것은 필터 축
  * (지역·구분)뿐이다. '내 업로드 DB'와 '전체 네트워크'가 이 화면 하나를 공유하며 범위로만
  * 갈린다 — 두 메뉴가 답해야 하는 것이 같으므로 열도 필터도 검색도 같아야 한다.
- * 미분류(구분 없음)는 분류 대기 작업 대기열이라 자기 메뉴(UnclassifiedTab)를 갖는다.
+ * 구분이 비어 있는 행도 이 목록에 담기며, 그것만 보려면 구분 필터의 '미지정'을 건다
+ * (2026-09-04 전용 메뉴 폐지 — 분류는 자리가 아니라 축이다).
  */
 export function NetworkListTab({ scope }: NetworkListTabProps) {
   const navigate = useNavigate()

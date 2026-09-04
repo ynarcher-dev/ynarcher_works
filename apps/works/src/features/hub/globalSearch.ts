@@ -220,9 +220,9 @@ async function searchNetworks(kw: string, overrides: MaskOverrides): Promise<Sea
       id: `network:${row.id}`,
       name: displaySensitive(overrides, contentKey, 'name', row.name),
       kind: 'network' as const,
-      detail: detail(['데이터베이스', label || '미분류', row.country?.name ?? null, row.affiliation]),
-      badge: label || '미분류',
-      // 미분류는 아직 자리를 못 찾은 행이라 다른 톤으로 남겨 눈에 걸리게 한다.
+      detail: detail(['데이터베이스', label || '미지정', row.country?.name ?? null, row.affiliation]),
+      badge: label || '미지정',
+      // 구분이 비어 있는 행은 아직 채워지지 않은 자리라 다른 톤으로 남겨 눈에 걸리게 한다.
       tone: (label ? 'success' : 'warning') as BadgeTone,
       path: `/networks/record/${row.id}`,
     }

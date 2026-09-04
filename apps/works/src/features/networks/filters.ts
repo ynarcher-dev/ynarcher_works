@@ -9,13 +9,19 @@
  * 거를 수 없는 것으로 거르는 칸은 고를 수 있다고 말하는 죽은 컨트롤이 된다.
  */
 
+import { CATEGORY_UNSET } from '@/features/networks/config'
+
 /**
  * 통합 목록 필터. 값은 모두 저장값(코드·태그 id)이며 화면에는 라벨이 보인다.
  * 레인지 값은 입력 그대로의 문자열로 들고 있다가 조회 직전에 숫자로 바꾼다 —
  * 빈 칸("경계 없음")과 0을 숫자 타입 하나로는 구분할 수 없다.
  */
 export interface NetworkFilterState {
-  /** 구분 다중선택(category 코드). 미분류는 자기 메뉴가 있으므로 여기에 두지 않는다. */
+  /**
+   * 구분 다중선택. 값은 category 코드이며, 구분이 비어 있는 행을 찾는 'UNSET'(미지정)도
+   * 같은 축에 담긴다 — 같은 물음('어떤 구분인가')의 마지막 답이라 축을 따로 만들지 않는다.
+   * 서버는 두 값을 OR로 합쳐 판정한다(20260904140000).
+   */
   categories: string[]
   /**
    * 지역 다중선택. 값은 DOMESTIC | OVERSEAS | UNSET(국가 미확인)이다.
@@ -67,6 +73,16 @@ export function showsOverseasAxes(f: NetworkFilterState): boolean {
 /** 지역 축에서 국가 미확인을 뺀 실제 지역 값(서버 인자로 나가는 값). */
 export function regionScopeValues(f: NetworkFilterState): string[] {
   return f.regionScopes.filter((v) => v !== 'UNSET')
+}
+
+/** 구분 축에서 '미지정'을 뺀 실제 구분 코드(서버 인자 p_categories로 나가는 값). */
+export function categoryCodes(f: NetworkFilterState): string[] {
+  return f.categories.filter((v) => v !== CATEGORY_UNSET)
+}
+
+/** 구분 축에 '미지정'이 걸려 있는가(서버 인자 p_uncategorized). */
+export function wantsUncategorized(f: NetworkFilterState): boolean {
+  return f.categories.includes(CATEGORY_UNSET)
 }
 
 /** 지역 축에 '국가 미확인'이 걸려 있는가. */
