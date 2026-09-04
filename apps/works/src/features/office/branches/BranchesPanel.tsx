@@ -34,9 +34,19 @@ export function BranchesPanel() {
   const pageRows = filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE)
 
   // 폭·정렬은 열마다의 종류(type)가 정한다(2026-08 디자인 리프레시, ADMIN 지사 관리와 동일 규격).
+  // 오른쪽 정렬인 수치 열(상주인력)은 맨 끝에 둔다 — 가운데 두면 오른쪽 끝에 붙은 '3명'과 바로
+  // 다음 열 왼쪽에 붙은 전화번호가 맞닿아 두 값이 한 덩어리로 읽힌다. 열 순서도 ADMIN '지사
+  // 관리'(지사명·주소·전화번호·상주인력)와 같아진다.
   const columns: Column<Branch>[] = [
     { key: 'name', header: '지사명', primary: true, type: 'name', render: (b) => b.name },
     { key: 'address', header: '주소', type: 'long', render: (b) => b.address ?? <EmptyValue /> },
+    {
+      key: 'phone',
+      header: '전화번호',
+      type: 'text',
+      render: (b) =>
+        b.phone ? <span className="tabular-nums">{b.phone}</span> : <EmptyValue />,
+    },
     {
       key: 'memberCount',
       header: '상주인력',
@@ -46,13 +56,6 @@ export function BranchesPanel() {
         const count = entriesOf(b.id).length
         return count > 0 ? `${count}명` : <EmptyValue />
       },
-    },
-    {
-      key: 'phone',
-      header: '전화번호',
-      type: 'text',
-      render: (b) =>
-        b.phone ? <span className="tabular-nums">{b.phone}</span> : <EmptyValue />,
     },
   ]
 
