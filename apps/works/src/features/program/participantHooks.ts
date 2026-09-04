@@ -21,8 +21,14 @@ export type ParticipantLoginStatus =
   | 'ACTIVE'
   | 'BLOCKED'
 
-/** 원장 출처. 내부 임직원 참가자는 원장이 없다(null). */
-export type MasterTable = 'startups' | 'experts'
+/**
+ * 원장 출처. 내부 임직원 참가자는 원장이 없다(null).
+ *
+ * 2026-09-04 원장 통합 전에는 'experts'였다 — 그때는 원장 이름 하나가 '어느 표인가'와
+ * '전문가인가'를 함께 답했다. 지금은 표가 'networks' 하나이고 전문가인지는 그 행의
+ * category가 답하므로, 후보 조회에 구분 조건을 함께 건다(아래 useMasterCandidates).
+ */
+export type MasterTable = 'startups' | 'networks'
 
 export interface ParticipantRow {
   id: string
@@ -117,14 +123,14 @@ export function useProgramParticipants(programId: string | undefined) {
       const rows = (data ?? []) as unknown as RawParticipant[]
 
       const startupIds = rows.filter((r) => r.master_table === 'startups' && r.master_id).map((r) => r.master_id!)
-      const expertIds = rows.filter((r) => r.master_table === 'experts' && r.master_id).map((r) => r.master_id!)
+      const expertIds = rows.filter((r) => r.master_table === 'networks' && r.master_id).map((r) => r.master_id!)
 
       const [startupsRes, expertsRes] = await Promise.all([
         startupIds.length
           ? supabase.from('startups').select('id, name, representative, email, phone, management_status').in('id', startupIds)
           : Promise.resolve({ data: [] }),
         expertIds.length
-          ? supabase.from('experts').select('id, name, affiliation, email, phone').in('id', expertIds)
+          ? supabase.from('networks').select('id, name, affiliation, email, phone').in('id', expertIds)
           : Promise.resolve({ data: [] }),
       ])
 
@@ -133,7 +139,7 @@ export function useProgramParticipants(programId: string | undefined) {
 
       return rows.map((r) => {
         const startup = r.master_table === 'startups' && r.master_id ? startups.get(r.master_id) : undefined
-        const expert = r.master_table === 'experts' && r.master_id ? experts.get(r.master_id) : undefined
+        const expert = r.master_table === 'networks' && r.master_id ? experts.get(r.master_id) : undefined
         // 연락처는 원장 화면이 쓰는 자리(email·phone 컬럼)에서만 읽는다. 옛 contact jsonb는
         // 어느 화면도 읽지 않는 레거시라, 그쪽을 보면 명부와 원장이 서로 다른 값을 말한다.
         const master = startup ?? expert
@@ -175,7 +181,12 @@ export function useMasterCandidates(
       const base =
         master === 'startups'
           ? supabase.from('startups').select('id, name, representative, email, phone, management_status')
-          : supabase.from('experts').select('id, name, affiliation, email, phone')
+          : // 후보는 전문가 구분으로 좁힌다 — 통합 전에도 참가자로 붙던 것은 전문가 원장뿐이라,
+            // 여기서 전 구분을 열면 명부에 담기는 대상이 조용히 넓어진다(넓히려면 별도 결정).
+            supabase
+              .from('networks')
+              .select('id, name, affiliation, email, phone')
+              .eq('category', 'experts')
 
       let query = base.is('deleted_at', null).order('name', { ascending: true }).limit(50)
       const kw = sanitizeOrValue(term)

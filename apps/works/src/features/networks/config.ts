@@ -1,16 +1,31 @@
 import type { MaskKind, MasterColumn } from '@/features/master/types'
 import {
   NETWORK_ORG_COLUMNS,
-  NETWORK_OTHERS_COLUMNS,
   NETWORK_PROFILE_COLUMNS,
+  NETWORK_UNCLASSIFIED_COLUMNS,
 } from '@/features/master/networkProfileColumns'
 
 /**
- * NETWORKS 마스터 엔티티 키.
- * - 화면 노출 8종은 `ENTITY_ORDER`가 원천이며, `partners`는 HUB 조회 하위호환용으로만 유지한다.
+ * NETWORKS 통합 원장.
+ *
+ * 종전에는 구분마다 물리 테이블이 있었고(국내 10종) 해외는 별도 원장이었다. 2026-09-04에
+ * `public.networks` 하나로 합치고 **구분(category)과 국가(country_tag_id)를 직교한 두 축**으로
+ * 세웠다 — 그래야 해외 대학·국내 기업이 같은 문법으로 선다. 한국도 다른 나라와 같은 국가
+ * 한 줄이며, 국내/해외(region_scope)는 그 국가에서 파생되는 값이라 사람이 고르지 않는다.
+ * 설계 정본: docs/docs_planning/3_3_4_networks_unified_ledger.md
  */
-export type EntityKey =
-  | 'startups'
+export const NETWORK_TABLE = 'networks'
+
+/** 권역/국가 기준정보 태그 테이블(ADMIN 관리). 국가는 전 행이 갖고, 권역은 국가가 갖는다. */
+export const REGION_TAG_TABLE = 'region_tags'
+export const COUNTRY_TAG_TABLE = 'country_tags'
+
+/**
+ * 구분 코드. 값은 원장 컬럼 `category`에 그대로 저장되며 라벨은 이 파일이 소유한다.
+ * `null`은 미분류(분류 전 임시 상태)이므로 이 타입에 넣지 않는다 — 값이 없다는 사실을
+ * 값 하나로 표현하면 "미분류라는 구분"이 생겨 다시 카테고리가 된다.
+ */
+export type NetworkCategory =
   | 'experts'
   | 'van'
   | 'exp'
@@ -18,165 +33,45 @@ export type EntityKey =
   | 'corporates'
   | 'institutions'
   | 'universities'
-  | 'vendors'
   | 'etc'
-  | 'others'
-  | 'partners'
+  | 'vendors'
 
-export interface EntityField {
-  name: string
-  label: string
-  required?: boolean
-  /** 개인정보 목록 마스킹 유형(목록 셀에만 적용, 상세/폼은 원본). */
-  mask?: MaskKind
-  /**
-   * 지정 시 폼에서 자유 입력 대신 해당 태그 원장(*_tags)의 태그를 선택한다(ADMIN 태그 관리 연동).
-   * 예: 'investment_stage_tags'. 목록에 없는 레거시 값은 현재값으로 보존 노출된다.
-   */
-  tagTable?: string
+/** 국내/해외. 국가에서 파생되어 저장되는 값이며 화면이 직접 고르지 않는다. */
+export type RegionScope = 'DOMESTIC' | 'OVERSEAS'
+
+export const REGION_SCOPE_LABEL: Record<RegionScope, string> = {
+  DOMESTIC: '국내',
+  OVERSEAS: '해외',
 }
 
 /**
- * 네트워크 8종 공용 인물 중심 필드(업로드 양식 통일).
- * 소속 조직이 아니라 담당자(사람)를 원장으로 관리한다. 부서/직책/구분은 `profile`(jsonb)에,
- * 이름·소속·이메일·연락처는 스칼라 컬럼에 저장한다(experts와 동일 스키마).
+ * 목록의 지역 필터 선택지. 'UNSET'은 저장값이 아니라 조회 축이다 — 국가를 아직 모르는
+ * 옛 데이터를 모아 채워 넣는 자리이며, 같은 물음의 세 번째 답이라 별도 축을 만들지 않는다.
  */
-const PERSON_FIELDS: EntityField[] = [
-  { name: 'name', label: '이름', required: true, mask: 'name' },
-  { name: 'affiliation', label: '소속' },
-  { name: 'profile.department', label: '부서명' },
-  { name: 'profile.position', label: '직책/직급' },
-  { name: 'email', label: '이메일', mask: 'email' },
-  { name: 'phone', label: '연락처', mask: 'phone' },
-  { name: 'profile.category', label: '구분' },
+export const REGION_SCOPE_OPTIONS: { value: RegionScope | 'UNSET'; label: string }[] = [
+  { value: 'DOMESTIC', label: '국내' },
+  { value: 'OVERSEAS', label: '해외' },
+  { value: 'UNSET', label: '국가 미확인' },
 ]
 
-export interface EntityConfig {
-  key: EntityKey
-  label: string
-  table: EntityKey
-  /** 폼/상세 대상 스칼라 필드(JSONB 부속 필드는 상세에서 별도 처리). */
-  fields: EntityField[]
-  /**
-   * 목록 표시 컬럼 재정의. 미지정 시 `fields`를 그대로 목록 컬럼으로 사용한다.
-   * 전문가·VAN·투자자는 공용 프로필 컬럼(구분/영역/활동/매칭/만족도)을 목록에 노출하되
-   * 등록·상세 폼은 `fields`를 유지한다.
-   */
-  listColumns?: MasterColumn[]
-}
-
-/** NETWORKS 마스터 엔티티 정의(등록 폼·목록 컬럼 공통 원천). */
-export const ENTITIES: Record<EntityKey, EntityConfig> = {
-  /**
-   * 스타트업은 NETWORKS 마스터의 한 종류였던 시절의 잔재다. 지금 업무 화면·등록 폼·업로드는 모두
-   * STARTUP 워크스페이스가 소유하며(StartupDetailForm / features/bulk), 이 엔트리는 라벨만 쓰인다
-   * (미분류 흡수 판정 `resolveEntityFromCategory`가 '스타트업' 라벨을 만났을 때).
-   *
-   * 여기에 필드 목록을 두면 안 된다 — 실제로 쓰이지 않으면서 STARTUP의 현행 항목(분야는 배열
-   * `industries`, 구분은 4분류 코드)과 어긋난 옛 정의가 정본처럼 남는다. `ENTITY_ORDER`에
-   * 없으므로 목록·폼·임포터 어디서도 이 fields를 읽지 않는다.
-   */
-  startups: {
-    key: 'startups',
-    label: '스타트업',
-    table: 'startups',
-    fields: [],
-  },
-  experts: {
-    key: 'experts',
-    label: '전문가',
-    table: 'experts',
-    fields: PERSON_FIELDS,
-    listColumns: NETWORK_PROFILE_COLUMNS,
-  },
-  van: {
-    key: 'van',
-    label: 'BAN',
-    table: 'van',
-    fields: PERSON_FIELDS,
-    listColumns: NETWORK_PROFILE_COLUMNS,
-  },
-  exp: {
-    key: 'exp',
-    label: 'EXP',
-    table: 'exp',
-    // 전문가(experts)와 동일한 프로필형 구조: 공용 프로필 컬럼·통합 폼·상세페이지를 공유한다.
-    fields: PERSON_FIELDS,
-    listColumns: NETWORK_PROFILE_COLUMNS,
-  },
-  investors: {
-    key: 'investors',
-    label: '투자사',
-    table: 'investors',
-    fields: PERSON_FIELDS,
-    listColumns: NETWORK_PROFILE_COLUMNS,
-  },
-  corporates: {
-    key: 'corporates',
-    label: '기업',
-    table: 'corporates',
-    fields: PERSON_FIELDS,
-    // 조직 유형: 영역·활동·만족도·매칭을 제외한 축약 컬럼(폼·상세 숨김과 대칭).
-    listColumns: NETWORK_ORG_COLUMNS,
-  },
-  institutions: {
-    key: 'institutions',
-    label: '기관',
-    table: 'institutions',
-    fields: PERSON_FIELDS,
-    listColumns: NETWORK_ORG_COLUMNS,
-  },
-  universities: {
-    key: 'universities',
-    label: '대학',
-    table: 'universities',
-    fields: PERSON_FIELDS,
-    listColumns: NETWORK_ORG_COLUMNS,
-  },
-  // 외주/거래: NETWORKS 화면에서는 은퇴(메뉴·대시보드·구분 옵션에서 제거)했으나
-  // 기존 vendors 레코드 조회 하위호환을 위해 정의만 유지한다.
-  vendors: {
-    key: 'vendors',
-    label: '외주/거래',
-    table: 'vendors',
-    fields: PERSON_FIELDS,
-    listColumns: NETWORK_ORG_COLUMNS,
-  },
-  etc: {
-    key: 'etc',
-    label: '기타',
-    table: 'etc',
-    fields: PERSON_FIELDS,
-    // 기타는 조직형(compact) 네트워크 — 조직 4종과 동일 컬럼(영역/활동/만족도/매칭 제외, 부서 노출).
-    listColumns: NETWORK_ORG_COLUMNS,
-  },
-  others: {
-    key: 'others',
-    label: '미분류',
-    table: 'others',
-    fields: PERSON_FIELDS,
-    // 미분류 데이터베이스(임시 저장소): 목록에서 구분을 드롭다운으로 골라 대상 네트워크로 이관한다.
-    listColumns: NETWORK_OTHERS_COLUMNS,
-  },
-  // 협력사: NETWORKS 화면에서는 은퇴(→ van 이관)했으나 HUB 조회 하위호환을 위해 정의만 유지한다.
-  partners: {
-    key: 'partners',
-    label: '협력사',
-    table: 'partners',
-    fields: [
-      { name: 'name', label: '협력사명', required: true },
-      { name: 'partner_type', label: '유형' },
-      { name: 'memo', label: '메모' },
-    ],
-  },
+export const CATEGORY_LABEL: Record<NetworkCategory, string> = {
+  experts: '전문가',
+  van: 'BAN',
+  exp: 'EXP',
+  investors: '투자사',
+  corporates: '기업',
+  institutions: '기관',
+  universities: '대학',
+  etc: '기타',
+  vendors: '외주/거래',
 }
 
 /**
- * '마스터 네트워크 관리'에 노출되는 분류 가능한 네트워크 카테고리(구분 옵션의 원천).
- * 스타트업은 STARTUP 워크스페이스로 분리, partners·vendors(외주/거래)는 은퇴하여 제외.
- * 미분류(others)는 카테고리가 아니라 임시 저장소(미분류 데이터베이스)이므로 여기서 제외한다.
+ * 등록·필터에 노출되는 구분(순서 = 화면 노출 순서).
+ * 외주/거래(`vendors`)는 은퇴했으므로 여기에 없다 — 기존 행은 목록에 계속 담기지만
+ * 새로 만들 수는 없다(카탈로그를 끄는 것과 문을 닫는 것은 다른 축이다).
  */
-export const ENTITY_ORDER: EntityKey[] = [
+export const CATEGORY_ORDER: NetworkCategory[] = [
   'van',
   'exp',
   'experts',
@@ -187,103 +82,94 @@ export const ENTITY_ORDER: EntityKey[] = [
   'etc',
 ]
 
-/**
- * 국내 통합 목록('내 업로드 DB (국내)' / '전체 네트워크 (국내)')이 담는 원장.
- * 분류 카테고리 8종 + 은퇴 원장(vendors) — 은퇴 원장은 메뉴도 필터 선택지도 없지만 기존
- * 레코드가 남아 있어, 여기서 빼면 어느 목록에서도 보이지 않는 행이 된다.
- * 글로벌과 미분류는 각자 자기 메뉴가 있으므로 이 목록에 섞지 않는다.
- */
-export const DOMESTIC_LIST_ENTITIES: EntityKey[] = [...ENTITY_ORDER, 'vendors']
+/** 은퇴 구분 — 값으로는 살아 있고 선택지로만 서지 않는다. */
+export const RETIRED_CATEGORIES: NetworkCategory[] = ['vendors']
 
-/**
- * 디렉토리(목록+상세)로 렌더되는 전체 엔티티.
- * 분류 카테고리(ENTITY_ORDER) + 미분류 데이터베이스(others 임시 저장소).
- * NetworksPage 탭 인식·상세 라우트·상세페이지 사용 판정의 단일 원천이다.
- */
-export const DIRECTORY_ENTITIES: EntityKey[] = [...ENTITY_ORDER, 'others']
+/** "구분" 드롭다운 옵션(등록 폼·미분류 인라인 지정·필터 공용). */
+export const CATEGORY_OPTIONS: { key: NetworkCategory; label: string }[] = CATEGORY_ORDER.map(
+  (key) => ({ key, label: CATEGORY_LABEL[key] }),
+)
 
-/**
- * 전문가 프로필 구조(사진·영역·구분·매칭·소개)를 공유하는 엔티티.
- * 업로드 양식 통일(Phase 15)로 8종 전부 experts와 동일한 컬럼
- * (email/phone/affiliation/expertise/profile)을 가지며, 공용 통합 폼(`NetworkForm`)과
- * 공용 상세페이지(`NetworkDetailPage`)를 동일 컴포넌트로 사용한다.
- */
-export const PROFILE_ENTITIES: EntityKey[] = [...DIRECTORY_ENTITIES]
-
-/** 해당 엔티티가 공용 프로필 상세페이지(모달 아님)를 사용하는지 여부. */
-export function isProfileEntity(key: EntityKey): boolean {
-  return PROFILE_ENTITIES.includes(key)
+/** 구분 코드의 표시 라벨. 미분류(null)와 알 수 없는 값은 빈 문자열로 둔다. */
+export function categoryLabel(value: string | null | undefined): string {
+  if (!value) return ''
+  return CATEGORY_LABEL[value as NetworkCategory] ?? value
 }
 
 /**
- * 축약(compact) 유형 — "구분"이 이들 중 하나이면 통합 폼·상세에서 매칭 가능여부·전문영역·
- * 멘토링 만족도를 숨긴다. 조직 유형(기업·기관·대학·기타, 은퇴한 외주/거래 포함)에 더해, 미분류(others)도
- * 분류 전 임시 저장소이므로 기업 네트워크처럼 간단한 항목만 노출한다.
+ * 축약(compact) 유형 — 조직형이라 매칭 가능여부·전문영역·만족도를 폼·상세에서 숨긴다.
+ * 미분류(null)도 분류 전 임시 상태이므로 같은 축약 형태를 쓴다.
  */
-export const COMPACT_ENTITIES: EntityKey[] = [
+const COMPACT_CATEGORIES = new Set<string>([
   'corporates',
   'institutions',
   'universities',
   'vendors',
   'etc',
-  'others',
+])
+
+export function isCompactCategory(category: string | null | undefined): boolean {
+  return category == null || COMPACT_CATEGORIES.has(category)
+}
+
+/** 목록 컬럼 — 통합 원장은 표가 하나이므로 구성도 하나다. */
+export const NETWORK_LIST_COLUMNS: MasterColumn[] = NETWORK_PROFILE_COLUMNS
+
+/** 조직형만 담기는 목록이 필요할 때(대시보드 미리보기 등) 쓰는 축약 구성. */
+export const NETWORK_ORG_LIST_COLUMNS: MasterColumn[] = NETWORK_ORG_COLUMNS
+
+/** 미분류 목록 컬럼(구분을 인라인 드롭다운으로 지정한다). */
+export const NETWORK_UNCLASSIFIED_LIST_COLUMNS: MasterColumn[] = NETWORK_UNCLASSIFIED_COLUMNS
+
+export interface NetworkField {
+  name: string
+  label: string
+  required?: boolean
+  /** 개인정보 목록 마스킹 유형(목록 셀에만 적용, 상세/폼은 원본). */
+  mask?: MaskKind
+  /** 지정 시 폼에서 자유 입력 대신 해당 태그 원장(*_tags)의 태그를 선택한다. */
+  tagTable?: string
+}
+
+/**
+ * 통합 원장의 인물 중심 공용 필드. 소속 조직이 아니라 담당자(사람)를 원장으로 관리한다.
+ * 이름·소속·이메일·연락처·링크드인은 스칼라 컬럼, 부서/직책은 `profile`(jsonb)에 저장한다.
+ * 구분·국가는 폼이 전용 컨트롤로 다루므로 이 목록에 넣지 않는다.
+ */
+export const NETWORK_FIELDS: NetworkField[] = [
+  { name: 'name', label: '이름', required: true, mask: 'name' },
+  { name: 'affiliation', label: '소속' },
+  { name: 'profile.department', label: '부서명' },
+  { name: 'profile.position', label: '직책/직급' },
+  { name: 'email', label: '이메일', mask: 'email' },
+  { name: 'phone', label: '연락처', mask: 'phone' },
+  { name: 'linkedin_url', label: '링크드인' },
 ]
 
-/** 통합 폼에서 매칭/전문영역을 숨기는 축약(조직) 유형인지 여부. */
-export function isCompactEntity(key: EntityKey): boolean {
-  return COMPACT_ENTITIES.includes(key)
-}
-
-/** 모달이 아닌 상세페이지에서 등록/수정하는 엔티티(카테고리 + 미분류 데이터베이스). */
-export function usesDetailPage(key: EntityKey): boolean {
-  return DIRECTORY_ENTITIES.includes(key)
-}
-
 /**
- * "구분" 드롭다운 옵션(라벨 → 엔티티 키). 통합 폼·CSV 임포터가 공유한다.
- * 선택한 라벨이 저장 대상 테이블을 결정한다. 미분류(others)도 포함해 통합 폼에서 레코드를
- * 미분류 데이터베이스로 되돌리거나 미분류 레코드를 올바르게 표시할 수 있게 한다.
- * (미분류 목록의 인라인 이관 드롭다운은 DirectoryTab에서 others를 걸러 실제 카테고리만 노출한다.)
+ * 자유 입력 "구분" 문자열(업로드 CSV·레거시 값)을 코드로 해석한다.
+ * 라벨과 코드를 모두 받아들이고, 알 수 없으면 `null`(미분류)로 흡수한다.
  */
-export const CATEGORY_OPTIONS: { key: EntityKey; label: string }[] = DIRECTORY_ENTITIES.map(
-  (key) => ({ key, label: ENTITIES[key].label }),
-)
-
-const CATEGORY_ALIASES: Record<string, EntityKey> = {
-  VAN: 'van',
-}
-
-export function displayCategoryLabel(value: unknown): unknown {
-  return value === 'VAN' ? ENTITIES.van.label : value
-}
-
-export function normalizeEntityRowCategory<T extends Record<string, unknown>>(row: T, table: EntityKey): T {
-  if (table !== 'van' || row.profile == null || typeof row.profile !== 'object') return row
-  const profile = row.profile as Record<string, unknown>
-  if (profile.category !== 'VAN') return row
-  return { ...row, profile: { ...profile, category: displayCategoryLabel(profile.category) } }
-}
-
-/**
- * "구분" 값(라벨)으로 저장 대상 엔티티 키를 해석한다.
- * ENTITY_ORDER 라벨과 매칭되지 않는 값(게스트·스타트업 등)은 미분류(others)로 흡수한다.
- */
-export function resolveEntityFromCategory(value: string | null | undefined): EntityKey {
+export function resolveCategory(value: string | null | undefined): NetworkCategory | null {
   const trimmed = (value ?? '').trim()
-  const alias = CATEGORY_ALIASES[trimmed]
-  if (alias) return alias
-  const found = CATEGORY_OPTIONS.find((o) => o.label === trimmed)
-  return found?.key ?? 'others'
+  if (!trimmed) return null
+  if (trimmed.toUpperCase() === 'VAN') return 'van'
+  const byCode = (Object.keys(CATEGORY_LABEL) as NetworkCategory[]).find((k) => k === trimmed)
+  if (byCode) return byCode
+  const byLabel = (Object.keys(CATEGORY_LABEL) as NetworkCategory[]).find(
+    (k) => CATEGORY_LABEL[k] === trimmed,
+  )
+  return byLabel ?? null
 }
 
 /**
- * 소속/이메일 도메인으로 추천 구분(엔티티 키)을 추정한다(미분류 일괄 분류 보조).
+ * 소속/이메일 도메인으로 추천 구분을 추정한다(미분류 일괄 분류 보조).
  * 확신이 낮으면 null(미분류 유지). 대학 › 투자사 › 기관 › 기업 순으로 판정한다.
  */
 export function suggestCategory(
   affiliation: string | null | undefined,
   email?: string | null,
-): EntityKey | null {
+): NetworkCategory | null {
   const domain = (email ?? '').split('@')[1] ?? ''
   const hay = `${affiliation ?? ''} ${domain}`.toLowerCase().trim()
   if (!hay) return null
@@ -297,16 +183,15 @@ export function suggestCategory(
   return null
 }
 
-/** 민감정보 접근 로그(access_logs)용 리소스 타입(8종 전체). */
-export const PROFILE_RESOURCE_TYPE: Partial<Record<EntityKey, string>> = {
-  experts: 'expert',
-  van: 'van',
-  exp: 'exp',
-  investors: 'investor',
-  corporates: 'corporate',
-  institutions: 'institution',
-  universities: 'university',
-  vendors: 'vendor',
-  etc: 'etc',
-  others: 'other',
-}
+/**
+ * 민감정보 접근 로그(access_logs)용 리소스 타입.
+ * 원장이 하나가 되었으므로 값도 하나다(감사 로그의 기존 행은 옛 값을 그대로 보존한다 —
+ * 그때 무엇에 접근했는지의 기록이라 사후에 이름을 바꾸면 사실이 아닌 기록이 된다).
+ */
+export const NETWORK_RESOURCE_TYPE = 'network'
+
+/**
+ * 자료·피드백·회의록 링크가 이 원장을 가리킬 때 쓰는 다형 키(단수형).
+ * 종전 10종(expert·van·investor…)이 2026-09-04 통합으로 이 한 값이 되었다.
+ */
+export const NETWORK_TARGET_TYPE = 'network'

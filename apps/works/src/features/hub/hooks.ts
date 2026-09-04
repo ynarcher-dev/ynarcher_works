@@ -234,13 +234,8 @@ export function useHubSummary() {
         approvals,
         managers,
         startups,
-        experts,
-        van,
-        investors,
-        institutions,
-        corporates,
-        universities,
-        others,
+        investExperts,
+        partners,
       ] = await Promise.all([
         supabase.from('programs').select('status').is('deleted_at', null),
         // M&A/PROJECT는 AC와 동일한 사업 원장 구조로 재편되어 상태 기준으로 집계한다.
@@ -254,13 +249,20 @@ export function useHubSummary() {
           .is('deleted_at', null)
           .not('user_type', 'in', GUEST_USER_TYPE_FILTER),
         headCount('startups'),
-        headCount('experts'),
-        headCount('van'),
-        headCount('investors'),
-        headCount('institutions'),
-        headCount('corporates'),
-        headCount('universities'),
-        headCount('others'),
+        // 원장 통합(2026-09-04) 이후 구분은 표가 아니라 컬럼이라, 여덟 번 세던 것을
+        // 두 번의 in() 집계로 대신한다.
+        supabase
+          .from('networks')
+          .select('*', { count: 'exact', head: true })
+          .is('deleted_at', null)
+          .is('merged_into_id', null)
+          .in('category', ['experts', 'van', 'exp', 'investors']),
+        supabase
+          .from('networks')
+          .select('*', { count: 'exact', head: true })
+          .is('deleted_at', null)
+          .is('merged_into_id', null)
+          .or('category.in.(institutions,corporates,universities,etc),category.is.null'),
       ])
 
       const pRows = programs.data ?? []
@@ -293,13 +295,8 @@ export function useHubSummary() {
         networks: {
           managers: managers.count ?? 0,
           startups: startups.count ?? 0,
-          investExperts:
-            (experts.count ?? 0) + (van.count ?? 0) + (investors.count ?? 0),
-          partners:
-            (institutions.count ?? 0) +
-            (corporates.count ?? 0) +
-            (universities.count ?? 0) +
-            (others.count ?? 0),
+          investExperts: investExperts.count ?? 0,
+          partners: partners.count ?? 0,
         },
       }
     },

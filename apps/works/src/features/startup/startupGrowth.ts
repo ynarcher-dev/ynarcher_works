@@ -1,4 +1,4 @@
-import type { EntityRow } from '@/features/networks/hooks'
+import type { EntityRow } from '@/features/master/entityHooks'
 
 /** 재무 지표 1건(연도 기준). */
 export interface FinanceEntry {

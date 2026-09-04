@@ -19,8 +19,7 @@ import { MnaBulkPage, MnaProgramDetailPage, MnaWorkspacePage } from '@/features/
 import { NetworksPage } from '@/features/networks/NetworksPage'
 import { NetworksBulkPage } from '@/features/networks/NetworksBulkPage'
 import { NetworkDetailPage } from '@/features/networks/NetworkDetailPage'
-import { GlobalNetworkDetailPage } from '@/features/networks/GlobalNetworkDetailPage'
-import { DIRECTORY_ENTITIES } from '@/features/networks/config'
+import { LegacyNetworkRedirect } from '@/features/networks/LegacyNetworkRedirect'
 import { StartupPage } from '@/features/startup/StartupPage'
 import { StyleguidePage } from '@/features/styleguide/StyleguidePage'
 import { StartupDetailPage } from '@/features/startup/StartupDetailPage'
@@ -68,24 +67,26 @@ export const router = createBrowserRouter([
               </RequireWorkspace>
             ),
           },
-          // 글로벌 네트워크 상세페이지(독립 마스터). id='new'면 등록 모드.
+          // 네트워크 상세페이지. id='new'면 등록 모드(?category=로 초기 구분을 받는다).
+          // 원장이 하나가 되면서 경로도 하나다(2026-09-04 통합).
           {
-            path: 'networks/global/:id',
+            path: 'networks/record/:id',
             element: (
               <RequireWorkspace workspace="networks">
-                <GlobalNetworkDetailPage />
+                <NetworkDetailPage />
               </RequireWorkspace>
             ),
           },
-          // 네트워크 상세페이지(공용 NetworkDetailPage). 카테고리 + 미분류 데이터베이스(others).
-          ...DIRECTORY_ENTITIES.map((entity) => ({
-            path: `networks/${entity}/:id`,
+          // 옛 경로(/networks/experts/:id · /networks/global/:id …)는 같은 레코드로 보낸다 —
+          // 이관이 id를 보존하므로 밖에 나간 링크·알림이 죽지 않는다.
+          {
+            path: 'networks/:entity/:id',
             element: (
               <RequireWorkspace workspace="networks">
-                <NetworkDetailPage entity={entity} />
+                <LegacyNetworkRedirect />
               </RequireWorkspace>
             ),
-          })),
+          },
           {
             path: 'startup',
             element: (

@@ -1,5 +1,4 @@
-import { Button, Dropdown, DropdownItem } from '@ynarcher/ui'
-import { useState } from 'react'
+import { Button } from '@ynarcher/ui'
 import { useNavigate } from 'react-router-dom'
 
 export interface ListActionsProps {
@@ -8,22 +7,14 @@ export interface ListActionsProps {
    * (생성·추가·새 ~ 를 쓰지 않는다) 명사는 그 목록이 다루는 원장 단위를 적는다.
    * 워크스페이스 설정이 명사를 이미 갖고 있으면 거기서 가져온다(화면에 하드코딩하지 않는다).
    *
-   * `onCreate`(또는 `createOptions`)와 함께 주어야 등록 버튼이 선다. 직접 등록이 성립하지
-   * 않는 목록(NETWORKS 미분류 데이터베이스처럼 분류 전 임시 저장소)은 둘 다 생략해 업로드
-   * 버튼만 남긴다.
+   * `onCreate`와 함께 주어야 등록 버튼이 선다. 직접 등록이 성립하지 않는 목록(NETWORKS
+   * 미분류 데이터베이스처럼 분류 전 임시 저장소)은 둘 다 생략해 업로드 버튼만 남긴다.
+   *
+   * 등록 버튼은 무엇을 만들지 되묻지 않고 바로 작성 화면으로 보낸다 — 목록이 하나의 원장을
+   * 다루므로 고를 것이 없고, 레코드 안에서 갈리는 값(구분 등)은 작성 폼의 한 칸이 답한다.
    */
   createLabel?: string
   onCreate?: () => void
-  /**
-   * 등록 대상이 목록 안에서 갈리는 경우(원장이 섞인 목록)의 선택지. 지정하면 등록 버튼이
-   * 바로 이동하는 대신 이 목록을 드롭다운으로 펼치고, 고른 값을 `onCreateOption`에 넘긴다.
-   *
-   * 버튼을 없애고 셀렉트 박스를 놓지 않는 이유: 등록은 이 줄에서 유일한 주행동이라 강조가
-   * 필요한데, 셀렉트는 필터와 같은 모양이라 조건을 고르는 자리처럼 읽힌다. 대상이 갈린다는
-   * 사실은 버튼을 누른 다음에 물으면 된다.
-   */
-  createOptions?: { value: string; label: string }[]
-  onCreateOption?: (value: string) => void
   /**
    * 대용량 업로드 페이지 경로. 지정하면 등록 버튼 왼쪽에 함께 놓는다.
    * 업로드는 모달이 아니라 전용 페이지다 — 파일을 고르고 열 매칭을 눈으로 확인하는 일이
@@ -49,25 +40,12 @@ export interface ListActionsProps {
 export function ListActions({
   createLabel,
   onCreate,
-  createOptions,
-  onCreateOption,
   bulkTo,
   onBulk,
   disabled,
 }: ListActionsProps) {
   const navigate = useNavigate()
-  const [menuOpen, setMenuOpen] = useState(false)
   const openBulk = onBulk ?? (bulkTo ? () => navigate(bulkTo) : undefined)
-  const hasMenu = Boolean(createOptions?.length && onCreateOption)
-  const createButton = createLabel ? (
-    <Button
-      density="page"
-      onClick={hasMenu ? () => setMenuOpen((v) => !v) : onCreate}
-      disabled={disabled}
-    >
-      {createLabel}
-    </Button>
-  ) : null
 
   return (
     <div className="flex items-center gap-2">
@@ -76,27 +54,11 @@ export function ListActions({
           대용량 업로드
         </Button>
       )}
-      {createButton && hasMenu && (
-        <Dropdown
-          open={menuOpen}
-          onClose={() => setMenuOpen(false)}
-          align="right"
-          trigger={createButton}
-        >
-          {createOptions?.map((o) => (
-            <DropdownItem
-              key={o.value}
-              onClick={() => {
-                setMenuOpen(false)
-                onCreateOption?.(o.value)
-              }}
-            >
-              {o.label}
-            </DropdownItem>
-          ))}
-        </Dropdown>
+      {createLabel && onCreate && (
+        <Button density="page" onClick={onCreate} disabled={disabled}>
+          {createLabel}
+        </Button>
       )}
-      {createButton && !hasMenu && onCreate && createButton}
     </div>
   )
 }

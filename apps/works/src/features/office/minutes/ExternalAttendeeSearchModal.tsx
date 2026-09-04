@@ -11,14 +11,19 @@ import {
 } from '@ynarcher/ui'
 import { Check } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { CATEGORY_OPTIONS, ENTITIES, type EntityKey } from '@/features/networks/config'
-import { checkDuplicateName, useCreateEntity } from '@/features/networks/hooks'
+import {
+  CATEGORY_OPTIONS,
+  categoryLabel,
+  NETWORK_TARGET_TYPE,
+  type NetworkCategory,
+} from '@/features/networks/config'
+import { checkDuplicateName, useCreateNetwork } from '@/features/networks/hooks'
 import {
   toExternalPersonLink,
   useDebounced,
   useNetworkPeopleSearch,
 } from '@/features/office/minutes/networkPeopleSearch'
-import { networkMinuteLinkType, type MinuteLink } from '@/features/office/minutes/minuteLinks'
+import type { MinuteLink } from '@/features/office/minutes/minuteLinks'
 
 interface Props {
   open: boolean
@@ -61,11 +66,12 @@ export function ExternalAttendeeSearchModal({
   const debouncedKeyword = useDebounced(keyword)
   const { data: hits, isFetching } = useNetworkPeopleSearch(debouncedKeyword, open)
 
-  // 간이 등록 폼(이름·소속·구분). 구분(라벨)이 저장 대상 원장을 결정한다 — 기본은 미분류.
+  // 간이 등록 폼(이름·소속·구분). 구분은 저장 대상 원장이 아니라 한 컬럼의 값이며,
+  // 비워 두면 미분류로 들어가 나중에 미분류 데이터베이스에서 지정한다.
   const [newName, setNewName] = useState('')
   const [newAffiliation, setNewAffiliation] = useState('')
-  const [newCategory, setNewCategory] = useState<EntityKey>('others')
-  const create = useCreateEntity(newCategory)
+  const [newCategory, setNewCategory] = useState<NetworkCategory | ''>('')
+  const create = useCreateNetwork()
 
   // 열릴 때 인라인에서 넘어온 이름을 간이 등록 '이름'에 채운다(검색창에도 같은 값을 넣어 후보를 보여줌).
   useEffect(() => {
@@ -90,32 +96,29 @@ export function ExternalAttendeeSearchModal({
       toast.show('이름을 입력하세요.', 'warning')
       return
     }
-    const targetType = networkMinuteLinkType(newCategory)
-    if (!targetType) {
-      toast.show('이 구분은 회의록 참석자로 담을 수 없습니다.', 'warning')
-      return
-    }
     try {
-      // 이미 같은 구분에 동일 이름이 있으면 새로 만들지 않고 검색해서 고르도록 안내한다.
-      if (await checkDuplicateName(newCategory, name)) {
-        toast.show('같은 구분에 동일한 이름이 이미 있습니다. 위에서 검색해 선택하세요.', 'warning')
+      // 이미 동일 이름이 있으면 새로 만들지 않고 검색해서 고르도록 안내한다.
+      if (await checkDuplicateName(name)) {
+        toast.show('동일한 이름이 이미 있습니다. 위에서 검색해 선택하세요.', 'warning')
         return
       }
       const createdId = await create.mutateAsync({
         name,
         affiliation: newAffiliation.trim() || null,
-        // 구분은 원장 테이블이 결정하지만, 목록 표시(profile.category)와 일관되게 라벨도 함께 남긴다.
-        profile: { category: ENTITIES[newCategory].label },
+        category: newCategory || null,
       })
       // 방금 만든 레코드의 참조를 그대로 담는다 — 이름을 베껴 적으면 상호참조가 끊긴다.
       onAdd({
-        targetType,
+        targetType: NETWORK_TARGET_TYPE,
         targetId: createdId,
         role: 'EXTERNAL_ATTENDEE',
         label: name,
         code: newAffiliation.trim() || null,
       })
-      toast.show(`${ENTITIES[newCategory].label} 네트워크에 등록하고 참석자로 추가했습니다.`, 'success')
+      toast.show(
+        `${categoryLabel(newCategory) || '미분류'}(으)로 등록하고 참석자로 추가했습니다.`,
+        'success',
+      )
       setNewName('')
       setNewAffiliation('')
     } catch {
@@ -158,11 +161,9 @@ export function ExternalAttendeeSearchModal({
                 <ul className="max-h-[15rem] divide-y divide-gray-100 overflow-y-auto">
                   {(hits ?? []).map((h) => {
                     const link = toExternalPersonLink(h)
-                    // 회의록이 가리킬 수 없는 원장(은퇴 원장 등)은 고를 수 없으니 줄에서 뺀다.
-                    if (!link) return null
                     const added = has(link)
                     return (
-                      <li key={`${h.entityTable}:${h.id}`}>
+                      <li key={h.id}>
                         {/* 행 클릭 토글: 추가 ↔ 해제. 별도 버튼 없음. */}
                         <button
                           type="button"
@@ -233,9 +234,11 @@ export function ExternalAttendeeSearchModal({
             <div className="w-32">
               <Select
                 value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value as EntityKey)}
+                onChange={(e) => setNewCategory(e.target.value as NetworkCategory | '')}
                 aria-label="구분"
               >
+                {/* 비워 두면 미분류로 들어간다 — 회의 중에 구분까지 정하게 하지 않는다. */}
+                <option value="">미분류</option>
                 {CATEGORY_OPTIONS.map((o) => (
                   <option key={o.key} value={o.key}>
                     {o.label}

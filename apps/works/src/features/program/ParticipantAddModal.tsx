@@ -13,7 +13,7 @@ import {
 /** 역할 기본값은 원장에 따라 갈린다 — 기업은 참가사, 전문가는 전문가 풀에서 출발한다. */
 const DEFAULT_ROLE: Record<MasterTable, string> = {
   startups: 'STARTUP',
-  experts: 'EXPERT',
+  networks: 'EXPERT',
 }
 
 /**
@@ -91,7 +91,7 @@ export function ParticipantAddModal({
           <Field label="원장" className="w-36">
             <Select value={master} onChange={(e) => switchMaster(e.target.value as MasterTable)}>
               <option value="startups">기업</option>
-              <option value="experts">전문가</option>
+              <option value="networks">전문가</option>
             </Select>
           </Field>
           <Field label="역할" className="w-40">

@@ -5,7 +5,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import type { EntityRow } from '@/features/networks/hooks'
+import type { EntityRow } from '@/features/master/entityHooks'
 import {
   fetchLedgerPage,
   managedRecordIds,

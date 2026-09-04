@@ -11,13 +11,18 @@ import {
   type Column,
 } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
+import { categoryLabel, type NetworkCategory } from '@/features/networks/config'
 import type { ExistingRef, ParsedRow } from '@/features/networks/bulkUpload'
 
 export type Decision = 'new' | 'merge' | 'skip'
 
 export interface ReviewRow extends ParsedRow {
-  /** 편집 가능한 저장 대상 구분 라벨. 중복이면 재결정의 출발점(보수적 프리셋). */
-  categoryLabel: string
+  /** 편집 가능한 저장 대상 구분(코드). 빈 값이면 미분류. 중복이면 재결정의 출발점(보수적 프리셋). */
+  targetCategory: NetworkCategory | ''
+  /** CSV의 국가명을 태그 원장과 대조한 결과. 못 찾으면 null(국가 미확인). */
+  countryTagId: string | null
+  /** 국가 표시값 — 찾은 태그명, 못 찾았으면 원값, 원값도 없으면 빈 문자열. */
+  countryLabel: string
   /** 확실중복(이메일·전화 일치)으로 매칭된 기존 레코드. 없으면 신규. */
   match: ExistingRef | null
   /** 처리 방식(비활성 매칭은 결정 대신 '복구하기' 버튼 사용). */
@@ -93,7 +98,7 @@ function DupCell({ row, match, revived }: { row: ReviewRow; match: ExistingRef; 
   return (
     <div className="inline-flex items-center gap-2.5 whitespace-nowrap text-caption leading-snug">
       <Seg label="생성자" value={match.contributor ?? '미상'} widthCls="min-w-[6rem]" />
-      <Seg label="구분" value={match.category} widthCls="min-w-[6.5rem]" />
+      <Seg label="구분" value={categoryLabel(match.category) || '미분류'} widthCls="min-w-[6.5rem]" />
       <Seg label="중복" tone="warning" value={dups} />
     </div>
   )
@@ -143,13 +148,27 @@ export function BulkReviewTable({
     { key: 'email', header: '이메일', type: 'text', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.email || '-'}</span> },
     { key: 'phone', header: '연락처', type: 'text', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.phone || '-'}</span> },
     {
+      // 국가는 파일이 답하고, 못 찾은 값은 목록의 '국가 미확인' 축에서 채운다 —
+      // 리뷰 표에 드롭다운을 하나 더 세우면 행마다 두 번 고르게 된다.
+      key: 'country',
+      header: '국가',
+      type: 'text',
+      className: pad,
+      render: (r: ReviewRow) =>
+        r.countryTagId ? (
+          <span className={dim(r, 'text-gray-600')}>{r.countryLabel}</span>
+        ) : (
+          <span className="text-gray-400">{r.countryLabel ? `${r.countryLabel}(미등록)` : '미확인'}</span>
+        ),
+    },
+    {
       key: 'category',
       header: '구분',
       type: 'text',
       className: pad,
       render: (r) => (
         <Select
-          value={r.categoryLabel}
+          value={r.targetCategory}
           disabled={r.decision === 'skip' || isDeactivated(r)}
           onChange={(e) => onCategory(r.line, e.target.value)}
         >

@@ -31,7 +31,7 @@ import {
   useCreateEntity,
   useUpdateEntity,
   type EntityRow,
-} from '@/features/networks/hooks'
+} from '@/features/master/entityHooks'
 import { StartupBusinessTeamFields } from '@/features/startup/StartupBusinessTeamFields'
 import { readBusiness, readTeam } from '@/features/startup/StartupBusinessTeamCard'
 import { StartupGrowthFields } from '@/features/startup/StartupGrowthFields'

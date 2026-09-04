@@ -1,6 +1,6 @@
 import { Badge, PanelCard, cardText } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
-import type { EntityRow } from '@/features/networks/hooks'
+import type { EntityRow } from '@/features/master/entityHooks'
 
 /** 비즈니스 정성 정보(startups.business_profile). */
 export interface BusinessProfile {

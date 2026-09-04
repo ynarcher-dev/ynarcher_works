@@ -1,4 +1,4 @@
-import type { EntityRow } from '@/features/networks/hooks'
+import type { EntityRow } from '@/features/master/entityHooks'
 
 /** 주주 1인. */
 export interface Shareholder {

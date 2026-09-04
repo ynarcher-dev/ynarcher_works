@@ -19,17 +19,9 @@ export interface CreatorLedger {
 
 export const CREATOR_LEDGERS: CreatorLedger[] = [
   { table: 'startups', label: '스타트업', nameColumn: 'name', group: '데이터베이스' },
-  { table: 'experts', label: '전문가 네트워크', nameColumn: 'name', group: '데이터베이스' },
-  { table: 'investors', label: '투자사 네트워크', nameColumn: 'name', group: '데이터베이스' },
-  { table: 'van', label: 'BAN 네트워크', nameColumn: 'name', group: '데이터베이스' },
-  { table: 'exp', label: 'EXP 네트워크', nameColumn: 'name', group: '데이터베이스' },
-  { table: 'corporates', label: '기업 네트워크', nameColumn: 'name', group: '데이터베이스' },
-  { table: 'institutions', label: '기관 네트워크', nameColumn: 'name', group: '데이터베이스' },
-  { table: 'universities', label: '대학 네트워크', nameColumn: 'name', group: '데이터베이스' },
-  { table: 'vendors', label: '외주 네트워크', nameColumn: 'name', group: '데이터베이스' },
-  { table: 'etc', label: '기타 네트워크', nameColumn: 'name', group: '데이터베이스' },
-  { table: 'others', label: '미분류 데이터베이스', nameColumn: 'name', group: '데이터베이스' },
-  { table: 'global_networks', label: '글로벌 네트워크', nameColumn: 'name', group: '데이터베이스' },
+  // NETWORKS 원장 11종이 2026-09-04에 하나로 합쳐졌다 — 구분은 그 표의 컬럼이므로
+  // 여기서 갈라 세울 이유가 없다.
+  { table: 'networks', label: '네트워크', nameColumn: 'name', group: '데이터베이스' },
   { table: 'programs', label: 'AC 사업', nameColumn: 'title', group: '워크스페이스' },
   { table: 'ma_programs', label: 'M&A/PE 딜', nameColumn: 'title', group: '워크스페이스' },
   { table: 'project_programs', label: '프로젝트', nameColumn: 'title', group: '워크스페이스' },

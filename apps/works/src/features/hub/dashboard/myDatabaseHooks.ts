@@ -1,9 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import type { WorkspaceKey } from '@/auth/types'
-import { GLOBAL_MINE_TAB } from '@/config/navigation'
 import { supabase } from '@/lib/supabase'
 import { managedRecordIds } from '@/features/master/ledgerPage'
-import { DOMESTIC_LIST_ENTITIES } from '@/features/networks/config'
 
 /**
  * 대시보드 「나의 데이터베이스」가 세는 원장 하나 — **내 몫과 전사 규모를 함께** 답한다.
@@ -25,7 +23,7 @@ export interface LedgerStat {
   total: number
 }
 
-export type LedgerKey = 'startup' | 'domestic' | 'global'
+export type LedgerKey = 'startup' | 'networks'
 
 /**
  * 원장별 정의 — 라벨·권한 키·목적지. 어느 원장을 세울지는 화면이 아니라 이 표가 답한다.
@@ -39,16 +37,16 @@ export type LedgerKey = 'startup' | 'domestic' | 'global'
  */
 export const LEDGERS: Omit<LedgerStat, 'mine' | 'total'>[] = [
   { key: 'startup', label: '스타트업 DB', workspace: 'startup', path: '/startup?tab=mine' },
-  { key: 'domestic', label: '국내 네트워크', workspace: 'networks', path: '/networks?tab=mine' },
-  { key: 'global', label: '글로벌 네트워크', workspace: 'networks', path: `/networks?tab=${GLOBAL_MINE_TAB}` },
+  // 국내·글로벌 두 줄이 2026-09-04 원장 통합으로 한 줄이 되었다. 지역은 그 목록의 필터
+  // 축이므로 카드에서 두 줄로 갈라 놓으면 눌러서 도착한 화면과 건수가 어긋난다.
+  { key: 'networks', label: '네트워크', workspace: 'networks', path: '/networks?tab=mine' },
 ]
 
 /**
  * 목록 RPC에서 총 건수만 받아 온다(`p_limit: 1`).
  *
  * 원장별 head 카운트를 합치지 않는 이유는 **눌러서 도착할 목록과 같은 수**여야 하기 때문이다.
- * 국내는 9종을 union하며 중복을 걷어내고 '내 것' 판정이 기여 로그 조인이라, 원장 합계로는
- * 재현되지 않는다. 총 건수는 모든 행에 같은 값으로 실려 오므로 한 행만 받으면 족하다.
+ * '내 것' 판정이 기여 로그 조인이라 원장 head 카운트로는 재현되지 않는다. 총 건수는 모든 행에 같은 값으로 실려 오므로 한 행만 받으면 족하다.
  */
 async function rpcTotal(fn: string, args: Record<string, unknown>): Promise<number> {
   const { data, error } = await supabase.rpc(fn, { ...args, p_limit: 1, p_offset: 0 })
@@ -89,26 +87,18 @@ async function fetchStartupStat(userId: string): Promise<LedgerCounts> {
   return { mine, total }
 }
 
-async function fetchDomesticStat(): Promise<LedgerCounts> {
+async function fetchNetworkStat(): Promise<LedgerCounts> {
+  // 미분류(구분 없음)는 목록에서 자기 메뉴로 빠져 있으므로 여기서도 빼야 두 수가 맞는다.
   const [mine, total] = await Promise.all([
-    rpcTotal('my_network_entities', { p_entities: DOMESTIC_LIST_ENTITIES }),
-    rpcTotal('all_network_entities', { p_entities: DOMESTIC_LIST_ENTITIES }),
-  ])
-  return { mine, total }
-}
-
-async function fetchGlobalStat(): Promise<LedgerCounts> {
-  const [mine, total] = await Promise.all([
-    rpcTotal('global_network_entities', { p_mine: true }),
-    rpcTotal('global_network_entities', { p_mine: false }),
+    rpcTotal('my_network_entities', { p_uncategorized: false }),
+    rpcTotal('all_network_entities', { p_uncategorized: false }),
   ])
   return { mine, total }
 }
 
 const FETCHERS: Record<LedgerKey, (userId: string) => Promise<LedgerCounts>> = {
   startup: fetchStartupStat,
-  domestic: fetchDomesticStat,
-  global: fetchGlobalStat,
+  networks: fetchNetworkStat,
 }
 
 /**

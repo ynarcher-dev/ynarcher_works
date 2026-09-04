@@ -25,7 +25,7 @@ interface LoginBadge {
 function masterPath(row: ParticipantRow): string | null {
   if (!row.master_id) return null
   if (row.master_table === 'startups') return `/startup/discovered/${row.master_id}`
-  if (row.master_table === 'experts') return `/networks/experts/${row.master_id}`
+  if (row.master_table === 'networks') return `/networks/record/${row.master_id}`
   return null
 }
 
@@ -40,7 +40,7 @@ function categoryBadge(row: ParticipantRow): LoginBadge | null {
     if (!code || !(code in MANAGEMENT_STATUS_LABEL)) return { label: '기업(구분 미지정)', tone: 'neutral' }
     return { label: MANAGEMENT_STATUS_LABEL[code], tone: MANAGEMENT_STATUS_TONE[code] }
   }
-  if (row.master_table === 'experts') return { label: '전문가', tone: 'neutral' }
+  if (row.master_table === 'networks') return { label: '전문가', tone: 'neutral' }
   return null
 }
 

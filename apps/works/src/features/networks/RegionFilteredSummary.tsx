@@ -1,16 +1,17 @@
 import { useQuery } from '@tanstack/react-query'
 import { Globe2, MapPin } from 'lucide-react'
 import { Card, Skeleton, SummaryTile, type SummaryTileTone } from '@ynarcher/ui'
-import type { GlobalFilterState, NetworkSearchScope } from '@/features/networks/filters'
-import type { GlobalListScope } from '@/features/networks/globalHooks'
+import { REGION_TAG_TABLE } from '@/features/networks/config'
+import type { NetworkFilterState, NetworkSearchScope } from '@/features/networks/filters'
+import type { NetworkListScope } from '@/features/networks/hooks'
 import { supabase } from '@/lib/supabase'
 
 const TONES: SummaryTileTone[] = ['blue', 'purple', 'cyan', 'amber', 'peach', 'rose', 'lime', 'mint']
 
 interface Props {
-  scope: GlobalListScope
+  scope: NetworkListScope
   keyword: string
-  filters: GlobalFilterState
+  filters: NetworkFilterState
   searchScope: NetworkSearchScope
   /** 권역 타일 토글(다중선택). 값은 목록 필터와 같은 태그 id다. */
   onToggleRegion: (regionId: string) => void
@@ -25,7 +26,12 @@ interface RegionTile {
   count: number
 }
 
-export function GlobalRegionFilteredSummary({
+/**
+ * 권역별 현황 — 지역을 해외로 좁혔을 때만 선다.
+ * 국내 행에는 권역이 없어 섞어 세면 '미지정'이 늘 최대 칸이 되고, 그 칸은 누를 조건이
+ * 없으므로 표를 좁히는 데 아무 도움이 되지 않는다.
+ */
+export function RegionFilteredSummary({
   scope,
   keyword,
   filters,
@@ -33,23 +39,26 @@ export function GlobalRegionFilteredSummary({
   onToggleRegion,
   onClearRegions,
 }: Props) {
+  const rpc = scope === 'mine' ? 'my_network_entities' : 'all_network_entities'
   const { data = [], isPending } = useQuery({
-    queryKey: ['networks', 'global', 'filtered-region-summary', scope, keyword, filters, searchScope],
+    queryKey: ['networks', 'region-summary', scope, keyword, filters, searchScope],
     queryFn: async (): Promise<RegionTile[]> => {
       const [tagRes, rowsRes] = await Promise.all([
         // 이름만이 아니라 id까지 읽는다 — 타일이 곧 권역 필터이고, 목록 필터는 이름이 아니라
         // 태그 id로 거른다(같은 이름의 태그가 둘일 수 있다).
-        supabase.from('region_tags').select('id, name').is('deleted_at', null),
-        supabase.rpc('global_network_entities', {
+        supabase.from(REGION_TAG_TABLE).select('id, name').is('deleted_at', null),
+        supabase.rpc(rpc, {
           p_keyword: keyword.trim() || null,
-          p_mine: scope === 'mine',
-          p_regions: null,
-          p_countries: filters.countryIds.length ? filters.countryIds : null,
-          p_categories: filters.categories.length ? filters.categories : null,
-          p_search_email: searchScope.email,
-          p_search_phone: searchScope.phone,
           p_limit: 5000,
           p_offset: 0,
+          p_categories: filters.categories.length ? filters.categories : null,
+          p_uncategorized: false,
+          // 이 카드는 해외만 센다. 권역 축은 집계에서 빼야 타일이 필터로 동작한다.
+          p_region_scope: ['OVERSEAS'],
+          p_regions: null,
+          p_countries: filters.countryIds.length ? filters.countryIds : null,
+          p_search_email: searchScope.email,
+          p_search_phone: searchScope.phone,
         }),
       ])
       if (tagRes.error) throw tagRes.error
@@ -84,32 +93,31 @@ export function GlobalRegionFilteredSummary({
 
   return (
     <Card title="권역별 현황">
-        <section aria-label="필터가 반영된 권역별 현황" className="grid grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-3">
+      <section aria-label="필터가 반영된 권역별 현황" className="grid grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-3">
+        <SummaryTile
+          title="전체"
+          eyebrow="해외 전체"
+          value={total}
+          unit="건"
+          tone="primary"
+          icon={<Globe2 aria-hidden className="size-[18px]" strokeWidth={1.8} />}
+          onClick={onClearRegions}
+          selected={filters.regionIds.length === 0}
+        />
+        {data.map((region, index) => (
           <SummaryTile
-            title="전체"
-            eyebrow="글로벌 전체"
-            value={total}
+            key={region.id ?? '미지정'}
+            title={region.label}
+            eyebrow="권역"
+            value={region.count}
             unit="건"
-            tone="primary"
-            icon={<Globe2 aria-hidden className="size-[18px]" strokeWidth={1.8} />}
-            onClick={onClearRegions}
-            selected={filters.regionIds.length === 0}
+            tone={TONES[index % TONES.length]}
+            icon={<MapPin aria-hidden className="size-[18px]" strokeWidth={1.8} />}
+            onClick={region.id ? () => onToggleRegion(region.id as string) : undefined}
+            selected={region.id ? filters.regionIds.includes(region.id) : undefined}
           />
-          {data.map((region, index) => (
-            <SummaryTile
-              key={region.id ?? '미지정'}
-              title={region.label}
-              eyebrow="권역"
-              value={region.count}
-              unit="건"
-              tone={TONES[index % TONES.length]}
-              icon={<MapPin aria-hidden className="size-[18px]" strokeWidth={1.8} />}
-              // 타일은 곧 권역 필터다(집계에서 권역 축을 뺀 p_regions: null과 짝을 이룬다).
-              onClick={region.id ? () => onToggleRegion(region.id as string) : undefined}
-              selected={region.id ? filters.regionIds.includes(region.id) : undefined}
-            />
-          ))}
-        </section>
+        ))}
+      </section>
     </Card>
   )
 }

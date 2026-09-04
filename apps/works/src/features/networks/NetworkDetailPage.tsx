@@ -1,7 +1,7 @@
 import { BackButton, Badge, Banner, Button, CardShell, cardText, DensityProvider, InfoField, PanelCard, Spinner } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { DetailDeleteButton } from '@/components/DetailDeleteButton'
 import { NetworkForm } from '@/features/networks/NetworkForm'
 import { PhotoBox } from '@/features/networks/PhotoBox'
@@ -12,17 +12,19 @@ import { AffiliationHistoryPanel } from '@/features/networks/AffiliationHistoryP
 import { RelatedMinutesPanel } from '@/features/office/minutes/RelatedMinutesPanel'
 import type { MinuteLinkTargetType } from '@/features/office/minutes/minuteLinks'
 import {
-  ENTITIES,
-  isCompactEntity,
-  PROFILE_RESOURCE_TYPE,
-  type EntityKey,
+  categoryLabel,
+  isCompactCategory,
+  NETWORK_RESOURCE_TYPE,
+  NETWORK_TARGET_TYPE,
+  type NetworkCategory,
 } from '@/features/networks/config'
 import { SensitiveValue } from '@/features/master/SensitiveValue'
 import {
+  countryLabelOf,
   useContributions,
-  useDeactivateEntity,
-  useEntity,
-  type EntityRow,
+  useDeactivateNetwork,
+  useNetworkRecord,
+  type NetworkRow,
 } from '@/features/networks/hooks'
 
 /** 상세 카드 섹션 래퍼. */
@@ -45,37 +47,41 @@ function SectionCard({
 /** 라벨: 값 한 줄 — 규격은 공용 `InfoField`가 소유한다. */
 const Info = InfoField
 
+/**
+ * 민감정보 정책 콘텐츠 키. 원장이 하나가 되면서 상세도 목록과 같은 키를 쓴다 —
+ * 종전에는 구분마다 키가 갈려 있었고(networks.experts 등) 그 목록은 이미 사라졌다.
+ */
+const CONTENT_KEY = 'networks.all'
+
 function formatDate(v: unknown): string {
   const s = v ? String(v) : ''
   return s.length >= 10 ? s.slice(0, 10) : '-'
 }
 
 /**
- * 네트워크 통합 상세 뷰(읽기 전용 카드). 8종 전체 공용.
- * 축약(compact) 유형(조직 5종 + 미분류)은 매칭 배지·전문영역 섹션을 숨긴다.
+ * 네트워크 상세 뷰(읽기 전용 카드). 전 구분·전 국가 공용 한 벌이다.
+ * 축약(compact) 유형(조직형 + 미분류)은 매칭 배지·전문영역 섹션을 숨긴다.
  */
-function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow }) {
-  const label = ENTITIES[entity].label
-  const compact = isCompactEntity(entity)
-  const resourceType = PROFILE_RESOURCE_TYPE[entity] ?? entity
-  // 민감정보 정책 콘텐츠 키 — 목록(DirectoryTab)과 같은 키를 써야 목록·상세가 함께 움직인다.
-  const contentKey = `networks.${entity}`
+function NetworkView({ record }: { record: NetworkRow }) {
+  const category = (record.category as string) ?? ''
+  const label = categoryLabel(category) || '네트워크'
+  const compact = isCompactCategory(category || null)
   const profile = (record.profile ?? {}) as Record<string, unknown>
-  const expertise = Array.isArray(record.expertise)
-    ? (record.expertise as string[])
-    : []
+  const expertise = Array.isArray(record.expertise) ? (record.expertise as string[]) : []
   const matchOk = profile.match_available !== false
   const intro = (profile.intro as string) ?? ''
   const affiliation = (record.affiliation as string) ?? ''
   const department = (profile.department as string) ?? ''
   const position = (profile.position as string) ?? ''
-  const category = (profile.category as string) ?? ''
+  const linkedin = (record.linkedin_url as string) ?? ''
+  const country = countryLabelOf(record)
+  const region = (record.region_name as string) ?? ''
   // 부제: 소속 · 부서명 · 직책(부서명은 소속과 직책 사이에 노출).
   const subtitle = [affiliation, department, position].filter(Boolean).join(' · ')
 
-  // 생성자(created_by)와 담당자는 별개 축이다. NETWORKS 8종은 모두 담당자=공동관리(쓰기 권한자 누구나)이므로
+  // 생성자(created_by)와 담당자는 별개 축이다. NETWORKS는 담당자 원장이 없는 영구 공동관리이므로
   // 특정 담당자 없이 기여자 목록으로 표시하고, 레코드를 만든 사람은 생성자로 별도 표기한다.
-  const { data: contributions } = useContributions(entity, record.id as string)
+  const { data: contributions } = useContributions(record.id as string)
   const contributors = uniqueContributors(contributions ?? [])
   const creator = (record.creator?.name as string) || '-'
 
@@ -93,17 +99,13 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
                 <h1 className="text-title-md font-bold text-gray-900">
                   <SensitiveValue
                     field="name"
-                    contentKey={contentKey}
+                    contentKey={CONTENT_KEY}
                     value={(record.name as string) ?? label}
-                    resourceType={resourceType}
+                    resourceType={NETWORK_RESOURCE_TYPE}
                     resourceId={record.id as string}
                   />
                 </h1>
-                {category && (
-                  <Badge tone="neutral">
-                    {category}
-                  </Badge>
-                )}
+                {category && <Badge tone="neutral">{categoryLabel(category)}</Badge>}
                 {!compact && (
                   <Badge tone={matchOk ? 'success' : 'neutral'}>
                     매칭 {matchOk ? '가능' : '불가능'}
@@ -121,9 +123,9 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
             value={
               <SensitiveValue
                 field="phone"
-                contentKey={contentKey}
+                contentKey={CONTENT_KEY}
                 value={(record.phone as string) ?? null}
-                resourceType={resourceType}
+                resourceType={NETWORK_RESOURCE_TYPE}
                 resourceId={record.id}
               />
             }
@@ -133,13 +135,31 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
             value={
               <SensitiveValue
                 field="email"
-                contentKey={contentKey}
+                contentKey={CONTENT_KEY}
                 value={(record.email as string) ?? null}
-                resourceType={resourceType}
+                resourceType={NETWORK_RESOURCE_TYPE}
                 resourceId={record.id}
               />
             }
           />
+          {/* 국가는 늘 선다 — 한국도 '한국'으로 명시한다. 권역은 국가가 이미 답하는 사실의
+              상위 묶음이라, 알 때만 괄호로 덧붙이고 따로 한 줄을 쓰지 않는다. */}
+          <Info label="국가" value={region ? `${country} (${region})` : country} />
+          {linkedin && (
+            <Info
+              label="링크드인"
+              value={
+                <a
+                  href={linkedin}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-brand underline-offset-2 hover:underline"
+                >
+                  프로필 열기
+                </a>
+              }
+            />
+          )}
           {!compact && (
             <Info
               label="전문 영역"
@@ -158,7 +178,6 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
               }
             />
           )}
-          {compact && <Info label="구분" value={category || '-'} />}
           <Info label="생성자" value={creator} />
           <Info label="기여자" value={contributors.length ? contributors.join(', ') : '-'} />
           <Info label="수정일" value={formatDate(record.updated_at)} />
@@ -179,60 +198,51 @@ function NetworkView({ entity, record }: { entity: EntityKey; record: EntityRow 
       </SectionCard>
       </div>
 
-      {/* 우측(1/3): 자료 관리 → 관련 회의록 → 변동 이력 → 코멘트. 8종 전체 공용 패널.
+      {/* 우측(1/3): 자료 관리 → 관련 회의록 → 변동 이력 → 코멘트.
           공용 순서에서 전자결재는 빠진다 — 네트워크 인물은 결재를 올리는 단위가 아니다.
           회의록은 반대로 넣는다: 이들은 회의의 참석자가 되는 쪽이라, 사람 상세에서
           "이 사람이 낀 회의"를 되짚는 일이 잦다(연동 키는 자료·코멘트와 같은 값). */}
       <div className="space-y-4 lg:col-span-1">
-        <MaterialPanel targetType={resourceType} targetId={record.id as string} readOnly />
+        <MaterialPanel targetType={NETWORK_TARGET_TYPE} targetId={record.id as string} readOnly />
         <RelatedMinutesPanel
-          targetType={resourceType as MinuteLinkTargetType}
+          targetType={NETWORK_TARGET_TYPE as MinuteLinkTargetType}
           targetId={record.id as string}
         />
         <ChangeHistoryPanel contributions={contributions} />
-        <FeedbackPanel targetType={resourceType} targetId={record.id as string} />
+        <FeedbackPanel targetType={NETWORK_TARGET_TYPE} targetId={record.id as string} />
       </div>
     </div>
   )
 }
 
 interface Props {
-  /** 대상 엔티티(8종 공용). 라우트별로 고정 전달한다. */
-  entity: EntityKey
   /**
    * 읽기 전용 모드(조회 전용 진입). true면 수정 버튼·편집 폼을 노출하지 않는다.
    * 마스터 편집은 NETWORKS 원장에서만 수행하고, 그 외 워크스페이스는 조회만 한다.
    */
   readOnly?: boolean
-  /** 목록/뒤로가기 경로. 기본 NETWORKS 디렉토리. */
+  /** 목록/뒤로가기 경로. 기본 '전체 네트워크'. */
   listPath?: string
 }
 
 /**
- * 네트워크 통합 상세페이지(8종 공용). `id`가 'new'면 등록 모드.
+ * 네트워크 상세페이지. `id`가 'new'면 등록 모드이며 `?category=`로 초기 구분을 받는다.
  * 등록/수정은 모달이 아닌 이 페이지에서 카드 섹션 폼(`NetworkForm`)으로 처리한다.
- * 구분 변경으로 다른 네트워크로 이동하면 대상 엔티티 상세로 재이동한다.
- * `readOnly`(HUB 조회 센터)면 편집 없이 조회 뷰만 렌더한다.
+ * 구분을 바꿔도 페이지를 옮기지 않는다 — 통합 원장에서 구분은 한 컬럼의 값이라 id가 그대로다.
  */
-export function NetworkDetailPage({
-  entity,
-  readOnly = false,
-  listPath: listPathProp,
-}: Props) {
+export function NetworkDetailPage({ readOnly = false, listPath: listPathProp }: Props) {
   const { id } = useParams<{ id: string }>()
+  const [params] = useSearchParams()
   const navigate = useNavigate()
-  const label = ENTITIES[entity].label
-  // 원장별 목록은 2026-08-20에 국내 통합 목록으로 합쳐졌다. 미분류(others)만 자기 메뉴가
-  // 남아 있으므로 그쪽으로 돌려보내고, 나머지 원장은 모두 '전체 네트워크 (국내)'로 돌아간다.
-  const listPath = listPathProp ?? `/networks?tab=${entity === 'others' ? 'others' : 'all'}`
+  const listPath = listPathProp ?? '/networks?tab=all'
   const isNew = id === 'new'
   const [editing, setEditing] = useState(isNew && !readOnly)
-  const { data: record, isLoading } = useEntity(entity, isNew ? undefined : id)
-  const deactivate = useDeactivateEntity(entity)
+  const { data: record, isLoading } = useNetworkRecord(isNew ? undefined : id)
+  const deactivate = useDeactivateNetwork()
 
   if (!isNew && isLoading) return <Spinner />
   if (!isNew && !record) {
-    return <Banner tone="warning">{label} 정보를 찾을 수 없습니다.</Banner>
+    return <Banner tone="warning">네트워크 정보를 찾을 수 없습니다.</Banner>
   }
 
   return (
@@ -245,7 +255,9 @@ export function NetworkDetailPage({
             <div className="flex items-center gap-2">
               <DetailDeleteButton
                 name={(record.name as string) ?? undefined}
-                onDelete={(reason) => deactivate.mutateAsync({ id: record.id as string, reason: reason ?? '' })}
+                onDelete={(reason) =>
+                  deactivate.mutateAsync({ id: record.id as string, reason: reason ?? '' })
+                }
                 onDeleted={() => navigate(listPath)}
               />
               <Button onClick={() => setEditing(true)}>수정</Button>
@@ -256,19 +268,18 @@ export function NetworkDetailPage({
 
       {editing ? (
         <NetworkForm
-          entity={entity}
           recordId={isNew ? undefined : id}
           initial={isNew ? null : (record ?? null)}
+          defaultCategory={(params.get('category') as NetworkCategory | null) ?? null}
           backTo={listPath}
-          onDone={({ id: newId, targetEntity, moved }) => {
+          onDone={({ id: newId }) => {
             setEditing(false)
-            // 이동(구분 변경)했으면 대상 엔티티 상세로, 신규 등록이면 해당 상세로 이동.
-            if (moved || isNew) navigate(`/networks/${targetEntity}/${newId}`)
+            if (isNew) navigate(`/networks/record/${newId}`)
           }}
           onCancel={() => (isNew ? navigate(listPath) : setEditing(false))}
         />
       ) : (
-        record && <NetworkView entity={entity} record={record} />
+        record && <NetworkView record={record} />
       )}
     </div>
   )

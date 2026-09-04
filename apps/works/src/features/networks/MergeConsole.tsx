@@ -1,13 +1,16 @@
 import { Button, EmptyState, Select, Spinner, useToast } from '@ynarcher/ui'
 import { useState } from 'react'
-import { useEntityList, useMergeEntity } from '@/features/networks/hooks'
-import type { EntityConfig } from '@/features/networks/config'
+import { useNetworkList, useMergeNetwork } from '@/features/networks/hooks'
+import type { NetworkCategory } from '@/features/networks/config'
 
-/** 중복 병합 콘솔: 중복 레코드를 정본으로 병합(merged_into_id 지정). */
-export function MergeConsole({ config }: { config: EntityConfig }) {
+/**
+ * 중복 병합 콘솔: 중복 레코드를 정본으로 병합(merged_into_id 지정).
+ * 구분을 주면 그 구분 안에서만 후보를 세운다 — 원장이 하나라 구분을 주지 않으면 전부가 후보다.
+ */
+export function MergeConsole({ category }: { category?: NetworkCategory }) {
   const toast = useToast()
-  const { data, isLoading } = useEntityList(config.table, '')
-  const merge = useMergeEntity(config.table)
+  const { data, isLoading } = useNetworkList('', category)
+  const merge = useMergeNetwork()
   const [primaryId, setPrimaryId] = useState('')
   const [duplicateId, setDuplicateId] = useState('')
 

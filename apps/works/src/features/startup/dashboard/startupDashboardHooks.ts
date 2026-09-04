@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import type { EntityRow } from '@/features/networks/hooks'
+import type { EntityRow } from '@/features/master/entityHooks'
 import type { StatusItem } from '@/features/networks/dashboardHooks'
 import {
   MANAGEMENT_STATUSES,

@@ -2,7 +2,6 @@ import { ListToolbar, Spinner } from '@ynarcher/ui'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ListActions } from '@/components/ListActions'
-import { ENTITIES } from '@/features/networks/config'
 import { useMaskPolicy } from '@/features/admin/sensitiveStore'
 import { StartupPoolTable, type StartupPoolRow } from '@/features/startup/StartupPoolTable'
 import { StartupPoolFilters } from '@/features/startup/StartupPoolFilters'
@@ -31,7 +30,6 @@ interface StartupPoolTabProps {
  * 구분(투자·보육·발굴·기타)은 진입 경로가 아니라 필터 축이므로 이 컨테이너는 구분을 고정하지 않는다.
  */
 export function StartupPoolTab({ mineUserId }: StartupPoolTabProps) {
-  const config = ENTITIES.startups
   const navigate = useNavigate()
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(0)
@@ -93,7 +91,7 @@ export function StartupPoolTab({ mineUserId }: StartupPoolTabProps) {
         filters={<StartupPoolFilters filters={filters} onChange={setFilters} />}
         actions={
           <ListActions
-            createLabel={`${config.label} 등록`}
+            createLabel="스타트업 등록"
             onCreate={() => navigate('/startup/discovered/new')}
             bulkTo="/startup/bulk"
           />

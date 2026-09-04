@@ -50,7 +50,7 @@ export function ExpertRankingPanel({
           <tbody>
             {shown.map((r, i) => (
               <tr
-                key={`${r.entity}:${r.id}`}
+                key={r.id}
                 onClick={() => onOpen(r)}
                 className="cursor-pointer border-b border-gray-50 hover:bg-gray-50"
               >

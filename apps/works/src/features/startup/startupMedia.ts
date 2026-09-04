@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import type { EntityRow } from '@/features/networks/hooks'
+import type { EntityRow } from '@/features/master/entityHooks'
 
 /** 미디어 1건(startups.media 배열 원소). 메타데이터는 URL 첨부 시 자동 채움(수동 편집 가능). */
 export interface MediaItem {

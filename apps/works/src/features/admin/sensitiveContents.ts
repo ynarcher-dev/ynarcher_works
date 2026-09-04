@@ -116,20 +116,15 @@ export const SENSITIVE_CONTENT_GROUPS: readonly SensitiveContentGroup[] = [
     contents: [
       // 정책 키는 메뉴명이 바뀌어도 그대로 둔다 — DB에 이 키로 저장돼 있고 목록·상세가
       // 함께 읽는다(라벨만 현재 메뉴명에 맞춘다).
-      { key: 'networks.mine', label: '내 업로드 DB (국내)', fields: PERSON },
-      { key: 'networks.all', label: '전체 네트워크 (국내)', fields: PERSON },
-      // 아래 원장별 키는 사이드바 메뉴가 사라진 뒤에도 각 원장 상세페이지가 계속 쓴다.
-      { key: 'networks.experts', label: '전문가 네트워크', fields: PERSON },
-      { key: 'networks.investors', label: '투자사 네트워크', fields: PERSON },
-      { key: 'networks.van', label: 'BAN 네트워크', fields: PERSON },
-      { key: 'networks.exp', label: 'EXP 네트워크', fields: PERSON },
-      { key: 'networks.corporates', label: '기업 네트워크', fields: PERSON },
-      { key: 'networks.institutions', label: '기관 네트워크', fields: PERSON },
-      { key: 'networks.universities', label: '대학 네트워크', fields: PERSON },
-      { key: 'networks.etc', label: '기타 네트워크', fields: PERSON },
-      // 글로벌은 '내 업로드 DB (글로벌)'와 '전체 네트워크 (글로벌)'가 한 원장·같은 열을
-      // 보므로 정책도 하나다.
-      { key: 'networks.global', label: '글로벌 네트워크', fields: PERSON },
+      // 정책 키는 메뉴명이 바뀌어도 그대로 둔다 — DB에 이 키로 저장돼 있고 목록·상세가
+      // 함께 읽는다(라벨만 현재 메뉴명에 맞춘다).
+      //
+      // 2026-09-04 원장 통합으로 구분별 키 8종과 글로벌 키는 걷었다. 그 키들이 보던 목록·
+      // 상세가 통합 목록 한 벌로 합쳐졌기 때문이며, 상세는 이제 'networks.all'을 읽는다.
+      // 정책을 합칠 때는 **가장 엄격한 값을 승계**해야 한다 — 느슨한 쪽을 택하면 그 축소가
+      // 곧 노출 확대다(DB에 남은 옛 키의 값은 읽히지 않을 뿐 지워지지 않는다).
+      { key: 'networks.mine', label: '내 업로드 DB', fields: PERSON },
+      { key: 'networks.all', label: '전체 네트워크 · 상세', fields: PERSON },
       { key: 'networks.others', label: '미분류 데이터베이스', fields: PERSON },
     ],
   },

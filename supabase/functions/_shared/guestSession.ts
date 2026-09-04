@@ -107,9 +107,11 @@ export async function readLedgerIdentity(
     const row = data as { name: string | null; representative: string | null } | null
     return { name: row?.representative ?? null, companyName: row?.name ?? null }
   }
-  if (p.master_table === 'experts') {
+  // 2026-09-04 원장 통합: 종전 'experts'는 통합 원장 networks가 되었다. 명부에 남아 있는
+  // 옛 값도 같은 표를 가리키므로 함께 받아 준다(이관이 id를 보존해 행은 그대로다).
+  if (p.master_table === 'networks' || p.master_table === 'experts') {
     const { data } = await db
-      .from('experts')
+      .from('networks')
       .select('name')
       .eq('id', p.master_id)
       .maybeSingle()

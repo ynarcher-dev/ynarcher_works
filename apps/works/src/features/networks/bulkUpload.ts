@@ -1,23 +1,30 @@
 import { splitCsvLine } from '@/lib/csv'
 import { supabase } from '@/lib/supabase'
 import {
-  DIRECTORY_ENTITIES,
-  ENTITIES,
-  isCompactEntity,
-  resolveEntityFromCategory,
-  type EntityKey,
+  isCompactCategory,
+  NETWORK_TABLE,
+  resolveCategory,
+  type NetworkCategory,
 } from '@/features/networks/config'
 
-/** 대용량 업로드 표준 CSV 헤더. */
+/**
+ * 대용량 업로드 표준 CSV 헤더.
+ *
+ * 원장 통합(2026-09-04)으로 국내·글로벌 양식이 한 벌이 되었다 — 종전에는 글로벌만
+ * 권역·국가·링크드인을 갖는 별도 임포터였다. 국가는 이 파일이 답하는 유일한 지역 값이며
+ * (권역은 국가가 안다), 비우면 국가 미확인으로 들어가 목록에서 채운다.
+ */
 export const BULK_HEADERS = [
   'name',
   'category',
+  'country',
   'expertise',
   'affiliation',
   'department',
   'position',
   'email',
   'phone',
+  'linkedin',
 ] as const
 
 /**
@@ -27,6 +34,7 @@ export const BULK_HEADERS = [
 const HEADER_ALIASES: Record<string, string> = {
   이름: 'name', 성명: 'name', name: 'name',
   구분: 'category', category: 'category',
+  국가: 'country', 나라: 'country', 국적: 'country', country: 'country',
   // 영역이 현행 표기이고 분야·전문분야는 2026-08-03 이전 표기다 — 그때 내려받은 파일이
   // 그대로 올라와도 열이 유실되지 않도록 옛 이름을 별칭으로 남겨 둔다.
   영역: 'expertise', 전문영역: 'expertise', 분야: 'expertise', 전문분야: 'expertise', expertise: 'expertise',
@@ -35,6 +43,7 @@ const HEADER_ALIASES: Record<string, string> = {
   직함: 'position', 직책: 'position', 직급: 'position', position: 'position', title: 'position',
   이메일: 'email', email: 'email', 'e-mail': 'email',
   휴대폰: 'phone', 휴대전화: 'phone', 핸드폰: 'phone', 전화: 'phone', 연락처: 'phone', phone: 'phone', mobile: 'phone',
+  링크드인: 'linkedin', linkedin: 'linkedin', linkedinurl: 'linkedin',
 }
 
 export interface ParsedRow {
@@ -46,10 +55,13 @@ export interface ParsedRow {
   position: string
   email: string
   phone: string
+  linkedin: string
   /** CSV의 '구분' 원값(비어 있을 수 있음). */
   category: string
+  /** CSV의 '국가' 원값(이름). 태그 원장과 대조해 id로 바꾼다. */
+  country: string
   /**
-   * 영역(expertise) — 세미콜론·슬래시로 나눈 태그명. 프로필형 4종의 목록 열이자 필터 축이라,
+   * 영역(expertise) — 세미콜론·슬래시로 나눈 태그명. 목록 열이자 필터 축이라,
    * 비운 채 등록하면 그 인물만 영역 필터에 걸리지 않는다(등록 폼은 태그에서 고르게 한다).
    */
   expertise: string[]
@@ -85,7 +97,9 @@ export function parseBulkCsv(text: string): ParsedRow[] {
       position: at(cells, 'position'),
       email: at(cells, 'email'),
       phone: at(cells, 'phone'),
+      linkedin: at(cells, 'linkedin'),
       category: at(cells, 'category'),
+      country: at(cells, 'country'),
       expertise: splitMulti(at(cells, 'expertise')),
     }
   })
@@ -95,8 +109,8 @@ export function parseBulkCsv(text: string): ParsedRow[] {
 export function buildTemplateCsv(): string {
   return [
     BULK_HEADERS.join(','),
-    '홍길동,전문가,투자;마케팅,와이앤아처,전략실,대표,hong@example.com,010-1234-5678',
-    '김미분,,,수집처 회사명,,팀장,kim@example.com,010-0000-0000',
+    '홍길동,전문가,한국,투자;마케팅,와이앤아처,전략실,대표,hong@example.com,010-1234-5678,',
+    'John Doe,투자사,미국,,Acme Ventures,,Partner,john@example.com,,https://linkedin.com/in/johndoe',
   ].join('\n')
 }
 
@@ -123,7 +137,6 @@ const IN_CHUNK = 200
 
 /** 확실중복으로 매칭된 기존 레코드 참조(비교·보강·병합 대상). */
 export interface ExistingRef {
-  table: EntityKey
   id: string
   name: string
   email: string | null
@@ -131,8 +144,10 @@ export interface ExistingRef {
   affiliation: string | null
   expertise: unknown[]
   profile: Record<string, unknown>
-  /** 기존 레코드의 현재 구분 라벨(profile.category 우선, 없으면 테이블 라벨). */
-  category: string
+  /** 기존 레코드의 현재 구분 코드. null이면 미분류. */
+  category: NetworkCategory | null
+  /** 기존 레코드의 현재 국가 태그. null이면 국가 미확인. */
+  countryTagId: string | null
   /** 선행 생성자(최초 기여자)명. 기여 로그에서 조회. */
   contributor: string | null
   /** 비활성(soft-delete) 상태 여부. true면 재업로드 시 '복구' 대상. */
@@ -151,21 +166,22 @@ interface ExistingRow {
   affiliation: string | null
   expertise: unknown[] | null
   profile: Record<string, unknown> | null
+  category: string | null
+  country_tag_id: string | null
   deleted_at: string | null
 }
 
-function toRef(table: EntityKey, r: ExistingRow): ExistingRef {
-  const profile = (r.profile ?? {}) as Record<string, unknown>
+function toRef(r: ExistingRow): ExistingRef {
   return {
-    table,
     id: r.id,
     name: r.name,
     email: r.email,
     phone: r.phone,
     affiliation: r.affiliation,
     expertise: Array.isArray(r.expertise) ? r.expertise : [],
-    profile,
-    category: (profile.category as string) || ENTITIES[table].label,
+    profile: (r.profile ?? {}) as Record<string, unknown>,
+    category: (r.category as NetworkCategory | null) ?? null,
+    countryTagId: r.country_tag_id,
     contributor: null,
     deleted: Boolean(r.deleted_at),
     deactivatedBy: null,
@@ -187,7 +203,10 @@ const normPhone = (v: unknown) => String(v ?? '').replace(/\D/g, '')
 /**
  * 업로드 행별로 기존 중복 레코드를 찾아 매칭한다.
  * 중복 기준: 이름·전화·이메일 중 **2개 이상 일치**(공용번호/공용메일 단독 일치 오탐 방지).
- * 9종 네트워크 테이블(비활성 포함)을 조회하며, 없는 테이블은 조용히 건너뛴다.
+ * 비활성 행까지 함께 조회한다(재업로드 복구 판정).
+ *
+ * 원장 통합(2026-09-04) 전에는 표 9종을 각각 훑고 결과를 합쳤다 — 그래서 같은 사람이
+ * 두 원장에 있으면 어느 쪽과 맞출지부터 정해야 했다. 지금은 한 원장이라 그 물음이 없다.
  */
 export async function findExistingMatches(
   rows: { line: number; name: string; email: string; phone: string }[],
@@ -196,16 +215,16 @@ export async function findExistingMatches(
   const names = [...new Set(rows.map((r) => r.name.trim()).filter(Boolean))]
   const emails = [...new Set(rows.map((r) => r.email.trim()).filter(Boolean))]
   const phones = [...new Set(rows.map((r) => normPhone(r.phone)).filter(Boolean))]
-  const cols = 'id,name,email,phone,affiliation,expertise,profile,deleted_at'
+  const cols =
+    'id,name,email,phone,affiliation,expertise,profile,category,country_tag_id,deleted_at'
 
-  // 이름/이메일/전화 중 하나라도 걸리는 후보를 테이블+id로 중복 없이 모은다.
+  // 이름/이메일/전화 중 하나라도 걸리는 후보를 id로 중복 없이 모은다.
   const byId = new Map<string, Candidate>()
-  const collect = (table: EntityKey, data: ExistingRow[]) => {
+  const collect = (data: ExistingRow[]) => {
     for (const r of data) {
-      const key = `${table}:${r.id}`
-      if (byId.has(key)) continue
-      byId.set(key, {
-        ref: toRef(table, r),
+      if (byId.has(r.id)) continue
+      byId.set(r.id, {
+        ref: toRef(r),
         nName: normText(r.name),
         nEmail: normText(r.email),
         nPhone: normPhone(r.phone),
@@ -213,12 +232,10 @@ export async function findExistingMatches(
     }
   }
   const queryBy = (field: 'name' | 'email' | 'phone', values: string[]) =>
-    DIRECTORY_ENTITIES.flatMap((table) =>
-      chunk(values, IN_CHUNK).map(async (batch) => {
-        const { data } = await supabase.from(table).select(cols).in(field, batch)
-        collect(table, (data ?? []) as ExistingRow[])
-      }),
-    )
+    chunk(values, IN_CHUNK).map(async (batch) => {
+      const { data } = await supabase.from(NETWORK_TABLE).select(cols).in(field, batch)
+      collect((data ?? []) as unknown as ExistingRow[])
+    })
 
   await Promise.all([
     ...queryBy('name', names),
@@ -250,7 +267,7 @@ export async function findExistingMatches(
     // 이 행과 필드 하나라도 겹치는 후보만 모아 2개 이상 일치를 판정한다.
     const cands = new Map<string, Candidate>()
     for (const c of [...(idxName.get(rn) ?? []), ...(idxEmail.get(re) ?? []), ...(idxPhone.get(rp) ?? [])]) {
-      cands.set(`${c.ref.table}:${c.ref.id}`, c)
+      cands.set(c.ref.id, c)
     }
     let best: { ref: ExistingRef; count: number } | null = null
     for (const c of cands.values()) {
@@ -302,22 +319,26 @@ export async function findExistingMatches(
 
 /**
  * 병합(합치기) 시 기존 레코드를 업로드 값으로 보강하는 부분 업데이트를 만든다. 보강할 게 없으면 null.
- * - 연락처(이메일·전화)는 비파괴 — 기존 값이 있으면 건드리지 않고 빈 칸만 채운다.
+ * - 연락처(이메일·전화·링크드인)는 비파괴 — 기존 값이 있으면 건드리지 않고 빈 칸만 채운다.
  * - 소속·부서·직책은 '신규를 현재로 승격' — 새 값이 있고 기존과 다르면 덮어쓴다.
  *   덮인 직전 조합은 원장 트리거(app.track_affiliation_history)가 profile.affiliation_history에
  *   보존하므로, 여기서 이력을 직접 만들지 않는다(트리거가 배열의 단일 소유자).
  * - 영역(expertise)는 비파괴 — 기존에 지정된 영역이 있으면 파일 값으로 덮지 않는다.
  *   상세 화면에서 고른 영역이 명함 한 장 때문에 밀려나면 안 된다.
+ * - 구분·국가는 리뷰 화면에서 사람이 확정한 값이므로 다르면 바꾼다. 통합 원장에서는 이것이
+ *   행 이동이 아니라 한 칸 수정이라, 종전의 '재분류 이관'(삭제 + 재등록)이 사라졌다.
  */
 export function buildEnrichment(
   existing: ExistingRef,
   row: ParsedRow,
+  target?: { category: NetworkCategory | null; countryTagId: string | null },
 ): Record<string, unknown> | null {
   const patch: Record<string, unknown> = {}
   const prof = { ...existing.profile }
   let profChanged = false
   if (!existing.email && row.email) patch.email = row.email
   if (!existing.phone && row.phone) patch.phone = row.phone.replace(/\D/g, '')
+  if (!existing.profile.linkedin_url && row.linkedin) patch.linkedin_url = row.linkedin
   if (existing.expertise.length === 0 && row.expertise.length > 0) patch.expertise = row.expertise
   if (row.affiliation && row.affiliation !== (existing.affiliation ?? '')) {
     patch.affiliation = row.affiliation
@@ -330,82 +351,44 @@ export function buildEnrichment(
     prof.position = row.position
     profChanged = true
   }
+  if (target) {
+    if (target.category !== existing.category) patch.category = target.category
+    // 국가는 비파괴다 — 파일에 없으면(null) 기존 국가를 지우지 않는다.
+    if (target.countryTagId && target.countryTagId !== existing.countryTagId) {
+      patch.country_tag_id = target.countryTagId
+    }
+  }
   if (profChanged) patch.profile = prof
   return Object.keys(patch).length ? patch : null
 }
 
-/**
- * 합치기+재분류 시 대상 테이블에 insert할 병합 완성 페이로드.
- * 기존 레코드 값을 기준으로 소속·부서·직책은 신규를 현재로 승격하고, 구분(profile.category)을 대상 라벨로 바꾼다.
- * 재분류는 대상 테이블에 INSERT라 원장 트리거(UPDATE 전용)가 돌지 않는다 —
- * 승격으로 소속 3축이 바뀌면 직전 조합을 여기서 직접 이력에 보존한다(트리거와 같은 항목 형태).
- */
-export function buildReclassifyValues(
-  existing: ExistingRef,
+/** 파싱 행 + 확정 구분·국가 → 통일 스키마 페이로드. */
+export function rowToPayload(
   row: ParsedRow,
-  targetLabel: string,
+  category: NetworkCategory | null,
+  countryTagId: string | null,
 ): Record<string, unknown> {
-  const patch = buildEnrichment(existing, row) ?? {}
-  const profile: Record<string, unknown> = {
-    ...existing.profile,
-    ...((patch.profile as Record<string, unknown>) ?? {}),
-    category: targetLabel,
-  }
-  const nextAffiliation = (patch.affiliation as string) ?? existing.affiliation ?? null
-  const oldDept = (existing.profile.department as string) ?? null
-  const oldPos = (existing.profile.position as string) ?? null
-  const changed =
-    nextAffiliation !== (existing.affiliation ?? null) ||
-    ((profile.department as string) ?? null) !== oldDept ||
-    ((profile.position as string) ?? null) !== oldPos
-  if (changed && (existing.affiliation || oldDept || oldPos)) {
-    const prior = Array.isArray(existing.profile.affiliation_history)
-      ? [...(existing.profile.affiliation_history as unknown[])]
-      : []
-    prior.push({
-      affiliation: existing.affiliation ?? null,
-      department: oldDept,
-      position: oldPos,
-      source: 'upload',
-      note: '재분류 승격',
-      at: new Date().toISOString(),
-    })
-    profile.affiliation_history = prior
-  }
+  const compact = isCompactCategory(category)
   return {
-    name: existing.name,
-    email: (patch.email as string) ?? existing.email ?? null,
-    phone: (patch.phone as string) ?? existing.phone ?? null,
-    affiliation: nextAffiliation,
-    expertise: (patch.expertise as string[]) ?? existing.expertise,
-    profile,
+    name: row.name,
+    email: row.email || null,
+    phone: row.phone.replace(/\D/g, '') || null,
+    affiliation: row.affiliation || null,
+    linkedin_url: row.linkedin || null,
+    category,
+    country_tag_id: countryTagId,
+    // 조직형(축약)은 영역을 쓰지 않는다 — 폼·상세에서도 감춰 두는 축이라 값을 만들지 않는다.
+    expertise: compact ? [] : row.expertise,
+    profile: {
+      department: row.department || null,
+      position: row.position || null,
+      match_available: compact ? null : true,
+      source: 'bulk_upload',
+    },
   }
 }
 
-/** 파싱 행 + 선택 구분 라벨 → 통일 스키마 페이로드와 저장 대상 테이블. */
-export function rowToPayload(
-  row: ParsedRow,
-  categoryLabel: string,
-): { target: EntityKey; payload: Record<string, unknown> } {
-  const target = resolveEntityFromCategory(categoryLabel)
-  const compact = isCompactEntity(target)
-  return {
-    target,
-    payload: {
-      name: row.name,
-      email: row.email || null,
-      phone: row.phone.replace(/\D/g, '') || null,
-      affiliation: row.affiliation || null,
-      // 조직형(축약) 4종은 영역을 쓰지 않는다 — 폼·상세에서도 감춰 두는 축이라 값을 만들지 않는다.
-      expertise: compact ? [] : row.expertise,
-      profile: {
-        department: row.department || null,
-        position: row.position || null,
-        category: ENTITIES[target].label,
-        match_available: compact ? null : true,
-        background: [],
-        source: 'bulk_upload',
-      },
-    },
-  }
+/** CSV의 구분 원값 → 코드. 알 수 없으면 미분류(null). */
+export function csvCategory(raw: string): NetworkCategory | null {
+  return resolveCategory(raw)
 }

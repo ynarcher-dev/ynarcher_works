@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { DIRECTORY_ENTITIES, ENTITIES, type EntityKey } from '@/features/networks/config'
-import { networkMinuteLinkType, type MinuteLink } from '@/features/office/minutes/minuteLinks'
+import { categoryLabel, NETWORK_TABLE, NETWORK_TARGET_TYPE } from '@/features/networks/config'
+import type { MinuteLink } from '@/features/office/minutes/minuteLinks'
 
-/** 입력값을 지연시켜 반환한다 — 매 키 입력마다 원장 9종을 병렬 조회하지 않도록 검색어를 눅인다. */
+/** 입력값을 지연시켜 반환한다 — 매 키 입력마다 원장을 조회하지 않도록 검색어를 눅인다. */
 export function useDebounced<T>(value: T, delay = 250): T {
   const [debounced, setDebounced] = useState(value)
   useEffect(() => {
@@ -16,12 +16,10 @@ export function useDebounced<T>(value: T, delay = 250): T {
 
 /** 외부 참석자 검색 결과 1건(networks 원장에서 이름·소속으로 매칭된 인물). */
 export interface NetworkPersonHit {
-  /** 원장 테이블(= EntityKey). 상세 이동·구분 라벨 판정의 기준. */
-  entityTable: EntityKey
   id: string
   name: string
   affiliation: string | null
-  /** 구분 라벨(원장 테이블 기준 — 전문가/투자사/기관 등). */
+  /** 구분 라벨(전문가/투자사/기관 등). 미분류면 빈 문자열. */
   categoryLabel: string
 }
 
@@ -34,12 +32,11 @@ function sanitizeOrValue(v: string): string {
 }
 
 /**
- * 외부 참석자 지정용 networks 인물 검색 — 디렉토리 원장(DIRECTORY_ENTITIES)을 이름·소속으로
- * 동시에 검색한다. 통합 검색 RPC가 없어 원장별로 병렬 조회하며(각 원장 SELECT RLS로 접근 가능한
- * 행만 반환), 이름·소속 부분일치 결과를 이름순으로 합쳐 상위 40건을 돌려준다.
+ * 외부 참석자 지정용 networks 인물 검색 — 이름·소속 부분일치로 상위 40건.
  *
- * 회의록 외부 참석자는 문자열 명단이므로(영구 FK 아님), 여기서 고른 인물은 '이름/소속' 표기로
- * 명단에 담긴다 — 이 훅은 그 표기를 채우기 위한 검색 편의일 뿐이다.
+ * 원장 통합(2026-09-04) 이전에는 구분마다 표가 있어 9개를 병렬 조회하고 결과를 합쳤다.
+ * 지금은 한 번의 조회이며, 어느 구분인지는 행이 들고 오는 `category`가 답한다.
+ * 접근 가능한 행만 돌아온다(원장 SELECT RLS).
  */
 export function useNetworkPeopleSearch(keyword: string, enabled = true) {
   const kw = sanitizeOrValue(keyword)
@@ -47,47 +44,41 @@ export function useNetworkPeopleSearch(keyword: string, enabled = true) {
     queryKey: ['office', 'minute-external-people', kw],
     enabled: enabled && kw.length >= 1,
     queryFn: async (): Promise<NetworkPersonHit[]> => {
-      const perTable = await Promise.all(
-        DIRECTORY_ENTITIES.map(async (table) => {
-          const { data, error } = await supabase
-            .from(table)
-            .select('id, name, affiliation')
-            .is('deleted_at', null)
-            .is('merged_into_id', null)
-            .or(`name.ilike.%${kw}%,affiliation.ilike.%${kw}%`)
-            .order('name', { ascending: true })
-            .limit(8)
-          if (error) throw error
-          return ((data ?? []) as { id: string; name: string; affiliation: string | null }[]).map(
-            (r): NetworkPersonHit => ({
-              entityTable: table,
-              id: r.id,
-              name: r.name,
-              affiliation: r.affiliation ?? null,
-              categoryLabel: ENTITIES[table].label,
-            }),
-          )
-        }),
-      )
-      return perTable
-        .flat()
-        .sort((a, b) => a.name.localeCompare(b.name, 'ko'))
-        .slice(0, 40)
+      const { data, error } = await supabase
+        .from(NETWORK_TABLE)
+        .select('id, name, affiliation, category')
+        .is('deleted_at', null)
+        .is('merged_into_id', null)
+        .or(`name.ilike.%${kw}%,affiliation.ilike.%${kw}%`)
+        .order('name', { ascending: true })
+        .limit(40)
+      if (error) throw error
+      return (
+        (data ?? []) as {
+          id: string
+          name: string
+          affiliation: string | null
+          category: string | null
+        }[]
+      ).map((r) => ({
+        id: r.id,
+        name: r.name,
+        affiliation: r.affiliation ?? null,
+        categoryLabel: categoryLabel(r.category),
+      }))
     },
   })
 }
 
 /**
- * 검색 결과 1건 → 회의록이 저장할 상호참조. 회의록이 가리킬 수 없는 원장이면 null이다.
+ * 검색 결과 1건 → 회의록이 저장할 상호참조.
  *
  * 이 변환이 있어야 하는 이유가 곧 2026-09-03 변경의 요지다 — 종전에는 여기서 '이름/소속'
  * 문자열만 뽑아 명단에 담았고, 그 순간 어느 레코드에서 온 사람인지가 사라졌다.
  */
-export function toExternalPersonLink(hit: NetworkPersonHit): MinuteLink | null {
-  const targetType = networkMinuteLinkType(hit.entityTable)
-  if (!targetType) return null
+export function toExternalPersonLink(hit: NetworkPersonHit): MinuteLink {
   return {
-    targetType,
+    targetType: NETWORK_TARGET_TYPE,
     targetId: hit.id,
     role: 'EXTERNAL_ATTENDEE',
     label: hit.name,

@@ -1,5 +1,4 @@
-import { ENTITIES, type EntityKey } from '@/features/networks/config'
-import { GLOBAL_TABLE } from '@/features/networks/globalConfig'
+import { NETWORK_TABLE, NETWORK_TARGET_TYPE } from '@/features/networks/config'
 
 /**
  * 회의록 연동(cross-reference) 대상 메타 — 종류 라벨·원장 테이블·상세 경로의 단일 원천.
@@ -10,22 +9,11 @@ import { GLOBAL_TABLE } from '@/features/networks/globalConfig'
  */
 
 /**
- * NETWORKS 원장 대상 종류(국내 9종 + 글로벌). 전문가·투자사 담당자는 회의의 참석자가 되는
- * 쪽이라 그 사람 상세에서 "낀 회의"를 되짚을 수 있어야 한다.
- * 값은 새로 만들지 않고 자료·코멘트·변동이력이 이미 쓰는 단수 다형 키를 그대로 쓴다
- * (networks/config.ts PROFILE_RESOURCE_TYPE). 은퇴 원장 vendors는 상세 라우트가 없어 제외한다.
+ * NETWORKS 원장 대상 종류. 원장이 하나로 합쳐지면서(2026-09-04) 종류도 하나다 —
+ * 종전에는 구분마다 원장이 있어 키가 10개였다(expert·van·investor…).
+ * 값은 자료·코멘트·변동이력이 함께 쓰는 단수 다형 키 그대로다(networks/config.ts).
  */
-export type NetworkMinuteLinkType =
-  | 'expert'
-  | 'van'
-  | 'exp'
-  | 'investor'
-  | 'corporate'
-  | 'institution'
-  | 'university'
-  | 'etc'
-  | 'other'
-  | 'global_network'
+export type NetworkMinuteLinkType = typeof NETWORK_TARGET_TYPE
 
 /** 연동 가능한 대상 종류. 사업 원장의 entityKey(program/ma_program/project_program) + startup + fund + NETWORKS. */
 export type MinuteLinkTargetType =
@@ -56,68 +44,18 @@ export interface MinuteLinkTargetMeta {
   toPath: (id: string) => string
 }
 
-/**
- * NETWORKS 원장 1종의 메타 — 라벨·테이블은 원장 정의(ENTITIES)에서 그대로 가져온다.
- * 여기에 라벨을 다시 적으면 원장 이름이 바뀌었을 때 회의록 화면만 옛 이름으로 남는다.
- * 사람·조직 원장이라 부가 표기 자리(사업코드)에는 소속을 넣어 동명이인을 가른다.
- */
-const networkTarget = (entity: EntityKey): MinuteLinkTargetMeta => ({
-  kindLabel: ENTITIES[entity].label,
-  table: ENTITIES[entity].table,
-  titleColumn: 'name',
-  codeColumn: 'affiliation',
-  toPath: (id) => `/networks/${entity}/${id}`,
-})
-
-/**
- * 네트워크 다형 키 ↔ 원장(EntityKey)의 짝. 이 표 하나에서 양방향을 만든다 —
- * 대상 메타(키 → 원장)는 아래 `MINUTE_LINK_TARGETS`가, 외부 참석자 검색 결과를 링크로 바꾸는
- * 역방향(원장 → 키)은 `networkMinuteLinkType()`이 쓴다. 두 곳에 손으로 적으면 원장이 하나
- * 늘 때 한쪽만 고쳐져 검색은 되는데 저장이 안 되는 종류가 생긴다.
- * 글로벌은 독립 마스터라 이 표에 들지 않고 아래에서 따로 선다.
- */
-const NETWORK_ENTITY: Record<Exclude<NetworkMinuteLinkType, 'global_network'>, EntityKey> = {
-  van: 'van',
-  exp: 'exp',
-  expert: 'experts',
-  investor: 'investors',
-  corporate: 'corporates',
-  institution: 'institutions',
-  university: 'universities',
-  etc: 'etc',
-  other: 'others',
-}
-
-/** 원장(EntityKey) → 회의록 다형 키. 회의록이 가리킬 수 없는 원장(스타트업·은퇴 원장)은 null. */
-export function networkMinuteLinkType(entity: EntityKey): NetworkMinuteLinkType | null {
-  const hit = (Object.entries(NETWORK_ENTITY) as [NetworkMinuteLinkType, EntityKey][]).find(
-    ([, e]) => e === entity,
-  )
-  return hit ? hit[0] : null
-}
-
-/** 종류 선택 순서(사업 3종 → 스타트업 → 펀드). NETWORKS는 아래 별도 목록. */
+/** 종류 선택 순서(사업 3종 → 스타트업 → 펀드 → 네트워크). */
 export const MINUTE_LINK_TARGET_TYPES: MinuteLinkTargetType[] = [
   'program',
   'ma_program',
   'project_program',
   'startup',
   'fund',
+  'network',
 ]
 
-/** NETWORKS 종류의 검색·표시 순서(원장 목록 순서와 동일, 미분류·글로벌이 뒤). */
-export const NETWORK_MINUTE_LINK_TYPES: NetworkMinuteLinkType[] = [
-  'van',
-  'exp',
-  'expert',
-  'investor',
-  'corporate',
-  'institution',
-  'university',
-  'etc',
-  'other',
-  'global_network',
-]
+/** 외부 참석자로 걸 수 있는 종류 — 회의에 오는 것은 사람이고 사람은 네트워크 원장에 있다. */
+export const NETWORK_MINUTE_LINK_TYPES: NetworkMinuteLinkType[] = ['network']
 
 export const MINUTE_LINK_TARGETS: Record<MinuteLinkTargetType, MinuteLinkTargetMeta> = {
   program: {
@@ -155,52 +93,37 @@ export const MINUTE_LINK_TARGETS: Record<MinuteLinkTargetType, MinuteLinkTargetM
     codeColumn: null,
     toPath: (id) => `/fund/${id}`,
   },
-  // NETWORKS 국내 원장 — 라우트 세그먼트가 곧 엔티티 키다(router.tsx: networks/:entity/:id).
-  van: networkTarget(NETWORK_ENTITY.van),
-  exp: networkTarget(NETWORK_ENTITY.exp),
-  expert: networkTarget(NETWORK_ENTITY.expert),
-  investor: networkTarget(NETWORK_ENTITY.investor),
-  corporate: networkTarget(NETWORK_ENTITY.corporate),
-  institution: networkTarget(NETWORK_ENTITY.institution),
-  university: networkTarget(NETWORK_ENTITY.university),
-  etc: networkTarget(NETWORK_ENTITY.etc),
-  other: networkTarget(NETWORK_ENTITY.other),
-  // 글로벌은 독립 마스터라 원장·라우트가 국내 규칙에서 벗어난다(networks/global/:id).
-  global_network: {
-    kindLabel: '글로벌',
-    table: GLOBAL_TABLE,
+  // NETWORKS — 원장이 하나이므로 종류도 하나이고 상세 경로도 하나다.
+  network: {
+    kindLabel: '네트워크',
+    table: NETWORK_TABLE,
     titleColumn: 'name',
+    // 사람·조직 원장이라 부가 표기 자리에는 소속을 넣어 동명이인을 가른다.
     codeColumn: 'affiliation',
-    toPath: (id) => `/networks/global/${id}`,
+    toPath: (id) => `/networks/record/${id}`,
   },
 }
 
 /**
- * 피커의 '종류' 드롭다운 항목. 사업·스타트업·펀드는 원장 하나가 곧 한 종류지만, 네트워크는
- * 찾는 사람이 어느 원장 소속인지 모른 채 이름부터 떠올린다 — 그래서 10개 원장을 '네트워크'
- * 한 항목으로 묶어 한 번에 검색한다(저장되는 키는 후보 행이 들고 온 원장별 키 그대로).
+ * 피커의 '종류' 드롭다운 항목. 원장 하나가 곧 한 종류다 — 종전에는 네트워크만 원장 10개를
+ * 한 항목으로 묶었는데(찾는 사람이 어느 원장 소속인지 모른 채 이름부터 떠올리므로),
+ * 원장 통합으로 그 묶음이 필요 없어졌다.
  */
 export interface MinuteLinkPickKind {
   key: string
   label: string
-  /** 이 항목이 검색하는 원장 종류(둘 이상이면 한 풀로 합쳐 보여준다). */
+  /** 이 항목이 검색하는 원장 종류. */
   types: MinuteLinkTargetType[]
 }
 
-/** 원장 하나가 곧 한 종류인 항목(사업·스타트업·펀드). */
-const singleKind = (t: MinuteLinkTargetType): MinuteLinkPickKind => ({
+export const MINUTE_LINK_PICK_KINDS: MinuteLinkPickKind[] = MINUTE_LINK_TARGET_TYPES.map((t) => ({
   key: t,
   label: MINUTE_LINK_TARGETS[t].kindLabel,
   types: [t],
-})
-
-export const MINUTE_LINK_PICK_KINDS: MinuteLinkPickKind[] = [
-  ...MINUTE_LINK_TARGET_TYPES.map(singleKind),
-  { key: 'network', label: '네트워크', types: [...NETWORK_MINUTE_LINK_TYPES] },
-]
+}))
 
 /** 피커 최초 진입 종류(AC 사업). */
-export const DEFAULT_MINUTE_LINK_PICK_KIND: MinuteLinkPickKind = singleKind('program')
+export const DEFAULT_MINUTE_LINK_PICK_KIND: MinuteLinkPickKind = MINUTE_LINK_PICK_KINDS[0]!
 
 /** 드롭다운 선택값(key) → 종류. 모르는 값이면 기본 종류로 되돌린다. */
 export function minuteLinkPickKind(key: string): MinuteLinkPickKind {

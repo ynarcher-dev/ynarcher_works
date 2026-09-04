@@ -1,26 +1,24 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { DIRECTORY_ENTITIES, ENTITIES, ENTITY_ORDER, type EntityKey } from '@/features/networks/config'
+import {
+  CATEGORY_LABEL,
+  CATEGORY_ORDER,
+  NETWORK_TABLE,
+  categoryLabel,
+  type NetworkCategory,
+} from '@/features/networks/config'
 
 /**
- * 네트워크 현황 집계 슬롯(표시 순서 고정). 인물·조직 8종 + 글로벌 + 미분류.
- * label은 현황 카드 표기용(구분별 분포 도넛은 config 라벨을 별도로 사용).
+ * 네트워크 현황 집계 — 원장 통합(2026-09-04) 이후.
+ *
+ * 종전에는 표가 11개라 슬롯마다 head 카운트를 따로 냈다(구분 = 표 이름). 지금은 한 표이므로
+ * 구분은 컬럼 값이고, 슬롯은 그 값의 목록이다. 해외는 더 이상 슬롯이 아니다 — 지역은 구분과
+ * 직교한 축이라 같은 줄에 세우면 한 사람이 두 칸에 잡힌다.
  */
-const STATUS_SLOTS: { key: string; label: string; table: string }[] = [
-  { key: 'van', label: 'BAN', table: 'van' },
-  { key: 'exp', label: 'EXP', table: 'exp' },
-  { key: 'experts', label: '전문가', table: 'experts' },
-  { key: 'investors', label: '투자자', table: 'investors' },
-  { key: 'corporates', label: '기업', table: 'corporates' },
-  { key: 'institutions', label: '기관', table: 'institutions' },
-  { key: 'universities', label: '대학', table: 'universities' },
-  { key: 'etc', label: '기타', table: 'etc' },
-  { key: 'global', label: '글로벌', table: 'global_networks' },
-  { key: 'others', label: '미분류', table: 'others' },
+const STATUS_SLOTS: { key: string; label: string; category: NetworkCategory | null }[] = [
+  ...CATEGORY_ORDER.map((key) => ({ key, label: CATEGORY_LABEL[key], category: key })),
+  { key: 'others', label: '미분류', category: null },
 ]
-
-/** 도넛(구분별 분포)에 넣는 카테고리 키 집합(글로벌·미분류 제외). */
-const DONUT_KEYS = new Set<string>(ENTITY_ORDER)
 
 /** 이번 달 1일 0시(로컬) ISO — 전월 대비 증감 집계 하한. */
 function startOfMonthISO(): string {
@@ -28,15 +26,24 @@ function startOfMonthISO(): string {
   return new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
 }
 
-/** 레코드 head 카운트(행 미전송). active=활성만, createdSince/deletedSince=기간 필터. */
+/**
+ * 통합 원장 head 카운트(행 미전송). category=null이면 미분류만,
+ * category를 주면 그 구분만, 생략하면 전체.
+ */
 async function headCount(
-  table: string,
-  opts: { active?: boolean; createdSince?: string; deletedSince?: string } = {},
+  opts: {
+    category?: NetworkCategory | null
+    active?: boolean
+    createdSince?: string
+    deletedSince?: string
+  } = {},
 ): Promise<number> {
   let q = supabase
-    .from(table)
+    .from(NETWORK_TABLE)
     .select('id', { count: 'exact', head: true })
     .is('merged_into_id', null)
+  if (opts.category === null) q = q.is('category', null)
+  else if (opts.category) q = q.eq('category', opts.category)
   if (opts.active) q = q.is('deleted_at', null)
   if (opts.createdSince) q = q.gte('created_at', opts.createdSince)
   if (opts.deletedSince) q = q.gte('deleted_at', opts.deletedSince)
@@ -56,13 +63,13 @@ export interface StatusItem {
 }
 
 export interface NetworksSummary {
-  /** 총보유(맨 앞) + 카테고리 10종 + 글로벌 + 미분류. 표시 순서 고정. */
+  /** 총보유(맨 앞) + 구분 8종 + 미분류. 표시 순서 고정. */
   items: StatusItem[]
-  /** 구분별 분포 도넛용(인물·조직 8종, 내림차순). */
-  byCategory: { key: EntityKey; label: string; count: number }[]
+  /** 구분별 분포 도넛용(내림차순). */
+  byCategory: { key: NetworkCategory; label: string; count: number }[]
 }
 
-/** 네트워크 현황(슬롯별 보유·증감) + 구분별 분포. 테이블별 head 카운트를 병렬 집계한다. */
+/** 네트워크 현황(구분별 보유·증감) + 구분별 분포. */
 export function useNetworksSummary() {
   return useQuery({
     queryKey: ['networks', 'dashboard', 'summary'],
@@ -71,9 +78,9 @@ export function useNetworksSummary() {
       const stats = await Promise.all(
         STATUS_SLOTS.map(async (s) => {
           const [total, added, removed] = await Promise.all([
-            headCount(s.table, { active: true }),
-            headCount(s.table, { active: true, createdSince: since }),
-            headCount(s.table, { deletedSince: since }),
+            headCount({ category: s.category, active: true }),
+            headCount({ category: s.category, active: true, createdSince: since }),
+            headCount({ category: s.category, deletedSince: since }),
           ])
           return { ...s, total, delta: added - removed }
         }),
@@ -88,12 +95,8 @@ export function useNetworksSummary() {
       }
 
       const byCategory = stats
-        .filter((s) => DONUT_KEYS.has(s.key))
-        .map((s) => ({
-          key: s.key as EntityKey,
-          label: ENTITIES[s.key as EntityKey].label,
-          count: s.total,
-        }))
+        .filter((s): s is typeof s & { category: NetworkCategory } => s.category !== null)
+        .map((s) => ({ key: s.category, label: s.label, count: s.total }))
         .sort((a, b) => b.count - a.count)
 
       return { items: [grand, ...stats], byCategory }
@@ -101,11 +104,8 @@ export function useNetworksSummary() {
   })
 }
 
-/** 영역(expertise) 집계 대상 — 전문 영역을 입력하는 프로필형 4종(BAN·EXP·전문가·투자사). */
-const EXPERTISE_TABLES = ['van', 'exp', 'experts', 'investors']
-
 /**
- * BAN·EXP·전문가·투자사의 전문 영역(expertise jsonb 배열) 태그별 보유 인원 분포.
+ * 전문 영역(expertise jsonb 배열) 태그별 보유 인원 분포.
  * ADMIN 영역 관리(field_tags)에 등록된 태그만 개별 조각으로 집계하고, 목록에 없는
  * 레거시·자유입력 값은 '기타(미등록)'로 합산한다. 한 인물이 여러 영역을 가지면 각 영역에
  * 중복 집계된다(합계 ≠ 인원 수).
@@ -114,30 +114,24 @@ export function useExpertiseDistribution() {
   return useQuery({
     queryKey: ['networks', 'dashboard', 'expertise'],
     queryFn: async (): Promise<{ label: string; count: number }[]> => {
-      const [tagRes, ...tableRes] = await Promise.all([
+      const [tagRes, rowRes] = await Promise.all([
         supabase.from('field_tags').select('name').is('deleted_at', null),
-        ...EXPERTISE_TABLES.map((t) =>
-          supabase
-            .from(t)
-            .select('expertise')
-            .is('deleted_at', null)
-            .is('merged_into_id', null)
-            .limit(2000),
-        ),
+        supabase
+          .from(NETWORK_TABLE)
+          .select('expertise')
+          .is('deleted_at', null)
+          .is('merged_into_id', null)
+          .limit(5000),
       ])
-      const managed = new Set(
-        ((tagRes.data ?? []) as { name: string }[]).map((t) => t.name),
-      )
+      const managed = new Set(((tagRes.data ?? []) as { name: string }[]).map((t) => t.name))
       const counts = new Map<string, number>()
       let other = 0
-      for (const res of tableRes) {
-        for (const row of (res.data ?? []) as { expertise: unknown }[]) {
-          const list = Array.isArray(row.expertise) ? row.expertise : []
-          for (const tag of list) {
-            if (typeof tag !== 'string' || !tag.trim()) continue
-            if (managed.has(tag)) counts.set(tag, (counts.get(tag) ?? 0) + 1)
-            else other += 1
-          }
+      for (const row of (rowRes.data ?? []) as { expertise: unknown }[]) {
+        const list = Array.isArray(row.expertise) ? row.expertise : []
+        for (const tag of list) {
+          if (typeof tag !== 'string' || !tag.trim()) continue
+          if (managed.has(tag)) counts.set(tag, (counts.get(tag) ?? 0) + 1)
+          else other += 1
         }
       }
       const result = [...counts.entries()]
@@ -150,71 +144,34 @@ export function useExpertiseDistribution() {
 }
 
 /**
- * 글로벌 네트워크(global_networks)의 권역(region_tags)별 보유 건수 분포.
- * 권역 미지정(region_tag_id null)은 '미지정'으로 집계한다. 건수 내림차순.
+ * 권역별 보유 건수 분포(해외만). 권역은 행이 아니라 국가가 갖는 값이라 국가를 조인해 센다.
+ * 국내는 세지 않는다 — 권역 '국내' 한 칸이 나머지를 다 눌러 비교가 성립하지 않는다.
+ * 국가 미확인은 '미지정'으로 집계한다. 건수 내림차순.
  */
-export function useRegionDistribution(scope: 'mine' | 'all' = 'all') {
+export function useRegionDistribution() {
   return useQuery({
-    queryKey: ['networks', 'dashboard', 'regions', scope],
+    queryKey: ['networks', 'dashboard', 'regions'],
     queryFn: async (): Promise<{ label: string; count: number }[]> => {
-      if (scope === 'mine') {
-        const [tagRes, rowsRes] = await Promise.all([
-          supabase.from('region_tags').select('name').is('deleted_at', null),
-          supabase.rpc('global_network_entities', {
-            p_keyword: null,
-            p_mine: true,
-            p_regions: null,
-            p_countries: null,
-            p_categories: null,
-            p_search_email: false,
-            p_search_phone: false,
-            p_limit: 5000,
-            p_offset: 0,
-          }),
-        ])
-        const { data, error } = rowsRes
-        if (tagRes.error) throw tagRes.error
-        if (error) throw error
-
-        const counts = new Map<string, number>(
-          ((tagRes.data ?? []) as { name: string }[]).map((tag) => [tag.name, 0]),
-        )
-        for (const row of (data ?? []) as { region_name?: string | null }[]) {
-          const label = row.region_name?.trim() || '미지정'
-          counts.set(label, (counts.get(label) ?? 0) + 1)
-        }
-        return [...counts.entries()]
-          .map(([label, count]) => ({ label, count }))
-          .sort((a, b) => b.count - a.count)
-      }
-
-      const [tagRes, rowRes] = await Promise.all([
-        supabase.from('region_tags').select('id, name').is('deleted_at', null),
-        supabase
-          .from('global_networks')
-          .select('region_tag_id')
-          .is('deleted_at', null)
-          .is('merged_into_id', null)
-          .limit(5000),
-      ])
-      if (tagRes.error) throw tagRes.error
-      if (rowRes.error) throw rowRes.error
-      const nameById = new Map(
-        ((tagRes.data ?? []) as { id: string; name: string }[]).map((t) => [t.id, t.name]),
-      )
-      const counts = new Map<string, number>(
-        ((tagRes.data ?? []) as { id: string; name: string }[]).map((tag) => [tag.id, 0]),
-      )
+      const { data, error } = await supabase
+        .from(NETWORK_TABLE)
+        .select('country:country_tags!country_tag_id(region:region_tags!region_tag_id(name))')
+        .eq('region_scope', 'OVERSEAS')
+        .is('deleted_at', null)
+        .is('merged_into_id', null)
+        .limit(5000)
+      if (error) throw error
+      const counts = new Map<string, number>()
       let none = 0
-      for (const r of (rowRes.data ?? []) as { region_tag_id: string | null }[]) {
-        if (!r.region_tag_id) {
+      for (const row of (data ?? []) as { country?: { region?: { name?: string } | null } | null }[]) {
+        const label = row.country?.region?.name?.trim()
+        if (!label) {
           none += 1
           continue
         }
-        counts.set(r.region_tag_id, (counts.get(r.region_tag_id) ?? 0) + 1)
+        counts.set(label, (counts.get(label) ?? 0) + 1)
       }
       const result = [...counts.entries()]
-        .map(([id, count]) => ({ label: nameById.get(id) ?? '기타', count }))
+        .map(([label, count]) => ({ label, count }))
         .sort((a, b) => b.count - a.count)
       if (none > 0) result.push({ label: '미지정', count: none })
       return result
@@ -222,54 +179,37 @@ export function useRegionDistribution(scope: 'mine' | 'all' = 'all') {
   })
 }
 
-/** 최근 등록 네트워크 행(구분 표기용 entity 포함). 디렉토리 엔티티 테이블 전역에서 최신순으로 모은다. */
+/** 최근 등록 네트워크 행(구분 표기용). */
 export interface RecentNetworkRow {
   id: string
   name: string
   created_at: string
-  /** 소속 엔티티(구분 배지·상세 라우팅용). */
-  entity: EntityKey
+  /** 구분 코드(배지 표기용). 미분류면 null. */
+  category: NetworkCategory | null
 }
 
-/**
- * 최근 등록 네트워크(디렉토리 9종 + 미분류 통합, 등록일 내림차순 상위 60건).
- * 테이블별로 최신 30건씩 병렬 조회 후 합쳐 정렬한다. 주간 피드(RecentRegisteredFeed)의 원천.
- */
+/** 최근 등록 네트워크(등록일 내림차순 상위 60건). 주간 피드(RecentRegisteredFeed)의 원천. */
 export function useRecentNetworks() {
   return useQuery({
     queryKey: ['networks', 'dashboard', 'recent'],
     queryFn: async (): Promise<RecentNetworkRow[]> => {
-      const perTable = await Promise.all(
-        DIRECTORY_ENTITIES.map(async (entity) => {
-          const { data } = await supabase
-            .from(entity)
-            .select('id, name, created_at')
-            .is('deleted_at', null)
-            .is('merged_into_id', null)
-            .order('created_at', { ascending: false })
-            .limit(30)
-          return ((data ?? []) as { id: string; name: string; created_at: string }[]).map((r) => ({
-            id: r.id,
-            name: r.name,
-            created_at: r.created_at,
-            entity,
-          }))
-        }),
-      )
-      return perTable
-        .flat()
-        .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
-        .slice(0, 60)
+      const { data } = await supabase
+        .from(NETWORK_TABLE)
+        .select('id, name, created_at, category')
+        .is('deleted_at', null)
+        .is('merged_into_id', null)
+        .order('created_at', { ascending: false })
+        .limit(60)
+      return (data ?? []) as RecentNetworkRow[]
     },
   })
 }
 
-/** 네트워크 평가랭킹 행(BAN·EXP·전문가·투자사 통합). 활동건·만족도는 실집계 연동 전이라 null(미연동)로 둔다. */
+/** 네트워크 평가랭킹 행. 활동건·만족도는 실집계 연동 전이라 null(미연동)로 둔다. */
 export interface ExpertRankRow {
   id: string
-  entity: EntityKey
   name: string
-  /** 구분(profile.category, 없으면 엔티티 라벨). */
+  /** 구분 라벨. 미분류면 빈 문자열. */
   category: string
   /** 영역(expertise 태그). */
   fields: string[]
@@ -279,46 +219,35 @@ export interface ExpertRankRow {
   satisfaction: number | null
 }
 
-/** 평가랭킹 대상 — 영역·활동·만족도를 갖는 프로필형 4종. */
-const RANKING_TABLES: EntityKey[] = ['experts', 'van', 'exp', 'investors']
+/** 평가랭킹 대상 — 영역·활동·만족도를 갖는 인물형 구분. */
+const RANKING_CATEGORIES: NetworkCategory[] = ['experts', 'van', 'exp', 'investors']
 
 /**
- * 네트워크 평가랭킹용 목록(BAN·EXP·전문가·투자사 통합, 이름·구분·영역). 활동건·만족도는
- * 실집계 연동 전이라 null이며, UI에서 '-'로 표기한다. 정렬(활동/만족도 탭)은 연동 후 값
- * 기준으로 동작하도록 준비만 한다.
+ * 네트워크 평가랭킹용 목록(인물형 구분, 이름·구분·영역). 활동건·만족도는 실집계 연동 전이라
+ * null이며, UI에서 '-'로 표기한다.
  */
 export function useExpertRanking() {
   return useQuery({
     queryKey: ['networks', 'dashboard', 'expert-ranking'],
     queryFn: async (): Promise<ExpertRankRow[]> => {
-      const perTable = await Promise.all(
-        RANKING_TABLES.map(async (t) => {
-          const { data } = await supabase
-            .from(t)
-            .select('id, name, expertise, profile')
-            .is('deleted_at', null)
-            .is('merged_into_id', null)
-            .order('name', { ascending: true })
-            .limit(500)
-          return (
-            (data ?? []) as {
-              id: string
-              name: string
-              expertise: unknown
-              profile: { category?: string } | null
-            }[]
-          ).map((r) => ({
-            id: r.id,
-            entity: t,
-            name: r.name,
-            category: r.profile?.category || ENTITIES[t].label,
-            fields: Array.isArray(r.expertise) ? (r.expertise as string[]) : [],
-            activity: null,
-            satisfaction: null,
-          }))
-        }),
-      )
-      return perTable.flat()
+      const { data } = await supabase
+        .from(NETWORK_TABLE)
+        .select('id, name, expertise, category')
+        .in('category', RANKING_CATEGORIES)
+        .is('deleted_at', null)
+        .is('merged_into_id', null)
+        .order('name', { ascending: true })
+        .limit(2000)
+      return (
+        (data ?? []) as { id: string; name: string; expertise: unknown; category: string | null }[]
+      ).map((r) => ({
+        id: r.id,
+        name: r.name,
+        category: categoryLabel(r.category),
+        fields: Array.isArray(r.expertise) ? (r.expertise as string[]) : [],
+        activity: null,
+        satisfaction: null,
+      }))
     },
   })
 }

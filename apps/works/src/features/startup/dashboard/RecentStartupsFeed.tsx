@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import type { EntityRow } from '@/features/networks/hooks'
+import type { EntityRow } from '@/features/master/entityHooks'
 import {
   RecentRegisteredFeed,
   type RecentItem,

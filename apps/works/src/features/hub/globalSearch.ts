@@ -6,8 +6,7 @@ import {
   type MaskOverrides,
   type SensitiveField,
 } from '@/features/admin/sensitiveStore'
-import { GLOBAL_TABLE } from '@/features/networks/globalConfig'
-import { DIRECTORY_ENTITIES, ENTITIES, type EntityKey } from '@/features/networks/config'
+import { NETWORK_TABLE, categoryLabel } from '@/features/networks/config'
 import {
   MANAGEMENT_STATUSES,
   MANAGEMENT_STATUS_LABEL,
@@ -22,7 +21,6 @@ type BadgeTone = 'neutral' | 'success' | 'warning' | 'info' | 'danger'
 export type SearchResultKind =
   | 'startup'
   | 'network'
-  | 'global_network'
   | 'program'
   | 'fund'
   | 'employee'
@@ -42,10 +40,8 @@ export interface SearchResult {
 
 type SearchScope = Record<SensitiveField, boolean>
 
-const NETWORK_CONTENT_KEYS = [
-  ...DIRECTORY_ENTITIES.map((entity) => `networks.${entity}`),
-  'networks.global',
-] as const
+// 원장이 하나가 되면서 민감정보 정책 키도 목록 셋으로 줄었다(2026-09-04).
+const NETWORK_CONTENT_KEYS = ['networks.all', 'networks.mine', 'networks.others'] as const
 
 const STARTUP_CONTENT_KEYS = MANAGEMENT_STATUSES.map((status) => startupContentKey(status))
 
@@ -187,83 +183,50 @@ async function searchStartups(kw: string, overrides: MaskOverrides): Promise<Sea
   return chunks.flat()
 }
 
-interface NetworkRow {
+interface NetworkSearchRow {
   id: string
   name: string
   affiliation: string | null
   email: string | null
   phone: string | null
+  category: string | null
+  /** 조인 임베드 — 결과 줄에 국가를 함께 적어 동명이인을 가른다. */
+  country: { name: string } | null
 }
 
-async function searchNetworkEntity(
-  entity: EntityKey,
-  kw: string,
-  overrides: MaskOverrides,
-): Promise<SearchResult[]> {
-  const contentKey = `networks.${entity}`
+async function searchNetworks(kw: string, overrides: MaskOverrides): Promise<SearchResult[]> {
+  // 통합 목록과 같은 정책 키를 쓴다 — 검색이 목록보다 넓게 보이면 마스킹이 무력해진다.
+  const contentKey = 'networks.all'
   const scope = scopeOf(overrides, contentKey)
   const fields = ['affiliation']
   if (scope.name) fields.push('name')
   if (scope.email) fields.push('email')
   if (scope.phone) fields.push('phone')
 
-  const rows = await safeRows<NetworkRow>(
+  const rows = await safeRows<NetworkSearchRow>(
     supabase
-      .from(entity)
-      .select('id, name, affiliation, email, phone')
+      .from(NETWORK_TABLE)
+      .select('id, name, affiliation, email, phone, category, country:country_tags!country_tag_id(name)')
       .is('deleted_at', null)
       .is('merged_into_id', null)
       .or(orClause(fields, kw))
       .order('name', { ascending: true })
-      .limit(NETWORK_LIMIT),
+      .limit(SOURCE_LIMIT + NETWORK_LIMIT),
   )
 
-  return rows.map((row) => ({
-    id: `${entity}:${row.id}`,
-    name: displaySensitive(overrides, contentKey, 'name', row.name),
-    kind: 'network' as const,
-    detail: detail(['데이터베이스', `${ENTITIES[entity].label} 네트워크`, row.affiliation]),
-    badge: ENTITIES[entity].label,
-    tone: entity === 'others' ? 'warning' : 'success',
-    path: `/networks/${entity}/${row.id}`,
-  }))
-}
-
-interface GlobalNetworkRow extends NetworkRow {
-  category: string | null
-}
-
-async function searchGlobalNetworks(
-  kw: string,
-  overrides: MaskOverrides,
-): Promise<SearchResult[]> {
-  const contentKey = 'networks.global'
-  const scope = scopeOf(overrides, contentKey)
-  const fields = ['affiliation', 'category']
-  if (scope.name) fields.push('name')
-  if (scope.email) fields.push('email')
-  if (scope.phone) fields.push('phone')
-
-  const rows = await safeRows<GlobalNetworkRow>(
-    supabase
-      .from(GLOBAL_TABLE)
-      .select('id, name, affiliation, email, phone, category')
-      .is('deleted_at', null)
-      .is('merged_into_id', null)
-      .or(orClause(fields, kw))
-      .order('name', { ascending: true })
-      .limit(SOURCE_LIMIT),
-  )
-
-  return rows.map((row) => ({
-    id: `${GLOBAL_TABLE}:${row.id}`,
-    name: displaySensitive(overrides, contentKey, 'name', row.name),
-    kind: 'global_network' as const,
-    detail: detail(['데이터베이스', '글로벌 네트워크', row.category, row.affiliation]),
-    badge: '글로벌',
-    tone: 'success' as const,
-    path: `/networks/global/${row.id}`,
-  }))
+  return rows.map((row) => {
+    const label = categoryLabel(row.category)
+    return {
+      id: `network:${row.id}`,
+      name: displaySensitive(overrides, contentKey, 'name', row.name),
+      kind: 'network' as const,
+      detail: detail(['데이터베이스', label || '미분류', row.country?.name ?? null, row.affiliation]),
+      badge: label || '미분류',
+      // 미분류는 아직 자리를 못 찾은 행이라 다른 톤으로 남겨 눈에 걸리게 한다.
+      tone: (label ? 'success' : 'warning') as BadgeTone,
+      path: `/networks/record/${row.id}`,
+    }
+  })
 }
 
 interface ProgramSearchSpec {
@@ -501,8 +464,7 @@ export async function fetchUnifiedSearch(
 
   const [
     startups,
-    networkChunks,
-    globalNetworks,
+    networks,
     programChunks,
     funds,
     employees,
@@ -511,8 +473,7 @@ export async function fetchUnifiedSearch(
     assets,
   ] = await Promise.all([
     searchStartups(kw, overrides),
-    Promise.all(DIRECTORY_ENTITIES.map((entity) => searchNetworkEntity(entity, kw, overrides))),
-    searchGlobalNetworks(kw, overrides),
+    searchNetworks(kw, overrides),
     Promise.all(PROGRAM_SPECS.map((spec) => searchPrograms(spec, kw))),
     searchFunds(kw),
     searchEmployees(kw),
@@ -523,8 +484,7 @@ export async function fetchUnifiedSearch(
 
   return dedupe([
     ...startups,
-    ...networkChunks.flat(),
-    ...globalNetworks,
+    ...networks,
     ...programChunks.flat(),
     ...funds,
     ...employees,

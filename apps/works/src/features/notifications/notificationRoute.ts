@@ -1,22 +1,17 @@
 /**
  * 알림의 target_type(코멘트 대상 유형) → 해당 레코드 상세 경로.
- * entity_feedback.target_type은 단수 리소스 타입이고, 라우트 세그먼트는 복수 엔티티 키라
- * 명시적 역매핑이 필요하다(router.tsx / networks/config.ts PROFILE_RESOURCE_TYPE 기준).
+ * entity_feedback.target_type은 다형 단수 키이고, 라우트는 그 키가 가리키는 화면이다.
  */
 
-/** 국내 네트워크: 단수 target_type → 복수 라우트 세그먼트. */
-const NETWORK_SEGMENT: Record<string, string> = {
-  expert: 'experts',
-  van: 'van',
-  exp: 'exp',
-  investor: 'investors',
-  corporate: 'corporates',
-  institution: 'institutions',
-  university: 'universities',
-  etc: 'etc',
-  other: 'others',
-  // vendor(외주/거래)는 라우트가 은퇴해 이동 경로가 없다.
-}
+/**
+ * 옛 네트워크 단수 키들. 2026-09-04 원장 통합으로 저장값은 'network' 하나가 되었지만,
+ * 통합 이전에 발송된 알림이 옛 키를 들고 있을 수 있어 같은 화면으로 받아 준다.
+ * (원장 행의 id는 이관에서 보존되므로 그 알림들은 여전히 올바른 레코드를 연다.)
+ */
+const LEGACY_NETWORK_TYPES = new Set([
+  'expert', 'van', 'exp', 'investor', 'corporate', 'institution',
+  'university', 'etc', 'other', 'vendor', 'global_network',
+])
 
 /**
  * 알림 클릭 시 이동할 경로를 만든다. 경로를 확정할 수 없으면 null(이동 불가로 처리).
@@ -25,8 +20,6 @@ const NETWORK_SEGMENT: Record<string, string> = {
  */
 export function notificationRoute(targetType: string, targetId: string): string | null {
   switch (targetType) {
-    case 'global_network':
-      return `/networks/global/${targetId}`
     case 'startup':
       return `/startup/discovered/${targetId}`
     case 'employee':
@@ -49,9 +42,9 @@ export function notificationRoute(targetType: string, targetId: string): string 
       // 반출 알림이 가리키는 것은 반출 건이 아니라 그 물건이다 — 요청·이력·처리 버튼이 모두
       // 물품 모달 안에 있어서, 물건을 여는 것이 곧 그 요청 앞에 서는 것이다.
       return `/office?tab=outbound&asset=${targetId}`
-    default: {
-      const seg = NETWORK_SEGMENT[targetType]
-      return seg ? `/networks/${seg}/${targetId}` : null
-    }
+    case 'network':
+      return `/networks/record/${targetId}`
+    default:
+      return LEGACY_NETWORK_TYPES.has(targetType) ? `/networks/record/${targetId}` : null
   }
 }

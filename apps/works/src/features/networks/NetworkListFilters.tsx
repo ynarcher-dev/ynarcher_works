@@ -1,46 +1,57 @@
 import { FilterResetButton, Input, MultiSelectFilter } from '@ynarcher/ui'
 import { useMemo } from 'react'
 import { useTags } from '@/features/admin/hooks'
-import { DOMESTIC_LIST_ENTITIES, ENTITIES } from '@/features/networks/config'
+import { useCountryOptions } from '@/features/networks/countryOptions'
 import {
-  EMPTY_NETWORK_LIST_FILTERS,
+  CATEGORY_LABEL,
+  CATEGORY_ORDER,
+  REGION_SCOPE_OPTIONS,
+  REGION_TAG_TABLE,
+} from '@/features/networks/config'
+import {
+  EMPTY_NETWORK_FILTERS,
   MATCH_FILTER_OPTIONS,
-  hasActiveNetworkListFilters,
-  type NetworkListFilterState,
+  hasActiveNetworkFilters,
+  showsOverseasAxes,
+  type NetworkFilterState,
 } from '@/features/networks/filters'
 
 interface NetworkListFiltersProps {
-  filters: NetworkListFilterState
-  onChange: (next: NetworkListFilterState) => void
+  filters: NetworkFilterState
+  onChange: (next: NetworkFilterState) => void
+  /** 미분류 목록처럼 구분이 이미 고정된 화면에서는 구분 축을 세우지 않는다. */
+  showCategory?: boolean
 }
 
 /**
- * 국내 통합 목록 필터 바(검색창 오른쪽에 같은 줄로 선다).
+ * 통합 목록 필터 바(검색창 오른쪽에 같은 줄로 선다).
  *
- * 축 순서는 표의 열 순서를 따른다 — 구분 → 영역 → 활동 → 만족도 → 매칭.
- * 첫 축은 이 목록에만 있다: 원장이 섞여 있으므로 '어느 구분인가'로 좁힐 수 있다. 값은 원장
- * 테이블명으로 거르되 화면에는 구분 이름만 보인다 — `profile.category`를 따로 축으로 두지
- * 않는 이유도 그 값이 곧 원장 라벨이라 같은 것을 두 번 묻게 되기 때문이다.
+ * 축 순서는 표의 열 순서를 따른다 — 지역 → (권역·국가) → 구분 → 영역 → 활동 → 매칭.
+ * 지역이 구분보다 앞에 서는 것은 좁혀 가는 순서가 어디 사람인가 → 어떤 구분인가 →
+ * 무엇을 하는가이기 때문이고, 표의 열도 같은 순서다(2026-09-04).
+ * 구분과 지역이 직교한 두 축이라 '해외의 대학'처럼 두 축을 함께 걸 수 있다(2026-09-04 통합
+ * 이전에는 해외가 원장 하나였고 그 안의 구분이 3값뿐이라 이 조합 자체가 없었다).
  *
- * 나머지 넷은 2026-08-20에 폐지된 원장별 목록에서 그대로 옮겨 왔다. 조직형(기업·기관·대학·
- * 기타) 행은 그 열이 비어 있어 이 축으로 거르면 자연히 빠지며, 그것이 이 축들의 뜻이다 —
- * '영역이 핀테크인 사람'을 물으면 영역 자체가 없는 조직 담당자는 답이 아니다.
+ * 권역·국가는 해외 행에만 있는 값이라, 지역을 국내로 좁히면 축에서 내린다 — 어떤 값을
+ * 골라도 결과가 0건이 되는 칸은 고를 수 있다고 말하는 죽은 컨트롤이다. 권역·국가는 태그
+ * FK(id)로 거른다(이름으로 거르면 동명 태그에서 어긋난다).
  *
  * 영역 선택지는 ADMIN 태그 원장(field_tags)에서 읽는다(코드에 목록을 박지 않는다).
  */
-export function NetworkListFilters({ filters, onChange }: NetworkListFiltersProps) {
+export function NetworkListFilters({
+  filters,
+  onChange,
+  showCategory = true,
+}: NetworkListFiltersProps) {
   const { data: fieldTags } = useTags('field_tags')
+  const { data: regionTags } = useTags(REGION_TAG_TABLE)
+  const { data: countries } = useCountryOptions()
 
-  // 선택지는 국내 목록이 담는 원장에서 파생한다(원장이 늘어도 이 파일은 손대지 않는다).
-  // 은퇴 원장(vendors)은 새로 고를 이유가 없어 선택지에서만 빼고 목록에는 그대로 담긴다.
+  // 은퇴 구분(vendors)은 새로 고를 이유가 없어 선택지에서만 빠지고 목록에는 그대로 담긴다.
   // 라벨은 구분 이름 그대로다 — 필터 이름이 이미 '구분'이라 항목마다 '네트워크'를 붙이면
   // 같은 말이 두 번 서고, 표의 구분 열에 찍히는 값과도 표기가 어긋난다.
-  const entityOptions = useMemo(
-    () =>
-      DOMESTIC_LIST_ENTITIES.filter((key) => key !== 'vendors').map((key) => ({
-        value: key,
-        label: ENTITIES[key].label,
-      })),
+  const categoryOptions = useMemo(
+    () => CATEGORY_ORDER.map((key) => ({ value: key, label: CATEGORY_LABEL[key] })),
     [],
   )
 
@@ -49,16 +60,83 @@ export function NetworkListFilters({ filters, onChange }: NetworkListFiltersProp
     [fieldTags],
   )
 
-  const active = hasActiveNetworkListFilters(filters)
+  const regionOptions = useMemo(
+    () => (regionTags ?? []).map((t) => ({ value: t.id, label: t.name })),
+    [regionTags],
+  )
+
+  // 국가 선택지는 자국을 맨 앞에 두고 나머지는 가나다순이다(useCountryOptions).
+  // 권역을 고르면 그 권역의 국가로 좁힌다 — 국가는 수가 많아 전체 나열이 고르기 어렵다.
+  const allCountries = useMemo(
+    () => [...(countries?.domestic ?? []), ...(countries?.overseas ?? [])],
+    [countries],
+  )
+  const countryOptions = useMemo(() => {
+    const scoped = filters.regionIds.length
+      ? allCountries.filter((t) => filters.regionIds.includes(t.region_tag_id ?? ''))
+      : allCountries
+    return scoped.map((t) => ({ value: t.id, label: t.name }))
+  }, [allCountries, filters.regionIds])
+
+  const overseas = showsOverseasAxes(filters)
+  const active = hasActiveNetworkFilters(filters)
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       <MultiSelectFilter
-        label="구분"
-        options={entityOptions}
-        selected={filters.entities}
-        onChange={(entities) => onChange({ ...filters, entities })}
+        label="지역"
+        options={REGION_SCOPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+        selected={filters.regionScopes}
+        onChange={(regionScopes) =>
+          // 국내로 좁히면 권역·국가 조건은 남겨 둘 수 없다 — 국내 행에는 그 값이 없어
+          // 조건이 남아 있으면 결과가 통째로 비고 그 이유가 화면에 보이지 않는다.
+          onChange(
+            regionScopes.length === 1 && regionScopes[0] === 'DOMESTIC'
+              ? { ...filters, regionScopes, regionIds: [], countryIds: [] }
+              : { ...filters, regionScopes },
+          )
+        }
       />
+
+      {overseas && (
+        <>
+          <MultiSelectFilter
+            label="권역"
+            options={regionOptions}
+            selected={filters.regionIds}
+            onChange={(regionIds) =>
+              // 권역을 바꾸면 그 권역에 없는 국가 선택은 남겨 둘 수 없다(고를 수 없는 조건이 된다).
+              onChange({
+                ...filters,
+                regionIds,
+                countryIds: filters.countryIds.filter((id) =>
+                  allCountries.some(
+                    (t) =>
+                      t.id === id &&
+                      (regionIds.length === 0 || regionIds.includes(t.region_tag_id ?? '')),
+                  ),
+                ),
+              })
+            }
+          />
+          <MultiSelectFilter
+            label="국가"
+            options={countryOptions}
+            selected={filters.countryIds}
+            onChange={(countryIds) => onChange({ ...filters, countryIds })}
+          />
+        </>
+      )}
+
+      {showCategory && (
+        <MultiSelectFilter
+          label="구분"
+          options={categoryOptions}
+          selected={filters.categories}
+          onChange={(categories) => onChange({ ...filters, categories })}
+        />
+      )}
+
       <MultiSelectFilter
         label="영역"
         options={fieldOptions}
@@ -98,9 +176,7 @@ export function NetworkListFilters({ filters, onChange }: NetworkListFiltersProp
         onChange={(match) => onChange({ ...filters, match })}
       />
 
-      {active && (
-        <FilterResetButton onClick={() => onChange(EMPTY_NETWORK_LIST_FILTERS)} />
-      )}
+      {active && <FilterResetButton onClick={() => onChange(EMPTY_NETWORK_FILTERS)} />}
     </div>
   )
 }

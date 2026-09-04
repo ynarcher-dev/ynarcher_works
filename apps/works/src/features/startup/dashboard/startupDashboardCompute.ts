@@ -1,4 +1,4 @@
-import type { EntityRow } from '@/features/networks/hooks'
+import type { EntityRow } from '@/features/master/entityHooks'
 import type { CategoryDatum } from '@/features/networks/dashboard/CategoryBarList'
 import { readGrowth, readIndustries } from '@/features/startup/startupGrowth'
 import {

@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Globe, Network, Rocket, type LucideIcon } from 'lucide-react'
+import {  Network, Rocket, type LucideIcon } from 'lucide-react'
 import { Card, EmptyState, Skeleton, SummaryTile, type SummaryTileTone } from '@ynarcher/ui'
 import { hasWorkspaceRead, useAuthStore } from '@/auth/authStore'
 import {
@@ -18,7 +18,7 @@ const n = (value: number) => value.toLocaleString('ko-KR')
  *
  * 색은 위 「나의 워크스페이스」가 쓰지 않는 넷에서 고른다(blue·purple·mint·amber 회피) —
  * 나란히 선 두 카드가 같은 색을 쓰면 두 줄이 한 줄의 연장으로 읽힌다. 아이콘은 좌측 내비에서
- * 그 원장을 가리키는 글리프를 그대로 가져온다(스타트업 Rocket · 글로벌 Globe).
+ * 그 원장을 가리키는 글리프를 그대로 가져온다(스타트업 Rocket · 네트워크 Network).
  *
  * 단위(스타트업 '개사' · 네트워크 '명')가 조회 결과가 아니라 이 표에 있는 이유: 단위는 서버가
  * 답하는 값이 아니라 화면이 아는 말인데, 조회 결과에 실으면 **캐시에 남아 있던 지난 행**이
@@ -33,8 +33,7 @@ const TILE_LOOK: Record<LedgerKey, {
   unit: string
 }> = {
   startup: { eyebrow: 'STARTUP', icon: Rocket, tone: 'cyan', unit: '개사' },
-  domestic: { eyebrow: 'NETWORKS', icon: Network, tone: 'indigo', unit: '명' },
-  global: { eyebrow: 'NETWORKS', icon: Globe, tone: 'orchid', unit: '명' },
+  networks: { eyebrow: 'NETWORKS', icon: Network, tone: 'indigo', unit: '명' },
 }
 
 /**

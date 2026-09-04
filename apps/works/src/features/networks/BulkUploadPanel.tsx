@@ -13,20 +13,12 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState, type DragEvent } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useTags } from '@/features/admin/hooks'
-import {
-  CATEGORY_OPTIONS,
-  ENTITIES,
-  resolveEntityFromCategory,
-  type EntityKey,
-} from '@/features/networks/config'
-import {
-  createUploadBatch,
-  findPriorBatchByHash,
-  mergeReclassify,
-} from '@/features/networks/hooks'
+import { CATEGORY_OPTIONS, NETWORK_TABLE, type NetworkCategory } from '@/features/networks/config'
+import { useCountryOptions } from '@/features/networks/countryOptions'
+import { createUploadBatch, findPriorBatchByHash } from '@/features/networks/hooks'
 import {
   buildEnrichment,
-  buildReclassifyValues,
+  csvCategory,
   buildTemplateCsv,
   downloadCsv,
   findExistingMatches,
@@ -37,16 +29,18 @@ import {
 } from '@/features/networks/bulkUpload'
 import { BulkReviewTable, type Decision, type ReviewRow } from '@/features/networks/BulkReviewTable'
 
-const MISC_LABEL = '미분류'
-const CATEGORY_SELECT = CATEGORY_OPTIONS.map((o) => ({ value: o.label, label: o.label }))
+// 선택지 값은 저장되는 코드 그대로다. 빈 값은 미분류(구분을 정하지 않고 올린다).
+const CATEGORY_SELECT = [
+  { value: '', label: '미분류' },
+  ...CATEGORY_OPTIONS.map((o) => ({ value: o.key, label: o.label })),
+]
 
-function normalizeCategory(raw: string): string {
-  return CATEGORY_OPTIONS.find((o) => o.label === raw.trim())?.label ?? MISC_LABEL
-}
-
-/** 중복 매칭 시 구분 재결정의 프리셋: 미분류 매칭이면 CSV 구분, 실카테고리 매칭이면 기존 구분(보수적). */
-function presetCategory(csvCategory: string, match: ExistingRef): string {
-  return match.table === 'others' ? csvCategory : match.category
+/**
+ * 중복 매칭 시 구분 재결정의 프리셋: 기존이 미분류면 CSV 구분, 이미 구분이 있으면 기존 값(보수적).
+ * 통합 원장에서는 구분이 한 칸의 값이라 이 선택이 행 이동을 뜻하지 않는다.
+ */
+function presetCategory(fromCsv: NetworkCategory | null, match: ExistingRef): NetworkCategory | '' {
+  return (match.category ?? fromCsv ?? '') as NetworkCategory | ''
 }
 
 /**
@@ -70,6 +64,16 @@ export function BulkUploadPanel() {
   // 영역은 ADMIN 영역 관리(field_tags)에서 고르는 값이다. 파일의 값은 그대로 저장하되,
   // 원장에 없는 이름은 목록 필터에 걸리지 않으므로 올리기 전에 드러낸다(조용히 버리지 않는다).
   const { data: fieldTags } = useTags('field_tags')
+  // 국가는 이름으로 올라오므로 태그 원장과 대조해 id로 바꾼다(대소문자·공백 무시).
+  // 못 찾은 값은 버리지 않고 '미확인'으로 남겨 목록에서 채우게 한다.
+  const { data: countries } = useCountryOptions()
+  const countryByName = useMemo(() => {
+    const m = new Map<string, { id: string; name: string }>()
+    for (const c of [...(countries?.domestic ?? []), ...(countries?.overseas ?? [])]) {
+      m.set(c.name.trim().toLowerCase(), { id: c.id, name: c.name })
+    }
+    return m
+  }, [countries])
   const unknownFields = useMemo(() => {
     const known = new Set((fieldTags ?? []).map((t) => t.name))
     const out = new Set<string>()
@@ -92,12 +96,17 @@ export function BulkUploadPanel() {
     setPriorUpload(await findPriorBatchByHash(hash))
 
     setRows(
-      parsed.map((r) => ({
-        ...r,
-        categoryLabel: normalizeCategory(r.category),
-        match: null,
-        decision: r.name ? 'new' : 'skip',
-      })),
+      parsed.map((r) => {
+        const hit = countryByName.get(r.country.trim().toLowerCase())
+        return {
+          ...r,
+          targetCategory: (csvCategory(r.category) ?? '') as NetworkCategory | '',
+          countryTagId: hit?.id ?? null,
+          countryLabel: hit?.name ?? r.country.trim(),
+          match: null,
+          decision: r.name ? 'new' : 'skip',
+        }
+      }),
     )
 
     setChecking(true)
@@ -114,7 +123,7 @@ export function BulkUploadPanel() {
             match: m,
             // 비활성 중복은 기본 건너뛰기(보수적) — 복구는 명시적으로 선택.
             decision: !r.name ? 'skip' : m.deleted ? 'skip' : 'merge',
-            categoryLabel: presetCategory(normalizeCategory(r.category), m),
+            targetCategory: presetCategory(csvCategory(r.category), m),
           }
         }),
       )
@@ -130,8 +139,10 @@ export function BulkUploadPanel() {
     if (file) void loadFile(file)
   }
 
-  const setCategory = (line: number, label: string) =>
-    setRows((prev) => prev.map((r) => (r.line === line ? { ...r, categoryLabel: label } : r)))
+  const setCategory = (line: number, value: string) =>
+    setRows((prev) =>
+      prev.map((r) => (r.line === line ? { ...r, targetCategory: value as NetworkCategory | '' } : r)),
+    )
   const setDecision = (line: number, decision: Decision) =>
     setRows((prev) => prev.map((r) => (r.line === line ? { ...r, decision } : r)))
   const applyBulkDecision = (d: Decision) =>
@@ -151,8 +162,12 @@ export function BulkUploadPanel() {
     setRows((prev) => prev.map((r) => (r.line === line ? { ...r, decision: 'merge' } : r)))
     setReviveConfirm(null)
   }
-  const applyBulkCategory = (label: string) =>
-    setRows((prev) => prev.map((r) => (selected.includes(r.line) ? { ...r, categoryLabel: label } : r)))
+  const applyBulkCategory = (value: string) =>
+    setRows((prev) =>
+      prev.map((r) =>
+        selected.includes(r.line) ? { ...r, targetCategory: value as NetworkCategory | '' } : r,
+      ),
+    )
   const reset = () => {
     setRows([])
     setSelected([])
@@ -192,59 +207,49 @@ export function BulkUploadPanel() {
         merged: mergeRows.length,
         skipped: skipCount,
       })
-      const touched = new Set<EntityKey>()
-
-      // 신규 등록.
-      const byTable = new Map<EntityKey, Record<string, unknown>[]>()
-      for (const r of newRows) {
-        const { target, payload } = rowToPayload(r, r.categoryLabel)
-        const list = byTable.get(target) ?? []
-        list.push(payload)
-        byTable.set(target, list)
-      }
-      // 등록과 이력을 한 트랜잭션에 넣는다. 종전에는 insert 후 행마다 기여 로그를 따로
-      // 밀어 넣어, 앞은 성공하고 뒤가 실패하면 배치 표식 없는 행이 남을 수 있었다.
-      for (const [table, list] of byTable) {
+      // 신규 등록. 원장이 하나라 대상별로 나눌 필요가 없다 — 한 번에 밀어 넣는다.
+      // 등록과 이력을 한 트랜잭션에 넣는다(종전에는 insert 후 행마다 기여 로그를 따로
+      // 밀어 넣어, 앞은 성공하고 뒤가 실패하면 배치 표식 없는 행이 남을 수 있었다).
+      if (newRows.length > 0) {
         const { error } = await supabase.rpc('upload_insert_entities', {
-          p_table: table,
-          p_rows: list,
+          p_table: NETWORK_TABLE,
+          p_rows: newRows.map((r) =>
+            rowToPayload(r, (r.targetCategory || null) as NetworkCategory | null, r.countryTagId),
+          ),
           p_batch_id: batchId,
         })
         if (error) throw error
-        touched.add(table)
       }
 
-      // 합치기: 같은 구분이면 제자리 보강, 다른 구분이면 재분류 이관.
+      // 합치기: 제자리 보강. 구분·국가가 바뀌었으면 같은 보강에 함께 실린다 —
+      // 통합 원장에서 구분 변경은 행 이동이 아니라 한 칸 수정이라, 종전의 '재분류 이관'
+      // (대상 등록 + 원본 비활성화)이 통째로 사라졌다. id가 그대로이므로 그 레코드에 붙어
+      // 있던 자료·피드백·회의록 링크도 끊기지 않는다.
       // 비활성 매칭을 합치기로 처리하면 이때 재활성화(deleted_at=null)한다.
       for (const r of mergeRows) {
         if (!r.match) continue
-        const target = resolveEntityFromCategory(r.categoryLabel)
-        if (target === r.match.table) {
-          const patch = buildEnrichment(r.match, r) ?? {}
-          const values = r.match.deleted ? { deleted_at: null, ...patch } : patch
-          // 보강할 값이 없는 '재유입'은 원장이 바뀌지 않으므로 RPC가 기록만 남긴다.
-          const { error } = await supabase.rpc('upload_enrich_entity', {
-            p_table: r.match.table,
-            p_id: r.match.id,
-            p_values: values,
-            p_batch_id: batchId,
-            p_note: r.match.deleted
-              ? '재업로드 복구·병합'
-              : Object.keys(patch).length
-                ? '업로드 병합·보강'
-                : '업로드 재유입',
-          })
-          if (error) throw error
-          touched.add(r.match.table)
-        } else {
-          const values = buildReclassifyValues(r.match, r, ENTITIES[target].label)
-          await mergeReclassify({ from: r.match.table, fromId: r.match.id, to: target, values, batchId })
-          touched.add(r.match.table)
-          touched.add(target)
-        }
+        const patch =
+          buildEnrichment(r.match, r, {
+            category: (r.targetCategory || null) as NetworkCategory | null,
+            countryTagId: r.countryTagId,
+          }) ?? {}
+        const values = r.match.deleted ? { deleted_at: null, ...patch } : patch
+        // 보강할 값이 없는 '재유입'은 원장이 바뀌지 않으므로 RPC가 기록만 남긴다.
+        const { error } = await supabase.rpc('upload_enrich_entity', {
+          p_table: NETWORK_TABLE,
+          p_id: r.match.id,
+          p_values: values,
+          p_batch_id: batchId,
+          p_note: r.match.deleted
+            ? '재업로드 복구·병합'
+            : Object.keys(patch).length
+              ? '업로드 병합·보강'
+              : '업로드 재유입',
+        })
+        if (error) throw error
       }
 
-      for (const table of touched) await qc.invalidateQueries({ queryKey: ['networks', table] })
+      await qc.invalidateQueries({ queryKey: ['networks'] })
       toast.show(
         `업로드 완료 — 신규 ${newRows.length} · 합치기 ${mergeRows.length} · 미업로드 ${displaySkip}`,
         'success',

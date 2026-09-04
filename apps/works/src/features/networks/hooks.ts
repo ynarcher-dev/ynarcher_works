@@ -6,17 +6,18 @@ import {
 } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import {
-  DOMESTIC_LIST_ENTITIES,
-  ENTITIES,
-  normalizeEntityRowCategory,
-  type EntityKey,
+  categoryLabel,
+  NETWORK_TABLE,
+  REGION_SCOPE_LABEL,
+  type NetworkCategory,
+  type RegionScope,
 } from '@/features/networks/config'
 import {
   CLOSED_SEARCH_SCOPE,
-  EMPTY_NETWORK_LIST_FILTERS,
   EMPTY_NETWORK_FILTERS,
   hasActiveNetworkFilters,
-  type NetworkListFilterState,
+  regionScopeValues,
+  wantsCountryUnset,
   type NetworkFilterState,
   type NetworkSearchScope,
 } from '@/features/networks/filters'
@@ -29,45 +30,84 @@ function rangeBound(v: string): number | null {
   return Number.isFinite(n) ? n : null
 }
 
-export type EntityRow = Record<string, unknown> & {
+/**
+ * 통합 원장 행. 목록 RPC와 단건 조회가 같은 형태를 쓰도록 맞춘다.
+ * `category_label`·`region_label`은 저장값이 아니라 표시용 파생값이다 — 목록 열이 읽는다.
+ */
+export type NetworkRow = Record<string, unknown> & {
   id: string
   name: string
+  affiliation?: string | null
+  email?: string | null
+  phone?: string | null
+  linkedin_url?: string | null
+  category?: NetworkCategory | null
+  region_scope?: RegionScope
+  /** 국가가 속한 권역(조인 결과). 행에 저장되지 않는다. */
+  region_tag_id?: string | null
+  country_tag_id?: string | null
+  /** 목록 RPC가 평면으로 실어 주는 태그명(단건 조회는 조인 임베드에서 꺼내 채운다). */
+  region_name?: string | null
+  country_name?: string | null
+  /** 표시 파생값 — 열이 직접 읽는다(구분 라벨 / 국가명). */
+  category_label?: string
+  country_label?: string
+  profile?: Record<string, unknown> | null
+  expertise?: unknown
   is_provisional?: boolean
   merged_into_id?: string | null
-  /** 활동(참여 사업 수) 집계. 목록 RPC가 실어 준다. */
-  activity_count?: number
-  /** 만족도(멘토 평가 평균) 집계. 근거 원장이 걷혀(20260903150000) 현재는 항상 null이다. */
-  satisfaction_avg?: number | null
+  created_by?: string | null
   /**
-   * 생성자(생성자, created_by → users) FK 임베드. 목록·상세의 생성자 표시 원천.
-   * 담당자(관리 주체)는 별개 축 — 투자기업은 startup_managers 지정 담당자, 그 외는 공동관리(특정 담당자 없음).
+   * 생성자(created_by → users) 임베드. 담당자(관리 주체)는 별개 축 —
+   * NETWORKS는 담당자 원장이 없는 영구 공동관리다.
    */
-  creator?: { id: string; name: string | null } | null
+  creator?: { id?: string; name: string | null } | null
+  updated_at?: string | null
+  /** 가장 최근 기여 행위(created/merged/enriched/edited). 전체 범위에서는 비어 있다. */
+  last_action?: string | null
+  last_contributed_at?: string | null
+  /** 활동(참여 사업 수). 참여 이력이 없으면 0. */
+  activity_count?: number
+  /** 만족도(멘토 평가 평균). 근거 원장이 걷혀(20260903150000) 항상 null이라 '-'로 남는다. */
+  satisfaction_avg?: number | null
 }
 
-/** 엔티티 목록(검색/미삭제/미병합). */
-export function useEntityList(table: EntityKey, keyword: string) {
-  return useQuery({
-    queryKey: ['networks', table, keyword],
-    queryFn: async (): Promise<EntityRow[]> => {
-      let q = supabase
-        .from(table)
-        .select('*, creator:users!created_by(id, name)')
-        .is('deleted_at', null)
-        .is('merged_into_id', null)
-        .order('name', { ascending: true })
-        .limit(200)
-      if (keyword.trim()) q = q.ilike('name', `%${keyword.trim()}%`)
-      const { data, error } = await q
-      if (error) throw error
-      return ((data ?? []) as EntityRow[]).map((row) => normalizeEntityRowCategory(row, table))
-    },
-  })
+/**
+ * 국가 표시값 — 국가를 알면 국가명을 그대로 세운다(한국도 '한국'으로 명시).
+ * 국가를 모르는 옛 행만 '국내'/'해외'로 물러선다 — 그 칸이 비어 있으면 "한국인가, 아직
+ * 안 넣었는가"를 표가 답하지 못하므로, 최소한 어느 쪽인지는 말한다.
+ */
+export function countryLabelOf(row: {
+  region_scope?: string | null
+  country_name?: string | null
+}): string {
+  const country = row.country_name?.trim()
+  if (country) return country
+  return row.region_scope === 'OVERSEAS'
+    ? REGION_SCOPE_LABEL.OVERSEAS
+    : REGION_SCOPE_LABEL.DOMESTIC
 }
 
-/** 엔티티 목록 페이지(0-base page). 서버 사이드 페이지네이션 결과와 건수 정보. */
-export interface EntityPage {
-  rows: EntityRow[]
+/** RPC 평면 행 → 화면 행(생성자 중첩 복원 + 표시 파생값). */
+function toRow(raw: Record<string, unknown>): NetworkRow {
+  const { total_count: _total, creator_name, ...rest } = raw as Record<string, unknown> & {
+    creator_name?: string | null
+    total_count?: number | string
+  }
+  const row = rest as NetworkRow
+  return {
+    ...row,
+    creator: creator_name ? { name: creator_name } : null,
+    category_label: categoryLabel(row.category),
+    country_label: countryLabelOf(row),
+  }
+}
+
+// ── 목록 ──────────────────────────────────────────────────────────────────
+
+/** 목록 페이지. 서버 사이드 페이지네이션 결과와 건수 정보. */
+export interface NetworkPage {
+  rows: NetworkRow[]
   /** 현재 검색어(필터)에 반영된 건수. 페이지 수·No. 넘버링의 기준. */
   total: number
   /** 필터 미적용(미삭제/미병합) 전체 건수. 검색어가 없으면 total과 같다. */
@@ -75,123 +115,7 @@ export interface EntityPage {
 }
 
 /**
- * 엔티티 목록의 서버 사이드 페이지네이션(검색/필터/미삭제/미병합).
- *
- * 조회를 PostgREST가 아니라 RPC(`network_directory_entities`)로 내린다 — 활동·만족도는 AC 참여
- * 원장에서 집계되는 파생값이라 원장 테이블에 얹은 조건으로는 거를 수 없고, 클라이언트에서 거르면
- * 지금 페이지에 실려 온 30건 안에서만 걸러져 2페이지의 대상이 사라진 것처럼 보인다.
- * 서버가 집계·필터·페이지네이션을 한 곳에서 처리하고, 총 건수는 모든 행에 동일하게 실려오는
- * 윈도우 카운트(`total_count`)로 돌아온다.
- *
- * 검색어가 이메일·연락처까지 닿을지는 `searchScope`가 정하며(마스킹 정책이 연 필드만 켠다)
- * 서버도 같은 인자로 강제한다. page는 0-base. 페이지 전환 시 이전 페이지를 유지(keepPreviousData).
- */
-export function useEntityPage(
-  table: EntityKey,
-  keyword: string,
-  page: number,
-  pageSize: number,
-  filters: NetworkFilterState = EMPTY_NETWORK_FILTERS,
-  searchScope: NetworkSearchScope = CLOSED_SEARCH_SCOPE,
-) {
-  // 필터 객체는 매 렌더 새로 만들어지므로 값으로 직렬화해 캐시 키를 안정시킨다.
-  // 정책이 바뀌면 같은 검색어라도 결과가 달라지므로 검색 범위도 캐시 키에 넣는다.
-  const filtersKey = JSON.stringify(filters)
-  const scopeKey = JSON.stringify(searchScope)
-  return useQuery({
-    queryKey: ['networks', table, 'page', keyword, filtersKey, scopeKey, page, pageSize],
-    placeholderData: keepPreviousData,
-    queryFn: async (): Promise<EntityPage> => {
-      const trimmed = keyword.trim()
-      const { data, error } = await supabase.rpc('network_directory_entities', {
-        p_table: table,
-        p_keyword: trimmed || null,
-        p_search_email: searchScope.email,
-        p_search_phone: searchScope.phone,
-        p_expertise: filters.expertise.length ? filters.expertise : null,
-        // 둘 다 고르면 거르지 않은 것과 같다(전체) — 조건을 붙이지 않는다.
-        p_match: filters.match.length === 1 ? filters.match[0] : null,
-        p_activity_min: rangeBound(filters.activityMin),
-        p_activity_max: rangeBound(filters.activityMax),
-        p_limit: pageSize,
-        p_offset: page * pageSize,
-      })
-      if (error) throw error
-      const raw = (data ?? []) as (Record<string, unknown> & {
-        creator_name?: string | null
-        total_count?: number | string
-      })[]
-      const total = Number(raw[0]?.total_count ?? 0)
-
-      // 검색어·필터가 모두 없으면 반영 건수 == 전체 건수. 하나라도 걸렸을 때만 별도 조회한다.
-      let totalAll = total
-      if (trimmed || hasActiveNetworkFilters(filters)) {
-        const { count: allCount } = await supabase
-          .from(table)
-          .select('*', { count: 'exact', head: true })
-          .is('deleted_at', null)
-          .is('merged_into_id', null)
-        totalAll = allCount ?? total
-      }
-
-      return {
-        // RPC는 생성자를 평면 컬럼(creator_name)으로 돌려주므로 다른 목록과 동일한 중첩 형태
-        // (creator.name)로 정규화한다(공용 리스트뷰의 생성자 컬럼 규약).
-        rows: raw.map(({ total_count: _total, creator_name, ...row }) =>
-          normalizeEntityRowCategory(
-            {
-              ...row,
-              creator: creator_name ? { name: creator_name } : null,
-            } as EntityRow,
-            table,
-          ),
-        ),
-        total,
-        totalAll,
-      }
-    },
-  })
-}
-
-// ── 국내 네트워크 통합 목록 ───────────────────────────────────────────────────
-
-/**
- * 국내 통합 목록의 행(RPC `my_network_entities` / `all_network_entities` 반환 컬럼).
- * 공용 리스트뷰(`MasterListView`)가 그대로 렌더할 수 있도록 `MasterRow` 호환 형태를 유지한다
- * (부서·직책·구분은 다른 네트워크와 동일하게 `profile` jsonb의 점 경로에서 읽힌다).
- */
-export type NetworkListRow = Record<string, unknown> & {
-  /** 원장 테이블명. 상세 라우트의 기준 — 원장이 섞인 목록이라 행마다 다르다. */
-  entity_table: EntityKey
-  id: string
-  name: string
-  affiliation: string | null
-  email: string | null
-  phone: string | null
-  /** 부서/직책/구분 등 공용 프로필 jsonb(다른 네트워크 목록과 동일 스키마). */
-  profile: Record<string, unknown> | null
-  expertise: unknown
-  created_by: string | null
-  /** 생성자(created_by → users.name). 공용 리스트뷰가 `creator.name`으로 읽는다. */
-  creator: { name: string | null } | null
-  updated_at: string | null
-  /** 가장 최근 기여 행위(created/merged/enriched/edited). 전체 범위에서는 비어 있다. */
-  last_action: string | null
-  last_contributed_at: string | null
-  /** 활동(참여 사업 수). 참여 이력이 없으면 0. */
-  activity_count: number
-  /** 만족도(멘토 평가 평균). 근거 원장이 걷혀(20260903150000) 항상 null이라 목록에서 '-'로 남는다. */
-  satisfaction_avg: number | null
-}
-
-/** 네트워크 통합 목록 페이지. `useEntityPage`와 동일 규약(rows + 건수). */
-export interface NetworkListPage {
-  rows: NetworkListRow[]
-  total: number
-}
-
-/**
- * 통합 목록의 범위. 'mine'은 내가 등록·편집·병합에 관여한 것만, 'all'은 볼 수 있는 전부.
+ * 목록의 범위. 'mine'은 내가 등록·편집·병합에 관여한 것만, 'all'은 볼 수 있는 전부.
  * 두 목록은 열·필터·검색·상세 진입이 모두 같고 이 축 하나로만 갈린다.
  */
 export type NetworkListScope = 'mine' | 'all'
@@ -206,37 +130,46 @@ const SCOPE_RPC: Record<NetworkListScope, string> = {
 }
 
 /**
- * 국내 네트워크 원장 8종(+은퇴한 vendors) 통합 목록(서버 사이드 페이지네이션).
- * 다형 조인·중복 제거가 필요해 PostgREST 대신 RPC로 조회한다.
- * 호출자 판정은 RPC 내부에서 하므로 user_id를 인자로 넘기지 않는다.
- * 총 건수는 모든 행에 동일하게 실려오는 `total_count`에서 읽는다(행 0건이면 0).
- * page는 0-base이며, 페이지 전환 시 이전 페이지를 유지(keepPreviousData)해 깜빡임을 줄인다.
+ * 통합 목록(서버 사이드 페이지네이션).
  *
- * 담는 범위도 `p_entities`가 정한다 — 통합 RPC는 글로벌·미분류까지 아는 union을 보므로,
- * 종류 필터를 고르지 않았을 때도 국내 원장 목록을 명시해 넘겨야 이 목록의 경계가 선다.
+ * 조회를 PostgREST가 아니라 RPC로 내린다 — 활동은 AC 참여 원장에서 집계되는 파생값이라
+ * 원장 테이블에 얹은 조건으로는 거를 수 없고, 클라이언트에서 거르면 지금 페이지에 실려 온
+ * 30건 안에서만 걸러져 2페이지의 대상이 사라진 것처럼 보인다. '내 것' 범위 판정도 기여
+ * 로그와의 조인이라 같은 이유로 서버 몫이다.
+ *
+ * `uncategorized`는 미분류 축이다(null=상관없음, true=미분류만, false=분류된 것만).
+ * 미분류는 카테고리가 아니라 '값이 없음'이라 구분 배열로 표현할 수 없어 별도 인자다.
  */
 export function useNetworkListPage(
   scope: NetworkListScope,
   keyword: string,
   page: number,
   pageSize: number,
-  filters: NetworkListFilterState = EMPTY_NETWORK_LIST_FILTERS,
+  filters: NetworkFilterState = EMPTY_NETWORK_FILTERS,
   searchScope: NetworkSearchScope = CLOSED_SEARCH_SCOPE,
+  uncategorized: boolean | null = false,
 ) {
+  // 필터 객체는 매 렌더 새로 만들어지므로 값으로 직렬화해 캐시 키를 안정시킨다.
+  // 정책이 바뀌면 같은 검색어라도 결과가 달라지므로 검색 범위도 캐시 키에 넣는다.
   const filtersKey = JSON.stringify(filters)
   const scopeKey = JSON.stringify(searchScope)
   return useQuery({
-    queryKey: ['networks', scope, 'page', keyword, filtersKey, scopeKey, page, pageSize],
+    queryKey: [
+      'networks', scope, 'page', keyword, filtersKey, scopeKey, uncategorized, page, pageSize,
+    ],
     placeholderData: keepPreviousData,
-    queryFn: async (): Promise<NetworkListPage> => {
+    queryFn: async (): Promise<NetworkPage> => {
       const trimmed = keyword.trim()
-      // 여러 원장을 union하는 목록이라 페이지네이션과 필터를 같은 곳(RPC)에서 걸어야 한다 —
-      // 클라이언트에서 거르면 현재 페이지에 실려 온 행 안에서만 걸러진다.
       const { data, error } = await supabase.rpc(SCOPE_RPC[scope], {
         p_keyword: trimmed || null,
         p_limit: pageSize,
         p_offset: page * pageSize,
-        p_entities: filters.entities.length ? filters.entities : DOMESTIC_LIST_ENTITIES,
+        p_categories: filters.categories.length ? filters.categories : null,
+        p_uncategorized: uncategorized,
+        p_region_scope: regionScopeValues(filters).length ? regionScopeValues(filters) : null,
+        p_regions: filters.regionIds.length ? filters.regionIds : null,
+        p_countries: filters.countryIds.length ? filters.countryIds : null,
+        p_country_unset: wantsCountryUnset(filters) ? true : null,
         p_search_email: searchScope.email,
         p_search_phone: searchScope.phone,
         p_expertise: filters.expertise.length ? filters.expertise : null,
@@ -246,51 +179,94 @@ export function useNetworkListPage(
         p_activity_max: rangeBound(filters.activityMax),
       })
       if (error) throw error
-      // RPC 원본 행: 생성자가 평면 컬럼(creator_name), 총 건수가 행마다 같은 값으로 실린다.
-      const rows = (data ?? []) as (Record<string, unknown> & {
-        creator_name?: string | null
-        total_count?: number | string
-      })[]
+      const raw = (data ?? []) as (Record<string, unknown> & { total_count?: number | string })[]
+      const total = Number(raw[0]?.total_count ?? 0)
+
+      // 검색어·필터가 모두 없으면 반영 건수 == 전체 건수. 하나라도 걸렸을 때만 별도 조회한다.
+      let totalAll = total
+      if (trimmed || hasActiveNetworkFilters(filters)) {
+        let q = supabase
+          .from(NETWORK_TABLE)
+          .select('*', { count: 'exact', head: true })
+          .is('deleted_at', null)
+          .is('merged_into_id', null)
+        if (uncategorized === true) q = q.is('category', null)
+        if (uncategorized === false) q = q.not('category', 'is', null)
+        const { count: allCount } = await q
+        totalAll = allCount ?? total
+      }
+
+      return { rows: raw.map(toRow), total, totalAll }
+    },
+  })
+}
+
+/**
+ * 이름순 단순 목록(중복 병합 콘솔 등 페이지네이션이 필요 없는 자리).
+ * 구분을 주면 그 구분만, 주지 않으면 전부.
+ */
+export function useNetworkList(keyword: string, category?: NetworkCategory) {
+  return useQuery({
+    queryKey: ['networks', 'list', category ?? 'all', keyword],
+    queryFn: async (): Promise<NetworkRow[]> => {
+      let q = supabase
+        .from(NETWORK_TABLE)
+        .select('*, creator:users!created_by(id, name)')
+        .is('deleted_at', null)
+        .is('merged_into_id', null)
+        .order('name', { ascending: true })
+        .limit(200)
+      if (category) q = q.eq('category', category)
+      if (keyword.trim()) q = q.ilike('name', `%${keyword.trim()}%`)
+      const { data, error } = await q
+      if (error) throw error
+      return ((data ?? []) as NetworkRow[]).map((row) => ({
+        ...row,
+        category_label: categoryLabel(row.category),
+      }))
+    },
+  })
+}
+
+// ── 단건 ──────────────────────────────────────────────────────────────────
+
+/** 단건 조회(상세페이지). id 미지정 시 비활성. 권역·국가는 태그명을 조인해 함께 읽는다. */
+export function useNetworkRecord(id: string | undefined) {
+  return useQuery({
+    queryKey: ['networks', 'detail', id],
+    enabled: Boolean(id),
+    queryFn: async (): Promise<NetworkRow | null> => {
+      const { data, error } = await supabase
+        .from(NETWORK_TABLE)
+        .select(
+          '*, creator:users!created_by(id, name), region:region_tags!region_tag_id(name), country:country_tags!country_tag_id(name)',
+        )
+        .eq('id', id)
+        .maybeSingle()
+      if (error) throw error
+      if (!data) return null
+      const row = data as NetworkRow & {
+        region?: { name: string } | null
+        country?: { name: string } | null
+      }
       return {
-        // RPC는 생성자를 평면 컬럼(creator_name)으로 돌려주므로 다른 네트워크 목록과 동일한
-        // 중첩 형태(creator.name)로 정규화한다(공용 리스트뷰의 생성자 컬럼 규약).
-        rows: rows.map(
-          ({ total_count: _total, creator_name, ...row }) =>
-            ({
-              ...row,
-              creator: creator_name ? { name: creator_name } : null,
-            }) as NetworkListRow,
-        ),
-        total: Number(rows[0]?.total_count ?? 0),
+        ...row,
+        region_name: row.region?.name ?? null,
+        country_name: row.country?.name ?? null,
+        category_label: categoryLabel(row.category),
+        country_label: countryLabelOf({
+          region_scope: row.region_scope,
+          country_name: row.country?.name ?? null,
+        }),
       }
     },
   })
 }
 
-/** 엔티티 단건 조회(상세페이지). id 미지정 시 비활성. */
-export function useEntity(table: EntityKey, id: string | undefined) {
-  return useQuery({
-    queryKey: ['networks', table, 'detail', id],
-    enabled: Boolean(id),
-    queryFn: async (): Promise<EntityRow | null> => {
-      const { data, error } = await supabase
-        .from(table)
-        .select('*, creator:users!created_by(id, name)')
-        .eq('id', id)
-        .maybeSingle()
-      if (error) throw error
-      return data ? normalizeEntityRowCategory(data as EntityRow, table) : null
-    },
-  })
-}
-
-/** 동일 이름 중복 존재 여부(등록 전 검사). */
-export async function checkDuplicateName(
-  table: EntityKey,
-  name: string,
-): Promise<boolean> {
+/** 동일 이름 중복 존재 여부(등록 전 검사). 원장이 하나라 검사도 한 번이다. */
+export async function checkDuplicateName(name: string): Promise<boolean> {
   const { data } = await supabase
-    .from(table)
+    .from(NETWORK_TABLE)
     .select('id')
     .eq('name', name)
     .is('deleted_at', null)
@@ -298,124 +274,29 @@ export async function checkDuplicateName(
   return (data ?? []).length > 0
 }
 
-/** 엔티티 생성(생성된 id 반환). */
-export function useCreateEntity(table: EntityKey) {
+/** 등록(생성된 id 반환). */
+export function useCreateNetwork() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (values: Record<string, unknown>): Promise<string> => {
       const { data, error } = await supabase
-        .from(table)
+        .from(NETWORK_TABLE)
         .insert(values)
         .select('id')
         .single()
       if (error) throw error
       return (data as { id: string }).id
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['networks', table] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['networks'] }),
   })
 }
 
 /**
- * 엔티티 이동(구분 변경). `from` 테이블 레코드를 `to` 테이블로 옮긴다.
- * 대상 등록과 원본 비활성화를 reassign_entity RPC가 한 트랜잭션으로 처리하므로,
- * 종전처럼 '대상은 만들어졌는데 원본이 안 지워져서 방금 만든 행을 물리 삭제로 되돌리는'
- * 보상 로직이 필요 없다(물리 삭제 금지 규약에도 부합). 변동 이력은 원장 트리거가 남긴다.
- * 이동으로 생성된 신규 레코드 id를 반환한다.
+ * 수정(사유 필수). 사유는 원장 컬럼이 아니라 기여 로그의 note로만 남고 트리거는 사유를
+ * 알 수 없으므로, 사유를 트랜잭션 컨텍스트에 실어 주는 update_entity RPC를 경유한다
+ * (20260721200000). 쓰기 권한은 원장 RLS가 그대로 판정한다.
  */
-export function useMoveEntity(from: EntityKey, to: EntityKey) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async ({
-      id,
-      values,
-      note,
-    }: {
-      id: string
-      values: Record<string, unknown>
-      note?: string
-    }): Promise<string> => {
-      const { data, error } = await supabase.rpc('reassign_entity', {
-        p_from: from,
-        p_to: to,
-        p_id: id,
-        p_values: values,
-        p_note_target: note ?? '구분 변경 이동',
-      })
-      if (error) throw error
-      return data as string
-    },
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['networks', from] })
-      void qc.invalidateQueries({ queryKey: ['networks', to] })
-    },
-  })
-}
-
-/**
- * 이관 시 대상 테이블로 복제할 공통(통일 스키마) 컬럼.
- * 8종 네트워크 테이블이 전부 공유하는 experts 동일 컬럼만 복제한다. 원본(others)에만 있는
- * 레거시 컬럼(category/representative/memo/contact 등)까지 복사하면 대상 테이블에 해당 컬럼이
- * 없어 insert가 실패하므로, 화이트리스트로 안전하게 좁힌다. (profile은 별도 병합.)
- */
-const REASSIGN_COPY_KEYS = [
-  'name',
-  'email',
-  'phone',
-  'affiliation',
-  'expertise',
-  'is_provisional',
-] as const
-
-/**
- * 미분류(others) 임시 저장소에서 구분을 선택해 대상 네트워크로 이관한다.
- * 목록 인라인 드롭다운 전용. 대상 테이블마다 목적지가 달라 `useMoveEntity`(고정 to)와 달리
- * 이관 시점에 `to`를 받는다. `useMoveEntity`와 동일 규약으로 대상에 복제 insert 후
- * 원본을 soft-delete하며, soft-delete 실패 시 신규 레코드를 보상 삭제한다.
- */
-export function useReassignCategory(from: EntityKey) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async ({
-      row,
-      to,
-    }: {
-      row: EntityRow
-      to: EntityKey
-    }): Promise<string> => {
-      // 공통 컬럼만 복제하고, 구분(profile.category)을 대상 라벨로 갱신한다.
-      const prevProfile = (row.profile as Record<string, unknown> | undefined) ?? {}
-      const values: Record<string, unknown> = {
-        profile: { ...prevProfile, category: ENTITIES[to].label },
-      }
-      for (const k of REASSIGN_COPY_KEYS) {
-        if (row[k] !== undefined) values[k] = row[k]
-      }
-
-      // 종전에는 여기에 기여 기록이 아예 없어 미분류 일괄 이관이 이력에서 통째로 빠졌다.
-      // 이제 RPC 한 트랜잭션이고 기록은 원장 트리거가 남긴다.
-      const { data, error } = await supabase.rpc('reassign_entity', {
-        p_from: from,
-        p_to: to,
-        p_id: row.id,
-        p_values: values,
-        p_note_target: '미분류에서 이관',
-      })
-      if (error) throw error
-      return data as string
-    },
-    onSuccess: (_newId, { to }) => {
-      void qc.invalidateQueries({ queryKey: ['networks', from] })
-      void qc.invalidateQueries({ queryKey: ['networks', to] })
-    },
-  })
-}
-
-/**
- * 엔티티 수정(사유 필수). 사유는 원장 컬럼이 아니라 기여 로그의 note로만 남고 트리거는
- * 사유를 알 수 없으므로, 사유를 트랜잭션 컨텍스트에 실어 주는 update_entity RPC를
- * 경유한다(20260721200000). 쓰기 권한은 원장 RLS가 그대로 판정한다.
- */
-export function useUpdateEntity(table: EntityKey) {
+export function useUpdateNetwork() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({
@@ -428,7 +309,7 @@ export function useUpdateEntity(table: EntityKey) {
       reason: string
     }) => {
       const { error } = await supabase.rpc('update_entity', {
-        p_table: table,
+        p_table: NETWORK_TABLE,
         p_id: id,
         p_values: values,
         p_note: reason,
@@ -436,39 +317,61 @@ export function useUpdateEntity(table: EntityKey) {
       if (error) throw error
     },
     onSuccess: (_v, { id }) => {
-      void qc.invalidateQueries({ queryKey: ['networks', table] })
-      void qc.invalidateQueries({ queryKey: ['networks', 'contributions', table, id] })
+      void qc.invalidateQueries({ queryKey: ['networks'] })
+      void qc.invalidateQueries({ queryKey: ['networks', 'contributions', id] })
     },
   })
 }
 
 /**
- * 사유를 남기는 비활성화(소프트 삭제)를 지원하는 원장 키.
- * 서버는 '기록 트리거가 실제로 붙어 있는가'를 카탈로그에서 확인해 거절하므로
- * (app.has_contribution_trigger), 이 타입은 그 집합의 클라이언트 측 표현이다.
+ * 구분 지정·변경. 통합 전에는 원장 사이의 행 이동(등록 + 원본 비활성화)이었고 그때마다
+ * id가 바뀌어 그 레코드에 붙은 자료·피드백·회의록 링크가 원본을 잃었다. 지금은 한 칸을
+ * 고치는 일이라 id가 그대로다. 미분류 인라인 지정과 상세 폼의 구분 변경이 공유한다.
  */
-export type DeactivatableKey = EntityKey | 'global_networks'
+export function useAssignCategory() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      id,
+      category,
+      note,
+    }: {
+      id: string
+      category: NetworkCategory | null
+      note?: string
+    }) => {
+      const { error } = await supabase.rpc('update_entity', {
+        p_table: NETWORK_TABLE,
+        p_id: id,
+        p_values: { category },
+        p_note: note ?? '구분 지정',
+      })
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['networks'] }),
+  })
+}
 
 /**
  * 사유를 남기는 비활성화. 사유는 원장 컬럼이 아니라 기여 로그의 note로만 남으므로,
  * 사유를 트랜잭션 컨텍스트에 실어 주는 deactivate_entity RPC를 경유한다(20260721150000).
  * 원장 UPDATE와 사유 기록이 한 트랜잭션에 묶이므로, 종전처럼 '비활성화 기록만 남고 행은
- * 살아 있는' 어긋난 상태가 생기지 않는다. 쓰기 권한은 원장 RLS가 그대로 판정한다.
+ * 살아 있는' 어긋난 상태가 생기지 않는다.
  */
-export function useDeactivateEntity(table: DeactivatableKey) {
+export function useDeactivateNetwork() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
       const { error } = await supabase.rpc('deactivate_entity', {
-        p_entity_key: table,
+        p_entity_key: NETWORK_TABLE,
         p_id: id,
         p_reason: reason,
       })
       if (error) throw error
     },
     onSuccess: (_v, { id }) => {
-      void qc.invalidateQueries({ queryKey: ['networks', table] })
-      void qc.invalidateQueries({ queryKey: ['networks', 'contributions', table, id] })
+      void qc.invalidateQueries({ queryKey: ['networks'] })
+      void qc.invalidateQueries({ queryKey: ['networks', 'contributions', id] })
     },
   })
 }
@@ -478,7 +381,7 @@ export function useDeactivateEntity(table: DeactivatableKey) {
  * RPC가 양쪽에 이력을 남긴다 — 중복에는 '어디로 흡수됐는지', 정본에는 '무엇을 흡수했는지'.
  * 병합된 중복은 목록에서 사라져 이력을 열 수 없으므로 정본 쪽 기록이 실질적으로 읽히는 기록이다.
  */
-export function useMergeEntity(table: EntityKey) {
+export function useMergeNetwork() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({
@@ -491,7 +394,7 @@ export function useMergeEntity(table: EntityKey) {
       note?: string
     }) => {
       const { error } = await supabase.rpc('merge_entity', {
-        p_table: table,
+        p_table: NETWORK_TABLE,
         p_primary_id: primaryId,
         p_duplicate_id: duplicateId,
         p_note: note ?? null,
@@ -499,13 +402,13 @@ export function useMergeEntity(table: EntityKey) {
       if (error) throw error
     },
     onSuccess: (_v, { primaryId }) => {
-      void qc.invalidateQueries({ queryKey: ['networks', table] })
-      void qc.invalidateQueries({ queryKey: ['networks', 'contributions', table, primaryId] })
+      void qc.invalidateQueries({ queryKey: ['networks'] })
+      void qc.invalidateQueries({ queryKey: ['networks', 'contributions', primaryId] })
     },
   })
 }
 
-// ── 대용량 업로드 Phase 2: 기여 이력 / 업로드 배치 데이터 계층 ────────────────
+// ── 기여 이력 / 업로드 배치 ────────────────────────────────────────────────
 
 export interface Contribution {
   id: string
@@ -521,15 +424,15 @@ export interface Contribution {
 }
 
 /** 레코드 기여 이력(연혁, 오래된 순). 공동 관리자 목록·타임라인의 원천. */
-export function useContributions(table: EntityKey, id: string | undefined) {
+export function useContributions(id: string | undefined) {
   return useQuery({
-    queryKey: ['networks', 'contributions', table, id],
+    queryKey: ['networks', 'contributions', id],
     enabled: Boolean(id),
     queryFn: async (): Promise<Contribution[]> => {
       const { data, error } = await supabase
         .from('entity_contributions')
         .select('*')
-        .eq('entity_table', table)
+        .eq('entity_table', NETWORK_TABLE)
         .eq('entity_id', id)
         .order('created_at', { ascending: true })
       if (error) throw error
@@ -542,7 +445,7 @@ export function useContributions(table: EntityKey, id: string | undefined) {
 // app.log_entity_contribution()이 같은 트랜잭션에서 남긴다(20260721150000·160000).
 // 손으로 남기던 시절에는 수정·미분류 일괄 이관·임포터가 이력에서 통째로 빠졌고,
 // 구분 변경은 두 곳이 각각 기록해 'created'가 두 줄이 됐다.
-// 사유·배치처럼 트리거가 알 수 없는 정보는 전용 RPC(deactivate_entity/reassign_entity/
+// 사유·배치처럼 트리거가 알 수 없는 정보는 전용 RPC(deactivate_entity/update_entity/
 // merge_entity/upload_*)가 트랜잭션 컨텍스트로 실어 보낸다.
 
 /** 업로드 배치 이력 생성(uploaded_by는 서버 트리거 스탬프). 배치 id 반환(실패 시 null). */
@@ -568,33 +471,6 @@ export async function createUploadBatch(input: {
     .single()
   if (error) return null
   return (data as { id: string }).id
-}
-
-/**
- * 합치기+재분류: 기존 매칭 레코드를 대상 구분 테이블로 이관한다(미분류→실구분 또는 명시적 override).
- * 수동 이관과 같은 reassign_entity RPC를 쓰되 업로드 컨텍스트(source·batch_id)를 실어 보낸다.
- * 신규 레코드 id 반환.
- */
-export async function mergeReclassify(input: {
-  from: EntityKey
-  fromId: string
-  to: EntityKey
-  values: Record<string, unknown>
-  batchId?: string | null
-}): Promise<string> {
-  const { data, error } = await supabase.rpc('reassign_entity', {
-    p_from: input.from,
-    p_to: input.to,
-    p_id: input.fromId,
-    p_values: input.values,
-    p_source: 'upload',
-    p_batch_id: input.batchId ?? null,
-    p_target_action: 'merged',
-    p_note_target: '업로드 병합·재분류',
-    p_note_source: '업로드 재분류',
-  })
-  if (error) throw error
-  return data as string
 }
 
 /** 동일 콘텐츠 해시의 이전 업로드 이력(동일 파일 재업로드 경고용). */

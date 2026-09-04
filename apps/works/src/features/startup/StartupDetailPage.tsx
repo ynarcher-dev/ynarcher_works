@@ -7,7 +7,7 @@ import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
 import { RelatedMinutesPanel } from '@/features/office/minutes/RelatedMinutesPanel'
 import { PhotoBox } from '@/features/networks/PhotoBox'
-import { useContributions, useDeactivateEntity, useEntity } from '@/features/networks/hooks'
+import { useContributions, useDeactivateEntity, useEntity } from '@/features/master/entityHooks'
 import { useAuthStore } from '@/auth/authStore'
 import { StartupDetailForm } from '@/features/startup/StartupDetailForm'
 import { useStartupManagers } from '@/features/startup/startupPoolHooks'
@@ -251,8 +251,7 @@ export function StartupDetailPage() {
           {/* 우측(1/3): 자료 관리 → 관련 회의록 → 변동 이력 → 코멘트.
               공용 순서에서 전자결재만 빠진다 — 스타트업은 결재를 올리는 단위가 아니라 사업이
               결재를 올리는 대상이라, 여기에 빈 결재 상자를 두면 없는 흐름을 있는 것처럼 보인다.
-              벤치마크는 사이드바 '벤치마크' 화면이 전부 맡는다 — 여기 있던 진입점 카드는
-              비교군을 직접 담는 그 화면과 하는 일이 겹쳐 걷어냈다. */}
+              비교군 진입점 카드는 목록 화면으로 책임을 모아두기 위해 걷어냈다. */}
           <div className="space-y-4 lg:col-span-1">
             <MaterialPanel targetType={RESOURCE_TYPE} targetId={record.id} readOnly />
             <RelatedMinutesPanel targetType="startup" targetId={record.id} />
