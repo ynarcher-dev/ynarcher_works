@@ -1,11 +1,11 @@
 import {
   Badge,
   Button,
-  Checkbox,
   Input,
   Modal,
   Select,
   TextArea,
+  TokenMultiSelect,
   Tooltip,
   tooltipScale,
   useToast,
@@ -101,8 +101,11 @@ export function ModuleFormModal({
   const [assignees, setAssignees] = useState<string[]>(
     () => (module?.assignees ?? []).map((a) => a.user_id),
   )
-  const toggleAssignee = (id: string) =>
-    setAssignees((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+  // 칩에 이름을 세우려면 id가 아니라 항목 자체를 들어야 한다(원장에서 빠진 사람은 '이름 미상').
+  const selectedAssignees = useMemo(
+    () => assignees.map((id) => pool.find((p) => p.id === id) ?? { id, name: '이름 미상' }),
+    [assignees, pool],
+  )
 
   const settings = readModuleSettings(module?.settings)
   // 선택지의 상한은 ADMIN이 배치한 템플릿 카탈로그가 답한다(3_2_1). 화면이 목록을 따로 들면
@@ -386,19 +389,19 @@ export function ModuleFormModal({
               사업 담당자 풀이 비어 있습니다. 개요에서 담당자를 먼저 배정하세요.
             </p>
           ) : (
-            <div className="mt-1 flex flex-wrap gap-2">
-              {pool.map((p) => {
-                const on = assignees.includes(p.id)
-                return (
-                  <Checkbox
-                    key={p.id}
-                    boxed
-                    checked={on}
-                    onChange={() => toggleAssignee(p.id)}
-                    label={p.name}
-                  />
-                )
-              })}
+            /* 사람 이름은 읽어야 고를 수 있는 값이 아니라 boxed 체크박스가 과했다(2026-09-05).
+               다만 후보가 이 사업 담당자 풀로 이미 닫혀 있어 '무엇이 있는지 보러' 여는 자리가
+               아니므로, 돋보기는 정본과 달리 기본값인 드롭다운으로 둔다. */
+            <div className="mt-1">
+              <TokenMultiSelect<{ id: string; name: string }>
+                selected={selectedAssignees}
+                onChange={(next) => setAssignees(next.map((a) => a.id))}
+                getKey={(a) => a.id}
+                getLabel={(a) => a.name}
+                options={pool}
+                placeholder="담당자 이름 검색"
+                browsable
+              />
             </div>
           )}
         </div>

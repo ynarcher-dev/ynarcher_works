@@ -289,8 +289,11 @@ export function ProgramFormModal({
             getLabel={(n) => n}
             options={industryOptions}
             max={MAX_PROGRAM_INDUSTRIES}
-            placeholder="분야 태그 검색"
+            placeholder="분야명을 검색하거나 돋보기로 전체 목록을 엽니다."
             browsable
+            browseIn="modal"
+            browseTitle="분야 전체 목록"
+            browseEmptyText="등록된 분야 태그가 없습니다. (ADMIN › 분야 관리)"
           />
         </Field>
         <ProgramStatusFields

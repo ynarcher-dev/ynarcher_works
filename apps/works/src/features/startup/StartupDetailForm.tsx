@@ -4,13 +4,15 @@ import {
   Input,
   PanelCard,
   Select,
-  TagChip,
   TextArea,
+  TokenMultiSelect,
   Tooltip,
+  cn,
+  formText,
   tooltipScale,
   useToast,
 } from '@ynarcher/ui'
-import { useState, type ChangeEvent, type ReactNode } from 'react'
+import { useMemo, useState, type ChangeEvent, type ReactNode } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { FormTopBar } from '@/components/FormTopBar'
 import { useEditReasonPrompt } from '@/components/EditReasonPrompt'
@@ -91,6 +93,7 @@ function Field({
   label,
   required,
   hint,
+  hintInline,
   className,
   children,
 }: {
@@ -98,6 +101,11 @@ function Field({
   required?: boolean
   /** 이 칸의 규칙. 라벨 옆 도움말(ⓘ) 말풍선으로 접힌다(공용 `Field`와 같은 규약). */
   hint?: string
+  /**
+   * 도움말을 접지 않고 컨트롤 아래에 편다. **다음 행동을 지시하는 안내에만** 쓴다 —
+   * 왜 못 채우는지, 무엇을 먼저 해야 하는지. 공용 `Field`의 같은 이름 슬롯과 규약이 같다.
+   */
+  hintInline?: boolean
   className?: string
   children: ReactNode
 }) {
@@ -106,9 +114,12 @@ function Field({
       <p className="mb-1 text-body font-medium text-gray-800">
         {label}
         {required && <span className="text-brand"> *</span>}
-        {hint && <Tooltip label={label} content={hint} className={tooltipScale.gap} />}
+        {hint && !hintInline && (
+          <Tooltip label={label} content={hint} className={tooltipScale.gap} />
+        )}
       </p>
       {children}
+      {hint && hintInline && <span className={cn('mt-1 block', formText.hint)}>{hint}</span>}
     </div>
   )
 }
@@ -152,15 +163,14 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
   // industries(jsonb 배열)에 저장.
   const { data: industryTags } = useTags('industry_tags')
   const [industries, setIndustries] = useState<string[]>(readIndustries(base))
-  const toggleIndustry = (name: string) => {
-    setIndustries((prev) =>
-      prev.includes(name)
-        ? prev.filter((n) => n !== name)
-        : prev.length >= MAX_INDUSTRIES
-          ? prev
-          : [...prev, name],
-    )
-  }
+  /**
+   * 후보는 원장 태그 + 이미 저장된 값이다. 원장에서 지워진 태그를 달고 있던 기업도 칩이 남아야
+   * 편집 중에 조용히 사라지지 않는다(사업 등록 폼과 같은 규약).
+   */
+  const industryOptions = useMemo(() => {
+    const names = (industryTags ?? []).map((t) => t.name)
+    return [...names, ...industries.filter((n) => !names.includes(n))]
+  }, [industryTags, industries])
   // 항목별 성장 지표·연혁도 상태로 관리해 저장 시 jsonb로 통째 반영한다.
   const [growth, setGrowth] = useState<GrowthMetrics>(readGrowth(base))
   const [businessStatus, setBusinessStatus] = useState<BusinessStatusEntry[]>(readBusinessStatus(base))
@@ -419,32 +429,33 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
               <Field label="사업자등록번호">
                 <Input {...register('biz_reg_no')} />
               </Field>
+              {/* 태그를 전부 펼쳐 두던 자리다(2026-09-05). 원장에서 자라는 목록은 화면이 몇 줄이
+                  될지 모르고, 고른 것과 안 고른 것이 색 하나로만 갈렸다 — 선택 결과는 칸 안에
+                  칩으로 남고 나머지는 검색하거나 돋보기로 열어 본다. 정본은 NETWORKS 전문 영역. */}
               <Field
                 label="분야"
-                hint={`분야 관리 태그에서 최대 ${MAX_INDUSTRIES}개 선택합니다.`}
+                hint={
+                  industryOptions.length === 0
+                    ? '등록된 분야 태그가 없습니다. ADMIN › 분야 관리에서 먼저 추가하세요.'
+                    : `분야 관리 태그에서 최대 ${MAX_INDUSTRIES}개 선택합니다.`
+                }
+                // 빈 상태는 접지 않는다 — 왜 못 고르는지는 물어봐야 답할 것이 아니다.
+                hintInline={industryOptions.length === 0}
                 className="sm:col-span-2"
               >
-                <div className="flex flex-wrap gap-1.5">
-                  {(industryTags ?? []).map((tag) => {
-                    const on = industries.includes(tag.name)
-                    const disabled = !on && industries.length >= MAX_INDUSTRIES
-                    return (
-                      <TagChip
-                        key={tag.id}
-                        selected={on}
-                        disabled={disabled}
-                        onClick={() => toggleIndustry(tag.name)}
-                      >
-                        {tag.name}
-                      </TagChip>
-                    )
-                  })}
-                  {(industryTags ?? []).length === 0 && (
-                    <span className="text-caption text-gray-600">
-                      등록된 분야 태그가 없습니다. (ADMIN › 분야 관리)
-                    </span>
-                  )}
-                </div>
+                <TokenMultiSelect<string>
+                  selected={industries}
+                  onChange={setIndustries}
+                  getKey={(n) => n}
+                  getLabel={(n) => n}
+                  options={industryOptions}
+                  max={MAX_INDUSTRIES}
+                  placeholder="분야명을 검색하거나 돋보기로 전체 목록을 엽니다."
+                  browsable
+                  browseIn="modal"
+                  browseTitle="분야 전체 목록"
+                  browseEmptyText="등록된 분야 태그가 없습니다. (ADMIN › 분야 관리)"
+                />
               </Field>
               {tagField('stage', 'investment_stage_tags', '단계')}
               <Field label="구분">

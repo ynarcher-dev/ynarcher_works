@@ -3,9 +3,8 @@ import {
   Button,
   DataTable,
   EmptyValue,
+  Select,
   Spinner,
-  TagChip,
-  cn,
   useToast,
   type Column,
 } from '@ynarcher/ui'
@@ -162,19 +161,24 @@ export function MeetingRoomAdminPanel() {
         </p>
       ) : (
         <>
-          {/* 지사 칩은 고르기 전용이다 — 이름·활성 여부를 바꾸는 자리는 '지사 관리' 한 곳뿐. */}
-          <div className="flex flex-wrap items-center gap-2">
-            {branches.map((b) => (
-              <TagChip
-                key={b.id}
-                selected={b.id === branchId}
-                onClick={() => setBranchId(b.id)}
-                className={cn(!b.isActive && 'opacity-60')}
-              >
-                {b.name}
-                {!b.isActive && <span className="text-gray-400">(비활성)</span>}
-              </TagChip>
-            ))}
+          {/* 지사는 고르기 전용이다 — 이름·활성 여부를 바꾸는 자리는 '지사 관리' 한 곳뿐.
+              칩을 쓰지 않는 이유는 이것이 **배타 선택**이기 때문이다(2026-09-05). 칩이 나란히
+              누워 있으면 형태가 '여러 개 고를 수 있다'고 말하는데 실제로는 하나만 켜진다. 게다가
+              지사는 코드가 아니라 원장이 소유해 개수를 화면이 알지 못한다. */}
+          <div className="flex flex-wrap items-center gap-3">
+            <Select
+              aria-label="지사 선택"
+              className="w-60"
+              value={branchId ?? ''}
+              onChange={(e) => setBranchId(e.target.value)}
+            >
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                  {!b.isActive && ' (비활성)'}
+                </option>
+              ))}
+            </Select>
             <Link className="text-caption text-gray-500 underline" to={BRANCH_ADMIN_PATH}>
               지사 관리
             </Link>

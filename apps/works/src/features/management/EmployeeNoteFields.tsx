@@ -53,9 +53,13 @@ export function EmployeeNoteFields({ value, onChange }: Props) {
           getLabel={(n) => n}
           options={options}
           max={MAX_INTERESTS}
-          placeholder="분야 태그 검색"
+          placeholder="분야명을 검색하거나 돋보기로 전체 목록을 엽니다."
           // 태그 이름을 외우고 있을 리 없으므로 돋보기로 원장 전체를 펼쳐 고를 수 있게 한다.
+          // 여는 이유가 '하나 집기'가 아니라 '무엇이 있는지 보기'라 드롭다운이 아니라 모달이다.
           browsable
+          browseIn="modal"
+          browseTitle="관심분야 전체 목록"
+          browseEmptyText="등록된 분야 태그가 없습니다. (ADMIN › 분야 관리)"
         />
       </Field>
 
