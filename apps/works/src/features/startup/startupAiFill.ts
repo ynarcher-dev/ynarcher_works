@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { isLinkMaterial, materialDisplayName, type Material } from '@/features/networks/materialHooks'
 import { isAiReadable } from '@/features/startup/startupAiFormats'
 import type { AiCardKey } from '@/features/startup/startupAiCards'
+import type { AiGrid } from '@/features/startup/startupAiGrid'
 import type { AiFillEnvelope } from '@/features/startup/startupAiMerge'
 
 /**
@@ -88,11 +89,12 @@ export function sourcesFromLinks(urls: string[]): AiSource[] {
 type AiFillResponse = AiFillEnvelope & {
   skippedSources?: string[]
   model?: string
+  modelVersion?: string
   elapsedMs?: number
   message?: string
 }
 
-/** 초안 봉투 + 읽지 못한 자료 안내. */
+/** 초안 봉투 + 읽지 못한 자료 안내 + 작성하지 못한 카드. */
 export type AiFillResult = AiFillEnvelope & { skippedSources: string[] }
 
 export interface AiFillInput {
@@ -100,8 +102,17 @@ export interface AiFillInput {
   startupId?: string
   /** 대상 기업명(프롬프트 맥락). 등록 모드에서 폼에 적힌 이름을 넘긴다. */
   companyName?: string
+  /** 격자가 가리키는 자료 전부(중복 없이). 카드가 몇이든 자료는 한 번만 올라간다. */
   sources: AiSource[]
   cards: AiCardKey[]
+  /**
+   * 카드별 자료 배정(격자).
+   *
+   * 서버는 이 배정으로 **자료 조합이 같은 카드끼리 한 요청**을 만들어 병렬로 보낸다. 나누는
+   * 일을 화면이 하지 않는 이유는 담당자가 누르는 것이 한 번이어야 하기 때문이고, 서버가
+   * 하는 이유는 자료를 한 번만 올려 요청들이 그 주소를 함께 써야 하기 때문이다.
+   */
+  assignments: AiGrid
 }
 
 /**
@@ -121,11 +132,21 @@ async function readInvokeError(error: unknown, fallback: string): Promise<string
 function buildUploadBody(input: AiFillInput): FormData {
   const form = new FormData()
   form.append('cards', JSON.stringify(input.cards))
+  form.append('assignments', JSON.stringify(input.assignments))
   if (input.companyName) form.append('companyName', input.companyName)
+  // 파일에는 id가 없으므로 **화면이 만든 키를 파일과 같은 순서로 함께 보낸다.** 순번을 서버가
+  // 다시 세면 담당자가 자료를 골라 보낼 때 그 순번이 화면의 것과 어긋나, 카드별 배정이 엉뚱한
+  // 자료를 가리킨다. 링크는 주소가 곧 키라 양쪽이 따로 만들어도 같은 값이 나온다.
+  const fileKeys: string[] = []
   for (const s of input.sources) {
-    if (s.kind === 'file') form.append('files', s.file, s.name)
-    else if (s.kind === 'link') form.append('links', s.url)
+    if (s.kind === 'file') {
+      form.append('files', s.file, s.name)
+      fileKeys.push(s.key)
+    } else if (s.kind === 'link') {
+      form.append('links', s.url)
+    }
   }
+  form.append('fileKeys', JSON.stringify(fileKeys))
   return form
 }
 
@@ -144,6 +165,7 @@ export async function requestAiFill(input: AiFillInput): Promise<AiFillResult> {
         startupId: input.startupId,
         attachmentIds: input.sources.map((s) => (s.kind === 'attachment' ? s.id : '')).filter(Boolean),
         cards: input.cards,
+        assignments: input.assignments,
       }
 
   const { data, error } = await supabase.functions.invoke<AiFillResponse>('startup-ai-fill', { body })
@@ -154,6 +176,9 @@ export async function requestAiFill(input: AiFillInput): Promise<AiFillResult> {
     notes: data.notes ?? {},
     evidence: data.evidence ?? {},
     skippedSources: data.skippedSources ?? [],
+    // 한 요청이 실패해도 나머지 카드는 온다. 실패한 카드는 값이 아니라 **이름과 사유**로 온다 —
+    // 그 카드의 폼 값을 건드리지 않기 위해서다(없는 카드는 병합이 그대로 둔다).
+    failedCards: data.failedCards ?? [],
   }
 }
 

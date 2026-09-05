@@ -17,13 +17,48 @@ import { normalizeEnvelope, parseJson, type NormalizeOptions } from './validate.
 
 /** 잠깐인 실패. 같은 요청을 다시 보내면 성공할 수 있는 것들만 담는다. */
 const TRANSIENT = new Set([429, 500, 502, 503, 504])
-const RETRY_DELAY_MS = 2_000
+const RETRY_BASE_MS = 2_000
+/**
+ * 다시 보내는 시각을 흩뜨리는 폭.
+ *
+ * 요청이 병렬로 나가면서 생긴 규칙이다. 셋이 같은 순간 429를 받고 **똑같이 2초 뒤** 다시
+ * 보내면 그 순간에 또 셋이 몰려 같은 벽에 부딪힌다. 기다리는 시간을 건마다 다르게 흩어야
+ * 재시도가 재시도끼리 부딪히지 않는다.
+ */
+const RETRY_JITTER_MS = 2_000
 
 export interface ModelFailure {
   /** 담당자에게 그대로 보이는 문구. */
   message: string
   /** 구글이 준 상태 코드. 로그와 구분에만 쓴다. */
   upstream: number | null
+}
+
+/**
+ * 한 번의 모델 호출에서 남길 운영 기록.
+ *
+ * **`gemini-flash-latest`는 별칭이라 실제로 어느 모델이 답했는지 요청만 보고는 알 수 없다.**
+ * 구글이 별칭을 옮기는 날 초안의 품질이 조용히 달라지고, 그때 무엇이 바뀌었는지 답할 근거가
+ * 우리에게 없다. 토큰 수도 마찬가지다 — 예산을 바이트로 재는 지금의 방식이 실제 소비와 얼마나
+ * 어긋나는지는 이 값이 쌓여야 알 수 있다(기획서 §14의 열린 이슈).
+ *
+ * **자료 내용과 생성 결과는 담지 않는다.** 여기 담기는 것은 전부 수(數)와 짧은 코드다.
+ */
+export interface ModelTelemetry {
+  /** 실제로 답한 모델. 별칭이 아니라 구글이 밝힌 버전이다. */
+  modelVersion: string | null
+  /** 구글의 응답 식별자. 문의할 때 이 값 하나로 그 호출을 가리킨다. */
+  responseId: string | null
+  promptTokens: number | null
+  outputTokens: number | null
+  /** 추론에 쓴 토큰. 값을 내지 않는 모델도 있어 없으면 null이다. */
+  thinkingTokens: number | null
+  totalTokens: number | null
+  /** 답이 끝난 사유. `MAX_TOKENS`면 카드가 많아 잘린 것이다. */
+  finishReason: string | null
+  elapsedMs: number
+  /** 몇 번째 시도에서 끝났는가(0이면 첫 시도). */
+  attempts: number
 }
 
 /**
@@ -62,6 +97,13 @@ export interface GenerateOptions {
   signal: AbortSignal
   /** 검증에 필요한 원장 값(소재지 목록 등). 상수로 두지 않고 요청 시점에 받아 온다. */
   normalize?: NormalizeOptions
+  /** 로그에서 이 호출을 부르는 이름(묶음 번호). 어느 묶음이 느렸는지 답한다. */
+  label?: string
+}
+
+/** 사용량 응답에서 수를 꺼낸다. 필드가 없거나 수가 아니면 null(0으로 세면 거짓이 된다). */
+function num(v: unknown): number | null {
+  return typeof v === 'number' && Number.isFinite(v) ? v : null
 }
 
 /**
@@ -72,7 +114,10 @@ export interface GenerateOptions {
  */
 export async function generateDraft(
   opts: GenerateOptions,
-): Promise<{ envelope: ReturnType<typeof normalizeEnvelope> } | { failure: ModelFailure }> {
+): Promise<
+  { envelope: ReturnType<typeof normalizeEnvelope>; telemetry: ModelTelemetry } | { failure: ModelFailure }
+> {
+  const startedAt = Date.now()
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(opts.model)}:generateContent?key=${opts.apiKey}`
   const payload = JSON.stringify({
@@ -100,7 +145,7 @@ export async function generateDraft(
       console.error('[startup-ai-fill] gemini 오류', resp.status, reason)
       lastFailure = { message: friendly(resp.status, reason), upstream: resp.status }
       if (attempt === 0 && TRANSIENT.has(resp.status)) {
-        await new Promise((r) => setTimeout(r, RETRY_DELAY_MS))
+        await new Promise((r) => setTimeout(r, RETRY_BASE_MS + Math.random() * RETRY_JITTER_MS))
         continue
       }
       return { failure: lastFailure }
@@ -109,22 +154,58 @@ export async function generateDraft(
     const data = (await resp.json().catch(() => ({}))) as {
       candidates?: { content?: { parts?: { text?: string }[] }; finishReason?: string }[]
       promptFeedback?: { blockReason?: string }
+      modelVersion?: string
+      responseId?: string
+      usageMetadata?: Record<string, unknown>
     }
     const candidate = data.candidates?.[0]
+    const usage = data.usageMetadata ?? {}
+    const telemetry: ModelTelemetry = {
+      modelVersion: data.modelVersion ?? null,
+      responseId: data.responseId ?? null,
+      promptTokens: num(usage.promptTokenCount),
+      outputTokens: num(usage.candidatesTokenCount),
+      thinkingTokens: num(usage.thoughtsTokenCount),
+      totalTokens: num(usage.totalTokenCount),
+      finishReason: candidate?.finishReason ?? null,
+      elapsedMs: Date.now() - startedAt,
+      attempts: attempt,
+    }
     const text = candidate?.content?.parts?.map((p) => p.text ?? '').join('') ?? ''
     const parsed = parseJson(text)
-    if (parsed) return { envelope: normalizeEnvelope(parsed, opts.cards, opts.normalize) }
+    if (parsed) {
+      // 구조화 로그 한 줄 — 내용은 담지 않고 수와 코드만 담는다(ModelTelemetry 주석 참조).
+      console.log(
+        '[startup-ai-fill] 모델 사용량',
+        JSON.stringify({ group: opts.label ?? null, cards: opts.cards.length, ...telemetry }),
+      )
+      return { envelope: normalizeEnvelope(parsed, opts.cards, opts.normalize), telemetry }
+    }
 
     // 200인데 읽을 것이 없으면 이유는 응답 안에 있다 — 안전 차단이거나 답이 잘린 것이다.
     // 그 둘은 "해석하지 못했다"와 다음 행동이 달라서 갈라 말한다.
     const blocked = data.promptFeedback?.blockReason
     const finish = candidate?.finishReason
-    console.error('[startup-ai-fill] 파싱 실패', attempt, { blocked, finish, head: text.slice(0, 300) })
+    // **답의 앞머리를 찍지 않는다.** 파싱이 실패한 답에도 기업 자료에서 온 글이 들어 있고,
+    // 로그는 자료가 나가지 않기로 한 곳이다. 왜 못 읽었는지는 길이와 첫 글자면 답한다
+    // (코드펜스로 감쌌는가 · 설명 문장을 붙였는가 · 아예 비었는가).
+    console.error(
+      '[startup-ai-fill] 파싱 실패',
+      JSON.stringify({
+        group: opts.label ?? null,
+        attempt,
+        blocked: blocked ?? null,
+        finish: finish ?? null,
+        textLength: text.length,
+        startsWith: text.trimStart().slice(0, 1),
+        ...telemetry,
+      }),
+    )
     lastFailure = {
       message: blocked
         ? `자료가 AI 안전 정책에 걸려 거절됐습니다(${blocked}).`
         : finish === 'MAX_TOKENS'
-          ? '작성할 카드가 많아 답이 중간에 끊겼습니다. 카드를 나눠 실행해 주세요.'
+          ? '한 요청이 맡은 카드가 많아 답이 중간에 끊겼습니다. 카드마다 읽을 자료를 다르게 지정하면 요청이 나뉩니다.'
           : 'AI 응답을 해석하지 못했습니다.',
       upstream: 200,
     }

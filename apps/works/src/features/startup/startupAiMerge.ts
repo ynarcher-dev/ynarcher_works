@@ -32,6 +32,21 @@ export interface AiFillEnvelope {
    * 있는 문제라 조용히 빠뜨리면 왜 초안이 부실한지 알 수 없다.
    */
   skippedSources?: string[]
+  /**
+   * 요청이 실패해 작성하지 못한 카드.
+   *
+   * 서버가 카드를 여러 요청으로 나눠 보내므로 일부만 실패할 수 있다. **"못 찾았다"와 다른
+   * 축이다** — 못 찾은 것은 모델이 자료를 읽고 근거가 없다고 답한 것이고, 여기 있는 것은
+   * 아예 묻지 못한 것이다. 둘을 같이 말하면 담당자가 "자료에 없구나"로 읽고 다시 시도하지
+   * 않는다.
+   */
+  failedCards?: AiFailedCards[]
+}
+
+/** 실패한 요청이 맡고 있던 카드와 그 사유. */
+export interface AiFailedCards {
+  keys: AiCardKey[]
+  message: string
 }
 
 /** 실행 결과 요약 — 폼 상단 안내 줄이 읽는다. */
@@ -40,6 +55,8 @@ export interface AiFillOutcome {
   filled: AiCardKey[]
   /** 체크했으나 자료에 근거가 없어 비워 둔 카드(기존 값 유지). */
   skipped: AiCardKey[]
+  /** 요청이 실패해 아예 묻지 못한 카드(기존 값 유지). 다시 시도하면 될 수 있다. */
+  failed: AiFailedCards[]
   notes: Partial<Record<AiCardKey, string[]>>
   evidence: Partial<Record<AiCardKey, string[]>>
   /** 읽지 못한 자료의 사유. 봉투에서 그대로 넘어온다. */
@@ -134,8 +151,13 @@ export function applyAiDraft(
 
   const filled: AiCardKey[] = []
   const skipped: AiCardKey[] = []
+  const failed = envelope.failedCards ?? []
+  // 요청이 실패한 카드는 **못 찾은 카드로 세지 않는다.** 모델이 자료를 읽고 없다고 답한 것과
+  // 아예 묻지 못한 것은 다음 행동이 다르다 — 앞은 자료를 더해야 하고, 뒤는 다시 누르면 된다.
+  const failedKeys = new Set(failed.flatMap((f) => f.keys))
 
   for (const key of cards) {
+    if (failedKeys.has(key)) continue
     const value = envelope.cards[key]
     if (!hasContent(value)) {
       skipped.push(key)
@@ -209,6 +231,7 @@ export function applyAiDraft(
     outcome: {
       filled,
       skipped,
+      failed,
       notes: envelope.notes,
       evidence: envelope.evidence,
       skippedSources: envelope.skippedSources ?? [],
@@ -216,13 +239,32 @@ export function applyAiDraft(
   }
 }
 
-/** 요약 줄 문구 — 무엇이 채워졌고 무엇이 그대로인지 한 줄로 말한다. */
+const labels = (keys: AiCardKey[]) => keys.map((k) => AI_CARD_LABEL[k]).join(' · ')
+
+/**
+ * 요약 줄 문구 — 무엇이 채워졌고 무엇이 그대로인지 한 줄로 말한다.
+ *
+ * **셋을 갈라 말한다.** 채운 카드, 자료에 근거가 없어 그대로 둔 카드, 요청이 실패해 아예 묻지
+ * 못한 카드다. 뒤의 둘을 뭉치면 담당자는 실패한 카드까지 "자료에 없구나"로 읽고 다시 시도하지
+ * 않는다 — 그 카드는 다시 누르면 채워질 수 있다.
+ */
 export function outcomeSummary(outcome: AiFillOutcome): string {
-  const filled = outcome.filled.map((k) => AI_CARD_LABEL[k]).join(' · ')
-  const head = outcome.filled.length > 0
-    ? `AI가 ${outcome.filled.length}개 카드를 채웠습니다: ${filled}.`
-    : 'AI가 채운 카드가 없습니다.'
-  if (outcome.skipped.length === 0) return `${head} 확인 후 저장하세요.`
-  const skipped = outcome.skipped.map((k) => AI_CARD_LABEL[k]).join(' · ')
-  return `${head} 자료에서 찾지 못해 그대로 둔 카드: ${skipped}. 확인 후 저장하세요.`
+  const failedKeys = outcome.failed.flatMap((f) => f.keys)
+  const total = outcome.filled.length + outcome.skipped.length + failedKeys.length
+  const head =
+    outcome.filled.length > 0
+      ? `${total}개 중 ${outcome.filled.length}개 카드를 작성했습니다: ${labels(outcome.filled)}.`
+      : '작성된 카드가 없습니다.'
+
+  const parts = [head]
+  if (failedKeys.length > 0) {
+    // 사유는 묶음마다 다를 수 있어 함께 세운다(같은 사유면 한 번만 서도록 중복을 걷는다).
+    const reasons = [...new Set(outcome.failed.map((f) => f.message))].join(' / ')
+    parts.push(`작성하지 못한 카드: ${labels(failedKeys)} — ${reasons}`)
+  }
+  if (outcome.skipped.length > 0) {
+    parts.push(`자료에서 찾지 못해 그대로 둔 카드: ${labels(outcome.skipped)}.`)
+  }
+  parts.push('확인 후 저장하세요.')
+  return parts.join(' ')
 }

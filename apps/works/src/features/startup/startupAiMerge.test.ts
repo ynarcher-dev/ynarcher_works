@@ -256,9 +256,54 @@ describe('Y/N 판정', () => {
 
 describe('outcomeSummary', () => {
   it('채운 카드와 못 찾은 카드를 함께 말한다', () => {
-    const text = outcomeSummary({ filled: ['business'], skipped: ['ip'], notes: {}, evidence: {}, skippedSources: [] })
+    const text = outcomeSummary({
+      filled: ['business'],
+      skipped: ['ip'],
+      failed: [],
+      notes: {},
+      evidence: {},
+      skippedSources: [],
+    })
     expect(text).toContain('비즈니스')
     expect(text).toContain('지식재산·인증')
     expect(text).toContain('확인 후 저장')
+  })
+
+  it('작성하지 못한 카드를 "못 찾은 카드"와 갈라 말한다', () => {
+    // 뭉치면 담당자가 실패한 카드까지 "자료에 없구나"로 읽고 다시 시도하지 않는다.
+    const text = outcomeSummary({
+      filled: ['business', 'tech'],
+      skipped: [],
+      failed: [{ keys: ['shareholders', 'investment'], message: 'AI 요청이 몰려 거절됐습니다.' }],
+      notes: {},
+      evidence: {},
+      skippedSources: [],
+    })
+    expect(text).toContain('4개 중 2개 카드를 작성했습니다')
+    expect(text).toContain('작성하지 못한 카드: 주주 · 투자')
+    expect(text).toContain('AI 요청이 몰려')
+    expect(text).not.toContain('찾지 못해')
+  })
+})
+
+describe('applyAiDraft — 실패한 카드는 기존 값을 건드리지 않는다', () => {
+  it('실패한 카드의 컬럼은 원본 그대로이고 못 찾은 카드로 세지도 않는다', () => {
+    const record = fullRecord()
+    const { record: next, outcome } = applyAiDraft(
+      record,
+      {
+        // 성공한 묶음의 카드만 봉투에 온다. 실패한 카드는 값이 아니라 이름으로 온다.
+        cards: { business: { oneLiner: '새 한 줄' } },
+        notes: {},
+        evidence: {},
+        failedCards: [{ keys: ['shareholders'], message: '요청이 실패했습니다.' }],
+      },
+      ['business', 'shareholders'],
+    )
+    expect(next.shareholders).toEqual(record.shareholders)
+    expect(outcome.filled).toEqual(['business'])
+    // 자료에 근거가 없어 비운 것이 아니라 아예 묻지 못한 것이다.
+    expect(outcome.skipped).toEqual([])
+    expect(outcome.failed).toHaveLength(1)
   })
 })

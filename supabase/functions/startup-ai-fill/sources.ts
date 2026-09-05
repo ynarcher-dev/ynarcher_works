@@ -27,6 +27,14 @@ export { MAX_TOTAL_BYTES }
 
 /** 읽을 자료 한 건. */
 export interface ResolvedSource {
+  /**
+   * 화면의 격자가 이 자료를 가리키는 키.
+   *
+   * 카드별 자료 배정이 이 키로 온다. **첨부 id를 그대로 쓰지 못하는 이유는 등록 모드**다 —
+   * 아직 원장에 없는 파일·링크에는 id가 없어 가리킬 말이 없다. 그래서 화면이 만든 키를
+   * 그대로 물려받는다(첨부는 id, 보류 파일은 `file:순번:이름`, 링크는 `link:주소`).
+   */
+  key: string
   /** 감사 로그가 가리킬 첨부 행 id. 등록 모드 업로드는 가리킬 행이 없어 null이다. */
   attachmentId: string | null
   name: string
@@ -125,6 +133,8 @@ export function resolveAttachments(
 
   return {
     sources: rows.map((r) => ({
+      // 이미 원장에 있는 자료는 id가 곧 화면의 키다(화면도 `m.id`를 키로 쓴다).
+      key: r.id,
       attachmentId: r.id,
       name: r.file_name,
       byteSize: r.kind === 'LINK' ? 0 : Number(r.byte_size ?? 0),
@@ -145,13 +155,20 @@ export function resolveAttachments(
  */
 export async function resolveUploads(
   files: File[],
+  keys: string[] = [],
 ): Promise<{ sources: ResolvedSource[] } | { error: SourceError }> {
   const bad = files.filter((f) => !isReadable(f.type, f.name))
   if (bad.length > 0) return { error: unsupported(bad.map((f) => f.name)) }
 
+  // 화면이 보낸 키를 순서대로 물려받는다. 순번을 여기서 다시 세지 않는 이유는 담당자가
+  // 자료를 골라 보내면 그 순번이 화면의 것과 어긋나기 때문이다 — 어긋나면 카드별 배정이
+  // 엉뚱한 자료를 가리킨다. 키가 오지 않으면(격자 이전 화면) 이름으로 세운다.
+  const keyOf = (f: File, i: number) => keys[i] ?? `file:${i}:${f.name}`
+
   // 크기 검사보다 먼저 바이트를 읽지 않도록 크기부터 본다(큰 파일을 메모리에 올리지 않는다).
   const pre = validateSources(
-    files.map((f) => ({
+    files.map((f, i) => ({
+      key: keyOf(f, i),
       attachmentId: null,
       name: f.name,
       byteSize: f.size,
@@ -164,8 +181,9 @@ export async function resolveUploads(
   if (pre) return { error: pre }
 
   const sources: ResolvedSource[] = []
-  for (const f of files) {
+  for (const [i, f] of files.entries()) {
     sources.push({
+      key: keyOf(f, i),
       attachmentId: null,
       name: f.name,
       byteSize: f.size,
@@ -186,6 +204,9 @@ export async function resolveUploads(
  */
 export function resolvePendingLinks(urls: string[]): ResolvedSource[] {
   return urls.map((url) => ({
+    // 주소가 곧 키다(화면도 `link:주소`를 키로 쓴다). 같은 주소를 두 번 담을 수 없으므로
+    // 순번이 필요 없고, 그래서 파일과 달리 양쪽이 따로 만들어도 같은 값이 나온다.
+    key: `link:${url}`,
     attachmentId: null,
     name: url,
     byteSize: 0,

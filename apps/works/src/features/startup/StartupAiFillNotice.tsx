@@ -20,10 +20,20 @@ export function StartupAiFillNotice({ outcome }: { outcome: AiFillOutcome }) {
   const warned = outcome.filled.filter((k) => (outcome.notes[k]?.length ?? 0) > 0)
   const evidenced = outcome.filled.filter((k) => (outcome.evidence[k]?.length ?? 0) > 0)
 
+  // 한 카드도 못 쓴 것이 아니라 **일부만** 못 쓴 것이라, 배너는 정보(info)로 두고 실패는
+  // 문장이 말한다. 전체를 위험(danger)으로 칠하면 이미 채워진 여덟 카드까지 잘못된 것으로 읽힌다.
   return (
     <Banner tone="info">
       <div className="space-y-2">
         <p>{outcomeSummary(outcome)}</p>
+
+        {/* 실패한 카드는 접지 않는다 — 다시 누르면 채워질 수 있다는 것이 다음 행동이다. */}
+        {outcome.failed.length > 0 && (
+          <p className={cardText.value}>
+            작성하지 못한 카드는 'AI 작성하기'를 다시 열어 그 줄만 남기고 실행하면 됩니다. 이미 채워진
+            카드는 그대로 있습니다.
+          </p>
+        )}
 
         {/* 못 읽은 자료는 접지 않는다 — 대부분 담당자가 고칠 수 있는 것(공유 설정·죽은 주소)이라
             이유를 봐야 다음 행동이 정해지고, 초안이 왜 부실한지도 여기서 답한다. */}

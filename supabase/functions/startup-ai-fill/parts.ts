@@ -20,7 +20,8 @@ import { uploadFile, waitActive, type UploadedFile } from './filesApi.ts'
 import { isTextOnlyMime } from './formats.ts'
 import { isOfficeMime, officeText } from './officeText.ts'
 import type { LinkContent, LinkError } from './linkRead.ts'
-import { MAX_INLINE_BYTES, MAX_TEXT_BYTES, MAX_TOTAL_BYTES, mb } from './limits.ts'
+import { MAX_INLINE_BYTES, MAX_TEXT_BYTES, MAX_TOTAL_BYTES, UPLOAD_CONCURRENCY, mb } from './limits.ts'
+import { runPool } from './pool.ts'
 import type { ResolvedSource, SourceError } from './sources.ts'
 
 /** ArrayBuffer를 base64로(청크 단위 — 대용량에서 call stack 초과 방지). */
@@ -49,11 +50,30 @@ export interface BuildDeps {
    * 결과도 남지 않는다.
    */
   deadline: number
+  /**
+   * 인라인을 쓰지 않고 반드시 Files API로 올린다.
+   *
+   * **요청이 둘 이상으로 갈리면 켠다.** 인라인은 자료를 base64 문자열로 바꿔 요청 본문에
+   * 직접 싣는 방식이라, 요청마다 사본이 따로 만들어진다 — 10MB 파일 하나가 요청 여섯 개면
+   * 13MB짜리 문자열 여섯 벌이 동시에 함수 메모리에 선다. Files API는 원본 바이트를 한 번만
+   * 올리고 주소만 참조하므로 요청 수와 무관하게 메모리가 파일 크기 1배다.
+   *
+   * 크기가 아니라 **요청 수**가 이 판정을 정하는 것이 요점이다. 작은 자료라도 여섯 요청에
+   * 반복해 실어 보낼 이유가 없다.
+   */
+  forceFilesApi: boolean
 }
 
 export interface BuiltParts {
-  /** 모델에 보낼 조각. 프롬프트는 호출자가 뒤에 붙인다. */
-  parts: unknown[]
+  /**
+   * 자료 키 → 그 자료가 만든 **파일 조각**(인라인 또는 Files API 참조).
+   *
+   * 묶음마다 조각을 다시 만들지 않고 이 지도를 함께 본다 — 자료는 한 번 내려받아 한 번
+   * 올리고, 여러 요청이 같은 주소를 가리킨다. 삽입 순서가 곧 담당자가 고른 순서다.
+   */
+  fileParts: Map<string, unknown[]>
+  /** 자료 키 → 그 자료에서 뽑아 낸 **글 조각**(오피스 문서·링크 본문). */
+  textParts: Map<string, unknown[]>
   /**
    * 읽지 못했거나 일부만 읽은 자료의 사유.
    *
@@ -65,9 +85,26 @@ export interface BuiltParts {
 }
 
 interface FileItem {
+  /** 이 조각이 어느 자료에서 왔는지. 묶음이 자기 몫만 골라 담는 데 쓴다. */
+  key: string
   name: string
   mime: string
   bytes: ArrayBuffer
+}
+
+/**
+ * 한 묶음이 보낼 조각을 고른다 — 파일이 앞, 글이 뒤.
+ *
+ * 순서를 여기서 정하는 이유는 조립과 같다. **자료의 본체는 파일이고 글은 그것을 보충한다.**
+ * 지도의 삽입 순서(담당자가 고른 순서)를 그대로 따르므로, 같은 조합이면 언제나 같은 요청이
+ * 만들어진다 — 실패를 재현할 수 있어야 한다.
+ */
+export function selectParts(built: BuiltParts, keys: string[]): unknown[] {
+  const wanted = new Set(keys)
+  const parts: unknown[] = []
+  for (const [key, list] of built.fileParts) if (wanted.has(key)) parts.push(...list)
+  for (const [key, list] of built.textParts) if (wanted.has(key)) parts.push(...list)
+  return parts
 }
 
 const tooLarge = (): SourceError => ({
@@ -90,7 +127,7 @@ export async function buildParts(
 ): Promise<BuiltParts | { error: SourceError }> {
   const files: FileItem[] = []
   /** 글로 넘길 것들. 앞머리(label)가 무엇에서 온 글인지 모델에 말한다. */
-  const texts: { label: string; text: string }[] = []
+  const texts: { key: string; label: string; text: string }[] = []
   const notices: string[] = []
   let used = 0
   /** 글자 계열이 쓴 몫. 전체 예산과 별개로 센다(같은 바이트라도 담기는 양이 다르다). */
@@ -126,8 +163,8 @@ export async function buildParts(
       }
       used += size
       if (isText) textUsed += size
-      if (read.text != null) texts.push({ label: '[참고 링크: ' + s.url + ']', text: read.text })
-      else if (read.bytes) files.push({ name: s.url, mime: read.mime, bytes: read.bytes })
+      if (read.text != null) texts.push({ key: s.key, label: '[참고 링크: ' + s.url + ']', text: read.text })
+      else if (read.bytes) files.push({ key: s.key, name: s.url, mime: read.mime, bytes: read.bytes })
       continue
     }
 
@@ -157,7 +194,7 @@ export async function buildParts(
         continue
       }
       textUsed += size
-      texts.push({ label: `[첨부 문서: ${s.name}]`, text: read })
+      texts.push({ key: s.key, label: `[첨부 문서: ${s.name}]`, text: read })
       continue
     }
 
@@ -175,33 +212,66 @@ export async function buildParts(
         }
       }
     }
-    files.push({ name: s.name, mime: s.mime, bytes: buf })
+    files.push({ key: s.key, name: s.name, mime: s.mime, bytes: buf })
   }
 
-  // 2) 합계가 보내는 방식을 정한다 ----------------------------------------------
+  // 2) 합계와 요청 수가 보내는 방식을 정한다 --------------------------------------
+  // 요청이 둘 이상이면 크기와 무관하게 올린다(BuildDeps.forceFilesApi 주석 참조).
   const fileBytes = files.reduce((sum, f) => sum + f.bytes.byteLength, 0)
-  const parts: unknown[] = []
+  const fileParts = new Map<string, unknown[]>()
+  const textParts = new Map<string, unknown[]>()
 
-  if (fileBytes <= MAX_INLINE_BYTES) {
-    for (const f of files) parts.push({ inlineData: { mimeType: f.mime, data: toBase64(f.bytes) } })
-  } else {
+  if (!deps.forceFilesApi && fileBytes <= MAX_INLINE_BYTES) {
     for (const f of files) {
+      fileParts.set(f.key, [{ inlineData: { mimeType: f.mime, data: toBase64(f.bytes) } }])
+    }
+  } else {
+    // 올리는 일은 바깥으로 나가는 왕복이라 건수만큼 시간을 먹는다. 몇 개씩 함께 보내되
+    // 상한을 둔다 — 열 건을 한꺼번에 올리면 요율 제한에 걸려 오히려 느려진다.
+    const ups = await runPool(files, UPLOAD_CONCURRENCY, async (f) => {
       const up = await uploadFile(deps.apiKey, f.bytes, f.mime, f.name, deps.signal)
-      if ('message' in up) {
-        notices.push(up.message)
-        continue
-      }
+      if ('message' in up) return { f, error: up.message }
+      // **올린 즉시 지울 목록에 넣는다.** 이 뒤의 어느 단계에서 예외로 빠져나가도 지울
+      // 대상이 남아 있어야 한다(그릇을 호출자가 쥐는 것과 같은 이유).
       uploaded.push(up)
       if (!(await waitActive(deps.apiKey, up, deps.signal))) {
-        notices.push(`자료 처리가 끝나지 않아 건너뛰었습니다: ${f.name}`)
+        return { f, error: `자료 처리가 끝나지 않아 건너뛰었습니다: ${f.name}` }
+      }
+      return { f, up }
+    })
+
+    // **시간이 초과된 것은 건너뛸 일이 아니라 멈출 일이다.** 상한을 넘긴 뒤에도 계속하면
+    // 남은 시간을 모델이 아니라 실패할 요청에 쓰고, 담당자는 "왜 부실한 초안인지"가 아니라
+    // 뒤늦은 시간 초과를 받는다. 올린 것은 이미 그릇에 담겨 있어 정리는 그대로 돈다.
+    for (const r of ups) {
+      if (r.status === 'rejected' && r.reason instanceof DOMException && r.reason.name === 'AbortError') {
+        throw r.reason
+      }
+    }
+
+    // 결과는 넣은 순서로 돌아온다. 지도의 삽입 순서가 곧 조각의 순서라, 먼저 끝난 순서가
+    // 아니라 담당자가 고른 순서로 넣어야 같은 조합이 언제나 같은 요청이 된다.
+    for (const r of ups) {
+      if (r.status === 'rejected') {
+        console.error('[startup-ai-fill] 업로드 예외', r.reason instanceof Error ? r.reason.message : r.reason)
         continue
       }
-      parts.push({ fileData: { mimeType: up.mime, fileUri: up.uri } })
+      const { f, up, error } = r.value as { f: FileItem; up?: UploadedFile; error?: string }
+      if (error || !up) {
+        notices.push(error ?? `자료를 올리지 못했습니다: ${f.name}`)
+        continue
+      }
+      fileParts.set(f.key, [{ fileData: { mimeType: up.mime, fileUri: up.uri } }])
     }
   }
 
   // 글로 뽑은 것은 파일 뒤에 세운다 — 자료의 본체는 파일이고, 글은 그것을 보충한다.
-  for (const t of texts) parts.push({ text: `${t.label}\n${t.text}` })
+  // 한 자료가 글 조각을 둘 낼 일은 없지만, 지도의 값을 목록으로 둔 덕에 늘어도 자리가 있다.
+  for (const t of texts) {
+    const prev = textParts.get(t.key) ?? []
+    prev.push({ text: `${t.label}\n${t.text}` })
+    textParts.set(t.key, prev)
+  }
 
-  return { parts, notices }
+  return { fileParts, textParts, notices }
 }

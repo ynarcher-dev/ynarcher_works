@@ -1,7 +1,16 @@
 // [STARTUP AI 작성하기] 첨부 자료 → Gemini → 상세 카드 초안(JSON)
-// 요청(수정 모드, JSON): { startupId, attachmentIds: string[], cards: CardKey[] }
-// 요청(등록 모드, multipart): cards=<JSON 배열>, files=<파일 여러 개>, links=<주소 여러 개>
-// 응답: { cards, notes, evidence, skippedSources, model, elapsedMs } | 4xx/5xx
+// 요청(수정 모드, JSON): { startupId, attachmentIds: string[], cards: CardKey[], assignments }
+// 요청(등록 모드, multipart): cards=<JSON 배열>, assignments=<JSON 객체>, files=<파일 여러 개>,
+//                             fileKeys=<JSON 배열, files와 같은 순서>, links=<주소 여러 개>
+// 응답: { cards, notes, evidence, skippedSources, failedCards, model, modelVersion, elapsedMs }
+//       | 4xx/5xx
+//
+// **담당자는 한 번 누르고 서버가 나눠 부른다(2026-09-06).** `assignments`는 카드마다 읽을
+// 자료를 지정한 격자이고, 서버는 **자료 조합이 같은 카드끼리 한 요청**으로 묶어 병렬로 보낸다.
+// 나누는 목적은 둘이다 — 카드가 쓰지 않을 자료가 빠져 잡음이 줄고(재무 카드에 IR 자료가 함께
+// 들어가면 확정 재무 대신 목표 매출을 집어 온다), 요청당 출력이 작아져 답이 잘리지 않는다.
+// 자료는 조합이 몇 벌이든 **한 번 내려받아 한 번 올리고** 요청들이 그 주소를 함께 쓴다.
+// 한 요청이 실패해도 나머지 카드는 그대로 돌려주고 실패한 카드만 `failedCards`가 말한다.
 //
 // 보안:
 // - 인증된 **내부 사용자**만 호출한다. 게스트 커스텀 JWT는 받지 않는다(WORKS 전용 기능).
@@ -28,9 +37,12 @@ import { jsonResponse, withCors } from '../_shared/cors.ts'
 import { supabaseAdmin } from '../_shared/supabaseAdmin.ts'
 import { isCardKey, type CardKey } from './cards.ts'
 import { deleteFile, type UploadedFile } from './filesApi.ts'
-import { ASSEMBLY_BUDGET_MS } from './limits.ts'
+import { planGroups, type Assignments } from './groups.ts'
+import { ASSEMBLY_BUDGET_MS, GROUP_CONCURRENCY, TIMEOUT_MS } from './limits.ts'
 import { readLink } from './linkRead.ts'
-import { buildParts } from './parts.ts'
+import { dedupe, mergeEnvelopes } from './merge.ts'
+import { buildParts, selectParts } from './parts.ts'
+import { runPool } from './pool.ts'
 import { generateDraft } from './generate.ts'
 import { buildPrompt } from './prompts.ts'
 import {
@@ -41,19 +53,20 @@ import {
   type AttachmentRow,
   type ResolvedSource,
 } from './sources.ts'
-import { parseJson } from './validate.ts'
+import { parseJson, type Envelope } from './validate.ts'
 
 const BUCKET = 'attachments'
 /** 첨부 대상 다형 키(스타트업 자료는 한 곳에 모인다 — StartupDetailForm의 MATERIAL_TARGET_TYPE). */
 const TARGET_TYPE = 'startup'
-/**
- * 자료를 가져오는 것부터 모델 응답까지 전부를 덮는 상한.
- *
- * 종전에는 모델 호출만 120초로 재고 자료 가져오기·업로드는 재지 않았다. 링크 다섯 건이
- * 각자 15초를 쓰면 그 앞에서만 75초가 지나가므로, 함수 자체가 죽는 것이 먼저다. 한 타이머가
- * 전부를 덮어야 담당자가 "시간이 초과됐다"는 답이라도 받는다.
- */
-const TIMEOUT_MS = 140_000
+
+/** 실패한 요청이 맡고 있던 카드. 화면이 "무엇을 못 썼는지"를 이 목록으로 말한다. */
+interface FailedCards {
+  keys: CardKey[]
+  /** 담당자에게 그대로 보이는 사유. 구글의 원문 오류·자료 내용은 담기지 않는다. */
+  message: string
+  /** 구글이 준 상태 코드(있으면). 운영이 원인을 가르는 데만 쓴다. */
+  upstream: number | null
+}
 
 /** 호출자 토큰을 그대로 실은 클라이언트 — 이 클라이언트의 조회에는 RLS가 끝까지 걸린다. */
 function callerClient(token: string) {
@@ -67,6 +80,39 @@ function callerClient(token: string) {
 function readCards(raw: unknown): CardKey[] {
   const list = Array.isArray(raw) ? raw : []
   return list.filter(isCardKey) as CardKey[]
+}
+
+/**
+ * 카드별 자료 배정(격자)을 읽는다.
+ *
+ * **객체가 아예 오지 않았을 때만 null이고, 그때는 모든 카드가 자료 전부를 읽는다** — 격자
+ * 이전의 화면이 보낸 요청도 그대로 돌아야 하고, 그때의 동작이 한 요청이었다.
+ *
+ * 객체가 왔는데 쓸 수 있는 줄이 하나도 없으면 **빈 배정**을 돌려준다(null이 아니다). 둘을
+ * 가르지 않으면 "격자를 보냈는데 전부 걸러진" 요청이 "격자를 안 보낸" 요청과 같아져, 아무것도
+ * 고르지 않았는데 자료 전부를 읽는 일이 된다. 빈 배정은 묶음 0개가 되어 400으로 막힌다.
+ */
+function readAssignments(raw: unknown): Assignments | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
+  const out: Assignments = {}
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (!isCardKey(key) || !Array.isArray(value)) continue
+    out[key] = value.map((v) => String(v)).filter(Boolean)
+  }
+  return out
+}
+
+/**
+ * 동시에 보낼 요청 수.
+ *
+ * 값은 코드가 갖되 **시크릿으로 내릴 수 있게** 둔다. 요율 티어가 낮은 키에서는 셋도 몰림으로
+ * 읽히는데, 그것은 배포 없이 고쳐야 하는 종류의 문제다. 올리는 쪽은 막는다 — 넷을 넘겨서
+ * 얻는 시간보다 429로 잃는 시간이 크다.
+ */
+function readConcurrency(): number {
+  const raw = Number(Deno.env.get('GEMINI_MAX_CONCURRENCY'))
+  if (!Number.isFinite(raw) || raw < 1) return GROUP_CONCURRENCY
+  return Math.min(Math.trunc(raw), 4)
 }
 
 Deno.serve(
@@ -104,14 +150,20 @@ Deno.serve(
     let sources: ResolvedSource[] = []
     let companyName = ''
     let startupId: string | null = null
+    /** 카드별 자료 배정. null이면 모든 카드가 자료 전부를 읽는다(옛 화면 호환). */
+    let assignments: Assignments | null = null
 
     if (isUpload) {
       // 3-a) 등록 모드: 아직 원장에 없는 파일이 요청에 실려 온다 -------------------
       const form = await req.formData().catch(() => null)
       if (!form) return jsonResponse({ error: 'invalid_request', message: '요청 형식이 올바르지 않습니다.' }, 400)
       cards = readCards(parseJson(String(form.get('cards') ?? '[]')))
+      assignments = readAssignments(parseJson(String(form.get('assignments') ?? 'null')))
       companyName = String(form.get('companyName') ?? '').trim()
       const files = form.getAll('files').filter((f): f is File => f instanceof File && f.size > 0)
+      // 화면이 만든 파일 키를 files와 같은 순서로 받는다. 순번을 서버가 다시 세면 담당자가
+      // 자료를 골라 보낼 때 화면의 키와 어긋나 배정이 엉뚱한 자료를 가리킨다.
+      const fileKeys = (parseJson(String(form.get('fileKeys') ?? '[]')) as unknown[] | null) ?? []
       const pendingLinks = form
         .getAll('links')
         .map((v) => String(v).trim())
@@ -127,7 +179,7 @@ Deno.serve(
         return jsonResponse({ error: 'forbidden', message: '스타트업을 등록할 권한이 없습니다.' }, 403)
       }
 
-      const resolved = await resolveUploads(files)
+      const resolved = await resolveUploads(files, fileKeys.map((k) => String(k)))
       if ('error' in resolved) {
         return jsonResponse({ error: resolved.error.code, message: resolved.error.message }, resolved.error.status)
       }
@@ -138,9 +190,11 @@ Deno.serve(
         startupId?: string
         attachmentIds?: string[]
         cards?: unknown
+        assignments?: unknown
       }
       startupId = String(body.startupId ?? '').trim() || null
       cards = readCards(body.cards)
+      assignments = readAssignments(body.assignments)
       const ids = [...new Set((body.attachmentIds ?? []).map((v) => String(v).trim()).filter(Boolean))]
       if (!startupId || ids.length === 0) {
         return jsonResponse({ error: 'invalid_request', message: '대상과 자료를 모두 선택해야 합니다.' }, 400)
@@ -181,6 +235,20 @@ Deno.serve(
     const sizeError = validateSources(sources)
     if (sizeError) return jsonResponse({ error: sizeError.code, message: sizeError.message }, sizeError.status)
 
+    // 4-0) 묶음을 여기서 정한다 — **감사 로그보다 먼저**여야 한다.
+    // 반출 기록은 "실제로 밖으로 나간 자료"를 적는 것이라, 어느 카드에도 배정되지 않아 모델에
+    // 닿지 않을 자료까지 적으면 그 기록이 사실이 아니게 된다. 겸해서 그런 자료는 내려받지도
+    // 않는다(스토리지 왕복과 자료 모으기 시간을 그만큼 아낀다).
+    const groups = planGroups(cards, assignments, sources.map((s) => s.key))
+    if (groups.length === 0) {
+      return jsonResponse(
+        { error: 'invalid_request', message: '카드마다 읽을 자료를 하나 이상 지정해야 합니다.' },
+        400,
+      )
+    }
+    const usedKeys = new Set(groups.flatMap((g) => g.sourceKeys))
+    sources = sources.filter((s) => usedKeys.has(s.key))
+
     // 4) 감사 로그 — 적재에 실패하면 모델을 부르지 않는다 ----------------------------
     // 등록 모드는 가리킬 행이 없어 resource_id가 비고, 무엇을 보냈는지는 파일명이 답한다.
     const { error: logErr } = await admin.from('access_logs').insert(
@@ -218,55 +286,143 @@ Deno.serve(
           readLink,
           // 모아 오는 일은 여기까지. 남은 시간은 모델이 쓴다.
           deadline: Date.now() + ASSEMBLY_BUDGET_MS,
+          // 요청이 둘 이상이면 인라인을 쓰지 않는다(요청마다 base64 사본이 생긴다).
+          forceFilesApi: groups.length > 1,
         },
         uploaded,
       )
       if ('error' in built) {
         return jsonResponse({ error: built.error.code, message: built.error.message }, built.error.status)
       }
-      const { parts, notices } = built
+      const notices = dedupe(built.notices)
 
       // 읽을 것이 하나도 남지 않으면 모델을 부르지 않는다(빈 초안에 비용을 쓰지 않는다).
-      if (parts.length === 0) {
+      if (built.fileParts.size === 0 && built.textParts.size === 0) {
         return jsonResponse(
           { error: 'no_readable_source', message: `읽을 수 있는 자료가 없습니다. ${notices.join(' / ')}` },
           400,
         )
       }
+
       // 소재지 선택지는 ADMIN 원장이 소유한다. 상수로 적어 두면 원장에서 시·도가 바뀌는 날
       // 서버만 옛 목록으로 판정하므로, 그 카드를 고른 요청에서만 그때그때 받아 온다.
       let locations: string[] = []
-      if (cards.includes("basics")) {
+      if (cards.includes('basics')) {
         const { data: tags } = await asCaller
-          .from("location_tags")
-          .select("name")
-          .is("deleted_at", null)
-          .order("sort_order")
+          .from('location_tags')
+          .select('name')
+          .is('deleted_at', null)
+          .order('sort_order')
         locations = (tags ?? []).map((t) => String(t.name)).filter(Boolean)
       }
-      parts.push({ text: buildPrompt(cards, companyName, locations) })
 
-      const result = await generateDraft({
-        apiKey,
-        model,
-        parts,
-        cards,
-        signal: controller.signal,
-        normalize: { locations },
+      // 5-2) 묶음마다 조각을 고른다. 지정한 자료를 하나도 못 읽은 묶음은 부르지 않는다 —
+      // 근거 없이 부르면 모델이 지어낼 자리만 생기고, 담당자에게는 "못 찾았다"로 보여
+      // 자료를 못 읽었다는 사실이 묻힌다.
+      const failedCards: FailedCards[] = []
+      const runnable = groups.flatMap((group) => {
+        const parts = selectParts(built, group.sourceKeys)
+        if (parts.length === 0) {
+          failedCards.push({
+            keys: group.cards,
+            message: '지정한 자료를 읽지 못해 건너뛰었습니다.',
+            upstream: null,
+          })
+          return []
+        }
+        return [{ group, parts }]
       })
-      if ('failure' in result) {
-        // 사유를 그대로 올려 보낸다. 못 읽은 자료도 함께 보낸다 — 실패한 이유가 그것일 수 있다.
+      if (runnable.length === 0) {
         return jsonResponse(
-          { error: 'draft_failed', message: result.failure.message, skippedSources: notices },
-          502,
+          { error: 'no_readable_source', message: `읽을 수 있는 자료가 없습니다. ${notices.join(' / ')}` },
+          400,
+        )
+      }
+
+      // 5-3) 병렬 호출. 한 묶음의 실패가 다른 묶음의 결과를 버리지 않는다.
+      const settled = await runPool(runnable, readConcurrency(), ({ group, parts }, i) =>
+        generateDraft({
+          apiKey,
+          model,
+          parts: [...parts, { text: buildPrompt(group.cards, companyName, locations) }],
+          cards: group.cards,
+          signal: controller.signal,
+          normalize: { locations },
+          label: `${i + 1}/${runnable.length}`,
+        }),
+      )
+
+      // 5-4) 성공한 것만 합치고 실패한 카드는 이름으로 말한다.
+      const envelopes: Envelope[] = []
+      let modelVersion: string | null = null
+      let abortedGroups = 0
+      for (const [i, r] of settled.entries()) {
+        const group = runnable[i].group
+        if (r.status === 'rejected') {
+          const aborted = r.reason instanceof DOMException && r.reason.name === 'AbortError'
+          if (aborted) abortedGroups += 1
+          else console.error('[startup-ai-fill] 묶음 예외', r.reason instanceof Error ? r.reason.message : r.reason)
+          failedCards.push({
+            keys: group.cards,
+            message: aborted
+              ? '시간이 초과돼 이 카드는 작성하지 못했습니다.'
+              : 'AI 작성 중 오류가 발생했습니다.',
+            upstream: null,
+          })
+          continue
+        }
+        if ('failure' in r.value) {
+          failedCards.push({
+            keys: group.cards,
+            message: r.value.failure.message,
+            upstream: r.value.failure.upstream,
+          })
+          continue
+        }
+        envelopes.push(r.value.envelope)
+        // 별칭이 실제로 어느 모델이었는지. 묶음마다 같은 값이라 먼저 온 것을 쓴다.
+        modelVersion ??= r.value.telemetry.modelVersion
+      }
+
+      console.log(
+        '[startup-ai-fill] 실행 요약',
+        JSON.stringify({
+          groups: groups.length,
+          called: runnable.length,
+          ok: envelopes.length,
+          failed: failedCards.length,
+          sources: sources.length,
+          uploaded: uploaded.length,
+          elapsedMs: Date.now() - startedAt,
+        }),
+      )
+
+      // 전부 실패했을 때만 오류다. 하나라도 성공하면 그 카드는 담당자의 손에 들어가야 한다.
+      if (envelopes.length === 0) {
+        const allAborted = abortedGroups === settled.length
+        return jsonResponse(
+          {
+            error: allAborted ? 'timeout' : 'draft_failed',
+            message: allAborted
+              ? '자료가 커서 시간이 초과됐습니다. 자료 수를 줄여 다시 시도하세요.'
+              : (failedCards[0]?.message ?? 'AI 작성에 실패했습니다.'),
+            // 못 읽은 자료도 함께 보낸다 — 실패한 이유가 그것일 수 있다.
+            skippedSources: notices,
+            failedCards,
+          },
+          allAborted ? 504 : 502,
         )
       }
 
       return jsonResponse({
-        ...result.envelope,
+        ...mergeEnvelopes(envelopes),
         // 못 읽었거나 일부만 읽은 자료는 결과와 같은 자리에서 알린다 — 화면이 이 줄을 안내에 그대로 세운다.
         skippedSources: notices,
+        // 부분 성공. 빈 배열이면 전부 성공이며, 화면은 이 목록으로 "무엇을 못 썼는지"를 말한다.
+        failedCards,
         model,
+        // 별칭이 아니라 실제로 답한 모델. 운영이 품질 변화를 이 값으로 가른다.
+        modelVersion,
         elapsedMs: Date.now() - startedAt,
       })
     } catch (e) {

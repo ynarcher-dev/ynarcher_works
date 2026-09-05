@@ -4,6 +4,7 @@ import type { EntityRow } from '@/features/master/entityHooks'
 import { StartupAiFillModal } from '@/features/startup/StartupAiFillModal'
 import type { AiFillResult, AiSource } from '@/features/startup/startupAiFill'
 import type { AiCardKey } from '@/features/startup/startupAiCards'
+import type { AiGrid } from '@/features/startup/startupAiGrid'
 
 /**
  * 자료 관리 카드 아래에 서는 'AI 작성하기' 진입 버튼.
@@ -36,6 +37,14 @@ export function StartupAiFillButton({
   onFilled: (result: AiFillResult, cards: AiCardKey[]) => void
 }) {
   const [open, setOpen] = useState(false)
+  /**
+   * 카드별 자료 배정(격자). **창이 아니라 여기에 둔다.**
+   *
+   * 한 요청이 실패하면 그 카드만 다시 돌려야 하는데, 창을 닫을 때 선택이 사라지면 열넷을
+   * 처음부터 다시 골라야 한다. 여기 있으면 다시 열었을 때 방금 고른 격자가 그대로 서고
+   * 담당자는 실패한 줄만 남기면 된다. 없는 자료를 가리키는 칸은 창이 걷는다(`pruneGrid`).
+   */
+  const [grid, setGrid] = useState<AiGrid>({})
   const hasReadable = sources.some((s) => s.readable)
 
   return (
@@ -58,6 +67,8 @@ export function StartupAiFillButton({
           snapshot={snapshot}
           startupId={startupId}
           companyName={companyName}
+          grid={grid}
+          onGrid={setGrid}
           onClose={() => setOpen(false)}
           onFilled={(result, cards) => {
             setOpen(false)

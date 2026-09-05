@@ -11,6 +11,8 @@
 //
 // 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §8.3
 
+import { DELETE_TIMEOUT_MS } from './limits.ts'
+
 const BASE = 'https://generativelanguage.googleapis.com'
 /** 올린 자료가 쓸 수 있는 상태가 되기를 기다리는 한도. */
 const ACTIVE_TIMEOUT_MS = 60_000
@@ -106,13 +108,29 @@ export async function waitActive(apiKey: string, file: UploadedFile, signal: Abo
   }
 }
 
-/** 올린 자료를 지운다. 실패해도 조용히 넘어간다(48시간 자동 삭제가 뒤를 받친다). */
+/**
+ * 올린 자료를 지운다. 실패해도 조용히 넘어간다(48시간 자동 삭제가 뒤를 받친다).
+ *
+ * **본 요청의 `signal`을 쓰지 않는다.** 지우기가 도는 시점은 대개 그 타이머가 이미 끊긴
+ * 뒤(`finally`)라, 같은 신호를 물리면 지우기가 시작하자마자 취소된다 — 정리하려고 둔 자리가
+ * 정리를 못 하는 자리가 된다. 대신 자기 시계를 갖는다.
+ *
+ * **지우기가 응답을 붙잡지 않게** 짧은 상한을 둔다. 이미 만들어진 초안이 손에 있는데 정리가
+ * 늦어져 담당자가 시간 초과를 받으면, 지우기의 목적을 지키려다 그 초안을 잃는다.
+ */
 export async function deleteFile(apiKey: string, file: UploadedFile): Promise<void> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), DELETE_TIMEOUT_MS)
   try {
-    const resp = await fetch(`${BASE}/v1beta/${file.name}?key=${encodeURIComponent(apiKey)}`, { method: 'DELETE' })
+    const resp = await fetch(`${BASE}/v1beta/${file.name}?key=${encodeURIComponent(apiKey)}`, {
+      method: 'DELETE',
+      signal: controller.signal,
+    })
     await resp.body?.cancel()
     if (!resp.ok) console.error('[startup-ai-fill] 올린 자료 삭제 실패', file.name, resp.status)
   } catch (e) {
     console.error('[startup-ai-fill] 올린 자료 삭제 실패', file.name, e instanceof Error ? e.message : e)
+  } finally {
+    clearTimeout(timer)
   }
 }
