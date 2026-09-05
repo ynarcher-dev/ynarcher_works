@@ -1,5 +1,5 @@
 import { CardShell, useToast } from '@ynarcher/ui'
-import { useState, type ChangeEvent } from 'react'
+import { useState, type ChangeEvent, type ReactNode } from 'react'
 import { useForm } from 'react-hook-form'
 import { FormTopBar } from '@/components/FormTopBar'
 import { useEditReasonPrompt } from '@/components/EditReasonPrompt'
@@ -64,6 +64,13 @@ interface Props {
   onCancel: () => void
   /** 상단 바 뒤로가기 목적지(목록 경로). */
   backTo: string
+  /**
+   * 폼 맨 위에 서는 안내(현재는 'AI 작성하기' 실행 결과).
+   *
+   * 초안 값 자체는 `initial`에 이미 얹혀 들어오므로 폼은 그것이 사람이 적은 값인지 AI가
+   * 채운 값인지 알 필요가 없다 — 여기서 받는 것은 무엇이 채워졌는지 말하는 한 덩어리뿐이다.
+   */
+  notice?: ReactNode
 }
 
 /**
@@ -72,7 +79,7 @@ interface Props {
  * 단계/구분/현황/분야는 ADMIN 태그 관리 원장에서 선택한다.
  * recordId가 없으면 신규 등록 모드로, 저장 시 새 레코드를 생성하고 상세페이지로 이동한다.
  */
-export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo }: Props) {
+export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo, notice }: Props) {
   const toast = useToast()
   const isCreate = !recordId
   const base = initial ?? ({} as EntityRow)
@@ -385,6 +392,8 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
         onCancel={onCancel}
         busy={isSubmitting}
       />
+
+      {notice}
 
       {/* 상세페이지와 동일한 3열 배치: 좌측 2/3 편집 카드 + 우측 1/3 자료 관리 */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
