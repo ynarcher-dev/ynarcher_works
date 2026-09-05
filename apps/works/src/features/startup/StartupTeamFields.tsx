@@ -1,6 +1,6 @@
 import { Button, Checkbox, Input, Select, TextArea, TokenMultiSelect } from '@ynarcher/ui'
 import { useFieldArray, type Control, type UseFormRegister } from 'react-hook-form'
-import { Cell, Label, RowBox } from '@/features/startup/StartupFieldLabel'
+import { Cell, Label, RowActions, RowBox } from '@/features/startup/StartupFieldLabel'
 import { EMPLOYMENT_OPTIONS } from '@/features/startup/startupProfile'
 import type { StartupDetailFormValues } from '@/features/startup/startupFormValues'
 
@@ -37,42 +37,34 @@ export function StartupTeamFields({ register, control, capabilities, setCapabili
         <div className="space-y-2">
           {members.fields.map((f, i) => (
             <RowBox key={f.id}>
-              <div className="w-28 shrink-0">
-                <Cell label="이름">
-                  <Input {...register(`members.${i}.name`)} />
-                </Cell>
-              </div>
-              <div className="w-28 shrink-0">
-                <Cell label="역할">
-                  <Input {...register(`members.${i}.role`)} />
-                </Cell>
-              </div>
-              <div className="w-28 shrink-0">
-                <Cell label="재직 형태">
-                  <Select {...register(`members.${i}.employment`)}>
-                    <option value="">선택</option>
-                    {EMPLOYMENT_OPTIONS.map((o) => (
-                      <option key={o} value={o}>
-                        {o}
-                      </option>
-                    ))}
-                  </Select>
-                </Cell>
-              </div>
-              <div className="w-36 shrink-0">
-                <Cell label="합류 시점">
-                  <Input type="month" {...register(`members.${i}.joinedAt`)} />
-                </Cell>
-              </div>
-              <Checkbox label="지분 보유" wrapperClassName="h-9 shrink-0" {...register(`members.${i}.hasEquity`)} />
-              <div className="min-w-40 flex-1">
-                <Cell label="한 줄 설명">
-                  <Input {...register(`members.${i}.background`)} />
-                </Cell>
-              </div>
-              <Button type="button" variant="secondary" className="shrink-0" onClick={() => members.remove(i)}>
-                삭제
-              </Button>
+              <Cell label="이름">
+                <Input {...register(`members.${i}.name`)} />
+              </Cell>
+              <Cell label="역할">
+                <Input {...register(`members.${i}.role`)} />
+              </Cell>
+              <Cell label="재직 형태">
+                <Select {...register(`members.${i}.employment`)}>
+                  <option value="">선택</option>
+                  {EMPLOYMENT_OPTIONS.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </Select>
+              </Cell>
+              <Cell label="합류 시점">
+                <Input type="month" {...register(`members.${i}.joinedAt`)} />
+              </Cell>
+              <Cell label="한 줄 설명" wide>
+                <Input {...register(`members.${i}.background`)} />
+              </Cell>
+              <RowActions>
+                <Checkbox label="지분 보유" wrapperClassName="mr-auto" {...register(`members.${i}.hasEquity`)} />
+                <Button type="button" variant="secondary" onClick={() => members.remove(i)}>
+                  삭제
+                </Button>
+              </RowActions>
             </RowBox>
           ))}
         </div>
@@ -103,24 +95,20 @@ export function StartupTeamFields({ register, control, capabilities, setCapabili
         <div className="space-y-2">
           {advisors.fields.map((f, i) => (
             <RowBox key={f.id}>
-              <div className="w-28 shrink-0">
-                <Cell label="이름">
-                  <Input {...register(`advisors.${i}.name`)} />
-                </Cell>
-              </div>
-              <div className="min-w-32 flex-1">
-                <Cell label="소속">
-                  <Input {...register(`advisors.${i}.affiliation`)} />
-                </Cell>
-              </div>
-              <div className="min-w-32 flex-1">
-                <Cell label="역할">
-                  <Input {...register(`advisors.${i}.role`)} />
-                </Cell>
-              </div>
-              <Button type="button" variant="secondary" className="shrink-0" onClick={() => advisors.remove(i)}>
-                삭제
-              </Button>
+              <Cell label="이름">
+                <Input {...register(`advisors.${i}.name`)} />
+              </Cell>
+              <Cell label="소속">
+                <Input {...register(`advisors.${i}.affiliation`)} />
+              </Cell>
+              <Cell label="역할" wide>
+                <Input {...register(`advisors.${i}.role`)} />
+              </Cell>
+              <RowActions>
+                <Button type="button" variant="secondary" onClick={() => advisors.remove(i)}>
+                  삭제
+                </Button>
+              </RowActions>
             </RowBox>
           ))}
         </div>

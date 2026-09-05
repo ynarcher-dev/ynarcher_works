@@ -16,21 +16,34 @@ export function Label({ text, children }: { text: string; children: ReactNode })
   )
 }
 
-/** 목록형 입력 한 줄을 감싸는 상자(팀원·자문·지식재산 등 여러 칸이 한 항목을 이룰 때). */
+/**
+ * 목록형 입력 한 항목을 감싸는 상자(팀원·자문·지식재산 등 여러 칸이 한 항목을 이룰 때).
+ *
+ * 한때 `flex flex-wrap`에 칸마다 고정 폭(`w-28`·`w-36`…)을 주었다. 카드가 전폭일 때는 한 줄에
+ * 들어맞았지만, 편집 폼을 조회 화면과 같은 2열로 세우자(2026-09-06) 카드 폭이 절반이 되면서
+ * 같은 상자가 화면마다 다른 줄 수로 접혔다 — 어느 칸이 어느 줄에 있는지가 폭에 따라 달라지면
+ * 같은 항목을 두 번째로 입력할 때 눈이 자리를 기억하지 못한다. **2열 격자**로 바꾸면 접히는
+ * 자리가 고정되고, 폭이 남거나 모자라는 것은 칸 자신이 늘고 줄어 흡수한다.
+ */
 export function RowBox({ children }: { children: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-end gap-2 rounded-radius-md border border-gray-200 p-3">
+    <div className="grid grid-cols-2 items-end gap-2 rounded-radius-md border border-gray-200 p-3">
       {children}
     </div>
   )
 }
 
-/** 목록형 입력 셀(라벨 + 컨트롤). 폭은 바깥에서 준다. */
-export function Cell({ label, children }: { label: string; children: ReactNode }) {
+/** 목록형 입력 셀(라벨 + 컨트롤). `wide`면 두 칸을 다 받는다(이름·명칭처럼 긴 값). */
+export function Cell({ label, wide, children }: { label: string; wide?: boolean; children: ReactNode }) {
   return (
-    <label className="block">
+    <label className={`block min-w-0 ${wide ? 'col-span-2' : ''}`}>
       <span className="mb-0.5 block text-caption text-gray-700">{label}</span>
       {children}
     </label>
   )
+}
+
+/** 항목 상자의 마지막 줄(삭제 등). 오른쪽 정렬로 두 칸을 다 받는다. */
+export function RowActions({ children }: { children: ReactNode }) {
+  return <div className="col-span-2 flex items-center justify-end gap-2">{children}</div>
 }

@@ -1,5 +1,5 @@
 import { Button, Input, Select, cardText } from '@ynarcher/ui'
-import { Cell, RowBox } from '@/features/startup/StartupFieldLabel'
+import { Cell, RowActions, RowBox } from '@/features/startup/StartupFieldLabel'
 import {
   GOV_ROLE_OPTIONS,
   IP_KIND_OPTIONS,
@@ -73,47 +73,39 @@ export function StartupIpFields({ ip, setIp }: { ip: IpProfile; setIp: (v: IpPro
       >
         {(row, patch, remove) => (
           <>
-            <div className="w-28 shrink-0">
-              <Cell label="종류">
-                <Select value={row.kind ?? ''} onChange={(e) => patch({ kind: e.target.value })}>
-                  {IP_KIND_OPTIONS.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </Select>
-              </Cell>
-            </div>
-            <div className="min-w-40 flex-1">
-              <Cell label="명칭">
-                <Input value={row.title ?? ''} onChange={(e) => patch({ title: e.target.value })} />
-              </Cell>
-            </div>
-            <div className="w-24 shrink-0">
-              <Cell label="상태">
-                <Select value={row.status ?? ''} onChange={(e) => patch({ status: e.target.value })}>
-                  <option value="">선택</option>
-                  {IP_STATUS_OPTIONS.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </Select>
-              </Cell>
-            </div>
-            <div className="w-32 shrink-0">
-              <Cell label="번호">
-                <Input value={row.no ?? ''} onChange={(e) => patch({ no: e.target.value })} />
-              </Cell>
-            </div>
-            <div className="w-36 shrink-0">
-              <Cell label="시점">
-                <Input type="month" value={row.date ?? ''} onChange={(e) => patch({ date: e.target.value })} />
-              </Cell>
-            </div>
-            <Button type="button" variant="secondary" className="shrink-0" onClick={remove}>
-              삭제
-            </Button>
+            <Cell label="종류">
+              <Select value={row.kind ?? ''} onChange={(e) => patch({ kind: e.target.value })}>
+                {IP_KIND_OPTIONS.map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
+              </Select>
+            </Cell>
+            <Cell label="상태">
+              <Select value={row.status ?? ''} onChange={(e) => patch({ status: e.target.value })}>
+                <option value="">선택</option>
+                {IP_STATUS_OPTIONS.map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
+              </Select>
+            </Cell>
+            <Cell label="명칭" wide>
+              <Input value={row.title ?? ''} onChange={(e) => patch({ title: e.target.value })} />
+            </Cell>
+            <Cell label="번호">
+              <Input value={row.no ?? ''} onChange={(e) => patch({ no: e.target.value })} />
+            </Cell>
+            <Cell label="시점">
+              <Input type="month" value={row.date ?? ''} onChange={(e) => patch({ date: e.target.value })} />
+            </Cell>
+            <RowActions>
+              <Button type="button" variant="secondary" onClick={remove}>
+                삭제
+              </Button>
+            </RowActions>
           </>
         )}
       </Group>
@@ -127,28 +119,24 @@ export function StartupIpFields({ ip, setIp }: { ip: IpProfile; setIp: (v: IpPro
       >
         {(row, patch, remove) => (
           <>
-            <div className="min-w-40 flex-1">
-              <Cell label="인증명">
-                <Input
-                  placeholder="벤처기업 · 이노비즈 · 기업부설연구소 등"
-                  value={row.name ?? ''}
-                  onChange={(e) => patch({ name: e.target.value })}
-                />
-              </Cell>
-            </div>
-            <div className="min-w-32 flex-1">
-              <Cell label="발급 기관">
-                <Input value={row.agency ?? ''} onChange={(e) => patch({ agency: e.target.value })} />
-              </Cell>
-            </div>
-            <div className="w-36 shrink-0">
-              <Cell label="시점">
-                <Input type="month" value={row.date ?? ''} onChange={(e) => patch({ date: e.target.value })} />
-              </Cell>
-            </div>
-            <Button type="button" variant="secondary" className="shrink-0" onClick={remove}>
-              삭제
-            </Button>
+            <Cell label="인증명" wide>
+              <Input
+                placeholder="벤처기업 · 이노비즈 · 기업부설연구소 등"
+                value={row.name ?? ''}
+                onChange={(e) => patch({ name: e.target.value })}
+              />
+            </Cell>
+            <Cell label="발급 기관">
+              <Input value={row.agency ?? ''} onChange={(e) => patch({ agency: e.target.value })} />
+            </Cell>
+            <Cell label="시점">
+              <Input type="month" value={row.date ?? ''} onChange={(e) => patch({ date: e.target.value })} />
+            </Cell>
+            <RowActions>
+              <Button type="button" variant="secondary" onClick={remove}>
+                삭제
+              </Button>
+            </RowActions>
           </>
         )}
       </Group>
@@ -162,45 +150,39 @@ export function StartupIpFields({ ip, setIp }: { ip: IpProfile; setIp: (v: IpPro
       >
         {(row, patch, remove) => (
           <>
-            <div className="min-w-40 flex-1">
-              <Cell label="과제명">
-                <Input value={row.name ?? ''} onChange={(e) => patch({ name: e.target.value })} />
-              </Cell>
-            </div>
-            <div className="w-24 shrink-0">
-              <Cell label="참여 형태">
-                <Select value={row.role ?? ''} onChange={(e) => patch({ role: e.target.value })}>
-                  <option value="">선택</option>
-                  {GOV_ROLE_OPTIONS.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </Select>
-              </Cell>
-            </div>
-            <div className="w-40 shrink-0">
-              <Cell label="기간">
-                <Input
-                  placeholder="2024-03 ~ 2025-02"
-                  value={row.period ?? ''}
-                  onChange={(e) => patch({ period: e.target.value })}
-                />
-              </Cell>
-            </div>
-            <div className="w-36 shrink-0">
-              <Cell label="과제비(원)">
-                <Input
-                  inputMode="numeric"
-                  className="text-right tabular-nums"
-                  value={row.amount == null ? '' : String(row.amount)}
-                  onChange={(e) => patch({ amount: numOrUndef(e.target.value) ?? null })}
-                />
-              </Cell>
-            </div>
-            <Button type="button" variant="secondary" className="shrink-0" onClick={remove}>
-              삭제
-            </Button>
+            <Cell label="과제명" wide>
+              <Input value={row.name ?? ''} onChange={(e) => patch({ name: e.target.value })} />
+            </Cell>
+            <Cell label="참여 형태">
+              <Select value={row.role ?? ''} onChange={(e) => patch({ role: e.target.value })}>
+                <option value="">선택</option>
+                {GOV_ROLE_OPTIONS.map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
+              </Select>
+            </Cell>
+            <Cell label="기간">
+              <Input
+                placeholder="2024-03 ~ 2025-02"
+                value={row.period ?? ''}
+                onChange={(e) => patch({ period: e.target.value })}
+              />
+            </Cell>
+            <Cell label="과제비(원)" wide>
+              <Input
+                inputMode="numeric"
+                className="text-right tabular-nums"
+                value={row.amount == null ? '' : String(row.amount)}
+                onChange={(e) => patch({ amount: numOrUndef(e.target.value) ?? null })}
+              />
+            </Cell>
+            <RowActions>
+              <Button type="button" variant="secondary" onClick={remove}>
+                삭제
+              </Button>
+            </RowActions>
           </>
         )}
       </Group>

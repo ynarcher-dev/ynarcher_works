@@ -1,4 +1,4 @@
-import { CardShell, PanelCard, useToast } from '@ynarcher/ui'
+import { CardShell, useToast } from '@ynarcher/ui'
 import { useState, type ChangeEvent } from 'react'
 import { useForm } from 'react-hook-form'
 import { FormTopBar } from '@/components/FormTopBar'
@@ -16,10 +16,8 @@ import {
   type EntityRow,
 } from '@/features/master/entityHooks'
 import { StartupBasicFields } from '@/features/startup/StartupBasicFields'
-import { StartupBusinessFields } from '@/features/startup/StartupBusinessFields'
-import { StartupTechFields } from '@/features/startup/StartupTechFields'
-import { StartupTeamFields } from '@/features/startup/StartupTeamFields'
-import { StartupIpFields } from '@/features/startup/StartupIpFields'
+import { StartupCapabilityFields } from '@/features/startup/StartupCapabilityFields'
+import { StartupPerformanceFields } from '@/features/startup/StartupPerformanceFields'
 import {
   readBusiness,
   readIp,
@@ -28,16 +26,13 @@ import {
   type IpProfile,
 } from '@/features/startup/startupProfile'
 import type { StartupDetailFormValues } from '@/features/startup/startupFormValues'
-import { StartupGrowthFields } from '@/features/startup/StartupGrowthFields'
 import {
   readBusinessStatus,
   readGrowth,
   type BusinessStatusEntry,
   type GrowthMetrics,
 } from '@/features/startup/startupGrowth'
-import { StartupShareholderFields } from '@/features/startup/StartupShareholderFields'
 import { readShareholderHistory, type ShareholderSnapshot } from '@/features/startup/startupShareholders'
-import { StartupMediaFields } from '@/features/startup/StartupMediaFields'
 import { readMedia, type MediaItem } from '@/features/startup/startupMedia'
 import { StartupSummaryFields } from '@/features/startup/StartupSummaryFields'
 import {
@@ -419,53 +414,25 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
             <StartupSummaryFields summary={summary} setSummary={setSummary} />
           </CardShell>
 
-          {/* 역량 밴드: 다시 재지 않는 값. 조회 화면은 2열이지만 입력은 1열로 쌓는다 —
-              읽을 때는 제품과 지식재산을 나란히 견주지만, 적을 때는 한 번에 한 칸을 채운다. */}
-          <SectionHeading title="역량" />
+          <StartupCapabilityFields
+            register={register}
+            control={control}
+            capabilities={capabilities}
+            setCapabilities={setCapabilities}
+            ip={ip}
+            setIp={setIp}
+          />
 
-          <PanelCard title="비즈니스">
-            <StartupBusinessFields register={register} />
-          </PanelCard>
-
-          <PanelCard title="제품·기술">
-            <StartupTechFields register={register} />
-          </PanelCard>
-
-          <PanelCard title="팀·조직">
-            <StartupTeamFields
-              register={register}
-              control={control}
-              capabilities={capabilities}
-              setCapabilities={setCapabilities}
-            />
-          </PanelCard>
-
-          <PanelCard title="지식재산·인증">
-            <StartupIpFields ip={ip} setIp={setIp} />
-          </PanelCard>
-
-          {/* 실적 밴드: 기간마다 다시 재는 값(연혁·트랙션·고객·매출·재무·고용·투자 + 주주 + 미디어). */}
-          <SectionHeading title="실적" />
-
-          <PanelCard title="실적 지표">
-            <StartupGrowthFields
-              growth={growth}
-              setGrowth={setGrowth}
-              businessStatus={businessStatus}
-              setBusinessStatus={setBusinessStatus}
-            />
-          </PanelCard>
-
-          {/* 주주 구성: 라운드마다 다시 재는 값이라 실적 밴드에 선다. */}
-          <PanelCard title="주주 구성">
-            <StartupShareholderFields history={shareholders} setHistory={setShareholders} />
-          </PanelCard>
-
-          {/* 미디어(언론기사·영상 등): URL 첨부 시 메타데이터 자동 로드. 노출도 기간의 사건이라
-              자기 구분선을 갖지 않고 실적 밴드 끝에 선다. */}
-          <PanelCard title="미디어">
-            <StartupMediaFields media={media} setMedia={setMedia} />
-          </PanelCard>
+          <StartupPerformanceFields
+            growth={growth}
+            setGrowth={setGrowth}
+            businessStatus={businessStatus}
+            setBusinessStatus={setBusinessStatus}
+            shareholders={shareholders}
+            setShareholders={setShareholders}
+            media={media}
+            setMedia={setMedia}
+          />
         </div>
 
         {/* 우측(1/3): 자료 관리 한 곳. 등록 모드에서는 보류 첨부 후 저장 시 함께 업로드한다. */}
