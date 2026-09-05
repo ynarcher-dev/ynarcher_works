@@ -1,10 +1,12 @@
 // [AI 작성하기] 모델이 읽을 수 있는 형식과, 확장자에서 그 형식을 알아내는 규칙.
 //
-// 목록은 Gemini가 파일 입력으로 받는 MIME 그대로다(공식 문서 기준). 우리가 임의로 늘리지
-// 않는다 — 목록에 없는 것을 보내면 요청이 통째로 400으로 죽어, 고른 자료 다섯 개 중 하나
-// 때문에 나머지 넷도 못 읽는다.
+// 형식은 두 갈래다. **모델이 그대로 받는 것**(PDF·이미지·글자 계열)은 Gemini 공식 목록
+// 그대로이며 우리가 임의로 늘리지 않는다 — 목록에 없는 것을 보내면 요청이 통째로 400으로
+// 죽어, 고른 자료 열넷 중 하나 때문에 나머지 열셋도 못 읽는다. **우리가 열어서 읽는 것**
+// (xlsx·docx·pptx)은 모델에 그대로 보내지 않고 서버가 압축을 풀어 글자로 바꿔 보낸다
+// (officeText.ts). 두 갈래를 한 표에 두지 않는 이유는 보내는 방식이 다르기 때문이다.
 //
-// **PDF만 '본다'는 사실이 이 파일의 전제다.** 나머지 형식은 글자만 뽑혀 들어가고, 문서를 화면에
+// **PDF와 이미지만 '본다'는 사실이 이 파일의 전제다.** 나머지 형식은 글자만 뽑혀 들어가고, 문서를 화면에
 // 그린 모습(표 괘선·차트·레이아웃)은 모델에 닿지 않는다. 그래서 표가 그림으로 들어간 문서를
 // 텍스트 형식으로 넣으면 조용히 빈 결과가 나온다 — 화면이 그 사실을 미리 말해야 한다.
 //
@@ -15,7 +17,9 @@
 // Deno API를 쓰지 않는다(works vitest가 이 판정을 직접 돌린다).
 // 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §2.1·§9
 
-/** 모델이 받는 MIME. 이 목록 밖은 보내지 않는다. */
+import { isOfficeMime, OFFICE_MIMES } from './officeText.ts'
+
+/** 모델이 그대로 받는 MIME. 이 목록 밖은 그대로 보내지 않는다. */
 const SUPPORTED_MIMES = new Set([
   'application/pdf',
   'application/json',
@@ -41,6 +45,10 @@ const SUPPORTED_MIMES = new Set([
  */
 const EXTENSION_MIMES: Record<string, string> = {
   pdf: 'application/pdf',
+  // 우리가 열어서 읽는 것들. 구형(.xls·.doc·.ppt)은 ZIP이 아니라 다른 이진 형식이라 못 연다.
+  xlsx: OFFICE_MIMES.xlsx,
+  docx: OFFICE_MIMES.docx,
+  pptx: OFFICE_MIMES.pptx,
   // 글자만 담긴 것들 — 평문으로 보낸다.
   txt: 'text/plain',
   md: 'text/plain',
@@ -64,7 +72,7 @@ const EXTENSION_MIMES: Record<string, string> = {
 
 /** 담당자에게 보여 줄 지원 형식 안내(화면과 서버가 같은 문구를 쓴다). */
 export const SUPPORTED_HINT =
-  'PDF · 이미지(PNG·JPG·WEBP·BMP) · 텍스트(TXT·MD·CSV·HTML·XML·RTF·JSON)'
+  'PDF · 이미지(PNG·JPG·WEBP·BMP) · 오피스(XLSX·DOCX·PPTX) · 텍스트(TXT·MD·CSV·HTML·XML·RTF·JSON)'
 
 function extensionOf(fileName: string): string {
   return /\.([a-z0-9]+)$/i.exec(fileName)?.[1]?.toLowerCase() ?? ''
@@ -80,7 +88,7 @@ export function resolveMime(contentType: string | null | undefined, fileName: st
   const byExt = EXTENSION_MIMES[extensionOf(fileName)]
   if (byExt) return byExt
   const ct = (contentType ?? '').split(';')[0].trim().toLowerCase()
-  if (SUPPORTED_MIMES.has(ct)) return ct
+  if (SUPPORTED_MIMES.has(ct) || isOfficeMime(ct)) return ct
   // 별칭 몇 가지 — 같은 것을 다르게 적는 값들이라 목록을 늘리는 것이 아니다.
   if (ct === 'image/jpg') return 'image/jpeg'
   if (ct === 'text/markdown' || ct === 'text/md') return 'text/plain'

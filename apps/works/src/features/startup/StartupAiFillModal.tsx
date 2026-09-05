@@ -84,7 +84,7 @@ export function StartupAiFillModal({
       dismissible={false}
       size="2xl"
       title="AI 작성하기"
-      help="첨부한 자료(파일·링크)를 근거로 선택한 카드의 초안을 만듭니다. 선택한 자료는 외부 AI(Google Gemini)로 전송되며 반출 기록이 남습니다. 결과는 편집 화면에 채워지고 저장 전까지 원장은 바뀌지 않습니다. 문서를 눈으로 보듯 이해하는 것은 PDF와 이미지뿐이고, 나머지 형식은 글자만 읽힙니다."
+      help="첨부한 자료(파일·링크)를 근거로 선택한 카드의 초안을 만듭니다. 선택한 자료는 외부 AI(Google Gemini)로 전송되며 반출 기록이 남습니다. 결과는 편집 화면에 채워지고 저장 전까지 원장은 바뀌지 않습니다. 문서를 눈으로 보듯 이해하는 것은 PDF와 이미지뿐입니다 — 엑셀·워드·파워포인트는 서버가 열어 글자와 표로 바꿔 보내므로 표는 그대로 옮겨지지만, 발표 자료(PPTX)는 그림과 배치가 빠집니다. IR 자료는 PDF로 저장해 올리는 편이 낫습니다."
       footer={
         <div className="flex items-center justify-end gap-2">
           <Button variant="ghost" onClick={onClose} disabled={busy}>

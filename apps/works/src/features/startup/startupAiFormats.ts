@@ -14,6 +14,10 @@ import { isLinkMaterial, type Material } from '@/features/networks/materialHooks
 /** 확장자 → 보낼 MIME. 서버 EXTENSION_MIMES와 한 벌이다. */
 export const AI_EXTENSION_MIMES: Record<string, string> = {
   pdf: 'application/pdf',
+  // 서버가 압축을 풀어 글자로 바꿔 보내는 것들. 구형(.xls·.doc·.ppt)은 ZIP이 아니라 못 연다.
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   txt: 'text/plain',
   md: 'text/plain',
   markdown: 'text/plain',
@@ -34,9 +38,12 @@ export const AI_EXTENSION_MIMES: Record<string, string> = {
   bmp: 'image/bmp',
 }
 
-/** 서버 SUPPORTED_MIMES와 한 벌. */
+/** 서버 SUPPORTED_MIMES + 오피스 3종과 한 벌(둘 다 resolveMime이 통과시키는 값이다). */
 export const AI_SUPPORTED_MIMES = [
   'application/pdf',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   'application/json',
   'text/plain',
   'text/csv',
@@ -53,7 +60,7 @@ export const AI_SUPPORTED_MIMES = [
 
 /** 담당자에게 보여 줄 지원 형식 안내. 서버 SUPPORTED_HINT와 같은 문구다. */
 export const AI_SUPPORTED_HINT =
-  'PDF · 이미지(PNG·JPG·WEBP·BMP) · 텍스트(TXT·MD·CSV·HTML·XML·RTF·JSON)'
+  'PDF · 이미지(PNG·JPG·WEBP·BMP) · 오피스(XLSX·DOCX·PPTX) · 텍스트(TXT·MD·CSV·HTML·XML·RTF·JSON)'
 
 function extensionOf(fileName: string): string {
   return /\.([a-z0-9]+)$/i.exec(fileName)?.[1]?.toLowerCase() ?? ''

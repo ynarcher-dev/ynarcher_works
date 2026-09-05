@@ -28,9 +28,20 @@ describe('화면과 서버가 같은 형식을 본다', () => {
   })
 
   it('지원하지 않는 형식은 양쪽 모두 거절한다', () => {
-    for (const name of ['계획서.hwp', '재무.xlsx', '소개.pptx', '보고.docx', '압축.zip']) {
+    // 구형 오피스(.xls·.doc·.ppt)는 ZIP이 아니라 다른 이진 형식이라 우리가 열지 못한다.
+    for (const name of ['계획서.hwp', '재무.xls', '소개.ppt', '보고.doc', '압축.zip']) {
       expect(resolveMime(null, name), name).toBeNull()
       expect(resolveAiMime(null, name), name).toBeNull()
+    }
+  })
+
+  it('오피스 3종은 우리가 열어서 읽는다', () => {
+    for (const name of ['재무.xlsx', '소개.pptx', '보고.docx']) {
+      const mime = resolveMime(null, name)
+      expect(mime, name).not.toBeNull()
+      expect(resolveAiMime(null, name), name).toBe(mime)
+      // 압축을 풀어 글자로 넘기므로 문서를 눈으로 보는 형식은 아니다.
+      expect(isTextOnlyMime(mime as string), name).toBe(true)
     }
   })
 })

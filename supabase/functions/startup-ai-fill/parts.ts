@@ -18,6 +18,7 @@
 
 import { uploadFile, waitActive, type UploadedFile } from './filesApi.ts'
 import { isTextOnlyMime } from './formats.ts'
+import { isOfficeMime, officeText } from './officeText.ts'
 import type { LinkContent, LinkError } from './linkRead.ts'
 import { MAX_INLINE_BYTES, MAX_TEXT_BYTES, MAX_TOTAL_BYTES, mb } from './limits.ts'
 import type { ResolvedSource, SourceError } from './sources.ts'
@@ -88,7 +89,8 @@ export async function buildParts(
   uploaded: UploadedFile[],
 ): Promise<BuiltParts | { error: SourceError }> {
   const files: FileItem[] = []
-  const texts: { name: string; text: string }[] = []
+  /** 글로 넘길 것들. 앞머리(label)가 무엇에서 온 글인지 모델에 말한다. */
+  const texts: { label: string; text: string }[] = []
   const notices: string[] = []
   let used = 0
   /** 글자 계열이 쓴 몫. 전체 예산과 별개로 센다(같은 바이트라도 담기는 양이 다르다). */
@@ -124,7 +126,7 @@ export async function buildParts(
       }
       used += size
       if (isText) textUsed += size
-      if (read.text != null) texts.push({ name: s.url, text: read.text })
+      if (read.text != null) texts.push({ label: '[참고 링크: ' + s.url + ']', text: read.text })
       else if (read.bytes) files.push({ name: s.url, mime: read.mime, bytes: read.bytes })
       continue
     }
@@ -137,6 +139,28 @@ export async function buildParts(
     used += buf.byteLength
     // 파일은 예비 검사를 이미 지났지만 링크가 앞서 예산을 먹었을 수 있다.
     if (used > MAX_TOTAL_BYTES) return { error: tooLarge() }
+
+    // 오피스 파일은 모델이 받지 않는다. 여기서 압축을 풀어 글자·표로 바꿔 넘긴다.
+    // **읽기 실패는 통째 실패로 만들지 않는다** — 암호가 걸렸거나 그림뿐인 문서는 담당자가
+    // 고를 때 알 수 없었던 사정이고, 그 한 건 때문에 나머지를 못 읽을 이유가 없다.
+    if (isOfficeMime(s.mime)) {
+      const read = await officeText(buf, s.mime, s.name)
+      if (typeof read !== 'string') {
+        notices.push(read.message)
+        continue
+      }
+      // 예산은 파일 크기가 아니라 **뽑아 낸 글자**로 센다. 모델이 읽는 것이 그것이고,
+      // 압축된 원본 크기는 그 양을 말해 주지 않는다(엑셀은 몇 배로 부푼다).
+      const size = new TextEncoder().encode(read).length
+      if (textUsed + size > MAX_TEXT_BYTES) {
+        notices.push(`글자 자료가 모델이 한 번에 읽는 양을 넘어 건너뛰었습니다: ${s.name}`)
+        continue
+      }
+      textUsed += size
+      texts.push({ label: `[첨부 문서: ${s.name}]`, text: read })
+      continue
+    }
+
     if (isTextOnlyMime(s.mime)) {
       textUsed += buf.byteLength
       // 파일은 링크와 달리 담당자가 고를 때 크기를 알 수 있었으므로 건너뛰지 않고 답한다 —
@@ -176,8 +200,8 @@ export async function buildParts(
     }
   }
 
-  // 링크에서 뽑은 글은 파일 뒤에 세운다 — 자료의 본체는 파일이고, 글은 그것을 보충한다.
-  for (const t of texts) parts.push({ text: `[참고 링크: ${t.name}]\n${t.text}` })
+  // 글로 뽑은 것은 파일 뒤에 세운다 — 자료의 본체는 파일이고, 글은 그것을 보충한다.
+  for (const t of texts) parts.push({ text: `${t.label}\n${t.text}` })
 
   return { parts, notices }
 }
