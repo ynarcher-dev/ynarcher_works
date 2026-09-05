@@ -17,15 +17,13 @@ import {
   CLOSED_SEARCH_SCOPE,
   EMPTY_NETWORK_FILTERS,
   hasActiveNetworkFilters,
-  regionScopeValues,
-  wantsCountryUnset,
   wantsUncategorized,
   type NetworkFilterState,
   type NetworkSearchScope,
 } from '@/features/networks/filters'
 
 /** 레인지 입력(문자열)을 숫자로. 빈 칸·비수치는 '경계 없음'(null)이다. */
-function rangeBound(v: string): number | null {
+export function rangeBound(v: string): number | null {
   const trimmed = v.trim()
   if (!trimmed) return null
   const n = Number(trimmed)
@@ -169,10 +167,8 @@ export function useNetworkListPage(
         p_offset: page * pageSize,
         p_categories: codes.length ? codes : null,
         p_uncategorized: wantsUncategorized(filters) ? true : null,
-        p_region_scope: regionScopeValues(filters).length ? regionScopeValues(filters) : null,
         p_regions: filters.regionIds.length ? filters.regionIds : null,
         p_countries: filters.countryIds.length ? filters.countryIds : null,
-        p_country_unset: wantsCountryUnset(filters) ? true : null,
         p_search_email: searchScope.email,
         p_search_phone: searchScope.phone,
         p_expertise: filters.expertise.length ? filters.expertise : null,

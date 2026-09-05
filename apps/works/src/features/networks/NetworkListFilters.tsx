@@ -2,16 +2,11 @@ import { FilterResetButton, Input, MultiSelectFilter } from '@ynarcher/ui'
 import { useMemo } from 'react'
 import { useTags } from '@/features/admin/hooks'
 import { useCountryOptions } from '@/features/networks/countryOptions'
-import {
-  CATEGORY_FILTER_OPTIONS,
-  REGION_SCOPE_OPTIONS,
-  REGION_TAG_TABLE,
-} from '@/features/networks/config'
+import { CATEGORY_FILTER_OPTIONS, REGION_TAG_TABLE } from '@/features/networks/config'
 import {
   EMPTY_NETWORK_FILTERS,
   MATCH_FILTER_OPTIONS,
   hasActiveNetworkFilters,
-  showsOverseasAxes,
   type NetworkFilterState,
 } from '@/features/networks/filters'
 
@@ -23,15 +18,18 @@ interface NetworkListFiltersProps {
 /**
  * 통합 목록 필터 바(검색창 오른쪽에 같은 줄로 선다).
  *
- * 축 순서는 표의 열 순서를 따른다 — 지역 → (권역·국가) → 구분 → 영역 → 활동 → 매칭.
- * 지역이 구분보다 앞에 서는 것은 좁혀 가는 순서가 어디 사람인가 → 어떤 구분인가 →
+ * 축 순서는 표의 열 순서를 따른다 — 권역 → 국가 → 구분 → 영역 → 활동 → 매칭.
+ * 권역이 구분보다 앞에 서는 것은 좁혀 가는 순서가 어디 사람인가 → 어떤 구분인가 →
  * 무엇을 하는가이기 때문이고, 표의 열도 같은 순서다(2026-09-04).
- * 구분과 지역이 직교한 두 축이라 '해외의 대학'처럼 두 축을 함께 걸 수 있다(2026-09-04 통합
+ * 구분과 권역이 직교한 두 축이라 '해외의 대학'처럼 두 축을 함께 걸 수 있다(2026-09-04 통합
  * 이전에는 해외가 원장 하나였고 그 안의 구분이 3값뿐이라 이 조합 자체가 없었다).
  *
- * 권역·국가는 해외 행에만 있는 값이라, 지역을 국내로 좁히면 축에서 내린다 — 어떤 값을
- * 골라도 결과가 0건이 되는 칸은 고를 수 있다고 말하는 죽은 컨트롤이다. 권역·국가는 태그
- * FK(id)로 거른다(이름으로 거르면 동명 태그에서 어긋난다).
+ * '지역'(국내/해외) 칩은 2026-09-05에 걷혔다 — 통합 시드에서 '국내'가 권역 태그 한 줄이 된
+ * 뒤로 그 칩은 권역 축의 부분집합이고(지역=국내 == 권역=국내), 상시로 서는 권역 카드가 같은
+ * 조건을 건수와 함께 보여 준다. 두 컨트롤을 두면 엇갈리게 걸 수 있고(지역=국내 + 권역=중동)
+ * 그때 결과가 빈 이유가 화면 어디에도 보이지 않는다.
+ *
+ * 권역·국가는 태그 FK(id)로 거른다(이름으로 거르면 동명 태그에서 어긋난다).
  *
  * 영역 선택지는 ADMIN 태그 원장(field_tags)에서 읽는다(코드에 목록을 박지 않는다).
  */
@@ -63,55 +61,35 @@ export function NetworkListFilters({ filters, onChange }: NetworkListFiltersProp
     return scoped.map((t) => ({ value: t.id, label: t.name }))
   }, [allCountries, filters.regionIds])
 
-  const overseas = showsOverseasAxes(filters)
   const active = hasActiveNetworkFilters(filters)
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       <MultiSelectFilter
-        label="지역"
-        options={REGION_SCOPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-        selected={filters.regionScopes}
-        onChange={(regionScopes) =>
-          // 국내로 좁히면 권역·국가 조건은 남겨 둘 수 없다 — 국내 행에는 그 값이 없어
-          // 조건이 남아 있으면 결과가 통째로 비고 그 이유가 화면에 보이지 않는다.
-          onChange(
-            regionScopes.length === 1 && regionScopes[0] === 'DOMESTIC'
-              ? { ...filters, regionScopes, regionIds: [], countryIds: [] }
-              : { ...filters, regionScopes },
-          )
+        label="권역"
+        options={regionOptions}
+        selected={filters.regionIds}
+        onChange={(regionIds) =>
+          // 권역을 바꾸면 그 권역에 없는 국가 선택은 남겨 둘 수 없다(고를 수 없는 조건이 된다).
+          onChange({
+            ...filters,
+            regionIds,
+            countryIds: filters.countryIds.filter((id) =>
+              allCountries.some(
+                (t) =>
+                  t.id === id &&
+                  (regionIds.length === 0 || regionIds.includes(t.region_tag_id ?? '')),
+              ),
+            ),
+          })
         }
       />
-
-      {overseas && (
-        <>
-          <MultiSelectFilter
-            label="권역"
-            options={regionOptions}
-            selected={filters.regionIds}
-            onChange={(regionIds) =>
-              // 권역을 바꾸면 그 권역에 없는 국가 선택은 남겨 둘 수 없다(고를 수 없는 조건이 된다).
-              onChange({
-                ...filters,
-                regionIds,
-                countryIds: filters.countryIds.filter((id) =>
-                  allCountries.some(
-                    (t) =>
-                      t.id === id &&
-                      (regionIds.length === 0 || regionIds.includes(t.region_tag_id ?? '')),
-                  ),
-                ),
-              })
-            }
-          />
-          <MultiSelectFilter
-            label="국가"
-            options={countryOptions}
-            selected={filters.countryIds}
-            onChange={(countryIds) => onChange({ ...filters, countryIds })}
-          />
-        </>
-      )}
+      <MultiSelectFilter
+        label="국가"
+        options={countryOptions}
+        selected={filters.countryIds}
+        onChange={(countryIds) => onChange({ ...filters, countryIds })}
+      />
 
       {/* 구분 선택지 끝에 '미지정'이 함께 선다(CATEGORY_FILTER_OPTIONS) — 구분이 비어 있는
           행을 찾는 일은 같은 물음의 마지막 답이라 축을 따로 만들지 않는다. 은퇴 구분(vendors)은

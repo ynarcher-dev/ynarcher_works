@@ -1,128 +1,151 @@
-import { useQuery } from '@tanstack/react-query'
-import { Globe2, MapPin } from 'lucide-react'
+import { useMemo } from 'react'
+import { CircleDashed, Flag, Globe2, Layers, MapPin } from 'lucide-react'
 import { Card, Skeleton, SummaryTile, type SummaryTileTone } from '@ynarcher/ui'
+import { useTags } from '@/features/admin/hooks'
 import { REGION_TAG_TABLE } from '@/features/networks/config'
-import {
-  categoryCodes,
-  wantsUncategorized,
-  type NetworkFilterState,
-  type NetworkSearchScope,
-} from '@/features/networks/filters'
+import { domesticRegionIds, useCountryOptions } from '@/features/networks/countryOptions'
+import { FACET_UNSET, useNetworkFacetCounts } from '@/features/networks/facetHooks'
+import type { NetworkFilterState, NetworkSearchScope } from '@/features/networks/filters'
 import type { NetworkListScope } from '@/features/networks/hooks'
-import { supabase } from '@/lib/supabase'
+import { toggleAxisValue } from '@/lib/filterAxis'
 
-const TONES: SummaryTileTone[] = ['blue', 'purple', 'cyan', 'amber', 'peach', 'rose', 'lime', 'mint']
+/** 권역 타일 색 — 국내(blue)·해외(cyan)와 겹치지 않는 7색을 권역 수만큼 둔다. */
+const REGION_TONES: SummaryTileTone[] = [
+  'purple', 'amber', 'peach', 'rose', 'lime', 'mint', 'orchid',
+]
 
 interface Props {
   scope: NetworkListScope
   keyword: string
   filters: NetworkFilterState
   searchScope: NetworkSearchScope
-  /** 권역 타일 토글(다중선택). 값은 목록 필터와 같은 태그 id다. */
-  onToggleRegion: (regionId: string) => void
-  /** '전체' 타일 — 권역 조건을 푸는 문. */
-  onClearRegions: () => void
-}
-
-/** 권역 한 칸. id가 없는 '미지정'은 걸 조건이 없어 누르지 않는다. */
-interface RegionTile {
-  id: string | null
-  label: string
-  count: number
+  /** 권역 조건 교체. 값은 목록 필터와 같은 태그 id 배열이다. */
+  onChangeRegions: (next: string[]) => void
 }
 
 /**
- * 권역별 현황 — 지역을 해외로 좁혔을 때만 선다.
- * 국내 행에는 권역이 없어 섞어 세면 '미지정'이 늘 최대 칸이 되고, 그 칸은 누를 조건이
- * 없으므로 표를 좁히는 데 아무 도움이 되지 않는다.
+ * 권역별 현황 — 목록 위에 상시로 선다(2026-09-05).
+ *
+ * 종전에는 지역을 해외로 좁혔을 때만 세웠다. 국내 행에 권역이 없던 시절의 규칙인데,
+ * 2026-09-04 통합에서 '국내'가 권역 태그 한 줄이 되면서 근거가 사라졌다 — 국내도 자기
+ * 칸에 서므로 섞어 세도 '미지정'이 최대 칸이 되지 않는다.
+ *
+ * 그래서 이 카드가 **지역 축을 통째로 소유한다.** 필터 줄의 '지역'(국내/해외) 칩은 이 카드의
+ * 부분집합이라 함께 걷었다 — 같은 물음을 두 컨트롤이 답하면 엇갈리게 걸 수 있고(지역=국내 +
+ * 권역=중동) 그때 결과가 빈 이유가 화면 어디에도 보이지 않는다.
+ *
+ * 타일은 넓은 것부터 좁은 것으로 내려간다: 전체 → 국내 · 해외 → 권역 7종. '해외'는 별도
+ * 축이 아니라 국내를 뺀 권역 전부를 한 번에 거는 단축키다(누르면 그 권역들이 함께 켜진다 —
+ * 무엇이 걸렸는지 타일이 그대로 말한다).
+ *
+ * 권역 순서는 건수가 아니라 원장의 노출순위(sort_order)를 따른다. 카드가 상시로 서게 되면
+ * 건수순은 필터를 만질 때마다 칸이 자리를 바꿔 같은 곳을 두 번 누르지 못하게 한다.
  */
 export function RegionFilteredSummary({
   scope,
   keyword,
   filters,
   searchScope,
-  onToggleRegion,
-  onClearRegions,
+  onChangeRegions,
 }: Props) {
-  const rpc = scope === 'mine' ? 'my_network_entities' : 'all_network_entities'
-  const { data = [], isPending } = useQuery({
-    queryKey: ['networks', 'region-summary', scope, keyword, filters, searchScope],
-    queryFn: async (): Promise<RegionTile[]> => {
-      const [tagRes, rowsRes] = await Promise.all([
-        // 이름만이 아니라 id까지 읽는다 — 타일이 곧 권역 필터이고, 목록 필터는 이름이 아니라
-        // 태그 id로 거른다(같은 이름의 태그가 둘일 수 있다).
-        supabase.from(REGION_TAG_TABLE).select('id, name').is('deleted_at', null),
-        supabase.rpc(rpc, {
-          p_keyword: keyword.trim() || null,
-          p_limit: 5000,
-          p_offset: 0,
-          // 구분 축은 코드와 '미지정'이 한 배열에 섞여 오므로 서버 인자 둘로 나눠 보낸다.
-          p_categories: categoryCodes(filters).length ? categoryCodes(filters) : null,
-          p_uncategorized: wantsUncategorized(filters) ? true : null,
-          // 이 카드는 해외만 센다. 권역 축은 집계에서 빼야 타일이 필터로 동작한다.
-          p_region_scope: ['OVERSEAS'],
-          p_regions: null,
-          p_countries: filters.countryIds.length ? filters.countryIds : null,
-          p_search_email: searchScope.email,
-          p_search_phone: searchScope.phone,
-        }),
-      ])
-      if (tagRes.error) throw tagRes.error
-      if (rowsRes.error) throw rowsRes.error
+  const { data: facets, isPending } = useNetworkFacetCounts(scope, keyword, filters, searchScope)
+  const { data: regionTags } = useTags(REGION_TAG_TABLE)
+  const { data: countries } = useCountryOptions()
 
-      // 집계는 태그 id로 센다 — 이름으로 뭉치면 동명 태그 둘이 한 칸에 합쳐져 그 칸을 눌렀을
-      // 때 목록이 절반만 나온다. 권역이 비어 있는 행은 걸 id가 없으므로 '미지정' 한 칸에 모은다.
-      const tags = (tagRes.data ?? []) as { id: string; name: string }[]
-      const labelById = new Map(tags.map((tag) => [tag.id, tag.name]))
-      const counts = new Map<string, number>(tags.map((tag) => [tag.id, 0]))
-      let unset = 0
-      for (const row of (rowsRes.data ?? []) as { region_tag_id?: string | null }[]) {
-        if (!row.region_tag_id) {
-          unset += 1
-          continue
-        }
-        counts.set(row.region_tag_id, (counts.get(row.region_tag_id) ?? 0) + 1)
-      }
-      const tiles: RegionTile[] = [...counts.entries()].map(([id, count]) => ({
-        id,
-        label: labelById.get(id) ?? '알 수 없음',
-        count,
-      }))
-      if (unset > 0) tiles.push({ id: null, label: '미지정', count: unset })
-      return tiles.sort((a, b) => b.count - a.count)
-    },
-  })
+  const { domesticIds, overseasTags } = useMemo(() => {
+    const domestic = domesticRegionIds(countries)
+    return {
+      domesticIds: domestic,
+      overseasTags: (regionTags ?? []).filter((t) => !domestic.has(t.id)),
+    }
+  }, [countries, regionTags])
 
-  if (isPending) return <Card title="권역별 현황"><Skeleton className="h-[7.5rem] rounded-radius-lg" /></Card>
+  if (isPending || !facets || !regionTags || !countries) {
+    return <Card title="권역별 현황"><Skeleton className="h-[7.5rem] rounded-radius-lg" /></Card>
+  }
 
-  const total = data.reduce((sum, region) => sum + region.count, 0)
+  const countOf = (ids: Iterable<string>) => {
+    let sum = 0
+    for (const id of ids) sum += facets.region.get(id) ?? 0
+    return sum
+  }
+  const overseasIds = overseasTags.map((t) => t.id)
+  const selected = new Set(filters.regionIds)
+  // '해외'는 국내를 뺀 권역이 빠짐없이 걸려 있을 때만 켜진 것으로 본다 — 그중 하나라도
+  // 빠져 있으면 걸린 조건은 '해외'가 아니라 그 권역들이다.
+  const overseasOn =
+    overseasIds.length > 0 &&
+    overseasIds.every((id) => selected.has(id)) &&
+    ![...domesticIds].some((id) => selected.has(id))
+  const domesticOn =
+    domesticIds.size > 0 &&
+    [...domesticIds].every((id) => selected.has(id)) &&
+    !overseasIds.some((id) => selected.has(id))
+
+  // 국가를 아직 모르는 옛 행. 0이면 세우지 않는다 — 누를 조건이 없는 칸이라, 남아 있다는
+  // 사실을 말할 때만 뜻이 선다(신규 등록은 국가가 필수다).
+  const unset = facets.region.get(FACET_UNSET) ?? 0
 
   return (
     <Card title="권역별 현황">
       <section aria-label="필터가 반영된 권역별 현황" className="grid grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-3">
         <SummaryTile
           title="전체"
-          eyebrow="해외 전체"
-          value={total}
+          eyebrow="전체 지역"
+          value={facets.regionTotal}
           unit="건"
           tone="primary"
-          icon={<Globe2 aria-hidden className="size-[18px]" strokeWidth={1.8} />}
-          onClick={onClearRegions}
+          icon={<Layers aria-hidden className="size-[18px]" strokeWidth={1.8} />}
+          onClick={() => onChangeRegions([])}
           selected={filters.regionIds.length === 0}
         />
-        {data.map((region, index) => (
+
+        <SummaryTile
+          title="국내"
+          eyebrow="지역"
+          value={countOf(domesticIds)}
+          unit="건"
+          tone="blue"
+          icon={<Flag aria-hidden className="size-[18px]" strokeWidth={1.8} />}
+          onClick={() => onChangeRegions(domesticOn ? [] : [...domesticIds])}
+          selected={domesticOn}
+        />
+
+        <SummaryTile
+          title="해외"
+          eyebrow="지역"
+          value={countOf(overseasIds)}
+          unit="건"
+          tone="cyan"
+          icon={<Globe2 aria-hidden className="size-[18px]" strokeWidth={1.8} />}
+          onClick={() => onChangeRegions(overseasOn ? [] : overseasIds)}
+          selected={overseasOn}
+        />
+
+        {overseasTags.map((tag, index) => (
           <SummaryTile
-            key={region.id ?? '미지정'}
-            title={region.label}
+            key={tag.id}
+            title={tag.name}
             eyebrow="권역"
-            value={region.count}
+            value={facets.region.get(tag.id) ?? 0}
             unit="건"
-            tone={TONES[index % TONES.length]}
+            tone={REGION_TONES[index % REGION_TONES.length]}
             icon={<MapPin aria-hidden className="size-[18px]" strokeWidth={1.8} />}
-            onClick={region.id ? () => onToggleRegion(region.id as string) : undefined}
-            selected={region.id ? filters.regionIds.includes(region.id) : undefined}
+            onClick={() => onChangeRegions(toggleAxisValue(filters.regionIds, tag.id))}
+            selected={selected.has(tag.id)}
           />
         ))}
+
+        {unset > 0 && (
+          <SummaryTile
+            title="미지정"
+            eyebrow="국가 없음"
+            value={unset}
+            unit="건"
+            tone="slate"
+            icon={<CircleDashed aria-hidden className="size-[18px]" strokeWidth={1.8} />}
+          />
+        )}
       </section>
     </Card>
   )

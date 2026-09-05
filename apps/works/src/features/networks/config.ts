@@ -46,16 +46,6 @@ export const REGION_SCOPE_LABEL: Record<RegionScope, string> = {
   OVERSEAS: '해외',
 }
 
-/**
- * 목록의 지역 필터 선택지. 'UNSET'은 저장값이 아니라 조회 축이다 — 국가를 아직 모르는
- * 옛 데이터를 모아 채워 넣는 자리이며, 같은 물음의 세 번째 답이라 별도 축을 만들지 않는다.
- */
-export const REGION_SCOPE_OPTIONS: { value: RegionScope | 'UNSET'; label: string }[] = [
-  { value: 'DOMESTIC', label: '국내' },
-  { value: 'OVERSEAS', label: '해외' },
-  { value: 'UNSET', label: '국가 미확인' },
-]
-
 export const CATEGORY_LABEL: Record<NetworkCategory, string> = {
   experts: '전문가',
   van: 'BAN',

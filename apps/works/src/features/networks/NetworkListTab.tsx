@@ -85,13 +85,19 @@ export function NetworkListTab({ scope, onScopeChange }: NetworkListTabProps) {
     searchScope,
   )
 
-  // 권역 카드는 지역을 해외로 좁혔을 때만 선다 — 국내 행에는 권역이 없어 섞어 세면
-  // '미지정'이 늘 최대 칸이 되고 그 칸은 누를 조건이 없다.
-  const overseasOnly =
-    filters.regionScopes.length === 1 && filters.regionScopes[0] === 'OVERSEAS'
-
+  // 두 요약 카드는 상시로 선다(2026-09-05). 어디 사람인가 → 어떤 구분인가 순으로 내려가는
+  // 것이 목록을 좁히는 순서이므로 권역이 위, 구성이 아래다. 권역 카드가 필터 줄에서 내려온
+  // 지역(국내/해외) 축까지 함께 소유한다.
   return (
     <div className="space-y-3">
+      <RegionFilteredSummary
+        scope={scope}
+        keyword={keyword}
+        filters={filters}
+        searchScope={searchScope}
+        onChangeRegions={(regionIds) => setFilters((f) => ({ ...f, regionIds }))}
+      />
+
       <NetworkFilteredSummary
         scope={scope}
         keyword={keyword}
@@ -102,19 +108,6 @@ export function NetworkListTab({ scope, onScopeChange }: NetworkListTabProps) {
         }
         onClearCategories={() => setFilters((f) => ({ ...f, categories: [] }))}
       />
-
-      {overseasOnly && (
-        <RegionFilteredSummary
-          scope={scope}
-          keyword={keyword}
-          filters={filters}
-          searchScope={searchScope}
-          onToggleRegion={(regionId) =>
-            setFilters((f) => ({ ...f, regionIds: toggleAxisValue(f.regionIds, regionId) }))
-          }
-          onClearRegions={() => setFilters((f) => ({ ...f, regionIds: [] }))}
-        />
-      )}
 
       <ListToolbar
         keyword={keyword}
