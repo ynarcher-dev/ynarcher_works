@@ -6,12 +6,10 @@ import {
   Modal,
   Select,
   TextArea,
-  TokenMultiSelect,
   useToast,
 } from '@ynarcher/ui'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { useTags } from '@/features/admin/hooks'
 import {
   programIndustries,
   useCreateProgram,
@@ -20,6 +18,7 @@ import {
 } from '@/features/program/hooks'
 import { useUpdateProgram } from '@/features/program/detail/detailHooks'
 import { useEditReasonPrompt } from '@/components/EditReasonPrompt'
+import { useTagTokenField } from '@/features/admin/TagTokenField'
 import type { ProgramManagerSegment } from '@/features/program/ProgramManagerEditor'
 import type { ProgramDepartmentSegment } from '@/features/program/ProgramDepartmentEditor'
 import { PhaseStaffingEditor } from '@/features/program/PhaseStaffingEditor'
@@ -104,18 +103,17 @@ export function ProgramFormModal({
     toDepartmentSegments(program),
   )
   const [managers, setManagers] = useState<ProgramManagerSegment[]>(() => toManagerSegments(program))
-  // 분야 태그: ADMIN 분야 관리(industry_tags — 물리명은 구 표기 그대로)에서 다중 선택(최대 3개). 폼 값이 아니라 배열
-  // 상태로 따로 든다 — react-hook-form의 register는 단일 값 입력을 전제로 한다.
-  const { data: industryTags } = useTags('industry_tags')
+  // 분야 태그: ADMIN 분야 관리(industry_tags — 물리명은 구 표기 그대로)에서 다중 선택. 폼 값이 아니라
+  // 배열 상태로 따로 든다 — react-hook-form의 register는 단일 값 입력을 전제로 한다.
   const [industries, setIndustries] = useState<string[]>(() => programIndustries(program))
-  /**
-   * 후보는 원장 태그 + 이미 저장된 값이다. 원장에서 지워진 태그를 달고 있던 사업도 칩이 남아야
-   * 편집 중에 조용히 사라지지 않는다.
-   */
-  const industryOptions = useMemo(() => {
-    const names = (industryTags ?? []).map((t) => t.name)
-    return [...names, ...industries.filter((n) => !names.includes(n))]
-  }, [industryTags, industries])
+  const industryField = useTagTokenField({
+    table: 'industry_tags',
+    noun: '분야',
+    adminMenu: '분야 관리',
+    value: industries,
+    onChange: setIndustries,
+    max: MAX_PROGRAM_INDUSTRIES,
+  })
   // 원장에 저장되는 값은 상태 하나뿐이므로 폼도 하나만 든다. 단계(제안/운영)는 이 값에서
   // 따라 나오는 것이라(`programStage()`) 따로 묻지 않는다.
   const [status, setStatus] = useState(() => initialStatusOf(config, program))
@@ -266,35 +264,9 @@ export function ProgramFormModal({
         {/*
           분야. 사업구분 바로 아래에 둔다 — 둘 다 '이 사업이 무엇인가'를 가르는 분류 축이고,
           기간·배치처럼 운영을 적는 칸과는 층위가 다르다. 태그 원장은 스타트업과 공유한다.
-
-          형태는 태그판이 아니라 입력 칸 하나다(표준 A패턴 TokenMultiSelect). 원장 태그가
-          늘어날수록 태그판은 폼 한가운데를 몇 줄씩 차지하면서 '고를 수 있는 것'과 '고른 것'이
-          색 하나로만 갈렸다. 토큰 입력은 고른 것만 칸 안에 남고 나머지는 돋보기로 펼쳐 찾는다 —
-          임직원 관심분야 칸(EmployeeNoteFields)과 같은 규약이다.
         */}
-        <Field
-          label="분야"
-          // 고를 태그가 없다는 말은 규칙이 아니라 '어디로 가서 무엇을 하라'는 지시다 — 접지 않는다.
-          hintInline={(industryTags ?? []).length === 0}
-          hint={
-            (industryTags ?? []).length === 0
-              ? '등록된 분야 태그가 없습니다. (ADMIN › 분야 관리)'
-              : `이 사업이 발굴·대상으로 하는 분야 · 최대 ${MAX_PROGRAM_INDUSTRIES}개 선택`
-          }
-        >
-          <TokenMultiSelect<string>
-            selected={industries}
-            onChange={setIndustries}
-            getKey={(n) => n}
-            getLabel={(n) => n}
-            options={industryOptions}
-            max={MAX_PROGRAM_INDUSTRIES}
-            placeholder="분야명을 검색하거나 돋보기로 전체 목록을 엽니다."
-            browsable
-            browseIn="modal"
-            browseTitle="분야 전체 목록"
-            browseEmptyText="등록된 분야 태그가 없습니다. (ADMIN › 분야 관리)"
-          />
+        <Field label="분야" hint={industryField.hint} hintInline={industryField.hintInline}>
+          {industryField.control}
         </Field>
         <ProgramStatusFields
           hasProposalStage={config.hasProposalStage}

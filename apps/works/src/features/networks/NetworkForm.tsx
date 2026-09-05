@@ -5,14 +5,13 @@ import {
   Input,
   Select,
   TextArea,
-  TokenMultiSelect,
   useToast,
 } from '@ynarcher/ui'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { FormTopBar } from '@/components/FormTopBar'
 import { useEditReasonPrompt } from '@/components/EditReasonPrompt'
-import { useTags } from '@/features/admin/hooks'
+import { useTagTokenField } from '@/features/admin/TagTokenField'
 import { PhotoPicker } from '@/features/networks/PhotoPicker'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { PendingMaterialPanel } from '@/features/networks/PendingMaterialPanel'
@@ -64,11 +63,6 @@ interface Props {
   backTo: string
 }
 
-/** 전문 영역 선택기(TokenMultiSelect)용 태그 최소 형태. 저장값이 이름이라 이름이 곧 키다. */
-interface FieldTagOpt {
-  name: string
-}
-
 /**
  * 네트워크 등록/수정 폼(상세페이지 내 편집 모드). 전 구분·전 국가 공용 한 벌이다.
  *
@@ -101,18 +95,19 @@ export function NetworkForm({
 
   const profile = (initial?.profile ?? {}) as Record<string, unknown>
 
-  // 전문 영역: ADMIN 영역 관리(field_tags) 태그에서 다중 선택(최대 3개), expertise(jsonb 배열)에 저장.
-  const { data: fieldTags } = useTags('field_tags')
+  // 전문 영역: ADMIN 영역 관리(field_tags) 태그에서 다중 선택, expertise(jsonb 배열)에 저장.
+  // 이 칸이 원장 태그 다중 선택의 정본이며, 규격 자체는 useTagTokenField가 소유한다.
   const [fields, setFields] = useState<string[]>(
     Array.isArray(initial?.expertise) ? (initial?.expertise as string[]) : [],
   )
-  // 선택기는 항목 객체를 다루고 원장은 이름 배열을 저장한다. 이름을 키로 삼으므로 태그가 지워져도
-  // 이미 저장된 값은 칩으로 그대로 남는다(원장에서 사라진 이름을 화면이 조용히 버리지 않는다).
-  const fieldOptions = useMemo<FieldTagOpt[]>(
-    () => (fieldTags ?? []).map((t) => ({ name: t.name })),
-    [fieldTags],
-  )
-  const selectedFields = useMemo<FieldTagOpt[]>(() => fields.map((name) => ({ name })), [fields])
+  const expertiseField = useTagTokenField({
+    table: 'field_tags',
+    noun: '전문 영역',
+    adminMenu: '영역 관리',
+    value: fields,
+    onChange: setFields,
+    max: MAX_FIELDS,
+  })
 
   // 국가 선택지 — 자국(한국)이 맨 위, 그 아래 구분선, 나머지는 가나다순.
   const { data: countries } = useCountryOptions()
@@ -312,28 +307,11 @@ export function NetworkForm({
                       칩으로 남고, 나머지는 검색하거나 돋보기로 열어 본다. */}
                   <Field
                     label="전문 영역"
-                    hint={
-                      fieldOptions.length === 0
-                        ? '등록된 영역 태그가 없습니다. ADMIN › 영역 관리에서 먼저 추가하세요.'
-                        : `영역 관리 태그에서 최대 ${MAX_FIELDS}개 선택합니다.`
-                    }
-                    // 빈 상태는 접지 않는다 — 왜 못 고르는지는 물어봐야 답할 것이 아니다.
-                    hintInline={fieldOptions.length === 0}
+                    hint={expertiseField.hint}
+                    hintInline={expertiseField.hintInline}
                     as="div"
                   >
-                    <TokenMultiSelect<FieldTagOpt>
-                      selected={selectedFields}
-                      onChange={(next) => setFields(next.map((t) => t.name))}
-                      getKey={(t) => t.name}
-                      getLabel={(t) => t.name}
-                      options={fieldOptions}
-                      max={MAX_FIELDS}
-                      placeholder="영역명을 검색하거나 돋보기로 전체 목록을 엽니다."
-                      browsable
-                      browseIn="modal"
-                      browseTitle="전문 영역 전체 목록"
-                      browseEmptyText="등록된 영역 태그가 없습니다. (ADMIN › 영역 관리)"
-                    />
+                    {expertiseField.control}
                   </Field>
                 </div>
               )}
