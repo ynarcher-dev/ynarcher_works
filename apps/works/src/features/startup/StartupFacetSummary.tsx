@@ -5,7 +5,6 @@ import {
   Layers,
   MapPin,
   Search,
-  Shapes,
   Sprout,
 } from 'lucide-react'
 import type { ComponentType } from 'react'
@@ -181,7 +180,10 @@ const CATEGORY_TILES: FacetTile[] = (
     { key: 'incubated', eyebrow: '육성 및 지원', icon: Sprout, tone: 'mint' },
     { key: 'sourced', eyebrow: '발굴 및 검토', icon: Search, tone: 'amber' },
     // 새로 등록하는 기업이 기본으로 들어오는 칸이다 — 무엇인지 정해지면 담당자가 옮긴다.
-    { key: 'other', eyebrow: '분류 대기', icon: Shapes, tone: 'rose' },
+    // 색과 아이콘은 권역 카드의 미지정 칸과 같은 회색·점선 원이다. 값이 하나 더 있는 것이
+    // 아니라 '아직 안 정함'이라는 사실을 말하는 칸이라, 다른 구분과 같은 색을 쓰면 나란한
+    // 분류처럼 읽힌다 — 두 카드에서 같은 뜻의 칸은 같은 모양이어야 한다.
+    { key: 'other', eyebrow: '분류 대기', icon: CircleDashed, tone: 'slate' },
   ] satisfies (Omit<FacetTile, 'key' | 'label'> & { key: ManagementStatus })[]
 ).map((t) => ({ ...t, label: MANAGEMENT_STATUS_LABEL[t.key] }))
 
