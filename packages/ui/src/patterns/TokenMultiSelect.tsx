@@ -144,15 +144,20 @@ export function TokenMultiSelect<T>({
   const [rect, setRect] = useState<DOMRect | null>(null)
   // 돋보기로 연 '전체 보기' 상태. 검색 결과와 달리 스스로 닫히지 않으므로 별도 상태로 둔다.
   const [browsing, setBrowsing] = useState(false)
-  // 입력에 초점이 있는 동안은 검색어가 없어도 후보를 내린다(`browsable`인 칸만).
-  const [focused, setFocused] = useState(false)
-  // Esc로 목록만 닫은 상태. 초점은 그대로 두므로(칸을 떠나게 만들지 않는다) 별도 플래그가 필요하다.
-  const [dismissed, setDismissed] = useState(false)
+  /**
+   * 검색어 없이 내려온 목록이 열려 있는지(`browsable`인 칸만).
+   *
+   * 초점 여부에서 파생시키지 않고 상태로 든다 — 초점만 보면 닫을 방법이 '칸을 떠나기' 하나뿐이라,
+   * 상한에 닿아 입력 칸이 사라지거나(blur가 오지 않는다) 같은 칸을 다시 눌렀을 때 닫을 길이 없다.
+   */
+  const [listOpen, setListOpen] = useState(false)
+  // 필드를 누르기 직전의 열림 상태. 클릭 전에 focus가 먼저 와 목록을 열어 버리므로, 토글의
+  // 기준은 클릭 시점이 아니라 mousedown 시점의 값이어야 한다(아니면 눌러도 늘 열린 채가 된다).
+  const openBeforeClick = useRef(false)
 
   // 질의를 바꿀 때마다 호출부에 통지한다(비동기 후보 조회를 걸 수 있게).
   const changeQuery = (next: string) => {
     setQ(next)
-    setDismissed(false)
     onQueryChange?.(next)
   }
 
@@ -172,9 +177,10 @@ export function TokenMultiSelect<T>({
   // 검색 결과와 달리 개수를 자르지 않고 드롭다운 안에서 스크롤시킨다.
   // 모달이 열려 있는 동안은 초점이 뒤 입력에 남아 있어도 목록을 내리지 않는다 — 같은 목록이
   // 모달 뒤에서 한 번 더 서면 어느 쪽을 고르는 중인지가 흐려진다.
+  // 상한에 닿으면 더할 것이 없으므로 목록도 서지 않는다(입력 칸도 그때 사라진다).
   const modalOpen = browsable && browseIn === 'modal' && browsing
   const openedWithoutQuery =
-    browsable && !modalOpen && !dismissed && (focused || (browseIn === 'dropdown' && browsing))
+    browsable && !modalOpen && !atMax && (listOpen || (browseIn === 'dropdown' && browsing))
   const browseList = useMemo(() => {
     if (!openedWithoutQuery || q.trim() || !options) return []
     return options.filter((o) => !selectedKeys.has(getKey(o)))
@@ -190,7 +196,10 @@ export function TokenMultiSelect<T>({
     changeQuery('')
     // 상한에 닿으면 입력 칸이 사라지므로 펼쳐 둔 목록도 함께 닫는다. 모달은 닫지 않는다 —
     // 거기서는 마지막 하나를 고른 뒤 다른 것과 바꾸는 것(빼고 다시 고르기)이 자연스러운 다음 동작이다.
-    if (browseIn === 'dropdown' && max != null && next.length >= max) setBrowsing(false)
+    if (max != null && next.length >= max) {
+      setListOpen(false)
+      if (browseIn === 'dropdown') setBrowsing(false)
+    }
     inputRef.current?.focus()
   }
 
@@ -240,24 +249,25 @@ export function TokenMultiSelect<T>({
   // 펼친 목록은 스스로 닫히지 않으므로 바깥 클릭으로 닫는다. 드롭다운은 포털이라 필드의
   // DOM 하위가 아니어서, 두 영역을 각각 확인해야 한다.
   useEffect(() => {
-    // 모달은 자기 딤이 바깥 클릭을 받는다. 여기서 함께 듣게 두면 모달 안을 누르는 것이
-    // '바깥 클릭'으로 잡혀 열자마자 닫힌다(모달은 필드의 DOM 하위가 아니다).
-    if (browseIn === 'modal' || !browsing) return
+    if (!browsing && !listOpen) return
     const onPointerDown = (e: MouseEvent) => {
       const t = e.target as Node
       if (fieldRef.current?.contains(t) || listRef.current?.contains(t)) return
-      setBrowsing(false)
+      // 모달은 자기 딤이 바깥 클릭을 받는다. 모달 안을 누른 것을 '바깥 클릭'으로 잡아
+      // 열자마자 닫지 않도록, 모달형의 펼침 상태(browsing)는 건드리지 않는다.
+      if (browseIn === 'dropdown') setBrowsing(false)
+      setListOpen(false)
     }
     document.addEventListener('mousedown', onPointerDown)
     return () => document.removeEventListener('mousedown', onPointerDown)
-  }, [browseIn, browsing])
+  }, [browseIn, browsing, listOpen])
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     const last = selected[selected.length - 1]
     if (e.key === 'Escape') {
       // 목록만 닫고 초점은 남긴다 — Esc는 '그만 보겠다'이지 '이 칸을 떠나겠다'가 아니다.
       setBrowsing(false)
-      setDismissed(true)
+      setListOpen(false)
       return
     }
     if (e.key === 'Backspace' && !q && last) {
@@ -276,11 +286,19 @@ export function TokenMultiSelect<T>({
     <div className="relative">
       <div
         ref={fieldRef}
+        // 필드를 누르는 것은 목록의 토글이다 — 열려 있으면 닫고, 닫혀 있으면 연다.
+        // 판단 기준은 클릭 직전의 값이다(그 사이에 focus가 끼어들어 목록을 열어 놓는다).
+        onMouseDown={() => {
+          openBeforeClick.current = listOpen || browsing
+        }}
         onClick={() => {
-          // 이미 초점이 있는 칸을 다시 누르는 것은 '닫아 둔 목록을 다시 보겠다'는 뜻이다
-          // (그때는 focus 이벤트가 오지 않으므로 여기서 되살린다).
-          setDismissed(false)
-          inputRef.current?.focus()
+          if (openBeforeClick.current) {
+            setBrowsing(false)
+            setListOpen(false)
+          } else {
+            setListOpen(true)
+            inputRef.current?.focus()
+          }
         }}
         className={cn(
           // 공용 Input과 동일한 외형·상태(테두리·그림자·호버·전환). 높이만 고정 대신 min-height로 두어
@@ -301,7 +319,12 @@ export function TokenMultiSelect<T>({
               key={key}
               selected
               disabled={disabled}
-              onClick={() => remove(key)}
+              // 칩을 지우는 것은 목록을 여닫는 일과 무관하다 — 필드의 토글까지 함께 타면
+              // 칩 하나 뺐다고 목록이 닫힌다.
+              onClick={(ev) => {
+                ev.stopPropagation()
+                remove(key)
+              }}
               title={`${getLabel(item)} 제거`}
               aria-label={`${getLabel(item)} 제거`}
             >
@@ -318,13 +341,10 @@ export function TokenMultiSelect<T>({
             value={q}
             onChange={(e) => changeQuery(e.target.value)}
             onKeyDown={onKeyDown}
-            onFocus={() => {
-              setFocused(true)
-              setDismissed(false)
-            }}
+            onFocus={() => setListOpen(true)}
             // 칩·후보 행·돋보기는 mousedown을 막아 초점을 지키므로, 여기 오는 blur는 정말로
-            // 칸을 떠난 것이다.
-            onBlur={() => setFocused(false)}
+            // 칸을 떠난 것이다(Tab으로 다음 칸에 가는 경우까지 포함).
+            onBlur={() => setListOpen(false)}
             placeholder={selected.length > 0 ? '' : placeholder}
             className={cn(
               'min-w-[6rem] flex-1 border-0 bg-transparent p-0 text-gray-900 outline-none placeholder:text-gray-400',
