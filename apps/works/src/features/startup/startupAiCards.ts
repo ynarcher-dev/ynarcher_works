@@ -40,7 +40,7 @@ export interface AiCardMeta {
   key: AiCardKey
   label: string
   band: AiCardBand
-  /** 현재 이 카드에 값이 있는가. 기본 체크 상태와 '작성됨' 표기를 함께 정한다. */
+  /** 현재 이 카드에 값이 있는가. 줄 오른쪽의 Y/N 배지와 교체 경고가 이 값을 읽는다. */
   filled: (record: EntityRow) => boolean
   /** 목록형 카드의 현재 건수(없으면 null). '작성됨 · 3건'의 뒷자리. */
   count?: (record: EntityRow) => number
@@ -50,8 +50,11 @@ const some = (...values: unknown[]) => values.some((v) => (typeof v === 'string'
 
 /**
  * 카드 정의. `filled`는 "AI가 덮어쓸 것이 있는가"를 답한다 — 하나라도 값이 있으면 채워진
- * 카드로 보고 기본 체크를 끈다. 절반만 찬 카드를 빈 카드로 취급하면, 담당자가 손으로 적은
- * 그 절반이 기본값 그대로 실행했을 때 사라진다.
+ * 카드(`Y`)로 본다. 절반만 찬 카드를 빈 카드로 세지 않는 것이 요점이다. 그 절반은 담당자가
+ * 손으로 적은 것이고, 이 카드를 켜면 그것까지 함께 바뀐다는 사실을 배지가 미리 말해야 한다.
+ *
+ * 2026-09-06 이전에는 이 값이 **기본 체크 상태**까지 정했다(빈 카드는 켜고 찬 카드는 끈다).
+ * 지금은 모달이 아무것도 켜지 않은 채 열리므로 표시에만 쓴다.
  */
 export const AI_CARDS: AiCardMeta[] = [
   {
@@ -186,13 +189,3 @@ export const AI_CARD_LABEL: Record<AiCardKey, string> = AI_CARDS.reduce(
   {} as Record<AiCardKey, string>,
 )
 
-/**
- * 기본 체크 상태 — **빈 카드는 켜고, 값이 있는 카드는 끈다.**
- *
- * 이 기본값이 이 기능의 안전장치다. 첫 작성은 한 번에 되고, 두 번째 갱신에서는 손으로 다듬어
- * 둔 카드가 기본값에서부터 덮어쓰기 대상에서 빠진다. 체크박스를 둔 이유가 "무엇을 쓸까"가
- * 아니라 "무엇을 지킬까"이므로, 기본값도 지키는 쪽에 서야 한다.
- */
-export function defaultCardSelection(record: EntityRow): AiCardKey[] {
-  return AI_CARDS.filter((c) => !c.filled(record)).map((c) => c.key)
-}

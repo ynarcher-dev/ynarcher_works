@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { EntityRow } from '@/features/master/entityHooks'
 import { applyAiDraft, outcomeSummary, type AiFillEnvelope } from '@/features/startup/startupAiMerge'
-import { defaultCardSelection } from '@/features/startup/startupAiCards'
+import { AI_CARDS } from '@/features/startup/startupAiCards'
 
 /**
  * 'AI 작성하기' 병합 규칙 회귀 테스트.
@@ -230,20 +230,27 @@ describe('applyAiDraft — AI의 null은 지우지 않는다', () => {
   })
 })
 
-describe('기본 체크 규칙', () => {
-  it('값이 있는 카드는 꺼지고 빈 카드만 켜진다', () => {
-    expect(defaultCardSelection(fullRecord())).toEqual([])
-    // 이름이 있으면 기본 정보는 '채워진 카드'다 — 수정 모드에서 기업명이 늘 차 있는 것과 같다.
-    const empty = { id: 'S2', name: '빈 기업' } as EntityRow
-    expect(defaultCardSelection(empty)).toHaveLength(11)
-    expect(defaultCardSelection(empty)).not.toContain('basics')
-    // 등록 모드의 빈 폼에서는 기본 정보까지 켜진다 — 첫 등록이 그 카드의 자리다.
-    expect(defaultCardSelection({ id: 'S3', name: '' } as EntityRow)).toHaveLength(12)
+/** 지금 값이 있는 카드(모달의 `Y` 배지). 2026-09-06 전에는 이것이 기본 체크까지 정했다. */
+const filledKeys = (record: EntityRow) => AI_CARDS.filter((c) => c.filled(record)).map((c) => c.key)
+
+describe('Y/N 판정', () => {
+  it('값이 다 찬 행은 모든 카드가 Y다', () => {
+    expect(filledKeys(fullRecord())).toHaveLength(AI_CARDS.length)
   })
 
-  it('카드가 절반만 차 있어도 채워진 카드로 보아 꺼진다', () => {
+  it('이름만 있는 행에서 Y는 기본 정보 하나다(수정 모드에서 기업명은 늘 차 있다)', () => {
+    const empty = { id: 'S2', name: '빈 기업' } as EntityRow
+    expect(filledKeys(empty)).toEqual(['basics'])
+  })
+
+  it('등록 모드의 빈 폼에서는 전부 N이다', () => {
+    expect(filledKeys({ id: 'S3', name: '' } as EntityRow)).toEqual([])
+  })
+
+  it('카드가 절반만 차 있어도 Y다', () => {
+    // 그 절반은 담당자가 손으로 적은 것이고, 켜면 그것까지 함께 바뀐다는 사실을 배지가 말해야 한다.
     const half = { id: 'S3', name: '반쯤', tech_profile: { product: '제품만 있음' } } as EntityRow
-    expect(defaultCardSelection(half)).not.toContain('tech')
+    expect(filledKeys(half)).toContain('tech')
   })
 })
 

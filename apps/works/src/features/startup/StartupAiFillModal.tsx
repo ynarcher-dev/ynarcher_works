@@ -3,19 +3,18 @@ import { useState } from 'react'
 import type { EntityRow } from '@/features/master/entityHooks'
 import { formatBytes } from '@/features/networks/materialHooks'
 import { AI_FILL_LIMITS, useAiFill, type AiFillResult, type AiSource } from '@/features/startup/startupAiFill'
-import { AI_CARDS, defaultCardSelection, type AiCardKey } from '@/features/startup/startupAiCards'
+import { AI_CARDS, type AiCardKey } from '@/features/startup/startupAiCards'
 import { AiBlockedList, AiCardList, AiFileList } from '@/features/startup/StartupAiFillPicker'
 
 /**
  * 'AI 작성하기' 모달 — 읽을 자료와 작성할 카드를 고르고 초안을 받는다.
  *
- * 자료 목록과 기준 값(`snapshot`)을 **받아서** 쓴다. 기본 선택이 "읽을 수 있는 자료 전부 · 빈 카드 전부"인데
- * 목록이 준비되기 전에 마운트되면 그 기본값이 빈 채로 굳어 담당자가 매번 손으로 다시 고르게
- * 된다. 목록이 준비된 뒤에 열리는 것을 버튼이 보장한다.
+ * 자료 목록과 기준 값(`snapshot`)을 **받아서** 쓴다. 목록이 준비된 뒤에 열리는 것을 버튼이
+ * 보장한다.
  *
- * 기준 값이 원장 행이 아니라 **지금 폼에 적힌 값**인 것이 요점이다 — '작성됨'은 저장된 값이
- * 아니라 화면에 보이는 값을 두고 하는 말이어야 하고, 방금 손으로 적은 줄이 있는 카드는
- * 기본으로 꺼져야 한다.
+ * 기준 값이 원장 행이 아니라 **지금 폼에 적힌 값**인 것이 요점이다 — 카드 줄의 `Y`/`N`은
+ * 저장된 값이 아니라 화면에 보이는 값을 두고 하는 말이어야 한다. 방금 손으로 적어 아직
+ * 저장하지 않은 줄이 있는 카드는 `Y`로 서야, 그 카드를 켤 때 무엇이 바뀌는지가 맞는 말이 된다.
  *
  * 봉투는 그대로 상위로 올린다. 병합은 폼이 자기 살아 있는 값 위에서 한다(§4.5).
  *
@@ -41,10 +40,13 @@ export function StartupAiFillModal({
   const readable = sources.filter((s) => s.readable)
   const blocked = sources.filter((s) => !s.readable)
 
-  // 기본 선택: 읽을 수 있는 자료 전부, 빈 카드 전부. 담당자가 아무것도 만지지 않고 실행해도
-  // 이미 적혀 있는 값은 그대로 남는다 — 기본값이 지키는 쪽에 서야 안전장치가 된다.
-  const [picked, setPicked] = useState<string[]>(() => readable.map((s) => s.key))
-  const [cards, setCards] = useState<AiCardKey[]>(() => defaultCardSelection(snapshot))
+  // **아무것도 켜지 않은 채 연다**(2026-09-06 사용자 지정). 종전에는 읽을 수 있는 자료 전부와
+  // 빈 카드 전부를 미리 켜 두었는데, 그러면 창을 열자마자 열둘·열넷의 결정이 이미 내려져 있어
+  // 실행 버튼을 누르는 일이 "고른 것을 실행한다"가 아니라 "정해진 것을 승인한다"가 된다.
+  // 빈 상태로 시작하면 모든 실행이 담당자가 고른 것이 되고, 한 번에 켜는 일은 목록 첫 행의
+  // 전체 선택이 한 번으로 해낸다.
+  const [picked, setPicked] = useState<string[]>([])
+  const [cards, setCards] = useState<AiCardKey[]>([])
   const [error, setError] = useState<string | null>(null)
 
   const chosen = readable.filter((s) => picked.includes(s.key))
@@ -135,7 +137,7 @@ export function StartupAiFillModal({
             <section className="flex min-h-0 flex-col gap-2">
               <CardHeading
                 level="subhead"
-                help="체크를 해제한 카드는 AI가 건드리지 않고 지금 적혀 있는 값을 그대로 둡니다. 오른쪽 Y·N은 지금 그 카드에 값이 있는지를 뜻하며, 값이 있는 카드는 기본으로 꺼져 있습니다."
+                help="체크한 카드만 AI가 씁니다. 체크하지 않은 카드는 지금 적혀 있는 값을 그대로 둡니다. 오른쪽 Y·N은 지금 그 카드에 값이 있는지를 뜻하며, Y인 카드를 체크하면 그 값이 AI 결과로 바뀝니다."
               >
                 작성할 카드
               </CardHeading>

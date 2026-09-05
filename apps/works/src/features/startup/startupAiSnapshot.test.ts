@@ -6,7 +6,7 @@ import {
   toFormValues,
   type AiCardState,
 } from '@/features/startup/startupAiSnapshot'
-import { defaultCardSelection } from '@/features/startup/startupAiCards'
+import { AI_CARDS } from '@/features/startup/startupAiCards'
 import type { StartupDetailFormValues } from '@/features/startup/startupFormValues'
 
 /**
@@ -155,11 +155,12 @@ describe('기본 체크는 저장값이 아니라 화면 값을 본다', () => {
       shareholders: [],
       summary: { strengths: [], improvements: [], needs: [] },
     })
-    const picked = defaultCardSelection(snap)
-    expect(picked).not.toContain('business')
-    expect(picked).not.toContain('tech')
-    expect(picked).not.toContain('team')
-    expect(picked).toContain('revenue')
-    expect(picked).toContain('shareholders')
+    // 폼 값이 스냅샷에 실렸는지는 카드의 Y/N 판정이 답한다 — 적어 둔 카드는 Y, 빈 카드는 N.
+    const filled = AI_CARDS.filter((c) => c.filled(snap)).map((c) => c.key)
+    expect(filled).toContain('business')
+    expect(filled).toContain('tech')
+    expect(filled).toContain('team')
+    expect(filled).not.toContain('revenue')
+    expect(filled).not.toContain('shareholders')
   })
 })
