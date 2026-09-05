@@ -1,3 +1,4 @@
+import { tableTextScale, type TableTextSet } from '@ynarcher/ui'
 import type { MaskKind, MasterColumn } from '@/features/master/types'
 import {
   NETWORK_ORG_COLUMNS,
@@ -208,3 +209,19 @@ export const NETWORK_RESOURCE_TYPE = 'network'
  * 종전 10종(expert·van·investor…)이 2026-09-04 통합으로 이 한 값이 되었다.
  */
 export const NETWORK_TARGET_TYPE = 'network'
+
+/**
+ * 이력 카드(소속·부서·직책 변경) 목록의 글자 단.
+ *
+ * 밀도 규칙은 "카드 안에 든 표는 카드가 말하는 주제의 부속이라 한 단 내린다"(13px)인데, 이
+ * 카드에서는 그 단이 카드를 두 크기로 갈랐다 — 비었을 때의 문장은 본문 단(14px)이고 행이
+ * 들어오면 13px이라, 데이터가 채워지는 순간 같은 자리의 글자가 한 단 작아졌다. 행이 표의 한
+ * 줄이 아니라 **문장에 가깝다**는 것이 이유다(소속 조합 한 덩이 + 괄호로 이은 경위). 좌측 본문
+ * 열의 카드라 폭도 표처럼 아껴 쓸 자리가 아니다.
+ *
+ * 우측 패널의 '변동 이력'은 이 단을 쓰지 않는다 — 좁은 열에 여러 항목을 훑는 자리라 카드 단이
+ * 맞다. 크기를 가르는 축은 중요도가 아니라 놓이는 자리라는 원칙 그대로다.
+ *
+ * 크기를 새로 만들지 않고 이미 있는 단을 고른다. 고르는 일은 이 한 줄이 전부다.
+ */
+export const historyText: TableTextSet = tableTextScale.page

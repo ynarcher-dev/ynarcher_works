@@ -228,7 +228,7 @@ export function NetworkForm({
 
       {/* 상세페이지와 동일한 3열 배치: 좌측 2/3 편집 카드 + 우측 1/3 자료 관리 */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* 좌측(2/3): 사진 → 기본 데이터 → 노트 */}
+        {/* 좌측(2/3): 사진 → 기본 데이터 → 소개 */}
         <div className="space-y-4 lg:col-span-2">
           {/* 사진 카드 */}
           <CardShell>
@@ -350,9 +350,9 @@ export function NetworkForm({
             </div>
           </CardShell>
 
-          {/* 노트 카드 */}
+          {/* 소개 카드 */}
           <CardShell>
-            <Field label="노트">
+            <Field label="소개">
               <TextArea rows={4} {...register('intro')} />
             </Field>
           </CardShell>

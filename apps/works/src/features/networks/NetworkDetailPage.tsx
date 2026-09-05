@@ -104,7 +104,7 @@ function NetworkView({ record }: { record: NetworkRow }) {
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-      {/* 좌측(2/3): 프로필 본문 — 기본 정보·이력·노트. */}
+      {/* 좌측(2/3): 프로필 본문 — 기본 정보·이력·소개. */}
       <div className="space-y-4 lg:col-span-2">
       <CardShell>
         <div className="flex items-center gap-5">
@@ -224,11 +224,11 @@ function NetworkView({ record }: { record: NetworkRow }) {
         <AffiliationHistoryPanel profile={profile} contributions={contributions} />
       </SectionCard>
 
-      <SectionCard title="노트">
+      <SectionCard title="소개">
         {intro ? (
           <p className="whitespace-pre-wrap text-body text-gray-800">{intro}</p>
         ) : (
-          <p className="text-body text-gray-600">등록된 노트 내용이 없습니다.</p>
+          <p className="text-body text-gray-600">등록된 소개 내용이 없습니다.</p>
         )}
       </SectionCard>
       </div>

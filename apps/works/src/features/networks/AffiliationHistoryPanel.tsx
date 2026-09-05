@@ -1,4 +1,4 @@
-import { tableText } from '@ynarcher/ui'
+import { historyText } from '@/features/networks/config'
 import type { Contribution } from '@/features/networks/hooks'
 
 /** profile.affiliation_history 한 항목. 원장 트리거(app.track_affiliation_history)가 남기는 형태. */
@@ -84,7 +84,8 @@ export function AffiliationHistoryPanel({ profile, contributions = [] }: Props) 
   }
 
   return (
-    // 목록 행은 표의 한 행이므로 크기를 tableText 하나로 세우고 위계는 색으로만 만든다(변동 이력과 동일 규격).
+    // 행은 표의 한 줄이 아니라 문장에 가까우므로 본문 단(14px)으로 세운다 — 단을 고르는 일은
+    // config의 `historyText`가 하고, 여기서는 위계를 색으로만 만든다.
     // 소속·부서·직책(현재값에서 밀려난 조합)을 앞세우고, 그 뒤에 '날짜 · 수정 이름 · 출처 · 사유'를
     // 메타로 이어 붙인다 — 무엇이 바뀌었나(굵게)를 먼저 읽고 언제·누가·어떻게(연하게)를 뒤에 둔다.
     <ul className="divide-y divide-gray-100">
@@ -92,8 +93,8 @@ export function AffiliationHistoryPanel({ profile, contributions = [] }: Props) 
         const actor = resolveActor(r, contributions)
         return (
           <li key={i} className="flex flex-wrap items-baseline gap-x-2 py-1.5 first:pt-0">
-            <span className={tableText.primary}>{formatCombo(r) || '-'}</span>
-            <span className={`tabular-nums ${tableText.meta}`}>
+            <span className={historyText.primary}>{formatCombo(r) || '-'}</span>
+            <span className={`tabular-nums ${historyText.meta}`}>
               {/* 날짜부터 사유까지를 괄호로 묶어 앞의 소속 조합과 시각적으로 분리한다. */}
               {`(${[
                 r.at ? String(r.at).slice(0, 10) : '-',
