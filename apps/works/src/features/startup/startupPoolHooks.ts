@@ -28,12 +28,12 @@ export interface StartupPoolFilters {
   regionUnset: boolean
   /** 분야(industries 배열, 태그명) — 선택 중 하나라도 포함(overlaps). */
   industries: string[]
-  /** 투자단계(stage). 요약 카드의 단계 타일이 소유하는 축이다. */
+  /** 투자단계(stage). 카드가 아니라 필터 바의 다중선택이 소유한다. */
   stages: string[]
-  /** 투자단계 미지정. 단계 배열과 OR로 묶인다(권역 축과 같은 규약). */
-  stageUnset: boolean
-  /** 구분(management_status). 코드 4종(투자·보육·발굴·기타) 다중선택. */
+  /** 구분(management_status). 코드 4종(투자·보육·발굴·기타) — 요약 카드의 구분 타일이 소유한다. */
   categories: string[]
+  /** 구분 미지정. 구분 배열과 OR로 묶인다(권역 축과 같은 규약). */
+  categoryUnset: boolean
   /** 관리현황(pool_status). 투자기업에서만 채워지는 값이라 비투자 구분에서는 결과가 빈다. */
   statuses: string[]
   /** 최소 업력(년차, 만 나이 기준). '' = 미적용. */
@@ -49,8 +49,8 @@ export const EMPTY_STARTUP_FILTERS: StartupPoolFilters = {
   regionUnset: false,
   industries: [],
   stages: [],
-  stageUnset: false,
   categories: [],
+  categoryUnset: false,
   statuses: [],
   ageMin: '',
   ageMax: '',
@@ -78,8 +78,8 @@ export function hasActiveStartupFilters(f: StartupPoolFilters): boolean {
     f.regionUnset ||
     f.industries.length > 0 ||
     f.stages.length > 0 ||
-    f.stageUnset ||
     f.categories.length > 0 ||
+    f.categoryUnset ||
     f.statuses.length > 0 ||
     f.ageMin !== '' ||
     f.ageMax !== ''
@@ -115,8 +115,8 @@ export function startupFilterArgs(
     p_region_unset: filters.regionUnset ? true : null,
     p_industries: filters.industries.length ? filters.industries : null,
     p_stages: filters.stages.length ? filters.stages : null,
-    p_stage_unset: filters.stageUnset ? true : null,
     p_categories: filters.categories.length ? filters.categories : null,
+    p_category_unset: filters.categoryUnset ? true : null,
     p_statuses: filters.statuses.length ? filters.statuses : null,
     p_age_min: filters.ageMin !== '' && Number.isFinite(ageMin) ? ageMin : null,
     p_age_max: filters.ageMax !== '' && Number.isFinite(ageMax) ? ageMax : null,
@@ -137,7 +137,7 @@ interface StartupPoolRpcRow {
  *
  * 공용 `fetchLedgerPage`(PostgREST 조립)를 쓰지 않는 원장은 NETWORKS에 이어 여기가 둘째다.
  * 옮긴 이유는 목록이 아니라 **요약 카드** 때문이다 — 타일 하나가 조회 하나이던 구조로
- * 권역·투자단계 두 줄(약 19칸)을 세우면 요약만으로 스무 번 가까이 호출하게 된다.
+ * 구분·권역 두 줄(약 15칸)을 세우면 요약만으로 열댓 번을 호출하게 된다.
  * 집계를 서버로 옮기려면 목록과 집계가 같은 판정을 공유해야 하고, 그 판정이 살 곳은 SQL이다.
  *
  * 전체 건수(totalAll)는 검색어·필터가 하나라도 걸렸을 때만 따로 묻는다(NETWORKS와 같은 규약) —

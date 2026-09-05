@@ -7,8 +7,8 @@ import { useMaskPolicy } from '@/features/admin/sensitiveStore'
 import { StartupPoolTable, type StartupPoolRow } from '@/features/startup/StartupPoolTable'
 import { StartupPoolFilters } from '@/features/startup/StartupPoolFilters'
 import {
+  StartupCategorySummary,
   StartupRegionSummary,
-  StartupStageSummary,
 } from '@/features/startup/StartupFacetSummary'
 import {
   EMPTY_STARTUP_FILTERS,
@@ -84,11 +84,22 @@ export function StartupPoolTab({ scope, onScopeChange, userId }: StartupPoolTabP
   return (
     <div className="space-y-3">
       {/*
-        요약 카드 두 줄이 지역·투자단계 축을 소유한다(2026-09-05). 종전 구분(발굴·보육·투자·
-        기타) 한 줄은 걷고 그 축은 필터 줄의 다중선택으로 내렸다 — 구분은 이미 필터에 있어
-        같은 물음에 컨트롤이 둘이었고, 카드 자리는 '지금 어디에·어느 단계에 몇 개사가 있나'가
-        가져가는 편이 목록을 좁히는 데 실제로 쓰인다.
+        요약 카드 두 줄이 구분·권역 축을 소유한다(2026-09-05). 순서는 좁혀 가는 순서다 —
+        먼저 '우리와 어떤 관계인 기업인가'(구분)를 고르고, 그다음 '어디에 있나'(권역)를
+        고른다. 두 축이 카드로 간 만큼 필터 줄에서는 같은 값을 묻는 칩(구분·단계 중 구분)을
+        걷었다 — 같은 물음에 컨트롤이 둘이면 엇갈리게 걸 수 있고 그때 결과가 빈 이유를
+        화면이 답하지 못한다. 소재지 칩은 권역의 아래 단이라 그대로 남는다.
       */}
+      <StartupCategorySummary
+        keyword={keyword}
+        filters={filters}
+        mineUserId={mineUserId}
+        searchScope={searchScope}
+        onChange={(next) =>
+          setFilters((f) => ({ ...f, categories: next.values, categoryUnset: next.unset }))
+        }
+      />
+
       <StartupRegionSummary
         keyword={keyword}
         filters={filters}
@@ -96,16 +107,6 @@ export function StartupPoolTab({ scope, onScopeChange, userId }: StartupPoolTabP
         searchScope={searchScope}
         onChange={(next) =>
           setFilters((f) => ({ ...f, regions: next.values, regionUnset: next.unset }))
-        }
-      />
-
-      <StartupStageSummary
-        keyword={keyword}
-        filters={filters}
-        mineUserId={mineUserId}
-        searchScope={searchScope}
-        onChange={(next) =>
-          setFilters((f) => ({ ...f, stages: next.values, stageUnset: next.unset }))
         }
       />
 
