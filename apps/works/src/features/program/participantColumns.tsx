@@ -57,6 +57,8 @@ function categoryBadge(row: ParticipantRow): LoginBadge | null {
  * 뜨거나 끝난 사업이 '이용 중'으로 보이는 일이 없다.
  *
  * 기간은 이제 사업이 갖는다(3_9_1 §8) — 그래서 만료 판정은 행이 아니라 사업 값 하나를 본다.
+ * **차단과 기간은 직교한 축**이라, 만료된 줄을 차단했다 해제해도 다시 '기간 만료'로 돌아온다
+ * (여는 방법은 해제가 아니라 기간 연장이다).
  */
 export function loginBadge(
   row: ParticipantRow,
@@ -68,19 +70,19 @@ export function loginBadge(
   }
   const opened = row.login_status === 'INVITED' || row.login_status === 'ACTIVE'
   if (DEAD_STATUSES.includes(programStatus) && opened) {
-    return { label: '닫힘 (사업 종료)', tone: 'neutral' }
+    return { label: '사업종료', tone: 'neutral' }
   }
-  if (row.login_status === 'BLOCKED') return { label: '차단됨', tone: 'danger' }
+  if (row.login_status === 'BLOCKED') return { label: '차단', tone: 'danger' }
   if (opened && guestAccessEndsAt && new Date(guestAccessEndsAt).getTime() <= Date.now()) {
     return { label: '기간 만료', tone: 'warning' }
   }
   switch (row.login_status) {
     case 'INVITED':
-      return { label: '초대함', tone: 'warning' }
+      return { label: '초대', tone: 'warning' }
     case 'ACTIVE':
       return { label: '이용 중', tone: 'success' }
     default:
-      return { label: '미개방', tone: 'neutral' }
+      return { label: '미발급', tone: 'neutral' }
   }
 }
 

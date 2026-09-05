@@ -422,6 +422,33 @@ export function useSetProgramAccessWindow(programId: string) {
   })
 }
 
+/**
+ * 차단 해제 — 닫은 문을 다시 연다.
+ *
+ * 되돌릴 상태를 화면이 정하지 않는다. 서버가 원장에 되묻는다 — 이 사업에 들어와 본 적이
+ * 있으면(`joined_at`) 이용 중, 없으면 초대다. 차단 직전 값을 어딘가에 적어 두는 방법은
+ * 쓰지 않는다(사본은 어긋난다 — 막아 둔 사이에 기간이 지나면 적어 둔 '이용 중'은 거짓이다).
+ *
+ * `로그인 열기`와 다른 점은 **안내를 보내지 않는다**는 것이다. 막은 적 있다는 사실을 굳이
+ * 알리지 않고 되돌리는 길이며, 다시 알려야 하면 `로그인 열기`를 쓴다.
+ */
+export function useReopenGuestAccess(programId: string) {
+  const config = useProgramWorkspace()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (participantIds: string[]): Promise<number> => {
+      const { data, error } = await supabase.rpc('reopen_program_guest_access', {
+        p_participant_ids: participantIds,
+      })
+      if (error) throw error
+      return (data as number | null) ?? 0
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: [config.key, 'participants', programId] })
+    },
+  })
+}
+
 /** 게스트 로그인 차단(접속 중인 세션까지 즉시 무효화). */
 export function useCloseGuestAccess(programId: string) {
   const config = useProgramWorkspace()

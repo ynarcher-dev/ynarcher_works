@@ -24,6 +24,7 @@ import {
   useCloseGuestAccess,
   useOpenGuestAccess,
   useProgramParticipants,
+  useReopenGuestAccess,
   useSendPasswordReset,
   type MasterTable,
   type ParticipantRow,
@@ -63,9 +64,14 @@ function accessWindowLabel(iso: string | null): string {
  * 함께 비워져야 일괄 작업이 안 보이는 행을 집지 않는다.
  *
  * **버튼이 서는 자리는 걸리는 범위가 정한다**(2026-09-05 개편). 사업 전체에 걸리는
- * '로그인 가능 기간'은 선택과 무관하므로 툴바에 상시로 서고, 고른 행에 걸리는 셋(열기·재설정
- * 안내·차단)은 고른 뒤에만 선택 줄로 뜬다. 종전에는 넷이 늘 회색으로 서 있었고 켜지는 조건이
- * 저마다 달라(1건만·계정 있는 행만·N건) 왜 못 누르는지를 화면이 답하지 못했다.
+ * '로그인 가능 기간'은 선택과 무관하므로 툴바에 상시로 서고, 고른 행에 걸리는 것들(열기·재설정
+ * 안내·차단·해제)은 고른 뒤에만 선택 줄로 뜬다. 종전에는 넷이 늘 회색으로 서 있었고 켜지는
+ * 조건이 저마다 달라(1건만·계정 있는 행만·N건) 왜 못 누르는지를 화면이 답하지 못했다.
+ *
+ * **차단과 해제는 두 버튼이지만 한 축이다.** 고른 것에 실제로 걸리는 쪽만 세우고, 섞어
+ * 골랐으면 둘 다 서되 각자 자기 몫에만 걸린다. `로그인 열기`와 `차단 해제`는 둘 다 문을
+ * 여는 일이지만 갈린다 — 전자는 **다시 초대하며 안내를 보내고**, 후자는 **조용히 되돌린다**
+ * (막은 적 있다는 사실을 굳이 알리지 않는 길이 있어야 한다).
  *
  * 명부에 올리는 일과 로그인을 여는 일이 갈려 있다 — 참여 후보를 쌓아 두더라도 확정 전에는
  * 문이 열리지 않는다. 문을 여닫을 수 있는 사람은 그 사업의 담당자(PM·MEMBER)뿐이며,
@@ -92,6 +98,7 @@ export function ParticipantPool({
   const { data, isLoading, isError } = useProgramParticipants(program.id)
   const open = useOpenGuestAccess(program.id)
   const close = useCloseGuestAccess(program.id)
+  const reopen = useReopenGuestAccess(program.id)
   const resetPw = useSendPasswordReset()
 
   const rows = useMemo(() => data ?? [], [data])
@@ -125,17 +132,30 @@ export function ParticipantPool({
     [masked, program.status, program.guest_access_ends_at, persona],
   )
 
-  /** 고른 행 중 계정이 있는 대상의 계정 id — 재설정 안내는 줄이 아니라 계정이 대상이다. */
-  const selectedAccountIds = useMemo(
-    () => [
-      ...new Set(
-        personaRows.filter((r) => selected.includes(r.id) && r.accountId).map((r) => r.accountId!),
-      ),
-    ],
+  const selectedRows = useMemo(
+    () => personaRows.filter((r) => selected.includes(r.id)),
     [personaRows, selected],
   )
 
-  const busy = open.isPending || close.isPending || resetPw.isPending
+  /** 고른 행 중 계정이 있는 대상의 계정 id — 재설정 안내는 줄이 아니라 계정이 대상이다. */
+  const selectedAccountIds = useMemo(
+    () => [...new Set(selectedRows.filter((r) => r.accountId).map((r) => r.accountId!))],
+    [selectedRows],
+  )
+
+  // 차단과 해제는 서로 반대인 한 축이라 대상이 겹치지 않는다. 섞어 골랐을 때 각 버튼이
+  // 자기 몫에만 걸리도록 여기서 갈라 둔다 — 고른 전부를 보내면 이미 차단된 행을 다시
+  // 차단하고 열려 있는 행의 해제를 시도하게 되어, 결과 건수가 담당자가 고른 수와 어긋난다.
+  const blockedIds = useMemo(
+    () => selectedRows.filter((r) => r.login_status === 'BLOCKED').map((r) => r.id),
+    [selectedRows],
+  )
+  const openableIds = useMemo(
+    () => selectedRows.filter((r) => r.login_status !== 'BLOCKED').map((r) => r.id),
+    [selectedRows],
+  )
+
+  const busy = open.isPending || close.isPending || reopen.isPending || resetPw.isPending
 
   const runOpen = () => {
     open.mutate(selected, {
@@ -154,7 +174,7 @@ export function ParticipantPool({
   }
 
   const runClose = () => {
-    close.mutate(selected, {
+    close.mutate(openableIds, {
       onSuccess: (n) => {
         setSelected([])
         setConfirming(null)
@@ -162,6 +182,22 @@ export function ParticipantPool({
       },
       onError: (e: unknown) =>
         toast.show(e instanceof Error ? e.message : '차단에 실패했습니다.', 'danger'),
+    })
+  }
+
+  /**
+   * 차단 해제. 되돌릴 상태는 화면이 정하지 않고 서버가 원장에 되묻는다(들어와 본 적이
+   * 있으면 이용 중, 없으면 초대). 안내는 나가지 않는다 — 그것은 `로그인 열기`의 일이다.
+   */
+  const runReopen = () => {
+    reopen.mutate(blockedIds, {
+      onSuccess: (n) => {
+        setSelected([])
+        setConfirming(null)
+        toast.show(`차단 ${n}건을 해제했습니다.`, 'success')
+      },
+      onError: (e: unknown) =>
+        toast.show(e instanceof Error ? e.message : '차단 해제에 실패했습니다.', 'danger'),
     })
   }
 
@@ -188,7 +224,16 @@ export function ParticipantPool({
   const confirmHandlers: Record<ParticipantAction, () => void> = {
     open: runOpen,
     block: runClose,
+    unblock: runReopen,
     reset: runResetPassword,
+  }
+
+  /** 확인창이 말할 건수 — 액션마다 대상이 다르다(계정 / 차단된 행 / 나머지). */
+  const confirmCount: Record<ParticipantAction, number> = {
+    open: selected.length,
+    block: openableIds.length,
+    unblock: blockedIds.length,
+    reset: selectedAccountIds.length,
   }
 
   if (isLoading) {
@@ -232,9 +277,11 @@ export function ParticipantPool({
             <ParticipantSelectionBar
               count={selected.length}
               accountCount={selectedAccountIds.length}
+              blockedCount={blockedIds.length}
               onOpen={() => setConfirming('open')}
               onResetPassword={() => setConfirming('reset')}
               onBlock={() => setConfirming('block')}
+              onUnblock={() => setConfirming('unblock')}
               onClear={() => setSelected([])}
               busy={busy}
             />
@@ -277,7 +324,7 @@ export function ParticipantPool({
       />
       <ParticipantActionConfirm
         action={confirming}
-        count={confirming === 'reset' ? selectedAccountIds.length : selected.length}
+        count={confirming ? confirmCount[confirming] : 0}
         onConfirm={() => confirming && confirmHandlers[confirming]()}
         onClose={() => setConfirming(null)}
         busy={busy}

@@ -14,9 +14,11 @@ import { Button } from '@ynarcher/ui'
 export function ParticipantSelectionBar({
   count,
   accountCount,
+  blockedCount,
   onOpen,
   onResetPassword,
   onBlock,
+  onUnblock,
   onClear,
   busy,
 }: {
@@ -24,13 +26,23 @@ export function ParticipantSelectionBar({
   count: number
   /** 고른 것 중 계정이 있는 대상 수 — 재설정 안내가 걸리는 대상이다. */
   accountCount: number
+  /** 고른 것 중 차단된 행 수 — 해제가 걸리는 대상이다. */
+  blockedCount: number
   onOpen: () => void
   onResetPassword: () => void
   onBlock: () => void
+  onUnblock: () => void
   onClear: () => void
   busy: boolean
 }) {
   if (count === 0) return null
+
+  // 차단과 해제는 서로 반대인 한 축이라 **고른 것에 실제로 걸리는 쪽만** 세운다. 둘을 늘
+  // 나란히 두면 담당자가 매번 어느 쪽이 지금 뜻이 있는 버튼인지 골라야 하고, 차단된 행만
+  // 골랐는데 '차단'이 활성인 화면은 무엇을 하겠다는 것인지 말하지 못한다.
+  // 섞어 고르면 둘 다 서고 각자 자기 몫에만 걸린다 — 그래서 건수를 함께 적는다.
+  const openCount = count - blockedCount
+  const mixed = blockedCount > 0 && openCount > 0
 
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-radius-md border border-brand-200 bg-brand-50 px-3 py-2">
@@ -49,9 +61,16 @@ export function ParticipantSelectionBar({
         {accountCount === 0 && (
           <span className="text-caption text-gray-600">계정이 있는 대상이 없습니다</span>
         )}
-        <Button variant="outline-danger" onClick={onBlock} disabled={busy}>
-          이 사업 차단
-        </Button>
+        {blockedCount > 0 && (
+          <Button variant="outline" onClick={onUnblock} disabled={busy}>
+            차단 해제{mixed ? ` (${blockedCount})` : ''}
+          </Button>
+        )}
+        {openCount > 0 && (
+          <Button variant="outline-danger" onClick={onBlock} disabled={busy}>
+            이 사업 차단{mixed ? ` (${openCount})` : ''}
+          </Button>
+        )}
         <Button variant="ghost" onClick={onClear} disabled={busy}>
           선택 해제
         </Button>

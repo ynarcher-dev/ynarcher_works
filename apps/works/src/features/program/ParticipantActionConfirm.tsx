@@ -2,7 +2,7 @@ import { Button, Modal } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 
 /** 확인이 필요한 명부 일괄 작업. null이면 창을 닫는다. */
-export type ParticipantAction = 'open' | 'block' | 'reset'
+export type ParticipantAction = 'open' | 'block' | 'unblock' | 'reset'
 
 /**
  * 명부 일괄 작업 확인창.
@@ -56,6 +56,20 @@ export function ParticipantActionConfirm({
         </>
       ),
       confirm: '안내 보내기',
+      danger: false,
+    },
+    unblock: {
+      title: '차단 해제',
+      body: (
+        <>
+          <b>{count}건</b>의 차단을 풉니다. 상태는 <b>차단 전으로 돌아갑니다</b> — 이 사업에
+          들어와 본 적이 있으면 <b>이용 중</b>, 초대만 되어 있었으면 <b>초대</b>입니다.
+          안내는 다시 보내지 않습니다(다시 알리려면 `로그인 열기`를 쓰세요). 접근 기간이 이미
+          지난 사업이라면 해제해도 들어오지 못하며, 그때는 <b>로그인 가능 기간</b>을 늘려야
+          합니다.
+        </>
+      ),
+      confirm: '차단 해제',
       danger: false,
     },
     block: {
