@@ -495,10 +495,11 @@
 - [x] Edge Function: `guest-auth-login` 2요소 + 참여 목록 반환, `guest-auth-context` 신설, `guest-auth-password`·`guest-auth-refresh` 자격증명 원장 이관 <!-- _shared/guestInvitation.ts를 걷고 _shared/guestAccount.ts로 대체(축이 초대 행에서 계정으로 바뀌었다). 로그인 응답이 넷으로 갈린다 — 세션(1건)·선택 티켓+목록(2건 이상)·accessible:false(0건)·설정 티켓(비밀번호 미설정). 0건을 사유와 함께 답할 수 있게 된 것은 본인 확인이 이미 끝난 뒤이기 때문이며, 종전에는 로그인 자체가 실패해 담당자도 원인을 몰랐다. 이메일 조회는 `.ilike()`를 쓰지 않는다(%·_가 와일드카드라 입력이 필터 구조를 바꾼다) — 원문·소문자 두 값으로 정확 일치를 묻는다. 같은 이메일에 계정이 둘이면(기업 인격+전문가 인격) 조용히 하나를 고르지 않고 거절한다. 참여 기간 판정도 PostgREST `.or()` 문자열 조립 대신 코드에서 한다 -->
 - [x] Edge Function: `guest-password-reset` 신설(본인 연락처로만 발송), `guest-access-invite` 문안 분기 <!-- 인가는 함수가 아니라 RPC(authorize_guest_password_reset)가 지고 호출자 토큰을 그대로 달아 보낸다(guest-access-invite와 같은 자세). 수신처는 요청 본문이 아니라 계정 원장에서 읽는다 — 클라이언트가 정할 수 있으면 남의 재설정 링크를 자기 주소로 받는다. **링크 소진 시 password_hash를 비우지 않는다**: 비우면 그 계정이 초기 상태로 돌아가 원장 연락처가 비밀번호로 통하고, 링크만 열고 그만두면 그 상태로 남는다 — 대신 설정 티켓에 rst 표시를 달아 덮어쓸 권한을 준다. 안내 문안은 GUEST_INVITE_NEW/ADD로 갈랐다(이미 계정이 있는 사람에게 초기 비밀번호를 안내하면 통하지 않는 값을 알려 주는 셈이다) -->
 - [ ] **Edge Function 배포** — `guest-auth-login guest-auth-context guest-auth-password guest-auth-refresh guest-password-reset guest-access-invite`. DB 반영 이후, 프론트 push 이전이어야 한다. CLI가 dev@ynarcher.com 로그인이어야 함
-- [ ] WORKS 화면: 참가자 명부에 `계정`·`접근` 열 + `연결` 버튼 일원화 + 기간 편집
-- [ ] WORKS 화면: OFFICE `게스트 계정` 메뉴 신설(발급·조회·재설정 안내, 연락처 마스킹) + ADMIN 패널에 발급 편입
-- [ ] GUEST 화면: 로그인에서 사업코드 칸 제거, 참여 선택 화면, 0건 안내
-- [ ] GUEST 화면: 사이드바 상단 참여 전환기
+- [x] WORKS 화면: 참가자 명부에 `계정`·`접근 기간` 열 + `연결` 버튼 일원화 + 기간 편집 모달 <!-- 계정 유무는 명부 행이 아니라 원장 행이 답한다(계정의 키가 그것이다) — 그래서 아직 문을 열지 않은 대상도 '계정 있음'으로 뜨고, 담당자는 신규·기존을 구분할 필요 없이 `연결` 하나만 누른다. 종전 '비밀번호 초기화'는 '재설정 안내 보내기'로 바뀌었고 대상이 명부 행이 아니라 계정이라 같은 계정을 두 번 보내지 않는다 -->
+- [x] WORKS 화면: OFFICE `게스트 계정` 메뉴 신설(발급·조회·재설정 안내) + ADMIN 패널에 발급 편입 <!-- 화면을 둘로 만들지 않고 GuestAccountPanel 하나에 canSuspend prop만 두었다 — 같은 목록을 두 벌로 그리면 한쪽만 고쳐 어긋난다. 연락처 마스킹은 화면이 아니라 서버(guest_accounts_list가 app.is_admin()으로 판정)가 정한다: UI에서 숨기는 것은 보안이 아니다. 발급 모달의 원장 검색은 `.ilike()` 패턴에서 %·_를 뺀다(PostgREST는 ESCAPE를 받지 않아 %만 넣으면 원장 전체가 걸린다) -->
+- [x] GUEST 화면: 로그인에서 사업코드 칸 제거, 참여 선택 화면, 0건 안내 <!-- 단계가 넷이고 서버 응답의 종류가 정한다(session/password/choose/none). 재설정 링크(?token=)로 들어오면 곧바로 설정 단계에 선다 -->
+- [x] GUEST 화면: 사이드바 상단 참여 전환기 <!-- 갈 곳이 하나뿐이면 ▾ 없이 이름만 세운다 — 고를 것이 없는데 열리는 컨트롤은 '고를 수 있다'고 말하는 셈이다. 전환 직후 홈으로 보낸다: 보고 있던 메뉴는 그 사업의 것이라 새 맥락에 없다. 목록은 localStorage에 저장하지 않는다(담당자가 문을 닫으면 즉시 바뀌는 값이라 복원된 옛 목록은 누를 수 없는 줄을 보여 준다) -->
+- [ ] **프론트 배포(main push)** — DB 반영 → Edge Function 배포 이후. 순서를 어기면 로그인이 막힌다
 - [ ] 회귀 검증: [3_9_1 §13](../docs_planning/3_9_1_guest_unified_account.md) 완료 기준 10항 + 보안 게이트 체크리스트
 
 ## 백로그 (우선순위 미정)

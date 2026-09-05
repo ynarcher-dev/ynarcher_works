@@ -14,10 +14,12 @@ import { useEffect, useState } from 'react'
 import {
   GUEST_PAGE_SIZE,
   useGuestAccounts,
+  useSendGuestPasswordReset,
   useSetGuestAccountActive,
   type GuestAccount,
   type GuestAccountProgram,
 } from '@/features/admin/guestAccountHooks'
+import { GuestAccountIssueModal } from '@/features/admin/GuestAccountIssueModal'
 import { GUEST_TYPE_LABEL } from '@/lib/userTypes'
 
 const DASH = <EmptyValue />
@@ -54,10 +56,12 @@ function fmtDate(v: string | null): string | null {
  *
  * 근거 기획: docs/docs_planning/3_2_workspace_admin.md §1.8
  */
-export function GuestAccountPanel() {
+export function GuestAccountPanel({ canSuspend = false }: { canSuspend?: boolean }) {
   const toast = useToast()
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(0)
+  /** 계정 발급 모달. 내부 사용자 전원이 쓴다(발급만으로는 아무것도 보이지 않는다). */
+  const [issueOpen, setIssueOpen] = useState(false)
   /** 참여 사업 목록을 펼쳐 보는 계정. */
   const [detail, setDetail] = useState<GuestAccount | null>(null)
   /** 정지하려는 계정(사유 입력). 해제는 사유를 묻지 않는다. */
@@ -66,6 +70,7 @@ export function GuestAccountPanel() {
 
   const { data, isLoading, error } = useGuestAccounts(keyword, page)
   const setActive = useSetGuestAccountActive()
+  const resetMutation = useSendGuestPasswordReset()
 
   // 검색어가 바뀌면 첫 페이지로 되돌린다(빈 페이지 방지).
   useEffect(() => {
@@ -85,6 +90,24 @@ export function GuestAccountPanel() {
       setReason('')
     } catch {
       toast.show('정지에 실패했습니다. 관리자 권한을 확인하세요.', 'danger')
+    }
+  }
+
+  /**
+   * 재설정 안내 발송. 링크는 게스트 본인 연락처로만 나가고 이 화면에는 아무 값도 오지
+   * 않는다 — 담당자가 값을 쥘 수 있으면 계정을 합친 순간 그 게스트의 다른 팀 사업까지 열린다.
+   */
+  const sendReset = async (a: GuestAccount) => {
+    try {
+      const { notified } = await resetMutation.mutateAsync(a.user_id)
+      toast.show(
+        notified
+          ? `${a.name}님의 연락처로 재설정 안내를 보냈습니다.`
+          : '안내를 준비했으나 발송 채널이 아직 연결되지 않았습니다.',
+        notified ? 'success' : 'warning',
+      )
+    } catch (e) {
+      toast.show(e instanceof Error ? e.message : '발송에 실패했습니다.', 'danger')
     }
   }
 
@@ -138,16 +161,25 @@ export function GuestAccountPanel() {
       key: '_action',
       header: '',
       align: 'right',
-      render: (r) =>
-        r.is_active ? (
-          <Button variant="ghost" onClick={() => setSuspending(r)}>
-            정지
+      render: (r) => (
+        <div className="flex items-center justify-end gap-1">
+          {/* 담당자도 누를 수 있다 — 값이 발송자에게 오지 않으므로 권한을 좁힐 실익이 없고,
+              좁히면 문의를 받은 사람이 할 수 있는 일이 없어진다. */}
+          <Button variant="ghost" onClick={() => void sendReset(r)} disabled={!r.is_active}>
+            재설정 안내
           </Button>
-        ) : (
-          <Button variant="ghost" onClick={() => void restore(r)}>
-            정지 해제
-          </Button>
-        ),
+          {canSuspend &&
+            (r.is_active ? (
+              <Button variant="ghost" onClick={() => setSuspending(r)}>
+                정지
+              </Button>
+            ) : (
+              <Button variant="ghost" onClick={() => void restore(r)}>
+                정지 해제
+              </Button>
+            ))}
+        </div>
+      ),
     },
   ]
 
@@ -162,12 +194,15 @@ export function GuestAccountPanel() {
 
   return (
     <div className="space-y-4">
-      <Input
-        value={keyword}
-        onChange={(e) => setKeyword(e.target.value)}
-        placeholder="이름 또는 이메일로 검색"
-        className="max-w-sm"
-      />
+      <div className="flex items-center justify-between gap-3">
+        <Input
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          placeholder="이름 또는 이메일로 검색"
+          className="max-w-sm"
+        />
+        <Button onClick={() => setIssueOpen(true)}>계정 발급</Button>
+      </div>
 
       <DataTable
         columns={columns}
@@ -205,11 +240,23 @@ export function GuestAccountPanel() {
                 </span>
                 <span className="block truncate text-body text-gray-800">{p.title ?? '(삭제된 사업)'}</span>
               </span>
-              <Badge tone={LOGIN_STATUS[p.login_status].tone}>{LOGIN_STATUS[p.login_status].label}</Badge>
+              <span className="flex shrink-0 items-center gap-2">
+                {/* 접근 기간은 계정이 아니라 이 줄이 갖는다 — 만료되면 이 사업만 사라진다. */}
+                {p.access_ends_at && (
+                  <span className="text-caption text-gray-500">
+                    ~ {fmtDate(p.access_ends_at)}
+                  </span>
+                )}
+                <Badge tone={LOGIN_STATUS[p.login_status].tone}>
+                  {LOGIN_STATUS[p.login_status].label}
+                </Badge>
+              </span>
             </li>
           ))}
         </ul>
       </Modal>
+
+      <GuestAccountIssueModal open={issueOpen} onClose={() => setIssueOpen(false)} />
 
       {/* 정지 — 쓰던 사유가 클릭 한 번에 사라지지 않도록 바깥 클릭으로 닫지 않는다. */}
       <Modal

@@ -1,6 +1,7 @@
 import { AppShell, Sidebar, SidebarItem } from '@ynarcher/ui'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import logo from '@/assets/logo.png'
+import { GuestContextSwitcher } from '@/app/GuestContextSwitcher'
 import { GuestUserMenu } from '@/app/GuestUserMenu'
 import { useGuestStore } from '@/auth/guestStore'
 import {
@@ -60,15 +61,11 @@ export function GuestLayout() {
         </div>
       }
       subheader={
-        // WORKS의 워크스페이스 스위처가 서는 자리. 게스트는 사업이 세션에 고정되어 있어
-        // 고를 것이 없으므로, 같은 규격의 **읽기 전용 표시**로 지금 어느 사업인지만 답한다.
-        // 사업 코드는 세우지 않는다(2026-09-01) — 로그인 열쇠일 뿐, 들어온 뒤에는 답하는
-        // 것이 없다.
-        program && (
-          <div className="rounded-radius-md border border-white/20 bg-white/10 px-3 py-2">
-            <p className="truncate text-body font-bold text-white">{program.title}</p>
-          </div>
-        )
+        // WORKS의 워크스페이스 스위처가 서는 자리. 2026-09-05부터 **참여 전환기**가 선다 —
+        // 계정이 대상 단위가 되면서 한 계정이 여러 사업에 걸리고, 바뀌는 것은 신원이 아니라
+        // 맥락이라 재로그인 없이 토큰만 다시 받으면 된다. 갈 곳이 하나뿐이면 종전과 같은
+        // 읽기 전용 표시로 물러난다(고를 것이 없는데 열리는 컨트롤을 두지 않는다).
+        program && <GuestContextSwitcher />
       }
     >
       <div className="flex flex-col gap-1">

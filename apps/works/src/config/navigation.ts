@@ -190,6 +190,10 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         { label: '회의실 예약', tab: 'rooms' },
         // 회의록은 STARTUP에서 이관했다.
         { label: '회의록 작성', tab: 'minutes' },
+        // 게스트 계정: 발급·조회·재설정 안내의 전원용 창구(2026-09-05 신설). ADMIN 워크스페이스는
+        // 관리자만 들어가는데 발급은 내부 사용자 전원의 일이라 전사 허브에 둔다. 계정 정지·해제와
+        // 연락처 원본은 ADMIN 화면에만 있다. 근거: 3_9_1 §11.1
+        { label: '게스트 계정', tab: 'guest-accounts', dividerBefore: true },
       ],
     },
     {

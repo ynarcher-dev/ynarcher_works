@@ -37,6 +37,18 @@ export interface ParticipantRow {
   master_id: string | null
   user_id: string | null
   login_status: ParticipantLoginStatus
+  /** 이 참여 줄의 접근 기간(2026-09-05 신설). null은 제한 없음. */
+  access_starts_at: string | null
+  access_ends_at: string | null
+  /**
+   * 이 대상에게 게스트 계정이 이미 있는가. 계정의 키가 원장 행이라 명부 행만으로 판정할 수
+   * 있으므로, 담당자가 계정 발급 화면을 확인하러 갈 필요가 없다.
+   */
+  hasAccount: boolean
+  /** 그 계정의 id(재설정 안내 발송 대상). 계정이 없으면 null. */
+  accountId: string | null
+  /** 그 계정의 마지막 접속 시각. 아직 한 번도 없으면 null. */
+  lastLoginAt: string | null
   /** 원장에서 온 대상 이름(기업명 또는 전문가명). 원장이 없으면 계정 이름. */
   targetName: string
   /** 부제(기업은 대표자, 전문가는 소속). */
@@ -71,6 +83,8 @@ interface RawParticipant {
   master_id: string | null
   user_id: string | null
   login_status: ParticipantLoginStatus
+  access_starts_at: string | null
+  access_ends_at: string | null
   user: { name: string | null; email: string | null } | null
 }
 
@@ -83,6 +97,7 @@ interface RawParticipant {
 function participantCols(table: string): string {
   return (
     'id, role, master_table, master_id, user_id, login_status, ' +
+    'access_starts_at, access_ends_at, ' +
     `user:users!${table}_user_id_fkey(name, email)`
   )
 }
@@ -137,12 +152,52 @@ export function useProgramParticipants(programId: string | undefined) {
       const startups = new Map(((startupsRes.data ?? []) as StartupMaster[]).map((s) => [s.id, s]))
       const experts = new Map(((expertsRes.data ?? []) as ExpertMaster[]).map((e) => [e.id, e]))
 
+      // 계정 유무는 명부 행이 아니라 **원장 행**이 답한다(계정의 키가 그것이다). 그래서
+      // 아직 이 사업에 문을 열지 않은 대상도 "계정 있음"으로 뜬다 — 담당자가 신규인지
+      // 기존인지 구분할 필요 없이 `연결` 하나만 누르면 되는 근거가 여기다.
+      const masterIds = [...startupIds, ...expertIds]
+      const accountsRes = masterIds.length
+        ? await supabase
+            .from('users')
+            .select('id, guest_master_table, guest_master_id')
+            .in('guest_master_id', masterIds)
+            .is('deleted_at', null)
+        : { data: [] }
+      const accounts = new Map(
+        ((accountsRes.data ?? []) as {
+          id: string
+          guest_master_table: string | null
+          guest_master_id: string | null
+        }[]).map((u) => [`${u.guest_master_table}:${u.guest_master_id}`, u.id]),
+      )
+
+      const accountIds = [...new Set([...accounts.values()])]
+      // 마지막 접속은 초대 레코드가 갖는다(사업마다 한 건). 계정 단위로 최댓값을 취한다.
+      const usedRes = accountIds.length
+        ? await supabase
+            .from('guest_invitations')
+            .select('app_user_id, used_at')
+            .in('app_user_id', accountIds)
+        : { data: [] }
+      const lastLogin = new Map<string, string>()
+      for (const row of (usedRes.data ?? []) as { app_user_id: string; used_at: string | null }[]) {
+        if (!row.used_at) continue
+        const prev = lastLogin.get(row.app_user_id)
+        if (!prev || prev < row.used_at) lastLogin.set(row.app_user_id, row.used_at)
+      }
+
       return rows.map((r) => {
         const startup = r.master_table === 'startups' && r.master_id ? startups.get(r.master_id) : undefined
         const expert = r.master_table === 'networks' && r.master_id ? experts.get(r.master_id) : undefined
         // 연락처는 원장 화면이 쓰는 자리(email·phone 컬럼)에서만 읽는다. 옛 contact jsonb는
         // 어느 화면도 읽지 않는 레거시라, 그쪽을 보면 명부와 원장이 서로 다른 값을 말한다.
         const master = startup ?? expert
+        const accountId =
+          (r.master_table && r.master_id
+            ? accounts.get(`${r.master_table}:${r.master_id}`)
+            : undefined) ??
+          r.user_id ??
+          null
         return {
           id: r.id,
           role: r.role,
@@ -150,6 +205,11 @@ export function useProgramParticipants(programId: string | undefined) {
           master_id: r.master_id,
           user_id: r.user_id,
           login_status: r.login_status,
+          access_starts_at: r.access_starts_at,
+          access_ends_at: r.access_ends_at,
+          hasAccount: Boolean(accountId),
+          accountId,
+          lastLoginAt: accountId ? (lastLogin.get(accountId) ?? null) : null,
           targetName: master?.name ?? r.user?.name ?? '미지정',
           subtitle: startup?.representative ?? expert?.affiliation ?? '',
           loginName: startup?.representative ?? expert?.name ?? null,
@@ -305,19 +365,45 @@ export function useOpenGuestAccess(programId: string) {
 }
 
 /**
- * 게스트 비밀번호 초기화. 다시 원장의 연락처가 초기 비밀번호가 되고, 다음 로그인 때
- * 새 비밀번호를 정하게 된다(분실 대응).
+ * 비밀번호 **재설정 안내 발송**. 종전의 '초기화'를 대체한다(2026-09-05).
+ *
+ * 담당자가 값을 되돌리는 경로를 두지 않는 이유: 계정이 대상 단위가 되면서 한 계정이 여러
+ * 사업을 열게 되었고, 값을 쥔 사람은 그 게스트가 참여 중인 **다른 팀 사업까지** 들어갈 수
+ * 있다. 링크는 게스트 본인 연락처로만 나가고 호출자 화면에는 아무 값도 오지 않는다.
  */
-export function useResetGuestPassword(programId: string) {
+export function useSendPasswordReset() {
+  return useMutation({
+    mutationFn: async (userId: string): Promise<{ notified: boolean }> => {
+      const { data, error } = await supabase.functions.invoke<{
+        ok?: boolean
+        notified?: boolean
+        message?: string
+      }>('guest-password-reset', { body: { userId } })
+      if (error) throw new Error(data?.message ?? error.message)
+      return { notified: Boolean(data?.notified) }
+    },
+  })
+}
+
+/**
+ * 참여 줄의 접근 기간 설정. 계정이 아니라 줄이 기간을 갖는다 — 계정에 종료일 하나를 달면
+ * 사업이 둘일 때 답이 없기 때문이다(3_9_1 §8).
+ */
+export function useSetAccessWindow(programId: string) {
   const config = useProgramWorkspace()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (participantIds: string[]): Promise<number> => {
-      const { data, error } = await supabase.rpc('reset_program_guest_password', {
-        p_participant_ids: participantIds,
+    mutationFn: async (input: {
+      participantId: string
+      starts: string | null
+      ends: string | null
+    }): Promise<void> => {
+      const { error } = await supabase.rpc('set_participant_access_window', {
+        p_participant_id: input.participantId,
+        p_starts: input.starts,
+        p_ends: input.ends,
       })
       if (error) throw error
-      return (data as number | null) ?? 0
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: [config.key, 'participants', programId] })

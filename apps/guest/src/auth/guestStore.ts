@@ -9,21 +9,39 @@ export interface GuestUser {
 }
 
 /**
- * 세션에 고정된 사업. 로그인에 사용한 사업 코드가 이 값을 정하며, 세션 안에서 바뀌지 않는다 —
- * 다른 사업은 그 사업의 코드로 다시 들어와야 한다(3_9_workspace_guest.md §2).
+ * 세션에 고정된 사업(맥락). **한 세션은 언제나 하나**이며, 바꾸려면 토큰을 다시 받는다
+ * (사이드바 상단 전환기 → guest-auth-context). 2026-09-05 이전에는 로그인에 쓴 사업 코드가
+ * 이 값을 정했고 세션 안에서 바꿀 수 없었다 — 계정이 사업마다 갈려 있었기 때문이다.
+ * 근거: 3_9_1_guest_unified_account.md §7
  */
 export interface GuestProgram {
   id: string
   title: string
   code: string | null
+  /** 이 맥락을 만든 명부 행. 전환 요청의 대상 키다. */
+  participantId?: string | null
+}
+
+/** 전환기 목록의 한 줄. 로그인 응답과 세션 갱신이 같은 모양으로 돌려준다. */
+export interface GuestContextChoice {
+  participantId: string
+  programId: string
+  entityKey: string
+  code: string | null
+  title: string
+  role?: string
+  accessEndsAt?: string | null
 }
 
 interface GuestState {
   status: GuestStatus
   user: GuestUser | null
   program: GuestProgram | null
+  /** 지금 계정이 갈 수 있는 곳 전부. 1개 이하이면 전환기를 세우지 않는다. */
+  contexts: GuestContextChoice[]
   accessToken: string | null
   setSession: (token: string, user: GuestUser, program: GuestProgram | null) => void
+  setContexts: (contexts: GuestContextChoice[]) => void
   setStatus: (status: GuestStatus) => void
   reset: () => void
 }
@@ -35,15 +53,25 @@ export const useGuestStore = create<GuestState>((set) => ({
   status: 'loading',
   user: null,
   program: null,
+  contexts: [],
   accessToken: null,
   setSession: (accessToken, user, program) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ accessToken, user, program }))
     set({ accessToken, user, program, status: 'authenticated' })
   },
+  // 목록은 저장하지 않는다 — 담당자가 문을 닫으면 즉시 바뀌는 값이라, 복원된 옛 목록은
+  // 누를 수 없는 줄을 보여 준다. 앱 구동 때 세션 갱신이 함께 받아 온다.
+  setContexts: (contexts) => set({ contexts }),
   setStatus: (status) => set({ status }),
   reset: () => {
     localStorage.removeItem(STORAGE_KEY)
-    set({ accessToken: null, user: null, program: null, status: 'unauthenticated' })
+    set({
+      accessToken: null,
+      user: null,
+      program: null,
+      contexts: [],
+      status: 'unauthenticated',
+    })
   },
 }))
 

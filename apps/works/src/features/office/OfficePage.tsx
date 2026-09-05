@@ -1,5 +1,6 @@
 import { EmptyState, PageHeader, Spinner } from '@ynarcher/ui'
 import { Navigate, useSearchParams } from 'react-router-dom'
+import { GuestAccountPanel } from '@/features/admin/GuestAccountPanel'
 import { ApprovalWorkspace } from '@/features/approval/ApprovalWorkspace'
 import { ArchiveWorkspace } from '@/features/hub/ArchiveWorkspace'
 import { BoardWorkspace } from '@/features/hub/BoardWorkspace'
@@ -115,6 +116,10 @@ export function OfficePage() {
       {tab === 'minutes' && <MinutesWorkspace initialMinuteId={params.get('minute') ?? undefined} />}
       {/* 지사 정보: ADMIN '지사 관리'가 소유한 지사 원장을 조회 전용 리스트뷰로 노출한다. */}
       {tab === 'branches' && <BranchesPanel />}
+      {/* 게스트 계정: ADMIN 콘솔과 **같은 화면**을 권한만 낮춰 세운다(canSuspend 없음).
+          둘로 나누지 않는 이유는 같은 목록을 두 벌로 그리면 한쪽만 고쳐 어긋나기 때문이며,
+          연락처 마스킹도 화면이 아니라 서버(guest_accounts_list)가 정한다. */}
+      {tab === 'guest-accounts' && <GuestAccountPanel />}
       {/* 거래처 정보: 원장은 MANAGEMENT가 소유하고 여기서는 확인만 한다. 원장을 그대로 읽지 않고
           가려진 뷰(trade_partners_directory)를 읽는다 — 계좌 원본·증빙 서류는 나오지 않는다. */}
       {tab === 'clients' && <OfficePartnersPanel />}

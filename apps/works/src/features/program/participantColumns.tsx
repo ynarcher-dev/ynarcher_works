@@ -138,12 +138,46 @@ export function participantColumns(
       },
     },
     {
+      // 계정 유무는 명부 행이 아니라 원장 행이 답한다(계정의 키가 그것이다). 이 열이 있어야
+      // 담당자가 계정 발급 화면을 확인하러 가지 않는다 — 그래도 버튼은 `연결` 하나뿐이라,
+      // 이 열은 무엇을 눌러야 하는지가 아니라 무슨 일이 일어날지를 알려 준다.
+      key: 'hasAccount',
+      header: '계정',
+      type: 'text',
+      render: (r) => {
+        if (!r.master_id) return '—'
+        if (!r.hasAccount) return <span className="text-gray-500">없음</span>
+        return r.lastLoginAt
+          ? `있음 · ${new Date(r.lastLoginAt).toLocaleDateString('ko-KR')}`
+          : '있음'
+      },
+    },
+    {
       key: 'login_status',
       header: '상태',
       type: 'badge',
       render: (r) => {
         const b = loginBadge(r, programStatus)
         return <Badge tone={b.tone}>{b.label}</Badge>
+      },
+    },
+    {
+      // 접근 기간은 계정이 아니라 이 줄이 갖는다 — 같은 사람이 두 사업에 걸리면 기간이
+      // 서로 다르기 때문이다. 만료되면 이 줄만 게스트 목록에서 사라진다.
+      key: 'access_ends_at',
+      header: '접근 기간',
+      type: 'period',
+      render: (r) => {
+        if (!r.master_id) return '—'
+        if (!r.access_ends_at) return <span className="text-gray-500">제한 없음</span>
+        const end = new Date(r.access_ends_at)
+        const expired = end.getTime() <= Date.now()
+        return (
+          <span className={expired ? 'text-danger' : undefined}>
+            {`~ ${end.toLocaleDateString('ko-KR')}`}
+            {expired ? ' (만료)' : ''}
+          </span>
+        )
       },
     },
   ]

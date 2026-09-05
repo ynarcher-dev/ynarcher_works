@@ -62,7 +62,7 @@ export function AdminPage() {
       {tab === 'rooms' && <MeetingRoomAdminPanel />}
       {tab === 'approval-forms' && <ApprovalFormAdminPanel />}
       {tab === 'modules' && <ModuleAdminPanel />}
-      {tab === 'guest-accounts' && <GuestAccountPanel />}
+      {tab === 'guest-accounts' && <GuestAccountPanel canSuspend />}
       {tagConfig && <TagAdminPanel config={tagConfig} />}
       {tab === 'sensitive' && <SensitivePanel />}
       {tab === 'merge' && <AdminMergePanel />}

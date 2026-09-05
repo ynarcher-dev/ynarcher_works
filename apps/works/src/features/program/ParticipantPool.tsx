@@ -20,9 +20,10 @@ import {
   useCloseGuestAccess,
   useOpenGuestAccess,
   useProgramParticipants,
-  useResetGuestPassword,
+  useSendPasswordReset,
   type ParticipantRow,
 } from '@/features/program/participantHooks'
+import { AccessWindowModal } from '@/features/program/AccessWindowModal'
 import { useProgramWorkspace } from '@/features/program/workspace'
 
 /** 한 페이지에 세우는 행 수 — 페이징 훅과 표 페이저가 같은 값을 봐야 한다. */
@@ -61,11 +62,12 @@ export function ParticipantPool({ program }: { program: Program }) {
   const [roles, setRoles] = useState<string[]>([])
   const [selected, setSelected] = useState<string[]>([])
   const [addOpen, setAddOpen] = useState(false)
+  const [windowTarget, setWindowTarget] = useState<ParticipantRow | null>(null)
 
   const { data, isLoading, isError } = useProgramParticipants(program.id)
   const open = useOpenGuestAccess(program.id)
   const close = useCloseGuestAccess(program.id)
-  const resetPw = useResetGuestPassword(program.id)
+  const resetPw = useSendPasswordReset()
 
   const rows = useMemo(() => data ?? [], [data])
   const isManager = useMemo(
@@ -129,14 +131,30 @@ export function ParticipantPool({ program }: { program: Program }) {
     })
   }
 
+  /**
+   * 비밀번호 재설정 **안내 발송**. 담당자가 값을 되돌리는 경로는 없다 — 계정 하나가 여러
+   * 사업을 열게 되어, 값을 쥔 사람은 그 게스트의 다른 팀 사업까지 들어갈 수 있다.
+   * 대상은 계정이라 명부 행이 아니라 계정 id를 보낸다(같은 계정을 두 번 보내지 않는다).
+   */
   const runResetPassword = () => {
-    resetPw.mutate(selected, {
-      onSuccess: (n) => {
-        setSelected([])
-        toast.show(`비밀번호 ${n}건을 초기화했습니다.`, 'success')
-      },
-      onError: (e: unknown) =>
-        toast.show(e instanceof Error ? e.message : '초기화에 실패했습니다.', 'danger'),
+    const accountIds = [
+      ...new Set(
+        rows.filter((r) => selected.includes(r.id) && r.accountId).map((r) => r.accountId!),
+      ),
+    ]
+    if (accountIds.length === 0) {
+      toast.show('계정이 있는 대상을 선택하세요.', 'warning')
+      return
+    }
+    void Promise.allSettled(accountIds.map((id) => resetPw.mutateAsync(id))).then((results) => {
+      setSelected([])
+      const sent = results.filter((r) => r.status === 'fulfilled').length
+      const failed = results.length - sent
+      if (failed > 0) {
+        toast.show(`재설정 안내 ${sent}건 발송 · ${failed}건 실패`, 'warning')
+      } else {
+        toast.show(`재설정 안내 ${sent}건을 본인 연락처로 보냈습니다.`, 'success')
+      }
     })
   }
 
@@ -172,19 +190,30 @@ export function ParticipantPool({ program }: { program: Program }) {
               <div className="flex items-center gap-2">
                 {canOpenDoor && (
                   <>
+                    {/* 버튼은 하나다 — 계정이 있으면 이 사업을 그 계정에 붙이고, 없으면
+                        만들어 붙인다. 담당자가 신규·기존을 구분할 필요가 없다. */}
                     <Button
                       variant="secondary"
                       disabled={selected.length === 0 || open.isPending}
                       onClick={runOpen}
                     >
-                      로그인 허용
+                      연결
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      disabled={selected.length !== 1}
+                      onClick={() =>
+                        setWindowTarget(rows.find((r) => r.id === selected[0]) ?? null)
+                      }
+                    >
+                      접근 기간
                     </Button>
                     <Button
                       variant="ghost"
                       disabled={selected.length === 0 || resetPw.isPending}
                       onClick={runResetPassword}
                     >
-                      비밀번호 초기화
+                      재설정 안내 보내기
                     </Button>
                     <Button
                       variant="ghost"
@@ -222,6 +251,11 @@ export function ParticipantPool({ program }: { program: Program }) {
       </Card>
 
       <ParticipantAddModal open={addOpen} onClose={() => setAddOpen(false)} programId={program.id} />
+      <AccessWindowModal
+        programId={program.id}
+        row={windowTarget}
+        onClose={() => setWindowTarget(null)}
+      />
     </>
   )
 }
