@@ -20,17 +20,18 @@ interface Props {
 /**
  * 역량 밴드 입력(조회의 `StartupCapabilitySection`과 짝).
  *
- * 카드 넷을 조회 화면과 같은 **2×2**로 세운다. 한때 입력만 1열로 쌓았고 근거는 "읽을 때는
- * 제품과 지식재산을 나란히 견주지만 적을 때는 한 칸씩 채운다"였는데, 그 결과 3행짜리
- * 텍스트영역이 화면 절반을 넘게 늘어나 한 줄이 어디서 끝나는지 눈이 따라가지 못했다 —
- * 폼에서 폭은 미덕이 아니라 비용이다. 게다가 편집과 조회의 카드 배열이 다르면 방금 적은 값이
- * 어느 카드로 가는지 화면이 답하지 못한다.
+ * 카드 넷을 조회 화면과 같은 **1열**로 세운다(2026-09-06 개정, 종전 2×2). 한때 조회만 2열이고
+ * 입력만 1열이던 시절이 있었는데 그때 문제는 열 수가 아니라 **둘이 달랐다**는 것이었다 —
+ * 편집과 조회의 카드 배열이 다르면 방금 적은 값이 어느 카드로 가는지 화면이 답하지 못한다.
+ * 그래서 열 수를 맞추는 규칙은 그대로 두고, 맞추는 값만 1열로 옮겼다. 폼에서는 이 편이 더
+ * 낫기도 하다 — 절반 폭에서 3행짜리 텍스트영역은 한 줄이 어디서 끝나는지 눈이 따라가기
+ * 어려웠고, 전폭에서는 카드 안의 2열 격자가 그 폭을 나눠 받는다.
  */
 export function StartupCapabilityFields({ register, control, capabilities, setCapabilities, ip, setIp }: Props) {
   return (
     <>
       <SectionHeading title="역량" />
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="space-y-4">
         <PanelCard title="비즈니스">
           <StartupBusinessFields register={register} />
         </PanelCard>

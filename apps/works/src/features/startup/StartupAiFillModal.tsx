@@ -1,10 +1,10 @@
-import { Banner, Button, CardHeading, Checkbox, Modal, Spinner, cardText } from '@ynarcher/ui'
+import { Banner, Button, CardHeading, Modal, Spinner, cardText } from '@ynarcher/ui'
 import { useState } from 'react'
 import type { EntityRow } from '@/features/master/entityHooks'
 import { formatBytes } from '@/features/networks/materialHooks'
 import { AI_FILL_LIMITS, useAiFill, type AiFillResult, type AiSource } from '@/features/startup/startupAiFill'
-import { defaultCardSelection, type AiCardKey } from '@/features/startup/startupAiCards'
-import { AiCardList, AiFileList } from '@/features/startup/StartupAiFillPicker'
+import { AI_CARDS, defaultCardSelection, type AiCardKey } from '@/features/startup/startupAiCards'
+import { AiBlockedList, AiCardList, AiFileList } from '@/features/startup/StartupAiFillPicker'
 
 /**
  * 'AI 작성하기' 모달 — 읽을 자료와 작성할 카드를 고르고 초안을 받는다.
@@ -38,25 +38,31 @@ export function StartupAiFillModal({
 }) {
   const fill = useAiFill()
 
+  const readable = sources.filter((s) => s.readable)
+  const blocked = sources.filter((s) => !s.readable)
+
   // 기본 선택: 읽을 수 있는 자료 전부, 빈 카드 전부. 담당자가 아무것도 만지지 않고 실행해도
   // 이미 적혀 있는 값은 그대로 남는다 — 기본값이 지키는 쪽에 서야 안전장치가 된다.
-  const [picked, setPicked] = useState<string[]>(() => sources.filter((s) => s.readable).map((s) => s.key))
+  const [picked, setPicked] = useState<string[]>(() => readable.map((s) => s.key))
   const [cards, setCards] = useState<AiCardKey[]>(() => defaultCardSelection(snapshot))
-  const [agreed, setAgreed] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const chosen = sources.filter((s) => picked.includes(s.key))
+  const chosen = readable.filter((s) => picked.includes(s.key))
   const totalBytes = chosen.reduce((sum, s) => sum + Number(s.bytes ?? 0), 0)
   const tooLarge = totalBytes > AI_FILL_LIMITS.maxTotalBytes
   // 합계와 별개로 한 건이 큰 경우를 따로 본다 — 합계만 말하면 어느 자료를 빼야 하는지 모른다.
   const oversized = chosen.filter((s) => Number(s.bytes ?? 0) > AI_FILL_LIMITS.maxSingleBytes)
   const busy = fill.isPending
-  const ready = chosen.length > 0 && cards.length > 0 && agreed && !tooLarge && oversized.length === 0 && !busy
+  const ready = chosen.length > 0 && cards.length > 0 && !tooLarge && oversized.length === 0 && !busy
 
   const togglePick = (key: string) =>
     setPicked((prev) => (prev.includes(key) ? prev.filter((v) => v !== key) : [...prev, key]))
+  const toggleAllPicks = () =>
+    setPicked((prev) => (prev.length === readable.length ? [] : readable.map((s) => s.key)))
   const toggleCard = (key: AiCardKey) =>
     setCards((prev) => (prev.includes(key) ? prev.filter((v) => v !== key) : [...prev, key]))
+  const toggleAllCards = () =>
+    setCards((prev) => (prev.length === AI_CARDS.length ? [] : AI_CARDS.map((c) => c.key)))
 
   const run = async () => {
     setError(null)
@@ -74,9 +80,9 @@ export function StartupAiFillModal({
       onClose={busy ? () => undefined : onClose}
       // 쓰던 것이 있는 모달이라 딤 클릭으로 닫지 않는다(고른 카드가 클릭 한 번에 사라지면 안 된다).
       dismissible={false}
-      size="lg"
+      size="2xl"
       title="AI 작성하기"
-      help="첨부한 자료(파일·링크)를 근거로 선택한 카드의 초안을 만듭니다. 결과는 편집 화면에 채워지며, 저장 전까지 원장은 바뀌지 않습니다. 문서를 눈으로 보듯 이해하는 것은 PDF와 이미지뿐이고, 나머지 형식은 글자만 읽힙니다."
+      help="첨부한 자료(파일·링크)를 근거로 선택한 카드의 초안을 만듭니다. 선택한 자료는 외부 AI(Google Gemini)로 전송되며 반출 기록이 남습니다. 결과는 편집 화면에 채워지고 저장 전까지 원장은 바뀌지 않습니다. 문서를 눈으로 보듯 이해하는 것은 PDF와 이미지뿐이고, 나머지 형식은 글자만 읽힙니다."
       footer={
         <div className="flex items-center justify-end gap-2">
           <Button variant="ghost" onClick={onClose} disabled={busy}>
@@ -95,49 +101,52 @@ export function StartupAiFillModal({
           <p className={cardText.meta}>자료 크기에 따라 1~2분이 걸릴 수 있습니다.</p>
         </div>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-4">
           {error && <Banner tone="danger">{error}</Banner>}
 
-          <section>
-            <CardHeading level="subhead">읽을 자료</CardHeading>
-            <div className="mt-2">
-              <AiFileList sources={sources} selected={picked} onToggle={togglePick} />
-            </div>
-            <p className={`mt-2 ${cardText.meta}`}>
-              선택 {chosen.length}개 · 합계 {formatBytes(totalBytes)}
-            </p>
-            {/* 막힌 이유는 접지 않는다 — 왜 실행 버튼이 안 눌리는지를 이 줄이 답한다. */}
-            {tooLarge && (
-              <p className="mt-1 text-caption text-danger">
-                합계가 {formatBytes(AI_FILL_LIMITS.maxTotalBytes)}를 넘습니다. 자료를 줄여 주세요.
-              </p>
-            )}
-            {oversized.length > 0 && (
-              <p className="mt-1 text-caption text-danger">
-                한 건이 {formatBytes(AI_FILL_LIMITS.maxSingleBytes)}를 넘습니다: {oversized.map((s) => s.name).join(' · ')}
-              </p>
-            )}
-          </section>
+          {/* 두 목록은 순서대로 거치는 단계가 아니라 함께 보며 맞추는 짝이라 좌우로 세운다
+              (결재선 설정과 같은 구성). 좁은 화면에서는 자료가 먼저 온다 — 무엇을 근거로
+              삼는지가 정해져야 어느 카드를 채울 수 있을지 가늠이 선다. */}
+          <div className="grid grid-cols-1 gap-5 lg:min-h-[24rem] lg:grid-cols-2">
+            <section className="flex min-h-0 flex-col gap-2">
+              <CardHeading level="subhead">읽을 자료</CardHeading>
+              <AiFileList
+                sources={readable}
+                selected={picked}
+                onToggle={togglePick}
+                onToggleAll={toggleAllPicks}
+              />
+              <p className={cardText.meta}>합계 {formatBytes(totalBytes)}</p>
+              {/* 막힌 이유는 접지 않는다 — 왜 실행 버튼이 안 눌리는지를 이 줄이 답한다. */}
+              {tooLarge && (
+                <p className="text-caption text-danger">
+                  합계가 {formatBytes(AI_FILL_LIMITS.maxTotalBytes)}를 넘습니다. 자료를 줄여 주세요.
+                </p>
+              )}
+              {oversized.length > 0 && (
+                <p className="text-caption text-danger">
+                  한 건이 {formatBytes(AI_FILL_LIMITS.maxSingleBytes)}를 넘습니다:{' '}
+                  {oversized.map((s) => s.name).join(' · ')}
+                </p>
+              )}
+              <AiBlockedList sources={blocked} />
+            </section>
 
-          <section>
-            <CardHeading
-              level="subhead"
-              help="체크를 해제한 카드는 AI가 건드리지 않고 지금 적혀 있는 값을 그대로 둡니다. 이미 값이 있는 카드는 기본으로 꺼져 있습니다."
-            >
-              작성할 카드
-            </CardHeading>
-            <div className="mt-2">
-              <AiCardList record={snapshot} selected={cards} onToggle={toggleCard} />
-            </div>
-          </section>
-
-          {/* 자료가 외부로 나간다는 파급 고지는 접지 않는다. 동의는 저장하지 않고 매번 새로
-              받는다 — 기업의 기밀 자료라 '한 번 켜 두면 계속'이어서는 안 된다. */}
-          <Checkbox
-            checked={agreed}
-            onChange={() => setAgreed((v) => !v)}
-            label="선택한 자료가 외부 AI(Google Gemini)로 전송되는 것에 동의합니다."
-          />
+            <section className="flex min-h-0 flex-col gap-2">
+              <CardHeading
+                level="subhead"
+                help="체크를 해제한 카드는 AI가 건드리지 않고 지금 적혀 있는 값을 그대로 둡니다. 오른쪽 Y·N은 지금 그 카드에 값이 있는지를 뜻하며, 값이 있는 카드는 기본으로 꺼져 있습니다."
+              >
+                작성할 카드
+              </CardHeading>
+              <AiCardList
+                record={snapshot}
+                selected={cards}
+                onToggle={toggleCard}
+                onToggleAll={toggleAllCards}
+              />
+            </section>
+          </div>
         </div>
       )}
     </Modal>

@@ -109,8 +109,11 @@ export function StartupManagerCard({
           }}
         />
       ) : (
-        <p className="text-body text-gray-600">
-          공동관리 — STARTUP 쓰기 권한자 누구나 수정할 수 있습니다.
+        // 담당자가 비어 있다는 것은 이 기업을 아무나 고칠 수 있다는 뜻이다. 그 사실은 상태가
+        // 아니라 **경고**라 회색으로 물러나지 않는다 — 물러나면 "지정된 사람이 없다"는 중립적
+        // 사실로 읽히고, 정작 다음 행동(딜메이커를 지정한다)이 지시되지 않는다.
+        <p className="text-body text-danger">
+          ※ 현재 이 기업의 정보는 딜메이커가 정해지지 않아 누구나 수정할 수 있습니다.
         </p>
       )}
     </PanelCard>
