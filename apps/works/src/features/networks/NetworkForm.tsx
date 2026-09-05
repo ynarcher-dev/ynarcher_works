@@ -232,12 +232,16 @@ export function NetworkForm({
                   {...register('name', { required: '이름은 필수입니다.' })}
                 />
               </Field>
-              <Field label="구분" required error={errors.category?.message}>
-                <Select
-                  invalid={Boolean(errors.category)}
-                  {...register('category', { required: '구분은 필수입니다.' })}
-                >
-                  <option value="">선택</option>
+              {/*
+                구분은 필수가 아니고 기본값이 '미지정'이다(2026-09-05). 고르지 않으면 빈 값이
+                저장되고, 그 행은 목록 구분 필터의 '미지정'으로 다시 찾아 채운다 — 저장되는 것은
+                여전히 null이며 '미지정'이라는 구분이 생긴 것이 아니다(config.ts의 CATEGORY_UNSET).
+                첫 줄을 '선택'이 아니라 '미지정'으로 적는 이유가 여기 있다: 아직 안 고른 상태가
+                아니라 **고르지 않기로 한 상태**도 답이 되므로, 그 자리는 빈 자리가 아니라 값이다.
+              */}
+              <Field label="구분" error={errors.category?.message}>
+                <Select invalid={Boolean(errors.category)} {...register('category')}>
+                  <option value="">미지정</option>
                   {CATEGORY_OPTIONS.map((o) => (
                     <option key={o.key} value={o.key}>
                       {o.label}

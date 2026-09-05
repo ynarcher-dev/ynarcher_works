@@ -1,6 +1,7 @@
 import { Button } from '@ynarcher/ui'
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { DetailPanelCard } from '@/features/networks/DetailPanelCard'
+import { MaterialBrowseModal } from '@/features/networks/MaterialBrowseModal'
 import { MaterialDropZone } from '@/features/networks/MaterialDropZone'
 import { MaterialList } from '@/features/networks/MaterialList'
 import { useDeleteMaterial, useMaterials, useUploadMaterial } from '@/features/networks/materialHooks'
@@ -14,6 +15,10 @@ import { useDeleteMaterial, useMaterials, useUploadMaterial } from '@/features/n
  *
  * `readOnly`(조회 모드)면 업로드/삭제 없이 목록·다운로드만 노출한다.
  * 업로드/삭제는 수정 모드(폼 내부 자료 관리 카드)에서만 가능하다.
+ *
+ * 헤더 '전체보기'는 같은 목록을 표(검색·번호줄 페이저 포함)로 펼치는 모달을 연다 — 이 패널은
+ * 한 쪽에 다섯 건만 서는 곁다리 자리라, 자료가 쌓이면 등록일·형식을 견주며 찾을 자리가 따로
+ * 필요하다. 두 자리가 같은 `list`를 보므로 건수가 어긋나지 않는다.
  */
 export function MaterialPanel({
   targetType,
@@ -38,6 +43,7 @@ export function MaterialPanel({
 }) {
   // 드롭존이 소유한 파일 입력을 헤더 '업로드' 버튼에서도 열기 위한 핸들.
   const openPicker = useRef<(() => void) | null>(null)
+  const [browsing, setBrowsing] = useState(false)
   const { data: materials, isLoading } = useMaterials(targetType, targetId, moduleId)
   const upload = useUploadMaterial(targetType, targetId, moduleId)
   const remove = useDeleteMaterial(targetType, targetId)
@@ -54,11 +60,17 @@ export function MaterialPanel({
       title={title}
       count={list.length}
       action={
-        readOnly ? undefined : (
-          <Button variant="secondary" disabled={busy} onClick={() => openPicker.current?.()}>
-            {busy ? '업로드 중…' : '업로드'}
+        // 전체보기는 조회 모드에서도 선다 — 읽기만 하는 자리이고, 목록이 길수록 더 필요하다.
+        <div className="flex items-center gap-1.5">
+          <Button variant="ghost" onClick={() => setBrowsing(true)}>
+            전체보기
           </Button>
-        )
+          {!readOnly && (
+            <Button variant="secondary" disabled={busy} onClick={() => openPicker.current?.()}>
+              {busy ? '업로드 중…' : '업로드'}
+            </Button>
+          )}
+        </div>
       }
     >
       {!readOnly && (
@@ -81,6 +93,17 @@ export function MaterialPanel({
           deletingId={remove.isPending ? remove.variables : undefined}
         />
       </div>
+
+      {browsing && (
+        <MaterialBrowseModal
+          title={title}
+          materials={list}
+          loading={isLoading}
+          onDelete={readOnly ? undefined : (id) => remove.mutate(id)}
+          deletingId={remove.isPending ? remove.variables : undefined}
+          onClose={() => setBrowsing(false)}
+        />
+      )}
     </DetailPanelCard>
   )
 }
