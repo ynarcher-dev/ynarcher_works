@@ -45,16 +45,3 @@ export function defaultCountryId(
 ): string | undefined {
   return options?.domestic[0]?.id
 }
-
-/**
- * 자국이 속한 권역 id 집합. 권역 태그에서 '국내'를 이름으로 찾지 않는 이유는 이름이
- * ADMIN에서 바뀔 수 있는 값이기 때문이다 — 국내/해외를 아는 것은 국가 원장의
- * `is_domestic`이고, 권역은 그 국가가 가리키는 부모일 뿐이다.
- */
-export function domesticRegionIds(
-  options: { domestic: CountryTag[] } | undefined,
-): Set<string> {
-  return new Set(
-    (options?.domestic ?? []).map((c) => c.region_tag_id).filter((id): id is string => Boolean(id)),
-  )
-}

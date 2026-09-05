@@ -1,17 +1,15 @@
-import { useMemo } from 'react'
-import { CircleDashed, Flag, Globe2, Layers, MapPin } from 'lucide-react'
+import { CircleDashed, Layers, MapPin } from 'lucide-react'
 import { Card, Skeleton, SummaryTile, type SummaryTileTone } from '@ynarcher/ui'
 import { useTags } from '@/features/admin/hooks'
 import { REGION_TAG_TABLE } from '@/features/networks/config'
-import { domesticRegionIds, useCountryOptions } from '@/features/networks/countryOptions'
 import { FACET_UNSET, useNetworkFacetCounts } from '@/features/networks/facetHooks'
 import type { NetworkFilterState, NetworkSearchScope } from '@/features/networks/filters'
 import type { NetworkListScope } from '@/features/networks/hooks'
 import { toggleAxisValue } from '@/lib/filterAxis'
 
-/** 권역 타일 색 — 국내(blue)·해외(cyan)와 겹치지 않는 7색을 권역 수만큼 둔다. */
+/** 권역 타일 색. 권역 수만큼 돌려 쓰며 순서가 곧 색이라 같은 칸은 늘 같은 색이다. */
 const REGION_TONES: SummaryTileTone[] = [
-  'purple', 'amber', 'peach', 'rose', 'lime', 'mint', 'orchid',
+  'blue', 'purple', 'cyan', 'amber', 'peach', 'rose', 'lime', 'mint', 'orchid',
 ]
 
 interface Props {
@@ -34,12 +32,13 @@ interface Props {
  * 부분집합이라 함께 걷었다 — 같은 물음을 두 컨트롤이 답하면 엇갈리게 걸 수 있고(지역=국내 +
  * 권역=중동) 그때 결과가 빈 이유가 화면 어디에도 보이지 않는다.
  *
- * 타일은 넓은 것부터 좁은 것으로 내려간다: 전체 → 국내 · 해외 → 권역 7종. '해외'는 별도
- * 축이 아니라 국내를 뺀 권역 전부를 한 번에 거는 단축키다(누르면 그 권역들이 함께 켜진다 —
- * 무엇이 걸렸는지 타일이 그대로 말한다).
+ * **타일은 전체 하나와 권역들뿐이다.** 국내·해외를 묶는 중간 칸을 두지 않는 이유는 국내가
+ * 이미 권역 한 줄이어서다 — 한 축에 '묶음'과 '낱개'가 섞여 서면 같은 줄의 칸들이 서로 다른
+ * 크기의 것을 세게 되고, 무엇을 눌러야 무엇이 걸리는지가 칸마다 달라진다.
  *
  * 권역 순서는 건수가 아니라 원장의 노출순위(sort_order)를 따른다. 카드가 상시로 서게 되면
  * 건수순은 필터를 만질 때마다 칸이 자리를 바꿔 같은 곳을 두 번 누르지 못하게 한다.
+ * 국내가 맨 앞에 서는 것도 그 순위(0)가 정한 것이지 화면이 특별 취급한 결과가 아니다.
  */
 export function RegionFilteredSummary({
   scope,
@@ -50,38 +49,12 @@ export function RegionFilteredSummary({
 }: Props) {
   const { data: facets, isPending } = useNetworkFacetCounts(scope, keyword, filters, searchScope)
   const { data: regionTags } = useTags(REGION_TAG_TABLE)
-  const { data: countries } = useCountryOptions()
 
-  const { domesticIds, overseasTags } = useMemo(() => {
-    const domestic = domesticRegionIds(countries)
-    return {
-      domesticIds: domestic,
-      overseasTags: (regionTags ?? []).filter((t) => !domestic.has(t.id)),
-    }
-  }, [countries, regionTags])
-
-  if (isPending || !facets || !regionTags || !countries) {
+  if (isPending || !facets || !regionTags) {
     return <Card title="권역별 현황"><Skeleton className="h-[7.5rem] rounded-radius-lg" /></Card>
   }
 
-  const countOf = (ids: Iterable<string>) => {
-    let sum = 0
-    for (const id of ids) sum += facets.region.get(id) ?? 0
-    return sum
-  }
-  const overseasIds = overseasTags.map((t) => t.id)
   const selected = new Set(filters.regionIds)
-  // '해외'는 국내를 뺀 권역이 빠짐없이 걸려 있을 때만 켜진 것으로 본다 — 그중 하나라도
-  // 빠져 있으면 걸린 조건은 '해외'가 아니라 그 권역들이다.
-  const overseasOn =
-    overseasIds.length > 0 &&
-    overseasIds.every((id) => selected.has(id)) &&
-    ![...domesticIds].some((id) => selected.has(id))
-  const domesticOn =
-    domesticIds.size > 0 &&
-    [...domesticIds].every((id) => selected.has(id)) &&
-    !overseasIds.some((id) => selected.has(id))
-
   // 국가를 아직 모르는 옛 행. 0이면 세우지 않는다 — 누를 조건이 없는 칸이라, 남아 있다는
   // 사실을 말할 때만 뜻이 선다(신규 등록은 국가가 필수다).
   const unset = facets.region.get(FACET_UNSET) ?? 0
@@ -91,7 +64,7 @@ export function RegionFilteredSummary({
       <section aria-label="필터가 반영된 권역별 현황" className="grid grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-3">
         <SummaryTile
           title="전체"
-          eyebrow="전체 지역"
+          eyebrow="전체 권역"
           value={facets.regionTotal}
           unit="건"
           tone="primary"
@@ -100,29 +73,7 @@ export function RegionFilteredSummary({
           selected={filters.regionIds.length === 0}
         />
 
-        <SummaryTile
-          title="국내"
-          eyebrow="지역"
-          value={countOf(domesticIds)}
-          unit="건"
-          tone="blue"
-          icon={<Flag aria-hidden className="size-[18px]" strokeWidth={1.8} />}
-          onClick={() => onChangeRegions(domesticOn ? [] : [...domesticIds])}
-          selected={domesticOn}
-        />
-
-        <SummaryTile
-          title="해외"
-          eyebrow="지역"
-          value={countOf(overseasIds)}
-          unit="건"
-          tone="cyan"
-          icon={<Globe2 aria-hidden className="size-[18px]" strokeWidth={1.8} />}
-          onClick={() => onChangeRegions(overseasOn ? [] : overseasIds)}
-          selected={overseasOn}
-        />
-
-        {overseasTags.map((tag, index) => (
+        {regionTags.map((tag, index) => (
           <SummaryTile
             key={tag.id}
             title={tag.name}
