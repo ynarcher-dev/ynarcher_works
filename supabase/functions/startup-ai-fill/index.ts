@@ -31,8 +31,8 @@ import { deleteFile, type UploadedFile } from './filesApi.ts'
 import { ASSEMBLY_BUDGET_MS } from './limits.ts'
 import { readLink } from './linkRead.ts'
 import { buildParts } from './parts.ts'
+import { generateDraft } from './generate.ts'
 import { buildPrompt } from './prompts.ts'
-import { buildResponseSchema } from './schema.ts'
 import {
   resolveAttachments,
   resolvePendingLinks,
@@ -41,7 +41,7 @@ import {
   type AttachmentRow,
   type ResolvedSource,
 } from './sources.ts'
-import { normalizeEnvelope, parseJson } from './validate.ts'
+import { parseJson } from './validate.ts'
 
 const BUCKET = 'attachments'
 /** 첨부 대상 다형 키(스타트업 자료는 한 곳에 모인다 — StartupDetailForm의 MATERIAL_TARGET_TYPE). */
@@ -235,46 +235,17 @@ Deno.serve(
       }
       parts.push({ text: buildPrompt(cards, companyName) })
 
-      const url =
-        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${apiKey}`
-      const payload = JSON.stringify({
-        contents: [{ parts }],
-        generationConfig: {
-          // 사실을 옮기는 작업이라 온도를 낮게 둔다(같은 자료에서 같은 답이 나와야 한다).
-          temperature: 0.2,
-          responseMimeType: 'application/json',
-          responseSchema: buildResponseSchema(cards),
-        },
-      })
-
-      // 파싱 실패만 1회 재시도한다. 모델 오류(5xx)는 같은 요청을 다시 보내도 같은 답이라 즉시 502.
-      let envelope: ReturnType<typeof normalizeEnvelope> | null = null
-      for (let attempt = 0; attempt < 2 && !envelope; attempt += 1) {
-        const resp = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: controller.signal,
-          body: payload,
-        })
-        if (!resp.ok) {
-          const detail = await resp.text().catch(() => '')
-          console.error('[startup-ai-fill] gemini 오류', resp.status, detail.slice(0, 500))
-          return jsonResponse({ error: 'draft_failed', message: 'AI 작성에 실패했습니다.' }, 502)
-        }
-        const data = (await resp.json().catch(() => ({}))) as {
-          candidates?: { content?: { parts?: { text?: string }[] } }[]
-        }
-        const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? ''
-        const parsed = parseJson(text)
-        if (parsed) envelope = normalizeEnvelope(parsed, cards)
-        else console.error('[startup-ai-fill] 파싱 실패', attempt, text.slice(0, 500))
-      }
-      if (!envelope) {
-        return jsonResponse({ error: 'draft_failed', message: 'AI 응답을 해석하지 못했습니다.' }, 502)
+      const result = await generateDraft({ apiKey, model, parts, cards, signal: controller.signal })
+      if ('failure' in result) {
+        // 사유를 그대로 올려 보낸다. 못 읽은 자료도 함께 보낸다 — 실패한 이유가 그것일 수 있다.
+        return jsonResponse(
+          { error: 'draft_failed', message: result.failure.message, skippedSources: notices },
+          502,
+        )
       }
 
       return jsonResponse({
-        ...envelope,
+        ...result.envelope,
         // 못 읽었거나 일부만 읽은 자료는 결과와 같은 자리에서 알린다 — 화면이 이 줄을 안내에 그대로 세운다.
         skippedSources: notices,
         model,
