@@ -1,12 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { Badge, Banner, Card, EmptyState, InfoField, InfoGrid, Spinner } from '@ynarcher/ui'
 import { guestAuth, type GuestMe } from '@/auth/guestAuthService'
+import { PERSONA_LABEL } from '@/auth/guestStore'
 import { PasswordChangeCard } from '@/pages/PasswordChangeCard'
-import {
-  PROGRAM_STATUS_LABEL,
-  PROGRAM_STATUS_TONE,
-  participantRoleLabels,
-} from '@/features/programMeta'
+import { PROGRAM_STATUS_LABEL, PROGRAM_STATUS_TONE } from '@/features/programMeta'
 import { formatDate } from '@/lib/format'
 
 /**
@@ -46,7 +43,10 @@ export function MyPage() {
         <InfoGrid columns={2}>
           <InfoField label="이름" value={me.user.name} />
           <InfoField label="이메일" value={me.user.email} />
-          <InfoField label="참여 구분" value={participantRoleLabels(me.participation.roles)} />
+          <InfoField
+            label="참여 구분"
+            value={me.participation.persona ? PERSONA_LABEL[me.participation.persona] : '—'}
+          />
           {me.company && <InfoField label="소속 기업" value={me.company.name} />}
         </InfoGrid>
       </Card>

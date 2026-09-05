@@ -55,7 +55,7 @@ AC 사업 상세와 **완전히 동일한 화면**입니다. 좌측 2/3에 기�
 
 ## 2. 데이터 구조
 
-원장은 AC와 물리적으로 분리된 `ma_*` 테이블 세트를 사용합니다. 스키마 형태는 AC와 동일하며 enum은 AC가 쓰는 `public` enum(`program_status`, `module_type`, `module_status`, `module_visibility`, `participation_mode`, `program_manager_role`, `program_department_kind`, `program_participant_role`, `activity_visibility`)을 그대로 재사용합니다.
+원장은 AC와 물리적으로 분리된 `ma_*` 테이블 세트를 사용합니다. 스키마 형태는 AC와 동일하며 enum은 AC가 쓰는 `public` enum(`program_status`, `module_type`, `module_status`, `module_visibility`, `participation_mode`, `program_manager_role`, `program_department_kind`, `activity_visibility`)을 그대로 재사용합니다.
 
 | AC 원장 | M&A 원장 |
 | :--- | :--- |

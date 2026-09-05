@@ -53,7 +53,6 @@ export interface GuestParticipation {
   participant_id: string
   program_id: string
   entity_key: ProgramEntityKey
-  role: string
   master_table: string | null
   master_id: string | null
   access_ends_at: string | null
@@ -150,7 +149,7 @@ export async function loadParticipations(
   const now = Date.now()
   const { data } = await db
     .from('program_participants')
-    .select('id, program_id, entity_key, role, master_table, master_id, access_starts_at, access_ends_at')
+    .select('id, program_id, entity_key, master_table, master_id, access_starts_at, access_ends_at')
     .eq('user_id', userId)
     .in('login_status', OPEN_STATUSES)
 
@@ -160,7 +159,6 @@ export async function loadParticipations(
     id: string
     program_id: string
     entity_key: string
-    role: string
     master_table: string | null
     master_id: string | null
     access_starts_at: string | null
@@ -205,7 +203,6 @@ export async function loadParticipations(
       participant_id: r.id,
       program_id: r.program_id,
       entity_key: r.entity_key as ProgramEntityKey,
-      role: r.role,
       master_table: r.master_table,
       master_id: r.master_id,
       access_ends_at: r.access_ends_at,
@@ -272,7 +269,6 @@ export interface GuestSessionPayload {
     entity_key: string
     code: string | null
     title: string
-    role: string
     /** 이 맥락의 자격 — startups(참가기업) | networks(참가전문가). 화면을 가르는 축이다. */
     persona: string | null
     access_ends_at: string | null
@@ -330,7 +326,6 @@ export async function issueSession(
       context_id: participation.program_id,
       // 배포 유예용 호환 클레임. 새 판정 함수는 context_*를 먼저 본다.
       program_id: participation.program_id,
-      program_role: participation.role,
       iat: nowSec,
       exp: nowSec + SESSION_TTL_SEC,
     },
@@ -352,7 +347,6 @@ export async function issueSession(
       entity_key: participation.entity_key,
       code: participation.code,
       title: participation.title,
-      role: participation.role,
       persona: participation.master_table,
       access_ends_at: participation.access_ends_at,
     },
@@ -413,7 +407,6 @@ export function toChoice(p: GuestParticipation) {
     entityKey: p.entity_key,
     code: p.code,
     title: p.title,
-    role: p.role,
     persona: p.master_table,
     accessEndsAt: p.access_ends_at,
   }

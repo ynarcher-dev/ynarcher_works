@@ -44,7 +44,6 @@ export interface GuestContextChoice {
   entityKey: string
   code: string | null
   title: string
-  role?: string
   persona?: GuestPersona | null
   accessEndsAt?: string | null
 }

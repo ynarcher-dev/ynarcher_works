@@ -1,8 +1,8 @@
-import { Button, Field, Input, Modal, Select, Spinner, cn, useToast } from '@ynarcher/ui'
+import { Button, Field, Input, Modal, Spinner, cn, useToast } from '@ynarcher/ui'
 import { Check } from 'lucide-react'
 import { useState } from 'react'
-import { PARTICIPANT_ROLES } from '@/features/program/config'
 import {
+  PERSONA_LABEL,
   canMapCandidate,
   mapBlockReason,
   useAddParticipants,
@@ -10,19 +10,18 @@ import {
   type MasterTable,
 } from '@/features/program/participantHooks'
 
-/** 역할 기본값은 원장에 따라 갈린다 — 기업은 참가사, 전문가는 전문가 풀에서 출발한다. */
-const DEFAULT_ROLE: Record<MasterTable, string> = {
-  startups: 'STARTUP',
-  networks: 'EXPERT',
-}
-
 /**
- * 참가자 명부 '원장에서 추가' 모달.
+ * 참가자 명부 원장 추가 모달(참여 기업 · 참여 전문가).
  *
  * 이 화면에서 신규 등록이나 값 보정을 하지 않는다 — 사업 담당자가 급히 받아적은 값이 마스터를
  * 덮어쓰면 어느 쪽이 정본인지 판정할 근거가 사라진다. 성명·연락처가 없는 대상은 목록에서
  * 빼지 않고 **고를 수 없는 채로 사유와 함께** 남긴다. 빼 버리면 "왜 안 보이지"가 되고,
  * 남기면 "무엇을 보완해야 하는지"가 남는다.
+ *
+ * 담을 대상이 어느 원장에서 오는지는 탭이 정한다 — 참여 기업은 STARTUP 원장(startups),
+ * 참여 전문가는 NETWORKS 원장(networks)이다. 2026-09-05에 역할 선택(STARTUP·EXPERT·MENTOR…)을
+ * 걷었다: 자격은 이미 탭이 답하고 있었고, 남은 역할 값은 그 답의 사본이라 서로 어긋날 수만
+ * 있었다(전문가 탭에서 담으며 역할을 STARTUP으로 고를 수 있었다).
  *
  * 후보 목록의 규격은 회의록 외부 참석자 검색과 같다(체크 원 + 이름·메타 두 줄 + 행 전체 클릭) —
  * 원장에서 골라 담는 화면이 앱 안에서 서로 다르게 생길 이유가 없다.
@@ -44,13 +43,11 @@ export function ParticipantAddModal({
   master: MasterTable
 }) {
   const toast = useToast()
-  const [role, setRole] = useState<string>(DEFAULT_ROLE[master])
   const [search, setSearch] = useState('')
   const [picked, setPicked] = useState<string[]>([])
 
-  const { data: candidates, isLoading } = useMasterCandidates(programId, master, role, search)
+  const { data: candidates, isLoading } = useMasterCandidates(programId, master, search)
   const add = useAddParticipants(programId)
-
 
   const toggle = (id: string) =>
     setPicked((prev) => (prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]))
@@ -58,7 +55,7 @@ export function ParticipantAddModal({
   const submit = () => {
     if (picked.length === 0) return
     add.mutate(
-      { master, role, ids: picked },
+      { master, ids: picked },
       {
         onSuccess: () => {
           toast.show(`${picked.length}건을 명부에 추가했습니다.`, 'success')
@@ -74,7 +71,12 @@ export function ParticipantAddModal({
     <Modal
       open={open}
       onClose={onClose}
-      title="원장에서 추가"
+      title={`${PERSONA_LABEL[master]} 추가`}
+      help={
+        master === 'startups'
+          ? 'STARTUP 원장에 등록된 기업만 담을 수 있습니다.'
+          : 'NETWORKS 원장의 전문가만 담을 수 있습니다.'
+      }
       size="lg"
       footer={
         <div className="flex justify-end gap-2">
@@ -88,30 +90,13 @@ export function ParticipantAddModal({
       }
     >
       <div className="space-y-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <Field label="역할" className="w-40">
-            <Select
-              value={role}
-              onChange={(e) => {
-                setRole(e.target.value)
-                setPicked([])
-              }}
-            >
-              {PARTICIPANT_ROLES.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="검색" className="min-w-0 flex-1">
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={master === 'startups' ? '기업명 · 대표자' : '전문가명 · 소속'}
-            />
-          </Field>
-        </div>
+        <Field label="검색">
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={master === 'startups' ? '기업명 · 대표자' : '전문가명 · 소속'}
+          />
+        </Field>
 
         <div className="overflow-hidden rounded-radius-md border border-gray-200">
           {isLoading ? (

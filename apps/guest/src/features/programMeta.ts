@@ -29,17 +29,3 @@ export const PROGRAM_STATUS_TONE: Record<string, BadgeTone> = {
   DEMO_DAY: 'info',
 }
 
-/** 명부 역할(program_participant_role) 라벨. */
-export const PARTICIPANT_ROLE_LABEL: Record<string, string> = {
-  STARTUP: '참여기업',
-  EXPERT: '전문가',
-  MENTOR: '멘토',
-  JUDGE: '심사위원',
-  INVESTOR: '투자자',
-  STAFF: '운영진',
-  OBSERVER: '참관',
-}
-
-export function participantRoleLabels(roles: readonly string[]): string {
-  return roles.map((r) => PARTICIPANT_ROLE_LABEL[r] ?? r).join(' · ')
-}

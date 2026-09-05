@@ -74,7 +74,8 @@ export interface GuestMe {
     end_date: string | null
     host_organization: string | null
   }
-  participation: { roles: string[]; joined_at: string | null }
+  /** 이 맥락의 자격 — startups(참여 기업) | networks(참여 전문가). 2026-09-05 역할 배열을 대체한다. */
+  participation: { persona: GuestPersona | null; joined_at: string | null }
   company: { name: string } | null
   currentParticipantId?: string | null
   contexts?: GuestContextChoice[]

@@ -301,29 +301,6 @@ export function useSetProgramModule(programId: string) {
   })
 }
 
-export interface Participant {
-  id: string
-  role: string
-  status: string
-  user_id: string | null
-}
-
-export function useParticipants(programId: string | undefined) {
-  const config = useProgramWorkspace()
-  return useQuery({
-    queryKey: [config.key, 'participants', programId],
-    enabled: Boolean(programId),
-    queryFn: async (): Promise<Participant[]> => {
-      const { data } = await supabase
-        .from(SHARED_TABLES.participants)
-        .select('id, role, status, user_id')
-        .eq('program_id', programId)
-        .order('role', { ascending: true })
-      return (data ?? []) as Participant[]
-    },
-  })
-}
-
 /**
  * 이 사업의 PM인지 여부. 모듈 삭제 한 가지에만 쓰는 판정이라 담당자 전체를 끌어오지 않고
  * 본인 행만 확인한다(RLS가 이미 사업 범위를 좁히므로 결과는 항상 본인 것이다).

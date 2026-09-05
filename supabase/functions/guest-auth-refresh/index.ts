@@ -90,7 +90,8 @@ Deno.serve(withCors(async (req: Request) => {
         status: INTERNAL_ONLY_STATUSES.has(program.status) ? null : program.status,
       },
       participation: {
-        roles: [...new Set(participations.map((p) => p.role))],
+        // 이 맥락의 자격 하나. 역할 축은 2026-09-05에 걷혔다 — 자격은 원장이 답한다.
+        persona: participations[0].master_table,
         joined_at: participations[0].joined_at,
       },
       company: identity.companyName ? { name: identity.companyName } : null,

@@ -250,7 +250,7 @@ export function GuestAccountPanel({ canSuspend = false }: { canSuspend?: boolean
         <ul className="space-y-2">
           {(detail?.programs ?? []).map((p) => (
             <li
-              key={`${p.entity_key}:${p.program_id}`}
+              key={`${p.entity_key}:${p.program_id}:${p.master_table ?? '-'}`}
               className="flex items-center justify-between gap-3 rounded border border-gray-200 px-3 py-2"
             >
               <span className="min-w-0">

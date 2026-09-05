@@ -74,7 +74,6 @@ export async function verifyGuestSession(
 
 export interface GuestParticipation {
   id: string
-  role: string
   joined_at: string | null
   master_table: string | null
   master_id: string | null
@@ -93,7 +92,7 @@ export async function loadOpenParticipations(
   const now = Date.now()
   const { data } = await db
     .from('program_participants')
-    .select('id, role, joined_at, master_table, master_id, login_status, access_starts_at, access_ends_at')
+    .select('id, joined_at, master_table, master_id, login_status, access_starts_at, access_ends_at')
     .eq('program_id', programId)
     .eq('user_id', userId)
     .in('login_status', ['INVITED', 'ACTIVE'])

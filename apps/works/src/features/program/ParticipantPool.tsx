@@ -3,7 +3,6 @@ import {
   Card,
   DataTable,
   ListToolbar,
-  MultiSelectFilter,
   Spinner,
   usePaged,
   useToast,
@@ -12,7 +11,6 @@ import { useMemo, useState } from 'react'
 import { useAuthStore } from '@/auth/authStore'
 import { participantContentKey } from '@/features/admin/sensitiveContents'
 import { useMaskPolicy } from '@/features/admin/sensitiveStore'
-import { PARTICIPANT_ROLES } from '@/features/program/config'
 import type { Program } from '@/features/program/hooks'
 import { ParticipantAddModal } from '@/features/program/ParticipantAddModal'
 import { participantColumns } from '@/features/program/participantColumns'
@@ -45,11 +43,11 @@ function matches(row: ParticipantRow, keyword: string): boolean {
  *
  * 2026-09-05 처음에는 탭 하나(참가자/전문가) 안의 하위 탭으로 갈랐으나 곧 위로 올렸다 —
  * 자격은 표를 거르는 조건이 아니라 **다른 화면을 여는 축**이기 때문이다(게스트가 볼 메뉴가
- * 여기서 갈린다, 3_9_1 §4). 표 위에서 좁히는 것(검색·역할)과 같은 층에 두면, 다른 대상에게
+ * 여기서 갈린다, 3_9_1 §4). 표 위에서 좁히는 것(검색)과 같은 층에 두면, 다른 대상에게
  * 다른 화면을 열어 주는 선택이 필터 한 칸처럼 읽힌다. 탭이 둘이면 어느 쪽을 보고 있는지도
  * 사이드 탭 줄에서 바로 읽힌다.
  *
- * 자격이 바뀌면 이 컴포넌트는 통째로 다시 선다(부모가 조건부로 렌더한다) — 선택·역할·페이지가
+ * 자격이 바뀌면 이 컴포넌트는 통째로 다시 선다(부모가 조건부로 렌더한다) — 선택·검색·페이지가
  * 함께 비워져야 `연결`이 안 보이는 행을 집지 않는다.
  *
  * 명부에 올리는 일과 로그인을 여는 일이 갈려 있다 — 참여 후보를 쌓아 두더라도 확정 전에는
@@ -59,9 +57,10 @@ function matches(row: ParticipantRow, keyword: string): boolean {
  * 게스트 로그인은 세 사업 워크스페이스 모두 열려 있다(2026-09-03 — 명부·게스트 원장 통합).
  * 문을 여는 판정은 사업이 속한 원장의 담당자 표를 보는 app.is_program_manager()가 한다.
  *
- * 셸·툴바·표는 전부 공용 규격이다 — 카드는 형제 탭(프로그램)과 같은 `Card`, 검색·필터·액션
- * 한 줄은 원장 목록과 같은 `ListToolbar`, 역할은 손수 만든 칩 나열이 아니라 목록 필터와 같은
- * `MultiSelectFilter`이며 건수는 그 선택지가 함께 답한다. 총 건수는 카드 제목 옆 한자리다.
+ * 셸·툴바·표는 전부 공용 규격이다 — 카드는 형제 탭(프로그램)과 같은 `Card`, 검색·액션 한 줄은
+ * 원장 목록과 같은 `ListToolbar`다. 표 위에 필터는 두지 않는다: 2026-09-05에 역할 축을
+ * 걷었고(자격은 탭이 답한다), 남은 축은 검색뿐이라 거를 것이 없다. 총 건수는 카드 제목 옆
+ * 한자리다.
  */
 export function ParticipantPool({
   program,
@@ -76,8 +75,6 @@ export function ParticipantPool({
   const masked = useMaskPolicy(participantContentKey(config.key))
 
   const [keyword, setKeyword] = useState('')
-  // 역할(STARTUP·MENTOR·JUDGE…)은 자격 **안의** 세부라 탭이 아니라 표 위 필터로 남는다.
-  const [roles, setRoles] = useState<string[]>([])
   const [selected, setSelected] = useState<string[]>([])
   const [addOpen, setAddOpen] = useState(false)
   const [windowTarget, setWindowTarget] = useState<ParticipantRow | null>(null)
@@ -104,23 +101,9 @@ export function ParticipantPool({
     [rows, persona],
   )
 
-  // 역할 선택지는 지금 탭 안에서만 센다 — 참여 기업 탭에 MENTOR 0건이 서 있으면 그 탭에서
-  // 고를 수 있는 값처럼 보인다.
-  const roleOptions = useMemo(
-    () =>
-      PARTICIPANT_ROLES.map((role) => ({
-        value: role,
-        label: `${role} ${personaRows.filter((r) => r.role === role).length}`,
-      })),
-    [personaRows],
-  )
-
   const filtered = useMemo(
-    () =>
-      personaRows.filter(
-        (r) => (roles.length === 0 || roles.includes(r.role)) && matches(r, keyword),
-      ),
-    [personaRows, roles, keyword],
+    () => personaRows.filter((r) => matches(r, keyword)),
+    [personaRows, keyword],
   )
 
   // 명부는 사업이 굴러갈수록 길어지는 목록이라 페이저를 단다. 카드 안이지만 미니 페이저가
@@ -213,14 +196,6 @@ export function ParticipantPool({
             keyword={keyword}
             onKeywordChange={setKeyword}
             searchPlaceholder="대상 · 로그인 계정 검색"
-            filters={
-              <MultiSelectFilter
-                label="역할"
-                options={roleOptions}
-                selected={roles}
-                onChange={setRoles}
-              />
-            }
             actions={
               <div className="flex items-center gap-2">
                 {canOpenDoor && (
@@ -273,7 +248,7 @@ export function ParticipantPool({
             onSelectionChange={setSelected}
             // 조회 실패와 빈 명부는 다른 사실이다 — 한 문장으로 뭉뚱그리면 원인을 짚을 수 없다.
             emptyText={isError ? '명부를 불러오지 못했습니다.' : '명부가 비어 있습니다.'}
-            // 좌측 건수는 '필터 반영 / 전체'로 읽힌다 — 검색·역할로 좁힌 뒤에도 명부 총량을 잃지 않는다.
+            // 좌측 건수는 '필터 반영 / 전체'로 읽힌다 — 검색으로 좁힌 뒤에도 명부 총량을 잃지 않는다.
             pagination={{
               page,
               pageSize: PAGE_SIZE,

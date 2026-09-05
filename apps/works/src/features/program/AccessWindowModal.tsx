@@ -1,6 +1,7 @@
 import { Button, Field, Input, Modal, useToast } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import {
+  PERSONA_LABEL,
   useSetAccessWindow,
   type ParticipantRow,
 } from '@/features/program/participantHooks'
@@ -95,7 +96,8 @@ export function AccessWindowModal({
     >
       <div className="space-y-3">
         <p className="text-body text-gray-700">
-          <span className="font-medium">{row.targetName}</span> · {row.role}
+          <span className="font-medium">{row.targetName}</span> ·{' '}
+          {row.master_table ? PERSONA_LABEL[row.master_table] : '임직원'}
         </p>
         <Field label="시작">
           <Input type="date" value={starts} onChange={(e) => setStarts(e.target.value)} />

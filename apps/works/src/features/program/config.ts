@@ -329,13 +329,3 @@ export const MAX_PROGRAM_INDUSTRIES = 3
  * 특별히 몰라도 되고, 대용량 업로드도 같은 말을 그대로 적으면 그대로 들어온다.
  */
 export const SELF_HOSTED_PROGRAM_HOST = '자체 프로젝트'
-
-export const PARTICIPANT_ROLES = [
-  'STARTUP',
-  'EXPERT',
-  'MENTOR',
-  'JUDGE',
-  'INVESTOR',
-  'STAFF',
-  'OBSERVER',
-] as const

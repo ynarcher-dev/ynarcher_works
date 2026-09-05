@@ -20,7 +20,6 @@ export interface GuestAccountProgram {
   workspace: string
   code: string | null
   title: string | null
-  role: string
   /** 그 사업에서의 로그인 개방 상태. 계정 상태와는 별개 축이다. */
   login_status: 'NOT_APPLICABLE' | 'NOT_ALLOWED' | 'INVITED' | 'ACTIVE' | 'BLOCKED'
   /** 이 참여 줄의 접근 종료. 계정이 아니라 줄이 기간을 갖는다(3_9_1 §8). */

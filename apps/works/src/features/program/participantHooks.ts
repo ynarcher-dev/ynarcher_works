@@ -45,7 +45,6 @@ export const PERSONA_LABEL: Record<MasterTable, string> = {
 
 export interface ParticipantRow {
   id: string
-  role: string
   master_table: MasterTable | null
   master_id: string | null
   user_id: string | null
@@ -85,13 +84,12 @@ export interface MasterCandidate {
   loginName: string | null
   email: string | null
   phone: string | null
-  /** 이미 이 사업에 같은 역할로 올라 있는가. */
+  /** 이미 이 사업에 같은 자격으로 올라 있는가. */
   alreadyMapped: boolean
 }
 
 interface RawParticipant {
   id: string
-  role: string
   master_table: MasterTable | null
   master_id: string | null
   user_id: string | null
@@ -109,7 +107,7 @@ interface RawParticipant {
  */
 function participantCols(table: string): string {
   return (
-    'id, role, master_table, master_id, user_id, login_status, ' +
+    'id, master_table, master_id, user_id, login_status, ' +
     'access_starts_at, access_ends_at, ' +
     `user:users!${table}_user_id_fkey(name, email)`
   )
@@ -133,7 +131,7 @@ interface ExpertMaster {
   phone: string | null
 }
 
-/** 명부 전체(역할 탭은 화면이 거른다). 원장 값은 조회로 합성한다. */
+/** 명부 전체(자격 탭은 화면이 거른다). 원장 값은 조회로 합성한다. */
 export function useProgramParticipants(programId: string | undefined) {
   const config = useProgramWorkspace()
   return useQuery({
@@ -214,7 +212,6 @@ export function useProgramParticipants(programId: string | undefined) {
           null
         return {
           id: r.id,
-          role: r.role,
           master_table: r.master_table,
           master_id: r.master_id,
           user_id: r.user_id,
@@ -243,13 +240,12 @@ export function useProgramParticipants(programId: string | undefined) {
 export function useMasterCandidates(
   programId: string | undefined,
   master: MasterTable,
-  role: string,
   search: string,
 ) {
   const config = useProgramWorkspace()
   const term = search.trim()
   return useQuery({
-    queryKey: [config.key, 'master-candidates', programId, master, role, term],
+    queryKey: [config.key, 'master-candidates', programId, master, term],
     enabled: Boolean(programId),
     queryFn: async (): Promise<MasterCandidate[]> => {
       const base =
@@ -277,8 +273,7 @@ export function useMasterCandidates(
           .from(SHARED_TABLES.participants)
           .select('master_id')
           .eq('program_id', programId)
-          .eq('master_table', master)
-          .eq('role', role),
+          .eq('master_table', master),
       ])
       if (error) throw error
       if (mapped.error) throw mapped.error
@@ -332,13 +327,12 @@ export function useAddParticipants(programId: string) {
   const config = useProgramWorkspace()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (input: { master: MasterTable; role: string; ids: string[] }) => {
+    mutationFn: async (input: { master: MasterTable; ids: string[] }) => {
       const rows = input.ids.map((id) => ({
         entity_key: config.entityKey,
         program_id: programId,
         master_table: input.master,
         master_id: id,
-        role: input.role,
       }))
       const { error } = await supabase.from(SHARED_TABLES.participants).insert(rows)
       if (error) throw error

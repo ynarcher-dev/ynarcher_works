@@ -111,12 +111,6 @@ export function participantColumns(
       },
     },
     {
-      key: 'role',
-      header: '역할',
-      type: 'badge',
-      render: (r) => <Badge tone="info">{r.role}</Badge>,
-    },
-    {
       key: 'loginName',
       header: '성명',
       type: 'person',
