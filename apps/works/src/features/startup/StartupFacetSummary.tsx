@@ -12,6 +12,10 @@ import type { ComponentType } from 'react'
 import { Card, Skeleton, SummaryTile, type SummaryTileTone } from '@ynarcher/ui'
 import { useTags } from '@/features/admin/hooks'
 import { FACET_UNSET, useStartupFacetCounts } from '@/features/startup/startupFacetHooks'
+import {
+  MANAGEMENT_STATUS_LABEL,
+  type ManagementStatus,
+} from '@/features/startup/startupClassification'
 import type { StartupPoolFilters, StartupSearchScope } from '@/features/startup/startupPoolHooks'
 import { toggleAxisValue } from '@/lib/filterAxis'
 
@@ -48,8 +52,13 @@ interface FacetCardProps {
   noun: string
   /** '전체' 타일의 눈썹 문구. */
   totalEyebrow: string
-  /** 미지정 타일의 눈썹 문구 — 무엇이 비어서 여기 모였는지를 적는다. */
-  unsetEyebrow: string
+  /** 미지정 타일의 이름. 축마다 '비어 있다'가 뜻하는 말이 다르다. */
+  unsetLabel?: string
+  /**
+   * 미지정 타일의 눈썹 문구 — 무엇이 비어서 여기 모였는지를 적는다.
+   * 주지 않으면 그 축에는 미지정 칸을 두지 않는다(값이 빌 수 없는 축).
+   */
+  unsetEyebrow?: string
   icon: TileIcon
   /** 타일 목록(고정 순서). 값은 필터에 그대로 들어가는 키다. */
   tiles: FacetTile[]
@@ -65,9 +74,12 @@ interface FacetCardProps {
  * 여기 하나로 모은다 — 같은 규격을 두 파일에 적으면 한쪽만 고쳐 어긋난다.
  *
  * **타일은 곧 필터다.** 그래서 미지정 칸도 누를 수 있다 — 한 축에 칸의 성격이 하나여야
- * 하고(옆 칸은 눌리는데 이 칸만 안 눌리면 같은 줄에서 칸마다 하는 일이 달라진다),
- * 구분·소재지는 등록 시 필수가 아니라 미지정이 '옛 데이터의 잔여'가 아니라 채워 넣을
- * 대기열이기 때문이다.
+ * 하고(옆 칸은 눌리는데 이 칸만 안 눌리면 같은 줄에서 칸마다 하는 일이 달라진다), 값이 빈
+ * 행도 목록의 행이라 카드의 합이 곧 전체여야 하기 때문이다.
+ *
+ * 다만 **값이 빌 수 없는 축에는 그 칸을 두지 않는다**(`unsetEyebrow`를 주지 않는다). 구분이
+ * 그렇다 — 원장이 NOT NULL이고 기본값이 '미지정 기업'이라, 미지정은 빈칸이 아니라 값 하나로
+ * 이미 타일 줄에 서 있다.
  *
  * 타일 순서는 건수가 아니라 고정 순서(구분은 코드 목록, 권역은 원장의 노출순위)를 따른다.
  * 상시로 서는 카드에서 건수순은 필터를 만질 때마다 칸이 자리를 바꿔 같은 곳을 두 번 누르지
@@ -77,6 +89,7 @@ function FacetCard({
   title,
   noun,
   totalEyebrow,
+  unsetLabel = '미지정',
   unsetEyebrow,
   icon: CardIcon,
   tiles,
@@ -135,9 +148,9 @@ function FacetCard({
         {/* 해당 행이 없으면 세우지 않는다 — 누를 조건이 없는 칸이라, 남아 있다는 사실을
             말할 때만 뜻이 선다. 이미 골라 둔 상태라면 건수와 무관하게 세운다(고른 칸이
             사라지면 되돌릴 자리가 없다). */}
-        {(unsetCount > 0 || selection.unset) && (
+        {unsetEyebrow && (unsetCount > 0 || selection.unset) && (
           <SummaryTile
-            title="미지정"
+            title={unsetLabel}
             eyebrow={unsetEyebrow}
             value={unsetCount}
             unit="개사"
@@ -157,13 +170,20 @@ function FacetCard({
  * (발굴 → 보육 → 투자)이지만 카드는 **투자기업이 먼저** 선다 — 목록에 들어와 가장 자주
  * 좁히는 칸을 첫 자리에 두는 것이고, 코드 순서 자체를 바꾸지는 않는다(그 순서는 셀렉트·
  * 배지·문서가 함께 쓰는 값이다).
+ *
+ * 이름은 여기 적지 않고 `MANAGEMENT_STATUS_LABEL`에서 읽는다 — 라벨을 두 곳에 적으면
+ * 한쪽만 고쳐 카드와 배지가 다른 말을 하게 된다(2026-09-06에 '기타기업'이 '미지정 기업'으로
+ * 바뀌며 실제로 겪을 뻔한 자리다).
  */
-const CATEGORY_TILES: FacetTile[] = [
-  { key: 'invested', label: '투자기업', eyebrow: '투자 포트폴리오', icon: HandCoins, tone: 'purple' },
-  { key: 'incubated', label: '보육기업', eyebrow: '육성 및 지원', icon: Sprout, tone: 'mint' },
-  { key: 'sourced', label: '발굴기업', eyebrow: '발굴 및 검토', icon: Search, tone: 'amber' },
-  { key: 'other', label: '기타기업', eyebrow: '기타 분류', icon: Shapes, tone: 'rose' },
-]
+const CATEGORY_TILES: FacetTile[] = (
+  [
+    { key: 'invested', eyebrow: '투자 포트폴리오', icon: HandCoins, tone: 'purple' },
+    { key: 'incubated', eyebrow: '육성 및 지원', icon: Sprout, tone: 'mint' },
+    { key: 'sourced', eyebrow: '발굴 및 검토', icon: Search, tone: 'amber' },
+    // 새로 등록하는 기업이 기본으로 들어오는 칸이다 — 무엇인지 정해지면 담당자가 옮긴다.
+    { key: 'other', eyebrow: '분류 대기', icon: Shapes, tone: 'rose' },
+  ] satisfies (Omit<FacetTile, 'key' | 'label'> & { key: ManagementStatus })[]
+).map((t) => ({ ...t, label: MANAGEMENT_STATUS_LABEL[t.key] }))
 
 interface SummaryProps {
   keyword: string
@@ -194,12 +214,11 @@ export function StartupCategorySummary({
       title="기업 현황"
       noun="구분"
       totalEyebrow="스타트업 DB"
-      unsetEyebrow="구분 없음"
       icon={Building2}
       tiles={CATEGORY_TILES}
       counts={facets?.category ?? new Map()}
       total={facets?.categoryTotal ?? 0}
-      selection={{ values: filters.categories, unset: filters.categoryUnset }}
+      selection={{ values: filters.categories, unset: false }}
       onChange={onChange}
       isPending={isPending}
     />

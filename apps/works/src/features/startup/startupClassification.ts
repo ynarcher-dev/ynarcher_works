@@ -8,12 +8,21 @@ export type ManagementStatus = 'sourced' | 'incubated' | 'invested' | 'other'
 
 export const MANAGEMENT_STATUSES: ManagementStatus[] = ['sourced', 'incubated', 'invested', 'other']
 
-/** 구분 코드 → 한글 라벨. */
+/**
+ * 구분 코드 → 한글 라벨.
+ *
+ * `other`는 2026-09-06에 '기타기업'에서 **'미지정 기업'**으로 바뀌었다. 종전에는 어디에도
+ * 맞지 않는 기업을 담는 실카테고리였고 자유 라벨 칸(`management_status_etc`)까지 딸려 있었으나,
+ * 실제로는 한 건도 쓰이지 않았고(전환 시점 0건) 정작 필요한 자리는 **"아직 무엇인지 정하지
+ * 않은 기업"**이었다 — 그 자리가 없어서 새로 등록하는 기업이 전부 발굴기업으로 들어가
+ * 발굴기업 수가 부풀려졌다. 코드값(`other`)은 그대로 둔다: DB·민감정보 정책 키·알림 경로가
+ * 이 문자열로 저장돼 있어 바꾸면 기존 설정이 통째로 끊긴다(부르는 말이 달라졌을 뿐이다).
+ */
 export const MANAGEMENT_STATUS_LABEL: Record<ManagementStatus, string> = {
   sourced: '발굴기업',
   incubated: '보육기업',
   invested: '투자기업',
-  other: '기타기업',
+  other: '미지정 기업',
 }
 
 export type BadgeTone = 'neutral' | 'info' | 'success' | 'warning'

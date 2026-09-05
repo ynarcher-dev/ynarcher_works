@@ -30,10 +30,12 @@ export interface StartupPoolFilters {
   industries: string[]
   /** 투자단계(stage). 카드가 아니라 필터 바의 다중선택이 소유한다. */
   stages: string[]
-  /** 구분(management_status). 코드 4종(투자·보육·발굴·기타) — 요약 카드의 구분 타일이 소유한다. */
+  /**
+   * 구분(management_status). 코드 4종(투자·보육·발굴·미지정) — 요약 카드의 구분 타일이 소유한다.
+   * 권역과 달리 '비어 있음' 축이 없다: 원장이 NOT NULL이고 기본값이 `other`(미지정 기업)라
+   * 값이 빈 행 자체가 생기지 않는다 — 미지정은 빈칸이 아니라 값이다.
+   */
   categories: string[]
-  /** 구분 미지정. 구분 배열과 OR로 묶인다(권역 축과 같은 규약). */
-  categoryUnset: boolean
   /** 관리현황(pool_status). 투자기업에서만 채워지는 값이라 비투자 구분에서는 결과가 빈다. */
   statuses: string[]
   /** 최소 업력(년차, 만 나이 기준). '' = 미적용. */
@@ -50,7 +52,6 @@ export const EMPTY_STARTUP_FILTERS: StartupPoolFilters = {
   industries: [],
   stages: [],
   categories: [],
-  categoryUnset: false,
   statuses: [],
   ageMin: '',
   ageMax: '',
@@ -79,7 +80,6 @@ export function hasActiveStartupFilters(f: StartupPoolFilters): boolean {
     f.industries.length > 0 ||
     f.stages.length > 0 ||
     f.categories.length > 0 ||
-    f.categoryUnset ||
     f.statuses.length > 0 ||
     f.ageMin !== '' ||
     f.ageMax !== ''
@@ -116,7 +116,6 @@ export function startupFilterArgs(
     p_industries: filters.industries.length ? filters.industries : null,
     p_stages: filters.stages.length ? filters.stages : null,
     p_categories: filters.categories.length ? filters.categories : null,
-    p_category_unset: filters.categoryUnset ? true : null,
     p_statuses: filters.statuses.length ? filters.statuses : null,
     p_age_min: filters.ageMin !== '' && Number.isFinite(ageMin) ? ageMin : null,
     p_age_max: filters.ageMax !== '' && Number.isFinite(ageMax) ? ageMax : null,
@@ -150,7 +149,7 @@ export function useStartupPoolPage(
   pageSize: number,
   /**
    * 지정 시 담당자(startup_managers) 또는 생성자(created_by)가 이 사용자인 기업만 조회한다('내 관리기업').
-   * 담당자는 투자기업 전용 개념이므로 생성자 축을 함께 봐야 발굴·보육·기타 기업도 잡힌다.
+   * 담당자는 투자기업 전용 개념이므로 생성자 축을 함께 봐야 발굴·보육·미지정 기업도 잡힌다.
    */
   mineUserId?: string | null,
   /** 검색 대상에 포함할 민감 필드. 마스킹 정책이 공개로 열린 필드만 켠다. */

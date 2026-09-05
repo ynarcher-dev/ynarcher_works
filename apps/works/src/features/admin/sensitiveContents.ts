@@ -107,7 +107,7 @@ export const SENSITIVE_CONTENT_GROUPS: readonly SensitiveContentGroup[] = [
       { key: 'startup.invested', label: '투자기업', fields: PERSON, hint: COMPANY_HINT },
       { key: 'startup.incubated', label: '보육기업', fields: PERSON, hint: COMPANY_HINT },
       { key: 'startup.discovered', label: '발굴기업', fields: PERSON, hint: COMPANY_HINT },
-      { key: 'startup.etc', label: '기타기업', fields: PERSON, hint: COMPANY_HINT },
+      { key: 'startup.etc', label: '미지정 기업', fields: PERSON, hint: COMPANY_HINT },
     ],
   },
   {

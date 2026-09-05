@@ -71,7 +71,6 @@ export interface StartupDetailFormValues {
   biz_reg_no: string
   stage: string
   management_status: string
-  management_status_etc: string
   pool_status: string
   discovery_source: string
   location: string
@@ -192,7 +191,6 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
   const {
     register,
     control,
-    watch,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<StartupDetailFormValues>({
@@ -203,9 +201,9 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
       founded_on: str('founded_on').slice(0, 10),
       biz_reg_no: str('biz_reg_no'),
       stage: str('stage'),
-      // 신규 등록 기본 구분은 발굴(sourced). DB 기본값과 일치.
-      management_status: str('management_status') || 'sourced',
-      management_status_etc: str('management_status_etc'),
+      // 신규 등록 기본 구분은 '미지정 기업'(other, 2026-09-06). 종전 기본값은 발굴이었는데,
+      // 아직 무엇인지 모르는 기업까지 전부 발굴기업으로 들어가 그 수가 부풀려졌다.
+      management_status: str('management_status') || 'other',
       pool_status: str('pool_status'),
       discovery_source: str('discovery_source'),
       location: str('location'),
@@ -222,8 +220,7 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
   })
 
   // 투자기업으로의 전환·담당자 지정·관리현황은 FUND 투자 집행에서만 처리한다(20260724190000).
-  // 이 화면에서는 투자기업이면 구분을 읽기 전용으로 보여주고, 비투자면 발굴/보육/기타 간에만 바꾼다.
-  const watchedStatus = watch('management_status')
+  // 이 화면에서는 투자기업이면 구분을 읽기 전용으로 보여주고, 비투자면 발굴/보육/미지정 간에만 바꾼다.
   const alreadyInvested = isInvested(str('management_status'))
   // 투자기업의 딜메이커(리드 담당자) 이름 — 읽기 전용 표시용.
   const leadName = existingManagers?.find((m) => m.is_lead)?.user?.name ?? null
@@ -239,9 +236,10 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
       industries,
       industry: industries[0] ?? null,
       stage: v.stage.trim() || null,
-      // 기타 라벨은 구분에 따라 게이팅한다. 구분(management_status)과 관리현황(pool_status)은
-      // 아래에서 투자기업 여부로 분기한다(투자기업은 이 화면에서 건드리지 않는다).
-      management_status_etc: v.management_status === 'other' ? v.management_status_etc.trim() || null : null,
+      // 구분(management_status)과 관리현황(pool_status)은 아래에서 투자기업 여부로 분기한다
+      // (투자기업은 이 화면에서 건드리지 않는다). 구 '기타 분류' 자유 라벨
+      // (management_status_etc)은 입력 칸을 걷으면서 저장 대상에서도 뺐다 — 컬럼은 남겨 두되
+      // 화면이 건드리지 않으므로, 옛 값이 있는 행은 저장해도 그 값이 지워지지 않는다.
       discovery_source: v.discovery_source.trim() || null,
       // 소재지(location_tags 태그명)·상세주소.
       location: v.location.trim() || null,
@@ -454,11 +452,6 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
                   </Select>
                 )}
               </Field>
-              {watchedStatus === 'other' && (
-                <Field label="기타 분류">
-                  <Input {...register('management_status_etc')} placeholder="기타 구분 라벨(선택)" />
-                </Field>
-              )}
               <Field label="발굴 경로" className="sm:col-span-2">
                 <Controller
                   control={control}

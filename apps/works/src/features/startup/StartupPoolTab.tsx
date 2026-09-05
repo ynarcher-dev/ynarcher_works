@@ -37,7 +37,7 @@ interface StartupPoolTabProps {
  * 검색어(다중 필드)·복수 필터·서버 페이지네이션·다중선택을 소유하고,
  * 검색창과 필터를 한 컨트롤 행으로 함께 배치한다. 신규 등록은 전용 등록 페이지에서 처리한다.
  * 비활성화(삭제)는 목록이 아니라 상세 페이지에서 수행한다.
- * 구분(투자·보육·발굴·기타)은 진입 경로가 아니라 필터 축이므로 이 컨테이너는 구분을 고정하지 않는다.
+ * 구분(투자·보육·발굴·미지정)은 진입 경로가 아니라 축이므로 이 컨테이너는 구분을 고정하지 않는다.
  */
 export function StartupPoolTab({ scope, onScopeChange, userId }: StartupPoolTabProps) {
   const mineUserId = scope === 'mine' ? userId : null
@@ -95,9 +95,7 @@ export function StartupPoolTab({ scope, onScopeChange, userId }: StartupPoolTabP
         filters={filters}
         mineUserId={mineUserId}
         searchScope={searchScope}
-        onChange={(next) =>
-          setFilters((f) => ({ ...f, categories: next.values, categoryUnset: next.unset }))
-        }
+        onChange={(next) => setFilters((f) => ({ ...f, categories: next.values }))}
       />
 
       <StartupRegionSummary
