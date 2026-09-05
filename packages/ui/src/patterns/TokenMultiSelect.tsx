@@ -58,6 +58,11 @@ export interface TokenMultiSelectProps<T> {
    * 후보가 원장에서 오는 경우(태그 등) 사용자는 무엇이 있는지 모르는 채로 빈 칸을 마주한다 —
    * 검색은 이미 아는 것을 빨리 찾는 수단이지 목록을 알려주는 수단이 아니다. 원격 조회형
    * (`onQueryChange`로 후보를 채우는) 필드에는 켜지 말 것 — 펼칠 전체 목록이 애초에 없다.
+   *
+   * 같은 이유로 **입력 칸에 초점이 가면 검색어 없이도 후보가 내려온다**. 후보 전부가 이미 손에
+   * 있다고 선언한 칸이므로, 고르려고 칸을 눌렀는데 아무것도 나오지 않아 무엇을 쳐야 하는지부터
+   * 알아내야 하는 상태를 만들지 않는다. 이 자동 열림은 돋보기를 모달로 두어도 드롭다운으로 선다
+   * — 그때 하려는 일은 훑어보기가 아니라 하나 집어넣기다.
    */
   browsable?: boolean
   /**
@@ -139,10 +144,15 @@ export function TokenMultiSelect<T>({
   const [rect, setRect] = useState<DOMRect | null>(null)
   // 돋보기로 연 '전체 보기' 상태. 검색 결과와 달리 스스로 닫히지 않으므로 별도 상태로 둔다.
   const [browsing, setBrowsing] = useState(false)
+  // 입력에 초점이 있는 동안은 검색어가 없어도 후보를 내린다(`browsable`인 칸만).
+  const [focused, setFocused] = useState(false)
+  // Esc로 목록만 닫은 상태. 초점은 그대로 두므로(칸을 떠나게 만들지 않는다) 별도 플래그가 필요하다.
+  const [dismissed, setDismissed] = useState(false)
 
   // 질의를 바꿀 때마다 호출부에 통지한다(비동기 후보 조회를 걸 수 있게).
   const changeQuery = (next: string) => {
     setQ(next)
+    setDismissed(false)
     onQueryChange?.(next)
   }
 
@@ -158,11 +168,17 @@ export function TokenMultiSelect<T>({
       .slice(0, maxSuggestions)
   }, [q, options, selectedKeys, getKey, getLabel, getSearchText, maxSuggestions])
 
-  // 돋보기로 펼친 전체 목록 — 검색 결과와 달리 개수를 자르지 않고 드롭다운 안에서 스크롤시킨다.
+  // 검색어 없이 내려오는 목록 — 초점이 들어왔거나(browsable) 돋보기로 펼쳤을 때다.
+  // 검색 결과와 달리 개수를 자르지 않고 드롭다운 안에서 스크롤시킨다.
+  // 모달이 열려 있는 동안은 초점이 뒤 입력에 남아 있어도 목록을 내리지 않는다 — 같은 목록이
+  // 모달 뒤에서 한 번 더 서면 어느 쪽을 고르는 중인지가 흐려진다.
+  const modalOpen = browsable && browseIn === 'modal' && browsing
+  const openedWithoutQuery =
+    browsable && !modalOpen && !dismissed && (focused || (browseIn === 'dropdown' && browsing))
   const browseList = useMemo(() => {
-    if (browseIn === 'modal' || !browsing || q.trim() || !options) return []
+    if (!openedWithoutQuery || q.trim() || !options) return []
     return options.filter((o) => !selectedKeys.has(getKey(o)))
-  }, [browseIn, browsing, q, options, selectedKeys, getKey])
+  }, [openedWithoutQuery, q, options, selectedKeys, getKey])
 
   // 드롭다운에 그릴 행. 검색어가 있으면 언제나 검색 결과가 이긴다(돋보기로 펼쳐 둔 상태여도).
   const rows = q.trim() ? matches : browseList
@@ -238,8 +254,10 @@ export function TokenMultiSelect<T>({
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     const last = selected[selected.length - 1]
-    if (e.key === 'Escape' && browsing) {
+    if (e.key === 'Escape') {
+      // 목록만 닫고 초점은 남긴다 — Esc는 '그만 보겠다'이지 '이 칸을 떠나겠다'가 아니다.
       setBrowsing(false)
+      setDismissed(true)
       return
     }
     if (e.key === 'Backspace' && !q && last) {
@@ -258,7 +276,12 @@ export function TokenMultiSelect<T>({
     <div className="relative">
       <div
         ref={fieldRef}
-        onClick={() => inputRef.current?.focus()}
+        onClick={() => {
+          // 이미 초점이 있는 칸을 다시 누르는 것은 '닫아 둔 목록을 다시 보겠다'는 뜻이다
+          // (그때는 focus 이벤트가 오지 않으므로 여기서 되살린다).
+          setDismissed(false)
+          inputRef.current?.focus()
+        }}
         className={cn(
           // 공용 Input과 동일한 외형·상태(테두리·그림자·호버·전환). 높이만 고정 대신 min-height로 두어
           // 칩이 늘면 세로로 자란다.
@@ -295,6 +318,13 @@ export function TokenMultiSelect<T>({
             value={q}
             onChange={(e) => changeQuery(e.target.value)}
             onKeyDown={onKeyDown}
+            onFocus={() => {
+              setFocused(true)
+              setDismissed(false)
+            }}
+            // 칩·후보 행·돋보기는 mousedown을 막아 초점을 지키므로, 여기 오는 blur는 정말로
+            // 칸을 떠난 것이다.
+            onBlur={() => setFocused(false)}
             placeholder={selected.length > 0 ? '' : placeholder}
             className={cn(
               'min-w-[6rem] flex-1 border-0 bg-transparent p-0 text-gray-900 outline-none placeholder:text-gray-400',
@@ -310,7 +340,9 @@ export function TokenMultiSelect<T>({
             type="button"
             // 입력에서 포커스가 빠져나가지 않도록 mousedown을 막는다(칩·드롭다운과 같은 규약).
             onMouseDown={(ev) => ev.preventDefault()}
-            onClick={() => {
+            onClick={(ev) => {
+              // 필드 래퍼의 onClick(초점 되살리기)까지 함께 타면 모달을 열자마자 뒤 목록이 선다.
+              ev.stopPropagation()
               changeQuery('')
               setBrowsing((v) => !v)
               // 모달을 열 때는 뒤 입력으로 초점을 되돌리지 않는다 — 초점은 열린 창에 있어야 한다.

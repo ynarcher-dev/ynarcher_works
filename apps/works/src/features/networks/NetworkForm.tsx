@@ -339,7 +339,10 @@ export function NetworkForm({
           {/* 소개 카드 */}
           <CardShell>
             <Field label="소개">
-              <TextArea rows={4} {...register('intro')} />
+              {/* 소개는 다 쓰고 나서 전체를 다시 읽는 글이라 칸이 내용만큼 자란다 — 고정 높이
+                  안에서 스크롤이 생기면 앞 문단이 창 밖으로 나가 고칠 자리를 매번 다시 찾는다.
+                  카드 하나를 통째로 쓰는 칸이라 자라도 밀려나는 입력이 없다. */}
+              <TextArea rows={4} autoGrow {...register('intro')} />
             </Field>
           </CardShell>
         </div>

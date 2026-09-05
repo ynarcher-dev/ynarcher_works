@@ -34,9 +34,10 @@ export interface FieldProps {
    * 자리다. 값이 아니라 값의 성질이라 칸을 늘리지 않으며, 컨트롤 아래에 붙이면 '입력 다음 입력'
    * 으로 읽히는 세로 흐름을 끊어 어느 칸에 붙은 성질인지가 흐려진다.
    *
-   * 규격은 화면이 아니라 이 컴포넌트가 갖는다 — 라벨 줄의 글자는 `formText.label`(text-body)이라
-   * 상속받은 카드 밀도(text-body-sm)로 두면 한 줄 안에서 크기가 갈린다. 그래서 이 자리만 페이지
-   * 밀도로 고정한다.
+   * 규격은 화면이 아니라 이 컴포넌트가 갖는다 — 이 자리는 표 밀도(캡션 12px)로 고정한다. 라벨과
+   * 같은 크기로 세우지 않는 것은, 이것이 두 번째 라벨이 아니라 **그 칸에 달린 주석**이기 때문이다.
+   * 도움말 말풍선이 같은 캡션 단계에 사는 것과 같은 이유이며, 같은 크기로 서면 라벨과 이 문구 중
+   * 무엇이 이 칸의 이름인지가 한눈에 갈리지 않는다.
    *
    * 이 슬롯을 쓰면 바깥 태그가 `div`로 내려간다 — `<label>` 안에 또 `<label>`을 둘 수 없고, 두면
    * 체크를 눌러도 초점이 옆 입력칸으로 간다.
@@ -105,7 +106,7 @@ export function Field({
         )}
       >
         {labelAside ? <span>{labelText}</span> : labelText}
-        {labelAside && <DensityProvider value="page">{labelAside}</DensityProvider>}
+        {labelAside && <DensityProvider value="table">{labelAside}</DensityProvider>}
       </span>
       {children}
       {error ? (
