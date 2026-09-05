@@ -1,5 +1,5 @@
 import { CardShell, useToast } from '@ynarcher/ui'
-import { useState, type ChangeEvent, type ReactNode } from 'react'
+import { useState, type ChangeEvent } from 'react'
 import { useForm } from 'react-hook-form'
 import { FormTopBar } from '@/components/FormTopBar'
 import { useEditReasonPrompt } from '@/components/EditReasonPrompt'
@@ -42,6 +42,11 @@ import {
 } from '@/features/startup/StartupSummaryCards'
 import { readIndustries } from '@/features/startup/startupGrowth'
 import { SectionHeading } from '@/features/startup/SectionHeading'
+import { StartupAiFillButton } from '@/features/startup/StartupAiFillButton'
+import { StartupAiFillNotice } from '@/features/startup/StartupAiFillNotice'
+import { sourcesFromFiles, sourcesFromMaterials } from '@/features/startup/startupAiFill'
+import { useStartupAiDraft } from '@/features/startup/useStartupAiDraft'
+import { useMaterials } from '@/features/networks/materialHooks'
 
 /** 분야 태그 다중 선택 상한(networks 전문 영역과 동일 규칙). */
 const MAX_INDUSTRIES = 3
@@ -64,13 +69,6 @@ interface Props {
   onCancel: () => void
   /** 상단 바 뒤로가기 목적지(목록 경로). */
   backTo: string
-  /**
-   * 폼 맨 위에 서는 안내(현재는 'AI 작성하기' 실행 결과).
-   *
-   * 초안 값 자체는 `initial`에 이미 얹혀 들어오므로 폼은 그것이 사람이 적은 값인지 AI가
-   * 채운 값인지 알 필요가 없다 — 여기서 받는 것은 무엇이 채워졌는지 말하는 한 덩어리뿐이다.
-   */
-  notice?: ReactNode
 }
 
 /**
@@ -79,7 +77,7 @@ interface Props {
  * 단계/구분/현황/분야는 ADMIN 태그 관리 원장에서 선택한다.
  * recordId가 없으면 신규 등록 모드로, 저장 시 새 레코드를 생성하고 상세페이지로 이동한다.
  */
-export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo, notice }: Props) {
+export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo }: Props) {
   const toast = useToast()
   const isCreate = !recordId
   const base = initial ?? ({} as EntityRow)
@@ -137,6 +135,8 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo,
     register,
     control,
     handleSubmit,
+    getValues,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<StartupDetailFormValues>({
     values: {
@@ -185,6 +185,23 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo,
       })),
     },
   })
+
+  // 'AI 작성하기' — 초안은 원장이 아니라 **지금 폼에 적힌 값 위에** 얹는다(useStartupAiDraft).
+  // 읽을 자료는 모드가 정한다: 수정은 이미 올라간 첨부, 등록은 아직 안 올라간 보류 파일이다.
+  const { data: uploaded } = useMaterials(MATERIAL_TARGET_TYPE, isCreate ? undefined : recordId)
+  const ai = useStartupAiDraft({
+    getValues,
+    reset,
+    state: { capabilities, ip, growth, businessStatus, shareholders, summary },
+    setCapabilities,
+    setIp,
+    setGrowth,
+    setBusinessStatus,
+    setShareholders,
+  })
+  const aiSources = isCreate
+    ? sourcesFromFiles(pending.files(MATERIAL_TARGET_TYPE))
+    : sourcesFromMaterials(uploaded ?? [])
 
   // 투자기업으로의 전환·담당자 지정·관리현황은 FUND 투자 집행에서만 처리한다(20260724190000).
   // 이 화면에서는 투자기업이면 구분을 읽기 전용으로 보여주고, 비투자면 발굴/보육/미지정 간에만 바꾼다.
@@ -393,7 +410,7 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo,
         busy={isSubmitting}
       />
 
-      {notice}
+      {ai.outcome && <StartupAiFillNotice outcome={ai.outcome} />}
 
       {/* 상세페이지와 동일한 3열 배치: 좌측 2/3 편집 카드 + 우측 1/3 자료 관리 */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -451,6 +468,17 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo,
           ) : (
             <MaterialPanel targetType={MATERIAL_TARGET_TYPE} targetId={recordId} />
           )}
+
+          {/* AI 작성하기는 자료 관리 바로 아래에 선다 — 이 기능이 읽는 것이 위 카드의 파일이라,
+              재료에서 떨어뜨리면 무엇을 근거로 채우는지가 화면에서 사라진다. 등록 모드에서는
+              아직 올라가지 않은 보류 파일을 그대로 보내고, 그 파일은 서버가 저장하지 않는다. */}
+          <StartupAiFillButton
+            sources={aiSources}
+            snapshot={ai.snapshot}
+            startupId={recordId}
+            companyName={base.name ? String(base.name) : undefined}
+            onFilled={ai.applyDraft}
+          />
         </div>
       </div>
 

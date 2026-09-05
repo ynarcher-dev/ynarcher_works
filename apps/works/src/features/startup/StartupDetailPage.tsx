@@ -7,12 +7,9 @@ import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
 import { RelatedMinutesPanel } from '@/features/office/minutes/RelatedMinutesPanel'
 import { PhotoBox } from '@/features/networks/PhotoBox'
-import { useContributions, useDeactivateEntity, useEntity, type EntityRow } from '@/features/master/entityHooks'
+import { useContributions, useDeactivateEntity, useEntity } from '@/features/master/entityHooks'
 import { useAuthStore } from '@/auth/authStore'
 import { StartupDetailForm } from '@/features/startup/StartupDetailForm'
-import { StartupAiFillButton } from '@/features/startup/StartupAiFillButton'
-import { StartupAiFillNotice } from '@/features/startup/StartupAiFillNotice'
-import type { AiFillOutcome } from '@/features/startup/startupAiMerge'
 import { StartupCapabilitySection } from '@/features/startup/StartupCapabilitySection'
 import { StartupPerformanceSection } from '@/features/startup/StartupPerformanceSection'
 import { useStartupManagers } from '@/features/startup/startupPoolHooks'
@@ -62,15 +59,6 @@ export function StartupDetailPage() {
   const authUser = useAuthStore((s) => s.user)
   const deactivate = useDeactivateEntity('startups')
   const [editing, setEditing] = useState(false)
-  /**
-   * 'AI 작성하기' 결과 — 초안을 얹은 레코드와 실행 요약. 여기 있는 동안 원장은 아직 그대로다
-   * (저장은 폼의 통상 경로가 한다). 편집을 닫을 때 함께 버려 다음 편집이 원본에서 시작하게 한다.
-   */
-  const [aiFill, setAiFill] = useState<{ record: EntityRow; outcome: AiFillOutcome } | null>(null)
-  const closeEditor = () => {
-    setEditing(false)
-    setAiFill(null)
-  }
 
   if (isLoading) return <Spinner />
   if (!record) return <Banner tone="warning">스타트업 정보를 찾을 수 없습니다.</Banner>
@@ -118,13 +106,10 @@ export function StartupDetailPage() {
       {editing ? (
         <StartupDetailForm
           recordId={record.id}
-          // AI 초안이 있으면 그것을 얹은 행으로 폼을 세운다. 폼은 원장 행 하나에서 모든 카드
-          // 값을 읽으므로, 행을 미리 합쳐 넘기면 폼 안쪽에 주입 경로를 따로 열지 않아도 된다.
-          initial={aiFill?.record ?? record}
-          notice={aiFill ? <StartupAiFillNotice outcome={aiFill.outcome} /> : undefined}
+          initial={record}
           backTo={LIST_PATH}
-          onDone={closeEditor}
-          onCancel={closeEditor}
+          onDone={() => setEditing(false)}
+          onCancel={() => setEditing(false)}
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -266,19 +251,9 @@ export function StartupDetailPage() {
               결재를 올리는 대상이라, 여기에 빈 결재 상자를 두면 없는 흐름을 있는 것처럼 보인다.
               비교군 진입점 카드는 목록 화면으로 책임을 모아두기 위해 걷어냈다. */}
           <div className="space-y-4 lg:col-span-1">
+            {/* 조회는 읽기만 한다 — 값을 바꾸기 시작하는 일('AI 작성하기' 포함)은 전부
+                편집 폼 안에 있다. 여기에 두면 화면이 말하는 것과 하는 일이 어긋난다. */}
             <MaterialPanel targetType={RESOURCE_TYPE} targetId={record.id} readOnly />
-            {/* AI 작성하기는 자료 관리 바로 아래에 선다 — 이 기능이 읽는 것이 위 카드의 파일이라,
-                재료에서 떨어뜨리면 무엇을 근거로 채우는지가 화면에서 사라진다. 수정 권한이 있을
-                때만 서고, 서버(startup-ai-fill)도 같은 판정을 다시 한다. */}
-            {canEdit && (
-              <StartupAiFillButton
-                record={record}
-                onFilled={(next, outcome) => {
-                  setAiFill({ record: next, outcome })
-                  setEditing(true)
-                }}
-              />
-            )}
             <RelatedMinutesPanel targetType="startup" targetId={record.id} />
             <ChangeHistoryPanel contributions={contributions} />
             <FeedbackPanel targetType={RESOURCE_TYPE} targetId={record.id} />

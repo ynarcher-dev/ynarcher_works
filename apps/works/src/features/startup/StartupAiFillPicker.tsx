@@ -1,6 +1,7 @@
 import { Checkbox, cardText } from '@ynarcher/ui'
 import type { EntityRow } from '@/features/master/entityHooks'
-import { formatBytes, isPdfMaterial, materialDisplayName, type Material } from '@/features/networks/materialHooks'
+import { formatBytes } from '@/features/networks/materialHooks'
+import type { AiSource } from '@/features/startup/startupAiFill'
 import { AI_CARDS, type AiCardKey } from '@/features/startup/startupAiCards'
 
 /**
@@ -12,40 +13,40 @@ import { AI_CARDS, type AiCardKey } from '@/features/startup/startupAiCards'
  * 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §4.2
  */
 
-/** 읽을 자료 목록. PDF가 아닌 파일은 체크할 수 없고 이유를 그 줄에서 밝힌다. */
+/**
+ * 읽을 자료 목록. PDF가 아닌 파일은 체크할 수 없고 이유를 그 줄에서 밝힌다.
+ *
+ * 이미 올라간 첨부와 아직 안 올라간 파일이 한 목록에 섞여 설 수 있다 — 등록 모드에서는 뒤쪽만,
+ * 수정 모드에서는 앞쪽만 온다. 고르는 사람에게는 둘이 같은 일이므로 화면도 가르지 않는다.
+ */
 export function AiFileList({
-  materials,
+  sources,
   selected,
   onToggle,
 }: {
-  materials: Material[]
+  sources: AiSource[]
   selected: string[]
-  onToggle: (id: string) => void
+  onToggle: (key: string) => void
 }) {
   return (
     <ul className="space-y-1.5">
-      {materials.map((m) => {
-        const pdf = isPdfMaterial(m)
-        return (
-          <li key={m.id} className="flex items-center gap-2">
-            <Checkbox
-              checked={selected.includes(m.id)}
-              disabled={!pdf}
-              onChange={() => onToggle(m.id)}
-              label={
-                <span className="flex min-w-0 flex-wrap items-center gap-x-2">
-                  <span className={`min-w-0 truncate ${pdf ? '' : 'text-gray-500'}`}>
-                    {materialDisplayName(m)}
-                  </span>
-                  <span className={cardText.meta}>{formatBytes(m.byte_size)}</span>
-                  {/* 막힌 이유는 접지 않는다 — 왜 못 고르는지는 다음 행동을 지시하는 안내다. */}
-                  {!pdf && <span className={cardText.meta}>PDF만 읽을 수 있습니다 · PDF로 변환해 올려 주세요</span>}
-                </span>
-              }
-            />
-          </li>
-        )
-      })}
+      {sources.map((s) => (
+        <li key={s.key} className="flex items-center gap-2">
+          <Checkbox
+            checked={selected.includes(s.key)}
+            disabled={!s.pdf}
+            onChange={() => onToggle(s.key)}
+            label={
+              <span className="flex min-w-0 flex-wrap items-center gap-x-2">
+                <span className={`min-w-0 truncate ${s.pdf ? '' : 'text-gray-500'}`}>{s.name}</span>
+                <span className={cardText.meta}>{formatBytes(s.bytes)}</span>
+                {/* 막힌 이유는 접지 않는다 — 왜 못 고르는지는 다음 행동을 지시하는 안내다. */}
+                {!s.pdf && <span className={cardText.meta}>PDF만 읽을 수 있습니다 · PDF로 변환해 올려 주세요</span>}
+              </span>
+            }
+          />
+        </li>
+      ))}
     </ul>
   )
 }
