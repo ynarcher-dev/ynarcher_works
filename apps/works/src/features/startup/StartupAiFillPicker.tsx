@@ -3,7 +3,7 @@ import type { EntityRow } from '@/features/master/entityHooks'
 import { formatBytes } from '@/features/networks/materialHooks'
 import type { AiSource } from '@/features/startup/startupAiFill'
 import { AI_SUPPORTED_HINT } from '@/features/startup/startupAiFormats'
-import { AI_CARDS, type AiCardKey } from '@/features/startup/startupAiCards'
+import { AI_CARDS, type AiCardBand, type AiCardKey } from '@/features/startup/startupAiCards'
 
 /**
  * 'AI 작성하기' 모달의 두 선택 목록 — 읽을 자료와 작성할 카드.
@@ -69,7 +69,7 @@ export function AiCardList({
   selected: AiCardKey[]
   onToggle: (key: AiCardKey) => void
 }) {
-  const bands: ('역량' | '실적')[] = ['역량', '실적']
+  const bands: AiCardBand[] = ['기본', '역량', '실적']
   return (
     <div className="space-y-3">
       {bands.map((band) => (

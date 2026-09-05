@@ -198,6 +198,7 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
     setGrowth,
     setBusinessStatus,
     setShareholders,
+    setSummary,
   })
   const aiSources = isCreate
     ? [

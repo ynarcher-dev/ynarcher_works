@@ -9,6 +9,7 @@
 
 import { CARD_KEYS, CARD_LABELS, LIMITS, type CardKey } from './cards.ts'
 import { BUSINESS_PROMPT, IP_PROMPT, TEAM_PROMPT, TECH_PROMPT } from './promptCapability.ts'
+import { basicsPrompt, SUMMARY_PROMPT } from './promptOverview.ts'
 import {
   EMPLOYEE_PROMPT,
   INVESTMENT_PROMPT,
@@ -18,7 +19,11 @@ import {
   TRACTION_PROMPT,
 } from './promptPerformance.ts'
 
-const CARD_PROMPTS: Record<CardKey, string> = {
+/** 소재지 목록이 필요한 기본 정보 카드만 함수로 만든다(나머지는 요청과 무관하게 늘 같다). */
+function cardPrompts(locations: string[]): Record<CardKey, string> {
+  return {
+  basics: basicsPrompt(locations),
+  summary: SUMMARY_PROMPT,
   business: BUSINESS_PROMPT,
   tech: TECH_PROMPT,
   team: TEAM_PROMPT,
@@ -29,6 +34,7 @@ const CARD_PROMPTS: Record<CardKey, string> = {
   employee: EMPLOYEE_PROMPT,
   shareholders: SHAREHOLDERS_PROMPT,
   investment: INVESTMENT_PROMPT,
+  }
 }
 
 /** §6.1 역할과 원칙 — 근거 없는 값을 만들지 않는다는 이 기능의 계약. */
@@ -72,8 +78,9 @@ const ENVELOPE_RULES = `출력 봉투:
  * 아니라 결과다 — 지시가 있으면 모델은 채우려 하고, 화면이 쓰지 않을 값을 만드느라 정작
  * 고른 카드의 근거 탐색이 얕아진다.
  */
-export function buildPrompt(cards: CardKey[], companyName: string): string {
-  // 카드 순서는 요청 순서가 아니라 화면 순서로 고정한다(역량 4 → 실적 6). 요청 순서를 그대로
+export function buildPrompt(cards: CardKey[], companyName: string, locations: string[] = []): string {
+  const CARD_PROMPTS = cardPrompts(locations)
+  // 카드 순서는 요청 순서가 아니라 화면 순서로 고정한다(기본 2 → 역량 4 → 실적 6). 요청 순서를 그대로
   // 쓰면 같은 조합인데 담당자가 체크한 차례에 따라 프롬프트가 달라진다.
   const ordered = CARD_KEYS.filter((k) => cards.includes(k))
   const sections = ordered.map((k) => CARD_PROMPTS[k]).join('\n\n---\n\n')

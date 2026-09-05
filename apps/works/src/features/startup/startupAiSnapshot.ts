@@ -8,7 +8,7 @@ import {
   type GrowthMetrics,
 } from '@/features/startup/startupGrowth'
 import { readShareholderHistory, type ShareholderSnapshot } from '@/features/startup/startupShareholders'
-import type { StartupSummary } from '@/features/startup/StartupSummaryCards'
+import { readSummary, type StartupSummary } from '@/features/startup/StartupSummaryCards'
 
 /**
  * 편집 폼의 살아 있는 값 ↔ 카드 컬럼 사이의 왕복.
@@ -23,8 +23,10 @@ import type { StartupSummary } from '@/features/startup/StartupSummaryCards'
  * 다시 쓰지 않는 이유는 그 규칙이 이 기능에서 유일하게 되돌릴 수 없는 사고가 나는 자리이기
  * 때문이다 — 두 벌이 되면 한쪽만 고치는 날이 온다.
  *
- * **일곱 카드 컬럼만 오간다.** 이름·연락처·사진·분야·미디어는 AI가 건드리지 않으므로 이
- * 왕복에 태우지 않는다(태우면 왕복에서 빠뜨린 칸이 조용히 비워진다).
+ * **오가는 것은 AI가 쓰는 칸뿐이다** — 일곱 카드 컬럼과 기본 정보 일곱 칸. 사진·분야·미디어·
+ * 단계·구분·발굴 경로·연락처는 AI가 건드리지 않으므로 태우지 않는다(태우면 왕복에서 빠뜨린
+ * 칸이 조용히 비워진다). 특히 구분(management_status)은 권한 잠금이 걸린 칸이라 이 왕복에
+ * 절대 올리지 않는다.
  *
  * 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §4.5·§5.1
  */
@@ -49,7 +51,14 @@ export interface AiCardState {
 export function buildCardSnapshot(v: StartupDetailFormValues, s: AiCardState): EntityRow {
   return {
     id: 'form-snapshot',
+    // 기본 정보 카드가 쓰는 평면 칸들. 카드 컬럼과 달리 원장에서 컬럼 하나가 값 하나다.
     name: v.name,
+    representative: v.representative,
+    company_form: v.company_form,
+    founded_on: v.founded_on,
+    biz_reg_no: v.biz_reg_no,
+    location: v.location,
+    address_detail: v.address_detail,
     business_profile: {
       oneLiner: v.oneLiner,
       businessModel: v.businessModel,
@@ -94,8 +103,19 @@ export function toFormValues(merged: EntityRow, v: StartupDetailFormValues): Sta
   const b = readBusiness(merged)
   const tech = readTech(merged)
   const t = readTeam(merged)
+  const text = (key: string) => {
+    const raw = (merged as Record<string, unknown>)[key]
+    return raw == null ? '' : String(raw)
+  }
   return {
     ...v,
+    name: text('name'),
+    representative: text('representative'),
+    company_form: text('company_form'),
+    founded_on: text('founded_on'),
+    biz_reg_no: text('biz_reg_no'),
+    location: text('location'),
+    address_detail: text('address_detail'),
     oneLiner: b.oneLiner ?? '',
     businessModel: b.businessModel ?? '',
     targetMarket: b.targetMarket ?? '',
@@ -126,10 +146,11 @@ export function toFormValues(merged: EntityRow, v: StartupDetailFormValues): Sta
   }
 }
 
-/** 병합 결과에서 폼이 상태로 드는 카드 값을 다시 읽는다. 요약 3축은 AI가 쓰지 않으므로 그대로 둔다. */
+/** 병합 결과에서 폼이 상태로 드는 카드 값을 다시 읽는다. */
 export function toCardState(merged: EntityRow, s: AiCardState): AiCardState {
   return {
     ...s,
+    summary: readSummary(merged),
     capabilities: readTeam(merged).capabilities ?? [],
     ip: readIp(merged),
     growth: readGrowth(merged),

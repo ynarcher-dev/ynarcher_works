@@ -141,3 +141,61 @@ describe('parseJson', () => {
     expect(parseJson('설명 문장입니다')).toBeNull()
   })
 })
+
+describe('normBasics — 서류에 인쇄된 값만 통과한다', () => {
+  const basics = (o: Record<string, unknown>, locations = ['서울특별시', '경기도', '해외']) =>
+    normalizeEnvelope({ cards: { basics: o } }, ['basics'], { locations })
+
+  it('사업자등록번호는 숫자 10자리를 형식에 맞춰 돌려준다', () => {
+    const out = basics({ bizRegNo: '1234567890' })
+    expect((out.cards.basics as Record<string, unknown>).bizRegNo).toBe('123-45-67890')
+  })
+
+  it('법인등록번호(13자리)를 잘못 읽어 오면 비우고 경고를 남긴다', () => {
+    const out = basics({ name: '주식회사 가', bizRegNo: '110111-1234567' })
+    expect((out.cards.basics as Record<string, unknown>).bizRegNo).toBeNull()
+    expect(out.notes.basics?.join(' ')).toContain('사업자등록번호')
+  })
+
+  it('설립일은 일 단위까지 있어야 한다(폼의 date 칸에 월만으로는 못 들어간다)', () => {
+    const out = basics({ name: '가', foundedOn: '2021-03' })
+    expect((out.cards.basics as Record<string, unknown>).foundedOn).toBeNull()
+    expect(out.notes.basics?.join(' ')).toContain('설립일')
+  })
+
+  it('소재지는 원장 목록 밖이면 비운다(셀렉트에 없는 값이 폼에 앉지 않게)', () => {
+    const out = basics({ name: '가', location: '서울' })
+    expect((out.cards.basics as Record<string, unknown>).location).toBeNull()
+    expect(out.notes.basics?.join(' ')).toContain('소재지')
+  })
+
+  it('소재지 목록을 못 받았으면 통과시키지 않고 그 사실을 말한다', () => {
+    const out = basics({ name: '가', location: '서울특별시' }, [])
+    expect((out.cards.basics as Record<string, unknown>).location).toBeNull()
+    expect(out.notes.basics?.join(' ')).toContain('불러오지 못해')
+  })
+
+  it('회사 형태는 세 값 밖이면 비운다', () => {
+    const out = basics({ name: '가', companyForm: '주식회사' })
+    expect((out.cards.basics as Record<string, unknown>).companyForm).toBeNull()
+  })
+})
+
+describe('normSummary — 판단하는 유일한 카드', () => {
+  const summary = (o: Record<string, unknown>) => normalizeEnvelope({ cards: { summary: o } }, ['summary'])
+
+  it('축마다 세 줄까지만 남긴다(폼의 입력 칸이 축마다 셋이다)', () => {
+    const out = summary({ strengths: ['1', '2', '3', '4'], improvements: [], needs: [] })
+    expect((out.cards.summary as Record<string, unknown>).strengths).toEqual(['1', '2', '3'])
+  })
+
+  it('빈 줄은 떨어뜨린다', () => {
+    const out = summary({ strengths: ['강점', '  ', ''], improvements: [], needs: [] })
+    expect((out.cards.summary as Record<string, unknown>).strengths).toEqual(['강점'])
+  })
+
+  it('세 축이 모두 비면 카드 전체를 null로 돌려준다(기존 값 유지로 읽힌다)', () => {
+    const out = summary({ strengths: [], improvements: [], needs: [] })
+    expect(out.cards.summary).toBeNull()
+  })
+})

@@ -80,6 +80,26 @@ function hasContent(value: unknown): boolean {
   )
 }
 
+/** 요약 카드가 소유하는 키. 비즈니스 카드와 같은 컬럼에 살지만 서로의 키를 건드리지 않는다. */
+const SUMMARY_KEYS = ['strengths', 'improvements', 'needs']
+
+/**
+ * 기본 정보 카드: 응답 키 → 원장 컬럼.
+ *
+ * 이 카드만 카드 컬럼(jsonb)이 아니라 평면 스칼라 컬럼을 건드린다. 단계·구분·발굴 경로·
+ * 연락처는 여기 없다 — 서류에 인쇄된 사실이 아니라 우리가 정하는 값이고, 특히 구분
+ * (management_status)은 권한 잠금이 걸린 칸이라 AI가 닿을 자리에 두지 않는다.
+ */
+const BASICS_FIELDS: [string, string][] = [
+  ['name', 'name'],
+  ['representative', 'representative'],
+  ['companyForm', 'company_form'],
+  ['foundedOn', 'founded_on'],
+  ['bizRegNo', 'biz_reg_no'],
+  ['location', 'location'],
+  ['addressDetail', 'address_detail'],
+]
+
 const BUSINESS_KEYS = ['oneLiner', 'businessModel', 'targetMarket', 'revenueModel', 'salesChannel', 'supplyMode']
 const TECH_KEYS = ['product', 'devStage', 'coreTech', 'devInsourcing', 'differentiator']
 const TEAM_TEXT_KEYS = ['founderStrength', 'orgComposition', 'hiringPlan']
@@ -123,6 +143,21 @@ export function applyAiDraft(
     }
     filled.push(key)
     switch (key) {
+      case 'basics': {
+        const v = obj(value)
+        const target = next as unknown as Rec
+        const source = record as unknown as Rec
+        for (const [from, col] of BASICS_FIELDS) target[col] = keep(v[from], source[col])
+        break
+      }
+      case 'summary': {
+        // 세 축 모두 목록이라 목록 규칙으로 얹는다(빈 배열은 '없다'가 아니라 '못 찾았다').
+        const v = obj(value)
+        const merged: Rec = { ...business }
+        for (const k of SUMMARY_KEYS) merged[k] = mergeList(business[k], v[k])
+        business = merged
+        break
+      }
       case 'business':
         business = mergeKeys(business, obj(value), BUSINESS_KEYS)
         break

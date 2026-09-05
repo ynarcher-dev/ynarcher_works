@@ -13,7 +13,7 @@
 
 import type { CardKey } from './cards.ts'
 import { buildResponseSchema } from './schema.ts'
-import { normalizeEnvelope, parseJson } from './validate.ts'
+import { normalizeEnvelope, parseJson, type NormalizeOptions } from './validate.ts'
 
 /** 잠깐인 실패. 같은 요청을 다시 보내면 성공할 수 있는 것들만 담는다. */
 const TRANSIENT = new Set([429, 500, 502, 503, 504])
@@ -60,6 +60,8 @@ export interface GenerateOptions {
   parts: unknown[]
   cards: CardKey[]
   signal: AbortSignal
+  /** 검증에 필요한 원장 값(소재지 목록 등). 상수로 두지 않고 요청 시점에 받아 온다. */
+  normalize?: NormalizeOptions
 }
 
 /**
@@ -111,7 +113,7 @@ export async function generateDraft(
     const candidate = data.candidates?.[0]
     const text = candidate?.content?.parts?.map((p) => p.text ?? '').join('') ?? ''
     const parsed = parseJson(text)
-    if (parsed) return { envelope: normalizeEnvelope(parsed, opts.cards) }
+    if (parsed) return { envelope: normalizeEnvelope(parsed, opts.cards, opts.normalize) }
 
     // 200인데 읽을 것이 없으면 이유는 응답 안에 있다 — 안전 차단이거나 답이 잘린 것이다.
     // 그 둘은 "해석하지 못했다"와 다음 행동이 달라서 갈라 말한다.

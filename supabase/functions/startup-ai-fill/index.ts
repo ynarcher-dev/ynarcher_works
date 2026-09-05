@@ -233,9 +233,27 @@ Deno.serve(
           400,
         )
       }
-      parts.push({ text: buildPrompt(cards, companyName) })
+      // 소재지 선택지는 ADMIN 원장이 소유한다. 상수로 적어 두면 원장에서 시·도가 바뀌는 날
+      // 서버만 옛 목록으로 판정하므로, 그 카드를 고른 요청에서만 그때그때 받아 온다.
+      let locations: string[] = []
+      if (cards.includes("basics")) {
+        const { data: tags } = await asCaller
+          .from("location_tags")
+          .select("name")
+          .is("deleted_at", null)
+          .order("sort_order")
+        locations = (tags ?? []).map((t) => String(t.name)).filter(Boolean)
+      }
+      parts.push({ text: buildPrompt(cards, companyName, locations) })
 
-      const result = await generateDraft({ apiKey, model, parts, cards, signal: controller.signal })
+      const result = await generateDraft({
+        apiKey,
+        model,
+        parts,
+        cards,
+        signal: controller.signal,
+        normalize: { locations },
+      })
       if ('failure' in result) {
         // 사유를 그대로 올려 보낸다. 못 읽은 자료도 함께 보낸다 — 실패한 이유가 그것일 수 있다.
         return jsonResponse(

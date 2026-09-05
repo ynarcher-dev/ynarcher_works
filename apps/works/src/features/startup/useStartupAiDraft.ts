@@ -41,6 +41,7 @@ export function useStartupAiDraft({
   setGrowth,
   setBusinessStatus,
   setShareholders,
+  setSummary,
 }: {
   getValues: UseFormGetValues<StartupDetailFormValues>
   reset: UseFormReset<StartupDetailFormValues>
@@ -51,6 +52,8 @@ export function useStartupAiDraft({
   setGrowth: (v: AiCardState['growth']) => void
   setBusinessStatus: (v: AiCardState['businessStatus']) => void
   setShareholders: (v: AiCardState['shareholders']) => void
+  /** 요약 3축. 2026-09-06에 AI가 쓰는 카드가 되면서 되돌릴 자리가 생겼다. */
+  setSummary: (v: AiCardState['summary']) => void
 }) {
   const [outcome, setOutcome] = useState<AiFillOutcome | null>(null)
 
@@ -67,6 +70,7 @@ export function useStartupAiDraft({
     setGrowth(next.growth)
     setBusinessStatus(next.businessStatus)
     setShareholders(next.shareholders)
+    setSummary(next.summary)
     setOutcome(merged.outcome)
   }
 

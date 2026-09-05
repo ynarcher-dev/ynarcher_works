@@ -39,6 +39,20 @@ function arr(items: SchemaNode): SchemaNode {
 }
 
 const CARD_SCHEMAS: Record<CardKey, SchemaNode> = {
+  basics: obj({
+    name: STR,
+    representative: STR,
+    companyForm: STR,
+    foundedOn: STR,
+    bizRegNo: STR,
+    location: STR,
+    addressDetail: STR,
+  }),
+  summary: obj({
+    strengths: arr({ type: 'STRING' }),
+    improvements: arr({ type: 'STRING' }),
+    needs: arr({ type: 'STRING' }),
+  }),
   business: obj({
     oneLiner: STR,
     businessModel: STR,

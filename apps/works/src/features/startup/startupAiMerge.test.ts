@@ -90,6 +90,86 @@ describe('applyAiDraft — 보존 키 규칙', () => {
   })
 })
 
+describe('applyAiDraft — 기본 정보와 요약(2026-09-06 추가)', () => {
+  it('기본 정보는 평면 컬럼에 얹힌다', () => {
+    const { record } = applyAiDraft(
+      fullRecord(),
+      envelope({
+        basics: {
+          name: '주식회사 비건슈퍼',
+          representative: '홍길동',
+          companyForm: '법인',
+          foundedOn: '2021-03-15',
+          bizRegNo: '123-45-67890',
+          location: '서울특별시',
+          addressDetail: '강남구 테헤란로 123',
+        },
+      }),
+      ['basics'],
+    )
+    expect(record.name).toBe('주식회사 비건슈퍼')
+    expect((record as Record<string, unknown>).company_form).toBe('법인')
+    expect((record as Record<string, unknown>).founded_on).toBe('2021-03-15')
+    expect((record as Record<string, unknown>).biz_reg_no).toBe('123-45-67890')
+    expect((record as Record<string, unknown>).address_detail).toBe('강남구 테헤란로 123')
+  })
+
+  it('기본 정보에서 못 찾은 칸은 기존 값을 지우지 않는다', () => {
+    const before = { ...fullRecord(), representative: '기존 대표', company_form: '법인' } as EntityRow
+    const { record } = applyAiDraft(
+      before,
+      envelope({ basics: { name: '새 상호', representative: null, companyForm: '' } }),
+      ['basics'],
+    )
+    expect(record.name).toBe('새 상호')
+    expect((record as Record<string, unknown>).representative).toBe('기존 대표')
+    expect((record as Record<string, unknown>).company_form).toBe('법인')
+  })
+
+  it('구분·단계·발굴 경로는 기본 정보 카드가 건드리지 않는다', () => {
+    // 권한 잠금이 걸린 칸이 AI가 닿는 자리에 있으면 안 된다.
+    const before = { ...fullRecord(), management_status: 'sourced', stage: '시드' } as EntityRow
+    const { record } = applyAiDraft(
+      before,
+      // 모델이 보내와도 흘려보내지 않는다.
+      envelope({ basics: { name: '새 상호', managementStatus: 'invested', stage: 'Series A' } }),
+      ['basics'],
+    )
+    expect((record as Record<string, unknown>).management_status).toBe('sourced')
+    expect((record as Record<string, unknown>).stage).toBe('시드')
+  })
+
+  it('요약을 채워도 같은 컬럼의 비즈니스 칸은 그대로다', () => {
+    const { record } = applyAiDraft(
+      fullRecord(),
+      envelope({ summary: { strengths: ['매출 3년 연속 성장'], improvements: [], needs: ['개발 인력 충원'] } }),
+      ['summary'],
+    )
+    const b = record.business_profile as Record<string, unknown>
+    expect(b.strengths).toEqual(['매출 3년 연속 성장'])
+    expect(b.needs).toEqual(['개발 인력 충원'])
+    // 빈 축은 기존 값이 남는다(빈 배열은 '없다'가 아니라 '못 찾았다').
+    expect(b.improvements).toEqual(['보완1'])
+    // 비즈니스 카드의 칸은 손대지 않는다.
+    expect(b.oneLiner).toBe('기존 한 줄')
+    expect(b.businessModel).toBe('기존 BM')
+  })
+
+  it('비즈니스와 요약을 함께 채워도 서로의 키를 지우지 않는다', () => {
+    const { record } = applyAiDraft(
+      fullRecord(),
+      envelope({
+        business: { oneLiner: '새 한 줄' },
+        summary: { strengths: ['새 강점'], improvements: [], needs: [] },
+      }),
+      ['business', 'summary'],
+    )
+    const b = record.business_profile as Record<string, unknown>
+    expect(b.oneLiner).toBe('새 한 줄')
+    expect(b.strengths).toEqual(['새 강점'])
+  })
+})
+
 describe('applyAiDraft — 체크하지 않은 카드는 불변', () => {
   it('체크하지 않은 카드의 컬럼은 원본과 같은 값이다', () => {
     const before = fullRecord()
@@ -153,8 +233,12 @@ describe('applyAiDraft — AI의 null은 지우지 않는다', () => {
 describe('기본 체크 규칙', () => {
   it('값이 있는 카드는 꺼지고 빈 카드만 켜진다', () => {
     expect(defaultCardSelection(fullRecord())).toEqual([])
+    // 이름이 있으면 기본 정보는 '채워진 카드'다 — 수정 모드에서 기업명이 늘 차 있는 것과 같다.
     const empty = { id: 'S2', name: '빈 기업' } as EntityRow
-    expect(defaultCardSelection(empty)).toHaveLength(10)
+    expect(defaultCardSelection(empty)).toHaveLength(11)
+    expect(defaultCardSelection(empty)).not.toContain('basics')
+    // 등록 모드의 빈 폼에서는 기본 정보까지 켜진다 — 첫 등록이 그 카드의 자리다.
+    expect(defaultCardSelection({ id: 'S3', name: '' } as EntityRow)).toHaveLength(12)
   })
 
   it('카드가 절반만 차 있어도 채워진 카드로 보아 꺼진다', () => {

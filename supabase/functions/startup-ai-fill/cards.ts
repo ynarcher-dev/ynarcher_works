@@ -7,8 +7,10 @@
 //
 // 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §5·§7
 
-/** 체크 단위(카드) 키. 상세 화면의 밴드·순서와 같다 — 역량 4 → 실적 6. */
+/** 체크 단위(카드) 키. 상세 화면의 밴드·순서와 같다 — 기본 2 → 역량 4 → 실적 6. */
 export const CARD_KEYS = [
+  'basics',
+  'summary',
   'business',
   'tech',
   'team',
@@ -25,6 +27,8 @@ export type CardKey = (typeof CARD_KEYS)[number]
 
 /** 화면 라벨(오류 메시지·요약 줄에서 카드를 부르는 말). */
 export const CARD_LABELS: Record<CardKey, string> = {
+  basics: '기본 정보',
+  summary: '요약',
   business: '비즈니스',
   tech: '제품·기술',
   team: '팀·조직',
@@ -39,6 +43,8 @@ export const CARD_LABELS: Record<CardKey, string> = {
 
 /** 카드가 객체 하나인지(null 가능) 목록인지 — 빈 결과 판정과 스키마 생성이 함께 쓴다. */
 export const CARD_SHAPE: Record<CardKey, 'object' | 'array'> = {
+  basics: 'object',
+  summary: 'object',
   business: 'object',
   tech: 'object',
   team: 'object',
@@ -60,6 +66,7 @@ export function isCardKey(v: unknown): v is CardKey {
 // 프론트 startupProfile.ts / startupGrowth.ts 의 같은 이름 상수와 한 벌이다.
 // 모델이 이 밖의 값을 돌려주면 validate.ts 가 null 로 치환하고 notes 에 원문을 남긴다.
 
+export const COMPANY_FORM_OPTIONS = ['법인', '개인', '예비'] as const
 export const DEV_STAGE_OPTIONS = ['아이디어', '프로토타입', 'MVP', '정식 출시', '양산'] as const
 export const DEV_INSOURCING_OPTIONS = ['자체 개발', '일부 외주', '전면 외주'] as const
 export const EMPLOYMENT_OPTIONS = ['전업', '겸업'] as const
@@ -77,6 +84,8 @@ export const LIMITS = {
   traction: 40,
   customers: 20,
   investment: 15,
+  /** 요약 3축의 축마다 문장 수. 화면 입력 칸이 축마다 셋이라 그 수에 맞춘다. */
+  summaryLines: 3,
   /** 카드마다 notes·evidence 줄 수. */
   notes: 5,
 } as const

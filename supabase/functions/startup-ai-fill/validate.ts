@@ -14,6 +14,7 @@
 
 import {
   CARD_SHAPE,
+  COMPANY_FORM_OPTIONS,
   CUSTOMER_KIND_OPTIONS,
   DEV_INSOURCING_OPTIONS,
   DEV_STAGE_OPTIONS,
@@ -31,6 +32,16 @@ export interface Envelope {
   cards: Partial<Record<CardKey, unknown>>
   notes: Partial<Record<CardKey, string[]>>
   evidence: Partial<Record<CardKey, string[]>>
+}
+
+export interface NormalizeOptions {
+  /**
+   * 소재지 태그 원장(location_tags)의 값 목록.
+   *
+   * 상수로 적어 두지 않는 이유는 그 원장을 ADMIN이 고치기 때문이다 — 적어 두면 시·도가 하나
+   * 바뀌는 날 서버만 옛 목록으로 판정한다.
+   */
+  locations?: string[]
 }
 
 /** 정규화 중 쌓이는 경고. 카드별 notes 뒤에 덧붙는다. */
@@ -84,7 +95,65 @@ function year(v: unknown): number | null {
   return n != null && n >= 1900 && n <= 2100 ? n : null
 }
 
+/** 일 단위까지 있는 날짜만. 설립일은 date 컬럼이라 월까지만 아는 값을 넣을 자리가 없다. */
+function ymd(v: unknown, card: CardKey, label: string, warn: Warn): string | null {
+  const s = str(v, 10)
+  if (!s) return null
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+  warn(card, `${label} 날짜 형식 아님 "${s}" — 비웠습니다`)
+  return null
+}
+
 // ── 카드별 정규화 ─────────────────────────────────────────────────────
+
+/**
+ * 기본 정보: 서류에 인쇄된 값이라 형식 검사가 곧 진위 검사에 가깝다.
+ *
+ * 소재지는 ADMIN 원장(location_tags)의 값하고만 맞는다. 목록을 못 받았을 때 그냥 통과시키면
+ * 화면의 셀렉트에 없는 값이 폼에 앉아 저장 직전까지 아무도 모른다.
+ */
+function normBasics(o: Rec, warn: Warn, locations: string[]): Rec {
+  let location: string | null = null
+  const rawLocation = str(o.location, 40)
+  if (rawLocation) {
+    if (locations.length === 0) warn('basics', `소재지 목록을 불러오지 못해 "${rawLocation}"를 비웠습니다`)
+    else location = pick(rawLocation, locations, 'basics', '소재지', warn)
+  }
+  return {
+    name: str(o.name, 100),
+    representative: str(o.representative, 60),
+    companyForm: pick(o.companyForm, COMPANY_FORM_OPTIONS, 'basics', '회사 형태', warn),
+    foundedOn: ymd(o.foundedOn, 'basics', '설립일', warn),
+    bizRegNo: bizRegNo(o.bizRegNo, warn),
+    location,
+    addressDetail: str(o.addressDetail, 200),
+  }
+}
+
+/** 사업자등록번호: 숫자 10자리만 통과. 13자리(법인등록번호)를 잘못 읽어 오는 사고가 흔하다. */
+function bizRegNo(v: unknown, warn: Warn): string | null {
+  const s = str(v, 20)
+  if (!s) return null
+  const digits = s.replace(/\D/g, '')
+  if (digits.length === 10) return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`
+  warn('basics', `사업자등록번호 자릿수 아님 "${s}" — 비웠습니다`)
+  return null
+}
+
+/**
+ * 요약: 이 카드만 서술어를 허용하므로 길이 상한도 문장 기준이다.
+ *
+ * 축마다 줄 수를 서버가 다시 자르는 이유는 화면 입력 칸이 축마다 셋이기 때문이다 — 넷째 줄이
+ * 오면 그 줄은 폼에 자리가 없어 조용히 사라진다.
+ */
+function normSummary(o: Rec): Rec {
+  const axis = (v: unknown) =>
+    list(v)
+      .map((s) => str(s, 120))
+      .filter((s): s is string => Boolean(s))
+      .slice(0, LIMITS.summaryLines)
+  return { strengths: axis(o.strengths), improvements: axis(o.improvements), needs: axis(o.needs) }
+}
 
 function normBusiness(o: Rec): Rec {
   return {
@@ -307,8 +376,10 @@ function normInvestment(v: unknown, warn: Warn): unknown[] {
 
 // ── 봉투 정규화 ───────────────────────────────────────────────────────
 
-function normalizeCard(key: CardKey, raw: unknown, warn: Warn): unknown {
+function normalizeCard(key: CardKey, raw: unknown, warn: Warn, opts: NormalizeOptions): unknown {
   switch (key) {
+    case 'basics': return normBasics(rec(raw), warn, opts.locations ?? [])
+    case 'summary': return normSummary(rec(raw))
     case 'business': return normBusiness(rec(raw))
     case 'tech': return normTech(rec(raw), warn)
     case 'team': return normTeam(rec(raw), warn)
@@ -348,7 +419,7 @@ function normLines(v: unknown): string[] {
  * (담당자가 지키기로 한 카드를 모델이 채워 보낸 것을 화면까지 흘려 보내지 않는다 —
  * 체크 해제는 '안 씀'이 아니라 '건드리지 않음'이다).
  */
-export function normalizeEnvelope(parsed: unknown, requested: CardKey[]): Envelope {
+export function normalizeEnvelope(parsed: unknown, requested: CardKey[], opts: NormalizeOptions = {}): Envelope {
   const root = rec(parsed)
   const rawCards = rec(root.cards)
   const rawNotes = rec(root.notes)
@@ -364,7 +435,7 @@ export function normalizeEnvelope(parsed: unknown, requested: CardKey[]): Envelo
   const evidence: Partial<Record<CardKey, string[]>> = {}
 
   for (const key of requested) {
-    const value = normalizeCard(key, rawCards[key], warn)
+    const value = normalizeCard(key, rawCards[key], warn, opts)
     cards[key] = isEmptyCard(value) ? (CARD_SHAPE[key] === 'array' ? [] : null) : value
     evidence[key] = normLines(rawEvidence[key])
   }

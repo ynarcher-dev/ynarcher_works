@@ -1,6 +1,7 @@
 import type { EntityRow } from '@/features/master/entityHooks'
 import { readGrowth, readBusinessStatus } from '@/features/startup/startupGrowth'
 import { readBusiness, readIp, readTeam, readTech } from '@/features/startup/startupProfile'
+import { readSummary } from '@/features/startup/StartupSummaryCards'
 import { readShareholderHistory } from '@/features/startup/startupShareholders'
 
 /**
@@ -16,6 +17,8 @@ import { readShareholderHistory } from '@/features/startup/startupShareholders'
 
 /** 카드 키. Edge Function(supabase/functions/startup-ai-fill/cards.ts)의 목록과 한 벌이다. */
 export const AI_CARD_KEYS = [
+  'basics',
+  'summary',
   'business',
   'tech',
   'team',
@@ -31,7 +34,7 @@ export const AI_CARD_KEYS = [
 export type AiCardKey = (typeof AI_CARD_KEYS)[number]
 
 /** 밴드 — 상세 화면의 세로 축(다시 재는가). 모달의 카드 목록도 같은 순서로 선다. */
-export type AiCardBand = '역량' | '실적'
+export type AiCardBand = '기본' | '역량' | '실적'
 
 export interface AiCardMeta {
   key: AiCardKey
@@ -51,6 +54,29 @@ const some = (...values: unknown[]) => values.some((v) => (typeof v === 'string'
  * 그 절반이 기본값 그대로 실행했을 때 사라진다.
  */
 export const AI_CARDS: AiCardMeta[] = [
+  {
+    key: 'basics',
+    label: '기본 정보',
+    band: '기본',
+    // 서류에 인쇄된 값이라 판단이 끼지 않는 유일한 카드다. 수정 모드에서는 기업명이 늘 차
+    // 있어 기본으로 꺼지고, 등록 모드의 빈 폼에서만 켜진다 — 첫 등록이 이 카드의 자리다.
+    filled: (r) =>
+      some(r.name, r.representative, r.company_form, r.founded_on, r.biz_reg_no, r.location, r.address_detail),
+  },
+  {
+    key: 'summary',
+    label: '요약',
+    band: '기본',
+    // 유일하게 판단을 요구하는 카드. 세 축 중 하나라도 차 있으면 손댄 것으로 본다.
+    filled: (r) => {
+      const sm = readSummary(r)
+      return some(sm.strengths.length, sm.improvements.length, sm.needs.length)
+    },
+    count: (r) => {
+      const sm = readSummary(r)
+      return sm.strengths.length + sm.improvements.length + sm.needs.length
+    },
+  },
   {
     key: 'business',
     label: '비즈니스',
