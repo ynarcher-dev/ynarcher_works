@@ -21,6 +21,8 @@ interface OpenedRow {
   target_name: string
   email: string | null
   phone: string | null
+  /** 계정을 이 호출이 처음 세웠는가. 안내 문안이 여기서 갈린다. */
+  account_is_new: boolean
 }
 
 Deno.serve(withCors(async (req: Request) => {
@@ -87,7 +89,9 @@ Deno.serve(withCors(async (req: Request) => {
         const res = await sendNotification({
           channel: to.includes('@') ? 'EMAIL' : 'ALIMTALK',
           to,
-          templateCode: 'GUEST_INVITE',
+          // 계정을 처음 세운 사람에게만 초기 비밀번호를 안내한다. 이미 쓰던 사람에게
+          // 연락처를 알려 주면 통하지 않는 값을 알려 주는 셈이 된다.
+          templateCode: row.account_is_new ? 'GUEST_INVITE_NEW' : 'GUEST_INVITE_ADD',
           variables: {
             name: row.target_name,
             program: titles.get(programId) ?? '참여 사업',

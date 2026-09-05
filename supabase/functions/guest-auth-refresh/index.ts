@@ -17,6 +17,7 @@ import {
   syncGuestName,
   verifyGuestSession,
 } from '../_shared/guestSession.ts'
+import { loadParticipations, toChoice } from '../_shared/guestAccount.ts'
 import { supabaseAdmin } from '../_shared/supabaseAdmin.ts'
 import { loadProgramAnywhere } from '../_shared/programLedger.ts'
 
@@ -41,6 +42,9 @@ Deno.serve(withCors(async (req: Request) => {
     const db = supabaseAdmin()
     const session = await verifyGuestSession(db, req)
     if (!session) return jsonResponse(EXPIRED, 401)
+    // 사업이 아닌 맥락(장래 fund 등)의 세션은 이 함수가 답할 것이 없다. 조용히 빈 값을
+    // 돌려주면 화면이 "사업이 사라졌다"로 읽으므로 사유를 가진 만료로 보낸다.
+    if (!session.programId) return jsonResponse(EXPIRED, 401)
 
     const participations = await loadOpenParticipations(
       db,
@@ -90,6 +94,10 @@ Deno.serve(withCors(async (req: Request) => {
         joined_at: participations[0].joined_at,
       },
       company: identity.companyName ? { name: identity.companyName } : null,
+      // 사이드바 전환기가 쓰는 목록. 여기 함께 실어 보내면 앱 구동 때 왕복이 한 번으로
+      // 끝나고, 목록과 현재 맥락이 같은 시점의 사실이 된다.
+      currentParticipantId: participations[0].id,
+      contexts: (await loadParticipations(db, session.user.id)).map(toChoice),
     })
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'internal_error'

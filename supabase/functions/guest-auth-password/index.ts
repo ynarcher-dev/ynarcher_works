@@ -6,21 +6,31 @@
 // [설정] { changeTicket, newPassword }
 //   초기 비밀번호로 처음 들어온 참여자가 자기 비밀번호를 정한다. 티켓은 guest-auth-login이
 //   초기 비밀번호를 확인한 뒤에만 발급하는 10분짜리 단명 토큰이며 데이터 접근 권한이
-//   없다(aud = guest-password-change). 비밀번호를 정하는 순간 비로소 정상 세션을 발급한다.
+//   없다(aud = guest-password-change). 비밀번호를 정한 뒤에 비로소 갈 곳을 고른다.
 // [변경] { currentPassword, newPassword } + Authorization: Bearer <세션 JWT>
 //   로그인한 게스트가 마이페이지에서 바꾼다. 세션만 믿지 않고 현재 비밀번호를 다시 받는다 —
-//   자리를 비운 사이 남이 계정을 잠그는 일을 막는 최소한의 재확인이다. 실패는 로그인과 같은
-//   잠금 규칙(연속 5회 → 15분)을 태운다.
+//   자리를 비운 사이 남이 계정을 잠그는 일을 막는 최소한의 재확인이다.
+//
+// 2026-09-05: 저장 위치가 초대 행(guest_invitations)에서 **계정**(guest_credentials)으로
+// 옮겨졌다. 종전에는 사업마다 초대 행이 있어 비밀번호가 여러 벌이었고, 새 사업에 초대되면
+// 그 행의 해시가 비어 전화번호로 다시 들어올 수 있었다. 이제 계정에 하나뿐이다.
 import { jsonResponse, withCors } from '../_shared/cors.ts'
 import { verifyJwt } from '../_shared/crypto.ts'
 import {
+  clearFailures,
   isLocked,
-  issueGuestSession,
-  loadInvitation,
+  issueSession,
+  loadAccount,
+  loadCredentials,
+  loadParticipations,
+  readLedgerPhone,
   recordFailure,
-  type GuestInvitation,
-} from '../_shared/guestInvitation.ts'
-import { loadOpenParticipations, verifyGuestSession } from '../_shared/guestSession.ts'
+  signSelectTicket,
+  toChoice,
+  SELECT_TTL_SEC,
+  type GuestAccount,
+} from '../_shared/guestAccount.ts'
+import { verifyGuestSession } from '../_shared/guestSession.ts'
 import { hashPassword, passwordPolicyError, verifyPassword } from '../_shared/password.ts'
 import { supabaseAdmin } from '../_shared/supabaseAdmin.ts'
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -41,8 +51,49 @@ const LOCKED = {
   error: 'locked',
   message: '시도가 많아 잠시 잠겼습니다. 15분 뒤 다시 시도해 주세요.',
 }
+const NO_ACCESS = {
+  accessible: false,
+  message: '비밀번호가 설정되었습니다. 다만 현재 접근 가능한 사업이 없습니다.',
+}
 
-/** [설정 모드] 티켓 검증 → 정책 검사 → 저장 → 세션 발급. */
+/** 새 비밀번호를 계정에 저장한다. */
+async function savePassword(
+  db: SupabaseClient,
+  userId: string,
+  newPassword: string,
+): Promise<boolean> {
+  const hash = await hashPassword(newPassword)
+  const { error } = await db
+    .from('guest_credentials')
+    .update({
+      password_hash: hash,
+      password_set_at: new Date().toISOString(),
+      login_attempts: 0,
+      locked_until: null,
+      // 재설정 링크로 들어와 정했다면 그 토큰은 여기서 소진된다.
+      reset_token_hash: null,
+      reset_expires_at: null,
+    })
+    .eq('user_id', userId)
+  return !error
+}
+
+/** 비밀번호를 정한 직후의 착지 — 갈 곳이 하나면 바로, 여럿이면 목록, 없으면 안내. */
+async function landAfterSet(db: SupabaseClient, account: GuestAccount): Promise<Response> {
+  const participations = await loadParticipations(db, account.id)
+  if (participations.length === 0) return jsonResponse(NO_ACCESS)
+  if (participations.length === 1) {
+    return jsonResponse(await issueSession(db, account, participations[0]))
+  }
+  return jsonResponse({
+    selectTicket: await signSelectTicket(account.id),
+    expiresInSec: SELECT_TTL_SEC,
+    user: { id: account.id, name: account.name, user_type: account.user_type },
+    choices: participations.map(toChoice),
+  })
+}
+
+/** [설정 모드] 티켓 검증 → 정책 검사 → 저장 → 착지. */
 async function handleInitialSet(
   db: SupabaseClient,
   changeTicket: string,
@@ -54,32 +105,26 @@ async function handleInitialSet(
   const claims = await verifyJwt(changeTicket, secret, 'guest-password-change')
   if (!claims || typeof claims.sub !== 'string') return jsonResponse(EXPIRED, 401)
 
-  const match = await loadInvitation(db, claims.sub)
-  if (!match) return jsonResponse(EXPIRED, 401)
+  const account = await loadAccount(db, claims.sub)
+  if (!account) return jsonResponse(EXPIRED, 401)
 
+  const cred = await loadCredentials(db, account.id)
   // 티켓이 살아 있어도 그 사이 비밀번호가 정해졌다면(다른 창에서 먼저 설정) 다시 로그인시킨다.
-  if (match.invitation.password_hash) return jsonResponse(EXPIRED, 401)
+  // 재설정 링크로 받은 티켓(rst)만 예외다 — 그 경로는 **이미 있는 비밀번호를 바꾸러** 온다.
+  const isReset = claims.rst === true
+  if (cred.password_hash && !isReset) return jsonResponse(EXPIRED, 401)
 
-  const policyError = passwordPolicyError(newPassword, match.invitation.phone ?? '')
+  const ledgerPhone = await readLedgerPhone(db, account)
+  const policyError = passwordPolicyError(newPassword, ledgerPhone ?? '')
   if (policyError) return jsonResponse({ error: 'weak_password', message: policyError }, 400)
 
-  const hash = await hashPassword(newPassword)
-  const { error: saveErr } = await db
-    .from('guest_invitations')
-    .update({
-      password_hash: hash,
-      password_set_at: new Date().toISOString(),
-      login_attempts: 0,
-      locked_until: null,
-    })
-    .eq('id', match.invitation.id)
-  if (saveErr) return jsonResponse({ error: 'save_failed' }, 500)
-
-  const session = await issueGuestSession(db, match)
-  return jsonResponse(session)
+  if (!(await savePassword(db, account.id, newPassword))) {
+    return jsonResponse({ error: 'save_failed' }, 500)
+  }
+  return await landAfterSet(db, account)
 }
 
-/** [변경 모드] 세션 검증 → 현재 비밀번호 재확인 → 정책 검사 → 이 사업의 초대장 전부에 저장. */
+/** [변경 모드] 세션 검증 → 현재 비밀번호 재확인 → 정책 검사 → 저장. */
 async function handleChange(
   db: SupabaseClient,
   req: Request,
@@ -89,39 +134,19 @@ async function handleChange(
   const session = await verifyGuestSession(db, req)
   if (!session) return jsonResponse(SESSION_EXPIRED, 401)
 
-  const participations = await loadOpenParticipations(db, session.programId, session.user.id)
-  if (participations.length === 0) return jsonResponse(SESSION_EXPIRED, 401)
+  const account = await loadAccount(db, session.user.id)
+  if (!account) return jsonResponse(SESSION_EXPIRED, 401)
 
-  // 한 사람이 이 사업에 역할 수만큼 초대장을 가질 수 있다(역할별 명부 행 × 초대장).
-  // 대조는 해시가 있는 것 중 하나로, 저장은 전부에 — 로그인이 어느 초대장을 집더라도
-  // 새 비밀번호 하나로 열리게 한다.
-  const { data } = await db
-    .from('guest_invitations')
-    .select('id, phone, password_hash, login_attempts, locked_until')
-    .in('participant_id', participations.map((p) => p.id))
-  const invitations = (data ?? []) as Pick<
-    GuestInvitation,
-    'id' | 'phone' | 'password_hash' | 'login_attempts' | 'locked_until'
-  >[]
-  if (invitations.length === 0) return jsonResponse(SESSION_EXPIRED, 401)
+  const cred = await loadCredentials(db, account.id)
+  if (isLocked(cred)) return jsonResponse(LOCKED, 429)
 
-  if (invitations.some((inv) => isLocked(inv as GuestInvitation))) {
-    return jsonResponse(LOCKED, 429)
-  }
-
-  let matched: (typeof invitations)[number] | null = null
-  for (const inv of invitations) {
-    if (inv.password_hash && (await verifyPassword(currentPassword, inv.password_hash))) {
-      matched = inv
-      break
-    }
-  }
-  if (!matched) {
-    await recordFailure(db, invitations[0] as GuestInvitation)
+  if (!cred.password_hash || !(await verifyPassword(currentPassword, cred.password_hash))) {
+    await recordFailure(db, cred)
     return jsonResponse(WRONG_CURRENT, 401)
   }
 
-  const policyError = passwordPolicyError(newPassword, matched.phone ?? '')
+  const ledgerPhone = await readLedgerPhone(db, account)
+  const policyError = passwordPolicyError(newPassword, ledgerPhone ?? '')
   if (policyError) return jsonResponse({ error: 'weak_password', message: policyError }, 400)
   if (newPassword === currentPassword) {
     return jsonResponse(
@@ -130,18 +155,10 @@ async function handleChange(
     )
   }
 
-  const hash = await hashPassword(newPassword)
-  const { error: saveErr } = await db
-    .from('guest_invitations')
-    .update({
-      password_hash: hash,
-      password_set_at: new Date().toISOString(),
-      login_attempts: 0,
-      locked_until: null,
-    })
-    .in('id', invitations.map((inv) => inv.id))
-  if (saveErr) return jsonResponse({ error: 'save_failed' }, 500)
-
+  if (!(await savePassword(db, account.id, newPassword))) {
+    return jsonResponse({ error: 'save_failed' }, 500)
+  }
+  await clearFailures(db, account.id)
   return jsonResponse({ ok: true })
 }
 
