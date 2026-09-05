@@ -38,11 +38,9 @@ export function StartupAiFillModal({
 }) {
   const fill = useAiFill()
 
-  // 기본 선택: 읽을 수 있는 자료 전부(상한 안에서), 빈 카드 전부. 담당자가 아무것도 만지지 않고 실행해도
+  // 기본 선택: 읽을 수 있는 자료 전부, 빈 카드 전부. 담당자가 아무것도 만지지 않고 실행해도
   // 이미 적혀 있는 값은 그대로 남는다 — 기본값이 지키는 쪽에 서야 안전장치가 된다.
-  const [picked, setPicked] = useState<string[]>(() =>
-    sources.filter((s) => s.readable).slice(0, AI_FILL_LIMITS.maxFiles).map((s) => s.key),
-  )
+  const [picked, setPicked] = useState<string[]>(() => sources.filter((s) => s.readable).map((s) => s.key))
   const [cards, setCards] = useState<AiCardKey[]>(() => defaultCardSelection(snapshot))
   const [agreed, setAgreed] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -52,10 +50,8 @@ export function StartupAiFillModal({
   const tooLarge = totalBytes > AI_FILL_LIMITS.maxTotalBytes
   // 합계와 별개로 한 건이 큰 경우를 따로 본다 — 합계만 말하면 어느 자료를 빼야 하는지 모른다.
   const oversized = chosen.filter((s) => Number(s.bytes ?? 0) > AI_FILL_LIMITS.maxSingleBytes)
-  const tooMany = chosen.length > AI_FILL_LIMITS.maxFiles
   const busy = fill.isPending
-  const ready =
-    chosen.length > 0 && cards.length > 0 && agreed && !tooLarge && oversized.length === 0 && !tooMany && !busy
+  const ready = chosen.length > 0 && cards.length > 0 && agreed && !tooLarge && oversized.length === 0 && !busy
 
   const togglePick = (key: string) =>
     setPicked((prev) => (prev.includes(key) ? prev.filter((v) => v !== key) : [...prev, key]))
@@ -119,11 +115,6 @@ export function StartupAiFillModal({
             {oversized.length > 0 && (
               <p className="mt-1 text-caption text-danger">
                 한 건이 {formatBytes(AI_FILL_LIMITS.maxSingleBytes)}를 넘습니다: {oversized.map((s) => s.name).join(' · ')}
-              </p>
-            )}
-            {tooMany && (
-              <p className="mt-1 text-caption text-danger">
-                한 번에 {AI_FILL_LIMITS.maxFiles}개까지 읽을 수 있습니다.
               </p>
             )}
           </section>

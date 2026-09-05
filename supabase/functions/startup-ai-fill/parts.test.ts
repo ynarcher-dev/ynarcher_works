@@ -1,31 +1,33 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { buildParts, type BuildDeps } from './parts.ts'
 import type { UploadedFile } from './filesApi.ts'
-import { MAX_INLINE_BYTES, MAX_TOTAL_BYTES } from './limits.ts'
+import { MAX_INLINE_BYTES, MAX_TEXT_BYTES, MAX_TOTAL_BYTES } from './limits.ts'
 import type { ResolvedSource } from './sources.ts'
 import type { LinkContent, LinkError } from './linkRead.ts'
 
 /**
  * 자료 조립의 예산 회귀 테스트.
  *
- * 여기서 지키는 것은 하나 — **링크가 예산에 들어간다**. 링크는 가져오기 전에 크기를 알 수 없어
- * 예비 검사에서 0으로 잡히므로, 이 관문이 세지 않으면 링크 몇 건이 모델 한도를 조용히 넘긴다.
- * 그때 담당자가 보는 것은 이유 없는 "AI 작성에 실패했습니다" 한 줄뿐이라, 화면만 보고는
- * 무엇을 빼야 하는지 알 수 없다.
+ * 개수 상한을 걷은 뒤로 **막는 일이 전부 여기에 있다.** 세 예산이 각각 다른 것을 막는다 —
+ * 바이트(모델 요청 한도), 글자 계열(모델이 한 번에 읽는 양), 시간(링크는 건수만큼 시간을 먹는다).
+ * 셋 중 하나라도 새면 담당자가 보는 것은 이유 없는 "AI 작성에 실패했습니다" 한 줄뿐이라,
+ * 화면만 보고는 무엇을 빼야 하는지 알 수 없다.
  *
  * 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §9
  */
 
 const MB = 1024 * 1024
+/** 시간 예산에 걸리지 않게 넉넉히 뒤로 둔 기한. 시간을 재는 테스트만 이 값을 덮어쓴다. */
+const FAR = Number.MAX_SAFE_INTEGER
 
-function fileSource(name: string, bytes: number): ResolvedSource {
+function fileSource(name: string, bytes: number, mime = 'application/pdf'): ResolvedSource {
   return {
     attachmentId: null,
     name,
     byteSize: bytes,
     storagePath: null,
     data: new ArrayBuffer(bytes),
-    mime: 'application/pdf',
+    mime,
     url: null,
   }
 }
@@ -67,16 +69,32 @@ beforeEach(() => {
 })
 afterEach(() => vi.unstubAllGlobals())
 
-function deps(readLink: BuildDeps['readLink']): BuildDeps {
+/** Files API 왕복을 흉내 낸다 — 시작(주소 헤더) · 본체 · 상태 조회 순. */
+function stubFilesApi() {
+  vi.stubGlobal('fetch', async (input: string | URL, init?: RequestInit) => {
+    const url = String(input)
+    if (url.includes('/upload/v1beta/files')) {
+      return new Response('{}', { headers: { 'x-goog-upload-url': 'https://upload.example/session' } })
+    }
+    if (url.startsWith('https://upload.example/')) {
+      return Response.json({ file: { name: 'files/abc', uri: 'https://files/abc', mimeType: 'application/pdf' } })
+    }
+    if (init?.method === 'DELETE') return new Response(null, { status: 200 })
+    return Response.json({ state: 'ACTIVE' })
+  })
+}
+
+function deps(readLink: BuildDeps['readLink'], deadline = FAR): BuildDeps {
   return {
     apiKey: 'test-key',
     signal: new AbortController().signal,
     download: () => Promise.resolve(null),
     readLink,
+    deadline,
   }
 }
 
-describe('buildParts — 링크도 예산을 쓴다', () => {
+describe('buildParts — 링크도 바이트 예산을 쓴다', () => {
   it('링크를 읽을 때마다 남은 예산이 줄어든다', async () => {
     const stub = stubLinks([asBytes(MB), asBytes(MB), asBytes(MB)])
     const built = await buildParts(
@@ -97,10 +115,8 @@ describe('buildParts — 링크도 예산을 쓴다', () => {
 
   it('남은 예산을 넘겨 오면 그 링크만 버리고 사유를 남긴다', async () => {
     // 상한을 지키지 않는 응답을 일부러 준다 — 관문이 스스로 닫히는지 보는 것이 요점이다.
-    // 첫 건을 글로 두는 것은 그것이 파일 합계에 끼지 않아 조립이 인라인에 머물기 때문이다
-    // (바이트로 두면 Files API 왕복이 함께 걸려 무엇을 재는 테스트인지 흐려진다).
-    // 한글 한 자가 3바이트라 47MB쯤을 먹고, 남은 5MB를 뒤 건이 넘긴다.
-    const stub = stubLinks([asText('가'.repeat(15 * MB)), asBytes(6 * MB)])
+    stubFilesApi()
+    const stub = stubLinks([asBytes(MAX_TOTAL_BYTES - MB), asBytes(2 * MB)])
     const built = await buildParts(
       [linkSource('https://a.example/big'), linkSource('https://a.example/small')],
       deps(stub.fn),
@@ -122,6 +138,63 @@ describe('buildParts — 링크도 예산을 쓴다', () => {
     )
     if ('error' in built) throw new Error('한 건이 막혔다고 전체를 멈추지 않는다')
     expect(built.notices).toEqual(['구글 문서가 비공개입니다.'])
+    expect(built.parts).toHaveLength(1)
+  })
+})
+
+describe('buildParts — 글자 계열은 따로 센다', () => {
+  it('바이트 예산 안이어도 글자 상한을 넘으면 그 파일에서 답한다', async () => {
+    // 4MB는 전체 50MB 예산의 12분의 1이지만, 한글이면 140만 자로 모델이 한 번에 읽지 못한다.
+    const built = await buildParts([fileSource('원문.txt', 4 * MB, 'text/plain')], deps(stubLinks([]).fn), [])
+    if (!('error' in built)) throw new Error('글자 상한을 넘으면 답해야 한다')
+    expect(built.error.status).toBe(413)
+    expect(built.error.message).toContain('글자')
+  })
+
+  it('PDF·이미지는 글자 몫을 쓰지 않는다', async () => {
+    stubFilesApi()
+    const built = await buildParts(
+      [fileSource('계획서.pdf', 20 * MB), fileSource('사진.png', 5 * MB, 'image/png')],
+      deps(stubLinks([]).fn),
+      [],
+    )
+    expect('error' in built).toBe(false)
+  })
+
+  it('글자 상한을 넘긴 링크는 그 건만 빠진다(파일과 달리 고를 때 크기를 알 수 없었다)', async () => {
+    const stub = stubLinks([asText('가'.repeat(MAX_TEXT_BYTES)), asBytes(MB)])
+    const built = await buildParts(
+      [linkSource('https://a.example/long'), linkSource('https://a.example/pdf')],
+      deps(stub.fn),
+      [],
+    )
+    if ('error' in built) throw new Error('링크는 통째 실패로 만들지 않는다')
+    expect(built.notices).toHaveLength(1)
+    expect(built.notices[0]).toContain('https://a.example/long')
+    expect(built.parts).toHaveLength(1)
+  })
+})
+
+describe('buildParts — 시간도 예산이다', () => {
+  it('기한이 지나면 남은 링크를 읽지 않고 읽은 것으로 만든다', async () => {
+    // 개수 상한이 걷힌 뒤 링크 건수를 막는 것은 이 예산 하나뿐이다.
+    const stub = stubLinks([asBytes(MB), asBytes(MB)])
+    const built = await buildParts(
+      [linkSource('https://a.example/1'), linkSource('https://a.example/2')],
+      deps(stub.fn, Date.now() - 1),
+      [],
+    )
+    if ('error' in built) throw new Error('시간이 모자란 것은 실패가 아니라 부분 결과다')
+    expect(built.parts).toHaveLength(0)
+    expect(built.notices).toHaveLength(2)
+    expect(built.notices[0]).toContain('시간이 모자라')
+    // 바깥으로 나가지 않았다 — 기한을 넘긴 뒤에는 요청 자체를 시작하지 않는다.
+    expect(stub.limits).toEqual([])
+  })
+
+  it('파일은 기한에 걸리지 않는다(바깥으로 나가지 않아 건수만큼 시간을 먹지 않는다)', async () => {
+    const built = await buildParts([fileSource('a.pdf', 8)], deps(stubLinks([]).fn, Date.now() - 1), [])
+    if ('error' in built) throw new Error('파일은 시간 예산의 대상이 아니다')
     expect(built.parts).toHaveLength(1)
   })
 })
@@ -157,19 +230,7 @@ describe('buildParts — 보내는 방식은 합계가 정한다', () => {
   })
 
   it('인라인 한도를 넘으면 올린 뒤 주소로 가리킨다', async () => {
-    // Files API 왕복을 흉내 낸다 — 시작(주소 헤더) · 본체 · 상태 조회 순.
-    const fetchMock = vi.fn(async (input: string | URL, init?: RequestInit) => {
-      const url = String(input)
-      if (url.includes('/upload/v1beta/files')) {
-        return new Response('{}', { headers: { 'x-goog-upload-url': 'https://upload.example/session' } })
-      }
-      if (url.startsWith('https://upload.example/')) {
-        return Response.json({ file: { name: 'files/abc', uri: 'https://files/abc', mimeType: 'application/pdf' } })
-      }
-      if (init?.method === 'DELETE') return new Response(null, { status: 200 })
-      return Response.json({ state: 'ACTIVE' })
-    })
-    vi.stubGlobal('fetch', fetchMock)
+    stubFilesApi()
     const uploaded: UploadedFile[] = []
     const built = await buildParts([fileSource('큰계획서.pdf', MAX_INLINE_BYTES + MB)], deps(stubLinks([]).fn), uploaded)
     if ('error' in built) throw new Error('실패할 이유가 없다')

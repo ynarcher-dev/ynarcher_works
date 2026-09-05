@@ -17,8 +17,9 @@
 // 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §8.3
 
 import { uploadFile, waitActive, type UploadedFile } from './filesApi.ts'
+import { isTextOnlyMime } from './formats.ts'
 import type { LinkContent, LinkError } from './linkRead.ts'
-import { MAX_INLINE_BYTES, MAX_TOTAL_BYTES, mb } from './limits.ts'
+import { MAX_INLINE_BYTES, MAX_TEXT_BYTES, MAX_TOTAL_BYTES, mb } from './limits.ts'
 import type { ResolvedSource, SourceError } from './sources.ts'
 
 /** ArrayBuffer를 base64로(청크 단위 — 대용량에서 call stack 초과 방지). */
@@ -39,6 +40,14 @@ export interface BuildDeps {
   download(path: string): Promise<ArrayBuffer | null>
   /** 링크를 가져온다. 남은 예산을 함께 넘겨 한 건이 전부를 먹지 못하게 한다. */
   readLink(url: string, limitBytes: number): Promise<LinkContent | LinkError>
+  /**
+   * 자료를 모아 오는 일을 끝내야 하는 시각(epoch ms).
+   *
+   * 링크는 크기가 작아도 건수만큼 시간을 먹으므로 바이트 예산으로는 못 막는다. 여기서 끊고
+   * **읽은 것으로 초안을 만든다** — 전체 상한 시간에만 기대면 다 읽지도 못한 채 끝나 아무
+   * 결과도 남지 않는다.
+   */
+  deadline: number
 }
 
 export interface BuiltParts {
@@ -82,10 +91,18 @@ export async function buildParts(
   const texts: { name: string; text: string }[] = []
   const notices: string[] = []
   let used = 0
+  /** 글자 계열이 쓴 몫. 전체 예산과 별개로 센다(같은 바이트라도 담기는 양이 다르다). */
+  let textUsed = 0
 
   // 1) 자료를 실제로 가져오며 예산을 깎는다 -------------------------------------
   for (const s of sources) {
     if (s.url) {
+      // 링크는 바깥으로 나가는 일이라 시간을 먹는다. 남은 시간이 없으면 여기서 멈추고
+      // 지금까지 읽은 것으로 초안을 만든다 — 다 읽으려다 아무것도 못 돌려주는 것보다 낫다.
+      if (Date.now() >= deps.deadline) {
+        notices.push(`시간이 모자라 읽지 못했습니다: ${s.url}`)
+        continue
+      }
       const read = await deps.readLink(s.url, MAX_TOTAL_BYTES - used)
       if ('message' in read) {
         notices.push(read.message)
@@ -96,11 +113,17 @@ export async function buildParts(
       // 지켜졌는지를 이쪽에서 확인할 수 없기 때문이다 — 관문이 스스로 닫히지 않으면 관문이 아니다.
       // 링크는 통째 실패로 만들지 않는다(파일과 달리 담당자가 고를 때 크기를 알 수 없었다).
       const size = read.text != null ? new TextEncoder().encode(read.text).length : (read.bytes?.byteLength ?? 0)
+      const isText = read.text != null || isTextOnlyMime(read.mime)
       if (used + size > MAX_TOTAL_BYTES) {
         notices.push(`앞선 자료로 용량을 다 써서 건너뛰었습니다: ${s.url}`)
         continue
       }
+      if (isText && textUsed + size > MAX_TEXT_BYTES) {
+        notices.push(`글자 자료가 모델이 한 번에 읽는 양을 넘어 건너뛰었습니다: ${s.url}`)
+        continue
+      }
       used += size
+      if (isText) textUsed += size
       if (read.text != null) texts.push({ name: s.url, text: read.text })
       else if (read.bytes) files.push({ name: s.url, mime: read.mime, bytes: read.bytes })
       continue
@@ -114,6 +137,20 @@ export async function buildParts(
     used += buf.byteLength
     // 파일은 예비 검사를 이미 지났지만 링크가 앞서 예산을 먹었을 수 있다.
     if (used > MAX_TOTAL_BYTES) return { error: tooLarge() }
+    if (isTextOnlyMime(s.mime)) {
+      textUsed += buf.byteLength
+      // 파일은 링크와 달리 담당자가 고를 때 크기를 알 수 있었으므로 건너뛰지 않고 답한다 —
+      // 무엇을 빼야 하는지 말해 주지 않으면 같은 조합으로 계속 다시 시도하게 된다.
+      if (textUsed > MAX_TEXT_BYTES) {
+        return {
+          error: {
+            code: 'too_large',
+            message: `글자 자료(텍스트·CSV 등)의 합이 ${mb(MAX_TEXT_BYTES)}를 넘습니다. 같은 크기라도 글자는 PDF보다 훨씬 많은 양이 담겨 모델이 한 번에 읽지 못합니다.`,
+            status: 413,
+          },
+        }
+      }
+    }
     files.push({ name: s.name, mime: s.mime, bytes: buf })
   }
 

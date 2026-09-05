@@ -21,9 +21,9 @@
 // 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §8.2·§9
 
 import { resolveMime, SUPPORTED_HINT } from './formats.ts'
-import { MAX_FILES, MAX_SINGLE_BYTES, MAX_TOTAL_BYTES, mb } from './limits.ts'
+import { MAX_SINGLE_BYTES, MAX_TOTAL_BYTES, mb } from './limits.ts'
 
-export { MAX_FILES, MAX_TOTAL_BYTES }
+export { MAX_TOTAL_BYTES }
 
 /** 읽을 자료 한 건. */
 export interface ResolvedSource {
@@ -65,15 +65,17 @@ const unsupported = (names: string[]): SourceError => ({
 })
 
 /**
- * 개수·크기의 예비 검사. 화면도 같은 값으로 잠그지만 여기서 다시 막는 이유는 UI 숨김이
+ * 크기의 예비 검사. 화면도 같은 값으로 잠그지만 여기서 다시 막는 이유는 UI 숨김이
  * 보안이 아니기 때문이다 — 함수는 직접 호출될 수 있다.
+ *
+ * **개수는 막지 않는다.** 합계 안에서만 이뤄지면 몇 건인지는 물어볼 일이 아니다 — 종전의
+ * '5개까지'는 크기를 재는 자가 링크를 세지 못하던 시절에 그 자리를 대신하던 울타리였다.
+ * 개수가 함께 막고 있던 나머지 둘(글자 계열의 밀도 · 링크에 드는 시간)은 조립이 제 이름으로
+ * 막는다(parts.ts).
  */
 export function validateSources(sources: ResolvedSource[]): SourceError | null {
   if (sources.length === 0) {
     return { code: 'invalid_request', message: '읽을 자료를 선택해야 합니다.', status: 400 }
-  }
-  if (sources.length > MAX_FILES) {
-    return { code: 'invalid_request', message: `자료는 한 번에 ${MAX_FILES}개까지 읽을 수 있습니다.`, status: 400 }
   }
   // 한 건 상한을 합산보다 먼저 본다 — 합계만 보면 "합은 되는데 한 파일이 전부"인 경우를
   // 통과시키고, 그때는 나머지 자료가 모델에 닿지 못한 채 초안만 부실해진다.

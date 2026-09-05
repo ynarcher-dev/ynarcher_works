@@ -28,6 +28,7 @@ import { jsonResponse, withCors } from '../_shared/cors.ts'
 import { supabaseAdmin } from '../_shared/supabaseAdmin.ts'
 import { isCardKey, type CardKey } from './cards.ts'
 import { deleteFile, type UploadedFile } from './filesApi.ts'
+import { ASSEMBLY_BUDGET_MS } from './limits.ts'
 import { readLink } from './linkRead.ts'
 import { buildParts } from './parts.ts'
 import { buildPrompt } from './prompts.ts'
@@ -215,6 +216,8 @@ Deno.serve(
             return await blob.arrayBuffer()
           },
           readLink,
+          // 모아 오는 일은 여기까지. 남은 시간은 모델이 쓴다.
+          deadline: Date.now() + ASSEMBLY_BUDGET_MS,
         },
         uploaded,
       )
