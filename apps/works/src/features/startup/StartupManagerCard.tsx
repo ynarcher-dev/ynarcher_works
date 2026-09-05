@@ -29,7 +29,7 @@ export function StartupManagerCard({
   managers: StartupManagerRow[]
 }) {
   // 부서 표기는 상위 경로가 필요해 조직도 원장을 경유한다(임베드로는 자기 이름까지만 온다).
-  const { pathLabelOf } = useDepartmentLabels()
+  const { labelOf, pathLabelOf } = useDepartmentLabels()
   const { pageItems, page, setPage } = usePaged(managers, PAGE_SIZE)
 
   const columns = useMemo<Column<StartupManagerRow>[]>(
@@ -55,8 +55,13 @@ export function StartupManagerCard({
         header: '부서',
         type: 'text',
         render: (r) => {
-          const label = pathLabelOf(r.user?.department_id ?? null)
-          return label ? <span title={label}>{label}</span> : <Dash />
+          // 칸에는 말단 부서명만 적고, 어느 본부의 부서인지는 툴팁의 전체 경로가 답한다.
+          const label = labelOf(r.user?.department_id ?? null)
+          return label ? (
+            <span title={pathLabelOf(r.user?.department_id ?? null)}>{label}</span>
+          ) : (
+            <Dash />
+          )
         },
       },
       {
@@ -81,7 +86,7 @@ export function StartupManagerCard({
         render: (r) => r.assigner?.name ?? <Dash />,
       },
     ],
-    [pathLabelOf],
+    [labelOf, pathLabelOf],
   )
 
   return (

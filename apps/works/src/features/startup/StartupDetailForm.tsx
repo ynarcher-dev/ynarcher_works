@@ -1,31 +1,13 @@
-import {
-  Button,
-  CardShell,
-  Input,
-  PanelCard,
-  Select,
-  TextArea,
-  Tooltip,
-  cn,
-  formText,
-  tooltipScale,
-  useToast,
-} from '@ynarcher/ui'
-import { useState, type ChangeEvent, type ReactNode } from 'react'
-import { Controller, useForm } from 'react-hook-form'
+import { CardShell, PanelCard, useToast } from '@ynarcher/ui'
+import { useState, type ChangeEvent } from 'react'
+import { useForm } from 'react-hook-form'
 import { FormTopBar } from '@/components/FormTopBar'
 import { useEditReasonPrompt } from '@/components/EditReasonPrompt'
-import {
-  MANAGEMENT_STATUS_OPTIONS,
-  isInvested,
-  managementStatusLabel,
-} from '@/features/startup/startupClassification'
+import { isInvested } from '@/features/startup/startupClassification'
 import { useStartupManagers } from '@/features/startup/startupPoolHooks'
-import { PhotoBox } from '@/features/networks/PhotoBox'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { PendingMaterialPanel } from '@/features/networks/PendingMaterialPanel'
 import { usePendingMaterials } from '@/features/networks/pendingMaterials'
-import { TagSelect } from '@/features/admin/TagSelect'
 import { useTagTokenField } from '@/features/admin/TagTokenField'
 import {
   checkDuplicateName,
@@ -33,8 +15,19 @@ import {
   useUpdateEntity,
   type EntityRow,
 } from '@/features/master/entityHooks'
-import { StartupBusinessTeamFields } from '@/features/startup/StartupBusinessTeamFields'
-import { readBusiness, readTeam } from '@/features/startup/StartupBusinessTeamCard'
+import { StartupBasicFields } from '@/features/startup/StartupBasicFields'
+import { StartupBusinessFields } from '@/features/startup/StartupBusinessFields'
+import { StartupTechFields } from '@/features/startup/StartupTechFields'
+import { StartupTeamFields } from '@/features/startup/StartupTeamFields'
+import { StartupIpFields } from '@/features/startup/StartupIpFields'
+import {
+  readBusiness,
+  readIp,
+  readTeam,
+  readTech,
+  type IpProfile,
+} from '@/features/startup/startupProfile'
+import type { StartupDetailFormValues } from '@/features/startup/startupFormValues'
 import { StartupGrowthFields } from '@/features/startup/StartupGrowthFields'
 import {
   readBusinessStatus,
@@ -46,11 +39,14 @@ import { StartupShareholderFields } from '@/features/startup/StartupShareholderF
 import { readShareholderHistory, type ShareholderSnapshot } from '@/features/startup/startupShareholders'
 import { StartupMediaFields } from '@/features/startup/StartupMediaFields'
 import { readMedia, type MediaItem } from '@/features/startup/startupMedia'
+import { StartupSummaryFields } from '@/features/startup/StartupSummaryFields'
+import {
+  readSummary,
+  toSummaryLines,
+  type StartupSummary,
+} from '@/features/startup/StartupSummaryCards'
 import { readIndustries } from '@/features/startup/startupGrowth'
 import { SectionHeading } from '@/features/startup/SectionHeading'
-
-/** 회사 형태 고정 선택지. */
-const COMPANY_FORMS = ['법인', '개인', '예비'] as const
 
 /** 분야 태그 다중 선택 상한(networks 전문 영역과 동일 규칙). */
 const MAX_INDUSTRIES = 3
@@ -62,65 +58,6 @@ const MAX_INDUSTRIES = 3
  * 우측 패널도 같은 카드를 셋으로 늘려 세로 자리만 먹었다. 다른 상세페이지처럼 한 곳으로 모은다.
  */
 const MATERIAL_TARGET_TYPE = 'startup'
-
-export interface StartupDetailFormValues {
-  name: string
-  representative: string
-  company_form: string
-  founded_on: string
-  biz_reg_no: string
-  stage: string
-  management_status: string
-  pool_status: string
-  discovery_source: string
-  location: string
-  address_detail: string
-  email: string
-  phone: string
-  // 비즈니스 & 팀 역량(통합 수정에 포함)
-  oneLiner: string
-  businessModel: string
-  targetMarket: string
-  competitiveEdge: string
-  founderStrength: string
-  members: { name: string; role: string; background: string }[]
-}
-
-/** 라벨 + 입력 래퍼. `className`으로 그리드 스팬 등을 지정할 수 있다. */
-function Field({
-  label,
-  required,
-  hint,
-  hintInline,
-  className,
-  children,
-}: {
-  label: string
-  required?: boolean
-  /** 이 칸의 규칙. 라벨 옆 도움말(ⓘ) 말풍선으로 접힌다(공용 `Field`와 같은 규약). */
-  hint?: string
-  /**
-   * 도움말을 접지 않고 컨트롤 아래에 편다. **다음 행동을 지시하는 안내에만** 쓴다 —
-   * 왜 못 채우는지, 무엇을 먼저 해야 하는지. 공용 `Field`의 같은 이름 슬롯과 규약이 같다.
-   */
-  hintInline?: boolean
-  className?: string
-  children: ReactNode
-}) {
-  return (
-    <div className={className}>
-      <p className="mb-1 text-body font-medium text-gray-800">
-        {label}
-        {required && <span className="text-brand"> *</span>}
-        {hint && !hintInline && (
-          <Tooltip label={label} content={hint} className={tooltipScale.gap} />
-        )}
-      </p>
-      {children}
-      {hint && hintInline && <span className={cn('mt-1 block', formText.hint)}>{hint}</span>}
-    </div>
-  )
-}
 
 interface Props {
   /** 수정 대상 레코드 id. 없으면(신규 등록) 저장 시 새 레코드를 생성한다. */
@@ -152,6 +89,7 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
   const str = (key: string) => (base[key] == null ? '' : String(base[key]))
   const b = readBusiness(base)
   const t = readTeam(base)
+  const tech = readTech(base)
 
   // 사진: NETWORKS와 동일하게 data URL로 logo_url에 저장(2MB 이하). 첨부 즉시 미리보기.
   const [photo, setPhoto] = useState<string>(str('logo_url'))
@@ -173,6 +111,11 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
   const [businessStatus, setBusinessStatus] = useState<BusinessStatusEntry[]>(readBusinessStatus(base))
   const [shareholders, setShareholders] = useState<ShareholderSnapshot[]>(readShareholderHistory(base))
   const [media, setMedia] = useState<MediaItem[]>(readMedia(base))
+  // 지식재산·인증도 목록 3종을 통째 교체하는 값이라 폼 값이 아니라 상태로 든다.
+  const [ip, setIp] = useState<IpProfile>(readIp(base))
+  // 기업 요약 3축(강점·보완점·필요사항)은 문장 배열이라 폼 값이 아니라 상태로 들고,
+  // 저장 시 business_profile 안에 함께 넣는다.
+  const [summary, setSummary] = useState<StartupSummary>(readSummary(base))
   // 투자기업의 담당자·관리현황은 이 화면에서 조회만 한다(지정·전환은 FUND 투자 집행 전용).
   const { data: existingManagers } = useStartupManagers(recordId)
   const onPickPhoto = (e: ChangeEvent<HTMLInputElement>) => {
@@ -213,9 +156,31 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
       oneLiner: b.oneLiner ?? '',
       businessModel: b.businessModel ?? '',
       targetMarket: b.targetMarket ?? '',
-      competitiveEdge: b.competitiveEdge ?? '',
+      revenueModel: b.revenueModel ?? '',
+      salesChannel: b.salesChannel ?? '',
+      supplyMode: b.supplyMode ?? '',
+      product: tech.product ?? '',
+      devStage: tech.devStage ?? '',
+      coreTech: tech.coreTech ?? '',
+      devInsourcing: tech.devInsourcing ?? '',
+      differentiator: tech.differentiator ?? '',
       founderStrength: t.founderStrength ?? '',
-      members: t.members ?? [],
+      orgComposition: t.orgComposition ?? '',
+      hiringPlan: t.hiringPlan ?? '',
+      // 옛 행에는 새 칸이 없다 — 폼 값은 항상 채워 둬야 컨트롤이 비제어로 떨어지지 않는다.
+      members: (t.members ?? []).map((m) => ({
+        name: m.name ?? '',
+        role: m.role ?? '',
+        background: m.background ?? '',
+        employment: m.employment ?? '',
+        joinedAt: m.joinedAt ?? '',
+        hasEquity: Boolean(m.hasEquity),
+      })),
+      advisors: (t.advisors ?? []).map((a) => ({
+        name: a.name ?? '',
+        affiliation: a.affiliation ?? '',
+        role: a.role ?? '',
+      })),
     },
   })
 
@@ -248,23 +213,94 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
       // 연락처는 숫자만 저장한다(NETWORKS 관례).
       phone: v.phone.replace(/\D/g, '') || null,
       logo_url: photo || null,
-      // 비즈니스 & 팀 역량(통합 저장).
+      // 역량 밴드 4종은 카드 하나에 컬럼 하나로 저장한다(통째 교체 모델이라 한 컬럼에 두 카드가
+      // 살면 한쪽만 고쳐도 다른 쪽 값을 함께 써야 하고, 그 왕복에서 빠뜨린 키가 조용히 지워진다).
       business_profile: {
         oneLiner: v.oneLiner.trim(),
         businessModel: v.businessModel.trim(),
         targetMarket: v.targetMarket.trim(),
-        competitiveEdge: v.competitiveEdge.trim(),
+        revenueModel: v.revenueModel.trim(),
+        salesChannel: v.salesChannel.trim(),
+        supplyMode: v.supplyMode.trim(),
+        // 요약 3축: 빈 줄은 떨어뜨리고 상한(3문장)을 다시 강제한다.
+        strengths: toSummaryLines(summary.strengths),
+        improvements: toSummaryLines(summary.improvements),
+        needs: toSummaryLines(summary.needs),
+      },
+      // 구 business_profile.competitiveEdge는 여기 differentiator로 옮겨졌다(20260906140000).
+      // 저장할 때 옛 키를 다시 쓰지 않으므로 값이 두 곳으로 갈라지지 않는다.
+      tech_profile: {
+        product: v.product.trim(),
+        devStage: v.devStage.trim(),
+        coreTech: v.coreTech.trim(),
+        devInsourcing: v.devInsourcing.trim(),
+        differentiator: v.differentiator.trim(),
       },
       team_profile: {
         founderStrength: v.founderStrength.trim(),
+        orgComposition: v.orgComposition.trim(),
+        hiringPlan: v.hiringPlan.trim(),
         members: v.members
-          .map((m) => ({ name: m.name.trim(), role: m.role.trim(), background: m.background.trim() }))
+          .map((m) => ({
+            name: m.name.trim(),
+            role: m.role.trim(),
+            background: m.background.trim(),
+            employment: m.employment.trim(),
+            joinedAt: m.joinedAt.trim(),
+            hasEquity: Boolean(m.hasEquity),
+          }))
           .filter((m) => m.name),
+        advisors: v.advisors
+          .map((a) => ({ name: a.name.trim(), affiliation: a.affiliation.trim(), role: a.role.trim() }))
+          .filter((a) => a.name),
         capabilities,
+      },
+      // 지식재산·인증: 이름(명칭·인증명·과제명)이 있는 항목만 저장한다. 건수는 저장하지 않는다.
+      ip_profile: {
+        rights: ip.rights
+          .map((r) => ({
+            kind: (r.kind ?? '').trim(),
+            title: (r.title ?? '').trim(),
+            no: (r.no ?? '').trim() || null,
+            status: (r.status ?? '').trim() || null,
+            date: (r.date ?? '').trim() || null,
+          }))
+          .filter((r) => r.title || r.no),
+        certifications: ip.certifications
+          .map((c) => ({
+            name: (c.name ?? '').trim(),
+            agency: (c.agency ?? '').trim() || null,
+            date: (c.date ?? '').trim() || null,
+          }))
+          .filter((c) => c.name),
+        govProjects: ip.govProjects
+          .map((g) => ({
+            name: (g.name ?? '').trim(),
+            role: (g.role ?? '').trim() || null,
+            period: (g.period ?? '').trim() || null,
+            amount: g.amount ?? null,
+          }))
+          .filter((g) => g.name),
       },
       business_profile_updated_at: new Date().toISOString(),
       // 항목별 성장 지표(재무·매출·고용은 연도 있는 행만, 투자는 기준월 있는 행만), 연혁: 날짜 또는 내용이 있는 항목만 저장한다.
       growth_metrics: {
+        // 트랙션은 지표명과 기준월이 둘 다 있는 줄만, 고객은 이름이 있는 줄만 저장한다.
+        traction: growth.traction
+          .map((e) => ({
+            metric: (e.metric ?? '').trim(),
+            unit: (e.unit ?? '').trim() || null,
+            period: (e.period ?? '').trim(),
+            value: e.value ?? null,
+          }))
+          .filter((e) => e.metric && e.period),
+        customers: growth.customers
+          .map((e) => ({
+            name: (e.name ?? '').trim(),
+            kind: (e.kind ?? '').trim() || null,
+            date: (e.date ?? '').trim() || null,
+          }))
+          .filter((e) => e.name),
         finance: growth.finance.filter((e) => e.year).map((e) => ({ ...e, year: Number(e.year) })),
         revenue: growth.revenue.filter((e) => e.year).map((e) => ({ ...e, year: Number(e.year) })),
         employee: growth.employee.filter((e) => e.year).map((e) => ({ ...e, year: Number(e.year) })),
@@ -344,24 +380,6 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
     }
   }
 
-  type TagFieldName = 'stage' | 'management_status' | 'pool_status' | 'location'
-  const tagField = (name: TagFieldName, table: string, label: string) => (
-    <Field label={label}>
-      <Controller
-        control={control}
-        name={name}
-        render={({ field }) => (
-          <TagSelect
-            table={table}
-            value={field.value ?? ''}
-            onChange={field.onChange}
-            placeholder={`${label} 선택`}
-          />
-        )}
-      />
-    </Field>
-  )
-
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
       {reasonModal}
@@ -375,135 +393,46 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
 
       {/* 상세페이지와 동일한 3열 배치: 좌측 2/3 편집 카드 + 우측 1/3 자료 관리 */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* 좌측(2/3): 사진 → 기본 데이터 → 기업 개요(비즈니스·주주·성장) → 미디어 */}
+        {/* 좌측(2/3): 조회 화면과 같은 밴드 순서 — 정체(사진·기본 데이터) → 요약 → 역량 → 실적.
+            편집 화면의 묶음이 조회 화면과 어긋나면 무엇을 고치러 들어왔는지가 흐려지고,
+            저장한 값이 어느 카드에 가서 붙는지도 예측할 수 없다. */}
         <div className="space-y-4 lg:col-span-2">
-          {/* 사진 카드(NETWORKS 편집 폼과 동일) */}
+          <StartupBasicFields
+            register={register}
+            control={control}
+            errors={errors}
+            industryField={industryField}
+            photo={photo}
+            setPhoto={setPhoto}
+            onPickPhoto={onPickPhoto}
+            alreadyInvested={alreadyInvested}
+            poolStatus={str('pool_status')}
+            leadName={leadName}
+          />
+
+          {/* 요약 구분선(상세페이지와 동일 — 역량보다 위) */}
+          <SectionHeading title="요약" />
+
+          {/* 요약 3축 입력. 구분선이 이미 '요약'을 말하므로 카드 제목은 두지 않는다
+              (같은 이름을 두 번 세우면 층이 하나 늘어난 것처럼 읽힌다). */}
           <CardShell>
-            <p className="mb-3 text-caption font-medium text-gray-700">사진</p>
-            <div className="flex items-center gap-4">
-              <PhotoBox src={photo} />
-              <div className="flex gap-2">
-                <label className="cursor-pointer rounded-radius-md border border-gray-300 px-3 py-1.5 text-body text-gray-700 transition-colors hover:bg-gray-50">
-                  사진 첨부
-                  <input type="file" accept="image/*" className="hidden" onChange={onPickPhoto} />
-                </label>
-                {photo && (
-                  <Button type="button" variant="secondary" onClick={() => setPhoto('')}>
-                    삭제
-                  </Button>
-                )}
-              </div>
-            </div>
+            <StartupSummaryFields summary={summary} setSummary={setSummary} />
           </CardShell>
 
-          {/* 기본 데이터 카드 */}
-          <CardShell>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field label="한 줄 소개" className="sm:col-span-2">
-                <Input placeholder="한 줄 소개(기업명 아래에 표시됩니다)" {...register('oneLiner')} />
-              </Field>
-              <Field label="기업명" required>
-                <Input invalid={Boolean(errors.name)} {...register('name', { required: '기업명은 필수입니다.' })} />
-                {errors.name && <p className="mt-1 text-caption text-danger">{errors.name.message}</p>}
-              </Field>
-              <Field label="대표자명">
-                <Input {...register('representative')} />
-              </Field>
-              <Field label="회사 형태">
-                <Select {...register('company_form')}>
-                  <option value="">선택</option>
-                  {COMPANY_FORMS.map((f) => (
-                    <option key={f} value={f}>
-                      {f}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label="설립일">
-                <Input type="date" {...register('founded_on')} />
-              </Field>
-              <Field label="사업자등록번호">
-                <Input {...register('biz_reg_no')} />
-              </Field>
-              <Field
-                label="분야"
-                hint={industryField.hint}
-                hintInline={industryField.hintInline}
-                className="sm:col-span-2"
-              >
-                {industryField.control}
-              </Field>
-              {tagField('stage', 'investment_stage_tags', '단계')}
-              <Field label="구분">
-                {alreadyInvested ? (
-                  // 투자기업은 이 화면에서 구분을 바꾸지 않는다(전환·복귀는 FUND 투자 집행에서 관리).
-                  <div className="flex items-center gap-2 py-2 text-body text-gray-900">
-                    {managementStatusLabel('invested')}
-                    <span className="text-caption text-gray-500">(FUND 투자 집행에서 관리)</span>
-                  </div>
-                ) : (
-                  // 투자기업 전환은 여기서 할 수 없다 — 발굴/보육/기타 간에만 바꾼다('투자' 옵션 제외).
-                  <Select {...register('management_status')}>
-                    {MANAGEMENT_STATUS_OPTIONS.filter((o) => o.value !== 'invested').map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </Select>
-                )}
-              </Field>
-              <Field label="발굴 경로" className="sm:col-span-2">
-                <Controller
-                  control={control}
-                  name="discovery_source"
-                  render={({ field }) => (
-                    <TextArea
-                      rows={3}
-                      value={field.value ?? ''}
-                      onChange={field.onChange}
-                      placeholder="발굴 경로를 자유롭게 입력하세요(길게 작성 가능)."
-                    />
-                  )}
-                />
-              </Field>
-              {tagField('location', 'location_tags', '소재지')}
-              <Field label="상세주소">
-                <Input {...register('address_detail')} placeholder="상세주소를 입력하세요" />
-              </Field>
-              <Field label="이메일">
-                <Input {...register('email')} />
-              </Field>
-              <Field label="연락처">
-                <Input {...register('phone')} />
-              </Field>
-            </div>
-          </CardShell>
+          {/* 역량 밴드: 다시 재지 않는 값. 조회 화면은 2열이지만 입력은 1열로 쌓는다 —
+              읽을 때는 제품과 지식재산을 나란히 견주지만, 적을 때는 한 번에 한 칸을 채운다. */}
+          <SectionHeading title="역량" />
 
-          {/* 담당자·현황 카드(투자기업 전용, 읽기 전용): 지정·전환은 FUND 투자 집행에서 처리한다. */}
-          {alreadyInvested && (
-            <PanelCard
-              title="담당자 · 현황 (투자기업)"
-              help={
-                '투자기업의 딜메이커·관리현황은 FUND 투자 집행에서 지정·관리합니다.\n이 화면에서는 조회만 됩니다.'
-              }
-            >
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field label="딜메이커">
-                  <div className="py-2 text-body text-gray-900">{leadName || '-'}</div>
-                </Field>
-                <Field label="관리현황">
-                  <div className="py-2 text-body text-gray-900">{str('pool_status') || '-'}</div>
-                </Field>
-              </div>
-            </PanelCard>
-          )}
+          <PanelCard title="비즈니스">
+            <StartupBusinessFields register={register} />
+          </PanelCard>
 
-          {/* 기업 개요 구분선(상세페이지와 동일) */}
-          <SectionHeading title="기업 개요" />
+          <PanelCard title="제품·기술">
+            <StartupTechFields register={register} />
+          </PanelCard>
 
-          {/* 비즈니스 & 팀 역량 카드(통합 수정에 포함) */}
-          <PanelCard title="비즈니스 & 팀 역량">
-            <StartupBusinessTeamFields
+          <PanelCard title="팀·조직">
+            <StartupTeamFields
               register={register}
               control={control}
               capabilities={capabilities}
@@ -511,13 +440,14 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
             />
           </PanelCard>
 
-          {/* 주주 구성 카드(통합 수정에 포함) */}
-          <PanelCard title="주주 구성">
-            <StartupShareholderFields history={shareholders} setHistory={setShareholders} />
+          <PanelCard title="지식재산·인증">
+            <StartupIpFields ip={ip} setIp={setIp} />
           </PanelCard>
 
-          {/* 성장 지표 카드(통합 수정에 포함) */}
-          <PanelCard title="성장 지표">
+          {/* 실적 밴드: 기간마다 다시 재는 값(연혁·트랙션·고객·매출·재무·고용·투자 + 주주 + 미디어). */}
+          <SectionHeading title="실적" />
+
+          <PanelCard title="실적 지표">
             <StartupGrowthFields
               growth={growth}
               setGrowth={setGrowth}
@@ -526,13 +456,16 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
             />
           </PanelCard>
 
-          {/* 미디어 구분선(상세페이지와 동일) */}
-          <SectionHeading title="미디어" />
+          {/* 주주 구성: 라운드마다 다시 재는 값이라 실적 밴드에 선다. */}
+          <PanelCard title="주주 구성">
+            <StartupShareholderFields history={shareholders} setHistory={setShareholders} />
+          </PanelCard>
 
-          {/* 미디어(언론기사·영상 등): URL 첨부 시 메타데이터 자동 로드 */}
-          <CardShell>
+          {/* 미디어(언론기사·영상 등): URL 첨부 시 메타데이터 자동 로드. 노출도 기간의 사건이라
+              자기 구분선을 갖지 않고 실적 밴드 끝에 선다. */}
+          <PanelCard title="미디어">
             <StartupMediaFields media={media} setMedia={setMedia} />
-          </CardShell>
+          </PanelCard>
         </div>
 
         {/* 우측(1/3): 자료 관리 한 곳. 등록 모드에서는 보류 첨부 후 저장 시 함께 업로드한다. */}

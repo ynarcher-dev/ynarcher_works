@@ -10,6 +10,8 @@ import { PhotoBox } from '@/features/networks/PhotoBox'
 import { useContributions, useDeactivateEntity, useEntity } from '@/features/master/entityHooks'
 import { useAuthStore } from '@/auth/authStore'
 import { StartupDetailForm } from '@/features/startup/StartupDetailForm'
+import { StartupCapabilitySection } from '@/features/startup/StartupCapabilitySection'
+import { StartupPerformanceSection } from '@/features/startup/StartupPerformanceSection'
 import { useStartupManagers } from '@/features/startup/startupPoolHooks'
 import {
   isInvested,
@@ -17,20 +19,11 @@ import {
   startupContentKey,
 } from '@/features/startup/startupClassification'
 import { SensitiveValue } from '@/features/master/SensitiveValue'
-import {
-  StartupBusinessTeamCard,
-  readBusiness,
-  readTeam,
-} from '@/features/startup/StartupBusinessTeamCard'
-import { StartupGrowthSection } from '@/features/startup/StartupGrowthSection'
-import { StartupBusinessTimeline } from '@/features/startup/StartupBusinessTimeline'
-import { readBusinessStatus, readGrowth, formatFounded, readIndustries } from '@/features/startup/startupGrowth'
-import { StartupShareholderCard } from '@/features/startup/StartupShareholderCard'
-import { readShareholderHistory } from '@/features/startup/startupShareholders'
+import { readBusiness } from '@/features/startup/startupProfile'
+import { formatFounded, readIndustries } from '@/features/startup/startupGrowth'
 import { SectionHeading } from '@/features/startup/SectionHeading'
 import { StartupManagementSection } from '@/features/startup/StartupManagementSection'
-import { StartupMediaCard } from '@/features/startup/StartupMediaCard'
-import { readMedia } from '@/features/startup/startupMedia'
+import { StartupSummaryCards, readSummary } from '@/features/startup/StartupSummaryCards'
 
 /** 첨부/피드백/기여 로그 대상 유형(다형 테이블 target_type). */
 const RESOURCE_TYPE = 'startup'
@@ -41,9 +34,10 @@ const LIST_PATH = '/startup?scope=all'
 /** 라벨: 값 한 줄 — 규격은 공용 `InfoField`가 소유한다. */
 const Info = InfoField
 
-function formatDate(v: unknown): string {
+/** 날짜 문자열의 앞 10자리(YYYY-MM-DD). 값이 없으면 null을 돌려 빈 값 표기를 InfoField에 맡긴다. */
+function formatDate(v: unknown): string | null {
   const s = v ? String(v) : ''
-  return s.length >= 10 ? s.slice(0, 10) : '-'
+  return s.length >= 10 ? s.slice(0, 10) : null
 }
 
 /** 원장 스칼라 값 → 문자열(빈 값은 null). 민감정보 컴포넌트에 넘길 때 쓴다. */
@@ -74,6 +68,8 @@ export function StartupDetailPage() {
   const isAdmin = authUser?.role === 'super_admin'
   const isManager = (managers ?? []).some((m) => m.user_id === authUser?.id)
   const canEdit = !invested || isAdmin || isManager
+  // 딜메이커 = 담당자 원장의 리드. 투자기업에만 지정되므로 그 외에는 빈 값으로 선다.
+  const leadName = (managers ?? []).find((m) => m.is_lead)?.user?.name ?? null
 
   const str = (key: string) => {
     const v = record[key]
@@ -202,43 +198,45 @@ export function StartupDetailPage() {
                 <Info label="설립일" value={formatFounded(record.founded_on)} />
                 <Info label="사업자등록번호" value={str('biz_reg_no')} />
                 <Info label="소재지" value={str('location')} />
-                {/* 상세주소는 소재지 오른쪽(설립일 아래) 2열을 차지하고, 수정일은 다음 행으로 흐른다. */}
+                {/* 상세주소는 길 수 있어 소재지 오른쪽 2열을 차지한다(이 그리드의 마지막 칸). */}
                 <Info
                   label="상세주소"
                   value={str('address_detail')}
                   className="min-w-0 sm:col-span-2"
                   valueClassName="min-w-0 flex-1 truncate"
                 />
-                <Info label="수정일" value={formatDate(record.updated_at)} />
-                {/* 생성자(created_by) — 권한 축이 아니라 이 레코드를 만든 사람이라, 관리 주체(담당자 카드)가
-                    아니라 수정일과 같은 줄의 기록 정보로 둔다. 목록에는 노출하지 않는다. */}
-                <Info label="생성자" value={record.creator?.name || '-'} />
               </div>
 
               {/* 발굴 경로는 길 수 있어 전체 폭을 쓰되, 표시 규격은 위 정보행(Info)과 동일하게 맞춘다. */}
               <div className="mt-2.5 border-t border-gray-100 pt-3">
                 <Info label="발굴 경로" value={str('discovery_source')} />
               </div>
+
+              {/* 이 레코드를 누가 맡고 누가 만들었는지 — 업무 사실(위 칸)과 다른 축이라 줄을 나눈다.
+                  딜메이커만 도메인 값이고(관리 주체) 생성자·수정일은 레코드를 다룬 흔적이라
+                  한 단 연한 메타 톤으로 물러난다. 담당자 전원은 아래 관리 현황 카드가 답한다. */}
+              <div className="mt-2.5 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-3 sm:grid-cols-3">
+                <Info label="딜메이커" value={leadName} />
+                <Info label="생성자" value={record.creator?.name || null} meta />
+                <Info label="수정일" value={formatDate(record.updated_at)} meta />
+              </div>
             </CardShell>
 
-            {/* 기업 개요 구분선(기본 데이터 아래) */}
-            <SectionHeading title="기업 개요" />
+            {/* 요약 구분선(기본 데이터 아래). 기업 개요보다 위에 서는 이유는 성격이 달라서다 —
+                아래 개요가 사실을 나열하는 자리라면 여기는 그 사실을 읽은 담당자의 판단이고,
+                판단이 근거보다 먼저 와야 아래를 무엇을 찾으며 읽을지가 정해진다. */}
+            <SectionHeading title="요약" />
 
-            {/* 기업 개요 첫 카드: 비즈니스 & 팀 역량. 카드 우상단 '수정'으로 편집. */}
-            <StartupBusinessTeamCard business={readBusiness(record)} team={readTeam(record)} />
+            {/* 요약 3축(강점 · 보완점 · 필요사항). 편집은 통합 수정에서. */}
+            <StartupSummaryCards summary={readSummary(record)} />
 
-            {/* 주주 구성(기업 개요 첫 카드 아래): 변경 시점별 이력형(최신 표+도넛 + 과거 이력 모달). 편집은 통합 수정에서. */}
-            <StartupShareholderCard history={readShareholderHistory(record)} />
+            {/* 역량 밴드: 다시 재지 않는 값(비즈니스·제품기술·팀조직·지식재산).
+                편집은 상단 '수정'(통합 수정 폼)에서. */}
+            <StartupCapabilitySection record={record} />
 
-            {/* 성장 지표(별도 그룹): 재무/매출/고용/투자 표 + 차트. 편집은 통합 수정에서. */}
-            <StartupGrowthSection growth={readGrowth(record)} startupId={record.id} />
-
-            {/* 연혁(성장 지표 아래). 편집은 통합 수정에서. */}
-            <StartupBusinessTimeline businessStatus={readBusinessStatus(record)} />
-
-            {/* 미디어(관리 현황보다 위): 언론기사·영상 등 URL + OG 메타데이터. 편집·URL 첨부는 통합 수정에서. */}
-            <SectionHeading title="미디어" />
-            <StartupMediaCard media={readMedia(record)} />
+            {/* 실적 밴드: 기간마다 다시 재는 값(연혁 → 트랙션·고객 → 매출·재무 → 고용·주주 →
+                투자 → 미디어). 두 밴드를 가르는 기준은 날짜의 유무가 아니라 '다시 재는가'다. */}
+            <StartupPerformanceSection record={record} />
 
             {/* 관리 현황: 담당자(최상단) + 사업 원장 3종 참여 목록 */}
             <StartupManagementSection

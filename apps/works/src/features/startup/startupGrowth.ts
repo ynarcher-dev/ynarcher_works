@@ -33,15 +33,48 @@ export interface InvestmentEntry {
 }
 
 /**
+ * 핵심 지표(트랙션) 1건. 기업마다 세는 것이 달라(MAU·유료고객수·재구매율·파이프라인)
+ * 고정 열로 못 박지 않고 지표명을 값으로 받는다 — 못 박으면 절반이 늘 빈 칸이 된다.
+ */
+export interface TractionEntry {
+  /** 지표명(자유 입력) — 예: MAU, 유료 고객 수, 재구매율. */
+  metric: string
+  /** 단위(명·건·%·원 등). 값과 함께 표기한다. */
+  unit?: string
+  /** 기준월 YYYY-MM. */
+  period: string
+  value?: number | null
+}
+
+/** 주요 고객·레퍼런스 1건. */
+export interface CustomerEntry {
+  name: string
+  /** 계약 / MOU / POC. */
+  kind?: string
+  /** 시점 YYYY-MM. */
+  date?: string
+}
+
+/** 고객·레퍼런스 형태 고정 선택지. */
+export const CUSTOMER_KIND_OPTIONS = ['계약', 'MOU', 'POC'] as const
+
+/**
  * 항목별 성장 지표(startups.growth_metrics).
- * 재무·매출·고용은 연도 기준, 투자는 월 기준으로 각각 독립 목록이다.
+ * 재무·매출·고용은 연도 기준, 투자·트랙션은 월 기준으로 각각 독립 목록이다.
  * (구버전은 연도별 통합 배열 — readGrowth가 자동으로 항목별로 분해해 흡수한다.)
+ *
+ * 트랙션(traction)과 고객(customers)이 여기 사는 이유는 **기간마다 다시 재는 값**이어서다.
+ * 매출과 나란히 놓고 보려고 만든 지표라 실적 밴드에서 떼어 놓으면(다른 컬럼·다른 섹션)
+ * 정작 그 비교가 스크롤 두 번 거리로 벌어진다. 확정 숫자(재무제표)와 자기 보고(기업 제시)의
+ * 무게는 자리가 아니라 카드 헤더의 출처 표기가 가른다.
  */
 export interface GrowthMetrics {
   finance: FinanceEntry[]
   revenue: RevenueEntry[]
   employee: EmployeeEntry[]
   investment: InvestmentEntry[]
+  traction: TractionEntry[]
+  customers: CustomerEntry[]
 }
 
 /** 비즈니스 현황 타임라인 1건(startups.business_status 배열 원소). */
@@ -86,6 +119,8 @@ interface LegacyGrowthMetric {
 const byYearDesc = (a: { year?: number }, b: { year?: number }) => (Number(b.year) || 0) - (Number(a.year) || 0)
 const byDateDesc = (a: { date?: string }, b: { date?: string }) =>
   String(b.date ?? '').localeCompare(String(a.date ?? ''))
+/** 기준월 문자열 내림차순(빈 값은 뒤로). 트랙션·고객처럼 시점 키 이름이 다른 목록에 쓴다. */
+const byPeriodDesc = (a?: string, b?: string) => String(b ?? '').localeCompare(String(a ?? ''))
 /** 하나라도 값이 있으면 true(빈 항목은 마이그레이션에서 제외). */
 const hasValue = (...vals: unknown[]) => vals.some((v) => v != null && v !== '')
 
@@ -116,6 +151,9 @@ function migrateLegacy(list: LegacyGrowthMetric[]): GrowthMetrics {
     revenue: revenue.sort(byYearDesc),
     employee: employee.sort(byYearDesc),
     investment: investment.sort(byDateDesc),
+    // 레거시 통합 배열에는 트랙션·고객이 없다(항목 자체가 나중에 생겼다).
+    traction: [],
+    customers: [],
   }
 }
 
@@ -132,6 +170,17 @@ export function readGrowth(record: EntityRow): GrowthMetrics {
       revenue: asArray(o.revenue).map((e) => e as RevenueEntry).sort(byYearDesc),
       employee: asArray(o.employee).map((e) => e as EmployeeEntry).sort(byYearDesc),
       investment: asArray(o.investment).map((e) => e as InvestmentEntry).sort(byDateDesc),
+      // 트랙션은 기준월 내림차순, 같은 달 안에서는 지표명순으로 묶어 같은 지표가 흩어지지 않게 한다.
+      traction: asArray(o.traction)
+        .map((e) => e as TractionEntry)
+        .sort(
+          (a, b) =>
+            byPeriodDesc(a.period, b.period) ||
+            String(a.metric ?? '').localeCompare(String(b.metric ?? '')),
+        ),
+      customers: asArray(o.customers)
+        .map((e) => e as CustomerEntry)
+        .sort((a, b) => byPeriodDesc(a.date, b.date)),
     }
   }
   return migrateLegacy(asArray(raw).map((m) => m as LegacyGrowthMetric))

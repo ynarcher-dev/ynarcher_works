@@ -1,12 +1,16 @@
 import { Button, cardText, cn, Input } from '@ynarcher/ui'
 import { Fragment, useState } from 'react'
-import type {
-  BusinessStatusEntry,
-  EmployeeEntry,
-  FinanceEntry,
-  GrowthMetrics,
-  InvestmentEntry,
-  RevenueEntry,
+import { Select } from '@ynarcher/ui'
+import {
+  CUSTOMER_KIND_OPTIONS,
+  type BusinessStatusEntry,
+  type CustomerEntry,
+  type EmployeeEntry,
+  type FinanceEntry,
+  type GrowthMetrics,
+  type InvestmentEntry,
+  type RevenueEntry,
+  type TractionEntry,
 } from '@/features/startup/startupGrowth'
 
 /** 빈 문자열 → undefined, 그 외 숫자로 파싱(콤마 허용). */
@@ -152,6 +156,96 @@ function YearMetricGroup<T extends { year: number }>({
   )
 }
 
+/**
+ * 핵심 지표(트랙션) 편집기. 지표명을 값으로 받는 이유는 기업마다 세는 것이 달라서다 —
+ * 고정 열(MAU·재구매율…)로 못 박으면 그 기업이 세지 않는 지표가 늘 빈 칸으로 남는다.
+ * 같은 지표를 여러 달 적으면 조회 화면이 기준월 내림차순으로 묶어 보여준다.
+ */
+function TractionGroup({ rows, setRows }: { rows: TractionEntry[]; setRows: (rows: TractionEntry[]) => void }) {
+  const patch = (i: number, p: Partial<TractionEntry>) =>
+    setRows(rows.map((r, idx) => (idx === i ? { ...r, ...p } : r)))
+  return (
+    <div className="space-y-2">
+      <h3 className={cardText.subhead}>핵심 지표</h3>
+      {rows.map((r, i) => (
+        <div key={i} className="flex flex-wrap items-end gap-2 rounded-radius-md border border-gray-200 p-3">
+          <label className="block w-32 shrink-0">
+            <span className="mb-0.5 block text-caption text-gray-700">기준월</span>
+            <Input type="month" value={r.period ?? ''} onChange={(e) => patch(i, { period: e.target.value })} />
+          </label>
+          <div className="min-w-32 flex-1">
+            <Txt label="지표명" value={r.metric} onChange={(v) => patch(i, { metric: v })} />
+          </div>
+          <div className="min-w-28 flex-1">
+            <Num label="값" value={r.value} onChange={(v) => patch(i, { value: v })} />
+          </div>
+          <div className="w-24 shrink-0">
+            <Txt label="단위" value={r.unit} onChange={(v) => patch(i, { unit: v })} />
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            className="shrink-0"
+            onClick={() => setRows(rows.filter((_, idx) => idx !== i))}
+          >
+            삭제
+          </Button>
+        </div>
+      ))}
+      <Button type="button" variant="outline" onClick={() => setRows([...rows, { metric: '', period: '' }])}>
+        지표 추가
+      </Button>
+    </div>
+  )
+}
+
+/**
+ * 주요 고객·레퍼런스 편집기. 형태(계약·MOU·POC)를 함께 받는 이유는 무게가 전혀 다른 사실이라서다 —
+ * 고객 수만 세면 MOU 열 건이 계약 한 건보다 커 보인다.
+ */
+function CustomerGroup({ rows, setRows }: { rows: CustomerEntry[]; setRows: (rows: CustomerEntry[]) => void }) {
+  const patch = (i: number, p: Partial<CustomerEntry>) =>
+    setRows(rows.map((r, idx) => (idx === i ? { ...r, ...p } : r)))
+  return (
+    <div className="space-y-2">
+      <h3 className={cardText.subhead}>주요 고객·레퍼런스</h3>
+      {rows.map((r, i) => (
+        <div key={i} className="flex flex-wrap items-end gap-2 rounded-radius-md border border-gray-200 p-3">
+          <label className="block w-32 shrink-0">
+            <span className="mb-0.5 block text-caption text-gray-700">시점</span>
+            <Input type="month" value={r.date ?? ''} onChange={(e) => patch(i, { date: e.target.value })} />
+          </label>
+          <div className="min-w-40 flex-1">
+            <Txt label="고객명" value={r.name} onChange={(v) => patch(i, { name: v })} />
+          </div>
+          <label className="block w-28 shrink-0">
+            <span className="mb-0.5 block text-caption text-gray-700">형태</span>
+            <Select value={r.kind ?? ''} onChange={(e) => patch(i, { kind: e.target.value })}>
+              <option value="">선택</option>
+              {CUSTOMER_KIND_OPTIONS.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </Select>
+          </label>
+          <Button
+            type="button"
+            variant="secondary"
+            className="shrink-0"
+            onClick={() => setRows(rows.filter((_, idx) => idx !== i))}
+          >
+            삭제
+          </Button>
+        </div>
+      ))}
+      <Button type="button" variant="outline" onClick={() => setRows([...rows, { name: '', kind: '', date: '' }])}>
+        고객 추가
+      </Button>
+    </div>
+  )
+}
+
 /** 투자 유치 편집기(월 기준). 회계연도와 무관하게 건별 카드로 관리한다. */
 function InvestmentGroup({
   rows,
@@ -221,8 +315,12 @@ const REVENUE_COLS: NumCol[] = [
 const EMPLOYEE_COLS: NumCol[] = [{ key: 'employeeCount', label: '고용 인원' }]
 
 /**
- * 통합 수정 폼의 '성장 지표' 입력 섹션.
- * 연혁(월 기준)과 항목별 지표(재무·매출·고용은 연도 기준, 투자는 월 기준)를 각각 목록으로 편집한다.
+ * 통합 수정 폼의 '실적' 입력 섹션.
+ *
+ * 목록의 순서는 조회 화면의 실적 밴드와 같다 — 연혁 → 핵심 지표·고객(기업 제시) →
+ * 매출·재무(재무제표 기준) → 고용 → 투자. 입력 순서와 조회 순서가 어긋나면 방금 적은 값이
+ * 화면 어디에 가서 붙는지를 매번 찾아야 한다.
+ *
  * 저장은 상위 폼이 growth_metrics(항목별 객체) / business_status(jsonb)로 통째 반영한다.
  */
 export function StartupGrowthFields({ growth, setGrowth, businessStatus, setBusinessStatus }: Props) {
@@ -265,18 +363,22 @@ export function StartupGrowthFields({ growth, setGrowth, businessStatus, setBusi
         </Button>
       </div>
 
-      {/* 항목별 지표: 재무·매출·고용(연도 기준) + 투자(월 기준) */}
-      <YearMetricGroup<FinanceEntry>
-        title="재무"
-        cols={FINANCE_COLS}
-        rows={growth.finance}
-        setRows={(finance) => setGrowth({ ...growth, finance })}
-      />
+      {/* 기업 제시 지표(월 기준): 매출 이전 단계의 증거라 재무·매출보다 앞에 선다. */}
+      <TractionGroup rows={growth.traction} setRows={(traction) => setGrowth({ ...growth, traction })} />
+      <CustomerGroup rows={growth.customers} setRows={(customers) => setGrowth({ ...growth, customers })} />
+
+      {/* 재무제표 기준 지표(연도 기준): 결과(매출)가 상태(재무)보다 앞선다. */}
       <YearMetricGroup<RevenueEntry>
         title="매출/손익"
         cols={REVENUE_COLS}
         rows={growth.revenue}
         setRows={(revenue) => setGrowth({ ...growth, revenue })}
+      />
+      <YearMetricGroup<FinanceEntry>
+        title="재무"
+        cols={FINANCE_COLS}
+        rows={growth.finance}
+        setRows={(finance) => setGrowth({ ...growth, finance })}
       />
       <YearMetricGroup<EmployeeEntry>
         title="고용"

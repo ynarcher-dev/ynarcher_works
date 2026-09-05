@@ -1,6 +1,5 @@
-import { Button, DataTable, EmptyValue, Modal, PanelCard, tableText, type Column } from '@ynarcher/ui'
+import { Button, DataTable, EmptyValue, Modal, PanelCard, cardText, tableText, type Column } from '@ynarcher/ui'
 import { useState } from 'react'
-import { StartupShareholderChart } from '@/features/startup/StartupShareholderChart'
 import type { Shareholder, ShareholderSnapshot } from '@/features/startup/startupShareholders'
 
 /** 지분율 표시값: 저장된 값이 있으면 그 값을, 없으면 주식 수 비중으로 계산. */
@@ -14,9 +13,15 @@ function shareholderColumns(totalShares: number): Column<Shareholder>[] {
   return [
     { key: 'name', header: '주주명', type: 'name', primary: true, render: (h) => h.name || <EmptyValue /> },
     {
+      /**
+       * 주식 수는 `count`가 아니라 `money`(금액·**수량**)다. `count`의 폭(카드 자리 80px)은
+       * `건수`처럼 짧은 머리글을 재어 정한 값이라, `보유 주식 수`가 두 줄로 접혀 그 열만 머리글
+       * 높이가 두 배가 됐다. 접히는 것은 머리글이 길다는 신호이고 여기서는 종류가 틀렸다는
+       * 신호다 — `10,000`은 세어 올린 건수가 아니라 자릿수를 견주는 수량이다.
+       */
       key: 'shares',
       header: '보유 주식 수',
-      type: 'count',
+      type: 'money',
       render: (h) => (h.shares == null ? <EmptyValue /> : Number(h.shares).toLocaleString()),
     },
     {
@@ -56,8 +61,10 @@ function SnapshotMeta({ snap }: { snap: ShareholderSnapshot }) {
 }
 
 /**
- * 주주 구성 카드(읽기, 성장 지표 아래). 변경 시점별 이력형.
- * 최신 구성은 좌측 도넛 + 우측 표로 나란히 보여주고, 과거 이력은 '변경 이력' 모달로 펼쳐 본다.
+ * 주주 구성 카드(읽기, 성장 지표 안 · 투자 현황 위). 변경 시점별 이력형.
+ * 최신 구성은 표 하나로 세우고, 과거 이력은 '변경 이력' 모달로 펼쳐 본다.
+ * 도넛 차트를 두지 않는 이유는 지분율이 이미 표의 한 열이어서다 — 같은 값을 원과 숫자로
+ * 두 번 말하면 카드 폭의 절반이 표가 이미 답한 것을 되풀이하는 데 쓰인다.
  * 편집은 통합 수정 폼에서 관리하므로 카드 수정 버튼·수정 날짜는 두지 않는다.
  */
 export function StartupShareholderCard({ history }: { history: ShareholderSnapshot[] }) {
@@ -69,28 +76,23 @@ export function StartupShareholderCard({ history }: { history: ShareholderSnapsh
     <PanelCard
       title="주주 구성"
       action={
-        hasHistory && (
-          <Button type="button" variant="outline" onClick={() => setHistoryOpen(true)}>
-            변경 이력
-          </Button>
-        )
+        /* 기준일은 헤더 우측 — 옆 카드들의 `(단위: 백만원)`이 서는 자리다. 표 아래에 두면
+           표를 다 읽고 나서야 그 숫자들이 언제 기준인지 알게 되고, 나란히 선 카드들 사이에서
+           이 카드만 헤더 우측이 비어 제목 줄의 기준선이 어긋난다. */
+        <div className="flex items-center gap-2">
+          {latest?.date && <span className={`shrink-0 ${cardText.subtitle}`}>(기준일 {latest.date})</span>}
+          {hasHistory && (
+            <Button type="button" variant="outline" onClick={() => setHistoryOpen(true)}>
+              변경 이력
+            </Button>
+          )}
+        </div>
       }
     >
       {!latest || latest.holders.length === 0 ? (
         <p className="text-body text-gray-600">등록된 주주 정보가 없습니다.</p>
       ) : (
-        // 좌: 도넛 차트 · 우: 표(하단 우측에 기준일)
-        <div className="grid items-center gap-4 lg:grid-cols-2">
-          <StartupShareholderChart shareholders={latest.holders} />
-          <div className="space-y-2">
-            <HolderTable holders={latest.holders} />
-            {latest.date && (
-              <div className="flex justify-end">
-                <SnapshotMeta snap={latest} />
-              </div>
-            )}
-          </div>
-        </div>
+        <HolderTable holders={latest.holders} />
       )}
 
       {/* 변경 이력 모달: 전체 시점을 최신 순으로 나열 */}

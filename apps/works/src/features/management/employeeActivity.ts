@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { EntityRow } from '@/features/master/entityHooks'
-import { readBusiness } from '@/features/startup/StartupBusinessTeamCard'
+import { readBusiness } from '@/features/startup/startupProfile'
 import { readIndustries } from '@/features/startup/startupGrowth'
 
 /**
