@@ -57,10 +57,15 @@ $fn$;
 comment on function app.mask_email(text) is '목록용 이메일 마스킹. 원본은 ADMIN 경로에서만 나간다.';
 
 -- ---------------------------------------------------------------------
--- (2) 계정 발급 — 원장 행 하나에 계정 하나 (멱등)
+-- (2) 계정 발급 — 사람 하나에 계정 하나, 인격은 여러 개 (멱등)
 --
---     같은 원장 행에 계정이 이미 있으면 그것을 그대로 돌려준다. 담당자가 명부에서
---     `연결`을 눌렀을 때 신규인지 기존인지 구분할 필요가 없는 것이 이 멱등성 덕이다.
+--     찾는 순서가 이 함수의 전부다.
+--       ① 이 원장 행에 이미 인격 매핑이 있으면 그 계정 (원장 이메일이 수정돼도 여기서 걸린다)
+--       ② 없으면 같은 이메일의 게스트 계정 (같은 사람이 다른 자격으로 이미 들어와 있다)
+--       ③ 그것도 없으면 새 계정
+--     ②가 있어야 A기업 대표로 계정을 받은 사람이 전문가로 참여할 때 계정이 하나로 남는다.
+--     계정을 갈라 두면 이메일이 같아 로그인에서 어느 쪽인지 가릴 수 없다 — 자격을 참여 줄로
+--     내린 것이 바로 이 문제를 없애기 위해서다.
 --
 --     SECURITY DEFINER인 이유는 위 보안 게이트 답변에 적었다. 호출자 확인이 본문 첫머리에 있다.
 -- ---------------------------------------------------------------------
@@ -97,14 +102,13 @@ begin
     raise exception '지원하지 않는 원장입니다: %', p_master_table using errcode = '22023';
   end if;
 
-  -- 이미 있으면 그대로 돌려준다. 재운 계정(deleted_at)은 세지 않는다 — 병합으로 흡수된
-  -- 계정이 새 발급을 영원히 막으면 안 되고, 부분 유니크 인덱스도 같은 기준이다.
-  select u.id into v_existing
-    from public.users u
-   where u.guest_master_table = p_master_table
-     and u.guest_master_id    = p_master_id
-     and u.deleted_at is null
-   limit 1;
+  -- ① 이 인격에 이미 계정이 붙어 있는가. 재운 계정(deleted_at)은 세지 않는다 — 병합으로
+  --    흡수된 계정이 새 발급을 영원히 막으면 안 된다(그 매핑은 병합이 이미 옮겼다).
+  select gi.user_id into v_existing
+    from public.guest_identities gi
+    join public.users u on u.id = gi.user_id and u.deleted_at is null
+   where gi.master_table = p_master_table
+     and gi.master_id    = p_master_id;
   if v_existing is not null then
     return v_existing;
   end if;
@@ -127,36 +131,55 @@ begin
   if v_name is null then
     raise exception '원장에서 대상을 찾을 수 없습니다.' using errcode = '22023';
   end if;
-  -- 이메일은 로그인 ID이고 연락처는 초기 비밀번호다. 계정을 **처음 세울 때만** 둘 다 필요하며,
-  -- 이미 계정이 있는 대상은 위에서 돌아갔으므로 이 검사가 매핑을 막지 않는다.
-  if v_email is null or v_phone is null then
-    raise exception '원장에 이메일과 연락처가 모두 있어야 계정을 세울 수 있습니다. NETWORKS에서 먼저 보완하십시오.'
+  if v_email is null then
+    raise exception '원장에 이메일이 없어 계정을 세울 수 없습니다(이메일이 로그인 ID입니다). 원장에서 먼저 보완하십시오.'
       using errcode = '22023';
   end if;
 
-  insert into public.users (user_type, name, email, phone, company_id,
-                            guest_master_table, guest_master_id)
-  values (v_user_type::public.user_type, v_name, v_email, v_phone, v_company,
-          p_master_table, p_master_id)
-  returning id into v_new;
+  -- ② 같은 이메일의 게스트 계정이 이미 있는가 — 같은 사람이 다른 자격으로 들어와 있는 경우다.
+  --    이때는 계정을 만들지 않고 **인격만 하나 더 붙인다.**
+  select u.id into v_existing
+    from public.users u
+   where u.user_type in ('external_startup', 'external_expert', 'temporary_guest')
+     and u.deleted_at is null
+     and lower(u.email) = lower(v_email);
 
-  -- 유형별 권한 템플릿. 기업은 자사(company), 전문가는 본인(self) 범위다.
-  insert into public.workspace_permissions (user_id, workspace_key, permission_level, scope_type, scope_id)
-  values (
-    v_new, 'guest', 'write',
-    case when v_user_type = 'external_startup' then 'company' else 'self' end::public.scope_type,
-    case when v_user_type = 'external_startup' then v_company else null end
-  )
-  on conflict (user_id, workspace_key) do nothing;
+  if v_existing is null then
+    -- ③ 새 계정. 여기서만 연락처가 필요하다 — 초기 비밀번호이기 때문이며, 이미 계정이
+    --    있는 사람은 자기 비밀번호로 들어오므로 위 두 갈래에서는 묻지 않는다.
+    if v_phone is null then
+      raise exception '원장에 연락처가 없어 계정을 세울 수 없습니다(연락처가 초기 비밀번호입니다). 원장에서 먼저 보완하십시오.'
+        using errcode = '22023';
+    end if;
 
-  -- 자격증명 자리를 비워 둔 채로 함께 만든다. 행이 없으면 로그인 경로가 "초기 상태"와
-  -- "계정 없음"을 구분하지 못한다.
-  insert into public.guest_credentials (user_id) values (v_new)
-  on conflict (user_id) do nothing;
+    insert into public.users (user_type, name, email, phone, company_id)
+    values (v_user_type::public.user_type, v_name, v_email, v_phone, v_company)
+    returning id into v_new;
+
+    -- 게스트 워크스페이스 권한 한 벌. **범위(scope)는 화면을 가르지 않는다** — 게스트가
+    -- 보는 것은 전적으로 app.guest_program_ids()/guest_module_ids()가 판정하며, 자격은
+    -- 세션에 고정된 참여 줄이 답한다. 여기 값은 권한 템플릿과의 형식만 맞춘다.
+    insert into public.workspace_permissions (user_id, workspace_key, permission_level, scope_type, scope_id)
+    values (v_new, 'guest', 'write', 'self'::public.scope_type, null)
+    on conflict (user_id, workspace_key) do nothing;
+
+    -- 자격증명 자리를 비워 둔 채로 함께 만든다. 행이 없으면 로그인 경로가 "초기 상태"와
+    -- "계정 없음"을 구분하지 못한다.
+    insert into public.guest_credentials (user_id) values (v_new)
+    on conflict (user_id) do nothing;
+  else
+    v_new := v_existing;
+  end if;
+
+  -- 인격을 붙인다. 한 계정이 여러 인격을 갖는 것이 정상이고(참가기업 + 참가전문가),
+  -- 원장 행 쪽은 PK라 한 계정만 가리킨다.
+  insert into public.guest_identities (master_table, master_id, user_id, created_by)
+  values (p_master_table, p_master_id, v_new, v_uid)
+  on conflict (master_table, master_id) do nothing;
 
   perform app.log_guest_access(
     v_new,
-    'GUEST_ACCOUNT_ISSUE',
+    case when v_existing is null then 'GUEST_ACCOUNT_ISSUE' else 'GUEST_IDENTITY_ADD' end,
     'guest:account',
     jsonb_build_object('master_table', p_master_table, 'master_id', p_master_id),
     null
@@ -268,11 +291,25 @@ begin
     end if;
 
     -- 계정이 이미 있었는지를 발급 전에 본다(발급은 멱등이라 사후에는 구분되지 않는다).
+    -- 이 인격에 매핑이 있거나, 같은 이메일의 계정이 이미 있으면 '기존'이다 — 후자를 함께
+    -- 보는 이유는 같은 사람이 다른 자격으로 이미 들어와 있을 수 있고, 그 사람에게는
+    -- 초기 비밀번호가 아니라 "기존 비밀번호로 들어오세요"라고 안내해야 하기 때문이다.
     select exists (
-      select 1 from public.users u
-       where u.guest_master_table = r.master_table
-         and u.guest_master_id    = r.master_id
+      select 1
+        from public.guest_identities gi
+        join public.users u on u.id = gi.user_id and u.deleted_at is null
+       where gi.master_table = r.master_table
+         and gi.master_id    = r.master_id
+      union all
+      select 1
+        from public.users u
+       where u.user_type in ('external_startup', 'external_expert', 'temporary_guest')
          and u.deleted_at is null
+         and lower(u.email) = lower(
+               case when r.master_table = 'startups'
+                    then (select nullif(s.contact ->> 'email', '') from public.startups s where s.id = r.master_id)
+                    else (select nullif(n.email, '') from public.networks n where n.id = r.master_id)
+               end)
     ) into v_had;
 
     -- 계정 확보. 원장에 값이 모자라면 여기서 사유와 함께 멈춘다.
@@ -466,8 +503,8 @@ returns table (
   user_type      text,
   is_active      boolean,
   company_name   text,
-  master_table   text,
-  master_id      uuid,
+  /** 이 계정이 가진 인격들 — [{master_table, master_id, name}]. 참가기업·참가전문가 둘 다 가질 수 있다. */
+  identities     jsonb,
   has_password   boolean,
   created_at     timestamptz,
   last_login_at  timestamptz,
@@ -502,7 +539,7 @@ begin
   ),
   accounts as (
     select u.id, u.name, u.email, u.phone, u.user_type::text as user_type, u.is_active,
-           u.created_at, u.company_id, u.guest_master_table, u.guest_master_id
+           u.created_at, u.company_id
       from public.users u
      where app.is_guest_user_type(u.user_type)
        and u.deleted_at is null
@@ -525,6 +562,8 @@ begin
                  'code',           l.code,
                  'title',          l.title,
                  'role',           pp.role,
+                 -- 이 줄의 자격. 같은 계정이 한 사업에 두 자격으로 걸리면 줄이 둘이다.
+                 'master_table',   pp.master_table,
                  'login_status',   pp.login_status,
                  'access_ends_at', pp.access_ends_at
                )
@@ -542,6 +581,23 @@ begin
       from public.guest_invitations gi
      where gi.app_user_id is not null
      group by gi.app_user_id
+  ),
+  -- 인격 목록. 유형(user_type)은 계정을 처음 세운 자격의 잔재라 이제 화면을 가르지 않는다 —
+  -- 이 계정이 무엇으로 참여하는지는 여기가 답한다.
+  personas as (
+    select gi.user_id,
+           jsonb_agg(
+             jsonb_build_object(
+               'master_table', gi.master_table,
+               'master_id',    gi.master_id,
+               'name',         coalesce(s.name, n.name)
+             )
+             order by gi.master_table
+           ) as identities
+      from public.guest_identities gi
+      left join public.startups s on gi.master_table = 'startups' and s.id = gi.master_id
+      left join public.networks n on gi.master_table = 'networks' and n.id = gi.master_id
+     group by gi.user_id
   )
   select a.id,
          a.name,
@@ -550,8 +606,7 @@ begin
          a.user_type,
          a.is_active,
          s.name,
-         a.guest_master_table,
-         a.guest_master_id,
+         coalesce(p.identities, '[]'::jsonb),
          (c.password_hash is not null),
          a.created_at,
          g.last_login_at,
@@ -560,8 +615,9 @@ begin
          coalesce(k.programs, '[]'::jsonb),
          count(*) over ()
     from accounts a
-    left join links  k on k.user_id = a.id
-    left join logins g on g.user_id = a.id
+    left join links   k on k.user_id = a.id
+    left join logins  g on g.user_id = a.id
+    left join personas p on p.user_id = a.id
     left join public.guest_credentials c on c.user_id = a.id
     left join public.startups s on s.id = a.company_id
    order by a.is_active desc, a.name

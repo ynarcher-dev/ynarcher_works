@@ -2,6 +2,7 @@ import { anonHeaders, functionsBase } from '@/lib/supabase'
 import {
   useGuestStore,
   type GuestContextChoice,
+  type GuestPersona,
   type GuestProgram,
   type GuestUser,
 } from '@/auth/guestStore'
@@ -34,6 +35,7 @@ interface SessionResponse {
     entity_key: string
     code: string | null
     title: string
+    persona: string | null
   } | null
 }
 
@@ -88,7 +90,13 @@ function applySession(data: SessionResponse): void {
       role: data.user.user_type,
     },
     ctx
-      ? { id: ctx.program_id, title: ctx.title, code: ctx.code, participantId: ctx.participant_id }
+      ? {
+          id: ctx.program_id,
+          title: ctx.title,
+          code: ctx.code,
+          participantId: ctx.participant_id,
+          persona: (ctx.persona as GuestPersona | null) ?? null,
+        }
       : null,
   )
 }

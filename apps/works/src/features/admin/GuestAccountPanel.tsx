@@ -27,6 +27,12 @@ const DASH = <EmptyValue />
 /** 워크스페이스 표기 — 사업 원장이 셋이라 어느 쪽 사업인지 함께 밝힌다. */
 const WORKSPACE_LABEL: Record<string, string> = { ac: 'AC', mna: 'M&A', project: 'PROJECT' }
 
+/** 참여 자격 라벨 — 명부 탭·GUEST 전환기와 같은 어휘를 쓴다. */
+const PERSONA_LABEL: Record<'startups' | 'networks', string> = {
+  startups: '참가기업',
+  networks: '참가전문가',
+}
+
 /** 사업별 로그인 개방 상태 표기. 계정 상태와 다른 축이라 톤도 다르게 쓴다. */
 const LOGIN_STATUS: Record<GuestAccountProgram['login_status'], { label: string; tone: 'neutral' | 'success' | 'warning' | 'danger' }> = {
   NOT_APPLICABLE: { label: '해당 없음', tone: 'neutral' },
@@ -41,20 +47,24 @@ function fmtDate(v: string | null): string | null {
 }
 
 /**
- * 게스트 계정 관리(ADMIN): 전사 게스트 계정 한 자리.
+ * 게스트 계정 관리: 전사 게스트 계정 한 자리.
  *
- * **계정을 만들지 않는다.** 게스트 계정은 사업 담당자가 참가자 명부에서 로그인을 열 때
- * 생기며, ADMIN은 있는 계정을 세우고 재운다 — 게시판·모듈 관리와 같은 자세다.
+ * **두 곳에 같은 화면이 선다** — OFFICE(전 직원)와 ADMIN(관리자)이며, 갈리는 것은
+ * `canSuspend` 하나다. 화면을 두 벌로 만들지 않는 이유는 같은 목록을 각자 그리면 한쪽만
+ * 고쳐 어긋나기 때문이고, 연락처 마스킹도 여기가 아니라 서버(guest_accounts_list)가
+ * 정한다 — UI에서 숨기는 것은 보안이 아니다.
  *
- * 사업 축과 계정 축을 가르는 것이 이 화면의 요지다. 담당자는 **자기 사업의 문**을 여닫고
- * (명부의 로그인 차단), ADMIN은 **계정 자체**를 멈춘다. 한 게스트가 세 사업에 걸려 있으면
- * 어느 사업 담당자도 그 사람을 전부 멈출 수 없었고, 그 일을 할 자리가 지금까지 없었다.
+ * 축이 셋이다(3_9_1 §3).
+ *   · **계정**은 사람 하나다. 발급은 내부 사용자 전원, 정지·해제는 ADMIN.
+ *   · **문**은 그 사업 담당자가 참가자 명부에서 여닫는다.
+ *   · **열쇠**(비밀번호)는 본인만 쥔다 — 이 화면의 '재설정 안내'는 링크를 게스트 본인
+ *     연락처로 보낼 뿐 어떤 값도 돌려주지 않는다.
  *
- * 그래서 정지는 사업별 상태를 건드리지 않는다 — 풀면 원래 열려 있던 사업이 그대로 열린다.
+ * 정지는 사업별 상태를 건드리지 않는다 — 풀면 원래 열려 있던 사업이 그대로 열린다.
  * 삭제는 두지 않는다(명부 행·초대 레코드가 이 계정을 가리키고 있어, 지우면 그 기록들이
  * 누구 것인지 답할 수 없게 된다). 되돌릴 수 있는 정지 하나로 충분하다.
  *
- * 근거 기획: docs/docs_planning/3_2_workspace_admin.md §1.8
+ * 근거 기획: docs/docs_planning/3_9_1_guest_unified_account.md §9·§11
  */
 export function GuestAccountPanel({ canSuspend = false }: { canSuspend?: boolean }) {
   const toast = useToast()
@@ -123,10 +133,25 @@ export function GuestAccountPanel({ canSuspend = false }: { canSuspend?: boolean
   const columns: Column<GuestAccount>[] = [
     { key: 'name', header: '이름', type: 'name', render: (r) => r.name },
     {
-      key: 'user_type',
-      header: '유형',
+      // 계정이 가진 자격들. `user_type`은 계정을 처음 세운 자격의 잔재라 더 이상 화면을
+      // 가르지 않는다 — 한 사람이 참가기업이면서 참가전문가일 수 있고, 그때 유형 한 칸은
+      // 절반만 말한다. 실제로 무엇으로 참여하는지는 참여 줄이 답하고, 계정이 무엇이 될 수
+      // 있는지는 인격 목록이 답한다.
+      key: 'identities',
+      header: '자격',
       type: 'badge',
-      render: (r) => <Badge tone="info">{GUEST_TYPE_LABEL[r.user_type] ?? r.user_type}</Badge>,
+      render: (r) =>
+        r.identities.length > 0 ? (
+          <span className="flex flex-wrap gap-1">
+            {r.identities.map((i) => (
+              <Badge key={`${i.master_table}:${i.master_id}`} tone="info">
+                {PERSONA_LABEL[i.master_table]}
+              </Badge>
+            ))}
+          </span>
+        ) : (
+          <Badge tone="neutral">{GUEST_TYPE_LABEL[r.user_type] ?? r.user_type}</Badge>
+        ),
     },
     { key: 'company', header: '소속 기업', type: 'text', render: (r) => r.company_name || DASH },
     { key: 'email', header: '이메일(로그인 ID)', type: 'long', render: (r) => r.email || DASH },
@@ -238,7 +263,10 @@ export function GuestAccountPanel({ canSuspend = false }: { canSuspend?: boolean
                   {WORKSPACE_LABEL[p.workspace] ?? p.workspace}
                   {p.code ? ` · ${p.code}` : ''}
                 </span>
-                <span className="block truncate text-body text-gray-800">{p.title ?? '(삭제된 사업)'}</span>
+                <span className="block truncate text-body text-gray-800">
+                  {p.title ?? '(삭제된 사업)'}
+                  {p.master_table ? ` · ${PERSONA_LABEL[p.master_table]}` : ''}
+                </span>
               </span>
               <span className="flex shrink-0 items-center gap-2">
                 {/* 접근 기간은 계정이 아니라 이 줄이 갖는다 — 만료되면 이 사업만 사라진다. */}

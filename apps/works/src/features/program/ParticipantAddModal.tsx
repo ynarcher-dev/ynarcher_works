@@ -31,25 +31,26 @@ export function ParticipantAddModal({
   open,
   onClose,
   programId,
+  master,
 }: {
   open: boolean
   onClose: () => void
   programId: string
+  /**
+   * 어느 자격으로 담을 것인가. 명부의 탭이 정한다 — 모달이 자기 원장 선택을 따로 갖고
+   * 있으면 담당자가 '참가전문가' 탭에서 열고도 기업을 담을 수 있고, 그러면 그 사람이 볼
+   * 화면이 열려 있던 탭과 어긋난다. 자격은 한 곳에서만 정해져야 한다(3_9_1 §4).
+   */
+  master: MasterTable
 }) {
   const toast = useToast()
-  const [master, setMaster] = useState<MasterTable>('startups')
-  const [role, setRole] = useState<string>(DEFAULT_ROLE.startups)
+  const [role, setRole] = useState<string>(DEFAULT_ROLE[master])
   const [search, setSearch] = useState('')
   const [picked, setPicked] = useState<string[]>([])
 
   const { data: candidates, isLoading } = useMasterCandidates(programId, master, role, search)
   const add = useAddParticipants(programId)
 
-  const switchMaster = (next: MasterTable) => {
-    setMaster(next)
-    setRole(DEFAULT_ROLE[next])
-    setPicked([])
-  }
 
   const toggle = (id: string) =>
     setPicked((prev) => (prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]))
@@ -88,12 +89,6 @@ export function ParticipantAddModal({
     >
       <div className="space-y-4">
         <div className="flex flex-wrap items-end gap-3">
-          <Field label="원장" className="w-36">
-            <Select value={master} onChange={(e) => switchMaster(e.target.value as MasterTable)}>
-              <option value="startups">기업</option>
-              <option value="networks">전문가</option>
-            </Select>
-          </Field>
           <Field label="역할" className="w-40">
             <Select
               value={role}

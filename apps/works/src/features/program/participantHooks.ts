@@ -152,23 +152,24 @@ export function useProgramParticipants(programId: string | undefined) {
       const startups = new Map(((startupsRes.data ?? []) as StartupMaster[]).map((s) => [s.id, s]))
       const experts = new Map(((expertsRes.data ?? []) as ExpertMaster[]).map((e) => [e.id, e]))
 
-      // 계정 유무는 명부 행이 아니라 **원장 행**이 답한다(계정의 키가 그것이다). 그래서
-      // 아직 이 사업에 문을 열지 않은 대상도 "계정 있음"으로 뜬다 — 담당자가 신규인지
-      // 기존인지 구분할 필요 없이 `연결` 하나만 누르면 되는 근거가 여기다.
+      // 계정 유무는 명부 행이 아니라 **원장 행**이 답한다(인격 매핑이 그것을 들고 있다).
+      // 그래서 아직 이 사업에 문을 열지 않은 대상도 "계정 있음"으로 뜬다 — 담당자가
+      // 신규인지 기존인지 구분할 필요 없이 `연결` 하나만 누르면 되는 근거가 여기다.
+      // 한 계정이 여러 인격을 가질 수 있으므로(참가기업 + 참가전문가) 계정이 아니라
+      // 매핑표를 읽는다.
       const masterIds = [...startupIds, ...expertIds]
       const accountsRes = masterIds.length
         ? await supabase
-            .from('users')
-            .select('id, guest_master_table, guest_master_id')
-            .in('guest_master_id', masterIds)
-            .is('deleted_at', null)
+            .from('guest_identities')
+            .select('master_table, master_id, user_id')
+            .in('master_id', masterIds)
         : { data: [] }
       const accounts = new Map(
         ((accountsRes.data ?? []) as {
-          id: string
-          guest_master_table: string | null
-          guest_master_id: string | null
-        }[]).map((u) => [`${u.guest_master_table}:${u.guest_master_id}`, u.id]),
+          master_table: string
+          master_id: string
+          user_id: string
+        }[]).map((g) => [`${g.master_table}:${g.master_id}`, g.user_id]),
       )
 
       const accountIds = [...new Set([...accounts.values()])]

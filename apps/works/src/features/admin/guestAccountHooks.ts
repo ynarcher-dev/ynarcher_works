@@ -25,6 +25,15 @@ export interface GuestAccountProgram {
   login_status: 'NOT_APPLICABLE' | 'NOT_ALLOWED' | 'INVITED' | 'ACTIVE' | 'BLOCKED'
   /** 이 참여 줄의 접근 종료. 계정이 아니라 줄이 기간을 갖는다(3_9_1 §8). */
   access_ends_at: string | null
+  /** 이 줄의 자격. 같은 계정이 한 사업에 두 자격으로 걸리면 줄이 둘이다. */
+  master_table: 'startups' | 'networks' | null
+}
+
+/** 계정이 가진 인격 하나 — 어느 원장의 누구로 참여하는가. */
+export interface GuestIdentity {
+  master_table: 'startups' | 'networks'
+  master_id: string
+  name: string | null
 }
 
 export interface GuestAccount {
@@ -37,9 +46,12 @@ export interface GuestAccount {
   /** 계정 축. false면 어느 사업에서도 들어오지 못한다. */
   is_active: boolean
   company_name: string | null
-  /** 계정의 키 — 이메일이 아니라 원장 행이다(3_9_1 §4). */
-  master_table: 'startups' | 'networks' | null
-  master_id: string | null
+  /**
+   * 이 계정이 가진 인격들. 한 사람이 참가기업(기업 대표)이면서 참가전문가일 수 있으므로
+   * 배열이다 — 화면을 가르는 자격은 참여 줄이 답하지만, 계정이 무엇으로 참여할 수 있는지는
+   * 여기가 답한다(3_9_1 §4).
+   */
+  identities: GuestIdentity[]
   /** 본인이 비밀번호를 정했는가. false면 아직 원장 연락처가 초기 비밀번호로 통한다. */
   has_password: boolean
   created_at: string
@@ -59,8 +71,9 @@ export interface GuestAccountPage {
 /** 목록 페이지당 행 수. */
 export const GUEST_PAGE_SIZE = 30
 
-interface RawRow extends Omit<GuestAccount, 'programs'> {
+interface RawRow extends Omit<GuestAccount, 'programs' | 'identities'> {
   programs: GuestAccountProgram[] | null
+  identities: GuestIdentity[] | null
   total_count: number | string
 }
 
@@ -78,7 +91,7 @@ export function useGuestAccounts(keyword: string, page: number) {
       if (error) throw error
       const rows = (data ?? []) as RawRow[]
       return {
-        rows: rows.map((r) => ({ ...r, programs: r.programs ?? [] })),
+        rows: rows.map((r) => ({ ...r, programs: r.programs ?? [], identities: r.identities ?? [] })),
         // 총 건수는 행마다 같은 값으로 실려 온다(윈도 카운트). 행이 없으면 0이다.
         total: rows[0] ? Number(rows[0].total_count) : 0,
       }
@@ -143,14 +156,11 @@ export function useIssueCandidates(masterTable: 'startups' | 'networks', search:
       if (rows.length === 0) return []
 
       const { data: accounts } = await supabase
-        .from('users')
-        .select('guest_master_id')
-        .eq('guest_master_table', masterTable)
-        .in('guest_master_id', rows.map((r) => r.id))
-        .is('deleted_at', null)
-      const has = new Set(
-        ((accounts ?? []) as { guest_master_id: string }[]).map((a) => a.guest_master_id),
-      )
+        .from('guest_identities')
+        .select('master_id')
+        .eq('master_table', masterTable)
+        .in('master_id', rows.map((r) => r.id))
+      const has = new Set(((accounts ?? []) as { master_id: string }[]).map((a) => a.master_id))
 
       return rows.map((r) => ({
         id: r.id,

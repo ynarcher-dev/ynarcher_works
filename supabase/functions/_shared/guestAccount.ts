@@ -40,8 +40,6 @@ export interface GuestAccount {
   phone: string | null
   company_id: string | null
   session_version: number
-  guest_master_table: string | null
-  guest_master_id: string | null
 }
 
 export interface GuestCredentials {
@@ -63,9 +61,7 @@ export interface GuestParticipation {
   title: string
 }
 
-const ACCOUNT_COLS =
-  'id, user_type, name, email, phone, company_id, session_version, ' +
-  'guest_master_table, guest_master_id'
+const ACCOUNT_COLS = 'id, user_type, name, email, phone, company_id, session_version'
 
 /**
  * 이메일로 살아 있는 게스트 계정을 찾는다.
@@ -93,9 +89,9 @@ export async function findAccountByEmail(
       .in('user_type', ['external_startup', 'external_expert', 'temporary_guest'])
       .limit(2)
     const rows = (data ?? []) as GuestAccount[]
-    // 같은 이메일에 계정이 둘이면(기업 인격 + 전문가 인격) 이메일만으로는 사람을 특정할 수
-    // 없다. 조용히 하나를 고르면 엉뚱한 인격으로 들어가므로 여기서 멈춘다 — 화면은
-    // 사유를 가리지 않는 일반 실패로 답하고, 담당자가 원장 이메일을 갈라 주어야 한다.
+    // 이메일은 계정의 키이므로 원장(부분 유니크 인덱스)이 유일성을 강제한다. 그래도 둘이
+    // 나오면 인덱스가 없거나 깨진 것이므로 조용히 하나를 고르지 않고 멈춘다 — 잘못 고르면
+    // 남의 기록을 그 사람 것으로 만든다.
     if (rows.length === 1) return rows[0]
     if (rows.length > 1) return null
   }
@@ -226,26 +222,39 @@ export async function loadParticipations(
  * 낡은 채로 남는다. 초기 비밀번호는 "참여자가 이미 가지고 있는 값"이어야 성립하므로
  * 정본인 원장을 읽는다(이름의 정본이 원장인 것과 같은 원리).
  */
-export async function readLedgerPhone(
+export async function readLedgerPhones(
   db: SupabaseClient,
   account: GuestAccount,
-): Promise<string | null> {
-  if (!account.guest_master_table || !account.guest_master_id) return account.phone
-  if (account.guest_master_table === 'startups') {
-    const { data } = await db
-      .from('startups')
-      .select('contact')
-      .eq('id', account.guest_master_id)
-      .maybeSingle()
-    const contact = (data as { contact: Record<string, string> | null } | null)?.contact
-    return contact?.phone ?? account.phone
+): Promise<string[]> {
+  const { data: rows } = await db
+    .from('guest_identities')
+    .select('master_table, master_id')
+    .eq('user_id', account.id)
+  const identities = (rows ?? []) as { master_table: string; master_id: string }[]
+
+  // 인격이 둘일 수 있으므로(참가기업 + 참가전문가) 어느 쪽 연락처든 통하게 한다. 이 값이
+  // 쓰이는 시점은 계정에 비밀번호가 아직 없을 때뿐이고, 그때 참여자가 손에 쥔 것은 자기
+  // 연락처다 — 어느 인격으로 등록됐는지까지 맞히라고 요구할 일이 아니다.
+  const phones: string[] = []
+  const startupIds = identities.filter((i) => i.master_table === 'startups').map((i) => i.master_id)
+  const networkIds = identities.filter((i) => i.master_table === 'networks').map((i) => i.master_id)
+
+  if (startupIds.length > 0) {
+    const { data } = await db.from('startups').select('contact').in('id', startupIds)
+    for (const row of (data ?? []) as { contact: Record<string, string> | null }[]) {
+      if (row.contact?.phone) phones.push(row.contact.phone)
+    }
   }
-  const { data } = await db
-    .from('networks')
-    .select('phone')
-    .eq('id', account.guest_master_id)
-    .maybeSingle()
-  return (data as { phone: string | null } | null)?.phone ?? account.phone
+  if (networkIds.length > 0) {
+    const { data } = await db.from('networks').select('phone').in('id', networkIds)
+    for (const row of (data ?? []) as { phone: string | null }[]) {
+      if (row.phone) phones.push(row.phone)
+    }
+  }
+  // 계정의 복사본은 마지막 폴백이다 — 원장이 정본이지만, 인격 매핑이 아직 없는 계정
+  // (temporary_guest 등)은 이 값밖에 없다.
+  if (account.phone) phones.push(account.phone)
+  return [...new Set(phones)]
 }
 
 export interface GuestSessionPayload {
@@ -264,6 +273,8 @@ export interface GuestSessionPayload {
     code: string | null
     title: string
     role: string
+    /** 이 맥락의 자격 — startups(참가기업) | networks(참가전문가). 화면을 가르는 축이다. */
+    persona: string | null
     access_ends_at: string | null
   }
 }
@@ -342,6 +353,7 @@ export async function issueSession(
       code: participation.code,
       title: participation.title,
       role: participation.role,
+      persona: participation.master_table,
       access_ends_at: participation.access_ends_at,
     },
   }
@@ -402,6 +414,7 @@ export function toChoice(p: GuestParticipation) {
     code: p.code,
     title: p.title,
     role: p.role,
+    persona: p.master_table,
     accessEndsAt: p.access_ends_at,
   }
 }

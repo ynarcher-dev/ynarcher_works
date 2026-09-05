@@ -9,7 +9,7 @@ import {
   type GuestCredentials,
   type GuestLoginResult,
 } from '@/auth/guestAuthService'
-import type { GuestContextChoice } from '@/auth/guestStore'
+import { PERSONA_LABEL, type GuestContextChoice } from '@/auth/guestStore'
 import { passwordRuleOk } from '@/lib/passwordRule'
 
 const credsSchema = z.object({
@@ -254,7 +254,9 @@ export function GuestLoginPage() {
                 >
                   <span className="text-body font-medium text-gray-900">{c.title}</span>
                   <span className="text-caption text-gray-500">
-                    {[c.code, endLabel(c.accessEndsAt)].filter(Boolean).join(' · ')}
+                    {[c.persona ? PERSONA_LABEL[c.persona] : null, c.code, endLabel(c.accessEndsAt)]
+                      .filter(Boolean)
+                      .join(' · ')}
                   </span>
                 </button>
               </li>

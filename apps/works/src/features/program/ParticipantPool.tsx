@@ -5,6 +5,7 @@ import {
   ListToolbar,
   MultiSelectFilter,
   Spinner,
+  Tabs,
   usePaged,
   useToast,
 } from '@ynarcher/ui'
@@ -21,6 +22,7 @@ import {
   useOpenGuestAccess,
   useProgramParticipants,
   useSendPasswordReset,
+  type MasterTable,
   type ParticipantRow,
 } from '@/features/program/participantHooks'
 import { AccessWindowModal } from '@/features/program/AccessWindowModal'
@@ -28,6 +30,16 @@ import { useProgramWorkspace } from '@/features/program/workspace'
 
 /** 한 페이지에 세우는 행 수 — 페이징 훅과 표 페이저가 같은 값을 봐야 한다. */
 const PAGE_SIZE = 10
+
+/**
+ * 자격 탭 라벨. 원장 이름(startups·networks)이 아니라 **이 사업에서의 자격**으로 적는다 —
+ * 담당자가 고르는 것은 "어느 원장에서 왔나"가 아니라 "무엇으로 참여시키나"이고, 그 선택이
+ * 게스트가 볼 화면을 정한다.
+ */
+const PERSONA_LABEL: Record<MasterTable, string> = {
+  startups: '참가기업',
+  networks: '참가전문가',
+}
 
 /** 검색이 걸리는 축 — 대상명과 로그인 계정(성명·연락처). 명부에서 사람을 찾는 길은 이 넷뿐이다. */
 function matches(row: ParticipantRow, keyword: string): boolean {
@@ -59,6 +71,13 @@ export function ParticipantPool({ program }: { program: Program }) {
   const masked = useMaskPolicy(participantContentKey(config.key))
 
   const [keyword, setKeyword] = useState('')
+  /**
+   * 자격 탭 — 참가기업 / 참가전문가. 축은 원장(`master_table`)이며 이미 명부 행에 있는
+   * 값이라 새로 저장하는 것이 없다. 탭으로 올린 이유는 이것이 **게스트 화면을 가르는 축**
+   * 이기 때문이다(3_9_1 §4) — 어느 탭에서 연결했는지가 그 사람이 볼 화면을 정한다.
+   * 역할(STARTUP·MENTOR·JUDGE…)은 그 자격 안의 세부라 아래 필터로 남는다.
+   */
+  const [persona, setPersona] = useState<MasterTable>('startups')
   const [roles, setRoles] = useState<string[]>([])
   const [selected, setSelected] = useState<string[]>([])
   const [addOpen, setAddOpen] = useState(false)
@@ -76,18 +95,43 @@ export function ParticipantPool({ program }: { program: Program }) {
   )
   const canOpenDoor = isManager
 
-  const roleOptions = useMemo(
+  /**
+   * 자격으로 먼저 가른다. 원장이 없는 행(내부 임직원 참가자)은 게스트 자격이 아니므로
+   * 참가기업 탭에 얹지 않고 어느 탭에도 세우지 않는다 — 이 표의 두 탭은 '밖에서 들어오는
+   * 사람'의 축이고, 임직원은 WORKS로 들어온다.
+   */
+  const personaRows = useMemo(
+    () => rows.filter((r) => r.master_table === persona),
+    [rows, persona],
+  )
+
+  const personaTabs = useMemo(
     () =>
-      PARTICIPANT_ROLES.map((role) => ({
-        value: role,
-        label: `${role} ${rows.filter((r) => r.role === role).length}`,
+      (['startups', 'networks'] as const).map((key) => ({
+        key,
+        label: PERSONA_LABEL[key],
+        count: rows.filter((r) => r.master_table === key).length,
       })),
     [rows],
   )
 
+  // 역할 선택지는 지금 탭 안에서만 센다 — 참가기업 탭에 MENTOR 0건이 서 있으면 그 탭에서
+  // 고를 수 있는 값처럼 보인다.
+  const roleOptions = useMemo(
+    () =>
+      PARTICIPANT_ROLES.map((role) => ({
+        value: role,
+        label: `${role} ${personaRows.filter((r) => r.role === role).length}`,
+      })),
+    [personaRows],
+  )
+
   const filtered = useMemo(
-    () => rows.filter((r) => (roles.length === 0 || roles.includes(r.role)) && matches(r, keyword)),
-    [rows, roles, keyword],
+    () =>
+      personaRows.filter(
+        (r) => (roles.length === 0 || roles.includes(r.role)) && matches(r, keyword),
+      ),
+    [personaRows, roles, keyword],
   )
 
   // 명부는 사업이 굴러갈수록 길어지는 목록이라 페이저를 단다. 카드 안이지만 미니 페이저가
@@ -174,6 +218,19 @@ export function ParticipantPool({ program }: { program: Program }) {
         subtitle={`사업 코드 ${program.code || '미발급'}`}
       >
         <div className="space-y-3">
+          {/* 자격 축이 먼저 서고 그 아래에서 검색·역할로 좁힌다. 탭을 바꾸면 선택을 비운다 —
+              일괄 처리는 지금 탭의 대상에게 하는 일이고, 안 보이는 행이 선택된 채로 남으면
+              `연결`이 다른 자격의 사람까지 집는다. */}
+          <Tabs
+            items={personaTabs}
+            value={persona}
+            onChange={(k) => {
+              setPersona(k as MasterTable)
+              setSelected([])
+              setRoles([])
+              setPage(0)
+            }}
+          />
           <ListToolbar
             keyword={keyword}
             onKeywordChange={setKeyword}
@@ -224,7 +281,7 @@ export function ParticipantPool({ program }: { program: Program }) {
                     </Button>
                   </>
                 )}
-                <Button onClick={() => setAddOpen(true)}>원장에서 추가</Button>
+                <Button onClick={() => setAddOpen(true)}>{PERSONA_LABEL[persona]} 추가</Button>
               </div>
             }
           />
@@ -250,7 +307,12 @@ export function ParticipantPool({ program }: { program: Program }) {
         </div>
       </Card>
 
-      <ParticipantAddModal open={addOpen} onClose={() => setAddOpen(false)} programId={program.id} />
+      <ParticipantAddModal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        programId={program.id}
+        master={persona}
+      />
       <AccessWindowModal
         programId={program.id}
         row={windowTarget}

@@ -24,7 +24,7 @@ import {
   issueSession,
   loadCredentials,
   loadParticipations,
-  readLedgerPhone,
+  readLedgerPhones,
   recordFailure,
   signChangeTicket,
   signSelectTicket,
@@ -70,9 +70,11 @@ Deno.serve(withCors(async (req: Request) => {
     const initial = !cred.password_hash
     let ok: boolean
     if (initial) {
-      const ledgerPhone = normalizePhone(await readLedgerPhone(db, account))
+      // 인격이 둘이면 연락처도 둘일 수 있다(참가기업 + 참가전문가). 어느 쪽이든 통하게
+      // 한다 — 참여자가 손에 쥔 것은 자기 연락처이지 '어느 자격으로 등록됐는가'가 아니다.
+      const ledgerPhones = (await readLedgerPhones(db, account)).map(normalizePhone).filter(Boolean)
       const given = normalizePhone(password)
-      ok = given.length > 0 && given === ledgerPhone
+      ok = given.length > 0 && ledgerPhones.includes(given)
     } else {
       ok = await verifyPassword(String(password), cred.password_hash)
     }

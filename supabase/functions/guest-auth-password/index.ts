@@ -23,7 +23,7 @@ import {
   loadAccount,
   loadCredentials,
   loadParticipations,
-  readLedgerPhone,
+  readLedgerPhones,
   recordFailure,
   signSelectTicket,
   toChoice,
@@ -114,8 +114,8 @@ async function handleInitialSet(
   const isReset = claims.rst === true
   if (cred.password_hash && !isReset) return jsonResponse(EXPIRED, 401)
 
-  const ledgerPhone = await readLedgerPhone(db, account)
-  const policyError = passwordPolicyError(newPassword, ledgerPhone ?? '')
+  const ledgerPhone = (await readLedgerPhones(db, account))[0] ?? ''
+  const policyError = passwordPolicyError(newPassword, ledgerPhone)
   if (policyError) return jsonResponse({ error: 'weak_password', message: policyError }, 400)
 
   if (!(await savePassword(db, account.id, newPassword))) {
@@ -145,8 +145,8 @@ async function handleChange(
     return jsonResponse(WRONG_CURRENT, 401)
   }
 
-  const ledgerPhone = await readLedgerPhone(db, account)
-  const policyError = passwordPolicyError(newPassword, ledgerPhone ?? '')
+  const ledgerPhone = (await readLedgerPhones(db, account))[0] ?? ''
+  const policyError = passwordPolicyError(newPassword, ledgerPhone)
   if (policyError) return jsonResponse({ error: 'weak_password', message: policyError }, 400)
   if (newPassword === currentPassword) {
     return jsonResponse(
