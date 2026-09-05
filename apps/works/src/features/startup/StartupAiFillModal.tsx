@@ -50,9 +50,12 @@ export function StartupAiFillModal({
   const chosen = sources.filter((s) => picked.includes(s.key))
   const totalBytes = chosen.reduce((sum, s) => sum + Number(s.bytes ?? 0), 0)
   const tooLarge = totalBytes > AI_FILL_LIMITS.maxTotalBytes
+  // 합계와 별개로 한 건이 큰 경우를 따로 본다 — 합계만 말하면 어느 자료를 빼야 하는지 모른다.
+  const oversized = chosen.filter((s) => Number(s.bytes ?? 0) > AI_FILL_LIMITS.maxSingleBytes)
   const tooMany = chosen.length > AI_FILL_LIMITS.maxFiles
   const busy = fill.isPending
-  const ready = chosen.length > 0 && cards.length > 0 && agreed && !tooLarge && !tooMany && !busy
+  const ready =
+    chosen.length > 0 && cards.length > 0 && agreed && !tooLarge && oversized.length === 0 && !tooMany && !busy
 
   const togglePick = (key: string) =>
     setPicked((prev) => (prev.includes(key) ? prev.filter((v) => v !== key) : [...prev, key]))
@@ -109,7 +112,14 @@ export function StartupAiFillModal({
             </p>
             {/* 막힌 이유는 접지 않는다 — 왜 실행 버튼이 안 눌리는지를 이 줄이 답한다. */}
             {tooLarge && (
-              <p className="mt-1 text-caption text-danger">합계가 14MB를 넘습니다. 파일을 줄여 주세요.</p>
+              <p className="mt-1 text-caption text-danger">
+                합계가 {formatBytes(AI_FILL_LIMITS.maxTotalBytes)}를 넘습니다. 자료를 줄여 주세요.
+              </p>
+            )}
+            {oversized.length > 0 && (
+              <p className="mt-1 text-caption text-danger">
+                한 건이 {formatBytes(AI_FILL_LIMITS.maxSingleBytes)}를 넘습니다: {oversized.map((s) => s.name).join(' · ')}
+              </p>
             )}
             {tooMany && (
               <p className="mt-1 text-caption text-danger">

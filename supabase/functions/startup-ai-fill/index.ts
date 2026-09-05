@@ -1,7 +1,7 @@
-// [STARTUP AI 작성하기] 첨부 PDF → Gemini → 상세 카드 초안(JSON)
+// [STARTUP AI 작성하기] 첨부 자료 → Gemini → 상세 카드 초안(JSON)
 // 요청(수정 모드, JSON): { startupId, attachmentIds: string[], cards: CardKey[] }
-// 요청(등록 모드, multipart): cards=<JSON 배열>, files=<PDF 여러 개>
-// 응답: { cards, notes, evidence, model, elapsedMs } | 4xx/5xx
+// 요청(등록 모드, multipart): cards=<JSON 배열>, files=<파일 여러 개>, links=<주소 여러 개>
+// 응답: { cards, notes, evidence, skippedSources, model, elapsedMs } | 4xx/5xx
 //
 // 보안:
 // - 인증된 **내부 사용자**만 호출한다. 게스트 커스텀 JWT는 받지 않는다(WORKS 전용 기능).
@@ -13,7 +13,9 @@
 //   바이트를 읽는 데와 감사 로그 적재에만 쓴다(material-download와 같은 규약).
 // - attachmentIds가 그 기업에 귀속되지 않으면 전체 거부한다(부분 처리 없음).
 // - 파일마다 access_logs를 적재하고, **적재에 실패하면 모델을 부르지 않는다**(기록 없는 반출 금지).
-// - 등록 모드로 올라온 파일은 **어디에도 저장하지 않는다**(초안만 만들고 버린다).
+// - 등록 모드로 올라온 파일은 **우리 쪽 어디에도 저장하지 않는다**(초안만 만들고 버린다).
+// - 자료가 커서 Files API로 올렸다면 **끝나며 반드시 지운다**(성공·실패·예외 모두). 구글의
+//   48시간 자동 삭제에 기대지 않는다 — 기밀 자료를 필요한 시간보다 오래 남길 이유가 없다.
 // - GEMINI_API_KEY는 서버 시크릿으로만 접근하며 클라이언트로 노출하지 않는다.
 // - DB에 쓰지 않는다(감사 로그 제외). 저장은 화면의 통상 저장 경로(RLS)가 담당한다.
 // 주의: 사업계획서는 기업의 기밀 자료이므로 Gemini(외부 AI)로 전송된다는 점이 전제되어 있다
@@ -25,9 +27,11 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { jsonResponse, withCors } from '../_shared/cors.ts'
 import { supabaseAdmin } from '../_shared/supabaseAdmin.ts'
 import { isCardKey, type CardKey } from './cards.ts'
+import { deleteFile, type UploadedFile } from './filesApi.ts'
+import { readLink } from './linkRead.ts'
+import { buildParts } from './parts.ts'
 import { buildPrompt } from './prompts.ts'
 import { buildResponseSchema } from './schema.ts'
-import { readLink } from './linkRead.ts'
 import {
   resolveAttachments,
   resolvePendingLinks,
@@ -41,19 +45,14 @@ import { normalizeEnvelope, parseJson } from './validate.ts'
 const BUCKET = 'attachments'
 /** 첨부 대상 다형 키(스타트업 자료는 한 곳에 모인다 — StartupDetailForm의 MATERIAL_TARGET_TYPE). */
 const TARGET_TYPE = 'startup'
-/** 입력이 회의록 초안보다 크므로 상한 시간도 두 배로 둔다. */
-const TIMEOUT_MS = 120_000
-
-/** ArrayBuffer를 base64로(청크 단위 — 대용량에서 call stack 초과 방지). */
-function toBase64(buf: ArrayBuffer): string {
-  const bytes = new Uint8Array(buf)
-  let binary = ''
-  const chunk = 0x8000
-  for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunk))
-  }
-  return btoa(binary)
-}
+/**
+ * 자료를 가져오는 것부터 모델 응답까지 전부를 덮는 상한.
+ *
+ * 종전에는 모델 호출만 120초로 재고 자료 가져오기·업로드는 재지 않았다. 링크 다섯 건이
+ * 각자 15초를 쓰면 그 앞에서만 75초가 지나가므로, 함수 자체가 죽는 것이 먼저다. 한 타이머가
+ * 전부를 덮어야 담당자가 "시간이 초과됐다"는 답이라도 받는다.
+ */
+const TIMEOUT_MS = 140_000
 
 /** 호출자 토큰을 그대로 실은 클라이언트 — 이 클라이언트의 조회에는 RLS가 끝까지 걸린다. */
 function callerClient(token: string) {
@@ -177,6 +176,7 @@ Deno.serve(
     if (cards.length === 0) {
       return jsonResponse({ error: 'invalid_request', message: '작성할 카드를 선택해야 합니다.' }, 400)
     }
+    // 예비 검사 — 적혀 있는 크기로 먼저 끊는다(큰 파일을 내려받기 전에 막기 위해).
     const sizeError = validateSources(sources)
     if (sizeError) return jsonResponse({ error: sizeError.code, message: sizeError.message }, sizeError.status)
 
@@ -194,51 +194,35 @@ Deno.serve(
       return jsonResponse({ error: 'log_failed', message: '자료 반출 기록을 남기지 못해 중단했습니다.' }, 500)
     }
 
-    // 5) Gemini 호출 -------------------------------------------------------------
+    // 5) 자료 조립 + Gemini 호출 ---------------------------------------------------
+    // 올린 자료는 어느 경로로 끝나든 지워야 하므로 try 밖에 둔다.
+    let uploaded: UploadedFile[] = []
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
     try {
-      const parts: unknown[] = []
-      // 읽지 못한 링크는 실행을 멈추지 않고 여기 쌓아 두었다가 결과와 함께 알린다 —
-      // 다섯 개 중 하나가 비공개라고 나머지 넷까지 못 읽을 이유가 없고, 담당자가 고칠 수
-      // 있는 문제라(공유 설정·죽은 주소) 조용히 빠뜨리면 왜 부실한지 알 수 없다.
-      const skippedLinks: string[] = []
-
-      for (const s of sources) {
-        // (a) 링크 — 서버가 가져온다. 구글 문서는 내보내기 주소로 바뀌어 PDF·표로 온다.
-        if (s.url) {
-          const read = await readLink(s.url)
-          if ('message' in read) {
-            skippedLinks.push(read.message)
-            continue
-          }
-          if (read.text != null) parts.push({ text: `[참고 링크: ${s.url}]\n${read.text}` })
-          else if (read.bytes) {
-            parts.push({ inlineData: { mimeType: read.mime, data: toBase64(read.bytes) } })
-          }
-          continue
-        }
-
-        // (b) 파일 — 손에 있으면 그대로, 첨부면 스토리지에서 받는다.
-        let buf = s.data
-        if (!buf && s.storagePath) {
-          const { data: blob, error: dlErr } = await admin.storage.from(BUCKET).download(s.storagePath)
+      const built = await buildParts(sources, {
+        apiKey,
+        signal: controller.signal,
+        download: async (path) => {
+          const { data: blob, error: dlErr } = await admin.storage.from(BUCKET).download(path)
           if (dlErr || !blob) {
-            console.error('[startup-ai-fill] 스토리지 읽기 실패', s.attachmentId, dlErr?.message)
-            return jsonResponse({ error: 'internal_error', message: '자료를 읽지 못했습니다.' }, 500)
+            console.error('[startup-ai-fill] 스토리지 읽기 실패', path, dlErr?.message)
+            return null
           }
-          buf = await blob.arrayBuffer()
-        }
-        if (!buf || !s.mime) {
-          return jsonResponse({ error: 'internal_error', message: '자료를 읽지 못했습니다.' }, 500)
-        }
-        parts.push({ inlineData: { mimeType: s.mime, data: toBase64(buf) } })
+          return await blob.arrayBuffer()
+        },
+        readLink,
+      })
+      uploaded = built.uploaded
+      if ('error' in built) {
+        return jsonResponse({ error: built.error.code, message: built.error.message }, built.error.status)
       }
+      const { parts, notices } = built
 
       // 읽을 것이 하나도 남지 않으면 모델을 부르지 않는다(빈 초안에 비용을 쓰지 않는다).
       if (parts.length === 0) {
         return jsonResponse(
-          { error: 'no_readable_source', message: `읽을 수 있는 자료가 없습니다. ${skippedLinks.join(' / ')}` },
+          { error: 'no_readable_source', message: `읽을 수 있는 자료가 없습니다. ${notices.join(' / ')}` },
           400,
         )
       }
@@ -284,8 +268,8 @@ Deno.serve(
 
       return jsonResponse({
         ...envelope,
-        // 못 읽은 링크는 결과와 같은 자리에서 알린다 — 화면이 이 줄을 안내에 그대로 세운다.
-        skippedSources: skippedLinks,
+        // 못 읽었거나 일부만 읽은 자료는 결과와 같은 자리에서 알린다 — 화면이 이 줄을 안내에 그대로 세운다.
+        skippedSources: notices,
         model,
         elapsedMs: Date.now() - startedAt,
       })
@@ -295,13 +279,15 @@ Deno.serve(
         {
           error: aborted ? 'timeout' : 'server_error',
           message: aborted
-            ? '자료가 커서 시간이 초과됐습니다. 파일 수를 줄여 다시 시도하세요.'
+            ? '자료가 커서 시간이 초과됐습니다. 자료 수를 줄여 다시 시도하세요.'
             : 'AI 작성 중 오류가 발생했습니다.',
         },
         aborted ? 504 : 500,
       )
     } finally {
       clearTimeout(timer)
+      // 올린 자료는 성공·실패·예외를 가리지 않고 지운다.
+      await Promise.all(uploaded.map((f) => deleteFile(apiKey, f)))
     }
   }),
 )

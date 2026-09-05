@@ -13,15 +13,17 @@
 // 함께 묻고, 업로드·링크는 가리킬 행이 없으므로 모드의 쓰기 자격만 묻는다. 판정 자체는
 // index.ts가 하고 여기서는 무엇을 읽을지만 모은다.
 //
+// **여기의 크기 검사는 예비 검사다.** 링크는 가져오기 전에 크기를 알 수 없어 0으로 잡히므로,
+// 진짜 예산은 자료를 손에 쥔 뒤 parts.ts가 다시 센다. 그래도 여기서 먼저 막는 이유는 큰
+// 파일을 내려받기 전에 끊기 위해서다.
+//
 // Deno API를 쓰지 않는다(works vitest가 검증 규칙을 직접 돌린다).
 // 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §8.2·§9
 
 import { resolveMime, SUPPORTED_HINT } from './formats.ts'
+import { MAX_FILES, MAX_SINGLE_BYTES, MAX_TOTAL_BYTES, mb } from './limits.ts'
 
-/** 인라인 합산 상한 14MB — base64 팽창(약 1.33배) 후에도 모델 요청 한도 안에 든다. */
-export const MAX_TOTAL_BYTES = 14 * 1024 * 1024
-/** 한 번에 읽을 자료 수. 입력 토큰을 억제한다. */
-export const MAX_FILES = 5
+export { MAX_FILES, MAX_TOTAL_BYTES }
 
 /** 읽을 자료 한 건. */
 export interface ResolvedSource {
@@ -29,13 +31,13 @@ export interface ResolvedSource {
   attachmentId: string | null
   name: string
   /**
-   * 상한 계산에 쓰는 크기. **링크는 0이다** — 가져오기 전에는 얼마나 될지 알 수 없다.
-   * 대신 linkRead가 한 건당 자기 상한(4MB)으로 막는다.
+   * 예비 검사에 쓰는 크기. **링크는 0이다** — 가져오기 전에는 얼마나 될지 알 수 없다.
+   * 링크의 실제 크기는 parts.ts가 남은 예산으로 막는다.
    */
   byteSize: number
   /** 첨부의 스토리지 경로(그 외는 null). */
   storagePath: string | null
-  /** 이미 손에 있는 바이트(등록 모드 업로드). 첨부·링크는 index가 뒤에 채운다. */
+  /** 이미 손에 있는 바이트(등록 모드 업로드). 첨부·링크는 parts가 뒤에 채운다. */
   data: ArrayBuffer | null
   /** 모델에 보낼 MIME. 링크는 내용을 받아 본 뒤에야 정해지므로 그때까지 null이다. */
   mime: string | null
@@ -47,6 +49,7 @@ export type SourceError =
   | { code: 'invalid_request'; message: string; status: 400 }
   | { code: 'unsupported_type'; message: string; status: 415 }
   | { code: 'too_large'; message: string; status: 413 }
+  | { code: 'read_failed'; message: string; status: 500 }
 
 /** 이 자료를 모델이 읽을 수 있는가. 판정과 보낼 MIME은 formats.ts가 소유한다. */
 export function isReadable(contentType: string | null | undefined, fileName: string): boolean {
@@ -55,14 +58,14 @@ export function isReadable(contentType: string | null | undefined, fileName: str
 
 const unsupported = (names: string[]): SourceError => ({
   code: 'unsupported_type',
-  // 무엇이 걸렸는지 이름으로 말한다 — 다섯 개를 골랐을 때 "형식이 안 된다"만으로는
+  // 무엇이 걸렸는지 이름으로 말한다 — 여러 개를 골랐을 때 "형식이 안 된다"만으로는
   // 어느 것을 빼야 하는지 알 수 없다.
   message: `읽을 수 없는 형식입니다: ${names.join(' · ')}. 지원 형식은 ${SUPPORTED_HINT}입니다.`,
   status: 415,
 })
 
 /**
- * 개수·합산 크기를 본다. 화면도 같은 값으로 잠그지만 여기서 다시 막는 이유는 UI 숨김이
+ * 개수·크기의 예비 검사. 화면도 같은 값으로 잠그지만 여기서 다시 막는 이유는 UI 숨김이
  * 보안이 아니기 때문이다 — 함수는 직접 호출될 수 있다.
  */
 export function validateSources(sources: ResolvedSource[]): SourceError | null {
@@ -72,9 +75,19 @@ export function validateSources(sources: ResolvedSource[]): SourceError | null {
   if (sources.length > MAX_FILES) {
     return { code: 'invalid_request', message: `자료는 한 번에 ${MAX_FILES}개까지 읽을 수 있습니다.`, status: 400 }
   }
+  // 한 건 상한을 합산보다 먼저 본다 — 합계만 보면 "합은 되는데 한 파일이 전부"인 경우를
+  // 통과시키고, 그때는 나머지 자료가 모델에 닿지 못한 채 초안만 부실해진다.
+  const big = sources.filter((s) => s.byteSize > MAX_SINGLE_BYTES)
+  if (big.length > 0) {
+    return {
+      code: 'too_large',
+      message: `한 건이 너무 큽니다(${mb(MAX_SINGLE_BYTES)} 이하): ${big.map((s) => s.name).join(' · ')}`,
+      status: 413,
+    }
+  }
   const total = sources.reduce((sum, s) => sum + s.byteSize, 0)
   if (total > MAX_TOTAL_BYTES) {
-    return { code: 'too_large', message: '선택한 자료의 합이 너무 큽니다(14MB 이하).', status: 413 }
+    return { code: 'too_large', message: `선택한 자료의 합이 너무 큽니다(${mb(MAX_TOTAL_BYTES)} 이하).`, status: 413 }
   }
   return null
 }
@@ -134,7 +147,7 @@ export async function resolveUploads(
   const bad = files.filter((f) => !isReadable(f.type, f.name))
   if (bad.length > 0) return { error: unsupported(bad.map((f) => f.name)) }
 
-  // 합산 상한 검사보다 먼저 바이트를 읽지 않도록 크기부터 본다(큰 파일을 메모리에 올리지 않는다).
+  // 크기 검사보다 먼저 바이트를 읽지 않도록 크기부터 본다(큰 파일을 메모리에 올리지 않는다).
   const pre = validateSources(
     files.map((f) => ({
       attachmentId: null,
@@ -164,7 +177,7 @@ export async function resolveUploads(
 }
 
 /**
- * 등록 모드의 링크: 주소만 온다. 내용은 index가 linkRead로 가져온다.
+ * 등록 모드의 링크: 주소만 온다. 내용은 parts가 linkRead로 가져온다.
  *
  * 등록 모드에서 링크를 원장에 먼저 넣지 않는 이유는 파일과 같다 — 대상 레코드가 없어 넣을
  * 자리가 없고, 등록을 취소하면 남아서도 안 된다.

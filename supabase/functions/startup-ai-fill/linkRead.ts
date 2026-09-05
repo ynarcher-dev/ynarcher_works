@@ -14,14 +14,17 @@
 // 페이지(HTML)가 돌아오므로, 그 경우를 형식으로 가려내 "공유를 열어 달라"고 말해야 한다.
 // 가리지 않으면 로그인 페이지의 글자가 그대로 모델에 들어가 엉뚱한 초안이 나온다.
 //
+// **크기 상한은 호출자가 준다.** 링크는 가져오기 전에는 얼마나 될지 알 수 없어 파일처럼 미리
+// 셀 수 없고, 그래서 한 건씩 고정 상한으로 막으면 여러 건이 합쳐 예산을 넘긴다. 남은 예산을
+// 받아 그 안에서만 읽는다.
+//
 // 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §2.1,
 //       supabase/functions/_shared/urlFetch.ts(SSRF 방어)
 
 import { CRAWLER_UA, fetchWithSsrfGuard, safeUrl } from '../_shared/urlFetch.ts'
 import { resolveMime } from './formats.ts'
+import { MAX_LINK_CHARS, MAX_SINGLE_BYTES, mb } from './limits.ts'
 
-/** 한 링크에서 가져올 본문 상한. 모델 입력 예산을 한 건이 통째로 먹지 않게 한다. */
-const MAX_BYTES = 4 * 1024 * 1024
 /** 링크 한 건당 대기 시간. 느린 사이트 하나가 전체를 지연시키지 않게 짧게 둔다. */
 const TIMEOUT_MS = 15_000
 
@@ -32,6 +35,8 @@ export interface LinkContent {
   bytes: ArrayBuffer | null
   /** 글로 보낼 본문(HTML에서 뽑은 것). 파일로 보낼 때는 null. */
   text: string | null
+  /** 본문이 길어 앞부분만 읽었는가. 담당자에게 그대로 알린다. */
+  truncated: boolean
 }
 
 export interface LinkError {
@@ -90,12 +95,18 @@ export function htmlToText(html: string): string {
  *
  * 실패는 전부 사람이 읽을 문구로 돌려준다 — 링크가 안 읽히는 이유는 대부분 담당자가 고칠 수
  * 있는 것(공유 설정·로그인·죽은 주소)이라, 원인을 말해야 다음 행동이 정해진다.
+ *
+ * @param limitBytes 이 링크가 쓸 수 있는 바이트. 앞선 자료가 쓰고 남은 예산이다.
  */
-export async function readLink(rawUrl: string): Promise<LinkContent | LinkError> {
+export async function readLink(rawUrl: string, limitBytes: number): Promise<LinkContent | LinkError> {
   const exported = googleExportUrl(rawUrl)
   const isGoogleDoc = exported !== null
   const target = safeUrl(exported ?? rawUrl)
   if (!target) return { message: `열 수 없는 주소입니다: ${rawUrl}` }
+
+  // 남은 예산 안에서, 한 건이 전부를 먹지 않도록 한 건 상한도 함께 건다.
+  const cap = Math.min(Math.max(limitBytes, 0), MAX_SINGLE_BYTES)
+  if (cap <= 0) return { message: `앞선 자료로 용량을 다 써서 읽지 못했습니다: ${target.hostname}` }
 
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
@@ -122,22 +133,29 @@ export async function readLink(rawUrl: string): Promise<LinkContent | LinkError>
     }
 
     const buf = await resp.arrayBuffer()
-    if (buf.byteLength > MAX_BYTES) {
-      return { message: `내용이 너무 큽니다(4MB 초과): ${target.hostname}` }
+    if (buf.byteLength > cap) {
+      return { message: `내용이 너무 큽니다(${mb(cap)} 초과): ${target.hostname}` }
     }
 
     // 모델이 그대로 받는 형식이면 바이트째로 넘긴다(구글 문서의 PDF·시트의 CSV가 여기로 온다).
     const mime = resolveMime(contentType, target.pathname)
-    if (mime && mime !== 'text/html') return { mime, bytes: buf, text: null }
+    if (mime && mime !== 'text/html') return { mime, bytes: buf, text: null, truncated: false }
 
     // 일반 웹페이지는 글자만 뽑아 넘긴다. HTML을 그대로 보내도 되지만, 스크립트·스타일이
     // 입력 예산의 대부분을 먹고 정작 본문은 뒤로 밀린다.
     if (contentType.startsWith('text/html') || mime === 'text/html') {
-      const text = htmlToText(new TextDecoder().decode(buf))
-      if (text.length < 40) {
+      const full = htmlToText(new TextDecoder().decode(buf))
+      if (full.length < 40) {
         return { message: `본문을 읽지 못했습니다(화면을 스크립트로 그리는 페이지일 수 있습니다): ${target.hostname}` }
       }
-      return { mime: 'text/plain', bytes: null, text }
+      // 바이트가 작아도 글자는 많을 수 있다. 자를 때는 그 사실을 함께 돌려준다.
+      const truncated = full.length > MAX_LINK_CHARS
+      return {
+        mime: 'text/plain',
+        bytes: null,
+        text: truncated ? full.slice(0, MAX_LINK_CHARS) : full,
+        truncated,
+      }
     }
 
     return { message: `읽을 수 없는 형식입니다(${contentType || '알 수 없음'}): ${target.hostname}` }
