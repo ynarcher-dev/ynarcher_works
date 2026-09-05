@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from '../utils/cn'
+import { DensityProvider } from '../density'
 import { formText, tooltipScale } from '../densityScale'
 import { Tooltip } from './Tooltip'
 
@@ -29,6 +30,19 @@ export interface FieldProps {
    */
   error?: ReactNode
   /**
+   * 라벨 줄 오른쪽 끝에 세울 것 — **그 칸의 값에 붙는 성질**을 켜고 끄는 작은 컨트롤(체크 하나)
+   * 자리다. 값이 아니라 값의 성질이라 칸을 늘리지 않으며, 컨트롤 아래에 붙이면 '입력 다음 입력'
+   * 으로 읽히는 세로 흐름을 끊어 어느 칸에 붙은 성질인지가 흐려진다.
+   *
+   * 규격은 화면이 아니라 이 컴포넌트가 갖는다 — 라벨 줄의 글자는 `formText.label`(text-body)이라
+   * 상속받은 카드 밀도(text-body-sm)로 두면 한 줄 안에서 크기가 갈린다. 그래서 이 자리만 페이지
+   * 밀도로 고정한다.
+   *
+   * 이 슬롯을 쓰면 바깥 태그가 `div`로 내려간다 — `<label>` 안에 또 `<label>`을 둘 수 없고, 두면
+   * 체크를 눌러도 초점이 옆 입력칸으로 간다.
+   */
+  labelAside?: ReactNode
+  /**
    * 렌더할 태그. 기본 `label`은 라벨을 눌러도 컨트롤에 초점이 가지만, 안에 컨트롤이 둘 이상
    * 들어가면(시작·종료 시각 등) 어느 것을 가리키는지 모호해지므로 `div`로 바꾼다.
    */
@@ -57,7 +71,8 @@ export function Field({
   hint,
   hintInline,
   error,
-  as: Comp = 'label',
+  labelAside,
+  as = 'label',
   className,
   children,
 }: FieldProps) {
@@ -65,18 +80,32 @@ export function Field({
   // 컨트롤 아래 한 줄을 오류와 도움말이 다투면 정작 고쳐야 할 말이 밀린다.
   const inlineHint = hintInline && !error ? hint : undefined
   const tipHint = hintInline ? undefined : hint
+  // 라벨 줄에 컨트롤이 서면 바깥은 label일 수 없다(중첩 label 금지).
+  const Comp = labelAside ? 'div' : as
+  const labelText = (
+    <>
+      {label}
+      {required && <span className={cn('ml-0.5', formText.required)}>*</span>}
+      {tipHint && (
+        <Tooltip
+          content={tipHint}
+          label={typeof label === 'string' ? label : undefined}
+          className={tooltipScale.gap}
+        />
+      )}
+    </>
+  )
   return (
     <Comp className={cn('block', className)}>
-      <span className={cn('mb-1 block', formText.label)}>
-        {label}
-        {required && <span className={cn('ml-0.5', formText.required)}>*</span>}
-        {tipHint && (
-          <Tooltip
-            content={tipHint}
-            label={typeof label === 'string' ? label : undefined}
-            className={tooltipScale.gap}
-          />
+      <span
+        className={cn(
+          'mb-1',
+          labelAside ? 'flex items-center justify-between gap-2' : 'block',
+          formText.label,
         )}
+      >
+        {labelAside ? <span>{labelText}</span> : labelText}
+        {labelAside && <DensityProvider value="page">{labelAside}</DensityProvider>}
       </span>
       {children}
       {error ? (

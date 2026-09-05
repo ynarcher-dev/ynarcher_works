@@ -1,6 +1,14 @@
-import { CardShell, Checkbox, Input, Select, TagChip, TextArea, useToast } from '@ynarcher/ui'
-import type { ReactNode } from 'react'
-import { useState } from 'react'
+import {
+  CardShell,
+  Checkbox,
+  Field,
+  Input,
+  Select,
+  TextArea,
+  TokenMultiSelect,
+  useToast,
+} from '@ynarcher/ui'
+import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { FormTopBar } from '@/components/FormTopBar'
 import { useEditReasonPrompt } from '@/components/EditReasonPrompt'
@@ -56,28 +64,9 @@ interface Props {
   backTo: string
 }
 
-/** 필드 래퍼(라벨 + 입력). */
-function Field({
-  label,
-  required,
-  hint,
-  children,
-}: {
-  label: string
-  required?: boolean
-  hint?: string
-  children: ReactNode
-}) {
-  return (
-    <div>
-      <label className="mb-1 block text-caption font-medium text-gray-700">
-        {label}
-        {required && <span className="text-brand"> *</span>}
-        {hint && <span className="ml-1 font-normal text-gray-700">{hint}</span>}
-      </label>
-      {children}
-    </div>
-  )
+/** 전문 영역 선택기(TokenMultiSelect)용 태그 최소 형태. 저장값이 이름이라 이름이 곧 키다. */
+interface FieldTagOpt {
+  name: string
 }
 
 /**
@@ -117,15 +106,13 @@ export function NetworkForm({
   const [fields, setFields] = useState<string[]>(
     Array.isArray(initial?.expertise) ? (initial?.expertise as string[]) : [],
   )
-  const toggleField = (name: string) => {
-    setFields((prev) =>
-      prev.includes(name)
-        ? prev.filter((n) => n !== name)
-        : prev.length >= MAX_FIELDS
-          ? prev
-          : [...prev, name],
-    )
-  }
+  // 선택기는 항목 객체를 다루고 원장은 이름 배열을 저장한다. 이름을 키로 삼으므로 태그가 지워져도
+  // 이미 저장된 값은 칩으로 그대로 남는다(원장에서 사라진 이름을 화면이 조용히 버리지 않는다).
+  const fieldOptions = useMemo<FieldTagOpt[]>(
+    () => (fieldTags ?? []).map((t) => ({ name: t.name })),
+    [fieldTags],
+  )
+  const selectedFields = useMemo<FieldTagOpt[]>(() => fields.map((name) => ({ name })), [fields])
 
   // 국가 선택지 — 자국(한국)이 맨 위, 그 아래 구분선, 나머지는 가나다순.
   const { data: countries } = useCountryOptions()
@@ -181,7 +168,7 @@ export function NetworkForm({
         match_available: compact ? null : v.match === 'possible',
         intro: v.intro.trim() || null,
         // 연락처가 비면 성질도 함께 지운다 — 없는 번호에 붙은 '와츠앱'은 아무것도 말하지 않는다.
-        whatsapp: v.phone.replace(/D/g, "") ? v.whatsapp : false,
+        whatsapp: v.phone.replace(/\D/g, '') ? v.whatsapp : false,
       },
     }
 
@@ -239,16 +226,13 @@ export function NetworkForm({
           {/* 기본 데이터 카드 */}
           <CardShell>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field label="이름" required>
+              <Field label="이름" required error={errors.name?.message}>
                 <Input
                   invalid={Boolean(errors.name)}
                   {...register('name', { required: '이름은 필수입니다.' })}
                 />
-                {errors.name && (
-                  <p className="mt-1 text-caption text-danger">{errors.name.message}</p>
-                )}
               </Field>
-              <Field label="구분" required>
+              <Field label="구분" required error={errors.category?.message}>
                 <Select
                   invalid={Boolean(errors.category)}
                   {...register('category', { required: '구분은 필수입니다.' })}
@@ -260,13 +244,10 @@ export function NetworkForm({
                     </option>
                   ))}
                 </Select>
-                {errors.category && (
-                  <p className="mt-1 text-caption text-danger">{errors.category.message}</p>
-                )}
               </Field>
               {/* 국가 하나로 지역이 정해진다 — 국내/해외를 따로 고르는 칸을 두지 않는다.
                   자국(한국)을 구분선 위로 빼는 것은 분류가 달라서가 아니라 가장 자주 쓰기 때문이다. */}
-              <Field label="국가" required>
+              <Field label="국가" required error={errors.countryTagId?.message}>
                 <Select
                   invalid={Boolean(errors.countryTagId)}
                   {...register('countryTagId', { required: '국가는 필수입니다.' })}
@@ -287,9 +268,6 @@ export function NetworkForm({
                     </option>
                   ))}
                 </Select>
-                {errors.countryTagId && (
-                  <p className="mt-1 text-caption text-danger">{errors.countryTagId.message}</p>
-                )}
               </Field>
               <Field label="소속">
                 <Input {...register('affiliation')} />
@@ -303,11 +281,14 @@ export function NetworkForm({
               <Field label="이메일">
                 <Input type="email" {...register('email')} />
               </Field>
-              <Field label="연락처">
+              {/* 와츠앱은 두 번째 번호가 아니라 이 번호의 성질이라 칸을 늘리지 않는다. 자리는
+                  라벨 줄 오른쪽 끝 — 값 아래에 두면 '연락처 다음 입력'으로 읽혀 어느 번호에 붙은
+                  성질인지가 끊기고, 라벨 줄에 서면 그 칸의 머리말 안에 함께 놓인다. */}
+              <Field
+                label="연락처"
+                labelAside={<Checkbox label="와츠앱 사용 번호" {...register('whatsapp')} />}
+              >
                 <Input {...register('phone')} />
-                {/* 와츠앱은 두 번째 번호가 아니라 이 번호의 성질이라, 칸을 늘리지 않고
-                    같은 칸 아래에 붙인다 — 번호를 두 곳에 적으면 한쪽만 고쳐 어긋난다. */}
-                <Checkbox wrapperClassName="mt-2" label="와츠앱 사용 번호" {...register('whatsapp')} />
               </Field>
               <Field label="링크드인">
                 <Input placeholder="https://linkedin.com/in/..." {...register('linkedin')} />
@@ -322,28 +303,33 @@ export function NetworkForm({
               )}
               {!compact && (
                 <div className="sm:col-span-2">
-                  <Field label="전문 영역" hint={`영역 관리 태그에서 최대 ${MAX_FIELDS}개 선택합니다.`}>
-                    <div className="flex flex-wrap gap-1.5">
-                      {(fieldTags ?? []).map((t) => {
-                        const on = fields.includes(t.name)
-                        const disabled = !on && fields.length >= MAX_FIELDS
-                        return (
-                          <TagChip
-                            key={t.id}
-                            selected={on}
-                            disabled={disabled}
-                            onClick={() => toggleField(t.name)}
-                          >
-                            {t.name}
-                          </TagChip>
-                        )
-                      })}
-                      {(fieldTags ?? []).length === 0 && (
-                        <span className="text-caption text-gray-600">
-                          등록된 영역 태그가 없습니다. (ADMIN › 영역 관리)
-                        </span>
-                      )}
-                    </div>
+                  {/* 태그를 전부 펼쳐 두던 자리다. 후보가 늘수록 고른 셋이 나머지 사이에 묻혀
+                      '지금 무엇이 선택되어 있는가'를 색으로 훑어야 했다 — 선택 결과는 칸 안에
+                      칩으로 남고, 나머지는 검색하거나 돋보기로 열어 본다. */}
+                  <Field
+                    label="전문 영역"
+                    hint={
+                      fieldOptions.length === 0
+                        ? '등록된 영역 태그가 없습니다. ADMIN › 영역 관리에서 먼저 추가하세요.'
+                        : `영역 관리 태그에서 최대 ${MAX_FIELDS}개 선택합니다.`
+                    }
+                    // 빈 상태는 접지 않는다 — 왜 못 고르는지는 물어봐야 답할 것이 아니다.
+                    hintInline={fieldOptions.length === 0}
+                    as="div"
+                  >
+                    <TokenMultiSelect<FieldTagOpt>
+                      selected={selectedFields}
+                      onChange={(next) => setFields(next.map((t) => t.name))}
+                      getKey={(t) => t.name}
+                      getLabel={(t) => t.name}
+                      options={fieldOptions}
+                      max={MAX_FIELDS}
+                      placeholder="영역명을 검색하거나 돋보기로 전체 목록을 엽니다."
+                      browsable
+                      browseIn="modal"
+                      browseTitle="전문 영역 전체 목록"
+                      browseEmptyText="등록된 영역 태그가 없습니다. (ADMIN › 영역 관리)"
+                    />
                   </Field>
                 </div>
               )}

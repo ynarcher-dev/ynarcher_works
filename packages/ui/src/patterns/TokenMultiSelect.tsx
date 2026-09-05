@@ -4,6 +4,7 @@ import { cn } from '../utils/cn'
 import { useDensity, type Density } from '../density'
 import { controlScale, formBaseClass, iconScale } from '../densityScale'
 import { TagChip } from '../components/TagChip'
+import { TokenBrowseModal } from './TokenBrowseModal'
 
 /** 밀도별 최소 높이 — 공용 Input의 고정 높이(controlScale.height)와 짝을 맞춘 min-height. */
 const minHeightByDensity: Record<Density, string> = {
@@ -59,6 +60,19 @@ export interface TokenMultiSelectProps<T> {
    * (`onQueryChange`로 후보를 채우는) 필드에는 켜지 말 것 — 펼칠 전체 목록이 애초에 없다.
    */
   browsable?: boolean
+  /**
+   * 돋보기로 펼친 전체 목록이 어디에 서는지(`browsable`일 때만 뜻이 있다).
+   *
+   * 기본 `dropdown`은 필드 아래 목록을 그대로 늘린다 — 후보가 몇 줄이면 그편이 가볍다.
+   * `modal`은 목록을 통째로 펴 훑어보게 한다. 가르는 축은 개수가 아니라 **무엇을 하러 여는가**다
+   * — 하나를 집으러 열면 드롭다운, 무엇이 있는지 보러 열면 모달이다(좁은 스크롤 상자에 담긴
+   * '전체 목록'은 전체를 보여준다는 말이 무색해진다).
+   */
+  browseIn?: 'dropdown' | 'modal'
+  /** 전체 목록 모달의 제목(`browseIn="modal"`일 때). 생략하면 '전체 목록'. */
+  browseTitle?: string
+  /** 전체 목록 모달에서 후보가 하나도 없을 때의 안내 — 어디서 만드는지까지 적는다. */
+  browseEmptyText?: string
   /** 밀도 맥락 강제 지정. 생략하면 부모 Card·DataTable이 내려준 맥락을 따른다(공용 Input과 동일). */
   density?: Density
 }
@@ -110,6 +124,9 @@ export function TokenMultiSelect<T>({
   max,
   maxSuggestions = 8,
   browsable = false,
+  browseIn = 'dropdown',
+  browseTitle,
+  browseEmptyText,
   density,
 }: TokenMultiSelectProps<T>) {
   const d = useDensity(density)
@@ -143,9 +160,9 @@ export function TokenMultiSelect<T>({
 
   // 돋보기로 펼친 전체 목록 — 검색 결과와 달리 개수를 자르지 않고 드롭다운 안에서 스크롤시킨다.
   const browseList = useMemo(() => {
-    if (!browsing || q.trim() || !options) return []
+    if (browseIn === 'modal' || !browsing || q.trim() || !options) return []
     return options.filter((o) => !selectedKeys.has(getKey(o)))
-  }, [browsing, q, options, selectedKeys, getKey])
+  }, [browseIn, browsing, q, options, selectedKeys, getKey])
 
   // 드롭다운에 그릴 행. 검색어가 있으면 언제나 검색 결과가 이긴다(돋보기로 펼쳐 둔 상태여도).
   const rows = q.trim() ? matches : browseList
@@ -155,8 +172,9 @@ export function TokenMultiSelect<T>({
     const next = [...selected, item]
     onChange(next)
     changeQuery('')
-    // 상한에 닿으면 입력 칸이 사라지므로 펼쳐 둔 목록도 함께 닫는다.
-    if (max != null && next.length >= max) setBrowsing(false)
+    // 상한에 닿으면 입력 칸이 사라지므로 펼쳐 둔 목록도 함께 닫는다. 모달은 닫지 않는다 —
+    // 거기서는 마지막 하나를 고른 뒤 다른 것과 바꾸는 것(빼고 다시 고르기)이 자연스러운 다음 동작이다.
+    if (browseIn === 'dropdown' && max != null && next.length >= max) setBrowsing(false)
     inputRef.current?.focus()
   }
 
@@ -182,6 +200,10 @@ export function TokenMultiSelect<T>({
   }
 
   const remove = (key: string) => onChange(selected.filter((s) => getKey(s) !== key))
+  // 전체 목록에서는 같은 칩이 켜기와 끄기를 겸한다 — 고른 것도 함께 보이기 때문이다.
+  const toggle = (item: T) =>
+    selectedKeys.has(getKey(item)) ? remove(getKey(item)) : add(item)
+  const browseLabel = browseTitle ?? '전체 태그 보기'
 
   const dropdownOpen = rows.length > 0 || showFreeTextRow
   const reposition = useCallback(() => {
@@ -202,7 +224,9 @@ export function TokenMultiSelect<T>({
   // 펼친 목록은 스스로 닫히지 않으므로 바깥 클릭으로 닫는다. 드롭다운은 포털이라 필드의
   // DOM 하위가 아니어서, 두 영역을 각각 확인해야 한다.
   useEffect(() => {
-    if (!browsing) return
+    // 모달은 자기 딤이 바깥 클릭을 받는다. 여기서 함께 듣게 두면 모달 안을 누르는 것이
+    // '바깥 클릭'으로 잡혀 열자마자 닫힌다(모달은 필드의 DOM 하위가 아니다).
+    if (browseIn === 'modal' || !browsing) return
     const onPointerDown = (e: MouseEvent) => {
       const t = e.target as Node
       if (fieldRef.current?.contains(t) || listRef.current?.contains(t)) return
@@ -210,7 +234,7 @@ export function TokenMultiSelect<T>({
     }
     document.addEventListener('mousedown', onPointerDown)
     return () => document.removeEventListener('mousedown', onPointerDown)
-  }, [browsing])
+  }, [browseIn, browsing])
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     const last = selected[selected.length - 1]
@@ -278,7 +302,9 @@ export function TokenMultiSelect<T>({
             )}
           />
         )}
-        {browsable && !atMax && !disabled && (
+        {/* 상한에 닿으면 드롭다운형은 펼칠 것이 없어 버튼을 거두지만, 모달형은 남긴다 —
+            거기서는 고른 것도 함께 보여 '빼고 다른 것으로 바꾸기'가 그 버튼의 일이다. */}
+        {browsable && !disabled && (browseIn === 'modal' || !atMax) && (
           // 검색어 없이 후보 전체를 펼치는 버튼. 필드 안 오른쪽 끝에 두어 '이 칸의 목록'임을 드러낸다.
           <button
             type="button"
@@ -287,11 +313,13 @@ export function TokenMultiSelect<T>({
             onClick={() => {
               changeQuery('')
               setBrowsing((v) => !v)
-              inputRef.current?.focus()
+              // 모달을 열 때는 뒤 입력으로 초점을 되돌리지 않는다 — 초점은 열린 창에 있어야 한다.
+              if (browseIn === 'dropdown') inputRef.current?.focus()
             }}
-            aria-label="전체 태그 보기"
-            aria-expanded={browsing}
-            title="전체 태그 보기"
+            aria-label={browseLabel}
+            aria-expanded={browseIn === 'dropdown' ? browsing : undefined}
+            aria-haspopup={browseIn === 'modal' ? 'dialog' : undefined}
+            title={browseLabel}
             className={cn(
               'ml-auto grid shrink-0 place-items-center rounded-radius-md transition-colors duration-fast',
               'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10',
@@ -350,6 +378,20 @@ export function TokenMultiSelect<T>({
           </ul>,
           document.body,
         )}
+      {browsable && browseIn === 'modal' && (
+        <TokenBrowseModal<T>
+          open={browsing}
+          onClose={() => setBrowsing(false)}
+          title={browseLabel}
+          options={options ?? []}
+          selected={selected}
+          getKey={getKey}
+          getLabel={getLabel}
+          onToggle={toggle}
+          max={max}
+          emptyText={browseEmptyText}
+        />
+      )}
     </div>
   )
 }
