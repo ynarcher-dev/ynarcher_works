@@ -1,4 +1,4 @@
-import { CardShell, Input, Select, TagChip, TextArea, useToast } from '@ynarcher/ui'
+import { CardShell, Checkbox, Input, Select, TagChip, TextArea, useToast } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -37,6 +37,8 @@ interface NetworkFormValues {
   department: string
   email: string
   phone: string
+  /** 이 번호가 와츠앱으로 닿는지. 별도 번호가 아니라 연락처에 붙는 성질이라 칸이 아닌 체크다. */
+  whatsapp: boolean
   linkedin: string
   match: 'possible' | 'impossible'
   intro: string
@@ -146,6 +148,7 @@ export function NetworkForm({
       department: (profile.department as string) ?? '',
       email: (initial?.email as string) ?? '',
       phone: (initial?.phone as string) ?? '',
+      whatsapp: profile.whatsapp === true,
       linkedin: (initial?.linkedin_url as string) ?? '',
       match: profile.match_available === false ? 'impossible' : 'possible',
       intro: (profile.intro as string) ?? '',
@@ -177,6 +180,8 @@ export function NetworkForm({
         // 조직 유형은 매칭 미사용.
         match_available: compact ? null : v.match === 'possible',
         intro: v.intro.trim() || null,
+        // 연락처가 비면 성질도 함께 지운다 — 없는 번호에 붙은 '와츠앱'은 아무것도 말하지 않는다.
+        whatsapp: v.phone.replace(/D/g, "") ? v.whatsapp : false,
       },
     }
 
@@ -300,6 +305,9 @@ export function NetworkForm({
               </Field>
               <Field label="연락처">
                 <Input {...register('phone')} />
+                {/* 와츠앱은 두 번째 번호가 아니라 이 번호의 성질이라, 칸을 늘리지 않고
+                    같은 칸 아래에 붙인다 — 번호를 두 곳에 적으면 한쪽만 고쳐 어긋난다. */}
+                <Checkbox wrapperClassName="mt-2" label="와츠앱 사용 번호" {...register('whatsapp')} />
               </Field>
               <Field label="링크드인">
                 <Input placeholder="https://linkedin.com/in/..." {...register('linkedin')} />

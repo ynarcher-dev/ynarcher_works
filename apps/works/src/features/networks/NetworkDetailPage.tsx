@@ -16,6 +16,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { DetailDeleteButton } from '@/components/DetailDeleteButton'
 import { LinkedInLink } from '@/components/LinkedInLink'
+import { WhatsAppMark } from '@/components/WhatsAppMark'
 import { NetworkForm } from '@/features/networks/NetworkForm'
 import { PhotoBox } from '@/features/networks/PhotoBox'
 import { ChangeHistoryPanel, uniqueContributors } from '@/features/networks/ChangeHistoryPanel'
@@ -87,6 +88,8 @@ function NetworkView({ record }: { record: NetworkRow }) {
   const department = (profile.department as string) ?? ''
   const position = (profile.position as string) ?? ''
   const linkedin = (record.linkedin_url as string) ?? ''
+  // 와츠앱은 번호의 성질이라 번호가 있을 때만 뜻이 있다.
+  const whatsapp = profile.whatsapp === true && !!record.phone
   const country = countryLabelOf(record)
   const region = (record.region_name as string) ?? ''
   const overseas = record.region_scope === 'OVERSEAS'
@@ -135,14 +138,23 @@ function NetworkView({ record }: { record: NetworkRow }) {
           <InfoGrid>
             <Info
               label="연락처"
+              // 값이 아이콘·버튼을 품어 글자보다 키가 커진 줄이다. 밑선을 맞추면 라벨이 값 상자의
+              // 아래 모서리에 걸려 한 칸 내려앉으므로, 이 줄만 가운데 축으로 세운다.
+              className="items-center"
               value={
-                <SensitiveValue
-                  field="phone"
-                  contentKey={CONTENT_KEY}
-                  value={(record.phone as string) ?? null}
-                  resourceType={NETWORK_RESOURCE_TYPE}
-                  resourceId={record.id}
-                />
+                <span className="inline-flex items-center gap-1.5">
+                  {/* 표식은 '연락처' 라벨 바로 옆, 번호 앞에 선다. 뒤에 두면 '보기' 버튼 너머로
+                      밀려 어느 값에 붙은 성질인지가 끊기고, 별도 줄로 세우면 '와츠앱: 예'가 되어
+                      어느 번호로 닿는다는 뜻이 번호에서 떨어져 나간다. */}
+                  {whatsapp && <WhatsAppMark />}
+                  <SensitiveValue
+                    field="phone"
+                    contentKey={CONTENT_KEY}
+                    value={(record.phone as string) ?? null}
+                    resourceType={NETWORK_RESOURCE_TYPE}
+                    resourceId={record.id}
+                  />
+                </span>
               }
             />
             <Info
