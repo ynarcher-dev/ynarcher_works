@@ -487,10 +487,11 @@
 > 정본: [3_9_1_guest_unified_account.md](../docs_planning/3_9_1_guest_unified_account.md). 계정을 사업 단위에서 대상 단위로 전환하고, 로그인을 이메일·비밀번호 2요소로 좁히며, 접근 기간을 참여 줄로 내린다. 순서를 지킨다 — 마이그레이션이 Edge Function보다 먼저 나가지 않으면 함수가 없는 컬럼을 읽고, Edge Function이 화면보다 먼저 나가지 않으면 화면이 없는 응답을 기다린다.
 
 - [x] 기획 문서 반영 — 3_9_1 신설 + 3_4_4·3_2·3_9·3_1·CLAUDE.md·인덱스 승계
-- [ ] 마이그레이션 1: 원장 — `users.guest_master_*` + `guest_credentials`(정책 없음) + `program_participants.access_*` + 인덱스
-- [ ] 마이그레이션 2: 이관 — 같은 원장 행을 가리키는 중복 계정 병합, 참조 재배선, 자격증명 이관(흡수 계정은 물리 삭제 금지)
-- [ ] 마이그레이션 3: 판정 — `guest_session_program_id()`의 `context_*` 클레임 수용, `guest_program_ids()`에 접근 기간 조건 추가
-- [ ] 마이그레이션 4: RPC — `issue_guest_account` / `open_program_guest_access` 개정(기존 계정 재사용·기간 기본값) / `set_participant_access_window` / `admin_guest_accounts` 확장, 구 `reset_program_guest_password` 폐기
+- [x] 마이그레이션 1: 원장 — `users.guest_master_*` + `guest_credentials`(정책 없음) + `program_participants.access_*` + 인덱스 <!-- 20260905120000. 자격증명을 users가 아니라 별도 원장에 둔 이유: users의 SELECT는 내부 전원에게 열려 있어(참가자 명부가 게스트 이름을 붙이려면 그래야 한다) 해시를 거기 두면 전 직원이 읽는다. RLS를 켜고 정책을 하나도 만들지 않아 Default Deny로 두고, 테이블 GRANT까지 REVOKE해 service_role Edge Function만 닿는다 -->
+- [x] 마이그레이션 2: 이관 — 같은 원장 행을 가리키는 중복 계정 병합, 참조 재배선, 자격증명 이관(흡수 계정은 물리 삭제 금지) <!-- 20260905130000. 재배선 대상을 손으로 나열하지 않고 users(id)를 가리키는 FK 컬럼 전체를 pg_constraint가 답하게 했다 — 빠뜨린 컬럼은 없는 계정을 가리키는 행이 되어 그 기록이 누구 것인지 답할 수 없게 된다. workspace_permissions만 unique(user_id, workspace_key) 충돌 때문에 예외로 먼저 지운다(권한 템플릿에서 파생되는 값이라 잃는 사실이 없다). 한 계정이 두 원장 행을 가리키는 경우는 자동으로 고를 근거가 없어 손대지 않고 WARNING으로 보고한다 -->
+- [x] 마이그레이션 3: 판정 — `guest_session_program_id()`의 `context_*` 클레임 수용, `guest_program_ids()`에 접근 기간 조건 추가 <!-- 20260905140000. 구 program_id 클레임 폴백을 남긴 이유: 세션 수명이 8시간이라 배포 직후 살아 있는 토큰은 아직 새 클레임이 없고, 폴백이 없으면 배포 순간 접속 중인 게스트가 전원 빈 화면이 된다. guest_my_participations()는 세션 고정 맥락을 보지 않는다 — 맥락을 고르기 전에 부르는 목록이기 때문이며, 파라미터를 두지 않아 남의 id를 넣을 자리가 없다 -->
+- [x] 마이그레이션 4: RPC — `issue_guest_account` / `open_program_guest_access` 개정(기존 계정 재사용·기간 기본값) / `set_participant_access_window` / `authorize_guest_password_reset` / `guest_accounts_list`(구 `admin_guest_accounts` 대체) <!-- 20260905150000. issue_guest_account만 SECURITY DEFINER인 이유: users_insert 정책의 MANAGEMENT 분기가 게스트 행을 배제해 INVOKER로는 성립하지 않는다(함수 첫머리에서 app.is_guest()를 막고 search_path 고정). 계정을 첫 로그인이 아니라 개방 시점에 만들도록 바꿔 담당자 화면이 '이 사람에게 계정이 있는가'에 답할 수 있게 했다. 목록 함수를 OFFICE용·ADMIN용으로 나누지 않고 마스킹 여부만 서버가 정한 이유: 나누면 한쪽만 고쳐 어긋난다 -->
+- [ ] **운영 DB 반영(`supabase db push`)** — 위 4건. Edge Function 배포보다 먼저여야 한다(함수가 없는 컬럼을 읽는다)
 - [ ] Edge Function: `guest-auth-login` 2요소 + 참여 목록 반환, `guest-auth-context` 신설, `guest-auth-password`·`guest-auth-refresh` 자격증명 원장 이관
 - [ ] Edge Function: `guest-password-reset` 신설(본인 연락처로만 발송), `guest-access-invite` 문안 분기
 - [ ] WORKS 화면: 참가자 명부에 `계정`·`접근` 열 + `연결` 버튼 일원화 + 기간 편집
