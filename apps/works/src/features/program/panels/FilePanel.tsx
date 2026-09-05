@@ -1,5 +1,5 @@
 import { Button, Card, Input, TextArea, Tooltip, tooltipScale, useToast } from '@ynarcher/ui'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { MaterialDropZone } from '@/features/networks/MaterialDropZone'
 import { MaterialList } from '@/features/networks/MaterialList'
 import {
@@ -32,8 +32,6 @@ export function FilePanel({
   programId: string
   moduleId: string
 }) {
-  // 드롭존이 소유한 파일 입력을 카드 헤더 '업로드' 버튼에서도 열기 위한 핸들.
-  const openPicker = useRef<(() => void) | null>(null)
   const { data: materials = [], isLoading } = useMaterials('program', programId, moduleId)
   const upload = useUploadMaterial('program', programId, moduleId)
   const remove = useDeleteMaterial('program', programId)
@@ -47,13 +45,6 @@ export function FilePanel({
       title="파일"
       count={materials.length}
       help="여기에 올린 파일은 이 사업의 자료 관리에도 함께 표시됩니다."
-      actions={
-        editing ? undefined : (
-          <Button variant="secondary" disabled={busy} onClick={() => openPicker.current?.()}>
-            {busy ? '업로드 중…' : '업로드'}
-          </Button>
-        )
-      }
     >
       {editing ? (
         <FileMetaForm
@@ -65,9 +56,10 @@ export function FilePanel({
         />
       ) : (
         <div className="space-y-3">
+          {/* 파일을 놓는 자리는 이 상자 하나다(헤더 '업로드' 버튼은 2026-09-05에 걷었다). */}
           <MaterialDropZone
             onFiles={(files) => files.forEach((f) => upload.mutate(f))}
-            openRef={openPicker}
+            busy={busy}
           />
           {upload.isError && (
             <p className="text-caption text-danger">업로드에 실패했습니다. 다시 시도해 주세요.</p>
@@ -79,7 +71,7 @@ export function FilePanel({
             onEdit={(m) => setEditing(m)}
             onDelete={(id) => remove.mutate(id)}
             deletingId={remove.isPending ? remove.variables : undefined}
-            emptyText="등록된 파일이 없습니다. 위 영역에 파일을 끌어다 놓거나 업로드를 누르세요."
+            emptyText="등록된 파일이 없습니다. 위 영역에 파일을 끌어다 놓거나 눌러서 첨부하세요."
             pageSize={8}
             showDescription
           />

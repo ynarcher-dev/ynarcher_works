@@ -1,5 +1,5 @@
 import { Button } from '@ynarcher/ui'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { DetailPanelCard } from '@/features/networks/DetailPanelCard'
 import { MaterialBrowseModal } from '@/features/networks/MaterialBrowseModal'
 import { MaterialDropZone } from '@/features/networks/MaterialDropZone'
@@ -15,6 +15,10 @@ import { useDeleteMaterial, useMaterials, useUploadMaterial } from '@/features/n
  *
  * `readOnly`(조회 모드)면 업로드/삭제 없이 목록·다운로드만 노출한다.
  * 업로드/삭제는 수정 모드(폼 내부 자료 관리 카드)에서만 가능하다.
+ *
+ * 파일을 놓는 자리는 점선 드롭존 하나다 — 헤더 '업로드' 버튼은 2026-09-05에 걷었다(같은 일을
+ * 하는 자리가 둘이면 어느 쪽이 이 카드의 입구인지 화면이 답하지 못하고, 정작 그렇게 적혀 있는
+ * 점선 상자는 눌러지지 않는 장식이었다). 업로드 진행 표시도 그 상자가 함께 맡는다.
  *
  * 헤더 '전체보기'는 같은 목록을 표(검색·번호줄 페이저 포함)로 펼치는 모달을 연다 — 이 패널은
  * 한 쪽에 다섯 건만 서는 곁다리 자리라, 자료가 쌓이면 등록일·형식을 견주며 찾을 자리가 따로
@@ -41,8 +45,6 @@ export function MaterialPanel({
   /** 패널 제목(기본 '자료 관리'). 한 레코드에 자료 분류가 여러 개일 때 구분용. */
   title?: string
 }) {
-  // 드롭존이 소유한 파일 입력을 헤더 '업로드' 버튼에서도 열기 위한 핸들.
-  const openPicker = useRef<(() => void) | null>(null)
   const [browsing, setBrowsing] = useState(false)
   const { data: materials, isLoading } = useMaterials(targetType, targetId, moduleId)
   const upload = useUploadMaterial(targetType, targetId, moduleId)
@@ -61,21 +63,14 @@ export function MaterialPanel({
       count={list.length}
       action={
         // 전체보기는 조회 모드에서도 선다 — 읽기만 하는 자리이고, 목록이 길수록 더 필요하다.
-        <div className="flex items-center gap-1.5">
-          <Button variant="ghost" onClick={() => setBrowsing(true)}>
-            전체보기
-          </Button>
-          {!readOnly && (
-            <Button variant="secondary" disabled={busy} onClick={() => openPicker.current?.()}>
-              {busy ? '업로드 중…' : '업로드'}
-            </Button>
-          )}
-        </div>
+        <Button variant="ghost" onClick={() => setBrowsing(true)}>
+          전체보기
+        </Button>
       }
     >
       {!readOnly && (
         <>
-          <MaterialDropZone onFiles={addFiles} openRef={openPicker} />
+          <MaterialDropZone onFiles={addFiles} busy={busy} />
 
           {upload.isError && (
             <p className="mt-2 text-caption text-danger">

@@ -129,7 +129,7 @@ export function MaterialBrowseModal({
     <>
       {/* 읽는 모달이라 바깥을 눌러 가볍게 닫는다(닫아도 잃을 것이 없다). */}
       <Modal open onClose={onClose} title={title} size="2xl">
-        <div className="space-y-3">
+        <div className="space-y-4">
           <Input
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
@@ -148,7 +148,9 @@ export function MaterialBrowseModal({
               rowKey={(m) => m.id}
               standardColumns={false}
               selectable={false}
-              layout="fixed"
+              // 자동 레이아웃이 기본값이다. 폭을 고정하면 종류를 적지 않은 액션 열이 남는 폭을
+              // 통째로 받아, 등록일과 아이콘 사이에 표 절반짜리 빈 구간이 생긴다 — 남는 폭은
+              // 이름 열이 받아야 한다(파일명은 잘리면 곤란한 값이라 여유가 가장 쓸모 있는 자리다).
               pagination={{
                 page,
                 pageSize: PAGE_SIZE,
