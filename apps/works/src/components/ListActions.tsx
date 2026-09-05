@@ -1,4 +1,5 @@
 import { Button } from '@ynarcher/ui'
+import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 export interface ListActionsProps {
@@ -28,14 +29,22 @@ export interface ListActionsProps {
   onBulk?: () => void
   /** 등록 버튼을 잠근다(권한 없음·로딩 중). */
   disabled?: boolean
+  /**
+   * 액션 왼쪽에 함께 서는 뷰 컨트롤(범위 토글 `ListScopeToggle`).
+   *
+   * 자리가 여기인 이유는 성격이 갈리기 때문이다 — 오른쪽 두 버튼이 '무엇을 새로 넣는가'라면
+   * 이것은 '지금 무엇을 보고 있는가'라서, 표 쪽에 붙어야 목록의 머리말처럼 읽힌다. 화면이
+   * 저마다 감싸 놓으면 간격과 순서가 갈리므로 자리는 이 컴포넌트가 소유한다.
+   */
+  leading?: ReactNode
 }
 
 /**
- * 원장 목록 상단 우측 액션 한 쌍(대용량 업로드 · 등록).
+ * 원장 목록 상단 우측 액션 줄(범위 토글 · 대용량 업로드 · 등록).
  *
  * 목록마다 버튼을 따로 놓다 보니 어떤 화면은 등록이 없고, 어떤 화면은 '생성'·'추가'·'새 ~'로
  * 문구가 갈리고, 업로드 진입 경로도 사이드바·모달·없음으로 제각각이었다. 세 가지를 여기 한 곳에서
- * 정한다 — 순서(업로드 왼쪽, 등록 오른쪽), 강조(등록만 주버튼), 문구 규칙.
+ * 정한다 — 순서(뷰 컨트롤 왼쪽, 업로드 가운데, 등록 오른쪽), 강조(등록만 주버튼), 문구 규칙.
  */
 export function ListActions({
   createLabel,
@@ -43,12 +52,14 @@ export function ListActions({
   bulkTo,
   onBulk,
   disabled,
+  leading,
 }: ListActionsProps) {
   const navigate = useNavigate()
   const openBulk = onBulk ?? (bulkTo ? () => navigate(bulkTo) : undefined)
 
   return (
     <div className="flex items-center gap-2">
+      {leading}
       {openBulk && (
         <Button variant="outline" density="page" onClick={openBulk}>
           대용량 업로드

@@ -209,13 +209,19 @@ const sidebarGroupIcon: Record<string, LucideIcon> = {
   tags: Tags,
 }
 
+/**
+ * 탭 키가 없는 메뉴(목록 하나뿐인 워크스페이스)의 아이콘.
+ *
+ * 2026-09-05에 STARTUP·NETWORKS·FUND·사업 3종의 '내 ~'/'전체 ~' 두 줄이 한 줄로 합쳐지며
+ * 이 줄들은 탭 키를 잃었다(범위는 `?scope=`가 싣는다). 탭 기반 매핑이 걸리지 않으므로
+ * 워크스페이스 글리프가 그 줄의 아이콘이 된다.
+ */
 const sidebarIconByWorkspace: Record<string, LucideIcon> = {
   startup: Rocket,
   ac: Target,
   fund: WalletCards,
   project: Folder,
-  // NETWORKS는 메뉴가 목록 하나뿐이라 탭 키가 없다(2026-09-05 통합) — 탭 기반 매핑이 걸리지
-  // 않으므로 워크스페이스 글리프가 그 줄의 아이콘이 된다.
+  mna: BriefcaseBusiness,
   networks: Network,
 }
 

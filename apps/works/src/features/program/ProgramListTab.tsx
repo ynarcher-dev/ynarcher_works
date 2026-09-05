@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/auth/authStore'
 import { ListActions } from '@/components/ListActions'
+import { ListScopeToggle } from '@/components/ListScopeToggle'
 import { ProgramFormModal } from '@/features/program/ProgramFormModal'
 import { ProgramFilters } from '@/features/program/ProgramFilters'
 import { ProgramPipeline } from '@/features/program/ProgramPipeline'
@@ -14,15 +15,15 @@ import {
 } from '@/features/program/programsPoolHooks'
 import { useProgramWorkspace } from '@/features/program/workspace'
 import { toggleAxisValue } from '@/lib/filterAxis'
+import type { ListScope } from '@/lib/listScope'
 
 /** 목록 페이지당 행 수(서버 사이드 페이지네이션). */
 const PAGE_SIZE = 30
 
 interface ProgramListTabProps {
   /** 'mine' = 내가 담당자/생성자인 사업만, 'all' = 전체 사업. */
-  scope: 'mine' | 'all'
-  /** 상세 진입 시 넘길 출처 탭. 뒤로가기·사이드바 활성 상태 복원에 쓴다. */
-  backTab: string
+  scope: ListScope
+  onScopeChange: (scope: ListScope) => void
 }
 
 /**
@@ -36,7 +37,7 @@ interface ProgramListTabProps {
  * 검색어·필터가 집계에 반영되면서 전체 목록에서도 "지금 좁혀 놓은 범위가 어느 단계에
  * 몰려 있나"라는 같은 질문이 성립한다 — 더는 '회사 전체 통계' 한 장이 아니다.
  */
-export function ProgramListTab({ scope, backTab }: ProgramListTabProps) {
+export function ProgramListTab({ scope, onScopeChange }: ProgramListTabProps) {
   const config = useProgramWorkspace()
   const navigate = useNavigate()
   const userId = useAuthStore((s) => s.user?.id)
@@ -71,6 +72,8 @@ export function ProgramListTab({ scope, backTab }: ProgramListTabProps) {
       />
 
       <ListToolbar
+        // 필터 축 다섯에 범위 토글까지 서므로 검색창을 한 단 좁힌다.
+        dense
         keyword={keyword}
         onKeywordChange={setKeyword}
         // 워크스페이스마다 부르는 이름이 다르다(AC 사업 / M&A·PROJECT 프로젝트).
@@ -78,6 +81,9 @@ export function ProgramListTab({ scope, backTab }: ProgramListTabProps) {
         filters={<ProgramFilters filters={filters} onChange={setFilters} />}
         actions={
           <ListActions
+            leading={
+              <ListScopeToggle scope={scope} onChange={onScopeChange} noun={config.entityNoun} />
+            }
             createLabel={`${config.entityNoun} 등록`}
             onCreate={() => setCreating(true)}
             bulkTo={`${config.basePath}/bulk`}
@@ -92,8 +98,11 @@ export function ProgramListTab({ scope, backTab }: ProgramListTabProps) {
           rows={data?.rows ?? []}
           selectedKeys={selected}
           onSelectionChange={setSelected}
-          // 출처 목록 탭(mine/all/카테고리)을 쿼리로 넘겨 상세에서 사이드바 활성·뒤로가기 목적지를 유지한다.
-          onRowClick={(row) => navigate(`${config.basePath}/programs/${row.id}?tab=${backTab}`)}
+          // 출처 범위를 쿼리로 넘겨 상세의 뒤로가기가 방금 보던 목록으로 돌아오게 한다
+          // (내 것이 아닌 사업을 '전체'에서 열었다면 '내 ~' 목록에는 그 행이 없다).
+          onRowClick={(row) =>
+            navigate(`${config.basePath}/programs/${row.id}?from=${scope}`)
+          }
           pagination={{
             page,
             pageSize: PAGE_SIZE,

@@ -55,10 +55,10 @@ export const OPERATION_ROLE_LABEL: Record<OperationRoleKey, string> = {
  * 펀드는 갖고 있지 않기 때문이다 — 화면에서 만들면 넷 중 하나만 손으로 적힌 경로가 된다.
  */
 export const OPERATION_MINE_PATH: Record<OperationWorkspaceKey, string> = {
-  ac: `${AC_WORKSPACE.basePath}?tab=mine`,
-  mna: `${MNA_WORKSPACE.basePath}?tab=mine`,
-  project: `${PROJECT_WORKSPACE.basePath}?tab=mine`,
-  fund: '/fund?tab=mine',
+  ac: AC_WORKSPACE.basePath,
+  mna: MNA_WORKSPACE.basePath,
+  project: PROJECT_WORKSPACE.basePath,
+  fund: '/fund',
 }
 
 interface ManagerRow {

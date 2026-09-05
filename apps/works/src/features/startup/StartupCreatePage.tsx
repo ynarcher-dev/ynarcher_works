@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { StartupDetailForm } from '@/features/startup/StartupDetailForm'
 
 /** 발굴기업 목록 경로(뒤로가기·취소 목적지). */
-const LIST_PATH = '/startup?tab=all'
+const LIST_PATH = '/startup?scope=all'
 
 /**
  * 스타트업 신규 등록 페이지(모달 아님). 발굴기업 목록의 '스타트업 등록'에서 진입하며,

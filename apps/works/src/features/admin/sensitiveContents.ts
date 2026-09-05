@@ -99,11 +99,11 @@ export const SENSITIVE_CONTENT_GROUPS: readonly SensitiveContentGroup[] = [
     key: 'startup',
     label: 'STARTUP',
     contents: [
-      { key: 'startup.mine', label: '내 업로드 DB', fields: PERSON, hint: COMPANY_HINT },
-      // 전체 목록은 내 목록과 같은 열을 보여주므로 가릴 필드도 같다. 범위가 넓은 화면이라
-      // 정책을 따로 걸 수 있어야 하며, 키가 없으면 필드 기본값으로 폴백해 관리 화면에서
-      // 보이지 않는 채로 동작한다(사이드바 항목과 콘텐츠 키는 1:1로 맞춘다).
-      { key: 'startup.all', label: '스타트업 DB', fields: PERSON, hint: COMPANY_HINT },
+      // 2026-09-05 메뉴 통합으로 두 키는 같은 목록의 범위 토글이 가른다(내 스타트업 / 전체
+      // 스타트업). 정책은 여전히 범위별로 따로 걸린다 — 내 것만 볼 때와 전부 볼 때의 노출
+      // 범위가 같을 이유가 없다. 키는 DB에 저장돼 있으므로 라벨만 화면의 말로 맞춘다.
+      { key: 'startup.mine', label: '내 스타트업', fields: PERSON, hint: COMPANY_HINT },
+      { key: 'startup.all', label: '전체 스타트업', fields: PERSON, hint: COMPANY_HINT },
       { key: 'startup.invested', label: '투자기업', fields: PERSON, hint: COMPANY_HINT },
       { key: 'startup.incubated', label: '보육기업', fields: PERSON, hint: COMPANY_HINT },
       { key: 'startup.discovered', label: '발굴기업', fields: PERSON, hint: COMPANY_HINT },

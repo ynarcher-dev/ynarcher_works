@@ -44,12 +44,12 @@ const CONTENT_KEY_BY_STATUS: Record<ManagementStatus, string> = {
 }
 
 /**
- * 구분이 없거나 섞인 뷰의 콘텐츠 키. 목록은 '내 업로드 DB'와 '스타트업 DB' 둘이며,
+ * 구분이 없거나 섞인 뷰의 콘텐츠 키. 목록은 하나이며 범위가 '내 스타트업'과 '전체 스타트업'으로 갈리고,
  * 같은 화면을 범위만 넓혀 쓰지만 정책은 따로 걸 수 있어야 하므로 키를 나눈다.
  */
 const CONTENT_KEY_BY_SCOPE = { mine: 'startup.mine', all: 'startup.all' } as const
 
-/** 목록 범위. '내 업로드 DB'(mine)와 '스타트업 DB'(all) 둘뿐이다. */
+/** 목록 범위. 토글의 '내 스타트업'(mine)과 '전체 스타트업'(all) 둘뿐이다. */
 export type StartupListScope = keyof typeof CONTENT_KEY_BY_SCOPE
 
 /**

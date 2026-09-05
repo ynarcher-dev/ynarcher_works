@@ -2,6 +2,7 @@ import { ListToolbar, Spinner } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ListActions } from '@/components/ListActions'
+import { ListScopeToggle } from '@/components/ListScopeToggle'
 import { FundListFilters } from '@/features/fund/FundListFilters'
 import { FundListTable } from '@/features/fund/FundListTable'
 import { FundSummaryPanel } from '@/features/fund/FundSummaryPanel'
@@ -11,13 +12,20 @@ import {
   type FundListFilterState,
 } from '@/features/fund/fundListHooks'
 import { toggleAxisValue } from '@/lib/filterAxis'
+import type { ListScope } from '@/lib/listScope'
 
 /** 페이지당 행 수. */
 const PAGE_SIZE = 20
 
+/** 표가 비었을 때·토글에서 부르는 원장 단위 이름. */
+const ENTITY_NOUN = '운용펀드'
+
 interface FundListTabProps {
-  /** 지정 시 생성자 또는 담당자(대표펀드매니저·운용/관리 인력)가 이 사용자인 펀드만('내 운용펀드'). */
-  mineUserId?: string | null
+  /** 'mine'은 생성자 또는 담당자(대표펀드매니저·운용/관리 인력)가 나인 펀드만, 'all'은 전부. */
+  scope: ListScope
+  onScopeChange: (scope: ListScope) => void
+  /** 로그인 사용자 id. 'mine' 범위에서만 조회 조건으로 걸린다. */
+  userId: string | null
 }
 
 /**
@@ -27,7 +35,8 @@ interface FundListTabProps {
  * 스코프(내 운용펀드)와 좁힘(검색·필터)이 나뉘어 있어 건수도 둘로 온다.
  * (StartupPoolTab·ProgramListTab과 같은 절차)
  */
-export function FundListTab({ mineUserId }: FundListTabProps) {
+export function FundListTab({ scope, onScopeChange, userId }: FundListTabProps) {
+  const mineUserId = scope === 'mine' ? userId : null
   const navigate = useNavigate()
   const [keyword, setKeyword] = useState('')
   const [filters, setFilters] = useState<FundListFilterState>(EMPTY_FUND_FILTERS)
@@ -39,7 +48,7 @@ export function FundListTab({ mineUserId }: FundListTabProps) {
   useEffect(() => {
     setPage(0)
     setSelected([])
-  }, [keyword, filtersKey, mineUserId])
+  }, [keyword, filtersKey, scope])
 
   const { data, isLoading } = useFundListPage(keyword, filters, page, PAGE_SIZE, mineUserId)
 
@@ -70,6 +79,9 @@ export function FundListTab({ mineUserId }: FundListTabProps) {
         filters={<FundListFilters filters={filters} onChange={setFilters} />}
         actions={
           <ListActions
+            leading={
+              <ListScopeToggle scope={scope} onChange={onScopeChange} noun={ENTITY_NOUN} />
+            }
             createLabel="펀드 등록"
             onCreate={() => navigate('/fund/new')}
             bulkTo="/fund/bulk"

@@ -15,6 +15,7 @@ import { RecruitmentPanel } from '@/features/program/panels/RecruitmentPanel'
 import { TimelinePanel } from '@/features/program/panels/TimelinePanel'
 import { useProgram } from '@/features/program/hooks'
 import { useProgramWorkspace } from '@/features/program/workspace'
+import { listPathOf } from '@/lib/listScope'
 
 // 참가자/전문가(참가자)는 개요 좌측 서브 탭에서 렌더하므로 전체 화면 라우팅 대상이 아니다.
 type Tab =
@@ -45,11 +46,11 @@ export function ProgramDetailPage() {
   const navigate = useNavigate()
   const deactivate = useDeactivateProgram()
   const [params] = useSearchParams()
-  // 출처 목록 탭(mine/all). 알 수 없는 값이면 전체 목록으로 폴백한다 —
-  // 사업구분별 탭은 폐지되었으므로 옛 링크로 들어온 카테고리 값도 여기서 전체로 접힌다.
-  const fromTab = params.get('tab') ?? ''
-  const backTab = fromTab === 'mine' || fromTab === 'all' ? fromTab : 'all'
-  const backTo = `${config.basePath}?tab=${backTab}`
+  // 출처 목록 범위(mine/all). 알 수 없는 값이면 전체 범위로 폴백한다 — 내 것이 아닌 사업을
+  // 열었을 때 '내 ~' 목록에는 그 행이 없어 뒤로가기가 빈 목록으로 끝난다. 옛 링크가 실어 오는
+  // 탭 값(?tab=mine·사업구분)도 여기서 같은 규칙으로 접힌다.
+  const from = params.get('from') ?? params.get('tab') ?? ''
+  const backTo = listPathOf(config.basePath, from === 'mine' ? 'mine' : 'all')
   const { data: program, isLoading } = useProgram(id)
   const [tab, setTab] = useState<Tab>('overview')
   // 진입한 모듈 인스턴스(운영 화면은 program_module_id 단위이므로 인스턴스를 들고 있어야 한다).

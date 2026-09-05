@@ -28,19 +28,19 @@ export type LedgerKey = 'startup' | 'networks'
 /**
  * 원장별 정의 — 라벨·권한 키·목적지. 어느 원장을 세울지는 화면이 아니라 이 표가 답한다.
  *
- * 경로는 각 원장 목록의 **'내 것' 범위**를 가리킨다(STARTUP은 `?tab=mine`, NETWORKS는
- * 메뉴 통합 뒤 범위 축이 된 `?scope=mine`) — 카드가 적은 수와 눌러서 도착한 목록의 건수가
- * 다르면, 방금 본 수가 무엇이었는지 되묻게 된다.
+ * 경로는 각 원장 목록의 **'내 것' 범위**를 가리킨다 — 카드가 적은 수와 눌러서 도착한
+ * 목록의 건수가 다르면, 방금 본 수가 무엇이었는지 되묻게 된다. 기본 범위가 '내 것'이므로
+ * 주소에는 아무것도 붙이지 않는다(`?scope=all`이 붙은 주소만 전체 범위다).
  *
  * 라벨은 사이드바의 말을 그대로 쓰지 않는다. 카드 이름이 이미 '나의 데이터베이스'라 '내 것'은
- * 카드가 말했고, 타일까지 '내 업로드 DB (국내)'라고 적으면 석 장이 같은 말을 세 번 반복한다.
+ * 카드가 말했고, 타일까지 '내 스타트업'이라고 적으면 석 장이 같은 말을 세 번 반복한다.
  * 타일이 답할 것은 **어느 원장인가**뿐이다.
  */
 export const LEDGERS: Omit<LedgerStat, 'mine' | 'total'>[] = [
-  { key: 'startup', label: '스타트업 DB', workspace: 'startup', path: '/startup?tab=mine' },
+  { key: 'startup', label: '스타트업 DB', workspace: 'startup', path: '/startup' },
   // 국내·글로벌 두 줄이 2026-09-04 원장 통합으로 한 줄이 되었다. 지역은 그 목록의 필터
   // 축이므로 카드에서 두 줄로 갈라 놓으면 눌러서 도착한 화면과 건수가 어긋난다.
-  { key: 'networks', label: '네트워크', workspace: 'networks', path: '/networks?scope=mine' },
+  { key: 'networks', label: '네트워크', workspace: 'networks', path: '/networks' },
 ]
 
 /**
@@ -75,7 +75,7 @@ type LedgerCounts = Pick<LedgerStat, 'mine' | 'total'>
  * 스타트업 원장 — '내 것'은 생성자(`created_by`) **또는** 담당자(`startup_managers`)다.
  *
  * 담당은 원장 밖에 있어 조인으로 걸 수 없으므로 담당 기업 id를 먼저 모아 `or`로 묶는다
- * (STARTUP '내 업로드 DB' 목록과 같은 조건이며, 그래서 두 화면의 건수가 일치한다).
+ * (STARTUP 목록의 '내 스타트업' 범위와 같은 조건이며, 그래서 두 화면의 건수가 일치한다).
  */
 async function fetchStartupStat(userId: string): Promise<LedgerCounts> {
   const ids = await managedRecordIds('startup_managers', 'startup_id', userId)

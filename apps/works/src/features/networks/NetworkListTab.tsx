@@ -1,7 +1,8 @@
-import { ListToolbar, SegmentedToggle, type SegmentedOption } from '@ynarcher/ui'
+import { ListToolbar } from '@ynarcher/ui'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ListActions } from '@/components/ListActions'
+import { ListScopeToggle } from '@/components/ListScopeToggle'
 import { useMaskPolicy } from '@/features/admin/sensitiveStore'
 import { MasterListView } from '@/features/master/MasterListView'
 import { NetworkListFilters } from '@/features/networks/NetworkListFilters'
@@ -22,15 +23,6 @@ import { toggleAxisValue } from '@/lib/filterAxis'
 
 /** 목록 페이지당 행 수. */
 const PAGE_SIZE = 30
-
-/**
- * 범위 토글 — 목록이 담는 범위를 정하는 한 축이다. 배타 선택이라 칩이 아니라 세그먼트로 세운다
- * (칩을 늘어놓으면 둘 다 켤 수 있는 것으로 읽힌다).
- */
-const SCOPE_OPTIONS: SegmentedOption<NetworkListScope>[] = [
-  { key: 'mine', label: '내 네트워크' },
-  { key: 'all', label: '전체 네트워크' },
-]
 
 /**
  * 범위별 민감정보 정책 키(ADMIN '민감정보 관리'). 정책 키는 메뉴명·라벨이 바뀌어도 그대로
@@ -134,23 +126,15 @@ export function NetworkListTab({ scope, onScopeChange }: NetworkListTabProps) {
         // 등록 버튼은 구분을 묻지 않고 곧장 작성 화면으로 간다 — 원장이 하나가 된 뒤
         // (2026-09-04 통합) 구분은 어디에 저장할지가 아니라 폼 안의 한 칸이고, 그 칸은 폼이
         // 이미 갖고 있다. 같은 것을 두 번 묻지 않는다.
-        //
-        // 범위 토글은 액션 묶음의 맨 왼쪽에 선다 — 오른쪽 두 버튼이 '무엇을 새로 넣는가'라면
-        // 토글은 '지금 무엇을 보고 있는가'라서, 목록 쪽에 붙어야 표의 머리말처럼 읽힌다.
         actions={
-          <div className="flex items-center gap-2">
-            <SegmentedToggle
-              label="목록 범위"
-              options={SCOPE_OPTIONS}
-              value={scope}
-              onChange={onScopeChange}
-            />
-            <ListActions
-              createLabel="신규 등록"
-              onCreate={() => navigate('/networks/record/new')}
-              bulkTo="/networks/bulk"
-            />
-          </div>
+          <ListActions
+            leading={
+              <ListScopeToggle scope={scope} onChange={onScopeChange} noun={ENTITY_NOUN} />
+            }
+            createLabel="신규 등록"
+            onCreate={() => navigate('/networks/record/new')}
+            bulkTo="/networks/bulk"
+          />
         }
       />
 
