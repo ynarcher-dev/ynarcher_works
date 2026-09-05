@@ -4,7 +4,7 @@ import { sanitizeOrValue } from '@/features/master/ledgerPage'
 import { SHARED_TABLES, useProgramWorkspace } from '@/features/program/workspace'
 
 /**
- * 참가자/전문가(참가자 명부) 데이터 계층.
+ * 참가자 명부(참여 기업·참여 전문가) 데이터 계층.
  *
  * 명부의 값은 원장(NETWORKS 기업·전문가)이 소유한다 — 여기서는 복제하지 않고 조회로 합성한다.
  * master_id는 FK가 아닌 soft ref라 임베드가 되지 않으므로, 명부를 읽은 뒤 원장을 한 번 더
@@ -29,6 +29,19 @@ export type ParticipantLoginStatus =
  * category가 답하므로, 후보 조회에 구분 조건을 함께 건다(아래 useMasterCandidates).
  */
 export type MasterTable = 'startups' | 'networks'
+
+/**
+ * 자격 라벨 — 원장 이름(startups·networks)이 아니라 **이 사업에서의 자격**으로 적는다.
+ * 담당자가 고르는 것은 "어느 원장에서 왔나"가 아니라 "무엇으로 참여시키나"이고, 그 선택이
+ * 게스트가 볼 화면을 정한다(3_9_1 §4).
+ *
+ * 이 한 벌이 사업 상세 탭·계정 원장의 자격 배지·게스트 전환기의 어휘를 함께 정한다 —
+ * 같은 축을 화면마다 다른 말로 적으면 담당자가 안내한 말과 게스트가 본 말이 어긋난다.
+ */
+export const PERSONA_LABEL: Record<MasterTable, string> = {
+  startups: '참여 기업',
+  networks: '참여 전문가',
+}
 
 export interface ParticipantRow {
   id: string
@@ -155,7 +168,7 @@ export function useProgramParticipants(programId: string | undefined) {
       // 계정 유무는 명부 행이 아니라 **원장 행**이 답한다(인격 매핑이 그것을 들고 있다).
       // 그래서 아직 이 사업에 문을 열지 않은 대상도 "계정 있음"으로 뜬다 — 담당자가
       // 신규인지 기존인지 구분할 필요 없이 `연결` 하나만 누르면 되는 근거가 여기다.
-      // 한 계정이 여러 인격을 가질 수 있으므로(참가기업 + 참가전문가) 계정이 아니라
+      // 한 계정이 여러 인격을 가질 수 있으므로(참여 기업 + 참여 전문가) 계정이 아니라
       // 매핑표를 읽는다.
       const masterIds = [...startupIds, ...expertIds]
       const accountsRes = masterIds.length

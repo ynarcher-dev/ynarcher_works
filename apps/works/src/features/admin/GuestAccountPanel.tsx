@@ -20,18 +20,13 @@ import {
   type GuestAccountProgram,
 } from '@/features/admin/guestAccountHooks'
 import { GuestAccountIssueModal } from '@/features/admin/GuestAccountIssueModal'
+import { PERSONA_LABEL } from '@/features/program/participantHooks'
 import { GUEST_TYPE_LABEL } from '@/lib/userTypes'
 
 const DASH = <EmptyValue />
 
 /** 워크스페이스 표기 — 사업 원장이 셋이라 어느 쪽 사업인지 함께 밝힌다. */
 const WORKSPACE_LABEL: Record<string, string> = { ac: 'AC', mna: 'M&A', project: 'PROJECT' }
-
-/** 참여 자격 라벨 — 명부 탭·GUEST 전환기와 같은 어휘를 쓴다. */
-const PERSONA_LABEL: Record<'startups' | 'networks', string> = {
-  startups: '참가기업',
-  networks: '참가전문가',
-}
 
 /** 사업별 로그인 개방 상태 표기. 계정 상태와 다른 축이라 톤도 다르게 쓴다. */
 const LOGIN_STATUS: Record<GuestAccountProgram['login_status'], { label: string; tone: 'neutral' | 'success' | 'warning' | 'danger' }> = {
@@ -134,7 +129,7 @@ export function GuestAccountPanel({ canSuspend = false }: { canSuspend?: boolean
     { key: 'name', header: '이름', type: 'name', render: (r) => r.name },
     {
       // 계정이 가진 자격들. `user_type`은 계정을 처음 세운 자격의 잔재라 더 이상 화면을
-      // 가르지 않는다 — 한 사람이 참가기업이면서 참가전문가일 수 있고, 그때 유형 한 칸은
+      // 가르지 않는다 — 한 사람이 참여 기업이면서 참여 전문가일 수 있고, 그때 유형 한 칸은
       // 절반만 말한다. 실제로 무엇으로 참여하는지는 참여 줄이 답하고, 계정이 무엇이 될 수
       // 있는지는 인격 목록이 답한다.
       key: 'identities',

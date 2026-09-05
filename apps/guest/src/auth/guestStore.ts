@@ -21,20 +21,20 @@ export interface GuestProgram {
   /** 이 맥락을 만든 명부 행. 전환 요청의 대상 키다. */
   participantId?: string | null
   /**
-   * 이 맥락의 자격 — 'startups'(참가기업) | 'networks'(참가전문가).
+   * 이 맥락의 자격 — 'startups'(참여 기업) | 'networks'(참여 전문가).
    * **화면을 가르는 축은 계정이 아니라 이 값이다**: 같은 사람이 한 사업에 두 자격으로
    * 참여하면 맥락이 둘이고 각각 다른 화면이 열린다(3_9_1 §4).
    */
   persona?: GuestPersona | null
 }
 
-/** 참여 자격. 명부의 두 탭(참가기업 / 참가전문가)과 같은 축이다. */
+/** 참여 자격. 명부의 두 탭(참여 기업 / 참여 전문가)과 같은 축이다. */
 export type GuestPersona = 'startups' | 'networks'
 
 /** 자격 라벨 — 화면 어디서나 같은 말을 쓴다(명부 탭과 같은 어휘). */
 export const PERSONA_LABEL: Record<GuestPersona, string> = {
-  startups: '참가기업',
-  networks: '참가전문가',
+  startups: '참여 기업',
+  networks: '참여 전문가',
 }
 
 /** 전환기 목록의 한 줄. 로그인 응답과 세션 갱신이 같은 모양으로 돌려준다. */

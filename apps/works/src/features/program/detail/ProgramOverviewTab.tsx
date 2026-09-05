@@ -2,6 +2,7 @@ import { Tabs } from '@ynarcher/ui'
 import { useState } from 'react'
 import type { Program, ProgramModule } from '@/features/program/hooks'
 import { ParticipantPool } from '@/features/program/ParticipantPool'
+import { PERSONA_LABEL, type MasterTable } from '@/features/program/participantHooks'
 import { ModuleBoardCard } from '@/features/program/detail/ModuleBoardCard'
 import { ProgramAnnouncementsPanel } from '@/features/program/detail/ProgramAnnouncementsPanel'
 import { ProgramInfoCard } from '@/features/program/detail/ProgramInfoCard'
@@ -15,16 +16,26 @@ import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 
-type LeftTab = 'modules' | 'participants' | 'intro' | 'announcements' | 'qna'
+/**
+ * 명부 탭의 키는 자격(`MasterTable`) 값 그대로다 — 탭 키를 자격으로 옮겨 적는 표를 두면
+ * 그 표가 곧 어긋날 자리가 된다.
+ */
+type LeftTab = 'modules' | MasterTable | 'intro' | 'announcements' | 'qna'
 
+/**
+ * 내부 운영 탭. 명부는 자격 두 축(참여 기업 · 참여 전문가)이 각각 한 탭이다 —
+ * 2026-09-05 하위 탭에서 이 층으로 올렸다. 자격은 표를 거르는 조건이 아니라 **게스트에게
+ * 다른 화면을 여는 축**이라(3_9_1 §4), 검색·역할과 같은 층에 두면 필터 한 칸처럼 읽힌다.
+ */
 const BASE_TABS: { key: LeftTab; label: string }[] = [
   { key: 'modules', label: '프로그램' },
-  { key: 'participants', label: '참가자/전문가' },
+  { key: 'startups', label: PERSONA_LABEL.startups },
+  { key: 'networks', label: PERSONA_LABEL.networks },
 ]
 
 /**
  * 프로그램 상세 개요(NETWORKS·STARTUP 상세와 동일한 2/3 + 1/3 카드섹션 컴포지션).
- * 좌측 본문(2/3): 기본 데이터 카드 → 서브 탭(프로그램 · 참가자/전문가 ┃ 사업개요 · 공지사항 · QNA).
+ * 좌측 본문(2/3): 기본 데이터 카드 → 서브 탭(프로그램 · 참여 기업 · 참여 전문가 ┃ 사업개요 · 공지사항 · QNA).
  * 구분선 뒤 세 탭은 **게스트에게 그대로 나가는 화면**이라 내부 운영 탭과 층이 다르다
  * (2026-09-01 사용자 지정 순서) — 원장을 둔 워크스페이스(AC)에서만 서며, 기본 탭은 언제나
  * 첫 탭인 프로그램다.
@@ -86,7 +97,11 @@ export function ProgramOverviewTab({
             {leftTab === 'modules' && (
               <ModuleBoardCard program={program} onOpenModule={onOpenModule} />
             )}
-            {leftTab === 'participants' && <ParticipantPool program={program} />}
+            {/* 탭을 바꾸면 명부는 통째로 다시 선다(key) — 선택·역할·페이지가 자격을 넘어
+                살아남으면, 안 보이는 행이 선택된 채로 `연결`에 딸려 간다. */}
+            {(leftTab === 'startups' || leftTab === 'networks') && (
+              <ParticipantPool key={leftTab} program={program} persona={leftTab} />
+            )}
           </div>
         </div>
       </div>

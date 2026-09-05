@@ -5,7 +5,6 @@ import {
   ListToolbar,
   MultiSelectFilter,
   Spinner,
-  Tabs,
   usePaged,
   useToast,
 } from '@ynarcher/ui'
@@ -18,6 +17,7 @@ import type { Program } from '@/features/program/hooks'
 import { ParticipantAddModal } from '@/features/program/ParticipantAddModal'
 import { participantColumns } from '@/features/program/participantColumns'
 import {
+  PERSONA_LABEL,
   useCloseGuestAccess,
   useOpenGuestAccess,
   useProgramParticipants,
@@ -31,16 +31,6 @@ import { useProgramWorkspace } from '@/features/program/workspace'
 /** 한 페이지에 세우는 행 수 — 페이징 훅과 표 페이저가 같은 값을 봐야 한다. */
 const PAGE_SIZE = 10
 
-/**
- * 자격 탭 라벨. 원장 이름(startups·networks)이 아니라 **이 사업에서의 자격**으로 적는다 —
- * 담당자가 고르는 것은 "어느 원장에서 왔나"가 아니라 "무엇으로 참여시키나"이고, 그 선택이
- * 게스트가 볼 화면을 정한다.
- */
-const PERSONA_LABEL: Record<MasterTable, string> = {
-  startups: '참가기업',
-  networks: '참가전문가',
-}
-
 /** 검색이 걸리는 축 — 대상명과 로그인 계정(성명·연락처). 명부에서 사람을 찾는 길은 이 넷뿐이다. */
 function matches(row: ParticipantRow, keyword: string): boolean {
   const kw = keyword.trim().toLowerCase()
@@ -51,7 +41,16 @@ function matches(row: ParticipantRow, keyword: string): boolean {
 }
 
 /**
- * 사업 상세 개요 좌측 '참가자/전문가' 탭.
+ * 사업 상세 개요 좌측 '참여 기업' · '참여 전문가' 탭의 본문. **자격 하나만 담는다.**
+ *
+ * 2026-09-05 처음에는 탭 하나(참가자/전문가) 안의 하위 탭으로 갈랐으나 곧 위로 올렸다 —
+ * 자격은 표를 거르는 조건이 아니라 **다른 화면을 여는 축**이기 때문이다(게스트가 볼 메뉴가
+ * 여기서 갈린다, 3_9_1 §4). 표 위에서 좁히는 것(검색·역할)과 같은 층에 두면, 다른 대상에게
+ * 다른 화면을 열어 주는 선택이 필터 한 칸처럼 읽힌다. 탭이 둘이면 어느 쪽을 보고 있는지도
+ * 사이드 탭 줄에서 바로 읽힌다.
+ *
+ * 자격이 바뀌면 이 컴포넌트는 통째로 다시 선다(부모가 조건부로 렌더한다) — 선택·역할·페이지가
+ * 함께 비워져야 `연결`이 안 보이는 행을 집지 않는다.
  *
  * 명부에 올리는 일과 로그인을 여는 일이 갈려 있다 — 참여 후보를 쌓아 두더라도 확정 전에는
  * 문이 열리지 않는다. 문을 여닫을 수 있는 사람은 그 사업의 담당자(PM·MEMBER)뿐이며,
@@ -64,20 +63,20 @@ function matches(row: ParticipantRow, keyword: string): boolean {
  * 한 줄은 원장 목록과 같은 `ListToolbar`, 역할은 손수 만든 칩 나열이 아니라 목록 필터와 같은
  * `MultiSelectFilter`이며 건수는 그 선택지가 함께 답한다. 총 건수는 카드 제목 옆 한자리다.
  */
-export function ParticipantPool({ program }: { program: Program }) {
+export function ParticipantPool({
+  program,
+  persona,
+}: {
+  program: Program
+  persona: MasterTable
+}) {
   const config = useProgramWorkspace()
   const toast = useToast()
   const myId = useAuthStore((s) => s.user?.id)
   const masked = useMaskPolicy(participantContentKey(config.key))
 
   const [keyword, setKeyword] = useState('')
-  /**
-   * 자격 탭 — 참가기업 / 참가전문가. 축은 원장(`master_table`)이며 이미 명부 행에 있는
-   * 값이라 새로 저장하는 것이 없다. 탭으로 올린 이유는 이것이 **게스트 화면을 가르는 축**
-   * 이기 때문이다(3_9_1 §4) — 어느 탭에서 연결했는지가 그 사람이 볼 화면을 정한다.
-   * 역할(STARTUP·MENTOR·JUDGE…)은 그 자격 안의 세부라 아래 필터로 남는다.
-   */
-  const [persona, setPersona] = useState<MasterTable>('startups')
+  // 역할(STARTUP·MENTOR·JUDGE…)은 자격 **안의** 세부라 탭이 아니라 표 위 필터로 남는다.
   const [roles, setRoles] = useState<string[]>([])
   const [selected, setSelected] = useState<string[]>([])
   const [addOpen, setAddOpen] = useState(false)
@@ -96,26 +95,16 @@ export function ParticipantPool({ program }: { program: Program }) {
   const canOpenDoor = isManager
 
   /**
-   * 자격으로 먼저 가른다. 원장이 없는 행(내부 임직원 참가자)은 게스트 자격이 아니므로
-   * 참가기업 탭에 얹지 않고 어느 탭에도 세우지 않는다 — 이 표의 두 탭은 '밖에서 들어오는
-   * 사람'의 축이고, 임직원은 WORKS로 들어온다.
+   * 이 탭의 자격만 남긴다. 원장이 없는 행(내부 임직원 참가자)은 게스트 자격이 아니므로
+   * 어느 탭에도 세우지 않는다 — 이 두 탭은 '밖에서 들어오는 사람'의 축이고, 임직원은
+   * WORKS로 들어온다.
    */
   const personaRows = useMemo(
     () => rows.filter((r) => r.master_table === persona),
     [rows, persona],
   )
 
-  const personaTabs = useMemo(
-    () =>
-      (['startups', 'networks'] as const).map((key) => ({
-        key,
-        label: PERSONA_LABEL[key],
-        count: rows.filter((r) => r.master_table === key).length,
-      })),
-    [rows],
-  )
-
-  // 역할 선택지는 지금 탭 안에서만 센다 — 참가기업 탭에 MENTOR 0건이 서 있으면 그 탭에서
+  // 역할 선택지는 지금 탭 안에서만 센다 — 참여 기업 탭에 MENTOR 0건이 서 있으면 그 탭에서
   // 고를 수 있는 값처럼 보인다.
   const roleOptions = useMemo(
     () =>
@@ -183,7 +172,7 @@ export function ParticipantPool({ program }: { program: Program }) {
   const runResetPassword = () => {
     const accountIds = [
       ...new Set(
-        rows.filter((r) => selected.includes(r.id) && r.accountId).map((r) => r.accountId!),
+        personaRows.filter((r) => selected.includes(r.id) && r.accountId).map((r) => r.accountId!),
       ),
     ]
     if (accountIds.length === 0) {
@@ -204,7 +193,7 @@ export function ParticipantPool({ program }: { program: Program }) {
 
   if (isLoading) {
     return (
-      <Card title="참가자/전문가">
+      <Card title={PERSONA_LABEL[persona]}>
         <Spinner />
       </Card>
     )
@@ -212,25 +201,14 @@ export function ParticipantPool({ program }: { program: Program }) {
 
   return (
     <>
+      {/* 건수는 이 탭의 자격만 센다 — 카드 제목이 '참여 기업'인데 뒤의 수가 전문가까지 합한
+          값이면, 표는 비어 있는데 제목만 건수를 말하는 화면이 된다. */}
       <Card
-        title="참가자/전문가"
-        count={rows.length}
+        title={PERSONA_LABEL[persona]}
+        count={personaRows.length}
         subtitle={`사업 코드 ${program.code || '미발급'}`}
       >
         <div className="space-y-3">
-          {/* 자격 축이 먼저 서고 그 아래에서 검색·역할로 좁힌다. 탭을 바꾸면 선택을 비운다 —
-              일괄 처리는 지금 탭의 대상에게 하는 일이고, 안 보이는 행이 선택된 채로 남으면
-              `연결`이 다른 자격의 사람까지 집는다. */}
-          <Tabs
-            items={personaTabs}
-            value={persona}
-            onChange={(k) => {
-              setPersona(k as MasterTable)
-              setSelected([])
-              setRoles([])
-              setPage(0)
-            }}
-          />
           <ListToolbar
             keyword={keyword}
             onKeywordChange={setKeyword}
@@ -260,7 +238,7 @@ export function ParticipantPool({ program }: { program: Program }) {
                       variant="ghost"
                       disabled={selected.length !== 1}
                       onClick={() =>
-                        setWindowTarget(rows.find((r) => r.id === selected[0]) ?? null)
+                        setWindowTarget(personaRows.find((r) => r.id === selected[0]) ?? null)
                       }
                     >
                       접근 기간
@@ -300,7 +278,7 @@ export function ParticipantPool({ program }: { program: Program }) {
               page,
               pageSize: PAGE_SIZE,
               total: filtered.length,
-              totalAll: rows.length,
+              totalAll: personaRows.length,
               onChange: setPage,
             }}
           />
