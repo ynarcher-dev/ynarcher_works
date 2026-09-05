@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { buildParts, type BuildDeps } from './parts.ts'
+import type { UploadedFile } from './filesApi.ts'
 import { MAX_INLINE_BYTES, MAX_TOTAL_BYTES } from './limits.ts'
 import type { ResolvedSource } from './sources.ts'
 import type { LinkContent, LinkError } from './linkRead.ts'
@@ -81,6 +82,7 @@ describe('buildParts — 링크도 예산을 쓴다', () => {
     const built = await buildParts(
       [linkSource('https://a.example/1'), linkSource('https://a.example/2'), linkSource('https://a.example/3')],
       deps(stub.fn),
+      [],
     )
     expect('error' in built).toBe(false)
     // 종전에는 세 번 모두 상한 전체를 넘겨받아, 다섯 건이면 합이 상한의 다섯 배까지 갔다.
@@ -89,7 +91,7 @@ describe('buildParts — 링크도 예산을 쓴다', () => {
 
   it('앞선 파일이 쓴 만큼을 빼고 링크에 넘긴다', async () => {
     const stub = stubLinks([asBytes(MB)])
-    await buildParts([fileSource('계획서.pdf', 10 * MB), linkSource('https://a.example/1')], deps(stub.fn))
+    await buildParts([fileSource('계획서.pdf', 10 * MB), linkSource('https://a.example/1')], deps(stub.fn), [])
     expect(stub.limits).toEqual([MAX_TOTAL_BYTES - 10 * MB])
   })
 
@@ -102,6 +104,7 @@ describe('buildParts — 링크도 예산을 쓴다', () => {
     const built = await buildParts(
       [linkSource('https://a.example/big'), linkSource('https://a.example/small')],
       deps(stub.fn),
+      [],
     )
     if ('error' in built) throw new Error('링크는 통째 실패로 만들지 않는다')
     expect(built.notices).toHaveLength(1)
@@ -115,6 +118,7 @@ describe('buildParts — 링크도 예산을 쓴다', () => {
     const built = await buildParts(
       [linkSource('https://docs.google.com/document/d/X/edit'), linkSource('https://a.example/2')],
       deps(stub.fn),
+      [],
     )
     if ('error' in built) throw new Error('한 건이 막혔다고 전체를 멈추지 않는다')
     expect(built.notices).toEqual(['구글 문서가 비공개입니다.'])
@@ -128,6 +132,7 @@ describe('buildParts — 파일 예산', () => {
     const built = await buildParts(
       [linkSource('https://a.example/1'), fileSource('계획서.pdf', 2 * MB)],
       deps(stub.fn),
+      [],
     )
     if (!('error' in built)) throw new Error('상한을 넘으면 거절해야 한다')
     expect(built.error.code).toBe('too_large')
@@ -136,7 +141,7 @@ describe('buildParts — 파일 예산', () => {
 
   it('내려받지 못한 첨부는 조용히 빠지지 않고 실패로 답한다', async () => {
     const src: ResolvedSource = { ...fileSource('계획서.pdf', MB), data: null, storagePath: 'x/y.pdf' }
-    const built = await buildParts([src], deps(stubLinks([]).fn))
+    const built = await buildParts([src], deps(stubLinks([]).fn), [])
     if (!('error' in built)) throw new Error('읽지 못한 첨부는 실패다')
     expect(built.error.code).toBe('read_failed')
   })
@@ -144,9 +149,10 @@ describe('buildParts — 파일 예산', () => {
 
 describe('buildParts — 보내는 방식은 합계가 정한다', () => {
   it('인라인 한도 안이면 요청에 실어 보낸다(아무것도 올리지 않는다)', async () => {
-    const built = await buildParts([fileSource('a.pdf', 8), fileSource('b.pdf', 8)], deps(stubLinks([]).fn))
+    const uploaded: UploadedFile[] = []
+    const built = await buildParts([fileSource('a.pdf', 8), fileSource('b.pdf', 8)], deps(stubLinks([]).fn), uploaded)
     if ('error' in built) throw new Error('실패할 이유가 없다')
-    expect(built.uploaded).toEqual([])
+    expect(uploaded).toEqual([])
     expect(built.parts.every((p) => Object.hasOwn(p as object, 'inlineData'))).toBe(true)
   })
 
@@ -164,10 +170,36 @@ describe('buildParts — 보내는 방식은 합계가 정한다', () => {
       return Response.json({ state: 'ACTIVE' })
     })
     vi.stubGlobal('fetch', fetchMock)
-    const built = await buildParts([fileSource('큰계획서.pdf', MAX_INLINE_BYTES + MB)], deps(stubLinks([]).fn))
+    const uploaded: UploadedFile[] = []
+    const built = await buildParts([fileSource('큰계획서.pdf', MAX_INLINE_BYTES + MB)], deps(stubLinks([]).fn), uploaded)
     if ('error' in built) throw new Error('실패할 이유가 없다')
     expect(built.parts).toEqual([{ fileData: { mimeType: 'application/pdf', fileUri: 'https://files/abc' } }])
-    // 올린 목록을 돌려주지 않으면 호출자가 지울 수 없다 — 남기지 않는 것이 이 경로의 계약이다.
-    expect(built.uploaded).toEqual([{ name: 'files/abc', uri: 'https://files/abc', mime: 'application/pdf' }])
+    // 그릇은 호출자가 쥔다 — 여기 담기지 않으면 지울 목록이 없어 올린 자료가 남는다.
+    expect(uploaded).toEqual([{ name: 'files/abc', uri: 'https://files/abc', mime: 'application/pdf' }])
+  })
+
+  it('올리다 시간이 초과돼도 그때까지 올린 것은 그릇에 남는다', async () => {
+    // 첫 건은 올라가고 둘째 건에서 취소된다 — 예외로 빠져나가는 경로가 지울 목록을 잃지 않는지 본다.
+    let uploads = 0
+    vi.stubGlobal('fetch', async (input: string | URL) => {
+      const url = String(input)
+      if (url.includes('/upload/v1beta/files')) {
+        if (++uploads > 1) throw new DOMException('aborted', 'AbortError')
+        return new Response('{}', { headers: { 'x-goog-upload-url': 'https://upload.example/session' } })
+      }
+      if (url.startsWith('https://upload.example/')) {
+        return Response.json({ file: { name: 'files/one', uri: 'https://files/one', mimeType: 'application/pdf' } })
+      }
+      return Response.json({ state: 'ACTIVE' })
+    })
+    const uploaded: UploadedFile[] = []
+    await expect(
+      buildParts(
+        [fileSource('하나.pdf', MAX_INLINE_BYTES), fileSource('둘.pdf', MB)],
+        deps(stubLinks([]).fn),
+        uploaded,
+      ),
+    ).rejects.toThrow()
+    expect(uploaded).toEqual([{ name: 'files/one', uri: 'https://files/one', mime: 'application/pdf' }])
   })
 })

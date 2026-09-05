@@ -195,25 +195,29 @@ Deno.serve(
     }
 
     // 5) 자료 조립 + Gemini 호출 ---------------------------------------------------
-    // 올린 자료는 어느 경로로 끝나든 지워야 하므로 try 밖에 둔다.
-    let uploaded: UploadedFile[] = []
+    // 올린 자료는 어느 경로로 끝나든 지워야 하므로 지우는 쪽이 목록을 쥔다. 조립이 돌려주는
+    // 값에 실으면 업로드 도중 시간이 초과돼 예외로 빠져나갈 때 목록이 함께 사라진다.
+    const uploaded: UploadedFile[] = []
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
     try {
-      const built = await buildParts(sources, {
-        apiKey,
-        signal: controller.signal,
-        download: async (path) => {
-          const { data: blob, error: dlErr } = await admin.storage.from(BUCKET).download(path)
-          if (dlErr || !blob) {
-            console.error('[startup-ai-fill] 스토리지 읽기 실패', path, dlErr?.message)
-            return null
-          }
-          return await blob.arrayBuffer()
+      const built = await buildParts(
+        sources,
+        {
+          apiKey,
+          signal: controller.signal,
+          download: async (path) => {
+            const { data: blob, error: dlErr } = await admin.storage.from(BUCKET).download(path)
+            if (dlErr || !blob) {
+              console.error('[startup-ai-fill] 스토리지 읽기 실패', path, dlErr?.message)
+              return null
+            }
+            return await blob.arrayBuffer()
+          },
+          readLink,
         },
-        readLink,
-      })
-      uploaded = built.uploaded
+        uploaded,
+      )
       if ('error' in built) {
         return jsonResponse({ error: built.error.code, message: built.error.message }, built.error.status)
       }

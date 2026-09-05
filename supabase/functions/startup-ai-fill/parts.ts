@@ -52,8 +52,6 @@ export interface BuiltParts {
    * 빠뜨리면 왜 초안이 부실한지 알 수 없다.
    */
   notices: string[]
-  /** 구글에 올려 둔 것. 호출자가 끝나며 반드시 지운다. */
-  uploaded: UploadedFile[]
 }
 
 interface FileItem {
@@ -71,13 +69,15 @@ const tooLarge = (): SourceError => ({
 /**
  * 자료를 손에 쥐고 예산 안에서 조각을 세운다.
  *
- * 실패해도 `uploaded`는 돌려주어야 하므로 오류를 던지지 않고 `error`와 함께 돌려준다 —
- * 던지면 이미 올린 자료를 지울 목록을 호출자가 잃는다.
+ * @param uploaded 올린 자료를 담아 둘 그릇. **호출자가 소유한다** — 돌려주는 값에 실으면
+ *   업로드 도중 시간이 초과돼 예외로 빠져나갈 때 지울 목록이 함께 사라져, 이미 올라간 기밀
+ *   자료가 구글의 48시간 자동 삭제까지 남는다. 지우는 쪽이 목록을 쥐고 있어야 한다.
  */
 export async function buildParts(
   sources: ResolvedSource[],
   deps: BuildDeps,
-): Promise<BuiltParts | { error: SourceError; uploaded: UploadedFile[] }> {
+  uploaded: UploadedFile[],
+): Promise<BuiltParts | { error: SourceError }> {
   const files: FileItem[] = []
   const texts: { name: string; text: string }[] = []
   const notices: string[] = []
@@ -109,18 +109,17 @@ export async function buildParts(
     let buf = s.data
     if (!buf && s.storagePath) buf = await deps.download(s.storagePath)
     if (!buf || !s.mime) {
-      return { error: { code: 'read_failed', message: '자료를 읽지 못했습니다.', status: 500 }, uploaded: [] }
+      return { error: { code: 'read_failed', message: '자료를 읽지 못했습니다.', status: 500 } }
     }
     used += buf.byteLength
     // 파일은 예비 검사를 이미 지났지만 링크가 앞서 예산을 먹었을 수 있다.
-    if (used > MAX_TOTAL_BYTES) return { error: tooLarge(), uploaded: [] }
+    if (used > MAX_TOTAL_BYTES) return { error: tooLarge() }
     files.push({ name: s.name, mime: s.mime, bytes: buf })
   }
 
   // 2) 합계가 보내는 방식을 정한다 ----------------------------------------------
   const fileBytes = files.reduce((sum, f) => sum + f.bytes.byteLength, 0)
   const parts: unknown[] = []
-  const uploaded: UploadedFile[] = []
 
   if (fileBytes <= MAX_INLINE_BYTES) {
     for (const f of files) parts.push({ inlineData: { mimeType: f.mime, data: toBase64(f.bytes) } })
@@ -143,5 +142,5 @@ export async function buildParts(
   // 링크에서 뽑은 글은 파일 뒤에 세운다 — 자료의 본체는 파일이고, 글은 그것을 보충한다.
   for (const t of texts) parts.push({ text: `[참고 링크: ${t.name}]\n${t.text}` })
 
-  return { parts, notices, uploaded }
+  return { parts, notices }
 }
