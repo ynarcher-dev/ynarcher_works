@@ -162,7 +162,13 @@ function NetworkView({ record }: { record: NetworkRow }) {
                 연락처·이메일과 한 줄에 서는 것은 셋이 같은 축(이 사람에게 닿는 수단)이기
                 때문이다 — 3열 격자에서 순서가 곧 묶음이라, 사이에 국가가 끼면 연락 수단이
                 두 줄로 갈린다. */}
-            <Info label="링크드인" value={<LinkedInLink url={linkedin} />} />
+            <Info
+              label="링크드인"
+              value={<LinkedInLink url={linkedin} />}
+              // 아이콘 값은 baseline이 아니라 가운데에 선다 — baseline은 글자의 축이라
+              // 그림을 걸면 아래쪽 모서리가 글자 밑선에 맞아 눈에는 한 칸 떠 보인다.
+              valueClassName="self-center"
+            />
             {/* 국가는 늘 선다 — 한국도 '한국'으로 명시한다. 권역은 해외에서만 괄호로 덧붙인다:
                 여러 나라를 묶어 읽을 때만 쓰이는 축이라, 국내 한 나라뿐인 '한국 (국내)'의
                 괄호는 같은 말을 두 번 하고 정작 국가명을 밀어낸다. */}

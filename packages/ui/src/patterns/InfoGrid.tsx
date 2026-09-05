@@ -14,7 +14,11 @@ export interface InfoFieldProps {
    */
   meta?: boolean
   className?: string
-  /** 값 표시 보정(말줄임 등). 긴 값이 열을 밀지 않도록 `truncate`를 줄 때 쓴다. */
+  /**
+   * 값 표시 보정. 긴 값이 열을 밀지 않도록 `truncate`를 주거나, 값이 글자가 아닐 때
+   * 축을 바꿀 때 쓴다 — 이 줄은 글자끼리 밑선을 맞추는 `items-baseline`이라, 아이콘 같은
+   * 그림 값은 아래 모서리가 밑선에 걸려 한 칸 떠 보인다(`self-center`로 가운데 정렬).
+   */
   valueClassName?: string
 }
 
