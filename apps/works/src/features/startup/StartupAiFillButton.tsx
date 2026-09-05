@@ -2,8 +2,7 @@ import { Button, cardText } from '@ynarcher/ui'
 import { useState } from 'react'
 import type { EntityRow } from '@/features/master/entityHooks'
 import { StartupAiFillModal } from '@/features/startup/StartupAiFillModal'
-import type { AiSource } from '@/features/startup/startupAiFill'
-import type { AiFillEnvelope } from '@/features/startup/startupAiMerge'
+import type { AiFillResult, AiSource } from '@/features/startup/startupAiFill'
 import type { AiCardKey } from '@/features/startup/startupAiCards'
 
 /**
@@ -34,24 +33,24 @@ export function StartupAiFillButton({
   /** 수정 모드의 대상 id. 등록 모드에는 아직 없다. */
   startupId?: string
   companyName?: string
-  onFilled: (envelope: AiFillEnvelope, cards: AiCardKey[]) => void
+  onFilled: (result: AiFillResult, cards: AiCardKey[]) => void
 }) {
   const [open, setOpen] = useState(false)
-  const hasPdf = sources.some((s) => s.pdf)
+  const hasReadable = sources.some((s) => s.readable)
 
   return (
     <div>
       <Button
         variant="secondary"
         className="w-full"
-        disabled={loading || !hasPdf}
+        disabled={loading || !hasReadable}
         onClick={() => setOpen(true)}
       >
         AI 작성하기
       </Button>
       {/* 막힌 이유는 접지 않는다 — 다음에 무엇을 해야 하는지를 지시하는 안내다. */}
-      {!loading && !hasPdf && (
-        <p className={`mt-1.5 ${cardText.meta}`}>PDF 자료를 먼저 첨부하세요.</p>
+      {!loading && !hasReadable && (
+        <p className={`mt-1.5 ${cardText.meta}`}>읽을 수 있는 자료를 먼저 첨부하세요.</p>
       )}
       {open && (
         <StartupAiFillModal
@@ -60,9 +59,9 @@ export function StartupAiFillButton({
           startupId={startupId}
           companyName={companyName}
           onClose={() => setOpen(false)}
-          onFilled={(envelope, cards) => {
+          onFilled={(result, cards) => {
             setOpen(false)
-            onFilled(envelope, cards)
+            onFilled(result, cards)
           }}
         />
       )}

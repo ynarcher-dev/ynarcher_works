@@ -1,5 +1,16 @@
 import { AttachmentRow, IconButton, Spinner } from '@ynarcher/ui'
-import { Download, Eye, File as FileIcon, Music, Pause, Pencil, Play, Trash2 } from 'lucide-react'
+import {
+  Download,
+  ExternalLink,
+  Eye,
+  File as FileIcon,
+  Link as LinkIcon,
+  Music,
+  Pause,
+  Pencil,
+  Play,
+  Trash2,
+} from 'lucide-react'
 import { useState } from 'react'
 import { MaterialPreviewModal } from '@/features/networks/MaterialPreview'
 import { MiniPager, usePaged } from '@ynarcher/ui'
@@ -8,8 +19,10 @@ import {
   fetchMaterialUrl,
   formatBytes,
   isAudioMaterial,
+  isLinkMaterial,
   materialDisplayName,
   materialPreviewKind,
+  openMaterialLink,
   type Material,
 } from '@/features/networks/materialHooks'
 
@@ -108,7 +121,9 @@ export function MaterialRow({
   showDescription?: boolean
 }) {
   const [downloading, setDownloading] = useState(false)
-  const audio = isAudioMaterial(material)
+  const link = isLinkMaterial(material)
+  const audio = !link && isAudioMaterial(material)
+  const name = materialDisplayName(material)
   // 재생용 Signed URL은 처음 재생을 누를 때 한 번만 받아 온다(펼쳐지면 그 아래 오디오 플레이어 표시).
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [loadingUrl, setLoadingUrl] = useState(false)
@@ -133,18 +148,22 @@ export function MaterialRow({
     <AttachmentRow
       // 오디오는 파일 아이콘 대신 음표 아이콘으로 한눈에 구분한다.
       icon={
-        audio ? (
+        link ? (
+          <LinkIcon className="size-4 shrink-0 text-gray-500" />
+        ) : audio ? (
           <Music className="size-4 shrink-0 text-brand" />
         ) : (
           <FileIcon className="size-4 shrink-0 text-gray-500" />
         )
       }
-      name={materialDisplayName(material)}
+      name={name}
       metaLines={[
         showDescription ? material.description : null,
         material.label?.trim() ? material.file_name : null,
       ]}
-      size={formatBytes(material.byte_size)}
+      // 링크에는 용량이 없다. 빈 값을 넘기면 이 열이 '-'로 서는데, 그것은 '모른다'는 뜻이라
+      // 사실과 다르다 — 아예 세우지 않는다.
+      size={link ? undefined : formatBytes(material.byte_size)}
       actions={
         <>
           {/*
@@ -180,30 +199,41 @@ export function MaterialRow({
           {onEdit && (
             <IconButton
               variant="ghost"
-              label={`${materialDisplayName(material)} 표시명·설명 수정`}
+              label={`${name} 표시명·설명 수정`}
               onClick={onEdit}
               icon={<Pencil className="size-4" />}
             />
           )}
-          <IconButton
-            variant="ghost"
-            label={`${material.file_name} 다운로드`}
-            disabled={downloading}
-            onClick={async () => {
-              setDownloading(true)
-              try {
-                await downloadMaterial(material)
-              } finally {
-                setDownloading(false)
-              }
-            }}
-            icon={<Download className="size-4" />}
-          />
+          {/* 파일은 내려받고 링크는 연다 — 같은 자리에 서는 짝이지, 링크에 다운로드를
+              두면 바깥 페이지를 내려받는 일이 된다. */}
+          {link ? (
+            <IconButton
+              variant="ghost"
+              label={`${name} 새 탭에서 열기`}
+              onClick={() => openMaterialLink(material)}
+              icon={<ExternalLink className="size-4" />}
+            />
+          ) : (
+            <IconButton
+              variant="ghost"
+              label={`${material.file_name} 다운로드`}
+              disabled={downloading}
+              onClick={async () => {
+                setDownloading(true)
+                try {
+                  await downloadMaterial(material)
+                } finally {
+                  setDownloading(false)
+                }
+              }}
+              icon={<Download className="size-4" />}
+            />
+          )}
           {onDelete && (
             <IconButton
               variant="ghost"
               danger
-              label={`${material.file_name} 삭제`}
+              label={`${name} 삭제`}
               disabled={deleting}
               onClick={onDelete}
               icon={<Trash2 className="size-4" />}

@@ -26,6 +26,12 @@ export interface AiFillEnvelope {
   cards: Partial<Record<AiCardKey, unknown>>
   notes: Partial<Record<AiCardKey, string[]>>
   evidence: Partial<Record<AiCardKey, string[]>>
+  /**
+   * 읽지 못한 자료의 사유(주로 링크). 서버가 건별로 돌려주며, 실행을 멈추지 않고 결과와 함께
+   * 알린다 — 다섯 중 하나가 비공개라고 나머지 넷까지 못 읽을 이유가 없고, 담당자가 고칠 수
+   * 있는 문제라 조용히 빠뜨리면 왜 초안이 부실한지 알 수 없다.
+   */
+  skippedSources?: string[]
 }
 
 /** 실행 결과 요약 — 폼 상단 안내 줄이 읽는다. */
@@ -36,6 +42,8 @@ export interface AiFillOutcome {
   skipped: AiCardKey[]
   notes: Partial<Record<AiCardKey, string[]>>
   evidence: Partial<Record<AiCardKey, string[]>>
+  /** 읽지 못한 자료의 사유. 봉투에서 그대로 넘어온다. */
+  skippedSources: string[]
 }
 
 type Rec = Record<string, unknown>
@@ -161,7 +169,16 @@ export function applyAiDraft(
 
   next.business_profile = business
   next.growth_metrics = growth
-  return { record: next, outcome: { filled, skipped, notes: envelope.notes, evidence: envelope.evidence } }
+  return {
+    record: next,
+    outcome: {
+      filled,
+      skipped,
+      notes: envelope.notes,
+      evidence: envelope.evidence,
+      skippedSources: envelope.skippedSources ?? [],
+    },
+  }
 }
 
 /** 요약 줄 문구 — 무엇이 채워졌고 무엇이 그대로인지 한 줄로 말한다. */

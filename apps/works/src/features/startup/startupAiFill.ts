@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { isPdfMaterial, materialDisplayName, type Material } from '@/features/networks/materialHooks'
+import { isLinkMaterial, materialDisplayName, type Material } from '@/features/networks/materialHooks'
+import { isAiReadable } from '@/features/startup/startupAiFormats'
 import type { AiCardKey } from '@/features/startup/startupAiCards'
 import type { AiFillEnvelope } from '@/features/startup/startupAiMerge'
 
@@ -18,30 +19,33 @@ import type { AiFillEnvelope } from '@/features/startup/startupAiMerge'
 export const AI_FILL_LIMITS = {
   /** 인라인 합산 상한(14MB) — base64 팽창 후에도 모델 요청 한도 안에 든다. */
   maxTotalBytes: 14 * 1024 * 1024,
-  /** 한 번에 읽을 파일 수. */
+  /** 한 번에 읽을 자료 수. */
   maxFiles: 5,
 } as const
 
 /**
- * 읽을 자료 한 건 — 두 모드를 한 목록으로 세우기 위한 표시 단위.
+ * 읽을 자료 한 건 — 세 경로를 한 목록으로 세우기 위한 표시 단위.
  *
- * 수정 모드의 자료는 이미 `attachments` 행이라 id로 가리키고, 등록 모드의 자료는 아직 원장에
- * 없어 파일 자체를 보낸다. 모달이 그 차이를 알 필요는 없으므로 여기서 한 모양으로 덮는다 —
- * 고르는 일과 보내는 일 중 **고르는 일만** 같기 때문이다.
+ * 모달은 세 경로의 차이를 알 필요가 없다. **고르는 일은 같고 보내는 일만 다르기** 때문이다.
+ *   * `attachment` — 이미 올라간 자료(파일이든 링크든). id만 보내고 서버가 RLS로 판정한다.
+ *   * `file` — 등록 모드의 보류 파일. 파일 자체를 보낸다.
+ *   * `link` — 등록 모드의 보류 링크. 주소만 보내고 서버가 가져온다.
  */
 export type AiSource =
-  | { kind: 'attachment'; key: string; name: string; bytes: number | null; pdf: boolean; id: string }
-  | { kind: 'file'; key: string; name: string; bytes: number | null; pdf: boolean; file: File }
+  | { kind: 'attachment'; key: string; name: string; bytes: number | null; readable: boolean; id: string }
+  | { kind: 'file'; key: string; name: string; bytes: number | null; readable: boolean; file: File }
+  | { kind: 'link'; key: string; name: string; bytes: number | null; readable: boolean; url: string }
 
-/** 이미 올라간 자료 목록을 출처로 바꾼다(수정 모드). */
+/** 이미 올라간 자료 목록을 출처로 바꾼다(수정 모드 — 파일과 링크 모두). */
 export function sourcesFromMaterials(materials: Material[]): AiSource[] {
   return materials.map((m) => ({
     kind: 'attachment',
     key: m.id,
     id: m.id,
     name: materialDisplayName(m),
-    bytes: m.byte_size,
-    pdf: isPdfMaterial(m),
+    // 링크에는 용량이 없다. 합산 표시에서 0으로 세지 않도록 null을 그대로 넘긴다.
+    bytes: isLinkMaterial(m) ? null : m.byte_size,
+    readable: isAiReadable(m),
   }))
 }
 
@@ -53,12 +57,33 @@ export function sourcesFromFiles(files: File[]): AiSource[] {
     key: `file:${i}:${f.name}`,
     name: f.name,
     bytes: f.size,
-    pdf: f.type === 'application/pdf' || /\.pdf$/i.test(f.name),
+    readable: isAiReadable({ kind: 'FILE', content_type: f.type, file_name: f.name } as Material),
     file: f,
   }))
 }
 
-type AiFillResponse = AiFillEnvelope & { model?: string; elapsedMs?: number; message?: string }
+/** 아직 올라가지 않은 보류 링크를 출처로 바꾼다(등록 모드). */
+export function sourcesFromLinks(urls: string[]): AiSource[] {
+  return urls.map((url) => ({
+    kind: 'link',
+    key: `link:${url}`,
+    name: url,
+    bytes: null,
+    // 링크는 열어 봐야 안다 — 미리 잠그지 않는다(startupAiFormats.isAiReadable 주석 참조).
+    readable: true,
+    url,
+  }))
+}
+
+type AiFillResponse = AiFillEnvelope & {
+  skippedSources?: string[]
+  model?: string
+  elapsedMs?: number
+  message?: string
+}
+
+/** 초안 봉투 + 읽지 못한 자료 안내. */
+export type AiFillResult = AiFillEnvelope & { skippedSources: string[] }
 
 export interface AiFillInput {
   /** 수정 모드의 대상 id. 등록 모드에는 아직 없다. */
@@ -83,34 +108,43 @@ async function readInvokeError(error: unknown, fallback: string): Promise<string
   return fallback
 }
 
+function buildUploadBody(input: AiFillInput): FormData {
+  const form = new FormData()
+  form.append('cards', JSON.stringify(input.cards))
+  if (input.companyName) form.append('companyName', input.companyName)
+  for (const s of input.sources) {
+    if (s.kind === 'file') form.append('files', s.file, s.name)
+    else if (s.kind === 'link') form.append('links', s.url)
+  }
+  return form
+}
+
 /**
- * 초안을 받아온다. 출처의 종류가 요청 모양을 정한다 —
- * 첨부는 id만 보내고(서버가 RLS로 그 행을 볼 자격을 판정한다), 보류 파일은 파일 자체를 보낸다.
- * 섞어 보내지 않는 이유는 서버가 두 경로에서 **다른 자격**을 묻기 때문이다(§8.2).
+ * 초안을 받아온다. **출처의 종류가 요청 모양을 정한다.**
+ *
+ * 아직 원장에 없는 것(보류 파일·보류 링크)이 하나라도 있으면 등록 모드로 보낸다 — 그것들은
+ * 가리킬 행이 없어 id로 말할 수 없기 때문이다. 두 모드를 섞어 보내지 않는 이유는 서버가
+ * 경로마다 **다른 자격**을 묻기 때문이다(§8.2).
  */
-export async function requestAiFill(input: AiFillInput): Promise<AiFillEnvelope> {
-  const pending = input.sources.filter((s) => s.kind === 'file')
-  const body =
-    pending.length > 0
-      ? buildUploadBody(pending as Extract<AiSource, { kind: 'file' }>[], input)
-      : {
-          startupId: input.startupId,
-          attachmentIds: input.sources.map((s) => (s.kind === 'attachment' ? s.id : '')).filter(Boolean),
-          cards: input.cards,
-        }
+export async function requestAiFill(input: AiFillInput): Promise<AiFillResult> {
+  const hasPending = input.sources.some((s) => s.kind !== 'attachment')
+  const body = hasPending
+    ? buildUploadBody(input)
+    : {
+        startupId: input.startupId,
+        attachmentIds: input.sources.map((s) => (s.kind === 'attachment' ? s.id : '')).filter(Boolean),
+        cards: input.cards,
+      }
 
   const { data, error } = await supabase.functions.invoke<AiFillResponse>('startup-ai-fill', { body })
   if (error) throw new Error(await readInvokeError(error, 'AI 작성에 실패했습니다.'))
   if (!data?.cards) throw new Error('AI 응답이 비어 있습니다.')
-  return { cards: data.cards, notes: data.notes ?? {}, evidence: data.evidence ?? {} }
-}
-
-function buildUploadBody(files: Extract<AiSource, { kind: 'file' }>[], input: AiFillInput): FormData {
-  const form = new FormData()
-  form.append('cards', JSON.stringify(input.cards))
-  if (input.companyName) form.append('companyName', input.companyName)
-  for (const s of files) form.append('files', s.file, s.name)
-  return form
+  return {
+    cards: data.cards,
+    notes: data.notes ?? {},
+    evidence: data.evidence ?? {},
+    skippedSources: data.skippedSources ?? [],
+  }
 }
 
 /** 모달이 쓰는 뮤테이션. 서버가 DB를 건드리지 않으므로 무효화할 쿼리도 없다. */

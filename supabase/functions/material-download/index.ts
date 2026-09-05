@@ -95,12 +95,18 @@ Deno.serve(withCors(async (req: Request) => {
     )
     const { data: att, error: attErr } = await asCaller
       .from('attachments')
-      .select('id, file_name, storage_path')
+      .select('id, file_name, storage_path, kind')
       .eq('id', attachmentId)
       .is('deleted_at', null)
       .maybeSingle()
     if (attErr) return jsonResponse({ error: 'internal_error' }, 500)
     if (!att) return jsonResponse({ error: 'forbidden' }, 403)
+    // 링크 자료에는 서명할 실물이 없다(2026-09-06 자료 관리 확장). 감사 로그를 남기기 전에
+    // 끊는 이유는 그것이 반출이 아니기 때문이다 — 우리가 내보내는 것이 없고, 브라우저가
+    // 바깥 주소를 여는 것뿐이라 다운로드와 같은 무게로 기록하면 실제 반출 건수가 흐려진다.
+    if (att.kind === 'LINK' || !att.storage_path) {
+      return jsonResponse({ error: 'not_a_file', message: '링크 자료는 내려받을 수 없습니다.' }, 400)
+    }
 
     // 3) 감사 로그 강제: 적재 실패 시 URL을 발급하지 않는다 -------------------
     const { error: logErr } = await admin.from('access_logs').insert({

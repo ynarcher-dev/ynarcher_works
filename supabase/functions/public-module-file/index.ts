@@ -45,15 +45,18 @@ Deno.serve(withCors(async (req: Request) => {
     // 2) 그 모듈에 귀속된 파일인가 — 요청자가 보낸 id를 그대로 믿지 않는다.
     const { data: att, error: attErr } = await db
       .from('attachments')
-      .select('id, file_name, storage_path')
+      .select('id, file_name, storage_path, kind')
       .eq('id', attachmentId)
+      // 파일첨부 모듈이 내보내는 것은 파일뿐이다. 자료 관리가 링크도 담게 되면서(2026-09-06)
+      // 같은 표에 실물 없는 행이 섞이므로, 서명 대상을 여기서 좁혀 둔다.
+      .eq('kind', 'FILE')
       .eq('target_type', 'program')
       .eq('target_id', link.programId)
       .eq('program_module_id', link.moduleId)
       .is('deleted_at', null)
       .maybeSingle()
     if (attErr) return jsonResponse({ error: 'internal_error' }, 500)
-    if (!att) return jsonResponse({ error: 'forbidden' }, 403)
+    if (!att || !att.storage_path) return jsonResponse({ error: 'forbidden' }, 403)
 
     // 3) 반출 기록. 익명이라 user_id는 비지만 무엇이 어느 링크로 나갔는지는 남는다.
     const { error: logErr } = await db.from('access_logs').insert({

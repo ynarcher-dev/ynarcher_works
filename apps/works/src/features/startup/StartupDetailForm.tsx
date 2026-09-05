@@ -44,7 +44,7 @@ import { readIndustries } from '@/features/startup/startupGrowth'
 import { SectionHeading } from '@/features/startup/SectionHeading'
 import { StartupAiFillButton } from '@/features/startup/StartupAiFillButton'
 import { StartupAiFillNotice } from '@/features/startup/StartupAiFillNotice'
-import { sourcesFromFiles, sourcesFromMaterials } from '@/features/startup/startupAiFill'
+import { sourcesFromFiles, sourcesFromLinks, sourcesFromMaterials } from '@/features/startup/startupAiFill'
 import { useStartupAiDraft } from '@/features/startup/useStartupAiDraft'
 import { useMaterials } from '@/features/networks/materialHooks'
 
@@ -200,7 +200,10 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
     setShareholders,
   })
   const aiSources = isCreate
-    ? sourcesFromFiles(pending.files(MATERIAL_TARGET_TYPE))
+    ? [
+        ...sourcesFromFiles(pending.files(MATERIAL_TARGET_TYPE)),
+        ...sourcesFromLinks(pending.links(MATERIAL_TARGET_TYPE)),
+      ]
     : sourcesFromMaterials(uploaded ?? [])
 
   // 투자기업으로의 전환·담당자 지정·관리현황은 FUND 투자 집행에서만 처리한다(20260724190000).

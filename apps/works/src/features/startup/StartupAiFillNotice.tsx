@@ -25,6 +25,18 @@ export function StartupAiFillNotice({ outcome }: { outcome: AiFillOutcome }) {
       <div className="space-y-2">
         <p>{outcomeSummary(outcome)}</p>
 
+        {/* 못 읽은 자료는 접지 않는다 — 대부분 담당자가 고칠 수 있는 것(공유 설정·죽은 주소)이라
+            이유를 봐야 다음 행동이 정해지고, 초안이 왜 부실한지도 여기서 답한다. */}
+        {outcome.skippedSources.length > 0 && (
+          <ul className="ml-3 list-disc pl-3">
+            {outcome.skippedSources.map((line, i) => (
+              <li key={i} className={cardText.value}>
+                {line}
+              </li>
+            ))}
+          </ul>
+        )}
+
         {warned.length > 0 && (
           <ul className="space-y-1">
             {warned.map((key) => (

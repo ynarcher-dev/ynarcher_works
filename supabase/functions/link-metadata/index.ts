@@ -10,23 +10,8 @@
 // 근거: docs/docs_dev/11_migration_security_gate.md,
 //       supabase/functions/employee-create/index.ts(인증 검증 패턴)
 import { jsonResponse, withCors } from '../_shared/cors.ts'
+import { CRAWLER_UA, fetchWithSsrfGuard, safeUrl } from '../_shared/urlFetch.ts'
 import { supabaseAdmin } from '../_shared/supabaseAdmin.ts'
-
-/** 사설망·로컬 호스트(SSRF 표적)를 차단한다. */
-function isBlockedHost(hostname: string): boolean {
-  const h = hostname.toLowerCase()
-  if (h === 'localhost' || h.endsWith('.local') || h.endsWith('.internal')) return true
-  // IPv4 사설/루프백/링크로컬 대역
-  if (/^127\./.test(h) || /^10\./.test(h) || /^192\.168\./.test(h)) return true
-  if (/^172\.(1[6-9]|2\d|3[01])\./.test(h)) return true
-  if (/^169\.254\./.test(h) || h === '0.0.0.0') return true
-  // IPv6 루프백/유니크로컬
-  if (h === '::1' || h.startsWith('fc') || h.startsWith('fd') || h.startsWith('fe80')) return true
-  return false
-}
-
-/** 봇/스크래퍼용 공용 User-Agent. */
-const UA = 'Mozilla/5.0 (compatible; YnarcherBot/1.0; +metadata-preview)'
 
 /**
  * YouTube 영상 ID를 추출한다(youtu.be / watch / shorts / embed 지원). 아니면 null.
@@ -41,64 +26,6 @@ function youtubeId(u: URL): string | null {
     if (m) return m[1]
   }
   return null
-}
-
-/** 요청 URL을 검증하고 정규화한다. 유효하지 않으면 null. */
-function safeUrl(raw: string): URL | null {
-  let u: URL
-  try {
-    u = new URL(raw)
-  } catch {
-    return null
-  }
-  if (u.protocol !== 'http:' && u.protocol !== 'https:') return null
-  if (isBlockedHost(u.hostname)) return null
-  return u
-}
-
-/** DNS 해석 결과가 사설/루프백 IP면 차단(베스트 에포트 — 미지원 런타임은 통과). */
-async function resolvesToBlockedIp(hostname: string): Promise<boolean> {
-  try {
-    const [a, aaaa] = await Promise.all([
-      Deno.resolveDns(hostname, 'A').catch(() => [] as string[]),
-      Deno.resolveDns(hostname, 'AAAA').catch(() => [] as string[]),
-    ])
-    return [...a, ...aaaa].some((ip) => isBlockedHost(ip))
-  } catch {
-    return false
-  }
-}
-
-/**
- * SSRF 방어 fetch: redirect를 수동으로 따라가며 각 홉의 호스트를 재검사한다(최대 3회).
- * 차단 대상으로 향하는 redirect는 즉시 중단한다. (P1-4.2)
- */
-async function fetchWithSsrfGuard(
-  start: URL,
-  init: RequestInit,
-): Promise<{ resp: Response; finalUrl: string } | 'blocked'> {
-  let current = start
-  for (let hop = 0; hop <= 3; hop++) {
-    if (await resolvesToBlockedIp(current.hostname)) return 'blocked'
-    const resp = await fetch(current.toString(), { ...init, redirect: 'manual' })
-    if ([301, 302, 303, 307, 308].includes(resp.status)) {
-      const loc = resp.headers.get('location')
-      await resp.body?.cancel()
-      if (!loc) return 'blocked'
-      let nextRaw: string
-      try {
-        nextRaw = new URL(loc, current).toString()
-      } catch {
-        return 'blocked'
-      }
-      const next = safeUrl(nextRaw)
-      if (!next) return 'blocked'
-      current = next
-      continue
-    }
-    return { resp, finalUrl: current.toString() }
-  }
-  return 'blocked'
 }
 
 /** 최소 HTML 엔티티 디코드(메타 태그 content용). */
@@ -152,7 +79,7 @@ Deno.serve(withCors(async (req: Request) => {
         const thumb = `https://i.ytimg.com/vi/${yt}/hqdefault.jpg`
         const oe = await fetch(
           `https://www.youtube.com/oembed?url=${encodeURIComponent(watch)}&format=json`,
-          { signal: controller.signal, headers: { 'User-Agent': UA, Accept: 'application/json' } },
+          { signal: controller.signal, headers: { 'User-Agent': CRAWLER_UA, Accept: 'application/json' } },
         ).catch(() => null)
         if (oe && oe.ok) {
           const o = (await oe.json().catch(() => ({}))) as {
@@ -178,7 +105,7 @@ Deno.serve(withCors(async (req: Request) => {
       const guarded = await fetchWithSsrfGuard(url, {
         method: 'GET',
         signal: controller.signal,
-        headers: { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml' },
+        headers: { 'User-Agent': CRAWLER_UA, Accept: 'text/html,application/xhtml+xml' },
       })
       if (guarded === 'blocked') {
         return jsonResponse({ error: 'invalid_url', message: '허용되지 않는 대상입니다.' }, 400)

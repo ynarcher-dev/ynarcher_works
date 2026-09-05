@@ -2,6 +2,7 @@ import { Checkbox, cardText } from '@ynarcher/ui'
 import type { EntityRow } from '@/features/master/entityHooks'
 import { formatBytes } from '@/features/networks/materialHooks'
 import type { AiSource } from '@/features/startup/startupAiFill'
+import { AI_SUPPORTED_HINT } from '@/features/startup/startupAiFormats'
 import { AI_CARDS, type AiCardKey } from '@/features/startup/startupAiCards'
 
 /**
@@ -34,14 +35,15 @@ export function AiFileList({
         <li key={s.key} className="flex items-center gap-2">
           <Checkbox
             checked={selected.includes(s.key)}
-            disabled={!s.pdf}
+            disabled={!s.readable}
             onChange={() => onToggle(s.key)}
             label={
               <span className="flex min-w-0 flex-wrap items-center gap-x-2">
-                <span className={`min-w-0 truncate ${s.pdf ? '' : 'text-gray-500'}`}>{s.name}</span>
-                <span className={cardText.meta}>{formatBytes(s.bytes)}</span>
+                <span className={`min-w-0 truncate ${s.readable ? '' : 'text-gray-500'}`}>{s.name}</span>
+                {/* 링크에는 용량이 없다. '-'는 모른다는 뜻이라 사실과 다르므로 아예 세우지 않는다. */}
+                {s.bytes != null && <span className={cardText.meta}>{formatBytes(s.bytes)}</span>}
                 {/* 막힌 이유는 접지 않는다 — 왜 못 고르는지는 다음 행동을 지시하는 안내다. */}
-                {!s.pdf && <span className={cardText.meta}>PDF만 읽을 수 있습니다 · PDF로 변환해 올려 주세요</span>}
+                {!s.readable && <span className={cardText.meta}>{`읽을 수 없는 형식 · 지원: ${AI_SUPPORTED_HINT}`}</span>}
               </span>
             }
           />

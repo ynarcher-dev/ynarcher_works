@@ -7,14 +7,16 @@ import {
   Spinner,
   type Column,
 } from '@ynarcher/ui'
-import { Download, Eye, Trash2 } from 'lucide-react'
+import { Download, ExternalLink, Eye, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { MaterialPreviewModal } from '@/features/networks/MaterialPreview'
 import {
   downloadMaterial,
   formatBytes,
+  isLinkMaterial,
   materialDisplayName,
   materialPreviewKind,
+  openMaterialLink,
   type Material,
 } from '@/features/networks/materialHooks'
 
@@ -27,11 +29,14 @@ function extensionOf(fileName: string): string | null {
   return m?.[1] ? m[1].toUpperCase() : null
 }
 
-/** 검색 대상 — 표시명과 파일명. 표에 선 이름이 둘 중 하나이므로 둘 다 훑는다. */
+/**
+ * 검색 대상 — 표시명·파일명·주소. 표에 선 이름이 표시명과 파일명 둘 중 하나이므로 둘 다 훑고,
+ * 링크는 기억나는 것이 제목이 아니라 주소일 때가 많아 url까지 함께 본다.
+ */
 function matches(m: Material, keyword: string): boolean {
   const k = keyword.trim().toLowerCase()
   if (!k) return true
-  return [m.label, m.file_name].some((v) => v?.toLowerCase().includes(k))
+  return [m.label, m.file_name, m.url].some((v) => v?.toLowerCase().includes(k))
 }
 
 /**
@@ -84,9 +89,15 @@ export function MaterialBrowseModal({
       key: 'ext',
       header: '형식',
       type: 'code',
-      render: (m) => extensionOf(m.file_name) ?? <EmptyValue />,
+      // 링크에는 확장자가 없다. 빈 칸 대신 '링크'라고 적어 이 행이 무엇인지 표가 답하게 한다.
+      render: (m) => (isLinkMaterial(m) ? '링크' : (extensionOf(m.file_name) ?? <EmptyValue />)),
     },
-    { key: 'size', header: '용량', type: 'count', render: (m) => formatBytes(m.byte_size) },
+    {
+      key: 'size',
+      header: '용량',
+      type: 'count',
+      render: (m) => (isLinkMaterial(m) ? <EmptyValue /> : formatBytes(m.byte_size)),
+    },
     {
       key: 'created_at',
       header: '등록일',
@@ -102,19 +113,28 @@ export function MaterialBrowseModal({
           {materialPreviewKind(m) ? (
             <IconButton
               variant="ghost"
-              label={`${m.file_name} 미리보기`}
+              label={`${materialDisplayName(m)} 미리보기`}
               onClick={() => setPreview(m)}
               icon={<Eye className="size-4" />}
             />
           ) : (
             <span className="size-icon-card shrink-0" aria-hidden />
           )}
-          <DownloadButton material={m} />
+          {isLinkMaterial(m) ? (
+            <IconButton
+              variant="ghost"
+              label={`${materialDisplayName(m)} 새 탭에서 열기`}
+              onClick={() => openMaterialLink(m)}
+              icon={<ExternalLink className="size-4" />}
+            />
+          ) : (
+            <DownloadButton material={m} />
+          )}
           {onDelete && (
             <IconButton
               variant="ghost"
               danger
-              label={`${m.file_name} 삭제`}
+              label={`${materialDisplayName(m)} 삭제`}
               disabled={deletingId === m.id}
               onClick={() => onDelete(m.id)}
               icon={<Trash2 className="size-4" />}

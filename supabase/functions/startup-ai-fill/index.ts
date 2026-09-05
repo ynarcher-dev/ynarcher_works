@@ -27,8 +27,10 @@ import { supabaseAdmin } from '../_shared/supabaseAdmin.ts'
 import { isCardKey, type CardKey } from './cards.ts'
 import { buildPrompt } from './prompts.ts'
 import { buildResponseSchema } from './schema.ts'
+import { readLink } from './linkRead.ts'
 import {
   resolveAttachments,
+  resolvePendingLinks,
   resolveUploads,
   validateSources,
   type AttachmentRow,
@@ -110,6 +112,10 @@ Deno.serve(
       cards = readCards(parseJson(String(form.get('cards') ?? '[]')))
       companyName = String(form.get('companyName') ?? '').trim()
       const files = form.getAll('files').filter((f): f is File => f instanceof File && f.size > 0)
+      const pendingLinks = form
+        .getAll('links')
+        .map((v) => String(v).trim())
+        .filter((v) => /^https?:\/\//i.test(v))
 
       // 가리킬 행이 없으므로 "만들 수 있는가"를 묻는다.
       const { data: creatable, error: gateErr } = await asCaller.rpc('can_create_startup')
@@ -125,7 +131,7 @@ Deno.serve(
       if ('error' in resolved) {
         return jsonResponse({ error: resolved.error.code, message: resolved.error.message }, resolved.error.status)
       }
-      sources = resolved.sources
+      sources = [...resolved.sources, ...resolvePendingLinks(pendingLinks)]
     } else {
       // 3-b) 수정 모드: 이미 올라간 첨부를 id로 가리킨다 --------------------------
       const body = (await req.json().catch(() => ({}))) as {
@@ -152,7 +158,7 @@ Deno.serve(
       // 첨부 메타는 호출자 토큰으로 — RLS가 그 행을 볼 자격을 판정한다.
       const { data: atts, error: attErr } = await asCaller
         .from('attachments')
-        .select('id, file_name, storage_path, content_type, byte_size')
+        .select('id, file_name, kind, url, storage_path, content_type, byte_size')
         .in('id', ids)
         .eq('target_type', TARGET_TYPE)
         .eq('target_id', startupId)
@@ -193,7 +199,27 @@ Deno.serve(
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
     try {
       const parts: unknown[] = []
+      // 읽지 못한 링크는 실행을 멈추지 않고 여기 쌓아 두었다가 결과와 함께 알린다 —
+      // 다섯 개 중 하나가 비공개라고 나머지 넷까지 못 읽을 이유가 없고, 담당자가 고칠 수
+      // 있는 문제라(공유 설정·죽은 주소) 조용히 빠뜨리면 왜 부실한지 알 수 없다.
+      const skippedLinks: string[] = []
+
       for (const s of sources) {
+        // (a) 링크 — 서버가 가져온다. 구글 문서는 내보내기 주소로 바뀌어 PDF·표로 온다.
+        if (s.url) {
+          const read = await readLink(s.url)
+          if ('message' in read) {
+            skippedLinks.push(read.message)
+            continue
+          }
+          if (read.text != null) parts.push({ text: `[참고 링크: ${s.url}]\n${read.text}` })
+          else if (read.bytes) {
+            parts.push({ inlineData: { mimeType: read.mime, data: toBase64(read.bytes) } })
+          }
+          continue
+        }
+
+        // (b) 파일 — 손에 있으면 그대로, 첨부면 스토리지에서 받는다.
         let buf = s.data
         if (!buf && s.storagePath) {
           const { data: blob, error: dlErr } = await admin.storage.from(BUCKET).download(s.storagePath)
@@ -203,8 +229,18 @@ Deno.serve(
           }
           buf = await blob.arrayBuffer()
         }
-        if (!buf) return jsonResponse({ error: 'internal_error', message: '자료를 읽지 못했습니다.' }, 500)
-        parts.push({ inlineData: { mimeType: 'application/pdf', data: toBase64(buf) } })
+        if (!buf || !s.mime) {
+          return jsonResponse({ error: 'internal_error', message: '자료를 읽지 못했습니다.' }, 500)
+        }
+        parts.push({ inlineData: { mimeType: s.mime, data: toBase64(buf) } })
+      }
+
+      // 읽을 것이 하나도 남지 않으면 모델을 부르지 않는다(빈 초안에 비용을 쓰지 않는다).
+      if (parts.length === 0) {
+        return jsonResponse(
+          { error: 'no_readable_source', message: `읽을 수 있는 자료가 없습니다. ${skippedLinks.join(' / ')}` },
+          400,
+        )
       }
       parts.push({ text: buildPrompt(cards, companyName) })
 
@@ -246,7 +282,13 @@ Deno.serve(
         return jsonResponse({ error: 'draft_failed', message: 'AI 응답을 해석하지 못했습니다.' }, 502)
       }
 
-      return jsonResponse({ ...envelope, model, elapsedMs: Date.now() - startedAt })
+      return jsonResponse({
+        ...envelope,
+        // 못 읽은 링크는 결과와 같은 자리에서 알린다 — 화면이 이 줄을 안내에 그대로 세운다.
+        skippedSources: skippedLinks,
+        model,
+        elapsedMs: Date.now() - startedAt,
+      })
     } catch (e) {
       const aborted = e instanceof DOMException && e.name === 'AbortError'
       return jsonResponse(

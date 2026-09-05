@@ -2,15 +2,14 @@ import { Banner, Button, CardHeading, Checkbox, Modal, Spinner, cardText } from 
 import { useState } from 'react'
 import type { EntityRow } from '@/features/master/entityHooks'
 import { formatBytes } from '@/features/networks/materialHooks'
-import { AI_FILL_LIMITS, useAiFill, type AiSource } from '@/features/startup/startupAiFill'
+import { AI_FILL_LIMITS, useAiFill, type AiFillResult, type AiSource } from '@/features/startup/startupAiFill'
 import { defaultCardSelection, type AiCardKey } from '@/features/startup/startupAiCards'
 import { AiCardList, AiFileList } from '@/features/startup/StartupAiFillPicker'
-import type { AiFillEnvelope } from '@/features/startup/startupAiMerge'
 
 /**
  * 'AI 작성하기' 모달 — 읽을 자료와 작성할 카드를 고르고 초안을 받는다.
  *
- * 자료 목록과 기준 값(`snapshot`)을 **받아서** 쓴다. 기본 선택이 "PDF 전부 · 빈 카드 전부"인데
+ * 자료 목록과 기준 값(`snapshot`)을 **받아서** 쓴다. 기본 선택이 "읽을 수 있는 자료 전부 · 빈 카드 전부"인데
  * 목록이 준비되기 전에 마운트되면 그 기본값이 빈 채로 굳어 담당자가 매번 손으로 다시 고르게
  * 된다. 목록이 준비된 뒤에 열리는 것을 버튼이 보장한다.
  *
@@ -35,14 +34,14 @@ export function StartupAiFillModal({
   startupId?: string
   companyName?: string
   onClose: () => void
-  onFilled: (envelope: AiFillEnvelope, cards: AiCardKey[]) => void
+  onFilled: (result: AiFillResult, cards: AiCardKey[]) => void
 }) {
   const fill = useAiFill()
 
-  // 기본 선택: PDF 전부(상한 안에서), 빈 카드 전부. 담당자가 아무것도 만지지 않고 실행해도
+  // 기본 선택: 읽을 수 있는 자료 전부(상한 안에서), 빈 카드 전부. 담당자가 아무것도 만지지 않고 실행해도
   // 이미 적혀 있는 값은 그대로 남는다 — 기본값이 지키는 쪽에 서야 안전장치가 된다.
   const [picked, setPicked] = useState<string[]>(() =>
-    sources.filter((s) => s.pdf).slice(0, AI_FILL_LIMITS.maxFiles).map((s) => s.key),
+    sources.filter((s) => s.readable).slice(0, AI_FILL_LIMITS.maxFiles).map((s) => s.key),
   )
   const [cards, setCards] = useState<AiCardKey[]>(() => defaultCardSelection(snapshot))
   const [agreed, setAgreed] = useState(false)
@@ -63,8 +62,8 @@ export function StartupAiFillModal({
   const run = async () => {
     setError(null)
     try {
-      const envelope = await fill.mutateAsync({ startupId, companyName, sources: chosen, cards })
-      onFilled(envelope, cards)
+      const result = await fill.mutateAsync({ startupId, companyName, sources: chosen, cards })
+      onFilled(result, cards)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'AI 작성에 실패했습니다.')
     }
@@ -78,7 +77,7 @@ export function StartupAiFillModal({
       dismissible={false}
       size="lg"
       title="AI 작성하기"
-      help="첨부한 PDF 자료를 근거로 선택한 카드의 초안을 만듭니다. 결과는 편집 화면에 채워지며, 저장 전까지 원장은 바뀌지 않습니다."
+      help="첨부한 자료(파일·링크)를 근거로 선택한 카드의 초안을 만듭니다. 결과는 편집 화면에 채워지며, 저장 전까지 원장은 바뀌지 않습니다. 문서를 눈으로 보듯 이해하는 것은 PDF와 이미지뿐이고, 나머지 형식은 글자만 읽힙니다."
       footer={
         <div className="flex items-center justify-end gap-2">
           <Button variant="ghost" onClick={onClose} disabled={busy}>

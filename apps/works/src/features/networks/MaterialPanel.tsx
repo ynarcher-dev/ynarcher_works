@@ -3,8 +3,14 @@ import { useState } from 'react'
 import { DetailPanelCard } from '@/features/networks/DetailPanelCard'
 import { MaterialBrowseModal } from '@/features/networks/MaterialBrowseModal'
 import { MaterialDropZone } from '@/features/networks/MaterialDropZone'
+import { MaterialLinkInput } from '@/features/networks/MaterialLinkInput'
 import { MaterialList } from '@/features/networks/MaterialList'
-import { useDeleteMaterial, useMaterials, useUploadMaterial } from '@/features/networks/materialHooks'
+import {
+  useAddMaterialLink,
+  useDeleteMaterial,
+  useMaterials,
+  useUploadMaterial,
+} from '@/features/networks/materialHooks'
 
 /**
  * 자료 관리 패널(공용). 레코드에 귀속된 파일의 업로드·다운로드·삭제(소프트)를 담당한다.
@@ -48,6 +54,7 @@ export function MaterialPanel({
   const [browsing, setBrowsing] = useState(false)
   const { data: materials, isLoading } = useMaterials(targetType, targetId, moduleId)
   const upload = useUploadMaterial(targetType, targetId, moduleId)
+  const addLink = useAddMaterialLink(targetType, targetId, moduleId)
   const remove = useDeleteMaterial(targetType, targetId)
   const list = materials ?? []
 
@@ -75,6 +82,16 @@ export function MaterialPanel({
           {upload.isError && (
             <p className="mt-2 text-caption text-danger">
               업로드에 실패했습니다. 다시 시도해 주세요.
+            </p>
+          )}
+
+          {/* 파일 아래에 링크 입력이 선다. 순서를 이렇게 두는 이유는 빈도다 — 자료 대부분은
+              파일로 오고, 주소는 그것을 보태는 자리다. */}
+          <MaterialLinkInput onAdd={(url) => addLink.mutate(url)} busy={addLink.isPending} />
+
+          {addLink.isError && (
+            <p className="mt-1 text-caption text-danger">
+              링크를 추가하지 못했습니다. 주소를 확인해 주세요.
             </p>
           )}
         </>

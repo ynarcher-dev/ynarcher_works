@@ -10,7 +10,11 @@ export interface Material {
   target_type: string
   target_id: string
   file_name: string
-  storage_path: string
+  /** 자료 종류. FILE=스토리지 실물, LINK=바깥 주소. */
+  kind: 'FILE' | 'LINK'
+  /** LINK 행의 전체 주소(FILE은 null). */
+  url: string | null
+  storage_path: string | null
   content_type: string | null
   byte_size: number | null
   uploaded_by: string | null
@@ -22,9 +26,32 @@ export interface Material {
   created_at: string
 }
 
-/** 목록에 노출할 이름 — 표시명이 있으면 그것, 없으면 파일명. */
+/** 목록에 노출할 이름 — 표시명이 있으면 그것, 없으면 파일명(링크는 호스트). */
 export function materialDisplayName(m: Material): string {
   return m.label?.trim() || m.file_name
+}
+
+/**
+ * 링크 자료 여부. 파일에만 뜻이 있는 것(다운로드·용량·미리보기·확장자)을 가르는 기준이다.
+ *
+ * `url`이 아니라 `kind`로 판정한다 — 두 칸이 어긋날 일은 CHECK 제약이 막지만, 판정의 근거는
+ * '무엇인가'를 적어 둔 칸 하나여야 한다(값이 있는지로 종류를 유추하면 칸이 늘 때마다 그 유추가
+ * 하나씩 는다).
+ */
+export function isLinkMaterial(m: Material): boolean {
+  return m.kind === 'LINK'
+}
+
+/**
+ * 주소에서 목록에 세울 호스트를 뽑는다. 이 값이 `file_name` 자리에 들어간다 —
+ * 그 칸은 "무엇을 받게 되는가"를 답하는 자리이고, 링크에서 그것은 어느 사이트인가다.
+ */
+export function linkHost(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '')
+  } catch {
+    return url.slice(0, 80)
+  }
 }
 
 /**
@@ -128,6 +155,52 @@ export function useUploadMaterial(targetType: string, targetId: string, moduleId
 }
 
 /**
+ * 링크 자료 1건 추가(공용 실행부). 스토리지를 거치지 않고 메타 행만 남긴다.
+ *
+ * 제목·설명은 `link-metadata` Edge Function이 읽어 온 OG 값으로 미리 채운다 — 담당자가 주소만
+ * 붙여도 목록에 "무엇인지"가 서야 하기 때문이다. 그 조회는 실패해도 무시한다(로그인이 필요한
+ * 페이지·차단된 사이트는 제목을 못 얻을 뿐, 주소를 남기는 일 자체가 막힐 이유는 없다).
+ */
+export async function addMaterialLink(
+  targetType: string,
+  targetId: string,
+  url: string,
+  programModuleId?: string,
+): Promise<void> {
+  const trimmed = url.trim()
+  // 제목·설명 조회는 있으면 좋은 값이라 실패를 삼킨다(주소를 남기는 일이 막힐 이유는 없다).
+  const { data: meta } = await supabase.functions
+    .invoke<{ title?: string | null; description?: string | null }>('link-metadata', {
+      body: { url: trimmed },
+    })
+    .catch(() => ({ data: null }))
+  const { error } = await supabase.from('attachments').insert({
+    target_type: targetType,
+    target_id: targetId,
+    kind: 'LINK',
+    url: trimmed,
+    // 파일명 자리에는 호스트가 들어간다(목록·검색용). 전체 주소는 url이 갖는다.
+    file_name: linkHost(trimmed),
+    storage_path: null,
+    content_type: null,
+    byte_size: null,
+    label: meta?.title?.trim() || null,
+    description: meta?.description?.trim() || null,
+    program_module_id: programModuleId ?? null,
+  })
+  if (error) throw error
+}
+
+/** 링크 추가 뮤테이션. 성공 시 해당 대상의 목록을 무효화한다(파일 업로드와 같은 규약). */
+export function useAddMaterialLink(targetType: string, targetId: string, moduleId?: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (url: string) => addMaterialLink(targetType, targetId, url, moduleId),
+    onSuccess: () => invalidateMaterials(qc, targetType, targetId),
+  })
+}
+
+/**
  * 표시명·설명 수정. 파일 자체(Storage 오브젝트·파일명)는 건드리지 않는다 — 바꾸는 것은
  * "이 파일이 무엇인지 부르는 말"이지 파일이 아니다.
  */
@@ -166,12 +239,21 @@ export function useDeleteMaterial(targetType: string, targetId: string) {
  * (클라이언트 직접 서명 경로는 폐쇄됨). 다운로드·인라인 재생이 공유한다.
  */
 export async function fetchMaterialUrl(m: Material): Promise<string> {
+  // 링크에는 서명할 실물이 없다. 여기까지 오는 것 자체가 화면의 분기 실수이므로 조용히
+  // 주소를 돌려주지 않고 끊는다 — 돌려주면 '다운로드'가 바깥 페이지를 내려받는 일이 된다.
+  if (isLinkMaterial(m)) throw new Error('link_has_no_file')
   const { data, error } = await supabase.functions.invoke<{
     url: string
     fileName: string
   }>('material-download', { body: { attachmentId: m.id } })
   if (error || !data?.url) throw error ?? new Error('download_failed')
   return data.url
+}
+
+/** 링크 자료를 새 탭에서 연다. 파일의 다운로드와 짝을 이루는 동작이다. */
+export function openMaterialLink(m: Material): void {
+  if (!m.url) return
+  window.open(m.url, '_blank', 'noopener,noreferrer')
 }
 
 /** 자료 다운로드: 단기 Signed URL을 받아 브라우저 다운로드를 트리거한다. */
@@ -224,6 +306,10 @@ export function isTextMaterial(m: Material): boolean {
 /** 모달 미리보기 종류(오디오는 행에서 인라인 재생하므로 여기서 제외). 지원 안 하면 null. */
 export type PreviewKind = 'pdf' | 'image' | 'video' | 'text'
 export function materialPreviewKind(m: Material): PreviewKind | null {
+  // 링크는 미리보기가 없다 — 여는 것이 곧 보는 것이라, 모달로 한 겹 감싸면 자리만 늘고
+  // 바깥 페이지를 우리 화면 안에 넣은 것처럼 보인다. 파일명 확장자로 종류를 유추하는
+  // 아래 판정들이 주소의 `.pdf` 같은 꼬리에 걸려 오작동하는 것도 여기서 함께 막힌다.
+  if (isLinkMaterial(m)) return null
   if (isImageMaterial(m)) return 'image'
   if (isVideoMaterial(m)) return 'video'
   if (isPdfMaterial(m)) return 'pdf'

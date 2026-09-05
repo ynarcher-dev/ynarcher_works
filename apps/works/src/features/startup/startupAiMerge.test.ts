@@ -165,7 +165,7 @@ describe('기본 체크 규칙', () => {
 
 describe('outcomeSummary', () => {
   it('채운 카드와 못 찾은 카드를 함께 말한다', () => {
-    const text = outcomeSummary({ filled: ['business'], skipped: ['ip'], notes: {}, evidence: {} })
+    const text = outcomeSummary({ filled: ['business'], skipped: ['ip'], notes: {}, evidence: {}, skippedSources: [] })
     expect(text).toContain('비즈니스')
     expect(text).toContain('지식재산·인증')
     expect(text).toContain('확인 후 저장')
