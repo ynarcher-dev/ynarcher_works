@@ -31,6 +31,17 @@ export function ProgramInfoCard({ program }: { program: Program }) {
   const formatPeriod = (start: string | null, end: string | null) =>
     start || end ? `${start ?? '?'} ~ ${end ?? '?'}` : '-'
   const operationPeriod = formatPeriod(program.start_date, program.end_date)
+  // 만료를 별색으로 밝힌다 — 문이 닫힌 사업에서 "왜 게스트가 못 들어오죠"의 답이 여기다.
+  const guestAccessEnd = program.guest_access_ends_at
+    ? new Date(program.guest_access_ends_at)
+    : null
+  const guestAccessLabel = !guestAccessEnd ? (
+    '제한 없음'
+  ) : guestAccessEnd.getTime() <= Date.now() ? (
+    <span className="text-danger">{`~ ${formatDate(program.guest_access_ends_at)} (만료)`}</span>
+  ) : (
+    `~ ${formatDate(program.guest_access_ends_at)}`
+  )
   // 분야는 목록과 같은 중립 배지로 적는다. 값이 없으면 InfoField가 하이픈으로 대체하도록 null을 준다.
   const industryList = programIndustries(program)
   const industryBadges = industryList.length ? (
@@ -113,6 +124,13 @@ export function ProgramInfoCard({ program }: { program: Program }) {
         {/* 분야. 목록과 같은 표기(중립 배지)를 쓴다 — 같은 값을 두 화면이 다르게 부르지 않는다. */}
         <Info label="분야" value={industryBadges} />
         <Info label="운영 기간" value={operationPeriod} />
+        {/*
+          게스트 로그인 가능 기간. 값은 사업이 갖고 참여 기업·전문가 전원에게 같이 걸리므로
+          자리도 사업 정보다(3_9_1 §8). 고치는 것은 명부 툴바의 같은 이름 버튼이며, 여기서는
+          "이 사업 게스트가 언제까지 들어오는가"를 읽기만 한다 — 그 답을 보려고 명부 탭까지
+          내려가지 않아도 되게 한다.
+        */}
+        <Info label="게스트 로그인" value={guestAccessLabel} />
         <Info label="생성자" value={program.creator?.name || '-'} />
         <Info label="수정일" value={formatDate(program.updated_at)} />
       </InfoGrid>}

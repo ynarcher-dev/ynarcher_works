@@ -77,6 +77,12 @@ export interface Program {
   start_date: string | null
   end_date: string | null
   description: string | null
+  /**
+   * 이 사업 게스트의 접근 종료(2026-09-05). null은 제한 없음이며, 참여 기업·전문가 전원에게
+   * 같이 걸린다 — 기간은 사업의 사실이지 기업의 사실이 아니다. 값은 명부 툴바의
+   * '로그인 가능 기간'과 사업 정보 카드가 함께 읽고, 쓰기는 RPC 하나가 맡는다(3_9_1 §8).
+   */
+  guest_access_ends_at: string | null
   updated_at: string | null
   /** 부서 구성(메인 1 + 협업 n, 협업비율 합 100). */
   departments: ProgramDepartment[]
@@ -95,7 +101,7 @@ export function programCols(config: ProgramWorkspaceConfig): string {
   return (
     // host_organization은 세 원장에 모두 있는 컬럼이라 select는 갈라지지 않는다 —
     // 표시·저장만 config(hasHostOrganization)가 가른다.
-    'id, code, category, industries, host_organization, title, status, proposal_start_date, proposal_end_date, start_date, end_date, description, updated_at, ' +
+    'id, code, category, industries, host_organization, title, status, proposal_start_date, proposal_end_date, start_date, end_date, description, guest_access_ends_at, updated_at, ' +
     `departments:${departments}(org_version_id, department_id, kind, collaboration_ratio, department:departments!${departments}_department_id_fkey(id, name)), ` +
     `managers:${managers}(user_id, org_version_id, department_id, role, allocation_rate, start_date, end_date, user:users!${managers}_user_id_fkey(id, name), department:departments!${managers}_department_id_fkey(id, name)), ` +
     'creator:users!created_by(id, name)'

@@ -55,6 +55,10 @@ export interface GuestParticipation {
   entity_key: ProgramEntityKey
   master_table: string | null
   master_id: string | null
+  /**
+   * 이 사업 게스트의 접근 종료(2026-09-05부터 **사업 원장**의 guest_access_ends_at).
+   * 참여 줄이 아니라 사업이 갖는 값이라, 같은 사업의 두 줄은 같은 값을 본다.
+   */
   access_ends_at: string | null
   code: string | null
   title: string
@@ -149,25 +153,17 @@ export async function loadParticipations(
   const now = Date.now()
   const { data } = await db
     .from('program_participants')
-    .select('id, program_id, entity_key, master_table, master_id, access_starts_at, access_ends_at')
+    .select('id, program_id, entity_key, master_table, master_id')
     .eq('user_id', userId)
     .in('login_status', OPEN_STATUSES)
 
-  // 기간 판정은 코드에서 한다. PostgREST의 `.or()`에 값을 문자열로 이어 붙이면 그 값의
-  // 표기(콜론·쉼표)가 필터 구조에 섞일 수 있고, 여기서 얻는 것은 몇 행의 절감뿐이다.
-  const rows = ((data ?? []) as {
+  const rows = (data ?? []) as {
     id: string
     program_id: string
     entity_key: string
     master_table: string | null
     master_id: string | null
-    access_starts_at: string | null
-    access_ends_at: string | null
-  }[]).filter(
-    (r) =>
-      (!r.access_starts_at || new Date(r.access_starts_at).getTime() <= now) &&
-      (!r.access_ends_at || new Date(r.access_ends_at).getTime() > now),
-  )
+  }[]
   if (rows.length === 0) return []
 
   // 사업 원장이 셋이라 entity_key로 갈라 한 번씩만 묻는다. 살아 있지 않은 사업은
@@ -179,11 +175,14 @@ export async function loadParticipations(
     byLedger.set(table, [...(byLedger.get(table) ?? []), r.program_id])
   }
 
-  const live = new Map<string, { code: string | null; title: string }>()
+  // 접근 기간은 **사업**이 갖는다(2026-09-05). 참여 줄마다 있던 시절에는 같은 사업의 스무
+  // 줄이 저마다 값을 들고 있어 어긋날 수 있었다. 기간 판정은 코드에서 한다 — PostgREST의
+  // `.or()`에 값을 문자열로 이어 붙이면 그 값의 표기(콜론·쉼표)가 필터 구조에 섞인다.
+  const live = new Map<string, { code: string | null; title: string; accessEndsAt: string | null }>()
   for (const [table, ids] of byLedger) {
     const { data: progs } = await db
       .from(table)
-      .select('id, code, title, status, deleted_at')
+      .select('id, code, title, status, deleted_at, guest_access_ends_at')
       .in('id', [...new Set(ids)])
     for (const p of (progs ?? []) as {
       id: string
@@ -191,9 +190,11 @@ export async function loadParticipations(
       title: string
       status: string
       deleted_at: string | null
+      guest_access_ends_at: string | null
     }[]) {
       if (p.deleted_at || DEAD_PROGRAM_STATUSES.has(p.status)) continue
-      live.set(p.id, { code: p.code, title: p.title })
+      if (p.guest_access_ends_at && new Date(p.guest_access_ends_at).getTime() <= now) continue
+      live.set(p.id, { code: p.code, title: p.title, accessEndsAt: p.guest_access_ends_at })
     }
   }
 
@@ -205,7 +206,7 @@ export async function loadParticipations(
       entity_key: r.entity_key as ProgramEntityKey,
       master_table: r.master_table,
       master_id: r.master_id,
-      access_ends_at: r.access_ends_at,
+      access_ends_at: live.get(r.program_id)!.accessEndsAt,
       code: live.get(r.program_id)!.code,
       title: live.get(r.program_id)!.title,
     }))

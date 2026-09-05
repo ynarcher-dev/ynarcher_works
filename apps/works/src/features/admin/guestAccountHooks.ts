@@ -22,7 +22,7 @@ export interface GuestAccountProgram {
   title: string | null
   /** 그 사업에서의 로그인 개방 상태. 계정 상태와는 별개 축이다. */
   login_status: 'NOT_APPLICABLE' | 'NOT_ALLOWED' | 'INVITED' | 'ACTIVE' | 'BLOCKED'
-  /** 이 참여 줄의 접근 종료. 계정이 아니라 줄이 기간을 갖는다(3_9_1 §8). */
+  /** 그 사업 게스트의 접근 종료. 계정이 아니라 **사업**이 기간을 갖는다(3_9_1 §8). */
   access_ends_at: string | null
   /** 이 줄의 자격. 같은 계정이 한 사업에 두 자격으로 걸리면 줄이 둘이다. */
   master_table: 'startups' | 'networks' | null

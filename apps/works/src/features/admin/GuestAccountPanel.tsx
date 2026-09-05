@@ -264,7 +264,7 @@ export function GuestAccountPanel({ canSuspend = false }: { canSuspend?: boolean
                 </span>
               </span>
               <span className="flex shrink-0 items-center gap-2">
-                {/* 접근 기간은 계정이 아니라 이 줄이 갖는다 — 만료되면 이 사업만 사라진다. */}
+                {/* 접근 기간은 계정이 아니라 그 사업이 갖는다 — 만료되면 이 사업만 목록에서 사라진다. */}
                 {p.access_ends_at && (
                   <span className="text-caption text-gray-500">
                     ~ {fmtDate(p.access_ends_at)}

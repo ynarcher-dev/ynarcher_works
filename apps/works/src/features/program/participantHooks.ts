@@ -49,9 +49,6 @@ export interface ParticipantRow {
   master_id: string | null
   user_id: string | null
   login_status: ParticipantLoginStatus
-  /** 이 참여 줄의 접근 기간(2026-09-05 신설). null은 제한 없음. */
-  access_starts_at: string | null
-  access_ends_at: string | null
   /**
    * 이 대상에게 게스트 계정이 이미 있는가. 계정의 키가 원장 행이라 명부 행만으로 판정할 수
    * 있으므로, 담당자가 계정 발급 화면을 확인하러 갈 필요가 없다.
@@ -61,6 +58,11 @@ export interface ParticipantRow {
   accountId: string | null
   /** 그 계정의 마지막 접속 시각. 아직 한 번도 없으면 null. */
   lastLoginAt: string | null
+  /**
+   * 이 줄을 명부에 담은 사람. 어떤 권한도 주지 않는 서술 값이며 트리거가 찍는다 —
+   * 관리 주체는 사업 담당자이고, 이 값은 "누가 담았나"에만 답한다. 옛 행은 비어 있다.
+   */
+  createdByName: string | null
   /** 원장에서 온 대상 이름(기업명 또는 전문가명). 원장이 없으면 계정 이름. */
   targetName: string
   /** 부제(기업은 대표자, 전문가는 소속). */
@@ -94,22 +96,22 @@ interface RawParticipant {
   master_id: string | null
   user_id: string | null
   login_status: ParticipantLoginStatus
-  access_starts_at: string | null
-  access_ends_at: string | null
   user: { name: string | null; email: string | null } | null
+  creator: { name: string | null } | null
 }
 
 /**
- * 명부 select. 계정 임베드에는 FK 힌트를 반드시 단다 — 명부에서 users로 가는 길이 둘이라
- * (`user_id` = 로그인 주체, `login_opened_by` = 문을 연 담당자) 힌트가 없으면 PostgREST가
- * 어느 쪽인지 판정하지 못하고 조회 전체를 거절한다(PGRST201). 제약 이름은 원장마다 다르므로
- * 물리 테이블명으로 조립한다(programCols가 임베드를 조립하는 것과 같은 축).
+ * 명부 select. 계정 임베드에는 FK 힌트를 반드시 단다 — 명부에서 users로 가는 길이 셋이라
+ * (`user_id` = 로그인 주체, `login_opened_by` = 문을 연 담당자, `created_by` = 명부에 담은
+ * 사람) 힌트가 없으면 PostgREST가 어느 쪽인지 판정하지 못하고 조회 전체를 거절한다
+ * (PGRST201). 제약 이름은 원장마다 다르므로 물리 테이블명으로 조립한다(programCols가
+ * 임베드를 조립하는 것과 같은 축).
  */
 function participantCols(table: string): string {
   return (
     'id, master_table, master_id, user_id, login_status, ' +
-    'access_starts_at, access_ends_at, ' +
-    `user:users!${table}_user_id_fkey(name, email)`
+    `user:users!${table}_user_id_fkey(name, email), ` +
+    `creator:users!${table}_created_by_fkey(name)`
   )
 }
 
@@ -216,11 +218,10 @@ export function useProgramParticipants(programId: string | undefined) {
           master_id: r.master_id,
           user_id: r.user_id,
           login_status: r.login_status,
-          access_starts_at: r.access_starts_at,
-          access_ends_at: r.access_ends_at,
           hasAccount: Boolean(accountId),
           accountId,
           lastLoginAt: accountId ? (lastLogin.get(accountId) ?? null) : null,
+          createdByName: r.creator?.name ?? null,
           targetName: master?.name ?? r.user?.name ?? '미지정',
           subtitle: startup?.representative ?? expert?.affiliation ?? '',
           loginName: startup?.representative ?? expert?.name ?? null,
@@ -394,27 +395,29 @@ export function useSendPasswordReset() {
 }
 
 /**
- * 참여 줄의 접근 기간 설정. 계정이 아니라 줄이 기간을 갖는다 — 계정에 종료일 하나를 달면
- * 사업이 둘일 때 답이 없기 때문이다(3_9_1 §8).
+ * 이 사업 게스트의 접근 종료일 설정(2026-09-05 사업 단위로 올라왔다).
+ *
+ * 기간은 사업의 사실이지 기업의 사실이 아니다 — 참여 기업이 스무 곳이면 종전 구조는 같은
+ * 값을 스무 번 적게 했고, 그 스무 값이 어긋날 수 있다는 것 자체가 결함이었다. 기업 한 곳만
+ * 막을 일은 기간이 아니라 **차단**이 답한다(3_9_1 §8).
+ *
+ * 사업 원장 값이 바뀌므로 명부만이 아니라 사업 조회도 함께 무효화한다.
  */
-export function useSetAccessWindow(programId: string) {
+export function useSetProgramAccessWindow(programId: string) {
   const config = useProgramWorkspace()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (input: {
-      participantId: string
-      starts: string | null
-      ends: string | null
-    }): Promise<void> => {
-      const { error } = await supabase.rpc('set_participant_access_window', {
-        p_participant_id: input.participantId,
-        p_starts: input.starts,
-        p_ends: input.ends,
+    mutationFn: async (ends: string | null): Promise<void> => {
+      const { error } = await supabase.rpc('set_program_guest_access_window', {
+        p_program_id: programId,
+        p_ends: ends,
       })
       if (error) throw error
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: [config.key, 'participants', programId] })
+      void qc.invalidateQueries({ queryKey: [config.key, 'program', programId] })
+      void qc.invalidateQueries({ queryKey: [config.key, 'programs'] })
     },
   })
 }

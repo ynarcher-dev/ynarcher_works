@@ -7,6 +7,7 @@
 
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { verifyJwt } from './crypto.ts'
+import { PROGRAM_LEDGERS, type ProgramEntityKey } from './programLedger.ts'
 
 /** 사업 맥락으로 인정하는 종류. 장래의 fund 맥락은 여기 들지 않는다. */
 const PROGRAM_CONTEXTS = new Set(['program', 'ma_program', 'project_program'])
@@ -92,21 +93,30 @@ export async function loadOpenParticipations(
   const now = Date.now()
   const { data } = await db
     .from('program_participants')
-    .select('id, joined_at, master_table, master_id, login_status, access_starts_at, access_ends_at')
+    .select('id, joined_at, master_table, master_id, login_status, entity_key')
     .eq('program_id', programId)
     .eq('user_id', userId)
     .in('login_status', ['INVITED', 'ACTIVE'])
-  return ((data ?? []) as (GuestParticipation & {
+  const rows = (data ?? []) as (GuestParticipation & {
     login_status: string
-    access_starts_at: string | null
-    access_ends_at: string | null
-  })[])
-    .filter(
-      (p) =>
-        (!p.access_starts_at || new Date(p.access_starts_at).getTime() <= now) &&
-        (!p.access_ends_at || new Date(p.access_ends_at).getTime() > now),
-    )
-    .map(({ login_status: _s, access_starts_at: _st, access_ends_at: _e, ...p }) => p)
+    entity_key: string
+  })[]
+  if (rows.length === 0) return []
+
+  // 기간은 **사업**이 갖는다(2026-09-05). 원장이 셋이라 어느 표에 물어야 하는지는 행의
+  // entity_key가 답한다 — id만으로 찾으면 세 원장을 다 뒤져야 하고, 그 순간 경계가 하나
+  // 사라진다(같은 id가 다른 원장에 있을 이유는 없지만, 없다는 것과 확인하지 않는 것은 다르다).
+  const table = PROGRAM_LEDGERS[rows[0].entity_key as ProgramEntityKey]
+  if (!table) return []
+  const { data: prog } = await db
+    .from(table)
+    .select('guest_access_ends_at')
+    .eq('id', programId)
+    .maybeSingle()
+  const endsAt = (prog as { guest_access_ends_at: string | null } | null)?.guest_access_ends_at
+  if (endsAt && new Date(endsAt).getTime() <= now) return []
+
+  return rows.map(({ login_status: _s, entity_key: _e, ...p }) => p)
 }
 
 export interface LedgerIdentity {
