@@ -20,6 +20,7 @@ import {
   useApprovalDocument,
   useApprovalForms,
   useCreateApproval,
+  useResubmitApproval,
   useSaveApprovalDraft,
   type ApprovalLineInput,
 } from '@/features/approval/approvalApi'
@@ -35,6 +36,7 @@ import {
   pruneValues,
   type FieldValues,
 } from '@/features/approval/fields'
+import { maxRound, stampLinesForRound } from '@/features/approval/stampRounds'
 import { useEmployees } from '@/features/management/hooks'
 import { useJobTitleLabel } from '@/features/management/jobTitleHooks'
 import { useDepartments } from '@/features/management/orgHooks'
@@ -70,7 +72,10 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
   const { data: editing, isLoading: loadingDoc } = useApprovalDocument(documentId)
   const create = useCreateApproval()
   const saveDraft = useSaveApprovalDraft()
+  const resubmit = useResubmitApproval()
   const pending = usePendingMaterials()
+  // 되돌아온 문서를 고치러 온 자리인가 — 임시저장 수정과 화면은 같고 저장 경로만 다르다.
+  const isResubmit = editing?.status === 'REJECTED'
   // 고치는 문서라면 이미 걸린 연동·참조를 실어 와야 한다(새 기안이면 빈 배열).
   const { data: savedPrograms } = useApprovalProgramLinks(documentId)
   const { data: savedDocLinks } = useDocumentLinks(documentId)
@@ -189,6 +194,27 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
   const amount = primaryAmount(fields, values)
   const amountLabel = primaryAmountLabel(fields)
 
+  /**
+   * 되돌아온 사연 — 누가 왜 되돌렸고 다시 올리면 어디서부터 받는가.
+   *
+   * **이 안내는 접지 않는다.** 지금 이 화면에 서 있는 이유이자 다음에 일어날 일을 말하는
+   * 차단 안내라, 말풍선 뒤에 숨기면 고칠 곳을 모른 채 다시 올리게 된다(안내 문구를 접는
+   * 규칙의 예외 — CLAUDE.md '안내 문구는 접는다').
+   */
+  const returnInfo = useMemo(() => {
+    if (!isResubmit || !editing) return null
+    const stamps = stampLinesForRound(editing.approval_lines, maxRound(editing.approval_lines))
+    const returned = stamps.find((s) => s.decision === 'REJECTED')
+    if (!returned) return null
+    const name = (employees ?? []).find((e) => e.id === returned.approverId)?.name ?? '결재자'
+    return {
+      by: name,
+      comment: returned.comment,
+      // stampRounds가 만든 '→ 3번부터' 표기를 그대로 쓴다 — 결재선 표와 같은 숫자를 말해야 한다.
+      where: (returned.note ?? '→ 처음부터').replace(/^(반송 )?→ /, ''),
+    }
+  }, [isResubmit, editing, employees])
+
   const submit = async (asDraft: boolean) => {
     if (!form || !form.current_version_id) {
       toast.show('문서 양식을 고르세요.', 'warning')
@@ -196,6 +222,30 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
     }
     if (!title.trim()) {
       toast.show('제목을 입력하세요.', 'warning')
+      return
+    }
+
+    // 재상신은 값만 고쳐 같은 문서를 다시 올린다 — 결재선·참조자·양식은 그대로이고,
+    // 어느 순번부터 다시 받을지는 되돌린 사람의 지정을 서버가 읽는다. 임시저장 경로와
+    // 나눈 이유는 save_approval_draft가 결재선을 통째로 지우고 다시 넣기 때문이다.
+    if (isResubmit && editing) {
+      const missing = missingRequired(fields, values)
+      if (missing.length > 0) {
+        toast.show(`필수 항목을 입력하세요: ${missing.join(', ')}`, 'warning')
+        return
+      }
+      try {
+        await resubmit.mutateAsync({
+          documentId: editing.id,
+          title: title.trim(),
+          fieldValues: pruneValues(fields, values),
+        })
+        if (pending.count > 0) await pending.flush(editing.id, () => APPROVAL_ATTACHMENT_TYPE)
+        toast.show('문서를 재상신했습니다.', 'success')
+        onSaved(editing.id)
+      } catch {
+        toast.show('재상신에 실패했습니다. 권한을 확인하세요.', 'danger')
+      }
       return
     }
     // 임시저장은 아직 조직에 내보내는 문서가 아니라 필수값·결재선을 강제하지 않는다.
@@ -249,25 +299,44 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
 
   if ((isLoading && !forms) || (loadingDoc && !editing)) return <Spinner />
 
-  const busy = create.isPending || saveDraft.isPending
+  const busy = create.isPending || saveDraft.isPending || resubmit.isPending
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <BackButton onClick={onCancel}>문서함</BackButton>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={() => void submit(true)} disabled={busy}>
-            임시저장
-          </Button>
+          {/* 되돌아온 문서에는 임시저장이 없다 — 이미 조직에 나갔던 문서라 되돌릴 '아직
+              안 낸 상태'가 없고, 고치다 말면 그냥 되돌아온 채로 남는다. */}
+          {!isResubmit && (
+            <Button variant="secondary" onClick={() => void submit(true)} disabled={busy}>
+              임시저장
+            </Button>
+          )}
           {/* 버튼은 이 화면에서 하는 일의 이름으로 적는다 — '상신'은 문서가 결재선을 타고
               올라가는 결과 쪽 용어라, 지금 기안서를 쓰고 있는 손에게는 '기안하기'가 자기가
               누르는 일의 이름이다(임시저장과 짝이 맞는다). 결과를 알리는 토스트·상태 표기는
-              도메인 용어인 '상신'을 그대로 쓴다. */}
+              도메인 용어인 '상신'을 그대로 쓴다. 되돌아온 문서만은 '재상신'이 그대로 손이
+              하는 일의 이름이다 — 새로 쓰는 것이 아니라 같은 문서를 다시 올린다. */}
           <Button onClick={() => void submit(false)} disabled={busy}>
-            기안하기
+            {isResubmit ? '재상신' : '기안하기'}
           </Button>
         </div>
       </div>
+
+      {returnInfo && (
+        <div className="rounded-radius-md border border-warning-border bg-warning-subtle px-4 py-3">
+          <p className="text-body font-medium text-gray-900">
+            {returnInfo.by} 님이 되돌린 문서입니다. 고쳐서 다시 올리면 {returnInfo.where} 결재를
+            받습니다.
+          </p>
+          {returnInfo.comment && (
+            <p className="mt-1 whitespace-pre-wrap text-body-sm text-gray-700">
+              사유: {returnInfo.comment}
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
@@ -336,6 +405,12 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
             recipientIds={recipientIds}
             onRecipientsChange={setRecipientIds}
             drafterId={uid}
+            readOnly={isResubmit}
+            help={
+              isResubmit
+                ? '되돌린 사람이 어느 순번부터 다시 받을지 지정했기 때문에, 재상신에서는 결재선을 고칠 수 없습니다. 결재선을 바꿔야 한다면 새로 기안하십시오.'
+                : undefined
+            }
           />
 
           {form && (

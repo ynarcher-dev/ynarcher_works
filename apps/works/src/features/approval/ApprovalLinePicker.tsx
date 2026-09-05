@@ -16,6 +16,15 @@ interface ApprovalLinePickerProps {
   onRecipientsChange: (ids: string[]) => void
   /** 기안자 본인 — 결재 행의 맨 앞 칸을 항상 차지한다(결재자로도 지정할 수 있다). */
   drafterId?: string | null
+  /**
+   * 결재선을 고칠 수 없는 자리(재상신). 되돌린 사람이 지정한 재개 지점은 **그 결재선을
+   * 전제로 한 판단**이라, 기안자가 사람을 갈아끼우면 "3번부터"가 누구를 가리키는지 알 수
+   * 없게 된다. 자리는 그대로 보이고 고치는 문만 닫는다 — 감춰 버리면 재상신하는 사람이
+   * 자기 문서가 누구에게 갈지 모른 채 올린다.
+   */
+  readOnly?: boolean
+  /** 제목 줄 도움말(재상신에서 왜 못 고치는지). */
+  help?: string
 }
 
 /**
@@ -34,6 +43,8 @@ export function ApprovalLinePicker({
   recipientIds,
   onRecipientsChange,
   drafterId,
+  readOnly,
+  help,
 }: ApprovalLinePickerProps) {
   const [open, setOpen] = useState(false)
   const { data: employees } = useEmployees()
@@ -64,10 +75,13 @@ export function ApprovalLinePicker({
   return (
     <Card
       title="결재선"
+      help={help}
       actions={
-        <Button variant="outline" onClick={() => setOpen(true)}>
-          결재선설정
-        </Button>
+        readOnly ? undefined : (
+          <Button variant="outline" onClick={() => setOpen(true)}>
+            결재선설정
+          </Button>
+        )
       }
     >
       <ApprovalLineGrid
@@ -80,7 +94,9 @@ export function ApprovalLinePicker({
         agreement={lines.AGREEMENT.map((id, i) => toPerson(id, i + 1))}
         finance={lines.FINANCE_AGREEMENT.map((id, i) => toPerson(id, i + 1))}
         cc={
-          recipientIds.length === 0 ? (
+          recipientIds.length === 0 && readOnly ? (
+            <span className={approvalText.empty}>-</span>
+          ) : recipientIds.length === 0 ? (
             // 결재선처럼 클릭해서 바로 채우는 자리 — 안내문 대신 빈 입력칸 모양으로 둔다.
             <button
               type="button"

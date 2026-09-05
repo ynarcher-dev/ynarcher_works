@@ -8,6 +8,7 @@ import { ApprovalFieldsView } from '@/features/approval/ApprovalFieldsView'
 import { ApprovalInfoTable } from '@/features/approval/ApprovalInfoTable'
 import { approvalHeaderPairs } from '@/features/approval/approvalHeader'
 import { ApprovalLinkPanel } from '@/features/approval/ApprovalLinkPanel'
+import { LegacyApprovalLineTable } from '@/features/approval/LegacyApprovalLineTable'
 import { ApprovalProgramPanel } from '@/features/approval/ApprovalProgramPanel'
 import { ApprovalStampTable } from '@/features/approval/ApprovalStampTable'
 import { useApprovalDocument, useMarkApprovalRead } from '@/features/approval/approvalApi'
@@ -17,11 +18,11 @@ import {
   DOC_STATUS_LABEL,
   DOC_STATUS_TONE,
   LINE_KIND_LABEL,
-  LINE_KIND_ORDER,
 } from '@/features/approval/config'
-import { formatMoney, parseFields } from '@/features/approval/fields'
+import { formatMoney, parseFields, tableRows } from '@/features/approval/fields'
 import { ApprovalCommentModal } from '@/features/approval/ApprovalCommentModal'
 import { isLastPending, isMyTurn } from '@/features/approval/model'
+import { maxRound, returnTargetsFor, stampLinesForRound } from '@/features/approval/stampRounds'
 import { useEmployees } from '@/features/management/hooks'
 import { useJobTitleLabel } from '@/features/management/jobTitleHooks'
 import { useDepartments } from '@/features/management/orgHooks'
@@ -67,6 +68,9 @@ export function ApprovalDetail({
   const [deciding, setDeciding] = useState(false)
   // 지금 열어 읽고 있는 결재 의견의 결재선 행. 의견은 도장을 눌러야 열린다.
   const [commentLineId, setCommentLineId] = useState<string | null>(null)
+  // 지난 회차 이력의 펼침 상태. 기본은 접힘 — 대부분의 문서는 1차이고, 되돌아온 문서도
+  // 지금 할 일은 현재 회차가 답한다.
+  const [showHistory, setShowHistory] = useState(false)
 
   const nameById = useMemo(() => {
     const m = new Map<string, string>()
@@ -118,9 +122,18 @@ export function ApprovalDetail({
   }
 
   const fields = parseFields(doc.version?.fields)
+  const paymentFields = doc.legacy ? fields.filter((field) => field.key === 'payments') : []
+  const bodyFields = paymentFields.length
+    ? fields.filter((field) => field.key !== 'payments')
+    : fields
+  const hasPayments = paymentFields.some(
+    (field) => field.type === 'TABLE' && tableRows(doc.field_values ?? {}, field.key).length > 0,
+  )
   const lines = doc.approval_lines
+  // 회차 — 되돌림·재상신이 새 회차를 쌓고, 모든 진행 판정은 현재 회차 안에서만 이뤄진다.
+  const round = maxRound(lines)
   const myLine = uid
-    ? lines.find((l) => l.approver_id === uid && l.decision === 'PENDING')
+    ? lines.find((l) => l.approver_id === uid && l.decision === 'PENDING' && l.round === round)
     : undefined
   const canDecide =
     Boolean(myLine) &&
@@ -129,41 +142,46 @@ export function ApprovalDetail({
   // 내가 문서를 끝낼 마지막 한 표인가 — 구분(결재·합의)에 상관없이 나 말고 남은 미처리 결재선이
   // 없으면 최종이다. 구분이 셋으로 나뉜 뒤로는 "순번이 뒤인가"로 답할 수 없다.
   const isFinal = !!myLine && isLastPending(lines, myLine.id)
+  // 되돌릴 수 있는 앞 순번과 합의 줄의 존재 여부 — 결재 처리 창의 두 칸이 이 답을 쓴다.
+  const returnTargets = myLine
+    ? returnTargetsFor(lines, round, myLine.kind ?? 'APPROVAL', myLine.step_order, nameOf)
+    : []
+  const hasAgreementLines = lines.some(
+    (l) => l.round === round && (l.kind ?? 'APPROVAL') !== 'APPROVAL',
+  )
 
   /**
-   * 결재선 표에 세울 도장 행 — 구분마다 순번대로 세운다. 순번을 여기서 매기는 이유는
-   * 의견 창이 **표에 선 것과 같은 숫자**를 적어야 하기 때문이다(저장된 step_order를 그대로
-   * 쓰면 임시저장을 고치며 중간이 빠졌을 때 표는 1·2인데 창은 2·4를 말한다).
+   * 결재선 표에 세울 도장 행 — 현재 회차 + 되돌림이 건너뛴 지난 회차의 승인(stampRounds).
+   * 순번을 원장 값이 아니라 정렬 후의 자리로 매기는 이유는 의견 창이 **표에 선 것과 같은
+   * 숫자**를 적어야 하기 때문이다(저장된 step_order를 그대로 쓰면 임시저장을 고치며 중간이
+   * 빠졌을 때 표는 1·2인데 창은 2·4를 말한다).
    */
-  const stampLines = LINE_KIND_ORDER.flatMap((kind) =>
-    lines
-      .filter((l) => (l.kind ?? 'APPROVAL') === kind)
-      .sort((a, b) => a.step_order - b.step_order)
-      .map((l, i) => ({
-        id: l.id,
-        approverId: l.approver_id,
-        stepOrder: l.step_order,
-        seq: i + 1,
-        decision: l.decision,
-        kind,
-        decidedAt: l.decided_at,
-        comment: l.comment,
-      })),
-  )
+  const stampLines = stampLinesForRound(lines, round)
+  // 지난 회차는 접어 둔다 — 지금 무엇을 해야 하는지는 현재 회차가 답하고, 옛 회차는
+  // "그때 누가 무엇을 했나"를 되짚을 때만 필요하다.
+  const pastRounds = Array.from({ length: round - 1 }, (_, i) => round - 1 - i)
   const openedComment = stampLines.find((l) => l.id === commentLineId)
+  // 기안자는 되돌아온 문서를 고쳐 다시 올릴 수 있다. 임시저장과 달리 결재선은 고치지
+  // 못하며(재개 지점이 그 결재선을 전제로 한 지정이다) 서버 RPC가 같은 조건을 다시 본다.
+  const canEdit =
+    Boolean(onEdit) &&
+    doc.drafter_id === uid &&
+    (doc.status === 'DRAFT' || doc.status === 'REJECTED')
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <BackButton onClick={onBack}>문서함</BackButton>
         <div className="flex items-center gap-2">
-          {/* 임시저장은 아직 조직에 내보내지 않은 문서라 기안자 본인이 고칠 수 있다.
-              상신된 뒤에는 이 길을 닫는다 — 결재가 돌기 시작한 문서의 내용이 바뀌면
-              이미 찍힌 도장이 무엇에 대한 것이었는지 판정할 근거가 사라진다.
+          {/* 기안자 본인이 고칠 수 있는 문서는 둘뿐이다 — 아직 조직에 내보내지 않은
+              임시저장과, 되돌아와 다시 올려야 하는 문서다. 흐르는 중인 문서에는 이 길을
+              닫는다: 내용이 바뀌면 이미 찍힌 도장이 무엇에 대한 것이었는지 판정할 근거가
+              사라진다(되돌아온 문서는 흐름이 멈춰 있고, 앞 순번의 도장을 어디까지 인정할지는
+              되돌린 사람이 이미 지정했다).
               (같은 조건을 서버 RPC가 다시 확인한다 — 화면에서 숨기는 것은 보안이 아니다.) */}
-          {onEdit && doc.status === 'DRAFT' && doc.drafter_id === uid && (
-            <Button variant="outline" onClick={() => onEdit(doc.id)}>
-              수정
+          {canEdit && (
+            <Button variant="outline" onClick={() => onEdit?.(doc.id)}>
+              {doc.status === 'REJECTED' ? '수정 후 재상신' : '수정'}
             </Button>
           )}
           {/* 결재 처리는 창으로 연다 — 승인·반려 버튼이 문서 옆에 상시로 서 있으면 다 읽기
@@ -185,6 +203,8 @@ export function ApprovalDetail({
           lineId={myLine.id}
           kind={myLine.kind ?? 'APPROVAL'}
           isFinal={isFinal}
+          returnTargets={returnTargets}
+          hasAgreementLines={hasAgreementLines}
         />
       )}
 
@@ -200,6 +220,9 @@ export function ApprovalDetail({
                   {doc.form?.name ?? '결재 문서'}
                 </h2>
                 <Badge tone={DOC_STATUS_TONE[doc.status]}>{DOC_STATUS_LABEL[doc.status]}</Badge>
+                {/* 회차는 1차일 때 적지 않는다 — 대부분의 문서가 1차이고, 늘 붙어 있으면
+                    '2차'라는 사실이 눈에 걸리지 않는다. 예외일 때만 말하는 표식이다. */}
+                {round > 1 && <Badge tone="neutral">{round}차 상신</Badge>}
               </div>
 
               <ApprovalInfoTable
@@ -223,26 +246,97 @@ export function ApprovalDetail({
             </div>
           </Card>
 
+          {doc.legacy && (
+            <Card title="하이웍스 원본 정보">
+              <div className="mb-3 flex items-center gap-2">
+                <Badge tone="info">복원 문서</Badge>
+                <p className={cardText.meta}>
+                  현재 기안자는 조회를 위해 매핑되었으며, 원본 정보는 별도로 보존됩니다.
+                </p>
+              </div>
+              <ApprovalInfoTable
+                pairs={[
+                  { label: '원본 양식', value: doc.legacy.source_form_title ?? '-' },
+                  {
+                    label: '원본 기안자',
+                    value: [doc.legacy.original_drafter_name, doc.legacy.original_drafter_position]
+                      .filter(Boolean)
+                      .join(' / '),
+                  },
+                  { label: '원본 부서', value: doc.legacy.original_department_name ?? '-' },
+                  {
+                    label: '원본 상태',
+                    value: doc.legacy.source_was_deleted
+                      ? `하이웍스에서 삭제됨 (${dateTime(doc.legacy.source_deleted_at)})`
+                      : '보존됨',
+                  },
+                ]}
+              />
+            </Card>
+          )}
+
           <Card title="결재선">
-            <ApprovalStampTable
-              drafterId={doc.drafter_id}
-              draftedAt={doc.created_at}
-              lines={stampLines}
-              recipients={doc.approval_recipients.map((r) => ({
-                userId: r.user_id,
-                read: doc.approval_reads.some((rd) => rd.user_id === r.user_id),
-              }))}
-              nameOf={nameOf}
-              titleOf={titleOf}
-              // 내 차례의 도장 칸은 '대기'가 아니라 누를 수 있는 [처리] 자리가 된다 —
-              // 상단 버튼과 같은 창을 연다. 결재선을 보다가 자기 칸에서 바로 손이 가는 것이
-              // 자연스럽고, 어느 칸이 내 차례인지도 그 자리에서 답한다.
-              actionableLineId={canDecide && myLine ? myLine.id : null}
-              onAction={() => setDeciding(true)}
-              // 의견이 남은 도장은 눌러 읽는다 — 특히 반려는 사유가 곧 다음에 할 일이라,
-              // 본문 아래까지 내려가지 않고 그 칸에서 바로 열리는 편이 맞다.
-              onOpenComment={setCommentLineId}
-            />
+            {doc.legacy ? (
+              <LegacyApprovalLineTable
+                participants={doc.legacy.participants ?? []}
+                drafterId={doc.drafter_id}
+                draftedAt={doc.created_at}
+                nameOf={nameOf}
+                titleOf={titleOf}
+              />
+            ) : (
+              <ApprovalStampTable
+                drafterId={doc.drafter_id}
+                draftedAt={doc.created_at}
+                lines={stampLines}
+                recipients={doc.approval_recipients.map((r) => ({
+                  userId: r.user_id,
+                  read: doc.approval_reads.some((rd) => rd.user_id === r.user_id),
+                }))}
+                nameOf={nameOf}
+                titleOf={titleOf}
+                // 내 차례의 도장 칸은 '대기'가 아니라 누를 수 있는 [처리] 자리가 된다 —
+                // 상단 버튼과 같은 창을 연다. 결재선을 보다가 자기 칸에서 바로 손이 가는 것이
+                // 자연스럽고, 어느 칸이 내 차례인지도 그 자리에서 답한다.
+                actionableLineId={canDecide && myLine ? myLine.id : null}
+                onAction={() => setDeciding(true)}
+                // 의견이 남은 도장은 눌러 읽는다 — 특히 되돌림은 사유가 곧 다음에 할 일이라,
+                // 본문 아래까지 내려가지 않고 그 칸에서 바로 열리는 편이 맞다.
+                onOpenComment={setCommentLineId}
+              />
+            )}
+
+            {/* 지난 회차는 접어 둔다 — 지금 무엇을 해야 하는지는 현재 회차가 답하고, 옛 회차는
+                "그때 누가 무엇을 했나"를 되짚을 때만 필요하다. 펼친 표는 누를 수 없다(처리도
+                의견 열기도 없다) — 끝난 회차에서 할 수 있는 일은 읽는 것뿐이다. */}
+            {!doc.legacy && pastRounds.length > 0 && (
+              <div className="mt-3 border-t border-gray-200 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setShowHistory((v) => !v)}
+                  className="text-body-sm font-medium text-gray-600 hover:text-gray-900"
+                >
+                  {showHistory ? '지난 회차 접기' : `지난 회차 결재 이력 (${pastRounds.length}건)`}
+                </button>
+                {showHistory && (
+                  <div className="mt-3 space-y-4">
+                    {pastRounds.map((r) => (
+                      <div key={r} className="space-y-1.5">
+                        <p className={cardText.meta}>{r}차</p>
+                        <ApprovalStampTable
+                          drafterId={doc.drafter_id}
+                          draftedAt={doc.created_at}
+                          lines={stampLinesForRound(lines, r)}
+                          recipients={[]}
+                          nameOf={nameOf}
+                          titleOf={titleOf}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </Card>
 
           {openedComment && (
@@ -262,12 +356,27 @@ export function ApprovalDetail({
           )}
 
           <Card title={doc.title}>
-            <ApprovalFieldsView fields={fields} values={doc.field_values ?? {}} />
+            <ApprovalFieldsView
+              fields={bodyFields}
+              values={doc.field_values ?? {}}
+              hideEmpty={Boolean(doc.legacy)}
+            />
             {/* 양식 도입 전 문서(구 body 단일 텍스트)도 그대로 읽힌다. */}
             {fields.length === 0 && doc.body && (
               <p className={`whitespace-pre-wrap ${cardText.value}`}>{doc.body}</p>
             )}
           </Card>
+
+          {hasPayments && (
+            <Card title="지급표">
+              <ApprovalFieldsView
+                fields={paymentFields}
+                values={doc.field_values ?? {}}
+                hideEmpty
+                hideSectionLabels
+              />
+            </Card>
+          )}
 
         </div>
 

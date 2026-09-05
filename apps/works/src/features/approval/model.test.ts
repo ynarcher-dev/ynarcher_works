@@ -150,6 +150,57 @@ describe('isMyTurn', () => {
   })
 })
 
+// 되돌림·재상신(2026-09-05) — 도장은 지우지 않고 회차로 쌓으므로, 회차를 걸지 않으면
+// 1차의 되돌림 한 건이 2차의 모든 차례를 끊고 1차의 잔여 PENDING이 최종 판정을 막는다.
+describe('회차(round)', () => {
+  it('지난 회차의 반려는 현재 회차의 차례를 끊지 않는다', () => {
+    const lines = [
+      { approver_id: OTHER, step_order: 1, decision: 'APPROVED' as const, round: 1 },
+      { approver_id: ME, step_order: 2, decision: 'REJECTED' as const, round: 1 },
+      { approver_id: OTHER, step_order: 1, decision: 'PENDING' as const, round: 2 },
+    ]
+    expect(isMyTurn(lines, OTHER)).toBe(true)
+  })
+
+  it('현재 회차에 서지 않는(건너뛴) 사람은 차례를 갖지 않는다', () => {
+    const lines = [
+      // 1차에서 승인했고 2차에는 복제되지 않은 자리 — 되돌린 사람이 건너뛰기로 지정했다.
+      { approver_id: ME, step_order: 1, decision: 'APPROVED' as const, round: 1 },
+      { approver_id: OTHER, step_order: 2, decision: 'PENDING' as const, round: 2 },
+    ]
+    expect(isMyTurn(lines, ME)).toBe(false)
+    expect(isMyTurn(lines, OTHER)).toBe(true)
+  })
+
+  it('회차가 없는 옛 데이터는 1회차로 읽어 종전과 같이 판정한다', () => {
+    const lines = [
+      { approver_id: OTHER, step_order: 1, decision: 'APPROVED' as const },
+      { approver_id: ME, step_order: 2, decision: 'PENDING' as const },
+    ]
+    expect(isMyTurn(lines, ME)).toBe(true)
+  })
+
+  it('지난 회차에 남은 미처리는 마지막 한 표 판정에 끼지 않는다', () => {
+    const lines = [
+      // 합의 재요청을 고르지 않아 2차로 넘어오지 않은 1차 합의 행.
+      { id: 'l0', approver_id: OTHER, step_order: 1, decision: 'PENDING' as const, kind: 'AGREEMENT' as const, round: 1 },
+      { id: 'l1', approver_id: ME, step_order: 1, decision: 'PENDING' as const, kind: 'APPROVAL' as const, round: 2 },
+    ]
+    expect(isLastPending(lines, 'l1')).toBe(true)
+  })
+
+  it('지난 회차의 내 미처리 행은 예정(upcoming)으로 서지 않는다', () => {
+    const r = row({
+      status: 'IN_REVIEW',
+      approval_lines: [
+        { approver_id: ME, step_order: 2, decision: 'PENDING', round: 1 },
+        { approver_id: OTHER, step_order: 1, decision: 'PENDING', round: 2 },
+      ],
+    })
+    expect(progressBucket(r, ME)).toBe(null)
+  })
+})
+
 describe('isLastPending', () => {
   it('구분에 상관없이 나 말고 미처리가 없으면 마지막 한 표다', () => {
     const lines = [

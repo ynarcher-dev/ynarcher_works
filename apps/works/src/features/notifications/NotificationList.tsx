@@ -27,6 +27,17 @@ function headline(type: string): string {
       return '님이 반출 요청을 승인했습니다.'
     case 'checkout_rejected':
       return '님이 반출 요청을 반려했습니다.'
+    // 결재 되돌림 — 셋을 유형부터 갈라 두는 이유는 받는 사람이 할 일이 저마다 다르기
+    // 때문이다. 기안자는 고쳐 다시 올리고, 반송받은 결재자는 다시 판단하며, 건너뛴
+    // 결재자는 할 일이 없고 알아 두기만 한다.
+    case 'approval_returned':
+      return '님이 문서를 되돌렸습니다. 고쳐서 다시 올려 주세요.'
+    case 'approval_sent_back':
+      return '님이 재검토를 요청했습니다.'
+    case 'approval_skipped':
+      return '님이 문서를 되돌렸습니다. 회원님의 승인은 유지된 채 다음 순번부터 다시 진행됩니다.'
+    case 'approval_pending':
+      return '님이 올린 문서가 회원님의 결재를 기다립니다.'
     default:
       return '님이 코멘트에서 회원님을 언급했습니다.'
   }

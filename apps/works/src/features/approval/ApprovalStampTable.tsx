@@ -12,6 +12,20 @@ export interface StampLine {
   decidedAt: string | null
   /** 처리하며 남긴 의견(없으면 null). 있으면 도장이 눌러서 읽는 자리가 된다. */
   comment: string | null
+  /** 계정이 없는 복원 결재선에서 사용하는 이름·직책 스냅샷. */
+  snapshotName?: string
+  snapshotTitle?: string
+  /** 복원된 후열 처리처럼 승인/반려 외의 원본 도장 문구. */
+  stampLabel?: string
+  /**
+   * 지난 회차에서 넘어온 도장인가 — 되돌림이 이 자리를 건너뛰었다는 뜻이다.
+   *
+   * 자리를 비우지 않는 이유: 결재선에 구멍이 생기면 누가 봤는지를 표가 답하지 못한다.
+   * 건너뛴 사람이 나중에 "나는 이 내용을 본 적 없다"고 말할 때 화면이 사실을 말해야 한다.
+   */
+  carriedFromRound?: number | null
+  /** 도장 아래 한 줄(되돌림 목적지·회차 표시). 일시 다음에 옅게 선다. */
+  note?: string | null
 }
 
 export interface StampRecipient {
@@ -65,6 +79,9 @@ const STAMP_TONE = {
   // 칸 전체가 확실히 가라앉는데, 글자까지 같이 내리면 흰 배경에서 1.35:1이라 '대기'가
   // 읽히지 않는다 — 누구 차례인지를 알려주는 글자라 읽히지 않으면 안 된다.
   PENDING: 'text-gray-400 border-gray-300',
+  // 지난 회차에서 넘어온 승인 — 형태는 승인 도장 그대로이고 색만 물러난다. 되돌림이
+  // 건너뛴 자리라 '지금 이 회차의 판단'이 아니지만, 찍힌 사실 자체는 지워지지 않는다.
+  CARRIED: 'text-gray-400 border-gray-300',
 } as const
 
 /** 도장 한 칸 — 원형 표식과 그 아래 일시. 일시가 없으면 표식만 선다. */
@@ -73,12 +90,15 @@ function StampMark({
   tone,
   date,
   hasComment,
+  note,
 }: {
   label: string
   tone: keyof typeof STAMP_TONE
   date: string | null
   /** 의견이 남았음을 알리는 말풍선 표식을 일시 옆에 세운다. */
   hasComment?: boolean
+  /** 일시 아래 한 줄(회차·되돌림 목적지). 이 줄이 붙는 칸만 한 줄 높아진다. */
+  note?: string | null
 }) {
   return (
     <span className="inline-flex flex-col items-center gap-2">
@@ -110,6 +130,11 @@ function StampMark({
       {date && (
         <span className={cn('whitespace-nowrap', approvalText.meta)}>{date.slice(0, 10)}</span>
       )}
+      {/* 회차·목적지 한 줄. 격자의 행 높이는 가장 큰 칸이 정하므로 이 줄이 붙어도 칸끼리
+          어긋나지 않는다(행 전체가 한 줄만큼 함께 높아진다). */}
+      {note && (
+        <span className={cn('whitespace-nowrap text-gray-400', approvalText.meta)}>{note}</span>
+      )}
     </span>
   )
 }
@@ -130,10 +155,12 @@ const DECISION_LABEL: Record<StampLine['decision'], string> = {
 function Stamp({ line, onOpenComment }: { line: StampLine; onOpenComment?: () => void }) {
   const mark = (
     <StampMark
-      label={DECISION_LABEL[line.decision]}
-      tone={line.decision}
+      label={line.stampLabel ?? DECISION_LABEL[line.decision]}
+      // 넘어온 도장은 색만 물러난다 — 찍힌 글자를 바꾸면 그 사람이 승인하지 않은 것으로 읽힌다.
+      tone={line.carriedFromRound ? 'CARRIED' : line.decision}
       date={line.decision === 'PENDING' ? null : line.decidedAt}
       hasComment={Boolean(line.comment)}
+      note={line.note}
     />
   )
   if (!line.comment || !onOpenComment) return mark
@@ -221,8 +248,8 @@ export function ApprovalStampTable({
     const actionable = onAction && line.id === actionableLineId && line.decision === 'PENDING'
     return {
       key: line.id,
-      title: titleOf?.(line.approverId) ?? '',
-      name: nameOf(line.approverId),
+      title: line.snapshotTitle ?? titleOf?.(line.approverId) ?? '',
+      name: line.snapshotName ?? nameOf(line.approverId),
       seq,
       stamp: actionable ? (
         <ActionStamp kindLabel={LINE_KIND_LABEL[line.kind ?? 'APPROVAL']} onClick={onAction} />

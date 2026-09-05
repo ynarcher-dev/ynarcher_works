@@ -44,6 +44,10 @@ export function notificationRoute(targetType: string, targetId: string): string 
       return `/office?tab=outbound&asset=${targetId}`
     case 'network':
       return `/networks/record/${targetId}`
+    case 'approval':
+      // 결재 알림이 가리키는 것은 결재선 행이 아니라 문서다 — 처리 버튼·결재선 표·되돌림
+      // 사유가 모두 문서 상세 안에 있어서, 문서를 여는 것이 곧 그 처리 앞에 서는 것이다.
+      return `/office?tab=approval&doc=${targetId}`
     default:
       return LEGACY_NETWORK_TYPES.has(targetType) ? `/networks/record/${targetId}` : null
   }

@@ -8,7 +8,7 @@
 --       해당 테이블 도입 시 케이스를 실제 테이블 접근으로 승격한다.
 -- =====================================================================
 begin;
-select plan(27);
+select plan(34);
 
 -- 픽스처: 테스트 계정 10종 + 데이터 (슈퍼유저로 삽입, 트랜잭션 종료 시 롤백) ----
 insert into public.startups(id, name) values
@@ -171,6 +171,65 @@ select is(
   '케이스8: RLS 미적용 테이블 없음'
 );
 
+-- 케이스 14: 하이웍스 복원 원장은 읽기 경계만 열고 클라이언트 쓰기는 닫는다 -----
+select is(
+  (select count(*)::int
+     from pg_tables
+    where schemaname = 'public'
+      and tablename in (
+        'approval_legacy_import_batches', 'approval_legacy_actors',
+        'approval_legacy_actor_mappings', 'approval_legacy_documents',
+        'approval_legacy_participants', 'approval_document_events',
+        'approval_legacy_document_links', 'approval_legacy_attachment_refs'
+      )
+      and rowsecurity = false),
+  0,
+  '케이스14a: 하이웍스 복원 원장 8종 RLS 활성화'
+);
+select is(
+  (select count(*)::int
+     from pg_policies
+    where schemaname = 'public'
+      and tablename in (
+        'approval_legacy_import_batches', 'approval_legacy_actors',
+        'approval_legacy_actor_mappings', 'approval_legacy_documents',
+        'approval_legacy_participants', 'approval_document_events',
+        'approval_legacy_document_links', 'approval_legacy_attachment_refs'
+      )
+      and cmd = 'DELETE'),
+  0,
+  '케이스14b: 하이웍스 복원 원장 DELETE 정책 없음'
+);
+select is(
+  (select count(*)::int
+     from information_schema.role_table_grants
+    where table_schema = 'public'
+      and table_name in (
+        'approval_legacy_import_batches', 'approval_legacy_actors',
+        'approval_legacy_actor_mappings', 'approval_legacy_documents',
+        'approval_legacy_participants', 'approval_document_events',
+        'approval_legacy_document_links', 'approval_legacy_attachment_refs'
+      )
+      and grantee = 'authenticated'
+      and privilege_type in ('INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER')),
+  0,
+  '케이스14c: authenticated는 하이웍스 복원 원장 쓰기 불가'
+);
+select is(
+  (select count(*)::int
+     from information_schema.role_table_grants
+    where table_schema = 'public'
+      and table_name in (
+        'approval_legacy_import_batches', 'approval_legacy_actors',
+        'approval_legacy_actor_mappings', 'approval_legacy_documents',
+        'approval_legacy_participants', 'approval_document_events',
+        'approval_legacy_document_links', 'approval_legacy_attachment_refs'
+      )
+      and grantee = 'anon'),
+  0,
+  '케이스14d: anon은 하이웍스 복원 원장 접근 불가'
+);
+
 -- 케이스 12: 레코드 코드 전역 레지스트리는 클라이언트가 닿을 수 없다 -------------
 -- 근거: 20260731150000_entity_code_registry.sql
 --   코드 유니크 보장을 entity_codes의 PK가 진다. 이 표를 클라이언트가 직접 쓸 수 있으면
@@ -233,6 +292,39 @@ select lives_ok(
   '케이스13c: 관리자는 오등록 수습을 위한 브레이크글라스로 남는다'
 );
 reset role;
+
+-- 케이스 14: 결재 되돌림의 두 헬퍼는 사용자에게 열리지 않는다 -------------------
+-- 근거: 20260905200000_approval_return_flow.sql
+--   회차 복제(clone_approval_round)와 알림 팬아웃(notify_approval)은 호출자 검증을 하지
+--   않는다 — 부르는 두 RPC가 "내 행인가·내 차례인가·기안자인가"를 먼저 확인한 뒤 부른다.
+--   그래서 이 둘이 authenticated에 열리면 아무나 남의 문서에 회차를 만들고 남에게 알림을
+--   보낼 수 있다. 처리 경로는 검증을 마친 RPC 둘뿐이어야 한다.
+select is(
+  (select count(*)::int
+     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'app' and p.proname in ('clone_approval_round', 'notify_approval')
+      and has_function_privilege('authenticated', p.oid, 'EXECUTE')),
+  0,
+  '케이스14a: authenticated가 회차 복제·알림 팬아웃 헬퍼를 직접 호출할 수 없다'
+);
+-- 반대로 처리·재상신 RPC는 열려 있어야 한다(닫히면 결재 자체가 멈춘다).
+select is(
+  (select count(*)::int
+     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname in ('decide_approval_document', 'resubmit_approval_document')
+      and has_function_privilege('authenticated', p.oid, 'EXECUTE')),
+  2,
+  '케이스14b: 결재 처리·재상신 RPC는 authenticated에 열려 있다'
+);
+-- 결재선에 DELETE 정책이 없어야 회차 이력이 지워지지 않는다. 되돌림은 지난 회차의 도장을
+-- 남겨 두는 것이 전제이고, 그 전제가 정책 한 줄로 무너지면 '1차 승인' 표시가 거짓이 된다.
+select is(
+  (select count(*)::int from pg_policies
+    where schemaname = 'public' and tablename = 'approval_lines' and cmd = 'DELETE'),
+  0,
+  '케이스14c: approval_lines에 DELETE 정책이 없다(회차 이력은 지워지지 않는다)'
+);
 
 select * from finish();
 rollback;

@@ -9,7 +9,7 @@ import type { ApprovalListRow } from '@/features/approval/model'
 const LIST_SELECT =
   'id, title, doc_no, form_type, status, drafter_id, department_id, amount, created_at, completed_at, ' +
   'form:form_id(name), ' +
-  'approval_lines(approver_id, step_order, decision, kind), ' +
+  'approval_lines(approver_id, step_order, decision, kind, round), ' +
   'approval_recipients(user_id), ' +
   'approval_reads(user_id)'
 
@@ -110,6 +110,16 @@ export interface ApprovalDetail {
   department_id: string | null
   created_at: string
   completed_at: string | null
+  legacy: {
+    source_system: string
+    source_form_title: string | null
+    original_drafter_name: string
+    original_drafter_position: string | null
+    original_department_name: string | null
+    source_was_deleted: boolean
+    source_deleted_at: string | null
+    participants: LegacyApprovalParticipant[]
+  } | null
   form: {
     name: string
     category: string
@@ -123,8 +133,14 @@ export interface ApprovalDetail {
     step_order: number
     decision: 'PENDING' | 'APPROVED' | 'REJECTED'
     kind: ApprovalLineKind
+    /** 결재 회차. 되돌림·재상신이 다시 도는 구간만 다음 회차로 복제한다. */
+    round: number
     comment: string | null
     decided_at: string | null
+    /** 되돌림 지정 — 되돌린 행에만 실린다(§3_1_3). */
+    return_to_step: number | null
+    return_via_drafter: boolean | null
+    return_reset_agreement: boolean | null
   }[]
   approval_recipients: { user_id: string; sort_order: number }[]
   approval_reads: { user_id: string; read_at: string }[]
@@ -133,11 +149,34 @@ export interface ApprovalDetail {
 const DETAIL_SELECT =
   'id, title, doc_no, form_id, form_version_id, form_type, field_values, body, status, amount, ' +
   'drafter_id, department_id, created_at, completed_at, ' +
+  'legacy:approval_legacy_documents(source_system, source_form_title, original_drafter_name, original_drafter_position, original_department_name, source_was_deleted, source_deleted_at, participants:approval_legacy_participants(id, source_line_section, step_order, source_role, normalized_role, source_decision, normalized_decision, decided_at, original_name, original_position, actor:approval_legacy_actors(original_position))), ' +
   'form:form_id(name, category, retention, security_grade), ' +
   'version:form_version_id(fields), ' +
-  'approval_lines(id, approver_id, step_order, decision, kind, comment, decided_at), ' +
+  'approval_lines(id, approver_id, step_order, decision, kind, round, comment, decided_at, return_to_step, return_via_drafter, return_reset_agreement), ' +
   'approval_recipients(user_id, sort_order), ' +
   'approval_reads(user_id, read_at)'
+
+export interface LegacyApprovalParticipant {
+  id: string
+  source_line_section: string | null
+  step_order: number | null
+  source_role: string | null
+  normalized_role:
+    | 'DRAFTER'
+    | 'APPROVER'
+    | 'AGREEMENT'
+    | 'FINANCE_AGREEMENT'
+    | 'CC'
+    | 'CONFIRMER'
+    | 'OTHER'
+    | null
+  source_decision: string | null
+  normalized_decision: 'APPROVED' | 'REJECTED' | 'CONFIRMED' | 'PENDING' | null
+  decided_at: string | null
+  original_name: string
+  original_position: string | null
+  actor: { original_position: string | null } | null
+}
 
 /** 문서 단건. 열람 가능 여부는 RLS가 가르며, 못 보는 문서는 null로 돌아온다. */
 export function useApprovalDocument(id: string | undefined) {
@@ -320,10 +359,28 @@ export function useSaveApprovalDraft() {
   })
 }
 
+/** 되돌림 지정 — 반려를 고를 때만 실린다(승인에는 뜻이 없다). */
+export interface ApprovalReturnInput {
+  /** 돌아갈 지점(같은 구분의 step_order). null이면 처음부터. */
+  returnToStep: number | null
+  /** 기안자가 고쳐 다시 올려야 하는가. 거짓이면 내용 그대로 그 자리에서 반송된다. */
+  viaDrafter: boolean
+  /** 합의·재무합의 줄도 다시 받는가. */
+  resetAgreement: boolean
+}
+
 /**
- * 결재 처리(승인/반려). 내 결재선 행을 찍고 문서 상태를 옮긴다.
- * 반려는 즉시 종결, 승인은 남은 단계가 있으면 진행(IN_REVIEW), 없으면 최종 승인이다.
- * 본인 결재선 행만 갱신 가능함은 RLS가 강제한다.
+ * 결재 처리(승인·되돌림) — `decide_approval_document` RPC 한 경로.
+ *
+ * **종전에는 화면이 결재선과 문서를 각각 UPDATE했다.** 그런데 문서 UPDATE 정책은
+ * `management 쓰기 또는 기안자 본인`이라, management 권한이 없는 결재자가 남의 문서를
+ * 승인하면 상태 UPDATE가 0행에 걸려 조용히 무시됐다(PostgREST는 0행 UPDATE를 오류로
+ * 내지 않는다) — 도장은 찍혔는데 문서는 PENDING에 머무는 어긋남이다. 되돌림은 여기에
+ * 회차 복제까지 더해 **한 트랜잭션 안에서** 끝나야 하므로(중간에 끊기면 문서가 아무의
+ * 차례도 아닌 상태로 굳는다) 처리 경로를 서버 함수 하나로 모았다.
+ *
+ * 차례·회차·되돌림 대상의 유효성은 전부 서버가 다시 판정한다 — 화면이 컨트롤을 숨기는
+ * 것은 보안이 아니다.
  */
 export function useDecideApproval() {
   const qc = useQueryClient()
@@ -332,26 +389,51 @@ export function useDecideApproval() {
       lineId: string
       documentId: string
       decision: 'APPROVED' | 'REJECTED'
-      isFinal: boolean
       comment?: string
+      /** 반려일 때의 되돌림 지정. 없으면 처음부터·기안자 경유(종전 반려와 같다). */
+      returnTo?: ApprovalReturnInput
     }) => {
-      const { error } = await supabase
-        .from('approval_lines')
-        .update({
-          decision: v.decision,
-          decided_at: new Date().toISOString(),
-          comment: v.comment?.trim() || null,
-        })
-        .eq('id', v.lineId)
+      const { error } = await supabase.rpc('decide_approval_document', {
+        p_line_id: v.lineId,
+        p_decision: v.decision,
+        p_comment: v.comment?.trim() || null,
+        p_return_to_step: v.returnTo?.returnToStep ?? null,
+        p_via_drafter: v.returnTo?.viaDrafter ?? true,
+        p_reset_agreement: v.returnTo?.resetAgreement ?? null,
+      })
       if (error) throw error
+    },
+    onSuccess: (_data, v) => {
+      void qc.invalidateQueries({ queryKey: ['approval', 'documents'] })
+      void qc.invalidateQueries({
+        queryKey: ['approval', 'document', v.documentId],
+      })
+    },
+  })
+}
 
-      const nextStatus: ApprovalStatus =
-        v.decision === 'REJECTED' ? 'REJECTED' : v.isFinal ? 'APPROVED' : 'IN_REVIEW'
-      const { error: de } = await supabase
-        .from('approval_documents')
-        .update({ status: nextStatus })
-        .eq('id', v.documentId)
-      if (de) throw de
+/**
+ * 재상신 — 되돌아온(REJECTED) 문서를 고쳐 다시 올린다.
+ *
+ * 임시저장 수정(`save_approval_draft`)과 경로를 나눈 이유는 그 함수가 결재선을 통째로
+ * `delete` 후 재삽입하기 때문이다. 도장이 찍힌 행을 지우게 되고, 되돌린 사람이 지정한
+ * 재개 지점도 함께 사라진다. 그래서 재상신은 **값만 고치고 결재선은 건드리지 않는다.**
+ */
+export function useResubmitApproval() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (v: {
+      documentId: string
+      title: string
+      fieldValues: FieldValues
+    }): Promise<string> => {
+      const { error } = await supabase.rpc('resubmit_approval_document', {
+        p_document_id: v.documentId,
+        p_title: v.title,
+        p_field_values: v.fieldValues,
+      })
+      if (error) throw error
+      return v.documentId
     },
     onSuccess: (_data, v) => {
       void qc.invalidateQueries({ queryKey: ['approval', 'documents'] })

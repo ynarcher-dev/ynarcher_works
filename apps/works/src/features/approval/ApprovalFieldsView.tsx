@@ -14,6 +14,10 @@ import {
 interface ApprovalFieldsViewProps {
   fields: FormField[]
   values: FieldValues
+  /** 복원 문서처럼 일부 양식 필드가 문서마다 달라질 때 값이 없는 선택 필드는 감춘다. */
+  hideEmpty?: boolean
+  /** 카드 제목이 필드 이름을 대신할 때 내부 섹션 제목을 반복하지 않는다. */
+  hideSectionLabels?: boolean
 }
 
 /** 표 필드 하나를 읽기 전용으로 편다. 금액·숫자 열에는 합계 행이 붙는다. */
@@ -109,19 +113,35 @@ function TableView({ field, values }: { field: FormField; values: FieldValues })
  * 양식 스키마다. 표는 자기 격자를 갖고, 서식 있는 본문(RICHTEXT)만 라벨 없이 통으로 흐른다 —
  * 서술형 본문에 좁은 값 칸을 씌우면 문장이 반 폭으로 잘린다.
  */
-export function ApprovalFieldsView({ fields, values }: ApprovalFieldsViewProps) {
+export function ApprovalFieldsView({
+  fields,
+  values,
+  hideEmpty = false,
+  hideSectionLabels = false,
+}: ApprovalFieldsViewProps) {
   if (fields.length === 0) {
     return <p className={cn('py-4', tableText.empty)}>표시할 내용이 없습니다.</p>
   }
 
   return (
     <div className="space-y-4">
-      {fields.map((field) => {
+      {fields.filter((field) => {
+        if (!hideEmpty || field.required) return true
+        if (field.type === 'TABLE') {
+          return tableRows(values, field.key).some((row) =>
+            Object.values(row).some((value) => value.trim() !== ''),
+          )
+        }
+        const value = scalarValue(values, field.key)
+        return field.type === 'RICHTEXT'
+          ? value.replace(/<[^>]*>/g, '').trim() !== ''
+          : value.trim() !== ''
+      }).map((field) => {
         if (field.type === 'RICHTEXT') {
           const html = scalarValue(values, field.key)
           return (
             <section key={field.key} className="space-y-1">
-              <h4 className={tableText.head}>{field.label}</h4>
+              {!hideSectionLabels && <h4 className={tableText.head}>{field.label}</h4>}
               {html.replace(/<[^>]*>/g, '').trim() ? (
                 <RichTextViewer html={html} />
               ) : (
@@ -134,7 +154,7 @@ export function ApprovalFieldsView({ fields, values }: ApprovalFieldsViewProps) 
         if (field.type === 'TABLE') {
           return (
             <section key={field.key} className="space-y-1">
-              <h4 className={tableText.head}>{field.label}</h4>
+              {!hideSectionLabels && <h4 className={tableText.head}>{field.label}</h4>}
               <TableView field={field} values={values} />
             </section>
           )

@@ -14,6 +14,8 @@ export interface ApprovalLine {
   decision: 'PENDING' | 'APPROVED' | 'REJECTED'
   /** 구분. 미지정 행(구 데이터)은 결재로 본다. */
   kind?: ApprovalLineKind
+  /** 결재 회차. 미지정 행(구 데이터)은 1회차로 본다. */
+  round?: number
 }
 
 /** 문서함 목록 한 행 — approvalApi의 LIST_SELECT와 형태가 일치해야 한다. */
@@ -35,6 +37,14 @@ export interface ApprovalListRow {
 }
 
 const inProgress = (s: ApprovalStatus) => s === 'PENDING' || s === 'IN_REVIEW'
+/**
+ * 흐름이 멈춘 문서 — 최종 승인됐거나 되돌아온 문서다.
+ *
+ * 되돌림 도입(2026-09-05)으로 `REJECTED`의 뜻이 '종결'에서 '기안자에게 돌아옴'으로 바뀌었지만
+ * **여기서는 그대로 둔다.** 이 판정이 쓰이는 곳은 `내 문서함 > 확인`(끝났는데 아직 내가 열어
+ * 보지 않은 문서) 하나이고, 되돌아온 문서야말로 당사자가 한 번은 읽어야 하는 문서다. 읽는
+ * 순간 그 칸에서 빠지므로 '끝난 문서만 서는 자리'라는 이름과도 어긋나지 않는다.
+ */
 const isCompleted = (s: ApprovalStatus) => s === 'APPROVED' || s === 'REJECTED'
 
 /**
@@ -66,6 +76,27 @@ export function hasRead(row: ApprovalListRow, uid: string): boolean {
 
 const kindOf = (l: ApprovalLine): ApprovalLineKind => l.kind ?? 'APPROVAL'
 
+/** 회차. 되돌림 도입 전에 저장된 행은 값이 없으므로 1회차로 읽는다. */
+const roundOf = (l: ApprovalLine): number => l.round ?? 1
+
+/**
+ * 문서의 현재 회차 — 되돌림·재상신이 새 회차를 쌓으므로 결재선 중 가장 큰 값이 지금이다.
+ *
+ * 문서 원장에 따로 적지 않는 이유는 같은 사실이 두 곳에 살면 어긋나기 때문이다(되돌림
+ * 트랜잭션이 중간에 끊겼을 때 어느 쪽이 진짜 회차인지 답할 근거가 없다). 서버도 같은
+ * 기준(`app.approval_current_round`)을 스스로 다시 계산한다 — 화면이 회차를 고르는 것은
+ * 보안이 아니다.
+ */
+export function currentRound(lines: ApprovalLine[]): number {
+  return lines.reduce((max, l) => Math.max(max, roundOf(l)), 1)
+}
+
+/** 현재 회차의 결재선만 — 모든 진행 판정이 여기서 출발한다. */
+export function livingLines<T extends ApprovalLine>(lines: T[]): T[] {
+  const round = currentRound(lines)
+  return lines.filter((l) => roundOf(l) === round)
+}
+
 /**
  * 지금이 내 차례인가 — **세 구분 모두 자기 줄 안에서 순차**다(2026-08-26). 구분마다 결재선을
  * 순번대로 훑어 아직 처리되지 않은 첫 행이 나이면 내 차례이고, 앞 순번이 남아 있으면 아니다.
@@ -74,14 +105,18 @@ const kindOf = (l: ApprovalLine): ApprovalLineKind => l.kind ?? 'APPROVAL'
  * 합의를 결재의 앞뒤에 못 박으면 두 줄이 사실은 한 줄이 되어, 결재선 표가 구분을 나눠
  * 보여 주는 뜻이 사라진다.
  *
- * 문서 전체가 이미 반려됐으면(어느 행이든 REJECTED) 남은 차례는 없다 — 구분이 무엇이든
- * 반려 한 건이 문서를 종결시키므로 다른 줄의 다음 순번도 함께 끊긴다.
+ * **판정은 현재 회차 안에서만 한다**(2026-09-05). 되돌림은 지난 회차의 도장을 지우지 않고
+ * 남기므로, 회차를 걸지 않으면 1차의 반려 한 건이 2차의 모든 차례를 영영 끊는다.
+ *
+ * 현재 회차가 이미 되돌려졌으면(어느 행이든 REJECTED) 남은 차례는 없다 — 구분이 무엇이든
+ * 되돌림 한 건이 문서를 멈추므로 다른 줄의 다음 순번도 함께 끊긴다.
  */
 export function isMyTurn(lines: ApprovalLine[], uid: string): boolean {
-  if (lines.some((l) => l.decision === 'REJECTED')) return false
+  const living = livingLines(lines)
+  if (living.some((l) => l.decision === 'REJECTED')) return false
 
   return LINE_KIND_ORDER.some((kind) => {
-    const next = lines
+    const next = living
       .filter((l) => kindOf(l) === kind)
       .sort((a, b) => a.step_order - b.step_order)
       .find((l) => l.decision === 'PENDING')
@@ -93,12 +128,15 @@ export function isMyTurn(lines: ApprovalLine[], uid: string): boolean {
  * 문서를 끝낼 마지막 한 표인가 — 구분에 상관없이 나 말고 남은 미처리 결재선이 없으면 참.
  * 구분이 셋으로 나뉜 뒤로는 "순번이 뒤인가"로 답할 수 없다 — 내 결재 줄이 끝나도 합의 줄에
  * 남은 사람이 있으면 문서는 아직 끝나지 않는다.
+ *
+ * 여기서도 현재 회차만 센다 — 지난 회차에 남은 PENDING(합의 재요청을 고르지 않아 다음
+ * 회차로 옮겨 가지 않은 행)이 끼면 마지막 한 표가 영영 오지 않는다.
  */
 export function isLastPending<T extends ApprovalLine & { id: string }>(
   lines: T[],
   lineId: string,
 ): boolean {
-  return !lines.some((l) => l.id !== lineId && l.decision === 'PENDING')
+  return !livingLines(lines).some((l) => l.id !== lineId && l.decision === 'PENDING')
 }
 
 /**
@@ -121,7 +159,9 @@ export function progressBucket(row: ApprovalListRow, uid: string): ApprovalProgr
 
   if (inProgress(row.status)) {
     if (isMyTurn(row.approval_lines, uid)) return 'waiting'
-    if (row.approval_lines.some((l) => l.approver_id === uid && l.decision === 'PENDING'))
+    // '예정'도 현재 회차만 본다 — 지난 회차에 남은 내 PENDING 행(합의 재요청을 고르지
+    // 않아 다음 회차로 오지 않은 자리)이 끼면, 이미 끝난 내 차례가 계속 예정으로 선다.
+    if (livingLines(row.approval_lines).some((l) => l.approver_id === uid && l.decision === 'PENDING'))
       return 'upcoming'
     if (row.drafter_id === uid) return 'ongoing'
     return null
