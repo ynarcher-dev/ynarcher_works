@@ -1,5 +1,6 @@
 import { Button, DataTable, Spinner, type Column, type DataTableProps } from '@ynarcher/ui'
 import { useMemo } from 'react'
+import { LinkedInLink } from '@/components/LinkedInLink'
 import { maskBy } from '@/lib/mask'
 import { useMaskPolicy } from '@/features/admin/sensitiveStore'
 import type { MasterColumn, MasterRow } from '@/features/master/types'
@@ -128,36 +129,9 @@ export function MasterListView({
           )
         }
         if (c.kind === 'link') {
-          // 링크드인 등 URL: 값이 있으면 브랜드 색 아이콘 링크, 없으면 회색 아이콘(비활성).
-          const url = typeof raw === 'string' ? raw.trim() : ''
-          const icon = (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-              <path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.55V9h3.57v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.72v20.56C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.72V1.72C24 .77 23.2 0 22.22 0z" />
-            </svg>
-          )
-          if (!url) {
-            return (
-              <span className="inline-flex text-gray-300" title="링크드인 없음" aria-label="링크드인 없음">
-                {icon}
-              </span>
-            )
-          }
-          return (
-            <a
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              // 링크드인 공식 브랜드색. 외부 서비스 식별색은 팔레트 밖 예외다 — 회색으로 누르면
-              // "링크드인으로 나간다"는 정보 자체가 사라진다. 이 아이콘 외의 자리에 쓰지 않는다.
-              // eslint-disable-next-line no-restricted-syntax
-              className="inline-flex text-[#0A66C2] hover:opacity-80"
-              title="링크드인 프로필 열기"
-              aria-label="링크드인 프로필 열기"
-            >
-              {icon}
-            </a>
-          )
+          // 링크드인 등 URL: 값 유무에 따라 아이콘이 갈린다. 규격은 공용 `LinkedInLink`가 갖는다
+          // — 상세 화면도 같은 아이콘을 쓰므로 SVG와 브랜드색이 두 곳에 복제되지 않게 한다.
+          return <LinkedInLink url={typeof raw === 'string' ? raw : null} stopRowClick />
         }
         const v = raw as string | null | undefined
         // 분류 값(권역 등)도 배지가 아니라 텍스트다 — 색은 상태에만 쓴다(5_component_spec_rules §3.4).

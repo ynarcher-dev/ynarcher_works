@@ -1,8 +1,21 @@
-import { BackButton, Badge, Banner, Button, CardShell, cardText, DensityProvider, InfoField, PanelCard, Spinner } from '@ynarcher/ui'
+import {
+  BackButton,
+  Badge,
+  Banner,
+  Button,
+  CardShell,
+  cardText,
+  DensityProvider,
+  InfoField,
+  InfoGrid,
+  PanelCard,
+  Spinner,
+} from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { DetailDeleteButton } from '@/components/DetailDeleteButton'
+import { LinkedInLink } from '@/components/LinkedInLink'
 import { NetworkForm } from '@/features/networks/NetworkForm'
 import { PhotoBox } from '@/features/networks/PhotoBox'
 import { ChangeHistoryPanel, uniqueContributors } from '@/features/networks/ChangeHistoryPanel'
@@ -117,70 +130,69 @@ function NetworkView({ record }: { record: NetworkRow }) {
           </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-3">
-          <Info
-            label="연락처"
-            value={
-              <SensitiveValue
-                field="phone"
-                contentKey={CONTENT_KEY}
-                value={(record.phone as string) ?? null}
-                resourceType={NETWORK_RESOURCE_TYPE}
-                resourceId={record.id}
-              />
-            }
-          />
-          <Info
-            label="이메일"
-            value={
-              <SensitiveValue
-                field="email"
-                contentKey={CONTENT_KEY}
-                value={(record.email as string) ?? null}
-                resourceType={NETWORK_RESOURCE_TYPE}
-                resourceId={record.id}
-              />
-            }
-          />
-          {/* 국가는 늘 선다 — 한국도 '한국'으로 명시한다. 권역은 국가가 이미 답하는 사실의
-              상위 묶음이라, 알 때만 괄호로 덧붙이고 따로 한 줄을 쓰지 않는다. */}
-          <Info label="국가" value={region ? `${country} (${region})` : country} />
-          {linkedin && (
+        <div className="mt-5 border-t border-gray-100 pt-4">
+          <InfoGrid>
             <Info
-              label="링크드인"
+              label="연락처"
               value={
-                <a
-                  href={linkedin}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-brand underline-offset-2 hover:underline"
-                >
-                  프로필 열기
-                </a>
+                <SensitiveValue
+                  field="phone"
+                  contentKey={CONTENT_KEY}
+                  value={(record.phone as string) ?? null}
+                  resourceType={NETWORK_RESOURCE_TYPE}
+                  resourceId={record.id}
+                />
               }
             />
-          )}
-          {!compact && (
             <Info
-              label="전문 영역"
+              label="이메일"
               value={
-                expertise.length ? (
-                  <span className="flex flex-wrap gap-1">
-                    {expertise.map((e) => (
-                      <Badge key={e} tone="neutral">
-                        {e}
-                      </Badge>
-                    ))}
-                  </span>
-                ) : (
-                  '-'
-                )
+                <SensitiveValue
+                  field="email"
+                  contentKey={CONTENT_KEY}
+                  value={(record.email as string) ?? null}
+                  resourceType={NETWORK_RESOURCE_TYPE}
+                  resourceId={record.id}
+                />
               }
             />
-          )}
-          <Info label="생성자" value={creator} />
-          <Info label="기여자" value={contributors.length ? contributors.join(', ') : '-'} />
-          <Info label="수정일" value={formatDate(record.updated_at)} />
+            {/* 국가는 늘 선다 — 한국도 '한국'으로 명시한다. 권역은 국가가 이미 답하는 사실의
+                상위 묶음이라, 알 때만 괄호로 덧붙이고 따로 한 줄을 쓰지 않는다. */}
+            <Info label="국가" value={region ? `${country} (${region})` : country} />
+            {/* 링크드인은 값이 없어도 선다 — 없다는 사실은 줄을 감추는 것이 아니라 꺼진
+                아이콘이 말한다(목록과 같은 규칙). 규격은 공용 `LinkedInLink`가 갖는다. */}
+            <Info label="링크드인" value={<LinkedInLink url={linkedin} />} />
+            {!compact && (
+              <Info
+                label="전문 영역"
+                value={
+                  expertise.length ? (
+                    <span className="flex flex-wrap gap-1">
+                      {expertise.map((e) => (
+                        <Badge key={e} tone="neutral">
+                          {e}
+                        </Badge>
+                      ))}
+                    </span>
+                  ) : (
+                    '-'
+                  )
+                }
+              />
+            )}
+          </InfoGrid>
+
+          {/*
+            생성자·기여자·수정일은 레코드 자체가 아니라 레코드를 다룬 흔적이다. 위 칸의 업무
+            사실(연락처·국가·전문 영역)과 한 격자에 섞이면 여덟 칸이 같은 무게로 서서, 이 사람이
+            누구인가를 읽으려는 눈이 매번 관리 정보를 함께 훑는다. 구분선으로 축을 가르고 톤도
+            한 단 낮춘다(`InfoField`의 meta — 이 세 값을 위해 있는 자리다).
+          */}
+          <InfoGrid className="mt-3 border-t border-gray-100 pt-3">
+            <Info label="생성자" value={creator} meta />
+            <Info label="기여자" value={contributors.length ? contributors.join(', ') : '-'} meta />
+            <Info label="수정일" value={formatDate(record.updated_at)} meta />
+          </InfoGrid>
         </div>
       </CardShell>
 
