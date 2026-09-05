@@ -214,6 +214,9 @@ const sidebarIconByWorkspace: Record<string, LucideIcon> = {
   ac: Target,
   fund: WalletCards,
   project: Folder,
+  // NETWORKS는 메뉴가 목록 하나뿐이라 탭 키가 없다(2026-09-05 통합) — 탭 기반 매핑이 걸리지
+  // 않으므로 워크스페이스 글리프가 그 줄의 아이콘이 된다.
+  networks: Network,
 }
 
 /**

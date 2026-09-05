@@ -15,7 +15,7 @@ import { BulkUploadPanel } from '@/features/networks/BulkUploadPanel'
 export function NetworksBulkPage() {
   return (
     <div className="space-y-5">
-      <DetailTopBar back={<BackButton as={Link} to="/networks?tab=all" />} />
+      <DetailTopBar back={<BackButton as={Link} to="/networks?scope=all" />} />
       <PageHeader title="네트워크 대용량 업로드" />
       <BulkUploadPanel />
     </div>

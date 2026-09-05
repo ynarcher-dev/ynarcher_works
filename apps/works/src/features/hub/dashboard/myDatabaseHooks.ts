@@ -28,8 +28,9 @@ export type LedgerKey = 'startup' | 'networks'
 /**
  * 원장별 정의 — 라벨·권한 키·목적지. 어느 원장을 세울지는 화면이 아니라 이 표가 답한다.
  *
- * 경로는 사이드바(`WORKSPACE_SUBNAV`)의 '내 업로드 DB' 셋과 **같은 탭**을 가리킨다 — 카드가
- * 적은 수와 눌러서 도착한 목록의 건수가 다르면, 방금 본 수가 무엇이었는지 되묻게 된다.
+ * 경로는 각 원장 목록의 **'내 것' 범위**를 가리킨다(STARTUP은 `?tab=mine`, NETWORKS는
+ * 메뉴 통합 뒤 범위 축이 된 `?scope=mine`) — 카드가 적은 수와 눌러서 도착한 목록의 건수가
+ * 다르면, 방금 본 수가 무엇이었는지 되묻게 된다.
  *
  * 라벨은 사이드바의 말을 그대로 쓰지 않는다. 카드 이름이 이미 '나의 데이터베이스'라 '내 것'은
  * 카드가 말했고, 타일까지 '내 업로드 DB (국내)'라고 적으면 석 장이 같은 말을 세 번 반복한다.
@@ -39,7 +40,7 @@ export const LEDGERS: Omit<LedgerStat, 'mine' | 'total'>[] = [
   { key: 'startup', label: '스타트업 DB', workspace: 'startup', path: '/startup?tab=mine' },
   // 국내·글로벌 두 줄이 2026-09-04 원장 통합으로 한 줄이 되었다. 지역은 그 목록의 필터
   // 축이므로 카드에서 두 줄로 갈라 놓으면 눌러서 도착한 화면과 건수가 어긋난다.
-  { key: 'networks', label: '네트워크', workspace: 'networks', path: '/networks?tab=mine' },
+  { key: 'networks', label: '네트워크', workspace: 'networks', path: '/networks?scope=mine' },
 ]
 
 /**

@@ -256,7 +256,10 @@ interface Props {
    * 마스터 편집은 NETWORKS 원장에서만 수행하고, 그 외 워크스페이스는 조회만 한다.
    */
   readOnly?: boolean
-  /** 목록/뒤로가기 경로. 기본 '전체 네트워크'. */
+  /**
+   * 목록/뒤로가기 경로. 기본은 전체 범위 목록(`?scope=all`)이다 — 내 것이 아닌 레코드를
+   * 열었을 때 '내 관리' 목록에는 그 행이 없어 뒤로가기가 빈 목록으로 끝난다.
+   */
   listPath?: string
 }
 
@@ -269,7 +272,7 @@ export function NetworkDetailPage({ readOnly = false, listPath: listPathProp }: 
   const { id } = useParams<{ id: string }>()
   const [params] = useSearchParams()
   const navigate = useNavigate()
-  const listPath = listPathProp ?? '/networks?tab=all'
+  const listPath = listPathProp ?? '/networks?scope=all'
   const isNew = id === 'new'
   const [editing, setEditing] = useState(isNew && !readOnly)
   const { data: record, isLoading } = useNetworkRecord(isNew ? undefined : id)

@@ -123,8 +123,11 @@ export const SENSITIVE_CONTENT_GROUPS: readonly SensitiveContentGroup[] = [
       // 상세가 통합 목록 한 벌로 합쳐졌기 때문이며, 상세는 이제 'networks.all'을 읽는다.
       // 정책을 합칠 때는 **가장 엄격한 값을 승계**해야 한다 — 느슨한 쪽을 택하면 그 축소가
       // 곧 노출 확대다(DB에 남은 옛 키의 값은 읽히지 않을 뿐 지워지지 않는다).
-      { key: 'networks.mine', label: '내 업로드 DB', fields: PERSON },
-      { key: 'networks.all', label: '전체 네트워크 · 상세', fields: PERSON },
+      // 2026-09-05 메뉴 통합으로 두 키는 이제 같은 목록의 범위 토글(내 관리 / 전체 관리)이
+      // 가른다 — 정책은 여전히 범위별로 따로 걸린다(내 것만 볼 때와 전부 볼 때의 노출 범위는
+      // 같을 이유가 없다). 라벨만 현재 화면의 말로 맞춘다.
+      { key: 'networks.mine', label: '네트워크 DB · 내 관리', fields: PERSON },
+      { key: 'networks.all', label: '네트워크 DB · 전체 관리 · 상세', fields: PERSON },
     ],
   },
   { key: 'ac', label: 'AC', contents: programContents('ac', '사업') },

@@ -4,7 +4,7 @@ import { ADMIN_TAG_CONFIGS } from '@/features/admin/tagConfig'
 /** 사이드바 세부 메뉴 항목. tab은 페이지 내부 섹션을 제어하는 `?tab=` 쿼리 값. */
 export interface SubNavItem {
   label: string
-  /** 미지정 시 워크스페이스 루트(단일 대시보드 메뉴)를 의미한다. */
+  /** 미지정 시 워크스페이스 루트를 의미한다(대시보드 하나·목록 하나뿐인 워크스페이스). */
   tab?: string
   /**
    * 하위 항목. 지정 시 이 항목은 사이드바 한 줄로 남고 클릭하면 우측 플라이아웃으로 펼쳐진다
@@ -36,7 +36,7 @@ export interface SubNavGroup {
 }
 
 /**
- * '전체 ~' 목록 메뉴의 탭 키. STARTUP·NETWORKS·FUND·AC/M&A/PROJECT가 같은 키를 쓴다 —
+ * '전체 ~' 목록 메뉴의 탭 키. STARTUP·FUND·AC/M&A/PROJECT가 같은 키를 쓴다 —
  * 이 메뉴들은 '내 ~ 관리'와 같은 목록 화면을 범위만 넓혀 그대로 쓰므로 키도 하나여야 한다.
  */
 export const LIST_ALL_TAB = 'all'
@@ -52,7 +52,8 @@ const LEGACY_LIST_TABS: Record<string, string> = { dashboard: LIST_ALL_TAB }
  * 목록 워크스페이스의 `?tab` 해석. 옛 키를 현재 키로 옮기고, 값이 없으면 기본 탭을 준다.
  *
  * OFFICE·MANAGEMENT는 `dashboard`가 지금도 살아 있는 제 메뉴이므로 이 함수를 쓰지 않는다 —
- * '전체 ~'가 대시보드 자리를 넘겨받은 워크스페이스(STARTUP·NETWORKS·FUND·사업 3종)에만 쓴다.
+ * '전체 ~'가 대시보드 자리를 넘겨받은 워크스페이스(STARTUP·FUND·사업 3종)에만 쓴다.
+ * NETWORKS도 2026-09-05 메뉴 통합으로 빠졌다 — 탭이 없고 범위는 `?scope=`가 답한다.
  */
 export function resolveListTab(raw: string | null, fallback = 'mine'): string {
   const tab = raw ?? fallback
@@ -72,6 +73,12 @@ export function resolveListTab(raw: string | null, fallback = 'mine'): string {
  */
 export const PROGRAM_MINE_LABEL = '내 프로젝트'
 export const PROGRAM_ALL_LABEL = '전체 프로젝트'
+
+/**
+ * NETWORKS 목록 메뉴 라벨. 페이지 제목(`NetworksPage`)도 이 상수를 읽는다 — 사이드바 라벨과
+ * 제목이 어긋나면 눌러 들어간 메뉴와 도착한 화면의 이름이 달라진다(사업 라벨과 같은 규칙).
+ */
+export const NETWORKS_LIST_LABEL = '네트워크 DB'
 
 /**
  * 사업 워크스페이스(AC/M&A/PROJECT) 공용 사이드바 구성 — `내 프로젝트` → `전체 프로젝트` 두 줄.
@@ -122,30 +129,21 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       ],
     },
   ],
-  // NETWORKS: 내 업로드 DB → 전체 네트워크, 두 줄이다.
+  // NETWORKS: 메뉴 한 줄이다.
   //
-  // 2026-09-04 원장 통합으로 국내/글로벌 쌍이 하나로 합쳐졌다. 지역은 메뉴가 아니라 목록의
-  // 필터 축이다 — 지역을 메뉴로 두면 그것이 '어디에 있는가'가 되어 구분·영역 같은 다른 축과
-  // 함께 걸 수 없다(해외의 대학, 같은 질문에 답할 수 없다). 사이드바 재편(2026-08-20)이
-  // 구분에 대해 이미 밟은 길과 같다.
+  // 2026-09-04 원장 통합으로 국내/글로벌 쌍이 하나로 합쳐졌고, 2026-09-05에 남아 있던
+  // '내 업로드 DB'/'전체 네트워크' 쌍도 한 줄로 합쳤다. 둘은 같은 원장을 같은 열·같은 필터로
+  // 보며 범위만 달랐는데, 범위를 메뉴로 두면 그것이 '어디에 있는가'가 되어 지역·구분과 같은
+  // 축으로 함께 걸 수 없고 메뉴를 옮길 때마다 검색어와 필터가 사라진다. 지역(2026-09-04)·
+  // 구분(2026-08-20)이 먼저 밟은 길과 같다 — 범위는 자리가 아니라 축이므로 목록 상단의
+  // 토글(내 관리 / 전체 관리)이 답한다.
   //
-  // 이모지·구분선을 쌍 안에 두지 않는다(STARTUP과 같은 규칙) — 같은 원장을 범위만 달리해 보는
-  // 한 쌍이라 한쪽에만 색 있는 글리프가 붙으면 층이 다른 메뉴처럼 읽힌다. 구분선은 쌍과 쌍
-  // 사이에만 선다.
+  // 탭 키를 두지 않는다 — 이 워크스페이스의 목록은 하나뿐이라 `/networks`가 곧 그 화면이고,
+  // 범위는 `?scope=`가 싣는다. 대용량 업로드도 메뉴가 아니라 목록 상단 버튼으로 들어간다
+  // (/networks/bulk) — 메뉴로 두면 어느 원장으로 들어가는 업로드인지가 이름에 드러나지 않는다.
   networks: [
     {
-      items: [
-        // 내가 생성했거나 기여한(entity_contributions) 것만.
-        { label: '내 업로드 DB', tab: 'mine' },
-        // 같은 목록을 범위만 넓혀 쓴다 — 볼 수 있는 전부. 구분이 비어 있는 행도 여기 담긴다
-        // (2026-09-04 '미분류 데이터베이스' 메뉴 폐지) — 그것만 보려면 구분 필터의 '미지정'을
-        // 건다. 분류를 메뉴로 두면 그것이 '어디에 있는가'가 되어 지역·영역 같은 다른 축과 함께
-        // 걸 수 없고(해외의 미지정, 같은 질문에 답할 수 없다), 업로드 시점에 구분을 확정하게
-        // 되면서 매일 비워야 할 대기열 자체가 없어졌다.
-        // 대용량 업로드는 사이드바 항목이 아니라 목록 상단의 '대용량 업로드' 버튼으로
-        // 들어간다(/networks/bulk).
-        { label: '전체 네트워크', tab: LIST_ALL_TAB },
-      ],
+      items: [{ label: NETWORKS_LIST_LABEL }],
     },
   ],
   ac: programSubnav(),
@@ -304,7 +302,7 @@ function allTabs(groups: SubNavGroup[] | undefined): Set<string> {
 
 /**
  * 상세 라우트 경로에서 활성 탭을 유추한다.
- * 예: pathname `/networks/global/123`, wsPath `/networks` → 세그먼트 `global`.
+ * 예: pathname `/startup/invested/123`, wsPath `/startup` → 세그먼트 `invested`.
  * 해당 세그먼트가 사이드바 탭으로 존재할 때만 반환하고, 아니면 undefined.
  */
 export function pathTabOf(
