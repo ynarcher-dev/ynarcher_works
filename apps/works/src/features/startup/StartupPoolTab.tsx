@@ -6,14 +6,16 @@ import { ListScopeToggle } from '@/components/ListScopeToggle'
 import { useMaskPolicy } from '@/features/admin/sensitiveStore'
 import { StartupPoolTable, type StartupPoolRow } from '@/features/startup/StartupPoolTable'
 import { StartupPoolFilters } from '@/features/startup/StartupPoolFilters'
-import { StartupFilteredSummary } from '@/features/startup/StartupFilteredSummary'
+import {
+  StartupRegionSummary,
+  StartupStageSummary,
+} from '@/features/startup/StartupFacetSummary'
 import {
   EMPTY_STARTUP_FILTERS,
   useStartupPoolPage,
   type StartupPoolFilters as Filters,
 } from '@/features/startup/startupPoolHooks'
 import { startupListContentKey } from '@/features/startup/startupClassification'
-import { toggleAxisValue } from '@/lib/filterAxis'
 import type { ListScope } from '@/lib/listScope'
 
 /** 목록 페이지당 행 수(서버 사이드 페이지네이션). */
@@ -81,15 +83,30 @@ export function StartupPoolTab({ scope, onScopeChange, userId }: StartupPoolTabP
 
   return (
     <div className="space-y-3">
-      <StartupFilteredSummary
+      {/*
+        요약 카드 두 줄이 지역·투자단계 축을 소유한다(2026-09-05). 종전 구분(발굴·보육·투자·
+        기타) 한 줄은 걷고 그 축은 필터 줄의 다중선택으로 내렸다 — 구분은 이미 필터에 있어
+        같은 물음에 컨트롤이 둘이었고, 카드 자리는 '지금 어디에·어느 단계에 몇 개사가 있나'가
+        가져가는 편이 목록을 좁히는 데 실제로 쓰인다.
+      */}
+      <StartupRegionSummary
         keyword={keyword}
         filters={filters}
         mineUserId={mineUserId}
         searchScope={searchScope}
-        onToggleCategory={(category) =>
-          setFilters((f) => ({ ...f, categories: toggleAxisValue(f.categories, category) }))
+        onChange={(next) =>
+          setFilters((f) => ({ ...f, regions: next.values, regionUnset: next.unset }))
         }
-        onClearCategories={() => setFilters((f) => ({ ...f, categories: [] }))}
+      />
+
+      <StartupStageSummary
+        keyword={keyword}
+        filters={filters}
+        mineUserId={mineUserId}
+        searchScope={searchScope}
+        onChange={(next) =>
+          setFilters((f) => ({ ...f, stages: next.values, stageUnset: next.unset }))
+        }
       />
 
       <ListToolbar

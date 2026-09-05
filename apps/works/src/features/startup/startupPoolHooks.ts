@@ -6,26 +6,32 @@ import {
 } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { EntityRow } from '@/features/master/entityHooks'
-import {
-  fetchLedgerPage,
-  managedRecordIds,
-  sanitizeOrValue,
-  userIdsByName,
-  type LedgerCondition,
-  type LedgerPage,
-} from '@/features/master/ledgerPage'
+import type { LedgerPage } from '@/features/master/ledgerPage'
 
 /**
  * 기업(startups) 목록 복수 필터. 빈 배열/빈 문자열은 "미적용"이다.
  * 분야만 배열 컬럼(industries)이라 overlaps로, 나머지 스칼라는 in으로, 설립일은 범위로 건다.
  */
 export interface StartupPoolFilters {
-  /** 소재지(location, location_tags 태그명). */
+  /** 소재지(location, location_tags 태그명). 권역의 아래 단이라 권역 축과 함께 걸린다. */
   locations: string[]
+  /**
+   * 권역(location_region_tags id). 요약 카드의 권역 타일이 소유하는 축이며,
+   * 소재지 태그의 부모(region_tag_id)로 판정한다.
+   */
+  regions: string[]
+  /**
+   * 권역 미지정(소재지가 비었거나 태그 원장에 없는 값). 권역 배열과 **OR**로 묶인다 —
+   * AND로 두면 '수도권 또는 미지정'이 늘 0건이 되어, 고를 수 있다고 말하면서 아무것도
+   * 답하지 않는 조합이 생긴다(NETWORKS가 2026-09-04에 고친 결함과 같은 자리).
+   */
+  regionUnset: boolean
   /** 분야(industries 배열, 태그명) — 선택 중 하나라도 포함(overlaps). */
   industries: string[]
-  /** 단계(stage). */
+  /** 투자단계(stage). 요약 카드의 단계 타일이 소유하는 축이다. */
   stages: string[]
+  /** 투자단계 미지정. 단계 배열과 OR로 묶인다(권역 축과 같은 규약). */
+  stageUnset: boolean
   /** 구분(management_status). 코드 4종(투자·보육·발굴·기타) 다중선택. */
   categories: string[]
   /** 관리현황(pool_status). 투자기업에서만 채워지는 값이라 비투자 구분에서는 결과가 빈다. */
@@ -39,8 +45,11 @@ export interface StartupPoolFilters {
 /** 필터 초기값(전부 미적용). */
 export const EMPTY_STARTUP_FILTERS: StartupPoolFilters = {
   locations: [],
+  regions: [],
+  regionUnset: false,
   industries: [],
   stages: [],
+  stageUnset: false,
   categories: [],
   statuses: [],
   ageMin: '',
@@ -65,8 +74,11 @@ export interface StartupSearchScope {
 export function hasActiveStartupFilters(f: StartupPoolFilters): boolean {
   return (
     f.locations.length > 0 ||
+    f.regions.length > 0 ||
+    f.regionUnset ||
     f.industries.length > 0 ||
     f.stages.length > 0 ||
+    f.stageUnset ||
     f.categories.length > 0 ||
     f.statuses.length > 0 ||
     f.ageMin !== '' ||
@@ -74,26 +86,62 @@ export function hasActiveStartupFilters(f: StartupPoolFilters): boolean {
   )
 }
 
-/** 오늘에서 years년 뺀 날짜(YYYY-MM-DD). 업력(년차)을 설립일 경계로 환산할 때 쓴다. */
-function foundedCutoff(years: number): string {
-  const d = new Date()
-  d.setHours(0, 0, 0, 0)
-  d.setFullYear(d.getFullYear() - years)
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
 /** 기업 목록 페이지. 다른 원장 목록과 동일 규약(rows + 건수 둘). */
 export type StartupPoolPage = LedgerPage<EntityRow>
 
 /**
- * 기업 풀 전용 서버 사이드 페이지네이션 훅. NETWORKS 공용 useEntityPage와 달리
- * 다중 필드 검색(기업명·대표자·사업자번호·담당자 + 공개 시 이메일·연락처)과
- * 복수 필터(소재지·분야·단계·구분·관리현황·설립일)를
- * 스타트업 스키마에 맞춰 처리한다. 담당자(투자 지정)는 startup_managers를 임베드해 컬럼으로 노출하고,
- * 생성자(created_by)는 '내 관리기업' 조회 조건으로만 쓴다(표시·검색 대상은 아님).
+ * 목록 RPC와 요약 집계 RPC가 **같은 인자 한 벌**을 받는다. 두 호출이 조건을 각자 조립하면
+ * 표와 카드가 어긋나는 날이 오고, 어긋났을 때 어느 쪽이 사실인지 판정할 근거가 없다.
+ * 축을 빼는 일(집계에서 자기 축 제외)은 화면이 아니라 서버가 한다.
+ *
+ * 업력(년차)은 년수 그대로 넘긴다 — 설립일 경계로 환산하는 일은 서버가 한다.
+ * 클라이언트에서 오늘 날짜로 환산하면 자정을 넘긴 탭에서 어제 기준으로 조회하게 된다.
+ */
+export function startupFilterArgs(
+  keyword: string,
+  filters: StartupPoolFilters,
+  mineUserId: string | null | undefined,
+  searchScope: StartupSearchScope,
+) {
+  const ageMin = Number.parseInt(filters.ageMin, 10)
+  const ageMax = Number.parseInt(filters.ageMax, 10)
+  return {
+    p_keyword: keyword.trim() || null,
+    p_mine_user: mineUserId ?? null,
+    p_locations: filters.locations.length ? filters.locations : null,
+    p_regions: filters.regions.length ? filters.regions : null,
+    // 미지정 축은 '켰을 때만' 조건이 된다. false를 그대로 보내면 '값이 있는 행만'이라는
+    // 반대 조건이 되어, 아무것도 고르지 않은 화면이 미지정 행을 통째로 숨긴다.
+    p_region_unset: filters.regionUnset ? true : null,
+    p_industries: filters.industries.length ? filters.industries : null,
+    p_stages: filters.stages.length ? filters.stages : null,
+    p_stage_unset: filters.stageUnset ? true : null,
+    p_categories: filters.categories.length ? filters.categories : null,
+    p_statuses: filters.statuses.length ? filters.statuses : null,
+    p_age_min: filters.ageMin !== '' && Number.isFinite(ageMin) ? ageMin : null,
+    p_age_max: filters.ageMax !== '' && Number.isFinite(ageMax) ? ageMax : null,
+    p_search_email: searchScope.email,
+    p_search_phone: searchScope.phone,
+  }
+}
+
+/** RPC가 돌려주는 행 한 줄(표시용 JSON + 필터 반영 건수). */
+interface StartupPoolRpcRow {
+  row_json: EntityRow
+  total_count: number | string
+}
+
+/**
+ * 기업 풀 목록 훅. 조회는 `startup_pool_entities` RPC 하나이며, 필터 판정은
+ * `app.startup_pool_filtered`가 소유한다(요약 카드의 집계도 같은 함수를 부른다).
+ *
+ * 공용 `fetchLedgerPage`(PostgREST 조립)를 쓰지 않는 원장은 NETWORKS에 이어 여기가 둘째다.
+ * 옮긴 이유는 목록이 아니라 **요약 카드** 때문이다 — 타일 하나가 조회 하나이던 구조로
+ * 권역·투자단계 두 줄(약 19칸)을 세우면 요약만으로 스무 번 가까이 호출하게 된다.
+ * 집계를 서버로 옮기려면 목록과 집계가 같은 판정을 공유해야 하고, 그 판정이 살 곳은 SQL이다.
+ *
+ * 전체 건수(totalAll)는 검색어·필터가 하나라도 걸렸을 때만 따로 묻는다(NETWORKS와 같은 규약) —
+ * 범위(내 관리기업/전체)만 반영한 수라 분모로 쓰인다.
  */
 export function useStartupPoolPage(
   keyword: string,
@@ -122,88 +170,32 @@ export function useStartupPoolPage(
     ],
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<StartupPoolPage> => {
-      const kw = sanitizeOrValue(keyword)
-
-      const scope: LedgerCondition[] = []
-      // '내 관리기업' 스코프: 생성자(created_by=나) OR 담당자(startup_managers.user_id=나).
-      // 담당은 원장 밖에 있어 조인으로 걸 수 없으므로 담당 기업 id를 먼저 모은다.
-      if (mineUserId) {
-        const ids = await managedRecordIds('startup_managers', 'startup_id', mineUserId)
-        const parts = [`created_by.eq.${mineUserId}`]
-        if (ids.length) parts.push(`id.in.(${ids.join(',')})`)
-        scope.push({ kind: 'or', expr: parts.join(',') })
-      }
-
-      const narrow: LedgerCondition[] = []
-      if (kw) narrow.push(await searchCondition(kw, searchScope))
-      // 분야(industries)은 jsonb 배열이라 overlaps(&&) 불가 — 각 선택값의 포함(@>, cs)을 OR로 묶는다.
-      if (filters.industries.length) {
-        narrow.push({
-          kind: 'or',
-          expr: filters.industries
-            .map((name) => `industries.cs.${JSON.stringify([name])}`)
-            .join(','),
-        })
-      }
-      if (filters.locations.length)
-        narrow.push({ kind: 'in', column: 'location', values: filters.locations })
-      if (filters.stages.length)
-        narrow.push({ kind: 'in', column: 'stage', values: filters.stages })
-      if (filters.categories.length)
-        narrow.push({ kind: 'in', column: 'management_status', values: filters.categories })
-      if (filters.statuses.length)
-        narrow.push({ kind: 'in', column: 'pool_status', values: filters.statuses })
-
-      // 업력(년차) 범위 → 설립일 경계. 최소 N년차 이상 = N년 전 또는 그 이전에 설립.
-      // 최대 N년차 이하 = (N+1)년 전보다 나중에 설립(만 나이 N년 초과분 제외).
-      const ageMin = Number.parseInt(filters.ageMin, 10)
-      const ageMax = Number.parseInt(filters.ageMax, 10)
-      if (Number.isFinite(ageMin) && filters.ageMin !== '')
-        narrow.push({ kind: 'lte', column: 'founded_on', value: foundedCutoff(ageMin) })
-      if (Number.isFinite(ageMax) && filters.ageMax !== '')
-        narrow.push({ kind: 'gt', column: 'founded_on', value: foundedCutoff(ageMax + 1) })
-
-      return fetchLedgerPage<EntityRow>({
-        table: 'startups',
-        // creator = 생성자(created_by). managers = 담당자(투자기업 지정, startup_managers).
-        // 두 축은 별개 — 생성자 컬럼은 전 구분 공통, 담당자 컬럼은 투자 전용(비투자는 담당자 없음=공동관리).
-        select:
-          '*, creator:users!created_by(id, name), managers:startup_managers(user_id, is_lead, user:users!startup_managers_user_id_fkey(id, name))',
-        liveColumns: ['deleted_at', 'merged_into_id'],
-        order: { column: 'updated_at', ascending: false },
-        page,
-        pageSize,
-        scope,
-        narrow,
+      const { data, error } = await supabase.rpc('startup_pool_entities', {
+        ...startupFilterArgs(keyword, filters, mineUserId, searchScope),
+        p_limit: pageSize,
+        p_offset: page * pageSize,
       })
+      if (error) throw error
+
+      const raw = (data ?? []) as StartupPoolRpcRow[]
+      const total = Number(raw[0]?.total_count ?? 0)
+
+      // 좁힘 조건이 없으면 반영 건수가 곧 전체 건수다 — 두 번째 질의를 내지 않는다.
+      let totalAll = total
+      if (keyword.trim() || hasActiveStartupFilters(filters)) {
+        const { data: allData, error: allError } = await supabase.rpc('startup_pool_entities', {
+          p_mine_user: mineUserId ?? null,
+          p_limit: 1,
+          p_offset: 0,
+        })
+        if (allError) throw allError
+        const allRaw = (allData ?? []) as { total_count?: number | string }[]
+        totalAll = Number(allRaw[0]?.total_count ?? total)
+      }
+
+      return { rows: raw.map((r) => r.row_json), total, totalAll }
     },
   })
-}
-
-/**
- * 검색어 조건: 기업명·대표자·사업자번호 + 담당자(이름→users.id→startup_managers 역조회).
- * 생성자는 검색 대상이 아니다 — 목록이 답해야 하는 것은 '지금 누가 관리하나'이고,
- * 생성자는 아무 권한도 갖지 않는 축이라 열도 검색도 담당자 하나로 모은다.
- * 이메일·연락처는 목록에서 공개된 경우에만 검색어가 닿는다(가려진 값은 조건에서 빠진다).
- */
-async function searchCondition(
-  kw: string,
-  searchScope: StartupSearchScope,
-): Promise<LedgerCondition> {
-  const parts = [`name.ilike.%${kw}%`, `representative.ilike.%${kw}%`, `biz_reg_no.ilike.%${kw}%`]
-  if (searchScope.email) parts.push(`email.ilike.%${kw}%`)
-  if (searchScope.phone) parts.push(`phone.ilike.%${kw}%`)
-
-  const userIds = await userIdsByName(kw)
-  if (userIds.length) {
-    const { data: mgr } = await supabase
-      .from('startup_managers')
-      .select('startup_id')
-      .in('user_id', userIds)
-    const startupIds = [...new Set(((mgr ?? []) as { startup_id: string }[]).map((m) => m.startup_id))]
-    if (startupIds.length) parts.push(`id.in.(${startupIds.join(',')})`)
-  }
-  return { kind: 'or', expr: parts.join(',') }
 }
 
 /** 스타트업 담당자 행(startup_managers + user 임베드). */

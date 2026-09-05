@@ -111,12 +111,25 @@ export const TAG_CONFIGS = {
     menuLabel: '기업현황',
     noun: '기업현황',
   },
+  // 소재지 권역(수도권·충청·해외…) — 시·도를 접는 상위 축. NETWORKS의 권역(region_tags)과
+  // 원장을 나눈 이유는 세는 대상이 달라서다: 그쪽은 대륙권이고 이쪽은 국내 시·도라, 한 원장에
+  // 담으면 NETWORKS 카드에 '수도권'이, STARTUP 카드에 '중동'이 0건으로 선다.
+  locationRegions: {
+    tab: 'location_regions',
+    table: 'location_region_tags',
+    heading: '소재지권역태그 관리',
+    menuLabel: '소재지권역',
+    noun: '소재지권역',
+  },
   locations: {
     tab: 'locations',
     table: 'location_tags',
     heading: '소재지태그 관리',
     menuLabel: '소재지',
     noun: '소재지',
+    // 2뎁스: 권역을 부모로 참조한다. 여기서 비워 두면 STARTUP 목록의 권역 카드에서
+    // 그 시·도의 기업들이 '미지정' 칸에 모인다.
+    parent: { table: 'location_region_tags', column: 'region_tag_id', noun: '권역' },
   },
   // FUND 포트폴리오 투자방식(investments.investment_method) 선택지 원장.
   investmentMethods: {

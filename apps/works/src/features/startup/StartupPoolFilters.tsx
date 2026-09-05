@@ -36,9 +36,10 @@ function TagFilter({
 }
 
 /**
- * 기업 목록 복수 필터 바: 소재지·분야·단계·구분·관리현황(다중선택) + 업력 범위(최소~최대).
+ * 기업 목록 복수 필터 바: 소재지·분야·구분·관리현황(다중선택) + 업력 범위(최소~최대).
  * 상태는 상위(StartupPoolTab)가 소유하며, 본 컴포넌트는 표시·변경만 담당한다.
- * 필터 순서는 표의 열 순서(소재지 → 분야 → 단계 → 구분 → 관리현황)를 그대로 따른다.
+ * 필터 순서는 표의 열 순서(소재지 → 분야 → 구분 → 관리현황)를 그대로 따른다.
+ * 권역·투자단계는 여기 서지 않는다 — 그 두 축은 목록 위 요약 카드가 소유한다.
  */
 export function StartupPoolFilters({ filters, onChange }: StartupPoolFiltersProps) {
   const active = hasActiveStartupFilters(filters)
@@ -56,12 +57,12 @@ export function StartupPoolFilters({ filters, onChange }: StartupPoolFiltersProp
         selected={filters.industries}
         onChange={(industries) => onChange({ ...filters, industries })}
       />
-      <TagFilter
-        label="단계"
-        table="investment_stage_tags"
-        selected={filters.stages}
-        onChange={(stages) => onChange({ ...filters, stages })}
-      />
+      {/*
+        '단계' 칩은 걷었다(2026-09-05) — 투자단계 축은 요약 카드가 통째로 소유한다. 같은 값을
+        묻는 컨트롤을 둘 두면 엇갈리게 걸 수 있고(카드=시드, 칩=Series A) 그때 결과가 빈 이유가
+        화면 어디에도 보이지 않는다. 소재지는 반대로 남겨 둔다 — 권역의 아래 단이라 함께 걸면
+        그 시·도만 남는 것이 사실이기 때문이다.
+      */}
       {/*
         구분(management_status)은 사이드바 메뉴가 아니라 이 필터가 답한다(2026-08-20). 태그 원장이
         아니라 코드 4종으로 고정된 값이라 TagFilter가 아닌 고정 옵션 다중선택이다.
