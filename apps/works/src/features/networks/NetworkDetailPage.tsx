@@ -89,6 +89,7 @@ function NetworkView({ record }: { record: NetworkRow }) {
   const linkedin = (record.linkedin_url as string) ?? ''
   const country = countryLabelOf(record)
   const region = (record.region_name as string) ?? ''
+  const overseas = record.region_scope === 'OVERSEAS'
   // 부제: 소속 · 부서명 · 직책(부서명은 소속과 직책 사이에 노출).
   const subtitle = [affiliation, department, position].filter(Boolean).join(' · ')
 
@@ -156,9 +157,10 @@ function NetworkView({ record }: { record: NetworkRow }) {
                 />
               }
             />
-            {/* 국가는 늘 선다 — 한국도 '한국'으로 명시한다. 권역은 국가가 이미 답하는 사실의
-                상위 묶음이라, 알 때만 괄호로 덧붙이고 따로 한 줄을 쓰지 않는다. */}
-            <Info label="국가" value={region ? `${country} (${region})` : country} />
+            {/* 국가는 늘 선다 — 한국도 '한국'으로 명시한다. 권역은 해외에서만 괄호로 덧붙인다:
+                여러 나라를 묶어 읽을 때만 쓰이는 축이라, 국내 한 나라뿐인 '한국 (국내)'의
+                괄호는 같은 말을 두 번 하고 정작 국가명을 밀어낸다. */}
+            <Info label="국가" value={overseas && region ? `${country} (${region})` : country} />
             {/* 링크드인은 값이 없어도 선다 — 없다는 사실은 줄을 감추는 것이 아니라 꺼진
                 아이콘이 말한다(목록과 같은 규칙). 규격은 공용 `LinkedInLink`가 갖는다. */}
             <Info label="링크드인" value={<LinkedInLink url={linkedin} />} />
