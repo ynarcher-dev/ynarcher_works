@@ -116,13 +116,16 @@ export function ProgramDetailPage() {
           {tab !== 'post' && <BackButton onClick={backToOverview} />}
 
           {/*
-            모듈 세팅 카드(운영 화면 최상단, 2026-09-06). 세팅을 고치는 자리가 개요 보드의 목록
-            한 줄뿐이라, 들어와서 하는 일과 그 일의 조건(기간·담당자·공유 범위)이 다른 화면에
-            갈려 있었다. 글쓰기는 헤더를 자기가 들고 있으므로 카드도 그 안에서 뒤로가기 줄 아래에
-            선다 — 카드가 뒤로가기보다 위에 서면 나가는 길이 화면 중간에 놓인다.
+            모듈 카드(운영 화면 최상단, 2026-09-06). 이 모듈을 관리하는 유일한 자리이며 설정·끄기·
+            삭제가 여기 모여 있다(개요 보드 목록의 아이콘 3종을 옮겨 왔다) — 종전에는 들어와서 하는
+            일과 그 일의 조건(기간·담당자·공유 범위)이 다른 화면에 갈려 있었다. 끄기·삭제 뒤에는
+            개요로 돌아온다(`onGone`).
+
+            글쓰기는 헤더를 자기가 들고 있으므로 카드도 그 안에서 뒤로가기 줄 아래에 선다 —
+            카드가 뒤로가기보다 위에 서면 나가는 길이 화면 중간에 놓인다.
           */}
           {moduleId && tab !== 'post' && (
-            <ModuleHeaderCard program={program} moduleId={moduleId} />
+            <ModuleHeaderCard program={program} moduleId={moduleId} onGone={backToOverview} />
           )}
 
           {/* 프로그램 단위 화면(타임라인)은 programId, 인스턴스 단위 운영 화면은 moduleId로 렌더한다. */}
@@ -133,7 +136,13 @@ export function ProgramDetailPage() {
               moduleId={moduleId}
               moduleTitle={openMod ? moduleDisplayName(openMod) : '글쓰기'}
               onBack={backToOverview}
-              moduleCard={<ModuleHeaderCard program={program} moduleId={moduleId} />}
+              moduleCard={
+                <ModuleHeaderCard
+                  program={program}
+                  moduleId={moduleId}
+                  onGone={backToOverview}
+                />
+              }
             />
           )}
           {/* 기본 템플릿(URL첨부·파일첨부): GUEST와 같은 카드 구성의 편집 화면. 헤더는 위 공통 헤더를 쓴다.

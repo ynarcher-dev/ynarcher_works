@@ -6,21 +6,16 @@ import {
   DashedAddButton,
   ExpandToggleButton,
   FullscreenPanel,
-  IconButton,
   Spinner,
   ViewToggleGroup,
-  useToast,
 } from '@ynarcher/ui'
 import {
   ChartGantt,
   List,
   Maximize2,
   Minimize2,
-  Pencil,
   Plus,
   SquareKanban,
-  Trash2,
-  X,
   type LucideIcon,
 } from 'lucide-react'
 import { useState } from 'react'
@@ -29,7 +24,6 @@ import { ModuleVisibilityBadge } from '@/features/program/detail/ModuleVisibilit
 import {
   useIsProgramPm,
   useProgramModules,
-  useToggleModule,
   type Program,
   type ProgramModule,
 } from '@/features/program/hooks'
@@ -73,8 +67,13 @@ function sortModules(modules: ProgramModule[]): ProgramModule[] {
 
 /**
  * 운영 모듈 보드(상세 개요 좌측 카드). 헤더 토글로 목록·칸반·간트 3개 뷰를 전환한다.
- * 목록 뷰: 활성 인스턴스 카드 나열(모듈명·템플릿 배지·상태·공유·기간·담당자, 호버 시 설정/끄기) + 하단 점선 카드로 모듈 추가.
+ * 목록 뷰: 활성 인스턴스 카드 나열(모듈명·템플릿 배지·상태·공유·기간·담당자) + 하단 점선 카드로 모듈 추가.
  * 추가는 2단계(템플릿 선택 → 세팅)이며, 편집은 세팅 폼을 재사용한다. 칸반: 상태 컬럼. 간트: 일정 막대.
+ *
+ * **켜진 모듈의 액션(설정·끄기·삭제)은 여기 없다**(2026-09-06 이동) — 그 모듈의 운영 화면
+ * 최상단 카드(`ModuleHeaderCard`)가 소유한다. 목록의 행은 '들어가는 길' 하나만 답하고, 관리는
+ * 들어가서 한다. 이 파일에 세팅·삭제 창이 남아 있는 것은 **꺼진 모듈** 때문이다 — 그쪽은 들어갈
+ * 운영 화면이 없으므로 접힌 줄이 계속 자기 자리에서 다룬다.
  */
 export function ModuleBoardCard({
   program,
@@ -84,11 +83,10 @@ export function ModuleBoardCard({
   onOpenModule: (module: ProgramModule) => void
 }) {
   const programId = program.id
-  const toast = useToast()
   const { data, isLoading } = useProgramModules(programId)
-  const toggle = useToggleModule(programId)
   // 삭제는 이 사업의 PM만 한다(서버가 최종 판정). 아닌 사람에게는 버튼을 세우지 않는다 —
   // 누를 수 있게 보여 두고 눌렀을 때 거절하는 것은 파괴적 액션에서 특히 나쁜 안내다.
+  // 켜진 모듈의 삭제는 운영 화면 최상단 카드가 가져갔고, 여기 남은 것은 꺼진 모듈 줄뿐이다.
   const { data: isPm } = useIsProgramPm(programId)
   const [editTarget, setEditTarget] = useState<ProgramModule | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ProgramModule | null>(null)
@@ -115,15 +113,6 @@ export function ModuleBoardCard({
   // 모듈명 중복 검증용: 편집 대상 자신은 제외한 나머지 인스턴스 제목.
   const titlesExcept = (id: string | undefined) =>
     modules.filter((m) => m.id !== id).map((m) => m.title ?? '').filter((t) => t.length > 0)
-
-  const onDisable = async (mod: ProgramModule) => {
-    if (!window.confirm(`'${nameOf(mod)}' 모듈을 끄시겠습니까? 데이터는 보존됩니다.`)) return
-    try {
-      await toggle.mutateAsync({ moduleId: mod.id, enabled: false })
-    } catch {
-      toast.show('모듈 비활성화에 실패했습니다. 권한을 확인하세요.', 'danger')
-    }
-  }
 
   /**
    * 모듈 진입: 전체 화면 오버레이를 닫은 뒤 상세 페이지의 운영 화면으로 넘긴다.
@@ -207,33 +196,8 @@ export function ModuleBoardCard({
                         </span>
                       </>
                     }
-                    /* 상시 노출 액션: 설정(연필)/끄기(X). 카드 클릭과 겹치지 않는 레이어에 놓인다. */
-                    actions={
-                      <>
-                        <IconButton
-                          title="모듈 설정"
-                          label={`${nameOf(mod)} 설정`}
-                          onClick={() => setEditTarget(mod)}
-                          icon={<Pencil className="h-3.5 w-3.5" />}
-                        />
-                        <IconButton
-                          title="모듈 끄기"
-                          label={`${nameOf(mod)} 끄기`}
-                          danger
-                          onClick={() => void onDisable(mod)}
-                          icon={<X className="h-3.5 w-3.5" />}
-                        />
-                        {isPm && (
-                          <IconButton
-                            title="모듈 삭제"
-                            label={`${nameOf(mod)} 삭제`}
-                            danger
-                            onClick={() => setDeleteTarget(mod)}
-                            icon={<Trash2 className="h-3.5 w-3.5" />}
-                          />
-                        )}
-                      </>
-                    }
+                    /* 액션은 두지 않는다(2026-09-06) — 설정·끄기·삭제는 모듈 운영 화면 최상단의
+                       모듈 카드가 소유한다. 목록의 행은 '들어가는 길' 하나만 답한다. */
                   />
                 </li>
               )
