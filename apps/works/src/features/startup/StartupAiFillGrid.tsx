@@ -4,6 +4,8 @@ import { formatBytes } from '@/features/networks/materialHooks'
 import type { AiSource } from '@/features/startup/startupAiFill'
 import { AI_CARDS, type AiCardBand, type AiCardKey } from '@/features/startup/startupAiCards'
 import { cardCountFor, cellCount, cellOn, sourcesOf, type AiGrid } from '@/features/startup/startupAiGrid'
+import { StartupAiSourceState } from '@/features/startup/StartupAiSourceState'
+import type { AiExtractController } from '@/features/startup/useStartupAiExtracts'
 
 /**
  * 'AI 작성하기'의 자료 × 카드 격자.
@@ -43,6 +45,7 @@ export function StartupAiFillGrid({
   onCard,
   onSource,
   onAll,
+  extracts,
 }: {
   /** 읽을 수 있는 자료만 온다(못 읽는 자료는 격자에 세우지 않는다). */
   sources: AiSource[]
@@ -55,6 +58,8 @@ export function StartupAiFillGrid({
   /** 자료 하나를 모든 카드에서 켜거나 끈다. */
   onSource: (key: string) => void
   onAll: () => void
+  /** 자료 줄의 분석 상태와 그 줄에서 할 수 있는 일. */
+  extracts: AiExtractController
 }) {
   const bands: AiCardBand[] = ['기본', '역량', '실적']
   const cards = AI_CARDS.map((c) => c.key)
@@ -141,26 +146,38 @@ export function StartupAiFillGrid({
             return (
               <tr key={s.key} className="group">
                 <th scope="row" className={cn(LEFT, 'border-b border-r border-gray-100 px-3 py-1.5 text-left')}>
-                  <div className="flex items-center justify-between gap-2">
-                    <Checkbox
-                      checked={used > 0}
-                      onChange={() => onSource(s.key)}
-                      // 이름이 길어 잘리므로 전체 이름은 커서를 올리면 답한다.
-                      label={
-                        <span className="block min-w-0 truncate" title={s.name}>
-                          {s.name}
-                        </span>
-                      }
+                  {/* 이름 줄과 상태 줄을 세로로 쌓는다 — 이름이 길어 한 줄에 둘을 세우면
+                      상태가 먼저 잘린다(무엇을 눌러야 하는지가 그 줄에 있다). */}
+                  <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <Checkbox
+                        checked={used > 0}
+                        onChange={() => onSource(s.key)}
+                        // 이름이 길어 잘리므로 전체 이름은 커서를 올리면 답한다.
+                        label={
+                          <span className="block min-w-0 truncate" title={s.name}>
+                            {s.name}
+                          </span>
+                        }
+                      />
+                      <span className="flex shrink-0 items-center gap-1.5">
+                        {used > 0 && (
+                          <span className={cardText.meta}>
+                            {used}/{cards.length}
+                          </span>
+                        )}
+                        {/* 링크에는 용량이 없다. '-'는 모른다는 뜻이라 사실과 달라 아예 세우지 않는다. */}
+                        {s.bytes != null && <span className={cardText.meta}>{formatBytes(s.bytes)}</span>}
+                      </span>
+                    </div>
+                    <StartupAiSourceState
+                      source={s}
+                      status={extracts.statusOf(s)}
+                      forcedOriginal={extracts.isForcedOriginal(s.key)}
+                      disabled={extracts.busy}
+                      onAnalyze={() => void extracts.analyze([s])}
+                      onToggleOriginal={() => extracts.toggleOriginal(s.key)}
                     />
-                    <span className="flex shrink-0 items-center gap-1.5">
-                      {used > 0 && (
-                        <span className={cardText.meta}>
-                          {used}/{cards.length}
-                        </span>
-                      )}
-                      {/* 링크에는 용량이 없다. '-'는 모른다는 뜻이라 사실과 달라 아예 세우지 않는다. */}
-                      {s.bytes != null && <span className={cardText.meta}>{formatBytes(s.bytes)}</span>}
-                    </span>
                   </div>
                 </th>
                 {AI_CARDS.map((card, i) => (

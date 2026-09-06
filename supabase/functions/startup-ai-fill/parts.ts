@@ -62,6 +62,16 @@ export interface BuildDeps {
    * 반복해 실어 보낼 이유가 없다.
    */
   forceFilesApi: boolean
+  /**
+   * 자료 키 → **이미 분석된 글자**(2026-09-06).
+   *
+   * 여기 있는 자료는 원본을 내려받지도, 열지도, 올리지도 않는다. 분석 단계가 이미 한 일을
+   * 실행할 때마다 다시 하지 않는 것이 이 개정의 요점이다.
+   *
+   * 결과적으로 **원본이 밖으로 나가지 않는다** — 오피스 파일의 바이트 대신 우리가 뽑은
+   * 글자만 모델에 닿는다. 그래서 감사 로그도 무엇을 보냈는지 범위로 답할 수 있다.
+   */
+  extracts?: Map<string, string>
 }
 
 export interface BuiltParts {
@@ -135,6 +145,21 @@ export async function buildParts(
 
   // 1) 자료를 실제로 가져오며 예산을 깎는다 -------------------------------------
   for (const s of sources) {
+    // 분석 단계가 이미 연 자료는 여기서 끝난다. 원본을 만지지 않으므로 스토리지 왕복도,
+    // 업로드도, 지우기도 없다 — 그것이 캐시를 둔 이유다.
+    const pre = deps.extracts?.get(s.key)
+    if (pre !== undefined) {
+      const size = new TextEncoder().encode(pre).length
+      if (textUsed + size > MAX_TEXT_BYTES) {
+        notices.push(`글자 자료가 모델이 한 번에 읽는 양을 넘어 건너뛰었습니다: ${s.name}`)
+        continue
+      }
+      used += size
+      textUsed += size
+      texts.push({ key: s.key, label: `[분석된 자료: ${s.name}]`, text: pre })
+      continue
+    }
+
     if (s.url) {
       // 링크는 바깥으로 나가는 일이라 시간을 먹는다. 남은 시간이 없으면 여기서 멈추고
       // 지금까지 읽은 것으로 초안을 만든다 — 다 읽으려다 아무것도 못 돌려주는 것보다 낫다.

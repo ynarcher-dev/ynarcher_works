@@ -1,7 +1,8 @@
 // [STARTUP AI 작성하기] 첨부 자료 → Gemini → 상세 카드 초안(JSON)
 // 요청(수정 모드, JSON): { startupId, attachmentIds: string[], cards: CardKey[], assignments }
 // 요청(등록 모드, multipart): cards=<JSON 배열>, assignments=<JSON 객체>, files=<파일 여러 개>,
-//                             fileKeys=<JSON 배열, files와 같은 순서>, links=<주소 여러 개>
+//                             fileKeys=<JSON 배열, files와 같은 순서>, links=<주소 여러 개>,
+//                             extracts=<JSON 객체, 자료 키 → { name, body }>
 // 응답: { cards, notes, evidence, skippedSources, failedCards, model, modelVersion, elapsedMs }
 //       | 4xx/5xx
 //
@@ -12,6 +13,16 @@
 // 들어가면 확정 재무 대신 목표 매출을 집어 온다), 요청당 출력이 작아져 답이 잘리지 않는다.
 // 자료는 조합이 몇 벌이든 **한 번 내려받아 한 번 올리고** 요청들이 그 주소를 함께 쓴다.
 // 한 요청이 실패해도 나머지 카드는 그대로 돌려주고 실패한 카드만 `failedCards`가 말한다.
+//
+// **이미 분석된 자료는 원본을 만지지 않는다(2026-09-06).** 자료 분석이 별도 단계로 떨어져
+// 나가면서(startup-material-extract) 오피스·글자·링크 자료는 캐시 원장에 글자로 남는다.
+// 여기서는 그 글자를 읽어 조각으로 세우므로 스토리지 왕복도, Files API 업로드도, 지우기도
+// 없다 — 그리고 **원본 바이트가 밖으로 나가지 않는다.** 캐시가 없는 자료(PDF·이미지·옛 화면의
+// 요청)는 종전 경로 그대로 원본을 그 자리에서 읽는다. 등록 모드는 저장할 자리가 없으므로
+// 화면이 분석 결과를 들고 있다가 `extracts`로 함께 싣는다(그 값은 여기서 다시 되세운다).
+//
+// **봉투에서 빠진 카드는 한 번만 더 묻는다.** 요청은 성공했는데 모델이 그 카드를 담지 않은
+// 경우이며, 값이 `null`로 온 카드는 여기 들지 않는다(읽고 없다고 답한 것이라 또 물어도 같다).
 //
 // 보안:
 // - 인증된 **내부 사용자**만 호출한다. 게스트 커스텀 JWT는 받지 않는다(WORKS 전용 기능).
@@ -36,10 +47,13 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { jsonResponse, withCors } from '../_shared/cors.ts'
 import { supabaseAdmin } from '../_shared/supabaseAdmin.ts'
-import { isCardKey, type CardKey } from './cards.ts'
+import type { CardKey } from './cards.ts'
 import { deleteFile, type UploadedFile } from './filesApi.ts'
-import { planGroups, type Assignments } from './groups.ts'
-import { ASSEMBLY_BUDGET_MS, GROUP_CONCURRENCY, TIMEOUT_MS } from './limits.ts'
+import { extractsFromRows, readPendingExtracts, type ExtractRow } from './extractsIn.ts'
+import { planGroups, type Assignments, type CardGroup } from './groups.ts'
+import { readAssignments, readCards, readConcurrency } from './request.ts'
+import { missingCards, planTopup } from './topup.ts'
+import { ASSEMBLY_BUDGET_MS, TIMEOUT_MS } from './limits.ts'
 import { readLink } from './linkRead.ts'
 import { dedupe, mergeEnvelopes } from './merge.ts'
 import { buildParts, selectParts } from './parts.ts'
@@ -75,45 +89,6 @@ function callerClient(token: string) {
     auth: { persistSession: false, autoRefreshToken: false },
     global: { headers: { Authorization: `Bearer ${token}` } },
   })
-}
-
-/** 요청에서 카드 키 목록을 읽는다. 알 수 없는 값은 버린다(클라이언트를 그대로 믿지 않는다). */
-function readCards(raw: unknown): CardKey[] {
-  const list = Array.isArray(raw) ? raw : []
-  return list.filter(isCardKey) as CardKey[]
-}
-
-/**
- * 카드별 자료 배정(격자)을 읽는다.
- *
- * **객체가 아예 오지 않았을 때만 null이고, 그때는 모든 카드가 자료 전부를 읽는다** — 격자
- * 이전의 화면이 보낸 요청도 그대로 돌아야 하고, 그때의 동작이 한 요청이었다.
- *
- * 객체가 왔는데 쓸 수 있는 줄이 하나도 없으면 **빈 배정**을 돌려준다(null이 아니다). 둘을
- * 가르지 않으면 "격자를 보냈는데 전부 걸러진" 요청이 "격자를 안 보낸" 요청과 같아져, 아무것도
- * 고르지 않았는데 자료 전부를 읽는 일이 된다. 빈 배정은 묶음 0개가 되어 400으로 막힌다.
- */
-function readAssignments(raw: unknown): Assignments | null {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
-  const out: Assignments = {}
-  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
-    if (!isCardKey(key) || !Array.isArray(value)) continue
-    out[key] = value.map((v) => String(v)).filter(Boolean)
-  }
-  return out
-}
-
-/**
- * 동시에 보낼 요청 수.
- *
- * 값은 코드가 갖되 **시크릿으로 내릴 수 있게** 둔다. 요율 티어가 낮은 키에서는 셋도 몰림으로
- * 읽히는데, 그것은 배포 없이 고쳐야 하는 종류의 문제다. 올리는 쪽은 막는다 — 넷을 넘겨서
- * 얻는 시간보다 429로 잃는 시간이 크다.
- */
-function readConcurrency(): number {
-  const raw = Number(Deno.env.get('GEMINI_MAX_CONCURRENCY'))
-  if (!Number.isFinite(raw) || raw < 1) return GROUP_CONCURRENCY
-  return Math.min(Math.trunc(raw), 4)
 }
 
 Deno.serve(
@@ -153,6 +128,13 @@ Deno.serve(
     let startupId: string | null = null
     /** 카드별 자료 배정. null이면 모든 카드가 자료 전부를 읽는다(옛 화면 호환). */
     let assignments: Assignments | null = null
+    /**
+     * 자료 키 → 이미 분석된 글자.
+     *
+     * 여기 담긴 자료는 원본을 내려받지도 올리지도 않는다. 비어 있으면 종전과 똑같이 원본을
+     * 그 자리에서 읽는다 — 캐시가 없는 자료·옛 화면·PDF가 모두 그 길로 간다.
+     */
+    const extracts = new Map<string, string>()
 
     if (isUpload) {
       // 3-a) 등록 모드: 아직 원장에 없는 파일이 요청에 실려 온다 -------------------
@@ -185,6 +167,25 @@ Deno.serve(
         return jsonResponse({ error: resolved.error.code, message: resolved.error.message }, resolved.error.status)
       }
       sources = [...resolved.sources, ...resolvePendingLinks(pendingLinks)]
+
+      // 이미 분석된 보류 자료는 파일이 아니라 **글자로** 실려 온다(등록 모드에는 저장할
+      // 자리가 없어 화면이 결과를 들고 있다가 여기에 싣는다). 가리킬 원본이 없으므로
+      // 자리만 만들어 준다 — 그래야 배정·감사 기록이 그 자료를 보고, 조각을 고를 수 있다.
+      const pending = readPendingExtracts(parseJson(String(form.get('extracts') ?? 'null')))
+      for (const [key, entry] of pending) {
+        extracts.set(key, entry.text)
+        if (sources.some((s) => s.key === key)) continue
+        sources.push({
+          key,
+          attachmentId: null,
+          name: entry.name,
+          byteSize: 0,
+          storagePath: null,
+          data: null,
+          mime: null,
+          url: null,
+        })
+      }
     } else {
       // 3-b) 수정 모드: 이미 올라간 첨부를 id로 가리킨다 --------------------------
       const body = (await req.json().catch(() => ({}))) as {
@@ -225,6 +226,15 @@ Deno.serve(
       }
       sources = resolved.sources
 
+      // 이미 분석된 자료의 글자를 캐시에서 읽는다. **호출자 토큰으로** 읽는 이유는 그 표의
+      // SELECT 정책이 첨부의 SELECT에 위임돼 있어서다 — 원본을 볼 수 있는 사람만 그 글자를
+      // 본다는 규칙이 여기서도 그대로 걸린다.
+      const { data: cached } = await asCaller
+        .from('attachment_extracts')
+        .select('attachment_id, status, body')
+        .in('attachment_id', ids)
+      for (const [key, text] of extractsFromRows((cached ?? []) as ExtractRow[])) extracts.set(key, text)
+
       const { data: startup } = await asCaller.from('startups').select('name').eq('id', startupId).maybeSingle()
       companyName = startup?.name ? String(startup.name) : ''
     }
@@ -257,7 +267,9 @@ Deno.serve(
         user_id: appUserId,
         resource_type: s.attachmentId ? 'attachment_ai_read' : 'startup_draft_ai_read',
         resource_id: s.attachmentId,
-        reason: `AI 작성하기(외부 AI 전송): ${s.name}`,
+        // **무엇이 나갔는지를 범위까지 적는다.** 분석된 자료는 원본 바이트가 아니라 우리가
+        // 뽑은 글자만 나가므로, 둘을 같은 문구로 적으면 실제 반출의 무게가 흐려진다.
+        reason: `AI 작성하기(외부 AI 전송, ${extracts.has(s.key) ? '분석 글자' : '원본'}): ${s.name}`,
       })),
     )
     if (logErr) {
@@ -289,6 +301,7 @@ Deno.serve(
           deadline: Date.now() + ASSEMBLY_BUDGET_MS,
           // 요청이 둘 이상이면 인라인을 쓰지 않는다(요청마다 base64 사본이 생긴다).
           forceFilesApi: groups.length > 1,
+          extracts,
         },
         uploaded,
       )
@@ -341,7 +354,7 @@ Deno.serve(
       }
 
       // 5-3) 병렬 호출. 한 묶음의 실패가 다른 묶음의 결과를 버리지 않는다.
-      const settled = await runPool(runnable, readConcurrency(), ({ group, parts }, i) =>
+      const settled = await runPool(runnable, readConcurrency(Deno.env.get('GEMINI_MAX_CONCURRENCY')), ({ group, parts }, i) =>
         generateDraft({
           apiKey,
           model,
@@ -385,14 +398,42 @@ Deno.serve(
         modelVersion ??= r.value.telemetry.modelVersion
       }
 
+      // 5-5) 봉투에서 빠진 카드만 한 번 더 묻는다 -----------------------------------
+      // 요청은 성공했는데 모델이 그 카드를 담지 않은 경우다(출력이 길어질 때 실제로 난다).
+      // 값이 null로 온 카드는 여기 들지 않는다 — 읽고 없다고 답한 것이라 다시 물어도 같다.
+      let topupCalled = false
+      if (envelopes.length > 0) {
+        const answered = envelopes.flatMap((e) => Object.keys(e.cards))
+        const missing = missingCards(cards, answered, failedCards.flatMap((f) => f.keys))
+        const plan: CardGroup | null = planTopup(missing, groups)
+        const parts = plan ? selectParts(built, plan.sourceKeys) : []
+        if (plan && parts.length > 0) {
+          topupCalled = true
+          const again = await generateDraft({
+            apiKey,
+            model,
+            parts: [...parts, { text: buildPrompt(plan.cards, companyName, locations) }],
+            cards: plan.cards,
+            signal: controller.signal,
+            normalize: { locations },
+            label: '보완',
+          }).catch(() => null)
+          // 보완이 실패해도 이미 손에 든 초안을 버리지 않는다. 그 카드는 값 없이 남고,
+          // 병합이 기존 값을 지키므로 담당자가 잃는 것이 없다.
+          if (again && !('failure' in again)) envelopes.push(again.envelope)
+        }
+      }
+
       console.log(
         '[startup-ai-fill] 실행 요약',
         JSON.stringify({
           groups: groups.length,
           called: runnable.length,
+          topup: topupCalled,
           ok: envelopes.length,
           failed: failedCards.length,
           sources: sources.length,
+          extracted: extracts.size,
           uploaded: uploaded.length,
           elapsedMs: Date.now() - startedAt,
         }),

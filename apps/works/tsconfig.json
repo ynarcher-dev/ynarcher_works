@@ -5,9 +5,13 @@
     "types": ["vite/client", "node"],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@docparse/*": ["../../supabase/functions/_shared/docParse/*"]
     },
-    "noEmit": true
+    "noEmit": true,
+    // 공용 파서는 Deno가 함께 읽으므로 임포트에 `.ts`가 붙어 있다. 확장자를 떼면 Deno가
+    // 그 파일을 찾지 못한다 — 그래서 확장자를 두고 여기서 받아들인다(noEmit이라 안전하다).
+    "allowImportingTsExtensions": true
   },
   "include": ["src", "vite.config.ts"]
 }

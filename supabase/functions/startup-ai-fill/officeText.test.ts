@@ -98,12 +98,12 @@ describe('docx', () => {
       // 필드 코드는 사람이 읽는 글자가 아니다 — <w:t> 밖이라 따라오지 않아야 한다.
       '<w:p><w:instrText>PAGEREF _Toc1</w:instrText></w:p>' +
       '</w:body></w:document>'
-    expect(await text(zipOf({ 'word/document.xml': xml }), OFFICE_MIMES.docx)).toBe('첫째 문단\n둘째 문단')
+    expect(await text(zipOf({ 'word/document.xml': xml }), OFFICE_MIMES.docx)).toBe('[문단 1-2]\n첫째 문단\n둘째 문단')
   })
 
   it('XML 엔티티를 되돌린다', async () => {
     const xml = '<w:p><w:r><w:t>A&amp;B &lt;주&gt;</w:t></w:r></w:p><w:p><w:r><w:t>같은 줄 아님</w:t></w:r></w:p>'
-    expect(await text(zipOf({ 'word/document.xml': xml }), OFFICE_MIMES.docx)).toBe('A&B <주>\n같은 줄 아님')
+    expect(await text(zipOf({ 'word/document.xml': xml }), OFFICE_MIMES.docx)).toBe('[문단 1-2]\nA&B <주>\n같은 줄 아님')
   })
 })
 

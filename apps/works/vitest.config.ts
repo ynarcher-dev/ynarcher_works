@@ -6,6 +6,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      // 앱과 Edge Function이 같은 파서를 쓴다(vite.config.ts 주석 참조).
+      '@docparse': fileURLToPath(new URL('../../supabase/functions/_shared/docParse', import.meta.url)),
     },
   },
   test: {

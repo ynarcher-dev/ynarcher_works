@@ -1,4 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
+import type { ExtractBody } from '@docparse/types.ts'
 import { supabase } from '@/lib/supabase'
 import { isLinkMaterial, materialDisplayName, type Material } from '@/features/networks/materialHooks'
 import { isAiReadable } from '@/features/startup/startupAiFormats'
@@ -43,7 +44,25 @@ export const AI_FILL_LIMITS = {
  *   * `link` — 등록 모드의 보류 링크. 주소만 보내고 서버가 가져온다.
  */
 export type AiSource =
-  | { kind: 'attachment'; key: string; name: string; bytes: number | null; readable: boolean; id: string }
+  | {
+      kind: 'attachment'
+      key: string
+      name: string
+      bytes: number | null
+      readable: boolean
+      id: string
+      /**
+       * 이 첨부가 링크면 그 주소, 파일이면 null.
+       *
+       * 종전에는 `bytes === null`이 링크를 뜻했다. 자료 분석이 붙으면서 **종류를 물어야 하는
+       * 자리가 생겼으므로**(링크는 서버가 가져오고 파일은 브라우저가 연다) 값을 그대로 든다 —
+       * 크기가 없다는 것과 링크라는 것은 다른 사실이고, 앞으로 크기가 비는 파일이 생기면
+       * 그 추측이 조용히 틀린다.
+       */
+      url: string | null
+      /** 원장에 적힌 형식 값. 분석 대상인지(PDF·이미지는 아니다) 가릴 때 쓴다. */
+      contentType: string | null
+    }
   | { kind: 'file'; key: string; name: string; bytes: number | null; readable: boolean; file: File }
   | { kind: 'link'; key: string; name: string; bytes: number | null; readable: boolean; url: string }
 
@@ -57,6 +76,8 @@ export function sourcesFromMaterials(materials: Material[]): AiSource[] {
     // 링크에는 용량이 없다. 합산 표시에서 0으로 세지 않도록 null을 그대로 넘긴다.
     bytes: isLinkMaterial(m) ? null : m.byte_size,
     readable: isAiReadable(m),
+    url: isLinkMaterial(m) ? m.url : null,
+    contentType: m.content_type,
   }))
 }
 
@@ -132,13 +153,21 @@ export interface AiFillInput {
    * 막는다. 나누는 일을 화면이 하지 않는 이유는 담당자가 누르는 것이 한 번이어야 하기 때문이다.
    */
   assignments: AiGrid
+  /**
+   * 등록 모드에서 **이미 분석된 보류 자료**의 글자(자료 키 → 이름과 본문).
+   *
+   * 저장할 자리가 없어(첨부 행이 아직 없다) 화면이 결과를 들고 있다가 작성 요청에 함께
+   * 싣는다. 여기 담긴 자료는 파일 자체를 보내지 않는다 — 그것이 분석 단계를 둔 이유다.
+   * 수정 모드에서는 서버가 캐시 원장에서 직접 읽으므로 이 칸이 비어 있다.
+   */
+  extracts?: Record<string, { name: string; body: ExtractBody }>
 }
 
 /**
  * functions.invoke 에러에서 서버가 담은 한국어 메시지를 끌어낸다.
  * FunctionsHttpError는 응답 본문(context)에 { message }를 담는다(voiceMinuteApi와 같은 규약).
  */
-async function readInvokeError(error: unknown, fallback: string): Promise<string> {
+export async function readInvokeError(error: unknown, fallback: string): Promise<string> {
   const ctx = (error as { context?: unknown }).context
   if (ctx instanceof Response) {
     const body = await ctx.json().catch(() => null)
@@ -156,8 +185,12 @@ function buildUploadBody(input: AiFillInput): FormData {
   // 파일에는 id가 없으므로 **화면이 만든 키를 파일과 같은 순서로 함께 보낸다.** 순번을 서버가
   // 다시 세면 담당자가 자료를 골라 보낼 때 그 순번이 화면의 것과 어긋나, 카드별 배정이 엉뚱한
   // 자료를 가리킨다. 링크는 주소가 곧 키라 양쪽이 따로 만들어도 같은 값이 나온다.
+  const extracts = input.extracts ?? {}
   const fileKeys: string[] = []
   for (const s of input.sources) {
+    // 이미 분석된 자료는 **파일도 주소도 보내지 않는다.** 글자가 아래에 함께 실리므로
+    // 원본을 또 보내면 같은 자료를 두 모양으로 읽히게 되고, 큰 파일이 그대로 다시 올라간다.
+    if (extracts[s.key]) continue
     if (s.kind === 'file') {
       form.append('files', s.file, s.name)
       fileKeys.push(s.key)
@@ -166,6 +199,7 @@ function buildUploadBody(input: AiFillInput): FormData {
     }
   }
   form.append('fileKeys', JSON.stringify(fileKeys))
+  if (Object.keys(extracts).length > 0) form.append('extracts', JSON.stringify(extracts))
   return form
 }
 
