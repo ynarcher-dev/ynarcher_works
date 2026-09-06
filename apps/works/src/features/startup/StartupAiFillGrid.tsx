@@ -21,21 +21,55 @@ import type { AiExtractController } from '@/features/startup/useStartupAiExtract
  * 밀려나 스크롤해야 나머지가 보인다. 행으로 세우면 이름은 한 줄을 다 쓰고 늘어나는 방향은
  * 브라우저가 원래 잘하는 세로 스크롤이 된다.
  *
+ * **가로로는 절대 스크롤하지 않는다**(2026-09-06 사용자 지정). 표는 `table-fixed`로 창 폭에
+ * 맞춰 갈라지고, 넘치는 것은 잘린다(파일 이름은 `truncate`, 전문은 커서를 올리면 답한다).
+ * 그래서 열 폭은 픽셀이 아니라 **비율**이고, 고정(sticky) 칸도 두지 않는다 — 가로로 움직이지
+ * 않는 표에서 따라올 것이 없다. 담기는 값이 아니라 화면 폭이 열 폭을 정하는 예외이며, 근거는
+ * 열둘이 언제나 함께 보여야 한다는 것이다(카드를 견주려고 여는 창이다).
+ *
+ * **왼쪽은 한 칸이 아니라 두 칸이다 — 파일명 · 분석 상태.** 한 칸에 세로로 쌓았더니 줄마다 두
+ * 층이 되어 목록이 통째로 두 배 높이가 됐고, 그 두 층은 성격도 다르다 — 이름은 **고를 때 읽는
+ * 것**이고 상태는 **누를 것이 있는지 훑는 것**이다. 열로 가르면 상태 배지가 세로로 정렬돼
+ * '분석 전'인 줄만 훑어 내려갈 수 있다.
+ *
  * **카드 체크박스를 따로 두지 않는다** — 한 칸이라도 켜진 카드가 작성 대상이다. 같은 값을
  * 묻는 컨트롤을 둘 두면 어느 쪽이 진짜인지 화면이 답하지 못한다.
  *
  * 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §4.2
  */
 
-/** 카드 열 하나의 폭. 열둘이 고정이라 이 값이 표의 가로 길이를 정한다. */
-const COL = 'w-24 min-w-[6rem]'
 /**
- * 자료 이름 칸 — 가로로 스크롤해도 자리에 남는다.
+ * 열 폭은 비율이다 — 파일명 19% · 형식 4.5% · 용량 6% · 분석 상태 8.5% · 카드 열둘이 나머지.
  *
- * 이 칸이 따라오지 않으면 오른쪽 끝의 체크박스가 어느 자료의 것인지 알 수 없다. 배경을
- * 칠하는 것은 장식이 아니라 필수다 — 투명하면 스크롤된 칸이 이 칸 밑으로 비쳐 겹쳐 보인다.
+ * 파일명이 가장 넓지만 그마저 5분의 1로 묶는다. 이름은 잘려도 커서로 답할 수 있지만, 카드
+ * 열은 잘리면 무엇을 켜는 칸인지 알 수 없다. 나머지 셋은 담기는 값의 **가장 긴 경우**에
+ * 맞춘다(형식 `XLSX`, 용량 `999 KB`, 상태 `재분석 필요` + 아이콘) — 값이 짧은 칸을 넓게
+ * 두면 그 여백만큼 카드 열이 좁아지고, 좁아지는 쪽은 언제나 잘리면 안 되는 쪽이다.
  */
-const LEFT = 'sticky left-0 z-10 w-72 min-w-[18rem] bg-white group-hover:bg-gray-25'
+const NAME_COL = 'w-[19%]'
+const EXT_COL = 'w-[4.5%]'
+const SIZE_COL = 'w-[6%]'
+const STATE_COL = 'w-[8.5%]'
+const CARD_COL = 'w-[5.1%]'
+
+/**
+ * 파일 이름에서 **확장자를 떼어 낸다**(2026-09-06 사용자 지정).
+ *
+ * 떼는 이유는 두 값의 성격이 다르기 때문이다 — 이름은 잘려도 되는 긴 값이고(전문은 커서가
+ * 답한다), 형식과 용량은 짧고 언제나 끝까지 보여야 하는 값이라 **각자 칸을 갖는다**. 한 칸에
+ * 이어 붙이면 잘리는 쪽이 뒤에 붙은 형식·용량이 되어, 정작 무엇을 여는지(PDF인지 엑셀인지)가
+ * 먼저 사라진다. 같은 값을 두 곳에 적지 않으므로 왼쪽 이름에서는 확장자가 빠진다.
+ */
+function splitName(name: string): { base: string; ext: string | null } {
+  const m = /^(.*)\.([A-Za-z0-9]{1,6})$/.exec(name)
+  if (!m?.[1] || !m[2]) return { base: name, ext: null }
+  return { base: m[1], ext: m[2].toUpperCase() }
+}
+
+/** 확장자가 없는 자료의 형식 칸 — 링크는 '링크'이고, 이름에 확장자가 없는 파일은 비운다. */
+function kindLabel(source: AiSource): string {
+  return source.kind === 'link' ? '링크' : ''
+}
 
 export function StartupAiFillGrid({
   sources,
@@ -49,7 +83,7 @@ export function StartupAiFillGrid({
 }: {
   /** 읽을 수 있는 자료만 온다(못 읽는 자료는 격자에 세우지 않는다). */
   sources: AiSource[]
-  /** 지금 폼에 적힌 값. 카드 열의 Y/N이 이것을 읽는다. */
+  /** 지금 폼에 적힌 값. 카드 열의 작성 여부가 이것을 읽는다. */
   record: EntityRow
   grid: AiGrid
   onCell: (card: AiCardKey, key: string) => void
@@ -67,10 +101,12 @@ export function StartupAiFillGrid({
   /** 밴드가 바뀌는 자리에만 세로선을 둔다 — 열마다 그으면 격자가 아니라 창살이 된다. */
   const bandEdge = (i: number) => i > 0 && AI_CARDS[i - 1]?.band !== AI_CARDS[i]?.band
 
+  // 세로 높이만 여기서 잠근다 — 표가 자기 안에서 스크롤해야 머리줄이 붙어 있고, 아래 결과
+  // 패널이 화면 밖으로 밀려나지 않는다. 가로(`overflow-x`)는 열지 않는다.
   return (
-    <div className="overflow-auto rounded-radius-md border border-gray-200 lg:max-h-[30rem]">
-      {/* border-collapse 대신 separate를 쓴다 — 붙인 테두리는 고정(sticky) 칸에서 사라진다. */}
-      <table className="min-w-full border-separate border-spacing-0">
+    <div className="max-h-[min(58vh,40rem)] overflow-y-auto overflow-x-hidden rounded-radius-md border border-gray-200">
+      {/* border-collapse 대신 separate를 쓴다 — 붙인 테두리는 고정(sticky) 머리줄에서 사라진다. */}
+      <table className="w-full table-fixed border-separate border-spacing-0">
         <thead>
           {/* 1단 — 밴드. 상세 화면의 세로 축(다시 재는가)이 여기서는 열 묶음이 된다. */}
           <tr>
@@ -78,8 +114,8 @@ export function StartupAiFillGrid({
               scope="col"
               rowSpan={2}
               className={cn(
-                LEFT,
-                'sticky top-0 z-30 border-b border-r border-gray-200 bg-white px-3 py-2 text-left align-bottom',
+                NAME_COL,
+                'sticky top-0 z-20 border-b border-gray-200 bg-white px-3 py-2 text-left align-bottom',
               )}
             >
               <Checkbox
@@ -87,6 +123,36 @@ export function StartupAiFillGrid({
                 onChange={onAll}
                 label={<span className={cardText.label}>{total > 0 ? '전체 해제' : '전체 선택'}</span>}
               />
+            </th>
+            <th
+              scope="col"
+              rowSpan={2}
+              className={cn(
+                EXT_COL,
+                'sticky top-0 z-20 border-b border-gray-200 bg-white px-1 py-2 text-center align-bottom',
+              )}
+            >
+              <span className={cardText.label}>형식</span>
+            </th>
+            <th
+              scope="col"
+              rowSpan={2}
+              className={cn(
+                SIZE_COL,
+                'sticky top-0 z-20 border-b border-gray-200 bg-white px-2 py-2 text-right align-bottom',
+              )}
+            >
+              <span className={cardText.label}>용량</span>
+            </th>
+            <th
+              scope="col"
+              rowSpan={2}
+              className={cn(
+                STATE_COL,
+                'sticky top-0 z-20 border-b border-r border-gray-200 bg-white px-2 py-2 text-left align-bottom',
+              )}
+            >
+              <span className={cardText.label}>분석</span>
             </th>
             {bands.map((band) => (
               <th
@@ -109,21 +175,30 @@ export function StartupAiFillGrid({
                   key={card.key}
                   scope="col"
                   className={cn(
-                    COL,
+                    CARD_COL,
                     // 1단(밴드)이 위에 서므로 그 높이만큼 내려 붙는다.
-                    'sticky top-7 z-20 border-b border-gray-200 bg-white px-2 py-2 align-bottom',
+                    'sticky top-7 z-20 border-b border-gray-200 bg-white px-1 py-2 align-bottom',
                     bandEdge(i) && 'border-l border-gray-200',
                   )}
-                  title={`${card.label} — ${filled ? '값 있음' : '비어 있음'}`}
                 >
                   <div className="flex flex-col items-center gap-1">
-                    {/* 작성 여부는 상태이므로 색을 쓴다(값이 있는 쪽만 눈에 걸리면 된다). */}
-                    <Badge tone={filled ? 'info' : 'neutral'} density="table">
-                      {filled ? 'Y' : 'N'}
-                    </Badge>
-                    <span className={cn('block w-full break-keep text-center', cardText.meta)}>
+                    {/* 이름이 먼저다 — 담당자가 열에서 찾는 것은 카드 이름이고, 값이 있는지는
+                        그 이름을 찾은 다음에 보는 것이다. 줄바꿈을 막지 않는다(`break-keep`을
+                        걷었다) — 열이 창 폭을 나눠 갖는 이상 이름은 접혀야 하고, 한글은 기본
+                        규칙으로도 음절 사이에서 접힌다. */}
+                    <span className={cn('block w-full text-center', cardText.label)}>
                       {card.label}
                     </span>
+                    {/* 작성 여부는 상태이므로 색을 쓴다(값이 있는 쪽만 눈에 걸리면 된다).
+                        배지는 줄어들지 않으므로 좁은 열에서는 글자를 최소로 줄이고, 무엇의
+                        답인지는 바로 위의 카드 이름과 커서 설명이 함께 답한다. */}
+                    <Badge
+                      tone={filled ? 'info' : 'neutral'}
+                      density="table"
+                      title={`${card.label} — ${filled ? '값 있음(작성됨)' : '비어 있음'}`}
+                    >
+                      {filled ? '있음' : '없음'}
+                    </Badge>
                     <span className="flex items-center gap-1">
                       <Checkbox
                         checked={picked > 0}
@@ -143,48 +218,57 @@ export function StartupAiFillGrid({
         <tbody>
           {sources.map((s) => {
             const used = cardCountFor(grid, s.key, cards)
+            const { base, ext } = splitName(s.name)
             return (
               <tr key={s.key} className="group">
-                <th scope="row" className={cn(LEFT, 'border-b border-r border-gray-100 px-3 py-1.5 text-left')}>
-                  {/* 이름 줄과 상태 줄을 세로로 쌓는다 — 이름이 길어 한 줄에 둘을 세우면
-                      상태가 먼저 잘린다(무엇을 눌러야 하는지가 그 줄에 있다). */}
-                  <div className="flex flex-col gap-0.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <Checkbox
-                        checked={used > 0}
-                        onChange={() => onSource(s.key)}
-                        // 이름이 길어 잘리므로 전체 이름은 커서를 올리면 답한다.
-                        label={
-                          <span className="block min-w-0 truncate" title={s.name}>
-                            {s.name}
-                          </span>
-                        }
-                      />
-                      <span className="flex shrink-0 items-center gap-1.5">
-                        {used > 0 && (
-                          <span className={cardText.meta}>
-                            {used}/{cards.length}
-                          </span>
-                        )}
-                        {/* 링크에는 용량이 없다. '-'는 모른다는 뜻이라 사실과 달라 아예 세우지 않는다. */}
-                        {s.bytes != null && <span className={cardText.meta}>{formatBytes(s.bytes)}</span>}
+                <th
+                  scope="row"
+                  className={cn(NAME_COL, 'border-b border-gray-100 px-3 py-1.5 text-left group-hover:bg-gray-25')}
+                >
+                  <Checkbox
+                    checked={used > 0}
+                    onChange={() => onSource(s.key)}
+                    // 라벨 래퍼가 줄어들 수 있어야 안쪽 이름이 잘린다 — `min-w-0`이 없으면
+                    // 이름이 칸을 밀어내 표가 가로로 넘친다.
+                    wrapperClassName="w-full min-w-0"
+                    // 이름은 잘리고(말줄임), 전체 이름은 커서를 올리면 답한다.
+                    label={
+                      <span className="block min-w-0 truncate" title={s.name}>
+                        {base}
                       </span>
-                    </div>
-                    <StartupAiSourceState
-                      source={s}
-                      status={extracts.statusOf(s)}
-                      forcedOriginal={extracts.isForcedOriginal(s.key)}
-                      disabled={extracts.busy}
-                      onAnalyze={() => void extracts.analyze([s])}
-                      onToggleOriginal={() => extracts.toggleOriginal(s.key)}
-                    />
-                  </div>
+                    }
+                  />
                 </th>
+                <td className={cn(EXT_COL, 'border-b border-gray-100 px-1 py-1.5 text-center group-hover:bg-gray-25')}>
+                  <span className={cn('block truncate', cardText.meta)}>{ext ?? kindLabel(s)}</span>
+                </td>
+                <td className={cn(SIZE_COL, 'border-b border-gray-100 px-2 py-1.5 text-right group-hover:bg-gray-25')}>
+                  {/* 링크에는 용량이 없다. '-'는 모른다는 뜻이라 사실과 달라 아예 비운다. */}
+                  <span className={cn('block truncate tabular-nums', cardText.meta)}>
+                    {s.bytes != null ? formatBytes(s.bytes) : ''}
+                  </span>
+                </td>
+                <td
+                  className={cn(
+                    STATE_COL,
+                    'border-b border-r border-gray-100 px-2 py-1.5 group-hover:bg-gray-25',
+                  )}
+                >
+                  <StartupAiSourceState
+                    source={s}
+                    status={extracts.statusOf(s)}
+                    forcedOriginal={extracts.isForcedOriginal(s.key)}
+                    disabled={extracts.busy}
+                    onAnalyze={() => void extracts.analyze([s])}
+                    onToggleOriginal={() => extracts.toggleOriginal(s.key)}
+                  />
+                </td>
                 {AI_CARDS.map((card, i) => (
                   <td
                     key={card.key}
                     className={cn(
-                      'border-b border-gray-100 px-2 py-1.5 text-center group-hover:bg-gray-25',
+                      CARD_COL,
+                      'border-b border-gray-100 px-1 py-1.5 text-center group-hover:bg-gray-25',
                       bandEdge(i) && 'border-l border-gray-200',
                     )}
                   >

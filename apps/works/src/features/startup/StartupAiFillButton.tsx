@@ -5,6 +5,7 @@ import { StartupAiFillModal } from '@/features/startup/StartupAiFillModal'
 import type { AiFillResult, AiSource } from '@/features/startup/startupAiFill'
 import type { AiCardKey } from '@/features/startup/startupAiCards'
 import type { AiGrid } from '@/features/startup/startupAiGrid'
+import type { AiFillOutcome } from '@/features/startup/startupAiMerge'
 
 /**
  * 자료 관리 카드 아래에 서는 'AI 작성하기' 진입 버튼.
@@ -34,7 +35,14 @@ export function StartupAiFillButton({
   /** 수정 모드의 대상 id. 등록 모드에는 아직 없다. */
   startupId?: string
   companyName?: string
-  onFilled: (result: AiFillResult, cards: AiCardKey[]) => void
+  /**
+   * 초안을 폼에 얹고 **그 결과**를 돌려준다.
+   *
+   * 돌려받는 이유는 창이 결과를 그 자리에서 보여 주기 때문이다(2026-09-06). 합치는 판단은
+   * 폼이 자기 살아 있는 값 위에서 하고, 그 답 하나를 화면 두 곳(창 안 결과 패널·폼 맨 위
+   * 안내)이 함께 읽는다.
+   */
+  onFilled: (result: AiFillResult, cards: AiCardKey[]) => AiFillOutcome
 }) {
   const [open, setOpen] = useState(false)
   /**
@@ -80,10 +88,9 @@ export function StartupAiFillButton({
           grid={grid}
           onGrid={setGrid}
           onClose={() => setOpen(false)}
-          onFilled={(result, cards) => {
-            setOpen(false)
-            onFilled(result, cards)
-          }}
+          // 실행해도 창을 닫지 않는다 — 결과는 창 안에서 서고, 실패한 카드만 남겨 다시
+          // 실행하는 것이 그다음의 정상 행동이다.
+          onFilled={onFilled}
         />
       )}
     </div>

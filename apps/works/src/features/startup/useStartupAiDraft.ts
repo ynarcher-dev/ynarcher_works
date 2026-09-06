@@ -60,7 +60,13 @@ export function useStartupAiDraft({
   /** 모달과 기본 체크 규칙이 기준으로 삼는, 지금 폼에 적힌 값. */
   const snapshot = buildCardSnapshot(getValues(), state)
 
-  const applyDraft = (envelope: AiFillEnvelope, cards: AiCardKey[]) => {
+  /**
+   * 초안을 지금 값 위에 얹고 **이번 실행의 결과**를 돌려준다.
+   *
+   * 돌려주는 이유는 그 결과를 읽는 자리가 둘이기 때문이다 — 창 안의 결과 패널(실행 직후)과
+   * 폼 맨 위의 안내(저장 직전). 합치는 판단은 여기 한 번만 돌고, 두 화면은 그 답을 함께 쓴다.
+   */
+  const applyDraft = (envelope: AiFillEnvelope, cards: AiCardKey[]): AiFillOutcome => {
     const values = getValues()
     const merged = applyAiDraft(buildCardSnapshot(values, state), envelope, cards)
     reset(toFormValues(merged.record, values))
@@ -72,6 +78,7 @@ export function useStartupAiDraft({
     setShareholders(next.shareholders)
     setSummary(next.summary)
     setOutcome(merged.outcome)
+    return merged.outcome
   }
 
   return { outcome, snapshot, applyDraft }

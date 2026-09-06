@@ -1,12 +1,25 @@
-import { Badge, cardText, cn, type BadgeTone } from '@ynarcher/ui'
+import { Badge, IconButton, cardText, cn, type BadgeTone } from '@ynarcher/ui'
+import { RotateCcw } from 'lucide-react'
 import type { AiSource } from '@/features/startup/startupAiFill'
 import { extractable, stateLabel, type AiSourceStatus } from '@/features/startup/startupAiExtractState'
 
 /**
- * 자료 줄의 분석 상태 한 줄 — 배지 · 요약 · 그 줄에서 할 수 있는 일.
+ * 자료 줄의 분석 상태 한 칸 — 배지 하나와, 다시 분석하는 아이콘 하나.
  *
  * **상태에 색을 쓰는 것이 맞는 자리다.** 배지는 값이 아니라 상태를 말하고(5_component_spec
  * §3.4), 담당자가 격자를 훑으며 찾는 것이 바로 "아직 안 연 줄"이다.
+ *
+ * **요약 건수(시트·표·글자 수)는 세우지 않는다**(2026-09-06 사용자 지정). 그 값은 담당자의
+ * 다음 행동을 바꾸지 않는데 줄마다 서서 칸을 넓히고, 넓어진 칸이 표를 가로로 밀어 스크롤을
+ * 만들었다. 상태를 아는 데 필요한 것은 '분석 완료'라는 사실 하나이고, 자세한 값은 배지에
+ * 커서를 올리면 답한다.
+ *
+ * **실패 사유만은 접지 않는다.** 건수는 알아도 그만이지만 실패는 담당자가 고쳐야 하는 것이라
+ * (암호 해제·PDF로 다시 저장), 그 줄에서 이유가 보이지 않으면 왜 안 되는지 알 수 없다.
+ *
+ * **버튼이 아니라 아이콘이다.** '분석'·'다시 분석' 두 글자 링크가 줄마다 서면 자료 목록이
+ * 아니라 링크 목록으로 읽힌다. 되돌아 도는 화살표는 이 저장소가 다시 실행에 쓰는 표시다
+ * (`RotateCcw` — 꺼진 모듈 되살리기·재시도와 같은 아이콘).
  *
  * **'원본으로' 스위치는 뜻이 있는 줄에만 세운다.** PDF·이미지는 이미 원본으로 가고, 오피스는
  * 모델이 받지 못해 원본으로 보낼 수 없으며, 링크는 서버가 가져온 것이 곧 원본이다. 남는 것은
@@ -51,39 +64,42 @@ export function StartupAiSourceState({
   onAnalyze: () => void
   onToggleOriginal: () => void
 }) {
+  const first = status.state === 'idle'
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
-      <Badge tone={TONES[status.state]} density="table">
+    <div className="flex min-w-0 items-center gap-1">
+      <Badge tone={TONES[status.state]} density="table" title={status.detail || undefined}>
         {stateLabel(status.state)}
       </Badge>
-      {status.detail && (
+      {status.analyzable && (
+        <IconButton
+          density="table"
+          variant="ghost"
+          icon={<RotateCcw className="h-3.5 w-3.5" />}
+          label={first ? `${source.name} 분석` : `${source.name} 다시 분석`}
+          title={first ? '이 자료를 열어 글자로 바꿔 둡니다.' : '이 자료를 다시 엽니다.'}
+          onClick={onAnalyze}
+          disabled={disabled}
+        />
+      )}
+      {/* 고쳐야 하는 것만 글자로 선다. 칸이 좁아 잘리므로 전문은 커서를 올리면 답한다. */}
+      {status.state === 'failed' && status.detail && (
         <span className={cn('min-w-0 truncate', cardText.meta)} title={status.detail}>
           {status.detail}
         </span>
-      )}
-      {status.analyzable && (
-        <button
-          type="button"
-          onClick={onAnalyze}
-          disabled={disabled}
-          className={cn(cardText.meta, 'text-brand underline-offset-2 hover:underline disabled:text-gray-400')}
-        >
-          {status.state === 'idle' ? '분석' : '다시 분석'}
-        </button>
       )}
       {canForceOriginal(source) && (
         <button
           type="button"
           onClick={onToggleOriginal}
           disabled={disabled}
-          className={cn(cardText.meta, 'text-gray-500 underline-offset-2 hover:underline disabled:text-gray-400')}
+          className={cn(cardText.meta, 'shrink-0 text-gray-500 underline-offset-2 hover:underline disabled:text-gray-400')}
           title={
             forcedOriginal
               ? '분석한 글자 대신 원본을 보내도록 지정했습니다. 눌러서 되돌립니다.'
               : '이 자료만 원본 그대로 AI에 보냅니다.'
           }
         >
-          {forcedOriginal ? '분석본으로' : '원본으로'}
+          {forcedOriginal ? '분석본' : '원본'}
         </button>
       )}
     </div>
