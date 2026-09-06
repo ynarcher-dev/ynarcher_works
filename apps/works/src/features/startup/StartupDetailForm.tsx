@@ -43,7 +43,6 @@ import {
 import { readIndustries } from '@/features/startup/startupGrowth'
 import { SectionHeading } from '@/features/startup/SectionHeading'
 import { StartupAiFillButton } from '@/features/startup/StartupAiFillButton'
-import { StartupAiFillNotice } from '@/features/startup/StartupAiFillNotice'
 import { sourcesFromFiles, sourcesFromLinks, sourcesFromMaterials } from '@/features/startup/startupAiFill'
 import { useStartupAiDraft } from '@/features/startup/useStartupAiDraft'
 import { useMaterials } from '@/features/networks/materialHooks'
@@ -413,8 +412,6 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
         onCancel={onCancel}
         busy={isSubmitting}
       />
-
-      {ai.outcome && <StartupAiFillNotice outcome={ai.outcome} />}
 
       {/* 상세페이지와 동일한 3열 배치: 좌측 2/3 편집 카드 + 우측 1/3 자료 관리 */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

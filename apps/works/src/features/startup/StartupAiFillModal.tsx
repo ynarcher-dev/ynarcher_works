@@ -1,5 +1,5 @@
 import { Banner, Button, Modal, Spinner, cardText, cn } from '@ynarcher/ui'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { EntityRow } from '@/features/master/entityHooks'
 import { formatBytes } from '@/features/networks/materialHooks'
 import { AI_FILL_LIMITS, useAiFill, type AiFillResult, type AiSource } from '@/features/startup/startupAiFill'
@@ -37,6 +37,11 @@ import {
  * 아니라 뒤편 화면에서 떴다. 이제 격자는 흐려질 뿐 자리에 남고(무엇을 돌리는 중인지 보인다),
  * 결과는 아래 패널이 받는다. 창을 닫지 않는 것도 같은 이유다 — 실패한 카드만 남겨 다시
  * 실행하는 것이 결과 직후의 정상 행동인데, 창이 닫히면 격자를 다시 열어야 한다.
+ *
+ * **폼 맨 위의 배너는 걷었다**(2026-09-06 사용자 지정). 결과가 창 안에 서게 된 뒤로 그것은
+ * 같은 말을 두 곳에서 하는 층이었고, 뒤편 화면의 파란 상자가 정작 창 안의 답보다 먼저 눈에
+ * 걸렸다. 대가는 창을 닫으면 근거·경고를 다시 볼 수 없다는 것이며, 다시 필요해지면 그때는
+ * 배너가 아니라 **창을 다시 여는 길**로 답한다(같은 사실이 두 자리에 살지 않게).
  *
  * **버튼이 둘인 이유는 두 일이 다르기 때문이다**(2026-09-06). 자료 분석은 우리 쪽에서 끝나
  * 밖으로 나가는 것이 없고, AI 작성은 그 자료가 외부 AI로 나간다. 한 버튼 뒤에 두면 담당자는
@@ -82,6 +87,17 @@ export function StartupAiFillModal({
   const [error, setError] = useState<string | null>(null)
   const [outcome, setOutcome] = useState<AiFillOutcome | null>(null)
   const extracts = useStartupAiExtracts(sources, startupId)
+  /**
+   * 결과 패널로 데려간다.
+   *
+   * 결과가 서는 자리는 격자 아래라, 자료가 많으면 창 본문이 스크롤되어 **결과가 접힌 화면
+   * 밖에서 뜬다**. 실행을 누른 사람은 스피너를 보던 자리(격자)를 계속 보고 있으므로, 답이
+   * 어디에 섰는지 화면이 데려가지 않으면 아무 일도 일어나지 않은 것처럼 읽힌다.
+   */
+  const resultRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (outcome) resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [outcome])
 
   const readable = useMemo(() => sources.filter((s) => s.readable), [sources])
   const blocked = sources.filter((s) => !s.readable)
@@ -242,7 +258,9 @@ export function StartupAiFillModal({
         <AiBlockedList sources={blocked} />
 
         {/* 실행 전에는 사용 방법, 실행 뒤에는 결과 — 한 자리를 두 내용이 이어 쓴다. */}
-        <StartupAiFillResultPanel outcome={outcome} />
+        <div ref={resultRef}>
+          <StartupAiFillResultPanel outcome={outcome} />
+        </div>
       </div>
     </Modal>
   )

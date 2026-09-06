@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import type { UseFormGetValues, UseFormReset } from 'react-hook-form'
 import type { StartupDetailFormValues } from '@/features/startup/startupFormValues'
 import type { AiCardKey } from '@/features/startup/startupAiCards'
@@ -11,7 +10,7 @@ import {
 } from '@/features/startup/startupAiSnapshot'
 
 /**
- * 편집 폼의 'AI 작성하기' 상태 — 초안을 지금 값 위에 얹고 그 결과를 기억한다.
+ * 편집 폼의 'AI 작성하기' 배선 — 초안을 지금 값 위에 얹고 그 결과를 돌려준다.
  *
  * 폼에서 떼어 낸 이유는 줄 수가 아니라 소유다. 폼은 "무엇을 저장하는가"를 알고, 이 훅은
  * "초안이 어디로 가는가"를 안다. 카드가 늘면 여기만 는다.
@@ -55,16 +54,15 @@ export function useStartupAiDraft({
   /** 요약 3축. 2026-09-06에 AI가 쓰는 카드가 되면서 되돌릴 자리가 생겼다. */
   setSummary: (v: AiCardState['summary']) => void
 }) {
-  const [outcome, setOutcome] = useState<AiFillOutcome | null>(null)
-
   /** 모달과 기본 체크 규칙이 기준으로 삼는, 지금 폼에 적힌 값. */
   const snapshot = buildCardSnapshot(getValues(), state)
 
   /**
    * 초안을 지금 값 위에 얹고 **이번 실행의 결과**를 돌려준다.
    *
-   * 돌려주는 이유는 그 결과를 읽는 자리가 둘이기 때문이다 — 창 안의 결과 패널(실행 직후)과
-   * 폼 맨 위의 안내(저장 직전). 합치는 판단은 여기 한 번만 돌고, 두 화면은 그 답을 함께 쓴다.
+   * 결과를 여기 담아 두지 않는 이유는 그것을 읽는 자리가 **창 하나**이기 때문이다(2026-09-06
+   * 사용자 지정). 폼이 들고 있으면 창을 닫은 뒤에도 남는데, 그때는 이미 값이 폼에 들어가
+   * 있어 같은 사실을 두 번 말하는 층이 된다.
    */
   const applyDraft = (envelope: AiFillEnvelope, cards: AiCardKey[]): AiFillOutcome => {
     const values = getValues()
@@ -77,9 +75,8 @@ export function useStartupAiDraft({
     setBusinessStatus(next.businessStatus)
     setShareholders(next.shareholders)
     setSummary(next.summary)
-    setOutcome(merged.outcome)
     return merged.outcome
   }
 
-  return { outcome, snapshot, applyDraft }
+  return { snapshot, applyDraft }
 }
