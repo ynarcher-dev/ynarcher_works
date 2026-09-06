@@ -44,10 +44,9 @@ export interface AssetDraft {
   billingCycle: AssetBillingCycle
   /** 보유 수량(1 이상 정수 문자열). 입력 중간의 빈 값을 담기 위해 문자열로 둔다. */
   quantity: string
+  /** OFFICE 자산 현황에 공개할지(원장 컬럼은 `is_portable`). */
   isPortable: boolean
-  /** 반출 시 승인 필요 여부. 반출 가능이 꺼져 있으면 저장되지 않는다(뜻이 없는 값이다). */
-  requiresApproval: boolean
-  /** 중요 표시. 목록에서 자산명 순을 건너뛰고 맨 위에 선다(반출 가능 여부와 무관한 축이다). */
+  /** 중요 표시. 목록에서 자산명 순을 건너뛰고 맨 위에 선다(공개 여부와 무관한 축이다). */
   isPinned: boolean
   note: string
   /**
@@ -80,7 +79,6 @@ export function emptyDraft(branchId: string): AssetDraft {
     billingCycle: 'ONE_TIME',
     quantity: '1',
     isPortable: false,
-    requiresApproval: false,
     isPinned: false,
     note: '',
     photoPaths: [],
@@ -109,7 +107,6 @@ export function draftFromAsset(a: Asset): AssetDraft {
     billingCycle: a.billingCycle,
     quantity: String(a.quantity),
     isPortable: a.isPortable,
-    requiresApproval: a.requiresApproval,
     isPinned: a.isPinned,
     note: a.note ?? '',
     photoPaths: a.photoPaths,
@@ -203,7 +200,6 @@ export function toAssetInput(draft: AssetDraft): AssetInput {
     billingCycle: draft.billingCycle,
     quantity: Number(draft.quantity || '1'),
     isPortable: draft.isPortable,
-    requiresApproval: draft.isPortable && draft.requiresApproval,
     isPinned: draft.isPinned,
     returnDue: retired ? null : endsOn,
     note: draft.note.trim() || null,

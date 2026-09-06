@@ -19,12 +19,12 @@ interface AssetsFilterBarProps {
 }
 
 const PORTABLE_OPTIONS = [
-  { value: 'true', label: '반출 가능' },
-  { value: 'false', label: '반출 불가' },
+  { value: 'true', label: '공개' },
+  { value: 'false', label: '비공개' },
 ]
 
 /**
- * 자산 목록 필터 바 — 상태·분류·결제주기·반출 가능 여부.
+ * 자산 목록 필터 바 — 상태·분류·결제주기·OFFICE 공개 여부.
  * 값 체계는 모두 config의 라벨을 그대로 쓴다(표의 배지와 필터가 다른 말을 하지 않게).
  * 지사는 필터가 아니라 탭이다 — 자산은 지사로 먼저 갈리는 원장이므로 조건이 아니라 자리다.
  */
@@ -50,7 +50,7 @@ export function AssetsFilterBar({ filters, onChange }: AssetsFilterBarProps) {
         onChange={(billingCycles) => onChange({ ...filters, billingCycles })}
       />
       <MultiSelectFilter
-        label="반출"
+        label="공개"
         options={PORTABLE_OPTIONS}
         selected={filters.portable}
         onChange={(portable) => onChange({ ...filters, portable })}

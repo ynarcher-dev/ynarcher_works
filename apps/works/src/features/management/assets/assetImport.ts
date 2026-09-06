@@ -45,8 +45,7 @@ export const ASSET_IMPORT_HEADERS = [
   '결제주기',
   '취득일자',
   '만료일',
-  '반출가능',
-  '반출승인',
+  '공개',
   '지사',
   '위치',
   '비고',
@@ -69,8 +68,7 @@ const HEADER_ALIASES: Record<string, string> = {
   폐기일자: '폐기일자', disposed_on: '폐기일자',
   금액: '금액', amount: '금액',
   결제주기: '결제주기', billing_cycle: '결제주기',
-  반출가능: '반출가능', is_portable: '반출가능', 반출: '반출가능',
-  반출승인: '반출승인', requires_approval: '반출승인', 승인필요: '반출승인',
+  공개: '공개', is_portable: '공개', 반출가능: '공개', 반출: '공개', OFFICE공개: '공개',
   비고: '비고', note: '비고',
 }
 
@@ -109,7 +107,7 @@ function codeOf<T extends string>(
   return byLabel ?? null
 }
 
-/** 'O'·'Y'·'true'·'가능'을 참으로 본다. 빈 값은 거짓(반출 불가가 기본이다). */
+/** 'O'·'Y'·'true'·'가능'을 참으로 본다. 빈 값은 거짓(비공개가 기본이다). */
 function boolOf(raw: string): boolean | null {
   const v = raw.trim().toLowerCase()
   if (!v) return false
@@ -138,8 +136,8 @@ function uniqueIdByName(list: { id: string; name: string }[], name: string) {
 export function buildAssetTemplateCsv(): string {
   return [
     ASSET_IMPORT_HEADERS.join(','),
-    '"MacBook Pro 16 (2025)",C02X1234ABCD,노트북,1,구매,보유,,,2500000,완납,2026-03-01,,O,X,본사,3층 사무실,',
-    'Figma 엔터프라이즈,,라이선스,5,렌탈,보유,,,55000,월 구독,2026-01-01,2027-12-31,X,X,본사,,연 단위 갱신',
+    '"MacBook Pro 16 (2025)",C02X1234ABCD,노트북,1,구매,보유,,,2500000,완납,2026-03-01,,O,본사,3층 사무실,',
+    'Figma 엔터프라이즈,,라이선스,5,렌탈,보유,,,55000,월 구독,2026-01-01,2027-12-31,X,본사,,연 단위 갱신',
   ].join('\n')
 }
 
@@ -197,16 +195,10 @@ export function parseAssetCsv(text: string, refs: ImportRefs): ImportParseResult
       errors.push({ line, message: `결제주기 '${cell('결제주기')}'를 알 수 없습니다(완납/월 구독/연 구독).` })
       continue
     }
-    const isPortable = boolOf(cell('반출가능'))
+    // 옛 템플릿의 '반출가능' 열은 별칭으로 계속 읽는다(같은 값이고 이름만 바뀌었다).
+    const isPortable = boolOf(cell('공개'))
     if (isPortable == null) {
-      errors.push({ line, message: `반출가능 '${cell('반출가능')}'를 알 수 없습니다(O/X).` })
-      continue
-    }
-    // 반출이 불가하면 승인 여부는 뜻이 없는 값이라 저장 단계에서 꺼진다(toAssetInput).
-    // 그래도 값 자체는 읽어 둔다 — 알 수 없는 글자를 말없이 넘기면 어느 줄이 잘못됐는지 모른다.
-    const requiresApproval = boolOf(cell('반출승인'))
-    if (requiresApproval == null) {
-      errors.push({ line, message: `반출승인 '${cell('반출승인')}'를 알 수 없습니다(O/X).` })
+      errors.push({ line, message: `공개 '${cell('공개')}'를 알 수 없습니다(O/X).` })
       continue
     }
 
@@ -270,7 +262,6 @@ export function parseAssetCsv(text: string, refs: ImportRefs): ImportParseResult
       quantity: normalizeAmountInput(cell('수량')) || '1',
       billingCycle,
       isPortable,
-      requiresApproval,
       note: cell('비고'),
     }
 

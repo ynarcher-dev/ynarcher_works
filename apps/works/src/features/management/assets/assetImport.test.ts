@@ -66,7 +66,13 @@ describe('parseAssetCsv', () => {
     expect(rows.map((r) => r.status)).toEqual(['AVAILABLE', 'AVAILABLE'])
   })
 
-  it('빈 칸은 기본값으로 떨어진다(구매·보유·완납·반출 불가)', () => {
+  it("옛 템플릿의 '반출가능' 열도 그대로 읽는다 — 값은 같고 이름만 '공개'로 바뀌었다", () => {
+    const { rows, errors } = parseAssetCsv('자산명,지사,반출가능\n의자,본사,O', refs)
+    expect(errors).toEqual([])
+    expect(rows[0]!.isPortable).toBe(true)
+  })
+
+  it('빈 칸은 기본값으로 떨어진다(구매·보유·완납·비공개)', () => {
     const { rows } = parseAssetCsv(csv({ 자산명: '의자', 지사: '본사' }), refs)
     expect(rows[0]).toMatchObject({
       acquisitionType: 'PURCHASE',
@@ -175,7 +181,7 @@ describe('parseAssetCsv', () => {
         csv(
           { 자산명: 'A', 지사: '본사', 분류: '렌트' },
           { 자산명: 'B', 지사: '본사', 취득일자: '13월1일' },
-          { 자산명: 'C', 지사: '본사', 반출가능: '예' },
+          { 자산명: 'C', 지사: '본사', 공개: '예' },
         ),
         refs,
       )
@@ -183,7 +189,7 @@ describe('parseAssetCsv', () => {
       expect(bad.errors.map((e) => e.line)).toEqual([2, 3, 4])
       expect(bad.errors[0]!.message).toContain('분류')
       expect(bad.errors[1]!.message).toContain('YYYY-MM-DD')
-      expect(bad.errors[2]!.message).toContain('반출가능')
+      expect(bad.errors[2]!.message).toContain('공개')
     })
 
     it('폼과 같은 검증을 통과해야 한다 — 할당인데 대상이 없으면 거부', () => {

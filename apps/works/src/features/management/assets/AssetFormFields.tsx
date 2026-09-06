@@ -140,9 +140,9 @@ export function AssetFormFields({
 
       {/*
         중요는 폼 맨 앞자리다 — 필드 차례는 표의 열 차례를 따르는데, 이 값이 목록에서
-        차지하는 자리가 맨 앞의 번호 칸이기 때문이다. 아래 반출 묶음에 넣지 않는 이유는
-        축이 다르기 때문이다: 반출 가능·승인 필요는 물건을 어떻게 다루는가이고, 중요는
-        목록에서 어디에 서는가다.
+        차지하는 자리가 맨 앞의 번호 칸이기 때문이다. 아래 공개 스위치와 묶지 않는 이유는
+        축이 다르기 때문이다: 공개는 이 물건을 OFFICE에 보일지이고, 중요는 이 목록에서
+        어디에 서는가다.
       */}
       <Checkbox
         checked={draft.isPinned}
@@ -193,7 +193,7 @@ export function AssetFormFields({
       <Row>
         {/*
           보유 수량은 품목 다음 자리다 — "어떤 물건인가" 다음에 오는 질문이 "몇 개인가"이고,
-          이 값이 OFFICE 반출대장의 잔여 계산 기준이 된다.
+          공용 물품이라면 OFFICE 자산 현황이 이 수를 그대로 적는다.
         */}
         <Field
           label="보유 수량"
@@ -264,7 +264,7 @@ export function AssetFormFields({
         <Field
           as="div"
           label="관리자"
-          hint="반출 요청·승인을 받는 사람. OFFICE 반출대장에 표시됩니다."
+          hint="이 물건을 맡은 사람. 공개하면 OFFICE 자산 현황에 표시되어 쓰려는 사람이 물어볼 상대가 됩니다."
         >
           <PersonPicker
             value={draft.managerId}
@@ -357,14 +357,16 @@ export function AssetFormFields({
       />
 
       {/*
-        반출 가능 여부는 관리자의 사전 판단이며, OFFICE 반출대장이 이 값으로 후보를 거른다.
-        승인 필요 여부는 그 아래에 딸린 값이라 반출을 켰을 때만 나타난다 — 반출하지 못하는
-        물건에 "승인이 필요한가"를 묻는 것은 뜻이 없는 질문이다.
+        이 스위치가 정하는 것은 하나다 — OFFICE 자산 현황에 이 물건이 서는가. 종전 이름은
+        '반출 가능 여부'였는데 그 이름이 가리키던 반출대장은 2026-08-25에 폐지됐고, 없어진
+        기능의 스위치로 읽힌 탓에 실제로 꺼져 OFFICE 목록이 통째로 빈 일이 있었다(2026-08-26).
+        이름은 그 스위치가 지금 하는 일을 말한다. 함께 있던 '반출 시 승인 필요'는 그 값을 읽는
+        화면이 하나도 남지 않아 걷어냈다.
       */}
       <div className="rounded-radius-md border border-gray-200 bg-gray-25 px-3 py-2.5">
         <SettingRow
-          title="반출 가능 여부"
-          hint="켜면 OFFICE 반출대장에서 반출 후보로 제시됩니다."
+          title="OFFICE 자산 현황에 공개"
+          hint="켜면 임직원 전원이 OFFICE 자산 현황에서 이 물건과 보관 위치·관리자를 찾을 수 있습니다. 꺼져 있거나 폐기 상태이면 그 목록에 서지 않습니다."
           control={({ id }) => (
             <Switch
               id={id}
@@ -373,21 +375,6 @@ export function AssetFormFields({
             />
           )}
         />
-
-        {draft.isPortable && (
-          <SettingRow
-            className="mt-2.5 border-t border-gray-200 pt-2.5 pl-3"
-            title="반출 시 승인 필요"
-            hint="켜면 반출 요청이 승인 대기로 등록되며, 자산 담당자가 승인해야 반출됩니다."
-            control={({ id }) => (
-              <Switch
-                id={id}
-                checked={draft.requiresApproval}
-                onChange={(requiresApproval) => onChange({ ...draft, requiresApproval })}
-              />
-            )}
-          />
-        )}
       </div>
 
       {/*

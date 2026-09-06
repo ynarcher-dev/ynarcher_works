@@ -33,8 +33,8 @@ export interface Asset {
   /** 이 물건을 지금 쓰는 사람(지급 대상). 상태가 ASSIGNED면 필수다. */
   assignedTo: string | null
   /**
-   * 이 물건을 맡은 사람. 반출 요청·승인을 받는 상대이며 할당 대상과는 다른 축이다 —
-   * 공용 비품은 누구에게도 지급되지 않지만(할당 없음) 맡은 사람은 있다.
+   * 이 물건을 맡은 사람. 할당 대상과는 다른 축이다 — 공용 비품은 누구에게도 지급되지 않지만
+   * (할당 없음) 맡은 사람은 있고, OFFICE 자산 현황이 그 사람을 "물어볼 상대"로 적는다.
    */
   managerId: string | null
   /** 시리얼·관리 번호. 유니크가 아니다(라이선스 키는 좌석마다 반복될 수 있다). */
@@ -44,11 +44,14 @@ export interface Asset {
   /** 금액(원). 어느 주기의 값인지는 billingCycle이 정한다. 미입력은 null이며 0과 구분한다. */
   amount: number | null
   billingCycle: AssetBillingCycle
-  /** 보유 수량. 같은 물건을 여러 개 두는 자산에서 1보다 크며, 반출 잔여의 기준이 된다. */
+  /** 보유 수량. 같은 물건을 여러 개 두는 자산에서 1보다 크며, OFFICE 자산 현황이 그대로 적는다. */
   quantity: number
+  /**
+   * OFFICE 자산 현황에 이 물건을 공개하는가. 컬럼 이름은 `is_portable`인데(반출대장 시절의
+   * 이름) 지금 이 값이 정하는 것은 반출 가능 여부가 아니라 노출 여부다 — 개칭하지 않는 이유는
+   * 보존해 둔 반출 원장(asset_checkouts)의 트리거가 이 이름으로 읽고 있어서다.
+   */
   isPortable: boolean
-  /** 반출 시 승인이 필요한가. 반출 가능(isPortable)일 때만 뜻을 갖는다. */
-  requiresApproval: boolean
   /** 중요 표시. 켜면 자산명 순을 건너뛰고 목록 맨 위에 서며 번호 칸이 핀으로 바뀐다. */
   isPinned: boolean
   returnDue: string | null
@@ -75,7 +78,6 @@ export interface AssetInput {
   billingCycle: AssetBillingCycle
   quantity: number
   isPortable: boolean
-  requiresApproval: boolean
   isPinned: boolean
   returnDue: string | null
   note: string | null
@@ -99,7 +101,6 @@ interface AssetRow {
   billing_cycle: AssetBillingCycle
   quantity: number
   is_portable: boolean
-  requires_approval: boolean
   is_pinned: boolean
   return_due: string | null
   note: string | null
@@ -108,7 +109,7 @@ interface AssetRow {
 }
 
 const COLUMNS =
-  'id, name, item_type, acquisition_type, status, branch_id, location, assigned_to, manager_id, serial_no, acquired_on, disposed_on, amount, billing_cycle, quantity, is_portable, requires_approval, is_pinned, return_due, note, photo_paths, updated_at'
+  'id, name, item_type, acquisition_type, status, branch_id, location, assigned_to, manager_id, serial_no, acquired_on, disposed_on, amount, billing_cycle, quantity, is_portable, is_pinned, return_due, note, photo_paths, updated_at'
 
 const toAsset = (r: AssetRow): Asset => ({
   id: r.id,
@@ -128,7 +129,6 @@ const toAsset = (r: AssetRow): Asset => ({
   billingCycle: r.billing_cycle,
   quantity: r.quantity,
   isPortable: r.is_portable,
-  requiresApproval: r.requires_approval,
   isPinned: r.is_pinned,
   returnDue: r.return_due,
   note: r.note,
@@ -154,9 +154,6 @@ export const toAssetRow = (v: AssetInput) => ({
   billing_cycle: v.billingCycle,
   quantity: v.quantity,
   is_portable: v.isPortable,
-  // 반출이 불가한 자산에 승인 여부는 뜻이 없다 — 토글을 끄면 함께 내린다(꺼진 채 남아 있으면
-  // 나중에 반출을 다시 켰을 때 예전 설정이 조용히 되살아난다).
-  requires_approval: v.isPortable && v.requiresApproval,
   is_pinned: v.isPinned,
   return_due: v.returnDue,
   note: v.note?.trim() || null,
@@ -170,7 +167,7 @@ export interface AssetFilters {
   statuses: string[]
   acquisitionTypes: string[]
   billingCycles: string[]
-  /** 반출 가능 여부. 'true'/'false' 문자열 다중선택(둘 다 고르면 조건 없음과 같다). */
+  /** OFFICE 공개 여부. 'true'/'false' 문자열 다중선택(둘 다 고르면 조건 없음과 같다). */
   portable: string[]
 }
 
@@ -334,32 +331,6 @@ export function useDeactivateAssets() {
         .from('assets')
         .update({ deleted_at: new Date().toISOString() })
         .in('id', ids)
-      if (error) throw error
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ASSETS_KEY }),
-  })
-}
-
-/**
- * 반출 승인 필요 여부 일괄 설정 — 품목 단위 운용의 실제 경로다.
- *
- * 정책을 품목(item_type)에 매달 수 없어(원장 없는 자유입력이라 '노트북'과 '랩탑'이 갈린다)
- * 값은 자산마다 있지만, 실제 운용은 "차량 12대를 전부 승인 대상으로"처럼 무리 단위다.
- * 검색으로 골라 한 번에 바꾸는 이 경로가 그것을 대신한다.
- *
- * 반출 가능한 자산에만 건다 — 반출이 불가한 자산의 승인 여부는 뜻이 없는 값이고, 켜 두면
- * 나중에 반출을 허용하는 순간 아무도 의도하지 않은 승인 절차가 조용히 붙는다.
- */
-export function useSetAssetsApproval() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (v: { ids: string[]; requiresApproval: boolean }) => {
-      if (!v.ids.length) return
-      const { error } = await supabase
-        .from('assets')
-        .update({ requires_approval: v.requiresApproval })
-        .in('id', v.ids)
-        .eq('is_portable', true)
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ASSETS_KEY }),

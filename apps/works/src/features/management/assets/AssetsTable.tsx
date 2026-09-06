@@ -133,20 +133,14 @@ export function AssetsTable({
       type: 'date',
       render: (a) => <DateCell value={a.disposedOn ?? a.returnDue} />,
     },
-    // 승인 필요는 반출 가능의 하위 값이라 열을 나누지 않는다 — 나누면 '불가'인 행에 늘 빈 칸이
-    // 하나 더 생기고, 두 칸을 함께 읽어야 뜻이 서는 값이 된다.
+    // OFFICE 자산 현황에 이 물건이 서는가. 임직원 전원이 보는 목록에 무엇이 올라가 있는지는
+    // 자산 관리에서만 알 수 있어 열로 세운다.
     {
       key: 'isPortable',
-      header: '반출',
+      header: '공개',
       type: 'badge',
       render: (a) =>
-        !a.isPortable ? (
-          <Badge tone="neutral">불가</Badge>
-        ) : a.requiresApproval ? (
-          <Badge tone="warning">승인 필요</Badge>
-        ) : (
-          <Badge tone="info">가능</Badge>
-        ),
+        a.isPortable ? <Badge tone="info">공개</Badge> : <Badge tone="neutral">비공개</Badge>,
     },
   ]
 
