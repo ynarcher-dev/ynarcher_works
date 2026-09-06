@@ -108,17 +108,22 @@ export function ModuleHeaderCard({
               </span>
             )}
             <span className="truncate">{name}</span>
+            {/* 배지는 제목 옆이다(2026-09-06 사용자 지정) — 상태·공유 범위는 이 모듈이 '무엇인가'를
+                말하는 값이라 이름에 붙어 읽혀야 한다. 우측 액션 줄에 두면 누르는 것들 사이에 끼어
+                눌리는 것처럼 보이고, 무엇에 대한 상태인지도 줄 끝에서 되짚게 된다.
+                긴 이름이 배지를 밀어내지 않는 것은 이름만 줄이고(truncate) 배지가 스스로
+                shrink-0·nowrap이기 때문이다(Badge가 소유하는 규격이라 여기서 다시 적지 않는다). */}
+            <Badge tone={status.tone}>{status.label}</Badge>
+            <ModuleVisibilityBadge
+              visibility={mod.visibility}
+              linkOpen={Boolean(openLinkIds?.has(mod.id))}
+            />
           </span>
         }
         /* 설명(운영 메모)은 카드가 지금 무엇을 보고 있는지 말하는 값이라 부제 자리다. */
         subtitle={settings.memo ?? undefined}
         actions={
           <>
-            <Badge tone={status.tone}>{status.label}</Badge>
-            <ModuleVisibilityBadge
-              visibility={mod.visibility}
-              linkOpen={Boolean(openLinkIds?.has(mod.id))}
-            />
             {/*
               세 액션은 위험도 순으로 선다(설정 → 끄기 → 삭제). 아이콘만 두지 않고 라벨을 붙이는
               것은, 목록에서는 행마다 반복되어 아이콘이 자리를 벌었지만 여기서는 한 번만 서기
