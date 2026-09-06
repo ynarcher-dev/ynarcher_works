@@ -3,14 +3,14 @@ import { AI_CARD_KEYS } from '@/features/startup/startupAiCards'
 import {
   cellCount,
   cellOn,
-  columnCount,
+  cardCountFor,
   gridCards,
   gridSourceKeys,
   pruneGrid,
   toggleCell,
-  toggleColumn,
+  toggleSource,
   toggleGrid,
-  toggleRow,
+  toggleCard,
   type AiGrid,
 } from '@/features/startup/startupAiGrid'
 
@@ -35,21 +35,21 @@ describe('칸·줄·열 토글', () => {
 
   it('줄은 켜져 있으면 끄고, 꺼져 있으면 전부 켠다', () => {
     const half: AiGrid = { business: ['a'] }
-    expect(toggleRow(half, 'business', KEYS).business).toEqual([])
-    expect(toggleRow({}, 'business', KEYS).business).toEqual(KEYS)
+    expect(toggleCard(half, 'business', KEYS).business).toEqual([])
+    expect(toggleCard({}, 'business', KEYS).business).toEqual(KEYS)
   })
 
   it('열은 모든 카드에서 함께 켜지고 함께 꺼진다', () => {
-    const on = toggleColumn({}, 'b', CARDS)
-    expect(columnCount(on, 'b', CARDS)).toBe(CARDS.length)
-    expect(columnCount(toggleColumn(on, 'b', CARDS), 'b', CARDS)).toBe(0)
+    const on = toggleSource({}, 'b', CARDS)
+    expect(cardCountFor(on, 'b', CARDS)).toBe(CARDS.length)
+    expect(cardCountFor(toggleSource(on, 'b', CARDS), 'b', CARDS)).toBe(0)
   })
 
   it('열을 끌 때 다른 열의 칸은 남는다', () => {
-    const grid = toggleColumn(toggleColumn({}, 'a', CARDS), 'b', CARDS)
-    const off = toggleColumn(grid, 'a', CARDS)
-    expect(columnCount(off, 'a', CARDS)).toBe(0)
-    expect(columnCount(off, 'b', CARDS)).toBe(CARDS.length)
+    const grid = toggleSource(toggleSource({}, 'a', CARDS), 'b', CARDS)
+    const off = toggleSource(grid, 'a', CARDS)
+    expect(cardCountFor(off, 'a', CARDS)).toBe(0)
+    expect(cardCountFor(off, 'b', CARDS)).toBe(CARDS.length)
   })
 
   it('전체 토글은 빈 격자를 다 채우고 채워진 격자를 비운다', () => {

@@ -11,10 +11,10 @@ import {
   gridCards,
   gridSourceKeys,
   pruneGrid,
+  toggleCard,
   toggleCell,
-  toggleColumn,
   toggleGrid,
-  toggleRow,
+  toggleSource,
   type AiGrid,
 } from '@/features/startup/startupAiGrid'
 
@@ -24,7 +24,7 @@ import {
  * 자료 목록과 기준 값(`snapshot`)을 **받아서** 쓴다. 목록이 준비된 뒤에 열리는 것을 버튼이
  * 보장한다.
  *
- * 기준 값이 원장 행이 아니라 **지금 폼에 적힌 값**인 것이 요점이다 — 격자 줄의 `Y`/`N`은
+ * 기준 값이 원장 행이 아니라 **지금 폼에 적힌 값**인 것이 요점이다 — 격자 카드 열의 `Y`/`N`은
  * 저장된 값이 아니라 화면에 보이는 값을 두고 하는 말이어야 한다.
  *
  * **담당자는 한 번만 실행한다.** 나누는 일은 서버가 한다 — 자료 조합이 같은 카드끼리 한
@@ -66,7 +66,7 @@ export function StartupAiFillModal({
   const allKeys = useMemo(() => readable.map((s) => s.key), [readable])
 
   // 자료가 바뀌었을 수 있다(실행 뒤 첨부를 지우거나 더한 경우). 없는 자료를 가리키는 칸을
-  // 걷지 않으면 줄 머리의 건수가 거짓을 말한다 — 3건이라 적혀 있는데 읽는 것은 둘이다.
+  // 걷지 않으면 카드 열의 건수가 거짓을 말한다 — 3건이라 적혀 있는데 읽는 것은 둘이다.
   const live = useMemo(() => pruneGrid(grid, allKeys), [grid, allKeys])
 
   const cards = gridCards(live)
@@ -106,7 +106,7 @@ export function StartupAiFillModal({
       onClose={busy ? () => undefined : onClose}
       // 쓰던 것이 있는 모달이라 딤 클릭으로 닫지 않는다(고른 칸이 클릭 한 번에 사라지면 안 된다).
       dismissible={false}
-      size="2xl"
+      size="3xl"
       title="AI 작성하기"
       help="카드마다 읽을 자료를 지정하면 그 자료만 근거로 초안을 만듭니다. 카드가 쓰지 않을 자료를 빼면 결과가 정확해집니다 — 재무 카드에 발표 자료가 함께 들어가면 확정 재무 대신 목표 수치를 가져올 수 있습니다. 선택한 자료는 외부 AI(Google Gemini)로 전송되며 반출 기록이 남습니다. 결과는 편집 화면에 채워지고 저장 전까지 원장은 바뀌지 않습니다. 문서를 눈으로 보듯 이해하는 것은 PDF와 이미지뿐입니다 — 엑셀·워드·파워포인트는 서버가 열어 글자와 표로 바꿔 보내므로 표는 그대로 옮겨지지만, 발표 자료(PPTX)는 그림과 배치가 빠집니다. IR 자료는 PDF로 저장해 올리는 편이 낫습니다."
       footer={
@@ -136,8 +136,8 @@ export function StartupAiFillModal({
             record={snapshot}
             grid={live}
             onCell={(card, key) => onGrid(toggleCell(live, card, key))}
-            onRow={(card) => onGrid(toggleRow(live, card, allKeys))}
-            onColumn={(key) => onGrid(toggleColumn(live, key, AI_CARDS.map((c) => c.key)))}
+            onCard={(card) => onGrid(toggleCard(live, card, allKeys))}
+            onSource={(key) => onGrid(toggleSource(live, key, AI_CARDS.map((c) => c.key)))}
             onAll={() => onGrid(toggleGrid(live, AI_CARDS.map((c) => c.key), allKeys))}
           />
 

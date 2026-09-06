@@ -12,8 +12,12 @@ import { AI_CARD_KEYS, type AiCardKey } from '@/features/startup/startupAiCards'
  * 않은 카드는 작성 대상이 아니다** — 그래서 카드 체크박스를 따로 두지 않는다(같은 값을 묻는
  * 컨트롤을 둘 두지 않는다).
  *
- * 이 파일은 상태만 갖고 화면을 모른다. 서버의 묶음 판정(`groups.ts`)과 짝이라 규칙이
- * 어긋나면 담당자가 고른 것과 다른 요청이 나가므로, 여기 규칙은 테스트가 지킨다.
+ * **이름은 화면의 축이 아니라 도메인을 가리킨다**(`toggleCard` / `toggleSource`). 축은 실제로
+ * 한 번 뒤집혔고(카드가 행이었다가 열이 됐다) 그때 `toggleRow`라는 이름이 통째로 거짓이 됐다.
+ * 무엇이 위아래로 서는지는 화면이 정할 일이고, 이 파일이 아는 것은 카드와 자료뿐이다.
+ *
+ * 서버의 묶음 판정(`groups.ts`)과 짝이라 규칙이 어긋나면 담당자가 고른 것과 다른 요청이
+ * 나가므로, 여기 규칙은 테스트가 지킨다.
  *
  * 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §4.2
  */
@@ -22,23 +26,23 @@ import { AI_CARD_KEYS, type AiCardKey } from '@/features/startup/startupAiCards'
 export type AiGrid = Partial<Record<AiCardKey, string[]>>
 
 /** 그 카드가 읽는 자료. 없으면 빈 배열(호출부가 매번 `?? []`를 적지 않도록). */
-export function rowKeys(grid: AiGrid, card: AiCardKey): string[] {
+export function sourcesOf(grid: AiGrid, card: AiCardKey): string[] {
   return grid[card] ?? []
 }
 
 /** 칸 하나가 켜져 있는가. */
 export function cellOn(grid: AiGrid, card: AiCardKey, key: string): boolean {
-  return rowKeys(grid, card).includes(key)
+  return sourcesOf(grid, card).includes(key)
 }
 
-/** 그 자료를 읽는 카드 수. 열 머리의 체크 상태와 건수 표시가 함께 읽는다. */
-export function columnCount(grid: AiGrid, key: string, cards: AiCardKey[]): number {
+/** 그 자료를 읽는 카드 수. 자료 줄의 체크 상태와 건수 표시가 함께 읽는다. */
+export function cardCountFor(grid: AiGrid, key: string, cards: AiCardKey[]): number {
   return cards.filter((c) => cellOn(grid, c, key)).length
 }
 
 /** 켜진 칸의 총 수. 실행 버튼의 잠금과 "몇 칸 골랐는지" 표시가 읽는다. */
 export function cellCount(grid: AiGrid): number {
-  return AI_CARD_KEYS.reduce((sum, c) => sum + rowKeys(grid, c).length, 0)
+  return AI_CARD_KEYS.reduce((sum, c) => sum + sourcesOf(grid, c).length, 0)
 }
 
 /**
@@ -48,40 +52,40 @@ export function cellCount(grid: AiGrid): number {
  * 조합인데 요청이 달라져, 실패했을 때 같은 요청을 다시 만들 수 없다.
  */
 export function gridCards(grid: AiGrid): AiCardKey[] {
-  return AI_CARD_KEYS.filter((c) => rowKeys(grid, c).length > 0)
+  return AI_CARD_KEYS.filter((c) => sourcesOf(grid, c).length > 0)
 }
 
 /** 켜진 칸이 가리키는 자료 전부(중복 없이). 자료는 카드가 몇이든 **한 번만** 올라간다. */
 export function gridSourceKeys(grid: AiGrid): string[] {
   const seen = new Set<string>()
-  for (const card of AI_CARD_KEYS) for (const key of rowKeys(grid, card)) seen.add(key)
+  for (const card of AI_CARD_KEYS) for (const key of sourcesOf(grid, card)) seen.add(key)
   return [...seen]
 }
 
 /** 칸 하나를 뒤집는다. */
 export function toggleCell(grid: AiGrid, card: AiCardKey, key: string): AiGrid {
-  const keys = rowKeys(grid, card)
+  const keys = sourcesOf(grid, card)
   const next = keys.includes(key) ? keys.filter((k) => k !== key) : [...keys, key]
   return { ...grid, [card]: next }
 }
 
 /**
- * 한 줄(카드)을 통째로 켜거나 끈다.
+ * 카드 하나가 자료 전부를 읽게 하거나 아무것도 읽지 않게 한다.
  *
- * **켜져 있으면 끈다**가 규칙이다. 절반만 켜진 줄에서 누르면 꺼지고, 다시 누르면 전부 켜진다 —
- * 한 번에 어느 쪽으로 갈지 헷갈릴 자리가 있지만, 지금 상태를 보고 누르는 것이라 "켜진 것을
- * 끈다"가 언제나 맞는 말이 된다. 몇 칸이 켜졌는지는 줄 머리의 건수가 답한다.
+ * **켜져 있으면 끈다**가 규칙이다. 절반만 켜진 카드에서 누르면 꺼지고, 다시 누르면 전부
+ * 켜진다 — 한 번에 어느 쪽으로 갈지 헷갈릴 자리가 있지만, 지금 상태를 보고 누르는 것이라
+ * "켜진 것을 끈다"가 언제나 맞는 말이 된다. 몇 칸이 켜졌는지는 건수 표시가 답한다.
  */
-export function toggleRow(grid: AiGrid, card: AiCardKey, allKeys: string[]): AiGrid {
-  return { ...grid, [card]: rowKeys(grid, card).length > 0 ? [] : [...allKeys] }
+export function toggleCard(grid: AiGrid, card: AiCardKey, allKeys: string[]): AiGrid {
+  return { ...grid, [card]: sourcesOf(grid, card).length > 0 ? [] : [...allKeys] }
 }
 
-/** 한 열(자료)을 모든 카드에서 켜거나 끈다. 규칙은 줄과 같다. */
-export function toggleColumn(grid: AiGrid, key: string, cards: AiCardKey[]): AiGrid {
-  const on = columnCount(grid, key, cards) > 0
+/** 자료 하나를 모든 카드에서 켜거나 끈다. 규칙은 카드 쪽과 같다. */
+export function toggleSource(grid: AiGrid, key: string, cards: AiCardKey[]): AiGrid {
+  const on = cardCountFor(grid, key, cards) > 0
   const next: AiGrid = { ...grid }
   for (const card of cards) {
-    const keys = rowKeys(next, card)
+    const keys = sourcesOf(next, card)
     next[card] = on ? keys.filter((k) => k !== key) : keys.includes(key) ? keys : [...keys, key]
   }
   return next
@@ -106,7 +110,7 @@ export function pruneGrid(grid: AiGrid, validKeys: string[]): AiGrid {
   const valid = new Set(validKeys)
   const next: AiGrid = {}
   for (const card of AI_CARD_KEYS) {
-    const keys = rowKeys(grid, card).filter((k) => valid.has(k))
+    const keys = sourcesOf(grid, card).filter((k) => valid.has(k))
     if (keys.length > 0) next[card] = keys
   }
   return next

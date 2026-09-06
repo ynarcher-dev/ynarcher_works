@@ -5,15 +5,25 @@ import { DensityProvider } from '../density'
 import { tooltipScale } from '../densityScale'
 import { Tooltip } from './Tooltip'
 
-export type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl'
+export type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl'
 
-/** 폭은 `modal-*` 토큰이 소유한다(400/600/800/1000/1200). 근거: 5_component_spec_rules.md §4.1 */
+/**
+ * 폭은 `modal-*` 토큰이 소유한다(400/600/800/1000/1200/1400).
+ *
+ * `3xl`은 **격자**(행과 열이 모두 데이터인 표)를 품는 자리에만 쓴다. 2xl과 가르는 기준은
+ * 중요도가 아니라 폭을 정하는 주체다 — 2xl까지는 우리가 정한 열 구성이 폭을 정하지만,
+ * 격자는 열 수가 데이터라 우리가 못 정한다. 좁히면 줄어드는 것이 여백이 아니라 한 번에
+ * 보이는 칸 수다.
+ *
+ * 근거: 5_component_spec_rules.md §4.1
+ */
 const sizeClass: Record<ModalSize, string> = {
   sm: 'max-w-modal-sm',
   md: 'max-w-modal-md',
   lg: 'max-w-modal-lg',
   xl: 'max-w-modal-xl',
   '2xl': 'max-w-modal-2xl',
+  '3xl': 'max-w-modal-3xl',
 }
 
 export interface ModalProps {
