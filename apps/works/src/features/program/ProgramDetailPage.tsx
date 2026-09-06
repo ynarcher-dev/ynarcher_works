@@ -5,8 +5,9 @@ import { DetailDeleteButton } from '@/components/DetailDeleteButton'
 import { useDeactivateProgram } from '@/features/program/programsPoolHooks'
 import { ProgramFormModal } from '@/features/program/ProgramFormModal'
 import { ProgramOverviewTab } from '@/features/program/detail/ProgramOverviewTab'
-import { MODULE_META } from '@/features/program/detail/moduleMeta'
-import type { ProgramModule } from '@/features/program/hooks'
+import { ModuleHeaderCard } from '@/features/program/detail/ModuleHeaderCard'
+import { MODULE_META, moduleDisplayName } from '@/features/program/detail/moduleMeta'
+import { useProgramModules, type ProgramModule } from '@/features/program/hooks'
 import { FilePanel } from '@/features/program/panels/FilePanel'
 import { LinkPanel } from '@/features/program/panels/LinkPanel'
 import { ModuleNoticeSplit } from '@/features/program/panels/NoticePanel'
@@ -54,7 +55,10 @@ export function ProgramDetailPage() {
   const { data: program, isLoading } = useProgram(id)
   const [tab, setTab] = useState<Tab>('overview')
   // 진입한 모듈 인스턴스(운영 화면은 program_module_id 단위이므로 인스턴스를 들고 있어야 한다).
-  const [openMod, setOpenMod] = useState<ProgramModule | null>(null)
+  // 들고 있는 것은 **id뿐**이고 값은 목록 캐시에서 되찾는다 — 진입 시점의 객체를 그대로 쥐고 있으면
+  // 운영 화면 최상단 카드에서 방금 고친 모듈명·기간이 이 화면에는 옛 값으로 남는다.
+  const [openModId, setOpenModId] = useState<string | null>(null)
+  const { data: modules } = useProgramModules(id)
   const [editOpen, setEditOpen] = useState(false)
 
   if (isLoading) return <Spinner />
@@ -66,7 +70,7 @@ export function ProgramDetailPage() {
   const onOpenModule = (module: ProgramModule) => {
     const target = MODULE_META[module.module_type]?.tab
     if (target && TAB_KEYS.has(target)) {
-      setOpenMod(module)
+      setOpenModId(module.id)
       setTab(target as Tab)
     }
   }
@@ -74,9 +78,10 @@ export function ProgramDetailPage() {
   // 운영 화면 뒤로가기 → 개요로 복귀(진입 인스턴스 해제).
   const backToOverview = () => {
     setTab('overview')
-    setOpenMod(null)
+    setOpenModId(null)
   }
   // 인스턴스 단위 운영 화면에 넘길 program_module_id.
+  const openMod = openModId ? (modules ?? []).find((m) => m.id === openModId) ?? null : null
   const moduleId = openMod?.id
 
   return (
@@ -110,14 +115,25 @@ export function ProgramDetailPage() {
           */}
           {tab !== 'post' && <BackButton onClick={backToOverview} />}
 
+          {/*
+            모듈 세팅 카드(운영 화면 최상단, 2026-09-06). 세팅을 고치는 자리가 개요 보드의 목록
+            한 줄뿐이라, 들어와서 하는 일과 그 일의 조건(기간·담당자·공유 범위)이 다른 화면에
+            갈려 있었다. 글쓰기는 헤더를 자기가 들고 있으므로 카드도 그 안에서 뒤로가기 줄 아래에
+            선다 — 카드가 뒤로가기보다 위에 서면 나가는 길이 화면 중간에 놓인다.
+          */}
+          {moduleId && tab !== 'post' && (
+            <ModuleHeaderCard program={program} moduleId={moduleId} />
+          )}
+
           {/* 프로그램 단위 화면(타임라인)은 programId, 인스턴스 단위 운영 화면은 moduleId로 렌더한다. */}
           {tab === 'timeline' && <TimelinePanel programId={id} />}
           {moduleId && tab === 'post' && (
             <PostPanel
               programId={id}
               moduleId={moduleId}
-              moduleTitle={openMod?.title?.trim() || '글쓰기'}
+              moduleTitle={openMod ? moduleDisplayName(openMod) : '글쓰기'}
               onBack={backToOverview}
+              moduleCard={<ModuleHeaderCard program={program} moduleId={moduleId} />}
             />
           )}
           {/* 기본 템플릿(URL첨부·파일첨부): GUEST와 같은 카드 구성의 편집 화면. 헤더는 위 공통 헤더를 쓴다.

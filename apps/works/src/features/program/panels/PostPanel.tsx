@@ -1,5 +1,5 @@
 import { BackButton, Button, Spinner, useToast } from '@ynarcher/ui'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { RichTextEditor, RichTextViewer } from '@/components/RichTextEditor'
 import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
@@ -26,6 +26,7 @@ export function PostPanel({
   moduleId,
   moduleTitle,
   onBack,
+  moduleCard,
 }: {
   programId: string
   moduleId: string
@@ -33,6 +34,11 @@ export function PostPanel({
   moduleTitle: string
   /** 개요로 돌아가기. 헤더를 이 화면이 직접 들고 있어 뒤로가기·수정이 한 줄에 선다. */
   onBack: () => void
+  /**
+   * 모듈 세팅 카드(다른 운영 화면은 상세 페이지가 직접 세운다). 이 화면만 받아서 그리는 것은
+   * 뒤로가기 줄을 자기가 들고 있기 때문이다 — 카드를 바깥에서 세우면 나가는 길보다 위에 선다.
+   */
+  moduleCard?: ReactNode
 }) {
   const toast = useToast()
   const { data: posts = [], isLoading } = useModulePosts(moduleId)
@@ -79,6 +85,8 @@ export function PostPanel({
           <Button onClick={startEdit}>{body ? '수정' : '작성'}</Button>
         )}
       </div>
+
+      {moduleCard}
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">

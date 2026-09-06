@@ -90,8 +90,14 @@ export function moduleStatusMeta(status: string): { label: string; tone: BadgeTo
 export const MODULE_BAR_CLASS = MODULE_STATUS_BAR_CLASS
 
 /**
- * 일정·메모의 읽기 규약은 `@ynarcher/master-data`가 소유한다 — GUEST 사이드바가 같은 행의
- * 같은 값을 읽으므로, 규약이 두 벌이면 한쪽만 고치는 날 두 화면의 일정이 갈린다.
+ * 일정·메모의 읽기 규약과 이름(템플릿 라벨·인스턴스 표시명)의 폴백 규약은
+ * `@ynarcher/master-data`가 소유한다 — GUEST 사이드바가 같은 행의 같은 값을 읽으므로, 규약이
+ * 두 벌이면 한쪽만 고치는 날 두 화면의 일정이 갈리고 이름이 갈린다.
  */
-export { readModuleSettings, formatModulePeriod } from '@ynarcher/master-data'
+export {
+  readModuleSettings,
+  formatModulePeriod,
+  moduleTypeLabel,
+  moduleDisplayName,
+} from '@ynarcher/master-data'
 export type { ModuleSettings } from '@ynarcher/master-data'
