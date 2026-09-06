@@ -5,9 +5,9 @@
 // 담당자는 로그를 볼 수 없으므로 고칠 수 있는 문제(자료가 너무 많다·잠시 몰렸다)와 고칠 수
 // 없는 문제(키 설정)를 가르지 못한 채 같은 조합으로 계속 다시 눌렀다.
 //
-// 그래서 두 가지를 한다 — **잠깐인 실패는 한 번 더 시도하고**(몰림·과부하는 같은 요청이 다음
-// 순간 성공한다), **남는 실패는 사유를 그대로 돌려준다**. 구글의 오류 문구는 영어지만, 아무 말도
-// 없는 것보다 낫고 대부분 그 안에 무엇을 줄여야 하는지가 들어 있다.
+// 그래서 두 가지를 한다 — **잠깐인 실패는 지수 백오프로 최대 세 번 더 시도하고**(몰림·과부하는
+// 같은 요청이 다음 순간 성공한다), **남는 실패는 사유를 그대로 돌려준다**. 구글의 오류 문구는
+// 영어지만, 아무 말도 없는 것보다 낫고 대부분 그 안에 무엇을 줄여야 하는지가 들어 있다.
 //
 // 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §8.2·§10
 
@@ -18,6 +18,7 @@ import { normalizeEnvelope, parseJson, type NormalizeOptions } from './validate.
 /** 잠깐인 실패. 같은 요청을 다시 보내면 성공할 수 있는 것들만 담는다. */
 const TRANSIENT = new Set([429, 500, 502, 503, 504])
 const RETRY_BASE_MS = 2_000
+const MAX_ATTEMPTS = 4
 /**
  * 다시 보내는 시각을 흩뜨리는 폭.
  *
@@ -26,6 +27,22 @@ const RETRY_BASE_MS = 2_000
  * 재시도가 재시도끼리 부딪히지 않는다.
  */
 const RETRY_JITTER_MS = 2_000
+
+/** 전체 실행이 취소되면 재시도 대기도 즉시 끝낸다. */
+function waitBeforeRetry(ms: number, signal: AbortSignal): Promise<void> {
+  if (signal.aborted) return Promise.reject(signal.reason ?? new DOMException('Aborted', 'AbortError'))
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      signal.removeEventListener('abort', onAbort)
+      resolve()
+    }, ms)
+    const onAbort = () => {
+      clearTimeout(timer)
+      reject(signal.reason ?? new DOMException('Aborted', 'AbortError'))
+    }
+    signal.addEventListener('abort', onAbort, { once: true })
+  })
+}
 
 export interface ModelFailure {
   /** 담당자에게 그대로 보이는 문구. */
@@ -131,7 +148,8 @@ export async function generateDraft(
   })
 
   let lastFailure: ModelFailure = { message: 'AI 작성에 실패했습니다.', upstream: null }
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  let parseFailures = 0
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
     const resp = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -144,8 +162,9 @@ export async function generateDraft(
       const reason = upstreamReason(resp.status, body)
       console.error('[startup-ai-fill] gemini 오류', resp.status, reason)
       lastFailure = { message: friendly(resp.status, reason), upstream: resp.status }
-      if (attempt === 0 && TRANSIENT.has(resp.status)) {
-        await new Promise((r) => setTimeout(r, RETRY_BASE_MS + Math.random() * RETRY_JITTER_MS))
+      if (attempt < MAX_ATTEMPTS - 1 && TRANSIENT.has(resp.status)) {
+        const delay = RETRY_BASE_MS * 2 ** attempt + Math.random() * RETRY_JITTER_MS
+        await waitBeforeRetry(delay, opts.signal)
         continue
       }
       return { failure: lastFailure }
@@ -211,6 +230,8 @@ export async function generateDraft(
     }
     // 차단과 끊김은 다시 보내도 같은 답이다. 형식이 어긋난 경우만 한 번 더 본다.
     if (blocked || finish === 'MAX_TOKENS') return { failure: lastFailure }
+    parseFailures += 1
+    if (parseFailures >= 2) return { failure: lastFailure }
   }
   return { failure: lastFailure }
 }

@@ -21,9 +21,9 @@ export const AI_FILL_LIMITS = {
   /**
    * 합산 상한(50MB).
    *
-   * 종전 14MB는 우리가 고른 값이 아니라 **요청에 실어 보내는 방식의 벽**이었다(모델의 한 요청
-   * 20MB에서 문자 변환 팽창분을 뺀 값). 서버가 큰 자료는 먼저 올린 뒤 주소만 참조하도록
-   * 바뀌면서 그 벽이 사라졌다. 담당자는 두 방식의 갈림을 알 필요가 없고 합계 하나만 본다.
+   * 14MB는 공급자의 절대 한도가 아니라 Edge Function의 원본·base64·JSON 동시 메모리를
+   * 위한 보수적 전환점이다. 서버가 큰 자료는 먼저 올린 뒤 주소만 참조하므로 담당자는 두
+   * 방식의 갈림을 알 필요가 없고 합계 하나만 본다.
    */
   maxTotalBytes: 50 * 1024 * 1024,
   /** 한 건 상한(30MB). 합이 되어도 한 파일이 전부를 먹으면 나머지가 모델에 닿지 못한다. */
@@ -60,12 +60,31 @@ export function sourcesFromMaterials(materials: Material[]): AiSource[] {
   }))
 }
 
+/** File 실물이 살아 있는 동안 변하지 않는 등록 모드 격자 키. */
+const pendingFileKeys = new WeakMap<File, string>()
+let pendingFileSequence = 0
+
+/**
+ * 배열 순서가 아니라 File 실물에 붙는 키.
+ *
+ * 같은 이름의 파일 둘 중 앞 파일을 지우면 배열 index가 당겨진다. index를 키로 쓰면 남은
+ * 파일이 지워진 파일의 격자 배정을 이어받으므로 File 객체에 실행 중 안정 키를 준다.
+ */
+function pendingFileKey(file: File): string {
+  const found = pendingFileKeys.get(file)
+  if (found) return found
+  pendingFileSequence += 1
+  const key = `file:${pendingFileSequence}:${file.name}`
+  pendingFileKeys.set(file, key)
+  return key
+}
+
 /** 아직 올라가지 않은 보류 파일을 출처로 바꾼다(등록 모드). */
 export function sourcesFromFiles(files: File[]): AiSource[] {
-  return files.map((f, i) => ({
+  return files.map((f) => ({
     kind: 'file',
-    // 파일은 id가 없다. 같은 이름을 두 번 담을 수 있으므로 순번을 함께 넣어 키를 유일하게 만든다.
-    key: `file:${i}:${f.name}`,
+    // 파일은 id가 없지만 배열 순번도 정체성이 아니다. 위 WeakMap의 안정 키를 쓴다.
+    key: pendingFileKey(f),
     name: f.name,
     bytes: f.size,
     readable: isAiReadable({ kind: 'FILE', content_type: f.type, file_name: f.name } as Material),
@@ -108,9 +127,9 @@ export interface AiFillInput {
   /**
    * 카드별 자료 배정(격자).
    *
-   * 서버는 이 배정으로 **자료 조합이 같은 카드끼리 한 요청**을 만들어 병렬로 보낸다. 나누는
-   * 일을 화면이 하지 않는 이유는 담당자가 누르는 것이 한 번이어야 하기 때문이고, 서버가
-   * 하는 이유는 자료를 한 번만 올려 요청들이 그 주소를 함께 써야 하기 때문이다.
+   * 서버는 먼저 같은 자료를 읽는 카드를 모으고, 카드가 많을 때만 탐색 축으로 나눠 병렬로
+   * 보낸다. 소수 카드 때문에 같은 큰 문서를 여러 번 읽지 않으면서 전체 선택의 출력 잘림도
+   * 막는다. 나누는 일을 화면이 하지 않는 이유는 담당자가 누르는 것이 한 번이어야 하기 때문이다.
    */
   assignments: AiGrid
 }

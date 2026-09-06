@@ -15,8 +15,8 @@ import { planGroups } from './groups.ts'
 const ALL = [...CARD_KEYS]
 const KEYS = ['a', 'b', 'c']
 
-describe('planGroups — 자료 조합이 묶음을 정한다', () => {
-  it('열두 카드가 세 조합이면 세 묶음이다', () => {
+describe('planGroups — 자료 조합과 탐색 축이 묶음을 정한다', () => {
+  it('열두 카드가 세 자료 조합이어도 서로 다른 탐색 축은 나뉜다', () => {
     const groups = planGroups(
       ALL,
       {
@@ -35,23 +35,46 @@ describe('planGroups — 자료 조합이 묶음을 정한다', () => {
       },
       KEYS,
     )
-    expect(groups).toHaveLength(3)
-    expect(groups.map((g) => g.cards.length)).toEqual([6, 2, 4])
-    expect(groups[2].sourceKeys).toEqual(['c'])
+    expect(groups).toHaveLength(4)
+    expect(groups.map((g) => g.cards.length)).toEqual([4, 2, 2, 4])
+    expect(groups[3].sourceKeys).toEqual(['c'])
   })
 
-  it('전부 같은 자료를 읽으면 한 요청이다(종전과 같은 동작)', () => {
+  it('전부 같은 자료를 읽어도 네 탐색 축으로 자동 분할한다', () => {
     const grid = Object.fromEntries(ALL.map((k) => [k, KEYS]))
     const groups = planGroups(ALL, grid, KEYS)
-    expect(groups).toHaveLength(1)
-    expect(groups[0].cards).toEqual(ALL)
+    expect(groups).toHaveLength(4)
+    expect(groups.map((g) => g.cards)).toEqual([
+      ['basics', 'summary', 'business', 'tech'],
+      ['team', 'ip'],
+      ['timeline', 'traction'],
+      ['revenue', 'employee', 'shareholders', 'investment'],
+    ])
+    expect(groups.every((g) => g.sourceKeys.join(',') === KEYS.join(','))).toBe(true)
+  })
+
+  it('같은 자료를 읽는 카드가 네 개 이하면 탐색 축이 달라도 한 요청이다', () => {
+    const cards = ['team', 'timeline', 'employee', 'investment'] as CardKey[]
+    const grid = Object.fromEntries(cards.map((k) => [k, ['a']]))
+    expect(planGroups(cards, grid, KEYS)).toEqual([{ cards, sourceKeys: ['a'] }])
+  })
+
+  it('같은 자료를 읽는 카드가 다섯 개부터 탐색 축으로 나눈다', () => {
+    const cards = ['basics', 'tech', 'team', 'timeline', 'investment'] as CardKey[]
+    const grid = Object.fromEntries(cards.map((k) => [k, ['a']]))
+    expect(planGroups(cards, grid, KEYS).map((g) => g.cards)).toEqual([
+      ['basics', 'tech'],
+      ['team'],
+      ['timeline'],
+      ['investment'],
+    ])
   })
 
   it('배정이 아예 없으면 모든 카드가 자료 전부를 읽는다(격자 이전 요청 호환)', () => {
     const groups = planGroups(ALL, null, KEYS)
-    expect(groups).toHaveLength(1)
-    expect(groups[0].sourceKeys).toEqual(KEYS)
-    expect(groups[0].cards).toEqual(ALL)
+    expect(groups).toHaveLength(4)
+    expect(groups.every((g) => g.sourceKeys.join(',') === KEYS.join(','))).toBe(true)
+    expect(groups.flatMap((g) => g.cards)).toEqual(ALL)
   })
 
   it('한 건도 배정되지 않은 카드는 요청에 들어가지 않는다', () => {
@@ -74,6 +97,12 @@ describe('planGroups — 같은 조합은 순서가 달라도 한 묶음이다',
     expect(groups[0].sourceKeys).toEqual(['a', 'b'])
   })
 
+  it('같은 탐색 축 안에서도 자료 조합이 다르면 나뉜다', () => {
+    const groups = planGroups(['business', 'tech'] as CardKey[], { business: ['a'], tech: ['b'] }, KEYS)
+    expect(groups).toHaveLength(2)
+    expect(groups.map((g) => g.sourceKeys)).toEqual([['a'], ['b']])
+  })
+
   it('없는 자료 키는 버린다(클라이언트를 그대로 믿지 않는다)', () => {
     const groups = planGroups(['business'] as CardKey[], { business: ['a', '남의자료'] }, KEYS)
     expect(groups[0].sourceKeys).toEqual(['a'])
@@ -88,6 +117,7 @@ describe('planGroups — 순서는 화면이 정한다', () => {
   it('체크한 차례가 아니라 화면 순서로 카드가 선다', () => {
     // 요청 순서를 그대로 쓰면 같은 조합인데 프롬프트가 달라져 실패를 재현할 수 없다.
     const groups = planGroups(['investment', 'basics', 'tech'] as CardKey[], null, KEYS)
-    expect(groups[0].cards).toEqual(['basics', 'tech', 'investment'])
+    expect(groups.map((group) => group.cards)).toEqual([['basics', 'tech', 'investment']])
+    expect(groups.flatMap((group) => group.cards)).toEqual(['basics', 'tech', 'investment'])
   })
 })

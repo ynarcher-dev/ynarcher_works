@@ -1,16 +1,13 @@
-// [AI 작성하기] 카드를 요청 묶음으로 가른다 — 같은 자료를 읽는 카드끼리 한 번에.
+// [AI 작성하기] 카드를 요청 묶음으로 가른다 — 작은 일은 합치고 큰 일만 탐색 축으로 나눈다.
 //
-// 담당자는 카드마다 읽을 자료를 지정하고 버튼은 한 번 누른다. 그 지정이 곧 묶음의 정의다 —
-// **자료 조합이 같은 카드끼리 한 요청**이 되고, 조합이 다른 수만큼만 요청이 나간다.
+// 담당자는 카드마다 읽을 자료를 지정하고 버튼은 한 번 누른다. 서버는 먼저 같은 자료 조합의
+// 카드를 모은다. 그 일이 네 카드 이하면 한 요청으로 끝내고, 다섯 카드 이상일 때만 탐색 축으로
+// 가른다. 소수 카드까지 축마다 나누면 같은 큰 PDF를 여러 번 훑느라 오히려 시간 초과가 난다.
 //
-// 카드 종류로 묶음을 고정하지 않는 이유는 셋이다.
-//   * 고정 묶음은 **자료를 묶음마다 다시 읽힌다.** 재무제표를 역량 묶음에도 보내면 입력
-//     토큰이 묶음 수만큼 늘고, 그 자료는 그 카드가 쓰지도 않는다.
-//   * 나누는 목적이 **잡음 제거**이기 때문이다. 재무 카드에 IR 자료 40쪽이 함께 들어가면
-//     모델이 확정 재무 대신 발표 자료의 목표 매출을 집어 온다. 무엇이 잡음인지는 카드 종류가
-//     아니라 그 기업이 낸 자료가 정하므로 코드가 미리 답할 수 없다.
-//   * 조합이 같으면 한 요청에 남으므로 **카드 간 일관성**(매출과 고용의 같은 연도 값)이 그
-//     안에서는 그대로 지켜진다. 전부 같은 자료를 읽히면 지금과 똑같이 한 요청이다.
+// 두 축은 서로 다른 일을 한다.
+//   * 자료 조합: 카드가 쓰지 않을 자료를 빼서 잡음을 줄인다.
+//   * 탐색 축: 같은 자료를 읽어도 기업 개요와 재무표처럼 찾는 방식이 다른 일을 나눠 회수율과
+//     출력 여유를 지킨다. 서로 맞물리는 카드(매출·고용·주주·투자)는 한 축에 남긴다.
 //
 // Deno API를 쓰지 않는다(works vitest가 이 판정을 직접 돌린다).
 // 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §4.2·§8.3
@@ -28,12 +25,31 @@ export interface CardGroup {
   sourceKeys: string[]
 }
 
+/** 같은 자료를 읽더라도 한 요청에 함께 맡길 수 있는 카드 묶음. */
+const EXTRACTION_FAMILY: Record<CardKey, 'overview' | 'organization' | 'growth' | 'capital'> = {
+  basics: 'overview',
+  summary: 'overview',
+  business: 'overview',
+  tech: 'overview',
+  team: 'organization',
+  ip: 'organization',
+  timeline: 'growth',
+  traction: 'growth',
+  revenue: 'capital',
+  employee: 'capital',
+  shareholders: 'capital',
+  investment: 'capital',
+}
+
+/** 이 수까지는 문서를 한 번만 읽는 편이 출력 여유보다 이득이다. */
+export const SINGLE_REQUEST_MAX_CARDS = 4
+
 /**
  * 카드와 배정을 묶음으로 가른다.
  *
  * @param cards 담당자가 고른 카드(요청 순서는 무시하고 화면 순서로 다시 세운다).
  * @param assignments 카드별 자료 배정. **없으면 모든 카드가 자료 전부를 읽는다** — 격자
- *   이전의 화면이 보낸 요청도 그대로 돌아야 하고, 그때의 동작은 한 요청이었다.
+ *   이전의 화면이 보낸 요청도 자료 선택은 그대로 호환한다.
  * @param allKeys 실제로 읽을 수 있는 자료의 키. 배정에 적힌 값 중 여기 없는 것은 버린다
  *   (클라이언트가 보낸 값을 그대로 믿지 않는다).
  *
@@ -49,7 +65,7 @@ export function planGroups(
   // 카드 순서는 요청 순서가 아니라 화면 순서로 고정한다(프롬프트 조립과 같은 이유 —
   // 같은 조합인데 체크한 차례에 따라 요청이 달라지면 실패를 재현할 수 없다).
   const ordered = CARD_KEYS.filter((k) => cards.includes(k))
-  const buckets = new Map<string, CardGroup>()
+  const sourceBuckets = new Map<string, CardGroup>()
 
   for (const card of ordered) {
     // **되돌아갈 자리는 요청 단위이지 카드 단위가 아니다.** 배정이 아예 오지 않았으면 옛
@@ -63,10 +79,29 @@ export function planGroups(
     if (keys.length === 0) continue
 
     const sig = keys.join('\u0000')
-    const found = buckets.get(sig)
+    const found = sourceBuckets.get(sig)
     if (found) found.cards.push(card)
-    else buckets.set(sig, { cards: [card], sourceKeys: keys })
+    else sourceBuckets.set(sig, { cards: [card], sourceKeys: keys })
   }
 
-  return [...buckets.values()]
+  const planned: CardGroup[] = []
+  for (const sourceGroup of sourceBuckets.values()) {
+    if (sourceGroup.cards.length <= SINGLE_REQUEST_MAX_CARDS) {
+      planned.push(sourceGroup)
+      continue
+    }
+
+    // 카드가 많을 때만 탐색 축을 지문에 더한다. 열두 카드 전체 선택은 여전히 네 요청으로
+    // 나뉘지만, 팀·연혁·고용·투자 네 카드처럼 작은 요청은 같은 문서를 한 번만 읽는다.
+    const familyBuckets = new Map<string, CardGroup>()
+    for (const card of sourceGroup.cards) {
+      const family = EXTRACTION_FAMILY[card]
+      const found = familyBuckets.get(family)
+      if (found) found.cards.push(card)
+      else familyBuckets.set(family, { cards: [card], sourceKeys: sourceGroup.sourceKeys })
+    }
+    planned.push(...familyBuckets.values())
+  }
+
+  return planned
 }
