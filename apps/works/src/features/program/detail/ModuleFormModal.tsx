@@ -98,14 +98,26 @@ export function ModuleFormModal({
     return [...seen.entries()].map(([id, name]) => ({ id, name }))
   }, [program.managers])
 
-  const [assignees, setAssignees] = useState<string[]>(
-    () => (module?.assignees ?? []).map((a) => a.user_id),
+  // 담당자는 사람만이 아니라 **그 사람이 이 모듈에서 하는 일**까지가 한 줄이다(2026-09-06).
+  // 역할(PM·멤버)은 여기서 받지 않는다 — 사업 담당자 원장이 이미 아는 사실이라, 모듈마다 다시
+  // 고르게 하면 같은 사람이 화면마다 다른 역할로 서게 된다.
+  const [assignees, setAssignees] = useState<{ id: string; duty: string }[]>(
+    () => (module?.assignees ?? []).map((a) => ({ id: a.user_id, duty: a.duty ?? '' })),
   )
   // 칩에 이름을 세우려면 id가 아니라 항목 자체를 들어야 한다(원장에서 빠진 사람은 '이름 미상').
+  const nameOfUser = (id: string) => pool.find((p) => p.id === id)?.name ?? '이름 미상'
   const selectedAssignees = useMemo(
-    () => assignees.map((id) => pool.find((p) => p.id === id) ?? { id, name: '이름 미상' }),
+    () => assignees.map((a) => pool.find((p) => p.id === a.id) ?? { id: a.id, name: '이름 미상' }),
     [assignees, pool],
   )
+  /** 사람 목록 변경(칩 추가·삭제). 이미 적어 둔 업무롤은 그대로 들고 간다. */
+  const onChangeAssignees = (next: { id: string }[]) => {
+    setAssignees((prev) =>
+      next.map((n) => ({ id: n.id, duty: prev.find((p) => p.id === n.id)?.duty ?? '' })),
+    )
+  }
+  const setDuty = (id: string, duty: string) =>
+    setAssignees((prev) => prev.map((a) => (a.id === id ? { ...a, duty } : a)))
 
   const settings = readModuleSettings(module?.settings)
   // 선택지의 상한은 ADMIN이 배치한 템플릿 카탈로그가 답한다(3_2_1). 화면이 목록을 따로 들면
@@ -214,7 +226,9 @@ export function ModuleFormModal({
           end_date: values.end_date || undefined,
           memo: values.memo || undefined,
         },
-        assigneeUserIds: assignees,
+        // 빈 업무롤은 빈 문자열이 아니라 null로 보낸다 — '안 적었다'와 '지웠다'가 원장에서
+        // 같은 모양이어야 화면이 둘을 가르지 않는다(서버도 같은 규칙으로 접는다).
+        assignees: assignees.map((a) => ({ userId: a.id, duty: a.duty.trim() || null })),
       })
       // 링크 공유는 별개 원장이라 저장도 뒤이어 따로 간다. 실패해도 모듈 저장은 이미 끝났으므로
       // 무엇이 반영되고 무엇이 안 됐는지를 문구로 가른다 — 한 문장으로 뭉치면 담당자가
@@ -395,7 +409,7 @@ export function ModuleFormModal({
             <div className="mt-1">
               <TokenMultiSelect<{ id: string; name: string }>
                 selected={selectedAssignees}
-                onChange={(next) => setAssignees(next.map((a) => a.id))}
+                onChange={onChangeAssignees}
                 getKey={(a) => a.id}
                 getLabel={(a) => a.name}
                 options={pool}
@@ -405,6 +419,36 @@ export function ModuleFormModal({
             </div>
           )}
         </div>
+
+        {/*
+          업무롤 — 위 칸이 '누구인가'를 묻고 여기가 '무엇을 하는가'를 묻는다. 같은 이름이 칩과
+          이 줄에 두 번 서지만 두 값은 다른 물음의 답이고, 이름이 곧 이 줄의 라벨이라 지울 수 없다.
+          역할(PM·멤버)은 여기서 받지 않는다 — 사업 담당자 원장이 이미 아는 사실이다.
+          선택 전에는 줄 자체를 세우지 않는다(늘 비어 있는 칸은 곧 안 읽히는 칸이 된다).
+        */}
+        {assignees.length > 0 && (
+          <div>
+            <span className="text-body font-medium text-gray-800">업무롤</span>
+            <div className="mt-1 space-y-2">
+              {assignees.map((a) => (
+                <div
+                  key={a.id}
+                  className="grid grid-cols-[6rem_minmax(0,1fr)] items-center gap-2"
+                >
+                  <span className="truncate text-body text-gray-700" title={nameOfUser(a.id)}>
+                    {nameOfUser(a.id)}
+                  </span>
+                  <Input
+                    value={a.duty}
+                    maxLength={200}
+                    placeholder="이 모듈에서 하는 일 (예: 신청서 검토·선발 총괄)"
+                    onChange={(e) => setDuty(a.id, e.target.value)}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div>
           <label className="text-body font-medium text-gray-800" htmlFor="mod-memo">

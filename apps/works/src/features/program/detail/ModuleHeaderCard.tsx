@@ -1,4 +1,15 @@
-import { Badge, Button, Card, InfoField, InfoGrid, Spinner, useToast } from '@ynarcher/ui'
+import {
+  Badge,
+  Button,
+  Card,
+  EntityHeaderSection,
+  InfoField,
+  InfoGrid,
+  Spinner,
+  cn,
+  tableText,
+  useToast,
+} from '@ynarcher/ui'
 import { Pencil, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
 import { ModuleVisibilityBadge } from '@/features/program/detail/ModuleVisibilityBadge'
@@ -72,6 +83,17 @@ export function ModuleHeaderCard({
   if (!mod) return null
 
   const name = moduleDisplayName(mod)
+  /**
+   * 역할은 사업 담당자 원장이 답한다 — 한 사람이 부서·기간 세그먼트로 여러 줄을 가질 수 있으므로
+   * **한 줄이라도 PM이면 PM**으로 본다(사업 기본 데이터 카드와 같은 규칙).
+   * 사업 담당자 풀에서 빠진 사람은 모듈 담당에서도 함께 거둬지지만(20260903140000), 그 사이의
+   * 행이 남아 있을 수 있으므로 못 찾은 경우는 비워 둔다 — 없는 역할을 '멤버'로 지어내지 않는다.
+   */
+  const roleLabelOf = (userId: string) => {
+    const rows = (program.managers ?? []).filter((m) => m.user_id === userId)
+    if (rows.length === 0) return <span className={tableText.empty}>-</span>
+    return rows.some((m) => m.role === 'PM') ? 'PM' : '멤버'
+  }
   const meta = MODULE_META[mod.module_type]
   const Icon = meta?.icon
   const status = moduleStatusMeta(mod.status)
@@ -151,24 +173,50 @@ export function ModuleHeaderCard({
           </>
         }
       >
-        <InfoGrid>
+        <InfoGrid columns={2}>
           {/* 템플릿은 배지가 아니라 라벨:값이다 — 색은 상태에만 쓴다(5_component_spec_rules §3.4).
               보드 카드가 배지로 두는 것은 라벨을 적을 자리가 없어서이고, 여기는 있다. */}
           <InfoField label="템플릿" value={moduleTypeLabel(mod.module_type)} />
           <InfoField label="기간" value={formatModulePeriod(settings)} />
-          <InfoField
-            label="담당"
-            value={
-              mod.assignees.length > 0 ? (
-                mod.assignees.map((a) => a.user?.name ?? '이름 미상').join(', ')
-              ) : (
-                /* 비어 있어도 칸을 지우지 않는다 — 담당자가 없는 것과 아직 못 읽은 것이 같은
-                   모양이 되면, 사업 담당자에서 빠지며 함께 비워진 모듈을 아무도 알아채지 못한다. */
-                <span className="text-warning">미지정</span>
-              )
-            }
-          />
         </InfoGrid>
+
+        {/*
+          담당자는 라벨:값 한 줄에서 구분선 아래 세 칸(역할·이름·업무롤)으로 내려왔다(2026-09-06).
+          이름만 쉼표로 잇던 동안 두 사람이 걸린 모듈에서 누가 무엇을 맡았는지를 화면이 답하지
+          못했다 — 그래서 사람마다 한 줄을 준다. 구분선·라벨 규격은 `EntityHeaderSection`이
+          소유한다(사업·기업 상세의 '담당자' 섹션과 같은 자리다).
+
+          역할은 이 모듈이 아니라 **사업**이 아는 사실이라 사업 담당자 원장에서 읽어 온다.
+          모듈에 다시 적어 두면 한쪽만 고치는 날 같은 사람이 화면마다 다른 역할로 선다.
+        */}
+        <EntityHeaderSection label="담당자">
+          {mod.assignees.length === 0 ? (
+            /* 비어 있어도 칸을 지우지 않는다 — 담당자가 없는 것과 아직 못 읽은 것이 같은
+               모양이 되면, 사업 담당자에서 빠지며 함께 비워진 모듈을 아무도 알아채지 못한다. */
+            <p className={tableText.body}>
+              <span className="text-warning">담당자가 지정되지 않았습니다.</span> 오른쪽 위
+              ‘설정’에서 담당자와 업무롤을 지정하세요.
+            </p>
+          ) : (
+            <div className="grid grid-cols-[4rem_7rem_minmax(0,1fr)] gap-x-3 gap-y-1.5">
+              <span className={tableText.head}>역할</span>
+              <span className={tableText.head}>이름</span>
+              <span className={tableText.head}>업무롤</span>
+              {mod.assignees.map((a) => (
+                <div key={a.user_id} className="contents">
+                  <span className={tableText.body}>{roleLabelOf(a.user_id)}</span>
+                  <span className={cn(tableText.primary, 'truncate')}>
+                    {a.user?.name ?? '이름 미상'}
+                  </span>
+                  {/* 안 적힌 업무롤은 하이픈으로 물러난다 — '아직 안 정했다'가 값처럼 읽히면 안 된다. */}
+                  <span className={cn(tableText.body, 'min-w-0')}>
+                    {a.duty?.trim() || <span className={tableText.empty}>-</span>}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </EntityHeaderSection>
       </Card>
 
       {editOpen && (

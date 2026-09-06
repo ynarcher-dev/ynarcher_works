@@ -201,6 +201,11 @@ export function useSetProgramStaffing() {
 /** 모듈 인스턴스 담당자(program_module_assignees 임베드). 이름은 users 조인. */
 export interface ModuleAssignee {
   user_id: string
+  /**
+   * 이 모듈에서 하는 일(업무롤) 한 줄. **역할(PM·멤버)은 여기 없다** — 그것은 사업 담당자
+   * 원장(`program.managers`)이 이미 아는 사실이라 복제하지 않는다(2026-09-06).
+   */
+  duty: string | null
   user: { id: string; name: string | null } | null
 }
 
@@ -231,7 +236,7 @@ export function moduleCols(): string {
   const t = SHARED_TABLES.moduleAssignees
   return (
     'id, module_type, title, enabled, participation_mode, visibility, status, settings, ' +
-    `assignees:${t}(user_id, user:users!${t}_user_id_fkey(id, name))`
+    `assignees:${t}(user_id, duty, user:users!${t}_user_id_fkey(id, name))`
   )
 }
 
@@ -286,7 +291,8 @@ export function useSetProgramModule(programId: string) {
       /** 매칭만 선택형. 그 외는 null로 보내면 서버가 템플릿 기본값으로 강제한다. */
       participationMode: string | null
       settings: Record<string, unknown>
-      assigneeUserIds: string[]
+      /** 담당자와 그 사람이 이 모듈에서 하는 일. 순서는 화면이 보여 준 순서 그대로 넘긴다. */
+      assignees: { userId: string; duty: string | null }[]
     }): Promise<string> => {
       const { data, error } = await supabase.rpc('set_program_module', {
         p_entity_key: config.entityKey,
@@ -298,7 +304,7 @@ export function useSetProgramModule(programId: string) {
         p_visibility: input.visibility,
         p_participation_mode: input.participationMode,
         p_settings: input.settings,
-        p_assignee_user_ids: input.assigneeUserIds,
+        p_assignees: input.assignees.map((a) => ({ user_id: a.userId, duty: a.duty })),
       })
       if (error) throw error
       return data as string
