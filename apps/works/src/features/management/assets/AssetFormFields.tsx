@@ -1,9 +1,7 @@
+
 import {
-  Checkbox,
   Field,
   Input,
-  Tooltip,
-  tooltipScale,
   Select,
   SettingRow,
   Switch,
@@ -22,7 +20,7 @@ import {
   type AssetBillingCycle,
   type AssetStatus,
 } from '@/features/management/config'
-import { AssetCostSummary } from '@/features/management/assets/AssetCostSummary'
+
 import { AssetPhotoPicker } from '@/features/management/assets/AssetPhotoPicker'
 import {
   endsOnLabel,
@@ -93,15 +91,15 @@ function PersonPicker({
 }
 
 /**
- * 자산 등록·수정 폼의 필드 배치. 값 판단(전이·검증)은 `assetForm`이, 금액 계산은 `assetCost`가
- * 갖고 여기서는 배치만 한다.
+
+ * 자산 등록·수정 폼의 필드 배치. 값 판단(전이·검증)은 `assetForm`이 갖고 여기서는 배치만 한다.
  *
  * 필드 차례는 표의 열 차례와 같다 — 표에서 보던 순서대로 폼이 이어져야 무엇을 고치는 중인지
  * 눈이 헤매지 않는다. 줄 묶음은 함께 정하는 값끼리다: 무엇인가(자산명·시리얼) /
  * 어떤 물건인가(품목·분류) / 몇 개이고 어떤 상태인가(보유 수량·상태) / 어디 있나(지사·보관 위치) /
  * 누구의 물건인가(관리자·할당) / 얼마(금액·결제 주기) / 언제부터 언제까지(취득일자·끝나는 날).
  *
- * 비용 계산 결과는 금액·기간 줄 바로 아래에 붙인다 — 값을 고치는 자리에서 결과가 바뀌어야 한다.
+ * 값을 다 적은 뒤에 이 행을 어떻게 다룰지의 스위치 묶음(공개·중요)이 서고, 그다음이 사진·비고다.
  *
  * 라벨·도움말의 규격은 공용 `Field`가 소유한다(2026-09-02에 이 파일의 사본을 걷어냈다). 사본을
  * 쓰던 동안 도움말이 이 모달에서만 상시 캡션으로 남아, 같은 works 안에서 규칙이 어느 화면은
@@ -138,27 +136,6 @@ export function AssetFormFields({
         </Field>
       </Row>
 
-      {/*
-        중요는 폼 맨 앞자리다 — 필드 차례는 표의 열 차례를 따르는데, 이 값이 목록에서
-        차지하는 자리가 맨 앞의 번호 칸이기 때문이다. 아래 공개 스위치와 묶지 않는 이유는
-        축이 다르기 때문이다: 공개는 이 물건을 OFFICE에 보일지이고, 중요는 이 목록에서
-        어디에 서는가다.
-      */}
-      <Checkbox
-        checked={draft.isPinned}
-        onChange={(e) => onChange({ ...draft, isPinned: e.target.checked })}
-        wrapperClassName="flex-wrap gap-y-1"
-        label={
-          <>
-            중요
-            <Tooltip
-              label="중요"
-              content="목록에서 자산명 순을 건너뛰고 맨 위에 고정합니다(번호 대신 📌)."
-              className={tooltipScale.gap}
-            />
-          </>
-        }
-      />
 
       <Row>
         <Field label="품목" hint="이미 등록된 품목이 제안되며, 새 품목은 그대로 입력합니다.">
@@ -347,21 +324,17 @@ export function AssetFormFields({
         </Field>
       </Row>
 
-      <AssetCostSummary
-        basis={{
-          amount: draft.amount ? Number(draft.amount) : null,
-          billingCycle: draft.billingCycle,
-          acquiredOn: draft.acquiredOn || null,
-          endsOn: draft.endsOn || null,
-        }}
-      />
 
       {/*
-        이 스위치가 정하는 것은 하나다 — OFFICE 자산 현황에 이 물건이 서는가. 종전 이름은
-        '반출 가능 여부'였는데 그 이름이 가리키던 반출대장은 2026-08-25에 폐지됐고, 없어진
-        기능의 스위치로 읽힌 탓에 실제로 꺼져 OFFICE 목록이 통째로 빈 일이 있었다(2026-08-26).
-        이름은 그 스위치가 지금 하는 일을 말한다. 함께 있던 '반출 시 승인 필요'는 그 값을 읽는
-        화면이 하나도 남지 않아 걷어냈다.
+        폼의 위쪽 절반은 "이 물건이 무엇인가"를 적는 자리이고, 이 상자의 둘은 "이 행을 어떻게
+        다룰 것인가"를 정하는 스위치다 — 밖에 보일지(공개)와 이 목록에서 어디에 설지(중요).
+        성격이 같으므로 한자리에 모으고 생김새도 하나로 맞춘다. 종전에는 중요만 폼 맨 앞의
+        체크박스였는데(표의 맨 앞 번호 칸을 차지하는 값이라는 이유), 입력 줄들 사이에 끼어
+        한 줄짜리 다른 생김새가 서면서 자산명에서 품목으로 내려가는 눈을 한 번 끊었다.
+
+        공개 스위치의 종전 이름은 '반출 가능 여부'였고, 그 이름이 가리키던 반출대장은
+        2026-08-25에 폐지됐다. 없어진 기능의 스위치로 읽힌 탓에 실제로 꺼져 OFFICE 목록이
+        통째로 빈 일이 있었다(2026-08-26) — 이름은 그 스위치가 지금 하는 일을 말한다.
       */}
       <div className="rounded-radius-md border border-gray-200 bg-gray-25 px-3 py-2.5">
         <SettingRow
@@ -372,6 +345,19 @@ export function AssetFormFields({
               id={id}
               checked={draft.isPortable}
               onChange={(isPortable) => onChange({ ...draft, isPortable })}
+            />
+          )}
+        />
+
+        <SettingRow
+          className="mt-2.5 border-t border-gray-200 pt-2.5"
+          title="중요"
+          hint="켜면 목록에서 자산명 순을 건너뛰고 맨 위에 고정되며, 번호 칸이 핀 표식(📌)으로 바뀝니다."
+          control={({ id }) => (
+            <Switch
+              id={id}
+              checked={draft.isPinned}
+              onChange={(isPinned) => onChange({ ...draft, isPinned })}
             />
           )}
         />

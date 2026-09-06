@@ -1,8 +1,8 @@
 import { Banner, Input, Spinner, Tabs, useToast } from '@ynarcher/ui'
 import { useEffect, useMemo, useState } from 'react'
 import { ListActions } from '@/components/ListActions'
+
 import { useEmployees } from '@/features/hub/hooks'
-import { costBasisFromAsset } from '@/features/management/assets/assetCost'
 import { AssetFormModal } from '@/features/management/assets/AssetFormModal'
 import { AssetImportModal } from '@/features/management/assets/AssetImportModal'
 import { AssetsFilterBar } from '@/features/management/assets/AssetsFilterBar'
@@ -31,8 +31,9 @@ const PAGE_SIZE = 30
  * 품목·상태가 의미를 갖는다. 그래서 지사는 필터가 아니라 자리다. 지사 목록은 '지사 관리'가
  * 소유한 원장을 그대로 쓰며(활성 지사만), 여기서 지사를 만들거나 고치지 않는다.
  *
+
  * 이 컴포넌트는 목록의 상태(지사·검색어·필터·페이지·선택)만 소유한다. 표는 AssetsTable이,
- * 비용 합계는 assetCost가, CSV 해석은 assetImport가 갖는다.
+ * CSV 해석은 assetImport가 갖는다.
  */
 export function AssetsPanel() {
   const toast = useToast()
@@ -163,8 +164,9 @@ export function AssetsPanel() {
         </div>
       </div>
 
+
       <AssetsSelectionBar
-        items={selectedRows.map(costBasisFromAsset)}
+        count={selectedRows.length}
         busy={busy}
         onDeactivate={() => void deactivate(selectedRows)}
       />
