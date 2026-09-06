@@ -1,70 +1,4 @@
-import {
-  Award,
-  BadgeCheck,
-  BarChart3,
-  BriefcaseBusiness,
-  CalendarDays,
-  ChartNoAxesCombined,
-  ClipboardList,
-  Download,
-  Folder,
-  Globe,
-  Handshake,
-  LayoutGrid,
-  Lightbulb,
-  Link2,
-  LockKeyhole,
-  PanelLeftClose,
-  PanelLeftOpen,
-  ReceiptText,
-  Rocket,
-  Search,
-  Sparkles,
-  Star,
-  Target,
-  User,
-  Users,
-  WalletCards,
-  Megaphone,
-  FolderOpen,
-  LayoutDashboard,
-  Factory,
-  Tags,
-  UserCog,
-  UserRoundCheck,
-  Medal,
-  Shapes,
-  Coins,
-  Building2,
-  Landmark,
-  TrendingUp,
-  ShoppingCart,
-  PiggyBank,
-  GraduationCap,
-  Boxes,
-  EyeOff,
-  Component,
-  Upload,
-  DoorOpen,
-  Network,
-  Gauge,
-  Building,
-  Layers,
-  Sprout,
-  FileSpreadsheet,
-  FileText,
-  ScanLine,
-  Tag,
-  Map,
-  MapPin,
-  Flag,
-  Milestone,
-  Activity,
-  HandCoins,
-  PackageOpen,
-  CalendarClock,
-} from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import { ClipboardList, FolderOpen, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import {
   AppShell,
   DropdownItem,
@@ -78,9 +12,17 @@ import {
 import { Fragment, useEffect, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import logo from '@/assets/logo.png'
-import { hasWorkspaceRead, useAuthStore } from '@/auth/authStore'
-import { WORKSPACES } from '@/config/workspaces'
-import { WORKSPACE_SUBNAV, firstTab, pathTabOf, type SubNavItem } from '@/config/navigation'
+import { useAuthStore } from '@/auth/authStore'
+import type { WorkspaceSection } from '@/config/workspaces'
+import { allTabs, firstTab, pathTabOf, type SubNavItem } from '@/config/navigation'
+import {
+  buildNavGroups,
+  landingPath,
+  plainGroups,
+  resolveWorkspace,
+  visibleWorkspaces,
+  type BoundNavItem,
+} from '@/app/workspaceNav'
 import { SidebarFlyout } from '@/app/SidebarFlyout'
 import { TopbarBreadcrumb } from '@/app/TopbarBreadcrumb'
 import { GlobalSearchBox } from '@/app/GlobalSearchBox'
@@ -90,140 +32,7 @@ import { RightPanelHost } from '@/app/RightPanelHost'
 import { useBoards } from '@/features/hub/boardHooks'
 import { boardsOfKind } from '@/features/hub/boardStore'
 import { boardIcon } from '@/features/hub/boardIcons'
-
-const sidebarIconByTab: Record<string, LucideIcon> = {
-  // HUB 그룹 1: 메인
-  dashboard: LayoutDashboard,
-  ai: Sparkles,
-  calendar: CalendarDays,
-  notices: Megaphone,
-  files: FolderOpen,
-  insights: Lightbulb,
-
-  // HUB 그룹 2: 마스터 정보
-  managers: Users,
-  startups: Rocket,
-  experts: BriefcaseBusiness,
-  partners: Handshake,
-  orgs: Handshake,
-
-  // NETWORKS 8종 네트워크(원장별 메뉴는 2026-08-20에 내렸으나, 상세·HUB 등 다른 화면이
-  // 같은 탭 키를 쓰므로 매핑은 남긴다)
-  van: Handshake,
-  exp: Star,
-  global: Globe,
-  // 글로벌 '내 업로드 DB' — 같은 역할(내 것)이라 국내 `mine`과 같은 글리프를 쓰고,
-  // 국내/글로벌은 라벨과 구분선이 가른다.
-  global_mine: User,
-  investors: Coins,
-  corporates: Building2,
-  institutions: Landmark,
-  universities: GraduationCap,
-  etc: Component,
-  others: Boxes,
-
-  // HUB 그룹 3: 현황 정보
-  ac: Target,
-  mine: User,
-  all: LayoutGrid,
-  mna: BriefcaseBusiness,
-  project: Folder,
-
-  // 사업 워크스페이스(AC/M&A/PROJECT) 사업구분 세분화 메뉴.
-  // `global`(글로벌)·`etc`(기타)는 NETWORKS 매핑을 그대로 재사용한다.
-  public: Landmark,
-  private: Building2,
-  revenue: Coins,
-  sell: TrendingUp,
-  buy: ShoppingCart,
-  pe_fund: PiggyBank,
-  new_biz: Lightbulb,
-
-  // FUND 펀드 종류별 메뉴(`ac_fund`·`vc_fund`)는 2026-08-20에 목록 '구분' 필터로 내려가
-  // 매핑도 함께 지웠다(`pe_fund`는 M&A 사업구분 키와 같아 위에 남아 있다).
-
-  // HUB 그룹 4: 실적 정보
-  fund: WalletCards,
-  management: ChartNoAxesCombined,
-
-  // 기존 탭 매핑 유지
-  search: Search,
-  ranking: Award,
-  directory: Users,
-  merge: Link2,
-  creators: UserCog,
-  bulk: Upload,
-  kanban: BadgeCheck,
-  matching: LayoutGrid,
-  permissions: LockKeyhole,
-  boards: ClipboardList,
-  // 게스트 계정 관리: 사람(User) 계열이되 인사(User)·생성자(UserCog)와 다른 글리프를 쓴다 —
-  // 사이드바에서 세 메뉴가 같은 일로 읽히면 안 된다.
-  'guest-accounts': UserRoundCheck,
-  sensitive: EyeOff,
-  audit: ReceiptText,
-  downloads: Download,
-  approval: BadgeCheck,
-  // 양식 관리는 결재 그 자체가 아니라 "무엇을 입력받을지"를 정하는 자리라 결재 도장(BadgeCheck)과
-  // 다른 글리프를 쓴다 — 사이드바에서 두 메뉴가 같은 일로 읽히면 안 된다.
-  'approval-forms': FileSpreadsheet,
-  'approval-stats': BarChart3,
-  clients: Handshake,
-  outbound: PackageOpen,
-  rooms: DoorOpen,
-  minutes: FileText,
-  hr: User,
-  attendance: CalendarClock,
-  finance: WalletCards,
-  assets: BriefcaseBusiness,
-  departments: Network,
-  branches: Building,
-  kpi: Gauge,
-
-  // STARTUP 워크스페이스
-  invested: Coins,
-  incubated: Sprout,
-  discovered: Rocket,
-  archerscan: ScanLine,
-
-  // ADMIN '태그 관리' 그룹(tagConfig.ts의 TAG_CONFIGS). 한 그룹 안에서 나란히 놓이므로
-  // 다른 메뉴와 겹치더라도 그룹 내부에서는 서로 다른 아이콘을 쓴다.
-  // 직책·직급·호봉은 MANAGEMENT에서 이 그룹으로 이관됐다(2026-08-03).
-  positions: UserCog,
-  ranks: Medal,
-  pay_steps: Layers,
-  industries: Factory,
-  fields: Tag,
-  categories: Shapes,
-  regions: Map,
-  countries: Flag,
-  investment_stages: Milestone,
-  company_categories: Building2,
-  company_statuses: Activity,
-  investment_methods: HandCoins,
-  locations: MapPin,
-}
-
-/** 하위 항목을 여는 아코디언 그룹 헤더의 아이콘(SubNavItem.groupIconKey). */
-const sidebarGroupIcon: Record<string, LucideIcon> = {
-  tags: Tags,
-}
-
-/**
- * 탭 키가 없는 메뉴(목록 하나뿐인 워크스페이스)의 아이콘.
- *
- * 2026-09-05에 STARTUP·NETWORKS·FUND·사업 3종의 '내 ~'/'전체 ~' 두 줄이 한 줄로 합쳐지며
- * 이 줄들은 탭 키를 잃었다(범위는 `?scope=`가 싣는다). 탭 기반 매핑이 걸리지 않으므로
- * 워크스페이스 글리프가 그 줄의 아이콘이 된다.
- */
-const sidebarIconByWorkspace: Record<string, LucideIcon> = {
-  startup: Rocket,
-  ac: Target,
-  fund: WalletCards,
-  project: Folder,
-  mna: BriefcaseBusiness,
-  networks: Network,
-}
+import { sidebarGroupIcon, sidebarIconByTab, sidebarIconByWorkspace } from '@/app/sidebarIcons'
 
 /**
  * 인증된 WORKS 셸: 컨텍스트 사이드바(워크스페이스 전환 + 메뉴) + 상단바(전역 기능·계정 메뉴).
@@ -247,26 +56,57 @@ export function WorksLayout() {
   const [openFlyout, setOpenFlyout] = useState<string | null>(null)
   const boards = useBoards().data ?? []
 
-  const visible = WORKSPACES.filter((w) => hasWorkspaceRead(user, w.key))
+  const visible = visibleWorkspaces(user)
 
-  // 현재 워크스페이스(경로 기준). 미매칭 시 첫 노출 워크스페이스로 폴백.
-  const currentWs =
-    visible.find((w) => location.pathname.startsWith(w.path)) ?? visible[0]
+  // 현재 스위처 항목 + 그 안의 권한 구획(경로 기준). 미매칭 시 첫 노출 항목으로 폴백.
+  // 구획까지 함께 잡는 이유는 경로·글리프·활성 판정이 항목이 아니라 구획 단위이기 때문이다
+  // (DATABASE 한 항목이 스타트업·네트워크 두 구획을 덮는다).
+  const { ws: currentWs, section: currentSection } = resolveWorkspace(
+    location.pathname,
+    visible,
+    user,
+  )
 
-  // 현재 워크스페이스의 세부 메뉴 + 활성 섹션(?tab, 없으면 기본 첫 항목).
-  const groups = currentWs ? WORKSPACE_SUBNAV[currentWs.key] ?? [] : []
+  // 현재 항목의 세부 메뉴(줄마다 자기 구획이 묶여 있다) + 활성 섹션(?tab, 없으면 기본 첫 항목).
+  const boundGroups = currentWs ? buildNavGroups(user, currentWs) : []
+  // 탭 판정(`allTabs`·`firstTab`)에는 고정 그룹도 함께 넣는다 — 그 줄의 탭이 목록에서 빠지면
+  // 그 화면에 서 있는 동안 사이드바의 원장 줄들이 전부 활성으로 칠해진다(`tabOwned`가 거짓이 된다).
+  const groups = plainGroups(boundGroups)
+  // 사이드바 본문에 서는 그룹과, 그 아래 고정 영역에 서는 그룹.
+  const bodyGroups = boundGroups.filter((g) => !g.pinned)
+  const pinnedGroup = boundGroups.find((g) => g.pinned)
   // 상세 라우트(/networks/{entity}/:id)는 ?tab이 없으므로 경로 세그먼트에서 활성 탭을 유추한다.
   // (엔티티 키 == 사이드바 탭 키) 이렇게 하지 않으면 firstTab 폴백으로 대시보드가 활성화된다.
-  const pathTab = currentWs ? pathTabOf(location.pathname, currentWs.path, groups) : undefined
+  const pathTab = currentSection
+    ? pathTabOf(location.pathname, currentSection.path, groups)
+    : undefined
   const activeTab =
     new URLSearchParams(location.search).get('tab') ?? pathTab ?? firstTab(groups)
 
+  // 지금 활성인 탭이 이 사이드바의 항목 중 하나인가. 탭 없는 항목(= 워크스페이스 루트)이
+  // 언제 활성인지를 이 값이 정한다 — 형제가 활성이면 루트는 물러나고, 아무도 갖지 않은
+  // 탭이면(옛 주소 ?tab=mine 등) 루트가 활성으로 남는다.
+  const tabOwned = activeTab ? allTabs(groups).has(activeTab) : false
+
   // 상단바 현재 위치 표시용 섹션명. 사이드바 트리에서 활성 탭의 라벨을 찾고,
-  // 게시판·자료실처럼 레지스트리에서 주입되는 동적 항목은 게시판 목록에서 보완한다.
+  // 레지스트리에서 주입되는 게시판·자료실 상세 탭은 그 상위 1차 메뉴명으로 보완한다.
+  // 구획을 둘 이상 덮는 항목에서는 워크스페이스명이 어느 원장인지 답하지 못하므로
+  // (DATABASE만으로는 스타트업인지 네트워크인지 모른다) 탭 없는 줄도 섹션명으로 세운다.
+  // 구획 하나짜리 항목에서는 종전대로 워크스페이스명만 남긴다 — 목록이 하나뿐이라 그 이름이
+  // 이미 어디인지를 답한다.
+  const multiSection = (currentWs?.sections.length ?? 0) > 1
   const activeSectionLabel = (() => {
-    for (const g of groups) {
-      for (const item of g.items) {
+    for (const g of boundGroups) {
+      for (const { item, section } of g.items) {
         if (item.tab === activeTab) return item.label
+        if (!item.tab && multiSection && section.key === currentSection?.key && !tabOwned) {
+          return item.label
+        }
+        if (item.dynamicKey) {
+          const kind = item.dynamicKey === 'archives' ? 'ARCHIVE' : 'POST'
+          if (item.dynamicKey === 'boards' && activeTab === 'notices') return item.label
+          if (boardsOfKind(boards, kind).some((b) => b.slug === activeTab)) return item.label
+        }
         const child = item.children?.find((c) => c.tab === activeTab)
         if (child) return child.label
       }
@@ -275,7 +115,7 @@ export function WorksLayout() {
   })()
 
   const switcherOptions = visible.map((w) => ({
-    key: w.key,
+    key: w.id,
     label: w.implemented ? w.label : `${w.label} (준비 중)`,
     disabled: !w.implemented,
     // 워크스페이스 부제 + 4개 구획(업무 허브/데이터베이스/워크스페이스/경영·시스템) 섹션 헤더.
@@ -284,38 +124,39 @@ export function WorksLayout() {
     divider: w.divider,
   }))
 
-  const goToSection = (item: { tab?: string }) => {
-    if (!currentWs) return
-    navigate(item.tab ? `${currentWs.path}?tab=${item.tab}` : currentWs.path)
+  const goToSection = (item: { tab?: string }, section: WorkspaceSection) => {
+    navigate(item.tab ? `${section.path}?tab=${item.tab}` : section.path)
   }
 
-  const getSidebarIcon = (item: { tab?: string }) =>
-    item.tab
-      ? sidebarIconByTab[item.tab]
-      : currentWs
-        ? sidebarIconByWorkspace[currentWs.key]
-        : undefined
+  // 탭 없는 줄(= 그 구획의 루트)은 워크스페이스 글리프를 쓴다. 글리프를 정하는 것도 항목이
+  // 아니라 구획이라, 한 항목에 두 줄이 서도 아이콘이 갈린다(스타트업 Rocket / 네트워크 Network).
+  const getSidebarIcon = (item: { tab?: string }, section: WorkspaceSection) =>
+    item.tab ? sidebarIconByTab[item.tab] : sidebarIconByWorkspace[section.key]
 
   /**
    * 아이콘 자리에 놓을 요소. 사이드바 글리프는 lucide 선 아이콘 한 종류뿐이다 —
    * 2026-08-20에 '내 ~' 항목의 ⭐ 이모지를 걷었다. 색 있는 글리프는 그 줄을 다른 층의
    * 메뉴로 보이게 하는데, '내 ~'와 '전체 ~'는 같은 원장을 범위만 달리해 보는 한 쌍이다.
    */
-  const leafIcon = (item: SubNavItem) => {
-    const Icon = item.iconKey ? boardIcon(item.iconKey) : getSidebarIcon(item)
+  const leafIcon = (item: SubNavItem, section: WorkspaceSection) => {
+    const Icon = item.iconKey ? boardIcon(item.iconKey) : getSidebarIcon(item, section)
     return Icon ? <Icon aria-hidden className="size-4" /> : undefined
   }
 
   /** 사이드바 본체의 메뉴 한 줄(어두운 배경 규격). 플라이아웃 내부는 renderFlyoutLeaf를 쓴다. */
-  const renderLeaf = (item: SubNavItem) => {
+  const renderLeaf = ({ item, section }: BoundNavItem) => {
     return (
       <SidebarItem
         key={item.label}
-        icon={leafIcon(item)}
+        icon={leafIcon(item, section)}
         label={item.label}
-        active={item.tab ? item.tab === activeTab : true}
+        // 탭 없는 줄은 자기 구획에 서 있을 때만 활성이다 — 이 조건이 없으면 구획을 둘 덮는
+        // 항목에서 두 줄이 동시에 칠해진다(둘 다 탭이 없어 !tabOwned가 함께 참이다).
+        active={
+          item.tab ? item.tab === activeTab : !tabOwned && section.key === currentSection?.key
+        }
         collapsed={sidebarCollapsed}
-        onClick={() => goToSection(item)}
+        onClick={() => goToSection(item, section)}
       />
     )
   }
@@ -326,11 +167,11 @@ export function WorksLayout() {
   }
 
   /** 플라이아웃(흰 팝오버) 안의 메뉴 한 줄. 사이드바 항목이 아니라 드롭다운 항목 규격을 쓴다. */
-  const renderFlyoutLeaf = (item: SubNavItem) => {
-    const Icon = item.iconKey ? boardIcon(item.iconKey) : getSidebarIcon(item)
+  const renderFlyoutLeaf = (item: SubNavItem, section: WorkspaceSection) => {
+    const Icon = item.iconKey ? boardIcon(item.iconKey) : getSidebarIcon(item, section)
     const isActive = item.tab ? item.tab === activeTab : false
     return (
-      <DropdownItem key={item.label} onClick={() => goToSection(item)}>
+      <DropdownItem key={item.label} onClick={() => goToSection(item, section)}>
         <span className="flex items-center gap-2 whitespace-nowrap">
           {Icon && (
             <Icon
@@ -344,36 +185,31 @@ export function WorksLayout() {
     )
   }
 
-  const renderItem = (item: SubNavItem) => {
-    // 게시판/자료실: 상위 단일 항목으로 두고, 클릭하면 우측 플라이아웃에 등록된 목록을 펼친다
-    // (워크스페이스 전환과 같은 조작감). 게시판이 늘어나도 사이드바 길이가 변하지 않는다.
+  const renderItem = ({ item, section }: BoundNavItem) => {
+    // 게시판/자료실: 1차 사이드바에는 상위 메뉴만 둔다. 등록된 실제 목록은 전자결재 문서함처럼
+    // 화면 안쪽 2차 사이드바가 맡아, 항목이 늘어나도 이 사이드바의 길이는 변하지 않는다.
     if (item.dynamicKey === 'boards' || item.dynamicKey === 'archives') {
       const archive = item.dynamicKey === 'archives'
       const list = boardsOfKind(boards, archive ? 'ARCHIVE' : 'POST')
       const GroupIcon = archive ? FolderOpen : ClipboardList
       return (
-        <SidebarFlyout
+        <SidebarItem
           key={item.label}
           icon={<GroupIcon aria-hidden className="size-4" />}
           label={item.label}
-          active={list.some((b) => b.slug === activeTab)}
+          active={
+            item.tab === activeTab ||
+            (item.dynamicKey === 'boards' && activeTab === 'notices') ||
+            list.some((b) => b.slug === activeTab)
+          }
           collapsed={sidebarCollapsed}
-          open={openFlyout === item.label}
-          onOpenChange={(next) => toggleFlyout(item.label, next)}
-        >
-          {list.length > 0 ? (
-            list.map((b) => renderFlyoutLeaf({ label: b.label, tab: b.slug, iconKey: b.icon }))
-          ) : (
-            <p className="px-3 py-1.5 text-body text-gray-500">
-              등록된 {item.label}이 없습니다.
-            </p>
-          )}
-        </SidebarFlyout>
+          onClick={() => goToSection(item, section)}
+        />
       )
     }
 
     const children = item.children
-    if (!children) return renderLeaf(item)
+    if (!children) return renderLeaf({ item, section })
 
     // 하위 항목을 가진 메뉴는 접힘/펼침과 무관하게 우측 플라이아웃으로 연다
     // (게시판·자료실과 같은 조작감). 아래로 펼치면 항목이 늘어날수록 사이드바가 길어진다.
@@ -390,7 +226,7 @@ export function WorksLayout() {
         open={openFlyout === item.label}
         onOpenChange={(next) => toggleFlyout(item.label, next)}
       >
-        {children.map((c) => renderFlyoutLeaf(c))}
+        {children.map((c) => renderFlyoutLeaf(c, section))}
       </SidebarFlyout>
     )
   }
@@ -448,25 +284,39 @@ export function WorksLayout() {
             variant="sidebar"
             collapsed={sidebarCollapsed}
             options={switcherOptions}
-            current={currentWs.key}
-            onSelect={(key) => {
-              const w = WORKSPACES.find((x) => x.key === key)
-              if (w?.implemented) navigate(w.path)
+            current={currentWs.id}
+            onSelect={(id) => {
+              const w = visible.find((x) => x.id === id)
+              // 도착지는 읽을 수 있는 첫 구획이다 — 구획을 둘 덮는 항목에서 한쪽만 열린
+              // 사용자가 권한 없는 경로로 떨어지지 않게 한다.
+              const to = w?.implemented ? landingPath(user, w) : undefined
+              if (to) navigate(to)
             }}
           />
+          </div>
+        )
+      }
+      // 고정 영역은 스크롤 목록 밖이라 자기 경계선을 갖는다(Sidebar가 그린다) — 여기 서는 줄에는
+      // `dividerBefore`를 쓰지 않는다.
+      footer={
+        pinnedGroup && (
+          <div className="flex flex-col gap-1">
+            {pinnedGroup.items.map((bound) => (
+              <Fragment key={bound.item.label}>{renderItem(bound)}</Fragment>
+            ))}
           </div>
         )
       }
     >
       {/* 그룹 경계·항목 구분선을 하나의 gap-1 리스트에 평탄화해 SidebarDivider가 어디서든 동일 여백을 내도록 한다. */}
       <div className="flex flex-col gap-1">
-        {groups.map((g, gi) => (
+        {bodyGroups.map((g, gi) => (
           <Fragment key={g.group ?? gi}>
             {gi > 0 && <SidebarDivider collapsed={sidebarCollapsed} />}
-            {g.items.map((item) => (
-              <Fragment key={item.label}>
-                {item.dividerBefore && <SidebarDivider collapsed={sidebarCollapsed} />}
-                {renderItem(item)}
+            {g.items.map((bound) => (
+              <Fragment key={bound.item.label}>
+                {bound.item.dividerBefore && <SidebarDivider collapsed={sidebarCollapsed} />}
+                {renderItem(bound)}
               </Fragment>
             ))}
           </Fragment>
@@ -485,10 +335,10 @@ export function WorksLayout() {
       topbarLeft={
         <>
           {sidebarToggle}
-          {currentWs && (
+          {currentWs && currentSection && (
             <TopbarBreadcrumb
               workspaceLabel={currentWs.label}
-              workspacePath={currentWs.path}
+              workspacePath={currentSection.path}
               sectionLabel={activeSectionLabel}
             />
           )}

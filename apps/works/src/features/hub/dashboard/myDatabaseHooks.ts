@@ -37,7 +37,7 @@ export type LedgerKey = 'startup' | 'networks'
  * 타일이 답할 것은 **어느 원장인가**뿐이다.
  */
 export const LEDGERS: Omit<LedgerStat, 'mine' | 'total'>[] = [
-  { key: 'startup', label: '스타트업 DB', workspace: 'startup', path: '/startup' },
+  { key: 'startup', label: '스타트업', workspace: 'startup', path: '/startup' },
   // 국내·글로벌 두 줄이 2026-09-04 원장 통합으로 한 줄이 되었다. 지역은 그 목록의 필터
   // 축이므로 카드에서 두 줄로 갈라 놓으면 눌러서 도착한 화면과 건수가 어긋난다.
   { key: 'networks', label: '네트워크', workspace: 'networks', path: '/networks' },

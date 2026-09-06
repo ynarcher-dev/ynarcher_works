@@ -1,4 +1,7 @@
+import { PageHeader } from '@ynarcher/ui'
+import { useSearchParams } from 'react-router-dom'
 import { AC_CATEGORIES } from '@/config/programCategories'
+import { GuestAccountPanel } from '@/features/admin/GuestAccountPanel'
 import { ProgramBulkPage } from '@/features/program/ProgramBulkPage'
 import { ProgramDetailPage } from '@/features/program/ProgramDetailPage'
 import { ProgramWorkspacePage } from '@/features/program/ProgramWorkspacePage'
@@ -31,6 +34,20 @@ export const AC_WORKSPACE: ProgramWorkspaceConfig = {
 }
 
 export function AcWorkspacePage() {
+  const [params] = useSearchParams()
+
+  // 게스트 계정: ADMIN·OFFICE와 **같은 화면**을 권한만 낮춰 세운다(canSuspend 없음).
+  // 사업 원장을 읽지 않으므로 ProgramWorkspaceProvider 바깥에 둔다.
+  // 2026-09-06 OFFICE에서 임시 이관 — 근거는 config/navigation.ts의 ac 항목 주석.
+  if (params.get('tab') === 'guest-accounts') {
+    return (
+      <div className="space-y-5">
+        <PageHeader title="GUEST계정 발급" />
+        <GuestAccountPanel />
+      </div>
+    )
+  }
+
   return (
     <ProgramWorkspaceProvider value={AC_WORKSPACE}>
       <ProgramWorkspacePage />

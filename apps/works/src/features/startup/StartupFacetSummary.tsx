@@ -215,7 +215,7 @@ export function StartupCategorySummary({
     <FacetCard
       title="기업 현황"
       noun="구분"
-      totalEyebrow="스타트업 DB"
+      totalEyebrow="스타트업"
       icon={Building2}
       tiles={CATEGORY_TILES}
       counts={facets?.category ?? new Map()}
