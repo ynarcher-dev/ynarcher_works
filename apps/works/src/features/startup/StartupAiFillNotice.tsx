@@ -1,5 +1,6 @@
-import { Banner, Tooltip, cardText } from '@ynarcher/ui'
+import { Banner, cardText } from '@ynarcher/ui'
 import { AI_CARD_LABEL } from '@/features/startup/startupAiCards'
+import { StartupAiFillEvidence } from '@/features/startup/StartupAiFillEvidence'
 import { outcomeSummary, type AiFillOutcome } from '@/features/startup/startupAiMerge'
 
 /**
@@ -10,15 +11,15 @@ import { outcomeSummary, type AiFillOutcome } from '@/features/startup/startupAi
  * 담당자가 확인해야 할 단위도 칸이 아니라 카드다 — 저장이 카드 단위 통째 교체이므로, 한 칸만
  * 골라 되돌린다는 선택지가 애초에 없다.
  *
- * 경고(notes)는 접지 않고 펼친다 — 지분율 합계가 안 맞는다거나 단위를 확인하지 못했다는 말은
- * 설명이 아니라 **입력값 되읽기**라, 저장 전에 눈에 걸려야 한다. 근거 위치(evidence)는 반대로
- * 접는다(확인하고 싶을 때만 찾는 값이다).
+ * 경고(notes)와 근거(evidence)는 **둘 다 접지 않고 펼친다.** 경고는 지분율 합계가 안 맞는다거나
+ * 단위를 확인하지 못했다는 말이라 설명이 아니라 **입력값 되읽기**이고, 근거는 서버가 원문과
+ * 대조해 확인한 값이라 저장 전에 훑어야 할 것이다(2026-09-06 — 종전에는 툴팁에 접혀 있었고,
+ * 그때는 모델이 지은 문자열이라 열어도 확인할 방법이 없었다).
  *
  * 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §4.4
  */
 export function StartupAiFillNotice({ outcome }: { outcome: AiFillOutcome }) {
   const warned = outcome.filled.filter((k) => (outcome.notes[k]?.length ?? 0) > 0)
-  const evidenced = outcome.filled.filter((k) => (outcome.evidence[k]?.length ?? 0) > 0)
 
   // 한 카드도 못 쓴 것이 아니라 **일부만** 못 쓴 것이라, 배너는 정보(info)로 두고 실패는
   // 문장이 말한다. 전체를 위험(danger)으로 칠하면 이미 채워진 여덟 카드까지 잘못된 것으로 읽힌다.
@@ -64,20 +65,7 @@ export function StartupAiFillNotice({ outcome }: { outcome: AiFillOutcome }) {
           </ul>
         )}
 
-        {evidenced.length > 0 && (
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className={cardText.meta}>근거 위치</span>
-            {evidenced.map((key) => (
-              <Tooltip
-                key={key}
-                label={`${AI_CARD_LABEL[key]} 근거 위치`}
-                content={(outcome.evidence[key] ?? []).join(' / ')}
-              >
-                <span className={cardText.meta}>{AI_CARD_LABEL[key]}</span>
-              </Tooltip>
-            ))}
-          </div>
-        )}
+        <StartupAiFillEvidence cards={outcome.filled} evidence={outcome.evidence} />
       </div>
     </Banner>
   )

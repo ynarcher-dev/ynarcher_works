@@ -21,11 +21,34 @@ import { AI_CARD_LABEL, type AiCardKey } from '@/features/startup/startupAiCards
  * 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §4.5·§5.1
  */
 
+/**
+ * 서버가 대조를 마친 근거 한 줄.
+ *
+ * **파일명과 자리는 모델이 아니라 서버가 붙인 값이다.** 모델은 자기가 본 조각의 id만 돌려주고,
+ * 서버가 그 id를 이번 요청의 지도에서 되짚어 이 모양으로 세운다 — 모델이 위치를 직접 적으면
+ * 그 문자열이 실제 자리인지 물어볼 대상이 없다.
+ */
+export interface AiEvidence {
+  /**
+   * 원문에서 확인했는가.
+   *
+   * 거짓이면 우리가 열지 않은 자료(PDF·이미지)를 가리킨 것이다 — 대조할 글자가 우리에게
+   * 없다는 뜻이지 지어냈다는 뜻이 아니다. 지어낸 근거는 서버가 이미 떼어 냈고, 뗀 건수는
+   * 그 카드의 경고 한 줄이 말한다.
+   */
+  verified: boolean
+  fileName: string
+  /** 조각의 자리(`시트: 손익`). 자료 전체를 가리킨 근거에서는 빈 문자열이다. */
+  location: string
+  quote: string | null
+  attachmentId: string | null
+}
+
 /** Edge Function 응답 봉투. cards의 값 모양은 카드마다 다르므로 unknown으로 받고 여기서 읽는다. */
 export interface AiFillEnvelope {
   cards: Partial<Record<AiCardKey, unknown>>
   notes: Partial<Record<AiCardKey, string[]>>
-  evidence: Partial<Record<AiCardKey, string[]>>
+  evidence: Partial<Record<AiCardKey, AiEvidence[]>>
   /**
    * 읽지 못한 자료의 사유(주로 링크). 서버가 건별로 돌려주며, 실행을 멈추지 않고 결과와 함께
    * 알린다 — 다섯 중 하나가 비공개라고 나머지 넷까지 못 읽을 이유가 없고, 담당자가 고칠 수
@@ -58,7 +81,7 @@ export interface AiFillOutcome {
   /** 요청이 실패해 아예 묻지 못한 카드(기존 값 유지). 다시 시도하면 될 수 있다. */
   failed: AiFailedCards[]
   notes: Partial<Record<AiCardKey, string[]>>
-  evidence: Partial<Record<AiCardKey, string[]>>
+  evidence: Partial<Record<AiCardKey, AiEvidence[]>>
   /** 읽지 못한 자료의 사유. 봉투에서 그대로 넘어온다. */
   skippedSources: string[]
 }

@@ -15,7 +15,7 @@ function isAllowedOrigin(origin: string): boolean {
   if (raw && raw.trim()) {
     return raw
       .split(',')
-      .map((s) => s.trim())
+      .map((s: string) => s.trim())
       .filter(Boolean)
       .includes(origin)
   }

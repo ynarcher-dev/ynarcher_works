@@ -15,7 +15,6 @@
 // Deno API를 쓰지 않는다(works vitest가 이 판정을 직접 돌린다).
 // 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §16.6
 
-import { CARD_KEYS, type CardKey } from './cards.ts'
 import type { CardGroup } from './groups.ts'
 
 /**
@@ -24,11 +23,17 @@ import type { CardGroup } from './groups.ts'
  * @param asked 이번 실행에서 물은 카드 전부.
  * @param answered 봉투에 **키가 있는** 카드(값이 null이어도 답한 것이다).
  * @param failed 요청 자체가 죽어 묻지 못한 카드.
+ * @param order 카드 키를 화면 순서로 담은 목록(프로파일이 소유한다).
  */
-export function missingCards(asked: CardKey[], answered: string[], failed: CardKey[]): CardKey[] {
+export function missingCards<K extends string>(
+  asked: K[],
+  answered: string[],
+  failed: K[],
+  order: readonly K[],
+): K[] {
   const has = new Set(answered)
   const dead = new Set(failed)
-  return CARD_KEYS.filter((k) => asked.includes(k) && !has.has(k) && !dead.has(k))
+  return order.filter((k) => asked.includes(k) && !has.has(k) && !dead.has(k))
 }
 
 /**
@@ -38,7 +43,7 @@ export function missingCards(asked: CardKey[], answered: string[], failed: CardK
  * 있으므로(새로 내려받지 않는다) 합쳐도 드는 것은 입력 토큰뿐이고, 나눠서 두 번 부르면
  * 보완이 '한 번'이라는 규칙이 깨진다.
  */
-export function planTopup(missing: CardKey[], groups: CardGroup[]): CardGroup | null {
+export function planTopup<K extends string>(missing: K[], groups: CardGroup<K>[]): CardGroup<K> | null {
   if (missing.length === 0) return null
   const keys = new Set<string>()
   for (const g of groups) {

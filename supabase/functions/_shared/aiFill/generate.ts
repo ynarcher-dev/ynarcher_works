@@ -11,9 +11,9 @@
 //
 // 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §8.2·§10
 
-import type { CardKey } from './cards.ts'
-import { buildResponseSchema } from './schema.ts'
-import { normalizeEnvelope, parseJson, type NormalizeOptions } from './validate.ts'
+import type { DraftEnvelope, EnvelopeStats } from './envelope.ts'
+import { parseJson } from './envelope.ts'
+import type { SchemaNode } from './schema.ts'
 
 /** 잠깐인 실패. 같은 요청을 다시 보내면 성공할 수 있는 것들만 담는다. */
 const TRANSIENT = new Set([429, 500, 502, 503, 504])
@@ -67,6 +67,14 @@ export interface ModelTelemetry {
   /** 구글의 응답 식별자. 문의할 때 이 값 하나로 그 호출을 가리킨다. */
   responseId: string | null
   promptTokens: number | null
+  /**
+   * 공급자가 앞머리를 캐시로 재사용한 토큰.
+   *
+   * 탐색 축으로 나뉜 요청들은 자료 조각이 같고 프롬프트 꼬리만 다르므로 앞머리가 겹친다.
+   * 그 겹침에 할인이 실제로 걸리는지는 이 값만이 답한다 — 값이 크면 축 분할의 중복 비용은
+   * 이미 대부분 상쇄된 것이고, 0에 가까우면 조각 선별로 줄여야 할 몫이 그만큼 남아 있다.
+   */
+  cachedTokens: number | null
   outputTokens: number | null
   /** 추론에 쓴 토큰. 값을 내지 않는 모델도 있어 없으면 null이다. */
   thinkingTokens: number | null
@@ -106,14 +114,19 @@ function friendly(status: number, reason: string): string {
   return `AI 작성에 실패했습니다: ${reason}`
 }
 
-export interface GenerateOptions {
+export interface GenerateOptions<K extends string> {
   apiKey: string
   model: string
   parts: unknown[]
-  cards: CardKey[]
+  cards: K[]
   signal: AbortSignal
-  /** 검증에 필요한 원장 값(소재지 목록 등). 상수로 두지 않고 요청 시점에 받아 온다. */
-  normalize?: NormalizeOptions
+  /** 이미 조립된 responseSchema. 카드 안쪽 모양은 프로파일이 소유한다. */
+  schema: SchemaNode
+  /**
+   * 응답을 봉투로 세운다. **묶음마다 다른 함수**다 — 근거 대조가 그 요청이 실제로 실어 보낸
+   * 조각 지도를 봐야 하므로, 지도를 닫아 넣은 함수를 호출자가 만들어 넘긴다.
+   */
+  normalize: (parsed: unknown) => { envelope: DraftEnvelope<K>; stats: EnvelopeStats }
   /** 로그에서 이 호출을 부르는 이름(묶음 번호). 어느 묶음이 느렸는지 답한다. */
   label?: string
 }
@@ -129,10 +142,10 @@ function num(v: unknown): number | null {
  * 다시 시도하는 경우는 둘뿐이다 — 잠깐인 실패(몰림·과부하)와 응답이 JSON이 아닌 경우.
  * 그 밖의 오류는 같은 요청을 다시 보내도 같은 답이라 즉시 사유와 함께 돌려준다.
  */
-export async function generateDraft(
-  opts: GenerateOptions,
+export async function generateDraft<K extends string>(
+  opts: GenerateOptions<K>,
 ): Promise<
-  { envelope: ReturnType<typeof normalizeEnvelope>; telemetry: ModelTelemetry } | { failure: ModelFailure }
+  { envelope: DraftEnvelope<K>; telemetry: ModelTelemetry; stats: EnvelopeStats } | { failure: ModelFailure }
 > {
   const startedAt = Date.now()
   const url =
@@ -143,7 +156,7 @@ export async function generateDraft(
       // 사실을 옮기는 작업이라 온도를 낮게 둔다(같은 자료에서 같은 답이 나와야 한다).
       temperature: 0.2,
       responseMimeType: 'application/json',
-      responseSchema: buildResponseSchema(opts.cards),
+      responseSchema: opts.schema,
     },
   })
 
@@ -160,7 +173,7 @@ export async function generateDraft(
     if (!resp.ok) {
       const body = await resp.text().catch(() => '')
       const reason = upstreamReason(resp.status, body)
-      console.error('[startup-ai-fill] gemini 오류', resp.status, reason)
+      console.error('[ai-fill] gemini 오류', resp.status, reason)
       lastFailure = { message: friendly(resp.status, reason), upstream: resp.status }
       if (attempt < MAX_ATTEMPTS - 1 && TRANSIENT.has(resp.status)) {
         const delay = RETRY_BASE_MS * 2 ** attempt + Math.random() * RETRY_JITTER_MS
@@ -183,6 +196,7 @@ export async function generateDraft(
       modelVersion: data.modelVersion ?? null,
       responseId: data.responseId ?? null,
       promptTokens: num(usage.promptTokenCount),
+      cachedTokens: num(usage.cachedContentTokenCount),
       outputTokens: num(usage.candidatesTokenCount),
       thinkingTokens: num(usage.thoughtsTokenCount),
       totalTokens: num(usage.totalTokenCount),
@@ -195,10 +209,11 @@ export async function generateDraft(
     if (parsed) {
       // 구조화 로그 한 줄 — 내용은 담지 않고 수와 코드만 담는다(ModelTelemetry 주석 참조).
       console.log(
-        '[startup-ai-fill] 모델 사용량',
+        '[ai-fill] 모델 사용량',
         JSON.stringify({ group: opts.label ?? null, cards: opts.cards.length, ...telemetry }),
       )
-      return { envelope: normalizeEnvelope(parsed, opts.cards, opts.normalize), telemetry }
+      const normalized = opts.normalize(parsed)
+      return { ...normalized, telemetry }
     }
 
     // 200인데 읽을 것이 없으면 이유는 응답 안에 있다 — 안전 차단이거나 답이 잘린 것이다.
@@ -209,7 +224,7 @@ export async function generateDraft(
     // 로그는 자료가 나가지 않기로 한 곳이다. 왜 못 읽었는지는 길이와 첫 글자면 답한다
     // (코드펜스로 감쌌는가 · 설명 문장을 붙였는가 · 아예 비었는가).
     console.error(
-      '[startup-ai-fill] 파싱 실패',
+      '[ai-fill] 파싱 실패',
       JSON.stringify({
         group: opts.label ?? null,
         attempt,

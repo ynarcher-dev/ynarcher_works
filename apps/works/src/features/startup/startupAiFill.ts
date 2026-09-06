@@ -215,7 +215,8 @@ export async function requestAiFill(input: AiFillInput): Promise<AiFillResult> {
   const body = hasPending
     ? buildUploadBody(input)
     : {
-        startupId: input.startupId,
+        // 대상 id의 이름은 `targetId`다 — 함수가 대상마다 얇게 서면서 공통 이름이 됐다.
+        targetId: input.startupId,
         attachmentIds: input.sources.map((s) => (s.kind === 'attachment' ? s.id : '')).filter(Boolean),
         cards: input.cards,
         assignments: input.assignments,

@@ -51,13 +51,13 @@ export async function uploadFile(
   })
   if (!start.ok) {
     const detail = await start.text().catch(() => '')
-    console.error('[startup-ai-fill] 업로드 시작 실패', start.status, detail.slice(0, 300))
+    console.error('[ai-fill] 업로드 시작 실패', start.status, detail.slice(0, 300))
     return failed
   }
   const uploadUrl = start.headers.get('x-goog-upload-url')
   await start.body?.cancel()
   if (!uploadUrl) {
-    console.error('[startup-ai-fill] 업로드 주소가 오지 않았습니다')
+    console.error('[ai-fill] 업로드 주소가 오지 않았습니다')
     return failed
   }
 
@@ -73,13 +73,13 @@ export async function uploadFile(
   })
   if (!done.ok) {
     const detail = await done.text().catch(() => '')
-    console.error('[startup-ai-fill] 업로드 실패', done.status, detail.slice(0, 300))
+    console.error('[ai-fill] 업로드 실패', done.status, detail.slice(0, 300))
     return failed
   }
   const body = (await done.json().catch(() => null)) as { file?: { name?: string; uri?: string; mimeType?: string } } | null
   const f = body?.file
   if (!f?.name || !f?.uri) {
-    console.error('[startup-ai-fill] 업로드 응답에 주소가 없습니다')
+    console.error('[ai-fill] 업로드 응답에 주소가 없습니다')
     return failed
   }
   return { name: f.name, uri: f.uri, mime: f.mimeType ?? mime }
@@ -127,9 +127,9 @@ export async function deleteFile(apiKey: string, file: UploadedFile): Promise<vo
       signal: controller.signal,
     })
     await resp.body?.cancel()
-    if (!resp.ok) console.error('[startup-ai-fill] 올린 자료 삭제 실패', file.name, resp.status)
+    if (!resp.ok) console.error('[ai-fill] 올린 자료 삭제 실패', file.name, resp.status)
   } catch (e) {
-    console.error('[startup-ai-fill] 올린 자료 삭제 실패', file.name, e instanceof Error ? e.message : e)
+    console.error('[ai-fill] 올린 자료 삭제 실패', file.name, e instanceof Error ? e.message : e)
   } finally {
     clearTimeout(timer)
   }

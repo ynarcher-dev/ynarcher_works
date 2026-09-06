@@ -5,44 +5,40 @@
 // 가른다. 소수 카드까지 축마다 나누면 같은 큰 PDF를 여러 번 훑느라 오히려 시간 초과가 난다.
 //
 // 두 축은 서로 다른 일을 한다.
-//   * 자료 조합: 카드가 쓰지 않을 자료를 빼서 잡음을 줄인다.
-//   * 탐색 축: 같은 자료를 읽어도 기업 개요와 재무표처럼 찾는 방식이 다른 일을 나눠 회수율과
-//     출력 여유를 지킨다. 서로 맞물리는 카드(매출·고용·주주·투자)는 한 축에 남긴다.
+//   * 자료 조합: 카드가 쓰지 않을 자료를 빼서 잡음을 줄인다. **입력을 실제로 줄이는 축이다.**
+//   * 탐색 축(family): 같은 자료를 읽어도 기업 개요와 재무표처럼 찾는 방식이 다른 일을 나눠
+//     회수율과 출력 여유를 지킨다. **입력은 줄지 않는다** — 같은 자료가 축마다 다시 실린다.
+//
+// 두 번째를 없애지 않는 이유가 여기 있다. 축을 합치면 입력 중복은 사라지지만 한 요청의 출력이
+// 길어져 답이 잘리고(`finishReason: MAX_TOKENS`) 카드별 탐색이 얕아진다 — 애초에 이 분할을
+// 만든 두 문제가 그대로 돌아온다. 중복을 줄이는 자리는 여기가 아니라 **조각 선별**(chunks.ts)이며,
+// 실제 중복량은 요약 로그의 토큰 수가 답한다.
 //
 // Deno API를 쓰지 않는다(works vitest가 이 판정을 직접 돌린다).
 // 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §4.2·§8.3
-
-import { CARD_KEYS, type CardKey } from './cards.ts'
 
 /** 카드 키 → 그 카드가 읽을 자료 키 목록. 화면의 격자가 그대로 실려 온다. */
 export type Assignments = Record<string, string[]>
 
 /** 한 번의 모델 요청이 될 묶음. */
-export interface CardGroup {
-  /** 이 요청이 채울 카드. 화면 순서(기본 2 → 역량 4 → 실적 6)로 선다. */
-  cards: CardKey[]
+export interface CardGroup<K extends string = string> {
+  /** 이 요청이 채울 카드. 프로파일이 정한 화면 순서로 선다. */
+  cards: K[]
   /** 이 요청이 읽을 자료 키. `allKeys` 순서를 그대로 물려받는다. */
   sourceKeys: string[]
 }
 
-/** 같은 자료를 읽더라도 한 요청에 함께 맡길 수 있는 카드 묶음. */
-const EXTRACTION_FAMILY: Record<CardKey, 'overview' | 'organization' | 'growth' | 'capital'> = {
-  basics: 'overview',
-  summary: 'overview',
-  business: 'overview',
-  tech: 'overview',
-  team: 'organization',
-  ip: 'organization',
-  timeline: 'growth',
-  traction: 'growth',
-  revenue: 'capital',
-  employee: 'capital',
-  shareholders: 'capital',
-  investment: 'capital',
-}
-
 /** 이 수까지는 문서를 한 번만 읽는 편이 출력 여유보다 이득이다. */
 export const SINGLE_REQUEST_MAX_CARDS = 4
+
+export interface PlanOptions<K extends string> {
+  /** 카드 키를 화면 순서로 담은 목록. 요청 순서를 쓰지 않는 근거다. */
+  order: readonly K[]
+  /** 카드 → 탐색 축. 서로 맞물리는 카드는 같은 축에 둔다. */
+  family: Record<K, string>
+  /** 이 수를 넘을 때만 탐색 축으로 가른다. */
+  singleMax?: number
+}
 
 /**
  * 카드와 배정을 묶음으로 가른다.
@@ -57,15 +53,17 @@ export const SINGLE_REQUEST_MAX_CARDS = 4
  * 화면의 규칙이 여기서 강제된다 — 읽을 것이 없는 카드에 모델을 부르면 근거 없는 값을
  * 지어낼 자리만 만든다.
  */
-export function planGroups(
-  cards: CardKey[],
+export function planGroups<K extends string>(
+  cards: K[],
   assignments: Assignments | null | undefined,
   allKeys: string[],
-): CardGroup[] {
+  opts: PlanOptions<K>,
+): CardGroup<K>[] {
   // 카드 순서는 요청 순서가 아니라 화면 순서로 고정한다(프롬프트 조립과 같은 이유 —
   // 같은 조합인데 체크한 차례에 따라 요청이 달라지면 실패를 재현할 수 없다).
-  const ordered = CARD_KEYS.filter((k) => cards.includes(k))
-  const sourceBuckets = new Map<string, CardGroup>()
+  const ordered = opts.order.filter((k) => cards.includes(k))
+  const singleMax = opts.singleMax ?? SINGLE_REQUEST_MAX_CARDS
+  const sourceBuckets = new Map<string, CardGroup<K>>()
 
   for (const card of ordered) {
     // **되돌아갈 자리는 요청 단위이지 카드 단위가 아니다.** 배정이 아예 오지 않았으면 옛
@@ -84,18 +82,18 @@ export function planGroups(
     else sourceBuckets.set(sig, { cards: [card], sourceKeys: keys })
   }
 
-  const planned: CardGroup[] = []
+  const planned: CardGroup<K>[] = []
   for (const sourceGroup of sourceBuckets.values()) {
-    if (sourceGroup.cards.length <= SINGLE_REQUEST_MAX_CARDS) {
+    if (sourceGroup.cards.length <= singleMax) {
       planned.push(sourceGroup)
       continue
     }
 
     // 카드가 많을 때만 탐색 축을 지문에 더한다. 열두 카드 전체 선택은 여전히 네 요청으로
     // 나뉘지만, 팀·연혁·고용·투자 네 카드처럼 작은 요청은 같은 문서를 한 번만 읽는다.
-    const familyBuckets = new Map<string, CardGroup>()
+    const familyBuckets = new Map<string, CardGroup<K>>()
     for (const card of sourceGroup.cards) {
-      const family = EXTRACTION_FAMILY[card]
+      const family = opts.family[card]
       const found = familyBuckets.get(family)
       if (found) found.cards.push(card)
       else familyBuckets.set(family, { cards: [card], sourceKeys: sourceGroup.sourceKeys })

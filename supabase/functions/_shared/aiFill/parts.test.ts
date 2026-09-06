@@ -106,14 +106,27 @@ function deps(readLink: BuildDeps['readLink'], deadline = FAR, forceFilesApi = f
 }
 
 /**
- * 조각 지도를 예전처럼 한 줄로 편다.
+ * 자료 표시(마커)인가.
+ *
+ * 파일 조각 앞에는 자료 이름표 한 줄이 선다 — 우리가 열지 않은 자료(PDF·이미지)에 모델이
+ * 근거를 댈 주소를 주기 위해서다. 이름표는 예산·개수의 대상이 아니므로 아래 시험들에서
+ * 걷어 낸다(이름표 자체는 별도 describe가 본다).
+ */
+const isMarker = (p: unknown): boolean => {
+  const text = (p as { text?: unknown }).text
+  return typeof text === "string" && /^\[자료 s\d+: .+\]$/.test(text)
+}
+
+/**
+ * 조립 결과를 예전처럼 한 줄로 편다.
  *
  * 조립이 **자료 키별 지도**를 돌려주게 된 뒤로(묶음마다 자기 몫만 골라 담아야 하므로) 예산
- * 회귀 테스트가 보던 "조각 몇 개"가 지도 두 개로 갈렸다. 재는 대상은 그대로이므로 여기서
- * 다시 편다 — 예산 규칙과 조각을 고르는 규칙은 다른 것이고, 뒤는 아래 별도 describe가 본다.
+ * 회귀 테스트가 보던 "조각 몇 개"가 지도 둘로 갈렸다. 재는 대상은 그대로이므로 여기서 다시
+ * 편다 — 예산 규칙과 조각을 고르는 규칙은 다른 것이고, 뒤는 아래 별도 describe가 본다.
  */
 function flat(built: BuiltParts): unknown[] {
-  return selectParts(built, [...built.fileParts.keys(), ...built.textParts.keys()])
+  const keys = [...built.fileParts.keys(), ...built.chunks.keys()]
+  return selectParts(built, keys).parts.filter((p) => !isMarker(p))
 }
 
 describe('buildParts — 링크도 바이트 예산을 쓴다', () => {
@@ -183,17 +196,21 @@ describe('buildParts — 글자 계열은 따로 센다', () => {
     expect('error' in built).toBe(false)
   })
 
-  it('글자 상한을 넘긴 링크는 그 건만 빠진다(파일과 달리 고를 때 크기를 알 수 없었다)', async () => {
-    const stub = stubLinks([asText('가'.repeat(MAX_TEXT_BYTES)), asBytes(MB)])
+  it('긴 링크 본문은 도막으로 나뉘어 실린다 — 종전에는 그 건을 통째로 버렸다', async () => {
+    // 글자 상한을 넘긴 링크는 예전에 이 자리에서 사라졌다. 이제는 도막으로 나뉘어 예산
+    // 안에서 들어가는 만큼 실린다 — 버리는 것을 줄이는 것이 조각을 둔 이유다.
+    const long = ('가'.repeat(999) + '\n').repeat(150)
+    const stub = stubLinks([asText(long), asBytes(MB)])
     const built = await buildParts(
       [linkSource('https://a.example/long'), linkSource('https://a.example/pdf')],
       deps(stub.fn),
       [],
     )
     if ('error' in built) throw new Error('링크는 통째 실패로 만들지 않는다')
-    expect(built.notices).toHaveLength(1)
-    expect(built.notices[0]).toContain('https://a.example/long')
-    expect(flat(built)).toHaveLength(1)
+    const picked = selectParts(built, ['link:https://a.example/long'])
+    expect(picked.parts).toHaveLength(1)
+    expect(picked.index.chunks.size).toBeGreaterThan(1)
+    expect(picked.notices).toEqual([])
   })
 })
 
@@ -322,10 +339,11 @@ describe('buildParts — 요청이 여럿이면 인라인을 쓰지 않는다', 
     if ('error' in built) throw new Error('실패할 이유가 없다')
 
     // 세 묶음이 같은 자료를 가리켜도 올라간 것은 하나이고, 셋 다 같은 주소를 받는다.
-    const one = selectParts(built, ['file:a.pdf'])
+    const one = selectParts(built, ['file:a.pdf']).parts
+    const again = () => selectParts(built, ['file:a.pdf']).parts
     expect(uploads).toBe(1)
     expect(uploaded).toHaveLength(1)
-    expect([one, selectParts(built, ['file:a.pdf']), selectParts(built, ['file:a.pdf'])]).toEqual([one, one, one])
+    expect([one, again(), again()]).toEqual([one, one, one])
   })
 })
 
@@ -339,11 +357,18 @@ describe('selectParts — 묶음은 자기 몫만 담는다', () => {
     )
     if ('error' in built) throw new Error('실패할 이유가 없다')
 
-    expect(selectParts(built, ['file:계획서.pdf'])).toHaveLength(1)
-    expect(selectParts(built, ['link:https://a.example/1'])).toEqual([
-      { text: '[참고 링크: https://a.example/1]\n링크 본문' },
+    // 파일 앞에는 이름표가 서고 그 뒤가 실제 조각이다(우리가 열지 않은 자료에도 주소를 준다).
+    expect(selectParts(built, ['file:계획서.pdf']).parts).toEqual([
+      { text: '[자료 s1: 계획서.pdf]' },
+      { inlineData: { mimeType: 'application/pdf', data: expect.any(String) } },
     ])
-    expect(selectParts(built, [])).toEqual([])
+    // 링크 본문은 조각 하나로 서고, 머리글이 어느 자료의 어느 자리인지를 말한다.
+    expect(selectParts(built, ['link:https://a.example/1']).parts).toEqual([
+      {
+        text: '[자료 s2: https://a.example/1]\n\n[s2#1 | 본문]\n링크 본문',
+      },
+    ])
+    expect(selectParts(built, []).parts).toEqual([])
   })
 
   it('파일이 앞이고 글이 뒤다 — 자료의 본체는 파일이고 글은 그것을 보충한다', async () => {
@@ -355,8 +380,91 @@ describe('selectParts — 묶음은 자기 몫만 담는다', () => {
     )
     if ('error' in built) throw new Error('실패할 이유가 없다')
     // 고른 순서는 링크가 먼저였지만 조각은 파일이 앞선다.
-    const parts = selectParts(built, ['link:https://a.example/1', 'file:계획서.pdf'])
-    expect(Object.hasOwn(parts[0] as object, 'inlineData')).toBe(true)
-    expect(Object.hasOwn(parts[1] as object, 'text')).toBe(true)
+    const { parts } = selectParts(built, ['link:https://a.example/1', 'file:계획서.pdf'])
+    expect(isMarker(parts[0])).toBe(true)
+    expect(Object.hasOwn(parts[1] as object, 'inlineData')).toBe(true)
+    expect(Object.hasOwn(parts[2] as object, 'text')).toBe(true)
+  })
+
+  it('이번 요청이 실은 것만 지도에 담는다 — 근거는 본 것만 가리킬 수 있다', async () => {
+    const stub = stubLinks([asText('링크 본문')])
+    const built = await buildParts(
+      [fileSource('계획서.pdf', 8), linkSource('https://a.example/1')],
+      deps(stub.fn),
+      [],
+    )
+    if ('error' in built) throw new Error('실패할 이유가 없다')
+
+    const { index } = selectParts(built, ['link:https://a.example/1'])
+    expect([...index.chunks.keys()]).toEqual(['s2#1'])
+    // 배정하지 않은 PDF는 자료로도 담기지 않는다(그 문서를 가리킨 근거는 버려져야 한다).
+    expect([...index.sources.keys()]).toEqual(['s2'])
+  })
+
+  it('우리가 열지 않은 자료는 조각 없이 지도에 선다(미검증 근거를 댈 수 있어야 한다)', async () => {
+    const built = await buildParts([fileSource('IR.pdf', 8)], deps(stubLinks([]).fn), [])
+    if ('error' in built) throw new Error('실패할 이유가 없다')
+
+    const { index } = selectParts(built, ['file:IR.pdf'])
+    expect(index.sources.get('s1')?.verifiable).toBe(false)
+    expect(index.chunks.size).toBe(0)
+  })
+})
+
+describe('selectParts — 예산을 넘으면 버리지 않고 줄여 담는다', () => {
+  /** 조각 여럿을 내는 오피스 문서 대신, 이미 분석된 자료로 조각을 직접 넣는다. */
+  function analyzed(key: string, count: number, chars: number) {
+    const extracts = new Map([
+      [
+        key,
+        Array.from({ length: count }, (_, i) => ({
+          kind: 'sheet' as const,
+          location: `시트: ${i + 1}`,
+          text: '가'.repeat(chars),
+          tables: [],
+        })),
+      ],
+    ])
+    return extracts
+  }
+
+  it('예산 안이면 조각이 전부 실린다', async () => {
+    const extracts = analyzed('A1', 3, 100)
+    const src: ResolvedSource = { ...fileSource('분석됨.xlsx', 0), key: 'A1' }
+    const built = await buildParts([src], { ...deps(stubLinks([]).fn), extracts }, [])
+    if ('error' in built) throw new Error('실패할 이유가 없다')
+
+    const { parts, notices, index } = selectParts(built, ['A1'])
+    expect(parts).toHaveLength(1)
+    expect(index.chunks.size).toBe(3)
+    expect(notices).toEqual([])
+  })
+
+  it('예산을 넘으면 자료를 버리는 대신 조각을 빼고 그 사실을 말한다', async () => {
+    // 종전에는 이 자리에서 자료를 통째로 건너뛰었다 — 초안에 그 자료의 값이 하나도 남지 않았다.
+    const extracts = analyzed('A1', 40, 30_000)
+    const src: ResolvedSource = { ...fileSource('큰자료.xlsx', 0), key: 'A1' }
+    const built = await buildParts([src], { ...deps(stubLinks([]).fn), extracts }, [])
+    if ('error' in built) throw new Error('실패할 이유가 없다')
+
+    const { parts, notices, index } = selectParts(built, ['A1'])
+    expect(parts).toHaveLength(1)
+    expect(index.chunks.size).toBeGreaterThan(0)
+    expect(index.chunks.size).toBeLessThan(40)
+    expect(notices.join(' ')).toContain('빼고 보냈습니다')
+  })
+
+  it('묶음이 함께 싣는 글자 파일의 몫을 예산에서 먼저 뺀다', async () => {
+    // 예산을 다 먹는 텍스트 파일과 함께 실리면 조각이 설 자리가 없다 — 그래도 그 사실은 말한다.
+    const extracts = analyzed('A1', 4, 100_000)
+    const chunked: ResolvedSource = { ...fileSource('분석됨.xlsx', 0), key: 'A1' }
+    const textFile = fileSource('원문.txt', MAX_TEXT_BYTES, 'text/plain')
+    const built = await buildParts([chunked, textFile], { ...deps(stubLinks([]).fn), extracts }, [])
+    if ('error' in built) throw new Error('실패할 이유가 없다')
+
+    const { notices } = selectParts(built, ['A1', textFile.key])
+    expect(notices.join(' ')).toContain('담지 못했습니다')
+    // 그 텍스트 파일을 뺀 묶음에서는 같은 조각이 그대로 실린다.
+    expect(selectParts(built, ['A1']).notices).toEqual([])
   })
 })

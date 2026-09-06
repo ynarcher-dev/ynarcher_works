@@ -11,7 +11,7 @@
 // Deno API를 쓰지 않는다(works vitest가 이 판정을 직접 돌린다).
 // 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §16.2·§16.11
 
-import { PARSER_VERSION } from '../_shared/docParse/types.ts'
+import { PARSER_VERSION } from '../docParse/types.ts'
 
 /** 브라우저가 보낸 분석 결과의 세 갈래. */
 export type ClientResult =
@@ -20,8 +20,8 @@ export type ClientResult =
   | { status: 'original' }
 
 export interface ExtractRequest {
-  /** 수정 모드의 대상 기업. 등록 모드에는 없다(가리킬 행이 아직 없다). */
-  startupId: string | null
+  /** 수정 모드의 대상 레코드. 등록 모드에는 없다(가리킬 행이 아직 없다). */
+  targetId: string | null
   /** 저장 대상 첨부. 없으면 등록 모드이며 **아무것도 저장하지 않는다.** */
   attachmentId: string | null
   source: 'file' | 'link'
@@ -103,7 +103,9 @@ export function readRequest(raw: unknown): ExtractRequest | { error: RequestErro
 
   const byteSize = Number(src.byteSize)
   return {
-    startupId: str(src.startupId) || null,
+    // 대상 id의 이름은 `targetId`다. 화면이 아직 옛 이름으로 부를 수 있어 함께 받는다 —
+    // 함수를 먼저 배포하고 화면을 뒤에 내보내는 순서라 그 사이가 있다.
+    targetId: str(src.targetId) || str(src.startupId) || null,
     attachmentId,
     source,
     parserVersion,
@@ -138,10 +140,10 @@ export interface AttachmentFacts {
 export function verifyAgainstAttachment(
   req: ExtractRequest,
   row: AttachmentFacts,
-  startupId: string,
+  target: { type: string; id: string },
 ): string | null {
-  if (row.targetType !== 'startup' || row.targetId !== startupId) {
-    return '이 기업의 자료가 아닙니다.'
+  if (row.targetType !== target.type || row.targetId !== target.id) {
+    return '이 레코드의 자료가 아닙니다.'
   }
   if (req.source === 'link' ? row.kind !== 'LINK' : row.kind !== 'FILE') {
     return '자료의 종류가 원장과 다릅니다.'

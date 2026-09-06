@@ -8,7 +8,10 @@ import {
   IP_KIND_OPTIONS,
   IP_STATUS_OPTIONS,
 } from './cards.ts'
-import { normalizeEnvelope, parseJson } from './validate.ts'
+import { buildIndex } from '../_shared/aiFill/chunks.ts'
+import { normalizeEnvelope as runEnvelope } from '../_shared/aiFill/envelope.ts'
+import { CARD_SHAPE, LIMITS, type CardKey } from './cards.ts'
+import { normalizeCard } from './validate.ts'
 import {
   CUSTOMER_KIND_OPTIONS as UI_CUSTOMER_KIND,
 } from '@/features/startup/startupGrowth'
@@ -28,6 +31,22 @@ import {
  * 없는 값을 채운다), (2) 규격 밖 값이 조용히 지워지지 않고 **경고를 남기며** 비워지는지.
  * 조용히 지우면 담당자는 "AI가 못 찾았다"와 "AI가 채웠는데 규격에 안 맞았다"를 가를 수 없다.
  */
+
+/**
+ * 봉투 정규화의 시험 진입점.
+ *
+ * 봉투 자체는 엔진이 소유하므로(요청하지 않은 카드 버리기·빈 카드 되돌리기·notes 다듬기)
+ * 여기서 재는 것은 **이 프로파일의 카드 규격**이다. 근거 대조는 빈 지도로 돌린다 — 그 판정은
+ * `_shared/aiFill/evidence.test.ts`가 따로 본다.
+ */
+const EMPTY_INDEX = buildIndex([], [])
+const normalizeEnvelope = (parsed: unknown, cards: CardKey[], opts: { locations?: string[] } = {}) =>
+  runEnvelope(parsed, cards, {
+    normalizeCard: (key, raw, warn) => normalizeCard(key, raw, warn, opts.locations ?? []),
+    cardShape: CARD_SHAPE,
+    index: EMPTY_INDEX,
+    maxNotes: LIMITS.notes,
+  }).envelope
 
 describe('고정 선택지 — 화면과 함수가 한 벌인가', () => {
   it('일곱 목록이 프론트 상수와 같다', () => {
@@ -129,16 +148,6 @@ describe('normalizeEnvelope — 빈 카드와 요청 범위', () => {
     const out = normalizeEnvelope('망가진 값', ['business', 'employee'])
     expect(out.cards.business).toBeNull()
     expect(out.cards.employee).toEqual([])
-  })
-})
-
-describe('parseJson', () => {
-  it('코드펜스로 감싼 JSON도 읽는다', () => {
-    expect(parseJson('```json\n{"a":1}\n```')).toEqual({ a: 1 })
-  })
-
-  it('JSON이 아니면 null이다(호출부가 재시도를 판단한다)', () => {
-    expect(parseJson('설명 문장입니다')).toBeNull()
   })
 })
 

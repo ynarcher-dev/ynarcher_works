@@ -17,7 +17,7 @@
 // Deno API를 쓰지 않는다(works vitest가 이 판정을 직접 돌린다).
 // 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §2.1·§9
 
-import { isOfficeMime, OFFICE_MIMES } from './officeText.ts'
+import { isOfficeMime, OFFICE_MIMES } from '../docParse/officeText.ts'
 
 /** 모델이 그대로 받는 MIME. 이 목록 밖은 그대로 보내지 않는다. */
 const SUPPORTED_MIMES = new Set([

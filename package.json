@@ -24,7 +24,8 @@
     "db:baseline:refresh": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/refresh-db-baseline.ps1",
     "db:baseline:check": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-db-baseline.ps1",
     "db:baseline:verify": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-db-baseline.ps1 -Full",
-    "functions:serve": "supabase functions serve"
+    "functions:serve": "supabase functions serve",
+    "typecheck:functions": "tsc --noEmit -p tsconfig.functions.json"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

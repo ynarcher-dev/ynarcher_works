@@ -21,7 +21,7 @@
 // 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §2.1,
 //       supabase/functions/_shared/urlFetch.ts(SSRF 방어)
 
-import { CRAWLER_UA, fetchWithSsrfGuard, safeUrl } from '../_shared/urlFetch.ts'
+import { CRAWLER_UA, fetchWithSsrfGuard, safeUrl } from '../urlFetch.ts'
 import { resolveMime } from './formats.ts'
 import { MAX_LINK_CHARS, MAX_SINGLE_BYTES, mb } from './limits.ts'
 

@@ -1,0 +1,31 @@
+{
+  // Edge Function 트리의 타입 점검 전용 설정.
+  //
+  // 함수는 Deno로 배포되고 배포 도구는 타입을 보지 않으므로, 이 설정이 없으면 타입 오류가
+  // 실행 순간까지 드러나지 않는다. 원격 import(`https://esm.sh/...`)는 tsc가 풀지 못하므로
+  // 설치된 같은 패키지의 타입으로 이어 준다 — 타입만 빌리는 것이라 런타임과 무관하다.
+  "compilerOptions": {
+    "noEmit": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": [],
+    "baseUrl": ".",
+    "paths": {
+      "@supabase/supabase-js": ["./apps/works/node_modules/@supabase/supabase-js/dist/index.d.mts"],
+      "https://esm.sh/@supabase/supabase-js@2": ["./apps/works/node_modules/@supabase/supabase-js/dist/index.d.mts"]
+    }
+  },
+  "exclude": ["**/*.test.ts"],
+  "include": [
+    "types/deno-remote.d.ts",
+    "supabase/functions/_shared/aiFill/**/*.ts",
+    "supabase/functions/_shared/docParse/**/*.ts",
+    "supabase/functions/startup-ai-fill/**/*.ts",
+    "supabase/functions/startup-material-extract/**/*.ts"
+  ]
+}

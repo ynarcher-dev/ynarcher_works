@@ -10,35 +10,16 @@
 // 바뀐다. 대신 STRING으로 받아 validate.ts가 목록 밖 값을 null로 치환하고 원문을 notes에
 // 남긴다 — 틀린 값을 지어내는 것보다 빈 칸이 낫다는 이 기능의 계약 그대로다.
 //
-// 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §6.3·§8.2
+// **봉투(notes·evidence)는 여기 없다.** 그것은 대상이 무엇이든 같은 일을 하므로 엔진이
+// 소유한다(_shared/aiFill/schema.ts) — 특히 evidence는 우리가 발급한 조각 id로 답해야 해서
+// 프로파일이 모양을 정할 자리가 아니다.
+//
+// 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §6.3·§8.2·§16.16
 
-import { CARD_KEYS, type CardKey } from './cards.ts'
+import { arr, BOOL, INT, NUM, obj, STR, type SchemaNode } from '../_shared/aiFill/schema.ts'
+import type { CardKey } from './cards.ts'
 
-/** Gemini responseSchema 노드(OpenAPI 부분집합). */
-interface SchemaNode {
-  type: string
-  nullable?: boolean
-  description?: string
-  properties?: Record<string, SchemaNode>
-  items?: SchemaNode
-  required?: string[]
-}
-
-const STR: SchemaNode = { type: 'STRING', nullable: true }
-const NUM: SchemaNode = { type: 'NUMBER', nullable: true }
-const INT: SchemaNode = { type: 'INTEGER', nullable: true }
-const BOOL: SchemaNode = { type: 'BOOLEAN', nullable: true }
-
-/** 이름이 없으면 행 자체가 성립하지 않는 목록에서 그 한 칸만 필수로 세운다. */
-function obj(properties: Record<string, SchemaNode>, required: string[] = []): SchemaNode {
-  return { type: 'OBJECT', nullable: true, properties, required }
-}
-
-function arr(items: SchemaNode): SchemaNode {
-  return { type: 'ARRAY', items }
-}
-
-const CARD_SCHEMAS: Record<CardKey, SchemaNode> = {
+export const CARD_SCHEMAS: Record<CardKey, SchemaNode> = {
   basics: obj({
     name: STR,
     representative: STR,
@@ -120,27 +101,4 @@ const CARD_SCHEMAS: Record<CardKey, SchemaNode> = {
   investment: arr(
     obj({ date: { type: 'STRING' }, round: STR, fundingAmount: NUM, valuation: NUM, investor: STR }, ['date']),
   ),
-}
-
-/**
- * 체크된 카드만 담은 봉투 스키마. 고르지 않은 카드를 스키마에 두지 않는 이유는 프롬프트와
- * 같다 — 자리가 있으면 모델은 채우려 하고, 화면이 버릴 값에 근거 탐색을 나눠 쓴다.
- */
-export function buildResponseSchema(cards: CardKey[]): SchemaNode {
-  const ordered = CARD_KEYS.filter((k) => cards.includes(k))
-  const cardProps: Record<string, SchemaNode> = {}
-  const noteProps: Record<string, SchemaNode> = {}
-  for (const k of ordered) {
-    cardProps[k] = CARD_SCHEMAS[k]
-    noteProps[k] = arr({ type: 'STRING' })
-  }
-  return {
-    type: 'OBJECT',
-    properties: {
-      cards: { type: 'OBJECT', properties: cardProps },
-      notes: { type: 'OBJECT', properties: noteProps },
-      evidence: { type: 'OBJECT', properties: noteProps },
-    },
-    required: ['cards'],
-  }
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { readRequest, verifyAgainstAttachment, type AttachmentFacts, type ExtractRequest } from './request.ts'
-import { PARSER_VERSION } from '../_shared/docParse/types.ts'
+import { readRequest, verifyAgainstAttachment, type AttachmentFacts, type ExtractRequest } from './extractRequest.ts'
+import { PARSER_VERSION } from '../docParse/types.ts'
 
 /**
  * 신뢰 경계 회귀 테스트.
@@ -13,7 +13,7 @@ import { PARSER_VERSION } from '../_shared/docParse/types.ts'
  */
 
 const base = {
-  startupId: 'S1',
+  targetId: 'S1',
   attachmentId: 'A1',
   source: 'file',
   parserVersion: PARSER_VERSION,
@@ -22,6 +22,9 @@ const base = {
   byteSize: 1024,
   result: { status: 'ready', body: { chunks: [] } },
 }
+
+/** 대상은 프로파일이 정한다 — 이 판정은 대상이 무엇인지 모르고 받은 값과 맞춰 볼 뿐이다. */
+const TARGET = { type: 'startup', id: 'S1' }
 
 const ok = (raw: unknown): ExtractRequest => {
   const out = readRequest(raw)
@@ -72,26 +75,26 @@ describe('요청 읽기', () => {
 
 describe('원장 행과 대조', () => {
   it('같으면 통과한다', () => {
-    expect(verifyAgainstAttachment(ok(base), facts, 'S1')).toBeNull()
+    expect(verifyAgainstAttachment(ok(base), facts, TARGET)).toBeNull()
   })
 
   it('다른 기업의 자료는 막는다', () => {
-    expect(verifyAgainstAttachment(ok(base), { ...facts, targetId: 'S2' }, 'S1')).toContain('이 기업의 자료가 아닙니다')
-    expect(verifyAgainstAttachment(ok(base), { ...facts, targetType: 'program' }, 'S1')).not.toBeNull()
+    expect(verifyAgainstAttachment(ok(base), { ...facts, targetId: 'S2' }, TARGET)).toContain('이 레코드의 자료가 아닙니다')
+    expect(verifyAgainstAttachment(ok(base), { ...facts, targetType: 'program' }, TARGET)).not.toBeNull()
   })
 
   it('이름·형식·크기가 어긋나면 막는다(같은 이름의 다른 파일을 심지 못하게)', () => {
-    expect(verifyAgainstAttachment(ok(base), { ...facts, fileName: '다른.xlsx' }, 'S1')).toContain('파일 이름')
-    expect(verifyAgainstAttachment(ok(base), { ...facts, mime: 'application/pdf' }, 'S1')).toContain('파일 형식')
-    expect(verifyAgainstAttachment(ok(base), { ...facts, byteSize: 2048 }, 'S1')).toContain('파일 크기')
+    expect(verifyAgainstAttachment(ok(base), { ...facts, fileName: '다른.xlsx' }, TARGET)).toContain('파일 이름')
+    expect(verifyAgainstAttachment(ok(base), { ...facts, mime: 'application/pdf' }, TARGET)).toContain('파일 형식')
+    expect(verifyAgainstAttachment(ok(base), { ...facts, byteSize: 2048 }, TARGET)).toContain('파일 크기')
   })
 
   it('원장에 크기가 없는 옛 행은 크기로 대조하지 않는다(없는 것과 어긋난 것은 다르다)', () => {
-    expect(verifyAgainstAttachment(ok(base), { ...facts, byteSize: null }, 'S1')).toBeNull()
+    expect(verifyAgainstAttachment(ok(base), { ...facts, byteSize: null }, TARGET)).toBeNull()
   })
 
   it('종류가 어긋나면 막는다(링크 자리에 파일 결과를 넣지 못한다)', () => {
-    expect(verifyAgainstAttachment(ok(base), { ...facts, kind: 'LINK', url: 'https://a.com' }, 'S1')).toContain(
+    expect(verifyAgainstAttachment(ok(base), { ...facts, kind: 'LINK', url: 'https://a.com' }, TARGET)).toContain(
       '자료의 종류',
     )
   })
@@ -99,7 +102,7 @@ describe('원장 행과 대조', () => {
   it('링크는 주소가 원장과 같아야 한다', () => {
     const req = ok({ ...base, source: 'link', result: null, url: 'https://a.com/x' })
     const linkFacts: AttachmentFacts = { ...facts, kind: 'LINK', url: 'https://a.com/x', byteSize: null }
-    expect(verifyAgainstAttachment(req, linkFacts, 'S1')).toBeNull()
-    expect(verifyAgainstAttachment(req, { ...linkFacts, url: 'https://b.com/y' }, 'S1')).toContain('주소가 원장과')
+    expect(verifyAgainstAttachment(req, linkFacts, TARGET)).toBeNull()
+    expect(verifyAgainstAttachment(req, { ...linkFacts, url: 'https://b.com/y' }, TARGET)).toContain('주소가 원장과')
   })
 })

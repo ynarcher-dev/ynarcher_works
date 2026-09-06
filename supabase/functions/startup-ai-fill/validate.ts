@@ -10,10 +10,12 @@
 // 가를 수 있게 한다. 조용히 지우면 그 둘이 화면에서 같아 보인다.
 //
 // Deno API를 쓰지 않는다(works vitest가 이 파일을 직접 돌린다).
-// 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §8.2·§10
+// **봉투는 여기 없다**(2026-09-06) — 엔진이 소유한다. 이 파일에 남는 것은 기업 정보라는
+// 대상에만 있는 규격뿐이라, 다른 대상이 이 기능을 쓸 때 다시 쓰지 않는 유일한 부분이다.
+//
+// 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §8.2·§10·§16.16
 
 import {
-  CARD_SHAPE,
   COMPANY_FORM_OPTIONS,
   CUSTOMER_KIND_OPTIONS,
   DEV_INSOURCING_OPTIONS,
@@ -25,27 +27,11 @@ import {
   LIMITS,
   type CardKey,
 } from './cards.ts'
+import type { Warn as EngineWarn } from '../_shared/aiFill/envelope.ts'
 
 type Rec = Record<string, unknown>
 
-export interface Envelope {
-  cards: Partial<Record<CardKey, unknown>>
-  notes: Partial<Record<CardKey, string[]>>
-  evidence: Partial<Record<CardKey, string[]>>
-}
-
-export interface NormalizeOptions {
-  /**
-   * 소재지 태그 원장(location_tags)의 값 목록.
-   *
-   * 상수로 적어 두지 않는 이유는 그 원장을 ADMIN이 고치기 때문이다 — 적어 두면 시·도가 하나
-   * 바뀌는 날 서버만 옛 목록으로 판정한다.
-   */
-  locations?: string[]
-}
-
-/** 정규화 중 쌓이는 경고. 카드별 notes 뒤에 덧붙는다. */
-type Warn = (card: CardKey, line: string) => void
+type Warn = EngineWarn<CardKey>
 
 const rec = (v: unknown): Rec => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Rec) : {})
 const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
@@ -374,11 +360,18 @@ function normInvestment(v: unknown, warn: Warn): unknown[] {
     .slice(0, LIMITS.investment)
 }
 
-// ── 봉투 정규화 ───────────────────────────────────────────────────────
+// ── 카드 한 장 ────────────────────────────────────────────────────────
 
-function normalizeCard(key: CardKey, raw: unknown, warn: Warn, opts: NormalizeOptions): unknown {
+/**
+ * 카드 한 장의 값을 규격에 맞춘다 — **프로파일이 소유하는 유일한 정규화**다.
+ *
+ * 봉투(요청하지 않은 카드 버리기·빈 카드 되돌리기·notes 다듬기·근거 대조)는 대상이 무엇이든
+ * 같은 일이라 엔진이 한다(`_shared/aiFill/envelope.ts`). 여기 남는 것은 기업 정보라는 이
+ * 대상에만 있는 규격뿐이다.
+ */
+export function normalizeCard(key: CardKey, raw: unknown, warn: Warn, locations: string[] = []): unknown {
   switch (key) {
-    case 'basics': return normBasics(rec(raw), warn, opts.locations ?? [])
+    case 'basics': return normBasics(rec(raw), warn, locations)
     case 'summary': return normSummary(rec(raw))
     case 'business': return normBusiness(rec(raw))
     case 'tech': return normTech(rec(raw), warn)
@@ -390,68 +383,5 @@ function normalizeCard(key: CardKey, raw: unknown, warn: Warn, opts: NormalizeOp
     case 'employee': return normEmployee(raw)
     case 'shareholders': return normShareholders(raw, warn)
     case 'investment': return normInvestment(raw, warn)
-  }
-}
-
-/**
- * 카드가 실질적으로 비었는가. 빈 카드를 null/[]로 되돌려 화면이 "기존 값 유지"로 읽게 한다.
- * 값 없는 키만 가득한 객체를 그대로 내보내면 화면은 그것을 '채워진 카드'로 세고, 담당자는
- * 무엇이 바뀌었는지 알 수 없다.
- */
-function isEmptyCard(value: unknown): boolean {
-  if (value == null) return true
-  if (Array.isArray(value)) return value.length === 0
-  return Object.values(value as Rec).every((v) =>
-    v == null || v === '' || (Array.isArray(v) && v.length === 0),
-  )
-}
-
-/** notes·evidence 한 카드분: 줄 수·길이 상한을 서버가 다시 강제한다. */
-function normLines(v: unknown): string[] {
-  return list(v)
-    .map((s) => str(s, 80))
-    .filter((s): s is string => Boolean(s))
-    .slice(0, LIMITS.notes)
-}
-
-/**
- * 모델 응답 전체를 요청한 카드 기준으로 정규화한다. 요청하지 않은 카드가 섞여 오면 버린다
- * (담당자가 지키기로 한 카드를 모델이 채워 보낸 것을 화면까지 흘려 보내지 않는다 —
- * 체크 해제는 '안 씀'이 아니라 '건드리지 않음'이다).
- */
-export function normalizeEnvelope(parsed: unknown, requested: CardKey[], opts: NormalizeOptions = {}): Envelope {
-  const root = rec(parsed)
-  const rawCards = rec(root.cards)
-  const rawNotes = rec(root.notes)
-  const rawEvidence = rec(root.evidence)
-
-  const extra: Partial<Record<CardKey, string[]>> = {}
-  const warn: Warn = (card, line) => {
-    ;(extra[card] ??= []).push(line)
-  }
-
-  const cards: Partial<Record<CardKey, unknown>> = {}
-  const notes: Partial<Record<CardKey, string[]>> = {}
-  const evidence: Partial<Record<CardKey, string[]>> = {}
-
-  for (const key of requested) {
-    const value = normalizeCard(key, rawCards[key], warn, opts)
-    cards[key] = isEmptyCard(value) ? (CARD_SHAPE[key] === 'array' ? [] : null) : value
-    evidence[key] = normLines(rawEvidence[key])
-  }
-  // 경고는 모델이 준 notes 뒤에 붙인다 — 앞에 두면 서버가 만든 줄이 모델의 관찰을 밀어낸다.
-  for (const key of requested) {
-    notes[key] = [...normLines(rawNotes[key]), ...(extra[key] ?? [])].slice(0, LIMITS.notes * 2)
-  }
-  return { cards, notes, evidence }
-}
-
-/** 모델이 코드펜스로 감싼 JSON을 돌려주는 경우까지 관대하게 파싱한다(ai-minute-draft와 같은 규약). */
-export function parseJson(raw: string): unknown | null {
-  const cleaned = raw.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim()
-  try {
-    return JSON.parse(cleaned)
-  } catch {
-    return null
   }
 }

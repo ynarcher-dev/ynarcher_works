@@ -114,8 +114,8 @@ async function requestExtract(body: Record<string, unknown>): Promise<ExtractRes
  * 돌려주는 것은 **화면이 그대로 세울 수 있는 한 줄**이다. 실패도 값으로 답한다 — 던지면
  * 여러 건을 잇달아 분석할 때 한 건이 나머지를 멈춘다.
  */
-export async function analyzeSource(source: AiSource, startupId?: string): Promise<LocalExtract> {
-  const base = { startupId, parserVersion: PARSER_VERSION, fileName: source.name }
+export async function analyzeSource(source: AiSource, targetId?: string): Promise<LocalExtract> {
+  const base = { targetId, parserVersion: PARSER_VERSION, fileName: source.name }
 
   if (source.kind === 'file') {
     const mime = resolveAiMime(source.file.type, source.name) ?? 'text/plain'

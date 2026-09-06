@@ -8,17 +8,9 @@
 // Deno API를 쓰지 않는다(works vitest가 이 판정을 직접 돌린다).
 // 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §8.3
 
-/**
- * 모델이 돌려준 초안 봉투(카드 키별 값·경고·근거).
- *
- * 카드 키를 타입 인자로 받는 이유는 검증(`validate.ts`)의 `Envelope`를 그대로 받기 위해서다 —
- * 여기서 모양을 다시 적으면 두 벌이 되고, 카드가 늘 때 한쪽만 고치는 날이 온다.
- */
-export interface DraftEnvelope<K extends string = string> {
-  cards: Partial<Record<K, unknown>>
-  notes: Partial<Record<K, string[]>>
-  evidence: Partial<Record<K, string[]>>
-}
+import type { DraftEnvelope } from './envelope.ts'
+
+export type { DraftEnvelope }
 
 /** 순서를 지키며 중복을 걷는다. 먼저 나온 줄이 남는다(자료 순서가 곧 담당자가 고른 순서다). */
 export function dedupe(lines: string[]): string[] {
