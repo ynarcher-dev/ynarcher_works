@@ -18,7 +18,7 @@ export interface StartupPick {
   name: string
   representative: string | null
   email: string | null
-  /** 분야 태그 이름 배열(최대 3). 바이어 원장도 같은 원장(industry_tags)의 이름을 담는다. */
+  /** 분야 태그 이름 배열(최대 3). 거래상대 원장도 같은 원장(industry_tags)의 이름을 담는다. */
   /** 분야 태그 이름 배열. 옛 단일 컬럼(industry)까지 합친 값이다. */
   industries: string[]
   /** 구분(투자·보육·발굴·미지정). 행의 배지가 읽는 값이다. */
@@ -34,7 +34,7 @@ export interface StartupPick {
  */
 function useStartupPool(enabled: boolean) {
   return useQuery({
-    queryKey: ['ma-buyers', 'startup-pool'],
+    queryKey: ['ma-parties', 'startup-pool'],
     enabled,
     queryFn: async (): Promise<StartupPick[]> => {
       // `industry`(옛 단일 컬럼)를 함께 읽는 이유는 분야가 두 곳에 있기 때문이다 — 배열
@@ -61,7 +61,7 @@ function useStartupPool(enabled: boolean) {
 }
 
 /**
- * 스타트업 DB에서 기업 하나 고르기 — 바이어 기업명 칸의 돋보기가 여는 창.
+ * 스타트업 DB에서 기업 하나 고르기 — 거래상대 기업명 칸의 돋보기가 여는 창.
  *
  * 고르는 즉시 닫힌다. 여러 건을 담는 피커(회의록 연동·결재 연동)가 [확인]을 받는 것은
  * 담는 동안 창 안의 상태와 바깥 상태가 갈리기 때문인데, 여기서는 고를 것이 하나뿐이라

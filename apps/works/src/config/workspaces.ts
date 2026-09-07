@@ -1,6 +1,6 @@
 import type { WorkspaceKey } from '@/auth/types'
 import type { SubNavGroup } from '@/config/navigation'
-import { MA_BUYER_LIST_LABEL } from '@/features/mna/buyers/config'
+import { MA_BUYER, MA_SELLER } from '@/features/mna/parties/config'
 
 /**
  * 스위처 항목 하나가 덮는 권한 구획.
@@ -18,13 +18,13 @@ export interface WorkspaceSection {
   /**
    * 이 구획의 사이드바 줄 구성. 미지정 시 `WORKSPACE_SUBNAV[key]`가 답한다.
    *
-   * 필요한 곳은 **한 권한 키가 두 자리에 서는 경우** 하나뿐이다 — M&A BUYER가 그렇다.
-   * 바이어 원장의 권한은 딜과 같은 `mna`인데(그 원장을 보는 사람과 딜을 보는 사람이 같다)
-   * 자리는 갈린다: 딜은 M&A/PE에, 바이어 원장은 DATABASE에 선다. 줄 구성을 키로만 찾으면
-   * 두 자리에 같은 줄이 함께 서서, 어느 쪽을 눌러도 같은 곳으로 가는 메뉴가 넷이 된다.
+   * 필요한 곳은 **한 권한 키가 한 항목 안에서 여러 줄로 서는 경우**다 — M&A/PE가 그렇다.
+   * 딜·BUYER·SELLER 셋이 모두 `mna` 키인데 줄과 화면은 갈린다. 줄 구성을 키로만 찾으면
+   * 세 구획에 같은 줄이 함께 서서, 어느 쪽을 눌러도 같은 곳으로 가는 메뉴가 아홉이 된다.
    *
-   * 경로도 함께 갈린다(`/mna` vs `/buyers`) — `resolveWorkspace`가 경로로 자리를 판정하므로,
-   * 두 구획이 같은 경로를 쓰면 어느 항목에 서 있는지 화면이 답하지 못한다.
+   * **구획의 신원은 키가 아니라 경로다.** `resolveWorkspace`가 경로 앞머리로 구획을
+   * 판정하고 활성 줄도 그 경로로 갈리므로, 두 구획이 같은 경로를 쓰거나 한쪽이 다른 쪽의
+   * 앞머리이면(`/mna` vs `/mna/buyers`) 어느 줄에 서 있는지 화면이 답하지 못한다.
    */
   subnav?: SubNavGroup[]
 }
@@ -52,16 +52,18 @@ export interface WorkspaceNavItem {
 const solo = (key: WorkspaceKey, path: string): WorkspaceSection[] => [{ key, path }]
 
 /**
- * M&A BUYER 한 줄.
+ * M&A/PE의 원장 두 줄(BUYER·SELLER).
  *
- * 위 두 원장과 사이에 선을 긋는다(`dividerBefore`) — DATABASE의 줄들은 원래 선 없이 나란히
- * 서지만(같은 층의 전사 원장이라 선을 그으면 서로 다른 층으로 보인다) 이 줄은 층이 다르다:
- * 스타트업·네트워크는 전사가 함께 쓰는 SSOT이고 바이어는 M&A/PE가 소유하는 업무 원장이라
- * 읽기 권한부터 갈린다. 선이 없으면 네트워크를 볼 수 있는 사람에게 이 줄이 왜 안 보이는지
- * 화면이 답하지 못한다.
+ * 딜 목록('프로젝트') 아래에 선을 긋고 선다(`dividerBefore`는 첫 줄에만) — 두 줄 사이가
+ * 아니라 **딜과 원장 사이**가 층이 갈리는 자리이기 때문이다. 딜은 열리고 닫히는 진행 중인
+ * 일이고 BUYER·SELLER는 딜보다 먼저 쌓여 어느 딜로도 이어질 수 있는 원장이라, 선이 없으면
+ * 셋이 같은 층의 목록 셋으로 읽힌다. 반대로 두 원장 사이에 선을 하나 더 그으면 사는 쪽과
+ * 파는 쪽이 서로 다른 층으로 보인다 — 그 둘은 같은 성격의 짝이다.
  */
-const MA_BUYER_SUBNAV: SubNavGroup[] = [
-  { items: [{ label: MA_BUYER_LIST_LABEL, dividerBefore: true }] },
+const MA_LEDGER_SUBNAV = (label: string, glyphKey: string, first = false): SubNavGroup[] => [
+  // 글리프를 줄이 직접 고른다 — 세 구획의 권한 키가 모두 `mna`라 워크스페이스 글리프에
+  // 맡기면 딜·BUYER·SELLER가 같은 아이콘 셋으로 선다.
+  { items: [{ label, glyphKey, dividerBefore: first }] },
 ]
 
 /**
@@ -71,7 +73,7 @@ const MA_BUYER_SUBNAV: SubNavGroup[] = [
  * 한 자리에 넷을 세우면 스위처가 답하던 '어느 원장인가'를 사이드바 줄 이름이 대신 답해야 하고,
  * 그 대가로 사업 3종이 공유하던 라벨 한 벌을 워크스페이스마다 갈라야 했다. 갈라 세우면 그 답이
  * 스위처로 돌아오고 줄 이름은 다시 한 벌이 된다. DATABASE는 합친 채로 둔다 — 원장들이 오가며
- * 함께 보는 짝이고 줄이 셋뿐이라 이름만으로 구분이 선다.
+ * 함께 보는 짝이고 줄이 둘뿐이라 이름만으로 구분이 선다.
  *
  * 항목이 여덟이라 구분선은 되살리되 섹션 라벨(`groupLabel`)은 두지 않는다 — 선이 나누는 위쪽
  * 두 블록은 항목이 하나·둘이라 헤더가 항목 이름을 다른 말로 한 번 더 적는 층이 된다.
@@ -85,7 +87,7 @@ export const WORKSPACES: WorkspaceNavItem[] = [
     implemented: true,
     description: '전사 공통 업무·대시보드',
   },
-  // 데이터베이스 — 쌓아 두고 찾아 보는 원장들이 스위처 항목 하나로 선다(2026-09-06, 2026-09-07 셋).
+  // 데이터베이스 — 쌓아 두고 찾아 보는 전사 원장 둘이 스위처 항목 하나로 선다(2026-09-06).
   //
   // 합친 것은 자리뿐이다 — 원장(`startups`/`networks`)도, 권한 키도, 목록 화면도 갈린 채다.
   // 원장을 합치지 않는 이유는 다형 키 문자열('startups'/'networks')이 명부·기여 로그·자료·
@@ -93,26 +95,16 @@ export const WORKSPACES: WorkspaceNavItem[] = [
   // 이유는 필터 축이 겹치지 않기 때문이다(같은 이름의 '구분'이 두 뜻이고, 한 표에 담으면 열의
   // 절반이 늘 빈다). 합쳐서 얻는 것은 원장을 오갈 때 워크스페이스를 갈아타지 않는 것 하나다.
   //
-  // 2026-09-07에 셋이 됐다(M&A BUYER). 항목이 덮는 것은 자리이지 권한이 아니라는 것이 여기서
-  // 드러난다 — 세 줄의 읽기 권한 키가 startup·networks·mna로 전부 다르고, 그래서 세 줄이 함께
-  // 서는 사람도 있고 한 줄만 서는 사람도 있다.
+  // 2026-09-07에 잠시 셋이었다(M&A BUYER). 되돌린 이유는 **소유**다 — 두 줄은 전사가 함께
+  // 쓰는 SSOT이고 BUYER·SELLER는 M&A/PE가 쌓고 M&A/PE만 읽는 업무 원장이라, 여기 세우면
+  // 네트워크를 볼 수 있는 사람에게 그 줄이 왜 안 보이는지 화면이 답하지 못한다. 지금 이
+  // 항목의 두 줄은 읽기 권한이 갈릴 뿐 대상은 전사 공용이다.
   {
     id: 'database',
     label: 'DATABASE',
     sections: [
       { key: 'startup', path: '/startup' },
       { key: 'networks', path: '/networks' },
-      // M&A BUYER — 인수 희망 주체 원장(2026-09-07). 권한 키는 mna이고 자리만 여기다.
-      //
-      // 여기 서는 이유는 성격이다 — 딜은 진행하는 일이고 바이어는 **쌓아 두고 찾아 보는 원장**
-      // 이라, 스타트업·네트워크와 같은 방식으로 읽힌다(검색해서 열고, 쌓이고, 어느 사업에도
-      // 아직 매이지 않는다). 권한을 함께 옮기지는 않는다: 이 원장을 보는 사람은 딜을 보는
-      // 사람이고, 키를 startup·networks와 합치면 네트워크 원장을 보라고 준 읽기 권한이
-      // 바이어까지 여는 조용한 확대가 된다.
-      //
-      // 줄 구성을 키가 아니라 구획이 직접 갖는 것도 그래서다(`subnav`) — 같은 mna 키가
-      // M&A/PE에도 서 있고, 그쪽 줄은 딜 목록이다.
-      { key: 'mna', path: '/buyers', subnav: MA_BUYER_SUBNAV },
     ],
     implemented: true,
     description: '스타트업·네트워크 원장',
@@ -137,10 +129,26 @@ export const WORKSPACES: WorkspaceNavItem[] = [
     implemented: true,
     description: '수행 프로젝트 관리',
   },
+  // M&A/PE — 딜 한 줄 + 거래상대 원장 두 줄(2026-09-07 이관·신설).
+  //
+  // 셋 다 권한 키가 `mna`다. 항목이 덮는 것은 자리이고 권한은 구획마다 판정한다는 규칙은
+  // 그대로이나, 여기서는 세 구획의 답이 같아 셋이 함께 서거나 함께 빠진다 — 원장을 보는
+  // 사람과 딜을 보는 사람이 같기 때문이며, 그래서 이 셋은 한 항목 아래 있는 것이 맞다.
+  //
+  // 경로는 `/mna` 아래로 넣지 않는다(`/buyers`·`/sellers`). 구획 판정이 경로 앞머리라
+  // `/mna/buyers`는 딜 구획에 먼저 걸려, 원장 화면에 서 있는데 사이드바는 딜 줄을 칠한다.
   {
     id: 'mna',
     label: 'M&A/PE',
-    sections: solo('mna', '/mna'),
+    sections: [
+      { key: 'mna', path: '/mna' },
+      {
+        key: 'mna',
+        path: MA_BUYER.basePath,
+        subnav: MA_LEDGER_SUBNAV(MA_BUYER.listLabel, 'buy', true),
+      },
+      { key: 'mna', path: MA_SELLER.basePath, subnav: MA_LEDGER_SUBNAV(MA_SELLER.listLabel, 'sell') },
+    ],
     implemented: true,
     description: '인수·합병·경영참여 딜 관리',
   },

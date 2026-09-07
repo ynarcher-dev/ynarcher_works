@@ -1,8 +1,5 @@
 import {
-  BackButton,
   Badge,
-  Banner,
-  Button,
   CardShell,
   cardText,
   DensityProvider,
@@ -11,26 +8,11 @@ import {
   InfoGrid,
   PanelCard,
   RefLinkList,
-  Spinner,
 } from '@ynarcher/ui'
-import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { DetailDeleteButton } from '@/components/DetailDeleteButton'
+import { Link } from 'react-router-dom'
 import { RichTextViewer } from '@/components/RichTextEditor'
-import { MaBuyerForm } from '@/features/mna/buyers/MaBuyerForm'
-import {
-  MA_BUYER_BASE_PATH,
-  MA_BUYER_CONTENT_KEY,
-  MA_BUYER_NOUN,
-  MA_BUYER_TARGET_TYPE,
-  toWon,
-  type MaBuyerRow,
-} from '@/features/mna/buyers/config'
-import {
-  useDeleteMaBuyer,
-  useMaBuyerContributions,
-  useMaBuyerRecord,
-} from '@/features/mna/buyers/hooks'
+import { toWon, type MaPartyConfig, type MaPartyRow } from '@/features/mna/parties/config'
+import { useMaPartyContributions } from '@/features/mna/parties/hooks'
 import { SensitiveValue } from '@/features/master/SensitiveValue'
 import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
@@ -49,10 +31,16 @@ function formatDate(v: string | null | undefined): string {
  * 둘러싼 것들(붙은 자료·다룬 회의·누가 고쳤나·무슨 말이 오갔나)이라, 원장이 달라도 같은 자리에
  * 같은 순서로 서야 화면을 옮겨도 손이 같은 곳을 찾는다.
  */
-function MaBuyerView({ record }: { record: MaBuyerRow }) {
+export function MaPartyView({
+  config,
+  record,
+}: {
+  config: MaPartyConfig
+  record: MaPartyRow
+}) {
   const industries = Array.isArray(record.industries) ? record.industries : []
   const overview = record.overview_html ?? ''
-  const { data: contributions } = useMaBuyerContributions(record.id)
+  const { data: contributions } = useMaPartyContributions(config, record.id)
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -77,11 +65,10 @@ function MaBuyerView({ record }: { record: MaBuyerRow }) {
 
           <div className="mt-5 border-t border-gray-100 pt-4">
             <InfoGrid>
-              {/* 연결된 스타트업 원장 행. **연결이 있을 때만 선다** — 대부분의 바이어는 우리
-                  원장에 없는 기업이라(인수하는 쪽은 대개 우리가 발굴·투자한 곳이 아니다)
-                  '연결 안 됨'을 상시로 세우면 거의 모든 상세에 아무것도 말하지 않는 줄이 하나
-                  더 붙는다. 값이 빈 것을 알려야 하는 칸(채워 넣을 대기열)과 달리, 이 줄은
-                  없는 것이 정상이라 빈 상태 자체가 정보가 아니다.
+              {/* 연결된 스타트업 원장 행. **연결이 있을 때만 선다** — 대부분의 거래상대는 우리
+                  원장에 없는 기업이라 '연결 안 됨'을 상시로 세우면 거의 모든 상세에 아무것도
+                  말하지 않는 줄이 하나 더 붙는다. 값이 빈 것을 알려야 하는 칸(채워 넣을
+                  대기열)과 달리, 이 줄은 없는 것이 정상이라 빈 상태 자체가 정보가 아니다.
 
                   상호참조는 배지가 아니라 텍스트 링크다 — 그 기업을 볼 권한이 없으면 임베드가
                   비어 오고, 그때 이 줄은 링크 없이 물러난다(죽은 배지가 남지 않는다). */}
@@ -95,9 +82,7 @@ function MaBuyerView({ record }: { record: MaBuyerRow }) {
                         {
                           key: record.startup_id,
                           label: record.startup?.name ?? '연결된 기업',
-                          to: record.startup
-                            ? `/startup/discovered/${record.startup_id}`
-                            : null,
+                          to: record.startup ? `/startup/discovered/${record.startup_id}` : null,
                           title: record.startup
                             ? undefined
                             : '이 기업을 열람할 권한이 없습니다.',
@@ -108,17 +93,15 @@ function MaBuyerView({ record }: { record: MaBuyerRow }) {
                 />
               )}
               <InfoField
-                label="가용자금"
+                label={config.fundsLabel}
                 // 상세는 원 단위다 — 한 건을 정확히 읽는 자리라 반올림이 끼면 안 된다.
                 // 목록은 백만원인데(자릿수를 짧게 해 세로로 견주는 자리), 단위가 갈리는 것은
                 // 자리마다 하는 일이 달라서이고 저장값은 원 하나다.
                 value={
-                  record.available_funds == null
-                    ? '-'
-                    : `${toWon(record.available_funds)}원`
+                  record.available_funds == null ? '-' : `${toWon(record.available_funds)}원`
                 }
               />
-              {/* 바이어 쪽 창구다(우리 쪽 관리 주체가 아니다 — 이 원장은 영구 공동관리).
+              {/* 상대 쪽 창구다(우리 쪽 관리 주체가 아니다 — 이 원장은 영구 공동관리).
                   외부 인물의 개인정보라 마스킹 정책을 거치고, 원본 열람은 사유와 함께
                   access_logs에 남는다. */}
               <InfoField
@@ -126,9 +109,9 @@ function MaBuyerView({ record }: { record: MaBuyerRow }) {
                 value={
                   <SensitiveValue
                     field="name"
-                    contentKey={MA_BUYER_CONTENT_KEY}
+                    contentKey={config.contentKey}
                     value={record.contact_name ?? ''}
-                    resourceType={MA_BUYER_TARGET_TYPE}
+                    resourceType={config.targetType}
                     resourceId={record.id}
                   />
                 }
@@ -138,9 +121,9 @@ function MaBuyerView({ record }: { record: MaBuyerRow }) {
                 value={
                   <SensitiveValue
                     field="email"
-                    contentKey={MA_BUYER_CONTENT_KEY}
+                    contentKey={config.contentKey}
                     value={record.contact_email ?? ''}
-                    resourceType={MA_BUYER_TARGET_TYPE}
+                    resourceType={config.targetType}
                     resourceId={record.id}
                   />
                 }
@@ -159,7 +142,7 @@ function MaBuyerView({ record }: { record: MaBuyerRow }) {
           ) : (
             <EmptyState
               title="아직 작성된 상세내용이 없습니다."
-              description="수정에서 인수 배경·희망 조건·미팅 메모를 적을 수 있습니다."
+              description="수정에서 배경·희망 조건·미팅 메모를 적을 수 있습니다."
             />
           )}
         </PanelCard>
@@ -168,71 +151,14 @@ function MaBuyerView({ record }: { record: MaBuyerRow }) {
       {/* 우측(1/3): 자료 관리 → 관련 회의록 → 변동 이력 → 코멘트. */}
       <div className="space-y-4 lg:col-span-1">
         {/* 조회 화면의 자료는 읽기 전용이다 — 값을 바꾸는 입구는 '수정' 하나다. */}
-        <MaterialPanel targetType={MA_BUYER_TARGET_TYPE} targetId={record.id} readOnly />
+        <MaterialPanel targetType={config.targetType} targetId={record.id} readOnly />
         <RelatedMinutesPanel
-          targetType={MA_BUYER_TARGET_TYPE as MinuteLinkTargetType}
+          targetType={config.targetType as MinuteLinkTargetType}
           targetId={record.id}
         />
         <ChangeHistoryPanel contributions={contributions} />
-        <FeedbackPanel targetType={MA_BUYER_TARGET_TYPE} targetId={record.id} />
+        <FeedbackPanel targetType={config.targetType} targetId={record.id} />
       </div>
-    </div>
-  )
-}
-
-/**
- * M&A BUYER 상세페이지. `id`가 'new'면 등록 모드이며, 등록·수정은 모달이 아니라
- * 이 페이지의 편집 모드(`MaBuyerForm`)가 받는다 — 본문 에디터가 모달에 들어가기에는 크다.
- */
-export function MaBuyerDetailPage() {
-  const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
-  const isNew = id === 'new'
-  const [editing, setEditing] = useState(isNew)
-  const { data: record, isLoading } = useMaBuyerRecord(isNew ? undefined : id)
-  const remove = useDeleteMaBuyer()
-
-  if (!isNew && isLoading) return <Spinner />
-  if (!isNew && !record) {
-    return <Banner tone="warning">{MA_BUYER_NOUN} 정보를 찾을 수 없습니다.</Banner>
-  }
-
-  return (
-    <div className="space-y-5">
-      {/* 편집 중에는 폼(FormTopBar)이 상단 바를 소유한다. */}
-      {!editing && (
-        <div className="flex items-center justify-between">
-          <BackButton as={Link} to={MA_BUYER_BASE_PATH} />
-          {!isNew && record && (
-            <div className="flex items-center gap-2">
-              {/* 사유는 원장 컬럼이 아니라 변동 이력의 note로 남는다(deactivate_entity RPC). */}
-              <DetailDeleteButton
-                name={record.name}
-                onDelete={(reason) =>
-                  remove.mutateAsync({ id: record.id, reason: reason ?? '' })
-                }
-                onDeleted={() => navigate(MA_BUYER_BASE_PATH)}
-              />
-              <Button onClick={() => setEditing(true)}>수정</Button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {editing ? (
-        <MaBuyerForm
-          recordId={isNew ? undefined : id}
-          initial={isNew ? null : (record ?? null)}
-          backTo={MA_BUYER_BASE_PATH}
-          onDone={({ id: newId }) => {
-            setEditing(false)
-            if (isNew) navigate(`${MA_BUYER_BASE_PATH}/${newId}`)
-          }}
-          onCancel={() => (isNew ? navigate(MA_BUYER_BASE_PATH) : setEditing(false))}
-        />
-      ) : (
-        record && <MaBuyerView record={record} />
-      )}
     </div>
   )
 }

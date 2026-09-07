@@ -136,12 +136,22 @@ export const SENSITIVE_CONTENT_GROUPS: readonly SensitiveContentGroup[] = [
     label: 'M&A',
     contents: [
       ...programContents('mna', '딜'),
-      // M&A BUYER 원장. 담는 개인정보는 바이어 쪽 연락 담당자의 이름·이메일이며,
+      // M&A BUYER·SELLER 원장. 담는 개인정보는 상대 쪽 연락 담당자의 이름·이메일이며,
       // 전화번호 칸이 없으므로 그 스위치도 두지 않는다 — 화면에 없는 필드의 스위치를 띄우면
       // '켰는데 아무 일도 안 일어나는' 죽은 설정이 된다.
+      //
+      // 화면은 한 벌이지만 **키는 원장마다 둔다** — 정책은 '어느 화면의 규격인가'가 아니라
+      // '어느 데이터를 가리는가'를 정하는 것이고, 사는 쪽과 파는 쪽은 노출 범위를 달리 잡을
+      // 수 있어야 한다(파는 쪽 창구는 매각 사실 자체가 대외비인 경우가 흔하다).
       {
         key: 'mna.buyers',
         label: 'M&A BUYER',
+        fields: ['name', 'email'],
+        hint: '담당자명 · 이메일',
+      },
+      {
+        key: 'mna.sellers',
+        label: 'M&A SELLER',
         fields: ['name', 'email'],
         hint: '담당자명 · 이메일',
       },

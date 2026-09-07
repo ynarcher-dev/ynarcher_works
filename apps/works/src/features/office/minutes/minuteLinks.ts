@@ -1,4 +1,4 @@
-import { MA_BUYER_BASE_PATH, MA_BUYER_TABLE } from '@/features/mna/buyers/config'
+import { MA_BUYER, MA_SELLER } from '@/features/mna/parties/config'
 import { NETWORK_TABLE, NETWORK_TARGET_TYPE } from '@/features/networks/config'
 
 /**
@@ -18,7 +18,7 @@ export type NetworkMinuteLinkType = typeof NETWORK_TARGET_TYPE
 
 /**
  * 연동 가능한 대상 종류. 사업 원장의 entityKey(program/ma_program/project_program) +
- * startup + fund + NETWORKS + M&A BUYER.
+ * startup + fund + NETWORKS + M&A BUYER·SELLER.
  */
 export type MinuteLinkTargetType =
   | 'program'
@@ -27,6 +27,7 @@ export type MinuteLinkTargetType =
   | 'startup'
   | 'fund'
   | 'ma_buyer'
+  | 'ma_seller'
   | NetworkMinuteLinkType
 
 /**
@@ -58,6 +59,7 @@ export const MINUTE_LINK_TARGET_TYPES: MinuteLinkTargetType[] = [
   'fund',
   'network',
   'ma_buyer',
+  'ma_seller',
 ]
 
 /** 외부 참석자로 걸 수 있는 종류 — 회의에 오는 것은 사람이고 사람은 네트워크 원장에 있다. */
@@ -108,14 +110,23 @@ export const MINUTE_LINK_TARGETS: Record<MinuteLinkTargetType, MinuteLinkTargetM
     codeColumn: 'affiliation',
     toPath: (id) => `/networks/record/${id}`,
   },
-  // M&A BUYER — 인수 희망 주체 원장. 자리는 DATABASE지만 권한 키는 mna다.
+  // M&A BUYER·SELLER — 인수/매각 희망 주체 원장(M&A/PE 소유).
   // 부가 표기에 희망사항을 넣는다: 이름이 비슷한 기업이 여럿일 때 가르는 것이 그 한 줄이다.
+  // 메타를 두 벌 적지 않고 설정에서 파생시킨다 — 라벨·표·경로가 이미 그 설정의 값이라,
+  // 여기 다시 적으면 원장을 옮기는 날 한쪽만 고쳐진다.
   ma_buyer: {
-    kindLabel: 'M&A BUYER',
-    table: MA_BUYER_TABLE,
+    kindLabel: MA_BUYER.listLabel,
+    table: MA_BUYER.table,
     titleColumn: 'name',
     codeColumn: 'wish',
-    toPath: (id) => `${MA_BUYER_BASE_PATH}/${id}`,
+    toPath: (id) => `${MA_BUYER.basePath}/${id}`,
+  },
+  ma_seller: {
+    kindLabel: MA_SELLER.listLabel,
+    table: MA_SELLER.table,
+    titleColumn: 'name',
+    codeColumn: 'wish',
+    toPath: (id) => `${MA_SELLER.basePath}/${id}`,
   },
 }
 

@@ -99,7 +99,7 @@ export function WorksLayout() {
     for (const g of boundGroups) {
       for (const { item, section } of g.items) {
         if (item.tab === activeTab) return item.label
-        if (!item.tab && multiSection && section.key === currentSection?.key && !tabOwned) {
+        if (!item.tab && multiSection && section.path === currentSection?.path && !tabOwned) {
           return item.label
         }
         if (item.dynamicKey) {
@@ -130,8 +130,13 @@ export function WorksLayout() {
 
   // 탭 없는 줄(= 그 구획의 루트)은 워크스페이스 글리프를 쓴다. 글리프를 정하는 것도 항목이
   // 아니라 구획이라, 한 항목에 두 줄이 서도 아이콘이 갈린다(스타트업 Rocket / 네트워크 Network).
-  const getSidebarIcon = (item: { tab?: string }, section: WorkspaceSection) =>
-    item.tab ? sidebarIconByTab[item.tab] : sidebarIconByWorkspace[section.key]
+  // 구획들이 같은 권한 키를 쓰면 그 갈림이 성립하지 않으므로(M&A/PE의 딜·BUYER·SELLER가 모두
+  // mna) 그때만 줄이 `glyphKey`로 자기 글리프를 직접 고른다.
+  const getSidebarIcon = (item: SubNavItem, section: WorkspaceSection) =>
+    item.tab
+      ? sidebarIconByTab[item.tab]
+      : (item.glyphKey ? sidebarIconByTab[item.glyphKey] : undefined) ??
+        sidebarIconByWorkspace[section.key]
 
   /**
    * 아이콘 자리에 놓을 요소. 사이드바 글리프는 lucide 선 아이콘 한 종류뿐이다 —
@@ -150,10 +155,14 @@ export function WorksLayout() {
         key={item.label}
         icon={leafIcon(item, section)}
         label={item.label}
-        // 탭 없는 줄은 자기 구획에 서 있을 때만 활성이다 — 이 조건이 없으면 구획을 둘 덮는
-        // 항목에서 두 줄이 동시에 칠해진다(둘 다 탭이 없어 !tabOwned가 함께 참이다).
+        // 탭 없는 줄은 자기 구획에 서 있을 때만 활성이다 — 이 조건이 없으면 구획을 둘 이상
+        // 덮는 항목에서 여러 줄이 동시에 칠해진다(모두 탭이 없어 !tabOwned가 함께 참이다).
+        //
+        // 구획을 가르는 것은 키가 아니라 **경로**다. 한 항목 안에서 여러 구획이 같은 권한
+        // 키를 쓸 수 있으므로(M&A/PE의 딜·BUYER·SELLER가 모두 mna) 키로 견주면 그 셋이 늘
+        // 함께 칠해진다. 경로는 구획마다 유일하고 `resolveWorkspace`도 그것으로 판정한다.
         active={
-          item.tab ? item.tab === activeTab : !tabOwned && section.key === currentSection?.key
+          item.tab ? item.tab === activeTab : !tabOwned && section.path === currentSection?.path
         }
         collapsed={sidebarCollapsed}
         onClick={() => goToSection(item, section)}

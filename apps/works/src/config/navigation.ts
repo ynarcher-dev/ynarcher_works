@@ -26,6 +26,14 @@ export interface SubNavItem {
   dynamicKey?: 'boards' | 'archives'
   /** 동적 항목의 아이콘 키(boardIcons.ts). 지정 시 tab 기반 매핑보다 우선한다. */
   iconKey?: string
+  /**
+   * 탭 없는 줄의 글리프 키(`sidebarIconByTab`).
+   *
+   * 탭이 없으면 글리프는 그 구획의 워크스페이스 글리프가 된다 — 구획 하나에 줄 하나일 때는
+   * 그것이 맞지만, 한 항목이 같은 권한 키의 구획을 여럿 덮으면(M&A/PE의 딜·BUYER·SELLER)
+   * 세 줄이 같은 아이콘으로 선다. 그때만 줄이 자기 글리프를 직접 고른다.
+   */
+  glyphKey?: string
   /** 이 항목 위에 같은 그룹 내 구분선을 그린다(그룹은 유지한 채 항목 사이만 시각적으로 나눌 때). */
   dividerBefore?: boolean
   /**
@@ -116,7 +124,27 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       // 대용량 업로드는 목록 상단의 버튼으로 들어간다(/startup/bulk) — 메뉴로 두면 어느
       // 원장으로 들어가는 업로드인지가 이름에 드러나지 않는다. 아처스캔은 화면이 준비되기
       // 전까지 메뉴에서 내린다(라우팅 ?tab=archerscan은 그대로 살아 있다).
-      items: [{ label: STARTUP_LIST_LABEL }],
+      items: [
+        { label: STARTUP_LIST_LABEL },
+        // GUEST계정 발급 — 2026-09-07에 AC에서 DATABASE로 옮겼다.
+        //
+        // 이 줄이 여는 것은 원장이 아니라 **계정을 내주는 창구**이고, 그 대상은 원장에 있는
+        // 행(참여 기업·참여 전문가)이다. AC에 있을 때 이상했던 것은 발급이 사업 업무라는
+        // 사실이 아니라 **한 사업 워크스페이스가 그 창구를 소유한 것**이었다 — 게스트는
+        // M&A·PROJECT 사업에도 걸리는데 AC를 읽지 못하는 담당자에게는 그 창구가 아예 없었다.
+        // DATABASE는 어느 실행 라인에도 속하지 않으면서 그 대상 원장이 사는 자리라, 여기
+        // 두면 발급이 특정 사업의 일로 읽히지 않는다.
+        //
+        // 구획을 startup으로 잡는 것은 발급 대상의 다수가 참여 기업이어서다. 권한이 여기서
+        // 넓어지지는 않는다 — 발급만으로는 그 게스트에게 아무 화면도 열리지 않고(매핑 전에는
+        // 0건), 문(사업별 로그인)과 계정 정지는 각각 사업 담당자와 ADMIN이 소유한다.
+        //
+        // 사이드바 맨 아래 고정 영역에 선다(`pinBottom`) — 원장 줄 옆에 나란히 두면 그것이
+        // 이 항목의 원장 하나로 읽힌다. 자리를 가르는 것은 `buildNavGroups`이므로
+        // `dividerBefore`는 두지 않는다(고정 영역이 이미 자기 경계선을 그어, 함께 쓰면 선이
+        // 두 줄 그어진다).
+        { label: 'GUEST계정 발급', tab: 'guest-accounts', pinBottom: true },
+      ],
     },
   ],
   // NETWORKS: 메뉴 한 줄이다.
@@ -136,29 +164,10 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       items: [{ label: NETWORKS_LIST_LABEL }],
     },
   ],
-  // AC: 사업 목록 + 게스트 계정(2026-09-06 OFFICE에서 임시 이관).
-  //
-  // 게스트 계정을 만드는 일은 사업 업무에서 시작한다 — 대상이 그 사업의 참여 기업·전문가이고,
-  // 발급만으로는 아무 화면도 열리지 않아(매핑 전에는 0건) 발급과 매핑이 한자리에 있어야 한다.
-  // 전사 허브(OFFICE)는 사내 일이 사는 자리라 바깥 사람의 계정을 여는 창구로는 맞지 않는다.
-  //
-  // AC에만 둔다 — 임시 배치이며 M&A·PROJECT는 종전 구성(programSubnav) 그대로다. 셋에 함께
-  // 세우려면 공용 구성으로 올리고, 최종 자리는 명부(3_9_1 §11.3)와 겹치는 범위를 정한 뒤 정한다.
-  //
-  // 이 줄은 AC 사이드바 맨 아래 고정 영역에 선다(2026-09-06, `pinBottom`) — 사업 목록 줄 옆에
-  // 나란히 두면 그것이 이 워크스페이스의 원장 하나로 읽힌다. 이름을 'GUEST계정 발급'으로
-  // 두는 것도 같은 이유다: 이 줄이 여는 것은 사업의 원장이 아니라 계정을 내주는 창구이고,
-  // 정지·해제는 여기서 하지 않는다(그것은 ADMIN '게스트 계정 관리'가 답한다).
-  // 자리를 가르는 것은 `buildNavGroups`이므로 `dividerBefore`는 두지 않는다(고정 영역이 이미
-  // 자기 경계선을 그어, 함께 쓰면 선이 두 줄 그어진다).
-  ac: [
-    {
-      items: [
-        { label: PROGRAM_LIST_LABEL },
-        { label: 'GUEST계정 발급', tab: 'guest-accounts', pinBottom: true },
-      ],
-    },
-  ],
+  // AC: 사업 목록 한 줄이다. 게스트 계정 발급 줄은 2026-09-07에 DATABASE로 옮겼다(위
+  // `startup` 항목) — 사업 워크스페이스 하나가 전사에 걸친 창구를 소유하면, 그 워크스페이스를
+  // 읽지 못하는 담당자에게는 창구가 아예 없다.
+  ac: programSubnav(),
   // FUND: 메뉴 한 줄이다(2026-09-05 '내 운용펀드'/'전체 운용펀드' 통합) — 범위는 목록 상단
   // 토글이 답한다. 펀드 종류(AC·VC·PE)는 2026-08-20에 이미 목록의 '구분' 필터로 내려갔다:
   // 분류를 메뉴로 두면 재원·성격·상태와 함께 걸 수 없고(VC 펀드 중 모태 재원만, 같은 질문에
@@ -170,10 +179,10 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
   ],
   // M&A/PE는 AC와 동일한 사업 원장 구조(features/program)를 공유한다.
   //
-  // 이 워크스페이스가 소유한 원장이 하나 더 있지만(M&A BUYER) 그 줄은 여기 없다 — 자리가
-  // DATABASE이기 때문이고, 줄 구성은 그 구획이 직접 갖는다(`WorkspaceSection.subnav`).
-  // 권한 키가 같다고 줄까지 같은 자리에 세우면 딜 목록 옆에 원장이 나란히 서서, 진행하는 일과
-  // 쌓아 두고 찾아 보는 것이 한 층으로 읽힌다.
+  // 이 표가 답하는 것은 딜 목록 한 줄뿐이다. 같은 항목 아래 서는 원장 두 줄(M&A BUYER·
+  // SELLER)은 여기 없고 각자의 구획이 직접 갖는다(`WorkspaceSection.subnav`) — 이 표의
+  // 열쇠는 권한 키인데 세 구획의 키가 모두 `mna`라, 여기 적으면 세 자리에 같은 줄이 함께
+  // 서서 어느 쪽을 눌러도 같은 곳으로 가는 메뉴가 아홉이 된다.
   mna: programSubnav(),
   admin: [
     {
