@@ -8,3 +8,14 @@
 export function toggleAxisValue(values: string[], value: string): string[] {
   return values.includes(value) ? values.filter((v) => v !== value) : [...values, value]
 }
+
+/**
+ * 한 타일이 실제 값 여럿을 대표할 때의 토글. 모두 걸려 있으면 함께 빼고, 하나라도 빠졌으면
+ * 모두 더한다 — 일부만 걸린 상태에서 각 값을 차례로 뒤집으면 선택이 서로 맞바뀌기 때문이다.
+ */
+export function toggleAxisValues(values: string[], targets: readonly string[]): string[] {
+  const allSelected = targets.every((target) => values.includes(target))
+  return allSelected
+    ? values.filter((value) => !targets.includes(value))
+    : [...new Set([...values, ...targets])]
+}

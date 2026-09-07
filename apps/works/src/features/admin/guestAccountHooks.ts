@@ -76,15 +76,25 @@ interface RawRow extends Omit<GuestAccount, 'programs' | 'identities'> {
   total_count: number | string
 }
 
-export function useGuestAccounts(keyword: string, page: number) {
+/**
+ * 게스트 계정 목록.
+ *
+ * `entityKey`는 **참여 사업 칸이 볼 범위**다(건수·열린 건수·사업 목록). 계정 자체는 언제나
+ * 전부 서고 좁혀지지 않는다 — 계정은 대상마다 하나이고 사업을 가로질러 존재하므로, 사업
+ * 하나를 못 본다고 계정을 빼면 이미 있다는 사실이 숨겨져 같은 대상에 발급을 다시 시도하게
+ * 된다. AC 발급 창구는 `'program'`을 주고, ADMIN 계정 관리는 주지 않는다(정지·해제는 계정에
+ * 걸리는 일이라 사업을 가려서는 안 된다).
+ */
+export function useGuestAccounts(keyword: string, page: number, entityKey?: 'program' | 'ma_program') {
   return useQuery({
-    queryKey: ['admin', 'guest-accounts', keyword, page],
+    queryKey: ['admin', 'guest-accounts', keyword, page, entityKey ?? 'all'],
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<GuestAccountPage> => {
       const { data, error } = await supabase.rpc('guest_accounts_list', {
         p_search: keyword.trim() || null,
         p_limit: GUEST_PAGE_SIZE,
         p_offset: page * GUEST_PAGE_SIZE,
+        p_entity_key: entityKey ?? null,
       })
       // 조회 실패를 삼키지 않는다 — 삼키면 "권한이 없다"와 "게스트가 없다"가 같은 빈 화면이 된다.
       if (error) throw error

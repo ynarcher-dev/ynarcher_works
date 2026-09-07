@@ -1,4 +1,7 @@
+import { PageHeader } from '@ynarcher/ui'
+import { useSearchParams } from 'react-router-dom'
 import { AC_CATEGORIES } from '@/config/programCategories'
+import { GuestAccountPanel } from '@/features/admin/GuestAccountPanel'
 import { ProgramBulkPage } from '@/features/program/ProgramBulkPage'
 import { ProgramDetailPage } from '@/features/program/ProgramDetailPage'
 import { ProgramWorkspacePage } from '@/features/program/ProgramWorkspacePage'
@@ -31,9 +34,26 @@ export const AC_WORKSPACE: ProgramWorkspaceConfig = {
 }
 
 export function AcWorkspacePage() {
-  // 게스트 계정 발급 분기는 2026-09-07에 DATABASE(스타트업 구획)로 옮겼다 —
-  // 사업 워크스페이스 하나가 전사에 걸친 창구를 소유하면 그 워크스페이스를 읽지 못하는
-  // 담당자에게는 창구가 아예 없다. 옛 주소(/ac?tab=guest-accounts)는 사업 목록으로 떨어진다.
+  const [params] = useSearchParams()
+
+  // GUEST계정 발급 — 2026-09-07 저녁에 DATABASE에서 되돌아왔다(사용자 지정).
+  //
+  // 같은 날 오전에 옮긴 근거("게스트는 M&A·PROJECT 사업에도 걸리는데 AC를 읽지 못하는
+  // 담당자에게는 창구가 없다")는 그날 안에 사라졌다 — PROJECT가 폐지되어 AC로 합쳐졌고,
+  // 게스트가 실제로 걸려 있는 사업은 전부 AC다.
+  //
+  // ADMIN·OFFICE와 **같은 화면**을 세우고 권한만 낮춘다(`canSuspend` 없음 — 정지·해제는
+  // ADMIN이 소유한다). 다른 것은 `entityKey` 하나뿐이다: 이 자리에서는 참여 사업 칸이
+  // AC 사업만 센다. 사업 원장을 읽지 않으므로 목록과 나란한 분기다.
+  if (params.get('tab') === 'guest-accounts') {
+    return (
+      <div className="space-y-5">
+        <PageHeader title="GUEST계정 발급" />
+        <GuestAccountPanel entityKey={AC_WORKSPACE.entityKey} />
+      </div>
+    )
+  }
+
   return (
     <ProgramWorkspaceProvider value={AC_WORKSPACE}>
       <ProgramWorkspacePage />

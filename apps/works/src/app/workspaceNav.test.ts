@@ -44,14 +44,10 @@ const database = itemOf('database')
 const ac = itemOf('ac')
 const mna = itemOf('mna')
 
-describe('DATABASE — 전사 원장 둘 + 하단 고정 창구', () => {
+describe('DATABASE — 전사 원장 둘', () => {
   it('둘 다 읽으면 한 그룹 두 줄이고 그 사이에 선이 없다', () => {
     const groups = buildNavGroups(userWith({ startup: 'read', networks: 'read' }), database)
-    // GUEST계정 발급은 목록이 아니라 그 아래 고정 영역이라 그룹이 갈린다.
-    expect(shape(groups)).toEqual([
-      ['startup:스타트업', 'networks:네트워크'],
-      ['startup:GUEST계정 발급'],
-    ])
+    expect(shape(groups)).toEqual([['startup:스타트업', 'networks:네트워크']])
     // 같은 층의 전사 원장이라 선을 그으면 서로 다른 층으로 보인다.
     const rows = groups[0]!.items
     expect(rows.map((b) => Boolean(b.item.dividerBefore))).toEqual([false, false])
@@ -67,16 +63,10 @@ describe('DATABASE — 전사 원장 둘 + 하단 고정 창구', () => {
     expect(visibleWorkspaces(userWith({ ac: 'write' })).map((w) => w.id)).not.toContain('database')
   })
 
-  it('GUEST계정 발급은 스타트업 구획의 하단 고정 줄이다', () => {
-    const groups = buildNavGroups(userWith({ startup: 'read' }), database)
-    expect(shape(pinnedOf(groups))).toEqual([['startup:GUEST계정 발급']])
-    // 그 탭이 탭 집합에서 빠지면 그 화면에서 원장 줄들이 활성으로 칠해진다.
-    expect(allTabs(plainGroups(groups)).has('guest-accounts')).toBe(true)
-  })
-
-  it('네트워크만 읽는 사람에게는 창구 줄이 서지 않는다 — 구획이 startup이기 때문이다', () => {
-    const groups = buildNavGroups(userWith({ networks: 'read' }), database)
+  it('GUEST계정 발급은 여기 없다 — 2026-09-07 저녁에 AC로 되돌아갔다', () => {
+    const groups = buildNavGroups(userWith({ startup: 'read', networks: 'read' }), database)
     expect(pinnedOf(groups)).toHaveLength(0)
+    expect(allTabs(plainGroups(groups)).has('guest-accounts')).toBe(false)
   })
 
   it('도착지는 읽을 수 있는 첫 구획이다 — 권한 없는 경로로 떨어지지 않는다', () => {
@@ -116,11 +106,18 @@ describe('M&A/PE — 딜 한 줄 + 거래상대 원장 두 줄', () => {
   })
 })
 
-describe('AC — 사업 목록 한 줄', () => {
-  it('GUEST계정 발급은 DATABASE로 옮겨 갔다 — AC에는 사업 목록만 남는다', () => {
+describe('AC — 사업 목록 + 하단 고정 창구', () => {
+  it('GUEST계정 발급은 목록이 아니라 그 아래 고정 영역이라 그룹이 갈린다', () => {
     const groups = buildNavGroups(userWith({ ac: 'write' }), ac)
-    expect(shape(groups)).toEqual([['ac:프로젝트']])
-    expect(pinnedOf(groups)).toHaveLength(0)
+    expect(shape(groups)).toEqual([['ac:프로젝트'], ['ac:GUEST계정 발급']])
+    // 그 탭이 탭 집합에서 빠지면 그 화면에서 사업 목록 줄이 활성으로 칠해진다.
+    expect(allTabs(plainGroups(groups)).has('guest-accounts')).toBe(true)
+  })
+
+  it('M&A는 같은 공용 subnav를 쓰지만 창구 줄은 서지 않는다', () => {
+    // 발급 줄은 사업 워크스페이스의 성질이 아니라 AC에만 준 자리다 — 게스트가 걸리는
+    // 사업이 전부 AC이기 때문이고, 같은 이유로 그 화면이 보는 사업도 AC로 좁혀 둔다.
+    expect(pinnedOf(buildNavGroups(userWith({ mna: 'read' }), mna))).toHaveLength(0)
   })
 
   it('AC를 읽지 못하면 스위처에서 항목 자체가 빠진다', () => {

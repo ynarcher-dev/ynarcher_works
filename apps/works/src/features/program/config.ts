@@ -155,7 +155,7 @@ export function defaultParticipationMode(moduleType: string): string | null {
 
 /**
  * 프로그램(프로젝트) 상태 수명주기:
- *   [제안 단계] 시도 → 선정 ┈▶ [운영 단계] 준비 → 진행중 → 종료 / (중단) 취소
+ *   [제안 단계] 제안 → 선정 ┈▶ [운영 단계] 준비 → 진행 → 완료 / (중단) 취소
  *              ↘ (미선정) 미선정 … 프로젝트 종료(terminal)
  * 선정(제안이 통과함)과 준비(운영 채비를 함)는 서로 다른 사실이라 자동으로 넘어가지 않는다 —
  * 자동 전환하면 선정만 되고 아직 착수하지 않은 사업이 원장에 남지 않아 목록·집계에서 가려낼 수 없다.
@@ -197,7 +197,7 @@ export function programStatusOptions(hasProposalStage: boolean): readonly string
     : PROGRAM_OPERATION_STATUSES
 }
 
-/** 신규 등록의 기본 상태 — 수명주기의 첫 칸(제안을 쓰면 '시도', 아니면 '준비'). */
+/** 신규 등록의 기본 상태 — 수명주기의 첫 칸(제안을 쓰면 '제안', 아니면 '준비'). */
 export function defaultProgramStatus(hasProposalStage: boolean): string {
   return hasProposalStage ? 'PROPOSED' : 'DRAFT'
 }
@@ -234,11 +234,11 @@ export function programFlowGroups(hasProposalStage: boolean) {
 }
 
 export const PROGRAM_STATUS_LABEL: Record<string, string> = {
-  PROPOSED: '시도',
+  PROPOSED: '제안',
   SELECTED: '선정',
   DRAFT: '준비',
-  OPERATING: '진행중',
-  FINISHED: '종료',
+  OPERATING: '진행',
+  FINISHED: '완료',
   CANCELLED: '취소',
   NOT_SELECTED: '미선정',
   // 구 상태값(기존 데이터 표시용) — 신규 등록에서는 사용하지 않는다.

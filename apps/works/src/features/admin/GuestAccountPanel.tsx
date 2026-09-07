@@ -61,7 +61,17 @@ function fmtDate(v: string | null): string | null {
  *
  * 근거 기획: docs/docs_planning/3_9_1_guest_unified_account.md §9·§11
  */
-export function GuestAccountPanel({ canSuspend = false }: { canSuspend?: boolean }) {
+export function GuestAccountPanel({
+  canSuspend = false,
+  entityKey,
+}: {
+  canSuspend?: boolean
+  /**
+   * 참여 사업 칸이 볼 범위. 주지 않으면 전 워크스페이스다.
+   * 자리마다 다른 이유는 `useGuestAccounts` 주석 참조 — 좁히는 것은 사업이지 계정이 아니다.
+   */
+  entityKey?: 'program' | 'ma_program'
+}) {
   const toast = useToast()
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(0)
@@ -73,7 +83,7 @@ export function GuestAccountPanel({ canSuspend = false }: { canSuspend?: boolean
   const [suspending, setSuspending] = useState<GuestAccount | null>(null)
   const [reason, setReason] = useState('')
 
-  const { data, isLoading, error } = useGuestAccounts(keyword, page)
+  const { data, isLoading, error } = useGuestAccounts(keyword, page, entityKey)
   const setActive = useSetGuestAccountActive()
   const resetMutation = useSendGuestPasswordReset()
 

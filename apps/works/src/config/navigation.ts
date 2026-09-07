@@ -94,13 +94,35 @@ export const FUND_LIST_LABEL = '운용펀드'
  * 필터 축 하나이며, 미분류 건은 그 필터의 '미지정' 선택지가 답한다 — 종전에 '기타'가 맡던
  * 사각지대 방어는 `전체 ~`가 이미 구분 무관 전부를 보여주므로 필요 없다.
  */
-function programSubnav(): SubNavGroup[] {
+function programSubnav(options: { guestAccounts?: boolean } = {}): SubNavGroup[] {
   return [
     {
       // 한 줄이다(2026-09-05). 범위(내 프로젝트/전체 프로젝트)는 메뉴가 아니라 목록 상단
       // 토글이 답한다 — 사업구분(2026-08-03)이 먼저 밟은 길과 같은 이유로, 범위를 메뉴로
       // 두면 그것이 '어디에 있는가'가 되어 상태·부서 같은 다른 축과 함께 걸 수 없다.
-      items: [{ label: PROGRAM_LIST_LABEL }],
+      items: [
+        { label: PROGRAM_LIST_LABEL },
+        // GUEST계정 발급 — 2026-09-07에 DATABASE에서 AC로 (되)옮겼다(사용자 지정).
+        //
+        // 같은 날 오전에는 반대로 옮겼고, 그때의 근거는 "게스트는 M&A·PROJECT 사업에도
+        // 걸리는데 AC를 읽지 못하는 담당자에게는 창구가 없다"였다. **그 근거가 같은 날
+        // 사라졌다** — PROJECT가 폐지되어 AC로 합쳐졌고, 게스트가 실제로 걸려 있는 사업은
+        // 전부 AC다. 창구를 어디에 둘지는 '어느 워크스페이스가 그 일을 하는가'가 정하고,
+        // 지금 그 답은 하나뿐이다.
+        //
+        // 그래서 **이 화면이 보는 사업도 AC로 좁힌다**(`entityKey`) — 자리를 옮기면서 보는
+        // 범위를 전사로 두면, AC 사이드바에 선 화면이 AC가 모르는 사업의 계정을 함께 세운다.
+        // 전사 축은 ADMIN '게스트 계정 관리'가 계속 소유한다: 정지·해제는 계정 자체에
+        // 걸리는 일이라 사업을 가려서는 안 된다.
+        //
+        // 사이드바 맨 아래 고정 영역에 선다(`pinBottom`) — 사업 목록 줄 옆에 나란히 두면
+        // 이 워크스페이스의 원장 하나로 읽힌다. 자리를 가르는 것은 `buildNavGroups`이므로
+        // `dividerBefore`는 두지 않는다(고정 영역이 이미 자기 경계선을 그어, 함께 쓰면 선이
+        // 두 줄 그어진다).
+        ...(options.guestAccounts
+          ? [{ label: 'GUEST계정 발급', tab: 'guest-accounts', pinBottom: true }]
+          : []),
+      ],
     },
   ]
 }
@@ -124,27 +146,8 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       // 대용량 업로드는 목록 상단의 버튼으로 들어간다(/startup/bulk) — 메뉴로 두면 어느
       // 원장으로 들어가는 업로드인지가 이름에 드러나지 않는다. 아처스캔은 화면이 준비되기
       // 전까지 메뉴에서 내린다(라우팅 ?tab=archerscan은 그대로 살아 있다).
-      items: [
-        { label: STARTUP_LIST_LABEL },
-        // GUEST계정 발급 — 2026-09-07에 AC에서 DATABASE로 옮겼다.
-        //
-        // 이 줄이 여는 것은 원장이 아니라 **계정을 내주는 창구**이고, 그 대상은 원장에 있는
-        // 행(참여 기업·참여 전문가)이다. AC에 있을 때 이상했던 것은 발급이 사업 업무라는
-        // 사실이 아니라 **한 사업 워크스페이스가 그 창구를 소유한 것**이었다 — 게스트는
-        // M&A·PROJECT 사업에도 걸리는데 AC를 읽지 못하는 담당자에게는 그 창구가 아예 없었다.
-        // DATABASE는 어느 실행 라인에도 속하지 않으면서 그 대상 원장이 사는 자리라, 여기
-        // 두면 발급이 특정 사업의 일로 읽히지 않는다.
-        //
-        // 구획을 startup으로 잡는 것은 발급 대상의 다수가 참여 기업이어서다. 권한이 여기서
-        // 넓어지지는 않는다 — 발급만으로는 그 게스트에게 아무 화면도 열리지 않고(매핑 전에는
-        // 0건), 문(사업별 로그인)과 계정 정지는 각각 사업 담당자와 ADMIN이 소유한다.
-        //
-        // 사이드바 맨 아래 고정 영역에 선다(`pinBottom`) — 원장 줄 옆에 나란히 두면 그것이
-        // 이 항목의 원장 하나로 읽힌다. 자리를 가르는 것은 `buildNavGroups`이므로
-        // `dividerBefore`는 두지 않는다(고정 영역이 이미 자기 경계선을 그어, 함께 쓰면 선이
-        // 두 줄 그어진다).
-        { label: 'GUEST계정 발급', tab: 'guest-accounts', pinBottom: true },
-      ],
+      // GUEST계정 발급 줄은 2026-09-07 저녁에 AC로 (되)옮겼다 — 근거는 programSubnav 주석.
+      items: [{ label: STARTUP_LIST_LABEL }],
     },
   ],
   // NETWORKS: 메뉴 한 줄이다.
@@ -164,10 +167,10 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       items: [{ label: NETWORKS_LIST_LABEL }],
     },
   ],
-  // AC: 사업 목록 한 줄이다. 게스트 계정 발급 줄은 2026-09-07에 DATABASE로 옮겼다(위
-  // `startup` 항목) — 사업 워크스페이스 하나가 전사에 걸친 창구를 소유하면, 그 워크스페이스를
-  // 읽지 못하는 담당자에게는 창구가 아예 없다.
-  ac: programSubnav(),
+  // AC: 사업 목록 + GUEST계정 발급 두 줄이다. 발급 줄이 AC에만 서는 이유는 위
+  // `programSubnav` 주석 — 게스트가 걸리는 사업이 전부 AC이고, 이 화면이 보는 사업도
+  // 그만큼 좁혔다. M&A는 사업 목록 한 줄뿐이다.
+  ac: programSubnav({ guestAccounts: true }),
   // FUND: 메뉴 한 줄이다(2026-09-05 '내 운용펀드'/'전체 운용펀드' 통합) — 범위는 목록 상단
   // 토글이 답한다. 펀드 종류(AC·VC·PE)는 2026-08-20에 이미 목록의 '구분' 필터로 내려갔다:
   // 분류를 메뉴로 두면 재원·성격·상태와 함께 걸 수 없고(VC 펀드 중 모태 재원만, 같은 질문에

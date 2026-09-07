@@ -14,7 +14,7 @@ import {
   type ProgramFilters as Filters,
 } from '@/features/program/programsPoolHooks'
 import { useProgramWorkspace } from '@/features/program/workspace'
-import { toggleAxisValue } from '@/lib/filterAxis'
+import { toggleAxisValues } from '@/lib/filterAxis'
 import type { ListScope } from '@/lib/listScope'
 
 /** 목록 페이지당 행 수(서버 사이드 페이지네이션). */
@@ -57,9 +57,9 @@ export function ProgramListTab({ scope, onScopeChange }: ProgramListTabProps) {
   const mineUserId = scope === 'mine' ? userId ?? null : null
   const { data, isLoading } = useProgramsPage(keyword, filters, page, PAGE_SIZE, mineUserId)
 
-  /** 단계 토글: 이미 걸린 상태면 빼고, 아니면 더한다(상태 필터와 같은 다중선택 규약). */
-  const toggleStatus = (status: string) =>
-    setFilters((f) => ({ ...f, statuses: toggleAxisValue(f.statuses, status) }))
+  /** 카드 한 칸이 대표하는 실제 상태를 한 번에 토글한다(합산 카드도 한 동작으로 유지). */
+  const toggleStatuses = (statuses: readonly string[]) =>
+    setFilters((f) => ({ ...f, statuses: toggleAxisValues(f.statuses, statuses) }))
 
   return (
     <div className="space-y-3">
@@ -67,7 +67,7 @@ export function ProgramListTab({ scope, onScopeChange }: ProgramListTabProps) {
         mineUserId={mineUserId}
         keyword={keyword}
         filters={filters}
-        onToggleStatus={toggleStatus}
+        onToggleStatuses={toggleStatuses}
         onClearStatuses={() => setFilters((f) => ({ ...f, statuses: [] }))}
       />
 

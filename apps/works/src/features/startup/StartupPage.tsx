@@ -2,7 +2,6 @@ import { EmptyState, PageHeader } from '@ynarcher/ui'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '@/auth/authStore'
 import { STARTUP_LIST_LABEL } from '@/config/navigation'
-import { GuestAccountPanel } from '@/features/admin/GuestAccountPanel'
 import { StartupPoolTab } from '@/features/startup/StartupPoolTab'
 import { useListScope } from '@/lib/listScope'
 
@@ -30,16 +29,12 @@ export function StartupPage() {
   const tab = params.get('tab')
   const pending = tab ? PENDING_TABS[tab] : undefined
 
-  // 게스트 계정: ADMIN·OFFICE와 **같은 화면**을 권한만 낮춰 세운다(canSuspend 없음 —
-  // 정지·해제는 ADMIN이 소유한다). 스타트업 원장을 읽지 않으므로 목록과 나란한 분기다.
-  // 2026-09-07 AC에서 이관 — 근거는 config/navigation.ts의 startup 항목 주석.
+  // GUEST계정 발급은 2026-09-07 저녁에 AC로 되돌아갔다(근거는 config/navigation.ts의
+  // programSubnav 주석). 이 주소는 하루도 안 되는 사이에 두 번 옮겨 다녔으므로 목록으로
+  // 떨어뜨리지 않고 **새 자리로 보낸다** — 그 사이에 즐겨찾기한 사람에게 목록을 보여 주면
+  // 화면이 왜 다른 것을 열었는지 답하지 못한다.
   if (tab === 'guest-accounts') {
-    return (
-      <div className="space-y-5">
-        <PageHeader title="GUEST계정 발급" />
-        <GuestAccountPanel />
-      </div>
-    )
+    return <Navigate to="/ac?tab=guest-accounts" replace />
   }
 
   if (tab && !pending) {
