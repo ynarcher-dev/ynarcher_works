@@ -77,32 +77,36 @@ function MaBuyerView({ record }: { record: MaBuyerRow }) {
 
           <div className="mt-5 border-t border-gray-100 pt-4">
             <InfoGrid>
-              {/* 연결된 스타트업 원장 행. 상호참조는 배지가 아니라 텍스트 링크다 — 그 기업을
-                  볼 권한이 없으면 임베드가 비어 오고, 그때 이 줄은 링크 없이 물러난다
-                  (죽은 배지가 남지 않는다). */}
-              <InfoField
-                label="스타트업 DB"
-                value={
-                  <RefLinkList
-                    as={Link}
-                    items={
-                      record.startup_id
-                        ? [
-                            {
-                              key: record.startup_id,
-                              label: record.startup?.name ?? '연결된 기업',
-                              to: record.startup ? `/startup/discovered/${record.startup_id}` : null,
-                              title: record.startup
-                                ? undefined
-                                : '이 기업을 열람할 권한이 없습니다.',
-                            },
-                          ]
-                        : []
-                    }
-                    empty="연결 안 됨"
-                  />
-                }
-              />
+              {/* 연결된 스타트업 원장 행. **연결이 있을 때만 선다** — 대부분의 바이어는 우리
+                  원장에 없는 기업이라(인수하는 쪽은 대개 우리가 발굴·투자한 곳이 아니다)
+                  '연결 안 됨'을 상시로 세우면 거의 모든 상세에 아무것도 말하지 않는 줄이 하나
+                  더 붙는다. 값이 빈 것을 알려야 하는 칸(채워 넣을 대기열)과 달리, 이 줄은
+                  없는 것이 정상이라 빈 상태 자체가 정보가 아니다.
+
+                  상호참조는 배지가 아니라 텍스트 링크다 — 그 기업을 볼 권한이 없으면 임베드가
+                  비어 오고, 그때 이 줄은 링크 없이 물러난다(죽은 배지가 남지 않는다). */}
+              {record.startup_id && (
+                <InfoField
+                  label="스타트업 DB"
+                  value={
+                    <RefLinkList
+                      as={Link}
+                      items={[
+                        {
+                          key: record.startup_id,
+                          label: record.startup?.name ?? '연결된 기업',
+                          to: record.startup
+                            ? `/startup/discovered/${record.startup_id}`
+                            : null,
+                          title: record.startup
+                            ? undefined
+                            : '이 기업을 열람할 권한이 없습니다.',
+                        },
+                      ]}
+                    />
+                  }
+                />
+              )}
               <InfoField
                 label="가용자금"
                 value={
