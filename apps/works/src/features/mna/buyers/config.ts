@@ -18,6 +18,13 @@ export const MA_BUYER_LIST_LABEL = 'M&A BUYER'
  */
 export const MA_BUYER_BASE_PATH = '/buyers'
 
+/**
+ * 자료·코멘트·회의록 링크가 이 원장을 가리킬 때 쓰는 다형 키(단수형).
+ * 기여 로그의 `entity_table`은 이 값이 아니라 표 이름(`ma_buyers`)이다 — 트리거 인자가 그
+ * 값이고, update_entity/deactivate_entity가 표 이름으로 트리거 존재를 확인한다.
+ */
+export const MA_BUYER_TARGET_TYPE = 'ma_buyer'
+
 /** 목록에서 부르는 이름(빈 상태 문구·등록 버튼). */
 export const MA_BUYER_NOUN = '바이어'
 

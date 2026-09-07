@@ -5,6 +5,7 @@ import {
   type LedgerCondition,
   type LedgerPage,
 } from '@/features/master/ledgerPage'
+import type { Contribution } from '@/features/networks/hooks'
 import { MA_BUYER_TABLE, type MaBuyerRow } from '@/features/mna/buyers/config'
 import { supabase } from '@/lib/supabase'
 
@@ -60,12 +61,10 @@ export function useMaBuyerRecord(id: string | undefined) {
 }
 
 /**
- * 등록·수정·삭제.
+ * 등록.
  *
- * 공용 RPC(update_entity·deactivate_entity)를 쓰지 않는다 — 그 둘은 변동 이력 트리거가 붙은
- * 원장만 받는 허용 목록(app.has_contribution_trigger)이고, 이 원장은 그 트리거를 아직 달지
- * 않았다(근거는 마이그레이션 주석). 그래서 사유를 묻지 않고 곧장 원장에 쓴다.
- * 쓰기 자격은 어느 경로로 오든 RLS(can_write_workspace('mna'))가 판정한다.
+ * 변동 이력 'created'는 화면이 아니라 원장 트리거가 같은 트랜잭션에서 남긴다
+ * (20260907130000) — 손으로 남기던 시절에는 임포터·일괄 이관이 이력에서 통째로 빠졌다.
  */
 export function useCreateMaBuyer() {
   const qc = useQueryClient()
@@ -83,28 +82,79 @@ export function useCreateMaBuyer() {
   })
 }
 
+/**
+ * 수정(사유 필수).
+ *
+ * 사유는 원장 컬럼이 아니라 기여 로그의 note로만 남고 트리거는 사유를 알 수 없으므로,
+ * 사유를 트랜잭션 컨텍스트(app.contribution_ctx)에 실어 주는 update_entity RPC를 경유한다.
+ * 그 RPC는 SECURITY INVOKER라 쓰기 권한은 이 원장의 RLS가 그대로 판정한다.
+ */
 export function useUpdateMaBuyer() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, values }: { id: string; values: Record<string, unknown> }) => {
-      const { error } = await supabase.from(MA_BUYER_TABLE).update(values).eq('id', id)
+    mutationFn: async ({
+      id,
+      values,
+      reason,
+    }: {
+      id: string
+      values: Record<string, unknown>
+      reason: string
+    }) => {
+      const { error } = await supabase.rpc('update_entity', {
+        p_table: MA_BUYER_TABLE,
+        p_id: id,
+        p_values: values,
+        p_note: reason,
+      })
       if (error) throw error
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['ma-buyers'] }),
+    onSuccess: (_v, { id }) => {
+      void qc.invalidateQueries({ queryKey: ['ma-buyers'] })
+      void qc.invalidateQueries({ queryKey: ['ma-buyers', 'contributions', id] })
+    },
   })
 }
 
-/** 소프트 삭제. 물리 삭제 금지 원칙에 따라 행은 남기고 deleted_at만 찍는다. */
+/**
+ * 사유를 남기는 삭제(소프트). 원장 UPDATE와 사유 기록이 한 트랜잭션에 묶이므로,
+ * '삭제 기록만 남고 행은 살아 있는' 어긋난 상태가 생기지 않는다.
+ */
 export function useDeleteMaBuyer() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from(MA_BUYER_TABLE)
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', id)
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      const { error } = await supabase.rpc('deactivate_entity', {
+        p_entity_key: MA_BUYER_TABLE,
+        p_id: id,
+        p_reason: reason,
+      })
       if (error) throw error
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['ma-buyers'] }),
+    onSuccess: (_v, { id }) => {
+      void qc.invalidateQueries({ queryKey: ['ma-buyers'] })
+      void qc.invalidateQueries({ queryKey: ['ma-buyers', 'contributions', id] })
+    },
+  })
+}
+
+/**
+ * 변동 이력. 기록(쓰기)은 클라이언트에 두지 않는다 — 원장 트리거가 남긴다.
+ * 최초 기여순(오래된 순)으로 가져온다: `uniqueContributors`가 그 순서를 전제한다.
+ */
+export function useMaBuyerContributions(id: string | undefined) {
+  return useQuery({
+    queryKey: ['ma-buyers', 'contributions', id],
+    enabled: Boolean(id),
+    queryFn: async (): Promise<Contribution[]> => {
+      const { data, error } = await supabase
+        .from('entity_contributions')
+        .select('*')
+        .eq('entity_table', MA_BUYER_TABLE)
+        .eq('entity_id', id)
+        .order('created_at', { ascending: true })
+      if (error) throw error
+      return (data ?? []) as Contribution[]
+    },
   })
 }

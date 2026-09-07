@@ -1,15 +1,20 @@
 import { CardShell, Field, Input, useToast } from '@ynarcher/ui'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { useEditReasonPrompt } from '@/components/EditReasonPrompt'
 import { FormTopBar } from '@/components/FormTopBar'
 import { RichTextEditor } from '@/components/RichTextEditor'
 import { useTagTokenField } from '@/features/admin/TagTokenField'
 import {
   MAX_INDUSTRIES,
   MA_BUYER_NOUN,
+  MA_BUYER_TARGET_TYPE,
   type MaBuyerRow,
 } from '@/features/mna/buyers/config'
 import { useCreateMaBuyer, useUpdateMaBuyer } from '@/features/mna/buyers/hooks'
+import { MaterialPanel } from '@/features/networks/MaterialPanel'
+import { PendingMaterialPanel } from '@/features/networks/PendingMaterialPanel'
+import { usePendingMaterials } from '@/features/networks/pendingMaterials'
 
 interface MaBuyerFormValues {
   name: string
@@ -35,13 +40,19 @@ interface Props {
  * 빈 칸이 많은 폼은 무엇을 적어야 하는 자리인지 스스로 답하지 못한다. 칸으로 남은 넷은
  * 목록을 좁히거나 정렬하는 값이라는 공통점 하나로 묶인다(근거: 원장 마이그레이션 주석).
  *
- * 폼의 카드 구성·순서는 조회 화면과 같다 — 읽던 자리에서 그대로 고치게 한다.
+ * 카드 구성·배치는 조회 화면과 같다 — 읽던 자리에서 그대로 고치게 한다. 우측 자료 관리도
+ * 같은 자리에 서되 여기서는 편집 가능하고, 등록 모드에서는 아직 붙일 레코드가 없어
+ * 보류 목록(`PendingMaterialPanel`)이 그 자리를 대신한 뒤 저장 직후 한꺼번에 올라간다.
  */
 export function MaBuyerForm({ recordId, initial, onDone, onCancel, backTo }: Props) {
   const toast = useToast()
   const create = useCreateMaBuyer()
   const update = useUpdateMaBuyer()
   const isEdit = Boolean(recordId)
+  // 수정 저장은 사유를 받아야 확정된다 — 사유는 변동 이력의 note로 남는다.
+  const { askReason, reasonModal } = useEditReasonPrompt()
+  // 등록 모드에서 미리 고른 자료. 저장 성공 직후 새 id로 일괄 업로드한다.
+  const pending = usePendingMaterials()
 
   const {
     register,
@@ -86,12 +97,22 @@ export function MaBuyerForm({ recordId, initial, onDone, onCancel, backTo }: Pro
 
     try {
       if (isEdit && recordId) {
-        await update.mutateAsync({ id: recordId, values: payload })
+        const reason = await askReason()
+        if (!reason) return
+        await update.mutateAsync({ id: recordId, values: payload, reason })
         toast.show(`${MA_BUYER_NOUN} 정보를 수정했습니다.`, 'success')
         onDone({ id: recordId })
       } else {
         const newId = await create.mutateAsync(payload)
-        toast.show(`${MA_BUYER_NOUN}을(를) 등록했습니다.`, 'success')
+        // 등록 전에 첨부한 자료를 새 레코드에 올린다. 실패해도 등록 자체는 되돌리지 않는다 —
+        // 자료는 상세에서 다시 붙일 수 있지만 되돌린 등록은 입력한 것이 통째로 사라진다.
+        const { failed } = await pending.flush(newId, () => MA_BUYER_TARGET_TYPE)
+        toast.show(
+          failed > 0
+            ? `${MA_BUYER_NOUN}을(를) 등록했지만 자료 ${failed}건 업로드에 실패했습니다. 상세페이지에서 다시 첨부해 주세요.`
+            : `${MA_BUYER_NOUN}을(를) 등록했습니다.`,
+          failed > 0 ? 'warning' : 'success',
+        )
         onDone({ id: newId })
       }
     } catch {
@@ -101,6 +122,8 @@ export function MaBuyerForm({ recordId, initial, onDone, onCancel, backTo }: Pro
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      {reasonModal}
+      {/* 상단 바(뒤로가기 ↔ 취소·확정) — 조회 화면의 '수정' 버튼과 같은 자리를 쓴다. */}
       <FormTopBar
         backTo={backTo}
         mode={isEdit ? 'edit' : 'create'}
@@ -108,48 +131,61 @@ export function MaBuyerForm({ recordId, initial, onDone, onCancel, backTo }: Pro
         busy={isSubmitting}
       />
 
-      <CardShell>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="기업명" required error={errors.name?.message}>
-            <Input
-              invalid={Boolean(errors.name)}
-              {...register('name', { required: '기업명은 필수입니다.' })}
-            />
-          </Field>
-          <Field
-            label="가용자금"
-            error={errors.fundsMillion?.message}
-            hint="백만원 단위로 적습니다. 범위나 조건이 붙는 금액은 상세내용에 적습니다."
-          >
-            <Input
-              inputMode="numeric"
-              placeholder="예: 50000"
-              invalid={Boolean(errors.fundsMillion)}
-              {...register('fundsMillion', {
-                validate: (v) =>
-                  v.trim() === '' ||
-                  /^[0-9,]+$/.test(v.trim()) ||
-                  '숫자만 입력합니다(백만원 단위).',
-              })}
-            />
-          </Field>
-          <Field label="분야" hint={industryField.hint} hintInline={industryField.hintInline}>
-            {industryField.control}
-          </Field>
-          <Field label="희망사항" hint="한 줄 요약입니다. 자세한 조건은 상세내용에 적습니다.">
-            <Input placeholder="예: 제조 분야 경영권 인수" {...register('wish')} />
-          </Field>
-        </div>
-      </CardShell>
+      {/* 조회와 같은 3열 배치: 좌측 2/3 편집 카드 + 우측 1/3 자료 관리. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="space-y-4 lg:col-span-2">
+          <CardShell>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="기업명" required error={errors.name?.message}>
+                <Input
+                  invalid={Boolean(errors.name)}
+                  {...register('name', { required: '기업명은 필수입니다.' })}
+                />
+              </Field>
+              <Field
+                label="가용자금"
+                error={errors.fundsMillion?.message}
+                hint="백만원 단위로 적습니다. 범위나 조건이 붙는 금액은 상세내용에 적습니다."
+              >
+                <Input
+                  inputMode="numeric"
+                  placeholder="예: 50000"
+                  invalid={Boolean(errors.fundsMillion)}
+                  {...register('fundsMillion', {
+                    validate: (v) =>
+                      v.trim() === '' ||
+                      /^[0-9,]+$/.test(v.trim()) ||
+                      '숫자만 입력합니다(백만원 단위).',
+                  })}
+                />
+              </Field>
+              <Field label="분야" hint={industryField.hint} hintInline={industryField.hintInline}>
+                {industryField.control}
+              </Field>
+              <Field label="희망사항" hint="한 줄 요약입니다. 자세한 조건은 상세내용에 적습니다.">
+                <Input placeholder="예: 제조 분야 경영권 인수" {...register('wish')} />
+              </Field>
+            </div>
+          </CardShell>
 
-      <CardShell>
-        <p className="mb-3 text-caption font-medium text-gray-700">상세내용</p>
-        <RichTextEditor
-          value={overview}
-          onChange={setOverview}
-          placeholder="인수 배경·희망 조건·미팅 메모 등을 자유롭게 적습니다."
-        />
-      </CardShell>
+          <CardShell>
+            <p className="mb-3 text-caption font-medium text-gray-700">상세내용</p>
+            <RichTextEditor
+              value={overview}
+              onChange={setOverview}
+              placeholder="인수 배경·희망 조건·미팅 메모 등을 자유롭게 적습니다."
+            />
+          </CardShell>
+        </div>
+
+        <div className="space-y-4 lg:col-span-1">
+          {isEdit && recordId ? (
+            <MaterialPanel targetType={MA_BUYER_TARGET_TYPE} targetId={recordId} />
+          ) : (
+            <PendingMaterialPanel slot={MA_BUYER_TARGET_TYPE} pending={pending} />
+          )}
+        </div>
+      </div>
     </form>
   )
 }

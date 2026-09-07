@@ -1,3 +1,4 @@
+import { MA_BUYER_BASE_PATH, MA_BUYER_TABLE } from '@/features/mna/buyers/config'
 import { NETWORK_TABLE, NETWORK_TARGET_TYPE } from '@/features/networks/config'
 
 /**
@@ -15,13 +16,17 @@ import { NETWORK_TABLE, NETWORK_TARGET_TYPE } from '@/features/networks/config'
  */
 export type NetworkMinuteLinkType = typeof NETWORK_TARGET_TYPE
 
-/** 연동 가능한 대상 종류. 사업 원장의 entityKey(program/ma_program/project_program) + startup + fund + NETWORKS. */
+/**
+ * 연동 가능한 대상 종류. 사업 원장의 entityKey(program/ma_program/project_program) +
+ * startup + fund + NETWORKS + M&A BUYER.
+ */
 export type MinuteLinkTargetType =
   | 'program'
   | 'ma_program'
   | 'project_program'
   | 'startup'
   | 'fund'
+  | 'ma_buyer'
   | NetworkMinuteLinkType
 
 /**
@@ -52,6 +57,7 @@ export const MINUTE_LINK_TARGET_TYPES: MinuteLinkTargetType[] = [
   'startup',
   'fund',
   'network',
+  'ma_buyer',
 ]
 
 /** 외부 참석자로 걸 수 있는 종류 — 회의에 오는 것은 사람이고 사람은 네트워크 원장에 있다. */
@@ -101,6 +107,15 @@ export const MINUTE_LINK_TARGETS: Record<MinuteLinkTargetType, MinuteLinkTargetM
     // 사람·조직 원장이라 부가 표기 자리에는 소속을 넣어 동명이인을 가른다.
     codeColumn: 'affiliation',
     toPath: (id) => `/networks/record/${id}`,
+  },
+  // M&A BUYER — 인수 희망 주체 원장. 자리는 DATABASE지만 권한 키는 mna다.
+  // 부가 표기에 희망사항을 넣는다: 이름이 비슷한 기업이 여럿일 때 가르는 것이 그 한 줄이다.
+  ma_buyer: {
+    kindLabel: 'M&A BUYER',
+    table: MA_BUYER_TABLE,
+    titleColumn: 'name',
+    codeColumn: 'wish',
+    toPath: (id) => `${MA_BUYER_BASE_PATH}/${id}`,
   },
 }
 
