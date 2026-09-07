@@ -1,20 +1,19 @@
 import { Banner, Button, Modal, Spinner, cardText, cn } from '@ynarcher/ui'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { EntityRow } from '@/features/master/entityHooks'
 import { formatBytes } from '@/features/networks/materialHooks'
 import {
   AI_FILL_LIMITS,
   useAiFill,
   type AiFillResult,
   type AiSource,
-} from '@/features/startup/startupAiFill'
-import { AI_CARDS, type AiCardKey } from '@/features/startup/startupAiCards'
-import { writableCount } from '@/features/startup/startupAiExtractState'
-import type { AiFillOutcome } from '@/features/startup/startupAiMerge'
-import { useStartupAiExtracts } from '@/features/startup/useStartupAiExtracts'
-import { StartupAiFillGrid } from '@/features/startup/StartupAiFillGrid'
-import { StartupAiFillResultPanel } from '@/features/startup/StartupAiFillResultPanel'
-import { AiBlockedList } from '@/features/startup/StartupAiFillPicker'
+} from '@/features/ai/aiFillClient'
+import { cardKeysOf, cardLabelMap, type AiFillCatalog } from '@/features/ai/aiCatalog'
+import type { AiFillOutcome } from '@/features/ai/aiTypes'
+import { writableCount } from '@/features/ai/aiExtractState'
+import { useAiExtracts } from '@/features/ai/useAiExtracts'
+import { AiFillGrid } from '@/features/ai/AiFillGrid'
+import { AiFillResultPanel } from '@/features/ai/AiFillResultPanel'
+import { AiBlockedList } from '@/features/ai/AiFillPicker'
 import {
   cellCount,
   gridCards,
@@ -26,16 +25,16 @@ import {
   toggleGrid,
   toggleSource,
   type AiGrid,
-} from '@/features/startup/startupAiGrid'
+} from '@/features/ai/aiGrid'
 
 /**
  * 'AI 작성하기' 모달 — 카드마다 읽을 자료를 격자에서 고르고 한 번에 실행한다.
  *
- * 자료 목록과 기준 값(`snapshot`)을 **받아서** 쓴다. 목록이 준비된 뒤에 열리는 것을 버튼이
+ * 자료 목록과 규격(`catalog`)을 **받아서** 쓴다. 목록이 준비된 뒤에 열리는 것을 버튼이
  * 보장한다.
  *
- * 기준 값이 원장 행이 아니라 **지금 폼에 적힌 값**인 것이 요점이다 — 격자 카드 열의 '작성됨'은
- * 저장된 값이 아니라 화면에 보이는 값을 두고 하는 말이어야 한다.
+ * 카드의 '작성됨'이 저장된 값이 아니라 **지금 폼에 적힌 값**을 두고 하는 말인 것이 요점이다 —
+ * 그 판정은 값을 가진 쪽(카탈로그를 만드는 화면)이 미리 해서 넘긴다.
  *
  * **실행도 결과도 이 창 안에서 일어난다**(2026-09-06 사용자 지정). 종전에는 실행하는 순간
  * 창이 격자를 걷고 스피너만 남겼다가 결과가 오면 창을 닫고 폼 맨 위에 안내를 세웠다. 그러면
@@ -60,39 +59,56 @@ import {
  * 카드가 많으면 탐색 축별 요청으로 보내고 자료는 조합이 몇 벌이든 한 번만 올린다. 그래서 이
  * 화면에는 묶음이라는 말이 없다.
  *
- * 격자 상태를 위(`StartupAiFillButton`)에서 받는 이유는 **재실행** 때문이다. 한 요청이
- * 실패하면 그 카드만 다시 돌려야 하는데, 창을 닫을 때 선택이 사라지면 열넷을 처음부터 다시
- * 골라야 한다.
+ * 격자 상태를 위(`AiFillButton`)에서 받는 이유는 **재실행** 때문이다. 한 요청이 실패하면 그
+ * 카드만 다시 돌려야 하는데, 창을 닫을 때 선택이 사라지면 처음부터 다시 골라야 한다.
  *
  * 봉투는 그대로 상위로 올린다. 병합은 폼이 자기 살아 있는 값 위에서 하고, 그 결과(`outcome`)를
  * 돌려주면 이 창이 받아 세운다 — 합치는 판단이 두 곳에 살지 않게 한다.
  *
  * 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §4
  */
-export function StartupAiFillModal({
+
+/**
+ * 창 제목 옆 말풍선의 공통 문구.
+ *
+ * 대상이 무엇이든 같은 말이라 여기 한 번만 적는다 — 대상마다 복사해 두면 규칙이 바뀌는 날
+ * 한쪽만 고쳐지고, 그때 어느 쪽이 지금의 규칙인지 화면이 답하지 못한다. 대상별로 덧붙일 말은
+ * 카탈로그의 `help`가 갖고 이 문장 앞에 선다.
+ */
+const COMMON_HELP =
+  '카드마다 읽을 자료를 지정하면 그 자료만 근거로 초안을 만듭니다. 카드가 쓰지 않을 자료를 빼면 결과가 정확해집니다 — 재무 카드에 발표 자료가 함께 들어가면 확정 재무 대신 목표 수치를 가져올 수 있습니다. 선택한 자료는 외부 AI(Google Gemini)로 전송되며 반출 기록이 남습니다. 결과는 편집 화면에 채워지고 저장 전까지 원장은 바뀌지 않습니다. 먼저 ‘선택 자료 분석하기’로 자료를 열어 두면 다음 실행부터 같은 자료를 다시 읽지 않고, 원본 대신 뽑아 낸 글자만 외부 AI로 나갑니다. 문서를 눈으로 보듯 이해하는 것은 PDF와 이미지뿐입니다 — 엑셀·워드·파워포인트는 서버가 열어 글자와 표로 바꿔 보내므로 표는 그대로 옮겨지지만, 발표 자료(PPTX)는 그림과 배치가 빠집니다. IR 자료는 PDF로 저장해 올리는 편이 낫습니다.'
+
+export function AiFillModal<K extends string>({
+  catalog,
   sources,
-  snapshot,
-  startupId,
-  companyName,
+  targetId,
+  subjectName,
   grid,
   onGrid,
   onClose,
   onFilled,
 }: {
+  /** 이 대상의 규격 — 카드·묶음·두드릴 함수. */
+  catalog: AiFillCatalog<K>
   sources: AiSource[]
-  snapshot: EntityRow
-  startupId?: string
-  companyName?: string
-  grid: AiGrid
-  onGrid: (next: AiGrid) => void
+  /** 수정 모드의 대상 id. 등록 모드에는 아직 없다. */
+  targetId?: string
+  /** 프롬프트에 실을 대상의 이름. */
+  subjectName?: string
+  grid: AiGrid<K>
+  onGrid: (next: AiGrid<K>) => void
   onClose: () => void
   /** 폼에 초안을 얹고 **그 결과**를 돌려준다. 창은 그것을 아래 패널에 세운다. */
-  onFilled: (result: AiFillResult, cards: AiCardKey[]) => AiFillOutcome
+  onFilled: (result: AiFillResult<K>, cards: K[]) => AiFillOutcome<K>
 }) {
-  const fill = useAiFill()
+  const fill = useAiFill<K>()
   const [error, setError] = useState<string | null>(null)
-  const [outcome, setOutcome] = useState<AiFillOutcome | null>(null)
-  const extracts = useStartupAiExtracts(sources, startupId)
+  const [outcome, setOutcome] = useState<AiFillOutcome<K> | null>(null)
+  const extracts = useAiExtracts(catalog.extractEndpoint, sources, targetId)
+
+  const allCardKeys = useMemo(() => cardKeysOf(catalog.cards), [catalog.cards])
+  const cardLabel = useMemo(() => cardLabelMap(catalog.cards), [catalog.cards])
+
   /**
    * 결과 패널로 데려간다.
    *
@@ -115,10 +131,10 @@ export function StartupAiFillModal({
 
   // 자료가 바뀌었을 수 있다(실행 뒤 첨부를 지우거나 더한 경우). 없는 자료를 가리키는 칸을
   // 걷지 않으면 카드 열의 건수가 거짓을 말한다 — 3건이라 적혀 있는데 읽는 것은 둘이다.
-  const live = useMemo(() => pruneGrid(grid, allKeys), [grid, allKeys])
+  const live = useMemo(() => pruneGrid(grid, allKeys, allCardKeys), [grid, allKeys, allCardKeys])
 
-  const cards = gridCards(live)
-  const chosenKeys = new Set(gridSourceKeys(live))
+  const cards = gridCards(live, allCardKeys)
+  const chosenKeys = new Set(gridSourceKeys(live, allCardKeys))
   const chosen = readable.filter((s) => chosenKeys.has(s.key))
   // 자료는 카드가 몇이든 **한 번만** 올라가므로 크기도 한 번만 센다.
   const totalBytes = chosen.reduce((sum, s) => sum + Number(s.bytes ?? 0), 0)
@@ -134,8 +150,8 @@ export function StartupAiFillModal({
   const analyzable = chosen.filter((s) => extracts.statusOf(s).analyzable)
 
   // 켜진 카드 중 이미 값이 있는 것 — 무엇이 바뀌는지는 줄마다가 아니라 여기서 한 번 말한다
-  // (줄마다 세우면 같은 경고가 열두 번 서서 정작 어느 카드인지가 그 문장에 묻힌다).
-  const overwritten = AI_CARDS.filter((c) => cards.includes(c.key) && c.filled(snapshot))
+  // (줄마다 세우면 같은 경고가 카드 수만큼 서서 정작 어느 카드인지가 그 문장에 묻힌다).
+  const overwritten = catalog.cards.filter((c) => cards.includes(c.key) && c.filled)
 
   const run = async () => {
     setError(null)
@@ -144,8 +160,9 @@ export function StartupAiFillModal({
     setOutcome(null)
     try {
       const result = await fill.mutateAsync({
-        startupId,
-        companyName,
+        endpoint: catalog.fillEndpoint,
+        targetId,
+        subjectName,
         sources: chosen,
         cards,
         assignments: live,
@@ -167,7 +184,7 @@ export function StartupAiFillModal({
       dismissible={false}
       size="3xl"
       title="AI 작성하기"
-      help="카드마다 읽을 자료를 지정하면 그 자료만 근거로 초안을 만듭니다. 카드가 쓰지 않을 자료를 빼면 결과가 정확해집니다 — 재무 카드에 발표 자료가 함께 들어가면 확정 재무 대신 목표 수치를 가져올 수 있습니다. 선택한 자료는 외부 AI(Google Gemini)로 전송되며 반출 기록이 남습니다. 결과는 편집 화면에 채워지고 저장 전까지 원장은 바뀌지 않습니다. 먼저 '선택 자료 분석하기'로 자료를 열어 두면 다음 실행부터 같은 자료를 다시 읽지 않고, 원본 대신 뽑아 낸 글자만 외부 AI로 나갑니다. 문서를 눈으로 보듯 이해하는 것은 PDF와 이미지뿐입니다 — 엑셀·워드·파워포인트는 서버가 열어 글자와 표로 바꿔 보내므로 표는 그대로 옮겨지지만, 발표 자료(PPTX)는 그림과 배치가 빠집니다. IR 자료는 PDF로 저장해 올리는 편이 낫습니다."
+      help={catalog.help ? `${catalog.help} ${COMMON_HELP}` : COMMON_HELP}
       footer={
         <div className="flex items-center justify-end gap-2">
           {/* 결과가 서기 전까지는 창을 접는 것이 취소이고, 결과가 선 뒤에는 값이 이미 폼에
@@ -215,31 +232,16 @@ export function StartupAiFillModal({
             className={cn(busy && 'pointer-events-none select-none opacity-60 blur-[2px]')}
             aria-busy={busy}
           >
-            <StartupAiFillGrid
+            <AiFillGrid
               sources={readable}
-              record={snapshot}
+              cards={catalog.cards}
+              groups={catalog.groups}
               grid={live}
               onCell={(card, key) => onGrid(toggleCell(live, card, key))}
               onCard={(card) => onGrid(toggleCard(live, card, allKeys))}
               onGroup={(groupCards) => onGrid(toggleCardGroup(live, groupCards, allKeys))}
-              onSource={(key) =>
-                onGrid(
-                  toggleSource(
-                    live,
-                    key,
-                    AI_CARDS.map((c) => c.key),
-                  ),
-                )
-              }
-              onAll={() =>
-                onGrid(
-                  toggleGrid(
-                    live,
-                    AI_CARDS.map((c) => c.key),
-                    allKeys,
-                  ),
-                )
-              }
+              onSource={(key) => onGrid(toggleSource(live, key, allCardKeys))}
+              onAll={() => onGrid(toggleGrid(live, allCardKeys, allKeys))}
               extracts={extracts}
             />
           </div>
@@ -259,7 +261,7 @@ export function StartupAiFillModal({
           <p className={cardText.meta}>
             카드 {cards.length}개 · 자료 {chosen.length}건 · 합계 {formatBytes(totalBytes)}
           </p>
-          <p className={cardText.meta}>선택한 칸 {cellCount(live)}개</p>
+          <p className={cardText.meta}>선택한 칸 {cellCount(live, allCardKeys)}개</p>
         </div>
 
         {extracts.error && <Banner tone="warning">{extracts.error}</Banner>}
@@ -297,7 +299,7 @@ export function StartupAiFillModal({
 
         {/* 실행 전에는 사용 방법, 실행 뒤에는 결과 — 한 자리를 두 내용이 이어 쓴다. */}
         <div ref={resultRef}>
-          <StartupAiFillResultPanel outcome={outcome} />
+          <AiFillResultPanel outcome={outcome} cardLabel={cardLabel} />
         </div>
       </div>
     </Modal>

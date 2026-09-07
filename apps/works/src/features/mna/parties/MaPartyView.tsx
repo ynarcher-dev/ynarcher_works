@@ -1,16 +1,13 @@
 import {
   Badge,
-  CardShell,
-  cardText,
-  DensityProvider,
   EmptyState,
+  EntityHeaderCard,
   InfoField,
   InfoGrid,
   PanelCard,
-  RefLinkList,
 } from '@ynarcher/ui'
-import { Link } from 'react-router-dom'
 import { RichTextViewer } from '@/components/RichTextEditor'
+import { MaQuickReviewSection } from '@/features/mna/parties/MaQuickReviewSection'
 import { toWon, type MaPartyConfig, type MaPartyRow } from '@/features/mna/parties/config'
 import { useMaPartyContributions } from '@/features/mna/parties/hooks'
 import { SensitiveValue } from '@/features/master/SensitiveValue'
@@ -20,8 +17,13 @@ import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { RelatedMinutesPanel } from '@/features/office/minutes/RelatedMinutesPanel'
 import type { MinuteLinkTargetType } from '@/features/office/minutes/minuteLinks'
 
-function formatDate(v: string | null | undefined): string {
-  return v && v.length >= 10 ? v.slice(0, 10) : '-'
+/**
+ * 날짜 한 칸. 값이 없으면 하이픈을 직접 찍지 않고 `null`을 돌려준다 — 빈 값의 글자와 색은
+ * `InfoField`가 `EmptyValue`에 맡겨 한곳에서 정한다. 직접 찍으면 값과 같은 진한 톤이 되어
+ * '수정일: -'가 실제 값만큼 무겁게 읽힌다.
+ */
+function formatDate(v: string | null | undefined): string | null {
+  return v && v.length >= 10 ? v.slice(0, 10) : null
 }
 
 /**
@@ -45,60 +47,29 @@ export function MaPartyView({
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
       <div className="space-y-4 lg:col-span-2">
-        <CardShell>
-          {/* 헤더 규격은 STARTUP 상세와 같다 — 이름 줄에 분야 배지, 그 아래 한 줄 부제.
-              상세 헤더는 카드 안에 있어도 페이지 맥락이라 밀도를 올린다: card 밀도를 그대로
-              두면 24px 제목 옆 배지가 11px로 찍혀 먼지처럼 보인다. */}
-          <DensityProvider value="page">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-title-md font-bold text-gray-900">{record.name}</h1>
-              {industries.map((ind) => (
-                <Badge key={ind} tone="neutral">
-                  {ind}
-                </Badge>
-              ))}
-            </div>
-          </DensityProvider>
-          {/* 희망사항이 이 원장의 한 줄 요약이다 — 기업명 바로 아래에서 '무엇을 찾는 곳인가'를
-              먼저 답한다. 아래 정보행에 다시 적지 않는다(같은 값을 두 곳에 두면 어긋난다). */}
-          <p className={`mt-1 ${cardText.subtitle}`}>{record.wish || '-'}</p>
+        {/* 헤더 규격(제목·배지·부제·구분선·정보행)은 화면이 아니라 공용 `EntityHeaderCard`가
+            소유한다 — STARTUP·NETWORKS·FUND 상세와 같은 카드다.
 
-          <div className="mt-5 border-t border-gray-100 pt-4">
+            부제 자리에 희망사항을 두는 것은 이 원장의 한 줄 요약이기 때문이다 — 기업명 바로
+            아래에서 '무엇을 찾는 곳인가'를 먼저 답한다. 아래 정보행에 다시 적지 않는다(같은
+            값을 두 곳에 두면 어긋난다). */}
+        <EntityHeaderCard
+          title={record.name}
+          badges={industries.map((ind) => (
+            <Badge key={ind} tone="neutral">
+              {ind}
+            </Badge>
+          ))}
+          description={record.wish}
+          info={
             <InfoGrid>
-              {/* 연결된 스타트업 원장 행. **연결이 있을 때만 선다** — 대부분의 거래상대는 우리
-                  원장에 없는 기업이라 '연결 안 됨'을 상시로 세우면 거의 모든 상세에 아무것도
-                  말하지 않는 줄이 하나 더 붙는다. 값이 빈 것을 알려야 하는 칸(채워 넣을
-                  대기열)과 달리, 이 줄은 없는 것이 정상이라 빈 상태 자체가 정보가 아니다.
-
-                  상호참조는 배지가 아니라 텍스트 링크다 — 그 기업을 볼 권한이 없으면 임베드가
-                  비어 오고, 그때 이 줄은 링크 없이 물러난다(죽은 배지가 남지 않는다). */}
-              {record.startup_id && (
-                <InfoField
-                  label="스타트업 DB"
-                  value={
-                    <RefLinkList
-                      as={Link}
-                      items={[
-                        {
-                          key: record.startup_id,
-                          label: record.startup?.name ?? '연결된 기업',
-                          to: record.startup ? `/startup/discovered/${record.startup_id}` : null,
-                          title: record.startup
-                            ? undefined
-                            : '이 기업을 열람할 권한이 없습니다.',
-                        },
-                      ]}
-                    />
-                  }
-                />
-              )}
               <InfoField
                 label={config.fundsLabel}
                 // 상세는 원 단위다 — 한 건을 정확히 읽는 자리라 반올림이 끼면 안 된다.
                 // 목록은 백만원인데(자릿수를 짧게 해 세로로 견주는 자리), 단위가 갈리는 것은
                 // 자리마다 하는 일이 달라서이고 저장값은 원 하나다.
                 value={
-                  record.available_funds == null ? '-' : `${toWon(record.available_funds)}원`
+                  record.available_funds == null ? null : `${toWon(record.available_funds)}원`
                 }
               />
               {/* 상대 쪽 창구다(우리 쪽 관리 주체가 아니다 — 이 원장은 영구 공동관리).
@@ -128,14 +99,19 @@ export function MaPartyView({
                   />
                 }
               />
-              <InfoField label="생성자" value={record.creator?.name ?? '-'} />
-              <InfoField label="등록일" value={formatDate(record.created_at)} />
-              <InfoField label="수정일" value={formatDate(record.updated_at)} />
+              {/* 레코드 자체의 값이 아니라 레코드를 다룬 흔적이라 한 단 연한 톤으로 물러난다
+                  (`InfoField`의 `meta` — STARTUP·NETWORKS 상세와 같은 처리). */}
+              <InfoField label="생성자" value={record.creator?.name || null} meta />
+              <InfoField label="등록일" value={formatDate(record.created_at)} meta />
+              <InfoField label="수정일" value={formatDate(record.updated_at)} meta />
             </InfoGrid>
-          </div>
-        </CardShell>
+          }
+        />
 
-        {/* 본문이 이 원장의 몸통이다 — 칸이 아니라 여기가 대부분의 내용을 갖는다. */}
+        {/* 본문이 이 원장의 몸통이다 — 칸이 아니라 여기가 대부분의 내용을 갖는다.
+            높이는 글자 길이가 정한다(2026-09-07) — 뷰어에 최소 높이를 주던 규칙을 걷었다.
+            한 줄짜리 메모가 열 줄짜리와 같은 크기로 서면 카드 크기가 내용의 많고 적음을
+            말하지 못한다(global.css의 `.rte` 규칙 참조). */}
         <PanelCard title="상세내용">
           {overview ? (
             <RichTextViewer html={overview} />
@@ -146,6 +122,10 @@ export function MaPartyView({
             />
           )}
         </PanelCard>
+
+        {/* 퀵 리뷰는 상세내용 아래에 선다 — 먼저 읽어야 할 것은 "왜 이 건을 보고 있는가"이고,
+            문서를 위에 두면 일곱 절이 그 한 줄을 스크롤 아래로 밀어낸다. */}
+        {config.hasQuickReview && <MaQuickReviewSection raw={record.quick_review} />}
       </div>
 
       {/* 우측(1/3): 자료 관리 → 관련 회의록 → 변동 이력 → 코멘트. */}

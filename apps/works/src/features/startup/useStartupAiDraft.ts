@@ -1,7 +1,8 @@
 import type { UseFormGetValues, UseFormReset } from 'react-hook-form'
 import type { StartupDetailFormValues } from '@/features/startup/startupFormValues'
 import type { AiCardKey } from '@/features/startup/startupAiCards'
-import { applyAiDraft, type AiFillEnvelope, type AiFillOutcome } from '@/features/startup/startupAiMerge'
+import { applyAiDraft } from '@/features/startup/startupAiMerge'
+import type { AiFillEnvelope, AiFillOutcome } from '@/features/ai/aiTypes'
 import {
   buildCardSnapshot,
   toCardState,
@@ -64,7 +65,7 @@ export function useStartupAiDraft({
    * 사용자 지정). 폼이 들고 있으면 창을 닫은 뒤에도 남는데, 그때는 이미 값이 폼에 들어가
    * 있어 같은 사실을 두 번 말하는 층이 된다.
    */
-  const applyDraft = (envelope: AiFillEnvelope, cards: AiCardKey[]): AiFillOutcome => {
+  const applyDraft = (envelope: AiFillEnvelope<AiCardKey>, cards: AiCardKey[]): AiFillOutcome<AiCardKey> => {
     const values = getValues()
     const merged = applyAiDraft(buildCardSnapshot(values, state), envelope, cards)
     reset(toFormValues(merged.record, values))

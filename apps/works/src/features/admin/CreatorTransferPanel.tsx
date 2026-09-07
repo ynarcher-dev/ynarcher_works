@@ -1,4 +1,13 @@
-import { Button, formText, Input, Select, TokenMultiSelect, useToast } from '@ynarcher/ui'
+import {
+  Button,
+  formText,
+  Input,
+  PickList,
+  PickRow,
+  Select,
+  TokenMultiSelect,
+  useToast,
+} from '@ynarcher/ui'
 import { useMemo, useState } from 'react'
 import { useEmployees } from '@/features/management/hooks'
 import {
@@ -135,26 +144,16 @@ export function CreatorTransferPanel() {
           ) : (rows ?? []).length === 0 ? (
             <p className="px-3 py-4 text-body-sm text-gray-500">일치하는 레코드가 없습니다.</p>
           ) : (
-            <ul className="max-h-64 divide-y divide-gray-100 overflow-y-auto">
+            <PickList>
               {(rows ?? []).map((r) => (
-                <li key={r.id}>
-                  <button
-                    type="button"
-                    onClick={() => setTargetId(r.id)}
-                    className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors duration-fast ${
-                      r.id === targetId ? 'bg-brand-25' : 'hover:bg-gray-50'
-                    }`}
-                  >
-                    <span className="min-w-0 flex-1 truncate text-body text-gray-900">
-                      {r.name}
-                    </span>
-                    <span className="shrink-0 text-body-sm text-gray-500">
-                      생성자 {nameOf(r.created_by)}
-                    </span>
-                  </button>
-                </li>
+                <PickRow key={r.id} selected={r.id === targetId} onClick={() => setTargetId(r.id)}>
+                  <span className="min-w-0 flex-1 truncate text-body text-gray-900">{r.name}</span>
+                  <span className="shrink-0 text-body-sm text-gray-500">
+                    생성자 {nameOf(r.created_by)}
+                  </span>
+                </PickRow>
               ))}
-            </ul>
+            </PickList>
           )}
         </div>
       )}

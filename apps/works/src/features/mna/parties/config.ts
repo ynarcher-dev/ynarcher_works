@@ -39,6 +39,18 @@ export interface MaPartyConfig {
   wishPlaceholder: string
   /** 상세내용 에디터의 예시. */
   overviewPlaceholder: string
+  /**
+   * 퀵 리뷰(매각 대상 소개 문서)를 이 원장에서 쓰는가.
+   *
+   * **셀러만 켠다**(2026-09-07 사용자 지정). 이 문서는 '파는 회사를 소개하는' 자리라 사는
+   * 쪽에서는 주주구성·Valuation·투자 포인트가 대부분 빈다. 칸이 대부분 비는 문서를 세우면
+   * 담당자는 그것을 '아직 안 쓴 것'으로 읽고 매번 채우려 한다.
+   *
+   * 켜는 데 필요한 것은 이 스위치와 원장의 `quick_review` 컬럼 둘뿐이다 — 화면·Edge Function은
+   * 그대로 쓴다(다만 바이어를 열 때는 쓰기 자격을 묻는 RPC가 하나 더 필요하다. 함수는 대상마다
+   * 얇게 서고 그 물음이 대상마다 다르다).
+   */
+  hasQuickReview?: boolean
 }
 
 /**
@@ -70,6 +82,7 @@ export const MA_SELLER: MaPartyConfig = {
   fundsLabel: '희망 매각가',
   wishPlaceholder: '예: 경영권 포함 지분 전량 매각',
   overviewPlaceholder: '매각 배경·희망 조건·미팅 메모 등을 자유롭게 적습니다.',
+  hasQuickReview: true,
 }
 
 /** 분야 선택 상한. startups.industries와 같은 규칙이라 같은 수를 쓴다. */
@@ -105,6 +118,12 @@ export interface MaPartyRow {
   /** 매핑된 기업(임베드). 그 기업을 볼 수 없으면 비어 온다 — 화면은 링크 없이 물러난다. */
   startup?: { id: string; name: string } | null
   overview_html: string | null
+  /**
+   * 퀵 리뷰 문서(절 7종). 상세 조회에서만 읽는다 — 목록은 이 칸을 가져오지 않는다.
+   * 모양은 `quickReview.ts`가 소유하고 여기서는 원문 그대로 들고 있는다(읽는 함수가 한 벌이라
+   * 화면마다 다른 모양으로 해석될 자리가 없다).
+   */
+  quick_review?: unknown
   created_at: string
   updated_at: string
   created_by: string | null

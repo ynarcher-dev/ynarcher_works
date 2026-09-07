@@ -1,6 +1,6 @@
 import { Select, TextArea } from '@ynarcher/ui'
 import type { UseFormRegister } from 'react-hook-form'
-import { Label } from '@/features/startup/StartupFieldLabel'
+import { Label } from '@/components/FormRowFields'
 import { DEV_INSOURCING_OPTIONS, DEV_STAGE_OPTIONS } from '@/features/startup/startupProfile'
 import type { StartupDetailFormValues } from '@/features/startup/startupFormValues'
 

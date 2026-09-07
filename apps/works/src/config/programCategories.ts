@@ -30,10 +30,11 @@ export const AC_CATEGORIES: readonly ProgramCategoryOption[] = [
   { value: 'ETC', label: '기타', tone: 'neutral' },
 ]
 
-/** M&A 사업구분: 매도/매수/PE 펀드/기타. */
+/** M&A 사업구분: 매도/매수/매도+매수/PE 펀드/기타. */
 export const MNA_CATEGORIES: readonly ProgramCategoryOption[] = [
   { value: 'SELL', label: 'Sell', tone: 'warning' },
   { value: 'BUY', label: 'Buy', tone: 'info' },
+  { value: 'SELL_BUY', label: 'Sell+Buy', tone: 'neutral' },
   { value: 'PE_FUND', label: 'PE Fund', tone: 'success' },
   { value: 'ETC', label: '기타', tone: 'neutral' },
 ]

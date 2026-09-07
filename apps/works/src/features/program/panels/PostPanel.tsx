@@ -1,4 +1,4 @@
-import { BackButton, Button, Spinner, useToast } from '@ynarcher/ui'
+import { BackButton, Button, DetailTopBar, Spinner, useToast } from '@ynarcher/ui'
 import { useState, type ReactNode } from 'react'
 import { RichTextEditor, RichTextViewer } from '@/components/RichTextEditor'
 import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
@@ -70,21 +70,23 @@ export function PostPanel({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <BackButton onClick={onBack} />
-        {editing ? (
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setEditing(false)} disabled={save.isPending}>
-              취소
-            </Button>
-            <Button onClick={() => void submit()} disabled={save.isPending}>
-              {save.isPending ? '저장 중…' : '저장'}
-            </Button>
-          </div>
-        ) : (
-          <Button onClick={startEdit}>{body ? '수정' : '작성'}</Button>
-        )}
-      </div>
+      <DetailTopBar
+        back={<BackButton onClick={onBack} />}
+        actions={
+          editing ? (
+            <>
+              <Button variant="outline" onClick={() => setEditing(false)} disabled={save.isPending}>
+                취소
+              </Button>
+              <Button onClick={() => void submit()} disabled={save.isPending}>
+                {save.isPending ? '저장 중…' : '저장'}
+              </Button>
+            </>
+          ) : (
+            <Button onClick={startEdit}>{body ? '수정' : '작성'}</Button>
+          )
+        }
+      />
 
       {moduleCard}
 

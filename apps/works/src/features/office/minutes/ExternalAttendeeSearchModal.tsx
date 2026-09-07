@@ -1,4 +1,16 @@
-import { Button, Card, cn, Input, Modal, Select, Spinner, useToast } from '@ynarcher/ui'
+import {
+  Button,
+  Card,
+  cn,
+  Input,
+  Modal,
+  PickList,
+  PickMark,
+  PickRow,
+  Select,
+  Spinner,
+  useToast,
+} from '@ynarcher/ui'
 import { Check } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import {
@@ -152,47 +164,29 @@ export function ExternalAttendeeSearchModal({
                   검색 중…
                 </div>
               ) : (
-                <ul className="max-h-[15rem] divide-y divide-gray-100 overflow-y-auto">
+                <PickList>
                   {(hits ?? []).map((h) => {
                     const link = toExternalPersonLink(h)
                     const added = has(link)
                     return (
-                      <li key={h.id}>
-                        {/* 행 클릭 토글: 추가 ↔ 해제. 별도 버튼 없음. */}
-                        <button
-                          type="button"
-                          onClick={() => toggle(link)}
-                          className={cn(
-                            'flex w-full items-center gap-3 px-3 py-2 text-left transition-colors duration-fast',
-                            added ? 'bg-brand/10 hover:bg-brand/15' : 'hover:bg-gray-50',
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              'grid size-5 shrink-0 place-items-center rounded-full border',
-                              added
-                                ? 'border-brand bg-brand text-white'
-                                : 'border-gray-300 text-transparent',
+                      // 행 클릭 토글: 추가 ↔ 해제. 별도 버튼 없음.
+                      <PickRow key={h.id} selected={added} onClick={() => toggle(link)}>
+                        <PickMark checked={added}>
+                          <Check className="size-3.5" />
+                        </PickMark>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-body text-gray-900">
+                            <span className="font-medium">{h.name}</span>
+                            {h.affiliation && (
+                              <span className="text-gray-500"> · {h.affiliation}</span>
                             )}
-                          >
-                            <Check className="size-3.5" />
                           </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-body text-gray-900">
-                              <span className="font-medium">{h.name}</span>
-                              {h.affiliation && (
-                                <span className="text-gray-500"> · {h.affiliation}</span>
-                              )}
-                            </span>
-                            <span className="block text-body-sm text-gray-600">
-                              {h.categoryLabel}
-                            </span>
-                          </span>
-                        </button>
-                      </li>
+                          <span className="block text-body-sm text-gray-600">{h.categoryLabel}</span>
+                        </span>
+                      </PickRow>
                     )
                   })}
-                </ul>
+                </PickList>
               )}
             </div>
           )}

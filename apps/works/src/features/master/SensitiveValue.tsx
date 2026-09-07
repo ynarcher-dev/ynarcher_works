@@ -1,4 +1,4 @@
-import { Button, Modal, TextArea, useToast } from '@ynarcher/ui'
+import { Button, EmptyValue, Modal, TextArea, useToast } from '@ynarcher/ui'
 import { useState } from 'react'
 import { maskBy } from '@/lib/mask'
 import { supabase } from '@/lib/supabase'
@@ -26,7 +26,9 @@ export function SensitiveValue({ field, contentKey, value, resourceType, resourc
   const [asking, setAsking] = useState(false)
   const [reason, setReason] = useState('')
 
-  if (!value) return <>-</>
+  // 값이 없는 자리의 글자와 색은 이 화면이 아니라 `EmptyValue`가 정한다 — 직접 찍으면 값과
+  // 같은 진한 톤이 되어, 마스킹 대상이 비어 있는 칸이 실제 값만큼 무겁게 읽힌다.
+  if (!value) return <EmptyValue />
   if (!policy[field] || revealed) return <>{value}</>
 
   const masked = maskBy(field, value)

@@ -11,7 +11,7 @@ import {
   type ProgramLedgerKey,
 } from '@/features/management/employeeActivity'
 import { amountInMillions } from '@/features/fund/fundListHooks'
-import { SectionHeading } from '@/features/startup/SectionHeading'
+import { SectionHeading } from '@/components/SectionHeading'
 
 /**
  * 폭은 열의 종류(`type`)가 정한다 — 손으로 붙이던 `FILLER`(`w-full max-w-0 truncate`)와

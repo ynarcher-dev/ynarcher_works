@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Button, Input, Modal, Spinner } from '@ynarcher/ui'
+import { Button, Input, Modal, PickList, PickRow, Spinner } from '@ynarcher/ui'
 import { useMemo, useState } from 'react'
 import { StartupPickRow } from '@/features/startup/StartupPickRow'
 import { readIndustries } from '@/features/startup/startupGrowth'
@@ -94,10 +94,15 @@ export function StartupPickerModal({
   }, [pool, keyword])
 
   return (
+    // 목록이 500건에서 끊기고 화면에는 50건만 선다는 규칙은 창 맨 아래 각주가 아니라 제목 옆
+    // 말풍선(`Modal`의 `help`)이 갖는다 — 안내가 사는 자리는 말풍선 하나이고, 그 자리를
+    // 화면이 정하지 않는다(3.6.1). 빈 목록·검색 결과 없음처럼 다음 행동을 지시하는 안내는
+    // 접지 않고 아래에 그대로 편다.
     <Modal
       open
       onClose={onClose}
       title="스타트업 DB에서 찾기"
+      help="한 번에 최대 50건까지 보여줍니다. 찾는 기업이 없으면 검색어로 좁히세요."
       size="md"
       footer={
         <Button variant="secondary" onClick={onClose}>
@@ -115,38 +120,31 @@ export function StartupPickerModal({
 
         {isLoading ? (
           <Spinner />
-        ) : rows.length === 0 ? (
-          <p className="py-6 text-center text-caption text-gray-500">
-            {keyword.trim()
-              ? '검색 결과가 없습니다. 원장에 없는 기업이면 기업명을 직접 입력하세요.'
-              : '조회할 수 있는 스타트업이 없습니다.'}
-          </p>
         ) : (
-          <ul className="max-h-80 space-y-1 overflow-y-auto">
+          // 목록·행의 규격(가로선·여백·호버·스크롤 높이)은 공용 `PickList`가, 한 줄에 무엇을
+          // 적는지는 `StartupPickRow`가 소유한다 — FUND 피투자사 검색과 같은 원장을 같은
+          // 방식으로 고르는 자리라, 둘 중 어느 것도 화면이 다시 적지 않는다.
+          <PickList
+            isEmpty={rows.length === 0}
+            empty={
+              keyword.trim()
+                ? '검색 결과가 없습니다. 원장에 없는 기업이면 기업명을 직접 입력하세요.'
+                : '조회할 수 있는 스타트업이 없습니다.'
+            }
+          >
             {rows.map((s) => (
-              <li key={s.id}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onPick(s)
-                    onClose()
-                  }}
-                  className="flex w-full items-center justify-between gap-3 rounded-radius-md border border-gray-300 bg-white px-3 py-2 text-left transition-colors hover:bg-gray-50"
-                >
-                  {/* 행의 규격은 공용 `StartupPickRow`가 소유한다(기업명 · 대표자명 + 구분
-                      배지) — FUND 피투자사 검색과 같은 원장을 같은 방식으로 고르는 자리다. */}
-                  <StartupPickRow value={s} />
-                </button>
-              </li>
+              <PickRow
+                key={s.id}
+                onClick={() => {
+                  onPick(s)
+                  onClose()
+                }}
+              >
+                <StartupPickRow value={s} />
+              </PickRow>
             ))}
-          </ul>
+          </PickList>
         )}
-
-        {/* 목록이 500건에서 끊기고 화면에는 50건만 서므로, 안 보이는 기업이 있을 수 있다는
-            사실을 검색으로 좁히라는 지시와 함께 밝힌다(빈 목록이 아니라 잘린 목록이다). */}
-        <p className="text-caption text-gray-500">
-          최대 50건까지 보여줍니다. 찾는 기업이 없으면 검색어로 좁히세요.
-        </p>
       </div>
     </Modal>
   )

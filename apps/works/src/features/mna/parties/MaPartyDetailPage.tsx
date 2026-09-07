@@ -1,4 +1,4 @@
-import { BackButton, Banner, Button, Spinner } from '@ynarcher/ui'
+import { BackButton, Banner, Button, DetailTopBar, Spinner } from '@ynarcher/ui'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { DetailDeleteButton } from '@/components/DetailDeleteButton'
@@ -28,20 +28,23 @@ function MaPartyDetailPage({ config }: { config: MaPartyConfig }) {
     <div className="space-y-5">
       {/* 편집 중에는 폼(FormTopBar)이 상단 바를 소유한다. */}
       {!editing && (
-        <div className="flex items-center justify-between">
-          <BackButton as={Link} to={config.basePath} />
-          {!isNew && record && (
-            <div className="flex items-center gap-2">
-              {/* 사유는 원장 컬럼이 아니라 변동 이력의 note로 남는다(deactivate_entity RPC). */}
-              <DetailDeleteButton
-                name={record.name}
-                onDelete={(reason) => remove.mutateAsync({ id: record.id, reason: reason ?? '' })}
-                onDeleted={() => navigate(config.basePath)}
-              />
-              <Button onClick={() => setEditing(true)}>수정</Button>
-            </div>
-          )}
-        </div>
+        <DetailTopBar
+          back={<BackButton as={Link} to={config.basePath} />}
+          actions={
+            !isNew &&
+            record && (
+              <>
+                {/* 사유는 원장 컬럼이 아니라 변동 이력의 note로 남는다(deactivate_entity RPC). */}
+                <DetailDeleteButton
+                  name={record.name}
+                  onDelete={(reason) => remove.mutateAsync({ id: record.id, reason: reason ?? '' })}
+                  onDeleted={() => navigate(config.basePath)}
+                />
+                <Button onClick={() => setEditing(true)}>수정</Button>
+              </>
+            )
+          }
+        />
       )}
 
       {editing ? (

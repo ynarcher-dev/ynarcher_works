@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { sourcesFromFiles } from '@/features/startup/startupAiFill'
+import { sourcesFromFiles } from '@/features/ai/aiFillClient'
 
 describe('sourcesFromFiles — 보류 파일의 격자 키', () => {
   it('같은 File 실물은 다시 읽어도 같은 키다', () => {

@@ -1,4 +1,13 @@
-import { BackButton, Badge, Button, Card, EmptyState, Spinner, cardText } from '@ynarcher/ui'
+import {
+  BackButton,
+  Badge,
+  Button,
+  Card,
+  DetailTopBar,
+  EmptyState,
+  Spinner,
+  cardText,
+} from '@ynarcher/ui'
 import { useEffect, useMemo, useState } from 'react'
 import { useAuthStore } from '@/auth/authStore'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
@@ -170,9 +179,10 @@ export function ApprovalDetail({
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <BackButton onClick={onBack}>문서함</BackButton>
-        <div className="flex items-center gap-2">
+      <DetailTopBar
+        back={<BackButton onClick={onBack}>문서함</BackButton>}
+        actions={
+          <>
           {/* 기안자 본인이 고칠 수 있는 문서는 둘뿐이다 — 아직 조직에 내보내지 않은
               임시저장과, 되돌아와 다시 올려야 하는 문서다. 흐르는 중인 문서에는 이 길을
               닫는다: 내용이 바뀌면 이미 찍힌 도장이 무엇에 대한 것이었는지 판정할 근거가
@@ -192,8 +202,9 @@ export function ApprovalDetail({
               {LINE_KIND_LABEL[myLine.kind ?? 'APPROVAL']} 처리
             </Button>
           )}
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {canDecide && myLine && (
         <ApprovalDecideModal

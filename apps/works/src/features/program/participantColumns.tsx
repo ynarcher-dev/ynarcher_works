@@ -7,10 +7,8 @@ import {
   MANAGEMENT_STATUS_TONE,
   type ManagementStatus,
 } from '@/features/startup/startupClassification'
+import { guestDoorBadge } from '@/features/program/guestDoorBadge'
 import type { MasterTable, ParticipantRow } from '@/features/program/participantHooks'
-
-/** 게스트가 진입할 수 없는 사업 상태. 이때 열린 문은 화면에서 '닫힘'으로 읽힌다. */
-const DEAD_STATUSES = ['FINISHED', 'CANCELLED']
 
 interface LoginBadge {
   label: string
@@ -50,40 +48,23 @@ function categoryBadge(row: ParticipantRow): LoginBadge | null {
  * 종전에는 `계정`(있음/없음) · `상태`(허용 전·초대·완료·차단) · `접근 기간`(제한 없음·만료)
  * 세 열이 재료를 늘어놓고, "이 사람 지금 들어올 수 있나"의 조합은 담당자가 머리로 했다.
  * 실제 게이트는 그 셋의 AND이므로 한 열이 그 결과를 답한다. 계정 유무는 열을 잃지 않는다 —
- * 계정이 없으면 애초에 '미개방'이고, 있으면 옆의 최종 접속이 그것을 증언한다.
+ * 계정이 없으면 애초에 '미발급'이고, 있으면 옆의 최종 접속이 그것을 증언한다.
  *
- * 값이 겹칠 때의 순서가 곧 담당자가 할 일의 순서다. 사업이 끝난 것 → 담당자가 막은 것 →
- * 기간이 지난 것 → 아직 열지 않은 것. 위의 사실이 아래를 덮으므로, 차단된 줄에 '기간 만료'가
- * 뜨거나 끝난 사업이 '이용 중'으로 보이는 일이 없다.
- *
- * 기간은 이제 사업이 갖는다(3_9_1 §8) — 그래서 만료 판정은 행이 아니라 사업 값 하나를 본다.
- * **차단과 기간은 직교한 축**이라, 만료된 줄을 차단했다 해제해도 다시 '기간 만료'로 돌아온다
- * (여는 방법은 해제가 아니라 기간 연장이다).
+ * **판정 자체는 여기 살지 않는다**(2026-09-07). GUEST계정 발급 화면의 참여 사업 목록이 같은
+ * 사실을 답해야 하는데, 각자 조합하면 어긋난 날 어느 쪽이 사실인지 판정할 근거가 없다 —
+ * 순서와 라벨의 소유자는 `guestDoorBadge`이고, 여기서는 명부 행을 그 입력으로 옮길 뿐이다.
  */
 export function loginBadge(
   row: ParticipantRow,
   programStatus: string,
   guestAccessEndsAt: string | null,
 ): LoginBadge {
-  if (row.login_status === 'NOT_APPLICABLE' || !row.master_id) {
-    return { label: '해당 없음', tone: 'neutral' }
-  }
-  const opened = row.login_status === 'INVITED' || row.login_status === 'ACTIVE'
-  if (DEAD_STATUSES.includes(programStatus) && opened) {
-    return { label: '사업종료', tone: 'neutral' }
-  }
-  if (row.login_status === 'BLOCKED') return { label: '차단', tone: 'danger' }
-  if (opened && guestAccessEndsAt && new Date(guestAccessEndsAt).getTime() <= Date.now()) {
-    return { label: '기간 만료', tone: 'warning' }
-  }
-  switch (row.login_status) {
-    case 'INVITED':
-      return { label: '초대', tone: 'warning' }
-    case 'ACTIVE':
-      return { label: '이용 중', tone: 'success' }
-    default:
-      return { label: '미발급', tone: 'neutral' }
-  }
+  return guestDoorBadge({
+    loginStatus: row.login_status,
+    hasTarget: Boolean(row.master_id),
+    programStatus,
+    accessEndsAt: guestAccessEndsAt,
+  })
 }
 
 /**

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { PARSER_VERSION } from '@docparse/types.ts'
-import { sourceStatus, stateLabel, summaryLabel, writableCount } from '@/features/startup/startupAiExtractState'
-import type { AiExtractRecord } from '@/features/startup/startupAiExtractState'
-import type { AiSource } from '@/features/startup/startupAiFill'
+import { sourceStatus, stateLabel, summaryLabel, writableCount } from '@/features/ai/aiExtractState'
+import type { AiExtractRecord } from '@/features/ai/aiExtractState'
+import type { AiSource } from '@/features/ai/aiFillClient'
 
 /**
  * 자료 줄 상태 판정의 회귀 테스트.

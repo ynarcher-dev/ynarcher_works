@@ -3,9 +3,8 @@ import {
   Badge,
   Banner,
   Button,
-  CardShell,
-  cardText,
-  DensityProvider,
+  DetailTopBar,
+  EntityHeaderCard,
   InfoField,
   InfoGrid,
   PanelCard,
@@ -106,35 +105,32 @@ function NetworkView({ record }: { record: NetworkRow }) {
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
       {/* 좌측(2/3): 프로필 본문 — 기본 정보·이력·소개. */}
       <div className="space-y-4 lg:col-span-2">
-      <CardShell>
-        <div className="flex items-center gap-5">
-          <PhotoBox src={(profile.photo as string) ?? null} />
-          <div className="min-w-0 flex-1">
-            {/* 상세 헤더는 카드 안에 있어도 페이지 맥락이다 — 24px 제목 옆 배지가 11px로 찍히지 않게 한다. */}
-            <DensityProvider value="page">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-title-md font-bold text-gray-900">
-                  <SensitiveValue
-                    field="name"
-                    contentKey={CONTENT_KEY}
-                    value={(record.name as string) ?? label}
-                    resourceType={NETWORK_RESOURCE_TYPE}
-                    resourceId={record.id as string}
-                  />
-                </h1>
-                {category && <Badge tone="neutral">{categoryLabel(category)}</Badge>}
-                {!compact && (
-                  <Badge tone={matchOk ? 'success' : 'neutral'}>
-                    매칭 {matchOk ? '가능' : '불가능'}
-                  </Badge>
-                )}
-              </div>
-            </DensityProvider>
-            <p className={`mt-1 ${cardText.subtitle}`}>{subtitle || '-'}</p>
-          </div>
-        </div>
-
-        <div className="mt-5 border-t border-gray-100 pt-4">
+      {/* 카드 규격(사진·제목·배지·부제·구분선·정보행)은 화면이 아니라 공용 `EntityHeaderCard`가
+          소유한다 — 상세 헤더가 페이지 맥락이라는 규칙도 그 카드가 함께 갖는다. */}
+      <EntityHeaderCard
+        photo={<PhotoBox src={(profile.photo as string) ?? null} />}
+        title={
+          <SensitiveValue
+            field="name"
+            contentKey={CONTENT_KEY}
+            value={(record.name as string) ?? label}
+            resourceType={NETWORK_RESOURCE_TYPE}
+            resourceId={record.id as string}
+          />
+        }
+        badges={
+          <>
+            {category && <Badge tone="neutral">{categoryLabel(category)}</Badge>}
+            {!compact && (
+              <Badge tone={matchOk ? 'success' : 'neutral'}>
+                매칭 {matchOk ? '가능' : '불가능'}
+              </Badge>
+            )}
+          </>
+        }
+        description={subtitle}
+        info={
+          <>
           <InfoGrid>
             <Info
               label="연락처"
@@ -216,8 +212,9 @@ function NetworkView({ record }: { record: NetworkRow }) {
             <Info label="기여자" value={contributors.length ? contributors.join(', ') : '-'} meta />
             <Info label="수정일" value={formatDate(record.updated_at)} meta />
           </InfoGrid>
-        </div>
-      </CardShell>
+          </>
+        }
+      />
 
       {/* 이력(소속·부서·직책 변경): 인물·조직 전 유형 공통 노출. 현재값은 부제가, 과거 조합은 이 카드가 담는다. */}
       <SectionCard title="이력">
@@ -287,21 +284,25 @@ export function NetworkDetailPage({ readOnly = false, listPath: listPathProp }: 
     <div className="space-y-5">
       {/* 편집 중에는 폼(FormTopBar)이 상단 바를 소유한다 — 뒤로가기 옆 우측 자리를 취소·확정이 쓴다. */}
       {!editing && (
-        <div className="flex items-center justify-between">
-          <BackButton as={Link} to={listPath} />
-          {!isNew && !readOnly && record && (
-            <div className="flex items-center gap-2">
-              <DetailDeleteButton
-                name={(record.name as string) ?? undefined}
-                onDelete={(reason) =>
-                  deactivate.mutateAsync({ id: record.id as string, reason: reason ?? '' })
-                }
-                onDeleted={() => navigate(listPath)}
-              />
-              <Button onClick={() => setEditing(true)}>수정</Button>
-            </div>
-          )}
-        </div>
+        <DetailTopBar
+          back={<BackButton as={Link} to={listPath} />}
+          actions={
+            !isNew &&
+            !readOnly &&
+            record && (
+              <>
+                <DetailDeleteButton
+                  name={(record.name as string) ?? undefined}
+                  onDelete={(reason) =>
+                    deactivate.mutateAsync({ id: record.id as string, reason: reason ?? '' })
+                  }
+                  onDeleted={() => navigate(listPath)}
+                />
+                <Button onClick={() => setEditing(true)}>수정</Button>
+              </>
+            )
+          }
+        />
       )}
 
       {editing ? (

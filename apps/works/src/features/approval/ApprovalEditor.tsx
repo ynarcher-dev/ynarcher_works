@@ -1,4 +1,14 @@
-import { BackButton, Button, Card, Field, Input, Select, Spinner, useToast } from '@ynarcher/ui'
+import {
+  BackButton,
+  Button,
+  Card,
+  DetailTopBar,
+  Field,
+  Input,
+  Select,
+  Spinner,
+  useToast,
+} from '@ynarcher/ui'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAuthStore } from '@/auth/authStore'
 import { PendingMaterialPanel } from '@/features/networks/PendingMaterialPanel'
@@ -303,9 +313,10 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <BackButton onClick={onCancel}>문서함</BackButton>
-        <div className="flex items-center gap-2">
+      <DetailTopBar
+        back={<BackButton onClick={onCancel}>문서함</BackButton>}
+        actions={
+          <>
           {/* 되돌아온 문서에는 임시저장이 없다 — 이미 조직에 나갔던 문서라 되돌릴 '아직
               안 낸 상태'가 없고, 고치다 말면 그냥 되돌아온 채로 남는다. */}
           {!isResubmit && (
@@ -321,8 +332,9 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
           <Button onClick={() => void submit(false)} disabled={busy}>
             {isResubmit ? '재상신' : '기안하기'}
           </Button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {returnInfo && (
         <div className="rounded-radius-md border border-warning-border bg-warning-subtle px-4 py-3">

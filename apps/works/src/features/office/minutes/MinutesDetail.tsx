@@ -2,6 +2,7 @@ import {
   Badge,
   BackButton,
   Button,
+  DetailTopBar,
   EmptyState,
   EntityHeaderCard,
   InfoField,
@@ -130,17 +131,19 @@ export function MinutesDetail({ minuteId, currentUserId, onBack, onEdit }: Props
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <BackButton onClick={onBack}>목록</BackButton>
-        {canEdit && (
-          <div className="flex gap-2">
-            <Button variant="outline-danger" onClick={onDelete} disabled={del.isPending}>
-              삭제
-            </Button>
-            <Button onClick={onEdit}>수정</Button>
-          </div>
-        )}
-      </div>
+      <DetailTopBar
+        back={<BackButton onClick={onBack}>목록</BackButton>}
+        actions={
+          canEdit && (
+            <>
+              <Button variant="outline-danger" onClick={onDelete} disabled={del.isPending}>
+                삭제
+              </Button>
+              <Button onClick={onEdit}>수정</Button>
+            </>
+          )
+        }
+      />
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
         {/*

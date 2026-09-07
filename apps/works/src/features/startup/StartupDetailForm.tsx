@@ -41,9 +41,10 @@ import {
   type StartupSummary,
 } from '@/features/startup/StartupSummaryCards'
 import { readIndustries } from '@/features/startup/startupGrowth'
-import { SectionHeading } from '@/features/startup/SectionHeading'
-import { StartupAiFillButton } from '@/features/startup/StartupAiFillButton'
-import { sourcesFromFiles, sourcesFromLinks, sourcesFromMaterials } from '@/features/startup/startupAiFill'
+import { SectionHeading } from '@/components/SectionHeading'
+import { AiFillButton } from '@/features/ai/AiFillButton'
+import { startupAiCatalog } from '@/features/startup/startupAiCards'
+import { sourcesFromFiles, sourcesFromLinks, sourcesFromMaterials } from '@/features/ai/aiFillClient'
 import { useStartupAiDraft } from '@/features/startup/useStartupAiDraft'
 import { useMaterials } from '@/features/networks/materialHooks'
 
@@ -473,11 +474,11 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
           {/* AI 작성하기는 자료 관리 바로 아래에 선다 — 이 기능이 읽는 것이 위 카드의 파일이라,
               재료에서 떨어뜨리면 무엇을 근거로 채우는지가 화면에서 사라진다. 등록 모드에서는
               아직 올라가지 않은 보류 파일을 그대로 보내고, 그 파일은 서버가 저장하지 않는다. */}
-          <StartupAiFillButton
+          <AiFillButton
+            catalog={startupAiCatalog(ai.snapshot)}
             sources={aiSources}
-            snapshot={ai.snapshot}
-            startupId={recordId}
-            companyName={base.name ? String(base.name) : undefined}
+            targetId={recordId}
+            subjectName={base.name ? String(base.name) : undefined}
             onFilled={ai.applyDraft}
           />
         </div>

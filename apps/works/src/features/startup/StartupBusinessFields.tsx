@@ -1,6 +1,6 @@
 import { TextArea } from '@ynarcher/ui'
 import type { UseFormRegister } from 'react-hook-form'
-import { Label } from '@/features/startup/StartupFieldLabel'
+import { Label } from '@/components/FormRowFields'
 import type { StartupDetailFormValues } from '@/features/startup/startupFormValues'
 
 /**

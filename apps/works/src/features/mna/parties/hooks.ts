@@ -63,7 +63,9 @@ export function useMaPartyRecord(cfg: MaPartyConfig, id: string | undefined) {
     queryFn: async (): Promise<MaPartyRow | null> => {
       const { data, error } = await supabase
         .from(cfg.table)
-        .select(`${SELECT}, overview_html`)
+        // 퀵 리뷰는 상세에서만 읽는다 — 목록이 열 줄짜리 문서 일곱 절을 함께 끌고 오면
+        // 한 페이지 조회가 그 문서들의 크기만큼 무거워진다(본문 overview_html과 같은 이유).
+        .select(`${SELECT}, overview_html, quick_review`)
         .eq('id', id)
         .is('deleted_at', null)
         .maybeSingle()

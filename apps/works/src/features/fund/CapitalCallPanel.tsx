@@ -1,20 +1,10 @@
-import { Button, CardShell, ExpandToggleButton, useToast } from '@ynarcher/ui'
+import { Button, CardShell, ExpandToggleButton, StatStrip, useToast } from '@ynarcher/ui'
 import { Maximize2, Minimize2, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { CapitalCallFormModal } from '@/features/fund/CapitalCallFormModal'
 import { CapitalCallMatrix } from '@/features/fund/CapitalCallMatrix'
 import { useCapitalCallDraft } from '@/features/fund/capitalCallDraft'
 import { useDeleteCapitalCall, type CapitalCall, type FundLp } from '@/features/fund/hooks'
-
-/** 상단 요약 타일 — 라벨 한 줄, 값 한 줄. 타일마다 지표는 하나만 싣는다. */
-function Summary({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-radius-md border border-gray-200 bg-gray-25 px-3 py-2">
-      <p className="text-caption text-gray-600">{label}</p>
-      <p className="text-body font-bold tabular-nums text-gray-900">{value}</p>
-    </div>
-  )
-}
 
 /**
  * 캐피탈 콜 탭 — 상단 요약 타일 + 차수×LP 매트릭스.
@@ -57,13 +47,19 @@ export function CapitalCallPanel({
     }
   }
 
+  // 지표 띠 규격(상자 없이 옅은 세로선으로만 나눈 한 덩어리)은 화면이 아니라 공용 `StatStrip`이
+  // 갖는다 — 종전 로컬 타일은 펀드 상세의 것과 글자 하나까지 같은 사본이라, 한쪽만 고쳐지면
+  // 같은 펀드의 숫자가 탭마다 다른 모양으로 섰다.
   const summary = (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-      <Summary label="총 약정액" value={draft.totals.commitment.toLocaleString()} />
-      <Summary label="총 실 납입액" value={draft.totals.paid.toLocaleString()} />
-      <Summary label="납입률" value={draft.totals.rate} />
-      <Summary label="미납 잔액" value={draft.totals.unpaid.toLocaleString()} />
-    </div>
+    <StatStrip
+      className="grid grid-cols-2 divide-gray-200 sm:grid-cols-4 sm:divide-x"
+      tiles={[
+        { key: 'commitment', label: '총 약정액', value: draft.totals.commitment.toLocaleString() },
+        { key: 'paid', label: '총 실 납입액', value: draft.totals.paid.toLocaleString() },
+        { key: 'rate', label: '납입률', value: draft.totals.rate },
+        { key: 'unpaid', label: '미납 잔액', value: draft.totals.unpaid.toLocaleString() },
+      ]}
+    />
   )
 
   const empty =

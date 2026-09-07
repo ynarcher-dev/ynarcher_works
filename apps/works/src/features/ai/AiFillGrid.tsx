@@ -1,17 +1,10 @@
 import { Badge, Checkbox, cardText, cn } from '@ynarcher/ui'
-import type { EntityRow } from '@/features/master/entityHooks'
 import { formatBytes } from '@/features/networks/materialHooks'
-import type { AiSource } from '@/features/startup/startupAiFill'
-import { AI_CARDS, AI_CARD_GROUPS, type AiCardKey } from '@/features/startup/startupAiCards'
-import {
-  cardCountFor,
-  cellCount,
-  cellOn,
-  sourcesOf,
-  type AiGrid,
-} from '@/features/startup/startupAiGrid'
-import { StartupAiSourceState } from '@/features/startup/StartupAiSourceState'
-import type { AiExtractController } from '@/features/startup/useStartupAiExtracts'
+import type { AiSource } from '@/features/ai/aiFillClient'
+import type { AiCardGroupMeta, AiCardMeta } from '@/features/ai/aiCatalog'
+import { cardCountFor, cellCount, cellOn, sourcesOf, type AiGrid } from '@/features/ai/aiGrid'
+import { AiSourceState } from '@/features/ai/AiSourceState'
+import type { AiExtractController } from '@/features/ai/useAiExtracts'
 
 /**
  * 'AI 작성하기'의 자료 × 카드 격자.
@@ -21,7 +14,7 @@ import type { AiExtractController } from '@/features/startup/useStartupAiExtract
  * 근거인가)은 어디서도 묻지 않았다 — 고른 자료 전부가 고른 카드 전부에 들어갔다.
  *
  * **자료가 행이고 카드가 열이다**(2026-09-06 사용자 지정, 처음 구현과 뒤바뀜). 축을 이렇게
- * 두는 이유는 **긴 쪽을 세로로 흘려보내기 위해서**다. 카드는 열둘로 고정이고 이름이 짧지만,
+ * 두는 이유는 **긴 쪽을 세로로 흘려보내기 위해서**다. 카드는 몇으로 고정이고 이름이 짧지만,
  * 자료는 몇 건이 될지 모르고 이름이 길다("25년 8월 투자예정기업 정보_주식회사 ….xlsx").
  * 자료를 열로 세우면 그 이름이 열 폭에 잘려 무엇을 고르는지 알 수 없고, 건수가 늘수록 가로로
  * 밀려나 스크롤해야 나머지가 보인다. 행으로 세우면 이름은 한 줄을 다 쓰고 늘어나는 방향은
@@ -31,7 +24,7 @@ import type { AiExtractController } from '@/features/startup/useStartupAiExtract
  * 맞춰 갈라지고, 넘치는 것은 잘린다(파일 이름은 `truncate`, 전문은 커서를 올리면 답한다).
  * 그래서 열 폭은 픽셀이 아니라 **비율**이고, 고정(sticky) 칸도 두지 않는다 — 가로로 움직이지
  * 않는 표에서 따라올 것이 없다. 담기는 값이 아니라 화면 폭이 열 폭을 정하는 예외이며, 근거는
- * 열둘이 언제나 함께 보여야 한다는 것이다(카드를 견주려고 여는 창이다).
+ * 카드가 언제나 함께 보여야 한다는 것이다(카드를 견주려고 여는 창이다).
  *
  * **왼쪽은 한 칸이 아니라 두 칸이다 — 파일명 · 분석 상태.** 한 칸에 세로로 쌓았더니 줄마다 두
  * 층이 되어 목록이 통째로 두 배 높이가 됐고, 그 두 층은 성격도 다르다 — 이름은 **고를 때 읽는
@@ -41,11 +34,16 @@ import type { AiExtractController } from '@/features/startup/useStartupAiExtract
  * **카드 체크박스를 따로 두지 않는다** — 한 칸이라도 켜진 카드가 작성 대상이다. 같은 값을
  * 묻는 컨트롤을 둘 두면 어느 쪽이 진짜인지 화면이 답하지 못한다.
  *
+ * **카드 목록은 받아서 쓴다**(2026-09-07). 종전에는 스타트업 열두 카드를 모듈에서 직접 읽고
+ * 원장 행(`record`)까지 함께 받아 `card.filled(record)`를 호출했다 — 그 한 줄 때문에 이
+ * 컴포넌트가 스타트업 원장의 모양을 알아야 했다. 지금은 값이 있는지를 **소유자가 미리
+ * 판정해** 넘긴다(카탈로그의 `filled`). 무엇이 채워졌는지는 그 값을 가진 쪽만 답할 수 있다.
+ *
  * 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §4.2
  */
 
 /**
- * 열 폭은 비율이다 — 파일명 19% · 형식 4.5% · 용량 6% · 분석 상태 8.5% · 카드 열둘이 나머지.
+ * 왼쪽 네 칸의 폭 — 파일명 19% · 형식 4.5% · 용량 6% · 분석 상태 8.5%.
  *
  * 파일명이 가장 넓지만 그마저 5분의 1로 묶는다. 이름은 잘려도 커서로 답할 수 있지만, 카드
  * 열은 잘리면 무엇을 켜는 칸인지 알 수 없다. 나머지 셋은 담기는 값의 **가장 긴 경우**에
@@ -56,7 +54,20 @@ const NAME_COL = 'w-[19%]'
 const EXT_COL = 'w-[4.5%]'
 const SIZE_COL = 'w-[6%]'
 const STATE_COL = 'w-[8.5%]'
-const CARD_COL = 'w-[5.1%]'
+
+/**
+ * 카드 열의 폭은 **남는 폭을 카드 수로 나눈 값**이다.
+ *
+ * 종전에는 `w-[5.1%]` 한 값이 상수로 박혀 있었다(열두 카드 × 5.1 ≈ 62). 카드 수가 대상마다
+ * 다르면 그 상수는 한 대상에서만 맞고 나머지에서는 표가 넘치거나 오른쪽이 빈다. 값을
+ * Tailwind 클래스로 만들지 않는 것은 클래스 이름을 실행 중에 조립하면 빌드가 그 클래스를
+ * 만들어 내지 못해 폭이 통째로 사라지기 때문이다 — 계산된 폭은 인라인 스타일이 갖는다.
+ */
+const LEFT_COLS_PCT = 19 + 4.5 + 6 + 8.5
+
+function cardColWidth(count: number): string {
+  return `${(100 - LEFT_COLS_PCT) / Math.max(count, 1)}%`
+}
 
 /**
  * 파일 이름에서 **확장자를 떼어 낸다**(2026-09-06 사용자 지정).
@@ -77,9 +88,10 @@ function kindLabel(source: AiSource): string {
   return source.kind === 'link' ? '링크' : ''
 }
 
-export function StartupAiFillGrid({
+export function AiFillGrid<K extends string>({
   sources,
-  record,
+  cards,
+  groups,
   grid,
   onCell,
   onCard,
@@ -90,24 +102,27 @@ export function StartupAiFillGrid({
 }: {
   /** 읽을 수 있는 자료만 온다(못 읽는 자료는 격자에 세우지 않는다). */
   sources: AiSource[]
-  /** 지금 폼에 적힌 값. 카드 열의 작성 여부가 이것을 읽는다. */
-  record: EntityRow
-  grid: AiGrid
-  onCell: (card: AiCardKey, key: string) => void
+  /** 화면 순서대로 선 카드. 지금 값이 있는지(`filled`)도 이미 판정된 채로 온다. */
+  cards: AiCardMeta<K>[]
+  /** 1단 머리 — 서버가 실제로 나눠 읽는 탐색 묶음. */
+  groups: AiCardGroupMeta[]
+  grid: AiGrid<K>
+  onCell: (card: K, key: string) => void
   /** 카드 하나가 자료 전부를 읽게 하거나 아무것도 읽지 않게 한다. */
-  onCard: (card: AiCardKey) => void
+  onCard: (card: K) => void
   /** 같은 탐색 묶음의 카드가 자료 전부를 읽게 하거나 아무것도 읽지 않게 한다. */
-  onGroup: (cards: AiCardKey[]) => void
+  onGroup: (cards: K[]) => void
   /** 자료 하나를 모든 카드에서 켜거나 끈다. */
   onSource: (key: string) => void
   onAll: () => void
   /** 자료 줄의 분석 상태와 그 줄에서 할 수 있는 일. */
   extracts: AiExtractController
 }) {
-  const cards = AI_CARDS.map((c) => c.key)
-  const total = cellCount(grid)
+  const cardKeys = cards.map((c) => c.key)
+  const total = cellCount(grid, cardKeys)
+  const colWidth = cardColWidth(cards.length)
   /** 묶음이 바뀌는 자리에만 세로선을 둔다 — 열마다 그으면 격자가 아니라 창살이 된다. */
-  const groupEdge = (i: number) => i > 0 && AI_CARDS[i - 1]?.group !== AI_CARDS[i]?.group
+  const groupEdge = (i: number) => i > 0 && cards[i - 1]?.group !== cards[i]?.group
 
   // 세로 높이만 여기서 잠근다 — 표가 자기 안에서 스크롤해야 머리줄이 붙어 있고, 아래 결과
   // 패널이 화면 밖으로 밀려나지 않는다. 가로(`overflow-x`)는 열지 않는다.
@@ -116,7 +131,7 @@ export function StartupAiFillGrid({
       {/* border-collapse 대신 separate를 쓴다 — 붙인 테두리는 고정(sticky) 머리줄에서 사라진다. */}
       <table className="w-full table-fixed border-separate border-spacing-0">
         <thead>
-          {/* 1단 — 서버가 실제로 나눠 읽는 네 탐색 묶음. 체크하면 묶음 단위로 고를 수 있다. */}
+          {/* 1단 — 서버가 실제로 나눠 읽는 탐색 묶음. 체크하면 묶음 단위로 고를 수 있다. */}
           <tr>
             <th
               scope="col"
@@ -164,8 +179,9 @@ export function StartupAiFillGrid({
             >
               <span className={cardText.label}>분석</span>
             </th>
-            {AI_CARD_GROUPS.map((group) => {
-              const groupCards = AI_CARDS.filter((c) => c.group === group.key).map((c) => c.key)
+            {groups.map((group) => {
+              const groupCards = cards.filter((c) => c.group === group.key).map((c) => c.key)
+              if (groupCards.length === 0) return null
               const picked = groupCards.some((card) => sourcesOf(grid, card).length > 0)
               return (
                 <th
@@ -188,15 +204,14 @@ export function StartupAiFillGrid({
           </tr>
           {/* 2단 — 카드. 열 머리의 체크는 그 카드가 자료 전부를 읽게 한다. */}
           <tr>
-            {AI_CARDS.map((card, i) => {
+            {cards.map((card, i) => {
               const picked = sourcesOf(grid, card.key).length
-              const filled = card.filled(record)
               return (
                 <th
                   key={card.key}
                   scope="col"
+                  style={{ width: colWidth }}
                   className={cn(
-                    CARD_COL,
                     // 1단(묶음)이 위에 서므로 그 높이만큼 내려 붙는다.
                     'sticky top-7 z-20 border-b border-gray-200 bg-white px-1 py-2 align-bottom',
                     groupEdge(i) && 'border-l border-gray-200',
@@ -214,11 +229,11 @@ export function StartupAiFillGrid({
                         배지는 줄어들지 않으므로 좁은 열에서는 글자를 최소로 줄이고, 무엇의
                         답인지는 바로 위의 카드 이름과 커서 설명이 함께 답한다. */}
                     <Badge
-                      tone={filled ? 'info' : 'neutral'}
+                      tone={card.filled ? 'info' : 'neutral'}
                       density="table"
-                      title={`${card.label} — ${filled ? '값 있음(작성됨)' : '비어 있음'}`}
+                      title={`${card.label} — ${card.filled ? '값 있음(작성됨)' : '비어 있음'}`}
                     >
-                      {filled ? '있음' : '없음'}
+                      {card.filled ? '있음' : '없음'}
                     </Badge>
                     <span className="flex items-center gap-1">
                       <Checkbox
@@ -238,7 +253,7 @@ export function StartupAiFillGrid({
         </thead>
         <tbody>
           {sources.map((s) => {
-            const used = cardCountFor(grid, s.key, cards)
+            const used = cardCountFor(grid, s.key, cardKeys)
             const { base, ext } = splitName(s.name)
             return (
               <tr key={s.key} className="group">
@@ -288,7 +303,7 @@ export function StartupAiFillGrid({
                     'border-b border-r border-gray-100 px-2 py-1.5 group-hover:bg-gray-25',
                   )}
                 >
-                  <StartupAiSourceState
+                  <AiSourceState
                     source={s}
                     status={extracts.statusOf(s)}
                     forcedOriginal={extracts.isForcedOriginal(s.key)}
@@ -297,11 +312,11 @@ export function StartupAiFillGrid({
                     onToggleOriginal={() => extracts.toggleOriginal(s.key)}
                   />
                 </td>
-                {AI_CARDS.map((card, i) => (
+                {cards.map((card, i) => (
                   <td
                     key={card.key}
+                    style={{ width: colWidth }}
                     className={cn(
-                      CARD_COL,
                       'border-b border-gray-100 px-1 py-1.5 text-center group-hover:bg-gray-25',
                       groupEdge(i) && 'border-l border-gray-200',
                     )}

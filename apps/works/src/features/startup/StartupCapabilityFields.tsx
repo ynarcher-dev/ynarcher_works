@@ -1,6 +1,6 @@
 import { PanelCard } from '@ynarcher/ui'
 import type { Control, UseFormRegister } from 'react-hook-form'
-import { SectionHeading } from '@/features/startup/SectionHeading'
+import { SectionHeading } from '@/components/SectionHeading'
 import { StartupBusinessFields } from '@/features/startup/StartupBusinessFields'
 import { StartupIpFields } from '@/features/startup/StartupIpFields'
 import { StartupTeamFields } from '@/features/startup/StartupTeamFields'

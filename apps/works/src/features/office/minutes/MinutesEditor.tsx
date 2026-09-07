@@ -1,4 +1,4 @@
-import { BackButton, Button, Input, SegmentedToggle, cn, formText } from '@ynarcher/ui'
+import { BackButton, Button, DetailTopBar, Input, SegmentedToggle, cn, formText } from '@ynarcher/ui'
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { RichTextEditor } from '@/components/RichTextEditor'
@@ -112,13 +112,16 @@ export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
 
   return (
     <div className="space-y-5">
-      {/* 상단 바 — 게시판 편집과 동일하게 좌측 뒤로가기, 우측 저장. */}
-      <div className="flex items-center justify-between">
-        <BackButton onClick={onCancel} />
-        <Button onClick={submit} disabled={save.isPending || !title.trim()}>
-          {save.isPending ? '저장 중…' : '저장'}
-        </Button>
-      </div>
+      {/* 상단 바 — 게시판 편집과 동일하게 좌측 뒤로가기, 우측 저장.
+          한 줄 규격은 화면이 아니라 공용 `DetailTopBar`가 갖는다. */}
+      <DetailTopBar
+        back={<BackButton onClick={onCancel} />}
+        actions={
+          <Button onClick={submit} disabled={save.isPending || !title.trim()}>
+            {save.isPending ? '저장 중…' : '저장'}
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
         {/* 좌: 본문 2/3. 필드 위 라벨 대신 각 입력의 플레이스홀더로 무엇을 적는지 안내한다. */}

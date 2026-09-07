@@ -152,6 +152,10 @@ export type {
   EntityHeaderSectionProps,
 } from './patterns/EntityHeaderCard'
 export { MiniPager, usePaged } from './patterns/MiniPager'
+// 검색해서 고르는 목록(모달·팝오버 안 후보 나열)의 소유자 — 행 모양·선택 배경·스크롤 높이가
+// 화면마다 갈리지 않도록 한곳에 모은다.
+export { PickList, PickRow, PickMark } from './patterns/PickList'
+export type { PickListProps, PickRowProps, PickMarkProps } from './patterns/PickList'
 export { PanelCard } from './patterns/PanelCard'
 export type { PanelCardProps } from './patterns/PanelCard'
 // 설정 한 줄(제목·설명 + 오른쪽 토글)의 소유자.

@@ -1,6 +1,6 @@
-import { Button, Input, Select, cn } from '@ynarcher/ui'
-import { Fragment, useState } from 'react'
-import { Cell, RowActions, RowBox } from '@/features/startup/StartupFieldLabel'
+import { Button, Input, Select } from '@ynarcher/ui'
+import { Fragment } from 'react'
+import { Cell, NumberInput, RowActions, RowBox, numOrUndef } from '@/components/FormRowFields'
 import {
   CUSTOMER_KIND_OPTIONS,
   type BusinessStatusEntry,
@@ -22,43 +22,6 @@ import {
  * 제목은 폼이 세우는 `PanelCard`가 소유한다.
  */
 
-/** 빈 문자열 → undefined, 그 외 숫자로 파싱(콤마 허용). */
-function numOrUndef(s: string): number | undefined {
-  if (s.trim() === '') return undefined
-  const n = Number(s.replace(/,/g, ''))
-  return Number.isNaN(n) ? undefined : n
-}
-
-/**
- * 천단위 콤마 표시 + 우측정렬 숫자 입력. number 타입은 콤마를 못 넣으므로 text로 처리한다.
- * 편집 중에는 입력한 원문을 그대로 두어(음수 '-' 입력·캐럿 튐 방지) 콤마 없이 보이고,
- * 포커스가 빠질 때 저장값을 콤마 포맷으로 다시 그린다.
- */
-function NumberInput({
-  value,
-  onChange,
-  className,
-}: {
-  value?: number | null
-  onChange: (v: number | undefined) => void
-  className?: string
-}) {
-  const [typing, setTyping] = useState<string | null>(null)
-  const formatted = value == null || Number.isNaN(Number(value)) ? '' : Number(value).toLocaleString()
-  return (
-    <Input
-      type="text"
-      inputMode="numeric"
-      className={cn('text-right tabular-nums', className)}
-      value={typing ?? formatted}
-      onChange={(e) => {
-        setTyping(e.target.value)
-        onChange(numOrUndef(e.target.value))
-      }}
-      onBlur={() => setTyping(null)}
-    />
-  )
-}
 
 /** 숫자 입력 셀(라벨 + number Input). */
 function Num({

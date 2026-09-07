@@ -24,6 +24,11 @@ export interface GuestAccountProgram {
   login_status: 'NOT_APPLICABLE' | 'NOT_ALLOWED' | 'INVITED' | 'ACTIVE' | 'BLOCKED'
   /** 그 사업 게스트의 접근 종료. 계정이 아니라 **사업**이 기간을 갖는다(3_9_1 §8). */
   access_ends_at: string | null
+  /**
+   * 그 사업의 진행 상태. 끝난 사업(FINISHED·CANCELLED)은 문이 열려 있어도 게스트가 들어오지
+   * 못하므로, 문의 결론을 내려면 이 값이 함께 있어야 한다(`guestDoorBadge`).
+   */
+  program_status: string | null
   /** 이 줄의 자격. 같은 계정이 한 사업에 두 자격으로 걸리면 줄이 둘이다. */
   master_table: 'startups' | 'networks' | null
 }
@@ -57,7 +62,11 @@ export interface GuestAccount {
   /** 마지막 세션 발급 시각(guest_invitations.used_at 최대값). 한 번도 없으면 null. */
   last_login_at: string | null
   program_count: number
-  /** 그중 문이 열려 있는 사업 수(INVITED·ACTIVE). */
+  /**
+   * 그중 개방 상태인 사업 수(INVITED·ACTIVE). **화면의 '로그인 가능'은 이 값이 아니다** —
+   * 실제 게이트는 개방 상태·사업 상태·기간의 AND라, 그 결론은 참여 줄마다 `guestDoorBadge`가
+   * 낸다. 이 값은 사업 상태·기간을 보지 않는 원장 그대로의 수다.
+   */
   open_count: number
   programs: GuestAccountProgram[]
 }
@@ -221,25 +230,6 @@ export function useIssueGuestAccount() {
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['admin', 'guest-accounts'] })
-    },
-  })
-}
-
-/**
- * 비밀번호 재설정 **안내 발송**. 호출자에게는 아무 값도 오지 않는다 — 링크는 게스트 본인
- * 연락처로만 나간다. 담당자가 값을 쥘 수 있으면 계정을 합친 순간 그 게스트가 참여 중인
- * 다른 팀 사업까지 열린다(3_9_1 §3).
- */
-export function useSendGuestPasswordReset() {
-  return useMutation({
-    mutationFn: async (userId: string): Promise<{ notified: boolean }> => {
-      const { data, error } = await supabase.functions.invoke<{
-        ok?: boolean
-        notified?: boolean
-        message?: string
-      }>('guest-password-reset', { body: { userId } })
-      if (error) throw new Error(data?.message ?? error.message)
-      return { notified: Boolean(data?.notified) }
     },
   })
 }

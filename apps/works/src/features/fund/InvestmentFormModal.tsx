@@ -8,6 +8,8 @@ import {
   InfoField,
   Input,
   Modal,
+  PickList,
+  PickRow,
   TokenMultiSelect,
   useToast,
 } from '@ynarcher/ui'
@@ -638,28 +640,21 @@ function CompanySearch({
       placeholder="기업명으로 검색"
       ariaLabel="피투자사 검색"
       renderList={(close) =>
-        candidates.length === 0 ? (
-          <p className="px-3 py-4 text-body-sm text-gray-500">일치하는 기업이 없습니다.</p>
-        ) : (
-          <ul className="max-h-56 divide-y divide-gray-100 overflow-y-auto">
-            {candidates.map((s) => (
-              <li key={s.id}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onPick(s.id)
-                    close()
-                  }}
-                  className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors duration-fast hover:bg-gray-50"
-                >
-                  {/* 행의 규격은 공용 `StartupPickRow`가 소유한다 — 같은 원장을 한 줄로 고르는
-                      자리가 여기와 M&A BUYER 둘이라, 값을 각자 적으면 한쪽만 고쳐지는 날 갈린다. */}
-                  <StartupPickRow value={s} />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )
+        <PickList isEmpty={candidates.length === 0} empty="일치하는 기업이 없습니다.">
+          {candidates.map((s) => (
+            <PickRow
+              key={s.id}
+              onClick={() => {
+                onPick(s.id)
+                close()
+              }}
+            >
+              {/* 행의 규격은 공용 `StartupPickRow`가 소유한다 — 같은 원장을 한 줄로 고르는
+                  자리가 여기와 M&A BUYER 둘이라, 값을 각자 적으면 한쪽만 고쳐지는 날 갈린다. */}
+              <StartupPickRow value={s} />
+            </PickRow>
+          ))}
+        </PickList>
       }
     />
   )

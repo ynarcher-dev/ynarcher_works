@@ -1,4 +1,10 @@
-import { Badge, EntityHeaderCard, EntityHeaderSection, InfoField, InfoGrid } from '@ynarcher/ui'
+import {
+  Badge,
+  EntityHeaderCard,
+  EntityHeaderSection,
+  InfoField,
+  InfoGrid,
+} from '@ynarcher/ui'
 import { useDepartmentLabels } from '@/features/management/departmentOptions'
 import {
   programIndustries,
@@ -7,7 +13,11 @@ import {
 } from '@/features/program/hooks'
 import { ProgramPhotoBox } from '@/features/program/detail/ProgramPhotoBox'
 import { PROGRAM_STATUS_LABEL, PROGRAM_STATUS_TONE } from '@/features/program/config'
-import { categoryLabel, useProgramWorkspace } from '@/features/program/workspace'
+import {
+  categoryLabel,
+  categoryTone,
+  useProgramWorkspace,
+} from '@/features/program/workspace'
 
 /** 라벨: 값 한 줄(StartupDetailPage·NetworkDetailPage의 Info와 동일 톤). */
 /** 라벨: 값 한 줄 — 규격은 공용 `InfoField`가 소유한다. */
@@ -110,16 +120,23 @@ export function ProgramInfoCard({ program }: { program: Program }) {
       photo={<ProgramPhotoBox src={null} />}
       title={program.title}
       badges={
-        <Badge tone={PROGRAM_STATUS_TONE[program.status] ?? 'neutral'}>
-          {PROGRAM_STATUS_LABEL[program.status] ?? program.status}
-        </Badge>
+        <>
+          {config.key === 'mna' && program.category && (
+            <Badge tone={categoryTone(config, program.category)}>
+              {categoryLabel(config, program.category) ?? program.category}
+            </Badge>
+          )}
+          <Badge tone={PROGRAM_STATUS_TONE[program.status] ?? 'neutral'}>
+            {PROGRAM_STATUS_LABEL[program.status] ?? program.status}
+          </Badge>
+        </>
       }
-      description={program.description}
+      description={config.key === 'mna' ? undefined : program.description}
       info={
         <InfoGrid>
           <Info label="사업코드" value={program.code || '-'} />
-          {/* 사업구분. 분류를 운용하지 않는 워크스페이스에서는 항목을 감춘다. */}
-          {config.categories.length > 0 && (
+          {/* M&A는 사업구분을 제목 옆 배지로 옮겼다. AC의 기존 정보 배치는 유지한다. */}
+          {config.key !== 'mna' && config.categories.length > 0 && (
             <Info
               label="카테고리"
               value={

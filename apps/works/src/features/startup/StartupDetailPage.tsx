@@ -1,4 +1,16 @@
-import { BackButton, Badge, Banner, Button, CardShell, cardText, DensityProvider, InfoField, Spinner } from '@ynarcher/ui'
+import {
+  BackButton,
+  Badge,
+  Banner,
+  Button,
+  DetailTopBar,
+  EntityHeaderCard,
+  EntityHeaderSection,
+  formText,
+  InfoField,
+  InfoGrid,
+  Spinner,
+} from '@ynarcher/ui'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { DetailDeleteButton } from '@/components/DetailDeleteButton'
@@ -21,7 +33,7 @@ import {
 import { SensitiveValue } from '@/features/master/SensitiveValue'
 import { readBusiness } from '@/features/startup/startupProfile'
 import { formatFounded, readIndustries } from '@/features/startup/startupGrowth'
-import { SectionHeading } from '@/features/startup/SectionHeading'
+import { SectionHeading } from '@/components/SectionHeading'
 import { StartupManagementSection } from '@/features/startup/StartupManagementSection'
 import { StartupSummaryCards, readSummary } from '@/features/startup/StartupSummaryCards'
 
@@ -86,21 +98,23 @@ export function StartupDetailPage() {
     <div className="space-y-5">
       {/* 편집 중에는 폼(FormTopBar)이 상단 바를 소유한다 — 뒤로가기 옆 우측 자리를 취소·확정이 쓴다. */}
       {!editing && (
-        <div className="flex items-center justify-between">
-          <BackButton as={Link} to={LIST_PATH} />
-          {canEdit ? (
-            <div className="flex items-center gap-2">
-              <DetailDeleteButton
-                name={record.name ? String(record.name) : undefined}
-                onDelete={(reason) => deactivate.mutateAsync({ id: record.id, reason: reason ?? '' })}
-                onDeleted={() => navigate(LIST_PATH)}
-              />
-              <Button onClick={() => setEditing(true)}>수정</Button>
-            </div>
-          ) : (
-            <span className="text-caption text-gray-600">지정 담당자만 수정할 수 있습니다.</span>
-          )}
-        </div>
+        <DetailTopBar
+          back={<BackButton as={Link} to={LIST_PATH} />}
+          actions={
+            canEdit ? (
+              <>
+                <DetailDeleteButton
+                  name={record.name ? String(record.name) : undefined}
+                  onDelete={(reason) => deactivate.mutateAsync({ id: record.id, reason: reason ?? '' })}
+                  onDeleted={() => navigate(LIST_PATH)}
+                />
+                <Button onClick={() => setEditing(true)}>수정</Button>
+              </>
+            ) : (
+              <span className={formText.hint}>지정 담당자만 수정할 수 있습니다.</span>
+            )
+          }
+        />
       )}
 
       {editing ? (
@@ -115,48 +129,35 @@ export function StartupDetailPage() {
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           {/* 좌측(2/3): 기본 데이터 카드 — 사진 + 이름/배지 + 부제 + 정보행 */}
           <div className="space-y-4 lg:col-span-2">
-            <CardShell>
-              <div className="flex items-center gap-5">
-                <PhotoBox src={logo} />
-                <div className="min-w-0 flex-1">
-                  {/* 상세 헤더는 카드 안에 있어도 페이지 맥락이다. card 밀도를 그대로 두면 24px 제목 옆
-                      배지가 11px(tag-card)로 찍혀 먼지처럼 보인다. */}
-                  <DensityProvider value="page">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h1 className="text-title-md font-bold text-gray-900">{record.name}</h1>
-                      {industries.map((ind) => (
-                        <Badge key={ind} tone="neutral">
-                          {ind}
-                        </Badge>
-                      ))}
-                    </div>
-                  </DensityProvider>
-                  <p className={`mt-1 ${cardText.subtitle}`}>{oneLiner || '-'}</p>
-                  {/* 상태·분류 칩: 라벨 없이 값만으로 읽히는 정보(단계·구분·관리현황)는 배지로 올린다.
-                      톤은 축을 나눈다 — 단계=중립(사실), 구분=info(주 분류), 관리현황=success+점(라이브 상태).
-                      분야 태그와 같은 page 밀도로 맞춰 헤더 칩끼리 크기가 어긋나지 않게 한다. */}
-                  <DensityProvider value="page">
-                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                      {str('stage') !== '-' && <Badge tone="neutral">{str('stage')}</Badge>}
-                      {managementStatusLabel(record.management_status) && (
-                        <Badge tone={invested ? 'info' : 'neutral'}>
-                          {managementStatusLabel(record.management_status)}
-                        </Badge>
-                      )}
-                      {invested && str('pool_status') !== '-' && (
-                        <Badge tone="success" dot>
-                          {str('pool_status')}
-                        </Badge>
-                      )}
-                    </div>
-                  </DensityProvider>
-                </div>
-              </div>
-
-              {/* 기본 정보(3열): 대표자·이메일·연락처 / 회사형태·설립일·사업자등록번호 / 소재지·상세주소 / 수정일·생성자.
-                  상태·분류(단계·구분·관리현황)는 헤더 칩으로 올려 이 그리드에서 뺐다.
-                  상세주소는 길 수 있어 다음 행 전폭을 차지한다(소재지·수정일 뒤에서 자연스레 줄바꿈). */}
-              <div className="mt-5 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-3">
+            {/* 카드 규격(사진·제목·배지·부제·칩 줄·구분선·정보행)은 화면이 아니라 공용
+                `EntityHeaderCard`가 소유한다 — 상세 헤더가 페이지 맥락이라는 규칙(24px 제목 옆
+                배지가 카드 규격 11px로 찍히지 않게 하는 것)도 그 카드가 함께 갖는다. */}
+            <EntityHeaderCard
+              photo={<PhotoBox src={logo} />}
+              title={record.name}
+              badges={industries.map((ind) => (
+                <Badge key={ind} tone="neutral">
+                  {ind}
+                </Badge>
+              ))}
+              description={oneLiner}
+              chips={
+                <>
+                  {str('stage') !== '-' && <Badge tone="neutral">{str('stage')}</Badge>}
+                  {managementStatusLabel(record.management_status) && (
+                    <Badge tone={invested ? 'info' : 'neutral'}>
+                      {managementStatusLabel(record.management_status)}
+                    </Badge>
+                  )}
+                  {invested && str('pool_status') !== '-' && (
+                    <Badge tone="success" dot>
+                      {str('pool_status')}
+                    </Badge>
+                  )}
+                </>
+              }
+              info={
+                <InfoGrid>
                 {/* 대표자·이메일·연락처는 외부 기업 정보 — ADMIN '민감정보 관리'의 구분별 정책을 따른다. */}
                 <Info
                   label="대표자"
@@ -205,22 +206,26 @@ export function StartupDetailPage() {
                   className="min-w-0 sm:col-span-2"
                   valueClassName="min-w-0 flex-1 truncate"
                 />
-              </div>
-
-              {/* 발굴 경로는 길 수 있어 전체 폭을 쓰되, 표시 규격은 위 정보행(Info)과 동일하게 맞춘다. */}
-              <div className="mt-2.5 border-t border-gray-100 pt-3">
+                </InfoGrid>
+              }
+            >
+              {/* 발굴 경로는 길 수 있어 전체 폭을 쓰되, 표시 규격은 위 정보행(Info)과 동일하게 맞춘다.
+                  구분선을 그은 한 묶음이라는 사실은 화면이 아니라 `EntityHeaderSection`이 적는다. */}
+              <EntityHeaderSection>
                 <Info label="발굴 경로" value={str('discovery_source')} />
-              </div>
+              </EntityHeaderSection>
 
               {/* 이 레코드를 누가 맡고 누가 만들었는지 — 업무 사실(위 칸)과 다른 축이라 줄을 나눈다.
                   딜메이커만 도메인 값이고(관리 주체) 생성자·수정일은 레코드를 다룬 흔적이라
                   한 단 연한 메타 톤으로 물러난다. 담당자 전원은 아래 관리 현황 카드가 답한다. */}
-              <div className="mt-2.5 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-3 sm:grid-cols-3">
-                <Info label="딜메이커" value={leadName} />
-                <Info label="생성자" value={record.creator?.name || null} meta />
-                <Info label="수정일" value={formatDate(record.updated_at)} meta />
-              </div>
-            </CardShell>
+              <EntityHeaderSection>
+                <InfoGrid>
+                  <Info label="딜메이커" value={leadName} />
+                  <Info label="생성자" value={record.creator?.name || null} meta />
+                  <Info label="수정일" value={formatDate(record.updated_at)} meta />
+                </InfoGrid>
+              </EntityHeaderSection>
+            </EntityHeaderCard>
 
             {/* 요약 구분선(기본 데이터 아래). 기업 개요보다 위에 서는 이유는 성격이 달라서다 —
                 아래 개요가 사실을 나열하는 자리라면 여기는 그 사실을 읽은 담당자의 판단이고,

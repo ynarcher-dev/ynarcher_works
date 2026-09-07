@@ -1,5 +1,5 @@
 import { PanelCard } from '@ynarcher/ui'
-import { SectionHeading } from '@/features/startup/SectionHeading'
+import { SectionHeading } from '@/components/SectionHeading'
 import {
   StartupCustomerFields,
   StartupEmployeeFields,

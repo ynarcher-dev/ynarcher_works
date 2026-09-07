@@ -53,13 +53,13 @@ function recent<T>(list: T[], n = 5): T[] {
 /** 재무·매출 카드의 막대차트 시리즈 정의. 고용·투자는 표만 둔다. */
 const FINANCE_SERIES: ChartSeries[] = [
   { key: 'assets', name: '자산', color: C.brand },
-  { key: 'liabilities', name: '부채', color: C.teal },
-  { key: 'equity', name: '자본', color: C.amber },
+  { key: 'liabilities', name: '부채', color: C.amber },
+  { key: 'equity', name: '자본', color: C.teal },
 ]
 const REVENUE_SERIES: ChartSeries[] = [
   { key: 'revenue', name: '매출액', color: C.brand },
   { key: 'operatingProfit', name: '영업이익', color: C.teal },
-  { key: 'netIncome', name: '당기순이익', color: C.amber },
+  { key: 'netIncome', name: '당기순이익', color: C.purple },
 ]
 
 /** 차트↔표 간격(mt-4)을 준 공용 소형 표. */

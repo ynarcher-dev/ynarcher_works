@@ -1,6 +1,6 @@
 import { cardText, cn } from '@ynarcher/ui'
-import { StartupAiFillOutcomeBody } from '@/features/startup/StartupAiFillOutcomeBody'
-import type { AiFillOutcome } from '@/features/startup/startupAiMerge'
+import { AiFillOutcomeBody } from '@/features/ai/AiFillOutcomeBody'
+import type { AiFillOutcome } from '@/features/ai/aiTypes'
 
 /**
  * 격자 아래 한 자리 — 실행 전에는 **사용 방법**, 실행 뒤에는 **작성 결과**가 선다.
@@ -17,7 +17,13 @@ import type { AiFillOutcome } from '@/features/startup/startupAiMerge'
  *
  * 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §4.4
  */
-export function StartupAiFillResultPanel({ outcome }: { outcome: AiFillOutcome | null }) {
+export function AiFillResultPanel<K extends string>({
+  outcome,
+  cardLabel,
+}: {
+  outcome: AiFillOutcome<K> | null
+  cardLabel: Record<K, string>
+}) {
   return (
     <section
       className={cn(
@@ -29,7 +35,7 @@ export function StartupAiFillResultPanel({ outcome }: { outcome: AiFillOutcome |
       {/* 결과는 길어질 수 있다(카드 열둘의 근거와 경고). 창 전체를 늘리는 대신 이 자리만
           스크롤시킨다 — 격자와 결과가 함께 밀리면 다시 실행할 때 격자를 찾아 올라가야 한다. */}
       <div className={cn('text-body-sm text-gray-800', outcome && 'max-h-[16rem] overflow-y-auto pr-1')}>
-        {outcome ? <StartupAiFillOutcomeBody outcome={outcome} /> : <Guide />}
+        {outcome ? <AiFillOutcomeBody outcome={outcome} cardLabel={cardLabel} /> : <Guide />}
       </div>
     </section>
   )

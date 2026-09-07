@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { EntityRow } from '@/features/master/entityHooks'
-import { applyAiDraft, outcomeSummary, type AiFillEnvelope } from '@/features/startup/startupAiMerge'
-import { AI_CARDS } from '@/features/startup/startupAiCards'
+import { applyAiDraft } from '@/features/startup/startupAiMerge'
+import { outcomeSummary, type AiFillEnvelope } from '@/features/ai/aiTypes'
+import { AI_CARDS, AI_CARD_LABEL, type AiCardKey } from '@/features/startup/startupAiCards'
 
 /**
  * 'AI 작성하기' 병합 규칙 회귀 테스트.
@@ -45,7 +46,9 @@ function fullRecord(): EntityRow {
   }
 }
 
-const envelope = (cards: AiFillEnvelope['cards']): AiFillEnvelope => ({ cards, notes: {}, evidence: {} })
+const envelope = (
+  cards: AiFillEnvelope<AiCardKey>['cards'],
+): AiFillEnvelope<AiCardKey> => ({ cards, notes: {}, evidence: {} })
 
 describe('applyAiDraft — 보존 키 규칙', () => {
   it('트랙션만 채워도 같은 컬럼의 매출·재무·고용·투자는 그대로다', () => {
@@ -263,7 +266,7 @@ describe('outcomeSummary', () => {
       notes: {},
       evidence: {},
       skippedSources: [],
-    })
+    }, AI_CARD_LABEL)
     expect(text).toContain('비즈니스')
     expect(text).toContain('지식재산·인증')
     expect(text).toContain('확인 후 저장')
@@ -278,7 +281,7 @@ describe('outcomeSummary', () => {
       notes: {},
       evidence: {},
       skippedSources: [],
-    })
+    }, AI_CARD_LABEL)
     expect(text).toContain('4개 중 2개 카드를 작성했습니다')
     expect(text).toContain('작성하지 못한 카드: 주주 · 투자')
     expect(text).toContain('AI 요청이 몰려')

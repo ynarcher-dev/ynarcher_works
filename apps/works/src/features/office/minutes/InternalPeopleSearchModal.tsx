@@ -1,4 +1,4 @@
-import { Button, Input, Modal } from '@ynarcher/ui'
+import { Button, Input, Modal, PickList, PickMark, PickRow } from '@ynarcher/ui'
 import { Check } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useEmployees } from '@/features/hub/hooks'
@@ -77,41 +77,23 @@ export function InternalPeopleSearchModal({ open, onClose, role, people, onChang
           autoFocus
         />
         <div className="min-h-[3rem] rounded-radius-md border border-gray-200">
-          {candidates.length === 0 ? (
-            <p className="px-3 py-4 text-body-sm text-gray-500">일치하는 임직원이 없습니다.</p>
-          ) : (
-            <ul className="max-h-72 divide-y divide-gray-100 overflow-y-auto">
-              {candidates.map((e) => {
-                const added = sameRoleIds.has(e.id)
-                return (
-                  <li key={e.id}>
-                    {/* 행을 누르면 추가, 다시 누르면 해제(토글) — 별도 버튼 없이 행 클릭으로 처리. */}
-                    <button
-                      type="button"
-                      onClick={() => toggle(e.id)}
-                      className={
-                        'flex w-full items-center gap-3 px-3 py-2 text-left transition-colors duration-fast ' +
-                        (added ? 'bg-brand/10 hover:bg-brand/15' : 'hover:bg-gray-50')
-                      }
-                    >
-                      <span
-                        className={
-                          'grid size-5 shrink-0 place-items-center rounded-full border ' +
-                          (added ? 'border-brand bg-brand text-white' : 'border-gray-300 text-transparent')
-                        }
-                      >
-                        <Check className="size-3.5" />
-                      </span>
-                      <span className="min-w-0 flex-1 truncate text-body text-gray-900">
-                        <span className="font-medium">{e.name}</span>
-                        {e.email && <span className="text-gray-500"> · {e.email}</span>}
-                      </span>
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
+          <PickList isEmpty={candidates.length === 0} empty="일치하는 임직원이 없습니다.">
+            {candidates.map((e) => {
+              const added = sameRoleIds.has(e.id)
+              return (
+                // 행을 누르면 추가, 다시 누르면 해제(토글) — 별도 버튼 없이 행 클릭으로 처리.
+                <PickRow key={e.id} selected={added} onClick={() => toggle(e.id)}>
+                  <PickMark checked={added}>
+                    <Check className="size-3.5" />
+                  </PickMark>
+                  <span className="min-w-0 flex-1 truncate text-body text-gray-900">
+                    <span className="font-medium">{e.name}</span>
+                    {e.email && <span className="text-gray-500"> · {e.email}</span>}
+                  </span>
+                </PickRow>
+              )
+            })}
+          </PickList>
         </div>
       </div>
     </Modal>

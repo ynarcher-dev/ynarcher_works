@@ -1,7 +1,7 @@
 import { Badge, IconButton, cardText, cn, type BadgeTone } from '@ynarcher/ui'
 import { RotateCcw } from 'lucide-react'
-import type { AiSource } from '@/features/startup/startupAiFill'
-import { extractable, stateLabel, type AiSourceStatus } from '@/features/startup/startupAiExtractState'
+import type { AiSource } from '@/features/ai/aiFillClient'
+import { extractable, stateLabel, type AiSourceStatus } from '@/features/ai/aiExtractState'
 
 /**
  * 자료 줄의 분석 상태 한 칸 — 배지 하나와, 다시 분석하는 아이콘 하나.
@@ -48,7 +48,7 @@ function canForceOriginal(source: AiSource): boolean {
   return extractable(source)
 }
 
-export function StartupAiSourceState({
+export function AiSourceState({
   source,
   status,
   forcedOriginal,

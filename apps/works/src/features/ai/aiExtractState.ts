@@ -1,6 +1,6 @@
 import { needsOriginal, PARSER_VERSION, type ExtractSummary } from '@docparse/types.ts'
-import type { AiSource } from '@/features/startup/startupAiFill'
-import { resolveAiMime } from '@/features/startup/startupAiFormats'
+import type { AiSource } from '@/features/ai/aiFillClient'
+import { resolveAiMime } from '@/features/ai/aiFormats'
 
 /**
  * 자료 줄의 **분석 상태**를 정한다 — 화면을 모르는 순수 모듈.

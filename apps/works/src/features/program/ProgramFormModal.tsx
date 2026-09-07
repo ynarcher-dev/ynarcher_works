@@ -310,18 +310,17 @@ export function ProgramFormModal({
             <Field label="분야" hint={industryField.hint} hintInline={industryField.hintInline}>
               {industryField.control}
             </Field>
-            {/*
-              설명은 기본 정보에 함께 든다. 이 사업이 무엇인지 적는 마지막 칸이고, 종전처럼 폼 맨
-              끝에 두면 한 줄짜리 소개를 적으러 수행 조직 표 전체를 지나 스크롤해야 한다.
-            */}
-            <Field label="설명">
-              <TextArea
-                id="description"
-                rows={3}
-                placeholder="상세 헤더에 표시할 사업 소개"
-                {...register('description')}
-              />
-            </Field>
+            {/* M&A 프로젝트의 헤더 설명 자리는 연결 매물명이 답한다. AC만 자유 설명을 입력한다. */}
+            {config.key !== 'mna' && (
+              <Field label="설명">
+                <TextArea
+                  id="description"
+                  rows={3}
+                  placeholder="상세 헤더에 표시할 사업 소개"
+                  {...register('description')}
+                />
+              </Field>
+            )}
           </div>
         </Card>
 

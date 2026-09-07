@@ -2,6 +2,7 @@ import {
   BackButton,
   Button,
   Checkbox,
+  DetailTopBar,
   EmptyState,
   EntityHeaderCard,
   InfoField,
@@ -222,13 +223,16 @@ function PostEditor({
 
   return (
     <div className="space-y-5">
-      {/* 상단 바 — 다른 상세/편집 화면과 동일하게 좌측 뒤로가기, 우측 확정 버튼. */}
-      <div className="flex items-center justify-between">
-        <BackButton onClick={onCancel} />
-        <Button onClick={() => void submit()} disabled={!postTitle.trim() || busy}>
-          {isEdit ? '수정 완료' : '등록'}
-        </Button>
-      </div>
+      {/* 상단 바 — 다른 상세/편집 화면과 동일하게 좌측 뒤로가기, 우측 확정 버튼.
+          한 줄 규격은 화면이 아니라 공용 `DetailTopBar`가 갖는다. */}
+      <DetailTopBar
+        back={<BackButton onClick={onCancel} />}
+        actions={
+          <Button onClick={() => void submit()} disabled={!postTitle.trim() || busy}>
+            {isEdit ? '수정 완료' : '등록'}
+          </Button>
+        }
+      />
 
       {/* 2:1 배치 — 좌측(2/3) 제목·본문 에디터, 우측(1/3) 첨부파일·게시 옵션 카드. */}
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
@@ -325,15 +329,17 @@ function DetailView({
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <BackButton onClick={onBack} />
-        <div className="flex gap-2">
-          <Button variant="outline-danger" onClick={() => void handleDelete()} disabled={setActive.isPending}>
-            삭제
-          </Button>
-          <Button onClick={onEdit}>수정</Button>
-        </div>
-      </div>
+      <DetailTopBar
+        back={<BackButton onClick={onBack} />}
+        actions={
+          <>
+            <Button variant="outline-danger" onClick={() => void handleDelete()} disabled={setActive.isPending}>
+              삭제
+            </Button>
+            <Button onClick={onEdit}>수정</Button>
+          </>
+        }
+      />
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
         {/* 좌측(2/3): 본문 — 제목·작성자·게시일·조회 + 리치 텍스트.

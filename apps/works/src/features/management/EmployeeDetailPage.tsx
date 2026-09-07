@@ -1,4 +1,15 @@
-import { BackButton, Badge, Banner, Button, CardShell, cardText, DensityProvider, InfoField, PanelCard, Spinner } from '@ynarcher/ui'
+import {
+  BackButton,
+  Badge,
+  Banner,
+  Button,
+  DetailTopBar,
+  EntityHeaderCard,
+  InfoField,
+  InfoGrid,
+  PanelCard,
+  Spinner,
+} from '@ynarcher/ui'
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { DetailDeleteButton } from '@/components/DetailDeleteButton'
@@ -97,22 +108,24 @@ export function EmployeeDetailPage({
     <div className="space-y-5">
       {/* 편집 중에는 폼(FormTopBar)이 상단 바를 소유한다 — 뒤로가기 옆 우측 자리를 취소·확정이 쓴다. */}
       {!editing && (
-        <div className="flex items-center justify-between">
-          <BackButton as={Link} to={backTo} />
-          {!readOnly && (
-            <div className="flex items-center gap-2">
-              {/* 임직원 원장은 사유 기록 인프라(기여 로그 RPC)가 없어 확인창만 띄운다. */}
-              <DetailDeleteButton
-                name={emp.name}
-                label="비활성화"
-                withReason={false}
-                onDelete={() => deactivate.mutateAsync(emp.id)}
-                onDeleted={() => navigate(backTo)}
-              />
-              <Button onClick={() => setEditing(true)}>수정</Button>
-            </div>
-          )}
-        </div>
+        <DetailTopBar
+          back={<BackButton as={Link} to={backTo} />}
+          actions={
+            !readOnly && (
+              <>
+                {/* 임직원 원장은 사유 기록 인프라(기여 로그 RPC)가 없어 확인창만 띄운다. */}
+                <DetailDeleteButton
+                  name={emp.name}
+                  label="비활성화"
+                  withReason={false}
+                  onDelete={() => deactivate.mutateAsync(emp.id)}
+                  onDeleted={() => navigate(backTo)}
+                />
+                <Button onClick={() => setEditing(true)}>수정</Button>
+              </>
+            )
+          }
+        />
       )}
 
       {editing ? (
@@ -127,34 +140,32 @@ export function EmployeeDetailPage({
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           {/* 좌측(2/3): 프로필 본문 */}
           <div className="space-y-4 lg:col-span-2">
-            <CardShell>
-              <div className="flex items-center gap-5">
-                <PhotoBox src={photo || null} />
-                <div className="min-w-0 flex-1">
-                  {/* 상세 헤더는 카드 안에 있어도 페이지 맥락이다 — 24px 제목 옆 배지가 11px로 찍히지 않게 한다. */}
-                  <DensityProvider value="page">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h1 className="text-title-md font-bold text-gray-900">{emp.name}</h1>
-                      {jobLabel && <Badge tone="neutral">{jobLabel}</Badge>}
-                      {adminLabel && <Badge tone="neutral">{adminLabel}</Badge>}
-                    </div>
-                  </DensityProvider>
-                  <p className={`mt-1 ${cardText.subtitle}`}>{subtitle}</p>
-                </div>
-              </div>
-
-              <div className="mt-5 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-3">
-                <Info label="회사" value={company || '-'} />
-                <Info label="지사" value={branchLabel || '-'} />
-                {/* 직책·직급은 이름 옆 호칭 태그가 이미 말한다 — 같은 값을 아래에 한 번 더 적지 않는다. */}
-                {/* 호봉은 인사 관리 맥락에서만 표기한다(OFFICE 임직원 정보에서는 감춤). */}
-                {showPayStep && <Info label="호봉" value={payStep || '-'} />}
-                <Info label="입사일" value={hireDate || '-'} />
-                <Info label="연락처" value={phone} />
-                <Info label="이메일" value={email} />
-                <Info label="수정일" value={formatDate(emp.updated_at)} />
-              </div>
-            </CardShell>
+            {/* 카드 규격(사진·제목·배지·부제·구분선·정보행)은 화면이 아니라 공용
+                `EntityHeaderCard`가 소유한다 — 상세 헤더가 페이지 맥락이라는 규칙도 함께. */}
+            <EntityHeaderCard
+              photo={<PhotoBox src={photo || null} />}
+              title={emp.name}
+              badges={
+                <>
+                  {jobLabel && <Badge tone="neutral">{jobLabel}</Badge>}
+                  {adminLabel && <Badge tone="neutral">{adminLabel}</Badge>}
+                </>
+              }
+              description={subtitle}
+              info={
+                <InfoGrid>
+                  <Info label="회사" value={company || null} />
+                  <Info label="지사" value={branchLabel || null} />
+                  {/* 직책·직급은 이름 옆 호칭 태그가 이미 말한다 — 같은 값을 아래에 한 번 더 적지 않는다. */}
+                  {/* 호봉은 인사 관리 맥락에서만 표기한다(OFFICE 임직원 정보에서는 감춤). */}
+                  {showPayStep && <Info label="호봉" value={payStep || null} />}
+                  <Info label="입사일" value={hireDate || null} />
+                  <Info label="연락처" value={phone} />
+                  <Info label="이메일" value={email} />
+                  <Info label="수정일" value={formatDate(emp.updated_at)} meta />
+                </InfoGrid>
+              }
+            />
 
             <SectionCard title="약력">
               {hasCareer ? (

@@ -1,4 +1,4 @@
-import { BackButton, Banner, Button, Spinner } from '@ynarcher/ui'
+import { BackButton, Banner, Button, DetailTopBar, Spinner } from '@ynarcher/ui'
 import { useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { DetailDeleteButton } from '@/components/DetailDeleteButton'
@@ -88,20 +88,22 @@ export function ProgramDetailPage() {
     <div className="space-y-5">
       {tab === 'overview' ? (
         <>
-          <div className="flex items-center justify-between gap-3">
-            <BackButton as={Link} to={backTo} />
-            <div className="flex items-center gap-2">
-              {/* 사업은 삭제 사유 인프라가 없어 확인창(confirm)으로 소프트 삭제한다. */}
-              <DetailDeleteButton
-                withReason={false}
-                onDelete={async () => {
-                  await deactivate.mutateAsync(program.id)
-                }}
-                onDeleted={() => navigate(backTo)}
-              />
-              <Button onClick={() => setEditOpen(true)}>편집</Button>
-            </div>
-          </div>
+          <DetailTopBar
+            back={<BackButton as={Link} to={backTo} />}
+            actions={
+              <>
+                {/* 사업은 삭제 사유 인프라가 없어 확인창(confirm)으로 소프트 삭제한다. */}
+                <DetailDeleteButton
+                  withReason={false}
+                  onDelete={async () => {
+                    await deactivate.mutateAsync(program.id)
+                  }}
+                  onDeleted={() => navigate(backTo)}
+                />
+                <Button onClick={() => setEditOpen(true)}>편집</Button>
+              </>
+            }
+          />
           <ProgramOverviewTab program={program} onOpenModule={onOpenModule} />
         </>
       ) : (

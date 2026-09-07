@@ -1,5 +1,5 @@
 import { Tabs } from '@ynarcher/ui'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Program, ProgramModule } from '@/features/program/hooks'
 import { ParticipantPool } from '@/features/program/ParticipantPool'
 import { PERSONA_LABEL, type MasterTable } from '@/features/program/participantHooks'
@@ -15,12 +15,20 @@ import { useProgramWorkspace } from '@/features/program/workspace'
 import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
+import { MaProgramPartyPanel } from '@/features/mna/MaProgramPartyPanel'
 
 /**
  * 명부 탭의 키는 자격(`MasterTable`) 값 그대로다 — 탭 키를 자격으로 옮겨 적는 표를 두면
  * 그 표가 곧 어긋날 자리가 된다.
  */
-type LeftTab = 'modules' | MasterTable | 'intro' | 'announcements' | 'qna'
+type LeftTab =
+  | 'modules'
+  | 'seller'
+  | 'buyer'
+  | MasterTable
+  | 'intro'
+  | 'announcements'
+  | 'qna'
 
 /**
  * 내부 운영 탭. 명부는 자격 두 축(참여 기업 · 참여 전문가)이 각각 한 탭이다 —
@@ -28,7 +36,7 @@ type LeftTab = 'modules' | MasterTable | 'intro' | 'announcements' | 'qna'
  * 다른 화면을 여는 축**이라(3_9_1 §4), 검색·역할과 같은 층에 두면 필터 한 칸처럼 읽힌다.
  */
 const BASE_TABS: { key: LeftTab; label: string }[] = [
-  { key: 'modules', label: '프로그램' },
+  { key: 'modules', label: 'WORK' },
   { key: 'startups', label: PERSONA_LABEL.startups },
   { key: 'networks', label: PERSONA_LABEL.networks },
 ]
@@ -72,11 +80,34 @@ export function ProgramOverviewTab({
     { key: 'announcements', label: '공지사항' },
     { key: 'qna', label: 'Q&A' },
   ]
-  const leftTabs = [
-    ...BASE_TABS,
-    ...guestTabs.map((tab, i) => (i === 0 ? { ...tab, divider: true } : tab)),
+  const mnaTabs: { key: LeftTab; label: string }[] = [
+    { key: 'modules', label: 'WORK' },
+    ...(program.category === 'SELL' || program.category === 'SELL_BUY'
+      ? [{ key: 'seller' as const, label: 'SELLER' }]
+      : []),
+    ...(program.category === 'BUY' || program.category === 'SELL_BUY'
+      ? [{ key: 'buyer' as const, label: 'BUYER' }]
+      : []),
   ]
+  const leftTabs =
+    config.key === 'mna'
+      ? mnaTabs
+      : [
+          ...BASE_TABS,
+          ...guestTabs.map((tab, i) => (i === 0 ? { ...tab, divider: true } : tab)),
+        ]
   const [leftTab, setLeftTab] = useState<LeftTab>('modules')
+  useEffect(() => {
+    const sellerVisible =
+      config.key === 'mna' &&
+      (program.category === 'SELL' || program.category === 'SELL_BUY')
+    const buyerVisible =
+      config.key === 'mna' &&
+      (program.category === 'BUY' || program.category === 'SELL_BUY')
+    if ((leftTab === 'seller' && !sellerVisible) || (leftTab === 'buyer' && !buyerVisible)) {
+      setLeftTab('modules')
+    }
+  }, [config.key, leftTab, program.category])
 
   return (
     <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
@@ -90,6 +121,20 @@ export function ProgramOverviewTab({
             {leftTab === 'qna' && <ProgramQnaPanel programId={program.id} />}
             {leftTab === 'modules' && (
               <ModuleBoardCard program={program} onOpenModule={onOpenModule} />
+            )}
+            {leftTab === 'seller' && (
+              <MaProgramPartyPanel
+                programId={program.id}
+                category={program.category}
+                kind="SELL"
+              />
+            )}
+            {leftTab === 'buyer' && (
+              <MaProgramPartyPanel
+                programId={program.id}
+                category={program.category}
+                kind="BUY"
+              />
             )}
             {/* 탭을 바꾸면 명부는 통째로 다시 선다(key) — 선택·역할·페이지가 자격을 넘어
                 살아남으면, 안 보이는 행이 선택된 채로 `연결`에 딸려 간다. */}

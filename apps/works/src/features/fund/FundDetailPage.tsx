@@ -5,9 +5,13 @@ import {
   Button,
   CardHeading,
   CardShell,
-  DensityProvider,
+  DetailTopBar,
+  EntityHeaderCard,
+  EntityHeaderSection,
   InfoField,
+  InfoGrid,
   Spinner,
+  StatStrip,
   Tabs,
   useToast,
   type BadgeTone,
@@ -67,15 +71,6 @@ const DETAIL_TABS: { key: DetailTab; label: string; divider?: boolean }[] = [
 ]
 
 /** 카드 안 KPI 타일. */
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-radius-md border border-gray-200 bg-gray-25 px-3 py-2">
-      <p className="text-caption text-gray-600">{label}</p>
-      <p className="text-body font-bold tabular-nums text-gray-900">{value}</p>
-    </div>
-  )
-}
-
 /**
  * 펀드 상세: 상단 편집/삭제 + 2:1 카드 섹션. 좌측 개요 카드 아래 서브 탭바(출자자/포트폴리오/캐피탈 콜)로
  * 운영 섹션을 전환한다(AC ProgramOverviewTab 구조). 우측(1/3)은 운용 인력·관리 정보 고정.
@@ -134,91 +129,107 @@ export function FundDetailPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <BackButton as={Link} to="/fund" />
-        <div className="flex items-center gap-2">
-          {/* 펀드는 삭제 사유 인프라가 없어 확인창(confirm)으로 소프트 삭제한다. */}
-          <DetailDeleteButton
-            name={fund.name}
-            withReason={false}
-            onDelete={async () => {
-              await deactivate.mutateAsync(fund.id)
-            }}
-            onDeleted={() => navigate('/fund')}
-          />
-          <Button onClick={() => setEditing(true)}>편집</Button>
-        </div>
-      </div>
+      <DetailTopBar
+        back={<BackButton as={Link} to="/fund" />}
+        actions={
+          <>
+            {/* 펀드는 삭제 사유 인프라가 없어 확인창(confirm)으로 소프트 삭제한다. */}
+            <DetailDeleteButton
+              name={fund.name}
+              withReason={false}
+              onDelete={async () => {
+                await deactivate.mutateAsync(fund.id)
+              }}
+              onDeleted={() => navigate('/fund')}
+            />
+            <Button onClick={() => setEditing(true)}>편집</Button>
+          </>
+        }
+      />
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
         {/* 좌측(2/3): 펀드 기본 데이터 카드(이름·배지 + 요약지표 + 정보부, 탭 무관 상단 고정) + 운영 서브 탭.
             STARTUP·NETWORKS 상세의 첫 카드 섹션과 동일한 구성이다. */}
         <div className="space-y-4 lg:col-span-2">
-          <CardShell>
-            <DensityProvider value="page">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-title-md font-bold text-gray-900">{fund.name}</h1>
+          {/* 카드 규격(제목·배지·구분선·정보행)은 화면이 아니라 공용 `EntityHeaderCard`가
+              소유한다 — 상세 헤더가 페이지 맥락이라는 규칙도 그 카드가 함께 갖는다. */}
+          <EntityHeaderCard
+            title={fund.name}
+            badges={
+              <>
                 {fund.strategy_type && (
                   <Badge tone={strategyTone[fund.strategy_type] ?? 'neutral'}>
                     {FUND_STRATEGY_LABEL[fund.strategy_type] ?? fund.strategy_type}
                   </Badge>
                 )}
                 <Badge tone={FUND_STATUS_TONE[fund.status] ?? 'neutral'}>{fundStatusLabel(fund.status)}</Badge>
-              </div>
-            </DensityProvider>
-
-            {/* 요약 지표(약정·실출자·집행·잔액) */}
-            <div className="mt-5 grid grid-cols-2 gap-3 border-t border-gray-100 pt-4 sm:grid-cols-4">
-              <Stat label="약정총액" value={formatWon(commit)} />
-              <Stat label="실출자금액" value={paidIn == null ? '-' : formatWon(paidIn)} />
-              <Stat label="집행액" value={formatWon(drawn)} />
-              <Stat label="잔액" value={formatWon(commit - drawn)} />
-            </div>
-
-            {/* 펀드 속성(재원·성격·유형·기간·출자방식) */}
-            <div className="mt-4 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-3">
+              </>
+            }
+            info={
+              /* 요약 지표(약정·실출자·집행·잔액) — 라벨:값이 아니라 나란히 견주는 지표라
+                 `InfoGrid`가 아니라 지표 띠다. 칸마다 테두리 상자를 두르면 비교가 아니라 열거로
+                 읽히므로 상자를 걷고 옅은 세로선으로만 나눈다(5_component_spec_rules §3.7).
+                 종전에는 이 타일이 캐피탈 콜 패널과 **글자 하나까지 같은 사본**으로 두 벌 있었다. */
+              <StatStrip
+                className="grid grid-cols-2 divide-gray-200 sm:grid-cols-4 sm:divide-x"
+                tiles={[
+                  { key: 'commit', label: '약정총액', value: formatWon(commit) },
+                  { key: 'paidIn', label: '실출자금액', value: paidIn == null ? '-' : formatWon(paidIn) },
+                  { key: 'drawn', label: '집행액', value: formatWon(drawn) },
+                  { key: 'rest', label: '잔액', value: formatWon(commit - drawn) },
+                ]}
+              />
+            }
+          >
+            {/* 펀드 속성(재원·성격·유형·기간·출자방식). 구분선을 그은 한 묶음이라는 사실은
+                화면이 아니라 `EntityHeaderSection`이 적는다. */}
+            <EntityHeaderSection>
+              <InfoGrid>
               {/* 펀드코드: 사업코드와 같은 형식(6자리 영숫자)이며 워크스페이스를 가로질러 유니크하다. */}
-              <Info label="펀드코드" value={fund.code || '-'} />
+              <Info label="펀드코드" value={fund.code || null} />
               <Info
                 label="재원구분"
-                value={fund.source_type ? FUND_SOURCE_LABEL[fund.source_type] ?? fund.source_type : '-'}
+                value={fund.source_type ? FUND_SOURCE_LABEL[fund.source_type] ?? fund.source_type : null}
               />
               <Info
                 label="성격구분"
                 value={
-                  fund.character_type ? FUND_CHARACTER_LABEL[fund.character_type] ?? fund.character_type : '-'
+                  fund.character_type ? FUND_CHARACTER_LABEL[fund.character_type] ?? fund.character_type : null
                 }
               />
               <Info
                 label="펀드유형"
-                value={fund.fund_type ? FUND_TYPE_LABEL[fund.fund_type] ?? fund.fund_type : '-'}
+                value={fund.fund_type ? FUND_TYPE_LABEL[fund.fund_type] ?? fund.fund_type : null}
               />
               {/* 결성일은 존속기간 시작일과 같은 날이라 은퇴했다 — 묻지도 적지도 않는다(20260731240000). */}
-              <Info label="존속기간" value={fundPeriod(fund.term_start ?? null, fund.term_end ?? null) ?? '-'} />
+              <Info label="존속기간" value={fundPeriod(fund.term_start ?? null, fund.term_end ?? null)} />
               <Info
                 label="운용기간"
-                value={fundPeriod(fund.operation_start ?? null, fund.operation_end ?? null) ?? '-'}
+                value={fundPeriod(fund.operation_start ?? null, fund.operation_end ?? null)}
               />
               <Info
                 label="출자 방식"
                 value={
                   fund.subscription_type
                     ? FUND_SUBSCRIPTION_LABEL[fund.subscription_type] ?? fund.subscription_type
-                    : '-'
+                    : null
                 }
               />
-            </div>
+              </InfoGrid>
+            </EntityHeaderSection>
 
             {/* 인력·등록 그룹: 펀드 속성과 구분선으로 분리. */}
-            <div className="mt-4 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-3">
-              <Info label="대표펀드매니저" value={fund.manager?.name || '-'} />
-              <Info label="운용인력" value={fundOperatorLabel(operators, true) ?? '-'} />
-              <Info label="관리인력" value={fundManagerLabel(operators, true) ?? '-'} />
-              {/* 생성자(created_by) — 관리 주체(대표펀드매니저·운용·관리인력)와 별개 축이다. */}
-              <Info label="생성자" value={fund.creator?.name || '-'} />
-              <Info label="수정일" value={fundDate(fund.updated_at ?? null) ?? '-'} />
-            </div>
-          </CardShell>
+            <EntityHeaderSection>
+              <InfoGrid>
+                <Info label="대표펀드매니저" value={fund.manager?.name || null} />
+                <Info label="운용인력" value={fundOperatorLabel(operators, true)} />
+                <Info label="관리인력" value={fundManagerLabel(operators, true)} />
+                {/* 생성자(created_by) — 관리 주체(대표펀드매니저·운용·관리인력)와 별개 축이다. */}
+                <Info label="생성자" value={fund.creator?.name || null} meta />
+                <Info label="수정일" value={fundDate(fund.updated_at ?? null)} meta />
+              </InfoGrid>
+            </EntityHeaderSection>
+          </EntityHeaderCard>
 
           <div>
             <Tabs items={DETAIL_TABS} value={tab} onChange={(k) => setTab(k as DetailTab)} />

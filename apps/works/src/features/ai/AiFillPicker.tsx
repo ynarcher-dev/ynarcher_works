@@ -1,12 +1,12 @@
 import { cardText, cn } from '@ynarcher/ui'
-import type { AiSource } from '@/features/startup/startupAiFill'
-import { AI_SUPPORTED_HINT } from '@/features/startup/startupAiFormats'
+import type { AiSource } from '@/features/ai/aiFillClient'
+import { AI_SUPPORTED_HINT } from '@/features/ai/aiFormats'
 
 /**
  * 'AI 작성하기' 모달에서 **고를 수 없는 자료**를 알리는 목록.
  *
  * 종전에는 이 파일이 세 목록(읽을 자료 · 작성할 카드 · 읽을 수 없는 자료)을 가졌다. 앞의 둘은
- * 2026-09-06에 카드 × 자료 격자(`StartupAiFillGrid`)로 합쳐졌다 — 두 목록은 "무엇을 읽는가"와
+ * 2026-09-06에 카드 × 자료 격자(`AiFillGrid`)로 합쳐졌다 — 두 목록은 "무엇을 읽는가"와
  * "무엇을 쓰는가"를 따로 물었을 뿐, 그 둘을 잇는 답(어느 자료가 어느 카드의 근거인가)은
  * 어디서도 묻지 않았기 때문이다.
  *

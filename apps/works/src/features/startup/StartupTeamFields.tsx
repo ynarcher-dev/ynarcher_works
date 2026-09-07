@@ -1,6 +1,6 @@
 import { Button, Checkbox, Input, Select, TextArea, TokenMultiSelect } from '@ynarcher/ui'
 import { useFieldArray, type Control, type UseFormRegister } from 'react-hook-form'
-import { Cell, Label, RowActions, RowBox } from '@/features/startup/StartupFieldLabel'
+import { Cell, Label, RowActions, RowBox } from '@/components/FormRowFields'
 import { EMPLOYMENT_OPTIONS } from '@/features/startup/startupProfile'
 import type { StartupDetailFormValues } from '@/features/startup/startupFormValues'
 

@@ -99,7 +99,7 @@ export function ModuleBoardCard({
 
   if (isLoading) {
     return (
-      <Card title="프로그램">
+      <Card title="WORK">
         <Spinner />
       </Card>
     )
@@ -227,7 +227,7 @@ export function ModuleBoardCard({
             onClick={() => setAddOpen(true)}
             icon={<Plus className="h-4 w-4" />}
           >
-            프로그램 추가
+            WORK 추가
           </DashedAddButton>
 
           <DisabledModuleSection
@@ -245,7 +245,7 @@ export function ModuleBoardCard({
   return (
     <>
       <Card
-        title="프로그램"
+        title="WORK"
         actions={
           <div className="flex items-center gap-2">
             {viewToggle}
@@ -261,7 +261,7 @@ export function ModuleBoardCard({
         onClose={() => setExpanded(false)}
         title={
           <>
-            <span className="text-title-sm font-medium text-gray-900">프로그램</span>
+            <span className="text-title-sm font-medium text-gray-900">WORK</span>
             <Badge tone="neutral">{program.title}</Badge>
           </>
         }

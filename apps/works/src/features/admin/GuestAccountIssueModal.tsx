@@ -1,4 +1,15 @@
-import { Button, Field, Input, Modal, Select, Spinner, cn, useToast } from '@ynarcher/ui'
+import {
+  Button,
+  EmptyState,
+  Field,
+  Input,
+  Modal,
+  Select,
+  Spinner,
+  cardText,
+  cn,
+  useToast,
+} from '@ynarcher/ui'
 import { Check } from 'lucide-react'
 import { useState } from 'react'
 import {
@@ -90,7 +101,10 @@ export function GuestAccountIssueModal({ open, onClose }: { open: boolean; onClo
 
         {isLoading && <Spinner />}
         {!isLoading && search.trim() && (candidates ?? []).length === 0 && (
-          <p className="text-body text-gray-500">검색 결과가 없습니다.</p>
+          <EmptyState
+            title="검색 결과가 없습니다"
+            description="원장에 이미 있는 대상만 고를 수 있습니다. 없으면 원장에 먼저 등록하세요."
+          />
         )}
 
         <ul className="space-y-1">
@@ -105,18 +119,18 @@ export function GuestAccountIssueModal({ open, onClose }: { open: boolean; onClo
                   className={cn(
                     'flex w-full items-center gap-3 rounded-radius-md border px-3 py-2 text-left',
                     blocked
-                      ? 'cursor-not-allowed border-gray-200 opacity-60'
-                      : 'border-gray-200 hover:border-brand hover:bg-brand/5',
+                      ? 'cursor-not-allowed border-gray-300 opacity-60'
+                      : 'border-gray-300 hover:border-brand hover:bg-brand/5',
                   )}
                 >
                   <span className="flex size-5 shrink-0 items-center justify-center rounded-full border border-gray-300">
                     {c.hasAccount && <Check aria-hidden className="size-3 text-success" />}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-body font-medium text-gray-900">
+                    <span className={cn('block truncate font-medium', cardText.value)}>
                       {c.name}
                     </span>
-                    <span className="block truncate text-body-sm text-gray-600">
+                    <span className={cn('block truncate', cardText.meta)}>
                       {blocked ??
                         [c.loginName, c.email, c.hasAccount ? '계정 있음' : null]
                           .filter(Boolean)

@@ -21,8 +21,9 @@ import {
  */
 export const CHART_COLORS = {
   brand: '#2E5CB8', // 슬롯1(주 지표) — 브랜드 인디고(brand.500)
-  teal: '#0A7D55', // 슬롯2 — 딥에메랄드
-  amber: '#9A6300', // 슬롯3 — 딥골드
+  teal: '#0D9488', // 슬롯2 — 틸
+  amber: '#D97706', // 슬롯3 — 앰버
+  purple: '#7C3AED', // 순이익 — 퍼플
   gray5: '#5B6371',
   gray4: '#6E7683',
   gray3: '#D9DEE5',

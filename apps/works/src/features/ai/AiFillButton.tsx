@@ -1,11 +1,10 @@
 import { Button, cardText } from '@ynarcher/ui'
 import { useState } from 'react'
-import type { EntityRow } from '@/features/master/entityHooks'
-import { StartupAiFillModal } from '@/features/startup/StartupAiFillModal'
-import type { AiFillResult, AiSource } from '@/features/startup/startupAiFill'
-import type { AiCardKey } from '@/features/startup/startupAiCards'
-import type { AiGrid } from '@/features/startup/startupAiGrid'
-import type { AiFillOutcome } from '@/features/startup/startupAiMerge'
+import { AiFillModal } from '@/features/ai/AiFillModal'
+import type { AiFillResult, AiSource } from '@/features/ai/aiFillClient'
+import type { AiFillCatalog } from '@/features/ai/aiCatalog'
+import type { AiFillOutcome } from '@/features/ai/aiTypes'
+import type { AiGrid } from '@/features/ai/aiGrid'
 
 /**
  * 자료 관리 카드 아래에 서는 'AI 작성하기' 진입 버튼.
@@ -19,22 +18,22 @@ import type { AiFillOutcome } from '@/features/startup/startupAiMerge'
  *
  * 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §4.1
  */
-export function StartupAiFillButton({
+export function AiFillButton<K extends string>({
+  catalog,
   sources,
-  snapshot,
   loading = false,
-  startupId,
-  companyName,
+  targetId,
+  subjectName,
   onFilled,
 }: {
+  /** 이 대상의 규격 — 카드·묶음·두드릴 함수. 카드의 '작성됨'도 이미 판정된 채로 온다. */
+  catalog: AiFillCatalog<K>
   /** 고를 수 있는 자료(수정: 올라간 첨부 / 등록: 아직 안 올라간 파일). */
   sources: AiSource[]
-  /** 지금 폼에 적힌 값을 원장 행 모양으로 세운 것. 기본 체크와 병합의 기준이 된다. */
-  snapshot: EntityRow
   loading?: boolean
   /** 수정 모드의 대상 id. 등록 모드에는 아직 없다. */
-  startupId?: string
-  companyName?: string
+  targetId?: string
+  subjectName?: string
   /**
    * 초안을 폼에 얹고 **그 결과**를 돌려준다.
    *
@@ -42,17 +41,17 @@ export function StartupAiFillButton({
    * 폼이 자기 살아 있는 값 위에서 하고(그 값이 기준이어야 방금 적어 둔 줄이 살아남는다),
    * 그 답은 창 안 결과 패널 하나가 읽는다.
    */
-  onFilled: (result: AiFillResult, cards: AiCardKey[]) => AiFillOutcome
+  onFilled: (result: AiFillResult<K>, cards: K[]) => AiFillOutcome<K>
 }) {
   const [open, setOpen] = useState(false)
   /**
    * 카드별 자료 배정(격자). **창이 아니라 여기에 둔다.**
    *
-   * 한 요청이 실패하면 그 카드만 다시 돌려야 하는데, 창을 닫을 때 선택이 사라지면 열넷을
-   * 처음부터 다시 골라야 한다. 여기 있으면 다시 열었을 때 방금 고른 격자가 그대로 서고
-   * 담당자는 실패한 줄만 남기면 된다. 없는 자료를 가리키는 칸은 창이 걷는다(`pruneGrid`).
+   * 한 요청이 실패하면 그 카드만 다시 돌려야 하는데, 창을 닫을 때 선택이 사라지면 처음부터
+   * 다시 골라야 한다. 여기 있으면 다시 열었을 때 방금 고른 격자가 그대로 서고 담당자는
+   * 실패한 줄만 남기면 된다. 없는 자료를 가리키는 칸은 창이 걷는다(`pruneGrid`).
    */
-  const [grid, setGrid] = useState<AiGrid>({})
+  const [grid, setGrid] = useState<AiGrid<K>>({})
   const hasReadable = sources.some((s) => s.readable)
 
   return (
@@ -68,11 +67,7 @@ export function StartupAiFillButton({
           대가**다. 둘이 하는 일이 시간 축에서 갈리기 때문에 실제로는 다투지 않는다 —
           이것은 폼을 채우기 시작하는 버튼이고 저장은 끝내는 버튼이며, 자리도 위아래로
           멀리 떨어져 있다. 다만 이 예외를 다른 화면으로 복사하지는 말 것. */}
-      <Button
-        className="w-full"
-        disabled={loading || !hasReadable}
-        onClick={() => setOpen(true)}
-      >
+      <Button className="w-full" disabled={loading || !hasReadable} onClick={() => setOpen(true)}>
         AI 작성하기
       </Button>
       {/* 막힌 이유는 접지 않는다 — 다음에 무엇을 해야 하는지를 지시하는 안내다. */}
@@ -80,11 +75,11 @@ export function StartupAiFillButton({
         <p className={`mt-1.5 ${cardText.meta}`}>읽을 수 있는 자료를 먼저 첨부하세요.</p>
       )}
       {open && (
-        <StartupAiFillModal
+        <AiFillModal
+          catalog={catalog}
           sources={sources}
-          snapshot={snapshot}
-          startupId={startupId}
-          companyName={companyName}
+          targetId={targetId}
+          subjectName={subjectName}
           grid={grid}
           onGrid={setGrid}
           onClose={() => setOpen(false)}

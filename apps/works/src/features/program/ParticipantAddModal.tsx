@@ -1,4 +1,14 @@
-import { Button, Field, Input, Modal, Spinner, cn, useToast } from '@ynarcher/ui'
+import {
+  Button,
+  Field,
+  Input,
+  Modal,
+  PickList,
+  PickMark,
+  PickRow,
+  Spinner,
+  useToast,
+} from '@ynarcher/ui'
 import { Check } from 'lucide-react'
 import { useState } from 'react'
 import {
@@ -104,37 +114,22 @@ export function ParticipantAddModal({
             <div className="flex items-center justify-center py-10">
               <Spinner />
             </div>
-          ) : (candidates ?? []).length === 0 ? (
-            <p className="py-10 text-center text-body-sm text-gray-500">검색 결과가 없습니다.</p>
           ) : (
-            <ul className="max-h-[22rem] divide-y divide-gray-100 overflow-y-auto">
+            <PickList isEmpty={(candidates ?? []).length === 0} empty="검색 결과가 없습니다.">
               {(candidates ?? []).map((c) => {
                 const blocked = mapBlockReason(c)
                 const selectable = canMapCandidate(c) && !c.alreadyMapped
                 const added = picked.includes(c.id)
                 return (
-                  <li key={c.id}>
-                    <button
-                      type="button"
+                    <PickRow
+                      key={c.id}
+                      selected={added}
                       disabled={!selectable}
                       onClick={() => toggle(c.id)}
-                      className={cn(
-                        'flex w-full items-center gap-3 px-3 py-2 text-left transition-colors duration-fast',
-                        !selectable && 'cursor-not-allowed bg-gray-50',
-                        selectable &&
-                          (added ? 'bg-brand/10 hover:bg-brand/15' : 'hover:bg-gray-50'),
-                      )}
                     >
-                      <span
-                        className={cn(
-                          'grid size-5 shrink-0 place-items-center rounded-full border',
-                          added
-                            ? 'border-brand bg-brand text-white'
-                            : 'border-gray-300 text-transparent',
-                        )}
-                      >
+                      <PickMark checked={added}>
                         <Check className="size-3.5" />
-                      </span>
+                      </PickMark>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-body text-gray-900">
                           <span className="font-medium">{c.name}</span>
@@ -147,11 +142,10 @@ export function ParticipantAddModal({
                       {blocked && (
                         <span className="shrink-0 text-body-sm text-gray-500">{blocked}</span>
                       )}
-                    </button>
-                  </li>
+                    </PickRow>
                 )
               })}
-            </ul>
+            </PickList>
           )}
         </div>
       </div>

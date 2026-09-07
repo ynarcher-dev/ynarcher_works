@@ -2,13 +2,13 @@ import { useMutation } from '@tanstack/react-query'
 import type { ExtractBody } from '@docparse/types.ts'
 import { supabase } from '@/lib/supabase'
 import { isLinkMaterial, materialDisplayName, type Material } from '@/features/networks/materialHooks'
-import { isAiReadable } from '@/features/startup/startupAiFormats'
-import type { AiCardKey } from '@/features/startup/startupAiCards'
-import type { AiGrid } from '@/features/startup/startupAiGrid'
-import type { AiFillEnvelope } from '@/features/startup/startupAiMerge'
+import { isAiReadable } from '@/features/ai/aiFormats'
+
+import type { AiGrid } from '@/features/ai/aiGrid'
+import type { AiFillEnvelope } from '@/features/ai/aiTypes'
 
 /**
- * 'AI 작성하기' 호출부 — startup-ai-fill Edge Function.
+ * 'AI 작성하기' 호출부 — 대상별 Edge Function(어느 함수인지는 카탈로그가 답한다).
  *
  * 이 훅은 **아무것도 저장하지 않는다.** 서버도 원장을 쓰지 않고 초안 봉투만 돌려주며, 저장은
  * 담당자가 폼에서 확인한 뒤 통상 저장 경로(RLS)로 한다. AI가 만든 값이 사람의 확인 없이
@@ -126,7 +126,7 @@ export function sourcesFromLinks(urls: string[]): AiSource[] {
   }))
 }
 
-type AiFillResponse = AiFillEnvelope & {
+type AiFillResponse<K extends string> = AiFillEnvelope<K> & {
   skippedSources?: string[]
   model?: string
   modelVersion?: string
@@ -135,16 +135,23 @@ type AiFillResponse = AiFillEnvelope & {
 }
 
 /** 초안 봉투 + 읽지 못한 자료 안내 + 작성하지 못한 카드. */
-export type AiFillResult = AiFillEnvelope & { skippedSources: string[] }
+export type AiFillResult<K extends string> = AiFillEnvelope<K> & { skippedSources: string[] }
 
-export interface AiFillInput {
+export interface AiFillInput<K extends string> {
+  /**
+   * 두드릴 Edge Function 이름.
+   *
+   * 대상마다 함수가 얇게 서므로(권한을 묻는 함수가 다르고, 함수 이름이 곧 감사 로그와 배포의
+   * 경계다) 화면도 어느 문을 두드릴지를 함께 넘긴다. 카탈로그가 이 값을 소유한다.
+   */
+  endpoint: string
   /** 수정 모드의 대상 id. 등록 모드에는 아직 없다. */
-  startupId?: string
-  /** 대상 기업명(프롬프트 맥락). 등록 모드에서 폼에 적힌 이름을 넘긴다. */
-  companyName?: string
+  targetId?: string
+  /** 프롬프트에 실을 대상의 이름. 등록 모드에서 폼에 적힌 이름을 넘긴다. */
+  subjectName?: string
   /** 격자가 가리키는 자료 전부(중복 없이). 카드가 몇이든 자료는 한 번만 올라간다. */
   sources: AiSource[]
-  cards: AiCardKey[]
+  cards: K[]
   /**
    * 카드별 자료 배정(격자).
    *
@@ -152,7 +159,7 @@ export interface AiFillInput {
    * 보낸다. 소수 카드 때문에 같은 큰 문서를 여러 번 읽지 않으면서 전체 선택의 출력 잘림도
    * 막는다. 나누는 일을 화면이 하지 않는 이유는 담당자가 누르는 것이 한 번이어야 하기 때문이다.
    */
-  assignments: AiGrid
+  assignments: AiGrid<K>
   /**
    * 등록 모드에서 **이미 분석된 보류 자료**의 글자(자료 키 → 이름과 본문).
    *
@@ -177,11 +184,13 @@ export async function readInvokeError(error: unknown, fallback: string): Promise
   return fallback
 }
 
-function buildUploadBody(input: AiFillInput): FormData {
+function buildUploadBody<K extends string>(input: AiFillInput<K>): FormData {
   const form = new FormData()
   form.append('cards', JSON.stringify(input.cards))
   form.append('assignments', JSON.stringify(input.assignments))
-  if (input.companyName) form.append('companyName', input.companyName)
+  // 이름 칸은 `subjectName`이다 — 대상이 기업만은 아니게 되면서 공통 이름이 됐다(서버는
+  // 옛 이름 `companyName`도 아직 받는다).
+  if (input.subjectName) form.append('subjectName', input.subjectName)
   // 파일에는 id가 없으므로 **화면이 만든 키를 파일과 같은 순서로 함께 보낸다.** 순번을 서버가
   // 다시 세면 담당자가 자료를 골라 보낼 때 그 순번이 화면의 것과 어긋나, 카드별 배정이 엉뚱한
   // 자료를 가리킨다. 링크는 주소가 곧 키라 양쪽이 따로 만들어도 같은 값이 나온다.
@@ -210,19 +219,19 @@ function buildUploadBody(input: AiFillInput): FormData {
  * 가리킬 행이 없어 id로 말할 수 없기 때문이다. 두 모드를 섞어 보내지 않는 이유는 서버가
  * 경로마다 **다른 자격**을 묻기 때문이다(§8.2).
  */
-export async function requestAiFill(input: AiFillInput): Promise<AiFillResult> {
+export async function requestAiFill<K extends string>(input: AiFillInput<K>): Promise<AiFillResult<K>> {
   const hasPending = input.sources.some((s) => s.kind !== 'attachment')
   const body = hasPending
     ? buildUploadBody(input)
     : {
         // 대상 id의 이름은 `targetId`다 — 함수가 대상마다 얇게 서면서 공통 이름이 됐다.
-        targetId: input.startupId,
+        targetId: input.targetId,
         attachmentIds: input.sources.map((s) => (s.kind === 'attachment' ? s.id : '')).filter(Boolean),
         cards: input.cards,
         assignments: input.assignments,
       }
 
-  const { data, error } = await supabase.functions.invoke<AiFillResponse>('startup-ai-fill', { body })
+  const { data, error } = await supabase.functions.invoke<AiFillResponse<K>>(input.endpoint, { body })
   if (error) throw new Error(await readInvokeError(error, 'AI 작성에 실패했습니다.'))
   if (!data?.cards) throw new Error('AI 응답이 비어 있습니다.')
   return {
@@ -237,6 +246,6 @@ export async function requestAiFill(input: AiFillInput): Promise<AiFillResult> {
 }
 
 /** 모달이 쓰는 뮤테이션. 서버가 DB를 건드리지 않으므로 무효화할 쿼리도 없다. */
-export function useAiFill() {
-  return useMutation({ mutationFn: requestAiFill })
+export function useAiFill<K extends string>() {
+  return useMutation({ mutationFn: (input: AiFillInput<K>) => requestAiFill(input) })
 }

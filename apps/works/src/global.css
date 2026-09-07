@@ -9,8 +9,18 @@
 
   /* 리치 텍스트 에디터(Tiptap) 콘텐츠 조판 — .rte 스코프 */
   .rte .ProseMirror {
-    @apply min-h-[16rem] text-body leading-relaxed text-gray-800;
+    @apply text-body leading-relaxed text-gray-800;
     outline: none;
+  }
+  /* 최소 높이는 **적는 자리에만** 준다(2026-09-07).
+     빈 에디터가 한 줄 높이로 서면 어디를 눌러야 글이 시작되는지 알 수 없어 적는 자리에는
+     바닥이 필요하다. 그런데 읽는 자리에서 같은 바닥은 **없는 내용을 있는 것처럼 보이게
+     한다** — 한 줄짜리 메모가 붙은 상세내용 카드가 열 줄짜리와 같은 크기로 서서, 화면을
+     훑는 눈이 카드 크기로 내용의 많고 적음을 읽지 못했다.
+     가르는 것은 클래스가 아니라 contenteditable 속성이다(뷰어는 editable:false라 'false'로
+     선다). 화면마다 클래스를 붙여 가르면 붙이는 것을 잊은 화면에서 규격이 조용히 갈린다. */
+  .rte .ProseMirror[contenteditable='true'] {
+    @apply min-h-[16rem];
   }
   .rte .ProseMirror:focus {
     outline: none;

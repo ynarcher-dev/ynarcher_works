@@ -1,4 +1,14 @@
-import { BackButton, Button, CardShell, formText, Input, PanelCard, Select, useToast } from '@ynarcher/ui'
+import {
+  BackButton,
+  Button,
+  CardShell,
+  DetailTopBar,
+  formText,
+  Input,
+  PanelCard,
+  Select,
+  useToast,
+} from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { FundStaffingFields, toStaffing, type FundStaffing } from '@/features/fund/FundStaffingFields'
@@ -174,17 +184,19 @@ export function FundForm({ fundId, initial, onCancel, onDone }: FundFormProps) {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <BackButton onClick={onCancel} />
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={onCancel}>
-            취소
-          </Button>
-          <Button onClick={() => void save()} disabled={busy}>
-            저장
-          </Button>
-        </div>
-      </div>
+      <DetailTopBar
+        back={<BackButton onClick={onCancel} />}
+        actions={
+          <>
+            <Button variant="secondary" onClick={onCancel}>
+              취소
+            </Button>
+            <Button onClick={() => void save()} disabled={busy}>
+              저장
+            </Button>
+          </>
+        }
+      />
 
       <h1 className="text-title-md font-bold text-gray-900">{editing ? '펀드 수정' : '펀드 등록'}</h1>
 

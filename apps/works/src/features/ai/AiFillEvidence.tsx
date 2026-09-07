@@ -1,6 +1,5 @@
 import { cardText } from '@ynarcher/ui'
-import { AI_CARD_LABEL, type AiCardKey } from '@/features/startup/startupAiCards'
-import type { AiEvidence } from '@/features/startup/startupAiMerge'
+import type { AiEvidence } from '@/features/ai/aiTypes'
 
 /**
  * 카드별 근거 — **어디서 읽었는지와, 그것을 우리가 확인했는지**를 함께 세운다.
@@ -17,14 +16,19 @@ import type { AiEvidence } from '@/features/startup/startupAiMerge'
  * '미검증'은 실패가 아니다. 우리가 열지 않은 자료(PDF·이미지)를 가리킨 것이라 대조할 글자가
  * 없다는 뜻이며, 지어낸 근거는 서버가 이미 떼어 내고 그 건수를 그 카드의 경고가 말한다.
  *
+ * 카드 이름은 **받아서** 쓴다. 이 컴포넌트가 하는 일은 대상이 무엇이든 같고 갈리는 것은
+ * 이름뿐이라, 목록을 직접 들면 그 순간 한 대상의 것이 된다.
+ *
  * 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §4.4·§16.15
  */
-export function StartupAiFillEvidence({
+export function AiFillEvidence<K extends string>({
   cards,
   evidence,
+  cardLabel,
 }: {
-  cards: AiCardKey[]
-  evidence: Partial<Record<AiCardKey, AiEvidence[]>>
+  cards: K[]
+  evidence: Partial<Record<K, AiEvidence[]>>
+  cardLabel: Record<K, string>
 }) {
   const shown = cards.filter((k) => (evidence[k]?.length ?? 0) > 0)
   if (shown.length === 0) return null
@@ -35,7 +39,7 @@ export function StartupAiFillEvidence({
       <ul className="space-y-1">
         {shown.map((key) => (
           <li key={key}>
-            <span className={cardText.label}>{AI_CARD_LABEL[key]}</span>
+            <span className={cardText.label}>{cardLabel[key]}</span>
             <ul className="ml-3 list-disc pl-3">
               {(evidence[key] ?? []).map((item, i) => (
                 <li key={i} className={cardText.value}>

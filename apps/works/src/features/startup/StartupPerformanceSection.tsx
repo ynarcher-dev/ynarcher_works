@@ -1,5 +1,5 @@
 import type { EntityRow } from '@/features/master/entityHooks'
-import { SectionHeading } from '@/features/startup/SectionHeading'
+import { SectionHeading } from '@/components/SectionHeading'
 import { StartupBusinessTimeline } from '@/features/startup/StartupBusinessTimeline'
 import { StartupGrowthCards } from '@/features/startup/StartupGrowthSection'
 import { StartupMediaCard } from '@/features/startup/StartupMediaCard'

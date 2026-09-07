@@ -1,4 +1,13 @@
-import { ColumnUnit, DataTable, ListToolbar, Spinner, type Column } from '@ynarcher/ui'
+import {
+  ColumnUnit,
+  DataTable,
+  EmptyValue,
+  ListToolbar,
+  PersonCell,
+  Spinner,
+  TagCell,
+  type Column,
+} from '@ynarcher/ui'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ListActions } from '@/components/ListActions'
@@ -31,13 +40,20 @@ function columnsOf(cfg: MaPartyConfig): Column<MaPartyRow>[] {
       key: 'industries',
       header: '분야',
       type: 'tags',
-      render: (r) => (r.industries?.length ? r.industries.join(', ') : '-'),
+      // 나열·상한(외 N)·말줄임·전체 값 title은 화면이 조립하지 않고 `TagCell`이 소유한다
+      // (STARTUP·FUND·사업 목록의 분야 열과 같은 부품) — 손으로 이으면 표마다 규격이 갈린다.
+      render: (r) => <TagCell items={r.industries ?? []} />,
     },
-    { key: 'wish', header: '희망사항', type: 'long', render: (r) => r.wish || '-' },
+    { key: 'wish', header: '희망사항', type: 'long', render: (r) => r.wish || <EmptyValue /> },
     // 상대 쪽 창구다 — 우리 쪽 관리 주체가 아니다(표준 컬럼의 '생성자'와 다른 축).
     // 이메일은 열로 세우지 않는다: 목록에서 견주는 값이 아니라 한 건을 열어 꺼내 쓰는 값이고,
     // 개인정보라 마스킹까지 걸리면 열의 대부분이 가려진 글자가 된다.
-    { key: 'contact_name', header: '담당자', type: 'person', render: (r) => r.contact_name || '-' },
+    {
+      key: 'contact_name',
+      header: '담당자',
+      type: 'person',
+      render: (r) => <PersonCell names={[r.contact_name]} />,
+    },
     {
       key: 'available_funds',
       header: (
@@ -46,7 +62,8 @@ function columnsOf(cfg: MaPartyConfig): Column<MaPartyRow>[] {
         </>
       ),
       type: 'money',
-      render: (r) => toMillion(r.available_funds),
+      render: (r) =>
+        r.available_funds == null ? <EmptyValue /> : toMillion(r.available_funds),
     },
   ]
 }
@@ -101,7 +118,7 @@ export function MaPartyListTab({ config }: { config: MaPartyConfig }) {
           onRowClick={(r) => navigate(`${config.basePath}/${r.id}`)}
           emptyText={`등록된 ${config.noun}이(가) 없습니다.`}
           // 생성자 값은 uuid가 아니라 임베드한 이름이 답한다(기본 추론은 created_by 원값을 읽는다).
-          meta={{ author: (r) => r.creator?.name ?? '-' }}
+          meta={{ author: (r) => r.creator?.name ?? <EmptyValue /> }}
           // 삭제는 목록이 아니라 상세에서 한다 — 빈 관리 열이 남지 않게 열 자체를 내린다.
           showManageColumn={false}
           pagination={{

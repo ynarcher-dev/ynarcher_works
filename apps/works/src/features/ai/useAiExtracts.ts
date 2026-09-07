@@ -1,9 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useMemo, useState } from 'react'
 import type { ExtractBody } from '@docparse/types.ts'
-import type { AiSource } from '@/features/startup/startupAiFill'
-import { analyzeSource, useMaterialExtracts, type LocalExtract } from '@/features/startup/startupAiExtract'
-import { sourceStatus, type AiSourceStatus } from '@/features/startup/startupAiExtractState'
+import type { AiSource } from '@/features/ai/aiFillClient'
+import { analyzeSource, useMaterialExtracts, type LocalExtract } from '@/features/ai/aiExtract'
+import { sourceStatus, type AiSourceStatus } from '@/features/ai/aiExtractState'
 
 /**
  * 자료 분석 단계의 상태를 한곳에서 든다 — 캐시 · 이번 세션의 결과 · 진행 중 · 담당자 지정.
@@ -30,7 +30,11 @@ export interface AiExtractController {
   error: string | null
 }
 
-export function useStartupAiExtracts(sources: AiSource[], startupId?: string): AiExtractController {
+export function useAiExtracts(
+  endpoint: string,
+  sources: AiSource[],
+  targetId?: string,
+): AiExtractController {
   const attachmentIds = useMemo(
     () => sources.filter((s) => s.kind === 'attachment').map((s) => s.key),
     [sources],
@@ -68,7 +72,7 @@ export function useStartupAiExtracts(sources: AiSource[], startupId?: string): A
       for (const [i, source] of todo.entries()) {
         setRunning((prev) => new Set(prev).add(source.key))
         try {
-          const result = await analyzeSource(source, startupId)
+          const result = await analyzeSource(endpoint, source, targetId)
           setLocal((prev) => ({ ...prev, [source.key]: result }))
           if (source.kind === 'attachment') stored = true
         } catch (e) {
@@ -89,7 +93,7 @@ export function useStartupAiExtracts(sources: AiSource[], startupId?: string): A
       // 저장된 자료가 있으면 캐시 조회를 다시 세운다(다음에 창을 열 때 그대로 보여야 한다).
       if (stored) await queryClient.invalidateQueries({ queryKey: ['attachment-extracts'] })
     },
-    [statusOf, startupId, queryClient],
+    [statusOf, endpoint, targetId, queryClient],
   )
 
   const toggleOriginal = useCallback((key: string) => {

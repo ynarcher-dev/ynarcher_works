@@ -55,6 +55,7 @@ MANAGEMENT 권한이 없는 임직원에게 물품과 사진만 노출하는 `po
   * **의미**: 결성 펀드 개요, 출자자(LP) 명부 관리, 분기별 자본금 납입 요청(캐피탈 콜) 관리 및 피투자 스타트업의 지분율 현황과 재무 정보 추적 화면 요건을 정의합니다.
 * **[3_6_workspace_ma.md](../docs_planning/3_6_workspace_ma.md) (M&A 워크스페이스 상세 기획서)**
   * **의미**: 투자 유치 및 인수합병 딜 소싱 관리를 위해 매수/매도 희망 조건 기반의 매칭 매트릭스와 협상 진척 사항을 기록하는 명세서입니다.
+  * **[3_6_1_ma_seller_quick_review.md](../docs_planning/3_6_1_ma_seller_quick_review.md) (M&A SELLER 퀵 리뷰와 AI 작성)**: 셀러 상세의 상세내용 아래에 서는 매각 대상 소개 문서(절 7종)와, 첨부 IM·티저·재무제표에서 그 초안을 만드는 AI 작성하기의 정본입니다. 절이 곧 저장·체크 단위인 jsonb 한 칸 구조, 파생값(성장률·이익률·Net debt·요약재무)을 담지 않는 규칙, 연도를 행으로 눕히는 표 규격, 이 대상에만 있는 프롬프트·정규화 규칙(홍보문 방지·괄호 음수·값을 고쳐 맞추지 않음), 대상마다 얇게 두는 Edge Function과 쓰기 게이트를 규정합니다. 엔진의 동작 규약은 [3_3_5](../docs_planning/3_3_5_startup_ai_fill.md)가 정본입니다.
 * **[3_7_workspace_management.md](../docs_planning/3_7_workspace_management.md) (MANAGEMENT 워크스페이스 상세 기획서)**
   * **의미**: 인사 관리(HRD/HRM), 재무 실적 및 성과 지표 대시보드, 전자결재 등 경영지원 업무 처리를 위한 대시보드 기획입니다.
 * **[3_7_1_management_performance_kpi.md](../docs_planning/3_7_1_management_performance_kpi.md) (MANAGEMENT 조직 성과·KPI 관리 기획서)**

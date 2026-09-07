@@ -5,7 +5,7 @@ import {
   AI_EXTENSION_MIMES,
   AI_SUPPORTED_HINT,
   resolveAiMime,
-} from '@/features/startup/startupAiFormats'
+} from '@/features/ai/aiFormats'
 
 /**
  * 형식 판정과 링크 읽기 회귀 테스트.

@@ -1,5 +1,5 @@
 import { Button, Input, Select, cardText } from '@ynarcher/ui'
-import { Cell, RowActions, RowBox } from '@/features/startup/StartupFieldLabel'
+import { Cell, RowActions, RowBox } from '@/components/FormRowFields'
 import {
   GOV_ROLE_OPTIONS,
   IP_KIND_OPTIONS,

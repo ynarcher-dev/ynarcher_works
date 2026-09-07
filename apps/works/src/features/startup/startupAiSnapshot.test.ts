@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { applyAiDraft, type AiFillEnvelope } from '@/features/startup/startupAiMerge'
+import { applyAiDraft } from '@/features/startup/startupAiMerge'
+import type { AiFillEnvelope } from '@/features/ai/aiTypes'
 import {
   buildCardSnapshot,
   toCardState,
   toFormValues,
   type AiCardState,
 } from '@/features/startup/startupAiSnapshot'
-import { AI_CARDS } from '@/features/startup/startupAiCards'
+import { AI_CARDS, type AiCardKey } from '@/features/startup/startupAiCards'
 import type { StartupDetailFormValues } from '@/features/startup/startupFormValues'
 
 /**
@@ -72,7 +73,9 @@ function cardState(over: Partial<AiCardState> = {}): AiCardState {
   }
 }
 
-const envelope = (cards: AiFillEnvelope['cards']): AiFillEnvelope => ({ cards, notes: {}, evidence: {} })
+const envelope = (
+  cards: AiFillEnvelope<AiCardKey>['cards'],
+): AiFillEnvelope<AiCardKey> => ({ cards, notes: {}, evidence: {} })
 
 describe('왕복 — 초안 없이 돌려도 값이 그대로다', () => {
   it('폼 값을 행으로 세웠다가 되돌려도 카드 값이 같다', () => {

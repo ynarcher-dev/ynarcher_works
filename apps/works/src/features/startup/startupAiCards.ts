@@ -3,6 +3,7 @@ import { readGrowth, readBusinessStatus } from '@/features/startup/startupGrowth
 import { readBusiness, readIp, readTeam, readTech } from '@/features/startup/startupProfile'
 import { readSummary } from '@/features/startup/StartupSummaryCards'
 import { readShareholderHistory } from '@/features/startup/startupShareholders'
+import type { AiFillCatalog } from '@/features/ai/aiCatalog'
 
 /**
  * 'AI 작성하기'의 체크 단위 — 상세 카드 12종.
@@ -44,7 +45,7 @@ export const AI_CARD_GROUPS: ReadonlyArray<{ key: AiCardGroup; label: string }> 
   { key: 'capital', label: '재무·인력·자본' },
 ]
 
-export interface AiCardMeta {
+export interface StartupAiCardMeta {
   key: AiCardKey
   label: string
   group: AiCardGroup
@@ -64,7 +65,7 @@ const some = (...values: unknown[]) => values.some((v) => (typeof v === 'string'
  * 2026-09-06 이전에는 이 값이 **기본 체크 상태**까지 정했다(빈 카드는 켜고 찬 카드는 끈다).
  * 지금은 모달이 아무것도 켜지 않은 채 열리므로 표시에만 쓴다.
  */
-export const AI_CARDS: AiCardMeta[] = [
+export const AI_CARDS: StartupAiCardMeta[] = [
   {
     key: 'basics',
     label: '기본 정보',
@@ -196,3 +197,30 @@ export const AI_CARD_LABEL: Record<AiCardKey, string> = AI_CARDS.reduce(
   (acc, c) => ({ ...acc, [c.key]: c.label }),
   {} as Record<AiCardKey, string>,
 )
+
+/**
+ * 공용 AI 작성 UI에 넘길 이 대상의 규격.
+ *
+ * **`filled`를 여기서 값으로 굳히는 것**이 요점이다(2026-09-07). 종전에는 창·격자가 원장 행을
+ * 함께 받아 카드마다 `filled(record)`를 불렀고, 그 한 줄 때문에 두 컴포넌트가 스타트업 원장의
+ * 모양을 알아야 했다. 무엇이 채워졌는지는 그 값을 가진 쪽만 답할 수 있는 물음이므로, 판정은
+ * 여기서 끝내고 넘어가는 것은 결과값뿐이다.
+ *
+ * 기준이 저장된 행이 아니라 **지금 폼에 적힌 값**(`snapshot`)인 것은 그대로다 — 편집 중에
+ * 누르는 버튼이라 아직 저장하지 않은 줄이 있고, 원장을 기준으로 판정하면 그 줄이 화면에서
+ * 사라진 것처럼 보인다.
+ */
+export function startupAiCatalog(snapshot: EntityRow): AiFillCatalog<AiCardKey> {
+  return {
+    fillEndpoint: 'startup-ai-fill',
+    extractEndpoint: 'startup-material-extract',
+    groups: AI_CARD_GROUPS.map((g) => ({ key: g.key, label: g.label })),
+    cards: AI_CARDS.map((c) => ({
+      key: c.key,
+      label: c.label,
+      group: c.group,
+      filled: c.filled(snapshot),
+      count: c.count?.(snapshot),
+    })),
+  }
+}
