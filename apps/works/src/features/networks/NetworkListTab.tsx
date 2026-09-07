@@ -95,7 +95,7 @@ export function NetworkListTab({ scope, onScopeChange }: NetworkListTabProps) {
         keyword={keyword}
         filters={filters}
         searchScope={searchScope}
-        onChangeRegions={(regionIds) => setFilters((f) => ({ ...f, regionIds }))}
+        onChangeRegionAxis={(axis) => setFilters((f) => ({ ...f, ...axis }))}
       />
 
       <NetworkFilteredSummary

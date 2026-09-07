@@ -33,6 +33,18 @@ export interface NetworkFilterState {
    * 답한다 — 별도의 지역 축을 두지 않는 이유다.
    */
   regionIds: string[]
+  /**
+   * 권역 카드의 '미지정' 칸 — 국가를 아직 모르는 행만 남긴다.
+   *
+   * 값은 국가에 관한 것인데 축의 소유자는 권역 카드다. 권역이 국가에서 파생되므로(행에
+   * 저장하지 않는다) **국가가 없으면 권역이 미지정**이고, 그래서 이 조건이 설 자리는 그
+   * 카드의 마지막 칸이다. 국가 필터 칩에 '미확인' 선택지를 되살리지 않는 것도 같은 이유다 —
+   * 같은 물음에 두 컨트롤이 답하면 엇갈리게 걸 수 있고 그때 결과가 빈 이유를 화면이 답하지
+   * 못한다(2026-09-05에 지역 칩을 걷은 것과 같은 판단).
+   *
+   * 서버 인자는 `p_country_unset`이며 목록 RPC에는 처음부터 있었다.
+   */
+  countryUnset: boolean
   countryIds: string[]
   /** 영역(expertise jsonb 배열) — ADMIN 영역 관리(field_tags) 태그명. */
   expertise: string[]
@@ -46,6 +58,7 @@ export interface NetworkFilterState {
 export const EMPTY_NETWORK_FILTERS: NetworkFilterState = {
   categories: [],
   regionIds: [],
+  countryUnset: false,
   countryIds: [],
   expertise: [],
   match: [],
@@ -57,6 +70,7 @@ export function hasActiveNetworkFilters(f: NetworkFilterState): boolean {
   return (
     f.categories.length > 0 ||
     f.regionIds.length > 0 ||
+    f.countryUnset ||
     f.countryIds.length > 0 ||
     f.expertise.length > 0 ||
     f.match.length > 0 ||

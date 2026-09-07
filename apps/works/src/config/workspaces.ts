@@ -40,12 +40,6 @@ export interface WorkspaceNavItem {
   sections: WorkspaceSection[]
   /** 아직 구현되지 않은 워크스페이스는 false (후속 Phase에서 활성화). */
   implemented: boolean
-  /** 스위처에서 워크스페이스가 무엇을 하는지 한 줄로 설명하는 부제. */
-  description?: string
-  /** 이 항목부터 시작되는 스위처 섹션명. 지정 시 위에 섹션 헤더(구분선+라벨)를 그린다. */
-  groupLabel?: string
-  /** 섹션 라벨 없이 이 항목 위에 구분선만 그린다. */
-  divider?: boolean
 }
 
 /** 구획 하나만 덮는 항목의 축약. */
@@ -72,20 +66,22 @@ const MA_LEDGER_SUBNAV = (label: string, glyphKey: string, first = false): SubNa
  * 2026-09-07에 BUSINESS 한 항목이 실행 라인 넷으로 다시 갈렸다(2026-09-06 통합 되돌림).
  * 한 자리에 넷을 세우면 스위처가 답하던 '어느 원장인가'를 사이드바 줄 이름이 대신 답해야 하고,
  * 그 대가로 사업 3종이 공유하던 라벨 한 벌을 워크스페이스마다 갈라야 했다. 갈라 세우면 그 답이
- * 스위처로 돌아오고 줄 이름은 다시 한 벌이 된다. DATABASE는 합친 채로 둔다 — 원장들이 오가며
+ * 스위처로 돌아오고 줄 이름은 다시 한 벌이 된다. Database는 합친 채로 둔다 — 원장들이 오가며
  * 함께 보는 짝이고 줄이 둘뿐이라 이름만으로 구분이 선다.
  *
- * 항목이 여덟이라 구분선은 되살리되 섹션 라벨(`groupLabel`)은 두지 않는다 — 선이 나누는 위쪽
- * 두 블록은 항목이 하나·둘이라 헤더가 항목 이름을 다른 말로 한 번 더 적는 층이 된다.
+ * **부제·구분선·섹션 라벨은 두지 않는다(2026-09-07 사용자 지정).** 같은 날 이름이 약어에서
+ * 부르는 이름으로 바뀌면서(`Accelerator`·`Investment Office`·`Management Office`) 이름
+ * 자체가 그 자리가 무엇인지 답하게 되었고, 부제는 같은 말을 한국어로 한 번 더 적는 층이
+ * 되었다. 구분선도 함께 걷는다 — 선은 묶음이 있을 때만 뜻이 서고, 없을 때는 한 목록을 여러
+ * 층으로 보이게 만든다. 목록의 순서는 그대로 조직 순이다.
  */
 export const WORKSPACES: WorkspaceNavItem[] = [
   // 업무 허브 — 전사 공통 업무 허브로 최상단에 노출(구 HUB 대시보드·AI 에이전트 통합).
   {
     id: 'office',
-    label: 'OFFICE',
+    label: 'Office',
     sections: solo('office', '/office'),
     implemented: true,
-    description: '전사 공통 업무·대시보드',
   },
   // 데이터베이스 — 쌓아 두고 찾아 보는 전사 원장 둘이 스위처 항목 하나로 선다(2026-09-06).
   //
@@ -101,19 +97,24 @@ export const WORKSPACES: WorkspaceNavItem[] = [
   // 항목의 두 줄은 읽기 권한이 갈릴 뿐 대상은 전사 공용이다.
   {
     id: 'database',
-    label: 'DATABASE',
+    label: 'Database',
     sections: [
       { key: 'startup', path: '/startup' },
       { key: 'networks', path: '/networks' },
     ],
     implemented: true,
-    description: '스타트업·네트워크 원장',
   },
   // 실행 라인 — 사업·딜·펀드. 셋이 각각 자기 항목으로 선다.
   //
   // 순서는 조직 순이다(2026-09-06 사용자 지정) — AC사업 / M&A팀·PE / 투자실.
-  // 항목명은 원장 이름(영문)으로 두고 조직명은 화면 안쪽 문구가 답한다: 나머지 항목이 전부
-  // 영문이라 여기만 한글이면 한 목록 안에서 표기가 섞인다.
+  // 항목명은 영문으로 둔다: 나머지 항목이 전부 영문이라 여기만 한글이면 표기가 섞인다.
+  //
+  // 2026-09-07에 세 항목의 이름을 약어에서 **부르는 이름**으로 바꿨다(사용자 지정) —
+  // `AC`→`Accelerator`, `FUND`→`Investment Office`, `M&A/PE`→`M&A·PE`. 약어는 안에서
+  // 일하는 사람에게만 통하는 말이라, 처음 들어온 사람에게 `AC`와 `FUND`는 무엇을 하는
+  // 자리인지 답하지 않는다. 가운뎃점(`·`)은 이 목록의 다른 자리와 같은 구분자다
+  // (슬래시는 경로로 읽힌다). **권한 키(`ac`·`fund`·`mna`)는 그대로다** — 그 값은
+  // 정책·감사 로그·저장된 설정에 박혀 있고, 바뀐 것은 부르는 이름 하나뿐이다.
   //
   // PROJECT는 2026-09-07에 폐지하고 AC로 합쳤다 — 열린 이래 사업 0건이라 실제로 쓰인 적이
   // 없는데, 줄이 둘이면 프로젝트 성격의 일이 들어올 때마다 어디에 넣을지를 매번 판단해야
@@ -121,11 +122,9 @@ export const WORKSPACES: WorkspaceNavItem[] = [
   // 이 항목에서 관리한다.
   {
     id: 'ac',
-    label: 'AC',
+    label: 'Accelerator',
     sections: solo('ac', '/ac'),
     implemented: true,
-    divider: true,
-    description: '액셀러레이팅·수행 사업 관리',
   },
   // M&A/PE — 딜 한 줄 + 거래상대 원장 두 줄(2026-09-07 이관·신설).
   //
@@ -137,7 +136,7 @@ export const WORKSPACES: WorkspaceNavItem[] = [
   // `/mna/buyers`는 딜 구획에 먼저 걸려, 원장 화면에 서 있는데 사이드바는 딜 줄을 칠한다.
   {
     id: 'mna',
-    label: 'M&A/PE',
+    label: 'M&A·PE',
     sections: [
       { key: 'mna', path: '/mna' },
       {
@@ -148,29 +147,24 @@ export const WORKSPACES: WorkspaceNavItem[] = [
       { key: 'mna', path: MA_SELLER.basePath, subnav: MA_LEDGER_SUBNAV(MA_SELLER.listLabel, 'sell') },
     ],
     implemented: true,
-    description: '인수·합병·경영참여 딜 관리',
   },
   {
     id: 'fund',
-    label: 'FUND',
+    label: 'Investment Office',
     sections: solo('fund', '/fund'),
     implemented: true,
-    description: '펀드·투자 운용',
   },
   // 경영·시스템 — 백오피스 및 시스템 관리
   {
     id: 'management',
-    label: 'MANAGEMENT',
+    label: 'Management Office',
     sections: solo('management', '/management'),
     implemented: true,
-    divider: true,
-    description: '인사·재무·자산 관리',
   },
   {
     id: 'admin',
-    label: 'ADMIN',
+    label: 'Admin',
     sections: solo('admin', '/admin'),
     implemented: true,
-    description: '시스템·권한 관리',
   },
 ]

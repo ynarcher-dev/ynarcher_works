@@ -118,10 +118,6 @@ export function WorksLayout() {
     key: w.id,
     label: w.implemented ? w.label : `${w.label} (준비 중)`,
     disabled: !w.implemented,
-    // 워크스페이스 부제 + 구획 구분선(실행 라인 넷 위, 경영·시스템 둘 위 — 섹션 라벨은 없다).
-    description: w.description,
-    groupLabel: w.groupLabel,
-    divider: w.divider,
   }))
 
   const goToSection = (item: { tab?: string }, section: WorkspaceSection) => {

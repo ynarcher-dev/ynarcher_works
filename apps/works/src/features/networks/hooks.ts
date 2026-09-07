@@ -169,6 +169,9 @@ export function useNetworkListPage(
         p_uncategorized: wantsUncategorized(filters) ? true : null,
         p_regions: filters.regionIds.length ? filters.regionIds : null,
         p_countries: filters.countryIds.length ? filters.countryIds : null,
+        // 권역 카드의 '미지정' 칸. 끄면 조건을 붙이지 않는다(false를 보내면 '국가가 있는
+        // 행만'이라는 반대 조건으로 읽힐 자리라, 켤 때만 참을 보낸다).
+        p_country_unset: filters.countryUnset ? true : null,
         p_search_email: searchScope.email,
         p_search_phone: searchScope.phone,
         p_expertise: filters.expertise.length ? filters.expertise : null,

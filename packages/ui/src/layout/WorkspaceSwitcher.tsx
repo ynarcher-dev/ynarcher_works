@@ -6,12 +6,6 @@ export interface WorkspaceOption {
   label: string
   /** 준비 중 등 선택 불가 워크스페이스는 비활성 처리. */
   disabled?: boolean
-  /** 워크스페이스가 무엇을 하는지 한 줄로 설명하는 부제(라벨 아래에 회색으로 노출). */
-  description?: string
-  /** 이 항목부터 시작되는 섹션명. 지정 시 위에 구분선 + 섹션 라벨을 그린다. */
-  groupLabel?: string
-  /** 섹션 라벨 없이 이 항목 위에 구분선만 그린다(groupLabel과 함께 쓰면 무시). */
-  divider?: boolean
 }
 
 export interface WorkspaceSwitcherProps {
@@ -99,21 +93,13 @@ export function WorkspaceSwitcher({
         )
       }
     >
-      {options.map((opt, idx) => {
+      {/* 구분선·섹션 라벨은 2026-09-07에 걷었다(사용자 지정). 항목이 일곱이고 이름이
+          저마다 다른 자리를 가리키므로, 선이 묶어 주지 않아도 목록이 읽힌다 — 선은 묶음이
+          있을 때만 뜻이 서고, 없을 때는 한 목록을 여러 층으로 보이게 만든다. */}
+      {options.map((opt) => {
         const isCurrent = opt.key === current
         return (
           <Fragment key={opt.key}>
-            {/* 구분선은 메뉴 좌우 여백(mx-3)에 맞춰 들여쓰는 드롭다운 관례를 따른다. */}
-            {idx > 0 && (opt.groupLabel || opt.divider) && (
-              <div className="mx-3 my-1 border-t border-gray-200" />
-            )}
-            {opt.groupLabel && (
-              <div className="px-3 pb-1 pt-1">
-                <span className="text-caption font-semibold text-gray-600">
-                  {opt.groupLabel}
-                </span>
-              </div>
-            )}
             <DropdownItem
               disabled={opt.disabled}
               onClick={() => {
@@ -122,20 +108,17 @@ export function WorkspaceSwitcher({
               }}
             >
               <span className="flex w-full items-baseline gap-3 whitespace-nowrap">
+                {/* 부제(설명)는 2026-09-07에 걷었다. 워크스페이스 이름이 약어에서 부르는
+                    이름으로 바뀌면서(Accelerator·Investment Office·Management Office) 이름
+                    자체가 그 자리가 무엇인지 답하게 되어, 옆에 붙은 한 줄이 같은 말을 한국어로
+                    한 번 더 적는 층이 되었다. 라벨의 고정 폭(w-28)도 함께 걷는다 — 그 폭은
+                    설명을 세로로 맞추기 위한 것이었고, 설명이 없는 지금은 긴 이름을 잘라
+                    놓기만 한다. */}
                 <span
-                  className={`w-28 shrink-0 ${
-                    isCurrent ? 'font-semibold text-brand' : 'font-medium text-gray-900'
-                  }`}
+                  className={isCurrent ? 'font-semibold text-brand' : 'font-medium text-gray-900'}
                 >
                   {opt.label}
                 </span>
-                {opt.description && (
-                  // 설명은 라벨과 **같은 줄**에 선다. 한 줄 안에서 크기를 갈라 위계를 만들지
-                  // 않으므로(4_color·3_typography의 관통 원칙) 크기는 라벨과 같은 본문 하나로
-                  // 두고 색으로만 물러난다 — 이전에는 12px + font-light였고, 그 굵기는 이
-                  // 코드베이스에서 여기 한 곳에서만 쓰이던 사다리 밖 값이었다.
-                  <span className="text-body text-gray-500">{opt.description}</span>
-                )}
                 {isCurrent && (
                   <span className="ml-auto shrink-0 self-center rounded-radius-sm bg-brand-25 px-1.5 py-0.5 text-caption font-medium text-brand">
                     현재

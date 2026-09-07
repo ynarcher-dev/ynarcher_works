@@ -57,6 +57,7 @@ export function useNetworkFacetCounts(
         p_uncategorized: wantsUncategorized(filters) ? true : null,
         p_regions: filters.regionIds.length ? filters.regionIds : null,
         p_countries: filters.countryIds.length ? filters.countryIds : null,
+        p_country_unset: filters.countryUnset ? true : null,
         p_search_email: searchScope.email,
         p_search_phone: searchScope.phone,
         p_expertise: filters.expertise.length ? filters.expertise : null,

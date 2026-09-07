@@ -17,12 +17,17 @@ export const MANAGEMENT_STATUSES: ManagementStatus[] = ['sourced', 'incubated', 
  * 않은 기업"**이었다 — 그 자리가 없어서 새로 등록하는 기업이 전부 발굴기업으로 들어가
  * 발굴기업 수가 부풀려졌다. 코드값(`other`)은 그대로 둔다: DB·민감정보 정책 키·알림 경로가
  * 이 문자열로 저장돼 있어 바꾸면 기존 설정이 통째로 끊긴다(부르는 말이 달라졌을 뿐이다).
+ *
+ * 2026-09-07에 '미지정 기업'에서 **'미지정'**으로 줄였다(사용자 지정). 나머지 셋은 `~기업`이
+ * 붙어야 무엇을 세는지가 이름에 드러나지만, 미지정은 **구분이 없다는 상태**를 가리키므로
+ * 여기서 `기업`은 옆 칸에서 이미 아는 말을 한 번 더 적는 층이다. NETWORKS 두 카드의 같은
+ * 칸도 `미지정` 한 낱말이라, 이 이름이 화면을 가로질러 한 벌이 된다.
  */
 export const MANAGEMENT_STATUS_LABEL: Record<ManagementStatus, string> = {
   sourced: '발굴기업',
   incubated: '보육기업',
   invested: '투자기업',
-  other: '미지정 기업',
+  other: '미지정',
 }
 
 export type BadgeTone = 'neutral' | 'info' | 'success' | 'warning'
