@@ -1,5 +1,4 @@
-import { Input, Tooltip, tooltipScale } from '@ynarcher/ui'
-import type { ReactNode } from 'react'
+import { Field, Input } from '@ynarcher/ui'
 
 interface OrgDraftFieldsProps {
   label: string
@@ -14,28 +13,6 @@ interface OrgDraftFieldsProps {
   onLabelCommit: () => void
   onFromChange: (v: string) => void
   onToChange: (v: string) => void
-}
-
-/** 라벨 + 입력 한 칸. */
-function Field({
-  label,
-  hint,
-  children,
-}: {
-  label: string
-  /** 이 칸의 규칙. 라벨 옆 도움말(ⓘ) 말풍선으로 접힌다(공용 `Field`와 같은 규약). */
-  hint?: string
-  children: ReactNode
-}) {
-  return (
-    <label className="block space-y-1">
-      <span className="text-caption font-semibold text-gray-600">
-        {label}
-        {hint && <Tooltip label={label} content={hint} className={tooltipScale.gap} />}
-      </span>
-      {children}
-    </label>
-  )
 }
 
 /**

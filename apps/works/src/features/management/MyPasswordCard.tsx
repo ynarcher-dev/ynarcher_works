@@ -1,32 +1,10 @@
-import { Button, CardShell, Tooltip, tooltipScale, useToast } from '@ynarcher/ui'
-import { useState, type ReactNode } from 'react'
+import { Button, CardShell, Field, useToast } from '@ynarcher/ui'
+import { useState } from 'react'
 import { PasswordInput } from '@/components/PasswordInput'
 import { supabase } from '@/lib/supabase'
 
 /** 새 비밀번호 최소 길이 — 계정 생성 시 초기 비밀번호와 같은 기준을 쓴다. */
 const MIN_LENGTH = 8
-
-/** 필드 래퍼(라벨 + 입력). 인사 관리 폼과 같은 모양. */
-function Field({
-  label,
-  hint,
-  children,
-}: {
-  label: string
-  hint?: string
-  children: ReactNode
-}) {
-  return (
-    <div>
-      <label className="mb-1 block text-caption font-medium text-gray-700">
-        {label}
-        <span className="text-brand"> *</span>
-        {hint && <Tooltip label={label} content={hint} className={tooltipScale.gap} />}
-      </label>
-      {children}
-    </div>
-  )
-}
 
 /** Supabase Auth가 영어로 돌려주는 거절 사유를 화면 문구로 옮긴다. */
 function failMessage(raw: string): string {
@@ -102,7 +80,7 @@ export function MyPasswordCard() {
     <CardShell>
       <p className="mb-3 text-caption font-medium text-gray-700">비밀번호 변경</p>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field label="현재 비밀번호">
+        <Field label="현재 비밀번호" required>
           <PasswordInput
             value={current}
             onChange={(e) => setCurrent(e.target.value)}
@@ -111,6 +89,7 @@ export function MyPasswordCard() {
         </Field>
         <div className="hidden sm:block" />
         <Field
+          required
           label="새 비밀번호"
           hint={`${MIN_LENGTH}자 이상으로, 다른 서비스와 겹치지 않는 값을 쓰세요.`}
         >
@@ -120,7 +99,7 @@ export function MyPasswordCard() {
             autoComplete="new-password"
           />
         </Field>
-        <Field label="새 비밀번호 확인">
+        <Field label="새 비밀번호 확인" required>
           <PasswordInput
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}

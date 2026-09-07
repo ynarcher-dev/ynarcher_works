@@ -161,9 +161,10 @@ export function MaterialRow({
         showDescription ? material.description : null,
         material.label?.trim() ? material.file_name : null,
       ]}
-      // 링크에는 용량이 없다. 빈 값을 넘기면 이 열이 '-'로 서는데, 그것은 '모른다'는 뜻이라
-      // 사실과 다르다 — 아예 세우지 않는다.
-      size={link ? undefined : formatBytes(material.byte_size)}
+      // 링크에는 용량이 없다. 그 자리를 비우면 링크 행만 오른쪽이 휑해 목록이 어긋나
+      // 보이므로, 용량 대신 '무엇인가'를 답하는 자리로 쓴다. '-'는 쓰지 않는다 —
+      // '모른다'는 뜻이라 사실과 다르다.
+      size={link ? 'link' : formatBytes(material.byte_size)}
       actions={
         <>
           {/*
@@ -242,12 +243,8 @@ export function MaterialRow({
         </>
       }
     >
-      {audioUrl && (
-        <audio className="mt-2 h-9 w-full" src={audioUrl} controls autoPlay />
-      )}
-      {urlError && (
-        <p className="mt-1 text-caption text-danger">재생 URL을 불러오지 못했습니다.</p>
-      )}
+      {audioUrl && <audio className="mt-2 h-9 w-full" src={audioUrl} controls autoPlay />}
+      {urlError && <p className="mt-1 text-caption text-danger">재생 URL을 불러오지 못했습니다.</p>}
     </AttachmentRow>
   )
 }

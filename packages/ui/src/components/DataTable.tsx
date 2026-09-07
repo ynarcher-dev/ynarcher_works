@@ -129,11 +129,19 @@ const buildColumnSpec = (stage: TableStage): Record<ColumnType, ColumnSpec> => {
      * `2026-08-01 ~ 2026-`처럼 잘린 값은 짧아진 것이 아니라 종료일이 없는 기간과 구분되지 않는
      * 틀린 값이라, 애초에 잘릴 수 없는 폭을 준다.
      */
-    period: { width: w.period, align: 'left', numeric: false, rem: page ? 13 : 12 },
+    period: { width: w.period, align: 'left', numeric: false, rem: 13 },
     /** 일시 `YYYY-MM-DD HH:MM:SS`. */
     datetime: { width: w.datetime, align: 'left', numeric: false, rem: page ? 11 : 9 },
-    /** 금액·수량. */
-    money: { width: w.money, align: 'right', numeric: true, rem: page ? 8 : 7 },
+    /**
+     * 금액·수량.
+     *
+     * 카드 자리도 페이지와 같은 8rem이다(2026-09-06 정정). 2026-09-06에 13px 단이 폐지되며
+     * `columnWidthScale.card`의 폭이 `w-32`(128px)로 올라갔는데 여기 `rem`만 7로 남아 있었다.
+     * 이 숫자는 가변폭 열이 나눠 가질 몫을 계산할 때 컨테이너에서 빼는 고정폭 합이라, 실제보다
+     * 작으면 가변폭 열이 그 차이만큼 더 받아 표가 카드를 넘긴다 — 열 하나당 16px씩, 조용히.
+     * 같은 이유로 `period`의 카드 값(12)도 폭(`w-52`, 13rem)에 맞춰 올렸다.
+     */
+    money: { width: w.money, align: 'right', numeric: true, rem: 8 },
     /** 건수·개수. */
     count: { width: w.count, align: 'right', numeric: true, rem: page ? 6 : 5 },
   }
@@ -166,7 +174,7 @@ const standardWidthByStage: Record<
     no: { w: 'w-14', rem: 3.5 },
     author: { w: 'w-24', rem: 6 },
     updated: { w: 'w-32', rem: 8 },
-    // 관리 열에는 card 맥락 버튼(32px·px-3·13px)이 둘까지 선다 — '수정'과 '비활성화'.
+    // 관리 열에는 card 맥락 버튼(32px·px-3·14px)이 둘까지 선다 — '수정'과 '비활성화'.
     manage: { w: 'w-40', rem: 10 },
   },
   card: {
@@ -377,12 +385,16 @@ export interface DataTableProps<T> {
    */
   showManageColumn?: boolean
   /**
-   * 표 전체에 한 번만 적히는 단서 — 금액 열의 단위가 대표적이다(`단위: 백만원`).
+   * 표 전체에 한 번만 적히는 단서 — 기준일처럼 **어느 한 열이 아니라 표 전부에 걸리는** 말이다.
    *
-   * 자리는 표 **테두리 안**, 머리글 줄 위 오른쪽이다. 단위를 값에 붙이면(`50,000백만원`) 세 글자가
-   * 행 수만큼 반복되며 열 폭을 먹고 자릿수 비교도 어긋나고, 머리글에 넣으면(`약정총액(백만원)`)
-   * 고정폭 열의 머리글이 접히거나 열을 밀어 넓혀 값에서 뺀 폭을 그대로 돌려준다. 표 밖에 두지
-   * 않는 이유는 캡처다 — 표만 잘라 공유해도 단위가 함께 따라와야 한다.
+   * 자리는 표 **테두리 안**, 머리글 줄 위 오른쪽이다. 표 밖에 두지 않는 이유는 캡처다 — 표만
+   * 잘라 공유해도 단서가 함께 따라와야 한다.
+   *
+   * **금액 단위는 여기가 아니라 머리글이다**(2026-09-02 확정, 공용 `ColumnUnit`). 2026-09-01에는
+   * `단위: 백만원`을 이 줄에 두었고 근거는 '머리글에 넣으면 고정폭 열의 머리글이 접힌다'였는데,
+   * 실제로 걸린 것은 읽는 순서였다 — 이 줄은 머리글에서 눈을 한 번 떼야 읽히고, 금액 열이 셋이면
+   * 그 단위가 어느 열에 걸리는지도 줄 하나로는 말해 주지 못한다. 값에 붙이는 안(`50,000백만원`)은
+   * 그대로 탈락이다(행 수만큼 반복되며 열 폭을 먹고 자릿수 비교가 어긋난다).
    */
   caption?: ReactNode
   /** 표준 컬럼 값 접근자(미지정 시 관례 필드에서 자동 추론). */

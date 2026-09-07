@@ -16,6 +16,8 @@ import { MyPage } from '@/features/management/MyPage'
 import { OrgReformPage } from '@/features/management/OrgReformPage'
 import { OfficePage } from '@/features/office/OfficePage'
 import { MnaBulkPage, MnaProgramDetailPage, MnaWorkspacePage } from '@/features/mna/MnaWorkspace'
+import { MaBuyerDetailPage } from '@/features/mna/buyers/MaBuyerDetailPage'
+import { MaBuyerPage } from '@/features/mna/buyers/MaBuyerPage'
 import { NetworksPage } from '@/features/networks/NetworksPage'
 import { NetworksBulkPage } from '@/features/networks/NetworksBulkPage'
 import { NetworkDetailPage } from '@/features/networks/NetworkDetailPage'
@@ -190,6 +192,25 @@ export const router = createBrowserRouter([
             element: (
               <RequireWorkspace workspace="mna">
                 <MnaBulkPage />
+              </RequireWorkspace>
+            ),
+          },
+          {
+            // M&A BUYER 원장 — 권한 키는 mna이지만 경로는 /mna 아래가 아니다.
+            // 자리(DATABASE)를 경로가 정하기 때문이다: /mna로 시작하면 resolveWorkspace가
+            // M&A/PE 항목으로 잡아 사이드바가 딜 목록으로 바뀐다.
+            path: 'buyers',
+            element: (
+              <RequireWorkspace workspace="mna">
+                <MaBuyerPage />
+              </RequireWorkspace>
+            ),
+          },
+          {
+            path: 'buyers/:id',
+            element: (
+              <RequireWorkspace workspace="mna">
+                <MaBuyerDetailPage />
               </RequireWorkspace>
             ),
           },

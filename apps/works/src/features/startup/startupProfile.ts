@@ -1,4 +1,5 @@
 import type { EntityRow } from '@/features/master/entityHooks'
+import { foldMonth } from '@/features/startup/startupMonth'
 
 /**
  * 역량 밴드(비즈니스·제품기술·팀조직·지식재산) 4종의 저장 규약과 읽기.
@@ -174,7 +175,8 @@ export function readTeam(record: EntityRow): TeamProfile {
   const o = asObject(record.team_profile)
   return {
     founderStrength: str(o, 'founderStrength'),
-    members: asArray<TeamMember>(o.members),
+    // 합류 시점은 월까지만 받는 칸이다 — 일이 붙은 옛 값은 여기서 접는다(monthValue 참조).
+    members: asArray<TeamMember>(o.members).map((m) => foldMonth(m, 'joinedAt')),
     capabilities: asArray<string>(o.capabilities),
     orgComposition: str(o, 'orgComposition'),
     hiringPlan: str(o, 'hiringPlan'),
@@ -185,8 +187,8 @@ export function readTeam(record: EntityRow): TeamProfile {
 export function readIp(record: EntityRow): IpProfile {
   const o = asObject(record.ip_profile)
   return {
-    rights: asArray<IpRight>(o.rights),
-    certifications: asArray<Certification>(o.certifications),
+    rights: asArray<IpRight>(o.rights).map((r) => foldMonth(r, 'date')),
+    certifications: asArray<Certification>(o.certifications).map((c) => foldMonth(c, 'date')),
     govProjects: asArray<GovProject>(o.govProjects),
   }
 }

@@ -30,7 +30,7 @@ export function StartupPage() {
   const pending = tab ? PENDING_TABS[tab] : undefined
 
   if (tab && !pending) {
-    return <Navigate to={tab === 'mine' ? '/startup' : '/startup?scope=all'} replace />
+    return <Navigate to={tab === 'mine' ? '/startup?scope=mine' : '/startup'} replace />
   }
 
   return (

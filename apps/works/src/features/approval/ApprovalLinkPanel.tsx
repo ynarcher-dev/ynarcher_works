@@ -1,4 +1,4 @@
-import { Badge, Spinner, cn } from '@ynarcher/ui'
+import { Badge, Spinner, cn, panelRowBox } from '@ynarcher/ui'
 import { DetailPanelCard } from '@/features/networks/DetailPanelCard'
 import { useDocumentLinks } from '@/features/approval/documentLinkApi'
 import { DOC_STATUS_LABEL, DOC_STATUS_TONE, approvalText } from '@/features/approval/config'
@@ -49,7 +49,7 @@ export function ApprovalLinkPanel({ documentId, onOpen }: ApprovalLinkPanelProps
                 disabled={!onOpen}
                 title={onOpen ? `${doc.title} 열기` : undefined}
                 onClick={() => onOpen?.(doc.id)}
-                className="flex w-full min-w-0 items-center gap-2 rounded-radius-md border border-gray-300 bg-white px-3 py-2 transition-colors hover:bg-gray-50 disabled:cursor-default disabled:hover:bg-white"
+                className={`flex w-full min-w-0 items-center gap-2 rounded-radius-md border border-gray-300 bg-white transition-colors hover:bg-gray-50 disabled:cursor-default disabled:hover:bg-white ${panelRowBox}`}
               >
                 <Badge tone={DOC_STATUS_TONE[doc.status]}>{DOC_STATUS_LABEL[doc.status]}</Badge>
                 <span className={cn('min-w-0 flex-1 truncate text-left', approvalText.primary)}>

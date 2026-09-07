@@ -5,7 +5,7 @@ import { readSummary } from '@/features/startup/StartupSummaryCards'
 import { readShareholderHistory } from '@/features/startup/startupShareholders'
 
 /**
- * 'AI 작성하기'의 체크 단위 — 상세 카드 10종.
+ * 'AI 작성하기'의 체크 단위 — 상세 카드 12종.
  *
  * 체크 단위를 카드로 잡은 이유는 저장 단위와 같기 때문이다. 저장이 **카드 하나에 컬럼 하나**
  * (통째 교체)라, 체크되지 않은 카드는 그 컬럼을 건드리지 않으면 그만이다. 필드 단위로 잘게
@@ -33,13 +33,21 @@ export const AI_CARD_KEYS = [
 
 export type AiCardKey = (typeof AI_CARD_KEYS)[number]
 
-/** 밴드 — 상세 화면의 세로 축(다시 재는가). 모달의 카드 목록도 같은 순서로 선다. */
-export type AiCardBand = '기본' | '역량' | '실적'
+/** AI가 같은 자료를 함께 탐색하는 묶음. 서버의 EXTRACTION_FAMILY와 같은 키를 쓴다. */
+export type AiCardGroup = 'overview' | 'organization' | 'growth' | 'capital'
+
+/** 내부 처리 이름을 분류명처럼 보이지 않게, 실제로 들어 있는 카드 이름으로 설명한다. */
+export const AI_CARD_GROUPS: ReadonlyArray<{ key: AiCardGroup; label: string }> = [
+  { key: 'overview', label: '개요' },
+  { key: 'organization', label: '팀·지식재산' },
+  { key: 'growth', label: '성장' },
+  { key: 'capital', label: '재무·인력·자본' },
+]
 
 export interface AiCardMeta {
   key: AiCardKey
   label: string
-  band: AiCardBand
+  group: AiCardGroup
   /** 현재 이 카드에 값이 있는가. 줄 오른쪽의 Y/N 배지와 교체 경고가 이 값을 읽는다. */
   filled: (record: EntityRow) => boolean
   /** 목록형 카드의 현재 건수(없으면 null). '작성됨 · 3건'의 뒷자리. */
@@ -60,7 +68,7 @@ export const AI_CARDS: AiCardMeta[] = [
   {
     key: 'basics',
     label: '기본 정보',
-    band: '기본',
+    group: 'overview',
     // 서류에 인쇄된 값이라 판단이 끼지 않는 유일한 카드다. 수정 모드에서는 기업명이 늘 차
     // 있어 기본으로 꺼지고, 등록 모드의 빈 폼에서만 켜진다 — 첫 등록이 이 카드의 자리다.
     filled: (r) =>
@@ -69,7 +77,7 @@ export const AI_CARDS: AiCardMeta[] = [
   {
     key: 'summary',
     label: '요약',
-    band: '기본',
+    group: 'overview',
     // 유일하게 판단을 요구하는 카드. 세 축 중 하나라도 차 있으면 손댄 것으로 본다.
     filled: (r) => {
       const sm = readSummary(r)
@@ -83,7 +91,7 @@ export const AI_CARDS: AiCardMeta[] = [
   {
     key: 'business',
     label: '비즈니스',
-    band: '역량',
+    group: 'overview',
     filled: (r) => {
       const b = readBusiness(r)
       return some(b.oneLiner, b.businessModel, b.targetMarket, b.revenueModel, b.salesChannel, b.supplyMode)
@@ -92,7 +100,7 @@ export const AI_CARDS: AiCardMeta[] = [
   {
     key: 'tech',
     label: '제품·기술',
-    band: '역량',
+    group: 'overview',
     filled: (r) => {
       const t = readTech(r)
       return some(t.product, t.devStage, t.coreTech, t.devInsourcing, t.differentiator)
@@ -101,7 +109,7 @@ export const AI_CARDS: AiCardMeta[] = [
   {
     key: 'team',
     label: '팀·조직',
-    band: '역량',
+    group: 'organization',
     filled: (r) => {
       const t = readTeam(r)
       return some(
@@ -117,7 +125,7 @@ export const AI_CARDS: AiCardMeta[] = [
   {
     key: 'ip',
     label: '지식재산·인증',
-    band: '역량',
+    group: 'organization',
     filled: (r) => {
       const ip = readIp(r)
       return ip.rights.length + ip.certifications.length + ip.govProjects.length > 0
@@ -130,14 +138,14 @@ export const AI_CARDS: AiCardMeta[] = [
   {
     key: 'timeline',
     label: '연혁',
-    band: '실적',
+    group: 'growth',
     filled: (r) => readBusinessStatus(r).length > 0,
     count: (r) => readBusinessStatus(r).length,
   },
   {
     key: 'traction',
     label: '트랙션·고객',
-    band: '실적',
+    group: 'growth',
     filled: (r) => {
       const g = readGrowth(r)
       return g.traction.length + g.customers.length > 0
@@ -150,7 +158,7 @@ export const AI_CARDS: AiCardMeta[] = [
   {
     key: 'revenue',
     label: '매출·재무',
-    band: '실적',
+    group: 'capital',
     filled: (r) => {
       const g = readGrowth(r)
       return g.revenue.length + g.finance.length > 0
@@ -163,21 +171,21 @@ export const AI_CARDS: AiCardMeta[] = [
   {
     key: 'employee',
     label: '고용',
-    band: '실적',
+    group: 'capital',
     filled: (r) => readGrowth(r).employee.length > 0,
     count: (r) => readGrowth(r).employee.length,
   },
   {
     key: 'shareholders',
     label: '주주',
-    band: '실적',
+    group: 'capital',
     filled: (r) => readShareholderHistory(r).length > 0,
     count: (r) => readShareholderHistory(r).length,
   },
   {
     key: 'investment',
     label: '투자',
-    band: '실적',
+    group: 'capital',
     filled: (r) => readGrowth(r).investment.length > 0,
     count: (r) => readGrowth(r).investment.length,
   },
@@ -188,4 +196,3 @@ export const AI_CARD_LABEL: Record<AiCardKey, string> = AI_CARDS.reduce(
   (acc, c) => ({ ...acc, [c.key]: c.label }),
   {} as Record<AiCardKey, string>,
 )
-

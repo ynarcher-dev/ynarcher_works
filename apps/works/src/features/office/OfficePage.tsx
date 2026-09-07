@@ -1,34 +1,36 @@
 import { EmptyState, PageHeader, Spinner } from '@ynarcher/ui'
-import { Navigate, useSearchParams } from 'react-router-dom'
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { GuestAccountPanel } from '@/features/admin/GuestAccountPanel'
 import { ApprovalWorkspace } from '@/features/approval/ApprovalWorkspace'
 import { ArchiveWorkspace } from '@/features/hub/ArchiveWorkspace'
+import { BoardSectionNav } from '@/features/hub/BoardSectionNav'
 import { BoardWorkspace } from '@/features/hub/BoardWorkspace'
 import { DashboardPanel } from '@/features/hub/DashboardPanel'
 import { NoticeWorkspace } from '@/features/hub/NoticeWorkspace'
 import { NOTICE_TAB } from '@/features/hub/boardPostStore'
 import { useBoardPostBoardId } from '@/features/hub/boardPostsApi'
 import { useBoards } from '@/features/hub/boardHooks'
+import { BOARD_KIND_LABEL, boardsOfKind, type BoardKind } from '@/features/hub/boardStore'
 import { OfficeManagersPanel } from '@/features/office/OfficeManagersPanel'
 import { BranchesPanel } from '@/features/office/branches/BranchesPanel'
 import { AssetListWorkspace } from '@/features/office/assets/AssetListWorkspace'
 import { MinutesWorkspace } from '@/features/office/minutes/MinutesWorkspace'
-import { OfficePartnersPanel } from '@/features/office/partners/OfficePartnersPanel'
 import { RoomReservationWorkspace } from '@/features/office/rooms/RoomReservationWorkspace'
 
 /**
  * 페이지 골격만 있는 준비 중 메뉴(탭 → 제목).
- * 지금은 비어 있다 — 마지막 골격이던 `거래처 정보`가 2026-09-03에 조회면으로 연결되었다.
+ * 지금은 비어 있다.
  */
 const PLACEHOLDER_TITLES: Record<string, string> = {}
 
 /**
- * OFFICE 워크스페이스: 대시보드 + 임직원 정보·회의실 예약 + 전자결재·거래처 정보 + 게시판 홈.
+ * OFFICE 워크스페이스: 대시보드 + 임직원 정보·회의실 예약 + 전자결재 + 게시판 홈.
  * 좌측 사이드바(?tab)로 섹션을 전환하며, 신규 게시판(ADMIN 게시판 관리 생성)이 모두 이곳에
  * 노출된다. AI 에이전트·전사 캘린더는 상단바 전역 진입점(우측 슬라이드오버)에서 연다.
  */
 export function OfficePage() {
   const [params] = useSearchParams()
+  const navigate = useNavigate()
   const boardsQuery = useBoards()
   const boards = boardsQuery.data ?? []
 
@@ -55,19 +57,66 @@ export function OfficePage() {
   // 부서 정보는 임직원 정보로 합쳐졌다(목록=조직, 상세=임직원). 기존 링크·북마크를 넘겨준다.
   if (tab === 'departments') return <Navigate to="/office?tab=managers" replace />
 
-  // 공지사항은 게시판이 아니라 전체 공지 게시글을 모아 보여주는 뷰다(레지스트리와 무관).
-  if (tab === NOTICE_TAB) {
+  // 1차 메뉴(`boards`/`archives`)로 들어오면 해당 종류의 첫 항목을 기본 선택한다. 실제 게시판
+  // slug URL도 그대로 받으므로 알림·북마크 딥링크는 이전 주소를 유지한다.
+  const requestedKind: BoardKind | undefined =
+    tab === 'boards' || tab === NOTICE_TAB
+      ? 'POST'
+      : tab === 'archives'
+        ? 'ARCHIVE'
+        : tabBoard?.kind
+  const sectionBoards = requestedKind ? boardsOfKind(boards, requestedKind) : []
+  const board = tabBoard ?? (tab === 'archives' ? sectionBoards[0] : undefined)
+
+  // 공지사항은 게시판 2차 사이드바의 고정 첫 항목이다. 1차 `게시판` 메뉴로 들어와도 이 화면을
+  // 기본으로 열며, 기존 `?tab=notices` 딥링크도 그대로 받는다.
+  if (tab === 'boards' || tab === NOTICE_TAB) {
     return (
       <div className="flex h-full flex-col">
-        <NoticeWorkspace />
+        <NoticeWorkspace
+          navigation={
+            <BoardSectionNav
+              kind="POST"
+              boards={sectionBoards}
+              selectedKey={NOTICE_TAB}
+              onSelect={(key) => navigate(`/office?tab=${key}`)}
+            />
+          }
+        />
       </div>
     )
   }
 
-  // 게시 탭은 종류에 따라 화면이 갈린다.
+  // 등록된 항목이 아직 없어도 1차 메뉴를 열 수 있어야 한다. 2차 사이드바와 빈 상태를 함께
+  // 보여 주어 ADMIN 게시판 관리에서 항목을 추가해야 한다는 맥락을 잃지 않는다.
+  if ((tab === 'boards' || tab === 'archives') && !board) {
+    if (boardsQuery.isLoading) return <Spinner />
+    const kind: BoardKind = tab === 'archives' ? 'ARCHIVE' : 'POST'
+    const title = BOARD_KIND_LABEL[kind]
+    return (
+      <div className="flex h-full flex-col gap-5">
+        <PageHeader title={title} />
+        <div className="flex min-h-0 flex-1 gap-5">
+          <BoardSectionNav kind={kind} boards={[]} onSelect={() => undefined} />
+          <div className="min-w-0 flex-1">
+            <EmptyState title={`등록된 ${title}이 없습니다`} />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // 게시 탭은 종류에 따라 화면이 갈린다. 목록 왼쪽의 2차 사이드바는 두 종류가 같은 부품을 쓴다.
   // 게시판(POST)=상세페이지가 있는 BoardWorkspace / 자료실(ARCHIVE)=즉시 다운로드 목록.
-  const board = tabBoard
   if (board) {
+    const boardNavigation = (
+      <BoardSectionNav
+        kind={board.kind}
+        boards={sectionBoards}
+        selectedKey={board.slug}
+        onSelect={(key) => navigate(`/office?tab=${key}`)}
+      />
+    )
     return (
       <div className="flex h-full flex-col">
         {board.kind === 'ARCHIVE' ? (
@@ -75,6 +124,7 @@ export function OfficePage() {
             key={board.slug}
             boardId={board.id}
             title={board.label}
+            navigation={boardNavigation}
           />
         ) : (
           <BoardWorkspace
@@ -82,6 +132,7 @@ export function OfficePage() {
             boardId={board.id}
             title={board.label}
             initialPostId={params.get('post') ?? undefined}
+            navigation={boardNavigation}
           />
         )}
       </div>
@@ -120,9 +171,6 @@ export function OfficePage() {
           둘로 나누지 않는 이유는 같은 목록을 두 벌로 그리면 한쪽만 고쳐 어긋나기 때문이며,
           연락처 마스킹도 화면이 아니라 서버(guest_accounts_list)가 정한다. */}
       {tab === 'guest-accounts' && <GuestAccountPanel />}
-      {/* 거래처 정보: 원장은 MANAGEMENT가 소유하고 여기서는 확인만 한다. 원장을 그대로 읽지 않고
-          가려진 뷰(trade_partners_directory)를 읽는다 — 계좌 원본·증빙 서류는 나오지 않는다. */}
-      {tab === 'clients' && <OfficePartnersPanel />}
       {/* 전자결재: 진행 중 타일(필터) + 문서함 좌패널 + 문서 목록. */}
       {tab === 'approval' && (
         <ApprovalWorkspace

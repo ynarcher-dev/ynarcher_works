@@ -25,10 +25,10 @@ import {
 } from '@/features/program/questionHooks'
 
 /**
- * QNA 탭 — 1:1 문의함의 담당자 쪽. 게스트가 GUEST QNA 메뉴에서 올린 질문 전체를 표로 보고,
+ * Q&A 탭 — 1:1 문의함의 담당자 쪽. 게스트가 GUEST Q&A 메뉴에서 올린 질문 전체를 표로 보고,
  * 행을 누르면 **상세 모달**에서 답변한다(2026-09-01 사용자 지정). 모달은 공지사항과 같은
  * 부품(BoardDetailModal)이라 두 화면이 같은 구조로 글과 첨부를 보여 준다.
- * 게스트에게는 본인 질문만 보이며, GUEST QNA 화면도 같은 모달로 질문·답변·첨부를 읽는다.
+ * 게스트에게는 본인 질문만 보이며, GUEST Q&A 화면도 같은 모달로 질문·답변·첨부를 읽는다.
  *
  * 질문은 순수 텍스트(게스트 입력), 답변은 공용 리치텍스트다 — 질문당 답변 하나이며 폼이
  * 아니라 원장이 그렇게 생겼다(answer_* 열). 첨부는 질문 1건에 매이며 담당자만 올린다.
@@ -119,7 +119,7 @@ export function ProgramQnaPanel({ programId }: { programId: string }) {
 
   if (isLoading) {
     return (
-      <Card title="QNA">
+      <Card title="Q&A">
         <Spinner />
       </Card>
     )
@@ -127,7 +127,7 @@ export function ProgramQnaPanel({ programId }: { programId: string }) {
 
   return (
     <>
-      <Card title="QNA" count={filtered.length}>
+      <Card title="Q&A" count={filtered.length}>
         <div className="space-y-3">
           <ListToolbar
             keyword={keyword}
@@ -146,7 +146,7 @@ export function ProgramQnaPanel({ programId }: { programId: string }) {
             emptyText={
               keyword
                 ? '검색 결과가 없습니다.'
-                : '아직 들어온 질문이 없습니다. 게스트가 QNA 메뉴에서 질문하면 여기에 쌓입니다.'
+                : '아직 들어온 질문이 없습니다. 게스트가 Q&A 메뉴에서 질문하면 여기에 쌓입니다.'
             }
             onRowClick={(q) => {
               setOpenId(q.id)
@@ -168,7 +168,7 @@ export function ProgramQnaPanel({ programId }: { programId: string }) {
         <BoardDetailModal
           open
           onClose={closeModal}
-          meta="QNA"
+          meta="Q&A"
           title={opened.title}
           date={`${opened.author?.name ?? '-'} · ${opened.created_at.slice(0, 10)}`}
           body={

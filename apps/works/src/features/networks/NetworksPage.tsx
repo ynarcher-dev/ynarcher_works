@@ -23,7 +23,7 @@ export function NetworksPage() {
   const legacyTab = params.get('tab')
   if (legacyTab) {
     // '내 업로드 DB'만 내 범위로 보내고 나머지(전체·구분별·글로벌·미분류)는 전체 범위로 간다.
-    return <Navigate to={legacyTab === 'mine' ? '/networks' : '/networks?scope=all'} replace />
+    return <Navigate to={legacyTab === 'mine' ? '/networks?scope=mine' : '/networks'} replace />
   }
 
   return (

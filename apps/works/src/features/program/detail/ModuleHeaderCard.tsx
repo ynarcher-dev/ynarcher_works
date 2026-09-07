@@ -12,7 +12,7 @@ import {
 } from '@ynarcher/ui'
 import { Pencil, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
-import { ModuleVisibilityBadge } from '@/features/program/detail/ModuleVisibilityBadge'
+import { moduleVisibilityBadge } from '@/features/program/config'
 import { ModuleDeleteModal } from '@/features/program/detail/ModuleDeleteModal'
 import { ModuleFormModal } from '@/features/program/detail/ModuleFormModal'
 import {
@@ -62,7 +62,7 @@ export function ModuleHeaderCard({
 }) {
   const toast = useToast()
   const { data: modules, isLoading } = useProgramModules(program.id)
-  // 밖에 열린 문인지는 공유 범위 배지의 톤이 답한다(라벨이 아니라) — 보드 카드와 같은 규칙이다.
+  // 밖에 열린 문인지(공개 상태·기간 안인지)는 공유 범위 라벨이 아니라 이 조회가 답한다.
   const { data: openLinkIds } = useOpenPublicLinkModuleIds([moduleId])
   const toggle = useToggleModule(program.id)
   // 삭제는 이 사업의 PM만 한다(서버가 최종 판정). 아닌 사람에게는 버튼을 세우지 않는다 —
@@ -98,6 +98,13 @@ export function ModuleHeaderCard({
   const Icon = meta?.icon
   const status = moduleStatusMeta(mod.status)
   const settings = readModuleSettings(mod.settings)
+  const linkOpen = Boolean(openLinkIds?.has(mod.id))
+  // 공유 범위 라벨의 원천은 배지와 같은 함수다 — 두 자리에서 지어내면 어긋나는 날이 온다.
+  const visibilityLabel = moduleVisibilityBadge(mod.visibility, linkOpen).label
+  const visibilityText =
+    mod.visibility === 'PUBLIC_LINK'
+      ? `${visibilityLabel} (${linkOpen ? '열림' : '닫힘'})`
+      : visibilityLabel
   // 모듈명 중복 검증용: 같은 사업의 다른 인스턴스 제목(자기 자신 제외).
   const otherTitles = (modules ?? [])
     .filter((m) => m.id !== mod.id)
@@ -130,16 +137,17 @@ export function ModuleHeaderCard({
               </span>
             )}
             <span className="truncate">{name}</span>
-            {/* 배지는 제목 옆이다(2026-09-06 사용자 지정) — 상태·공유 범위는 이 모듈이 '무엇인가'를
+            {/* 배지는 제목 옆이다(2026-09-06 사용자 지정) — 상태와 템플릿은 이 모듈이 '무엇인가'를
                 말하는 값이라 이름에 붙어 읽혀야 한다. 우측 액션 줄에 두면 누르는 것들 사이에 끼어
                 눌리는 것처럼 보이고, 무엇에 대한 상태인지도 줄 끝에서 되짚게 된다.
                 긴 이름이 배지를 밀어내지 않는 것은 이름만 줄이고(truncate) 배지가 스스로
                 shrink-0·nowrap이기 때문이다(Badge가 소유하는 규격이라 여기서 다시 적지 않는다). */}
             <Badge tone={status.tone}>{status.label}</Badge>
-            <ModuleVisibilityBadge
-              visibility={mod.visibility}
-              linkOpen={Boolean(openLinkIds?.has(mod.id))}
-            />
+            {/* 템플릿은 이름 옆 태그다(2026-09-06 사용자 지정) — 모듈명이 자율 입력이라(‘참가 링크’)
+                그것만으로는 이 화면이 무엇을 하는 곳인지 답하지 못하고, 그 답은 이름과 붙어 읽혀야
+                한다. 톤이 없는 것이 요점이다 — 종류는 상태가 아니라서 색을 갖지 않는다(보드 카드의
+                템플릿 배지와 같은 규격). */}
+            <Badge tone="neutral">{moduleTypeLabel(mod.module_type)}</Badge>
           </span>
         }
         /* 설명(운영 메모)은 카드가 지금 무엇을 보고 있는지 말하는 값이라 부제 자리다. */
@@ -174,9 +182,14 @@ export function ModuleHeaderCard({
         }
       >
         <InfoGrid columns={2}>
-          {/* 템플릿은 배지가 아니라 라벨:값이다 — 색은 상태에만 쓴다(5_component_spec_rules §3.4).
-              보드 카드가 배지로 두는 것은 라벨을 적을 자리가 없어서이고, 여기는 있다. */}
-          <InfoField label="템플릿" value={moduleTypeLabel(mod.module_type)} />
+          {/* 공유 여부가 라벨:값으로 내려온 이유(2026-09-06 사용자 지정): 배지에는 라벨이 없어
+              'WORKS+GUEST'가 무엇에 대한 값인지 화면이 답하지 못했다. 담당자가 실제로 묻는 것(이
+              모듈이 어디까지 보이는가)이라 물음과 답이 한 줄에 함께 서야 한다.
+
+              배지에서 톤이 답하던 "지금 실제로 열려 있는가"는 여기서 **글자로 적는다** — 라벨:값
+              한 줄은 색을 갖지 않으므로, 옮기면서 말없이 버리면 비공개거나 기간 밖이라 닫힌 모듈이
+              열린 것과 같은 모양으로 선다. */}
+          <InfoField label="공개 범위" value={visibilityText} />
           <InfoField label="기간" value={formatModulePeriod(settings)} />
         </InfoGrid>
 

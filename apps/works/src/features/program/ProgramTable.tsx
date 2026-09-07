@@ -9,10 +9,7 @@ import {
 import { useMemo } from 'react'
 import { useDepartmentLabels } from '@/features/management/departmentOptions'
 import { programManagerNames } from '@/features/program/programManagerLabel'
-import {
-  PROGRAM_STATUS_LABEL,
-  PROGRAM_STATUS_TONE,
-} from '@/features/program/config'
+import { PROGRAM_STATUS_LABEL, PROGRAM_STATUS_TONE } from '@/features/program/config'
 import { programIndustries, type Program } from '@/features/program/hooks'
 import {
   programDepartmentText,
@@ -45,7 +42,7 @@ export function ProgramTable({
 }: ProgramTableProps) {
   const config = useProgramWorkspace()
   // 부서 표기는 상위 경로가 필요해 조직도 원장을 경유한다(임베드로는 자기 이름까지만 온다).
-  const { pathLabelOf, lineageOf } = useDepartmentLabels()
+  const { labelOf, pathLabelOf, lineageOf } = useDepartmentLabels()
   // 담당자·생성자는 내부 임직원이라 민감정보 마스킹 대상이 아니다(외부 신청 기업 정보만 가린다).
   const columns = useMemo<Column<Program>[]>(
     () => [
@@ -76,7 +73,7 @@ export function ProgramTable({
               type: 'code',
               render: (r: Program) =>
                 r.category ? (
-                  categoryLabel(config, r.category) ?? r.category
+                  (categoryLabel(config, r.category) ?? r.category)
                 ) : (
                   <span className="text-gray-400">-</span>
                 ),
@@ -87,20 +84,21 @@ export function ProgramTable({
       // M&A·PROJECT에서는 영원히 비고, AC에서도 사업을 고르는 축이 아니라 고른 뒤 확인할 값이다.
       // 상세(ProgramInfoCard)에 남기고, 목록에서 그 몫의 폭은 사업명·담당 부서·분야가 나눠 갖는다.
       {
-        // 담당 부서: 메인 부서 한 곳만 경로로 적고 나머지는 '외 N'으로 접는다.
-        // 경로가 길어지면 칸을 넓히지 않고 말줄임한다(넓히면 분야가 그만큼 사라진다).
+        // 담당 부서: 메인 부서 한 곳만 **말단 부서명**으로 적고 나머지는 '+N'으로 접는다.
+        // 상위를 앞에 세우면 줄마다 같은 본부명이 먼저 읽히고 정작 줄끼리 다른 말단이 말줄임에
+        // 먼저 잘린다. 어느 본부의 '1팀'인지는 마우스를 올려 전체 경로가 답한다.
         key: 'departments',
         header: '담당 부서',
         type: 'long',
         render: (r) => {
           const summary = summarizeProgramDepartments(r.departments ?? [], lineageOf)
           if (!summary) return <span className="text-gray-400">미지정</span>
-          // 조직도를 아직 못 읽었으면 부서명이 빈칸이 된다 — 그때 '외 N'만 남기면 무엇의 '외'인지
+          // 조직도를 아직 못 읽었으면 부서명이 빈칸이 된다 — 그때 '+N'만 남기면 무엇에 더한 수인지
           // 알 수 없으므로 한 칸을 통째로 비운다(조직도가 도착하면 다시 채워진다).
-          if (!pathLabelOf(summary.mainDepartmentId)) return <span className="text-gray-400">-</span>
-          const text = programDepartmentText(summary, pathLabelOf)
-          // 말줄임된 경로는 마우스를 올려 전체를 확인할 수 있어야 한다.
-          return <span title={text}>{text}</span>
+          if (!labelOf(summary.mainDepartmentId)) return <span className="text-gray-400">-</span>
+          const text = programDepartmentText(summary, labelOf)
+          // 접은 상위와 말줄임된 이름은 마우스를 올려 전체 경로로 확인할 수 있어야 한다.
+          return <span title={programDepartmentText(summary, pathLabelOf)}>{text}</span>
         },
       },
       {
@@ -153,7 +151,7 @@ export function ProgramTable({
         ),
       },
     ],
-    [config, pathLabelOf, lineageOf],
+    [config, labelOf, pathLabelOf, lineageOf],
   )
 
   return (

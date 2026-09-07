@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import type { EntityRow } from '@/features/master/entityHooks'
 import { readBusiness } from '@/features/startup/startupProfile'
 import { readIndustries } from '@/features/startup/startupGrowth'
+import { SHARED_TABLES } from '@/features/program/workspace'
 
 /**
  * 임직원 상세 '활동 이력' 조회 훅 모음.
@@ -97,9 +98,9 @@ export function useEmployeeStartups(userId: string | undefined) {
  * 워크스페이스별 차이는 테이블명·임베드 FK명뿐이다.
  */
 const PROGRAM_LEDGERS = {
-  ac: { managers: 'program_managers', programs: 'programs' },
-  mna: { managers: 'ma_program_managers', programs: 'ma_programs' },
-  project: { managers: 'project_program_managers', programs: 'project_programs' },
+  ac: { managers: 'program_managers', programs: 'programs', entityKey: 'program' },
+  mna: { managers: 'ma_program_managers', programs: 'ma_programs', entityKey: 'ma_program' },
+  project: { managers: 'project_program_managers', programs: 'project_programs', entityKey: 'project_program' },
 } as const
 
 export type ProgramLedgerKey = keyof typeof PROGRAM_LEDGERS
@@ -113,6 +114,13 @@ export interface ActivityProgram {
   /** 분야 태그(industries jsonb). */
   industries: string[]
   description: string | null
+  /**
+   * 이 사업의 명부에 오른 참여 기업 수.
+   *
+   * 명부가 세 워크스페이스 공용이 된 뒤로 소속은 `entity_key`가 답하고, 참여 기업과 참여
+   * 전문가를 가르는 것은 `master_table` 하나다(2026-09-05에 role 축이 걷혔다).
+   */
+  startupCount: number
   /** 대표(PM) 여부. 한 사람이 여러 구간을 가지므로 하나라도 PM이면 PM으로 접는다. */
   isPm: boolean
   /**
@@ -168,10 +176,30 @@ export function useEmployeePrograms(ws: ProgramLedgerKey, userId: string | undef
             ? p!.industries.map((v) => String(v).trim()).filter(Boolean)
             : [],
           description: p!.description,
+          startupCount: prev?.startupCount ?? 0,
           isPm: (prev?.isPm ?? false) || r.role === 'PM',
           rate: Math.max(prev?.rate ?? 0, r.allocation_rate ?? 0),
         })
       }
+      // 참여 기업 수는 명부에서 따로 센다. 명부가 사업 원장에 FK로 매여 있지 않아(세 워크스페이스
+      // 공용 한 벌) 임베드로 함께 끌어올 수 없다 — 그래서 사업 목록이 정해진 뒤 한 번 더 묻는다.
+      const programIds = [...byId.keys()]
+      if (programIds.length > 0) {
+        const { data: partData, error: partError } = await supabase
+          .from(SHARED_TABLES.participants)
+          .select('program_id')
+          // 통합 원장에서 id로만 찾는 것은 언제나 경계를 하나 잃는 일이다 — 소속(entity_key)과
+          // 자격이 온 원장(master_table)을 함께 걸어야 그 사업의 참여 '기업'만 세어진다.
+          .eq('entity_key', ledger.entityKey)
+          .eq('master_table', 'startups')
+          .in('program_id', programIds)
+        if (partError) throw partError
+        for (const row of (partData ?? []) as { program_id: string }[]) {
+          const program = byId.get(row.program_id)
+          if (program) program.startupCount += 1
+        }
+      }
+
       // 활동 이력은 최근에 한 일이 위로 와야 읽힌다 — 운영 시작일 내림차순.
       return [...byId.values()].sort((a, b) => byDateDesc(a.start_date, b.start_date))
     },

@@ -174,6 +174,7 @@ export function EventEditorModal({
 
   return (
     <Modal
+      dismissible={false}
       open={open}
       onClose={onClose}
       title={isEdit ? '일정 수정' : '일정 추가'}

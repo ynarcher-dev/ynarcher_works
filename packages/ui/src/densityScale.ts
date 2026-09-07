@@ -259,8 +259,7 @@ export const columnWidthScale: Record<TableStage, ColumnWidthSet> = {
     badge: 'w-20 whitespace-nowrap',
     person: 'w-28 whitespace-nowrap',
     short: 'w-28 whitespace-nowrap',
-    // 코드(6자 영숫자)·2~4자 라벨의 상한이 80px이라 카드 자리와 같은 값이 된다 — 이 종류는
-    // 담기는 값이 짧아 14px과 13px의 차이가 폭을 가를 만큼 쌓이지 않는다.
+    // 코드(6자 영숫자)·2~4자 라벨의 상한이 80px이라 카드 자리와 같은 값이 된다.
     code: 'w-20 whitespace-nowrap',
     date: 'w-32 whitespace-nowrap',
     // `2026-07-13 ~ 2026-07-30`(23자)이 14px에서 약 190px(여백 포함). 192px은 딱 맞아떨어져
@@ -273,16 +272,24 @@ export const columnWidthScale: Record<TableStage, ColumnWidthSet> = {
     datetime: 'w-44 whitespace-nowrap',
     wide: 'w-52',
   },
+  // 2026-09-06에 13px 단이 폐지되면서 이 자리의 표도 페이지 자리와 **같은 14px**을 쓴다.
+  // 두 자리를 가르는 것은 이제 글자가 아니라 셀 좌우 여백뿐이다(px-2.5 20px vs px-3 24px).
+  // 그래서 종전에 13px 글자폭으로 재어 둔 값 중 여유가 4px 남짓이던 셋만 한 칸씩 올렸다 —
+  // 나머지는 담기는 값이 짧아 1px 차이가 폭을 가를 만큼 쌓이지 않는다.
   card: {
-    seq: 'w-12 whitespace-nowrap',
+    // 머리글 '번호'(2자)가 14px에서 여백 포함 48px — 폭과 딱 같아 반올림 한 픽셀에 말줄임이 난다.
+    seq: 'w-14 whitespace-nowrap',
     badge: 'w-20 whitespace-nowrap',
     person: 'w-24 whitespace-nowrap',
     short: 'w-24 whitespace-nowrap',
     code: 'w-20 whitespace-nowrap',
     date: 'w-28 whitespace-nowrap',
-    // 같은 23자가 13px에서 약 176px(여백 포함). 페이지 자리와 같은 이유로 한 칸 위(192px)에 둔다.
-    period: 'w-48 whitespace-nowrap',
-    money: 'w-28 whitespace-nowrap',
+    // 같은 23자가 14px에서 약 186px(여백 포함). 192px은 6px밖에 안 남아, 같은 값이 2px 남았을 때
+    // 실제로 말줄임이 났던 페이지 자리를 따라 한 칸 위(208px)에 둔다.
+    period: 'w-52 whitespace-nowrap',
+    // 폭을 정하는 쪽은 값이 아니라 머리글이다 — `약정총액 (백만)`이 14px+12px로 112px을 넘겨
+    // 두 줄로 접힌다. 페이지 자리와 같은 128px.
+    money: 'w-32 whitespace-nowrap',
     count: 'w-20 whitespace-nowrap',
     datetime: 'w-36 whitespace-nowrap',
     wide: 'w-44',
@@ -416,6 +423,63 @@ export const tableTextScale: Record<TableStage, TableTextSet> = {
  * 페이지에 바로 놓이는 표는 `DataTable`을 쓴다.
  */
 export const tableText: TableTextSet = tableTextScale.card
+
+/**
+ * 상세 우측 패널 안에 한 줄로 서는 목록 행의 **상자 규격**(자료 관리·관련 회의록·전자결재 …).
+ *
+ * 소유하는 것은 여백과 최소 높이뿐이다. 같은 열에 카드가 세로로 쌓이고 그 안의 행들도 세로로
+ * 쌓이므로, 상자 높이가 내용물(액션 버튼이 있느냐 글자만 있느냐)을 따라 카드마다 갈리면
+ * 목록이 아니라 크기가 제각각인 조각으로 읽힌다. 높이의 기준은 가장 내용이 많은 첨부 행이고,
+ * 액션이 없는 링크 행은 `items-center`로 그 높이 안에서 가운데 선다.
+ *
+ * **테두리 색·모서리는 여기 두지 않는다** — 그 둘은 크기가 아니라 *누를 수 있는 줄인가*를
+ * 말한다(못 누르는 첨부 행은 `radius-sm`+`gray-200`, 눌러서 이동하는 링크 행은 `radius-md`+
+ * `gray-300`). 크기를 맞춘다고 그 구분까지 지우면, 눌러도 되는지를 커서를 올려 봐야 알게 된다.
+ */
+export const panelRowBox = 'min-h-panel-row px-3 py-2'
+
+/**
+ * 본문 좌패널(2차 내비게이션)의 한 줄 — 전자결재 문서함이 원형이고 게시판·자료실·조직 트리가
+ * 같은 리듬을 쓴다. 부품(`SidePanelNavRow`)이 이 값을 쓰지만, 행을 통째로 버튼으로 쓰지 못하는
+ * 자리(재귀 트리는 접기 토글 때문에 버튼 안에 버튼을 둘 수 없다)가 **같은 값을 다시 적지
+ * 않도록** 매핑을 여기 둔다. 규격을 바꾸는 자리는 언제나 이 하나다.
+ *
+ * 세로 여백은 **행**이 갖는다 — 라벨 칸에만 py를 주면 라벨 상자(30px)와 건수 상자(18px)가
+ * 달라져 두 글자가 같은 규격으로 서지 않는다(가운데 정렬로 가려질 뿐 언제든 어긋난다).
+ *
+ * 배경 hover는 행이, 글자 hover는 라벨이 갖되 행을 `group`으로 묶어 함께 반응하게 한다 —
+ * 각자 두면 버튼 밖(들여쓰기·화살표 자리)에서 배경만 바뀌어 한 행이 두 상태로 보인다.
+ */
+export const sidePanelNavRow = {
+  /** 행 상자. */
+  row: (selected: boolean) =>
+    `group flex w-full items-center gap-1 rounded-radius-md py-1.5 pl-1 pr-1 text-left ${
+      selected ? 'bg-brand-25 hover:bg-brand-25' : 'hover:bg-gray-50'
+    }`,
+  /** 좌측 24px 아이콘 슬롯. 아이콘이 없는 행도 이 폭을 비워 글자 시작점을 맞춘다. */
+  icon: (selected: boolean) =>
+    `flex w-icon-table shrink-0 items-center justify-center ${
+      selected ? 'text-brand-700' : 'text-gray-500'
+    }`,
+  /** 이름. */
+  label: (selected: boolean) =>
+    `min-w-0 flex-1 truncate text-body-sm ${
+      selected ? 'font-semibold text-brand-700' : 'text-gray-700 group-hover:text-gray-900'
+    }`,
+  /**
+   * 건수 열. 0건만 회색으로 물러나는 규칙은 카드 제목 옆 건수(`cardText.count`)에서 가져오되
+   * **색과 굵기만** 가져온다 — 크기는 이 행의 토큰(`text-body-sm`)을 쓴다. 한 줄 안에서 크기를
+   * 갈라 위계를 만들지 않는다는 규칙은 "옆 글자와 같은 토큰을 쓴다"로 지켜지는 것이지 값이
+   * 우연히 같아서 지켜지는 것이 아니다.
+   *
+   * 폭을 고정하고 오른쪽으로 맞춘다 — 폭을 내용에 맡기면 `[9]`와 `[10]`이 한 자리만큼 어긋나
+   * 건수 열이 들쭉날쭉해진다(자릿수는 언제든 늘어난다).
+   */
+  count: (count: number, pending: boolean) =>
+    `w-12 shrink-0 text-right text-body-sm font-semibold tabular-nums ${
+      count === 0 ? 'text-gray-400' : pending ? 'text-danger-700' : 'text-gray-600'
+    }`,
+}
 
 /** 스피너 — 로딩 자리를 차지하는 크기이므로 아이콘 격자보다 한 단계 작게 잡는다. */
 export const spinnerScale: Record<Density, string> = {

@@ -1,4 +1,4 @@
-import { Badge, Spinner, cn } from '@ynarcher/ui'
+import { Badge, Spinner, cn, panelRowBox } from '@ynarcher/ui'
 import { useNavigate } from 'react-router-dom'
 import { DetailPanelCard } from '@/features/networks/DetailPanelCard'
 import { approvalText } from '@/features/approval/config'
@@ -48,7 +48,7 @@ export function ApprovalProgramPanel({ documentId }: { documentId: string }) {
                   disabled={!canOpen}
                   title={canOpen ? `${l.title} 열기` : '접근 권한이 없어 열 수 없는 대상입니다'}
                   onClick={() => navigate(meta.toPath(l.targetId))}
-                  className="flex w-full min-w-0 items-center gap-2 rounded-radius-md border border-gray-300 bg-white px-3 py-2 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:bg-gray-25 disabled:hover:bg-gray-25"
+                  className={`flex w-full min-w-0 items-center gap-2 rounded-radius-md border border-gray-300 bg-white transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:bg-gray-25 disabled:hover:bg-gray-25 ${panelRowBox}`}
                 >
                   <Badge tone={canOpen ? 'info' : 'neutral'}>{meta.kindLabel}</Badge>
                   <span className={cn('min-w-0 flex-1 truncate text-left', approvalText.primary)}>

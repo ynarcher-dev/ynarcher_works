@@ -257,7 +257,7 @@ interface Props {
    */
   readOnly?: boolean
   /**
-   * 목록/뒤로가기 경로. 기본은 전체 범위 목록(`?scope=all`)이다 — 내 것이 아닌 레코드를
+   * 목록/뒤로가기 경로. 기본은 전체 범위 목록이다 — 내 것이 아닌 레코드를
    * 열었을 때 '내 네트워크' 목록에는 그 행이 없어 뒤로가기가 빈 목록으로 끝난다.
    */
   listPath?: string
@@ -272,7 +272,7 @@ export function NetworkDetailPage({ readOnly = false, listPath: listPathProp }: 
   const { id } = useParams<{ id: string }>()
   const [params] = useSearchParams()
   const navigate = useNavigate()
-  const listPath = listPathProp ?? '/networks?scope=all'
+  const listPath = listPathProp ?? '/networks'
   const isNew = id === 'new'
   const [editing, setEditing] = useState(isNew && !readOnly)
   const { data: record, isLoading } = useNetworkRecord(isNew ? undefined : id)

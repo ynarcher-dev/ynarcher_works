@@ -74,7 +74,8 @@ function toInputs(drafts: LpDraft[]): FundLpInput[] {
 }
 
 /** 명부 표의 열 폭 — 머리글과 각 줄이 같은 격자를 쓰도록 한 곳에서 정의한다. */
-const COLS = 'grid grid-cols-[minmax(11rem,1.4fr)_8rem_10rem_7rem_9rem_minmax(10rem,1fr)_2rem] gap-2'
+const COLS =
+  'grid grid-cols-[minmax(11rem,1.4fr)_8rem_10rem_7rem_9rem_minmax(10rem,1fr)_2rem] gap-2'
 
 /**
  * 출자자(LP) 명부 편집 모달 — 조합원을 한 줄씩 쌓아 올리고 한 번에 저장한다.
@@ -147,6 +148,7 @@ export function FundLpRosterModal({
 
   return (
     <Modal
+      dismissible={false}
       open={open}
       onClose={onClose}
       size="2xl"
@@ -159,9 +161,7 @@ export function FundLpRosterModal({
           <span className="mr-auto text-body-sm text-gray-500">
             조합원 {named}명 · 약정총액{' '}
             <b className="tabular-nums text-gray-800">{total.toLocaleString()}</b>원
-            {removedCount > 0 && (
-              <span className="text-danger"> · 제외 {removedCount}명</span>
-            )}
+            {removedCount > 0 && <span className="text-danger"> · 제외 {removedCount}명</span>}
           </span>
           <Button variant="secondary" onClick={onClose}>
             취소
@@ -174,7 +174,7 @@ export function FundLpRosterModal({
     >
       {/* 줄이 늘어나도 머리글은 한 번만 — 라벨을 줄마다 반복하면 명부가 아니라 폼 더미가 된다. */}
       <div className="min-w-[60rem]">
-        <div className={`${COLS} px-1 pb-1 text-caption font-semibold text-gray-500`}>
+        <div className={`${COLS} px-1 pb-1 text-table-card font-semibold text-gray-600`}>
           <span>조합원명</span>
           <span>조합원유형</span>
           <span className="text-right">약정액(원)</span>
@@ -206,7 +206,10 @@ export function FundLpRosterModal({
                 className="text-right tabular-nums"
                 placeholder="0"
               />
-              <Input value={d.manager} onChange={(e) => patch(d.key, { manager: e.target.value })} />
+              <Input
+                value={d.manager}
+                onChange={(e) => patch(d.key, { manager: e.target.value })}
+              />
               <Input
                 value={d.phone}
                 onChange={(e) => patch(d.key, { phone: e.target.value })}
@@ -237,7 +240,6 @@ export function FundLpRosterModal({
           <Plus className="size-4" />
           조합원 추가
         </Button>
-
       </div>
     </Modal>
   )

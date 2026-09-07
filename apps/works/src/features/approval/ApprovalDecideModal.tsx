@@ -91,7 +91,9 @@ export function ApprovalDecideModal({
   /** 고른 조합을 그대로 되읽는다 — 되돌림은 조합마다 일어나는 일이 다르다. */
   const summary = (): string => {
     if (decision === 'APPROVED') {
-      return isFinal ? '승인하시겠습니까? 남은 처리가 이것뿐이라 문서가 완료됩니다.' : '승인하시겠습니까?'
+      return isFinal
+        ? '승인하시겠습니까? 남은 처리가 이것뿐이라 문서가 완료됩니다.'
+        : '승인하시겠습니까?'
     }
     const where = target ? `${target.seq}번 ${target.name}부터` : '처음부터'
     const kept = target ? ' 앞 순번의 승인은 그대로 유지됩니다.' : ''
@@ -128,6 +130,7 @@ export function ApprovalDecideModal({
 
   return (
     <Modal
+      dismissible={false}
       open={open}
       onClose={close}
       title={kindLabel}

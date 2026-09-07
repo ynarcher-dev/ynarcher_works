@@ -1,13 +1,13 @@
 import {
   Badge,
   Button,
+  Card,
+  Field,
   Input,
   Modal,
   Select,
   TextArea,
   TokenMultiSelect,
-  Tooltip,
-  tooltipScale,
   useToast,
 } from '@ynarcher/ui'
 import { useMemo, useState } from 'react'
@@ -21,12 +21,20 @@ import {
 } from '@/features/program/config'
 import type { Program, ProgramModule } from '@/features/program/hooks'
 import { useSetProgramModule } from '@/features/program/hooks'
-import { MODULE_META, MODULE_STATUS_META, readModuleSettings } from '@/features/program/detail/moduleMeta'
+import {
+  MODULE_META,
+  MODULE_STATUS_META,
+  readModuleSettings,
+} from '@/features/program/detail/moduleMeta'
 import { failureText } from '@/lib/failureText'
 import { ModulePublicLinkFields } from '@/features/program/detail/ModulePublicLinkFields'
 import { useModuleTemplateMap } from '@/features/program/moduleTemplateHooks'
 import { useModulePublicLinkForm } from '@/features/program/detail/publicLinkForm'
-import { isCompleteRange, moduleWithin, type CompleteRange } from '@/features/program/programPeriods'
+import {
+  isCompleteRange,
+  moduleWithin,
+  type CompleteRange,
+} from '@/features/program/programPeriods'
 
 interface FormValues {
   title: string
@@ -78,8 +86,14 @@ export function ModuleFormModal({
   // 모듈 기간이 들어갈 수 있는 구간: 제안 기간·운영 기간 중 완전 구간만 후보.
   const allowedRanges = useMemo<CompleteRange[]>(() => {
     const ranges: (CompleteRange | null)[] = [
-      isCompleteRange({ start: program.proposal_start_date, end: program.proposal_end_date })
-        ? { start: program.proposal_start_date!, end: program.proposal_end_date! }
+      isCompleteRange({
+        start: program.proposal_start_date,
+        end: program.proposal_end_date,
+      })
+        ? {
+            start: program.proposal_start_date!,
+            end: program.proposal_end_date!,
+          }
         : null,
       isCompleteRange({ start: program.start_date, end: program.end_date })
         ? { start: program.start_date!, end: program.end_date! }
@@ -87,7 +101,8 @@ export function ModuleFormModal({
     ]
     return ranges.filter((r): r is CompleteRange => r !== null)
   }, [program])
-  const proposalRange = allowedRanges[0]?.start === program.proposal_start_date ? allowedRanges[0] : null
+  const proposalRange =
+    allowedRanges[0]?.start === program.proposal_start_date ? allowedRanges[0] : null
 
   // 담당자 풀: 프로그램 담당자(program_managers)를 user_id로 중복 제거.
   const pool = useMemo(() => {
@@ -101,8 +116,11 @@ export function ModuleFormModal({
   // 담당자는 사람만이 아니라 **그 사람이 이 모듈에서 하는 일**까지가 한 줄이다(2026-09-06).
   // 역할(PM·멤버)은 여기서 받지 않는다 — 사업 담당자 원장이 이미 아는 사실이라, 모듈마다 다시
   // 고르게 하면 같은 사람이 화면마다 다른 역할로 서게 된다.
-  const [assignees, setAssignees] = useState<{ id: string; duty: string }[]>(
-    () => (module?.assignees ?? []).map((a) => ({ id: a.user_id, duty: a.duty ?? '' })),
+  const [assignees, setAssignees] = useState<{ id: string; duty: string }[]>(() =>
+    (module?.assignees ?? []).map((a) => ({
+      id: a.user_id,
+      duty: a.duty ?? '',
+    })),
   )
   // 칩에 이름을 세우려면 id가 아니라 항목 자체를 들어야 한다(원장에서 빠진 사람은 '이름 미상').
   const nameOfUser = (id: string) => pool.find((p) => p.id === id)?.name ?? '이름 미상'
@@ -113,7 +131,10 @@ export function ModuleFormModal({
   /** 사람 목록 변경(칩 추가·삭제). 이미 적어 둔 업무롤은 그대로 들고 간다. */
   const onChangeAssignees = (next: { id: string }[]) => {
     setAssignees((prev) =>
-      next.map((n) => ({ id: n.id, duty: prev.find((p) => p.id === n.id)?.duty ?? '' })),
+      next.map((n) => ({
+        id: n.id,
+        duty: prev.find((p) => p.id === n.id)?.duty ?? '',
+      })),
     )
   }
   const setDuty = (id: string, duty: string) =>
@@ -228,7 +249,10 @@ export function ModuleFormModal({
         },
         // 빈 업무롤은 빈 문자열이 아니라 null로 보낸다 — '안 적었다'와 '지웠다'가 원장에서
         // 같은 모양이어야 화면이 둘을 가르지 않는다(서버도 같은 규칙으로 접는다).
-        assignees: assignees.map((a) => ({ userId: a.id, duty: a.duty.trim() || null })),
+        assignees: assignees.map((a) => ({
+          userId: a.id,
+          duty: a.duty.trim() || null,
+        })),
       })
       // 링크 공유는 별개 원장이라 저장도 뒤이어 따로 간다. 실패해도 모듈 저장은 이미 끝났으므로
       // 무엇이 반영되고 무엇이 안 됐는지를 문구로 가른다 — 한 문장으로 뭉치면 담당자가
@@ -252,8 +276,9 @@ export function ModuleFormModal({
   }
 
   const operationRange = allowedRanges.find((r) => r !== proposalRange) ?? null
-  // 허용 범위는 시작일·종료일 두 칸에 함께 걸리는 규칙이라 두 칸이 같은 문구를 나눠 갖는다.
-  // 한 칸에만 달면 다른 칸을 채우다 막힌 사람은 규칙이 어디 적혀 있는지 찾지 못한다.
+  // 허용 범위는 시작일·종료일 두 칸에 함께 걸리는 규칙이라 칸이 아니라 그 둘을 담은 카드가
+  // 갖는다(2026-09-06). 한 칸에만 달면 다른 칸을 채우다 막힌 사람은 규칙이 어디 적혀 있는지
+  // 찾지 못하고, 두 칸에 같은 문구를 두 번 달면 같은 규칙이 둘로 읽힌다.
   const rangeHelp =
     allowedRanges.length === 0
       ? undefined
@@ -268,8 +293,10 @@ export function ModuleFormModal({
 
   return (
     <Modal
+      dismissible={false}
       open
       onClose={onClose}
+      sectioned
       title={isEdit ? `${module?.title || labelOf(moduleType)} 설정` : '모듈 세팅'}
       footer={
         <>
@@ -283,184 +310,157 @@ export function ModuleFormModal({
       }
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
-        {/* 파생 템플릿 배지 — 어느 템플릿에서 나온 인스턴스인지 항상 표기. */}
-        <div className="flex items-center gap-2">
-          {Icon && (
-            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-radius-sm bg-gray-50 text-gray-600">
-              <Icon className="h-4 w-4" />
+        <Card
+          title="기본 정보"
+          actions={
+            /* 파생 템플릿 배지 — 어느 템플릿에서 나온 인스턴스인지 항상 표기. 값이 아니라 이
+               카드가 무엇에 대한 것인지의 표기라 본문 첫 줄을 먹지 않고 제목 줄에 선다. */
+            <span className="flex items-center gap-1.5">
+              {Icon && <Icon className="size-4 shrink-0 text-gray-500" aria-hidden />}
+              <Badge tone="neutral">{labelOf(moduleType)}</Badge>
             </span>
-          )}
-          <span className="text-caption text-gray-600">템플릿</span>
-          <Badge tone="neutral">
-            {labelOf(moduleType)}
-          </Badge>
-        </div>
+          }
+        >
+          <div className="space-y-3">
+            <Field
+              label="모듈명"
+              error={dupTitle ? '이미 같은 이름의 모듈이 있습니다.' : undefined}
+            >
+              <Input placeholder={`예: 1차 ${labelOf(moduleType)}`} {...register('title')} />
+            </Field>
 
-        <div>
-          <label className="text-body font-medium text-gray-800" htmlFor="mod-title">
-            모듈명
-          </label>
-          <Input
-            id="mod-title"
-            placeholder={`예: 1차 ${labelOf(moduleType)}`}
-            {...register('title')}
-          />
-          {dupTitle && (
-            <p className="mt-1 text-caption text-brand">이미 같은 이름의 모듈이 있습니다.</p>
-          )}
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-body font-medium text-gray-800" htmlFor="mod-status">
-              상태
-            </label>
-            <Select id="mod-status" {...register('status')}>
-              {Object.entries(MODULE_STATUS_META).map(([key, meta]) => (
-                <option key={key} value={key}>
-                  {meta.label}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div>
-            {visibilityFixed ? (
-              <>
-                <span className="text-body font-medium text-gray-800">공유 범위</span>
-                <p className="mt-1 rounded-radius-sm border border-gray-200 bg-gray-25 px-3 py-2 text-body text-gray-700">
-                  {MODULE_VISIBILITY_LABEL[fixedVisibility] ?? fixedVisibility}
-                </p>
-                {/* 되읽기·차단 안내는 접지 않는다 — 왜 고를 수 없는지가 이 줄의 내용이다. */}
-                <p className="mt-1 text-caption text-gray-500">
-                  {offTemplate
-                    ? `이 종류는 지금 ${
-                        MODULE_VISIBILITY_LABEL[visibilityOptions[0]?.value ?? ''] ?? '다른 범위'
-                      }만 씁니다. 저장된 값은 그대로 두되 노출은 종류의 성격이 정합니다.`
-                    : '이 종류의 공유 범위는 ADMIN 모듈 관리가 정합니다.'}
-                </p>
-              </>
-            ) : (
-              <>
-                <label className="text-body font-medium text-gray-800" htmlFor="mod-visibility">
-                  공유 범위
-                </label>
-                <Select id="mod-visibility" {...register('visibility')}>
-                  {visibilityOptions.map((v) => (
-                    <option key={v.value} value={v.value}>
-                      {v.label}
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="상태">
+                <Select {...register('status')}>
+                  {Object.entries(MODULE_STATUS_META).map(([key, meta]) => (
+                    <option key={key} value={key}>
+                      {meta.label}
                     </option>
                   ))}
                 </Select>
-              </>
+              </Field>
+              {visibilityFixed ? (
+                <Field
+                  as="div"
+                  label="공개 범위"
+                  hintInline
+                  /* 되읽기·차단 안내는 접지 않는다 — 왜 고를 수 없는지가 이 줄의 내용이다. */
+                  hint={
+                    offTemplate
+                      ? `이 종류는 지금 ${
+                          MODULE_VISIBILITY_LABEL[visibilityOptions[0]?.value ?? ''] ?? '다른 범위'
+                        }만 씁니다. 저장된 값은 그대로 두되 노출은 종류의 성격이 정합니다.`
+                      : '이 종류의 공개 범위는 ADMIN 모듈 관리가 정합니다.'
+                  }
+                >
+                  <p className="rounded-radius-sm border border-gray-200 bg-gray-25 px-3 py-2 text-body text-gray-700">
+                    {MODULE_VISIBILITY_LABEL[fixedVisibility] ?? fixedVisibility}
+                  </p>
+                </Field>
+              ) : (
+                <Field label="공개 범위">
+                  <Select {...register('visibility')}>
+                    {visibilityOptions.map((v) => (
+                      <option key={v.value} value={v.value}>
+                        {v.label}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              )}
+            </div>
+
+            <Field label="설명">
+              <TextArea rows={3} placeholder="카드에 표시할 운영 메모" {...register('memo')} />
+            </Field>
+          </div>
+        </Card>
+
+        <Card title="공개 링크">
+          <ModulePublicLinkFields
+            form={linkForm}
+            moduleStartDate={startValue}
+            moduleEndDate={endValue}
+          />
+        </Card>
+
+        <Card title="운영 기간" help={rangeHelp}>
+          <div className="space-y-3">
+            {modePolicy?.options && (
+              <Field label="배정 방식">
+                <Select {...register('participation_mode')}>
+                  {modePolicy.options.map((m) => (
+                    <option key={m} value={m}>
+                      {PARTICIPATION_MODE_LABEL[m] ?? m}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            )}
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="시작일" required>
+                <Input type="date" {...register('start_date')} />
+              </Field>
+              <Field label="종료일" required>
+                <Input type="date" {...register('end_date')} />
+              </Field>
+            </div>
+          </div>
+        </Card>
+
+        <Card title="담당자">
+          <div className="space-y-3">
+            <Field as="div" label="담당자" required>
+              {pool.length === 0 ? (
+                <p className="rounded-radius-sm border border-gray-200 bg-gray-25 px-3 py-2 text-body-sm text-gray-500">
+                  사업 담당자 풀이 비어 있습니다. 개요에서 담당자를 먼저 배정하세요.
+                </p>
+              ) : (
+                /* 사람 이름은 읽어야 고를 수 있는 값이 아니라 boxed 체크박스가 과했다(2026-09-05).
+                   다만 후보가 이 사업 담당자 풀로 이미 닫혀 있어 '무엇이 있는지 보러' 여는 자리가
+                   아니므로, 돋보기는 정본과 달리 기본값인 드롭다운으로 둔다. */
+                <TokenMultiSelect<{ id: string; name: string }>
+                  selected={selectedAssignees}
+                  onChange={onChangeAssignees}
+                  getKey={(a) => a.id}
+                  getLabel={(a) => a.name}
+                  options={pool}
+                  placeholder="담당자 이름 검색"
+                  browsable
+                />
+              )}
+            </Field>
+
+            {/*
+              업무롤 — 위 칸이 '누구인가'를 묻고 여기가 '무엇을 하는가'를 묻는다. 같은 이름이 칩과
+              이 줄에 두 번 서지만 두 값은 다른 물음의 답이고, 이름이 곧 이 줄의 라벨이라 지울 수
+              없다. 역할(PM·멤버)은 여기서 받지 않는다 — 사업 담당자 원장이 이미 아는 사실이다.
+              선택 전에는 줄 자체를 세우지 않는다(늘 비어 있는 칸은 곧 안 읽히는 칸이 된다).
+            */}
+            {assignees.length > 0 && (
+              <Field as="div" label="업무롤">
+                <div className="space-y-2">
+                  {assignees.map((a) => (
+                    <div
+                      key={a.id}
+                      className="grid grid-cols-[6rem_minmax(0,1fr)] items-center gap-2"
+                    >
+                      <span className="truncate text-body text-gray-700" title={nameOfUser(a.id)}>
+                        {nameOfUser(a.id)}
+                      </span>
+                      <Input
+                        value={a.duty}
+                        maxLength={200}
+                        placeholder="이 모듈에서 하는 일 (예: 신청서 검토·선발 총괄)"
+                        onChange={(e) => setDuty(a.id, e.target.value)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </Field>
             )}
           </div>
-        </div>
-
-        <ModulePublicLinkFields
-          form={linkForm}
-          moduleStartDate={startValue}
-          moduleEndDate={endValue}
-        />
-
-        {modePolicy?.options && (
-          <div>
-            <label className="text-body font-medium text-gray-800" htmlFor="mod-mode">
-              배정 방식
-            </label>
-            <Select id="mod-mode" {...register('participation_mode')}>
-              {modePolicy.options.map((m) => (
-                <option key={m} value={m}>
-                  {PARTICIPATION_MODE_LABEL[m] ?? m}
-                </option>
-              ))}
-            </Select>
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-body font-medium text-gray-800" htmlFor="mod-start">
-              시작일 <span className="text-brand">*</span>
-              <Tooltip label="시작일" content={rangeHelp} className={tooltipScale.gap} />
-            </label>
-            <Input id="mod-start" type="date" {...register('start_date')} />
-          </div>
-          <div>
-            <label className="text-body font-medium text-gray-800" htmlFor="mod-end">
-              종료일 <span className="text-brand">*</span>
-              <Tooltip label="종료일" content={rangeHelp} className={tooltipScale.gap} />
-            </label>
-            <Input id="mod-end" type="date" {...register('end_date')} />
-          </div>
-        </div>
-
-        <div>
-          <span className="text-body font-medium text-gray-800">
-            담당자 <span className="text-brand">*</span>
-          </span>
-          {pool.length === 0 ? (
-            <p className="mt-1 rounded-radius-sm border border-gray-200 bg-gray-25 px-3 py-2 text-caption text-gray-500">
-              사업 담당자 풀이 비어 있습니다. 개요에서 담당자를 먼저 배정하세요.
-            </p>
-          ) : (
-            /* 사람 이름은 읽어야 고를 수 있는 값이 아니라 boxed 체크박스가 과했다(2026-09-05).
-               다만 후보가 이 사업 담당자 풀로 이미 닫혀 있어 '무엇이 있는지 보러' 여는 자리가
-               아니므로, 돋보기는 정본과 달리 기본값인 드롭다운으로 둔다. */
-            <div className="mt-1">
-              <TokenMultiSelect<{ id: string; name: string }>
-                selected={selectedAssignees}
-                onChange={onChangeAssignees}
-                getKey={(a) => a.id}
-                getLabel={(a) => a.name}
-                options={pool}
-                placeholder="담당자 이름 검색"
-                browsable
-              />
-            </div>
-          )}
-        </div>
-
-        {/*
-          업무롤 — 위 칸이 '누구인가'를 묻고 여기가 '무엇을 하는가'를 묻는다. 같은 이름이 칩과
-          이 줄에 두 번 서지만 두 값은 다른 물음의 답이고, 이름이 곧 이 줄의 라벨이라 지울 수 없다.
-          역할(PM·멤버)은 여기서 받지 않는다 — 사업 담당자 원장이 이미 아는 사실이다.
-          선택 전에는 줄 자체를 세우지 않는다(늘 비어 있는 칸은 곧 안 읽히는 칸이 된다).
-        */}
-        {assignees.length > 0 && (
-          <div>
-            <span className="text-body font-medium text-gray-800">업무롤</span>
-            <div className="mt-1 space-y-2">
-              {assignees.map((a) => (
-                <div
-                  key={a.id}
-                  className="grid grid-cols-[6rem_minmax(0,1fr)] items-center gap-2"
-                >
-                  <span className="truncate text-body text-gray-700" title={nameOfUser(a.id)}>
-                    {nameOfUser(a.id)}
-                  </span>
-                  <Input
-                    value={a.duty}
-                    maxLength={200}
-                    placeholder="이 모듈에서 하는 일 (예: 신청서 검토·선발 총괄)"
-                    onChange={(e) => setDuty(a.id, e.target.value)}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div>
-          <label className="text-body font-medium text-gray-800" htmlFor="mod-memo">
-            설명
-          </label>
-          <TextArea
-            id="mod-memo"
-            rows={3}
-            placeholder="카드에 표시할 운영 메모"
-            {...register('memo')}
-          />
-        </div>
+        </Card>
       </form>
     </Modal>
   )

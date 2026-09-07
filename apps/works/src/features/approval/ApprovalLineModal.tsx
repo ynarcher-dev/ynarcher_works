@@ -1,4 +1,4 @@
-import { Button, IconButton, Input, Modal, TagChip, cn, useToast } from '@ynarcher/ui'
+import { Button, Card, IconButton, Input, Modal, TagChip, cn, useToast } from '@ynarcher/ui'
 import { ArrowDown, ArrowUp, ChevronRight, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { ApprovalOrgTree, type OrgPerson } from '@/features/approval/ApprovalOrgTree'
@@ -126,10 +126,12 @@ export function ApprovalLineModal({
 
   return (
     <Modal
+      dismissible={false}
       open={open}
       onClose={onClose}
       title="결재선 설정"
       size="2xl"
+      sectioned
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
@@ -143,20 +145,22 @@ export function ApprovalLineModal({
           들어가야 하므로 넓다. 반반으로 나누면 왼쪽은 남고 오른쪽은 좁아 줄이 접힌다. */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[18rem_auto_1fr]">
         {/* 좌: 조직에서 고르기 */}
-        <div className="space-y-2">
-          <Input
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            placeholder="이름, 직책, 조직 검색"
-          />
-          <ApprovalOrgTree
-            keyword={keyword}
-            checked={checked}
-            onCheckedChange={setChecked}
-            excludeIds={excludeIds}
-            onPeopleLoaded={setPeople}
-          />
-        </div>
+        <Card title="조직에서 고르기">
+          <div className="space-y-2">
+            <Input
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              placeholder="이름, 직책, 조직 검색"
+            />
+            <ApprovalOrgTree
+              keyword={keyword}
+              checked={checked}
+              onCheckedChange={setChecked}
+              excludeIds={excludeIds}
+              onPeopleLoaded={setPeople}
+            />
+          </div>
+        </Card>
 
         {/* 중앙: 고른 사람을 어느 자리로 보낼지. 두 패널 사이를 잇는 조작이라 어느 한쪽 끝에
             붙이지 않고 세로 가운데에 세운다. */}
@@ -178,64 +182,65 @@ export function ApprovalLineModal({
 
         {/* 우: 정해진 결재선 */}
         <div className="space-y-3">
-          {/* 좌우 기둥이 같은 높이에서 끝나도록 잡은 값(좌: 검색창+트리, 우: 목록+참조). */}
-          <div className="h-[22.5rem] overflow-auto rounded-radius-md border border-gray-200">
-            {LINE_KIND_ORDER.every((k) => draft[k].length === 0) ? (
-              <p className={cn('py-10 text-center', approvalText.empty)}>
-                왼쪽에서 사람을 고르고 가운데 버튼으로 자리를 정하세요.
-              </p>
-            ) : (
-              LINE_KIND_ORDER.flatMap((kind) =>
-                draft[kind].map((id, i) => (
-                  <div
-                    key={`${kind}-${id}`}
-                    className="flex items-center gap-2 border-b border-gray-100 px-3 py-2 last:border-b-0"
-                  >
-                    {/* 순번은 세 구분에 모두 붙는다 — 셋 다 자기 명단 안에서 순차로 흐르므로
-                        번호가 곧 처리 차례다(참조만 순서를 갖지 않아 아래 칩으로 따로 선다). */}
-                    <ApprovalSeqBadge seq={i + 1} />
-                    <span className={cn('w-16 shrink-0', approvalText.head)}>
-                      {LINE_KIND_LABEL[kind]}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className={approvalText.body}>{nameOf(id)}</span>
-                      {titleOf(id) && (
-                        <span className={cn('ml-2', approvalText.meta)}>{titleOf(id)}</span>
-                      )}
-                    </span>
-                    <IconButton
-                      density="table"
-                      variant="ghost"
-                      label="위로"
-                      onClick={() => move(kind, i, -1)}
-                      disabled={i === 0}
-                      icon={<ArrowUp size={14} />}
-                    />
-                    <IconButton
-                      density="table"
-                      variant="ghost"
-                      label="아래로"
-                      onClick={() => move(kind, i, 1)}
-                      disabled={i === draft[kind].length - 1}
-                      icon={<ArrowDown size={14} />}
-                    />
-                    <IconButton
-                      density="table"
-                      variant="ghost"
-                      danger
-                      label="제외"
-                      onClick={() => removeFrom(kind, id)}
-                      icon={<X size={14} />}
-                    />
-                  </div>
-                )),
-              )
-            )}
-          </div>
+          <Card title="결재선">
+            {/* 좌우 기둥이 같은 높이에서 끝나도록 잡은 값(좌: 검색창+트리, 우: 목록+참조). */}
+            <div className="h-[22.5rem] overflow-auto rounded-radius-md border border-gray-200">
+              {LINE_KIND_ORDER.every((k) => draft[k].length === 0) ? (
+                <p className={cn('py-10 text-center', approvalText.empty)}>
+                  왼쪽에서 사람을 고르고 가운데 버튼으로 자리를 정하세요.
+                </p>
+              ) : (
+                LINE_KIND_ORDER.flatMap((kind) =>
+                  draft[kind].map((id, i) => (
+                    <div
+                      key={`${kind}-${id}`}
+                      className="flex items-center gap-2 border-b border-gray-100 px-3 py-2 last:border-b-0"
+                    >
+                      {/* 순번은 세 구분에 모두 붙는다 — 셋 다 자기 명단 안에서 순차로 흐르므로
+                          번호가 곧 처리 차례다(참조만 순서를 갖지 않아 아래 칩으로 따로 선다). */}
+                      <ApprovalSeqBadge seq={i + 1} />
+                      <span className={cn('w-16 shrink-0', approvalText.head)}>
+                        {LINE_KIND_LABEL[kind]}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className={approvalText.body}>{nameOf(id)}</span>
+                        {titleOf(id) && (
+                          <span className={cn('ml-2', approvalText.meta)}>{titleOf(id)}</span>
+                        )}
+                      </span>
+                      <IconButton
+                        density="table"
+                        variant="ghost"
+                        label="위로"
+                        onClick={() => move(kind, i, -1)}
+                        disabled={i === 0}
+                        icon={<ArrowUp size={14} />}
+                      />
+                      <IconButton
+                        density="table"
+                        variant="ghost"
+                        label="아래로"
+                        onClick={() => move(kind, i, 1)}
+                        disabled={i === draft[kind].length - 1}
+                        icon={<ArrowDown size={14} />}
+                      />
+                      <IconButton
+                        density="table"
+                        variant="ghost"
+                        danger
+                        label="제외"
+                        onClick={() => removeFrom(kind, id)}
+                        icon={<X size={14} />}
+                      />
+                    </div>
+                  )),
+                )
+              )}
+            </div>
+          </Card>
 
-          <div className="space-y-1">
-            <p className={approvalText.head}>참조</p>
-            <div className="min-h-[4rem] rounded-radius-md border border-gray-200 p-2">
+          <Card title="참조">
+            <div className="min-h-[3rem]">
               {draftCc.length === 0 ? (
                 <p className={approvalText.empty}>지정된 참조자가 없습니다.</p>
               ) : (
@@ -255,7 +260,7 @@ export function ApprovalLineModal({
                 </div>
               )}
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     </Modal>

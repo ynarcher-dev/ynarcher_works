@@ -1,14 +1,4 @@
-import {
-  Button,
-  cn,
-  Input,
-  Modal,
-  Select,
-  Spinner,
-  Tooltip,
-  tooltipScale,
-  useToast,
-} from '@ynarcher/ui'
+import { Button, Card, cn, Input, Modal, Select, Spinner, useToast } from '@ynarcher/ui'
 import { Check } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import {
@@ -130,9 +120,11 @@ export function ExternalAttendeeSearchModal({
 
   return (
     <Modal
+      dismissible={false}
       open={open}
       onClose={onClose}
       size="lg"
+      sectioned
       title="외부 참석자 검색 · 간이 등록"
       footer={
         <Button variant="secondary" onClick={onClose}>
@@ -143,7 +135,7 @@ export function ExternalAttendeeSearchModal({
       {/* 검색 중에는 오버레이 드롭다운이 들어갈 높이를 확보해 아래 영역이 흔들리지 않게 한다. */}
       <div className={cn('space-y-5', showDropdown && 'min-h-[20rem]')}>
         {/* 검색: networks 원장 통합 검색(이름·소속). 결과는 입력창 아래 절대 위치 드롭다운. */}
-        <section className="relative">
+        <Card title="원장에서 찾기" bodyClassName="relative">
           <Input
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
@@ -192,7 +184,7 @@ export function ExternalAttendeeSearchModal({
                                 <span className="text-gray-500"> · {h.affiliation}</span>
                               )}
                             </span>
-                            <span className="block text-caption text-gray-600">
+                            <span className="block text-body-sm text-gray-600">
                               {h.categoryLabel}
                             </span>
                           </span>
@@ -204,18 +196,13 @@ export function ExternalAttendeeSearchModal({
               )}
             </div>
           )}
-        </section>
+        </Card>
 
         {/* 간이 등록: 검색해도 없을 때 이름·소속·구분만 받아 원장에 만들고 곧바로 추가 */}
-        <section className="space-y-2 border-t border-gray-200 pt-4">
-          <p className="flex items-center text-body-sm font-medium text-gray-700">
-            없나요? 간이 등록 후 바로 추가
-            <Tooltip
-              label="간이 등록"
-              content="선택한 구분의 networks 원장에 새 인물로 등록되고, 회의록 참석자 명단에도 함께 담깁니다."
-              className={tooltipScale.gap}
-            />
-          </p>
+        <Card
+          title="찾는 사람이 없으면 간이 등록"
+          help="선택한 구분의 networks 원장에 새 인물로 등록되고, 회의록 참석자 명단에도 함께 담깁니다."
+        >
           <div className="flex flex-wrap items-start gap-2">
             <div className="w-40">
               <Input
@@ -255,7 +242,7 @@ export function ExternalAttendeeSearchModal({
               {create.isPending ? '등록 중…' : '등록 후 추가'}
             </Button>
           </div>
-        </section>
+        </Card>
       </div>
     </Modal>
   )

@@ -93,18 +93,27 @@ export function affiliationLabel(rows: Department[], deptId: string | null): str
 }
 
 /**
- * 부서를 값처럼 한 칸에 적을 때의 표기 — **최상위(법인)만 뺀 전체 경로**
- * (예: '지원본부 > 경영지원1실', '와이앤아처 > AC본부 > 밸류커넥트그룹 > 3팀' → 'AC본부 > 밸류커넥트그룹 > 3팀').
+ * 부서의 전체 경로 표기. 기본은 **최상위(법인)만 뺀 경로**
+ * (예: '지원본부 > 경영지원1실', '와이앤아처 > AC본부 > 밸류커넥트그룹 > 3팀' → 'AC본부 > 밸류커넥트그룹 > 3팀'),
+ * `withRoot`를 주면 법인까지 붙인 경로다(예: '와이앤아처 > 지원본부 > 경영지원1실').
  *
- * 중간 상위를 생략하지 않는 이유: 조직도는 본부마다 같은 이름의 말단이 있어('1팀', '1실'),
- * 어디까지 접든 접는 순간 어느 조직인지 가릴 수 없는 쌍이 생긴다. 최상위 법인만 빼는 것은
- * 그 반대다 — 모든 부서에 똑같이 붙어 구분에 전혀 기여하지 않으면서 칸만 먹는다.
- * 최상위 부서 자체가 지정된 경우에는 뺄 것이 없으므로 그 이름을 그대로 적는다.
+ * 되묻는 자리(툴팁)에서 최상위 법인을 빼는 기준은 그대로다 — 모든 부서에 똑같이 붙어 구분에 전혀
+ * 기여하지 않으면서 칸만 먹는다. 최상위 부서 자체가 지정된 경우에는 뺄 것이 없으므로 그 이름을
+ * 그대로 적는다.
+ *
+ * `withRoot`를 따로 두는 이유는 **경로가 되묻는 표기가 아니라 값 자체인 자리**가 있어서다 —
+ * 사업 담당자 배치처럼 "어느 조직이 이 사업을 맡았는가"를 읽는 자리에서는 소속 전체가 답이라
+ * 법인부터 말단까지 한 줄로 선다. 거기서도 법인이 부서끼리를 가르지 않는다는 사실은 같지만,
+ * 그 자리에서 읽는 것은 구분이 아니라 소속이다.
  *
  * 선택지 라벨(buildDepartmentOptions, 법인 포함 전체 경로)·사람 옆 소속 표기(affiliationLabel)와
  * 구분한다 — 고르는 자리는 법인까지 다 보여야 하고, 인사 표기는 hr_hidden을 걷어낸 별개 관점이다.
  */
-export function deptPathLabel(rows: Department[], deptId: string | null): string {
+export function deptPathLabel(
+  rows: Department[],
+  deptId: string | null,
+  opts: { withRoot?: boolean } = {},
+): string {
   if (!deptId) return ''
   const byId = new Map(rows.map((d) => [d.id, d]))
   const chain: string[] = []
@@ -118,7 +127,25 @@ export function deptPathLabel(rows: Department[], deptId: string | null): string
     seen.add(cur)
     chain.unshift(byId.get(cur)!.name)
   }
+  if (opts.withRoot) return chain.join(PATH_SEP)
   return (chain.length > 1 ? chain.slice(1) : chain).join(PATH_SEP)
+}
+
+/**
+ * 부서를 값처럼 한 칸에 적을 때의 표기 — **말단 부서명 하나**
+ * (예: 'AC본부 > 스케일업그룹 > 스케일업 1팀' → '스케일업 1팀', '지원본부 > 투자지원실' → '투자지원실').
+ *
+ * 경로를 접는 이유는 자리가 아니라 읽는 순서다 — 담당 부서 칸에서 눈이 찾는 것은 **일을 맡은 조직
+ * 하나**인데 상위가 앞에 서면 줄마다 같은 본부명이 먼저 읽히고, 정작 줄끼리 다른 값인 말단이 뒤로
+ * 밀린 채 말줄임에 먼저 잘린다. 사업이 지정하는 부서는 어차피 조직도의 한 점이므로 그 점의 이름이 값이다.
+ *
+ * 대가는 하나 — 조직도에는 본부마다 같은 이름의 말단이 있어('1팀', '1실') 말단만으로는 어느 조직인지
+ * 가릴 수 없는 쌍이 생긴다. 그래서 **접은 자리에는 전체 경로를 툴팁으로 함께 둔다**(deptPathLabel).
+ * 접는 것과 없애는 것은 다르다.
+ */
+export function deptLeafLabel(rows: Department[], deptId: string | null): string {
+  if (!deptId) return ''
+  return rows.find((d) => d.id === deptId)?.name ?? ''
 }
 
 /**
@@ -155,8 +182,13 @@ export function useDepartmentLabels() {
     const rows = data ?? []
     const byId = new Map(rows.map((d) => [d.id, d]))
     return {
-      /** 부서 id → 최상위를 뺀 경로 표기. 아직 못 읽었거나 없는 id면 fallback. */
+      /** 부서 id → 말단 부서명. 값으로 적히는 자리는 모두 이것이다. 없는 id면 fallback. */
+      labelOf: (id: string | null, fallback = '') => deptLeafLabel(rows, id) || fallback,
+      /** 부서 id → 최상위를 뺀 전체 경로. 말단만으로 가릴 수 없는 쌍을 되묻는 툴팁용. */
       pathLabelOf: (id: string | null, fallback = '') => deptPathLabel(rows, id) || fallback,
+      /** 부서 id → 법인부터 말단까지 전체 경로. 경로가 값 자체인 자리(사업 담당자 배치)용. */
+      fullPathLabelOf: (id: string | null, fallback = '') =>
+        deptPathLabel(rows, id, { withRoot: true }) || fallback,
       /** 부서 id → 계보 id. 버전마다 id가 갈리므로 "같은 부서"는 이 값으로 센다. */
       lineageOf: (id: string) => byId.get(id)?.lineage_id ?? id,
     }

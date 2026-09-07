@@ -1,16 +1,10 @@
-import { Button, Input, Modal, Select, TextArea, useToast } from '@ynarcher/ui'
+import { Button, formText, Input, Modal, Select, TextArea, useToast } from '@ynarcher/ui'
 import { useState } from 'react'
 import { FORM_TYPES } from '@/features/management/config'
 import { useCreateApproval, useEmployees } from '@/features/management/hooks'
 
 /** 결재선 지정 및 문서 상신 폼(조직도 기반 순차 결재자 지정). */
-export function ApprovalFormModal({
-  open,
-  onClose,
-}: {
-  open: boolean
-  onClose: () => void
-}) {
+export function ApprovalFormModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const toast = useToast()
   const create = useCreateApproval()
   const { data: employees } = useEmployees()
@@ -66,7 +60,7 @@ export function ApprovalFormModal({
     >
       <div className="space-y-3">
         <div>
-          <label className="text-body font-medium text-gray-800">문서 양식</label>
+          <label className={formText.label}>문서 양식</label>
           <Select value={formType} onChange={(e) => setFormType(e.target.value)}>
             {FORM_TYPES.map((f) => (
               <option key={f.key} value={f.key}>
@@ -76,29 +70,23 @@ export function ApprovalFormModal({
           </Select>
         </div>
         <div>
-          <label className="text-body font-medium text-gray-800">제목</label>
+          <label className={formText.label}>제목</label>
           <Input value={title} onChange={(e) => setTitle(e.target.value)} />
         </div>
         <div>
-          <label className="text-body font-medium text-gray-800">금액(원)</label>
-          <Input
-            inputMode="numeric"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
+          <label className={formText.label}>금액(원)</label>
+          <Input inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} />
         </div>
         <div>
-          <label className="text-body font-medium text-gray-800">본문</label>
+          <label className={formText.label}>본문</label>
           <TextArea value={body} onChange={(e) => setBody(e.target.value)} rows={3} />
         </div>
         <div>
-          <label className="text-body font-medium text-gray-800">
-            결재선(순차)
-          </label>
+          <label className={formText.label}>결재선(순차)</label>
           <div className="space-y-2">
             {approvers.map((a, i) => (
               <div key={i} className="flex items-center gap-2">
-                <span className="text-caption text-gray-600">{i + 1}차</span>
+                <span className="text-body-sm text-gray-600">{i + 1}차</span>
                 <Select value={a} onChange={(e) => setApprover(i, e.target.value)}>
                   <option value="">결재자 선택</option>
                   {(employees ?? []).map((e) => (
@@ -109,10 +97,7 @@ export function ApprovalFormModal({
                 </Select>
               </div>
             ))}
-            <Button
-              variant="ghost"
-              onClick={() => setApprovers((p) => [...p, ''])}
-            >
+            <Button variant="ghost" onClick={() => setApprovers((p) => [...p, ''])}>
               + 결재자 추가
             </Button>
           </div>

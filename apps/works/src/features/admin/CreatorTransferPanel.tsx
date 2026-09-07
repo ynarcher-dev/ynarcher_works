@@ -1,4 +1,4 @@
-import { Button, Input, Select, TokenMultiSelect, useToast } from '@ynarcher/ui'
+import { Button, formText, Input, Select, TokenMultiSelect, useToast } from '@ynarcher/ui'
 import { useMemo, useState } from 'react'
 import { useEmployees } from '@/features/management/hooks'
 import {
@@ -36,7 +36,12 @@ export function CreatorTransferPanel() {
   const transfer = useSetEntityCreator()
 
   const people: PersonOpt[] = useMemo(
-    () => (employees ?? []).map((e) => ({ id: e.id, name: e.name, email: e.email })),
+    () =>
+      (employees ?? []).map((e) => ({
+        id: e.id,
+        name: e.name,
+        email: e.email,
+      })),
     [employees],
   )
   const nameOf = (id: string | null): string =>
@@ -67,7 +72,12 @@ export function CreatorTransferPanel() {
       return
     }
     try {
-      await transfer.mutateAsync({ table: ledger.table, id: target.id, userId: newCreator, reason })
+      await transfer.mutateAsync({
+        table: ledger.table,
+        id: target.id,
+        userId: newCreator,
+        reason,
+      })
       toast.show(`생성자를 ${nameOf(newCreator)}(으)로 교체했습니다.`, 'success')
       setNewCreator('')
       setReason('')
@@ -80,13 +90,13 @@ export function CreatorTransferPanel() {
     <div className="max-w-3xl space-y-4">
       <p className="text-body text-gray-600">
         생성자는 수정·삭제 권한을 주지 않는 표기 축입니다(관리 주체는 담당자). 교체하면 그 레코드가
-        이전 생성자의 &lsquo;내 ~ 관리&rsquo; 목록에서 빠지고 새 생성자의 목록에 나타나며, 변경 이력은
-        감사 로그와 원장 변동 이력에 함께 남습니다.
+        이전 생성자의 &lsquo;내 ~ 관리&rsquo; 목록에서 빠지고 새 생성자의 목록에 나타나며, 변경
+        이력은 감사 로그와 원장 변동 이력에 함께 남습니다.
       </p>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
-          <label className="text-body font-medium text-gray-800" htmlFor="creator-ledger">
+          <label className={formText.label} htmlFor="creator-ledger">
             대상 원장
           </label>
           <Select id="creator-ledger" value={table} onChange={(e) => pickLedger(e.target.value)}>
@@ -102,7 +112,7 @@ export function CreatorTransferPanel() {
           </Select>
         </div>
         <div>
-          <label className="text-body font-medium text-gray-800" htmlFor="creator-keyword">
+          <label className={formText.label} htmlFor="creator-keyword">
             레코드 검색
           </label>
           <Input
@@ -135,7 +145,9 @@ export function CreatorTransferPanel() {
                       r.id === targetId ? 'bg-brand-25' : 'hover:bg-gray-50'
                     }`}
                   >
-                    <span className="min-w-0 flex-1 truncate text-body text-gray-900">{r.name}</span>
+                    <span className="min-w-0 flex-1 truncate text-body text-gray-900">
+                      {r.name}
+                    </span>
                     <span className="shrink-0 text-body-sm text-gray-500">
                       생성자 {nameOf(r.created_by)}
                     </span>
@@ -149,7 +161,7 @@ export function CreatorTransferPanel() {
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
-          <label className="text-body font-medium text-gray-800">새 생성자</label>
+          <label className={formText.label}>새 생성자</label>
           <TokenMultiSelect<PersonOpt>
             selected={newCreator ? [personObj(newCreator)] : []}
             onChange={(next) => setNewCreator(next.at(-1)?.id ?? '')}
@@ -163,7 +175,7 @@ export function CreatorTransferPanel() {
           />
         </div>
         <div>
-          <label className="text-body font-medium text-gray-800" htmlFor="creator-reason">
+          <label className={formText.label} htmlFor="creator-reason">
             사유
           </label>
           <Input

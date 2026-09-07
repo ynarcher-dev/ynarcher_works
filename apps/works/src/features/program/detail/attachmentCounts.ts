@@ -3,7 +3,7 @@ import { ATTACHMENT_COUNT_KEY } from '@/features/networks/materialHooks'
 import { supabase } from '@/lib/supabase'
 
 /**
- * 게시판형 목록(공지사항·QNA)의 행별 첨부 건수 — 표의 클립 표식이 이 값을 본다.
+ * 게시판형 목록(공지사항·Q&A)의 행별 첨부 건수 — 표의 클립 표식이 이 값을 본다.
  *
  * 첨부를 임베드로 끌어오지 못하는 이유는 `attachments`가 다형 테이블이라 각 원장과 외래키로
  * 이어져 있지 않기 때문이다. 그래서 화면에 뜬 id 묶음으로 **한 번만** 세어 맵을 만든다 —

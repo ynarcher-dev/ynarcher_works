@@ -1,7 +1,7 @@
 import { Badge } from '@ynarcher/ui'
 import { Link } from 'react-router-dom'
 import { DetailPanelCard } from '@/features/networks/DetailPanelCard'
-import { MiniPager, usePaged } from '@ynarcher/ui'
+import { MiniPager, panelRowBox, usePaged } from '@ynarcher/ui'
 import { DOC_STATUS_LABEL, DOC_STATUS_TONE } from '@/features/approval/config'
 import type { ProgramLinkType } from '@/features/approval/programLinkApi'
 import { useRelatedApprovals } from '@/features/approval/relatedApprovalsApi'
@@ -42,7 +42,7 @@ export function RelatedApprovalPanel({
               <li key={a.id}>
                 <Link
                   to={`/office?tab=approval&doc=${a.id}`}
-                  className="flex min-w-0 items-center gap-2 rounded-radius-md border border-gray-300 bg-white px-3 py-2 transition-colors hover:bg-gray-50"
+                  className={`flex min-w-0 items-center gap-2 rounded-radius-md border border-gray-300 bg-white transition-colors hover:bg-gray-50 ${panelRowBox}`}
                 >
                   <Badge tone={DOC_STATUS_TONE[a.status]}>{DOC_STATUS_LABEL[a.status]}</Badge>
                   <span className="min-w-0 flex-1 truncate text-body font-semibold text-gray-900">

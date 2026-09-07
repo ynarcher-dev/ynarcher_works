@@ -41,12 +41,26 @@ function pinnedOf(groups: BoundNavGroup[]): BoundNavGroup[] {
 }
 
 const database = itemOf('database')
-const business = itemOf('business')
+const ac = itemOf('ac')
 
-describe('DATABASE — 원장 둘이 한 항목 아래 선다', () => {
-  it('둘 다 읽으면 구분선 없이 한 그룹 두 줄이다', () => {
-    const groups = buildNavGroups(userWith({ startup: 'read', networks: 'read' }), database)
-    expect(shape(groups)).toEqual([['startup:스타트업', 'networks:네트워크']])
+describe('DATABASE — 원장 셋이 한 항목 아래 선다', () => {
+  it('셋 다 읽으면 한 그룹 세 줄이고 M&A BUYER 앞에만 선이 선다', () => {
+    const groups = buildNavGroups(
+      userWith({ startup: 'read', networks: 'read', mna: 'read' }),
+      database,
+    )
+    expect(shape(groups)).toEqual([
+      ['startup:스타트업', 'networks:네트워크', 'mna:M&A BUYER'],
+    ])
+    // 앞 두 줄은 전사 SSOT이고 셋째 줄은 M&A/PE 소유라 층이 다르다 — 그 경계만 선이 답한다.
+    const rows = groups.flatMap((g) => g.items)
+    expect(rows.map((b) => Boolean(b.item.dividerBefore))).toEqual([false, false, true])
+  })
+
+  it('구획마다 권한을 따로 판정한다 — 딜 권한만 있으면 BUYER 줄만 선다', () => {
+    const user = userWith({ mna: 'read' })
+    expect(shape(buildNavGroups(user, database))).toEqual([['mna:M&A BUYER']])
+    expect(readableSections(user, database)).toHaveLength(1)
   })
 
   it('한 구획만 읽으면 그 줄만 선다 — 자리를 합쳐도 권한은 구획마다 판정한다', () => {
@@ -55,43 +69,65 @@ describe('DATABASE — 원장 둘이 한 항목 아래 선다', () => {
     expect(readableSections(user, database)).toHaveLength(1)
   })
 
-  it('둘 다 못 읽으면 스위처에서 항목 자체가 빠진다', () => {
+  it('셋 다 못 읽으면 스위처에서 항목 자체가 빠진다', () => {
     expect(visibleWorkspaces(userWith({ ac: 'write' })).map((w) => w.id)).not.toContain('database')
   })
 
   it('도착지는 읽을 수 있는 첫 구획이다 — 권한 없는 경로로 떨어지지 않는다', () => {
     expect(landingPath(userWith({ networks: 'read' }), database)).toBe('/networks')
     expect(landingPath(userWith({ startup: 'read', networks: 'read' }), database)).toBe('/startup')
+    expect(landingPath(userWith({ mna: 'read' }), database)).toBe('/buyers')
+  })
+
+  it('같은 mna 키가 두 자리에 서지만 줄과 경로는 갈린다', () => {
+    const user = userWith({ mna: 'read' })
+    // 자리를 가르는 것은 권한 키가 아니라 경로다.
+    expect(resolveWorkspace('/buyers/abc', visibleWorkspaces(user), user).ws?.id).toBe('database')
+    expect(resolveWorkspace('/mna', visibleWorkspaces(user), user).ws?.id).toBe('mna')
+    expect(shape(buildNavGroups(user, itemOf('mna')))).toEqual([['mna:프로젝트']])
   })
 })
 
-describe('BUSINESS — 실행 라인 넷이 한 항목 아래 선다', () => {
-  it('원장 넷이 한 그룹으로 서고 GUEST계정 발급만 하단 고정 그룹으로 빠진다', () => {
-    const user = userWith({ ac: 'write', mna: 'read', project: 'read', fund: 'read' })
-    const groups = buildNavGroups(user, business)
-    expect(shape(groups)).toEqual([
-      ['ac:AC사업', 'project:글로벌 · 신사업', 'mna:M&A팀 · PE', 'fund:투자실'],
-      ['ac:GUEST계정 발급'],
-    ])
+describe('AC — 사업 목록 한 줄 + 하단 고정 줄', () => {
+  it('사업 목록 줄과 GUEST계정 발급이 다른 그룹으로 갈린다', () => {
+    const groups = buildNavGroups(userWith({ ac: 'write' }), ac)
+    expect(shape(groups)).toEqual([['ac:프로젝트'], ['ac:GUEST계정 발급']])
     expect(shape(pinnedOf(groups))).toEqual([['ac:GUEST계정 발급']])
   })
 
-  it('고정 줄의 탭도 탭 집합에 남는다 — 빠지면 그 화면에서 원장 줄이 모두 활성으로 칠해진다', () => {
-    const user = userWith({ ac: 'write', fund: 'read' })
-    expect(allTabs(plainGroups(buildNavGroups(user, business))).has('guest-accounts')).toBe(true)
+  it('고정 줄의 탭도 탭 집합에 남는다 — 빠지면 그 화면에서 사업 목록 줄이 활성으로 칠해진다', () => {
+    const groups = buildNavGroups(userWith({ ac: 'write' }), ac)
+    expect(allTabs(plainGroups(groups)).has('guest-accounts')).toBe(true)
   })
 
-  it('사업 3종의 줄 이름이 서로 다르다 — 한 자리에 서면 이름이 유일한 구분이다', () => {
+  it('AC를 읽지 못하면 스위처에서 항목 자체가 빠진다', () => {
+    expect(visibleWorkspaces(userWith({ fund: 'read' })).map((w) => w.id)).not.toContain('ac')
+  })
+})
+
+describe('실행 라인 넷 — 사업 3종이 같은 줄 이름을 공유한다', () => {
+  it('어느 원장인지는 스위처 항목이 답하므로 줄 이름은 한 벌이다', () => {
+    const user = userWith({ ac: 'write', mna: 'read', project: 'read' })
+    for (const id of ['ac', 'mna', 'project']) {
+      const rows = buildNavGroups(user, itemOf(id)).flatMap((g) =>
+        g.items.filter((b) => !b.item.pinBottom).map((b) => b.item.label),
+      )
+      expect(rows).toEqual(['프로젝트'])
+    }
+  })
+
+  it('넷이 각자 자기 항목으로 서고 도착지는 자기 루트 경로다', () => {
     const user = userWith({ ac: 'write', mna: 'read', project: 'read', fund: 'read' })
-    const labels = buildNavGroups(user, business).flatMap((g) => g.items.map((b) => b.item.label))
-    expect(new Set(labels).size).toBe(labels.length)
-  })
-
-  it('AC를 읽지 못하면 그 원장 줄도 고정 그룹도 함께 빠진다 — 빈 그룹은 서지 않는다', () => {
-    const user = userWith({ mna: 'read', fund: 'read' })
-    const groups = buildNavGroups(user, business)
-    expect(shape(groups)).toEqual([['mna:M&A팀 · PE', 'fund:투자실']])
-    expect(pinnedOf(groups)).toHaveLength(0)
+    // DATABASE가 함께 서는 것은 그 항목이 mna 구획(M&A BUYER)도 덮기 때문이다 — 딜 권한
+    // 하나로 두 자리가 열린다(항목이 덮는 것은 자리이고 권한은 구획마다 판정한다).
+    expect(visibleWorkspaces(user).map((w) => w.id)).toEqual([
+      'database',
+      'ac',
+      'project',
+      'mna',
+      'fund',
+    ])
+    expect(landingPath(user, itemOf('fund'))).toBe('/fund')
   })
 })
 
@@ -103,10 +139,10 @@ describe('resolveWorkspace — 항목과 구획을 함께 잡는다', () => {
     expect(section?.key).toBe('networks')
   })
 
-  it('/fund는 BUSINESS 항목의 fund 구획으로 해석된다', () => {
+  it('/fund는 FUND 항목의 fund 구획으로 해석된다', () => {
     const user = userWith({ ac: 'write', fund: 'read' })
     const { ws, section } = resolveWorkspace('/fund', visibleWorkspaces(user), user)
-    expect(ws?.id).toBe('business')
+    expect(ws?.id).toBe('fund')
     expect(section?.key).toBe('fund')
   })
 

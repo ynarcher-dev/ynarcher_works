@@ -36,6 +36,10 @@ function seatText(r: ActivityProgram): string {
  * 사업 열 구성은 원장별로 두 벌이다. 스키마는 셋 다 같지만 **부르는 이름이 다르다** —
  * AC는 수주해 운영하는 '사업'이고, M&A·PROJECT는 착수해서 끝내는 '프로젝트'다.
  * 분야 태그도 AC만 운용 축으로 쓰므로(어느 분야의 기업을 발굴하는 사업인가) 거기에만 둔다.
+ *
+ * AC의 끝 열이 설명이 아니라 **참여 기업 수**인 것도 같은 축이다. 운영사업에서 그 사업의 규모를
+ * 말하는 값은 소개 문장이 아니라 몇 개사를 받아 굴렸는가이고, 설명은 어차피 말줄임으로 잘려
+ * 첫 몇 글자만 남는다 — 잘린 문장은 폭을 먹으면서 아무것도 답하지 않는다.
  */
 const AC_PROGRAM_COLUMNS: ActivityColumn<ActivityProgram>[] = [
   { header: '사업명', primary: true, type: 'name', render: (r) => r.title },
@@ -45,8 +49,18 @@ const AC_PROGRAM_COLUMNS: ActivityColumn<ActivityProgram>[] = [
     render: (r) => <PeriodCell start={r.start_date} end={r.end_date} />,
   },
   { header: '역할', type: 'code', render: (r) => seatText(r) },
-  { header: '분야', type: 'tags', render: (r) => <TagCell items={r.industries} /> },
-  { header: '설명', type: 'long', render: (r) => <Text value={r.description} /> },
+  {
+    header: '분야',
+    type: 'tags',
+    render: (r) => <TagCell items={r.industries} />,
+  },
+  {
+    key: 'startupCount',
+    header: '참여기업',
+    type: 'count',
+    render: (r) =>
+      r.startupCount > 0 ? <span className="tabular-nums">{r.startupCount}개사</span> : <Dash />,
+  },
 ]
 
 const DEAL_PROGRAM_COLUMNS: ActivityColumn<ActivityProgram>[] = [
@@ -57,15 +71,27 @@ const DEAL_PROGRAM_COLUMNS: ActivityColumn<ActivityProgram>[] = [
     render: (r) => <PeriodCell start={r.start_date} end={r.end_date} />,
   },
   { header: '역할', type: 'code', render: (r) => seatText(r) },
-  { header: '설명', type: 'long', render: (r) => <Text value={r.description} /> },
+  {
+    header: '설명',
+    type: 'long',
+    render: (r) => <Text value={r.description} />,
+  },
 ]
 
 /** 투자(관리)기업 열 구성. 그 기업이 무엇을 하는 곳인지가 한 줄에 서도록 골랐다. */
 const STARTUP_COLUMNS: ActivityColumn<ActivityStartup>[] = [
   { header: '기업명', primary: true, type: 'name', render: (s) => s.name },
   { header: '단계', type: 'code', render: (s) => s.stage || <Dash /> },
-  { header: '분야', type: 'tags', render: (s) => <TagCell items={s.industries} /> },
-  { header: '한 줄 소개', type: 'long', render: (s) => <Text value={s.oneLiner} /> },
+  {
+    header: '분야',
+    type: 'tags',
+    render: (s) => <TagCell items={s.industries} />,
+  },
+  {
+    header: '한 줄 소개',
+    type: 'long',
+    render: (s) => <Text value={s.oneLiner} />,
+  },
 ]
 
 /** 펀드 자리 표기. 위계 순(대표 → 운용 → 관리)으로 늘어놓아 자리들이 늘 같은 순서로 읽힌다. */
@@ -153,8 +179,20 @@ export function EmployeeActivitySection({ userId }: { userId: string }) {
   const fundRows = funds.data ?? []
   // 사업 카드 3종은 원장만 다르고 표가 답하는 물음은 같다(features/program 공유 원칙과 같은 축).
   const programCards: ProgramCard[] = [
-    { title: '운영사업', workspace: 'ac', basePath: '/ac/programs', columns: AC_PROGRAM_COLUMNS, rows: ac.data ?? [] },
-    { title: 'M&A', workspace: 'mna', basePath: '/mna/programs', columns: DEAL_PROGRAM_COLUMNS, rows: mna.data ?? [] },
+    {
+      title: '운영사업',
+      workspace: 'ac',
+      basePath: '/ac/programs',
+      columns: AC_PROGRAM_COLUMNS,
+      rows: ac.data ?? [],
+    },
+    {
+      title: 'M&A',
+      workspace: 'mna',
+      basePath: '/mna/programs',
+      columns: DEAL_PROGRAM_COLUMNS,
+      rows: mna.data ?? [],
+    },
     {
       title: '프로젝트',
       workspace: 'project',

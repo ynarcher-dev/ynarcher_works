@@ -60,11 +60,23 @@ export function resolveWorkspace(
 }
 
 /**
+ * 이 구획의 사이드바 줄 구성. 구획이 직접 갖고 있으면 그것이, 아니면 권한 키가 답한다.
+ *
+ * 키로만 찾지 않는 이유는 **한 권한 키가 두 자리에 설 수 있기** 때문이다(M&A BUYER — 권한은
+ * 딜과 같은 mna인데 자리는 DATABASE다). 키가 유일한 열쇠면 그 두 자리에 같은 줄이 함께 선다.
+ */
+function subnavOf(section: WorkspaceSection): SubNavGroup[] {
+  return section.subnav ?? WORKSPACE_SUBNAV[section.key] ?? []
+}
+
+/**
  * 사이드바 그룹 구성. 구획마다 자기 서브내비를 가져와 줄에 구획을 묶는다.
  *
  * 구획을 둘 이상 덮는 항목의 줄들은 한 그룹에 나란히 선다 — 같은 층의 원장들이라, 사이에
- * 선을 그으면 한 벌이 서로 다른 층의 메뉴로 보인다(DATABASE의 스타트업·네트워크, BUSINESS의
- * 사업 3종·펀드). 구획 하나짜리 항목은 자기 서브내비의 그룹 구성을 그대로 쓴다(종전과 같다).
+ * 선을 그으면 한 벌이 서로 다른 층의 메뉴로 보인다(DATABASE의 스타트업·네트워크). 층이 다른
+ * 줄이 섞일 때만 그 줄이 `dividerBefore`로 자기 앞에 선을 긋는다(DATABASE의 M&A BUYER —
+ * 앞 둘은 전사 SSOT이고 이 줄은 M&A/PE 소유라 읽기 권한부터 갈린다). 구획 하나짜리 항목은
+ * 자기 서브내비의 그룹 구성을 그대로 쓴다.
  *
  * `pinBottom` 줄만은 어느 쪽이든 목록에서 빼내 마지막 그룹(`pinned`)으로 세운다 — 그 줄은
  * 목록의 항목이 아니라 그 아래 별도 자리이고, 셸이 사이드바 하단 고정 영역에 그린다.
@@ -76,14 +88,14 @@ export function buildNavGroups(user: AuthUser | null, ws: WorkspaceNavItem): Bou
 
   const built: BoundNavGroup[] =
     sections.length === 1
-      ? (WORKSPACE_SUBNAV[first.key] ?? []).map((g) => ({
+      ? subnavOf(first).map((g) => ({
           group: g.group,
           items: g.items.map((item) => ({ item, section: first })),
         }))
       : [
           {
             items: sections.flatMap((section) =>
-              (WORKSPACE_SUBNAV[section.key] ?? []).flatMap((g) =>
+              subnavOf(section).flatMap((g) =>
                 g.items.map((item) => ({ item, section })),
               ),
             ),

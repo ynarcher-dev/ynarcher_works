@@ -2,6 +2,7 @@ import {
   Badge,
   Button,
   Card,
+  Field,
   Input,
   SegmentedToggle,
   Spinner,
@@ -11,7 +12,7 @@ import {
 } from '@ynarcher/ui'
 import dayjs from 'dayjs'
 import { ExternalLink, ImageUp, Link2 } from 'lucide-react'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { readModuleSettings } from '@/features/program/detail/moduleMeta'
 import {
   effectiveLinkWindow,
@@ -47,9 +48,11 @@ const DATETIME_CLS =
   'transition-all duration-fast hover:border-gray-400 focus-visible:outline-none focus-visible:border-brand/50'
 
 /** ISO 문자열 → datetime-local 입력값(로컬 시간, 분 단위). */
-const toDatetimeInput = (iso: string | null): string => (iso ? dayjs(iso).format('YYYY-MM-DDTHH:mm') : '')
+const toDatetimeInput = (iso: string | null): string =>
+  iso ? dayjs(iso).format('YYYY-MM-DDTHH:mm') : ''
 /** datetime-local 입력값(로컬) → ISO 문자열. 빈 값이면 null. */
-const fromDatetimeInput = (local: string): string | null => (local ? dayjs(local).toISOString() : null)
+const fromDatetimeInput = (local: string): string | null =>
+  local ? dayjs(local).toISOString() : null
 
 /**
  * 공개 상태 + **상속을 적용한** 공개 기간으로 "지금 실제로 공개 중인지"를 계산한다.
@@ -61,40 +64,27 @@ const fromDatetimeInput = (local: string): string | null => (local ? dayjs(local
  * 상속된 경계 때문에 닫힌 경우에는 **어디서 온 시각인지**까지 말한다 — 자기가 넣지 않은
  * 기간으로 마감됐다는 사실이 배지에서 읽혀야 무엇을 고칠지 알 수 있다.
  */
-function effectiveStatus(status: PublicStatus, win: LinkWindow): { label: string; tone: BadgeTone } {
+function effectiveStatus(
+  status: PublicStatus,
+  win: LinkWindow,
+): { label: string; tone: BadgeTone } {
   if (status === 'PRIVATE') return { label: '비공개', tone: 'neutral' }
   if (status === 'CLOSED') return { label: '마감', tone: 'neutral' }
   const now = dayjs()
   if (win.openAt && now.isBefore(dayjs(win.openAt)))
-    return { label: win.openInherited ? '시작 전(모듈 기간)' : '시작 예정', tone: 'warning' }
+    return {
+      label: win.openInherited ? '시작 전(모듈 기간)' : '시작 예정',
+      tone: 'warning',
+    }
   if (win.closeAt && now.isAfter(dayjs(win.closeAt)))
-    return { label: win.closeInherited ? '마감(모듈 기간 종료)' : '기간 종료(마감)', tone: 'neutral' }
+    return {
+      label: win.closeInherited ? '마감(모듈 기간 종료)' : '기간 종료(마감)',
+      tone: 'neutral',
+    }
   return { label: '공개중', tone: 'success' }
 }
 
 /** 라벨 + 입력 래퍼(전 페이지 공통 필드 규격). */
-function Field({
-  label,
-  hint,
-  htmlFor,
-  children,
-}: {
-  label: string
-  hint?: string
-  htmlFor?: string
-  children: ReactNode
-}) {
-  return (
-    <div>
-      <label className="mb-1.5 block text-caption font-medium text-gray-700" htmlFor={htmlFor}>
-        {label}
-        {hint && <span className="ml-1 font-normal text-gray-700">{hint}</span>}
-      </label>
-      {children}
-    </div>
-  )
-}
-
 /**
  * 모집 설정(폼빌더): 3블록 구성 — 기본 세팅(상태·URL·제목·포스터) /
  * 안내 설정(커스터마이즈 안내 섹션 + 문의처) / 신청 설정(신청 항목 빌더).
@@ -150,7 +140,8 @@ export function RecruitmentSettingsPanel({
     moduleEndDate: modulePeriod.end_date ?? null,
   })
   const eff = effectiveStatus(status, win)
-  const patchLanding = (part: Partial<LandingContent>) => setLanding((prev) => ({ ...prev, ...part }))
+  const patchLanding = (part: Partial<LandingContent>) =>
+    setLanding((prev) => ({ ...prev, ...part }))
 
   const onPickPoster = async (file: File | undefined) => {
     if (!file) return
@@ -217,7 +208,7 @@ export function RecruitmentSettingsPanel({
         }
       >
         <div className="space-y-5">
-          <Field label="공개 상태">
+          <Field label="공개 상태" as="div">
             <div className="flex flex-wrap items-center gap-3">
               <SegmentedToggle
                 label="공개 상태"
@@ -232,6 +223,7 @@ export function RecruitmentSettingsPanel({
           </Field>
 
           <Field
+            as="div"
             label="모집 기간"
             hint="공개 모집중일 때 이 기간에만 자동으로 열립니다. 비우면 이 모듈의 기간을 따릅니다."
           >
@@ -267,7 +259,7 @@ export function RecruitmentSettingsPanel({
             <p className="mt-1.5 text-caption text-gray-700">{windowReadback(win)}</p>
           </Field>
 
-          <Field label="공개 URL">
+          <Field label="공개 URL" as="div">
             {url ? (
               <div className="flex flex-wrap items-center gap-2">
                 <Input readOnly value={url} className="min-w-0 flex-1 text-caption" />
@@ -287,7 +279,7 @@ export function RecruitmentSettingsPanel({
             )}
           </Field>
 
-          <Field label="랜딩 제목" htmlFor="lp-title">
+          <Field label="랜딩 제목">
             <Input
               id="lp-title"
               placeholder="예: 2026 글로벌 액셀러레이팅 참여기업 모집"
@@ -296,7 +288,7 @@ export function RecruitmentSettingsPanel({
             />
           </Field>
 
-          <Field label="포스터 이미지" hint="JPG·PNG·WEBP · 최대 5MB.">
+          <Field label="포스터 이미지" hint="JPG·PNG·WEBP · 최대 5MB." as="div">
             <div className="flex items-start gap-4">
               <div className="grid h-40 w-32 shrink-0 place-items-center overflow-hidden rounded-radius-md border border-gray-200 bg-gray-25">
                 {poster ? (
@@ -336,7 +328,7 @@ export function RecruitmentSettingsPanel({
           <GuideBuilder sections={sections} onChange={setSections} />
 
           <div className="space-y-5 border-t border-gray-100 pt-5">
-            <Field label="문의처" hint="선택 입력입니다. 공개 페이지 하단에 노출됩니다." htmlFor="lp-contact">
+            <Field label="문의처" hint="선택 입력입니다. 공개 페이지 하단에 노출됩니다.">
               <TextArea
                 id="lp-contact"
                 rows={2}
@@ -356,11 +348,7 @@ export function RecruitmentSettingsPanel({
         actions={<Badge tone="neutral">{`항목 ${fields.length}`}</Badge>}
       >
         <div className="space-y-5">
-          <Field
-            label="개인정보 수집·이용 동의 문구"
-            hint="동의 체크 영역에 노출됩니다."
-            htmlFor="lp-privacy"
-          >
+          <Field label="개인정보 수집·이용 동의 문구" hint="동의 체크 영역에 노출됩니다.">
             <TextArea
               id="lp-privacy"
               rows={3}

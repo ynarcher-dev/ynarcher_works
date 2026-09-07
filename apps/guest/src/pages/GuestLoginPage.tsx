@@ -1,14 +1,11 @@
+import { formText } from '@ynarcher/ui'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
 import { GuestButton } from '@/components/GuestButton'
-import {
-  guestAuth,
-  type GuestCredentials,
-  type GuestLoginResult,
-} from '@/auth/guestAuthService'
+import { guestAuth, type GuestCredentials, type GuestLoginResult } from '@/auth/guestAuthService'
 import { PERSONA_LABEL, type GuestContextChoice } from '@/auth/guestStore'
 import { passwordRuleOk } from '@/lib/passwordRule'
 
@@ -154,7 +151,7 @@ export function GuestLoginPage() {
       {step === 'creds' && (
         <form onSubmit={handleSubmit(onLogin)} className="mt-6 space-y-4">
           <div>
-            <label className="text-body font-medium text-gray-800" htmlFor="email">
+            <label className={formText.label} htmlFor="email">
               이메일
             </label>
             <input
@@ -170,7 +167,7 @@ export function GuestLoginPage() {
             )}
           </div>
           <div>
-            <label className="text-body font-medium text-gray-800" htmlFor="password">
+            <label className={formText.label} htmlFor="password">
               비밀번호
             </label>
             <input
@@ -200,7 +197,7 @@ export function GuestLoginPage() {
       {step === 'password' && (
         <div className="mt-6 space-y-4">
           <div>
-            <label className="text-body font-medium text-gray-800" htmlFor="newPassword">
+            <label className={formText.label} htmlFor="newPassword">
               새 비밀번호 (영문+숫자 조합, 8자 이상)
             </label>
             <input
@@ -213,7 +210,7 @@ export function GuestLoginPage() {
             />
           </div>
           <div>
-            <label className="text-body font-medium text-gray-800" htmlFor="confirmPassword">
+            <label className={formText.label} htmlFor="confirmPassword">
               새 비밀번호 확인
             </label>
             <input
@@ -270,8 +267,8 @@ export function GuestLoginPage() {
         <div className="mt-6 space-y-4">
           <p className="text-body text-gray-700">{notice}</p>
           <p className="text-caption text-gray-500">
-            사업이 끝났거나 접근 기간이 지났을 수 있습니다. 계정은 그대로 살아 있으므로, 새
-            사업에 참여하시면 같은 이메일과 비밀번호로 들어오실 수 있습니다.
+            사업이 끝났거나 접근 기간이 지났을 수 있습니다. 계정은 그대로 살아 있으므로, 새 사업에
+            참여하시면 같은 이메일과 비밀번호로 들어오실 수 있습니다.
           </p>
           <GuestButton className="w-full" onClick={() => setStep('creds')}>
             다시 로그인

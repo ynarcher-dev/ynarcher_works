@@ -4,10 +4,7 @@ import { useState } from 'react'
 import { RichTextEditor, RichTextViewer } from '@/components/RichTextEditor'
 import { isEmptyRichText } from '@/lib/richText'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
-import {
-  useProgramOverview,
-  useSaveProgramOverview,
-} from '@/features/program/overviewHooks'
+import { useProgramOverview, useSaveProgramOverview } from '@/features/program/overviewHooks'
 
 /**
  * 사업개요 첨부의 다형 키. 사업 자료 관리('program')와 같은 attachments 원장을 쓰되
@@ -118,7 +115,7 @@ function IntroCard({ programId }: { programId: string }) {
 }
 
 /**
- * 개요 작성·수정 **모달** — 공지사항·QNA의 작성 모달과 같은 방식이다(2026-09-01 사용자
+ * 개요 작성·수정 **모달** — 공지사항·Q&A의 작성 모달과 같은 방식이다(2026-09-01 사용자
  * 지정: "그렇게 해야 유저 경험이 일관될 것"). 쓰는 동안 딤 클릭으로 닫히지 않게 잠가
  * 두므로(`dismissible={false}`) 닫는 길은 취소 버튼뿐이다.
  *
@@ -155,6 +152,7 @@ function IntroFormModal({
       open
       onClose={onClose}
       dismissible={false}
+      sectioned
       title={initialBody ? '사업개요 수정' : '사업개요 작성'}
       size="xl"
       footer={
@@ -168,23 +166,18 @@ function IntroFormModal({
         </>
       }
     >
-      {/* 게시판 작성 모달과 같은 바닥·카드 구성 — 쓰는 화면끼리 모양이 같아야 한다. */}
-      <div className="-mx-5 -my-4 space-y-3 bg-gray-100 px-5 py-4">
-        <Card title="사업소개">
-          <RichTextEditor
-            value={body}
-            onChange={setBody}
-            placeholder="참여자에게 보일 사업소개를 적어 주세요."
-          />
-        </Card>
-
-        {/* 대상이 언제나 있으므로 즉시 업로드다(공지 신규 작성의 대기 업로드와 다른 점). */}
-        <MaterialPanel
-          targetType={OVERVIEW_ATTACHMENT_TYPE}
-          targetId={programId}
-          title="첨부 파일"
+      {/* 게시판 작성 모달과 같은 카드 구성 — 쓰는 화면끼리 모양이 같아야 한다. 바닥(회색)은
+          `Modal`의 `sectioned`가 깐다. */}
+      <Card title="사업소개">
+        <RichTextEditor
+          value={body}
+          onChange={setBody}
+          placeholder="참여자에게 보일 사업소개를 적어 주세요."
         />
-      </div>
+      </Card>
+
+      {/* 대상이 언제나 있으므로 즉시 업로드다(공지 신규 작성의 대기 업로드와 다른 점). */}
+      <MaterialPanel targetType={OVERVIEW_ATTACHMENT_TYPE} targetId={programId} title="첨부 파일" />
     </Modal>
   )
 }

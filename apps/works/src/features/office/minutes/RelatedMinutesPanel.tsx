@@ -1,7 +1,7 @@
 import { Badge } from '@ynarcher/ui'
 import { Link } from 'react-router-dom'
 import { DetailPanelCard } from '@/features/networks/DetailPanelCard'
-import { MiniPager, usePaged } from '@ynarcher/ui'
+import { MiniPager, panelRowBox, usePaged } from '@ynarcher/ui'
 import { MINUTE_VISIBILITY_LABEL } from '@/features/office/minutes/minutesApi'
 import type { MinuteLinkTargetType } from '@/features/office/minutes/minuteLinks'
 import { useRelatedMinutes } from '@/features/office/minutes/relatedMinutesApi'
@@ -14,6 +14,11 @@ import { useRelatedMinutes } from '@/features/office/minutes/relatedMinutesApi'
  * 한 건을 한 줄로 마감한다 — 공개범위·제목은 왼쪽, 일자·작성자는 오른쪽 끝에 붙인다. 상세의
  * 곁다리 패널이라 세로 자리를 아낄수록 본문이 먼저 보이며, 제목이 길어지면 줄을 늘리는 대신
  * 잘라낸다(전체 제목은 이동한 회의록 상세가 답한다).
+ *
+ * 상자의 여백·최소 높이는 공용 `panelRowBox`가 갖는다 — 같은 열에 바로 위아래로 쌓이는 자료
+ * 관리 행과 높이를 맞추기 위해서다. 이 행은 글자만 있어 그냥 두면 첨부 행(아이콘 버튼이 높이를
+ * 만든다)보다 7px 낮게 주저앉는데, 붙어 선 상자 둘의 높이가 다르면 같은 성격의 목록으로 읽히지
+ * 않는다. 테두리·모서리는 그대로 한 단 진하고 둥글다(누를 수 있는 줄이라는 표시).
  */
 export function RelatedMinutesPanel({
   targetType,
@@ -34,7 +39,7 @@ export function RelatedMinutesPanel({
               <li key={m.id}>
                 <Link
                   to={`/office?tab=minutes&minute=${m.id}`}
-                  className="flex min-w-0 items-center gap-2 rounded-radius-md border border-gray-300 bg-white px-3 py-2 transition-colors hover:bg-gray-50"
+                  className={`flex min-w-0 items-center gap-2 rounded-radius-md border border-gray-300 bg-white transition-colors hover:bg-gray-50 ${panelRowBox}`}
                 >
                   <Badge tone={m.visibility === 'OFFICE' ? 'info' : 'neutral'}>
                     {MINUTE_VISIBILITY_LABEL[m.visibility]}

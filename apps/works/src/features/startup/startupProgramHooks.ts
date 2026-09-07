@@ -21,15 +21,8 @@ export interface StartupProgramRow {
   status: string
   start_date: string | null
   end_date: string | null
-  /** 참여 성격 태그(수혜기업·멘티 등). 미지정은 빈 배열. */
-  roleTags: string[]
   /** 이 사업에 배정된 우리 담당자(기간 세그먼트라 한 사람이 여러 행일 수 있다). */
   managers: { user_id: string; role: ProgramManagerRole; user: { name: string | null } | null }[]
-}
-
-interface ParticipantRow {
-  program_id: string
-  role_tags: string[] | null
 }
 
 /** 참여한 사업 본체 select. 카드 표가 그리는 열만 읽는다(부서·분야·설명은 사업 상세가 답한다). */
@@ -57,16 +50,17 @@ export function useStartupPrograms(config: ProgramWorkspaceConfig, startupId: st
     queryFn: async (): Promise<StartupProgramRow[]> => {
       const { data: partData, error: partError } = await supabase
         .from(SHARED_TABLES.participants)
-        .select('program_id, role_tags')
+        .select('program_id')
         // 사업으로 좁히지 않는 조회라 entity_key를 반드시 건다. 명부가 세 워크스페이스
         // 공용이 된 뒤로, 이 조건이 없으면 AC 카드에 M&A 참여 이력이 함께 딸려 온다.
         .eq('entity_key', config.entityKey)
+        // 자격은 어느 원장에서 왔는가가 답한다(2026-09-05에 명부의 role 축이 걷혔다).
+        // uuid가 겹칠 일은 없지만, id만으로 찾는 것은 언제나 경계를 하나 잃는 일이라 원장까지 건다.
+        .eq('master_table', 'startups')
         .eq('master_id', startupId)
-        .eq('role', 'STARTUP')
       if (partError) throw partError
 
-      const participants = (partData ?? []) as ParticipantRow[]
-      const ids = [...new Set(participants.map((p) => p.program_id))]
+      const ids = [...new Set(((partData ?? []) as { program_id: string }[]).map((p) => p.program_id))]
       if (ids.length === 0) return []
 
       const { data: programData, error: programError } = await supabase
@@ -76,19 +70,8 @@ export function useStartupPrograms(config: ProgramWorkspaceConfig, startupId: st
         .is('deleted_at', null)
       if (programError) throw programError
 
-      // 같은 사업에 참가 행이 둘 이상일 수 있어(성격 태그를 나눠 단 경우) 사업 단위로 접는다.
-      const byProgram = new Map<string, ParticipantRow[]>()
-      participants.forEach((p) =>
-        byProgram.set(p.program_id, [...(byProgram.get(p.program_id) ?? []), p]),
-      )
-
-      type ProgramRow = Omit<StartupProgramRow, 'roleTags'>
-      return ((programData ?? []) as unknown as ProgramRow[])
-        .map((program): StartupProgramRow => ({
-          ...program,
-          managers: program.managers ?? [],
-          roleTags: [...new Set((byProgram.get(program.id) ?? []).flatMap((r) => r.role_tags ?? []))],
-        }))
+      return ((programData ?? []) as unknown as StartupProgramRow[])
+        .map((program): StartupProgramRow => ({ ...program, managers: program.managers ?? [] }))
         .sort((a, b) => (b.start_date ?? '').localeCompare(a.start_date ?? ''))
     },
   })

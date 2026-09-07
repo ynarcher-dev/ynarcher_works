@@ -1,11 +1,12 @@
 import { Badge, EntityHeaderCard, EntityHeaderSection, InfoField, InfoGrid } from '@ynarcher/ui'
 import { useDepartmentLabels } from '@/features/management/departmentOptions'
-import { programIndustries, type Program, type ProgramDepartmentKind } from '@/features/program/hooks'
-import { ProgramPhotoBox } from '@/features/program/detail/ProgramPhotoBox'
 import {
-  PROGRAM_STATUS_LABEL,
-  PROGRAM_STATUS_TONE,
-} from '@/features/program/config'
+  programIndustries,
+  type Program,
+  type ProgramDepartmentKind,
+} from '@/features/program/hooks'
+import { ProgramPhotoBox } from '@/features/program/detail/ProgramPhotoBox'
+import { PROGRAM_STATUS_LABEL, PROGRAM_STATUS_TONE } from '@/features/program/config'
 import { categoryLabel, useProgramWorkspace } from '@/features/program/workspace'
 
 /** 라벨: 값 한 줄(StartupDetailPage·NetworkDetailPage의 Info와 동일 톤). */
@@ -25,23 +26,13 @@ function formatDate(v: unknown): string {
  */
 export function ProgramInfoCard({ program }: { program: Program }) {
   const config = useProgramWorkspace()
-  // 부서명은 목록과 같은 표기(최상위를 뺀 경로)를 쓴다 — 같은 사업을 목록과 상세에서 다르게 부르면 안 된다.
-  const { pathLabelOf } = useDepartmentLabels()
+  // 담당자 줄의 부서는 법인부터 말단까지 전체 경로로 적는다 — 여기서 읽는 것은 "어느 조직이 이
+  // 사업을 맡았는가"라 소속 전체가 답이다(목록 한 칸의 말단 표기와 갈리는 이유는 아래 주석).
+  const { fullPathLabelOf } = useDepartmentLabels()
   // 운영 기간(실제 행사 관리)만 표시한다. 제안 단계는 별도 기간을 두지 않는다.
   const formatPeriod = (start: string | null, end: string | null) =>
     start || end ? `${start ?? '?'} ~ ${end ?? '?'}` : '-'
   const operationPeriod = formatPeriod(program.start_date, program.end_date)
-  // 만료를 별색으로 밝힌다 — 문이 닫힌 사업에서 "왜 게스트가 못 들어오죠"의 답이 여기다.
-  const guestAccessEnd = program.guest_access_ends_at
-    ? new Date(program.guest_access_ends_at)
-    : null
-  const guestAccessLabel = !guestAccessEnd ? (
-    '제한 없음'
-  ) : guestAccessEnd.getTime() <= Date.now() ? (
-    <span className="text-danger">{`~ ${formatDate(program.guest_access_ends_at)} (만료)`}</span>
-  ) : (
-    `~ ${formatDate(program.guest_access_ends_at)}`
-  )
   // 분야는 목록과 같은 중립 배지로 적는다. 값이 없으면 InfoField가 하이픈으로 대체하도록 null을 준다.
   const industryList = programIndustries(program)
   const industryBadges = industryList.length ? (
@@ -59,7 +50,12 @@ export function ProgramInfoCard({ program }: { program: Program }) {
   type Member = { user_id: string; name: string; isPM: boolean; rate: number }
   const deptGroups = new Map<
     string,
-    { name: string; kind: ProgramDepartmentKind | null; ratio: number | null; members: Map<string, Member> }
+    {
+      name: string
+      kind: ProgramDepartmentKind | null
+      ratio: number | null
+      members: Map<string, Member>
+    }
   >()
   // 부서 구성으로 먼저 채워 담당자 미배정 부서도 노출한다. 단계별 중복 시 메인 우선·협업비율 최대치.
   for (const d of program.departments ?? []) {
@@ -79,10 +75,20 @@ export function ProgramInfoCard({ program }: { program: Program }) {
   for (const m of program.managers ?? []) {
     let g = deptGroups.get(m.department_id)
     if (!g) {
-      g = { name: m.department?.name ?? '-', kind: null, ratio: null, members: new Map() }
+      g = {
+        name: m.department?.name ?? '-',
+        kind: null,
+        ratio: null,
+        members: new Map(),
+      }
       deptGroups.set(m.department_id, g)
     }
-    const cur = g.members.get(m.user_id) ?? { user_id: m.user_id, name: m.user?.name ?? '-', isPM: false, rate: 0 }
+    const cur = g.members.get(m.user_id) ?? {
+      user_id: m.user_id,
+      name: m.user?.name ?? '-',
+      isPM: false,
+      rate: 0,
+    }
     cur.isPM = cur.isPM || m.role === 'PM'
     cur.rate = Math.max(cur.rate, m.allocation_rate)
     g.members.set(m.user_id, cur)
@@ -95,7 +101,8 @@ export function ProgramInfoCard({ program }: { program: Program }) {
       members: [...g.members.values()].sort((a, b) => Number(b.isPM) - Number(a.isPM)),
     }))
     .sort(
-      (a, b) => Number(b.kind === 'MAIN') - Number(a.kind === 'MAIN') || (b.ratio ?? 0) - (a.ratio ?? 0),
+      (a, b) =>
+        Number(b.kind === 'MAIN') - Number(a.kind === 'MAIN') || (b.ratio ?? 0) - (a.ratio ?? 0),
     )
 
   return (
@@ -108,32 +115,36 @@ export function ProgramInfoCard({ program }: { program: Program }) {
         </Badge>
       }
       description={program.description}
-      info={<InfoGrid>
-        <Info label="사업코드" value={program.code || '-'} />
-        {/* 사업구분. 분류를 운용하지 않는 워크스페이스에서는 항목을 감춘다. */}
-        {config.categories.length > 0 && (
-          <Info
-            label="카테고리"
-            value={program.category ? categoryLabel(config, program.category) ?? program.category : '-'}
-          />
-        )}
-        {/* 주관. 운용하지 않는 워크스페이스에서는 항목을 감춘다(사업구분과 같은 판정). */}
-        {config.hasHostOrganization && (
-          <Info label="주관" value={program.host_organization || '-'} valueClassName="truncate" />
-        )}
-        {/* 분야. 목록과 같은 표기(중립 배지)를 쓴다 — 같은 값을 두 화면이 다르게 부르지 않는다. */}
-        <Info label="분야" value={industryBadges} />
-        <Info label="운영 기간" value={operationPeriod} />
-        {/*
-          게스트 로그인 가능 기간. 값은 사업이 갖고 참여 기업·전문가 전원에게 같이 걸리므로
-          자리도 사업 정보다(3_9_1 §8). 고치는 것은 명부 툴바의 같은 이름 버튼이며, 여기서는
-          "이 사업 게스트가 언제까지 들어오는가"를 읽기만 한다 — 그 답을 보려고 명부 탭까지
-          내려가지 않아도 되게 한다.
+      info={
+        <InfoGrid>
+          <Info label="사업코드" value={program.code || '-'} />
+          {/* 사업구분. 분류를 운용하지 않는 워크스페이스에서는 항목을 감춘다. */}
+          {config.categories.length > 0 && (
+            <Info
+              label="카테고리"
+              value={
+                program.category
+                  ? (categoryLabel(config, program.category) ?? program.category)
+                  : '-'
+              }
+            />
+          )}
+          {/* 주관. 운용하지 않는 워크스페이스에서는 항목을 감춘다(사업구분과 같은 판정). */}
+          {config.hasHostOrganization && (
+            <Info label="주관" value={program.host_organization || '-'} valueClassName="truncate" />
+          )}
+          {/* 분야. 목록과 같은 표기(중립 배지)를 쓴다 — 같은 값을 두 화면이 다르게 부르지 않는다. */}
+          <Info label="분야" value={industryBadges} />
+          <Info label="운영 기간" value={operationPeriod} />
+          {/*
+          게스트 로그인 가능 기간은 여기 두지 않는다 — 값을 고치는 자리가 명부 툴바라, 읽는 자리를
+          기본 데이터에도 두면 같은 값이 두 화면에 서면서 정작 만지는 곳은 저쪽이 된다.
+          기간을 확인하는 사람은 어차피 문을 여닫으러 명부 탭으로 간다.
         */}
-        <Info label="게스트 로그인" value={guestAccessLabel} />
-        <Info label="생성자" value={program.creator?.name || '-'} />
-        <Info label="수정일" value={formatDate(program.updated_at)} />
-      </InfoGrid>}
+          <Info label="생성자" value={program.creator?.name || '-'} />
+          <Info label="수정일" value={formatDate(program.updated_at)} />
+        </InfoGrid>
+      }
     >
       <EntityHeaderSection label="담당자">
         {departments.length ? (
@@ -149,12 +160,15 @@ export function ProgramInfoCard({ program }: { program: Program }) {
                       : 'text-body text-gray-700'
                   }
                 >
-                  {/* 역할·비율을 앞에 세운다 — 부서 경로는 길이가 제각각이라 뒤에 두면 %가 줄마다
-                      다른 자리에서 시작해 세로로 비교되지 않는다. */}
+                  {/* 역할·비율을 앞에 세운다 — 부서명은 길이가 제각각이라 뒤에 두면 %가 줄마다
+                      다른 자리에서 시작해 세로로 비교되지 않는다.
+                      부서는 목록 한 칸(말단 하나 + 툴팁)과 달리 법인부터 전체 경로로 적는다 —
+                      목록은 줄끼리 비교하는 자리라 같은 본부명이 앞서면 정작 다른 값인 말단이
+                      밀리지만, 여기는 이 사업 하나의 배치를 읽는 자리라 소속 전체가 값이다. */}
                   {(d.kind === 'MAIN' ? '메인' : '협업') +
                     (d.ratio != null ? `(${d.ratio}%)` : '') +
                     ' · ' +
-                    (pathLabelOf(d.department_id) || d.name)}
+                    (fullPathLabelOf(d.department_id) || d.name)}
                 </span>
                 <span className="text-caption text-gray-400">/</span>
                 {d.members.length ? (

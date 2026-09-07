@@ -1,3 +1,4 @@
+import { formText } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 
 /**
@@ -10,7 +11,7 @@ import type { ReactNode } from 'react'
 export function Label({ text, children }: { text: string; children: ReactNode }) {
   return (
     <div>
-      <p className="mb-1 text-body font-medium text-gray-800">{text}</p>
+      <p className={`mb-1 ${formText.label}`}>{text}</p>
       {children}
     </div>
   )

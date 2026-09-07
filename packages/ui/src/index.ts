@@ -35,6 +35,12 @@ export { columnWidth } from './densityScale'
 // 표 격자(행 높이·셀 좌우 여백) — 카드 안 소형 표처럼 `DataTable`을 거치지 않는 표가 격자를
 // 자체 값으로 재선언하지 않도록 열어 둔다. 재선언하면 같은 화면에서 행 높이와 여백이 갈린다.
 export { tableGrid } from './densityScale'
+// 패널 목록 행의 상자 규격(여백·최소 높이) — 자료 관리 행은 `AttachmentRow`가 쓰고, 액션이 없어
+// 컴포넌트를 따로 두지 않은 링크 행(회의록·전자결재)은 화면이 직접 쓴다. 값이 열려 있어야 같은
+// 열에 쌓이는 상자들의 높이가 한 곳에서 정해진다.
+export { panelRowBox } from './densityScale'
+// 좌패널 행의 규격 — 구조가 다른 자리(재귀 트리)가 같은 값을 다시 적지 않도록 함께 연다.
+export { sidePanelNavRow } from './densityScale'
 
 // 기초 컴포넌트
 export { Button } from './components/Button'
@@ -169,6 +175,20 @@ export { NumberRangeFilter } from './patterns/NumberRangeFilter'
 export type { NumberRangeFilterProps } from './patterns/NumberRangeFilter'
 export { ViewToggleGroup } from './patterns/ViewToggleGroup'
 export type { ViewToggleOption, ViewToggleGroupProps } from './patterns/ViewToggleGroup'
+// 본문 좌패널(2차 내비게이션)의 소유자 — 전자결재 문서함이 원형이고
+// 게시판·자료실·조직 트리가 같은 폭·행 리듬을 쓴다.
+export {
+  SidePanelNav,
+  SidePanelNavGroup,
+  SidePanelNavRow,
+  SidePanelNavEmpty,
+} from './patterns/SidePanelNav'
+export type {
+  SidePanelNavProps,
+  SidePanelNavGroupProps,
+  SidePanelNavRowProps,
+  SidePanelNavIcon,
+} from './patterns/SidePanelNav'
 export { FullscreenPanel, ExpandToggleButton } from './patterns/FullscreenPanel'
 export type {
   FullscreenPanelProps,

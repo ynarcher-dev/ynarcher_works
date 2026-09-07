@@ -61,6 +61,7 @@ export function SensitiveValue({ field, contentKey, value, resourceType, resourc
       </Button>
 
       <Modal
+        dismissible={false}
         open={asking}
         onClose={() => setAsking(false)}
         title="민감정보 열람 사유"

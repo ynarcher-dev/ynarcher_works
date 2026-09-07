@@ -47,7 +47,11 @@ export function AttendanceBulkBar({ targets, statuses, unit, onDone }: Props) {
 
   const submit = async () => {
     try {
-      const changed = await bulk.mutateAsync({ targets, statusCode, reason: trimmedReason })
+      const changed = await bulk.mutateAsync({
+        targets,
+        statusCode,
+        reason: trimmedReason,
+      })
       // 이미 그 상태이던 칸은 서버가 건너뛴다 — 고른 수와 바뀐 수가 다르면 그 사실을 밝힌다.
       const skipped = targets.length - changed
       toast.show(
@@ -77,6 +81,7 @@ export function AttendanceBulkBar({ targets, statuses, unit, onDone }: Props) {
       </div>
 
       <Modal
+        dismissible={false}
         open={open}
         onClose={close}
         title={`상태 일괄 변경 — ${targets.length}${unit}`}

@@ -1,4 +1,4 @@
-import { Button } from '@ynarcher/ui'
+import { Button, formText } from '@ynarcher/ui'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -51,7 +51,7 @@ export function LoginPage() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
         <div>
-          <label className="text-body font-medium text-gray-800" htmlFor="email">
+          <label className={formText.label} htmlFor="email">
             이메일
           </label>
           <input
@@ -67,7 +67,7 @@ export function LoginPage() {
         </div>
 
         <div>
-          <label className="text-body font-medium text-gray-800" htmlFor="password">
+          <label className={formText.label} htmlFor="password">
             비밀번호
           </label>
           <input

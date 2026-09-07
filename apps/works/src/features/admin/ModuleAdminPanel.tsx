@@ -71,7 +71,8 @@ export function ModuleAdminPanel() {
     }
   }
 
-  const patch = (t: ModuleTemplate, part: Partial<ModuleTemplate>) => void commit([{ ...t, ...part }])
+  const patch = (t: ModuleTemplate, part: Partial<ModuleTemplate>) =>
+    void commit([{ ...t, ...part }])
 
   /** 같은 분류 안에서 위/아래로 한 칸. 두 행의 sort_order를 맞바꾼다. */
   const move = (t: ModuleTemplate, dir: -1 | 1) => {
@@ -136,7 +137,7 @@ export function ModuleAdminPanel() {
       help={
         '사업 운영 모듈의 템플릿 목록을 배치합니다. 누르면 곧바로 저장됩니다.\n' +
         '사용·워크스페이스를 끄면 새로 배치할 수 없을 뿐 기존 모듈은 그대로 동작합니다.\n' +
-        '공유 범위는 그 종류가 어디까지 나가는가(성격)이며, 세 값은 서로 배타입니다.\n' +
+        '공개 범위는 그 종류가 어디까지 나가는가(성격)이며, 세 값은 서로 배타입니다.\n' +
         '좁히면 이미 열려 있던 것도 즉시 닫히되 설정값·주소는 남아 되돌리면 복구됩니다.'
       }
     >
@@ -212,9 +213,9 @@ export function ModuleAdminPanel() {
                       {/* 공유 범위는 상한 두 개가 아니라 성격 한 축이다. 담당자는 이 결과를
                           받을 뿐 고르지 않으므로, 여기서 고른 값이 곧 그 종류의 성격이 된다. */}
                       <span className="flex shrink-0 items-center gap-1.5">
-                        <span className="text-caption text-gray-600">공유 범위</span>
+                        <span className="text-caption text-gray-600">공개 범위</span>
                         <Select
-                          aria-label={`${moduleTypeLabel(t.key)} 공유 범위`}
+                          aria-label={`${moduleTypeLabel(t.key)} 공개 범위`}
                           className="w-40"
                           value={t.visibility}
                           disabled={!t.is_active}

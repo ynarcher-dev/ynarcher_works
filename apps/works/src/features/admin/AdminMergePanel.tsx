@@ -1,4 +1,4 @@
-import { Select } from '@ynarcher/ui'
+import { formText, Select } from '@ynarcher/ui'
 import { useState } from 'react'
 import { MergeConsole } from '@/features/networks/MergeConsole'
 import { CATEGORY_OPTIONS, type NetworkCategory } from '@/features/networks/config'
@@ -17,7 +17,7 @@ export function AdminMergePanel() {
   return (
     <div className="space-y-5">
       <div className="max-w-xs">
-        <label className="text-body font-medium text-gray-800">구분</label>
+        <label className={formText.label}>구분</label>
         <Select
           value={category}
           onChange={(e) => setCategory(e.target.value as NetworkCategory | '')}

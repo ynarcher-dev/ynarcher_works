@@ -1,4 +1,4 @@
-import { IconButton, cardText, cn, formText } from '@ynarcher/ui'
+import { IconButton, cardText, cn, formText, panelRowBox } from '@ynarcher/ui'
 import { Download, File, Paperclip, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import type { BoardAttachment } from '@/features/hub/boardData'
@@ -67,13 +67,12 @@ export function AttachmentField({ value, onChange }: AttachmentFieldProps) {
         }}
         onClick={() => inputRef.current?.click()}
         className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-radius-md border border-dashed px-4 py-5 text-center transition-colors duration-fast ${
-          dragging
-            ? 'border-brand bg-brand/5'
-            : 'border-gray-300 bg-gray-25 hover:border-gray-400'
+          dragging ? 'border-brand bg-brand/5' : 'border-gray-300 bg-gray-25 hover:border-gray-400'
         }`}
       >
         <p className={cardText.value}>
-          파일을 여기로 끌어다 놓거나 <span className="font-semibold text-brand">클릭</span>하여 선택
+          파일을 여기로 끌어다 놓거나 <span className="font-semibold text-brand">클릭</span>하여
+          선택
         </p>
         <p className={formText.hint}>여러 파일을 한 번에 첨부할 수 있습니다.</p>
         <input
@@ -93,7 +92,10 @@ export function AttachmentField({ value, onChange }: AttachmentFieldProps) {
           {value.map((a) => (
             <li
               key={a.id}
-              className="flex items-center gap-2 rounded-radius-sm border border-gray-200 bg-white px-3 py-2"
+              className={cn(
+                'flex items-center gap-2 rounded-radius-sm border border-gray-200 bg-white',
+                panelRowBox,
+              )}
             >
               <File className="size-4 shrink-0 text-gray-400" />
               <span className={cn('min-w-0 flex-1 truncate', cardText.value)}>{a.name}</span>
@@ -127,7 +129,10 @@ export function AttachmentList({ attachments }: { attachments: BoardAttachment[]
         {attachments.map((a) => (
           <li
             key={a.id}
-            className="flex items-center gap-2 rounded-radius-sm border border-gray-200 bg-white px-3 py-2"
+            className={cn(
+              'flex items-center gap-2 rounded-radius-sm border border-gray-200 bg-white',
+              panelRowBox,
+            )}
           >
             <File className="size-4 shrink-0 text-gray-500" />
             <span className={cn('min-w-0 flex-1 truncate', cardText.value)}>{a.name}</span>

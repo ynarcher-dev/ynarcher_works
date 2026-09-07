@@ -61,6 +61,7 @@ export function AssetImportModal({ open, onClose, branches }: AssetImportModalPr
 
   return (
     <Modal
+      dismissible={false}
       open={open}
       onClose={onClose}
       title="자산 대용량 업로드"
@@ -102,9 +103,7 @@ export function AssetImportModal({ open, onClose, branches }: AssetImportModalPr
           className="font-mono"
         />
 
-        {text.trim() !== '' && (
-          <ImportResult count={rows.length} errors={errors} />
-        )}
+        {text.trim() !== '' && <ImportResult count={rows.length} errors={errors} />}
       </div>
     </Modal>
   )
@@ -126,7 +125,7 @@ function ImportResult({ count, errors }: { count: number; errors: ImportRowError
       </Banner>
       <ul className="max-h-40 space-y-1 overflow-y-auto rounded-radius-md border border-gray-200 bg-gray-25 p-2">
         {errors.map((e, i) => (
-          <li key={`${e.line}-${i}`} className="text-caption text-gray-700">
+          <li key={`${e.line}-${i}`} className="text-body-sm text-gray-700">
             <span className="font-semibold tabular-nums">{e.line}행</span> · {e.message}
           </li>
         ))}

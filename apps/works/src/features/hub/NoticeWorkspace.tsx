@@ -1,5 +1,5 @@
 import { DataTable, Input, PageHeader, Spinner, pinMark, type Column } from '@ynarcher/ui'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { NewBadge } from '@/features/hub/PostFlagBadges'
 import { useNotices, useBoardPostAttachmentIds, type NoticeItem } from '@/features/hub/boardPostsApi'
@@ -11,7 +11,7 @@ import { attachmentColumn, viewsColumn } from '@/features/hub/BoardPanel'
  * 사본을 만들지 않으므로 항목을 클릭하면 원본 게시판의 상세로 이동한다.
  * 설계: docs/docs_planning/3_1_1_board_archive_notice.md
  */
-export function NoticeWorkspace() {
+export function NoticeWorkspace({ navigation }: { navigation?: ReactNode } = {}) {
   const navigate = useNavigate()
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(0)
@@ -71,10 +71,13 @@ export function NoticeWorkspace() {
           />
         }
       />
-      {isLoading ? (
-        <Spinner />
-      ) : (
-      <DataTable
+      <div className="flex min-h-0 flex-1 gap-5">
+        {navigation}
+        <div className="min-w-0 flex-1">
+          {isLoading ? (
+            <Spinner />
+          ) : (
+            <DataTable
         columns={columns}
         rows={pageRows}
         rowKey={(n) => `${n.boardSlug}:${n.post.id}`}
@@ -98,8 +101,10 @@ export function NoticeWorkspace() {
           total: rows.length,
           onChange: setPage,
         }}
-      />
-      )}
+            />
+          )}
+        </div>
+      </div>
     </div>
   )
 }

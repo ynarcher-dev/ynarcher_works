@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { AI_CARD_KEYS } from '@/features/startup/startupAiCards'
+import { AI_CARDS, AI_CARD_KEYS } from '@/features/startup/startupAiCards'
 import {
   cellCount,
   cellOn,
@@ -7,10 +7,11 @@ import {
   gridCards,
   gridSourceKeys,
   pruneGrid,
-  toggleCell,
-  toggleSource,
-  toggleGrid,
   toggleCard,
+  toggleCardGroup,
+  toggleCell,
+  toggleGrid,
+  toggleSource,
   type AiGrid,
 } from '@/features/startup/startupAiGrid'
 
@@ -25,6 +26,18 @@ import {
 
 const KEYS = ['a', 'b', 'c']
 const CARDS = [...AI_CARD_KEYS]
+
+describe('카드 탐색 묶음', () => {
+  it('서버가 나눠 읽는 네 묶음과 같은 카드 구성이다', () => {
+    const keysOf = (group: (typeof AI_CARDS)[number]['group']) =>
+      AI_CARDS.filter((card) => card.group === group).map((card) => card.key)
+
+    expect(keysOf('overview')).toEqual(['basics', 'summary', 'business', 'tech'])
+    expect(keysOf('organization')).toEqual(['team', 'ip'])
+    expect(keysOf('growth')).toEqual(['timeline', 'traction'])
+    expect(keysOf('capital')).toEqual(['revenue', 'employee', 'shareholders', 'investment'])
+  })
+})
 
 describe('칸·줄·열 토글', () => {
   it('칸 하나를 켰다 끈다', () => {
@@ -43,6 +56,19 @@ describe('칸·줄·열 토글', () => {
     const on = toggleSource({}, 'b', CARDS)
     expect(cardCountFor(on, 'b', CARDS)).toBe(CARDS.length)
     expect(cardCountFor(toggleSource(on, 'b', CARDS), 'b', CARDS)).toBe(0)
+  })
+
+  it('카드 묶음은 묶음 안의 카드만 함께 켜고 끈다', () => {
+    const group = ['basics', 'summary', 'business', 'tech'] as const
+    const on = toggleCardGroup({}, [...group], KEYS)
+    expect(on.basics).toEqual(KEYS)
+    expect(on.tech).toEqual(KEYS)
+    expect(on.team).toBeUndefined()
+
+    const off = toggleCardGroup({ ...on, team: ['a'] }, [...group], KEYS)
+    expect(off.basics).toEqual([])
+    expect(off.tech).toEqual([])
+    expect(off.team).toEqual(['a'])
   })
 
   it('열을 끌 때 다른 열의 칸은 남는다', () => {

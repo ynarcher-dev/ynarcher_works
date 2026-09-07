@@ -1,5 +1,5 @@
 import { moduleTypeLabel } from '@ynarcher/master-data'
-import { Button, Modal } from '@ynarcher/ui'
+import { Button, Card, cardText, cn, Modal } from '@ynarcher/ui'
 import { useMemo, useState } from 'react'
 import type { ModuleTypeDef } from '@/features/program/config'
 import { MODULE_META } from '@/features/program/detail/moduleMeta'
@@ -30,9 +30,7 @@ export function AddModulesModal({
   // 갖지 않고 원장이 준 순서대로 그린다 — 두 벌이면 ADMIN이 고친 순서가 여기만 안 바뀐다.
   const { data: templates = [] } = useModuleTemplates()
   const sections = useMemo(() => {
-    const usable = templates.filter(
-      (t) => t.is_active && t.workspaces.includes(config.key),
-    )
+    const usable = templates.filter((t) => t.is_active && t.workspaces.includes(config.key))
     return MODULE_CATEGORIES.map((c) => ({
       label: c.label,
       defs: usable
@@ -83,7 +81,7 @@ export function AddModulesModal({
           <span className="text-xl leading-none" aria-hidden>
             {meta?.emoji}
           </span>
-          <span className="text-caption font-medium leading-tight text-gray-900">{def.label}</span>
+          <span className="text-body-sm font-medium leading-tight text-gray-900">{def.label}</span>
         </button>
       </li>
     )
@@ -94,6 +92,7 @@ export function AddModulesModal({
       open={open}
       onClose={close}
       size="2xl"
+      sectioned
       title="모듈 추가 — 템플릿 선택"
       footer={
         <>
@@ -106,46 +105,48 @@ export function AddModulesModal({
         </>
       }
     >
-      <div className="grid gap-5 md:grid-cols-[1fr_20rem]">
+      <div className="grid gap-3 md:grid-cols-[1fr_20rem]">
         {/* 좌측: 정방형 템플릿 타일 */}
-        <div className="space-y-5" role="radiogroup" aria-label="모듈 템플릿">
-          {/* 비어 있는 분류는 섹션 자체를 세우지 않는다(그 워크스페이스에 하나도 없는 경우). */}
-          {sections.map((s) => (
-            <section key={s.label}>
-              <h3 className="mb-2 text-caption font-semibold text-gray-600">{s.label}</h3>
-              <ul className="grid grid-cols-[repeat(auto-fill,minmax(6rem,1fr))] gap-2.5">
-                {s.defs.map(tile)}
-              </ul>
-            </section>
-          ))}
-          {sections.length === 0 && (
-            // 빈 목록만 두면 무엇을 해야 하는지 알 수 없다 — 사유를 말한다.
-            <p className="rounded-radius-sm border border-gray-200 bg-gray-25 px-3 py-2 text-caption text-gray-500">
-              이 워크스페이스에서 사용할 수 있는 모듈 템플릿이 없습니다. ADMIN 모듈 관리에서
-              템플릿을 켜 주세요.
-            </p>
-          )}
-        </div>
+        <Card title="템플릿">
+          <div className="space-y-4" role="radiogroup" aria-label="모듈 템플릿">
+            {/* 비어 있는 분류는 섹션 자체를 세우지 않는다(그 워크스페이스에 하나도 없는 경우). */}
+            {sections.map((s) => (
+              <section key={s.label}>
+                <h3 className={cn('mb-2', cardText.subhead)}>{s.label}</h3>
+                <ul className="grid grid-cols-[repeat(auto-fill,minmax(6rem,1fr))] gap-2.5">
+                  {s.defs.map(tile)}
+                </ul>
+              </section>
+            ))}
+            {sections.length === 0 && (
+              // 빈 목록만 두면 무엇을 해야 하는지 알 수 없다 — 사유를 말한다.
+              <p className="rounded-radius-sm border border-gray-200 bg-gray-25 px-3 py-2 text-body-sm text-gray-500">
+                이 워크스페이스에서 사용할 수 있는 모듈 템플릿이 없습니다. ADMIN 모듈 관리에서
+                템플릿을 켜 주세요.
+              </p>
+            )}
+          </div>
+        </Card>
 
         {/* 우측: 선택/미리보기 템플릿 설명 패널 */}
-        <aside className="rounded-radius-md border border-gray-200 bg-gray-25 p-5">
+        <Card title="설명">
           {activeDef && activeMeta ? (
             <div className="space-y-3">
               <span
-                className="grid h-12 w-12 place-items-center rounded-radius-md bg-white text-2xl shadow-soft"
+                className="grid h-12 w-12 place-items-center rounded-radius-md bg-gray-25 text-2xl"
                 aria-hidden
               >
                 {activeMeta.emoji}
               </span>
-              <h4 className="text-title-sm font-semibold text-gray-900">{activeDef.label}</h4>
+              <h4 className={cardText.subhead}>{activeDef.label}</h4>
               <p className="text-body leading-relaxed text-gray-700">{activeMeta.detail}</p>
             </div>
           ) : (
-            <p className="text-caption text-gray-600">
+            <p className="text-body-sm text-gray-600">
               템플릿에 마우스를 올리거나 선택하면 설명이 표시됩니다.
             </p>
           )}
-        </aside>
+        </Card>
       </div>
     </Modal>
   )

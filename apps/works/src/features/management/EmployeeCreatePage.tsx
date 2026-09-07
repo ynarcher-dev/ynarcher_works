@@ -1,5 +1,5 @@
-import { CardShell, Input, Select, useToast } from '@ynarcher/ui'
-import { useState, type ReactNode } from 'react'
+import { CardShell, Field, Input, Select, useToast } from '@ynarcher/ui'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FormTopBar } from '@/components/FormTopBar'
 import { CREATABLE_ROLE_OPTIONS } from '@/features/management/config'
@@ -8,30 +8,6 @@ import { useCreateEmployee } from '@/features/management/hooks'
 
 /** 인사 관리 목록 경로(뒤로가기·취소 목적지). */
 const LIST_PATH = '/management?tab=hr'
-
-/** 필드 래퍼(라벨 + 입력). EmployeeForm과 동일한 페이지 폼 스타일. */
-function Field({
-  label,
-  required,
-  hint,
-  children,
-}: {
-  label: string
-  required?: boolean
-  hint?: string
-  children: ReactNode
-}) {
-  return (
-    <div>
-      <label className="mb-1 block text-caption font-medium text-gray-700">
-        {label}
-        {required && <span className="text-brand"> *</span>}
-      </label>
-      {children}
-      {hint && <p className="mt-1 text-caption text-gray-700">{hint}</p>}
-    </div>
-  )
-}
 
 /**
  * 임직원 계정 생성 페이지(인사 관리 전용). 로그인 가능한 계정을 만든다.
@@ -47,9 +23,7 @@ export function EmployeeCreatePage() {
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
-  const [userType, setUserType] = useState(
-    CREATABLE_ROLE_OPTIONS[0]?.value ?? 'management_support',
-  )
+  const [userType, setUserType] = useState(CREATABLE_ROLE_OPTIONS[0]?.value ?? 'management_support')
   const [position, setPosition] = useState('')
   const [rank, setRank] = useState('')
   const [payStep, setPayStep] = useState('')

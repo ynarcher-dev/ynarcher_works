@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { tableText } from '../densityScale'
+import { panelRowBox, tableText } from '../densityScale'
 
 /**
  * 첨부 파일 1건 행 — WORKS 자료 관리(MaterialRow)와 GUEST 파일 목록이 공유하는 표시 규격.
@@ -33,7 +33,12 @@ export function AttachmentRow({
   children,
 }: AttachmentRowProps) {
   return (
-    <li className="rounded-radius-sm border border-gray-200 bg-white px-3 py-2">
+    // 여백·최소 높이는 `panelRowBox`(패널 목록 행 공용 규격)가 갖는다 — 같은 열에 쌓이는
+    // 회의록·전자결재 링크 행과 상자 높이를 맞추기 위해서다. 테두리·모서리만 여기서 정한다
+    // (누를 수 없는 행이라 링크 행보다 한 단 연하고 덜 둥글다).
+    <li
+      className={`flex flex-col justify-center rounded-radius-sm border border-gray-200 bg-white ${panelRowBox}`}
+    >
       <div className="flex items-center gap-2">
         {icon}
         {/* 이름은 이 행의 식별 값, 메타·용량은 곁값 — 크기는 하나로 두고 색으로만 가른다. */}

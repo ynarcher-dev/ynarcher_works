@@ -1,5 +1,4 @@
-import { TextArea } from '@ynarcher/ui'
-import { type ReactNode } from 'react'
+import { Field, TextArea } from '@ynarcher/ui'
 import { useTagTokenField } from '@/features/admin/TagTokenField'
 import {
   INTEREST_TAG_TABLE,
@@ -10,29 +9,6 @@ import {
 interface Props {
   value: EmployeeNote
   onChange: (next: EmployeeNote) => void
-}
-
-/** 라벨 + 입력 한 칸(EmployeeForm의 Field와 같은 규격). */
-function Field({
-  label,
-  hint,
-  children,
-}: {
-  label: string
-  /**
-   * 접지 않고 컨트롤 아래에 펴는 안내. **막힌 이유에만** 쓴다 — 이 폼에는 말풍선 인프라가 없어
-   * 접을 자리가 없고, 접을 수 없는 것을 접는 척하느니 지시문만 받는 편이 정직하다.
-   */
-  hint?: string
-  children: ReactNode
-}) {
-  return (
-    <div>
-      <label className="mb-1 block text-caption font-medium text-gray-700">{label}</label>
-      {children}
-      {hint && <p className="mt-1 text-caption text-gray-600">{hint}</p>}
-    </div>
-  )
 }
 
 /**
@@ -64,6 +40,7 @@ export function EmployeeNoteFields({ value, onChange }: Props) {
       <Field
         label={`관심분야(${MAX_INTERESTS}개)`}
         hint={interestField.hintInline ? interestField.hint : undefined}
+        hintInline
       >
         {interestField.control}
       </Field>

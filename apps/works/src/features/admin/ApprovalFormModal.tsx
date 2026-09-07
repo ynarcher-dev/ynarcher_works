@@ -1,4 +1,4 @@
-import { Button, Field, Input, Modal, Tooltip, tooltipScale, useToast } from '@ynarcher/ui'
+import { Button, Card, Field, Input, Modal, useToast } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { FieldSchemaEditor } from '@/features/approval/FieldSchemaEditor'
 import type { ApprovalForm } from '@/features/approval/approvalApi'
@@ -99,10 +99,12 @@ export function ApprovalFormModal({
 
   return (
     <Modal
+      dismissible={false}
       open={open}
       onClose={onClose}
       title={form ? '결재 양식 수정' : '결재 양식 등록'}
       size="2xl"
+      sectioned
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
@@ -114,69 +116,71 @@ export function ApprovalFormModal({
         </>
       }
     >
-      <div className="space-y-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Field
-            label="분류(대분류)"
-            hint="같은 분류끼리 기안 화면에서 묶입니다. 새 이름을 적으면 새 분류가 됩니다."
-          >
-            <Input
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              list="approval-form-categories"
-              placeholder="지출결의서"
-            />
-            {/* 선택지는 살아 있는 양식이 쓰는 분류에서 파생한다 — 별도 원장이 없으므로
-                빈 분류가 목록에 남지 않는다. */}
-            <datalist id="approval-form-categories">
-              {categories.map((c) => (
-                <option key={c} value={c} />
-              ))}
-            </datalist>
-          </Field>
-          <Field label="양식 이름" required>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="법인카드 지출결의서"
-            />
-          </Field>
-          <Field
-            label="문서 번호 약칭"
-            required
-            hint="문서 번호의 접두가 됩니다(예: 지결-260826-0001)."
-          >
-            <Input value={abbrev} onChange={(e) => setAbbrev(e.target.value)} placeholder="지결" />
-          </Field>
-          <Field label="보존 연한">
-            <Input value={retention} onChange={(e) => setRetention(e.target.value)} />
-          </Field>
-          <Field label="보안 등급">
-            <Input value={grade} onChange={(e) => setGrade(e.target.value)} />
-          </Field>
-          <Field label="표시 순서" hint="작은 값이 먼저 놓입니다.">
-            <Input
-              inputMode="numeric"
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value)}
-            />
-          </Field>
-        </div>
+      <>
+        <Card title="기본 정보">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field
+              label="분류(대분류)"
+              hint="같은 분류끼리 기안 화면에서 묶입니다. 새 이름을 적으면 새 분류가 됩니다."
+            >
+              <Input
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                list="approval-form-categories"
+                placeholder="지출결의서"
+              />
+              {/* 선택지는 살아 있는 양식이 쓰는 분류에서 파생한다 — 별도 원장이 없으므로
+                  빈 분류가 목록에 남지 않는다. */}
+              <datalist id="approval-form-categories">
+                {categories.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
+            </Field>
+            <Field label="양식 이름" required>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="법인카드 지출결의서"
+              />
+            </Field>
+            <Field
+              label="문서 번호 약칭"
+              required
+              hint="문서 번호의 접두가 됩니다(예: 지결-260826-0001)."
+            >
+              <Input
+                value={abbrev}
+                onChange={(e) => setAbbrev(e.target.value)}
+                placeholder="지결"
+              />
+            </Field>
+            <Field label="보존 연한">
+              <Input value={retention} onChange={(e) => setRetention(e.target.value)} />
+            </Field>
+            <Field label="보안 등급">
+              <Input value={grade} onChange={(e) => setGrade(e.target.value)} />
+            </Field>
+            <Field label="표시 순서" hint="작은 값이 먼저 놓입니다.">
+              <Input
+                inputMode="numeric"
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+              />
+            </Field>
+          </div>
+        </Card>
 
-        <section className="space-y-2 border-t border-gray-200 pt-4">
-          <h4 className="flex items-center text-body font-semibold text-gray-900">
-            양식 필드
-            <Tooltip
-              label="양식 필드"
-              content={
-                '금액은 금액 타입으로 받아야 집계됩니다.\n표(TABLE) 안의 금액 열에 ‘대표 금액’을 지정하면 그 합계가 문서 금액이 되어 재무 집계로 이어집니다.'
-              }
-              className={tooltipScale.gap}
-            />
-          </h4>
+        <Card
+          title="양식 필드"
+          count={fields.length}
+          help={
+            '금액은 금액 타입으로 받아야 집계됩니다.\n표(TABLE) 안의 금액 열에 ‘대표 금액’을 지정하면 그 합계가 문서 금액이 되어 재무 집계로 이어집니다.'
+          }
+        >
           <FieldSchemaEditor fields={fields} onChange={setFields} />
-        </section>
-      </div>
+        </Card>
+      </>
     </Modal>
   )
 }

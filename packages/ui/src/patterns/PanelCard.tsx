@@ -12,6 +12,8 @@ export interface PanelCardProps {
   help?: ReactNode
   action?: ReactNode
   className?: string
+  /** 제목 글자에만 붙일 클래스(색 강조·truncate 등). 제목 줄 규격은 CardHeading이 그대로 소유한다. */
+  titleClassName?: string
   bodyClassName?: string
   children: ReactNode
 }
@@ -26,13 +28,14 @@ export function PanelCard({
   help,
   action,
   className,
+  titleClassName,
   bodyClassName,
   children,
 }: PanelCardProps) {
   return (
     <CardShell className={className}>
       <div className="mb-3 flex items-center justify-between gap-2">
-        <CardHeading count={count} help={help}>
+        <CardHeading count={count} help={help} titleClassName={titleClassName}>
           {title}
         </CardHeading>
         {action}

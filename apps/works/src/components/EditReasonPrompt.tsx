@@ -34,6 +34,7 @@ export function useEditReasonPrompt() {
   const trimmed = reason.trim()
   const reasonModal = (
     <Modal
+      dismissible={false}
       open={resolver !== null}
       onClose={() => settle(null)}
       title="수정 사유"

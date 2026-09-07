@@ -1,12 +1,20 @@
-import { Button, Input, Modal } from '@ynarcher/ui'
+import { Button, formText, Input, Modal } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { BOARD_ICON_OPTIONS, DEFAULT_BOARD_ICON } from '@/features/hub/boardIcons'
 import type { BoardDef, BoardKind } from '@/features/hub/boardStore'
 
 /** 생성 가능한 게시 종류. 공지사항은 게시판이 아니라 뷰이므로 선택지에 없다. */
 const KIND_OPTIONS: { key: BoardKind; label: string; hint: string }[] = [
-  { key: 'POST', label: '게시판', hint: '제목 클릭 시 상세페이지(본문·첨부·댓글)' },
-  { key: 'ARCHIVE', label: '자료실', hint: '상세페이지 없이 목록에서 파일 즉시 다운로드' },
+  {
+    key: 'POST',
+    label: '게시판',
+    hint: '제목 클릭 시 상세페이지(본문·첨부·댓글)',
+  },
+  {
+    key: 'ARCHIVE',
+    label: '자료실',
+    hint: '상세페이지 없이 목록에서 파일 즉시 다운로드',
+  },
 ]
 
 export interface BoardFormValue {
@@ -55,6 +63,7 @@ export function BoardFormModal({
 
   return (
     <Modal
+      dismissible={false}
       open={open}
       onClose={onClose}
       title={editing ? `${kindLabel} 수정` : '게시판·자료실 생성'}
@@ -76,7 +85,7 @@ export function BoardFormModal({
     >
       <div className="space-y-4">
         <div className="space-y-1.5">
-          <label className="text-caption font-semibold text-gray-600">구분</label>
+          <label className={formText.label}>구분</label>
           <div className="grid grid-cols-2 gap-2">
             {KIND_OPTIONS.map((opt) => {
               const selected = opt.key === kind
@@ -112,7 +121,7 @@ export function BoardFormModal({
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-caption font-semibold text-gray-600">{kindLabel}명</label>
+          <label className={formText.label}>{kindLabel}명</label>
           <Input
             autoFocus
             placeholder={kind === 'ARCHIVE' ? '예: 사내 규정 자료실' : '예: 규정·정책'}
@@ -125,7 +134,7 @@ export function BoardFormModal({
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-caption font-semibold text-gray-600">아이콘</label>
+          <label className={formText.label}>아이콘</label>
           <div className="grid grid-cols-7 gap-1.5">
             {BOARD_ICON_OPTIONS.map((opt) => {
               const selected = opt.key === icon
@@ -150,7 +159,6 @@ export function BoardFormModal({
             })}
           </div>
         </div>
-
       </div>
     </Modal>
   )

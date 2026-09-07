@@ -1,4 +1,4 @@
-import { Checkbox } from '@ynarcher/ui'
+import { Checkbox, formText } from '@ynarcher/ui'
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { GuestButton } from '@/components/GuestButton'
@@ -58,7 +58,12 @@ type NotOpenReason = 'private' | 'scheduled' | 'closed'
 
 type State =
   | { kind: 'loading' }
-  | { kind: 'closed'; reason?: NotOpenReason; open_at?: string | null; close_at?: string | null }
+  | {
+      kind: 'closed'
+      reason?: NotOpenReason
+      open_at?: string | null
+      close_at?: string | null
+    }
   | { kind: 'notfound' }
   | { kind: 'ok'; form: FormPayload }
   | { kind: 'done' }
@@ -241,7 +246,12 @@ export function ApplyPage() {
       const res = await fetch(`${functionsBase}/application-submit`, {
         method: 'POST',
         headers: anonHeaders,
-        body: JSON.stringify({ token, consent: true, answers, files: fileItems }),
+        body: JSON.stringify({
+          token,
+          consent: true,
+          answers,
+          files: fileItems,
+        }),
       })
       if (!res.ok) throw new Error('submit_failed')
       setState({ kind: 'done' })
@@ -256,9 +266,15 @@ export function ApplyPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-5 py-8">
-      <h1 className="text-title-md font-bold text-gray-900">{landing.landing_title || form!.title}</h1>
+      <h1 className="text-title-md font-bold text-gray-900">
+        {landing.landing_title || form!.title}
+      </h1>
       {poster && (
-        <img src={poster} alt="모집 포스터" className="mt-4 w-full rounded-lg border border-gray-200" />
+        <img
+          src={poster}
+          alt="모집 포스터"
+          className="mt-4 w-full rounded-lg border border-gray-200"
+        />
       )}
       {guideSections(landing).map((s, i) => (
         <Section key={i} title={s.title} body={s.body} />
@@ -269,7 +285,7 @@ export function ApplyPage() {
         <div className="mt-4 space-y-4">
           {inputFields.map((f) => (
             <div key={f.id}>
-              <label className="text-body font-medium text-gray-800" htmlFor={`f-${f.id}`}>
+              <label className={formText.label} htmlFor={`f-${f.id}`}>
                 {f.label}
                 {f.is_required && <span className="text-danger"> *</span>}
               </label>
@@ -315,7 +331,9 @@ export function ApplyPage() {
                 ) : (
                   <input
                     id={`f-${f.id}`}
-                    type={f.field_type === 'email' ? 'email' : f.field_type === 'tel' ? 'tel' : 'text'}
+                    type={
+                      f.field_type === 'email' ? 'email' : f.field_type === 'tel' ? 'tel' : 'text'
+                    }
                     className={inputClass}
                     value={values[f.id] ?? ''}
                     onChange={(e) => setValues((v) => ({ ...v, [f.id]: e.target.value }))}
@@ -352,11 +370,7 @@ export function ApplyPage() {
 
         {error && <p className="mt-4 text-caption text-danger">{error}</p>}
 
-        <GuestButton
-          className="mt-5 w-full"
-          onClick={() => void onSubmit()}
-          disabled={submitting}
-        >
+        <GuestButton className="mt-5 w-full" onClick={() => void onSubmit()} disabled={submitting}>
           {submitting ? '제출 중…' : '신청서 제출'}
         </GuestButton>
 

@@ -46,6 +46,8 @@ export function PendingMaterialPanel({
               <span className={`min-w-0 flex-1 truncate ${tableText.primary}`} title={url}>
                 {url}
               </span>
+              {/* 파일 행의 용량 자리를 링크는 종류로 채운다 — 자료 관리 목록과 같은 규격이다. */}
+              <span className={`shrink-0 ${tableText.meta}`}>link</span>
               <IconButton
                 variant="ghost"
                 danger
@@ -69,9 +71,7 @@ export function PendingMaterialPanel({
                 <FileIcon className="size-4 shrink-0 text-gray-500" />
                 {/* 규격은 자료 관리 패널(MaterialPanel)의 행과 동일하게 맞춘다 — 등록 모드와
                     조회 모드에서 같은 목록이 다르게 보이면 안 된다. */}
-                <span className={`min-w-0 flex-1 truncate ${tableText.primary}`}>
-                  {file.name}
-                </span>
+                <span className={`min-w-0 flex-1 truncate ${tableText.primary}`}>{file.name}</span>
                 <span className={`shrink-0 tabular-nums ${tableText.meta}`}>
                   {formatBytes(file.size)}
                 </span>

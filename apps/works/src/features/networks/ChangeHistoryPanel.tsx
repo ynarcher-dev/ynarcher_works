@@ -45,8 +45,8 @@ export function ChangeHistoryPanel({
     <DetailPanelCard title="변동 이력" count={list.length}>
       {list.length > 0 ? (
         <>
-          {/* 목록 행은 실질적으로 표의 한 행이므로 크기를 tableText 하나(12px)로 세우고
-              위계는 색으로만 만든다 — 종전에는 한 줄에 14/12/11px가 섞여 있었다. */}
+          {/* 목록 행은 실질적으로 표의 한 행이므로 크기를 tableText 하나(카드 안 표 단 = 14px)로
+              세우고 위계는 색으로만 만든다 — 종전에는 한 줄에 14/12/11px가 섞여 있었다. */}
           {/* 행 사이 얕은 실선(divide-y)으로 표의 결을 만든다 — 텍스트만 떠 보이던 것을 눌러준다.
               여백만으로는 34건을 세로로 훑을 때 어디서 한 건이 끝나는지 눈이 잡지 못한다. */}
           <ul className="divide-y divide-gray-100">
@@ -64,9 +64,7 @@ export function ChangeHistoryPanel({
                 {/* 행위는 상태가 아니라 분류이므로 알약 배지가 아니라 대괄호 말머리로 둔다.
                     행마다 배지가 붙으면 목록 전체에 회색 알약이 줄지어 눈이 걸릴 곳이 늘어난다.
                     색은 날짜·출처(메타)와 이름(식별) 사이 단계에 놓아 세 층을 만든다. */}
-                <span className={tableText.body}>
-                  [{CONTRIBUTION_ACTION_LABEL[c.action]}]
-                </span>
+                <span className={tableText.body}>[{CONTRIBUTION_ACTION_LABEL[c.action]}]</span>
                 <span className={tableText.primary}>{c.user_name ?? '-'}</span>
                 <span className={`truncate ${tableText.meta}`}>
                   {/* 출처는 두 값뿐(DB 제약 manual|upload). 무엇을 뜻하는지 짐작하지 않아도

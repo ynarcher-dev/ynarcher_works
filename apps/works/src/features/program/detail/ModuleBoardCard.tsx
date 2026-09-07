@@ -11,7 +11,7 @@ import {
 } from '@ynarcher/ui'
 import {
   ChartGantt,
-  List,
+  ListOrdered,
   Maximize2,
   Minimize2,
   Plus,
@@ -44,14 +44,13 @@ import { useOpenPublicLinkModuleIds } from '@/features/program/publicLinkHooks'
 type BoardView = 'list' | 'kanban' | 'gantt'
 
 const VIEW_OPTIONS: { key: BoardView; label: string; icon: LucideIcon }[] = [
-  { key: 'list', label: '목록', icon: List },
+  { key: 'list', label: '시작일순', icon: ListOrdered },
   { key: 'kanban', label: '칸반', icon: SquareKanban },
   { key: 'gantt', label: '간트', icon: ChartGantt },
 ]
 
 const typeOrder = new Map(MODULE_TYPES.map((d, i) => [d.type, i]))
-const labelOf = (type: string) =>
-  MODULE_TYPES.find((d) => d.type === type)?.label ?? type
+const labelOf = (type: string) => MODULE_TYPES.find((d) => d.type === type)?.label ?? type
 /** 인스턴스 표시명: 모듈명(자율 입력) 우선, 없으면 템플릿 라벨 폴백. */
 const nameOf = (mod: ProgramModule) => mod.title?.trim() || labelOf(mod.module_type)
 
@@ -112,7 +111,10 @@ export function ModuleBoardCard({
   const disabled = sortModules(modules.filter((m) => !m.enabled))
   // 모듈명 중복 검증용: 편집 대상 자신은 제외한 나머지 인스턴스 제목.
   const titlesExcept = (id: string | undefined) =>
-    modules.filter((m) => m.id !== id).map((m) => m.title ?? '').filter((t) => t.length > 0)
+    modules
+      .filter((m) => m.id !== id)
+      .map((m) => m.title ?? '')
+      .filter((t) => t.length > 0)
 
   /**
    * 모듈 진입: 전체 화면 오버레이를 닫은 뒤 상세 페이지의 운영 화면으로 넘긴다.
@@ -152,64 +154,73 @@ export function ModuleBoardCard({
       {view === 'gantt' && <ModuleGanttView modules={enabled} onOpenModule={openModule} />}
       {view === 'list' && (
         <>
-          <ul className="space-y-2">
-            {enabled.map((mod) => {
+          <ol>
+            {enabled.map((mod, index) => {
               const meta = MODULE_META[mod.module_type]
               const status = moduleStatusMeta(mod.status)
               const settings = readModuleSettings(mod.settings)
+              const hasNext = index < enabled.length - 1
               return (
-                <li key={mod.id}>
-                  <BoardItemCard
-                    onClick={() => openModule(mod)}
-                    leading={meta?.emoji}
-                    title={nameOf(mod)}
-                    badges={
-                      <>
-                        <Badge tone={status.tone}>{status.label}</Badge>
-                        {/* 공유 범위는 한 축이므로 배지도 하나다(2026-09-03). PUBLIC_LINK
-                            배지 자체가 "밖으로 나간다"를 말하고, 지금 실제로 열려 있는지는
-                            라벨이 아니라 톤이 답한다. */}
-                        <ModuleVisibilityBadge
-                          visibility={mod.visibility}
-                          linkOpen={Boolean(openLinkIds?.has(mod.id))}
-                        />
-                        {/* 파생 템플릿 배지 — 원천 템플릿을 다른 배지와 함께 표기. */}
-                        <Badge tone="neutral">{labelOf(mod.module_type)}</Badge>
-                      </>
-                    }
-                    description={settings.memo ?? meta?.description ?? ''}
-                    meta={
-                      <>
-                        <span className="tabular-nums">
-                          {formatModulePeriod(settings)}
-                        </span>
-                        {/* 비어 있을 때 칸을 지우지 않는다 — 담당자가 없는 것과 아직 못 읽은
-                            것이 같은 모양이 되고, 사업 담당자에서 빠지며 모듈 담당이 함께
-                            비워진 모듈을 아무도 알아채지 못한다. 다시 정해야 하는 상태다. */}
-                        <span className="border-l border-gray-200 pl-2">
-                          <span className="font-semibold">담당</span>{' '}
-                          {mod.assignees.length > 0 ? (
-                            mod.assignees.map((a) => a.user?.name ?? '이름 미상').join(', ')
-                          ) : (
-                            <span className="text-warning">미지정</span>
-                          )}
-                        </span>
-                      </>
-                    }
-                    /* 액션은 두지 않는다(2026-09-06) — 설정·끄기·삭제는 모듈 운영 화면 최상단의
-                       모듈 카드가 소유한다. 목록의 행은 '들어가는 길' 하나만 답한다. */
-                  />
+                <li key={mod.id} className={hasNext ? 'flex gap-2 pb-2' : 'flex gap-2'}>
+                  {/* 목록이 독립 카드 묶음이 아니라 시작일순 흐름으로 읽히도록, 표 밀도의
+                      순번과 디자인 시스템의 hairline을 한 축으로 잇는다. */}
+                  <span className="flex w-icon-table shrink-0 flex-col items-center" aria-hidden>
+                    <span className="mt-2 grid size-icon-table place-items-center rounded-full border border-gray-300 bg-gray-50 text-caption font-semibold tabular-nums text-gray-700">
+                      {index + 1}
+                    </span>
+                    {hasNext && <span className="mt-1 w-px flex-1 bg-gray-300" />}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <BoardItemCard
+                      onClick={() => openModule(mod)}
+                      leading={meta?.emoji}
+                      title={nameOf(mod)}
+                      badges={
+                        <>
+                          <Badge tone={status.tone}>{status.label}</Badge>
+                          <span className="ml-auto flex shrink-0 items-center gap-2">
+                            {/* 공유 범위는 한 축이므로 배지도 하나다(2026-09-03). PUBLIC_LINK
+                                배지 자체가 "밖으로 나간다"를 말하고, 지금 실제로 열려 있는지는
+                                라벨이 아니라 톤이 답한다. */}
+                            <ModuleVisibilityBadge
+                              visibility={mod.visibility}
+                              linkOpen={Boolean(openLinkIds?.has(mod.id))}
+                            />
+                            {/* 파생 템플릿 배지 — 원천 템플릿을 다른 배지와 함께 표기. */}
+                            <Badge tone="neutral">{labelOf(mod.module_type)}</Badge>
+                          </span>
+                        </>
+                      }
+                      description={settings.memo ?? meta?.description ?? ''}
+                      meta={
+                        <>
+                          <span className="tabular-nums">{formatModulePeriod(settings)}</span>
+                          {/* 비어 있을 때 칸을 지우지 않는다 — 담당자가 없는 것과 아직 못 읽은
+                              것이 같은 모양이 되고, 사업 담당자에서 빠지며 모듈 담당이 함께
+                              비워진 모듈을 아무도 알아채지 못한다. 다시 정해야 하는 상태다. */}
+                          <span className="border-l border-gray-200 pl-2">
+                            <span className="font-semibold">담당</span>{' '}
+                            {mod.assignees.length > 0 ? (
+                              mod.assignees.map((a) => a.user?.name ?? '이름 미상').join(', ')
+                            ) : (
+                              <span className="text-warning">미지정</span>
+                            )}
+                          </span>
+                        </>
+                      }
+                      /* 액션은 두지 않는다(2026-09-06) — 설정·끄기·삭제는 모듈 운영 화면 최상단의
+                         모듈 카드가 소유한다. 목록의 행은 '들어가는 길' 하나만 답한다. */
+                    />
+                  </div>
                 </li>
               )
             })}
             {enabled.length === 0 && (
               <li>
-                <BoardEmptyRow>
-                  활성화된 모듈이 없습니다. 아래에서 모듈을 추가하세요.
-                </BoardEmptyRow>
+                <BoardEmptyRow>활성화된 모듈이 없습니다. 아래에서 모듈을 추가하세요.</BoardEmptyRow>
               </li>
             )}
-          </ul>
+          </ol>
 
           <DashedAddButton
             className="mt-2"

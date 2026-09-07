@@ -1,4 +1,12 @@
-import { cn, IconButton, Input, Select } from '@ynarcher/ui'
+import {
+  cn,
+  IconButton,
+  Input,
+  Select,
+  SidePanelNav,
+  SidePanelNavEmpty,
+  SidePanelNavGroup,
+} from '@ynarcher/ui'
 import {
   ChevronRight,
   ChevronsDownUp,
@@ -261,48 +269,51 @@ export function OrgEditTree({ editing, selectedId, onSelect, keyword }: OrgEditT
   return (
     // 편집 트리는 한 줄에 이름·레벨·액션이 함께 서므로 조회용 트리(w-60)보다 넓어야 한다.
     // 가장 깊은 조직에서도 이름 8rem + 레벨 8rem + 액션이 잘리지 않는 폭으로 잡았다.
-    <aside className="w-[30rem] shrink-0 border-r border-gray-200 pr-3">
-      <div className="mb-1 flex items-center justify-between pl-1">
-        <span className="text-caption font-semibold text-gray-500">조직</span>
-        <span className="flex items-center gap-0.5">
-          <IconButton
-            density="table"
-            variant="ghost"
-            label="최상위 조직 추가"
-            title="최상위 조직 추가"
-            onClick={() => void addRoot()}
-            icon={<Plus size={14} />}
-          />
-          <IconButton
-            density="table"
-            variant="ghost"
-            label={allExpanded ? '전체 접기' : '전체 펼치기'}
-            title={allExpanded ? '전체 접기' : '전체 펼치기'}
-            onClick={() =>
-              setCollapsed(allExpanded ? collapsibleIds(editing.tree) : new Set<string>())
-            }
-            icon={allExpanded ? <ChevronsDownUp size={14} /> : <ChevronsUpDown size={14} />}
-          />
-        </span>
-      </div>
-      {tree.length === 0 ? (
-        <p className="py-6 text-center text-caption text-gray-500">
-          {keyword.trim() ? '검색 결과가 없습니다.' : '‘＋’로 첫 조직을 추가하세요.'}
-        </p>
-      ) : (
-        tree.map((root) => (
-          <Row
-            key={root.id}
-            node={root}
-            editing={editing}
-            selectedId={selectedId}
-            onSelect={onSelect}
-            collapsed={collapsed}
-            onToggle={toggle}
-            drag={drag}
-          />
-        ))
-      )}
-    </aside>
+    <SidePanelNav className="w-[30rem]">
+      <SidePanelNavGroup
+        label="조직"
+        action={
+          <span className="flex items-center gap-0.5">
+            <IconButton
+              density="table"
+              variant="ghost"
+              label="최상위 조직 추가"
+              title="최상위 조직 추가"
+              onClick={() => void addRoot()}
+              icon={<Plus size={14} />}
+            />
+            <IconButton
+              density="table"
+              variant="ghost"
+              label={allExpanded ? '전체 접기' : '전체 펼치기'}
+              title={allExpanded ? '전체 접기' : '전체 펼치기'}
+              onClick={() =>
+                setCollapsed(allExpanded ? collapsibleIds(editing.tree) : new Set<string>())
+              }
+              icon={allExpanded ? <ChevronsDownUp size={14} /> : <ChevronsUpDown size={14} />}
+            />
+          </span>
+        }
+      >
+        {tree.length === 0 ? (
+          <SidePanelNavEmpty>
+            {keyword.trim() ? '검색 결과가 없습니다.' : '‘＋’로 첫 조직을 추가하세요.'}
+          </SidePanelNavEmpty>
+        ) : (
+          tree.map((root) => (
+            <Row
+              key={root.id}
+              node={root}
+              editing={editing}
+              selectedId={selectedId}
+              onSelect={onSelect}
+              collapsed={collapsed}
+              onToggle={toggle}
+              drag={drag}
+            />
+          ))
+        )}
+      </SidePanelNavGroup>
+    </SidePanelNav>
   )
 }

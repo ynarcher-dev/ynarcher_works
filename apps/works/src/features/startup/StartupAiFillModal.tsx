@@ -2,7 +2,12 @@ import { Banner, Button, Modal, Spinner, cardText, cn } from '@ynarcher/ui'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { EntityRow } from '@/features/master/entityHooks'
 import { formatBytes } from '@/features/networks/materialHooks'
-import { AI_FILL_LIMITS, useAiFill, type AiFillResult, type AiSource } from '@/features/startup/startupAiFill'
+import {
+  AI_FILL_LIMITS,
+  useAiFill,
+  type AiFillResult,
+  type AiSource,
+} from '@/features/startup/startupAiFill'
 import { AI_CARDS, type AiCardKey } from '@/features/startup/startupAiCards'
 import { writableCount } from '@/features/startup/startupAiExtractState'
 import type { AiFillOutcome } from '@/features/startup/startupAiMerge'
@@ -16,6 +21,7 @@ import {
   gridSourceKeys,
   pruneGrid,
   toggleCard,
+  toggleCardGroup,
   toggleCell,
   toggleGrid,
   toggleSource,
@@ -96,7 +102,11 @@ export function StartupAiFillModal({
    */
   const resultRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    if (outcome) resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    if (outcome)
+      resultRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      })
   }, [outcome])
 
   const readable = useMemo(() => sources.filter((s) => s.readable), [sources])
@@ -162,13 +172,21 @@ export function StartupAiFillModal({
         <div className="flex items-center justify-end gap-2">
           {/* 결과가 서기 전까지는 창을 접는 것이 취소이고, 결과가 선 뒤에는 값이 이미 폼에
               들어가 있으므로 같은 버튼이 '닫기'가 된다. */}
-          <Button variant={outcome ? 'primary' : 'ghost'} onClick={onClose} disabled={busy || extracts.busy}>
+          <Button
+            variant={outcome ? 'primary' : 'ghost'}
+            onClick={onClose}
+            disabled={busy || extracts.busy}
+          >
             {outcome ? '닫기' : '취소'}
           </Button>
           {/* 분석과 작성은 다른 일이라 버튼도 둘이다 — 분석은 우리 쪽에서 끝나고, 작성은
               자료가 외부 AI로 나간다. 한 버튼 뒤에 두면 언제 밖으로 나가는지 알 수 없다. */}
           {(analyzable.length > 0 || extracts.busy) && (
-            <Button variant="outline" onClick={() => void extracts.analyze(chosen)} disabled={busy || extracts.busy}>
+            <Button
+              variant="outline"
+              onClick={() => void extracts.analyze(chosen)}
+              disabled={busy || extracts.busy}
+            >
               {extracts.progress
                 ? `분석 중 (${extracts.progress.done}/${extracts.progress.total})`
                 : `선택 자료 분석하기 (${analyzable.length}건)`}
@@ -193,15 +211,35 @@ export function StartupAiFillModal({
             한다. 스피너는 그 위에 얹고, 조작은 겹친 층이 아니라 격자 쪽에서 막는다
             (`pointer-events-none`). */}
         <div className="relative">
-          <div className={cn(busy && 'pointer-events-none select-none opacity-60 blur-[2px]')} aria-busy={busy}>
+          <div
+            className={cn(busy && 'pointer-events-none select-none opacity-60 blur-[2px]')}
+            aria-busy={busy}
+          >
             <StartupAiFillGrid
               sources={readable}
               record={snapshot}
               grid={live}
               onCell={(card, key) => onGrid(toggleCell(live, card, key))}
               onCard={(card) => onGrid(toggleCard(live, card, allKeys))}
-              onSource={(key) => onGrid(toggleSource(live, key, AI_CARDS.map((c) => c.key)))}
-              onAll={() => onGrid(toggleGrid(live, AI_CARDS.map((c) => c.key), allKeys))}
+              onGroup={(groupCards) => onGrid(toggleCardGroup(live, groupCards, allKeys))}
+              onSource={(key) =>
+                onGrid(
+                  toggleSource(
+                    live,
+                    key,
+                    AI_CARDS.map((c) => c.key),
+                  ),
+                )
+              }
+              onAll={() =>
+                onGrid(
+                  toggleGrid(
+                    live,
+                    AI_CARDS.map((c) => c.key),
+                    allKeys,
+                  ),
+                )
+              }
               extracts={extracts}
             />
           </div>
@@ -230,8 +268,8 @@ export function StartupAiFillModal({
             읽힌다(종전 동작). 다만 시간이 더 걸리므로 그 사실을 접지 않고 말한다. */}
         {pending > 0 && (
           <p className="text-caption text-gray-600">
-            {pending}건은 아직 분석 전입니다. 그대로 작성하면 그 자료는 작성할 때 읽어
-            시간이 더 걸립니다. 한 번 분석해 두면 다음 실행부터 다시 읽지 않습니다.
+            {pending}건은 아직 분석 전입니다. 그대로 작성하면 그 자료는 작성할 때 읽어 시간이 더
+            걸립니다. 한 번 분석해 두면 다음 실행부터 다시 읽지 않습니다.
           </p>
         )}
 
@@ -250,8 +288,8 @@ export function StartupAiFillModal({
         {/* 되돌릴 수 있다는 말을 함께 적는다 — 경고가 과하면 정작 필요한 갱신을 망설인다. */}
         {overwritten.length > 0 && (
           <p className="text-caption text-warning">
-            현재 값이 AI 결과로 바뀝니다: {overwritten.map((c) => c.label).join(' · ')}. 저장 전까지는
-            되돌릴 수 있습니다.
+            현재 값이 AI 결과로 바뀝니다: {overwritten.map((c) => c.label).join(' · ')}. 저장
+            전까지는 되돌릴 수 있습니다.
           </p>
         )}
 

@@ -19,7 +19,7 @@ describe('summarizeProgramDepartments', () => {
     expect(s?.restCount).toBe(1)
   })
 
-  it('부서가 하나면 외 N을 붙이지 않는다', () => {
+  it('부서가 하나면 +N을 붙이지 않는다', () => {
     const s = summarizeProgramDepartments([dept('a', 'MAIN')], identity)
     expect(s?.restCount).toBe(0)
   })
@@ -35,7 +35,7 @@ describe('summarizeProgramDepartments', () => {
   })
 
   it('단계(조직 버전)마다 다시 지정된 같은 부서는 한 번만 센다', () => {
-    // 개편 전/후 id가 다를 뿐 같은 부서다 — 계보로 접지 않으면 '외 1'이 아니라 '외 3'이 된다.
+    // 개편 전/후 id가 다를 뿐 같은 부서다 — 계보로 접지 않으면 '+1'이 아니라 '+3'이 된다.
     const rows = [
       dept('v1-main', 'MAIN'),
       dept('v2-main', 'MAIN'),
@@ -48,17 +48,20 @@ describe('summarizeProgramDepartments', () => {
 })
 
 describe('programDepartmentText', () => {
-  const labelOf = () => 'AC본부 > 밸류커넥트그룹 > 3팀'
+  const labelOf = () => '3팀'
 
-  it('혼자면 부서 경로만', () => {
-    expect(programDepartmentText({ mainDepartmentId: 'a', restCount: 0 }, labelOf)).toBe(
-      'AC본부 > 밸류커넥트그룹 > 3팀',
-    )
+  it('혼자면 부서명만', () => {
+    expect(programDepartmentText({ mainDepartmentId: 'a', restCount: 0 }, labelOf)).toBe('3팀')
   })
 
-  it('다른 부서가 붙으면 메인 뒤에 외 N만 붙인다', () => {
-    expect(programDepartmentText({ mainDepartmentId: 'a', restCount: 1 }, labelOf)).toBe(
-      'AC본부 > 밸류커넥트그룹 > 3팀 외 1',
+  it('다른 부서가 붙으면 메인 뒤에 +N만 붙인다', () => {
+    expect(programDepartmentText({ mainDepartmentId: 'a', restCount: 1 }, labelOf)).toBe('3팀 +1')
+  })
+
+  it('표기 함수를 갈아 끼우면 같은 요약이 툴팁용 전체 경로로도 나온다', () => {
+    const pathLabelOf = () => 'AC본부 > 밸류커넥트그룹 > 3팀'
+    expect(programDepartmentText({ mainDepartmentId: 'a', restCount: 1 }, pathLabelOf)).toBe(
+      'AC본부 > 밸류커넥트그룹 > 3팀 +1',
     )
   })
 })

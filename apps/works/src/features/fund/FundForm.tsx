@@ -1,4 +1,4 @@
-import { BackButton, Button, CardShell, Input, PanelCard, Select, useToast } from '@ynarcher/ui'
+import { BackButton, Button, CardShell, formText, Input, PanelCard, Select, useToast } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { FundStaffingFields, toStaffing, type FundStaffing } from '@/features/fund/FundStaffingFields'
@@ -32,7 +32,7 @@ interface Option {
 }
 
 function Label({ children }: { children: React.ReactNode }) {
-  return <label className="text-body font-medium text-gray-800">{children}</label>
+  return <label className={formText.label}>{children}</label>
 }
 
 function SelectField({

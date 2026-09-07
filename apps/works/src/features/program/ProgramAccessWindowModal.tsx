@@ -57,7 +57,9 @@ export function ProgramAccessWindowModal({
     save.mutate(fromDateInput(ends), {
       onSuccess: () => {
         toast.show(
-          ends ? '로그인 가능 기간을 저장했습니다.' : '로그인 가능 기간을 제한 없음으로 두었습니다.',
+          ends
+            ? '로그인 가능 기간을 저장했습니다.'
+            : '로그인 가능 기간을 제한 없음으로 두었습니다.',
           'success',
         )
         onClose()
@@ -69,6 +71,7 @@ export function ProgramAccessWindowModal({
 
   return (
     <Modal
+      dismissible={false}
       open
       onClose={onClose}
       title="로그인 가능 기간"

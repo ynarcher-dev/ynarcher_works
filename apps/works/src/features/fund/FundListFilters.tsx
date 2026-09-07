@@ -65,7 +65,7 @@ export function FundListFilters({ filters, onChange }: FundListFiltersProps) {
         onChange={({ from, to }) => onChange({ ...filters, termFrom: from, termTo: to })}
       />
 
-      {/* 단위(백만원)는 여기 적지 않는다 — 표 안 단서 줄(DataTable의 caption)이 이미 답한다. */}
+      {/* 단위(백만원)는 여기 적지 않는다 — 표의 금액 머리글이 `ColumnUnit`으로 이미 답한다. */}
       <NumberRangeFilter
         minLabel="최소 잔액"
         maxLabel="최대 잔액"

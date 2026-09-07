@@ -1,4 +1,4 @@
-import { Button, Input, Modal, Select } from '@ynarcher/ui'
+import { Button, Field, formText, Input, Modal, Select } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { WeekdayPicker } from '@/components/WeekdayPicker'
 import { RoomPhotoPicker } from '@/features/office/rooms/RoomPhotoPicker'
@@ -44,13 +44,13 @@ export function MeetingRoomFormModal({ open, branchId, room, busy, onClose, onSu
     setErr('')
   }, [open, room])
 
-
   const submit = () => {
     if (!name.trim()) return setErr('회의실명을 입력하세요.')
     if (openTime >= closeTime) return setErr('마감 시간은 시작 시간보다 늦어야 합니다.')
     if (weekdays.length === 0) return setErr('예약 가능 요일을 하나 이상 선택하세요.')
     const cap = capacity.trim() ? Number(capacity) : null
-    if (cap != null && (!Number.isInteger(cap) || cap < 0)) return setErr('인원은 0 이상 정수로 입력하세요.')
+    if (cap != null && (!Number.isInteger(cap) || cap < 0))
+      return setErr('인원은 0 이상 정수로 입력하세요.')
     setErr('')
     onSubmit({
       branchId,
@@ -67,6 +67,7 @@ export function MeetingRoomFormModal({ open, branchId, room, busy, onClose, onSu
 
   return (
     <Modal
+      dismissible={false}
       open={open}
       onClose={onClose}
       title={editing ? '회의실 수정' : '회의실 추가'}
@@ -83,25 +84,29 @@ export function MeetingRoomFormModal({ open, branchId, room, busy, onClose, onSu
       }
     >
       <div className="space-y-4">
-        <label className="block">
-          <span className="mb-1 block text-caption font-medium text-gray-600">사진</span>
+        <Field label="사진" as="div">
           <RoomPhotoPicker value={photoPath} onChange={setPhotoPath} />
-        </label>
+        </Field>
 
         <div className="grid grid-cols-2 gap-3">
-          <label className="block">
-            <span className="mb-1 block text-caption font-medium text-gray-600">회의실명</span>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="예: 드림플러스 강남1" />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-caption font-medium text-gray-600">위치</span>
-            <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="예: 6F" />
-          </label>
+          <Field label="회의실명" required>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="예: 드림플러스 강남1"
+            />
+          </Field>
+          <Field label="위치">
+            <Input
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="예: 6F"
+            />
+          </Field>
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-          <label className="block">
-            <span className="mb-1 block text-caption font-medium text-gray-600">인원</span>
+          <Field label="인원">
             <Input
               type="number"
               min={0}
@@ -109,35 +114,35 @@ export function MeetingRoomFormModal({ open, branchId, room, busy, onClose, onSu
               onChange={(e) => setCapacity(e.target.value)}
               placeholder="예: 6"
             />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-caption font-medium text-gray-600">오픈 시간</span>
+          </Field>
+          <Field label="오픈 시간">
             <Input type="time" value={openTime} onChange={(e) => setOpenTime(e.target.value)} />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-caption font-medium text-gray-600">마감 시간</span>
+          </Field>
+          <Field label="마감 시간">
             <Input type="time" value={closeTime} onChange={(e) => setCloseTime(e.target.value)} />
-          </label>
+          </Field>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <label className="block">
-            <span className="mb-1 block text-caption font-medium text-gray-600">슬롯 단위</span>
-            <Select value={String(slotMinutes)} onChange={(e) => setSlotMinutes(Number(e.target.value))}>
+          <Field label="슬롯 단위">
+            <Select
+              value={String(slotMinutes)}
+              onChange={(e) => setSlotMinutes(Number(e.target.value))}
+            >
               {SLOT_OPTIONS.map((m) => (
                 <option key={m} value={m}>
                   {m}분
                 </option>
               ))}
             </Select>
-          </label>
-          <div>
-            <span className="mb-1 block text-caption font-medium text-gray-600">예약 가능 요일</span>
+          </Field>
+          <Field label="예약 가능 요일" as="div">
             <WeekdayPicker value={weekdays} onChange={setWeekdays} label="예약 가능 요일" />
-          </div>
+          </Field>
         </div>
 
-        {err && <p className="text-caption text-danger">{err}</p>}
+        {/* 저장 실패는 어느 한 칸의 오류가 아니라 폼 전체의 결과라 마지막 줄에 선다. */}
+        {err && <p className={formText.error}>{err}</p>}
       </div>
     </Modal>
   )

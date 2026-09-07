@@ -3,7 +3,11 @@ import { ChevronDown, ChevronRight, RotateCcw, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { MODULE_TYPES } from '@/features/program/config'
 import { useToggleModule, type ProgramModule } from '@/features/program/hooks'
-import { MODULE_META, formatModulePeriod, readModuleSettings } from '@/features/program/detail/moduleMeta'
+import {
+  MODULE_META,
+  formatModulePeriod,
+  readModuleSettings,
+} from '@/features/program/detail/moduleMeta'
 
 const labelOf = (type: string) => MODULE_TYPES.find((d) => d.type === type)?.label ?? type
 const nameOf = (mod: ProgramModule) => mod.title?.trim() || labelOf(mod.module_type)
@@ -64,16 +68,16 @@ export function DisabledModuleSection({
 
   return (
     <div className="mt-3 border-t border-gray-200 pt-2">
+      {/* 접힌 줄은 카드 본문과 같은 단(14px)에 선다(2026-09-06 사용자 지적). 종전에는 캡션
+          (12px)이었는데, 이 줄은 누르는 컨트롤이고 펼치면 바로 아래에 14px 카드가 서므로 같은
+          묶음 안에서 크기가 갈렸다. 물러나게 하려던 것은 크기가 아니라 무게이며 그 일은 이미
+          색(gray-600)이 하고 있다 — 캡션은 도움말·툴팁 자리다. */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-1 rounded-radius-md px-1 py-1 text-left text-caption text-gray-600 transition-colors duration-fast hover:bg-gray-50 hover:text-gray-800"
+        className="flex w-full items-center gap-1 rounded-radius-md px-1 py-1 text-left text-body-sm text-gray-600 transition-colors duration-fast hover:bg-gray-50 hover:text-gray-800"
       >
-        {open ? (
-          <ChevronDown className="h-3.5 w-3.5" />
-        ) : (
-          <ChevronRight className="h-3.5 w-3.5" />
-        )}
+        {open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
         <span>꺼진 모듈</span>
         <span className="tabular-nums font-semibold">{modules.length}</span>
         <span>개</span>

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   affiliationLabel,
   buildDepartmentOptions,
+  deptLeafLabel,
   deptPathLabel,
   nearestScopedAncestor,
 } from '@/features/management/departmentOptions'
@@ -84,6 +85,14 @@ describe('deptPathLabel', () => {
     expect(deptPathLabel(ORG, 'root')).toBe('와이앤아처')
   })
 
+  it('withRoot면 법인부터 말단까지 적는다 — 경로가 값 자체인 자리(사업 담당자)의 표기', () => {
+    expect(deptPathLabel(ORG, 'ac-1', { withRoot: true })).toBe(
+      '와이앤아처 > AC본부 > 스케일업그룹 > 1팀',
+    )
+    // 최상위 부서 자체는 두 표기가 같다 — 붙일 것도 뺄 것도 없다.
+    expect(deptPathLabel(ORG, 'root', { withRoot: true })).toBe('와이앤아처')
+  })
+
   it('인사 미노출(hr_hidden)이어도 건너뛰지 않는다', () => {
     // 사업의 부서 구성은 인사 관점이 아니라 조직 그대로다 — 지정한 부서를 그대로 적는다.
     const org = ORG.map((d) => (d.id === 'scale' ? { ...d, hr_hidden: true } : d))
@@ -103,6 +112,23 @@ describe('deptPathLabel', () => {
   it('parent_id가 순환해도 멎지 않는다', () => {
     const cyclic = ORG.map((d) => (d.id === 'root' ? { ...d, parent_id: 'ac-1' } : d))
     expect(deptPathLabel(cyclic, 'ac-1')).toContain('1팀')
+  })
+})
+
+describe('deptLeafLabel', () => {
+  it('값으로 적는 자리는 말단 부서명 하나다', () => {
+    expect(deptLeafLabel(ORG, 'ac-1')).toBe('1팀')
+    expect(deptLeafLabel(ORG, 'scale')).toBe('스케일업그룹')
+  })
+
+  it('본부가 달라도 말단이 같으면 같은 값이 된다 — 그 구분은 툴팁(deptPathLabel)이 맡는다', () => {
+    expect(deptLeafLabel(ORG, 'ac-1')).toBe(deptLeafLabel(ORG, 'inv-1'))
+    expect(deptPathLabel(ORG, 'ac-1')).not.toBe(deptPathLabel(ORG, 'inv-1'))
+  })
+
+  it('소속이 없거나 원장에 없는 id면 빈 문자열', () => {
+    expect(deptLeafLabel(ORG, null)).toBe('')
+    expect(deptLeafLabel(ORG, 'nope')).toBe('')
   })
 })
 

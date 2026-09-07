@@ -1,4 +1,11 @@
-import { cn, IconButton } from '@ynarcher/ui'
+import {
+  cn,
+  IconButton,
+  SidePanelNav,
+  SidePanelNavEmpty,
+  SidePanelNavGroup,
+  sidePanelNavRow,
+} from '@ynarcher/ui'
 import { ChevronRight, ChevronsDownUp, ChevronsUpDown } from 'lucide-react'
 import type { DeptTreeNode } from '@/features/management/panels/departmentsMock'
 
@@ -24,7 +31,13 @@ interface TreeRowProps
   node: DeptTreeNode
 }
 
-/** 트리의 한 줄(재귀). 토글은 접힘만 담당하고, 이름 클릭이 표시 범위를 옮긴다. */
+/**
+ * 트리의 한 줄(재귀). 토글은 접힘만 담당하고, 이름 클릭이 표시 범위를 옮긴다.
+ *
+ * 행 전체를 버튼으로 쓰는 `SidePanelNavRow`를 쓰지 못하는 이유는 토글이다 — 버튼 안에 버튼을
+ * 둘 수 없어 구조가 갈린다. 그래서 구조만 여기 두고 **규격은 `sidePanelNavRow`에서
+ * 그대로 가져온다**(값을 다시 적으면 문서함 좌패널과 조용히 어긋난다).
+ */
 function TreeRow({ node, selectedId, collapsed, onSelect, onToggle }: TreeRowProps) {
   const hasChildren = node.children.length > 0
   const isCollapsed = collapsed.has(node.id)
@@ -32,15 +45,10 @@ function TreeRow({ node, selectedId, collapsed, onSelect, onToggle }: TreeRowPro
 
   return (
     <>
-      {/* 배경 hover는 행(div)이, 글자 hover는 이름 버튼이 갖는다. 둘을 각자 두면 버튼 밖
-          (들여쓰기·화살표 자리)에 마우스를 올렸을 때 배경만 바뀌고 글자는 그대로여서 한 행이
-          두 상태로 보인다. 행을 `group`으로 묶어 글자도 함께 반응하게 한다
-          (전자결재 문서함 좌패널과 같은 동작). */}
+      {/* 세로 여백은 이름 버튼이 갖는다 — 토글 버튼이 자기 높이를 갖고 있어 행에 py를 주면
+          두 번 더해진다. 들여쓰기는 depth가 정한다. */}
       <div
-        className={cn(
-          'group flex items-center gap-1 rounded-radius-md pr-1 hover:bg-gray-50',
-          isSelected && 'bg-brand-25 hover:bg-brand-25',
-        )}
+        className={cn(sidePanelNavRow.row(isSelected), 'py-0 pl-0')}
         style={{ paddingLeft: `${node.depth * 16 + 4}px` }}
       >
         {hasChildren ? (
@@ -62,12 +70,7 @@ function TreeRow({ node, selectedId, collapsed, onSelect, onToggle }: TreeRowPro
         <button
           type="button"
           onClick={() => onSelect(node.id)}
-          className={cn(
-            'min-w-0 flex-1 truncate py-1.5 text-left text-body-sm',
-            isSelected
-              ? 'font-semibold text-brand-700'
-              : 'text-gray-700 group-hover:text-gray-900',
-          )}
+          className={cn(sidePanelNavRow.label(isSelected), 'py-1.5 text-left')}
         >
           {node.name}
         </button>
@@ -108,32 +111,35 @@ export function OrgTreeNav({
   emptyText = '등록된 조직이 없습니다.',
 }: OrgTreeNavProps) {
   return (
-    <aside className="w-60 shrink-0 border-r border-gray-200 pr-3">
-      <div className="mb-1 flex items-center justify-between pl-1">
-        <span className="text-caption font-semibold text-gray-500">조직</span>
-        <IconButton
-          density="table"
-          variant="ghost"
-          label={allExpanded ? '전체 접기' : '전체 펼치기'}
-          title={allExpanded ? '전체 접기' : '전체 펼치기'}
-          onClick={allExpanded ? onCollapseAll : onExpandAll}
-          icon={allExpanded ? <ChevronsDownUp size={14} /> : <ChevronsUpDown size={14} />}
-        />
-      </div>
-      {tree.length === 0 ? (
-        <p className="py-6 text-center text-caption text-gray-500">{emptyText}</p>
-      ) : (
-        tree.map((root) => (
-          <TreeRow
-            key={root.id}
-            node={root}
-            selectedId={selectedId}
-            collapsed={collapsed}
-            onSelect={onSelect}
-            onToggle={onToggle}
+    <SidePanelNav>
+      <SidePanelNavGroup
+        label="조직"
+        action={
+          <IconButton
+            density="table"
+            variant="ghost"
+            label={allExpanded ? '전체 접기' : '전체 펼치기'}
+            title={allExpanded ? '전체 접기' : '전체 펼치기'}
+            onClick={allExpanded ? onCollapseAll : onExpandAll}
+            icon={allExpanded ? <ChevronsDownUp size={14} /> : <ChevronsUpDown size={14} />}
           />
-        ))
-      )}
-    </aside>
+        }
+      >
+        {tree.length === 0 ? (
+          <SidePanelNavEmpty>{emptyText}</SidePanelNavEmpty>
+        ) : (
+          tree.map((root) => (
+            <TreeRow
+              key={root.id}
+              node={root}
+              selectedId={selectedId}
+              collapsed={collapsed}
+              onSelect={onSelect}
+              onToggle={onToggle}
+            />
+          ))
+        )}
+      </SidePanelNavGroup>
+    </SidePanelNav>
   )
 }

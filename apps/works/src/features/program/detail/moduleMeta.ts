@@ -101,3 +101,13 @@ export {
   moduleDisplayName,
 } from '@ynarcher/master-data'
 export type { ModuleSettings } from '@ynarcher/master-data'
+
+/**
+ * 좁은 자리(칸반 카드·간트 1열)에서 적을 담당자 이름의 개수 상한(2026-09-06 사용자 지정).
+ *
+ * 그 자리들은 폭이 200px 안팎이라 폭에 맡기면 거의 언제나 첫 사람 + `+N`이 되고, 그러면
+ * 담당자가 셋인 모듈과 하나인 모듈이 같은 모양으로 읽힌다. 값이 여기 있는 이유는 두 뷰가
+ * 같은 수를 적어야 하기 때문이다 — 뷰를 바꿨다고 보이는 사람 수가 달라지면 두 화면을 견줄 수 없다.
+ * 목록 뷰(넓은 카드)는 상한 없이 폭에 맡긴다.
+ */
+export const MODULE_ASSIGNEE_LIMIT = 3

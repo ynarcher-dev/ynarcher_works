@@ -25,7 +25,7 @@ export function FundPage() {
 
   const legacyTab = params.get('tab')
   if (legacyTab) {
-    return <Navigate to={legacyTab === 'mine' ? '/fund' : '/fund?scope=all'} replace />
+    return <Navigate to={legacyTab === 'mine' ? '/fund?scope=mine' : '/fund'} replace />
   }
 
   return (

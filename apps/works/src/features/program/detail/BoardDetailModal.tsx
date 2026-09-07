@@ -9,12 +9,12 @@ import {
 } from '@/features/networks/materialHooks'
 
 /**
- * 게시판형 상세 모달(공지사항·QNA 공용) — **두 화면이 같은 구조를 쓴다.**
+ * 게시판형 상세 모달(공지사항·Q&A 공용) — **두 화면이 같은 구조를 쓴다.**
  *
  * 구성은 위에서 아래로 [머리(제목·날짜) → 본문 → (답변) → 첨부 파일]이며, 셋은 각각
  * **자기 카드**로 선다(2026-09-01 사용자 지정). 구분선만으로 나눴을 때는 어디서 하나가
  * 끝나고 다음이 시작하는지 읽히지 않았다 — 성격이 다른 덩어리(물음 / 대답 / 딸린 것)는
- * 선이 아니라 면으로 갈라야 한다. 그래서 모달 본문 바닥을 페이지 바탕(gray-100)으로 깔고
+ * 선이 아니라 면으로 갈라야 한다. 그래서 모달 본문 바닥을 페이지 바탕(`Modal`의 `sectioned`)으로 깔고
  * 그 위에 카드를 올린다(표면은 그림자가 아니라 헤어라인+바탕 색차로 구획한다는 원칙 그대로).
  *
  * 글자 규격은 화면이 직접 고르지 않고 `cardText`가 소유하며, 카드 제목은 `Card`가 갖는다.
@@ -40,11 +40,11 @@ export function BoardDetailModal({
   title: string
   /** 게시일·질문일(질문자 이름이 함께 서기도 한다). */
   date: string
-  /** 모달 머리에 세울 화면 이름(공지사항·QNA). */
+  /** 모달 머리에 세울 화면 이름(공지사항·Q&A). */
   meta: string
   /** 본문. 리치텍스트 뷰어 또는 순수 텍스트 문단. */
   body: ReactNode
-  /** 본문에 딸린 답변(QNA). 없으면 그 카드를 세우지 않는다. */
+  /** 본문에 딸린 답변(Q&A). 없으면 그 카드를 세우지 않는다. */
   answer?: ReactNode
   attachmentType: string
   attachmentId: string
@@ -53,7 +53,7 @@ export function BoardDetailModal({
   /**
    * 바깥(딤) 클릭으로 닫히지 않게 잠근다. 읽기만 하는 동안에는 가볍게 닫히는 편이 낫지만
    * (닫아도 잃는 것이 없다), 이 모달 안에서 무언가 쓰고 있는 동안에는 클릭 한 번에 그 글이
-   * 사라지면 안 된다 — QNA 답변을 쓰는 중이 그 경우다.
+   * 사라지면 안 된다 — Q&A 답변을 쓰는 중이 그 경우다.
    */
   locked?: boolean
   /**
@@ -70,6 +70,7 @@ export function BoardDetailModal({
       onClose={onClose}
       dismissible={!locked}
       title={meta}
+      sectioned
       size="xl"
       footer={
         destructiveAction || actions ? (
@@ -81,23 +82,20 @@ export function BoardDetailModal({
         ) : undefined
       }
     >
-      {/* 모달 본문 바닥을 페이지 바탕으로 깐다(음수 여백으로 모달의 안쪽 여백까지 채운다). */}
-      <div className="-mx-5 -my-4 space-y-3 bg-gray-100 px-5 py-4">
-        {/* 머리 한 줄 — 카드 밖에 서서 이 모달 전체가 무엇에 대한 것인지 먼저 답한다. */}
-        <div className="flex items-center gap-2">
-          <span aria-hidden className="h-4 w-0.5 shrink-0 rounded-full bg-brand" />
-          <p className={`min-w-0 flex-1 ${cardText.subhead}`}>{title}</p>
-          <span className={`shrink-0 tabular-nums ${cardText.meta}`}>{date}</span>
-        </div>
-
-        <Card title="본문">{body}</Card>
-        {answer && <Card title="답변">{answer}</Card>}
-        <ModalAttachmentsCard
-          targetType={attachmentType}
-          targetId={attachmentId}
-          readOnly={readOnlyFiles}
-        />
+      {/* 머리 한 줄 — 카드 밖에 서서 이 모달 전체가 무엇에 대한 것인지 먼저 답한다. */}
+      <div className="flex items-center gap-2">
+        <span aria-hidden className="h-4 w-0.5 shrink-0 rounded-full bg-brand" />
+        <p className={`min-w-0 flex-1 ${cardText.subhead}`}>{title}</p>
+        <span className={`shrink-0 tabular-nums ${cardText.meta}`}>{date}</span>
       </div>
+
+      <Card title="본문">{body}</Card>
+      {answer && <Card title="답변">{answer}</Card>}
+      <ModalAttachmentsCard
+        targetType={attachmentType}
+        targetId={attachmentId}
+        readOnly={readOnlyFiles}
+      />
     </Modal>
   )
 }
@@ -155,9 +153,7 @@ function ModalAttachmentsCard({
       }
     >
       {upload.isError && (
-        <p className="mb-2 text-caption text-danger">
-          업로드에 실패했습니다. 다시 시도해 주세요.
-        </p>
+        <p className="mb-2 text-caption text-danger">업로드에 실패했습니다. 다시 시도해 주세요.</p>
       )}
       <MaterialList
         materials={list}

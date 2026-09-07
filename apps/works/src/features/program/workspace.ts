@@ -105,7 +105,7 @@ export const SHARED_TABLES = {
   overviews: 'program_overviews',
   /** 사업 공지사항(사업 단위 게시판 — 모듈별 NOTICE와 축이 다르다). */
   announcements: 'program_announcements',
-  /** 사업 QNA(게스트 질문 + 담당자 답변, 1:1 문의함). */
+  /** 사업 Q&A(게스트 질문 + 담당자 답변, 1:1 문의함). */
   questions: 'program_questions',
 } as const
 

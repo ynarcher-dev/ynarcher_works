@@ -1,4 +1,15 @@
-import { Banner, Button, Input, Modal, Select, Spinner, TextArea, useToast } from '@ynarcher/ui'
+import {
+  Banner,
+  Button,
+  Card,
+  Field,
+  Input,
+  Modal,
+  Select,
+  Spinner,
+  TextArea,
+  useToast,
+} from '@ynarcher/ui'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
 import { AttendanceEditHistory } from '@/features/management/attendance/AttendanceEditHistory'
@@ -116,9 +127,11 @@ export function AttendanceEditModal({ target, statuses, onClose }: Props) {
 
   return (
     <Modal
+      dismissible={false}
       open
       onClose={onClose}
       size="lg"
+      sectioned
       title={`근태 수정 — ${target.userName} / ${date.format('YYYY-MM-DD')} (${WEEKDAY_LABELS[date.day()]})`}
       footer={
         <>
@@ -131,67 +144,66 @@ export function AttendanceEditModal({ target, statuses, onClose }: Props) {
         </>
       }
     >
-      <div className="space-y-4">
+      <>
         {!target.entry.isWorkday && (
           <Banner tone="info">근무 기준상 근무일이 아닌 날입니다.</Banner>
         )}
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <label className="space-y-1">
-            <span className="text-caption text-gray-600">근무지</span>
-            <Select value={place} onChange={(e) => setPlace(e.target.value as AttendancePlace)}>
-              {(Object.keys(PLACE_LABELS) as AttendancePlace[]).map((p) => (
-                <option key={p} value={p}>
-                  {PLACE_LABELS[p]}
-                </option>
-              ))}
-            </Select>
-          </label>
-          <label className="space-y-1">
-            <span className="text-caption text-gray-600">출근 시각</span>
-            <Input type="time" value={checkIn} onChange={(e) => setCheckIn(e.target.value)} />
-          </label>
-          <label className="space-y-1">
-            <span className="text-caption text-gray-600">퇴근 시각</span>
-            <Input type="time" value={checkOut} onChange={(e) => setCheckOut(e.target.value)} />
-          </label>
-        </div>
+        <Card title="근태 값">
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <Field label="근무지">
+                <Select value={place} onChange={(e) => setPlace(e.target.value as AttendancePlace)}>
+                  {(Object.keys(PLACE_LABELS) as AttendancePlace[]).map((p) => (
+                    <option key={p} value={p}>
+                      {PLACE_LABELS[p]}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="출근 시각">
+                <Input type="time" value={checkIn} onChange={(e) => setCheckIn(e.target.value)} />
+              </Field>
+              <Field label="퇴근 시각">
+                <Input type="time" value={checkOut} onChange={(e) => setCheckOut(e.target.value)} />
+              </Field>
+            </div>
 
-        <label className="block space-y-1">
-          <span className="text-caption text-gray-600">
-            상태
-            {auto && <span className="ml-2 text-gray-500">자동 판정: {auto.label}</span>}
-          </span>
-          <Select value={statusCode} onChange={(e) => setStatusCode(e.target.value)}>
-            <option value="">상태 선택</option>
-            {options.map((s) => (
-              <option key={s.code} value={s.code}>
-                {s.label}
-              </option>
-            ))}
-          </Select>
-        </label>
+            {/* 자동 판정은 값을 되읽어 주는 안내라 접지 않고 편다(무엇을 고르는 칸인지의 근거다). */}
+            <Field label="상태" hintInline hint={auto ? `자동 판정: ${auto.label}` : undefined}>
+              <Select value={statusCode} onChange={(e) => setStatusCode(e.target.value)}>
+                <option value="">상태 선택</option>
+                {options.map((s) => (
+                  <option key={s.code} value={s.code}>
+                    {s.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
 
-        <label className="block space-y-1">
-          <span className="text-caption text-gray-600">사유 (필수)</span>
-          <Input
-            value={reason}
-            maxLength={60}
-            placeholder="예: 오전 반차 결재 승인, 출근 기록 누락 보정"
-            onChange={(e) => setReason(e.target.value)}
-          />
-        </label>
+            <Field label="사유" required>
+              <Input
+                value={reason}
+                maxLength={60}
+                placeholder="예: 오전 반차 결재 승인, 출근 기록 누락 보정"
+                onChange={(e) => setReason(e.target.value)}
+              />
+            </Field>
 
-        <label className="block space-y-1">
-          <span className="text-caption text-gray-600">비고</span>
-          <TextArea rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
-        </label>
+            <Field label="비고">
+              <TextArea rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
+            </Field>
+          </div>
+        </Card>
 
-        <div className="border-t border-gray-100 pt-3">
-          <p className="mb-2 text-caption font-medium text-gray-700">정정 이력</p>
-          {editsLoading ? <Spinner /> : <AttendanceEditHistory edits={edits ?? []} statuses={statuses} />}
-        </div>
-      </div>
+        <Card title="정정 이력">
+          {editsLoading ? (
+            <Spinner />
+          ) : (
+            <AttendanceEditHistory edits={edits ?? []} statuses={statuses} />
+          )}
+        </Card>
+      </>
     </Modal>
   )
 }

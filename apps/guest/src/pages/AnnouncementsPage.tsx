@@ -1,11 +1,4 @@
-import {
-  Card,
-  DataTable,
-  ListToolbar,
-  PageHeader,
-  Spinner,
-  type Column,
-} from '@ynarcher/ui'
+import { Card, DataTable, ListToolbar, PageHeader, Spinner, type Column } from '@ynarcher/ui'
 import { Paperclip } from 'lucide-react'
 import { useState } from 'react'
 import { BoardDetailModal } from '@/components/BoardDetailModal'
@@ -23,7 +16,7 @@ const ANNOUNCEMENT_ATTACHMENT_TYPE = 'program_announcement'
 /**
  * 공지사항 — 고정 메뉴 두 번째 줄. 목록 표가 전체 폭으로 서고, 행을 누르면 **상세 모달**이
  * 열린다(2026-09-01 사용자 지정) — WORKS 공지사항 탭과 같은 구성이며 작성·수정만 없다.
- * 모달은 QNA와 같은 부품(BoardDetailModal)이라 두 화면이 같은 구조로 글과 첨부를 보여 준다.
+ * 모달은 Q&A와 같은 부품(BoardDetailModal)이라 두 화면이 같은 구조로 글과 첨부를 보여 준다.
  */
 export function AnnouncementsPage() {
   const { data, isLoading } = useProgramAnnouncements()

@@ -20,7 +20,7 @@ export interface ExpandToggleButtonProps {
  *
  * 외형은 손수 그리지 않고 `Button`의 outline을 쓴다 — 이 버튼이 정하는 것은 라벨과 아이콘이
  * 상태에 따라 뒤집힌다는 사실뿐이다. 손수 그리던 시절에는 같은 모양이 앱에도 두 벌 복제돼
- * 있었고(사업 모듈 보드·포트폴리오 보드), 복제본은 카드 맥락 규격(13px·px-3)이 아니라
+ * 있었고(사업 모듈 보드·포트폴리오 보드), 복제본은 카드 맥락 규격(14px·px-3)이 아니라
  * 12px·px-2.5로 굳어 있어 바로 옆에 선 공식 버튼과 라벨 크기가 갈렸다.
  */
 export function ExpandToggleButton({

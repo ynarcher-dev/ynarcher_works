@@ -5,6 +5,7 @@ import { MNA_WORKSPACE } from '@/features/mna/MnaWorkspace'
 import { PROJECT_WORKSPACE } from '@/features/project/ProjectWorkspace'
 import type { ProgramManagerRole } from '@/features/program/hooks'
 import type { ProgramWorkspaceConfig, ProgramWorkspaceKey } from '@/features/program/workspace'
+import { listPathOf } from '@/lib/listScope'
 
 /**
  * 대시보드가 세는 '나의 운영' 한 건 — **어느 워크스페이스에서 어느 자리인가**, 둘뿐이다.
@@ -53,12 +54,14 @@ export const OPERATION_ROLE_LABEL: Record<OperationRoleKey, string> = {
  *
  * 경로 조립을 화면에 맡기지 않는 것은 사업 3종만 워크스페이스 config가 베이스를 갖고 있고
  * 펀드는 갖고 있지 않기 때문이다 — 화면에서 만들면 넷 중 하나만 손으로 적힌 경로가 된다.
+ *
+ * 목록의 기본 범위가 전체이므로(2026-09-07) 범위는 `listPathOf`가 주소에 실어 붙인다.
  */
 export const OPERATION_MINE_PATH: Record<OperationWorkspaceKey, string> = {
-  ac: AC_WORKSPACE.basePath,
-  mna: MNA_WORKSPACE.basePath,
-  project: PROJECT_WORKSPACE.basePath,
-  fund: '/fund',
+  ac: listPathOf(AC_WORKSPACE.basePath, 'mine'),
+  mna: listPathOf(MNA_WORKSPACE.basePath, 'mine'),
+  project: listPathOf(PROJECT_WORKSPACE.basePath, 'mine'),
+  fund: listPathOf('/fund', 'mine'),
 }
 
 interface ManagerRow {

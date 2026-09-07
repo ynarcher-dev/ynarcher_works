@@ -37,7 +37,7 @@ export interface ProgramFilters {
   categories: string[]
   /**
    * 담당 부서 계보 id(departments.lineage_id). 메인/협업을 가리지 않고 걸린다 —
-   * 목록 표기에서 '외 N'으로 접힌 협업 부서로도 사업을 찾을 수 있어야 한다.
+   * 목록 표기에서 '+N'으로 접힌 협업 부서로도 사업을 찾을 수 있어야 한다.
    * 부서 id가 아니라 계보 id인 이유: 부서 id는 조직 버전마다 새로 발급되므로, id로 거르면
    * 개편 전 단계에 같은 부서를 지정한 사업이 통째로 빠진다.
    */

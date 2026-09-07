@@ -2,14 +2,14 @@ import { Badge, GanttChart, PersonCell, type GanttRow } from '@ynarcher/ui'
 import { MODULE_TYPES } from '@/features/program/config'
 import type { ProgramModule } from '@/features/program/hooks'
 import {
+  MODULE_ASSIGNEE_LIMIT,
   MODULE_BAR_CLASS,
   MODULE_META,
   moduleStatusMeta,
   readModuleSettings,
 } from '@/features/program/detail/moduleMeta'
 
-const labelOf = (type: string) =>
-  MODULE_TYPES.find((d) => d.type === type)?.label ?? type
+const labelOf = (type: string) => MODULE_TYPES.find((d) => d.type === type)?.label ?? type
 /** 인스턴스 표시명: 모듈명 우선, 없으면 템플릿 라벨. */
 const nameOf = (mod: ProgramModule) => mod.title?.trim() || labelOf(mod.module_type)
 
@@ -65,10 +65,10 @@ export function ModuleGanttView({
           )}
           <span className="flex min-w-0 flex-1 flex-col justify-center">
             <span className="truncate text-body font-semibold text-gray-900">{nameOf(mod)}</span>
-            {/* 몇 명까지 적을지는 개수가 아니라 열 폭이 정한다(PersonCell) — 다 들어가면 다 적고
-                모자라면 그때부터 `+N`으로 접는다. */}
-            <span className="flex min-w-0 text-caption text-gray-700">
-              <PersonCell names={names} empty="담당자 미지정" />
+            {/* 1열은 폭이 좁아 폭에 맡기면 거의 언제나 첫 사람 + `+N`이 된다(2026-09-06 사용자
+                지정) — 상한은 칸반과 같은 수를 쓰고, 행 높이가 정해진 자리라 줄바꿈은 켜지 않는다. */}
+            <span className="flex min-w-0 text-body-sm text-gray-700">
+              <PersonCell names={names} empty="담당자 미지정" max={MODULE_ASSIGNEE_LIMIT} />
             </span>
           </span>
           <Badge tone={status.tone}>{status.label}</Badge>
@@ -100,7 +100,7 @@ function UndatedList({
   onOpenModule: (module: ProgramModule) => void
 }) {
   return (
-    <p className="text-caption text-gray-700">
+    <p className="text-body-sm text-gray-700">
       일정 미등록:{' '}
       {modules.map((m, i) => (
         <span key={m.id}>

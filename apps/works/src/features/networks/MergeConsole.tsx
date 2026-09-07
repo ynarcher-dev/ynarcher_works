@@ -1,4 +1,4 @@
-import { Button, EmptyState, Select, Spinner, useToast } from '@ynarcher/ui'
+import { Button, EmptyState, formText, Select, Spinner, useToast } from '@ynarcher/ui'
 import { useState } from 'react'
 import { useNetworkList, useMergeNetwork } from '@/features/networks/hooks'
 import type { NetworkCategory } from '@/features/networks/config'
@@ -43,10 +43,11 @@ export function MergeConsole({ category }: { category?: NetworkCategory }) {
   return (
     <div className="max-w-xl space-y-4">
       <p className="text-body text-gray-600">
-        중복 레코드를 정본(Primary)으로 병합합니다. 병합된 레코드는 목록에서 숨겨지며 병합 이력이 감사 로그에 기록됩니다.
+        중복 레코드를 정본(Primary)으로 병합합니다. 병합된 레코드는 목록에서 숨겨지며 병합 이력이
+        감사 로그에 기록됩니다.
       </p>
       <div>
-        <label className="text-body font-medium text-gray-800">정본(Primary)</label>
+        <label className={formText.label}>정본(Primary)</label>
         <Select value={primaryId} onChange={(e) => setPrimaryId(e.target.value)}>
           <option value="">선택</option>
           {rows.map((r) => (
@@ -57,7 +58,7 @@ export function MergeConsole({ category }: { category?: NetworkCategory }) {
         </Select>
       </div>
       <div>
-        <label className="text-body font-medium text-gray-800">중복(Duplicate)</label>
+        <label className={formText.label}>중복(Duplicate)</label>
         <Select value={duplicateId} onChange={(e) => setDuplicateId(e.target.value)}>
           <option value="">선택</option>
           {rows.map((r) => (

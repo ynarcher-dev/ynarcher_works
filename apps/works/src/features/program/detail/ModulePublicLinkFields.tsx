@@ -76,7 +76,7 @@ export function ModulePublicLinkFields({
   }
 
   return (
-    <div className="space-y-3 rounded-radius-sm border border-gray-200 bg-gray-25 p-3">
+    <div className="space-y-3">
       <Field
         as="div"
         label="링크 공유"
@@ -124,7 +124,7 @@ export function ModulePublicLinkFields({
             <Field label="공개 상태">
               <Select
                 value={form.status}
-                    onChange={(e) => form.setStatus(e.target.value as PublicLinkStatus)}
+                onChange={(e) => form.setStatus(e.target.value as PublicLinkStatus)}
               >
                 {STATUS_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -139,27 +139,24 @@ export function ModulePublicLinkFields({
             >
               <Input
                 placeholder="예: 02-000-0000 / ac@ynarcher.com"
-                    value={form.contact}
+                value={form.contact}
                 onChange={(e) => form.setContact(e.target.value)}
               />
             </Field>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field
-              label="공개 시작"
-              hint="비워 두면 이 메뉴의 시작일부터 열립니다."
-            >
+            <Field label="공개 시작" hint="비워 두면 이 메뉴의 시작일부터 열립니다.">
               <Input
                 type="datetime-local"
-                    value={form.openAt}
+                value={form.openAt}
                 onChange={(e) => form.setOpenAt(e.target.value)}
               />
             </Field>
             <Field label="공개 마감" hint="비워 두면 이 메뉴의 종료일까지 열립니다.">
               <Input
                 type="datetime-local"
-                    value={form.closeAt}
+                value={form.closeAt}
                 onChange={(e) => form.setCloseAt(e.target.value)}
               />
             </Field>

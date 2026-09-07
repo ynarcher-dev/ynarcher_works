@@ -25,13 +25,7 @@ const MASTER_LABEL: Record<'startups' | 'networks', string> = {
  *
  * 근거: docs/docs_planning/3_9_1_guest_unified_account.md §4, §9
  */
-export function GuestAccountIssueModal({
-  open,
-  onClose,
-}: {
-  open: boolean
-  onClose: () => void
-}) {
+export function GuestAccountIssueModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const toast = useToast()
   const [master, setMaster] = useState<'startups' | 'networks'>('startups')
   const [search, setSearch] = useState('')
@@ -59,6 +53,7 @@ export function GuestAccountIssueModal({
 
   return (
     <Modal
+      dismissible={false}
       open={open}
       onClose={onClose}
       title="게스트 계정 발급"
@@ -121,7 +116,7 @@ export function GuestAccountIssueModal({
                     <span className="block truncate text-body font-medium text-gray-900">
                       {c.name}
                     </span>
-                    <span className="block truncate text-caption text-gray-500">
+                    <span className="block truncate text-body-sm text-gray-600">
                       {blocked ??
                         [c.loginName, c.email, c.hasAccount ? '계정 있음' : null]
                           .filter(Boolean)

@@ -39,10 +39,6 @@ export function StartupProgramCard({
   const navigate = useNavigate()
   const { pageItems, page, setPage } = usePaged(rows, PAGE_SIZE)
 
-  // 참여 성격 태그는 운용하는 사업에서만 채워진다 — 전 행이 비면 열 자체를 세우지 않는다.
-  // 영원히 '-'만 찬 칸은 폭만 먹고 아무것도 답하지 않는다(목록의 '주관' 열과 같은 규칙).
-  const hasRoleTags = rows.some((r) => r.roleTags.length > 0)
-
   const columns = useMemo<Column<StartupProgramRow>[]>(
     () => [
       {
@@ -58,22 +54,7 @@ export function StartupProgramCard({
               header: '카테고리',
               type: 'text',
               render: (r: StartupProgramRow) =>
-                r.category ? categoryLabel(config, r.category) ?? r.category : <Dash />,
-            } satisfies Column<StartupProgramRow>,
-          ]
-        : []),
-      ...(hasRoleTags
-        ? [
-            {
-              key: 'roleTags',
-              header: '참여 성격',
-              type: 'text',
-              render: (r: StartupProgramRow) =>
-                r.roleTags.length ? (
-                  <span title={r.roleTags.join(' · ')}>{r.roleTags.join(' · ')}</span>
-                ) : (
-                  <Dash />
-                ),
+                r.category ? (categoryLabel(config, r.category) ?? r.category) : <Dash />,
             } satisfies Column<StartupProgramRow>,
           ]
         : []),
@@ -105,7 +86,7 @@ export function StartupProgramCard({
         ),
       },
     ],
-    [config, hasRoleTags],
+    [config],
   )
 
   return (
@@ -118,7 +99,13 @@ export function StartupProgramCard({
         onRowClick={(r) => navigate(`${config.basePath}/programs/${r.id}`)}
         standardColumns={false}
         // 카드 안 보조 목록이라 번호줄 없는 미니 페이저를 쓴다(우측 패널 목록과 같은 규격).
-        pagination={{ page, pageSize: PAGE_SIZE, total: rows.length, onChange: setPage, compact: true }}
+        pagination={{
+          page,
+          pageSize: PAGE_SIZE,
+          total: rows.length,
+          onChange: setPage,
+          compact: true,
+        }}
       />
     </PanelCard>
   )

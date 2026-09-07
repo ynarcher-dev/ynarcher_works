@@ -1,9 +1,20 @@
-import { Badge, Button, CardShell, DataTable, EmptyState, type Column } from '@ynarcher/ui'
+import {
+  Badge,
+  Button,
+  CardShell,
+  DataTable,
+  EmptyState,
+  ListToolbar,
+  type Column,
+} from '@ynarcher/ui'
 import { Plus } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { FundLpRosterModal } from '@/features/fund/FundLpRosterModal'
 import { FUND_LP_TYPE_LABEL, FUND_LP_TYPE_TONE } from '@/features/fund/fundListHooks'
 import type { FundLp } from '@/features/fund/hooks'
+
+/** 카드 안 표의 페이지 크기(포트폴리오 카드와 같은 규격). */
+const PAGE_SIZE = 10
 
 // 폭·정렬·수치서식은 열마다의 종류(type)가 정한다(2026-08 디자인 리프레시).
 const lpColumns: Column<FundLp>[] = [
@@ -66,11 +77,29 @@ const lpColumns: Column<FundLp>[] = [
  * 지분율 도넛은 두지 않는다 — 비율은 표의 '지분율' 열이 이미 정확한 숫자로 말하고, 조합원이
  * 한둘이면 도넛이 100%/0% 한 덩어리가 되어 아무것도 보태지 못한다(§2.2 "표만으로 충분").
  * (근거: docs_planning/3_5_workspace_fund.md §2.2)
+ *
+ * 검색·페이저는 원장 목록과 같은 규격이다 — 카드 안에 있어도 이 탭의 작업 대상이라 표 아래가
+ * 다른 화면과 달라 보이면 안 된다. 그래서 **한 페이지뿐이어도 번호줄 페이저를 세운다**(미니
+ * 페이저는 한 페이지면 사라진다). 좌측 건수는 검색이 걸리면 '반영 수 / 전체 수'로 답한다.
  */
 export function FundLpPanel({ fundId, lps }: { fundId: string; lps: FundLp[] }) {
   const [open, setOpen] = useState(false)
+  const [keyword, setKeyword] = useState('')
+  const [page, setPage] = useState(0)
 
   const openLabel = lps.length > 0 ? '명부 편집' : '출자자 등록'
+
+  // 검색은 조합원명 부분일치 한 축(placeholder가 답하는 그 축이다).
+  const filtered = useMemo(() => {
+    const kw = keyword.trim().toLowerCase()
+    if (kw === '') return lps
+    return lps.filter((r) => r.name.toLowerCase().includes(kw))
+  }, [lps, keyword])
+
+  // 검색·삭제로 목록이 줄어 보고 있던 페이지가 사라지면 마지막 페이지로 당긴다.
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const safePage = Math.min(page, pageCount - 1)
+  const rows = filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE)
 
   return (
     <>
@@ -85,14 +114,34 @@ export function FundLpPanel({ fundId, lps }: { fundId: string; lps: FundLp[] }) 
           </div>
 
           {lps.length > 0 ? (
-            /* 표는 읽기 전용 — 편집은 명부 모달 한 곳에서만 한다(행 클릭도 같은 모달을 연다). */
-            <DataTable
-              columns={lpColumns}
-              rows={lps}
-              rowKey={(r) => r.id}
-              standardColumns={false}
-              onRowClick={() => setOpen(true)}
-            />
+            <>
+              <ListToolbar
+                keyword={keyword}
+                onKeywordChange={(v) => {
+                  setKeyword(v)
+                  setPage(0)
+                }}
+                searchPlaceholder="조합원명으로 검색"
+                dense
+              />
+              {/* 표는 읽기 전용 — 편집은 명부 모달 한 곳에서만 한다(행 클릭도 같은 모달을 연다). */}
+              <DataTable
+                columns={lpColumns}
+                rows={rows}
+                rowKey={(r) => r.id}
+                standardColumns={false}
+                onRowClick={() => setOpen(true)}
+                emptyText="검색 결과가 없습니다."
+                pagination={{
+                  page: safePage,
+                  pageSize: PAGE_SIZE,
+                  total: filtered.length,
+                  // 검색이 걸렸을 때만 '반영 수 / 전체 수'로 답한다(안 걸렸으면 둘이 같은 수다).
+                  totalAll: keyword.trim() === '' ? undefined : lps.length,
+                  onChange: setPage,
+                }}
+              />
+            </>
           ) : (
             <EmptyState
               title="등록된 출자자(LP)가 없습니다."

@@ -47,7 +47,7 @@ interface ActivityCardProps<T> {
   rowTo: (row: T) => string
   /** 이동 대상 워크스페이스. 읽기 권한이 없으면 행을 클릭 불가로 둔다. */
   workspace: WorkspaceKey
-  /** 표 전체에 한 번만 적는 단서(금액 열의 단위 등). 표 테두리 안 머리글 위에 선다. */
+  /** 표 전체에 한 번만 적는 단서(기준일 등). 표 테두리 안 머리글 위에 선다 — 금액 단위는 여기가 아니라 머리글(`ColumnUnit`)이 답한다. */
   caption?: ReactNode
 }
 

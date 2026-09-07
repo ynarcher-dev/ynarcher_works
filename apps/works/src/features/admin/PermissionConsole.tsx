@@ -1,4 +1,13 @@
-import { CardShell, Select, Spinner, Switch, Tooltip, tooltipScale, useToast } from '@ynarcher/ui'
+import {
+  CardShell,
+  formText,
+  Select,
+  Spinner,
+  Switch,
+  Tooltip,
+  tooltipScale,
+  useToast,
+} from '@ynarcher/ui'
 import { useMemo, useState } from 'react'
 import {
   ROLES,
@@ -45,7 +54,7 @@ export function PermissionConsole() {
   return (
     <div className="space-y-4">
       <div className="max-w-xs">
-        <label className="text-body font-medium text-gray-800">역할 선택</label>
+        <label className={formText.label}>역할 선택</label>
         <Select value={role} onChange={(e) => setRole(e.target.value as RoleKey)}>
           {ROLES.map((r) => (
             <option key={r.key} value={r.key}>

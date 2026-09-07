@@ -7,7 +7,7 @@ const LADDER = [
   ['text-title-sm', '20px / bold', '지표 값·섹션 헤딩', 'text-title-sm font-bold text-gray-900'],
   ['text-body-lg', '16px / semibold', '카드 제목', 'text-body-lg font-semibold text-gray-900'],
   ['text-body', '14px', '본문 표준', 'text-body text-gray-900'],
-  ['text-body-sm', '13px', '컨트롤 라벨', 'text-body-sm text-gray-900'],
+  ['text-body-sm', '14px', '컨트롤 라벨', 'text-body-sm text-gray-900'],
   ['text-caption', '12px', '표 셀·보조 설명', 'text-caption text-gray-900'],
 ] as const
 

@@ -69,6 +69,7 @@ export function ParticipantAddModal({
 
   return (
     <Modal
+      dismissible={false}
       open={open}
       onClose={onClose}
       title={`${PERSONA_LABEL[master]} 추가`}
@@ -120,7 +121,8 @@ export function ParticipantAddModal({
                       className={cn(
                         'flex w-full items-center gap-3 px-3 py-2 text-left transition-colors duration-fast',
                         !selectable && 'cursor-not-allowed bg-gray-50',
-                        selectable && (added ? 'bg-brand/10 hover:bg-brand/15' : 'hover:bg-gray-50'),
+                        selectable &&
+                          (added ? 'bg-brand/10 hover:bg-brand/15' : 'hover:bg-gray-50'),
                       )}
                     >
                       <span
@@ -138,12 +140,12 @@ export function ParticipantAddModal({
                           <span className="font-medium">{c.name}</span>
                           {c.loginName && <span className="text-gray-500"> · {c.loginName}</span>}
                         </span>
-                        <span className="block truncate text-caption text-gray-600">
+                        <span className="block truncate text-body-sm text-gray-600">
                           {c.email ?? c.phone ?? ''}
                         </span>
                       </span>
                       {blocked && (
-                        <span className="shrink-0 text-caption text-gray-500">{blocked}</span>
+                        <span className="shrink-0 text-body-sm text-gray-500">{blocked}</span>
                       )}
                     </button>
                   </li>

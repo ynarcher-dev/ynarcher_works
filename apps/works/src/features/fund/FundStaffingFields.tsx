@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { TokenMultiSelect } from '@ynarcher/ui'
+import { Field, TokenMultiSelect } from '@ynarcher/ui'
 import { useEmployees } from '@/features/hub/hooks'
 
 interface Emp {
@@ -62,15 +62,6 @@ function MemberPicker({
   )
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <p className="mb-1 text-body font-medium text-gray-800">{label}</p>
-      {children}
-    </div>
-  )
-}
-
 /**
  * 펀드 인력 배정 필드(컨트롤드): 대표펀드매니저(단일)·운용인력·관리인력(각 다중).
  * 한 사람이 운용·관리에 동시에 들어가지 않도록 한쪽 추가 시 다른 쪽에서 뺀다.
@@ -93,7 +84,7 @@ export function FundStaffingFields({
   return (
     <div className="space-y-4">
       {/* 대표펀드매니저는 펀드의 관리 주체라 필수다(폼 저장 시 강제). 운용·관리는 선택. */}
-      <Field label="대표펀드매니저 *">
+      <Field label="대표펀드매니저" required as="div">
         <MemberPicker
           employees={list}
           selected={value.manager}
@@ -102,10 +93,10 @@ export function FundStaffingFields({
           placeholder="임직원 검색 후 대표 지정(1명)"
         />
       </Field>
-      <Field label="운용인력">
+      <Field label="운용인력" as="div">
         <MemberPicker employees={list} selected={value.operators} onChange={setOps} placeholder="임직원 검색 후 추가" />
       </Field>
-      <Field label="관리인력">
+      <Field label="관리인력" as="div">
         <MemberPicker employees={list} selected={value.admins} onChange={setAdm} placeholder="임직원 검색 후 추가" />
       </Field>
     </div>

@@ -1,4 +1,13 @@
-import { Button, Card, Input, TextArea, Tooltip, tooltipScale, useToast } from '@ynarcher/ui'
+import {
+  Button,
+  Card,
+  formText,
+  Input,
+  TextArea,
+  Tooltip,
+  tooltipScale,
+  useToast,
+} from '@ynarcher/ui'
 import { useState } from 'react'
 import { MaterialDropZone } from '@/features/networks/MaterialDropZone'
 import { MaterialList } from '@/features/networks/MaterialList'
@@ -25,13 +34,7 @@ import {
  * 않기 위해 올린 뒤에 붙인다 — 여러 파일을 한꺼번에 끌어다 놓는 흐름을 폼이 가로막으면
  * 정작 파일이 안 올라간다.
  */
-export function FilePanel({
-  programId,
-  moduleId,
-}: {
-  programId: string
-  moduleId: string
-}) {
+export function FilePanel({ programId, moduleId }: { programId: string; moduleId: string }) {
   const { data: materials = [], isLoading } = useMaterials('program', programId, moduleId)
   const upload = useUploadMaterial('program', programId, moduleId)
   const remove = useDeleteMaterial('program', programId)
@@ -115,7 +118,7 @@ function FileMetaForm({
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <label className="text-caption font-semibold text-gray-600">
+        <label className={formText.label}>
           표시명
           <Tooltip
             label="표시명"
@@ -131,7 +134,7 @@ function FileMetaForm({
         />
       </div>
       <div className="space-y-1.5">
-        <label className="text-caption font-semibold text-gray-600">설명</label>
+        <label className={formText.label}>설명</label>
         <TextArea
           rows={2}
           placeholder="이 파일이 무엇인지 한 줄로 적어 주세요."

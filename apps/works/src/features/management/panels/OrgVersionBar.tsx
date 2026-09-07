@@ -181,11 +181,13 @@ export function OrgVersionBar({
 
       {notActive && (
         <p className="rounded-radius-md border border-warning-border bg-warning-subtle px-3 py-2 text-caption text-warning">
-          편집 중인 버전은 오늘의 유효 조직도가 아닙니다. 미래·과거 조직도를 미리 설계·보관하는 용도입니다.
+          편집 중인 버전은 오늘의 유효 조직도가 아닙니다. 미래·과거 조직도를 미리 설계·보관하는
+          용도입니다.
         </p>
       )}
 
       <Modal
+        dismissible={false}
         open={open}
         onClose={() => setOpen(false)}
         size="sm"
@@ -206,12 +208,16 @@ export function OrgVersionBar({
       >
         <div className="space-y-3">
           <p className="text-caption text-gray-600">
-            <span className="font-semibold text-gray-800">{selected?.label}</span> 의 조직 트리를
-            새 가용기간으로 복사합니다.
+            <span className="font-semibold text-gray-800">{selected?.label}</span> 의 조직 트리를 새
+            가용기간으로 복사합니다.
           </p>
           <label className="block space-y-1">
             <span className="text-caption font-semibold text-gray-600">버전 이름</span>
-            <Input value={label} onChange={(e) => setLabel(e.target.value)} className="h-ctl-card" />
+            <Input
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              className="h-ctl-card"
+            />
           </label>
           <div className="grid grid-cols-2 gap-2">
             <label className="block space-y-1">

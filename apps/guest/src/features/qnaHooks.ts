@@ -4,7 +4,7 @@ import { useGuestClient } from '@/lib/useGuestClient'
 import type { GuestFile } from '@/features/moduleHooks'
 
 /**
- * 사업 QNA(1:1 문의함) — 게스트 쪽. **게스트 쓰기가 콘텐츠 원장에 열리는 첫 자리**다
+ * 사업 Q&A(1:1 문의함) — 게스트 쪽. **게스트 쓰기가 콘텐츠 원장에 열리는 첫 자리**다
  * (기존 게스트 쓰기는 예약·만족도·평가뿐). 본인 질문만 돌아온다는 판정은 화면이 아니라
  * RLS(program_questions_guest_select — created_by 본인 + 세션 고정 사업)가 하며,
  * INSERT도 본인 명의·세션 사업·답변 열 비움을 정책이 강제한다.

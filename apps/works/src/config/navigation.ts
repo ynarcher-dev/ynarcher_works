@@ -60,32 +60,22 @@ export interface SubNavGroup {
  * 화면의 이름이 달라진다. 범위(내 것/전부)는 이 이름에 담지 않는다: 2026-09-05에 메뉴 두
  * 줄을 한 줄로 합치면서 범위는 목록 안의 토글이 답하게 했다.
  *
- * 사업 3종은 2026-09-06까지 '프로젝트' 한 라벨을 공유했다 — 같은 원장 구조·같은 화면을 쓰므로
- * 워크스페이스를 옮겨도 손이 같은 자리를 찾게 하려던 것이었고, 스위처가 워크스페이스를 갈라
- * 두는 동안에는 그 이름이 어느 원장인지를 스위처가 답했다. 넷이 BUSINESS 한 항목 아래 나란히
- * 서면서 그 답이 사라졌으므로(같은 줄 이름이 셋이면 무엇을 눌러야 할지 화면이 말하지 못한다)
- * 라벨을 워크스페이스별로 가른다.
+ * 사업 3종이 한 라벨을 공유하는 것은 2026-08-20 결정의 연장이다 — 세 워크스페이스는 같은 원장
+ * 구조·같은 화면을 쓰므로 메뉴 이름까지 같아야 워크스페이스를 옮겨도 손이 같은 자리를 찾는다.
+ * 도메인 명칭(사업·딜)은 목록 안쪽 문구(`entityNoun`)가 계속 답한다.
  *
- * BUSINESS 네 줄의 이름은 원장이 아니라 **그 일을 하는 조직**이다(2026-09-06 사용자 결정) —
- * AC사업 / 글로벌·신사업 / M&A팀·PE / 투자실. 원장 이름(사업·딜·프로젝트·펀드)은 서로 겹쳐
- * 읽히는 반면 조직명은 겹치지 않고, 사내에서 "그 건 어디 거냐"를 답하는 말이 이미 조직명이다. 대가는
- * 조직 개편이 메뉴 이름을 흔든다는 것이고, 그때 고치는 자리는 이 상수 하나다(페이지 제목도
- * 여기를 읽는다). 도메인 명칭은 목록 안쪽 문구(`entityNoun`)가 계속 답한다.
+ * 2026-09-06에 이 라벨을 워크스페이스별 조직명(AC사업 / 글로벌·신사업 / M&A팀·PE / 투자실)으로
+ * 갈랐다가 2026-09-07에 되돌렸다 — 가른 것은 실행 라인 넷이 BUSINESS 한 항목 아래 나란히 서서
+ * '어느 원장인가'를 줄 이름이 홀로 답해야 했기 때문이고, 스위처가 다시 넷으로 갈리면서 그 답이
+ * 항목명으로 돌아왔다. 줄 이름이 그 답을 겸하면 워크스페이스마다 같은 자리의 이름이 달라진다.
  */
-export const PROGRAM_LIST_LABELS: Record<'ac' | 'mna' | 'project', string> = {
-  ac: 'AC사업',
-  mna: 'M&A팀 · PE',
-  project: '글로벌 · 신사업',
-}
-// 위 두 줄은 2026-09-06부터 DATABASE 한 항목 아래에, 아래 넷은 BUSINESS 한 항목 아래에 나란히
-// 선다. 줄 이름이 원장을 그대로 부르는 이유는 항목명(DATABASE·BUSINESS)이 어느 원장인지 답하지
-// 못하기 때문이다 — 한 자리에 여러 원장이 서면 줄 이름이 유일한 구분이다.
-//
-// 'DB' 꼬리는 걷었다(2026-09-06) — 항목명이 이미 DATABASE라 줄마다 그 말을 다시 적는 층이었고,
-// 두 줄 모두에 붙어 있어 구분에도 보태지 않았다.
+export const PROGRAM_LIST_LABEL = '프로젝트'
+// 'DB' 꼬리는 걷은 채로 둔다(2026-09-06) — 두 줄은 여전히 DATABASE 한 항목 아래 나란히 서고,
+// 항목명이 이미 그 말이라 줄마다 다시 적는 층이었다(두 줄 모두에 붙어 있어 구분에도 보태지
+// 않았다). 아래 셋은 각자 자기 스위처 항목 아래 한 줄로 선다.
 export const NETWORKS_LIST_LABEL = '네트워크'
 export const STARTUP_LIST_LABEL = '스타트업'
-export const FUND_LIST_LABEL = '투자실'
+export const FUND_LIST_LABEL = '운용펀드'
 
 /**
  * 사업 워크스페이스(AC/M&A/PROJECT) 공용 사이드바 구성 — `프로젝트` 한 줄.
@@ -96,13 +86,13 @@ export const FUND_LIST_LABEL = '투자실'
  * 필터 축 하나이며, 미분류 건은 그 필터의 '미지정' 선택지가 답한다 — 종전에 '기타'가 맡던
  * 사각지대 방어는 `전체 ~`가 이미 구분 무관 전부를 보여주므로 필요 없다.
  */
-function programSubnav(key: 'mna' | 'project'): SubNavGroup[] {
+function programSubnav(): SubNavGroup[] {
   return [
     {
       // 한 줄이다(2026-09-05). 범위(내 프로젝트/전체 프로젝트)는 메뉴가 아니라 목록 상단
       // 토글이 답한다 — 사업구분(2026-08-03)이 먼저 밟은 길과 같은 이유로, 범위를 메뉴로
       // 두면 그것이 '어디에 있는가'가 되어 상태·부서 같은 다른 축과 함께 걸 수 없다.
-      items: [{ label: PROGRAM_LIST_LABELS[key] }],
+      items: [{ label: PROGRAM_LIST_LABEL }],
     },
   ]
 }
@@ -155,8 +145,8 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
   // AC에만 둔다 — 임시 배치이며 M&A·PROJECT는 종전 구성(programSubnav) 그대로다. 셋에 함께
   // 세우려면 공용 구성으로 올리고, 최종 자리는 명부(3_9_1 §11.3)와 겹치는 범위를 정한 뒤 정한다.
   //
-  // 이 줄은 BUSINESS 사이드바 맨 아래 고정 영역에 선다(2026-09-06, `pinBottom`) — 원장 넷의
-  // 목록 안에 끼면 위아래 어느 원장의 것인지 화면이 답하지 못한다. 이름을 'GUEST계정 발급'으로
+  // 이 줄은 AC 사이드바 맨 아래 고정 영역에 선다(2026-09-06, `pinBottom`) — 사업 목록 줄 옆에
+  // 나란히 두면 그것이 이 워크스페이스의 원장 하나로 읽힌다. 이름을 'GUEST계정 발급'으로
   // 두는 것도 같은 이유다: 이 줄이 여는 것은 사업의 원장이 아니라 계정을 내주는 창구이고,
   // 정지·해제는 여기서 하지 않는다(그것은 ADMIN '게스트 계정 관리'가 답한다).
   // 자리를 가르는 것은 `buildNavGroups`이므로 `dividerBefore`는 두지 않는다(고정 영역이 이미
@@ -164,7 +154,7 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
   ac: [
     {
       items: [
-        { label: PROGRAM_LIST_LABELS.ac },
+        { label: PROGRAM_LIST_LABEL },
         { label: 'GUEST계정 발급', tab: 'guest-accounts', pinBottom: true },
       ],
     },
@@ -179,7 +169,12 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
     },
   ],
   // M&A/PE는 AC와 동일한 사업 원장 구조(features/program)를 공유한다.
-  mna: programSubnav('mna'),
+  //
+  // 이 워크스페이스가 소유한 원장이 하나 더 있지만(M&A BUYER) 그 줄은 여기 없다 — 자리가
+  // DATABASE이기 때문이고, 줄 구성은 그 구획이 직접 갖는다(`WorkspaceSection.subnav`).
+  // 권한 키가 같다고 줄까지 같은 자리에 세우면 딜 목록 옆에 원장이 나란히 서서, 진행하는 일과
+  // 쌓아 두고 찾아 보는 것이 한 층으로 읽힌다.
+  mna: programSubnav(),
   admin: [
     {
       group: '시스템 관리',
@@ -216,7 +211,7 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
     },
   ],
   // PROJECT도 AC와 동일한 사업 원장 구조(features/program)를 공유한다.
-  project: programSubnav('project'),
+  project: programSubnav(),
   // OFFICE: 임직원 정보·전사 캘린더 + 게시판(공지사항 고정 + 일반, 아코디언 없이 평탄 나열).
   // 신규 게시판은 모두 이곳에 생성·노출된다.
   office: [

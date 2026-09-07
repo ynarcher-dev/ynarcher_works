@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useGuestClient } from '@/lib/useGuestClient'
 
 /**
- * 게시판형 목록(공지사항·QNA)의 행별 첨부 건수 — 표의 클립 표식이 이 값을 본다.
+ * 게시판형 목록(공지사항·Q&A)의 행별 첨부 건수 — 표의 클립 표식이 이 값을 본다.
  * WORKS의 같은 이름 훅과 같은 판정이며, 조회 범위만 RLS가 게스트 몫으로 좁힌다.
  *
  * 첨부를 임베드로 끌어오지 못하는 이유는 `attachments`가 다형 테이블이라 각 원장과

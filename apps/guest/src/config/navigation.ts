@@ -58,7 +58,7 @@ export const STARTUP_FIXED_NAV: readonly [GuestNavItem, ...GuestNavItem[]] = [
   { path: '/overview', label: '사업개요', icon: BookOpen },
   { path: '/announcements', label: '공지사항', icon: Bell },
   { path: '/schedule', label: '일정안내', icon: CalendarDays },
-  { path: '/qna', label: 'QNA', icon: CircleHelp },
+  { path: '/qna', label: 'Q&A', icon: CircleHelp },
 ]
 
 /**

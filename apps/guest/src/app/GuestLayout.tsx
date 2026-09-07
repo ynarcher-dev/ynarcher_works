@@ -69,7 +69,7 @@ export function GuestLayout() {
       }
     >
       <div className="flex flex-col gap-1">
-        {/* 상단은 고정 메뉴 묶음(사업개요·공지사항·일정안내·QNA — 첫 줄이 로그인 직후
+        {/* 상단은 고정 메뉴 묶음(사업개요·공지사항·일정안내·Q&A — 첫 줄이 로그인 직후
             착지점)이다. 원장이 세우는 하위 메뉴와는 구분선으로 가른다 — 층이 다른 메뉴임을
             선 하나가 답한다. */}
         {STARTUP_FIXED_NAV.map(renderItem)}

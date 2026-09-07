@@ -1,4 +1,13 @@
-import { Button, Card, IconButton, Input, Spinner, TextArea, useToast } from '@ynarcher/ui'
+import {
+  Button,
+  Card,
+  formText,
+  IconButton,
+  Input,
+  Spinner,
+  TextArea,
+  useToast,
+} from '@ynarcher/ui'
 import { ExternalLink, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import {
@@ -16,13 +25,7 @@ const URL_PATTERN = /^https?:\/\/\S+$/i
  * 차이는 편집 가능 여부뿐이다 — WORKS에서 모아 적고, 공유 범위를 올리면 GUEST가 같은
  * 목록을 읽기 전용으로 본다. 편집(추가·수정)은 카드 안에서 목록과 자리를 바꿔 처리한다.
  */
-export function LinkPanel({
-  programId,
-  moduleId,
-}: {
-  programId: string
-  moduleId: string
-}) {
+export function LinkPanel({ programId, moduleId }: { programId: string; moduleId: string }) {
   const { data: links = [], isLoading } = useModuleLinks(moduleId)
   // undefined=목록 / null=신규 추가 / ProgramLink=수정
   const [editing, setEditing] = useState<ProgramLink | null | undefined>(undefined)
@@ -59,7 +62,12 @@ export function LinkPanel({
       ) : (
         <ul className="space-y-2">
           {links.map((link) => (
-            <LinkRow key={link.id} link={link} moduleId={moduleId} onEdit={() => setEditing(link)} />
+            <LinkRow
+              key={link.id}
+              link={link}
+              moduleId={moduleId}
+              onEdit={() => setEditing(link)}
+            />
           ))}
         </ul>
       )}
@@ -177,7 +185,7 @@ function LinkForm({
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <label className="text-caption font-semibold text-gray-600">표시명</label>
+        <label className={formText.label}>표시명</label>
         <Input
           autoFocus
           placeholder="예: 참가 신청 구글폼"
@@ -186,14 +194,16 @@ function LinkForm({
         />
       </div>
       <div className="space-y-1.5">
-        <label className="text-caption font-semibold text-gray-600">URL</label>
+        <label className={formText.label}>URL</label>
         <Input placeholder="https://" value={url} onChange={(e) => setUrl(e.target.value)} />
         {!urlValid && url.trim() !== 'https://' && (
-          <p className="text-caption text-danger">http:// 또는 https:// 로 시작하는 주소만 등록할 수 있습니다.</p>
+          <p className="text-caption text-danger">
+            http:// 또는 https:// 로 시작하는 주소만 등록할 수 있습니다.
+          </p>
         )}
       </div>
       <div className="space-y-1.5">
-        <label className="text-caption font-semibold text-gray-600">설명</label>
+        <label className={formText.label}>설명</label>
         <TextArea
           rows={2}
           placeholder="이 링크가 무엇인지 한 줄로 적어 주세요."

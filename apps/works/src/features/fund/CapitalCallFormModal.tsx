@@ -1,10 +1,6 @@
-import { Banner, Button, Input, Modal, useToast } from '@ynarcher/ui'
+import { Banner, Button, formText, Input, Modal, useToast } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
-import {
-  useCreateCapitalCall,
-  useUpdateCapitalCall,
-  type CapitalCall,
-} from '@/features/fund/hooks'
+import { useCreateCapitalCall, useUpdateCapitalCall, type CapitalCall } from '@/features/fund/hooks'
 
 /**
  * 캐피탈 콜 차수(회차) 등록·수정 모달. 차수는 회차·납입 기한만 갖는다 —
@@ -65,6 +61,7 @@ export function CapitalCallFormModal({
 
   return (
     <Modal
+      dismissible={false}
       open={open}
       onClose={onClose}
       size="sm"
@@ -83,7 +80,7 @@ export function CapitalCallFormModal({
       <div className="space-y-3">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label className="text-body font-medium text-gray-800">회차</label>
+            <label className={formText.label}>회차</label>
             <Input
               inputMode="numeric"
               value={callNo}
@@ -92,13 +89,13 @@ export function CapitalCallFormModal({
             />
           </div>
           <div>
-            <label className="text-body font-medium text-gray-800">납입 기한</label>
+            <label className={formText.label}>납입 기한</label>
             <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
           </div>
         </div>
         <Banner tone="info">
-          상태는 차수가 아니라 출자자(LP)별로 지정합니다. 등록 후 표에서 LP마다 예정·통지·납입완료·연체를
-          고르면 차수 상태는 그 분포에서 자동 계산됩니다.
+          상태는 차수가 아니라 출자자(LP)별로 지정합니다. 등록 후 표에서 LP마다
+          예정·통지·납입완료·연체를 고르면 차수 상태는 그 분포에서 자동 계산됩니다.
         </Banner>
       </div>
     </Modal>

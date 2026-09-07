@@ -2,8 +2,14 @@ import { Badge, Checkbox, cardText, cn } from '@ynarcher/ui'
 import type { EntityRow } from '@/features/master/entityHooks'
 import { formatBytes } from '@/features/networks/materialHooks'
 import type { AiSource } from '@/features/startup/startupAiFill'
-import { AI_CARDS, type AiCardBand, type AiCardKey } from '@/features/startup/startupAiCards'
-import { cardCountFor, cellCount, cellOn, sourcesOf, type AiGrid } from '@/features/startup/startupAiGrid'
+import { AI_CARDS, AI_CARD_GROUPS, type AiCardKey } from '@/features/startup/startupAiCards'
+import {
+  cardCountFor,
+  cellCount,
+  cellOn,
+  sourcesOf,
+  type AiGrid,
+} from '@/features/startup/startupAiGrid'
 import { StartupAiSourceState } from '@/features/startup/StartupAiSourceState'
 import type { AiExtractController } from '@/features/startup/useStartupAiExtracts'
 
@@ -77,6 +83,7 @@ export function StartupAiFillGrid({
   grid,
   onCell,
   onCard,
+  onGroup,
   onSource,
   onAll,
   extracts,
@@ -89,17 +96,18 @@ export function StartupAiFillGrid({
   onCell: (card: AiCardKey, key: string) => void
   /** 카드 하나가 자료 전부를 읽게 하거나 아무것도 읽지 않게 한다. */
   onCard: (card: AiCardKey) => void
+  /** 같은 탐색 묶음의 카드가 자료 전부를 읽게 하거나 아무것도 읽지 않게 한다. */
+  onGroup: (cards: AiCardKey[]) => void
   /** 자료 하나를 모든 카드에서 켜거나 끈다. */
   onSource: (key: string) => void
   onAll: () => void
   /** 자료 줄의 분석 상태와 그 줄에서 할 수 있는 일. */
   extracts: AiExtractController
 }) {
-  const bands: AiCardBand[] = ['기본', '역량', '실적']
   const cards = AI_CARDS.map((c) => c.key)
   const total = cellCount(grid)
-  /** 밴드가 바뀌는 자리에만 세로선을 둔다 — 열마다 그으면 격자가 아니라 창살이 된다. */
-  const bandEdge = (i: number) => i > 0 && AI_CARDS[i - 1]?.band !== AI_CARDS[i]?.band
+  /** 묶음이 바뀌는 자리에만 세로선을 둔다 — 열마다 그으면 격자가 아니라 창살이 된다. */
+  const groupEdge = (i: number) => i > 0 && AI_CARDS[i - 1]?.group !== AI_CARDS[i]?.group
 
   // 세로 높이만 여기서 잠근다 — 표가 자기 안에서 스크롤해야 머리줄이 붙어 있고, 아래 결과
   // 패널이 화면 밖으로 밀려나지 않는다. 가로(`overflow-x`)는 열지 않는다.
@@ -108,7 +116,7 @@ export function StartupAiFillGrid({
       {/* border-collapse 대신 separate를 쓴다 — 붙인 테두리는 고정(sticky) 머리줄에서 사라진다. */}
       <table className="w-full table-fixed border-separate border-spacing-0">
         <thead>
-          {/* 1단 — 밴드. 상세 화면의 세로 축(다시 재는가)이 여기서는 열 묶음이 된다. */}
+          {/* 1단 — 서버가 실제로 나눠 읽는 네 탐색 묶음. 체크하면 묶음 단위로 고를 수 있다. */}
           <tr>
             <th
               scope="col"
@@ -121,7 +129,9 @@ export function StartupAiFillGrid({
               <Checkbox
                 checked={total > 0}
                 onChange={onAll}
-                label={<span className={cardText.label}>{total > 0 ? '전체 해제' : '전체 선택'}</span>}
+                label={
+                  <span className={cardText.label}>{total > 0 ? '전체 해제' : '전체 선택'}</span>
+                }
               />
             </th>
             <th
@@ -154,16 +164,27 @@ export function StartupAiFillGrid({
             >
               <span className={cardText.label}>분석</span>
             </th>
-            {bands.map((band) => (
-              <th
-                key={band}
-                scope="colgroup"
-                colSpan={AI_CARDS.filter((c) => c.band === band).length}
-                className="sticky top-0 z-20 border-b border-l border-gray-200 bg-gray-25 px-2 py-1 text-center"
-              >
-                <span className={cardText.subhead}>{band}</span>
-              </th>
-            ))}
+            {AI_CARD_GROUPS.map((group) => {
+              const groupCards = AI_CARDS.filter((c) => c.group === group.key).map((c) => c.key)
+              const picked = groupCards.some((card) => sourcesOf(grid, card).length > 0)
+              return (
+                <th
+                  key={group.key}
+                  scope="colgroup"
+                  colSpan={groupCards.length}
+                  className="sticky top-0 z-20 border-b border-l border-gray-200 bg-gray-25 px-2 py-1 text-center"
+                >
+                  <span className="flex items-center justify-center gap-1.5">
+                    <Checkbox
+                      checked={picked}
+                      onChange={() => onGroup(groupCards)}
+                      title={`${group.label} 카드 — 자료 전부 켜기/끄기`}
+                    />
+                    <span className={cardText.subhead}>{group.label}</span>
+                  </span>
+                </th>
+              )
+            })}
           </tr>
           {/* 2단 — 카드. 열 머리의 체크는 그 카드가 자료 전부를 읽게 한다. */}
           <tr>
@@ -176,9 +197,9 @@ export function StartupAiFillGrid({
                   scope="col"
                   className={cn(
                     CARD_COL,
-                    // 1단(밴드)이 위에 서므로 그 높이만큼 내려 붙는다.
+                    // 1단(묶음)이 위에 서므로 그 높이만큼 내려 붙는다.
                     'sticky top-7 z-20 border-b border-gray-200 bg-white px-1 py-2 align-bottom',
-                    bandEdge(i) && 'border-l border-gray-200',
+                    groupEdge(i) && 'border-l border-gray-200',
                   )}
                 >
                   <div className="flex flex-col items-center gap-1">
@@ -223,7 +244,10 @@ export function StartupAiFillGrid({
               <tr key={s.key} className="group">
                 <th
                   scope="row"
-                  className={cn(NAME_COL, 'border-b border-gray-100 px-3 py-1.5 text-left group-hover:bg-gray-25')}
+                  className={cn(
+                    NAME_COL,
+                    'border-b border-gray-100 px-3 py-1.5 text-left group-hover:bg-gray-25',
+                  )}
                 >
                   <Checkbox
                     checked={used > 0}
@@ -239,10 +263,20 @@ export function StartupAiFillGrid({
                     }
                   />
                 </th>
-                <td className={cn(EXT_COL, 'border-b border-gray-100 px-1 py-1.5 text-center group-hover:bg-gray-25')}>
+                <td
+                  className={cn(
+                    EXT_COL,
+                    'border-b border-gray-100 px-1 py-1.5 text-center group-hover:bg-gray-25',
+                  )}
+                >
                   <span className={cn('block truncate', cardText.meta)}>{ext ?? kindLabel(s)}</span>
                 </td>
-                <td className={cn(SIZE_COL, 'border-b border-gray-100 px-2 py-1.5 text-right group-hover:bg-gray-25')}>
+                <td
+                  className={cn(
+                    SIZE_COL,
+                    'border-b border-gray-100 px-2 py-1.5 text-right group-hover:bg-gray-25',
+                  )}
+                >
                   {/* 링크에는 용량이 없다. '-'는 모른다는 뜻이라 사실과 달라 아예 비운다. */}
                   <span className={cn('block truncate tabular-nums', cardText.meta)}>
                     {s.bytes != null ? formatBytes(s.bytes) : ''}
@@ -269,7 +303,7 @@ export function StartupAiFillGrid({
                     className={cn(
                       CARD_COL,
                       'border-b border-gray-100 px-1 py-1.5 text-center group-hover:bg-gray-25',
-                      bandEdge(i) && 'border-l border-gray-200',
+                      groupEdge(i) && 'border-l border-gray-200',
                     )}
                   >
                     <Checkbox

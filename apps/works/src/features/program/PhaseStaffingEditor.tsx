@@ -1,12 +1,9 @@
-import { Button, Field, cardText } from '@ynarcher/ui'
-import {
-  ProgramDepartmentEditor,
-  type ProgramDepartmentSegment,
-} from '@/features/program/ProgramDepartmentEditor'
-import {
-  ProgramManagerEditor,
-  type ProgramManagerSegment,
-} from '@/features/program/ProgramManagerEditor'
+import { Button, cardText, cn } from '@ynarcher/ui'
+import { ProgramStaffingEditor } from '@/features/program/ProgramStaffingEditor'
+import type {
+  ProgramDepartmentSegment,
+  ProgramManagerSegment,
+} from '@/features/program/staffingTypes'
 import type { StaffingPhase } from '@/features/program/programManagerCoverage'
 import { useDepartments } from '@/features/management/orgHooks'
 
@@ -20,12 +17,26 @@ interface Props {
   onManagersChange: (rows: ProgramManagerSegment[]) => void
   /** 직전 단계('이전 단계 복사' 출발점). 없으면 복사 버튼 숨김. */
   previousPhase?: StaffingPhase
+  /**
+   * 이 배치가 **여러 단계 중 하나**인가. 기본은 참이다.
+   *
+   * 거짓이면 테두리 상자와 머리글 줄을 걷는다 — 운영 기간에 조직개편이 걸치지 않은 사업에는
+   * 나눌 단계가 애초에 없어서, 그때 서는 상자는 '이 안이 하나의 단계'라는 사실을 말하지만 그
+   * 사실이 없다. 그러면 남는 것은 층뿐이다(수행 조직 라벨 → 상자 → 부서 카드 3중). 기간과 조직
+   * 버전 이름도 함께 걷는다 — 기간은 바로 위 칸에서 방금 입력한 운영 기간과 언제나 같은 값이라
+   * 적어 두면 다를 수 있다고 오해하게 만들고, 버전 이름 한 줄만 남으면 바깥 라벨과 부서 카드
+   * 사이에서 바깥 묶음이 아무 내용 없는 층처럼 보인다. 그 버전이 무엇인지는 부서 선택지 자체가
+   * 답한다.
+   */
+  phased?: boolean
 }
 
 /**
- * 한 단계(org 버전 기간)의 배치 편집 섹션.
- * 조직개편 경계마다 독립 재편성 — 이 단계의 부서 구성 + 담당자 배치를 그 버전 기준으로 관리한다.
- * '이전 단계 복사'는 직전 단계의 부서·인력을 lineage(버전 간 동일 부서 계보)로 이 버전에 매핑해 초안으로 채운다.
+ * 한 단계(org 버전 기간)의 수행 조직 편집 섹션.
+ *
+ * 조직개편 경계마다 독립 재편성 — 이 단계의 부서와 담당자를 그 버전 기준으로 관리한다.
+ * '이전 단계 복사'는 직전 단계의 부서·인력을 lineage(버전 간 동일 부서 계보)로 이 버전에 매핑해
+ * 초안으로 채운다.
  */
 export function PhaseStaffingEditor({
   phase,
@@ -34,6 +45,7 @@ export function PhaseStaffingEditor({
   managers,
   onManagersChange,
   previousPhase,
+  phased = true,
 }: Props) {
   const { data: thisMaster } = useDepartments(false, phase.versionId)
   const { data: prevMaster } = useDepartments(false, previousPhase?.versionId)
@@ -41,7 +53,10 @@ export function PhaseStaffingEditor({
   const deptSlice = departments.filter((d) => d.org_version_id === phase.versionId)
   const mgrSlice = managers.filter((m) => m.org_version_id === phase.versionId)
   const setDeptSlice = (rows: ProgramDepartmentSegment[]) =>
-    onDepartmentsChange([...departments.filter((d) => d.org_version_id !== phase.versionId), ...rows])
+    onDepartmentsChange([
+      ...departments.filter((d) => d.org_version_id !== phase.versionId),
+      ...rows,
+    ])
   const setMgrSlice = (rows: ProgramManagerSegment[]) =>
     onManagersChange([...managers.filter((m) => m.org_version_id !== phase.versionId), ...rows])
 
@@ -94,51 +109,34 @@ export function PhaseStaffingEditor({
   }
 
   return (
-    <section className="rounded-radius-md border border-gray-200 p-3">
-      {/* 단계 이름과 그 기간은 한 줄에 나란히 서므로 같은 크기로 둔다 — 구분은 굵기와 색이 맡는다. */}
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className={cardText.subhead}>{phase.label}</span>
-          <span className="tabular-nums text-body text-gray-600">
-            {phase.start} ~ {phase.end}
-          </span>
+    <section className={cn(phased && 'rounded-radius-md border border-gray-200 p-3')}>
+      {/* 단계 이름과 그 기간은 한 줄에 나란히 서므로 같은 크기로 둔다 — 구분은 굵기와 색이 맡는다.
+          단계가 하나면 이 줄 자체가 서지 않는다(`phased` 주석 참조). */}
+      {phased && (
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className={cardText.subhead}>{phase.label}</span>
+            <span className="tabular-nums text-body text-gray-600">
+              {phase.start} ~ {phase.end}
+            </span>
+          </div>
+          {previousPhase && (
+            <Button variant="outline" className="shrink-0" onClick={copyFromPrevious}>
+              이전 단계 복사
+            </Button>
+          )}
         </div>
-        {previousPhase && (
-          <Button variant="outline" className="shrink-0" onClick={copyFromPrevious}>
-            이전 단계 복사
-          </Button>
-        )}
-      </div>
+      )}
 
-      {/*
-        규칙 설명은 `Field`의 `hint`가 라벨 **옆**에 접어 둔다(2026-09-01).
-        종전에는 규칙을 라벨과 같은 줄에 괄호로 붙였다 — `hint`가 컨트롤 아래 줄이던 시절에는
-        편집기 한 덩어리를 지나 저 밑에 붙어 무엇에 대한 설명인지 이어지지 않았기 때문이다.
-        지금은 `hint`가 라벨 옆에 서므로 그 이유가 사라졌고, 괄호를 걷어 라벨이 이름만 말한다.
-      */}
-      <div className="space-y-3">
-        <Field
-          as="div"
-          label="부서 구성"
-          hint={'메인 부서는 1개이고 협업 부서는 여러 개를 둘 수 있습니다.\n협업비율의 합은 100%가 되어야 합니다.'}
-        >
-          <ProgramDepartmentEditor value={deptSlice} onChange={setDeptSlice} versionId={phase.versionId} />
-        </Field>
-        <Field
-          as="div"
-          label="담당자 배치"
-          hint={'부서별 투입률의 합은 그 부서의 협업비율과 같아야 합니다.\n같은 사람을 다시 추가하면 그 사람의 구간이 늘어납니다.'}
-        >
-          <ProgramManagerEditor
-            value={mgrSlice}
-            onChange={setMgrSlice}
-            departments={deptSlice}
-            versionId={phase.versionId}
-            phaseStart={phase.start}
-            phaseEnd={phase.end}
-          />
-        </Field>
-      </div>
+      <ProgramStaffingEditor
+        departments={deptSlice}
+        onDepartmentsChange={setDeptSlice}
+        managers={mgrSlice}
+        onManagersChange={setMgrSlice}
+        versionId={phase.versionId}
+        phaseStart={phase.start}
+        phaseEnd={phase.end}
+      />
     </section>
   )
 }

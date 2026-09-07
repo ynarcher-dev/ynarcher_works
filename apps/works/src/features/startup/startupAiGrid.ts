@@ -80,6 +80,14 @@ export function toggleCard(grid: AiGrid, card: AiCardKey, allKeys: string[]): Ai
   return { ...grid, [card]: sourcesOf(grid, card).length > 0 ? [] : [...allKeys] }
 }
 
+/** 카드 묶음 전체를 켜거나 끈다. 일부만 켜져 있어도 한 번 누르면 묶음을 비운다. */
+export function toggleCardGroup(grid: AiGrid, cards: AiCardKey[], allKeys: string[]): AiGrid {
+  const on = cards.some((card) => sourcesOf(grid, card).length > 0)
+  const next: AiGrid = { ...grid }
+  for (const card of cards) next[card] = on ? [] : [...allKeys]
+  return next
+}
+
 /** 자료 하나를 모든 카드에서 켜거나 끈다. 규칙은 카드 쪽과 같다. */
 export function toggleSource(grid: AiGrid, key: string, cards: AiCardKey[]): AiGrid {
   const on = cardCountFor(grid, key, cards) > 0

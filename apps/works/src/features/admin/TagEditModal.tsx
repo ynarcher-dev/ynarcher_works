@@ -35,6 +35,7 @@ export function TagEditModal({
 }: TagEditModalProps) {
   return (
     <Modal
+      dismissible={false}
       open={Boolean(tag)}
       onClose={onClose}
       title={`${noun} 태그 수정`}

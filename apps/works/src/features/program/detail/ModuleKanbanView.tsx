@@ -6,6 +6,7 @@ import type { ProgramModule } from '@/features/program/hooks'
 import { useUpdateModuleStatus } from '@/features/program/detail/detailHooks'
 import { useOpenPublicLinkModuleIds } from '@/features/program/publicLinkHooks'
 import {
+  MODULE_ASSIGNEE_LIMIT,
   MODULE_META,
   formatModulePeriod,
   moduleStatusMeta,
@@ -114,7 +115,7 @@ export function ModuleKanbanView({
               <Badge tone={meta.tone}>
                 {meta.label}
               </Badge>
-              <span className="text-caption tabular-nums text-gray-700">{items.length}</span>
+              <span className="text-body-sm tabular-nums text-gray-700">{items.length}</span>
             </div>
             <ul className="space-y-2">
               {items.map((mod) => {
@@ -166,14 +167,20 @@ export function ModuleKanbanView({
                           linkOpen={Boolean(openLinkIds?.has(mod.id))}
                         />
                       </span>
-                      <span className="mt-1 block truncate text-caption tabular-nums text-gray-700">
+                      <span className="mt-1 block truncate text-body-sm tabular-nums text-gray-700">
                         {formatModulePeriod(settings)}
                       </span>
-                      {/* 몇 명까지 적을지는 개수가 아니라 카드 폭이 정한다(PersonCell). */}
-                      <span className="mt-1 flex min-w-0 text-caption text-gray-700">
+                      {/* 몇 명까지 적을지를 카드 폭에 맡기지 않는다(2026-09-06 사용자 지정) —
+                        칸반 칸은 폭이 좁아 폭에 맡기면 거의 언제나 첫 사람 + `+1`이 되어,
+                        담당자가 셋인 모듈과 하나인 모듈이 같은 모양으로 읽혔다. 상한은 간트와
+                        같은 수를 쓰고(`MODULE_ASSIGNEE_LIMIT`), 카드 높이는 자유로우니 넘치는
+                        줄은 잘라 감추지 말고 흘린다. */}
+                      <span className="mt-1 flex min-w-0 text-body-sm text-gray-700">
                         <PersonCell
                           names={mod.assignees.map((a) => a.user?.name)}
                           empty="담당자 미지정"
+                          max={MODULE_ASSIGNEE_LIMIT}
+                          wrap
                         />
                       </span>
                     </button>
@@ -183,7 +190,7 @@ export function ModuleKanbanView({
               {/* 상시 빈 슬롯: 카드 아래에 점선으로 드롭 가능 위치를 항상 보여준다.
                   드래그 중(다른 상태의 카드)엔 이 상태로의 변경을 유도하고, 조준 시 강조한다. */}
               <li
-                className={`rounded-radius-md border border-dashed px-3 py-4 text-center text-caption transition-colors duration-fast ${
+                className={`rounded-radius-md border border-dashed px-3 py-4 text-center text-body-sm transition-colors duration-fast ${
                   isOver
                     ? 'border-brand/50 bg-brand-25 text-brand'
                     : isValidTarget

@@ -15,7 +15,7 @@ import {
   cn,
   useToast,
 } from '@ynarcher/ui'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { RichTextEditor, RichTextViewer } from '@/components/RichTextEditor'
 import { BoardPanel } from '@/features/hub/BoardPanel'
@@ -54,6 +54,8 @@ export interface BoardWorkspaceProps {
   title: string
   /** 공지사항 뷰 등에서 깊은 링크로 열 게시글 id. */
   initialPostId?: string
+  /** 목록 화면 왼쪽에 놓는 게시판 2차 사이드바. 상세·작성 화면에서는 숨긴다. */
+  navigation?: ReactNode
 }
 
 /**
@@ -61,7 +63,7 @@ export interface BoardWorkspaceProps {
  * 게시글·코멘트·조회수·첨부는 전부 실데이터(board_posts / entity_feedback / attachments)이며
  * 열람·쓰기 권한은 DB RLS가 강제한다. 전체 공지(globalNotice)는 공지사항 메뉴가 모아 보여준다.
  */
-export function BoardWorkspace({ boardId, title, initialPostId }: BoardWorkspaceProps) {
+export function BoardWorkspace({ boardId, title, initialPostId, navigation }: BoardWorkspaceProps) {
   const [view, setView] = useState<View>(
     initialPostId ? { mode: 'detail', id: initialPostId } : { mode: 'list' },
   )
@@ -132,18 +134,23 @@ export function BoardWorkspace({ boardId, title, initialPostId }: BoardWorkspace
         }
         actions={<Button onClick={() => setView({ mode: 'compose' })}>글쓰기</Button>}
       />
-      {isLoading ? (
-        <Spinner />
-      ) : (
-        <BoardPanel
-          posts={filterPosts(posts ?? [], keyword)}
-          attachmentIds={attachmentIds}
-          emptyText={keyword.trim() ? '검색 결과가 없습니다.' : '등록된 게시글이 없습니다.'}
-          boardLabel={title}
-          onSelect={(post) => openDetail(post.id)}
-          // 수정·삭제는 목록의 관리 컬럼이 아니라 상세 페이지에서 수행한다(관리 컬럼 미노출).
-        />
-      )}
+      <div className="flex min-h-0 flex-1 gap-5">
+        {navigation}
+        <div className="min-w-0 flex-1">
+          {isLoading ? (
+            <Spinner />
+          ) : (
+            <BoardPanel
+              posts={filterPosts(posts ?? [], keyword)}
+              attachmentIds={attachmentIds}
+              emptyText={keyword.trim() ? '검색 결과가 없습니다.' : '등록된 게시글이 없습니다.'}
+              boardLabel={title}
+              onSelect={(post) => openDetail(post.id)}
+              // 수정·삭제는 목록의 관리 컬럼이 아니라 상세 페이지에서 수행한다(관리 컬럼 미노출).
+            />
+          )}
+        </div>
+      </div>
     </div>
   )
 }

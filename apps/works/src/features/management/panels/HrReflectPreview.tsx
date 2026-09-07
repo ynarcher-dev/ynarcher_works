@@ -38,7 +38,7 @@ export function HrReflectPreview({ open, onClose, levels, nodes, employees }: Hr
     >
       <div className="space-y-2">
         <div className="max-h-96 overflow-auto rounded-radius-md border border-gray-200">
-          <table className="w-full border-collapse text-caption">
+          <table className="w-full border-collapse text-table-card">
             <thead className="sticky top-0 bg-gray-50 text-gray-600">
               <tr>
                 <th className="whitespace-nowrap px-3 py-2 text-left font-semibold">이름</th>

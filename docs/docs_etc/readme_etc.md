@@ -10,6 +10,7 @@
 | :--- | :--- | :--- | :---: |
 | **임시 회의록/메모** | _(작성 예정)_ | 기획/디자인/개발 미팅 주요 결정 사항 및 요구사항 수집 노트 | **대기 중** |
 | **벤치마킹 및 레퍼런스** | _(작성 예정)_ | 타사 액셀러레이터/VC 플랫폼 UI/UX 벤치마킹 분석 보조 자료 | **대기 중** |
+| **Google Workspace 연동 아이데이션** | [google_workspace_integration_ideation.md](./google_workspace_integration_ideation.md) | 계정 분리, Calendar·Chat 알림, S3·Shared Drive, 퇴사자 데이터 보존 방향을 정리한 논의 초안 | **논의 중** |
 | **Gemini 보안/운영 문서 작성 마스터 가이드** | [gemini_security_docs_master_guide.md](./gemini_security_docs_master_guide.md) | Gemini에게 전달할 인증, 권한, RLS, 개인정보, 백업, API 계약 문서 작성 지시서 | **작성 완료** |
 | **Gemini matching 기반 AC 기획 보강 가이드** | [gemini_matching_ac_planning_rework_guide.md](./gemini_matching_ac_planning_rework_guide.md) | 기존 완성 서비스 `.references/matching`의 Program First 운영 구조를 works AC 문서에 보강하기 위한 Gemini 작업 지시서 | **작성 완료** |
 

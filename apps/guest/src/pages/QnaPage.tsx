@@ -31,12 +31,12 @@ import { RICH_BODY_CLASS, sanitizeRichText } from '@/lib/richText'
 const QUESTION_ATTACHMENT_TYPE = 'program_question'
 
 /**
- * QNA — 고정 메뉴 세 번째 줄이자 **게스트가 처음으로 글을 쓰는 화면**(1:1 문의함).
+ * Q&A — 고정 메뉴 세 번째 줄이자 **게스트가 처음으로 글을 쓰는 화면**(1:1 문의함).
  *
  * 목록이 전체 폭으로 서고, 쓰는 일과 읽는 일이 모두 **모달**에서 일어난다(2026-09-01
  * 사용자 지정) — 질문 작성 폼을 우측에 상시로 세워 두면 대개 비어 있는 폼이 화면 절반을
  * 계속 차지하고, 정작 자주 하는 일(내 질문과 답변을 훑는 것)이 좁은 칸으로 밀린다.
- * 상세 모달은 WORKS QNA 탭과 같은 부품(BoardDetailModal)이라 두 앱이 같은 구조로 보여 준다.
+ * 상세 모달은 WORKS Q&A 탭과 같은 부품(BoardDetailModal)이라 두 앱이 같은 구조로 보여 준다.
  * 다른 참여자의 질문은 보이지 않는다 — 판정은 화면이 아니라 RLS가 한다(qnaHooks 머리말).
  */
 export function QnaPage() {
@@ -49,7 +49,7 @@ export function QnaPage() {
     <div className="space-y-5">
       {/* 설명 줄은 두지 않는다(2026-09-01) — 무엇을 하는 화면인지는 '질문하기' 버튼과
           '내 질문' 목록이 이미 말하고, 본인에게만 보인다는 사실도 그 두 이름에 들어 있다. */}
-      <PageHeader title="QNA" />
+      <PageHeader title="Q&A" />
       {/* 본문 폭은 다른 GUEST 화면과 같은 2:1 격자를 따른다(2026-09-01 사용자 지정) —
           목록이 화면 전체를 가로지르면 메뉴마다 콘텐츠의 좌우 끝이 달라진다. 우측 칸은
           비워 두되 자리는 지킨다(상세·작성이 모달로 열려 곁칸에 세울 것이 없다). */}
@@ -177,20 +177,14 @@ function MyQuestionsCard({ list }: { list: GuestQuestion[] }) {
 }
 
 /** 질문 1건의 상세 모달(질문 본문 → 답변 → 첨부). 첨부는 열린 질문의 것만 조회한다. */
-function QuestionModal({
-  question,
-  onClose,
-}: {
-  question: GuestQuestion
-  onClose: () => void
-}) {
+function QuestionModal({ question, onClose }: { question: GuestQuestion; onClose: () => void }) {
   const { data: files } = useQuestionFiles(question.id)
 
   return (
     <BoardDetailModal
       open
       onClose={onClose}
-      meta="QNA"
+      meta="Q&A"
       title={question.title}
       date={question.created_at.slice(0, 10)}
       body={
@@ -204,7 +198,9 @@ function QuestionModal({
         question.answer_body ? (
           <div
             className={RICH_BODY_CLASS}
-            dangerouslySetInnerHTML={{ __html: sanitizeRichText(question.answer_body) }}
+            dangerouslySetInnerHTML={{
+              __html: sanitizeRichText(question.answer_body),
+            }}
           />
         ) : (
           <p className="text-body text-gray-600">담당자의 답변을 기다리고 있습니다.</p>

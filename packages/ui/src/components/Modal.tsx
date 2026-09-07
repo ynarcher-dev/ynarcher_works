@@ -49,6 +49,19 @@ export interface ModalProps {
    * 안 되므로 `false`로 잠가 닫는 길을 푸터의 취소 버튼 하나로 좁힌다.
    */
   dismissible?: boolean
+  /**
+   * 본문을 **카드 여러 장으로 나누는** 모달인가.
+   *
+   * 켜면 본문 바닥이 흰색에서 회색(gray-100)으로 내려가고 카드 사이 간격이 함께 붙는다. 카드가
+   * 흰 바닥 위에 흰 상자로 서면 테두리 한 줄만으로 구획을 버텨야 해서, 칸이 서넛만 넘어가도
+   * 어디까지가 한 묶음인지 눈이 따라가지 못한다 — 표면은 그림자가 아니라 헤어라인 테두리와
+   * 바닥의 색차로 구획한다는 규칙(4_color_system_rules)이 모달 안에서도 그대로여야 한다.
+   *
+   * 화면이 아니라 여기가 소유하는 이유는 이 자리가 **본문 여백을 아는 유일한 곳**이기 때문이다.
+   * 종전에는 네 곳이 `-mx-5 -my-4 … px-5 py-4`로 본문 패딩을 손으로 되돌려 칠했고, 그 숫자는
+   * 아래 본문 클래스와 짝이라 한쪽만 고치면 바닥이 어긋난 채로 남는다.
+   */
+  sectioned?: boolean
 }
 
 /**
@@ -64,6 +77,7 @@ export function Modal({
   children,
   footer,
   dismissible = true,
+  sectioned = false,
 }: ModalProps) {
   if (!open) return null
   return createPortal(
@@ -100,7 +114,12 @@ export function Modal({
             </h2>
           </header>
         )}
-        <div className="flex-1 overflow-y-auto px-5 py-4 text-body text-gray-800">
+        <div
+          className={cn(
+            'flex-1 overflow-y-auto px-5 py-4 text-body text-gray-800',
+            sectioned && 'space-y-3 bg-gray-100',
+          )}
+        >
           {children}
         </div>
         {footer && (

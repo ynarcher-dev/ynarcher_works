@@ -1,4 +1,4 @@
-import { Button, Input, Modal, TokenMultiSelect } from '@ynarcher/ui'
+import { Button, Field, formText, Input, Modal, TokenMultiSelect } from '@ynarcher/ui'
 import { useEffect, useMemo, useState } from 'react'
 import { useEmployees } from '@/features/hub/hooks'
 import type { Branch, BranchInput } from '@/features/office/branches/branchesApi'
@@ -42,10 +42,7 @@ export function BranchFormModal({
   const [members, setMembers] = useState<Sel[]>([])
   const [err, setErr] = useState('')
 
-  const byId = useMemo(
-    () => new Map((employees ?? []).map((e) => [e.id, e] as const)),
-    [employees],
-  )
+  const byId = useMemo(() => new Map((employees ?? []).map((e) => [e.id, e] as const)), [employees])
   const options: Sel[] = useMemo(
     () => (employees ?? []).map((e) => ({ userId: e.id, name: e.name })),
     [employees],
@@ -57,7 +54,12 @@ export function BranchFormModal({
     setName(branch?.name ?? '')
     setAddress(branch?.address ?? '')
     setPhone(branch?.phone ?? '')
-    setMembers(memberIds.map((id) => ({ userId: id, name: byId.get(id)?.name ?? '알 수 없음' })))
+    setMembers(
+      memberIds.map((id) => ({
+        userId: id,
+        name: byId.get(id)?.name ?? '알 수 없음',
+      })),
+    )
     setErr('')
   }, [open, branch, memberIds, byId])
 
@@ -74,6 +76,7 @@ export function BranchFormModal({
 
   return (
     <Modal
+      dismissible={false}
       open={open}
       onClose={onClose}
       title={editing ? '지사 수정' : '지사 추가'}
@@ -105,36 +108,32 @@ export function BranchFormModal({
     >
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
-          <label className="block">
-            <span className="mb-1 block text-caption font-medium text-gray-600">지사명</span>
+          <Field label="지사명" required>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="예: 강남지사"
               autoFocus
             />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-caption font-medium text-gray-600">전화번호</span>
+          </Field>
+          <Field label="전화번호">
             <Input
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="예: 02-1234-5678"
             />
-          </label>
+          </Field>
         </div>
 
-        <label className="block">
-          <span className="mb-1 block text-caption font-medium text-gray-600">주소</span>
+        <Field label="주소">
           <Input
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             placeholder="예: 서울특별시 강남구 테헤란로 123, 6층"
           />
-        </label>
+        </Field>
 
-        <div>
-          <span className="mb-1 block text-caption font-medium text-gray-600">상주인력</span>
+        <Field label="상주인력" as="div">
           <TokenMultiSelect<Sel>
             selected={members}
             onChange={setMembers}
@@ -144,9 +143,10 @@ export function BranchFormModal({
             getMeta={(s) => byId.get(s.userId)?.email ?? undefined}
             placeholder="임직원 검색 후 추가"
           />
-        </div>
+        </Field>
 
-        {err && <p className="text-caption text-danger">{err}</p>}
+        {/* 저장 실패는 어느 한 칸의 오류가 아니라 폼 전체의 결과라 마지막 줄에 선다. */}
+        {err && <p className={formText.error}>{err}</p>}
       </div>
     </Modal>
   )

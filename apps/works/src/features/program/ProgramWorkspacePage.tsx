@@ -1,6 +1,6 @@
 import { PageHeader } from '@ynarcher/ui'
 import { Navigate, useSearchParams } from 'react-router-dom'
-import { PROGRAM_LIST_LABELS } from '@/config/navigation'
+import { PROGRAM_LIST_LABEL } from '@/config/navigation'
 import { ProgramListTab } from '@/features/program/ProgramListTab'
 import { useProgramWorkspace } from '@/features/program/workspace'
 import { listPathOf, useListScope } from '@/lib/listScope'
@@ -33,7 +33,7 @@ export function ProgramWorkspacePage() {
   return (
     <div className="space-y-5">
       {/* 화면은 '메뉴명 + 구분선'으로 시작한다. 구분선은 PageHeader가 그린다. */}
-      <PageHeader title={PROGRAM_LIST_LABELS[config.key]} />
+      <PageHeader title={PROGRAM_LIST_LABEL} />
       <ProgramListTab scope={scope} onScopeChange={setScope} />
     </div>
   )

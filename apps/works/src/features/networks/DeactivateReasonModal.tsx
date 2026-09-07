@@ -19,7 +19,14 @@ interface Props {
 }
 
 /** 비활성화/삭제 사유 입력 모달(30자 이내). 사유는 기여 로그에 기록된다. */
-export function DeactivateReasonModal({ open, name, busy, verb = '비활성화', onCancel, onConfirm }: Props) {
+export function DeactivateReasonModal({
+  open,
+  name,
+  busy,
+  verb = '비활성화',
+  onCancel,
+  onConfirm,
+}: Props) {
   const [reason, setReason] = useState('')
   const trimmed = reason.trim()
   const submit = () => {
@@ -27,6 +34,7 @@ export function DeactivateReasonModal({ open, name, busy, verb = '비활성화',
   }
   return (
     <Modal
+      dismissible={false}
       open={open}
       onClose={onCancel}
       title={`${verb} 사유`}

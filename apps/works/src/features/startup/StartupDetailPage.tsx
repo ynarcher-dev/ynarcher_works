@@ -29,7 +29,7 @@ import { StartupSummaryCards, readSummary } from '@/features/startup/StartupSumm
 const RESOURCE_TYPE = 'startup'
 
 /** 발굴기업 목록 경로(뒤로가기 목적지). */
-const LIST_PATH = '/startup?scope=all'
+const LIST_PATH = '/startup'
 
 /** 라벨: 값 한 줄 — 규격은 공용 `InfoField`가 소유한다. */
 const Info = InfoField

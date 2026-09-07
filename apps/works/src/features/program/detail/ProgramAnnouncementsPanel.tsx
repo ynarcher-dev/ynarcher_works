@@ -30,7 +30,7 @@ import { LIST_PAGE_SIZE, matchesKeyword, pageSlice } from '@/features/program/de
 
 /**
  * 공지사항 탭 — 사업 단위 게시판. 목록 표가 전체 폭으로 서고, 행을 누르면 **상세 모달**이
- * 열린다(2026-09-01 사용자 지정). 모달은 QNA와 같은 부품(BoardDetailModal)이라 두 화면이
+ * 열린다(2026-09-01 사용자 지정). 모달은 Q&A와 같은 부품(BoardDetailModal)이라 두 화면이
  * 같은 구조로 글과 첨부를 보여 준다. GUEST 공지사항 화면도 같은 구성이며 편집만 없다.
  * 모듈별 NOTICE(메뉴당 한 건)와 축이 다르다 — 이쪽은 사업 전체를 향한 글이 여러 건 쌓인다.
  *
@@ -256,6 +256,7 @@ function AnnouncementFormModal({
       open
       onClose={onClose}
       // 쓰던 글이 바깥 클릭 한 번에 사라지면 안 된다 — 닫는 길은 취소 버튼뿐이다.
+      sectioned
       dismissible={false}
       title={announcement ? '공지 수정' : '공지 작성'}
       size="xl"
@@ -270,44 +271,43 @@ function AnnouncementFormModal({
         </>
       }
     >
-      {/* 상세 모달과 같은 바닥·카드 구성 — 쓰는 화면과 읽는 화면이 같은 모양이어야 한다. */}
-      <div className="-mx-5 -my-4 space-y-3 bg-gray-100 px-5 py-4">
-        <Card title="내용">
-          {/* 폼 라벨 규격은 화면이 아니라 `Field`가 소유한다(densityScale.formText). */}
-          <div className="space-y-4">
-            <Field label="제목" required>
-              <Input
-                autoFocus
-                placeholder="예: 1차 멘토링 일정 안내"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            </Field>
-            <Field as="div" label="본문">
-              <RichTextEditor
-                value={body}
-                onChange={setBody}
-                placeholder="참여자에게 알릴 내용을 적어 주세요."
-              />
-            </Field>
-          </div>
-        </Card>
+      {/* 상세 모달과 같은 카드 구성 — 쓰는 화면과 읽는 화면이 같은 모양이어야 한다.
+          바닥(회색)은 `Modal`의 `sectioned`가 깐다. */}
+      <Card title="내용">
+        {/* 폼 라벨 규격은 화면이 아니라 `Field`가 소유한다(densityScale.formText). */}
+        <div className="space-y-4">
+          <Field label="제목" required>
+            <Input
+              autoFocus
+              placeholder="예: 1차 멘토링 일정 안내"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          </Field>
+          <Field as="div" label="본문">
+            <RichTextEditor
+              value={body}
+              onChange={setBody}
+              placeholder="참여자에게 알릴 내용을 적어 주세요."
+            />
+          </Field>
+        </div>
+      </Card>
 
-        {/* 수정은 대상이 이미 있으므로 즉시 업로드, 신규는 저장 때 함께 올린다. */}
-        {announcement ? (
-          <MaterialPanel
-            targetType={ANNOUNCEMENT_ATTACHMENT_TYPE}
-            targetId={announcement.id}
-            title="첨부 파일"
-          />
-        ) : (
-          <PendingMaterialPanel
-            slot={ANNOUNCEMENT_ATTACHMENT_TYPE}
-            pending={pending}
-            title="첨부 파일"
-          />
-        )}
-      </div>
+      {/* 수정은 대상이 이미 있으므로 즉시 업로드, 신규는 저장 때 함께 올린다. */}
+      {announcement ? (
+        <MaterialPanel
+          targetType={ANNOUNCEMENT_ATTACHMENT_TYPE}
+          targetId={announcement.id}
+          title="첨부 파일"
+        />
+      ) : (
+        <PendingMaterialPanel
+          slot={ANNOUNCEMENT_ATTACHMENT_TYPE}
+          pending={pending}
+          title="첨부 파일"
+        />
+      )}
     </Modal>
   )
 }

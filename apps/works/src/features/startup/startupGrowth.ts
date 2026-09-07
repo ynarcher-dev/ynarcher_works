@@ -1,4 +1,5 @@
 import type { EntityRow } from '@/features/master/entityHooks'
+import { foldMonth } from '@/features/startup/startupMonth'
 
 /** 재무 지표 1건(연도 기준). */
 export interface FinanceEntry {
@@ -169,17 +170,20 @@ export function readGrowth(record: EntityRow): GrowthMetrics {
       finance: asArray(o.finance).map((e) => e as FinanceEntry).sort(byYearDesc),
       revenue: asArray(o.revenue).map((e) => e as RevenueEntry).sort(byYearDesc),
       employee: asArray(o.employee).map((e) => e as EmployeeEntry).sort(byYearDesc),
-      investment: asArray(o.investment).map((e) => e as InvestmentEntry).sort(byDateDesc),
+      // 월 값은 읽는 자리에서 접는다 — 일까지 붙은 옛 값은 월 선택기가 빈 칸으로 그린다.
+      investment: asArray(o.investment)
+        .map((e) => foldMonth(e as InvestmentEntry, 'date'))
+        .sort(byDateDesc),
       // 트랙션은 기준월 내림차순, 같은 달 안에서는 지표명순으로 묶어 같은 지표가 흩어지지 않게 한다.
       traction: asArray(o.traction)
-        .map((e) => e as TractionEntry)
+        .map((e) => foldMonth(e as TractionEntry, 'period'))
         .sort(
           (a, b) =>
             byPeriodDesc(a.period, b.period) ||
             String(a.metric ?? '').localeCompare(String(b.metric ?? '')),
         ),
       customers: asArray(o.customers)
-        .map((e) => e as CustomerEntry)
+        .map((e) => foldMonth(e as CustomerEntry, 'date'))
         .sort((a, b) => byPeriodDesc(a.date, b.date)),
     }
   }
@@ -189,7 +193,7 @@ export function readGrowth(record: EntityRow): GrowthMetrics {
 /** 비즈니스 현황을 날짜 내림차순으로 읽는다. */
 export function readBusinessStatus(record: EntityRow): BusinessStatusEntry[] {
   return asArray(record.business_status)
-    .map((e) => e as BusinessStatusEntry)
+    .map((e) => foldMonth(e as BusinessStatusEntry, 'date'))
     .sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? '')))
 }
 

@@ -1,5 +1,4 @@
-import { Badge, Button, cardText, InfoField, Modal, type BadgeTone } from '@ynarcher/ui'
-import { Link } from 'react-router-dom'
+import { Badge, Button, Card, cardText, InfoField, Modal, type BadgeTone } from '@ynarcher/ui'
 import { FUND_PORTFOLIO_CONTENT_KEY } from '@/features/admin/sensitiveContents'
 import { SensitiveValue } from '@/features/master/SensitiveValue'
 import { PhotoBox } from '@/features/networks/PhotoBox'
@@ -51,26 +50,19 @@ export function InvestmentDetailModal({
       open
       onClose={onClose}
       size="lg"
+      sectioned
       title="투자 집행 상세"
       footer={<Button onClick={() => onEdit(inv)}>수정</Button>}
     >
-      <div className="space-y-4">
+      <>
         {/* 헤더: 로고 + 이름·업종 배지 + 부제 + 상태·분류 칩 — STARTUP 상세 헤더 구성과 동일.
-            업종은 이름 옆(중립), 구분·라운드·관리현황은 부제 아래 칩 줄로 분리해 위계를 만든다. */}
+            업종은 이름 옆(중립), 구분·라운드·관리현황은 부제 아래 칩 줄로 분리해 위계를 만든다.
+            카드 밖에 서서 이 모달 전체가 어느 기업에 대한 것인지 먼저 답한다. */}
         <div className="flex items-center gap-5">
           <PhotoBox src={inv.startup_logo_url} />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              {inv.startup_id ? (
-                <Link
-                  to={`/startup/discovered/${inv.startup_id}`}
-                  className="text-title-md font-bold text-info underline underline-offset-2 hover:opacity-80"
-                >
-                  {inv.startup_name ?? '-'}
-                </Link>
-              ) : (
-                <h3 className="text-title-md font-bold text-gray-900">{inv.startup_name ?? '-'}</h3>
-              )}
+              <h3 className="text-title-md font-bold text-gray-900">{inv.startup_name ?? '-'}</h3>
               {inv.startup_industries.map((ind) => (
                 <Badge key={ind} tone="neutral">
                   {ind}
@@ -93,35 +85,39 @@ export function InvestmentDetailModal({
         </div>
 
         {/* 회사개요(startups 호출값) */}
-        <div className="grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-3">
-          <Info
-            label="대표자"
-            value={
-              <SensitiveValue
-                field="name"
-                contentKey={FUND_PORTFOLIO_CONTENT_KEY}
-                value={inv.startup_representative}
-                resourceType="fund_investment"
-                resourceId={inv.id}
-              />
-            }
-          />
-          <Info label="설립일" value={shortDate(inv.startup_founded_on)} />
-          <Info label="소재지" value={inv.startup_location || '-'} />
-        </div>
+        <Card title="회사 개요">
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+            <Info
+              label="대표자"
+              value={
+                <SensitiveValue
+                  field="name"
+                  contentKey={FUND_PORTFOLIO_CONTENT_KEY}
+                  value={inv.startup_representative}
+                  resourceType="fund_investment"
+                  resourceId={inv.id}
+                />
+              }
+            />
+            <Info label="설립일" value={shortDate(inv.startup_founded_on)} />
+            <Info label="소재지" value={inv.startup_location || '-'} />
+          </div>
+        </Card>
 
         {/* 투자 집행 정보 — 딜메이커는 집행액 우측(마지막 행). */}
-        <div className="grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-4 sm:grid-cols-3">
-          <Info label="투자펀드" value={fundName} />
-          <Info label="투자일" value={shortDate(inv.invested_at)} />
-          <Info label="라운드" value={inv.stage || '-'} />
-          <Info label="투자방식" value={inv.investment_method || '-'} />
-          <Info label="PRE VALUE" value={num(inv.valuation)} />
-          <Info label="POST VALUE" value={num(inv.post_valuation)} />
-          <Info label="집행액" value={num(inv.amount)} />
-          <Info label="딜메이커" value={inv.dealmaker_name || '-'} />
-        </div>
-      </div>
+        <Card title="투자 집행 정보">
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+            <Info label="투자펀드" value={fundName} />
+            <Info label="투자일" value={shortDate(inv.invested_at)} />
+            <Info label="라운드" value={inv.stage || '-'} />
+            <Info label="투자방식" value={inv.investment_method || '-'} />
+            <Info label="PRE VALUE" value={num(inv.valuation)} />
+            <Info label="POST VALUE" value={num(inv.post_valuation)} />
+            <Info label="집행액" value={num(inv.amount)} />
+            <Info label="딜메이커" value={inv.dealmaker_name || '-'} />
+          </div>
+        </Card>
+      </>
     </Modal>
   )
 }

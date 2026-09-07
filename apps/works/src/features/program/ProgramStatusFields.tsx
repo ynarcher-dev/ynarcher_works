@@ -53,9 +53,16 @@ export function ProgramStatusFields({
   onStatusChange,
   register,
 }: ProgramStatusFieldsProps) {
+  /*
+    세 칸은 폭을 나눠 갖지 않고 **각자 값만큼만** 차지한다(2026-09-06). 3등분 격자였을 때는
+    모달 폭(xl)이 그대로 셋으로 갈려 날짜 한 칸이 300px을 넘었고, 옆에 선 사업구분(w-48)과
+    크기가 어긋나 같은 층위의 칸들이 서로 다른 무게로 읽혔다. 날짜는 담기는 글자가 정해져 있어
+    더 준다고 더 담기지 않는다 — 남는 폭은 비워 두는 편이 '여기에 긴 값이 들어간다'는 거짓
+    신호를 주는 것보다 낫다.
+  */
   return (
-    <div className="grid grid-cols-3 gap-3">
-      <Field label="상태">
+    <div className="flex flex-wrap items-start gap-3">
+      <Field label="상태" className="w-48 shrink-0">
         <Select value={status} onChange={(e) => onStatusChange(e.target.value)}>
           {hasProposalStage ? (
             // 제안·운영을 묶어 보여주되 어느 쪽이든 바로 고를 수 있다. 묶음 이름이 곧 단계다.
@@ -73,10 +80,10 @@ export function ProgramStatusFields({
         </Select>
       </Field>
       {/* 담당자 배치 단계가 이 기간에서 산출되므로, 어느 상태에서든 기간은 필수다. */}
-      <Field label="시작일" required>
+      <Field label="시작일" required className="w-40 shrink-0">
         <Input type="date" {...register('start_date')} />
       </Field>
-      <Field label="종료일" required>
+      <Field label="종료일" required className="w-40 shrink-0">
         <Input type="date" {...register('end_date')} />
       </Field>
     </div>

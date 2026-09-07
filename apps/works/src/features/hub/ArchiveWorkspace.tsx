@@ -1,6 +1,6 @@
 import { Banner, Button, Checkbox, DataTable, EmptyValue, Field, IconButton, Input, PageHeader, Spinner, pinMark, useToast, type Column } from '@ynarcher/ui'
 import { Download } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { ArchiveDetailModal } from '@/features/hub/ArchiveDetailModal'
 import { NewBadge } from '@/features/hub/PostFlagBadges'
 import { isNewPost, type BoardPost } from '@/features/hub/boardData'
@@ -33,6 +33,8 @@ export interface ArchiveWorkspaceProps {
   /** 자료실 원장 id(board_posts.board_id). */
   boardId: string
   title: string
+  /** 목록 화면 왼쪽에 놓는 자료실 2차 사이드바. 등록·편집 화면에서는 숨긴다. */
+  navigation?: ReactNode
 }
 
 const PAGE_SIZE = 20
@@ -63,7 +65,7 @@ function DownloadCell({ material }: { material: Material | undefined }) {
   )
 }
 
-export function ArchiveWorkspace({ boardId, title }: ArchiveWorkspaceProps) {
+export function ArchiveWorkspace({ boardId, title, navigation }: ArchiveWorkspaceProps) {
   const [editing, setEditing] = useState<BoardPost | null | undefined>(undefined)
   const [opened, setOpened] = useState<BoardPost | null>(null)
   const [keyword, setKeyword] = useState('')
@@ -170,10 +172,13 @@ export function ArchiveWorkspace({ boardId, title }: ArchiveWorkspaceProps) {
         }
         actions={<Button onClick={() => setEditing(null)}>자료 등록</Button>}
       />
-      {isLoading ? (
-        <Spinner />
-      ) : (
-        <DataTable
+      <div className="flex min-h-0 flex-1 gap-5">
+        {navigation}
+        <div className="min-w-0 flex-1">
+          {isLoading ? (
+            <Spinner />
+          ) : (
+            <DataTable
           columns={columns}
           rows={pageRows}
           rowKey={(p) => p.id}
@@ -195,8 +200,10 @@ export function ArchiveWorkspace({ boardId, title }: ArchiveWorkspaceProps) {
             total: rows.length,
             onChange: setPage,
           }}
-        />
-      )}
+            />
+          )}
+        </div>
+      </div>
 
       <ArchiveDetailModal
         open={opened !== null}

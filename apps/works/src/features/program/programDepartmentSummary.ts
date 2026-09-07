@@ -7,14 +7,14 @@ export interface DepartmentRef {
 }
 
 export interface ProgramDepartmentSummary {
-  /** 대표로 적을 부서(메인). 표기는 호출부가 deptPathLabel로 만든다. */
+  /** 대표로 적을 부서(메인). 표기는 호출부가 부서 라벨 함수로 만든다. */
   mainDepartmentId: string
-  /** 메인 외 부서 수. 0이면 '외 N'을 붙이지 않는다. */
+  /** 메인 외 부서 수. 0이면 '+N'을 붙이지 않는다. */
   restCount: number
 }
 
 /**
- * 사업의 담당 부서 한 줄 요약 — 메인 부서 하나 + 나머지 '외 N'.
+ * 사업의 담당 부서 한 줄 요약 — 메인 부서 하나 + 나머지 '+N'.
  *
  * 목록 한 칸에 부서를 다 적으면 사업명보다 길어지므로, **메인 부서만 적고 나머지는 수로 접는다.**
  * 협업 부서의 이름을 고르는 규칙을 두지 않는 이유이기도 하다 — 협업비율이 같은 부서가 여럿일 때
@@ -39,11 +39,20 @@ export function summarizeProgramDepartments(
   return { mainDepartmentId: main.department_id, restCount: rest.size }
 }
 
-/** 요약 + 부서 표기 → 목록 한 칸 문자열(예: 'AC본부 > 밸류커넥트그룹 > 3팀 외 1'). */
+/**
+ * 요약 + 부서 표기 → 한 칸 문자열(예: '3팀 +1').
+ *
+ * 접힌 수를 '외 N'이 아니라 '+N'으로 적는 것은 표 안에서 같은 뜻이 한 모양이어야 해서다 —
+ * 담당자 열이 이미 '+N'으로 접고 있어 두 표기가 한 행에 나란히 서면 다른 뜻인지 되짚게 된다.
+ * '외'는 조사라 부서명 끝에 붙어 이름의 일부처럼 읽히기도 한다('경영지원1실 외').
+ *
+ * 부서를 어떻게 적을지는 이 함수가 정하지 않는다 — 칸에 보이는 값은 말단 하나(labelOf),
+ * 그 위에 올리는 툴팁은 전체 경로를 주면 같은 '+N'이 두 표기로 나온다.
+ */
 export function programDepartmentText(
   summary: ProgramDepartmentSummary,
-  pathLabelOf: (departmentId: string) => string,
+  labelOf: (departmentId: string) => string,
 ): string {
-  const label = pathLabelOf(summary.mainDepartmentId)
-  return summary.restCount > 0 ? `${label} 외 ${summary.restCount}` : label
+  const label = labelOf(summary.mainDepartmentId)
+  return summary.restCount > 0 ? `${label} +${summary.restCount}` : label
 }

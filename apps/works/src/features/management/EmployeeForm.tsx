@@ -1,5 +1,5 @@
-import { CardShell, Input, Select, useToast } from '@ynarcher/ui'
-import { useMemo, useState, type ReactNode } from 'react'
+import { CardShell, Field, Input, Select, useToast } from '@ynarcher/ui'
+import { useMemo, useState } from 'react'
 import { FormTopBar } from '@/components/FormTopBar'
 import { ROLE_OPTIONS } from '@/features/management/config'
 import { EmployeeNoteFields } from '@/features/management/EmployeeNoteFields'
@@ -12,27 +12,6 @@ import { useBranches, useSetUserBranches } from '@/features/office/branches/bran
 import { CareerEditor } from '@/features/management/CareerEditor'
 import { PhotoPicker } from '@/features/networks/PhotoPicker'
 import { parseBackground, type CareerData } from '@/features/management/careerConfig'
-
-/** 필드 래퍼(라벨 + 입력). NetworkForm/GlobalNetworkForm과 동일한 페이지 폼 스타일. */
-function Field({
-  label,
-  required,
-  children,
-}: {
-  label: string
-  required?: boolean
-  children: ReactNode
-}) {
-  return (
-    <div>
-      <label className="mb-1 block text-caption font-medium text-gray-700">
-        {label}
-        {required && <span className="text-brand"> *</span>}
-      </label>
-      {children}
-    </div>
-  )
-}
 
 function str(v: unknown): string {
   return typeof v === 'string' ? v : ''
@@ -202,11 +181,7 @@ export function EmployeeForm({ recordId, initial, onDone, onCancel, backTo }: Pr
             <HrTagSelect table="pay_step_tags" value={payStep} onChange={setPayStep} />
           </Field>
           <Field label="입사일">
-            <Input
-              type="date"
-              value={hireDate}
-              onChange={(e) => setHireDate(e.target.value)}
-            />
+            <Input type="date" value={hireDate} onChange={(e) => setHireDate(e.target.value)} />
           </Field>
           <Field label="연락처">
             <Input value={phone} onChange={(e) => setPhone(e.target.value)} />

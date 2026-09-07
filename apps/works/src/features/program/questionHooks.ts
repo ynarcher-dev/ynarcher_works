@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { SHARED_TABLES, useProgramWorkspace } from '@/features/program/workspace'
 
 /**
- * 사업 QNA(1:1 문의함) 데이터 접근 — 담당자 쪽. 질문은 게스트가 쓰고(INSERT 정책이 게스트
+ * 사업 Q&A(1:1 문의함) 데이터 접근 — 담당자 쪽. 질문은 게스트가 쓰고(INSERT 정책이 게스트
  * 전용) 담당자는 전체를 읽어 답변·소프트 삭제만 한다. 게스트에게는 본인 질문만 보이므로
  * 작성자 표시는 이 화면(WORKS)만의 요구다 — users 임베드로 이름을 얻는다.
  * 원장은 세 사업 워크스페이스가 공유하며 소속은 entity_key가 답한다(2026-09-03 통합).

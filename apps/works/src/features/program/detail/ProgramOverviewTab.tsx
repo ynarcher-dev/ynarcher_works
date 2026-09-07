@@ -35,7 +35,7 @@ const BASE_TABS: { key: LeftTab; label: string }[] = [
 
 /**
  * 프로그램 상세 개요(NETWORKS·STARTUP 상세와 동일한 2/3 + 1/3 카드섹션 컴포지션).
- * 좌측 본문(2/3): 기본 데이터 카드 → 서브 탭(프로그램 · 참여 기업 · 참여 전문가 ┃ 사업개요 · 공지사항 · QNA).
+ * 좌측 본문(2/3): 기본 데이터 카드 → 서브 탭(프로그램 · 참여 기업 · 참여 전문가 ┃ 사업개요 · 공지사항 · Q&A).
  * 구분선 뒤 세 탭은 **게스트에게 그대로 나가는 화면**이라 내부 운영 탭과 층이 다르다
  * (2026-09-01 사용자 지정 순서) — 원장을 둔 워크스페이스(AC)에서만 서며, 기본 탭은 언제나
  * 첫 탭인 프로그램다.
@@ -64,13 +64,13 @@ export function ProgramOverviewTab({
 }) {
   const config = useProgramWorkspace()
   const { data: contributions } = useProgramContributions(program.id)
-  // 게스트향 화면 3종(사업개요·공지사항·QNA)은 내부 운영 탭 뒤에 구분선으로 갈라 세운다
+  // 게스트향 화면 3종(사업개요·공지사항·Q&A)은 내부 운영 탭 뒤에 구분선으로 갈라 세운다
   // — 첫 줄에만 divider를 달아 묶음의 시작을 알린다. 2026-09-03 원장 통합 이후 세 사업
   // 워크스페이스가 모두 운용하므로 워크스페이스별 노출 분기는 없다.
   const guestTabs: { key: LeftTab; label: string }[] = [
     { key: 'intro', label: '사업개요' },
     { key: 'announcements', label: '공지사항' },
-    { key: 'qna', label: 'QNA' },
+    { key: 'qna', label: 'Q&A' },
   ]
   const leftTabs = [
     ...BASE_TABS,
@@ -83,16 +83,10 @@ export function ProgramOverviewTab({
       <div className="space-y-4 lg:col-span-2">
         <ProgramInfoCard program={program} />
         <div>
-          <Tabs
-            items={leftTabs}
-            value={leftTab}
-            onChange={(key) => setLeftTab(key as LeftTab)}
-          />
+          <Tabs items={leftTabs} value={leftTab} onChange={(key) => setLeftTab(key as LeftTab)} />
           <div className="mt-4">
             {leftTab === 'intro' && <ProgramIntroPanel programId={program.id} />}
-            {leftTab === 'announcements' && (
-              <ProgramAnnouncementsPanel programId={program.id} />
-            )}
+            {leftTab === 'announcements' && <ProgramAnnouncementsPanel programId={program.id} />}
             {leftTab === 'qna' && <ProgramQnaPanel programId={program.id} />}
             {leftTab === 'modules' && (
               <ModuleBoardCard program={program} onOpenModule={onOpenModule} />
