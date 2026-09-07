@@ -17,13 +17,12 @@ import { NETWORK_TABLE, NETWORK_TARGET_TYPE } from '@/features/networks/config'
 export type NetworkMinuteLinkType = typeof NETWORK_TARGET_TYPE
 
 /**
- * 연동 가능한 대상 종류. 사업 원장의 entityKey(program/ma_program/project_program) +
+ * 연동 가능한 대상 종류. 사업 원장의 entityKey(program/ma_program) +
  * startup + fund + NETWORKS + M&A BUYER·SELLER.
  */
 export type MinuteLinkTargetType =
   | 'program'
   | 'ma_program'
-  | 'project_program'
   | 'startup'
   | 'fund'
   | 'ma_buyer'
@@ -50,11 +49,10 @@ export interface MinuteLinkTargetMeta {
   toPath: (id: string) => string
 }
 
-/** 종류 선택 순서(사업 3종 → 스타트업 → 펀드 → 네트워크). */
+/** 종류 선택 순서(사업 2종 → 스타트업 → 펀드 → 네트워크). */
 export const MINUTE_LINK_TARGET_TYPES: MinuteLinkTargetType[] = [
   'program',
   'ma_program',
-  'project_program',
   'startup',
   'fund',
   'network',
@@ -79,13 +77,6 @@ export const MINUTE_LINK_TARGETS: Record<MinuteLinkTargetType, MinuteLinkTargetM
     titleColumn: 'title',
     codeColumn: 'code',
     toPath: (id) => `/mna/programs/${id}`,
-  },
-  project_program: {
-    kindLabel: 'PROJECT',
-    table: 'project_programs',
-    titleColumn: 'title',
-    codeColumn: 'code',
-    toPath: (id) => `/project/programs/${id}`,
   },
   startup: {
     kindLabel: 'STARTUP',

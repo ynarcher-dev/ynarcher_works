@@ -128,10 +128,10 @@ describe('AC — 사업 목록 한 줄', () => {
   })
 })
 
-describe('실행 라인 넷 — 사업 3종이 같은 줄 이름을 공유한다', () => {
+describe('실행 라인 셋 — 사업 2종이 같은 줄 이름을 공유한다', () => {
   it('어느 원장인지는 스위처 항목이 답하므로 줄 이름은 한 벌이다', () => {
-    const user = userWith({ ac: 'write', mna: 'read', project: 'read' })
-    for (const id of ['ac', 'mna', 'project']) {
+    const user = userWith({ ac: 'write', mna: 'read' })
+    for (const id of ['ac', 'mna']) {
       // M&A/PE에는 딜 아래로 거래상대 원장 두 줄이 더 서므로 첫 줄만 견준다 — 견주는 것은
       // 그 워크스페이스가 하는 일의 이름이고, 그 자리는 어디서나 맨 위 한 줄이다.
       const rows = buildNavGroups(user, itemOf(id)).flatMap((g) =>
@@ -141,11 +141,11 @@ describe('실행 라인 넷 — 사업 3종이 같은 줄 이름을 공유한다
     }
   })
 
-  it('넷이 각자 자기 항목으로 서고 도착지는 자기 루트 경로다', () => {
-    const user = userWith({ ac: 'write', mna: 'read', project: 'read', fund: 'read' })
+  it('셋이 각자 자기 항목으로 서고 도착지는 자기 루트 경로다', () => {
+    const user = userWith({ ac: 'write', mna: 'read', fund: 'read' })
     // DATABASE는 서지 않는다 — 그 항목이 덮는 구획은 startup·networks 둘뿐이고, 딜 권한은
     // 이제 M&A/PE 한 자리만 연다(2026-09-07 M&A BUYER 이관).
-    expect(visibleWorkspaces(user).map((w) => w.id)).toEqual(['ac', 'project', 'mna', 'fund'])
+    expect(visibleWorkspaces(user).map((w) => w.id)).toEqual(['ac', 'mna', 'fund'])
     expect(landingPath(user, itemOf('fund'))).toBe('/fund')
   })
 })

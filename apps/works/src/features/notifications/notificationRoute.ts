@@ -29,8 +29,6 @@ export function notificationRoute(targetType: string, targetId: string): string 
       return `/ac/programs/${targetId}`
     case 'ma_program':
       return `/mna/programs/${targetId}`
-    case 'project_program':
-      return `/project/programs/${targetId}`
     case 'board_post':
       // 게시글은 소속 게시판 탭 안에서 열린다(/office?tab=<slug>&post=<id>). 알림은 slug를 모르므로
       // post만 실어 보내고, OfficePage가 글의 게시판을 찾아 탭을 보정한다.

@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { AC_WORKSPACE } from '@/features/ac/AcWorkspace'
 import { MNA_WORKSPACE } from '@/features/mna/MnaWorkspace'
-import { PROJECT_WORKSPACE } from '@/features/project/ProjectWorkspace'
 import type { ProgramManagerRole } from '@/features/program/hooks'
 import type { ProgramWorkspaceConfig, ProgramWorkspaceKey } from '@/features/program/workspace'
 import { listPathOf } from '@/lib/listScope'
@@ -10,7 +9,7 @@ import { listPathOf } from '@/lib/listScope'
 /**
  * 대시보드가 세는 '나의 운영' 한 건 — **어느 워크스페이스에서 어느 자리인가**, 둘뿐이다.
  *
- * 원장은 넷(AC·M&A·PROJECT 사업 + FUND 펀드)이고 컬럼도 상태값도 서로 다르지만, 이 값을
+ * 원장은 셋(AC·M&A 사업 + FUND 펀드)이고 컬럼도 상태값도 서로 다르지만, 이 값을
  * 읽는 곳은 「나의 워크스페이스」 타일 하나이고 타일이 하는 일은 세는 것뿐이다. 제목·기간·
  * 상태·투입률까지 실어 올리던 시절이 있었는데(2026-08-26 이전, '참여 중인 운영' 목록),
  * 그 목록이 위 타일과 같은 물음에 두 번 답하고 있어 걷어냈다. 각 원장의 상세는 타일이 보내는
@@ -21,7 +20,7 @@ export interface BusinessOperation {
   roleKey: OperationRoleKey
 }
 
-/** 사업 3종 + 펀드. 펀드는 사업 원장(features/program)이 아니므로 키를 따로 잇는다. */
+/** 사업 2종 + 펀드. 펀드는 사업 원장(features/program)이 아니므로 키를 따로 잇는다. */
 export type OperationWorkspaceKey = ProgramWorkspaceKey | 'fund'
 
 /**
@@ -60,7 +59,6 @@ export const OPERATION_ROLE_LABEL: Record<OperationRoleKey, string> = {
 export const OPERATION_MINE_PATH: Record<OperationWorkspaceKey, string> = {
   ac: listPathOf(AC_WORKSPACE.basePath, 'mine'),
   mna: listPathOf(MNA_WORKSPACE.basePath, 'mine'),
-  project: listPathOf(PROJECT_WORKSPACE.basePath, 'mine'),
   fund: listPathOf('/fund', 'mine'),
 }
 
@@ -71,7 +69,7 @@ interface ManagerRow {
   end_date: string
 }
 
-const SOURCES: ProgramWorkspaceConfig[] = [AC_WORKSPACE, MNA_WORKSPACE, PROJECT_WORKSPACE]
+const SOURCES: ProgramWorkspaceConfig[] = [AC_WORKSPACE, MNA_WORKSPACE]
 
 const ACTIVE_STATUSES = new Set(['PROPOSED', 'SELECTED', 'DRAFT', 'OPERATING', 'RECRUITING', 'SCREENING', 'DEMO_DAY'])
 

@@ -3,13 +3,13 @@ import { supabase } from '@/lib/supabase'
 import { MINUTE_LINK_TARGETS, type MinuteLinkPickKind } from '@/features/office/minutes/minuteLinks'
 
 /**
- * 결재 문서에 걸 수 있는 사업 원장 3종. 값은 DB의 다형 키(approval_program_links.target_type)이자
- * 사업 워크스페이스의 entityKey이며, 셋 다 CHECK 제약으로 고정되어 있다.
+ * 결재 문서에 걸 수 있는 사업 원장 2종. 값은 DB의 다형 키(approval_program_links.target_type)이자
+ * 사업 워크스페이스의 entityKey이며, 둘 다 CHECK 제약으로 고정되어 있다.
  */
-export type ProgramLinkType = 'program' | 'ma_program' | 'project_program'
+export type ProgramLinkType = 'program' | 'ma_program'
 
-/** 종류를 늘 이 순서로 놓는다(AC → M&A → PROJECT). */
-export const PROGRAM_LINK_TYPES: ProgramLinkType[] = ['program', 'ma_program', 'project_program']
+/** 종류를 늘 이 순서로 놓는다(AC → M&A). */
+export const PROGRAM_LINK_TYPES: ProgramLinkType[] = ['program', 'ma_program']
 
 /**
  * 원장 테이블·상세 경로·라벨은 회의록 연동이 이미 소유한 메타(MINUTE_LINK_TARGETS)를

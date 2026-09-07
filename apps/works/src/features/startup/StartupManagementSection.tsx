@@ -1,7 +1,6 @@
 import { hasWorkspaceRead, useAuthStore } from '@/auth/authStore'
 import { AC_WORKSPACE } from '@/features/ac/AcWorkspace'
 import { MNA_WORKSPACE } from '@/features/mna/MnaWorkspace'
-import { PROJECT_WORKSPACE } from '@/features/project/ProjectWorkspace'
 import type { ProgramWorkspaceConfig } from '@/features/program/workspace'
 import { SectionHeading } from '@/features/startup/SectionHeading'
 import { StartupManagerCard } from '@/features/startup/StartupManagerCard'
@@ -52,9 +51,8 @@ export function StartupManagementSection({
 }) {
   const ac = useParticipation(AC_WORKSPACE, '참여 사업', startupId)
   const mna = useParticipation(MNA_WORKSPACE, '참여 M&A', startupId)
-  const project = useParticipation(PROJECT_WORKSPACE, '참여 프로젝트', startupId)
 
-  const cards = [ac, mna, project]
+  const cards = [ac, mna]
   // 조회 중에는 아직 아무것도 판정하지 않는다 — 빈 카드가 잠깐 떴다 사라지는 편보다
   // 결론이 난 뒤 한 번에 서는 편이 낫다.
   if (cards.some((c) => c.isLoading)) return null

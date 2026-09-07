@@ -169,15 +169,14 @@ export function EmployeeActivitySection({ userId }: { userId: string }) {
   // 훅은 배열로 접지 않고 한 줄씩 부른다 — 호출 순서·개수가 렌더마다 고정되어야 한다.
   const ac = useEmployeePrograms('ac', userId)
   const mna = useEmployeePrograms('mna', userId)
-  const project = useEmployeePrograms('project', userId)
 
   // 조회 중에는 아직 아무것도 판정하지 않는다 — 빈 카드가 잠깐 떴다 사라지는 편보다
   // 결론이 난 뒤 한 번에 서는 편이 낫다.
-  if ([startups, funds, ac, mna, project].some((q) => q.isLoading)) return null
+  if ([startups, funds, ac, mna].some((q) => q.isLoading)) return null
 
   const startupRows = startups.data ?? []
   const fundRows = funds.data ?? []
-  // 사업 카드 3종은 원장만 다르고 표가 답하는 물음은 같다(features/program 공유 원칙과 같은 축).
+  // 사업 카드 2종은 원장만 다르고 표가 답하는 물음은 같다(features/program 공유 원칙과 같은 축).
   const programCards: ProgramCard[] = [
     {
       title: '운영사업',
@@ -192,13 +191,6 @@ export function EmployeeActivitySection({ userId }: { userId: string }) {
       basePath: '/mna/programs',
       columns: DEAL_PROGRAM_COLUMNS,
       rows: mna.data ?? [],
-    },
-    {
-      title: '프로젝트',
-      workspace: 'project',
-      basePath: '/project/programs',
-      columns: DEAL_PROGRAM_COLUMNS,
-      rows: project.data ?? [],
     },
   ]
   const filledPrograms = programCards.filter((c) => c.rows.length > 0)

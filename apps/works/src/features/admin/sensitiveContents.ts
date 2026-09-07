@@ -157,7 +157,6 @@ export const SENSITIVE_CONTENT_GROUPS: readonly SensitiveContentGroup[] = [
       },
     ],
   },
-  { key: 'project', label: 'PROJECT', contents: programContents('project', '프로젝트') },
   {
     key: 'fund',
     label: 'FUND',

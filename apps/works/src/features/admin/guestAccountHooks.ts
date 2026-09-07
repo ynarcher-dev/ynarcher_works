@@ -16,7 +16,7 @@ import type { GuestUserType } from '@/lib/userTypes'
 /** 이 계정이 걸려 있는 사업 한 건. RPC가 접어 준 jsonb 배열의 원소. */
 export interface GuestAccountProgram {
   program_id: string
-  entity_key: 'program' | 'ma_program' | 'project_program'
+  entity_key: 'program' | 'ma_program'
   workspace: string
   code: string | null
   title: string | null

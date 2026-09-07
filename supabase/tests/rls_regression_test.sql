@@ -261,10 +261,10 @@ select is(
 select is(
   (select count(*)::int from pg_trigger
     where tgname in ('trg_programs_assign_code', 'trg_ma_programs_assign_code',
-                     'trg_project_programs_assign_code', 'trg_funds_assign_code')
+                     'trg_funds_assign_code')
       and not tgisinternal),
-  4,
-  '케이스12d: 코드 부여 트리거가 사업 3종·펀드에 모두 붙어 있다'
+  3,
+  '케이스12d: 코드 부여 트리거가 사업 2종·펀드에 모두 붙어 있다'
 );
 
 -- 케이스 13: 투자기업은 등록(INSERT)으로 만들 수 없다 --------------------------

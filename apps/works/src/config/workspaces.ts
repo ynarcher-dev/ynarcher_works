@@ -109,25 +109,23 @@ export const WORKSPACES: WorkspaceNavItem[] = [
     implemented: true,
     description: '스타트업·네트워크 원장',
   },
-  // 실행 라인 — 사업·딜·프로젝트·펀드. 넷이 각각 자기 항목으로 선다(2026-09-07).
+  // 실행 라인 — 사업·딜·펀드. 셋이 각각 자기 항목으로 선다.
   //
-  // 순서는 조직 순이다(2026-09-06 사용자 지정) — AC사업 / 글로벌·신사업 / M&A팀·PE / 투자실.
+  // 순서는 조직 순이다(2026-09-06 사용자 지정) — AC사업 / M&A팀·PE / 투자실.
   // 항목명은 원장 이름(영문)으로 두고 조직명은 화면 안쪽 문구가 답한다: 나머지 항목이 전부
   // 영문이라 여기만 한글이면 한 목록 안에서 표기가 섞인다.
+  //
+  // PROJECT는 2026-09-07에 폐지하고 AC로 합쳤다 — 열린 이래 사업 0건이라 실제로 쓰인 적이
+  // 없는데, 줄이 둘이면 프로젝트 성격의 일이 들어올 때마다 어디에 넣을지를 매번 판단해야
+  // 하고 두 곳에 나뉘어 쌓인 뒤에는 어느 쪽이 전체인지 답할 근거가 없다. 글로벌·신사업도
+  // 이 항목에서 관리한다.
   {
     id: 'ac',
     label: 'AC',
     sections: solo('ac', '/ac'),
     implemented: true,
     divider: true,
-    description: '액셀러레이팅 사업 관리',
-  },
-  {
-    id: 'project',
-    label: 'PROJECT',
-    sections: solo('project', '/project'),
-    implemented: true,
-    description: '수행 프로젝트 관리',
+    description: '액셀러레이팅·수행 사업 관리',
   },
   // M&A/PE — 딜 한 줄 + 거래상대 원장 두 줄(2026-09-07 이관·신설).
   //

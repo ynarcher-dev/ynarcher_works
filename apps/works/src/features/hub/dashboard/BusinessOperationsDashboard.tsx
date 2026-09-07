@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { BriefcaseBusiness, FolderKanban, Target, WalletCards, type LucideIcon } from 'lucide-react'
+import { BriefcaseBusiness, Target, WalletCards, type LucideIcon } from 'lucide-react'
 import { Card, EmptyState, Skeleton, SummaryTile, type SummaryTileTone } from '@ynarcher/ui'
 import { hasWorkspaceRead, useAuthStore } from '@/auth/authStore'
 import { MyDatabaseCard } from './MyDatabaseCard'
@@ -33,10 +33,6 @@ const WORKSPACE_SUMMARIES: {
   {
     key: 'mna', label: 'M&A·PE', caption: '딜 운영', icon: BriefcaseBusiness,
     tone: 'purple', roles: ['PM', 'MEMBER'],
-  },
-  {
-    key: 'project', label: 'PROJECT', caption: '프로젝트', icon: FolderKanban,
-    tone: 'mint', roles: ['PM', 'MEMBER'],
   },
   // 펀드는 사업 원장(features/program)이 아니지만 "내가 지금 무엇을 굴리고 있는가"라는
   // 물음에는 함께 답해야 한다 — 운용역에게는 펀드가 곧 자기 운영이라, 이 칸이 없으면

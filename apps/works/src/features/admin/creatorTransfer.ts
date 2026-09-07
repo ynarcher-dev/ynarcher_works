@@ -24,7 +24,6 @@ export const CREATOR_LEDGERS: CreatorLedger[] = [
   { table: 'networks', label: '네트워크', nameColumn: 'name', group: '데이터베이스' },
   { table: 'programs', label: 'AC 사업', nameColumn: 'title', group: '워크스페이스' },
   { table: 'ma_programs', label: 'M&A/PE 딜', nameColumn: 'title', group: '워크스페이스' },
-  { table: 'project_programs', label: '프로젝트', nameColumn: 'title', group: '워크스페이스' },
   { table: 'funds', label: '펀드', nameColumn: 'name', group: '워크스페이스' },
 ]
 

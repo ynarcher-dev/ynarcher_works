@@ -94,13 +94,12 @@ export function useEmployeeStartups(userId: string | undefined) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * 사업 원장 3종은 스키마가 같아 조회도 하나로 쓴다(features/program 공유 원칙과 같은 이유).
+ * 사업 원장 2종은 스키마가 같아 조회도 하나로 쓴다(features/program 공유 원칙과 같은 이유).
  * 워크스페이스별 차이는 테이블명·임베드 FK명뿐이다.
  */
 const PROGRAM_LEDGERS = {
   ac: { managers: 'program_managers', programs: 'programs', entityKey: 'program' },
   mna: { managers: 'ma_program_managers', programs: 'ma_programs', entityKey: 'ma_program' },
-  project: { managers: 'project_program_managers', programs: 'project_programs', entityKey: 'project_program' },
 } as const
 
 export type ProgramLedgerKey = keyof typeof PROGRAM_LEDGERS

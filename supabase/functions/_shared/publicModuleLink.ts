@@ -26,10 +26,9 @@ export type { LinkDenyReason } from './publicModuleLinkGate.ts'
 const LEDGERS = {
   program: 'programs',
   ma_program: 'ma_programs',
-  project_program: 'project_programs',
 } as const
 
-/** 세 워크스페이스가 공유하는 통합 원장. 소속은 테이블 이름이 아니라 entity_key가 답한다. */
+/** 사업 워크스페이스들이 공유하는 통합 원장. 소속은 테이블 이름이 아니라 entity_key가 답한다. */
 const SHARED = { modules: 'program_modules', posts: 'program_posts', links: 'program_links' } as const
 
 export type EntityKey = keyof typeof LEDGERS

@@ -219,8 +219,6 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       ],
     },
   ],
-  // PROJECT도 AC와 동일한 사업 원장 구조(features/program)를 공유한다.
-  project: programSubnav(),
   // OFFICE: 임직원 정보·전사 캘린더 + 게시판(공지사항 고정 + 일반, 아코디언 없이 평탄 나열).
   // 신규 게시판은 모두 이곳에 생성·노출된다.
   office: [

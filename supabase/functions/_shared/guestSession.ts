@@ -10,7 +10,7 @@ import { verifyJwt } from './crypto.ts'
 import { PROGRAM_LEDGERS, type ProgramEntityKey } from './programLedger.ts'
 
 /** 사업 맥락으로 인정하는 종류. 장래의 fund 맥락은 여기 들지 않는다. */
-const PROGRAM_CONTEXTS = new Set(['program', 'ma_program', 'project_program'])
+const PROGRAM_CONTEXTS = new Set(['program', 'ma_program'])
 
 export interface GuestSessionUser {
   id: string

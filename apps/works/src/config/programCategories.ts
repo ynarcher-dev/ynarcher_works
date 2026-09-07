@@ -38,9 +38,6 @@ export const MNA_CATEGORIES: readonly ProgramCategoryOption[] = [
   { value: 'ETC', label: '기타', tone: 'neutral' },
 ]
 
-/** PROJECT 사업구분: 글로벌/신사업/기타. */
-export const PROJECT_CATEGORIES: readonly ProgramCategoryOption[] = [
-  { value: 'GLOBAL', label: '글로벌', tone: 'info' },
-  { value: 'NEW_BIZ', label: '신사업', tone: 'success' },
-  { value: 'ETC', label: '기타', tone: 'neutral' },
-]
+// PROJECT 사업구분(글로벌/신사업/기타)은 2026-09-07 워크스페이스 폐지와 함께 걷었다.
+// 프로젝트 성격의 건도 AC 원장에 들어오며 분류는 위 AC 5종을 쓴다 — 폐지 시점에 PROJECT
+// 원장이 0건이라 이 세 값으로 저장된 행 자체가 없었다.

@@ -198,7 +198,6 @@ export function useDeleteSystemEvent() {
 export interface HubSummary {
   ac: { operating: number; total: number }
   mna: { operating: number; total: number }
-  project: { operating: number; total: number }
   fund: { aum: number; drawn: number }
   management: { pending: number; total: number }
   networks: {
@@ -229,7 +228,6 @@ export function useHubSummary() {
       const [
         programs,
         deals,
-        projects,
         funds,
         approvals,
         managers,
@@ -238,9 +236,8 @@ export function useHubSummary() {
         partners,
       ] = await Promise.all([
         supabase.from('programs').select('status').is('deleted_at', null),
-        // M&A/PROJECT는 AC와 동일한 사업 원장 구조로 재편되어 상태 기준으로 집계한다.
+        // M&A는 AC와 동일한 사업 원장 구조라 상태 기준으로 집계한다.
         supabase.from('ma_programs').select('status').is('deleted_at', null),
-        supabase.from('project_programs').select('status').is('deleted_at', null),
         supabase.from('funds').select('total_commitment, drawn_amount').is('deleted_at', null),
         supabase.from('approval_documents').select('status').is('deleted_at', null),
         supabase
@@ -267,7 +264,6 @@ export function useHubSummary() {
 
       const pRows = programs.data ?? []
       const dRows = deals.data ?? []
-      const prjRows = projects.data ?? []
       const fRows = funds.data ?? []
       const aRows = approvals.data ?? []
 
@@ -279,10 +275,6 @@ export function useHubSummary() {
         mna: {
           operating: dRows.filter((d) => d.status === 'OPERATING').length,
           total: dRows.length,
-        },
-        project: {
-          operating: prjRows.filter((p) => p.status === 'OPERATING').length,
-          total: prjRows.length,
         },
         fund: {
           aum: fRows.reduce((s, f) => s + Number(f.total_commitment ?? 0), 0),

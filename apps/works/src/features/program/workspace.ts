@@ -6,10 +6,14 @@ export type { ProgramCategoryOption }
 
 /**
  * 사업(Program) 공용 모듈을 사용하는 워크스페이스 키.
- * AC/M&A/PROJECT는 원장 테이블이 물리적으로 분리되어 있으나 화면·운영 규칙은 동일하므로,
+ * AC/M&A는 사업 본체 원장이 물리적으로 분리되어 있으나 화면·운영 규칙은 동일하므로,
  * 차이를 본 config 하나로 흡수하고 features/program 전체를 공유한다.
+ *
+ * 2026-09-07까지는 셋이었다(PROJECT 포함). PROJECT는 열린 이래 사업 0건이라 폐지하고
+ * AC로 합쳤다 — 이 축에 값을 하나 더 두는 비용은 config 한 벌이 아니라, 사업이 들어올
+ * 때마다 어디에 넣을지 판단하는 일과 사업을 가로지르는 조회가 하나 더 붙는 일이다.
  */
-export type ProgramWorkspaceKey = 'ac' | 'mna' | 'project'
+export type ProgramWorkspaceKey = 'ac' | 'mna'
 
 /**
  * 워크스페이스별 원장 테이블·RPC·분류 정의.
@@ -21,13 +25,13 @@ export interface ProgramWorkspaceConfig {
    * 다형 테이블(entity_contributions.entity_table / entity_feedback.target_type)에서
    * 이 워크스페이스의 사업을 가리키는 값.
    *
-   * 세 워크스페이스가 'program' 하나를 공유하던 것을 원장별로 나눴다 — 공유하면 RLS가 값만
-   * 보고는 소유 워크스페이스를 판정할 수 없어, M&A·PROJECT 사용자가 자기 사업의 변동 이력과
+   * 워크스페이스들이 'program' 하나를 공유하던 것을 원장별로 나눴다 — 공유하면 RLS가 값만
+   * 보고는 소유 워크스페이스를 판정할 수 없어, M&A 사용자가 자기 사업의 변동 이력과
    * 코멘트를 못 보는 문제가 있었다. 근거: 20260721130000_program_entity_key_split.sql
    *
    * 첨부(attachments)는 정책이 워크스페이스 무관이라 분리하지 않고 'program'을 그대로 쓴다.
    */
-  entityKey: 'program' | 'ma_program' | 'project_program'
+  entityKey: 'program' | 'ma_program'
   /** 라우트 베이스 경로. 목록 `${basePath}`, 상세 `${basePath}/programs/:id`. */
   basePath: string
   /**
@@ -42,8 +46,8 @@ export interface ProgramWorkspaceConfig {
   /**
    * 워크스페이스별로 갈려 있는 원장만 여기 적는다.
    * 모듈 계열·명부·게스트향 원장은 2026-09-03에 한 벌로 통합되어 `SHARED_TABLES`가 소유하며,
-   * 그 행의 소속은 테이블 이름이 아니라 `entity_key`가 답한다. 같은 이름을 세 config에
-   * 세 번 적으면 "갈릴 수 있는 값"으로 읽혀, 실제로는 하나인 원장을 갈라 놓으려는 시도가 는다.
+   * 그 행의 소속은 테이블 이름이 아니라 `entity_key`가 답한다. 같은 이름을 워크스페이스마다
+   * 다시 적으면 "갈릴 수 있는 값"으로 읽혀, 실제로는 하나인 원장을 갈라 놓으려는 시도가 는다.
    */
   tables: {
     programs: string
@@ -80,16 +84,16 @@ export interface ProgramWorkspaceConfig {
 }
 
 /**
- * 세 워크스페이스가 공유하는 통합 원장(2026-09-03).
+ * 사업 워크스페이스들이 공유하는 통합 원장(2026-09-03).
  *
  * 종전에는 모듈·배정·글·링크·명부가 워크스페이스마다 한 벌씩 있었고, 그 결과 정형 운영 모듈
- * 8종의 내용물 원장 30여 종이 전부 AC 모듈 원장에 FK로 매여 M&A·PROJECT에서는 모듈을 만들어도
+ * 8종의 내용물 원장 30여 종이 전부 AC 모듈 원장에 FK로 매여 M&A에서는 모듈을 만들어도
  * 안을 채울 수 없었다. 원장을 한 벌로 합치고 **행마다 `entity_key`가 소속을 답하게** 하면서,
  * 그 위에 올라가는 기능은 워크스페이스를 가리지 않게 되었다.
  *
  * 그래서 화면이 지켜야 할 규칙이 하나 생긴다 — **사업으로 좁히지 않는 조회에는 반드시
  * `entity_key`를 함께 건다.** 사업 id로 좁히는 조회는 id 자체가 한 원장에만 있으므로 안전하지만,
- * (스타트업 참여 이력처럼) 사업을 가로지르는 조회는 세 워크스페이스의 행을 한꺼번에 집어 온다.
+ * (스타트업 참여 이력처럼) 사업을 가로지르는 조회는 모든 워크스페이스의 행을 한꺼번에 집어 온다.
  */
 export const SHARED_TABLES = {
   modules: 'program_modules',

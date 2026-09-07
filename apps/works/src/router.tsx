@@ -26,11 +26,6 @@ import { StartupPage } from '@/features/startup/StartupPage'
 import { StyleguidePage } from '@/features/styleguide/StyleguidePage'
 import { StartupDetailPage } from '@/features/startup/StartupDetailPage'
 import { StartupCreatePage } from '@/features/startup/StartupCreatePage'
-import {
-  ProjectBulkPage,
-  ProjectProgramDetailPage,
-  ProjectWorkspacePage,
-} from '@/features/project/ProjectWorkspace'
 import { LoginPage } from '@/pages/LoginPage'
 import { RootLayout } from '@/pages/RootLayout'
 
@@ -248,30 +243,6 @@ export const router = createBrowserRouter([
           },
           // 디자인 시스템 규격 확인용 내부 페이지. 메뉴에는 노출하지 않고 URL로만 진입한다.
           { path: 'styleguide', element: <StyleguidePage /> },
-          {
-            path: 'project',
-            element: (
-              <RequireWorkspace workspace="project">
-                <ProjectWorkspacePage />
-              </RequireWorkspace>
-            ),
-          },
-          {
-            path: 'project/bulk',
-            element: (
-              <RequireWorkspace workspace="project">
-                <ProjectBulkPage />
-              </RequireWorkspace>
-            ),
-          },
-          {
-            path: 'project/programs/:id',
-            element: (
-              <RequireWorkspace workspace="project">
-                <ProjectProgramDetailPage />
-              </RequireWorkspace>
-            ),
-          },
           {
             path: 'management',
             element: (

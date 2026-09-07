@@ -230,7 +230,7 @@ async function searchNetworks(kw: string, overrides: MaskOverrides): Promise<Sea
 }
 
 interface ProgramSearchSpec {
-  table: 'programs' | 'ma_programs' | 'project_programs'
+  table: 'programs' | 'ma_programs'
   workspace: string
   badge: string
   basePath: string
@@ -240,13 +240,6 @@ interface ProgramSearchSpec {
 const PROGRAM_SPECS: ProgramSearchSpec[] = [
   { table: 'programs', workspace: 'AC', badge: '사업', basePath: '/ac', tone: 'info' },
   { table: 'ma_programs', workspace: 'M&A', badge: '딜', basePath: '/mna', tone: 'warning' },
-  {
-    table: 'project_programs',
-    workspace: 'PROJECT',
-    badge: '프로젝트',
-    basePath: '/project',
-    tone: 'neutral',
-  },
 ]
 
 interface ProgramRow {

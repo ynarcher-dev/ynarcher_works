@@ -337,18 +337,21 @@
 - [x] 인사 기준정보 태그(직책·직급·호봉)를 MANAGEMENT에서 ADMIN '태그 관리'로 이관 <!-- 마이그레이션 불필요(메뉴 소유 이동, DB 정책 무변경). 세 원장 모두 쓰기 정책이 app.is_admin() 하나뿐이라 MANAGEMENT에 두면 그 워크스페이스 사용자는 열람만 할 수 있었고, 기준정보를 고치러 갈 곳이 두 군데로 갈렸다. tagConfig.ts에서 owner 축(admin/management) 자체를 걷어냈다 — 한쪽이 비면 남는 것은 분기 코드뿐이라, ADMIN_TAG_CONFIGS = TAG_CONFIGS 전체가 되고 tagConfigOf(tab)는 인자 하나로 준다. 세 항목은 선언 목록 끝에 함께 둔다(앞의 태그가 전사 마스터를 가리키는 데 반해 이 셋은 임직원 표기를 정하는 한 묶음이다). ManagementPage에서 TagAdminPanel 렌더를 제거하고 옛 링크(?tab=positions 등)는 경영 현황으로 받는다. 임직원 등록·수정 화면의 직책·직급·호봉 선택(HrTagSelect)은 그대로이며 선택지 원장을 고치는 자리만 옮겼다. 사이드바 아이콘 3종도 ADMIN 태그 그룹 블록으로 이동. tsc/vitest(219)/eslint 통과 -->
 
 
-## Phase 11. PROJECT 워크스페이스
+## Phase 11. PROJECT 워크스페이스 (2026-09-07 폐지 — AC로 통합)
 
-> **참고 문서**: [3_8_workspace_project.md](../docs_planning/3_8_workspace_project.md)
+> **참고 문서**: 없음. `3_8_workspace_project.md`는 폐지와 함께 삭제했습니다. 사업 워크스페이스의 정본은 [3_4_workspace_ac.md](../docs_planning/3_4_workspace_ac.md)입니다.
+>
+> 아래 완료 항목은 **그때 실제로 한 일의 기록**이라 지우지 않습니다(체크리스트는 계획표이자 이력이며, 지우면 왜 이 코드가 있었는지 답할 근거가 사라집니다). 남아 있던 미완 항목 둘은 폐지로 소멸했습니다.
 
+- [x] **PROJECT 워크스페이스 폐지 — AC 한 곳으로 통합** <!-- 2026-09-07 사용자 지정("프로젝트를 삭제하고 AC를 프로젝트로 바꿔서 사용"). 남기는 쪽은 **AC**이고 이름·주소(/ac)·사업구분 5종을 그대로 둔다(사용자 선택). **폐지가 값싼 이유는 데이터가 없어서다** — 사업 0건·모듈 0건·명부 0건·기여 로그 0건·workspace_permissions 0건이라 이관할 행이 하나도 없었다(반대로 AC 9건은 제안 단계 PROPOSED 2·NOT_SELECTED 1과 주관 5건을 실제로 쓰고 있어, PROJECT 설정을 채택하면 CHECK 제약에 걸려 저장 자체가 막힌다). **DB(20260907170000)**: 2026-09-03 통합 때 남긴 `_retired_project_program_*` 백업 5종 + `project_programs`·`_managers`·`_departments`·`_timeline_items` 4종 드롭(전부 0행), `set_project_program_staffing`·`enforce_project_module_assignee_in_pool` 드롭(후자는 이미 없는 `project_program_modules`를 조회하고 있었다 — 개명 때 놓친 자리), **함수 15종에서 project 분기 제거**(표를 지우는 마이그레이션은 그 이름으로 함수 본문을 전수 조사하는 것까지가 한 벌이다), entity_key CHECK 8종 + approval/minute link target_type 2종 축소, `module_templates.workspaces`에서 project 제거 후 CHECK를 ('ac','mna')로. **남긴 것**: workspace_key enum 값(system_events 6행이 사용)·permission_templates 8행·system_events 6행·2026-07-05 초기 스키마의 projects 계열 4표(데이터 있음, 어느 화면도 읽지 않음 — 별개 계통이라 이번 대상 아님). **프론트 23파일**: features/project 삭제, 라우트 3개·사이드바 항목·navigation 서브메뉴·WorkspaceKey·ProgramWorkspaceKey·entityKey 유니온·PROJECT_CATEGORIES·ADMIN 워크스페이스 열 3곳·대시보드 타일·전역검색 스펙·회의록/결재 연동 대상·알림 라우트·MANAGEMENT 임직원 활동 카드·STARTUP 참여 이력 카드. **함께 고친 결함 1건**: `moduleAdminHooks`가 2026-09-03 통합 때 사라진 `ma_program_modules`·`project_program_modules`를 계속 조회해 ADMIN 모듈 관리의 '배치 N건'이 오류로 죽고 있었다 — 표를 개명하는 마이그레이션이 그 이름으로 **프론트까지** 전수 조사하지 않으면 이렇게 남는다. **Edge Function 3종**(programLedger·guestSession·publicModuleLink)에서 원장·맥락 키 축소 — 재배포 필요. 문서: readme_master(워크스페이스 9→8, 번호 재정렬)·0_service_spec_draft·3_0_workspace_overview에서 3_8 인덱스 제거, CLAUDE.md 아키텍처 결정 추가. **검증**: 마이그레이션을 운영 DB에서 트랜잭션 롤백으로 먼저 드라이런(잔존 함수·표·제약 0건 확인) 후 적용, tsc 6/6 + typecheck:functions 통과, works 테스트 549 pass, eslint 0 error. **보안 게이트**: 새 테이블·RPC·정책·Storage 변경 없음, SECURITY DEFINER 함수는 기존 정의에서 분기만 제거(search_path·인가 검사 그대로), 판정 분기가 줄어 노출면은 감소, 감사 로그(access_logs·entity_contributions)는 손대지 않음 -->
 - [x] 프로젝트 통합 대시보드 (유형/부서 필터) <!-- 유형 필터+진척도 카드 그리드. 부서 필터/아바타는 후속 -->
 - [x] 태스크 칸반 (To-Do → In-Progress → Review → Done) <!-- 4열 칸반+상태 이동+마감 UTC 병기·지연 배지. 드래그앤드롭/체크리스트는 후속 -->
 - [x] 간트 마일스톤 로드맵 (글로벌: 다국어/UTC 병기) <!-- 선형 막대 간트+전사 캘린더(system_events) 자동 연계. 드래그 리사이즈는 후속 -->
 - [x] PROJECT 워크스페이스 사업 원장 구조 전환 — AC와 동일한 대시보드/내 프로젝트/전체 프로젝트 + 리스트뷰 + 상세 <!-- features/program 공용 모듈 공유(PROJECT_WORKSPACE config 주입). 원장 project_* 8테이블 신설(20260720150000), 카테고리는 ETC 단일(구 project_type 폐지), 모듈 템플릿은 CUSTOM_ACTIVITY만. 구 화면(태스크 칸반·간트) 제거, projects 등 구 테이블은 soft 보존 -->
 - [x] PROJECT 상태 수명주기에서 제안 단계 폐지 — 운영 4단계만 <!-- Phase 9의 M&A 항목과 한 변경(같은 공용 모듈·같은 마이그레이션 20260803120000). 상세는 그쪽 주석 참조 -->
 - [x] PROJECT도 AC와 완전히 같은 모듈 구조로 — 정형 운영 모듈 11종·게스트 포털 개방 <!-- Phase 9의 M&A 항목과 한 변경(같은 공용 모듈·같은 마이그레이션 5종). 상세는 그쪽 주석 참조. 운영 DB 반영도 그쪽 항목이 함께 답한다 -->
-- [ ] PROJECT 태스크 보드·간트 마일스톤 모듈 템플릿 재도입 <!-- 3_8_workspace_project.md §4 후속 확장 과제 -->
-- [ ] project_* 원장 마이그레이션 운영 DB 반영(supabase db push) 및 RLS 회귀 테스트
+- [x] ~~PROJECT 태스크 보드·간트 마일스톤 모듈 템플릿 재도입~~ <!-- 폐지로 소멸(2026-09-07). 태스크 보드·간트를 다시 만들 일이 생기면 그것은 PROJECT 워크스페이스가 아니라 AC 모듈 템플릿으로 설계한다 -->
+- [x] ~~project_* 원장 마이그레이션 운영 DB 반영 및 RLS 회귀 테스트~~ <!-- 폐지로 소멸(2026-09-07). 그 원장들이 드롭됐다 -->
 
 
 ## Phase 12. MANAGEMENT 워크스페이스
