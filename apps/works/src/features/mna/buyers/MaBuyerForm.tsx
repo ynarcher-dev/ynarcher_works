@@ -6,7 +6,10 @@ import { useEditReasonPrompt } from '@/components/EditReasonPrompt'
 import { FormTopBar } from '@/components/FormTopBar'
 import { RichTextEditor } from '@/components/RichTextEditor'
 import { useTagTokenField } from '@/features/admin/TagTokenField'
-import { StartupPickerModal } from '@/features/mna/buyers/StartupPickerModal'
+import {
+  StartupPickerModal,
+  type StartupPick,
+} from '@/features/mna/buyers/StartupPickerModal'
 import {
   MAX_INDUSTRIES,
   MA_BUYER_NOUN,
@@ -100,6 +103,50 @@ export function MaBuyerForm({ recordId, initial, onDone, onCancel, backTo }: Pro
   const [startupName, setStartupName] = useState<string>(initial?.startup?.name ?? '')
   const [picking, setPicking] = useState(false)
 
+  /**
+   * 스타트업 원장 한 행을 이 폼에 얹는다.
+   *
+   * 규칙은 하나 — **연결은 값을 덮지 않는다.** 비어 있는 칸만 채우고 이미 적힌 칸은 그대로
+   * 둔다. 연결은 되돌릴 수 있지만(연결 해제) 덮어써서 잃은 입력은 되돌릴 방법이 없고,
+   * 원장 표기와 이 바이어를 부르는 이름이 다른 경우도 흔하다(약칭·계약서 표기).
+   * AI 초안이 "근거를 못 찾은 칸은 기존 값 유지"인 것과 같은 이유다.
+   *
+   * 가져오는 값이 셋인 이유는 스타트업 원장이 **이미 답하고 있는 것**이기 때문이다 —
+   * 연결해 놓고 분야·대표자·이메일을 손으로 또 적게 하면 같은 사실이 두 곳에 살고, 그때부터
+   * 어긋난다. 다만 복사이지 참조가 아니다: 담기고 나면 이 바이어의 값이라 따로 고칠 수 있고,
+   * 원장 쪽이 바뀌어도 따라 변하지 않는다(바이어의 창구가 그 기업 대표가 아닐 수 있다).
+   */
+  const applyStartup = (s: StartupPick) => {
+    setStartupId(s.id)
+    setStartupName(s.name)
+
+    const filled: string[] = []
+    if (!getValues('name').trim()) {
+      setValue('name', s.name, { shouldValidate: true })
+    }
+    if (industries.length === 0 && s.industries?.length) {
+      setIndustries(s.industries.slice(0, MAX_INDUSTRIES))
+      filled.push('분야')
+    }
+    if (!getValues('contactName').trim() && s.representative) {
+      setValue('contactName', s.representative)
+      filled.push('담당자')
+    }
+    if (!getValues('contactEmail').trim() && s.email) {
+      setValue('contactEmail', s.email, { shouldValidate: true })
+      filled.push('이메일')
+    }
+
+    // 무엇이 함께 들어왔는지 밝힌다 — 연결 버튼 하나에 칸 셋이 조용히 바뀌면, 담당자는
+    // 자기가 적지 않은 값이 언제 들어왔는지 알 수 없다.
+    toast.show(
+      filled.length
+        ? `스타트업 DB를 연결하고 ${filled.join('·')}을(를) 가져왔습니다.`
+        : '스타트업 DB를 연결했습니다.',
+      'success',
+    )
+  }
+
   const onSubmit = async (v: MaBuyerFormValues) => {
     const million = v.fundsMillion.replace(/,/g, '').trim()
     const payload: Record<string, unknown> = {
@@ -168,7 +215,7 @@ export function MaBuyerForm({ recordId, initial, onDone, onCancel, backTo }: Pro
                     화면이 아니라 공용 `Input`의 `action` 슬롯이 소유한다. */}
                 <Input
                   invalid={Boolean(errors.name)}
-                  action={<Search size={16} />}
+                  action={<Search />}
                   actionLabel="스타트업 DB에서 찾기"
                   onActionClick={() => setPicking(true)}
                   {...register('name', { required: '기업명은 필수입니다.' })}
@@ -252,18 +299,7 @@ export function MaBuyerForm({ recordId, initial, onDone, onCancel, backTo }: Pro
       </div>
 
       {picking && (
-        <StartupPickerModal
-          onPick={(s) => {
-            setStartupId(s.id)
-            setStartupName(s.name)
-            // 이름 칸이 비어 있을 때만 채운다 — 이미 적어 둔 표기(약칭·계약서 이름)를 연결
-            // 한 번으로 덮으면, 연결이 이름을 바꾸는 일이 되어 되돌릴 방법이 없다.
-            if (!getValues('name').trim()) {
-              setValue('name', s.name, { shouldValidate: true })
-            }
-          }}
-          onClose={() => setPicking(false)}
-        />
+        <StartupPickerModal onPick={applyStartup} onClose={() => setPicking(false)} />
       )}
     </form>
   )

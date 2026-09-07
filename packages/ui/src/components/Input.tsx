@@ -6,6 +6,7 @@ import {
   controlScale,
   formBaseClass,
   formInvalidClass,
+  iconScale,
 } from '../densityScale'
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -39,6 +40,17 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
  * `8`처럼 잘려 보였다. 화살표 자체도 32px 컨트롤 안에서는 누를 수 없을 만큼 작아 실질적인 입력
  * 수단이 아니다 — 값은 키보드로 적고 범위는 `min`/`max`가 지킨다.
  */
+/**
+ * 액션 슬롯의 글리프 크기 — `iconScale[d].glyph`(px)와 같은 값을 클래스로 적은 것이다.
+ * `TokenMultiSelect`는 아이콘을 직접 그려 숫자를 넘기지만, 여기는 바깥에서 받은 노드라
+ * 크기를 씌우려면 클래스여야 한다. 두 값이 갈리지 않게 주석으로 짝을 밝혀 둔다(18/16/14).
+ */
+const glyphSize: Record<Density, string> = {
+  page: '[&_svg]:size-[18px]',
+  card: '[&_svg]:size-4',
+  table: '[&_svg]:size-[14px]',
+}
+
 const numberSpinnerReset =
   '[appearance:textfield] [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none ' +
   '[&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none'
@@ -80,8 +92,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         {...props}
       />
       {action && (
-        // 색·호버·초점 링은 `TokenMultiSelect`의 돋보기와 같은 값이다 — 두 칸이 나란히 설 때
-        // 같은 조작이 같은 무게로 읽혀야 한다. 위치는 아이콘 자리(iconRight)를 그대로 쓴다.
+        // 규격은 전부 `TokenMultiSelect`의 돋보기와 **같은 토큰**이다 — 상자는 `iconScale.box`,
+        // 색·호버·초점 링은 같은 값, 자리는 좌측 아이콘이 쓰던 `iconRight`. 두 칸이 나란히 설 때
+        // 같은 조작이 같은 무게로 읽혀야 하므로 여기서 값을 새로 짓지 않는다.
+        //
+        // 세로 가운데 정렬을 명시하는 이유는 그쪽과 사정이 다르기 때문이다: 그 돋보기는 flex
+        // 자식이라 컨테이너가 세워 주지만, 이쪽은 입력 위에 절대배치라 스스로 세워야 한다.
         <button
           type="button"
           onClick={onActionClick}
@@ -89,9 +105,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
           title={actionLabel}
           disabled={props.disabled}
           className={cn(
-            'absolute grid shrink-0 place-items-center rounded-radius-md transition-colors duration-fast',
+            'absolute top-1/2 grid -translate-y-1/2 shrink-0 place-items-center',
+            'rounded-radius-md transition-colors duration-fast',
             'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10',
             'text-gray-400 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-60',
+            iconScale[d].box,
+            // 글리프 크기도 이 컴포넌트가 정한다 — 화면이 아이콘에 크기를 달면 화면마다
+            // 다른 크기의 돋보기가 서고, 그 순간 '같은 규격'이라는 말이 성립하지 않는다.
+            glyphSize[d],
             pad.iconRight,
           )}
         >

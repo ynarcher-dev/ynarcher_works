@@ -3,10 +3,20 @@ import { Button, Input, Modal, Spinner } from '@ynarcher/ui'
 import { useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
+/**
+ * 고른 기업이 함께 들고 오는 값.
+ *
+ * id·이름 말고 셋을 더 읽는 이유는 연결이 **원장을 가리키는 일이자 그 원장이 이미 아는 것을
+ * 다시 묻지 않는 일**이기 때문이다 — 분야·대표자·이메일은 스타트업 원장이 이미 답하고 있어서
+ * 연결해 놓고 손으로 또 적게 하면, 같은 사실을 두 번 적는 자리가 생기고 그때부터 어긋난다.
+ */
 export interface StartupPick {
   id: string
   name: string
   representative: string | null
+  email: string | null
+  /** 분야 태그 이름 배열(최대 3). 바이어 원장도 같은 원장(industry_tags)의 이름을 담는다. */
+  industries: string[] | null
 }
 
 /**
@@ -23,7 +33,7 @@ function useStartupPool(enabled: boolean) {
     queryFn: async (): Promise<StartupPick[]> => {
       const { data, error } = await supabase
         .from('startups')
-        .select('id, name, representative')
+        .select('id, name, representative, email, industries')
         .is('deleted_at', null)
         .order('name', { ascending: true })
         .limit(500)
@@ -32,7 +42,6 @@ function useStartupPool(enabled: boolean) {
     },
   })
 }
-
 /**
  * 스타트업 DB에서 기업 하나 고르기 — 바이어 기업명 칸의 돋보기가 여는 창.
  *
