@@ -14,6 +14,8 @@ import {
   MAX_INDUSTRIES,
   MA_BUYER_NOUN,
   MA_BUYER_TARGET_TYPE,
+  formatWonInput,
+  parseWon,
   type MaBuyerRow,
 } from '@/features/mna/buyers/config'
 import { useCreateMaBuyer, useUpdateMaBuyer } from '@/features/mna/buyers/hooks'
@@ -24,8 +26,8 @@ import { usePendingMaterials } from '@/features/networks/pendingMaterials'
 interface MaBuyerFormValues {
   name: string
   wish: string
-  /** 백만원 단위로 입력받는다 — 표기와 같은 단위여야 적은 값과 읽는 값이 같다(저장은 원 단위). */
-  fundsMillion: string
+  /** 원 단위, 세 자리마다 쉼표. 표기와 같은 단위여야 적은 값과 읽는 값이 같다. */
+  funds: string
   /** 바이어 쪽 연락 창구. 우리 쪽 관리 주체가 아니다. */
   contactName: string
   contactEmail: string
@@ -73,10 +75,10 @@ export function MaBuyerForm({ recordId, initial, onDone, onCancel, backTo }: Pro
     values: {
       name: initial?.name ?? '',
       wish: initial?.wish ?? '',
-      fundsMillion:
+      funds:
         initial?.available_funds == null
           ? ''
-          : String(Math.round(Number(initial.available_funds) / 1_000_000)),
+          : Number(initial.available_funds).toLocaleString(),
       contactName: initial?.contact_name ?? '',
       contactEmail: initial?.contact_email ?? '',
     },
@@ -148,13 +150,13 @@ export function MaBuyerForm({ recordId, initial, onDone, onCancel, backTo }: Pro
   }
 
   const onSubmit = async (v: MaBuyerFormValues) => {
-    const million = v.fundsMillion.replace(/,/g, '').trim()
     const payload: Record<string, unknown> = {
       name: v.name.trim(),
       industries,
       wish: v.wish.trim() || null,
-      // 입력은 백만원, 저장은 원. 단위를 저장 쪽에 맞추면 담당자가 0을 여섯 개 세게 된다.
-      available_funds: million === '' ? null : Number(million) * 1_000_000,
+      // 저장은 원 단위 하나다. 화면마다 단위를 바꿔 저장하면 어느 자리에서 적힌 값인지에
+      // 따라 같은 컬럼이 다른 뜻을 갖는다.
+      available_funds: parseWon(v.funds),
       contact_name: v.contactName.trim() || null,
       contact_email: v.contactEmail.trim() || null,
       startup_id: startupId,
@@ -239,19 +241,21 @@ export function MaBuyerForm({ recordId, initial, onDone, onCancel, backTo }: Pro
               </Field>
               <Field
                 label="가용자금"
-                error={errors.fundsMillion?.message}
-                hint="백만원 단위로 적습니다. 범위나 조건이 붙는 금액은 상세내용에 적습니다."
+                error={errors.funds?.message}
+                hint="원 단위로 적습니다. 범위나 조건이 붙는 금액은 상세내용에 적습니다."
               >
                 <Input
                   inputMode="numeric"
-                  placeholder="예: 50000"
-                  invalid={Boolean(errors.fundsMillion)}
-                  {...register('fundsMillion', {
-                    validate: (v) =>
-                      v.trim() === '' ||
-                      /^[0-9,]+$/.test(v.trim()) ||
-                      '숫자만 입력합니다(백만원 단위).',
-                  })}
+                  placeholder="예: 50,000,000"
+                  invalid={Boolean(errors.funds)}
+                  {...register('funds')}
+                  // 적는 동안 세 자리마다 쉼표를 다시 찍는다 — 0이 아홉 개 붙는 값이라
+                  // 쉼표 없이는 적는 사람도 읽는 사람도 자릿수를 눈으로 세어야 한다.
+                  // 숫자 아닌 글자는 애초에 들어오지 못하므로 형식 검증도 따로 두지 않는다
+                  // (막을 수 있는 것을 통과시킨 뒤 오류로 알리지 않는다).
+                  onChange={(e) =>
+                    setValue('funds', formatWonInput(e.target.value), { shouldDirty: true })
+                  }
                 />
               </Field>
               <Field label="분야" hint={industryField.hint} hintInline={industryField.hintInline}>

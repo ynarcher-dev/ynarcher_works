@@ -23,7 +23,7 @@ import {
   MA_BUYER_CONTENT_KEY,
   MA_BUYER_NOUN,
   MA_BUYER_TARGET_TYPE,
-  toMillion,
+  toWon,
   type MaBuyerRow,
 } from '@/features/mna/buyers/config'
 import {
@@ -109,10 +109,13 @@ function MaBuyerView({ record }: { record: MaBuyerRow }) {
               )}
               <InfoField
                 label="가용자금"
+                // 상세는 원 단위다 — 한 건을 정확히 읽는 자리라 반올림이 끼면 안 된다.
+                // 목록은 백만원인데(자릿수를 짧게 해 세로로 견주는 자리), 단위가 갈리는 것은
+                // 자리마다 하는 일이 달라서이고 저장값은 원 하나다.
                 value={
                   record.available_funds == null
                     ? '-'
-                    : `${toMillion(record.available_funds)}백만원`
+                    : `${toWon(record.available_funds)}원`
                 }
               />
               {/* 바이어 쪽 창구다(우리 쪽 관리 주체가 아니다 — 이 원장은 영구 공동관리).

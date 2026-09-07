@@ -37,7 +37,14 @@ export const MA_BUYER_CONTENT_KEY = 'mna.buyers'
 /** 분야 선택 상한. startups.industries와 같은 규칙이라 같은 수를 쓴다. */
 export const MAX_INDUSTRIES = 3
 
-/** 원 단위 저장값을 백만원으로 줄여 적는다 — 단위는 값이 아니라 표 머리글·카드 헤더가 답한다. */
+/**
+ * 저장은 원 단위 하나이고, 읽는 자리마다 단위가 갈린다.
+ *
+ * **목록은 백만원**(`toMillion`) — 열을 세로로 훑으며 크기를 견주는 자리라 자릿수가 짧아야
+ * 하고, 단위는 값이 아니라 머리글이 한 번만 답한다.
+ * **상세·입력은 원**(`toWon`) — 한 건을 정확히 읽고 적는 자리라 반올림이 끼면 안 된다
+ * (백만원으로 받으면 5천만원을 '50'으로 적게 되고, 그 '50'은 오십으로도 읽힌다).
+ */
 export function toMillion(v: unknown): string {
   if (v == null || v === '') return '-'
   return Math.round(Number(v) / 1_000_000).toLocaleString()
@@ -64,4 +71,22 @@ export interface MaBuyerRow {
   updated_at: string
   created_by: string | null
   creator?: { id: string; name: string } | null
+}
+
+/** 원 단위 그대로, 세 자리마다 쉼표. 상세·입력이 쓴다. */
+export function toWon(v: unknown): string {
+  if (v == null || v === '') return '-'
+  return Number(v).toLocaleString()
+}
+
+/** 입력 문자열(쉼표 포함)을 저장값으로. 숫자가 하나도 없으면 null. */
+export function parseWon(v: string): number | null {
+  const digits = v.replace(/[^0-9]/g, '')
+  return digits === '' ? null : Number(digits)
+}
+
+/** 입력 중 표시값 — 숫자만 남기고 세 자리마다 쉼표를 다시 찍는다. */
+export function formatWonInput(v: string): string {
+  const n = parseWon(v)
+  return n === null ? '' : n.toLocaleString()
 }

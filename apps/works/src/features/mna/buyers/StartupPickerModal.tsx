@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 import { Button, Input, Modal, Spinner } from '@ynarcher/ui'
 import { useMemo, useState } from 'react'
 import { StartupPickRow } from '@/features/startup/StartupPickRow'
+import { readIndustries } from '@/features/startup/startupGrowth'
+import type { EntityRow } from '@/features/master/entityHooks'
 import { supabase } from '@/lib/supabase'
 
 /**
@@ -17,7 +19,8 @@ export interface StartupPick {
   representative: string | null
   email: string | null
   /** 분야 태그 이름 배열(최대 3). 바이어 원장도 같은 원장(industry_tags)의 이름을 담는다. */
-  industries: string[] | null
+  /** 분야 태그 이름 배열. 옛 단일 컬럼(industry)까지 합친 값이다. */
+  industries: string[]
   /** 구분(투자·보육·발굴·미지정). 행의 배지가 읽는 값이다. */
   management_status: string | null
 }
@@ -34,17 +37,29 @@ function useStartupPool(enabled: boolean) {
     queryKey: ['ma-buyers', 'startup-pool'],
     enabled,
     queryFn: async (): Promise<StartupPick[]> => {
+      // `industry`(옛 단일 컬럼)를 함께 읽는 이유는 분야가 두 곳에 있기 때문이다 — 배열
+      // (`industries`)이 SSOT이고 옛 컬럼은 대표값 미러인데, 배열이 빈 채 옛 컬럼만 가진 행이
+      // 남아 있다. 둘을 합치는 규칙은 화면이 다시 적지 않고 공용 `readIndustries`가 답한다
+      // (그 규칙을 여기서 한 번 더 적으면 한쪽만 고쳐지는 날 어느 화면에서만 분야가 빈다).
       const { data, error } = await supabase
         .from('startups')
-        .select('id, name, representative, email, industries, management_status')
+        .select('id, name, representative, email, industries, industry, management_status')
         .is('deleted_at', null)
         .order('name', { ascending: true })
         .limit(500)
       if (error) throw error
-      return (data ?? []) as StartupPick[]
+      return ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+        id: row.id as string,
+        name: (row.name as string) ?? '',
+        representative: (row.representative as string | null) ?? null,
+        email: (row.email as string | null) ?? null,
+        management_status: (row.management_status as string | null) ?? null,
+        industries: readIndustries(row as EntityRow),
+      }))
     },
   })
 }
+
 /**
  * 스타트업 DB에서 기업 하나 고르기 — 바이어 기업명 칸의 돋보기가 여는 창.
  *
