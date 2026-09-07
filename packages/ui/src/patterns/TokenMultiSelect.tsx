@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '../utils/cn'
 import { useDensity, type Density } from '../density'
-import { controlScale, formBaseClass, iconScale } from '../densityScale'
+import { controlScale, formBaseClass } from '../densityScale'
+import { ControlAction } from '../components/ControlAction'
 import { TagChip } from '../components/TagChip'
 import { TokenBrowseModal } from './TokenBrowseModal'
 
@@ -86,12 +87,10 @@ export interface TokenMultiSelectProps<T> {
  * 돋보기 글리프. packages/ui는 아이콘 패키지에 의존하지 않는 것이 규약이라(IconButton은 앱이
  * 주입) 여기서는 lucide `search`와 같은 형태를 인라인 SVG로 그린다.
  */
-function SearchGlyph({ size }: { size: number }) {
+function SearchGlyph() {
   return (
     <svg
       aria-hidden
-      width={size}
-      height={size}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -355,9 +354,15 @@ export function TokenMultiSelect<T>({
         {/* 상한에 닿으면 드롭다운형은 펼칠 것이 없어 버튼을 거두지만, 모달형은 남긴다 —
             거기서는 고른 것도 함께 보여 '빼고 다른 것으로 바꾸기'가 그 버튼의 일이다. */}
         {browsable && !disabled && (browseIn === 'modal' || !atMax) && (
-          // 검색어 없이 후보 전체를 펼치는 버튼. 필드 안 오른쪽 끝에 두어 '이 칸의 목록'임을 드러낸다.
-          <button
-            type="button"
+          // 검색어 없이 후보 전체를 펼치는 버튼. 필드 안 오른쪽 끝에 두어 '이 칸의 목록'임을
+          // 드러낸다. 규격은 `ControlAction`이 소유한다 — 기업명 칸(`Input`의 액션 슬롯)의
+          // 돋보기와 **같은 버튼**이라, 나란히 선 두 칸에서 크기·색이 갈릴 자리가 없다.
+          // 여기서 정하는 것은 자리(flex 자식이라 `ml-auto`)와 이 칸만의 사정 셋이다.
+          <ControlAction
+            icon={<SearchGlyph />}
+            label={browseLabel}
+            active={browsing}
+            placement="ml-auto"
             // 입력에서 포커스가 빠져나가지 않도록 mousedown을 막는다(칩·드롭다운과 같은 규약).
             onMouseDown={(ev) => ev.preventDefault()}
             onClick={(ev) => {
@@ -368,19 +373,9 @@ export function TokenMultiSelect<T>({
               // 모달을 열 때는 뒤 입력으로 초점을 되돌리지 않는다 — 초점은 열린 창에 있어야 한다.
               if (browseIn === 'dropdown') inputRef.current?.focus()
             }}
-            aria-label={browseLabel}
             aria-expanded={browseIn === 'dropdown' ? browsing : undefined}
             aria-haspopup={browseIn === 'modal' ? 'dialog' : undefined}
-            title={browseLabel}
-            className={cn(
-              'ml-auto grid shrink-0 place-items-center rounded-radius-md transition-colors duration-fast',
-              'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10',
-              iconScale[d].box,
-              browsing ? 'text-brand' : 'text-gray-400 hover:text-gray-700',
-            )}
-          >
-            <SearchGlyph size={iconScale[d].glyph} />
-          </button>
+          />
         )}
       </div>
       {dropdownOpen &&
