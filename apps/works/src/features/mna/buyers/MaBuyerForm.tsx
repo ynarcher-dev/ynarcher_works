@@ -1,4 +1,4 @@
-import { CardShell, Field, IconButton, Input, TextAction, useToast } from '@ynarcher/ui'
+import { CardShell, Field, Input, TextAction, useToast } from '@ynarcher/ui'
 import { Search } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -162,23 +162,17 @@ export function MaBuyerForm({ recordId, initial, onDone, onCancel, backTo }: Pro
                 hint="스타트업 DB에 있는 기업이면 돋보기로 찾아 연결하세요. 없으면 직접 입력합니다."
                 as="div"
               >
-                <div className="flex items-center gap-1.5">
-                  <div className="min-w-0 flex-1">
-                    <Input
-                      invalid={Boolean(errors.name)}
-                      {...register('name', { required: '기업명은 필수입니다.' })}
-                    />
-                  </div>
-                  {/* 돋보기는 이름을 대신 채워 주는 것이 아니라 원장의 행을 가리키는 일이다.
-                      그래서 고른 뒤에도 이름 칸은 그대로 고칠 수 있다. */}
-                  <IconButton
-                    type="button"
-                    icon={<Search className="size-4" />}
-                    label="스타트업 DB에서 찾기"
-                    title="스타트업 DB에서 찾기"
-                    onClick={() => setPicking(true)}
-                  />
-                </div>
+                {/* 돋보기는 이름을 대신 채워 주는 것이 아니라 원장의 행을 가리키는 일이다.
+                    그래서 고른 뒤에도 이름 칸은 그대로 고칠 수 있다. 자리가 칸 안쪽 오른쪽
+                    끝인 것은 바로 아래 분야 칸의 돋보기와 같은 규격이기 때문이며, 그 규격은
+                    화면이 아니라 공용 `Input`의 `action` 슬롯이 소유한다. */}
+                <Input
+                  invalid={Boolean(errors.name)}
+                  action={<Search size={16} />}
+                  actionLabel="스타트업 DB에서 찾기"
+                  onActionClick={() => setPicking(true)}
+                  {...register('name', { required: '기업명은 필수입니다.' })}
+                />
                 {startupId && (
                   <p className="mt-1.5 flex items-center gap-2 text-caption text-gray-600">
                     <span className="truncate">
