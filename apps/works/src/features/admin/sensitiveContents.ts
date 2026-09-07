@@ -131,7 +131,22 @@ export const SENSITIVE_CONTENT_GROUPS: readonly SensitiveContentGroup[] = [
     ],
   },
   { key: 'ac', label: 'AC', contents: programContents('ac', '사업') },
-  { key: 'mna', label: 'M&A', contents: programContents('mna', '딜') },
+  {
+    key: 'mna',
+    label: 'M&A',
+    contents: [
+      ...programContents('mna', '딜'),
+      // M&A BUYER 원장. 담는 개인정보는 바이어 쪽 연락 담당자의 이름·이메일이며,
+      // 전화번호 칸이 없으므로 그 스위치도 두지 않는다 — 화면에 없는 필드의 스위치를 띄우면
+      // '켰는데 아무 일도 안 일어나는' 죽은 설정이 된다.
+      {
+        key: 'mna.buyers',
+        label: 'M&A BUYER',
+        fields: ['name', 'email'],
+        hint: '담당자명 · 이메일',
+      },
+    ],
+  },
   { key: 'project', label: 'PROJECT', contents: programContents('project', '프로젝트') },
   {
     key: 'fund',

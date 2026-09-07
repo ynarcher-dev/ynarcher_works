@@ -10,6 +10,13 @@ export const MA_BUYER_TABLE = 'ma_buyers'
 export const MA_BUYER_LIST_LABEL = 'M&A BUYER'
 
 /**
+ * 자료·코멘트·회의록 링크가 이 원장을 가리킬 때 쓰는 다형 키(단수형).
+ * 기여 로그의 `entity_table`은 이 값이 아니라 표 이름(`ma_buyers`)이다 — 트리거 인자가 그
+ * 값이고, update_entity/deactivate_entity가 표 이름으로 트리거 존재를 확인한다.
+ */
+export const MA_BUYER_TARGET_TYPE = 'ma_buyer'
+
+/**
  * 이 원장의 루트 경로 — 목록이 이 주소이고 상세·등록이 그 아래 선다.
  *
  * `/mna` 아래가 아닌 이유는 `resolveWorkspace`가 **경로로 자리를 판정**하기 때문이다. 이 원장의
@@ -18,15 +25,14 @@ export const MA_BUYER_LIST_LABEL = 'M&A BUYER'
  */
 export const MA_BUYER_BASE_PATH = '/buyers'
 
-/**
- * 자료·코멘트·회의록 링크가 이 원장을 가리킬 때 쓰는 다형 키(단수형).
- * 기여 로그의 `entity_table`은 이 값이 아니라 표 이름(`ma_buyers`)이다 — 트리거 인자가 그
- * 값이고, update_entity/deactivate_entity가 표 이름으로 트리거 존재를 확인한다.
- */
-export const MA_BUYER_TARGET_TYPE = 'ma_buyer'
-
 /** 목록에서 부르는 이름(빈 상태 문구·등록 버튼). */
 export const MA_BUYER_NOUN = '바이어'
+
+/**
+ * 민감정보 마스킹 정책 콘텐츠 키(ADMIN '민감정보 관리').
+ * 목록과 상세가 같은 키를 쓴다 — 이 원장은 화면이 하나뿐이라 범위로 갈릴 것이 없다.
+ */
+export const MA_BUYER_CONTENT_KEY = 'mna.buyers'
 
 /** 분야 선택 상한. startups.industries와 같은 규칙이라 같은 수를 쓴다. */
 export const MAX_INDUSTRIES = 3
@@ -43,6 +49,16 @@ export interface MaBuyerRow {
   industries: string[] | null
   wish: string | null
   available_funds: number | null
+  /** 바이어 쪽 연락 담당자 — 우리 쪽 관리 주체가 아니다(이 원장은 영구 공동관리다). */
+  contact_name: string | null
+  contact_email: string | null
+  /**
+   * STARTUP 원장 매핑(선택). 기업명과 별개의 값이다 — 이름은 '이 바이어를 부르는 이름'이고
+   * 이 값은 '그 기업이 우리 원장의 어느 행인가'다.
+   */
+  startup_id: string | null
+  /** 매핑된 기업(임베드). 그 기업을 볼 수 없으면 비어 온다 — 화면은 링크 없이 물러난다. */
+  startup?: { id: string; name: string } | null
   overview_html: string | null
   created_at: string
   updated_at: string

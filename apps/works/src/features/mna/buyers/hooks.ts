@@ -11,7 +11,7 @@ import { supabase } from '@/lib/supabase'
 
 /** 목록·상세가 함께 읽는 select 문자열. 작성자는 이름만 임베드한다. */
 const SELECT =
-  'id, name, industries, wish, available_funds, created_at, updated_at, created_by, creator:users!created_by(id, name)'
+  'id, name, industries, wish, available_funds, contact_name, contact_email, startup_id, created_at, updated_at, created_by, creator:users!created_by(id, name), startup:startups!startup_id(id, name)'
 
 /**
  * 목록 한 페이지.

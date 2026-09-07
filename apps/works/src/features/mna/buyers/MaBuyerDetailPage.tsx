@@ -1,13 +1,16 @@
 import {
   BackButton,
+  Badge,
   Banner,
   Button,
   CardShell,
+  cardText,
   DensityProvider,
   EmptyState,
   InfoField,
   InfoGrid,
   PanelCard,
+  RefLinkList,
   Spinner,
 } from '@ynarcher/ui'
 import { useState } from 'react'
@@ -17,6 +20,7 @@ import { RichTextViewer } from '@/components/RichTextEditor'
 import { MaBuyerForm } from '@/features/mna/buyers/MaBuyerForm'
 import {
   MA_BUYER_BASE_PATH,
+  MA_BUYER_CONTENT_KEY,
   MA_BUYER_NOUN,
   MA_BUYER_TARGET_TYPE,
   toMillion,
@@ -27,6 +31,7 @@ import {
   useMaBuyerContributions,
   useMaBuyerRecord,
 } from '@/features/mna/buyers/hooks'
+import { SensitiveValue } from '@/features/master/SensitiveValue'
 import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
@@ -53,21 +58,84 @@ function MaBuyerView({ record }: { record: MaBuyerRow }) {
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
       <div className="space-y-4 lg:col-span-2">
         <CardShell>
-          {/* 상세 제목은 카드 안에 있어도 페이지 맥락이다. */}
+          {/* 헤더 규격은 STARTUP 상세와 같다 — 이름 줄에 분야 배지, 그 아래 한 줄 부제.
+              상세 헤더는 카드 안에 있어도 페이지 맥락이라 밀도를 올린다: card 밀도를 그대로
+              두면 24px 제목 옆 배지가 11px로 찍혀 먼지처럼 보인다. */}
           <DensityProvider value="page">
-            <h1 className="text-title-md font-bold text-gray-900">{record.name}</h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-title-md font-bold text-gray-900">{record.name}</h1>
+              {industries.map((ind) => (
+                <Badge key={ind} tone="neutral">
+                  {ind}
+                </Badge>
+              ))}
+            </div>
           </DensityProvider>
+          {/* 희망사항이 이 원장의 한 줄 요약이다 — 기업명 바로 아래에서 '무엇을 찾는 곳인가'를
+              먼저 답한다. 아래 정보행에 다시 적지 않는다(같은 값을 두 곳에 두면 어긋난다). */}
+          <p className={`mt-1 ${cardText.subtitle}`}>{record.wish || '-'}</p>
 
           <div className="mt-5 border-t border-gray-100 pt-4">
             <InfoGrid>
-              <InfoField label="분야" value={industries.length ? industries.join(', ') : '-'} />
-              <InfoField label="희망사항" value={record.wish || '-'} />
+              {/* 연결된 스타트업 원장 행. 상호참조는 배지가 아니라 텍스트 링크다 — 그 기업을
+                  볼 권한이 없으면 임베드가 비어 오고, 그때 이 줄은 링크 없이 물러난다
+                  (죽은 배지가 남지 않는다). */}
+              <InfoField
+                label="스타트업 DB"
+                value={
+                  <RefLinkList
+                    as={Link}
+                    items={
+                      record.startup_id
+                        ? [
+                            {
+                              key: record.startup_id,
+                              label: record.startup?.name ?? '연결된 기업',
+                              to: record.startup ? `/startup/discovered/${record.startup_id}` : null,
+                              title: record.startup
+                                ? undefined
+                                : '이 기업을 열람할 권한이 없습니다.',
+                            },
+                          ]
+                        : []
+                    }
+                    empty="연결 안 됨"
+                  />
+                }
+              />
               <InfoField
                 label="가용자금"
                 value={
                   record.available_funds == null
                     ? '-'
                     : `${toMillion(record.available_funds)}백만원`
+                }
+              />
+              {/* 바이어 쪽 창구다(우리 쪽 관리 주체가 아니다 — 이 원장은 영구 공동관리).
+                  외부 인물의 개인정보라 마스킹 정책을 거치고, 원본 열람은 사유와 함께
+                  access_logs에 남는다. */}
+              <InfoField
+                label="담당자"
+                value={
+                  <SensitiveValue
+                    field="name"
+                    contentKey={MA_BUYER_CONTENT_KEY}
+                    value={record.contact_name ?? ''}
+                    resourceType={MA_BUYER_TARGET_TYPE}
+                    resourceId={record.id}
+                  />
+                }
+              />
+              <InfoField
+                label="이메일"
+                value={
+                  <SensitiveValue
+                    field="email"
+                    contentKey={MA_BUYER_CONTENT_KEY}
+                    value={record.contact_email ?? ''}
+                    resourceType={MA_BUYER_TARGET_TYPE}
+                    resourceId={record.id}
+                  />
                 }
               />
               <InfoField label="생성자" value={record.creator?.name ?? '-'} />

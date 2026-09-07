@@ -35,6 +35,10 @@ const COLUMNS: Column<MaBuyerRow>[] = [
     render: (r) => (r.industries?.length ? r.industries.join(', ') : '-'),
   },
   { key: 'wish', header: '희망사항', type: 'long', render: (r) => r.wish || '-' },
+  // 바이어 쪽 창구다 — 우리 쪽 관리 주체가 아니다(표준 컬럼의 '생성자'와 다른 축).
+  // 이메일은 열로 세우지 않는다: 목록에서 견주는 값이 아니라 한 건을 열어 꺼내 쓰는 값이고,
+  // 개인정보라 마스킹까지 걸리면 열의 대부분이 가려진 글자가 된다.
+  { key: 'contact_name', header: '담당자', type: 'person', render: (r) => r.contact_name || '-' },
   {
     key: 'available_funds',
     header: (
