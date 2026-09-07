@@ -376,13 +376,22 @@ export function ModuleFormModal({
           </div>
         </Card>
 
-        <Card title="공개 링크">
-          <ModulePublicLinkFields
-            form={linkForm}
-            moduleStartDate={startValue}
-            moduleEndDate={endValue}
-          />
-        </Card>
+        {/*
+          공개 링크 카드는 **템플릿의 성격이 `PUBLIC_LINK`일 때만** 선다(모집 하나뿐이다).
+          안쪽 컴포넌트는 이미 그 판정으로 `null`을 돌려주고 있었는데 감싸는 카드가 무조건
+          서서, 글쓰기·URL첨부·파일첨부 모듈에서는 제목만 남은 빈 카드가 떴다 — 빈 카드는
+          "여기에 무언가 있어야 하는데 안 나왔다"로 읽혀, 없는 것보다 나쁘다.
+          같은 판정을 두 곳에 적지 않도록 카드도 `linkForm.available` 하나를 본다.
+        */}
+        {linkForm.available && (
+          <Card title="공개 링크">
+            <ModulePublicLinkFields
+              form={linkForm}
+              moduleStartDate={startValue}
+              moduleEndDate={endValue}
+            />
+          </Card>
+        )}
 
         <Card title="운영 기간" help={rangeHelp}>
           <div className="space-y-3">
