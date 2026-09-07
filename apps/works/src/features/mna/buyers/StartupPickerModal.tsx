@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Button, Input, Modal, Spinner } from '@ynarcher/ui'
 import { useMemo, useState } from 'react'
+import { StartupPickRow } from '@/features/startup/StartupPickRow'
 import { supabase } from '@/lib/supabase'
 
 /**
@@ -17,6 +18,8 @@ export interface StartupPick {
   email: string | null
   /** 분야 태그 이름 배열(최대 3). 바이어 원장도 같은 원장(industry_tags)의 이름을 담는다. */
   industries: string[] | null
+  /** 구분(투자·보육·발굴·미지정). 행의 배지가 읽는 값이다. */
+  management_status: string | null
 }
 
 /**
@@ -33,7 +36,7 @@ function useStartupPool(enabled: boolean) {
     queryFn: async (): Promise<StartupPick[]> => {
       const { data, error } = await supabase
         .from('startups')
-        .select('id, name, representative, email, industries')
+        .select('id, name, representative, email, industries, management_status')
         .is('deleted_at', null)
         .order('name', { ascending: true })
         .limit(500)
@@ -115,10 +118,9 @@ export function StartupPickerModal({
                   }}
                   className="flex w-full items-center justify-between gap-3 rounded-radius-md border border-gray-300 bg-white px-3 py-2 text-left transition-colors hover:bg-gray-50"
                 >
-                  <span className="min-w-0 truncate text-body text-gray-900">{s.name}</span>
-                  <span className="shrink-0 text-caption text-gray-500">
-                    {s.representative || '-'}
-                  </span>
+                  {/* 행의 규격은 공용 `StartupPickRow`가 소유한다(기업명 · 대표자명 + 구분
+                      배지) — FUND 피투자사 검색과 같은 원장을 같은 방식으로 고르는 자리다. */}
+                  <StartupPickRow value={s} />
                 </button>
               </li>
             ))}

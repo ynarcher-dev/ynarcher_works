@@ -85,6 +85,14 @@ export function managementStatusLabel(v: unknown): string | null {
   return MANAGEMENT_STATUS_LABEL[v as ManagementStatus] ?? v
 }
 
+/**
+ * 구분 코드 → 배지 톤. 코드가 없거나 모르는 값이면 중립.
+ * 라벨과 짝이므로 같은 파일에 둔다 — 한쪽만 고치면 색과 글자가 다른 것을 가리킨다.
+ */
+export function managementStatusTone(v: string | null | undefined): BadgeTone {
+  return v ? (MANAGEMENT_STATUS_TONE[v as ManagementStatus] ?? 'neutral') : 'neutral'
+}
+
 /** 투자기업 여부. 담당자·관리현황 규칙의 분기 기준. */
 export function isInvested(v: unknown): boolean {
   return v === 'invested'

@@ -10,7 +10,6 @@ import {
   Modal,
   TokenMultiSelect,
   useToast,
-  type BadgeTone,
 } from '@ynarcher/ui'
 import { Check, Search } from 'lucide-react'
 import { PhotoBox } from '@/features/networks/PhotoBox'
@@ -19,9 +18,8 @@ import { createPortal } from 'react-dom'
 import { TagSelect } from '@/features/admin/TagSelect'
 import { useEmployees } from '@/features/management/hooks'
 import {
-  MANAGEMENT_STATUS_TONE,
   managementStatusLabel,
-  type ManagementStatus,
+  managementStatusTone,
 } from '@/features/startup/startupClassification'
 import {
   usePromoteToInvested,
@@ -39,6 +37,7 @@ import {
   type StartupOption,
 } from '@/features/fund/hooks'
 import { FUND_PURPOSE_KIND_LABEL } from '@/features/fund/fundListHooks'
+import { StartupPickRow } from '@/features/startup/StartupPickRow'
 
 /** 빈 문자열 → null, 그 외 콤마 제거 후 숫자. 파싱 실패 시 null. */
 function numOrNull(s: string): number | null {
@@ -620,11 +619,6 @@ function Combobox({
   )
 }
 
-/** 구분 코드 → 배지 톤. 코드가 없거나 모르는 값이면 중립. */
-function managementStatusTone(v: string | null): BadgeTone {
-  return v ? (MANAGEMENT_STATUS_TONE[v as ManagementStatus] ?? 'neutral') : 'neutral'
-}
-
 /** 기업명 검색 입력 + 후보 오버레이. 행을 누르면 선택된다. */
 function CompanySearch({
   keyword,
@@ -658,19 +652,9 @@ function CompanySearch({
                   }}
                   className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors duration-fast hover:bg-gray-50"
                 >
-                  <span className="min-w-0 flex-1 truncate text-body text-gray-900">
-                    <span className="font-medium">{s.name}</span>
-                    {s.representative && (
-                      <span className="text-gray-500"> · {s.representative}</span>
-                    )}
-                  </span>
-                  {managementStatusLabel(s.management_status) && (
-                    <span className="shrink-0">
-                      <Badge tone={managementStatusTone(s.management_status)}>
-                        {managementStatusLabel(s.management_status)}
-                      </Badge>
-                    </span>
-                  )}
+                  {/* 행의 규격은 공용 `StartupPickRow`가 소유한다 — 같은 원장을 한 줄로 고르는
+                      자리가 여기와 M&A BUYER 둘이라, 값을 각자 적으면 한쪽만 고쳐지는 날 갈린다. */}
+                  <StartupPickRow value={s} />
                 </button>
               </li>
             ))}
