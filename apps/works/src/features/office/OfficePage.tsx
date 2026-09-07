@@ -1,6 +1,5 @@
 import { EmptyState, PageHeader, Spinner } from '@ynarcher/ui'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
-import { GuestAccountPanel } from '@/features/admin/GuestAccountPanel'
 import { ApprovalWorkspace } from '@/features/approval/ApprovalWorkspace'
 import { ArchiveWorkspace } from '@/features/hub/ArchiveWorkspace'
 import { BoardSectionNav } from '@/features/hub/BoardSectionNav'
@@ -56,6 +55,12 @@ export function OfficePage() {
 
   // 부서 정보는 임직원 정보로 합쳐졌다(목록=조직, 상세=임직원). 기존 링크·북마크를 넘겨준다.
   if (tab === 'departments') return <Navigate to="/office?tab=managers" replace />
+
+  // 게스트 계정은 2026-09-07 저녁에 AC 'GUEST계정 발급'으로 모였다(근거는 config/navigation.ts의
+  // programSubnav 주석). OFFICE 사이드바에서는 그때 줄이 빠졌는데 화면 분기만 남아 있어, 메뉴에는
+  // 없고 주소로는 열리는 자리가 됐다 — 그것도 **전사 범위**라 AC의 좁힌 화면과 같은 목록을 다르게
+  // 답했다. 목록으로 떨어뜨리지 않고 새 자리로 보내는 것은 STARTUP과 같은 이유다.
+  if (tab === 'guest-accounts') return <Navigate to="/ac?tab=guest-accounts" replace />
 
   // 1차 메뉴(`boards`/`archives`)로 들어오면 해당 종류의 첫 항목을 기본 선택한다. 실제 게시판
   // slug URL도 그대로 받으므로 알림·북마크 딥링크는 이전 주소를 유지한다.
@@ -167,10 +172,6 @@ export function OfficePage() {
       {tab === 'minutes' && <MinutesWorkspace initialMinuteId={params.get('minute') ?? undefined} />}
       {/* 지사 정보: ADMIN '지사 관리'가 소유한 지사 원장을 조회 전용 리스트뷰로 노출한다. */}
       {tab === 'branches' && <BranchesPanel />}
-      {/* 게스트 계정: ADMIN 콘솔과 **같은 화면**을 권한만 낮춰 세운다(canSuspend 없음).
-          둘로 나누지 않는 이유는 같은 목록을 두 벌로 그리면 한쪽만 고쳐 어긋나기 때문이며,
-          연락처 마스킹도 화면이 아니라 서버(guest_accounts_list)가 정한다. */}
-      {tab === 'guest-accounts' && <GuestAccountPanel />}
       {/* 전자결재: 진행 중 타일(필터) + 문서함 좌패널 + 문서 목록. */}
       {tab === 'approval' && (
         <ApprovalWorkspace
