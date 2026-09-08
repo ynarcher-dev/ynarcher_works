@@ -268,37 +268,97 @@ export async function fetchLedgerCandidates(
   })
 }
 
-/** 원장 후보 검색(GUEST 명부의 매핑 모달). 이미 명부에 담긴 대상은 고를 수 없다. */
+/**
+ * GUEST 계정 후보 — **이 사업의 참가자 목록에서만 고른다**(2026-09-09 좁힘).
+ *
+ * 종전에는 전사 원장 전체(`fetchLedgerCandidates`)를 읽었고, `program_participant_entries`가
+ * 생긴 뒤에도 그대로였다. 그래서 참가자 목록에 담은 적 없는 기업에 계정을 세울 수 있었고,
+ * 반대로 담아 둔 기업은 원장 수백 건 사이에 이름순으로 섞여 검색해야 찾을 수 있었다 —
+ * 두 목록이 어긋나도 화면이 알려 주는 것이 없었다.
+ *
+ * **좁히는 근거는 순서다.** 계정은 "누구를 들일지 정한 다음"에 세우는 것이고, 그 결정이
+ * 사는 곳이 참가자 목록이다(`SHARED_TABLES.participantEntries`가 "계정은 이 명단을 보고
+ * 골라서 만든다"고 이미 적어 두었다 — 좁히지 않는 한 그 문장은 규약이 아니라 희망이다).
+ * 원장에서 곧바로 고를 수 있으면 참가 여부를 정한 적 없는 대상에게 문이 열리고, 그 사람이
+ * 참가자인지 묻는 화면과 계정이 있는지 묻는 화면이 서로 다른 답을 갖게 된다.
+ *
+ * **두 원장을 다시 합치는 것이 아니다.** 여기서 읽는 것은 참가 사실 하나뿐이고, 계정·문·
+ * 기간은 여전히 `program_participants`가 진다. 이미 명부에 있는 행은 명단에서 빠져도 그대로
+ * 남는다 — 좁히는 것은 **담는 자리**이지 담긴 것이 아니다(빼는 것은 문을 닫는 일이고, 그
+ * 축은 `login_status`가 답한다).
+ *
+ * 검색은 **화면에 서는 값**으로 건다(이름·명의·이메일·연락처). 원장 검색 컬럼을 쓰지 않는
+ * 이유는 그 값이 이 목록에 보이지 않기 때문이다 — 보이지 않는 값으로 걸러지면 방금 눈으로
+ * 본 줄이 사라진 이유를 화면이 답하지 못한다. 명단은 수십 건이라 클라이언트에서 거른다.
+ */
 export function useMasterCandidates(
   programId: string | undefined,
   master: MasterTable,
   search: string,
 ) {
   const config = useProgramWorkspace()
-  const term = search.trim()
+  const term = search.trim().toLowerCase()
   return useQuery({
-    queryKey: [config.key, 'master-candidates', programId, master, term],
+    // `entityKey`가 키에 든다 — 명단은 통합 원장이라 사업 id만으로는 소속이 정해지지 않는다.
+    queryKey: [config.key, 'master-candidates', config.entityKey, programId, master, term],
     enabled: Boolean(programId),
     queryFn: async (): Promise<MasterCandidate[]> => {
-      const [candidates, mapped] = await Promise.all([
-        fetchLedgerCandidates(master, term),
+      const [entries, mapped] = await Promise.all([
+        supabase
+          .from(SHARED_TABLES.participantEntries)
+          .select('master_table, master_id')
+          .eq('entity_key', config.entityKey)
+          .eq('program_id', programId)
+          .eq('master_table', master)
+          .is('deleted_at', null)
+          .order('created_at', { ascending: true }),
         supabase
           .from(SHARED_TABLES.participants)
           .select('master_id')
           .eq('program_id', programId)
           .eq('master_table', master),
       ])
+      // 조회 실패를 삼키지 않는다 — 삼키면 "권한이 없다"와 "명단이 비었다"가 같은 화면이 되고,
+      // 이 모달에서 그 둘은 담당자가 해야 할 일이 정반대다.
+      if (entries.error) throw entries.error
       if (mapped.error) throw mapped.error
 
+      const rows = (entries.data ?? []) as unknown as {
+        master_table: MasterTable
+        master_id: string
+      }[]
       const taken = new Set(
         ((mapped.data ?? []) as { master_id: string | null }[])
           .map((r) => r.master_id)
           .filter(Boolean) as string[],
       )
 
-      return candidates.map((c) => ({ ...c, alreadyMapped: taken.has(c.id) }))
+      // 값은 복제하지 않고 원장을 가리킨다 — 명단·GUEST 명부와 같은 합성 함수를 쓴다.
+      const facts = await loadLedgerFacts(rows)
+
+      return rows
+        .map((r): MasterCandidate => {
+          const f = facts.get(`${r.master_table}:${r.master_id}`)
+          return {
+            id: r.master_id,
+            // 원장 행이 지워졌거나 읽을 권한이 없으면 이름을 지어내지 않는다(명단 표와 같다).
+            name: f?.name || '미지정',
+            loginName: f?.loginName ?? null,
+            email: f?.email ?? null,
+            phone: f?.phone ?? null,
+            alreadyMapped: taken.has(r.master_id),
+          }
+        })
+        .filter((c) => !term || candidateMatches(c, term))
     },
   })
+}
+
+/** 후보 한 줄이 검색어에 걸리는가. 견주는 값은 그 줄이 실제로 보여 주는 것뿐이다. */
+function candidateMatches(c: MasterCandidate, lowerTerm: string): boolean {
+  return [c.name, c.loginName, c.email, c.phone].some((v) =>
+    (v ?? '').toLowerCase().includes(lowerTerm),
+  )
 }
 
 /**
