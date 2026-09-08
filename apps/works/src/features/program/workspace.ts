@@ -132,6 +132,12 @@ export const SHARED_TABLES = {
   modules: 'program_modules',
   moduleAssignees: 'program_module_assignees',
   participants: 'program_participants',
+  /**
+   * 참가자 목록(명단) — 참가 사실 한 축만 지는 원장이며 위 `participants`(게스트 문·계정 축)와
+   * 갈려 있다. 가른 이유는 담는 순간 "게스트 계정이 있다"가 함께 서던 것을 떼기 위해서다.
+   * 계정은 다음 라운드에서 이 명단을 보고 **골라서** 만든다(자동 생성이 아니다).
+   */
+  participantEntries: 'program_participant_entries',
   /** 글쓰기 모듈의 글 원장(구 커스텀 활동 원장을 2026-08-03 개명한 것). */
   posts: 'program_posts',
   /** URL첨부 모듈의 링크 원장. */

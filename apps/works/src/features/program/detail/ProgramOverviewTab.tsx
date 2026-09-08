@@ -1,6 +1,10 @@
+import { Tabs } from '@ynarcher/ui'
+import { useState } from 'react'
 import type { Program, ProgramModule } from '@/features/program/hooks'
+import { MODULE_BOARD_LABEL } from '@/features/program/config'
 import { GuestSettingsButton } from '@/features/program/detail/GuestSettingsButton'
 import { ModuleBoardCard } from '@/features/program/detail/ModuleBoardCard'
+import { ProgramRosterCard, ROSTER_LABEL } from '@/features/program/detail/ProgramRosterCard'
 import { ProgramInfoCard } from '@/features/program/detail/ProgramInfoCard'
 import { RelatedApprovalPanel } from '@/features/program/detail/RelatedApprovalPanel'
 import { RelatedMinutesPanel } from '@/features/office/minutes/RelatedMinutesPanel'
@@ -12,12 +16,19 @@ import { MaterialPanel } from '@/features/networks/MaterialPanel'
 
 /**
  * 프로그램 상세 개요(NETWORKS·STARTUP 상세와 동일한 2/3 + 1/3 카드섹션 컴포지션).
- * 좌측 본문(2/3): 기본 데이터 카드 → `와이앤아처 GUEST 설정` 버튼 → 워크플로우.
+ * 좌측 본문(2/3): 기본 데이터 카드 → `와이앤아처 GUEST 설정` 버튼 → 탭 줄(워크플로우 · 참가자 목록).
  *
- * **좌측 탭 줄은 2026-09-09에 걷혔다**(사용자 지정). 게스트에게 나가는 셋(개요·공지사항·Q&A)이
- * 계정생성과 함께 GUEST 설정 모달로 들어가면서 탭 줄에 워크플로우 하나만 남았고, 가를 것이
- * 없는 자리에 선 탭은 '다른 것도 있다'고 말하는 거짓 신호이기 때문이다. 워크플로우가 무엇인지는
- * 그 카드가 자기 제목으로 이미 말한다.
+ * **좌측 탭 줄은 2026-09-09 낮에 걷혔다가 같은 날 되섰다.** 걷은 이유는 게스트에게 나가는
+ * 셋(개요·공지사항·Q&A)이 계정생성과 함께 GUEST 설정 모달로 들어가면서 남은 탭이 워크플로우
+ * 하나가 되었기 때문이다 — 가를 것이 없는 자리에 선 탭은 '다른 것도 있다'고 말하는 거짓 신호다.
+ * 되선 이유도 같은 규칙이다: **참가자 목록이 들어와 실제로 가를 것이 둘이 되었다.**
+ *
+ * 둘이 같은 층에 서는 근거는 둘 다 *이 사업 안에서 하는 일*이라는 것이다 — 무엇을 하는가
+ * (워크플로우)와 누가 참가하는가(참가자 목록). 게스트에게 나가는 것들이 버튼 뒤로 접힌 것과
+ * 갈리는 축이며, 그래서 참가자 목록은 GUEST 설정 안이 아니라 여기 선다(계정을 다루지 않는다).
+ *
+ * 이름은 탭 줄이 소유하므로 **두 카드 모두 제목을 들지 않는다** — 같은 낱말이 탭과 카드 제목에
+ * 겹쳐 서면 둘이 같은 층인지 아닌지를 화면이 답하지 못한다.
  * 넷을 한자리에 모은 근거는 `GuestSettingsButton` 주석에 있다 — 성격이 같은 것끼리 모으면
  * 밖에 무엇이 나가 있는지 확인하려는 사람이 한 곳만 열면 된다.
  * '평가 엔진' 탭은 2026-08-27 걷어냈다 — 평가는 사업 상세에 늘 떠 있어야 하는 축이 아니라
@@ -46,8 +57,9 @@ export function ProgramOverviewTab({
   const config = useProgramWorkspace()
   const { data: contributions } = useProgramContributions(program.id)
   // 이 워크스페이스가 쓰는 자격. 무엇이 서는지는 `guestMasterTables`가 답하고, 그 값은
-  // 사이드바 창구의 하위 탭과 **같은 한 벌**이다.
+  // 사이드바 창구의 하위 탭·참가자 목록의 자격 탭과 **같은 한 벌**이다.
   const personas = config.guestMasterTables ?? []
+  const [tab, setTab] = useState<'workflow' | 'roster'>('workflow')
 
   return (
     <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
@@ -57,7 +69,21 @@ export function ProgramOverviewTab({
             하는가(아래 탭 줄)다. 우측 컬럼에 두지 않은 이유는 그쪽이 이미 패널 다섯 장이라
             한 장을 더하면 무엇이 무엇인지 흐려지기 때문이다 — 자세한 근거는 버튼 주석. */}
         <GuestSettingsButton program={program} personas={personas} />
-        <ModuleBoardCard program={program} onOpenModule={onOpenModule} />
+        <Tabs
+          items={[
+            { key: 'workflow', label: MODULE_BOARD_LABEL },
+            { key: 'roster', label: ROSTER_LABEL },
+          ]}
+          value={tab}
+          onChange={(key) => setTab(key as 'workflow' | 'roster')}
+        />
+        {/* 탭을 감추지 않고 갈아 끼운다 — 워크플로우 카드는 뷰 전환·펼침 같은 자기 상태를
+            들고 있어, 숨겨 둔 채로 살려 두면 보이지 않는 화면이 조회를 계속 돌린다. */}
+        {tab === 'workflow' ? (
+          <ModuleBoardCard program={program} onOpenModule={onOpenModule} />
+        ) : (
+          <ProgramRosterCard programId={program.id} personas={personas} />
+        )}
       </div>
       {/* 우측(1/3): 자료 관리 → 전자결재 → 관련 회의록 → 변동 이력 → 코멘트.
           급한 순서가 곧 위에서 아래 순서다 — 일하러 들어온 사람이 먼저 찾는 것은 자료와 결재고,

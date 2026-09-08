@@ -199,7 +199,7 @@ export function ProgramFormModal({
     if (!isMna) return true
     if (isEdit && partyLoading) return true
     const kinds = partyKindsOf(category)
-    // 걸 것도 걷을 것도 없으면 부르지 않는다 — 매물을 연결하지 않는 구분(PE Fund·기타)에서
+    // 걸 것도 걷을 것도 없으면 부르지 않는다 — 매물을 연결하지 않는 구분(기타)에서
     // 저장할 때마다 도는 빈 요청이 된다.
     if (kinds.length === 0 && buyers.length === 0 && sellers.length === 0) return true
     try {

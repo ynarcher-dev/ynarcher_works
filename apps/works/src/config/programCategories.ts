@@ -30,12 +30,18 @@ export const AC_CATEGORIES: readonly ProgramCategoryOption[] = [
   { value: 'ETC', label: '기타', tone: 'neutral' },
 ]
 
-/** M&A 사업구분: 매도/매수/매도+매수/PE 펀드/기타. */
+/**
+ * M&A 프로젝트 구분: 매도/매수/매도+매수/기타.
+ *
+ * `PE_FUND`는 2026-09-09에 선택지에서 뺐다(사용자 지정). **DB CHECK 제약은 그대로 둔다** —
+ * 저장된 행이 0건이라 잃는 데이터가 없고, 되돌리는 일이 마이그레이션 없이 이 줄 하나가
+ * 되어야 하기 때문이다('일단 빼 달라'는 되돌릴 여지를 남겨 달라는 말이다). 화면에서 고를 수
+ * 없으면 새 행은 생기지 않으므로, 열려 있는 CHECK 값이 실제로 쓰일 자리는 없다.
+ */
 export const MNA_CATEGORIES: readonly ProgramCategoryOption[] = [
   { value: 'SELL', label: 'Sell', tone: 'warning' },
   { value: 'BUY', label: 'Buy', tone: 'info' },
   { value: 'SELL_BUY', label: 'Sell+Buy', tone: 'neutral' },
-  { value: 'PE_FUND', label: 'PE Fund', tone: 'success' },
   { value: 'ETC', label: '기타', tone: 'neutral' },
 ]
 

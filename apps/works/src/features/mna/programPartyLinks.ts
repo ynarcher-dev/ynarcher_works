@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 export type MaProgramPartyKind = 'BUY' | 'SELL'
 
 /**
- * 프로젝트 구분이 어느 원장을 여는가. 여기 없는 구분(PE Fund·기타)은 매물을 연결하지 않는다.
+ * 프로젝트 구분이 어느 원장을 여는가. 여기 없는 구분(기타)은 매물을 연결하지 않는다.
  *
  * 화면이 아니라 여기 두는 이유는 같은 판정을 서버 RPC(`set_ma_program_party_links`)도 하기
  * 때문이다 — 등록 폼과 상세 패널이 각자 조건을 적으면 그 둘이 서버와 어긋날 자리가 둘이 된다.

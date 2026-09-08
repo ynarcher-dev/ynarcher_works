@@ -114,7 +114,7 @@ function participantCols(table: string): string {
  * 자격 수만큼 병렬 조회가 돌고, 자격이 늘어도 이 함수는 그대로다 — 어느 표를 어떤 컬럼으로
  * 읽는지는 자격 설정이 답한다.
  */
-async function loadLedgerFacts(
+export async function loadLedgerFacts(
   rows: { master_table: string | null; master_id: string | null }[],
 ): Promise<Map<string, LedgerFacts>> {
   const byPersona = new Map<MasterTable, string[]>()
@@ -229,9 +229,46 @@ export function useProgramParticipants(programId: string | undefined) {
 }
 
 /**
- * 원장 후보 검색(매핑 모달). 성명·연락처가 없는 대상도 함께 돌려주고 화면이 사유를 표시한다 —
- * 목록에서 빼 버리면 "왜 안 보이지"가 되고, 보이되 고를 수 없어야 "무엇을 보완해야 하는지"가 남는다.
+ * 원장 후보 검색 — **원장만 읽고 '이미 담김' 판정은 하지 않는다.**
+ *
+ * 담긴 여부를 여기서 묻지 않는 이유는 그 답을 가진 표가 화면마다 다르기 때문이다(GUEST
+ * 명부는 `program_participants`, 참가자 목록은 `program_participant_entries`). 원장을 어떻게
+ * 읽는가는 하나이고 무엇과 대조하는가는 둘이므로, 하나인 쪽만 여기 두고 대조는 부르는 쪽이 한다.
+ *
+ * 성명·연락처가 없는 대상도 함께 돌려주고 화면이 사유를 표시한다 — 목록에서 빼 버리면
+ * "왜 안 보이지"가 되고, 보이되 사유가 붙어야 "무엇을 보완해야 하는지"가 남는다.
  */
+export async function fetchLedgerCandidates(
+  master: MasterTable,
+  search: string,
+): Promise<Omit<MasterCandidate, 'alreadyMapped'>[]> {
+  const { ledger } = PARTICIPANT_PERSONAS[master]
+  let query = supabase
+    .from(ledger.table)
+    .select(ledger.columns)
+    .is('deleted_at', null)
+    .order('name', { ascending: true })
+    .limit(50)
+  if (ledger.narrow) query = query.eq(ledger.narrow.column, ledger.narrow.value)
+  const kw = sanitizeOrValue(search.trim())
+  if (kw) query = query.or(ledger.searchColumns.map((c) => `${c}.ilike.%${kw}%`).join(','))
+
+  const { data, error } = await query
+  if (error) throw error
+
+  return ((data ?? []) as unknown as Record<string, unknown>[]).map((raw) => {
+    const facts = ledger.map(raw)
+    return {
+      id: String(raw.id),
+      name: facts.name,
+      loginName: facts.loginName,
+      email: facts.email,
+      phone: facts.phone,
+    }
+  })
+}
+
+/** 원장 후보 검색(GUEST 명부의 매핑 모달). 이미 명부에 담긴 대상은 고를 수 없다. */
 export function useMasterCandidates(
   programId: string | undefined,
   master: MasterTable,
@@ -243,26 +280,14 @@ export function useMasterCandidates(
     queryKey: [config.key, 'master-candidates', programId, master, term],
     enabled: Boolean(programId),
     queryFn: async (): Promise<MasterCandidate[]> => {
-      const { ledger } = PARTICIPANT_PERSONAS[master]
-      let query = supabase
-        .from(ledger.table)
-        .select(ledger.columns)
-        .is('deleted_at', null)
-        .order('name', { ascending: true })
-        .limit(50)
-      if (ledger.narrow) query = query.eq(ledger.narrow.column, ledger.narrow.value)
-      const kw = sanitizeOrValue(term)
-      if (kw) query = query.or(ledger.searchColumns.map((c) => `${c}.ilike.%${kw}%`).join(','))
-
-      const [{ data, error }, mapped] = await Promise.all([
-        query,
+      const [candidates, mapped] = await Promise.all([
+        fetchLedgerCandidates(master, term),
         supabase
           .from(SHARED_TABLES.participants)
           .select('master_id')
           .eq('program_id', programId)
           .eq('master_table', master),
       ])
-      if (error) throw error
       if (mapped.error) throw mapped.error
 
       const taken = new Set(
@@ -271,18 +296,7 @@ export function useMasterCandidates(
           .filter(Boolean) as string[],
       )
 
-      return ((data ?? []) as unknown as Record<string, unknown>[]).map((raw) => {
-        const facts = ledger.map(raw)
-        const id = String(raw.id)
-        return {
-          id,
-          name: facts.name,
-          loginName: facts.loginName,
-          email: facts.email,
-          phone: facts.phone,
-          alreadyMapped: taken.has(id),
-        }
-      })
+      return candidates.map((c) => ({ ...c, alreadyMapped: taken.has(c.id) }))
     },
   })
 }

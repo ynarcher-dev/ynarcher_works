@@ -99,7 +99,7 @@ export function ModuleBoardCard({
 
   if (isLoading) {
     return (
-      <Card title={MODULE_BOARD_LABEL}>
+      <Card>
         <Spinner />
       </Card>
     )
@@ -244,8 +244,13 @@ export function ModuleBoardCard({
 
   return (
     <>
+      {/*
+        **카드가 제목을 들지 않는다**(2026-09-09) — 이름은 위 탭 줄(`워크플로우` · `참가자 목록`)이
+        이미 말한다. 제목을 함께 두면 같은 낱말이 위아래로 겹쳐, 탭이 고른 것과 카드가 담은 것이
+        서로 다른 층인지 같은 층인지를 화면이 답하지 못한다.
+        전체 화면(FullscreenPanel)에는 탭 줄이 따라가지 않으므로 그쪽은 제목을 그대로 든다.
+      */}
       <Card
-        title={MODULE_BOARD_LABEL}
         actions={
           <div className="flex items-center gap-2">
             {viewToggle}
