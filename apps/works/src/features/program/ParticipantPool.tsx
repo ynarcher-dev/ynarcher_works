@@ -1,6 +1,5 @@
 import {
   Button,
-  Card,
   DataTable,
   ListToolbar,
   Spinner,
@@ -255,23 +254,21 @@ export function ParticipantPool({
     reset: selectedAccountIds.length,
   }
 
-  if (isLoading) {
-    return (
-      <Card title={spec.label}>
-        <Spinner />
-      </Card>
-    )
-  }
+  if (isLoading) return <Spinner />
 
   return (
     <>
-      {/* 건수는 이 탭의 자격만 센다 — 카드 제목이 '참여 기업'인데 뒤의 수가 전문가까지 합한
-          값이면, 표는 비어 있는데 제목만 건수를 말하는 화면이 된다.
-          부제는 두지 않는다(2026-09-08 사용자 지정) — 사업 코드는 사업의 식별값이라 사업 정보
-          카드가 소유하고, 기간은 그것을 바꾸는 버튼이 스스로 되읽는다. 같은 값을 두 곳에서
-          말하면 한쪽만 고쳐지는 날이 온다. */}
-      <Card title={spec.label} count={personaRows.length}>
-        <div className="space-y-3">
+      {/*
+        **카드 껍데기를 두르지 않는다**(2026-09-08). 이 명부는 모달 안에 서고, 그 모달은 이미
+        제목과 상자를 갖는다 — 한 번 더 두르면 상자 안의 상자가 되고 제목이 두 줄이 된다.
+
+        건수도 제목 옆에 적지 않는다. 표 아래 페이저가 이미 '필터 반영 / 전체'로 말하고 있어,
+        같은 수를 두 곳에서 각자 세면 검색으로 좁혔을 때 두 값이 어긋나 보인다.
+
+        자격은 위의 하위 탭이 답하고, 사업 코드는 사업 정보 카드가 소유하며, 기간은 그것을
+        바꾸는 버튼이 스스로 되읽는다.
+      */}
+      <div className="space-y-3">
           <ListToolbar
             keyword={keyword}
             onKeywordChange={setKeyword}
@@ -323,8 +320,7 @@ export function ParticipantPool({
               onChange: setPage,
             }}
           />
-        </div>
-      </Card>
+      </div>
 
       <ParticipantAddModal
         open={addOpen}
