@@ -8,7 +8,12 @@ import {
 } from '@ynarcher/ui'
 import { RichTextViewer } from '@/components/RichTextEditor'
 import { MaQuickReviewSection } from '@/features/mna/parties/MaQuickReviewSection'
-import { toWon, type MaPartyConfig, type MaPartyRow } from '@/features/mna/parties/config'
+import {
+  decisionBadge,
+  toWon,
+  type MaPartyConfig,
+  type MaPartyRow,
+} from '@/features/mna/parties/config'
 import { useMaPartyContributions } from '@/features/mna/parties/hooks'
 import { SensitiveValue } from '@/features/master/SensitiveValue'
 import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
@@ -41,6 +46,7 @@ export function MaPartyView({
   record: MaPartyRow
 }) {
   const industries = Array.isArray(record.industries) ? record.industries : []
+  const decision = decisionBadge(record.decision)
   const overview = record.overview_html ?? ''
   const { data: contributions } = useMaPartyContributions(config, record.id)
 
@@ -55,11 +61,22 @@ export function MaPartyView({
             값을 두 곳에 두면 어긋난다). */}
         <EntityHeaderCard
           title={record.name}
-          badges={industries.map((ind) => (
-            <Badge key={ind} tone="neutral">
-              {ind}
-            </Badge>
-          ))}
+          badges={
+            <>
+              {/* 진행여부가 분야보다 앞선다 — 이름 다음에 답해야 하는 것은 '무엇을 하는
+                  곳인가'가 아니라 '이 건을 할 것인가'다. 결정이 없어도 자리를 비우지 않고
+                  중립 '미결정'으로 세운다(목록의 같은 열과 같은 처리).
+
+                  색이 붙는 배지는 이 하나뿐이라 분야 배지와 섞이지 않는다 — 색은 상태에만
+                  쓴다는 규칙(§3.4)이 여기서 그대로 두 종류를 갈라 준다. */}
+              <Badge tone={decision.tone}>{decision.label}</Badge>
+              {industries.map((ind) => (
+                <Badge key={ind} tone="neutral">
+                  {ind}
+                </Badge>
+              ))}
+            </>
+          }
           description={record.wish}
           info={
             <InfoGrid>

@@ -1,3 +1,5 @@
+import type { BadgeTone } from '@ynarcher/ui'
+
 /**
  * M&A 거래상대 원장(BUYER·SELLER) 화면 설정.
  *
@@ -85,6 +87,63 @@ export const MA_SELLER: MaPartyConfig = {
   hasQuickReview: true,
 }
 
+/**
+ * 진행여부 결정 — 저장값 셋.
+ *
+ * '미결정'은 값이 아니라 `null`이다(원장 주석과 같은 판단) — 등록하는 순간에는 아직 정한
+ * 것이 없고, 저장값으로 만들면 '아직 안 정함'과 '정하지 않기로 함'이 같은 글자가 된다.
+ * 그래도 화면에서는 빈 자리로 두지 않고 '미결정'이라 적는다: 배지가 없으면 그 레코드에
+ * 이 축이 없는 것인지 아직 정하지 않은 것인지 화면이 답하지 못한다.
+ *
+ * 순서는 결정의 무게가 아니라 담당자가 고르는 순서다(진행 → 미진행 → 보류) — 셀렉트·필터
+ * 팝오버가 언제나 이 순서를 쓰므로 같은 자리를 두 번 누를 수 있다.
+ */
+export const MA_DECISIONS = ['PROCEED', 'NOT_PROCEED', 'HOLD'] as const
+
+export type MaDecision = (typeof MA_DECISIONS)[number]
+
+export const MA_DECISION_LABEL: Record<MaDecision, string> = {
+  PROCEED: '진행',
+  NOT_PROCEED: '미진행',
+  HOLD: '보류',
+}
+
+/**
+ * 색은 상태에만 쓴다(5_component_spec_rules §3.4). 톤 배분은 사업 상태표
+ * (`PROGRAM_STATUS_TONE`)와 같은 규칙이다 — 끝난 긍정은 초록, 끝난 부정은 빨강, 기다리는
+ * 중은 노랑. 결정이 없는 행은 중립이라 상태 배지 사이에서 먼저 눈에 들어오지 않는다.
+ */
+export const MA_DECISION_TONE: Record<MaDecision, BadgeTone> = {
+  PROCEED: 'success',
+  NOT_PROCEED: 'danger',
+  HOLD: 'warning',
+}
+
+/** 미결정(저장값 `null`)의 화면 라벨. 배지·셀렉트·필터가 같은 글자를 쓴다. */
+export const MA_DECISION_UNSET_LABEL = '미결정'
+
+/**
+ * 필터에서 '미결정'을 가리키는 표식.
+ *
+ * 저장값이 아니므로 값 배열에 그대로 섞을 수 없고(그 배열이 곧 `in` 조건이 된다), 그렇다고
+ * 축을 둘로 갈라 두면 '진행 또는 미결정'을 고를 자리가 없어진다. 값 배열 안에서만 통하는
+ * 표식 하나를 두고 조회가 그것만 떼어 OR로 묶는다(사업구분 필터의 `UNCLASSIFIED_CATEGORY`와
+ * 같은 처리).
+ */
+export const DECISION_UNSET = '__unset__'
+
+/** 저장값 → 배지가 쓸 것 전부(라벨·톤). 화면마다 따로 조립하지 않는다. */
+export function decisionBadge(v: string | null | undefined): {
+  label: string
+  tone: BadgeTone
+} {
+  const key = v as MaDecision
+  if (!key || !(key in MA_DECISION_LABEL)) {
+    return { label: MA_DECISION_UNSET_LABEL, tone: 'neutral' }
+  }
+  return { label: MA_DECISION_LABEL[key], tone: MA_DECISION_TONE[key] }
+}
+
 /** 분야 선택 상한. startups.industries와 같은 규칙이라 같은 수를 쓴다. */
 export const MAX_INDUSTRIES = 3
 
@@ -117,6 +176,11 @@ export interface MaPartyRow {
   startup_id: string | null
   /** 매핑된 기업(임베드). 그 기업을 볼 수 없으면 비어 온다 — 화면은 링크 없이 물러난다. */
   startup?: { id: string; name: string } | null
+  /**
+   * 진행여부 결정(`null`이면 미결정). 목록도 이 칸을 읽는다 — 이 축으로 좁혀 보는 것이
+   * 칸을 만든 이유이고, 좁힌 결과를 표에서 확인하지 못하면 필터가 무엇을 했는지 알 수 없다.
+   */
+  decision: string | null
   overview_html: string | null
   /**
    * 퀵 리뷰 문서(절 7종). 상세 조회에서만 읽는다 — 목록은 이 칸을 가져오지 않는다.

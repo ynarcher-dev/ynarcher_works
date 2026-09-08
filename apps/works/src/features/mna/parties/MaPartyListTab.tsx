@@ -1,8 +1,10 @@
 import {
+  Badge,
   ColumnUnit,
   DataTable,
   EmptyValue,
   ListToolbar,
+  MultiSelectFilter,
   PersonCell,
   Spinner,
   TagCell,
@@ -11,11 +13,32 @@ import {
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ListActions } from '@/components/ListActions'
-import { toMillion, type MaPartyConfig, type MaPartyRow } from '@/features/mna/parties/config'
+import {
+  DECISION_UNSET,
+  MA_DECISIONS,
+  MA_DECISION_LABEL,
+  MA_DECISION_UNSET_LABEL,
+  decisionBadge,
+  toMillion,
+  type MaPartyConfig,
+  type MaPartyRow,
+} from '@/features/mna/parties/config'
 import { useMaPartyListPage } from '@/features/mna/parties/hooks'
 
 /** 목록 페이지당 행 수 — 다른 원장 목록과 같다. */
 const PAGE_SIZE = 30
+
+/**
+ * 진행여부 필터 선택지.
+ *
+ * '미결정'을 끝에 둔다 — 결정 셋 다음에 서야 "아직 안 정한 것"이 결정의 한 종류가 아니라
+ * 그 축의 나머지로 읽힌다. 이 값이 있어야 정할 것이 남은 건을 골라 볼 수 있고, 그것이
+ * 이 필터를 만든 첫 번째 쓰임이다.
+ */
+const DECISION_OPTIONS = [
+  ...MA_DECISIONS.map((value) => ({ value, label: MA_DECISION_LABEL[value] })),
+  { value: DECISION_UNSET, label: MA_DECISION_UNSET_LABEL },
+]
 
 /**
  * 목록 도메인 열.
@@ -36,6 +59,19 @@ const PAGE_SIZE = 30
 function columnsOf(cfg: MaPartyConfig): Column<MaPartyRow>[] {
   return [
     { key: 'name', header: '기업명', type: 'name' },
+    {
+      // 기업명 바로 옆이다 — 이 열로 좁혀 보려고 필터를 만들었으므로, 세로로 훑을 때 이름과
+      // 결정이 붙어 있어야 "무엇을 진행하기로 했나"가 한 눈에 읽힌다.
+      // 결정이 없는 행도 '미결정' 배지로 선다: 빈 칸으로 두면 아직 안 정한 것인지 이 열이
+      // 그 행에 해당하지 않는 것인지 표가 답하지 못한다.
+      key: 'decision',
+      header: '진행여부',
+      type: 'badge',
+      render: (r) => {
+        const { label, tone } = decisionBadge(r.decision)
+        return <Badge tone={tone}>{label}</Badge>
+      },
+    },
     {
       key: 'industries',
       header: '분야',
@@ -71,9 +107,10 @@ function columnsOf(cfg: MaPartyConfig): Column<MaPartyRow>[] {
 /**
  * M&A BUYER·SELLER 목록.
  *
- * 필터 축을 두지 않는다. 축이 될 만한 값이 분야 하나뿐인데 그 하나를 위해 필터 줄을 세우면
- * 검색창 옆이 늘 절반 비고, 실제로 좁히는 일은 검색어가 먼저 한다 — 건수가 쌓여 분야로
- * 좁혀 보는 일이 생기면 그때 축을 연다(요약 카드도 같은 조건이다).
+ * 필터 축은 진행여부 하나다(2026-09-08). 이 원장들은 딜보다 먼저 쌓이므로 목록에는 아직
+ * 볼지 정하지 않은 건과 정한 건이 섞여 서고, 그 둘을 가르는 것이 이 목록에서 가장 자주 하는
+ * 일이다. 분야는 여전히 축이 아니다 — 값이 태그라 선택지가 원장에서 자라고, 실제로 좁히는
+ * 일은 검색어가 먼저 한다(건수가 쌓이면 그때 연다. 요약 카드도 같은 조건이다).
  *
  * 범위 토글(내 것/전체)도 없다. 이 원장들은 담당자 원장을 두지 않은 공동관리라 '내 바이어'
  * 라는 것이 성립하지 않는다 — 생성자는 권한 축이 아니므로 범위가 되지 못한다.
@@ -81,18 +118,20 @@ function columnsOf(cfg: MaPartyConfig): Column<MaPartyRow>[] {
 export function MaPartyListTab({ config }: { config: MaPartyConfig }) {
   const navigate = useNavigate()
   const [keyword, setKeyword] = useState('')
+  const [decisions, setDecisions] = useState<string[]>([])
   const [page, setPage] = useState(0)
   const columns = useMemo(() => columnsOf(config), [config])
 
-  // 검색어를 바꾸면 첫 페이지로 되돌린다(빈 페이지 방지).
-  useEffect(() => setPage(0), [keyword])
-  // 원장을 옮겨도 컴포넌트는 그대로 서므로(같은 화면 한 벌) 검색어·페이지를 함께 되돌린다.
+  // 좁힘 조건을 바꾸면 첫 페이지로 되돌린다(3페이지를 보던 중 필터를 걸면 빈 페이지가 선다).
+  useEffect(() => setPage(0), [keyword, decisions])
+  // 원장을 옮겨도 컴포넌트는 그대로 서므로(같은 화면 한 벌) 검색어·필터·페이지를 함께 되돌린다.
   useEffect(() => {
     setKeyword('')
+    setDecisions([])
     setPage(0)
   }, [config])
 
-  const { data, isLoading } = useMaPartyListPage(config, keyword, page, PAGE_SIZE)
+  const { data, isLoading } = useMaPartyListPage(config, keyword, decisions, page, PAGE_SIZE)
 
   return (
     <div className="space-y-3">
@@ -100,6 +139,14 @@ export function MaPartyListTab({ config }: { config: MaPartyConfig }) {
         keyword={keyword}
         onKeywordChange={setKeyword}
         searchPlaceholder="기업명·희망사항 검색"
+        filters={
+          <MultiSelectFilter
+            label="진행여부"
+            options={DECISION_OPTIONS}
+            selected={decisions}
+            onChange={setDecisions}
+          />
+        }
         actions={
           <ListActions
             createLabel={`${config.noun} 등록`}

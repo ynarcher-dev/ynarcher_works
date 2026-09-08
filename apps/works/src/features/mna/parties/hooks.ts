@@ -6,12 +6,16 @@ import {
   type LedgerPage,
 } from '@/features/master/ledgerPage'
 import type { Contribution } from '@/features/networks/hooks'
-import type { MaPartyConfig, MaPartyRow } from '@/features/mna/parties/config'
+import {
+  DECISION_UNSET,
+  type MaPartyConfig,
+  type MaPartyRow,
+} from '@/features/mna/parties/config'
 import { supabase } from '@/lib/supabase'
 
 /** 목록·상세가 함께 읽는 select 문자열. 생성자는 이름만 임베드한다. */
 const SELECT =
-  'id, name, industries, wish, available_funds, contact_name, contact_email, startup_id, created_at, updated_at, created_by, creator:users!created_by(id, name), startup:startups!startup_id(id, name)'
+  'id, name, industries, wish, available_funds, decision, contact_name, contact_email, startup_id, created_at, updated_at, created_by, creator:users!created_by(id, name), startup:startups!startup_id(id, name)'
 
 /**
  * 캐시 키의 뿌리는 표 이름이다.
@@ -32,15 +36,29 @@ const root = (cfg: MaPartyConfig) => ['ma-parties', cfg.table] as const
 export function useMaPartyListPage(
   cfg: MaPartyConfig,
   keyword: string,
+  decisions: readonly string[],
   page: number,
   pageSize: number,
 ) {
   return useQuery({
-    queryKey: [...root(cfg), 'list', keyword, page, pageSize],
+    // 필터도 캐시 키에 든다 — 빠뜨리면 '진행'으로 좁힌 결과가 필터를 푼 목록으로 그대로 선다.
+    queryKey: [...root(cfg), 'list', keyword, [...decisions].sort().join(','), page, pageSize],
     queryFn: async (): Promise<LedgerPage<MaPartyRow>> => {
       const narrow: LedgerCondition[] = []
       const kw = sanitizeOrValue(keyword)
       if (kw) narrow.push({ kind: 'or', expr: `name.ilike.%${kw}%,wish.ilike.%${kw}%` })
+
+      // 미결정은 저장값이 아니라 null이라 값 배열에 섞이지 못한다. 그래서 표식만 떼어 내고
+      // 한 축을 **OR 하나로** 묶는다 — 두 조건으로 나눠 걸면 AND가 되어 '진행 또는 미결정'이
+      // 언제나 0건이 된다(고를 수 있다고 말하면서 아무것도 답하지 않는 조합).
+      const wantsUnset = decisions.includes(DECISION_UNSET)
+      const values = decisions.filter((d) => d !== DECISION_UNSET)
+      if (wantsUnset || values.length > 0) {
+        const parts: string[] = []
+        if (values.length > 0) parts.push(`decision.in.(${values.join(',')})`)
+        if (wantsUnset) parts.push('decision.is.null')
+        narrow.push({ kind: 'or', expr: parts.join(',') })
+      }
 
       return fetchLedgerPage<MaPartyRow>({
         table: cfg.table,

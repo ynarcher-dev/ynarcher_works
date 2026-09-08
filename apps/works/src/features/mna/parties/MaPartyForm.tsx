@@ -1,4 +1,13 @@
-import { CardShell, Field, formText, Input, PanelCard, TextAction, useToast } from '@ynarcher/ui'
+import {
+  CardShell,
+  Field,
+  formText,
+  Input,
+  PanelCard,
+  Select,
+  TextAction,
+  useToast,
+} from '@ynarcher/ui'
 import { Search } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -9,6 +18,9 @@ import { useTagTokenField } from '@/features/admin/TagTokenField'
 import { StartupPickerModal } from '@/features/mna/parties/StartupPickerModal'
 import {
   MAX_INDUSTRIES,
+  MA_DECISIONS,
+  MA_DECISION_LABEL,
+  MA_DECISION_UNSET_LABEL,
   formatWonInput,
   parseWon,
   type MaPartyConfig,
@@ -32,6 +44,8 @@ import { usePendingMaterials } from '@/features/networks/pendingMaterials'
 interface MaPartyFormValues {
   name: string
   wish: string
+  /** 진행여부 결정. 빈 문자열이 '미결정'이며 저장할 때 null이 된다(셀렉트는 null을 담지 못한다). */
+  decision: string
   /** 원 단위, 세 자리마다 쉼표. 표기와 같은 단위여야 적은 값과 읽는 값이 같다. */
   funds: string
   /** 상대 쪽 연락 창구. 우리 쪽 관리 주체가 아니다. */
@@ -82,6 +96,7 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
     values: {
       name: initial?.name ?? '',
       wish: initial?.wish ?? '',
+      decision: initial?.decision ?? '',
       funds:
         initial?.available_funds == null
           ? ''
@@ -171,6 +186,9 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
       // 저장은 원 단위 하나다. 화면마다 단위를 바꿔 저장하면 어느 자리에서 적힌 값인지에
       // 따라 같은 컬럼이 다른 뜻을 갖는다.
       available_funds: parseWon(v.funds),
+      // 빈 문자열은 '미결정'이고 그것은 값이 아니라 null이다 — 셀렉트가 담지 못하는 것을
+      // 여기서 되돌린다. 그대로 보내면 CHECK 제약에 걸려 저장 자체가 실패한다.
+      decision: v.decision || null,
       contact_name: v.contactName.trim() || null,
       contact_email: v.contactEmail.trim() || null,
       startup_id: link.startupId,
@@ -301,6 +319,29 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
                       '이메일 형식이 아닙니다.',
                   })}
                 />
+              </Field>
+              {/* 우리 쪽 판단이라 상대 쪽 값(기업명·금액·분야·희망사항·담당자·이메일) 뒤에
+                  홀로 선다 — 앞 여섯 칸이 '이 상대가 무엇인가'를 적는 자리이고 이 칸만
+                  '우리가 어떻게 할 것인가'라, 사이에 끼우면 성격이 다른 칸이 짝을 이룬다.
+
+                  첫 줄은 '선택'이 아니라 '미결정'이다 — 아직 고르지 않은 빈 자리가 아니라
+                  아직 정하지 않았다는 답이고, 그 답으로 목록을 좁혀 보는 것이 이 칸의 첫
+                  쓰임이다. 저장되는 값은 여전히 null이라 '미결정이라는 결정'이 생기지 않는다.
+
+                  바꾼 사유를 여기서 받지 않는 것은 수정 저장이 이미 사유를 묻기 때문이다 —
+                  그 사유가 변동 이력의 note로 남아 "왜 미진행으로 돌렸나"를 답한다. */}
+              <Field
+                label="진행여부"
+                hint="정하기 전까지는 미결정입니다. 그렇게 정한 이유는 상세내용이나 수정 사유가 답합니다."
+              >
+                <Select {...register('decision')}>
+                  <option value="">{MA_DECISION_UNSET_LABEL}</option>
+                  {MA_DECISIONS.map((value) => (
+                    <option key={value} value={value}>
+                      {MA_DECISION_LABEL[value]}
+                    </option>
+                  ))}
+                </Select>
               </Field>
             </div>
           </CardShell>
