@@ -329,7 +329,7 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
                   값을 쓰는 쪽(계정 발급)은 이 칸이 비었는지만 보고 사유와 함께 멈춘다. */}
               <Field
                 label="연락처"
-                hint="포털 계정의 초기 비밀번호가 됩니다."
+                hint="GUEST 계정의 초기 비밀번호가 됩니다."
               >
                 <Input placeholder="예: 010-1234-5678" {...register('contactPhone')} />
               </Field>

@@ -5,6 +5,7 @@ import { RichTextEditor, RichTextViewer } from '@/components/RichTextEditor'
 import { isEmptyRichText } from '@/lib/richText'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { useProgramOverview, useSaveProgramOverview } from '@/features/program/overviewHooks'
+import { useProgramWorkspace } from '@/features/program/workspace'
 
 /**
  * 사업개요 첨부의 다형 키. 사업 자료 관리('program')와 같은 attachments 원장을 쓰되
@@ -42,6 +43,9 @@ export function ProgramIntroPanel({ programId }: { programId: string }) {
 
 /** 소개문 카드 — 카드 안에서 공용 리치텍스트 뷰어와 에디터가 자리를 바꾼다. */
 function IntroCard({ programId }: { programId: string }) {
+  // 부르는 이름은 워크스페이스가 답한다(AC 사업개요 / M&A 프로젝트개요) — 같은 화면을 부르는
+  // 말이 사이드바·목록과 어긋나면 둘이 다른 것인지 되묻게 된다.
+  const { entityNoun } = useProgramWorkspace()
   const toast = useToast()
   const { data: overview, isLoading } = useProgramOverview(programId)
   const save = useSaveProgramOverview(programId)
@@ -69,7 +73,7 @@ function IntroCard({ programId }: { programId: string }) {
 
   return (
     <Card
-      title="사업개요"
+      title={`${entityNoun}개요`}
       actions={
         !editing ? (
           <span className="flex items-center gap-1">
@@ -77,7 +81,7 @@ function IntroCard({ programId }: { programId: string }) {
               <IconButton
                 variant="ghost"
                 danger
-                label="사업소개 삭제"
+                label={`${entityNoun}개요 삭제`}
                 disabled={save.isPending}
                 onClick={() => void onDelete()}
                 icon={<Trash2 className="size-4" />}
@@ -100,7 +104,7 @@ function IntroCard({ programId }: { programId: string }) {
         </div>
       ) : (
         <p className="py-6 text-center text-body text-gray-600">
-          아직 작성된 사업소개가 없습니다. 작성하면 게스트 로그인 직후 첫 화면에 보입니다.
+          아직 작성된 {entityNoun}개요가 없습니다. 작성하면 게스트 로그인 직후 첫 화면에 보입니다.
         </p>
       )}
       {editing && (
@@ -134,6 +138,7 @@ function IntroFormModal({
   initialBody: string
   onClose: () => void
 }) {
+  const { entityNoun } = useProgramWorkspace()
   const toast = useToast()
   const save = useSaveProgramOverview(programId)
   const [body, setBody] = useState(initialBody)
@@ -153,7 +158,7 @@ function IntroFormModal({
       onClose={onClose}
       dismissible={false}
       sectioned
-      title={initialBody ? '사업개요 수정' : '사업개요 작성'}
+      title={`${entityNoun}개요 ${initialBody ? '수정' : '작성'}`}
       size="xl"
       footer={
         <>

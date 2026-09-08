@@ -19,7 +19,7 @@ import { useProgram } from '@/features/program/hooks'
 import { useProgramWorkspace } from '@/features/program/workspace'
 import { listPathOf } from '@/lib/listScope'
 
-// 명부는 개요의 'Y&A 포털 계정생성' 버튼이 여는 모달에서 렌더하므로 전체 화면 라우팅 대상이 아니다.
+// 명부는 개요의 '와이앤아처 GUEST 설정' 버튼이 여는 모달에서 렌더하므로 전체 화면 라우팅 대상이 아니다.
 type Tab =
   | 'overview'
   | 'recruitment'

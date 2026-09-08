@@ -1,13 +1,7 @@
-import { Tabs } from '@ynarcher/ui'
-import { useState } from 'react'
 import type { Program, ProgramModule } from '@/features/program/hooks'
-import { MODULE_BOARD_LABEL } from '@/features/program/config'
-import { PortalAccountsButton } from '@/features/program/detail/PortalAccountsButton'
+import { GuestSettingsButton } from '@/features/program/detail/GuestSettingsButton'
 import { ModuleBoardCard } from '@/features/program/detail/ModuleBoardCard'
-import { ProgramAnnouncementsPanel } from '@/features/program/detail/ProgramAnnouncementsPanel'
 import { ProgramInfoCard } from '@/features/program/detail/ProgramInfoCard'
-import { ProgramIntroPanel } from '@/features/program/detail/ProgramIntroPanel'
-import { ProgramQnaPanel } from '@/features/program/detail/ProgramQnaPanel'
 import { RelatedApprovalPanel } from '@/features/program/detail/RelatedApprovalPanel'
 import { RelatedMinutesPanel } from '@/features/office/minutes/RelatedMinutesPanel'
 import { useProgramContributions } from '@/features/program/detail/programContributions'
@@ -16,17 +10,16 @@ import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 
-type LeftTab = 'modules' | 'intro' | 'announcements' | 'qna'
-
 /**
  * 프로그램 상세 개요(NETWORKS·STARTUP 상세와 동일한 2/3 + 1/3 카드섹션 컴포지션).
- * 좌측 본문(2/3): 기본 데이터 카드 → 서브 탭(워크플로우 ┃ 사업개요 · 공지사항 · Q&A).
- * 명부는 2026-09-08에 좌측 탭에서 **정보 카드 아래 버튼 + 모달**로 옮겼다(사용자 지정) —
- * 탭 줄은 이 사업이 가진 것을 부르는 명사만 남고, 계정을 세우는 동사는 버튼의 말이 된다.
- * 근거는 PortalAccountsButton 주석.
- * 구분선 뒤 세 탭은 **게스트에게 그대로 나가는 화면**이라 내부 운영 탭과 층이 다르다
- * (2026-09-01 사용자 지정 순서) — 원장을 둔 워크스페이스(AC)에서만 서며, 기본 탭은 언제나
- * 첫 탭인 프로그램다.
+ * 좌측 본문(2/3): 기본 데이터 카드 → `와이앤아처 GUEST 설정` 버튼 → 워크플로우.
+ *
+ * **좌측 탭 줄은 2026-09-09에 걷혔다**(사용자 지정). 게스트에게 나가는 셋(개요·공지사항·Q&A)이
+ * 계정생성과 함께 GUEST 설정 모달로 들어가면서 탭 줄에 워크플로우 하나만 남았고, 가를 것이
+ * 없는 자리에 선 탭은 '다른 것도 있다'고 말하는 거짓 신호이기 때문이다. 워크플로우가 무엇인지는
+ * 그 카드가 자기 제목으로 이미 말한다.
+ * 넷을 한자리에 모은 근거는 `GuestSettingsButton` 주석에 있다 — 성격이 같은 것끼리 모으면
+ * 밖에 무엇이 나가 있는지 확인하려는 사람이 한 곳만 열면 된다.
  * '평가 엔진' 탭은 2026-08-27 걷어냈다 — 평가는 사업 상세에 늘 떠 있어야 하는 축이 아니라
  * 서면평가·대면평가 모듈을 켰을 때의 운영 화면이라, 모듈과 무관한 상시 탭 자리를 차지할 이유가 없다.
  * 우측(1/3): 자료 관리 → 관련 전자결재 → 관련 회의록 → 변동 이력 → 코멘트(상세 공통 순서).
@@ -52,29 +45,9 @@ export function ProgramOverviewTab({
 }) {
   const config = useProgramWorkspace()
   const { data: contributions } = useProgramContributions(program.id)
-  // 게스트향 화면 3종(사업개요·공지사항·Q&A)은 내부 운영 탭 뒤에 구분선으로 갈라 세운다
-  // — 첫 줄에만 divider를 달아 묶음의 시작을 알린다. 2026-09-03 원장 통합 이후 세 사업
-  // 워크스페이스가 모두 운용하므로 워크스페이스별 노출 분기는 없다.
-  const guestTabs: { key: LeftTab; label: string }[] = [
-    { key: 'intro', label: '사업개요' },
-    { key: 'announcements', label: '공지사항' },
-    { key: 'qna', label: 'Q&A' },
-  ]
   // 이 워크스페이스가 쓰는 자격. 무엇이 서는지는 `guestMasterTables`가 답하고, 그 값은
   // 사이드바 창구의 하위 탭과 **같은 한 벌**이다.
   const personas = config.guestMasterTables ?? []
-  // **M&A의 SELLER·BUYER 탭은 걷었다**(2026-09-08 사용자 지정 "연동하면 탭이 생기는 게
-  // 아니라 모듈을 하나 생성하자"). 연결된 매물의 내용은 이제 퀵리뷰 모듈이 세운다 — 탭 줄이
-  // 답하는 물음은 '이 프로젝트에서 무엇을 하는가'이고, 연결된 기업의 내용은 '무엇을 하는가'가
-  // 아니라 '무엇을 놓고 하는가'다. 그래서 M&A와 AC의 탭 줄이 같아졌다.
-  //
-  // 게스트향 세 탭이 M&A에도 서는 것은 2026-09-03 원장 통합의 결과 그대로다(사업개요·공지·
-  // Q&A는 세 워크스페이스가 모두 운용한다).
-  const leftTabs = [
-    { key: 'modules' as const, label: MODULE_BOARD_LABEL },
-    ...guestTabs.map((tab, i) => (i === 0 ? { ...tab, divider: true } : tab)),
-  ]
-  const [leftTab, setLeftTab] = useState<LeftTab>('modules')
 
   return (
     <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
@@ -83,18 +56,8 @@ export function ProgramOverviewTab({
         {/* 사업이 무엇인지(위) 다음에 오는 것이 **누구를 상대로 도는가**이고, 그다음이 무엇을
             하는가(아래 탭 줄)다. 우측 컬럼에 두지 않은 이유는 그쪽이 이미 패널 다섯 장이라
             한 장을 더하면 무엇이 무엇인지 흐려지기 때문이다 — 자세한 근거는 버튼 주석. */}
-        <PortalAccountsButton program={program} personas={personas} />
-        <div>
-          <Tabs items={leftTabs} value={leftTab} onChange={(key) => setLeftTab(key as LeftTab)} />
-          <div className="mt-4">
-            {leftTab === 'intro' && <ProgramIntroPanel programId={program.id} />}
-            {leftTab === 'announcements' && <ProgramAnnouncementsPanel programId={program.id} />}
-            {leftTab === 'qna' && <ProgramQnaPanel programId={program.id} />}
-            {leftTab === 'modules' && (
-              <ModuleBoardCard program={program} onOpenModule={onOpenModule} />
-            )}
-          </div>
-        </div>
+        <GuestSettingsButton program={program} personas={personas} />
+        <ModuleBoardCard program={program} onOpenModule={onOpenModule} />
       </div>
       {/* 우측(1/3): 자료 관리 → 전자결재 → 관련 회의록 → 변동 이력 → 코멘트.
           급한 순서가 곧 위에서 아래 순서다 — 일하러 들어온 사람이 먼저 찾는 것은 자료와 결재고,

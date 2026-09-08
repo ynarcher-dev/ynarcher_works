@@ -56,7 +56,7 @@ export function MnaWorkspacePage() {
   if (params.get('tab') === 'guest-accounts') {
     return (
       <div className="space-y-5">
-        <PageHeader title="Y&A 포털 계정" />
+        <PageHeader title="와이앤아처 GUEST 계정" />
         <GuestAccountPanel
           entityKey={MNA_WORKSPACE.entityKey}
           masterTables={MNA_WORKSPACE.guestMasterTables}

@@ -150,7 +150,7 @@ export function GuestLoginPage() {
         로그는 그대로다(2026-09-07 AC→Accelerator와 같은 방식). 근거: 3_9_2 §10
       */}
       <h1 className="text-title-md font-bold text-gray-900">
-        와이앤아처 <span className="text-brand">포털</span>
+        와이앤아처 <span className="text-brand">GUEST</span>
       </h1>
       <p className="mt-1 text-body text-gray-600">{STEP_LABEL[step]}</p>
 

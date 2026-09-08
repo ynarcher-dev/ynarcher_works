@@ -5,7 +5,7 @@ import { ParticipantPool } from '@/features/program/ParticipantPool'
 import { PERSONA_LABEL, type MasterTable } from '@/features/program/participantPersona'
 
 /**
- * `Y&A 포털 계정생성` 모달의 몸통 — 자격을 하위 탭으로 가르고 그 아래 명부가 선다.
+ * `와이앤아처 GUEST 설정` 모달의 계정생성 탭 — 자격을 하위 탭으로 가르고 그 아래 명부가 선다.
  *
  * **왜 자격이 한 층 아래인가.** 2026-09-05에는 사업 상세의 상단 탭 줄에 자격 둘이 나란히
  * 섰고, 그때의 근거는 "자격은 표를 거르는 조건이 아니라 게스트에게 **다른 화면을 여는 축**"
@@ -23,7 +23,7 @@ import { PERSONA_LABEL, type MasterTable } from '@/features/program/participantP
  * **하나면 탭 줄을 세우지 않는다.** 가를 것이 없는 자리에 선 탭은 '다른 것도 있다'고 말하는
  * 거짓 신호이고 남는 것은 층뿐이다(M&A 연결 기업 패널과 같은 판단).
  */
-export function PortalAccountsPanel({
+export function GuestAccountsPanel({
   program,
   personas,
 }: {
@@ -36,7 +36,7 @@ export function PortalAccountsPanel({
   if (personas.length === 0) {
     return (
       <EmptyState
-        title="이 워크스페이스에는 포털 계정 자격이 없습니다."
+        title="이 워크스페이스에는 GUEST 계정 자격이 없습니다."
         description="계정을 세울 원장이 정해지면 여기에 자격 탭이 섭니다."
       />
     )
