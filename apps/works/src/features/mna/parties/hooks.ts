@@ -94,7 +94,13 @@ export function useMaPartyRecord(cfg: MaPartyConfig, id: string | undefined) {
         .from(cfg.table)
         // 퀵 리뷰는 상세에서만 읽는다 — 목록이 열 줄짜리 문서 일곱 절을 함께 끌고 오면
         // 한 페이지 조회가 그 문서들의 크기만큼 무거워진다(본문 overview_html과 같은 이유).
-        .select(`${selectOf(cfg)}, overview_html, quick_review`)
+        // 그리고 진행여부와 같은 규칙으로 **켠 원장에만** 붙인다 — 바이어에는 컬럼 자체가
+        // 없어(20260907230000이 ma_sellers에만 더했다) 물으면 상세 조회가 통째로 400이 된다.
+        .select(
+          [selectOf(cfg), 'overview_html', ...(cfg.hasQuickReview ? ['quick_review'] : [])].join(
+            ', ',
+          ),
+        )
         .eq('id', id)
         .is('deleted_at', null)
         .maybeSingle()
