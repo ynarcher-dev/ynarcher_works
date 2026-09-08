@@ -56,9 +56,14 @@ export interface IntakeDeps<K extends string, C> {
 /**
  * 등록 모드 — 아직 원장에 없는 파일·링크가 요청에 실려 온다.
  *
- * 가리킬 행이 없으므로 첨부 조회도 캐시 조회도 없다. 이미 분석된 자료는 화면이 결과를 들고
- * 있다가 함께 싣고, 서버는 그 값을 되세워 쓴다(저장하지 않는다 — 등록을 취소하면 고아 파일이
- * 남지 않아야 한다).
+ * 가리킬 행이 없으므로 보류 파일·링크는 요청에 실려 온다. 이미 분석된 자료는 화면이 결과를
+ * 들고 있다가 함께 싣고, 서버는 그 값을 되세워 쓴다(저장하지 않는다 — 등록을 취소하면 고아
+ * 파일이 남지 않아야 한다).
+ *
+ * **참조 자료는 예외다**(2026-09-08). 등록 화면에서 연결한 원장(스타트업 등)의 자료는 **이미
+ * 원장에 있는 행**이라 파일을 싣지 않고 id로 가리킨다 — 실어 보내면 이미 우리 스토리지에 있는
+ * 파일을 브라우저가 내려받아 다시 올리는 일이 되고, 캐시된 조각도 못 쓴다. 대상 행이 아직
+ * 없으므로 소속은 폼이 고른 연결(`linkId`)로 판정한다.
  */
 async function readUpload<K extends string, C>(
   req: Request,
@@ -86,11 +91,38 @@ async function readUpload<K extends string, C>(
 
   const resolved = await resolveUploads(files, fileKeys.map((k) => String(k)))
   if ('error' in resolved) return { error: resolved.error }
-  const sources = [...resolved.sources, ...resolvePendingLinks(pendingLinks)]
+
+  // 참조 자료 — 이미 원장에 있는 행이라 id로 온다. **무엇이 참조인지는 서버가 다시 묻는다**:
+  // 화면이 보낸 id를 그대로 믿지 않고, 같은 방향 함수가 호출자 토큰으로 돌려준 목록과 맞춰
+  // 본다. 목록에 없는 id는 요청 전체를 거절한다(남의 것이 하나라도 섞이면 부분 처리는
+  // 무엇을 읽었는지를 흐린다 — resolveAttachments와 같은 규약).
+  const refIds = [...new Set((
+    (parseJson(String(form.get('attachmentIds') ?? '[]')) as unknown[] | null) ?? []
+  ).map((v) => String(v).trim()).filter(Boolean))]
+  const linkId = String(form.get('linkId') ?? '').trim() || null
+
+  let refSources: ResolvedSource[] = []
+  const refExtracts = new Map<string, ExtractChunk[]>()
+  if (refIds.length > 0) {
+    const rows = (await loadRefAttachments(deps.caller, deps.profile.targetType, null, linkId))
+      .filter((r) => refIds.includes(r.id))
+    const resolvedRefs = resolveAttachments(rows, refIds)
+    if ('error' in resolvedRefs) return { error: resolvedRefs.error }
+    refSources = resolvedRefs.sources
+
+    // 참조는 진짜 첨부 행이라 캐시 원장의 조각을 그대로 쓴다(등록 모드라고 다시 열 이유가 없다).
+    const { data: cachedRefs } = await deps.caller
+      .from('attachment_extracts')
+      .select('attachment_id, status, body')
+      .in('attachment_id', refIds)
+    for (const [k, v] of extractsFromRows((cachedRefs ?? []) as ExtractRow[])) refExtracts.set(k, v)
+  }
+
+  const sources = [...resolved.sources, ...resolvePendingLinks(pendingLinks), ...refSources]
 
   // 이미 분석된 보류 자료는 파일이 아니라 **조각으로** 실려 온다. 가리킬 원본이 없으므로
   // 자리만 만들어 준다 — 그래야 배정·감사 기록이 그 자료를 보고, 조각을 고를 수 있다.
-  const extracts = new Map<string, ExtractChunk[]>()
+  const extracts = new Map<string, ExtractChunk[]>(refExtracts)
   for (const [key, entry] of readPendingExtracts(parseJson(String(form.get('extracts') ?? 'null')))) {
     extracts.set(key, entry.chunks)
     if (sources.some((s) => s.key === key)) continue

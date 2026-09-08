@@ -78,14 +78,22 @@ export function groupMaterialRefs(materials: Material[]): MaterialRefGroup[] {
  * 내려면 그 방향표를 여기에 한 벌 더 적어야 하고, 그 복제본은 새 방향을 열 때 조용히 옛
  * 답을 낸다. 참조가 없으면 빈 배열이 오고 화면은 아무것도 세우지 않는다.
  */
-export function useMaterialRefs(targetType: string, targetId: string | undefined) {
+export function useMaterialRefs(
+  targetType: string,
+  targetId: string | undefined,
+  linkId?: string | null,
+) {
   return useQuery({
-    queryKey: ['material-refs', targetType, targetId],
-    enabled: Boolean(targetId),
+    queryKey: ['material-refs', targetType, targetId ?? null, linkId ?? null],
+    // 등록 화면에는 대상 id가 없고 폼이 방금 고른 연결만 있다. 둘 중 하나라도 있으면 묻는다.
+    enabled: Boolean(targetId || linkId),
     queryFn: async (): Promise<Material[]> => {
       const { data, error } = await supabase.rpc('attachment_refs', {
         p_target_type: targetType,
-        p_target_id: targetId,
+        p_target_id: targetId ?? null,
+        // 아직 저장되지 않은 연결(등록 화면). 주면 이것이 답이고, 없으면 서버가 저장된 행에서
+        // 찾는다 — 어느 쪽이든 방향과 열람 자격은 서버 함수 하나가 판정한다.
+        p_link_id: linkId ?? null,
       })
       if (error) throw error
       return (data ?? []) as Material[]

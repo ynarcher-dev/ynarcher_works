@@ -178,7 +178,9 @@ export async function runMaterialExtract<K extends string, C>(
   let storagePath: string | null = null
   let storedMime: string | null = null
   if (parsed.attachmentId) {
-    if (!parsed.targetId) {
+    // 대상 행이 없어도 폼이 고른 연결이 있으면 참조 자료는 분석할 수 있다(등록 화면).
+    // 둘 다 없으면 이 첨부가 어느 일에 딸린 것인지 답할 근거가 없다.
+    if (!parsed.targetId && !parsed.linkId) {
       return jsonResponse({ error: 'invalid_request', message: '대상 레코드가 없습니다.' }, 400)
     }
     const { data: row, error: attErr } = await caller
@@ -203,11 +205,15 @@ export async function runMaterialExtract<K extends string, C>(
     // 대조 대상은 자기 레코드와 **참조로 함께 읽는 대상들**이다(2026-09-08). 참조는 그 행이
     // 자기 것이 아닐 때만 묻는다 — 대부분의 요청에서 왕복 한 번이 늘지 않고, 무엇을 참조로
     // 찾는지가 코드에서 그대로 읽힌다. 어느 대상을 함께 읽는지는 RPC가 호출자 토큰으로 답한다.
-    const self = { type: profile.targetType, id: parsed.targetId }
-    const targets =
-      facts.targetType === self.type && facts.targetId === self.id
-        ? [self]
-        : [self, ...refTargetsOf(await loadRefAttachments(caller, self.type, self.id))]
+    // 등록 모드에는 자기 레코드가 없으므로 목록이 참조뿐이며, 비면 아무 자료도 통과하지 못한다.
+    const self = parsed.targetId ? { type: profile.targetType, id: parsed.targetId } : null
+    let targets: { type: string; id: string }[]
+    if (self && facts.targetType === self.type && facts.targetId === self.id) {
+      targets = [self]
+    } else {
+      const refs = await loadRefAttachments(caller, profile.targetType, parsed.targetId, parsed.linkId)
+      targets = [...(self ? [self] : []), ...refTargetsOf(refs)]
+    }
     const mismatch = verifyAgainstAttachment(parsed, facts, targets)
     if (mismatch) return jsonResponse({ error: 'invalid_request', message: mismatch }, 400)
     storagePath = row.storage_path ? String(row.storage_path) : null

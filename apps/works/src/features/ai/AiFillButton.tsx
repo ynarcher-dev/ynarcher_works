@@ -23,6 +23,7 @@ export function AiFillButton<K extends string>({
   sources,
   loading = false,
   targetId,
+  linkId,
   subjectName,
   onFilled,
 }: {
@@ -33,6 +34,13 @@ export function AiFillButton<K extends string>({
   loading?: boolean
   /** 수정 모드의 대상 id. 등록 모드에는 아직 없다. */
   targetId?: string
+  /**
+   * 등록 모드에서 폼이 방금 고른 참조 연결(스타트업 id 등).
+   *
+   * 대상 행이 아직 없으므로 참조의 소속을 서버가 저장된 값에서 찾을 수 없다. 이 값을 함께
+   * 보내면 같은 방향 함수가 판정한다 — 열람 자격은 여전히 그 원장의 RLS가 본다.
+   */
+  linkId?: string | null
   subjectName?: string
   /**
    * 초안을 폼에 얹고 **그 결과**를 돌려준다.
@@ -79,6 +87,7 @@ export function AiFillButton<K extends string>({
           catalog={catalog}
           sources={sources}
           targetId={targetId}
+          linkId={linkId}
           subjectName={subjectName}
           grid={grid}
           onGrid={setGrid}

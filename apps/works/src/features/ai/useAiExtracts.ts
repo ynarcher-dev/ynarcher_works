@@ -34,6 +34,8 @@ export function useAiExtracts(
   endpoint: string,
   sources: AiSource[],
   targetId?: string,
+  /** 등록 모드에서 폼이 방금 고른 참조 연결. 참조 자료를 분석할 때 서버가 소속을 판정할 근거다. */
+  linkId?: string | null,
 ): AiExtractController {
   const attachmentIds = useMemo(
     () => sources.filter((s) => s.kind === 'attachment').map((s) => s.key),
@@ -72,7 +74,7 @@ export function useAiExtracts(
       for (const [i, source] of todo.entries()) {
         setRunning((prev) => new Set(prev).add(source.key))
         try {
-          const result = await analyzeSource(endpoint, source, targetId)
+          const result = await analyzeSource(endpoint, source, targetId, linkId)
           setLocal((prev) => ({ ...prev, [source.key]: result }))
           if (source.kind === 'attachment') stored = true
         } catch (e) {
@@ -93,7 +95,7 @@ export function useAiExtracts(
       // 저장된 자료가 있으면 캐시 조회를 다시 세운다(다음에 창을 열 때 그대로 보여야 한다).
       if (stored) await queryClient.invalidateQueries({ queryKey: ['attachment-extracts'] })
     },
-    [statusOf, endpoint, targetId, queryClient],
+    [statusOf, endpoint, targetId, linkId, queryClient],
   )
 
   const toggleOriginal = useCallback((key: string) => {

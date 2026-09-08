@@ -3,22 +3,31 @@ import { File as FileIcon, Link as LinkIcon, Trash2 } from 'lucide-react'
 import { DetailPanelCard } from '@/features/networks/DetailPanelCard'
 import { MaterialDropZone } from '@/features/networks/MaterialDropZone'
 import { MaterialLinkInput } from '@/features/networks/MaterialLinkInput'
-import { formatBytes } from '@/features/networks/materialHooks'
+import { formatBytes, type Material } from '@/features/networks/materialHooks'
+import { MaterialRefGroups } from '@/features/networks/MaterialRefGroups'
 import type { PendingMaterials } from '@/features/networks/pendingMaterials'
 
 /**
  * 신규 등록 폼용 자료 패널. 대상 레코드가 아직 없으므로 파일을 즉시 업로드하지 않고
  * 보류 목록(`PendingMaterials`)에 담아 두며, 등록 저장 직후 일괄 업로드된다.
  * 조작감(드롭존·목록·삭제)은 상세 수정 폼의 `MaterialPanel`과 동일하게 맞춘다.
+ *
+ * **참조 자료(`refs`)는 등록 화면에서도 선다**(2026-09-08). 여기가 참조가 가장 필요한 자리다 —
+ * 스타트업 원장에서 기업을 끌어와 셀러를 만들고 그 자리에서 초안까지 만드는 것이 정상 순서인데,
+ * 참조가 저장 후에야 보이면 담당자는 같은 파일을 한 번 더 올린다. 이 자료들은 보류 목록과 달리
+ * **이미 원장에 있는 행**이라 저장 시 함께 올라가지 않는다(복제하지 않는 것이 참조의 요점이다).
  */
 export function PendingMaterialPanel({
   slot,
   pending,
+  refs = [],
   title = '자료 관리',
 }: {
   /** 자료 분류 키(= 업로드 시 target_type). */
   slot: string
   pending: PendingMaterials
+  /** 폼에서 방금 고른 연결이 데려온 다른 대상의 자료(읽기 전용, 저장 대상 아님). */
+  refs?: Material[]
   title?: string
 }) {
   const list = pending.files(slot)
@@ -27,8 +36,8 @@ export function PendingMaterialPanel({
   return (
     <DetailPanelCard
       title={title}
-      count={list.length + links.length}
-      help="첨부한 자료는 등록을 저장할 때 함께 업로드됩니다."
+      count={list.length + links.length + refs.length}
+      help="첨부한 자료는 등록을 저장할 때 함께 업로드됩니다. 연결한 원장의 자료는 참조로 함께 보이며 복제되지 않습니다."
     >
       <MaterialDropZone onFiles={(files) => pending.add(slot, files)} />
       <MaterialLinkInput onAdd={(url) => pending.addLink(slot, url)} />
@@ -85,12 +94,15 @@ export function PendingMaterialPanel({
               </li>
             ))}
           </ul>
-        ) : links.length === 0 ? (
-          // 링크만 담겨 있으면 빈 상태가 아니다 — 위에 이미 목록이 서 있는데 그 아래에
+        ) : links.length === 0 && refs.length === 0 ? (
+          // 링크나 참조가 이미 서 있으면 빈 상태가 아니다 — 위에 목록이 있는데 그 아래에
           // '없습니다'가 함께 서면 화면이 스스로를 부정한다.
           <p className="text-body text-gray-600">첨부한 자료가 없습니다.</p>
         ) : null}
       </div>
+
+      {/* 참조 자료 — 수정 모드 패널과 같은 부품이라 저장 전후로 생김새가 달라지지 않는다. */}
+      <MaterialRefGroups refs={refs} />
     </DetailPanelCard>
   )
 }

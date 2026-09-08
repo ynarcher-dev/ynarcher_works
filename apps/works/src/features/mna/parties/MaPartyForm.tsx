@@ -113,13 +113,21 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
     readQuickReview(initial?.quick_review),
   )
 
+  // STARTUP 원장 매핑(선택). 고르면 이름·분야·담당자·이메일을 원장 값으로 덮어쓴다.
+  const link = useStartupLink(initial, {
+    setText: (f, value) => setValue(f, value, { shouldValidate: true }),
+    setIndustries,
+  })
+
   /**
    * 'AI 작성하기'가 읽을 자료. **모드가 무엇을 읽는지 정한다** — 수정은 이미 올라간 첨부,
    * 등록은 아직 올라가지 않은 보류 파일·링크다(등록 모드의 파일은 서버가 저장하지 않는다).
    *
-   * 수정 모드에서는 **참조 자료도 함께 읽는다**(2026-09-08) — 연결한 스타트업 쪽에 이미
-   * 올라가 있는 IR덱·등기부를 여기 한 번 더 올리지 않아도 초안의 근거가 된다. 등록 모드에는
-   * 참조가 없다: 가리킬 행이 아직 없고, 연결은 저장 후에 성립한다.
+   * **참조 자료도 함께 읽는다**(2026-09-08) — 연결한 스타트업 쪽에 이미 올라가 있는 IR덱·
+   * 등기부를 여기 한 번 더 올리지 않아도 초안의 근거가 된다. **등록 모드에서도 읽는다**: 가리킬
+   * 행은 아직 없지만 폼이 방금 고른 연결(`link.startupId`)이 있고, 서버는 그것을 후보로 받아
+   * 같은 방향 함수로 판정한다. 등록 화면이야말로 참조가 가장 필요한 자리다 — 스타트업 원장에서
+   * 기업을 끌어와 셀러를 만들고 그 자리에서 초안까지 만드는 것이 정상 순서다.
    *
    * 자료 관리 카드와 **같은 두 목록을 같은 순서로** 세운다(자기 것 다음 참조). 화면에서 본
    * 목록과 창에서 고르는 목록이 다르면, 방금 본 파일이 왜 여기 없는지 담당자가 답할 수 없다.
@@ -128,16 +136,24 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
     config.targetType,
     isEdit ? recordId : undefined,
   )
+  // 수정 모드는 **저장된 연결**이 참조를 정하고(참조는 원장의 사실이다), 등록 모드는 저장된
+  // 것이 없으므로 폼이 방금 고른 연결이 유일한 답이다.
   const { data: refMaterials, isLoading: refsLoading } = useMaterialRefs(
     config.targetType,
     isEdit ? recordId : undefined,
+    isEdit ? undefined : link.startupId,
   )
-  const aiSources = isEdit
-    ? sourcesFromMaterials([...(uploaded ?? []), ...(refMaterials ?? [])], config.targetType)
-    : [
-        ...sourcesFromFiles(pending.files(config.targetType)),
-        ...sourcesFromLinks(pending.links(config.targetType)),
-      ]
+  const refList = refMaterials ?? []
+  const aiSources = [
+    ...(isEdit
+      ? sourcesFromMaterials(uploaded ?? [])
+      : [
+          ...sourcesFromFiles(pending.files(config.targetType)),
+          ...sourcesFromLinks(pending.links(config.targetType)),
+        ]),
+    // 참조는 두 모드 모두 뒤에 붙는다 — 자료 관리 카드와 같은 순서다(자기 것 다음 참조).
+    ...sourcesFromMaterials(refList, config.targetType),
+  ]
 
   /**
    * 프롬프트에 실을 대상 이름 — 저장된 값이 아니라 **지금 폼에 적힌 이름**이다.
@@ -146,12 +162,6 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
    * 있다. 원장 값을 보내면 모델이 다른 회사 이름으로 문서를 쓴다.
    */
   const watchedName = watch('name').trim()
-
-  // STARTUP 원장 매핑(선택). 고르면 이름·분야·담당자·이메일을 원장 값으로 덮어쓴다.
-  const link = useStartupLink(initial, {
-    setText: (f, value) => setValue(f, value, { shouldValidate: true }),
-    setIndustries,
-  })
 
   const onSubmit = async (v: MaPartyFormValues) => {
     const payload: Record<string, unknown> = {
@@ -324,7 +334,11 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
           {isEdit && recordId ? (
             <MaterialPanel targetType={config.targetType} targetId={recordId} />
           ) : (
-            <PendingMaterialPanel slot={config.targetType} pending={pending} />
+            <PendingMaterialPanel
+              slot={config.targetType}
+              pending={pending}
+              refs={refList}
+            />
           )}
 
           {/* AI 작성하기는 자료 관리 **바로 아래**에 선다 — 이 기능이 읽는 것이 위 카드의
@@ -335,8 +349,9 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
             <AiFillButton
               catalog={quickReviewCatalog(quickReview)}
               sources={aiSources}
-              loading={isEdit && (materialsLoading || refsLoading)}
+              loading={(isEdit && materialsLoading) || refsLoading}
               targetId={recordId}
+              linkId={isEdit ? undefined : link.startupId}
               subjectName={watchedName || undefined}
               onFilled={(result, cards) => {
                 const { review, outcome } = applyQuickReviewDraft(quickReview, result, cards)

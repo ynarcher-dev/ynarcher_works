@@ -1,4 +1,4 @@
-import { Button, cardText } from '@ynarcher/ui'
+import { Button } from '@ynarcher/ui'
 import { useState } from 'react'
 import { DetailPanelCard } from '@/features/networks/DetailPanelCard'
 import { MaterialBrowseModal } from '@/features/networks/MaterialBrowseModal'
@@ -11,7 +11,8 @@ import {
   useMaterials,
   useUploadMaterial,
 } from '@/features/networks/materialHooks'
-import { groupMaterialRefs, useMaterialRefs } from '@/features/networks/materialRefs'
+import { MaterialRefGroups } from '@/features/networks/MaterialRefGroups'
+import { useMaterialRefs } from '@/features/networks/materialRefs'
 
 /**
  * 자료 관리 패널(공용). 레코드에 귀속된 파일의 업로드·다운로드·삭제(소프트)를 담당한다.
@@ -39,8 +40,13 @@ import { groupMaterialRefs, useMaterialRefs } from '@/features/networks/material
  * (`materialRefs.ts`).
  *
  * **읽기 전용이라 업로드·수정·삭제를 두지 않는다** — 그 자료를 고치는 자리는 그것이 원래
- * 사는 화면 하나다. 헤더 건수와 '전체보기'도 자기 자료만 센다: 헤더의 수는 이 카드가 올리고
- * 지울 수 있는 것의 수여야 하고, 참조 덩어리는 자기 소제목에서 자기 건수를 말한다.
+ * 사는 화면 하나다.
+ *
+ * **헤더 건수와 '전체보기'는 참조까지 함께 센다**(2026-09-08 사용자 지적으로 정정). 처음에는
+ * 자기 자료만 셌고 근거는 "헤더의 수는 이 카드가 올리고 지울 수 있는 것의 수"였는데, 그러면
+ * 참조 여덟 건이 아래 서 있는데 머리는 [0]이라고 말한다 — 카드가 스스로를 부정한다. 이 카드가
+ * 답하는 것은 "이 건을 볼 때 손에 잡히는 자료가 몇인가"이고, 지울 수 있는지는 건수가 아니라
+ * 행마다 있는(없는) 삭제 버튼이 답한다.
  *
  * 모듈 자료(`moduleId`)에는 참조를 세우지 않는다 — 그 자리는 "이 모듈이 올린 파일"만 답하는
  * 좁힌 창이라, 다른 원장의 자료가 끼면 그 좁힘이 뜻을 잃는다.
@@ -50,6 +56,7 @@ export function MaterialPanel({
   targetId,
   moduleId,
   readOnly = false,
+  linkId,
   title = '자료 관리',
 }: {
   /** 첨부 대상 유형(예: 'expert' | 'investor' | 'global_network'). */
@@ -63,18 +70,26 @@ export function MaterialPanel({
   moduleId?: string
   /** 조회 모드: 목록·다운로드만 노출(업로드/삭제 숨김). */
   readOnly?: boolean
+  /**
+   * 아직 저장되지 않은 참조 연결(폼에서 방금 고른 스타트업 등).
+   *
+   * 주지 않으면 서버가 저장된 행에서 연결을 찾는다 — 조회 화면은 그것이 맞다. 폼이 이 값을
+   * 주는 자리는 등록 모드뿐이다: 수정 중에 연결을 바꿔도 참조는 **저장된 연결**이 정한다
+   * (참조는 원장의 사실이고, 저장 전에는 아직 그 사실이 아니다).
+   */
+  linkId?: string | null
   /** 패널 제목(기본 '자료 관리'). 한 레코드에 자료 분류가 여러 개일 때 구분용. */
   title?: string
 }) {
   const [browsing, setBrowsing] = useState(false)
   const { data: materials, isLoading } = useMaterials(targetType, targetId, moduleId)
   // 모듈로 좁힌 자리에는 참조를 세우지 않는다(위 주석).
-  const { data: refs } = useMaterialRefs(targetType, moduleId ? undefined : targetId)
+  const { data: refs } = useMaterialRefs(targetType, moduleId ? undefined : targetId, linkId)
   const upload = useUploadMaterial(targetType, targetId, moduleId)
   const addLink = useAddMaterialLink(targetType, targetId, moduleId)
   const remove = useDeleteMaterial(targetType, targetId)
   const list = materials ?? []
-  const refGroups = groupMaterialRefs(refs ?? [])
+  const refList = refs ?? []
 
   const addFiles = (files: File[]) => {
     for (const file of files) upload.mutate(file)
@@ -85,7 +100,7 @@ export function MaterialPanel({
   return (
     <DetailPanelCard
       title={title}
-      count={list.length}
+      count={list.length + refList.length}
       action={
         // 전체보기는 조회 모드에서도 선다 — 읽기만 하는 자리이고, 목록이 길수록 더 필요하다.
         <Button variant="ghost" onClick={() => setBrowsing(true)}>
@@ -124,21 +139,14 @@ export function MaterialPanel({
         />
       </div>
 
-      {/* 참조 자료 — 위치마다 한 덩어리. 삭제·수정 핸들러를 주지 않으므로 목록이 스스로
-          읽기 전용으로 선다(같은 목록 부품을 쓰되 할 수 있는 일만 갈린다). */}
-      {refGroups.map((g) => (
-        <div key={g.targetType} className="mt-3 border-t border-gray-100 pt-3">
-          <p className={`mb-1.5 ${cardText.subhead}`}>
-            {g.label} 자료 [{g.materials.length}]
-          </p>
-          <MaterialList materials={g.materials} />
-        </div>
-      ))}
+      {/* 참조 자료 — 위치마다 한 덩어리(등록 모드 패널과 같은 부품). */}
+      <MaterialRefGroups refs={refList} />
 
       {browsing && (
         <MaterialBrowseModal
           title={title}
           materials={list}
+          refs={refList}
           loading={isLoading}
           onDelete={readOnly ? undefined : (id) => remove.mutate(id)}
           deletingId={remove.isPending ? remove.variables : undefined}

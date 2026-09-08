@@ -19,6 +19,7 @@ import {
   openMaterialLink,
   type Material,
 } from '@/features/networks/materialHooks'
+import { materialLocationLabel } from '@/features/networks/materialRefs'
 
 /** 모달 한 쪽에 세우는 건수. 패널 목록(5건)보다 크게 잡아 훑어보는 자리로 쓴다. */
 const PAGE_SIZE = 10
@@ -50,10 +51,20 @@ function matches(m: Material, keyword: string): boolean {
  * 조회·다운로드는 언제나 열려 있고, 삭제는 호출부가 `onDelete`를 줄 때만 노출한다
  * (패널이 조회 모드면 여기서도 지울 수 없다). 업로드는 두지 않는다 — 파일을 놓는 자리는
  * 패널의 드롭존 하나이고, 같은 일을 두 자리에 두면 어느 쪽이 그 레코드의 입구인지 흐려진다.
+ *
+ * ## 참조 자료와 '위치' 열 (2026-09-08)
+ *
+ * 다른 대상에서 참조해 온 자료(`refs`)도 **같은 표에 함께** 선다. 패널에서는 소제목으로 갈려
+ * 있지만 여기서는 등록일·형식을 견주며 찾는 자리라, 갈라 두면 두 표를 번갈아 보게 된다.
+ *
+ * 대신 **'위치' 열이 각 행이 어디에 사는지 답한다.** 이 열은 참조가 하나라도 있을 때만 세운다 —
+ * 참조가 없는 레코드에서는 모든 행이 같은 값이라, 가르는 것이 없으면서 이름 열의 폭만 가져간다.
+ * 참조 행에는 삭제 버튼이 서지 않으며, 왜 없는지는 그 위치 값이 답한다.
  */
 export function MaterialBrowseModal({
   title,
   materials,
+  refs = [],
   loading = false,
   onDelete,
   deletingId,
@@ -62,6 +73,8 @@ export function MaterialBrowseModal({
   /** 모달 제목(패널 제목을 그대로 물려받는다). */
   title: string
   materials: Material[]
+  /** 다른 대상에서 참조해 온 자료(읽기 전용). 같은 표에 서고 '위치' 열이 출처를 답한다. */
+  refs?: Material[]
   loading?: boolean
   /** 미지정 시 삭제 열을 숨긴다(조회 모드). */
   onDelete?: (id: string) => void
@@ -74,7 +87,12 @@ export function MaterialBrowseModal({
   // 표 안에서 연 간이 뷰어(모달 위에 겹쳐 뜬다). 목록당 하나만 연다.
   const [preview, setPreview] = useState<Material | null>(null)
 
-  const filtered = useMemo(() => materials.filter((m) => matches(m, keyword)), [materials, keyword])
+  // 자기 자료 다음 참조 — 패널·AI 작성 창과 같은 순서다(화면마다 순서가 다르면 같은 파일을
+  // 두 번째로 찾을 때 눈이 자리를 기억하지 못한다).
+  const rows = useMemo(() => [...materials, ...refs], [materials, refs])
+  // 참조 행은 지울 수 없다. id로 판정하는 이유는 표가 두 목록을 이미 합쳐 들고 있어서다.
+  const refIds = useMemo(() => new Set(refs.map((m) => m.id)), [refs])
+  const filtered = useMemo(() => rows.filter((m) => matches(m, keyword)), [rows, keyword])
 
   // 검색어가 바뀌면 첫 페이지로 되돌린다(빈 페이지 방지).
   useEffect(() => {
@@ -85,6 +103,18 @@ export function MaterialBrowseModal({
 
   const columns: Column<Material>[] = [
     { key: 'name', header: '이름', type: 'name', render: (m) => materialDisplayName(m) },
+    // 위치는 참조가 있을 때만 선다(위 주석). 형식 **앞**에 두는 것은 좁혀 읽는 순서다 —
+    // "어디 것인가"가 먼저 정해져야 "무슨 형식인가"가 뜻을 갖는다.
+    ...(refs.length > 0
+      ? ([
+          {
+            key: '_location',
+            header: '위치',
+            type: 'code',
+            render: (m: Material) => materialLocationLabel(m.target_type) ?? <EmptyValue />,
+          },
+        ] as Column<Material>[])
+      : []),
     {
       key: 'ext',
       header: '형식',
@@ -130,7 +160,9 @@ export function MaterialBrowseModal({
           ) : (
             <DownloadButton material={m} />
           )}
-          {onDelete && (
+          {/* 참조 행에는 삭제가 서지 않는다 — 그 자료를 고치는 자리는 원래 사는 화면 하나이고,
+              왜 없는지는 같은 줄의 '위치' 값이 답한다. */}
+          {onDelete && !refIds.has(m.id) && (
             <IconButton
               variant="ghost"
               danger

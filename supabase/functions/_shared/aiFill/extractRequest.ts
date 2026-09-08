@@ -22,6 +22,13 @@ export type ClientResult =
 export interface ExtractRequest {
   /** 수정 모드의 대상 레코드. 등록 모드에는 없다(가리킬 행이 아직 없다). */
   targetId: string | null
+  /**
+   * 등록 모드에서 폼이 방금 고른 참조 연결(스타트업 id 등).
+   *
+   * 대상 행이 없으면 참조의 소속을 서버가 저장된 값에서 찾을 수 없다. 이 값이 그 자리를
+   * 대신하며, 판정은 여전히 같은 방향 함수와 그 원장의 RLS가 한다.
+   */
+  linkId: string | null
   /** 저장 대상 첨부. 없으면 등록 모드이며 **아무것도 저장하지 않는다.** */
   attachmentId: string | null
   source: 'file' | 'link'
@@ -106,6 +113,7 @@ export function readRequest(raw: unknown): ExtractRequest | { error: RequestErro
     // 대상 id의 이름은 `targetId`다. 화면이 아직 옛 이름으로 부를 수 있어 함께 받는다 —
     // 함수를 먼저 배포하고 화면을 뒤에 내보내는 순서라 그 사이가 있다.
     targetId: str(src.targetId) || str(src.startupId) || null,
+    linkId: str(src.linkId) || null,
     attachmentId,
     source,
     parserVersion,

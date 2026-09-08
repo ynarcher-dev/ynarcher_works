@@ -118,8 +118,11 @@ export async function analyzeSource(
   endpoint: string,
   source: AiSource,
   targetId?: string,
+  linkId?: string | null,
 ): Promise<LocalExtract> {
-  const base = { targetId, parserVersion: PARSER_VERSION, fileName: source.name }
+  // 등록 모드에는 대상 행이 없어 참조 자료의 소속을 서버가 스스로 찾을 수 없다. 폼이 방금 고른
+  // 연결을 함께 보내면 같은 방향 함수가 판정한다(열람 자격은 여전히 그 원장의 RLS가 본다).
+  const base = { targetId, linkId: linkId ?? undefined, parserVersion: PARSER_VERSION, fileName: source.name }
 
   if (source.kind === 'file') {
     const mime = resolveAiMime(source.file.type, source.name) ?? 'text/plain'

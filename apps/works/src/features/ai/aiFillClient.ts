@@ -168,6 +168,13 @@ export interface AiFillInput<K extends string> {
   endpoint: string
   /** 수정 모드의 대상 id. 등록 모드에는 아직 없다. */
   targetId?: string
+  /**
+   * 등록 모드에서 폼이 방금 고른 참조 연결(스타트업 id 등).
+   *
+   * 가리킬 대상 행이 아직 없으므로 참조를 서버가 저장된 값에서 찾을 수 없다. 이 값을 주면
+   * 서버가 같은 방향 함수에 후보로 넣어 판정한다 — 열람 자격은 여전히 그 원장의 RLS가 본다.
+   */
+  linkId?: string | null
   /** 프롬프트에 실을 대상의 이름. 등록 모드에서 폼에 적힌 이름을 넘긴다. */
   subjectName?: string
   /** 격자가 가리키는 자료 전부(중복 없이). 카드가 몇이든 자료는 한 번만 올라간다. */
@@ -217,7 +224,14 @@ function buildUploadBody<K extends string>(input: AiFillInput<K>): FormData {
   // 자료를 가리킨다. 링크는 주소가 곧 키라 양쪽이 따로 만들어도 같은 값이 나온다.
   const extracts = input.extracts ?? {}
   const fileKeys: string[] = []
+  // 등록 모드에도 **이미 원장에 있는 자료**가 섞인다(참조). 그것은 파일을 실어 보내지 않고
+  // id로 가리킨다 — 서버가 RLS로 그 행을 볼 자격을 판정하고, 캐시된 조각도 그대로 쓴다.
+  const attachmentIds: string[] = []
   for (const s of input.sources) {
+    if (s.kind === 'attachment') {
+      attachmentIds.push(s.id)
+      continue
+    }
     // 이미 분석된 자료는 **파일도 주소도 보내지 않는다.** 글자가 아래에 함께 실리므로
     // 원본을 또 보내면 같은 자료를 두 모양으로 읽히게 되고, 큰 파일이 그대로 다시 올라간다.
     if (extracts[s.key]) continue
@@ -229,20 +243,23 @@ function buildUploadBody<K extends string>(input: AiFillInput<K>): FormData {
     }
   }
   form.append('fileKeys', JSON.stringify(fileKeys))
+  if (attachmentIds.length > 0) form.append('attachmentIds', JSON.stringify(attachmentIds))
+  if (input.linkId) form.append('linkId', input.linkId)
   if (Object.keys(extracts).length > 0) form.append('extracts', JSON.stringify(extracts))
   return form
 }
 
 /**
- * 초안을 받아온다. **출처의 종류가 요청 모양을 정한다.**
+ * 초안을 받아온다. **대상 행이 있는가가 요청 모양을 정한다**(2026-09-08 정정).
  *
- * 아직 원장에 없는 것(보류 파일·보류 링크)이 하나라도 있으면 등록 모드로 보낸다 — 그것들은
- * 가리킬 행이 없어 id로 말할 수 없기 때문이다. 두 모드를 섞어 보내지 않는 이유는 서버가
- * 경로마다 **다른 자격**을 묻기 때문이다(§8.2).
+ * 종전에는 '보류 자료가 하나라도 있으면 등록 모드'였다. 그 판정은 등록 화면에서 **참조 자료만**
+ * 고른 경우를 놓친다 — 참조는 이미 원장에 있는 행이라 보류가 아니고, 그래서 요청이 수정 모드로
+ * 나가 대상 id 없이 거절됐다. 모드를 가르는 진짜 질문은 자료의 종류가 아니라 **가리킬 행이
+ * 있는가**이고, 서버가 자격을 달리 묻는 근거도 그것이다(§8.2).
  */
 export async function requestAiFill<K extends string>(input: AiFillInput<K>): Promise<AiFillResult<K>> {
-  const hasPending = input.sources.some((s) => s.kind !== 'attachment')
-  const body = hasPending
+  const isCreate = !input.targetId
+  const body = isCreate
     ? buildUploadBody(input)
     : {
         // 대상 id의 이름은 `targetId`다 — 함수가 대상마다 얇게 서면서 공통 이름이 됐다.

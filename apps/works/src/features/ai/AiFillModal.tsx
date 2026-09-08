@@ -82,6 +82,7 @@ export function AiFillModal<K extends string>({
   catalog,
   sources,
   targetId,
+  linkId,
   subjectName,
   grid,
   onGrid,
@@ -93,6 +94,13 @@ export function AiFillModal<K extends string>({
   sources: AiSource[]
   /** 수정 모드의 대상 id. 등록 모드에는 아직 없다. */
   targetId?: string
+  /**
+   * 등록 모드에서 폼이 방금 고른 참조 연결(스타트업 id 등).
+   *
+   * 대상 행이 아직 없으므로 참조의 소속을 서버가 저장된 값에서 찾을 수 없다. 이 값을 함께
+   * 보내면 같은 방향 함수가 판정한다 — 열람 자격은 여전히 그 원장의 RLS가 본다.
+   */
+  linkId?: string | null
   /** 프롬프트에 실을 대상의 이름. */
   subjectName?: string
   grid: AiGrid<K>
@@ -104,7 +112,7 @@ export function AiFillModal<K extends string>({
   const fill = useAiFill<K>()
   const [error, setError] = useState<string | null>(null)
   const [outcome, setOutcome] = useState<AiFillOutcome<K> | null>(null)
-  const extracts = useAiExtracts(catalog.extractEndpoint, sources, targetId)
+  const extracts = useAiExtracts(catalog.extractEndpoint, sources, targetId, linkId)
 
   const allCardKeys = useMemo(() => cardKeysOf(catalog.cards), [catalog.cards])
   const cardLabel = useMemo(() => cardLabelMap(catalog.cards), [catalog.cards])
@@ -162,6 +170,7 @@ export function AiFillModal<K extends string>({
       const result = await fill.mutateAsync({
         endpoint: catalog.fillEndpoint,
         targetId,
+        linkId,
         subjectName,
         sources: chosen,
         cards,
