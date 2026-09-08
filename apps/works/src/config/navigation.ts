@@ -113,6 +113,12 @@ function programSubnav(options: { guestAccounts?: boolean } = {}): SubNavGroup[]
         // 포털'이 되어(3_9_2) 화면에 GUEST가 남으면 담당자가 안내한 말과 어긋나고, '발급'은
         // 창구가 하는 일의 절반이다 — 이 화면은 이미 있는 계정을 세우고 찾는 자리이기도 하다.
         //
+        // **사업 상세의 'Y&A 포털 계정생성' 탭과 이름이 한 글자 다르다**(2026-09-08). 같게
+        // 적지 않는 이유는 두 자리가 다른 물음에 답하기 때문이다 — 이 줄은 **계정 자체**를
+        // 세우고 찾는 자리(사업을 가로지른다)이고, 저 탭은 **이 사업에 누구를 들이는가**다.
+        // 같은 이름을 두 곳에 걸면 어느 쪽을 눌러야 하는지가 이름으로 답해지지 않고, 결국
+        // 담당자가 둘 다 열어 봐야 안다.
+        //
         // **보는 범위는 두 축으로 좁힌다.** `entityKey`는 참여 사업 칸이 어느 사업을 세는가,
         // `guestMasterTables`는 어느 인격이 목록에 서는가다(그 값이 하위 원장 탭도 편다).
         // 남의 원장 인격이 여기 서면 참여 사업 칸이 비어 있어도 "그 사람 계정이 있다"가
@@ -124,7 +130,7 @@ function programSubnav(options: { guestAccounts?: boolean } = {}): SubNavGroup[]
         // `dividerBefore`는 두지 않는다(고정 영역이 이미 자기 경계선을 그어, 함께 쓰면 선이
         // 두 줄 그어진다).
         ...(options.guestAccounts
-          ? [{ label: '계정생성', tab: 'guest-accounts', pinBottom: true }]
+          ? [{ label: 'Y&A 포털 계정', tab: 'guest-accounts', pinBottom: true }]
           : []),
       ],
     },

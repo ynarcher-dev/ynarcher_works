@@ -73,7 +73,7 @@ describe('DATABASE — 전사 원장 둘', () => {
     expect(visibleWorkspaces(userWith({ ac: 'write' })).map((w) => w.id)).not.toContain('database')
   })
 
-  it('계정생성은 여기 없다 — 창구는 사업 워크스페이스가 갖는다', () => {
+  it('포털 계정 줄은 여기 없다 — 창구는 사업 워크스페이스가 갖는다', () => {
     const groups = buildNavGroups(userWith({ startup: 'read', networks: 'read' }), database)
     expect(pinnedOf(groups)).toHaveLength(0)
     expect(allTabs(plainGroups(groups)).has('guest-accounts')).toBe(false)
@@ -120,9 +120,9 @@ describe('M&A/PE — 딜 한 줄 + 거래상대 원장 두 줄', () => {
 })
 
 describe('AC — 사업 목록 + 하단 고정 창구', () => {
-  it('계정생성은 목록이 아니라 그 아래 고정 영역이라 그룹이 갈린다', () => {
+  it('포털 계정 줄은 목록이 아니라 그 아래 고정 영역이라 그룹이 갈린다', () => {
     const groups = buildNavGroups(userWith({ ac: 'write' }), ac)
-    expect(shape(groups)).toEqual([['ac:프로젝트'], ['ac:계정생성']])
+    expect(shape(groups)).toEqual([['ac:프로젝트'], ['ac:Y&A 포털 계정']])
     // 그 탭이 탭 집합에서 빠지면 그 화면에서 사업 목록 줄이 활성으로 칠해진다.
     expect(allTabs(plainGroups(groups)).has('guest-accounts')).toBe(true)
   })

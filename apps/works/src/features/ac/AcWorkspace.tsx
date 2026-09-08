@@ -57,7 +57,7 @@ export function AcWorkspacePage() {
   if (params.get('tab') === 'guest-accounts') {
     return (
       <div className="space-y-5">
-        <PageHeader title="계정생성" />
+        <PageHeader title="Y&A 포털 계정" />
         <GuestAccountPanel
           entityKey={AC_WORKSPACE.entityKey}
           masterTables={AC_WORKSPACE.guestMasterTables}

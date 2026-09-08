@@ -2,12 +2,7 @@ import { Tabs } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import type { Program, ProgramModule } from '@/features/program/hooks'
 import { MODULE_BOARD_LABEL } from '@/features/program/config'
-import { ParticipantPool } from '@/features/program/ParticipantPool'
-import {
-  PARTICIPANT_PERSONAS,
-  PERSONA_LABEL,
-  type MasterTable,
-} from '@/features/program/participantPersona'
+import { PortalAccountsPanel } from '@/features/program/detail/PortalAccountsPanel'
 import { ModuleBoardCard } from '@/features/program/detail/ModuleBoardCard'
 import { ProgramAnnouncementsPanel } from '@/features/program/detail/ProgramAnnouncementsPanel'
 import { ProgramInfoCard } from '@/features/program/detail/ProgramInfoCard'
@@ -23,46 +18,22 @@ import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { MaProgramPartyPanel } from '@/features/mna/MaProgramPartyPanel'
 import { partyKindsOf } from '@/features/mna/programPartyLinks'
 
-/**
- * 명부 탭의 키는 자격(`MasterTable`) 값 그대로다 — 탭 키를 자격으로 옮겨 적는 표를 두면
- * 그 표가 곧 어긋날 자리가 된다.
- */
-type LeftTab =
-  | 'modules'
-  | 'seller'
-  | 'buyer'
-  | MasterTable
-  | 'intro'
-  | 'announcements'
-  | 'qna'
-
-/** 탭 키가 자격인가 — 값을 손으로 나열하지 않고 자격 설정에 되묻는다. */
-function isPersonaTab(tab: LeftTab): tab is MasterTable {
-  return tab in PARTICIPANT_PERSONAS
-}
+type LeftTab = 'modules' | 'seller' | 'buyer' | 'portal' | 'intro' | 'announcements' | 'qna'
 
 /**
- * 내부 운영 탭. 명부는 자격 두 축(참여 기업 · 참여 전문가)이 각각 한 탭이다 —
- * 2026-09-05 하위 탭에서 이 층으로 올렸다. 자격은 표를 거르는 조건이 아니라 **게스트에게
- * 다른 화면을 여는 축**이라(3_9_1 §4), 검색·역할과 같은 층에 두면 필터 한 칸처럼 읽힌다.
- */
-/**
- * 내부 운영 탭 — 워크플로우 + 이 워크스페이스가 쓰는 자격들.
+ * 명부가 사는 탭의 이름 — 자격 둘을 한 자리에 묶고 그 아래 하위 탭으로 가른다(2026-09-08).
  *
- * 자격을 손으로 나열하지 않는다: 무엇이 서는지는 `guestMasterTables`가 답하고, 그 값은
- * 계정생성 창구의 하위 탭과 **같은 한 벌**이다. 나열하면 계정은 세울 수 있는데 명부에는
- * 탭이 없는 자격이 조용히 생긴다.
+ * 'GUEST'가 아니라 '포털'인 것은 밖에서 부르는 이름이 그렇게 정해졌기 때문이다(3_9_2) —
+ * GUEST는 받는 사람에게 등급을 통보하는 말이라 인수 후보·기관 투자사에 어울리지 않는다.
+ * 층을 둔 근거는 `PortalAccountsPanel` 주석에 있다.
  */
-function baseTabs(personas: readonly MasterTable[]): { key: LeftTab; label: string }[] {
-  return [
-    { key: 'modules', label: MODULE_BOARD_LABEL },
-    ...personas.map((key) => ({ key: key as LeftTab, label: PERSONA_LABEL[key] })),
-  ]
-}
+const PORTAL_TAB_LABEL = 'Y&A 포털 계정생성'
 
 /**
  * 프로그램 상세 개요(NETWORKS·STARTUP 상세와 동일한 2/3 + 1/3 카드섹션 컴포지션).
- * 좌측 본문(2/3): 기본 데이터 카드 → 서브 탭(프로그램 · 참여 기업 · 참여 전문가 ┃ 사업개요 · 공지사항 · Q&A).
+ * 좌측 본문(2/3): 기본 데이터 카드 → 서브 탭(워크플로우 · Y&A 포털 계정생성 ┃ 사업개요 · 공지사항 · Q&A).
+ * 명부는 2026-09-08에 자격 탭 둘에서 계정생성 탭 하나 + 하위 자격 탭으로 접혔다 —
+ * 근거는 PortalAccountsPanel 주석.
  * 구분선 뒤 세 탭은 **게스트에게 그대로 나가는 화면**이라 내부 운영 탭과 층이 다르다
  * (2026-09-01 사용자 지정 순서) — 원장을 둔 워크스페이스(AC)에서만 서며, 기본 탭은 언제나
  * 첫 탭인 프로그램다.
@@ -99,6 +70,13 @@ export function ProgramOverviewTab({
     { key: 'announcements', label: '공지사항' },
     { key: 'qna', label: 'Q&A' },
   ]
+  // 자격이 하나라도 있으면 명부 탭이 선다 — 무엇이 서는지는 `guestMasterTables`가 답하고,
+  // 그 값은 사이드바 창구의 하위 탭과 **같은 한 벌**이다. 손으로 나열하면 계정은 세울 수
+  // 있는데 명부에는 탭이 없는 자격이 조용히 생긴다.
+  const personas = config.guestMasterTables ?? []
+  const portalTab: { key: LeftTab; label: string }[] = personas.length
+    ? [{ key: 'portal', label: PORTAL_TAB_LABEL }]
+    : []
   const mnaTabs: { key: LeftTab; label: string }[] = [
     { key: 'modules', label: MODULE_BOARD_LABEL },
     ...(partyKindsOf(program.category).includes('SELL')
@@ -107,12 +85,16 @@ export function ProgramOverviewTab({
     ...(partyKindsOf(program.category).includes('BUY')
       ? [{ key: 'buyer' as const, label: 'BUYER' }]
       : []),
+    // 명부는 연결 기업 탭 **뒤에** 선다. 앞 둘은 '이 딜의 상대가 누구인가'이고 이 탭은
+    // '그 상대에서 누가 들어오는가'라, 대상이 정해진 뒤에 사람이 온다.
+    ...portalTab,
   ]
   const leftTabs =
     config.key === 'mna'
       ? mnaTabs
       : [
-          ...baseTabs(config.guestMasterTables ?? []),
+          { key: 'modules' as const, label: MODULE_BOARD_LABEL },
+          ...portalTab,
           ...guestTabs.map((tab, i) => (i === 0 ? { ...tab, divider: true } : tab)),
         ]
   const [leftTab, setLeftTab] = useState<LeftTab>('modules')
@@ -143,10 +125,8 @@ export function ProgramOverviewTab({
                 자리가 알면 되고, 읽는 자리는 이미 연결된 것만 세운다. */}
             {leftTab === 'seller' && <MaProgramPartyPanel programId={program.id} kind="SELL" />}
             {leftTab === 'buyer' && <MaProgramPartyPanel programId={program.id} kind="BUY" />}
-            {/* 탭을 바꾸면 명부는 통째로 다시 선다(key) — 선택·역할·페이지가 자격을 넘어
-                살아남으면, 안 보이는 행이 선택된 채로 `연결`에 딸려 간다. */}
-            {isPersonaTab(leftTab) && (
-              <ParticipantPool key={leftTab} program={program} persona={leftTab} />
+            {leftTab === 'portal' && (
+              <PortalAccountsPanel program={program} personas={personas} />
             )}
           </div>
         </div>
