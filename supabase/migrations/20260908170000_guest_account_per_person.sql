@@ -22,6 +22,9 @@
 --   (1) guest_identities PK에 user_id를 더해 원장 행 : 계정을 1:N으로 푼다.
 --   (2) issue_guest_account가 사람(이름·이메일·연락처)을 인자로 받는다.
 --       인자를 비우면 종전대로 원장 연락처에서 꺼내므로 기존 호출이 그대로 산다.
+--   (3) 담당자가 이메일을 직접 적게 되면서 새로 열리는 길 하나를 막는다 —
+--       **내부 임직원 주소로는 게스트 계정을 세우지 못한다.** 종전에는 이메일이
+--       원장에서만 와서 사실상 닫혀 있던 길이고, 유일 인덱스는 게스트끼리만 막는다.
 --
 -- 이 파일이 하지 않는 일:
 --   · master_table CHECK 확대(ma_sellers·ma_buyers) — M&A 창구를 여는 마이그레이션의 몫.
@@ -186,6 +189,26 @@ begin
   end if;
   if v_email is null then
     raise exception '이메일이 없어 계정을 세울 수 없습니다(이메일이 로그인 ID입니다). 담당자 이메일을 지정하거나 원장에서 보완하십시오.'
+      using errcode = '22023';
+  end if;
+
+  -- 내부 임직원의 주소로 게스트 계정을 세우지 않는다.
+  --
+  -- 종전에는 이 길이 사실상 닫혀 있었다 — 이메일이 원장에서만 왔기 때문이다. 담당자가
+  -- 직접 적게 되면서 오타 한 번으로 자기 회사 주소가 들어올 수 있게 됐다. 유일 인덱스
+  -- (uq_users_guest_email)는 **게스트끼리만** 막으므로 이 조합은 조용히 저장된다.
+  --
+  -- 그러면 한 이메일에 users 행이 둘이 되고, 임직원 목록을 묻는 조회는 유형으로
+  -- 거르므로(lib/userTypes) 겉으로는 멀쩡하지만 사람을 이메일로 찾는 자리마다 답이
+  -- 둘이 된다. 게스트 로그인 경로도 그 사람을 영영 받지 않는다(유형이 다르다).
+  -- 즉 만들어 봐야 쓰이지 않는 행이므로, 만들지 않고 사유를 말한다.
+  if exists (
+    select 1 from public.users u
+     where u.deleted_at is null
+       and lower(u.email) = v_email_key
+       and not app.is_guest_user_type(u.user_type)
+  ) then
+    raise exception '이 이메일은 내부 임직원 계정입니다. 게스트 계정은 다른 주소로 세우십시오.'
       using errcode = '22023';
   end if;
 
