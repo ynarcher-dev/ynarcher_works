@@ -6,7 +6,6 @@ import {
   InfoGrid,
   PanelCard,
 } from '@ynarcher/ui'
-import type { ReactNode } from 'react'
 import { RichTextViewer } from '@/components/RichTextEditor'
 import { MaQuickReviewSection } from '@/features/mna/parties/MaQuickReviewSection'
 import {
@@ -44,21 +43,19 @@ function formatDate(v: string | null | undefined): string | null {
  *
  * 퀵 리뷰는 켠 원장에서만 선다(`hasQuickReview`) — 바이어는 파는 회사를 소개하는 문서를
  * 갖지 않으므로 기업정보와 상세내용 둘로 끝난다.
+ *
+ * **제목을 갈아 끼우는 슬롯을 두지 않는다**(2026-09-08 사용자 지적 "카드 디자인 동일하게").
+ * 잠깐 프로젝트 탭에서 제목을 원장 링크로 바꿔 끼웠는데, 링크 부품이 자기 글자 규격을 함께
+ * 들고 와 같은 카드가 두 화면에서 다른 크기의 제목으로 섰다. 두 자리가 같은 것을 보여주려고
+ * 부품을 하나로 뗀 것이므로, 그 하나가 규격까지 소유해야 한다 — 갈아 끼울 수 있게 두면
+ * 갈아 끼운 자리마다 규격이 갈린다.
  */
 export function MaPartySummary({
   config,
   record,
-  title,
 }: {
   config: MaPartyConfig
   record: MaPartyRow
-  /**
-   * 제목 자리를 갈아 끼운다(기본은 기업명 글자).
-   *
-   * 프로젝트 탭에서는 여기에 원장으로 가는 링크가 온다 — 그 자리에서 읽다가 고치러 갈 곳이
-   * 이름 자신이어야 하고, 카드 밖에 '자세히 보기' 같은 줄을 따로 두면 카드가 둘로 읽힌다.
-   */
-  title?: ReactNode
 }) {
   const industries = Array.isArray(record.industries) ? record.industries : []
   const decision = config.hasDecision ? decisionBadge(record.decision) : null
@@ -73,7 +70,7 @@ export function MaPartySummary({
           아래에서 '무엇을 찾는 곳인가'를 먼저 답한다. 아래 정보행에 다시 적지 않는다(같은
           값을 두 곳에 두면 어긋난다). */}
       <EntityHeaderCard
-        title={title ?? record.name}
+        title={record.name}
         badges={
           <>
             {/* 진행여부가 분야보다 앞선다 — 이름 다음에 답해야 하는 것은 '무엇을 하는

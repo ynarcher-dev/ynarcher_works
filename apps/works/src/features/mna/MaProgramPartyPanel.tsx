@@ -1,5 +1,4 @@
-import { EmptyState, Spinner, TextAction } from '@ynarcher/ui'
-import { Link } from 'react-router-dom'
+import { EmptyState, Spinner } from '@ynarcher/ui'
 import { MaPartySummary } from '@/features/mna/parties/MaPartySummary'
 import { MA_BUYER, MA_SELLER, type MaPartyConfig } from '@/features/mna/parties/config'
 import { useMaPartyRecord } from '@/features/mna/parties/hooks'
@@ -82,17 +81,8 @@ function PartyBody({ config, id }: { config: MaPartyConfig; id: string }) {
     )
   }
 
-  return (
-    <MaPartySummary
-      config={config}
-      record={record}
-      // 제목이 곧 원장으로 가는 길이다 — 여기서 읽다가 고치러 갈 곳은 그 기업의 상세뿐이라
-      // 카드 밖에 '자세히 보기' 줄을 따로 두지 않는다.
-      title={
-        <TextAction as={Link} to={`${config.basePath}/${record.id}`}>
-          {record.name}
-        </TextAction>
-      }
-    />
-  )
+  // 원장으로 가는 링크는 걸지 않는다(2026-09-08 사용자 지정) — 이 탭이 세우는 것이 이미 그
+  // 기업의 내용 전부라 건너갈 이유가 남지 않고, 제목이 링크가 되면 그 부품의 글자 규격이
+  // 따라와 같은 카드가 두 화면에서 다르게 선다.
+  return <MaPartySummary config={config} record={record} />
 }
