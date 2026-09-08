@@ -1,5 +1,5 @@
 import { Tabs } from '@ynarcher/ui'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { Program, ProgramModule } from '@/features/program/hooks'
 import { MODULE_BOARD_LABEL } from '@/features/program/config'
 import { PortalAccountsButton } from '@/features/program/detail/PortalAccountsButton'
@@ -15,10 +15,8 @@ import { useProgramWorkspace } from '@/features/program/workspace'
 import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
-import { MaProgramPartyPanel } from '@/features/mna/MaProgramPartyPanel'
-import { partyKindsOf } from '@/features/mna/programPartyLinks'
 
-type LeftTab = 'modules' | 'seller' | 'buyer' | 'intro' | 'announcements' | 'qna'
+type LeftTab = 'modules' | 'intro' | 'announcements' | 'qna'
 
 /**
  * 프로그램 상세 개요(NETWORKS·STARTUP 상세와 동일한 2/3 + 1/3 카드섹션 컴포지션).
@@ -65,31 +63,18 @@ export function ProgramOverviewTab({
   // 이 워크스페이스가 쓰는 자격. 무엇이 서는지는 `guestMasterTables`가 답하고, 그 값은
   // 사이드바 창구의 하위 탭과 **같은 한 벌**이다.
   const personas = config.guestMasterTables ?? []
-  const mnaTabs: { key: LeftTab; label: string }[] = [
-    { key: 'modules', label: MODULE_BOARD_LABEL },
-    ...(partyKindsOf(program.category).includes('SELL')
-      ? [{ key: 'seller' as const, label: 'SELLER' }]
-      : []),
-    ...(partyKindsOf(program.category).includes('BUY')
-      ? [{ key: 'buyer' as const, label: 'BUYER' }]
-      : []),
+  // **M&A의 SELLER·BUYER 탭은 걷었다**(2026-09-08 사용자 지정 "연동하면 탭이 생기는 게
+  // 아니라 모듈을 하나 생성하자"). 연결된 매물의 내용은 이제 퀵리뷰 모듈이 세운다 — 탭 줄이
+  // 답하는 물음은 '이 프로젝트에서 무엇을 하는가'이고, 연결된 기업의 내용은 '무엇을 하는가'가
+  // 아니라 '무엇을 놓고 하는가'다. 그래서 M&A와 AC의 탭 줄이 같아졌다.
+  //
+  // 게스트향 세 탭이 M&A에도 서는 것은 2026-09-03 원장 통합의 결과 그대로다(사업개요·공지·
+  // Q&A는 세 워크스페이스가 모두 운용한다).
+  const leftTabs = [
+    { key: 'modules' as const, label: MODULE_BOARD_LABEL },
+    ...guestTabs.map((tab, i) => (i === 0 ? { ...tab, divider: true } : tab)),
   ]
-  const leftTabs =
-    config.key === 'mna'
-      ? mnaTabs
-      : [
-          { key: 'modules' as const, label: MODULE_BOARD_LABEL },
-          ...guestTabs.map((tab, i) => (i === 0 ? { ...tab, divider: true } : tab)),
-        ]
   const [leftTab, setLeftTab] = useState<LeftTab>('modules')
-  useEffect(() => {
-    const kinds = config.key === 'mna' ? partyKindsOf(program.category) : []
-    const sellerVisible = kinds.includes('SELL')
-    const buyerVisible = kinds.includes('BUY')
-    if ((leftTab === 'seller' && !sellerVisible) || (leftTab === 'buyer' && !buyerVisible)) {
-      setLeftTab('modules')
-    }
-  }, [config.key, leftTab, program.category])
 
   return (
     <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
@@ -108,11 +93,6 @@ export function ProgramOverviewTab({
             {leftTab === 'modules' && (
               <ModuleBoardCard program={program} onOpenModule={onOpenModule} />
             )}
-            {/* 매핑은 프로젝트 편집 폼이 갖는다(2026-09-08) — 이 탭은 연결된 기업의 내용을
-                읽는 자리다. 그래서 사업구분을 넘기지 않는다: 무엇을 고를 수 있는지는 고르는
-                자리가 알면 되고, 읽는 자리는 이미 연결된 것만 세운다. */}
-            {leftTab === 'seller' && <MaProgramPartyPanel programId={program.id} kind="SELL" />}
-            {leftTab === 'buyer' && <MaProgramPartyPanel programId={program.id} kind="BUY" />}
           </div>
         </div>
       </div>

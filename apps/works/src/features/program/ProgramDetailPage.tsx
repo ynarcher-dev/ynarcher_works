@@ -12,6 +12,7 @@ import { FilePanel } from '@/features/program/panels/FilePanel'
 import { LinkPanel } from '@/features/program/panels/LinkPanel'
 import { ModuleNoticeSplit } from '@/features/program/panels/NoticePanel'
 import { PostPanel } from '@/features/program/panels/PostPanel'
+import { QuickReviewPanel } from '@/features/program/panels/QuickReviewPanel'
 import { RecruitmentPanel } from '@/features/program/panels/RecruitmentPanel'
 import { TimelinePanel } from '@/features/program/panels/TimelinePanel'
 import { useProgram } from '@/features/program/hooks'
@@ -26,6 +27,7 @@ type Tab =
   | 'post'
   | 'link'
   | 'file'
+  | 'quick-review'
 
 const TAB_KEYS = new Set<string>([
   'overview',
@@ -34,6 +36,7 @@ const TAB_KEYS = new Set<string>([
   'post',
   'link',
   'file',
+  'quick-review',
 ])
 
 /**
@@ -162,6 +165,11 @@ export function ProgramDetailPage() {
           {moduleId && tab === 'recruitment' && (
             <RecruitmentPanel programId={id} moduleId={moduleId} />
           )}
+          {/* 퀵리뷰는 moduleId를 쓰지 않는다 — 세우는 값이 모듈에 매달린 것이 아니라
+              **프로젝트에 연결된 매물**의 것이라, 프로젝트 하나에 이 모듈도 하나다
+              (uq_program_modules_quick_review_singleton). 우측 NOTICE도 두지 않는다:
+              그 칸은 게스트에게 나가는 알림이고 이 모듈은 WORKS ONLY다. */}
+          {moduleId && tab === 'quick-review' && <QuickReviewPanel programId={id} />}
         </>
       )}
 

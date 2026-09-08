@@ -16,6 +16,9 @@
  */
 export const MODULE_TYPE_LABEL: Record<string, string> = {
   RECRUITMENT: '모집/신청서',
+  // M&A 전용(2026-09-08). 프로젝트에 연결된 매물의 희망사항·퀵 리뷰를 비추는 모듈이며,
+  // 값은 이 모듈이 아니라 M&A 원장이 소유한다.
+  QUICK_REVIEW: '퀵리뷰',
   POST: '글쓰기',
   LINK: 'URL첨부',
   FILE: '파일첨부',

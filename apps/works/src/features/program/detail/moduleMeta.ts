@@ -1,6 +1,7 @@
 import { MODULE_STATUS_BAR_CLASS, MODULE_STATUS_LABEL, MODULE_STATUS_TONE } from '@ynarcher/master-data'
 import type { BadgeTone } from '@ynarcher/ui'
 import {
+  ClipboardCheck,
   Link as LinkIcon,
   Megaphone,
   Paperclip,
@@ -40,6 +41,14 @@ export const MODULE_META: Record<string, ModuleMeta> = {
     detail:
       '공개 랜딩페이지 기반의 참여 기업 모집을 운영합니다. 신청서 폼을 직접 구성하고, 공개 URL로 지원을 접수하며, 접수된 신청 내역과 첨부서류를 한곳에서 검토합니다.',
     tab: 'recruitment',
+  },
+  QUICK_REVIEW: {
+    icon: ClipboardCheck,
+    emoji: '🔎',
+    description: '연결된 매물의 희망사항과 퀵 리뷰를 봅니다.',
+    detail:
+      '이 프로젝트에 연결된 M&A SELLER·BUYER 매물의 희망사항과 퀵 리뷰를 한곳에서 읽습니다. 매물을 연결하면 이 모듈이 자동으로 서며, 값은 여기서 고치지 않고 각 원장이 소유합니다. 밖으로 나가지 않는 내부 검토 자료입니다.',
+    tab: 'quick-review',
   },
   POST: {
     icon: PenLine,
