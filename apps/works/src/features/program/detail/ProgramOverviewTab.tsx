@@ -2,7 +2,7 @@ import { Tabs } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import type { Program, ProgramModule } from '@/features/program/hooks'
 import { MODULE_BOARD_LABEL } from '@/features/program/config'
-import { PortalAccountsCard } from '@/features/program/detail/PortalAccountsCard'
+import { PortalAccountsButton } from '@/features/program/detail/PortalAccountsButton'
 import { ModuleBoardCard } from '@/features/program/detail/ModuleBoardCard'
 import { ProgramAnnouncementsPanel } from '@/features/program/detail/ProgramAnnouncementsPanel'
 import { ProgramInfoCard } from '@/features/program/detail/ProgramInfoCard'
@@ -23,9 +23,9 @@ type LeftTab = 'modules' | 'seller' | 'buyer' | 'intro' | 'announcements' | 'qna
 /**
  * 프로그램 상세 개요(NETWORKS·STARTUP 상세와 동일한 2/3 + 1/3 카드섹션 컴포지션).
  * 좌측 본문(2/3): 기본 데이터 카드 → 서브 탭(워크플로우 ┃ 사업개요 · 공지사항 · Q&A).
- * 명부는 2026-09-08에 좌측 탭에서 **우측 카드 + 모달**로 옮겼다(사용자 지정) — 탭 줄은
- * 이 사업이 가진 것을 부르는 명사만 남고, 계정을 세우는 동사는 버튼의 말이 된다.
- * 근거는 PortalAccountsCard 주석.
+ * 명부는 2026-09-08에 좌측 탭에서 **정보 카드 아래 버튼 + 모달**로 옮겼다(사용자 지정) —
+ * 탭 줄은 이 사업이 가진 것을 부르는 명사만 남고, 계정을 세우는 동사는 버튼의 말이 된다.
+ * 근거는 PortalAccountsButton 주석.
  * 구분선 뒤 세 탭은 **게스트에게 그대로 나가는 화면**이라 내부 운영 탭과 층이 다르다
  * (2026-09-01 사용자 지정 순서) — 원장을 둔 워크스페이스(AC)에서만 서며, 기본 탭은 언제나
  * 첫 탭인 프로그램다.
@@ -95,6 +95,10 @@ export function ProgramOverviewTab({
     <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
       <div className="space-y-4 lg:col-span-2">
         <ProgramInfoCard program={program} />
+        {/* 사업이 무엇인지(위) 다음에 오는 것이 **누구를 상대로 도는가**이고, 그다음이 무엇을
+            하는가(아래 탭 줄)다. 우측 컬럼에 두지 않은 이유는 그쪽이 이미 패널 다섯 장이라
+            한 장을 더하면 무엇이 무엇인지 흐려지기 때문이다 — 자세한 근거는 버튼 주석. */}
+        <PortalAccountsButton program={program} personas={personas} />
         <div>
           <Tabs items={leftTabs} value={leftTab} onChange={(key) => setLeftTab(key as LeftTab)} />
           <div className="mt-4">
@@ -116,10 +120,6 @@ export function ProgramOverviewTab({
           급한 순서가 곧 위에서 아래 순서다 — 일하러 들어온 사람이 먼저 찾는 것은 자료와 결재고,
           코멘트는 다 보고 남기는 말이라 맨 아래에 둔다. 상세 화면 전부가 이 순서를 공유한다. */}
       <div className="space-y-4 lg:col-span-1">
-        {/* 포털 계정이 맨 위에 서는 이유는 급한 순서다 — 이 사업이 누구를 상대로 도는가가
-            먼저이고, 자료와 결재는 그 사람들과 주고받는 것이다. 아래 다섯 장의 상대 순서는
-            상세 화면 공통 그대로다. */}
-        <PortalAccountsCard program={program} personas={personas} />
         <MaterialPanel targetType="program" targetId={program.id} />
         {/* 결재 연동의 대상 키도 회의록과 같은 워크스페이스별 entityKey다(program / ma_program)
             — 하나를 공유하면 AC 결재가 M&A 딜에 붙어 보인다. */}
