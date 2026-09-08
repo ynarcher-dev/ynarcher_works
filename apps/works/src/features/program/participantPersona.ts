@@ -14,8 +14,9 @@ import {
  * 성립하지 않는다** — 삼항은 "이것이 아니면 저것"이라 셋을 답하지 못하고, 여덟 자리를 각각
  * 열어 고치면 어느 한 곳을 빠뜨렸을 때 화면이 기업 라벨로 셀러를 부른다.
  *
- * 그래서 자격은 화면이 아니라 이 표가 소유한다. 새 자격을 여는 일은 여기 한 줄을 더하는
- * 일이며, 더하지 않은 화면은 애초에 그 자격을 세울 수 없다(타입이 막는다).
+ * 그래서 자격은 화면이 아니라 이 표가 소유한다. 자격을 여는 일은 `MasterTable` 유니온에
+ * 값을 더하고 이 표에 그 항목을 적는 것뿐이며, 더하지 않은 자격은 애초에 화면에 세울 수
+ * 없다(타입이 막는다).
  *
  * **키는 원장 이름 그대로**다(`program_participants.master_table` 값). 자격을 옮겨 적는 표를
  * 하나 더 두면 그 표가 곧 어긋날 자리가 된다 — 무엇으로 참여시키는가는 어느 원장에서
@@ -94,13 +95,22 @@ function text(row: Record<string, unknown>, key: string): string | null {
 }
 
 /**
+ * 원장 출처 = 자격 키. 내부 임직원 참가자는 원장이 없다(null).
+ *
+ * 2026-09-04 원장 통합 전에는 'experts'였다 — 그때는 원장 이름 하나가 '어느 표인가'와
+ * '전문가인가'를 함께 답했다. 지금은 표가 'networks' 하나이고 전문가인지는 행의 category가
+ * 답하므로, 후보 조회에 그 조건을 함께 건다(`ledger.narrow`).
+ */
+export type MasterTable = 'startups' | 'networks'
+
+/**
  * 이 앱이 명부에 세울 수 있는 자격 전부.
  *
  * 여기 없는 원장은 명부에 담기지 않는다 — 그리고 그 강제는 화면이 아니라 DB의 CHECK 제약이
  * 함께 한다(화면에서 숨기는 것은 보안이 아니다). 자격을 하나 열 때는 두 곳을 같은 커밋에서
  * 함께 연다.
  */
-export const PARTICIPANT_PERSONAS = {
+export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
   startups: {
     label: '참여 기업',
     nameHeader: '기업명',
@@ -158,16 +168,7 @@ export const PARTICIPANT_PERSONAS = {
     },
     categoryBadge: () => ({ label: '전문가', tone: 'neutral' }),
   },
-} satisfies Record<string, ParticipantPersona>
-
-/**
- * 원장 출처 = 자격 키. 내부 임직원 참가자는 원장이 없다(null).
- *
- * 2026-09-04 원장 통합 전에는 'experts'였다 — 그때는 원장 이름 하나가 '어느 표인가'와
- * '전문가인가'를 함께 답했다. 지금은 표가 'networks' 하나이고 전문가인지는 행의 category가
- * 답하므로, 후보 조회에 그 조건을 함께 건다(`ledger.narrow`).
- */
-export type MasterTable = keyof typeof PARTICIPANT_PERSONAS
+}
 
 /** 자격 키가 이 앱이 아는 것인가 — 원장에서 읽어 온 문자열을 좁힐 때 쓴다. */
 export function isMasterTable(value: string | null | undefined): value is MasterTable {

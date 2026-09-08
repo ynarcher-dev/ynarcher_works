@@ -31,7 +31,6 @@ export type ParticipantLoginStatus =
   | 'BLOCKED'
 
 export type { MasterTable }
-export { PERSONA_LABEL } from '@/features/program/participantPersona'
 
 export interface ParticipantRow {
   id: string
@@ -130,7 +129,7 @@ async function loadLedgerFacts(
     [...byPersona].map(async ([key, ids]) => {
       const { ledger } = PARTICIPANT_PERSONAS[key]
       const { data } = await supabase.from(ledger.table).select(ledger.columns).in('id', ids)
-      for (const raw of (data ?? []) as Record<string, unknown>[]) {
+      for (const raw of (data ?? []) as unknown as Record<string, unknown>[]) {
         facts.set(`${key}:${String(raw.id)}`, ledger.map(raw))
       }
     }),
@@ -271,7 +270,7 @@ export function useMasterCandidates(
           .filter(Boolean) as string[],
       )
 
-      return ((data ?? []) as Record<string, unknown>[]).map((raw) => {
+      return ((data ?? []) as unknown as Record<string, unknown>[]).map((raw) => {
         const facts = ledger.map(raw)
         const id = String(raw.id)
         return {
