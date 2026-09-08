@@ -17,7 +17,7 @@ export function StartupCreatePage() {
       {/* 상단 바(뒤로가기 ↔ 취소·등록)는 폼이 소유한다. */}
       <StartupDetailForm
         backTo={LIST_PATH}
-        onDone={(id) => navigate(`/startup/discovered/${id}`)}
+        onDone={(id) => navigate(`/startup/${id}`)}
         onCancel={() => navigate(LIST_PATH)}
       />
     </div>

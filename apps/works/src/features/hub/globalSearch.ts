@@ -175,7 +175,7 @@ async function searchStartups(kw: string, overrides: MaskOverrides): Promise<Sea
         detail: detail(['데이터베이스', label, startupIndustry(row)]),
         badge: '스타트업',
         tone: 'info',
-        path: `/startup/discovered/${row.id}`,
+        path: `/startup/${row.id}`,
       }))
     }),
   )
@@ -224,7 +224,7 @@ async function searchNetworks(kw: string, overrides: MaskOverrides): Promise<Sea
       badge: label || '미지정',
       // 구분이 비어 있는 행은 아직 채워지지 않은 자리라 다른 톤으로 남겨 눈에 걸리게 한다.
       tone: (label ? 'success' : 'warning') as BadgeTone,
-      path: `/networks/record/${row.id}`,
+      path: `/networks/${row.id}`,
     }
   })
 }
@@ -233,13 +233,14 @@ interface ProgramSearchSpec {
   table: 'programs' | 'ma_programs'
   workspace: string
   badge: string
-  basePath: string
+  /** 상세 경로의 앞부분. 구획마다 모양이 달라(원장이 하나면 생략) 조립 규칙이 아니라 값으로 갖는다. */
+  detailBase: string
   tone: BadgeTone
 }
 
 const PROGRAM_SPECS: ProgramSearchSpec[] = [
-  { table: 'programs', workspace: 'AC', badge: '사업', basePath: '/ac', tone: 'info' },
-  { table: 'ma_programs', workspace: 'M&A', badge: '딜', basePath: '/mna', tone: 'warning' },
+  { table: 'programs', workspace: '프로젝트', badge: '사업', detailBase: '/project', tone: 'info' },
+  { table: 'ma_programs', workspace: 'M&A', badge: '딜', detailBase: '/mna/deals', tone: 'warning' },
 ]
 
 interface ProgramRow {
@@ -274,7 +275,7 @@ async function searchPrograms(spec: ProgramSearchSpec, kw: string): Promise<Sear
     detail: detail(['워크스페이스', spec.workspace, row.code, row.host_organization]),
     badge: spec.badge,
     tone: spec.tone,
-    path: `${spec.basePath}/programs/${row.id}`,
+    path: `${spec.detailBase}/${row.id}`,
   }))
 }
 

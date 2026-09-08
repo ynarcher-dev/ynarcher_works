@@ -2,7 +2,7 @@ import type { BadgeTone } from '@ynarcher/ui'
 
 /**
  * 사업구분(category) 선택지. DB는 text + CHECK 제약이며 워크스페이스마다 값이 다르다.
- * 각 워크스페이스 설정(AcWorkspace/MnaWorkspace/ProjectWorkspace)이 이 목록을 주입하고,
+ * 각 워크스페이스 설정(ProjectWorkspace/MnaWorkspace/ProjectWorkspace)이 이 목록을 주입하고,
  * 등록 폼의 셀렉트·목록 표의 배지·목록 사업구분 필터·업로드 '구분' 열이 함께 참조하므로,
  * 분류를 늘릴 때는 여기와 DB CHECK 제약만 고치면 된다.
  *

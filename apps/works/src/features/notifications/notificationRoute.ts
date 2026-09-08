@@ -21,14 +21,14 @@ const LEGACY_NETWORK_TYPES = new Set([
 export function notificationRoute(targetType: string, targetId: string): string | null {
   switch (targetType) {
     case 'startup':
-      return `/startup/discovered/${targetId}`
+      return `/startup/${targetId}`
     case 'employee':
       // /management/hr 와 /office/managers 두 라우트가 같은 화면을 열지만, HR을 기본으로 쓴다.
       return `/management/hr/${targetId}`
     case 'program':
-      return `/ac/programs/${targetId}`
+      return `/project/${targetId}`
     case 'ma_program':
-      return `/mna/programs/${targetId}`
+      return `/mna/deals/${targetId}`
     case 'board_post':
       // 게시글은 소속 게시판 탭 안에서 열린다(/office?tab=<slug>&post=<id>). 알림은 slug를 모르므로
       // post만 실어 보내고, OfficePage가 글의 게시판을 찾아 탭을 보정한다.
@@ -41,12 +41,12 @@ export function notificationRoute(targetType: string, targetId: string): string 
       // 물품 모달 안에 있어서, 물건을 여는 것이 곧 그 요청 앞에 서는 것이다.
       return `/office?tab=outbound&asset=${targetId}`
     case 'network':
-      return `/networks/record/${targetId}`
+      return `/networks/${targetId}`
     case 'approval':
       // 결재 알림이 가리키는 것은 결재선 행이 아니라 문서다 — 처리 버튼·결재선 표·되돌림
       // 사유가 모두 문서 상세 안에 있어서, 문서를 여는 것이 곧 그 처리 앞에 서는 것이다.
       return `/office?tab=approval&doc=${targetId}`
     default:
-      return LEGACY_NETWORK_TYPES.has(targetType) ? `/networks/record/${targetId}` : null
+      return LEGACY_NETWORK_TYPES.has(targetType) ? `/networks/${targetId}` : null
   }
 }

@@ -65,25 +65,25 @@ export const NETWORK_MINUTE_LINK_TYPES: NetworkMinuteLinkType[] = ['network']
 
 export const MINUTE_LINK_TARGETS: Record<MinuteLinkTargetType, MinuteLinkTargetMeta> = {
   program: {
-    kindLabel: 'AC 사업',
+    kindLabel: '프로젝트 사업',
     table: 'programs',
     titleColumn: 'title',
     codeColumn: 'code',
-    toPath: (id) => `/ac/programs/${id}`,
+    toPath: (id) => `/project/${id}`,
   },
   ma_program: {
     kindLabel: 'M&A 딜',
     table: 'ma_programs',
     titleColumn: 'title',
     codeColumn: 'code',
-    toPath: (id) => `/mna/programs/${id}`,
+    toPath: (id) => `/mna/deals/${id}`,
   },
   startup: {
     kindLabel: 'STARTUP',
     table: 'startups',
     titleColumn: 'name',
     codeColumn: null,
-    toPath: (id) => `/startup/discovered/${id}`,
+    toPath: (id) => `/startup/${id}`,
   },
   fund: {
     kindLabel: 'FUND',
@@ -99,7 +99,7 @@ export const MINUTE_LINK_TARGETS: Record<MinuteLinkTargetType, MinuteLinkTargetM
     titleColumn: 'name',
     // 사람·조직 원장이라 부가 표기 자리에는 소속을 넣어 동명이인을 가른다.
     codeColumn: 'affiliation',
-    toPath: (id) => `/networks/record/${id}`,
+    toPath: (id) => `/networks/${id}`,
   },
   // M&A BUYER·SELLER — 인수/매각 희망 주체 원장(M&A/PE 소유).
   // 부가 표기에 희망사항을 넣는다: 이름이 비슷한 기업이 여럿일 때 가르는 것이 그 한 줄이다.
@@ -139,7 +139,7 @@ export const MINUTE_LINK_PICK_KINDS: MinuteLinkPickKind[] = MINUTE_LINK_TARGET_T
   types: [t],
 }))
 
-/** 피커 최초 진입 종류(AC 사업). */
+/** 피커 최초 진입 종류(프로젝트 사업). */
 export const DEFAULT_MINUTE_LINK_PICK_KIND: MinuteLinkPickKind = MINUTE_LINK_PICK_KINDS[0]!
 
 /** 드롭다운 선택값(key) → 종류. 모르는 값이면 기본 종류로 되돌린다. */

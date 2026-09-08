@@ -167,7 +167,7 @@ export function EmployeeActivitySection({ userId }: { userId: string }) {
   const startups = useEmployeeStartups(userId)
   const funds = useEmployeeFunds(userId)
   // 훅은 배열로 접지 않고 한 줄씩 부른다 — 호출 순서·개수가 렌더마다 고정되어야 한다.
-  const ac = useEmployeePrograms('ac', userId)
+  const ac = useEmployeePrograms('project', userId)
   const mna = useEmployeePrograms('mna', userId)
 
   // 조회 중에는 아직 아무것도 판정하지 않는다 — 빈 카드가 잠깐 떴다 사라지는 편보다
@@ -180,15 +180,15 @@ export function EmployeeActivitySection({ userId }: { userId: string }) {
   const programCards: ProgramCard[] = [
     {
       title: '운영사업',
-      workspace: 'ac',
-      basePath: '/ac/programs',
+      workspace: 'project',
+      basePath: '/project',
       columns: AC_PROGRAM_COLUMNS,
       rows: ac.data ?? [],
     },
     {
       title: 'M&A',
       workspace: 'mna',
-      basePath: '/mna/programs',
+      basePath: '/mna/deals',
       columns: DEAL_PROGRAM_COLUMNS,
       rows: mna.data ?? [],
     },
@@ -207,7 +207,7 @@ export function EmployeeActivitySection({ userId }: { userId: string }) {
           columns={STARTUP_COLUMNS}
           rows={startupRows}
           rowKey={(s) => s.id}
-          rowTo={(s) => `/startup/discovered/${s.id}`}
+          rowTo={(s) => `/startup/${s.id}`}
           workspace="startup"
         />
       )}

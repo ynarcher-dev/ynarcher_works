@@ -18,15 +18,17 @@ export type RoleKey = (typeof ROLES)[number]['key']
 /**
  * 토글 매트릭스에 노출되는 워크스페이스(내부 + GUEST).
  *
- * DB `workspace_key` enum의 부분집합이다 — 폐지된 PROJECT(2026-09-07, AC로 통합)의 enum
- * 값은 `system_events`의 과거 기록이 쓰고 있어 남겨 두었고, 여기서 빠졌으므로 부여할 자리가
- * 없다. 열 수 있는 화면이 없는 워크스페이스를 토글에 세우면 켜 놓고도 아무 일이 없다.
+ * DB `workspace_key` enum의 부분집합이다 — 폐지된 구 PROJECT(2026-09-07, AC로 통합)의 enum
+ * 값은 `system_events`의 과거 기록이 쓰고 있어 `project_retired`라는 이름으로 남겨 두었고,
+ * 여기서 빠졌으므로 부여할 자리가 없다. 열 수 있는 화면이 없는 워크스페이스를 토글에 세우면
+ * 켜 놓고도 아무 일이 없다. 여기 서 있는 `project`는 그것이 아니라 **구 AC**다(2026-09-09
+ * 개명 — 부르는 이름·경로·권한 키를 한 벌로 맞췄다).
  */
 export const WORKSPACE_KEYS = [
   { key: 'office', label: 'OFFICE' },
   { key: 'startup', label: 'STARTUP' },
   { key: 'networks', label: 'NETWORKS' },
-  { key: 'ac', label: 'AC' },
+  { key: 'project', label: '프로젝트' },
   { key: 'fund', label: 'FUND' },
   { key: 'mna', label: 'M&A/PE' },
   { key: 'management', label: 'MANAGEMENT' },

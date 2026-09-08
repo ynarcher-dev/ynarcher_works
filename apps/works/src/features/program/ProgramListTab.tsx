@@ -101,7 +101,7 @@ export function ProgramListTab({ scope, onScopeChange }: ProgramListTabProps) {
           // 출처 범위를 쿼리로 넘겨 상세의 뒤로가기가 방금 보던 목록으로 돌아오게 한다
           // (내 것이 아닌 사업을 '전체'에서 열었다면 '내 ~' 목록에는 그 행이 없다).
           onRowClick={(row) =>
-            navigate(`${config.basePath}/programs/${row.id}?from=${scope}`)
+            navigate(`${config.detailBase}/${row.id}?from=${scope}`)
           }
           pagination={{
             page,

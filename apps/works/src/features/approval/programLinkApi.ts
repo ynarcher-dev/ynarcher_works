@@ -30,7 +30,7 @@ const programKind = (t: ProgramLinkType): MinuteLinkPickKind => ({
 
 export const PROGRAM_LINK_PICK_KINDS: MinuteLinkPickKind[] = PROGRAM_LINK_TYPES.map(programKind)
 
-/** 피커 최초 진입 종류(AC 사업). */
+/** 피커 최초 진입 종류(프로젝트 사업). */
 export const DEFAULT_PROGRAM_LINK_KIND: MinuteLinkPickKind = programKind('program')
 
 /** 드롭다운 선택값(key) → 종류. 모르는 값이면 기본 종류로 되돌린다. */

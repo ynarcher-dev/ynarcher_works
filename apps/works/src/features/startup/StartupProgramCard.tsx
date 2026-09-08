@@ -96,7 +96,7 @@ export function StartupProgramCard({
         rows={pageItems}
         rowKey={(r) => r.id}
         layout="fixed"
-        onRowClick={(r) => navigate(`${config.basePath}/programs/${r.id}`)}
+        onRowClick={(r) => navigate(`${config.detailBase}/${r.id}`)}
         standardColumns={false}
         // 카드 안 보조 목록이라 번호줄 없는 미니 페이저를 쓴다(우측 패널 목록과 같은 규격).
         pagination={{

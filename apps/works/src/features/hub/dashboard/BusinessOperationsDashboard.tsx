@@ -27,7 +27,7 @@ const WORKSPACE_SUMMARIES: {
   roles: OperationRoleKey[]
 }[] = [
   {
-    key: 'ac', label: 'AC', caption: '액셀러레이팅', icon: Target,
+    key: 'project', label: '프로젝트', caption: '사업 운영', icon: Target,
     tone: 'blue', roles: ['PM', 'MEMBER'],
   },
   {

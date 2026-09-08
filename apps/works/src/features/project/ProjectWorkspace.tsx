@@ -12,12 +12,13 @@ import { ProgramWorkspaceProvider, type ProgramWorkspaceConfig } from '@/feature
  * 이 파일은 원장 테이블·RPC·사업구분 등 AC 고유값만 주입한다.
  * 사업구분 근거: docs/docs_planning/3_4_2_ac_program_overview.md
  */
-export const AC_WORKSPACE: ProgramWorkspaceConfig = {
-  key: 'ac',
+export const PROJECT_WORKSPACE: ProgramWorkspaceConfig = {
+  key: 'project',
   entityKey: 'program',
   // 이 창구가 발급하는 대상 — 참여 기업(STARTUP 원장)과 참여 전문가(NETWORKS 원장).
   guestMasterTables: ['startups', 'networks'],
-  basePath: '/ac',
+  basePath: '/project',
+  detailBase: '/project',
   entityNoun: '사업',
   tables: {
     programs: 'programs',
@@ -37,7 +38,7 @@ export const AC_WORKSPACE: ProgramWorkspaceConfig = {
   overviewNoun: '사업개요',
 }
 
-export function AcWorkspacePage() {
+export function ProjectWorkspacePage() {
   const [params] = useSearchParams()
 
   // GUEST계정 발급 — 2026-09-07 저녁에 DATABASE에서 되돌아왔다(사용자 지정).
@@ -60,31 +61,31 @@ export function AcWorkspacePage() {
       <div className="space-y-5">
         <PageHeader title="와이앤아처 GUEST 계정" />
         <GuestAccountPanel
-          entityKey={AC_WORKSPACE.entityKey}
-          masterTables={AC_WORKSPACE.guestMasterTables}
+          entityKey={PROJECT_WORKSPACE.entityKey}
+          masterTables={PROJECT_WORKSPACE.guestMasterTables}
         />
       </div>
     )
   }
 
   return (
-    <ProgramWorkspaceProvider value={AC_WORKSPACE}>
+    <ProgramWorkspaceProvider value={PROJECT_WORKSPACE}>
       <ProgramWorkspacePage />
     </ProgramWorkspaceProvider>
   )
 }
 
-export function AcProgramDetailPage() {
+export function ProjectProgramDetailPage() {
   return (
-    <ProgramWorkspaceProvider value={AC_WORKSPACE}>
+    <ProgramWorkspaceProvider value={PROJECT_WORKSPACE}>
       <ProgramDetailPage />
     </ProgramWorkspaceProvider>
   )
 }
 
-export function AcBulkPage() {
+export function ProjectBulkPage() {
   return (
-    <ProgramWorkspaceProvider value={AC_WORKSPACE}>
+    <ProgramWorkspaceProvider value={PROJECT_WORKSPACE}>
       <ProgramBulkPage />
     </ProgramWorkspaceProvider>
   )

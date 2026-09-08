@@ -14,7 +14,7 @@ export type { ProgramCategoryOption }
  * AC로 합쳤다 — 이 축에 값을 하나 더 두는 비용은 config 한 벌이 아니라, 사업이 들어올
  * 때마다 어디에 넣을지 판단하는 일과 사업을 가로지르는 조회가 하나 더 붙는 일이다.
  */
-export type ProgramWorkspaceKey = 'ac' | 'mna'
+export type ProgramWorkspaceKey = 'project' | 'mna'
 
 /**
  * 워크스페이스별 원장 테이블·RPC·분류 정의.
@@ -49,8 +49,17 @@ export interface ProgramWorkspaceConfig {
    * 근거: docs/docs_planning/3_9_2_external_portal_expansion.md §6
    */
   guestMasterTables?: readonly MasterTable[]
-  /** 라우트 베이스 경로. 목록 `${basePath}`, 상세 `${basePath}/programs/:id`. */
+  /** 목록·업로드의 베이스 경로(목록 `${basePath}`, 업로드 `${basePath}/bulk`). */
   basePath: string
+  /**
+   * 상세 경로의 앞부분(`${detailBase}/:id`).
+   *
+   * `basePath`에서 규칙으로 만들지 않고 값으로 받는다 — 상세 경로의 모양이 구획마다
+   * 다르기 때문이다(2026-09-09 정리): 구획에 원장이 하나면 이름을 생략하고(`/project/:id`),
+   * 여럿이면 원장 이름을 단다(`/mna/deals/:id` — 딜·BUYER·SELLER 셋이 산다). 어느 쪽인지는
+   * 그 구획만 아는 사실이라, 공용 화면이 규칙으로 조립하면 한쪽이 반드시 틀린다.
+   */
+  detailBase: string
   /**
    * 목록 안쪽 문구(검색 자리표시자·등록 버튼·업로드 템플릿)에 쓰는 도메인 명칭.
    *

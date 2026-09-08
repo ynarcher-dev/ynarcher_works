@@ -8,7 +8,7 @@ const baseUser: AuthUser = {
   email: null,
   role: 'ac_business',
   permissions: {
-    ac: { level: 'write', scopeType: 'program', scopeId: null },
+    project: { level: 'write', scopeType: 'program', scopeId: null },
     networks: { level: 'read', scopeType: 'global', scopeId: null },
   },
 }
@@ -23,7 +23,7 @@ describe('authStore 초기 상태 (P0-1 회귀)', () => {
 
 describe('hasWorkspaceRead', () => {
   it('미로그인(null)은 모든 워크스페이스 접근 불가', () => {
-    expect(hasWorkspaceRead(null, 'ac')).toBe(false)
+    expect(hasWorkspaceRead(null, 'project')).toBe(false)
     expect(hasWorkspaceRead(null, 'admin')).toBe(false)
   })
 
@@ -35,7 +35,7 @@ describe('hasWorkspaceRead', () => {
   })
 
   it('read/write 권한 모두 읽기 접근을 허용한다', () => {
-    expect(hasWorkspaceRead(baseUser, 'ac')).toBe(true)
+    expect(hasWorkspaceRead(baseUser, 'project')).toBe(true)
     expect(hasWorkspaceRead(baseUser, 'networks')).toBe(true)
   })
 

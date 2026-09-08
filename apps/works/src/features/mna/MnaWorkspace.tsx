@@ -21,6 +21,7 @@ export const MNA_WORKSPACE: ProgramWorkspaceConfig = {
   // 딜 한 건의 성격이고, 창구는 워크스페이스의 것이라 둘 다 선다.
   guestMasterTables: ['ma_sellers', 'ma_buyers'],
   basePath: '/mna',
+  detailBase: '/mna/deals',
   // 목록 안쪽 문구의 도메인 명칭. M&A 딜도 화면상으로는 '프로젝트'로 부른다.
   entityNoun: '프로젝트',
   tables: {

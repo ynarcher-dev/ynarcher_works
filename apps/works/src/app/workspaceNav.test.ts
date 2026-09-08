@@ -51,7 +51,7 @@ function unpinnedOf(groups: BoundNavGroup[]): BoundNavGroup[] {
 }
 
 const database = itemOf('database')
-const ac = itemOf('ac')
+const project = itemOf('project')
 const mna = itemOf('mna')
 
 describe('DATABASE — 전사 원장 둘', () => {
@@ -70,7 +70,7 @@ describe('DATABASE — 전사 원장 둘', () => {
   })
 
   it('둘 다 못 읽으면 스위처에서 항목 자체가 빠진다', () => {
-    expect(visibleWorkspaces(userWith({ ac: 'write' })).map((w) => w.id)).not.toContain('database')
+    expect(visibleWorkspaces(userWith({ project: 'write' })).map((w) => w.id)).not.toContain('database')
   })
 
   it('포털 계정 줄은 여기 없다 — 창구는 사업 워크스페이스가 갖는다', () => {
@@ -102,12 +102,34 @@ describe('M&A/PE — 딜 한 줄 + 거래상대 원장 두 줄', () => {
   it('구획의 신원은 키가 아니라 경로다 — 셋이 각자 자기 경로로 잡힌다', () => {
     const user = userWith({ mna: 'read' })
     const visible = visibleWorkspaces(user)
-    expect(resolveWorkspace('/mna/programs/abc', visible, user).section?.path).toBe('/mna')
-    expect(resolveWorkspace('/buyers/abc', visible, user).section?.path).toBe('/buyers')
-    expect(resolveWorkspace('/sellers/abc', visible, user).section?.path).toBe('/sellers')
-    for (const p of ['/mna', '/buyers', '/sellers']) {
+    expect(resolveWorkspace('/mna/deals/abc', visible, user).section?.path).toBe('/mna')
+    expect(resolveWorkspace('/mna/buyers/abc', visible, user).section?.path).toBe('/mna/buyers')
+    expect(resolveWorkspace('/mna/sellers/abc', visible, user).section?.path).toBe('/mna/sellers')
+    for (const p of ['/mna', '/mna/buyers', '/mna/sellers']) {
       expect(resolveWorkspace(p, visible, user).ws?.id).toBe('mna')
     }
+  })
+
+  // 2026-09-09 이전에는 `startsWith`라 `/mna/buyers`가 `/mna`에 먼저 걸렸고, 그래서 원장
+  // 경로가 소속과 무관하게 최상위(`/buyers`)에 서 있었다. 아래 둘이 그 판정을 못박는다.
+  it('겹치는 구획에서는 더 긴 경로가 이긴다 — 목록 순서가 판정을 좌우하지 않는다', () => {
+    const user = userWith({ mna: 'read' })
+    const visible = visibleWorkspaces(user)
+    // `/mna`가 목록에서 먼저지만, 더 구체적인 `/mna/buyers`가 답해야 한다.
+    expect(resolveWorkspace('/mna/buyers', visible, user).section?.path).toBe('/mna/buyers')
+  })
+
+  it('앞머리가 같은 남남은 걸리지 않는다 — 경계는 세그먼트다', () => {
+    // 폴백이 어디인지 분명하도록 OFFICE를 첫 항목으로 함께 연다 — `not.toBe(...)`로만
+    // 확인하면 폴백이 그 구획으로 떨어져도 통과해 아무것도 못박지 못한다.
+    const user = userWith({ office: 'read', mna: 'read', project: 'read' })
+    const visible = visibleWorkspaces(user)
+    // `/mnaXYZ`는 `/mna`로 시작하지만 그 아래가 아니다. `/projects`도 `/project`가 아니다.
+    expect(resolveWorkspace('/mnaXYZ', visible, user).section?.path).toBe('/office')
+    expect(resolveWorkspace('/projects', visible, user).section?.path).toBe('/office')
+    // 반면 자기 자신과 그 아래는 걸린다.
+    expect(resolveWorkspace('/mna', visible, user).section?.path).toBe('/mna')
+    expect(resolveWorkspace('/project/abc', visible, user).section?.path).toBe('/project')
   })
 
   it('도착지는 딜 목록이다 — 원장이 아니라 그 워크스페이스가 하는 일이 먼저 선다', () => {
@@ -121,8 +143,8 @@ describe('M&A/PE — 딜 한 줄 + 거래상대 원장 두 줄', () => {
 
 describe('AC — 사업 목록 + 하단 고정 창구', () => {
   it('포털 계정 줄은 목록이 아니라 그 아래 고정 영역이라 그룹이 갈린다', () => {
-    const groups = buildNavGroups(userWith({ ac: 'write' }), ac)
-    expect(shape(groups)).toEqual([['ac:프로젝트'], ['ac:와이앤아처 GUEST 계정']])
+    const groups = buildNavGroups(userWith({ project: 'write' }), project)
+    expect(shape(groups)).toEqual([['project:프로젝트'], ['project:와이앤아처 GUEST 계정']])
     // 그 탭이 탭 집합에서 빠지면 그 화면에서 사업 목록 줄이 활성으로 칠해진다.
     expect(allTabs(plainGroups(groups)).has('guest-accounts')).toBe(true)
   })
@@ -137,14 +159,14 @@ describe('AC — 사업 목록 + 하단 고정 창구', () => {
   })
 
   it('AC를 읽지 못하면 스위처에서 항목 자체가 빠진다', () => {
-    expect(visibleWorkspaces(userWith({ fund: 'read' })).map((w) => w.id)).not.toContain('ac')
+    expect(visibleWorkspaces(userWith({ fund: 'read' })).map((w) => w.id)).not.toContain('project')
   })
 })
 
 describe('실행 라인 셋 — 사업 2종이 같은 줄 이름을 공유한다', () => {
   it('어느 원장인지는 스위처 항목이 답하므로 줄 이름은 한 벌이다', () => {
-    const user = userWith({ ac: 'write', mna: 'read' })
-    for (const id of ['ac', 'mna']) {
+    const user = userWith({ project: 'write', mna: 'read' })
+    for (const id of ['project', 'mna']) {
       // M&A/PE에는 딜 아래로 거래상대 원장 두 줄이 더 서므로 첫 줄만 견준다 — 견주는 것은
       // 그 워크스페이스가 하는 일의 이름이고, 그 자리는 어디서나 맨 위 한 줄이다.
       const rows = buildNavGroups(user, itemOf(id)).flatMap((g) =>
@@ -155,10 +177,10 @@ describe('실행 라인 셋 — 사업 2종이 같은 줄 이름을 공유한다
   })
 
   it('셋이 각자 자기 항목으로 서고 도착지는 자기 루트 경로다', () => {
-    const user = userWith({ ac: 'write', mna: 'read', fund: 'read' })
+    const user = userWith({ project: 'write', mna: 'read', fund: 'read' })
     // DATABASE는 서지 않는다 — 그 항목이 덮는 구획은 startup·networks 둘뿐이고, 딜 권한은
     // 이제 M&A/PE 한 자리만 연다(2026-09-07 M&A BUYER 이관).
-    expect(visibleWorkspaces(user).map((w) => w.id)).toEqual(['ac', 'mna', 'fund'])
+    expect(visibleWorkspaces(user).map((w) => w.id)).toEqual(['project', 'mna', 'fund'])
     expect(landingPath(user, itemOf('fund'))).toBe('/fund')
   })
 })
@@ -172,7 +194,7 @@ describe('resolveWorkspace — 항목과 구획을 함께 잡는다', () => {
   })
 
   it('/fund는 FUND 항목의 fund 구획으로 해석된다', () => {
-    const user = userWith({ ac: 'write', fund: 'read' })
+    const user = userWith({ project: 'write', fund: 'read' })
     const { ws, section } = resolveWorkspace('/fund', visibleWorkspaces(user), user)
     expect(ws?.id).toBe('fund')
     expect(section?.key).toBe('fund')

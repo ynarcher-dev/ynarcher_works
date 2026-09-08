@@ -34,12 +34,12 @@ import { GUEST_TYPE_LABEL } from '@/lib/userTypes'
 const DASH = <EmptyValue />
 
 /** 워크스페이스 표기 — 사업 원장이 둘이라 어느 쪽 사업인지 함께 밝힌다. */
-const WORKSPACE_LABEL: Record<string, string> = { ac: 'AC', mna: 'M&A' }
+const WORKSPACE_LABEL: Record<string, string> = { project: '프로젝트', mna: 'M&A' }
 
 /** 사업 상세로 가는 길. 값을 복제하지 않고 원장을 가리킨다(명부와 같은 규약). */
 const PROGRAM_PATH: Record<GuestAccountProgram['entity_key'], string> = {
-  program: '/ac/programs',
-  ma_program: '/mna/programs',
+  program: '/project',
+  ma_program: '/mna/deals',
 }
 
 /** 상세 모달의 참여 사업 표 한 장. 모달 안이라 화면 목록(30)보다 짧게 끊는다. */

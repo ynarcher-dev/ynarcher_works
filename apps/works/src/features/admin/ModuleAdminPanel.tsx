@@ -13,7 +13,7 @@ import {
 
 /** 워크스페이스 열 — 사업 공용 모듈을 쓰는 둘뿐이라 열도 둘이다(PROJECT는 2026-09-07 폐지). */
 const WORKSPACES = [
-  { key: 'ac', label: 'AC' },
+  { key: 'project', label: '프로젝트' },
   { key: 'mna', label: 'M&A' },
 ] as const
 

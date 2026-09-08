@@ -98,7 +98,7 @@ export function useEmployeeStartups(userId: string | undefined) {
  * 워크스페이스별 차이는 테이블명·임베드 FK명뿐이다.
  */
 const PROGRAM_LEDGERS = {
-  ac: { managers: 'program_managers', programs: 'programs', entityKey: 'program' },
+  project: { managers: 'program_managers', programs: 'programs', entityKey: 'program' },
   mna: { managers: 'ma_program_managers', programs: 'ma_programs', entityKey: 'ma_program' },
 } as const
 

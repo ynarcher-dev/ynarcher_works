@@ -181,7 +181,7 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
   // 주석 — 외부인이 들어오는 자리가 셋으로 넓어졌고, 창구는 자기 원장을 가진 워크스페이스의
   // 것이다. FUND는 아직 서지 않는다(그 워크스페이스에는 명부에 해당하는 것이 없어, 세워도
   // 어디에도 연결할 수 없는 계정만 생긴다 — 3_9_2 §15).
-  ac: programSubnav({ guestAccounts: true }),
+  project: programSubnav({ guestAccounts: true }),
   // FUND: 메뉴 한 줄이다(2026-09-05 '내 운용펀드'/'전체 운용펀드' 통합) — 범위는 목록 상단
   // 토글이 답한다. 펀드 종류(AC·VC·PE)는 2026-08-20에 이미 목록의 '구분' 필터로 내려갔다:
   // 분류를 메뉴로 두면 재원·성격·상태와 함께 걸 수 없고(VC 펀드 중 모태 재원만, 같은 질문에

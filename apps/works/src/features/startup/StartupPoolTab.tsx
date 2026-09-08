@@ -123,7 +123,7 @@ export function StartupPoolTab({ scope, onScopeChange, userId }: StartupPoolTabP
               <ListScopeToggle scope={scope} onChange={onScopeChange} noun={ENTITY_NOUN} />
             }
             createLabel="스타트업 등록"
-            onCreate={() => navigate('/startup/discovered/new')}
+            onCreate={() => navigate('/startup/new')}
             bulkTo="/startup/bulk"
           />
         }
@@ -137,7 +137,7 @@ export function StartupPoolTab({ scope, onScopeChange, userId }: StartupPoolTabP
         contentKey={contentKey}
         selectedKeys={selected}
         onSelectionChange={setSelected}
-        onRowClick={(row) => navigate(`/startup/discovered/${row.id}`)}
+        onRowClick={(row) => navigate(`/startup/${row.id}`)}
         pagination={{
           page,
           pageSize: PAGE_SIZE,

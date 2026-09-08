@@ -33,7 +33,7 @@ const LOCATION_LABEL: Record<string, string> = {
   ma_buyer: 'M&A BUYER',
   network: 'NETWORKS',
   fund: 'FUND',
-  program: 'AC 사업',
+  program: '프로젝트 사업',
   ma_program: 'M&A 딜',
 }
 

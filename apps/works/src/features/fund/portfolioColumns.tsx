@@ -102,7 +102,7 @@ export function buildPortfolioColumns({
    */
   maskRepresentative?: boolean
 }): Column<Investment>[] {
-  // 기업명 = 스타트업 상세(/startup/discovered/:id) 하이퍼링크. id 없으면 링크 없이 텍스트.
+  // 기업명 = 스타트업 상세(/startup/:id) 하이퍼링크. id 없으면 링크 없이 텍스트.
   // 링크 클릭은 stopPropagation — 행 클릭(상세 모달)과 분리해 이름은 스타트업 상세로만 이동한다.
   const startupColumn: Column<Investment> = {
     key: 'startup',
@@ -112,7 +112,7 @@ export function buildPortfolioColumns({
     render: (r) =>
       r.startup_id ? (
         <Link
-          to={`/startup/discovered/${r.startup_id}`}
+          to={`/startup/${r.startup_id}`}
           onClick={(e) => e.stopPropagation()}
           className="font-medium text-info underline underline-offset-2 transition-opacity duration-fast hover:opacity-80"
         >

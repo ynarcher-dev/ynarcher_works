@@ -22,7 +22,7 @@ function MaPartyPage({ config }: { config: MaPartyConfig }) {
  *
  * 설정을 라우터에서 넘기지 않고 여기서 묶는 이유는 라우트 정의가 이 원장의 설정 파일을
  * 알 필요가 없어서다 — 라우터가 아는 것은 '이 경로에 이 화면'이고, 어느 원장인지는 화면이
- * 답한다(사업 3종의 AcWorkspacePage·MnaWorkspacePage와 같은 모양).
+ * 답한다(사업 3종의 ProjectWorkspacePage·MnaWorkspacePage와 같은 모양).
  */
 export function MaBuyerPage() {
   return <MaPartyPage config={MA_BUYER} />

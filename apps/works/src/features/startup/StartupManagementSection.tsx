@@ -1,5 +1,5 @@
 import { hasWorkspaceRead, useAuthStore } from '@/auth/authStore'
-import { AC_WORKSPACE } from '@/features/ac/AcWorkspace'
+import { PROJECT_WORKSPACE } from '@/features/project/ProjectWorkspace'
 import { MNA_WORKSPACE } from '@/features/mna/MnaWorkspace'
 import type { ProgramWorkspaceConfig } from '@/features/program/workspace'
 import { SectionHeading } from '@/components/SectionHeading'
@@ -49,7 +49,7 @@ export function StartupManagementSection({
   invested: boolean
   managers: StartupManagerRow[]
 }) {
-  const ac = useParticipation(AC_WORKSPACE, '참여 사업', startupId)
+  const ac = useParticipation(PROJECT_WORKSPACE, '참여 사업', startupId)
   const mna = useParticipation(MNA_WORKSPACE, '참여 M&A', startupId)
 
   const cards = [ac, mna]

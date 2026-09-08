@@ -125,7 +125,7 @@ export function NetworkListTab({ scope, onScopeChange }: NetworkListTabProps) {
               <ListScopeToggle scope={scope} onChange={onScopeChange} noun={ENTITY_NOUN} />
             }
             createLabel="신규 등록"
-            onCreate={() => navigate('/networks/record/new')}
+            onCreate={() => navigate('/networks/new')}
             bulkTo="/networks/bulk"
           />
         }
@@ -140,7 +140,7 @@ export function NetworkListTab({ scope, onScopeChange }: NetworkListTabProps) {
         columns={NETWORK_LIST_COLUMNS}
         rows={data?.rows ?? []}
         isLoading={isLoading}
-        onRowClick={(r) => navigate(`/networks/record/${(r as NetworkRow).id}`)}
+        onRowClick={(r) => navigate(`/networks/${(r as NetworkRow).id}`)}
         // 비활성화는 사유·영향 확인이 필요해 목록이 아니라 상세에서 수행한다
         // (핸들러가 없으므로 관리 컬럼 자체가 렌더되지 않는다).
         pagination={{

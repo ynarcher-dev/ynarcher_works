@@ -131,7 +131,7 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
     listSearchPlaceholder: '기업명 · 대표자 · 연락처 검색',
     pickSearchPlaceholder: '기업명 · 대표자',
     pickHelp: 'STARTUP 원장에 등록된 기업만 담을 수 있습니다.',
-    detailPath: (id) => `/startup/discovered/${id}`,
+    detailPath: (id) => `/startup/${id}`,
     ledger: {
       table: 'startups',
       columns: 'id, name, representative, email, phone, management_status',
@@ -213,7 +213,7 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
     listSearchPlaceholder: '전문가명 · 연락처 검색',
     pickSearchPlaceholder: '전문가명 · 소속',
     pickHelp: 'NETWORKS 원장의 전문가만 담을 수 있습니다.',
-    detailPath: (id) => `/networks/record/${id}`,
+    detailPath: (id) => `/networks/${id}`,
     ledger: {
       table: 'networks',
       columns: 'id, name, affiliation, email, phone',

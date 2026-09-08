@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { AC_WORKSPACE } from '@/features/ac/AcWorkspace'
+import { PROJECT_WORKSPACE } from '@/features/project/ProjectWorkspace'
 import { MNA_WORKSPACE } from '@/features/mna/MnaWorkspace'
 import type { ProgramManagerRole } from '@/features/program/hooks'
 import type { ProgramWorkspaceConfig, ProgramWorkspaceKey } from '@/features/program/workspace'
@@ -57,7 +57,7 @@ export const OPERATION_ROLE_LABEL: Record<OperationRoleKey, string> = {
  * 목록의 기본 범위가 전체이므로(2026-09-07) 범위는 `listPathOf`가 주소에 실어 붙인다.
  */
 export const OPERATION_MINE_PATH: Record<OperationWorkspaceKey, string> = {
-  ac: listPathOf(AC_WORKSPACE.basePath, 'mine'),
+  project: listPathOf(PROJECT_WORKSPACE.basePath, 'mine'),
   mna: listPathOf(MNA_WORKSPACE.basePath, 'mine'),
   fund: listPathOf('/fund', 'mine'),
 }
@@ -69,7 +69,7 @@ interface ManagerRow {
   end_date: string
 }
 
-const SOURCES: ProgramWorkspaceConfig[] = [AC_WORKSPACE, MNA_WORKSPACE]
+const SOURCES: ProgramWorkspaceConfig[] = [PROJECT_WORKSPACE, MNA_WORKSPACE]
 
 const ACTIVE_STATUSES = new Set(['PROPOSED', 'SELECTED', 'DRAFT', 'OPERATING', 'RECRUITING', 'SCREENING', 'DEMO_DAY'])
 

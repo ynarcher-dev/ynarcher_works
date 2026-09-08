@@ -14,7 +14,7 @@ import { Navigate, useParams } from 'react-router-dom'
 export function LegacyNetworkRedirect() {
   const { entity, id } = useParams<{ entity: string; id: string }>()
   if (id === 'new') {
-    return <Navigate to={`/networks/record/new?category=${entity ?? ''}`} replace />
+    return <Navigate to={`/networks/new?category=${entity ?? ''}`} replace />
   }
-  return <Navigate to={`/networks/record/${id}`} replace />
+  return <Navigate to={`/networks/${id}`} replace />
 }

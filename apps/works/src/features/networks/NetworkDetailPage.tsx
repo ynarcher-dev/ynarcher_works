@@ -313,7 +313,7 @@ export function NetworkDetailPage({ readOnly = false, listPath: listPathProp }: 
           backTo={listPath}
           onDone={({ id: newId }) => {
             setEditing(false)
-            if (isNew) navigate(`/networks/record/${newId}`)
+            if (isNew) navigate(`/networks/${newId}`)
           }}
           onCancel={() => (isNew ? navigate(listPath) : setEditing(false))}
         />

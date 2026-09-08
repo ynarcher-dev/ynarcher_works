@@ -41,6 +41,22 @@ export function landingPath(user: AuthUser | null, ws: WorkspaceNavItem): string
 }
 
 /**
+ * 경로가 이 구획 **안**에 있는가 — 세그먼트 경계로 판정한다.
+ *
+ * 종전에는 `pathname.startsWith(s.path)`였고, 그래서 `/mna/buyers`가 `/mna` 구획에 먼저
+ * 걸렸다 — 원장 화면에 서 있는데 사이드바는 딜 줄을 활성으로 칠했다. 그것을 피하려고
+ * BUYER·SELLER 경로가 소속과 무관하게 최상위(`/buyers`)에 서 있었다.
+ *
+ * **앞머리가 같다는 것과 그 아래 있다는 것은 다르다.** `/mna`와 `/mnaXYZ`는 남남이고,
+ * `/mna/buyers`는 `/mna`의 아래이면서 동시에 `/mna/buyers` 자신의 것이다. 그래서 경계를
+ * 보고, 겹칠 때는 **더 긴 경로가 이긴다**(가장 구체적인 구획이 답한다) — 그러지 않으면
+ * 목록에 먼저 선 구획이 이겨 순서가 판정을 좌우한다.
+ */
+function pathInSection(pathname: string, sectionPath: string): boolean {
+  return pathname === sectionPath || pathname.startsWith(`${sectionPath}/`)
+}
+
+/**
  * 현재 경로가 서 있는 스위처 항목과 그 안의 구획.
  *
  * 구획까지 함께 돌려주는 이유는 경로·글리프·활성 판정이 항목이 아니라 구획 단위이기 때문이다.
@@ -51,10 +67,14 @@ export function resolveWorkspace(
   visible: WorkspaceNavItem[],
   user: AuthUser | null,
 ): { ws?: WorkspaceNavItem; section?: WorkspaceSection } {
+  let best: { ws: WorkspaceNavItem; section: WorkspaceSection } | undefined
   for (const w of visible) {
-    const hit = readableSections(user, w).find((s) => pathname.startsWith(s.path))
-    if (hit) return { ws: w, section: hit }
+    for (const s of readableSections(user, w)) {
+      if (!pathInSection(pathname, s.path)) continue
+      if (!best || s.path.length > best.section.path.length) best = { ws: w, section: s }
+    }
   }
+  if (best) return best
   const ws = visible[0]
   return { ws, section: ws ? readableSections(user, ws)[0] : undefined }
 }

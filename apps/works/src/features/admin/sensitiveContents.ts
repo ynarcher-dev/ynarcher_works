@@ -130,7 +130,7 @@ export const SENSITIVE_CONTENT_GROUPS: readonly SensitiveContentGroup[] = [
       { key: 'networks.all', label: '전체 네트워크 · 상세', fields: PERSON },
     ],
   },
-  { key: 'ac', label: 'AC', contents: programContents('ac', '사업') },
+  { key: 'project', label: '프로젝트', contents: programContents('project', '사업') },
   {
     key: 'mna',
     label: 'M&A',

@@ -319,7 +319,7 @@ export const PROGRAM_STATUS_TONE: Record<string, BadgeTone> = {
 
 /**
  * 사업구분(category)은 워크스페이스마다 값이 다르므로 각 워크스페이스 config가 단일 원천이다.
- * AC는 features/ac/AcWorkspace.tsx, M&A는 features/mna/MnaWorkspace.tsx의 `categories`를 참조한다.
+ * AC는 features/ac/ProjectWorkspace.tsx, M&A는 features/mna/MnaWorkspace.tsx의 `categories`를 참조한다.
  */
 
 /**
