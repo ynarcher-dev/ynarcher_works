@@ -35,8 +35,9 @@ export function QuickReviewPanel({ programId }: { programId: string }) {
 
   const parties = links ?? []
   if (parties.length === 0) {
-    // 연결이 0건이 되어도 모듈은 지워지지 않는다(그 삭제는 PM만 하는 되돌릴 수 없는 일이다).
-    // 그래서 이 빈 상태는 오류가 아니라 정상 상태이며, 어디서 고치는지까지 말한다.
+    // 연결이 0건이 되면 모듈도 함께 걷힌다(2026-09-09) — 그래서 이 빈 상태는 거의 서지 않는다.
+    // 남는 경우는 하나다: 이 모듈에 무언가 매달려 있어 자동 삭제가 건너뛴 때(그때는 사람이
+    // 지운다). 그 자리에서도 어디서 고치는지까지 말한다.
     return (
       <EmptyState
         title="연결된 매물이 없습니다."

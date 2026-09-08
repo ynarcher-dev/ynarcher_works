@@ -64,10 +64,14 @@ export function readModuleSettings(settings: unknown): ModuleSettings {
 /**
  * 모듈 기간 한 줄. 한쪽만 있으면 그쪽만 말한다 — 비어 있는 칸을 물음표나 오늘 날짜로
  * 메우면 없는 일정을 있는 것처럼 읽게 된다.
+ *
+ * 시작과 끝이 같은 날이면 날짜 하나로 적는다(2026-09-09) — 하루짜리는 기간이 아니라 날이고,
+ * `2026-09-08 ~ 2026-09-08`은 같은 값을 두 번 읽게 해 정작 그것이 하루라는 사실을 감춘다.
+ * 퀵리뷰 모듈의 작성일이 이 모양으로 서지만, 규칙은 하루짜리 모듈 전부에 걸린다.
  */
 export function formatModulePeriod(settings: ModuleSettings): string {
   const { start_date: from, end_date: to } = settings
-  if (from && to) return `${from} ~ ${to}`
+  if (from && to) return from === to ? from : `${from} ~ ${to}`
   if (from) return `${from} ~`
   if (to) return `~ ${to}`
   return '일정 미등록'

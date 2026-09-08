@@ -92,7 +92,10 @@ function PartyField({
   return (
     <Field
       label={ledger}
-      hint={`${ledger} 원장에서 이 프로젝트와 연결할 기업을 고릅니다. 등록 후 상세 화면에서도 바꿀 수 있습니다.`}
+      hint={
+        `${ledger} 원장에서 이 프로젝트와 연결할 기업을 고릅니다. 등록 후 상세 화면에서도 바꿀 수 있습니다.\n` +
+        '연결하면 워크플로우에 퀵리뷰 모듈이 서고, 연결을 모두 해제하면 함께 사라집니다.'
+      }
       as="div"
     >
       <TokenMultiSelect<MaProgramPartyPick>

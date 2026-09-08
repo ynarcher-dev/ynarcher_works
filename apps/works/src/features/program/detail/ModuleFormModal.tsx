@@ -82,6 +82,15 @@ export function ModuleFormModal({
   const toast = useToast()
   const save = useSetProgramModule(program.id)
   const isEdit = Boolean(module)
+  /**
+   * 기간·담당자를 이 폼이 받지 않는 모듈(2026-09-09). 퀵리뷰는 담당자가 세팅한 배치물이 아니라
+   * 연결된 매물을 비추는 거울이라, 두 칸의 답은 원장이 갖는다(퀵 리뷰의 작성일·작성자).
+   *
+   * **감추는 것이 아니라 받지 않는 것이 요점이다** — 칸을 세워 두면 담당자가 고칠 수 있고, 고친
+   * 값은 화면에 서지 못한다(목록·운영 화면이 원장 값을 얹는다). 고쳐 봐야 아무 일도 일어나지
+   * 않는 칸은 없는 편이 낫다. 그래서 저장할 때도 두 값을 함께 비운다.
+   */
+  const ledgerOwned = moduleType === 'QUICK_REVIEW'
 
   // 모듈 기간이 들어갈 수 있는 구간: 제안 기간·운영 기간 중 완전 구간만 후보.
   const allowedRanges = useMemo<CompleteRange[]>(() => {
@@ -117,10 +126,14 @@ export function ModuleFormModal({
   // 역할(PM·멤버)은 여기서 받지 않는다 — 사업 담당자 원장이 이미 아는 사실이라, 모듈마다 다시
   // 고르게 하면 같은 사람이 화면마다 다른 역할로 서게 된다.
   const [assignees, setAssignees] = useState<{ id: string; duty: string }[]>(() =>
-    (module?.assignees ?? []).map((a) => ({
-      id: a.user_id,
-      duty: a.duty ?? '',
-    })),
+    // 원장이 답하는 모듈에서는 들고 오지 않는다 — 목록이 얹어 준 작성자는 배정이 아니라 사실이라,
+    // 이 폼이 그것을 자기 값으로 삼으면 저장하는 순간 사실이 배정으로 굳는다.
+    ledgerOwned
+      ? []
+      : (module?.assignees ?? []).map((a) => ({
+          id: a.user_id,
+          duty: a.duty ?? '',
+        })),
   )
   // 칩에 이름을 세우려면 id가 아니라 항목 자체를 들어야 한다(원장에서 빠진 사람은 '이름 미상').
   const nameOfUser = (id: string) => pool.find((p) => p.id === id)?.name ?? '이름 미상'
@@ -182,8 +195,9 @@ export function ModuleFormModal({
       status: module?.status ?? 'DRAFT',
       visibility: module?.visibility || 'INTERNAL_ONLY',
       participation_mode: module?.participation_mode ?? fixedMode ?? '',
-      start_date: settings.start_date ?? '',
-      end_date: settings.end_date ?? '',
+      // 같은 이유로 기간도 비워 시작한다(목록이 얹은 작성일이 폼의 초기값으로 굳지 않게 한다).
+      start_date: ledgerOwned ? '' : (settings.start_date ?? ''),
+      end_date: ledgerOwned ? '' : (settings.end_date ?? ''),
       memo: settings.memo ?? '',
     },
   })
@@ -204,7 +218,7 @@ export function ModuleFormModal({
       toast.show('이미 같은 이름의 모듈이 있습니다.', 'warning')
       return
     }
-    if (!values.start_date || !values.end_date) {
+    if (!ledgerOwned && (!values.start_date || !values.end_date)) {
       toast.show('일정(시작일·종료일)을 반드시 설정하세요.', 'warning')
       return
     }
@@ -212,7 +226,7 @@ export function ModuleFormModal({
       toast.show('종료일은 시작일 이후여야 합니다.', 'warning')
       return
     }
-    if (assignees.length === 0) {
+    if (!ledgerOwned && assignees.length === 0) {
       toast.show(
         pool.length === 0
           ? '먼저 개요에서 사업 담당자를 배정한 뒤 담당자를 지정하세요.'
@@ -243,6 +257,8 @@ export function ModuleFormModal({
         participationMode,
         settings: {
           ...(module?.settings ?? {}),
+          // 폼이 비운 값은 키째 빠진다(undefined는 직렬화에서 사라진다) — 목록이 얹어 준
+          // 작성일이 이 저장에 실려 원장에 굳는 일을 여기서 막는다.
           start_date: values.start_date || undefined,
           end_date: values.end_date || undefined,
           memo: values.memo || undefined,
@@ -406,18 +422,32 @@ export function ModuleFormModal({
                 </Select>
               </Field>
             )}
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="시작일" required>
-                <Input type="date" {...register('start_date')} />
-              </Field>
-              <Field label="종료일" required>
-                <Input type="date" {...register('end_date')} />
-              </Field>
-            </div>
+            {ledgerOwned ? (
+              /* 차단 안내는 접지 않는다 — 왜 여기서 못 정하는지가 이 자리의 내용이다. */
+              <p className="rounded-radius-sm border border-gray-200 bg-gray-25 px-3 py-2 text-body text-gray-700">
+                이 모듈의 기간은 연결된 매물의 <b>퀵 리뷰 작성일</b>이 답합니다. 여기서 정하지
+                않습니다.
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="시작일" required>
+                  <Input type="date" {...register('start_date')} />
+                </Field>
+                <Field label="종료일" required>
+                  <Input type="date" {...register('end_date')} />
+                </Field>
+              </div>
+            )}
           </div>
         </Card>
 
         <Card title="담당자">
+          {ledgerOwned ? (
+            <p className="rounded-radius-sm border border-gray-200 bg-gray-25 px-3 py-2 text-body text-gray-700">
+              이 모듈의 담당은 연결된 매물의 <b>퀵 리뷰를 작성한 사람</b>이 답합니다. 여기서
+              지정하지 않습니다.
+            </p>
+          ) : (
           <div className="space-y-3">
             <Field as="div" label="담당자" required>
               {pool.length === 0 ? (
@@ -469,6 +499,7 @@ export function ModuleFormModal({
               </Field>
             )}
           </div>
+          )}
         </Card>
       </form>
     </Modal>

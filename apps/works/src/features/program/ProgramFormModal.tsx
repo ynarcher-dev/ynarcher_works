@@ -406,17 +406,19 @@ export function ProgramFormModal({
             <Field label="분야" hint={industryField.hint} hintInline={industryField.hintInline}>
               {industryField.control}
             </Field>
-            {/* M&A 프로젝트의 헤더 설명 자리는 연결 매물명이 답한다. AC만 자유 설명을 입력한다. */}
-            {config.key !== 'mna' && (
-              <Field label="설명">
-                <TextArea
-                  id="description"
-                  rows={3}
-                  placeholder={`상세 헤더에 표시할 ${config.entityNoun} 소개`}
-                  {...register('description')}
-                />
-              </Field>
-            )}
+            {/* 설명은 분야 아래다(2026-09-09 사용자 지정 — M&A에서 감췄던 칸을 되돌린다).
+                연결 매물명이 대신 답한다고 보아 M&A에서만 감췄었는데, 매물 이름은 '무엇을 놓고
+                하는가'이고 설명은 '이 건이 어떤 건인가'라 서로를 대신하지 못한다 — 감춰 둔
+                동안에도 원장에는 칸이 있어, 값이 저장된 프로젝트는 그 문장을 읽을 자리가
+                없었다. */}
+            <Field label="설명">
+              <TextArea
+                id="description"
+                rows={3}
+                placeholder={`상세 헤더에 표시할 ${config.entityNoun} 소개`}
+                {...register('description')}
+              />
+            </Field>
           </div>
         </Card>
 

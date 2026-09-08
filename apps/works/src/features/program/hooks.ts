@@ -3,8 +3,14 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import { useAuthStore } from '@/auth/authStore'
 import { supabase } from '@/lib/supabase'
+import {
+  quickReviewAuthorship,
+  useMaProgramPartyLinks,
+  type MaProgramPartyLink,
+} from '@/features/mna/programPartyLinks'
 import {
   SHARED_TABLES,
   useProgramWorkspace,
@@ -242,7 +248,7 @@ export function moduleCols(): string {
 
 export function useProgramModules(programId: string | undefined) {
   const config = useProgramWorkspace()
-  return useQuery({
+  const query = useQuery({
     queryKey: [config.key, 'modules', programId],
     enabled: Boolean(programId),
     queryFn: async (): Promise<ProgramModule[]> => {
@@ -253,6 +259,44 @@ export function useProgramModules(programId: string | undefined) {
       return (data ?? []) as unknown as ProgramModule[]
     },
   })
+  // 퀵리뷰 모듈이 없으면 조회 자체가 서지 않는다(AC에는 이 종류가 배치되지 않는다).
+  const hasQuickReview = (query.data ?? []).some((m) => m.module_type === 'QUICK_REVIEW')
+  const { data: links } = useMaProgramPartyLinks(programId, hasQuickReview)
+  const data = useMemo(() => withQuickReviewAuthorship(query.data, links), [query.data, links])
+  return { ...query, data }
+}
+
+/**
+ * 퀵리뷰 모듈의 기간·담당 칸을 원장에서 읽어 얹는다(2026-09-09 사용자 지정 "일정은 퀵리뷰가
+ * 작성된 작성일, 담당은 퀵리뷰를 생성한 생성자").
+ *
+ * **모듈 원장에 적지 않고 여기서 얹는 이유**는 이 모듈이 값을 소유하지 않기 때문이다 — 담당자가
+ * 세팅한 배치물이 아니라 연결된 매물을 비추는 거울이라, 같은 사실을 모듈에도 적으면 원장을
+ * 고쳤을 때 어느 쪽이 진짜인지 판정할 근거가 없다. 그래서 저장하지 않고, 대신 그 두 칸을
+ * **설정 폼에서도 뺀다** — 고쳐 봐야 아무 일도 일어나지 않는 칸은 없는 편이 낫다.
+ *
+ * 얹는 자리가 목록·칸반·간트·운영 화면 넷이 아니라 이 훅 하나인 것이 요점이다 — 화면마다
+ * 얹으면 한 곳을 빠뜨린 날 같은 모듈이 화면마다 다른 일정을 갖는다.
+ */
+function withQuickReviewAuthorship(
+  modules: ProgramModule[] | undefined,
+  links: MaProgramPartyLink[] | undefined,
+): ProgramModule[] | undefined {
+  if (!modules || !links) return modules
+  const { from, to, writers } = quickReviewAuthorship(links)
+  // 아직 아무도 쓰지 않았으면 원장이 답할 것이 없다 — 지어내지 않고 빈 칸 그대로 둔다.
+  if (!from || !to) return modules
+  return modules.map((m) =>
+    m.module_type === 'QUICK_REVIEW'
+      ? {
+          ...m,
+          settings: { ...m.settings, start_date: from, end_date: to },
+          // 모듈 담당자 원장에는 행을 만들지 않는다(그 자리는 사업 담당자 풀 소속만 받고,
+          // 이 값은 배정이 아니라 사실이다). 화면이 읽는 모양만 맞춰 세운다.
+          assignees: writers.map((w) => ({ user_id: w.id, duty: null, user: w })),
+        }
+      : m,
+  )
 }
 
 /** 인스턴스 끄기/켜기(soft off). enabled 플래그만 부분 업데이트한다. */
