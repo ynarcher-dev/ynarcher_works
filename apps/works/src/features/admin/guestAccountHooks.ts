@@ -130,12 +130,26 @@ function sanitizeLike(v: string): string {
 export interface IssueCandidate {
   id: string
   name: string
-  /** 로그인 명의(기업=대표자, 전문가=본인). 없으면 발급 불가. */
+  /** 원장이 든 담당자 이름(기업=대표자, 전문가=본인). 발급 폼의 **기본값**이다. */
   loginName: string | null
   email: string | null
   phone: string | null
-  /** 이미 계정이 있는가. 있으면 발급이 아니라 그대로 돌려받는다(멱등). */
-  hasAccount: boolean
+  /**
+   * 이 원장 행에 이미 선 계정 수(2026-09-08 `hasAccount` 대체).
+   *
+   * 참·거짓으로는 부족해졌다 — 한 회사에 담당자가 여럿일 수 있게 되면서, 발급하려는
+   * 사람에게 계정이 있는지는 이 값이 답하지 못한다. 목록에서는 "몇 명이 이미 들어와
+   * 있는가"만 말하고, 누가 있는지는 고른 뒤 폼이 보여 준다(`useLedgerAccounts`).
+   */
+  accountCount: number
+}
+
+/** 이 원장 행에 이미 선 계정 하나. 발급 폼이 중복을 눈으로 막게 한다. */
+export interface LedgerAccount {
+  userId: string
+  name: string | null
+  email: string | null
+  isActive: boolean
 }
 
 /**
@@ -173,12 +187,17 @@ export function useIssueCandidates(masterTable: 'startups' | 'networks', search:
       }[]
       if (rows.length === 0) return []
 
+      // 원장 행마다 이미 선 계정 수. 한 행에 여러 줄이 올 수 있으므로 세어서 담는다
+      // (2026-09-08 1:N 전환 — 종전에는 있음/없음 하나였다).
       const { data: accounts } = await supabase
         .from('guest_identities')
         .select('master_id')
         .eq('master_table', masterTable)
         .in('master_id', rows.map((r) => r.id))
-      const has = new Set(((accounts ?? []) as { master_id: string }[]).map((a) => a.master_id))
+      const counts = new Map<string, number>()
+      for (const a of (accounts ?? []) as { master_id: string }[]) {
+        counts.set(a.master_id, (counts.get(a.master_id) ?? 0) + 1)
+      }
 
       return rows.map((r) => ({
         id: r.id,
@@ -186,33 +205,62 @@ export function useIssueCandidates(masterTable: 'startups' | 'networks', search:
         loginName: masterTable === 'startups' ? (r.representative ?? null) : r.name,
         email: r.email?.trim() || null,
         phone: r.phone?.trim() || null,
-        hasAccount: has.has(r.id),
+        accountCount: counts.get(r.id) ?? 0,
       }))
     },
   })
 }
 
-/** 계정을 세울 수 있는 조건 — 이메일은 로그인 ID이고 연락처는 초기 비밀번호다. */
-export function canIssue(c: IssueCandidate): boolean {
-  return c.hasAccount || Boolean(c.loginName && c.email && c.phone)
-}
-
-export function issueBlockReason(c: IssueCandidate): string | null {
-  if (canIssue(c)) return null
-  const missing = [
-    !c.loginName ? '성명' : null,
-    !c.email ? '이메일' : null,
-    !c.phone ? '연락처' : null,
-  ].filter(Boolean)
-  return `${missing.join('·')} 없음 · 원장에서 먼저 보완`
+/**
+ * 이 원장 행에 이미 선 계정들.
+ *
+ * 발급 폼이 이 목록을 세우는 이유는 **중복을 눈으로 막기 위해서**다. 서버는 같은 이메일이
+ * 오면 그 계정을 그대로 돌려주므로(멱등) 사고가 나지는 않지만, 담당자는 "이 회사에 이미
+ * 누가 들어와 있나"를 발급 전에 알아야 같은 사람에게 두 번 안내하지 않는다.
+ *
+ * `users` 임베드가 통하는 것은 `guest_identities.user_id`에 FK가 있고 `users`의 SELECT가
+ * 내부 사용자 전원에게 열려 있기 때문이다(참가자 명부가 게스트 이름을 붙이려면 그래야 한다).
+ * 인격 행 자체는 2026-09-08부터 **그 원장을 읽을 수 있는 사람에게만** 보인다.
+ */
+export function useLedgerAccounts(
+  masterTable: 'startups' | 'networks',
+  masterId: string | null,
+) {
+  return useQuery({
+    queryKey: ['admin', 'guest-ledger-accounts', masterTable, masterId],
+    enabled: Boolean(masterId),
+    queryFn: async (): Promise<LedgerAccount[]> => {
+      const { data, error } = await supabase
+        .from('guest_identities')
+        .select('user_id, users!inner(name, email, is_active, deleted_at)')
+        .eq('master_table', masterTable)
+        .eq('master_id', masterId!)
+      if (error) throw error
+      type Row = {
+        user_id: string
+        users: { name: string | null; email: string | null; is_active: boolean; deleted_at: string | null }
+      }
+      return ((data ?? []) as unknown as Row[])
+        .filter((r) => !r.users.deleted_at)
+        .map((r) => ({
+          userId: r.user_id,
+          name: r.users.name,
+          email: r.users.email,
+          isActive: r.users.is_active,
+        }))
+    },
+  })
 }
 
 /**
- * 계정 발급 — 원장 행 하나에 계정 하나(멱등).
+ * 계정 발급 — **원장 행 × 사람**에 계정 하나(멱등).
  *
  * 내부 사용자 전원이 부를 수 있다. 발급만으로는 아무것도 보이지 않기 때문이다 — 사업에
  * 매핑되기 전까지 그 계정으로 로그인해도 "접근 가능한 사업이 없습니다"만 뜬다. 권한이 걸릴
  * 자리는 발급이 아니라 **매핑**이며, 그것은 그 사업 담당자만 할 수 있다.
+ *
+ * 2026-09-08부터 사람을 함께 넘긴다. 넘기지 않으면 서버가 종전대로 원장 연락처를 쓰므로
+ * 명부에서 여는 경로(`open_program_guest_access`)는 바뀌지 않는다.
  */
 export function useIssueGuestAccount() {
   const qc = useQueryClient()
@@ -220,16 +268,26 @@ export function useIssueGuestAccount() {
     mutationFn: async (v: {
       masterTable: 'startups' | 'networks'
       masterId: string
+      name?: string | null
+      email?: string | null
+      phone?: string | null
     }): Promise<string> => {
       const { data, error } = await supabase.rpc('issue_guest_account', {
         p_master_table: v.masterTable,
         p_master_id: v.masterId,
+        p_name: v.name?.trim() || null,
+        p_email: v.email?.trim() || null,
+        p_phone: v.phone?.trim() || null,
       })
       if (error) throw error
       return data as string
     },
-    onSuccess: () => {
+    onSuccess: (_data, v) => {
       void qc.invalidateQueries({ queryKey: ['admin', 'guest-accounts'] })
+      void qc.invalidateQueries({ queryKey: ['admin', 'guest-issue-candidates'] })
+      void qc.invalidateQueries({
+        queryKey: ['admin', 'guest-ledger-accounts', v.masterTable, v.masterId],
+      })
     },
   })
 }

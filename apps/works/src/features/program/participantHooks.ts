@@ -177,15 +177,19 @@ export function useProgramParticipants(programId: string | undefined) {
             .select('master_table, master_id, user_id')
             .in('master_id', masterIds)
         : { data: [] }
-      const accounts = new Map(
+      // **원장 행에 계정이 있는가**만 답하는 집합이다(2026-09-08). 종전에는
+      // `원장행 → 계정id` 지도였는데, 한 원장 행이 계정 여럿을 가질 수 있게 되면서
+      // (3_9_2 §5) 그 지도는 임의의 한 명을 답하게 됐다. "이 참여자의 계정"은 지도가
+      // 아니라 명부 행의 `user_id`가 답한다 — 문을 열 때 그 사람으로 박히기 때문이다.
+      const ledgerHasAccount = new Set(
         ((accountsRes.data ?? []) as {
           master_table: string
           master_id: string
           user_id: string
-        }[]).map((g) => [`${g.master_table}:${g.master_id}`, g.user_id]),
+        }[]).map((g) => `${g.master_table}:${g.master_id}`),
       )
 
-      const accountIds = [...new Set([...accounts.values()])]
+      const accountIds = [...new Set(rows.map((r) => r.user_id).filter(Boolean) as string[])]
       // 마지막 접속은 초대 레코드가 갖는다(사업마다 한 건). 계정 단위로 최댓값을 취한다.
       const usedRes = accountIds.length
         ? await supabase
@@ -206,19 +210,25 @@ export function useProgramParticipants(programId: string | undefined) {
         // 연락처는 원장 화면이 쓰는 자리(email·phone 컬럼)에서만 읽는다. 옛 contact jsonb는
         // 어느 화면도 읽지 않는 레거시라, 그쪽을 보면 명부와 원장이 서로 다른 값을 말한다.
         const master = startup ?? expert
-        const accountId =
-          (r.master_table && r.master_id
-            ? accounts.get(`${r.master_table}:${r.master_id}`)
-            : undefined) ??
-          r.user_id ??
-          null
+        // 이 참여자의 계정은 명부 행이 답한다. 원장 행에 다른 사람의 계정이 있어도
+        // 그것은 이 줄의 계정이 아니다(1:N 전환 이후 갈리는 자리다).
+        const accountId = r.user_id ?? null
+        // 반면 "계정 있음" 표시는 원장 행 기준이다 — 아직 문을 열지 않은 대상도 그렇게
+        // 떠야 담당자가 신규인지 기존인지 구분하지 않고 `로그인 열기` 하나만 누르면 된다.
+        const hasAccount =
+          Boolean(accountId) ||
+          Boolean(
+            r.master_table && r.master_id
+              ? ledgerHasAccount.has(`${r.master_table}:${r.master_id}`)
+              : false,
+          )
         return {
           id: r.id,
           master_table: r.master_table,
           master_id: r.master_id,
           user_id: r.user_id,
           login_status: r.login_status,
-          hasAccount: Boolean(accountId),
+          hasAccount,
           accountId,
           lastLoginAt: accountId ? (lastLogin.get(accountId) ?? null) : null,
           createdByName: r.creator?.name ?? null,
