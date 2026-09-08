@@ -143,8 +143,14 @@ export function GuestLoginPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-5">
+      {/*
+        밖에서 부르는 이름(2026-09-08). `GUEST`는 받는 사람에게 등급을 통보하는 말이라,
+        이 앱이 AC 참여기업뿐 아니라 M&A 거래상대·투자사까지 받게 되면 어울리지 않는다.
+        **바뀌는 것은 부르는 이름뿐이다** — `guest` 권한 키·`external_*` enum·정책·감사
+        로그는 그대로다(2026-09-07 AC→Accelerator와 같은 방식). 근거: 3_9_2 §10
+      */}
       <h1 className="text-title-md font-bold text-gray-900">
-        와이앤아처 <span className="text-brand">GUEST</span>
+        와이앤아처 <span className="text-brand">포털</span>
       </h1>
       <p className="mt-1 text-body text-gray-600">{STEP_LABEL[step]}</p>
 

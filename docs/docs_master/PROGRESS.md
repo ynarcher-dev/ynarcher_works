@@ -590,7 +590,7 @@
 - [ ] M&A 창구 개방 — 명부 `master_table`에 `ma_sellers`·`ma_buyers`, `module_templates`에 M&A 종류(요청자료·데이터룸·티저·IM)
 - [ ] **선별** — `program_module_attachments` 연결 표 + 딜 상세의 공개 목록 편성 화면 <!-- 자료를 옮기거나 복제하지 않는다. attachments.program_module_id가 컬럼 하나라 복제하면 두 목록이 어긋나고 옮기면 셀러가 자기가 낸 자료를 못 본다. 전량이면 함수, 고르면 표 -->
 - [ ] 단계 축 — `program_participants.stage` · `program_modules.min_stage` <!-- AC·FUND는 비어 있어 영향 없음(기본 = 전원). 바이어 개별 커스터마이즈는 두지 않는다 -->
-- [ ] 외부 앱 이름 `와이앤아처 GUEST` → **`와이앤아처 포털`** <!-- 부르는 이름만. guest 권한 키·external_* enum·정책·감사 로그는 그대로 -->
+- [x] 외부 앱 이름 `와이앤아처 GUEST` → **`와이앤아처 포털`** <!-- 2026-09-08. 바꾼 곳은 둘뿐이다 — `apps/guest/index.html`의 <title>과 로그인 lockup의 h1. 나머지 `GUEST`는 전부 코드 식별자·주석이거나 내부에서 부르는 이름(`GUEST계정 발급` 창구, 공유 범위 배지 `WORKS+GUEST`)이라 그대로 둔다: 바꾸기로 한 것은 **밖에서 받는 사람이 읽는 말**이고 그 둘이 전부다. 초대 메일·알림톡 본문에는 앱 이름이 실리지 않아 손댈 곳이 없었다. `guest` 권한 키·`external_*` enum·정책·감사 로그는 그대로 -->
 - [ ] FUND 온기보고 — 포트폴리오사 맥락(`context_type='fund'`) + 고정 화면 <!-- 항목은 ADMIN 템플릿이 소유한다. 회차 운용·영업보고서 편입 시점은 FUND 전면 보완에서 확정 -->
 - [ ] 회귀 검증: [3_9_2 §14](../docs_planning/3_9_2_external_portal_expansion.md) 완료 기준 10항 + 보안 게이트 체크리스트
 
