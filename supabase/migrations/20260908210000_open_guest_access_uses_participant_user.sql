@@ -10,10 +10,20 @@
 -- .user_id가 이미 있었고 개방이 그것을 보존하기는 했지만(coalesce), 초대 레코드와
 -- 감사 로그는 원장에서 꺼낸 계정을 썼으므로 미리 정해 둔 계정과 어긋났다.
 --
--- **M&A에는 원장에서 꺼내는 길이 아예 없다.** ma_buyers에는 연락 칸이 없고
--- (name·industries·wish·available_funds·overview_html뿐) ma_sellers도 contact_name·
--- contact_email만 있어 연락처가 없다. 그래서 M&A 명부는 사람을 정한 줄만 열 수 있고,
--- 그 판정은 issue_guest_account가 사유와 함께 답한다.
+-- **M&A에는 원장에서 꺼내는 길이 없다.** [2026-09-08 정정 — 아래 근거를 다시 적는다.
+-- 최초 작성 시 "ma_buyers에는 연락 칸이 아예 없다"고 적었으나 사실이 아니다. 두 원장 모두
+-- contact_name·contact_email을 갖는다(바이어는 20260907140000이 더했다). 결론은 그대로이나
+-- 이유가 다르므로 틀린 근거를 남겨 두지 않는다.]
+--
+--   (1) issue_guest_account가 원장을 두 값으로 잠그고 있다 — p_master_table이
+--       'startups'·'networks'가 아니면 첫머리에서 22023으로 멈춘다. M&A를 여는 일은
+--       이 허용 목록과 guest_identities·program_participants의 CHECK를 함께 여는 일이다.
+--   (2) 두 M&A 원장에는 **전화번호 칸이 없다.** 초기 비밀번호가 연락처이므로, 원장에서
+--       꺼내는 경로만으로는 새 계정의 자격증명을 만들 수 없다.
+--
+-- 사람 인자(p_name·p_email·p_phone)를 받게 된 지금은 발급 창구에서 세 값을 직접 넣을 수
+-- 있으므로 (2)는 막지 않는다. 그래서 M&A 명부는 사람을 정한 줄만 열 수 있고, 그 판정은
+-- issue_guest_account가 사유와 함께 답한다.
 --
 -- 폴백을 남기는 이유:
 --   이 마이그레이션 시점의 명부 행은 전부 user_id가 비어 있다(사람을 고르는 화면이
@@ -102,9 +112,11 @@ begin
     else
       -- 옛 행(사람이 정해지기 전에 담긴 줄)과 원장 연락처로 여는 경로.
       --
-      -- M&A 원장에는 이 길이 없다 — ma_buyers에는 연락 칸이 아예 없고 ma_sellers도
-      -- 연락처가 없다. 그래서 M&A 명부는 사람을 정한 줄만 열 수 있다(그 판정은
-      -- issue_guest_account가 사유와 함께 답한다).
+      -- M&A 원장에는 이 길이 없다 — issue_guest_account가 원장을 startups·networks
+      -- 두 값으로 잠그고 있고, 두 M&A 원장에는 전화번호 칸이 없어(초기 비밀번호가
+      -- 연락처다) 원장에서 꺼내는 경로만으로는 자격증명을 만들 수 없다. 그래서 M&A
+      -- 명부는 사람을 정한 줄만 열 수 있다(그 판정은 issue_guest_account가 사유와
+      -- 함께 답한다).
       select exists (
         select 1
           from public.users u
