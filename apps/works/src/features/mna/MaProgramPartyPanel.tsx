@@ -1,4 +1,5 @@
-import { EmptyState, Spinner } from '@ynarcher/ui'
+import { EmptyState, Spinner, Tabs } from '@ynarcher/ui'
+import { useState } from 'react'
 import { MaPartySummary } from '@/features/mna/parties/MaPartySummary'
 import { MA_BUYER, MA_SELLER, type MaPartyConfig } from '@/features/mna/parties/config'
 import { useMaPartyRecord } from '@/features/mna/parties/hooks'
@@ -27,6 +28,14 @@ const CONFIG: Record<MaProgramPartyKind, MaPartyConfig> = {
  *
  * 자료·회의록·변동 이력·코멘트는 여기 세우지 않는다. 그것들은 레코드를 둘러싼 것들이라 원장
  * 상세가 소유하며, 여기까지 옮겨오면 이 탭이 원장 상세의 사본이 되고 고치러 갈 곳이 둘이 된다.
+ *
+ * **연결이 둘 이상이면 이어 붙이지 않고 하위 탭으로 가른다**(2026-09-08 사용자 지정). 이어
+ * 붙이면 퀵 리뷰가 건수만큼 세로로 쌓여, 두 번째 기업의 주요내용을 보려면 첫 기업의 문서
+ * 일곱 절을 스크롤로 지나야 한다 — 그리고 지나는 동안 지금 보는 표가 어느 기업 것인지
+ * 화면이 답하지 않는다(카드 제목은 이미 위로 밀려났다).
+ *
+ * **하나면 탭을 세우지 않는다.** 가를 것이 없는 자리에 선 탭은 '다른 것도 있다'고 말하는
+ * 거짓 신호이고, 남는 것은 층뿐이다(단계가 하나인 수행 조직에서 상자를 걷는 것과 같은 판단).
  */
 export function MaProgramPartyPanel({
   programId,
@@ -38,6 +47,7 @@ export function MaProgramPartyPanel({
   const config = CONFIG[kind]
   const { data: links, isLoading } = useMaProgramPartyLinks(programId)
   const selected = (links ?? []).filter((link) => link.kind === kind)
+  const [picked, setPicked] = useState<string | null>(null)
 
   if (isLoading) return <Spinner />
   if (selected.length === 0) {
@@ -49,11 +59,24 @@ export function MaProgramPartyPanel({
     )
   }
 
+  // 고른 것이 목록에서 빠졌으면(연결 해제) 첫 기업으로 되돌린다 — 없는 탭을 고른 채로 두면
+  // 탭 줄에는 아무것도 선택되어 있지 않은데 아래는 비어, 왜 비었는지 화면이 답하지 못한다.
+  const current = selected.find((party) => party.id === picked) ?? selected[0]!
+
+  if (selected.length === 1) {
+    return <PartyBody config={config} id={current.id} />
+  }
+
   return (
-    <div className="space-y-6">
-      {selected.map((party) => (
-        <PartyBody key={party.id} config={config} id={party.id} />
-      ))}
+    <div className="space-y-4">
+      <Tabs
+        items={selected.map((party) => ({ key: party.id, label: party.name }))}
+        value={current.id}
+        onChange={setPicked}
+      />
+      {/* 탭을 옮기면 몸통은 통째로 다시 선다(key) — 같은 부품에 다른 기업의 값이 들어가면
+          퀵 리뷰의 접힘·스크롤 같은 내부 상태가 앞 기업의 것으로 남는다. */}
+      <PartyBody key={current.id} config={config} id={current.id} />
     </div>
   )
 }
