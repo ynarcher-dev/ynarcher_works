@@ -1,14 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { sanitizeOrValue } from '@/features/master/ledgerPage'
+import {
+  PARTICIPANT_PERSONAS,
+  isMasterTable,
+  type LedgerFacts,
+  type MasterTable,
+} from '@/features/program/participantPersona'
 import { SHARED_TABLES, useProgramWorkspace } from '@/features/program/workspace'
 
 /**
  * 참가자 명부(참여 기업·참여 전문가) 데이터 계층.
  *
- * 명부의 값은 원장(NETWORKS 기업·전문가)이 소유한다 — 여기서는 복제하지 않고 조회로 합성한다.
- * master_id는 FK가 아닌 soft ref라 임베드가 되지 않으므로, 명부를 읽은 뒤 원장을 한 번 더
- * 읽어 이름·연락처를 붙인다(useParticipantPool이 쓰던 방식과 같은 축).
+ * 명부의 값은 원장이 소유한다 — 여기서는 복제하지 않고 조회로 합성한다. master_id는 FK가 아닌
+ * soft ref라 임베드가 되지 않으므로, 명부를 읽은 뒤 원장을 한 번 더 읽어 이름·연락처를 붙인다.
+ *
+ * **어느 원장을 어떻게 읽는지는 이 파일이 알지 않는다** — 자격 설정(`PARTICIPANT_PERSONAS`)이
+ * 표 이름·컬럼·좁히는 조건·읽는 방법을 함께 갖고, 여기서는 명부 행에 적힌 자격으로 그것을
+ * 꺼내 쓴다. 그래서 자격을 하나 더 여는 일에 이 파일은 손대지 않는다.
  *
  * 근거: docs/docs_planning/3_4_4_ac_participant_pool.md
  */
@@ -21,27 +30,8 @@ export type ParticipantLoginStatus =
   | 'ACTIVE'
   | 'BLOCKED'
 
-/**
- * 원장 출처. 내부 임직원 참가자는 원장이 없다(null).
- *
- * 2026-09-04 원장 통합 전에는 'experts'였다 — 그때는 원장 이름 하나가 '어느 표인가'와
- * '전문가인가'를 함께 답했다. 지금은 표가 'networks' 하나이고 전문가인지는 그 행의
- * category가 답하므로, 후보 조회에 구분 조건을 함께 건다(아래 useMasterCandidates).
- */
-export type MasterTable = 'startups' | 'networks'
-
-/**
- * 자격 라벨 — 원장 이름(startups·networks)이 아니라 **이 사업에서의 자격**으로 적는다.
- * 담당자가 고르는 것은 "어느 원장에서 왔나"가 아니라 "무엇으로 참여시키나"이고, 그 선택이
- * 게스트가 볼 화면을 정한다(3_9_1 §4).
- *
- * 이 한 벌이 사업 상세 탭·계정 원장의 자격 배지·게스트 전환기의 어휘를 함께 정한다 —
- * 같은 축을 화면마다 다른 말로 적으면 담당자가 안내한 말과 게스트가 본 말이 어긋난다.
- */
-export const PERSONA_LABEL: Record<MasterTable, string> = {
-  startups: '참여 기업',
-  networks: '참여 전문가',
-}
+export type { MasterTable }
+export { PERSONA_LABEL } from '@/features/program/participantPersona'
 
 export interface ParticipantRow {
   id: string
@@ -60,7 +50,10 @@ export interface ParticipantRow {
   lastLoginAt: string | null
   /**
    * 이 줄을 명부에 담은 사람. 어떤 권한도 주지 않는 서술 값이며 트리거가 찍는다 —
-   * 관리 주체는 사업 담당자이고, 이 값은 "누가 담았나"에만 답한다. 옛 행은 비어 있다.
+   * 관리 주체는 사업 담당자이고, 이 값은 "누가 담았나"에만 답한다.
+   *
+   * 컬럼은 2026-09-05에 생겼다(20260905180000). 그 전에 담긴 줄은 알 수 없어 비어 있고,
+   * 지어내지 않고 그대로 비운다 — 없는 사실을 채우면 그 화면이 거짓을 말한다.
    */
   createdByName: string | null
   /** 원장에서 온 대상 이름(기업명 또는 전문가명). 원장이 없으면 계정 이름. */
@@ -72,8 +65,8 @@ export interface ParticipantRow {
   email: string | null
   phone: string | null
   /**
-   * 원장이 이 대상을 무엇으로 분류하는가 — 기업은 STARTUP 구분(management_status),
-   * 전문가는 원장 이름 자체다. 명부가 스스로 분류하지 않고 원장의 분류를 그대로 비춘다.
+   * 원장이 이 대상을 무엇으로 분류하는가. 명부가 스스로 분류하지 않고 원장의 분류를 그대로
+   * 비춘다 — 라벨·톤 매핑은 자격 설정의 `categoryBadge`가 갖는다.
    */
   masterCategory: string | null
 }
@@ -92,7 +85,7 @@ export interface MasterCandidate {
 
 interface RawParticipant {
   id: string
-  master_table: MasterTable | null
+  master_table: string | null
   master_id: string | null
   user_id: string | null
   login_status: ParticipantLoginStatus
@@ -115,22 +108,34 @@ function participantCols(table: string): string {
   )
 }
 
-interface StartupMaster {
-  id: string
-  name: string
-  representative: string | null
-  email: string | null
-  phone: string | null
-  /** 구분(management_status: sourced·incubated·invested·other). 원장이 분류하는 축. */
-  management_status: string | null
-}
+/**
+ * 명부 행이 가리키는 원장 행을 자격별로 한 번씩 읽어 `자격:id → 사실`로 세운다.
+ *
+ * 자격 수만큼 병렬 조회가 돌고, 자격이 늘어도 이 함수는 그대로다 — 어느 표를 어떤 컬럼으로
+ * 읽는지는 자격 설정이 답한다.
+ */
+async function loadLedgerFacts(
+  rows: { master_table: string | null; master_id: string | null }[],
+): Promise<Map<string, LedgerFacts>> {
+  const byPersona = new Map<MasterTable, string[]>()
+  for (const row of rows) {
+    if (!isMasterTable(row.master_table) || !row.master_id) continue
+    const ids = byPersona.get(row.master_table) ?? []
+    ids.push(row.master_id)
+    byPersona.set(row.master_table, ids)
+  }
 
-interface ExpertMaster {
-  id: string
-  name: string
-  affiliation: string | null
-  email: string | null
-  phone: string | null
+  const facts = new Map<string, LedgerFacts>()
+  await Promise.all(
+    [...byPersona].map(async ([key, ids]) => {
+      const { ledger } = PARTICIPANT_PERSONAS[key]
+      const { data } = await supabase.from(ledger.table).select(ledger.columns).in('id', ids)
+      for (const raw of (data ?? []) as Record<string, unknown>[]) {
+        facts.set(`${key}:${String(raw.id)}`, ledger.map(raw))
+      }
+    }),
+  )
+  return facts
 }
 
 /** 명부 전체(자격 탭은 화면이 거른다). 원장 값은 조회로 합성한다. */
@@ -150,27 +155,14 @@ export function useProgramParticipants(programId: string | undefined) {
       if (error) throw error
       const rows = (data ?? []) as unknown as RawParticipant[]
 
-      const startupIds = rows.filter((r) => r.master_table === 'startups' && r.master_id).map((r) => r.master_id!)
-      const expertIds = rows.filter((r) => r.master_table === 'networks' && r.master_id).map((r) => r.master_id!)
-
-      const [startupsRes, expertsRes] = await Promise.all([
-        startupIds.length
-          ? supabase.from('startups').select('id, name, representative, email, phone, management_status').in('id', startupIds)
-          : Promise.resolve({ data: [] }),
-        expertIds.length
-          ? supabase.from('networks').select('id, name, affiliation, email, phone').in('id', expertIds)
-          : Promise.resolve({ data: [] }),
-      ])
-
-      const startups = new Map(((startupsRes.data ?? []) as StartupMaster[]).map((s) => [s.id, s]))
-      const experts = new Map(((expertsRes.data ?? []) as ExpertMaster[]).map((e) => [e.id, e]))
+      const facts = await loadLedgerFacts(rows)
 
       // 계정 유무는 명부 행이 아니라 **원장 행**이 답한다(인격 매핑이 그것을 들고 있다).
       // 그래서 아직 이 사업에 문을 열지 않은 대상도 "계정 있음"으로 뜬다 — 담당자가
       // 신규인지 기존인지 구분할 필요 없이 `연결` 하나만 누르면 되는 근거가 여기다.
       // 한 계정이 여러 인격을 가질 수 있으므로(참여 기업 + 참여 전문가) 계정이 아니라
       // 매핑표를 읽는다.
-      const masterIds = [...startupIds, ...expertIds]
+      const masterIds = rows.map((r) => r.master_id).filter(Boolean) as string[]
       const accountsRes = masterIds.length
         ? await supabase
             .from('guest_identities')
@@ -205,26 +197,18 @@ export function useProgramParticipants(programId: string | undefined) {
       }
 
       return rows.map((r) => {
-        const startup = r.master_table === 'startups' && r.master_id ? startups.get(r.master_id) : undefined
-        const expert = r.master_table === 'networks' && r.master_id ? experts.get(r.master_id) : undefined
-        // 연락처는 원장 화면이 쓰는 자리(email·phone 컬럼)에서만 읽는다. 옛 contact jsonb는
-        // 어느 화면도 읽지 않는 레거시라, 그쪽을 보면 명부와 원장이 서로 다른 값을 말한다.
-        const master = startup ?? expert
+        const persona = isMasterTable(r.master_table) ? r.master_table : null
+        const key = persona && r.master_id ? `${persona}:${r.master_id}` : null
+        const master = key ? facts.get(key) : undefined
         // 이 참여자의 계정은 명부 행이 답한다. 원장 행에 다른 사람의 계정이 있어도
         // 그것은 이 줄의 계정이 아니다(1:N 전환 이후 갈리는 자리다).
         const accountId = r.user_id ?? null
         // 반면 "계정 있음" 표시는 원장 행 기준이다 — 아직 문을 열지 않은 대상도 그렇게
         // 떠야 담당자가 신규인지 기존인지 구분하지 않고 `로그인 열기` 하나만 누르면 된다.
-        const hasAccount =
-          Boolean(accountId) ||
-          Boolean(
-            r.master_table && r.master_id
-              ? ledgerHasAccount.has(`${r.master_table}:${r.master_id}`)
-              : false,
-          )
+        const hasAccount = Boolean(accountId) || Boolean(key && ledgerHasAccount.has(key))
         return {
           id: r.id,
-          master_table: r.master_table,
+          master_table: persona,
           master_id: r.master_id,
           user_id: r.user_id,
           login_status: r.login_status,
@@ -232,12 +216,12 @@ export function useProgramParticipants(programId: string | undefined) {
           accountId,
           lastLoginAt: accountId ? (lastLogin.get(accountId) ?? null) : null,
           createdByName: r.creator?.name ?? null,
-          targetName: master?.name ?? r.user?.name ?? '미지정',
-          subtitle: startup?.representative ?? expert?.affiliation ?? '',
-          loginName: startup?.representative ?? expert?.name ?? null,
-          email: master?.email?.trim() || r.user?.email || null,
-          phone: master?.phone?.trim() || null,
-          masterCategory: startup?.management_status ?? null,
+          targetName: master?.name || r.user?.name || '미지정',
+          subtitle: master?.subtitle ?? '',
+          loginName: master?.loginName ?? null,
+          email: master?.email ?? r.user?.email ?? null,
+          phone: master?.phone ?? null,
+          masterCategory: master?.category ?? null,
         }
       })
     },
@@ -259,24 +243,16 @@ export function useMasterCandidates(
     queryKey: [config.key, 'master-candidates', programId, master, term],
     enabled: Boolean(programId),
     queryFn: async (): Promise<MasterCandidate[]> => {
-      const base =
-        master === 'startups'
-          ? supabase.from('startups').select('id, name, representative, email, phone, management_status')
-          : // 후보는 전문가 구분으로 좁힌다 — 통합 전에도 참가자로 붙던 것은 전문가 원장뿐이라,
-            // 여기서 전 구분을 열면 명부에 담기는 대상이 조용히 넓어진다(넓히려면 별도 결정).
-            supabase
-              .from('networks')
-              .select('id, name, affiliation, email, phone')
-              .eq('category', 'experts')
-
-      let query = base.is('deleted_at', null).order('name', { ascending: true }).limit(50)
+      const { ledger } = PARTICIPANT_PERSONAS[master]
+      let query = supabase
+        .from(ledger.table)
+        .select(ledger.columns)
+        .is('deleted_at', null)
+        .order('name', { ascending: true })
+        .limit(50)
+      if (ledger.narrow) query = query.eq(ledger.narrow.column, ledger.narrow.value)
       const kw = sanitizeOrValue(term)
-      if (kw) {
-        query =
-          master === 'startups'
-            ? query.or(`name.ilike.%${kw}%,representative.ilike.%${kw}%`)
-            : query.or(`name.ilike.%${kw}%,affiliation.ilike.%${kw}%`)
-      }
+      if (kw) query = query.or(ledger.searchColumns.map((c) => `${c}.ilike.%${kw}%`).join(','))
 
       const [{ data, error }, mapped] = await Promise.all([
         query,
@@ -290,27 +266,23 @@ export function useMasterCandidates(
       if (mapped.error) throw mapped.error
 
       const taken = new Set(
-        ((mapped.data ?? []) as { master_id: string | null }[]).map((r) => r.master_id).filter(Boolean) as string[],
+        ((mapped.data ?? []) as { master_id: string | null }[])
+          .map((r) => r.master_id)
+          .filter(Boolean) as string[],
       )
 
-      if (master === 'startups') {
-        return ((data ?? []) as StartupMaster[]).map((s) => ({
-          id: s.id,
-          name: s.name,
-          loginName: s.representative?.trim() || null,
-          email: s.email?.trim() || null,
-          phone: s.phone?.trim() || null,
-          alreadyMapped: taken.has(s.id),
-        }))
-      }
-      return ((data ?? []) as ExpertMaster[]).map((e) => ({
-        id: e.id,
-        name: e.name,
-        loginName: e.name?.trim() || null,
-        email: e.email?.trim() || null,
-        phone: e.phone?.trim() || null,
-        alreadyMapped: taken.has(e.id),
-      }))
+      return ((data ?? []) as Record<string, unknown>[]).map((raw) => {
+        const facts = ledger.map(raw)
+        const id = String(raw.id)
+        return {
+          id,
+          name: facts.name,
+          loginName: facts.loginName,
+          email: facts.email,
+          phone: facts.phone,
+          alreadyMapped: taken.has(id),
+        }
+      })
     },
   })
 }

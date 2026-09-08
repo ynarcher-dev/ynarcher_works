@@ -12,13 +12,12 @@ import {
 import { Check } from 'lucide-react'
 import { useState } from 'react'
 import {
-  PERSONA_LABEL,
   canMapCandidate,
   mapBlockReason,
   useAddParticipants,
   useMasterCandidates,
-  type MasterTable,
 } from '@/features/program/participantHooks'
+import { PARTICIPANT_PERSONAS, type MasterTable } from '@/features/program/participantPersona'
 
 /**
  * 참가자 명부 원장 추가 모달(참여 기업 · 참여 전문가).
@@ -53,6 +52,9 @@ export function ParticipantAddModal({
   master: MasterTable
 }) {
   const toast = useToast()
+  // 제목·안내·검색 문구의 소유자는 이 화면이 아니라 자격 설정이다 — 자격을 하나 더 여는 일이
+  // 이 모달의 삼항 셋을 고치는 일이 되어서는 안 된다.
+  const spec = PARTICIPANT_PERSONAS[master]
   const [search, setSearch] = useState('')
   const [picked, setPicked] = useState<string[]>([])
 
@@ -82,12 +84,8 @@ export function ParticipantAddModal({
       dismissible={false}
       open={open}
       onClose={onClose}
-      title={`${PERSONA_LABEL[master]} 추가`}
-      help={
-        master === 'startups'
-          ? 'STARTUP 원장에 등록된 기업만 담을 수 있습니다.'
-          : 'NETWORKS 원장의 전문가만 담을 수 있습니다.'
-      }
+      title={`${spec.label} 추가`}
+      help={spec.pickHelp}
       size="lg"
       footer={
         <div className="flex justify-end gap-2">
@@ -105,7 +103,7 @@ export function ParticipantAddModal({
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={master === 'startups' ? '기업명 · 대표자' : '전문가명 · 소속'}
+            placeholder={spec.pickSearchPlaceholder}
           />
         </Field>
 

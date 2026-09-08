@@ -1,0 +1,187 @@
+import type { BadgeTone } from '@ynarcher/ui'
+import {
+  MANAGEMENT_STATUS_LABEL,
+  MANAGEMENT_STATUS_TONE,
+  type ManagementStatus,
+} from '@/features/startup/startupClassification'
+
+/**
+ * 참가자 명부의 **자격**(persona) 정의 — 이 축 하나가 명부 화면 전체의 차이를 흡수한다.
+ *
+ * 종전에는 자격이 화면마다 `persona === 'startups'` 삼항으로 흩어져 있었다(카드 제목·표
+ * 머리글 넷·검색 자리표시자 둘·모달 안내·원장 상세 경로·후보 조회 컬럼·구분 배지). 자격이
+ * 둘일 때는 삼항이 곧 분기 전부라 값싼 표현이었으나, **셋째가 들어오는 순간 그 표현이
+ * 성립하지 않는다** — 삼항은 "이것이 아니면 저것"이라 셋을 답하지 못하고, 여덟 자리를 각각
+ * 열어 고치면 어느 한 곳을 빠뜨렸을 때 화면이 기업 라벨로 셀러를 부른다.
+ *
+ * 그래서 자격은 화면이 아니라 이 표가 소유한다. 새 자격을 여는 일은 여기 한 줄을 더하는
+ * 일이며, 더하지 않은 화면은 애초에 그 자격을 세울 수 없다(타입이 막는다).
+ *
+ * **키는 원장 이름 그대로**다(`program_participants.master_table` 값). 자격을 옮겨 적는 표를
+ * 하나 더 두면 그 표가 곧 어긋날 자리가 된다 — 무엇으로 참여시키는가는 어느 원장에서
+ * 왔는가가 답하고, 그 사실은 이미 명부 행에 저장되어 있다.
+ *
+ * 근거: docs/docs_planning/3_4_4_ac_participant_pool.md,
+ *       docs/docs_planning/3_9_2_external_portal_expansion.md
+ */
+
+/**
+ * 원장 한 행에서 명부가 읽는 사실.
+ *
+ * 원장마다 컬럼 이름이 다르므로(기업은 `representative`, 전문가는 `affiliation`) 여기서 한
+ * 모양으로 맞춘다. 맞추는 일을 화면에서 하면 표·모달·훅이 각자 원장 컬럼 이름을 알게 되고,
+ * 원장이 컬럼 하나를 바꾸는 날 고칠 곳이 셋으로 늘어난다.
+ */
+export interface LedgerFacts {
+  /** 대상 이름(기업명·전문가명). 명부 표의 첫 열. */
+  name: string
+  /** 로그인 명의 — 기업은 대표자, 전문가는 본인. 없으면 매핑이 막힌다. */
+  loginName: string | null
+  /** 이름 아래 한 줄 보조(기업은 대표자, 전문가는 소속). */
+  subtitle: string
+  email: string | null
+  phone: string | null
+  /** 원장이 이 대상을 무엇으로 분류하는가. 분류축이 없는 원장은 null. */
+  category: string | null
+}
+
+export interface ParticipantPersona {
+  /** 탭·카드 제목·추가 버튼이 함께 쓰는 이름. 원장 이름이 아니라 **이 사업에서의 자격**이다. */
+  label: string
+  /** 표의 대상 이름 열 머리글. 자격을 그대로 부른다(기업 탭에서 '대상'이라 적으면 번역이 한 번 더 든다). */
+  nameHeader: string
+  /** 표의 로그인 명의 열 머리글. */
+  loginNameHeader: string
+  /** 명의가 비었을 때 표가 붉게 적는 말. 머리글과 같은 낱말을 써야 무엇이 비었는지 바로 읽힌다. */
+  loginNameMissing: string
+  /** 명부 표 위 검색 자리표시자. */
+  listSearchPlaceholder: string
+  /** 추가 모달 검색 자리표시자. */
+  pickSearchPlaceholder: string
+  /** 추가 모달 제목 줄 도움말 — 어느 원장에서 고르는지 밝힌다. */
+  pickHelp: string
+  /**
+   * 원장 상세 경로. 명부는 값을 복제하지 않고 원장을 가리키므로 이름을 누르면 그리로 간다.
+   * 갈 곳이 없는 자격은 null을 돌려주고, 그때 이름은 링크가 아니라 글자로 선다.
+   */
+  detailPath: (id: string) => string | null
+  /** 원장 조회 정의 — 명부 합성과 후보 검색이 같은 한 벌을 쓴다. */
+  ledger: {
+    table: string
+    /** PostgREST select 문자열. `id`를 반드시 포함한다. */
+    columns: string
+    /**
+     * 후보를 좁히는 조건. 통합 원장에서 한 구분만 고를 때 쓴다(NETWORKS는 표가 하나이고
+     * 전문가인지는 행의 `category`가 답한다) — 여기서 좁히지 않으면 명부에 담기는 대상이
+     * 조용히 넓어진다.
+     */
+    narrow?: { column: string; value: string }
+    /** 후보 검색이 `or`로 묶는 컬럼들. */
+    searchColumns: readonly string[]
+    map: (row: Record<string, unknown>) => LedgerFacts
+  }
+  /**
+   * 구분 배지 — 명부가 스스로 분류를 만들지 않고 원장의 분류를 그대로 비춘다.
+   * 분류축이 없는 자격은 자기 이름 하나를 고정으로 돌려준다.
+   */
+  categoryBadge: (code: string | null) => { label: string; tone: BadgeTone }
+}
+
+/** 문자열 칸 하나를 다듬어 읽는다 — 원장의 빈 문자열과 공백은 '없음'과 같은 뜻이다. */
+function text(row: Record<string, unknown>, key: string): string | null {
+  const v = row[key]
+  return typeof v === 'string' && v.trim() ? v.trim() : null
+}
+
+/**
+ * 이 앱이 명부에 세울 수 있는 자격 전부.
+ *
+ * 여기 없는 원장은 명부에 담기지 않는다 — 그리고 그 강제는 화면이 아니라 DB의 CHECK 제약이
+ * 함께 한다(화면에서 숨기는 것은 보안이 아니다). 자격을 하나 열 때는 두 곳을 같은 커밋에서
+ * 함께 연다.
+ */
+export const PARTICIPANT_PERSONAS = {
+  startups: {
+    label: '참여 기업',
+    nameHeader: '기업명',
+    loginNameHeader: '대표자',
+    loginNameMissing: '대표자 없음',
+    listSearchPlaceholder: '기업명 · 대표자 · 연락처 검색',
+    pickSearchPlaceholder: '기업명 · 대표자',
+    pickHelp: 'STARTUP 원장에 등록된 기업만 담을 수 있습니다.',
+    detailPath: (id) => `/startup/discovered/${id}`,
+    ledger: {
+      table: 'startups',
+      columns: 'id, name, representative, email, phone, management_status',
+      searchColumns: ['name', 'representative'],
+      map: (row) => ({
+        name: String(row.name ?? ''),
+        loginName: text(row, 'representative'),
+        subtitle: text(row, 'representative') ?? '',
+        email: text(row, 'email'),
+        phone: text(row, 'phone'),
+        category: text(row, 'management_status'),
+      }),
+    },
+    categoryBadge: (code) => {
+      const key = code as ManagementStatus | null
+      if (!key || !(key in MANAGEMENT_STATUS_LABEL)) {
+        return { label: '기업(구분 미지정)', tone: 'neutral' }
+      }
+      return { label: MANAGEMENT_STATUS_LABEL[key], tone: MANAGEMENT_STATUS_TONE[key] }
+    },
+  },
+  networks: {
+    label: '참여 전문가',
+    nameHeader: '전문가명',
+    loginNameHeader: '성명',
+    loginNameMissing: '성명 없음',
+    listSearchPlaceholder: '전문가명 · 연락처 검색',
+    pickSearchPlaceholder: '전문가명 · 소속',
+    pickHelp: 'NETWORKS 원장의 전문가만 담을 수 있습니다.',
+    detailPath: (id) => `/networks/record/${id}`,
+    ledger: {
+      table: 'networks',
+      columns: 'id, name, affiliation, email, phone',
+      // 통합 원장이라 표 하나에 11종이 함께 산다. 전문가 구분으로 좁히지 않으면 투자사·기관까지
+      // 후보에 서고, 명부에 담기는 대상이 결정 없이 넓어진다.
+      narrow: { column: 'category', value: 'experts' },
+      searchColumns: ['name', 'affiliation'],
+      map: (row) => ({
+        name: String(row.name ?? ''),
+        loginName: text(row, 'name'),
+        subtitle: text(row, 'affiliation') ?? '',
+        email: text(row, 'email'),
+        phone: text(row, 'phone'),
+        category: null,
+      }),
+    },
+    categoryBadge: () => ({ label: '전문가', tone: 'neutral' }),
+  },
+} satisfies Record<string, ParticipantPersona>
+
+/**
+ * 원장 출처 = 자격 키. 내부 임직원 참가자는 원장이 없다(null).
+ *
+ * 2026-09-04 원장 통합 전에는 'experts'였다 — 그때는 원장 이름 하나가 '어느 표인가'와
+ * '전문가인가'를 함께 답했다. 지금은 표가 'networks' 하나이고 전문가인지는 행의 category가
+ * 답하므로, 후보 조회에 그 조건을 함께 건다(`ledger.narrow`).
+ */
+export type MasterTable = keyof typeof PARTICIPANT_PERSONAS
+
+/** 자격 키가 이 앱이 아는 것인가 — 원장에서 읽어 온 문자열을 좁힐 때 쓴다. */
+export function isMasterTable(value: string | null | undefined): value is MasterTable {
+  return Boolean(value && value in PARTICIPANT_PERSONAS)
+}
+
+/**
+ * 자격 라벨 — 원장 이름(startups·networks)이 아니라 **이 사업에서의 자격**으로 적는다.
+ * 담당자가 고르는 것은 "어느 원장에서 왔나"가 아니라 "무엇으로 참여시키나"이고, 그 선택이
+ * 게스트가 볼 화면을 정한다(3_9_1 §4).
+ *
+ * 이 한 벌이 사업 상세 탭·계정 원장의 자격 배지·게스트 전환기의 어휘를 함께 정한다 —
+ * 같은 축을 화면마다 다른 말로 적으면 담당자가 안내한 말과 게스트가 본 말이 어긋난다.
+ */
+export const PERSONA_LABEL = Object.fromEntries(
+  Object.entries(PARTICIPANT_PERSONAS).map(([key, persona]) => [key, persona.label]),
+) as Record<MasterTable, string>

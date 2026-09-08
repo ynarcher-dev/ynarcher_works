@@ -20,15 +20,17 @@ import {
 import { participantColumns } from '@/features/program/participantColumns'
 import { ParticipantSelectionBar } from '@/features/program/ParticipantSelectionBar'
 import {
-  PERSONA_LABEL,
   useCloseGuestAccess,
   useOpenGuestAccess,
   useProgramParticipants,
   useReopenGuestAccess,
   useSendPasswordReset,
-  type MasterTable,
   type ParticipantRow,
 } from '@/features/program/participantHooks'
+import {
+  PARTICIPANT_PERSONAS,
+  type MasterTable,
+} from '@/features/program/participantPersona'
 import { ProgramAccessWindowModal } from '@/features/program/ProgramAccessWindowModal'
 import { useProgramWorkspace } from '@/features/program/workspace'
 
@@ -44,13 +46,26 @@ function matches(row: ParticipantRow, keyword: string): boolean {
     .some((v) => String(v).toLowerCase().includes(kw))
 }
 
-/** 기간 표기(카드 부제). 값은 사업이 갖고 참여 기업·전문가 전원에게 같이 걸린다. */
+/**
+ * 기간을 여는 버튼의 라벨 — **값이 있으면 버튼이 그 값을 되읽는다**(2026-09-08).
+ *
+ * 종전에는 카드 부제가 이 값을 말했다. 자리를 옮긴 이유는 부제가 답하던 두 가지 중 하나가
+ * 이 카드의 물음이 아니어서다 — 사업 코드는 사업의 식별값이라 사업 정보 카드가 소유하고,
+ * 명부 카드에 두면 제목 바로 아래 첫 줄을 명부와 무관한 값이 차지한다.
+ *
+ * 남는 하나(기간)는 부제보다 **그 값을 바꾸는 버튼**에 붙는 편이 낫다. 버튼이 자기가 무엇을
+ * 여는지 말할 뿐 아니라 지금 값이 무엇인지도 함께 말하므로, 담당자가 열어 확인하고 닫는
+ * 왕복이 사라진다(CLAUDE.md: 입력값 되읽기는 접지 않는 예외다).
+ *
+ * 만료를 숨기지 않는 이유: 기간이 지났다는 사실은 "왜 아무도 못 들어오나"의 답이라, 날짜만
+ * 적으면 담당자가 그것을 오늘과 비교해야 안다.
+ */
 function accessWindowLabel(iso: string | null): string {
-  if (!iso) return '로그인 가능 기간 제한 없음'
+  if (!iso) return '로그인 가능 기간'
   const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return '로그인 가능 기간 제한 없음'
-  const label = `로그인 가능 ~ ${d.toLocaleDateString('ko-KR')}`
-  return d.getTime() <= Date.now() ? `${label} (만료)` : label
+  if (Number.isNaN(d.getTime())) return '로그인 가능 기간'
+  const day = d.toLocaleDateString('ko-KR')
+  return d.getTime() <= Date.now() ? `로그인 만료 · ${day}` : `로그인 가능 ~ ${day}`
 }
 
 /**
@@ -85,6 +100,9 @@ export function ParticipantPool({
   persona: MasterTable
 }) {
   const config = useProgramWorkspace()
+  // 자격이 정하는 것(제목·머리글·검색 문구·원장 조회·구분 배지)은 전부 이 한 벌에서 나온다.
+  // 화면이 `persona === 'startups'` 삼항으로 갈라 쓰면 자격이 셋 이상일 때 답할 수 없다.
+  const spec = PARTICIPANT_PERSONAS[persona]
   const toast = useToast()
   const myId = useAuthStore((s) => s.user?.id)
   const masked = useMaskPolicy(participantContentKey(config.key))
@@ -238,7 +256,7 @@ export function ParticipantPool({
 
   if (isLoading) {
     return (
-      <Card title={PERSONA_LABEL[persona]}>
+      <Card title={spec.label}>
         <Spinner />
       </Card>
     )
@@ -248,27 +266,23 @@ export function ParticipantPool({
     <>
       {/* 건수는 이 탭의 자격만 센다 — 카드 제목이 '참여 기업'인데 뒤의 수가 전문가까지 합한
           값이면, 표는 비어 있는데 제목만 건수를 말하는 화면이 된다.
-          기간은 전원 공통이라 열로 반복하지 않고 여기 한 자리에 적는다. */}
-      <Card
-        title={PERSONA_LABEL[persona]}
-        count={personaRows.length}
-        subtitle={`사업 코드 ${program.code || '미발급'} · ${accessWindowLabel(program.guest_access_ends_at)}`}
-      >
+          부제는 두지 않는다(2026-09-08 사용자 지정) — 사업 코드는 사업의 식별값이라 사업 정보
+          카드가 소유하고, 기간은 그것을 바꾸는 버튼이 스스로 되읽는다. 같은 값을 두 곳에서
+          말하면 한쪽만 고쳐지는 날이 온다. */}
+      <Card title={spec.label} count={personaRows.length}>
         <div className="space-y-3">
           <ListToolbar
             keyword={keyword}
             onKeywordChange={setKeyword}
-            searchPlaceholder={
-              persona === 'startups' ? '기업명 · 대표자 · 연락처 검색' : '전문가명 · 연락처 검색'
-            }
+            searchPlaceholder={spec.listSearchPlaceholder}
             actions={
               <div className="flex items-center gap-2">
                 {canOpenDoor && (
                   <Button variant="outline" onClick={() => setWindowOpen(true)}>
-                    로그인 가능 기간
+                    {accessWindowLabel(program.guest_access_ends_at)}
                   </Button>
                 )}
-                <Button onClick={() => setAddOpen(true)}>{PERSONA_LABEL[persona]} 추가</Button>
+                <Button onClick={() => setAddOpen(true)}>{spec.label} 추가</Button>
               </div>
             }
           />

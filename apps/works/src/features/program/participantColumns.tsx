@@ -2,44 +2,13 @@ import { Badge, type BadgeTone, type Column } from '@ynarcher/ui'
 import { Link } from 'react-router-dom'
 import { maskEmail, maskName, maskPhone } from '@/lib/mask'
 import type { SensitiveField } from '@/features/admin/sensitiveContents'
-import {
-  MANAGEMENT_STATUS_LABEL,
-  MANAGEMENT_STATUS_TONE,
-  type ManagementStatus,
-} from '@/features/startup/startupClassification'
 import { guestDoorBadge } from '@/features/program/guestDoorBadge'
-import type { MasterTable, ParticipantRow } from '@/features/program/participantHooks'
+import { PARTICIPANT_PERSONAS, type MasterTable } from '@/features/program/participantPersona'
+import type { ParticipantRow } from '@/features/program/participantHooks'
 
 interface LoginBadge {
   label: string
   tone: BadgeTone
-}
-
-/**
- * 대상 → 원장 상세 경로. 명부는 값을 복제하지 않고 원장을 가리키므로, 이름을 누르면
- * 그 원장으로 간다(기업은 STARTUP 상세, 전문가는 NETWORKS 상세).
- * 원장이 없는 내부 임직원 행은 갈 곳이 없어 링크를 걸지 않는다.
- */
-function masterPath(row: ParticipantRow): string | null {
-  if (!row.master_id) return null
-  if (row.master_table === 'startups') return `/startup/discovered/${row.master_id}`
-  if (row.master_table === 'networks') return `/networks/record/${row.master_id}`
-  return null
-}
-
-/**
- * 구분 표기. 기업은 STARTUP 원장의 구분(발굴·보육·투자·기타)을 그대로 비추고, 전문가는
- * NETWORKS 원장 이름을 쓴다. 명부가 스스로 분류를 만들지 않는다 — 분류는 원장이 소유하고
- * 여기서는 라벨·톤 매핑(startupClassification)만 빌린다.
- */
-function categoryBadge(row: ParticipantRow): LoginBadge | null {
-  if (row.master_table === 'startups') {
-    const code = row.masterCategory as ManagementStatus | null
-    if (!code || !(code in MANAGEMENT_STATUS_LABEL)) return { label: '기업(구분 미지정)', tone: 'neutral' }
-    return { label: MANAGEMENT_STATUS_LABEL[code], tone: MANAGEMENT_STATUS_TONE[code] }
-  }
-  if (row.master_table === 'networks') return { label: '전문가', tone: 'neutral' }
-  return null
 }
 
 /**
@@ -82,10 +51,12 @@ function formatLastLogin(iso: string): string {
 }
 
 /**
- * 참가자 명부(참여 기업·참여 전문가) 표의 컬럼.
+ * 참가자 명부 표의 컬럼.
  *
  * 머리글은 자격을 그대로 부른다 — 기업 탭에서 '대상'·'성명'이라 적으면 무엇의 이름인지가
- * 한 번 더 번역을 거친다. 기업의 로그인 명의는 원장의 대표자이고, 전문가는 본인이다.
+ * 한 번 더 번역을 거친다. 그 낱말의 소유자는 이 파일이 아니라 자격 설정
+ * (`PARTICIPANT_PERSONAS`)이다 — 자격이 셋 이상이 되면 삼항으로는 답할 수 없고, 자격마다
+ * 여기를 열어 분기를 늘리면 새 자격을 여는 일이 표를 고치는 일이 된다.
  *
  * 연락처는 그 사람에게 인증이 어디로 가는가이므로 이름 옆에 붙어 한 짝으로 읽힌다 —
  * 매핑이 막혔을 때 성명이 빈 건지 연락처가 빈 건지 눈으로 가려야 한다.
@@ -97,14 +68,16 @@ export function participantColumns(
   guestAccessEndsAt: string | null,
   persona: MasterTable,
 ): Column<ParticipantRow>[] {
-  const isCompany = persona === 'startups'
+  const spec = PARTICIPANT_PERSONAS[persona]
   return [
     {
       key: 'targetName',
-      header: isCompany ? '기업명' : '전문가명',
+      header: spec.nameHeader,
       type: 'name',
       render: (r) => {
-        const to = masterPath(r)
+        // 명부는 값을 복제하지 않고 원장을 가리키므로, 이름을 누르면 그 원장으로 간다.
+        // 원장이 없는 내부 임직원 행은 갈 곳이 없어 링크를 걸지 않는다.
+        const to = r.master_id ? spec.detailPath(r.master_id) : null
         return to ? (
           <Link
             to={to}
@@ -122,18 +95,20 @@ export function participantColumns(
       key: 'masterCategory',
       header: '구분',
       type: 'badge',
+      // 명부가 스스로 분류를 만들지 않는다 — 분류는 원장이 소유하고 자격 설정이 라벨·톤만 빌린다.
       render: (r) => {
-        const b = categoryBadge(r)
-        return b ? <Badge tone={b.tone}>{b.label}</Badge> : '임직원'
+        if (!r.master_table) return '임직원'
+        const b = spec.categoryBadge(r.masterCategory)
+        return <Badge tone={b.tone}>{b.label}</Badge>
       },
     },
     {
       key: 'loginName',
-      header: isCompany ? '대표자' : '성명',
+      header: spec.loginNameHeader,
       type: 'person',
       render: (r) => {
         if (!r.master_id) return '—'
-        if (!r.loginName) return <span className="text-danger">{isCompany ? '대표자 없음' : '성명 없음'}</span>
+        if (!r.loginName) return <span className="text-danger">{spec.loginNameMissing}</span>
         return masked.name ? maskName(r.loginName) : r.loginName
       },
     },
@@ -149,8 +124,16 @@ export function participantColumns(
       },
     },
     {
+      // 머리글이 `로그인 상태`이던 것을 `상태`로 줄인다(2026-09-08). 배지 열의 폭(80px)은
+      // 담기는 **값**이 정한 규격인데(배지 네 글자), 여섯 글자 머리글이 그 폭을 넘겨 두 줄로
+      // 접히며 표 전체의 행 높이를 밀어 올리고 있었다. 규격을 정해 놓고 머리글이 그것을
+      // 이기면 규격이 아니므로, 줄일 것은 열 폭이 아니라 머리글이다(DataTable 머리글 주석).
+      //
+      // 뜻을 잃지 않는 이유: 이 표에서 상태라 부를 만한 축은 문(門) 하나뿐이고, 옆의
+      // `구분`은 원장의 분류라 헷갈릴 자리가 없다. 값 자체도 초대·이용 중·차단이라
+      // 무엇의 상태인지 스스로 말한다.
       key: 'login_status',
-      header: '로그인 상태',
+      header: '상태',
       type: 'badge',
       render: (r) => {
         const b = loginBadge(r, programStatus, guestAccessEndsAt)
@@ -169,7 +152,8 @@ export function participantColumns(
     },
     {
       // 생성자는 어떤 권한도 주지 않는 서술 값이라 관리 주체(사업 담당자)를 흐리지 않는다.
-      // 옛 행은 트리거가 생기기 전이라 비어 있고, 지어내지 않고 그대로 비운다.
+      // 값은 화면이 보내지 않고 INSERT 트리거가 찍는다(app.stamp_participant_insert).
+      // 컬럼이 2026-09-05에 생겼으므로 그 전에 담긴 줄은 비어 있고, 지어내지 않고 비운다.
       key: 'createdByName',
       header: '생성자',
       type: 'person',

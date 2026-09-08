@@ -3,7 +3,11 @@ import { useEffect, useState } from 'react'
 import type { Program, ProgramModule } from '@/features/program/hooks'
 import { MODULE_BOARD_LABEL } from '@/features/program/config'
 import { ParticipantPool } from '@/features/program/ParticipantPool'
-import { PERSONA_LABEL, type MasterTable } from '@/features/program/participantHooks'
+import {
+  PARTICIPANT_PERSONAS,
+  PERSONA_LABEL,
+  type MasterTable,
+} from '@/features/program/participantPersona'
 import { ModuleBoardCard } from '@/features/program/detail/ModuleBoardCard'
 import { ProgramAnnouncementsPanel } from '@/features/program/detail/ProgramAnnouncementsPanel'
 import { ProgramInfoCard } from '@/features/program/detail/ProgramInfoCard'
@@ -32,6 +36,11 @@ type LeftTab =
   | 'announcements'
   | 'qna'
 
+/** 탭 키가 자격인가 — 값을 손으로 나열하지 않고 자격 설정에 되묻는다. */
+function isPersonaTab(tab: LeftTab): tab is MasterTable {
+  return tab in PARTICIPANT_PERSONAS
+}
+
 /**
  * 내부 운영 탭. 명부는 자격 두 축(참여 기업 · 참여 전문가)이 각각 한 탭이다 —
  * 2026-09-05 하위 탭에서 이 층으로 올렸다. 자격은 표를 거르는 조건이 아니라 **게스트에게
@@ -39,8 +48,12 @@ type LeftTab =
  */
 const BASE_TABS: { key: LeftTab; label: string }[] = [
   { key: 'modules', label: MODULE_BOARD_LABEL },
-  { key: 'startups', label: PERSONA_LABEL.startups },
-  { key: 'networks', label: PERSONA_LABEL.networks },
+  // 자격 탭은 손으로 나열하지 않고 자격 설정 순서를 그대로 편다 — 자격을 하나 더 여는 일이
+  // 이 배열을 고치는 일이 되면, 설정에는 있는데 탭에는 없는 자격이 조용히 생긴다.
+  ...(Object.keys(PARTICIPANT_PERSONAS) as MasterTable[]).map((key) => ({
+    key: key as LeftTab,
+    label: PERSONA_LABEL[key],
+  })),
 ]
 
 /**
@@ -128,7 +141,7 @@ export function ProgramOverviewTab({
             {leftTab === 'buyer' && <MaProgramPartyPanel programId={program.id} kind="BUY" />}
             {/* 탭을 바꾸면 명부는 통째로 다시 선다(key) — 선택·역할·페이지가 자격을 넘어
                 살아남으면, 안 보이는 행이 선택된 채로 `연결`에 딸려 간다. */}
-            {(leftTab === 'startups' || leftTab === 'networks') && (
+            {isPersonaTab(leftTab) && (
               <ParticipantPool key={leftTab} program={program} persona={leftTab} />
             )}
           </div>

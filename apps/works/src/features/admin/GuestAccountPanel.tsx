@@ -28,7 +28,7 @@ import {
 } from '@/features/admin/guestAccountHooks'
 import { GuestAccountIssueModal } from '@/features/admin/GuestAccountIssueModal'
 import { guestDoorBadge, isDoorOpen } from '@/features/program/guestDoorBadge'
-import { PERSONA_LABEL } from '@/features/program/participantHooks'
+import { PERSONA_LABEL } from '@/features/program/participantPersona'
 import { GUEST_TYPE_LABEL } from '@/lib/userTypes'
 
 const DASH = <EmptyValue />
