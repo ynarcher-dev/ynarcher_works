@@ -39,6 +39,8 @@ export const MNA_WORKSPACE: ProgramWorkspaceConfig = {
   categories: MNA_CATEGORIES,
   // AC의 '사업구분'과 한 낱말로 붙지 않는다 — 이 워크스페이스에서 부르는 이름이 프로젝트다.
   categoryNoun: '프로젝트 구분',
+  // '사업개요'와 달리 띄어 쓴다(2026-09-09 사용자 지정) — 규칙으로 짓지 못하는 말이라 값이다.
+  overviewNoun: '프로젝트 개요',
 }
 
 export function MnaWorkspacePage() {

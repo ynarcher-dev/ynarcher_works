@@ -24,7 +24,7 @@ type GuestTab = 'intro' | 'announcements' | 'qna' | 'accounts'
  * 무엇을 세우는 자리인지 스스로 답하고, 게스트에게 나가는 것들은 '설정'이라는 한 동사 아래
  * 모인다 — **밖에 무엇이 나가 있는지 확인하려는 사람이 한 곳만 열면 된다.**
  *
- * **첫 탭 이름은 워크스페이스가 답한다**(AC는 사업개요, M&A는 프로젝트개요) — 같은 화면을
+ * **첫 탭 이름은 워크스페이스가 답한다**(AC는 사업개요, M&A는 프로젝트 개요) — 같은 화면을
  * 부르는 말이 사이드바·목록과 어긋나면 둘이 다른 것인지 되묻게 된다.
  *
  * **계정생성 탭은 자격이 있을 때만 선다.** 나머지 셋은 세 워크스페이스가 모두 운용하므로
@@ -48,7 +48,7 @@ export function GuestSettingsButton({
   const [tab, setTab] = useState<GuestTab>('intro')
 
   const items = [
-    { key: 'intro' as const, label: `${config.entityNoun}개요` },
+    { key: 'intro' as const, label: config.overviewNoun },
     { key: 'announcements' as const, label: '공지사항' },
     { key: 'qna' as const, label: 'Q&A' },
     ...(personas.length > 0 ? [{ key: 'accounts' as const, label: '계정생성' }] : []),

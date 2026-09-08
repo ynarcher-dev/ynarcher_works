@@ -43,9 +43,9 @@ export function ProgramIntroPanel({ programId }: { programId: string }) {
 
 /** 소개문 카드 — 카드 안에서 공용 리치텍스트 뷰어와 에디터가 자리를 바꾼다. */
 function IntroCard({ programId }: { programId: string }) {
-  // 부르는 이름은 워크스페이스가 답한다(AC 사업개요 / M&A 프로젝트개요) — 같은 화면을 부르는
-  // 말이 사이드바·목록과 어긋나면 둘이 다른 것인지 되묻게 된다.
-  const { entityNoun } = useProgramWorkspace()
+  // 부르는 이름은 워크스페이스가 답한다(AC '사업개요' / M&A '프로젝트 개요' — 띄어쓰기까지
+  // 값으로 든다). 같은 화면을 부르는 말이 탭·목록과 어긋나면 둘이 다른 것인지 되묻게 된다.
+  const { overviewNoun } = useProgramWorkspace()
   const toast = useToast()
   const { data: overview, isLoading } = useProgramOverview(programId)
   const save = useSaveProgramOverview(programId)
@@ -73,7 +73,7 @@ function IntroCard({ programId }: { programId: string }) {
 
   return (
     <Card
-      title={`${entityNoun}개요`}
+      title={overviewNoun}
       actions={
         !editing ? (
           <span className="flex items-center gap-1">
@@ -81,7 +81,7 @@ function IntroCard({ programId }: { programId: string }) {
               <IconButton
                 variant="ghost"
                 danger
-                label={`${entityNoun}개요 삭제`}
+                label={`${overviewNoun} 삭제`}
                 disabled={save.isPending}
                 onClick={() => void onDelete()}
                 icon={<Trash2 className="size-4" />}
@@ -104,7 +104,7 @@ function IntroCard({ programId }: { programId: string }) {
         </div>
       ) : (
         <p className="py-6 text-center text-body text-gray-600">
-          아직 작성된 {entityNoun}개요가 없습니다. 작성하면 게스트 로그인 직후 첫 화면에 보입니다.
+          아직 작성된 {overviewNoun}가 없습니다. 작성하면 게스트 로그인 직후 첫 화면에 보입니다.
         </p>
       )}
       {editing && (
@@ -138,7 +138,7 @@ function IntroFormModal({
   initialBody: string
   onClose: () => void
 }) {
-  const { entityNoun } = useProgramWorkspace()
+  const { overviewNoun } = useProgramWorkspace()
   const toast = useToast()
   const save = useSaveProgramOverview(programId)
   const [body, setBody] = useState(initialBody)
@@ -158,7 +158,7 @@ function IntroFormModal({
       onClose={onClose}
       dismissible={false}
       sectioned
-      title={`${entityNoun}개요 ${initialBody ? '수정' : '작성'}`}
+      title={`${overviewNoun} ${initialBody ? '수정' : '작성'}`}
       size="xl"
       footer={
         <>

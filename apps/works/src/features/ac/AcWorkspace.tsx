@@ -34,6 +34,7 @@ export const AC_WORKSPACE: ProgramWorkspaceConfig = {
   hasHostOrganization: true,
   categories: AC_CATEGORIES,
   categoryNoun: '사업구분',
+  overviewNoun: '사업개요',
 }
 
 export function AcWorkspacePage() {

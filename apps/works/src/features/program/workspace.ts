@@ -106,6 +106,14 @@ export interface ProgramWorkspaceConfig {
    * 짓지 못하는 말은 규칙인 척하지 않고 값으로 든다(MaPartyConfig의 `fundsLabel`과 같은 처리).
    */
   categoryNoun: string
+  /**
+   * 게스트에게 나가는 소개문의 이름(GUEST 설정 모달의 첫 탭·카드 제목·작성 모달 제목).
+   *
+   * `categoryNoun`과 같은 이유로 값이다 — AC는 '사업개요'가 한 낱말로 붙고 M&A는
+   * '프로젝트 개요'로 띄어 쓴다(2026-09-09 사용자 지정). 규칙으로 짓지 못하는 말은
+   * 규칙인 척하지 않고 값으로 든다.
+   */
+  overviewNoun: string
 }
 
 /**
