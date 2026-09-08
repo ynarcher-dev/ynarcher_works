@@ -32,6 +32,18 @@ export interface ProgramWorkspaceConfig {
    * 첨부(attachments)는 정책이 워크스페이스 무관이라 분리하지 않고 'program'을 그대로 쓴다.
    */
   entityKey: 'program' | 'ma_program'
+  /**
+   * 이 워크스페이스의 GUEST 계정 발급 창구가 다루는 **인격의 출처 원장**(2026-09-08).
+   *
+   * 창구가 세우는 계정 목록을 이 값으로 좁힌다. `entityKey`와 다른 축이다 — 저쪽은 참여
+   * 사업 칸이 어느 사업을 세는가이고, 이쪽은 어느 계정이 목록에 서는가다.
+   *
+   * 창구가 없는 워크스페이스에는 두지 않는다(`undefined`). 값을 비워 두는 것과 창구가
+   * 없는 것은 같은 뜻이며, 창구를 열 때 이 값을 함께 정하는 것이 순서다.
+   *
+   * 근거: docs/docs_planning/3_9_2_external_portal_expansion.md §6
+   */
+  guestMasterTables?: readonly string[]
   /** 라우트 베이스 경로. 목록 `${basePath}`, 상세 `${basePath}/programs/:id`. */
   basePath: string
   /**

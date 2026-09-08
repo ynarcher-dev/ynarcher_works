@@ -90,13 +90,22 @@ function doorOf(p: GuestAccountProgram) {
 export function GuestAccountPanel({
   canSuspend = false,
   entityKey,
+  masterTables,
 }: {
   canSuspend?: boolean
   /**
    * 참여 사업 칸이 볼 범위. 주지 않으면 전 워크스페이스다.
-   * 자리마다 다른 이유는 `useGuestAccounts` 주석 참조 — 좁히는 것은 사업이지 계정이 아니다.
+   * 자리마다 다른 이유는 `useGuestAccounts` 주석 참조.
    */
   entityKey?: 'program' | 'ma_program'
+  /**
+   * 목록에 설 계정을 **인격의 출처 원장**으로 좁힌다(2026-09-08). 주지 않으면 전부(ADMIN).
+   *
+   * `entityKey`와 다른 축이다 — 저쪽은 참여 사업 칸이 무엇을 세는가이고 이쪽은 어느 계정이
+   * 서는가다. 창구마다 발급하는 원장이 다르므로, 남의 원장 인격이 여기 서면 참여 사업 칸이
+   * 비어 있어도 "그 사람 계정이 있다"가 드러난다.
+   */
+  masterTables?: readonly string[]
 }) {
   const toast = useToast()
   const [keyword, setKeyword] = useState('')
@@ -109,7 +118,7 @@ export function GuestAccountPanel({
   const [suspending, setSuspending] = useState<GuestAccount | null>(null)
   const [reason, setReason] = useState('')
 
-  const { data, isLoading, error } = useGuestAccounts(keyword, page, entityKey)
+  const { data, isLoading, error } = useGuestAccounts(keyword, page, entityKey, masterTables)
   const setActive = useSetGuestAccountActive()
 
   /**

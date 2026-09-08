@@ -86,17 +86,40 @@ interface RawRow extends Omit<GuestAccount, 'programs' | 'identities'> {
 }
 
 /**
- * 게스트 계정 목록.
+ * 게스트 계정 목록. **두 축이 서로 다른 질문에 답한다.**
  *
- * `entityKey`는 **참여 사업 칸이 볼 범위**다(건수·열린 건수·사업 목록). 계정 자체는 언제나
- * 전부 서고 좁혀지지 않는다 — 계정은 대상마다 하나이고 사업을 가로질러 존재하므로, 사업
- * 하나를 못 본다고 계정을 빼면 이미 있다는 사실이 숨겨져 같은 대상에 발급을 다시 시도하게
- * 된다. AC 발급 창구는 `'program'`을 주고, ADMIN 계정 관리는 주지 않는다(정지·해제는 계정에
- * 걸리는 일이라 사업을 가려서는 안 된다).
+ * `entityKey` — 참여 사업 칸이 볼 범위(건수·열린 건수·사업 목록). AC 창구는 `'program'`을
+ * 주고, ADMIN 계정 관리는 주지 않는다.
+ *
+ * `masterTables` — **어느 계정이 목록에 서는가**(2026-09-08 신설). 2026-09-07에는
+ * *"좁히는 것은 사업이지 계정이 아니다 — 사업 하나를 못 본다고 계정을 빼면 이미 있다는
+ * 사실이 숨겨져 같은 대상에 발급을 다시 시도하게 된다"* 였는데, **M&A가 들어오면 그 근거가
+ * 성립하지 않는다**: AC 창구가 발급하는 대상은 `startups`·`networks` 행이고 M&A 창구는
+ * `ma_sellers`·`ma_buyers` 행이라 애초에 재시도가 일어날 수 있는 같은 대상이 아니다
+ * (중복 발급은 `issue_guest_account`의 ①번 분기가 계속 막는다). 반면 계정을 전부 세우면
+ * `ma_sellers` 인격이 AC 창구에 서서, 참여 사업 칸이 비어 있어도 그 사람 계정이 있다는
+ * 사실이 드러난다.
+ *
+ * 이 값은 **권한이 아니라 자리**를 좁힌다 — 권한은 두 겹이 이미 건다(인격 매핑의 원장별
+ * 정책, 그리고 `security invoker`의 사업 원장 RLS). ADMIN은 둘 다 주지 않는다.
+ *
+ * 근거: docs/docs_planning/3_9_2_external_portal_expansion.md §6
  */
-export function useGuestAccounts(keyword: string, page: number, entityKey?: 'program' | 'ma_program') {
+export function useGuestAccounts(
+  keyword: string,
+  page: number,
+  entityKey?: 'program' | 'ma_program',
+  masterTables?: readonly string[],
+) {
   return useQuery({
-    queryKey: ['admin', 'guest-accounts', keyword, page, entityKey ?? 'all'],
+    queryKey: [
+      'admin',
+      'guest-accounts',
+      keyword,
+      page,
+      entityKey ?? 'all',
+      masterTables?.join(',') ?? 'all',
+    ],
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<GuestAccountPage> => {
       const { data, error } = await supabase.rpc('guest_accounts_list', {
@@ -104,6 +127,7 @@ export function useGuestAccounts(keyword: string, page: number, entityKey?: 'pro
         p_limit: GUEST_PAGE_SIZE,
         p_offset: page * GUEST_PAGE_SIZE,
         p_entity_key: entityKey ?? null,
+        p_master_tables: masterTables ? [...masterTables] : null,
       })
       // 조회 실패를 삼키지 않는다 — 삼키면 "권한이 없다"와 "게스트가 없다"가 같은 빈 화면이 된다.
       if (error) throw error

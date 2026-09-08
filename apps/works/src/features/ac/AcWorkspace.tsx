@@ -15,6 +15,8 @@ import { ProgramWorkspaceProvider, type ProgramWorkspaceConfig } from '@/feature
 export const AC_WORKSPACE: ProgramWorkspaceConfig = {
   key: 'ac',
   entityKey: 'program',
+  // 이 창구가 발급하는 대상 — 참여 기업(STARTUP 원장)과 참여 전문가(NETWORKS 원장).
+  guestMasterTables: ['startups', 'networks'],
   basePath: '/ac',
   entityNoun: '사업',
   tables: {
@@ -44,13 +46,22 @@ export function AcWorkspacePage() {
   // 게스트가 실제로 걸려 있는 사업은 전부 AC다.
   //
   // ADMIN·OFFICE와 **같은 화면**을 세우고 권한만 낮춘다(`canSuspend` 없음 — 정지·해제는
-  // ADMIN이 소유한다). 다른 것은 `entityKey` 하나뿐이다: 이 자리에서는 참여 사업 칸이
-  // AC 사업만 센다. 사업 원장을 읽지 않으므로 목록과 나란한 분기다.
+  // ADMIN이 소유한다). 다른 것은 좁히는 축 둘이다.
+  //
+  //  · `entityKey` — 참여 사업 칸이 AC 사업만 센다(2026-09-07).
+  //  · `masterTables` — **목록에 설 계정**을 이 창구가 발급하는 원장으로 좁힌다(2026-09-08).
+  //    종전에는 계정이 전부 섰고 근거는 "사업 하나를 못 본다고 계정을 빼면 이미 있다는
+  //    사실이 숨겨져 같은 대상에 발급을 다시 시도하게 된다"였다. M&A 창구가 서면 그
+  //    근거가 사라진다 — 발급 대상이 다른 원장 행이라 재시도가 일어날 수 있는 같은
+  //    대상이 아니고, 반대로 `ma_sellers` 인격이 여기 서면 그 사람 계정의 존재가 드러난다.
   if (params.get('tab') === 'guest-accounts') {
     return (
       <div className="space-y-5">
         <PageHeader title="GUEST계정 발급" />
-        <GuestAccountPanel entityKey={AC_WORKSPACE.entityKey} />
+        <GuestAccountPanel
+          entityKey={AC_WORKSPACE.entityKey}
+          masterTables={AC_WORKSPACE.guestMasterTables}
+        />
       </div>
     )
   }
