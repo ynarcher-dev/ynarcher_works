@@ -44,6 +44,15 @@ export function AiFillOutcomeBody<K extends string>({
         </p>
       )}
 
+      {/* 문장 다듬기를 못 한 경우. **다시 실행하라고 말하지 않는다** — 값은 이미 다 들어 있고
+          다시 눌러도 같은 값을 받되 문장만 달라진다. 담당자가 알아야 할 것은 지금 화면의 문장이
+          자료에서 뽑힌 그대로라는 사실뿐이다. */}
+      {outcome.composeFailed && (
+        <p className={cardText.value}>
+          {outcome.composeFailed} 값은 모두 채워졌으며, 문장은 자료에서 뽑은 그대로입니다.
+        </p>
+      )}
+
       {/* 못 읽은 자료는 접지 않는다 — 대부분 담당자가 고칠 수 있는 것(공유 설정·죽은 주소)이라
           이유를 봐야 다음 행동이 정해지고, 초안이 왜 부실한지도 여기서 답한다. */}
       {outcome.skippedSources.length > 0 && (

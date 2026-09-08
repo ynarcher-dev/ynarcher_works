@@ -32,6 +32,18 @@ export const QUICK_REVIEW_KEYS = [
 
 export type QuickReviewKey = (typeof QUICK_REVIEW_KEYS)[number]
 
+/**
+ * 한 절에 붙는 이미지 수 상한.
+ *
+ * 넷인 것은 저장 용량이 아니라 **읽는 자리** 때문이다. 이미지는 카드 폭을 그대로 받아 세로로
+ * 쌓이므로, 다섯 장째부터는 그 절의 문장이 스크롤 아래로 밀려 그림이 본문을 덮는다. 문서에
+ * 더 많은 그림이 있다면 그것은 본문이 아니라 자료이고, 자료가 사는 자리는 자료 관리다.
+ */
+export const QR_IMAGE_MAX = 4
+
+/** 이미지 한 장의 용량 상한. 자산 사진과 같은 값이다(같은 성격의 첨부라 규격을 가르지 않는다). */
+export const QR_IMAGE_MAX_BYTES = 5_000_000
+
 export interface QrShareholder {
   name: string
   /** 지분율(%). 문서가 밝히지 않았으면 null — 0으로 채우면 '지분이 없다'는 거짓이 된다. */
@@ -87,8 +99,14 @@ export interface QuickReview {
     shareholdersAsOf: string | null
     note: string | null
   }
-  intro: { metrics: QrMetric[]; body: string | null; bullets: string[] }
-  products: { body: string | null; items: QrProduct[]; bullets: string[]; note: string | null }
+  intro: { metrics: QrMetric[]; body: string | null; bullets: string[]; images: string[] }
+  products: {
+    body: string | null
+    items: QrProduct[]
+    bullets: string[]
+    note: string | null
+    images: string[]
+  }
   financials: { pnl: QrPnlYear[]; bs: QrBsYear[]; note: string | null }
   valuation: { bullets: string[] }
   highlights: QrHighlight[]
@@ -112,6 +130,16 @@ const strings = (v: unknown): string[] =>
   list(v)
     .map(str)
     .filter((s): s is string => s !== null)
+
+/**
+ * 절에 붙은 이미지의 오브젝트 키 목록(`ma-quick-review-images` 버킷).
+ *
+ * 상한을 읽는 자리에서 강제하는 것이 요점이다. 화면의 첨부 버튼도 상한에서 멈추지만, 그 길을
+ * 거치지 않는 경로(AI 응답·직접 수정한 jsonb)로 여섯째가 들어오면 상한이 있다는 말이 뜻을
+ * 잃는다. 원장 CHECK 제약이 아니라 여기인 것은 값이 jsonb 안쪽에 있어서다 — 절의 모양을
+ * 아는 곳은 이 함수 하나다.
+ */
+const imagePaths = (v: unknown): string[] => strings(v).slice(0, QR_IMAGE_MAX)
 
 /** 연도 오름차순. 두 표를 나란히 읽으므로 순서가 갈리면 같은 자리에 다른 해가 선다. */
 const byYear = <T extends { fiscalYear: number }>(rows: T[]): T[] =>
@@ -152,6 +180,7 @@ export function readQuickReview(raw: unknown): QuickReview {
         .map((x) => ({ label: String(x.label).trim(), value: String(x.value).trim() })),
       body: str(intro.body),
       bullets: strings(intro.bullets),
+      images: imagePaths(intro.images),
     },
     products: {
       body: str(products.body),
@@ -161,6 +190,7 @@ export function readQuickReview(raw: unknown): QuickReview {
         .map((x) => ({ product: String(x.product).trim(), achievement: str(x.achievement) })),
       bullets: strings(products.bullets),
       note: str(products.note),
+      images: imagePaths(products.images),
     },
     financials: {
       pnl: byYear(

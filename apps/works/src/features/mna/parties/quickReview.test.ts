@@ -126,6 +126,40 @@ describe('AI 초안은 값을 지우지 못한다', () => {
     expect(outcome.filled).toEqual([])
   })
 
+  it('절을 갈아 끼워도 담당자가 올린 이미지는 남는다', () => {
+    // 모델은 그림을 만들지 않으므로 응답에 `images`가 없다. 절을 통째로 교체하는 병합이
+    // 그대로 돌면 초안을 한 번 만들 때마다 그림이 조용히 사라진다.
+    const withImages = readQuickReview({
+      intro: { body: '옛 소개', images: ['a.png'] },
+      products: { body: '옛 라인업', images: ['b.png', 'c.png'] },
+    })
+    const { review } = applyQuickReviewDraft(
+      withImages,
+      {
+        cards: {
+          intro: { body: '새 소개', metrics: [], bullets: [] },
+          products: { body: '새 라인업', items: [], bullets: [] },
+        },
+        notes: {},
+        evidence: {},
+      },
+      ['intro', 'products'],
+    )
+    expect(review.intro.body).toBe('새 소개')
+    expect(review.intro.images).toEqual(['a.png'])
+    expect(review.products.images).toEqual(['b.png', 'c.png'])
+  })
+
+  it('AI가 이미지 키를 보내와도 지금 값이 이긴다 — 그림의 주인은 사람이다', () => {
+    const withImages = readQuickReview({ intro: { images: ['mine.png'] } })
+    const { review } = applyQuickReviewDraft(
+      withImages,
+      { cards: { intro: { body: '새 소개', images: ['ai.png'] } }, notes: {}, evidence: {} },
+      ['intro'],
+    )
+    expect(review.intro.images).toEqual(['mine.png'])
+  })
+
   it('요청이 실패한 절은 "못 찾음"과 갈라 센다', () => {
     // 뭉치면 담당자가 실패한 절까지 "자료에 없구나"로 읽고 다시 시도하지 않는다.
     const { outcome } = applyQuickReviewDraft(

@@ -25,6 +25,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { jsonResponse } from '../cors.ts'
 import { supabaseAdmin } from '../supabaseAdmin.ts'
 import type { SourceChunk } from './chunks.ts'
+import { applyCompose, buildComposeSchema, composableCards, factsOf } from './compose.ts'
 import type { DraftEnvelope } from './envelope.ts'
 import { normalizeEnvelope } from './envelope.ts'
 import { EVIDENCE_RULES } from './evidence.ts'
@@ -321,6 +322,78 @@ export async function runAiFill<K extends string, C>(
       }
     }
 
+    // 6-6) 작문 패스 — **자료를 다시 읽지 않고 문장만 다시 쓴다** ----------------------
+    // 봉투를 여기서 미리 합치는 것은 이 패스의 입력이 "1단계가 확정한 사실 전부"이기 때문이다.
+    // 묶음별 봉투를 따로 넘기면 핵심 포인트를 쓰는 요청이 재무 표를 보지 못한다.
+    const merged = mergeEnvelopes(envelopes)
+    const composed: K[] = []
+    let composeFailed: string | null = null
+    let composeModel: string | null = null
+    if (profile.compose && envelopes.length > 0) {
+      const spec = profile.compose
+      const targets = composableCards(cards, merged.cards, spec, profile.cardKeys)
+      if (targets.length > 0) {
+        // 모델을 따로 고를 수 있게 둔다 — 두 단계가 서로 다른 일을 하므로 저울도 다르다.
+        // 값이 없으면 1단계와 같은 모델이라, 설정하지 않은 환경에서 조용히 달라지지 않는다.
+        composeModel = (spec.modelEnv ? Deno.env.get(spec.modelEnv) : null) ?? model
+        const written = await generateDraft<K>({
+          apiKey,
+          model: composeModel,
+          // 자료가 실리지 않는다. 손에 있는 것이 1단계의 값뿐이라 지어낼 자리가 없다.
+          parts: [
+            {
+              text: `${spec.buildPrompt(targets, subject, context)}\n\n--- 1단계가 확정한 사실(JSON) ---\n${factsOf(merged.cards)}`,
+            },
+          ],
+          cards: targets,
+          signal: controller.signal,
+          schema: buildComposeSchema(targets, spec.cardSchemas),
+          temperature: spec.temperature,
+          normalize: (parsed) =>
+            normalizeEnvelope(parsed, targets, {
+              normalizeCard: (key, raw, warn) => profile.normalizeCard(key, raw, warn, context),
+              cardShape: profile.cardShape,
+              // 조각을 싣지 않았으므로 대조할 지도가 없다. 스키마에도 근거 칸이 없어 실제로
+              // 여기 걸릴 값은 오지 않지만, 지도를 비워 두는 것이 곧 "이 패스는 근거를 만들지
+              // 않는다"는 선언이다.
+              index: { chunks: new Map(), sources: new Map() },
+              maxNotes: profile.maxNotes,
+            }),
+          label: '작문',
+        }).catch((e: unknown) => {
+          const aborted = e instanceof DOMException && e.name === 'AbortError'
+          return {
+            failure: {
+              message: aborted
+                ? '시간이 초과돼 문장 다듬기를 건너뛰었습니다.'
+                : '문장 다듬기 중 오류가 발생했습니다.',
+              upstream: null,
+            },
+          } as const
+        })
+
+        if ('failure' in written) {
+          // **초안을 버리지 않는다.** 1단계 결과가 이미 손에 있고 그것만으로도 값은 다 들어
+          // 있다. 담당자에게는 "문장이 덜 다듬어졌다"는 사실만 알린다.
+          composeFailed = written.failure.message
+        } else {
+          composed.push(...applyCompose(merged, written.envelope, targets, profile.cardShape, profile.maxNotes))
+          metrics.promptTokens += written.telemetry.promptTokens ?? 0
+          metrics.cachedTokens += written.telemetry.cachedTokens ?? 0
+          metrics.outputTokens += written.telemetry.outputTokens ?? 0
+        }
+      }
+    }
+
+    // 6-7) 카드를 가로질러 보는 판정 — **작문 패스 뒤**여야 한다.
+    // 판정 대상은 담당자가 실제로 보게 될 문장이고, 그 문장을 마지막에 정한 것이 작문 패스다.
+    if (profile.crossCheck) {
+      profile.crossCheck(merged.cards, (card, line) => {
+        const lines = (merged.notes[card] ??= [])
+        if (lines.length < profile.maxNotes * 2) lines.push(line)
+      })
+    }
+
     console.log(
       '[ai-fill] 실행 요약',
       JSON.stringify({
@@ -328,6 +401,8 @@ export async function runAiFill<K extends string, C>(
         groups: groups.length,
         called: runnable.length,
         topup: topupCalled,
+        composed: composed.length,
+        composeFailed: composeFailed !== null,
         ok: envelopes.length,
         failed: failedCards.length,
         sources: sources.length,
@@ -359,12 +434,17 @@ export async function runAiFill<K extends string, C>(
     }
 
     return jsonResponse({
-      ...mergeEnvelopes(envelopes),
+      ...merged,
       // 못 읽었거나 일부만 읽은 자료는 결과와 같은 자리에서 알린다.
       skippedSources: dedupe(notices),
       // 부분 성공. 빈 배열이면 전부 성공이며, 화면은 이 목록으로 "무엇을 못 썼는지"를 말한다.
       failedCards,
+      // 문장까지 다시 쓴 카드. 값이 채워진 것과 다른 축이라 따로 말한다.
+      composed,
+      // 다듬지 못했을 때의 사유. 값은 다 들어 있으므로 실패가 아니라 **알림**이다.
+      composeFailed,
       model,
+      composeModel,
       // 별칭이 아니라 실제로 답한 모델. 운영이 품질 변화를 이 값으로 가른다.
       modelVersion,
       elapsedMs: Date.now() - startedAt,

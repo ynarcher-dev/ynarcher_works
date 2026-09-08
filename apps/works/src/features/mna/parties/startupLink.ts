@@ -50,9 +50,22 @@ export function useStartupLink(initial: MaPartyRow | null, form: FormBridge) {
     toast.show('스타트업 DB를 연결하고 기업 정보를 원장 값으로 변경했습니다.', 'success')
   }
 
+  /**
+   * 연결을 끊는다 — **이름 칸도 함께 비운다**(2026-09-08 사용자 지정).
+   *
+   * 남겨 두지 않는 이유는 그 글자의 출처다. 연결하는 동안 이름 칸은 손으로 적을 수 없고
+   * (폼이 비활성으로 세운다) 거기 선 글자는 전부 원장이 준 값이다. 연결을 끊고도 그 값이
+   * 남으면 **어디서 왔는지 아무도 답할 수 없는 이름**이 되고, 담당자는 그것을 자기가 적은
+   * 값으로 읽어 그대로 저장한다. 비워 두면 다음 행동이 하나로 정해진다 — 다시 찾아 연결하거나
+   * 직접 적거나.
+   *
+   * 분야·대표자·이메일은 비우지 않는다. 그 셋은 연결이 **복사해 준** 값이라 이 레코드의
+   * 것이 되었고(`apply` 주석), 이름과 달리 화면이 출처를 표시하지도 잠그지도 않는다.
+   */
   const clear = () => {
     setStartupId(null)
     setStartupName('')
+    form.setText('name', '')
   }
 
   return { startupId, startupName, picking, setPicking, apply, clear }

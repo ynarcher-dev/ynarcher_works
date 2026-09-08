@@ -36,7 +36,7 @@ const CARD_META: ReadonlyArray<{ key: QuickReviewKey; label: string; group: stri
   { key: 'products', label: '제품·서비스', group: 'product' },
   { key: 'financials', label: '재무 요약', group: 'financial' },
   { key: 'valuation', label: 'Valuation', group: 'financial' },
-  { key: 'highlights', label: '투자 포인트', group: 'thesis' },
+  { key: 'highlights', label: '핵심 포인트', group: 'thesis' },
 ]
 
 /** 서버의 EXTRACTION_FAMILY와 같은 키를 쓴다(profile.ts). 어긋나면 격자의 묶음 머리가 거짓이 된다. */
@@ -44,7 +44,7 @@ const CARD_GROUPS = [
   { key: 'overview', label: '개요' },
   { key: 'product', label: '제품' },
   { key: 'financial', label: '재무' },
-  { key: 'thesis', label: '투자 포인트' },
+  { key: 'thesis', label: '핵심 포인트' },
 ]
 
 export const QUICK_REVIEW_LABEL: Record<QuickReviewKey, string> = CARD_META.reduce(
@@ -107,11 +107,37 @@ function hasContent(value: unknown): boolean {
 }
 
 /**
+ * AI가 만들지 않으며 절이 교체돼도 **살아남아야 하는 키**.
+ *
+ * 이미지는 담당자가 올린 파일의 경로다. 모델은 그림을 만들지 않으므로 응답에 이 키가 없고,
+ * 절을 통째로 갈아 끼우는 병합이 그대로 돌면 초안을 한 번 만들 때마다 그림이 조용히 사라진다
+ * (STARTUP의 '보존 키'와 같은 함정이다 — 저장 단위가 값 하나보다 크면 언제나 생긴다).
+ *
+ * 목록으로 두는 것이 요점이다. 절마다 손으로 되붙이면 절이 늘 때 빠뜨리는 자리가 생기고,
+ * 빠뜨린 것은 오류가 아니라 **조용한 삭제**로만 드러난다.
+ */
+const PRESERVED_KEYS: Partial<Record<QuickReviewKey, string[]>> = {
+  intro: ['images'],
+  products: ['images'],
+}
+
+/** 새 절 값에 보존 키를 되얹는다. AI가 그 키를 보냈어도 지금 값이 이긴다(그림의 주인은 사람이다). */
+function keepPreserved(key: QuickReviewKey, next: unknown, current: QuickReview): unknown {
+  const keys = PRESERVED_KEYS[key]
+  if (!keys || next == null || typeof next !== 'object' || Array.isArray(next)) return next
+  const before = (current as unknown as Record<string, unknown>)[key]
+  if (before == null || typeof before !== 'object') return next
+  const kept: Record<string, unknown> = { ...(next as Record<string, unknown>) }
+  for (const k of keys) kept[k] = (before as Record<string, unknown>)[k]
+  return kept
+}
+
+/**
  * 체크된 절만 지금 문서 위에 얹은 새 문서를 만든다.
  *
  * 원본은 그대로 두므로(취소하면 원래 값이다) 화면은 결과를 폼 상태에 넣기만 하면 된다.
- * 절 하나가 통째로 교체되므로 STARTUP의 '보존 키' 문제(한 컬럼을 여러 카드가 나눠 쓰는 자리)가
- * 여기에는 없다 — 절 하나에 키 하나다.
+ * 절 하나가 통째로 교체되므로 **절 안에 있지만 AI가 만들지 않는 값**은 따로 지켜야 한다
+ * (`PRESERVED_KEYS`).
  */
 export function applyQuickReviewDraft(
   current: QuickReview,
@@ -130,7 +156,7 @@ export function applyQuickReviewDraft(
     if (!(key in envelope.cards)) continue
     const value = envelope.cards[key]
     if (hasContent(value)) {
-      merged[key] = value
+      merged[key] = keepPreserved(key, value, current)
       filled.push(key)
     } else {
       // 못 찾은 절은 기존 값을 그대로 둔다(빈 값으로 덮지 않는다).
@@ -154,6 +180,7 @@ export function applyQuickReviewDraft(
       notes: envelope.notes,
       evidence: envelope.evidence,
       skippedSources: envelope.skippedSources ?? [],
+      composeFailed: envelope.composeFailed ?? null,
     },
   }
 }

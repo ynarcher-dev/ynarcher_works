@@ -242,6 +242,8 @@ export async function requestAiFill<K extends string>(input: AiFillInput<K>): Pr
     // 한 요청이 실패해도 나머지 카드는 온다. 실패한 카드는 값이 아니라 **이름과 사유**로 온다 —
     // 그 카드의 폼 값을 건드리지 않기 위해서다(없는 카드는 병합이 그대로 둔다).
     failedCards: data.failedCards ?? [],
+    // 문장을 다듬지 못한 사유. 값은 이미 들어 있으므로 카드 실패와 갈라 나른다.
+    composeFailed: data.composeFailed ?? null,
   }
 }
 

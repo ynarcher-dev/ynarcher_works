@@ -13,6 +13,8 @@ import type { Warn } from '../_shared/aiFill/envelope.ts'
 import { CARD_KEYS, CARD_LABELS, CARD_SHAPE, isCardKey, LIMITS, type CardKey } from './cards.ts'
 import { CARD_SCHEMAS } from './schema.ts'
 import { buildPrompt } from './prompts.ts'
+import { quickReviewCompose } from './compose.ts'
+import { crossCheckCards } from './crossCheck.ts'
 import { normalizeCard } from './validate.ts'
 
 /**
@@ -90,6 +92,18 @@ export const maSellerQuickReviewProfile: AiFillProfile<CardKey, QuickReviewConte
   normalizeCard(key: CardKey, raw: unknown, warn: Warn<CardKey>) {
     return normalizeCard(key, raw, warn)
   },
+
+  crossCheck(cards, warn) {
+    crossCheckCards(cards, warn)
+  },
+
+  /**
+   * 2단계 작문 패스를 켠다 — **이 대상이 원장의 칸이 아니라 읽히는 문서이기 때문**이다.
+   *
+   * STARTUP 프로파일에는 이 값이 없다. 저쪽에서 뽑는 것은 상세페이지 카드의 칸이라 1단계의
+   * 명사구가 그대로 최종본이고, 문장으로 세울 자리가 없다.
+   */
+  compose: quickReviewCompose,
 
   // 두 판정 모두 정책이 쓰는 식을 되묻는다 — 복제하면 정책이 바뀌는 날 함수는 옛 규칙으로
   // 답하고, 어긋난 것을 알려 주는 것이 없다(마이그레이션 20260907230000).

@@ -217,3 +217,47 @@ describe('isOfficeMime', () => {
     expect(isOfficeMime('application/vnd.ms-excel')).toBe(false)
   })
 })
+
+describe('hwpx', () => {
+  /** 구역 XML 한 장. 표준 접두사(`hp:`)로 세운다. */
+  const section = (body: string) => `<hml><hp:sec>${body}</hp:sec></hml>`
+  const para = (t: string) => `<hp:p><hp:run><hp:t>${t}</hp:t></hp:run></hp:p>`
+
+  it('문단을 줄로 세우고 구역을 번호 순으로 잇는다', async () => {
+    const out = await text(
+      zipOf({
+        // 10번이 2번 앞에 오면 회의록의 앞뒤가 뒤집힌다.
+        'Contents/section10.xml': section(para('열째 구역')),
+        'Contents/section2.xml': section(para('둘째 구역')),
+        'Contents/section0.xml': section(para('첫째 구역')),
+      }),
+      OFFICE_MIMES.hwpx,
+    )
+    expect(out).toBe('[문단 1-3]\n첫째 구역\n둘째 구역\n열째 구역')
+  })
+
+  it('표를 문단에서 떼어 자기 자리로 세운다', async () => {
+    const table =
+      '<hp:tbl><hp:tr>' +
+      '<hp:tc><hp:subList>' + para('항목') + '</hp:subList></hp:tc>' +
+      '<hp:tc><hp:subList>' + para('값') + '</hp:subList></hp:tc>' +
+      '</hp:tr></hp:tbl>'
+    const out = await text(zipOf({ 'Contents/section0.xml': section(para('앞 문단') + table) }), OFFICE_MIMES.hwpx)
+    expect(out).toBe('[문단 1-1]\n앞 문단\n\n[표 1]\n항목\t값')
+  })
+
+  it('접두사가 달라도 읽는다(어긋나면 오류가 아니라 빈 결과가 된다)', async () => {
+    const xml = '<hml><p><run><t>접두사가 없는 구역 문서입니다</t></run></p></hml>'
+    expect(await text(zipOf({ 'Contents/section0.xml': xml }), OFFICE_MIMES.hwpx)).toBe(
+      '[문단 1-1]\n접두사가 없는 구역 문서입니다',
+    )
+  })
+
+  it('XML 엔티티를 되돌린다', async () => {
+    const out = await text(
+      zipOf({ 'Contents/section0.xml': section(para('㈜알투씨 &amp; 파트너 &lt;주&gt;')) }),
+      OFFICE_MIMES.hwpx,
+    )
+    expect(out).toBe('[문단 1-1]\n㈜알투씨 & 파트너 <주>')
+  })
+})

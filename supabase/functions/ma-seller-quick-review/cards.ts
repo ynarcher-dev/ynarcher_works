@@ -28,7 +28,7 @@ export const CARD_LABELS: Record<CardKey, string> = {
   products: '제품·서비스',
   financials: '재무 요약',
   valuation: 'Valuation',
-  highlights: '투자 포인트',
+  highlights: '핵심 포인트',
 }
 
 /**

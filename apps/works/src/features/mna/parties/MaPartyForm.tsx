@@ -207,11 +207,20 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
                 as="div"
               >
                 {/* 돋보기는 이름을 대신 채워 주는 것이 아니라 원장의 행을 가리키는 일이다.
-                    그래서 고른 뒤에도 이름 칸은 그대로 고칠 수 있다. 자리가 칸 안쪽 오른쪽
-                    끝인 것은 바로 아래 분야 칸의 돋보기와 같은 규격이기 때문이며, 그 규격은
-                    화면이 아니라 공용 `Input`의 `action` 슬롯이 소유한다. */}
+                    자리가 칸 안쪽 오른쪽 끝인 것은 바로 아래 분야 칸의 돋보기와 같은 규격이기
+                    때문이며, 그 규격은 화면이 아니라 공용 `Input`의 `action` 슬롯이 소유한다.
+
+                    **연결된 동안 이 칸은 잠긴다**(2026-09-08 사용자 지정). 종전에는 고른 뒤에도
+                    고칠 수 있었는데, 그러면 바로 아래 줄의 `스타트업 DB 연결: ○○`와 칸의 글자가
+                    어긋나고 어느 쪽이 이 레코드의 이름인지 화면이 답하지 못한다. 잠그면 답은
+                    언제나 원장이다.
+
+                    잠금이 돋보기까지 함께 끄는 것은 `Input`이 `action`의 비활성을 칸에서
+                    물려받기 때문인데, 그 편이 흐름이 하나로 선다 — 다른 기업으로 바꾸려면
+                    '연결 해제'가 먼저이고, 그때 이름이 비므로 옛 이름이 새 연결에 섞이지 않는다. */}
                 <Input
                   invalid={Boolean(errors.name)}
+                  disabled={Boolean(link.startupId)}
                   action={<Search />}
                   actionLabel="스타트업 DB에서 찾기"
                   onActionClick={() => link.setPicking(true)}
@@ -289,7 +298,11 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
           {config.hasQuickReview && (
             <>
               <SectionHeading title="퀵 리뷰" accent />
-              <MaQuickReviewFields qr={quickReview} onChange={setQuickReview} />
+              <MaQuickReviewFields
+                qr={quickReview}
+                onChange={setQuickReview}
+                sellerId={recordId}
+              />
               <MaQuickReviewFinancialFields qr={quickReview} onChange={setQuickReview} />
             </>
           )}

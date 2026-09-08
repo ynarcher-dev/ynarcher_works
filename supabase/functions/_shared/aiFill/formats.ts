@@ -45,10 +45,11 @@ const SUPPORTED_MIMES = new Set([
  */
 const EXTENSION_MIMES: Record<string, string> = {
   pdf: 'application/pdf',
-  // 우리가 열어서 읽는 것들. 구형(.xls·.doc·.ppt)은 ZIP이 아니라 다른 이진 형식이라 못 연다.
+  // 우리가 열어서 읽는 것들. 구형(.xls·.doc·.ppt·.hwp)은 ZIP이 아니라 다른 이진 형식이라 못 연다.
   xlsx: OFFICE_MIMES.xlsx,
   docx: OFFICE_MIMES.docx,
   pptx: OFFICE_MIMES.pptx,
+  hwpx: OFFICE_MIMES.hwpx,
   // 글자만 담긴 것들 — 평문으로 보낸다.
   txt: 'text/plain',
   md: 'text/plain',
@@ -72,7 +73,7 @@ const EXTENSION_MIMES: Record<string, string> = {
 
 /** 담당자에게 보여 줄 지원 형식 안내(화면과 서버가 같은 문구를 쓴다). */
 export const SUPPORTED_HINT =
-  'PDF · 이미지(PNG·JPG·WEBP·BMP) · 오피스(XLSX·DOCX·PPTX) · 텍스트(TXT·MD·CSV·HTML·XML·RTF·JSON)'
+  'PDF · 이미지(PNG·JPG·WEBP·BMP) · 오피스(XLSX·DOCX·PPTX) · 한글(HWPX) · 텍스트(TXT·MD·CSV·HTML·XML·RTF·JSON)'
 
 function extensionOf(fileName: string): string {
   return /\.([a-z0-9]+)$/i.exec(fileName)?.[1]?.toLowerCase() ?? ''
@@ -90,6 +91,9 @@ export function resolveMime(contentType: string | null | undefined, fileName: st
   const ct = (contentType ?? '').split(';')[0].trim().toLowerCase()
   if (SUPPORTED_MIMES.has(ct) || isOfficeMime(ct)) return ct
   // 별칭 몇 가지 — 같은 것을 다르게 적는 값들이라 목록을 늘리는 것이 아니다.
+  // HWPX는 브라우저가 형식을 몰라 한컴이 쓰는 값(`application/haansofthwpx`)을 그대로 적는
+  // 일이 잦다. 확장자가 먼저 걸리므로 대개 여기까지 오지 않지만, 이름이 어긋난 행이 실제로 있다.
+  if (ct === 'application/haansofthwpx' || ct === 'application/vnd.hancom.hwpx') return OFFICE_MIMES.hwpx
   if (ct === 'image/jpg') return 'image/jpeg'
   if (ct === 'text/markdown' || ct === 'text/md') return 'text/plain'
   if (ct === 'application/xml') return 'text/xml'

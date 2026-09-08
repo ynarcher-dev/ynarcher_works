@@ -26,6 +26,11 @@
     "supabase/functions/_shared/aiFill/**/*.ts",
     "supabase/functions/_shared/docParse/**/*.ts",
     "supabase/functions/startup-ai-fill/**/*.ts",
-    "supabase/functions/startup-material-extract/**/*.ts"
+    "supabase/functions/startup-material-extract/**/*.ts",
+    // 대상이 늘면 여기 함께 늘린다. 목록을 손으로 드는 것은 이 설정이 **원격 import를 가진
+    // 트리만** 골라 보기 때문인데, 빠뜨리면 검사되지 않는다는 사실이 아무 데서도 드러나지
+    // 않는다 — 실제로 M&A 함수 두 벌이 한동안 이 목록 밖에 있었다.
+    "supabase/functions/ma-seller-quick-review/**/*.ts",
+    "supabase/functions/ma-seller-material-extract/**/*.ts"
   ]
 }

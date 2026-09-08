@@ -8,8 +8,11 @@
   }
 
   /* 리치 텍스트 에디터(Tiptap) 콘텐츠 조판 — .rte 스코프 */
+  /* 끊을 자리가 없는 문자열(붙여 넣은 긴 URL·해시)은 어절 중간에서라도 접는다(2026-09-08).
+     본문은 폭이 정해진 카드 안에 서므로, 접지 않으면 그 한 줄이 카드를 가로로 밀어 카드 밖으로
+     삐져나간다 — 옆 칸을 밀어내는 것은 그 줄 하나인데 무너지는 것은 화면 전체의 격자다. */
   .rte .ProseMirror {
-    @apply text-body leading-relaxed text-gray-800;
+    @apply break-words text-body leading-relaxed text-gray-800;
     outline: none;
   }
   /* 최소 높이는 **적는 자리에만** 준다(2026-09-07).

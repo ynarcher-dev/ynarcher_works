@@ -129,6 +129,15 @@ export interface GenerateOptions<K extends string> {
   normalize: (parsed: unknown) => { envelope: DraftEnvelope<K>; stats: EnvelopeStats }
   /** 로그에서 이 호출을 부르는 이름(묶음 번호). 어느 묶음이 느렸는지 답한다. */
   label?: string
+  /**
+   * 표집 온도. 기본값은 사실을 옮기는 작업의 값(0.2)이다.
+   *
+   * 인자로 연 것은 **작문 패스가 다른 일을 하기** 때문이다. 사실 추출은 같은 자료에서 같은
+   * 답이 나와야 하지만, 문장을 세우는 일에서 온도를 그대로 두면 지시에 든 예시의 문형을
+   * 그대로 베껴 문서마다 같은 골격이 나온다. 그래도 크게 올리지는 않는다 — 여기서 늘어나야
+   * 하는 것은 표현의 폭이지 사실의 폭이 아니다.
+   */
+  temperature?: number
 }
 
 /** 사용량 응답에서 수를 꺼낸다. 필드가 없거나 수가 아니면 null(0으로 세면 거짓이 된다). */
@@ -154,7 +163,7 @@ export async function generateDraft<K extends string>(
     contents: [{ parts: opts.parts }],
     generationConfig: {
       // 사실을 옮기는 작업이라 온도를 낮게 둔다(같은 자료에서 같은 답이 나와야 한다).
-      temperature: 0.2,
+      temperature: opts.temperature ?? 0.2,
       responseMimeType: 'application/json',
       responseSchema: opts.schema,
     },

@@ -18,6 +18,8 @@ export const AI_EXTENSION_MIMES: Record<string, string> = {
   xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  // 한글 문서. 구형 .hwp는 ZIP이 아니라 열지 못한다(서버 주석과 같은 근거).
+  hwpx: 'application/hwp+zip',
   txt: 'text/plain',
   md: 'text/plain',
   markdown: 'text/plain',
@@ -38,12 +40,13 @@ export const AI_EXTENSION_MIMES: Record<string, string> = {
   bmp: 'image/bmp',
 }
 
-/** 서버 SUPPORTED_MIMES + 오피스 3종과 한 벌(둘 다 resolveMime이 통과시키는 값이다). */
+/** 서버 SUPPORTED_MIMES + 우리가 여는 형식 4종과 한 벌(둘 다 resolveMime이 통과시키는 값이다). */
 export const AI_SUPPORTED_MIMES = [
   'application/pdf',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/hwp+zip',
   'application/json',
   'text/plain',
   'text/csv',
@@ -60,7 +63,7 @@ export const AI_SUPPORTED_MIMES = [
 
 /** 담당자에게 보여 줄 지원 형식 안내. 서버 SUPPORTED_HINT와 같은 문구다. */
 export const AI_SUPPORTED_HINT =
-  'PDF · 이미지(PNG·JPG·WEBP·BMP) · 오피스(XLSX·DOCX·PPTX) · 텍스트(TXT·MD·CSV·HTML·XML·RTF·JSON)'
+  'PDF · 이미지(PNG·JPG·WEBP·BMP) · 오피스(XLSX·DOCX·PPTX) · 한글(HWPX) · 텍스트(TXT·MD·CSV·HTML·XML·RTF·JSON)'
 
 function extensionOf(fileName: string): string {
   return /\.([a-z0-9]+)$/i.exec(fileName)?.[1]?.toLowerCase() ?? ''
@@ -77,6 +80,8 @@ export function resolveAiMime(contentType: string | null | undefined, fileName: 
   if (byExt) return byExt
   const ct = baseMime(contentType)
   if ((AI_SUPPORTED_MIMES as readonly string[]).includes(ct)) return ct
+  // 브라우저가 형식을 모르면 한컴이 쓰는 값을 그대로 적는다(서버 resolveMime과 한 벌).
+  if (ct === 'application/haansofthwpx' || ct === 'application/vnd.hancom.hwpx') return 'application/hwp+zip'
   if (ct === 'image/jpg') return 'image/jpeg'
   if (ct === 'text/markdown' || ct === 'text/md') return 'text/plain'
   if (ct === 'application/xml') return 'text/xml'

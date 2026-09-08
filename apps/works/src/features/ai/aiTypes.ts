@@ -62,6 +62,15 @@ export interface AiFillEnvelope<K extends string> {
    * 않는다.
    */
   failedCards?: AiFailedCards<K>[]
+  /**
+   * 문장 다듬기(2단계 작문 패스)를 하지 못한 사유.
+   *
+   * **실패가 아니라 알림이다.** 값은 1단계에서 이미 채워져 손에 있고, 못 한 것은 그것을 문장으로
+   * 세우는 일뿐이다. 그래서 `failedCards`와 같은 자리에 두지 않는다 — 저쪽은 카드가 통째로 비어
+   * 다시 눌러야 하는 일이고, 이쪽은 값이 다 있는데 문체가 거친 것이다. 두 축을 뭉치면 담당자가
+   * 멀쩡한 초안을 버리고 다시 실행한다.
+   */
+  composeFailed?: string | null
 }
 
 /** 실행 결과 — 창 안 결과 패널이 읽는다. */
@@ -76,6 +85,8 @@ export interface AiFillOutcome<K extends string> {
   evidence: Partial<Record<K, AiEvidence[]>>
   /** 읽지 못한 자료의 사유. 봉투에서 그대로 넘어온다. */
   skippedSources: string[]
+  /** 문장을 다듬지 못한 사유. 값은 채워졌으므로 다시 실행하지 않아도 된다. */
+  composeFailed?: string | null
 }
 
 /**

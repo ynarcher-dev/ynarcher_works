@@ -28,6 +28,17 @@ export const OFFICE_MIMES = {
   xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  /**
+   * 한글 문서(HWPX) — **ZIP이라 열린다.**
+   *
+   * 구형 `.hwp`는 목록에 없다. 그쪽은 ZIP이 아니라 OLE 복합 문서에 자체 압축을 얹은 이진
+   * 형식이라 `.xls`·`.doc`과 같은 이유로 열지 못한다. HWPX는 OWPML — `Contents/section0.xml`
+   * 꼴의 XML을 묶은 ZIP이므로 우리가 이미 가진 리더로 그대로 읽힌다.
+   *
+   * 넣은 이유는 그 형식으로 오는 자료가 **회의록**이기 때문이다. 등기·증명서류가 사실을
+   * 말한다면 회의록에는 담당자의 판단이 담기고, 그것이 초안에서 가장 비어 있던 부분이다.
+   */
+  hwpx: 'application/hwp+zip',
 } as const
 
 const OFFICE_MIME_SET: ReadonlySet<string> = new Set(Object.values(OFFICE_MIMES))
@@ -311,6 +322,110 @@ async function xlsxChunks(buf: ArrayBuffer, index: Map<string, ZipEntry>): Promi
   return out
 }
 
+// ── 한글(HWPX) ─────────────────────────────────────────────────────────
+//
+// OWPML은 워드와 닮았다 — 문단이 `<hp:p>`, 글자가 `<hp:t>`, 표가 `<hp:tbl>`/`<hp:tr>`/`<hp:tc>`다.
+// 그래서 구조를 가르는 방식(표를 문단에서 떼고 각각 조각으로 세운다)을 워드에서 그대로 가져온다.
+//
+// 접두사를 고정하지 않고 `(?:\w+:)?`로 받는 것이 워드와 갈리는 유일한 지점이다. 표준은 `hp:`이지만
+// 한컴 버전에 따라 다른 접두사로 저장되는 파일이 있고, 접두사 하나가 어긋나면 오류가 아니라
+// **빈 결과**가 나온다 — 담당자는 왜 아무것도 안 채워졌는지 알 수 없다. 형식은 이미 MIME으로
+// 갈라져 있으므로 여기서 접두사를 느슨하게 받아도 다른 형식의 태그를 집을 일이 없다.
+
+/** 구역 파일 이름 → 번호. `Contents/section0.xml`의 0. */
+const sectionNo = (name: string) => Number(/section(\d+)\.xml$/i.exec(name)?.[1] ?? 0)
+
+/** 문단·글자만 모은다. 문단 끝(`</hp:p>`)과 줄바꿈이 줄을 가른다. */
+function hwpxText(xml: string): string {
+  const out: string[] = []
+  const re = /<(?:\w+:)?t\b[^>]*>([\s\S]*?)<\/(?:\w+:)?t>|<(?:\w+:)?tab\b[^>]*\/?>|<\/(?:\w+:)?p>/g
+  for (let m = re.exec(xml); m; m = re.exec(xml)) {
+    if (m[1] !== undefined) out.push(unescapeXml(m[1]))
+    else if (/tab/.test(m[0])) out.push('\t')
+    else out.push('\n')
+  }
+  return out.join('')
+}
+
+/** 표 한 칸의 글자. 칸 안의 줄바꿈은 공백으로 눕힌다(열이 어긋나지 않게). */
+function hwpxCell(xml: string): string {
+  return hwpxText(xml).replace(/[\t\n\r]+/g, ' ').trim()
+}
+
+function hwpxTable(xml: string): string[][] {
+  const rows: string[][] = []
+  const rowRe = /<(?:\w+:)?tr\b[^>]*>([\s\S]*?)<\/(?:\w+:)?tr>/g
+  for (let r = rowRe.exec(xml); r; r = rowRe.exec(xml)) {
+    const cells: string[] = []
+    const cellRe = /<(?:\w+:)?tc\b[^>]*>([\s\S]*?)<\/(?:\w+:)?tc>/g
+    for (let c = cellRe.exec(r[1]!); c; c = cellRe.exec(r[1]!)) cells.push(hwpxCell(c[1]!))
+    rows.push(cells)
+  }
+  return tidyTable(rows)
+}
+
+/** 구역 하나를 문단 묶음과 표로 가른다(워드의 `docxParts`와 같은 규칙). */
+function hwpxParts(xml: string): { paragraphs: string[]; tables: string[][][] } {
+  const tables: string[][][] = []
+  const outside: string[] = []
+  const tblRe = /<(?:\w+:)?tbl\b[^>]*>[\s\S]*?<\/(?:\w+:)?tbl>/g
+  let cursor = 0
+  for (let m = tblRe.exec(xml); m; m = tblRe.exec(xml)) {
+    outside.push(xml.slice(cursor, m.index))
+    const rows = hwpxTable(m[0])
+    if (rows.length > 0) tables.push(rows)
+    cursor = m.index + m[0].length
+  }
+  outside.push(xml.slice(cursor))
+
+  const paragraphs = outside
+    .map((part) => hwpxText(part))
+    .join('\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+
+  return { paragraphs, tables }
+}
+
+/**
+ * 구역을 번호 순으로 이어 읽는다.
+ *
+ * 구역마다 조각을 나누지 않고 문단을 통째로 이어 붙이는 것은 **구역이 사람에게는 자리가
+ * 아니기 때문**이다. 워드의 '문단 1-40'은 읽는 사람이 되짚을 수 있는 말이지만 '구역 2'는
+ * 한글이 편집 설정(용지·단)을 가르는 단위라, 근거로 적혀도 문서에서 그 자리를 찾을 수 없다.
+ */
+async function hwpxChunks(buf: ArrayBuffer, index: Map<string, ZipEntry>): Promise<ExtractChunk[]> {
+  const sections = [...index.keys()]
+    .filter((n) => /(^|\/)section\d+\.xml$/i.test(n))
+    .sort((a, b) => sectionNo(a) - sectionNo(b))
+
+  const paragraphs: string[] = []
+  const tables: string[][][] = []
+  for (const name of sections) {
+    const xml = await readZipText(buf, index.get(name)!)
+    if (!xml) continue
+    const part = hwpxParts(xml)
+    paragraphs.push(...part.paragraphs)
+    tables.push(...part.tables)
+  }
+
+  const out: ExtractChunk[] = []
+  for (let i = 0; i < paragraphs.length; i += PARAGRAPHS_PER_CHUNK) {
+    const slice = paragraphs.slice(i, i + PARAGRAPHS_PER_CHUNK)
+    out.push({
+      kind: 'paragraph',
+      location: `문단 ${i + 1}-${i + slice.length}`,
+      text: tidy(slice.join('\n')),
+      tables: [],
+    })
+  }
+  for (const [i, rows] of tables.entries()) {
+    out.push({ kind: 'table', location: `표 ${i + 1}`, text: tableToText(rows), tables: [rows] })
+  }
+  return out
+}
+
 // ── 진입점 ─────────────────────────────────────────────────────────────
 
 async function docxChunks(buf: ArrayBuffer, index: Map<string, ZipEntry>): Promise<ExtractChunk[]> {
@@ -352,6 +467,7 @@ export async function officeChunks(
   if (mime === OFFICE_MIMES.docx) chunks = await docxChunks(buf, index)
   else if (mime === OFFICE_MIMES.pptx) chunks = await pptxChunks(buf, index)
   else if (mime === OFFICE_MIMES.xlsx) chunks = await xlsxChunks(buf, index)
+  else if (mime === OFFICE_MIMES.hwpx) chunks = await hwpxChunks(buf, index)
 
   // 상한은 조각 단위로 자른다. 글자 한복판에서 끊으면 표의 마지막 행이 반쪽으로 남아,
   // 모델이 그 반쪽을 값으로 읽는다.

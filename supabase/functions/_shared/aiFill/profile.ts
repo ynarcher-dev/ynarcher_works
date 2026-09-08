@@ -12,6 +12,7 @@
 // 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §16.16
 
 import type { SourceChunk } from './chunks.ts'
+import type { ComposeSpec } from './compose.ts'
 import type { SchemaNode } from './schema.ts'
 import type { Warn } from './envelope.ts'
 
@@ -83,6 +84,26 @@ export interface AiFillProfile<K extends string, C> {
   buildPrompt(cards: K[], subject: string, context: C): string
   /** 카드 한 장의 값을 규격에 맞춘다. 규격 밖 값은 null로 치환하고 `warn`에 원문을 남긴다. */
   normalizeCard(key: K, raw: unknown, warn: Warn<K>, context: C): unknown
+
+  /**
+   * 카드를 **가로질러** 보는 판정. 없으면 하지 않는다.
+   *
+   * 정규화가 이 일을 못 하는 것은 엔진이 그것을 카드마다 따로 부르기 때문이고, 그 구조는
+   * 일부러 그렇다 — 한 카드의 규격이 다른 카드의 값에 얽히면 카드를 늘릴 때마다 기존 카드의
+   * 정규화를 다시 봐야 한다. 그래서 "같은 문장이 두 카드에 앉지 않았는가" 같은 물음만 여기서
+   * 답하고, **고치지 않고 알리기만 한다**(어느 쪽을 다시 쓸지는 사람이 정한다).
+   *
+   * 작문 패스가 있으면 그 뒤에 부른다 — 판정 대상은 담당자가 실제로 보게 될 문장이다.
+   */
+  crossCheck?(cards: Partial<Record<K, unknown>>, warn: Warn<K>): void
+
+  /**
+   * 2단계 작문 패스의 규격. 없으면 그 패스는 아예 돌지 않는다(모델 호출이 늘지 않는다).
+   *
+   * 대상마다 필요가 다르다 — 원장의 칸을 채우는 대상에서는 1단계의 명사구가 그대로 최종본이고,
+   * 읽는 사람을 앞에 둔 문서에서만 문장이 필요하다.
+   */
+  compose?: ComposeSpec<K, C>
 
   /** 이 레코드를 고칠 수 있는가. 판정식을 복제하지 않고 정책이 쓰는 함수를 되묻는다. */
   canWrite(caller: CallerClient, targetId: string): Promise<boolean>

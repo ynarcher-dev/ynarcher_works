@@ -32,10 +32,20 @@ export interface InfoFieldProps {
 export function InfoField({ label, value, meta, className, valueClassName }: InfoFieldProps) {
   const empty = value === null || value === undefined || value === ''
   return (
-    <div className={cn('flex items-baseline gap-2', className)}>
+    /*
+      `min-w-0`·`break-words`가 여기 있는 이유(2026-09-08).
+
+      이 줄은 대개 `InfoGrid`의 칸 하나로 선다. 격자 트랙(`1fr`)의 최소 폭은 기본이 내용의
+      min-content라, 끊을 자리가 없는 값 하나(이메일·URL·긴 사업자번호)가 들어오면 그 칸이
+      값만큼 넓어지고 **격자 전체가 카드를 넘친다** — 무너지는 것은 그 한 줄이 아니라 옆 칸
+      둘까지 포함한 줄 전체다. 칸이 줄어들 수 있게 열어 두고(`min-w-0`), 대신 값이 필요할 때
+      어절 중간에서 접히게 한다(`break-words`). 값을 자를지(`truncate`) 접을지는 여전히 쓰는
+      쪽이 `valueClassName`으로 정한다 — 뒤에 오므로 그 지정이 이긴다.
+    */
+    <div className={cn('flex min-w-0 items-baseline gap-2', className)}>
       <span className={cn('shrink-0', cardText.label)}>{label}:</span>
       <span
-        className={cn(meta ? cardText.meta : cardText.value, valueClassName)}
+        className={cn('min-w-0 break-words', meta ? cardText.meta : cardText.value, valueClassName)}
         title={typeof value === 'string' ? value : undefined}
       >
         {/*
@@ -88,7 +98,15 @@ export function InfoRows({ items, className }: InfoRowsProps) {
         return (
           <div key={item.label} className="contents">
             <dt className={cardText.label}>{item.label}</dt>
-            <dd className={cn('min-w-0', item.meta ? cardText.meta : cardText.value, item.valueClassName)}>
+            {/* 값 칸도 접힐 수 있어야 한다 — `minmax(0,1fr)`는 칸이 줄어드는 것만 허용할 뿐,
+                끊을 자리가 없는 값은 그 칸을 넘어 옆으로 삐져나간다(`InfoField` 주석 참조). */}
+            <dd
+              className={cn(
+                'min-w-0 break-words',
+                item.meta ? cardText.meta : cardText.value,
+                item.valueClassName,
+              )}
+            >
               {empty ? <EmptyValue /> : item.value}
             </dd>
           </div>
