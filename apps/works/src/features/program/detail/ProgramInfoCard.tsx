@@ -133,7 +133,7 @@ export function ProgramInfoCard({ program }: { program: Program }) {
           </Badge>
         </>
       }
-      description={config.key === 'mna' ? undefined : program.description}
+      description={program.description}
       info={
         <InfoGrid>
           <Info label="사업코드" value={program.code || '-'} />
