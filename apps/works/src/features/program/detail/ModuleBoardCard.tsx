@@ -19,7 +19,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { useState } from 'react'
-import { MODULE_TYPES } from '@/features/program/config'
+import { MODULE_BOARD_LABEL, MODULE_TYPES } from '@/features/program/config'
 import { ModuleVisibilityBadge } from '@/features/program/detail/ModuleVisibilityBadge'
 import {
   useIsProgramPm,
@@ -99,7 +99,7 @@ export function ModuleBoardCard({
 
   if (isLoading) {
     return (
-      <Card title="WORK">
+      <Card title={MODULE_BOARD_LABEL}>
         <Spinner />
       </Card>
     )
@@ -227,7 +227,7 @@ export function ModuleBoardCard({
             onClick={() => setAddOpen(true)}
             icon={<Plus className="h-4 w-4" />}
           >
-            WORK 추가
+            {MODULE_BOARD_LABEL} 추가
           </DashedAddButton>
 
           <DisabledModuleSection
@@ -245,7 +245,7 @@ export function ModuleBoardCard({
   return (
     <>
       <Card
-        title="WORK"
+        title={MODULE_BOARD_LABEL}
         actions={
           <div className="flex items-center gap-2">
             {viewToggle}
@@ -261,7 +261,7 @@ export function ModuleBoardCard({
         onClose={() => setExpanded(false)}
         title={
           <>
-            <span className="text-title-sm font-medium text-gray-900">WORK</span>
+            <span className="text-title-sm font-medium text-gray-900">{MODULE_BOARD_LABEL}</span>
             <Badge tone="neutral">{program.title}</Badge>
           </>
         }

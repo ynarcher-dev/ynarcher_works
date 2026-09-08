@@ -12,6 +12,19 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 
+/**
+ * 사업 상세의 운영 모듈 보드를 부르는 이름 — 탭 · 카드 제목 · 추가 버튼 · 확대보기가 함께 읽는다.
+ *
+ * `WORK`에서 옮겼다(2026-09-08 사용자 지정). 그 이름은 화면 어디에나 있는 말이라 이 자리가
+ * 무엇을 모아 두는 곳인지 답하지 못했고, 바로 옆 배지의 `WORKS+GUEST`·`WORKS ONLY`와 한 글자
+ * 차이여서 같은 줄에서 서로를 흐렸다. 여기 서는 것은 담당자가 순서대로 얹어 둔 운영 단계이므로
+ * 그 사실을 그대로 부른다.
+ *
+ * 상수로 두는 이유는 부르는 자리가 넷이기 때문이다 — 네 곳에 따로 적으면 이름을 다시 고치는 날
+ * 한 곳이 남는다.
+ */
+export const MODULE_BOARD_LABEL = '워크플로우'
+
 /** AC 모듈 타입 정의(Program First 14모듈 중 모듈 보드 대상). */
 export interface ModuleTypeDef {
   type: string

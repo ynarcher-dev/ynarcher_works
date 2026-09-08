@@ -1,6 +1,7 @@
 import { Tabs } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import type { Program, ProgramModule } from '@/features/program/hooks'
+import { MODULE_BOARD_LABEL } from '@/features/program/config'
 import { ParticipantPool } from '@/features/program/ParticipantPool'
 import { PERSONA_LABEL, type MasterTable } from '@/features/program/participantHooks'
 import { ModuleBoardCard } from '@/features/program/detail/ModuleBoardCard'
@@ -37,7 +38,7 @@ type LeftTab =
  * 다른 화면을 여는 축**이라(3_9_1 §4), 검색·역할과 같은 층에 두면 필터 한 칸처럼 읽힌다.
  */
 const BASE_TABS: { key: LeftTab; label: string }[] = [
-  { key: 'modules', label: 'WORK' },
+  { key: 'modules', label: MODULE_BOARD_LABEL },
   { key: 'startups', label: PERSONA_LABEL.startups },
   { key: 'networks', label: PERSONA_LABEL.networks },
 ]
@@ -82,7 +83,7 @@ export function ProgramOverviewTab({
     { key: 'qna', label: 'Q&A' },
   ]
   const mnaTabs: { key: LeftTab; label: string }[] = [
-    { key: 'modules', label: 'WORK' },
+    { key: 'modules', label: MODULE_BOARD_LABEL },
     ...(partyKindsOf(program.category).includes('SELL')
       ? [{ key: 'seller' as const, label: 'SELLER' }]
       : []),
