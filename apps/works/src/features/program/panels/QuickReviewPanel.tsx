@@ -1,31 +1,31 @@
-import { EmptyState, PanelCard, Spinner, Tabs } from '@ynarcher/ui'
+import { EmptyState, Spinner, Tabs } from '@ynarcher/ui'
 import { useState } from 'react'
-import { SectionHeading } from '@/components/SectionHeading'
-import { MaQuickReviewSection } from '@/features/mna/parties/MaQuickReviewSection'
+import { MaPartyView } from '@/features/mna/parties/MaPartyView'
 import { MA_BUYER, MA_SELLER, type MaPartyConfig } from '@/features/mna/parties/config'
 import { useMaPartyRecord } from '@/features/mna/parties/hooks'
 import { useMaProgramPartyLinks } from '@/features/mna/programPartyLinks'
 
 /**
- * 퀵리뷰 모듈(전체 화면) — 이 프로젝트에 연결된 매물의 **희망사항과 퀵 리뷰**를 세운다.
+ * 퀵리뷰 모듈(전체 화면) — 이 프로젝트에 연결된 매물을 **원장 상세와 같은 구성**으로 세운다.
  *
  * 2026-09-08 사용자 지정으로 프로젝트 상세의 SELLER·BUYER 탭이 이 모듈로 내려왔다. 탭 줄이
  * 어색했던 이유는 그 줄이 답하는 물음과 달랐기 때문이다 — 그 줄은 '이 프로젝트에서 무엇을
  * 하는가'를 세우는데(워크플로우), 연결된 기업의 내용은 '무엇을 하는가'가 아니라 '무엇을
  * 놓고 하는가'다. 모듈이 되면 검토라는 일이 다른 일들과 같은 줄에서 상태·기간·담당자를 갖는다.
  *
- * **세우는 것을 둘로 줄였다**(사용자 지정 "워크북·희망사항만"). 원장 상세가 세우는 기업정보와
- * 상세내용은 여기 오지 않는다 — 그것들은 '이 회사가 무엇인가'이고, 이 모듈이 답하는 것은
- * '이 건을 어떻게 볼 것인가'다. 회사 자체를 읽으러 갈 곳은 원장 상세 하나로 남는다.
+ * **배치는 `MaPartyView`가 통째로 갖는다**(같은 날 재지정 "콘텐츠 쪽 비율은 2:1로, 구성은
+ * M&A DB와 동일하게"). 처음에는 희망사항과 퀵 리뷰만 손으로 세웠는데 두 가지가 틀렸다 —
+ * 폭이 전면이라 일곱 절 표가 한 줄에 늘어졌고, 무엇보다 **희망사항이 두 번 섰다**(원장
+ * 상세는 그 값을 기업명 아래 부제로 이미 세우고 있었다). 배치를 빌려 오면 그런 어긋남이
+ * 애초에 생기지 않는다.
  *
- * **고치는 자리가 아니다.** 값은 M&A 원장(`ma_sellers.quick_review`·`wish`)이 소유하고 여기서는
- * 비추기만 한다 — 모듈이 값을 들고 있으면 원장을 고쳤을 때 어느 쪽이 진짜인지 판정할 근거가
- * 없다. 고치러 가는 길은 그 원장 상세다.
+ * **고치는 자리가 아니다.** 값은 M&A 원장이 소유하고 여기서는 비추기만 한다 — 모듈이 값을
+ * 들고 있으면 원장을 고쳤을 때 어느 쪽이 진짜인지 판정할 근거가 없다. 그래서 `MaPartyView`가
+ * 세우는 자료 패널도 읽기 전용이고, 고치러 가는 길은 그 원장 상세 하나다.
  *
- * **연결이 둘 이상이면 이어 붙이지 않고 하위 탭으로 가른다**(연결 기업 패널과 같은 판단) —
- * 이어 붙이면 퀵 리뷰가 건수만큼 세로로 쌓여, 두 번째 기업의 주요내용을 보려면 첫 기업의
- * 문서 일곱 절을 스크롤로 지나야 하고 지나는 동안 지금 보는 표가 어느 기업 것인지 화면이
- * 답하지 않는다.
+ * **연결이 둘 이상이면 이어 붙이지 않고 하위 탭으로 가른다** — 이어 붙이면 퀵 리뷰가 건수만큼
+ * 세로로 쌓여, 두 번째 기업의 주요내용을 보려면 첫 기업의 문서 일곱 절을 스크롤로 지나야 하고
+ * 지나는 동안 지금 보는 표가 어느 기업 것인지 화면이 답하지 않는다.
  */
 export function QuickReviewPanel({ programId }: { programId: string }) {
   const { data: links, isLoading } = useMaProgramPartyLinks(programId)
@@ -64,9 +64,9 @@ export function QuickReviewPanel({ programId }: { programId: string }) {
 }
 
 /**
- * 연결 한 건의 검토. 원장 행을 여기서 다시 읽는 이유는 연결 조회가 **목록에 필요한 칸만**
- * 담아 오기 때문이다 — 퀵 리뷰 문서는 무거워 목록 조회가 들고 다닐 값이 아니고, 연결이
- * 여럿이면 그 무게가 건수만큼 곱해진다.
+ * 연결 한 건. 원장 행을 여기서 다시 읽는 이유는 연결 조회가 **목록에 필요한 칸만** 담아
+ * 오기 때문이다 — 퀵 리뷰 문서는 무거워 목록 조회가 들고 다닐 값이 아니고, 연결이 여럿이면
+ * 그 무게가 건수만큼 곱해진다.
  *
  * 훅을 부르는 자리라 연결마다 컴포넌트를 나눈다(반복문 안에서 훅을 부르지 않는다).
  */
@@ -87,27 +87,5 @@ function PartyReview({ party }: { party: { id: string; kind: 'BUY' | 'SELL'; nam
     )
   }
 
-  return (
-    <div className="space-y-4">
-      {/* 기업명은 밴드 제목으로 선다. 카드 제목으로 내리면 그 아래 '희망사항'·'퀵 리뷰'와
-          같은 층이 되어, 무엇이 무엇을 담는지 화면이 답하지 못한다. 연결이 하나뿐이어서
-          탭 줄이 서지 않을 때는 이 제목이 유일한 답이기도 하다. */}
-      <SectionHeading title={record.name} accent />
-
-      <PanelCard title="희망사항">
-        {record.wish ? (
-          <p className="text-body text-gray-900">{record.wish}</p>
-        ) : (
-          <EmptyState
-            title="아직 적힌 희망사항이 없습니다."
-            description={`${config.listLabel} 원장에서 채울 수 있습니다.`}
-          />
-        )}
-      </PanelCard>
-
-      {/* 퀵 리뷰는 켠 원장에서만 선다(`hasQuickReview`) — 바이어는 파는 회사를 소개하는
-          문서를 갖지 않는다. 그때 이 모듈이 답하는 것은 희망사항 하나다. */}
-      {config.hasQuickReview && <MaQuickReviewSection raw={record.quick_review} />}
-    </div>
-  )
+  return <MaPartyView config={config} record={record} />
 }

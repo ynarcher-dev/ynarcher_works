@@ -167,8 +167,12 @@ export function ProgramDetailPage() {
           )}
           {/* 퀵리뷰는 moduleId를 쓰지 않는다 — 세우는 값이 모듈에 매달린 것이 아니라
               **프로젝트에 연결된 매물**의 것이라, 프로젝트 하나에 이 모듈도 하나다
-              (uq_program_modules_quick_review_singleton). 우측 NOTICE도 두지 않는다:
-              그 칸은 게스트에게 나가는 알림이고 이 모듈은 WORKS ONLY다. */}
+              (uq_program_modules_quick_review_singleton).
+
+              ModuleNoticeSplit(우측 NOTICE)로 감싸지 않는 이유는 둘이다. 그 칸은 게스트에게
+              나가는 알림인데 이 모듈은 WORKS ONLY이고, 무엇보다 이 패널은 **자기 2:1 격자를
+              들고 온다**(원장 상세와 같은 구성) — 그 바깥에 또 다른 2:1을 씌우면 본문이
+              4/9로 접혀 퀵 리뷰 표가 설 자리를 잃는다. */}
           {moduleId && tab === 'quick-review' && <QuickReviewPanel programId={id} />}
         </>
       )}
