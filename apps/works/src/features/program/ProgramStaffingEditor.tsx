@@ -21,7 +21,8 @@ interface Props {
   versionId: string
   /** 단계 기간(신규 구간 프리필 + 커버리지 envelope). */
   phaseStart: string
-  phaseEnd: string
+  /** 단계 종료(포함). `null`이면 열린 단계 — 담당자 구간이 끝을 정한다. */
+  phaseEnd: string | null
 }
 
 /**
@@ -140,7 +141,9 @@ export function ProgramStaffingEditor({
                     role: 'MEMBER',
                     allocation_rate: 0,
                     start_date: phaseStart,
-                    end_date: phaseEnd,
+                    // 끝이 열린 단계에서는 비워 둔 채로 담는다. 지어낸 끝을 채워 두면
+                    // 담당자가 그 값을 그대로 저장해 "언제까지인지 정한 적 없는 구간"이 된다.
+                    end_date: phaseEnd ?? '',
                   },
                 ])
               }

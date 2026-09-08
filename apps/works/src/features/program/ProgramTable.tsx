@@ -50,7 +50,7 @@ export function ProgramTable({
         // 사업명(식별 열). 폭·정렬은 종류(type)가 정한다 — 수동 w-*를 적지 않는다.
         // 넘치면 말줄임 + 툴팁(layout="fixed"가 계산 폭을 지키고 넘치는 글자를 자른다).
         key: 'title',
-        header: '사업명',
+        header: `${config.entityNoun}명`,
         type: 'name',
         render: (r) => <span title={r.title}>{r.title}</span>,
       },

@@ -99,7 +99,8 @@ export function PhaseStaffingEditor({
                 role: m.role,
                 allocation_rate: m.allocation_rate,
                 start_date: phase.start,
-                end_date: phase.end,
+                // 열린 단계에서는 복사할 끝이 없다 — 언제까지 맡는지는 사람이 적는다.
+                end_date: phase.end ?? '',
               } as ProgramManagerSegment,
             ]
           : []
@@ -117,7 +118,9 @@ export function PhaseStaffingEditor({
           <div className="flex min-w-0 items-center gap-2">
             <span className={cardText.subhead}>{phase.label}</span>
             <span className="tabular-nums text-body text-gray-600">
-              {phase.start} ~ {phase.end}
+              {/* 열린 단계는 끝을 비워 두지 않고 '종료일 미정'이라 적는다 — 빈 자리는 값이
+                  없는 것인지 아직 못 받은 것인지 말하지 못한다. */}
+              {phase.start} ~ {phase.end ?? '종료일 미정'}
             </span>
           </div>
           {previousPhase && (

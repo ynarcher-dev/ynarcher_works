@@ -62,7 +62,7 @@ export function ProgramFilters({ filters, onChange }: ProgramFiltersProps) {
           필터는 걸 이유가 없다). 등록 폼의 사업구분 필드와 같은 판정이다. */}
       {config.categories.length > 0 && (
         <MultiSelectFilter
-          label="사업구분"
+          label={config.categoryNoun}
           options={categoryOptions}
           selected={filters.categories}
           onChange={(categories) => onChange({ ...filters, categories })}

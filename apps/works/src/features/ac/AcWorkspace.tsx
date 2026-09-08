@@ -31,6 +31,7 @@ export const AC_WORKSPACE: ProgramWorkspaceConfig = {
   // 공고를 낸 주관기관/기업이 있어야 제안이 성립하므로 '주관'을 운용한다(AC 전용).
   hasHostOrganization: true,
   categories: AC_CATEGORIES,
+  categoryNoun: '사업구분',
 }
 
 export function AcWorkspacePage() {

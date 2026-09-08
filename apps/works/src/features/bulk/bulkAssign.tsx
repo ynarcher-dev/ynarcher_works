@@ -179,6 +179,11 @@ function buildStaffing(
       kind: 'MAIN',
       collaboration_ratio: 100,
     })
+    // 열린 단계(종료일 미정)는 여기서 성립하지 않는다 — 이 함수가 담당자 구간을 대신 적는데
+    // 끝이 없는 단계에는 적을 값이 없다. 파일에 종료일이 필수인 이유가 이 한 줄이다.
+    if (phase.end === null) {
+      return `'${title}'의 종료일이 비어 있습니다. 대량 업로드는 담당자 구간을 대신 적으므로 종료일이 있어야 합니다(종료일 미정 건은 등록 폼에서 만드세요).`
+    }
     managers.push({
       user_id: userId,
       org_version_id: phase.versionId,

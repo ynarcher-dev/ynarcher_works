@@ -12,6 +12,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MaProgramPartyPicker } from '@/features/mna/MaProgramPartyField'
 import {
+  partyKindsOf,
   useMaProgramPartyLinks,
   useSetMaProgramPartyLinks,
   type MaProgramPartyKind,
@@ -41,13 +42,12 @@ export function MaProgramPartyPanel({
     const other = (links ?? []).filter((link) => link.kind === otherKind)
     const buyers = kind === 'BUY' ? next : other
     const sellers = kind === 'SELL' ? next : other
+    const kinds = partyKindsOf(category)
     try {
       await save.mutateAsync({
         programId,
-        buyerIds:
-          category === 'BUY' || category === 'SELL_BUY' ? buyers.map((row) => row.id) : [],
-        sellerIds:
-          category === 'SELL' || category === 'SELL_BUY' ? sellers.map((row) => row.id) : [],
+        buyerIds: kinds.includes('BUY') ? buyers.map((row) => row.id) : [],
+        sellerIds: kinds.includes('SELL') ? sellers.map((row) => row.id) : [],
       })
       toast.show(`${ledger} 매핑을 저장했습니다.`, 'success')
     } catch {

@@ -40,8 +40,10 @@ export function ProgramInfoCard({ program }: { program: Program }) {
   // 사업을 맡았는가"라 소속 전체가 답이다(목록 한 칸의 말단 표기와 갈리는 이유는 아래 주석).
   const { fullPathLabelOf } = useDepartmentLabels()
   // 운영 기간(실제 행사 관리)만 표시한다. 제안 단계는 별도 기간을 두지 않는다.
+  // 비어 있는 끝은 '?'가 아니라 '미정'이다 — 물음표는 값을 못 읽었다는 뜻으로도 읽히는데,
+  // 종료일은 실제로 정하지 않은 채 진행하는 사업이 있다(2026-09-08 종료일 선택 전환).
   const formatPeriod = (start: string | null, end: string | null) =>
-    start || end ? `${start ?? '?'} ~ ${end ?? '?'}` : '-'
+    start || end ? `${start ?? '미정'} ~ ${end ?? '미정'}` : '-'
   const operationPeriod = formatPeriod(program.start_date, program.end_date)
   // 분야는 목록과 같은 중립 배지로 적는다. 값이 없으면 InfoField가 하이픈으로 대체하도록 null을 준다.
   const industryList = programIndustries(program)

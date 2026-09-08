@@ -16,6 +16,7 @@ import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { MaProgramPartyPanel } from '@/features/mna/MaProgramPartyPanel'
+import { partyKindsOf } from '@/features/mna/programPartyLinks'
 
 /**
  * 명부 탭의 키는 자격(`MasterTable`) 값 그대로다 — 탭 키를 자격으로 옮겨 적는 표를 두면
@@ -82,10 +83,10 @@ export function ProgramOverviewTab({
   ]
   const mnaTabs: { key: LeftTab; label: string }[] = [
     { key: 'modules', label: 'WORK' },
-    ...(program.category === 'SELL' || program.category === 'SELL_BUY'
+    ...(partyKindsOf(program.category).includes('SELL')
       ? [{ key: 'seller' as const, label: 'SELLER' }]
       : []),
-    ...(program.category === 'BUY' || program.category === 'SELL_BUY'
+    ...(partyKindsOf(program.category).includes('BUY')
       ? [{ key: 'buyer' as const, label: 'BUYER' }]
       : []),
   ]
@@ -98,12 +99,9 @@ export function ProgramOverviewTab({
         ]
   const [leftTab, setLeftTab] = useState<LeftTab>('modules')
   useEffect(() => {
-    const sellerVisible =
-      config.key === 'mna' &&
-      (program.category === 'SELL' || program.category === 'SELL_BUY')
-    const buyerVisible =
-      config.key === 'mna' &&
-      (program.category === 'BUY' || program.category === 'SELL_BUY')
+    const kinds = config.key === 'mna' ? partyKindsOf(program.category) : []
+    const sellerVisible = kinds.includes('SELL')
+    const buyerVisible = kinds.includes('BUY')
     if ((leftTab === 'seller' && !sellerVisible) || (leftTab === 'buyer' && !buyerVisible)) {
       setLeftTab('modules')
     }

@@ -18,7 +18,8 @@ interface Props {
   options: { id: string; label: string }[]
   /** 단계 기간(커버리지 envelope). */
   phaseStart: string
-  phaseEnd: string
+  /** 단계 종료(포함). `null`이면 열린 단계 — 커버리지의 끝은 담당자 구간이 답한다. */
+  phaseEnd: string | null
   onPatchDept: (next: Partial<ProgramDepartmentSegment>) => void
   onSetMain: () => void
   onRemoveDept: () => void

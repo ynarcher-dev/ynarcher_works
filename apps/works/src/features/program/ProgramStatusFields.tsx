@@ -79,11 +79,19 @@ export function ProgramStatusFields({
           )}
         </Select>
       </Field>
-      {/* 담당자 배치 단계가 이 기간에서 산출되므로, 어느 상태에서든 기간은 필수다. */}
+      {/* 시작일만 필수다(2026-09-08 사용자 지정) — 종료일을 모르는 채로 시작하는 일이 많다.
+
+          두 칸이 갈리는 이유는 각자 없을 때 생기는 일이 다르기 때문이다. 시작일이 없으면
+          담당자 구간을 어느 조직 버전에 얹을지 판정할 수 없어 배치 화면 자체가 열리지 않고,
+          종료일이 없으면 그 단계가 열린 채로 서서 담당자가 적은 구간이 끝을 대신한다(서버 RPC도
+          같은 규칙으로 검증한다).
+
+          '미정'이라는 사실은 접지 않고 칸 아래에 적는다 — 필수 표식이 사라진 자리에 아무 말도
+          없으면 안 적어도 되는 칸인지 적을 것이 없는 칸인지 화면이 답하지 못한다. */}
       <Field label="시작일" required className="w-40 shrink-0">
         <Input type="date" {...register('start_date')} />
       </Field>
-      <Field label="종료일" required className="w-40 shrink-0">
+      <Field label="종료일" className="w-40 shrink-0" hint="모르면 비워 둡니다.">
         <Input type="date" {...register('end_date')} />
       </Field>
     </div>

@@ -30,6 +30,8 @@ export const MNA_WORKSPACE: ProgramWorkspaceConfig = {
   // 딜은 우리가 스스로 여는 일이라 발주·주관하는 바깥 기관이 없다.
   hasHostOrganization: false,
   categories: MNA_CATEGORIES,
+  // AC의 '사업구분'과 한 낱말로 붙지 않는다 — 이 워크스페이스에서 부르는 이름이 프로젝트다.
+  categoryNoun: '프로젝트 구분',
 }
 
 export function MnaWorkspacePage() {

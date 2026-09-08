@@ -229,7 +229,7 @@ export function programBulkSpec(config: ProgramWorkspaceConfig): BulkImportSpec 
     table: config.tables.programs,
     backTo: config.basePath,
     templateName: `${config.entityNoun}_업로드_템플릿.csv`,
-    guide: `${config.entityNoun}명과 기간(시작일·종료일)이 필수입니다. 기간은 담당자 배치 단계를 나누는 기준이라 비울 수 없습니다. 상태${config.categories.length ? '와 구분' : ''}은 화면에서 쓰는 말을 그대로 적으면 되고, 상태를 비워 두면 ${config.hasProposalStage ? "제안 단계의 '시도'" : "운영 단계의 '준비'"}로 들어갑니다. 담당자는 아래에서 한 번 지정해 파일 전체에 적용하며, 부서별 협업비율·투입률 조정과 운영 모듈은 등록 후 상세 화면에서 다룹니다.`,
+    guide: `${config.entityNoun}명과 기간(시작일·종료일)이 필수입니다. 기간은 담당자 배치 단계를 나누는 기준이라 비울 수 없습니다. 종료일 미정으로 만들려면 등록 폼을 쓰세요 — 여기서는 담당자 구간을 파일 전체에 한 번에 얹으므로 끝이 없는 구간을 지어낼 수 없습니다. 상태${config.categories.length ? '와 구분' : ''}은 화면에서 쓰는 말을 그대로 적으면 되고, 상태를 비워 두면 ${config.hasProposalStage ? "제안 단계의 '시도'" : "운영 단계의 '준비'"}로 들어갑니다. 담당자는 아래에서 한 번 지정해 파일 전체에 적용하며, 부서별 협업비율·투입률 조정과 운영 모듈은 등록 후 상세 화면에서 다룹니다.`,
     invalidateKeys: [[config.key, 'programs']],
     // 신규 등록 기본 상태는 등록 폼과 같이 수명주기의 첫 칸이다(제안을 쓰면 '시도', 아니면 '준비').
     // 폼과 어긋나면 업로드로 만든 사업만 다른 자리에서 출발한다.
@@ -270,6 +270,10 @@ export function programBulkSpec(config: ProgramWorkspaceConfig): BulkImportSpec 
         header: '종료일',
         column: 'end_date',
         kind: 'date',
+        // 등록 폼과 달리 여기서는 필수로 남는다(2026-09-08). 폼에서는 담당자가 언제까지 맡는지를
+        // 사람이 직접 적어 열린 단계의 끝을 대신하지만, 업로드는 그 구간을 시스템이 대신 적는다 —
+        // 끝이 없는 단계에서는 적을 값이 없고, 아무 날짜나 채우면 아무도 정한 적 없는 종료일이
+        // 원장에 남는다. 입구가 갈리는 것이 아니라 담당자 구간을 **누가 적는가**가 갈린다.
         required: true,
         aliases: ['end_date'],
         example: '2026-12-31',

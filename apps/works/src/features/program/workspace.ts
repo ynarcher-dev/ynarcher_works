@@ -81,6 +81,14 @@ export interface ProgramWorkspaceConfig {
   hasHostOrganization: boolean
   /** 사업구분 선택지. 빈 배열이면 분류 UI를 감춘다. */
   categories: readonly ProgramCategoryOption[]
+  /**
+   * 분류 칸의 이름(등록 폼 라벨·목록 필터 칩).
+   *
+   * `entityNoun`에서 조립하지 않는 이유는 두 낱말이 붙는 방식이 워크스페이스마다 다르기
+   * 때문이다 — AC는 '사업구분'이 한 낱말이고 M&A는 '프로젝트 구분'으로 띄어 쓴다. 규칙으로
+   * 짓지 못하는 말은 규칙인 척하지 않고 값으로 든다(MaPartyConfig의 `fundsLabel`과 같은 처리).
+   */
+  categoryNoun: string
 }
 
 /**

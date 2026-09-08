@@ -6,26 +6,49 @@ export interface StaffingPhase {
   versionId: string
   label: string
   start: string
-  end: string
+  /**
+   * 단계 종료(포함). **`null`이면 열린 단계**다 — 사업 종료일이 미정이고 그 단계의 조직
+   * 버전에도 만료가 없을 때다.
+   *
+   * 열린 단계에서 "언제까지 채워야 하는가"는 담당자들이 적은 구간이 답한다(서버 RPC가 이미
+   * 그렇게 판정한다 — 사업 기간이 비면 envelope를 담당자 구간의 min/max로 잡는다). 화면이
+   * 임의의 끝을 지어내면 그 끝은 저장 규칙과 다른 곳을 가리키게 된다.
+   */
+  end: string | null
 }
 
 /**
  * 프로그램 기간이 걸치는 org 버전(발행됨)들을 단계로 산출한다.
  * 각 단계 기간 = 버전 유효기간[from, to)(to=null 무기한)과 [progStart, progEnd]의 교집합.
- * 프로그램 기간이 없으면 단계를 산출하지 않는다(기간 입력 후 배치).
+ *
+ * **시작일만 있으면 단계가 선다(2026-09-08).** 종료일은 모르는 채로 시작하는 일이 많은데
+ * (사용자 지정) 종전에는 둘 다 있어야 단계를 냈고, 그래서 종료일 미정인 사업은 담당자를
+ * 아예 배정할 수 없었다. 종료일이 비면 그 뒤의 조직 버전까지 전부 단계가 되고 마지막
+ * 열린 버전의 단계는 끝이 `null`이다 — 언제까지 맡는지는 담당자 구간이 답한다.
+ *
+ * 시작일이 없으면 여전히 단계를 내지 않는다. 언제부터 맡는지를 모르면 구간의 시작을 지어내야
+ * 하고, 지어낸 시작은 조직 버전 경계와 어긋나 어느 단계에 속하는지조차 답할 수 없다.
  */
 export function computePhases(
   versions: OrgVersion[],
   progStart?: string | null,
   progEnd?: string | null,
 ): StaffingPhase[] {
-  if (!progStart || !progEnd) return []
+  if (!progStart) return []
   const phases: StaffingPhase[] = []
   for (const v of versions) {
-    const vEndIncl = v.effective_to ? addDays(v.effective_to, -1) : progEnd
+    // 버전 만료(배타)를 포함 표기로 바꾼다. 만료가 없으면 사업 종료일이 끝이고, 그것도
+    // 없으면 이 단계는 열린 채로 선다.
+    const vEndIncl = v.effective_to ? addDays(v.effective_to, -1) : (progEnd ?? null)
     const start = v.effective_from > progStart ? v.effective_from : progStart
-    const end = vEndIncl < progEnd ? vEndIncl : progEnd
-    if (start <= end) phases.push({ versionId: v.id, label: v.label, start, end })
+    const end =
+      vEndIncl === null
+        ? (progEnd ?? null)
+        : progEnd && vEndIncl >= progEnd
+          ? progEnd
+          : vEndIncl
+    // 열린 단계(end=null)는 시작만 사업 시작 이후면 성립한다.
+    if (end === null || start <= end) phases.push({ versionId: v.id, label: v.label, start, end })
   }
   return phases.sort((a, b) => a.start.localeCompare(b.start))
 }
@@ -127,8 +150,16 @@ function validatePhase(
   if (managers.some((m) => !m.start_date || !m.end_date || m.allocation_rate < 1)) {
     return { ok: false, message: `${prefix}구간별 역할·수행 기간·투입률(1~100%)을 모두 입력하세요.` }
   }
-  if (managers.some((m) => m.start_date < phase.start || m.end_date > phase.end)) {
-    return { ok: false, message: `${prefix}담당자 구간은 단계 기간(${phase.start} ~ ${phase.end}) 내여야 합니다.` }
+  // 열린 단계에는 넘을 끝이 없다 — 위쪽 경계만 본다.
+  if (
+    managers.some(
+      (m) => m.start_date < phase.start || (phase.end !== null && m.end_date > phase.end),
+    )
+  ) {
+    return {
+      ok: false,
+      message: `${prefix}담당자 구간은 단계 기간(${phase.start} ~ ${phase.end ?? '종료일 미정'}) 내여야 합니다.`,
+    }
   }
   // 부서별 전 구간 커버리지 = 협업비율(envelope = 단계 기간)
   for (const dep of departments) {
