@@ -151,11 +151,18 @@ AC에서는 참을 만했습니다. 참여기업 대표 한 명이 들어와 자
 using (
   app.current_app_user_id() is not null
   and not app.is_guest()
-  and app.can_read_master_table(master_table)   -- 신설 헬퍼
+  and app.can_read_master_table(master_table)
 )
 ```
 
-`guest_accounts_list`의 `personas` CTE도 같은 규칙으로 맞춥니다. **화면만 고치면 안 됩니다** — 정책이 열려 있으면 PostgREST로 표를 직접 읽을 수 있고, *UI에서 숨기는 것은 보안이 아닙니다*.
+**매핑을 새로 만들지 않습니다.** `app.entity_key_workspace`가 이미 `startups`→`startup`, `ma_sellers`·`ma_buyers`→`mna`를 답합니다 — 같은 사실을 두 곳에 적으면 어긋나는 날이 옵니다. 신설 헬퍼가 하는 일은 매핑이 아니라 **기본값을 뒤집는 것**입니다: `entity_key_workspace`의 기본값은 `networks`이고 그것은 매핑 함수로서는 옳지만(다형 키 대부분이 네트워크 원장입니다) **정책에서는 모르는 값이 NETWORKS 읽기 권한자 전원에게 열린다**는 뜻입니다. 그래서 허용 목록을 앞에 세워 모르는 값을 거짓으로 떨어뜨립니다 — 원장을 더하는 사람이 목록에 넣지 않으면 조용히 열리는 것이 아니라 **조용히 닫힙니다.**
+
+**`guest_accounts_list`는 고치지 않습니다.** 그 함수는 `security invoker`라 `personas` CTE가 `guest_identities`를 그냥 조회하고, 정책이 좁아지면 함수의 시야도 함께 좁아집니다. 판정을 본문에 복제하지 않는 것이 요점입니다 — 복제본은 정책이 바뀌는 날 옛 규칙으로 답하고, 어긋난 것을 알려 주는 것이 없습니다.
+
+**화면만 고치면 안 됩니다** — 정책이 열려 있으면 PostgREST로 표를 직접 읽을 수 있고, *UI에서 숨기는 것은 보안이 아닙니다*.
+
+> [!NOTE]
+> **새로 막히는 것은 없습니다.** AC 명부는 계정 유무를 묻기 전에 이미 `startups`·`networks`를 직접 조회해 회사명·대표·연락처를 붙입니다. 그 원장을 못 읽는 사용자에게는 이미 그 칸들이 비어 있었으므로, 같은 기준으로 인격을 가리는 것은 두 조회의 답을 **일치시키는** 일입니다. 게스트 로그인 경로(`readLedgerPhones`)는 `service_role`로 돌아 RLS를 타지 않습니다.
 
 ---
 
@@ -269,7 +276,7 @@ UI 구성안(로그인 · 맥락 고르기 · 세 맥락 화면 · 전환기)은
 | `program_modules` | `min_stage` 컬럼 신설 |
 | `module_templates` | M&A 종류 신설(요청자료·데이터룸·티저·IM), FUND 온기보고 종류 신설. `workspaces`·`visibility` 지정 |
 | **신설** `program_module_attachments` | `(program_module_id, attachment_id)` — 데이터룸이 여는 목록 |
-| `app.can_read_master_table(text)` | **신설 헬퍼** — 다형 원장 키로 읽기 권한을 판정 |
+| `app.can_read_master_table(text)` | **신설 헬퍼** — 매핑은 기존 `app.entity_key_workspace`에 맡기고, 허용 목록으로 모르는 값을 **거짓으로 떨어뜨린다**(그 함수의 기본값 `networks`는 정책에서는 조용히 여는 쪽이다) |
 
 > [!WARNING]
 > **함수 본문 전수 조사는 한 벌입니다.** `guest_identities` PK와 `issue_guest_account` 시그니처가 바뀌므로, 그 이름으로 함수 본문을 전수 조사하는 것까지가 이 마이그레이션의 범위입니다. 함수 본문은 의존성으로 추적되지 않아 살아남은 함수가 **호출 순간에만** 죽습니다(2026-09-03·09-04·09-05에 세 번 겪었습니다).
