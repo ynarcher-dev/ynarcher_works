@@ -83,9 +83,21 @@ const unsupported = (names: string[]): SourceError => ({
  * 막는다(parts.ts).
  */
 export function validateSources(sources: ResolvedSource[]): SourceError | null {
+  // **"하나도 없다"는 업로드 목록의 사실이 아니라 요청 전체의 사실이다**(2026-09-08).
+  //
+  // 이 검사가 크기 검사와 한 함수에 묶여 있던 동안, 업로드 예비 검사(`resolveUploads`)가 보류
+  // 파일만 들고 이 함수를 부르면서 **참조 자료만 고른 등록 요청을 여기서 끊었다** — 화면에는
+  // 자료 스무 건이 켜져 있는데 서버가 "읽을 자료를 선택해야 합니다"로 답했다. 예비 검사가
+  // 알아야 하는 것은 크기뿐이므로(큰 파일을 내려받기 전에 끊는 것이 목적이다) 그쪽은
+  // `validateSizes`를 부르고, 비어 있는지는 자료가 다 모인 뒤 run.ts가 이 함수로 묻는다.
   if (sources.length === 0) {
     return { code: 'invalid_request', message: '읽을 자료를 선택해야 합니다.', status: 400 }
   }
+  return validateSizes(sources)
+}
+
+/** 크기만 본다 — 목록이 아직 다 모이지 않은 자리(업로드 예비 검사)가 쓴다. */
+export function validateSizes(sources: ResolvedSource[]): SourceError | null {
   // 한 건 상한을 합산보다 먼저 본다 — 합계만 보면 "합은 되는데 한 파일이 전부"인 경우를
   // 통과시키고, 그때는 나머지 자료가 모델에 닿지 못한 채 초안만 부실해진다.
   const big = sources.filter((s) => s.byteSize > MAX_SINGLE_BYTES)
@@ -167,7 +179,9 @@ export async function resolveUploads(
   const keyOf = (f: File, i: number) => keys[i] ?? `file:${i}:${f.name}`
 
   // 크기 검사보다 먼저 바이트를 읽지 않도록 크기부터 본다(큰 파일을 메모리에 올리지 않는다).
-  const pre = validateSources(
+  // **크기만** 본다 — 여기서 "하나도 없다"까지 판정하면 참조 자료만 고른 등록 요청이 보류
+  // 파일이 없다는 이유로 끊긴다(위 validateSources 주석).
+  const pre = validateSizes(
     files.map((f, i) => ({
       key: keyOf(f, i),
       attachmentId: null,

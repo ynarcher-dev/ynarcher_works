@@ -289,14 +289,22 @@ export function AiFillGrid<K extends string>({
                     wrapperClassName="w-full min-w-0"
                     // 이름은 잘리고(말줄임), 전체 이름은 커서를 올리면 답한다.
                     //
-                    // 참조해 온 자료에는 위치가 이름 앞에 붙는다(2026-09-08). **줄을 늘리지
-                    // 않고 같은 한 줄에 세우는 것**이 요점이다 — 이 표는 줄마다 두 층이 되면
-                    // 통째로 두 배 높이가 되므로(위 주석), 크기를 갈라 위계를 만들지 않고
-                    // 색만 한 단 물러난다.
+                    // 참조해 온 자료에는 위치가 이름 앞에 **태그로** 붙는다(2026-09-08 사용자
+                    // 지정). 처음에는 같은 글자 크기의 회색 텍스트였는데, 파일 이름이 대부분
+                    // 길어 잘리는 줄에서는 그 회색 글자가 이름의 앞부분처럼 읽혔다. 태그는
+                    // 테두리로 자기 경계를 스스로 그어 이름과 섞이지 않는다.
+                    //
+                    // **줄은 여전히 늘리지 않는다** — 이 표는 줄마다 두 층이 되면 통째로 두 배
+                    // 높이가 되므로(위 주석), 태그는 같은 줄에서 폭만 차지하고 이름이 그만큼
+                    // 더 잘린다. 배지는 `shrink-0`이라 찌그러지지 않고, 잘린 전문은 커서가 답한다.
                     label={
-                      <span className="block min-w-0 truncate" title={sourceTitle(s)}>
-                        {origin && <span className="text-gray-500">{origin} · </span>}
-                        {base}
+                      <span className="flex min-w-0 items-center gap-1" title={sourceTitle(s)}>
+                        {origin && (
+                          <Badge tone="neutral" density="table">
+                            {origin}
+                          </Badge>
+                        )}
+                        <span className="min-w-0 truncate">{base}</span>
                       </span>
                     }
                   />
