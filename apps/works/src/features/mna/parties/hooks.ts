@@ -13,9 +13,20 @@ import {
 } from '@/features/mna/parties/config'
 import { supabase } from '@/lib/supabase'
 
-/** 목록·상세가 함께 읽는 select 문자열. 생성자는 이름만 임베드한다. */
-const SELECT =
-  'id, name, industries, wish, available_funds, decision, contact_name, contact_email, startup_id, created_at, updated_at, created_by, creator:users!created_by(id, name), startup:startups!startup_id(id, name)'
+/**
+ * 목록·상세가 함께 읽는 select 문자열. 생성자는 이름만 임베드한다.
+ *
+ * 진행여부는 **켠 원장에만 붙인다** — 바이어에는 컬럼 자체가 없어(20260908160000) 물으면
+ * 조회가 통째로 실패한다. 설정으로 화면만 끄고 select는 그대로 두는 실수가 이 원장들처럼
+ * 한 벌을 공유하는 화면에서 가장 흔하다.
+ */
+const selectOf = (cfg: MaPartyConfig) =>
+  [
+    'id, name, industries, wish, available_funds',
+    ...(cfg.hasDecision ? ['decision'] : []),
+    'contact_name, contact_email, startup_id, created_at, updated_at, created_by',
+    'creator:users!created_by(id, name), startup:startups!startup_id(id, name)',
+  ].join(', ')
 
 /**
  * 캐시 키의 뿌리는 표 이름이다.
@@ -62,7 +73,7 @@ export function useMaPartyListPage(
 
       return fetchLedgerPage<MaPartyRow>({
         table: cfg.table,
-        select: SELECT,
+        select: selectOf(cfg),
         liveColumns: ['deleted_at'],
         order: { column: 'updated_at', ascending: false },
         page,
@@ -83,7 +94,7 @@ export function useMaPartyRecord(cfg: MaPartyConfig, id: string | undefined) {
         .from(cfg.table)
         // 퀵 리뷰는 상세에서만 읽는다 — 목록이 열 줄짜리 문서 일곱 절을 함께 끌고 오면
         // 한 페이지 조회가 그 문서들의 크기만큼 무거워진다(본문 overview_html과 같은 이유).
-        .select(`${SELECT}, overview_html, quick_review`)
+        .select(`${selectOf(cfg)}, overview_html, quick_review`)
         .eq('id', id)
         .is('deleted_at', null)
         .maybeSingle()

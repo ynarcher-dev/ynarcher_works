@@ -385,19 +385,20 @@ export function ProgramFormModal({
                     />
                   </div>
                 )}
+                {/* 매물 연결은 구분과 **같은 줄**이다 — 어느 원장에서 고르는지를 구분이 정하므로
+                    답이 그 칸 바로 옆에 있어야 하고, 주관을 운용하지 않는 M&A에서는 이 칸이
+                    비어 있던 줄의 나머지를 받는다(주관과 함께 서는 워크스페이스는 없다:
+                    주관은 AC, 매물은 M&A다). 고를 원장이 없으면 부품이 통째로 사라진다. */}
+                <MaProgramPartyFields
+                  category={watch('category')}
+                  buyers={buyers}
+                  sellers={sellers}
+                  onChange={(kind: MaProgramPartyKind, next: MaProgramPartyPick[]) =>
+                    kind === 'SELL' ? setSellers(next) : setBuyers(next)
+                  }
+                />
               </div>
             )}
-            {/* 매물 연결은 구분 바로 아래다 — 어느 원장에서 고르는지를 구분이 정하므로, 그 답이
-                방금 고른 칸 바로 아래에 있어야 한다. 구분이 Sell·Buy·Sell+Buy가 아니면 칸 자체가
-                서지 않는다(고를 원장이 없다). */}
-            <MaProgramPartyFields
-              category={watch('category')}
-              buyers={buyers}
-              sellers={sellers}
-              onChange={(kind: MaProgramPartyKind, next: MaProgramPartyPick[]) =>
-                kind === 'SELL' ? setSellers(next) : setBuyers(next)
-              }
-            />
             {/*
               분야. 사업구분 바로 아래에 둔다 — 둘 다 '이 사업이 무엇인가'를 가르는 분류 축이고,
               기간·배치처럼 운영을 적는 칸과는 층위가 다르다. 태그 원장은 스타트업과 공유한다.

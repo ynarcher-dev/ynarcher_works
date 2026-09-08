@@ -1,4 +1,4 @@
-import { Button, IconButton, Input, Select } from '@ynarcher/ui'
+import { Checkbox, IconButton, Input, Select } from '@ynarcher/ui'
 import { X } from 'lucide-react'
 import { coverageSlices } from '@/features/program/programManagerCoverage'
 import { StaffingMemberPicker } from '@/features/program/StaffingMemberPicker'
@@ -62,17 +62,24 @@ export function StaffingDepartmentCard({
   return (
     <li className="overflow-hidden rounded-radius-md border border-gray-200">
       {/* 부서 줄. 메인/협업 표식이 **맨 앞**에 서는 것이 요점이다 — 카드가 여러 장 쌓였을 때
-          어느 것이 메인인지는 왼쪽 끝을 훑어 찾는다. 켜짐/꺼짐은 색이 가른다(채움 = 메인). */}
+          어느 것이 메인인지는 왼쪽 끝을 훑어 찾는다.
+
+          표식이 버튼이 아니라 체크박스인 이유(2026-09-08 사용자 지정) — 이 자리는 누르는 일이
+          아니라 켜고 끈 상태 그 자체다. 버튼이던 동안 켜짐/꺼짐을 채움 색만으로 말했고, 그 색은
+          같은 줄의 다른 버튼(부서 추가·제거)과 같은 어휘라 '지금 메인인 것'과 '눌러서 메인으로
+          만드는 것'이 한 모양이었다.
+
+          **켜진 것을 다시 눌러도 꺼지지 않는다.** 메인은 정확히 1개여야 하므로 끄면 0개가 되고
+          그 상태는 저장되지 않는다 — 끌 수 있다고 말하는 컨트롤을 두지 않는다. 이 부서를 끄는
+          방법은 다른 부서를 켜는 것이고, `onSetMain`이 나머지를 협업으로 되돌린다. */}
       <div className="flex items-center gap-2 border-b border-gray-200 bg-gray-25 px-2.5 py-1.5">
-        <Button
-          className="shrink-0"
-          variant={isMain ? 'primary' : 'outline'}
-          aria-pressed={isMain}
-          onClick={onSetMain}
-          title="메인 부서로 지정"
-        >
-          메인
-        </Button>
+        <Checkbox
+          checked={isMain}
+          onChange={onSetMain}
+          label="메인"
+          wrapperClassName="shrink-0"
+          title="메인 부서로 지정합니다. 부서 하나만 메인이며, 다른 부서를 켜면 이 부서는 협업이 됩니다."
+        />
         <Select
           value={dept.department_id}
           onChange={(e) => onPatchDept({ department_id: e.target.value })}

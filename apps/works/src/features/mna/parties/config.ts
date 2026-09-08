@@ -53,6 +53,18 @@ export interface MaPartyConfig {
    * 얇게 서고 그 물음이 대상마다 다르다).
    */
   hasQuickReview?: boolean
+  /**
+   * 진행여부 결정을 이 원장에서 쓰는가.
+   *
+   * **셀러만 켠다**(2026-09-08 사용자 지정). 파는 쪽은 매물이라 "이 건을 진행할 것인가"가
+   * 그 레코드에 대한 우리 판단이지만, 사는 쪽은 인수 의향을 가진 상대라 진행 여부는 그
+   * 상대가 아니라 **딜마다** 갈린다 — 한 바이어가 세 건을 보고 둘은 접고 하나만 가는 것이
+   * 정상이므로, 그 판단을 바이어 행에 하나만 적으면 어느 건에 대한 답인지 말할 수 없다.
+   *
+   * 끄는 것은 화면만이 아니라 조회 컬럼까지다 — 원장에서도 걷었으므로(`20260908160000`)
+   * 켜지 않은 원장에서 이 칸을 select 하면 그대로 오류가 된다.
+   */
+  hasDecision?: boolean
 }
 
 /**
@@ -85,6 +97,7 @@ export const MA_SELLER: MaPartyConfig = {
   wishPlaceholder: '예: 경영권 포함 지분 전량 매각',
   overviewPlaceholder: '매각 배경·희망 조건·미팅 메모 등을 자유롭게 적습니다.',
   hasQuickReview: true,
+  hasDecision: true,
 }
 
 /**
@@ -179,8 +192,10 @@ export interface MaPartyRow {
   /**
    * 진행여부 결정(`null`이면 미결정). 목록도 이 칸을 읽는다 — 이 축으로 좁혀 보는 것이
    * 칸을 만든 이유이고, 좁힌 결과를 표에서 확인하지 못하면 필터가 무엇을 했는지 알 수 없다.
+   *
+   * `hasDecision`을 켠 원장에만 있다(바이어에는 컬럼 자체가 없다) — 그래서 선택적이다.
    */
-  decision: string | null
+  decision?: string | null
   overview_html: string | null
   /**
    * 퀵 리뷰 문서(절 7종). 상세 조회에서만 읽는다 — 목록은 이 칸을 가져오지 않는다.

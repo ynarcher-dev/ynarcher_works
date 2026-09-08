@@ -41,6 +41,23 @@ const DECISION_OPTIONS = [
 ]
 
 /**
+ * 진행여부 열. 기업명 바로 옆이다 — 이 열로 좁혀 보려고 필터를 만들었으므로, 세로로 훑을 때
+ * 이름과 결정이 붙어 있어야 "무엇을 진행하기로 했나"가 한 눈에 읽힌다.
+ *
+ * 결정이 없는 행도 '미결정' 배지로 선다: 빈 칸으로 두면 아직 안 정한 것인지 이 열이 그 행에
+ * 해당하지 않는 것인지 표가 답하지 못한다.
+ */
+const decisionColumn: Column<MaPartyRow> = {
+  key: 'decision',
+  header: '진행여부',
+  type: 'badge',
+  render: (r) => {
+    const { label, tone } = decisionBadge(r.decision)
+    return <Badge tone={tone}>{label}</Badge>
+  },
+}
+
+/**
  * 목록 도메인 열.
  *
  * 생성자·수정일 두 열은 여기 적지 않는다 — `DataTable`의 표준 컬럼이 이미 소유하고 있어
@@ -59,19 +76,7 @@ const DECISION_OPTIONS = [
 function columnsOf(cfg: MaPartyConfig): Column<MaPartyRow>[] {
   return [
     { key: 'name', header: '기업명', type: 'name' },
-    {
-      // 기업명 바로 옆이다 — 이 열로 좁혀 보려고 필터를 만들었으므로, 세로로 훑을 때 이름과
-      // 결정이 붙어 있어야 "무엇을 진행하기로 했나"가 한 눈에 읽힌다.
-      // 결정이 없는 행도 '미결정' 배지로 선다: 빈 칸으로 두면 아직 안 정한 것인지 이 열이
-      // 그 행에 해당하지 않는 것인지 표가 답하지 못한다.
-      key: 'decision',
-      header: '진행여부',
-      type: 'badge',
-      render: (r) => {
-        const { label, tone } = decisionBadge(r.decision)
-        return <Badge tone={tone}>{label}</Badge>
-      },
-    },
+    ...(cfg.hasDecision ? [decisionColumn] : []),
     {
       key: 'industries',
       header: '분야',
@@ -107,9 +112,10 @@ function columnsOf(cfg: MaPartyConfig): Column<MaPartyRow>[] {
 /**
  * M&A BUYER·SELLER 목록.
  *
- * 필터 축은 진행여부 하나다(2026-09-08). 이 원장들은 딜보다 먼저 쌓이므로 목록에는 아직
- * 볼지 정하지 않은 건과 정한 건이 섞여 서고, 그 둘을 가르는 것이 이 목록에서 가장 자주 하는
- * 일이다. 분야는 여전히 축이 아니다 — 값이 태그라 선택지가 원장에서 자라고, 실제로 좁히는
+ * 필터 축은 진행여부 하나이고 **그 축을 쓰는 원장(셀러)에서만** 선다(2026-09-08). 셀러는
+ * 딜보다 먼저 쌓이므로 목록에 아직 볼지 정하지 않은 건과 정한 건이 섞여 서고, 그 둘을 가르는
+ * 것이 이 목록에서 가장 자주 하는 일이다. 바이어에는 그 축이 없다(config 주석 참조).
+ * 분야는 여전히 축이 아니다 — 값이 태그라 선택지가 원장에서 자라고, 실제로 좁히는
  * 일은 검색어가 먼저 한다(건수가 쌓이면 그때 연다. 요약 카드도 같은 조건이다).
  *
  * 범위 토글(내 것/전체)도 없다. 이 원장들은 담당자 원장을 두지 않은 공동관리라 '내 바이어'
@@ -140,12 +146,16 @@ export function MaPartyListTab({ config }: { config: MaPartyConfig }) {
         onKeywordChange={setKeyword}
         searchPlaceholder="기업명·희망사항 검색"
         filters={
-          <MultiSelectFilter
-            label="진행여부"
-            options={DECISION_OPTIONS}
-            selected={decisions}
-            onChange={setDecisions}
-          />
+          // 축을 운용하지 않는 원장에서는 필터 자체를 감춘다 — 걸어도 아무것도 답하지 않는
+          // 컨트롤은 고를 수 있다고 말하는 거짓 신호다(사업구분 필터와 같은 판정).
+          config.hasDecision ? (
+            <MultiSelectFilter
+              label="진행여부"
+              options={DECISION_OPTIONS}
+              selected={decisions}
+              onChange={setDecisions}
+            />
+          ) : undefined
         }
         actions={
           <ListActions

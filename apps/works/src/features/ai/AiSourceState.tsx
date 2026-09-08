@@ -92,7 +92,13 @@ export function AiSourceState({
           type="button"
           onClick={onToggleOriginal}
           disabled={disabled}
-          className={cn(cardText.meta, 'shrink-0 text-gray-500 underline-offset-2 hover:underline disabled:text-gray-400')}
+          // 앞의 분석 아이콘과 한 칸 더 띄운다(2026-09-08 사용자 지적) — 줄 간격(gap-1)만으로는
+          // 아이콘에 바짝 붙어 그 버튼의 라벨처럼 읽혔다. 둘은 성격이 다른 컨트롤이다: 하나는
+          // 지금 실행하는 일이고 하나는 다음 실행에 쓸 것을 지정하는 스위치다.
+          className={cn(
+            cardText.meta,
+            'ml-1.5 shrink-0 text-gray-500 underline-offset-2 hover:underline disabled:text-gray-400',
+          )}
           title={
             forcedOriginal
               ? '분석한 글자 대신 원본을 보내도록 지정했습니다. 눌러서 되돌립니다.'

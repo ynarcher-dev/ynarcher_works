@@ -188,7 +188,8 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
       available_funds: parseWon(v.funds),
       // 빈 문자열은 '미결정'이고 그것은 값이 아니라 null이다 — 셀렉트가 담지 못하는 것을
       // 여기서 되돌린다. 그대로 보내면 CHECK 제약에 걸려 저장 자체가 실패한다.
-      decision: v.decision || null,
+      // 축을 쓰지 않는 원장에는 컬럼 자체가 없으므로 키를 아예 빼고 보낸다.
+      ...(config.hasDecision ? { decision: v.decision || null } : {}),
       contact_name: v.contactName.trim() || null,
       contact_email: v.contactEmail.trim() || null,
       startup_id: link.startupId,
@@ -330,19 +331,21 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
 
                   바꾼 사유를 여기서 받지 않는 것은 수정 저장이 이미 사유를 묻기 때문이다 —
                   그 사유가 변동 이력의 note로 남아 "왜 미진행으로 돌렸나"를 답한다. */}
-              <Field
-                label="진행여부"
-                hint="정하기 전까지는 미결정입니다. 그렇게 정한 이유는 상세내용이나 수정 사유가 답합니다."
-              >
-                <Select {...register('decision')}>
-                  <option value="">{MA_DECISION_UNSET_LABEL}</option>
-                  {MA_DECISIONS.map((value) => (
-                    <option key={value} value={value}>
-                      {MA_DECISION_LABEL[value]}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
+              {config.hasDecision && (
+                <Field
+                  label="진행여부"
+                  hint="정하기 전까지는 미결정입니다. 그렇게 정한 이유는 상세내용이나 수정 사유가 답합니다."
+                >
+                  <Select {...register('decision')}>
+                    <option value="">{MA_DECISION_UNSET_LABEL}</option>
+                    {MA_DECISIONS.map((value) => (
+                      <option key={value} value={value}>
+                        {MA_DECISION_LABEL[value]}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              )}
             </div>
           </CardShell>
 

@@ -120,20 +120,11 @@ export function ProgramOverviewTab({
             {leftTab === 'modules' && (
               <ModuleBoardCard program={program} onOpenModule={onOpenModule} />
             )}
-            {leftTab === 'seller' && (
-              <MaProgramPartyPanel
-                programId={program.id}
-                category={program.category}
-                kind="SELL"
-              />
-            )}
-            {leftTab === 'buyer' && (
-              <MaProgramPartyPanel
-                programId={program.id}
-                category={program.category}
-                kind="BUY"
-              />
-            )}
+            {/* 매핑은 프로젝트 편집 폼이 갖는다(2026-09-08) — 이 탭은 연결된 기업의 내용을
+                읽는 자리다. 그래서 사업구분을 넘기지 않는다: 무엇을 고를 수 있는지는 고르는
+                자리가 알면 되고, 읽는 자리는 이미 연결된 것만 세운다. */}
+            {leftTab === 'seller' && <MaProgramPartyPanel programId={program.id} kind="SELL" />}
+            {leftTab === 'buyer' && <MaProgramPartyPanel programId={program.id} kind="BUY" />}
             {/* 탭을 바꾸면 명부는 통째로 다시 선다(key) — 선택·역할·페이지가 자격을 넘어
                 살아남으면, 안 보이는 행이 선택된 채로 `연결`에 딸려 간다. */}
             {(leftTab === 'startups' || leftTab === 'networks') && (
