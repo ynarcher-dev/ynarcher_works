@@ -1,5 +1,9 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import {
+  PARTICIPANT_PERSONAS,
+  type MasterTable,
+} from '@/features/program/participantPersona'
 import type { GuestUserType } from '@/lib/userTypes'
 
 /**
@@ -30,12 +34,12 @@ export interface GuestAccountProgram {
    */
   program_status: string | null
   /** 이 줄의 자격. 같은 계정이 한 사업에 두 자격으로 걸리면 줄이 둘이다. */
-  master_table: 'startups' | 'networks' | null
+  master_table: MasterTable | null
 }
 
 /** 계정이 가진 인격 하나 — 어느 원장의 누구로 참여하는가. */
 export interface GuestIdentity {
-  master_table: 'startups' | 'networks'
+  master_table: MasterTable
   master_id: string
   name: string | null
 }
@@ -109,7 +113,7 @@ export function useGuestAccounts(
   keyword: string,
   page: number,
   entityKey?: 'program' | 'ma_program',
-  masterTables?: readonly string[],
+  masterTables?: readonly MasterTable[],
 ) {
   return useQuery({
     queryKey: [
@@ -184,31 +188,28 @@ export interface LedgerAccount {
  * 값이 모자란 대상도 목록에서 빼지 않고 고를 수 없는 채로 남긴다 — 빼면 "왜 안 보이지"가
  * 되고, 남기면 "무엇을 보완해야 하는지"가 남는다.
  */
-export function useIssueCandidates(masterTable: 'startups' | 'networks', search: string) {
+export function useIssueCandidates(masterTable: MasterTable, search: string) {
   const kw = search.trim()
   return useQuery({
     queryKey: ['admin', 'guest-issue-candidates', masterTable, kw],
     enabled: kw.length > 0,
     queryFn: async (): Promise<IssueCandidate[]> => {
-      const nameCol = masterTable === 'startups' ? 'name' : 'name'
-      const cols =
-        masterTable === 'startups'
-          ? 'id, name, representative, email, phone'
-          : 'id, name, email, phone'
-      const { data, error } = await supabase
-        .from(masterTable)
-        .select(cols)
-        .ilike(nameCol, `%${sanitizeLike(kw)}%`)
+      // 어느 표를 어떤 컬럼으로 읽고 그 행에서 무엇을 꺼내는지는 자격 설정이 답한다 —
+      // 원장이 넷이 된 뒤로 이 자리의 삼항은 "이것이 아니면 저것"밖에 말하지 못한다.
+      const { ledger } = PARTICIPANT_PERSONAS[masterTable]
+      let query = supabase
+        .from(ledger.table)
+        .select(ledger.columns)
+        .ilike('name', `%${sanitizeLike(kw)}%`)
         .is('deleted_at', null)
         .limit(20)
+      if (ledger.narrow) query = query.eq(ledger.narrow.column, ledger.narrow.value)
+      const { data, error } = await query
       if (error) throw error
-      const rows = (data ?? []) as unknown as {
-        id: string
-        name: string
-        representative?: string | null
-        email: string | null
-        phone: string | null
-      }[]
+      const rows = ((data ?? []) as unknown as Record<string, unknown>[]).map((raw) => ({
+        id: String(raw.id),
+        ...ledger.map(raw),
+      }))
       if (rows.length === 0) return []
 
       // 원장 행마다 이미 선 계정 수. 한 행에 여러 줄이 올 수 있으므로 세어서 담는다
@@ -226,9 +227,9 @@ export function useIssueCandidates(masterTable: 'startups' | 'networks', search:
       return rows.map((r) => ({
         id: r.id,
         name: r.name,
-        loginName: masterTable === 'startups' ? (r.representative ?? null) : r.name,
-        email: r.email?.trim() || null,
-        phone: r.phone?.trim() || null,
+        loginName: r.loginName,
+        email: r.email,
+        phone: r.phone,
         accountCount: counts.get(r.id) ?? 0,
       }))
     },
@@ -246,10 +247,7 @@ export function useIssueCandidates(masterTable: 'startups' | 'networks', search:
  * 내부 사용자 전원에게 열려 있기 때문이다(참가자 명부가 게스트 이름을 붙이려면 그래야 한다).
  * 인격 행 자체는 2026-09-08부터 **그 원장을 읽을 수 있는 사람에게만** 보인다.
  */
-export function useLedgerAccounts(
-  masterTable: 'startups' | 'networks',
-  masterId: string | null,
-) {
+export function useLedgerAccounts(masterTable: MasterTable, masterId: string | null) {
   return useQuery({
     queryKey: ['admin', 'guest-ledger-accounts', masterTable, masterId],
     enabled: Boolean(masterId),
@@ -290,7 +288,7 @@ export function useIssueGuestAccount() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (v: {
-      masterTable: 'startups' | 'networks'
+      masterTable: MasterTable
       masterId: string
       name?: string | null
       email?: string | null

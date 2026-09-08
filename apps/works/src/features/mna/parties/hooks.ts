@@ -24,7 +24,7 @@ const selectOf = (cfg: MaPartyConfig) =>
   [
     'id, name, industries, wish, available_funds',
     ...(cfg.hasDecision ? ['decision'] : []),
-    'contact_name, contact_email, startup_id, created_at, updated_at, created_by',
+    'contact_name, contact_email, phone, startup_id, created_at, updated_at, created_by',
     'creator:users!created_by(id, name), startup:startups!startup_id(id, name)',
   ].join(', ')
 

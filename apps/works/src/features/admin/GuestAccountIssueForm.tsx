@@ -1,4 +1,5 @@
 import { Badge, Button, Field, Input, cardText, cn, useToast } from '@ynarcher/ui'
+import type { MasterTable } from '@/features/program/participantPersona'
 import { ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
 import {
@@ -26,7 +27,7 @@ export function GuestAccountIssueForm({
   onBack,
   onDone,
 }: {
-  master: 'startups' | 'networks'
+  master: MasterTable
   candidate: IssueCandidate
   onBack: () => void
   onDone: () => void

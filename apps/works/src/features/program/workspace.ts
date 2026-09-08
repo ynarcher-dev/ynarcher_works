@@ -1,6 +1,7 @@
 import type { BadgeTone } from '@ynarcher/ui'
 import { createContext, useContext } from 'react'
 import type { ProgramCategoryOption } from '@/config/programCategories'
+import type { MasterTable } from '@/features/program/participantPersona'
 
 export type { ProgramCategoryOption }
 
@@ -33,7 +34,11 @@ export interface ProgramWorkspaceConfig {
    */
   entityKey: 'program' | 'ma_program'
   /**
-   * 이 워크스페이스의 GUEST 계정 발급 창구가 다루는 **인격의 출처 원장**(2026-09-08).
+   * 이 워크스페이스가 다루는 **인격의 출처 원장**(2026-09-08).
+   *
+   * 계정생성 창구의 하위 탭과 명부의 자격 탭이 **같은 이 값**을 편다 — 계정을 세울 수 있는
+   * 자격과 명부에 담을 수 있는 자격이 갈리면, 발급은 되는데 어디에도 담기지 않는 계정이
+   * 생기고 화면은 그 이유를 답하지 못한다.
    *
    * 창구가 세우는 계정 목록을 이 값으로 좁힌다. `entityKey`와 다른 축이다 — 저쪽은 참여
    * 사업 칸이 어느 사업을 세는가이고, 이쪽은 어느 계정이 목록에 서는가다.
@@ -43,7 +48,7 @@ export interface ProgramWorkspaceConfig {
    *
    * 근거: docs/docs_planning/3_9_2_external_portal_expansion.md §6
    */
-  guestMasterTables?: readonly string[]
+  guestMasterTables?: readonly MasterTable[]
   /** 라우트 베이스 경로. 목록 `${basePath}`, 상세 `${basePath}/programs/:id`. */
   basePath: string
   /**

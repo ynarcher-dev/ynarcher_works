@@ -11,6 +11,7 @@ import {
   Modal,
   RefLinkList,
   Spinner,
+  Tabs,
   TagCell,
   usePaged,
   TextArea,
@@ -28,7 +29,7 @@ import {
 } from '@/features/admin/guestAccountHooks'
 import { GuestAccountIssueModal } from '@/features/admin/GuestAccountIssueModal'
 import { guestDoorBadge, isDoorOpen } from '@/features/program/guestDoorBadge'
-import { PERSONA_LABEL } from '@/features/program/participantPersona'
+import { PERSONA_LABEL, type MasterTable } from '@/features/program/participantPersona'
 import { GUEST_TYPE_LABEL } from '@/lib/userTypes'
 
 const DASH = <EmptyValue />
@@ -63,8 +64,8 @@ function doorOf(p: GuestAccountProgram) {
 /**
  * 게스트 계정 관리: 전사 게스트 계정 한 자리.
  *
- * **두 곳에 같은 화면이 선다** — AC 'GUEST계정 발급'(내부 사용자 전원)과 ADMIN·OFFICE의
- * '게스트 계정 관리'이며, 갈리는 것은 `canSuspend`와 `entityKey` 둘뿐이다. 화면을 두 벌로
+ * **여러 곳에 같은 화면이 선다** — AC·M&A의 '계정생성'(내부 사용자 전원)과 ADMIN·OFFICE의
+ * '게스트 계정 관리'이며, 갈리는 것은 `canSuspend`·`entityKey`·`masterTables` 셋뿐이다. 화면을 두 벌로
  * 만들지 않는 이유는 같은 목록을 각자 그리면 한쪽만 고쳐 어긋나기 때문이고, 연락처 마스킹도
  * 여기가 아니라 서버(`guest_accounts_list`)가 정한다 — UI에서 숨기는 것은 보안이 아니다.
  *
@@ -105,9 +106,22 @@ export function GuestAccountPanel({
    * 서는가다. 창구마다 발급하는 원장이 다르므로, 남의 원장 인격이 여기 서면 참여 사업 칸이
    * 비어 있어도 "그 사람 계정이 있다"가 드러난다.
    */
-  masterTables?: readonly string[]
+  masterTables?: readonly MasterTable[]
 }) {
   const toast = useToast()
+  /**
+   * 지금 선 원장 탭. 창구는 원장을 **가르는 자리**이고(2026-09-08 사용자 지정 "각각에 하위
+   * 탭에 AC는 스타트업, 전문가 / M&A는 SELLER, BUYER"), 그 값이 목록과 발급을 함께 정한다.
+   *
+   * 종전에는 목록이 이 워크스페이스의 원장을 한꺼번에 세우고 발급 창의 셀렉트가 원장을
+   * 따로 물었다. 그러면 같은 물음에 컨트롤이 둘이라 방금 본 목록과 만든 계정이 어긋날 수
+   * 있었고, 무엇보다 목록이 성격이 다른 인격을 섞어 세웠다 — SELLER와 BUYER를 한 표에
+   * 담으면 어느 줄이 파는 쪽인지 이름만으로 가려야 한다.
+   *
+   * 원장이 없는 자리(ADMIN 계정 관리)는 탭이 서지 않고 전부를 세운다 — 그 화면이 소유한
+   * 축은 정지·해제이고 그것은 계정에 걸리는 일이라 원장을 가려서는 안 된다(3_9_2 §6).
+   */
+  const [ledger, setLedger] = useState<MasterTable | null>(masterTables?.[0] ?? null)
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(0)
   /** 계정 발급 모달. 내부 사용자 전원이 쓴다(발급만으로는 아무것도 보이지 않는다). */
@@ -118,7 +132,10 @@ export function GuestAccountPanel({
   const [suspending, setSuspending] = useState<GuestAccount | null>(null)
   const [reason, setReason] = useState('')
 
-  const { data, isLoading, error } = useGuestAccounts(keyword, page, entityKey, masterTables)
+  // 탭이 선 자리에서는 **그 원장 하나**로 좁힌다. 탭이 없으면 창구가 준 목록 전부이고,
+  // 그것도 없으면(ADMIN) 전 원장이다.
+  const scope = ledger ? [ledger] : masterTables
+  const { data, isLoading, error } = useGuestAccounts(keyword, page, entityKey, scope)
   const setActive = useSetGuestAccountActive()
 
   /**
@@ -309,11 +326,31 @@ export function GuestAccountPanel({
 
   return (
     <div className="space-y-4">
+      {/* 원장이 둘 이상일 때만 탭이 선다 — 가를 것이 없는 자리에 선 탭은 '다른 것도 있다'고
+          말하는 거짓 신호이고, 남는 것은 층뿐이다(M&A 연결 기업 탭과 같은 판단). */}
+      {ledger && (masterTables?.length ?? 0) > 1 && (
+        <Tabs
+          items={masterTables!.map((key) => ({ key, label: PERSONA_LABEL[key] }))}
+          value={ledger}
+          onChange={(key) => {
+            setLedger(key as MasterTable)
+            // 탭을 옮기면 페이지를 처음으로 되돌린다 — 3쪽에 서 있다가 옮기면 그 원장에는
+            // 3쪽이 없어 빈 화면이 뜨고, 화면은 왜 비었는지 답하지 못한다.
+            setPage(0)
+          }}
+        />
+      )}
+
       <ListToolbar
         keyword={keyword}
         onKeywordChange={setKeyword}
         searchPlaceholder="이름 또는 이메일로 검색"
-        actions={<Button onClick={() => setIssueOpen(true)}>계정 발급</Button>}
+        actions={
+          // 발급 버튼은 원장이 정해진 자리에만 선다. 발급은 "어느 원장의 어느 행"에 인격을
+          // 붙이는 일이라 원장 없이는 성립하지 않는다 — ADMIN 계정 관리가 소유한 축은
+          // 정지·해제이고, 발급이 필요하면 그 원장을 가진 창구에서 한다.
+          ledger ? <Button onClick={() => setIssueOpen(true)}>계정 발급</Button> : undefined
+        }
       />
 
       <DataTable
@@ -398,7 +435,13 @@ export function GuestAccountPanel({
         )}
       </Modal>
 
-      <GuestAccountIssueModal open={issueOpen} onClose={() => setIssueOpen(false)} />
+      {ledger && (
+        <GuestAccountIssueModal
+          open={issueOpen}
+          onClose={() => setIssueOpen(false)}
+          master={ledger}
+        />
+      )}
 
       {/* 정지 — 쓰던 사유가 클릭 한 번에 사라지지 않도록 바깥 클릭으로 닫지 않는다. */}
       <Modal

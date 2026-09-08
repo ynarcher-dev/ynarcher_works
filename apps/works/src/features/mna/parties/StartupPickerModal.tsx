@@ -18,6 +18,8 @@ export interface StartupPick {
   name: string
   representative: string | null
   email: string | null
+  /** 연결 시 거래상대 원장의 연락처 칸으로 함께 넘어간다(포털 계정의 초기 비밀번호). */
+  phone: string | null
   /** 분야 태그 이름 배열(최대 3). 거래상대 원장도 같은 원장(industry_tags)의 이름을 담는다. */
   /** 분야 태그 이름 배열. 옛 단일 컬럼(industry)까지 합친 값이다. */
   industries: string[]
@@ -43,7 +45,7 @@ function useStartupPool(enabled: boolean) {
       // (그 규칙을 여기서 한 번 더 적으면 한쪽만 고쳐지는 날 어느 화면에서만 분야가 빈다).
       const { data, error } = await supabase
         .from('startups')
-        .select('id, name, representative, email, industries, industry, management_status')
+        .select('id, name, representative, email, phone, industries, industry, management_status')
         .is('deleted_at', null)
         .order('name', { ascending: true })
         .limit(500)
@@ -53,6 +55,7 @@ function useStartupPool(enabled: boolean) {
         name: (row.name as string) ?? '',
         representative: (row.representative as string | null) ?? null,
         email: (row.email as string | null) ?? null,
+        phone: (row.phone as string | null) ?? null,
         management_status: (row.management_status as string | null) ?? null,
         industries: readIndustries(row as EntityRow),
       }))

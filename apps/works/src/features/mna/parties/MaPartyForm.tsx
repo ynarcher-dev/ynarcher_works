@@ -51,6 +51,7 @@ interface MaPartyFormValues {
   /** 상대 쪽 연락 창구. 우리 쪽 관리 주체가 아니다. */
   contactName: string
   contactEmail: string
+  contactPhone: string
 }
 
 interface Props {
@@ -103,6 +104,7 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
           : Number(initial.available_funds).toLocaleString(),
       contactName: initial?.contact_name ?? '',
       contactEmail: initial?.contact_email ?? '',
+      contactPhone: initial?.phone ?? '',
     },
   })
 
@@ -192,6 +194,7 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
       ...(config.hasDecision ? { decision: v.decision || null } : {}),
       contact_name: v.contactName.trim() || null,
       contact_email: v.contactEmail.trim() || null,
+      phone: v.contactPhone.trim() || null,
       startup_id: link.startupId,
       overview_html: overview.trim() || null,
       // 퀵 리뷰를 쓰지 않는 원장에서는 이 칸을 아예 보내지 않는다 — 빈 문서를 저장하면
@@ -320,6 +323,15 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
                       '이메일 형식이 아닙니다.',
                   })}
                 />
+              </Field>
+              {/* 포털 계정을 세울 때 이메일이 ID, 연락처가 초기 비밀번호다. 형식을 강제하지
+                  않는 이유는 명함에 적힌 그대로 받는 자리여서다(내선·해외번호가 섞인다) —
+                  값을 쓰는 쪽(계정 발급)은 이 칸이 비었는지만 보고 사유와 함께 멈춘다. */}
+              <Field
+                label="연락처"
+                hint="포털 계정의 초기 비밀번호가 됩니다."
+              >
+                <Input placeholder="예: 010-1234-5678" {...register('contactPhone')} />
               </Field>
               {/* 우리 쪽 판단이라 상대 쪽 값(기업명·금액·분야·희망사항·담당자·이메일) 뒤에
                   홀로 선다 — 앞 여섯 칸이 '이 상대가 무엇인가'를 적는 자리이고 이 칸만

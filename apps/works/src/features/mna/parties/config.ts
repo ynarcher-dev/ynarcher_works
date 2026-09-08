@@ -183,6 +183,12 @@ export interface MaPartyRow {
   contact_name: string | null
   contact_email: string | null
   /**
+   * 담당자 연락처. 포털 계정의 **초기 비밀번호가 되는 값**이라 계정이 아니라 원장이 갖는다
+   * (2026-09-08) — 발급 폼에서 담당자가 직접 적게 하면 같은 사실이 두 곳에 살고, 번호가
+   * 바뀐 날 어느 쪽이 정본인지 답할 근거가 없다.
+   */
+  phone: string | null
+  /**
    * STARTUP 원장 매핑(선택). 기업명과 별개의 값이다 — 이름은 '이 상대를 부르는 이름'이고
    * 이 값은 '그 기업이 우리 원장의 어느 행인가'다.
    */

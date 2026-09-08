@@ -101,14 +101,19 @@ function text(row: Record<string, unknown>, key: string): string | null {
  * '전문가인가'를 함께 답했다. 지금은 표가 'networks' 하나이고 전문가인지는 행의 category가
  * 답하므로, 후보 조회에 그 조건을 함께 건다(`ledger.narrow`).
  */
-export type MasterTable = 'startups' | 'networks'
+export type MasterTable = 'startups' | 'networks' | 'ma_sellers' | 'ma_buyers'
 
 /**
  * 이 앱이 명부에 세울 수 있는 자격 전부.
  *
  * 여기 없는 원장은 명부에 담기지 않는다 — 그리고 그 강제는 화면이 아니라 DB의 CHECK 제약이
  * 함께 한다(화면에서 숨기는 것은 보안이 아니다). 자격을 하나 열 때는 두 곳을 같은 커밋에서
- * 함께 연다.
+ * 함께 연다(M&A 두 종은 `20260908220000`이 열었다).
+ *
+ * **이 표는 앱이 아는 자격 전부이고, 어느 워크스페이스가 그중 무엇을 쓰는지는 여기서 답하지
+ * 않는다.** 그 답은 `ProgramWorkspaceConfig.guestMasterTables`가 갖는다 — 자격에 워크스페이스
+ * 칸을 두면 한 자격이 두 곳에서 쓰이게 되는 날 그 칸이 배열이 되고, 결국 같은 사실을 양쪽에
+ * 적는 표가 둘이 된다.
  */
 export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
   startups: {
@@ -140,6 +145,58 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
       }
       return { label: MANAGEMENT_STATUS_LABEL[key], tone: MANAGEMENT_STATUS_TONE[key] }
     },
+  },
+  ma_sellers: {
+    // 밖에서 부르는 이름은 원장 이름 그대로다 — M&A에서 SELLER·BUYER는 업계 용어이고,
+    // '참여 매각기업'처럼 옮겨 적으면 담당자가 화면에서 쓰는 말과 어긋난다.
+    label: 'SELLER',
+    nameHeader: '기업명',
+    loginNameHeader: '담당자',
+    loginNameMissing: '담당자 없음',
+    listSearchPlaceholder: '기업명 · 담당자 · 연락처 검색',
+    pickSearchPlaceholder: '기업명 · 담당자',
+    pickHelp: 'M&A SELLER 원장에 등록된 기업만 담을 수 있습니다.',
+    detailPath: (id) => `/mna/sellers/${id}`,
+    ledger: {
+      table: 'ma_sellers',
+      // 연락처는 20260908220000이 더했다 — 포털 계정의 초기 비밀번호가 되는 값이라
+      // 계정이 아니라 원장이 갖는다.
+      columns: 'id, name, contact_name, contact_email, phone',
+      searchColumns: ['name', 'contact_name'],
+      map: (row) => ({
+        name: String(row.name ?? ''),
+        loginName: text(row, 'contact_name'),
+        subtitle: text(row, 'contact_name') ?? '',
+        email: text(row, 'contact_email'),
+        phone: text(row, 'phone'),
+        category: null,
+      }),
+    },
+    categoryBadge: () => ({ label: 'SELLER', tone: 'neutral' }),
+  },
+  ma_buyers: {
+    label: 'BUYER',
+    nameHeader: '기업명',
+    loginNameHeader: '담당자',
+    loginNameMissing: '담당자 없음',
+    listSearchPlaceholder: '기업명 · 담당자 · 연락처 검색',
+    pickSearchPlaceholder: '기업명 · 담당자',
+    pickHelp: 'M&A BUYER 원장에 등록된 기업만 담을 수 있습니다.',
+    detailPath: (id) => `/mna/buyers/${id}`,
+    ledger: {
+      table: 'ma_buyers',
+      columns: 'id, name, contact_name, contact_email, phone',
+      searchColumns: ['name', 'contact_name'],
+      map: (row) => ({
+        name: String(row.name ?? ''),
+        loginName: text(row, 'contact_name'),
+        subtitle: text(row, 'contact_name') ?? '',
+        email: text(row, 'contact_email'),
+        phone: text(row, 'phone'),
+        category: null,
+      }),
+    },
+    categoryBadge: () => ({ label: 'BUYER', tone: 'neutral' }),
   },
   networks: {
     label: '참여 전문가',

@@ -46,15 +46,19 @@ function isPersonaTab(tab: LeftTab): tab is MasterTable {
  * 2026-09-05 하위 탭에서 이 층으로 올렸다. 자격은 표를 거르는 조건이 아니라 **게스트에게
  * 다른 화면을 여는 축**이라(3_9_1 §4), 검색·역할과 같은 층에 두면 필터 한 칸처럼 읽힌다.
  */
-const BASE_TABS: { key: LeftTab; label: string }[] = [
-  { key: 'modules', label: MODULE_BOARD_LABEL },
-  // 자격 탭은 손으로 나열하지 않고 자격 설정 순서를 그대로 편다 — 자격을 하나 더 여는 일이
-  // 이 배열을 고치는 일이 되면, 설정에는 있는데 탭에는 없는 자격이 조용히 생긴다.
-  ...(Object.keys(PARTICIPANT_PERSONAS) as MasterTable[]).map((key) => ({
-    key: key as LeftTab,
-    label: PERSONA_LABEL[key],
-  })),
-]
+/**
+ * 내부 운영 탭 — 워크플로우 + 이 워크스페이스가 쓰는 자격들.
+ *
+ * 자격을 손으로 나열하지 않는다: 무엇이 서는지는 `guestMasterTables`가 답하고, 그 값은
+ * 계정생성 창구의 하위 탭과 **같은 한 벌**이다. 나열하면 계정은 세울 수 있는데 명부에는
+ * 탭이 없는 자격이 조용히 생긴다.
+ */
+function baseTabs(personas: readonly MasterTable[]): { key: LeftTab; label: string }[] {
+  return [
+    { key: 'modules', label: MODULE_BOARD_LABEL },
+    ...personas.map((key) => ({ key: key as LeftTab, label: PERSONA_LABEL[key] })),
+  ]
+}
 
 /**
  * 프로그램 상세 개요(NETWORKS·STARTUP 상세와 동일한 2/3 + 1/3 카드섹션 컴포지션).
@@ -108,7 +112,7 @@ export function ProgramOverviewTab({
     config.key === 'mna'
       ? mnaTabs
       : [
-          ...BASE_TABS,
+          ...baseTabs(config.guestMasterTables ?? []),
           ...guestTabs.map((tab, i) => (i === 0 ? { ...tab, divider: true } : tab)),
         ]
   const [leftTab, setLeftTab] = useState<LeftTab>('modules')

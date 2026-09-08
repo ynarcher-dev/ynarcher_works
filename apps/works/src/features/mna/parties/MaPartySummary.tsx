@@ -124,6 +124,20 @@ export function MaPartySummary({
                 />
               }
             />
+            {/* 연락처는 이메일 바로 다음이다 — 둘은 같은 사람에게 닿는 두 길이라 한 짝으로
+                읽혀야 하고, 포털 계정을 세울 때 이 두 칸이 함께 필요하다. */}
+            <InfoField
+              label="연락처"
+              value={
+                <SensitiveValue
+                  field="phone"
+                  contentKey={config.contentKey}
+                  value={record.phone ?? ''}
+                  resourceType={config.targetType}
+                  resourceId={record.id}
+                />
+              }
+            />
             {/* 레코드 자체의 값이 아니라 레코드를 다룬 흔적이라 한 단 연한 톤으로 물러난다
                 (`InfoField`의 `meta` — STARTUP·NETWORKS 상세와 같은 처리). */}
             <InfoField label="생성자" value={record.creator?.name || null} meta />

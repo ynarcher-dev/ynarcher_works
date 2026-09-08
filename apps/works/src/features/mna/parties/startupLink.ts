@@ -3,9 +3,12 @@ import { useToast } from '@ynarcher/ui'
 import type { StartupPick } from '@/features/mna/parties/StartupPickerModal'
 import { MAX_INDUSTRIES, type MaPartyRow } from '@/features/mna/parties/config'
 
-/** 폼에서 이 훅이 만지는 칸들 — 이름·담당자·이메일은 폼이, 분야는 별도 상태가 갖는다. */
+/** 폼에서 이 훅이 만지는 칸들 — 이름·담당자·연락은 폼이, 분야는 별도 상태가 갖는다. */
 interface FormBridge {
-  setText: (field: 'name' | 'contactName' | 'contactEmail', value: string) => void
+  setText: (
+    field: 'name' | 'contactName' | 'contactEmail' | 'contactPhone',
+    value: string,
+  ) => void
   setIndustries: (next: string[]) => void
 }
 
@@ -44,6 +47,7 @@ export function useStartupLink(initial: MaPartyRow | null, form: FormBridge) {
     form.setIndustries((s.industries ?? []).slice(0, MAX_INDUSTRIES))
     form.setText('contactName', s.representative ?? '')
     form.setText('contactEmail', s.email ?? '')
+    form.setText('contactPhone', s.phone ?? '')
 
     // 무엇이 함께 들어왔는지 밝힌다 — 연결 버튼 하나에 칸 셋이 조용히 바뀌면, 담당자는
     // 자기가 적지 않은 값이 언제 들어왔는지 알 수 없다.

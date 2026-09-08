@@ -146,14 +146,14 @@ export const SENSITIVE_CONTENT_GROUPS: readonly SensitiveContentGroup[] = [
       {
         key: 'mna.buyers',
         label: 'M&A BUYER',
-        fields: ['name', 'email'],
-        hint: '담당자명 · 이메일',
+        fields: PERSON,
+        hint: '담당자명 · 이메일 · 연락처',
       },
       {
         key: 'mna.sellers',
         label: 'M&A SELLER',
-        fields: ['name', 'email'],
-        hint: '담당자명 · 이메일',
+        fields: PERSON,
+        hint: '담당자명 · 이메일 · 연락처',
       },
     ],
   },
