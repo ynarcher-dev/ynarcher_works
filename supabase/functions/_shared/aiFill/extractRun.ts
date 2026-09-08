@@ -38,6 +38,7 @@ import { MAX_SINGLE_BYTES } from './limits.ts'
 // 링크를 가져오는 일과 그 크기 상한은 작성 경로가 이미 갖고 있다. 복제하지 않는 이유는
 // SSRF 방어가 그 안에 있기 때문이다 — 보안 코드를 복제하면 한쪽만 고치는 날이 온다.
 import { readLink } from './linkRead.ts'
+import { loadRefAttachments, refTargetsOf } from './refs.ts'
 import type { AiFillProfile, CallerClient } from './profile.ts'
 
 const BUCKET = 'attachments'
@@ -199,7 +200,15 @@ export async function runMaterialExtract<K extends string, C>(
       byteSize: row.byte_size == null ? null : Number(row.byte_size),
       mime: storedMime,
     }
-    const mismatch = verifyAgainstAttachment(parsed, facts, { type: profile.targetType, id: parsed.targetId })
+    // 대조 대상은 자기 레코드와 **참조로 함께 읽는 대상들**이다(2026-09-08). 참조는 그 행이
+    // 자기 것이 아닐 때만 묻는다 — 대부분의 요청에서 왕복 한 번이 늘지 않고, 무엇을 참조로
+    // 찾는지가 코드에서 그대로 읽힌다. 어느 대상을 함께 읽는지는 RPC가 호출자 토큰으로 답한다.
+    const self = { type: profile.targetType, id: parsed.targetId }
+    const targets =
+      facts.targetType === self.type && facts.targetId === self.id
+        ? [self]
+        : [self, ...refTargetsOf(await loadRefAttachments(caller, self.type, self.id))]
+    const mismatch = verifyAgainstAttachment(parsed, facts, targets)
     if (mismatch) return jsonResponse({ error: 'invalid_request', message: mismatch }, 400)
     storagePath = row.storage_path ? String(row.storage_path) : null
   }

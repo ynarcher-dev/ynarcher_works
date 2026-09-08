@@ -136,13 +136,19 @@ export interface AttachmentFacts {
  * 크기를 **같은 값으로 맞추는 것**이 요점이다. 이름과 형식만 맞추면 같은 이름의 다른 파일을
  * 분석한 결과를 그 행에 심을 수 있다. 반대로 원장에 크기가 비어 있는 옛 행은 크기로 대조할
  * 수 없으므로 그 조건만 건너뛴다(대조할 값이 없는 것과 어긋나는 것은 다르다).
+ *
+ * @param targets 이 요청이 자료를 읽어도 되는 대상들 — 자기 레코드와, 참조로 함께 읽는 것들.
  */
 export function verifyAgainstAttachment(
   req: ExtractRequest,
   row: AttachmentFacts,
-  target: { type: string; id: string },
+  targets: ReadonlyArray<{ type: string; id: string }>,
 ): string | null {
-  if (row.targetType !== target.type || row.targetId !== target.id) {
+  // 대상은 하나가 아니라 **한 벌**이다(2026-09-08). 자기 레코드 외에 참조로 함께 읽는
+  // 대상들이 들어온다 — 그 목록을 만드는 것은 호출부이고, 여기서는 받은 것과 맞춰 볼 뿐이다.
+  // 목록이 비면 어떤 자료도 통과하지 못한다(빈 목록을 '전부 허용'으로 읽지 않는다 — 참조
+  // 조회가 실패한 날 조용히 문이 열려서는 안 된다).
+  if (!targets.some((t) => row.targetType === t.type && row.targetId === t.id)) {
     return '이 레코드의 자료가 아닙니다.'
   }
   if (req.source === 'link' ? row.kind !== 'LINK' : row.kind !== 'FILE') {

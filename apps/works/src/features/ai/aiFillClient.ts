@@ -2,6 +2,7 @@ import { useMutation } from '@tanstack/react-query'
 import type { ExtractBody } from '@docparse/types.ts'
 import { supabase } from '@/lib/supabase'
 import { isLinkMaterial, materialDisplayName, type Material } from '@/features/networks/materialHooks'
+import { materialLocationLabel } from '@/features/networks/materialRefs'
 import { isAiReadable } from '@/features/ai/aiFormats'
 
 import type { AiGrid } from '@/features/ai/aiGrid'
@@ -62,12 +63,28 @@ export type AiSource =
       url: string | null
       /** 원장에 적힌 형식 값. 분석 대상인지(PDF·이미지는 아니다) 가릴 때 쓴다. */
       contentType: string | null
+      /**
+       * 이 자료가 사는 곳의 이름. **다른 대상에서 참조해 온 자료에만 붙는다**(2026-09-08).
+       *
+       * 이 화면 자기 자료에는 비워 둔다 — 전부에 붙이면 같은 말이 모든 줄에 서서 정작
+       * 어느 줄이 남의 것인지가 그 반복에 묻힌다. 자료 관리 카드에서는 위치가 소제목으로
+       * 갈려 있지만 이 격자에서는 두 곳의 자료가 한 목록에 섞이므로, 같은 이름의 파일이
+       * 양쪽에 있을 때 무엇을 고르는지 답할 것이 필요하다.
+       */
+      origin?: string
     }
   | { kind: 'file'; key: string; name: string; bytes: number | null; readable: boolean; file: File }
   | { kind: 'link'; key: string; name: string; bytes: number | null; readable: boolean; url: string }
 
-/** 이미 올라간 자료 목록을 출처로 바꾼다(수정 모드 — 파일과 링크 모두). */
-export function sourcesFromMaterials(materials: Material[]): AiSource[] {
+/**
+ * 이미 올라간 자료 목록을 출처로 바꾼다(수정 모드 — 파일과 링크 모두).
+ *
+ * `ownTargetType`을 주면 **그 대상의 것이 아닌 줄에만** 위치 이름이 붙는다(참조 자료).
+ * 위치를 호출부가 글자로 적어 넘기지 않는 것이 요점이다 — 어디서 왔는지는 행 자신이
+ * `target_type`으로 말하고 있고, 그 답을 화면이 손으로 다시 적으면 참조가 늘어날 때마다
+ * 호출부가 방향표를 한 벌 더 갖게 된다.
+ */
+export function sourcesFromMaterials(materials: Material[], ownTargetType?: string): AiSource[] {
   return materials.map((m) => ({
     kind: 'attachment',
     key: m.id,
@@ -78,6 +95,10 @@ export function sourcesFromMaterials(materials: Material[]): AiSource[] {
     readable: isAiReadable(m),
     url: isLinkMaterial(m) ? m.url : null,
     contentType: m.content_type,
+    origin:
+      ownTargetType && m.target_type !== ownTargetType
+        ? (materialLocationLabel(m.target_type) ?? undefined)
+        : undefined,
   }))
 }
 

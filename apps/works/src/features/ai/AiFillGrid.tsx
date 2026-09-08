@@ -88,6 +88,22 @@ function kindLabel(source: AiSource): string {
   return source.kind === 'link' ? '링크' : ''
 }
 
+/**
+ * 이 자료가 사는 곳(참조해 온 자료에만 있다).
+ *
+ * 이 화면 자기 자료에는 없다 — 전부에 붙이면 같은 말이 모든 줄에 서서 정작 어느 줄이 남의
+ * 것인지가 그 반복에 묻힌다.
+ */
+function sourceOrigin(source: AiSource): string | undefined {
+  return source.kind === 'attachment' ? source.origin : undefined
+}
+
+/** 커서 설명 — 잘린 이름의 전문. 참조 자료는 어디 것인지까지 답한다. */
+function sourceTitle(source: AiSource): string {
+  const origin = sourceOrigin(source)
+  return origin ? `${origin} · ${source.name}` : source.name
+}
+
 export function AiFillGrid<K extends string>({
   sources,
   cards,
@@ -255,6 +271,7 @@ export function AiFillGrid<K extends string>({
           {sources.map((s) => {
             const used = cardCountFor(grid, s.key, cardKeys)
             const { base, ext } = splitName(s.name)
+            const origin = sourceOrigin(s)
             return (
               <tr key={s.key} className="group">
                 <th
@@ -271,8 +288,14 @@ export function AiFillGrid<K extends string>({
                     // 이름이 칸을 밀어내 표가 가로로 넘친다.
                     wrapperClassName="w-full min-w-0"
                     // 이름은 잘리고(말줄임), 전체 이름은 커서를 올리면 답한다.
+                    //
+                    // 참조해 온 자료에는 위치가 이름 앞에 붙는다(2026-09-08). **줄을 늘리지
+                    // 않고 같은 한 줄에 세우는 것**이 요점이다 — 이 표는 줄마다 두 층이 되면
+                    // 통째로 두 배 높이가 되므로(위 주석), 크기를 갈라 위계를 만들지 않고
+                    // 색만 한 단 물러난다.
                     label={
-                      <span className="block min-w-0 truncate" title={s.name}>
+                      <span className="block min-w-0 truncate" title={sourceTitle(s)}>
+                        {origin && <span className="text-gray-500">{origin} · </span>}
                         {base}
                       </span>
                     }

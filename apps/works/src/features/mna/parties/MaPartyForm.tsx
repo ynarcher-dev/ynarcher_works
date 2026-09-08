@@ -23,6 +23,7 @@ import { SectionHeading } from '@/components/SectionHeading'
 import { AiFillButton } from '@/features/ai/AiFillButton'
 import { sourcesFromFiles, sourcesFromLinks, sourcesFromMaterials } from '@/features/ai/aiFillClient'
 import { useMaterials } from '@/features/networks/materialHooks'
+import { useMaterialRefs } from '@/features/networks/materialRefs'
 import { useStartupLink } from '@/features/mna/parties/startupLink'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { PendingMaterialPanel } from '@/features/networks/PendingMaterialPanel'
@@ -115,13 +116,24 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
   /**
    * 'AI 작성하기'가 읽을 자료. **모드가 무엇을 읽는지 정한다** — 수정은 이미 올라간 첨부,
    * 등록은 아직 올라가지 않은 보류 파일·링크다(등록 모드의 파일은 서버가 저장하지 않는다).
+   *
+   * 수정 모드에서는 **참조 자료도 함께 읽는다**(2026-09-08) — 연결한 스타트업 쪽에 이미
+   * 올라가 있는 IR덱·등기부를 여기 한 번 더 올리지 않아도 초안의 근거가 된다. 등록 모드에는
+   * 참조가 없다: 가리킬 행이 아직 없고, 연결은 저장 후에 성립한다.
+   *
+   * 자료 관리 카드와 **같은 두 목록을 같은 순서로** 세운다(자기 것 다음 참조). 화면에서 본
+   * 목록과 창에서 고르는 목록이 다르면, 방금 본 파일이 왜 여기 없는지 담당자가 답할 수 없다.
    */
   const { data: uploaded, isLoading: materialsLoading } = useMaterials(
     config.targetType,
     isEdit ? recordId : undefined,
   )
+  const { data: refMaterials, isLoading: refsLoading } = useMaterialRefs(
+    config.targetType,
+    isEdit ? recordId : undefined,
+  )
   const aiSources = isEdit
-    ? sourcesFromMaterials(uploaded ?? [])
+    ? sourcesFromMaterials([...(uploaded ?? []), ...(refMaterials ?? [])], config.targetType)
     : [
         ...sourcesFromFiles(pending.files(config.targetType)),
         ...sourcesFromLinks(pending.links(config.targetType)),
@@ -323,7 +335,7 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
             <AiFillButton
               catalog={quickReviewCatalog(quickReview)}
               sources={aiSources}
-              loading={isEdit && materialsLoading}
+              loading={isEdit && (materialsLoading || refsLoading)}
               targetId={recordId}
               subjectName={watchedName || undefined}
               onFilled={(result, cards) => {

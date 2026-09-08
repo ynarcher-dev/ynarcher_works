@@ -1,4 +1,4 @@
-import { Button } from '@ynarcher/ui'
+import { Button, cardText } from '@ynarcher/ui'
 import { useState } from 'react'
 import { DetailPanelCard } from '@/features/networks/DetailPanelCard'
 import { MaterialBrowseModal } from '@/features/networks/MaterialBrowseModal'
@@ -11,6 +11,7 @@ import {
   useMaterials,
   useUploadMaterial,
 } from '@/features/networks/materialHooks'
+import { groupMaterialRefs, useMaterialRefs } from '@/features/networks/materialRefs'
 
 /**
  * 자료 관리 패널(공용). 레코드에 귀속된 파일의 업로드·다운로드·삭제(소프트)를 담당한다.
@@ -29,6 +30,20 @@ import {
  * 헤더 '전체보기'는 같은 목록을 표(검색·번호줄 페이저 포함)로 펼치는 모달을 연다 — 이 패널은
  * 한 쪽에 다섯 건만 서는 곁다리 자리라, 자료가 쌓이면 등록일·형식을 견주며 찾을 자리가 따로
  * 필요하다. 두 자리가 같은 `list`를 보므로 건수가 어긋나지 않는다.
+ *
+ * ## 참조 자료 (2026-09-08)
+ *
+ * 자기 자료 아래에 **다른 대상에 올라간 자료**가 위치별로 한 덩어리씩 선다(M&A SELLER가
+ * 연결된 스타트업의 자료를 함께 보는 것이 첫 사례다). 파일을 복제하지 않고 그쪽 행을 그대로
+ * 세우며, 어느 대상이 어느 대상의 자료를 보는지는 화면이 아니라 서버 함수 하나가 답한다
+ * (`materialRefs.ts`).
+ *
+ * **읽기 전용이라 업로드·수정·삭제를 두지 않는다** — 그 자료를 고치는 자리는 그것이 원래
+ * 사는 화면 하나다. 헤더 건수와 '전체보기'도 자기 자료만 센다: 헤더의 수는 이 카드가 올리고
+ * 지울 수 있는 것의 수여야 하고, 참조 덩어리는 자기 소제목에서 자기 건수를 말한다.
+ *
+ * 모듈 자료(`moduleId`)에는 참조를 세우지 않는다 — 그 자리는 "이 모듈이 올린 파일"만 답하는
+ * 좁힌 창이라, 다른 원장의 자료가 끼면 그 좁힘이 뜻을 잃는다.
  */
 export function MaterialPanel({
   targetType,
@@ -53,10 +68,13 @@ export function MaterialPanel({
 }) {
   const [browsing, setBrowsing] = useState(false)
   const { data: materials, isLoading } = useMaterials(targetType, targetId, moduleId)
+  // 모듈로 좁힌 자리에는 참조를 세우지 않는다(위 주석).
+  const { data: refs } = useMaterialRefs(targetType, moduleId ? undefined : targetId)
   const upload = useUploadMaterial(targetType, targetId, moduleId)
   const addLink = useAddMaterialLink(targetType, targetId, moduleId)
   const remove = useDeleteMaterial(targetType, targetId)
   const list = materials ?? []
+  const refGroups = groupMaterialRefs(refs ?? [])
 
   const addFiles = (files: File[]) => {
     for (const file of files) upload.mutate(file)
@@ -105,6 +123,17 @@ export function MaterialPanel({
           deletingId={remove.isPending ? remove.variables : undefined}
         />
       </div>
+
+      {/* 참조 자료 — 위치마다 한 덩어리. 삭제·수정 핸들러를 주지 않으므로 목록이 스스로
+          읽기 전용으로 선다(같은 목록 부품을 쓰되 할 수 있는 일만 갈린다). */}
+      {refGroups.map((g) => (
+        <div key={g.targetType} className="mt-3 border-t border-gray-100 pt-3">
+          <p className={`mb-1.5 ${cardText.subhead}`}>
+            {g.label} 자료 [{g.materials.length}]
+          </p>
+          <MaterialList materials={g.materials} />
+        </div>
+      ))}
 
       {browsing && (
         <MaterialBrowseModal

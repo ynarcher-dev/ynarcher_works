@@ -23,8 +23,14 @@ const base = {
   result: { status: 'ready', body: { chunks: [] } },
 }
 
-/** 대상은 프로파일이 정한다 — 이 판정은 대상이 무엇인지 모르고 받은 값과 맞춰 볼 뿐이다. */
-const TARGET = { type: 'startup', id: 'S1' }
+/**
+ * 대상은 프로파일이 정한다 — 이 판정은 대상이 무엇인지 모르고 받은 값과 맞춰 볼 뿐이다.
+ * 한 벌인 이유는 참조 자료다: 자기 레코드 외에 함께 읽는 대상들이 뒤에 붙는다.
+ */
+const TARGET = [{ type: 'startup', id: 'S1' }]
+
+/** 참조로 함께 읽는 대상이 하나 붙은 경우. */
+const WITH_REF = [...TARGET, { type: 'ma_seller', id: 'M1' }]
 
 const ok = (raw: unknown): ExtractRequest => {
   const out = readRequest(raw)
@@ -81,6 +87,17 @@ describe('원장 행과 대조', () => {
   it('다른 기업의 자료는 막는다', () => {
     expect(verifyAgainstAttachment(ok(base), { ...facts, targetId: 'S2' }, TARGET)).toContain('이 레코드의 자료가 아닙니다')
     expect(verifyAgainstAttachment(ok(base), { ...facts, targetType: 'program' }, TARGET)).not.toBeNull()
+  })
+
+  it('참조로 함께 읽는 대상의 자료는 통과한다(목록에 있는 것만)', () => {
+    const ref = { ...facts, targetType: 'ma_seller', targetId: 'M1' }
+    expect(verifyAgainstAttachment(ok(base), ref, WITH_REF)).toBeNull()
+    // 참조 목록에 없으면 막힌다 — 목록을 만드는 것은 서버이고 이 판정은 맞춰 볼 뿐이다.
+    expect(verifyAgainstAttachment(ok(base), ref, TARGET)).toContain('이 레코드의 자료가 아닙니다')
+  })
+
+  it('대상 목록이 비면 어떤 자료도 통과하지 못한다(빈 목록은 전부 허용이 아니다)', () => {
+    expect(verifyAgainstAttachment(ok(base), facts, [])).toContain('이 레코드의 자료가 아닙니다')
   })
 
   it('이름·형식·크기가 어긋나면 막는다(같은 이름의 다른 파일을 심지 못하게)', () => {

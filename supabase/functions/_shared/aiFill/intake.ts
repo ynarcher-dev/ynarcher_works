@@ -15,6 +15,7 @@ import { parseJson } from './envelope.ts'
 import { extractsFromRows, readPendingExtracts, type ExtractRow } from './extractsIn.ts'
 import type { Assignments } from './groups.ts'
 import type { AiFillProfile, CallerClient } from './profile.ts'
+import { loadRefAttachments } from './refs.ts'
 import { readAssignments, readCards } from './request.ts'
 import {
   resolveAttachments,
@@ -144,7 +145,24 @@ async function readStored<K extends string, C>(
     .eq('target_id', targetId)
     .is('deleted_at', null)
   if (attErr) return { error: { code: 'internal_error', status: 500 } }
-  const resolved = resolveAttachments((atts ?? []) as AttachmentRow[], ids)
+
+  // 이 레코드의 것이 아닌 id는 **참조 자료**일 수 있다(2026-09-08) — 연결한 스타트업 쪽에
+  // 올라간 자료를 셀러 퀵 리뷰가 그대로 읽는 경우다. 참조를 먼저 묻지 않고 **남은 id가 있을
+  // 때만** 묻는 것이 요점이다: 참조가 없는 대상(대부분)에서 왕복 한 번이 늘지 않고, 무엇을
+  // 참조로 찾는지가 코드에서 그대로 읽힌다.
+  //
+  // 어느 대상의 자료를 함께 읽는지는 여기서 판정하지 않는다 — RPC가 호출자 토큰으로 돌며
+  // 그쪽 원장의 SELECT 정책이 그대로 답한다(refs.ts).
+  const own = (atts ?? []) as AttachmentRow[]
+  const missing = ids.filter((id) => !own.some((r) => r.id === id))
+  const fromRefs =
+    missing.length === 0
+      ? []
+      : (await loadRefAttachments(deps.caller, deps.profile.targetType, targetId)).filter((r) =>
+          missing.includes(r.id),
+        )
+
+  const resolved = resolveAttachments([...own, ...fromRefs], ids)
   if ('error' in resolved) return { error: resolved.error }
 
   // 이미 분석된 자료의 조각을 캐시에서 읽는다. **호출자 토큰으로** 읽는 이유는 그 표의
