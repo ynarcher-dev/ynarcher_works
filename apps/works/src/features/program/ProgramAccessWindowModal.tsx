@@ -96,7 +96,10 @@ export function ProgramAccessWindowModal({
           접지 않는다).
         */}
         <p className="text-body text-gray-700">
-          <span className="font-medium">{program.title}</span>의 참여 기업·참여 전문가{' '}
+          {/* 자격을 낱개로 세지 않는다 — 워크스페이스마다 다르고(M&A는 SELLER·BUYER),
+              여기서 다시 적으면 자격이 늘 때마다 이 문장이 뒤처진다. 이 기간이 걸리는 대상은
+              '그 사업의 포털 계정 전원'이라는 사실 하나다. */}
+          <span className="font-medium">{program.title}</span>의 포털 계정{' '}
           <span className="font-medium">전원</span>에게 같이 걸립니다.
         </p>
         <Field label="종료일" hint="비워 두면 제한 없음">

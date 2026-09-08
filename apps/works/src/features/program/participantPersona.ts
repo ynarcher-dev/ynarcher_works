@@ -47,7 +47,14 @@ export interface LedgerFacts {
 }
 
 export interface ParticipantPersona {
-  /** 탭·카드 제목·추가 버튼이 함께 쓰는 이름. 원장 이름이 아니라 **이 사업에서의 자격**이다. */
+  /**
+   * 탭·배지·추가 버튼이 함께 쓰는 이름 — **그 사람이 무엇으로 들어오는가**다.
+   *
+   * 2026-09-08에 `참여 기업`·`참여 전문가`에서 `스타트업`·`전문가`로 줄였다(사용자 지정).
+   * '참여'를 뗀 것은 자리가 이미 그 말을 하고 있어서다 — 이 이름이 서는 곳은 그 사업의 명부와
+   * 계정생성 창구뿐이라, 참여 중이라는 사실을 이름이 한 번 더 적으면 같은 말이 두 번 선다.
+   * M&A가 `SELLER`·`BUYER`인 것과도 층이 맞는다: 넷 다 **무엇인가**를 부르는 한 낱말이다.
+   */
   label: string
   /** 표의 대상 이름 열 머리글. 자격을 그대로 부른다(기업 탭에서 '대상'이라 적으면 번역이 한 번 더 든다). */
   nameHeader: string
@@ -117,7 +124,7 @@ export type MasterTable = 'startups' | 'networks' | 'ma_sellers' | 'ma_buyers'
  */
 export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
   startups: {
-    label: '참여 기업',
+    label: '스타트업',
     nameHeader: '기업명',
     loginNameHeader: '대표자',
     loginNameMissing: '대표자 없음',
@@ -199,7 +206,7 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
     categoryBadge: () => ({ label: 'BUYER', tone: 'neutral' }),
   },
   networks: {
-    label: '참여 전문가',
+    label: '전문가',
     nameHeader: '전문가명',
     loginNameHeader: '성명',
     loginNameMissing: '성명 없음',
