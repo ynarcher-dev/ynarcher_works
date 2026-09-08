@@ -27,7 +27,6 @@ import {
   type GuestAccount,
   type GuestAccountProgram,
 } from '@/features/admin/guestAccountHooks'
-import { GuestAccountIssueModal } from '@/features/admin/GuestAccountIssueModal'
 import { guestDoorBadge, isDoorOpen } from '@/features/program/guestDoorBadge'
 import { PERSONA_LABEL, type MasterTable } from '@/features/program/participantPersona'
 import { GUEST_TYPE_LABEL } from '@/lib/userTypes'
@@ -124,8 +123,6 @@ export function GuestAccountPanel({
   const [ledger, setLedger] = useState<MasterTable | null>(masterTables?.[0] ?? null)
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(0)
-  /** 계정 발급 모달. 내부 사용자 전원이 쓴다(발급만으로는 아무것도 보이지 않는다). */
-  const [issueOpen, setIssueOpen] = useState(false)
   /** 상세를 펼쳐 보는 계정. 행을 누르면 열린다. */
   const [detail, setDetail] = useState<GuestAccount | null>(null)
   /** 정지하려는 계정(사유 입력). 해제는 사유를 묻지 않는다. */
@@ -341,16 +338,24 @@ export function GuestAccountPanel({
         />
       )}
 
+      {/*
+        **발급 버튼이 없다**(2026-09-08 사용자 지정 "사이드바에서는 매핑된 프로젝트가 조회되는
+        기능으로만 하고, 실제 생성은 프로젝트 상세에서").
+
+        걷어도 잃는 것이 없다 — 이 화면에서 만든 계정은 사업에 매핑되기 전까지 로그인해도
+        "접근 가능한 사업이 없습니다"만 떴다. 즉 **아무 일도 하지 않는 버튼**이었고, 계정은
+        언제나 "어느 사업에 들이려고" 만들어지므로 만드는 자리도 그 사업 안이어야 한다.
+
+        옮긴 것이지 없앤 것이 아니다: 사람을 고르는 2단계 폼은 사업 상세의 명부 추가 모달로
+        갔고, 오히려 거기서 더 많은 일을 한다(그 자리는 계정과 명부 행을 함께 만든다).
+
+        남는 물음은 이 화면만 답할 수 있는 것들이다 — 이 계정이 **어느 사업들에** 걸려 있나,
+        지금 열려 있나, 정지됐나. 사업을 가로지르는 물음이라 사업 안에서는 답할 수 없다.
+      */}
       <ListToolbar
         keyword={keyword}
         onKeywordChange={setKeyword}
         searchPlaceholder="이름 또는 이메일로 검색"
-        actions={
-          // 발급 버튼은 원장이 정해진 자리에만 선다. 발급은 "어느 원장의 어느 행"에 인격을
-          // 붙이는 일이라 원장 없이는 성립하지 않는다 — ADMIN 계정 관리가 소유한 축은
-          // 정지·해제이고, 발급이 필요하면 그 원장을 가진 창구에서 한다.
-          ledger ? <Button onClick={() => setIssueOpen(true)}>계정 발급</Button> : undefined
-        }
       />
 
       <DataTable
@@ -434,14 +439,6 @@ export function GuestAccountPanel({
           </div>
         )}
       </Modal>
-
-      {ledger && (
-        <GuestAccountIssueModal
-          open={issueOpen}
-          onClose={() => setIssueOpen(false)}
-          master={ledger}
-        />
-      )}
 
       {/* 정지 — 쓰던 사유가 클릭 한 번에 사라지지 않도록 바깥 클릭으로 닫지 않는다. */}
       <Modal

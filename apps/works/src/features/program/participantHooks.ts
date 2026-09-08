@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { sanitizeOrValue } from '@/features/master/ledgerPage'
+import type { PersonChoice } from '@/features/program/participantPerson'
 import {
   PARTICIPANT_PERSONAS,
   isMasterTable,
@@ -287,163 +288,90 @@ export function useMasterCandidates(
 }
 
 /**
- * 후보가 로그인 대상이 될 수 있는가.
- * 이메일과 연락처가 **둘 다** 있어야 한다 — 이메일은 ID이고 연락처는 초기 비밀번호라,
- * 한쪽만으로는 로그인이 성립하지 않는다(2026-08-27 비밀번호 인증 전환).
+ * 매핑 불가 사유(짧은 라벨). 가능하면 null.
+ *
+ * **막는 것은 '이미 담김' 하나다**(2026-09-08). 종전에는 원장에 성명·이메일·연락처가 없으면
+ * 고를 수 없었고, 그것은 계정 값을 **원장이 정하던** 시절의 규칙이었다 — 원장이 비면 계정을
+ * 세울 방법이 아예 없었으므로 목록에서 미리 잠그는 것이 정직했다.
+ *
+ * 지금은 담당자가 2단계에서 이름·이메일·연락처를 적는다. 그래서 원장이 비었다는 것은 더 이상
+ * '담을 수 없다'가 아니라 '기본값이 비어 있다'이며, 그 사실은 줄 아래 회색 한 줄이 답한다.
  */
-export function canMapCandidate(c: MasterCandidate): boolean {
-  return Boolean(c.loginName) && Boolean(c.email) && Boolean(c.phone)
-}
-
-/** 매핑 불가 사유(짧은 라벨). 가능하면 null. */
 export function mapBlockReason(c: MasterCandidate): string | null {
-  if (c.alreadyMapped) return '등록됨'
-  if (!c.loginName) return '성명 없음'
-  if (!c.email) return '이메일 없음'
-  if (!c.phone) return '연락처 없음'
-  return null
+  return c.alreadyMapped ? '등록됨' : null
 }
 
-/** 원장에서 고른 대상을 명부에 올린다(로그인은 열리지 않는다). */
+export interface AddParticipantsResult {
+  added: number
+  /** 계정을 세우지 못한 줄의 사유. 나머지는 담긴다 — 하나가 막혔다고 나머지를 버리지 않는다. */
+  failed: string[]
+}
+
+/**
+ * 원장에서 고른 대상을 **사람까지 정해** 명부에 올린다. 로그인은 아직 열리지 않는다.
+ *
+ * 명부에 담는 일과 문을 여는 일은 갈려 있다 — 참여 후보를 쌓아 두더라도 확정 전에는 문이
+ * 열리지 않고, 여는 것은 그 사업 담당자(PM·MEMBER)뿐이다.
+ *
+ * **계정은 여기서 세워진다**(2026-09-08 사용자 지정). 종전에는 `로그인 열기`가 원장 행에서
+ * 한 명을 자동으로 꺼내 세웠고, 그래서 한 회사에 담당자를 여럿 둘 수 없었다. 담을 때 정하면
+ * 명부 행이 처음부터 "어느 회사의 누구"를 들고, 개방은 그 값을 쓴다(20260908210000).
+ *
+ * **삽입 전에 계정을 세운다.** 순서를 뒤집어 명부 행을 먼저 넣으면, 발급이 실패했을 때
+ * 사람 없는 줄이 남아 담당자가 그것을 지우고 다시 담아야 한다.
+ *
+ * 발급은 멱등이라 같은 이메일이 이미 있으면 그 계정을 그대로 돌려받는다 — 그래서 같은
+ * 사람을 두 번째 사업에 담아도 계정도 비밀번호도 늘지 않는다.
+ */
 export function useAddParticipants(programId: string) {
   const config = useProgramWorkspace()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (input: { master: MasterTable; ids: string[] }) => {
-      const rows = input.ids.map((id) => ({
-        entity_key: config.entityKey,
-        program_id: programId,
-        master_table: input.master,
-        master_id: id,
-      }))
-      const { error } = await supabase.from(SHARED_TABLES.participants).insert(rows)
-      if (error) throw error
+    mutationFn: async (input: {
+      master: MasterTable
+      rows: { masterId: string; choice: PersonChoice }[]
+    }): Promise<AddParticipantsResult> => {
+      const failed: string[] = []
+      const resolved: { masterId: string; userId: string }[] = []
+
+      for (const row of input.rows) {
+        if (row.choice.kind === 'existing') {
+          resolved.push({ masterId: row.masterId, userId: row.choice.userId })
+          continue
+        }
+        const { data, error } = await supabase.rpc('issue_guest_account', {
+          p_master_table: input.master,
+          p_master_id: row.masterId,
+          p_name: row.choice.name.trim() || null,
+          p_email: row.choice.email.trim() || null,
+          p_phone: row.choice.phone.trim() || null,
+        })
+        // 사유를 그대로 옮긴다 — 서버가 "연락처가 없어 계정을 세울 수 없습니다"처럼 무엇을
+        // 보완해야 하는지 답하는데, 여기서 뭉뚱그리면 담당자가 그 답을 잃는다.
+        if (error) failed.push(`${row.choice.name || row.masterId}: ${error.message}`)
+        else resolved.push({ masterId: row.masterId, userId: data as string })
+      }
+
+      if (resolved.length > 0) {
+        const { error } = await supabase.from(SHARED_TABLES.participants).insert(
+          resolved.map((r) => ({
+            entity_key: config.entityKey,
+            program_id: programId,
+            master_table: input.master,
+            master_id: r.masterId,
+            user_id: r.userId,
+          })),
+        )
+        if (error) throw error
+      }
+      return { added: resolved.length, failed }
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: [config.key, 'participants', programId] })
       void qc.invalidateQueries({ queryKey: [config.key, 'master-candidates', programId] })
-    },
-  })
-}
-
-export interface OpenAccessResult {
-  opened: number
-  notified: number
-  failed: number
-}
-
-/**
- * 게스트 로그인 개방 + 접속 안내 발송. 인가(사업 담당자 여부)는 서버 RPC가 지며,
- * 함수는 그 결과로 받은 연락처로만 안내를 보낸다.
- */
-export function useOpenGuestAccess(programId: string) {
-  const config = useProgramWorkspace()
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (participantIds: string[]): Promise<OpenAccessResult> => {
-      const { data, error } = await supabase.functions.invoke<OpenAccessResult & { message?: string }>(
-        'guest-access-invite',
-        { body: { participantIds } },
-      )
-      if (error) throw new Error(data?.message ?? error.message)
-      return { opened: data?.opened ?? 0, notified: data?.notified ?? 0, failed: data?.failed ?? 0 }
-    },
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: [config.key, 'participants', programId] })
-    },
-  })
-}
-
-/**
- * 비밀번호 **재설정 안내 발송**. 종전의 '초기화'를 대체한다(2026-09-05).
- *
- * 담당자가 값을 되돌리는 경로를 두지 않는 이유: 계정이 대상 단위가 되면서 한 계정이 여러
- * 사업을 열게 되었고, 값을 쥔 사람은 그 게스트가 참여 중인 **다른 팀 사업까지** 들어갈 수
- * 있다. 링크는 게스트 본인 연락처로만 나가고 호출자 화면에는 아무 값도 오지 않는다.
- */
-export function useSendPasswordReset() {
-  return useMutation({
-    mutationFn: async (userId: string): Promise<{ notified: boolean }> => {
-      const { data, error } = await supabase.functions.invoke<{
-        ok?: boolean
-        notified?: boolean
-        message?: string
-      }>('guest-password-reset', { body: { userId } })
-      if (error) throw new Error(data?.message ?? error.message)
-      return { notified: Boolean(data?.notified) }
-    },
-  })
-}
-
-/**
- * 이 사업 게스트의 접근 종료일 설정(2026-09-05 사업 단위로 올라왔다).
- *
- * 기간은 사업의 사실이지 기업의 사실이 아니다 — 참여 기업이 스무 곳이면 종전 구조는 같은
- * 값을 스무 번 적게 했고, 그 스무 값이 어긋날 수 있다는 것 자체가 결함이었다. 기업 한 곳만
- * 막을 일은 기간이 아니라 **차단**이 답한다(3_9_1 §8).
- *
- * 사업 원장 값이 바뀌므로 명부만이 아니라 사업 조회도 함께 무효화한다.
- */
-export function useSetProgramAccessWindow(programId: string) {
-  const config = useProgramWorkspace()
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (ends: string | null): Promise<void> => {
-      const { error } = await supabase.rpc('set_program_guest_access_window', {
-        p_program_id: programId,
-        p_ends: ends,
-      })
-      if (error) throw error
-    },
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: [config.key, 'participants', programId] })
-      void qc.invalidateQueries({ queryKey: [config.key, 'program', programId] })
-      void qc.invalidateQueries({ queryKey: [config.key, 'programs'] })
-    },
-  })
-}
-
-/**
- * 차단 해제 — 닫은 문을 다시 연다.
- *
- * 되돌릴 상태를 화면이 정하지 않는다. 서버가 원장에 되묻는다 — 이 사업에 들어와 본 적이
- * 있으면(`joined_at`) 이용 중, 없으면 초대다. 차단 직전 값을 어딘가에 적어 두는 방법은
- * 쓰지 않는다(사본은 어긋난다 — 막아 둔 사이에 기간이 지나면 적어 둔 '이용 중'은 거짓이다).
- *
- * `로그인 열기`와 다른 점은 **안내를 보내지 않는다**는 것이다. 막은 적 있다는 사실을 굳이
- * 알리지 않고 되돌리는 길이며, 다시 알려야 하면 `로그인 열기`를 쓴다.
- */
-export function useReopenGuestAccess(programId: string) {
-  const config = useProgramWorkspace()
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (participantIds: string[]): Promise<number> => {
-      const { data, error } = await supabase.rpc('reopen_program_guest_access', {
-        p_participant_ids: participantIds,
-      })
-      if (error) throw error
-      return (data as number | null) ?? 0
-    },
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: [config.key, 'participants', programId] })
-    },
-  })
-}
-
-/** 게스트 로그인 차단(접속 중인 세션까지 즉시 무효화). */
-export function useCloseGuestAccess(programId: string) {
-  const config = useProgramWorkspace()
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (participantIds: string[]): Promise<number> => {
-      const { data, error } = await supabase.rpc('close_program_guest_access', {
-        p_participant_ids: participantIds,
-      })
-      if (error) throw error
-      return (data as number | null) ?? 0
-    },
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: [config.key, 'participants', programId] })
+      // 계정을 세웠으므로 창구의 목록과 원장 행별 계정 수도 함께 상한다.
+      void qc.invalidateQueries({ queryKey: ['admin', 'guest-accounts'] })
+      void qc.invalidateQueries({ queryKey: ['admin', 'guest-ledger-accounts'] })
     },
   })
 }

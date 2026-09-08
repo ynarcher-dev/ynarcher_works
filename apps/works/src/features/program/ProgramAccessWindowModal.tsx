@@ -1,7 +1,9 @@
 import { Button, Field, Input, Modal, useToast } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import type { Program } from '@/features/program/hooks'
-import { useSetProgramAccessWindow } from '@/features/program/participantHooks'
+import {
+  useSetProgramAccessWindow,
+} from '@/features/program/participantAccessHooks'
 
 /** timestamptz → `<input type="date">`가 읽는 값. 빈 값은 '제한 없음'이다. */
 function toDateInput(iso: string | null): string {

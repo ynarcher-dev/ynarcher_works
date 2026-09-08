@@ -20,13 +20,15 @@ import {
 import { participantColumns } from '@/features/program/participantColumns'
 import { ParticipantSelectionBar } from '@/features/program/ParticipantSelectionBar'
 import {
-  useCloseGuestAccess,
-  useOpenGuestAccess,
   useProgramParticipants,
-  useReopenGuestAccess,
-  useSendPasswordReset,
   type ParticipantRow,
 } from '@/features/program/participantHooks'
+import {
+  useCloseGuestAccess,
+  useOpenGuestAccess,
+  useReopenGuestAccess,
+  useSendPasswordReset,
+} from '@/features/program/participantAccessHooks'
 import {
   PARTICIPANT_PERSONAS,
   type MasterTable,
@@ -69,11 +71,10 @@ function accessWindowLabel(iso: string | null): string {
 }
 
 /**
- * 사업 상세 개요 좌측 '참여 기업' · '참여 전문가' 탭의 본문. **자격 하나만 담는다.**
+ * 사업 상세 'Y&A 포털 계정생성' 탭의 본문. **자격 하나만 담는다.**
  *
- * 2026-09-05 처음에는 탭 하나(참가자/전문가) 안의 하위 탭으로 갈랐으나 곧 위로 올렸다 —
- * 자격은 표를 거르는 조건이 아니라 **다른 화면을 여는 축**이기 때문이다(게스트가 볼 메뉴가
- * 여기서 갈린다, 3_9_1 §4).
+ * 자격이 어느 층에 서는가는 이 파일이 정하지 않는다 — 2026-09-08부터 상위 탭 하나 아래
+ * 하위 탭으로 서고, 그 근거는 `PortalAccountsPanel` 주석에 있다.
  *
  * 자격이 바뀌면 이 컴포넌트는 통째로 다시 선다(부모가 조건부로 렌더한다) — 선택·검색·페이지가
  * 함께 비워져야 일괄 작업이 안 보이는 행을 집지 않는다.
