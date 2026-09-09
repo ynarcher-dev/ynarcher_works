@@ -1,6 +1,7 @@
 import type { EntityRow } from '@/features/master/entityHooks'
 import { SectionHeading } from '@/components/SectionHeading'
 import { StartupBusinessCard } from '@/features/startup/StartupBusinessCard'
+import { StartupCertCard } from '@/features/startup/StartupCertCard'
 import { StartupIpCard } from '@/features/startup/StartupIpCard'
 import { StartupTeamCard } from '@/features/startup/StartupTeamCard'
 import { StartupTechCard } from '@/features/startup/StartupTechCard'
@@ -54,7 +55,7 @@ export function StartupCapabilitySection({ record }: { record: EntityRow }) {
       <SectionHeading title="역량" />
       {bandEmpty ? (
         <p className="text-body text-gray-600">
-          비즈니스·제품·팀·지식재산 정보가 아직 없습니다. "수정"에서 입력하세요.
+          비즈니스·제품·팀·지식재산·인증 정보가 아직 없습니다. "수정"에서 입력하세요.
         </p>
       ) : (
         <div className="space-y-4">
@@ -66,6 +67,7 @@ export function StartupCapabilitySection({ record }: { record: EntityRow }) {
             representative={record.representative == null ? null : String(record.representative)}
           />
           <StartupIpCard ip={ip} />
+          <StartupCertCard ip={ip} />
         </div>
       )}
     </section>

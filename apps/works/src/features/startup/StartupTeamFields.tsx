@@ -1,5 +1,6 @@
 import { Button, Checkbox, Input, Select, TextArea, TokenMultiSelect } from '@ynarcher/ui'
 import { useFieldArray, type Control, type UseFormRegister } from 'react-hook-form'
+import { FieldGrid } from '@/components/FieldGrid'
 import { Cell, Label, RowActions, RowBox } from '@/components/FormRowFields'
 import { EMPLOYMENT_OPTIONS } from '@/features/startup/startupProfile'
 import type { StartupDetailFormValues } from '@/features/startup/startupFormValues'
@@ -27,9 +28,23 @@ export function StartupTeamFields({ register, control, capabilities, setCapabili
 
   return (
     <div className="space-y-3">
-      <Label text="창업자 역량">
-        <TextArea rows={3} {...register('founderStrength')} />
-      </Label>
+      {/* **서술 셋을 한 격자에 모아 가로로 세운다**(2026-09-09). 종전에는 창업자 역량이 맨 위에
+          홀로 전폭으로 서고, 조직 구성·채용 계획이 목록들 사이에 끼어 세로로 쌓였다. 셋 다
+          '이 팀이 어떤 팀인가'를 적는 같은 성격의 칸이라 한 자리에 모으는 편이 맞고, 모아야
+          가로로 설 수 있다. 목록(팀원·자문단)은 폭 전체를 쓰는 다른 성격이라 그 아래로 간다. */}
+      <FieldGrid>
+        <Label text="창업자 역량" width="lg">
+          <TextArea rows={3} {...register('founderStrength')} />
+        </Label>
+        {/* 조직 구성·채용 계획: 총 인원이 아니라 '어느 기능에 사람이 있는가'를 받는다
+            (총원 추이는 실적 밴드의 고용 표가 답한다). */}
+        <Label text="조직 구성" width="lg">
+          <TextArea rows={2} placeholder="개발 5 · 영업 2 · 경영지원 1 등" {...register('orgComposition')} />
+        </Label>
+        <Label text="채용 계획" width="lg">
+          <TextArea rows={2} placeholder="채용 계획 · 주요 결원" {...register('hiringPlan')} />
+        </Label>
+      </FieldGrid>
 
       {/* 핵심 팀원(동적 목록) */}
       <div>
@@ -79,15 +94,6 @@ export function StartupTeamFields({ register, control, capabilities, setCapabili
           팀원 추가
         </Button>
       </div>
-
-      {/* 조직 구성·채용 계획: 총 인원이 아니라 '어느 기능에 사람이 있는가'를 받는다
-          (총원 추이는 실적 밴드의 고용 표가 답한다). */}
-      <Label text="조직 구성">
-        <TextArea rows={2} placeholder="개발 5 · 영업 2 · 경영지원 1 등" {...register('orgComposition')} />
-      </Label>
-      <Label text="채용 계획">
-        <TextArea rows={2} placeholder="채용 계획 · 주요 결원" {...register('hiringPlan')} />
-      </Label>
 
       {/* 자문단(동적 목록) */}
       <div>

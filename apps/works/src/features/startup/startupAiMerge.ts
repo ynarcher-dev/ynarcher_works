@@ -12,10 +12,14 @@ import type { AiFillEnvelope, AiFillOutcome } from '@/features/ai/aiTypes'
  *
  * ## 이 파일이 지키는 두 규칙
  *
- * 1. **보존 키** — 한 컬럼을 여러 카드가 나눠 쓰는 자리가 둘 있다. `business_profile`은
- *    비즈니스 카드와 요약 3축(강점·보완점·필요사항)이, `growth_metrics`는 실적 카드 넷이
- *    나눠 쓴다. 체크된 카드의 키만 갈아 끼우고 나머지 키는 원본 값을 그대로 옮긴다.
- *    빠뜨리면 트랙션만 체크했는데 매출 표가 사라진다.
+ * 1. **보존 키** — 한 컬럼을 여러 카드가 나눠 쓰는 자리가 셋 있다. `business_profile`은
+ *    비즈니스 카드와 요약 3축(강점·보완점·필요사항)이, `ip_profile`은 지식재산과 인증·정부과제가,
+ *    `growth_metrics`는 실적 카드 여섯이 나눠 쓴다. 체크된 카드의 키만 갈아 끼우고 나머지 키는
+ *    원본 값을 그대로 옮긴다. 빠뜨리면 트랙션만 체크했는데 매출 표가 사라진다.
+ *
+ *    **카드를 쪼갤수록 이 규칙이 하는 일이 는다**(2026-09-09에 12종 → 15종). 그래서 컬럼을
+ *    나눠 쓰는 자리는 카드마다 원본에서 새로 읽지 않고 **누적 변수**로 든다 — 새로 읽으면
+ *    앞 카드가 얹은 값이 뒤 카드의 원본 읽기에 지워진다.
  * 2. **AI의 null은 지우지 않는다** — 근거를 못 찾은 칸은 기존 값을 그대로 둔다. "모른다"를
  *    "없다"로 바꾸는 것은 사람만 할 수 있는 판단이고, 비우는 일에는 되돌릴 근거가 없다.
  *
@@ -104,8 +108,9 @@ export function applyAiDraft(
   cards: AiCardKey[],
 ): { record: EntityRow; outcome: AiFillOutcome<AiCardKey> } {
   const next: EntityRow = { ...record }
-  // 컬럼을 나눠 쓰는 두 자리는 누적해 고친다 — 카드마다 원본에서 새로 읽으면 앞 카드의 결과가 지워진다.
+  // 컬럼을 나눠 쓰는 세 자리는 누적해 고친다 — 카드마다 원본에서 새로 읽으면 앞 카드의 결과가 지워진다.
   let business = obj(record.business_profile)
+  let ip = obj(record.ip_profile)
   let growth = obj(record.growth_metrics)
 
   const filled: AiCardKey[] = []
@@ -148,29 +153,35 @@ export function applyAiDraft(
       case 'team':
         next.team_profile = mergeTeam(obj(record.team_profile), obj(value))
         break
-      case 'ip': {
-        const prev = obj(record.ip_profile)
+      // 지식재산은 권리 목록 하나다(2026-09-09 분할). 같은 컬럼의 인증·정부과제는 건드리지 않는다.
+      case 'ip':
+        ip = { ...ip, rights: mergeList(ip.rights, value) }
+        break
+      case 'cert': {
         const v = obj(value)
-        next.ip_profile = {
-          rights: mergeList(prev.rights, v.rights),
-          certifications: mergeList(prev.certifications, v.certifications),
-          govProjects: mergeList(prev.govProjects, v.govProjects),
+        ip = {
+          ...ip,
+          certifications: mergeList(ip.certifications, v.certifications),
+          govProjects: mergeList(ip.govProjects, v.govProjects),
         }
         break
       }
       case 'timeline':
         next.business_status = mergeList(record.business_status, value)
         break
-      case 'traction': {
-        const v = obj(value)
-        growth = putGrowth(putGrowth(growth, 'traction', v.traction), 'customers', v.customers)
+      // 넷 다 목록 하나씩이다(2026-09-09 분할) — 매출만 다시 뽑고 재무는 지키는 일이 이제 된다.
+      case 'traction':
+        growth = putGrowth(growth, 'traction', value)
         break
-      }
-      case 'revenue': {
-        const v = obj(value)
-        growth = putGrowth(putGrowth(growth, 'revenue', v.revenue), 'finance', v.finance)
+      case 'customers':
+        growth = putGrowth(growth, 'customers', value)
         break
-      }
+      case 'revenue':
+        growth = putGrowth(growth, 'revenue', value)
+        break
+      case 'finance':
+        growth = putGrowth(growth, 'finance', value)
+        break
       case 'employee':
         growth = putGrowth(growth, 'employee', value)
         break
@@ -184,6 +195,7 @@ export function applyAiDraft(
   }
 
   next.business_profile = business
+  next.ip_profile = ip
   next.growth_metrics = growth
   return {
     record: next,

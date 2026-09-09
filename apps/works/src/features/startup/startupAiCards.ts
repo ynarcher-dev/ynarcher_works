@@ -6,14 +6,24 @@ import { readShareholderHistory } from '@/features/startup/startupShareholders'
 import type { AiFillCatalog } from '@/features/ai/aiCatalog'
 
 /**
- * 'AI 작성하기'의 체크 단위 — 상세 카드 12종.
+ * 'AI 작성하기'의 체크 단위 — 상세 카드 15종.
  *
  * 체크 단위를 카드로 잡은 이유는 저장 단위와 같기 때문이다. 저장이 **카드 하나에 컬럼 하나**
  * (통째 교체)라, 체크되지 않은 카드는 그 컬럼을 건드리지 않으면 그만이다. 필드 단위로 잘게
  * 쪼개면 담당자가 열 몇 칸을 매번 훑어야 하고, 밴드 단위로 뭉치면 손으로 다듬어 둔 카드 하나
  * 때문에 밴드 전체를 포기하게 된다.
  *
- * 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §5
+ * **복합 카드 셋을 쪼갰다(2026-09-09 사용자 지정, 12종 → 15종).** 지식재산·인증은 목록 셋을,
+ * 트랙션·고객과 매출·재무는 표 둘을 한 카드에 담고 있었다. 그 카드들은 **화면에서는 이미
+ * 따로 서 있었으므로**(조회의 핵심 지표·주요 고객·매출 현황·재무 현황은 각각 별개 카드다)
+ * 체크 한 칸이 화면의 두 자리를 함께 바꾸는 상태였고, 그래서 "매출만 다시 뽑고 재무는 손으로
+ * 적어 둔 값을 지키자"가 불가능했다. **체크 단위는 담당자가 지키고 싶은 단위여야 한다.**
+ *
+ * 쪼개도 저장 규칙은 그대로다 — 한 컬럼을 여러 카드가 나눠 쓰는 자리가 늘 뿐이고(`ip_profile`이
+ * 둘, `growth_metrics`가 여섯), 그 자리는 병합이 **키 단위 보존**으로 이미 다루고 있다
+ * (startupAiMerge.ts).
+ *
+ * 근거: docs/docs_planning/3_3_7_ai_fill_visual_read.md §4
  */
 
 /** 카드 키. Edge Function(supabase/functions/startup-ai-fill/cards.ts)의 목록과 한 벌이다. */
@@ -24,9 +34,12 @@ export const AI_CARD_KEYS = [
   'tech',
   'team',
   'ip',
+  'cert',
   'timeline',
   'traction',
+  'customers',
   'revenue',
+  'finance',
   'employee',
   'shareholders',
   'investment',
@@ -49,9 +62,9 @@ export interface StartupAiCardMeta {
   key: AiCardKey
   label: string
   group: AiCardGroup
-  /** 현재 이 카드에 값이 있는가. 줄 오른쪽의 Y/N 배지와 교체 경고가 이 값을 읽는다. */
+  /** 현재 이 카드에 값이 있는가. 줄 오른쪽의 '있음' 배지와 교체 경고가 이 값을 읽는다. */
   filled: (record: EntityRow) => boolean
-  /** 목록형 카드의 현재 건수(없으면 null). '작성됨 · 3건'의 뒷자리. */
+  /** 목록형 카드의 현재 건수(없으면 null). '있음' 배지의 커서 설명이 읽는다. */
   count?: (record: EntityRow) => number
 }
 
@@ -59,11 +72,11 @@ const some = (...values: unknown[]) => values.some((v) => (typeof v === 'string'
 
 /**
  * 카드 정의. `filled`는 "AI가 덮어쓸 것이 있는가"를 답한다 — 하나라도 값이 있으면 채워진
- * 카드(`Y`)로 본다. 절반만 찬 카드를 빈 카드로 세지 않는 것이 요점이다. 그 절반은 담당자가
+ * 카드로 본다. 절반만 찬 카드를 빈 카드로 세지 않는 것이 요점이다. 그 절반은 담당자가
  * 손으로 적은 것이고, 이 카드를 켜면 그것까지 함께 바뀐다는 사실을 배지가 미리 말해야 한다.
  *
  * 2026-09-06 이전에는 이 값이 **기본 체크 상태**까지 정했다(빈 카드는 켜고 찬 카드는 끈다).
- * 지금은 모달이 아무것도 켜지 않은 채 열리므로 표시에만 쓴다.
+ * 지금은 창이 아무것도 켜지 않은 채 열리므로 표시에만 쓴다.
  */
 export const AI_CARDS: StartupAiCardMeta[] = [
   {
@@ -125,15 +138,25 @@ export const AI_CARDS: StartupAiCardMeta[] = [
   },
   {
     key: 'ip',
-    label: '지식재산·인증',
+    label: '지식재산',
     group: 'organization',
+    filled: (r) => readIp(r).rights.length > 0,
+    count: (r) => readIp(r).rights.length,
+  },
+  {
+    key: 'cert',
+    label: '인증·정부과제',
+    group: 'organization',
+    // 인증과 정부과제를 한 카드에 남긴 것은 둘 다 **밖에서 받은 자격**이고 한 문서(사업계획서
+    // 부록)에서 함께 읽히기 때문이다. 지식재산과 갈린 이유는 그쪽이 우리가 만든 자산이라
+    // 근거 문서(등록원부·공보)가 다르다.
     filled: (r) => {
       const ip = readIp(r)
-      return ip.rights.length + ip.certifications.length + ip.govProjects.length > 0
+      return ip.certifications.length + ip.govProjects.length > 0
     },
     count: (r) => {
       const ip = readIp(r)
-      return ip.rights.length + ip.certifications.length + ip.govProjects.length
+      return ip.certifications.length + ip.govProjects.length
     },
   },
   {
@@ -145,29 +168,31 @@ export const AI_CARDS: StartupAiCardMeta[] = [
   },
   {
     key: 'traction',
-    label: '트랙션·고객',
+    label: '핵심 지표',
     group: 'growth',
-    filled: (r) => {
-      const g = readGrowth(r)
-      return g.traction.length + g.customers.length > 0
-    },
-    count: (r) => {
-      const g = readGrowth(r)
-      return g.traction.length + g.customers.length
-    },
+    filled: (r) => readGrowth(r).traction.length > 0,
+    count: (r) => readGrowth(r).traction.length,
+  },
+  {
+    key: 'customers',
+    label: '주요 고객',
+    group: 'growth',
+    filled: (r) => readGrowth(r).customers.length > 0,
+    count: (r) => readGrowth(r).customers.length,
   },
   {
     key: 'revenue',
-    label: '매출·재무',
+    label: '매출',
     group: 'capital',
-    filled: (r) => {
-      const g = readGrowth(r)
-      return g.revenue.length + g.finance.length > 0
-    },
-    count: (r) => {
-      const g = readGrowth(r)
-      return g.revenue.length + g.finance.length
-    },
+    filled: (r) => readGrowth(r).revenue.length > 0,
+    count: (r) => readGrowth(r).revenue.length,
+  },
+  {
+    key: 'finance',
+    label: '재무',
+    group: 'capital',
+    filled: (r) => readGrowth(r).finance.length > 0,
+    count: (r) => readGrowth(r).finance.length,
   },
   {
     key: 'employee',

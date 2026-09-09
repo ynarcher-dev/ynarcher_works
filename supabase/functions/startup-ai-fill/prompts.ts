@@ -8,10 +8,12 @@
 // 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §6
 
 import { CARD_KEYS, CARD_LABELS, LIMITS, type CardKey } from './cards.ts'
-import { BUSINESS_PROMPT, IP_PROMPT, TEAM_PROMPT, TECH_PROMPT } from './promptCapability.ts'
+import { BUSINESS_PROMPT, CERT_PROMPT, IP_PROMPT, TEAM_PROMPT, TECH_PROMPT } from './promptCapability.ts'
 import { basicsPrompt, SUMMARY_PROMPT } from './promptOverview.ts'
 import {
+  CUSTOMERS_PROMPT,
   EMPLOYEE_PROMPT,
+  FINANCE_PROMPT,
   INVESTMENT_PROMPT,
   REVENUE_PROMPT,
   SHAREHOLDERS_PROMPT,
@@ -28,9 +30,12 @@ function cardPrompts(locations: string[]): Record<CardKey, string> {
   tech: TECH_PROMPT,
   team: TEAM_PROMPT,
   ip: IP_PROMPT,
+  cert: CERT_PROMPT,
   timeline: TIMELINE_PROMPT,
   traction: TRACTION_PROMPT,
+  customers: CUSTOMERS_PROMPT,
   revenue: REVENUE_PROMPT,
+  finance: FINANCE_PROMPT,
   employee: EMPLOYEE_PROMPT,
   shareholders: SHAREHOLDERS_PROMPT,
   investment: INVESTMENT_PROMPT,
@@ -86,7 +91,7 @@ const ENVELOPE_RULES = `출력 봉투:
  */
 export function buildPrompt(cards: CardKey[], companyName: string, locations: string[] = []): string {
   const CARD_PROMPTS = cardPrompts(locations)
-  // 카드 순서는 요청 순서가 아니라 화면 순서로 고정한다(기본 2 → 역량 4 → 실적 6). 요청 순서를 그대로
+  // 카드 순서는 요청 순서가 아니라 화면 순서로 고정한다(기본 2 → 역량 5 → 실적 8). 요청 순서를 그대로
   // 쓰면 같은 조합인데 담당자가 체크한 차례에 따라 프롬프트가 달라진다.
   const ordered = CARD_KEYS.filter((k) => cards.includes(k))
   const sections = ordered.map((k) => CARD_PROMPTS[k]).join('\n\n---\n\n')

@@ -211,8 +211,13 @@ function normTeam(o: Rec, warn: Warn): Rec {
   }
 }
 
-function normIp(o: Rec, warn: Warn): Rec {
-  const rights = list(o.rights)
+/**
+ * 지식재산권: 명칭도 번호도 없는 행은 버린다 — 종류만 남은 행은 "특허 5건"을 다섯 줄로 편 것이다.
+ *
+ * 2026-09-09에 카드가 갈리며 목록이 곧 카드가 됐다(구 `ip.rights`). 판정은 그대로 옮겼다.
+ */
+function normIp(v: unknown, warn: Warn): unknown[] {
+  return list(v)
     .map((raw) => {
       const r = rec(raw)
       const title = str(r.title, 120)
@@ -227,11 +232,15 @@ function normIp(o: Rec, warn: Warn): Rec {
       }
     })
     .filter(Boolean)
+}
+
+/** 인증·정부과제: 화면에서 한 카드에 함께 서므로 갈린 뒤에도 목록 둘을 든 객체다(구 `ip`의 나머지). */
+function normCert(o: Rec, warn: Warn): Rec {
   const certifications = list(o.certifications)
     .map((raw) => {
       const c = rec(raw)
       const name = str(c.name, 100)
-      return name ? { name, agency: str(c.agency, 60), date: ym(c.date, 'ip', '인증 일자', warn) } : null
+      return name ? { name, agency: str(c.agency, 60), date: ym(c.date, 'cert', '인증 일자', warn) } : null
     })
     .filter(Boolean)
   const govProjects = list(o.govProjects)
@@ -241,13 +250,13 @@ function normIp(o: Rec, warn: Warn): Rec {
       if (!name) return null
       return {
         name,
-        role: pick(g.role, GOV_ROLE_OPTIONS, 'ip', '과제 참여 형태', warn),
+        role: pick(g.role, GOV_ROLE_OPTIONS, 'cert', '과제 참여 형태', warn),
         period: str(g.period, 40),
         amount: num(g.amount),
       }
     })
     .filter(Boolean)
-  return { rights, certifications, govProjects }
+  return { certifications, govProjects }
 }
 
 function normTimeline(v: unknown, warn: Warn): unknown[] {
@@ -262,8 +271,8 @@ function normTimeline(v: unknown, warn: Warn): unknown[] {
     .slice(0, LIMITS.timeline)
 }
 
-function normTraction(o: Rec, warn: Warn): Rec {
-  const traction = list(o.traction)
+function normTraction(v: unknown, warn: Warn): unknown[] {
+  return list(v)
     .map((raw) => {
       const e = rec(raw)
       const metric = str(e.metric, 40)
@@ -273,38 +282,42 @@ function normTraction(o: Rec, warn: Warn): Rec {
     })
     .filter(Boolean)
     .slice(0, LIMITS.traction)
-  const customers = list(o.customers)
+}
+
+function normCustomers(v: unknown, warn: Warn): unknown[] {
+  return list(v)
     .map((raw) => {
       const c = rec(raw)
       const name = str(c.name, 60)
       if (!name) return null
       return {
         name,
-        kind: pick(c.kind, CUSTOMER_KIND_OPTIONS, 'traction', '고객 관계', warn),
-        date: ym(c.date, 'traction', '고객 일자', warn),
+        kind: pick(c.kind, CUSTOMER_KIND_OPTIONS, 'customers', '고객 관계', warn),
+        date: ym(c.date, 'customers', '고객 일자', warn),
       }
     })
     .filter(Boolean)
     .slice(0, LIMITS.customers)
-  return { traction, customers }
 }
 
-function normRevenue(o: Rec): Rec {
-  const revenue = list(o.revenue)
+function normRevenue(v: unknown): unknown[] {
+  return list(v)
     .map((raw) => {
       const e = rec(raw)
       const y = year(e.year)
       return y ? { year: y, revenue: num(e.revenue), operatingProfit: num(e.operatingProfit), netIncome: num(e.netIncome) } : null
     })
     .filter(Boolean)
-  const finance = list(o.finance)
+}
+
+function normFinance(v: unknown): unknown[] {
+  return list(v)
     .map((raw) => {
       const e = rec(raw)
       const y = year(e.year)
       return y ? { year: y, assets: num(e.assets), liabilities: num(e.liabilities), equity: num(e.equity) } : null
     })
     .filter(Boolean)
-  return { revenue, finance }
 }
 
 function normEmployee(v: unknown): unknown[] {
@@ -376,10 +389,13 @@ export function normalizeCard(key: CardKey, raw: unknown, warn: Warn, locations:
     case 'business': return normBusiness(rec(raw))
     case 'tech': return normTech(rec(raw), warn)
     case 'team': return normTeam(rec(raw), warn)
-    case 'ip': return normIp(rec(raw), warn)
+    case 'ip': return normIp(raw, warn)
+    case 'cert': return normCert(rec(raw), warn)
     case 'timeline': return normTimeline(raw, warn)
-    case 'traction': return normTraction(rec(raw), warn)
-    case 'revenue': return normRevenue(rec(raw))
+    case 'traction': return normTraction(raw, warn)
+    case 'customers': return normCustomers(raw, warn)
+    case 'revenue': return normRevenue(raw)
+    case 'finance': return normFinance(raw)
     case 'employee': return normEmployee(raw)
     case 'shareholders': return normShareholders(raw, warn)
     case 'investment': return normInvestment(raw, warn)

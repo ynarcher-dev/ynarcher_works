@@ -1,6 +1,7 @@
 import { Button, CardShell, Input, PanelCard, Select, TextArea } from '@ynarcher/ui'
 import type { ChangeEvent, ReactNode } from 'react'
 import { Controller, type Control, type FieldErrors, type UseFormRegister } from 'react-hook-form'
+import { FieldGrid, type FieldWidth } from '@/components/FieldGrid'
 import { PhotoBox } from '@/features/networks/PhotoBox'
 import { TagSelect } from '@/features/admin/TagSelect'
 import { MANAGEMENT_STATUS_OPTIONS, managementStatusLabel } from '@/features/startup/startupClassification'
@@ -45,8 +46,8 @@ export function StartupBasicFields({
   leadName,
 }: Props) {
   type TagFieldName = 'stage' | 'management_status' | 'pool_status' | 'location'
-  const tagField = (name: TagFieldName, table: string, label: string) => (
-    <Field label={label}>
+  const tagField = (name: TagFieldName, table: string, label: string, width: FieldWidth) => (
+    <Field label={label} width={width}>
       <Controller
         control={control}
         name={name}
@@ -85,18 +86,23 @@ export function StartupBasicFields({
 
       {/* 기본 데이터 카드 */}
       <CardShell>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="한 줄 소개" className="sm:col-span-2">
+        {/* **칸의 종류가 폭을 정하고, 같은 종류가 한 줄을 채우도록 순서도 함께 모았다**
+            (2026-09-09 사용자 지정). 정체(기업명·대표자·형태·설립일) → 분류(사업자번호·단계·
+            구분·소재지) → 연락(상세주소·이메일·연락처) → 폭이 필요한 것(분야·발굴 경로)이다.
+            종전에는 2열 격자에 칸이 종류와 무관하게 둘씩 서고 긴 칸만 전폭을 받아, 짧은 칸이
+            제 값보다 두 배 넓은 자리를 차지하면서 폼이 세로로 길어졌다. */}
+        <FieldGrid>
+          <Field label="한 줄 소개" width="full">
             <Input placeholder="한 줄 소개(기업명 아래에 표시됩니다)" {...register('oneLiner')} />
           </Field>
-          <Field label="기업명" required>
+          <Field label="기업명" required width="sm">
             <Input invalid={Boolean(errors.name)} {...register('name', { required: '기업명은 필수입니다.' })} />
             {errors.name && <p className="mt-1 text-caption text-danger">{errors.name.message}</p>}
           </Field>
-          <Field label="대표자명">
+          <Field label="대표자명" width="sm">
             <Input {...register('representative')} />
           </Field>
-          <Field label="회사 형태">
+          <Field label="회사 형태" width="sm">
             <Select {...register('company_form')}>
               <option value="">선택</option>
               {COMPANY_FORMS.map((f) => (
@@ -106,22 +112,14 @@ export function StartupBasicFields({
               ))}
             </Select>
           </Field>
-          <Field label="설립일">
+          <Field label="설립일" width="sm">
             <Input type="date" {...register('founded_on')} />
           </Field>
-          <Field label="사업자등록번호">
+          <Field label="사업자등록번호" width="sm">
             <Input {...register('biz_reg_no')} />
           </Field>
-          <Field
-            label="분야"
-            hint={industryField.hint}
-            hintInline={industryField.hintInline}
-            className="sm:col-span-2"
-          >
-            {industryField.control}
-          </Field>
-          {tagField('stage', 'investment_stage_tags', '단계')}
-          <Field label="구분">
+          {tagField('stage', 'investment_stage_tags', '단계', 'sm')}
+          <Field label="구분" width="sm">
             {alreadyInvested ? (
               // 투자기업은 이 화면에서 구분을 바꾸지 않는다(전환·복귀는 FUND 투자 집행에서 관리).
               <div className="flex items-center gap-2 py-2 text-body text-gray-900">
@@ -139,7 +137,25 @@ export function StartupBasicFields({
               </Select>
             )}
           </Field>
-          <Field label="발굴 경로" className="sm:col-span-2">
+          {tagField('location', 'location_tags', '소재지', 'sm')}
+          <Field label="상세주소" width="md">
+            <Input {...register('address_detail')} placeholder="상세주소를 입력하세요" />
+          </Field>
+          <Field label="이메일" width="md">
+            <Input {...register('email')} />
+          </Field>
+          <Field label="연락처" width="md">
+            <Input {...register('phone')} />
+          </Field>
+          <Field
+            label="분야"
+            hint={industryField.hint}
+            hintInline={industryField.hintInline}
+            width="full"
+          >
+            {industryField.control}
+          </Field>
+          <Field label="발굴 경로" width="lg">
             <Controller
               control={control}
               name="discovery_source"
@@ -153,17 +169,7 @@ export function StartupBasicFields({
               )}
             />
           </Field>
-          {tagField('location', 'location_tags', '소재지')}
-          <Field label="상세주소">
-            <Input {...register('address_detail')} placeholder="상세주소를 입력하세요" />
-          </Field>
-          <Field label="이메일">
-            <Input {...register('email')} />
-          </Field>
-          <Field label="연락처">
-            <Input {...register('phone')} />
-          </Field>
-        </div>
+        </FieldGrid>
       </CardShell>
 
       {/* 담당자·현황 카드(투자기업 전용, 읽기 전용): 지정·전환은 FUND 투자 집행에서 처리한다. */}
@@ -172,14 +178,14 @@ export function StartupBasicFields({
           title="담당자 · 현황 (투자기업)"
           help={'투자기업의 딜메이커·관리현황은 FUND 투자 집행에서 지정·관리합니다.\n이 화면에서는 조회만 됩니다.'}
         >
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="딜메이커">
+          <FieldGrid>
+            <Field label="딜메이커" width="md">
               <div className="py-2 text-body text-gray-900">{leadName || '-'}</div>
             </Field>
-            <Field label="관리현황">
+            <Field label="관리현황" width="md">
               <div className="py-2 text-body text-gray-900">{poolStatus || '-'}</div>
             </Field>
-          </div>
+          </FieldGrid>
         </PanelCard>
       )}
     </>

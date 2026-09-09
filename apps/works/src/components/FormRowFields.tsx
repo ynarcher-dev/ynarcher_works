@@ -1,5 +1,6 @@
 import { Button, Input, cn, formText } from '@ynarcher/ui'
 import { useState, type ReactNode } from 'react'
+import { fieldWidthClass, type FieldWidth } from '@/components/FieldGrid'
 
 /**
  * 카드 안 입력 섹션이 함께 쓰는 라벨 · 항목 상자 · 숫자 입력.
@@ -13,9 +14,23 @@ import { useState, type ReactNode } from 'react'
  * 고치는 날 다른 쪽은 옛 규격으로 남는다. 자리가 `components/`인 것은 이것이 어느 도메인의
  * 것도 아니라는 뜻이다.
  */
-export function Label({ text, children }: { text: string; children: ReactNode }) {
+export function Label({
+  text,
+  width,
+  children,
+}: {
+  text: string
+  /**
+   * 이 칸이 격자에서 차지하는 폭 — **칸의 종류**로 말한다(FieldGrid).
+   *
+   * 클래스를 받지 않는 이유는 그것이 곧 화면마다 다른 폭이 되기 때문이다. 종류를 고르면
+   * 폭은 규격이 정하고, 규격을 고칠 때 화면을 훑지 않아도 된다.
+   */
+  width?: FieldWidth
+  children: ReactNode
+}) {
   return (
-    <div>
+    <div className={width && fieldWidthClass[width]}>
       <p className={`mb-1 ${formText.label}`}>{text}</p>
       {children}
     </div>

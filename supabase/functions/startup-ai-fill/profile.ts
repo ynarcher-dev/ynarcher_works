@@ -28,8 +28,12 @@ export interface StartupContext {
 /**
  * 같은 자료를 읽더라도 한 요청에 함께 맡길 수 있는 카드 묶음.
  *
- * 서로 맞물리는 카드(매출·고용·주주·투자)는 한 축에 남긴다 — 지분율과 투자 라운드는 같은
+ * 서로 맞물리는 카드(매출·재무·고용·주주·투자)는 한 축에 남긴다 — 지분율과 투자 라운드는 같은
  * 표에서 함께 읽히는 값이라 갈라 물으면 양쪽이 서로 다른 표를 집는다.
+ *
+ * 2026-09-09에 갈린 카드는 **갈리기 전의 축을 그대로 물려받는다**(cert→organization,
+ * customers→growth, finance→capital). 체크 단위를 가른 것이지 읽는 자리를 가른 것이 아니라서다
+ * — 매출과 재무는 여전히 같은 결산표에서 읽히므로 갈라 물으면 두 요청이 서로 다른 표를 집는다.
  */
 const EXTRACTION_FAMILY: Record<CardKey, 'overview' | 'organization' | 'growth' | 'capital'> = {
   basics: 'overview',
@@ -38,9 +42,12 @@ const EXTRACTION_FAMILY: Record<CardKey, 'overview' | 'organization' | 'growth' 
   tech: 'overview',
   team: 'organization',
   ip: 'organization',
+  cert: 'organization',
   timeline: 'growth',
   traction: 'growth',
+  customers: 'growth',
   revenue: 'capital',
+  finance: 'capital',
   employee: 'capital',
   shareholders: 'capital',
   investment: 'capital',
@@ -61,10 +68,13 @@ const CARD_KEYWORDS: Partial<Record<CardKey, readonly string[]>> = {
   business: ['비즈니스 모델', '수익 모델', 'target', '고객', '시장', '판매'],
   tech: ['기술', '제품', '개발', '특허', 'r&d', '스펙'],
   team: ['조직', '팀', '인력', '이력', '경력', '자문'],
-  ip: ['특허', '상표', '인증', '출원', '등록번호', '정부과제', '지원사업'],
+  ip: ['특허', '상표', '디자인', '출원', '등록번호', '지식재산'],
+  cert: ['인증', '정부과제', '지원사업', 'tips', 'r&d', '바우처'],
   timeline: ['연혁', '주요 이력', 'history', '설립', '수상'],
-  traction: ['mau', 'dau', 'gmv', '거래액', '가입자', '계약', 'mou', 'poc'],
-  revenue: ['매출', '손익', '영업이익', '당기순', '재무상태', '자산', '부채', '자본'],
+  traction: ['mau', 'dau', 'gmv', '거래액', '가입자', '지표'],
+  customers: ['고객', '레퍼런스', '계약', 'mou', 'poc', '납품'],
+  revenue: ['매출', '손익', '영업이익', '당기순', '손익계산서'],
+  finance: ['재무상태', '자산', '부채', '자본', '재무제표'],
   employee: ['고용', '임직원', '인원', '직원 수'],
   shareholders: ['주주', '지분', '주식', '보통주', '우선주', '지분율'],
   investment: ['투자', '유치', '시리즈', '라운드', '밸류', '기업가치', 'pre-a'],

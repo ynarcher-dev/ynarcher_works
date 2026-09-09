@@ -2,6 +2,7 @@ import { PanelCard } from '@ynarcher/ui'
 import type { Control, UseFormRegister } from 'react-hook-form'
 import { SectionHeading } from '@/components/SectionHeading'
 import { StartupBusinessFields } from '@/features/startup/StartupBusinessFields'
+import { StartupCertFields } from '@/features/startup/StartupCertFields'
 import { StartupIpFields } from '@/features/startup/StartupIpFields'
 import { StartupTeamFields } from '@/features/startup/StartupTeamFields'
 import { StartupTechFields } from '@/features/startup/StartupTechFields'
@@ -49,8 +50,12 @@ export function StartupCapabilityFields({ register, control, capabilities, setCa
           />
         </PanelCard>
 
-        <PanelCard title="지식재산·인증">
+        <PanelCard title="지식재산">
           <StartupIpFields ip={ip} setIp={setIp} />
+        </PanelCard>
+
+        <PanelCard title="인증·정부과제">
+          <StartupCertFields ip={ip} setIp={setIp} />
         </PanelCard>
       </div>
     </>

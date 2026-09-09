@@ -34,9 +34,15 @@ export interface TextAreaProps
  * 여러 줄 입력(4상태). 높이는 `rows`(또는 `autoGrow`)가 정하므로 밀도는 **글자·여백**에만 반영한다.
  * 세로 크기를 고정하지 않는 유일한 폼 컨트롤이다.
  * react-hook-form register가 동작하도록 ref를 forward한다.
+ *
+ * **최소 높이 120px은 `rows`를 적지 않았을 때의 기본값이다**(2026-09-09 정정). 종전에는 그 값이
+ * 언제나 걸려 `rows={2}`도 다섯 줄 높이로 섰고, "높이는 rows가 정한다"는 이 컴포넌트의 계약이
+ * 자기 클래스 한 줄에 막혀 있었다. 좁은 칸에 선 한 줄짜리 서술이 다섯 줄 상자를 차지하면 그
+ * 빈자리가 "여기 더 적어야 한다"는 말로 읽힌다 — 칸의 크기는 담기는 글의 길이를 말한다.
+ * 그래서 `rows`를 적은 칸은 그 값이 곧 높이이고, 적지 않은 칸에만 120px 바닥이 남는다.
  */
 export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(function TextArea(
-  { invalid, density, autoGrow = false, className, onInput, ...props },
+  { invalid, density, autoGrow = false, className, onInput, rows, ...props },
   ref,
 ) {
   const d = useDensity(density)
@@ -73,13 +79,16 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(function 
       }}
       className={cn(
         formBaseClass,
-        // 스펙 요구: 최소 높이 확보 + 세로 리사이즈 허용(가로는 레이아웃이 깨지므로 막는다).
-        'min-h-[7.5rem]',
+        // 바닥 높이는 **`rows`를 적지 않은 칸에만** 건다. 적어 둔 칸에서는 그 값이 곧 높이여야
+        // 하고(위 주석), 자라는 칸은 내용이 높이를 정하므로 바닥이 그 답을 가린다.
+        rows === undefined && !autoGrow && 'min-h-[7.5rem]',
+        // 세로 리사이즈만 허용한다(가로는 레이아웃이 깨진다).
         autoGrow ? 'resize-none overflow-hidden' : 'resize-y',
         textAreaScale[d],
         invalid && formInvalidClass,
         className,
       )}
+      rows={rows}
       {...props}
     />
   )

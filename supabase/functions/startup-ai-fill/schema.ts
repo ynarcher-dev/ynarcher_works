@@ -69,24 +69,20 @@ export const CARD_SCHEMAS: Record<CardKey, SchemaNode> = {
     advisors: arr(obj({ name: { type: 'STRING' }, affiliation: STR, role: STR }, ['name'])),
     capabilities: arr({ type: 'STRING' }),
   }),
-  ip: obj({
-    rights: arr(obj({ kind: STR, title: { type: 'STRING' }, no: STR, status: STR, date: STR }, ['title'])),
+  // 2026-09-09 분할: 목록 하나만 담는 카드는 그 목록이 곧 카드다. 한 겹을 벗기면 모델이
+  // 바깥 객체를 지어낼 자리가 없어지고, 빈 답이 null이 아니라 []로 와 화면의 처리도 하나가 된다.
+  ip: arr(obj({ kind: STR, title: { type: 'STRING' }, no: STR, status: STR, date: STR }, ['title'])),
+  cert: obj({
     certifications: arr(obj({ name: { type: 'STRING' }, agency: STR, date: STR }, ['name'])),
     govProjects: arr(obj({ name: { type: 'STRING' }, role: STR, period: STR, amount: NUM }, ['name'])),
   }),
   timeline: arr(obj({ date: { type: 'STRING' }, content: { type: 'STRING' } }, ['date', 'content'])),
-  traction: obj({
-    traction: arr(
-      obj({ metric: { type: 'STRING' }, unit: STR, period: { type: 'STRING' }, value: NUM }, ['metric', 'period']),
-    ),
-    customers: arr(obj({ name: { type: 'STRING' }, kind: STR, date: STR }, ['name'])),
-  }),
-  revenue: obj({
-    revenue: arr(
-      obj({ year: { type: 'INTEGER' }, revenue: NUM, operatingProfit: NUM, netIncome: NUM }, ['year']),
-    ),
-    finance: arr(obj({ year: { type: 'INTEGER' }, assets: NUM, liabilities: NUM, equity: NUM }, ['year'])),
-  }),
+  traction: arr(
+    obj({ metric: { type: 'STRING' }, unit: STR, period: { type: 'STRING' }, value: NUM }, ['metric', 'period']),
+  ),
+  customers: arr(obj({ name: { type: 'STRING' }, kind: STR, date: STR }, ['name'])),
+  revenue: arr(obj({ year: { type: 'INTEGER' }, revenue: NUM, operatingProfit: NUM, netIncome: NUM }, ['year'])),
+  finance: arr(obj({ year: { type: 'INTEGER' }, assets: NUM, liabilities: NUM, equity: NUM }, ['year'])),
   employee: arr(obj({ year: { type: 'INTEGER' }, employeeCount: INT }, ['year'])),
   shareholders: arr(
     obj(

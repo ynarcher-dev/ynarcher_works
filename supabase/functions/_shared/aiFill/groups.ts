@@ -55,7 +55,7 @@ export function planGroups<K extends string>(
   // 묶음마다 사본을 든다 — 한 배열을 나눠 쥐면 어느 묶음의 수정이 다른 묶음에 번진다.
   if (ordered.length <= singleMax) return [{ cards: ordered, sourceKeys: [...sourceKeys] }]
 
-  // 카드가 많을 때만 탐색 축으로 가른다. 열두 카드 전체 선택은 네 요청으로 나뉘지만,
+  // 카드가 많을 때만 탐색 축으로 가른다. 전체 선택은 카드가 몇이든 네 요청으로 나뉘지만,
   // 팀·연혁·고용·투자 네 카드처럼 작은 요청은 같은 문서를 한 번만 읽는다.
   const buckets = new Map<string, CardGroup<K>>()
   for (const card of ordered) {

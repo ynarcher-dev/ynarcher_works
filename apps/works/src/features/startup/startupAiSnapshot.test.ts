@@ -108,7 +108,7 @@ describe('저장하지 않은 입력을 지키는가', () => {
     // 트랙션만 채운다 — 손으로 적은 한 줄 소개·제품과 나머지 표는 그대로여야 한다.
     const merged = applyAiDraft(
       buildCardSnapshot(v, s),
-      envelope({ traction: { traction: [{ metric: 'DAU', period: '2025-06', value: 5 }], customers: [] } }),
+      envelope({ traction: [{ metric: 'DAU', period: '2025-06', value: 5 }] }),
       ['traction'],
     )
     const back = toFormValues(merged.record, v)

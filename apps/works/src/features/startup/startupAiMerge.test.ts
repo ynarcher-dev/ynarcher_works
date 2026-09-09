@@ -32,7 +32,11 @@ function fullRecord(): EntityRow {
     },
     tech_profile: { product: '기존 제품', devStage: 'MVP', coreTech: '기존 기술' },
     team_profile: { founderStrength: '기존 대표', members: [{ name: '홍길동' }], capabilities: ['기존역량'] },
-    ip_profile: { rights: [{ kind: '특허', title: '기존특허' }], certifications: [], govProjects: [] },
+    ip_profile: {
+      rights: [{ kind: '특허', title: '기존특허' }],
+      certifications: [{ name: '기존인증' }],
+      govProjects: [{ name: '기존과제' }],
+    },
     business_status: [{ date: '2024-01', content: '기존 연혁' }],
     growth_metrics: {
       traction: [{ metric: 'MAU', period: '2025-01', value: 100 }],
@@ -51,22 +55,52 @@ const envelope = (
 ): AiFillEnvelope<AiCardKey> => ({ cards, notes: {}, evidence: {} })
 
 describe('applyAiDraft — 보존 키 규칙', () => {
-  it('트랙션만 채워도 같은 컬럼의 매출·재무·고용·투자는 그대로다', () => {
+  it('트랙션만 채워도 같은 컬럼의 다섯 목록은 그대로다', () => {
+    // 2026-09-09에 카드가 갈리면서 이 컬럼을 나눠 쓰는 카드가 넷에서 여섯이 됐다. 보존 규칙이
+    // 하는 일이 그만큼 늘었으므로 지키는 대상도 함께 늘어난다.
     const before = fullRecord()
     const { record } = applyAiDraft(
       before,
-      envelope({ traction: { traction: [{ metric: 'DAU', period: '2025-06', value: 9 }], customers: [] } }),
+      envelope({ traction: [{ metric: 'DAU', period: '2025-06', value: 9 }] }),
       ['traction'],
     )
     const g = record.growth_metrics as Record<string, unknown>
     expect(g.traction).toEqual([{ metric: 'DAU', period: '2025-06', value: 9 }])
-    // 나머지 네 목록은 원본과 같은 값이어야 한다 — 여기가 빠지면 표 하나가 통째로 사라진다.
+    // 나머지 다섯 목록은 원본과 같은 값이어야 한다 — 여기가 빠지면 표 하나가 통째로 사라진다.
+    expect(g.customers).toEqual([{ name: '기존고객' }])
     expect(g.revenue).toEqual([{ year: 2024, revenue: 1000 }])
     expect(g.finance).toEqual([{ year: 2024, assets: 2000 }])
     expect(g.employee).toEqual([{ year: 2024, employeeCount: 5 }])
     expect(g.investment).toEqual([{ date: '2024-03', round: 'Seed' }])
-    // 고객은 빈 배열로 왔으므로 기존 값이 남는다(빈 배열은 '없다'가 아니라 '못 찾았다').
-    expect(g.customers).toEqual([{ name: '기존고객' }])
+  })
+
+  it('매출만 채우면 재무는 손으로 적어 둔 값을 지킨다', () => {
+    // 카드를 가른 이유가 이것이다 — 한 카드였을 때는 매출을 다시 뽑는 순간 재무도 함께 바뀌었다.
+    const { record } = applyAiDraft(fullRecord(), envelope({ revenue: [{ year: 2025, revenue: 50 }] }), ['revenue'])
+    const g = record.growth_metrics as Record<string, unknown>
+    expect(g.revenue).toEqual([{ year: 2025, revenue: 50 }])
+    expect(g.finance).toEqual([{ year: 2024, assets: 2000 }])
+  })
+
+  it('지식재산만 채우면 같은 컬럼의 인증·정부과제는 그대로다', () => {
+    const { record } = applyAiDraft(fullRecord(), envelope({ ip: [{ kind: '상표', title: '새상표' }] }), ['ip'])
+    const ip = record.ip_profile as Record<string, unknown>
+    expect(ip.rights).toEqual([{ kind: '상표', title: '새상표' }])
+    expect(ip.certifications).toEqual([{ name: '기존인증' }])
+    expect(ip.govProjects).toEqual([{ name: '기존과제' }])
+  })
+
+  it('인증·정부과제만 채우면 지식재산권은 그대로다', () => {
+    const { record } = applyAiDraft(
+      fullRecord(),
+      envelope({ cert: { certifications: [{ name: '새인증' }], govProjects: [] } }),
+      ['cert'],
+    )
+    const ip = record.ip_profile as Record<string, unknown>
+    expect(ip.certifications).toEqual([{ name: '새인증' }])
+    // 과제는 빈 배열로 왔으므로 기존 값이 남는다(빈 배열은 '없다'가 아니라 '못 찾았다').
+    expect(ip.govProjects).toEqual([{ name: '기존과제' }])
+    expect(ip.rights).toEqual([{ kind: '특허', title: '기존특허' }])
   })
 
   it('비즈니스를 채워도 요약 3축(강점·보완점·필요사항)은 그대로다', () => {
@@ -82,7 +116,7 @@ describe('applyAiDraft — 보존 키 규칙', () => {
     const { record } = applyAiDraft(
       fullRecord(),
       envelope({
-        revenue: { revenue: [{ year: 2025, revenue: 50 }], finance: [] },
+        revenue: [{ year: 2025, revenue: 50 }],
         employee: [{ year: 2025, employeeCount: 12 }],
       }),
       ['revenue', 'employee'],
@@ -213,7 +247,7 @@ describe('applyAiDraft — AI의 null은 지우지 않는다', () => {
 
   it('카드 전체가 비면 기존 값을 두고 skipped로 보고한다', () => {
     const before = fullRecord()
-    const { record, outcome } = applyAiDraft(before, envelope({ ip: null, timeline: [] }), ['ip', 'timeline'])
+    const { record, outcome } = applyAiDraft(before, envelope({ ip: [], timeline: [] }), ['ip', 'timeline'])
     expect(record.ip_profile).toEqual(before.ip_profile)
     expect(record.business_status).toEqual(before.business_status)
     expect(outcome.filled).toEqual([])
@@ -268,7 +302,7 @@ describe('outcomeSummary', () => {
       skippedSources: [],
     }, AI_CARD_LABEL)
     expect(text).toContain('비즈니스')
-    expect(text).toContain('지식재산·인증')
+    expect(text).toContain('지식재산')
     expect(text).toContain('확인 후 저장')
   })
 

@@ -1,5 +1,6 @@
 import { Tooltip, cn, formText, tooltipScale } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
+import { fieldWidthClass, type FieldWidth } from '@/components/FieldGrid'
 
 /**
  * 통합 수정 폼의 라벨 + 입력 래퍼. `className`으로 그리드 스팬 등을 지정할 수 있다.
@@ -12,6 +13,7 @@ export function Field({
   required,
   hint,
   hintInline,
+  width,
   className,
   children,
 }: {
@@ -24,11 +26,18 @@ export function Field({
    * 왜 못 채우는지, 무엇을 먼저 해야 하는지. 공용 `Field`의 같은 이름 슬롯과 규약이 같다.
    */
   hintInline?: boolean
+  /**
+   * 이 칸이 격자에서 차지하는 폭 — **칸의 종류**로 말한다(FieldGrid).
+   *
+   * `className`으로 스팬을 직접 적던 자리를 대신한다. 클래스를 받으면 같은 성격의 칸이
+   * 화면마다 다른 폭으로 서고, 그때부터 폭은 규격이 아니라 취향이 된다.
+   */
+  width?: FieldWidth
   className?: string
   children: ReactNode
 }) {
   return (
-    <div className={className}>
+    <div className={cn(width && fieldWidthClass[width], className)}>
       <p className="mb-1 text-body font-medium text-gray-800">
         {label}
         {required && <span className="text-brand"> *</span>}

@@ -7,7 +7,14 @@
 //
 // 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §5·§7
 
-/** 체크 단위(카드) 키. 상세 화면의 밴드·순서와 같다 — 기본 2 → 역량 4 → 실적 6. */
+/**
+ * 체크 단위(카드) 키. 상세 화면의 밴드·순서와 같다 — 기본 2 → 역량 5 → 실적 8.
+ *
+ * 2026-09-09에 셋을 갈라 12개에서 15개가 됐다(지식재산·인증 → 지식재산 / 인증·정부과제,
+ * 트랙션·고객 → 핵심 지표 / 주요 고객, 매출·재무 → 매출 / 재무). 체크 단위를 저장 단위에
+ * 맞추는 것이 이 목록의 규칙인데, 그 셋만 한 칸에 목록 둘을 담고 있어 담당자가 매출만 다시
+ * 뽑으려 해도 재무까지 함께 갈렸다 — 손으로 다듬은 절반을 지키려면 카드 전체를 포기해야 했다.
+ */
 export const CARD_KEYS = [
   'basics',
   'summary',
@@ -15,9 +22,12 @@ export const CARD_KEYS = [
   'tech',
   'team',
   'ip',
+  'cert',
   'timeline',
   'traction',
+  'customers',
   'revenue',
+  'finance',
   'employee',
   'shareholders',
   'investment',
@@ -32,26 +42,38 @@ export const CARD_LABELS: Record<CardKey, string> = {
   business: '비즈니스',
   tech: '제품·기술',
   team: '팀·조직',
-  ip: '지식재산·인증',
+  ip: '지식재산',
+  cert: '인증·정부과제',
   timeline: '연혁',
-  traction: '트랙션·고객',
-  revenue: '매출·재무',
+  traction: '핵심 지표',
+  customers: '주요 고객',
+  revenue: '매출',
+  finance: '재무',
   employee: '고용',
   shareholders: '주주',
   investment: '투자',
 }
 
-/** 카드가 객체 하나인지(null 가능) 목록인지 — 빈 결과 판정과 스키마 생성이 함께 쓴다. */
+/**
+ * 카드가 객체 하나인지(null 가능) 목록인지 — 빈 결과 판정과 스키마 생성이 함께 쓴다.
+ *
+ * 2026-09-09에 갈려 나온 여섯 중 다섯(ip·traction·customers·revenue·finance)은 목록 하나만 담게
+ * 되어 'array'가 됐다. `cert`만 객체로 남는 이유는 인증과 정부과제가 화면에서 한 카드에 함께
+ * 서기 때문이다 — 갈랐다고 아무 데나 다시 가르지 않는다. 가르는 기준은 저장 단위이지 목록 수가 아니다.
+ */
 export const CARD_SHAPE: Record<CardKey, 'object' | 'array'> = {
   basics: 'object',
   summary: 'object',
   business: 'object',
   tech: 'object',
   team: 'object',
-  ip: 'object',
+  ip: 'array',
+  cert: 'object',
   timeline: 'array',
-  traction: 'object',
-  revenue: 'object',
+  traction: 'array',
+  customers: 'array',
+  revenue: 'array',
+  finance: 'array',
   employee: 'array',
   shareholders: 'array',
   investment: 'array',

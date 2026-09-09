@@ -78,12 +78,8 @@ describe('normalizeEnvelope — 규격 밖 값', () => {
   })
 
   it('금액에 섞인 쉼표·통화기호를 숫자로 읽는다', () => {
-    const out = normalizeEnvelope(
-      { cards: { revenue: { revenue: [{ year: 2024, revenue: '1,250,000,000' }], finance: [] } } },
-      ['revenue'],
-    )
-    const card = out.cards.revenue as Record<string, unknown>
-    expect((card.revenue as Record<string, unknown>[])[0].revenue).toBe(1_250_000_000)
+    const out = normalizeEnvelope({ cards: { revenue: [{ year: 2024, revenue: '1,250,000,000' }] } }, ['revenue'])
+    expect((out.cards.revenue as Record<string, unknown>[])[0].revenue).toBe(1_250_000_000)
   })
 
   it('지분율 합이 어긋나면 값을 고치지 않고 경고만 남긴다', () => {
@@ -120,11 +116,8 @@ describe('normalizeEnvelope — 규격 밖 값', () => {
   })
 
   it('이름 없는 행은 버린다(가짜 행을 만들지 않는다)', () => {
-    const out = normalizeEnvelope(
-      { cards: { ip: { rights: [{ kind: '특허' }, { kind: '특허', title: '진짜' }], certifications: [], govProjects: [] } } },
-      ['ip'],
-    )
-    expect((out.cards.ip as Record<string, unknown>).rights).toHaveLength(1)
+    const out = normalizeEnvelope({ cards: { ip: [{ kind: '특허' }, { kind: '특허', title: '진짜' }] } }, ['ip'])
+    expect(out.cards.ip as unknown[]).toHaveLength(1)
   })
 })
 
