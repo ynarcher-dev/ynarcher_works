@@ -20,11 +20,17 @@ import { AiBlockedList } from '@/features/ai/AiFillPicker'
  * 'AI 작성하기' 모달 — **읽을 자료 한 벌**과 **작성할 카드**를 고르고 한 번에 실행한다.
  *
  * **좌우 두 기둥이다** — 왼쪽은 자료(위: 읽을 자료 / 아래: 읽지 않을 자료), 오른쪽은 작성할
- * 카드다(2026-09-09 사용자 지정). **기둥 비와 창 폭은 격자 시절 그대로**이고(자료 42 : 카드
- * 58, `size="3xl"`) 바뀐 것은 왼쪽이 열 넷에서 위아래 두 칸이 된 것뿐이다 — 같은 화면을 쓰던
- * 눈이 자리를 다시 익히지 않아도 된다. 세로로 이어 쌓지 않는 것은 자료와 카드가 **같은 한 번의
- * 실행에 들어가는 두 답**이라, 스크롤로 갈라 놓으면 실행 버튼을 누를 때 위쪽 답이 화면 밖에
- * 있기 때문이다.
+ * 카드다(2026-09-09 사용자 지정). 기둥 비는 격자 시절 그대로 자료 42 : 카드 58이고, 바뀐 것은
+ * 왼쪽이 자료 열 넷에서 위아래 두 칸이 된 것뿐이라 같은 화면을 쓰던 눈이 자리를 다시 익히지
+ * 않아도 된다. 세로로 이어 쌓지 않는 것은 자료와 카드가 **같은 한 번의 실행에 들어가는 두
+ * 답**이라, 스크롤로 갈라 놓으면 실행 버튼을 누를 때 위쪽 답이 화면 밖에 있기 때문이다.
+ *
+ * **창은 `2xl`이고 본문은 `sectioned`다**(2026-09-09 정정). 격자를 걷었으므로 `3xl`을 쓸 근거가
+ * 함께 사라졌다 — 그 단계는 **열 수가 데이터인 표**를 품는 자리이고(5_component_spec §3.5),
+ * 좁히면 줄어드는 것이 여백이 아니라 보이는 칸 수여야 한다. 지금 이 창의 열 구성은 우리가 정한
+ * 둘이라 폭을 정하는 주체가 우리이고, 그때의 단계는 `2xl`이다. `sectioned`는 본문이 카드 셋으로
+ * 갈리기 때문이다(묶음이 둘 이상이면 켠다) — 흰 바닥에 흰 상자가 서면 테두리 한 줄로 구획을
+ * 버텨야 한다. 같은 두 목록 이관 창인 게스트 계정 생성이 이미 `2xl` + `sectioned`다.
  *
  * 2026-09-09 개정으로 카드×자료 격자를 걷었다. 격자는 "어느 자료가 어느 카드의 근거인가"를
  * 물었는데, 그 답이 카드마다 갈리면 서버는 자료 조합마다 요청을 갈라 같은 자료를 여러 번
@@ -101,6 +107,16 @@ export function AiFillModal<K extends string>({
   const fill = useAiFill<K>()
   const [error, setError] = useState<string | null>(null)
   const [outcome, setOutcome] = useState<AiFillOutcome<K> | null>(null)
+  /**
+   * 지금 이 창이 작성을 돌리고 있는가.
+   *
+   * **뮤테이션의 `isPending`을 그대로 쓰지 않는다**(2026-09-09 수정). 결과가 이미 아래 서 있는데도
+   * 스피너가 남는 일이 실제로 났다. 스피너를 세우고 걷는 일은 **이 창이 시작한 실행 하나**에
+   * 매여야 하므로 시작할 때 켜고 `finally`에서 끄는 플래그를 이 창이 직접 든다 — 성공·실패·예외
+   * 어느 길로 빠져나가도 반드시 꺼진다. 남의 상태를 읽어 내 화면을 세우면, 그 값이 언제
+   * 참이 되는지를 이 창이 답할 수 없다.
+   */
+  const [running, setRunning] = useState(false)
 
   const allCardKeys = useMemo(() => cardKeysOf(catalog.cards), [catalog.cards])
   const cardLabel = useMemo(() => cardLabelMap(catalog.cards), [catalog.cards])
@@ -123,17 +139,24 @@ export function AiFillModal<K extends string>({
    *
    * 버튼을 두지 않는 이유는 그것이 담당자의 결정이 아니라 준비이기 때문이다 — 열어 두면
    * 작성이 빨라질 뿐 결과가 달라지지 않는다. 한 번에 한 벌씩 열고(같은 작업자를 쓴다), 끝나면
-   * 이 효과가 다시 돌아 새로 올라온 줄을 잡는다. 실패한 줄은 상태가 '실패'로 남아 다시 돌지
-   * 않는다(줄의 배지가 사유를 답한다).
+   * 이 효과가 다시 돌아 새로 올라온 줄을 잡는다.
+   *
+   * **한 번 시도한 자료는 다시 열지 않는다.** 열기에 실패하면 그 줄의 상태가 '분석 전'에
+   * 머무는 경우가 있고(서버가 요청을 통째로 거절한 때), 시도한 키를 적어 두지 않으면 이
+   * 효과가 끝없이 다시 돌며 같은 요청을 반복한다. 다시 열고 싶으면 창을 다시 연다.
    */
+  const tried = useRef<Set<string>>(new Set())
   const readKeys = read.map((s) => s.key).join('|')
   useEffect(() => {
     if (extracts.busy) return
     const todo = read.filter((s) => {
+      if (tried.current.has(s.key)) return false
       const st = extracts.statusOf(s)
       return st.state === 'idle' || st.state === 'stale'
     })
-    if (todo.length > 0) void extracts.analyze(todo)
+    if (todo.length === 0) return
+    for (const s of todo) tried.current.add(s.key)
+    void extracts.analyze(todo)
     // read 배열은 키 문자열로 대신 본다(같은 줄들이면 새 배열이어도 다시 돌지 않는다).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [readKeys, extracts.busy])
@@ -155,7 +178,7 @@ export function AiFillModal<K extends string>({
   const tooLarge = totalBytes > AI_FILL_LIMITS.maxTotalBytes
   // 합계와 별개로 한 건이 큰 경우를 따로 본다 — 합계만 말하면 어느 자료를 빼야 하는지 모른다.
   const oversized = read.filter((s) => Number(s.bytes ?? 0) > AI_FILL_LIMITS.maxSingleBytes)
-  const busy = fill.isPending
+  const busy = running
   const ready =
     chosenCards.length > 0 && read.length > 0 && !tooLarge && oversized.length === 0 && !busy && !extracts.busy
 
@@ -171,6 +194,11 @@ export function AiFillModal<K extends string>({
   }
 
   const run = async () => {
+    // 이미 돌고 있으면 아무 일도 하지 않는다. 버튼이 잠기지만 그 사이의 두 번째 클릭까지
+    // 막는 것은 이 한 줄이다 — 두 번 나가면 앞선 결과 위에 스피너가 다시 서서, 끝난 실행이
+    // 끝나지 않은 것처럼 보인다.
+    if (running) return
+    setRunning(true)
     setError(null)
     // 지난 결과는 실행과 함께 걷는다 — 돌고 있는 스피너 아래에 옛 답이 남아 있으면 그것이
     // 이번 실행의 답으로 읽힌다.
@@ -190,6 +218,8 @@ export function AiFillModal<K extends string>({
       setOutcome(onFilled(result, chosenCards))
     } catch (e) {
       setError(e instanceof Error ? e.message : 'AI 작성에 실패했습니다.')
+    } finally {
+      setRunning(false)
     }
   }
 
@@ -199,7 +229,11 @@ export function AiFillModal<K extends string>({
       onClose={busy ? () => undefined : onClose}
       // 쓰던 것이 있는 모달이라 딤 클릭으로 닫지 않는다(고른 것이 클릭 한 번에 사라지면 안 된다).
       dismissible={false}
-      size="3xl"
+      // 격자를 걷었으므로 3xl(열 수가 데이터인 표를 품는 단계)을 쓸 근거가 함께 사라졌다.
+      size="2xl"
+      // 본문이 카드 셋(읽을 자료·읽지 않을 자료·작성할 카드)으로 갈린다 — 바닥을 페이지
+      // 바탕으로 내려 상자의 경계를 선이 아니라 면이 만든다.
+      sectioned
       title="AI 작성하기"
       help={catalog.help ? `${catalog.help} ${COMMON_HELP}` : COMMON_HELP}
       footer={
@@ -221,68 +255,70 @@ export function AiFillModal<K extends string>({
         </div>
       }
     >
-      <div className="space-y-4">
-        {error && <Banner tone="danger">{error}</Banner>}
+      {error && <Banner tone="danger">{error}</Banner>}
 
-        {/* 실행 중에도 고른 것은 자리에 남고 흐려질 뿐이다 — 무엇을 고른 채로 기다리는지 보여야
-            한다. 스피너는 그 위에 얹고, 조작은 겹친 층이 아니라 안쪽에서 막는다. */}
-        <div className="relative">
-          {/* 기둥 비는 격자 시절 그대로다(자료 칸 42 : 카드 58, 창은 3xl) — 바뀐 것은
-              왼쪽이 열 넷에서 위아래 두 칸이 된 것뿐이다(2026-09-09 사용자 지정). 좁은
-              화면에서는 한 기둥으로 접히고, 그때 자료가 먼저 선다. */}
-          <div
-            className={cn(
-              'grid gap-4 lg:grid-cols-[42fr_58fr]',
-              busy && 'pointer-events-none select-none opacity-60 blur-[2px]',
-            )}
-            aria-busy={busy}
-          >
-            <AiSourcePanes
-              read={read}
-              skip={skip}
-              extracts={extracts}
-              disabled={busy}
-              onMove={(s, to) => onReadSet(moveSource(live, s, to))}
-              onMoveAll={(to) => onReadSet(moveAll(live, to === 'read' ? skip : read, to))}
-            />
-            <AiCardPicker
-              cards={catalog.cards}
-              groups={catalog.groups}
-              selected={chosenCards}
-              disabled={busy}
-              onToggle={toggleCard}
-              onToggleMany={toggleMany}
-            />
-          </div>
-          {busy && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-radius-md bg-white/70">
-              <Spinner />
-              {/* 서버가 한 번의 응답이라 진척값이 없다. 없는 단계를 지어내지 않는다. */}
-              <p className={cardText.value}>
-                읽을 자료 {read.length}건에서 {chosenCards.length}개 카드를 작성하고 있습니다.
-              </p>
-              <p className={cardText.meta}>자료 크기에 따라 1~2분이 걸릴 수 있습니다.</p>
-            </div>
+      {/* 실행 중에도 고른 것은 자리에 남고 흐려질 뿐이다 — 무엇을 고른 채로 기다리는지 보여야
+          한다. 스피너는 그 위에 얹고, 조작은 겹친 층이 아니라 안쪽에서 막는다. */}
+      <div className="relative">
+        {/* 기둥 비는 격자 시절 그대로다(자료 칸 42 : 카드 58) — 바뀐 것은 왼쪽이 열 넷에서
+            위아래 두 칸이 된 것뿐이다(2026-09-09 사용자 지정). 좁은 화면에서는 한 기둥으로
+            접히고, 그때 자료가 먼저 선다. */}
+        <div
+          className={cn(
+            'grid gap-3 lg:grid-cols-[42fr_58fr]',
+            busy && 'pointer-events-none select-none opacity-60 blur-[2px]',
           )}
+          aria-busy={busy}
+        >
+          <AiSourcePanes
+            read={read}
+            skip={skip}
+            extracts={extracts}
+            disabled={busy}
+            onMove={(s, to) => onReadSet(moveSource(live, s, to))}
+            onMoveAll={(to) => onReadSet(moveAll(live, to === 'read' ? skip : read, to))}
+          />
+          <AiCardPicker
+            cards={catalog.cards}
+            groups={catalog.groups}
+            selected={chosenCards}
+            disabled={busy}
+            onToggle={toggleCard}
+            onToggleMany={toggleMany}
+          />
         </div>
+        {busy && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-radius-md bg-white/70">
+            <Spinner />
+            {/* 서버가 한 번의 응답이라 진척값이 없다. 없는 단계를 지어내지 않는다. */}
+            <p className={cardText.value}>
+              읽을 자료 {read.length}건에서 {chosenCards.length}개 카드를 작성하고 있습니다.
+            </p>
+            <p className={cardText.meta}>자료 크기에 따라 1~2분이 걸릴 수 있습니다.</p>
+          </div>
+        )}
+      </div>
 
+      {/* 세는 값과 막힌 이유를 한 덩이로 붙여 둔다 — 성격이 같고, 흩어 놓으면 바닥의 리듬이
+          문장 수만큼 늘어난다. */}
+      <div className="space-y-1">
         <p className={cardText.meta}>
           카드 {chosenCards.length}개 · 읽을 자료 {read.length}건 · 합계 {formatBytes(totalBytes)}
         </p>
 
-        {extracts.error && <Banner tone="warning">{extracts.error}</Banner>}
-
         {/* 여는 중인 자료가 있으면 실행이 잠시 잠긴다 — 왜 안 눌리는지를 이 줄이 답한다. */}
         {extracts.progress && (
-          <p className={cn('text-caption', 'text-gray-600')}>
-            자료를 여는 중입니다 ({extracts.progress.done}/{extracts.progress.total}). 끝나면 실행할 수 있습니다.
+          <p className="text-caption text-gray-600">
+            자료를 여는 중입니다 ({extracts.progress.done}/{extracts.progress.total}). 끝나면 실행할 수
+            있습니다.
           </p>
         )}
 
         {/* 막힌 이유는 접지 않는다 — 왜 실행 버튼이 안 눌리는지를 이 줄이 답한다. */}
         {tooLarge && (
           <p className="text-caption text-danger">
-            읽을 자료의 합계가 {formatBytes(AI_FILL_LIMITS.maxTotalBytes)}를 넘습니다. 자료를 아래로 내려 주세요.
+            읽을 자료의 합계가 {formatBytes(AI_FILL_LIMITS.maxTotalBytes)}를 넘습니다. 자료를 아래로 내려
+            주세요.
           </p>
         )}
         {oversized.length > 0 && (
@@ -294,16 +330,19 @@ export function AiFillModal<K extends string>({
         {/* 되돌릴 수 있다는 말을 함께 적는다 — 경고가 과하면 정작 필요한 갱신을 망설인다. */}
         {overwritten.length > 0 && (
           <p className="text-caption text-warning">
-            현재 값이 AI 결과로 바뀝니다: {overwritten.map((c) => c.label).join(' · ')}. 저장 전까지는 되돌릴 수 있습니다.
+            현재 값이 AI 결과로 바뀝니다: {overwritten.map((c) => c.label).join(' · ')}. 저장 전까지는
+            되돌릴 수 있습니다.
           </p>
         )}
+      </div>
 
-        <AiBlockedList sources={blocked} />
+      {extracts.error && <Banner tone="warning">{extracts.error}</Banner>}
 
-        {/* 실행 전에는 비어 있고, 실행 뒤에는 결과가 선다. */}
-        <div ref={resultRef}>
-          <AiFillResultPanel outcome={outcome} cardLabel={cardLabel} />
-        </div>
+      <AiBlockedList sources={blocked} />
+
+      {/* 실행 전에는 사용 방법, 실행 뒤에는 결과 — 한 자리를 두 내용이 이어 쓴다. */}
+      <div ref={resultRef}>
+        <AiFillResultPanel outcome={outcome} cardLabel={cardLabel} />
       </div>
     </Modal>
   )
