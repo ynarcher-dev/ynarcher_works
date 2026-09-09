@@ -111,6 +111,13 @@ export function useGuestAccounts(
   page: number,
   entityKey?: 'program' | 'ma_program',
   masterTables?: readonly MasterTable[],
+  /**
+   * 참여 사업이 0건인 계정만.
+   *
+   * 서버에서 거르는 이유는 이 목록이 서버 페이징이기 때문이다 — 화면에서 거르면 한 페이지
+   * 안에서만 걸러져 '2쪽에는 더 있는데 1쪽에서 0건'이 된다.
+   */
+  onlyOrphans?: boolean,
 ) {
   return useQuery({
     queryKey: [
@@ -120,6 +127,7 @@ export function useGuestAccounts(
       page,
       entityKey ?? 'all',
       masterTables?.join(',') ?? 'all',
+      onlyOrphans ? 'orphans' : 'all',
     ],
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<GuestAccountPage> => {
@@ -129,6 +137,7 @@ export function useGuestAccounts(
         p_offset: page * GUEST_PAGE_SIZE,
         p_entity_key: entityKey ?? null,
         p_master_tables: masterTables ? [...masterTables] : null,
+        p_only_orphans: Boolean(onlyOrphans),
       })
       // 조회 실패를 삼키지 않는다 — 삼키면 "권한이 없다"와 "게스트가 없다"가 같은 빈 화면이 된다.
       if (error) throw error

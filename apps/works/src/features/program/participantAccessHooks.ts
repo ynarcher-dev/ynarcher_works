@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useProgramWorkspace } from '@/features/program/workspace'
 
@@ -122,6 +122,66 @@ export function useCloseGuestAccess(programId: string) {
   return useMutation({
     mutationFn: async (participantIds: string[]): Promise<number> => {
       const { data, error } = await supabase.rpc('close_program_guest_access', {
+        p_participant_ids: participantIds,
+      })
+      if (error) throw error
+      return (data as number | null) ?? 0
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: [config.key, 'participants', programId] })
+    },
+  })
+}
+
+/** 명부 행을 뺐을 때 남는 기록 한 종류. 건수가 0인 종류는 서버가 보내지 않는다. */
+export interface RemovalResidual {
+  kind: string
+  label: string
+  n: number
+}
+
+/**
+ * 뺄 때 남는 기록의 건수 — **삭제창이 열릴 때만** 묻는다.
+ *
+ * 선택이 바뀔 때마다 세지 않는 이유는 이 값이 결정에 쓰이는 자리가 삭제창 하나뿐이기
+ * 때문이다. 선택 줄에 상시로 세우면 고를 때마다 왕복이 늘고, 정작 읽어야 할 순간에는
+ * 이미 화면에 있던 숫자라 눈에 걸리지 않는다.
+ */
+export function useRemovalPreview(programId: string, participantIds: string[], enabled: boolean) {
+  const config = useProgramWorkspace()
+  return useQuery({
+    queryKey: [config.key, 'removal-preview', programId, [...participantIds].sort()],
+    enabled: enabled && participantIds.length > 0,
+    queryFn: async (): Promise<RemovalResidual[]> => {
+      const { data, error } = await supabase.rpc('program_participant_removal_preview', {
+        p_participant_ids: participantIds,
+      })
+      if (error) throw error
+      return ((data ?? []) as { kind: string; label: string; n: number | string }[]).map((r) => ({
+        kind: r.kind,
+        label: r.label,
+        n: Number(r.n),
+      }))
+    },
+  })
+}
+
+/**
+ * 명부 행을 그 사업에서 **뺀다**(되돌릴 수 없다).
+ *
+ * 차단(`useCloseGuestAccess`)과 다른 축이다 — 저쪽은 문을 닫아 두는 일이라 되돌릴 수 있고,
+ * 이쪽은 "이 사업에 담은 적이 없다"로 만드는 일이다. 잘못 담은 줄이 '차단됨'으로 명부에
+ * 남으면 목록이 사실을 말하지 못한다.
+ *
+ * 계정·비밀번호·다른 사업의 줄은 그대로다. 지원서·질문·자료도 지우지 않는다 — 그 기록이
+ * 누구 것인지는 계정이 답한다. 무엇이 남는지는 `useRemovalPreview`가 삭제 전에 밝힌다.
+ */
+export function useRemoveParticipants(programId: string) {
+  const config = useProgramWorkspace()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (participantIds: string[]): Promise<number> => {
+      const { data, error } = await supabase.rpc('remove_program_participants', {
         p_participant_ids: participantIds,
       })
       if (error) throw error

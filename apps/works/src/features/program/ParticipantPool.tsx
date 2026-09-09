@@ -17,6 +17,7 @@ import {
   type ParticipantAction,
 } from '@/features/program/ParticipantActionConfirm'
 import { participantColumns } from '@/features/program/participantColumns'
+import { ParticipantRemoveConfirm } from '@/features/program/ParticipantRemoveConfirm'
 import { ParticipantSelectionBar } from '@/features/program/ParticipantSelectionBar'
 import {
   useProgramParticipants,
@@ -25,6 +26,7 @@ import {
 import {
   useCloseGuestAccess,
   useOpenGuestAccess,
+  useRemoveParticipants,
   useReopenGuestAccess,
   useSendPasswordReset,
 } from '@/features/program/participantAccessHooks'
@@ -112,12 +114,15 @@ export function ParticipantPool({
   const [addOpen, setAddOpen] = useState(false)
   const [windowOpen, setWindowOpen] = useState(false)
   const [confirming, setConfirming] = useState<ParticipantAction | null>(null)
+  // 되돌릴 수 없는 하나는 별도 상태다 — 나머지 넷과 확인창 자체가 다르다(따라쓰기).
+  const [removing, setRemoving] = useState(false)
 
   const { data, isLoading, isError } = useProgramParticipants(program.id)
   const open = useOpenGuestAccess(program.id)
   const close = useCloseGuestAccess(program.id)
   const reopen = useReopenGuestAccess(program.id)
   const resetPw = useSendPasswordReset()
+  const remove = useRemoveParticipants(program.id)
 
   const rows = useMemo(() => data ?? [], [data])
   const isManager = useMemo(
@@ -173,7 +178,8 @@ export function ParticipantPool({
     [selectedRows],
   )
 
-  const busy = open.isPending || close.isPending || reopen.isPending || resetPw.isPending
+  const busy =
+    open.isPending || close.isPending || reopen.isPending || resetPw.isPending || remove.isPending
 
   const runOpen = () => {
     open.mutate(selected, {
@@ -294,6 +300,7 @@ export function ParticipantPool({
               onResetPassword={() => setConfirming('reset')}
               onBlock={() => setConfirming('block')}
               onUnblock={() => setConfirming('unblock')}
+              onRemove={() => setRemoving(true)}
               onClear={() => setSelected([])}
               busy={busy}
             />
@@ -339,6 +346,29 @@ export function ParticipantPool({
         onConfirm={() => confirming && confirmHandlers[confirming]()}
         onClose={() => setConfirming(null)}
         busy={busy}
+      />
+      <ParticipantRemoveConfirm
+        open={removing}
+        programId={program.id}
+        participantIds={selected}
+        onConfirm={() =>
+          remove.mutate(selected, {
+            onSuccess: (n) => {
+              setSelected([])
+              setRemoving(false)
+              toast.show(`${n}건을 명부에서 뺐습니다.`, 'success')
+            },
+            onError: (e: unknown) => {
+              // 창을 닫지 않는다 — 실패한 자리에서 사유를 보고 다시 누를 수 있어야 한다.
+              toast.show(
+                e instanceof Error ? e.message : '명부에서 빼지 못했습니다. 권한을 확인하세요.',
+                'danger',
+              )
+            },
+          })
+        }
+        onClose={() => setRemoving(false)}
+        busy={remove.isPending}
       />
     </>
   )

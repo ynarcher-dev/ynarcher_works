@@ -7,6 +7,7 @@ import {
   EmptyValue,
   InfoField,
   InfoGrid,
+  Checkbox,
   ListToolbar,
   Modal,
   RefLinkList,
@@ -123,6 +124,14 @@ export function GuestAccountPanel({
   const [ledger, setLedger] = useState<MasterTable | null>(masterTables?.[0] ?? null)
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(0)
+  /**
+   * 참여 사업이 0건인 계정만 — **정지 여부를 사람이 판단하기 위한 축**이다.
+   *
+   * 그래서 정지를 소유한 화면(ADMIN)에만 선다. 창구(AC·M&A)는 계정을 세우는 자리라 이
+   * 물음이 그 자리의 것이 아니고, 무엇보다 창구는 사업을 좁혀 보므로 여기서 0건이
+   * '어디에도 안 걸림'이 아니라 '이 워크스페이스에 안 걸림'이 되어 뜻이 달라진다.
+   */
+  const [onlyOrphans, setOnlyOrphans] = useState(false)
   /** 상세를 펼쳐 보는 계정. 행을 누르면 열린다. */
   const [detail, setDetail] = useState<GuestAccount | null>(null)
   /** 정지하려는 계정(사유 입력). 해제는 사유를 묻지 않는다. */
@@ -132,7 +141,13 @@ export function GuestAccountPanel({
   // 탭이 선 자리에서는 **그 원장 하나**로 좁힌다. 탭이 없으면 창구가 준 목록 전부이고,
   // 그것도 없으면(ADMIN) 전 원장이다.
   const scope = ledger ? [ledger] : masterTables
-  const { data, isLoading, error } = useGuestAccounts(keyword, page, entityKey, scope)
+  const { data, isLoading, error } = useGuestAccounts(
+    keyword,
+    page,
+    entityKey,
+    scope,
+    canSuspend && onlyOrphans,
+  )
   const setActive = useSetGuestAccountActive()
 
   /**
@@ -148,10 +163,10 @@ export function GuestAccountPanel({
     setProgramPage(0)
   }, [detail?.user_id, setProgramPage])
 
-  // 검색어가 바뀌면 첫 페이지로 되돌린다(빈 페이지 방지).
+  // 검색어·필터가 바뀌면 첫 페이지로 되돌린다(빈 페이지 방지).
   useEffect(() => {
     setPage(0)
-  }, [keyword])
+  }, [keyword, onlyOrphans])
 
   const submitSuspend = async () => {
     if (!suspending) return
@@ -356,6 +371,16 @@ export function GuestAccountPanel({
         keyword={keyword}
         onKeywordChange={setKeyword}
         searchPlaceholder="이름 또는 이메일로 검색"
+        filters={
+          canSuspend ? (
+            <Checkbox
+              label="참여 사업 없는 계정만"
+              checked={onlyOrphans}
+              onChange={(e) => setOnlyOrphans(e.target.checked)}
+              title="어느 사업에도 걸려 있지 않은 계정입니다. 로그인은 되지만 들어가도 아무것도 보이지 않습니다."
+            />
+          ) : undefined
+        }
       />
 
       <DataTable

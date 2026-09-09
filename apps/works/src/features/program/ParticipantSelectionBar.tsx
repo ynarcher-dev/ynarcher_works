@@ -19,6 +19,7 @@ export function ParticipantSelectionBar({
   onResetPassword,
   onBlock,
   onUnblock,
+  onRemove,
   onClear,
   busy,
 }: {
@@ -32,6 +33,7 @@ export function ParticipantSelectionBar({
   onResetPassword: () => void
   onBlock: () => void
   onUnblock: () => void
+  onRemove: () => void
   onClear: () => void
   busy: boolean
 }) {
@@ -71,6 +73,16 @@ export function ParticipantSelectionBar({
             이 사업 차단{mixed ? ` (${openCount})` : ''}
           </Button>
         )}
+        {/*
+          차단 옆에 서지만 **같은 축이 아니다** — 차단은 문을 닫아 두는 일이라 되돌릴 수 있고,
+          빼기는 그 줄을 없애 "담은 적이 없다"로 만든다. 그래서 고른 것이 차단됐든 열려
+          있든 언제나 서고(차단/해제처럼 상태에 따라 갈리지 않는다), 확인창도 따로 쓴다.
+          자리를 맨 뒤로 둔 것은 되돌릴 수 없는 것이 손이 먼저 가는 자리에 있으면 안 되기
+          때문이다.
+        */}
+        <Button variant="outline-danger" onClick={onRemove} disabled={busy}>
+          명부에서 빼기
+        </Button>
         <Button variant="ghost" onClick={onClear} disabled={busy}>
           선택 해제
         </Button>
