@@ -13,6 +13,9 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useEditReasonPrompt } from '@/components/EditReasonPrompt'
 import { FormTopBar } from '@/components/FormTopBar'
+import { DuplicateNotice } from '@/features/master/DuplicateNotice'
+import { useDuplicateGuard } from '@/features/master/duplicateGuard'
+import { LEDGERS } from '@/features/master/ledgers'
 import { RichTextEditor } from '@/components/RichTextEditor'
 import { useTagTokenField } from '@/features/admin/TagTokenField'
 import { StartupPickerModal } from '@/features/mna/parties/StartupPickerModal'
@@ -82,6 +85,9 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
   const create = useCreateMaParty(config)
   const update = useUpdateMaParty(config)
   const isEdit = Boolean(recordId)
+  // 중복 가드 — 이 원장은 종전에 대조가 아예 없어 같은 회사가 그대로 두 번 들어왔다
+  // (2026-09-09 신설). 어느 원장을 볼지는 화면 설정이 정한다.
+  const dup = useDuplicateGuard(LEDGERS[config.table])
   // 수정 저장은 사유를 받아야 확정된다 — 사유는 변동 이력의 note로 남는다.
   const { askReason, reasonModal } = useEditReasonPrompt()
   // 등록 모드에서 미리 고른 자료. 저장 성공 직후 새 id로 일괄 업로드한다.
@@ -180,6 +186,15 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
    */
   const watchedName = watch('name').trim()
 
+  // 대조에 쓰인 세 칸이 바뀌면 통과권이 사라진다 — 한 번 확인한 뒤 이름을 고쳐도 대조 없이
+  // 저장되면, 정작 새로 적은 이름의 중복은 아무도 보지 않는다.
+  const probeKey = [watchedName, watch('contactEmail'), watch('contactPhone')].join('|')
+  const [lastProbeKey, setLastProbeKey] = useState(probeKey)
+  if (probeKey !== lastProbeKey) {
+    setLastProbeKey(probeKey)
+    dup.clear()
+  }
+
   const onSubmit = async (v: MaPartyFormValues) => {
     const payload: Record<string, unknown> = {
       name: v.name.trim(),
@@ -210,6 +225,17 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
         toast.show(`${config.noun} 정보를 수정했습니다.`, 'success')
         onDone({ id: recordId })
       } else {
+        // 종전에는 이 원장에만 대조가 아예 없어 같은 회사가 그대로 두 번 들어왔다.
+        // 걸리면 무엇이 걸렸는지 세우고 멈추며, 한 번 더 누르면 진행한다.
+        if (
+          await dup.shouldStop({
+            name: v.name.trim(),
+            email: v.contactEmail.trim(),
+            phone: v.contactPhone.trim(),
+          })
+        ) {
+          return
+        }
         const newId = await create.mutateAsync(payload)
         // 등록 전에 첨부한 자료를 새 레코드에 올린다. 실패해도 등록 자체는 되돌리지 않는다 —
         // 자료는 상세에서 다시 붙일 수 있지만 되돌린 등록은 입력한 것이 통째로 사라진다.
@@ -237,6 +263,15 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
         onCancel={onCancel}
         busy={isSubmitting}
       />
+
+      {/* 확정 버튼 바로 아래 선다 — 저장을 누른 손이 그대로 머무는 자리다. */}
+      {dup.match && (
+        <DuplicateNotice
+          match={dup.match}
+          noun={config.noun}
+          detailPath={(id) => `${config.basePath}/${id}`}
+        />
+      )}
 
       {/* 조회와 같은 3열 배치: 좌측 2/3 편집 카드 + 우측 1/3 자료 관리. */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

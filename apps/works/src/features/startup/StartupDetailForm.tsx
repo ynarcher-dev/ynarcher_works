@@ -2,6 +2,9 @@ import { CardShell, useToast } from '@ynarcher/ui'
 import { useState, type ChangeEvent } from 'react'
 import { useForm } from 'react-hook-form'
 import { FormTopBar } from '@/components/FormTopBar'
+import { DuplicateNotice } from '@/features/master/DuplicateNotice'
+import { useDuplicateGuard } from '@/features/master/duplicateGuard'
+import { LEDGERS } from '@/features/master/ledgers'
 import { useEditReasonPrompt } from '@/components/EditReasonPrompt'
 import { isInvested } from '@/features/startup/startupClassification'
 import { useStartupManagers } from '@/features/startup/startupPoolHooks'
@@ -10,7 +13,6 @@ import { PendingMaterialPanel } from '@/features/networks/PendingMaterialPanel'
 import { usePendingMaterials } from '@/features/networks/pendingMaterials'
 import { useTagTokenField } from '@/features/admin/TagTokenField'
 import {
-  checkDuplicateName,
   useCreateEntity,
   useUpdateEntity,
   type EntityRow,
@@ -82,6 +84,8 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
   const isCreate = !recordId
   const base = initial ?? ({} as EntityRow)
   const create = useCreateEntity('startups')
+  // 중복 가드 — 등록 모드에서만 돈다(수정은 이미 그 행이다).
+  const dup = useDuplicateGuard(LEDGERS.startups)
   // 등록 모드에서 미리 고른 자료(분류별). 저장 성공 직후 새 id로 일괄 업로드한다.
   const pending = usePendingMaterials()
   const update = useUpdateEntity('startups')
@@ -137,6 +141,7 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
     handleSubmit,
     getValues,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<StartupDetailFormValues>({
     values: {
@@ -212,6 +217,15 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
   const alreadyInvested = isInvested(str('management_status'))
   // 투자기업의 딜메이커(리드 담당자) 이름 — 읽기 전용 표시용.
   const leadName = existingManagers?.find((m) => m.is_lead)?.user?.name ?? null
+
+  // 대조에 쓰인 세 칸이 바뀌면 통과권이 사라진다 — 한 번 확인한 뒤 이름을 고쳐도 대조 없이
+  // 저장되면, 정작 새로 적은 이름의 중복은 아무도 보지 않는다.
+  const probeKey = [watch('name'), watch('email'), watch('phone')].join('|')
+  const [lastProbeKey, setLastProbeKey] = useState(probeKey)
+  if (probeKey !== lastProbeKey) {
+    setLastProbeKey(probeKey)
+    dup.clear()
+  }
 
   const onSubmit = async (v: StartupDetailFormValues) => {
     const payload: Record<string, unknown> = {
@@ -372,10 +386,19 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
 
     try {
       if (isCreate) {
-        // 등록: 이름 중복 검사 후 새 레코드를 만들고, 생성 로그를 남긴 뒤 상세페이지로 이동한다.
+        // 등록: 원장 대조 후 새 레코드를 만들고, 생성 로그를 남긴 뒤 상세페이지로 이동한다.
         // (신규 스타트업은 항상 비투자로 만든다 — 투자기업 전환은 FUND 투자 집행에서만 일어난다.)
-        if (await checkDuplicateName('startups', payload.name as string)) {
-          toast.show('동일한 이름이 이미 등록되어 있습니다.', 'warning')
+        //
+        // 이름 완전일치가 아니라 이름·이메일·전화 2개 이상 일치로 본다(2026-09-09) —
+        // `딜챗`과 `주식회사 딜챗`이 남남이던 자리다. 걸리면 무엇이 걸렸는지 세우고 멈추며,
+        // 한 번 더 누르면 진행한다(두 칸 일치는 강한 근거이지 증명은 아니다).
+        if (
+          await dup.shouldStop({
+            name: String(payload.name ?? ''),
+            email: v.email.trim(),
+            phone: v.phone.trim(),
+          })
+        ) {
           return
         }
         // 변동 이력 'created'는 원장 트리거가 같은 트랜잭션에서 남긴다(20260721150000).
@@ -413,6 +436,11 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
         onCancel={onCancel}
         busy={isSubmitting}
       />
+
+      {/* 확정 버튼 바로 아래 선다 — 저장을 누른 손이 그대로 머무는 자리다. */}
+      {dup.match && (
+        <DuplicateNotice match={dup.match} noun="기업" detailPath={(id) => `/startup/${id}`} />
+      )}
 
       {/* 상세페이지와 동일한 3열 배치: 좌측 2/3 편집 카드 + 우측 1/3 자료 관리 */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

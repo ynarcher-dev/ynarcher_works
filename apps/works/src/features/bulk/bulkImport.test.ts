@@ -83,7 +83,7 @@ describe('parseBulkCsv', () => {
   })
 
   it('빈 파일은 오류가 아니라 빈 결과다(열기만 해도 빨간 글씨가 뜨지 않게)', () => {
-    expect(parseBulkCsv('', SPEC)).toEqual({ rows: [], preview: [], errors: [] })
+    expect(parseBulkCsv('', SPEC)).toEqual({ rows: [], lines: [], preview: [], errors: [] })
   })
 })
 

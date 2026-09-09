@@ -25,6 +25,7 @@ import {
   programStatusOptions,
 } from '@/features/program/config'
 import { MANAGEMENT_STATUS_LABEL } from '@/features/startup/startupClassification'
+import { LEDGERS } from '@/features/master/ledgers'
 import { FUND_BULK_ASSIGNMENT, programBulkAssignment } from '@/features/bulk/bulkAssign'
 import type { ProgramWorkspaceConfig } from '@/features/program/workspace'
 import type { BulkImportSpec } from '@/features/bulk/bulkImport'
@@ -48,6 +49,9 @@ const STARTUP_UPLOAD_STATUS_LABEL: Record<string, string> = Object.fromEntries(
 export const STARTUP_BULK_SPEC: BulkImportSpec = {
   noun: '스타트업',
   table: 'startups',
+  // 원장에 이미 있는 기업은 파일로 다시 들어오지 못한다(2026-09-09) — 등록 폼은 막는데
+  // 파일로는 수백 건이 그냥 들어오던 비대칭을 닫는다.
+  matchLedger: LEDGERS.startups,
   backTo: '/startup',
   templateName: '스타트업_업로드_템플릿.csv',
   guide:

@@ -1,4 +1,5 @@
 import type { BadgeTone } from '@ynarcher/ui'
+import type { LedgerKey } from '@/features/master/ledgers'
 
 /**
  * M&A 거래상대 원장(BUYER·SELLER) 화면 설정.
@@ -19,8 +20,11 @@ export interface MaPartyConfig {
   /**
    * 원장 표 이름. 기여 로그의 `entity_table`이자 update_entity/deactivate_entity의 인자다
    * (그 둘은 허용 목록이 아니라 표에 트리거가 붙어 있는지를 카탈로그에서 확인한다).
+   *
+   * 타입을 이 아니라 원장 키 유니온으로 좁힌다 — 중복 대조가 이 값으로 를
+   * 꺼내므로, 넓게 두면 그 자리에 캐스트가 필요하고 캐스트는 오타를 잡아 주지 못한다.
    */
-  table: string
+  table: LedgerKey
   /** 자료·코멘트·회의록 링크가 이 원장을 가리킬 때 쓰는 다형 키(단수형). */
   targetType: string
   /** 사이드바 줄·페이지 제목이 함께 읽는 이름. 두 곳에 따로 적으면 메뉴와 화면의 이름이 갈린다. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bestMatchFor, type LedgerCandidate } from '@/features/program/ledgerMatch'
+import { bestMatchFor, type LedgerCandidate } from '@/features/master/ledgerMatch'
 
 /**
  * 중복 대조 판정. **조회가 아니라 규칙만** 본다 — 어떤 행을 긁어 왔는가는 원장과 권한의
@@ -14,15 +14,11 @@ const candidate = (
   retired = false,
 ): LedgerCandidate => ({
   id,
-  facts: {
-    name,
-    loginName: null,
-    subtitle: '',
-    email,
-    phone,
-    category: null,
-    retired,
-  },
+  name,
+  email,
+  phone,
+  retired,
+  raw: { id, name, email, phone },
   nName: name.trim().toLowerCase(),
   nEmail: (email ?? '').trim().toLowerCase(),
   nPhone: (phone ?? '').replace(/\D/g, ''),

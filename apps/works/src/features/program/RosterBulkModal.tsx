@@ -1,7 +1,7 @@
 import { Button, Modal, Spinner, cardText, cn, useToast } from '@ynarcher/ui'
 import { useRef, useState } from 'react'
 import { downloadCsv } from '@/lib/csv'
-import { findLedgerMatches } from '@/features/program/ledgerMatch'
+import { findPersonaMatches } from '@/features/program/ledgerMatch'
 import { PARTICIPANT_PERSONAS, type MasterTable } from '@/features/program/participantPersona'
 import {
   buildEntries,
@@ -27,7 +27,7 @@ import { useProgramWorkspace } from '@/features/program/workspace'
  * 그 자리는 사업 상세 안이다 — 페이지로 빼면 어느 사업으로 돌아가야 하는지를 주소가 지고
  * 다녀야 한다.
  *
- * 판정은 등록 창과 **같은 함수**를 쓴다(`findLedgerMatches`). 두 화면이 같은 파일을 두고
+ * 판정은 등록 창과 **같은 함수**를 쓴다(`findPersonaMatches`). 두 화면이 같은 파일을 두고
  * 다른 답을 내면 담당자는 어느 쪽을 믿어야 할지 알 수 없다.
  */
 export function RosterBulkModal({
@@ -71,7 +71,7 @@ export function RosterBulkModal({
         return
       }
       // 대조는 파일 전체를 한 번에 던진다 — 줄마다 왕복하면 수백 건에서 화면이 멈춘다.
-      const matches = await findLedgerMatches(
+      const matches = await findPersonaMatches(
         master,
         rows.map((r) => ({ name: r.name, email: r.email, phone: r.phone })),
       )

@@ -16,6 +16,7 @@ import { supabase } from '@/lib/supabase'
 import { createUploadBatch } from '@/features/networks/hooks'
 import { BulkPreviewTable } from '@/features/bulk/BulkPreviewTable'
 import { useBulkTagLookup } from '@/features/bulk/bulkTags'
+import { useLedgerDuplicates } from '@/features/bulk/bulkDuplicates'
 import {
   buildTemplateCsv,
   parseBulkCsv,
@@ -49,12 +50,47 @@ export function BulkImportPage({ spec }: { spec: BulkImportSpec }) {
   // 태그 원장을 다 읽은 뒤에 파싱한다(못 읽은 채 검증하면 모든 값이 통과해 버린다).
   const tagTables = useMemo(() => specTagTables(spec), [spec])
   const { lookup, ready: tagsReady } = useBulkTagLookup(tagTables)
-  const result = useMemo(
+  const parsed = useMemo(
     () => (text && tagsReady ? parseBulkCsv(text, spec, lookup) : null),
     // lookup은 매 렌더 새 객체라 태그 준비 여부와 파일 내용만 의존성으로 둔다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [text, spec, tagsReady],
   )
+
+  /**
+   * 원장 중복 대조(2026-09-09) — 형식 검증을 통과한 줄만 훑는다.
+   *
+   * **파싱과 갈라 두는 이유**는 이것이 서버에 묻는 일이어서다. 파싱은 파일만 보고 즉시 끝나는데
+   * 대조는 왕복이 필요하고, 한 `useMemo`에 섞으면 파일을 고를 때마다 동기 계산이 비동기를
+   * 기다리게 된다.
+   *
+   * 대조는 명세가 원장을 준 화면에서만 돈다 — 사업·펀드처럼 사람·회사가 아닌 원장은 이름이
+   * 같아도 다른 건일 수 있어(같은 이름의 2기·3기 사업) 여기서 막을 일이 아니다.
+   */
+  const dupCheck = useLedgerDuplicates(spec, parsed)
+
+  /**
+   * 화면이 보는 결과 — 대조에 걸린 줄을 오류로 얹고 업로드 대상에서 뺀다.
+   *
+   * 오류로 세우는 것은 그 줄을 **파일에서 고치게** 하기 위해서다. 이 화면에는 명단 대용량
+   * 담기와 달리 '기존 행을 대신 쓴다'는 선택지가 없다(원장에 새로 만드는 자리다).
+   */
+  const result = useMemo(() => {
+    if (!parsed) return null
+    if (dupCheck.duplicates.size === 0) return parsed
+    return {
+      ...parsed,
+      rows: parsed.rows.filter((_, i) => !dupCheck.duplicates.has(i)),
+      lines: parsed.lines.filter((_, i) => !dupCheck.duplicates.has(i)),
+      errors: [
+        ...parsed.errors,
+        ...[...dupCheck.duplicates].map(([i, name]) => ({
+          line: parsed.lines[i]!,
+          message: `원장에 이미 있습니다 — ${name}`,
+        })),
+      ].sort((a, b) => a.line - b.line),
+    }
+  }, [parsed, dupCheck.duplicates])
 
   const loadFile = async (file: File) => {
     const body = await file.text()
@@ -73,7 +109,16 @@ export function BulkImportPage({ spec }: { spec: BulkImportSpec }) {
   }
 
   const assignBlocked = spec.assignment?.blockedReason(assignValue) ?? null
-  const ready = Boolean(result && result.rows.length > 0 && result.errors.length === 0 && !assignBlocked)
+  // 대조가 도는 중이거나 실패했으면 열지 않는다 — 확인하지 못한 것을 '중복 없음'으로 읽으면
+  // 그 침묵이 그대로 수백 건의 중복 등록이 된다.
+  const ready = Boolean(
+    result &&
+      result.rows.length > 0 &&
+      result.errors.length === 0 &&
+      !assignBlocked &&
+      !dupCheck.checking &&
+      !dupCheck.failed,
+  )
 
   const commit = async () => {
     if (!result || !ready) return
@@ -145,8 +190,22 @@ export function BulkImportPage({ spec }: { spec: BulkImportSpec }) {
                 다시 선택
               </Button>
             )}
-            <Button onClick={() => void commit()} disabled={!ready || busy} title={assignBlocked ?? undefined}>
-              {busy ? '업로드 중…' : `${result?.rows.length ?? 0}건 업로드`}
+            {/* 왜 못 누르는지는 버튼이 답해야 한다 — 대조 중·대조 실패는 배정 미지정과 다른
+                사유이고, 그 셋이 같은 회색 버튼으로 보이면 담당자가 기다릴지 고칠지 모른다. */}
+            <Button
+              onClick={() => void commit()}
+              disabled={!ready || busy}
+              title={
+                dupCheck.failed
+                  ? '원장 대조에 실패했습니다. 다시 시도해 주세요.'
+                  : (assignBlocked ?? undefined)
+              }
+            >
+              {busy
+                ? '업로드 중…'
+                : dupCheck.checking
+                  ? '원장 대조 중…'
+                  : `${result?.rows.length ?? 0}건 업로드`}
             </Button>
           </>
         }

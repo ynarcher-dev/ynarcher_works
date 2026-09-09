@@ -266,12 +266,23 @@ export function useNetworkRecord(id: string | undefined) {
   })
 }
 
-/** 동일 이름 중복 존재 여부(등록 전 검사). 원장이 하나라 검사도 한 번이다. */
+/**
+ * 동일 이름 중복 존재 여부(등록 전 검사). 원장이 하나라 검사도 한 번이다.
+ *
+ * **이름만 받는 자리에만 남는다**(2026-09-09). 등록 폼은 이름·이메일·전화 2개 이상 일치를
+ * 보는 `useDuplicateGuard`로 옮겨 갔고, 여기 남은 호출자는 **회의록 간이 등록** 하나다 —
+ * 그 창은 이름과 소속만 받아, 2-of-3 규칙을 걸면 일치 칸이 하나뿐이라 **아무것도 걸리지
+ * 않는다.** 규칙을 통일하는 것이 이 자리에서는 방어를 없애는 일이 되므로 두 규칙을 함께 둔다.
+ *
+ * 다만 `eq`에서 `ilike`로 옮겨 대소문자 차이는 흡수한다(호출자가 이미 앞뒤 공백을 턴다).
+ * `주식회사 딜챗` 같은 접두어 차이는 여전히 못 잡지만, 이 창이 담는 것은 사람 이름이라
+ * 회사명만큼 흔한 문제가 아니다.
+ */
 export async function checkDuplicateName(name: string): Promise<boolean> {
   const { data } = await supabase
     .from(NETWORK_TABLE)
     .select('id')
-    .eq('name', name)
+    .ilike('name', name.trim())
     .is('deleted_at', null)
     .limit(1)
   return (data ?? []).length > 0

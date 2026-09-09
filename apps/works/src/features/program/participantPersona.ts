@@ -1,4 +1,5 @@
 import type { BadgeTone } from '@ynarcher/ui'
+import { LEDGERS } from '@/features/master/ledgers'
 import {
   MANAGEMENT_STATUS_LABEL,
   MANAGEMENT_STATUS_TONE,
@@ -178,10 +179,8 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
     pickHelp: 'STARTUP 원장에 등록된 기업만 담을 수 있습니다.',
     detailPath: (id) => `/startup/${id}`,
     ledger: {
-      table: 'startups',
-      columns: 'id, name, representative, email, phone, management_status, deleted_at',
+      ...LEDGERS.startups,
       searchColumns: ['name', 'representative'],
-      matchColumns: { name: 'name', email: 'email', phone: 'phone' },
       // 아직 무엇인지 모르는 기업은 '미지정'으로 들어간다(2026-09-06) — 기본값이 발굴이면
       // 몰라서 담은 기업까지 발굴기업 수를 부풀린다. 코드값 `other`는 그대로 둔다.
       createFixed: { management_status: 'other' },
@@ -192,7 +191,7 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
         email: text(row, 'email'),
         phone: text(row, 'phone'),
         category: text(row, 'management_status'),
-        retired: Boolean(row.deleted_at),
+        retired: LEDGERS.startups.retired!(row),
       }),
       person: { name: 'representative', email: 'email', phone: 'phone' },
     },
@@ -216,12 +215,8 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
     pickHelp: 'M&A SELLER 원장에 등록된 기업만 담을 수 있습니다.',
     detailPath: (id) => `/mna/sellers/${id}`,
     ledger: {
-      table: 'ma_sellers',
-      // 연락처는 20260908220000이 더했다 — 포털 계정의 초기 비밀번호가 되는 값이라
-      // 계정이 아니라 원장이 갖는다.
-      columns: 'id, name, contact_name, contact_email, phone, deleted_at',
+      ...LEDGERS.ma_sellers,
       searchColumns: ['name', 'contact_name'],
-      matchColumns: { name: 'name', email: 'contact_email', phone: 'phone' },
       map: (row) => ({
         name: String(row.name ?? ''),
         loginName: text(row, 'contact_name'),
@@ -229,7 +224,7 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
         email: text(row, 'contact_email'),
         phone: text(row, 'phone'),
         category: null,
-        retired: Boolean(row.deleted_at),
+        retired: LEDGERS.ma_sellers.retired!(row),
       }),
       person: { name: 'contact_name', email: 'contact_email', phone: 'phone' },
     },
@@ -245,10 +240,8 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
     pickHelp: 'M&A BUYER 원장에 등록된 기업만 담을 수 있습니다.',
     detailPath: (id) => `/mna/buyers/${id}`,
     ledger: {
-      table: 'ma_buyers',
-      columns: 'id, name, contact_name, contact_email, phone, deleted_at',
+      ...LEDGERS.ma_buyers,
       searchColumns: ['name', 'contact_name'],
-      matchColumns: { name: 'name', email: 'contact_email', phone: 'phone' },
       map: (row) => ({
         name: String(row.name ?? ''),
         loginName: text(row, 'contact_name'),
@@ -256,7 +249,7 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
         email: text(row, 'contact_email'),
         phone: text(row, 'phone'),
         category: null,
-        retired: Boolean(row.deleted_at),
+        retired: LEDGERS.ma_buyers.retired!(row),
       }),
       person: { name: 'contact_name', email: 'contact_email', phone: 'phone' },
     },
@@ -272,8 +265,7 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
     pickHelp: 'NETWORKS 원장의 전문가만 담을 수 있습니다.',
     detailPath: (id) => `/networks/${id}`,
     ledger: {
-      table: 'networks',
-      columns: 'id, name, affiliation, email, phone, deleted_at, merged_into_id',
+      ...LEDGERS.networks,
       // 통합 원장이라 표 하나에 11종이 함께 산다. 전문가 구분으로 좁히지 않으면 투자사·기관까지
       // 후보에 서고, 명부에 담기는 대상이 결정 없이 넓어진다.
       narrow: { column: 'category', value: 'experts' },
@@ -294,7 +286,7 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
         phone: text(row, 'phone'),
         category: null,
         // 병합된 행은 정본으로 흡수돼 더는 스스로를 답하지 않는다 — 비활성과 같은 무게로 본다.
-        retired: Boolean(row.deleted_at || row.merged_into_id),
+        retired: LEDGERS.networks.retired!(row),
       }),
       person: { name: 'name', email: 'email', phone: 'phone' },
     },

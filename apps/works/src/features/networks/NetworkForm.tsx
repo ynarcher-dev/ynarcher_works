@@ -10,6 +10,9 @@ import {
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { FormTopBar } from '@/components/FormTopBar'
+import { DuplicateNotice } from '@/features/master/DuplicateNotice'
+import { useDuplicateGuard } from '@/features/master/duplicateGuard'
+import { LEDGERS } from '@/features/master/ledgers'
 import { useEditReasonPrompt } from '@/components/EditReasonPrompt'
 import { useTagTokenField } from '@/features/admin/TagTokenField'
 import { PhotoPicker } from '@/features/networks/PhotoPicker'
@@ -25,7 +28,6 @@ import {
   type NetworkCategory,
 } from '@/features/networks/config'
 import {
-  checkDuplicateName,
   useCreateNetwork,
   useUpdateNetwork,
   type NetworkRow,
@@ -115,6 +117,11 @@ export function NetworkForm({
   // 사진: data URL로 profile.photo에 저장(2MB 이하). 첨부/미리보기는 공용 PhotoPicker가 소유한다.
   const [photo, setPhoto] = useState<string>((profile.photo as string) ?? '')
 
+  // 중복 가드. **구분으로 좁히지 않는다**(`LEDGERS.networks`에는 `narrow`가 없다) — 이 폼은
+  // 구분을 가리지 않고 한 표에 넣는 자리라, 좁혀서 보면 투자사로 이미 등록된 사람을 전문가로
+  // 또 넣게 된다.
+  const dup = useDuplicateGuard(LEDGERS.networks)
+
   const {
     register,
     handleSubmit,
@@ -140,6 +147,15 @@ export function NetworkForm({
   // 조직 유형이면 매칭/전문영역을 숨긴다. 구분이 비어 있는 값도 같은 축약 형태다.
   const selectedCategory = watch('category')
   const compact = isCompactCategory(selectedCategory || null)
+
+  // 대조에 쓰인 세 칸이 바뀌면 통과권이 사라진다 — 한 번 확인한 뒤 이름을 고쳐도 대조 없이
+  // 저장되면, 정작 새로 적은 이름의 중복은 아무도 보지 않는다.
+  const probeKey = `${watch('name')}|${watch('email')}|${watch('phone')}`
+  const [lastProbeKey, setLastProbeKey] = useState(probeKey)
+  if (probeKey !== lastProbeKey) {
+    setLastProbeKey(probeKey)
+    dup.clear()
+  }
 
   const onSubmit = async (v: NetworkFormValues) => {
     const label = categoryLabel(v.category) || '네트워크'
@@ -176,8 +192,16 @@ export function NetworkForm({
         toast.show(`${label} 정보를 수정했습니다.`, 'success')
         onDone({ id: recordId })
       } else {
-        if (await checkDuplicateName(v.name.trim())) {
-          toast.show('동일한 이름이 이미 등록되어 있습니다.', 'warning')
+        // 이름 완전일치가 아니라 이름·이메일·전화 2개 이상 일치로 본다(2026-09-09) —
+        // `홍길동`과 ` 홍길동 `이 남남이던 자리다. 걸리면 무엇이 걸렸는지 세우고 멈추며,
+        // 한 번 더 누르면 진행한다(두 칸 일치는 강한 근거이지 증명은 아니다).
+        if (
+          await dup.shouldStop({
+            name: v.name.trim(),
+            email: v.email.trim(),
+            phone: v.phone.trim(),
+          })
+        ) {
           return
         }
         const newId = await create.mutateAsync(payload)
@@ -207,6 +231,15 @@ export function NetworkForm({
         onCancel={onCancel}
         busy={isSubmitting}
       />
+
+      {/* 확정 버튼 바로 아래 선다 — 저장을 누른 손이 그대로 머무는 자리다. */}
+      {dup.match && (
+        <DuplicateNotice
+          match={dup.match}
+          noun={categoryLabel(selectedCategory) || '네트워크'}
+          detailPath={(id) => `/networks/${id}`}
+        />
+      )}
 
       {/* 상세페이지와 동일한 3열 배치: 좌측 2/3 편집 카드 + 우측 1/3 자료 관리 */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

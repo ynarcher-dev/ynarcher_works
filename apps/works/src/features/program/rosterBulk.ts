@@ -1,5 +1,5 @@
 import { parseCsvTable } from '@/lib/csv'
-import type { LedgerMatch } from '@/features/program/ledgerMatch'
+import type { PersonaMatch } from '@/features/program/ledgerMatch'
 import { PARTICIPANT_PERSONAS, type MasterTable } from '@/features/program/participantPersona'
 
 /**
@@ -9,7 +9,7 @@ import { PARTICIPANT_PERSONAS, type MasterTable } from '@/features/program/parti
  * (공용 `BulkImportPage` + NETWORKS 전용 대조 업로드), 여기에 셋째를 더하면 검증 강도와 오류
  * 문구가 또 갈린다. 그리고 **명단이 실제로 필요한 것은 등록이 아니라 대조다** — 파일에 적힌
  * 이름 중 무엇이 이미 원장에 있고 무엇이 없는지를 가리는 일이고, 그것이 곧 4번(중복) 문제와
- * 같은 물음이다. 그래서 판정은 등록 창과 **같은 함수**(`findLedgerMatches`)를 쓴다.
+ * 같은 물음이다. 그래서 판정은 등록 창과 **같은 함수**(`findPersonaMatches`)를 쓴다.
  *
  * 받는 열은 명단 표에 서는 넷뿐이다 — 원장의 나머지 칸(구분·분야·소재지…)은 여기서 받지
  * 않는다. 그 값들을 받기 시작하면 이 화면이 원장 임포터가 되고, 그러면 원장 임포터가 둘이
@@ -40,7 +40,7 @@ export type BulkDecision = 'link' | 'create' | 'skip'
 export interface BulkEntry {
   row: BulkRow
   /** 원장에서 찾은 행. 없으면 신규다. */
-  match: LedgerMatch | null
+  match: PersonaMatch | null
   /** 이미 이 명단에 담겨 있는가(대조로 찾은 행 기준). 담긴 줄은 결정을 바꿀 수 없다. */
   alreadyMapped: boolean
   decision: BulkDecision
@@ -116,7 +116,7 @@ export function buildTemplateCsv(master: MasterTable): string {
  */
 export function buildEntries(
   rows: BulkRow[],
-  matches: Map<number, LedgerMatch>,
+  matches: Map<number, PersonaMatch>,
   mappedMasterIds: ReadonlySet<string>,
 ): BulkEntry[] {
   const seen = new Set<string>()

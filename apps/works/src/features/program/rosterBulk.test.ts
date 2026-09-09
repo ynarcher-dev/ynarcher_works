@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { LedgerMatch } from '@/features/program/ledgerMatch'
+import type { PersonaMatch } from '@/features/program/ledgerMatch'
 import {
   buildEntries,
   buildTemplateCsv,
@@ -8,7 +8,7 @@ import {
   type BulkRow,
 } from '@/features/program/rosterBulk'
 
-const match = (id: string, name: string, retired = false): LedgerMatch => ({
+const match = (id: string, name: string, retired = false): PersonaMatch => ({
   id,
   name,
   loginName: null,

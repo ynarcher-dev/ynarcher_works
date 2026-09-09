@@ -42,16 +42,14 @@ export function useEntity(table: string, id: string | undefined) {
   })
 }
 
-/** 동일 이름 중복 존재 여부(등록 전 검사). */
-export async function checkDuplicateName(table: string, name: string): Promise<boolean> {
-  const { data } = await supabase
-    .from(table)
-    .select('id')
-    .eq('name', name)
-    .is('deleted_at', null)
-    .limit(1)
-  return (data ?? []).length > 0
-}
+// 이름 완전일치 중복 검사(`checkDuplicateName`)는 2026-09-09에 걷었다. `.eq('name', name)`
+// 한 줄이라 `딜챗`과 `주식회사 딜챗`, `(주)딜챗`이 서로 남남이었고 — 실무에서 중복이 들어오는
+// 가장 흔한 통로가 그 한 글자 차이였다. 대신 이름·이메일·전화 2개 이상 일치를 보는
+// `features/master/duplicateGuard`를 쓴다.
+//
+// 지우고 남기지 않은 이유: 약한 규칙이 공용 자리에 남아 있으면 다음에 원장이 하나 늘 때
+// 그것이 다시 쓰인다. 이름만 받는 자리(회의록 간이 등록)의 예외는 그 도메인이 자기
+// 훅으로 갖는다 — 예외는 공용 부품이 아니라 예외가 사는 곳에 둔다.
 
 /** 등록(생성된 id 반환). */
 export function useCreateEntity(table: string) {

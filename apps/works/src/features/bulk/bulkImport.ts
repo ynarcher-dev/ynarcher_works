@@ -17,6 +17,7 @@
  */
 import type { ReactNode } from 'react'
 import { parseCsvTable } from '@/lib/csv'
+import type { LedgerMatchSpec } from '@/features/master/ledgerMatch'
 
 /** 값을 어떻게 읽을지. 지정하지 않으면 문자열 그대로 넣는다. */
 export type BulkFieldKind = 'text' | 'number' | 'date' | 'enum' | 'tag' | 'tags' | 'phone'
@@ -100,6 +101,20 @@ export interface BulkImportSpec {
   guide: string
   /** 파일과 별개로 화면에서 지정하는 값(담당자 등). 없으면 파일만으로 등록한다. */
   assignment?: BulkAssignment
+  /**
+   * 업로드 전에 원장과 중복을 대조할지(2026-09-09). 주면 그 원장을 이름·이메일·전화
+   * 2개 이상 일치로 훑고, **걸린 줄은 오류로 빠져 업로드에서 제외된다.**
+   *
+   * 이 화면은 종전에 대조가 아예 없었다 — NETWORKS만 전용 대조 업로드를 가졌고 나머지는
+   * 파일에 적힌 대로 그대로 들어갔다. 사람 손으로 한 건 넣을 때는 등록 폼이 막는데 파일로는
+   * 수백 건이 그냥 들어오는 비대칭이었다.
+   *
+   * **막고 넘기지 않는 이유**는 한 건 등록과 다른 점이 하나 있어서다 — 저기서는 담당자가 그
+   * 한 건을 눈으로 보고 "다른 곳이다"라고 판단하지만, 여기서는 판단해야 할 줄이 수십 개다.
+   * 파일을 고쳐 다시 올리는 편이 화면에서 줄마다 예외를 여는 것보다 안전하고, 명단 대용량
+   * 담기와 달리 이 화면에는 **기존 행을 대신 쓰는 선택지가 없다**(원장에 새로 만드는 자리다).
+   */
+  matchLedger?: LedgerMatchSpec
 }
 
 export interface BulkRowError {
@@ -111,6 +126,12 @@ export interface BulkRowError {
 export interface BulkParseResult {
   /** 원장에 그대로 넣을 수 있는 행. */
   rows: Record<string, unknown>[]
+  /**
+   * `rows[i]`가 온 원본 CSV 줄 번호. 검증을 통과한 줄만 `rows`에 남아 `preview`와 첨자가
+   * 어긋나므로, 뒤에 붙는 검사(원장 중복 대조)가 결과를 파일의 그 줄로 되돌리려면 이 표가
+   * 필요하다 — 없으면 "몇 번째 줄이 중복인지"를 화면이 답하지 못한다.
+   */
+  lines: number[]
   /** 미리보기 표에 쓰는 원본 셀 값(헤더 순서). */
   preview: { line: number; cells: string[] }[]
   errors: BulkRowError[]
@@ -224,7 +245,7 @@ export function parseBulkCsv(
   tags: BulkTagLookup = {},
 ): BulkParseResult {
   const table = parseCsvTable(text)
-  const empty: BulkParseResult = { rows: [], preview: [], errors: [] }
+  const empty: BulkParseResult = { rows: [], lines: [], preview: [], errors: [] }
   // 아직 아무것도 올리지 않은 상태 — 오류로 다루면 화면을 열기만 해도 빨간 글씨가 뜬다.
   if (!table.headers.length) return empty
 
@@ -263,6 +284,7 @@ export function parseBulkCsv(
   }
 
   const rows: Record<string, unknown>[] = []
+  const lines: number[] = []
   const preview: BulkParseResult['preview'] = []
   const errors: BulkRowError[] = []
 
@@ -367,7 +389,8 @@ export function parseBulkCsv(
       continue
     }
     rows.push(payload)
+    lines.push(line)
   }
 
-  return { rows, preview, errors }
+  return { rows, lines, preview, errors }
 }

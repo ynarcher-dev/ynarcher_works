@@ -1,5 +1,5 @@
 import { Button, Field, Input, Spinner, cardText, cn } from '@ynarcher/ui'
-import type { LedgerMatch } from '@/features/program/ledgerMatch'
+import type { PersonaMatch } from '@/features/program/ledgerMatch'
 import { PARTICIPANT_PERSONAS, type MasterTable } from '@/features/program/participantPersona'
 import type { QuickAddDraft } from '@/features/program/quickAddDraft'
 
@@ -34,8 +34,8 @@ export function LedgerQuickAdd({
   draft: QuickAddDraft
   onDraftChange: (next: QuickAddDraft) => void
   /** 대조 결과. `null`이면 아직 안 돌았거나 값이 바뀌어 무효가 된 것이다. */
-  match: LedgerMatch | null
-  onMatchChange: (next: LedgerMatch | null) => void
+  match: PersonaMatch | null
+  onMatchChange: (next: PersonaMatch | null) => void
   busy: boolean
 }) {
   const spec = PARTICIPANT_PERSONAS[master]
@@ -99,7 +99,7 @@ function MatchNotice({
   match,
   spec,
 }: {
-  match: LedgerMatch
+  match: PersonaMatch
   spec: (typeof PARTICIPANT_PERSONAS)[MasterTable]
 }) {
   return (
@@ -135,7 +135,7 @@ export function LedgerQuickAddActions({
   onCreateAnyway,
   onUseMatch,
 }: {
-  match: LedgerMatch | null
+  match: PersonaMatch | null
   canSubmit: boolean
   busy: boolean
   onCheckAndCreate: () => void

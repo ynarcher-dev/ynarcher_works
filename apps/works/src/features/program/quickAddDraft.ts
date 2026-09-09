@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { findLedgerMatches, type LedgerMatch } from '@/features/program/ledgerMatch'
+import { findPersonaMatches, type PersonaMatch } from '@/features/program/ledgerMatch'
 import type { MasterTable } from '@/features/program/participantPersona'
 
 /**
@@ -27,8 +27,8 @@ export const EMPTY_DRAFT: QuickAddDraft = { name: '', contactName: '', email: ''
 export async function checkDraft(
   master: MasterTable,
   draft: QuickAddDraft,
-): Promise<LedgerMatch | null> {
-  const found = await findLedgerMatches(master, [
+): Promise<PersonaMatch | null> {
+  const found = await findPersonaMatches(master, [
     { name: draft.name, email: draft.email, phone: draft.phone },
   ])
   return found.get(0) ?? null
@@ -42,7 +42,7 @@ export async function checkDraft(
  */
 export function useQuickAddDraft() {
   const [draft, setDraft] = useState<QuickAddDraft>(EMPTY_DRAFT)
-  const [match, setMatch] = useState<LedgerMatch | null>(null)
+  const [match, setMatch] = useState<PersonaMatch | null>(null)
   const reset = () => {
     setDraft(EMPTY_DRAFT)
     setMatch(null)
