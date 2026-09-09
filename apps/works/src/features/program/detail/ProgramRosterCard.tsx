@@ -3,12 +3,15 @@ import { useState } from 'react'
 import { PERSONA_LABEL, type MasterTable } from '@/features/program/participantPersona'
 import { RosterPanel } from '@/features/program/RosterPanel'
 
-/** 탭 줄이 이 화면을 부르는 이름 — 탭과 빈 상태가 함께 읽는다. */
-export const ROSTER_LABEL = '참가자 목록'
-
 /**
- * 사업 상세 `참가자 목록` 탭 — 자격을 하위 탭으로 가르고 그 아래 명단이 선다
+ * 사업 상세 참가자 명단 탭 — 자격을 하위 탭으로 가르고 그 아래 명단이 선다
  * (AC는 스타트업·전문가, M&A는 SELLER·BUYER).
+ *
+ * **이 화면을 부르는 이름은 여기 없다** — `ProgramWorkspaceConfig.rosterLabel`이 갖는다
+ * (AC `참가자 목록` / M&A `딜 참여사`). 상수로 둘 때는 이름이 하나뿐이라 값싼 표현이었으나,
+ * 워크스페이스마다 부르는 말이 갈리는 순간 그 상수는 답하지 못한다 — 자격 라벨을 persona가
+ * 소유하는 것과 같은 규칙이고, 화면에서 `config.key === 'mna'` 삼항으로 가르면 구획이 셋이
+ * 되는 날 같은 자리를 다시 연다.
  *
  * **카드가 제목을 들지 않는다.** 이름은 위 탭 줄이 이미 말했고, 카드가 같은 말을 한 번 더
  * 적으면 탭과 제목이 같은 층에서 겹친다 — 워크플로우 카드가 제목을 내려놓은 것과 같은 이유다.
@@ -34,8 +37,8 @@ export function ProgramRosterCard({
     return (
       <Card>
         <EmptyState
-          title="이 워크스페이스에는 참가자 자격이 없습니다."
-          description="명단에 담을 원장이 정해지면 여기에 자격 탭이 섭니다."
+          title="명단에 담을 자격이 없습니다."
+          description="담을 원장이 정해지면 여기에 자격 탭이 섭니다."
         />
       </Card>
     )

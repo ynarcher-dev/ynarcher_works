@@ -36,6 +36,8 @@ export const PROJECT_WORKSPACE: ProgramWorkspaceConfig = {
   categories: AC_CATEGORIES,
   categoryNoun: '사업구분',
   overviewNoun: '사업개요',
+  // 담기는 것이 기업과 사람 둘이라 회사로 부를 수 없다.
+  rosterLabel: '참가자 목록',
 }
 
 export function ProjectWorkspacePage() {

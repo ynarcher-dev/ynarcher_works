@@ -42,6 +42,9 @@ export const MNA_WORKSPACE: ProgramWorkspaceConfig = {
   categoryNoun: '프로젝트 구분',
   // '사업개요'와 달리 띄어 쓴다(2026-09-09 사용자 지정) — 규칙으로 짓지 못하는 말이라 값이다.
   overviewNoun: '프로젝트 개요',
+  // 담기는 것이 SELLER·BUYER 둘 다 회사이고, 그 회사들이 무엇에 매달렸는지는 이 워크스페이스가
+  // URL·메뉴에서 이미 쓰는 낱말(딜)이 답한다.
+  rosterLabel: '딜 참여사',
 }
 
 export function MnaWorkspacePage() {

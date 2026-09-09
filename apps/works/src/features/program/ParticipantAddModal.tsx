@@ -10,6 +10,7 @@ import { ParticipantRemoveConfirm } from '@/features/program/ParticipantRemoveCo
 import { ParticipantTransferPanes } from '@/features/program/ParticipantTransferPanes'
 import { useParticipantTransfer } from '@/features/program/participantTransfer'
 import { PARTICIPANT_PERSONAS, type MasterTable } from '@/features/program/participantPersona'
+import { useProgramWorkspace } from '@/features/program/workspace'
 
 /**
  * 계정 생성 — **참가자 목록에 담긴 대상 중 누가 로그인하는가**를 좌우 두 목록으로 정한다.
@@ -47,6 +48,7 @@ export function ParticipantAddModal({
   master: MasterTable
 }) {
   const toast = useToast()
+  const config = useProgramWorkspace()
   const spec = PARTICIPANT_PERSONAS[master]
   const [search, setSearch] = useState('')
   const [confirming, setConfirming] = useState(false)
@@ -146,7 +148,7 @@ export function ParticipantAddModal({
         open={open}
         onClose={close}
         title={`${spec.label} 계정 생성`}
-        help="참가자 목록에 담긴 대상만 고를 수 있습니다. 오른쪽으로 옮긴 대상에게 계정이 세워지고, 왼쪽으로 내린 대상은 저장할 때 명부에서 빠집니다."
+        help={`${config.rosterLabel}에 담긴 대상만 고를 수 있습니다. 오른쪽으로 옮긴 대상에게 계정이 세워지고, 왼쪽으로 내린 대상은 저장할 때 명부에서 빠집니다.`}
         size="2xl"
         sectioned
         footer={

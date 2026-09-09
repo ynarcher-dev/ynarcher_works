@@ -4,7 +4,7 @@ import type { Program, ProgramModule } from '@/features/program/hooks'
 import { MODULE_BOARD_LABEL } from '@/features/program/config'
 import { GuestSettingsButton } from '@/features/program/detail/GuestSettingsButton'
 import { ModuleBoardCard } from '@/features/program/detail/ModuleBoardCard'
-import { ProgramRosterCard, ROSTER_LABEL } from '@/features/program/detail/ProgramRosterCard'
+import { ProgramRosterCard } from '@/features/program/detail/ProgramRosterCard'
 import { ProgramInfoCard } from '@/features/program/detail/ProgramInfoCard'
 import { RelatedApprovalPanel } from '@/features/program/detail/RelatedApprovalPanel'
 import { RelatedMinutesPanel } from '@/features/office/minutes/RelatedMinutesPanel'
@@ -72,7 +72,7 @@ export function ProgramOverviewTab({
         <Tabs
           items={[
             { key: 'workflow', label: MODULE_BOARD_LABEL },
-            { key: 'roster', label: ROSTER_LABEL },
+            { key: 'roster', label: config.rosterLabel },
           ]}
           value={tab}
           onChange={(key) => setTab(key as 'workflow' | 'roster')}

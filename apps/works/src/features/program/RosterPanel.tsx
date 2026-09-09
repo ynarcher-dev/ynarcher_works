@@ -21,7 +21,8 @@ function matches(row: RosterRow, keyword: string): boolean {
 }
 
 /**
- * 참가자 목록 — **자격 하나**의 명단. 자격이 어느 층에 서는지는 부모(`ProgramRosterCard`)가 정한다.
+ * 참가자 명단 — **자격 하나**의 목록. 자격이 어느 층에 서는지는 부모(`ProgramRosterCard`)가
+ * 정하고, 이 화면을 부르는 이름은 워크스페이스(`config.rosterLabel`)가 갖는다.
  *
  * 할 수 있는 일은 추가와 삭제 둘뿐이다. 로그인·계정·기간은 여기 없다 — 그것은
  * `와이앤아처 GUEST 설정` 모달이 소유하는 다른 축이고, 두 축을 한 화면에 두었을 때
@@ -63,7 +64,7 @@ export function RosterPanel({
       onSuccess: (n) => {
         setSelected([])
         setConfirmOpen(false)
-        toast.show(`${n}건을 참가자 목록에서 뺐습니다.`, 'success')
+        toast.show(`${n}건을 ${config.rosterLabel}에서 뺐습니다.`, 'success')
       },
       onError: (e: unknown) => {
         setConfirmOpen(false)
@@ -114,7 +115,9 @@ export function RosterPanel({
           standardColumns={false}
           // 조회 실패와 빈 명단은 다른 사실이다 — 한 문장으로 뭉뚱그리면 원인을 짚을 수 없다.
           emptyText={
-            isError ? '참가자 목록을 불러오지 못했습니다.' : `담긴 ${spec.label}이(가) 없습니다.`
+            isError
+              ? `${config.rosterLabel}을(를) 불러오지 못했습니다.`
+              : `담긴 ${spec.label}이(가) 없습니다.`
           }
           // 좌측 건수는 '필터 반영 / 전체'로 읽힌다 — 검색으로 좁힌 뒤에도 총량을 잃지 않는다.
           pagination={{
@@ -141,7 +144,7 @@ export function RosterPanel({
       <Modal
         open={confirmOpen}
         onClose={() => setConfirmOpen(false)}
-        title="참가자 목록에서 삭제"
+        title={`${config.rosterLabel}에서 삭제`}
         size="sm"
         footer={
           <div className="flex justify-end gap-2">
@@ -155,7 +158,7 @@ export function RosterPanel({
         }
       >
         <p className="text-body text-gray-700">
-          <b>{selected.length}건</b>을 참가자 목록에서 뺍니다. 원장(
+          <b>{selected.length}건</b>을 {config.rosterLabel}에서 뺍니다. 원장(
           {spec.label})의 데이터는 지워지지 않으며, 같은 대상을 다시 담을 수 있습니다.
         </p>
       </Modal>

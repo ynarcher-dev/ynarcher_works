@@ -4,6 +4,7 @@ import { useState } from 'react'
 import type { MasterCandidate } from '@/features/program/participantHooks'
 import { PARTICIPANT_PERSONAS, type MasterTable } from '@/features/program/participantPersona'
 import { useAddRosterEntries, useRosterCandidates } from '@/features/program/rosterHooks'
+import { useProgramWorkspace } from '@/features/program/workspace'
 
 /**
  * 참가자 목록에 담기 — **원장에서 고르는 한 단계**로 끝난다.
@@ -36,6 +37,7 @@ export function RosterAddModal({
   master: MasterTable
 }) {
   const toast = useToast()
+  const config = useProgramWorkspace()
   const spec = PARTICIPANT_PERSONAS[master]
   const [search, setSearch] = useState('')
   const [picked, setPicked] = useState<string[]>([])
@@ -57,7 +59,7 @@ export function RosterAddModal({
       { master, masterIds: picked },
       {
         onSuccess: (n) => {
-          toast.show(`${n}건을 참가자 목록에 담았습니다.`, 'success')
+          toast.show(`${n}건을 ${config.rosterLabel}에 담았습니다.`, 'success')
           close()
         },
         onError: (e: unknown) =>

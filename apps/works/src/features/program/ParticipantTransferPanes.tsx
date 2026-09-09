@@ -3,6 +3,7 @@ import { ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { ParticipantRightRow } from '@/features/program/ParticipantRightRow'
 import type { ParticipantPersona } from '@/features/program/participantPersona'
 import type { useParticipantTransfer } from '@/features/program/participantTransfer'
+import { useProgramWorkspace } from '@/features/program/workspace'
 
 /**
  * 계정생성 창의 두 기둥 — **왼쪽은 계정 없음, 오른쪽은 계정 있음**이다.
@@ -30,6 +31,7 @@ export function ParticipantTransferPanes({
   isLoading: boolean
   transfer: ReturnType<typeof useParticipantTransfer>
 }) {
+  const config = useProgramWorkspace()
   const { left, right } = transfer
 
   return (
@@ -54,12 +56,12 @@ export function ParticipantTransferPanes({
             ) : (
               <PickList
                 isEmpty={left.length === 0}
-                // 검색어가 없는데도 비었다면 걸러진 것이 아니라, 참가자 목록에 담긴 대상 전원이
-                // 이미 계정을 갖고 있다는 뜻이다 — 두 경우에 담당자가 할 일이 정반대다.
+                // 검색어가 없는데도 비었다면 걸러진 것이 아니라, 명단에 담긴 대상 전원이 이미
+                // 계정을 갖고 있다는 뜻이다 — 두 경우에 담당자가 할 일이 정반대다.
                 empty={
                   search.trim()
                     ? '검색 결과가 없습니다.'
-                    : `계정이 없는 ${spec.label}가 없습니다. 참가자 목록 탭에서 먼저 담아 주세요.`
+                    : `계정이 없는 ${spec.label}가 없습니다. ${config.rosterLabel} 탭에서 먼저 담아 주세요.`
                 }
               >
                 {left.map((row) => (
