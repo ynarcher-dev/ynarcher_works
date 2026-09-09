@@ -110,6 +110,7 @@ export function AiFillModal<K extends string>({
   const fill = useAiFill<K>()
   const [error, setError] = useState<string | null>(null)
   const [outcome, setOutcome] = useState<AiFillOutcome<K> | null>(null)
+  const fillAbortRef = useRef<AbortController | null>(null)
   /**
    * 지금 이 창이 작성을 돌리고 있는가.
    *
@@ -120,6 +121,10 @@ export function AiFillModal<K extends string>({
    * 참이 되는지를 이 창이 답할 수 없다.
    */
   const [running, setRunning] = useState(false)
+
+  useEffect(() => {
+    return () => fillAbortRef.current?.abort()
+  }, [])
 
   const allCardKeys = useMemo(() => cardKeysOf(catalog.cards), [catalog.cards])
   const cardLabel = useMemo(() => cardLabelMap(catalog.cards), [catalog.cards])
@@ -206,6 +211,8 @@ export function AiFillModal<K extends string>({
     // 지난 결과는 실행과 함께 걷는다 — 돌고 있는 스피너 아래에 옛 답이 남아 있으면 그것이
     // 이번 실행의 답으로 읽힌다.
     setOutcome(null)
+    const controller = new AbortController()
+    fillAbortRef.current = controller
     try {
       const result = await fill.mutateAsync({
         endpoint: catalog.fillEndpoint,
@@ -217,13 +224,22 @@ export function AiFillModal<K extends string>({
         // 등록 모드에서 이미 분석된 자료의 글자. 수정 모드는 서버가 캐시 원장에서 직접 읽으므로
         // 여기에 담기지 않는다(같은 값을 두 길로 보내지 않는다).
         extracts: extracts.pendingExtracts,
+        signal: controller.signal,
       })
       setOutcome(onFilled(result, chosenCards))
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'AI 작성에 실패했습니다.')
+      if (!controller.signal.aborted) {
+        setError(e instanceof Error ? e.message : 'AI 작성에 실패했습니다.')
+      }
     } finally {
+      if (fillAbortRef.current === controller) fillAbortRef.current = null
       setRunning(false)
     }
+  }
+
+  const cancel = () => {
+    fillAbortRef.current?.abort()
+    onClose()
   }
 
   return (
@@ -245,7 +261,7 @@ export function AiFillModal<K extends string>({
         <div className="flex items-center justify-end gap-2">
           {/* 결과가 서기 전까지는 창을 접는 것이 취소이고, 결과가 선 뒤에는 값이 이미 폼에
               들어가 있으므로 같은 버튼이 '닫기'가 된다. */}
-          <Button variant={outcome ? 'primary' : 'ghost'} onClick={onClose} disabled={busy}>
+          <Button variant={outcome ? 'primary' : 'ghost'} onClick={outcome ? onClose : cancel}>
             {outcome ? '닫기' : '취소'}
           </Button>
           <Button variant={outcome ? 'outline' : 'primary'} onClick={run} disabled={!ready}>

@@ -158,6 +158,8 @@ type AiFillResponse<K extends string> = AiFillEnvelope<K> & {
 export type AiFillResult<K extends string> = AiFillEnvelope<K> & { skippedSources: string[] }
 
 export interface AiFillInput<K extends string> {
+  /** Abort the in-flight AI request when the user cancels. */
+  signal?: AbortSignal
   /**
    * 두드릴 Edge Function 이름.
    *
@@ -261,7 +263,10 @@ export async function requestAiFill<K extends string>(input: AiFillInput<K>): Pr
         cards: input.cards,
       }
 
-  const { data, error } = await supabase.functions.invoke<AiFillResponse<K>>(input.endpoint, { body })
+  const { data, error } = await supabase.functions.invoke<AiFillResponse<K>>(input.endpoint, {
+    body,
+    signal: input.signal,
+  })
   if (error) throw new Error(await readInvokeError(error, 'AI 작성에 실패했습니다.'))
   if (!data?.cards) throw new Error('AI 응답이 비어 있습니다.')
   return {
