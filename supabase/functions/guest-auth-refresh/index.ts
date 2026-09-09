@@ -19,15 +19,17 @@ import {
 } from '../_shared/guestSession.ts'
 import { loadParticipations, toChoice } from '../_shared/guestAccount.ts'
 import { supabaseAdmin } from '../_shared/supabaseAdmin.ts'
-import { loadProgramAnywhere } from '../_shared/programLedger.ts'
+import {
+  guestProgramSelect,
+  isDeadProgram,
+  ledgerEntityKey,
+  loadProgramAnywhere,
+} from '../_shared/programLedger.ts'
 
 const EXPIRED = {
   error: 'session_expired',
   message: '세션이 만료되었거나 접근이 닫혔습니다. 다시 로그인해 주세요.',
 }
-
-/** 게스트가 진입할 수 없는 사업 상태(로그인과 같은 기준). */
-const DEAD_PROGRAM_STATUSES = new Set(['FINISHED', 'CANCELLED'])
 
 /**
  * AC 제안 단계(사업 유치) 상태 — 와이앤아처 내부의 사업현황이지 참여자의 선정 여부가
@@ -42,8 +44,8 @@ Deno.serve(withCors(async (req: Request) => {
     const db = supabaseAdmin()
     const session = await verifyGuestSession(db, req)
     if (!session) return jsonResponse(EXPIRED, 401)
-    // 사업이 아닌 맥락(장래 fund 등)의 세션은 이 함수가 답할 것이 없다. 조용히 빈 값을
-    // 돌려주면 화면이 "사업이 사라졌다"로 읽으므로 사유를 가진 만료로 보낸다.
+    // 통합 원장이 다루지 않는 종류의 맥락은 이 함수가 답할 것이 없다(사업·조합 셋 밖의 값).
+    // 조용히 빈 값을 돌려주면 화면이 "대상이 사라졌다"로 읽으므로 사유를 가진 만료로 보낸다.
     if (!session.programId) return jsonResponse(EXPIRED, 401)
 
     const participations = await loadOpenParticipations(
@@ -56,23 +58,24 @@ Deno.serve(withCors(async (req: Request) => {
 
     // 게스트에게 보여줄 표시용 컬럼만 고른다 — 사업구분(category)·내부 제목 같은 내부 분류는
     // 외부 참여자의 화면 요소가 아니므로 응답에 싣지 않는다.
-    const program = await loadProgramAnywhere<{
+    //
+    // 어느 칸에서 읽는지는 원장이 정한다(조합의 제목은 `name`, 기간은 존속기간이고 주관은
+    // 아예 없다). 죽은 상태의 값도 원장마다 다르므로 찾은 표를 함께 받아 그 표의 기준으로
+    // 판정한다 — 한 집합으로 뭉치면 청산 중 조합이 만료로 읽힌다.
+    const found = await loadProgramAnywhere<{
       id: string
       title: string
       code: string | null
       status: string
       start_date: string | null
       end_date: string | null
-      host_organization: string | null
+      host_organization?: string | null
       deleted_at: string | null
-    }>(
-      db,
-      session.programId,
-      'id, title, code, status, start_date, end_date, host_organization, deleted_at',
-    )
-    if (!program || program.deleted_at || DEAD_PROGRAM_STATUSES.has(program.status)) {
+    }>(db, session.programId, guestProgramSelect)
+    if (!found || found.row.deleted_at || isDeadProgram(found.table, found.row.status)) {
       return jsonResponse(EXPIRED, 401)
     }
+    const program = found.row
 
     const identity = await readLedgerIdentity(db, participations[0])
     const name = await syncGuestName(db, session.user, participations, identity.name)
@@ -87,6 +90,9 @@ Deno.serve(withCors(async (req: Request) => {
       },
       program: {
         ...programOut,
+        // 맥락의 종류. 게스트 앱의 사이드바·화면 이름이 이 값으로 갈리므로(사업개요/조합 개요)
+        // 화면이 목록에서 되찾게 두지 않고 지금 읽은 사실을 그대로 실어 보낸다.
+        entity_key: ledgerEntityKey(found.table),
         status: INTERNAL_ONLY_STATUSES.has(program.status) ? null : program.status,
       },
       participation: {

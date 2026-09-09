@@ -31,7 +31,7 @@ const EXPIRED = {
 }
 const NOT_ALLOWED = {
   error: 'context_denied',
-  message: '지금 들어갈 수 없는 사업입니다. 목록을 새로 고쳐 주세요.',
+  message: '지금 들어갈 수 없습니다. 목록을 새로 고쳐 주세요.',
 }
 
 /** 선택 티켓 또는 살아 있는 세션에서 계정 id를 얻는다. 둘 다 아니면 null. */

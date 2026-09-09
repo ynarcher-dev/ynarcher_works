@@ -6,7 +6,7 @@ import { GuestUserMenu } from '@/app/GuestUserMenu'
 import { useGuestStore } from '@/auth/guestStore'
 import {
   GUEST_HOME_PATH,
-  STARTUP_FIXED_NAV,
+  fixedNavOf,
   moduleNavItems,
   type GuestNavItem,
 } from '@/config/navigation'
@@ -34,6 +34,8 @@ export function GuestLayout() {
   // 사이드바 하위 메뉴는 원장이 세운다. 뷰 축(스타트업/전문가)은 2026-09-03에 걷혔다 —
   // 전문가 전용 화면이 멘토링·매칭과 함께 사라져 전환할 곳이 없다.
   const items = moduleNavItems(modules ?? [])
+  // 조합에는 아직 모듈이 서지 않는다(온기보고를 여는 날 함께 선다). 그래서 이 목록은
+  // 언제나 비어 있고, 비어 있으면 구분선도 서지 않는다 — 아래 조건이 이미 그렇게 답한다.
 
   /** 사이드바 한 줄. 고정 메뉴(사업개요)와 원장이 세우는 메뉴가 같은 규격으로 선다. */
   const renderItem = (item: GuestNavItem) => {
@@ -69,10 +71,10 @@ export function GuestLayout() {
       }
     >
       <div className="flex flex-col gap-1">
-        {/* 상단은 고정 메뉴 묶음(사업개요·공지사항·일정안내·Q&A — 첫 줄이 로그인 직후
-            착지점)이다. 원장이 세우는 하위 메뉴와는 구분선으로 가른다 — 층이 다른 메뉴임을
-            선 하나가 답한다. */}
-        {STARTUP_FIXED_NAV.map(renderItem)}
+        {/* 상단은 고정 메뉴 묶음(첫 줄이 로그인 직후 착지점)이다. 무엇이 서는지는 맥락이
+            정한다 — 사업은 넷, 조합은 셋이다(2026-09-09). 원장이 세우는 하위 메뉴와는
+            구분선으로 가른다 — 층이 다른 메뉴임을 선 하나가 답한다. */}
+        {fixedNavOf(program?.entityKey).map(renderItem)}
         {items.length > 0 && <div aria-hidden className="my-1 border-t border-white/20" />}
         {items.map(renderItem)}
       </div>

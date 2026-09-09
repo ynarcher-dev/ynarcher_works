@@ -34,6 +34,11 @@ export interface Fund {
   operation_start?: string | null
   operation_end?: string | null
   paid_in_amount?: number | null
+  /**
+   * 이 조합 게스트(포트폴리오사)의 접근 종료. 기간은 참여 줄이 아니라 조합이 갖는다
+   * (3_9_1 §8). 목록 최소 조회에서는 미포함이라 옵셔널.
+   */
+  guest_access_ends_at?: string | null
   updated_at?: string | null
   manager?: { id: string; name: string | null } | null
   creator?: { id: string; name: string | null } | null
@@ -64,7 +69,7 @@ export function useFund(id: string | undefined) {
       const { data } = await supabase
         .from('funds')
         .select(
-          'id, code, name, vintage_year, total_commitment, drawn_amount, status, source_type, character_type, strategy_type, fund_type, subscription_type, term_start, term_end, operation_start, operation_end, paid_in_amount, updated_at, manager:users!manager_id(id, name), creator:users!created_by(id, name), operators:fund_managers(user_id, role, is_lead, user:users!user_id(id, name))',
+          'id, code, name, vintage_year, total_commitment, drawn_amount, status, source_type, character_type, strategy_type, fund_type, subscription_type, term_start, term_end, operation_start, operation_end, paid_in_amount, guest_access_ends_at, updated_at, manager:users!manager_id(id, name), creator:users!created_by(id, name), operators:fund_managers(user_id, role, is_lead, user:users!user_id(id, name))',
         )
         .eq('id', id)
         .maybeSingle()

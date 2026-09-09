@@ -9,8 +9,14 @@ import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { verifyJwt } from './crypto.ts'
 import { PROGRAM_LEDGERS, type ProgramEntityKey } from './programLedger.ts'
 
-/** 사업 맥락으로 인정하는 종류. 장래의 fund 맥락은 여기 들지 않는다. */
-const PROGRAM_CONTEXTS = new Set(['program', 'ma_program'])
+/**
+ * 통합 원장(참여 줄·개요·공지·Q&A)으로 다루는 맥락 종류.
+ *
+ * 2026-09-09에 `fund`가 들어왔다 — 조합은 사업이 아니지만 게스트가 들어오는 문의 모양이
+ * 같아, 세션이 고정하는 대상도 같은 자리에 선다. DB의 `app.guest_session_program_id()`가
+ * 같은 세 값을 받으며, 두 곳이 어긋나면 함수는 통과하는데 표는 비는 틈이 생긴다.
+ */
+const PROGRAM_CONTEXTS = new Set(['program', 'ma_program', 'fund'])
 
 export interface GuestSessionUser {
   id: string
@@ -22,7 +28,11 @@ export interface GuestSessionUser {
 
 export interface VerifiedGuestSession {
   user: GuestSessionUser
-  /** 세션에 고정된 사업. 사업이 아닌 맥락(장래 fund 등)이면 null이다. */
+  /**
+   * 세션에 고정된 맥락(사업 또는 조합)의 id. 통합 원장이 다루지 않는 종류면 null이다.
+   * 이름이 `programId`인 것은 이 값을 쓰는 호출부와 DB 함수가 그 이름으로 불러 온 탓이며,
+   * 답하는 것은 '이 세션이 고정된 대상'이다.
+   */
   programId: string | null
   contextType: string
 }

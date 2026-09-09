@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { useProgramWorkspace } from '@/features/program/workspace'
+import { useGuestHost } from '@/features/guest/host'
 
 /**
  * 참가자 명부의 **문**(門) — 여닫고, 막고, 열쇠를 다시 보내고, 기간을 정한다.
@@ -22,7 +22,7 @@ export interface OpenAccessResult {
  * 함수는 그 결과로 받은 연락처로만 안내를 보낸다.
  */
 export function useOpenGuestAccess(programId: string) {
-  const config = useProgramWorkspace()
+  const config = useGuestHost()
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (participantIds: string[]): Promise<OpenAccessResult> => {
@@ -70,7 +70,7 @@ export function useSendPasswordReset() {
  * 사업 원장 값이 바뀌므로 명부만이 아니라 사업 조회도 함께 무효화한다.
  */
 export function useSetProgramAccessWindow(programId: string) {
-  const config = useProgramWorkspace()
+  const config = useGuestHost()
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (ends: string | null): Promise<void> => {
@@ -99,7 +99,7 @@ export function useSetProgramAccessWindow(programId: string) {
  * 알리지 않고 되돌리는 길이며, 다시 알려야 하면 `로그인 열기`를 쓴다.
  */
 export function useReopenGuestAccess(programId: string) {
-  const config = useProgramWorkspace()
+  const config = useGuestHost()
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (participantIds: string[]): Promise<number> => {
@@ -117,7 +117,7 @@ export function useReopenGuestAccess(programId: string) {
 
 /** 게스트 로그인 차단(접속 중인 세션까지 즉시 무효화). */
 export function useCloseGuestAccess(programId: string) {
-  const config = useProgramWorkspace()
+  const config = useGuestHost()
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (participantIds: string[]): Promise<number> => {
@@ -148,7 +148,7 @@ export interface RemovalResidual {
  * 이미 화면에 있던 숫자라 눈에 걸리지 않는다.
  */
 export function useRemovalPreview(programId: string, participantIds: string[], enabled: boolean) {
-  const config = useProgramWorkspace()
+  const config = useGuestHost()
   return useQuery({
     queryKey: [config.key, 'removal-preview', programId, [...participantIds].sort()],
     enabled: enabled && participantIds.length > 0,
@@ -177,7 +177,7 @@ export function useRemovalPreview(programId: string, participantIds: string[], e
  * 누구 것인지는 계정이 답한다. 무엇이 남는지는 `useRemovalPreview`가 삭제 전에 밝힌다.
  */
 export function useRemoveParticipants(programId: string) {
-  const config = useProgramWorkspace()
+  const config = useGuestHost()
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (participantIds: string[]): Promise<number> => {

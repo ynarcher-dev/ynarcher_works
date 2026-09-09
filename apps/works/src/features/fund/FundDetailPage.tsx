@@ -18,6 +18,9 @@ import {
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { DetailDeleteButton } from '@/components/DetailDeleteButton'
+import { GuestHostProvider } from '@/features/guest/host'
+import { FUND_GUEST_HOST, fundAsGuestHost } from '@/features/fund/guestHost'
+import { GuestSettingsButton } from '@/features/program/detail/GuestSettingsButton'
 import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
@@ -211,6 +214,25 @@ export function FundDetailPage() {
               </InfoGrid>
             </EntityHeaderSection>
           </EntityHeaderCard>
+
+          {/*
+            조합이 밖으로 내보내는 것 전부(조합 개요 · 공지사항 · Q&A · 계정생성)가 이 버튼
+            하나에 모인다 — 사업 상세와 **같은 화면**이며, 갈리는 것은 주입하는 설정뿐이다.
+
+            자리도 사업 상세와 같다: 무엇인지(위 정보 카드) 다음에 오는 것이 **누구를 상대로
+            도는가**이고, 그다음이 무엇을 하는가(아래 탭 줄)다. 우측 컬럼에 두지 않은 이유도
+            같다 — 그쪽은 이미 패널 넷이라 한 장을 더하면 무엇이 무엇인지 흐려진다.
+
+            `GuestHostProvider`가 여기서만 서는 것은 그 아래 화면들만 게스트 맥락을 묻기
+            때문이다. 페이지 전체를 감싸면 포트폴리오·캐피탈 콜처럼 게스트와 무관한 화면까지
+            그 설정 안에 서서, 어디까지가 게스트 이야기인지 코드가 답하지 못한다.
+          */}
+          <GuestHostProvider value={FUND_GUEST_HOST}>
+            <GuestSettingsButton
+              host={fundAsGuestHost(fund)}
+              personas={FUND_GUEST_HOST.guestMasterTables ?? []}
+            />
+          </GuestHostProvider>
 
           <div>
             <Tabs items={DETAIL_TABS} value={tab} onChange={(k) => setTab(k as DetailTab)} />

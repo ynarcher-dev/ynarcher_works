@@ -1,6 +1,6 @@
 import { Button, Field, Input, Modal, useToast } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
-import type { Program } from '@/features/program/hooks'
+import type { GuestHostEntity } from '@/features/guest/host'
 import {
   useSetProgramAccessWindow,
 } from '@/features/program/participantAccessHooks'
@@ -37,21 +37,21 @@ function fromDateInput(value: string): string | null {
  * 근거: docs/docs_planning/3_9_1_guest_unified_account.md §8
  */
 export function ProgramAccessWindowModal({
-  program,
+  host,
   open,
   onClose,
 }: {
-  program: Program
+  host: GuestHostEntity
   open: boolean
   onClose: () => void
 }) {
   const toast = useToast()
-  const save = useSetProgramAccessWindow(program.id)
+  const save = useSetProgramAccessWindow(host.id)
   const [ends, setEnds] = useState('')
 
   useEffect(() => {
-    if (open) setEnds(toDateInput(program.guest_access_ends_at))
-  }, [open, program.guest_access_ends_at])
+    if (open) setEnds(toDateInput(host.guest_access_ends_at))
+  }, [open, host.guest_access_ends_at])
 
   if (!open) return null
 
@@ -77,7 +77,7 @@ export function ProgramAccessWindowModal({
       open
       onClose={onClose}
       title="로그인 가능 기간"
-      help="비워 두면 제한이 없습니다. 기간이 지나면 이 사업만 게스트의 참여 목록에서 사라지고, 계정과 다른 사업은 그대로 유지됩니다."
+      help="비워 두면 제한이 없습니다. 기간이 지나면 여기만 게스트의 참여 목록에서 사라지고, 계정과 다른 참여는 그대로 유지됩니다."
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
@@ -99,7 +99,7 @@ export function ProgramAccessWindowModal({
           {/* 자격을 낱개로 세지 않는다 — 워크스페이스마다 다르고(M&A는 SELLER·BUYER),
               여기서 다시 적으면 자격이 늘 때마다 이 문장이 뒤처진다. 이 기간이 걸리는 대상은
               '그 사업의 포털 계정 전원'이라는 사실 하나다. */}
-          <span className="font-medium">{program.title}</span>의 포털 계정{' '}
+          <span className="font-medium">{host.title}</span>의 포털 계정{' '}
           <span className="font-medium">전원</span>에게 같이 걸립니다.
         </p>
         <Field label="종료일" hint="비워 두면 제한 없음">

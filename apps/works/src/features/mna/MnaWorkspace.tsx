@@ -45,6 +45,9 @@ export const MNA_WORKSPACE: ProgramWorkspaceConfig = {
   // 담기는 것이 SELLER·BUYER 둘 다 회사이고, 그 회사들이 무엇에 매달렸는지는 이 워크스페이스가
   // URL·메뉴에서 이미 쓰는 낱말(딜)이 답한다.
   rosterLabel: '딜 참여사',
+  // 계정 후보는 담당자가 꾸린 딜 참여사 목록에서 고른다(매물·인수후보 연결은 별개 축이라
+  // 그 자체로 "누구를 들일지"의 답이 되지 않는다).
+  rosterSource: { kind: 'entries' },
 }
 
 export function MnaWorkspacePage() {

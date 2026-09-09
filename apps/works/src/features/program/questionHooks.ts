@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/auth/authStore'
 import { supabase } from '@/lib/supabase'
-import { SHARED_TABLES, useProgramWorkspace } from '@/features/program/workspace'
+import { useGuestHost } from '@/features/guest/host'
+import { SHARED_TABLES } from '@/features/program/workspace'
 
 /**
  * 사업 Q&A(1:1 문의함) 데이터 접근 — 담당자 쪽. 질문은 게스트가 쓰고(INSERT 정책이 게스트
@@ -33,7 +34,7 @@ const COLS =
 
 /** 사업의 질문 전체(미삭제, 최신순). */
 export function useQuestions(programId: string | undefined) {
-  const config = useProgramWorkspace()
+  const config = useGuestHost()
   const table = SHARED_TABLES.questions
   return useQuery({
     queryKey: [config.key, 'program-questions', programId],
@@ -55,7 +56,7 @@ export function useQuestions(programId: string | undefined) {
 /** 답변 저장(작성·수정 동일 — 답변은 질문당 하나다). 빈 본문이면 답변을 거둔 것으로 본다. */
 export function useAnswerQuestion(programId: string) {
   const qc = useQueryClient()
-  const config = useProgramWorkspace()
+  const config = useGuestHost()
   const userId = useAuthStore((s) => s.user?.id)
   return useMutation({
     mutationFn: async (input: { id: string; answerBody: string | null }) => {
@@ -79,7 +80,7 @@ export function useAnswerQuestion(programId: string) {
 /** 질문 소프트 삭제(물리 삭제 금지 — 오등록·부적절 문의 정리용). */
 export function useDeleteQuestion(programId: string) {
   const qc = useQueryClient()
-  const config = useProgramWorkspace()
+  const config = useGuestHost()
   return useMutation({
     mutationFn: async (id: string) => {
       const table = SHARED_TABLES.questions

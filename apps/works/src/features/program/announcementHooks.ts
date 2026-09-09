@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { SHARED_TABLES, useProgramWorkspace } from '@/features/program/workspace'
+import { useGuestHost } from '@/features/guest/host'
+import { SHARED_TABLES } from '@/features/program/workspace'
 
 /**
  * 사업 공지사항(사업 단위 게시판) 데이터 접근. 모듈별 NOTICE(noticeHooks)와 축이 다르다 —
@@ -28,7 +29,7 @@ const COLS = 'id, title, body, created_at, updated_at'
 
 /** 사업의 공지 목록(미삭제, 최신순). */
 export function useAnnouncements(programId: string | undefined) {
-  const config = useProgramWorkspace()
+  const config = useGuestHost()
   const table = SHARED_TABLES.announcements
   return useQuery({
     queryKey: [config.key, 'program-announcements', programId],
@@ -53,7 +54,7 @@ export function useAnnouncements(programId: string | undefined) {
  */
 export function useSaveAnnouncement(programId: string) {
   const qc = useQueryClient()
-  const config = useProgramWorkspace()
+  const config = useGuestHost()
   return useMutation({
     mutationFn: async (input: {
       id?: string
@@ -85,7 +86,7 @@ export function useSaveAnnouncement(programId: string) {
 /** 공지 소프트 삭제(물리 삭제 금지). */
 export function useDeleteAnnouncement(programId: string) {
   const qc = useQueryClient()
-  const config = useProgramWorkspace()
+  const config = useGuestHost()
   return useMutation({
     mutationFn: async (id: string) => {
       const table = SHARED_TABLES.announcements

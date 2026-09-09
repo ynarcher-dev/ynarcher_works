@@ -3,7 +3,7 @@ import { ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { ParticipantRightRow } from '@/features/program/ParticipantRightRow'
 import type { ParticipantPersona } from '@/features/program/participantPersona'
 import type { useParticipantTransfer } from '@/features/program/participantTransfer'
-import { useProgramWorkspace } from '@/features/program/workspace'
+import { useGuestHost } from '@/features/guest/host'
 
 /**
  * 계정생성 창의 두 기둥 — **왼쪽은 계정 없음, 오른쪽은 계정 있음**이다.
@@ -31,7 +31,7 @@ export function ParticipantTransferPanes({
   isLoading: boolean
   transfer: ReturnType<typeof useParticipantTransfer>
 }) {
-  const config = useProgramWorkspace()
+  const config = useGuestHost()
   const { left, right } = transfer
 
   return (

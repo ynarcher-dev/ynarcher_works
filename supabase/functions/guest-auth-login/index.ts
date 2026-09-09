@@ -45,7 +45,9 @@ const LOCKED = {
 }
 const NO_ACCESS = {
   accessible: false,
-  message: '현재 접근 가능한 사업이 없습니다. 담당자에게 문의해 주세요.',
+  // 맥락이 사업·조합 둘이 되었으므로 어느 한쪽의 이름을 쓰지 않는다 — 조합에만 참여한
+  // 게스트에게 "사업이 없습니다"라고 답하면 그 사람은 자기 이야기가 아니라고 읽는다.
+  message: '현재 접근 가능한 곳이 없습니다. 담당자에게 문의해 주세요.',
 }
 
 Deno.serve(withCors(async (req: Request) => {

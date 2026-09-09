@@ -1,6 +1,6 @@
 import { EmptyState, Tabs } from '@ynarcher/ui'
 import { useState } from 'react'
-import type { Program } from '@/features/program/hooks'
+import type { GuestHostEntity } from '@/features/guest/host'
 import { ParticipantPool } from '@/features/program/ParticipantPool'
 import { PERSONA_LABEL, type MasterTable } from '@/features/program/participantPersona'
 
@@ -24,10 +24,10 @@ import { PERSONA_LABEL, type MasterTable } from '@/features/program/participantP
  * 거짓 신호이고 남는 것은 층뿐이다(M&A 연결 기업 패널과 같은 판단).
  */
 export function GuestAccountsPanel({
-  program,
+  host,
   personas,
 }: {
-  program: Program
+  host: GuestHostEntity
   /** 이 워크스페이스가 쓰는 자격. 창구의 하위 탭과 **같은 한 벌**이다. */
   personas: readonly MasterTable[]
 }) {
@@ -46,7 +46,7 @@ export function GuestAccountsPanel({
   // 아무것도 선택되어 있지 않은데 아래는 비어, 왜 비었는지 화면이 답하지 못한다.
   const current = personas.find((p) => p === picked) ?? personas[0]!
 
-  if (personas.length === 1) return <ParticipantPool program={program} persona={current} />
+  if (personas.length === 1) return <ParticipantPool host={host} persona={current} />
 
   return (
     <div className="space-y-4">
@@ -57,7 +57,7 @@ export function GuestAccountsPanel({
       />
       {/* 탭을 바꾸면 명부는 통째로 다시 선다(key) — 선택·검색·페이지가 자격을 넘어 살아남으면
           안 보이는 행이 선택된 채로 일괄 작업에 딸려 간다. */}
-      <ParticipantPool key={current} program={program} persona={current} />
+      <ParticipantPool key={current} host={host} persona={current} />
     </div>
   )
 }

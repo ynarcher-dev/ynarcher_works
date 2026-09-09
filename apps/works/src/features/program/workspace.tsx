@@ -1,7 +1,7 @@
 import type { BadgeTone } from '@ynarcher/ui'
-import { createContext, useContext } from 'react'
+import { createContext, useContext, type ReactNode } from 'react'
 import type { ProgramCategoryOption } from '@/config/programCategories'
-import type { MasterTable } from '@/features/program/participantPersona'
+import { GuestHostProvider, type GuestHostConfig } from '@/features/guest/host'
 
 export type { ProgramCategoryOption }
 
@@ -20,7 +20,7 @@ export type ProgramWorkspaceKey = 'project' | 'mna'
  * 워크스페이스별 원장 테이블·RPC·분류 정의.
  * 테이블명은 PostgREST 쿼리와 임베드 문자열 조립에 그대로 쓰이므로 실제 물리 테이블명과 일치해야 한다.
  */
-export interface ProgramWorkspaceConfig {
+export interface ProgramWorkspaceConfig extends GuestHostConfig {
   key: ProgramWorkspaceKey
   /**
    * 다형 테이블(entity_contributions.entity_table / entity_feedback.target_type)에서
@@ -33,22 +33,6 @@ export interface ProgramWorkspaceConfig {
    * 첨부(attachments)는 정책이 워크스페이스 무관이라 분리하지 않고 'program'을 그대로 쓴다.
    */
   entityKey: 'program' | 'ma_program'
-  /**
-   * 이 워크스페이스가 다루는 **인격의 출처 원장**(2026-09-08).
-   *
-   * 계정생성 창구의 하위 탭과 명부의 자격 탭이 **같은 이 값**을 편다 — 계정을 세울 수 있는
-   * 자격과 명부에 담을 수 있는 자격이 갈리면, 발급은 되는데 어디에도 담기지 않는 계정이
-   * 생기고 화면은 그 이유를 답하지 못한다.
-   *
-   * 창구가 세우는 계정 목록을 이 값으로 좁힌다. `entityKey`와 다른 축이다 — 저쪽은 참여
-   * 사업 칸이 어느 사업을 세는가이고, 이쪽은 어느 계정이 목록에 서는가다.
-   *
-   * 창구가 없는 워크스페이스에는 두지 않는다(`undefined`). 값을 비워 두는 것과 창구가
-   * 없는 것은 같은 뜻이며, 창구를 열 때 이 값을 함께 정하는 것이 순서다.
-   *
-   * 근거: docs/docs_planning/3_9_2_external_portal_expansion.md §6
-   */
-  guestMasterTables?: readonly MasterTable[]
   /** 목록·업로드의 베이스 경로(목록 `${basePath}`, 업로드 `${basePath}/bulk`). */
   basePath: string
   /**
@@ -115,28 +99,15 @@ export interface ProgramWorkspaceConfig {
    * 짓지 못하는 말은 규칙인 척하지 않고 값으로 든다(MaPartyConfig의 `fundsLabel`과 같은 처리).
    */
   categoryNoun: string
-  /**
-   * 게스트에게 나가는 소개문의 이름(GUEST 설정 모달의 첫 탭·카드 제목·작성 모달 제목).
+  /*
+   * `overviewNoun`·`rosterLabel`·`guestMasterTables`·`rosterSource`는 `GuestHostConfig`가
+   * 소유한다(2026-09-09). 그 넷은 사업 워크스페이스만의 값이 아니라 **게스트에게 무엇이
+   * 나가는가**를 다루는 화면들이 함께 읽는 값이고, 조합(FUND)도 같은 화면을 세우기 때문이다.
    *
-   * `categoryNoun`과 같은 이유로 값이다 — AC는 '사업개요'가 한 낱말로 붙고 M&A는
-   * '프로젝트 개요'로 띄어 쓴다(2026-09-09 사용자 지정). 규칙으로 짓지 못하는 말은
-   * 규칙인 척하지 않고 값으로 든다.
+   * M&A의 `rosterLabel`이 '딜 참여사'인 이유는 층이 아니라 뜻이다 — 인수후보사는 이 딜에
+   * *참가한* 것이 아니라 *검토하는* 쪽이고, 그 관계를 부르는 말은 이 워크스페이스가
+   * URL·메뉴에서 이미 쓰는 낱말(딜)에 매달아야 한다.
    */
-  overviewNoun: string
-  /**
-   * 참가자 명단 탭이 스스로를 부르는 이름(탭 줄·삭제창·빈 상태·토스트가 함께 읽는다).
-   *
-   * `categoryNoun`·`overviewNoun`과 같은 이유로 값이다 — 규칙으로 짓지 못한다. AC는 사람과
-   * 기업이 함께 담기는 '참가자 목록'이고, M&A는 담기는 것이 회사뿐이라 **'딜 참여사'**다
-   * (2026-09-09 사용자 지정). M&A에서 '참가자'가 어긋나는 이유는 층이 아니라 뜻이다 —
-   * 인수후보사는 이 딜에 *참가한* 것이 아니라 *검토하는* 쪽이고, 그 관계를 부르는 말은
-   * 이 워크스페이스가 URL·메뉴에서 이미 쓰는 낱말(딜)에 매달아야 한다.
-   *
-   * '거래자'를 쓰지 않는다 — 증권 트레이더 어감이고, 파는 쪽인지 사는 쪽인지를 그 낱말이
-   * 답하지 못한다. '거래 당사자'는 정확하지만 NDA 전 인수후보에게는 과하다(아직 당사자가
-   * 아니다).
-   */
-  rosterLabel: string
 }
 
 /**
@@ -177,7 +148,28 @@ export const SHARED_TABLES = {
 
 const ProgramWorkspaceContext = createContext<ProgramWorkspaceConfig | null>(null)
 
-export const ProgramWorkspaceProvider = ProgramWorkspaceContext.Provider
+/**
+ * 사업 워크스페이스 설정을 내려 준다. **게스트 맥락 설정도 같은 값으로 함께 내려간다** —
+ * `ProgramWorkspaceConfig`가 `GuestHostConfig`를 상속하므로 사업 워크스페이스는 게스트 맥락
+ * 하나이기도 하다.
+ *
+ * 두 Provider를 화면마다 나란히 쓰게 하지 않는 이유는 하나를 빠뜨릴 수 있어서다 — 그때
+ * 나오는 것은 오류가 아니라 개요·공지 탭에서만 터지는 예외라, 그 자리를 열어 보기 전에는
+ * 드러나지 않는다. 조합(FUND)은 사업 설정이 없으므로 `GuestHostProvider`를 직접 쓴다.
+ */
+export function ProgramWorkspaceProvider({
+  value,
+  children,
+}: {
+  value: ProgramWorkspaceConfig
+  children: ReactNode
+}) {
+  return (
+    <ProgramWorkspaceContext.Provider value={value}>
+      <GuestHostProvider value={value}>{children}</GuestHostProvider>
+    </ProgramWorkspaceContext.Provider>
+  )
+}
 
 /**
  * 현재 화면이 속한 사업 워크스페이스 설정을 반환한다.

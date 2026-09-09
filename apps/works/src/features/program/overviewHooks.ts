@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { SHARED_TABLES, useProgramWorkspace } from '@/features/program/workspace'
+import { useGuestHost } from '@/features/guest/host'
+import { SHARED_TABLES } from '@/features/program/workspace'
 
 /**
  * 사업개요(사업소개문) 데이터 접근. **사업 1건 = 개요 1건**(program_id가 PK)이라 목록이
@@ -16,7 +17,7 @@ export interface ProgramOverview {
 
 /** 사업의 개요(없으면 null — 아직 아무도 쓰지 않은 상태). */
 export function useProgramOverview(programId: string | undefined) {
-  const config = useProgramWorkspace()
+  const config = useGuestHost()
   const table = SHARED_TABLES.overviews
   return useQuery({
     queryKey: [config.key, 'program-overview', programId],
@@ -39,7 +40,7 @@ export function useProgramOverview(programId: string | undefined) {
  */
 export function useSaveProgramOverview(programId: string) {
   const qc = useQueryClient()
-  const config = useProgramWorkspace()
+  const config = useGuestHost()
   return useMutation({
     mutationFn: async (body: string | null) => {
       const table = SHARED_TABLES.overviews

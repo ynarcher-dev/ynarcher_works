@@ -31,6 +31,16 @@
     // 트리만** 골라 보기 때문인데, 빠뜨리면 검사되지 않는다는 사실이 아무 데서도 드러나지
     // 않는다 — 실제로 M&A 함수 두 벌이 한동안 이 목록 밖에 있었다.
     "supabase/functions/ma-seller-quick-review/**/*.ts",
-    "supabase/functions/ma-seller-material-extract/**/*.ts"
+    "supabase/functions/ma-seller-material-extract/**/*.ts",
+    // 게스트 인증 계통(2026-09-09 추가). 맥락이 셋이 되면서 원장별로 갈리는 값(제목 칸·죽은
+    // 상태)을 `programLedger`가 지게 됐고, 그 계약이 어긋나면 로그인·갱신이 **실행 순간에만**
+    // 죽는다 — 밖에서 들어오는 사람이 먼저 마주치는 자리라 그 자리를 검사 밖에 두지 않는다.
+    "supabase/functions/_shared/programLedger.ts",
+    "supabase/functions/_shared/guestAccount.ts",
+    "supabase/functions/_shared/guestSession.ts",
+    "supabase/functions/guest-auth-login/**/*.ts",
+    "supabase/functions/guest-auth-context/**/*.ts",
+    "supabase/functions/guest-auth-refresh/**/*.ts",
+    "supabase/functions/guest-access-invite/**/*.ts"
   ]
 }

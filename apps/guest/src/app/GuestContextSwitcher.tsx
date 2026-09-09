@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronDown } from 'lucide-react'
 import { guestAuth } from '@/auth/guestAuthService'
-import { PERSONA_LABEL, useGuestStore } from '@/auth/guestStore'
+import { PERSONA_LABEL, contextKindLabel, useGuestStore } from '@/auth/guestStore'
 import { GUEST_HOME_PATH } from '@/config/navigation'
 
 function endLabel(iso?: string | null): string | null {
@@ -58,7 +58,7 @@ export function GuestContextSwitcher() {
       setOpen(false)
       navigate(GUEST_HOME_PATH, { replace: true })
     } catch (e) {
-      setError(e instanceof Error ? e.message : '해당 사업으로 들어갈 수 없습니다.')
+      setError(e instanceof Error ? e.message : '그곳으로 들어갈 수 없습니다.')
     } finally {
       setBusy(false)
     }
@@ -68,10 +68,18 @@ export function GuestContextSwitcher() {
     return (
       <div className="rounded-radius-md border border-white/20 bg-white/10 px-3 py-2">
         <p className="truncate text-body font-bold text-white">{program.title}</p>
-        {/* 자격은 갈 곳이 하나여도 세운다 — 같은 사업에 두 자격으로 참여하는 사람에게는
-            지금 어느 쪽으로 들어와 있는지가 화면의 내용을 정하기 때문이다. */}
-        {program.persona && (
-          <p className="truncate text-caption text-white/70">{PERSONA_LABEL[program.persona]}</p>
+        {/* 종류와 자격은 갈 곳이 하나여도 세운다 — 같은 사업에 두 자격으로 참여하는 사람에게는
+            지금 어느 쪽으로 들어와 있는지가 화면의 내용을 정하고, 종류(사업·딜·조합)는 아래
+            메뉴 구성이 왜 그렇게 생겼는지를 답한다. */}
+        {(program.persona || contextKindLabel(program.entityKey)) && (
+          <p className="truncate text-caption text-white/70">
+            {[
+              contextKindLabel(program.entityKey),
+              program.persona ? PERSONA_LABEL[program.persona] : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </p>
         )}
       </div>
     )
@@ -90,7 +98,11 @@ export function GuestContextSwitcher() {
         <span className="min-w-0 flex-1">
           <span className="block truncate text-body font-bold text-white">{program.title}</span>
           <span className="block truncate text-caption text-white/70">
-            {[program.persona ? PERSONA_LABEL[program.persona] : null, `참여 ${contexts.length}건`]
+            {[
+              contextKindLabel(program.entityKey),
+              program.persona ? PERSONA_LABEL[program.persona] : null,
+              `참여 ${contexts.length}건`,
+            ]
               .filter(Boolean)
               .join(' · ')}
           </span>
@@ -119,7 +131,12 @@ export function GuestContextSwitcher() {
                 >
                   <span className="truncate text-body font-medium text-gray-900">{c.title}</span>
                   <span className="truncate text-caption text-gray-500">
-                    {[c.persona ? PERSONA_LABEL[c.persona] : null, c.code, endLabel(c.accessEndsAt)]
+                    {[
+                      contextKindLabel(c.entityKey),
+                      c.persona ? PERSONA_LABEL[c.persona] : null,
+                      c.code,
+                      endLabel(c.accessEndsAt),
+                    ]
                       .filter(Boolean)
                       .join(' · ')}
                   </span>

@@ -10,7 +10,7 @@ import { useMemo, useState } from 'react'
 import { useAuthStore } from '@/auth/authStore'
 import { participantContentKey } from '@/features/admin/sensitiveContents'
 import { useMaskPolicy } from '@/features/admin/sensitiveStore'
-import type { Program } from '@/features/program/hooks'
+import { useGuestHost, type GuestHostEntity } from '@/features/guest/host'
 import { ParticipantAddModal } from '@/features/program/ParticipantAddModal'
 import {
   ParticipantActionConfirm,
@@ -35,7 +35,6 @@ import {
   type MasterTable,
 } from '@/features/program/participantPersona'
 import { ProgramAccessWindowModal } from '@/features/program/ProgramAccessWindowModal'
-import { useProgramWorkspace } from '@/features/program/workspace'
 
 /** 한 페이지에 세우는 행 수 — 페이징 훅과 표 페이저가 같은 값을 봐야 한다. */
 const PAGE_SIZE = 10
@@ -95,13 +94,13 @@ function accessWindowLabel(iso: string | null): string {
  * 화면의 숨김은 편의일 뿐 실제 강제는 서버(RPC)가 한다.
  */
 export function ParticipantPool({
-  program,
+  host,
   persona,
 }: {
-  program: Program
+  host: GuestHostEntity
   persona: MasterTable
 }) {
-  const config = useProgramWorkspace()
+  const config = useGuestHost()
   // 자격이 정하는 것(제목·머리글·검색 문구·원장 조회·구분 배지)은 전부 이 한 벌에서 나온다.
   // 화면이 `persona === 'startups'` 삼항으로 갈라 쓰면 자격이 셋 이상일 때 답할 수 없다.
   const spec = PARTICIPANT_PERSONAS[persona]
@@ -117,17 +116,17 @@ export function ParticipantPool({
   // 되돌릴 수 없는 하나는 별도 상태다 — 나머지 넷과 확인창 자체가 다르다(따라쓰기).
   const [removing, setRemoving] = useState(false)
 
-  const { data, isLoading, isError } = useProgramParticipants(program.id)
-  const open = useOpenGuestAccess(program.id)
-  const close = useCloseGuestAccess(program.id)
-  const reopen = useReopenGuestAccess(program.id)
+  const { data, isLoading, isError } = useProgramParticipants(host.id)
+  const open = useOpenGuestAccess(host.id)
+  const close = useCloseGuestAccess(host.id)
+  const reopen = useReopenGuestAccess(host.id)
   const resetPw = useSendPasswordReset()
-  const remove = useRemoveParticipants(program.id)
+  const remove = useRemoveParticipants(host.id)
 
   const rows = useMemo(() => data ?? [], [data])
   const isManager = useMemo(
-    () => (program.managers ?? []).some((m) => m.user_id === myId),
-    [program.managers, myId],
+    () => (host.managers ?? []).some((m) => m.user_id === myId),
+    [host.managers, myId],
   )
   const canOpenDoor = isManager
 
@@ -151,8 +150,8 @@ export function ParticipantPool({
   const { pageItems, page, setPage } = usePaged(filtered, PAGE_SIZE)
 
   const columns = useMemo(
-    () => participantColumns(masked, program.status, program.guest_access_ends_at, persona),
-    [masked, program.status, program.guest_access_ends_at, persona],
+    () => participantColumns(masked, host.status, host.guest_access_ends_at, persona),
+    [masked, host.status, host.guest_access_ends_at, persona],
   )
 
   const selectedRows = useMemo(
@@ -283,7 +282,7 @@ export function ParticipantPool({
               <div className="flex items-center gap-2">
                 {canOpenDoor && (
                   <Button variant="outline" onClick={() => setWindowOpen(true)}>
-                    {accessWindowLabel(program.guest_access_ends_at)}
+                    {accessWindowLabel(host.guest_access_ends_at)}
                   </Button>
                 )}
                 <Button onClick={() => setAddOpen(true)}>{spec.label} 계정 생성</Button>
@@ -332,11 +331,11 @@ export function ParticipantPool({
       <ParticipantAddModal
         open={addOpen}
         onClose={() => setAddOpen(false)}
-        programId={program.id}
+        programId={host.id}
         master={persona}
       />
       <ProgramAccessWindowModal
-        program={program}
+        host={host}
         open={windowOpen}
         onClose={() => setWindowOpen(false)}
       />
@@ -349,7 +348,7 @@ export function ParticipantPool({
       />
       <ParticipantRemoveConfirm
         open={removing}
-        programId={program.id}
+        programId={host.id}
         participantIds={selected}
         onConfirm={() =>
           remove.mutate(selected, {

@@ -45,16 +45,16 @@ export function modulePath(moduleId: string): string {
 }
 
 /**
- * 스타트업 뷰 사이드바 **상단의 고정 메뉴 묶음**. 첫 줄(사업개요)이 로그인 직후 착지점이다.
+ * 사이드바 **상단의 고정 메뉴 묶음**. 첫 줄(소개)이 로그인 직후 착지점이다.
  *
- * 모듈 메뉴는 원장이 세우지만(위 moduleNavItems), 이 넷은 메뉴(모듈)가 아니라 사업 자체를
+ * 모듈 메뉴는 원장이 세우지만(위 moduleNavItems), 이 줄들은 메뉴(모듈)가 아니라 맥락 자체를
  * 향한 화면이라 코드에 고정으로 선다 — 담당자가 켜고 끄는 대상이 아니고, 공개 메뉴가
- * 하나도 없는 사업이어도 로그인이 열렸다면 소개·공지·문의는 닿을 수 있어야 한다.
+ * 하나도 없어도 로그인이 열렸다면 소개·공지·문의는 닿을 수 있어야 한다.
  * 일정안내만은 성격이 반쯤 다르다 — 보여 주는 내용 자체가 공개 메뉴들의 기간이라
  * 공개 메뉴가 없으면 빈 화면이 되지만, 자리는 고정으로 지킨다(메뉴가 열리는 날 바로 선다).
  * 원장이 세우는 하위 메뉴와는 사이드바가 구분선으로 가른다(GuestLayout).
  */
-export const STARTUP_FIXED_NAV: readonly [GuestNavItem, ...GuestNavItem[]] = [
+const PROGRAM_FIXED_NAV: readonly [GuestNavItem, ...GuestNavItem[]] = [
   { path: '/overview', label: '사업개요', icon: BookOpen },
   { path: '/announcements', label: '공지사항', icon: Bell },
   { path: '/schedule', label: '일정안내', icon: CalendarDays },
@@ -62,7 +62,39 @@ export const STARTUP_FIXED_NAV: readonly [GuestNavItem, ...GuestNavItem[]] = [
 ]
 
 /**
- * 로그인 직후·루트 진입의 착지점. 언제나 사업개요다 — 공개 메뉴가 하나도 없어도 사업소개는
- * 읽을 수 있으므로 '갈 곳 없음'이라는 결과가 없다.
+ * 조합(FUND) 맥락의 고정 메뉴 — **셋뿐이고 일정안내가 없다**(2026-09-09).
+ *
+ * 없는 이유는 자리를 아껴서가 아니라 그 화면이 세우는 것이 공개 메뉴(모듈)들의 기간이기
+ * 때문이다. 조합에는 아직 모듈이 서지 않으므로(온기보고를 여는 날 함께 선다) 지금 두면
+ * 언제 눌러도 빈 화면이고, 빈 화면으로 데려가는 메뉴는 '아직 안 온 것'이 아니라 '고장'으로
+ * 읽힌다. 사업에서 그 자리를 지킨 근거(메뉴가 열리는 날 바로 선다)가 여기서는 아직 없다.
  */
-export const GUEST_HOME_PATH: string = STARTUP_FIXED_NAV[0].path
+const FUND_FIXED_NAV: readonly [GuestNavItem, ...GuestNavItem[]] = [
+  { path: '/overview', label: '조합 개요', icon: BookOpen },
+  { path: '/announcements', label: '공지사항', icon: Bell },
+  { path: '/qna', label: 'Q&A', icon: CircleHelp },
+]
+
+/**
+ * 이 맥락의 고정 메뉴. 값이 없으면 사업으로 읽는다 — 구 세션이 복원되는 8시간 동안
+ * `entityKey`가 비어 들어오고, 그때 메뉴가 사라지는 것보다 종전 구성이 서는 편이 낫다.
+ */
+export function fixedNavOf(
+  entityKey: string | null | undefined,
+): readonly [GuestNavItem, ...GuestNavItem[]] {
+  return entityKey === 'fund' ? FUND_FIXED_NAV : PROGRAM_FIXED_NAV
+}
+
+/**
+ * 이 맥락의 소개문을 부르는 이름. **메뉴 이름과 화면 제목이 같은 자리에서 나온다** —
+ * 두 곳에 적으면 사이드바는 '조합 개요'인데 본문 머리는 '사업개요'인 화면이 된다.
+ */
+export function overviewLabelOf(entityKey: string | null | undefined): string {
+  return fixedNavOf(entityKey)[0].label
+}
+
+/**
+ * 로그인 직후·루트 진입의 착지점. 언제나 소개 화면이다 — 공개 메뉴가 하나도 없어도 소개는
+ * 읽을 수 있으므로 '갈 곳 없음'이라는 결과가 없다. 경로는 맥락과 무관하게 하나다.
+ */
+export const GUEST_HOME_PATH: string = PROGRAM_FIXED_NAV[0].path

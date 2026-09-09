@@ -18,6 +18,14 @@ export interface GuestProgram {
   id: string
   title: string
   code: string | null
+  /**
+   * 이 맥락이 무엇인가 — 사업(`program`·`ma_program`) 또는 조합(`fund`).
+   *
+   * 2026-09-09에 FUND가 들어오면서 필요해졌다. **화면 구성을 가르는 축**이며(사업개요·일정안내
+   * 대 조합 개요), 자격(`persona`)과는 다른 물음에 답한다 — 저쪽은 *누구로 들어왔는가*이고
+   * 이쪽은 *어디에 들어왔는가*다. 값이 없으면 사업으로 읽는다(구 세션 복원).
+   */
+  entityKey?: GuestEntityKey | null
   /** 이 맥락을 만든 명부 행. 전환 요청의 대상 키다. */
   participantId?: string | null
   /**
@@ -30,6 +38,29 @@ export interface GuestProgram {
 
 /** 참여 자격. 명부의 두 탭(참여 기업 / 참여 전문가)과 같은 축이다. */
 export type GuestPersona = 'startups' | 'networks'
+
+/** 맥락의 종류. WORKS의 통합 원장 `entity_key`와 같은 값이며 서버가 실어 보낸다. */
+export type GuestEntityKey = 'program' | 'ma_program' | 'fund'
+
+/**
+ * 맥락의 종류를 부르는 말 — 전환기 목록에서 이름 앞에 선다.
+ *
+ * 종류가 하나였을 때는 필요 없었다. 셋이 되면서 **이름만으로는 어느 성격의 자리인지
+ * 답하지 못하게 됐다** — 같은 회사가 사업에도 조합에도 걸리면 목록의 두 줄이 서로 다른
+ * 화면으로 데려가는데, 그 차이가 제목에는 드러나지 않는다.
+ *
+ * 배지가 아니라 글자다 — 색은 상태에만 쓰고, 여기서 답하는 것은 상태가 아니라 종류다.
+ */
+export const CONTEXT_KIND_LABEL: Record<GuestEntityKey, string> = {
+  program: '사업',
+  ma_program: '딜',
+  fund: '조합',
+}
+
+/** 종류 라벨. 모르는 값(구 세션·새 종류)이면 아무 말도 하지 않는다 — 지어내지 않는다. */
+export function contextKindLabel(key: string | null | undefined): string | null {
+  return key ? (CONTEXT_KIND_LABEL[key as GuestEntityKey] ?? null) : null
+}
 
 /** 자격 라벨 — 화면 어디서나 같은 말을 쓴다(명부 탭과 같은 어휘). */
 export const PERSONA_LABEL: Record<GuestPersona, string> = {

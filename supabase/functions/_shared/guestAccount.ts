@@ -12,7 +12,12 @@
 // 근거: docs/docs_planning/3_9_1_guest_unified_account.md
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { signJwt } from './crypto.ts'
-import { PROGRAM_LEDGERS, type ProgramEntityKey } from './programLedger.ts'
+import {
+  PROGRAM_LEDGERS,
+  contextSelect,
+  isDeadProgram,
+  type ProgramEntityKey,
+} from './programLedger.ts'
 
 /** 세션 수명. 게스트는 하루 업무 단위로 들어오므로 8시간이면 충분하다. */
 export const SESSION_TTL_SEC = 60 * 60 * 8
@@ -25,9 +30,6 @@ export const CHANGE_TTL_SEC = 60 * 10
 
 /** 명부에서 문이 열려 있다고 보는 상태. */
 const OPEN_STATUSES = ['INVITED', 'ACTIVE']
-
-/** 게스트가 진입할 수 없는 사업 상태(종료·취소). */
-const DEAD_PROGRAM_STATUSES = new Set(['FINISHED', 'CANCELLED'])
 
 const MAX_ATTEMPTS = 5
 const LOCK_MINUTES = 15
@@ -56,8 +58,8 @@ export interface GuestParticipation {
   master_table: string | null
   master_id: string | null
   /**
-   * 이 사업 게스트의 접근 종료(2026-09-05부터 **사업 원장**의 guest_access_ends_at).
-   * 참여 줄이 아니라 사업이 갖는 값이라, 같은 사업의 두 줄은 같은 값을 본다.
+   * 이 맥락 게스트의 접근 종료(2026-09-05부터 **본체 원장**의 guest_access_ends_at).
+   * 참여 줄이 아니라 사업·조합이 갖는 값이라, 같은 맥락의 두 줄은 같은 값을 본다.
    */
   access_ends_at: string | null
   code: string | null
@@ -166,7 +168,7 @@ export async function loadParticipations(
   }[]
   if (rows.length === 0) return []
 
-  // 사업 원장이 셋이라 entity_key로 갈라 한 번씩만 묻는다. 살아 있지 않은 사업은
+  // 본체 원장이 셋이라 entity_key로 갈라 한 번씩만 묻는다. 살아 있지 않은 맥락은
   // 여기서 걸러지므로 목록에 뜨지 않는다.
   const byLedger = new Map<string, string[]>()
   for (const r of rows) {
@@ -175,16 +177,20 @@ export async function loadParticipations(
     byLedger.set(table, [...(byLedger.get(table) ?? []), r.program_id])
   }
 
-  // 접근 기간은 **사업**이 갖는다(2026-09-05). 참여 줄마다 있던 시절에는 같은 사업의 스무
+  // 접근 기간은 **사업·조합**이 갖는다(2026-09-05). 참여 줄마다 있던 시절에는 같은 사업의 스무
   // 줄이 저마다 값을 들고 있어 어긋날 수 있었다. 기간 판정은 코드에서 한다 — PostgREST의
   // `.or()`에 값을 문자열로 이어 붙이면 그 값의 표기(콜론·쉼표)가 필터 구조에 섞인다.
+  //
+  // 제목 칸과 죽은 상태의 값은 원장마다 다르므로 `programLedger`가 답한다(조합의 제목은
+  // `name`이고 죽은 상태는 해산 하나다). 여기서 다시 적으면 원장을 하나 더 여는 날
+  // 이 파일과 그 파일이 서로 다른 규칙을 갖는다.
   const live = new Map<string, { code: string | null; title: string; accessEndsAt: string | null }>()
   for (const [table, ids] of byLedger) {
     const { data: progs } = await db
       .from(table)
-      .select('id, code, title, status, deleted_at, guest_access_ends_at')
+      .select(contextSelect(table))
       .in('id', [...new Set(ids)])
-    for (const p of (progs ?? []) as {
+    for (const p of (progs ?? []) as unknown as {
       id: string
       code: string | null
       title: string
@@ -192,7 +198,7 @@ export async function loadParticipations(
       deleted_at: string | null
       guest_access_ends_at: string | null
     }[]) {
-      if (p.deleted_at || DEAD_PROGRAM_STATUSES.has(p.status)) continue
+      if (p.deleted_at || isDeadProgram(table, p.status)) continue
       if (p.guest_access_ends_at && new Date(p.guest_access_ends_at).getTime() <= now) continue
       live.set(p.id, { code: p.code, title: p.title, accessEndsAt: p.guest_access_ends_at })
     }
@@ -287,9 +293,10 @@ function requireSecret(): string {
 /**
  * 고른 맥락 하나로 세션을 발급한다.
  *
- * 토큰에는 `context_type`+`context_id`를 싣는다 — FUND가 들어올 때 클레임이 하나 더
- * 생기면 판정 함수가 두 벌로 갈라지기 때문이다. 옛 `program_id`도 함께 실어 배포 유예를
- * 둔다(새 함수가 배포되기 전의 구 판정 경로가 그것을 읽는다).
+ * 토큰에는 `context_type`+`context_id`를 싣는다 — 클레임을 맥락마다 하나씩 더하면 판정
+ * 함수가 그만큼 갈라지기 때문이다. 2026-09-09에 FUND(`fund`)가 세 번째 값으로 들어왔고,
+ * 그때 고친 것은 판정 함수의 허용 목록 한 줄뿐이었다. 옛 `program_id`도 함께 실어 배포
+ * 유예를 둔다(새 함수가 배포되기 전의 구 판정 경로가 그것을 읽는다).
  */
 export async function issueSession(
   db: SupabaseClient,

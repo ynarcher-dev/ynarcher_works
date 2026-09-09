@@ -68,7 +68,7 @@ export function ProgramOverviewTab({
         {/* 사업이 무엇인지(위) 다음에 오는 것이 **누구를 상대로 도는가**이고, 그다음이 무엇을
             하는가(아래 탭 줄)다. 우측 컬럼에 두지 않은 이유는 그쪽이 이미 패널 다섯 장이라
             한 장을 더하면 무엇이 무엇인지 흐려지기 때문이다 — 자세한 근거는 버튼 주석. */}
-        <GuestSettingsButton program={program} personas={personas} />
+        <GuestSettingsButton host={program} personas={personas} />
         <Tabs
           items={[
             { key: 'workflow', label: MODULE_BOARD_LABEL },

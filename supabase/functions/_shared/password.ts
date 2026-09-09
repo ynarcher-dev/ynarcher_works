@@ -30,7 +30,10 @@ async function derive(password: string, salt: Uint8Array, iterations: number): P
     ['deriveBits'],
   )
   const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
+    // `salt`을 BufferSource로 좁혀 넘긴다. TS 5.7부터 Uint8Array가 버퍼 종류로 제네릭해져
+    // (`Uint8Array<ArrayBufferLike>`) SharedArrayBuffer 가능성 때문에 BufferSource에 그대로
+    // 들어가지 않는다 — 런타임 값은 언제나 일반 ArrayBuffer이므로 타입만 좁힌다.
+    { name: 'PBKDF2', salt: salt as unknown as BufferSource, iterations, hash: 'SHA-256' },
     key,
     KEY_BITS,
   )

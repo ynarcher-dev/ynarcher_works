@@ -8,7 +8,8 @@ import {
   type LedgerFacts,
   type MasterTable,
 } from '@/features/program/participantPersona'
-import { SHARED_TABLES, useProgramWorkspace } from '@/features/program/workspace'
+import { useGuestHost, type GuestRosterSource } from '@/features/guest/host'
+import { SHARED_TABLES } from '@/features/program/workspace'
 
 /**
  * 참가자 명부(참여 기업·참여 전문가) 데이터 계층.
@@ -176,7 +177,7 @@ export async function loadLedgerFacts(
 
 /** 명부 전체(자격 탭은 화면이 거른다). 원장 값은 조회로 합성한다. */
 export function useProgramParticipants(programId: string | undefined) {
-  const config = useProgramWorkspace()
+  const config = useGuestHost()
   return useQuery({
     queryKey: [config.key, 'participants', programId],
     enabled: Boolean(programId),
@@ -184,6 +185,9 @@ export function useProgramParticipants(programId: string | undefined) {
       const { data, error } = await supabase
         .from(SHARED_TABLES.participants)
         .select(participantCols(SHARED_TABLES.participants))
+        // 통합 원장이므로 소속을 함께 건다. 사업 id로 좁히면 실제로는 한 원장의 행만 오지만,
+        // 그 사실에 기대는 조회는 원장이 하나 더 열리는 날 조용히 남의 행을 집는다.
+        .eq('entity_key', config.entityKey)
         .eq('program_id', programId)
         .order('created_at', { ascending: true })
       // 조회 실패를 삼키지 않는다 — 삼키면 "권한이 없다"와 "명부가 비었다"가 같은 화면이 되고,
@@ -310,7 +314,56 @@ export async function fetchLedgerCandidates(
 }
 
 /**
- * GUEST 계정 후보 — **이 사업의 참가자 목록에서만 고른다**(2026-09-09 좁힘).
+ * 명단이 사는 자리에서 원장 행 id를 읽는다.
+ *
+ * 두 갈래가 답하는 것은 같다 — "이 사업·조합이 누구를 들이기로 했는가". 다른 것은 그 사실이
+ * 이미 적혀 있는 표가 있는가뿐이다: 사업은 없어서 명단을 따로 꾸리고, 조합은 포트폴리오가
+ * 그것을 이미 답하고 있다. 그래서 갈리는 것은 표 이름과 칸 이름 셋이고, 이 함수 밖으로는
+ * 같은 모양(`자격 + 원장 행 id`)만 나간다.
+ */
+async function fetchRosterIds(
+  source: GuestRosterSource,
+  entityKey: string,
+  programId: string,
+  master: MasterTable,
+): Promise<{ master_table: MasterTable; master_id: string }[]> {
+  if (source.kind === 'entries') {
+    const { data, error } = await supabase
+      .from(SHARED_TABLES.participantEntries)
+      .select('master_table, master_id')
+      // 통합 원장이라 사업 id만으로는 소속이 정해지지 않는다.
+      .eq('entity_key', entityKey)
+      .eq('program_id', programId)
+      .eq('master_table', master)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: true })
+    if (error) throw error
+    return (data ?? []) as unknown as { master_table: MasterTable; master_id: string }[]
+  }
+
+  // 업무 원장을 그대로 명단으로 읽는 갈래. 이 표는 한 자격만 담으므로, 다른 자격을 물으면
+  // 빈 목록이 옳다(있지도 않은 자격의 후보를 지어내지 않는다).
+  if (source.master !== master) return []
+  let query = supabase
+    .from(source.table)
+    .select(`${source.idColumn}`)
+    .eq(source.parentColumn, programId)
+  if (source.deletedColumn) query = query.is(source.deletedColumn, null)
+  const { data, error } = await query
+  if (error) throw error
+
+  // 같은 대상이 두 줄로 들어올 수 있다(한 기업에 투자를 두 번 집행한 경우). 명단은
+  // 대상의 목록이므로 여기서 접는다 — 접지 않으면 추가 모달에 같은 회사가 두 번 선다.
+  const ids = new Set(
+    ((data ?? []) as unknown as Record<string, string | null>[])
+      .map((r) => r[source.idColumn])
+      .filter((v): v is string => Boolean(v)),
+  )
+  return [...ids].map((id) => ({ master_table: master, master_id: id }))
+}
+
+/**
+ * GUEST 계정 후보 — **이 사업·조합의 명단에서만 고른다**(2026-09-09 좁힘).
  *
  * 종전에는 전사 원장 전체(`fetchLedgerCandidates`)를 읽었고, `program_participant_entries`가
  * 생긴 뒤에도 그대로였다. 그래서 참가자 목록에 담은 적 없는 기업에 계정을 세울 수 있었고,
@@ -331,13 +384,19 @@ export async function fetchLedgerCandidates(
  * 검색은 **화면에 서는 값**으로 건다(이름·명의·이메일·연락처). 원장 검색 컬럼을 쓰지 않는
  * 이유는 그 값이 이 목록에 보이지 않기 때문이다 — 보이지 않는 값으로 걸러지면 방금 눈으로
  * 본 줄이 사라진 이유를 화면이 답하지 못한다. 명단은 수십 건이라 클라이언트에서 거른다.
+ *
+ * **명단이 어디에 사는지는 이 파일이 정하지 않는다**(2026-09-09). 사업은 담당자가 따로
+ * 꾸린 참가자 목록이 답하지만, 조합(FUND)은 **포트폴리오가 곧 명단**이다 — `investments`가
+ * 이미 "이 조합이 누구에게 투자했는가"를 답하고 있어 같은 사실을 적는 표를 하나 더 두면
+ * 어긋날 자리만 는다. 그 자리는 `GuestHostConfig.rosterSource`가 든다.
  */
 export function useMasterCandidates(
   programId: string | undefined,
   master: MasterTable,
   search: string,
 ) {
-  const config = useProgramWorkspace()
+  const config = useGuestHost()
+  const source = config.rosterSource
   const term = search.trim().toLowerCase()
   return useQuery({
     // `entityKey`가 키에 든다 — 명단은 통합 원장이라 사업 id만으로는 소속이 정해지지 않는다.
@@ -345,29 +404,19 @@ export function useMasterCandidates(
     enabled: Boolean(programId),
     queryFn: async (): Promise<MasterCandidate[]> => {
       const [entries, mapped] = await Promise.all([
-        supabase
-          .from(SHARED_TABLES.participantEntries)
-          .select('master_table, master_id')
-          .eq('entity_key', config.entityKey)
-          .eq('program_id', programId)
-          .eq('master_table', master)
-          .is('deleted_at', null)
-          .order('created_at', { ascending: true }),
+        fetchRosterIds(source, config.entityKey, programId!, master),
         supabase
           .from(SHARED_TABLES.participants)
           .select('master_id')
+          .eq('entity_key', config.entityKey)
           .eq('program_id', programId)
           .eq('master_table', master),
       ])
       // 조회 실패를 삼키지 않는다 — 삼키면 "권한이 없다"와 "명단이 비었다"가 같은 화면이 되고,
       // 이 모달에서 그 둘은 담당자가 해야 할 일이 정반대다.
-      if (entries.error) throw entries.error
       if (mapped.error) throw mapped.error
 
-      const rows = (entries.data ?? []) as unknown as {
-        master_table: MasterTable
-        master_id: string
-      }[]
+      const rows = entries
       const taken = new Set(
         ((mapped.data ?? []) as { master_id: string | null }[])
           .map((r) => r.master_id)
@@ -433,7 +482,7 @@ export interface AddParticipantsResult {
  * 사람을 두 번째 사업에 담아도 계정도 비밀번호도 늘지 않는다.
  */
 export function useAddParticipants(programId: string) {
-  const config = useProgramWorkspace()
+  const config = useGuestHost()
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (input: {

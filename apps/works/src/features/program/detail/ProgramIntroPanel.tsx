@@ -5,7 +5,7 @@ import { RichTextEditor, RichTextViewer } from '@/components/RichTextEditor'
 import { isEmptyRichText } from '@/lib/richText'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { useProgramOverview, useSaveProgramOverview } from '@/features/program/overviewHooks'
-import { useProgramWorkspace } from '@/features/program/workspace'
+import { useGuestHost } from '@/features/guest/host'
 
 /**
  * 사업개요 첨부의 다형 키. 사업 자료 관리('program')와 같은 attachments 원장을 쓰되
@@ -45,7 +45,7 @@ export function ProgramIntroPanel({ programId }: { programId: string }) {
 function IntroCard({ programId }: { programId: string }) {
   // 부르는 이름은 워크스페이스가 답한다(AC '사업개요' / M&A '프로젝트 개요' — 띄어쓰기까지
   // 값으로 든다). 같은 화면을 부르는 말이 탭·목록과 어긋나면 둘이 다른 것인지 되묻게 된다.
-  const { overviewNoun } = useProgramWorkspace()
+  const { overviewNoun } = useGuestHost()
   const toast = useToast()
   const { data: overview, isLoading } = useProgramOverview(programId)
   const save = useSaveProgramOverview(programId)
@@ -138,7 +138,7 @@ function IntroFormModal({
   initialBody: string
   onClose: () => void
 }) {
-  const { overviewNoun } = useProgramWorkspace()
+  const { overviewNoun } = useGuestHost()
   const toast = useToast()
   const save = useSaveProgramOverview(programId)
   const [body, setBody] = useState(initialBody)

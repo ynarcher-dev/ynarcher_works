@@ -38,6 +38,9 @@ export const PROJECT_WORKSPACE: ProgramWorkspaceConfig = {
   overviewNoun: '사업개요',
   // 담기는 것이 기업과 사람 둘이라 회사로 부를 수 없다.
   rosterLabel: '참가자 목록',
+  // 계정 후보는 담당자가 따로 꾸린 참가자 목록에서 고른다 — 이 워크스페이스에는 "누가
+  // 참가하는가"를 이미 답하고 있는 업무 원장이 없다(사업은 담는 일 자체가 결정이다).
+  rosterSource: { kind: 'entries' },
 }
 
 export function ProjectWorkspacePage() {

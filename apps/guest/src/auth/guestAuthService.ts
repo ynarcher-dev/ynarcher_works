@@ -2,6 +2,7 @@ import { anonHeaders, functionsBase } from '@/lib/supabase'
 import {
   useGuestStore,
   type GuestContextChoice,
+  type GuestEntityKey,
   type GuestPersona,
   type GuestProgram,
   type GuestUser,
@@ -72,7 +73,10 @@ export interface GuestMe {
     status: string | null
     start_date: string | null
     end_date: string | null
-    host_organization: string | null
+    /** 조합에는 주관 기관이 없다 — 그 원장에서는 이 칸 자체가 응답에 서지 않는다. */
+    host_organization?: string | null
+    /** 이 맥락이 무엇인가(사업/조합). 사이드바·화면 이름이 이 값으로 갈린다. */
+    entity_key?: GuestEntityKey | null
   }
   /** 이 맥락의 자격 — startups(참여 기업) | networks(참여 전문가). 2026-09-05 역할 배열을 대체한다. */
   participation: { persona: GuestPersona | null; joined_at: string | null }
@@ -95,6 +99,7 @@ function applySession(data: SessionResponse): void {
           id: ctx.program_id,
           title: ctx.title,
           code: ctx.code,
+          entityKey: (ctx.entity_key as GuestEntityKey) ?? null,
           participantId: ctx.participant_id,
           persona: (ctx.persona as GuestPersona | null) ?? null,
         }
@@ -126,7 +131,7 @@ function readLanding(data: LoginResponse): GuestLoginResult {
     return { kind: 'choose', selectTicket: data.selectTicket, choices: data.choices }
   }
   if (data.accessible === false) {
-    return { kind: 'none', message: data.message ?? '현재 접근 가능한 사업이 없습니다.' }
+    return { kind: 'none', message: data.message ?? '현재 접근 가능한 곳이 없습니다.' }
   }
   if (!data.accessToken || !data.user) throw new Error('로그인에 실패했습니다.')
   applySession(data as SessionResponse)
@@ -210,7 +215,7 @@ export const guestAuth = {
       token,
     )
     if (!ok || !data.accessToken) {
-      throw new Error(data?.message ?? '해당 사업으로 들어갈 수 없습니다.')
+      throw new Error(data?.message ?? '그곳으로 들어갈 수 없습니다.')
     }
     applySession(data)
   },
@@ -242,6 +247,7 @@ export const guestAuth = {
         id: data.program.id,
         title: data.program.title,
         code: data.program.code,
+        entityKey: data.program.entity_key ?? null,
         participantId: data.currentParticipantId ?? null,
       },
     )

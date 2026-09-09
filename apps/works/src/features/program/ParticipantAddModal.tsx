@@ -10,7 +10,7 @@ import { ParticipantRemoveConfirm } from '@/features/program/ParticipantRemoveCo
 import { ParticipantTransferPanes } from '@/features/program/ParticipantTransferPanes'
 import { useParticipantTransfer } from '@/features/program/participantTransfer'
 import { PARTICIPANT_PERSONAS, type MasterTable } from '@/features/program/participantPersona'
-import { useProgramWorkspace } from '@/features/program/workspace'
+import { useGuestHost } from '@/features/guest/host'
 
 /**
  * 계정 생성 — **참가자 목록에 담긴 대상 중 누가 로그인하는가**를 좌우 두 목록으로 정한다.
@@ -48,7 +48,7 @@ export function ParticipantAddModal({
   master: MasterTable
 }) {
   const toast = useToast()
-  const config = useProgramWorkspace()
+  const config = useGuestHost()
   const spec = PARTICIPANT_PERSONAS[master]
   const [search, setSearch] = useState('')
   const [confirming, setConfirming] = useState(false)

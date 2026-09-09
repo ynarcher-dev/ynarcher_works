@@ -1,12 +1,11 @@
 import { Button, Modal, Tabs } from '@ynarcher/ui'
 import { useState } from 'react'
-import type { Program } from '@/features/program/hooks'
+import { useGuestHost, type GuestHostEntity } from '@/features/guest/host'
 import { GuestAccountsPanel } from '@/features/program/detail/GuestAccountsPanel'
 import { ProgramAnnouncementsPanel } from '@/features/program/detail/ProgramAnnouncementsPanel'
 import { ProgramIntroPanel } from '@/features/program/detail/ProgramIntroPanel'
 import { ProgramQnaPanel } from '@/features/program/detail/ProgramQnaPanel'
 import type { MasterTable } from '@/features/program/participantPersona'
-import { useProgramWorkspace } from '@/features/program/workspace'
 
 /** 버튼이 부르는 이름. 밖에서 부르는 이름이 `와이앤아처 GUEST`로 되돌아왔다(2026-09-09). */
 export const GUEST_SETTINGS_LABEL = '와이앤아처 GUEST 설정'
@@ -36,14 +35,14 @@ type GuestTab = 'intro' | 'announcements' | 'qna' | 'accounts'
  * 두면 정보 카드의 액션인지 탭 줄의 것인지 자리가 답하지 못한다.
  */
 export function GuestSettingsButton({
-  program,
+  host,
   personas,
 }: {
-  program: Program
+  host: GuestHostEntity
   /** 이 워크스페이스가 쓰는 자격. 창구의 하위 탭과 **같은 한 벌**이다. */
   personas: readonly MasterTable[]
 }) {
-  const config = useProgramWorkspace()
+  const config = useGuestHost()
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<GuestTab>('intro')
 
@@ -85,10 +84,10 @@ export function GuestSettingsButton({
         }
       >
         <Tabs items={items} value={tab} onChange={(key) => setTab(key as GuestTab)} />
-        {tab === 'intro' && <ProgramIntroPanel programId={program.id} />}
-        {tab === 'announcements' && <ProgramAnnouncementsPanel programId={program.id} />}
-        {tab === 'qna' && <ProgramQnaPanel programId={program.id} />}
-        {tab === 'accounts' && <GuestAccountsPanel program={program} personas={personas} />}
+        {tab === 'intro' && <ProgramIntroPanel programId={host.id} />}
+        {tab === 'announcements' && <ProgramAnnouncementsPanel programId={host.id} />}
+        {tab === 'qna' && <ProgramQnaPanel programId={host.id} />}
+        {tab === 'accounts' && <GuestAccountsPanel host={host} personas={personas} />}
       </Modal>
     </>
   )

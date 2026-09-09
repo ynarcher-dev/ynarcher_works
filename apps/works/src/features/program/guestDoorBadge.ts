@@ -1,8 +1,17 @@
 import type { BadgeTone } from '@ynarcher/ui'
 import type { ParticipantLoginStatus } from '@/features/program/participantHooks'
 
-/** 게스트가 진입할 수 없는 사업 상태. 이때 열린 문은 화면에서 '닫힘'으로 읽힌다. */
-const DEAD_STATUSES = ['FINISHED', 'CANCELLED']
+/**
+ * 게스트가 진입할 수 없는 상태. 이때 열린 문은 화면에서 '닫힘'으로 읽힌다.
+ *
+ * 사업(종료·취소)과 조합(해산)의 값을 **한 목록에 담아도 섞이지 않는다** — 두 enum이
+ * 값을 하나도 공유하지 않으므로, 어느 원장의 행인지 몰라도 판정이 갈리지 않는다.
+ * 조합의 청산 중(LIQUIDATING)은 여기 들지 않는다: 그 구간에도 회수·정산 안내가 오간다.
+ *
+ * 값이 겹치는 원장이 들어오는 날에는 이 목록을 원장별로 갈라야 한다. 서버는 이미 그렇게
+ * 되어 있다(app.guest_program_ids가 원장마다 조건을 따로 적는다).
+ */
+const DEAD_STATUSES = ['FINISHED', 'CANCELLED', 'CLOSED']
 
 export interface DoorBadge {
   label: string
@@ -13,7 +22,7 @@ export interface GuestDoorInput {
   loginStatus: ParticipantLoginStatus
   /** 원장 대상이 붙어 있는가. 내부 임직원 참가자는 원장이 없어 로그인이라는 개념이 없다. */
   hasTarget: boolean
-  /** 그 사업의 진행 상태. 모르면 null이며 그때는 사업종료 판정만 빠진다. */
+  /** 그 사업·조합의 진행 상태. 모르면 null이며 그때는 종료 판정만 빠진다. */
   programStatus: string | null
   /** 그 사업 게스트의 접근 종료. 기간은 줄이 아니라 사업이 갖는다(3_9_1 §8). */
   accessEndsAt: string | null
@@ -45,7 +54,7 @@ export function guestDoorBadge({
   }
   const opened = loginStatus === 'INVITED' || loginStatus === 'ACTIVE'
   if (programStatus && DEAD_STATUSES.includes(programStatus) && opened) {
-    return { label: '사업종료', tone: 'neutral' }
+    return { label: '종료', tone: 'neutral' }
   }
   if (loginStatus === 'BLOCKED') return { label: '차단', tone: 'danger' }
   if (opened && accessEndsAt && new Date(accessEndsAt).getTime() <= Date.now()) {

@@ -167,6 +167,16 @@ export const SENSITIVE_CONTENT_GROUPS: readonly SensitiveContentGroup[] = [
         fields: PERSON,
         hint: COMPANY_HINT,
       },
+      {
+        // 조합의 GUEST 명부(2026-09-09). 포트폴리오 카드와 키를 나누는 이유는 가리는 대상이
+        // 달라서다 — 저쪽은 기업의 대표 연락처이고, 이쪽은 **문을 여는 사람**의 성명·이메일·
+        // 연락처다(한 회사에 담당자가 여럿이면 다른 값이다). 같은 키로 묶으면 포트폴리오 표를
+        // 열어 두려고 켠 스위치가 계정 화면까지 함께 연다.
+        key: participantContentKey('fund'),
+        label: '조합 GUEST 계정(포트폴리오사 담당자)',
+        fields: PERSON,
+        hint: '담당자 성명 · 이메일 · 연락처',
+      },
     ],
   },
 ]
