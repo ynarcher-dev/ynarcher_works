@@ -100,7 +100,9 @@ export function AiSourcePanes({
   onMoveAll: (to: 'read' | 'skip') => void
 }) {
   return (
-    <div className="space-y-2">
+    // `min-w-0`이 없으면 이 덩어리가 격자 칸의 최소 폭을 자기 내용으로 밀어 올려, 옆 기둥이
+    // 그만큼 좁아진다(칸의 기본 최소 폭이 내용이다). 줄어드는 일은 파일 이름의 말줄임이 받는다.
+    <div className="min-w-0 space-y-2">
       <Card
         title="읽을 자료"
         count={read.length}

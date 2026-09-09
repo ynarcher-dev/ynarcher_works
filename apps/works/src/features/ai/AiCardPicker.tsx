@@ -16,8 +16,12 @@ import type { AiCardGroupMeta, AiCardMeta } from '@/features/ai/aiCatalog'
  * 묶음을 알아야 해서가 아니다. 묶음 이름을 누르면 그 묶음이 통째로 켜지고 꺼진다.
  *
  * **묶음이 열이고 그 안의 카드가 행이다** — 격자 시절 열 머리의 배치를 그대로 물려받는다.
- * 오른쪽 기둥이 넓으므로(창 폭의 58%) 묶음 넷이 한 줄에 서고, 같은 묶음의 카드는 세로로 쌓여
- * 눈이 덩이를 한 번에 잡는다. 좁은 화면에서는 두 열, 더 좁으면 한 열로 접힌다.
+ * 같은 묶음의 카드는 세로로 쌓여 눈이 덩이를 한 번에 잡는다.
+ *
+ * **몇 열로 설지는 화면 폭이 아니라 이 칸의 폭이 정한다**(2026-09-09 수정). 종전에는 `xl:`
+ * 같은 뷰포트 기준으로 열 수를 못 박았는데, 그 기준은 **창 안에서 이 칸이 실제로 얼마나
+ * 넓은지를 모른다** — 화면이 넓어도 이 기둥은 좁을 수 있고, 그때 넷으로 갈린 칸에 이름이
+ * 겹쳐 섰다. 지금은 한 열의 최소 폭만 정하고 몇 열이 될지는 브라우저가 남는 폭으로 정한다.
  *
  * **아무것도 켜지지 않은 채 연다**(2026-09-06 사용자 지정 유지). 창을 열자마자 결정이 내려져
  * 있으면 실행이 "고른 것을 실행한다"가 아니라 "정해진 것을 승인한다"가 된다.
@@ -61,7 +65,7 @@ export function AiCardPicker<K extends string>({
         </button>
       }
     >
-      <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-x-5 gap-y-3">
         {groups.map((g) => {
           const members = cards.filter((c) => c.group === g.key)
           if (members.length === 0) return null
@@ -87,7 +91,9 @@ export function AiCardPicker<K extends string>({
                     disabled={disabled}
                     onChange={() => onToggle(c.key)}
                     label={
-                      <span className="inline-flex items-center gap-1.5">
+                      // 이름과 배지가 한 줄에 서되, 좁아지면 배지가 다음 줄로 접힌다 —
+                      // 겹쳐 서는 것보다 낫다.
+                      <span className="flex flex-wrap items-center gap-x-1.5">
                         <span className={cardText.value}>{c.label}</span>
                         {c.filled && (
                           <Badge
