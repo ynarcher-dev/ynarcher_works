@@ -32,6 +32,14 @@ export interface RosterRow {
   contactName: string | null
   email: string | null
   phone: string | null
+  /**
+   * 가리키는 원장 행이 내려갔는가(비활성화·병합). **줄을 빼지 않고 표시만 한다** — 근거는
+   * `LedgerFacts.retired` 주석에 있다.
+   *
+   * 원장을 읽지 못한 경우(권한·장애)는 여기 오지 않는다. 그때는 합성이 통째로 실패해 표가
+   * 빈 화면 대신 오류를 말한다 — 못 읽은 것을 '내려갔다'로 적으면 화면이 거짓을 말한다.
+   */
+  retired: boolean
   createdAt: string
 }
 
@@ -82,6 +90,7 @@ export function useProgramRoster(programId: string | undefined) {
           contactName: master?.loginName ?? null,
           email: master?.email ?? null,
           phone: master?.phone ?? null,
+          retired: master?.retired ?? false,
           createdAt: r.created_at,
         }
       })

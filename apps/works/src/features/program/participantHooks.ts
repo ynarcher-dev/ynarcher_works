@@ -118,10 +118,31 @@ function participantCols(table: string): string {
 }
 
 /**
- * 명부 행이 가리키는 원장 행을 자격별로 한 번씩 읽어 `자격:id → 사실`로 세운다.
+ * `in()` 한 번에 싣는 id 수. 넘으면 URL 길이 한계에 걸려 조회 자체가 거절된다
+ * (NETWORKS 임포터가 쓰는 값과 같다 — 같은 이유로 같은 수여야 한다).
+ */
+const IN_CHUNK = 200
+
+function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = []
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size))
+  return out
+}
+
+/**
+ * 명부 행이 가리키는 원장 행을 자격별로 읽어 `자격:id → 사실`로 세운다.
  *
  * 자격 수만큼 병렬 조회가 돌고, 자격이 늘어도 이 함수는 그대로다 — 어느 표를 어떤 컬럼으로
  * 읽는지는 자격 설정이 답한다.
+ *
+ * **조회 실패를 삼키지 않는다**(2026-09-09). 종전에는 `error`를 버려서 원장 SELECT가 RLS에
+ * 막히거나 네트워크가 끊겼을 때 그 줄이 조용히 `미지정`이 됐다 — 명단 조회는 에러를 던지는데
+ * 원장 조회만 삼키는 비대칭이었고, **원장 행이 지워진 것과 읽을 권한이 없는 것이 화면에서
+ * 같아졌다.** M&A에서 특히 위험하다: `ma_sellers`는 인격 자체가 기밀이라, 못 읽은 이유를
+ * 화면이 답하지 못하면 담당자가 "이 셀러는 삭제됐다"로 읽는다.
+ *
+ * **id는 나눠 싣는다.** 명단은 수백 건이 될 수 있고, `in()` 한 번에 전부 실으면 URL 길이
+ * 한계에 걸려 목록 전체가 빈 화면이 된다.
  */
 export async function loadLedgerFacts(
   rows: { master_table: string | null; master_id: string | null }[],
@@ -136,12 +157,18 @@ export async function loadLedgerFacts(
 
   const facts = new Map<string, LedgerFacts>()
   await Promise.all(
-    [...byPersona].map(async ([key, ids]) => {
+    [...byPersona].flatMap(([key, ids]) => {
       const { ledger } = PARTICIPANT_PERSONAS[key]
-      const { data } = await supabase.from(ledger.table).select(ledger.columns).in('id', ids)
-      for (const raw of (data ?? []) as unknown as Record<string, unknown>[]) {
-        facts.set(`${key}:${String(raw.id)}`, ledger.map(raw))
-      }
+      return chunk([...new Set(ids)], IN_CHUNK).map(async (batch) => {
+        const { data, error } = await supabase
+          .from(ledger.table)
+          .select(ledger.columns)
+          .in('id', batch)
+        if (error) throw error
+        for (const raw of (data ?? []) as unknown as Record<string, unknown>[]) {
+          facts.set(`${key}:${String(raw.id)}`, ledger.map(raw))
+        }
+      })
     }),
   )
   return facts
@@ -261,6 +288,9 @@ export async function fetchLedgerCandidates(
     .order('name', { ascending: true })
     .limit(50)
   if (ledger.narrow) query = query.eq(ledger.narrow.column, ledger.narrow.value)
+  // 이미 정본으로 흡수된 행은 고를 수 없다 — 담으면 그 줄이 정본이 아닌 곳을 가리키고,
+  // 정본을 고쳐도 명단은 옛 값을 계속 든다. 컬럼이 없는 원장에는 이 조건이 서지 않는다.
+  if (ledger.mergedColumn) query = query.is(ledger.mergedColumn, null)
   const kw = sanitizeOrValue(search.trim())
   if (kw) query = query.or(ledger.searchColumns.map((c) => `${c}.ilike.%${kw}%`).join(','))
 

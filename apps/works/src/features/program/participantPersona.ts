@@ -44,6 +44,19 @@ export interface LedgerFacts {
   phone: string | null
   /** 원장이 이 대상을 무엇으로 분류하는가. 분류축이 없는 원장은 null. */
   category: string | null
+  /**
+   * **원장에서 내려간 행인가**(비활성화 또는 중복 병합, 2026-09-09).
+   *
+   * 명단에서 그 줄을 빼지 않고 이 값으로 표시만 한다(사용자 확정). 빼면 원장을 정리하는
+   * 행동이 **남의 워크스페이스 사업 기록을 조용히 바꾸고**, 참가기업 10곳으로 운영한 사업이
+   * 폐업 2곳을 정리한 뒤 8곳으로 보인다 — 참가 사실은 업무 기록이라 원장 정리로 건수가
+   * 달라져서는 안 된다. 진행 중 사업에서는 오히려 "이 대상은 원장에서 내려갔다"가 담당자에게
+   * 필요한 정보다(왜 연락이 닿지 않는지의 답).
+   *
+   * 무엇이 '내려감'인가는 원장마다 다르므로 각 자격의 `map`이 답한다 — NETWORKS는 통합 원장에
+   * 병합(`merged_into_id`) 축이 하나 더 있고, 나머지 셋은 `deleted_at` 하나다.
+   */
+  retired: boolean
 }
 
 export interface ParticipantPersona {
@@ -86,6 +99,14 @@ export interface ParticipantPersona {
     narrow?: { column: string; value: string }
     /** 후보 검색이 `or`로 묶는 컬럼들. */
     searchColumns: readonly string[]
+    /**
+     * 중복을 흡수당한 행을 가리키는 컬럼. **가진 원장에만** 적는다(현재 NETWORKS 하나).
+     *
+     * 후보 검색이 이 값이 찬 행을 뺀다 — 이미 합쳐서 죽은 행을 명단에 담으면 그 줄은 정본이
+     * 아닌 곳을 가리키고, 정본을 고쳐도 명단은 옛 값을 계속 든다. 없는 원장에 `.is()`를 걸면
+     * 컬럼이 없어 조회 전체가 거절되므로, 있는지 여부를 이 칸이 답한다.
+     */
+    mergedColumn?: string
     map: (row: Record<string, unknown>) => LedgerFacts
       /**
        * 계정 명의를 **원장에 되쓸 때**의 칸. 읽는 것은 `map`이 답하고 쓰는 것은 여기가 답한다.
@@ -142,7 +163,7 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
     detailPath: (id) => `/startup/${id}`,
     ledger: {
       table: 'startups',
-      columns: 'id, name, representative, email, phone, management_status',
+      columns: 'id, name, representative, email, phone, management_status, deleted_at',
       searchColumns: ['name', 'representative'],
       map: (row) => ({
         name: String(row.name ?? ''),
@@ -151,6 +172,7 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
         email: text(row, 'email'),
         phone: text(row, 'phone'),
         category: text(row, 'management_status'),
+        retired: Boolean(row.deleted_at),
       }),
       person: { name: 'representative', email: 'email', phone: 'phone' },
     },
@@ -177,7 +199,7 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
       table: 'ma_sellers',
       // 연락처는 20260908220000이 더했다 — 포털 계정의 초기 비밀번호가 되는 값이라
       // 계정이 아니라 원장이 갖는다.
-      columns: 'id, name, contact_name, contact_email, phone',
+      columns: 'id, name, contact_name, contact_email, phone, deleted_at',
       searchColumns: ['name', 'contact_name'],
       map: (row) => ({
         name: String(row.name ?? ''),
@@ -186,6 +208,7 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
         email: text(row, 'contact_email'),
         phone: text(row, 'phone'),
         category: null,
+        retired: Boolean(row.deleted_at),
       }),
       person: { name: 'contact_name', email: 'contact_email', phone: 'phone' },
     },
@@ -202,7 +225,7 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
     detailPath: (id) => `/mna/buyers/${id}`,
     ledger: {
       table: 'ma_buyers',
-      columns: 'id, name, contact_name, contact_email, phone',
+      columns: 'id, name, contact_name, contact_email, phone, deleted_at',
       searchColumns: ['name', 'contact_name'],
       map: (row) => ({
         name: String(row.name ?? ''),
@@ -211,6 +234,7 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
         email: text(row, 'contact_email'),
         phone: text(row, 'phone'),
         category: null,
+        retired: Boolean(row.deleted_at),
       }),
       person: { name: 'contact_name', email: 'contact_email', phone: 'phone' },
     },
@@ -227,11 +251,13 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
     detailPath: (id) => `/networks/${id}`,
     ledger: {
       table: 'networks',
-      columns: 'id, name, affiliation, email, phone',
+      columns: 'id, name, affiliation, email, phone, deleted_at, merged_into_id',
       // 통합 원장이라 표 하나에 11종이 함께 산다. 전문가 구분으로 좁히지 않으면 투자사·기관까지
       // 후보에 서고, 명부에 담기는 대상이 결정 없이 넓어진다.
       narrow: { column: 'category', value: 'experts' },
       searchColumns: ['name', 'affiliation'],
+      // 통합 원장은 중복 병합(정본으로 흡수)을 운용하는 유일한 원장이다.
+      mergedColumn: 'merged_into_id',
       map: (row) => ({
         name: String(row.name ?? ''),
         loginName: text(row, 'name'),
@@ -239,6 +265,8 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
         email: text(row, 'email'),
         phone: text(row, 'phone'),
         category: null,
+        // 병합된 행은 정본으로 흡수돼 더는 스스로를 답하지 않는다 — 비활성과 같은 무게로 본다.
+        retired: Boolean(row.deleted_at || row.merged_into_id),
       }),
       person: { name: 'name', email: 'email', phone: 'phone' },
     },

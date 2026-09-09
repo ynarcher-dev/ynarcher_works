@@ -1,4 +1,4 @@
-import type { Column } from '@ynarcher/ui'
+import { cn, type Column } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { maskEmail, maskName, maskPhone } from '@/lib/mask'
@@ -73,7 +73,22 @@ export function rosterColumns(
       header: spec.nameHeader,
       type: 'name',
       // 이름은 평문이다 — 이 표에서 이름은 값이지 길이 아니다(위 주석).
-      render: (r) => <span className="font-medium text-gray-900">{r.name}</span>,
+      //
+      // **원장에서 내려간 줄은 빠지지 않고 물러선다**(2026-09-09 사용자 확정). 빼면 원장을
+      // 정리하는 행동이 남의 사업 기록을 조용히 바꾸고, 참가기업 10곳으로 운영한 사업이
+      // 폐업 2곳을 정리한 뒤 8곳이 된다 — 참가 사실은 업무 기록이라 건수가 달라져서는 안 된다.
+      //
+      // 배지가 아니라 회색 글자인 이유는 이것이 **이 줄이 무엇인가**가 아니라 **가리키는 곳이
+      // 어떤 상태인가**여서다. 배지로 세우면 자격 배지·상태 배지와 같은 무게로 서서, 정작
+      // 이 표가 답할 물음(누가 참가하는가)보다 먼저 읽힌다.
+      render: (r) => (
+        <span className="flex min-w-0 items-baseline gap-1.5">
+          <span className={cn('truncate font-medium', r.retired ? 'text-gray-500' : 'text-gray-900')}>
+            {r.name}
+          </span>
+          {r.retired && <span className="shrink-0 text-body-sm text-gray-500">원장 비활성</span>}
+        </span>
+      ),
     },
     {
       key: 'contactName',
