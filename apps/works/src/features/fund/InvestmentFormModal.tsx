@@ -73,8 +73,6 @@ function shortDate(v: string | null): string {
  * 딜메이커를 담당자로 지정한다. 전환은 이 흐름(자사 투자 집행)에서만 서버가 허용한다(20260724190000).
  * 딜메이커가 지정되면 그 사람과 관리자만 이후 이 투자기업 정보를 수정·삭제할 수 있다.
  */
-
-
 export function InvestmentFormModal({
   fundId,
   fundName,
@@ -121,9 +119,29 @@ export function InvestmentFormModal({
   // 선택된 스타트업의 기존 담당자(투자기업이면 존재). 딜메이커 프리필에 쓴다.
   const { data: existingManagers } = useStartupManagers(startupId || undefined)
 
+  /**
+   * 이 폼이 지금 무엇을 편집하고 있는가 — 열림 여부 + 대상 id 하나. **초기화의 방아쇠는 이것뿐이다.**
+   *
+   * 종전에는 `editing` 객체 자체가 방아쇠였는데, 그 객체는 목록 질의(`useInvestments`)가 다시
+   * 돌 때마다 새로 만들어진다(react-query는 창을 다시 포커스하면 배경에서 다시 가져온다).
+   * 그래서 폼을 열어 둔 채 잠깐 다른 창을 봤다 오면 **같은 레코드인데도 초기화가 다시 돌아**
+   * 딜메이커·지원 담당자가 빈 값으로 되돌아갔고(그 둘은 여기서 '' 로 비운 뒤 담당자 조회가
+   * 채우는데, 그 조회 결과는 그대로라 다시 채우지 않는다), 그 상태로 저장하면 담당자가 통째로
+   * 바뀌었다. 편집 중인 초안은 배경 재조회가 건드릴 수 없어야 한다.
+   */
+  const formSession = open ? (editing?.id ?? 'new') : null
+  // 초기화가 읽는 값은 최신 레코드여야 하지만, **읽는다고 다시 도는 것은 아니다**.
+  const editingRef = useRef(editing)
+  editingRef.current = editing
+  // 담당자 프리필을 이미 적용한 대상(세션 + 피투자사). 대상마다 한 번만 적용해야 사용자가 지운
+  // 담당자를 배경 재조회가 되살리지 않고, 신규 등록에서 기업을 바꾸면 그 기업의 담당자로 다시 찬다.
+  const managerFilledFor = useRef<string | null>(null)
+
   // 모달을 열 때(신규/수정) 현재 대상 값으로 초기화한다.
   useEffect(() => {
-    if (!open) return
+    if (!formSession) return
+    const editing = editingRef.current
+    managerFilledFor.current = null
     setStartupId(editing?.startup_id ?? '')
     setKeyword('')
     setInvestedAt(editing?.invested_at?.slice(0, 10) ?? '')
@@ -139,16 +157,19 @@ export function InvestmentFormModal({
     setPoolStatus(editing?.startup_pool_status ?? '')
     setClosedOn(editing?.startup_closed_on?.slice(0, 10) ?? '')
     setPurposeIds(editing?.purpose_ids ?? [])
-  }, [open, editing])
+  }, [formSession])
 
   // 기존 담당자가 있으면(=이미 투자기업) 딜메이커/지원 담당자를 그 값으로 채운다.
   // 담당자가 없는(미투자) 스타트업이면 건드리지 않아 사용자의 선택을 유지한다.
   useEffect(() => {
+    const fillKey = formSession && startupId ? `${formSession}:${startupId}` : null
+    if (!fillKey || managerFilledFor.current === fillKey) return
     if (!existingManagers || existingManagers.length === 0) return
+    managerFilledFor.current = fillKey
     const lead = existingManagers.find((m) => m.is_lead)
     setLeadId(lead?.user_id ?? '')
     setSupportIds(existingManagers.filter((m) => !m.is_lead).map((m) => m.user_id))
-  }, [existingManagers])
+  }, [formSession, startupId, existingManagers])
 
   // 선택된 피투자사의 회사개요(상속 표시용). 목록 로딩 전이거나 비활성 대상이면 수정 데이터로 폴백한다.
   const selected: StartupOption | null = useMemo(() => {
@@ -234,7 +255,7 @@ export function InvestmentFormModal({
       toast.show('집행액을 입력하세요.', 'warning')
       return
     }
-    // 신규 등록은 전환과 동시에 딜메이커 지정이 필수(서버 RLS도 리드 필수). 수정은 강제하지 않는다.
+    // 신규 등록은 전환과 동시에 딜메이커 지정이 필수(서버 RLS도 리드 필수).
     if (!editing && !leadId) {
       toast.show('딜메이커(리드 담당자)를 지정하세요.', 'warning')
       return
@@ -254,11 +275,19 @@ export function InvestmentFormModal({
     const stageChanged = stage !== ((editing?.stage ?? '') || null)
     // 폐업일자는 관리현황이 폐업일 때만 의미가 있다(그 외 상태로 바뀌면 서버가 NULL 로 정리).
     const effectiveClosedOn = poolStatus === CLOSED_POOL_STATUS ? closedOn || null : null
+    // 수정에서도 담당·현황을 건드렸다면 딜메이커(정)가 있어야 한다 — 그 값들을 저장하는 유일한
+    // 경로가 promote RPC이고, 서버가 리드를 필수로 요구한다(`lead_required`). 종전에는 리드가
+    // 비어 있으면 이 호출을 **조용히 건너뛰어**, 관리현황을 바꾸고 '수정'을 눌러도 성공 메시지만
+    // 뜨고 값은 그대로였다. 저장되지 않는다는 사실은 저장 전에 말해야 한다.
+    if (editing && !leadId && (ownershipChanged || stageChanged)) {
+      toast.show('딜메이커(정)를 지정해야 담당·현황이 저장됩니다.', 'warning')
+      return
+    }
     try {
       if (editing) {
         await update.mutateAsync({ id: editing.id, values })
-        // 딜메이커가 지정돼 있고 담당자·현황·단계가 바뀐 경우에만 승격 RPC로 동기화(투자 필드만 고쳤으면 건너뛴다).
-        if (leadId && (ownershipChanged || stageChanged)) {
+        // 담당자·현황·단계가 바뀐 경우에만 승격 RPC로 동기화(투자 필드만 고쳤으면 건너뛴다).
+        if (ownershipChanged || stageChanged) {
           await promote.mutateAsync({
             startupId,
             leadUserId: leadId,

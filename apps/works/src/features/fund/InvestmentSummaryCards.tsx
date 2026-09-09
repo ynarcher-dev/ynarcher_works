@@ -1,9 +1,13 @@
 import { Badge, Button, Card, EntityHeaderSection, InfoField, InfoGrid, InfoRows } from '@ynarcher/ui'
+import { Fragment } from 'react'
 import { labeledPurposes } from '@/features/fund/fundPurposeLabel'
 import { CLOSED_POOL_STATUS } from '@/features/startup/startupClassification'
-import type { FundPurpose, Investment } from '@/features/fund/hooks'
+import type { DealmakerRef, FundPurpose, Investment } from '@/features/fund/hooks'
 
 const Info = InfoField
+
+/** 담당자가 한 명도 없을 때 세우는 빈 줄 — 자리를 감추지 않고 '아직 없다'를 말한다. */
+const EMPTY_LEAD: DealmakerRef = { name: null, email: null, phone: null, is_lead: true }
 
 /** YYYY-MM-DD 앞 10자리. 없으면 '-'. */
 function shortDate(v: string | null): string {
@@ -25,9 +29,9 @@ function num(v: number | null): string {
  *
  * **카드는 하나이고 안에서 구분선이 축을 가른다.** 딜메이커를 옆 카드로 떼면 카드 제목이
  * 답해야 할 것이 '이 집행 건'과 '사람' 둘로 갈려 한 줄짜리 카드가 남고, 아래 기업 카드들과
- * 폭이 어긋난다. 같은 격자에 섞지 않는 이유는 그대로다 — '이메일'이 무엇의 이메일인지 라벨이
- * 스스로 답해야 한다. 이름만 목록과 같은 요약 규격('외 N')이고 이메일·연락처는 딜메이커(리드)
- * 본인 것이다(연락처는 사람 하나에 붙는 값이라 접을 수 없다). 내부 임직원이라 마스킹하지 않는다.
+ * 폭이 어긋난다. 위 격자에 섞지 않는 이유는 그대로다 — '이메일'이 무엇의 이메일인지 라벨이
+ * 스스로 답해야 한다. 담당자는 정·부가 각각 한 줄이며(목록의 '외 N' 요약을 여기서 쓰지 않는
+ * 이유는 연락처가 사람 하나에 붙는 값이어서다), 내부 임직원이라 마스킹하지 않는다.
  */
 export function InvestmentSummaryCards({
   investment,
@@ -91,11 +95,21 @@ export function InvestmentSummaryCards({
         </EntityHeaderSection>
       )}
 
+      {/* 담당자는 한 사람이 한 줄이다 — 정·부가 각각 이름·이메일·연락처를 갖는다(3열 격자라
+          사람 하나가 정확히 한 행을 쓴다). 목록의 '외 N' 요약을 여기 그대로 쓰지 않는 이유는
+          연락처 때문이다: 접힌 이름 옆의 이메일이 누구 것인지 화면이 답하지 못한다.
+          담당자가 없으면 그 사실을 한 줄로 말한다(빈 상태는 접지 않는다). */}
       <EntityHeaderSection label="딜메이커">
+        {/* 사람마다 칸 셋이라 3열 격자에서 한 사람이 정확히 한 행을 쓴다 — 격자를 사람 수만큼
+            나누지 않는 이유는 열이다: 한 격자 안에 있어야 이메일·연락처가 세로로 맞는다. */}
         <InfoGrid>
-          <Info label="이름" value={inv.dealmaker_name || '-'} />
-          <Info label="이메일" value={inv.dealmaker_email || '-'} />
-          <Info label="연락처" value={inv.dealmaker_phone || '-'} />
+          {(inv.dealmakers.length > 0 ? inv.dealmakers : [EMPTY_LEAD]).map((m, i) => (
+            <Fragment key={`${m.name ?? ''}-${i}`}>
+              <Info label={m.is_lead ? '딜메이커(정)' : '딜메이커(부)'} value={m.name} />
+              <Info label="이메일" value={m.email} />
+              <Info label="연락처" value={m.phone} />
+            </Fragment>
+          ))}
         </InfoGrid>
       </EntityHeaderSection>
     </Card>

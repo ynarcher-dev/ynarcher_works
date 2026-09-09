@@ -526,6 +526,14 @@ export function useCapitalCalls(fundId: string | undefined) {
   })
 }
 
+/** 투자기업 담당자 한 사람(정=리드 / 부=지원). 상세의 딜메이커 줄이 그대로 이 모양이다. */
+export interface DealmakerRef {
+  name: string | null
+  email: string | null
+  phone: string | null
+  is_lead: boolean
+}
+
 export interface Investment {
   id: string
   startup_id: string | null
@@ -548,12 +556,13 @@ export interface Investment {
   /** 딜메이커(전권 담당자) = startup_managers 리드(is_lead). networks 읽기 권한 없으면 RLS로 null. */
   dealmaker_name: string | null
   /**
-   * 딜메이커 **한 사람**(리드)의 연락 축. 지원 담당자의 것은 담지 않는다 — 연락처는 사람 하나에
-   * 붙는 값이라 `dealmaker_name`처럼 '외 N'으로 접을 수 없고, 접으면 누구의 번호인지 화면이
-   * 답하지 못한다. 내부 임직원이라 마스킹하지 않는다(sensitiveContents 주석, 2026-07-29 확정).
+   * 담당자 전원(정·부)의 연락 축. 리드가 먼저 선다.
+   *
+   * 목록은 `dealmaker_name`의 요약('외 N')으로 충분하지만 상세는 사람마다 한 줄이 필요하다 —
+   * 연락처는 사람 하나에 붙는 값이라 접을 수 없고, 접으면 누구의 번호인지 화면이 답하지 못한다.
+   * 내부 임직원이라 마스킹하지 않는다(sensitiveContents 주석, 2026-07-29 확정).
    */
-  dealmaker_email: string | null
-  dealmaker_phone: string | null
+  dealmakers: DealmakerRef[]
   amount: number
   invested_at: string | null
   stage: string | null
@@ -585,19 +594,12 @@ function readIndustryList(industries: unknown, legacy: unknown): string[] {
   return one ? [one] : []
 }
 
-/** startup_managers 조인 행에서 읽는 사람 한 명. */
-interface ManagerPerson {
-  name: string | null
-  email: string | null
-  phone: string | null
-}
-
 /**
  * startup_managers 행을 '리드 먼저' 순서로 세운다. 요약(`외 N`)과 연락 축이 **같은 순서 하나**를
  * 따라야 한다 — 순서를 각자 정하면 리드가 지정되지 않은 기업에서 이름과 연락처가 서로 다른
  * 사람을 가리킬 수 있다.
  */
-function orderedManagers(managers: unknown): ManagerPerson[] {
+function orderedManagers(managers: unknown): DealmakerRef[] {
   if (!Array.isArray(managers)) return []
   const rows = managers.filter((m): m is Record<string, unknown> => Boolean(m) && typeof m === 'object')
   const lead = rows.find((m) => m.is_lead === true)
@@ -608,6 +610,7 @@ function orderedManagers(managers: unknown): ManagerPerson[] {
       name: (u?.name as string) ?? null,
       email: (u?.email as string) ?? null,
       phone: (u?.phone as string) ?? null,
+      is_lead: m.is_lead === true,
     }
   })
 }
@@ -645,8 +648,8 @@ export function useInvestments(fundId: string | undefined) {
       return ((data ?? []) as unknown[]).map((row) => {
         const r = row as Record<string, unknown> & { startup?: Record<string, unknown> | null }
         const s = r.startup ?? null
-        // 딜메이커 본인 = '리드 먼저' 순서의 첫 사람. 요약과 같은 목록을 한 번만 세운다.
-        const dealmaker = orderedManagers(s?.managers)[0] ?? null
+        // 담당자 전원(리드 먼저). 요약도 상세 줄도 이 목록 하나에서 나온다.
+        const dealmakers = orderedManagers(s?.managers)
         return {
           id: r.id as string,
           startup_id: (r.startup_id as string) ?? null,
@@ -660,9 +663,8 @@ export function useInvestments(fundId: string | undefined) {
           startup_management_status: (s?.management_status as string) ?? null,
           startup_pool_status: (s?.pool_status as string) ?? null,
           startup_closed_on: (s?.closed_on as string) ?? null,
-          dealmaker_name: readLeadManager(s?.managers),
-          dealmaker_email: dealmaker?.email ?? null,
-          dealmaker_phone: dealmaker?.phone ?? null,
+          dealmaker_name: memberSummary(dealmakers.map((m) => m.name)),
+          dealmakers,
           amount: Number(r.amount),
           invested_at: (r.invested_at as string) ?? null,
           stage: (r.stage as string) ?? null,
