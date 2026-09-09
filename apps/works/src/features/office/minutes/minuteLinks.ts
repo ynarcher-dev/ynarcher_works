@@ -45,6 +45,14 @@ export interface MinuteLinkTargetMeta {
   titleColumn: string
   /** 부가 표기 컬럼(사업코드·소속 등). 없으면 null. */
   codeColumn: string | null
+  /**
+   * 중복 병합 축을 가진 원장인가(2026-09-09). 참이면 후보 검색이 정본으로 흡수된 행을 뺀다.
+   *
+   * **원장마다 다르므로 값으로 든다** — 사업·펀드에는 이 컬럼이 없고, 없는 표에 `.is()`를
+   * 걸면 조회 전체가 거절된다. 빼지 않으면 이미 합쳐서 죽은 행이 회의록 연동 후보에 서고,
+   * 골라 걸면 그 링크는 열 수 없는 행을 가리킨다.
+   */
+  hasMergeAxis?: boolean
   /** 상세 페이지 경로 조립기. */
   toPath: (id: string) => string
 }
@@ -83,6 +91,7 @@ export const MINUTE_LINK_TARGETS: Record<MinuteLinkTargetType, MinuteLinkTargetM
     table: 'startups',
     titleColumn: 'name',
     codeColumn: null,
+    hasMergeAxis: true,
     toPath: (id) => `/startup/${id}`,
   },
   fund: {
@@ -99,6 +108,7 @@ export const MINUTE_LINK_TARGETS: Record<MinuteLinkTargetType, MinuteLinkTargetM
     titleColumn: 'name',
     // 사람·조직 원장이라 부가 표기 자리에는 소속을 넣어 동명이인을 가른다.
     codeColumn: 'affiliation',
+    hasMergeAxis: true,
     toPath: (id) => `/networks/${id}`,
   },
   // M&A BUYER·SELLER — 인수/매각 희망 주체 원장(M&A/PE 소유).
@@ -110,6 +120,7 @@ export const MINUTE_LINK_TARGETS: Record<MinuteLinkTargetType, MinuteLinkTargetM
     table: MA_BUYER.table,
     titleColumn: 'name',
     codeColumn: 'wish',
+    hasMergeAxis: true,
     toPath: (id) => `${MA_BUYER.basePath}/${id}`,
   },
   ma_seller: {
@@ -117,6 +128,7 @@ export const MINUTE_LINK_TARGETS: Record<MinuteLinkTargetType, MinuteLinkTargetM
     table: MA_SELLER.table,
     titleColumn: 'name',
     codeColumn: 'wish',
+    hasMergeAxis: true,
     toPath: (id) => `${MA_SELLER.basePath}/${id}`,
   },
 }

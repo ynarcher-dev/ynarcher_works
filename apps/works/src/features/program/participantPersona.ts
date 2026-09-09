@@ -1,4 +1,5 @@
 import type { BadgeTone } from '@ynarcher/ui'
+import type { LedgerMatchSpec } from '@/features/master/ledgerMatch'
 import { LEDGERS } from '@/features/master/ledgers'
 import {
   MANAGEMENT_STATUS_LABEL,
@@ -54,8 +55,8 @@ export interface LedgerFacts {
    * 달라져서는 안 된다. 진행 중 사업에서는 오히려 "이 대상은 원장에서 내려갔다"가 담당자에게
    * 필요한 정보다(왜 연락이 닿지 않는지의 답).
    *
-   * 무엇이 '내려감'인가는 원장마다 다르므로 각 자격의 `map`이 답한다 — NETWORKS는 통합 원장에
-   * 병합(`merged_into_id`) 축이 하나 더 있고, 나머지 셋은 `deleted_at` 하나다.
+   * 넷 다 비활성(`deleted_at`)과 중복 병합(`merged_into_id`) 둘의 합이며, 그 판정은 원장의
+   * 값이라 `LEDGERS`가 한 번만 적는다.
    */
   retired: boolean
 }
@@ -87,36 +88,16 @@ export interface ParticipantPersona {
    * 갈 곳이 없는 자격은 null을 돌려주고, 그때 이름은 링크가 아니라 글자로 선다.
    */
   detailPath: (id: string) => string | null
-  /** 원장 조회 정의 — 명부 합성과 후보 검색이 같은 한 벌을 쓴다. */
-  ledger: {
-    table: string
-    /** PostgREST select 문자열. `id`를 반드시 포함한다. */
-    columns: string
-    /**
-     * 후보를 좁히는 조건. 통합 원장에서 한 구분만 고를 때 쓴다(NETWORKS는 표가 하나이고
-     * 전문가인지는 행의 `category`가 답한다) — 여기서 좁히지 않으면 명부에 담기는 대상이
-     * 조용히 넓어진다.
-     */
-    narrow?: { column: string; value: string }
+  /**
+   * 원장 조회 정의 — 명부 합성과 후보 검색이 같은 한 벌을 쓴다.
+   *
+   * **표·컬럼·대조 칸·병합 축은 여기서 선언하지 않는다.** 그것은 자격의 값이 아니라 원장의
+   * 값이라 `LEDGERS`가 소유하고, 각 자격은 그것을 펼쳐 담은 뒤 아래 넷만 얹는다 — 같은
+   * 사실을 두 곳에 적으면 원장이 컬럼을 바꾸는 날 한쪽만 고쳐진다.
+   */
+  ledger: LedgerMatchSpec & {
     /** 후보 검색이 `or`로 묶는 컬럼들. */
     searchColumns: readonly string[]
-    /**
-     * 중복을 흡수당한 행을 가리키는 컬럼. **가진 원장에만** 적는다(현재 NETWORKS 하나).
-     *
-     * 후보 검색이 이 값이 찬 행을 뺀다 — 이미 합쳐서 죽은 행을 명단에 담으면 그 줄은 정본이
-     * 아닌 곳을 가리키고, 정본을 고쳐도 명단은 옛 값을 계속 든다. 없는 원장에 `.is()`를 걸면
-     * 컬럼이 없어 조회 전체가 거절되므로, 있는지 여부를 이 칸이 답한다.
-     */
-    mergedColumn?: string
-    /**
-     * 중복 대조가 견주는 세 칸의 **실제 이름**(2026-09-09).
-     *
-     * `map`이 답하지 못하는 이유는 방향이 반대여서다 — 저쪽은 여러 칸을 한 모양으로 읽는
-     * 일이고, 대조는 원장에 `.in()`을 걸어야 하므로 그 값이 실제로 사는 칸 하나를 정확히
-     * 가리켜야 한다(`person`을 쓰지 못하는 것도 같은 이유다. 저쪽 `name`은 대상 이름이
-     * 아니라 로그인 명의라 스타트업에서 `representative`를 가리킨다).
-     */
-    matchColumns: { name: string; email: string; phone: string }
     /**
      * 이 자격으로 원장에 새 행을 만들 때 **반드시 함께 박히는 값**.
      *
@@ -124,15 +105,16 @@ export interface ParticipantPersona {
      * 박지 않으면 그 행이 후보 조회(`narrow`)에 걸리지 않아 **방금 만든 대상을 담을 수 없다.**
      */
     createFixed?: Record<string, unknown>
+    /** 원장 행 하나를 이 자격이 읽는 사실로 옮긴다. */
     map: (row: Record<string, unknown>) => LedgerFacts
-      /**
-       * 계정 명의를 **원장에 되쓸 때**의 칸. 읽는 것은 `map`이 답하고 쓰는 것은 여기가 답한다.
-       *
-       * 두 방향을 한 칸으로 합치지 않는 이유는 읽기가 여러 칸을 한 모양으로 맞추는 일이라
-       * 그 반대가 자동으로 정해지지 않기 때문이다 — 쓰기는 그 값이 실제로 사는 칸 하나를
-       * 정확히 가리켜야 한다(스타트업의 명의는 `representative`이지 `name`이 아니다).
-       */
-      person: { name: string; email: string; phone: string }
+    /**
+     * 계정 명의를 **원장에 되쓸 때**의 칸. 읽는 것은 `map`이 답하고 쓰는 것은 여기가 답한다.
+     *
+     * 두 방향을 한 칸으로 합치지 않는 이유는 읽기가 여러 칸을 한 모양으로 맞추는 일이라
+     * 그 반대가 자동으로 정해지지 않기 때문이다 — 쓰기는 그 값이 실제로 사는 칸 하나를
+     * 정확히 가리켜야 한다(스타트업의 명의는 `representative`이지 `name`이 아니다).
+     */
+    person: { name: string; email: string; phone: string }
   }
   /**
    * 구분 배지 — 명부가 스스로 분류를 만들지 않고 원장의 분류를 그대로 비춘다.
@@ -276,8 +258,6 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
       // 국가는 비운다: 여기서 필수로 받으면 이름 하나만 들고 온 자리에서 등록이 막힌다
       // (목록의 '국가 미확인'으로 채우는 대기열에 든다).
       createFixed: { category: 'experts' },
-      // 통합 원장은 중복 병합(정본으로 흡수)을 운용하는 유일한 원장이다.
-      mergedColumn: 'merged_into_id',
       map: (row) => ({
         name: String(row.name ?? ''),
         loginName: text(row, 'name'),

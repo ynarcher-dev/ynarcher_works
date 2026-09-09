@@ -47,6 +47,9 @@ function useStartupPool(enabled: boolean) {
         .from('startups')
         .select('id, name, representative, email, phone, industries, industry, management_status')
         .is('deleted_at', null)
+        // 정본으로 흡수된 행은 고를 수 없다(2026-09-09) — 고르면 그 연결이 목록에서 사라진
+        // 행을 가리키고, 정본을 고쳐도 이 셀러는 옛 값을 계속 든다.
+        .is('merged_into_id', null)
         .order('name', { ascending: true })
         .limit(500)
       if (error) throw error

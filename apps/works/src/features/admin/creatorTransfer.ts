@@ -15,13 +15,18 @@ export interface CreatorLedger {
   nameColumn: 'name' | 'title'
   /** 사이드바 구획(선택 셀렉트의 optgroup). */
   group: '데이터베이스' | '워크스페이스'
+  /**
+   * 중복 병합 축을 가진 원장인가(2026-09-09). 참이면 정본으로 흡수된 행을 후보에서 뺀다.
+   * 사업·펀드에는 이 컬럼이 없고, 없는 표에 `.is()`를 걸면 조회 전체가 거절된다.
+   */
+  hasMergeAxis?: boolean
 }
 
 export const CREATOR_LEDGERS: CreatorLedger[] = [
-  { table: 'startups', label: '스타트업', nameColumn: 'name', group: '데이터베이스' },
+  { table: 'startups', label: '스타트업', nameColumn: 'name', group: '데이터베이스', hasMergeAxis: true },
   // NETWORKS 원장 11종이 2026-09-04에 하나로 합쳐졌다 — 구분은 그 표의 컬럼이므로
   // 여기서 갈라 세울 이유가 없다.
-  { table: 'networks', label: '네트워크', nameColumn: 'name', group: '데이터베이스' },
+  { table: 'networks', label: '네트워크', nameColumn: 'name', group: '데이터베이스', hasMergeAxis: true },
   { table: 'programs', label: '프로젝트 사업', nameColumn: 'title', group: '워크스페이스' },
   { table: 'ma_programs', label: 'M&A/PE 딜', nameColumn: 'title', group: '워크스페이스' },
   { table: 'funds', label: '펀드', nameColumn: 'name', group: '워크스페이스' },
@@ -44,11 +49,17 @@ export function useCreatorTargets(ledger: CreatorLedger, keyword: string) {
     queryKey: ['admin', 'creator-transfer', ledger.table, kw],
     enabled: kw.length > 0,
     queryFn: async (): Promise<CreatorTargetRow[]> => {
-      const { data, error } = await supabase
+      let query = supabase
         .from(ledger.table)
         .select(`id, ${ledger.nameColumn}, created_by`)
         .ilike(ledger.nameColumn, `%${kw.replace(/[(),]/g, ' ')}%`)
         .is('deleted_at', null)
+      // 정본으로 흡수된 행은 세우지 않는다(2026-09-09). 생성자를 바꿔 봐야 그 행은 어느
+      // 목록에도 서지 않으므로, 남겨 두면 담당자가 고친 줄이 어디에도 반영되지 않는다.
+      // 컬럼이 없는 원장(사업·펀드)에 이 조건을 걸면 조회 전체가 거절되므로 설정이 답한다.
+      if (ledger.hasMergeAxis) query = query.is('merged_into_id', null)
+
+      const { data, error } = await query
         .order(ledger.nameColumn, { ascending: true })
         .limit(20)
       if (error) throw error

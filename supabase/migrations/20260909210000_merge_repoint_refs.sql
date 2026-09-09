@@ -123,9 +123,10 @@ as $$
                       when 'ma_sellers' then 'ma_seller'
                       when 'ma_buyers' then 'ma_buyer' end,
         null::text[], 'move'),
-      -- 회의록 상호참조. **M&A 두 원장은 대상이 아니다**(CHECK가 사업 3종·스타트업·펀드·
-      -- 네트워크만 허용한다) — 없는 키로 훑으면 조용히 0행이므로 아예 빼 둔다.
-      -- `unique (minute_id, target_type, target_id)`가 있고 소프트 삭제가 없어 'delete'다.
+      -- 회의록 상호참조. `unique (minute_id, target_type, target_id)`가 있고 소프트 삭제가
+      -- 없어 'delete'다 — 정본에 같은 회의록이 이미 걸려 있으면 중복 링크는 아무 사실도
+      -- 더하지 않는다.
+      -- (M&A 두 원장이 여기서 빠져 있었다. 20260909220000이 더한다.)
       ('meeting_minute_links', 'target_type', 'target_id',
         case p_ledger when 'startups' then 'startup'
                       when 'networks' then 'network' end,

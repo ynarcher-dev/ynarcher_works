@@ -24,10 +24,13 @@ export interface MinuteLinkCandidate {
 async function loadPool(targetType: MinuteLinkTargetType): Promise<MinuteLinkCandidate[]> {
   const meta = MINUTE_LINK_TARGETS[targetType]
   const cols = ['id', meta.titleColumn, meta.codeColumn].filter(Boolean).join(', ')
-  const { data, error } = await supabase
-    .from(meta.table)
-    .select(cols)
-    .is('deleted_at', null)
+  let query = supabase.from(meta.table).select(cols).is('deleted_at', null)
+  // 정본으로 흡수된 행은 후보에 세우지 않는다(2026-09-09) — 골라 걸면 그 링크가 목록에서
+  // 사라진 행을 가리킨다. 컬럼이 없는 원장(사업·펀드)에 이 조건을 걸면 조회 전체가 거절되므로
+  // 있는지 여부는 메타가 답한다.
+  if (meta.hasMergeAxis) query = query.is('merged_into_id', null)
+
+  const { data, error } = await query
     .order(meta.titleColumn, { ascending: true })
     .limit(500)
   if (error) throw error

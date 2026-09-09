@@ -57,6 +57,14 @@ export interface LedgerMatchSpec {
    * 만들지는 사람이 정할 일이므로 그 사실을 화면에 함께 올린다.
    */
   retired?: (row: Record<string, unknown>) => boolean
+  /**
+   * 중복을 흡수당한 행을 가리키는 컬럼(있는 원장만).
+   *
+   * `retired`와 같은 사실을 가리키지만 쓰임이 다르다 — 저쪽은 **읽어 온 행**을 보고 판정하고,
+   * 이쪽은 **조회에 조건을 건다**(`.is(col, null)`). 컬럼이 없는 원장에 그 조건을 걸면 조회
+   * 전체가 거절되므로, 있는지 여부를 이 칸이 답한다.
+   */
+  mergedColumn?: string
 }
 
 /** 대조에 걸린 원장 행 하나. */
