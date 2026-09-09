@@ -10,8 +10,10 @@ import type { AiExtractController } from '@/features/ai/useAiExtracts'
  * 'AI 작성하기'의 자료 두 칸 — **위는 읽을 자료, 아래는 읽지 않을 자료**다.
  *
  * 게스트 계정 창의 두 목록과 같은 부품(`PickList`·`PickRow`)이고 방향만 상하다(2026-09-09
- * 사용자 지정). 좌우가 아니라 상하인 이유는 담기는 것이 **이름이 긴 파일**이기 때문이다 —
- * 좌우로 가르면 한 줄에 절반 폭만 남아 파일명이 잘리고, 두 칸이 한 폭을 다 쓰면 잘릴 것이 없다.
+ * 사용자 지정). 이 둘은 창의 **왼쪽 기둥**을 위아래로 나눠 쓴다 — 저쪽(계정 창)이 두 목록을
+ * 좌우로 세운 것과 갈리는 이유는 담기는 것이 **이름이 긴 파일**이기 때문이다. 좌우로 다시
+ * 가르면 한 줄에 남는 폭이 기둥의 절반이라 파일명이 잘리고, 위아래로 두면 두 칸 모두 기둥의
+ * 폭을 그대로 쓴다.
  *
  * **개별 이동은 줄을 누르는 것 하나다.** 갈 자리가 하나뿐이라 고르기와 보내기가 같은 뜻이다.
  * 가운데 버튼이 맡는 것은 한 줄씩으로는 못 하는 일(전부 옮기기)뿐이다.
@@ -108,7 +110,7 @@ export function AiSourcePanes({
           <PickList
             isEmpty={read.length === 0}
             empty="읽을 자료가 없습니다. 아래 목록에서 줄을 눌러 올리세요."
-            className="max-h-64"
+            className="max-h-72"
           >
             {read.map((s) => (
               <SourceRow
@@ -151,7 +153,7 @@ export function AiSourcePanes({
         help="이 칸의 자료는 AI로 나가지 않습니다. 읽어야 할 자료가 여기 있으면 줄을 눌러 위로 올리세요. 읽을 자료가 적을수록 초안이 정확해집니다."
       >
         <div className={cn('overflow-hidden rounded-radius-md border border-gray-200', disabled && 'opacity-60')}>
-          <PickList isEmpty={skip.length === 0} empty="모든 자료를 읽습니다." className="max-h-48">
+          <PickList isEmpty={skip.length === 0} empty="모든 자료를 읽습니다." className="max-h-56">
             {skip.map((s) => (
               <SourceRow key={s.key} source={s} direction="up" onMove={() => !disabled && onMove(s, 'read')} />
             ))}
