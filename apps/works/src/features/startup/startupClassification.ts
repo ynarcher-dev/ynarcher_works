@@ -102,3 +102,11 @@ export function managementStatusTone(v: string | null | undefined): BadgeTone {
 export function isInvested(v: unknown): boolean {
   return v === 'invested'
 }
+
+/**
+ * 관리현황(`company_status_tags`)이 이 값이면 폐업일자(`startups.closed_on`)가 유효하다.
+ *
+ * 태그 원장의 라벨을 코드가 아는 유일한 자리다 — 값을 두 곳에 적으면 원장에서 라벨을 고치는 날
+ * 한쪽만 따라오고, 폐업일자가 입력은 되는데 화면에는 서지 않는(또는 그 반대) 상태가 된다.
+ */
+export const CLOSED_POOL_STATUS = '폐업'

@@ -20,6 +20,7 @@ import { createPortal } from 'react-dom'
 import { TagSelect } from '@/features/admin/TagSelect'
 import { useEmployees } from '@/features/management/hooks'
 import {
+  CLOSED_POOL_STATUS,
   managementStatusLabel,
   managementStatusTone,
 } from '@/features/startup/startupClassification'
@@ -72,8 +73,7 @@ function shortDate(v: string | null): string {
  * 딜메이커를 담당자로 지정한다. 전환은 이 흐름(자사 투자 집행)에서만 서버가 허용한다(20260724190000).
  * 딜메이커가 지정되면 그 사람과 관리자만 이후 이 투자기업 정보를 수정·삭제할 수 있다.
  */
-/** 관리현황이 이 값이면 폐업일자 입력을 노출·저장한다(company_status_tags 의 폐업 라벨). */
-const CLOSED_STATUS = '폐업'
+
 
 export function InvestmentFormModal({
   fundId,
@@ -253,7 +253,7 @@ export function InvestmentFormModal({
     const stage = round.trim() || null
     const stageChanged = stage !== ((editing?.stage ?? '') || null)
     // 폐업일자는 관리현황이 폐업일 때만 의미가 있다(그 외 상태로 바뀌면 서버가 NULL 로 정리).
-    const effectiveClosedOn = poolStatus === CLOSED_STATUS ? closedOn || null : null
+    const effectiveClosedOn = poolStatus === CLOSED_POOL_STATUS ? closedOn || null : null
     try {
       if (editing) {
         await update.mutateAsync({ id: editing.id, values })
@@ -457,7 +457,7 @@ export function InvestmentFormModal({
               />
             </Field>
             {/* 관리현황이 폐업일 때만 폐업일자를 입력받는다(다른 상태로 바꾸면 서버가 NULL 로 정리). */}
-            {poolStatus === CLOSED_STATUS && (
+            {poolStatus === CLOSED_POOL_STATUS && (
               <Field label="폐업일자">
                 <Input type="date" value={closedOn} onChange={(e) => setClosedOn(e.target.value)} />
               </Field>

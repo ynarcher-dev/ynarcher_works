@@ -1,5 +1,6 @@
 import { Badge, Button, Card, EntityHeaderSection, InfoField, InfoGrid, InfoRows } from '@ynarcher/ui'
 import { labeledPurposes } from '@/features/fund/fundPurposeLabel'
+import { CLOSED_POOL_STATUS } from '@/features/startup/startupClassification'
 import type { FundPurpose, Investment } from '@/features/fund/hooks'
 
 const Info = InfoField
@@ -52,6 +53,15 @@ export function InvestmentSummaryCards({
         <Info label="PRE VALUE" value={num(inv.valuation)} />
         <Info label="POST VALUE" value={num(inv.post_valuation)} />
         <Info label="집행액" value={num(inv.amount)} />
+        {/* 관리현황은 `startups`의 값이지만 **이 페이지의 '수정'이 고치는 값**이라 여기 선다
+            (수정 모달의 '투자기업 담당·현황' 묶음 = 딜메이커 + 관리현황). 기업 헤더의 칩과 같은
+            값이 두 번 적히는 셈이지만, 칩은 훑는 자리고 여기는 라벨을 단 값이라 하는 일이 다르다 —
+            고칠 수 있는 값이 고치는 버튼 아래 서 있어야 무엇을 바꾸게 되는지 화면이 답한다. */}
+        <Info label="관리현황" value={inv.startup_pool_status || '-'} />
+        {/* 폐업일자는 관리현황이 폐업일 때만 유효한 값이라 그때만 선다(수정 폼과 같은 조건). */}
+        {inv.startup_pool_status === CLOSED_POOL_STATUS && (
+          <Info label="폐업일자" value={shortDate(inv.startup_closed_on)} />
+        )}
       </InfoGrid>
 
       {/* 규약 목적 부합 — 표에서는 Y/- 한 글자짜리 열 여럿이던 것이 여기서는 줄로 선다.
