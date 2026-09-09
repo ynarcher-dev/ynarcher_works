@@ -1,6 +1,11 @@
 import { useCallback, useMemo, useState } from 'react'
 import type { MasterCandidate, ParticipantRow } from '@/features/program/participantHooks'
-import { isChoiceReady, type PersonChoice } from '@/features/program/participantPerson'
+import {
+  isPersonReady,
+  needsPerson,
+  resolvePerson,
+  type PersonInput,
+} from '@/features/program/participantPerson'
 
 /**
  * 계정생성 창의 좌우 이관 상태 — **왼쪽은 계정 없음, 오른쪽은 계정 있음**이고 그 사이를 옮기는 일이
@@ -66,8 +71,14 @@ export function useParticipantTransfer(
   const [drafts, setDrafts] = useState<MasterCandidate[]>([])
   /** 이번에 내린 기존 행(`participant_id`). 확정 전까지는 표시일 뿐이다. */
   const [removed, setRemoved] = useState<string[]>([])
-  /** 올린 줄이 **누구로** 들어오는가. 키는 원장 행 id다. */
-  const [people, setPeople] = useState<Record<string, PersonChoice>>({})
+  /**
+   * 담당자가 그 줄에 적은 명의. 키는 원장 행 id다.
+   *
+   * **원장이 명의를 다 알고 있는 줄은 여기 들어오지 않는다** — 대부분의 줄이 그렇고, 그래서
+   * 이 표는 보통 비어 있다. 원장 값을 미리 복사해 두지 않는 것이 요점이다: 복사해 두면
+   * 화면이 원장의 사본을 들게 되어, 저장 직전에 원장이 바뀌어도 옛 값을 보낸다.
+   */
+  const [typed, setTyped] = useState<Record<string, PersonInput>>({})
 
   const term = search.trim().toLowerCase()
 
@@ -111,7 +122,7 @@ export function useParticipantTransfer(
       .map((c) => ({
         masterId: c.id,
         name: c.name,
-        meta: c.email ?? c.phone ?? '원장에 연락처 없음 · 오른쪽에서 입력',
+        meta: c.email ?? c.phone ?? '원장에 명의 없음 · 오른쪽에서 채웁니다',
         removingParticipantId: null,
         candidate: c,
       }))
@@ -130,7 +141,7 @@ export function useParticipantTransfer(
 
   const take = useCallback((row: RightRow) => {
     if (row.kind === 'existing') setRemoved((prev) => [...prev, row.participantId])
-    // 입력해 둔 값(`people`)은 지우지 않는다 — 잘못 내렸다가 다시 올릴 때 방금 적은 이메일을
+    // 입력해 둔 값(`typed`)은 지우지 않는다 — 잘못 내렸다가 다시 올릴 때 방금 적은 이메일을
     // 두 번 적게 하지 않는다.
     else setDrafts((prev) => prev.filter((d) => d.id !== row.masterId))
   }, [])
@@ -144,41 +155,46 @@ export function useParticipantTransfer(
   const addAll = useCallback((rows: LeftRow[]) => rows.forEach(add), [add])
   const takeAll = useCallback((rows: RightRow[]) => rows.forEach(take), [take])
 
-  // 행이 기본값을 정할 때마다 불린다. 참조가 매 렌더 바뀌면 그 행의 effect가 다시 돌아
-  // 방금 고친 값을 되돌리므로 여기서 고정한다.
-  const setChoice = useCallback(
-    (masterId: string, next: PersonChoice) =>
-      setPeople((prev) => ({ ...prev, [masterId]: next })),
+  const setPerson = useCallback(
+    (masterId: string, next: PersonInput) => setTyped((prev) => ({ ...prev, [masterId]: next })),
     [],
   )
 
   const reset = useCallback(() => {
     setDrafts([])
     setRemoved([])
-    setPeople({})
+    setTyped({})
   }, [])
 
+  /**
+   * 확정하면 계정을 세울 줄. `writeLedger`는 **담당자가 채운 줄**만 참이다 — 원장이 이미
+   * 알고 있던 값을 되쓰는 것은 아무것도 바꾸지 않으면서 원장의 수정일만 오늘로 민다.
+   */
   const additions = useMemo(
-    () => drafts.map((d) => ({ masterId: d.id, choice: people[d.id] })),
-    [drafts, people],
+    () =>
+      drafts.map((d) => ({
+        masterId: d.id,
+        person: resolvePerson(d, typed[d.id]),
+        writeLedger: needsPerson(d),
+      })),
+    [drafts, typed],
   )
 
   return {
     left,
     right,
-    people,
+    typed,
     add,
     addAll,
     take,
     takeAll,
-    setChoice,
+    setPerson,
     reset,
-    /** 확정하면 계정을 세우고 명부에 담을 줄. */
     additions,
     /** 확정하면 명부에서 빠질 줄(되돌릴 수 없다). */
     removals: removed,
-    /** 올린 줄마다 누구인지가 정해졌는가. */
-    ready: drafts.every((d) => isChoiceReady(people[d.id])),
+    /** 올린 줄마다 명의가 갖춰졌는가(원장이 답했든 담당자가 적었든). */
+    ready: drafts.every((d) => isPersonReady(resolvePerson(d, typed[d.id]))),
     dirty: drafts.length > 0 || removed.length > 0,
   }
 }

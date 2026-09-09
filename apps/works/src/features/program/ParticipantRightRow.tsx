@@ -1,170 +1,92 @@
-import { Badge, Field, IconButton, Input, Select, Spinner, cardText, cn } from '@ynarcher/ui'
+import { Badge, Field, IconButton, Input, cardText, cn } from '@ynarcher/ui'
 import { X } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { useEffect } from 'react'
-import { useLedgerAccounts } from '@/features/admin/guestAccountHooks'
-import type { MasterCandidate } from '@/features/program/participantHooks'
-import type { MasterTable } from '@/features/program/participantPersona'
-import type { PersonChoice } from '@/features/program/participantPerson'
+import {
+  ledgerPerson,
+  needsPerson,
+  type PersonInput,
+} from '@/features/program/participantPerson'
+import type { ParticipantPersona } from '@/features/program/participantPersona'
 import type { RightRow } from '@/features/program/participantTransfer'
 
 /**
  * 계정 있음(우측) 목록의 한 줄.
  *
  * 두 갈래가 **같은 목록에 서면서 서로 다르게 생긴** 이유는 남은 일이 다르기 때문이다. 이미 선
- * 줄은 누구인지가 이미 정해져 그 사실을 되읽기만 하면 되고, 이번에 올린 줄은 *누구로 들어올
- * 것인가*가 아직 비어 있어 그 자리에서 답해야 한다. 같은 모양으로 맞추면 둘 중 하나가
- * 거짓말을 한다 — 기존 줄에 입력칸을 두면 고칠 수 있는 것처럼 보이고(고치는 자리는 계정
- * 화면이다), 새 줄에서 입력칸을 빼면 무엇을 더 해야 하는지 화면이 답하지 못한다.
+ * 줄은 누구인지가 이미 정해져 그 사실을 되읽기만 하면 되고, 이번에 올린 줄은 원장이 아는
+ * 명의를 되읽되 그 값이 비어 있으면 그 자리에서 채워야 한다.
  *
- * 단계를 없애고 이 자리에서 묻는다(2026-09-09). 종전에는 고르기와 사람 정하기가 두 화면으로
- * 갈려 있었고, 그러면 방금 고른 줄과 지금 값을 적는 줄이 **다른 화면에 있어** 무엇을 몇 건
- * 담는 중인지 한눈에 보이지 않았다.
+ * **사람을 고르는 축은 없다**(2026-09-09). 명의는 원장이 답하고, 같은 사람에게 계정이 두 벌
+ * 생기지 않는 것은 발급의 멱등성이 보장한다 — 근거는 `participantPerson.ts`에 있다.
  */
 export function ParticipantRightRow({
-  master,
+  spec,
   row,
-  choice,
+  typed,
   onChange,
   onRemove,
 }: {
-  master: MasterTable
+  spec: ParticipantPersona
   row: RightRow
-  choice: PersonChoice | undefined
-  onChange: (next: PersonChoice) => void
+  /** 담당자가 이 줄에 적은 값. 원장이 다 알고 있으면 undefined다. */
+  typed: PersonInput | undefined
+  onChange: (next: PersonInput) => void
   onRemove: () => void
 }) {
   if (row.kind === 'existing') {
     return (
-      <RowShell
-        name={row.name}
-        badge={null}
-        onRemove={onRemove}
-        removeLabel={`${row.name} 명부에서 빼기`}
-      >
+      <RowShell name={row.name} badge={null} onRemove={onRemove} removeLabel={`${row.name} 명부에서 빼기`}>
         <p className={cn('truncate', cardText.meta)}>
           {[row.personName, row.personEmail].filter(Boolean).join(' · ') || '계정 정보 없음'}
         </p>
       </RowShell>
     )
   }
-  return (
-    <DraftRow
-      master={master}
-      candidate={row.candidate}
-      choice={choice}
-      onChange={onChange}
-      onRemove={onRemove}
-    />
-  )
-}
 
-/**
- * 이번에 올린 줄 — 그 원장 행에 이미 선 계정을 읽어 기본값을 정하고, 담당자가 바꾸면 그 값이 이긴다.
- *
- * **기본값이 '기존 계정'인 것이 요점이다.** 같은 회사를 두 번째 사업에 담을 때 새 계정을
- * 만들면 그 사람은 비밀번호를 두 벌 받는다 — 계정을 대상마다 하나에서 **사람마다 하나**로
- * 옮긴 이유가 바로 그것이었다(3_9_2 §5). 그래서 이미 있는 사람이 먼저 서고, 새로 세우는
- * 것은 담당자가 일부러 고르는 일이 된다.
- *
- * 계정이 하나도 없으면 원장 값(대표자·이메일·연락처)을 채워 둔다. 비워 두면 매번 원장을
- * 열어 옮겨 적게 되고, 대부분의 첫 등록은 여전히 그 한 사람이다.
- */
-function DraftRow({
-  master,
-  candidate,
-  choice,
-  onChange,
-  onRemove,
-}: {
-  master: MasterTable
-  candidate: MasterCandidate
-  choice: PersonChoice | undefined
-  onChange: (next: PersonChoice) => void
-  onRemove: () => void
-}) {
-  const { data: accounts, isLoading } = useLedgerAccounts(master, candidate.id)
-
-  const blank = (): PersonChoice => ({
-    kind: 'new',
-    name: candidate.loginName ?? '',
-    email: candidate.email ?? '',
-    phone: candidate.phone ?? '',
-  })
-
-  // 계정 목록이 오면 기본값을 정한다. `choice`가 이미 있으면 손대지 않는다 — 담당자가 고른
-  // 값을 조회 한 번에 되돌리면, 바꾼 것이 왜 되돌아왔는지 화면이 답하지 못한다.
-  useEffect(() => {
-    if (choice || isLoading || !accounts) return
-    const live = accounts.filter((a) => a.isActive)
-    onChange(
-      live.length > 0
-        ? { kind: 'existing', userId: live[0]!.userId }
-        : {
-            kind: 'new',
-            name: candidate.loginName ?? '',
-            email: candidate.email ?? '',
-            phone: candidate.phone ?? '',
-          },
-    )
-  }, [accounts, isLoading, choice, candidate, onChange])
-
-  const live = (accounts ?? []).filter((a) => a.isActive)
-  const value = choice?.kind === 'existing' ? choice.userId : 'new'
+  const c = row.candidate
+  const value = typed ?? ledgerPerson(c)
 
   return (
     <RowShell
-      name={candidate.name}
+      name={c.name}
       badge={<Badge tone="info">이번에 생성</Badge>}
       onRemove={onRemove}
-      removeLabel={`${candidate.name} 빼기`}
+      removeLabel={`${c.name} 빼기`}
     >
-      {isLoading ? (
-        <Spinner />
-      ) : (
+      {needsPerson(c) ? (
         <div className="space-y-2">
-          <Select
-            value={value}
-            onChange={(e) => {
-              const v = e.target.value
-              onChange(v === 'new' ? blank() : { kind: 'existing', userId: v })
-            }}
-          >
-            {live.map((a) => (
-              <option key={a.userId} value={a.userId}>
-                {a.name ?? '(이름 없음)'} · {a.email ?? '(이메일 없음)'}
-              </option>
-            ))}
-            <option value="new">+ 새 사람 추가</option>
-          </Select>
-
-          {choice?.kind === 'new' && (
-            // 이메일이 로그인 ID이고 연락처가 초기 비밀번호다. 연락처를 필수로 두지 않는
-            // 이유는 이미 그 이메일의 계정이 있으면 서버가 그 계정을 그대로 돌려주기
-            // 때문이다(멱등) — 그때는 비밀번호를 새로 만들 일이 없다.
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <Field label="이름">
-                <Input
-                  value={choice.name}
-                  onChange={(e) => onChange({ ...choice, name: e.target.value })}
-                />
-              </Field>
-              <Field label="이메일" hint="로그인 ID">
-                <Input
-                  type="email"
-                  value={choice.email}
-                  onChange={(e) => onChange({ ...choice, email: e.target.value })}
-                />
-              </Field>
-              <Field label="연락처" hint="초기 비밀번호">
-                <Input
-                  value={choice.phone}
-                  onChange={(e) => onChange({ ...choice, phone: e.target.value })}
-                />
-              </Field>
-            </div>
-          )}
+          {/*
+            접지 않는 안내다 — 적은 값이 계정에만 머무르지 않고 **원장까지 바꾼다**는 파급
+            효과 고지이고(CLAUDE.md 안내 규칙의 예외), 그 사실을 모르면 담당자는 이 칸을
+            '이번 계정에만 쓰는 임시값'으로 읽는다.
+          */}
+          <p className={cardText.meta}>
+            원장에 {spec.loginNameHeader} 정보가 없습니다. 여기 적은 값은 계정과 함께{' '}
+            <b>{spec.nameHeader} 원장에도 저장</b>됩니다.
+          </p>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <Field label={spec.loginNameHeader}>
+              <Input value={value.name} onChange={(e) => onChange({ ...value, name: e.target.value })} />
+            </Field>
+            <Field label="이메일" hint="로그인 ID">
+              <Input
+                type="email"
+                value={value.email}
+                onChange={(e) => onChange({ ...value, email: e.target.value })}
+              />
+            </Field>
+            <Field label="연락처" hint="초기 비밀번호">
+              <Input value={value.phone} onChange={(e) => onChange({ ...value, phone: e.target.value })} />
+            </Field>
+          </div>
         </div>
+      ) : (
+        // 원장이 다 아는 줄은 값을 되읽기만 한다. 입력칸을 세우면 고칠 수 있는 것처럼 보이고,
+        // 고치는 자리는 원장 하나여야 한다.
+        <p className={cn('truncate', cardText.meta)}>
+          {spec.loginNameHeader} {value.name} · {value.email}
+          {value.phone && ` · ${value.phone}`}
+        </p>
       )}
     </RowShell>
   )

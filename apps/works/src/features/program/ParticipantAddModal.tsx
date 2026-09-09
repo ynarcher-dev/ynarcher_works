@@ -92,9 +92,7 @@ export function ParticipantAddModal({
       return
     }
 
-    const rows = transfer.additions.flatMap((a) =>
-      a.choice ? [{ masterId: a.masterId, choice: a.choice }] : [],
-    )
+    const rows = transfer.additions
     if (rows.length === 0) {
       toast.show(`${removed}건을 명부에서 뺐습니다.`, 'success')
       close()
@@ -106,13 +104,21 @@ export function ParticipantAddModal({
       {
         onSuccess: (res) => {
           const tail = removed > 0 ? ` · ${removed}건 뺌` : ''
+          // 원장 보완 실패는 계정 실패와 갈라 말한다 — 담긴 것은 담긴 것이고 못 고친 것은
+          // 원장이라, 담당자가 다시 해야 하는 일이 서로 다르다.
+          const ledger =
+            res.ledgerFailed > 0
+              ? ` ${res.ledgerFailed}건은 원장에 반영하지 못했습니다(원장 쓰기 권한).`
+              : ''
           if (res.failed.length > 0) {
             toast.show(
-              `계정 ${res.added}건 생성${tail}. ${res.failed.length}건 실패: ${res.failed[0]}`,
+              `${res.added}건을 담았습니다${tail}. ${res.failed.length}건 실패: ${res.failed[0]}`,
               'warning',
             )
+          } else if (ledger) {
+            toast.show(`${res.added}건을 명부에 담았습니다${tail}.${ledger}`, 'warning')
           } else {
-            toast.show(`계정 ${res.added}건을 생성했습니다${tail}.`, 'success')
+            toast.show(`${res.added}건을 명부에 담았습니다${tail}.`, 'success')
           }
           if (res.added > 0 || removed > 0) close()
         },
@@ -127,7 +133,7 @@ export function ParticipantAddModal({
 
   /** 저장 버튼이 자기가 일으킬 일을 되읽는다 — 되돌릴 수 없는 빼기가 섞였는지가 여기서 드러난다. */
   const summary = [
-    transfer.additions.length > 0 ? `${transfer.additions.length}건 생성` : null,
+    transfer.additions.length > 0 ? `${transfer.additions.length}건 담기` : null,
     transfer.removals.length > 0 ? `${transfer.removals.length}건 빼기` : null,
   ]
     .filter(Boolean)
@@ -158,7 +164,6 @@ export function ParticipantAddModal({
         }
       >
         <ParticipantTransferPanes
-          master={master}
           spec={spec}
           search={search}
           onSearchChange={setSearch}

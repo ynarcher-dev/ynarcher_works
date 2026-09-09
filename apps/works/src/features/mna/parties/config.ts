@@ -77,7 +77,7 @@ export interface MaPartyConfig {
 export const MA_BUYER: MaPartyConfig = {
   table: 'ma_buyers',
   targetType: 'ma_buyer',
-  listLabel: 'M&A BUYER',
+  listLabel: 'BUYER DB',
   basePath: '/mna/buyers',
   noun: '바이어',
   contentKey: 'mna.buyers',
@@ -89,7 +89,7 @@ export const MA_BUYER: MaPartyConfig = {
 export const MA_SELLER: MaPartyConfig = {
   table: 'ma_sellers',
   targetType: 'ma_seller',
-  listLabel: 'M&A SELLER',
+  listLabel: 'SELLER DB',
   basePath: '/mna/sellers',
   noun: '셀러',
   contentKey: 'mna.sellers',

@@ -57,7 +57,7 @@ const mna = itemOf('mna')
 describe('DATABASE — 전사 원장 둘', () => {
   it('둘 다 읽으면 한 그룹 두 줄이고 그 사이에 선이 없다', () => {
     const groups = buildNavGroups(userWith({ startup: 'read', networks: 'read' }), database)
-    expect(shape(groups)).toEqual([['startup:스타트업', 'networks:네트워크']])
+    expect(shape(groups)).toEqual([['startup:스타트업 DB', 'networks:네트워크 DB']])
     // 같은 층의 전사 원장이라 선을 그으면 서로 다른 층으로 보인다.
     const rows = groups[0]!.items
     expect(rows.map((b) => Boolean(b.item.dividerBefore))).toEqual([false, false])
@@ -65,7 +65,7 @@ describe('DATABASE — 전사 원장 둘', () => {
 
   it('한 구획만 읽으면 그 줄만 선다 — 자리를 합쳐도 권한은 구획마다 판정한다', () => {
     const user = userWith({ networks: 'read' })
-    expect(shape(buildNavGroups(user, database))).toEqual([['networks:네트워크']])
+    expect(shape(buildNavGroups(user, database))).toEqual([['networks:네트워크 DB']])
     expect(readableSections(user, database)).toHaveLength(1)
   })
 
@@ -91,7 +91,7 @@ describe('M&A/PE — 딜 한 줄 + 거래상대 원장 두 줄', () => {
     const groups = buildNavGroups(user, mna)
     // 계정생성은 하단 고정 영역이라 이 줄들과 그룹이 갈린다(plainGroups가 그것을 뺀다).
     expect(shape(unpinnedOf(groups))).toEqual([
-      ['mna:프로젝트', 'mna:M&A BUYER', 'mna:M&A SELLER'],
+      ['mna:프로젝트', 'mna:BUYER DB', 'mna:SELLER DB'],
     ])
     // 층이 갈리는 자리는 딜과 원장 사이 하나다 — 두 원장 사이에 선을 하나 더 그으면
     // 사는 쪽과 파는 쪽이 서로 다른 층으로 보인다.

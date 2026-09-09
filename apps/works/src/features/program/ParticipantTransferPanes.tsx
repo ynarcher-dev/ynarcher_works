@@ -1,7 +1,7 @@
 import { Button, Card, Field, Input, PickList, PickRow, Spinner, cardText, cn } from '@ynarcher/ui'
 import { ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { ParticipantRightRow } from '@/features/program/ParticipantRightRow'
-import type { MasterTable, ParticipantPersona } from '@/features/program/participantPersona'
+import type { ParticipantPersona } from '@/features/program/participantPersona'
 import type { useParticipantTransfer } from '@/features/program/participantTransfer'
 
 /**
@@ -18,14 +18,12 @@ import type { useParticipantTransfer } from '@/features/program/participantTrans
  * 가운데 버튼이 맡는 것은 한 줄씩으로는 못 하는 일(전부 옮기기)뿐이다.
  */
 export function ParticipantTransferPanes({
-  master,
   spec,
   search,
   onSearchChange,
   isLoading,
   transfer,
 }: {
-  master: MasterTable
   spec: ParticipantPersona
   search: string
   onSearchChange: (v: string) => void
@@ -120,10 +118,10 @@ export function ParticipantTransferPanes({
             right.map((row) => (
               <ParticipantRightRow
                 key={row.masterId}
-                master={master}
+                spec={spec}
                 row={row}
-                choice={transfer.people[row.masterId]}
-                onChange={(next) => transfer.setChoice(row.masterId, next)}
+                typed={transfer.typed[row.masterId]}
+                onChange={(next) => transfer.setPerson(row.masterId, next)}
                 onRemove={() => transfer.take(row)}
               />
             ))

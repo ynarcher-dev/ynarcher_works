@@ -87,6 +87,14 @@ export interface ParticipantPersona {
     /** 후보 검색이 `or`로 묶는 컬럼들. */
     searchColumns: readonly string[]
     map: (row: Record<string, unknown>) => LedgerFacts
+      /**
+       * 계정 명의를 **원장에 되쓸 때**의 칸. 읽는 것은 `map`이 답하고 쓰는 것은 여기가 답한다.
+       *
+       * 두 방향을 한 칸으로 합치지 않는 이유는 읽기가 여러 칸을 한 모양으로 맞추는 일이라
+       * 그 반대가 자동으로 정해지지 않기 때문이다 — 쓰기는 그 값이 실제로 사는 칸 하나를
+       * 정확히 가리켜야 한다(스타트업의 명의는 `representative`이지 `name`이 아니다).
+       */
+      person: { name: string; email: string; phone: string }
   }
   /**
    * 구분 배지 — 명부가 스스로 분류를 만들지 않고 원장의 분류를 그대로 비춘다.
@@ -144,6 +152,7 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
         phone: text(row, 'phone'),
         category: text(row, 'management_status'),
       }),
+      person: { name: 'representative', email: 'email', phone: 'phone' },
     },
     categoryBadge: (code) => {
       const key = code as ManagementStatus | null
@@ -178,6 +187,7 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
         phone: text(row, 'phone'),
         category: null,
       }),
+      person: { name: 'contact_name', email: 'contact_email', phone: 'phone' },
     },
     categoryBadge: () => ({ label: 'SELLER', tone: 'neutral' }),
   },
@@ -202,6 +212,7 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
         phone: text(row, 'phone'),
         category: null,
       }),
+      person: { name: 'contact_name', email: 'contact_email', phone: 'phone' },
     },
     categoryBadge: () => ({ label: 'BUYER', tone: 'neutral' }),
   },
@@ -229,6 +240,7 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
         phone: text(row, 'phone'),
         category: null,
       }),
+      person: { name: 'name', email: 'email', phone: 'phone' },
     },
     categoryBadge: () => ({ label: '전문가', tone: 'neutral' }),
   },

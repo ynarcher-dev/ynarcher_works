@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { sanitizeOrValue } from '@/features/master/ledgerPage'
-import type { PersonChoice } from '@/features/program/participantPerson'
+import type { PersonInput } from '@/features/program/participantPerson'
 import {
   PARTICIPANT_PERSONAS,
   isMasterTable,
@@ -376,6 +376,14 @@ export interface AddParticipantsResult {
   added: number
   /** 계정을 세우지 못한 줄의 사유. 나머지는 담긴다 — 하나가 막혔다고 나머지를 버리지 않는다. */
   failed: string[]
+  /**
+   * 명의를 원장에 되쓰지 못한 줄의 수(대개 그 원장의 쓰기 권한이 없다).
+   *
+   * 실패로 세지 않고 따로 세는 이유는 **계정은 세워졌기 때문**이다 — 담당자가 하려던 일은
+   * 끝났고, 못 한 것은 곁다리로 하려던 원장 보완이다. 한 수로 뭉치면 멀쩡히 담긴 줄을
+   * 실패로 읽고 다시 시도하게 된다.
+   */
+  ledgerFailed: number
 }
 
 /**
@@ -400,26 +408,51 @@ export function useAddParticipants(programId: string) {
   return useMutation({
     mutationFn: async (input: {
       master: MasterTable
-      rows: { masterId: string; choice: PersonChoice }[]
+      rows: { masterId: string; person: PersonInput; writeLedger: boolean }[]
     }): Promise<AddParticipantsResult> => {
       const failed: string[] = []
+      let ledgerFailed = 0
       const resolved: { masterId: string; userId: string }[] = []
+      const cols = PARTICIPANT_PERSONAS[input.master].ledger
 
       for (const row of input.rows) {
-        if (row.choice.kind === 'existing') {
-          resolved.push({ masterId: row.masterId, userId: row.choice.userId })
-          continue
+        // ① 담당자가 채운 명의는 **원장이 먼저 갖는다**(2026-09-09 사용자 결정).
+        //
+        //    계정에만 적으면 원장은 그대로 비어 있어 다음 사업에서 같은 값을 또 묻게 되고,
+        //    '기업 DB는 대표자가 기준'이라는 모델에서 그 값의 집은 원장이다. 값이 있는 칸만
+        //    보낸다 — 빈 문자열로 덮는 것은 '지운다'이고, 지우는 일은 원장 화면에서 한다.
+        //
+        //    **RLS가 막으면 오류가 아니라 0행이 온다.** PostgREST는 0행 UPDATE를 오류로
+        //    내지 않으므로 반환 행을 세어야 하고, 그러지 않으면 "원장에 저장했다"고 말한
+        //    화면이 실제로는 아무것도 못 고친 채 지나간다(결재 상태 UPDATE가 같은 방식으로
+        //    조용히 무시됐던 자리다). 계정 발급은 멈추지 않는다 — 원장을 못 고치는 것과
+        //    계정을 못 세우는 것은 다른 일이고, 담당자에게 필요한 것은 계정이다.
+        if (row.writeLedger) {
+          const patch: Record<string, string> = {}
+          if (row.person.name.trim()) patch[cols.person.name] = row.person.name.trim()
+          if (row.person.email.trim()) patch[cols.person.email] = row.person.email.trim()
+          if (row.person.phone.trim()) patch[cols.person.phone] = row.person.phone.trim()
+          if (Object.keys(patch).length > 0) {
+            const { data, error } = await supabase
+              .from(cols.table)
+              .update(patch)
+              .eq('id', row.masterId)
+              .select('id')
+            if (error || (data ?? []).length === 0) ledgerFailed += 1
+          }
         }
+
+        // ② 계정. 발급은 (원장 행 × 이메일)로 멱등이라 같은 명의면 이미 있는 계정이 돌아온다.
         const { data, error } = await supabase.rpc('issue_guest_account', {
           p_master_table: input.master,
           p_master_id: row.masterId,
-          p_name: row.choice.name.trim() || null,
-          p_email: row.choice.email.trim() || null,
-          p_phone: row.choice.phone.trim() || null,
+          p_name: row.person.name.trim() || null,
+          p_email: row.person.email.trim() || null,
+          p_phone: row.person.phone.trim() || null,
         })
         // 사유를 그대로 옮긴다 — 서버가 "연락처가 없어 계정을 세울 수 없습니다"처럼 무엇을
         // 보완해야 하는지 답하는데, 여기서 뭉뚱그리면 담당자가 그 답을 잃는다.
-        if (error) failed.push(`${row.choice.name || row.masterId}: ${error.message}`)
+        if (error) failed.push(`${row.person.name || row.masterId}: ${error.message}`)
         else resolved.push({ masterId: row.masterId, userId: data as string })
       }
 
@@ -435,7 +468,7 @@ export function useAddParticipants(programId: string) {
         )
         if (error) throw error
       }
-      return { added: resolved.length, failed }
+      return { added: resolved.length, failed, ledgerFailed }
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: [config.key, 'participants', programId] })

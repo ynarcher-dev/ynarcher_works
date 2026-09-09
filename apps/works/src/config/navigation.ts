@@ -78,11 +78,14 @@ export interface SubNavGroup {
  * 항목명으로 돌아왔다. 줄 이름이 그 답을 겸하면 워크스페이스마다 같은 자리의 이름이 달라진다.
  */
 export const PROGRAM_LIST_LABEL = '프로젝트'
-// 'DB' 꼬리는 걷은 채로 둔다(2026-09-06) — 두 줄은 여전히 DATABASE 한 항목 아래 나란히 서고,
-// 항목명이 이미 그 말이라 줄마다 다시 적는 층이었다(두 줄 모두에 붙어 있어 구분에도 보태지
-// 않았다). 아래 셋은 각자 자기 스위처 항목 아래 한 줄로 선다.
-export const NETWORKS_LIST_LABEL = '네트워크'
-export const STARTUP_LIST_LABEL = '스타트업'
+// 'DB' 꼬리를 되살렸다(2026-09-09 사용자 지정). 2026-09-06에 걷은 근거는 "두 줄이 DATABASE 한
+// 항목 아래 나란히 서니 항목명이 이미 그 말을 한다"였는데, 그 뒤 스위처가 갈리면서 각 줄은
+// **자기 항목 아래 한 줄**로 서게 됐다 — 대신 말해 주던 항목명이 사라진 것이다. 꼬리가 답하는
+// 것은 '이 자리가 무엇을 하는 곳인가'다: 원장을 보는 자리이지 그 대상으로 업무를 하는 화면이
+// 아니다(같은 스타트업을 다루는 자리가 프로젝트 명부에도 있다). M&A 두 줄의 이름은 여기가
+// 아니라 각자의 원장 설정(MaPartyConfig.listLabel)이 갖는다.
+export const NETWORKS_LIST_LABEL = '네트워크 DB'
+export const STARTUP_LIST_LABEL = '스타트업 DB'
 export const FUND_LIST_LABEL = '운용펀드'
 
 /**
