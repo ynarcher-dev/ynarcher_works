@@ -1,28 +1,18 @@
+import { Button, Modal, useToast } from '@ynarcher/ui'
+import { useMemo, useState } from 'react'
 import {
-  Button,
-  Field,
-  Input,
-  Modal,
-  PickList,
-  PickMark,
-  PickRow,
-  Spinner,
-  useToast,
-} from '@ynarcher/ui'
-import { Check } from 'lucide-react'
-import { useCallback, useState } from 'react'
-import {
-  mapBlockReason,
   useAddParticipants,
   useMasterCandidates,
-  type MasterCandidate,
+  useProgramParticipants,
 } from '@/features/program/participantHooks'
-import { ParticipantPersonRow } from '@/features/program/ParticipantPersonStep'
-import { isChoiceReady, type PersonChoice } from '@/features/program/participantPerson'
+import { useRemoveParticipants } from '@/features/program/participantAccessHooks'
+import { ParticipantRemoveConfirm } from '@/features/program/ParticipantRemoveConfirm'
+import { ParticipantTransferPanes } from '@/features/program/ParticipantTransferPanes'
+import { useParticipantTransfer } from '@/features/program/participantTransfer'
 import { PARTICIPANT_PERSONAS, type MasterTable } from '@/features/program/participantPersona'
 
 /**
- * 참가자 명부에 담기 — **대상을 고르고, 그다음 그 대상의 누구인가를 정한다.**
+ * 계정 생성 — **참가자 목록에 담긴 대상 중 누가 로그인하는가**를 좌우 두 목록으로 정한다.
  *
  * 이 화면에서 원장을 고치지 않는다. 사업 담당자가 급히 받아적은 값이 마스터를 덮어쓰면
  * 어느 쪽이 정본인지 판정할 근거가 사라진다 — 사람을 새로 적는 것은 **계정**을 세우는
@@ -33,22 +23,16 @@ import { PARTICIPANT_PERSONAS, type MasterTable } from '@/features/program/parti
  * 탭과 어긋난다. 자격은 한 곳에서만 정해져야 한다(3_9_1 §4).
  *
  * **후보는 이 사업의 참가자 목록이다**(2026-09-09 좁힘 — 종전에는 전사 원장 전체였다).
- * 계정은 "누구를 들일지 정한 다음"에 세우는 것이라, 고르는 자리도 그 결정이 사는 곳이어야
- * 한다. 그래서 이 모달의 빈 상태는 **검색 결과 없음과 명단 비었음을 가른다** — 앞은 검색어를
- * 고치는 일이고 뒤는 다른 탭에서 먼저 담아야 하는 일이라, 담당자가 할 행동이 정반대다.
+ * 계정은 "누구를 들일지 정한 다음"에 세우는 것이라, 고르는 자리도 그 결정이 사는 곳이어야 한다.
  *
- * **2단계가 생긴 이유**(2026-09-08 사용자 지정 "실제 생성은 프로젝트 상세에서").
- *   계정을 세우는 자리가 사이드바 창구에서 여기로 옮겨 왔다. 창구에 있던 시절에도 발급만으로는
- *   아무것도 보이지 않았다 — 사업에 매핑되기 전까지 그 계정으로 로그인해도 "접근 가능한 사업이
- *   없습니다"만 떴다. 즉 사업 없이 만드는 계정은 **아무 일도 하지 않는 버튼**이었고, 그 버튼을
- *   없애면 계정은 언제나 "어느 사업에 들이려고" 만들어진다.
+ * **창은 두 갈래의 쓰기를 함께 확정한다**(2026-09-09). 오른쪽으로 옮긴 줄은 계정을 세우고
+ * 명부에 담고, 왼쪽으로 내린 줄은 명부에서 뺀다. 두 축을 한 창에 둔 이유는 담당자가 잘못
+ * 담은 줄을 **알아차리는 자리가 여기**이기 때문이다 — 계정을 세우려고 목록을 훑다가 발견한
+ * 오등록을 거두려고 창을 닫고 표로 돌아가야 하면, 대개 그냥 두게 된다.
  *
- *   그리고 사람을 여기서 정하지 않으면 한 회사에 담당자를 여럿 둘 수 없다. 종전 경로
- *   (`로그인 열기`)는 원장 행에서 한 명을 자동으로 꺼내므로, A딜엔 김이사·B딜엔 박상무 같은
- *   구분이 표현되지 않는다.
- *
- * 후보 목록의 규격은 회의록 외부 참석자 검색과 같다(체크 원 + 이름·메타 두 줄 + 행 전체 클릭) —
- * 원장에서 골라 담는 화면이 앱 안에서 서로 다르게 생길 이유가 없다.
+ * **되돌릴 수 없는 쪽만 확인을 거친다.** 담기는 되돌릴 수 있으므로(다시 빼면 된다) 저장 한
+ * 번으로 끝나고, 빼기는 행이 사라지므로 따라쓰기 확인창을 지난다 — 확인이 필요한 것과 아닌
+ * 것을 같은 무게로 물으면 그 확인은 곧 아무도 읽지 않는 절차가 된다.
  */
 export function ParticipantAddModal({
   open,
@@ -65,48 +49,72 @@ export function ParticipantAddModal({
   const toast = useToast()
   const spec = PARTICIPANT_PERSONAS[master]
   const [search, setSearch] = useState('')
-  const [picked, setPicked] = useState<MasterCandidate[]>([])
-  const [people, setPeople] = useState<Record<string, PersonChoice>>({})
-  const [step, setStep] = useState<'pick' | 'people'>('pick')
+  const [confirming, setConfirming] = useState(false)
 
   const { data: candidates, isLoading } = useMasterCandidates(programId, master, search)
+  const { data: allParticipants } = useProgramParticipants(programId)
   const add = useAddParticipants(programId)
+  const remove = useRemoveParticipants(programId)
+
+  /**
+   * 오른쪽에 세울 기존 줄. 이 탭의 자격만 남긴다 — 원장이 없는 행(내부 임직원 참가자)은
+   * 게스트 자격이 아니므로 어느 자격 탭에도 서지 않는다.
+   */
+  const participants = useMemo(
+    () => (allParticipants ?? []).filter((p) => p.master_table === master),
+    [allParticipants, master],
+  )
+
+  const transfer = useParticipantTransfer(candidates, participants, search)
 
   const close = () => {
-    setPicked([])
-    setPeople({})
-    setStep('pick')
+    transfer.reset()
+    setSearch('')
+    setConfirming(false)
     onClose()
   }
 
-  const toggle = (c: MasterCandidate) =>
-    setPicked((prev) =>
-      prev.some((p) => p.id === c.id) ? prev.filter((p) => p.id !== c.id) : [...prev, c],
+  const busy = add.isPending || remove.isPending
+
+  /**
+   * **빼기를 먼저 끝낸다.** 담기가 부분 실패해도(계정 발급이 막히는 줄이 있다) 담당자가 이미
+   * 승인한 빼기는 끝나 있어야, 창을 다시 열었을 때 같은 따라쓰기 확인을 두 번 하지 않는다.
+   */
+  const run = async () => {
+    let removed = 0
+    try {
+      if (transfer.removals.length > 0) removed = await remove.mutateAsync(transfer.removals)
+    } catch (e) {
+      toast.show(
+        e instanceof Error ? e.message : '명부에서 빼지 못했습니다. 권한을 확인하세요.',
+        'danger',
+      )
+      return
+    }
+
+    const rows = transfer.additions.flatMap((a) =>
+      a.choice ? [{ masterId: a.masterId, choice: a.choice }] : [],
     )
+    if (rows.length === 0) {
+      toast.show(`${removed}건을 명부에서 뺐습니다.`, 'success')
+      close()
+      return
+    }
 
-  // 행이 기본값을 정할 때마다 불린다. 참조가 매 렌더 바뀌면 그 행의 effect가 다시 돌아
-  // 방금 고친 값을 되돌리므로 여기서 고정한다.
-  const setChoice = useCallback(
-    (id: string, next: PersonChoice) => setPeople((prev) => ({ ...prev, [id]: next })),
-    [],
-  )
-
-  const ready = picked.length > 0 && picked.every((c) => isChoiceReady(people[c.id]))
-
-  const submit = () => {
     add.mutate(
-      { master, rows: picked.map((c) => ({ masterId: c.id, choice: people[c.id]! })) },
+      { master, rows },
       {
         onSuccess: (res) => {
+          const tail = removed > 0 ? ` · ${removed}건 뺌` : ''
           if (res.failed.length > 0) {
             toast.show(
-              `${res.added}건을 담았습니다. ${res.failed.length}건 실패: ${res.failed[0]}`,
+              `계정 ${res.added}건 생성${tail}. ${res.failed.length}건 실패: ${res.failed[0]}`,
               'warning',
             )
           } else {
-            toast.show(`${res.added}건을 명부에 담았습니다.`, 'success')
+            toast.show(`계정 ${res.added}건을 생성했습니다${tail}.`, 'success')
           }
-          if (res.added > 0) close()
+          if (res.added > 0 || removed > 0) close()
         },
         onError: (e: unknown) =>
           toast.show(
@@ -117,118 +125,63 @@ export function ParticipantAddModal({
     )
   }
 
-  return (
-    <Modal
-      dismissible={false}
-      open={open}
-      onClose={close}
-      title={`${spec.label} 추가`}
-      help={
-        step === 'pick'
-          ? // 자격마다 다른 말을 하지 않는다 — 후보의 출처가 원장이 아니라 이 사업의 명단이
-            // 되면서, 그 문장이 더 이상 자격의 성질을 말하지 않는다.
-            `${spec.label}는 참가자 목록에 담긴 대상 중에서만 고를 수 있습니다. 계정은 누구를 들일지 정한 다음에 세웁니다.`
-          : '이미 계정이 있으면 그 사람을 고릅니다. 새로 적으면 계정이 하나 세워지고, 같은 이메일이 이미 있으면 그 계정을 그대로 씁니다.'
-      }
-      size="lg"
-      footer={
-        <div className="flex justify-end gap-2">
-          {step === 'people' ? (
-            <>
-              <Button variant="ghost" onClick={() => setStep('pick')}>
-                뒤로
-              </Button>
-              <Button onClick={submit} disabled={add.isPending || !ready}>
-                {add.isPending ? '담는 중…' : `명부에 담기 (${picked.length})`}
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button variant="ghost" onClick={close}>
-                취소
-              </Button>
-              <Button onClick={() => setStep('people')} disabled={picked.length === 0}>
-                다음 ({picked.length})
-              </Button>
-            </>
-          )}
-        </div>
-      }
-    >
-      {step === 'people' ? (
-        <div className="overflow-hidden rounded-radius-md border border-gray-200">
-          {picked.map((c) => (
-            <ParticipantPersonRow
-              key={c.id}
-              master={master}
-              candidate={c}
-              choice={people[c.id]}
-              onChange={(next) => setChoice(c.id, next)}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <Field label="검색">
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={spec.pickSearchPlaceholder}
-            />
-          </Field>
+  /** 저장 버튼이 자기가 일으킬 일을 되읽는다 — 되돌릴 수 없는 빼기가 섞였는지가 여기서 드러난다. */
+  const summary = [
+    transfer.additions.length > 0 ? `${transfer.additions.length}건 생성` : null,
+    transfer.removals.length > 0 ? `${transfer.removals.length}건 빼기` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
 
-          <div className="overflow-hidden rounded-radius-md border border-gray-200">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-10">
-                <Spinner />
-              </div>
-            ) : (
-              <PickList
-                isEmpty={(candidates ?? []).length === 0}
-                // 검색어가 없는데도 비었다면 걸러진 것이 아니라 명단 자체가 비어 있다 —
-                // 그때 담당자가 할 일은 검색어를 고치는 것이 아니라 다른 탭에서 담는 것이다.
-                empty={
-                  search.trim()
-                    ? '검색 결과가 없습니다.'
-                    : `참가자 목록에 담긴 ${spec.label}가 없습니다. 먼저 참가자 목록 탭에서 담아 주세요.`
-                }
-              >
-                {(candidates ?? []).map((c) => {
-                  // 막는 것은 '이미 담김' 하나다(2026-09-08). 종전에는 원장에 성명·이메일·
-                  // 연락처가 없으면 고를 수 없었는데, 그것은 계정 값을 **원장이 정하던**
-                  // 시절의 규칙이다. 지금은 다음 단계에서 담당자가 적으므로 막을 이유가 없다.
-                  const blocked = mapBlockReason(c)
-                  const added = picked.some((p) => p.id === c.id)
-                  return (
-                    <PickRow
-                      key={c.id}
-                      selected={added}
-                      disabled={Boolean(blocked)}
-                      onClick={() => toggle(c)}
-                    >
-                      <PickMark checked={added}>
-                        <Check className="size-3.5" />
-                      </PickMark>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-body text-gray-900">
-                          <span className="font-medium">{c.name}</span>
-                          {c.loginName && <span className="text-gray-500"> · {c.loginName}</span>}
-                        </span>
-                        <span className="block truncate text-body-sm text-gray-600">
-                          {c.email ?? c.phone ?? '원장에 연락처 없음 · 다음 단계에서 입력'}
-                        </span>
-                      </span>
-                      {blocked && (
-                        <span className="shrink-0 text-body-sm text-gray-500">{blocked}</span>
-                      )}
-                    </PickRow>
-                  )
-                })}
-              </PickList>
-            )}
-          </div>
-        </div>
-      )}
-    </Modal>
+  return (
+    <>
+      <Modal
+        dismissible={false}
+        open={open}
+        onClose={close}
+        title={`${spec.label} 계정 생성`}
+        help="참가자 목록에 담긴 대상만 고를 수 있습니다. 오른쪽으로 옮긴 대상에게 계정이 세워지고, 왼쪽으로 내린 대상은 저장할 때 명부에서 빠집니다."
+        size="2xl"
+        sectioned
+        footer={
+          <>
+            <Button variant="ghost" onClick={close} disabled={busy}>
+              취소
+            </Button>
+            <Button
+              onClick={() => (transfer.removals.length > 0 ? setConfirming(true) : void run())}
+              disabled={busy || !transfer.dirty || !transfer.ready}
+            >
+              {busy ? '저장 중…' : summary ? `저장 (${summary})` : '저장'}
+            </Button>
+          </>
+        }
+      >
+        <ParticipantTransferPanes
+          master={master}
+          spec={spec}
+          search={search}
+          onSearchChange={setSearch}
+          isLoading={isLoading}
+          transfer={transfer}
+        />
+      </Modal>
+
+      {/*
+        빼기만 확인을 거친다. 이 창이 남는 기록의 건수까지 함께 묻는다 — 막지 않는 것과
+        말없이 지우는 것은 다르다(지원서·질문·자료는 함께 지워지지 않고 그대로 남는다).
+      */}
+      <ParticipantRemoveConfirm
+        open={confirming}
+        programId={programId}
+        participantIds={transfer.removals}
+        onConfirm={() => {
+          setConfirming(false)
+          void run()
+        }}
+        onClose={() => setConfirming(false)}
+        busy={busy}
+      />
+    </>
   )
 }

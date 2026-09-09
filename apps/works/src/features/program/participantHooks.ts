@@ -46,6 +46,15 @@ export interface ParticipantRow {
   hasAccount: boolean
   /** 그 계정의 id(재설정 안내 발송 대상). 계정이 없으면 null. */
   accountId: string | null
+  /**
+   * 이 줄이 **누구로** 들어와 있는가 — 그 계정의 성명·이메일.
+   *
+   * `loginName`과 갈린다: 저쪽은 원장이 적어 둔 명의(기업의 대표자)이고 이쪽은 실제로 문을
+   * 여는 사람이다. 2026-09-08에 담을 때 사람을 직접 정하게 되면서 둘이 달라질 수 있게 됐고
+   * (한 회사에 김이사·박상무), 계정을 다루는 화면은 원장이 아니라 이쪽을 세워야 한다.
+   */
+  accountName: string | null
+  accountEmail: string | null
   /** 그 계정의 마지막 접속 시각. 아직 한 번도 없으면 null. */
   lastLoginAt: string | null
   /**
@@ -214,6 +223,8 @@ export function useProgramParticipants(programId: string | undefined) {
           login_status: r.login_status,
           hasAccount,
           accountId,
+          accountName: r.user?.name ?? null,
+          accountEmail: r.user?.email ?? null,
           lastLoginAt: accountId ? (lastLogin.get(accountId) ?? null) : null,
           createdByName: r.creator?.name ?? null,
           targetName: master?.name || r.user?.name || '미지정',
@@ -359,20 +370,6 @@ function candidateMatches(c: MasterCandidate, lowerTerm: string): boolean {
   return [c.name, c.loginName, c.email, c.phone].some((v) =>
     (v ?? '').toLowerCase().includes(lowerTerm),
   )
-}
-
-/**
- * 매핑 불가 사유(짧은 라벨). 가능하면 null.
- *
- * **막는 것은 '이미 담김' 하나다**(2026-09-08). 종전에는 원장에 성명·이메일·연락처가 없으면
- * 고를 수 없었고, 그것은 계정 값을 **원장이 정하던** 시절의 규칙이었다 — 원장이 비면 계정을
- * 세울 방법이 아예 없었으므로 목록에서 미리 잠그는 것이 정직했다.
- *
- * 지금은 담당자가 2단계에서 이름·이메일·연락처를 적는다. 그래서 원장이 비었다는 것은 더 이상
- * '담을 수 없다'가 아니라 '기본값이 비어 있다'이며, 그 사실은 줄 아래 회색 한 줄이 답한다.
- */
-export function mapBlockReason(c: MasterCandidate): string | null {
-  return c.alreadyMapped ? '등록됨' : null
 }
 
 export interface AddParticipantsResult {

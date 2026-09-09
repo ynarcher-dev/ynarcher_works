@@ -286,7 +286,7 @@ export function ParticipantPool({
                     {accessWindowLabel(program.guest_access_ends_at)}
                   </Button>
                 )}
-                <Button onClick={() => setAddOpen(true)}>{spec.label} 추가</Button>
+                <Button onClick={() => setAddOpen(true)}>{spec.label} 계정 생성</Button>
               </div>
             }
           />
