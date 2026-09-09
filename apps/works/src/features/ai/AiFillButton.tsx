@@ -4,7 +4,7 @@ import { AiFillModal } from '@/features/ai/AiFillModal'
 import type { AiFillResult, AiSource } from '@/features/ai/aiFillClient'
 import type { AiFillCatalog } from '@/features/ai/aiCatalog'
 import type { AiFillOutcome } from '@/features/ai/aiTypes'
-import type { AiGrid } from '@/features/ai/aiGrid'
+import type { AiReadSet } from '@/features/ai/aiReadSet'
 
 /**
  * 자료 관리 카드 아래에 서는 'AI 작성하기' 진입 버튼.
@@ -16,7 +16,7 @@ import type { AiGrid } from '@/features/ai/aiGrid'
  * 거기서 누르면 값을 바꾸는 일이 시작되어 그 화면이 말하는 것과 하는 일이 어긋난다. 폼 안에
  * 있으면 초안이 다른 입력과 같은 자리에서 같은 방식으로 확정된다(저장 버튼 하나).
  *
- * 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §4.1
+ * 근거: docs/docs_planning/3_3_7_ai_fill_visual_read.md §4
  */
 export function AiFillButton<K extends string>({
   catalog,
@@ -53,13 +53,14 @@ export function AiFillButton<K extends string>({
 }) {
   const [open, setOpen] = useState(false)
   /**
-   * 카드별 자료 배정(격자). **창이 아니라 여기에 둔다.**
+   * 자료 배치(담당자가 옮긴 줄)와 작성할 카드. **창이 아니라 여기에 둔다.**
    *
    * 한 요청이 실패하면 그 카드만 다시 돌려야 하는데, 창을 닫을 때 선택이 사라지면 처음부터
-   * 다시 골라야 한다. 여기 있으면 다시 열었을 때 방금 고른 격자가 그대로 서고 담당자는
-   * 실패한 줄만 남기면 된다. 없는 자료를 가리키는 칸은 창이 걷는다(`pruneGrid`).
+   * 다시 골라야 한다. 여기 있으면 다시 열었을 때 방금 고른 것이 그대로 서고 담당자는 실패한
+   * 카드만 남기면 된다. 사라진 자료의 자리는 창이 걷는다(`pruneReadSet`).
    */
-  const [grid, setGrid] = useState<AiGrid<K>>({})
+  const [readSet, setReadSet] = useState<AiReadSet>({})
+  const [cards, setCards] = useState<K[]>([])
   const hasReadable = sources.some((s) => s.readable)
 
   return (
@@ -89,8 +90,10 @@ export function AiFillButton<K extends string>({
           targetId={targetId}
           linkId={linkId}
           subjectName={subjectName}
-          grid={grid}
-          onGrid={setGrid}
+          readSet={readSet}
+          onReadSet={setReadSet}
+          cards={cards}
+          onCards={setCards}
           onClose={() => setOpen(false)}
           // 실행해도 창을 닫지 않는다 — 결과는 창 안에서 서고, 실패한 카드만 남겨 다시
           // 실행하는 것이 그다음의 정상 행동이다.

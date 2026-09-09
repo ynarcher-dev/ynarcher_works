@@ -15,8 +15,8 @@ import { verifyEvidence } from './evidence.ts'
  * 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §16.15
  */
 
-const sheet: SourceRef = { id: 's1', key: 'A1', name: '재무.xlsx', attachmentId: 'A1', verifiable: true }
-const pdf: SourceRef = { id: 's2', key: 'B1', name: 'IR.pdf', attachmentId: 'B1', verifiable: false }
+const sheet: SourceRef = { id: 's1', key: 'A1', name: '재무.xlsx', attachmentId: 'A1', kind: 'other', verifiable: true }
+const pdf: SourceRef = { id: 's2', key: 'B1', name: 'IR.pdf', attachmentId: 'B1', kind: 'other', verifiable: false }
 
 const chunks = toSourceChunks(sheet, [
   { kind: 'sheet', location: '시트: 손익', text: '2025년\t매출액\t1,200,000,000\n영업이익\t-320,000,000', tables: [] },

@@ -114,7 +114,7 @@ function deps(readLink: BuildDeps['readLink'], deadline = FAR, forceFilesApi = f
  */
 const isMarker = (p: unknown): boolean => {
   const text = (p as { text?: unknown }).text
-  return typeof text === "string" && /^\[자료 s\d+: .+\]$/.test(text)
+  return typeof text === "string" && /^\[자료 s\d+( · [^:]+)?: .+\]$/.test(text)
 }
 
 /**

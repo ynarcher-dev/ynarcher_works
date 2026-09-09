@@ -6,14 +6,13 @@ import { AI_SUPPORTED_HINT } from '@/features/ai/aiFormats'
  * 'AI 작성하기' 모달에서 **고를 수 없는 자료**를 알리는 목록.
  *
  * 종전에는 이 파일이 세 목록(읽을 자료 · 작성할 카드 · 읽을 수 없는 자료)을 가졌다. 앞의 둘은
- * 2026-09-06에 카드 × 자료 격자(`AiFillGrid`)로 합쳐졌다 — 두 목록은 "무엇을 읽는가"와
- * "무엇을 쓰는가"를 따로 물었을 뿐, 그 둘을 잇는 답(어느 자료가 어느 카드의 근거인가)은
- * 어디서도 묻지 않았기 때문이다.
+ * 2026-09-06에 카드 × 자료 격자로 합쳐졌다가 2026-09-09에 읽을 자료·읽지 않을 자료 두 칸
+ * (`AiSourcePanes`)과 카드 체크(`AiCardPicker`)로 다시 갈렸다.
  *
- * 이 목록만 남은 이유는 **성격이 다르기** 때문이다. 격자는 고르는 자리이고 여기는 고를 수
- * 없는 것을 알리는 자리라, 격자 안에 열로 세우면 눌리지 않는 칸이 한 줄 생긴다.
+ * 이 목록만 그대로인 이유는 **성격이 다르기** 때문이다. 두 칸은 옮기는 자리이고 여기는 옮길 수
+ * 없는 것을 알리는 자리라, 두 칸 안에 줄로 세우면 눌리지 않는 줄이 생긴다.
  *
- * 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §4.2
+ * 근거: docs/docs_planning/3_3_7_ai_fill_visual_read.md §4
  */
 export function AiBlockedList({ sources }: { sources: AiSource[] }) {
   if (sources.length === 0) return null

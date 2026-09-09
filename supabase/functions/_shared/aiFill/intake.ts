@@ -13,10 +13,9 @@ import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import type { ExtractChunk } from '../docParse/types.ts'
 import { parseJson } from './envelope.ts'
 import { extractsFromRows, readPendingExtracts, type ExtractRow } from './extractsIn.ts'
-import type { Assignments } from './groups.ts'
 import type { AiFillProfile, CallerClient } from './profile.ts'
 import { loadRefAttachments } from './refs.ts'
-import { readAssignments, readCards } from './request.ts'
+import { readCards } from './request.ts'
 import {
   resolveAttachments,
   resolvePendingLinks,
@@ -36,7 +35,6 @@ export interface IntakeError {
 export interface Intake<K extends string> {
   cards: K[]
   sources: ResolvedSource[]
-  assignments: Assignments | null
   /** 자료 키 → 이미 분석된 조각. 비어 있으면 종전처럼 원본을 그 자리에서 읽는다. */
   extracts: Map<string, ExtractChunk[]>
   /** 프롬프트에 실을 대상의 이름. */
@@ -73,11 +71,10 @@ async function readUpload<K extends string, C>(
   if (!form) return { error: { code: 'invalid_request', message: '요청 형식이 올바르지 않습니다.', status: 400 } }
 
   const cards = readCards(parseJson(String(form.get('cards') ?? '[]')), deps.isCardKey)
-  const assignments = readAssignments(parseJson(String(form.get('assignments') ?? 'null')), deps.isCardKey)
   const subject = String(form.get('subjectName') ?? form.get('companyName') ?? '').trim()
   const files = form.getAll('files').filter((f): f is File => f instanceof File && f.size > 0)
   // 화면이 만든 파일 키를 files와 같은 순서로 받는다. 순번을 서버가 다시 세면 담당자가
-  // 자료를 골라 보낼 때 화면의 키와 어긋나 배정이 엉뚱한 자료를 가리킨다.
+  // 자료를 골라 보낼 때 화면의 키와 어긋나 분석 글자가 엉뚱한 자료에 붙는다.
   const fileKeys = (parseJson(String(form.get('fileKeys') ?? '[]')) as unknown[] | null) ?? []
   const pendingLinks = form
     .getAll('links')
@@ -121,7 +118,7 @@ async function readUpload<K extends string, C>(
   const sources = [...resolved.sources, ...resolvePendingLinks(pendingLinks), ...refSources]
 
   // 이미 분석된 보류 자료는 파일이 아니라 **조각으로** 실려 온다. 가리킬 원본이 없으므로
-  // 자리만 만들어 준다 — 그래야 배정·감사 기록이 그 자료를 보고, 조각을 고를 수 있다.
+  // 자리만 만들어 준다 — 그래야 감사 기록이 그 자료를 보고, 조각을 고를 수 있다.
   const extracts = new Map<string, ExtractChunk[]>(refExtracts)
   for (const [key, entry] of readPendingExtracts(parseJson(String(form.get('extracts') ?? 'null')))) {
     extracts.set(key, entry.chunks)
@@ -138,7 +135,7 @@ async function readUpload<K extends string, C>(
     })
   }
 
-  return { cards, sources, assignments, extracts, subject, targetId: null }
+  return { cards, sources, extracts, subject, targetId: null }
 }
 
 /** 수정 모드 — 이미 올라간 첨부를 id로 가리킨다. */
@@ -150,7 +147,6 @@ async function readStored<K extends string, C>(
     targetId?: string
     attachmentIds?: string[]
     cards?: unknown
-    assignments?: unknown
     [key: string]: unknown
   }
   // 대상 id의 이름은 `targetId`다. 프로파일이 옛 이름을 밝히면 그것도 받는다 — 함수를 먼저
@@ -158,7 +154,6 @@ async function readStored<K extends string, C>(
   const legacy = deps.profile.legacyIdKey ? body[deps.profile.legacyIdKey] : undefined
   const targetId = String(body.targetId ?? legacy ?? '').trim() || null
   const cards = readCards(body.cards, deps.isCardKey)
-  const assignments = readAssignments(body.assignments, deps.isCardKey)
   const ids = [...new Set((body.attachmentIds ?? []).map((v) => String(v).trim()).filter(Boolean))]
   if (!targetId || ids.length === 0) {
     return { error: { code: 'invalid_request', message: '대상과 자료를 모두 선택해야 합니다.', status: 400 } }
@@ -208,7 +203,6 @@ async function readStored<K extends string, C>(
   return {
     cards,
     sources: resolved.sources,
-    assignments,
     extracts: extractsFromRows((cached ?? []) as ExtractRow[]),
     subject: await deps.profile.subjectName(deps.caller as unknown as CallerClient, targetId),
     targetId,

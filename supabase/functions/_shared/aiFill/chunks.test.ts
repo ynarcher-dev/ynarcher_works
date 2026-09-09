@@ -31,6 +31,7 @@ const ref = (over: Partial<SourceRef> = {}): SourceRef => ({
   key: 'A1',
   name: '사업계획서.xlsx',
   attachmentId: 'A1',
+  kind: 'other',
   verifiable: true,
   ...over,
 })

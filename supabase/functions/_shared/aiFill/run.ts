@@ -26,6 +26,7 @@ import { jsonResponse } from '../cors.ts'
 import { supabaseAdmin } from '../supabaseAdmin.ts'
 import type { SourceChunk } from './chunks.ts'
 import { applyCompose, buildComposeSchema, composableCards, factsOf } from './compose.ts'
+import { createContextCache, deleteContextCache, type ContextCache } from './contextCache.ts'
 import type { DraftEnvelope } from './envelope.ts'
 import { normalizeEnvelope } from './envelope.ts'
 import { EVIDENCE_RULES } from './evidence.ts'
@@ -41,6 +42,7 @@ import { runPool } from './pool.ts'
 import { chunkRanker, type AiFillProfile, type CallerClient } from './profile.ts'
 import { readConcurrency } from './request.ts'
 import { buildEnvelopeSchema } from './schema.ts'
+import { SOURCE_KIND_RULES } from './sourceKinds.ts'
 import { validateSources } from './sources.ts'
 import { missingCards, planTopup } from './topup.ts'
 
@@ -116,8 +118,7 @@ export async function runAiFill<K extends string, C>(
   if ('error' in intake) {
     return jsonResponse({ error: intake.error.code, message: intake.error.message }, intake.error.status)
   }
-  const { cards, assignments, extracts, subject } = intake
-  let sources = intake.sources
+  const { cards, extracts, subject, sources } = intake
 
   if (cards.length === 0) {
     return jsonResponse({ error: 'invalid_request', message: '작성할 카드를 선택해야 합니다.' }, 400)
@@ -126,19 +127,13 @@ export async function runAiFill<K extends string, C>(
   const sizeError = validateSources(sources)
   if (sizeError) return jsonResponse({ error: sizeError.code, message: sizeError.message }, sizeError.status)
 
-  // 4) 묶음을 여기서 정한다 — **감사 로그보다 먼저**여야 한다.
-  // 반출 기록은 "실제로 밖으로 나간 자료"를 적는 것이라, 어느 카드에도 배정되지 않아 모델에
-  // 닿지 않을 자료까지 적으면 그 기록이 사실이 아니게 된다. 겸해서 그런 자료는 내려받지도
-  // 않는다(스토리지 왕복과 자료 모으기 시간을 그만큼 아낀다).
-  const groups = planGroups(cards, assignments, sources.map((s) => s.key), {
-    order: profile.cardKeys,
-    family: profile.family,
-  })
+  // 4) 묶음을 정한다 — **감사 로그보다 먼저**여야 한다(묶음이 없으면 아무것도 나가지 않는다).
+  // 자료는 화면이 '읽을 자료' 칸에 세운 한 벌이고 모든 묶음이 그것을 읽는다(2026-09-09 —
+  // 카드별 배정 격자를 걷었다). 그래서 요청에 실려 온 자료가 곧 밖으로 나가는 자료다.
+  const groups = planGroups(cards, sources.map((s) => s.key), { order: profile.cardKeys, family: profile.family })
   if (groups.length === 0) {
-    return jsonResponse({ error: 'invalid_request', message: '카드마다 읽을 자료를 하나 이상 지정해야 합니다.' }, 400)
+    return jsonResponse({ error: 'invalid_request', message: '읽을 자료를 하나 이상 올려야 합니다.' }, 400)
   }
-  const usedKeys = new Set(groups.flatMap((g) => g.sourceKeys))
-  sources = sources.filter((s) => usedKeys.has(s.key))
 
   // 5) 감사 로그 — 적재에 실패하면 모델을 부르지 않는다 ----------------------------
   // 등록 모드는 가리킬 행이 없어 resource_id가 비고, 무엇을 보냈는지는 파일명이 답한다.
@@ -160,6 +155,13 @@ export async function runAiFill<K extends string, C>(
   // 올린 자료는 어느 경로로 끝나든 지워야 하므로 지우는 쪽이 목록을 쥔다. 조립이 돌려주는
   // 값에 실으면 업로드 도중 시간이 초과돼 예외로 빠져나갈 때 목록이 함께 사라진다.
   const uploaded: UploadedFile[] = []
+  /**
+   * 공급자 컨텍스트 캐시. 묶음이 둘 이상이면 자료를 여기 한 번 올리고 묶음들은 프롬프트만
+   * 싣는다 — 탐색 축 팬아웃의 자료 값을 한 번만 치른다. 못 만들면 종전대로 자료를 실어 보낸다.
+   */
+  let cache: ContextCache | null = null
+  let cacheSkip: string | null = null
+  const cacheModel = Deno.env.get('GEMINI_CACHE_MODEL') ?? model
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
   try {
@@ -222,6 +224,32 @@ export async function runAiFill<K extends string, C>(
       )
     }
 
+    // 6-2b) 묶음이 둘 이상이고 전부 같은 조각을 실으면 자료를 캐시에 한 번 올린다.
+    // 자료가 한 벌이라 대개 같지만, 예산을 넘겨 묶음마다 다른 조각을 고른 날은 같지 않다 —
+    // 그때는 캐시로 묶지 않는다(그 묶음이 보지 못한 조각을 캐시가 실으면 근거 지도가 거짓이 된다).
+    // **캐시 실패는 실패가 아니다.** 사유는 로그에만 남고 초안은 종전 경로로 똑같이 나온다.
+    let cachedParts: string | null = null
+    if (runnable.length > 1) {
+      const first = JSON.stringify(runnable[0].selected.parts)
+      if (!runnable.every((r) => JSON.stringify(r.selected.parts) === first)) {
+        cacheSkip = 'parts_differ'
+      } else {
+        const made = await createContextCache({
+          apiKey,
+          model: cacheModel,
+          parts: runnable[0].selected.parts,
+          signal: controller.signal,
+        })
+        if ('skipped' in made) cacheSkip = made.skipped
+        else {
+          cache = made
+          cachedParts = first
+        }
+      }
+    } else {
+      cacheSkip = 'single_group'
+    }
+
     const metrics: RunMetrics = {
       promptTokens: 0,
       cachedTokens: 0,
@@ -236,14 +264,17 @@ export async function runAiFill<K extends string, C>(
       group: CardGroup<K>,
       selected: { parts: unknown[]; index: ReturnType<typeof selectParts>['index'] },
       label: string,
-    ) =>
-      generateDraft<K>({
+    ) => {
+      const prompt = {
+        text: `${profile.buildPrompt(group.cards, subject, context)}\n\n${SOURCE_KIND_RULES}\n\n${EVIDENCE_RULES}`,
+      }
+      // 캐시에 있는 조각과 같을 때만 캐시를 가리킨다(보완 요청도 같은 조각이면 함께 탄다).
+      const viaCache = cache !== null && cachedParts !== null && JSON.stringify(selected.parts) === cachedParts
+      return generateDraft<K>({
         apiKey,
-        model,
-        parts: [
-          ...selected.parts,
-          { text: `${profile.buildPrompt(group.cards, subject, context)}\n\n${EVIDENCE_RULES}` },
-        ],
+        model: viaCache ? cacheModel : model,
+        parts: viaCache ? [prompt] : [...selected.parts, prompt],
+        cachedContent: viaCache && cache ? cache.name : undefined,
         cards: group.cards,
         signal: controller.signal,
         schema: buildEnvelopeSchema(group.cards, profile.cardSchemas),
@@ -256,6 +287,7 @@ export async function runAiFill<K extends string, C>(
           }),
         label,
       })
+    }
 
     // 6-3) 병렬 호출. 한 묶음의 실패가 다른 묶음의 결과를 버리지 않는다.
     const settled = await runPool(
@@ -411,6 +443,8 @@ export async function runAiFill<K extends string, C>(
         chunks: [...built.chunks.values()].reduce((sum, list: SourceChunk[]) => sum + list.length, 0),
         skipped: dedupe(notices).length,
         uploaded: uploaded.length,
+        // 캐시가 섰는가, 서지 않았다면 왜인가. 팬아웃 비용을 실제로 접었는지는 이 값이 답한다.
+        cache: cache ? 'used' : cacheSkip,
         ...metrics,
         elapsedMs: Date.now() - startedAt,
       }),
@@ -462,7 +496,10 @@ export async function runAiFill<K extends string, C>(
     )
   } finally {
     clearTimeout(timer)
-    // 올린 자료는 성공·실패·예외를 가리지 않고 지운다.
-    await Promise.all(uploaded.map((f) => deleteFile(apiKey, f)))
+    // 올린 자료와 캐시는 성공·실패·예외를 가리지 않고 지운다.
+    await Promise.all([
+      ...uploaded.map((f) => deleteFile(apiKey, f)),
+      ...(cache ? [deleteContextCache(apiKey, cache)] : []),
+    ])
   }
 }

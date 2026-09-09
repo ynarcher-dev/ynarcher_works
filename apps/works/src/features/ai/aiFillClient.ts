@@ -5,7 +5,6 @@ import { isLinkMaterial, materialDisplayName, type Material } from '@/features/n
 import { materialLocationLabel } from '@/features/networks/materialRefs'
 import { isAiReadable } from '@/features/ai/aiFormats'
 
-import type { AiGrid } from '@/features/ai/aiGrid'
 import type { AiFillEnvelope } from '@/features/ai/aiTypes'
 
 /**
@@ -102,7 +101,7 @@ export function sourcesFromMaterials(materials: Material[], ownTargetType?: stri
   }))
 }
 
-/** File 실물이 살아 있는 동안 변하지 않는 등록 모드 격자 키. */
+/** File 실물이 살아 있는 동안 변하지 않는 등록 모드 자료 키. */
 const pendingFileKeys = new WeakMap<File, string>()
 let pendingFileSequence = 0
 
@@ -110,7 +109,7 @@ let pendingFileSequence = 0
  * 배열 순서가 아니라 File 실물에 붙는 키.
  *
  * 같은 이름의 파일 둘 중 앞 파일을 지우면 배열 index가 당겨진다. index를 키로 쓰면 남은
- * 파일이 지워진 파일의 격자 배정을 이어받으므로 File 객체에 실행 중 안정 키를 준다.
+ * 파일이 지워진 파일의 자리(읽을지 말지)를 이어받으므로 File 객체에 실행 중 안정 키를 준다.
  */
 function pendingFileKey(file: File): string {
   const found = pendingFileKeys.get(file)
@@ -177,17 +176,12 @@ export interface AiFillInput<K extends string> {
   linkId?: string | null
   /** 프롬프트에 실을 대상의 이름. 등록 모드에서 폼에 적힌 이름을 넘긴다. */
   subjectName?: string
-  /** 격자가 가리키는 자료 전부(중복 없이). 카드가 몇이든 자료는 한 번만 올라간다. */
+  /**
+   * 읽을 자료(상 칸) 전부. 카드가 몇이든 자료는 한 번만 올라가고 **모든 카드가 함께 읽는다**
+   * (2026-09-09 — 카드별 배정을 걷었다). 카드가 많을 때 탐색 축으로 나누는 일은 서버가 한다.
+   */
   sources: AiSource[]
   cards: K[]
-  /**
-   * 카드별 자료 배정(격자).
-   *
-   * 서버는 먼저 같은 자료를 읽는 카드를 모으고, 카드가 많을 때만 탐색 축으로 나눠 병렬로
-   * 보낸다. 소수 카드 때문에 같은 큰 문서를 여러 번 읽지 않으면서 전체 선택의 출력 잘림도
-   * 막는다. 나누는 일을 화면이 하지 않는 이유는 담당자가 누르는 것이 한 번이어야 하기 때문이다.
-   */
-  assignments: AiGrid<K>
   /**
    * 등록 모드에서 **이미 분석된 보류 자료**의 글자(자료 키 → 이름과 본문).
    *
@@ -215,13 +209,12 @@ export async function readInvokeError(error: unknown, fallback: string): Promise
 function buildUploadBody<K extends string>(input: AiFillInput<K>): FormData {
   const form = new FormData()
   form.append('cards', JSON.stringify(input.cards))
-  form.append('assignments', JSON.stringify(input.assignments))
   // 이름 칸은 `subjectName`이다 — 대상이 기업만은 아니게 되면서 공통 이름이 됐다(서버는
   // 옛 이름 `companyName`도 아직 받는다).
   if (input.subjectName) form.append('subjectName', input.subjectName)
   // 파일에는 id가 없으므로 **화면이 만든 키를 파일과 같은 순서로 함께 보낸다.** 순번을 서버가
-  // 다시 세면 담당자가 자료를 골라 보낼 때 그 순번이 화면의 것과 어긋나, 카드별 배정이 엉뚱한
-  // 자료를 가리킨다. 링크는 주소가 곧 키라 양쪽이 따로 만들어도 같은 값이 나온다.
+  // 다시 세면 담당자가 자료를 골라 보낼 때 그 순번이 화면의 것과 어긋나, 분석 글자가 엉뚱한
+  // 자료에 붙는다. 링크는 주소가 곧 키라 양쪽이 따로 만들어도 같은 값이 나온다.
   const extracts = input.extracts ?? {}
   const fileKeys: string[] = []
   // 등록 모드에도 **이미 원장에 있는 자료**가 섞인다(참조). 그것은 파일을 실어 보내지 않고
@@ -266,7 +259,6 @@ export async function requestAiFill<K extends string>(input: AiFillInput<K>): Pr
         targetId: input.targetId,
         attachmentIds: input.sources.map((s) => (s.kind === 'attachment' ? s.id : '')).filter(Boolean),
         cards: input.cards,
-        assignments: input.assignments,
       }
 
   const { data, error } = await supabase.functions.invoke<AiFillResponse<K>>(input.endpoint, { body })

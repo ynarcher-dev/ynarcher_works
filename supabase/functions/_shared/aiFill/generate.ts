@@ -138,6 +138,13 @@ export interface GenerateOptions<K extends string> {
    * 하는 것은 표현의 폭이지 사실의 폭이 아니다.
    */
   temperature?: number
+  /**
+   * 공급자 컨텍스트 캐시의 이름(`cachedContents/xxxx`).
+   *
+   * 주면 **자료는 캐시에 있고 `parts`에는 프롬프트만 담긴다.** 같은 자료를 읽는 묶음들이
+   * 이 이름 하나를 가리켜 자료 값을 한 번만 치른다(contextCache.ts).
+   */
+  cachedContent?: string
 }
 
 /** 사용량 응답에서 수를 꺼낸다. 필드가 없거나 수가 아니면 null(0으로 세면 거짓이 된다). */
@@ -161,6 +168,9 @@ export async function generateDraft<K extends string>(
     `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(opts.model)}:generateContent?key=${opts.apiKey}`
   const payload = JSON.stringify({
     contents: [{ parts: opts.parts }],
+    // 캐시를 쓰면 자료는 여기 실리지 않고 이 이름이 가리킨다. 값이 없으면 키 자체를 보내지
+    // 않는다 — 빈 문자열을 보내면 공급자가 없는 캐시를 찾다가 요청을 통째로 거절한다.
+    ...(opts.cachedContent ? { cachedContent: opts.cachedContent } : {}),
     generationConfig: {
       // 사실을 옮기는 작업이라 온도를 낮게 둔다(같은 자료에서 같은 답이 나와야 한다).
       temperature: opts.temperature ?? 0.2,
@@ -248,7 +258,7 @@ export async function generateDraft<K extends string>(
       message: blocked
         ? `자료가 AI 안전 정책에 걸려 거절됐습니다(${blocked}).`
         : finish === 'MAX_TOKENS'
-          ? '한 요청이 맡은 카드가 많아 답이 중간에 끊겼습니다. 카드마다 읽을 자료를 다르게 지정하면 요청이 나뉩니다.'
+          ? '한 요청이 맡은 카드가 많아 답이 중간에 끊겼습니다. 작성할 카드를 줄여 나눠 실행하세요.'
           : 'AI 응답을 해석하지 못했습니다.',
       upstream: 200,
     }

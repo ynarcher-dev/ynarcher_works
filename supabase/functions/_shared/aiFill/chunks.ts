@@ -20,6 +20,8 @@
 // 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §16.14
 
 import type { ExtractChunk } from '../docParse/types.ts'
+import type { SourceKind } from '../docParse/sourceKind.ts'
+import { sourceHeader } from './sourceKinds.ts'
 
 /** 한 요청이 다루는 자료 한 건의 표시. 조각이 없어도(원본 경로) 자리는 있다. */
 export interface SourceRef {
@@ -30,6 +32,13 @@ export interface SourceRef {
   name: string
   /** 감사·링크가 가리킬 첨부 행. 등록 모드 보류 자료는 null. */
   attachmentId: string | null
+  /**
+   * 파일명으로 판정한 자료 종류(재무제표·IR…). 모델에 꼬리표로 붙는다(sourceKinds.ts).
+   *
+   * 격자를 걷은 뒤(2026-09-09) 모든 카드가 같은 자료를 읽으므로, 확정 숫자를 어느 자료에서
+   * 읽을지는 자료를 빼는 것이 아니라 이 꼬리표가 가른다.
+   */
+  kind: SourceKind
   /**
    * 이 자료의 근거를 원문과 대조할 수 있는가.
    *
@@ -92,7 +101,7 @@ export function renderChunk(chunk: SourceChunk): string {
 
 /** 조각들을 한 자료분의 글로. 자료명이 맨 앞에 한 번 선다. */
 export function renderSource(source: SourceRef, chunks: SourceChunk[]): string {
-  return [`[자료 ${source.id}: ${source.name}]`, ...chunks.map(renderChunk)].join('\n\n')
+  return [sourceHeader(source), ...chunks.map(renderChunk)].join('\n\n')
 }
 
 const encoder = new TextEncoder()

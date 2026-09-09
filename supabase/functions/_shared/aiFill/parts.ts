@@ -25,6 +25,8 @@
 // 근거: docs/docs_planning/3_3_5_startup_ai_fill.md §8.3·§16.14
 
 import type { ExtractChunk } from '../docParse/types.ts'
+import { classifySourceKind } from '../docParse/sourceKind.ts'
+import { sourceHeader } from './sourceKinds.ts'
 import { isOfficeMime, officeChunks } from '../docParse/officeText.ts'
 import { textChunks } from '../docParse/textParse.ts'
 import {
@@ -174,7 +176,7 @@ export function selectParts(
     // 없어진다. 표시가 있으면 자료 단위로 가리킬 수 있고, 대조하지 못한 근거는 '미검증'으로
     // 갈라 세운다 — 검증하지 못하는 것과 지어낸 것은 다르다.
     const ref = refOf.get(key)
-    if (ref) parts.push({ text: `[자료 ${ref.id}: ${ref.name}]` })
+    if (ref) parts.push({ text: sourceHeader(ref) })
     parts.push(...list)
   }
 
@@ -209,7 +211,7 @@ export function selectParts(
   }
   if (picked.dropped > 0) {
     notices.push(
-      `자료가 모델이 한 번에 읽는 양을 넘어 조각 ${picked.dropped}개를 빼고 보냈습니다. 카드마다 읽을 자료를 좁히면 더 정확해집니다.`,
+      `자료가 모델이 한 번에 읽는 양을 넘어 조각 ${picked.dropped}개를 빼고 보냈습니다. 읽을 자료를 줄이면 더 정확해집니다.`,
     )
   }
 
@@ -271,6 +273,8 @@ export async function buildParts(
       key: s.key,
       name: s.name,
       attachmentId: s.attachmentId,
+      // 종류는 파일명이 답한다. 링크는 주소의 마지막 마디를 본다.
+      kind: classifySourceKind(s.url ?? s.name),
       verifiable: false,
     }
 
