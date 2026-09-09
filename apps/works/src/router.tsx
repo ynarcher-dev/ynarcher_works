@@ -9,6 +9,7 @@ import { FUND_BULK_SPEC, STARTUP_BULK_SPEC } from '@/features/bulk/specs'
 import { FundCreatePage } from '@/features/fund/FundCreatePage'
 import { FundDetailPage } from '@/features/fund/FundDetailPage'
 import { FundPage } from '@/features/fund/FundPage'
+import { InvestmentDetailPage } from '@/features/fund/InvestmentDetailPage'
 import { ManagementPage } from '@/features/management/ManagementPage'
 import { EmployeeCreatePage } from '@/features/management/EmployeeCreatePage'
 import { EmployeeDetailPage } from '@/features/management/EmployeeDetailPage'
@@ -211,6 +212,18 @@ export const router = createBrowserRouter([
             element: (
               <RequireWorkspace workspace="fund">
                 <FundDetailPage />
+              </RequireWorkspace>
+            ),
+          },
+          // 투자 집행 상세. 펀드에 매달린 건이라 주소도 그 밑에 선다 — 원장이 하나 더 늘어난
+          // 것이 아니라 `/fund/:id`의 포트폴리오 한 줄을 펼친 자리다(`/fund/investments/:id`로
+          // 두면 어느 펀드의 집행인지 주소가 답하지 못하고, 펀드명·목적 조회를 위해 레코드를
+          // 먼저 읽어야 한다).
+          {
+            path: 'fund/:fundId/investments/:investmentId',
+            element: (
+              <RequireWorkspace workspace="fund">
+                <InvestmentDetailPage />
               </RequireWorkspace>
             ),
           },

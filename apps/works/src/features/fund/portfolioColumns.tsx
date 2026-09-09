@@ -1,12 +1,12 @@
 import { Badge, TagCell, type BadgeTone, type Column } from '@ynarcher/ui'
-import { Link } from 'react-router-dom'
 import { maskName } from '@/lib/mask'
 import {
   MANAGEMENT_STATUS_TONE,
   managementStatusLabel,
   type ManagementStatus,
 } from '@/features/startup/startupClassification'
-import type { FundPurpose, FundPurposeKind, Investment } from '@/features/fund/hooks'
+import { labeledPurposes } from '@/features/fund/fundPurposeLabel'
+import type { FundPurpose, Investment } from '@/features/fund/hooks'
 
 /** YYYY-MM-DD 앞 10자리. 없으면 '-'. */
 function shortDate(v: string | null): string {
@@ -18,15 +18,6 @@ function num(v: number | null): string {
   return v == null ? '-' : Number(v).toLocaleString()
 }
 
-/** 목적 구분별 컬럼 헤더 접두어(의무투자=의무, 주목적=주목적, 특수목적=특수). 번호는 구분 안에서 1부터. */
-const PURPOSE_KIND_PREFIX: Record<FundPurposeKind, string> = {
-  MANDATORY: '의무',
-  MAIN: '주목적',
-  SPECIAL: '특수',
-}
-/** 컬럼 배치 순서: 의무투자 → 주목적 → 특수목적(각 구분 안에서는 sort_order). */
-const PURPOSE_KIND_ORDER: Record<FundPurposeKind, number> = { MANDATORY: 0, MAIN: 1, SPECIAL: 2 }
-
 /**
  * 펀드 규약 목적(fund_purposes)을 표의 동적 컬럼으로 펼친다. 펀드마다 목적 개수가 달라 컬럼도 가변이다.
  * 헤더는 짧은 넘버링(의1·주1·주2·주3·특1)으로 두고 전체 조건 텍스트는 툴팁(title)에 담는다.
@@ -34,12 +25,7 @@ const PURPOSE_KIND_ORDER: Record<FundPurposeKind, number> = { MANDATORY: 0, MAIN
  * 이 표는 읽기 전용이다(§2.3.1). 근거: 3_5_workspace_fund.md §2.3.1
  */
 function buildPurposeColumns(purposes: FundPurpose[]): Column<Investment>[] {
-  const ordered = [...purposes].sort(
-    (a, b) => PURPOSE_KIND_ORDER[a.kind] - PURPOSE_KIND_ORDER[b.kind] || a.sort_order - b.sort_order,
-  )
-  const seq: Record<FundPurposeKind, number> = { MANDATORY: 0, MAIN: 0, SPECIAL: 0 }
-  return ordered.map((p) => {
-    const short = `${PURPOSE_KIND_PREFIX[p.kind]}${(seq[p.kind] += 1)}`
+  return labeledPurposes(purposes).map(({ purpose: p, short }) => {
     return {
       key: `purpose_${p.id}`,
       // 전체 조건은 헤더 hover 툴팁으로. 조건이 없으면(빈 라벨) 넘버링만 보인다.
@@ -102,25 +88,15 @@ export function buildPortfolioColumns({
    */
   maskRepresentative?: boolean
 }): Column<Investment>[] {
-  // 기업명 = 스타트업 상세(/startup/:id) 하이퍼링크. id 없으면 링크 없이 텍스트.
-  // 링크 클릭은 stopPropagation — 행 클릭(상세 모달)과 분리해 이름은 스타트업 상세로만 이동한다.
+  // 기업명은 링크가 아니라 값이다 — 행 전체가 투자 집행 상세로 가는 지금, 이름에만 걸린 다른
+  // 목적지(기업 상세)는 '어디를 눌렀는가'에 따라 다른 화면이 열리는 표를 만든다. 기업 상세로
+  // 가는 길은 그 집행 상세 페이지 상단에 한 줄로 서 있다.
   const startupColumn: Column<Investment> = {
     key: 'startup',
     header: '기업명',
     primary: true,
     type: 'name',
-    render: (r) =>
-      r.startup_id ? (
-        <Link
-          to={`/startup/${r.startup_id}`}
-          onClick={(e) => e.stopPropagation()}
-          className="font-medium text-info underline underline-offset-2 transition-opacity duration-fast hover:opacity-80"
-        >
-          {r.startup_name ?? '-'}
-        </Link>
-      ) : (
-        (r.startup_name ?? '-')
-      ),
+    render: (r) => r.startup_name ?? '-',
   }
 
   // 아이템 = startups 한줄소개(business_profile.oneLiner).

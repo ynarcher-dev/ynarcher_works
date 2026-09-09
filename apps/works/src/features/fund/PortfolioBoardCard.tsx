@@ -2,10 +2,10 @@ import { Badge, Button, DataTable, ExpandToggleButton, PanelCard } from '@ynarch
 import { Maximize2, Minimize2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useNavigate } from 'react-router-dom'
 import { FUND_PORTFOLIO_CONTENT_KEY } from '@/features/admin/sensitiveContents'
 import { useMaskPolicy } from '@/features/admin/sensitiveStore'
 import { buildPortfolioColumns } from '@/features/fund/portfolioColumns'
-import { InvestmentDetailModal } from '@/features/fund/InvestmentDetailModal'
 import type { FundPurpose, Investment } from '@/features/fund/hooks'
 
 /** 카드 안 요약표와 전체보기 오버레이의 페이지 크기. */
@@ -16,7 +16,8 @@ const FULL_PAGE_SIZE = 20
  * 포트폴리오 보드 카드(펀드 상세 포트폴리오 탭).
  * 헤더 '전체보기'로 AC 운영보드(칸반/간트)와 동일한 전체화면 오버레이(z-500, Esc 닫힘)를 열어
  * 표를 전체 컬럼으로 펼친다. 카드 축소 상태는 요약보기(핵심 투자 컬럼만)로 둔다.
- * 행을 누르면 상세 모달이 열리고, 거기서 수정·삭제로 이어진다.
+ * 행을 누르면 투자 집행 상세 페이지로 이동하고, 수정·삭제는 거기서 이어진다 — 모달로 열던
+ * 시절에는 기업 정보를 그 좁은 자리에 다 세울 수 없어 회사개요 서너 줄이 전부였다.
  *
  * 페이징은 두 자리가 따로 세되(카드 10건 / 전체보기 20건) **페이저는 양쪽 다 번호줄이고 한
  * 페이지뿐이어도 노출한다.** 포트폴리오는 카드 안에 있어도 이 탭의 작업 대상이라, 목록 화면의
@@ -24,20 +25,20 @@ const FULL_PAGE_SIZE = 20
  * 건수가 적을 때 표 아래가 다른 화면과 달라 보인다).
  */
 export function PortfolioBoardCard({
+  fundId,
   fundName,
   investments,
   purposes,
   onAdd,
-  onEdit,
 }: {
+  fundId: string
   fundName: string
   investments: Investment[]
   purposes: FundPurpose[]
   onAdd: () => void
-  onEdit: (inv: Investment) => void
 }) {
+  const navigate = useNavigate()
   const [expanded, setExpanded] = useState(false)
-  const [detail, setDetail] = useState<Investment | null>(null)
   const [cardPage, setCardPage] = useState(0)
   const [fullPage, setFullPage] = useState(0)
   // 피투자사(외부 기업) 대표자명 정책. 딜메이커·관리인력은 내부 임직원이라 대상이 아니다.
@@ -69,11 +70,7 @@ export function PortfolioBoardCard({
   const safeFullPage = Math.min(fullPage, fullPages - 1)
   const fullRows = investments.slice(safeFullPage * FULL_PAGE_SIZE, (safeFullPage + 1) * FULL_PAGE_SIZE)
 
-  // 수정: 상세 닫고 편집 폼 열기(삭제는 편집 폼 좌측 하단에서 처리).
-  const handleEdit = (inv: Investment) => {
-    setDetail(null)
-    onEdit(inv)
-  }
+  const openDetail = (inv: Investment) => navigate(`/fund/${fundId}/investments/${inv.id}`)
 
   const actions = (
     <div className="flex items-center gap-2">
@@ -97,7 +94,7 @@ export function PortfolioBoardCard({
           rowKey={(r) => r.id}
           standardColumns={false}
           stickyLead
-          onRowClick={(r) => setDetail(r)}
+          onRowClick={openDetail}
           emptyText="집행된 투자가 없습니다."
           pagination={{
             page: safeCardPage,
@@ -125,7 +122,7 @@ export function PortfolioBoardCard({
                 rowKey={(r) => r.id}
                 standardColumns={false}
                 stickyLead
-                onRowClick={(r) => setDetail(r)}
+                onRowClick={openDetail}
                 emptyText="집행된 투자가 없습니다."
                 pagination={{
                   page: safeFullPage,
@@ -138,13 +135,6 @@ export function PortfolioBoardCard({
           </div>,
           document.body,
         )}
-
-      <InvestmentDetailModal
-        investment={detail}
-        fundName={fundName}
-        onClose={() => setDetail(null)}
-        onEdit={handleEdit}
-      />
     </>
   )
 }

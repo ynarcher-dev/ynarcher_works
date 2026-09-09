@@ -96,7 +96,14 @@ export interface EntityHeaderSectionProps {
   children: ReactNode
 }
 
-/** 기본 데이터 카드 하단의 (라벨 +) 내용 섹션(구분선 포함). */
+/**
+ * 카드 안에서 축이 갈리는 자리(라벨 + 구분선 + 내용).
+ *
+ * 이름은 이 카드에서 났지만 소유하는 것은 **카드 안 구분 섹션 규격**(위 여백·선 색·캡션 톤)이라
+ * `EntityHeaderCard` 밖의 `Card`에서도 이 자리를 쓴다(FUND 투자 집행 정보의 규약 목적·딜메이커).
+ * 화면이 `border-t border-gray-100 pt-4`를 손으로 적기 시작하면 같은 선이 카드마다 다른 여백으로
+ * 그어진다 — 규격을 화면에 두지 않는다는 규칙이 여기에도 그대로 적용된다.
+ */
 export function EntityHeaderSection({ label, children }: EntityHeaderSectionProps) {
   return (
     <div className="mt-4 border-t border-gray-100 pt-4">

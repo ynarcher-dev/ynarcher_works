@@ -13,7 +13,6 @@ import {
   Spinner,
   StatStrip,
   Tabs,
-  useToast,
   type BadgeTone,
 } from '@ynarcher/ui'
 import { useState } from 'react'
@@ -46,13 +45,11 @@ import {
 import {
   useCapitalCalls,
   useDeactivateFund,
-  useDeleteInvestment,
   useFund,
   useFundContributions,
   useFundLps,
   useFundPurposes,
   useInvestments,
-  type Investment,
 } from '@/features/fund/hooks'
 
 const Info = InfoField
@@ -85,27 +82,11 @@ export function FundDetailPage() {
   const { data: investments } = useInvestments(id)
   const { data: purposes } = useFundPurposes(id)
   const { data: contributions } = useFundContributions(id)
-  const del = useDeleteInvestment(id ?? '')
   const deactivate = useDeactivateFund()
-  const toast = useToast()
   const [editing, setEditing] = useState(false)
   const [tab, setTab] = useState<DetailTab>('portfolio')
-  const [invModal, setInvModal] = useState<{ open: boolean; editing: Investment | null }>({
-    open: false,
-    editing: null,
-  })
-
-  const onDeleteInvestment = async (inv: Investment) => {
-    if (!window.confirm(`${inv.startup_name ?? '해당'} 투자를 삭제할까요?`)) return
-    try {
-      await del.mutateAsync(inv.id)
-      toast.show('투자를 삭제했습니다.', 'success')
-      // 삭제는 수정 폼 좌측 하단에서 호출된다 — 성공 시 폼을 닫는다.
-      setInvModal({ open: false, editing: null })
-    } catch {
-      toast.show('삭제에 실패했습니다. 권한을 확인하세요.', 'danger')
-    }
-  }
+  // 이 화면의 투자 폼은 **등록 전용**이다 — 수정·삭제는 집행 건 상세 페이지가 갖는다.
+  const [addingInv, setAddingInv] = useState(false)
 
   if (isLoading) return <Spinner />
   if (!fund || !id) return <Banner tone="warning">펀드를 찾을 수 없습니다.</Banner>
@@ -252,11 +233,11 @@ export function FundDetailPage() {
               {tab === 'lp' && <FundLpPanel fundId={id} lps={lps ?? []} />}
               {tab === 'portfolio' && (
                 <PortfolioBoardCard
+                  fundId={id}
                   fundName={fund.name}
                   investments={investments ?? []}
                   purposes={purposes ?? []}
-                  onAdd={() => setInvModal({ open: true, editing: null })}
-                  onEdit={(inv) => setInvModal({ open: true, editing: inv })}
+                  onAdd={() => setAddingInv(true)}
                 />
               )}
               {tab === 'calls' && (
@@ -303,10 +284,8 @@ export function FundDetailPage() {
       <InvestmentFormModal
         fundId={id}
         fundName={fund.name}
-        open={invModal.open}
-        editing={invModal.editing}
-        onClose={() => setInvModal({ open: false, editing: null })}
-        onDelete={(inv) => void onDeleteInvestment(inv)}
+        open={addingInv}
+        onClose={() => setAddingInv(false)}
       />
 
     </div>

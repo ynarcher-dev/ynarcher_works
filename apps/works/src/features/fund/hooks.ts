@@ -536,9 +536,6 @@ export interface Investment {
   startup_one_liner: string | null
   /** 회사개요(startups 마스터 호출값 — investments에 중복 저장하지 않음). */
   startup_representative: string | null
-  /** 기업 연락 축(startups.email/phone). 외부 기업 정보라 민감정보 정책(fund.portfolio)을 탄다. */
-  startup_email: string | null
-  startup_phone: string | null
   startup_founded_on: string | null
   startup_location: string | null
   startup_industries: string[]
@@ -639,7 +636,7 @@ export function useInvestments(fundId: string | undefined) {
         .select(
           'id, startup_id, amount, invested_at, stage, investment_method, valuation, post_valuation, is_own_investment, ' +
             'purposes:investment_purposes(purpose_id), ' +
-            'startup:startups!investments_startup_id_fkey(name, logo_url, business_profile, representative, email, phone, founded_on, location, industries, industry, management_status, pool_status, closed_on, ' +
+            'startup:startups!investments_startup_id_fkey(name, logo_url, business_profile, representative, founded_on, location, industries, industry, management_status, pool_status, closed_on, ' +
             'managers:startup_managers(is_lead, user:users!startup_managers_user_id_fkey(name, email, phone)))',
         )
         .eq('fund_id', fundId)
@@ -657,8 +654,6 @@ export function useInvestments(fundId: string | undefined) {
           startup_logo_url: (s?.logo_url as string) ?? null,
           startup_one_liner: readOneLiner(s?.business_profile),
           startup_representative: (s?.representative as string) ?? null,
-          startup_email: (s?.email as string) ?? null,
-          startup_phone: (s?.phone as string) ?? null,
           startup_founded_on: (s?.founded_on as string) ?? null,
           startup_location: (s?.location as string) ?? null,
           startup_industries: readIndustryList(s?.industries, s?.industry),

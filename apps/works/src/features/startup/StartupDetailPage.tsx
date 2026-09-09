@@ -1,16 +1,4 @@
-import {
-  BackButton,
-  Badge,
-  Banner,
-  Button,
-  DetailTopBar,
-  EntityHeaderCard,
-  EntityHeaderSection,
-  formText,
-  InfoField,
-  InfoGrid,
-  Spinner,
-} from '@ynarcher/ui'
+import { BackButton, Banner, Button, DetailTopBar, formText, Spinner } from '@ynarcher/ui'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { DetailDeleteButton } from '@/components/DetailDeleteButton'
@@ -18,44 +6,23 @@ import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
 import { RelatedMinutesPanel } from '@/features/office/minutes/RelatedMinutesPanel'
-import { PhotoBox } from '@/features/networks/PhotoBox'
 import { useContributions, useDeactivateEntity, useEntity } from '@/features/master/entityHooks'
 import { useAuthStore } from '@/auth/authStore'
 import { StartupDetailForm } from '@/features/startup/StartupDetailForm'
 import { StartupCapabilitySection } from '@/features/startup/StartupCapabilitySection'
 import { StartupPerformanceSection } from '@/features/startup/StartupPerformanceSection'
 import { useStartupManagers } from '@/features/startup/startupPoolHooks'
-import {
-  isInvested,
-  managementStatusLabel,
-  startupContentKey,
-} from '@/features/startup/startupClassification'
-import { SensitiveValue } from '@/features/master/SensitiveValue'
-import { readBusiness } from '@/features/startup/startupProfile'
-import { formatFounded, readIndustries } from '@/features/startup/startupGrowth'
+import { isInvested, startupContentKey } from '@/features/startup/startupClassification'
 import { SectionHeading } from '@/components/SectionHeading'
 import { StartupManagementSection } from '@/features/startup/StartupManagementSection'
 import { StartupSummaryCards, readSummary } from '@/features/startup/StartupSummaryCards'
+import { StartupHeaderCard } from '@/features/startup/StartupHeaderCard'
 
 /** 첨부/피드백/기여 로그 대상 유형(다형 테이블 target_type). */
 const RESOURCE_TYPE = 'startup'
 
 /** 발굴기업 목록 경로(뒤로가기 목적지). */
 const LIST_PATH = '/startup'
-
-/** 라벨: 값 한 줄 — 규격은 공용 `InfoField`가 소유한다. */
-const Info = InfoField
-
-/** 날짜 문자열의 앞 10자리(YYYY-MM-DD). 값이 없으면 null을 돌려 빈 값 표기를 InfoField에 맡긴다. */
-function formatDate(v: unknown): string | null {
-  const s = v ? String(v) : ''
-  return s.length >= 10 ? s.slice(0, 10) : null
-}
-
-/** 원장 스칼라 값 → 문자열(빈 값은 null). 민감정보 컴포넌트에 넘길 때 쓴다. */
-function text(v: unknown): string | null {
-  return v == null || v === '' ? null : String(v)
-}
 
 /**
  * 스타트업 풀 상세페이지(모달 아님, NETWORKS와 동일한 카드 섹션 + 좌우 배치).
@@ -83,16 +50,8 @@ export function StartupDetailPage() {
   // 딜메이커 = 담당자 원장의 리드. 투자기업에만 지정되므로 그 외에는 빈 값으로 선다.
   const leadName = (managers ?? []).find((m) => m.is_lead)?.user?.name ?? null
 
-  const str = (key: string) => {
-    const v = record[key]
-    return v == null || v === '' ? '-' : String(v)
-  }
   // 민감정보 정책은 구분(관리현황)별 메뉴 단위다 — 상세도 자기가 속한 목록과 같은 정책을 따른다.
   const contentKey = startupContentKey(record.management_status)
-  const logo = record.logo_url ? String(record.logo_url) : null
-  const industries = readIndustries(record)
-  // 부제 자리에는 한 줄 소개(business_profile.oneLiner)를 노출한다.
-  const oneLiner = readBusiness(record).oneLiner ?? ''
 
   return (
     <div className="space-y-5">
@@ -132,100 +91,7 @@ export function StartupDetailPage() {
             {/* 카드 규격(사진·제목·배지·부제·칩 줄·구분선·정보행)은 화면이 아니라 공용
                 `EntityHeaderCard`가 소유한다 — 상세 헤더가 페이지 맥락이라는 규칙(24px 제목 옆
                 배지가 카드 규격 11px로 찍히지 않게 하는 것)도 그 카드가 함께 갖는다. */}
-            <EntityHeaderCard
-              photo={<PhotoBox src={logo} />}
-              title={record.name}
-              badges={industries.map((ind) => (
-                <Badge key={ind} tone="neutral">
-                  {ind}
-                </Badge>
-              ))}
-              description={oneLiner}
-              chips={
-                <>
-                  {str('stage') !== '-' && <Badge tone="neutral">{str('stage')}</Badge>}
-                  {managementStatusLabel(record.management_status) && (
-                    <Badge tone={invested ? 'info' : 'neutral'}>
-                      {managementStatusLabel(record.management_status)}
-                    </Badge>
-                  )}
-                  {invested && str('pool_status') !== '-' && (
-                    <Badge tone="success" dot>
-                      {str('pool_status')}
-                    </Badge>
-                  )}
-                </>
-              }
-              info={
-                <InfoGrid>
-                {/* 대표자·이메일·연락처는 외부 기업 정보 — ADMIN '민감정보 관리'의 구분별 정책을 따른다. */}
-                <Info
-                  label="대표자"
-                  value={
-                    <SensitiveValue
-                      field="name"
-                      contentKey={contentKey}
-                      value={text(record.representative)}
-                      resourceType={RESOURCE_TYPE}
-                      resourceId={record.id}
-                    />
-                  }
-                />
-                <Info
-                  label="이메일"
-                  value={
-                    <SensitiveValue
-                      field="email"
-                      contentKey={contentKey}
-                      value={text(record.email)}
-                      resourceType={RESOURCE_TYPE}
-                      resourceId={record.id}
-                    />
-                  }
-                />
-                <Info
-                  label="연락처"
-                  value={
-                    <SensitiveValue
-                      field="phone"
-                      contentKey={contentKey}
-                      value={text(record.phone)}
-                      resourceType={RESOURCE_TYPE}
-                      resourceId={record.id}
-                    />
-                  }
-                />
-                <Info label="회사 형태" value={str('company_form')} />
-                <Info label="설립일" value={formatFounded(record.founded_on)} />
-                <Info label="사업자등록번호" value={str('biz_reg_no')} />
-                <Info label="소재지" value={str('location')} />
-                {/* 상세주소는 길 수 있어 소재지 오른쪽 2열을 차지한다(이 그리드의 마지막 칸). */}
-                <Info
-                  label="상세주소"
-                  value={str('address_detail')}
-                  className="min-w-0 sm:col-span-2"
-                  valueClassName="min-w-0 flex-1 truncate"
-                />
-                </InfoGrid>
-              }
-            >
-              {/* 발굴 경로는 길 수 있어 전체 폭을 쓰되, 표시 규격은 위 정보행(Info)과 동일하게 맞춘다.
-                  구분선을 그은 한 묶음이라는 사실은 화면이 아니라 `EntityHeaderSection`이 적는다. */}
-              <EntityHeaderSection>
-                <Info label="발굴 경로" value={str('discovery_source')} />
-              </EntityHeaderSection>
-
-              {/* 이 레코드를 누가 맡고 누가 만들었는지 — 업무 사실(위 칸)과 다른 축이라 줄을 나눈다.
-                  딜메이커만 도메인 값이고(관리 주체) 생성자·수정일은 레코드를 다룬 흔적이라
-                  한 단 연한 메타 톤으로 물러난다. 담당자 전원은 아래 관리 현황 카드가 답한다. */}
-              <EntityHeaderSection>
-                <InfoGrid>
-                  <Info label="딜메이커" value={leadName} />
-                  <Info label="생성자" value={record.creator?.name || null} meta />
-                  <Info label="수정일" value={formatDate(record.updated_at)} meta />
-                </InfoGrid>
-              </EntityHeaderSection>
-            </EntityHeaderCard>
+            <StartupHeaderCard record={record} contentKey={contentKey} leadName={leadName} />
 
             {/* 요약 구분선(기본 데이터 아래). 기업 개요보다 위에 서는 이유는 성격이 달라서다 —
                 아래 개요가 사실을 나열하는 자리라면 여기는 그 사실을 읽은 담당자의 판단이고,
