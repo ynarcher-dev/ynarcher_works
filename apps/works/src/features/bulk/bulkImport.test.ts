@@ -177,3 +177,78 @@ describe('buildTemplateCsv', () => {
     expect(example).toBe('1호 조합,운용 중,2026-01-15,3000000000,"a,b"')
   })
 })
+
+/**
+ * 파일 안 중복 — 대조 원장을 준 명세에서만 돈다.
+ *
+ * **빈 원장에 넣을 때는 이것이 유일한 방어선**이다(서버 대조는 전 줄을 통과시킨다).
+ * 초기 데이터 이관이 정확히 그 상황이고, 파일 안 중복이 가장 많은 자리이기도 하다.
+ */
+const DEDUP_SPEC: BulkImportSpec = {
+  ...TAG_SPEC,
+  matchLedger: {
+    table: 'startups',
+    columns: 'id, name, email, phone',
+    matchColumns: { name: 'name', email: 'email', phone: 'phone' },
+  },
+  fields: [
+    { header: '기업명', column: 'name', required: true },
+    { header: '이메일', column: 'email' },
+    { header: '연락처', column: 'phone', kind: 'phone' },
+  ],
+}
+
+describe('parseBulkCsv — 파일 안 중복', () => {
+  it('같은 대상이 두 줄이면 뒤엣줄이 오류로 빠지고 앞엣줄만 올라간다', () => {
+    const result = parseBulkCsv(
+      '기업명,이메일,연락처\n딜챗,a@x.com,010-1111-2222\n(주)딜챗,a@x.com,010-1111-2222',
+      DEDUP_SPEC,
+      TAGS,
+    )
+    expect(result.rows).toHaveLength(1)
+    expect(result.rows[0]?.name).toBe('딜챗')
+    expect(result.errors).toEqual([{ line: 3, message: '파일 2줄과 같은 대상입니다.' }])
+  })
+
+  it('접힌 줄도 미리보기에는 남는다 — 무엇을 올렸는지는 파일 그대로 보여야 한다', () => {
+    const result = parseBulkCsv(
+      '기업명,이메일,연락처\n딜챗,a@x.com,\n딜챗,a@x.com,',
+      DEDUP_SPEC,
+      TAGS,
+    )
+    expect(result.preview).toHaveLength(2)
+    expect(result.rows).toHaveLength(1)
+  })
+
+  it('한 칸만 같으면 둘 다 올라간다', () => {
+    const result = parseBulkCsv(
+      '기업명,이메일,연락처\n딜챗,a@x.com,\n딜챗,b@x.com,',
+      DEDUP_SPEC,
+      TAGS,
+    )
+    expect(result.rows).toHaveLength(2)
+    expect(result.errors).toHaveLength(0)
+  })
+
+  it('대조 원장이 없는 명세(사업·펀드)에서는 돌지 않는다 — 같은 이름의 2기가 정상이다', () => {
+    const result = parseBulkCsv(
+      '기업명,이메일,연락처\n딜챗,a@x.com,\n딜챗,a@x.com,',
+      { ...DEDUP_SPEC, matchLedger: undefined },
+      TAGS,
+    )
+    expect(result.rows).toHaveLength(2)
+    expect(result.errors).toHaveLength(0)
+  })
+
+  it('형식 오류로 빠진 줄이 있어도 중복 줄 번호가 파일 그대로다', () => {
+    const result = parseBulkCsv(
+      // 2줄은 기업명이 비어 형식 오류, 3·4줄이 서로 중복이다.
+      '기업명,이메일,연락처\n,a@x.com,\n딜챗,b@x.com,\n딜챗,b@x.com,',
+      DEDUP_SPEC,
+      TAGS,
+    )
+    expect(result.rows).toHaveLength(1)
+    expect(result.errors.map((e) => e.line)).toEqual([2, 4])
+    expect(result.errors[1]?.message).toBe('파일 3줄과 같은 대상입니다.')
+  })
+})

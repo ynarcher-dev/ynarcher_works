@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { bestMatchFor, type LedgerCandidate } from '@/features/master/ledgerMatch'
+import {
+  bestMatchFor,
+  findDuplicateProbes,
+  type LedgerCandidate,
+} from '@/features/master/ledgerMatch'
 
 /**
  * 중복 대조 판정. **조회가 아니라 규칙만** 본다 — 어떤 행을 긁어 왔는가는 원장과 권한의
@@ -92,5 +96,57 @@ describe('bestMatchFor', () => {
 
   it('후보가 없으면 null이다', () => {
     expect(bestMatchFor({ name: '와이앤아처', email: 'a@x.com', phone: '' }, [])).toBeNull()
+  })
+})
+
+/**
+ * 파일 안 중복 — **빈 원장에 넣을 때는 이것이 유일한 방어선**이다(원장 대조는 전 줄을
+ * 통과시킨다). 초기 데이터 이관이 정확히 그 상황이다.
+ */
+describe('findDuplicateProbes', () => {
+  const probe = (name: string, email = '', phone = '') => ({ name, email, phone })
+
+  it('같은 대상이 두 줄이면 뒤엣줄이 앞엣줄을 가리킨다', () => {
+    const found = findDuplicateProbes([
+      probe('딜챗', 'a@x.com'),
+      probe('뉴런랩스', 'b@x.com'),
+      probe('딜챗', 'a@x.com'),
+    ])
+    expect([...found]).toEqual([[2, 0]])
+  })
+
+  it('세 줄이 같으면 둘이 접히고 둘 다 첫 줄을 가리킨다', () => {
+    const found = findDuplicateProbes([
+      probe('딜챗', 'a@x.com'),
+      probe('딜챗', 'a@x.com'),
+      probe('딜챗', 'a@x.com'),
+    ])
+    expect([...found]).toEqual([
+      [1, 0],
+      [2, 0],
+    ])
+  })
+
+  it('한 칸만 같으면 접지 않는다 — 원장 대조와 같은 기준이다', () => {
+    expect(
+      findDuplicateProbes([probe('딜챗', 'a@x.com'), probe('딜챗', 'b@x.com')]).size,
+    ).toBe(0)
+  })
+
+  it('표기가 달라도 값이 같으면 접는다(대소문자·공백·전화 하이픈)', () => {
+    const found = findDuplicateProbes([
+      probe('Acme', 'A@X.COM', '010-1111-2222'),
+      probe(' acme ', 'a@x.com', '01011112222'),
+    ])
+    expect(found.get(1)).toBe(0)
+  })
+
+  it('연락처가 양쪽 다 빈 동명이인은 접지 않는다 — 빈 칸은 일치가 아니다', () => {
+    expect(findDuplicateProbes([probe('김철수'), probe('김철수')]).size).toBe(0)
+  })
+
+  it('한 줄짜리·빈 목록은 접을 것이 없다', () => {
+    expect(findDuplicateProbes([probe('딜챗', 'a@x.com')]).size).toBe(0)
+    expect(findDuplicateProbes([]).size).toBe(0)
   })
 })

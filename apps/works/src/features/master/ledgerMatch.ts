@@ -224,6 +224,67 @@ export async function findLedgerMatches(
   return out
 }
 
+/** 원장 행(또는 업로드 페이로드)에서 대조에 견줄 세 값을 꺼낸다. 칸 이름은 원장마다 다르다. */
+export function probeOf(
+  row: Record<string, unknown>,
+  cols: { name: string; email: string; phone: string },
+): LedgerProbe {
+  const at = (key: string) => (row[key] == null ? '' : String(row[key]))
+  return { name: at(cols.name), email: at(cols.email), phone: at(cols.phone) }
+}
+
+/**
+ * **파일 안에서** 서로 같은 줄을 찾는다 — 첨자 → 그것이 처음 나온 첨자.
+ *
+ * 원장 대조(`findLedgerMatches`)와 다른 물음이다. 저쪽은 "이미 원장에 있는가"를 서버에 묻고,
+ * 이쪽은 "이 파일이 같은 대상을 두 번 적었는가"를 파일만 보고 답한다 — **빈 원장에 넣을 때는
+ * 저쪽이 전 줄을 통과시키므로 이쪽이 유일한 방어선이다.** 초기 데이터 이관이 정확히 그
+ * 상황이고, 파일 안 중복이 가장 많은 자리이기도 하다.
+ *
+ * 판정 규칙은 하나뿐이다(`bestMatchFor`) — 파일 안과 원장을 다른 잣대로 보면, 같은 두 줄이
+ * 파일에서는 남남이고 원장에서는 같은 대상이 된다.
+ */
+export function findDuplicateProbes(probes: LedgerProbe[]): Map<number, number> {
+  const idxName = new Map<string, LedgerCandidate[]>()
+  const idxEmail = new Map<string, LedgerCandidate[]>()
+  const push = (m: Map<string, LedgerCandidate[]>, k: string, c: LedgerCandidate) => {
+    if (!k) return
+    const arr = m.get(k)
+    if (arr) arr.push(c)
+    else m.set(k, [c])
+  }
+
+  const out = new Map<number, number>()
+  probes.forEach((probe, i) => {
+    const nName = normText(probe.name)
+    const nEmail = normText(probe.email)
+
+    // **앞선 줄만** 후보다 — 뒤엣줄이 접히고 앞엣줄이 남아야, 같은 파일을 두 번 올려도
+    // 접히는 줄이 같다(뒤를 보면 어느 쪽이 남을지가 순회 순서에 따라 달라진다).
+    const cands = new Map<string, LedgerCandidate>()
+    for (const c of [...(idxName.get(nName) ?? []), ...(idxEmail.get(nEmail) ?? [])]) {
+      cands.set(c.id, c)
+    }
+    const hit = bestMatchFor(probe, [...cands.values()])
+    if (hit) out.set(i, Number(hit.id))
+
+    const self: LedgerCandidate = {
+      id: String(i),
+      name: probe.name,
+      email: probe.email,
+      phone: probe.phone,
+      retired: false,
+      raw: {},
+      nName,
+      nEmail,
+      nPhone: normPhone(probe.phone),
+    }
+    push(idxName, nName, self)
+    push(idxEmail, nEmail, self)
+  })
+  return out
+}
+
 /** 한 건만 대조한다 — 등록 폼이 저장 직전에 부르는 자리. */
 export async function findOneLedgerMatch(
   spec: LedgerMatchSpec,

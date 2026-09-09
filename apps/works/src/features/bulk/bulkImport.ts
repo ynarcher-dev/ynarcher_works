@@ -17,7 +17,11 @@
  */
 import type { ReactNode } from 'react'
 import { parseCsvTable } from '@/lib/csv'
-import type { LedgerMatchSpec } from '@/features/master/ledgerMatch'
+import {
+  findDuplicateProbes,
+  probeOf,
+  type LedgerMatchSpec,
+} from '@/features/master/ledgerMatch'
 
 /** 값을 어떻게 읽을지. 지정하지 않으면 문자열 그대로 넣는다. */
 export type BulkFieldKind = 'text' | 'number' | 'date' | 'enum' | 'tag' | 'tags' | 'phone'
@@ -392,5 +396,46 @@ export function parseBulkCsv(
     lines.push(line)
   }
 
-  return { rows, lines, preview, errors }
+  return withInFileDuplicates({ rows, lines, preview, errors }, spec)
+}
+
+/**
+ * **파일 안에서 같은 대상을 두 번 적은 줄**을 오류로 세우고 업로드 대상에서 뺀다(2026-09-09).
+ *
+ * 원장 대조(`useLedgerDuplicates`)와 다른 물음이다. 저쪽은 "이미 원장에 있는가"를 서버에 묻고
+ * 이쪽은 파일만 보고 답한다 — **빈 원장에 넣을 때는 저쪽이 전 줄을 통과시키므로 이쪽이 유일한
+ * 방어선**이고, 초기 데이터 이관이 정확히 그 상황이자 파일 안 중복이 가장 많은 자리다.
+ *
+ * 파싱과 같은 곳에 두는 이유는 **서버에 묻지 않는 판정**이어서다 — 파일만 있으면 답이 나오므로
+ * 화면이 조회를 기다릴 이유가 없고, 순수 함수라 테스트가 지킬 수 있다.
+ *
+ * 남는 것은 앞엣줄이고 접히는 것은 뒤엣줄이다. 그래야 같은 파일을 두 번 올려도 접히는 줄이
+ * 같다 — 어느 쪽이 남을지가 순회 방향에 따라 달라지면 결과를 예측할 수 없다.
+ *
+ * 대조 원장을 주지 않은 명세(사업·펀드)에서는 돌지 않는다. 같은 이름의 2기·3기 사업이 정상인
+ * 자리라 여기서 막으면 정상 등록이 이유 없이 거절된다.
+ */
+function withInFileDuplicates(
+  result: BulkParseResult,
+  spec: BulkImportSpec,
+): BulkParseResult {
+  const cols = spec.matchLedger?.matchColumns
+  if (!cols || result.rows.length < 2) return result
+
+  const dupes = findDuplicateProbes(result.rows.map((r) => probeOf(r, cols)))
+  if (dupes.size === 0) return result
+
+  return {
+    rows: result.rows.filter((_, i) => !dupes.has(i)),
+    lines: result.lines.filter((_, i) => !dupes.has(i)),
+    preview: result.preview,
+    errors: [
+      ...result.errors,
+      ...[...dupes].map(([i, first]) => ({
+        line: result.lines[i]!,
+        // 몇 줄과 같은지 밝힌다 — "중복입니다" 한 줄이면 파일에서 어느 줄을 지울지 알 수 없다.
+        message: `파일 ${result.lines[first]!}줄과 같은 대상입니다.`,
+      })),
+    ].sort((a, b) => a.line - b.line),
+  }
 }

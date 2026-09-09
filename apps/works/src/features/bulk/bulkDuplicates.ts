@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { findLedgerMatches } from '@/features/master/ledgerMatch'
+import { findLedgerMatches, probeOf } from '@/features/master/ledgerMatch'
 import type { BulkImportSpec, BulkParseResult } from '@/features/bulk/bulkImport'
 
 /**
@@ -16,15 +16,6 @@ import type { BulkImportSpec, BulkParseResult } from '@/features/bulk/bulkImport
  * 다른 건일 수 있어(같은 이름의 2기·3기 사업) 여기서 막을 일이 아니다 — 막으면 정상 등록이
  * 이유 없이 거절된다.
  */
-
-/** 대조에 견줄 세 값을 페이로드에서 꺼낸다. 컬럼 이름은 원장마다 다르므로 명세가 답한다. */
-function probeOf(
-  row: Record<string, unknown>,
-  cols: { name: string; email: string; phone: string },
-) {
-  const at = (key: string) => (row[key] == null ? '' : String(row[key]))
-  return { name: at(cols.name), email: at(cols.email), phone: at(cols.phone) }
-}
 
 /**
  * 걸린 줄의 첨자 → 그 원장 행의 이름.
