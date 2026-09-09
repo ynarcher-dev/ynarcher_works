@@ -2,7 +2,6 @@ import {
   Badge,
   Button,
   Card,
-  CardHeading,
   cardText,
   InfoField,
   InfoGrid,
@@ -112,20 +111,19 @@ export function InvestmentDetailModal({
           </div>
         </div>
 
-        {/* 회사개요(startups 호출값). 대표자·이메일·연락처는 STARTUP 상세와 같은 순서로 선다 —
-            같은 값을 두 화면에서 보는 눈이 자리를 다시 찾지 않아야 한다. */}
+        {/* 회사개요(startups 호출값). 줄이 축을 가른다 — 첫 줄은 이 기업이 무엇인가(대표자·
+            설립일·소재지), 둘째 줄은 어떻게 닿는가(이메일·연락처)다. */}
         <Card title="회사 개요">
           <InfoGrid>
-            {/* 대표자·이메일·연락처는 외부 기업 정보 — ADMIN '민감정보 관리'의 fund.portfolio 정책을 따른다. */}
             <Info label="대표자" value={masked('name', inv.startup_representative)} />
-            <Info label="이메일" value={masked('email', inv.startup_email)} />
-            <Info label="연락처" value={masked('phone', inv.startup_phone)} />
             <Info label="설립일" value={shortDate(inv.startup_founded_on)} />
             <Info label="소재지" value={inv.startup_location || '-'} />
+            {/* 이메일·연락처도 외부 기업 정보 — ADMIN '민감정보 관리'의 fund.portfolio 정책을 따른다. */}
+            <Info label="이메일" value={masked('email', inv.startup_email)} />
+            <Info label="연락처" value={masked('phone', inv.startup_phone)} />
           </InfoGrid>
         </Card>
 
-        {/* 투자 집행 정보 + 딜메이커. */}
         <Card title="투자 집행 정보">
           <InfoGrid>
             <Info label="투자펀드" value={fundName} />
@@ -136,15 +134,14 @@ export function InvestmentDetailModal({
             <Info label="POST VALUE" value={num(inv.post_valuation)} />
             <Info label="집행액" value={num(inv.amount)} />
           </InfoGrid>
+        </Card>
 
-          {/* 딜메이커는 금액·조건과 같은 줄에 섞이지 않는다 — 저 값들은 이 건의 조건이고 여기는
-              사람이라, 한 격자에 두면 '이메일'이 무엇의 이메일인지 라벨이 스스로 답하지 못한다.
-              이름만 요약 규격('외 N')이고 이메일·연락처는 딜메이커(리드) 본인 것이다 — 연락처는
-              사람 하나에 붙는 값이라 접을 수 없다. 내부 임직원이므로 마스킹하지 않는다. */}
-          <CardHeading level="subhead" className="mt-4">
-            딜메이커
-          </CardHeading>
-          <InfoGrid className="mt-2">
+        {/* 딜메이커는 카드를 따로 받는다 — 위 카드가 담는 것은 이 건의 조건(금액·밸류·방식)이고
+            여기는 사람이라, 한 카드에 두면 '이메일'이 무엇의 이메일인지 라벨이 스스로 답하지
+            못한다. 이름만 목록과 같은 요약 규격('외 N')이고 이메일·연락처는 딜메이커(리드) 본인
+            것이다 — 연락처는 사람 하나에 붙는 값이라 접을 수 없다. 내부 임직원이라 마스킹하지 않는다. */}
+        <Card title="딜메이커">
+          <InfoGrid>
             <Info label="이름" value={inv.dealmaker_name || '-'} />
             <Info label="이메일" value={inv.dealmaker_email || '-'} />
             <Info label="연락처" value={inv.dealmaker_phone || '-'} />
