@@ -52,9 +52,6 @@ export interface SensitiveContentGroup {
 
 /** 외부 인물 원장(이름·이메일·연락처를 모두 표시하는 화면) 공통 필드. */
 const PERSON: readonly SensitiveField[] = ['name', 'email', 'phone']
-/** 외부 기업의 대표자명만 표시하는 화면 공통 필드. */
-const NAME_ONLY: readonly SensitiveField[] = ['name']
-
 /** 기업 원장(목록은 대표자명, 상세는 이메일·연락처까지) 공통 설명. */
 const COMPANY_HINT = '대표자명 · 기업 이메일 · 연락처'
 
@@ -162,10 +159,13 @@ export const SENSITIVE_CONTENT_GROUPS: readonly SensitiveContentGroup[] = [
     label: 'FUND',
     contents: [
       {
+        // 2026-09-09에 대표자 하나에서 STARTUP 원장과 같은 세 축으로 넓혔다 — 투자 집행 상세의
+        // 회사개요가 기업 이메일·연락처를 함께 세우기 때문이다. 화면이 렌더하는 필드만 담는다는
+        // 규칙 그대로이며, 정책이 미설정인 두 축은 기본값(마스킹)으로 선다.
         key: FUND_PORTFOLIO_CONTENT_KEY,
         label: '포트폴리오(피투자사)',
-        fields: NAME_ONLY,
-        hint: '피투자사 대표자',
+        fields: PERSON,
+        hint: COMPANY_HINT,
       },
     ],
   },

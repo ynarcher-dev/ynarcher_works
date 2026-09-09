@@ -536,6 +536,9 @@ export interface Investment {
   startup_one_liner: string | null
   /** 회사개요(startups 마스터 호출값 — investments에 중복 저장하지 않음). */
   startup_representative: string | null
+  /** 기업 연락 축(startups.email/phone). 외부 기업 정보라 민감정보 정책(fund.portfolio)을 탄다. */
+  startup_email: string | null
+  startup_phone: string | null
   startup_founded_on: string | null
   startup_location: string | null
   startup_industries: string[]
@@ -547,6 +550,13 @@ export interface Investment {
   startup_closed_on: string | null
   /** 딜메이커(전권 담당자) = startup_managers 리드(is_lead). networks 읽기 권한 없으면 RLS로 null. */
   dealmaker_name: string | null
+  /**
+   * 딜메이커 **한 사람**(리드)의 연락 축. 지원 담당자의 것은 담지 않는다 — 연락처는 사람 하나에
+   * 붙는 값이라 `dealmaker_name`처럼 '외 N'으로 접을 수 없고, 접으면 누구의 번호인지 화면이
+   * 답하지 못한다. 내부 임직원이라 마스킹하지 않는다(sensitiveContents 주석, 2026-07-29 확정).
+   */
+  dealmaker_email: string | null
+  dealmaker_phone: string | null
   amount: number
   invested_at: string | null
   stage: string | null
@@ -578,19 +588,40 @@ function readIndustryList(industries: unknown, legacy: unknown): string[] {
   return one ? [one] : []
 }
 
+/** startup_managers 조인 행에서 읽는 사람 한 명. */
+interface ManagerPerson {
+  name: string | null
+  email: string | null
+  phone: string | null
+}
+
+/**
+ * startup_managers 행을 '리드 먼저' 순서로 세운다. 요약(`외 N`)과 연락 축이 **같은 순서 하나**를
+ * 따라야 한다 — 순서를 각자 정하면 리드가 지정되지 않은 기업에서 이름과 연락처가 서로 다른
+ * 사람을 가리킬 수 있다.
+ */
+function orderedManagers(managers: unknown): ManagerPerson[] {
+  if (!Array.isArray(managers)) return []
+  const rows = managers.filter((m): m is Record<string, unknown> => Boolean(m) && typeof m === 'object')
+  const lead = rows.find((m) => m.is_lead === true)
+  const ordered = lead ? [lead, ...rows.filter((m) => m !== lead)] : rows
+  return ordered.map((m) => {
+    const u = (m.user ?? null) as Record<string, unknown> | null
+    return {
+      name: (u?.name as string) ?? null,
+      email: (u?.email as string) ?? null,
+      phone: (u?.phone as string) ?? null,
+    }
+  })
+}
+
 /**
  * 딜메이커 = startup_managers 담당자를 목록 공용 규격("대표(리드) 1명 외 N")으로 요약한다.
  * 지원 담당자(딜메이커 부)가 있으면 "외 N"으로 드러나야 한다 — 리드만 적으면 목록에서는
  * 담당자가 1명뿐인 것처럼 보인다. 담당자가 없으면 null.
  */
 function readLeadManager(managers: unknown): string | null {
-  if (!Array.isArray(managers)) return null
-  const rows = managers.filter((m): m is Record<string, unknown> => Boolean(m) && typeof m === 'object')
-  const nameOf = (m: Record<string, unknown>) =>
-    (m.user as { name?: string | null } | null | undefined)?.name
-  const lead = rows.find((m) => m.is_lead === true)
-  const ordered = lead ? [lead, ...rows.filter((m) => m !== lead)] : rows
-  return memberSummary(ordered.map(nameOf))
+  return memberSummary(orderedManagers(managers).map((m) => m.name))
 }
 
 /**
@@ -608,8 +639,8 @@ export function useInvestments(fundId: string | undefined) {
         .select(
           'id, startup_id, amount, invested_at, stage, investment_method, valuation, post_valuation, is_own_investment, ' +
             'purposes:investment_purposes(purpose_id), ' +
-            'startup:startups!investments_startup_id_fkey(name, logo_url, business_profile, representative, founded_on, location, industries, industry, management_status, pool_status, closed_on, ' +
-            'managers:startup_managers(is_lead, user:users!startup_managers_user_id_fkey(name)))',
+            'startup:startups!investments_startup_id_fkey(name, logo_url, business_profile, representative, email, phone, founded_on, location, industries, industry, management_status, pool_status, closed_on, ' +
+            'managers:startup_managers(is_lead, user:users!startup_managers_user_id_fkey(name, email, phone)))',
         )
         .eq('fund_id', fundId)
         .is('deleted_at', null)
@@ -617,6 +648,8 @@ export function useInvestments(fundId: string | undefined) {
       return ((data ?? []) as unknown[]).map((row) => {
         const r = row as Record<string, unknown> & { startup?: Record<string, unknown> | null }
         const s = r.startup ?? null
+        // 딜메이커 본인 = '리드 먼저' 순서의 첫 사람. 요약과 같은 목록을 한 번만 세운다.
+        const dealmaker = orderedManagers(s?.managers)[0] ?? null
         return {
           id: r.id as string,
           startup_id: (r.startup_id as string) ?? null,
@@ -624,6 +657,8 @@ export function useInvestments(fundId: string | undefined) {
           startup_logo_url: (s?.logo_url as string) ?? null,
           startup_one_liner: readOneLiner(s?.business_profile),
           startup_representative: (s?.representative as string) ?? null,
+          startup_email: (s?.email as string) ?? null,
+          startup_phone: (s?.phone as string) ?? null,
           startup_founded_on: (s?.founded_on as string) ?? null,
           startup_location: (s?.location as string) ?? null,
           startup_industries: readIndustryList(s?.industries, s?.industry),
@@ -631,6 +666,8 @@ export function useInvestments(fundId: string | undefined) {
           startup_pool_status: (s?.pool_status as string) ?? null,
           startup_closed_on: (s?.closed_on as string) ?? null,
           dealmaker_name: readLeadManager(s?.managers),
+          dealmaker_email: dealmaker?.email ?? null,
+          dealmaker_phone: dealmaker?.phone ?? null,
           amount: Number(r.amount),
           invested_at: (r.invested_at as string) ?? null,
           stage: (r.stage as string) ?? null,

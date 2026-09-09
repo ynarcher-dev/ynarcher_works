@@ -1,5 +1,18 @@
-import { Badge, Button, Card, cardText, InfoField, Modal, type BadgeTone } from '@ynarcher/ui'
-import { FUND_PORTFOLIO_CONTENT_KEY } from '@/features/admin/sensitiveContents'
+import {
+  Badge,
+  Button,
+  Card,
+  CardHeading,
+  cardText,
+  InfoField,
+  InfoGrid,
+  Modal,
+  type BadgeTone,
+} from '@ynarcher/ui'
+import {
+  FUND_PORTFOLIO_CONTENT_KEY,
+  type SensitiveField,
+} from '@/features/admin/sensitiveContents'
 import { SensitiveValue } from '@/features/master/SensitiveValue'
 import { PhotoBox } from '@/features/networks/PhotoBox'
 import {
@@ -39,6 +52,21 @@ export function InvestmentDetailModal({
 }) {
   const inv = investment
   if (!inv) return null
+
+  /**
+   * 회사개요의 개인정보 세 칸 — 정책 키와 로그 컨텍스트를 세 번 적지 않는다.
+   * 컴포넌트가 아니라 값을 돌려주는 함수인 이유는 열람 상태다: 렌더마다 새 컴포넌트 타입이
+   * 만들어지면 '보기'로 연 원본이 다음 렌더에서 다시 가려진다.
+   */
+  const masked = (field: SensitiveField, value: string | null) => (
+    <SensitiveValue
+      field={field}
+      contentKey={FUND_PORTFOLIO_CONTENT_KEY}
+      value={value}
+      resourceType="fund_investment"
+      resourceId={inv.id}
+    />
+  )
 
   const categoryLabel = managementStatusLabel(inv.startup_management_status)
   const categoryTone: BadgeTone = inv.startup_management_status
@@ -84,29 +112,22 @@ export function InvestmentDetailModal({
           </div>
         </div>
 
-        {/* 회사개요(startups 호출값) */}
+        {/* 회사개요(startups 호출값). 대표자·이메일·연락처는 STARTUP 상세와 같은 순서로 선다 —
+            같은 값을 두 화면에서 보는 눈이 자리를 다시 찾지 않아야 한다. */}
         <Card title="회사 개요">
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-            <Info
-              label="대표자"
-              value={
-                <SensitiveValue
-                  field="name"
-                  contentKey={FUND_PORTFOLIO_CONTENT_KEY}
-                  value={inv.startup_representative}
-                  resourceType="fund_investment"
-                  resourceId={inv.id}
-                />
-              }
-            />
+          <InfoGrid>
+            {/* 대표자·이메일·연락처는 외부 기업 정보 — ADMIN '민감정보 관리'의 fund.portfolio 정책을 따른다. */}
+            <Info label="대표자" value={masked('name', inv.startup_representative)} />
+            <Info label="이메일" value={masked('email', inv.startup_email)} />
+            <Info label="연락처" value={masked('phone', inv.startup_phone)} />
             <Info label="설립일" value={shortDate(inv.startup_founded_on)} />
             <Info label="소재지" value={inv.startup_location || '-'} />
-          </div>
+          </InfoGrid>
         </Card>
 
-        {/* 투자 집행 정보 — 딜메이커는 집행액 우측(마지막 행). */}
+        {/* 투자 집행 정보 + 딜메이커. */}
         <Card title="투자 집행 정보">
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+          <InfoGrid>
             <Info label="투자펀드" value={fundName} />
             <Info label="투자일" value={shortDate(inv.invested_at)} />
             <Info label="라운드" value={inv.stage || '-'} />
@@ -114,8 +135,20 @@ export function InvestmentDetailModal({
             <Info label="PRE VALUE" value={num(inv.valuation)} />
             <Info label="POST VALUE" value={num(inv.post_valuation)} />
             <Info label="집행액" value={num(inv.amount)} />
-            <Info label="딜메이커" value={inv.dealmaker_name || '-'} />
-          </div>
+          </InfoGrid>
+
+          {/* 딜메이커는 금액·조건과 같은 줄에 섞이지 않는다 — 저 값들은 이 건의 조건이고 여기는
+              사람이라, 한 격자에 두면 '이메일'이 무엇의 이메일인지 라벨이 스스로 답하지 못한다.
+              이름만 요약 규격('외 N')이고 이메일·연락처는 딜메이커(리드) 본인 것이다 — 연락처는
+              사람 하나에 붙는 값이라 접을 수 없다. 내부 임직원이므로 마스킹하지 않는다. */}
+          <CardHeading level="subhead" className="mt-4">
+            딜메이커
+          </CardHeading>
+          <InfoGrid className="mt-2">
+            <Info label="이름" value={inv.dealmaker_name || '-'} />
+            <Info label="이메일" value={inv.dealmaker_email || '-'} />
+            <Info label="연락처" value={inv.dealmaker_phone || '-'} />
+          </InfoGrid>
         </Card>
       </>
     </Modal>
