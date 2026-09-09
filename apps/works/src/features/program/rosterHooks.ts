@@ -59,6 +59,33 @@ interface RawEntry {
  */
 const ENTRY_COLS = 'id, master_table, master_id, created_at'
 
+/**
+ * 원장 새 행 하나의 페이로드 — **한 건 등록과 대용량이 같은 규칙을 쓴다.**
+ *
+ * 두 곳에 각각 적으면 한쪽만 고쳐지는 날이 오고, 그때 같은 파일이 어느 화면으로 올라갔느냐에
+ * 따라 다른 행이 만들어진다.
+ */
+function ledgerPayload(
+  master: MasterTable,
+  input: { name: string; contactName: string; email: string; phone: string },
+): Record<string, unknown> {
+  const { ledger } = PARTICIPANT_PERSONAS[master]
+  const trimmed = (v: string) => v.trim() || null
+
+  const payload: Record<string, unknown> = {
+    [ledger.person.name]: trimmed(input.contactName),
+    [ledger.matchColumns.email]: trimmed(input.email),
+    // 연락처는 숫자만 저장한다(등록 폼·업로드와 같은 규칙 — 표기 차이로 중복 판정이 갈린다).
+    [ledger.matchColumns.phone]: input.phone.replace(/\D/g, '') || null,
+    ...(ledger.createFixed ?? {}),
+  }
+  // 대상 이름을 **마지막에** 얹는다. NETWORKS는 대상이 곧 사람이라 이름 칸과 명의 칸이 같은
+  // `name`인데, 앞에 두면 비어 있을 수 있는 명의가 필수인 이름을 덮어 지운다(그 자격의 폼과
+  // 템플릿이 명의 칸을 세우지 않는 이유도 같다).
+  payload[ledger.matchColumns.name] = input.name.trim()
+  return payload
+}
+
 /** 이 사업의 참가자 명단 전부(자격 탭은 화면이 거른다). 뺀 줄은 오지 않는다. */
 export function useProgramRoster(programId: string | undefined) {
   const config = useProgramWorkspace()
@@ -197,23 +224,9 @@ export function useCreateLedgerEntry(programId: string) {
       phone: string
     }): Promise<string> => {
       const { ledger } = PARTICIPANT_PERSONAS[input.master]
-      const trimmed = (v: string) => v.trim() || null
-
-      const payload: Record<string, unknown> = {
-        [ledger.person.name]: trimmed(input.contactName),
-        [ledger.matchColumns.email]: trimmed(input.email),
-        // 연락처는 숫자만 저장한다(등록 폼·업로드와 같은 규칙 — 표기 차이로 중복 판정이 갈린다).
-        [ledger.matchColumns.phone]: input.phone.replace(/\D/g, '') || null,
-        ...(ledger.createFixed ?? {}),
-      }
-      // 대상 이름을 **마지막에** 얹는다. NETWORKS는 대상이 곧 사람이라 이름 칸과 명의 칸이
-      // 같은 `name`인데, 앞에 두면 비어 있을 수 있는 명의가 필수인 이름을 덮어 지운다
-      // (그 자격의 폼이 명의 칸을 세우지 않는 이유도 같다).
-      payload[ledger.matchColumns.name] = input.name.trim()
-
       const { data, error } = await supabase
         .from(ledger.table)
-        .insert(payload)
+        .insert(ledgerPayload(input.master, input))
         .select('id')
         .single()
       if (error) throw error
@@ -231,6 +244,61 @@ export function useCreateLedgerEntry(programId: string) {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: [config.key, 'roster', programId] })
       void qc.invalidateQueries({ queryKey: [config.key, 'roster-candidates', programId] })
+    },
+  })
+}
+
+/**
+ * 대용량 담기 실행 — 리뷰 표에서 확정된 결정을 그대로 옮긴다(2026-09-09).
+ *
+ * **한 줄씩 등록 창을 여는 것과 결과가 같아야 한다.** 그래서 원장 신규는
+ * `useCreateLedgerEntry`와 **같은 페이로드 조립**을 쓰고(자격이 정하는 값·이름을 마지막에
+ * 얹는 규칙까지), 대조 판정은 등록 창과 같은 함수가 이미 끝내 화면에서 넘어온다.
+ *
+ * 순서는 원장 먼저다 — 뒤가 실패해도 남는 것이 '담기지 않은 원장 행'이지 '가리킬 곳 없는
+ * 명단 줄'이 아니다. 원장 삽입은 한 번에 보내고(부분 성공을 만들지 않는다 — 절반만 만들어진
+ * 상태에서 다시 실행하면 앞의 절반이 중복으로 걸린다), 명단 삽입도 한 번이다.
+ */
+export function useBulkAddRoster(programId: string) {
+  const config = useProgramWorkspace()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      master: MasterTable
+      /** 이미 원장에 있는 대상 — 그대로 담는다. */
+      linkIds: string[]
+      /** 원장에 없는 대상 — 만들어서 담는다. */
+      creates: { name: string; contactName: string; email: string; phone: string }[]
+    }): Promise<{ linked: number; created: number }> => {
+      const { ledger } = PARTICIPANT_PERSONAS[input.master]
+      const masterIds = [...input.linkIds]
+
+      if (input.creates.length > 0) {
+        const { data, error } = await supabase
+          .from(ledger.table)
+          .insert(input.creates.map((c) => ledgerPayload(input.master, c)))
+          .select('id')
+        if (error) throw error
+        for (const row of (data ?? []) as { id: string }[]) masterIds.push(String(row.id))
+      }
+
+      if (masterIds.length > 0) {
+        const { error } = await supabase.from(SHARED_TABLES.participantEntries).insert(
+          masterIds.map((masterId) => ({
+            entity_key: config.entityKey,
+            program_id: programId,
+            master_table: input.master,
+            master_id: masterId,
+          })),
+        )
+        if (error) throw error
+      }
+      return { linked: input.linkIds.length, created: input.creates.length }
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: [config.key, 'roster', programId] })
+      void qc.invalidateQueries({ queryKey: [config.key, 'roster-candidates', programId] })
+      void qc.invalidateQueries({ queryKey: [config.key, 'master-candidates'] })
     },
   })
 }

@@ -4,6 +4,7 @@ import { participantContentKey } from '@/features/admin/sensitiveContents'
 import { useMaskPolicy } from '@/features/admin/sensitiveStore'
 import { PARTICIPANT_PERSONAS, type MasterTable } from '@/features/program/participantPersona'
 import { RosterAddModal } from '@/features/program/RosterAddModal'
+import { RosterBulkModal } from '@/features/program/RosterBulkModal'
 import { rosterColumns } from '@/features/program/rosterColumns'
 import { useProgramRoster, useRemoveRosterEntries, type RosterRow } from '@/features/program/rosterHooks'
 import { useProgramWorkspace } from '@/features/program/workspace'
@@ -46,6 +47,7 @@ export function RosterPanel({
   const [keyword, setKeyword] = useState('')
   const [selected, setSelected] = useState<string[]>([])
   const [addOpen, setAddOpen] = useState(false)
+  const [bulkOpen, setBulkOpen] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
 
   const { data, isLoading, isError } = useProgramRoster(programId)
@@ -82,7 +84,16 @@ export function RosterPanel({
           keyword={keyword}
           onKeywordChange={setKeyword}
           searchPlaceholder={spec.listSearchPlaceholder}
-          actions={<Button onClick={() => setAddOpen(true)}>{spec.label} 추가</Button>}
+          actions={
+            <div className="flex items-center gap-2">
+              {/* 대용량은 옆에 서되 물러선 모양이다 — 한 건씩 담는 일이 이 화면의 주 행동이고,
+                  파일을 올리는 것은 기수 시작처럼 이따금 있는 일이다. */}
+              <Button variant="outline" onClick={() => setBulkOpen(true)}>
+                대용량 담기
+              </Button>
+              <Button onClick={() => setAddOpen(true)}>{spec.label} 추가</Button>
+            </div>
+          }
         />
 
         {selected.length > 0 && (
@@ -133,6 +144,13 @@ export function RosterPanel({
       <RosterAddModal
         open={addOpen}
         onClose={() => setAddOpen(false)}
+        programId={programId}
+        master={persona}
+      />
+
+      <RosterBulkModal
+        open={bulkOpen}
+        onClose={() => setBulkOpen(false)}
         programId={programId}
         master={persona}
       />
