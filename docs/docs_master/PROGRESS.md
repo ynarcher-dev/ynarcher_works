@@ -632,7 +632,7 @@
 - [ ] 후속: 죽은 표 둘 정리 검토 — `action_items`·`activity_attendees` <!-- 2026-09-09 발견. `program_participants`를 FK로 가리키는 셋 중 둘인데 프론트·Edge Function·DB 함수 어디서도 참조되지 않고 0행이다(2026-09-03 정형 모듈 7종을 걷을 때 함께 걷히지 않은 잔재로 보인다). 지금은 무해하지만 `NO ACTION` FK라, 어떤 경로로든 행이 생기면 명부 빼기가 원인을 설명하지 못하는 FK 위반으로 죽는다 -->
 - [ ] 후속: OFFICE만 읽는 사용자의 임직원 알림 <!-- `notificationRoute`가 `employee`를 언제나 `/management/hr/:id`로 보낸다. 인사 권한이 없는 사람은 그 주소에서 접근 거부를 만나고, 그 사람에게 열리는 `/office/managers/:id`가 따로 있다. 이번 정리에서 드러난 별개 결함이라 범위 밖으로 둔다 — 고치려면 알림 경로가 수신자의 권한을 알아야 하고, 그것은 경로 표가 아니라 화면이 답할 물음이다 -->
 
-## Phase 19. 'AI 작성하기' 재설계 — 눈으로 읽고 자료는 상·하 (2026-09-09 확정 — 구현 완료·배포 대기)
+## Phase 19. 'AI 작성하기' 재설계 — 눈으로 읽고 자료는 상·하 (2026-09-09 확정 — 완료)
 
 > 정본은 [3_3_7](../docs_planning/3_3_7_ai_fill_visual_read.md). 첫 버전은 토큰 과다(같은 자료를 묶음·조합마다 다시 읽힘), 같은 날의 보완안(pdf.js 글자 추출·OCR)은 인식률 하락. 읽는 방식은 처음 것(원본을 눈으로)으로 돌아가고 읽히는 횟수를 자료 상·하 두 칸으로 접는다. 보완안은 `git stash`에 보관(트리에 없음).
 
@@ -642,7 +642,7 @@
 - [x] 화면: 카드 체크(`AiCardPicker`) + 읽을 자료·읽지 않을 자료 두 칸(`AiSourcePanes`, PickList 상하), 자동 분석(버튼 없음), 배치 세션 기억(`aiReadSet`) <!-- 격자·AiSourceState·aiGrid 삭제. 모달 2xl. 상 칸만 useAiExtracts에 넘겨 하 칸은 열지도 보내지도 않는다 -->
 - [x] 문서: 3_3_7 신설, 3_3_5 §4.2·§8.3·§16.3 대체 고지, 인덱스·CLAUDE.md 갱신
 - [x] 검증 — 함수 타입 검사·works 타입 검사·vitest 645건·프로덕션 빌드 통과
-- [ ] 배포 — 함수 `startup-ai-fill`·`ma-seller-quick-review` + `git push`(순서 무관, 마이그레이션 없음) <!-- 함수 배포는 CLI가 dev@ynarcher.com 로그인일 때만 된다 -->
+- [x] 배포 — 함수 4종 + `git push` <!-- 2026-09-09 완료(커밋 `dce1b34`). 마이그레이션 없음이라 순서가 자유롭다. 작성 함수 둘(`startup-ai-fill`·`ma-seller-quick-review`)뿐 아니라 **분석 함수 둘(`startup-material-extract`·`ma-seller-material-extract`)도 함께** 재배포했다 — 그 둘이 `_shared/aiFill/profile.ts`를 거쳐 이번에 바뀐 `chunks.ts`를 번들에 인라인하기 때문이다(동작이 달라지지는 않지만, 공유 파일을 물고 있는 함수는 재배포해야 바뀐다는 규칙을 그대로 적용) -->
 - [ ] 배포 뒤 확인 — 실행 요약 로그의 `cache`가 `used`인지(G1), 아니면 `GEMINI_CACHE_MODEL`에 버전 박힌 모델 <!-- 어느 쪽이든 초안은 같다 -->
 - [ ] 후속: 실사용 파일명에서 하에 잘못 서는 낱말을 `sourceKind.ts`에 보강 · 같은 줄을 매번 옮기면 배치 저장 검토
 
