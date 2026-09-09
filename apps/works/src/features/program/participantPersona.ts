@@ -107,6 +107,22 @@ export interface ParticipantPersona {
      * 컬럼이 없어 조회 전체가 거절되므로, 있는지 여부를 이 칸이 답한다.
      */
     mergedColumn?: string
+    /**
+     * 중복 대조가 견주는 세 칸의 **실제 이름**(2026-09-09).
+     *
+     * `map`이 답하지 못하는 이유는 방향이 반대여서다 — 저쪽은 여러 칸을 한 모양으로 읽는
+     * 일이고, 대조는 원장에 `.in()`을 걸어야 하므로 그 값이 실제로 사는 칸 하나를 정확히
+     * 가리켜야 한다(`person`을 쓰지 못하는 것도 같은 이유다. 저쪽 `name`은 대상 이름이
+     * 아니라 로그인 명의라 스타트업에서 `representative`를 가리킨다).
+     */
+    matchColumns: { name: string; email: string; phone: string }
+    /**
+     * 이 자격으로 원장에 새 행을 만들 때 **반드시 함께 박히는 값**.
+     *
+     * 담당자가 고르는 칸이 아니라 자격이 정하는 칸이다 — NETWORKS는 통합 원장이라 구분을
+     * 박지 않으면 그 행이 후보 조회(`narrow`)에 걸리지 않아 **방금 만든 대상을 담을 수 없다.**
+     */
+    createFixed?: Record<string, unknown>
     map: (row: Record<string, unknown>) => LedgerFacts
       /**
        * 계정 명의를 **원장에 되쓸 때**의 칸. 읽는 것은 `map`이 답하고 쓰는 것은 여기가 답한다.
@@ -165,6 +181,10 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
       table: 'startups',
       columns: 'id, name, representative, email, phone, management_status, deleted_at',
       searchColumns: ['name', 'representative'],
+      matchColumns: { name: 'name', email: 'email', phone: 'phone' },
+      // 아직 무엇인지 모르는 기업은 '미지정'으로 들어간다(2026-09-06) — 기본값이 발굴이면
+      // 몰라서 담은 기업까지 발굴기업 수를 부풀린다. 코드값 `other`는 그대로 둔다.
+      createFixed: { management_status: 'other' },
       map: (row) => ({
         name: String(row.name ?? ''),
         loginName: text(row, 'representative'),
@@ -201,6 +221,7 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
       // 계정이 아니라 원장이 갖는다.
       columns: 'id, name, contact_name, contact_email, phone, deleted_at',
       searchColumns: ['name', 'contact_name'],
+      matchColumns: { name: 'name', email: 'contact_email', phone: 'phone' },
       map: (row) => ({
         name: String(row.name ?? ''),
         loginName: text(row, 'contact_name'),
@@ -227,6 +248,7 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
       table: 'ma_buyers',
       columns: 'id, name, contact_name, contact_email, phone, deleted_at',
       searchColumns: ['name', 'contact_name'],
+      matchColumns: { name: 'name', email: 'contact_email', phone: 'phone' },
       map: (row) => ({
         name: String(row.name ?? ''),
         loginName: text(row, 'contact_name'),
@@ -256,6 +278,12 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
       // 후보에 서고, 명부에 담기는 대상이 결정 없이 넓어진다.
       narrow: { column: 'category', value: 'experts' },
       searchColumns: ['name', 'affiliation'],
+      matchColumns: { name: 'name', email: 'email', phone: 'phone' },
+      // 통합 원장이라 구분을 박지 않으면 그 행이 `narrow`에 걸리지 않는다 — 방금 만든
+      // 전문가를 그 자리에서 담을 수 없게 되고, 화면은 왜 안 보이는지 답하지 못한다.
+      // 국가는 비운다: 여기서 필수로 받으면 이름 하나만 들고 온 자리에서 등록이 막힌다
+      // (목록의 '국가 미확인'으로 채우는 대기열에 든다).
+      createFixed: { category: 'experts' },
       // 통합 원장은 중복 병합(정본으로 흡수)을 운용하는 유일한 원장이다.
       mergedColumn: 'merged_into_id',
       map: (row) => ({

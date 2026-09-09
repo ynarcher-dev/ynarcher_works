@@ -5,7 +5,7 @@ import {
   loadLedgerFacts,
   type MasterCandidate,
 } from '@/features/program/participantHooks'
-import { type MasterTable } from '@/features/program/participantPersona'
+import { PARTICIPANT_PERSONAS, type MasterTable } from '@/features/program/participantPersona'
 import { SHARED_TABLES, useProgramWorkspace } from '@/features/program/workspace'
 
 /**
@@ -156,6 +156,77 @@ export function useAddRosterEntries(programId: string) {
       )
       if (error) throw error
       return input.masterIds.length
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: [config.key, 'roster', programId] })
+      void qc.invalidateQueries({ queryKey: [config.key, 'roster-candidates', programId] })
+    },
+  })
+}
+
+/**
+ * 원장에 새 행을 만들고 **그 자리에서 명단에 담는다**(2026-09-09).
+ *
+ * **명단에 직접 적는 칸을 만들지 않는 이유가 셋이다.** (1) 이 원장의 전제(*값을 복제하지
+ * 않고 원장을 가리킨다*)가 그 순간 깨지고 표의 네 칸이 "원장 값인가 손으로 적은 값인가"를
+ * 두 벌로 답해야 한다. (2) 가리킬 원장 행이 없는 줄은 **계정을 받을 수 없다** —
+ * `guest_identities`의 키가 원장 행이라 발급이 성립하지 않고, 자료 참조·AI 작성도 전부
+ * 원장 행을 전제한다. 담을 수는 있는데 아무것도 못 하는 줄이 생긴다. (3) 회의록 외부 참석자
+ * 간이 등록이 같은 갈림길에서 이미 원장에 넣는 쪽을 골랐다.
+ *
+ * 받는 칸은 표에 서는 넷뿐이고 이름만 필수다 — 이 자리는 명함 한 장이나 회의 직후의 이름
+ * 하나를 들고 오는 곳이라, 더 물으면 등록 자체가 막힌다. 나머지는 명단 표의 `입력`이
+ * 원장으로 데려가 채우게 한다.
+ *
+ * 자격이 정하는 값(스타트업 구분 '미지정', NETWORKS 구분 '전문가')은 담당자가 고르지 않고
+ * `ledger.createFixed`가 박는다.
+ *
+ * 두 쓰기를 트랜잭션으로 묶지 않는다 — PostgREST에 그 수단이 없다. 대신 순서를 원장 먼저로
+ * 두어, 뒤가 실패해도 남는 것이 **명단에 담기지 않은 원장 행**이 된다(다시 담으면 그만이다).
+ * 반대 순서였다면 가리킬 곳 없는 명단 줄이 남는다.
+ */
+export function useCreateLedgerEntry(programId: string) {
+  const config = useProgramWorkspace()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      master: MasterTable
+      name: string
+      contactName: string
+      email: string
+      phone: string
+    }): Promise<string> => {
+      const { ledger } = PARTICIPANT_PERSONAS[input.master]
+      const trimmed = (v: string) => v.trim() || null
+
+      const payload: Record<string, unknown> = {
+        [ledger.person.name]: trimmed(input.contactName),
+        [ledger.matchColumns.email]: trimmed(input.email),
+        // 연락처는 숫자만 저장한다(등록 폼·업로드와 같은 규칙 — 표기 차이로 중복 판정이 갈린다).
+        [ledger.matchColumns.phone]: input.phone.replace(/\D/g, '') || null,
+        ...(ledger.createFixed ?? {}),
+      }
+      // 대상 이름을 **마지막에** 얹는다. NETWORKS는 대상이 곧 사람이라 이름 칸과 명의 칸이
+      // 같은 `name`인데, 앞에 두면 비어 있을 수 있는 명의가 필수인 이름을 덮어 지운다
+      // (그 자격의 폼이 명의 칸을 세우지 않는 이유도 같다).
+      payload[ledger.matchColumns.name] = input.name.trim()
+
+      const { data, error } = await supabase
+        .from(ledger.table)
+        .insert(payload)
+        .select('id')
+        .single()
+      if (error) throw error
+
+      const masterId = String((data as { id: string }).id)
+      const { error: linkError } = await supabase.from(SHARED_TABLES.participantEntries).insert({
+        entity_key: config.entityKey,
+        program_id: programId,
+        master_table: input.master,
+        master_id: masterId,
+      })
+      if (linkError) throw linkError
+      return masterId
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: [config.key, 'roster', programId] })
