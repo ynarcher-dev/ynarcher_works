@@ -1,6 +1,6 @@
-import { Button, Input, Select } from '@ynarcher/ui'
-import { Cell, RowActions, numOrUndef } from '@/components/FormRowFields'
-import { StartupListGroup } from '@/features/startup/StartupListGroup'
+import { Input, Select } from '@ynarcher/ui'
+import { ItemRows, patchAt, removeAt, type ItemCol } from '@/components/ItemRows'
+import { numOrUndef } from '@/components/FormRowFields'
 import {
   GOV_ROLE_OPTIONS,
   type Certification,
@@ -18,53 +18,65 @@ import {
  * 인증과 정부과제는 서로 갈리지 않고 한 카드에 남는다. 둘 다 **기관이 준 것**이고 한 문서
  * (사업계획서 부록·기업 현황표)에서 나란히 읽히므로, 채울 때도 한자리에서 옮겨 적게 된다.
  */
+
+/** 인증 한 줄. 인증명이 길이를 모르는 값이라 남는 폭을 가져간다. */
+const CERT_COLS: ItemCol[] = [
+  { label: '인증명' },
+  { label: '발급 기관', kind: 'name' },
+  { label: '시점', kind: 'date' },
+]
+
+/** 정부과제 한 줄. */
+const GOV_COLS: ItemCol[] = [
+  { label: '과제명' },
+  { label: '참여 형태', kind: 'pick' },
+  { label: '기간', kind: 'code' },
+  { label: '과제비(원)', kind: 'num' },
+]
+
 export function StartupCertFields({ ip, setIp }: { ip: IpProfile; setIp: (v: IpProfile) => void }) {
+  const setCerts = (certifications: Certification[]) => setIp({ ...ip, certifications })
+  const setGov = (govProjects: GovProject[]) => setIp({ ...ip, govProjects })
+
   return (
     <div className="space-y-5">
-      <StartupListGroup<Certification>
+      <ItemRows
         title="인증"
+        cols={CERT_COLS}
         rows={ip.certifications}
-        setRows={(certifications) => setIp({ ...ip, certifications })}
-        empty={{ name: '', agency: '', date: '' }}
+        onRemove={(i) => setCerts(removeAt(ip.certifications, i))}
+        onAdd={() => setCerts([...ip.certifications, { name: '', agency: '', date: '' }])}
         addLabel="인증 추가"
       >
-        {(row, patch, remove) => (
-          <>
-            <Cell label="인증명" wide>
+        {(row, i) => {
+          const patch = (p: Partial<Certification>) => setCerts(patchAt(ip.certifications, i, p))
+          return (
+            <>
               <Input
                 placeholder="벤처기업 · 이노비즈 · 기업부설연구소 등"
                 value={row.name ?? ''}
                 onChange={(e) => patch({ name: e.target.value })}
               />
-            </Cell>
-            <Cell label="발급 기관">
               <Input value={row.agency ?? ''} onChange={(e) => patch({ agency: e.target.value })} />
-            </Cell>
-            <Cell label="시점">
               <Input type="month" value={row.date ?? ''} onChange={(e) => patch({ date: e.target.value })} />
-            </Cell>
-            <RowActions>
-              <Button type="button" variant="secondary" onClick={remove}>
-                삭제
-              </Button>
-            </RowActions>
-          </>
-        )}
-      </StartupListGroup>
+            </>
+          )
+        }}
+      </ItemRows>
 
-      <StartupListGroup<GovProject>
+      <ItemRows
         title="정부과제"
+        cols={GOV_COLS}
         rows={ip.govProjects}
-        setRows={(govProjects) => setIp({ ...ip, govProjects })}
-        empty={{ name: '', role: '주관', period: '', amount: null }}
+        onRemove={(i) => setGov(removeAt(ip.govProjects, i))}
+        onAdd={() => setGov([...ip.govProjects, { name: '', role: '주관', period: '', amount: null }])}
         addLabel="정부과제 추가"
       >
-        {(row, patch, remove) => (
-          <>
-            <Cell label="과제명" wide>
+        {(row, i) => {
+          const patch = (p: Partial<GovProject>) => setGov(patchAt(ip.govProjects, i, p))
+          return (
+            <>
               <Input value={row.name ?? ''} onChange={(e) => patch({ name: e.target.value })} />
-            </Cell>
-            <Cell label="참여 형태">
               <Select value={row.role ?? ''} onChange={(e) => patch({ role: e.target.value })}>
                 <option value="">선택</option>
                 {GOV_ROLE_OPTIONS.map((o) => (
@@ -73,30 +85,21 @@ export function StartupCertFields({ ip, setIp }: { ip: IpProfile; setIp: (v: IpP
                   </option>
                 ))}
               </Select>
-            </Cell>
-            <Cell label="기간">
               <Input
                 placeholder="2024-03 ~ 2025-02"
                 value={row.period ?? ''}
                 onChange={(e) => patch({ period: e.target.value })}
               />
-            </Cell>
-            <Cell label="과제비(원)" wide>
               <Input
                 inputMode="numeric"
                 className="text-right tabular-nums"
                 value={row.amount == null ? '' : String(row.amount)}
                 onChange={(e) => patch({ amount: numOrUndef(e.target.value) ?? null })}
               />
-            </Cell>
-            <RowActions>
-              <Button type="button" variant="secondary" onClick={remove}>
-                삭제
-              </Button>
-            </RowActions>
-          </>
-        )}
-      </StartupListGroup>
+            </>
+          )
+        }}
+      </ItemRows>
     </div>
   )
 }

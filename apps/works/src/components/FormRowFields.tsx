@@ -3,7 +3,7 @@ import { useState, type ReactNode } from 'react'
 import { fieldWidthClass, type FieldWidth } from '@/components/FieldGrid'
 
 /**
- * 카드 안 입력 섹션이 함께 쓰는 라벨 · 항목 상자 · 숫자 입력.
+ * 카드 안 입력 섹션이 함께 쓰는 라벨 · 숫자 입력 · 줄 목록.
  *
  * 폼 상위의 `Field`와 규격이 같지만 그쪽은 도움말·필수 표시·그리드 스팬을 함께 갖는 폼 전용
  * 슬롯이다. 여기 있는 것은 카드 **안쪽**의 최소 형태로, 파일마다 같은 라벨을 다시 정의해
@@ -37,37 +37,9 @@ export function Label({
   )
 }
 
-/**
- * 목록형 입력 한 항목을 감싸는 상자(팀원·자문·지식재산 등 여러 칸이 한 항목을 이룰 때).
- *
- * 한때 `flex flex-wrap`에 칸마다 고정 폭(`w-28`·`w-36`…)을 주었다. 카드가 전폭일 때는 한 줄에
- * 들어맞았지만, 편집 폼을 조회 화면과 같은 2열로 세우자(2026-09-06) 카드 폭이 절반이 되면서
- * 같은 상자가 화면마다 다른 줄 수로 접혔다 — 어느 칸이 어느 줄에 있는지가 폭에 따라 달라지면
- * 같은 항목을 두 번째로 입력할 때 눈이 자리를 기억하지 못한다. **2열 격자**로 바꾸면 접히는
- * 자리가 고정되고, 폭이 남거나 모자라는 것은 칸 자신이 늘고 줄어 흡수한다.
- */
-export function RowBox({ children }: { children: ReactNode }) {
-  return (
-    <div className="grid grid-cols-2 items-end gap-2 rounded-radius-md border border-gray-200 p-3">
-      {children}
-    </div>
-  )
-}
-
-/** 목록형 입력 셀(라벨 + 컨트롤). `wide`면 두 칸을 다 받는다(이름·명칭처럼 긴 값). */
-export function Cell({ label, wide, children }: { label: string; wide?: boolean; children: ReactNode }) {
-  return (
-    <label className={`block min-w-0 ${wide ? 'col-span-2' : ''}`}>
-      <span className="mb-0.5 block text-caption text-gray-700">{label}</span>
-      {children}
-    </label>
-  )
-}
-
-/** 항목 상자의 마지막 줄(삭제 등). 오른쪽 정렬로 두 칸을 다 받는다. */
-export function RowActions({ children }: { children: ReactNode }) {
-  return <div className="col-span-2 flex items-center justify-end gap-2">{children}</div>
-}
+// 목록형 입력의 항목 상자(`RowBox`·`Cell`·`RowActions`)는 2026-09-09에 걷었다. 값이 둘뿐인
+// 항목이 라벨 두 줄과 삭제 한 줄을 더해 네 줄을 쓰고 있었다 — 라벨을 항목마다 다시 적기
+// 때문이다. 대신 `components/ItemRows.tsx`가 **머리글 한 줄 + 항목 한 줄**로 세운다.
 
 /** 빈 문자열 → undefined, 그 외 숫자로 파싱(콤마 허용). */
 export function numOrUndef(s: string): number | undefined {

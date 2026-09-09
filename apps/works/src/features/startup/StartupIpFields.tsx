@@ -1,6 +1,5 @@
-import { Button, Input, Select } from '@ynarcher/ui'
-import { Cell, RowActions } from '@/components/FormRowFields'
-import { StartupListGroup } from '@/features/startup/StartupListGroup'
+import { Input, Select } from '@ynarcher/ui'
+import { ItemRows, patchAt, removeAt, type ItemCol } from '@/components/ItemRows'
 import {
   IP_KIND_OPTIONS,
   IP_STATUS_OPTIONS,
@@ -22,18 +21,30 @@ import {
  * 종류(특허·상표·디자인·SW저작권)와 상태(출원·등록)를 한 목록의 두 값으로 둔 이유는, 세 목록으로
  * 나누면 같은 형태의 표가 셋 서면서 어느 목록에 넣어야 하는지를 매번 판단하게 되기 때문이다.
  */
+const IP_COLS: ItemCol[] = [
+  { label: '종류', kind: 'pick' },
+  { label: '상태', kind: 'pick' },
+  { label: '명칭' },
+  { label: '번호', kind: 'code' },
+  { label: '시점', kind: 'date' },
+]
+
 export function StartupIpFields({ ip, setIp }: { ip: IpProfile; setIp: (v: IpProfile) => void }) {
+  const setRights = (rights: IpRight[]) => setIp({ ...ip, rights })
+
   return (
-    <StartupListGroup<IpRight>
+    <ItemRows
       title="지식재산권"
+      cols={IP_COLS}
       rows={ip.rights}
-      setRows={(rights) => setIp({ ...ip, rights })}
-      empty={{ kind: '특허', title: '', no: '', status: '출원', date: '' }}
+      onRemove={(i) => setRights(removeAt(ip.rights, i))}
+      onAdd={() => setRights([...ip.rights, { kind: '특허', title: '', no: '', status: '출원', date: '' }])}
       addLabel="지식재산권 추가"
     >
-      {(row, patch, remove) => (
-        <>
-          <Cell label="종류">
+      {(row, i) => {
+        const patch = (p: Partial<IpRight>) => setRights(patchAt(ip.rights, i, p))
+        return (
+          <>
             <Select value={row.kind ?? ''} onChange={(e) => patch({ kind: e.target.value })}>
               {IP_KIND_OPTIONS.map((o) => (
                 <option key={o} value={o}>
@@ -41,8 +52,6 @@ export function StartupIpFields({ ip, setIp }: { ip: IpProfile; setIp: (v: IpPro
                 </option>
               ))}
             </Select>
-          </Cell>
-          <Cell label="상태">
             <Select value={row.status ?? ''} onChange={(e) => patch({ status: e.target.value })}>
               <option value="">선택</option>
               {IP_STATUS_OPTIONS.map((o) => (
@@ -51,23 +60,12 @@ export function StartupIpFields({ ip, setIp }: { ip: IpProfile; setIp: (v: IpPro
                 </option>
               ))}
             </Select>
-          </Cell>
-          <Cell label="명칭" wide>
             <Input value={row.title ?? ''} onChange={(e) => patch({ title: e.target.value })} />
-          </Cell>
-          <Cell label="번호">
             <Input value={row.no ?? ''} onChange={(e) => patch({ no: e.target.value })} />
-          </Cell>
-          <Cell label="시점">
             <Input type="month" value={row.date ?? ''} onChange={(e) => patch({ date: e.target.value })} />
-          </Cell>
-          <RowActions>
-            <Button type="button" variant="secondary" onClick={remove}>
-              삭제
-            </Button>
-          </RowActions>
-        </>
-      )}
-    </StartupListGroup>
+          </>
+        )
+      }}
+    </ItemRows>
   )
 }

@@ -147,11 +147,13 @@ export function StartupBasicFields({
           <Field label="연락처" width="md">
             <Input {...register('phone')} />
           </Field>
+          {/* 분야·발굴 경로가 한 줄을 반씩 나눈다 — 분야를 전폭으로 두면 발굴 경로가 홀로
+              다음 줄에 서서 오른쪽 절반이 빈다(2026-09-09). 태그는 넘치면 아래로 접힌다. */}
           <Field
             label="분야"
             hint={industryField.hint}
             hintInline={industryField.hintInline}
-            width="full"
+            width="lg"
           >
             {industryField.control}
           </Field>

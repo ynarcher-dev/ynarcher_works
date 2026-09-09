@@ -79,8 +79,8 @@ export function MaQuickReviewFinancialFields({
         />
       </PanelCard>
 
-      {/* 투자 포인트는 묶음마다 제목과 근거 줄을 갖는다. 상자 하나가 곧 한 묶음이라
-          `RowBox`(2열 격자)를 쓰지 않는다 — 안에 목록이 들어가 두 칸으로 갈리지 않는다. */}
+      {/* 투자 포인트는 묶음마다 제목과 **근거 줄 목록**을 갖는다. 한 항목이 한 줄에 담기지
+          않으므로 여기만 상자로 감싼다 — `ItemRows`는 한 줄에 서는 목록의 규격이다. */}
       <PanelCard title="핵심 포인트" count={qr.highlights.length || undefined}>
         <div className="space-y-2">
           {qr.highlights.map((h, i) => (

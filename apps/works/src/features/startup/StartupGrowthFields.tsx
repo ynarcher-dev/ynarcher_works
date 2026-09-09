@@ -1,6 +1,6 @@
-import { Button, Input, Select } from '@ynarcher/ui'
-import { Fragment } from 'react'
-import { Cell, NumberInput, RowActions, RowBox, numOrUndef } from '@/components/FormRowFields'
+import { Input, Select } from '@ynarcher/ui'
+import { ItemRows, patchAt, removeAt, type ItemCol } from '@/components/ItemRows'
+import { NumberInput, numOrUndef } from '@/components/FormRowFields'
 import {
   CUSTOMER_KIND_OPTIONS,
   type BusinessStatusEntry,
@@ -20,56 +20,24 @@ import {
  * 방금 적은 값이 어느 카드로 가는지 화면이 답하지 못했다(2026-09-06 분리). 카드가 곧 묶음의
  * 단위라는 규칙은 조회와 편집 양쪽에 같이 적용된다 — 그래서 여기 있는 것들은 제목을 갖지 않는다.
  * 제목은 폼이 세우는 `PanelCard`가 소유한다.
+ *
+ * **일곱 묶음이 모두 같은 모양(`ItemRows`)으로 선다**(2026-09-09). 그 전에는 연도 표(매출·재무·
+ * 고용)만 줄 표였고 나머지는 항목 상자였으며 연혁은 또 다른 flex 한 줄이었다 — 같은 카드 안에서
+ * 목록의 모양이 셋이면 어느 것이 규격인지 화면이 답하지 못한다.
  */
 
-
-/** 숫자 입력 셀(라벨 + number Input). */
-function Num({
-  label,
-  value,
-  onChange,
-}: {
-  label: string
-  value?: number | null
-  onChange: (v: number | undefined) => void
-}) {
-  return (
-    <label className="block min-w-0">
-      <span className="mb-0.5 block text-caption text-gray-700">{label}</span>
-      <NumberInput value={value} onChange={onChange} />
-    </label>
-  )
-}
-
-/** 텍스트 입력 셀(라벨 + text Input). */
-function Txt({
-  label,
-  value,
-  onChange,
-}: {
-  label: string
-  value?: string
-  onChange: (v: string) => void
-}) {
-  return (
-    <label className="block min-w-0">
-      <span className="mb-0.5 block text-caption text-gray-700">{label}</span>
-      <Input value={value ?? ''} onChange={(e) => onChange(e.target.value)} />
-    </label>
-  )
-}
-
+/** 연도 기준 숫자 지표(매출·재무·고용)의 항목 열. */
 interface NumCol {
   key: string
   label: string
 }
 
 /**
- * 연도 기준 숫자 지표(재무/매출/고용) 편집기. 헤더 1행 + 연도별 값 행을 그리드로 정렬한다.
+ * 연도 기준 숫자 지표 편집기.
  *
- * 이 형태만은 항목 상자로 바꾸지 않는다 — 연도를 **세로로 견주며** 넣는 입력이라 열이 정렬돼야
- * 작년 값과 올해 값이 눈으로 맞고, 상자로 흩으면 그 비교가 사라진다. 대신 이 카드를 쓰는 자리는
- * 폼에서 두 칸을 다 받는다(절반 폭에서는 금액 칸이 여덟 자를 담지 못한다).
+ * 이 형태가 목록 전부의 본이 됐다 — 연도를 **세로로 견주며** 넣는 입력이라 열이 정렬돼야 작년
+ * 값과 올해 값이 눈으로 맞고, 항목 상자로 흩으면 그 비교가 사라진다. 2026-09-09에 나머지 목록도
+ * 같은 모양으로 모으면서, 이 함수는 `ItemRows`에 열 정의만 넘기는 얇은 겉면이 됐다.
  */
 function YearMetricGroup<T extends { year: number }>({
   cols,
@@ -80,55 +48,35 @@ function YearMetricGroup<T extends { year: number }>({
   rows: T[]
   setRows: (rows: T[]) => void
 }) {
-  const patch = (i: number, p: Partial<T>) => setRows(rows.map((r, idx) => (idx === i ? { ...r, ...p } : r)))
+  const itemCols: ItemCol[] = [
+    { label: '연도', kind: 'short' },
+    ...cols.map((c): ItemCol => ({ label: c.label, kind: 'num' })),
+  ]
   const get = (r: T, k: string) => (r as Record<string, number | null | undefined>)[k]
-  // 연도 + 각 항목 + 삭제 버튼 열. 헤더/값 행이 같은 그리드라 자동 정렬된다.
-  const gridStyle = { gridTemplateColumns: `5.5rem repeat(${cols.length}, minmax(0,1fr)) auto` }
   return (
-    <div className="space-y-2">
-      {rows.length > 0 && (
-        <div className="grid items-center gap-x-2 gap-y-1.5" style={gridStyle}>
-          <span className="text-caption text-gray-700">연도</span>
-          {cols.map((c) => (
-            <span key={c.key} className="text-caption text-gray-700">
-              {c.label}
-            </span>
-          ))}
-          <span aria-hidden />
-          {rows.map((r, i) => (
-            <Fragment key={i}>
-              <Input
-                type="number"
-                value={r.year ?? ''}
-                onChange={(e) => patch(i, { year: numOrUndef(e.target.value) ?? 0 } as Partial<T>)}
-              />
-              {cols.map((c) => (
-                <NumberInput
-                  key={c.key}
-                  value={get(r, c.key)}
-                  onChange={(v) => patch(i, { [c.key]: v } as Partial<T>)}
-                />
-              ))}
-              <Button
-                type="button"
-                variant="secondary"
-                className="shrink-0"
-                onClick={() => setRows(rows.filter((_, idx) => idx !== i))}
-              >
-                삭제
-              </Button>
-            </Fragment>
-          ))}
-        </div>
-      )}
-      <Button
-        type="button"
-        variant="outline"
-        onClick={() => setRows([...rows, { year: new Date().getFullYear() } as T])}
-      >
-        연도 추가
-      </Button>
-    </div>
+    <ItemRows
+      cols={itemCols}
+      rows={rows}
+      onRemove={(i) => setRows(removeAt(rows, i))}
+      onAdd={() => setRows([...rows, { year: new Date().getFullYear() } as T])}
+      addLabel="연도 추가"
+    >
+      {(row, i) => {
+        const patch = (p: Partial<T>) => setRows(patchAt(rows, i, p))
+        return (
+          <>
+            <Input
+              type="number"
+              value={row.year ?? ''}
+              onChange={(e) => patch({ year: numOrUndef(e.target.value) ?? 0 } as Partial<T>)}
+            />
+            {cols.map((c) => (
+              <NumberInput key={c.key} value={get(row, c.key)} onChange={(v) => patch({ [c.key]: v } as Partial<T>)} />
+            ))}
+          </>
+        )
+      }}
+    </ItemRows>
   )
 }
 
@@ -145,6 +93,32 @@ const REVENUE_COLS: NumCol[] = [
 ]
 const EMPLOYEE_COLS: NumCol[] = [{ key: 'employeeCount', label: '고용 인원' }]
 
+const TIMELINE_COLS: ItemCol[] = [
+  { label: '시점', kind: 'date' },
+  { label: '현황 내용' },
+]
+
+const TRACTION_COLS: ItemCol[] = [
+  { label: '기준월', kind: 'date' },
+  { label: '지표명' },
+  { label: '값', kind: 'num' },
+  { label: '단위', kind: 'short' },
+]
+
+const CUSTOMER_COLS: ItemCol[] = [
+  { label: '시점', kind: 'date' },
+  { label: '형태', kind: 'pick' },
+  { label: '고객명' },
+]
+
+const INVESTMENT_COLS: ItemCol[] = [
+  { label: '기준월', kind: 'date' },
+  { label: '라운드', kind: 'name' },
+  { label: '투자자' },
+  { label: '기업 가치(Pre)', kind: 'num' },
+  { label: '투자유치액', kind: 'num' },
+]
+
 /** 연혁(월 기준 서술) 편집기. */
 export function StartupTimelineFields({
   rows,
@@ -153,37 +127,29 @@ export function StartupTimelineFields({
   rows: BusinessStatusEntry[]
   setRows: (rows: BusinessStatusEntry[]) => void
 }) {
-  const patch = (i: number, p: Partial<BusinessStatusEntry>) =>
-    setRows(rows.map((s, idx) => (idx === i ? { ...s, ...p } : s)))
   return (
-    <div className="space-y-2">
-      {rows.map((s, i) => (
-        <div key={i} className="flex items-center gap-2">
-          {/* Input 래퍼가 w-full이라 폭 클래스는 바깥 div에 준다. 선택은 월(YYYY-MM)까지만. */}
-          <div className="w-40 shrink-0">
-            <Input type="month" value={s.date ?? ''} onChange={(e) => patch(i, { date: e.target.value })} />
-          </div>
-          <div className="min-w-0 flex-1">
+    <ItemRows
+      cols={TIMELINE_COLS}
+      rows={rows}
+      onRemove={(i) => setRows(removeAt(rows, i))}
+      onAdd={() => setRows([...rows, { date: '', content: '' }])}
+      addLabel="현황 추가"
+    >
+      {(row, i) => {
+        const patch = (p: Partial<BusinessStatusEntry>) => setRows(patchAt(rows, i, p))
+        return (
+          <>
+            {/* 선택은 월(YYYY-MM)까지만 — 연혁은 날짜가 아니라 시기의 기록이다. */}
+            <Input type="month" value={row.date ?? ''} onChange={(e) => patch({ date: e.target.value })} />
             <Input
               placeholder="현황 내용"
-              value={s.content ?? ''}
-              onChange={(e) => patch(i, { content: e.target.value })}
+              value={row.content ?? ''}
+              onChange={(e) => patch({ content: e.target.value })}
             />
-          </div>
-          <Button
-            type="button"
-            variant="secondary"
-            className="shrink-0"
-            onClick={() => setRows(rows.filter((_, idx) => idx !== i))}
-          >
-            삭제
-          </Button>
-        </div>
-      ))}
-      <Button type="button" variant="outline" onClick={() => setRows([...rows, { date: '', content: '' }])}>
-        현황 추가
-      </Button>
-    </div>
+          </>
+        )
+      }}
+    </ItemRows>
   )
 }
 
@@ -199,33 +165,26 @@ export function StartupTractionFields({
   rows: TractionEntry[]
   setRows: (rows: TractionEntry[]) => void
 }) {
-  const patch = (i: number, p: Partial<TractionEntry>) =>
-    setRows(rows.map((r, idx) => (idx === i ? { ...r, ...p } : r)))
   return (
-    <div className="space-y-2">
-      {rows.map((r, i) => (
-        <RowBox key={i}>
-          <Cell label="기준월">
-            <Input type="month" value={r.period ?? ''} onChange={(e) => patch(i, { period: e.target.value })} />
-          </Cell>
-          <Txt label="지표명" value={r.metric} onChange={(v) => patch(i, { metric: v })} />
-          <Num label="값" value={r.value} onChange={(v) => patch(i, { value: v })} />
-          <Txt label="단위" value={r.unit} onChange={(v) => patch(i, { unit: v })} />
-          <RowActions>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setRows(rows.filter((_, idx) => idx !== i))}
-            >
-              삭제
-            </Button>
-          </RowActions>
-        </RowBox>
-      ))}
-      <Button type="button" variant="outline" onClick={() => setRows([...rows, { metric: '', period: '' }])}>
-        지표 추가
-      </Button>
-    </div>
+    <ItemRows
+      cols={TRACTION_COLS}
+      rows={rows}
+      onRemove={(i) => setRows(removeAt(rows, i))}
+      onAdd={() => setRows([...rows, { metric: '', period: '' }])}
+      addLabel="지표 추가"
+    >
+      {(row, i) => {
+        const patch = (p: Partial<TractionEntry>) => setRows(patchAt(rows, i, p))
+        return (
+          <>
+            <Input type="month" value={row.period ?? ''} onChange={(e) => patch({ period: e.target.value })} />
+            <Input value={row.metric ?? ''} onChange={(e) => patch({ metric: e.target.value })} />
+            <NumberInput value={row.value} onChange={(v) => patch({ value: v })} />
+            <Input value={row.unit ?? ''} onChange={(e) => patch({ unit: e.target.value })} />
+          </>
+        )
+      }}
+    </ItemRows>
   )
 }
 
@@ -240,17 +199,20 @@ export function StartupCustomerFields({
   rows: CustomerEntry[]
   setRows: (rows: CustomerEntry[]) => void
 }) {
-  const patch = (i: number, p: Partial<CustomerEntry>) =>
-    setRows(rows.map((r, idx) => (idx === i ? { ...r, ...p } : r)))
   return (
-    <div className="space-y-2">
-      {rows.map((r, i) => (
-        <RowBox key={i}>
-          <Cell label="시점">
-            <Input type="month" value={r.date ?? ''} onChange={(e) => patch(i, { date: e.target.value })} />
-          </Cell>
-          <Cell label="형태">
-            <Select value={r.kind ?? ''} onChange={(e) => patch(i, { kind: e.target.value })}>
+    <ItemRows
+      cols={CUSTOMER_COLS}
+      rows={rows}
+      onRemove={(i) => setRows(removeAt(rows, i))}
+      onAdd={() => setRows([...rows, { name: '', kind: '', date: '' }])}
+      addLabel="고객 추가"
+    >
+      {(row, i) => {
+        const patch = (p: Partial<CustomerEntry>) => setRows(patchAt(rows, i, p))
+        return (
+          <>
+            <Input type="month" value={row.date ?? ''} onChange={(e) => patch({ date: e.target.value })} />
+            <Select value={row.kind ?? ''} onChange={(e) => patch({ kind: e.target.value })}>
               <option value="">선택</option>
               {CUSTOMER_KIND_OPTIONS.map((o) => (
                 <option key={o} value={o}>
@@ -258,25 +220,11 @@ export function StartupCustomerFields({
                 </option>
               ))}
             </Select>
-          </Cell>
-          <Cell label="고객명" wide>
-            <Input value={r.name ?? ''} onChange={(e) => patch(i, { name: e.target.value })} />
-          </Cell>
-          <RowActions>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setRows(rows.filter((_, idx) => idx !== i))}
-            >
-              삭제
-            </Button>
-          </RowActions>
-        </RowBox>
-      ))}
-      <Button type="button" variant="outline" onClick={() => setRows([...rows, { name: '', kind: '', date: '' }])}>
-        고객 추가
-      </Button>
-    </div>
+            <Input value={row.name ?? ''} onChange={(e) => patch({ name: e.target.value })} />
+          </>
+        )
+      }}
+    </ItemRows>
   )
 }
 
@@ -313,7 +261,7 @@ export function StartupEmployeeFields({
   return <YearMetricGroup<EmployeeEntry> cols={EMPLOYEE_COLS} rows={rows} setRows={setRows} />
 }
 
-/** 투자 유치 편집기(월 기준). 회계연도와 무관하게 건별 상자로 관리한다. */
+/** 투자 유치 편집기(월 기준). 회계연도와 무관하게 건별로 관리한다. */
 export function StartupInvestmentFields({
   rows,
   setRows,
@@ -321,35 +269,26 @@ export function StartupInvestmentFields({
   rows: InvestmentEntry[]
   setRows: (rows: InvestmentEntry[]) => void
 }) {
-  const patch = (i: number, p: Partial<InvestmentEntry>) =>
-    setRows(rows.map((r, idx) => (idx === i ? { ...r, ...p } : r)))
   return (
-    <div className="space-y-2">
-      {rows.map((r, i) => (
-        <RowBox key={i}>
-          <Cell label="기준월">
-            <Input type="month" value={r.date ?? ''} onChange={(e) => patch(i, { date: e.target.value })} />
-          </Cell>
-          <Txt label="라운드" value={r.round} onChange={(v) => patch(i, { round: v })} />
-          <Cell label="투자자" wide>
-            <Input value={r.investor ?? ''} onChange={(e) => patch(i, { investor: e.target.value })} />
-          </Cell>
-          <Num label="기업 가치(Pre)" value={r.valuation} onChange={(v) => patch(i, { valuation: v })} />
-          <Num label="투자유치액" value={r.fundingAmount} onChange={(v) => patch(i, { fundingAmount: v })} />
-          <RowActions>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setRows(rows.filter((_, idx) => idx !== i))}
-            >
-              삭제
-            </Button>
-          </RowActions>
-        </RowBox>
-      ))}
-      <Button type="button" variant="outline" onClick={() => setRows([...rows, { date: '' }])}>
-        투자 추가
-      </Button>
-    </div>
+    <ItemRows
+      cols={INVESTMENT_COLS}
+      rows={rows}
+      onRemove={(i) => setRows(removeAt(rows, i))}
+      onAdd={() => setRows([...rows, { date: '' }])}
+      addLabel="투자 추가"
+    >
+      {(row, i) => {
+        const patch = (p: Partial<InvestmentEntry>) => setRows(patchAt(rows, i, p))
+        return (
+          <>
+            <Input type="month" value={row.date ?? ''} onChange={(e) => patch({ date: e.target.value })} />
+            <Input value={row.round ?? ''} onChange={(e) => patch({ round: e.target.value })} />
+            <Input value={row.investor ?? ''} onChange={(e) => patch({ investor: e.target.value })} />
+            <NumberInput value={row.valuation} onChange={(v) => patch({ valuation: v })} />
+            <NumberInput value={row.fundingAmount} onChange={(v) => patch({ fundingAmount: v })} />
+          </>
+        )
+      }}
+    </ItemRows>
   )
 }

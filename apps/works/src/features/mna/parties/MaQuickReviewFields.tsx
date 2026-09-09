@@ -1,12 +1,6 @@
-import { Button, Field, Input, PanelCard, TextArea } from '@ynarcher/ui'
-import {
-  Cell,
-  Label,
-  LineListField,
-  NumberInput,
-  RowActions,
-  RowBox,
-} from '@/components/FormRowFields'
+import { Field, Input, PanelCard, TextArea } from '@ynarcher/ui'
+import { Label, LineListField, NumberInput } from '@/components/FormRowFields'
+import { ItemRows, patchAt, removeAt, type ItemCol } from '@/components/ItemRows'
 import { ImagePicker } from '@/components/ImagePicker'
 import {
   QR_IMAGE_MAX,
@@ -31,6 +25,15 @@ import {
  *
  * 근거: docs/docs_planning/3_6_1_ma_seller_quick_review.md
  */
+/** 주주 한 줄. 지분율은 자릿수가 정해진 값이고 이름만 길이를 모른다. */
+const SHAREHOLDER_COLS: ItemCol[] = [{ label: '주주명' }, { label: '지분율 (%)', kind: 'num' }]
+
+/** 핵심 지표 한 줄. 값에 단위가 붙어 오므로(예: 61.4%) 숫자 칸이 아니라 글자 칸이다. */
+const METRIC_COLS: ItemCol[] = [{ label: '지표 이름' }, { label: '값 (단위 포함)' }]
+
+/** 제품별 실적 한 줄. */
+const PRODUCT_COLS: ItemCol[] = [{ label: '제품', kind: 'name' }, { label: '실적' }]
+
 /**
  * 절 하나의 이미지 칸 — 규격은 공용 `ImagePicker`, 버킷과 상한만 이 도메인이 준다.
  *
@@ -138,61 +141,38 @@ export function MaQuickReviewFields({
             />
           </Label>
           <Label text="주주구성">
-            <div className="space-y-2">
-              {b.shareholders.map((s, i) => (
-                <RowBox key={i}>
-                  <Cell label="주주명">
-                    <Input
-                      value={s.name}
-                      onChange={(e) =>
-                        patch('basics', {
-                          ...b,
-                          shareholders: b.shareholders.map((x, idx) =>
-                            idx === i ? { ...x, name: e.target.value } : x,
-                          ),
-                        })
-                      }
-                    />
-                  </Cell>
-                  <Cell label="지분율 (%)">
-                    <NumberInput
-                      value={s.ratio}
-                      onChange={(v) =>
-                        patch('basics', {
-                          ...b,
-                          shareholders: b.shareholders.map((x, idx) =>
-                            idx === i ? { ...x, ratio: v ?? null } : x,
-                          ),
-                        })
-                      }
-                    />
-                  </Cell>
-                  <RowActions>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() =>
-                        patch('basics', {
-                          ...b,
-                          shareholders: b.shareholders.filter((_, idx) => idx !== i),
-                        })
-                      }
-                    >
-                      삭제
-                    </Button>
-                  </RowActions>
-                </RowBox>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() =>
-                  patch('basics', { ...b, shareholders: [...b.shareholders, { name: '', ratio: null }] })
-                }
-              >
-                주주 추가
-              </Button>
-            </div>
+            <ItemRows
+              cols={SHAREHOLDER_COLS}
+              rows={b.shareholders}
+              onRemove={(i) => patch('basics', { ...b, shareholders: removeAt(b.shareholders, i) })}
+              onAdd={() =>
+                patch('basics', { ...b, shareholders: [...b.shareholders, { name: '', ratio: null }] })
+              }
+              addLabel="주주 추가"
+            >
+              {(s, i) => (
+                <>
+                  <Input
+                    value={s.name}
+                    onChange={(e) =>
+                      patch('basics', {
+                        ...b,
+                        shareholders: patchAt(b.shareholders, i, { name: e.target.value }),
+                      })
+                    }
+                  />
+                  <NumberInput
+                    value={s.ratio}
+                    onChange={(v) =>
+                      patch('basics', {
+                        ...b,
+                        shareholders: patchAt(b.shareholders, i, { ratio: v ?? null }),
+                      })
+                    }
+                  />
+                </>
+              )}
+            </ItemRows>
           </Label>
           {/* 기준 시점은 주주 목록 **다음**에 선다 — 이 값이 무엇의 시점인지는 바로 위 목록이
               답하고, 조회에서도 주주구성 표의 소제목 옆 단서 한 자리로 붙는다. */}
@@ -218,63 +198,38 @@ export function MaQuickReviewFields({
           {/* 이미지 칸은 조회에서 그림이 서는 자리(지표 아래)와 같은 순서로 둔다 — 적는 자리와
               읽는 자리의 순서가 갈리면 방금 올린 그림이 어디에 설지 화면이 답하지 못한다. */}
           <Label text="핵심 지표">
-            <div className="space-y-2">
-              {intro.metrics.map((m, i) => (
-                <RowBox key={i}>
-                  <Cell label="지표 이름">
-                    <Input
-                      value={m.label}
-                      placeholder="예: 국내 RTD 점유율"
-                      onChange={(e) =>
-                        patch('intro', {
-                          ...intro,
-                          metrics: intro.metrics.map((x, idx) =>
-                            idx === i ? { ...x, label: e.target.value } : x,
-                          ),
-                        })
-                      }
-                    />
-                  </Cell>
-                  <Cell label="값 (단위 포함)">
-                    <Input
-                      value={m.value}
-                      placeholder="예: 61.4%"
-                      onChange={(e) =>
-                        patch('intro', {
-                          ...intro,
-                          metrics: intro.metrics.map((x, idx) =>
-                            idx === i ? { ...x, value: e.target.value } : x,
-                          ),
-                        })
-                      }
-                    />
-                  </Cell>
-                  <RowActions>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() =>
-                        patch('intro', {
-                          ...intro,
-                          metrics: intro.metrics.filter((_, idx) => idx !== i),
-                        })
-                      }
-                    >
-                      삭제
-                    </Button>
-                  </RowActions>
-                </RowBox>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() =>
-                  patch('intro', { ...intro, metrics: [...intro.metrics, { label: '', value: '' }] })
-                }
-              >
-                지표 추가
-              </Button>
-            </div>
+            <ItemRows
+              cols={METRIC_COLS}
+              rows={intro.metrics}
+              onRemove={(i) => patch('intro', { ...intro, metrics: removeAt(intro.metrics, i) })}
+              onAdd={() => patch('intro', { ...intro, metrics: [...intro.metrics, { label: '', value: '' }] })}
+              addLabel="지표 추가"
+            >
+              {(m, i) => (
+                <>
+                  <Input
+                    value={m.label}
+                    placeholder="예: 국내 RTD 점유율"
+                    onChange={(e) =>
+                      patch('intro', {
+                        ...intro,
+                        metrics: patchAt(intro.metrics, i, { label: e.target.value }),
+                      })
+                    }
+                  />
+                  <Input
+                    value={m.value}
+                    placeholder="예: 61.4%"
+                    onChange={(e) =>
+                      patch('intro', {
+                        ...intro,
+                        metrics: patchAt(intro.metrics, i, { value: e.target.value }),
+                      })
+                    }
+                  />
+                </>
+              )}
+            </ItemRows>
           </Label>
           <Label text="이미지">
             <QuickReviewImageField
@@ -318,65 +273,42 @@ export function MaQuickReviewFields({
             />
           </Label>
           <Label text="제품별 실적">
-            <div className="space-y-2">
-              {products.items.map((p, i) => (
-                <RowBox key={i}>
-                  <Cell label="제품">
-                    <Input
-                      value={p.product}
-                      onChange={(e) =>
-                        patch('products', {
-                          ...products,
-                          items: products.items.map((x, idx) =>
-                            idx === i ? { ...x, product: e.target.value } : x,
-                          ),
-                        })
-                      }
-                    />
-                  </Cell>
-                  <Cell label="실적">
-                    <Input
-                      value={p.achievement ?? ''}
-                      placeholder="예: 누적 3,500만캔 판매"
-                      onChange={(e) =>
-                        patch('products', {
-                          ...products,
-                          items: products.items.map((x, idx) =>
-                            idx === i ? { ...x, achievement: e.target.value } : x,
-                          ),
-                        })
-                      }
-                    />
-                  </Cell>
-                  <RowActions>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() =>
-                        patch('products', {
-                          ...products,
-                          items: products.items.filter((_, idx) => idx !== i),
-                        })
-                      }
-                    >
-                      삭제
-                    </Button>
-                  </RowActions>
-                </RowBox>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() =>
-                  patch('products', {
-                    ...products,
-                    items: [...products.items, { product: '', achievement: null }],
-                  })
-                }
-              >
-                제품 추가
-              </Button>
-            </div>
+            <ItemRows
+              cols={PRODUCT_COLS}
+              rows={products.items}
+              onRemove={(i) => patch('products', { ...products, items: removeAt(products.items, i) })}
+              onAdd={() =>
+                patch('products', {
+                  ...products,
+                  items: [...products.items, { product: '', achievement: null }],
+                })
+              }
+              addLabel="제품 추가"
+            >
+              {(p, i) => (
+                <>
+                  <Input
+                    value={p.product}
+                    onChange={(e) =>
+                      patch('products', {
+                        ...products,
+                        items: patchAt(products.items, i, { product: e.target.value }),
+                      })
+                    }
+                  />
+                  <Input
+                    value={p.achievement ?? ''}
+                    placeholder="예: 누적 3,500만캔 판매"
+                    onChange={(e) =>
+                      patch('products', {
+                        ...products,
+                        items: patchAt(products.items, i, { achievement: e.target.value }),
+                      })
+                    }
+                  />
+                </>
+              )}
+            </ItemRows>
           </Label>
           <Label text="추가 사실">
             <LineListField
