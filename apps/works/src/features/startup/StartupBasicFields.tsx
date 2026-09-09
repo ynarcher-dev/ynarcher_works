@@ -86,23 +86,23 @@ export function StartupBasicFields({
 
       {/* 기본 데이터 카드 */}
       <CardShell>
-        {/* **칸의 종류가 폭을 정하고, 같은 종류가 한 줄을 채우도록 순서도 함께 모았다**
-            (2026-09-09 사용자 지정). 정체(기업명·대표자·형태·설립일) → 분류(사업자번호·단계·
-            구분·소재지) → 연락(상세주소·이메일·연락처) → 폭이 필요한 것(분야·발굴 경로)이다.
-            종전에는 2열 격자에 칸이 종류와 무관하게 둘씩 서고 긴 칸만 전폭을 받아, 짧은 칸이
-            제 값보다 두 배 넓은 자리를 차지하면서 폼이 세로로 길어졌다. */}
+        {/* **한 줄에 두 칸으로 세운다**(2026-09-09 사용자 지정). 종류별 폭(4·3·2개)으로 세우니
+            한 줄에 네 칸이 서서, 라벨과 값을 눈이 가로로 네 번 훑어야 했다 — 날짜·선택지는 제
+            값을 담고도 남는데 이름·주소는 모자라, 같은 줄에서 칸마다 여유가 달랐다. 두 칸이면
+            어느 종류든 폭이 같아 눈이 왼쪽 두 줄만 따라 내려간다.
+            순서는 그대로 정체(기업명·대표자·형태·설립일) → 분류(사업자번호·단계·구분·소재지) →
+            연락(상세주소·이메일·연락처) → 분야 → 발굴 경로 → 한 줄 소개다. 전폭은 상세주소·분야·
+            발굴 경로·한 줄 소개 넷인데 담기는 글이 반 폭에서 끝나지 않는 칸들이고, 그 넷이
+            홀수 자리를 메워 둘씩 서는 줄에는 빈 반 칸이 생기지 않는다. */}
         <FieldGrid>
-          <Field label="한 줄 소개" width="full">
-            <Input placeholder="한 줄 소개(기업명 아래에 표시됩니다)" {...register('oneLiner')} />
-          </Field>
-          <Field label="기업명" required width="sm">
+          <Field label="기업명" required width="lg">
             <Input invalid={Boolean(errors.name)} {...register('name', { required: '기업명은 필수입니다.' })} />
             {errors.name && <p className="mt-1 text-caption text-danger">{errors.name.message}</p>}
           </Field>
-          <Field label="대표자명" width="sm">
+          <Field label="대표자명" width="lg">
             <Input {...register('representative')} />
           </Field>
-          <Field label="회사 형태" width="sm">
+          <Field label="회사 형태" width="lg">
             <Select {...register('company_form')}>
               <option value="">선택</option>
               {COMPANY_FORMS.map((f) => (
@@ -112,14 +112,14 @@ export function StartupBasicFields({
               ))}
             </Select>
           </Field>
-          <Field label="설립일" width="sm">
+          <Field label="설립일" width="lg">
             <Input type="date" {...register('founded_on')} />
           </Field>
-          <Field label="사업자등록번호" width="sm">
+          <Field label="사업자등록번호" width="lg">
             <Input {...register('biz_reg_no')} />
           </Field>
-          {tagField('stage', 'investment_stage_tags', '단계', 'sm')}
-          <Field label="구분" width="sm">
+          {tagField('stage', 'investment_stage_tags', '단계', 'lg')}
+          <Field label="구분" width="lg">
             {alreadyInvested ? (
               // 투자기업은 이 화면에서 구분을 바꾸지 않는다(전환·복귀는 FUND 투자 집행에서 관리).
               <div className="flex items-center gap-2 py-2 text-body text-gray-900">
@@ -137,39 +137,49 @@ export function StartupBasicFields({
               </Select>
             )}
           </Field>
-          {tagField('location', 'location_tags', '소재지', 'sm')}
-          <Field label="상세주소" width="md">
+          {tagField('location', 'location_tags', '소재지', 'lg')}
+          <Field label="상세주소" width="full">
             <Input {...register('address_detail')} placeholder="상세주소를 입력하세요" />
           </Field>
-          <Field label="이메일" width="md">
+          <Field label="이메일" width="lg">
             <Input {...register('email')} />
           </Field>
-          <Field label="연락처" width="md">
+          <Field label="연락처" width="lg">
             <Input {...register('phone')} />
           </Field>
-          {/* 분야·발굴 경로가 한 줄을 반씩 나눈다 — 분야를 전폭으로 두면 발굴 경로가 홀로
-              다음 줄에 서서 오른쪽 절반이 빈다(2026-09-09). 태그는 넘치면 아래로 접힌다. */}
+          {/* 분야·발굴 경로·한 줄 소개는 각각 한 행을 통째로 쓴다(2026-09-09 사용자 지정).
+              셋 다 담기는 것이 반 폭에서 끝나지 않는다 — 태그는 여러 줄로 접히고, 발굴 경로와
+              한 줄 소개는 문장이다. 반 폭에 두면 옆 칸과 줄이 어긋나 어느 쪽이 이어지는 글인지
+              읽는 눈이 매번 다시 잡아야 한다. */}
           <Field
             label="분야"
             hint={industryField.hint}
             hintInline={industryField.hintInline}
-            width="lg"
+            width="full"
           >
             {industryField.control}
           </Field>
-          <Field label="발굴 경로" width="lg">
+          <Field label="발굴 경로" width="full">
             <Controller
               control={control}
               name="discovery_source"
               render={({ field }) => (
+                // 역량 밴드의 서술 칸과 같은 규격 — 두 문장 높이로 서고 내용만큼 자란다.
                 <TextArea
-                  rows={3}
+                  rows={2}
+                  autoGrow
                   value={field.value ?? ''}
                   onChange={field.onChange}
                   placeholder="발굴 경로를 자유롭게 입력하세요(길게 작성 가능)."
                 />
               )}
             />
+          </Field>
+          {/* 한 줄 소개가 카드 맨 아래에 선다(2026-09-09 사용자 지정). 맨 위에 두면 전폭 한 칸이
+              기업명보다 먼저 서서, 이 기업이 무엇인지 아직 모르는 채 요약부터 적게 된다.
+              나머지를 다 적고 그 전부를 한 줄로 줄이는 칸이라 자리도 마지막이다. */}
+          <Field label="한 줄 소개" width="full">
+            <Input placeholder="한 줄 소개(기업명 아래에 표시됩니다)" {...register('oneLiner')} />
           </Field>
         </FieldGrid>
       </CardShell>
@@ -181,10 +191,10 @@ export function StartupBasicFields({
           help={'투자기업의 딜메이커·관리현황은 FUND 투자 집행에서 지정·관리합니다.\n이 화면에서는 조회만 됩니다.'}
         >
           <FieldGrid>
-            <Field label="딜메이커" width="md">
+            <Field label="딜메이커" width="lg">
               <div className="py-2 text-body text-gray-900">{leadName || '-'}</div>
             </Field>
-            <Field label="관리현황" width="md">
+            <Field label="관리현황" width="lg">
               <div className="py-2 text-body text-gray-900">{poolStatus || '-'}</div>
             </Field>
           </FieldGrid>

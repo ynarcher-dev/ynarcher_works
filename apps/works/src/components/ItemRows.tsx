@@ -39,21 +39,40 @@ export type ItemColKind =
   /** 체크박스 한 칸. */
   | 'flag'
 
-/** 종류별 고정 폭(rem). `text`는 여기 없다 — 남는 폭을 받는다. */
+/**
+ * 종류별 폭(rem). `text`는 여기 없다 — 남는 폭을 받는다.
+ *
+ * 여기 적힌 값은 **바닥**이지 상한이 아니다. `text` 열이 없는 표에서는 이 폭에서 시작해 남는
+ * 폭을 값 칸들이 균등하게 나눠 갖는다(아래 `spread`).
+ *
+ * 값을 정하는 기준은 **그 종류가 실제로 담는 글자 수**다(2026-09-09 조정 — name 10→8, pick
+ * 8.5→7, flag 5.5→4). 반대로 필요보다 넓게 잡으면 그 여유가 `text` 열에서 빠져나온다 — 세 글자
+ * 이름이 열 글자 자리를 차지하는 동안 한 줄 설명은 절반만 보인다. 고정 열의 여유는 공짜가 아니라
+ * **길이를 모르는 값에서 뺀 폭**이다(표 폭 정리에서 이미 한 번 밟은 자리다).
+ * `date`·`code`·`num`을 깎지 않은 것은 담기는 것이 정해져 있어서다 — 날짜 입력은 달력 아이콘까지
+ * 세야 하고, 금액은 열 자리에 콤마가 셋 붙는다.
+ */
 const COL_WIDTH: Record<Exclude<ItemColKind, 'text'>, number> = {
-  name: 10,
+  name: 8,
   date: 9.5,
-  pick: 8.5,
+  pick: 7,
   code: 10,
   num: 9,
   short: 6,
-  flag: 5.5,
+  flag: 4,
 }
 
 /** `text` 열이 가로 스크롤 없이 최소한 확보하는 폭(rem). */
 const TEXT_MIN = 12
 
-/** 삭제 버튼 열의 폭(rem) — 최소 폭 계산에만 쓴다(실제 열은 `auto`). */
+/**
+ * 삭제 버튼 열의 폭(rem).
+ *
+ * 고정 폭인 것이 요점이다(2026-09-09 사용자 지정). 종전에는 `auto`로 두었는데, `text` 열이 없는
+ * 표(매출·재무·고용처럼 연도와 숫자만 있는 것)에서는 남는 폭을 받을 1fr 열이 없어 그 자리가
+ * 전부 버튼으로 갔다 — 지우는 칸이 값을 적는 칸보다 넓어 표에서 가장 먼저 눈에 띄었다.
+ * **줄이 카드 폭을 다 채우지 않아도 된다** — 남는 자리는 그냥 비워 둔다.
+ */
 const ACTION_WIDTH = 4.5
 
 export interface ItemCol {
@@ -91,9 +110,16 @@ interface Props<T> {
  * 안내인지 화면이 말하지 못한다. 남는 것은 추가 버튼 하나다.
  */
 export function ItemRows<T>({ cols, rows, rowKey, onRemove, onAdd, addLabel, title, children }: Props<T>) {
+  // 남는 폭의 임자: `text` 열이 있으면 그 열이 전부 가져가고, 없으면(연도·금액만 있는 표) 값
+  // 칸들이 **균등하게** 나눠 갖는다 — 고정 폭 그대로 두면 줄이 카드 절반에서 끝나 오른쪽이
+  // 통째로 빈다. 몫이 같으므로 열 사이의 폭 차이(연도 6 · 금액 9)는 그대로 남는다.
+  // 체크박스 열만 빠진다 — 넓혀도 담기는 것이 그대로라 빈자리만 는다.
+  const spread = !cols.some((c) => (c.kind ?? 'text') === 'text')
   const tracks = cols.map((c) => {
     const kind = c.kind ?? 'text'
-    return kind === 'text' ? 'minmax(0,1fr)' : `${COL_WIDTH[kind]}rem`
+    if (kind === 'text') return 'minmax(0,1fr)'
+    const w = `${COL_WIDTH[kind]}rem`
+    return spread && kind !== 'flag' ? `minmax(${w},1fr)` : w
   })
   const fixed = cols.reduce((sum, c) => {
     const kind = c.kind ?? 'text'
@@ -109,7 +135,7 @@ export function ItemRows<T>({ cols, rows, rowKey, onRemove, onAdd, addLabel, tit
             // `[&>*]:min-w-0` — 격자 칸의 기본 최소 폭은 '내용이 요구하는 폭'이라, 입력 하나의
             // 기본 너비(약 20자)가 열 폭보다 커지면 표 전체가 밀린다. 칸마다 0으로 풀어 둔다.
             className="grid items-center gap-x-2 gap-y-1.5 [&>*]:min-w-0"
-            style={{ gridTemplateColumns: `${tracks.join(' ')} auto`, minWidth: `${fixed}rem` }}
+            style={{ gridTemplateColumns: `${tracks.join(' ')} ${ACTION_WIDTH}rem`, minWidth: `${fixed}rem` }}
           >
             {cols.map((c, i) => (
               <span key={i} className="text-caption text-gray-700">

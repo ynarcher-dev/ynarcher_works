@@ -410,7 +410,7 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
               같은 부품(`SectionHeading`)이라, '수정'을 누르는 순간 화면의 뼈대가 바뀌지 않는다. */}
           {config.hasQuickReview && (
             <>
-              <SectionHeading title="퀵 리뷰" accent />
+              <SectionHeading title="퀵 리뷰" />
               <MaQuickReviewFields
                 qr={quickReview}
                 onChange={setQuickReview}

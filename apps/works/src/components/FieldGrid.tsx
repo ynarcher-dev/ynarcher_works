@@ -1,4 +1,4 @@
-import { cn } from '@ynarcher/ui'
+import { cn, formText } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 
 /**
@@ -34,6 +34,11 @@ import type { ReactNode } from 'react'
  *
  * 좁은 화면(`md` 미만)에서는 전부 한 줄에 하나씩 선다 — 그 폭에서 둘로 가르면 어느 칸도 제
  * 값을 담지 못한다.
+ *
+ * **다만 기본 데이터 카드는 같은 날 저녁 `lg`(2개)로 통일했다**(2026-09-09 사용자 지정). 종류대로
+ * 세우니 한 줄에 네 칸이 서서 눈이 가로로 네 번 훑어야 했고, 같은 줄에서 칸마다 여유가 달랐다.
+ * 표가 말하는 종류→폭 규칙은 그대로 살아 있고 지금 폼이 그중 `lg`·`full` 둘만 쓰는 것이다 —
+ * 한 줄에 몇 칸을 세울지는 여전히 화면이 아니라 여기서 고른 종류가 답한다.
  */
 export type FieldWidth = 'sm' | 'md' | 'lg' | 'full'
 
@@ -61,29 +66,38 @@ export function FieldGrid({ children, className }: { children: ReactNode; classN
 }
 
 /**
- * 적는 칸만 있는 카드의 **한 행 N열** 격자 — 칸이 몇이든 한 줄에 서고 폭을 똑같이 나눈다.
+ * 적는 칸이 **한 줄에 하나씩** 서는 자리 — 라벨은 왼쪽 고정 열, 입력이 나머지 폭을 받는다.
  *
- * 2026-09-09 사용자 지정이다. 12칸 격자는 *종류가 다른 칸이 섞인* 카드(기본 데이터 — 이름·날짜·
- * 선택지·주소가 함께 산다)의 규격이다. 반면 역량 밴드의 카드들은 칸이 **전부 적는 칸**이라
- * 종류로 가를 것이 없고, 그때 12칸에 맞춰 폭을 고르면 칸 수가 4의 배수가 아닐 때마다 마지막
- * 하나가 홀로 다음 줄에 서서 그 옆이 빈다(다섯 칸을 `lg`로 두면 2·2·1, `md`로 두면 3·2).
+ * 2026-09-09 사용자 지정이다. 그 전에는 같은 카드가 `FieldRow`(한 행 N열)로 서서 다섯 칸이
+ * 가로로 나란히 있었는데, **조회 화면이 같은 카드를 `InfoRows`로 세운다** — 라벨: 값이 한 줄씩
+ * 위아래로 쌓인 모양이다. 두 화면의 줄 방향이 다르면 방금 읽은 값을 고치러 들어왔을 때 눈이
+ * 자리를 다시 찾아야 한다. 조회가 세로면 편집도 세로다.
  *
- * **줄을 채우려고 폭을 고르는 대신, 칸 수가 곧 열 수가 되게 한다.** 카드가 자기 칸 수를 세어
- * 넘길 필요도 없다 — `grid-flow-col`이 놓이는 대로 열을 만들고 `auto-cols`가 그 열들을 같은
- * 폭으로 세운다. 좁은 화면(`md` 미만)에서는 한 줄에 하나씩 쌓인다.
+ * 격자 폭(`6rem`)과 라벨 열의 존재 이유는 `InfoRows`와 같다 — 라벨 길이가 제각각이라 값의
+ * 왼쪽 끝이 줄마다 어긋나면, 훑어 내려가는 눈이 매번 값의 시작점을 다시 찾는다. 그래서 라벨은
+ * 고정 폭 열에 세우고 입력은 한 축에서 시작한다. **두 화면이 같은 6rem을 쓰는 것이 요점이다.**
  *
- * 열 폭에 `minmax(0,1fr)`을 쓰는 것이 요점이다 — 그냥 `1fr`이면 최소 폭이 '내용이 요구하는 폭'
- * 이라 텍스트영역의 기본 너비(약 20자)가 바닥이 되어 열이 밀린다.
+ * 라벨에 `md:pt-2`가 붙는 이유는 입력이 라벨보다 높기 때문이다(카드 밀도의 `py-2`). 그만큼
+ * 내려야 라벨 글자가 입력 안 첫 줄과 같은 높이에 선다 — 텍스트영역이 자라도 첫 줄 기준은
+ * 그대로다. 좁은 화면에서는 라벨이 입력 위로 올라서므로 그 보정을 걷는다.
  */
-export function FieldRow({ children, className }: { children: ReactNode; className?: string }) {
+export function FieldLines({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div
-      className={cn(
-        'grid grid-cols-1 gap-3 md:grid-cols-none md:grid-flow-col md:auto-cols-[minmax(0,1fr)]',
-        className,
-      )}
-    >
+    <div className={cn('grid grid-cols-1 gap-x-3 gap-y-2.5 md:grid-cols-[6rem_minmax(0,1fr)]', className)}>
       {children}
+    </div>
+  )
+}
+
+/**
+ * `FieldLines` 안의 한 줄. `contents`로 자기 상자를 지워, 라벨과 입력이 부모 격자의 두 칸에
+ * 직접 선다 — 상자를 남기면 줄마다 자기 안에서 폭을 나눠 라벨 축이 줄마다 어긋난다.
+ */
+export function FieldLine({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="contents">
+      <p className={cn('md:pt-2', formText.label)}>{label}</p>
+      <div className="min-w-0">{children}</div>
     </div>
   )
 }

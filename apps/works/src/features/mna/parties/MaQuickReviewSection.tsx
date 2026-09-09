@@ -25,7 +25,7 @@ export function MaQuickReviewSection({ raw }: { raw: unknown }) {
       {/* 밴드 제목은 카드 밖에 선다 — 카드 제목과 같은 층에 두면 '퀵 리뷰'가 그 아래 일곱 절
           중 하나로 읽힌다. 규격은 화면이 아니라 공용 `SectionHeading`이 소유한다
           (스타트업 상세의 역량·실적 밴드와 같은 부품이다). */}
-      <SectionHeading title="퀵 리뷰" accent />
+      <SectionHeading title="퀵 리뷰" />
       {isQuickReviewEmpty(qr) ? (
         <EmptyState
           title="아직 작성된 퀵 리뷰가 없습니다."
