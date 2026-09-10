@@ -17,8 +17,13 @@ import type { ListScope } from '@/lib/listScope'
 /** 페이지당 행 수. */
 const PAGE_SIZE = 20
 
-/** 표가 비었을 때·토글에서 부르는 원장 단위 이름. */
-const ENTITY_NOUN = '운용펀드'
+/**
+ * 범위 스위치가 부르는 이름 — **'내 펀드'**다(2026-09-10 사용자 지정).
+ *
+ * 페이지 제목은 '운용펀드'로 남는다. 제목은 이 목록이 담는 것을 말하는 자리지만, 스위치는
+ * 내가 낀 것만 남기는 축이라 짧을수록 무엇이 걸리는지가 빨리 읽힌다.
+ */
+const SCOPE_LABEL = '내 펀드'
 
 interface FundListTabProps {
   /** 'mine'은 생성자 또는 담당자(대표펀드매니저·운용/관리 인력)가 나인 펀드만, 'all'은 전부. */
@@ -80,7 +85,7 @@ export function FundListTab({ scope, onScopeChange, userId }: FundListTabProps) 
         actions={
           <ListActions
             leading={
-              <ListScopeToggle scope={scope} onChange={onScopeChange} noun={ENTITY_NOUN} />
+              <ListScopeToggle scope={scope} onChange={onScopeChange} label={SCOPE_LABEL} />
             }
             createLabel="펀드 등록"
             onCreate={() => navigate('/fund/new')}

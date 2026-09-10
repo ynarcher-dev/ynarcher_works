@@ -127,7 +127,7 @@ export function FundSummaryPanel({
     <Card title="펀드 현황">
       <section
         aria-label="펀드 구성 및 자금 현황"
-        className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8"
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
       >
         {tiles.map((tile) => {
           const Icon = tile.icon

@@ -2,16 +2,36 @@ import { Switch, cn, formText } from '@ynarcher/ui'
 import { useId } from 'react'
 import type { ListScope } from '@/lib/listScope'
 
-export interface ListScopeToggleProps {
+interface ListScopeToggleBase {
   scope: ListScope
   onChange: (scope: ListScope) => void
-  /**
-   * 원장 단위 명사(네트워크·스타트업·운용펀드·프로젝트). 스위치 이름은 `내 {명사}만`으로
-   * 선다 — 켜면 무엇이 남는지를 이름이 그대로 말해야 하고, 그 명사가 목록이 담는 것과
-   * 같아야 무엇을 좁히는 스위치인지 되묻지 않는다.
-   */
-  noun: string
 }
+
+/**
+ * 이름은 둘 중 하나로만 정한다 — 원장 명사를 주면 규격이 조립하고(`내 {명사}만`), 그 규격이
+ * 어색한 자리는 이름 전체를 준다. 둘 다 받으면 어느 쪽이 화면에 서는지 부르는 쪽에서 알 수
+ * 없으므로 타입이 하나만 허용한다.
+ */
+export type ListScopeToggleProps = ListScopeToggleBase &
+  (
+    | {
+        /**
+         * 원장 단위 명사(네트워크·스타트업·프로젝트). 스위치 이름은 `내 {명사}만`으로
+         * 선다 — 켜면 무엇이 남는지를 이름이 그대로 말해야 하고, 그 명사가 목록이 담는 것과
+         * 같아야 무엇을 좁히는 스위치인지 되묻지 않는다.
+         */
+        noun: string
+        label?: never
+      }
+    | {
+        noun?: never
+        /**
+         * 이름 전체를 직접 준다. 조립 규격이 부르는 이름과 어긋날 때만 쓴다 — FUND가 그렇다
+         * (목록은 '운용펀드'인데 스위치는 '내 펀드'로 부른다, 2026-09-10 사용자 지정).
+         */
+        label: string
+      }
+  )
 
 /**
  * 목록 범위 스위치(내 ~만) — 원장 목록 5종 공용.
@@ -25,7 +45,7 @@ export interface ListScopeToggleProps {
  * 채로 자리만 차지한다. 스위치는 꺼진 상태가 곧 기본이고 켜는 것이 좁히는 일이라, 같은 줄의
  * 다른 필터 축과 성격이 같아진다(걸면 좁아진다).
  */
-export function ListScopeToggle({ scope, onChange, noun }: ListScopeToggleProps) {
+export function ListScopeToggle({ scope, onChange, noun, label }: ListScopeToggleProps) {
   const id = useId()
   return (
     <div className="inline-flex items-center gap-2">
@@ -33,7 +53,7 @@ export function ListScopeToggle({ scope, onChange, noun }: ListScopeToggleProps)
         htmlFor={id}
         className={cn(formText.label, 'cursor-pointer select-none whitespace-nowrap')}
       >
-        내 {noun}만
+        {label ?? `내 ${noun}만`}
       </label>
       <Switch
         id={id}

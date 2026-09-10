@@ -260,6 +260,17 @@ export function InvestmentFormModal({
       toast.show('딜메이커(리드 담당자)를 지정하세요.', 'warning')
       return
     }
+    // 관리현황도 전환과 함께 정한다(2026-09-10 사용자 지정). 종전에는 선택 사항이라 비운 채
+    // 전환되면 그 뒤로 다시 묻는 자리가 없어 영영 빈 채로 남았다 — 실제로 투자기업 여섯 곳 중
+    // 세 곳이 그 상태였고, 목록·상세·헤더 칩이 전부 '-'로 섰다. 지금 이 기업이 어느 상태인지는
+    // 전환하는 사람이 가장 잘 알고, 그 순간이 아니면 물을 자리가 없다.
+    //
+    // **수정에서는 막지 않는다** — 집행액 한 칸 고치러 들어온 사람에게 남이 비워 둔 칸을
+    // 채우게 하면, 고치려던 일이 그 칸에 막힌다. 빈 값을 채우는 것은 이 화면에서 언제든 된다.
+    if (!editing && !poolStatus) {
+      toast.show('관리현황을 선택하세요.', 'warning')
+      return
+    }
     const values = {
       startup_id: startupId,
       invested_at: investedAt || null,
@@ -477,7 +488,7 @@ export function InvestmentFormModal({
               />
             </Field>
             {/* 담당자(딜메이커·지원) 아래 줄에 관리현황을 두고, 폐업이면 그 옆에 폐업일자를 노출한다. */}
-            <Field label="관리현황">
+            <Field label="관리현황" required={!editing}>
               <TagSelect
                 table="company_status_tags"
                 value={poolStatus}
