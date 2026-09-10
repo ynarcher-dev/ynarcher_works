@@ -54,6 +54,7 @@ export function KpiPanel() {
   if (!selected) return <Card><EmptyState title="KPI 스냅샷이 없습니다." description="조직 원장 버전을 먼저 생성하세요." /></Card>
 
   const configurationEditable = canWrite && selected.status === 'DRAFT'
+  const assignmentEditable = canWrite && selected.status !== 'CLOSED'
   const actualEditable = canWrite && selected.status === 'PUBLISHED'
 
   return (
@@ -66,7 +67,7 @@ export function KpiPanel() {
           <Button
             disabled={publish.isPending}
             onClick={() => void publish.mutateAsync(selected.org_version_id)
-              .then(() => toast.show('조직과 KPI 스냅샷을 함께 발행했습니다.', 'success'))
+              .then(() => toast.show('KPI를 발행했습니다. 미할당 대상은 발행 후에도 할당할 수 있습니다.', 'success'))
               .catch((error: Error) => toast.show(error.message, 'danger'))}
           >{publish.isPending ? '발행 중…' : '조직·KPI 함께 발행'}</Button>
         ) : undefined}
@@ -82,8 +83,8 @@ export function KpiPanel() {
 
       <Tabs items={VIEW_ITEMS} value={view} onChange={(key) => updateParam('kpiView', key)} />
       {view === 'templates' && <KpiTemplateBuilder versionId={selected.id} editable={configurationEditable} />}
-      {view === 'departments' && <KpiAssignmentsPanel versionId={selected.id} orgVersionId={selected.org_version_id} scope="DEPARTMENT" editable={configurationEditable} />}
-      {view === 'people' && <KpiAssignmentsPanel versionId={selected.id} orgVersionId={selected.org_version_id} scope="PERSON" editable={configurationEditable} />}
+      {view === 'departments' && <KpiAssignmentsPanel versionId={selected.id} orgVersionId={selected.org_version_id} scope="DEPARTMENT" editable={assignmentEditable} fillOnly={selected.status === 'PUBLISHED'} />}
+      {view === 'people' && <KpiAssignmentsPanel versionId={selected.id} orgVersionId={selected.org_version_id} scope="PERSON" editable={assignmentEditable} fillOnly={selected.status === 'PUBLISHED'} />}
       {view === 'actuals' && <KpiActualPanel versionId={selected.id} orgVersionId={selected.org_version_id} editable={actualEditable} />}
     </div>
   )
