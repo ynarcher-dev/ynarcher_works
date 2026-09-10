@@ -31,7 +31,7 @@ function formValues(over: Partial<StartupDetailFormValues> = {}): StartupDetailF
     pool_status: '',
     discovery_source: '데모데이',
     location: '서울',
-    address_detail: '강남구',
+    addresses: [{ kind: '본사', detail: '강남구' }],
     email: 'a@b.com',
     phone: '01012345678',
     oneLiner: '손으로 적은 한 줄',

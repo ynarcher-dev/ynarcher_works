@@ -1,6 +1,6 @@
 import type { EntityRow } from '@/features/master/entityHooks'
 import { readGrowth, readBusinessStatus } from '@/features/startup/startupGrowth'
-import { readBusiness, readIp, readTeam, readTech } from '@/features/startup/startupProfile'
+import { readAddresses, readBusiness, readIp, readTeam, readTech } from '@/features/startup/startupProfile'
 import { readSummary } from '@/features/startup/StartupSummaryCards'
 import { readShareholderHistory } from '@/features/startup/startupShareholders'
 import type { AiFillCatalog } from '@/features/ai/aiCatalog'
@@ -86,7 +86,8 @@ export const AI_CARDS: StartupAiCardMeta[] = [
     // 서류에 인쇄된 값이라 판단이 끼지 않는 유일한 카드다. 수정 모드에서는 기업명이 늘 차
     // 있어 기본으로 꺼지고, 등록 모드의 빈 폼에서만 켜진다 — 첫 등록이 이 카드의 자리다.
     filled: (r) =>
-      some(r.name, r.representative, r.company_form, r.founded_on, r.biz_reg_no, r.location, r.address_detail),
+      some(r.name, r.representative, r.company_form, r.founded_on, r.biz_reg_no, r.location) ||
+      readAddresses(r).length > 0,
   },
   {
     key: 'summary',

@@ -1,12 +1,23 @@
 import { Button, CardShell, Input, PanelCard, Select, TextArea } from '@ynarcher/ui'
 import type { ChangeEvent, ReactNode } from 'react'
-import { Controller, type Control, type FieldErrors, type UseFormRegister } from 'react-hook-form'
+import {
+  Controller,
+  useFieldArray,
+  type Control,
+  type FieldErrors,
+  type UseFormRegister,
+} from 'react-hook-form'
 import { FieldGrid, type FieldWidth } from '@/components/FieldGrid'
+import { ItemRows, type ItemCol } from '@/components/ItemRows'
 import { PhotoBox } from '@/features/networks/PhotoBox'
 import { TagSelect } from '@/features/admin/TagSelect'
 import { MANAGEMENT_STATUS_OPTIONS, managementStatusLabel } from '@/features/startup/startupClassification'
+import { ADDRESS_KIND_OPTIONS } from '@/features/startup/startupProfile'
 import { Field } from '@/features/startup/StartupFormField'
 import type { StartupDetailFormValues } from '@/features/startup/startupFormValues'
+
+/** 주소 한 줄 — 구분은 고정 선택지라 좁고, 주소는 길이를 모르는 값이라 남는 폭을 갖는다. */
+const ADDRESS_COLS: ItemCol[] = [{ label: '구분', kind: 'pick' }, { label: '주소' }]
 
 /** 회사 형태 고정 선택지. */
 const COMPANY_FORMS = ['법인', '개인', '예비'] as const
@@ -45,6 +56,10 @@ export function StartupBasicFields({
   poolStatus,
   leadName,
 }: Props) {
+  // 주소 목록 — 줄의 key는 순번이 아니라 useFieldArray가 준 id다(가운데 줄을 지웠을 때
+  // 아래 줄의 DOM 값이 위로 밀려 붙는 것을 막는다).
+  const addresses = useFieldArray({ control, name: 'addresses' })
+
   type TagFieldName = 'stage' | 'management_status' | 'pool_status' | 'location'
   const tagField = (name: TagFieldName, table: string, label: string, width: FieldWidth) => (
     <Field label={label} width={width}>
@@ -119,13 +134,23 @@ export function StartupBasicFields({
             <Input {...register('biz_reg_no')} />
           </Field>
           {tagField('stage', 'investment_stage_tags', '단계', 'lg')}
-          <Field label="구분" width="lg">
+          <Field
+            label="구분"
+            width="lg"
+            // 왜 못 고치는지를 답하는 차단 안내라 접지 않는다(CLAUDE.md 안내 규칙의 예외).
+            hint={alreadyInvested ? '전환·복귀는 FUND 투자 집행에서 관리합니다.' : undefined}
+            hintInline={alreadyInvested}
+          >
             {alreadyInvested ? (
-              // 투자기업은 이 화면에서 구분을 바꾸지 않는다(전환·복귀는 FUND 투자 집행에서 관리).
-              <div className="flex items-center gap-2 py-2 text-body text-gray-900">
-                {managementStatusLabel('invested')}
-                <span className="text-caption text-gray-500">(FUND 투자 집행에서 관리)</span>
-              </div>
+              // 투자기업은 이 화면에서 구분을 바꾸지 않는다(전환·복귀는 FUND 투자 집행에서
+              // 관리). **글자가 아니라 잠긴 칸으로 세운다**(2026-09-10 사용자 지정) — 값만
+              // 적어 두면 옆 칸들과 높이가 어긋나 그 자리에 칸이 없는 것처럼 보이고,
+              // 담당자는 구분이 아예 없는 폼으로 읽는다. 잠긴 셀렉트는 '있는데 지금은 못
+              // 고친다'를 형태가 말한다.
+              // 잠긴 칸이라 값이 바뀔 일이 없다 — `value`로 두면 onChange 없는 제어 컴포넌트가 된다.
+              <Select defaultValue="invested" disabled>
+                <option value="invested">{managementStatusLabel('invested')}</option>
+              </Select>
             ) : (
               // 투자기업 전환은 여기서 할 수 없다 — 발굴/보육/미지정 간에만 바꾼다('투자' 옵션 제외).
               <Select {...register('management_status')}>
@@ -137,10 +162,42 @@ export function StartupBasicFields({
               </Select>
             )}
           </Field>
-          {tagField('location', 'location_tags', '소재지', 'lg')}
-          <Field label="상세주소" width="full">
-            <Input {...register('address_detail')} placeholder="상세주소를 입력하세요" />
-          </Field>
+          {tagField('location', 'location_tags', '소재지(본사)', 'lg')}
+          {/*
+            상세주소는 **목록**이다(2026-09-10 사용자 지정). 한 칸이던 동안 지사·연구소를
+            둔 기업은 그 사실을 적을 자리가 없어 본사 주소 뒤에 이어 붙이거나 아예 적지
+            않았다. 규격은 폼의 다른 목록 입력과 같다(`ItemRows` — 머리글 한 줄 + 항목 한
+            줄 + 줄 끝 삭제).
+          */}
+          <div className="col-span-12">
+            <p className="mb-1 text-body font-medium text-gray-800">상세주소</p>
+            <ItemRows
+              cols={ADDRESS_COLS}
+              rows={addresses.fields}
+              rowKey={(f) => f.id}
+              onRemove={(i) => addresses.remove(i)}
+              onAdd={() => addresses.append({ kind: ADDRESS_KIND_OPTIONS[0], detail: '' })}
+              addLabel="주소 추가"
+            >
+              {(_row, i) => (
+                <>
+                  <Select {...register(`addresses.${i}.kind`)}>
+                    {ADDRESS_KIND_OPTIONS.map((k) => (
+                      <option key={k} value={k}>
+                        {k}
+                      </option>
+                    ))}
+                  </Select>
+                  {/* 시·도는 위 소재지 태그가 답하므로 여기는 그 아래부터 적는다. */}
+                  <Input
+                    {...register(`addresses.${i}.detail`)}
+                    placeholder="시·군·구부터 끝까지"
+                    aria-label="주소"
+                  />
+                </>
+              )}
+            </ItemRows>
+          </div>
           <Field label="이메일" width="lg">
             <Input {...register('email')} />
           </Field>

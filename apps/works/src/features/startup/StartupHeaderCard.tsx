@@ -3,7 +3,7 @@ import { PhotoBox } from '@/features/networks/PhotoBox'
 import { SensitiveValue } from '@/features/master/SensitiveValue'
 import type { EntityRow } from '@/features/master/entityHooks'
 import { isInvested, managementStatusLabel } from '@/features/startup/startupClassification'
-import { readBusiness } from '@/features/startup/startupProfile'
+import { readAddresses, readBusiness } from '@/features/startup/startupProfile'
 import { formatFounded, readIndustries } from '@/features/startup/startupGrowth'
 
 /** 첨부/피드백/기여 로그 대상 유형(다형 테이블 target_type). 원장이 하나라 화면마다 갈리지 않는다. */
@@ -33,6 +33,14 @@ function text(v: unknown): string | null {
  * 정하고(STARTUP은 구분별 메뉴 키, FUND는 `fund.portfolio`), 딜메이커 이름은 담당자 원장을
  * 읽는 쪽이 이미 손에 쥐고 있어 여기서 다시 조회하지 않는다.
  */
+/** 주소 목록을 헤더 한 칸에 적는다. 비면 정보행의 빈 값 표기를 그대로 쓴다. */
+function addressLine(record: EntityRow): string {
+  const list = readAddresses(record)
+  if (list.length === 0) return '-'
+  if (list.length === 1) return list[0]!.detail
+  return list.map((a) => `${a.kind} ${a.detail}`).join(', ')
+}
+
 export function StartupHeaderCard({
   record,
   contentKey,
@@ -102,10 +110,13 @@ export function StartupHeaderCard({
           <Info label="설립일" value={formatFounded(record.founded_on)} />
           <Info label="사업자등록번호" value={str('biz_reg_no')} />
           <Info label="소재지" value={str('location')} />
-          {/* 상세주소는 길 수 있어 소재지 오른쪽 2열을 차지한다(이 그리드의 마지막 칸). */}
+          {/* 상세주소는 길 수 있어 소재지 오른쪽 2열을 차지한다(이 그리드의 마지막 칸).
+              여러 줄이면 구분(지사·연구소)을 앞에 붙여 쉼표로 잇는다 — 본사 하나뿐일 때는
+              구분을 적지 않는다(라벨이 이미 '상세주소'이고, 한 줄뿐인데 '본사'를 붙이면
+              읽는 사람이 다른 줄을 찾게 된다). */}
           <Info
             label="상세주소"
-            value={str('address_detail')}
+            value={addressLine(record)}
             className="min-w-0 sm:col-span-2"
             valueClassName="min-w-0 flex-1 truncate"
           />

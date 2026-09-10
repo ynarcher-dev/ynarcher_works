@@ -24,7 +24,10 @@ import {
 } from '@/features/master/ledgerMatch'
 
 /** 값을 어떻게 읽을지. 지정하지 않으면 문자열 그대로 넣는다. */
-export type BulkFieldKind = 'text' | 'number' | 'date' | 'enum' | 'tag' | 'tags' | 'phone'
+export type BulkFieldKind = 'text' | 'number' | 'date' | 'enum' | 'tag' | 'tags' | 'phone' | 'address'
+
+/** 업로드가 받는 주소 한 줄의 구분(`ADDRESS_KIND_OPTIONS[0]`과 같은 값). */
+const BULK_ADDRESS_KIND = '본사'
 
 /** 태그 원장(ADMIN 태그 관리) 테이블명 → 등록된 태그명 목록. */
 export type BulkTagLookup = Record<string, string[]>
@@ -372,6 +375,13 @@ export function parseBulkCsv(
           break
         }
         setColumn(payload, field.column, n)
+        continue
+      }
+      if (field.kind === 'address') {
+        // 파일이 주는 것은 주소 한 줄이고 원장은 목록이다(2026-09-10) — 그 한 줄은 본사다.
+        // 파일에 지사·연구소 열을 더하지 않는 것은 이 업로드가 받는 열이 명단 표에 서는
+        // 값들이기 때문이다: 자리별 주소는 등록한 뒤 상세 화면에서 채운다.
+        setColumn(payload, field.column, [{ kind: BULK_ADDRESS_KIND, detail: raw }])
         continue
       }
       if (field.kind === 'phone') {

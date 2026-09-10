@@ -18,7 +18,13 @@ export interface StartupDetailFormValues {
   pool_status: string
   discovery_source: string
   location: string
-  address_detail: string
+  /**
+   * 주소 목록(2026-09-10). 한 칸이던 상세주소가 '어느 자리의 주소인가'를 함께 지는
+   * 목록이 됐다 — 본사 하나만 담기던 동안 지사·연구소는 한 칸에 이어 붙이거나 적히지
+   * 않았다. 배열이지만 폼 값으로 두는 것은 팀원·자문단과 같은 이유다(줄 추가·삭제가
+   * useFieldArray로 서고, 저장은 통째 교체다).
+   */
+  addresses: { kind: string; detail: string }[]
   email: string
   phone: string
   // 비즈니스(business_profile)

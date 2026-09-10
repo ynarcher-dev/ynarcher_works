@@ -105,7 +105,8 @@ export const STARTUP_BULK_SPEC: BulkImportSpec = {
     },
     { header: '발굴경로', column: 'discovery_source', aliases: ['discovery_source'], example: '데모데이' },
     { header: '소재지', column: 'location', kind: 'tag', tagTable: 'location_tags', aliases: ['location'] },
-    { header: '상세주소', column: 'address_detail', aliases: ['address_detail'] },
+    // 파일은 주소 한 줄만 받는다 — 원장은 목록이라 본사 한 줄로 접어 넣는다(2026-09-10).
+    { header: '상세주소', column: 'addresses', kind: 'address', aliases: ['address_detail', 'addresses'] },
     { header: '이메일', column: 'email', aliases: ['email'], example: 'contact@example.com' },
     { header: '연락처', column: 'phone', kind: 'phone', aliases: ['phone'], example: '010-1234-5678' },
   ],

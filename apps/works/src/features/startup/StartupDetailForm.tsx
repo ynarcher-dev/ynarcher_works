@@ -21,6 +21,8 @@ import { StartupBasicFields } from '@/features/startup/StartupBasicFields'
 import { StartupCapabilityFields } from '@/features/startup/StartupCapabilityFields'
 import { StartupPerformanceFields } from '@/features/startup/StartupPerformanceFields'
 import {
+  ADDRESS_KIND_OPTIONS,
+  readAddresses,
   readBusiness,
   readIp,
   readTeam,
@@ -157,7 +159,7 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
       pool_status: str('pool_status'),
       discovery_source: str('discovery_source'),
       location: str('location'),
-      address_detail: str('address_detail'),
+      addresses: readAddresses(base),
       email: str('email'),
       phone: str('phone'),
       oneLiner: b.oneLiner ?? '',
@@ -245,7 +247,11 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
       discovery_source: v.discovery_source.trim() || null,
       // 소재지(location_tags 태그명)·상세주소.
       location: v.location.trim() || null,
-      address_detail: v.address_detail.trim() || null,
+      // 주소는 목록 통째 교체다. 빈 줄은 저장하지 않는다 — '줄 추가'를 눌러 두고 채우지
+      // 않은 자리가 원장에 빈 항목으로 남으면, 다음에 여는 사람이 지워야 할 줄로 읽는다.
+      addresses: v.addresses
+        .map((a) => ({ kind: a.kind || ADDRESS_KIND_OPTIONS[0], detail: a.detail.trim() }))
+        .filter((a) => a.detail !== ''),
       email: v.email.trim() || null,
       // 연락처는 숫자만 저장한다(NETWORKS 관례).
       phone: v.phone.replace(/\D/g, '') || null,

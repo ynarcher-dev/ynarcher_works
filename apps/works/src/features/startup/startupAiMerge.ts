@@ -1,6 +1,7 @@
 import type { EntityRow } from '@/features/master/entityHooks'
 import type { AiCardKey } from '@/features/startup/startupAiCards'
 import type { AiFillEnvelope, AiFillOutcome } from '@/features/ai/aiTypes'
+import { ADDRESS_KIND_OPTIONS } from '@/features/startup/startupProfile'
 
 /**
  * AI 초안을 **레코드에 얹는다**(폼에 넣는 것이 아니라).
@@ -77,7 +78,7 @@ const BASICS_FIELDS: [string, string][] = [
   ['foundedOn', 'founded_on'],
   ['bizRegNo', 'biz_reg_no'],
   ['location', 'location'],
-  ['addressDetail', 'address_detail'],
+  // 주소는 여기 없다 — 원장은 목록이고 모델은 본점 한 줄만 답하므로 `mergeAddresses`가 접는다.
 ]
 
 const BUSINESS_KEYS = ['oneLiner', 'businessModel', 'targetMarket', 'revenueModel', 'salesChannel', 'supplyMode']
@@ -91,6 +92,24 @@ function mergeTeam(prev: Rec, next: Rec): Rec {
   merged.advisors = mergeList(prev.advisors, next.advisors)
   merged.capabilities = mergeList(prev.capabilities, next.capabilities)
   return merged
+}
+
+/**
+ * 모델이 답한 본점 주소 한 줄을 주소 **목록**에 얹는다(2026-09-10).
+ *
+ * 원장이 목록이 된 뒤에도 서버 스키마는 `addressDetail` 문자열 한 칸 그대로다 — 모델이
+ * 읽는 서류(등기·사업자등록증)에 적힌 주소는 본점 하나이고, 지사·연구소는 담당자가 아는
+ * 사실이라 서류에서 뽑을 값이 아니다.
+ *
+ * **이미 목록이 있으면 손대지 않는다.** AI는 값을 지우지 못한다는 관통 규칙이 여기서는
+ * '덮지 못한다'로 선다 — 담당자가 세 줄을 적어 둔 자리에 본점 한 줄이 들어오면 나머지
+ * 두 줄이 사라진다.
+ */
+function mergeAddresses(prev: unknown, next: unknown): unknown {
+  const rows = Array.isArray(prev) ? prev : []
+  if (rows.length > 0) return rows
+  const detail = typeof next === 'string' ? next.trim() : ''
+  return detail ? [{ kind: ADDRESS_KIND_OPTIONS[0], detail }] : rows
 }
 
 /** 성장 지표 컬럼에 목록 하나만 갈아 끼운다. 나머지 다섯은 원본 그대로 넘어간다. */
@@ -134,6 +153,7 @@ export function applyAiDraft(
         const target = next as unknown as Rec
         const source = record as unknown as Rec
         for (const [from, col] of BASICS_FIELDS) target[col] = keep(v[from], source[col])
+        target.addresses = mergeAddresses(source.addresses, v.addressDetail)
         break
       }
       case 'summary': {

@@ -1,6 +1,13 @@
 import type { EntityRow } from '@/features/master/entityHooks'
 import type { StartupDetailFormValues } from '@/features/startup/startupFormValues'
-import { readBusiness, readIp, readTeam, readTech, type IpProfile } from '@/features/startup/startupProfile'
+import {
+  readAddresses,
+  readBusiness,
+  readIp,
+  readTeam,
+  readTech,
+  type IpProfile,
+} from '@/features/startup/startupProfile'
 import {
   readBusinessStatus,
   readGrowth,
@@ -58,7 +65,7 @@ export function buildCardSnapshot(v: StartupDetailFormValues, s: AiCardState): E
     founded_on: v.founded_on,
     biz_reg_no: v.biz_reg_no,
     location: v.location,
-    address_detail: v.address_detail,
+    addresses: v.addresses,
     business_profile: {
       oneLiner: v.oneLiner,
       businessModel: v.businessModel,
@@ -115,7 +122,7 @@ export function toFormValues(merged: EntityRow, v: StartupDetailFormValues): Sta
     founded_on: text('founded_on'),
     biz_reg_no: text('biz_reg_no'),
     location: text('location'),
-    address_detail: text('address_detail'),
+    addresses: readAddresses(merged),
     oneLiner: b.oneLiner ?? '',
     businessModel: b.businessModel ?? '',
     targetMarket: b.targetMarket ?? '',

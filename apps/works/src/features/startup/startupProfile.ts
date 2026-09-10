@@ -120,6 +120,12 @@ export const DEV_INSOURCING_OPTIONS = ['자체 개발', '일부 외주', '전면
 /** 재직 형태 고정 선택지. */
 export const EMPLOYMENT_OPTIONS = ['전업', '겸업'] as const
 
+/**
+ * 주소 구분 고정 선택지(2026-09-10). 저장도 이 말 그대로다 — 세 값이 코드에 박히는 고정
+ * 목록이라 라벨 표를 따로 두면 jsonb를 눈으로 읽을 때마다 그 표를 함께 열어야 한다.
+ */
+export const ADDRESS_KIND_OPTIONS = ['본사', '지사', '연구소'] as const
+
 /** 지식재산권 종류·상태 고정 선택지. */
 export const IP_KIND_OPTIONS = ['특허', '상표', '디자인', 'SW저작권'] as const
 export const IP_STATUS_OPTIONS = ['출원', '등록'] as const
@@ -140,6 +146,33 @@ function asArray<T>(v: unknown): T[] {
 function str(o: Record<string, unknown>, key: string): string {
   const v = o[key]
   return v == null ? '' : String(v)
+}
+
+/** 주소 한 줄. `kind`는 `ADDRESS_KIND_OPTIONS`의 값 그대로다. */
+export interface StartupAddress {
+  kind: string
+  detail: string
+}
+
+/**
+ * 주소 목록을 읽는다(2026-09-10).
+ *
+ * 옛 한 칸(`address_detail`)을 함께 본다 — 마이그레이션이 값을 옮기지만, 그 배포 전에
+ * 저장된 행이나 되돌린 백업이 옛 칸만 갖고 있어도 화면에서 주소가 사라지지 않아야 한다
+ * (`readTech`가 competitiveEdge를 흡수하는 것과 같은 처리). 목록이 하나라도 있으면
+ * 목록이 이긴다 — 그쪽이 담당자가 마지막으로 손댄 값이다.
+ */
+export function readAddresses(record: EntityRow): StartupAddress[] {
+  const rows = Array.isArray(record.addresses) ? record.addresses : []
+  const list = rows
+    .map((raw) => {
+      const o = asObject(raw)
+      return { kind: str(o, 'kind') || ADDRESS_KIND_OPTIONS[0], detail: str(o, 'detail') }
+    })
+    .filter((a) => a.detail.trim() !== '')
+  if (list.length > 0) return list
+  const legacy = record.address_detail == null ? '' : String(record.address_detail).trim()
+  return legacy ? [{ kind: ADDRESS_KIND_OPTIONS[0], detail: legacy }] : []
 }
 
 export function readBusiness(record: EntityRow): BusinessProfile {

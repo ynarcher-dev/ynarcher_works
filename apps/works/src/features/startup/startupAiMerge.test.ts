@@ -148,7 +148,10 @@ describe('applyAiDraft — 기본 정보와 요약(2026-09-06 추가)', () => {
     expect((record as Record<string, unknown>).company_form).toBe('법인')
     expect((record as Record<string, unknown>).founded_on).toBe('2021-03-15')
     expect((record as Record<string, unknown>).biz_reg_no).toBe('123-45-67890')
-    expect((record as Record<string, unknown>).address_detail).toBe('강남구 테헤란로 123')
+    // 모델은 본점 한 줄을 답하고, 원장은 목록이라 본사 한 줄로 접혀 들어간다.
+    expect((record as Record<string, unknown>).addresses).toEqual([
+      { kind: '본사', detail: '강남구 테헤란로 123' },
+    ])
   })
 
   it('기본 정보에서 못 찾은 칸은 기존 값을 지우지 않는다', () => {
