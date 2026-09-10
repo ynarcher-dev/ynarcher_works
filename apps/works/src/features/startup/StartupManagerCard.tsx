@@ -1,4 +1,4 @@
-import { Badge, DataTable, PanelCard, usePaged, type Column } from '@ynarcher/ui'
+import { DataTable, PanelCard, usePaged, type Column } from '@ynarcher/ui'
 import { useMemo } from 'react'
 import { useDepartmentLabels } from '@/features/management/departmentOptions'
 import type { StartupManagerRow } from '@/features/startup/startupPoolHooks'
@@ -15,7 +15,7 @@ const PAGE_SIZE = 5
  * 생성자(레코드를 만든 사람)는 권한을 주지 않는 별개 축이라 여기 오지 않는다(기본 데이터
  * 카드의 기록 정보에 있다).
  *
- * 투자기업만 지정 담당자(리드/지원)를 갖고, 비투자는 공동관리다 — 그쪽은 표가 아니라 문장으로
+ * 투자기업만 지정 담당자(정/부)를 갖고, 비투자는 공동관리다 — 그쪽은 표가 아니라 문장으로
  * 답한다. 빈 표를 세우면 "아직 아무도 지정되지 않았다"로 읽히지만, 공동관리는 지정을 기다리는
  * 상태가 아니라 그 자체로 완결된 관리 방식이다.
  *
@@ -41,14 +41,16 @@ export function StartupManagerCard({
         render: (r) => r.user?.name ?? <Dash />,
       },
       {
-        // 리드는 이 기업의 관리 책임자다. 한 기업에 리드는 하나뿐이며 DB 부분 유니크 인덱스가
-        // 강제한다(uq_startup_managers_one_lead) — 표에서도 색으로 하나만 도드라진다.
+        // 정은 이 기업의 관리 책임자다. 한 기업에 정은 하나뿐이며 DB 부분 유니크 인덱스가
+        // 강제한다(uq_startup_managers_one_lead).
+        //
+        // 배지가 아니라 텍스트인 이유는 색이 상태에만 쓰이기 때문이다 — 정·부는 이 사람이 지금
+        // 어떤 상태인가가 아니라 이 기업에서 무엇을 맡았는가라, 색 상자로 세우면 상태를 말하는
+        // 배지와 무게가 같아진다. 하나뿐인 정은 색이 아니라 굵기로 도드라진다.
         key: 'is_lead',
         header: '역할',
-        type: 'badge',
-        render: (r) => (
-          <Badge tone={r.is_lead ? 'success' : 'neutral'}>{r.is_lead ? '리드' : '지원'}</Badge>
-        ),
+        type: 'code',
+        render: (r) => (r.is_lead ? <span className="font-semibold">정</span> : '부'),
       },
       {
         key: 'department',

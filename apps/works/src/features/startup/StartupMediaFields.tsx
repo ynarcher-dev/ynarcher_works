@@ -53,8 +53,10 @@ export function StartupMediaFields({ media, setMedia }: Props) {
           <div key={i} className="space-y-2 rounded-radius-md border border-gray-200 p-3">
             {/* 담당자가 넣는 것 — 분류와 주소. 삭제는 줄 끝이다(목록 규격과 같은 자리). */}
             <div className="flex items-center gap-2">
+              {/* 분류 칸의 폭은 아래 줄 썸네일과 같다(`w-28`) — 두 줄의 왼쪽 끝이 한 세로줄로
+                  맞아야 위가 '넣는 것', 아래가 '따라온 것'이라는 두 층이 눈에 보인다. */}
               <Select
-                className="w-32 shrink-0"
+                className="w-28 shrink-0"
                 value={m.kind ?? ''}
                 onChange={(e) => patch(i, { kind: e.target.value })}
               >
