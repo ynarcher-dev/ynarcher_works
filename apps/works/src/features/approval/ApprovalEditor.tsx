@@ -50,6 +50,7 @@ import {
   type FieldValues,
 } from '@/features/approval/fields'
 import { maxRound, stampLinesForRound } from '@/features/approval/stampRounds'
+import { isFinalApprovalReset } from '@/features/approval/approvalRecall'
 import { useEmployees } from '@/features/management/hooks'
 import { useJobTitleLabel } from '@/features/management/jobTitleHooks'
 import { useDepartments } from '@/features/management/orgHooks'
@@ -88,7 +89,11 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
   const resubmit = useResubmitApproval()
   const pending = usePendingMaterials()
   // 보완 요청 문서를 고치러 온 자리인가 — 임시저장 수정과 화면은 같고 저장 경로만 다르다.
-  const isResubmit = editing?.status === 'REVISION_REQUIRED'
+  const isResubmit = Boolean(
+    editing &&
+      (editing.status === 'REVISION_REQUIRED' ||
+        isFinalApprovalReset(editing.status, editing.approval_lines)),
+  )
   // 고치는 문서라면 이미 걸린 연동·참조를 실어 와야 한다(새 기안이면 빈 배열).
   const { data: savedPrograms } = useApprovalProgramLinks(documentId)
   const { data: savedDocLinks } = useDocumentLinks(documentId)

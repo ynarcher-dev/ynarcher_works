@@ -42,6 +42,12 @@ function headline(type: string): string {
       return '님이 보완을 요청했습니다. 수정 후 재상신해 주세요.'
     case 'approval_revision_resubmitted':
       return '님이 보완한 문서를 재상신했습니다. 기존 승인은 유지됩니다.'
+    case 'approval_withdrawn':
+      return '님이 본인의 승인을 취소했습니다.'
+    case 'approval_final_reset':
+      return '님이 최종 결재를 초기화해 문서를 반려했습니다.'
+    case 'approval_reset_resubmitted':
+      return '님이 반려된 문서를 재상신했습니다. 결재가 처음부터 다시 진행됩니다.'
     default:
       return '님이 코멘트에서 회원님을 언급했습니다.'
   }

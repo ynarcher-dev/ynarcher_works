@@ -47,6 +47,7 @@ import {
 import { readIndustries } from '@/features/startup/startupGrowth'
 import { SectionHeading } from '@/components/SectionHeading'
 import { AiFillButton } from '@/features/ai/AiFillButton'
+import { StartupAiPersonLink } from '@/features/startup/StartupAiPersonLink'
 import { startupAiCatalog } from '@/features/startup/startupAiCards'
 import { sourcesFromFiles, sourcesFromLinks, sourcesFromMaterials } from '@/features/ai/aiFillClient'
 import { useStartupAiDraft } from '@/features/startup/useStartupAiDraft'
@@ -520,6 +521,14 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
             targetId={recordId}
             subjectName={base.name ? String(base.name) : undefined}
             onFilled={ai.applyDraft}
+          />
+
+          {/* 초안이 데려온 사람을 원장에 잇는 줄. 얹기 전에는 서지 않는다. */}
+          <StartupAiPersonLink
+            pending={ai.pending}
+            affiliation={base.name ? String(base.name) : undefined}
+            onLinked={ai.applyLinks}
+            onDismiss={ai.clearPending}
           />
         </div>
       </div>

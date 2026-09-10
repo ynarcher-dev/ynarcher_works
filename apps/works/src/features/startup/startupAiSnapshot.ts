@@ -61,6 +61,10 @@ export function buildCardSnapshot(v: StartupDetailFormValues, s: AiCardState): E
     // 기본 정보 카드가 쓰는 평면 칸들. 카드 컬럼과 달리 원장에서 컬럼 하나가 값 하나다.
     name: v.name,
     representative: v.representative,
+    // 대표자 참조도 함께 싣는다 — 병합이 "이름이 바뀌면 참조를 끊는다"를 판정하려면 두 값이
+    // 같은 레코드 안에 있어야 한다. 싣지 않았을 때는 이름만 갈리고 참조는 폼에 그대로 남아
+    // 전임자를 가리키는 저장이 됐다(2026-09-10).
+    representative_network_id: v.representative_network_id,
     company_form: v.company_form,
     founded_on: v.founded_on,
     biz_reg_no: v.biz_reg_no,
@@ -118,6 +122,8 @@ export function toFormValues(merged: EntityRow, v: StartupDetailFormValues): Sta
     ...v,
     name: text('name'),
     representative: text('representative'),
+    representative_network_id:
+      ((merged as Record<string, unknown>).representative_network_id as string | null) ?? null,
     company_form: text('company_form'),
     founded_on: text('founded_on'),
     biz_reg_no: text('biz_reg_no'),

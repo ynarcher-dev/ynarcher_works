@@ -399,6 +399,32 @@ export function useDecideApproval() {
 }
 
 /**
+ * 이미 찍은 본인 승인을 회수한다. 서버가 현재 회차의 남은 줄과 문서 완료 여부를 다시 확인해
+ * 진행 중이면 WITHDRAWN, 최종 승인 완료 뒤면 RESET을 반환한다.
+ */
+export function useRecallApproval() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (v: {
+      lineId: string
+      documentId: string
+      reason?: string
+    }): Promise<'WITHDRAWN' | 'RESET'> => {
+      const { data, error } = await supabase.rpc('recall_approval_decision', {
+        p_line_id: v.lineId,
+        p_reason: v.reason?.trim() || null,
+      })
+      if (error) throw error
+      return data as 'WITHDRAWN' | 'RESET'
+    },
+    onSuccess: (_data, v) => {
+      void qc.invalidateQueries({ queryKey: ['approval', 'documents'] })
+      void qc.invalidateQueries({ queryKey: ['approval', 'document', v.documentId] })
+    },
+  })
+}
+
+/**
  * 재상신 — 보완 요청으로 멈춘(REVISION_REQUIRED) 문서를 고쳐 다시 올린다.
  *
  * 임시저장 수정(`save_approval_draft`)과 경로를 나눈 이유는 그 함수가 결재선을 통째로

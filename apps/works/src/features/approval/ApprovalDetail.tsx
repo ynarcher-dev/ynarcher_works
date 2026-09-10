@@ -15,7 +15,8 @@ import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { ApprovalDecideModal } from '@/features/approval/ApprovalDecideModal'
 import { ApprovalFieldsView } from '@/features/approval/ApprovalFieldsView'
 import { ApprovalInfoTable } from '@/features/approval/ApprovalInfoTable'
-import { ApprovalFormName } from '@/features/approval/HiworksSourceMark'
+import { HiworksSourceMark } from '@/features/approval/HiworksSourceMark'
+import { ApprovalRecallModal } from '@/features/approval/ApprovalRecallModal'
 import { approvalHeaderPairs } from '@/features/approval/approvalHeader'
 import { ApprovalLinkPanel } from '@/features/approval/ApprovalLinkPanel'
 import { LegacyApprovalLineTable } from '@/features/approval/LegacyApprovalLineTable'
@@ -31,7 +32,15 @@ import {
 } from '@/features/approval/config'
 import { formatMoney, parseFields, tableRows } from '@/features/approval/fields'
 import { ApprovalCommentModal } from '@/features/approval/ApprovalCommentModal'
-import { actionableLineFor, isLastPending } from '@/features/approval/model'
+import {
+  actionableLineFor,
+  approvalFormDisplayName,
+  isLastPending,
+} from '@/features/approval/model'
+import {
+  approvalRecallActionFor,
+  isFinalApprovalReset,
+} from '@/features/approval/approvalRecall'
 import { maxRound, stampLinesForRound } from '@/features/approval/stampRounds'
 import { useEmployees } from '@/features/management/hooks'
 import { useJobTitleLabel } from '@/features/management/jobTitleHooks'
@@ -76,6 +85,7 @@ export function ApprovalDetail({
   const markRead = useMarkApprovalRead()
   // 결재 처리 창의 열림 여부. 문서를 다 읽고 [○○ 처리]를 누른 사람만 결정 앞에 선다.
   const [deciding, setDeciding] = useState(false)
+  const [recalling, setRecalling] = useState(false)
   // 지금 열어 읽고 있는 결재 의견의 결재선 행. 의견은 도장을 눌러야 열린다.
   const [commentLineId, setCommentLineId] = useState<string | null>(null)
   // 지난 회차 이력의 펼침 상태. 기본은 접힘 — 대부분의 문서는 1차이고, 되돌아온 문서도
@@ -162,11 +172,13 @@ export function ApprovalDetail({
   // "그때 누가 무엇을 했나"를 되짚을 때만 필요하다.
   const pastRounds = Array.from({ length: round - 1 }, (_, i) => round - 1 - i)
   const openedComment = stampLines.find((l) => l.id === commentLineId)
+  const finalApprovalReset = isFinalApprovalReset(doc.status, lines)
+  const recallAction = uid ? approvalRecallActionFor(doc.status, lines, uid) : null
   // 기안자는 임시저장 또는 보완 요청 문서만 고칠 수 있다. 반려는 종결이라 수정·재상신이 없다.
   const canEdit =
     Boolean(onEdit) &&
     doc.drafter_id === uid &&
-    (doc.status === 'DRAFT' || doc.status === 'REVISION_REQUIRED')
+    (doc.status === 'DRAFT' || doc.status === 'REVISION_REQUIRED' || finalApprovalReset)
 
   return (
     <div className="space-y-5">
@@ -180,7 +192,15 @@ export function ApprovalDetail({
               (같은 조건을 서버 RPC가 다시 확인한다 — 화면에서 숨기는 것은 보안이 아니다.) */}
           {canEdit && (
             <Button variant="outline" onClick={() => onEdit?.(doc.id)}>
-              {doc.status === 'REVISION_REQUIRED' ? '보완 후 재상신' : '수정'}
+              {doc.status === 'DRAFT' ? '수정' : '보완 후 재상신'}
+            </Button>
+          )}
+          {recallAction && (
+            <Button
+              variant={recallAction.action === 'RESET' ? 'outline-danger' : 'outline'}
+              onClick={() => setRecalling(true)}
+            >
+              {recallAction.action === 'RESET' ? '결재 초기화' : '승인 취소'}
             </Button>
           )}
           {/* 결재 처리는 창으로 연다 — 승인·반려 버튼이 문서 옆에 상시로 서 있으면 다 읽기
@@ -206,6 +226,16 @@ export function ApprovalDetail({
         />
       )}
 
+      {recallAction && (
+        <ApprovalRecallModal
+          open={recalling}
+          onClose={() => setRecalling(false)}
+          documentId={doc.id}
+          lineId={recallAction.lineId}
+          action={recallAction.action}
+        />
+      )}
+
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           {/* 표준 머리 — 모든 문서가 공유한다(양식이 정의하지 않는 부분).
@@ -215,10 +245,7 @@ export function ApprovalDetail({
             <div className="space-y-4">
               <div className="flex items-center justify-center gap-2">
                 <h2 className="text-title-md font-bold text-gray-900">
-                  <ApprovalFormName
-                    name={doc.form?.name ?? '결재 문서'}
-                    isHiworks={doc.legacy?.source_system === 'HIWORKS'}
-                  />
+                  {doc.form ? approvalFormDisplayName(doc.form.name) : '결재 문서'}
                 </h2>
                 <Badge tone={DOC_STATUS_TONE[doc.status]}>{DOC_STATUS_LABEL[doc.status]}</Badge>
                 {/* 회차는 1차일 때 적지 않는다 — 대부분의 문서가 1차이고, 늘 붙어 있으면
@@ -229,15 +256,9 @@ export function ApprovalDetail({
               <ApprovalInfoTable
                 pairs={approvalHeaderPairs({
                   // 문서 종류는 두 단으로 적는다(대분류 > 양식) — 기안 화면에서 고른 경로 그대로.
-                  formPath: doc.form ? (
-                    <span className="inline-flex items-center gap-1">
-                      <span>{doc.form.category || '공통'} &gt;</span>
-                      <ApprovalFormName
-                        name={doc.form.name}
-                        isHiworks={doc.legacy?.source_system === 'HIWORKS'}
-                      />
-                    </span>
-                  ) : '-',
+                  formPath: doc.form
+                    ? `${doc.form.category || '공통'} > ${approvalFormDisplayName(doc.form.name)}`
+                    : '-',
                   docNo: doc.doc_no,
                   deptName,
                   drafter: {
@@ -370,7 +391,14 @@ export function ApprovalDetail({
             />
           )}
 
-          <Card title={doc.title}>
+          <Card
+            title={
+              <span className="inline-flex items-center gap-1">
+                {doc.legacy?.source_system === 'HIWORKS' && <HiworksSourceMark />}
+                <span>{doc.title}</span>
+              </span>
+            }
+          >
             <ApprovalFieldsView
               fields={bodyFields}
               values={doc.field_values ?? {}}

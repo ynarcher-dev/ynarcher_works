@@ -1,4 +1,7 @@
+import { useState } from 'react'
 import type { UseFormGetValues, UseFormReset } from 'react-hook-form'
+import type { PersonLinkResult, PersonLinkTarget } from '@/features/networks/PersonLinkModal'
+import { REP_KEY, memberKey, unlinkedPeople } from '@/features/startup/startupAiPeople'
 import type { StartupDetailFormValues } from '@/features/startup/startupFormValues'
 import type { AiCardKey } from '@/features/startup/startupAiCards'
 import { applyAiDraft } from '@/features/startup/startupAiMerge'
@@ -55,6 +58,13 @@ export function useStartupAiDraft({
   /** 요약 3축. 2026-09-06에 AI가 쓰는 카드가 되면서 되돌릴 자리가 생겼다. */
   setSummary: (v: AiCardState['summary']) => void
 }) {
+  /**
+   * 이번 초안이 남긴 **미연결 사람들**. 창이 아니라 여기 있는 이유는 초안을 얹은 자리가
+   * 여기이기 때문이다 — 연결이 끊기거나 새로 생기는 것은 병합의 결과이고, 그 사실을 아는
+   * 것은 병합을 부른 쪽뿐이다.
+   */
+  const [pending, setPending] = useState<PersonLinkTarget[]>([])
+
   /** 모달과 기본 체크 규칙이 기준으로 삼는, 지금 폼에 적힌 값. */
   const snapshot = buildCardSnapshot(getValues(), state)
 
@@ -68,16 +78,50 @@ export function useStartupAiDraft({
   const applyDraft = (envelope: AiFillEnvelope<AiCardKey>, cards: AiCardKey[]): AiFillOutcome<AiCardKey> => {
     const values = getValues()
     const merged = applyAiDraft(buildCardSnapshot(values, state), envelope, cards)
-    reset(toFormValues(merged.record, values))
-    const next = toCardState(merged.record, state)
-    setCapabilities(next.capabilities)
-    setIp(next.ip)
-    setGrowth(next.growth)
-    setBusinessStatus(next.businessStatus)
-    setShareholders(next.shareholders)
-    setSummary(next.summary)
+    const next = toFormValues(merged.record, values)
+    reset(next)
+    setPending(unlinkedPeople(next, cards))
+    const cardState = toCardState(merged.record, state)
+    setCapabilities(cardState.capabilities)
+    setIp(cardState.ip)
+    setGrowth(cardState.growth)
+    setBusinessStatus(cardState.businessStatus)
+    setShareholders(cardState.shareholders)
+    setSummary(cardState.summary)
     return merged.outcome
   }
 
-  return { snapshot, applyDraft }
+  /**
+   * 확정된 연결을 폼에 되돌린다. **원장은 이미 창이 썼고 여기서 쓰는 것은 폼뿐**이다 —
+   * 스타트업 행에 남는 것은 저장 버튼을 눌러야 반영된다(AI는 원장을 쓰지 않는다는 규칙이
+   * 여기서도 그대로다. 창이 만드는 것은 사람 원장의 행이지 이 기업의 값이 아니다).
+   *
+   * `setValue`가 아니라 `reset`인 이유는 위와 같다 — 팀원이 `useFieldArray`로 살아 있다.
+   */
+  const applyLinks = (links: PersonLinkResult[]) => {
+    const map = new Map(links.map((l) => [l.key, l]))
+    // 자리(순번)만으로 되돌리지 않는다 — 창이 열려 있는 동안 담당자가 팀원 줄을 더하거나
+    // 지우면 순번이 밀려 **다른 사람에게 남의 연결이 붙는다**. 창에 세울 때의 이름이 그
+    // 자리에 그대로 있을 때만 얹고, 어긋나면 그 줄은 미연결로 남긴다(잘못 잇는 것보다 낫다).
+    const origin = new Map(pending.map((t) => [t.key, t.name]))
+    const takes = (key: string, current: string) => {
+      const hit = map.get(key)
+      if (!hit) return null
+      return origin.get(key) === current.trim() ? hit : null
+    }
+    const v = getValues()
+    const rep = takes(REP_KEY, v.representative)
+    reset({
+      ...v,
+      representative: rep ? rep.name : v.representative,
+      representative_network_id: rep ? rep.networkId : v.representative_network_id,
+      members: v.members.map((m, i) => {
+        const hit = takes(memberKey(i), m.name)
+        return hit ? { ...m, name: hit.name, networkId: hit.networkId } : m
+      }),
+    })
+    setPending([])
+  }
+
+  return { snapshot, applyDraft, pending, applyLinks, clearPending: () => setPending([]) }
 }

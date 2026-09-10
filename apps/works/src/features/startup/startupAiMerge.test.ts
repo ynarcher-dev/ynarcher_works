@@ -347,3 +347,72 @@ describe('applyAiDraft — 실패한 카드는 기존 값을 건드리지 않는
     expect(outcome.failed).toHaveLength(1)
   })
 })
+
+/**
+ * 사람 연결(2026-09-10) 회귀.
+ *
+ * 이 셋이 깨지면 초안 한 번이 원장의 재직 이력을 건드린다 — 연결이 끊긴 채 저장되면
+ * `app.sync_startup_affiliations()`가 그 사람들을 "이 회사가 더 이상 말하지 않는 사람"으로
+ * 보아 관계 줄에 `ended_on`을 찍기 때문이다.
+ */
+describe('applyAiDraft — 사람 연결', () => {
+  it('AI가 데려온 팀원에 같은 이름의 기존 원장 참조를 물려준다', () => {
+    const before = fullRecord()
+    before.team_profile = {
+      ...(before.team_profile as Record<string, unknown>),
+      members: [
+        { name: '홍길동', networkId: 'N-1', role: 'CTO' },
+        { name: '김철수', networkId: 'N-2', role: 'CFO' },
+      ],
+    }
+    const { record } = applyAiDraft(
+      before,
+      envelope({
+        team: {
+          members: [
+            { name: '홍길동', role: '대표이사' },
+            { name: '이영희', role: 'CPO' },
+          ],
+        },
+      }),
+      ['team'],
+    )
+    const members = (record.team_profile as { members: { name: string; networkId?: string }[] }).members
+    // 이름이 같은 사람은 연결을 그대로 물려받는다(직함은 초안 것으로 갱신된다).
+    expect(members[0]).toMatchObject({ name: '홍길동', networkId: 'N-1', role: '대표이사' })
+    // 초안이 데려온 새 사람은 미연결이다 — 잇는 것은 사람이 한다.
+    expect(members[1]?.networkId).toBeUndefined()
+    // 목록에서 빠진 사람의 연결까지 되살리지는 않는다(빠진 것은 담당자의 판단이다).
+    expect(members).toHaveLength(2)
+  })
+
+  it('대표자 이름이 바뀌면 참조를 끊는다', () => {
+    const before = fullRecord()
+    before.representative = '홍길동'
+    before.representative_network_id = 'N-1'
+    const { record } = applyAiDraft(before, envelope({ basics: { representative: '김철수' } }), ['basics'])
+    expect(record.representative).toBe('김철수')
+    expect(record.representative_network_id).toBeNull()
+  })
+
+  it('대표자 이름이 그대로면 참조를 지킨다', () => {
+    const before = fullRecord()
+    before.representative = '홍길동'
+    before.representative_network_id = 'N-1'
+    const { record } = applyAiDraft(
+      before,
+      envelope({ basics: { representative: '홍길동', companyForm: '주식회사' } }),
+      ['basics'],
+    )
+    expect(record.representative_network_id).toBe('N-1')
+  })
+
+  it('AI가 대표자를 못 찾으면 이름도 참조도 그대로다', () => {
+    const before = fullRecord()
+    before.representative = '홍길동'
+    before.representative_network_id = 'N-1'
+    const { record } = applyAiDraft(before, envelope({ basics: { companyForm: '주식회사' } }), ['basics'])
+    expect(record.representative).toBe('홍길동')
+    expect(record.representative_network_id).toBe('N-1')
+  })
+})

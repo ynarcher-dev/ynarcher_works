@@ -58,10 +58,6 @@ export function approvalFormDisplayName(name: string): string {
   return name.replace(HIWORKS_RESTORE_SUFFIX, '').trim()
 }
 
-export function isHiworksRestoreName(name: string | null | undefined): boolean {
-  return Boolean(name && HIWORKS_RESTORE_SUFFIX.test(name))
-}
-
 export function docTypeName(row: { form: { name: string } | null; form_type: string }): string {
   if (row.form?.name) return approvalFormDisplayName(row.form.name)
   return FORM_TYPES.find((f) => f.key === row.form_type)?.label ?? row.form_type
