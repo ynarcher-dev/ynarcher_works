@@ -31,6 +31,8 @@ export interface ApprovalListRow {
   created_at: string
   completed_at: string | null
   form: { name: string } | null
+  /** 하이웍스 원본과 연결된 문서인지 목록에서도 이름 문자열에 기대지 않고 판별한다. */
+  legacy: { source_system: string } | null
   approval_lines: ApprovalLine[]
   approval_recipients: { user_id: string }[]
   approval_reads: { user_id: string }[]
@@ -49,8 +51,19 @@ const isCompleted = (s: ApprovalStatus) => s === 'APPROVED' || s === 'REJECTED'
  * 때문이다(사업 상세의 '관련 전자결재' 패널은 목록과 다른 select로 문서를 읽는다) —
  * 행 타입에 묶어 두면 부르는 쪽마다 쓰지도 않는 열을 채워 넣어야 한다.
  */
+const HIWORKS_RESTORE_SUFFIX = /\s*\(하이웍스 복원\)\s*$/
+
+/** DB에는 이관 당시 양식명을 보존하고, 화면에서는 출처 아이콘이 대신하므로 접미어를 감춘다. */
+export function approvalFormDisplayName(name: string): string {
+  return name.replace(HIWORKS_RESTORE_SUFFIX, '').trim()
+}
+
+export function isHiworksRestoreName(name: string | null | undefined): boolean {
+  return Boolean(name && HIWORKS_RESTORE_SUFFIX.test(name))
+}
+
 export function docTypeName(row: { form: { name: string } | null; form_type: string }): string {
-  if (row.form?.name) return row.form.name
+  if (row.form?.name) return approvalFormDisplayName(row.form.name)
   return FORM_TYPES.find((f) => f.key === row.form_type)?.label ?? row.form_type
 }
 

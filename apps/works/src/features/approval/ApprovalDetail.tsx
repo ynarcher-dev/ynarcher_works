@@ -15,6 +15,7 @@ import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { ApprovalDecideModal } from '@/features/approval/ApprovalDecideModal'
 import { ApprovalFieldsView } from '@/features/approval/ApprovalFieldsView'
 import { ApprovalInfoTable } from '@/features/approval/ApprovalInfoTable'
+import { ApprovalFormName } from '@/features/approval/HiworksSourceMark'
 import { approvalHeaderPairs } from '@/features/approval/approvalHeader'
 import { ApprovalLinkPanel } from '@/features/approval/ApprovalLinkPanel'
 import { LegacyApprovalLineTable } from '@/features/approval/LegacyApprovalLineTable'
@@ -214,7 +215,10 @@ export function ApprovalDetail({
             <div className="space-y-4">
               <div className="flex items-center justify-center gap-2">
                 <h2 className="text-title-md font-bold text-gray-900">
-                  {doc.form?.name ?? '결재 문서'}
+                  <ApprovalFormName
+                    name={doc.form?.name ?? '결재 문서'}
+                    isHiworks={doc.legacy?.source_system === 'HIWORKS'}
+                  />
                 </h2>
                 <Badge tone={DOC_STATUS_TONE[doc.status]}>{DOC_STATUS_LABEL[doc.status]}</Badge>
                 {/* 회차는 1차일 때 적지 않는다 — 대부분의 문서가 1차이고, 늘 붙어 있으면
@@ -225,7 +229,15 @@ export function ApprovalDetail({
               <ApprovalInfoTable
                 pairs={approvalHeaderPairs({
                   // 문서 종류는 두 단으로 적는다(대분류 > 양식) — 기안 화면에서 고른 경로 그대로.
-                  formPath: doc.form ? `${doc.form.category || '공통'} > ${doc.form.name}` : '-',
+                  formPath: doc.form ? (
+                    <span className="inline-flex items-center gap-1">
+                      <span>{doc.form.category || '공통'} &gt;</span>
+                      <ApprovalFormName
+                        name={doc.form.name}
+                        isHiworks={doc.legacy?.source_system === 'HIWORKS'}
+                      />
+                    </span>
+                  ) : '-',
                   docNo: doc.doc_no,
                   deptName,
                   drafter: {

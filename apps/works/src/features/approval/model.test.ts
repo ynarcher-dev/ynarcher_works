@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  approvalFormDisplayName,
   actionableLineFor,
   countByProgress,
   inBox,
@@ -26,12 +27,20 @@ function row(partial: Partial<ApprovalListRow> = {}): ApprovalListRow {
     created_at: '2026-08-26T09:00:00Z',
     completed_at: null,
     form: { name: '지출결의서' },
+    legacy: null,
     approval_lines: [],
     approval_recipients: [],
     approval_reads: [],
     ...partial,
   }
 }
+
+describe('approvalFormDisplayName', () => {
+  it('하이웍스 복원 접미어만 화면 이름에서 제거한다', () => {
+    expect(approvalFormDisplayName('지출결의서 (하이웍스 복원)')).toBe('지출결의서')
+    expect(approvalFormDisplayName('일반결재')).toBe('일반결재')
+  })
+})
 
 describe('isMyTurn', () => {
   it('순번상 첫 PENDING 결재선이 나이면 내 차례다', () => {

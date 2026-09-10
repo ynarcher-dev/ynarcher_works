@@ -9,6 +9,7 @@ import type { ApprovalListRow } from '@/features/approval/model'
 const LIST_SELECT =
   'id, title, doc_no, form_type, status, drafter_id, department_id, amount, created_at, completed_at, ' +
   'form:form_id(name), ' +
+  'legacy:approval_legacy_documents(source_system), ' +
   'approval_lines(approver_id, step_order, decision, kind, round), ' +
   'approval_recipients(user_id), ' +
   'approval_reads(user_id)'

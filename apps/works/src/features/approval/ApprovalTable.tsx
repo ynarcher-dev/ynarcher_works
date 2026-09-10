@@ -1,10 +1,11 @@
-import { Badge, DataTable, type Column, type DataTableProps } from '@ynarcher/ui'
+import { badgeToneText, DataTable, type Column, type DataTableProps } from '@ynarcher/ui'
 import {
   APPROVAL_ROLE_LABEL,
   DOC_STATUS_LABEL,
   DOC_STATUS_TONE,
 } from '@/features/approval/config'
 import { docTypeName, myRole, type ApprovalListRow } from '@/features/approval/model'
+import { ApprovalFormName } from '@/features/approval/HiworksSourceMark'
 
 export interface ApprovalTableProps {
   rows: ApprovalListRow[]
@@ -38,9 +39,25 @@ export function ApprovalTable({
   pagination,
 }: ApprovalTableProps) {
   const columns: Column<ApprovalListRow>[] = [
-    { key: 'doc_no', header: '문서 번호', type: 'text', render: (r) => r.doc_no ?? '-' },
+    {
+      key: 'doc_no',
+      header: '문서 번호',
+      type: 'text',
+      className: 'whitespace-nowrap pr-4',
+      render: (r) => r.doc_no ?? '-',
+    },
     { key: 'title', header: '제목', type: 'name', primary: true, render: (r) => r.title },
-    { key: 'docType', header: '문서 종류', type: 'text', render: (r) => docTypeName(r) },
+    {
+      key: 'docType',
+      header: '문서 종류',
+      type: 'text',
+      render: (r) => (
+        <ApprovalFormName
+          name={r.form?.name ?? docTypeName(r)}
+          isHiworks={r.legacy?.source_system === 'HIWORKS'}
+        />
+      ),
+    },
     { key: 'drafter', header: '기안자', type: 'person', render: (r) => nameOf(r.drafter_id) },
     { key: 'draftedAt', header: '기안일', type: 'date', render: (r) => r.created_at.slice(0, 10) },
     {
@@ -63,7 +80,11 @@ export function ApprovalTable({
       key: 'status',
       header: '상태',
       type: 'badge',
-      render: (r) => <Badge tone={DOC_STATUS_TONE[r.status]}>{DOC_STATUS_LABEL[r.status]}</Badge>,
+      render: (r) => (
+        <span className={badgeToneText[DOC_STATUS_TONE[r.status]]}>
+          {DOC_STATUS_LABEL[r.status]}
+        </span>
+      ),
     },
   ]
 
