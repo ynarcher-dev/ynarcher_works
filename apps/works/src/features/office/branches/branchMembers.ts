@@ -4,38 +4,6 @@ import { useDepartments, useOrgLevels } from '@/features/management/orgHooks'
 import { ancestorPath, toNodes } from '@/features/management/panels/departmentsMock'
 import { useBranchMembers, useBranches } from '@/features/office/branches/branchesApi'
 
-/**
- * 지사 상주인력을 이름으로 읽는 훅.
- * branch_members는 user_id만 갖고, 이름은 임직원 원장(MANAGEMENT 소유)에서 붙인다 —
- * 지사 원장에 이름을 비정규화해 두면 임직원 개명·퇴사가 반영되지 않기 때문이다.
- */
-export function useBranchMemberNames() {
-  const membersQuery = useBranchMembers()
-  const { data: employees } = useEmployees()
-
-  const nameById = useMemo(
-    () => new Map((employees ?? []).map((e) => [e.id, e.name] as const)),
-    [employees],
-  )
-
-  /** 지사의 상주인력 이름 목록(배정 순서 유지). 조회 불가한 계정은 표기에서 제외한다. */
-  const namesOf = useCallback(
-    (branchId: string): string[] =>
-      (membersQuery.data?.get(branchId) ?? [])
-        .map((id) => nameById.get(id))
-        .filter((n): n is string => Boolean(n)),
-    [membersQuery.data, nameById],
-  )
-
-  /** 지사의 상주인력 id 목록(폼 초기값). */
-  const idsOf = useCallback(
-    (branchId: string): string[] => membersQuery.data?.get(branchId) ?? [],
-    [membersQuery.data],
-  )
-
-  return { namesOf, idsOf, isLoading: membersQuery.isLoading }
-}
-
 /** 조직 경로 한 마디(상위→하위 중 하나). */
 export interface BranchMemberOrgStep {
   id: string
@@ -52,24 +20,33 @@ export interface BranchMemberEntry {
   orgPath: BranchMemberOrgStep[]
 }
 
+/** 조직 경로 한 줄. 아직 배치 전이면 그 사실을 적는다 — 빈 줄은 '없음'인지 '못 읽었는지' 말하지 못한다. */
+export function branchMemberOrgLabel(entry: BranchMemberEntry): string {
+  return entry.orgPath.length > 0 ? entry.orgPath.map((step) => step.name).join(' · ') : '조직 미배치'
+}
+
 /**
- * 상주인력을 "이름 + 조직관리에서 배치된 자리"로 읽는 훅.
+ * 임직원 한 명을 "이름 + 조직관리에서 배치된 자리"로 읽는 훅.
+ *
  * 자리는 임직원 원장에 따로 적지 않고 조직관리(users.department_id → departments → org_levels)에서
  * 파생한다 — 조직 개편으로 배치가 바뀌면 지사 표기도 자동으로 따라간다.
  * 레벨 수는 조직관리에서 동적으로 늘고 줄기 때문에 직접 소속만 찍지 않고 루트까지의 조상 경로를
  * 통째로 만든다(예: 와이앤아처 · 지원본부 · 경영지원2실). 인사 미노출(hr_hidden) 조직은
  * 인사관리 컬럼과 같은 기준으로 경로에서 건너뛴다.
  * 부서·레벨은 오늘의 유효 조직 버전 스코프다(useDepartments/useOrgLevels 기본값).
+ *
+ * 지사에 매인 훅이 아니라 사람 한 명을 읽는 훅인 이유는 **같은 줄이 세 자리에 서기** 때문이다 —
+ * OFFICE 상세의 명단, MANAGEMENT 수정 창의 오른쪽 기둥(이 지사 상주인력), 그 왼쪽 기둥(임직원
+ * 원장 전체). 셋이 같은 생김새여야 하고, 그러려면 이름과 자리를 만드는 자리가 하나여야 한다.
  */
-export function useBranchMemberEntries() {
-  const membersQuery = useBranchMembers()
-  const { data: employees } = useEmployees()
+export function useEmployeeOrgEntries() {
+  const employeesQuery = useEmployees()
   const { data: departments } = useDepartments()
   const { data: levels } = useOrgLevels()
 
   const employeeById = useMemo(
-    () => new Map((employees ?? []).map((e) => [e.id, e] as const)),
-    [employees],
+    () => new Map((employeesQuery.data ?? []).map((e) => [e.id, e] as const)),
+    [employeesQuery.data],
   )
   const nodes = useMemo(() => toNodes(departments ?? []), [departments])
   const levelNameById = useMemo(
@@ -77,30 +54,71 @@ export function useBranchMemberEntries() {
     [levels],
   )
 
+  /** 임직원 한 명. 조회 불가한 계정이면 null(표기에서 제외하거나 화면이 대체 문구를 세운다). */
+  const entryOf = useCallback(
+    (userId: string): BranchMemberEntry | null => {
+      const employee = employeeById.get(userId)
+      if (!employee) return null
+      const path = employee.department_id ? ancestorPath(nodes, employee.department_id) : []
+      return {
+        id: userId,
+        name: employee.name,
+        orgPath: path
+          .filter((n) => !n.hrHidden)
+          .map((n) => ({
+            id: n.id,
+            name: n.name,
+            levelName: levelNameById.get(n.levelId) ?? null,
+          })),
+      }
+    },
+    [employeeById, nodes, levelNameById],
+  )
+
+  /** 조회 가능한 임직원 전체(이름순 — 원장 조회가 정한 순서 그대로). */
+  const entries = useMemo(
+    () =>
+      (employeesQuery.data ?? []).flatMap((e) => {
+        const entry = entryOf(e.id)
+        return entry ? [entry] : []
+      }),
+    [employeesQuery.data, entryOf],
+  )
+
+  return { entryOf, entries, isLoading: employeesQuery.isLoading }
+}
+
+/**
+ * 지사 상주인력을 "이름 + 배치된 자리"로 읽는 훅.
+ * branch_members는 user_id만 갖고, 이름과 자리는 임직원·조직 원장(MANAGEMENT 소유)에서 붙인다 —
+ * 지사 원장에 이름을 비정규화해 두면 임직원 개명·퇴사·조직 개편이 반영되지 않기 때문이다.
+ */
+export function useBranchMemberEntries() {
+  const membersQuery = useBranchMembers()
+  const { entryOf, isLoading } = useEmployeeOrgEntries()
+
+  /** 지사의 상주인력(배정 순서 유지). 조회 불가한 계정은 표기에서 제외한다. */
   const entriesOf = useCallback(
     (branchId: string): BranchMemberEntry[] =>
       (membersQuery.data?.get(branchId) ?? []).flatMap((userId) => {
-        const employee = employeeById.get(userId)
-        if (!employee) return [] // 조회 불가한 계정은 표기에서 제외
-        const path = employee.department_id ? ancestorPath(nodes, employee.department_id) : []
-        return [
-          {
-            id: userId,
-            name: employee.name,
-            orgPath: path
-              .filter((n) => !n.hrHidden)
-              .map((n) => ({
-                id: n.id,
-                name: n.name,
-                levelName: levelNameById.get(n.levelId) ?? null,
-              })),
-          },
-        ]
+        const entry = entryOf(userId)
+        return entry ? [entry] : []
       }),
-    [membersQuery.data, employeeById, nodes, levelNameById],
+    [membersQuery.data, entryOf],
   )
 
-  return { entriesOf, isLoading: membersQuery.isLoading }
+  /**
+   * 지사의 상주인력 id 목록(폼 초기값).
+   *
+   * 표기와 달리 조회 불가한 계정도 그대로 든다 — 여기서 걸러 내면 담당자가 전화번호 한 칸만
+   * 고치고 저장해도 그 사람이 조용히 명단에서 빠진다.
+   */
+  const idsOf = useCallback(
+    (branchId: string): string[] => membersQuery.data?.get(branchId) ?? [],
+    [membersQuery.data],
+  )
+
+  return { entriesOf, idsOf, isLoading: isLoading || membersQuery.isLoading }
 }
 
 /**

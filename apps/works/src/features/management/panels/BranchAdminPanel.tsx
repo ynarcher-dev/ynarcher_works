@@ -10,7 +10,7 @@ import {
 } from '@ynarcher/ui'
 import { useState } from 'react'
 import { BranchFormModal } from '@/features/management/panels/BranchFormModal'
-import { useBranchMemberNames } from '@/features/office/branches/branchMembers'
+import { useBranchMemberEntries } from '@/features/office/branches/branchMembers'
 import {
   useBranches,
   useCreateBranch,
@@ -24,15 +24,13 @@ import {
 const PAGE_SIZE = 15
 
 /**
- * 검색은 표의 글자 열(지사명·주소·전화번호·상주인력)만 훑는다 — 결과와 화면이 어긋나지 않게 한다.
- * 상주인력은 표에 이름이 그대로 나오므로 명단도 함께 훑는다(활성 여부는 상태 열의 몫이다).
+ * 검색은 표의 글자 열(지사명·주소·전화번호)만 훑는다 — 결과와 화면이 어긋나지 않게 한다.
+ * 상주인력은 이름이 아니라 수로 서므로 명단은 훑지 않는다(누가 있는지는 지사를 열어 확인한다).
  */
-function matchesKeyword(b: Branch, memberNames: string[], kw: string): boolean {
+function matchesKeyword(b: Branch, kw: string): boolean {
   const q = kw.trim().toLowerCase()
   if (!q) return true
-  return [b.name, b.address, b.phone, ...memberNames].some((v) =>
-    (v ?? '').toLowerCase().includes(q),
-  )
+  return [b.name, b.address, b.phone].some((v) => (v ?? '').toLowerCase().includes(q))
 }
 
 /**
@@ -47,7 +45,7 @@ export function BranchAdminPanel() {
   const toast = useToast()
   const branchesQuery = useBranches(true)
   const branches = branchesQuery.data ?? []
-  const { namesOf, idsOf } = useBranchMemberNames()
+  const { entriesOf, idsOf } = useBranchMemberEntries()
 
   const createBranch = useCreateBranch()
   const updateBranch = useUpdateBranch()
@@ -56,7 +54,7 @@ export function BranchAdminPanel() {
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(0)
 
-  const filtered = branches.filter((b) => matchesKeyword(b, namesOf(b.id), keyword))
+  const filtered = branches.filter((b) => matchesKeyword(b, keyword))
   // 검색으로 목록이 줄어 현재 페이지가 범위를 벗어나면 마지막 페이지로 클램프한다.
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const safePage = Math.min(page, pageCount - 1)
@@ -112,10 +110,12 @@ export function BranchAdminPanel() {
     {
       key: 'members',
       header: '상주인력',
-      type: 'long',
+      type: 'count',
+      // OFFICE '지사 정보'와 같은 근거(조회 가능한 계정)로 세고 같은 규격으로 적는다 — 누가
+      // 있는지는 지사를 열어 확인하고, 표에는 인원이 늘어도 폭이 흔들리지 않는 수만 둔다.
       render: (b) => {
-        const names = namesOf(b.id)
-        return names.length > 0 ? names.join(', ') : <EmptyValue />
+        const count = entriesOf(b.id).length
+        return count > 0 ? `${count}명` : <EmptyValue />
       },
     },
     {
@@ -132,7 +132,7 @@ export function BranchAdminPanel() {
       <div className="flex flex-wrap items-center gap-2">
         <div className="w-full sm:w-80">
           <Input
-            placeholder="지사명·주소·전화번호·상주인력 검색"
+            placeholder="지사명·주소·전화번호 검색"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
           />
