@@ -167,25 +167,11 @@ export function resolveCategory(value: string | null | undefined): NetworkCatego
 }
 
 /**
- * 소속/이메일 도메인으로 추천 구분을 추정한다(업로드 리뷰에서 빈 구분을 미리 채우는 보조).
- * 확신이 낮으면 null(사람이 고르도록 비워 둔다). 대학 › 투자사 › 기관 › 기업 순으로 판정한다.
+ * 소속 → 구분 추천과 자사 판정은 `categoryRules.ts`가 갖는다(2026-09-10 분리).
+ * 낱말 목록이라 계속 자랄 자리이고, 그 파일에는 실행되는 import가 없어 화면을 세우지 않고
+ * 실제 명함첩 파일에 그대로 걸어 시험할 수 있다 — 규칙표는 눈으로 읽어서는 맞는지 알 수 없다.
  */
-export function suggestCategory(
-  affiliation: string | null | undefined,
-  email?: string | null,
-): NetworkCategory | null {
-  const domain = (email ?? '').split('@')[1] ?? ''
-  const hay = `${affiliation ?? ''} ${domain}`.toLowerCase().trim()
-  if (!hay) return null
-  const has = (words: string[]) => words.some((w) => hay.includes(w))
-  if (has(['대학', 'univ', 'college', '.edu', '연구소', '연구원'])) return 'universities'
-  if (has(['벤처', '인베스트', '캐피탈', '자산운용', '파트너스', 'ventures', 'capital', 'partners', 'invest']))
-    return 'investors'
-  if (has(['진흥원', '재단', '센터', '협회', '공사', '공단', '진흥', 'foundation', 'agency', 'institute', 'go.kr', 'or.kr']))
-    return 'institutions'
-  if (has(['㈜', '주식회사', '(주)', 'inc', 'corp', 'ltd', 'co.,', 'company'])) return 'corporates'
-  return null
-}
+export { isInternalPerson, suggestCategory } from '@/features/networks/categoryRules'
 
 /**
  * 민감정보 접근 로그(access_logs)용 리소스 타입.

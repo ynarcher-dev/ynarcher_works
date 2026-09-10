@@ -13,12 +13,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState, type DragEvent } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useTags } from '@/features/admin/hooks'
-import {
-  CATEGORY_OPTIONS,
-  NETWORK_TABLE,
-  suggestCategory,
-  type NetworkCategory,
-} from '@/features/networks/config'
+import { CATEGORY_OPTIONS, NETWORK_TABLE, type NetworkCategory } from '@/features/networks/config'
+import { isInternalPerson, isOrgLikeName, suggestCategory } from '@/features/networks/categoryRules'
 import { useCountryOptions } from '@/features/networks/countryOptions'
 import { createUploadBatch, findPriorBatchByHash } from '@/features/networks/hooks'
 import {
@@ -27,6 +23,8 @@ import {
   buildTemplateCsv,
   downloadCsv,
   findExistingMatches,
+  foldFileDuplicates,
+  guessCountryName,
   parseBulkCsv,
   rowToPayload,
   sha256Hex,
@@ -35,13 +33,18 @@ import {
 import { BulkReviewTable, type Decision, type ReviewRow } from '@/features/networks/BulkReviewTable'
 
 /**
- * 구분 선택지. 값은 저장되는 코드 그대로이고, 선두의 빈 값은 저장되는 값이 아니라 '아직
- * 고르지 않았다'는 표시다 — 종전에는 이 자리가 '미분류'였고 그대로 올리면 분류 대기열로
- * 떨어졌다. 그 대기열(미분류 데이터베이스)을 접은 지금(2026-09-04) 구분이 정해지는 자리는
- * 올리는 이 화면 하나뿐이라, 빈 칸이 남아 있으면 업로드 자체가 막힌다.
+ * 구분 선택지. 첫 줄은 **'미지정'이라는 답**이지 빈 자리가 아니다 — 아직 고르지 않은 상태가
+ * 아니라 고르지 않기로 한 상태이며, 저장되는 것은 여전히 `null`이다(신규 등록 폼이
+ * 2026-09-05에 먼저 밟은 길).
+ *
+ * 종전에는 이 자리가 '구분 선택'이었고 빈 칸이 하나라도 남으면 업로드가 막혔다. 그 문의
+ * 전제는 *빈 칸 = 추천이 할 말이 없었으니 사람이 정하라* 였는데, 추천이 기타로 떨어지게 된
+ * 지금(2026-09-10) 그 상태는 **소속도 회사 도메인도 없는 줄**에만 남는다. 그런 줄은 파일을
+ * 다시 들여다봐도 답이 나오지 않으므로, 거기서 막는 것은 결정을 얻는 것이 아니라 업로드를
+ * 잃는 것이다.
  */
 const CATEGORY_SELECT = [
-  { value: '', label: '구분 선택' },
+  { value: '', label: '미지정' },
   ...CATEGORY_OPTIONS.map((o) => ({ value: o.key, label: o.label })),
 ]
 
@@ -93,7 +96,9 @@ export function BulkUploadPanel() {
 
   const loadFile = async (file: File) => {
     const text = await file.text()
-    const parsed = parseBulkCsv(text)
+    // 같은 파일 안의 중복을 먼저 접는다 — 원장 대조는 업로드 전에 한 번 돌므로, 접지 않으면
+    // 한 사람의 명함 두 장이 서로를 모른 채 두 행으로 등록된다.
+    const parsed = foldFileDuplicates(parseBulkCsv(text))
     if (parsed.length === 0) {
       toast.show('헤더와 최소 1개 데이터 행이 필요합니다.', 'warning')
       return
@@ -107,18 +112,26 @@ export function BulkUploadPanel() {
 
     setRows(
       parsed.map((r) => {
-        const hit = countryByName.get(r.country.trim().toLowerCase())
+        // 국가 열이 없는 파일(명함첩)에서는 연락처가 대신 답한다. 파일이 적어 낸 값이 언제나 먼저다.
+        const countryName = r.country.trim() || guessCountryName(r.phone)
+        const hit = countryByName.get(countryName.toLowerCase())
+        const internal = isInternalPerson(r.affiliation, r.email)
+        const orgLikeName = isOrgLikeName(r.name)
         return {
           ...r,
           // 파일에 구분이 없으면 소속·이메일 도메인으로 추천해 미리 채운다 — 사람이 고쳐 쓰는
-          // 출발점이지 확정이 아니고, 추천이 없으면 빈 칸으로 남아 업로드를 막는다.
+          // 출발점이지 확정이 아니다. 소속을 짐작할 근거가 하나도 없는 줄만 '미지정'으로 선다.
           targetCategory: (csvCategory(r.category) ??
             suggestCategory(r.affiliation, r.email) ??
             '') as NetworkCategory | '',
           countryTagId: hit?.id ?? null,
-          countryLabel: hit?.name ?? r.country.trim(),
+          countryLabel: hit?.name ?? countryName,
+          internal,
+          orgLikeName,
           match: null,
-          decision: r.name ? 'new' : 'skip',
+          // 자사 사람과 조직 명함은 기본값이 건너뛰기다. 자사는 되돌릴 수 없고(정책),
+          // 조직명은 되돌릴 수 있다(의심일 뿐이다).
+          decision: !r.name || internal || orgLikeName ? 'skip' : 'new',
         }
       }),
     )
@@ -136,7 +149,8 @@ export function BulkUploadPanel() {
             ...r,
             match: m,
             // 비활성 중복은 기본 건너뛰기(보수적) — 복구는 명시적으로 선택.
-            decision: !r.name ? 'skip' : m.deleted ? 'skip' : 'merge',
+            decision:
+              !r.name || r.internal || r.orgLikeName ? 'skip' : m.deleted ? 'skip' : 'merge',
             targetCategory: presetCategory(
               csvCategory(r.category) ?? suggestCategory(r.affiliation, r.email),
               m,
@@ -160,12 +174,13 @@ export function BulkUploadPanel() {
     setRows((prev) =>
       prev.map((r) => (r.line === line ? { ...r, targetCategory: value as NetworkCategory | '' } : r)),
     )
+  // 자사 행은 결정을 바꿀 수 없다 — 추천이 아니라 정책이라 되돌릴 자리를 두지 않는다.
   const setDecision = (line: number, decision: Decision) =>
-    setRows((prev) => prev.map((r) => (r.line === line ? { ...r, decision } : r)))
+    setRows((prev) => prev.map((r) => (r.line === line && !r.internal ? { ...r, decision } : r)))
   const applyBulkDecision = (d: Decision) =>
     setRows((prev) =>
       prev.map((r) => {
-        if (!selected.includes(r.line)) return r
+        if (!selected.includes(r.line) || r.internal) return r
         // 합치기는 활성 중복만 유효(비활성은 행별 복구 버튼으로 처리).
         if (d === 'merge' && !(r.match && !r.match.deleted)) return r
         return { ...r, decision: d }
@@ -194,13 +209,14 @@ export function BulkUploadPanel() {
     setPriorUpload(null)
   }
 
-  const newRows = rows.filter((r) => r.decision === 'new' && r.name)
+  const newRows = rows.filter((r) => r.decision === 'new' && r.name && !r.internal)
   // 합치기 대상: 활성 매칭 + 복구 예정(비활성이지만 복구하기를 누른) 매칭.
   const mergeRows = rows.filter(
     (r) =>
       r.decision === 'merge' &&
       r.match &&
       r.name &&
+      !r.internal &&
       (!r.match.deleted || revivedLines.includes(r.line)),
   )
   const skipCount = rows.length - newRows.length - mergeRows.length
@@ -208,16 +224,17 @@ export function BulkUploadPanel() {
   // 아직 복구하기를 누르지 않은 비활성 매칭 — 미업로드(건너뜀) 표시에서 분리해 별도 노출.
   const deletedPending = rows.filter((r) => r.match?.deleted && !revivedLines.includes(r.line)).length
   const displaySkip = skipCount - deletedPending
-  // 실제로 올라가는 행 중 구분이 빈 것 — 여기가 구분을 정하는 마지막 문이라 통과시키지 않는다.
-  const missingCategory = [...newRows, ...mergeRows].filter((r) => !r.targetCategory)
+  // 화면이 밝혀야 하는 자동 처리 넷 — 조용히 사라지거나 조용히 바뀌는 행이 없어야 한다.
+  const internalCount = rows.filter((r) => r.internal).length
+  const orgNameCount = rows.filter((r) => r.orgLikeName && !r.internal).length
+  const foldedCount = rows.reduce((sum, r) => sum + r.foldedLines.length, 0)
+  const corruptCount = rows.filter((r) => r.phoneCorrupt).length
+  // 올라가는 행 중 구분이 빈 것 — 막지 않고 '미지정'으로 들어간다(위 CATEGORY_SELECT 주석).
+  const unsetCategory = [...newRows, ...mergeRows].filter((r) => !r.targetCategory).length
 
   const commit = async () => {
     if (newRows.length === 0 && mergeRows.length === 0) {
       toast.show('처리할 행이 없습니다.', 'warning')
-      return
-    }
-    if (missingCategory.length > 0) {
-      toast.show(`구분이 비어 있는 행이 ${missingCategory.length}건 있습니다.`, 'warning')
       return
     }
     setBusy(true)
@@ -320,7 +337,9 @@ export function BulkUploadPanel() {
           <span className="text-body font-medium text-gray-700">
             CSV 파일을 여기로 드래그하거나 클릭해 선택하세요
           </span>
-          <span className="text-caption text-gray-600">.csv (UTF-8)</span>
+          <span className="text-caption text-gray-600">
+            .csv (UTF-8) · 리멤버 명함첩에서 내려받은 파일을 그대로 올릴 수 있습니다
+          </span>
           <input
             type="file"
             accept=".csv,text/csv"
@@ -347,10 +366,7 @@ export function BulkUploadPanel() {
             </div>
             <div className="flex gap-2">
               <Button variant="secondary" onClick={reset} disabled={busy}>다시 선택</Button>
-              <Button
-                onClick={() => void commit()}
-                disabled={busy || checking || missingCategory.length > 0}
-              >
+              <Button onClick={() => void commit()} disabled={busy || checking}>
                 최종 업로드 ({newRows.length + mergeRows.length})
               </Button>
             </div>
@@ -363,12 +379,39 @@ export function BulkUploadPanel() {
             </Banner>
           )}
 
-          {/* 왜 못 누르는지를 말하는 차단 안내라 접지 않는다(CLAUDE.md 안내 문구 규칙). */}
-          {missingCategory.length > 0 && (
+          {/* 파일을 읽으며 화면이 대신 판단한 것들. 되돌릴 자리가 있는지까지 함께 말한다. */}
+          {(internalCount > 0 || orgNameCount > 0 || foldedCount > 0 || corruptCount > 0) && (
+            <Banner tone="info">
+              {internalCount > 0 && (
+                <>
+                  자사 임직원 <b>{internalCount}건</b>은 제외했습니다 — 이 원장이 담는 것은 회사 밖
+                  사람입니다.{' '}
+                </>
+              )}
+              {orgNameCount > 0 && (
+                <>
+                  이름 칸이 조직명으로 보이는 <b>{orgNameCount}건</b>은 건너뛰기로 두었습니다. 사람이
+                  맞으면 그 행의 결정을 바꾸십시오.{' '}
+                </>
+              )}
+              {foldedCount > 0 && (
+                <>
+                  같은 파일 안에서 겹친 <b>{foldedCount}건</b>은 한 줄로 접었습니다.{' '}
+                </>
+              )}
+              {corruptCount > 0 && (
+                <>
+                  엑셀이 망가뜨린 번호 <b>{corruptCount}건</b>은 연락처를 비웠습니다. 리멤버에서 받은
+                  원본 CSV를 엑셀로 열어 저장하지 마십시오.
+                </>
+              )}
+            </Banner>
+          )}
+
+          {unsetCategory > 0 && (
             <Banner tone="warning">
-              구분이 비어 있는 행이 <b>{missingCategory.length}건</b> 있습니다. 각 행의 구분을 고른 뒤
-              올릴 수 있습니다 — 올린 다음에 모아서 분류하는 자리는 없습니다(행을 선택해 '구분 일괄'로
-              한 번에 지정할 수 있습니다).
+              구분을 짐작할 소속이 없어 <b>{unsetCategory}건</b>이 미지정으로 올라갑니다. 목록의 구분
+              필터 '미지정'에서 다시 찾아 채울 수 있습니다.
             </Banner>
           )}
 

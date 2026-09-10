@@ -41,7 +41,11 @@ const HEADER_ALIASES: Record<string, string> = {
   회사: 'affiliation', 회사명: 'affiliation', 소속: 'affiliation', affiliation: 'affiliation', company: 'affiliation',
   부서: 'department', 부서명: 'department', department: 'department',
   직함: 'position', 직책: 'position', 직급: 'position', position: 'position', title: 'position',
-  이메일: 'email', email: 'email', 'e-mail': 'email',
+  // 리멤버 명함첩은 이 열을 '전자 메일 주소'로 내보낸다(별칭 비교는 공백 제거 후라 붙여 적는다).
+  // 이 한 줄이 없던 동안 명함첩 업로드는 이메일을 통째로 잃었고, 이메일이 없으면 구분 추천·
+  // 중복 대조·자사 판별이 함께 약해진다 — 세 가지가 모두 도메인에 기대기 때문이다.
+  이메일: 'email', 이메일주소: 'email', 전자메일주소: 'email', 메일: 'email', 메일주소: 'email',
+  email: 'email', 'e-mail': 'email', emailaddress: 'email',
   휴대폰: 'phone', 휴대전화: 'phone', 핸드폰: 'phone', 전화: 'phone', 연락처: 'phone', phone: 'phone', mobile: 'phone',
   링크드인: 'linkedin', linkedin: 'linkedin', linkedinurl: 'linkedin',
 }
@@ -65,6 +69,14 @@ export interface ParsedRow {
    * 비운 채 등록하면 그 인물만 영역 필터에 걸리지 않는다(등록 폼은 태그에서 고르게 한다).
    */
   expertise: string[]
+  /**
+   * 엑셀이 망가뜨린 번호(`8.41646E+11`)인가. 원본 CSV를 엑셀로 한 번 열어 저장하면 긴 번호가
+   * 지수 표기로 바뀌어 되돌릴 수 없다 — 그런 값은 저장하지 않고(연락처를 비운다) 사실만 알린다.
+   * 잘못된 번호를 넣는 것보다 비어 있는 편이 낫다. 비면 채우러 가지만, 틀린 번호는 걸어 봐야 안다.
+   */
+  phoneCorrupt: boolean
+  /** 이 행에 접어 넣은 **같은 파일 안** 중복 행의 원본 줄 번호. 비어 있으면 접힌 것이 없다. */
+  foldedLines: number[]
 }
 
 /** 다중 값 열 구분자 — 콤마는 CSV 구분자와 겹쳐 따옴표가 필요하므로 세미콜론·슬래시도 받는다. */
@@ -89,6 +101,8 @@ export function parseBulkCsv(text: string): ParsedRow[] {
   }
   return lines.slice(1).map((line, i) => {
     const cells = splitCsvLine(line)
+    const rawPhone = at(cells, 'phone')
+    const phoneCorrupt = SCI_NOTATION.test(rawPhone.replace(/\s/g, ''))
     return {
       line: i + 2,
       name: at(cells, 'name'),
@@ -96,13 +110,138 @@ export function parseBulkCsv(text: string): ParsedRow[] {
       department: at(cells, 'department'),
       position: at(cells, 'position'),
       email: at(cells, 'email'),
-      phone: at(cells, 'phone'),
+      phone: phoneCorrupt ? '' : rawPhone,
+      phoneCorrupt,
+      foldedLines: [],
       linkedin: at(cells, 'linkedin'),
       category: at(cells, 'category'),
       country: at(cells, 'country'),
       expertise: splitMulti(at(cells, 'expertise')),
     }
   })
+}
+
+/** 비교용 정규화 — 표기 흔들림(대소문자·공백·구분기호)을 걷고 값만 남긴다. */
+const normText = (v: unknown) => String(v ?? '').trim().toLowerCase()
+const normPhone = (v: unknown) => String(v ?? '').replace(/\D/g, '')
+
+/**
+ * 지수 표기로 망가진 숫자(`8.41646E+11`). 엑셀이 12자리 넘는 번호를 그렇게 저장한다.
+ * 자릿수가 이미 잘려 나가 복원할 길이 없으므로 판정만 하고 값은 버린다.
+ */
+const SCI_NOTATION = /^\d(\.\d+)?e\+?\d+$/i
+
+/** 행에 담긴 알맹이 수 — 파일 안 중복에서 어느 줄을 남길지 정한다. */
+function density(r: ParsedRow): number {
+  const cells = [r.affiliation, r.department, r.position, r.email, r.phone, r.linkedin, r.category, r.country]
+  return cells.filter((v) => v.trim()).length + r.expertise.length
+}
+
+/** 빈 칸만 채운다 — 남기기로 한 줄의 값은 덮지 않는다. */
+function fillGaps(winner: ParsedRow, loser: ParsedRow): ParsedRow {
+  const pick = (a: string, b: string) => (a.trim() ? a : b)
+  return {
+    ...winner,
+    affiliation: pick(winner.affiliation, loser.affiliation),
+    department: pick(winner.department, loser.department),
+    position: pick(winner.position, loser.position),
+    email: pick(winner.email, loser.email),
+    phone: pick(winner.phone, loser.phone),
+    linkedin: pick(winner.linkedin, loser.linkedin),
+    category: pick(winner.category, loser.category),
+    country: pick(winner.country, loser.country),
+    expertise: winner.expertise.length ? winner.expertise : loser.expertise,
+    phoneCorrupt: winner.phoneCorrupt && loser.phoneCorrupt,
+  }
+}
+
+/**
+ * **같은 파일 안**의 중복을 한 줄로 접는다.
+ *
+ * 중복 대조(`findExistingMatches`)는 원장과만 맞추므로, 한 사람의 명함을 두 번 받아 두 줄로
+ * 실린 파일은 그대로 두 행이 등록된다 — 그리고 두 번째 행은 첫 번째가 방금 만든 행과
+ * 중복이지만 그 사실을 아무도 모른다(대조는 업로드 **전에** 한 번 돌았다).
+ *
+ * 접는 기준은 **이름이 같고 연락처(휴대폰 또는 이메일)가 같을 때**다. 이름을 함께 보는 것이
+ * 요점이다 — 회사 대표 메일(`info@`)을 명함에 적는 곳이 있어 이메일만으로 접으면 같은 회사
+ * 동료 둘이 한 사람이 된다. 반대로 이름만으로 접으면 동명이인이 합쳐진다.
+ *
+ * 남기는 줄은 값이 더 많이 찬 쪽이고, 진 줄의 값은 **빈 칸만** 메운다. 접힌 줄 번호는
+ * 남은 행이 들고 다녀 화면이 "무엇을 접었는지"를 말할 수 있게 한다(조용히 지우지 않는다).
+ */
+export function foldFileDuplicates(rows: ParsedRow[]): ParsedRow[] {
+  const out: ParsedRow[] = []
+  const seatByKey = new Map<string, number>()
+  const keysOf = (r: ParsedRow): string[] => {
+    const name = normText(r.name)
+    if (!name) return []
+    const keys: string[] = []
+    const phone = normPhone(r.phone)
+    const email = normText(r.email)
+    if (phone) keys.push(`p|${name}|${phone}`)
+    if (email) keys.push(`e|${name}|${email}`)
+    return keys
+  }
+  for (const row of rows) {
+    const keys = keysOf(row)
+    let seat = -1
+    for (const k of keys) {
+      const hit = seatByKey.get(k)
+      if (hit !== undefined) { seat = hit; break }
+    }
+    if (seat < 0) {
+      seat = out.length
+      out.push({ ...row })
+    } else {
+      const kept = out[seat]!
+      const [winner, loser] = density(row) > density(kept) ? [row, kept] : [kept, row]
+      const folded = [...kept.foldedLines, ...row.foldedLines, kept.line, row.line]
+      out[seat] = {
+        ...fillGaps(winner, loser),
+        line: winner.line,
+        foldedLines: [...new Set(folded)].filter((l) => l !== winner.line).sort((a, b) => a - b),
+      }
+    }
+    // 접은 뒤에 생긴 키(진 줄이 들고 온 이메일 등)도 같은 자리를 가리켜야 세 줄이 이어 접힌다.
+    for (const k of keysOf(out[seat]!)) seatByKey.set(k, seat)
+  }
+  return out
+}
+
+/**
+ * 국가번호 → 국가 태그 이름. 자릿수가 긴 것부터 본다(`+370`이 `+37`보다 먼저 걸려야 한다).
+ * 이름은 `country_tags` 시드 표기 그대로여서 화면이 그대로 대조한다.
+ */
+const DIAL_CODES: [string, string][] = [
+  ['370', '리투아니아'], ['358', '핀란드'], ['886', '대만'], ['852', '홍콩'],
+  ['971', '아랍에미리트'], ['966', '사우디아라비아'], ['84', '베트남'], ['82', '한국'],
+  ['81', '일본'], ['86', '중국'], ['66', '태국'], ['65', '싱가포르'], ['63', '필리핀'],
+  ['62', '인도네시아'], ['61', '호주'], ['60', '말레이시아'], ['49', '독일'], ['48', '폴란드'],
+  ['46', '스웨덴'], ['44', '영국'], ['33', '프랑스'], ['31', '네덜란드'], ['91', '인도'], ['1', '미국'],
+]
+
+/** 국내 번호 꼴(`010-…` · `02-…` · `070-…`). 앞에 0이 서는 것이 국내 번호의 표시다. */
+const DOMESTIC_PHONE = /^0(1[016789]|2|[3-7]\d)/
+
+/**
+ * 연락처에서 국가를 짐작한다. 명함첩에는 국가 열이 없어 그냥 올리면 **전 행이 미확인**이 되고,
+ * 국가는 이 원장에서 구분과 나란한 축이라 그 상태로는 목록의 권역 카드가 답을 못 한다.
+ *
+ * **근무처 전화는 보지 않는다**(2026-09-10 사용자 결정: 대표전화는 쓰지 않는다) — 함께 보면
+ * 서른 줄쯤 더 맞히지만, 저장하지 않기로 한 열을 판정에만 몰래 쓰는 자리가 생긴다.
+ *
+ * 짐작이지 확정이 아니다 — 한국 번호를 그대로 쓰는 해외 체류자는 한국으로 선다. 화면에서
+ * 사람이 고쳐 쓰는 출발점이며, 짐작할 근거가 없으면 빈 문자열로 두어 '미확인'이 된다.
+ */
+export function guessCountryName(phone: string): string {
+  const raw = (phone ?? '').trim()
+  if (!raw || SCI_NOTATION.test(raw.replace(/\s/g, ''))) return ''
+  if (raw.startsWith('+') || raw.startsWith('00')) {
+    const digits = raw.replace(/\D/g, '').replace(/^00/, '')
+    for (const [code, name] of DIAL_CODES) if (digits.startsWith(code)) return name
+    return ''
+  }
+  return DOMESTIC_PHONE.test(raw.replace(/\D/g, '')) ? '한국' : ''
 }
 
 /** 다운로드용 템플릿 CSV(헤더 + 예시 2행). 구분·영역은 비워도 됨을 예시로 보인다. */
@@ -197,8 +336,6 @@ interface Candidate {
   nPhone: string
 }
 
-const normText = (v: unknown) => String(v ?? '').trim().toLowerCase()
-const normPhone = (v: unknown) => String(v ?? '').replace(/\D/g, '')
 
 /**
  * 업로드 행별로 기존 중복 레코드를 찾아 매칭한다.

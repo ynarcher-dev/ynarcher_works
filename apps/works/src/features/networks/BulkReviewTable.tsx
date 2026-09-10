@@ -23,6 +23,13 @@ export interface ReviewRow extends ParsedRow {
   countryTagId: string | null
   /** 국가 표시값 — 찾은 태그명, 못 찾았으면 원값, 원값도 없으면 빈 문자열. */
   countryLabel: string
+  /**
+   * 자사 임직원인가. 네트워크 원장은 회사 밖 사람의 자리이므로 이 행은 올라가지 않으며,
+   * 화면에서 되돌릴 수도 없다 — 추천이 아니라 정책이다(2026-09-10 사용자 결정).
+   */
+  internal: boolean
+  /** 이름 칸에 조직명이 들어온 것으로 보이는가. 의심일 뿐이라 결정은 되돌릴 수 있다. */
+  orgLikeName: boolean
   /** 확실중복(이메일·전화 일치)으로 매칭된 기존 레코드. 없으면 신규. */
   match: ExistingRef | null
   /** 처리 방식(비활성 매칭은 결정 대신 '복구하기' 버튼 사용). */
@@ -43,6 +50,26 @@ function decisionOptions(hasMatch: boolean): { value: Decision; label: string }[
         { value: 'new', label: '신규 등록' },
         { value: 'skip', label: '미업로드' },
       ]
+}
+
+/**
+ * 이름 옆에 서는 한 줄 표시 — **이 줄이 무엇인가**에 답한다.
+ *
+ * 하나만 세운다. 자사 제외는 되돌릴 수 없어 먼저 서고, 조직명 의심은 사람이 판단할 것이라
+ * 그다음이며, 접힘은 이 줄이 여러 줄을 대신한다는 사실이라 마지막이다. 셋을 함께 세우면
+ * 이름 칸이 표시로 덮여 정작 이름이 밀린다.
+ */
+function RowFlag({ row }: { row: ReviewRow }) {
+  if (row.internal) return <Badge tone="neutral">자사</Badge>
+  if (row.orgLikeName) return <Badge tone="warning">조직명?</Badge>
+  if (row.foldedLines.length > 0) {
+    return (
+      <Badge tone="info" title={`파일 ${row.foldedLines.join(', ')}행을 이 줄에 접었습니다`}>
+        접힘 {row.foldedLines.length}
+      </Badge>
+    )
+  }
+  return null
 }
 
 /** 업로드 행과 기존 레코드가 실제로 겹치는 필드 라벨만 추린다(이름/소속/부서/직책/이메일/연락처). */
@@ -137,16 +164,43 @@ export function BulkReviewTable({
   // 모든 열의 좌우 패딩을 px-2로 통일해 열 간 여백이 들쑥날쑥하지 않게 한다(중복 칸은 폭만 w-72로 넓힘).
   const pad = 'px-2'
   // 비활성(미복구) 상태: 복구하기를 아직 누르지 않은 비활성 매칭 행.
-  const isDeactivated = (r: ReviewRow) => Boolean(r.match?.deleted) && !revivedLines.includes(r.line)
+  const isDeactivated = (r: ReviewRow) =>
+    r.internal || (Boolean(r.match?.deleted) && !revivedLines.includes(r.line))
   // 비활성 행은 원본 데이터 텍스트를 옅게 처리한다.
   const dim = (r: ReviewRow, normal: string) => (isDeactivated(r) ? 'text-gray-300' : normal)
   const columns: Column<ReviewRow>[] = [
-    { key: 'name', header: '이름', type: 'name', className: pad, render: (r) => <span className={cn('font-medium', dim(r, 'text-gray-800'))}>{r.name || <EmptyValue />}</span> },
+    {
+      key: 'name',
+      header: '이름',
+      type: 'name',
+      className: pad,
+      render: (r) => (
+        <span className="flex items-center gap-1.5">
+          <span className={cn('font-medium', dim(r, 'text-gray-800'))}>{r.name || <EmptyValue />}</span>
+          <RowFlag row={r} />
+        </span>
+      ),
+    },
     { key: 'affiliation', header: '소속', type: 'long', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.affiliation || '-'}</span> },
     { key: 'department', header: '부서', type: 'text', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.department || '-'}</span> },
     { key: 'position', header: '직책', type: 'text', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.position || '-'}</span> },
     { key: 'email', header: '이메일', type: 'text', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.email || '-'}</span> },
-    { key: 'phone', header: '연락처', type: 'text', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.phone || '-'}</span> },
+    {
+      key: 'phone',
+      header: '연락처',
+      type: 'text',
+      className: pad,
+      // 엑셀이 지수 표기로 바꾼 번호는 자릿수가 이미 잘려 되돌릴 수 없다. 빈 칸으로 두되
+      // 왜 비었는지는 말한다 — 그냥 비워 두면 명함에 번호가 없었던 것으로 읽힌다.
+      render: (r) =>
+        r.phoneCorrupt ? (
+          <span className="text-warning" title="엑셀이 지수 표기로 바꾼 번호라 복원할 수 없습니다.">
+            번호 훼손
+          </span>
+        ) : (
+          <span className={dim(r, 'text-gray-600')}>{r.phone || '-'}</span>
+        ),
+    },
     {
       // 국가는 파일이 답하고, 못 찾은 값은 목록의 '국가 미확인' 축에서 채운다 —
       // 리뷰 표에 드롭다운을 하나 더 세우면 행마다 두 번 고르게 된다.
@@ -169,7 +223,7 @@ export function BulkReviewTable({
       render: (r) => (
         <Select
           value={r.targetCategory}
-          disabled={r.decision === 'skip' || isDeactivated(r)}
+          disabled={r.decision === 'skip' || isDeactivated(r) || r.internal}
           onChange={(e) => onCategory(r.line, e.target.value)}
         >
           {categoryOptions.map((o) => (
@@ -208,7 +262,9 @@ export function BulkReviewTable({
       className: 'w-32 pl-2 pr-4',
       // 비활성 매칭은 먼저 '복구하기'로 의사를 밝힌 뒤에야 결정(합치기/미업로드) 드롭다운이 열린다.
       render: (r) =>
-        r.match?.deleted && !revivedLines.includes(r.line) ? (
+        r.internal ? (
+          <span className="text-caption text-gray-500">제외</span>
+        ) : r.match?.deleted && !revivedLines.includes(r.line) ? (
           <Button disabled={busy} onClick={() => onRevive(r.line)}>
             복구하기
           </Button>
