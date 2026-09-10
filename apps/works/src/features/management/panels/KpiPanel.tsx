@@ -1,47 +1,90 @@
-import { Badge, DataTable, Spinner, type Column } from '@ynarcher/ui'
-import { useKpis, type Kpi } from '@/features/management/hooks'
+import { useEffect, useMemo } from 'react'
+import { Badge, Button, Card, EmptyState, Select, Skeleton, Tabs, useToast } from '@ynarcher/ui'
+import { hasWorkspaceWrite, useAuthStore } from '@/auth/authStore'
+import { useSearchParams } from 'react-router-dom'
+import { KpiActualPanel } from '@/features/management/kpi/KpiActualPanel'
+import { KpiAssignmentsPanel } from '@/features/management/kpi/KpiAssignmentsPanel'
+import { KpiTemplateBuilder } from '@/features/management/kpi/KpiTemplateBuilder'
+import { useKpiVersions, usePublishKpiVersion } from '@/features/management/kpi/kpiApi'
+import type { KpiVersionStatus } from '@/features/management/kpi/kpiTypes'
 
-/** KPI 관리: 부서별 KPI 달성 현황(실적/목표 대비 달성률). */
+type View = 'templates' | 'departments' | 'people' | 'actuals'
+const VIEW_ITEMS = [
+  { key: 'templates', label: 'KPI 구성' },
+  { key: 'departments', label: '부서 할당' },
+  { key: 'people', label: '개인 할당' },
+  { key: 'actuals', label: '실적·점수' },
+]
+const isView = (value: string | null): value is View => VIEW_ITEMS.some((item) => item.key === value)
+const statusLabel: Record<KpiVersionStatus, string> = { DRAFT: '설계 중', PUBLISHED: '운영 중', CLOSED: '마감' }
+const statusTone: Record<KpiVersionStatus, 'warning' | 'success' | 'neutral'> = { DRAFT: 'warning', PUBLISHED: 'success', CLOSED: 'neutral' }
+
+/** 조직 버전과 1:1로 묶인 KPI 스냅샷을 구성·할당·운영한다. */
 export function KpiPanel() {
-  const { data: kpis, isLoading } = useKpis()
+  const toast = useToast()
+  const user = useAuthStore((state) => state.user)
+  const canWrite = hasWorkspaceWrite(user, 'management')
+  const [params, setParams] = useSearchParams()
+  const { data: versions = [], isLoading, isError } = useKpiVersions()
+  const publish = usePublishKpiVersion()
+  const requestedOrgVersion = params.get('orgVersion')
+  const requestedKpiVersion = params.get('kpiVersion')
+  const selected = useMemo(() => versions.find((version) => version.id === requestedKpiVersion)
+    ?? versions.find((version) => version.org_version_id === requestedOrgVersion)
+    ?? versions[0] ?? null, [versions, requestedKpiVersion, requestedOrgVersion])
+  const view: View = isView(params.get('kpiView')) ? params.get('kpiView') as View : 'templates'
 
-  // 폭·정렬·수치서식은 열마다의 종류(type)가 정한다(2026-08 디자인 리프레시).
-  const columns: Column<Kpi>[] = [
-    { key: 'metric_name', header: '지표', type: 'name', render: (r) => r.metric_name },
-    { key: 'period', header: '기간', type: 'text', render: (r) => r.period ?? '-' },
-    {
-      key: 'actual',
-      header: '실적/목표',
-      type: 'money',
-      render: (r) =>
-        `${Number(r.actual_value ?? 0).toLocaleString()} / ${Number(r.target_value ?? 0).toLocaleString()}`,
-    },
-    {
-      key: 'rate',
-      header: '달성률',
-      type: 'badge',
-      render: (r) => {
-        const rate =
-          r.target_value && Number(r.target_value) > 0
-            ? Math.round((Number(r.actual_value ?? 0) / Number(r.target_value)) * 100)
-            : 0
-        return (
-          <Badge tone={rate >= 100 ? 'success' : rate >= 70 ? 'warning' : 'neutral'}>
-            {rate}%
-          </Badge>
-        )
-      },
-    },
-  ]
+  useEffect(() => {
+    if (!selected || requestedKpiVersion === selected.id) return
+    const next = new URLSearchParams(params)
+    next.set('kpiVersion', selected.id)
+    next.delete('orgVersion')
+    setParams(next, { replace: true })
+  }, [params, requestedKpiVersion, selected, setParams])
 
-  if (isLoading) return <Spinner />
+  const updateParam = (key: string, value: string) => {
+    const next = new URLSearchParams(params)
+    next.set(key, value)
+    if (key === 'kpiVersion') next.delete('orgVersion')
+    setParams(next, { replace: true })
+  }
+
+  if (isLoading) return <Skeleton className="h-96 rounded-radius-lg" />
+  if (isError) return <Card><EmptyState title="KPI 스냅샷을 불러오지 못했습니다." description="잠시 후 다시 시도하세요." /></Card>
+  if (!selected) return <Card><EmptyState title="KPI 스냅샷이 없습니다." description="조직 원장 버전을 먼저 생성하세요." /></Card>
+
+  const configurationEditable = canWrite && selected.status === 'DRAFT'
+  const actualEditable = canWrite && selected.status === 'PUBLISHED'
 
   return (
-    <DataTable
-      columns={columns}
-      rows={kpis ?? []}
-      rowKey={(r) => r.id}
-      emptyText="등록된 KPI가 없습니다."
-    />
+    <div className="space-y-4">
+      <Card
+        title="KPI 스냅샷"
+        subtitle={`${selected.org.label} · ${selected.org.effective_from} ~ ${selected.org.effective_to ?? '계속'}`}
+        help="조직 개편 시 KPI 구성과 할당도 새 스냅샷으로 복제됩니다. 발행 이후 구성 변경은 다음 조직·KPI 버전에서 진행합니다."
+        actions={configurationEditable && canWrite ? (
+          <Button
+            disabled={publish.isPending}
+            onClick={() => void publish.mutateAsync(selected.org_version_id)
+              .then(() => toast.show('조직과 KPI 스냅샷을 함께 발행했습니다.', 'success'))
+              .catch((error: Error) => toast.show(error.message, 'danger'))}
+          >{publish.isPending ? '발행 중…' : '조직·KPI 함께 발행'}</Button>
+        ) : undefined}
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Select className="sm:max-w-md" value={selected.id} onChange={(event) => updateParam('kpiVersion', event.target.value)} aria-label="KPI 스냅샷 선택">
+            {versions.map((version) => <option key={version.id} value={version.id}>{version.label} · {version.org.label}</option>)}
+          </Select>
+          <Badge tone={statusTone[selected.status]}>{statusLabel[selected.status]}</Badge>
+          {selected.source_version_id && <span className="text-caption text-gray-500">이전 스냅샷에서 복제됨</span>}
+        </div>
+      </Card>
+
+      <Tabs items={VIEW_ITEMS} value={view} onChange={(key) => updateParam('kpiView', key)} />
+      {view === 'templates' && <KpiTemplateBuilder versionId={selected.id} editable={configurationEditable} />}
+      {view === 'departments' && <KpiAssignmentsPanel versionId={selected.id} orgVersionId={selected.org_version_id} scope="DEPARTMENT" editable={configurationEditable} />}
+      {view === 'people' && <KpiAssignmentsPanel versionId={selected.id} orgVersionId={selected.org_version_id} scope="PERSON" editable={configurationEditable} />}
+      {view === 'actuals' && <KpiActualPanel versionId={selected.id} orgVersionId={selected.org_version_id} editable={actualEditable} />}
+    </div>
   )
 }

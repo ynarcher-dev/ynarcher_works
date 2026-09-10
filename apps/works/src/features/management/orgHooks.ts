@@ -402,6 +402,8 @@ const MEMBER_KEY = ['management', 'dept-members'] as const
 export interface DeptMember {
   user_id: string
   department_id: string
+  effective_from: string
+  effective_to: string | null
 }
 
 /**
@@ -414,11 +416,16 @@ export function useDeptMembers(versionId?: string) {
     queryFn: async (): Promise<DeptMember[]> => {
       const { data, error } = await supabase
         .from('dept_members')
-        .select('user_id, department_id')
+        .select('user_id, department_id, effective_from, effective_to')
         .eq('version_id', versionId as string)
         .is('deleted_at', null)
+        .order('effective_from', { ascending: false })
       if (error) throw error
-      return (data ?? []) as DeptMember[]
+      const latest = new Map<string, DeptMember>()
+      for (const row of (data ?? []) as DeptMember[]) {
+        if (!latest.has(row.user_id)) latest.set(row.user_id, row)
+      }
+      return [...latest.values()]
     },
   })
 }
@@ -439,8 +446,8 @@ export function useActivePlacementMap(): { map: Map<string, string>; ready: bool
 }
 
 /**
- * 인력 배치 변경(선택 버전 기준). 기존 배치를 soft delete 후 신규 배치 삽입(부서 null=배치 해제).
- * 편집 버전이 활성 버전이면 users.department_id 미러도 함께 갱신한다(라이브 표시 일관).
+ * 인력 배치 변경(선택 버전 기준). 서버 RPC가 현재 구간을 닫고 새 기간 구간을 만든다.
+ * 활성 조직에서 옮기면 개인 KPI는 유지되고, 부서 KPI만 이동일 기준 새 소속을 상속한다.
  */
 export function useAssignDeptMember() {
   const qc = useQueryClient()
@@ -451,26 +458,13 @@ export function useAssignDeptMember() {
       departmentId: string | null
       isActive: boolean
     }) => {
-      const { error: delErr } = await supabase
-        .from('dept_members')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('version_id', v.versionId)
-        .eq('user_id', v.userId)
-        .is('deleted_at', null)
-      if (delErr) throw delErr
-      if (v.departmentId) {
-        const { error: insErr } = await supabase
-          .from('dept_members')
-          .insert({ version_id: v.versionId, department_id: v.departmentId, user_id: v.userId })
-        if (insErr) throw insErr
-      }
-      if (v.isActive) {
-        const { error: mirErr } = await supabase
-          .from('users')
-          .update({ department_id: v.departmentId })
-          .eq('id', v.userId)
-        if (mirErr) throw mirErr
-      }
+      const { error } = await supabase.rpc('set_department_membership', {
+        p_version_id: v.versionId,
+        p_user_id: v.userId,
+        p_department_id: v.departmentId,
+        p_effective_from: null,
+      })
+      if (error) throw error
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: MEMBER_KEY })

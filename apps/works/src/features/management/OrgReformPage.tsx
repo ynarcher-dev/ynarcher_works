@@ -24,6 +24,7 @@ import {
   OrgReformStructure,
   type OrgReformStructureHandle,
 } from '@/features/management/OrgReformStructure'
+import { usePublishKpiVersion } from '@/features/management/kpi/kpiApi'
 
 /** 조직 관리 목록 경로(뒤로가기 목적지). */
 const LIST_PATH = '/management?tab=departments'
@@ -59,6 +60,7 @@ export function OrgReformPage() {
 
   const cloneVersion = useCloneOrgVersion()
   const updateVersion = useUpdateOrgVersion()
+  const publishKpiVersion = usePublishKpiVersion()
   const editorRef = useRef<OrgReformStructureHandle>(null)
 
   const [label, setLabel] = useState('')
@@ -144,7 +146,7 @@ export function OrgReformPage() {
     }
   }
 
-  /** 예약하기: 초안을 PUBLISHED로 확정하고 현재 조직 종료일을 새 조직 시작 전일로 맞춘다. */
+  /** 예약하기: 조직과 1:1 KPI 스냅샷을 서버 트랜잭션에서 함께 검증·발행한다. */
   const reserve = async () => {
     if (!draft) return
     const err = validate()
@@ -157,15 +159,12 @@ export function OrgReformPage() {
         id: draft.id,
         values: {
           label: label.trim(),
-          status: 'PUBLISHED',
           effective_from: from,
           effective_to: to || null,
         },
       })
-      if (active) {
-        await updateVersion.mutateAsync({ id: active.id, values: { effective_to: dayBefore(from) } })
-      }
-      toast.show('조직 개편을 예약했습니다.', 'success')
+      await publishKpiVersion.mutateAsync(draft.id)
+      toast.show('조직 개편과 KPI 개편을 함께 예약했습니다.', 'success')
       navigate(LIST_PATH)
     } catch (e) {
       setError(e instanceof Error ? e.message : '예약에 실패했습니다.')
@@ -276,6 +275,23 @@ export function OrgReformPage() {
           )}
         </div>
       </Card>
+
+      {draft && (
+        <Card
+          title="KPI 개편"
+          help="조직 초안에는 별도의 KPI 스냅샷이 함께 생성됩니다. 구성과 부서·개인 할당을 완료해야 예약할 수 있습니다."
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-body text-gray-700">이 조직이 발효되는 날 새 KPI도 함께 시작되며, 이전 버전의 기준과 실적은 바뀌지 않습니다.</p>
+            <Link
+              to={`/management?tab=kpi&orgVersion=${draft.id}`}
+              className="inline-flex h-ctl-md items-center justify-center rounded-radius-md bg-gray-100 px-4 text-sm font-semibold text-gray-800 hover:bg-gray-200"
+            >
+              KPI 개편 설계
+            </Link>
+          </div>
+        </Card>
+      )}
 
       {draft && (
         <Card
