@@ -66,7 +66,7 @@ export function ProgramDetailPage() {
 
   if (isLoading) return <Spinner />
   if (!program || !id) {
-    return <Banner tone="warning">사업을 찾을 수 없습니다.</Banner>
+    return <Banner tone="warning">{config.entityNoun}을(를) 찾을 수 없습니다.</Banner>
   }
 
   /** 모듈 카드 클릭 → 해당 인스턴스의 운영 화면으로 이동. */

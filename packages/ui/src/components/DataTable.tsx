@@ -328,6 +328,14 @@ export interface DataTableProps<T> {
    * 아닌 것)는 `selectable={false}`를 준다.
    */
   selectable?: boolean
+  /**
+   * 그 행을 고를 수 있는가. 미지정이면 전부 고를 수 있다.
+   *
+   * 고를 수 없는 행은 체크 칸이 **빈 칸으로 남고**(칸 자체를 걷지 않는다 — 걷으면 그 행만
+   * 첫 열이 왼쪽으로 밀려 표가 어긋난다) 머리글의 전체선택에도 들지 않는다. 표 하나에 성격이
+   * 다른 두 갈래가 함께 서는 자리를 위한 것이다(이미 담긴 줄 / 이번에 담을 줄).
+   */
+  selectableRow?: (row: T) => boolean
   /** 선택된 행 키(제어 모드). 미지정 시 컴포넌트 내부 상태로 관리한다. */
   selectedKeys?: string[]
   /** 선택 변경 콜백(제어/비제어 공통). */
@@ -467,6 +475,7 @@ export function DataTable<T>({
   manageable = true,
   showManageColumn = true,
   selectable: selectableProp,
+  selectableRow,
   selectedKeys,
   onSelectionChange,
   onRowClick,
@@ -634,8 +643,10 @@ export function DataTable<T>({
 
   const [internalSelected, setInternalSelected] = useState<string[]>([])
   const selected = new Set(selectedKeys ?? internalSelected)
-  const allKeys = displayedRows.map(rowKey)
-  const allSelected = displayedRows.length > 0 && allKeys.every((k) => selected.has(k))
+  // 고를 수 없는 행은 전체선택에도, 선택 결과에도 들지 않는다 — 걸러 두지 않으면 머리글
+  // 체크 한 번이 '이 창에서 손댈 수 없는 줄'까지 골라 버린다.
+  const allKeys = displayedRows.filter((r) => selectableRow?.(r) ?? true).map(rowKey)
+  const allSelected = allKeys.length > 0 && allKeys.every((k) => selected.has(k))
   const someSelected = allKeys.some((k) => selected.has(k))
 
   const commitSelection = (next: Set<string>) => {
@@ -870,11 +881,13 @@ export function DataTable<T>({
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="flex items-center justify-center">
-                        <Checkbox
-                          aria-label="행 선택"
-                          checked={selected.has(key)}
-                          onChange={() => toggleRow(key)}
-                        />
+                        {(selectableRow?.(row) ?? true) && (
+                          <Checkbox
+                            aria-label="행 선택"
+                            checked={selected.has(key)}
+                            onChange={() => toggleRow(key)}
+                          />
+                        )}
                       </div>
                     </td>
                   )}

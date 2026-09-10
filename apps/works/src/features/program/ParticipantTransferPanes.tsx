@@ -7,11 +7,9 @@ import {
   PickRow,
   Spinner,
   TransferPanes,
-  cardText,
-  cn,
 } from '@ynarcher/ui'
 import { Check } from 'lucide-react'
-import { ParticipantRightRow } from '@/features/program/ParticipantRightRow'
+import { ParticipantRightTable } from '@/features/program/ParticipantRightTable'
 import type { ParticipantPersona } from '@/features/program/participantPersona'
 import type { useParticipantTransfer } from '@/features/program/participantTransfer'
 import { useGuestHost } from '@/features/guest/host'
@@ -108,26 +106,14 @@ export function ParticipantTransferPanes({
         title: '계정 있음',
         count: right.length,
         children: (
-          // 좌우 기둥이 같은 높이에서 끝나도록 잡은 값(좌: 검색칸 + 목록).
-          <div className="h-[23rem] overflow-y-auto rounded-radius-md border border-gray-200">
-            {right.length === 0 ? (
-              <p className={cn('px-3 py-10 text-center', cardText.meta)}>
-                왼쪽에서 대상을 고르고 [넣기]를 누르세요.
-              </p>
-            ) : (
-              right.map((row) => (
-                <ParticipantRightRow
-                  key={row.masterId}
-                  spec={spec}
-                  row={row}
-                  checked={transfer.checkedRight.includes(row.masterId)}
-                  onToggle={() => transfer.toggleRight(row.masterId)}
-                  typed={transfer.typed[row.masterId]}
-                  onChange={(next) => transfer.setPerson(row.masterId, next)}
-                />
-              ))
-            )}
-          </div>
+          <ParticipantRightTable
+            spec={spec}
+            rows={right}
+            checked={transfer.checkedRight}
+            onCheckedChange={transfer.setCheckedRight}
+            typed={transfer.typed}
+            onPerson={transfer.setPerson}
+          />
         ),
       }}
       toRight={{

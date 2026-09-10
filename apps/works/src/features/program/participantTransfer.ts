@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react'
 import type { MasterCandidate, ParticipantRow } from '@/features/program/participantHooks'
 import {
   isPersonReady,
-  needsPerson,
+  ledgerPerson,
   resolvePerson,
   type PersonInput,
 } from '@/features/program/participantPerson'
@@ -60,6 +60,14 @@ export type RightRow =
       name: string
       personName: string | null
       personEmail: string | null
+      /**
+       * 연락처는 **원장이 답한다** — 계정(`users`)에는 연락처 칸이 없다.
+       *
+       * 명의·이메일과 원천이 갈리는 유일한 열이라 적어 둔다. 그 둘은 '누가 문을 여는가'라
+       * 계정이 서면 계정이 답하지만, 연락처는 초기 비밀번호가 되는 원장 값이고 계정이 선
+       * 뒤에는 아무것도 바꾸지 않는다.
+       */
+      phone: string | null
     }
   | {
       /** 이번에 올린 줄 — 아직 아무것도 세워지지 않았고, 누구로 들어올지를 이 줄에서 정한다. */
@@ -116,6 +124,7 @@ export function useParticipantTransfer(
         name: p.targetName,
         personName: p.accountName,
         personEmail: p.accountEmail,
+        phone: p.phone,
       }))
     return [...fresh, ...kept]
   }, [drafts, participants, removed])
@@ -165,11 +174,6 @@ export function useParticipantTransfer(
   const toggleLeft = useCallback(
     (id: string) =>
       setCheckedLeft((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])),
-    [],
-  )
-  const toggleRight = useCallback(
-    (id: string) =>
-      setCheckedRight((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])),
     [],
   )
 
@@ -226,16 +230,29 @@ export function useParticipantTransfer(
   }, [])
 
   /**
-   * 확정하면 계정을 세울 줄. `writeLedger`는 **담당자가 채운 줄**만 참이다 — 원장이 이미
-   * 알고 있던 값을 되쓰는 것은 아무것도 바꾸지 않으면서 원장의 수정일만 오늘로 민다.
+   * 확정하면 계정을 세울 줄.
+   *
+   * `writeLedger`는 **값이 실제로 달라진 줄**만 참이다 — 원장이 이미 알고 있던 값을 되쓰는
+   * 것은 아무것도 바꾸지 않으면서 원장의 수정일만 오늘로 민다.
+   *
+   * 판정을 `needsPerson`에서 옮겼다(2026-09-10). 저 판정은 *이 줄이 계정을 세울 만큼
+   * 갖췄는가*(이름·이메일)라, 연락처만 채운 줄이 거짓이 되어 담당자가 적은 값이 원장에
+   * 닿지 않았다. 빈 칸을 칸 단위로 채우게 되면서 그 어긋남이 실제 손실이 된다.
    */
   const additions = useMemo(
     () =>
-      drafts.map((d) => ({
-        masterId: d.id,
-        person: resolvePerson(d, typed[d.id]),
-        writeLedger: needsPerson(d),
-      })),
+      drafts.map((d) => {
+        const base = ledgerPerson(d)
+        const person = resolvePerson(d, typed[d.id])
+        return {
+          masterId: d.id,
+          person,
+          writeLedger:
+            person.name !== base.name ||
+            person.email !== base.email ||
+            person.phone !== base.phone,
+        }
+      }),
     [drafts, typed],
   )
 
@@ -246,7 +263,12 @@ export function useParticipantTransfer(
     checkedLeft: leftChecked,
     checkedRight: rightChecked,
     toggleLeft,
-    toggleRight,
+    /**
+     * 오른쪽은 표라 선택을 통째로 받는다(표의 머리글 체크가 여러 줄을 한 번에 바꾼다).
+     * 왼쪽은 줄을 눌러 하나씩 켜는 목록이라 `toggleLeft`가 그대로 남는다 — 같은 이름의 두
+     * 축이 아니라 서로 다른 컨트롤이 내는 서로 다른 신호다.
+     */
+    setCheckedRight,
     moveRight,
     moveLeft,
     moveAllRight,

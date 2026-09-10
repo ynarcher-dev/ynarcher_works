@@ -170,9 +170,9 @@ export function ProgramTable({
       pagination={pagination}
       showManageColumn={false}
       // 생성자(created_by)는 권한 축이 아니라 목록에서 내린다 — 관리 주체는 담당자 컬럼이 답한다.
-      // 생성자는 상세 페이지(ProgramInfoCard)에만 남고, '내 사업 관리' 스코프는 계속 created_by를 함께 본다.
+      // 생성자는 상세 페이지(ProgramInfoCard)에만 남고, '내 것만' 스코프는 계속 created_by를 함께 본다.
       showAuthor={false}
-      emptyText="등록된 사업이 없습니다."
+      emptyText={`등록된 ${config.entityNoun}이(가) 없습니다.`}
     />
   )
 }

@@ -41,7 +41,7 @@ export interface RosterPick {
   checkedLeft: string[]
   checkedRight: string[]
   toggleLeft: (id: string) => void
-  toggleRight: (id: string) => void
+  setCheckedRight: (ids: string[]) => void
   moveRight: () => void
   moveLeft: () => void
   moveAllRight: () => void
@@ -92,11 +92,6 @@ export function useRosterPick(
       setCheckedLeft((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])),
     [],
   )
-  const toggleRight = useCallback(
-    (id: string) =>
-      setCheckedRight((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])),
-    [],
-  )
 
   const moveRight = useCallback(() => {
     setStaged((prev) => {
@@ -142,7 +137,11 @@ export function useRosterPick(
     checkedLeft,
     checkedRight,
     toggleLeft,
-    toggleRight,
+    /**
+     * 오른쪽은 표라 선택을 통째로 받는다(머리글 체크 한 번이 여러 줄을 바꾼다). 왼쪽은 줄을
+     * 눌러 하나씩 켜는 목록이라 `toggleLeft`가 그대로 남는다.
+     */
+    setCheckedRight,
     moveRight,
     moveLeft,
     moveAllRight,

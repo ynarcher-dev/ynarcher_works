@@ -123,54 +123,27 @@ export function PickMark({ checked, children }: PickMarkProps) {
 export interface PickLineProps {
   /** 식별값(이름·기업명). 이 목록이 무엇을 고르는지를 답하는 값이다. */
   name: ReactNode
-  /**
-   * 그 대상을 **확정하는 데 필요한 값**(이메일·연락처·조직).
-   *
-   * 고르는 기둥에는 주지 않고 담긴 기둥에만 준다 — 왼쪽에서 하는 일은 이름으로 찾아 고르는
-   * 것이고, 오른쪽에서 하는 일은 *이 사람이 맞는가*를 확인하는 것이다. 왼쪽에도 붙이면 아직
-   * 고르지도 않은 수십 줄이 저마다 이메일과 전화번호를 들고 서서, 정작 찾는 이름이 그 사이에
-   * 묻힌다.
-   */
-  meta?: ReactNode
 }
 
 /**
- * 고르는 목록 한 줄의 **글자 부분** — 이름과 부가값이 한 줄에 선다.
+ * 고르는 목록 한 줄의 **글자 부분** — 이름 하나가 선다.
  *
- * 두 단으로 접어 이름 아래 회색 줄을 깔던 자리다(2026-09-10 사용자 지정으로 폄). 접는 편이
- * 좁은 기둥에서 안전하지만, 그 안전을 위해 목록의 줄 수가 두 배가 되고 한 화면에 보이는
- * 후보가 절반이 된다 — 고르는 목록에서 그것은 스크롤이 아니라 **비교할 수 있는 범위**가
- * 줄어드는 일이다. 접지 않는 대신 창을 넓히고(`TransferPanes`가 기둥 폭을 정한다) 왼쪽에서
- * 부가값을 걷었다.
+ * 이름 아래 회색 한 줄(이메일·소속)을 함께 깔던 자리다(2026-09-10 사용자 지정으로 걷음).
+ * **왼쪽 기둥에서 하는 일은 이름으로 찾아 고르는 것**이고, 그 대상이 맞는지 확인하는 일은
+ * 오른쪽 기둥의 표가 한다 — 아직 고르지도 않은 수십 줄이 저마다 연락처를 들고 서면, 정작
+ * 찾는 이름이 그 사이에 묻히고 한 화면에 보이는 후보가 절반이 된다.
  *
- * 두 값의 **크기는 같고 굵기와 색만 갈린다** — 한 줄 안에서 크기를 갈라 위계를 만들지
- * 않는다(densityScale `cardText`). 접혀 있던 동안에는 줄이 갈려 있어 크기를 낮춰도 됐지만,
- * 한 줄에 서면 2px 차이가 위계가 아니라 다른 글꼴로 읽힌다.
- *
- * 넘치면 이름이 아니라 **부가값이 먼저 줄어든다** — 이름은 그 줄이 무엇인지 답하는 값이라
- * 잘리면 곤란하고, 이메일은 앞부분만 보여도 어느 줄인지 가려낼 수 있다. 전체 값은 `title`에
- * 남는다.
+ * 그래서 이 부품이 소유하는 것은 **한 줄짜리 이름의 규격 하나**다. 소유자를 두기 전에는 세
+ * 창이 저마다 `text-body text-gray-900` + `font-medium`을 손으로 적고 있었고, 한 곳만 고치는
+ * 날 같은 목록이 창마다 다른 굵기로 섰다.
  */
-export function PickLine({ name, meta }: PickLineProps) {
-  const empty = meta === null || meta === undefined || meta === ''
+export function PickLine({ name }: PickLineProps) {
   return (
-    <span className="flex min-w-0 flex-1 items-baseline gap-2">
-      <span
-        className={cn('min-w-0 truncate', cardText.value, 'font-medium')}
-        title={typeof name === 'string' ? name : undefined}
-      >
-        {name}
-      </span>
-      {!empty && (
-        // 줄어드는 몫을 부가값이 거의 다 진다(`shrink-[9999]`) — 기본값끼리 두면 flex는 원래
-        // 길이에 비례해 깎아, 긴 이름일수록 더 잘리는 정반대의 결과가 된다.
-        <span
-          className={cn('min-w-0 shrink-[9999] truncate', cardText.meta)}
-          title={typeof meta === 'string' ? meta : undefined}
-        >
-          {meta}
-        </span>
-      )}
+    <span
+      className={cn('min-w-0 flex-1 truncate', cardText.value, 'font-medium')}
+      title={typeof name === 'string' ? name : undefined}
+    >
+      {name}
     </span>
   )
 }

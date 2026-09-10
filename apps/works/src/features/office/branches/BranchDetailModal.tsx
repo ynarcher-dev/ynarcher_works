@@ -1,18 +1,9 @@
+import { Button, Card, DataTable, InfoField, InfoGrid, Modal } from '@ynarcher/ui'
+import type { BranchMemberEntry } from '@/features/office/branches/branchMembers'
 import {
-  Button,
-  Card,
-  InfoField,
-  InfoGrid,
-  Modal,
-  PickLine,
-  PickList,
-  cn,
-  panelRowBox,
-} from '@ynarcher/ui'
-import {
-  branchMemberOrgLabel,
-  type BranchMemberEntry,
-} from '@/features/office/branches/branchMembers'
+  BRANCH_MEMBER_COLUMNS,
+  toBranchMemberRow,
+} from '@/features/office/branches/branchMemberTable'
 import type { Branch } from '@/features/office/branches/branchesApi'
 
 interface Props {
@@ -57,17 +48,16 @@ export function BranchDetailModal({ branch, members, onClose }: Props) {
       </Card>
 
       <Card title="상주인력" count={members.length}>
-        <div className="overflow-hidden rounded-radius-md border border-gray-200">
-          <PickList isEmpty={members.length === 0} empty="배정된 상주인력이 없습니다.">
-            {members.map((m) => (
-              // 고를 수 없는 줄이라 버튼(PickRow)이 아니다 — 눌리지 않는 것에 눌리는 생김새를
-              // 주면 담당자가 눌러 보고서야 조회 전용임을 안다. 여백만 같은 값을 쓴다.
-              <li key={m.id} className={cn('flex items-center gap-3', panelRowBox)}>
-                <PickLine name={m.name} meta={branchMemberOrgLabel(m)} />
-              </li>
-            ))}
-          </PickList>
-        </div>
+        {/* 수정 창의 담긴 기둥과 같은 표다 — 고를 수 없다는 것만 다르다(체크 칸이 서지 않는다). */}
+        <DataTable
+          columns={BRANCH_MEMBER_COLUMNS}
+          rows={members.map((m) => toBranchMemberRow(m.id, m))}
+          rowKey={(row) => row.entry.id}
+          numbered={false}
+          standardColumns={false}
+          selectable={false}
+          emptyText="배정된 상주인력이 없습니다."
+        />
       </Card>
     </Modal>
   )

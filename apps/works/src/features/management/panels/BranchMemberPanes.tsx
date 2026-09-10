@@ -1,4 +1,5 @@
 import {
+  DataTable,
   Field,
   Input,
   PickLine,
@@ -10,22 +11,21 @@ import {
 } from '@ynarcher/ui'
 import { Check } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { branchMemberOrgLabel, useEmployeeOrgEntries } from '@/features/office/branches/branchMembers'
 import {
-  branchMemberOrgLabel,
-  useEmployeeOrgEntries,
-  type BranchMemberEntry,
-} from '@/features/office/branches/branchMembers'
+  BRANCH_MEMBER_COLUMNS,
+  toBranchMemberRow,
+  type BranchMemberRow,
+} from '@/features/office/branches/branchMemberTable'
 
-/** 조회할 수 없는 계정(퇴사·권한)의 자리. 이름을 못 읽어도 줄은 남는다 — 없애면 저장이 곧 삭제가 된다. */
-const UNKNOWN_META = '조회할 수 없는 계정'
 
 /**
  * 지사 수정 창의 **상주인력 두 기둥** — 왼쪽은 임직원 원장, 오른쪽은 이 지사에 상주하는 사람이다.
  *
  * 종전에는 입력 칸 안에 이름 칩이 쌓이는 토큰 선택기였다. 칩은 **지금 무엇을 골랐는가**만 답하고
- * 그 사람이 어느 조직인지는 말하지 못하는데, 지사에 누구를 앉힐지는 대개 조직을 보고 정한다
- * (같은 이름이 둘일 때 가릴 근거도 그 줄뿐이다). 여기서는 좌우 어느 기둥에서나 이름 아래 자리가
- * 함께 서고, OFFICE 상세의 명단과도 같은 줄 규격이다.
+ * 그 사람이 어느 조직인지는 말하지 못하는데, 지사에 누구를 앉힐지는 대개 조직을 보고 정한다.
+ * 그 조직은 담긴 기둥의 **표**가 자기 열로 세우며, 열 한 벌은 OFFICE 상세와 함께 쓴다
+ * (`branchMemberTable`).
  *
  * 골격은 명단 담기·계정 생성 창과 **같은 부품**(`TransferPanes`)이다 — 담당자가 하는 손놀림이
  * 같으므로(왼쪽에서 체크하고 가운데로 옮기고 오른쪽을 확인한 뒤 저장한다) 창마다 다르게 생길
@@ -68,14 +68,8 @@ export function BranchMemberPanes({
    * 오른쪽 — 담긴 사람. **검색어를 따르지 않는다**(좌우로 가른 이유가 이 목록을 눈에 두는 것이다).
    * 이름을 못 읽는 계정도 줄을 세운다 — 감추면 담당자가 모르는 사이에 저장이 그 사람을 지운다.
    */
-  const right = useMemo<{ entry: BranchMemberEntry; unknown: boolean }[]>(
-    () =>
-      value.map((id) => {
-        const entry = entryOf(id)
-        return entry
-          ? { entry, unknown: false }
-          : { entry: { id, name: '알 수 없음', orgPath: [] }, unknown: true }
-      }),
+  const right = useMemo<BranchMemberRow[]>(
+    () => value.map((id) => toBranchMemberRow(id, entryOf(id))),
     [value, entryOf],
   )
 
@@ -147,31 +141,22 @@ export function BranchMemberPanes({
         title: '이 지사 상주인력',
         count: right.length,
         children: (
-          <div className="overflow-hidden rounded-radius-md border border-gray-200">
-            <PickList
-              isEmpty={right.length === 0}
-              empty="왼쪽에서 임직원을 고르고 [넣기]를 누르세요."
-            >
-              {right.map(({ entry, unknown }) => {
-                const on = checkedRight.includes(entry.id)
-                return (
-                  <PickRow
-                    key={entry.id}
-                    selected={on}
-                    onClick={() => toggle(checkedRight, setCheckedRight, entry.id)}
-                  >
-                    <PickMark checked={on}>
-                      <Check className="size-3" />
-                    </PickMark>
-                    <PickLine
-                      name={entry.name}
-                      meta={unknown ? UNKNOWN_META : branchMemberOrgLabel(entry)}
-                    />
-                  </PickRow>
-                )
-              })}
-            </PickList>
-          </div>
+          /*
+            담긴 기둥은 표다(계정 생성·명단 담기 창과 같은 규격) — 값을 이어 붙이면 빈 값이
+            사라져 무엇이 비었는지 말하지 못한다. 여기서 비는 것은 조직 배치이고, 그것은
+            지사에 앉힐 사람을 고르는 근거라 눈에 띄어야 한다.
+          */
+          <DataTable
+            columns={BRANCH_MEMBER_COLUMNS}
+            rows={right}
+            rowKey={(row) => row.entry.id}
+            numbered={false}
+            standardColumns={false}
+            selectable
+            selectedKeys={checkedRight}
+            onSelectionChange={setCheckedRight}
+            emptyText="왼쪽에서 임직원을 고르고 [넣기]를 누르세요."
+          />
         ),
       }}
       toRight={{

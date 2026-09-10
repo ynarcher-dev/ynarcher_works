@@ -59,7 +59,7 @@ function IntroCard({ programId }: { programId: string }) {
   const onDelete = async () => {
     if (
       !window.confirm(
-        '사업소개를 삭제하시겠습니까? 게스트 첫 화면에서도 사라집니다. 첨부한 파일은 그대로 남습니다.',
+        `${overviewNoun}를 삭제하시겠습니까? 게스트 첫 화면에서도 사라집니다. 첨부한 파일은 그대로 남습니다.`,
       )
     ) {
       return
@@ -173,11 +173,11 @@ function IntroFormModal({
     >
       {/* 게시판 작성 모달과 같은 카드 구성 — 쓰는 화면끼리 모양이 같아야 한다. 바닥(회색)은
           `Modal`의 `sectioned`가 깐다. */}
-      <Card title="사업소개">
+      <Card title={overviewNoun}>
         <RichTextEditor
           value={body}
           onChange={setBody}
-          placeholder="참여자에게 보일 사업소개를 적어 주세요."
+          placeholder={`참여자에게 보일 ${overviewNoun}를 적어 주세요.`}
         />
       </Card>
 
