@@ -11,7 +11,6 @@ import {
   useFundListPage,
   type FundListFilterState,
 } from '@/features/fund/fundListHooks'
-import { toggleAxisValue } from '@/lib/filterAxis'
 import type { ListScope } from '@/lib/listScope'
 
 /** 페이지당 행 수. */
@@ -59,7 +58,7 @@ export function FundListTab({ scope, onScopeChange, userId }: FundListTabProps) 
 
   return (
     <div className="space-y-3">
-      {/* 요약 카드는 두 스코프에 모두 둔다 — 검색어·필터가 집계에 반영되므로 '전체 운용펀드'에서도
+      {/* 요약 카드는 두 스코프에 모두 둔다 — 검색어·필터가 집계에 반영되므로 '내 펀드'를 끈 전체 범위에서도
           "지금 좁혀 놓은 범위에 돈이 어디까지 와 있나"라는 같은 질문이 성립한다.
           (사업 진행 현황 카드를 두 스코프 모두에 둔 것과 같은 판단) */}
       <FundSummaryPanel
@@ -67,10 +66,6 @@ export function FundListTab({ scope, onScopeChange, userId }: FundListTabProps) 
         filters={filters}
         mineUserId={mineUserId}
         listTotal={data?.total}
-        onToggleStrategy={(strategy) =>
-          setFilters((f) => ({ ...f, strategies: toggleAxisValue(f.strategies, strategy) }))
-        }
-        onClearStrategies={() => setFilters((f) => ({ ...f, strategies: [] }))}
       />
 
       <ListToolbar
