@@ -1,6 +1,10 @@
 import { useCallback, useMemo, useState } from 'react'
 import type { MasterCandidate } from '@/features/program/participantHooks'
-import { isLedgerReady } from '@/features/program/participantPerson'
+import {
+  ledgerGaps,
+  type LedgerFill,
+  type PersonField,
+} from '@/features/program/participantPerson'
 import type { RosterRow } from '@/features/program/rosterHooks'
 
 /**
@@ -20,6 +24,12 @@ import type { RosterRow } from '@/features/program/rosterHooks'
  * **오른쪽 줄은 검색어를 따르지 않는다.** 왼쪽은 서버가 검색어로 좁힌 결과(원장 수천 건 중
  * 50건)이고, 오른쪽은 이 사업의 사실이라 검색어를 바꿨다고 사라지면 안 된다 — 이 창을
  * 좌우로 가른 이유가 바로 그 목록을 눈에 두는 것이다.
+ *
+ * **원장이 비워 둔 칸은 오른쪽에서 채운다**(2026-09-10 사용자 지정). 그 전에는 빈 칸이 있는
+ * 대상을 아예 고르지 못하게 막고 "원장에서 채운 뒤 담으라"고 했는데, 담당자가 명단을 꾸리다
+ * 말고 원장 화면으로 나갔다가 돌아와야 했다 — 창을 떠나면 지금까지 고른 것이 사라진다.
+ * 담는 문 앞에서 한 번 묻는다는 규칙은 그대로이고, **묻는 방식이 차단에서 입력으로** 바뀐 것이다.
+ * 채운 값은 이 창이 들고 있다가 담을 때 원장에 반영한다(값의 집은 여전히 원장이다).
  */
 export interface RosterRightRow {
   /** `existing`은 이미 담긴 줄(이 창에서 내리지 못한다), `draft`는 이번에 담을 줄. */
@@ -30,13 +40,19 @@ export interface RosterRightRow {
   loginName: string | null
   email: string | null
   phone: string | null
+  /**
+   * **원장이 비워 둔 칸** — 이 줄에서 그 칸만 입력으로 선다.
+   *
+   * 지금 값이 아니라 **원장의 값**으로 정해지는 것이 요점이다. 담당자가 한 글자 적는 순간
+   * 그 칸이 입력에서 글자로 바뀌면 이어서 고칠 수 없고, 반대로 원장이 답한 칸까지 열어 두면
+   * 이 창이 원장 수정 화면이 된다 — 고치는 자리는 원장 하나다.
+   */
+  gaps: PersonField[]
 }
 
 export interface RosterPick {
   /** 왼쪽 기둥 — 검색 결과 중 아직 담기지도, 이번에 고르지도 않은 줄. */
   left: MasterCandidate[]
-  /** 그중 실제로 담을 수 있는 줄 수(원장이 갖춰진 것). [전체 넣기]가 이 값을 본다. */
-  movable: number
   /** 오른쪽 기둥 — 이번에 담을 줄이 위, 이미 담긴 줄이 아래. */
   right: RosterRightRow[]
   /** 확정하면 명단에 담길 대상. `담기` 버튼이 세는 값이다. */
@@ -50,6 +66,12 @@ export interface RosterPick {
   moveAllRight: () => void
   moveAllLeft: () => void
   reset: () => void
+  /** 오른쪽 줄의 빈 칸에 값을 적는다. */
+  patch: (id: string, field: PersonField, value: string) => void
+  /** 담기 전에 원장에 반영할 값 — 원장이 비워 둔 칸만 담긴다. */
+  fills: LedgerFill[]
+  /** 아직 빈 칸이 남은 줄의 이름. 비어 있어야 담을 수 있다. */
+  pending: string[]
 }
 
 export function useRosterPick(
@@ -59,6 +81,14 @@ export function useRosterPick(
 ): RosterPick {
   /** 고른 대상은 후보 객체 그대로 든다 — 오른쪽 줄도 이름·연락처를 보여 줘야 한다. */
   const [staged, setStaged] = useState<MasterCandidate[]>([])
+  /**
+   * 담당자가 오른쪽에서 적은 값(원장 행 id → 칸).
+   *
+   * 후보 객체를 고쳐 들지 않고 따로 두는 이유는 **무엇이 원장의 값이고 무엇이 이번에 적은
+   * 값인지**를 끝까지 가를 수 있어야 하기 때문이다 — 원장에 반영할 것은 뒤엣것뿐이다.
+   * 되돌린 줄의 입력도 지우지 않는다(다시 올리면 적던 값이 그대로 선다).
+   */
+  const [typed, setTyped] = useState<Record<string, Partial<Record<PersonField, string>>>>({})
   const [checkedLeft, setCheckedLeft] = useState<string[]>([])
   const [checkedRight, setCheckedRight] = useState<string[]>([])
 
@@ -69,16 +99,24 @@ export function useRosterPick(
   }, [candidates, staged])
 
   const right = useMemo<RosterRightRow[]>(() => {
-    // 이번에 올린 줄이 위에 선다 — 그 줄만 아직 확정되지 않았으므로, 이미 담긴 수십 건
-    // 아래로 밀리면 담당자가 방금 무엇을 골랐는지 찾으러 스크롤해야 한다.
-    const fresh: RosterRightRow[] = staged.map((c) => ({
-      kind: 'draft',
-      id: c.id,
-      name: c.name,
-      loginName: c.loginName,
-      email: c.email,
-      phone: c.phone,
-    }))
+    // 이번에 올린 줄이 위에 선다 — 그 줄만 아직 확정되지 않았고 채울 칸도 거기 있으므로,
+    // 이미 담긴 수십 건 아래로 밀리면 담당자가 무엇을 적어야 하는지 찾으러 스크롤해야 한다.
+    const fresh: RosterRightRow[] = staged.map((c) => {
+      const gaps = ledgerGaps(c)
+      const mine = typed[c.id] ?? {}
+      // 원장이 답한 칸은 원장 값이 그대로 서고, 비워 둔 칸만 이 창이 받는다.
+      const value = (field: PersonField, fromLedger: string | null) =>
+        gaps.includes(field) ? (mine[field] ?? '') : fromLedger
+      return {
+        kind: 'draft',
+        id: c.id,
+        name: c.name,
+        loginName: value('name', c.loginName),
+        email: value('email', c.email),
+        phone: value('phone', c.phone),
+        gaps,
+      }
+    })
     const kept: RosterRightRow[] = existing.map((r) => ({
       kind: 'existing',
       id: r.master_id,
@@ -86,9 +124,12 @@ export function useRosterPick(
       loginName: r.contactName,
       email: r.email,
       phone: r.phone,
+      // 이미 담긴 줄은 이 창이 손대지 않는다 — 빈 칸이 있어도 그것은 지난 사실이고,
+      // 고치는 자리는 원장이다(여기서 열면 담는 창이 원장 수정 화면이 된다).
+      gaps: [],
     }))
     return [...fresh, ...kept]
-  }, [existing, staged])
+  }, [existing, staged, typed])
 
   const toggleLeft = useCallback(
     (id: string) =>
@@ -96,20 +137,14 @@ export function useRosterPick(
     [],
   )
 
-  /**
-   * 담기는 **원장이 갖춰진 줄만** 옮긴다(2026-09-10).
-   *
-   * 화면이 이미 그 줄을 못 고르게 막고 있지만 판정을 여기에도 둔다 — 화면의 잠금은 보이는
-   * 것이고, 무엇이 실제로 담기는가는 이 함수가 답한다. 특히 [전체 넣기]는 체크를 거치지
-   * 않으므로 여기서 걸러야 게이트가 성립한다.
-   */
+  const patch = useCallback((id: string, field: PersonField, value: string) => {
+    setTyped((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }))
+  }, [])
+
   const moveRight = useCallback(() => {
     setStaged((prev) => {
       const has = new Set(prev.map((c) => c.id))
-      return [
-        ...prev,
-        ...left.filter((c) => checkedLeft.includes(c.id) && !has.has(c.id) && isLedgerReady(c)),
-      ]
+      return [...prev, ...left.filter((c) => checkedLeft.includes(c.id) && !has.has(c.id))]
     })
     setCheckedLeft([])
   }, [checkedLeft, left])
@@ -127,7 +162,7 @@ export function useRosterPick(
   const moveAllRight = useCallback(() => {
     setStaged((prev) => {
       const has = new Set(prev.map((c) => c.id))
-      return [...prev, ...left.filter((c) => !has.has(c.id) && isLedgerReady(c))]
+      return [...prev, ...left.filter((c) => !has.has(c.id))]
     })
     setCheckedLeft([])
   }, [left])
@@ -139,13 +174,45 @@ export function useRosterPick(
 
   const reset = useCallback(() => {
     setStaged([])
+    setTyped({})
     setCheckedLeft([])
     setCheckedRight([])
   }, [])
 
+  /** 그 줄에서 아직 비어 있는 칸. 원장이 답한 칸은 애초에 묻지 않는다. */
+  const missing = useCallback(
+    (c: MasterCandidate) => ledgerGaps(c).filter((f) => !(typed[c.id]?.[f] ?? '').trim()),
+    [typed],
+  )
+
+  const pending = useMemo(
+    () => staged.filter((c) => missing(c).length > 0).map((c) => c.name),
+    [missing, staged],
+  )
+
+  /**
+   * 원장에 반영할 값.
+   *
+   * 담기는 **원장이 비워 둔 칸만** 담는다 — 원장이 이미 답한 칸은 이 창에 입력조차 서지 않으므로
+   * 여기 올 수 없고, 그래서 이 창이 원장의 값을 덮어쓸 경로가 구조적으로 없다.
+   */
+  const fills = useMemo<LedgerFill[]>(
+    () =>
+      staged
+        .map((c) => {
+          const values: Partial<Record<PersonField, string>> = {}
+          for (const field of ledgerGaps(c)) {
+            const v = (typed[c.id]?.[field] ?? '').trim()
+            if (v) values[field] = v
+          }
+          return { masterId: c.id, values }
+        })
+        .filter((f) => Object.keys(f.values).length > 0),
+    [staged, typed],
+  )
+
   return {
     left,
-    movable: left.filter(isLedgerReady).length,
     right,
     staged,
     checkedLeft,
@@ -161,5 +228,8 @@ export function useRosterPick(
     moveAllRight,
     moveAllLeft,
     reset,
+    patch,
+    fills,
+    pending,
   }
 }

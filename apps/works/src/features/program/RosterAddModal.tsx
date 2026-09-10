@@ -86,17 +86,25 @@ export function RosterAddModal({
   const fail = (e: unknown, fallback: string) =>
     toast.show(e instanceof Error ? e.message : fallback, 'danger')
 
-  const addStaged = () =>
+  const addStaged = () => {
+    // 원장에 반영될 건수는 담기 전에 읽는다 — `close()`가 창 상태를 비우기 때문이다.
+    const filled = pick.fills.length
     add.mutate(
-      { master, masterIds: pick.staged.map((c) => c.id) },
+      { master, masterIds: pick.staged.map((c) => c.id), fills: pick.fills },
       {
         onSuccess: (n) => {
-          toast.show(`${n}건을 ${config.rosterLabel}에 담았습니다.`, 'success')
+          toast.show(
+            filled > 0
+              ? `${n}건을 ${config.rosterLabel}에 담았습니다(원장 보완 ${filled}건).`
+              : `${n}건을 ${config.rosterLabel}에 담았습니다.`,
+            'success',
+          )
           close()
         },
         onError: (e) => fail(e, '추가에 실패했습니다. 권한을 확인하세요.'),
       },
     )
+  }
 
   /** 저장 한 번에 대조 한 번. 값을 고치면 결과가 사라지므로 다시 눌러야 담긴다. */
   const runCheck = async () => {
@@ -153,7 +161,7 @@ export function RosterAddModal({
       title={mode === 'pick' ? `${spec.label} 추가` : `${spec.label} 신규 등록`}
       help={
         mode === 'pick'
-          ? spec.pickHelp
+          ? `${spec.pickHelp} 원장이 비워 둔 칸은 오른쪽 표에서 채울 수 있고, 채운 값은 원장에 함께 반영됩니다.`
           : '원장에 새 행을 만들고 그대로 담습니다. 명단에 담긴 대상은 계정을 열 수 있어야 하므로 네 칸을 모두 받습니다.'
       }
       size="3xl"
@@ -164,7 +172,12 @@ export function RosterAddModal({
             {mode === 'pick' ? '취소' : '목록으로'}
           </Button>
           {mode === 'pick' ? (
-            <Button onClick={addStaged} disabled={busy || pick.staged.length === 0}>
+            <Button
+              onClick={addStaged}
+              // 빈 칸이 남은 줄이 있으면 담지 않는다 — 왜 못 누르는지는 오른쪽 기둥 아래
+              // 한 줄이 답한다(버튼만 흐려 두면 어느 줄이 모자란지 알 수 없다).
+              disabled={busy || pick.staged.length === 0 || pick.pending.length > 0}
+            >
               {add.isPending ? '담는 중…' : `담기 (${pick.staged.length})`}
             </Button>
           ) : (
@@ -186,6 +199,7 @@ export function RosterAddModal({
           search={search}
           onSearchChange={setSearch}
           pick={pick}
+          busy={busy}
           footer={
             // 찾아본 뒤에야 닿는 자리다 — 목록 위에 두면 찾기 전에 만들기를 고르게 된다.
             <div className="space-y-1 text-body-sm text-gray-600">

@@ -156,7 +156,7 @@ function MatchNotices({
   onDecide: (line: number, decision: BulkDecision) => void
 }) {
   return (
-    <div className="space-y-2 rounded-radius-md border border-warning-200 bg-warning-50 px-3 py-2.5">
+    <div className="space-y-2 rounded-radius-md border border-warning-border bg-warning-subtle px-3 py-2.5">
       <p className="text-body font-semibold text-gray-900">
         확인이 필요한 줄이 {notices.length}건 있습니다.
       </p>

@@ -27,7 +27,7 @@ export function DuplicateNotice({
 }) {
   const to = detailPath?.(match.id)
   return (
-    <div className="rounded-radius-md border border-warning-200 bg-warning-50 px-3 py-2.5">
+    <div className="rounded-radius-md border border-warning-border bg-warning-subtle px-3 py-2.5">
       <p className="text-body font-semibold text-gray-900">
         이미 등록된 {noun}일 수 있습니다 — {match.hits}개 항목이 일치합니다.
       </p>

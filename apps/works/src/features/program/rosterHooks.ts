@@ -5,6 +5,12 @@ import {
   loadLedgerFacts,
   type MasterCandidate,
 } from '@/features/program/participantHooks'
+import {
+  isLedgerReady,
+  ledgerGaps,
+  type LedgerFill,
+  type PersonField,
+} from '@/features/program/participantPerson'
 import { PARTICIPANT_PERSONAS, type MasterTable } from '@/features/program/participantPersona'
 import { SHARED_TABLES, useProgramWorkspace } from '@/features/program/workspace'
 
@@ -163,16 +169,84 @@ export function useRosterCandidates(
 }
 
 /**
+ * 담기 전에 **원장의 빈 칸을 채운다**(2026-09-10 사용자 지정).
+ *
+ * 담당자가 명단 담기 창에서 적은 값이며, 원장이 이미 답한 칸은 애초에 입력이 서지 않아 여기
+ * 오지 않는다 — 그래서 이 경로가 원장의 값을 덮어쓸 수 없다. 그 판정을 **쓰기 직전에 한 번 더**
+ * 한다: 창이 열려 있던 사이 다른 사람이 그 칸을 채웠을 수 있고, 그때 이기는 쪽은 원장에 먼저
+ * 앉은 값이어야 한다(창을 연 시점의 빈 칸 목록으로 쓰면 남의 값을 덮는다).
+ *
+ * **쓰고 나서 되읽는다.** PostgREST의 UPDATE는 RLS에 막혀 0행을 고쳐도 오류를 내지 않으므로,
+ * 원장 쓰기 권한이 없는 담당자에게는 조용히 아무 일도 일어나지 않는다 — 그 침묵을 그대로 두면
+ * 값이 없는 채로 명단에 담기고, 계정을 열 수 없는 줄이 다시 생긴다. 되읽어 아직 비어 있으면
+ * **명단에는 아무것도 담지 않고** 멈춘다(순서를 원장 먼저로 둔 이유가 이것이다).
+ */
+async function fillLedger(master: MasterTable, fills: LedgerFill[]): Promise<void> {
+  if (fills.length === 0) return
+  const { ledger } = PARTICIPANT_PERSONAS[master]
+  const ids = fills.map((f) => f.masterId)
+
+  /** 지금 원장이 답하는 값. 창을 연 시점이 아니라 **쓰기 직전**의 사실이다. */
+  const read = async () => {
+    const { data, error } = await supabase.from(ledger.table).select(ledger.columns).in('id', ids)
+    if (error) throw error
+    const now = new Map<string, ReturnType<typeof ledger.map>>()
+    for (const raw of (data ?? []) as unknown as Record<string, unknown>[]) {
+      now.set(String(raw.id), ledger.map(raw))
+    }
+    return now
+  }
+
+  const before = await read()
+  for (const fill of fills) {
+    const facts = before.get(fill.masterId)
+    if (!facts) continue
+    const empty = new Set(ledgerGaps(facts))
+    const payload: Record<string, unknown> = {}
+    for (const [field, raw] of Object.entries(fill.values) as [PersonField, string][]) {
+      // 담당자가 창을 열어 둔 사이 다른 사람이 그 칸을 채웠을 수 있다. 이기는 쪽은 원장에 먼저
+      // 앉은 값이다 — 이 창은 비어 있던 자리를 메울 뿐 고치지 않는다.
+      if (!empty.has(field)) continue
+      // 연락처는 숫자만 저장한다(등록 폼·업로드와 같은 규칙 — 표기 차이로 중복 판정이 갈린다).
+      const value = field === 'phone' ? raw.replace(/\D/g, '') : raw.trim()
+      if (value) payload[ledger.person[field]] = value
+    }
+    if (Object.keys(payload).length === 0) continue
+    const { error } = await supabase.from(ledger.table).update(payload).eq('id', fill.masterId)
+    if (error) throw error
+  }
+
+  const after = await read()
+  const stuck = [...after.values()].filter((facts) => !isLedgerReady(facts))
+  if (stuck.length > 0) {
+    throw new Error(
+      `${stuck.map((f) => f.name).join(', ')} — 원장에 값을 쓰지 못했습니다. ` +
+        '원장 수정 권한을 확인해 주세요(명단에는 담지 않았습니다).',
+    )
+  }
+}
+
+/**
  * 원장에서 고른 대상을 명단에 담는다. **계정은 세우지 않는다** — 참가자 목록은 참가 사실
  * 하나만 답하는 자리이고, 게스트 계정은 이 명단에서 **골라서** 만드는 다음 결정이다
  * (자동으로 세우면 담는 일과 문을 여는 일이 다시 한 동작이 된다).
+ *
+ * 다만 **원장의 빈 칸은 담기 직전에 채운다**(2026-09-10) — 명단에 담긴 대상은 계정을 열 수
+ * 있어야 하고, 담당자가 그 값을 아는 자리는 이 창이다. 값을 쓰는 곳은 여전히 원장 하나이고,
+ * 이 훅은 창에서 받은 것을 그리로 옮길 뿐이다.
  */
 export function useAddRosterEntries(programId: string) {
   const config = useProgramWorkspace()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (input: { master: MasterTable; masterIds: string[] }): Promise<number> => {
+    mutationFn: async (input: {
+      master: MasterTable
+      masterIds: string[]
+      /** 원장이 비워 둔 칸에 채울 값. 담기 전에 원장에 반영된다. */
+      fills: LedgerFill[]
+    }): Promise<number> => {
       if (input.masterIds.length === 0) return 0
+      await fillLedger(input.master, input.fills)
       const { error } = await supabase.from(SHARED_TABLES.participantEntries).insert(
         input.masterIds.map((masterId) => ({
           entity_key: config.entityKey,
@@ -187,6 +261,8 @@ export function useAddRosterEntries(programId: string) {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: [config.key, 'roster', programId] })
       void qc.invalidateQueries({ queryKey: [config.key, 'roster-candidates', programId] })
+      // 원장을 고쳤을 수 있다 — 그 값을 읽는 목록(계정 생성 창의 후보)도 함께 상한다.
+      void qc.invalidateQueries({ queryKey: [config.key, 'master-candidates'] })
     },
   })
 }
