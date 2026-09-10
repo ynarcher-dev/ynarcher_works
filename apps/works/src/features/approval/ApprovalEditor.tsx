@@ -11,9 +11,11 @@ import {
 } from '@ynarcher/ui'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAuthStore } from '@/auth/authStore'
+import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { PendingMaterialPanel } from '@/features/networks/PendingMaterialPanel'
 import { usePendingMaterials } from '@/features/networks/pendingMaterials'
 import { ApprovalDocLinkField, type DocLinkDraft } from '@/features/approval/ApprovalDocLinkField'
+import { ApprovalLinkPanel } from '@/features/approval/ApprovalLinkPanel'
 import { ApprovalFieldsForm } from '@/features/approval/ApprovalFieldsForm'
 import { ApprovalInfoTable } from '@/features/approval/ApprovalInfoTable'
 import { approvalHeaderPairs } from '@/features/approval/approvalHeader'
@@ -22,6 +24,7 @@ import {
   ApprovalProgramField,
   type ProgramLinkDraft,
 } from '@/features/approval/ApprovalProgramField'
+import { ApprovalProgramPanel } from '@/features/approval/ApprovalProgramPanel'
 import { useDocumentLinks, useSyncDocumentLinks } from '@/features/approval/documentLinkApi'
 import { useApprovalProgramLinks, useSyncProgramLinks } from '@/features/approval/programLinkApi'
 import {
@@ -84,16 +87,21 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
   const saveDraft = useSaveApprovalDraft()
   const resubmit = useResubmitApproval()
   const pending = usePendingMaterials()
-  // 되돌아온 문서를 고치러 온 자리인가 — 임시저장 수정과 화면은 같고 저장 경로만 다르다.
-  const isResubmit = editing?.status === 'REJECTED'
+  // 보완 요청 문서를 고치러 온 자리인가 — 임시저장 수정과 화면은 같고 저장 경로만 다르다.
+  const isResubmit = editing?.status === 'REVISION_REQUIRED'
   // 고치는 문서라면 이미 걸린 연동·참조를 실어 와야 한다(새 기안이면 빈 배열).
   const { data: savedPrograms } = useApprovalProgramLinks(documentId)
   const { data: savedDocLinks } = useDocumentLinks(documentId)
   const syncPrograms = useSyncProgramLinks()
   const syncDocLinks = useSyncDocumentLinks()
 
-  const activeForms = useMemo(() => (forms ?? []).filter((f) => f.is_active), [forms])
-  const groups = useMemo(() => groupFormsByCategory(activeForms), [activeForms])
+  // 보완 중에는 기안 당시 양식을 그대로 써야 한다. 이후 비활성화된 양식도 이 문서에서는
+  // 사라지면 안 되므로 현재 문서의 양식 한 건은 선택 목록에 남긴다.
+  const availableForms = useMemo(
+    () => (forms ?? []).filter((f) => f.is_active || f.id === editing?.form_id),
+    [forms, editing?.form_id],
+  )
+  const groups = useMemo(() => groupFormsByCategory(availableForms), [availableForms])
 
   const [category, setCategory] = useState('')
   const [formId, setFormId] = useState('')
@@ -118,13 +126,18 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
         .sort((a, b) => a.sort_order - b.sort_order)
         .map((r) => r.user_id),
     )
-    // 결재는 순번이 곧 차례라 정렬해서 싣는다(합의는 병렬이라 적힌 차례 그대로).
+    // 현재 회차의 자리와 앞 회차에서 유지된 승인 도장을 합친 결재선만 싣는다. 회차 원장을
+    // 그대로 펴면 재상신 횟수만큼 같은 자리가 중복된다.
+    const visibleLines = stampLinesForRound(
+      editing.approval_lines,
+      maxRound(editing.approval_lines),
+    )
     const next = { ...EMPTY_LINES }
     for (const kind of LINE_KIND_ORDER) {
-      next[kind] = editing.approval_lines
-        .filter((l) => (l.kind ?? 'APPROVAL') === kind)
-        .sort((a, b) => a.step_order - b.step_order)
-        .map((l) => l.approver_id)
+      next[kind] = visibleLines
+        .filter((l) => l.kind === kind)
+        .sort((a, b) => a.stepOrder - b.stepOrder)
+        .map((l) => l.approverId)
         .filter((id): id is string => Boolean(id))
     }
     setLines(next)
@@ -162,7 +175,7 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
   }, [savedDocLinks])
 
   const categoryForms = groups.find((g) => g.category === category)?.forms ?? []
-  const form = activeForms.find((f) => f.id === formId) ?? null
+  const form = availableForms.find((f) => f.id === formId) ?? null
   const fields = useMemo(() => parseFields(form?.current_version?.fields), [form])
 
   const me = useMemo(() => (employees ?? []).find((e) => e.id === uid) ?? null, [employees, uid])
@@ -189,7 +202,7 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
 
   const selectForm = (id: string) => {
     setFormId(id)
-    const next = activeForms.find((f) => f.id === id)
+    const next = availableForms.find((f) => f.id === id)
     setValues(emptyValues(parseFields(next?.current_version?.fields)))
   }
 
@@ -205,23 +218,21 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
   const amountLabel = primaryAmountLabel(fields)
 
   /**
-   * 되돌아온 사연 — 누가 왜 되돌렸고 다시 올리면 어디서부터 받는가.
+   * 보완 요청 — 누가 무엇을 고쳐 달라고 했는가.
    *
    * **이 안내는 접지 않는다.** 지금 이 화면에 서 있는 이유이자 다음에 일어날 일을 말하는
    * 차단 안내라, 말풍선 뒤에 숨기면 고칠 곳을 모른 채 다시 올리게 된다(안내 문구를 접는
    * 규칙의 예외 — CLAUDE.md '안내 문구는 접는다').
    */
-  const returnInfo = useMemo(() => {
+  const revisionInfo = useMemo(() => {
     if (!isResubmit || !editing) return null
     const stamps = stampLinesForRound(editing.approval_lines, maxRound(editing.approval_lines))
-    const returned = stamps.find((s) => s.decision === 'REJECTED')
-    if (!returned) return null
-    const name = (employees ?? []).find((e) => e.id === returned.approverId)?.name ?? '결재자'
+    const requested = stamps.find((s) => s.decision === 'REVISION_REQUESTED')
+    if (!requested) return null
+    const name = (employees ?? []).find((e) => e.id === requested.approverId)?.name ?? '결재자'
     return {
       by: name,
-      comment: returned.comment,
-      // stampRounds가 만든 '→ 3번부터' 표기를 그대로 쓴다 — 결재선 표와 같은 숫자를 말해야 한다.
-      where: (returned.note ?? '→ 처음부터').replace(/^(반송 )?→ /, ''),
+      comment: requested.comment,
     }
   }, [isResubmit, editing, employees])
 
@@ -235,9 +246,8 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
       return
     }
 
-    // 재상신은 값만 고쳐 같은 문서를 다시 올린다 — 결재선·참조자·양식은 그대로이고,
-    // 어느 순번부터 다시 받을지는 되돌린 사람의 지정을 서버가 읽는다. 임시저장 경로와
-    // 나눈 이유는 save_approval_draft가 결재선을 통째로 지우고 다시 넣기 때문이다.
+    // 재상신은 값만 고쳐 같은 문서를 다시 올린다. 결재선·참조자·양식은 그대로이고,
+    // 서버가 보완 요청 자리와 아직 처리하지 않은 자리만 다음 회차에 세운다.
     if (isResubmit && editing) {
       const missing = missingRequired(fields, values)
       if (missing.length > 0) {
@@ -250,7 +260,6 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
           title: title.trim(),
           fieldValues: pruneValues(fields, values),
         })
-        if (pending.count > 0) await pending.flush(editing.id, () => APPROVAL_ATTACHMENT_TYPE)
         toast.show('문서를 재상신했습니다.', 'success')
         onSaved(editing.id)
       } catch {
@@ -317,8 +326,8 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
         back={<BackButton onClick={onCancel}>문서함</BackButton>}
         actions={
           <>
-          {/* 되돌아온 문서에는 임시저장이 없다 — 이미 조직에 나갔던 문서라 되돌릴 '아직
-              안 낸 상태'가 없고, 고치다 말면 그냥 되돌아온 채로 남는다. */}
+          {/* 보완 중 문서에는 임시저장이 없다 — 이미 조직에 나갔던 문서라 되돌릴 '아직
+              안 낸 상태'가 없고, 고치다 말면 그냥 보완 중인 채로 남는다. */}
           {!isResubmit && (
             <Button variant="secondary" onClick={() => void submit(true)} disabled={busy}>
               임시저장
@@ -327,7 +336,7 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
           {/* 버튼은 이 화면에서 하는 일의 이름으로 적는다 — '상신'은 문서가 결재선을 타고
               올라가는 결과 쪽 용어라, 지금 기안서를 쓰고 있는 손에게는 '기안하기'가 자기가
               누르는 일의 이름이다(임시저장과 짝이 맞는다). 결과를 알리는 토스트·상태 표기는
-              도메인 용어인 '상신'을 그대로 쓴다. 되돌아온 문서만은 '재상신'이 그대로 손이
+              도메인 용어인 '상신'을 그대로 쓴다. 보완 중 문서만은 '재상신'이 그대로 손이
               하는 일의 이름이다 — 새로 쓰는 것이 아니라 같은 문서를 다시 올린다. */}
           <Button onClick={() => void submit(false)} disabled={busy}>
             {isResubmit ? '재상신' : '기안하기'}
@@ -336,15 +345,15 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
         }
       />
 
-      {returnInfo && (
+      {revisionInfo && (
         <div className="rounded-radius-md border border-warning-border bg-warning-subtle px-4 py-3">
           <p className="text-body font-medium text-gray-900">
-            {returnInfo.by} 님이 되돌린 문서입니다. 고쳐서 다시 올리면 {returnInfo.where} 결재를
-            받습니다.
+            {revisionInfo.by} 님이 보완을 요청했습니다. 수정 후 재상신하면 보완을 요청한 자리부터
+            결재가 이어집니다.
           </p>
-          {returnInfo.comment && (
+          {revisionInfo.comment && (
             <p className="mt-1 whitespace-pre-wrap text-body-sm text-gray-700">
-              사유: {returnInfo.comment}
+              보완 내용: {revisionInfo.comment}
             </p>
           )}
         </div>
@@ -370,6 +379,7 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
                         className="min-w-0 flex-1"
                         value={category}
                         onChange={(e) => selectCategory(e.target.value)}
+                        disabled={isResubmit}
                       >
                         <option value="">분류 선택</option>
                         {groups.map((g) => (
@@ -383,7 +393,7 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
                         className="min-w-0 flex-1"
                         value={formId}
                         onChange={(e) => selectForm(e.target.value)}
-                        disabled={!category}
+                        disabled={!category || isResubmit}
                       >
                         <option value="">양식 선택</option>
                         {categoryForms.map((f) => (
@@ -420,7 +430,7 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
             readOnly={isResubmit}
             help={
               isResubmit
-                ? '되돌린 사람이 어느 순번부터 다시 받을지 지정했기 때문에, 재상신에서는 결재선을 고칠 수 없습니다. 결재선을 바꿔야 한다면 새로 기안하십시오.'
+                ? '보완은 문서 내용만 고치는 단계입니다. 기존 도장과 이어질 순서를 보존하기 위해 결재선은 변경할 수 없습니다.'
                 : undefined
             }
           />
@@ -464,18 +474,34 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
             도장이 찍히기 시작한 문서에 나중에 무언가가 붙으면 결재자가 무엇을 보고 승인했는지
             판정할 근거가 사라진다. 순서는 상세 화면의 패널 순서와 같다. */}
         <div className="space-y-4 lg:col-span-1">
-          <PendingMaterialPanel
-            slot={APPROVAL_ATTACHMENT_TYPE}
-            pending={pending}
-            title="첨부 파일"
-          />
-          <ApprovalProgramField value={programLinks} onChange={setProgramLinks} />
-          <ApprovalDocLinkField
-            documentId={documentId}
-            userId={uid}
-            value={docLinks}
-            onChange={setDocLinks}
-          />
+          {isResubmit && editing ? (
+            <>
+              {/* 보완 중인 문서는 이미 id가 있으므로 첨부를 즉시 고칠 수 있다. 연동·상호
+                  참조는 결재선과 마찬가지로 기존 판단의 범위를 바꾸므로 읽기만 한다. */}
+              <MaterialPanel
+                targetType={APPROVAL_ATTACHMENT_TYPE}
+                targetId={editing.id}
+                title="첨부 파일"
+              />
+              <ApprovalProgramPanel documentId={editing.id} />
+              <ApprovalLinkPanel documentId={editing.id} />
+            </>
+          ) : (
+            <>
+              <PendingMaterialPanel
+                slot={APPROVAL_ATTACHMENT_TYPE}
+                pending={pending}
+                title="첨부 파일"
+              />
+              <ApprovalProgramField value={programLinks} onChange={setProgramLinks} />
+              <ApprovalDocLinkField
+                documentId={documentId}
+                userId={uid}
+                value={docLinks}
+                onChange={setDocLinks}
+              />
+            </>
+          )}
         </div>
       </div>
     </div>

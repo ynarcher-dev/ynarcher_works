@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  actionableLineFor,
   countByProgress,
   inBox,
   isLastPending,
@@ -141,6 +142,31 @@ describe('isMyTurn', () => {
     expect(isMyTurn(lines, ME)).toBe(false)
   })
 
+  it('보완 요청 중에는 다른 구분을 포함해 누구도 처리할 수 없다', () => {
+    const lines = [
+      { approver_id: OTHER, step_order: 1, decision: 'REVISION_REQUESTED' as const },
+      { approver_id: ME, step_order: 1, decision: 'PENDING' as const, kind: 'AGREEMENT' as const },
+    ]
+    expect(isMyTurn(lines, ME)).toBe(false)
+  })
+
+  it('같은 사람이 여러 번 서도 현재 순번의 자리부터 하나씩 처리한다', () => {
+    const lines = [
+      { id: 'later', approver_id: ME, step_order: 3, decision: 'PENDING' as const },
+      { id: 'first', approver_id: ME, step_order: 1, decision: 'PENDING' as const },
+      { id: 'middle', approver_id: OTHER, step_order: 2, decision: 'PENDING' as const },
+    ]
+    expect(actionableLineFor(lines, ME)?.id).toBe('first')
+    expect(
+      actionableLineFor(
+        lines.map((line) =>
+          line.id === 'first' ? { ...line, decision: 'APPROVED' as const } : line,
+        ),
+        ME,
+      ),
+    ).toBeUndefined()
+  })
+
   it('구분이 없는 구 데이터는 결재로 본다', () => {
     const lines = [
       { approver_id: OTHER, step_order: 1, decision: 'PENDING' as const },
@@ -150,10 +176,10 @@ describe('isMyTurn', () => {
   })
 })
 
-// 되돌림·재상신(2026-09-05) — 도장은 지우지 않고 회차로 쌓으므로, 회차를 걸지 않으면
-// 1차의 되돌림 한 건이 2차의 모든 차례를 끊고 1차의 잔여 PENDING이 최종 판정을 막는다.
+// 보완·재상신 — 도장은 지우지 않고 회차로 쌓으므로, 회차를 걸지 않으면
+// 1차의 보완 한 건이 2차의 모든 차례를 끊고 1차의 잔여 PENDING이 최종 판정을 막는다.
 describe('회차(round)', () => {
-  it('지난 회차의 반려는 현재 회차의 차례를 끊지 않는다', () => {
+  it('지난 회차의 중단 결정은 현재 회차의 차례를 끊지 않는다', () => {
     const lines = [
       { approver_id: OTHER, step_order: 1, decision: 'APPROVED' as const, round: 1 },
       { approver_id: ME, step_order: 2, decision: 'REJECTED' as const, round: 1 },
@@ -266,6 +292,13 @@ describe('progressBucket', () => {
     expect(progressBucket(row({ status: 'DRAFT', drafter_id: OTHER }), ME)).toBe(null)
   })
 
+  it('보완 요청 문서는 기안자의 보완함에만 선다', () => {
+    expect(progressBucket(row({ status: 'REVISION_REQUIRED', drafter_id: ME }), ME)).toBe(
+      'revision',
+    )
+    expect(progressBucket(row({ status: 'REVISION_REQUIRED', drafter_id: OTHER }), ME)).toBe(null)
+  })
+
   it('임시저장은 결재선이 이미 지정돼 있어도 대기·예정으로 새지 않는다', () => {
     // 상신 전이라 아직 아무의 차례도 아니다 — 결재선을 미리 짜 두었다는 이유로
     // 결재자의 '대기'에 뜨면 처리할 수 없는 문서가 할 일 목록에 선다.
@@ -349,6 +382,7 @@ describe('countByProgress', () => {
       waiting: 1,
       upcoming: 1,
       ongoing: 1,
+      revision: 0,
     })
   })
 
@@ -362,6 +396,7 @@ describe('countByProgress', () => {
       waiting: 0,
       upcoming: 0,
       ongoing: 0,
+      revision: 0,
     })
   })
 })

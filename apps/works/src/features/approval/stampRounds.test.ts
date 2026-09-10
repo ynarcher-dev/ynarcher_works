@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { maxRound, returnTargetsFor, stampLinesForRound, type RoundLine } from './stampRounds'
-
-const ME = 'me'
+import { maxRound, stampLinesForRound, type RoundLine } from './stampRounds'
 
 function line(partial: Partial<RoundLine> & { id: string }): RoundLine {
   return {
@@ -17,8 +15,6 @@ function line(partial: Partial<RoundLine> & { id: string }): RoundLine {
     ...partial,
   }
 }
-
-const nameOf = (id: string | null) => (id ? `이름:${id}` : '-')
 
 describe('maxRound', () => {
   it('가장 큰 회차가 현재 회차다', () => {
@@ -85,9 +81,18 @@ describe('stampLinesForRound', () => {
     expect(stampLinesForRound(lines, 1)[1]?.note).toBe('반송 → 1번부터')
   })
 
-  it('목적지 없는 되돌림은 처음부터라고 적는다', () => {
+  it('새 흐름의 반려는 결재 종료로 적는다', () => {
     const lines = [line({ id: 'a', step_order: 1, decision: 'REJECTED' })]
-    expect(stampLinesForRound(lines, 1)[0]?.note).toBe('→ 처음부터')
+    expect(stampLinesForRound(lines, 1)[0]?.note).toBe('결재 종료')
+  })
+
+  it('보완 요청은 재상신을 기다리는 노란 도장 상태로 전달한다', () => {
+    const lines = [line({ id: 'a', decision: 'REVISION_REQUESTED', comment: '금액 수정' })]
+    expect(stampLinesForRound(lines, 1)[0]).toMatchObject({
+      decision: 'REVISION_REQUESTED',
+      note: '보완 후 재상신',
+      comment: '금액 수정',
+    })
   })
 
   // 순번은 저장된 step_order가 아니라 정렬 후의 자리다 — 임시저장을 고치며 중간이 빠지면
@@ -98,38 +103,5 @@ describe('stampLinesForRound', () => {
       line({ id: 'b', step_order: 5, decision: 'REJECTED', return_to_step: 2 }),
     ]
     expect(stampLinesForRound(lines, 1)[1]?.note).toBe('→ 1번부터')
-  })
-})
-
-describe('returnTargetsFor', () => {
-  it('같은 구분에서 이미 승인한 앞 순번만 되돌릴 수 있다', () => {
-    const lines = [
-      line({ id: 'a', approver_id: 'a', step_order: 1, decision: 'APPROVED' }),
-      line({ id: 'b', approver_id: 'b', step_order: 2, decision: 'APPROVED' }),
-      line({ id: 'me', approver_id: ME, step_order: 3 }),
-      // 아직 처리하지 않은 뒤 순번 — 되돌림이 아니라 건너뛰기라 목록에 서지 않는다.
-      line({ id: 'd', approver_id: 'd', step_order: 4 }),
-      // 다른 구분 — 합의 줄은 '다시 받기' 체크박스가 담당한다.
-      line({ id: 'g', approver_id: 'g', step_order: 1, decision: 'APPROVED', kind: 'AGREEMENT' }),
-    ]
-    const targets = returnTargetsFor(lines, 1, 'APPROVAL', 3, nameOf)
-
-    expect(targets).toEqual([
-      { stepOrder: 1, seq: 1, name: '이름:a' },
-      { stepOrder: 2, seq: 2, name: '이름:b' },
-    ])
-  })
-
-  it('지난 회차의 행은 되돌릴 자리로 서지 않는다', () => {
-    const lines = [
-      line({ id: 'a1', approver_id: 'a', step_order: 1, decision: 'APPROVED', round: 1 }),
-      line({ id: 'me', approver_id: ME, step_order: 2, round: 2 }),
-    ]
-    expect(returnTargetsFor(lines, 2, 'APPROVAL', 2, nameOf)).toEqual([])
-  })
-
-  it('내가 첫 순번이면 되돌릴 곳이 없다', () => {
-    const lines = [line({ id: 'me', approver_id: ME, step_order: 1 })]
-    expect(returnTargetsFor(lines, 1, 'APPROVAL', 1, nameOf)).toEqual([])
   })
 })

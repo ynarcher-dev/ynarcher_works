@@ -1,7 +1,12 @@
 import { Button, Card, IconButton, Input, Modal, TagChip, cn, useToast } from '@ynarcher/ui'
 import { ArrowDown, ArrowUp, ChevronRight, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ApprovalOrgTree, type OrgPerson } from '@/features/approval/ApprovalOrgTree'
+import {
+  appendApprovalSlots,
+  appendUniqueRecipients,
+  removeApprovalSlot,
+} from '@/features/approval/approvalLineDraft'
 import { ApprovalSeqBadge } from '@/features/approval/ApprovalSeqBadge'
 import type { ApprovalLineInput } from '@/features/approval/approvalApi'
 import {
@@ -30,6 +35,7 @@ const SLOT_LABEL: Record<Slot, string> = {
 }
 
 const SLOTS: Slot[] = [...LINE_KIND_ORDER, 'CC']
+const NO_EXCLUSIONS = new Set<string>()
 
 /**
  * 결재선 설정 — 조직에서 사람을 골라 결재 / 합의 / 재무합의 / 참조 네 자리로 보낸다.
@@ -67,15 +73,6 @@ export function ApprovalLineModal({
     setKeyword('')
   }, [open, lines, recipientIds])
 
-  const assigned = useMemo(
-    () => new Set([...LINE_KIND_ORDER.flatMap((k) => draft[k]), ...draftCc]),
-    [draft, draftCc],
-  )
-  // 이미 어느 자리에 배정된 사람만 후보에서 뺀다. **기안자 본인은 빼지 않는다** —
-  // 자기가 올린 문서를 자기가 결재하는 흐름(1인 부서·소액 지출 등)이 실제로 있고,
-  // 기안 도장과 결재 도장은 서로 다른 사실이라 한 사람이 둘 다 찍을 수 있다.
-  const excludeIds = useMemo(() => new Set(assigned), [assigned])
-
   const nameOf = (id: string) => people.get(id)?.name ?? '(알 수 없음)'
   const titleOf = (id: string) => people.get(id)?.title ?? ''
 
@@ -85,18 +82,20 @@ export function ApprovalLineModal({
       toast.show('조직에서 사람을 먼저 고르세요.', 'warning')
       return
     }
-    if (slot === 'CC') setDraftCc((prev) => [...prev, ...ids])
-    else setDraft((prev) => ({ ...prev, [slot]: [...prev[slot], ...ids] }))
+    // 결재선은 **사람이 아니라 자리**를 담는다. 같은 사람이 실무 검토와 최종 결재처럼
+    // 여러 순번을 맡을 수 있으므로 매번 새 자리로 붙인다. 참조는 도장 자리가 아니고 DB도
+    // (문서, 사람) 하나만 허용하므로 중복만 접는다.
+    if (slot === 'CC') setDraftCc((prev) => appendUniqueRecipients(prev, ids))
+    else setDraft((prev) => appendApprovalSlots(prev, slot, ids))
     setChecked(new Set())
   }
 
-  const removeFrom = (slot: Slot, id: string) => {
+  const removeFrom = (slot: Slot, id: string, index?: number) => {
     if (slot === 'CC') setDraftCc((prev) => prev.filter((x) => x !== id))
     else
-      setDraft((prev) => ({
-        ...prev,
-        [slot]: prev[slot].filter((x) => x !== id),
-      }))
+      // 같은 사람이 여러 자리에 설 수 있으므로 id로 지우면 그 사람의 모든 자리가
+      // 사라진다. 눌린 순번 한 자리만 제거한다.
+      setDraft((prev) => removeApprovalSlot(prev, slot, index ?? -1))
   }
 
   /**
@@ -156,7 +155,9 @@ export function ApprovalLineModal({
               keyword={keyword}
               checked={checked}
               onCheckedChange={setChecked}
-              excludeIds={excludeIds}
+              // 결재선에는 같은 사람을 여러 번 세울 수 있다. 선택할 때마다 새 자리로
+              // 붙으므로 이미 배정됐다는 이유로 조직 후보에서 숨기지 않는다.
+              excludeIds={NO_EXCLUSIONS}
               onPeopleLoaded={setPeople}
             />
           </div>
@@ -193,7 +194,7 @@ export function ApprovalLineModal({
                 LINE_KIND_ORDER.flatMap((kind) =>
                   draft[kind].map((id, i) => (
                     <div
-                      key={`${kind}-${id}`}
+                      key={`${kind}-${i}-${id}`}
                       className="flex items-center gap-2 border-b border-gray-100 px-3 py-2 last:border-b-0"
                     >
                       {/* 순번은 세 구분에 모두 붙는다 — 셋 다 자기 명단 안에서 순차로 흐르므로
@@ -229,7 +230,7 @@ export function ApprovalLineModal({
                         variant="ghost"
                         danger
                         label="제외"
-                        onClick={() => removeFrom(kind, id)}
+                        onClick={() => removeFrom(kind, id, i)}
                         icon={<X size={14} />}
                       />
                     </div>

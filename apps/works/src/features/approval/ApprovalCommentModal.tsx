@@ -9,7 +9,7 @@ export interface ApprovalCommentView {
   seq: number
   name: string
   title: string
-  decision: 'APPROVED' | 'REJECTED'
+  decision: 'APPROVED' | 'REVISION_REQUESTED' | 'REJECTED'
   decidedAt: string | null
   comment: string
 }
@@ -54,8 +54,18 @@ export function ApprovalCommentModal({ view, onClose }: ApprovalCommentModalProp
           <span className={approvalText.head}>{LINE_KIND_LABEL[view.kind]}</span>
           <span className={approvalText.primary}>{view.name}</span>
           {view.title && <span className={approvalText.meta}>{view.title}</span>}
-          <Badge tone={DOC_STATUS_TONE[view.decision]}>
-            {view.decision === 'APPROVED' ? '승인' : '반려'}
+          <Badge
+            tone={
+              view.decision === 'REVISION_REQUESTED'
+                ? 'warning'
+                : DOC_STATUS_TONE[view.decision]
+            }
+          >
+            {view.decision === 'APPROVED'
+              ? '승인'
+              : view.decision === 'REVISION_REQUESTED'
+                ? '보완'
+                : '반려'}
           </Badge>
           {view.decidedAt && (
             <span className={cn('ml-auto tabular-nums', approvalText.meta)}>

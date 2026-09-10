@@ -30,8 +30,8 @@ import {
 } from '@/features/approval/config'
 import { formatMoney, parseFields, tableRows } from '@/features/approval/fields'
 import { ApprovalCommentModal } from '@/features/approval/ApprovalCommentModal'
-import { isLastPending, isMyTurn } from '@/features/approval/model'
-import { maxRound, returnTargetsFor, stampLinesForRound } from '@/features/approval/stampRounds'
+import { actionableLineFor, isLastPending } from '@/features/approval/model'
+import { maxRound, stampLinesForRound } from '@/features/approval/stampRounds'
 import { useEmployees } from '@/features/management/hooks'
 import { useJobTitleLabel } from '@/features/management/jobTitleHooks'
 import { useDepartments } from '@/features/management/orgHooks'
@@ -139,28 +139,19 @@ export function ApprovalDetail({
     (field) => field.type === 'TABLE' && tableRows(doc.field_values ?? {}, field.key).length > 0,
   )
   const lines = doc.approval_lines
-  // 회차 — 되돌림·재상신이 새 회차를 쌓고, 모든 진행 판정은 현재 회차 안에서만 이뤄진다.
+  // 회차 — 보완 재상신이 새 회차를 쌓고, 모든 진행 판정은 현재 회차 안에서만 이뤄진다.
   const round = maxRound(lines)
-  const myLine = uid
-    ? lines.find((l) => l.approver_id === uid && l.decision === 'PENDING' && l.round === round)
-    : undefined
+  // 같은 사람이 여러 자리에 설 수 있으므로 배열에서 그 사람의 첫 PENDING을 고르지 않는다.
+  // 구분별 현재 순번을 먼저 계산한 뒤 그중 내 자리를 고른다.
+  const myLine = uid ? actionableLineFor(lines, uid) : undefined
   const canDecide =
     Boolean(myLine) &&
-    (doc.status === 'PENDING' || doc.status === 'IN_REVIEW') &&
-    isMyTurn(lines, uid ?? '')
+    (doc.status === 'PENDING' || doc.status === 'IN_REVIEW')
   // 내가 문서를 끝낼 마지막 한 표인가 — 구분(결재·합의)에 상관없이 나 말고 남은 미처리 결재선이
   // 없으면 최종이다. 구분이 셋으로 나뉜 뒤로는 "순번이 뒤인가"로 답할 수 없다.
   const isFinal = !!myLine && isLastPending(lines, myLine.id)
-  // 되돌릴 수 있는 앞 순번과 합의 줄의 존재 여부 — 결재 처리 창의 두 칸이 이 답을 쓴다.
-  const returnTargets = myLine
-    ? returnTargetsFor(lines, round, myLine.kind ?? 'APPROVAL', myLine.step_order, nameOf)
-    : []
-  const hasAgreementLines = lines.some(
-    (l) => l.round === round && (l.kind ?? 'APPROVAL') !== 'APPROVAL',
-  )
-
   /**
-   * 결재선 표에 세울 도장 행 — 현재 회차 + 되돌림이 건너뛴 지난 회차의 승인(stampRounds).
+   * 결재선 표에 세울 도장 행 — 현재 회차 + 보완 뒤에도 유지되는 지난 회차 승인(stampRounds).
    * 순번을 원장 값이 아니라 정렬 후의 자리로 매기는 이유는 의견 창이 **표에 선 것과 같은
    * 숫자**를 적어야 하기 때문이다(저장된 step_order를 그대로 쓰면 임시저장을 고치며 중간이
    * 빠졌을 때 표는 1·2인데 창은 2·4를 말한다).
@@ -170,12 +161,11 @@ export function ApprovalDetail({
   // "그때 누가 무엇을 했나"를 되짚을 때만 필요하다.
   const pastRounds = Array.from({ length: round - 1 }, (_, i) => round - 1 - i)
   const openedComment = stampLines.find((l) => l.id === commentLineId)
-  // 기안자는 되돌아온 문서를 고쳐 다시 올릴 수 있다. 임시저장과 달리 결재선은 고치지
-  // 못하며(재개 지점이 그 결재선을 전제로 한 지정이다) 서버 RPC가 같은 조건을 다시 본다.
+  // 기안자는 임시저장 또는 보완 요청 문서만 고칠 수 있다. 반려는 종결이라 수정·재상신이 없다.
   const canEdit =
     Boolean(onEdit) &&
     doc.drafter_id === uid &&
-    (doc.status === 'DRAFT' || doc.status === 'REJECTED')
+    (doc.status === 'DRAFT' || doc.status === 'REVISION_REQUIRED')
 
   return (
     <div className="space-y-5">
@@ -184,14 +174,12 @@ export function ApprovalDetail({
         actions={
           <>
           {/* 기안자 본인이 고칠 수 있는 문서는 둘뿐이다 — 아직 조직에 내보내지 않은
-              임시저장과, 되돌아와 다시 올려야 하는 문서다. 흐르는 중인 문서에는 이 길을
-              닫는다: 내용이 바뀌면 이미 찍힌 도장이 무엇에 대한 것이었는지 판정할 근거가
-              사라진다(되돌아온 문서는 흐름이 멈춰 있고, 앞 순번의 도장을 어디까지 인정할지는
-              되돌린 사람이 이미 지정했다).
+              임시저장과, 보완 요청으로 흐름이 멈춘 문서다. 반려는 결재를 끝내므로 열지 않는다.
+              흐르는 중인 문서도 이미 찍힌 도장이 무엇에 대한 것인지 흐려지므로 수정할 수 없다.
               (같은 조건을 서버 RPC가 다시 확인한다 — 화면에서 숨기는 것은 보안이 아니다.) */}
           {canEdit && (
             <Button variant="outline" onClick={() => onEdit?.(doc.id)}>
-              {doc.status === 'REJECTED' ? '수정 후 재상신' : '수정'}
+              {doc.status === 'REVISION_REQUIRED' ? '보완 후 재상신' : '수정'}
             </Button>
           )}
           {/* 결재 처리는 창으로 연다 — 승인·반려 버튼이 문서 옆에 상시로 서 있으면 다 읽기
@@ -214,8 +202,6 @@ export function ApprovalDetail({
           lineId={myLine.id}
           kind={myLine.kind ?? 'APPROVAL'}
           isFinal={isFinal}
-          returnTargets={returnTargets}
-          hasAgreementLines={hasAgreementLines}
         />
       )}
 
@@ -312,7 +298,7 @@ export function ApprovalDetail({
                 // 자연스럽고, 어느 칸이 내 차례인지도 그 자리에서 답한다.
                 actionableLineId={canDecide && myLine ? myLine.id : null}
                 onAction={() => setDeciding(true)}
-                // 의견이 남은 도장은 눌러 읽는다 — 특히 되돌림은 사유가 곧 다음에 할 일이라,
+                // 의견이 남은 도장은 눌러 읽는다 — 특히 보완은 사유가 곧 다음에 할 일이라,
                 // 본문 아래까지 내려가지 않고 그 칸에서 바로 열리는 편이 맞다.
                 onOpenComment={setCommentLineId}
               />
@@ -359,7 +345,12 @@ export function ApprovalDetail({
                 name: nameOf(openedComment.approverId),
                 title: titleOf(openedComment.approverId),
                 // 의견이 있는 도장만 눌리므로 여기 오는 행은 반드시 처리된 행이다.
-                decision: openedComment.decision === 'REJECTED' ? 'REJECTED' : 'APPROVED',
+                decision:
+                  openedComment.decision === 'REVISION_REQUESTED'
+                    ? 'REVISION_REQUESTED'
+                    : openedComment.decision === 'REJECTED'
+                      ? 'REJECTED'
+                      : 'APPROVED',
                 decidedAt: openedComment.decidedAt,
                 comment: openedComment.comment ?? '',
               }}

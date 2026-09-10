@@ -7,7 +7,7 @@ export interface StampLine {
   id: string
   approverId: string | null
   stepOrder: number
-  decision: 'PENDING' | 'APPROVED' | 'REJECTED'
+  decision: 'PENDING' | 'REVISION_REQUESTED' | 'APPROVED' | 'REJECTED'
   kind: ApprovalLineKind
   decidedAt: string | null
   /** 처리하며 남긴 의견(없으면 null). 있으면 도장이 눌러서 읽는 자리가 된다. */
@@ -18,13 +18,13 @@ export interface StampLine {
   /** 복원된 후열 처리처럼 승인/반려 외의 원본 도장 문구. */
   stampLabel?: string
   /**
-   * 지난 회차에서 넘어온 도장인가 — 되돌림이 이 자리를 건너뛰었다는 뜻이다.
+   * 지난 회차에서 유지된 도장인가 — 보완 재상신에서도 이 자리는 다시 판단하지 않았다는 뜻이다.
    *
    * 자리를 비우지 않는 이유: 결재선에 구멍이 생기면 누가 봤는지를 표가 답하지 못한다.
    * 건너뛴 사람이 나중에 "나는 이 내용을 본 적 없다"고 말할 때 화면이 사실을 말해야 한다.
    */
   carriedFromRound?: number | null
-  /** 도장 아래 한 줄(되돌림 목적지·회차 표시). 일시 다음에 옅게 선다. */
+  /** 도장 아래 한 줄(과거 회차·보완/반려 표시). 일시 다음에 옅게 선다. */
   note?: string | null
 }
 
@@ -85,11 +85,14 @@ const STAMP_TONE = {
   DRAFT: 'text-info',
   APPROVED: 'text-info',
   REJECTED: 'text-danger',
+  // 보완 요청은 흐름이 잠시 멈췄지만 끝난 것은 아니다. 위험(빨강)과 대기(회색) 사이의
+  // 노란 면으로 표시해 기안자에게 수정이 필요한 자리임을 결재선 자체가 답한다.
+  REVISION_REQUESTED: 'border-warning-border text-warning',
   // 대기만 테두리를 글자보다 한 단 더 옅게(gray-300, 표준 헤어라인) 물린다. 원이 물러나면
   // 칸 전체가 확실히 가라앉는데, 글자까지 같이 내리면 흰 배경에서 1.35:1이라 '대기'가
   // 읽히지 않는다 — 누구 차례인지를 알려주는 글자라 읽히지 않으면 안 된다.
   PENDING: 'text-gray-400 border-gray-300',
-  // 지난 회차에서 넘어온 승인 — 형태는 승인 도장 그대로이고 색만 물러난다. 되돌림이
+  // 지난 회차에서 유지된 승인 — 형태는 승인 도장 그대로이고 색만 물러난다. 보완이
   // 건너뛴 자리라 '지금 이 회차의 판단'이 아니지만, 찍힌 사실 자체는 지워지지 않는다.
   CARRIED: 'text-gray-400 border-gray-300',
 } as const
@@ -107,14 +110,15 @@ function StampMark({
   date: string | null
   /** 의견이 남았음을 알리는 말풍선 표식을 일시 옆에 세운다. */
   hasComment?: boolean
-  /** 일시 아래 한 줄(회차·되돌림 목적지). 이 줄이 붙는 칸만 한 줄 높아진다. */
+  /** 일시 아래 한 줄(회차·보완/반려 이력). 이 줄이 붙는 칸만 한 줄 높아진다. */
   note?: string | null
 }) {
   return (
     <span className="inline-flex flex-col items-center gap-2">
       <span
         className={cn(
-          'relative flex size-10 items-center justify-center rounded-full border-2 border-current bg-white font-bold',
+          'relative flex size-10 items-center justify-center rounded-full border-2 border-current font-bold',
+          tone === 'REVISION_REQUESTED' ? 'bg-warning-subtle' : 'bg-white',
           STAMP_TONE[tone],
         )}
       >
@@ -140,7 +144,7 @@ function StampMark({
       {date && (
         <span className={cn('whitespace-nowrap', approvalText.meta)}>{date.slice(0, 10)}</span>
       )}
-      {/* 회차·목적지 한 줄. 격자의 행 높이는 가장 큰 칸이 정하므로 이 줄이 붙어도 칸끼리
+      {/* 회차·처리 이력 한 줄. 격자의 행 높이는 가장 큰 칸이 정하므로 이 줄이 붙어도 칸끼리
           어긋나지 않는다(행 전체가 한 줄만큼 함께 높아진다). */}
       {note && (
         <span className={cn('whitespace-nowrap text-gray-400', approvalText.meta)}>{note}</span>
@@ -151,6 +155,7 @@ function StampMark({
 
 const DECISION_LABEL: Record<StampLine['decision'], string> = {
   PENDING: '대기',
+  REVISION_REQUESTED: '보완',
   APPROVED: '승인',
   REJECTED: '반려',
 }

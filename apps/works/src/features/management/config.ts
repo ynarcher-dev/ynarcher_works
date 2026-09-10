@@ -4,6 +4,7 @@ export type ApprovalStatus =
   | 'DRAFT'
   | 'PENDING'
   | 'IN_REVIEW'
+  | 'REVISION_REQUIRED'
   | 'APPROVED'
   | 'REJECTED'
 
@@ -11,6 +12,7 @@ export const APPROVAL_LABELS: Record<ApprovalStatus, string> = {
   DRAFT: '임시저장',
   PENDING: '상신',
   IN_REVIEW: '1차 검토',
+  REVISION_REQUIRED: '보완',
   APPROVED: '최종 승인',
   REJECTED: '반려',
 }
@@ -19,6 +21,7 @@ export const approvalTone: Record<ApprovalStatus, BadgeTone> = {
   DRAFT: 'neutral',
   PENDING: 'info',
   IN_REVIEW: 'warning',
+  REVISION_REQUIRED: 'warning',
   APPROVED: 'success',
   REJECTED: 'danger',
 }

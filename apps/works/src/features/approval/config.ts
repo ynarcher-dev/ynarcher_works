@@ -8,6 +8,7 @@ import {
   Hourglass,
   Inbox,
   PenLine,
+  PencilLine,
   Send,
   Users,
 } from 'lucide-react'
@@ -108,6 +109,7 @@ export const APPROVAL_PROGRESS_GROUP: {
     { key: 'waiting', label: '대기', icon: Hourglass },
     { key: 'upcoming', label: '예정', icon: CalendarClock },
     { key: 'ongoing', label: '진행', icon: Send },
+    { key: 'revision', label: '보완', icon: PencilLine },
     { key: 'draft', label: '임시저장', icon: FilePen },
   ],
 }
@@ -162,6 +164,7 @@ export const APPROVAL_DASHBOARD_ROWS: ApprovalNavRow[] = [
   boxRow('mine-confirm'),
   progressRow('upcoming'),
   progressRow('ongoing'),
+  progressRow('revision'),
   progressRow('draft'),
 ]
 
@@ -174,7 +177,7 @@ export const APPROVAL_ATTACHMENT_TYPE = 'approval'
 export const APPROVAL_FEEDBACK_TYPE = 'approval'
 
 /** 진행 상태 키. 전체 = 나머지 넷의 합집합(문서 한 건은 한 칸에만 든다). */
-export type ApprovalProgressKey = 'all' | 'waiting' | 'upcoming' | 'ongoing' | 'draft'
+export type ApprovalProgressKey = 'all' | 'waiting' | 'upcoming' | 'ongoing' | 'revision' | 'draft'
 
 /**
  * 문서함 목록의 상태 표기 — 목록에서는 결재 단계(1차 검토 등)까지 가르지 않고
@@ -184,6 +187,7 @@ export const DOC_STATUS_LABEL: Record<ApprovalStatus, string> = {
   DRAFT: '임시저장',
   PENDING: '진행',
   IN_REVIEW: '진행',
+  REVISION_REQUIRED: '보완',
   APPROVED: '완료',
   REJECTED: '반려',
 }
@@ -192,6 +196,7 @@ export const DOC_STATUS_TONE: Record<ApprovalStatus, BadgeTone> = {
   DRAFT: 'neutral',
   PENDING: 'info',
   IN_REVIEW: 'info',
+  REVISION_REQUIRED: 'warning',
   APPROVED: 'success',
   REJECTED: 'danger',
 }
@@ -227,4 +232,3 @@ export const LINE_KIND_LABEL: Record<ApprovalLineKind, string> = {
 
 /** 결재선 표·지정 화면에서 늘 이 순서로 놓는다(결재 → 합의 → 재무합의 → 참조). */
 export const LINE_KIND_ORDER: ApprovalLineKind[] = ['APPROVAL', 'AGREEMENT', 'FINANCE_AGREEMENT']
-

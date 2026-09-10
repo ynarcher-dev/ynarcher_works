@@ -131,13 +131,13 @@ export interface ApprovalDetail {
     id: string
     approver_id: string | null
     step_order: number
-    decision: 'PENDING' | 'APPROVED' | 'REJECTED'
+    decision: 'PENDING' | 'REVISION_REQUESTED' | 'APPROVED' | 'REJECTED'
     kind: ApprovalLineKind
-    /** 결재 회차. 되돌림·재상신이 다시 도는 구간만 다음 회차로 복제한다. */
+    /** 결재 회차. 보완 재상신이 남은 구간만 다음 회차로 복제한다. */
     round: number
     comment: string | null
     decided_at: string | null
-    /** 되돌림 지정 — 되돌린 행에만 실린다(§3_1_3). */
+    /** 2026-09-10 이전 되돌림 이력. 새 반려·보완 흐름에서는 쓰지 않는다. */
     return_to_step: number | null
     return_via_drafter: boolean | null
     return_reset_agreement: boolean | null
@@ -359,27 +359,17 @@ export function useSaveApprovalDraft() {
   })
 }
 
-/** 되돌림 지정 — 반려를 고를 때만 실린다(승인에는 뜻이 없다). */
-export interface ApprovalReturnInput {
-  /** 돌아갈 지점(같은 구분의 step_order). null이면 처음부터. */
-  returnToStep: number | null
-  /** 기안자가 고쳐 다시 올려야 하는가. 거짓이면 내용 그대로 그 자리에서 반송된다. */
-  viaDrafter: boolean
-  /** 합의·재무합의 줄도 다시 받는가. */
-  resetAgreement: boolean
-}
-
 /**
- * 결재 처리(승인·되돌림) — `decide_approval_document` RPC 한 경로.
+ * 결재 처리(승인·반려·보완 요청) — `decide_approval_document` RPC 한 경로.
  *
  * **종전에는 화면이 결재선과 문서를 각각 UPDATE했다.** 그런데 문서 UPDATE 정책은
  * `management 쓰기 또는 기안자 본인`이라, management 권한이 없는 결재자가 남의 문서를
  * 승인하면 상태 UPDATE가 0행에 걸려 조용히 무시됐다(PostgREST는 0행 UPDATE를 오류로
- * 내지 않는다) — 도장은 찍혔는데 문서는 PENDING에 머무는 어긋남이다. 되돌림은 여기에
+ * 내지 않는다) — 도장은 찍혔는데 문서는 PENDING에 머무는 어긋남이다. 보완 요청도 여기에
  * 회차 복제까지 더해 **한 트랜잭션 안에서** 끝나야 하므로(중간에 끊기면 문서가 아무의
  * 차례도 아닌 상태로 굳는다) 처리 경로를 서버 함수 하나로 모았다.
  *
- * 차례·회차·되돌림 대상의 유효성은 전부 서버가 다시 판정한다 — 화면이 컨트롤을 숨기는
+ * 차례·회차·상태의 유효성은 전부 서버가 다시 판정한다 — 화면이 컨트롤을 숨기는
  * 것은 보안이 아니다.
  */
 export function useDecideApproval() {
@@ -388,18 +378,13 @@ export function useDecideApproval() {
     mutationFn: async (v: {
       lineId: string
       documentId: string
-      decision: 'APPROVED' | 'REJECTED'
+      decision: 'APPROVED' | 'REVISION_REQUESTED' | 'REJECTED'
       comment?: string
-      /** 반려일 때의 되돌림 지정. 없으면 처음부터·기안자 경유(종전 반려와 같다). */
-      returnTo?: ApprovalReturnInput
     }) => {
       const { error } = await supabase.rpc('decide_approval_document', {
         p_line_id: v.lineId,
         p_decision: v.decision,
         p_comment: v.comment?.trim() || null,
-        p_return_to_step: v.returnTo?.returnToStep ?? null,
-        p_via_drafter: v.returnTo?.viaDrafter ?? true,
-        p_reset_agreement: v.returnTo?.resetAgreement ?? null,
       })
       if (error) throw error
     },
@@ -413,11 +398,12 @@ export function useDecideApproval() {
 }
 
 /**
- * 재상신 — 되돌아온(REJECTED) 문서를 고쳐 다시 올린다.
+ * 재상신 — 보완 요청으로 멈춘(REVISION_REQUIRED) 문서를 고쳐 다시 올린다.
  *
  * 임시저장 수정(`save_approval_draft`)과 경로를 나눈 이유는 그 함수가 결재선을 통째로
- * `delete` 후 재삽입하기 때문이다. 도장이 찍힌 행을 지우게 되고, 되돌린 사람이 지정한
- * 재개 지점도 함께 사라진다. 그래서 재상신은 **값만 고치고 결재선은 건드리지 않는다.**
+ * `delete` 후 재삽입하기 때문이다. 도장이 찍힌 행을 지우게 되므로 재상신은 **값만 고치고
+ * 결재선은 건드리지 않는다.** 서버가 보완 요청 자리와 아직 처리하지 않은 자리만 새 회차에
+ * 세워 기존 결재를 이어간다.
  */
 export function useResubmitApproval() {
   const qc = useQueryClient()

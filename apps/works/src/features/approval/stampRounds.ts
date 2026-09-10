@@ -1,13 +1,12 @@
 import { LINE_KIND_ORDER, type ApprovalLineKind } from '@/features/approval/config'
 import type { StampLine } from '@/features/approval/ApprovalStampTable'
-import type { ReturnTarget } from '@/features/approval/ApprovalDecideModal'
 
 /** 결재선 한 행 중 도장 표가 읽는 부분만. approvalApi.ApprovalDetail의 형태와 맞춘다. */
 export interface RoundLine {
   id: string
   approver_id: string | null
   step_order: number
-  decision: 'PENDING' | 'APPROVED' | 'REJECTED'
+  decision: 'PENDING' | 'REVISION_REQUESTED' | 'APPROVED' | 'REJECTED'
   kind: ApprovalLineKind
   round: number
   comment: string | null
@@ -78,45 +77,21 @@ export function stampLinesForRound(lines: RoundLine[], round: number): SeqStampL
         carriedFromRound: carriedFrom,
         note: carriedFrom
           ? `${carriedFrom}차 승인`
-          : l.decision === 'REJECTED'
-            ? returnNote(l, seqByStep)
-            : null,
+          : l.decision === 'REVISION_REQUESTED'
+            ? '보완 후 재상신'
+            : l.decision === 'REJECTED'
+              ? oldReturnNote(l, seqByStep) ?? '결재 종료'
+              : null,
       }
     })
   })
 }
 
 /** 되돌린 도장 아래 한 줄 — 어디로 되돌렸는지가 곧 다음에 일어날 일이다. */
-function returnNote(line: RoundLine, seqByStep: Map<number, number>): string {
+function oldReturnNote(line: RoundLine, seqByStep: Map<number, number>): string | null {
+  if (line.return_to_step == null && line.return_via_drafter == null) return null
   const where =
     line.return_to_step != null ? `${seqByStep.get(line.return_to_step) ?? line.return_to_step}번부터` : '처음부터'
   // 기안자를 거치지 않는 되돌림은 문서가 그 자리에서 다시 도는 '반송'이라 이름이 다르다.
   return line.return_via_drafter === false ? `반송 → ${where}` : `→ ${where}`
-}
-
-/**
- * 되돌릴 수 있는 앞 순번 — **같은 구분에서 이미 승인한, 나보다 앞선 자리**뿐이다.
- *
- * 아직 처리하지 않은 뒤 순번으로는 보낼 수 없다(그것은 되돌림이 아니라 건너뛰기다). 다른
- * 구분의 사람에게 직접 보내는 것도 열지 않는다 — 합의 줄은 '다시 받기' 체크박스가 담당한다.
- */
-export function returnTargetsFor(
-  lines: RoundLine[],
-  round: number,
-  myKind: ApprovalLineKind,
-  myStep: number,
-  nameOf: (id: string | null) => string,
-): ReturnTarget[] {
-  const ofKind = lines
-    .filter((l) => roundOf(l) === round && kindOf(l) === myKind)
-    .sort((a, b) => a.step_order - b.step_order)
-
-  return ofKind
-    .map((l, i) => ({ line: l, seq: i + 1 }))
-    .filter(({ line }) => line.step_order < myStep && line.decision === 'APPROVED')
-    .map(({ line, seq }) => ({
-      stepOrder: line.step_order,
-      seq,
-      name: nameOf(line.approver_id),
-    }))
 }

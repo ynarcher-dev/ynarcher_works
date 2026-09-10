@@ -293,16 +293,17 @@ select lives_ok(
 );
 reset role;
 
--- 케이스 14: 결재 되돌림의 두 헬퍼는 사용자에게 열리지 않는다 -------------------
--- 근거: 20260905200000_approval_return_flow.sql
---   회차 복제(clone_approval_round)와 알림 팬아웃(notify_approval)은 호출자 검증을 하지
---   않는다 — 부르는 두 RPC가 "내 행인가·내 차례인가·기안자인가"를 먼저 확인한 뒤 부른다.
---   그래서 이 둘이 authenticated에 열리면 아무나 남의 문서에 회차를 만들고 남에게 알림을
---   보낼 수 있다. 처리 경로는 검증을 마친 RPC 둘뿐이어야 한다.
+-- 케이스 14: 결재 보완의 내부 헬퍼는 사용자에게 열리지 않는다 -------------------
+-- 근거: 20260910030352_approval_revision_rpcs.sql
+--   회차 복제(clone_approval_revision_round)와 알림 팬아웃(notify_approval)은 호출자 검증을
+--   하지 않는다 — 부르는 두 RPC가 "내 행인가·내 차례인가·기안자인가"를 먼저 확인한 뒤
+--   부른다. 그래서 이 둘이 authenticated에 열리면 아무나 남의 문서에 회차를 만들고
+--   남에게 알림을 보낼 수 있다. 처리 경로는 검증을 마친 RPC 둘뿐이어야 한다.
 select is(
   (select count(*)::int
      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-    where n.nspname = 'app' and p.proname in ('clone_approval_round', 'notify_approval')
+    where n.nspname = 'app'
+      and p.proname in ('clone_approval_revision_round', 'notify_approval')
       and has_function_privilege('authenticated', p.oid, 'EXECUTE')),
   0,
   '케이스14a: authenticated가 회차 복제·알림 팬아웃 헬퍼를 직접 호출할 수 없다'
@@ -317,13 +318,27 @@ select is(
   2,
   '케이스14b: 결재 처리·재상신 RPC는 authenticated에 열려 있다'
 );
--- 결재선에 DELETE 정책이 없어야 회차 이력이 지워지지 않는다. 되돌림은 지난 회차의 도장을
--- 남겨 두는 것이 전제이고, 그 전제가 정책 한 줄로 무너지면 '1차 승인' 표시가 거짓이 된다.
+-- anon/service_role의 명시적 기본 EXECUTE도 걷는다. 함수 본문 인가와 별개로 호출 표면을
+-- authenticated로 좁혀 두어야 새 인자가 늘거나 검증이 바뀔 때 우회 경로가 생기지 않는다.
+select is(
+  (select count(*)::int
+     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname in ('decide_approval_document', 'resubmit_approval_document')
+      and (
+        has_function_privilege('anon', p.oid, 'EXECUTE')
+        or has_function_privilege('service_role', p.oid, 'EXECUTE')
+      )),
+  0,
+  '케이스14c: 결재 처리·재상신 RPC는 anon/service_role에 열려 있지 않다'
+);
+-- 결재선에 DELETE 정책이 없어야 회차 이력이 지워지지 않는다. 보완 전 승인 도장을
+-- 남겨 두는 것이 전제이고, 그 전제가 정책 한 줄로 무너지면 승인 유지 표시가 거짓이 된다.
 select is(
   (select count(*)::int from pg_policies
     where schemaname = 'public' and tablename = 'approval_lines' and cmd = 'DELETE'),
   0,
-  '케이스14c: approval_lines에 DELETE 정책이 없다(회차 이력은 지워지지 않는다)'
+  '케이스14d: approval_lines에 DELETE 정책이 없다(회차 이력은 지워지지 않는다)'
 );
 
 select * from finish();

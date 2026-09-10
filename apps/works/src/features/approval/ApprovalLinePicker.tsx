@@ -17,10 +17,9 @@ interface ApprovalLinePickerProps {
   /** 기안자 본인 — 결재 행의 맨 앞 칸을 항상 차지한다(결재자로도 지정할 수 있다). */
   drafterId?: string | null
   /**
-   * 결재선을 고칠 수 없는 자리(재상신). 되돌린 사람이 지정한 재개 지점은 **그 결재선을
-   * 전제로 한 판단**이라, 기안자가 사람을 갈아끼우면 "3번부터"가 누구를 가리키는지 알 수
-   * 없게 된다. 자리는 그대로 보이고 고치는 문만 닫는다 — 감춰 버리면 재상신하는 사람이
-   * 자기 문서가 누구에게 갈지 모른 채 올린다.
+   * 결재선을 고칠 수 없는 자리(보완 재상신). 앞선 승인과 보완 요청 자리는 기존 결재선을
+   * 전제로 한 업무 기록이라 기안자가 사람을 갈아끼우지 못한다. 자리는 그대로 보이고 고치는
+   * 문만 닫는다 — 감추면 재상신하는 사람이 자기 문서가 누구에게 갈지 알 수 없다.
    */
   readOnly?: boolean
   /** 제목 줄 도움말(재상신에서 왜 못 고치는지). */
@@ -61,10 +60,11 @@ export function ApprovalLinePicker({
     return m
   }, [employees, jobTitle])
 
-  const toPerson = (id: string, seq?: number): GridPerson => {
+  const toPerson = (id: string, key: string, seq?: number): GridPerson => {
     const info = infoById.get(id)
     return {
-      key: id,
+      // 같은 사람이 여러 결재 자리에 설 수 있으므로 사람 id가 아니라 자리 키를 쓴다.
+      key,
       title: info?.title ?? '',
       name: info?.name ?? '(알 수 없음)',
       seq,
@@ -87,12 +87,14 @@ export function ApprovalLinePicker({
       <ApprovalLineGrid
         // 맨 앞은 기안자 본인(순번 없음), 그 뒤로 지정한 결재자들이 순번대로 선다.
         approval={[
-          ...(drafterId ? [toPerson(drafterId)] : []),
-          ...lines.APPROVAL.map((id, i) => toPerson(id, i + 1)),
+          ...(drafterId ? [toPerson(drafterId, `drafter-${drafterId}`)] : []),
+          ...lines.APPROVAL.map((id, i) => toPerson(id, `approval-${i}-${id}`, i + 1)),
         ]}
         // 합의·재무합의도 자기 줄 안에서 순차라 순번이 붙는다(참조만 순서를 갖지 않는다).
-        agreement={lines.AGREEMENT.map((id, i) => toPerson(id, i + 1))}
-        finance={lines.FINANCE_AGREEMENT.map((id, i) => toPerson(id, i + 1))}
+        agreement={lines.AGREEMENT.map((id, i) => toPerson(id, `agreement-${i}-${id}`, i + 1))}
+        finance={lines.FINANCE_AGREEMENT.map((id, i) =>
+          toPerson(id, `finance-${i}-${id}`, i + 1),
+        )}
         cc={
           recipientIds.length === 0 && readOnly ? (
             <span className={approvalText.empty}>-</span>
