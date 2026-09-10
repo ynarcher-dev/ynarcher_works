@@ -86,11 +86,11 @@ describe('stampLinesForRound', () => {
     expect(stampLinesForRound(lines, 1)[0]?.note).toBe('결재 종료')
   })
 
-  it('보완 요청은 재상신을 기다리는 노란 도장 상태로 전달한다', () => {
+  it('보완 요청은 별도 안내 문구 없이 노란 도장 상태로 전달한다', () => {
     const lines = [line({ id: 'a', decision: 'REVISION_REQUESTED', comment: '금액 수정' })]
     expect(stampLinesForRound(lines, 1)[0]).toMatchObject({
       decision: 'REVISION_REQUESTED',
-      note: '보완 후 재상신',
+      note: null,
       comment: '금액 수정',
     })
   })

@@ -77,11 +77,9 @@ export function stampLinesForRound(lines: RoundLine[], round: number): SeqStampL
         carriedFromRound: carriedFrom,
         note: carriedFrom
           ? `${carriedFrom}차 승인`
-          : l.decision === 'REVISION_REQUESTED'
-            ? '보완 후 재상신'
-            : l.decision === 'REJECTED'
-              ? oldReturnNote(l, seqByStep) ?? '결재 종료'
-              : null,
+          : l.decision === 'REJECTED'
+            ? oldReturnNote(l, seqByStep) ?? '결재 종료'
+            : null,
       }
     })
   })
