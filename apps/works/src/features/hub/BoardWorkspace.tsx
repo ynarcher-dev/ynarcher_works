@@ -1,6 +1,7 @@
 import {
   BackButton,
   Button,
+  Card,
   Checkbox,
   DetailTopBar,
   EmptyState,
@@ -10,14 +11,12 @@ import {
   Input,
   PageHeader,
   PanelCard,
-  RefLinkList,
   Spinner,
   cardText,
   cn,
   useToast,
 } from '@ynarcher/ui'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
 import { RichTextEditor, RichTextViewer } from '@/components/RichTextEditor'
 import { BoardPanel } from '@/features/hub/BoardPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
@@ -342,11 +341,11 @@ function DetailView({
       />
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
-        {/* 좌측(2/3): 본문 — 제목·작성자·게시일·조회 + 리치 텍스트.
+        {/* 좌측(2/3): 머리 카드(제목·작성자·게시일·조회) + 본문 카드.
             상세 최상단 카드는 전 워크스페이스 공용 규격(EntityHeaderCard)을 쓴다. 메타 세 줄도
             상세 공통 '라벨: 값'(InfoField)에 맡긴다 — 작성자·게시일·조회는 글 자체가 아니라 글을
             다룬 흔적이므로 meta 톤으로 한 단 물러난다. */}
-        <div className="lg:col-span-2">
+        <div className="space-y-4 lg:col-span-2">
           <EntityHeaderCard
             title={
               <span className="min-w-0">
@@ -356,43 +355,27 @@ function DetailView({
             }
             info={
               <InfoGrid columns={3}>
-                <InfoField
-                  label="작성자"
-                  meta
-                  // 이름은 그 사람으로 가는 길이다 — 계정을 알 때만 링크가 되고, 옛 글처럼
-                  // 계정이 비어 있으면 이름 그대로 선다. (회의록 상세는 2026-09-10에 이름 링크를
-                  // 걷었다 — 한 장에 사람이 여럿 서는 화면이라 갈린 것이고, 글 한 편에 작성자가
-                  // 하나뿐인 여기는 그대로 둔다.)
-                  value={
-                    post.authorId ? (
-                      <RefLinkList
-                        as={Link}
-                        items={[
-                          {
-                            key: post.authorId,
-                            label: post.author,
-                            to: `/office/managers/${post.authorId}`,
-                          },
-                        ]}
-                      />
-                    ) : (
-                      post.author
-                    )
-                  }
-                />
+                {/* 작성자는 이름 그대로 선다 — 회의록 상세가 2026-09-10에 이름 링크를 걷은 것과
+                    같은 자리다. 이 줄이 답하는 것은 '누가 언제 올려 몇 번 읽혔는가'라는 글을 다룬
+                    흔적이고, 그 안에서 한 칸만 눌리면 나란한 세 값 중 하나가 다른 성격이 된다. */}
+                <InfoField label="작성자" value={post.author} meta />
                 <InfoField label="게시일" value={post.date} meta />
                 <InfoField label="조회" value={(post.views ?? 0).toLocaleString()} meta />
               </InfoGrid>
             }
-          >
-            <div className="mt-4 border-t border-gray-100 pt-4">
-              {post.content ? (
-                <RichTextViewer html={post.content} />
-              ) : (
-                <p className={cardText.subtitle}>본문이 없습니다.</p>
-              )}
-            </div>
-          </EntityHeaderCard>
+          />
+
+          {/* 본문은 카드를 따로 세운다(회의록 상세와 같은 규격) — 머리 카드가 답하는 것은 누가
+              언제 올려 몇 번 읽혔는가이고, 여기는 그 글이 하는 말이다. 길이도 성격도 달라 구분선
+              하나로 이으면 제목 줄과 본문이 한 덩어리로 읽힌다. */}
+          <Card title="본문">
+            {post.content ? (
+              <RichTextViewer html={post.content} />
+            ) : (
+              // 빈 상태는 접지 않는다 — 본문이 없는 글과 아직 안 불러온 화면은 다른 사실이다.
+              <p className={cardText.subtitle}>본문이 없습니다.</p>
+            )}
+          </Card>
         </div>
 
         {/* 우측(1/3): 공용 패널 — 첨부파일(조회 전용) → 코멘트(다른 상세페이지와 동일) */}
