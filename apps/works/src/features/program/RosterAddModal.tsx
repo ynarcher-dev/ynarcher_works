@@ -1,13 +1,14 @@
 import { Button, Modal, useToast } from '@ynarcher/ui'
-import { useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { LedgerQuickAdd, LedgerQuickAddActions } from '@/features/program/LedgerQuickAdd'
-import { checkDraft, useQuickAddDraft } from '@/features/program/quickAddDraft'
+import { checkRows, useQuickAddRows } from '@/features/program/quickAddDraft'
 import { PARTICIPANT_PERSONAS, type MasterTable } from '@/features/program/participantPersona'
 import { RosterPickPanes } from '@/features/program/RosterPickPanes'
 import { useRosterPick } from '@/features/program/rosterPick'
 import {
   useAddRosterEntries,
-  useCreateLedgerEntry,
+  useBulkAddRoster,
+  useProgramRoster,
   useRosterCandidates,
 } from '@/features/program/rosterHooks'
 import { useProgramWorkspace } from '@/features/program/workspace'
@@ -28,9 +29,9 @@ import { useProgramWorkspace } from '@/features/program/workspace'
  * 만들기를 고를 수 있게 되고, 그것이 곧 중복 등록의 자리다. 그래서 만들기는 목록 아래
  * 한 줄로만 닿는다.
  *
- * **대용량도 같은 자리에서 닿는다**(2026-09-10 사용자 지정). 종전에는 명단 표 위 툴바에
- * 버튼으로 서 있었는데, 한 건이든 백 건이든 담당자가 하려는 일은 '명단에 담기' 하나라 입구가
- * 둘일 이유가 없다. 그리고 파일을 올리는 것은 새로 만들기와 같은 성격의 **다른 길**이다 —
+ * **CSV파일 업로드도 같은 자리에서 닿는다**(2026-09-10 사용자 지정). 종전에는 명단 표 위
+ * 툴바에 버튼으로 서 있었는데, 한 건이든 백 건이든 담당자가 하려는 일은 '명단에 담기' 하나라
+ * 입구가 둘일 이유가 없다. 파일을 올리는 것은 새로 만들기와 같은 성격의 **다른 길**이다 —
  * 원장을 찾아본 다음에야 고르는 길이라 그 아래 한 줄로 선다.
  *
  * 담을 자격은 탭이 정하고 모달은 받기만 한다 — 모달이 자기 원장 선택을 따로 가지면
@@ -45,7 +46,7 @@ export function RosterAddModal({
 }: {
   open: boolean
   onClose: () => void
-  /** 대용량 담기 창으로 넘어간다(이 창은 닫힌다 — 두 창을 겹쳐 세우지 않는다). */
+  /** CSV파일 업로드 창으로 넘어간다(이 창은 닫힌다 — 두 창을 겹쳐 세우지 않는다). */
   onBulk: () => void
   programId: string
   /** 어느 자격으로 담을 것인가. 참가자 명단의 자격 탭이 정한다. */
@@ -56,13 +57,21 @@ export function RosterAddModal({
   const spec = PARTICIPANT_PERSONAS[master]
   const [mode, setMode] = useState<'pick' | 'create'>('pick')
   const [search, setSearch] = useState('')
-  const quick = useQuickAddDraft()
+  const quick = useQuickAddRows()
   const [checking, setChecking] = useState(false)
 
   const { data: candidates, isLoading } = useRosterCandidates(programId, master, search)
-  const pick = useRosterPick(candidates)
+  const { data: roster } = useProgramRoster(programId)
+  /** 이 자격으로 이미 담긴 줄 — 오른쪽 기둥에 서고, 신규 등록의 '이미 담김' 판정도 이 값이다. */
+  const existing = useMemo(
+    () => (roster ?? []).filter((r) => r.master_table === master),
+    [roster, master],
+  )
+  const mappedIds = useMemo(() => new Set(existing.map((r) => r.master_id)), [existing])
+
+  const pick = useRosterPick(candidates, existing)
   const add = useAddRosterEntries(programId)
-  const create = useCreateLedgerEntry(programId)
+  const create = useBulkAddRoster(programId)
 
   const busy = add.isPending || create.isPending || checking
 
@@ -77,9 +86,9 @@ export function RosterAddModal({
   const fail = (e: unknown, fallback: string) =>
     toast.show(e instanceof Error ? e.message : fallback, 'danger')
 
-  const addMasterIds = (masterIds: string[]) =>
+  const addStaged = () =>
     add.mutate(
-      { master, masterIds },
+      { master, masterIds: pick.staged.map((c) => c.id) },
       {
         onSuccess: (n) => {
           toast.show(`${n}건을 ${config.rosterLabel}에 담았습니다.`, 'success')
@@ -89,28 +98,11 @@ export function RosterAddModal({
       },
     )
 
-  const createNow = () =>
-    create.mutate(
-      { master, ...quick.draft },
-      {
-        onSuccess: () => {
-          toast.show(`${spec.label} 1건을 원장에 등록하고 담았습니다.`, 'success')
-          close()
-        },
-        onError: (e) => fail(e, '등록에 실패했습니다. 권한을 확인하세요.'),
-      },
-    )
-
-  /** 저장 한 번에 대조 한 번. 걸리면 만들지 않고 그 행을 보여 준다. */
-  const checkAndCreate = async () => {
+  /** 저장 한 번에 대조 한 번. 값을 고치면 결과가 사라지므로 다시 눌러야 담긴다. */
+  const runCheck = async () => {
     setChecking(true)
     try {
-      const found = await checkDraft(master, quick.draft)
-      if (found) {
-        quick.setMatch(found)
-        return
-      }
-      createNow()
+      quick.setEntries(await checkRows(master, quick.rows, mappedIds))
     } catch (e) {
       // 대조에 실패하면 만들지 않는다 — 확인하지 못한 것을 '중복 없음'으로 읽으면
       // 그 침묵이 그대로 중복 등록이 된다.
@@ -120,13 +112,35 @@ export function RosterAddModal({
     }
   }
 
+  /** 대조에서 정해진 결정을 그대로 옮긴다 — CSV파일 업로드와 **같은 실행 훅**을 쓴다. */
+  const runCreate = () => {
+    const entries = quick.entries ?? []
+    create.mutate(
+      {
+        master,
+        linkIds: entries.filter((e) => e.decision === 'link' && e.match).map((e) => e.match!.id),
+        creates: entries.filter((e) => e.decision === 'create').map((e) => e.row),
+      },
+      {
+        onSuccess: ({ linked, created }) => {
+          toast.show(
+            `${config.rosterLabel}에 ${linked + created}건을 담았습니다(원장 신규 ${created}건).`,
+            'success',
+          )
+          close()
+        },
+        onError: (e) => fail(e, '등록에 실패했습니다. 권한을 확인하세요.'),
+      },
+    )
+  }
+
   const toPick = () => {
     setMode('pick')
     quick.reset()
   }
 
   const goBulk = () => {
-    // 고르던 것은 버린다 — 대용량 창은 파일이 곧 목록이라 이 창에서 옮겨 둔 줄이 갈 자리가 없다.
+    // 고르던 것은 버린다 — 업로드 창은 파일이 곧 목록이라 이 창에서 옮겨 둔 줄이 갈 자리가 없다.
     pick.reset()
     onBulk()
   }
@@ -142,7 +156,7 @@ export function RosterAddModal({
           ? spec.pickHelp
           : '원장에 새 행을 만들고 그대로 담습니다. 이름만 필수이고 나머지는 나중에 원장에서 채울 수 있습니다.'
       }
-      size={mode === 'pick' ? '2xl' : 'lg'}
+      size="2xl"
       sectioned={mode === 'pick'}
       footer={
         <div className="flex justify-end gap-2">
@@ -150,20 +164,16 @@ export function RosterAddModal({
             {mode === 'pick' ? '취소' : '목록으로'}
           </Button>
           {mode === 'pick' ? (
-            <Button
-              onClick={() => addMasterIds(pick.right.map((c) => c.id))}
-              disabled={busy || pick.right.length === 0}
-            >
-              {add.isPending ? '담는 중…' : `담기 (${pick.right.length})`}
+            <Button onClick={addStaged} disabled={busy || pick.staged.length === 0}>
+              {add.isPending ? '담는 중…' : `담기 (${pick.staged.length})`}
             </Button>
           ) : (
             <LedgerQuickAddActions
-              match={quick.match}
-              canSubmit={Boolean(quick.draft.name.trim())}
+              entries={quick.entries}
+              canSubmit={quick.rows.some((r) => r.name.trim())}
               busy={busy}
-              onCheckAndCreate={() => void checkAndCreate()}
-              onCreateAnyway={createNow}
-              onUseMatch={() => quick.match && addMasterIds([quick.match.id])}
+              onCheck={() => void runCheck()}
+              onSubmit={runCreate}
             />
           )}
         </div>
@@ -182,10 +192,11 @@ export function RosterAddModal({
               {/* 링크 글자는 문장과 같은 크기로 둔다 — 한 줄 안에서 크기를 갈라 위계를 만들지
                   않는다(구분은 색이 진다). */}
               <p>
-                원장에 없나요? <InlineLink onClick={() => setMode('create')}>{spec.label} 새로 등록</InlineLink>
+                원장에 없나요?{' '}
+                <InlineLink onClick={() => setMode('create')}>{spec.label} 새로 등록</InlineLink>
               </p>
               <p>
-                한 번에 여러 건인가요? <InlineLink onClick={goBulk}>대용량 업로드</InlineLink>
+                한 번에 여러 건인가요? <InlineLink onClick={goBulk}>CSV파일 업로드</InlineLink>
               </p>
             </div>
           }
@@ -193,10 +204,12 @@ export function RosterAddModal({
       ) : (
         <LedgerQuickAdd
           master={master}
-          draft={quick.draft}
-          onDraftChange={quick.setDraft}
-          match={quick.match}
-          onMatchChange={quick.setMatch}
+          rows={quick.rows}
+          entries={quick.entries}
+          onPatch={quick.patch}
+          onAdd={quick.add}
+          onRemove={quick.remove}
+          onDecide={quick.decide}
           busy={busy}
         />
       )}

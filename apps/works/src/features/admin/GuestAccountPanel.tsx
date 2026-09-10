@@ -28,6 +28,7 @@ import {
   type GuestAccount,
   type GuestAccountProgram,
 } from '@/features/admin/guestAccountHooks'
+import type { GuestEntityKey } from '@/features/guest/host'
 import { guestDoorBadge, isDoorOpen } from '@/features/program/guestDoorBadge'
 import { PERSONA_LABEL, type MasterTable } from '@/features/program/participantPersona'
 import { GUEST_TYPE_LABEL } from '@/lib/userTypes'
@@ -35,12 +36,13 @@ import { GUEST_TYPE_LABEL } from '@/lib/userTypes'
 const DASH = <EmptyValue />
 
 /** 워크스페이스 표기 — 사업 원장이 둘이라 어느 쪽 사업인지 함께 밝힌다. */
-const WORKSPACE_LABEL: Record<string, string> = { project: '프로젝트', mna: 'M&A' }
+const WORKSPACE_LABEL: Record<string, string> = { project: '프로젝트', mna: 'M&A', fund: '조합' }
 
 /** 사업 상세로 가는 길. 값을 복제하지 않고 원장을 가리킨다(명부와 같은 규약). */
 const PROGRAM_PATH: Record<GuestAccountProgram['entity_key'], string> = {
   program: '/project',
   ma_program: '/mna/deals',
+  fund: '/fund',
 }
 
 /** 상세 모달의 참여 사업 표 한 장. 모달 안이라 화면 목록(30)보다 짧게 끊는다. */
@@ -98,7 +100,7 @@ export function GuestAccountPanel({
    * 참여 사업 칸이 볼 범위. 주지 않으면 전 워크스페이스다.
    * 자리마다 다른 이유는 `useGuestAccounts` 주석 참조.
    */
-  entityKey?: 'program' | 'ma_program'
+  entityKey?: GuestEntityKey
   /**
    * 목록에 설 계정을 **인격의 출처 원장**으로 좁힌다(2026-09-08). 주지 않으면 전부(ADMIN).
    *

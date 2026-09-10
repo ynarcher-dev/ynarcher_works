@@ -2,6 +2,8 @@ import { PageHeader } from '@ynarcher/ui'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '@/auth/authStore'
 import { FUND_LIST_LABEL } from '@/config/navigation'
+import { GuestAccountPanel } from '@/features/admin/GuestAccountPanel'
+import { FUND_GUEST_HOST } from '@/features/fund/guestHost'
 import { FundListTab } from '@/features/fund/FundListTab'
 import { useListScope } from '@/lib/listScope'
 
@@ -24,6 +26,26 @@ export function FundPage() {
   const [scope, setScope] = useListScope()
 
   const legacyTab = params.get('tab')
+
+  // 와이앤아처 GUEST 계정 — 조합의 창구(2026-09-10). PROJECT·M&A와 **같은 화면**을 세우고
+  // 권한만 낮춘다(`canSuspend` 없음 — 정지·해제는 ADMIN이 소유한다). 좁히는 축 둘도 같다:
+  // `entityKey`는 참여 칸이 조합만 세게 하고, `masterTables`는 목록에 설 인격을 이 창구가
+  // 발급하는 원장(포트폴리오사=STARTUP)으로 좁힌다.
+  //
+  // 이 줄이 legacy 탭 처리보다 **앞에** 서야 한다 — 아래 분기가 tab이 있으면 무조건
+  // 목록으로 돌려보내므로, 뒤에 두면 메뉴를 눌러도 목록만 뜬다.
+  if (legacyTab === 'guest-accounts') {
+    return (
+      <div className="space-y-5">
+        <PageHeader title="와이앤아처 GUEST 계정" />
+        <GuestAccountPanel
+          entityKey={FUND_GUEST_HOST.entityKey}
+          masterTables={FUND_GUEST_HOST.guestMasterTables}
+        />
+      </div>
+    )
+  }
+
   if (legacyTab) {
     return <Navigate to={legacyTab === 'mine' ? '/fund?scope=mine' : '/fund'} replace />
   }

@@ -1,4 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { GuestEntityKey } from '@/features/guest/host'
 import { supabase } from '@/lib/supabase'
 import type { MasterTable } from '@/features/program/participantPersona'
 import type { GuestUserType } from '@/lib/userTypes'
@@ -17,7 +18,7 @@ import type { GuestUserType } from '@/lib/userTypes'
 /** 이 계정이 걸려 있는 사업 한 건. RPC가 접어 준 jsonb 배열의 원소. */
 export interface GuestAccountProgram {
   program_id: string
-  entity_key: 'program' | 'ma_program'
+  entity_key: GuestEntityKey
   workspace: string
   code: string | null
   title: string | null
@@ -109,7 +110,7 @@ interface RawRow extends Omit<GuestAccount, 'programs' | 'identities'> {
 export function useGuestAccounts(
   keyword: string,
   page: number,
-  entityKey?: 'program' | 'ma_program',
+  entityKey?: GuestEntityKey,
   masterTables?: readonly MasterTable[],
   /**
    * 참여 사업이 0건인 계정만.

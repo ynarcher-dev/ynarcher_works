@@ -84,9 +84,10 @@ export function RosterPanel({
           keyword={keyword}
           onKeywordChange={setKeyword}
           searchPlaceholder={spec.listSearchPlaceholder}
-          // 담는 입구는 하나다(2026-09-10 사용자 지정). 대용량은 옆에 선 두 번째 버튼이
-          // 아니라 추가 창 안의 다른 길로 들어간다 — 한 건이든 백 건이든 담당자가 하려는
-          // 일은 '명단에 담기' 하나이고, 파일을 올릴지는 원장을 찾아본 다음에 갈리는 문제다.
+          // 담는 입구는 하나다(2026-09-10 사용자 지정). CSV파일 업로드는 옆에 선 두 번째
+          // 버튼이 아니라 추가 창 안의 다른 길로 들어간다 — 한 건이든 백 건이든 담당자가
+          // 하려는 일은 '명단에 담기' 하나이고, 목록을 파일이 정할지 손이 정할지는 원장을
+          // 찾아본 다음에 갈리는 문제다.
           actions={<Button onClick={() => setAddOpen(true)}>{spec.label} 추가</Button>}
         />
 

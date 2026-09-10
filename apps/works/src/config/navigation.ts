@@ -180,10 +180,15 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       items: [{ label: NETWORKS_LIST_LABEL }],
     },
   ],
-  // AC·M&A: 사업 목록 + 계정생성 두 줄이다. 창구가 둘 다 서는 이유는 위 `programSubnav`
-  // 주석 — 외부인이 들어오는 자리가 셋으로 넓어졌고, 창구는 자기 원장을 가진 워크스페이스의
-  // 것이다. FUND는 아직 서지 않는다(그 워크스페이스에는 명부에 해당하는 것이 없어, 세워도
-  // 어디에도 연결할 수 없는 계정만 생긴다 — 3_9_2 §15).
+  // PROJECT·M&A·FUND 셋 다 창구를 갖는다. 이유는 위 `programSubnav` 주석 — 외부인이
+  // 들어오는 자리가 셋이고, 창구는 자기 원장을 가진 워크스페이스의 것이다.
+  //
+  // FUND가 2026-09-10에 합류했다(사용자 지적 "INVESTMENT에는 사이드바 하단에 안 보여").
+  // 종전 주석은 "명부에 해당하는 것이 없어 어디에도 연결할 수 없는 계정만 생긴다"였는데,
+  // 2026-09-09에 조합이 게스트 맥락 셋째가 되면서 그 전제가 사라졌다 — **명단은 포트폴리오가
+  // 답하고**(`rosterSource.kind = 'table'`), 서버의 `guest_accounts_list`도 그때 조합을
+  // 세도록 넓혀 두었다. 창구만 없어서, 조합에 게스트를 연 담당자가 그 계정을 되찾을 자리가
+  // 없었다.
   project: programSubnav({ guestAccounts: true }),
   // FUND: 메뉴 한 줄이다(2026-09-05 '내 운용펀드'/'전체 운용펀드' 통합) — 범위는 목록 상단
   // 토글이 답한다. 펀드 종류(AC·VC·PE)는 2026-08-20에 이미 목록의 '구분' 필터로 내려갔다:
@@ -191,7 +196,11 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
   // 답할 수 없다), 구분이 비어 있는 펀드는 어느 메뉴에도 나타나지 않아 아예 보이지 않았다.
   fund: [
     {
-      items: [{ label: FUND_LIST_LABEL }],
+      items: [
+        { label: FUND_LIST_LABEL },
+        // 이 창구가 발급하는 대상은 포트폴리오사(STARTUP 원장) 하나다 — 근거는 FUND_GUEST_HOST.
+        { label: '와이앤아처 GUEST 계정', tab: 'guest-accounts', pinBottom: true },
+      ],
     },
   ],
   // M&A/PE는 AC와 동일한 사업 원장 구조(features/program)를 공유한다.

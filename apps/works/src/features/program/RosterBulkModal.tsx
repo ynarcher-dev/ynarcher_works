@@ -16,7 +16,11 @@ import { useBulkAddRoster, useRosterCandidates } from '@/features/program/roster
 import { useProgramWorkspace } from '@/features/program/workspace'
 
 /**
- * 명단 대용량 담기 — **파일을 올려 원장과 대조하고, 확인한 뒤 한 번에 담는다**(2026-09-09).
+ * 명단 CSV파일 업로드 — **파일을 올려 원장과 대조하고, 확인한 뒤 한 번에 담는다**(2026-09-09).
+ *
+ * 부르는 이름이 '대용량 담기'에서 바뀐 것은 2026-09-10 사용자 지정이다. 같은 창 안에서 손으로
+ * 여러 줄을 적는 길(`신규 등록`)이 생긴 뒤로 '대용량'은 두 길을 가르지 못한다 — 가르는 것은
+ * 건수가 아니라 **목록을 무엇이 정하는가**(파일 / 손)이므로, 이름도 그 사실을 적는다.
  *
  * 이 창의 본체는 업로드가 아니라 **리뷰**다. 파일에 적힌 이름 중 무엇이 이미 원장에 있고
  * 무엇이 없는지를 먼저 가리고, 그 판정을 사람이 보고 실행한다 — 바로 넣으면 3번(대용량)이
@@ -120,7 +124,7 @@ export function RosterBulkModal({
       dismissible={false}
       open={open}
       onClose={close}
-      title={`${spec.label} 대용량 담기`}
+      title={`${spec.label} CSV파일 업로드`}
       help="파일을 올리면 먼저 원장과 대조합니다. 원장에 있는 대상은 그 행을 담고, 없는 대상만 새로 만듭니다."
       size="2xl"
       footer={

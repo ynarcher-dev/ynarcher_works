@@ -3,7 +3,7 @@ import { PARTICIPANT_PERSONAS, type MasterTable } from '@/features/program/parti
 import type { BulkDecision, BulkEntry } from '@/features/program/rosterBulk'
 
 /**
- * 대용량 담기 리뷰 표 — **파일이 원장과 어떻게 맞물렸는가**를 줄마다 보여 준다.
+ * CSV파일 업로드 리뷰 표 — **파일이 원장과 어떻게 맞물렸는가**를 줄마다 보여 준다.
  *
  * `DataTable`을 쓰지 않는다. 저 부품은 원장 목록의 규격(정렬·페이저·표준 열·선택)을 갖고
  * 있는데, 여기 서는 것은 원장 행이 아니라 **아직 저장되지 않은 판정**이고 페이지를 넘기면

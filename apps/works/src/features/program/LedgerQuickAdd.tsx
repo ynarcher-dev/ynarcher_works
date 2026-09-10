@@ -1,41 +1,47 @@
-import { Button, Field, Input, Spinner, cardText, cn } from '@ynarcher/ui'
-import type { PersonaMatch } from '@/features/program/ledgerMatch'
+import { Button, Input, Spinner, cardText, cn } from '@ynarcher/ui'
+import { ItemRows } from '@/components/ItemRows'
 import { PARTICIPANT_PERSONAS, type MasterTable } from '@/features/program/participantPersona'
-import type { QuickAddDraft } from '@/features/program/quickAddDraft'
+import type { QuickAddDraft, QuickAddRow } from '@/features/program/quickAddDraft'
+import type { BulkDecision, BulkEntry } from '@/features/program/rosterBulk'
 
 /**
- * 원장에 없는 대상을 **원장에 만들어** 명단에 담는 자리(2026-09-09).
+ * 원장에 없는 대상을 **원장에 만들어** 명단에 담는 자리(2026-09-09 / 2026-09-10 여러 줄로).
  *
  * 이 화면의 요점은 입력 칸이 아니라 **저장 직전의 되물음**이다. "없는 줄 알고 새로 넣었는데
  * 사실 있었다"를 사후에 수습하는 방법은 병합뿐이고 그건 비싸므로, 막을 자리를 여기 둔다 —
  * 저장을 누르면 먼저 원장을 대조하고(이름·이메일·전화 중 2개 이상 일치), 걸리면 **만들지
  * 않고 그 행을 보여 준다.**
  *
- * 걸렸을 때 기본 행동이 `이 대상 담기`인 것이 규칙이다. `그래도 새로 만들기`는 한 번 더
+ * 걸렸을 때 기본 행동이 `있는 행 담기`인 것이 규칙이다. `그래도 새로 만들기`는 한 번 더
  * 눌러야 닿는 자리에 둔다 — 동명이인·동명 법인이 실제로 있으므로 길을 막지는 않되, 손이
  * 저절로 가는 쪽은 이미 있는 행이어야 한다.
  *
- * 대조는 이름을 고칠 때마다 돌지 않는다(타이핑마다 원장을 긁으면 그 요청이 실제 저장보다
- * 훨씬 잦다). 저장 한 번에 한 번 돌고, 값을 고치면 결과가 사라진다 — 지나간 대조 결과가
- * 바뀐 값 옆에 남아 있으면 그 화면이 거짓을 말한다.
+ * **한 줄에 네 칸, 줄은 늘린다**(2026-09-10 사용자 지정). 명함 여러 장을 한 번에 정리하는
+ * 자리라 한 건씩 창을 열고 닫는 것이 실제 불편이었다. 규격은 폼의 목록 입력 그대로다
+ * (`ItemRows` — 머리글 한 줄 + 항목 한 줄 + 줄 끝 삭제), 그래서 이 창만의 목록 모양이
+ * 새로 생기지 않는다.
  *
  * 받는 칸은 명단 표에 서는 넷뿐이고 **이름만 필수**다. 이 자리는 명함 한 장이나 회의 직후의
  * 이름 하나를 들고 오는 곳이라, 더 물으면 등록 자체가 막힌다.
  */
 export function LedgerQuickAdd({
   master,
-  draft,
-  onDraftChange,
-  match,
-  onMatchChange,
+  rows,
+  entries,
+  onPatch,
+  onAdd,
+  onRemove,
+  onDecide,
   busy,
 }: {
   master: MasterTable
-  draft: QuickAddDraft
-  onDraftChange: (next: QuickAddDraft) => void
+  rows: readonly QuickAddRow[]
   /** 대조 결과. `null`이면 아직 안 돌았거나 값이 바뀌어 무효가 된 것이다. */
-  match: PersonaMatch | null
-  onMatchChange: (next: PersonaMatch | null) => void
+  entries: BulkEntry[] | null
+  onPatch: (index: number, patch: Partial<QuickAddDraft>) => void
+  onAdd: () => void
+  onRemove: (index: number) => void
+  onDecide: (line: number, decision: BulkDecision) => void
   busy: boolean
 }) {
   const spec = PARTICIPANT_PERSONAS[master]
@@ -43,104 +49,139 @@ export function LedgerQuickAdd({
   // 두 칸으로 받으면 담당자가 둘을 다르게 적을 수 있고, 그때 원장에 남는 것은 하나뿐이다.
   const hasContactField = spec.ledger.person.name !== spec.ledger.matchColumns.name
 
-  const set = (patch: Partial<QuickAddDraft>) => {
-    onDraftChange({ ...draft, ...patch })
-    // 값이 바뀌면 지나간 대조는 무효다.
-    onMatchChange(null)
-  }
+  const cols = [
+    { label: `${spec.nameHeader} *`, kind: 'text' as const },
+    ...(hasContactField ? [{ label: spec.loginNameHeader, kind: 'name' as const }] : []),
+    { label: '이메일', kind: 'text' as const },
+    { label: '연락처', kind: 'code' as const },
+  ]
+
+  /** 그 줄에 대해 할 말이 있는 판정만 남긴다 — 새로 만들 줄은 알림에 서지 않는다. */
+  const notices = (entries ?? []).filter((e) => e.match || e.decision === 'skip')
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Field label={spec.nameHeader} required>
-          <Input
-            value={draft.name}
-            onChange={(e) => set({ name: e.target.value })}
-            disabled={busy}
-            autoFocus
-          />
-        </Field>
-        {hasContactField && (
-          <Field label={spec.loginNameHeader}>
+      <ItemRows
+        cols={cols}
+        rows={rows}
+        rowKey={(r) => r.key}
+        onAdd={onAdd}
+        onRemove={onRemove}
+        addLabel="줄 추가"
+      >
+        {(row, i) => (
+          <>
             <Input
-              value={draft.contactName}
-              onChange={(e) => set({ contactName: e.target.value })}
+              value={row.name}
+              onChange={(e) => onPatch(i, { name: e.target.value })}
               disabled={busy}
+              aria-label={spec.nameHeader}
             />
-          </Field>
+            {hasContactField && (
+              <Input
+                value={row.contactName}
+                onChange={(e) => onPatch(i, { contactName: e.target.value })}
+                disabled={busy}
+                aria-label={spec.loginNameHeader}
+              />
+            )}
+            <Input
+              type="email"
+              value={row.email}
+              onChange={(e) => onPatch(i, { email: e.target.value })}
+              disabled={busy}
+              aria-label="이메일"
+            />
+            <Input
+              value={row.phone}
+              onChange={(e) => onPatch(i, { phone: e.target.value })}
+              disabled={busy}
+              aria-label="연락처"
+            />
+          </>
         )}
-        <Field label="이메일">
-          <Input
-            type="email"
-            value={draft.email}
-            onChange={(e) => set({ email: e.target.value })}
-            disabled={busy}
-          />
-        </Field>
-        <Field label="연락처">
-          <Input
-            value={draft.phone}
-            onChange={(e) => set({ phone: e.target.value })}
-            disabled={busy}
-          />
-        </Field>
-      </div>
+      </ItemRows>
 
-      {match && <MatchNotice match={match} spec={spec} />}
+      {notices.length > 0 && <MatchNotices notices={notices} onDecide={onDecide} />}
     </div>
   )
 }
 
 /**
- * 대조에 걸렸을 때 서는 알림. **무엇이 같아서 걸렸는지**를 밝힌다 — 건수만 말하면 담당자가
- * 동명이인인지 진짜 중복인지 판단할 근거가 없다.
+ * 대조에 걸린 줄들. **무엇이 같아서 걸렸는지**를 밝힌다 — 건수만 말하면 담당자가 동명이인인지
+ * 진짜 중복인지 판단할 근거가 없다.
+ *
+ * 줄 안이 아니라 목록 아래에 모아 세우는 이유는 격자다. 입력 줄은 열이 세로로 맞아야 위아래
+ * 값을 견줄 수 있는데(`ItemRows`), 그 사이에 폭이 다른 알림 줄이 끼면 그 정렬이 끊긴다.
+ * 대신 **몇 번 줄인지**를 알림이 먼저 말한다.
  */
-function MatchNotice({
-  match,
-  spec,
+function MatchNotices({
+  notices,
+  onDecide,
 }: {
-  match: PersonaMatch
-  spec: (typeof PARTICIPANT_PERSONAS)[MasterTable]
+  notices: BulkEntry[]
+  onDecide: (line: number, decision: BulkDecision) => void
 }) {
   return (
-    <div className="rounded-radius-md border border-warning-200 bg-warning-50 px-3 py-2.5">
+    <div className="space-y-2 rounded-radius-md border border-warning-200 bg-warning-50 px-3 py-2.5">
       <p className="text-body font-semibold text-gray-900">
-        원장에 이미 있습니다 — {match.hits}개 항목이 일치합니다.
+        확인이 필요한 줄이 {notices.length}건 있습니다.
       </p>
-      <p className={cn('mt-1', cardText.meta)}>
-        <span className="font-medium text-gray-800">{match.name}</span>
-        {match.loginName && <> · {match.loginName}</>}
-        {match.email && <> · {match.email}</>}
-        {match.phone && <> · {match.phone}</>}
-        {match.retired && <> · 원장 비활성</>}
-      </p>
-      <p className={cn('mt-1.5', cardText.meta)}>
-        {match.retired
-          ? `이 ${spec.label}은(는) 원장에서 내려간 행입니다. 담으면 명단에 서되 '원장 비활성'으로 표시됩니다.`
-          : '새로 만들지 않고 이 행을 담는 것이 정본을 하나로 지키는 길입니다.'}
-      </p>
+      {notices.map((e) => (
+        <div key={e.row.line} className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <span className={cn('shrink-0 font-medium text-gray-800', cardText.value)}>
+            {e.row.line}번 줄 {e.row.name}
+          </span>
+          <span className={cn('min-w-0 flex-1', cardText.meta)}>
+            {e.alreadyMapped ? (
+              <>이미 명단에 담겨 있습니다 — 이 줄은 등록하지 않습니다.</>
+            ) : !e.match ? (
+              <>앞의 줄과 같은 대상입니다 — 이 줄은 등록하지 않습니다.</>
+            ) : (
+              <>
+                원장에 <span className="font-medium text-gray-800">{e.match.name}</span>
+                {e.match.loginName && <> · {e.match.loginName}</>}
+                {e.match.email && <> · {e.match.email}</>}
+                {e.match.retired && <> · 원장 비활성</>} 가(이) 있습니다({e.match.hits}개 일치).{' '}
+                {e.decision === 'link'
+                  ? '새로 만들지 않고 이 행을 담습니다.'
+                  : '이 행과 별개로 새로 만듭니다.'}
+              </>
+            )}
+          </span>
+          {/* 동명이인·동명 법인이 실제로 있으므로 길을 막지는 않되, 손이 저절로 가는 쪽은
+              이미 있는 행이어야 한다. 사실로 내려간 줄(이미 담김·폼 안 중복)에는 고를 것이 없다. */}
+          {e.match && !e.alreadyMapped && (
+            <button
+              type="button"
+              onClick={() => onDecide(e.row.line, e.decision === 'link' ? 'create' : 'link')}
+              className="shrink-0 text-body-sm text-info transition-opacity duration-fast hover:opacity-80"
+            >
+              {e.decision === 'link' ? '그래도 새로 만들기' : '있는 행 담기'}
+            </button>
+          )}
+        </div>
+      ))}
     </div>
   )
 }
 
 /**
- * 저장 버튼 묶음. 대조 전/후로 **누를 것이 달라진다** — 전에는 `확인 후 등록` 하나이고,
- * 걸린 뒤에는 `이 대상 담기`가 주 행동이 되고 새로 만들기는 물러선다.
+ * 저장 버튼. 대조 전/후로 **누를 것이 달라진다** — 전에는 `확인 후 등록` 하나이고, 대조가
+ * 끝나면 무엇을 담고 무엇을 만들지가 정해져 건수를 든 `담기`가 된다.
  */
 export function LedgerQuickAddActions({
-  match,
+  entries,
   canSubmit,
   busy,
-  onCheckAndCreate,
-  onCreateAnyway,
-  onUseMatch,
+  onCheck,
+  onSubmit,
 }: {
-  match: PersonaMatch | null
+  entries: BulkEntry[] | null
   canSubmit: boolean
   busy: boolean
-  onCheckAndCreate: () => void
-  onCreateAnyway: () => void
-  onUseMatch: () => void
+  onCheck: () => void
+  onSubmit: () => void
 }) {
   if (busy) {
     return (
@@ -150,22 +191,17 @@ export function LedgerQuickAddActions({
       </span>
     )
   }
-  if (!match) {
+  if (!entries) {
     return (
-      <Button onClick={onCheckAndCreate} disabled={!canSubmit}>
+      <Button onClick={onCheck} disabled={!canSubmit}>
         확인 후 등록
       </Button>
     )
   }
+  const total = entries.filter((e) => e.decision !== 'skip').length
   return (
-    <>
-      {/* 동명이인·동명 법인이 실제로 있으므로 길을 막지는 않되, 손이 저절로 가는 쪽은
-          이미 있는 행이어야 한다. */}
-      <Button variant="outline" onClick={onCreateAnyway}>
-        그래도 새로 만들기
-      </Button>
-      <Button onClick={onUseMatch}>이 대상 담기</Button>
-    </>
+    <Button onClick={onSubmit} disabled={total === 0}>
+      담기 ({total})
+    </Button>
   )
 }
-
