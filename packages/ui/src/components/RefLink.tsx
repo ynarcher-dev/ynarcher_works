@@ -1,4 +1,5 @@
 import type { ComponentType, ElementType, ReactNode } from 'react'
+import { Badge } from './Badge'
 import { EmptyValue } from './EmptyValue'
 import { cn } from '../utils/cn'
 
@@ -7,7 +8,7 @@ export interface RefLinkItem {
   key: string
   /** 이름 — 링크가 걸리는 부분. */
   label: string
-  /** 이름 앞 종류 표기(`AC 사업`·`전문가` 등). 이름만으로 어느 원장인지 모를 때만 준다. */
+  /** 이름 앞 종류 표기(`STARTUP`·`전문가`·소속 등). 이름만으로 어디서 온 값인지 모를 때만 준다. */
   kind?: string | null
   /** 이름 뒤 부가 표기(사업코드·소속). 동명이인을 가르는 자리다. */
   note?: string | null
@@ -31,6 +32,18 @@ export interface RefLinkListProps {
    * 생략하면 모든 항목이 링크 없는 텍스트로 선다.
    */
   as?: ElementType
+  /**
+   * 종류 표기(`kind`)를 세우는 방식. 기본은 이름 앞 회색 글자다.
+   *
+   * `'tag'`는 그것을 태그 하나로 세운다 — **상세 화면 전용**이다. 목록에서 분류를 배지로
+   * 세우지 않는 근거(`TagCell`)는 훑는 눈에 색 덩어리가 걸린다는 것인데, 상세는 한 레코드만
+   * 서는 자리라 그 요철이 생기지 않고 거기서 종류는 배경이 아니라 읽어야 할 값이다.
+   *
+   * 태그가 되는 것은 **이름이 아니라 그 이름이 어디서 온 것인가**이므로 "상호참조는 배지가
+   * 아니라 텍스트 링크다"와 어긋나지 않는다 — 이름은 그대로 텍스트로 서고 길도 이름에만 걸린다.
+   * 그래서 태그는 링크 **밖에** 세운다(안에 두면 이름에 걸린 밑줄이 분류까지 함께 긋는다).
+   */
+  kindAs?: 'text' | 'tag'
   /** 항목이 하나도 없을 때 적을 값. 미지정이면 빈 값 표기(`-`). */
   empty?: ReactNode
   className?: string
@@ -51,16 +64,17 @@ export interface RefLinkListProps {
  * 크기는 이 줄이 놓인 자리(대개 `InfoField`의 값)를 그대로 물려받고 색만 바꾼다 —
  * "한 줄 안에서 크기를 갈라 위계를 만들지 않는다"(densityScale.ts).
  */
-export function RefLinkList({ items, as, empty, className }: RefLinkListProps) {
+export function RefLinkList({ items, as, kindAs = 'text', empty, className }: RefLinkListProps) {
   if (items.length === 0) return <>{empty ?? <EmptyValue />}</>
   const Comp = (as ?? null) as unknown as ComponentType<Record<string, unknown>> | null
 
   return (
     <span className={cn('inline', className)}>
       {items.map((item, i) => {
+        const asTag = kindAs === 'tag' && Boolean(item.kind)
         const body = (
           <>
-            {item.kind && <span className="text-gray-500">{item.kind} </span>}
+            {item.kind && !asTag && <span className="text-gray-500">{item.kind} </span>}
             {item.label}
             {item.note && <span className="text-gray-500"> {item.note}</span>}
           </>
@@ -69,6 +83,13 @@ export function RefLinkList({ items, as, empty, className }: RefLinkListProps) {
           <span key={item.key}>
             {/* 쉼표는 링크 밖에 둔다 — 구분자까지 밑줄이 그어지면 이름의 일부로 읽힌다. */}
             {i > 0 && <span className="text-gray-500">, </span>}
+            {asTag && (
+              // 이름과 같은 줄에 서므로 글자 흐름에 맞춰 중앙으로 맞춘다 — 태그는 고정 높이라
+              // 기준선에 그대로 놓으면 아래로 처져 줄 간격이 태그 있는 줄에서만 벌어진다.
+              <Badge tone="neutral" className="mr-1 align-middle">
+                {item.kind}
+              </Badge>
+            )}
             {Comp && item.to ? (
               <Comp
                 to={item.to}

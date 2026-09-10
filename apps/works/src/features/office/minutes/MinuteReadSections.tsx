@@ -58,9 +58,13 @@ export function MinuteReadSections({ minute }: { minute: MinuteDetail }) {
     })),
   ]
 
-  /** 사람 목록 한 줄. 비어 있으면 `InfoRows`가 `-`로 대신한다(빈 배열을 빈 목록으로 넘기지 않는다). */
+  /**
+   * 사람 목록 한 줄. 비어 있으면 `InfoRows`가 `-`로 대신한다(빈 배열을 빈 목록으로 넘기지 않는다).
+   * 종류·소속은 태그로 선다(`kindAs`) — 한 레코드만 서는 상세라 목록에서 배지를 접는 근거가
+   * 여기서는 성립하지 않고, 그 자리에서 종류는 훑어 넘길 배경이 아니라 읽어야 할 값이다.
+   */
   const people = (items: RefLinkItem[]) =>
-    items.length > 0 ? <RefLinkList items={items} /> : null
+    items.length > 0 ? <RefLinkList items={items} kindAs="tag" /> : null
 
   return (
     <div className="space-y-4">
