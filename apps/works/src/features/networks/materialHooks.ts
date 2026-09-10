@@ -250,6 +250,23 @@ export async function fetchMaterialUrl(m: Material): Promise<string> {
   return data.url
 }
 
+/**
+ * 저장된 첨부를 다시 파일 입력처럼 다룰 때 쓸 `File`로 받는다.
+ *
+ * 다운로드 URL을 직접 전사 API에 넘기지 않는다 — 짧게 사라지는 서명 URL은 접근 로그를 남긴
+ * 뒤 브라우저가 읽는 통로이고, 녹음 전사는 사용자가 방금 고른 로컬 파일과 같은 입력 모양을
+ * 받아야 청크 분할·파일명·MIME 판정이 한 경로를 탄다.
+ */
+export async function fetchMaterialFile(m: Material): Promise<File> {
+  const url = await fetchMaterialUrl(m)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error('fetch_failed')
+  const blob = await res.blob()
+  return new File([blob], m.file_name, {
+    type: m.content_type || blob.type || 'application/octet-stream',
+  })
+}
+
 /** 링크 자료를 새 탭에서 연다. 파일의 다운로드와 짝을 이루는 동작이다. */
 export function openMaterialLink(m: Material): void {
   if (!m.url) return

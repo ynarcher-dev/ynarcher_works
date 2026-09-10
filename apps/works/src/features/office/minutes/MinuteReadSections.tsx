@@ -1,5 +1,9 @@
 import {
+  Badge,
   Card,
+  EntityHeaderCard,
+  EntityHeaderSection,
+  EntityHeaderSectionRow,
   InfoField,
   InfoGrid,
   InfoRows,
@@ -7,32 +11,36 @@ import {
   cardText,
   type RefLinkItem,
 } from '@ynarcher/ui'
-import { Link } from 'react-router-dom'
 import { RichTextViewer } from '@/components/RichTextEditor'
 import { linkItem, personItem } from '@/features/office/minutes/minuteRefItems'
-import type { MinuteDetail } from '@/features/office/minutes/minutesApi'
+import { MINUTE_VISIBILITY_LABEL, type MinuteDetail } from '@/features/office/minutes/minutesApi'
 
 /**
- * 회의록 읽기 화면의 본문 — **쓰기 화면과 같은 카드 단위·같은 순서**로 선다(2026-09-10 사용자 지정).
+ * 회의록 읽기 화면의 본문 — **머리 카드 하나에 섹션으로 접는다**(2026-09-10 사용자 지정,
+ * 같은 날 오전의 '쓰기와 같은 카드로 가른다'를 잇는 정정).
  *
- * 종전에는 여섯 줄(장소·내부·외부·참조·연동·안건)이 머리 카드 하나에 세로로 쌓였다. 한 카드
- * 안에서는 라벨 축이 하나뿐이라 `2026-07-23` 같은 짧은 값도 카드 폭을 통째로 받았고, 그래서
- * 값보다 빈 자리가 넓었다 — 사용자가 지적한 "여백이 많다"의 실체가 그것이다.
+ * 가른 것 자체는 맞았다. 틀린 것은 **가른 자리를 카드로 세운 것**이다 — 회의 정보·참석자·
+ * 열람 설정·관련 업무는 각각 한두 줄짜리인데, 카드는 테두리와 제목과 안쪽 여백을 함께 들고
+ * 오므로 한 줄을 세우는 데 카드 한 장이 쓰였다. 그래서 화면에는 값보다 테두리가 많았다.
  *
- * 카드를 가르는 근거는 **쓰기 화면이 이미 갈라 놓았다**는 것이다(`MinuteFormFields`). 규칙은
- * 이미 있다 — *입력 폼도 조회와 같은 카드 구성으로 선다(카드 단위·순서·이름)*. 그 규칙이
- * 지키려는 것은 **적은 자리와 읽는 자리가 같아 보이는 것**이므로, 방향은 어느 쪽이든 같다.
- * 열 수만 갈린다(쓰기는 적는 자리라 한 칸씩, 읽기는 견주는 자리라 두 칸씩).
+ * 규격은 지어내지 않고 사업 상세의 기본 데이터 카드(`ProgramInfoCard`)를 그대로 따른다 —
+ * 제목·배지 → 부제 → 구분선 → 정보 격자 → 캡션 달린 섹션. **한 레코드를 읽는 화면이 여럿
+ * 있는데 그중 하나만 다른 모양이면, 그 다름이 뜻을 갖지 않는데도 다르게 읽힌다.**
  *
- * **빈 값도 자리를 지킨다.** 종전에는 값이 있는 줄만 세웠고 근거는 "여섯 줄 중 넷이 `-`면
- * 없는 것을 알리느라 있는 것을 가린다"였는데, 그 걱정은 **한 카드에 여섯 줄**이었기 때문이다.
- * 카드가 갈리면 한 카드에 한두 줄이라 `-`가 벽이 되지 않고, 오히려 "이 회의록엔 연동이 없다"가
- * 자리로 남아야 회의록 둘을 같은 눈으로 읽을 수 있다(줄이 사라지면 아래 값이 위로 올라와,
- * 같은 항목이 회의록마다 다른 자리에 선다).
+ * 쓰기 화면과의 약속은 그대로다 — **단위·순서·이름**(회의 정보·참석자·열람 설정·관련 업무)이
+ * 지켜지고, 그것을 카드로 세우는지 섹션으로 세우는지만 갈린다. 적는 자리는 칸마다 손이 들어가
+ * 숨 쉴 자리가 필요하고, 읽는 자리는 한 문서를 위에서 아래로 훑는 자리다.
  *
- * **공개범위는 여기 서지 않는다** — 머리 카드의 배지가 이미 답한다. 같은 값을 묻는 표기는
- * 화면에 하나뿐이어야 하고, 문서를 열자마자 알아야 하는 사실이라 그 하나는 머리에 둔다.
- * 이 카드가 답하는 것은 *그래서 누가 함께 보는가*(참조)다.
+ * **주요 안건은 라벨을 잃고 부제로 오른다.** "이 회의가 무엇에 관한 것인가"에 답하는 한 줄이라
+ * 사업 카드의 설명과 같은 자리이고, 격자 칸에 두면 짧은 값 둘(회의일·장소) 옆에서 혼자 줄
+ * 전체를 받아 그 줄이 비어 보였다.
+ *
+ * **이름에 링크를 걸지 않는다**(2026-09-10 사용자 지정) — 근거는 `minuteRefItems`에 적었다.
+ * **참석자와 열람 설정은 나란히 선다** — 둘 다 이름 한 줄짜리라 쌓으면 오른쪽이 통째로 빈다.
+ *
+ * **빈 값도 자리를 지킨다** — 값이 있는 줄만 세우면 같은 항목이 회의록마다 다른 자리에 서서
+ * 둘을 같은 눈으로 읽을 수 없다. **공개범위는 배지 하나가 답한다**(같은 값을 묻는 표기는
+ * 화면에 하나뿐이어야 하고, 문서를 열자마자 알아야 하는 사실이라 그 하나는 머리에 둔다).
  */
 export function MinuteReadSections({ minute }: { minute: MinuteDetail }) {
   const attendees = minute.people.filter((p) => p.role === 'ATTENDEE')
@@ -52,64 +60,81 @@ export function MinuteReadSections({ minute }: { minute: MinuteDetail }) {
 
   /** 사람 목록 한 줄. 비어 있으면 `InfoRows`가 `-`로 대신한다(빈 배열을 빈 목록으로 넘기지 않는다). */
   const people = (items: RefLinkItem[]) =>
-    items.length > 0 ? <RefLinkList as={Link} items={items} /> : null
+    items.length > 0 ? <RefLinkList items={items} /> : null
 
   return (
     <div className="space-y-4">
-      <Card title="회의 정보">
-        {/*
-          짧은 값 둘은 두 칸으로 견주고, 안건만 줄 전체를 받는다 — 한 카드 안의 라벨 축은
-          하나로 두되(`InfoField`), 값의 길이에 따라 칸 수만 다르게 준다.
-        */}
-        <InfoGrid columns={2}>
-          <InfoField label="회의일" value={minute.meetingDate} />
-          <InfoField label="장소" value={minute.location} />
-          <InfoField
-            label="주요 안건"
-            value={minute.agenda}
-            className="sm:col-span-2"
-            valueClassName="whitespace-pre-line"
-          />
-        </InfoGrid>
-      </Card>
+      <EntityHeaderCard
+        title={minute.title}
+        badges={
+          <Badge tone={isOpen ? 'info' : 'neutral'}>
+            {MINUTE_VISIBILITY_LABEL[minute.visibility]}
+          </Badge>
+        }
+        description={minute.agenda}
+        info={
+          /*
+            두 칸으로 세운다 — 위 줄은 회의의 사실(언제·어디서), 아래 줄은 이 기록을 다룬
+            흔적(누가 적었고 몇 번 열렸는가)이다. 세 칸이면 넷이 3+1로 접혀 그 갈림이 사라진다.
+          */
+          <InfoGrid columns={2}>
+            <InfoField label="회의일" value={minute.meetingDate} />
+            <InfoField label="장소" value={minute.location} />
+            <InfoField label="작성자" value={minute.authorName} meta />
+            <InfoField label="조회" value={minute.viewCount.toLocaleString()} meta />
+          </InfoGrid>
+        }
+      >
+        <EntityHeaderSectionRow>
+          <EntityHeaderSection label="참석자">
+            <InfoRows
+              items={[
+                { label: '내부 참석자', value: people(attendees.map(personItem)) },
+                { label: '외부 참석자', value: people(externals) },
+              ]}
+            />
+          </EntityHeaderSection>
 
-      {/* 사람을 다루는 두 카드는 나란히 선다 — 쓰기 화면이 같은 자리에 같은 짝으로 세운다. */}
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
-        <Card title="참석자">
-          <InfoRows
-            items={[
-              { label: '내부 참석자', value: people(attendees.map(personItem)) },
-              { label: '외부 참석자', value: people(externals) },
-            ]}
-          />
-        </Card>
+          <EntityHeaderSection
+            label="열람 설정"
+            help="참조는 회의 참석자가 아니라 비공개 회의록을 함께 볼 사람입니다."
+          >
+            <InfoRows
+              items={[
+                {
+                  label: '참조',
+                  // 전체공개면 참조는 애초에 둘 수 없는 값이라, 비어 있는 이유를 자리가 답한다
+                  // (`-`만 서면 "안 넣었다"와 "넣을 수 없다"가 화면에서 같아진다).
+                  value:
+                    references.length > 0
+                      ? people(references.map(personItem))
+                      : isOpen
+                        ? '전체공개라 참조를 두지 않습니다'
+                        : null,
+                  meta: references.length === 0 && isOpen,
+                },
+              ]}
+            />
+          </EntityHeaderSection>
+        </EntityHeaderSectionRow>
 
-        <Card title="열람 설정" help="참조는 회의 참석자가 아니라 비공개 회의록을 함께 볼 사람입니다.">
+        <EntityHeaderSection
+          label="관련 업무"
+          help="연동된 사업·스타트업·네트워크와 상호 참조됩니다. 비어 있으면 일반 회의록입니다."
+        >
           <InfoRows
             items={[
               {
-                label: '참조',
-                // 전체공개면 참조는 애초에 둘 수 없는 값이라, 비어 있는 이유를 자리가 답한다
-                // (`-`만 서면 "안 넣었다"와 "넣을 수 없다"가 화면에서 같아진다).
-                value: references.length > 0 ? people(references.map(personItem)) : isOpen ? '전체공개라 참조를 두지 않습니다' : null,
-                meta: references.length === 0 && isOpen,
+                label: '연동 대상',
+                value: people(minute.links.map((l) => linkItem(l, { showKind: true }))),
               },
             ]}
           />
-        </Card>
-      </div>
+        </EntityHeaderSection>
+      </EntityHeaderCard>
 
-      <Card title="관련 업무" help="연동된 사업·스타트업·네트워크와 상호 참조됩니다. 비어 있으면 일반 회의록입니다.">
-        <InfoRows
-          items={[
-            {
-              label: '연동 대상',
-              value: people(minute.links.map((l) => linkItem(l, { showKind: true }))),
-            },
-          ]}
-        />
-      </Card>
-
+      {/* 본문만 카드로 남는다 — 머리 카드가 답하는 것은 이 회의의 사실이고, 여기는 그 회의에서
+          오간 말이다. 길이도 성격도 달라 같은 카드 안에서 구분선 하나로 잇지 않는다. */}
       <Card title="회의 내용">
         {minute.body ? (
           <RichTextViewer html={minute.body} />

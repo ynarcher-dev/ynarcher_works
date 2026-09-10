@@ -47,13 +47,13 @@ export function MinutesTable({
       ),
     },
     {
-      // 공개범위: 태그가 아니라 텍스트 컬럼으로 전체공개/일부공개를 표기한다.
-      // 일부공개(제한 공개)는 붉은색으로 색만 갈라 표기하고, 전체공개는 기본 본문색.
+      // 공개범위: 태그가 아니라 텍스트 컬럼으로 전체공개/비공개를 표기한다.
+      // 비공개(제한 공개)는 붉은색으로 색만 갈라 표기하고, 전체공개는 기본 본문색.
       // 별도의 버건디 톤을 두었었지만, 화면에 붉은 계열이 둘로 갈려 같은 '주의' 신호가
       // 자리마다 다른 색으로 보였다 — 제한 표기도 danger 램프 하나로 모은다(2026-08-03).
       key: 'visibility',
       header: '공개범위',
-      type: 'badge',
+      type: 'code',
       render: (m) => (
         <span
           className={
@@ -67,7 +67,8 @@ export function MinutesTable({
     {
       key: 'attachment',
       header: '첨부',
-      type: 'badge',
+      type: 'code',
+      align: 'center',
       render: (m) =>
         attachmentIds.has(m.id) ? (
           <span className="inline-flex items-center justify-center" title="첨부 있음">
@@ -83,7 +84,7 @@ export function MinutesTable({
       // (게시판·공지사항 viewsColumn과 같은 규칙).
       key: 'views',
       header: '조회',
-      type: 'count',
+      type: 'code',
       align: 'center',
       // 조회수는 회의록 자체가 아니라 그것이 열린 흔적이라 메타 톤이다. 크기는 표가 정한다.
       tone: 'meta',
@@ -93,7 +94,7 @@ export function MinutesTable({
       // 작성자는 게시판류와 같이 가운데로 모은다(person 기본 좌측을 덮는 예외).
       key: 'author',
       header: '작성자',
-      type: 'person',
+      type: 'code',
       align: 'center',
       // 표준 열의 생성자와 같은 톤 — 회의록을 다룬 사람이지 회의록의 내용은 아니다.
       tone: 'meta',

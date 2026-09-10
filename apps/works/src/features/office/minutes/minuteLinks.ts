@@ -183,7 +183,3 @@ export function minuteLinkKindLabel(type: string): string {
   return MINUTE_LINK_TARGETS[type as MinuteLinkTargetType]?.kindLabel ?? type
 }
 
-/** 상세 경로 조립(미등록 종류는 null → 링크 비활성화). */
-export function minuteLinkPath(type: string, id: string): string | null {
-  return MINUTE_LINK_TARGETS[type as MinuteLinkTargetType]?.toPath(id) ?? null
-}

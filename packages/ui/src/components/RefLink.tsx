@@ -11,7 +11,13 @@ export interface RefLinkItem {
   kind?: string | null
   /** 이름 뒤 부가 표기(사업코드·소속). 동명이인을 가르는 자리다. */
   note?: string | null
-  /** 이동 경로. `null`이면 링크 없이 텍스트로만 선다(접근 권한 없음·삭제됨). */
+  /**
+   * 이동 경로.
+   *
+   * **`null`과 미지정은 다르다.** `null`은 *갈 곳이 없다*(접근 권한 없음·삭제됨)라 회색으로
+   * 물러나고, 아예 주지 않으면 *길을 두지 않는다*라 값 그대로의 톤으로 선다. 둘을 같은 회색으로
+   * 세우면 링크를 걸지 않기로 한 화면에서 멀쩡한 값이 전부 '못 여는 대상'처럼 보인다.
+   */
   to?: string | null
   /** 링크가 없는 이유(마우스 오버 설명). */
   title?: string
@@ -72,7 +78,9 @@ export function RefLinkList({ items, as, empty, className }: RefLinkListProps) {
                 {body}
               </Comp>
             ) : (
-              <span title={item.title} className="text-gray-500">
+              // 갈 곳이 없다고 명시된 항목만 물러난다. 라우터를 주지 않아 링크가 안 걸린
+              // 항목은 색을 지정하지 않고 놓인 자리(대개 `InfoField`의 값)를 물려받는다.
+              <span title={item.title} className={item.to === null ? 'text-gray-500' : undefined}>
                 {body}
               </span>
             )}

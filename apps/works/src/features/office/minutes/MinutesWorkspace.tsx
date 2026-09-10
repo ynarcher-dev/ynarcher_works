@@ -1,5 +1,6 @@
 import { EmptyState, ListToolbar, PageHeader, Spinner, Tabs } from '@ynarcher/ui'
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '@/auth/authStore'
 import { ListActions } from '@/components/ListActions'
 import {
@@ -27,7 +28,7 @@ type View = { mode: 'list' } | { mode: 'detail'; id: string } | { mode: 'edit'; 
 const VISIBILITY_TABS = [
   { key: 'ALL', label: '전체' },
   { key: 'OFFICE', label: '전체공개' },
-  { key: 'PARTICIPANTS', label: '일부공개' },
+  { key: 'PARTICIPANTS', label: '비공개' },
 ] as const
 
 type VisibilityTab = (typeof VISIBILITY_TABS)[number]['key']
@@ -43,19 +44,42 @@ function EditExisting({ id, onDone }: { id: string; onDone: (id: string) => void
 function matchesKeyword(m: MinuteListItem, kw: string): boolean {
   const q = kw.trim().toLowerCase()
   if (!q) return true
-  return m.title.toLowerCase().includes(q) || (m.authorName ?? '').toLowerCase().includes(q)
+  return m.searchText.includes(q)
 }
 
 /**
  * OFFICE 회의록 워크스페이스: 목록(게시판형 표) ↔ 상세 ↔ 작성/편집.
  * 열람 범위(전사 공개/참석자 한정)는 DB RLS가 강제하므로 목록에는 볼 수 있는 회의록만 담긴다.
  */
-export function MinutesWorkspace({ initialMinuteId }: { initialMinuteId?: string } = {}) {
+export function MinutesWorkspace() {
   const userId = useAuthStore((s) => s.user?.id) ?? null
-  // 딥링크(?minute=)로 진입하면 해당 상세를 초기 뷰로 연다(사업/스타트업 '관련 회의록'에서 이동).
-  const [view, setView] = useState<View>(
-    initialMinuteId ? { mode: 'detail', id: initialMinuteId } : { mode: 'list' },
-  )
+  const [params, setParams] = useSearchParams()
+  const minuteId = params.get('minute')
+  const minuteMode = params.get('minuteMode')
+  // 목록·상세·편집을 URL이 답하게 해 브라우저 뒤로가기와 딥링크가 같은 화면을 연다.
+  const view: View =
+    minuteMode === 'create'
+      ? { mode: 'edit', id: null }
+      : minuteId
+        ? minuteMode === 'edit'
+          ? { mode: 'edit', id: minuteId }
+          : { mode: 'detail', id: minuteId }
+        : { mode: 'list' }
+  const setView = (nextView: View, replace = false) => {
+    const next = new URLSearchParams(params)
+    next.delete('minute')
+    next.delete('minuteMode')
+    if (nextView.mode === 'detail') next.set('minute', nextView.id)
+    if (nextView.mode === 'edit') {
+      if (nextView.id) {
+        next.set('minute', nextView.id)
+        next.set('minuteMode', 'edit')
+      } else {
+        next.set('minuteMode', 'create')
+      }
+    }
+    setParams(next, { replace })
+  }
   const [keyword, setKeyword] = useState('')
   const [tab, setTab] = useState<VisibilityTab>('ALL')
   const { data: minutes, isLoading } = useMinutes()
@@ -73,12 +97,12 @@ export function MinutesWorkspace({ initialMinuteId }: { initialMinuteId?: string
     return (
       <div className="space-y-5">
         {view.id ? (
-          <EditExisting id={view.id} onDone={(id) => setView({ mode: 'detail', id })} />
+          <EditExisting id={view.id} onDone={(id) => setView({ mode: 'detail', id }, true)} />
         ) : (
           <MinutesEditor
             initial={null}
-            onSaved={(id) => setView({ mode: 'detail', id })}
-            onCancel={() => setView({ mode: 'list' })}
+            onSaved={(id) => setView({ mode: 'detail', id }, true)}
+            onCancel={() => setView({ mode: 'list' }, true)}
           />
         )}
       </div>
@@ -92,7 +116,7 @@ export function MinutesWorkspace({ initialMinuteId }: { initialMinuteId?: string
         <MinutesDetail
           minuteId={view.id}
           currentUserId={userId}
-          onBack={() => setView({ mode: 'list' })}
+          onBack={() => setView({ mode: 'list' }, true)}
           onEdit={() => setView({ mode: 'edit', id: view.id })}
         />
       </div>
@@ -122,7 +146,7 @@ export function MinutesWorkspace({ initialMinuteId }: { initialMinuteId?: string
       <ListToolbar
         keyword={keyword}
         onKeywordChange={setKeyword}
-        searchPlaceholder="제목·작성자 검색"
+        searchPlaceholder="제목·작성자·회의일·장소·안건·참석자 검색"
         actions={
           <ListActions
             createLabel="회의록 등록"

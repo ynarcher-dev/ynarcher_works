@@ -169,7 +169,7 @@ export function OfficePage() {
       {/* 회의실 예약: 지사 탭 + 날짜 이동 + 회의실 카드. 설정은 ADMIN이 소유한다. */}
       {tab === 'rooms' && <RoomReservationWorkspace />}
       {/* 회의록: STARTUP에서 이관. 자체 목록/상세/작성 흐름과 헤더를 소유한다. */}
-      {tab === 'minutes' && <MinutesWorkspace initialMinuteId={params.get('minute') ?? undefined} />}
+      {tab === 'minutes' && <MinutesWorkspace />}
       {/* 지사 정보: ADMIN '지사 관리'가 소유한 지사 원장을 조회 전용 리스트뷰로 노출한다. */}
       {tab === 'branches' && <BranchesPanel />}
       {/* 전자결재: 진행 중 타일(필터) + 문서함 좌패널 + 문서 목록. */}

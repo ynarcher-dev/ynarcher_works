@@ -1,11 +1,8 @@
-import { BackButton, Button, DetailTopBar, Input, SegmentedToggle, cn, formText } from '@ynarcher/ui'
-import { useQueryClient } from '@tanstack/react-query'
+import { BackButton, Button, DetailTopBar, formText } from '@ynarcher/ui'
 import { useState } from 'react'
-import { RichTextEditor } from '@/components/RichTextEditor'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { PendingMaterialPanel } from '@/features/networks/PendingMaterialPanel'
 import { usePendingMaterials } from '@/features/networks/pendingMaterials'
-import { uploadMaterialFile } from '@/features/networks/materialHooks'
 import {
   MINUTE_ATTACHMENT_TYPE,
   MINUTE_VOICE_ATTACHMENT_TYPE,
@@ -13,9 +10,8 @@ import {
   type MinuteDetail,
   type MinuteVisibility,
 } from '@/features/office/minutes/minutesApi'
-import { InternalPersonPicker, type PickerPerson } from '@/features/office/minutes/MinutePeoplePicker'
-import { ExternalAttendeePicker } from '@/features/office/minutes/ExternalAttendeePicker'
-import { MinuteLinkPicker } from '@/features/office/minutes/MinuteLinkPicker'
+import { MinuteFormFields } from '@/features/office/minutes/MinuteFormFields'
+import type { PickerPerson } from '@/features/office/minutes/MinutePeoplePicker'
 import type { MinuteLink } from '@/features/office/minutes/minuteLinks'
 import { VoiceMinutePanel } from '@/features/office/minutes/voice/VoiceMinutePanel'
 import type { MinuteDraft } from '@/features/office/minutes/voice/voiceMinuteApi'
@@ -27,11 +23,6 @@ interface Props {
   onCancel: () => void
 }
 
-const VISIBILITY_OPTS: { value: MinuteVisibility; label: string; help: string }[] = [
-  { value: 'PARTICIPANTS', label: '일부공개', help: '작성자와 아래 참석자·참조로 태그된 사람만 열람합니다.' },
-  { value: 'OFFICE', label: '전체공개', help: 'OFFICE를 볼 수 있는 임직원 전원이 열람합니다.' },
-]
-
 /**
  * 회의록 작성·편집 폼. 2:1 레이아웃 — 좌측에 본문(리치텍스트)·메타·공개범위·참석자,
  * 우측에 파일첨부. 신규는 저장 성공 후 보류 첨부를 일괄 업로드하고, 수정은 즉시 업로드한다.
@@ -39,7 +30,6 @@ const VISIBILITY_OPTS: { value: MinuteVisibility; label: string; help: string }[
 export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
   const save = useSaveMinute()
   const pending = usePendingMaterials()
-  const qc = useQueryClient()
   const [title, setTitle] = useState(initial?.title ?? '')
   const [meetingDate, setMeetingDate] = useState(initial?.meetingDate ?? '')
   const [location, setLocation] = useState(initial?.location ?? '')
@@ -79,8 +69,9 @@ export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
       },
       {
         onSuccess: async (id) => {
-          // 신규 등록: 저장으로 id가 생긴 직후 보류 첨부를 일괄 업로드한다.
-          if (!initial?.id && pending.count > 0) await pending.flush(id)
+          // 새 녹음은 신규·수정 모두 상단 저장 하나에 맞춰 이 시점에 함께 올린다.
+          // 일반 첨부는 기존 규약대로 신규만 보류되고, 수정 중에는 MaterialPanel이 즉시 올린다.
+          if (pending.count > 0) await pending.flush(id)
           onSaved(id)
         },
       },
@@ -88,27 +79,33 @@ export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
   }
 
   // AI 초안 반영: 비어 있는 필드만 채우고, 본문은 기존 내용을 덮지 않도록 뒤에 잇는다.
-  const applyDraft = (draft: MinuteDraft) => {
+  const applyDraft = (draft: MinuteDraft): (() => void) => {
+    const before = { title, agenda, body }
     if (draft.title && !title.trim()) setTitle(draft.title)
     if (draft.agenda && !agenda.trim()) setAgenda(draft.agenda)
     if (draft.body) {
       const hasBody = body.replace(/<[^>]*>/g, '').trim().length > 0
       setBody(hasBody ? `${body}${draft.body}` : draft.body)
     }
-  }
-
-  // 음성 오디오 저장: 일반 첨부와 섞이지 않게 음성 전용 슬롯(MINUTE_VOICE_ATTACHMENT_TYPE)에 담는다.
-  // 수정 모드면 즉시 업로드(목록 갱신), 신규면 저장 후 일괄 업로드되도록 보류에 담는다.
-  const saveAudio = async (file: File) => {
-    if (initial?.id) {
-      await uploadMaterialFile(MINUTE_VOICE_ATTACHMENT_TYPE, initial.id, file)
-      qc.invalidateQueries({ queryKey: ['materials', MINUTE_VOICE_ATTACHMENT_TYPE, initial.id] })
-    } else {
-      pending.add(MINUTE_VOICE_ATTACHMENT_TYPE, [file])
+    return () => {
+      setTitle(before.title)
+      setAgenda(before.agenda)
+      setBody(before.body)
     }
   }
 
-  const activeHelp = VISIBILITY_OPTS.find((o) => o.value === visibility)?.help
+  // 한 번의 편집에서 새로 담는 녹음은 한 건이다. 다른 파일을 고르면 아직 저장되지 않은 앞 파일을
+  // 교체하고, 서버에 이미 저장된 녹음은 건드리지 않는다.
+  const queueAudio = (file: File) => {
+    const current = pending.files(MINUTE_VOICE_ATTACHMENT_TYPE)
+    for (let i = current.length - 1; i >= 0; i -= 1) pending.remove(MINUTE_VOICE_ATTACHMENT_TYPE, i)
+    pending.add(MINUTE_VOICE_ATTACHMENT_TYPE, [file])
+  }
+
+  const removeQueuedAudio = () => {
+    const current = pending.files(MINUTE_VOICE_ATTACHMENT_TYPE)
+    for (let i = current.length - 1; i >= 0; i -= 1) pending.remove(MINUTE_VOICE_ATTACHMENT_TYPE, i)
+  }
 
   return (
     <div className="space-y-5">
@@ -124,87 +121,30 @@ export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
       />
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
-        {/* 좌: 본문 2/3. 필드 위 라벨 대신 각 입력의 플레이스홀더로 무엇을 적는지 안내한다. */}
-        <div className="space-y-4 lg:col-span-2">
-          <Input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="회의 제목"
-            aria-label="제목"
-          />
+        <MinuteFormFields
+          title={title}
+          onTitleChange={setTitle}
+          meetingDate={meetingDate}
+          onMeetingDateChange={setMeetingDate}
+          location={location}
+          onLocationChange={setLocation}
+          visibility={visibility}
+          onVisibilityChange={setVisibility}
+          people={people}
+          onPeopleChange={setPeople}
+          externalPeople={externalPeople}
+          onExternalPeopleChange={setExternalPeople}
+          externalAttendees={externalAttendees}
+          onExternalAttendeesChange={setExternalAttendees}
+          links={links}
+          onLinksChange={setLinks}
+          agenda={agenda}
+          onAgendaChange={setAgenda}
+          body={body}
+          onBodyChange={setBody}
+        />
 
-          <div className="flex flex-wrap gap-3">
-            <div className="w-44">
-              {/* 날짜 입력은 빈 값에 텍스트 플레이스홀더가 표시되지 않으므로 접근성 라벨만 부여한다. */}
-              <Input
-                type="date"
-                value={meetingDate}
-                onChange={(e) => setMeetingDate(e.target.value)}
-                aria-label="회의일"
-                title="회의일"
-              />
-            </div>
-            <div className="min-w-0 flex-1">
-              <Input
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="장소 (회의실 등)"
-                aria-label="장소"
-              />
-            </div>
-          </div>
-
-          {/* 공개범위: 세그먼트 토글(각 버튼이 스스로를 설명하므로 별도 라벨을 두지 않는다). */}
-          <div>
-            <SegmentedToggle
-              label="공개범위"
-              options={VISIBILITY_OPTS.map((o) => ({ key: o.value, label: o.label }))}
-              value={visibility}
-              onChange={setVisibility}
-            />
-            {activeHelp && <p className={cn('mt-1', formText.hint)}>{activeHelp}</p>}
-          </div>
-
-          <InternalPersonPicker
-            role="ATTENDEE"
-            people={people}
-            onChange={setPeople}
-            placeholder="내부 참석자 검색 후 추가"
-            searchTitle="내부 참석자 검색"
-          />
-
-          {/* 전체공개는 임직원 전원이 열람하므로 참조(열람 허용)가 의미 없다 → 입력 비활성화. */}
-          <InternalPersonPicker
-            role="REFERENCE"
-            people={people}
-            onChange={setPeople}
-            placeholder={
-              visibility === 'OFFICE' ? '전체공개 회의록은 참조가 필요 없습니다' : '참조 대상 검색 후 추가'
-            }
-            searchTitle="참조 대상 검색"
-            disabled={visibility === 'OFFICE'}
-          />
-
-          <ExternalAttendeePicker
-            people={externalPeople}
-            onPeopleChange={setExternalPeople}
-            legacyNames={externalAttendees}
-            onLegacyChange={setExternalAttendees}
-          />
-
-          <MinuteLinkPicker value={links} onChange={setLinks} />
-
-          <Input
-            value={agenda}
-            onChange={(e) => setAgenda(e.target.value)}
-            placeholder="주요 안건 (예: 3분기 채용 계획 검토)"
-            aria-label="주요 안건"
-          />
-
-          <RichTextEditor value={body} onChange={setBody} placeholder="회의 내용을 입력하세요…" />
-        </div>
-
-        {/* 우: 파일첨부 + 회의 녹음 + 음성/AI 초안 1/3 */}
+        {/* 우: 일반 첨부 + 녹음·전사·AI 초안 통합 패널 1/3 */}
         <div className="space-y-4 lg:col-span-1">
           {initial?.id ? (
             <MaterialPanel targetType={MINUTE_ATTACHMENT_TYPE} targetId={initial.id} title="첨부 파일" />
@@ -212,17 +152,13 @@ export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
             <PendingMaterialPanel slot={MINUTE_ATTACHMENT_TYPE} pending={pending} title="첨부 파일" />
           )}
 
-          {/* 회의 녹음: 일반 첨부와 분리된 전용 슬롯. 아래 녹음기가 저장한 오디오가 여기에 쌓인다. */}
-          {initial?.id ? (
-            <MaterialPanel targetType={MINUTE_VOICE_ATTACHMENT_TYPE} targetId={initial.id} title="회의 녹음" />
-          ) : (
-            <PendingMaterialPanel slot={MINUTE_VOICE_ATTACHMENT_TYPE} pending={pending} title="회의 녹음" />
-          )}
-
           <VoiceMinutePanel
             context={{ title, meetingDate, attendees: externalNames, agenda }}
             onApplyDraft={applyDraft}
-            onSaveAudio={saveAudio}
+            targetId={initial?.id}
+            queuedAudio={pending.files(MINUTE_VOICE_ATTACHMENT_TYPE)[0] ?? null}
+            onQueueAudio={queueAudio}
+            onRemoveQueuedAudio={removeQueuedAudio}
           />
         </div>
       </div>

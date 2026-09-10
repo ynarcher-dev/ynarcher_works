@@ -1,7 +1,15 @@
 import { Button, PanelCard, Spinner, TextArea, cardText, cn } from '@ynarcher/ui'
-import { Sparkles, RotateCcw, AlertTriangle, Save, Check, Music } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
-import { formatBytes } from '@/features/networks/materialHooks'
+import { AlertTriangle, Music, RotateCcw, Sparkles } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  fetchMaterialFile,
+  formatBytes,
+  useDeleteMaterial,
+  useMaterials,
+  type Material,
+} from '@/features/networks/materialHooks'
+import { MaterialList } from '@/features/networks/MaterialList'
+import { MINUTE_VOICE_ATTACHMENT_TYPE } from '@/features/office/minutes/minutesApi'
 import { FrequencyVisualizer } from './FrequencyVisualizer'
 import { RecorderControls } from './RecorderControls'
 import { transcribeLong, type TranscribeProgress } from './chunkedTranscribe'
@@ -9,66 +17,85 @@ import { useVoiceRecorder } from './useVoiceRecorder'
 import { generateMinuteDraft, type DraftContext, type MinuteDraft } from './voiceMinuteApi'
 
 interface Props {
-  /** 초안 맥락(제목·회의일·참석자·안건). AI에 함께 전달된다. */
   context: DraftContext
-  /** 생성된 초안을 상위 폼(제목·안건·본문)에 반영. */
-  onApplyDraft: (draft: MinuteDraft) => void
-  /** 녹음·업로드한 오디오를 회의록 '회의 녹음' 전용 슬롯에 저장. 신규는 보류 첨부, 수정은 즉시 업로드된다. */
-  onSaveAudio: (file: File) => Promise<void>
+  /** 초안을 상위 폼에 반영하고, 그 반영만 되돌리는 함수를 돌려준다. */
+  onApplyDraft: (draft: MinuteDraft) => () => void
+  targetId?: string
+  queuedAudio: File | null
+  onQueueAudio: (file: File) => void
+  onRemoveQueuedAudio: () => void
 }
 
-/** ms를 mm:ss로. */
+type WorkingAudio = { file: File; queued: boolean }
+
 function fmt(ms: number): string {
   const s = Math.floor(ms / 1000)
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 }
 
-/** 녹음 오디오의 첨부 파일명(회의일 있으면 사용, 없으면 오늘 날짜). */
 function audioFileName(meetingDate?: string | null): string {
   const base = (meetingDate && meetingDate.trim()) || new Date().toISOString().slice(0, 10)
   return `회의녹음-${base}.wav`
 }
 
 /**
- * 회의록 음성 패널. 두 기능을 독립적으로 다룬다.
- *  - 회의 녹음: 마이크 녹음 또는 오디오 파일 업로드 → Gemini 전사(텍스트) + 원본 오디오 첨부 저장.
- *  - AI 초안: 전사·직접 입력·붙여넣기 등 어떤 텍스트든 있으면 Gemini로 초안 생성.
- * 두 버튼은 서로를 강제하지 않는다(전사 없이 초안만, 초안 없이 오디오 저장만 가능).
+ * 녹음 보관과 전사·AI 초안을 한 흐름으로 다루는 패널.
+ * 새 음성은 회의록 저장 전까지 보류하고, 저장된 음성도 같은 자리에서 다시 전사할 수 있다.
  */
-export function VoiceMinutePanel({ context, onApplyDraft, onSaveAudio }: Props) {
+export function VoiceMinutePanel({
+  context,
+  onApplyDraft,
+  targetId,
+  queuedAudio,
+  onQueueAudio,
+  onRemoveQueuedAudio,
+}: Props) {
   const rec = useVoiceRecorder()
+  const { data: recordings = [], isLoading } = useMaterials(
+    MINUTE_VOICE_ATTACHMENT_TYPE,
+    targetId,
+  )
+  const remove = useDeleteMaterial(MINUTE_VOICE_ATTACHMENT_TYPE, targetId ?? '')
   const [transcript, setTranscript] = useState('')
+  const [workingAudio, setWorkingAudio] = useState<WorkingAudio | null>(
+    queuedAudio ? { file: queuedAudio, queued: true } : null,
+  )
   const [busy, setBusy] = useState<null | 'transcribing' | 'drafting'>(null)
+  const [transcribingId, setTranscribingId] = useState<string | undefined>()
   const [progress, setProgress] = useState<TranscribeProgress | null>(null)
   const [apiError, setApiError] = useState<string | null>(null)
   const [applied, setApplied] = useState(false)
-  // 저장 가능한 마지막 오디오(녹음 또는 업로드본)와 그 저장 상태.
-  const [audio, setAudio] = useState<File | null>(null)
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
-  const [saveError, setSaveError] = useState<string | null>(null)
+  const undoDraftRef = useRef<(() => void) | null>(null)
 
-  // 녹음본 미리듣기용 blob URL — 저장 전에 바로 들어볼 수 있게 한다(오디오가 바뀌면 이전 URL은 해제).
-  const audioUrl = useMemo(() => (audio ? URL.createObjectURL(audio) : null), [audio])
   useEffect(() => {
-    return () => {
-      if (audioUrl) URL.revokeObjectURL(audioUrl)
-    }
+    if (queuedAudio) setWorkingAudio({ file: queuedAudio, queued: true })
+    else setWorkingAudio((current) => (current?.queued ? null : current))
+  }, [queuedAudio])
+
+  const audioUrl = useMemo(
+    () => (workingAudio ? URL.createObjectURL(workingAudio.file) : null),
+    [workingAudio],
+  )
+  useEffect(() => () => {
+    if (audioUrl) URL.revokeObjectURL(audioUrl)
   }, [audioUrl])
 
   const recording = rec.status === 'recording'
   const micLive = rec.status === 'ready' || recording
 
-  async function runTranscribe(file: File) {
+  async function runTranscribe(file: File, materialId?: string) {
     setApiError(null)
     setBusy('transcribing')
+    setTranscribingId(materialId)
     setProgress(null)
     try {
       const text = await transcribeLong(file, setProgress)
-      setTranscript((prev) => (prev ? `${prev}\n${text}` : text).trim())
+      setTranscript(text.trim())
     } catch (e) {
       setApiError(e instanceof Error ? e.message : '음성 전사에 실패했습니다.')
     } finally {
       setBusy(null)
+      setTranscribingId(undefined)
       setProgress(null)
     }
   }
@@ -77,27 +104,25 @@ export function VoiceMinutePanel({ context, onApplyDraft, onSaveAudio }: Props) 
     const blob = await rec.stop()
     if (!blob) return
     const file = new File([blob], audioFileName(context.meetingDate), { type: 'audio/wav' })
-    setAudio(file)
-    setSaveState('idle')
+    onQueueAudio(file)
+    setWorkingAudio({ file, queued: true })
     await runTranscribe(file)
   }
 
   function handleFile(file: File) {
-    setAudio(file)
-    setSaveState('idle')
+    onQueueAudio(file)
+    setWorkingAudio({ file, queued: true })
     void runTranscribe(file)
   }
 
-  async function handleSaveAudio() {
-    if (!audio) return
-    setSaveState('saving')
-    setSaveError(null)
+  async function handleStoredRecording(material: Material) {
+    setApiError(null)
     try {
-      await onSaveAudio(audio)
-      setSaveState('saved')
+      const file = await fetchMaterialFile(material)
+      setWorkingAudio({ file, queued: false })
+      await runTranscribe(file, material.id)
     } catch (e) {
-      setSaveState('idle')
-      setSaveError(e instanceof Error ? e.message : '음성 파일 저장에 실패했습니다.')
+      setApiError(e instanceof Error ? e.message : '저장된 녹음을 불러오지 못했습니다.')
     }
   }
 
@@ -105,8 +130,7 @@ export function VoiceMinutePanel({ context, onApplyDraft, onSaveAudio }: Props) 
     setApiError(null)
     setBusy('drafting')
     try {
-      const draft = await generateMinuteDraft(transcript, context)
-      onApplyDraft(draft)
+      undoDraftRef.current = onApplyDraft(await generateMinuteDraft(transcript, context))
       setApplied(true)
     } catch (e) {
       setApiError(e instanceof Error ? e.message : 'AI 초안 생성에 실패했습니다.')
@@ -115,32 +139,34 @@ export function VoiceMinutePanel({ context, onApplyDraft, onSaveAudio }: Props) 
     }
   }
 
+  function undoDraft() {
+    undoDraftRef.current?.()
+    undoDraftRef.current = null
+    setApplied(false)
+  }
+
   function handleReset() {
+    if (workingAudio?.queued) onRemoveQueuedAudio()
+    undoDraft()
     rec.reset()
     setTranscript('')
     setApiError(null)
-    setApplied(false)
-    setAudio(null)
-    setSaveState('idle')
-    setSaveError(null)
+    setWorkingAudio(null)
   }
 
   return (
-    <PanelCard title="회의 녹음 · AI 초안">
+    <PanelCard
+      title="회의 녹음 · AI 초안"
+      count={recordings.length + (queuedAudio ? 1 : 0)}
+      help="회의 음성을 녹음하거나 파일을 올려 텍스트로 옮긴 뒤, 제목·안건·본문 초안을 만듭니다."
+    >
       <div className="space-y-3">
-        <p className={cardText.subtitle}>
-          회의 음성을 녹음하거나 녹취파일을 올려 텍스트로 옮기고, 필요하면 AI가 초안(제목·안건·본문)을
-          작성합니다. 길이·포맷에 상관없이 자동으로 나눠 인식합니다.
-        </p>
+        {micLive && <FrequencyVisualizer analyserRef={rec.analyserRef} active />}
 
-        {/* 주파수 시각화 — 마이크에 소리가 들어오면 막대가 반응해 정상 동작을 확인시킨다. */}
-        <FrequencyVisualizer analyserRef={rec.analyserRef} active={micLive} />
-
-        {/* ── 회의 녹음: 녹음/업로드 → 전사 ──────────────────────────────── */}
         <RecorderControls
           rec={rec}
           busy={busy !== null}
-          hasContent={Boolean(transcript || audio)}
+          hasContent={Boolean(transcript || workingAudio)}
           elapsedLabel={fmt(rec.elapsedMs)}
           onStop={handleStop}
           onFile={handleFile}
@@ -155,79 +181,48 @@ export function VoiceMinutePanel({ context, onApplyDraft, onSaveAudio }: Props) 
           </div>
         )}
 
-        {/* 녹음본 준비됨 — 녹취파일 업로드(위)와 한 묶음으로, 파일명 칩 + 미리듣기 + 저장을 2행으로 둔다.
-            저장은 녹음/업로드본을 회의록 '회의 녹음' 슬롯에 남긴다(전사와 무관). */}
-        {audio && !recording && (
+        {workingAudio && !recording && (
           <div className="space-y-2 rounded-radius-md border border-gray-200 bg-gray-50 p-2">
-            {/* 1행: 파일명 칩(아이콘 + 이름 + 용량) — 덜렁 텍스트 대신 파일임을 한눈에. */}
             <div className="flex items-center gap-2 rounded-radius-sm border border-gray-200 bg-white px-2.5 py-1.5">
               <Music className="size-4 shrink-0 text-brand" strokeWidth={1.75} />
-              <span className={cn('min-w-0 flex-1 truncate', cardText.value)} title={audio.name}>
-                {audio.name}
+              <span className={cn('min-w-0 flex-1 truncate', cardText.value)} title={workingAudio.file.name}>
+                {workingAudio.file.name}
               </span>
               <span className={cn('shrink-0 tabular-nums', cardText.meta)}>
-                {formatBytes(audio.size)}
+                {formatBytes(workingAudio.file.size)}
               </span>
             </div>
-
-            {/* 미리듣기: 저장 전에 바로 들어볼 수 있다. */}
-            {audioUrl && (
-              <audio className="h-9 w-full" src={audioUrl} controls />
-            )}
-
-            {/* 2행: 저장 버튼. */}
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={handleSaveAudio}
-              disabled={saveState !== 'idle'}
-            >
-              {saveState === 'saving' ? (
-                <Spinner />
-              ) : saveState === 'saved' ? (
-                <Check className="h-4 w-4" strokeWidth={2} />
-              ) : (
-                <Save className="h-4 w-4" strokeWidth={1.75} />
-              )}
-              {saveState === 'saved' ? '회의 녹음에 저장됨' : '음성 파일을 회의 녹음에 저장'}
-            </Button>
-            {saveError && (
-              <p className="flex items-start gap-1.5 text-caption text-danger">
-                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" strokeWidth={2} />
-                {saveError}
-              </p>
+            {audioUrl && <audio className="h-9 w-full" src={audioUrl} controls />}
+            {workingAudio.queued && (
+              <p className={cardText.meta}>회의록을 저장할 때 회의 녹음에 함께 저장됩니다.</p>
             )}
           </div>
         )}
 
-        {/* ── 전사 텍스트(항상 노출) + AI 초안(독립) ────────────────────── */}
         <div className="space-y-2 border-t border-gray-200 pt-3">
           <TextArea
             value={transcript}
             onChange={(e) => setTranscript(e.target.value)}
             rows={5}
-            placeholder="전사 결과가 여기에 표시됩니다. 직접 입력·붙여넣기해 초안을 만들 수도 있습니다."
+            placeholder="전사 결과가 여기에 표시됩니다. 직접 입력·붙여넣기할 수도 있습니다."
             aria-label="회의 내용 텍스트"
           />
           <div className="flex gap-2">
-            <Button
-              className="flex-1"
-              onClick={handleDraft}
-              disabled={busy !== null || transcript.trim().length < 10}
-            >
+            <Button className="flex-1" onClick={handleDraft} disabled={busy !== null || transcript.trim().length < 10}>
               {busy === 'drafting' ? <Spinner /> : <Sparkles className="h-4 w-4" strokeWidth={1.75} />}
               {busy === 'drafting' ? 'AI 초안 작성 중…' : 'AI 초안 작성'}
             </Button>
-            <Button variant="ghost" onClick={handleReset} disabled={busy !== null} aria-label="초기화">
+            <Button variant="ghost" onClick={handleReset} disabled={busy !== null} aria-label="음성 작업 초기화">
               <RotateCcw className="h-4 w-4" strokeWidth={1.75} />
             </Button>
           </div>
         </div>
 
         {applied && (
-          <p className="text-caption text-success">
-            초안을 본문에 반영했습니다. 좌측에서 확인·수정 후 저장하세요.
-          </p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-caption text-success">초안을 제목·안건·본문에 반영했습니다.</p>
+            <Button variant="ghost" onClick={undoDraft}>반영 취소</Button>
+          </div>
         )}
 
         {apiError && (
@@ -236,6 +231,19 @@ export function VoiceMinutePanel({ context, onApplyDraft, onSaveAudio }: Props) 
             {apiError}
           </p>
         )}
+
+        <div className="space-y-2 border-t border-gray-200 pt-3">
+          <p className={cardText.label}>저장된 녹음</p>
+          <MaterialList
+            materials={recordings}
+            loading={isLoading}
+            emptyText="저장된 녹음이 없습니다."
+            onTranscribe={(material) => void handleStoredRecording(material)}
+            transcribingId={transcribingId}
+            onDelete={targetId ? (id) => remove.mutate(id) : undefined}
+            deletingId={remove.isPending ? remove.variables : undefined}
+          />
+        </div>
       </div>
     </PanelCard>
   )

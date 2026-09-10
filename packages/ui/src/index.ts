@@ -146,10 +146,15 @@ export type { PageHeaderProps } from './layout/PageHeader'
 // 데이터 조회는 하지 않고 슬롯(ReactNode)만 배치하므로 워크스페이스 간 재사용이 가능하다.
 export { InfoField, InfoGrid, InfoRows } from './patterns/InfoGrid'
 export type { InfoFieldProps, InfoGridProps, InfoRowItem, InfoRowsProps } from './patterns/InfoGrid'
-export { EntityHeaderCard, EntityHeaderSection } from './patterns/EntityHeaderCard'
+export {
+  EntityHeaderCard,
+  EntityHeaderSection,
+  EntityHeaderSectionRow,
+} from './patterns/EntityHeaderCard'
 export type {
   EntityHeaderCardProps,
   EntityHeaderSectionProps,
+  EntityHeaderSectionRowProps,
 } from './patterns/EntityHeaderCard'
 export { MiniPager, usePaged } from './patterns/MiniPager'
 // 검색해서 고르는 목록(모달·팝오버 안 후보 나열)의 소유자 — 행 모양·선택 배경·스크롤 높이가

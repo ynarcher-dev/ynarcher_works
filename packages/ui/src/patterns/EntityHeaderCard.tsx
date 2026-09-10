@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react'
+import { createContext, useContext, type ReactNode } from 'react'
 import { CardShell } from '../components/CardShell'
+import { Tooltip } from '../components/Tooltip'
 import { DensityProvider } from '../density'
 import { cardText } from '../densityScale'
 import { cn } from '../utils/cn'
@@ -86,6 +87,39 @@ export function EntityHeaderCard({
   )
 }
 
+/**
+ * 이 섹션이 한 줄에 나란히 선 묶음의 칸인지 알린다.
+ *
+ * 화면이 플래그로 알리게 두지 않는 이유는, 그러면 "묶이면 선을 긋지 않는다"는 규칙을 섹션을
+ * 놓는 쪽마다 다시 알아야 하기 때문이다. 묶는 것은 `EntityHeaderSectionRow`이니 그 사실도
+ * 그쪽이 내려보낸다.
+ */
+const SectionRowContext = createContext(false)
+
+export interface EntityHeaderSectionRowProps {
+  children: ReactNode
+}
+
+/**
+ * 섹션 둘을 **한 줄에 나란히** 세우는 자리(구분선은 묶음이 한 번만 긋는다).
+ *
+ * 세로로 쌓는 것이 기본이고 이 자리는 예외다 — 축 둘이 각각 한두 줄뿐이면 쌓았을 때 오른쪽이
+ * 통째로 비어, 값보다 빈 자리가 넓어진다(회의록의 참석자·열람 설정). 나란히 세울 수 있는
+ * 조건은 `InfoGrid`가 칸을 나누는 조건과 같다 — **한 칸에 들어가는 값이 짧을 때**다.
+ *
+ * 선을 칸마다 긋지 않고 묶음이 한 번 긋는 것이 요점이다. 칸마다 그으면 가운데 간격만큼 끊긴
+ * 선 둘이 서서, 한 축이 갈린 것인지 두 축이 나란한 것인지 화면이 답하지 못한다.
+ */
+export function EntityHeaderSectionRow({ children }: EntityHeaderSectionRowProps) {
+  return (
+    <SectionRowContext.Provider value={true}>
+      <div className="mt-4 grid grid-cols-1 items-start gap-x-6 gap-y-4 border-t border-gray-100 pt-4 sm:grid-cols-2">
+        {children}
+      </div>
+    </SectionRowContext.Provider>
+  )
+}
+
 export interface EntityHeaderSectionProps {
   /**
    * 섹션 캡션(담당자·태그 등). 생략하면 구분선만 긋는다 — 정보 그리드가 두 벌 이어지는 카드
@@ -93,6 +127,14 @@ export interface EntityHeaderSectionProps {
    * 없는 이름을 지어 붙이면 그 이름이 곧 다음 사람이 지켜야 할 분류축이 된다.
    */
   label?: string
+  /**
+   * 이 섹션이 무엇을 다루는지에 대한 설명. 캡션 옆 도움말(ⓘ) 말풍선으로 선다.
+   *
+   * 자리를 여기가 갖는 근거는 `CardHeading`의 `help`와 같다 — 카드가 섹션으로 접히면 카드
+   * 제목이 쥐고 있던 안내도 함께 접혀야 하는데, 그때 화면이 `Tooltip`을 직접 놓기 시작하면
+   * 같은 안내가 섹션마다 다른 간격으로 선다. 캡션이 없는 섹션에는 붙일 자리도 없다.
+   */
+  help?: ReactNode
   children: ReactNode
 }
 
@@ -104,10 +146,17 @@ export interface EntityHeaderSectionProps {
  * 화면이 `border-t border-gray-100 pt-4`를 손으로 적기 시작하면 같은 선이 카드마다 다른 여백으로
  * 그어진다 — 규격을 화면에 두지 않는다는 규칙이 여기에도 그대로 적용된다.
  */
-export function EntityHeaderSection({ label, children }: EntityHeaderSectionProps) {
+export function EntityHeaderSection({ label, help, children }: EntityHeaderSectionProps) {
+  // 묶음 안에서는 위 여백과 선을 묶음이 이미 그었다.
+  const inRow = useContext(SectionRowContext)
   return (
-    <div className="mt-4 border-t border-gray-100 pt-4">
-      {label && <span className="text-caption text-gray-700">{label}</span>}
+    <div className={inRow ? undefined : 'mt-4 border-t border-gray-100 pt-4'}>
+      {label && (
+        <span className="flex items-center gap-1">
+          <span className="text-caption text-gray-700">{label}</span>
+          {help && <Tooltip content={help} label={label} className="shrink-0" />}
+        </span>
+      )}
       <div className={label ? 'mt-2' : undefined}>{children}</div>
     </div>
   )

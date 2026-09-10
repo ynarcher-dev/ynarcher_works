@@ -19,10 +19,10 @@ export type { MinuteLink, MinuteLinkRef } from '@/features/office/minutes/minute
 export type MinuteVisibility = 'OFFICE' | 'PARTICIPANTS'
 export type MinutePersonRole = 'ATTENDEE' | 'REFERENCE'
 
-/** 공개범위 표시 라벨(목록·상세·편집 공용). OFFICE=전체공개 / PARTICIPANTS=일부공개. */
+/** 공개범위 표시 라벨(목록·상세·편집 공용). OFFICE=전체공개 / PARTICIPANTS=비공개. */
 export const MINUTE_VISIBILITY_LABEL: Record<MinuteVisibility, string> = {
   OFFICE: '전체공개',
-  PARTICIPANTS: '일부공개',
+  PARTICIPANTS: '비공개',
 }
 
 /** 회의록 첨부의 attachments.target_type. RLS가 office_minute만 회의록 접근범위에 종속시킨다. */
@@ -54,6 +54,8 @@ export interface MinuteListItem {
   createdAt: string
   /** 누적 조회수(app.increment_minute_view로 집계). */
   viewCount: number
+  /** 목록 검색용 문자열(제목·작성자·회의일·장소·안건·참석자). 화면 표시에는 쓰지 않는다. */
+  searchText: string
 }
 
 export interface MinuteDetail extends MinuteListItem {
@@ -94,7 +96,7 @@ export interface MinuteDraft {
 const MINUTES_KEY = ['office', 'minutes']
 
 const LIST_COLUMNS =
-  'id, title, meeting_date, visibility, author_id, author_name, created_at, view_count'
+  'id, title, meeting_date, location, agenda, visibility, author_id, author_name, created_at, view_count, external_attendees, meeting_minute_people(role, users:user_id(name))'
 const DETAIL_COLUMNS =
   'id, title, meeting_date, location, agenda, body, visibility, author_id, author_name, created_at, view_count, external_attendees, meeting_minute_people(user_id, role, users:user_id(name))'
 
@@ -107,9 +109,20 @@ interface ListRow {
   author_name: string | null
   created_at: string
   view_count: number | null
+  location?: string | null
+  agenda?: string | null
+  external_attendees?: string[] | null
+  meeting_minute_people?: {
+    role: MinutePersonRole
+    users: { name: string } | { name: string }[] | null
+  }[]
 }
 
 function toListItem(r: ListRow): MinuteListItem {
+  const peopleNames = (r.meeting_minute_people ?? []).map((p) => {
+    const user = Array.isArray(p.users) ? p.users[0] : p.users
+    return user?.name ?? ''
+  })
   return {
     id: r.id,
     title: r.title,
@@ -119,6 +132,18 @@ function toListItem(r: ListRow): MinuteListItem {
     authorName: r.author_name,
     createdAt: r.created_at,
     viewCount: r.view_count ?? 0,
+    searchText: [
+      r.title,
+      r.author_name,
+      r.meeting_date,
+      r.location,
+      r.agenda,
+      ...(r.external_attendees ?? []),
+      ...peopleNames,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase(),
   }
 }
 
@@ -231,7 +256,7 @@ export function useMinute(id: string | null) {
       if (!data) return null
       // PostgREST 임베드(users:user_id)는 to-one이지만 생성 타입 없이는 배열로 추론되어
       // unknown 경유로 캐스팅하고 배열/객체 양쪽을 정규화한다.
-      const row = data as unknown as ListRow & {
+      const row = data as unknown as Omit<ListRow, 'meeting_minute_people'> & {
         location: string | null
         agenda: string | null
         body: string | null

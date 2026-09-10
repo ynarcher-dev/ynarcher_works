@@ -7,7 +7,7 @@ interface Props {
   rec: VoiceRecorder
   /** 전사/초안 진행 중 여부 — 녹음·업로드 버튼을 잠근다. */
   busy: boolean
-  /** 이미 오디오나 전사 텍스트가 있으면 '녹음 시작' 대신 '이어 녹음'으로 표기. */
+  /** 이미 오디오나 전사 텍스트가 있으면 기존 작업을 교체한다는 점을 표기. */
   hasContent: boolean
   /** 현재 녹음 경과(ms) — 녹음 중 타이머 표시. */
   elapsedLabel: string
@@ -18,8 +18,8 @@ interface Props {
 }
 
 /**
- * 회의 녹음의 입력 컨트롤(마이크 확인·녹음 + 녹취파일 업로드).
- * 업로드 버튼은 녹음 중이 아닐 때 항상 한 개만 노출하고, 마이크 상태 컨트롤은 그 위에 둔다.
+ * 회의 녹음의 입력 컨트롤(녹음 + 녹취파일 업로드).
+ * 녹음 시작이 마이크 권한 요청까지 함께 맡아, 시작 전에 별도 확인 버튼을 거치지 않는다.
  * 녹음 종료 후 오디오 처리와 전사는 부모(VoiceMinutePanel)가 담당한다.
  */
 export function RecorderControls({ rec, busy, hasContent, elapsedLabel, onStop, onFile }: Props) {
@@ -37,15 +37,15 @@ export function RecorderControls({ rec, busy, hasContent, elapsedLabel, onStop, 
     <>
       {/* 마이크 상태 컨트롤 -------------------------------------------------- */}
       {rec.status === 'idle' && (
-        <Button variant="outline" className="w-full" onClick={() => rec.checkMic()}>
+        <Button className="w-full" onClick={() => rec.start()} disabled={busy}>
           <Mic className="h-4 w-4" strokeWidth={1.75} />
-          마이크 확인
+          {hasContent ? '다시 녹음' : '녹음 시작'}
         </Button>
       )}
 
       {rec.status === 'checking' && (
         <div className="flex items-center justify-center gap-2 py-1 text-body text-gray-500">
-          <Spinner /> 마이크 확인 중…
+          <Spinner /> 마이크 여는 중…
         </div>
       )}
 
@@ -56,8 +56,8 @@ export function RecorderControls({ rec, busy, hasContent, elapsedLabel, onStop, 
             {rec.error}
           </p>
           {rec.status !== 'unsupported' && (
-            <Button variant="outline" className="w-full" onClick={() => rec.checkMic()}>
-              다시 시도
+            <Button variant="outline" className="w-full" onClick={() => rec.start()}>
+              녹음 다시 시도
             </Button>
           )}
         </div>
@@ -65,12 +65,9 @@ export function RecorderControls({ rec, busy, hasContent, elapsedLabel, onStop, 
 
       {rec.status === 'ready' && !recording && (
         <>
-          <p className="text-caption text-gray-500">
-            마이크에 대고 말해 막대가 움직이면 정상입니다. 준비되면 녹음을 시작하세요.
-          </p>
           <Button className="w-full" onClick={() => rec.start()} disabled={busy}>
             <Mic className="h-4 w-4" strokeWidth={1.75} />
-            {hasContent ? '이어 녹음' : '녹음 시작'}
+            {hasContent ? '다시 녹음' : '녹음 시작'}
           </Button>
         </>
       )}
