@@ -7,6 +7,7 @@
  */
 import type { BadgeTone } from '@ynarcher/ui'
 import dayjs from 'dayjs'
+import { weekdaysText } from '@/lib/weekdays'
 
 export type AttendancePlace = 'INTERNAL' | 'EXTERNAL'
 export type AttendanceKind = 'WORK' | 'LEAVE' | 'ABSENT'
@@ -54,6 +55,21 @@ export interface AttendancePolicy {
   /** 0=일 .. 6=토 */
   workdays: number[]
   allowExternal: boolean
+  /**
+   * 오전 반차로 쉬는 구간('HH:mm:ss'). 끝 시각이 그날의 출근 기준선이 된다.
+   *
+   * 반차를 길이가 아니라 구간으로 받는 이유는 출근 쪽 때문이다 — 길이만 알면 오후에 출근한
+   * 사람을 09:00 지각선으로 재게 되어 오전 반차를 쓴 사람이 전원 지각으로 찍힌다.
+   */
+  halfAmStart: string
+  halfAmEnd: string
+  /** 오후 반차로 쉬는 구간('HH:mm:ss'). 시작 시각이 그날의 퇴근 기준선이 된다. */
+  halfPmStart: string
+  halfPmEnd: string
+  /** 반반차 길이(분). 쉬는 자리가 하루 중 어디로도 갈 수 있어 구간이 아니라 길이로 받는다. */
+  quarterMinutes: number
+  /** 근무 요건 무시 — 출퇴근을 자유롭게 찍고 지각·조기퇴근을 판정하지 않는다. */
+  ignoreSchedule: boolean
   effectiveFrom: string
   note: string | null
 }
@@ -171,10 +187,21 @@ export function durationText(checkIn: string | null, checkOut: string | null): s
 
 export const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'] as const
 
-/** 근무 요일 배열 → '월·화·수·목·금'. 비어 있으면 '없음'. */
-export function workdaysText(workdays: number[]): string {
-  if (!workdays.length) return '없음'
-  return [...workdays].sort().map((d) => WEEKDAY_LABELS[d] ?? '?').join('·')
+/**
+ * 근무 요일 배열 → '월·화·수·목·금'. 비어 있으면 '없음'.
+ *
+ * 차례는 여기서 정하지 않는다 — 요일을 고르는 컨트롤(`WeekdayPicker`)이 소유한 차례를 그대로
+ * 쓴다. 고른 차례와 읽는 차례가 갈리면 방금 고른 것을 다시 읽지 못한다.
+ */
+export const workdaysText = weekdaysText
+
+/** 'HH:mm' 두 값 사이의 분. 반차 구간의 길이를 잴 때 쓴다(같은 날 안이라 날짜를 넘지 않는다). */
+export function minutesBetween(from: string, to: string): number {
+  const at = (v: string) => {
+    const [h, m] = v.split(':')
+    return Number(h) * 60 + Number(m)
+  }
+  return at(to) - at(from)
 }
 
 /** 분 → '9시간' / '8시간 30분'. 근무 기준 표기에 쓴다. */

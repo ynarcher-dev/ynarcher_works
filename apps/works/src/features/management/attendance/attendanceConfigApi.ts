@@ -96,6 +96,12 @@ interface PolicyRow {
   work_minutes: number
   workdays: number[]
   allow_external: boolean
+  half_am_start: string
+  half_am_end: string
+  half_pm_start: string
+  half_pm_end: string
+  quarter_minutes: number
+  ignore_schedule: boolean
   effective_from: string
   note: string | null
 }
@@ -108,12 +114,18 @@ const toPolicy = (r: PolicyRow): AttendancePolicy => ({
   workMinutes: r.work_minutes,
   workdays: r.workdays ?? [],
   allowExternal: r.allow_external,
+  halfAmStart: r.half_am_start,
+  halfAmEnd: r.half_am_end,
+  halfPmStart: r.half_pm_start,
+  halfPmEnd: r.half_pm_end,
+  quarterMinutes: r.quarter_minutes,
+  ignoreSchedule: r.ignore_schedule,
   effectiveFrom: r.effective_from,
   note: r.note,
 })
 
 const POLICY_COLUMNS =
-  'id, user_id, check_in_from, check_in_to, work_minutes, workdays, allow_external, effective_from, note'
+  'id, user_id, check_in_from, check_in_to, work_minutes, workdays, allow_external, half_am_start, half_am_end, half_pm_start, half_pm_end, quarter_minutes, ignore_schedule, effective_from, note'
 
 /** 근무 정책 전체(전사 기본 + 임직원별 예외). 발효일 최신이 앞에 온다. */
 export function useAttendancePolicies() {
@@ -152,6 +164,12 @@ export interface AttendancePolicyInput {
   workMinutes: number
   workdays: number[]
   allowExternal: boolean
+  halfAmStart: string
+  halfAmEnd: string
+  halfPmStart: string
+  halfPmEnd: string
+  quarterMinutes: number
+  ignoreSchedule: boolean
   effectiveFrom: string
   note: string | null
 }
@@ -171,6 +189,12 @@ export function useSaveAttendancePolicy() {
         work_minutes: v.workMinutes,
         workdays: v.workdays,
         allow_external: v.allowExternal,
+        half_am_start: v.halfAmStart,
+        half_am_end: v.halfAmEnd,
+        half_pm_start: v.halfPmStart,
+        half_pm_end: v.halfPmEnd,
+        quarter_minutes: v.quarterMinutes,
+        ignore_schedule: v.ignoreSchedule,
         effective_from: v.effectiveFrom,
         note: v.note?.trim() || null,
       }

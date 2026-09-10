@@ -1,5 +1,7 @@
 import { Input, SettingRow, Switch, Tooltip, tooltipScale } from '@ynarcher/ui'
+import { SectionHeading } from '@/components/SectionHeading'
 import { WeekdayPicker } from '@/components/WeekdayPicker'
+import { AttendanceLeaveFields } from '@/features/management/attendance/AttendanceLeaveFields'
 import type { AttendancePolicyInput } from '@/features/management/attendance/attendanceConfigApi'
 import { workMinutesText } from '@/features/management/attendance/attendanceModel'
 
@@ -14,14 +16,40 @@ interface Props {
  * 값의 뜻을 라벨이 아니라 배치가 말하게 둔다: 출근 가능 시간대는 한 줄에 붙여 놓고 뒤 값이
  * 지각선임을 캡션으로 밝히며, 소정 근무시간은 그것이 만드는 결과(퇴근 가능 시각)를 바로 아래
  * 적는다. 숫자만 두면 "9시간이 어디서부터 9시간인가"를 매번 되묻게 된다.
+ *
+ * 칸이 여섯을 넘어서면서 머리말로 세 묶음(근무·연차·적용)을 세운다. 묶음이 없으면 반차 뒤에
+ * 선 '적용 시작일'이 반차의 적용일로 읽힌다 — 이 폼에서 그 값은 기준 한 벌 전체의 것이다.
+ *
+ * **근무 요건 무시는 임직원 예외에만 선다.** 전사 기본에서 켜는 것이 뜻 없는 설정은 아니지만
+ * (전원 자유출퇴근인 회사가 있다) 지금 이 회사가 쓰는 축이 아니고, 무엇보다 전사 기준을 고치러
+ * 들어온 자리에서 가장 먼저 보이는 스위치가 '기준을 보지 않는다'여서는 안 된다.
  */
 export function AttendancePolicyFields({ value, onChange }: Props) {
   const set = <K extends keyof AttendancePolicyInput>(k: K, v: AttendancePolicyInput[K]) =>
     onChange({ ...value, [k]: v })
 
 
+  // 새 예외는 대상을 아직 고르지 않아 빈 문자열이고, 전사 기본만 null이다.
+  const isException = value.userId !== null
+
   return (
     <div className="space-y-4">
+      {isException && (
+        <SettingRow
+          title="근무 요건 무시"
+          hint="켜면 출퇴근을 자유롭게 찍고 지각·조기퇴근을 판정하지 않습니다. 근무 요일과 외부근무 허용은 그대로 적용됩니다."
+          control={({ id }) => (
+            <Switch
+              id={id}
+              checked={value.ignoreSchedule}
+              onChange={(on) => set('ignoreSchedule', on)}
+            />
+          )}
+        />
+      )}
+
+      <SectionHeading title="근무 기준" className="pt-0" />
+
       <div className="space-y-1">
         <span className="text-caption text-gray-600">
           출근 가능 시간
@@ -51,6 +79,7 @@ export function AttendancePolicyFields({ value, onChange }: Props) {
       <div className="space-y-1">
         <span className="text-caption text-gray-600">
           소정 근무시간
+          <span className="ml-1 text-gray-500">(휴게시간 포함)</span>
           <Tooltip
             label="소정 근무시간"
             content={`퇴근 가능 시각 = 출근 시각 + ${workMinutesText(value.workMinutes)}.\n그 전에 퇴근하면 조기퇴근으로 판정합니다.`}
@@ -82,6 +111,12 @@ export function AttendancePolicyFields({ value, onChange }: Props) {
           label="근무 요일"
         />
       </div>
+
+      <SectionHeading title="연차 기준" />
+
+      <AttendanceLeaveFields value={value} onChange={onChange} />
+
+      <SectionHeading title="적용" />
 
       <SettingRow
         title="외부근무 허용"

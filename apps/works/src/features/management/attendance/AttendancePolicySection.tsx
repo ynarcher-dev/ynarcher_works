@@ -30,13 +30,30 @@ function draftFrom(base: AttendancePolicy | undefined, userId: string | null): A
     workMinutes: base?.workMinutes ?? 540,
     workdays: base?.workdays ?? [1, 2, 3, 4, 5],
     allowExternal: base?.allowExternal ?? true,
+    halfAmStart: base?.halfAmStart ?? '09:00',
+    halfAmEnd: base?.halfAmEnd ?? '14:00',
+    halfPmStart: base?.halfPmStart ?? '14:00',
+    halfPmEnd: base?.halfPmEnd ?? '18:00',
+    quarterMinutes: base?.quarterMinutes ?? 120,
+    // 예외를 새로 만들 때는 꺼진 채로 시작한다 — 전사 기본을 물려받되 이 축만은
+    // 담당자가 켜는 것이지 물려받는 것이 아니다.
+    ignoreSchedule: false,
     effectiveFrom: dayjs().format('YYYY-MM-DD'),
     note: null,
   }
 }
 
-/** 정책 한 줄 요약 — 목록에서 기준을 펼치지 않고도 읽힌다. */
+/**
+ * 정책 한 줄 요약 — 목록에서 기준을 펼치지 않고도 읽힌다.
+ *
+ * 근무 요건을 무시하는 예외는 시간 기준을 적지 않는다. 적어 두면 그 값이 이 사람에게 적용되는
+ * 것으로 읽히는데, 실제로는 어느 시각에 찍어도 판정이 서지 않는다.
+ */
 function summary(p: AttendancePolicy): string {
+  if (p.ignoreSchedule) {
+    return ['근무 요건 무시', workdaysText(p.workdays), p.allowExternal ? '외부근무 허용' : '사내만']
+      .join(' · ')
+  }
   return [
     `${timeText(p.checkInFrom)}~${timeText(p.checkInTo)}`,
     workMinutesText(p.workMinutes),
@@ -68,7 +85,13 @@ export function AttendancePolicySection({ policies, onSaved, onFailed }: Props) 
   }, [employees])
 
   const submit = async (value: AttendancePolicyInput) => {
-    if (value.checkInFrom >= value.checkInTo) {
+    // DB CHECK와 짝을 이루는 앞단 검사. 뒤집힌 구간은 출근선이 퇴근선보다 늦어져
+    // 그날의 판정이 답을 낼 수 없다.
+    const inverted =
+      value.checkInFrom >= value.checkInTo ||
+      value.halfAmStart >= value.halfAmEnd ||
+      value.halfPmStart >= value.halfPmEnd
+    if (inverted) {
       onFailed()
       return
     }

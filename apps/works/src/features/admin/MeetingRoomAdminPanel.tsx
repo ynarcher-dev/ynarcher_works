@@ -14,6 +14,7 @@ import { Link } from 'react-router-dom'
 import { MeetingRoomFormModal } from '@/features/admin/MeetingRoomFormModal'
 import { useBranches } from '@/features/office/branches/branchesApi'
 import { normalizeTime } from '@/features/office/rooms/availability'
+import { weekdaysText } from '@/lib/weekdays'
 import {
   roomPhotoUrl,
   useCreateRoom,
@@ -27,9 +28,9 @@ import {
 /** 지사 원장의 단일 세팅 지점(MANAGEMENT). 여기서는 링크로만 안내한다. */
 const BRANCH_ADMIN_PATH = '/management?tab=branches'
 
-const KO_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
-const weekdayText = (days: number[]) =>
-  [...days].sort().map((d) => KO_WEEKDAYS[d]).join('·')
+// 요일 차례는 고르는 컨트롤(WeekdayPicker)이 소유한다 — 예약 가능 요일을 월요일부터 골라
+// 놓고 목록 요약이 '일·월·화…'로 서면 방금 고른 것을 다시 읽지 못한다.
+const weekdayText = weekdaysText
 
 /**
  * ADMIN 회의실 관리: 지사를 골라 그 지사의 회의실 목록·설정을 편집한다.

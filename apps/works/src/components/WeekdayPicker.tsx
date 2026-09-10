@@ -1,10 +1,8 @@
 import { cn } from '@ynarcher/ui'
-
-/** 요일 라벨(0=일 … 6=토). 요일을 숫자로 다루는 화면이 같은 순서·같은 글자를 쓰도록 한곳에 둔다. */
-export const KO_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'] as const
+import { KO_WEEKDAYS, WEEK_ORDER, sortWeekdays } from '@/lib/weekdays'
 
 export interface WeekdayPickerProps {
-  /** 선택된 요일(0=일 … 6=토). 항상 오름차순으로 되돌려 준다. */
+  /** 선택된 요일(0=일 … 6=토). 항상 화면 차례(월~일)로 되돌려 준다. */
   value: number[]
   onChange: (next: number[]) => void
   /** 무엇을 고르는 묶음인지 알리는 접근성 라벨(화면에는 보이지 않는다). */
@@ -26,11 +24,12 @@ export interface WeekdayPickerProps {
  */
 export function WeekdayPicker({ value, onChange, label, disabled = false }: WeekdayPickerProps) {
   const toggle = (d: number) =>
-    onChange(value.includes(d) ? value.filter((x) => x !== d) : [...value, d].sort())
+    onChange(sortWeekdays(value.includes(d) ? value.filter((x) => x !== d) : [...value, d]))
 
   return (
     <div role="group" aria-label={label} className="flex flex-wrap gap-1.5">
-      {KO_WEEKDAYS.map((day, d) => {
+      {WEEK_ORDER.map((d) => {
+        const day = KO_WEEKDAYS[d]
         const on = value.includes(d)
         return (
           <button
