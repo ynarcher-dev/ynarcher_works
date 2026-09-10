@@ -1,4 +1,4 @@
-import { Field, Input, PickList, PickMark, PickRow, Spinner } from '@ynarcher/ui'
+import { Field, Input, PickLine, PickList, PickMark, PickRow, Spinner } from '@ynarcher/ui'
 import { Check } from 'lucide-react'
 import type { MasterCandidate } from '@/features/program/participantHooks'
 import { PARTICIPANT_PERSONAS, type MasterTable } from '@/features/program/participantPersona'
@@ -67,15 +67,9 @@ export function RosterCandidateList({
                   <PickMark checked={on}>
                     <Check className="size-3" />
                   </PickMark>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-body text-gray-900">
-                      <span className="font-medium">{c.name}</span>
-                      {c.loginName && <span className="text-gray-500"> · {c.loginName}</span>}
-                    </span>
-                    <span className="block truncate text-body-sm text-gray-600">
-                      {c.email ?? c.phone ?? '원장에 연락처 없음'}
-                    </span>
-                  </span>
+                  {/* 왼쪽에서 하는 일은 이름으로 찾아 고르는 것뿐이다 — 명의·연락처는 담고
+                      나서 오른쪽 기둥이 답한다(`PickLine` 주석). */}
+                  <PickLine name={c.name} />
                   {c.alreadyMapped && (
                     <span className="shrink-0 text-body-sm text-gray-500">담김</span>
                   )}

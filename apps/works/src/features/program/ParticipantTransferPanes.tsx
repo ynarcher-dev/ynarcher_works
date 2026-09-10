@@ -1,6 +1,7 @@
 import {
   Field,
   Input,
+  PickLine,
   PickList,
   PickMark,
   PickRow,
@@ -46,8 +47,6 @@ export function ParticipantTransferPanes({
 
   return (
     <TransferPanes
-      // 좌측은 이름 한 줄이면 충분하고 우측은 이름·명의·입력 세 칸이 서므로 넓다.
-      rightWide
       left={{
         title: '계정 없음',
         count: left.length,
@@ -88,14 +87,9 @@ export function ParticipantTransferPanes({
                         <PickMark checked={on}>
                           <Check className="size-3" />
                         </PickMark>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-body text-gray-900">
-                            <span className="font-medium">{row.name}</span>
-                          </span>
-                          <span className="block truncate text-body-sm text-gray-600">
-                            {row.meta}
-                          </span>
-                        </span>
+                        {/* 왼쪽에서 하는 일은 이름으로 찾아 고르는 것뿐이다 — 연락처는 옮기고
+                            나서 오른쪽 기둥이 답한다(`PickLine` 주석). */}
+                        <PickLine name={row.name} />
                         {row.removingParticipantId && (
                           // 내린 줄은 **확정하면 지워진다**. 그 사실을 좌측에서 말하지 않으면
                           // '아직 안 담은 것'과 생김새가 같아, 되돌리려는 손이 그 줄을 못 찾는다.

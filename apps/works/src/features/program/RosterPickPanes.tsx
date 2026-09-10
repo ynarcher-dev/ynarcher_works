@@ -1,4 +1,4 @@
-import { Badge, PickList, PickMark, PickRow, TransferPanes, cardText, cn } from '@ynarcher/ui'
+import { Badge, PickLine, PickList, PickMark, PickRow, TransferPanes } from '@ynarcher/ui'
 import { Check } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { PARTICIPANT_PERSONAS, type MasterTable } from '@/features/program/participantPersona'
@@ -88,15 +88,15 @@ export function RosterPickPanes({
                       // 체크 자리를 비워 두면 두 갈래의 이름이 서로 다른 들여쓰기에서 시작한다.
                       <span className="size-4 shrink-0" aria-hidden />
                     )}
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-body text-gray-900">
-                        <span className="font-medium">{row.name}</span>
-                        {row.loginName && <span className="text-gray-500"> · {row.loginName}</span>}
-                      </span>
-                      <span className={cn('block truncate', cardText.meta)}>
-                        {row.email ?? row.phone ?? '원장에 연락처 없음'}
-                      </span>
-                    </span>
+                    {/* 담긴 기둥은 *이 대상이 맞는가*를 보는 자리라 명의·이메일·연락처를
+                        한 줄에 함께 세운다(왼쪽은 이름 하나다). */}
+                    <PickLine
+                      name={row.name}
+                      meta={
+                        [row.loginName, row.email, row.phone].filter(Boolean).join(' · ') ||
+                        '원장에 연락처 없음'
+                      }
+                    />
                     {draft ? (
                       <Badge tone="info">이번에 담기</Badge>
                     ) : (

@@ -1,6 +1,7 @@
 import {
   Field,
   Input,
+  PickLine,
   PickList,
   PickMark,
   PickRow,
@@ -9,7 +10,6 @@ import {
 } from '@ynarcher/ui'
 import { Check } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { BranchMemberLine } from '@/features/office/branches/BranchMemberLine'
 import {
   branchMemberOrgLabel,
   useEmployeeOrgEntries,
@@ -133,7 +133,7 @@ export function BranchMemberPanes({
                         <PickMark checked={on}>
                           <Check className="size-3" />
                         </PickMark>
-                        <BranchMemberLine entry={e} />
+                        <PickLine name={e.name} />
                       </PickRow>
                     )
                   })}
@@ -163,9 +163,9 @@ export function BranchMemberPanes({
                     <PickMark checked={on}>
                       <Check className="size-3" />
                     </PickMark>
-                    <BranchMemberLine
-                      entry={entry}
-                      meta={unknown ? UNKNOWN_META : undefined}
+                    <PickLine
+                      name={entry.name}
+                      meta={unknown ? UNKNOWN_META : branchMemberOrgLabel(entry)}
                     />
                   </PickRow>
                 )

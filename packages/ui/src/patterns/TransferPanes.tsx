@@ -47,30 +47,26 @@ export interface TransferPanesProps {
   toRight: TransferMove
   /** 오른쪽 → 왼쪽. */
   toLeft: TransferMove
-  /**
-   * 오른쪽 기둥을 넓게 잡는다(줄 안에 입력칸이 서는 창). 반반으로 나누면 왼쪽은 남고
-   * 오른쪽은 좁아 칸이 한 줄씩 접힌다.
-   */
-  rightWide?: boolean
   className?: string
 }
 
-export function TransferPanes({
-  left,
-  right,
-  toRight,
-  toLeft,
-  rightWide,
-  className,
-}: TransferPanesProps) {
+/**
+ * 기둥 폭 — **왼쪽은 정해진 폭, 오른쪽은 남는 폭 전부**다(2026-09-10).
+ *
+ * 반반으로 나누던 자리다. 갈라 놓고 보니 두 기둥이 세우는 것이 서로 달랐다 — 왼쪽 줄에는
+ * 이름 하나가 서고 오른쪽 줄에는 그 대상을 확정하는 값들(이메일·연락처·조직)이 한 줄에
+ * 함께 선다. 폭이 같으면 왼쪽은 이름 하나를 두고 절반을 비워 두는데 오른쪽은 그 폭이
+ * 모자라 값이 잘린다.
+ *
+ * 왼쪽을 `1fr`이 아니라 고정 폭으로 두는 이유도 같다 — 창이 넓어질수록 남는 폭은 값이 여럿인
+ * 쪽으로 가야 한다. 결재선 설정 창이 먼저 쓰던 규격(18rem)보다 조금 넓은 것은 여기 서는 것이
+ * 사람 이름만이 아니라 기업명일 수 있어서다.
+ */
+const PANE_GRID = 'lg:grid-cols-[20rem_auto_minmax(0,1fr)]'
+
+export function TransferPanes({ left, right, toRight, toLeft, className }: TransferPanesProps) {
   return (
-    <div
-      className={cn(
-        'grid grid-cols-1 gap-4',
-        rightWide ? 'lg:grid-cols-[1fr_auto_1.4fr]' : 'lg:grid-cols-[1fr_auto_1fr]',
-        className,
-      )}
-    >
+    <div className={cn('grid grid-cols-1 gap-4', PANE_GRID, className)}>
       <Card title={left.title} count={left.count}>
         {left.children}
       </Card>

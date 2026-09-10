@@ -1,4 +1,4 @@
-import { Badge, Checkbox, Field, Input, cardText, cn } from '@ynarcher/ui'
+import { Badge, Checkbox, Field, Input, PickLine, cardText } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import {
   ledgerPerson,
@@ -45,19 +45,33 @@ export function ParticipantRightRow({
 }) {
   if (row.kind === 'existing') {
     return (
-      <RowShell name={row.name} badge={null} checked={checked} onToggle={onToggle}>
-        <p className={cn('truncate', cardText.meta)}>
-          {[row.personName, row.personEmail].filter(Boolean).join(' · ') || '계정 정보 없음'}
-        </p>
-      </RowShell>
+      <RowShell
+        name={row.name}
+        meta={[row.personName, row.personEmail].filter(Boolean).join(' · ') || '계정 정보 없음'}
+        badge={null}
+        checked={checked}
+        onToggle={onToggle}
+      />
     )
   }
 
   const c = row.candidate
   const value = typed ?? ledgerPerson(c)
 
+  // 원장이 다 아는 줄은 이름 옆에 그 값을 그대로 세운다 — 입력칸을 세우면 고칠 수 있는 것처럼
+  // 보이고, 고치는 자리는 원장 하나여야 한다. 값이 없는 줄만 아래에 칸이 선다.
+  const known = needsPerson(c)
+    ? undefined
+    : `${spec.loginNameHeader} ${value.name} · ${value.email}${value.phone ? ` · ${value.phone}` : ''}`
+
   return (
-    <RowShell name={c.name} badge={<Badge tone="info">이번에 생성</Badge>} checked={checked} onToggle={onToggle}>
+    <RowShell
+      name={c.name}
+      meta={known}
+      badge={<Badge tone="info">이번에 생성</Badge>}
+      checked={checked}
+      onToggle={onToggle}
+    >
       {needsPerson(c) ? (
         <div className="space-y-2">
           {/*
@@ -85,14 +99,7 @@ export function ParticipantRightRow({
             </Field>
           </div>
         </div>
-      ) : (
-        // 원장이 다 아는 줄은 값을 되읽기만 한다. 입력칸을 세우면 고칠 수 있는 것처럼 보이고,
-        // 고치는 자리는 원장 하나여야 한다.
-        <p className={cn('truncate', cardText.meta)}>
-          {spec.loginNameHeader} {value.name} · {value.email}
-          {value.phone && ` · ${value.phone}`}
-        </p>
-      )}
+      ) : null}
     </RowShell>
   )
 }
@@ -100,24 +107,32 @@ export function ParticipantRightRow({
 /** 두 갈래가 공유하는 껍데기 — 이름 줄과 체크박스의 자리는 갈리지 않는다. */
 function RowShell({
   name,
+  meta,
   badge,
   checked,
   onToggle,
   children,
 }: {
   name: string
+  /**
+   * 이름 옆에 서는 확인용 값(명의·이메일·연락처). 왼쪽 기둥과 갈리는 지점이다 — 저기서는
+   * 이름으로 찾고, 여기서는 *이 사람이 맞는가*를 본다. 그래서 접지 않고 한 줄에 세운다
+   * (2026-09-10 사용자 지정, `PickLine`과 같은 규격).
+   */
+  meta?: ReactNode
   badge: ReactNode
   checked: boolean
   onToggle: () => void
-  children: ReactNode
+  /** 이름 줄 **아래**에 서는 것 — 값이 아니라 입력칸일 때만 준다. */
+  children?: ReactNode
 }) {
   return (
     <div className="space-y-2 border-b border-gray-200 px-3 py-2.5 last:border-b-0">
       <div className="flex items-center gap-2">
-        {/* 이름까지가 클릭 영역이다(입력칸은 아니다) — 라벨 글자는 이름 규격을 그대로 쓴다. */}
+        {/* 이름과 확인값까지가 클릭 영역이다(입력칸은 아니다) — 글자 규격은 `PickLine`이 갖는다. */}
         <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2">
           <Checkbox checked={checked} onChange={onToggle} />
-          <span className={cn('min-w-0 flex-1 truncate font-medium', cardText.value)}>{name}</span>
+          <PickLine name={name} meta={meta} />
         </label>
         {badge}
       </div>

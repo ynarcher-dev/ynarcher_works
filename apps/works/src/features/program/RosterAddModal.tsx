@@ -156,7 +156,7 @@ export function RosterAddModal({
           ? spec.pickHelp
           : '원장에 새 행을 만들고 그대로 담습니다. 이름만 필수이고 나머지는 나중에 원장에서 채울 수 있습니다.'
       }
-      size="2xl"
+      size="3xl"
       sectioned={mode === 'pick'}
       footer={
         <div className="flex justify-end gap-2">

@@ -1,6 +1,18 @@
-import { Button, Card, InfoField, InfoGrid, Modal, PickList, panelRowBox, cn } from '@ynarcher/ui'
-import { BranchMemberLine } from '@/features/office/branches/BranchMemberLine'
-import type { BranchMemberEntry } from '@/features/office/branches/branchMembers'
+import {
+  Button,
+  Card,
+  InfoField,
+  InfoGrid,
+  Modal,
+  PickLine,
+  PickList,
+  cn,
+  panelRowBox,
+} from '@ynarcher/ui'
+import {
+  branchMemberOrgLabel,
+  type BranchMemberEntry,
+} from '@/features/office/branches/branchMembers'
 import type { Branch } from '@/features/office/branches/branchesApi'
 
 interface Props {
@@ -51,7 +63,7 @@ export function BranchDetailModal({ branch, members, onClose }: Props) {
               // 고를 수 없는 줄이라 버튼(PickRow)이 아니다 — 눌리지 않는 것에 눌리는 생김새를
               // 주면 담당자가 눌러 보고서야 조회 전용임을 안다. 여백만 같은 값을 쓴다.
               <li key={m.id} className={cn('flex items-center gap-3', panelRowBox)}>
-                <BranchMemberLine entry={m} />
+                <PickLine name={m.name} meta={branchMemberOrgLabel(m)} />
               </li>
             ))}
           </PickList>

@@ -79,7 +79,7 @@ export function BranchFormModal({
       open={open}
       onClose={onClose}
       title={editing ? '지사 수정' : '지사 등록'}
-      size="2xl"
+      size="3xl"
       sectioned
       footer={
         <>

@@ -149,7 +149,7 @@ export function ParticipantAddModal({
         onClose={close}
         title={`${spec.label} 계정 생성`}
         help={`${config.rosterLabel}에 담긴 대상만 고를 수 있습니다. 오른쪽으로 옮긴 대상에게 계정이 세워지고, 왼쪽으로 내린 대상은 저장할 때 명부에서 빠집니다.`}
-        size="2xl"
+        size="3xl"
         sectioned
         footer={
           <>

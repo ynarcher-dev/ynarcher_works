@@ -154,8 +154,8 @@ export type {
 export { MiniPager, usePaged } from './patterns/MiniPager'
 // 검색해서 고르는 목록(모달·팝오버 안 후보 나열)의 소유자 — 행 모양·선택 배경·스크롤 높이가
 // 화면마다 갈리지 않도록 한곳에 모은다.
-export { PickList, PickRow, PickMark } from './patterns/PickList'
-export type { PickListProps, PickRowProps, PickMarkProps } from './patterns/PickList'
+export { PickList, PickRow, PickMark, PickLine } from './patterns/PickList'
+export type { PickListProps, PickRowProps, PickMarkProps, PickLineProps } from './patterns/PickList'
 // 좌우 두 목록 사이로 줄을 옮기는 창(계정생성·명단 담기)의 골격.
 export { TransferPanes } from './patterns/TransferPanes'
 export type { TransferPanesProps, TransferSide, TransferMove } from './patterns/TransferPanes'
