@@ -60,6 +60,12 @@ interface ApprovalStampTableProps {
   actionableLineId?: string | null
   /** [처리] 자리를 눌렀을 때. 실제 결정은 결재 처리 창에서 한 번 더 고른다. */
   onAction?: () => void
+  /** 참조자 중 현재 사용자. 이 사람의 미확인 체크만 직접 누를 수 있다. */
+  confirmableRecipientId?: string | null
+  /** 현재 사용자가 자기 참조 확인 체크를 눌렀을 때. */
+  onConfirmRecipient?: () => void
+  /** 확인 저장 중 중복 클릭을 막는다. */
+  confirmingRecipient?: boolean
   /**
    * 의견이 남은 도장을 눌렀을 때. 넘기지 않으면 도장은 읽기만 하는 표식으로 남는다
    * (기안 미리보기처럼 아직 아무 처리도 없는 자리).
@@ -254,6 +260,9 @@ export function ApprovalStampTable({
   titleOf,
   actionableLineId,
   onAction,
+  confirmableRecipientId,
+  onConfirmRecipient,
+  confirmingRecipient = false,
   onOpenComment,
   className,
 }: ApprovalStampTableProps) {
@@ -308,16 +317,52 @@ export function ApprovalStampTable({
       cc={
         recipients.length > 0 ? (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            {recipients.map((r) => (
-              <span
-                key={r.key ?? r.userId ?? r.snapshotName}
-                className={cn('inline-flex items-center gap-1', approvalText.body)}
-              >
-                {r.snapshotName ?? nameOf(r.userId)}
-                {/* 열람 확인 — 읽은 사람만 표식이 붙는다(안 읽었으면 아무 것도 적지 않는다). */}
-                {r.read && <Check size={13} className="text-info" strokeWidth={2.5} />}
-              </span>
-            ))}
+            {recipients.map((r) => {
+              const name = r.snapshotName ?? nameOf(r.userId)
+              const canConfirm =
+                !r.read && r.userId === confirmableRecipientId && Boolean(onConfirmRecipient)
+              const check = (
+                <Check
+                  aria-hidden
+                  size={13}
+                  className={r.read ? 'text-info' : 'text-gray-300'}
+                  strokeWidth={2.5}
+                />
+              )
+              return (
+                <span
+                  key={r.key ?? r.userId ?? r.snapshotName}
+                  className={cn('inline-flex items-center gap-1', approvalText.body)}
+                >
+                  {name}
+                  {/* 미확인은 회색, 확인은 파란색이다. 자기 이름 옆의 회색 체크만 누를 수 있다. */}
+                  {canConfirm ? (
+                    <button
+                      type="button"
+                      onClick={onConfirmRecipient}
+                      disabled={confirmingRecipient}
+                      aria-label={`${name} 참조 확인`}
+                      title="확인하기"
+                      className={cn(
+                        'rounded-radius-sm p-0.5 transition-colors hover:bg-gray-100',
+                        'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10',
+                        'disabled:cursor-wait disabled:opacity-50',
+                      )}
+                    >
+                      {check}
+                    </button>
+                  ) : (
+                    <span
+                      role="img"
+                      aria-label={r.read ? '확인 완료' : '미확인'}
+                      title={r.read ? '확인 완료' : '미확인'}
+                    >
+                      {check}
+                    </span>
+                  )}
+                </span>
+              )
+            })}
           </div>
         ) : undefined
       }

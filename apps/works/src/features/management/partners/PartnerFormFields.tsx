@@ -29,6 +29,10 @@ interface PartnerFormFieldsProps {
   partnerId?: string
   code?: string
   error: PartnerFormError | null
+  /** 계좌 확인 시점(원장 값). 등록 화면에는 아직 없다. */
+  verifiedAt?: string | null
+  /** 확인 스위치를 다룰 수 있을 때만 넘긴다(수정 화면). */
+  onVerifiedChange?: (next: boolean) => void
 }
 
 function Row({ children }: { children: ReactNode }) {
@@ -51,6 +55,8 @@ export function PartnerFormFields({
   partnerId,
   code,
   error,
+  verifiedAt,
+  onVerifiedChange,
 }: PartnerFormFieldsProps) {
   const invalid = (field: keyof PartnerDraft) => error?.field === field
   const editing = Boolean(code)
@@ -203,6 +209,21 @@ export function PartnerFormFields({
           />
         )}
       />
+
+      {/* 계좌 확인 — 사용 여부와 **다른 축**이다. 저쪽은 "지금 거래하는가"이고 이쪽은
+          "이 계좌를 믿을 근거를 봤는가"다. 송금 요청 화면에서 담당자가 그 자리에서 넣은
+          거래처는 확인 전으로 들어오며, 증빙을 본 경영지원만 이 스위치를 올린다.
+          확인한 사람은 화면이 보내지 않는다(원장 트리거가 세션에서 찍는다) — 확인은 책임이
+          따르는 행위라 누가 했는지를 클라이언트가 주장하게 두지 않는다. */}
+      {onVerifiedChange && (
+        <SettingRow
+          title="계좌 확인"
+          hint="사업자등록증·통장사본을 확인했으면 켭니다. 꺼져 있으면 결재 화면에 '확인 전' 딱지가 붙습니다."
+          control={({ id }) => (
+            <Switch id={id} checked={Boolean(verifiedAt)} onChange={onVerifiedChange} />
+          )}
+        />
+      )}
     </div>
   )
 }

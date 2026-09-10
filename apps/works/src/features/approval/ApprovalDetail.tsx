@@ -7,8 +7,9 @@ import {
   EmptyState,
   Spinner,
   cardText,
+  useToast,
 } from '@ynarcher/ui'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useAuthStore } from '@/auth/authStore'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
@@ -22,6 +23,11 @@ import { ApprovalLinkPanel } from '@/features/approval/ApprovalLinkPanel'
 import { LegacyApprovalLineTable } from '@/features/approval/LegacyApprovalLineTable'
 import { ApprovalProgramPanel } from '@/features/approval/ApprovalProgramPanel'
 import { ApprovalStampTable } from '@/features/approval/ApprovalStampTable'
+import { BudgetSummaryCard } from '@/features/approval/BudgetSummaryCard'
+import { BudgetRefContext } from '@/features/approval/budgetRefContext'
+import { budgetTotal as sumBudget } from '@/features/approval/budget'
+import { useBudgetStatus } from '@/features/approval/budgetApi'
+import { useBudgetSourceState } from '@/features/approval/budgetSourceHooks'
 import { useApprovalDocument, useMarkApprovalRead } from '@/features/approval/approvalApi'
 import {
   APPROVAL_ATTACHMENT_TYPE,
@@ -30,7 +36,15 @@ import {
   DOC_STATUS_TONE,
   LINE_KIND_LABEL,
 } from '@/features/approval/config'
-import { formatMoney, parseFields, tableRows } from '@/features/approval/fields'
+import {
+  budgetAmountColumn,
+  budgetField,
+  budgetValue,
+  formatMoney,
+  parseFields,
+  tableRows,
+  type FieldValues,
+} from '@/features/approval/fields'
 import { ApprovalCommentModal } from '@/features/approval/ApprovalCommentModal'
 import {
   actionableLineFor,
@@ -83,6 +97,7 @@ export function ApprovalDetail({
   const { data: employees } = useEmployees()
   const { data: departments } = useDepartments(true)
   const markRead = useMarkApprovalRead()
+  const toast = useToast()
   // 결재 처리 창의 열림 여부. 문서를 다 읽고 [○○ 처리]를 누른 사람만 결정 앞에 선다.
   const [deciding, setDeciding] = useState(false)
   const [recalling, setRecalling] = useState(false)
@@ -91,6 +106,16 @@ export function ApprovalDetail({
   // 지난 회차 이력의 펼침 상태. 기본은 접힘 — 대부분의 문서는 1차이고, 되돌아온 문서도
   // 지금 할 일은 현재 회차가 답한다.
   const [showHistory, setShowHistory] = useState(false)
+
+  // 이 문서가 가리키는 품의(지출결의의 근거 / 변경 품의의 대상)와 이 문서 자신의 예산 사용 현황.
+  // 훅은 문서를 못 읽는 경우의 조기 반환보다 앞에 둔다 — 렌더마다 훅 순서가 같아야 한다.
+  // 지출 내역의 '예산 줄' 값을 이름으로 펴려면 근거 품의의 예산표가 필요하다(기안 화면과
+  // 같은 파생을 쓴다 — 고르는 자리와 읽는 자리가 다른 규칙으로 줄을 세우면 안 된다).
+  const { sourceDoc, refSource: budgetRefSource } = useBudgetSourceState(
+    doc?.budget_document_id ?? null,
+    '근거 품의를 읽을 수 없습니다.',
+  )
+  const { data: ownUsage } = useBudgetStatus(doc?.id ?? null)
 
   const nameById = useMemo(() => {
     const m = new Map<string, string>()
@@ -118,16 +143,6 @@ export function ApprovalDetail({
     return (departments ?? []).find((d) => d.id === doc.department_id)?.name ?? '-'
   }, [departments, doc?.department_id])
 
-  // 문서를 연 순간 열람 확인을 남긴다(확인함 뱃지·참조자 체크마크의 원천).
-  // 이미 읽은 문서는 다시 찍지 않는다 — 열 때마다 쓰면 읽은 시각이 계속 밀린다.
-  const alreadyRead = Boolean(uid && doc?.approval_reads.some((r) => r.user_id === uid))
-  useEffect(() => {
-    if (!uid || !doc || alreadyRead) return
-    markRead.mutate({ documentId, userId: uid })
-    // markRead는 매 렌더 새 객체라 의존성에 넣으면 무한 루프가 된다.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uid, doc?.id, alreadyRead, documentId])
-
   if (isLoading && !doc) return <Spinner />
   if (!doc) {
     return (
@@ -142,6 +157,17 @@ export function ApprovalDetail({
   }
 
   const fields = parseFields(doc.version?.fields)
+  // 이 문서가 예산표를 가졌는가 = 이 문서가 품의서인가. 양식 설정이 아니라 필드가 답한다
+  // (같은 사실을 두 곳에 적지 않는다 — 서버 app.approval_budget_keys도 같은 규칙이다).
+  const ownBudgetField = budgetField(fields)
+  const ownBudgetAmountColumn = ownBudgetField ? budgetAmountColumn(ownBudgetField) : null
+  const ownBudgetTotal =
+    ownBudgetField && ownBudgetAmountColumn
+      ? sumBudget(
+          budgetValue((doc.field_values ?? {}) as FieldValues, ownBudgetField.key).rows,
+          ownBudgetAmountColumn.key,
+        )
+      : null
   const paymentFields = doc.legacy ? fields.filter((field) => field.key === 'payments') : []
   const bodyFields = paymentFields.length
     ? fields.filter((field) => field.key !== 'payments')
@@ -174,6 +200,22 @@ export function ApprovalDetail({
   const openedComment = stampLines.find((l) => l.id === commentLineId)
   const finalApprovalReset = isFinalApprovalReset(doc.status, lines)
   const recallAction = uid ? approvalRecallActionFor(doc.status, lines, uid) : null
+  const isHiworks = doc.legacy?.source_system === 'HIWORKS'
+  const canConfirmRecipient = Boolean(
+    uid &&
+      doc.approval_recipients.some((r) => r.user_id === uid) &&
+      !doc.approval_reads.some((r) => r.user_id === uid),
+  )
+  const confirmRecipient = () => {
+    if (!uid || !canConfirmRecipient || markRead.isPending) return
+    markRead.mutate(
+      { documentId: doc.id, userId: uid },
+      {
+        onSuccess: () => toast.show('문서를 확인했습니다.', 'success'),
+        onError: () => toast.show('확인 처리에 실패했습니다.', 'danger'),
+      },
+    )
+  }
   // 기안자는 임시저장 또는 보완 요청 문서만 고칠 수 있다. 반려는 종결이라 수정·재상신이 없다.
   const canEdit =
     Boolean(onEdit) &&
@@ -238,14 +280,16 @@ export function ApprovalDetail({
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
+
           {/* 표준 머리 — 모든 문서가 공유한다(양식이 정의하지 않는 부분).
               기안 화면과 같은 카드 구성을 쓴다(기본 설정 / 결재선) — 무엇을 적고 있는지와
               무엇이 적혔는지가 같은 자리에서 읽혀야 한다. */}
-          <Card>
+          <Card className={isHiworks ? 'border-info' : undefined}>
             <div className="space-y-4">
               <div className="flex items-center justify-center gap-2">
-                <h2 className="text-title-md font-bold text-gray-900">
-                  {doc.form ? approvalFormDisplayName(doc.form.name) : '결재 문서'}
+                <h2 className="inline-flex items-center gap-1 text-title-md font-bold text-gray-900">
+                  {isHiworks && <HiworksSourceMark />}
+                  <span>{doc.form ? approvalFormDisplayName(doc.form.name) : '결재 문서'}</span>
                 </h2>
                 <Badge tone={DOC_STATUS_TONE[doc.status]}>{DOC_STATUS_LABEL[doc.status]}</Badge>
                 {/* 회차는 1차일 때 적지 않는다 — 대부분의 문서가 1차이고, 늘 붙어 있으면
@@ -276,32 +320,27 @@ export function ApprovalDetail({
             </div>
           </Card>
 
-          {doc.legacy && (
-            <Card title="하이웍스 원본 정보">
-              <div className="mb-3 flex items-center gap-2">
-                <Badge tone="info">복원 문서</Badge>
-                <p className={cardText.meta}>
-                  현재 기안자는 조회를 위해 매핑되었으며, 원본 정보는 별도로 보존됩니다.
-                </p>
-              </div>
-              <ApprovalInfoTable
-                pairs={[
-                  { label: '원본 양식', value: doc.legacy.source_form_title ?? '-' },
-                  {
-                    label: '원본 기안자',
-                    value: [doc.legacy.original_drafter_name, doc.legacy.original_drafter_position]
-                      .filter(Boolean)
-                      .join(' / '),
-                  },
-                  { label: '원본 부서', value: doc.legacy.original_department_name ?? '-' },
-                  {
-                    label: '원본 상태',
-                    value: doc.legacy.source_was_deleted
-                      ? `하이웍스에서 삭제됨 (${dateTime(doc.legacy.source_deleted_at)})`
-                      : '보존됨',
-                  },
-                ]}
-              />
+          {doc.budget_document_id && (
+            <Card title={doc.form?.budget_link === 'REVISE' ? '변경 대상 품의' : '근거 품의'}>
+              {sourceDoc ? (
+                <button
+                  type="button"
+                  onClick={() => onOpenDocument?.(sourceDoc.id)}
+                  className="flex w-full items-center gap-2 text-left"
+                >
+                  <Badge tone="neutral">{sourceDoc.docNo ?? '번호 없음'}</Badge>
+                  <span className="min-w-0 flex-1 truncate text-body text-gray-900 hover:underline">
+                    {sourceDoc.title}
+                  </span>
+                  <span className="tabular-nums text-body text-gray-700">
+                    {formatMoney(sourceDoc.amount)}
+                  </span>
+                </button>
+              ) : (
+                // 열람 권한이 없어도 **걸려 있다는 사실은 감추지 않는다** — 그 사실이 곧
+                // 이 지출이 어딘가의 예산을 쓰고 있다는 뜻이라 결재 판단에 든다.
+                <p className={cardText.meta}>연결된 품의를 열람할 권한이 없습니다.</p>
+              )}
             </Card>
           )}
 
@@ -331,6 +370,9 @@ export function ApprovalDetail({
                 // 자연스럽고, 어느 칸이 내 차례인지도 그 자리에서 답한다.
                 actionableLineId={canDecide && myLine ? myLine.id : null}
                 onAction={() => setDeciding(true)}
+                confirmableRecipientId={uid}
+                onConfirmRecipient={canConfirmRecipient ? confirmRecipient : undefined}
+                confirmingRecipient={markRead.isPending}
                 // 의견이 남은 도장은 눌러 읽는다 — 특히 보완은 사유가 곧 다음에 할 일이라,
                 // 본문 아래까지 내려가지 않고 그 칸에서 바로 열리는 편이 맞다.
                 onOpenComment={setCommentLineId}
@@ -391,24 +433,36 @@ export function ApprovalDetail({
             />
           )}
 
-          <Card
-            title={
-              <span className="inline-flex items-center gap-1">
-                {doc.legacy?.source_system === 'HIWORKS' && <HiworksSourceMark />}
-                <span>{doc.title}</span>
-              </span>
-            }
-          >
-            <ApprovalFieldsView
-              fields={bodyFields}
-              values={doc.field_values ?? {}}
-              hideEmpty={Boolean(doc.legacy)}
-            />
+          <Card title={doc.title}>
+            {/* 지출 내역의 '예산 줄' 칸은 줄 id 하나를 저장하고 이름은 근거 품의가 갖는다.
+                이름을 지출 문서에 복사해 두지 않는 이유는 예산 변경으로 항목명이 바뀌는 날
+                그 지출만 옛 이름으로 남기 때문이다. */}
+            <BudgetRefContext.Provider value={budgetRefSource}>
+              <ApprovalFieldsView
+                fields={bodyFields}
+                values={doc.field_values ?? {}}
+                hideEmpty={Boolean(doc.legacy)}
+                // 예산표에는 이 품의에서 지금까지 나간 돈이 함께 선다 — 예산만 보이는 표는
+                // "얼마 남았나"라는 실제 물음에 답하지 못한다.
+                budgetUsage={ownUsage}
+              />
+            </BudgetRefContext.Provider>
             {/* 양식 도입 전 문서(구 body 단일 텍스트)도 그대로 읽힌다. */}
             {fields.length === 0 && doc.body && (
               <p className={`whitespace-pre-wrap ${cardText.value}`}>{doc.body}</p>
             )}
           </Card>
+
+          {/* 예산 현황(품의 금액·사용·결재 중·남음·이익률)과 예산 변경 이력.
+              예산표를 가진 문서, 곧 품의서에만 선다 — 지출결의서에는 자기 예산이 없다. */}
+          {ownBudgetField && (
+            <BudgetSummaryCard
+              documentId={doc.id}
+              budgetTotal={ownBudgetTotal}
+              usage={ownUsage}
+              nameOf={nameOf}
+            />
+          )}
 
           {hasPayments && (
             <Card title="지급표">

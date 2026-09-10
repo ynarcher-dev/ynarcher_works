@@ -280,9 +280,7 @@ describe('progressBucket', () => {
     expect(progressBucket(r, ME)).toBe('ongoing')
   })
 
-  it('완료된 문서는 진행 상태 어디에도 들지 않는다', () => {
-    // 끝났는데 아직 못 본 문서는 내 문서함의 '확인' 칸이 받는다(inBox의 mine-confirm) —
-    // 다 끝난 문서가 '진행 중인 문서'에 서 있으면 그 그룹의 이름이 사실과 어긋난다.
+  it('완료된 문서는 진행 상태 어디에도 들지 않고, 미확인 참조 문서는 확인 칸이 받는다', () => {
     const done = row({
       status: 'APPROVED',
       completed_at: '2026-08-26T10:00:00Z',
@@ -293,6 +291,29 @@ describe('progressBucket', () => {
     expect(inBox({ ...done, approval_reads: [{ user_id: ME }] }, 'mine-confirm', ME, null)).toBe(
       false,
     )
+  })
+
+  it('진행 중인 참조 문서도 직접 확인하기 전까지 확인 칸에 남는다', () => {
+    const referenced = row({ approval_recipients: [{ user_id: ME }] })
+    expect(inBox(referenced, 'mine-confirm', ME, null)).toBe(true)
+    expect(
+      inBox({ ...referenced, approval_reads: [{ user_id: ME }] }, 'mine-confirm', ME, null),
+    ).toBe(false)
+  })
+
+  it('참조자가 아닌 기안자·결재자는 확인 칸의 대상이 아니다', () => {
+    expect(inBox(row({ drafter_id: ME, status: 'APPROVED' }), 'mine-confirm', ME, null)).toBe(false)
+    expect(
+      inBox(
+        row({
+          status: 'APPROVED',
+          approval_lines: [{ approver_id: ME, step_order: 1, decision: 'APPROVED' }],
+        }),
+        'mine-confirm',
+        ME,
+        null,
+      ),
+    ).toBe(false)
   })
 
   it('내 임시저장은 draft, 남의 임시저장은 어디에도 들지 않는다', () => {

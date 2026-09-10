@@ -46,6 +46,7 @@ export function ApprovalFormAdminPanel() {
       retention: v.retention,
       security_grade: v.security_grade,
       sort_order: v.sort_order,
+      budget_link: v.budget_link,
     }
     try {
       if (editing) {

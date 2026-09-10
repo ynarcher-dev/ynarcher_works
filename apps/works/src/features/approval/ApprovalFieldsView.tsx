@@ -1,9 +1,13 @@
 import { cn, tableText } from '@ynarcher/ui'
 import { RichTextViewer } from '@/components/RichTextEditor'
+import { BudgetTreeView, type BudgetUsage } from '@/features/approval/BudgetTreeView'
+import { BudgetRefText, PartnerRefText } from '@/features/approval/RefCellText'
 import {
+  budgetValue,
   columnSum,
   displayValue,
   formatMoney,
+  isNumericColumn,
   scalarValue,
   tableRows,
   toNumber,
@@ -18,13 +22,19 @@ interface ApprovalFieldsViewProps {
   hideEmpty?: boolean
   /** 카드 제목이 필드 이름을 대신할 때 내부 섹션 제목을 반복하지 않는다. */
   hideSectionLabels?: boolean
+  /**
+   * 예산표에 함께 세울 사용 현황(줄 id → 사용·결재 중).
+   * 넘기지 않으면 예산만 보이는 표가 된다 — 기안 미리보기처럼 아직 지출이 있을 수 없는
+   * 자리에서 빈 '사용' 열을 세우면 그 열이 아무 말도 하지 않는다.
+   */
+  budgetUsage?: Map<string, BudgetUsage>
 }
 
 /** 표 필드 하나를 읽기 전용으로 편다. 금액·숫자 열에는 합계 행이 붙는다. */
 function TableView({ field, values }: { field: FormField; values: FieldValues }) {
   const columns = field.columns ?? []
   const rows = tableRows(values, field.key)
-  const hasNumeric = columns.some((c) => c.type === 'MONEY' || c.type === 'NUMBER')
+  const hasNumeric = columns.some((c) => isNumericColumn(c.type))
 
   if (rows.length === 0) {
     return <p className={cn('py-2', tableText.empty)}>입력된 내역이 없습니다.</p>
@@ -41,7 +51,7 @@ function TableView({ field, values }: { field: FormField; values: FieldValues })
                 className={cn(
                   'px-3 py-1.5 text-left',
                   tableText.head,
-                  (c.type === 'MONEY' || c.type === 'NUMBER') && 'text-right',
+                  isNumericColumn(c.type) && 'text-right',
                 )}
               >
                 {c.label}
@@ -54,7 +64,7 @@ function TableView({ field, values }: { field: FormField; values: FieldValues })
             <tr key={i} className="border-b border-gray-100 last:border-b-0">
               {columns.map((c) => {
                 const raw = row[c.key] ?? ''
-                const numeric = c.type === 'MONEY' || c.type === 'NUMBER'
+                const numeric = isNumericColumn(c.type)
                 const n = numeric ? toNumber(raw) : null
                 return (
                   <td
@@ -65,11 +75,19 @@ function TableView({ field, values }: { field: FormField; values: FieldValues })
                       numeric && 'text-right tabular-nums',
                     )}
                   >
-                    {numeric && n !== null
-                      ? c.type === 'MONEY'
-                        ? formatMoney(n)
-                        : n.toLocaleString('ko-KR')
-                      : raw || '-'}
+                    {c.type === 'BUDGET_REF' ? (
+                      <BudgetRefText value={raw} />
+                    ) : c.type === 'PARTNER_REF' ? (
+                      <PartnerRefText value={raw} />
+                    ) : numeric && n !== null ? (
+                      c.type === 'MONEY' ? (
+                        formatMoney(n)
+                      ) : (
+                        n.toLocaleString('ko-KR')
+                      )
+                    ) : (
+                      raw || '-'
+                    )}
                   </td>
                 )
               })}
@@ -78,7 +96,7 @@ function TableView({ field, values }: { field: FormField; values: FieldValues })
           {hasNumeric && (
             <tr className="border-t border-gray-200 bg-gray-25">
               {columns.map((c, i) => {
-                const numeric = c.type === 'MONEY' || c.type === 'NUMBER'
+                const numeric = isNumericColumn(c.type)
                 return (
                   <td
                     key={c.key}
@@ -118,6 +136,7 @@ export function ApprovalFieldsView({
   values,
   hideEmpty = false,
   hideSectionLabels = false,
+  budgetUsage,
 }: ApprovalFieldsViewProps) {
   if (fields.length === 0) {
     return <p className={cn('py-4', tableText.empty)}>표시할 내용이 없습니다.</p>
@@ -131,6 +150,9 @@ export function ApprovalFieldsView({
           return tableRows(values, field.key).some((row) =>
             Object.values(row).some((value) => value.trim() !== ''),
           )
+        }
+        if (field.type === 'BUDGET_TREE') {
+          return budgetValue(values, field.key).rows.some((r) => r.name.trim() !== '')
         }
         const value = scalarValue(values, field.key)
         return field.type === 'RICHTEXT'
@@ -147,6 +169,19 @@ export function ApprovalFieldsView({
               ) : (
                 <p className={tableText.empty}>내용이 없습니다.</p>
               )}
+            </section>
+          )
+        }
+
+        if (field.type === 'BUDGET_TREE') {
+          return (
+            <section key={field.key} className="space-y-1">
+              {!hideSectionLabels && <h4 className={tableText.head}>{field.label}</h4>}
+              <BudgetTreeView
+                field={field}
+                value={budgetValue(values, field.key)}
+                usage={budgetUsage}
+              />
             </section>
           )
         }

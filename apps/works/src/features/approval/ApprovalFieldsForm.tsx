@@ -1,8 +1,11 @@
 import { Field, Input, Select, TextArea, cn } from '@ynarcher/ui'
 import { RichTextEditor } from '@/components/RichTextEditor'
+import { BudgetTreeInput } from '@/features/approval/BudgetTreeInput'
 import { FieldTableInput } from '@/features/approval/FieldTableInput'
 import {
+  budgetValue,
   formatMoney,
+  isNumericColumn,
   scalarValue,
   tableRows,
   toNumber,
@@ -72,6 +75,24 @@ export function ApprovalFieldsForm({ fields, values, onChange }: ApprovalFieldsF
   return (
     <div className="space-y-4">
       {fields.map((field) => {
+        if (field.type === 'BUDGET_TREE') {
+          return (
+            <Field
+              key={field.key}
+              as="div"
+              label={field.label}
+              required={field.required}
+              hint={field.help}
+            >
+              <BudgetTreeInput
+                field={field}
+                value={budgetValue(values, field.key)}
+                onChange={(next) => set(field.key, next)}
+              />
+            </Field>
+          )
+        }
+
         if (field.type === 'TABLE') {
           return (
             <Field key={field.key} as="div" label={field.label} required={field.required} hint={field.help}>
@@ -87,7 +108,7 @@ export function ApprovalFieldsForm({ fields, values, onChange }: ApprovalFieldsF
         // 금액·숫자는 입력한 값이 어떻게 읽히는지 옆에 바로 보인다 — 쉼표를 섞어 적어도
         // 저장되는 수치가 무엇인지 확인하고 넘어갈 수 있다.
         const raw = scalarValue(values, field.key)
-        const parsed = field.type === 'MONEY' || field.type === 'NUMBER' ? toNumber(raw) : null
+        const parsed = isNumericColumn(field.type) ? toNumber(raw) : null
         const hint =
           parsed !== null
             ? field.type === 'MONEY'

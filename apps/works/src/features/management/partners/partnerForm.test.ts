@@ -191,6 +191,7 @@ describe('draftFromPartner', () => {
       bankbookPath: null,
       bankbookName: null,
       isActive: true,
+      verifiedAt: null,
       createdBy: null,
       updatedAt: null,
     }

@@ -1,10 +1,10 @@
-import { Button, Checkbox, IconButton, Input, Select, cardText, cn } from '@ynarcher/ui'
+import { Button, Checkbox, IconButton, Input, Select, TextArea, cardText, cn } from '@ynarcher/ui'
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react'
+import { DEFAULT_BUDGET_LEVELS } from '@/features/approval/budget'
+import { FieldColumnRow } from '@/features/approval/FieldColumnRow'
 import {
-  COLUMN_TYPES,
   FIELD_TYPE_LABEL,
   canBePrimaryAmount,
-  type FormColumn,
   type FormField,
   type FieldType,
 } from '@/features/approval/fields'
@@ -25,84 +25,6 @@ function nextKey(prefix: string, taken: string[]): string {
 }
 
 const FIELD_TYPES = Object.keys(FIELD_TYPE_LABEL) as FieldType[]
-
-/** 열 한 줄(표 필드 안). */
-function ColumnRow({
-  column,
-  onChange,
-  onRemove,
-  canRemove,
-}: {
-  column: FormColumn
-  onChange: (c: FormColumn) => void
-  onRemove: () => void
-  canRemove: boolean
-}) {
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Input
-        density="table"
-        className="w-40"
-        value={column.label}
-        placeholder="열 이름"
-        onChange={(e) => onChange({ ...column, label: e.target.value })}
-      />
-      <Select
-        density="table"
-        className="w-28"
-        value={column.type}
-        onChange={(e) =>
-          onChange({
-            ...column,
-            type: e.target.value as FormColumn['type'],
-            // 금액·숫자가 아니게 되면 대표 금액 표시도 함께 내린다.
-            primaryAmount:
-              e.target.value === 'MONEY' || e.target.value === 'NUMBER'
-                ? column.primaryAmount
-                : false,
-          })
-        }
-      >
-        {COLUMN_TYPES.map((t) => (
-          <option key={t} value={t}>
-            {FIELD_TYPE_LABEL[t]}
-          </option>
-        ))}
-      </Select>
-      {column.type === 'SELECT' && (
-        <Input
-          density="table"
-          className="w-48"
-          placeholder="선택지(쉼표로 구분)"
-          value={(column.options ?? []).join(', ')}
-          onChange={(e) =>
-            onChange({
-              ...column,
-              options: e.target.value.split(',').map((s) => s.trim()).filter(Boolean),
-            })
-          }
-        />
-      )}
-      {(column.type === 'MONEY' || column.type === 'NUMBER') && (
-        <Checkbox
-          density="table"
-          label="대표 금액"
-          checked={column.primaryAmount ?? false}
-          onChange={(e) => onChange({ ...column, primaryAmount: e.target.checked })}
-        />
-      )}
-      <IconButton
-        density="table"
-        variant="ghost"
-        danger
-        label="열 삭제"
-        onClick={onRemove}
-        disabled={!canRemove}
-        icon={<Trash2 size={14} />}
-      />
-    </div>
-  )
-}
 
 /**
  * 양식 필드 조립기 — ADMIN이 양식을 스스로 만들 때 쓰는 편집기.
@@ -162,7 +84,22 @@ export function FieldSchemaEditor({ fields, onChange }: FieldSchemaEditorProps) 
                           { key: 'col1', label: '항목', type: 'TEXT' },
                           { key: 'col2', label: '금액', type: 'MONEY', primaryAmount: true },
                         ])
+                      : // 예산표의 기본 열은 기획서가 정한 넷이다(수량·단가·금액·비고).
+                        // 항목 이름 열은 따로 정의하지 않는다 — 층을 이루는 왼쪽 칸이
+                        // 곧 항목이라 열로 두면 같은 것이 두 번 서게 된다.
+                        type === 'BUDGET_TREE'
+                        ? (field.columns ?? [
+                            { key: 'qty', label: '수량', type: 'NUMBER' },
+                            { key: 'unitPrice', label: '단가', type: 'MONEY' },
+                            { key: 'amount', label: '금액', type: 'MONEY', primaryAmount: true },
+                            { key: 'note', label: '비고', type: 'TEXT', wide: true },
+                          ])
+                        : undefined,
+                  levels:
+                    type === 'BUDGET_TREE'
+                      ? (field.levels ?? DEFAULT_BUDGET_LEVELS)
                       : undefined,
+                  defaultValue: type === 'RICHTEXT' ? field.defaultValue : undefined,
                 })
               }}
             >
@@ -227,11 +164,47 @@ export function FieldSchemaEditor({ fields, onChange }: FieldSchemaEditorProps) 
             />
           )}
 
-          {field.type === 'TABLE' && (
+          {/* 본문 기본 문구 — 새 문서가 들고 시작하는 틀(`1. 행사명 : …`).
+              옛 결재에서 담당자가 매번 손으로 적던 뼈대라, 양식이 한 번 갖고 있으면 된다. */}
+          {field.type === 'RICHTEXT' && (
+            <div className="space-y-1 border-t border-gray-100 pt-2">
+              <p className={cardText.meta}>기본 문구 (새 문서가 이 내용으로 시작합니다)</p>
+              <TextArea
+                rows={3}
+                placeholder={'1. 행사명 : \n2. 행사일자 : '}
+                value={field.defaultValue ?? ''}
+                onChange={(e) => setField(index, { ...field, defaultValue: e.target.value })}
+              />
+            </div>
+          )}
+
+          {/* 층 이름은 **기본값**만 양식이 갖는다 — 사업마다 층 이름과 층 수가 달라
+              (대분류·중분류 / 세목·비목·세세목) 못 박으면 그 목록에 없는 사업은 예산을
+              적을 수 없다. 문서를 쓰면서 고칠 수 있고, 최종 값은 문서가 갖는다. */}
+          {field.type === 'BUDGET_TREE' && (
+            <div className="space-y-1 border-t border-gray-100 pt-2">
+              <p className={cardText.meta}>층 이름 기본값 (쉼표로 구분, 위에서 아래 순서)</p>
+              <Input
+                density="table"
+                placeholder="세목, 비목, 세세목"
+                value={(field.levels ?? []).join(', ')}
+                onChange={(e) =>
+                  setField(index, {
+                    ...field,
+                    levels: e.target.value.split(',').map((s) => s.trim()).filter(Boolean),
+                  })
+                }
+              />
+            </div>
+          )}
+
+          {(field.type === 'TABLE' || field.type === 'BUDGET_TREE') && (
             <div className="space-y-2 border-t border-gray-100 pt-2">
-              <p className={cardText.meta}>표의 열</p>
+              <p className={cardText.meta}>
+                {field.type === 'BUDGET_TREE' ? '예산표의 숫자 열' : '표의 열'}
+              </p>
               {(field.columns ?? []).map((c, ci) => (
-                <ColumnRow
+                <FieldColumnRow
                   key={c.key}
                   column={c}
                   canRemove={(field.columns ?? []).length > 1}

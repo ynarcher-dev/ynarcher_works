@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { FormField } from '@/features/approval/fields'
+import type { BudgetLink } from '@/features/approval/approvalApi'
 
 interface FormMeta {
   name: string
@@ -9,6 +10,8 @@ interface FormMeta {
   retention: string
   security_grade: string
   sort_order: number
+  /** 예산과의 관계(근거 품의 필수·선택·예산 변경 품의). 기본은 사용 안 함. */
+  budget_link?: BudgetLink
 }
 
 /** 양식 신설 + 버전 1 발행. 쓰기 권한(admin)은 RLS가 강제한다. */
@@ -25,6 +28,7 @@ export function useCreateApprovalForm() {
           retention: v.retention,
           security_grade: v.security_grade,
           sort_order: v.sort_order,
+          budget_link: v.budget_link ?? 'NONE',
         })
         .select('id')
         .single()

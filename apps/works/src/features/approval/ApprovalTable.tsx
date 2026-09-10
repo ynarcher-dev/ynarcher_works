@@ -41,15 +41,14 @@ export function ApprovalTable({
     {
       key: 'doc_no',
       header: '문서 번호',
-      type: 'text',
-      className: 'whitespace-nowrap pr-4',
+      className: 'w-44 whitespace-nowrap pr-4',
       render: (r) => r.doc_no ?? '-',
     },
     {
       key: 'title',
       header: '제목',
-      type: 'name',
       primary: true,
+      sortable: true,
       className: 'overflow-hidden',
       render: (r) => (
         <span className="flex min-w-0 items-center gap-1" title={r.title}>
@@ -61,10 +60,15 @@ export function ApprovalTable({
     {
       key: 'docType',
       header: '문서 종류',
-      type: 'text',
+      className: 'w-44',
       render: (r) => docTypeName(r),
     },
-    { key: 'drafter', header: '기안자', type: 'person', render: (r) => nameOf(r.drafter_id) },
+    {
+      key: 'drafter',
+      header: '기안자',
+      className: 'w-28',
+      render: (r) => nameOf(r.drafter_id),
+    },
     { key: 'draftedAt', header: '기안일', type: 'date', render: (r) => r.created_at.slice(0, 10) },
     {
       key: 'completedAt',
@@ -76,7 +80,7 @@ export function ApprovalTable({
       // 구분(나의 자리)은 대등한 분류라 배지 없이 텍스트로 적는다(자산 상태 열과 같은 판단).
       key: 'role',
       header: '구분',
-      type: 'text',
+      type: 'code',
       render: (r) => {
         const role = myRole(r, uid, myDeptId)
         return role ? APPROVAL_ROLE_LABEL[role] : '-'

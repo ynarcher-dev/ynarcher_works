@@ -5,7 +5,6 @@ import {
   DetailTopBar,
   Field,
   Input,
-  Select,
   Spinner,
   useToast,
 } from '@ynarcher/ui'
@@ -17,9 +16,13 @@ import { usePendingMaterials } from '@/features/networks/pendingMaterials'
 import { ApprovalDocLinkField, type DocLinkDraft } from '@/features/approval/ApprovalDocLinkField'
 import { ApprovalLinkPanel } from '@/features/approval/ApprovalLinkPanel'
 import { ApprovalFieldsForm } from '@/features/approval/ApprovalFieldsForm'
-import { ApprovalInfoTable } from '@/features/approval/ApprovalInfoTable'
-import { approvalHeaderPairs } from '@/features/approval/approvalHeader'
+import { ApprovalBasicsCard } from '@/features/approval/ApprovalBasicsCard'
+import { ApprovalRevisionNotice } from '@/features/approval/ApprovalRevisionNotice'
 import { ApprovalLinePicker } from '@/features/approval/ApprovalLinePicker'
+import { BudgetSourceField } from '@/features/approval/BudgetSourceField'
+import { BudgetRefContext } from '@/features/approval/budgetRefContext'
+import { budgetFormIds } from '@/features/approval/budgetApi'
+import { useBudgetSourceState } from '@/features/approval/budgetSourceHooks'
 import {
   ApprovalProgramField,
   type ProgramLinkDraft,
@@ -35,6 +38,7 @@ import {
   useCreateApproval,
   useResubmitApproval,
   useSaveApprovalDraft,
+  usesBudgetSource,
   type ApprovalLineInput,
 } from '@/features/approval/approvalApi'
 import { LINE_KIND_ORDER } from '@/features/approval/config'
@@ -116,6 +120,9 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
   const [recipientIds, setRecipientIds] = useState<string[]>([])
   const [programLinks, setProgramLinks] = useState<ProgramLinkDraft[]>([])
   const [docLinks, setDocLinks] = useState<DocLinkDraft[]>([])
+  // 근거 품의(지출결의) 또는 변경 대상 품의(예산 변경 품의). 문서 단위의 값이라 필드가 아니라
+  // 여기서 든다 — 표 칸마다 들면 한 문서 안에서 서로 다른 품의를 가리키는 줄이 생긴다.
+  const [budgetDocumentId, setBudgetDocumentId] = useState<string | null>(null)
 
   // 고칠 문서를 한 번만 입력 칸에 싣는다 — 다시 실으면 사용자가 고치던 값이 되돌아간다.
   const seeded = useRef(false)
@@ -126,6 +133,7 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
     setFormId(editing.form_id ?? '')
     setTitle(editing.title)
     setValues((editing.field_values ?? {}) as FieldValues)
+    setBudgetDocumentId(editing.budget_document_id ?? null)
     setRecipientIds(
       [...editing.approval_recipients]
         .sort((a, b) => a.sort_order - b.sort_order)
@@ -209,6 +217,9 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
     setFormId(id)
     const next = availableForms.find((f) => f.id === id)
     setValues(emptyValues(parseFields(next?.current_version?.fields)))
+    // 양식이 바뀌면 근거 품의도 비운다 — 값을 비우면서 근거만 남기면 지출 내역이 비었는데
+    // 어느 품의에 걸린 문서로 남는다.
+    setBudgetDocumentId(null)
   }
 
   // 대분류를 바꾸면 그 아래 양식 선택과 입력 값을 함께 비운다 — 필드 키가 달라
@@ -217,29 +228,25 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
     setCategory(next)
     setFormId('')
     setValues({})
+    setBudgetDocumentId(null)
   }
+
+  /**
+   * 근거 품의가 정하는 것들 — 고를 대상, 지금 고른 문서, 그 문서의 예산 줄과 사용 현황.
+   *
+   * "예산표를 가진 양식인가"는 `budget_link`가 아니라 **필드에 예산표가 있는가**가 답한다
+   * (같은 사실을 두 곳에 적지 않는다 — 서버 `app.approval_budget_keys`도 같은 규칙이다).
+   */
+  const sourceFormIds = useMemo(() => budgetFormIds(availableForms), [availableForms])
+  const budgetLink = form?.budget_link ?? 'NONE'
+  const needsSource = usesBudgetSource(budgetLink)
+  const { sourceDoc, refSource: budgetRefSource } = useBudgetSourceState(
+    needsSource ? budgetDocumentId : null,
+    budgetDocumentId ? '근거 품의에 예산 줄이 없습니다.' : '근거 품의를 먼저 고르세요.',
+  )
 
   const amount = primaryAmount(fields, values)
   const amountLabel = primaryAmountLabel(fields)
-
-  /**
-   * 보완 요청 — 누가 무엇을 고쳐 달라고 했는가.
-   *
-   * **이 안내는 접지 않는다.** 지금 이 화면에 서 있는 이유이자 다음에 일어날 일을 말하는
-   * 차단 안내라, 말풍선 뒤에 숨기면 고칠 곳을 모른 채 다시 올리게 된다(안내 문구를 접는
-   * 규칙의 예외 — CLAUDE.md '안내 문구는 접는다').
-   */
-  const revisionInfo = useMemo(() => {
-    if (!isResubmit || !editing) return null
-    const stamps = stampLinesForRound(editing.approval_lines, maxRound(editing.approval_lines))
-    const requested = stamps.find((s) => s.decision === 'REVISION_REQUESTED')
-    if (!requested) return null
-    const name = (employees ?? []).find((e) => e.id === requested.approverId)?.name ?? '결재자'
-    return {
-      by: name,
-      comment: requested.comment,
-    }
-  }, [isResubmit, editing, employees])
 
   const submit = async (asDraft: boolean) => {
     if (!form || !form.current_version_id) {
@@ -283,6 +290,14 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
         toast.show('결재자를 한 명 이상 지정하세요.', 'warning')
         return
       }
+      // 근거 품의는 화면에서만 막고 끝내지 않는다 — 서버가 다시 판정한다.
+      if (!budgetDocumentId && (budgetLink === 'SPEND_REQUIRED' || budgetLink === 'REVISE')) {
+        toast.show(
+          budgetLink === 'REVISE' ? '변경 대상 품의를 고르세요.' : '근거 품의를 고르세요.',
+          'warning',
+        )
+        return
+      }
     }
 
     try {
@@ -292,6 +307,7 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
         formVersionId: form.current_version_id,
         fieldValues: pruneValues(fields, values),
         departmentId: myDeptId,
+        budgetDocumentId: needsSource ? budgetDocumentId : null,
         lines,
         recipientIds,
         asDraft,
@@ -350,78 +366,28 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
         }
       />
 
-      {revisionInfo && (
-        <div className="rounded-radius-md border border-warning-border bg-warning-subtle px-4 py-3">
-          <p className="text-body font-medium text-gray-900">
-            {revisionInfo.by} 님이 보완을 요청했습니다. 수정 후 재상신하면 보완을 요청한 자리부터
-            결재가 이어집니다.
-          </p>
-          {revisionInfo.comment && (
-            <p className="mt-1 whitespace-pre-wrap text-body-sm text-gray-700">
-              보완 내용: {revisionInfo.comment}
-            </p>
-          )}
-        </div>
-      )}
+      <ApprovalRevisionNotice document={editing} active={isResubmit} employees={employees} />
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           {/* 기본 설정 — 상세 화면과 같은 격자 표. 무엇을 적고 있는지와 무엇이 적혔는지가
               같은 모양으로 읽히도록 기안·상세가 같은 머리를 쓴다. 보존 연한·보안 등급은
               양식이 정하므로 여기서는 고르지 않고 고른 양식의 값을 그대로 보인다. */}
-          <Card title="기본 설정">
-            <div className="space-y-4">
-              <ApprovalInfoTable
-                pairs={approvalHeaderPairs({
-                  // 문서 종류는 두 단이다 — 대분류를 고른 뒤 그 안의 양식을 고른다.
-                  // 양식이 늘어날수록 한 줄짜리 목록은 훑기 어려워진다.
-                  formPath: (
-                    // 대분류와 양식은 한 줄에 나란히 선다(`대분류 > 양식`을 읽는 순서 그대로).
-                    // 줄바꿈을 허용하면 좁은 칸에서 둘이 위아래로 갈려 두 단 관계가 흐려진다.
-                    <div className="flex items-center gap-2">
-                      <Select
-                        density="table"
-                        className="min-w-0 flex-1"
-                        value={category}
-                        onChange={(e) => selectCategory(e.target.value)}
-                        disabled={isResubmit}
-                      >
-                        <option value="">분류 선택</option>
-                        {groups.map((g) => (
-                          <option key={g.category} value={g.category}>
-                            {g.category}
-                          </option>
-                        ))}
-                      </Select>
-                      <Select
-                        density="table"
-                        className="min-w-0 flex-1"
-                        value={formId}
-                        onChange={(e) => selectForm(e.target.value)}
-                        disabled={!category || isResubmit}
-                      >
-                        <option value="">양식 선택</option>
-                        {categoryForms.map((f) => (
-                          <option key={f.id} value={f.id}>
-                            {f.name}
-                          </option>
-                        ))}
-                      </Select>
-                    </div>
-                  ),
-                  // 채번·완료 일시는 아직 없다. 자리는 그대로 두고 값만 비운다.
-                  docNo: editing?.doc_no ?? null,
-                  deptName: myDeptName,
-                  drafter: drafterParts,
-                  retentionGrade: form ? `${form.retention} / ${form.security_grade}` : null,
-                  // 금액은 지금 입력 중인 값에서 곧바로 파생한다(상신 후 집계될 값과 같은 셈).
-                  amount: formatMoney(amount),
-                  createdAt: editing ? dateTime(editing.created_at) : null,
-                  completedAt: null,
-                })}
-              />
-            </div>
-          </Card>
+          <ApprovalBasicsCard
+            groups={groups}
+            categoryForms={categoryForms}
+            category={category}
+            onCategoryChange={selectCategory}
+            formId={formId}
+            onFormChange={selectForm}
+            form={form}
+            locked={isResubmit}
+            docNo={editing?.doc_no ?? null}
+            deptName={myDeptName}
+            drafter={drafterParts}
+            amount={formatMoney(amount)}
+            createdAt={editing ? dateTime(editing.created_at) : null}
+          />
 
           {/* 결재선은 기본 설정 바로 아래, 본문과 같은 흐름에 둔다 — 문서를 누가 어떤 순서로
               보게 될지는 첨부처럼 곁들이는 정보가 아니라 기안의 본체다.
@@ -439,6 +405,25 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
                 : undefined
             }
           />
+
+          {/* 근거 품의는 본문보다 앞에 선다 — 품의를 골라야 지출 내역에서 예산 줄을 고를 수
+              있으므로, 뒤에 두면 내역을 적다가 위로 되돌아와야 한다. 보완 중에는 고르지 못한다
+              (결재자가 무엇을 근거로 승인했는지가 바뀌면 이미 찍힌 도장의 뜻이 달라진다). */}
+          {form && needsSource && (
+            <BudgetSourceField
+              formIds={sourceFormIds}
+              value={budgetDocumentId}
+              onChange={setBudgetDocumentId}
+              picked={
+                sourceDoc
+                  ? { title: sourceDoc.title, docNo: sourceDoc.docNo, amount: sourceDoc.amount }
+                  : null
+              }
+              required={budgetLink === 'SPEND_REQUIRED' || budgetLink === 'REVISE'}
+              revise={budgetLink === 'REVISE'}
+              readOnly={isResubmit}
+            />
+          )}
 
           {form && (
             <Card
@@ -458,7 +443,9 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
                     이 양식에 정의된 필드가 없습니다. ADMIN 결재 양식 관리에서 필드를 추가하세요.
                   </p>
                 ) : (
-                  <ApprovalFieldsForm fields={fields} values={values} onChange={setValues} />
+                  <BudgetRefContext.Provider value={budgetRefSource}>
+                    <ApprovalFieldsForm fields={fields} values={values} onChange={setValues} />
+                  </BudgetRefContext.Provider>
                 )}
               </div>
             </Card>

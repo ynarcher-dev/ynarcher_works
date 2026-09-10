@@ -40,11 +40,6 @@ export interface ApprovalListRow {
 
 const inProgress = (s: ApprovalStatus) => s === 'PENDING' || s === 'IN_REVIEW'
 /**
- * 끝난 문서. 반려는 2026-09-10부터 종결이며, 보완 요청은 별도 상태라 여기에 들지 않는다.
- */
-const isCompleted = (s: ApprovalStatus) => s === 'APPROVED' || s === 'REJECTED'
-
-/**
  * 문서 종류 표기 — 양식 원장이 정본, 양식 없는 구(舊) 문서는 legacy form_type으로 폴백.
  *
  * 목록 행 전체가 아니라 **양식 두 칸만** 받는다. 같은 판정을 문서함 목록 바깥에서도 쓰기
@@ -159,8 +154,8 @@ export function isLastPending<T extends ApprovalLine & { id: string }>(
  * 해당 없으면 null. 우선순위는 처리 급한 순(waiting > upcoming > ongoing)이다.
  *
  * 완료(승인·반려)된 문서는 여기서 답하지 않는다(2026-08-26) — 다 끝난 문서가 '진행 중인
- * 문서'에 서 있으면 그 이름이 사실과 어긋난다. 끝났는데 아직 못 본 문서는 내 문서함의
- * '확인' 칸(inBox의 mine-confirm)이 받는다.
+ * 문서'에 서 있으면 그 이름이 사실과 어긋난다. 참조자로서 직접 확인해야 하는 문서는 내
+ * 문서함의 '확인' 칸(inBox의 mine-confirm)이 받는다.
  */
 export function progressBucket(row: ApprovalListRow, uid: string): ApprovalProgressKey | null {
   // 임시저장은 상신 전이라 결재선을 볼 필요가 없다 — 아직 아무의 차례도 아니고, 오직
@@ -246,11 +241,10 @@ export function inBox(
       return isApprover(row, uid)
     case 'mine-cc':
       return isRecipient(row, uid)
-    // 확인: 끝났는데 내가 아직 안 열어 본 문서. 다른 칸과 달리 **열면 빠진다** — 함이 아니라
-    // 할 일에 가깝지만, 완료된 문서를 찾는 자리가 내 문서함이라 여기 둔다(반려 칸도 상태로
-    // 좁힌 칸이다). 열람 표시는 상세를 열 때 useMarkApprovalRead가 남긴다.
+    // 확인: 참조자로 지정됐고 내가 아직 명시적으로 확인하지 않은 문서. 상세를 여는 것만으로는
+    // 빠지지 않고, 결재선의 내 이름 옆 체크를 눌러야 approval_reads가 남으며 이 칸에서 빠진다.
     case 'mine-confirm':
-      return isCompleted(row.status) && isInvolved(row, uid) && !hasRead(row, uid)
+      return row.status !== 'DRAFT' && isRecipient(row, uid) && !hasRead(row, uid)
     case 'mine-rejected':
       return isInvolved(row, uid) && row.status === 'REJECTED'
     case 'dept-all':

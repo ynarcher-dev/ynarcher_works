@@ -47,10 +47,24 @@ export interface ApprovalForm {
   current_version_id: string | null
   /** 현재 버전의 필드 스키마(원본 jsonb — parseFields로 읽는다). */
   current_version: { id: string; version_no: number; fields: unknown } | null
+  /**
+   * 이 양식이 예산과 맺는 관계. NONE / SPEND_REQUIRED(근거 품의 필수) /
+   * SPEND_OPTIONAL(선택) / REVISE(예산 변경 품의).
+   * 예산표를 가졌는지는 이 값이 아니라 필드에 BUDGET_TREE가 있는지가 답한다.
+   */
+  budget_link: BudgetLink
+}
+
+export type BudgetLink = 'NONE' | 'SPEND_REQUIRED' | 'SPEND_OPTIONAL' | 'REVISE'
+
+/** 근거 품의를 고르는 자리가 서는가. */
+export function usesBudgetSource(link: BudgetLink | undefined): boolean {
+  return link === 'SPEND_REQUIRED' || link === 'SPEND_OPTIONAL' || link === 'REVISE'
 }
 
 const FORM_SELECT =
   'id, name, category, abbrev, retention, security_grade, is_active, sort_order, current_version_id, ' +
+  'budget_link, ' +
   'current_version:current_version_id(id, version_no, fields)'
 
 /** 결재 양식 목록 + 현재 버전 스키마. 기안 화면과 ADMIN 빌더가 함께 쓴다. */
@@ -111,6 +125,8 @@ export interface ApprovalDetail {
   department_id: string | null
   created_at: string
   completed_at: string | null
+  /** 근거 품의(지출결의) 또는 변경 대상 품의(예산 변경 품의). */
+  budget_document_id: string | null
   legacy: {
     source_system: string
     source_form_title: string | null
@@ -126,6 +142,7 @@ export interface ApprovalDetail {
     category: string
     retention: string
     security_grade: string
+    budget_link: BudgetLink
   } | null
   version: { fields: unknown } | null
   approval_lines: {
@@ -149,9 +166,9 @@ export interface ApprovalDetail {
 
 const DETAIL_SELECT =
   'id, title, doc_no, form_id, form_version_id, form_type, field_values, body, status, amount, ' +
-  'drafter_id, department_id, created_at, completed_at, ' +
+  'drafter_id, department_id, created_at, completed_at, budget_document_id, ' +
   'legacy:approval_legacy_documents(source_system, source_form_title, original_drafter_name, original_drafter_position, original_department_name, source_was_deleted, source_deleted_at, participants:approval_legacy_participants(id, source_line_section, step_order, source_role, normalized_role, source_decision, normalized_decision, decided_at, original_name, original_position, actor:approval_legacy_actors(original_position))), ' +
-  'form:form_id(name, category, retention, security_grade), ' +
+  'form:form_id(name, category, retention, security_grade, budget_link), ' +
   'version:form_version_id(fields), ' +
   'approval_lines(id, approver_id, step_order, decision, kind, round, comment, decided_at, return_to_step, return_via_drafter, return_reset_agreement), ' +
   'approval_recipients(user_id, sort_order), ' +
@@ -254,6 +271,8 @@ export interface CreateApprovalInput {
   departmentId: string | null
   lines: ApprovalLineInput
   recipientIds: string[]
+  /** 근거 품의(지출결의) 또는 변경 대상 품의(예산 변경 품의). 없으면 null. */
+  budgetDocumentId?: string | null
   /** 임시저장이면 DRAFT — 문서 번호는 상신할 때 붙는다. */
   asDraft?: boolean
 }
@@ -274,6 +293,7 @@ export function useCreateApproval() {
           form_version_id: v.formVersionId,
           field_values: v.fieldValues,
           department_id: v.departmentId,
+          budget_document_id: v.budgetDocumentId ?? null,
           status: v.asDraft ? 'DRAFT' : 'PENDING',
         })
         .select('id')
@@ -347,6 +367,7 @@ export function useSaveApprovalDraft() {
         p_lines: lineRows,
         p_recipient_ids: v.recipientIds,
         p_submit: !v.asDraft,
+        p_budget_document_id: v.budgetDocumentId ?? null,
       })
       if (error) throw error
       return v.documentId
@@ -474,10 +495,7 @@ export function useDeleteApproval() {
   })
 }
 
-/**
- * 열람 확인 스탬프 — 문서를 연 순간 본인 행을 upsert한다(확인함 뱃지·참조자
- * 체크마크의 원천). 본인 행만 쓸 수 있음은 RLS가 강제한다.
- */
+/** 참조 확인 스탬프 — 본인이 이름 옆 체크를 눌렀을 때만 남긴다. RLS도 본인 행만 허용한다. */
 export function useMarkApprovalRead() {
   const qc = useQueryClient()
   return useMutation({

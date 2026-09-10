@@ -33,6 +33,12 @@ export interface TradePartner {
   bankbookPath: string | null
   bankbookName: string | null
   isActive: boolean
+  /**
+   * 경영지원이 증빙을 보고 계좌를 확인한 시점. 비어 있으면 "확인 전"이다 —
+   * 송금 요청에서 담당자가 그 자리에서 넣은 거래처가 여기 섞이므로, 확인된 행과 같은
+   * 얼굴로 서면 결재자가 둘을 가릴 수 없다.
+   */
+  verifiedAt: string | null
   createdBy: string | null
   updatedAt: string | null
 }
@@ -66,12 +72,13 @@ interface PartnerRow {
   bankbook_path: string | null
   bankbook_name: string | null
   is_active: boolean
+  verified_at: string | null
   created_by: string | null
   updated_at: string | null
 }
 
 const COLUMNS =
-  'id, code, name, partner_type, registration_no, bank_code, account_no, account_holder, license_path, license_name, bankbook_path, bankbook_name, is_active, created_by, updated_at'
+  'id, code, name, partner_type, registration_no, bank_code, account_no, account_holder, license_path, license_name, bankbook_path, bankbook_name, is_active, verified_at, created_by, updated_at'
 
 const toPartner = (r: PartnerRow): TradePartner => ({
   id: r.id,
@@ -87,6 +94,7 @@ const toPartner = (r: PartnerRow): TradePartner => ({
   bankbookPath: r.bankbook_path,
   bankbookName: r.bankbook_name,
   isActive: r.is_active,
+  verifiedAt: r.verified_at,
   createdBy: r.created_by,
   updatedAt: r.updated_at,
 })

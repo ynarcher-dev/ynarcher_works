@@ -1,9 +1,12 @@
 import { Button, IconButton, Input, Select, cn, tableText } from '@ynarcher/ui'
 import { Plus, Trash2 } from 'lucide-react'
+import { BudgetRefCell } from '@/features/approval/BudgetRefCell'
+import { PartnerRefCell } from '@/features/approval/PartnerRefCell'
 import {
   columnSum,
   emptyRow,
   formatMoney,
+  isNumericColumn,
   type FormColumn,
   type FormField,
   type TableRow,
@@ -25,6 +28,14 @@ function CellInput({
   value: string
   onChange: (v: string) => void
 }) {
+  // 다른 원장의 행을 가리키는 칸은 글자를 적는 자리가 아니라 **고르는 자리**다.
+  // 자기 부품이 자기 선택 창을 갖는다(표는 어느 원장인지 알 필요가 없다).
+  if (column.type === 'BUDGET_REF') {
+    return <BudgetRefCell value={value} onChange={onChange} />
+  }
+  if (column.type === 'PARTNER_REF') {
+    return <PartnerRefCell value={value} onChange={onChange} />
+  }
   if (column.type === 'SELECT') {
     return (
       <Select density="table" value={value} onChange={(e) => onChange(e.target.value)}>
@@ -41,9 +52,9 @@ function CellInput({
     <Input
       density="table"
       type={column.type === 'DATE' ? 'date' : 'text'}
-      inputMode={column.type === 'MONEY' || column.type === 'NUMBER' ? 'numeric' : undefined}
+      inputMode={isNumericColumn(column.type) ? 'numeric' : undefined}
       className={cn(
-        (column.type === 'MONEY' || column.type === 'NUMBER') && 'text-right tabular-nums',
+        isNumericColumn(column.type) && 'text-right tabular-nums',
       )}
       value={value}
       onChange={(e) => onChange(e.target.value)}
@@ -62,7 +73,7 @@ function CellInput({
  */
 export function FieldTableInput({ field, rows, onChange }: FieldTableInputProps) {
   const columns = field.columns ?? []
-  const numericColumns = columns.filter((c) => c.type === 'MONEY' || c.type === 'NUMBER')
+  const numericColumns = columns.filter((c) => isNumericColumn(c.type))
 
   const setCell = (index: number, key: string, value: string) =>
     onChange(rows.map((r, i) => (i === index ? { ...r, [key]: value } : r)))
@@ -81,7 +92,7 @@ export function FieldTableInput({ field, rows, onChange }: FieldTableInputProps)
                 className={cn(
                   'px-2 py-1.5 text-left',
                   tableText.head,
-                  (c.type === 'MONEY' || c.type === 'NUMBER') && 'text-right',
+                  isNumericColumn(c.type) && 'text-right',
                 )}
               >
                 {c.label}
@@ -123,7 +134,7 @@ export function FieldTableInput({ field, rows, onChange }: FieldTableInputProps)
           {numericColumns.length > 0 && (
             <tr className="border-t border-gray-200 bg-gray-25">
               {columns.map((c, i) => {
-                const numeric = c.type === 'MONEY' || c.type === 'NUMBER'
+                const numeric = isNumericColumn(c.type)
                 const sum = numeric ? columnSum(rows, c.key) : null
                 return (
                   <td

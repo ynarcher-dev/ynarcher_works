@@ -111,8 +111,18 @@ export function PartnersTable({
         return names.length ? names.join('·') : <EmptyValue />
       },
     },
-    // 사용 여부는 이 목록에서 유일한 상태값이라 배지로 칠한다 — 대등한 분류가 아니라
-    // '지금 쓰는가'의 한 축이고, 중단된 거래처가 눈에 띄어야 지급 대상을 잘못 고르지 않는다.
+    // 계좌 확인은 사용 여부와 **다른 축**이다. 저쪽은 "지금 거래하는가"이고 이쪽은
+    // "이 계좌를 믿을 근거를 봤는가"다. 송금 요청에서 담당자가 그 자리에서 넣은 거래처가
+    // 여기 섞여 들어오므로, 확인된 행과 같은 얼굴로 서면 결재자가 둘을 가릴 수 없다.
+    {
+      key: 'verified',
+      header: '계좌 확인',
+      type: 'badge',
+      render: (p) =>
+        p.verifiedAt ? <Badge tone="success">확인</Badge> : <Badge tone="warning">확인 전</Badge>,
+    },
+    // 사용 여부는 '지금 쓰는가'의 한 축이고, 중단된 거래처가 눈에 띄어야 지급 대상을
+    // 잘못 고르지 않는다.
     {
       key: 'isActive',
       header: '사용 여부',

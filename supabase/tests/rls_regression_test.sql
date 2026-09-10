@@ -8,7 +8,7 @@
 --       해당 테이블 도입 시 케이스를 실제 테이블 접근으로 승격한다.
 -- =====================================================================
 begin;
-select plan(34);
+select plan(38);
 
 -- 픽스처: 테스트 계정 10종 + 데이터 (슈퍼유저로 삽입, 트랜잭션 종료 시 롤백) ----
 insert into public.startups(id, name) values
@@ -313,10 +313,12 @@ select is(
   (select count(*)::int
      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
-      and p.proname in ('decide_approval_document', 'resubmit_approval_document')
+      and p.proname in (
+        'decide_approval_document', 'recall_approval_decision', 'resubmit_approval_document'
+      )
       and has_function_privilege('authenticated', p.oid, 'EXECUTE')),
-  2,
-  '케이스14b: 결재 처리·재상신 RPC는 authenticated에 열려 있다'
+  3,
+  '케이스14b: 결재 처리·승인 회수·재상신 RPC는 authenticated에 열려 있다'
 );
 -- anon/service_role의 명시적 기본 EXECUTE도 걷는다. 함수 본문 인가와 별개로 호출 표면을
 -- authenticated로 좁혀 두어야 새 인자가 늘거나 검증이 바뀔 때 우회 경로가 생기지 않는다.
@@ -324,13 +326,15 @@ select is(
   (select count(*)::int
      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
-      and p.proname in ('decide_approval_document', 'resubmit_approval_document')
+      and p.proname in (
+        'decide_approval_document', 'recall_approval_decision', 'resubmit_approval_document'
+      )
       and (
         has_function_privilege('anon', p.oid, 'EXECUTE')
         or has_function_privilege('service_role', p.oid, 'EXECUTE')
       )),
   0,
-  '케이스14c: 결재 처리·재상신 RPC는 anon/service_role에 열려 있지 않다'
+  '케이스14c: 결재 처리·승인 회수·재상신 RPC는 anon/service_role에 열려 있지 않다'
 );
 -- 결재선에 DELETE 정책이 없어야 회차 이력이 지워지지 않는다. 보완 전 승인 도장을
 -- 남겨 두는 것이 전제이고, 그 전제가 정책 한 줄로 무너지면 승인 유지 표시가 거짓이 된다.
@@ -339,6 +343,49 @@ select is(
     where schemaname = 'public' and tablename = 'approval_lines' and cmd = 'DELETE'),
   0,
   '케이스14d: approval_lines에 DELETE 정책이 없다(회차 이력은 지워지지 않는다)'
+);
+
+-- 케이스 15: 예산·지출 연동(20260911140000) --------------------------------
+-- 예산 변경 이력은 **사람이 적는 원장이 아니라 승인이 남기는 기록**이다. 쓰기 정책을 열면
+-- 담당자가 PostgREST로 직접 이력을 지어낼 수 있고, 그러면 이 표가 근거가 되지 못한다.
+select is(
+  (select count(*)::int from pg_policies
+    where schemaname = 'public' and tablename = 'approval_budget_revisions'
+      and cmd in ('INSERT', 'UPDATE', 'DELETE')),
+  0,
+  '케이스15a: 예산 변경 이력에 쓰기·삭제 정책이 없다(서버 함수만 남긴다)'
+);
+select is(
+  (select count(*)::int
+     from information_schema.role_table_grants
+    where table_schema = 'public' and table_name = 'approval_budget_revisions'
+      and grantee = 'authenticated'
+      and privilege_type in ('INSERT', 'UPDATE', 'DELETE', 'TRUNCATE')),
+  0,
+  '케이스15b: authenticated는 예산 변경 이력을 직접 쓰지 못한다'
+);
+-- 호출자 검증이 없는 내부 헬퍼는 사용자에게 열지 않는다. 예산 사용 현황은 게이트를 가진
+-- public 래퍼(approval_budget_status)만 통과하고, 예산 변경 적용은 결재 처리만 부른다.
+select is(
+  (select count(*)::int
+     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'app'
+      and p.proname in ('approval_budget_usage', 'apply_approval_budget_revision')
+      and (
+        has_function_privilege('authenticated', p.oid, 'EXECUTE')
+        or has_function_privilege('anon', p.oid, 'EXECUTE')
+      )),
+  0,
+  '케이스15c: 예산 내부 헬퍼는 authenticated·anon에 열려 있지 않다'
+);
+-- 거래처 가려진 뷰는 확인 여부를 더해도 계좌 노출 범위를 넓히지 않는다 —
+-- 전체 계좌번호 컬럼이 이 뷰에 서면 내부 사용자 전원에게 계좌가 열린다.
+select is(
+  (select count(*)::int from information_schema.columns
+    where table_schema = 'public' and table_name = 'trade_partners_directory'
+      and column_name in ('account_no', 'license_path', 'bankbook_path')),
+  0,
+  '케이스15d: 거래처 가려진 뷰에 전체 계좌번호·증빙 경로가 없다'
 );
 
 select * from finish();
