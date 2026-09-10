@@ -1,4 +1,15 @@
-import { Button, DataTable, EmptyValue, Field, Input, Modal, Select, useToast, type Column } from '@ynarcher/ui'
+import {
+  Button,
+  Card,
+  DataTable,
+  EmptyValue,
+  Field,
+  Input,
+  Modal,
+  Select,
+  useToast,
+  type Column,
+} from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { useDebounced } from '@/lib/useDebounced'
 import { CATEGORY_OPTIONS, type NetworkCategory } from '@/features/networks/config'
@@ -90,63 +101,92 @@ export function PersonSearchModal({
   ]
 
   return (
-    <Modal open={open} onClose={onClose} title="원장에서 사람 가져오기" size="lg">
-      <div className="space-y-4">
-        <Field label="검색" hint="이름 또는 소속으로 네트워크 원장을 찾습니다.">
-          <Input
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            placeholder="이름 또는 소속"
-          />
-        </Field>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="원장에서 사람 가져오기"
+      size="xl"
+      sectioned
+      footer={
+        <Button variant="secondary" onClick={onClose}>
+          닫기
+        </Button>
+      }
+    >
+      <div className="space-y-3">
+        {/* 여기서 하는 일은 둘이고 손놀림이 서로 다르다 — 위는 찾아 고르는 일(줄을 누른다),
+            아래는 없을 때 만드는 일(버튼을 누른다). 한 상자에 담아 두었을 때는 등록 버튼이
+            푸터에서 '닫기' 옆에 서서 이 창의 주 동작처럼 보였다 — 정작 주 동작인 '고르기'는
+            버튼이 없는데(줄 클릭) 부수 동작만 버튼을 갖고 있었다. 카드로 가르면 각 동작이
+            자기 자리 안에 서고, 푸터에는 창을 닫는 일만 남는다. */}
+        <Card title="원장에서 찾기" help="줄을 누르면 그 사람을 이 칸에 연결하고 창이 닫힙니다.">
+          <div className="space-y-4">
+            <Field label="검색" hint="이름 또는 소속으로 네트워크 원장을 찾습니다.">
+              <Input
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                placeholder="이름 또는 소속"
+              />
+            </Field>
 
-        <DataTable
-          columns={columns}
-          rows={hits ?? []}
-          rowKey={(r) => r.id}
-          onRowClick={(r) => {
-            onPick(r)
-            onClose()
-          }}
-          emptyText={
-            keyword.trim() === ''
-              ? '이름 또는 소속을 입력하면 원장을 찾습니다.'
-              : isFetching
-                ? '찾는 중…'
-                : '원장에 없습니다. 아래에서 새 인물로 등록할 수 있습니다.'
-          }
-        />
+            <DataTable
+              columns={columns}
+              rows={hits ?? []}
+              rowKey={(r) => r.id}
+              onRowClick={(r) => {
+                onPick(r)
+                onClose()
+              }}
+              emptyText={
+                keyword.trim() === ''
+                  ? '이름 또는 소속을 입력하면 원장을 찾습니다.'
+                  : isFetching
+                    ? '찾는 중…'
+                    : '원장에 없습니다. 아래에서 새 인물로 등록할 수 있습니다.'
+              }
+            />
+          </div>
+        </Card>
 
         {/* 검색해도 없을 때 쓰는 자리. 구분을 비워도 등록된다 — 명함 정리·회의 직후처럼
             이름과 소속만 들고 들어오는 자리가 있고, 구분을 몰라 등록 자체가 막히는 것보다
             비워 둔 채 넣고 목록의 '미지정'으로 다시 찾아 채우는 편이 낫다(2026-09-05). */}
-        <div className="grid grid-cols-1 gap-3 border-t border-gray-100 pt-4 sm:grid-cols-3">
-          <Field label="이름" required>
-            <Input value={newName} onChange={(e) => setNewName(e.target.value)} />
-          </Field>
-          <Field label="소속">
-            <Input value={newAffiliation} onChange={(e) => setNewAffiliation(e.target.value)} />
-          </Field>
-          <Field label="구분">
-            <Select value={newCategory} onChange={(e) => setNewCategory(e.target.value as NetworkCategory | '')}>
-              <option value="">미지정</option>
-              {CATEGORY_OPTIONS.map((o) => (
-                <option key={o.key} value={o.key}>
-                  {o.label}
-                </option>
-              ))}
-            </Select>
-          </Field>
-        </div>
-      </div>
-
-      <div className="mt-4 flex justify-end gap-2">
-        <Button variant="secondary" onClick={onClose}>
-          닫기
-        </Button>
-        <Button disabled={create.isPending} onClick={() => void submitCreate()}>
-          새 인물로 등록하고 연결
-        </Button>
+        <Card
+          title="찾는 사람이 없으면 새로 등록"
+          help="네트워크 원장에 새 인물로 등록하고 이 칸에 곧바로 연결합니다."
+        >
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <Field label="이름" required>
+                <Input value={newName} onChange={(e) => setNewName(e.target.value)} />
+              </Field>
+              <Field label="소속">
+                <Input value={newAffiliation} onChange={(e) => setNewAffiliation(e.target.value)} />
+              </Field>
+              <Field label="구분">
+                <Select
+                  value={newCategory}
+                  onChange={(e) => setNewCategory(e.target.value as NetworkCategory | '')}
+                >
+                  <option value="">미지정</option>
+                  {CATEGORY_OPTIONS.map((o) => (
+                    <option key={o.key} value={o.key}>
+                      {o.label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+            <div className="flex justify-end">
+              <Button
+                disabled={create.isPending || !newName.trim()}
+                onClick={() => void submitCreate()}
+              >
+                {create.isPending ? '등록 중…' : '등록하고 연결'}
+              </Button>
+            </div>
+          </div>
+        </Card>
       </div>
     </Modal>
   )
