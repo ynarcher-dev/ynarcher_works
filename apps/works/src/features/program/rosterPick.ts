@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import type { MasterCandidate } from '@/features/program/participantHooks'
+import { isLedgerReady } from '@/features/program/participantPerson'
 import type { RosterRow } from '@/features/program/rosterHooks'
 
 /**
@@ -34,6 +35,8 @@ export interface RosterRightRow {
 export interface RosterPick {
   /** 왼쪽 기둥 — 검색 결과 중 아직 담기지도, 이번에 고르지도 않은 줄. */
   left: MasterCandidate[]
+  /** 그중 실제로 담을 수 있는 줄 수(원장이 갖춰진 것). [전체 넣기]가 이 값을 본다. */
+  movable: number
   /** 오른쪽 기둥 — 이번에 담을 줄이 위, 이미 담긴 줄이 아래. */
   right: RosterRightRow[]
   /** 확정하면 명단에 담길 대상. `담기` 버튼이 세는 값이다. */
@@ -93,10 +96,20 @@ export function useRosterPick(
     [],
   )
 
+  /**
+   * 담기는 **원장이 갖춰진 줄만** 옮긴다(2026-09-10).
+   *
+   * 화면이 이미 그 줄을 못 고르게 막고 있지만 판정을 여기에도 둔다 — 화면의 잠금은 보이는
+   * 것이고, 무엇이 실제로 담기는가는 이 함수가 답한다. 특히 [전체 넣기]는 체크를 거치지
+   * 않으므로 여기서 걸러야 게이트가 성립한다.
+   */
   const moveRight = useCallback(() => {
     setStaged((prev) => {
       const has = new Set(prev.map((c) => c.id))
-      return [...prev, ...left.filter((c) => checkedLeft.includes(c.id) && !has.has(c.id))]
+      return [
+        ...prev,
+        ...left.filter((c) => checkedLeft.includes(c.id) && !has.has(c.id) && isLedgerReady(c)),
+      ]
     })
     setCheckedLeft([])
   }, [checkedLeft, left])
@@ -114,7 +127,7 @@ export function useRosterPick(
   const moveAllRight = useCallback(() => {
     setStaged((prev) => {
       const has = new Set(prev.map((c) => c.id))
-      return [...prev, ...left.filter((c) => !has.has(c.id))]
+      return [...prev, ...left.filter((c) => !has.has(c.id) && isLedgerReady(c))]
     })
     setCheckedLeft([])
   }, [left])
@@ -132,6 +145,7 @@ export function useRosterPick(
 
   return {
     left,
+    movable: left.filter(isLedgerReady).length,
     right,
     staged,
     checkedLeft,

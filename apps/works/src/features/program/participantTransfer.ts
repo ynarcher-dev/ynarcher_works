@@ -1,11 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import type { MasterCandidate, ParticipantRow } from '@/features/program/participantHooks'
-import {
-  isPersonReady,
-  ledgerPerson,
-  resolvePerson,
-  type PersonInput,
-} from '@/features/program/participantPerson'
+import { isLedgerReady, ledgerPerson } from '@/features/program/participantPerson'
 
 /**
  * 계정생성 창의 좌우 이관 상태 — **왼쪽은 계정 없음, 오른쪽은 계정 있음**이고 그 사이를 옮기는 일이
@@ -92,14 +87,6 @@ export function useParticipantTransfer(
   const [drafts, setDrafts] = useState<MasterCandidate[]>([])
   /** 이번에 내린 기존 행(`participant_id`). 확정 전까지는 표시일 뿐이다. */
   const [removed, setRemoved] = useState<string[]>([])
-  /**
-   * 담당자가 그 줄에 적은 명의. 키는 원장 행 id다.
-   *
-   * **원장이 명의를 다 알고 있는 줄은 여기 들어오지 않는다** — 대부분의 줄이 그렇고, 그래서
-   * 이 표는 보통 비어 있다. 원장 값을 미리 복사해 두지 않는 것이 요점이다: 복사해 두면
-   * 화면이 원장의 사본을 들게 되어, 저장 직전에 원장이 바뀌어도 옛 값을 보낸다.
-   */
-  const [typed, setTyped] = useState<Record<string, PersonInput>>({})
   /** 지금 체크된 줄(원장 행 id). 기둥마다 따로 센다 — 가운데 버튼이 방향별로 서 있다. */
   const [checkedLeft, setCheckedLeft] = useState<string[]>([])
   const [checkedRight, setCheckedRight] = useState<string[]>([])
@@ -147,7 +134,7 @@ export function useParticipantTransfer(
       .map((c) => ({
         masterId: c.id,
         name: c.name,
-        meta: c.email ?? c.phone ?? '원장에 명의 없음 · 오른쪽에서 채웁니다',
+        meta: c.email ?? c.phone ?? '',
         removingParticipantId: null,
         candidate: c,
       }))
@@ -166,8 +153,6 @@ export function useParticipantTransfer(
 
   const take = useCallback((row: RightRow) => {
     if (row.kind === 'existing') setRemoved((prev) => [...prev, row.participantId])
-    // 입력해 둔 값(`typed`)은 지우지 않는다 — 잘못 내렸다가 다시 올릴 때 방금 적은 이메일을
-    // 두 번 적게 하지 않는다.
     else setDrafts((prev) => prev.filter((d) => d.id !== row.masterId))
   }, [])
 
@@ -216,15 +201,9 @@ export function useParticipantTransfer(
     setCheckedRight([])
   }, [right, take])
 
-  const setPerson = useCallback(
-    (masterId: string, next: PersonInput) => setTyped((prev) => ({ ...prev, [masterId]: next })),
-    [],
-  )
-
   const reset = useCallback(() => {
     setDrafts([])
     setRemoved([])
-    setTyped({})
     setCheckedLeft([])
     setCheckedRight([])
   }, [])
@@ -232,34 +211,19 @@ export function useParticipantTransfer(
   /**
    * 확정하면 계정을 세울 줄.
    *
-   * `writeLedger`는 **값이 실제로 달라진 줄**만 참이다 — 원장이 이미 알고 있던 값을 되쓰는
-   * 것은 아무것도 바꾸지 않으면서 원장의 수정일만 오늘로 민다.
-   *
-   * 판정을 `needsPerson`에서 옮겼다(2026-09-10). 저 판정은 *이 줄이 계정을 세울 만큼
-   * 갖췄는가*(이름·이메일)라, 연락처만 채운 줄이 거짓이 되어 담당자가 적은 값이 원장에
-   * 닿지 않았다. 빈 칸을 칸 단위로 채우게 되면서 그 어긋남이 실제 손실이 된다.
+   * **원장을 쓰지 않는다**(2026-09-10 사용자 결정). 종전에는 담당자가 이 창에서 채운 값을
+   * 계정과 함께 원장에도 되썼고, 그래서 여기에 `writeLedger` 판정과 부분 실패 처리가 있었다.
+   * 값의 집이 원장이라면 묻는 자리도 원장 문 앞 하나여야 하므로, 그 일은 명단 담기가 진다
+   * (갖춰지지 않은 대상은 애초에 담기지 않는다). 여기서는 원장이 아는 명의를 그대로 옮긴다.
    */
   const additions = useMemo(
-    () =>
-      drafts.map((d) => {
-        const base = ledgerPerson(d)
-        const person = resolvePerson(d, typed[d.id])
-        return {
-          masterId: d.id,
-          person,
-          writeLedger:
-            person.name !== base.name ||
-            person.email !== base.email ||
-            person.phone !== base.phone,
-        }
-      }),
-    [drafts, typed],
+    () => drafts.map((d) => ({ masterId: d.id, person: ledgerPerson(d) })),
+    [drafts],
   )
 
   return {
     left,
     right,
-    typed,
     checkedLeft: leftChecked,
     checkedRight: rightChecked,
     toggleLeft,
@@ -273,13 +237,18 @@ export function useParticipantTransfer(
     moveLeft,
     moveAllRight,
     moveAllLeft,
-    setPerson,
     reset,
     additions,
     /** 확정하면 명부에서 빠질 줄(되돌릴 수 없다). */
     removals: removed,
     /** 올린 줄마다 명의가 갖춰졌는가(원장이 답했든 담당자가 적었든). */
-    ready: drafts.every((d) => isPersonReady(resolvePerson(d, typed[d.id]))),
+    /**
+     * 올린 줄이 전부 계정을 세울 수 있는가.
+     *
+     * 게이트가 선 뒤로 담기지 않는 조합이지만 판정을 남긴다 — 게이트 이전에 담긴 줄이
+     * 명단에 남아 있고, 그 줄로 계정을 열려는 시도를 막는 것은 여기다.
+     */
+    ready: drafts.every((d) => isLedgerReady(d)),
     dirty: drafts.length > 0 || removed.length > 0,
   }
 }

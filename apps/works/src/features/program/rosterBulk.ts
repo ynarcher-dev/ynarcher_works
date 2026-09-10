@@ -1,6 +1,11 @@
 import { parseCsvTable } from '@/lib/csv'
 import type { PersonaMatch } from '@/features/program/ledgerMatch'
-import { PARTICIPANT_PERSONAS, type MasterTable } from '@/features/program/participantPersona'
+import { gapText, ledgerGaps, type PersonField } from '@/features/program/participantPerson'
+import {
+  PARTICIPANT_PERSONAS,
+  hasOwnLoginName,
+  type MasterTable,
+} from '@/features/program/participantPersona'
 
 /**
  * 명단 대용량 담기의 **파싱과 판정 조립** — 화면과 조회에서 갈라 둔 순수 부분.
@@ -43,6 +48,14 @@ export interface BulkEntry {
   match: PersonaMatch | null
   /** 이미 이 명단에 담겨 있는가(대조로 찾은 행 기준). 담긴 줄은 결정을 바꿀 수 없다. */
   alreadyMapped: boolean
+  /**
+   * 이 줄이 담기면 원장이 **비워 두게 되는 칸**. 하나라도 있으면 담기지 않는다(2026-09-10).
+   *
+   * 보는 대상이 결정에 따라 갈린다 — 원장에 있는 행을 담는 줄(`link`)은 **그 원장 행**이
+   * 답하고, 새로 만드는 줄(`create`)은 **파일·폼의 값**이 답한다. 담긴 것은 계정을 열 수
+   * 있어야 하므로 어느 쪽이든 셋(명의·이메일·연락처)이 갖춰져야 한다.
+   */
+  gaps: PersonField[]
   decision: BulkDecision
 }
 
@@ -115,10 +128,14 @@ export function buildTemplateCsv(master: MasterTable): string {
  * 대조에 걸린 원장 행 id이고, 신규 줄은 이름·이메일을 합친 값으로 본다(아직 id가 없다).
  */
 export function buildEntries(
+  master: MasterTable,
   rows: BulkRow[],
   matches: Map<number, PersonaMatch>,
   mappedMasterIds: ReadonlySet<string>,
 ): BulkEntry[] {
+  const spec = PARTICIPANT_PERSONAS[master]
+  // 대상이 곧 사람인 자격(전문가)은 이름 칸이 명의까지 답한다 — 파일에 명의 열이 없다.
+  const ownLogin = hasOwnLoginName(spec)
   const seen = new Set<string>()
   return rows.map((row, i) => {
     const match = matches.get(i) ?? null
@@ -127,10 +144,27 @@ export function buildEntries(
     seen.add(key)
 
     const alreadyMapped = Boolean(match && mappedMasterIds.has(match.id))
+    /*
+      빈 칸을 어디서 보는가 — 있는 행을 담는 줄은 원장이, 새로 만드는 줄은 파일이 답한다.
+      파일 값으로 원장의 빈 칸을 채우지는 않는다: 이 창이 받는 열은 명단 표에 서는 넷뿐이라
+      여기서 원장을 고치기 시작하면 원장 임포터가 둘이 된다(이 파일 머리말의 근거 그대로).
+    */
+    const gaps = ledgerGaps(
+      match ?? {
+        loginName: ownLogin ? row.contactName : row.name,
+        email: row.email,
+        phone: row.phone,
+      },
+    )
     const decision: BulkDecision =
-      alreadyMapped || duplicateInFile ? 'skip' : match ? 'link' : 'create'
-    return { row, match, alreadyMapped, decision }
+      alreadyMapped || duplicateInFile || gaps.length > 0 ? 'skip' : match ? 'link' : 'create'
+    return { row, match, alreadyMapped, gaps, decision }
   })
+}
+
+/** 담기지 못하는 이유를 담당자가 읽는 말로. 비어 있지 않은 줄만 부른다. */
+export function entryGapText(entry: BulkEntry, master: MasterTable): string {
+  return gapText(entry.gaps, PARTICIPANT_PERSONAS[master].loginNameHeader)
 }
 
 /** 실행 요약 — 버튼과 결과 토스트가 같은 값을 읽는다. */

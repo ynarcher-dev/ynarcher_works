@@ -80,7 +80,7 @@ export function RosterBulkModal({
         rows.map((r) => ({ name: r.name, email: r.email, phone: r.phone })),
       )
       const mapped = new Set((candidates ?? []).filter((c) => c.alreadyMapped).map((c) => c.id))
-      setEntries(buildEntries(rows, matches, mapped))
+      setEntries(buildEntries(master, rows, matches, mapped))
       setFileName(file.name)
     } catch (e) {
       // 대조에 실패하면 표를 세우지 않는다 — '중복 없음'으로 보이는 표가 곧 대량 중복이다.

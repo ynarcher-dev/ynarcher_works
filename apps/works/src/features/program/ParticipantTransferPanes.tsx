@@ -110,9 +110,7 @@ export function ParticipantTransferPanes({
             spec={spec}
             rows={right}
             checked={transfer.checkedRight}
-            onCheckedChange={transfer.setCheckedRight}
-            typed={transfer.typed}
-            onPerson={transfer.setPerson}
+            onCheckedChange={transfer.setCheckedRight}
           />
         ),
       }}

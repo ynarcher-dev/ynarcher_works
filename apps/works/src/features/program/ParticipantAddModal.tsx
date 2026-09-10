@@ -106,19 +106,11 @@ export function ParticipantAddModal({
       {
         onSuccess: (res) => {
           const tail = removed > 0 ? ` · ${removed}건 뺌` : ''
-          // 원장 보완 실패는 계정 실패와 갈라 말한다 — 담긴 것은 담긴 것이고 못 고친 것은
-          // 원장이라, 담당자가 다시 해야 하는 일이 서로 다르다.
-          const ledger =
-            res.ledgerFailed > 0
-              ? ` ${res.ledgerFailed}건은 원장에 반영하지 못했습니다(원장 쓰기 권한).`
-              : ''
           if (res.failed.length > 0) {
             toast.show(
               `${res.added}건을 담았습니다${tail}. ${res.failed.length}건 실패: ${res.failed[0]}`,
               'warning',
             )
-          } else if (ledger) {
-            toast.show(`${res.added}건을 명부에 담았습니다${tail}.${ledger}`, 'warning')
           } else {
             toast.show(`${res.added}건을 명부에 담았습니다${tail}.`, 'success')
           }

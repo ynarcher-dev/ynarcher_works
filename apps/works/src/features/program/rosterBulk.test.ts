@@ -8,24 +8,37 @@ import {
   type BulkRow,
 } from '@/features/program/rosterBulk'
 
-const match = (id: string, name: string, retired = false): PersonaMatch => ({
+/** 기업 자격 — 이름과 명의가 갈리는 쪽이다(전문가는 아래 시험이 따로 본다). */
+const MASTER = 'startups' as const
+
+/**
+ * 갖춰진 원장 행이 기본이다 — 명의·이메일·연락처가 없으면 담기지 않는 것이 규칙이라
+ * (2026-09-10), 비어 있는 픽스처를 기본으로 두면 모든 시험이 그 한 가지만 확인하게 된다.
+ */
+const match = (
+  id: string,
+  name: string,
+  extra: Partial<PersonaMatch> = {},
+): PersonaMatch => ({
   id,
   name,
-  loginName: null,
+  loginName: '이대표',
   subtitle: '',
-  email: null,
-  phone: null,
+  email: 'm@x.com',
+  phone: '010-0000-0000',
   category: null,
-  retired,
+  retired: false,
   hits: 2,
+  ...extra,
 })
 
-const row = (line: number, name: string, email = ''): BulkRow => ({
+const row = (line: number, name: string, extra: Partial<BulkRow> = {}): BulkRow => ({
   line,
   name,
-  contactName: '',
-  email,
-  phone: '',
+  contactName: '이대표',
+  email: 'a@x.com',
+  phone: '010-1111-2222',
+  ...extra,
 })
 
 describe('parseBulkCsv', () => {
@@ -61,7 +74,7 @@ describe('parseBulkCsv', () => {
 
 describe('buildEntries', () => {
   it('원장에 있으면 담기, 없으면 신규 등록이 기본이다', () => {
-    const entries = buildEntries(
+    const entries = buildEntries(MASTER, 
       [row(2, '딜챗'), row(3, '없는회사')],
       new Map([[0, match('m1', '딜챗')]]),
       new Set(),
@@ -71,13 +84,13 @@ describe('buildEntries', () => {
   })
 
   it('이미 담긴 대상은 제외로 잠긴다', () => {
-    const entries = buildEntries([row(2, '딜챗')], new Map([[0, match('m1', '딜챗')]]), new Set(['m1']))
+    const entries = buildEntries(MASTER, [row(2, '딜챗')], new Map([[0, match('m1', '딜챗')]]), new Set(['m1']))
     expect(entries[0]?.decision).toBe('skip')
     expect(entries[0]?.alreadyMapped).toBe(true)
   })
 
   it('파일 안에서 같은 원장 행을 두 번 가리키면 뒤엣줄을 접는다', () => {
-    const entries = buildEntries(
+    const entries = buildEntries(MASTER, 
       [row(2, '딜챗'), row(3, 'Dealchat')],
       new Map([
         [0, match('m1', '딜챗')],
@@ -90,8 +103,8 @@ describe('buildEntries', () => {
   })
 
   it('신규끼리의 파일 내 중복도 접는다 — 막으려던 중복을 우리가 만들지 않는다', () => {
-    const entries = buildEntries(
-      [row(2, '새회사', 'a@x.com'), row(3, '새회사', 'a@x.com')],
+    const entries = buildEntries(MASTER, 
+      [row(2, '새회사'), row(3, '새회사')],
       new Map(),
       new Set(),
     )
@@ -99,16 +112,49 @@ describe('buildEntries', () => {
   })
 
   it('이름이 같아도 이메일이 다르면 각각 신규다', () => {
-    const entries = buildEntries(
-      [row(2, '새회사', 'a@x.com'), row(3, '새회사', 'b@x.com')],
+    const entries = buildEntries(MASTER, 
+      [row(2, '새회사'), row(3, '새회사', { email: 'b@x.com' })],
       new Map(),
       new Set(),
     )
     expect(entries.map((e) => e.decision)).toEqual(['create', 'create'])
   })
 
+  it('원장이 비어 있으면 담기지 않는다 — 담긴 것은 계정을 열 수 있어야 한다', () => {
+    const entries = buildEntries(
+      MASTER,
+      [row(2, '딜챗')],
+      new Map([[0, match('m1', '딜챗', { email: null, phone: null })]]),
+      new Set(),
+    )
+    expect(entries[0]?.decision).toBe('skip')
+    expect(entries[0]?.gaps).toEqual(['email', 'phone'])
+  })
+
+  it('새로 만드는 줄은 파일의 값이 답한다 — 빠진 칸이 있으면 만들지 않는다', () => {
+    const entries = buildEntries(
+      MASTER,
+      [row(2, '새회사', { email: '' })],
+      new Map(),
+      new Set(),
+    )
+    expect(entries[0]?.decision).toBe('skip')
+    expect(entries[0]?.gaps).toEqual(['email'])
+  })
+
+  it('전문가는 이름이 곧 명의라 명의 열이 없어도 갖춰진 것이다', () => {
+    const entries = buildEntries(
+      'networks',
+      [row(2, '홍길동', { contactName: '' })],
+      new Map(),
+      new Set(),
+    )
+    expect(entries[0]?.decision).toBe('create')
+    expect(entries[0]?.gaps).toEqual([])
+  })
+
   it('비활성 행에 걸려도 담기가 기본이다 — 있는 것을 없다고 하지 않는다', () => {
-    const entries = buildEntries([row(2, '딜챗')], new Map([[0, match('m1', '딜챗', true)]]), new Set())
+    const entries = buildEntries(MASTER, [row(2, '딜챗')], new Map([[0, match('m1', '딜챗', { retired: true })]]), new Set())
     expect(entries[0]?.decision).toBe('link')
     expect(entries[0]?.match?.retired).toBe(true)
   })
@@ -116,7 +162,7 @@ describe('buildEntries', () => {
 
 describe('summarize', () => {
   it('결정별 건수를 센다', () => {
-    const entries = buildEntries(
+    const entries = buildEntries(MASTER, 
       [row(2, '딜챗'), row(3, '없는회사'), row(4, '담긴회사')],
       new Map([
         [0, match('m1', '딜챗')],

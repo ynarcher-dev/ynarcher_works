@@ -274,6 +274,17 @@ export const PARTICIPANT_PERSONAS: Record<MasterTable, ParticipantPersona> = {
   },
 }
 
+/**
+ * 이 자격의 **대상이 곧 사람인가** — 그렇다면 이름 칸 하나가 명의까지 답한다(전문가).
+ *
+ * 판정을 여기 모은 것은 같은 식(`person.name === matchColumns.name`)이 세 자리에 손으로
+ * 쓰여 있었기 때문이다(신규 등록 폼의 열, CSV 템플릿의 열, 대조 판정). 한 곳만 고치는 날
+ * 폼은 명의 칸을 세우는데 판정은 그 칸이 없다고 보는 어긋남이 생긴다.
+ */
+export function hasOwnLoginName(spec: ParticipantPersona): boolean {
+  return spec.ledger.person.name !== spec.ledger.matchColumns.name
+}
+
 /** 자격 키가 이 앱이 아는 것인가 — 원장에서 읽어 온 문자열을 좁힐 때 쓴다. */
 export function isMasterTable(value: string | null | undefined): value is MasterTable {
   return Boolean(value && value in PARTICIPANT_PERSONAS)

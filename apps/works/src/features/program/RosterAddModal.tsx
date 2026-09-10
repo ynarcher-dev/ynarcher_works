@@ -1,7 +1,7 @@
 import { Button, Modal, useToast } from '@ynarcher/ui'
 import { useMemo, useState, type ReactNode } from 'react'
 import { LedgerQuickAdd, LedgerQuickAddActions } from '@/features/program/LedgerQuickAdd'
-import { checkRows, useQuickAddRows } from '@/features/program/quickAddDraft'
+import { canSubmitQuickAdd, checkRows, useQuickAddRows } from '@/features/program/quickAddDraft'
 import { PARTICIPANT_PERSONAS, type MasterTable } from '@/features/program/participantPersona'
 import { RosterPickPanes } from '@/features/program/RosterPickPanes'
 import { useRosterPick } from '@/features/program/rosterPick'
@@ -154,7 +154,7 @@ export function RosterAddModal({
       help={
         mode === 'pick'
           ? spec.pickHelp
-          : '원장에 새 행을 만들고 그대로 담습니다. 이름만 필수이고 나머지는 나중에 원장에서 채울 수 있습니다.'
+          : '원장에 새 행을 만들고 그대로 담습니다. 명단에 담긴 대상은 계정을 열 수 있어야 하므로 네 칸을 모두 받습니다.'
       }
       size="3xl"
       sectioned={mode === 'pick'}
@@ -170,7 +170,7 @@ export function RosterAddModal({
           ) : (
             <LedgerQuickAddActions
               entries={quick.entries}
-              canSubmit={quick.rows.some((r) => r.name.trim())}
+              canSubmit={canSubmitQuickAdd(master, quick.rows)}
               busy={busy}
               onCheck={() => void runCheck()}
               onSubmit={runCreate}

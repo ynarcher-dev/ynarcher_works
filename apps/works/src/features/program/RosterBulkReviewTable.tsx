@@ -1,6 +1,6 @@
 import { Select, cardText, cn } from '@ynarcher/ui'
 import { PARTICIPANT_PERSONAS, type MasterTable } from '@/features/program/participantPersona'
-import type { BulkDecision, BulkEntry } from '@/features/program/rosterBulk'
+import { entryGapText, type BulkDecision, type BulkEntry } from '@/features/program/rosterBulk'
 
 /**
  * CSV파일 업로드 리뷰 표 — **파일이 원장과 어떻게 맞물렸는가**를 줄마다 보여 준다.
@@ -53,20 +53,22 @@ export function RosterBulkReviewTable({
                 </span>
               </td>
               <td className="px-3 py-2">
-                <MatchCell entry={entry} />
+                <MatchCell entry={entry} master={master} />
               </td>
               <td className="px-3 py-2">
                 <Select
                   value={entry.decision}
                   onChange={(e) => onDecision(i, e.target.value as BulkDecision)}
-                  disabled={entry.alreadyMapped}
+                  // 빈 칸이 있는 줄은 담을 수 없다 — 고를 것이 없으므로 잠근다.
+                  disabled={entry.alreadyMapped || entry.gaps.length > 0}
                 >
                   {/* 중복인 줄에 '신규 등록'을 두지 않는다 — 위 주석 참조. */}
-                  {entry.match ? (
-                    <option value="link">이 행 담기</option>
-                  ) : (
-                    <option value="create">신규 등록 후 담기</option>
-                  )}
+                  {entry.gaps.length === 0 &&
+                    (entry.match ? (
+                      <option value="link">이 행 담기</option>
+                    ) : (
+                      <option value="create">신규 등록 후 담기</option>
+                    ))}
                   <option value="skip">담지 않음</option>
                 </Select>
               </td>
@@ -90,7 +92,24 @@ function Th({ children, className }: { children: React.ReactNode; className?: st
  * 대조 결과 칸. **무엇이 같아서 걸렸는지**까지 적는다 — 이름만 보여 주면 동명이인인지
  * 진짜 중복인지 판단할 근거가 없고, 그때 담당자가 할 수 있는 일은 통째로 믿는 것뿐이다.
  */
-function MatchCell({ entry }: { entry: BulkEntry }) {
+function MatchCell({ entry, master }: { entry: BulkEntry; master: MasterTable }) {
+  /*
+    빈 칸이 가장 먼저 답한다 — 대조에 걸렸는지보다 **담을 수 있는지**가 담당자가 지금 할 일을
+    정한다. 어디를 고쳐야 하는지도 함께 적는다: 있는 행을 담는 줄은 원장을, 새로 만드는 줄은
+    파일을 고쳐야 한다.
+  */
+  if (entry.gaps.length > 0) {
+    return (
+      <span className="block">
+        <span className="block truncate text-body-sm text-danger">
+          {entryGapText(entry, master)}
+        </span>
+        <span className={cn("block truncate", cardText.meta)}>
+          {entry.match ? "원장에서 채운 뒤 담을 수 있습니다" : "파일의 빈 칸을 채워 주세요"}
+        </span>
+      </span>
+    )
+  }
   if (entry.alreadyMapped) {
     return <span className={cardText.meta}>이미 담김</span>
   }

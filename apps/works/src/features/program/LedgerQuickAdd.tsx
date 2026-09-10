@@ -1,8 +1,12 @@
-import { Button, Input, Spinner, cardText, cn } from '@ynarcher/ui'
+import { Button, Input, Spinner, cardText, cn, formText } from '@ynarcher/ui'
 import { ItemRows } from '@/components/ItemRows'
 import { PARTICIPANT_PERSONAS, type MasterTable } from '@/features/program/participantPersona'
-import type { QuickAddDraft, QuickAddRow } from '@/features/program/quickAddDraft'
-import type { BulkDecision, BulkEntry } from '@/features/program/rosterBulk'
+import {
+  isQuickAddRowReady,
+  type QuickAddDraft,
+  type QuickAddRow,
+} from '@/features/program/quickAddDraft'
+import { entryGapText, type BulkDecision, type BulkEntry } from '@/features/program/rosterBulk'
 
 /**
  * 원장에 없는 대상을 **원장에 만들어** 명단에 담는 자리(2026-09-09 / 2026-09-10 여러 줄로).
@@ -21,8 +25,11 @@ import type { BulkDecision, BulkEntry } from '@/features/program/rosterBulk'
  * (`ItemRows` — 머리글 한 줄 + 항목 한 줄 + 줄 끝 삭제), 그래서 이 창만의 목록 모양이
  * 새로 생기지 않는다.
  *
- * 받는 칸은 명단 표에 서는 넷뿐이고 **이름만 필수**다. 이 자리는 명함 한 장이나 회의 직후의
- * 이름 하나를 들고 오는 곳이라, 더 물으면 등록 자체가 막힌다.
+ * 받는 칸은 명단 표에 서는 넷뿐이고 **넷 다 필수**다(2026-09-10 사용자 결정). 종전에는 이름
+ * 하나만 받았다 — 명함 한 장을 들고 오는 자리라 더 물으면 등록이 막힌다는 것이 근거였는데,
+ * 그렇게 들어온 반쪽 행이 나중에 계정 생성 창에서 보완되면서 **원장을 고치는 자리가 둘**이
+ * 됐다. 값의 집은 원장이므로 담는 문 앞에서 한 번 묻고 그 뒤로는 묻지 않는다. 이름만 아는
+ * 대상은 명단이 아니라 원장에서 먼저 만든다(그쪽은 여전히 이름 하나로 선다).
  */
 export function LedgerQuickAdd({
   master,
@@ -49,12 +56,23 @@ export function LedgerQuickAdd({
   // 두 칸으로 받으면 담당자가 둘을 다르게 적을 수 있고, 그때 원장에 남는 것은 하나뿐이다.
   const hasContactField = spec.ledger.person.name !== spec.ledger.matchColumns.name
 
+  /*
+    넷 다 필수다(2026-09-10) — 명단에 담긴 것은 계정을 열 수 있어야 하고, 그 셋(명의·이메일·
+    연락처)이 없으면 열지 못한다. 종전에는 이름만 필수여서 "나중에 원장에서 채운다"였는데,
+    그 나중이 계정 생성 창이 되어 원장을 고치는 자리가 둘이 됐다.
+  */
   const cols = [
     { label: `${spec.nameHeader} *`, kind: 'text' as const },
-    ...(hasContactField ? [{ label: spec.loginNameHeader, kind: 'name' as const }] : []),
-    { label: '이메일', kind: 'text' as const },
-    { label: '연락처', kind: 'code' as const },
+    ...(hasContactField ? [{ label: `${spec.loginNameHeader} *`, kind: 'name' as const }] : []),
+    { label: '이메일 *', kind: 'text' as const },
+    { label: '연락처 *', kind: 'code' as const },
   ]
+
+  /** 이름은 적었는데 아직 빈 칸이 남은 줄 번호. 담당자가 화면에서 세는 줄과 같은 번호다. */
+  const incomplete = rows
+    .map((r, i) => ({ line: i + 1, r }))
+    .filter(({ r }) => r.name.trim() && !isQuickAddRowReady(master, r))
+    .map(({ line }) => line)
 
   /** 그 줄에 대해 할 말이 있는 판정만 남긴다 — 새로 만들 줄은 알림에 서지 않는다. */
   const notices = (entries ?? []).filter((e) => e.match || e.decision === 'skip')
@@ -102,7 +120,20 @@ export function LedgerQuickAdd({
         )}
       </ItemRows>
 
-      {notices.length > 0 && <MatchNotices notices={notices} onDecide={onDecide} />}
+      {/*
+        왜 아직 등록할 수 없는지 — 차단 안내라 접지 않는다(CLAUDE.md 안내 규칙의 예외).
+        버튼만 흐려 두면 담당자는 어느 칸이 모자란지 눌러 보고도 알 수 없다.
+      */}
+      {incomplete.length > 0 && (
+        <p className={formText.hint}>
+          {incomplete.join(", ")}번 줄에 빈 칸이 있습니다 — 명단에 담긴 대상은 계정을 열 수
+          있어야 하므로 표시된 칸을 모두 채워 주세요.
+        </p>
+      )}
+
+      {notices.length > 0 && (
+        <MatchNotices notices={notices} master={master} onDecide={onDecide} />
+      )}
     </div>
   )
 }
@@ -117,9 +148,11 @@ export function LedgerQuickAdd({
  */
 function MatchNotices({
   notices,
+  master,
   onDecide,
 }: {
   notices: BulkEntry[]
+  master: MasterTable
   onDecide: (line: number, decision: BulkDecision) => void
 }) {
   return (
@@ -133,7 +166,14 @@ function MatchNotices({
             {e.row.line}번 줄 {e.row.name}
           </span>
           <span className={cn('min-w-0 flex-1', cardText.meta)}>
-            {e.alreadyMapped ? (
+            {e.gaps.length > 0 ? (
+              <>
+                원장에 <span className="font-medium text-gray-800">{entryGapText(e, master)}</span>
+                {e.match
+                  ? " — 원장에서 채운 뒤 담을 수 있습니다."
+                  : " — 이 줄의 빈 칸을 채워 주세요."}
+              </>
+            ) : e.alreadyMapped ? (
               <>이미 명단에 담겨 있습니다 — 이 줄은 등록하지 않습니다.</>
             ) : !e.match ? (
               <>앞의 줄과 같은 대상입니다 — 이 줄은 등록하지 않습니다.</>
@@ -151,7 +191,7 @@ function MatchNotices({
           </span>
           {/* 동명이인·동명 법인이 실제로 있으므로 길을 막지는 않되, 손이 저절로 가는 쪽은
               이미 있는 행이어야 한다. 사실로 내려간 줄(이미 담김·폼 안 중복)에는 고를 것이 없다. */}
-          {e.match && !e.alreadyMapped && (
+          {e.match && !e.alreadyMapped && e.gaps.length === 0 && (
             <button
               type="button"
               onClick={() => onDecide(e.row.line, e.decision === 'link' ? 'create' : 'link')}

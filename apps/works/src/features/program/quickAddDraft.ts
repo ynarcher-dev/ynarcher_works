@@ -1,7 +1,12 @@
 import { useCallback, useState } from 'react'
 import { patchAt, removeAt } from '@/components/ItemRows'
 import { findPersonaMatches } from '@/features/program/ledgerMatch'
-import type { MasterTable } from '@/features/program/participantPersona'
+import { isLedgerReady } from '@/features/program/participantPerson'
+import {
+  PARTICIPANT_PERSONAS,
+  hasOwnLoginName,
+  type MasterTable,
+} from '@/features/program/participantPersona'
 import { buildEntries, type BulkDecision, type BulkEntry } from '@/features/program/rosterBulk'
 
 /**
@@ -39,6 +44,27 @@ let seq = 0
 const newRow = (): QuickAddRow => ({ ...EMPTY_DRAFT, key: `r${++seq}` })
 
 /**
+ * 이 줄이 원장에 설 수 있을 만큼 갖췄는가 — **담기 게이트와 같은 판정**이다(2026-09-10).
+ *
+ * 이름이 빈 줄은 아예 등록 대상이 아니므로(대조에서도 빠진다) 갖췄는지 묻지 않는다.
+ * 전문가처럼 대상이 곧 사람인 자격은 이름 칸이 명의까지 답한다.
+ */
+export function isQuickAddRowReady(master: MasterTable, row: QuickAddDraft): boolean {
+  const ownLogin = hasOwnLoginName(PARTICIPANT_PERSONAS[master])
+  return isLedgerReady({
+    loginName: ownLogin ? row.contactName : row.name,
+    email: row.email,
+    phone: row.phone,
+  })
+}
+
+/** 등록을 누를 수 있는가 — 이름을 적은 줄이 있고, 그 줄들이 모두 갖춰졌을 때다. */
+export function canSubmitQuickAdd(master: MasterTable, rows: readonly QuickAddRow[]): boolean {
+  const filled = rows.filter((r) => r.name.trim())
+  return filled.length > 0 && filled.every((r) => isQuickAddRowReady(master, r))
+}
+
+/**
  * 줄들을 원장과 대조한다. 화면이 직접 부르지 않고 모달이 **저장 흐름에서** 부른다 —
  * 타이핑마다 원장을 긁으면 그 요청이 실제 저장보다 훨씬 잦다.
  *
@@ -58,7 +84,7 @@ export async function checkRows(
     master,
     filled.map((r) => ({ name: r.name, email: r.email, phone: r.phone })),
   )
-  return buildEntries(filled, matches, mappedMasterIds)
+  return buildEntries(master, filled, matches, mappedMasterIds)
 }
 
 /**

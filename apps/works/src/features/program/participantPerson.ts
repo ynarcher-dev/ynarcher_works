@@ -38,30 +38,51 @@ export function ledgerPerson(c: LedgerPerson): PersonInput {
   return { name: c.loginName ?? '', email: c.email ?? '', phone: c.phone ?? '' }
 }
 
+/** 계정을 열려면 원장이 답해야 하는 값. `name`은 로그인 명의(기업=대표자, 전문가=본인)다. */
+export type PersonField = 'name' | 'email' | 'phone'
+
 /**
- * 담당자가 그 자리에서 채워야 하는가 — **이름 또는 이메일이 비었을 때만** 그렇다.
+ * 원장이 **비워 둔 칸**. 비어 있지 않으면 빈 배열이다.
  *
- * 연락처는 묻지 않는다. 초기 비밀번호가 되는 값이지만 이미 그 이메일의 계정이 있으면 서버가
- * 그 계정을 그대로 돌려주므로(멱등) 비밀번호를 새로 만들 일이 없고, 정말 필요한 경우에는
- * 서버가 사유와 함께 멈춘다.
+ * 셋을 함께 보는 이유는 셋 다 계정을 세우는 데 쓰이기 때문이다 — 명의는 그 계정이 누구인지,
+ * 이메일은 로그인 ID, 연락처는 초기 비밀번호다. 종전 판정(`needsPerson`)은 연락처를 뺐는데,
+ * 그 근거는 *발급이 멱등이라 비밀번호를 새로 만들 일이 없다*였다. 그 말은 **이미 계정이 있는**
+ * 사람에게만 참이라, 처음 여는 대상에서는 연락처가 없으면 서버가 멈춘다. '명단에 담긴 것은
+ * 계정을 열 수 있다'를 규칙으로 삼는 이상(2026-09-10) 셋이 같은 무게다.
  */
-export function needsPerson(c: LedgerPerson): boolean {
+export function ledgerGaps(c: LedgerPerson): PersonField[] {
   const p = ledgerPerson(c)
-  return !p.name.trim() || !p.email.trim()
+  const gaps: PersonField[] = []
+  if (!p.name.trim()) gaps.push('name')
+  if (!p.email.trim()) gaps.push('email')
+  if (!p.phone.trim()) gaps.push('phone')
+  return gaps
 }
 
-/** 실제로 쓸 명의 — 원장 값이 기본이고 담당자가 적은 값이 이긴다(서버의 판정과 같은 순서다). */
-export function resolvePerson(c: LedgerPerson, typed: PersonInput | undefined): PersonInput {
-  const base = ledgerPerson(c)
-  if (!typed) return base
-  return {
-    name: typed.name.trim() || base.name,
-    email: typed.email.trim() || base.email,
-    phone: typed.phone.trim() || base.phone,
+/**
+ * 이 원장 행으로 계정을 열 수 있는가 — **명단에 담을 수 있는가와 같은 판정**이다.
+ *
+ * 두 물음을 하나로 묶은 것이 2026-09-10 사용자 결정이다. 종전에는 명단에 이름만 있으면 담기고
+ * 모자란 값은 계정 생성 창에서 채웠는데, 그러면 **원장을 고치는 자리가 둘**이 되고 그중 하나가
+ * 계정을 세우는 창이었다. 값의 집은 원장이므로, 담는 문 앞에서 한 번 묻고 그 뒤로는 묻지
+ * 않는다 — 계정 생성 창은 원장을 쓰지 않는다.
+ */
+export function isLedgerReady(c: LedgerPerson): boolean {
+  return ledgerGaps(c).length === 0
+}
+
+/**
+ * 빈 칸을 담당자가 읽는 말로 — `대표자·연락처 없음`.
+ *
+ * 명의를 부르는 말은 자격마다 다르므로(대표자/담당자/성명) 밖에서 받는다. 이 파일이
+ * 자격 표를 되부르지 않는 이유는 `LedgerPerson` 주석과 같다.
+ */
+export function gapText(gaps: PersonField[], loginNameLabel: string): string {
+  if (gaps.length === 0) return ''
+  const label: Record<PersonField, string> = {
+    name: loginNameLabel,
+    email: '이메일',
+    phone: '연락처',
   }
-}
-
-/** 이 명의로 계정을 세울 수 있는가. 이메일이 로그인 ID라 이름과 함께 필수다. */
-export function isPersonReady(p: PersonInput): boolean {
-  return Boolean(p.name.trim() && p.email.trim())
+  return `${gaps.map((g) => label[g]).join('·')} 없음`
 }

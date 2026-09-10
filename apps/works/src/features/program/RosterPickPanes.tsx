@@ -94,7 +94,8 @@ export function RosterPickPanes({
         count: pick.checkedLeft.length,
         onMove: pick.moveRight,
         onMoveAll: pick.moveAllRight,
-        allDisabled: pick.left.length === 0,
+        // 담을 수 있는 줄이 없으면 누를 것이 없다 — 원장이 빈 줄은 옮겨지지 않는다.
+        allDisabled: pick.movable === 0,
       }}
       toLeft={{
         count: pick.checkedRight.length,
