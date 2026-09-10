@@ -52,6 +52,14 @@ export function PersonSearchModal({
   const debounced = useDebounced(keyword)
   const { data: hits, isFetching } = useNetworkPeopleSearch(debounced, open)
 
+  // 고른 줄. 종전에는 줄을 누르는 순간 연결하고 창이 닫혔다 — 되돌릴 자리가 없어 잘못 누르면
+  // 창을 다시 열어야 했고, 아래 등록 칸에만 버튼이 있어 이 창에서 무엇이 확정 동작인지도
+  // 어긋나 있었다. 고르는 일과 확정하는 일을 가른다.
+  const [pickedId, setPickedId] = useState<string | null>(null)
+  // 확정하는 것은 id가 아니라 **지금 표에 서 있는 줄**이다 — 검색어가 바뀌면 결과가 갈리므로,
+  // 화면에서 사라진 줄이 버튼 뒤에 남아 있으면 담당자가 보지 못한 사람을 연결하게 된다.
+  const picked = (hits ?? []).find((h) => h.id === pickedId) ?? null
+
   // 간이 등록 폼. 검색해도 없을 때 쓰는 자리라 검색 결과 아래에 선다.
   const [newName, setNewName] = useState('')
   const [newAffiliation, setNewAffiliation] = useState('')
@@ -63,6 +71,7 @@ export function PersonSearchModal({
   useEffect(() => {
     if (!open) return
     setKeyword(initialName ?? '')
+    setPickedId(null)
     setNewName(initialName ?? '')
     setNewAffiliation(defaultAffiliation ?? '')
     setNewCategory(defaultCategory ?? '')
@@ -114,13 +123,14 @@ export function PersonSearchModal({
       }
     >
       <div className="space-y-3">
-        {/* 여기서 하는 일은 둘이고 손놀림이 서로 다르다 — 위는 찾아 고르는 일(줄을 누른다),
-            아래는 없을 때 만드는 일(버튼을 누른다). 한 상자에 담아 두었을 때는 등록 버튼이
-            푸터에서 '닫기' 옆에 서서 이 창의 주 동작처럼 보였다 — 정작 주 동작인 '고르기'는
-            버튼이 없는데(줄 클릭) 부수 동작만 버튼을 갖고 있었다. 카드로 가르면 각 동작이
-            자기 자리 안에 서고, 푸터에는 창을 닫는 일만 남는다. */}
-        <Card title="원장에서 찾기" help="줄을 누르면 그 사람을 이 칸에 연결하고 창이 닫힙니다.">
-          <div className="space-y-4">
+        {/* 여기서 하는 일은 둘이다 — 위는 원장에 있는 사람을 찾아 잇는 일, 아래는 없는
+            사람을 만들어 잇는 일. 한 상자에 담겨 있을 때는 등록 버튼만 푸터에서 '닫기' 옆에
+            서서 이 창의 주 동작처럼 보였고, 정작 주 동작인 '고르기'는 버튼 없이 줄 클릭
+            하나로 즉시 확정됐다. 카드로 가르고 **양쪽에 같은 자리의 버튼**을 둔다 — 고르는
+            일과 확정하는 일이 갈려야 잘못 누른 줄을 그 자리에서 다시 고를 수 있고, 두 카드가
+            같은 손놀림(고른다 → 누른다)으로 끝나야 무엇이 다른 일인지 이름이 답한다. */}
+        <Card title="원장에서 찾기" help="줄을 눌러 고른 뒤 [이 사람 연결]을 누릅니다.">
+          <div className="space-y-3">
             <Field label="검색" hint="이름 또는 소속으로 네트워크 원장을 찾습니다.">
               <Input
                 value={keyword}
@@ -133,10 +143,10 @@ export function PersonSearchModal({
               columns={columns}
               rows={hits ?? []}
               rowKey={(r) => r.id}
-              onRowClick={(r) => {
-                onPick(r)
-                onClose()
-              }}
+              // 체크 칸은 두지 않는다 — 고르는 것이 한 명뿐인데 체크박스가 서면 여럿을 담을 수
+              // 있다고 말하는 컨트롤이 된다. 고른 줄은 배경색이 답한다.
+              selectedKeys={pickedId ? [pickedId] : []}
+              onRowClick={(r) => setPickedId(r.id)}
               emptyText={
                 keyword.trim() === ''
                   ? '이름 또는 소속을 입력하면 원장을 찾습니다.'
@@ -145,6 +155,20 @@ export function PersonSearchModal({
                     : '원장에 없습니다. 아래에서 새 인물로 등록할 수 있습니다.'
               }
             />
+
+            {/* 아래 카드와 같은 자리, 같은 규칙이다 — 고르기 전에는 서지 않고 눌러야 확정된다. */}
+            <div className="flex justify-end">
+              <Button
+                disabled={!picked}
+                onClick={() => {
+                  if (!picked) return
+                  onPick(picked)
+                  onClose()
+                }}
+              >
+                이 사람 연결
+              </Button>
+            </div>
           </div>
         </Card>
 
