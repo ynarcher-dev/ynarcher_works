@@ -3,7 +3,7 @@ import { PhotoBox } from '@/features/networks/PhotoBox'
 import { SensitiveValue } from '@/features/master/SensitiveValue'
 import type { EntityRow } from '@/features/master/entityHooks'
 import { isInvested, managementStatusLabel } from '@/features/startup/startupClassification'
-import { readAddresses, readBusiness } from '@/features/startup/startupProfile'
+import { ADDRESS_KIND_OPTIONS, readAddresses, readBusiness } from '@/features/startup/startupProfile'
 import { formatFounded, readIndustries } from '@/features/startup/startupGrowth'
 
 /** 첨부/피드백/기여 로그 대상 유형(다형 테이블 target_type). 원장이 하나라 화면마다 갈리지 않는다. */
@@ -33,12 +33,36 @@ function text(v: unknown): string | null {
  * 정하고(STARTUP은 구분별 메뉴 키, FUND는 `fund.portfolio`), 딜메이커 이름은 담당자 원장을
  * 읽는 쪽이 이미 손에 쥐고 있어 여기서 다시 조회하지 않는다.
  */
-/** 주소 목록을 헤더 한 칸에 적는다. 비면 정보행의 빈 값 표기를 그대로 쓴다. */
-function addressLine(record: EntityRow): string {
-  const list = readAddresses(record)
-  if (list.length === 0) return '-'
-  if (list.length === 1) return list[0]!.detail
-  return list.map((a) => `${a.kind} ${a.detail}`).join(', ')
+/**
+ * 주소를 구분마다 한 줄씩 세운다(2026-09-10 사용자 지정).
+ *
+ * 한 칸에 쉼표로 이어 붙이던 것을 가른 이유는 **구분이 값의 일부가 아니라 라벨**이기
+ * 때문이다. 이어 붙이면 '본사 …, 지사 …'가 한 줄에 서서 어디까지가 본사 주소인지를 쉼표
+ * 하나로 가려야 하고, 자리가 모자라 잘리면 뒤쪽 구분은 있다는 사실조차 보이지 않는다.
+ *
+ * 차례는 담당자가 입력한 순서가 아니라 `ADDRESS_KIND_OPTIONS`가 정한다 — 기업마다 같은
+ * 구분이 같은 자리에 서야 두 기업을 같은 눈으로 읽는다. 같은 구분이 여럿이면(지사 두 곳)
+ * 그 줄 안에서 쉼표로 잇는다: 라벨이 같은 줄을 둘 세우면 무엇이 다른 줄인지 말하지 못한다.
+ *
+ * 값이 없는 구분은 줄을 세우지 않되, 하나도 없으면 본사 한 줄을 빈 값으로 남긴다 — 빈 줄
+ * 셋은 안내문의 벽이지만 한 줄도 없으면 이 기업에 적을 자리가 있다는 사실이 사라진다.
+ */
+function addressRows(record: EntityRow): { kind: string; text: string }[] {
+  const list = readAddresses(record).filter((a) => a.detail.trim() !== '')
+  if (list.length === 0) return [{ kind: ADDRESS_KIND_OPTIONS[0], text: '-' }]
+
+  // 고정 선택지를 먼저, 원장에 남은 그 밖의 값을 뒤에. kind는 자유 문자열로 저장되므로
+  // 선택지에 없는 값이 들어와도 화면에서 사라지지 않아야 한다.
+  const kinds = [
+    ...ADDRESS_KIND_OPTIONS,
+    ...list.map((a) => a.kind).filter((k) => !ADDRESS_KIND_OPTIONS.includes(k as never)),
+  ]
+  return [...new Set(kinds)]
+    .map((kind) => ({
+      kind,
+      text: list.filter((a) => a.kind === kind).map((a) => a.detail.trim()).join(', '),
+    }))
+    .filter((row) => row.text !== '')
 }
 
 export function StartupHeaderCard({
@@ -109,17 +133,19 @@ export function StartupHeaderCard({
           <Info label="회사 형태" value={str('company_form')} />
           <Info label="설립일" value={formatFounded(record.founded_on)} />
           <Info label="사업자등록번호" value={str('biz_reg_no')} />
-          <Info label="소재지" value={str('location')} />
-          {/* 상세주소는 길 수 있어 소재지 오른쪽 2열을 차지한다(이 그리드의 마지막 칸).
-              여러 줄이면 구분(지사·연구소)을 앞에 붙여 쉼표로 잇는다 — 본사 하나뿐일 때는
-              구분을 적지 않는다(라벨이 이미 '상세주소'이고, 한 줄뿐인데 '본사'를 붙이면
-              읽는 사람이 다른 줄을 찾게 된다). */}
-          <Info
-            label="상세주소"
-            value={addressLine(record)}
-            className="min-w-0 sm:col-span-2"
-            valueClassName="min-w-0 flex-1 truncate"
-          />
+          <Info label="소재지(본사)" value={str('location')} />
+          {/* 주소는 소재지 바로 아래에 구분마다 한 줄씩 선다. 한 줄이 격자 전체를 쓰는
+              이유는 주소가 잘리면 안 되기 때문이다 — 시·군·구부터 적는 값이라 뒤쪽(동·층·
+              건물명)이 잘리면 남는 것은 어느 기업에나 같은 앞머리뿐이다. */}
+          {addressRows(record).map((row) => (
+            <Info
+              key={row.kind}
+              label={`주소(${row.kind})`}
+              value={row.text}
+              className="min-w-0 sm:col-span-3"
+              valueClassName="min-w-0 flex-1"
+            />
+          ))}
         </InfoGrid>
       }
     >
