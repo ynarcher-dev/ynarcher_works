@@ -2,11 +2,9 @@ import { IconButton, TokenMultiSelect } from '@ynarcher/ui'
 import { Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { ExternalAttendeeSearchModal } from '@/features/office/minutes/ExternalAttendeeSearchModal'
-import {
-  toExternalPersonLink,
-  useDebounced,
-  useNetworkPeopleSearch,
-} from '@/features/office/minutes/networkPeopleSearch'
+import { useDebounced } from '@/lib/useDebounced'
+import { useNetworkPeopleSearch } from '@/features/networks/personSearch'
+import { toExternalPersonLink } from '@/features/office/minutes/networkPeopleSearch'
 import { MINUTE_LINK_TARGETS, type MinuteLink } from '@/features/office/minutes/minuteLinks'
 
 interface Props {
@@ -78,15 +76,6 @@ export function ExternalAttendeePicker({
     )
   }
 
-  const add = (link: MinuteLink) => {
-    if (people.some((p) => p.targetType === link.targetType && p.targetId === link.targetId)) return
-    onPeopleChange([...people, link])
-  }
-  const remove = (link: MinuteLink) =>
-    onPeopleChange(
-      people.filter((p) => !(p.targetType === link.targetType && p.targetId === link.targetId)),
-    )
-
   // networks에 없을 때: 입력한 이름을 실어 간이 등록 모달을 연다(문자열 직접 추가는 하지 않는다).
   const openRegister = (name: string) => {
     setInitialName(name)
@@ -128,8 +117,7 @@ export function ExternalAttendeePicker({
         onClose={() => setOpen(false)}
         existing={people}
         initialName={initialName}
-        onAdd={add}
-        onRemove={remove}
+        onApply={onPeopleChange}
       />
     </div>
   )

@@ -149,6 +149,7 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
     values: {
       name: str('name'),
       representative: str('representative'),
+      representative_network_id: (base.representative_network_id as string | null) ?? null,
       company_form: str('company_form'),
       founded_on: str('founded_on').slice(0, 10),
       biz_reg_no: str('biz_reg_no'),
@@ -179,6 +180,7 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
       // 옛 행에는 새 칸이 없다 — 폼 값은 항상 채워 둬야 컨트롤이 비제어로 떨어지지 않는다.
       members: (t.members ?? []).map((m) => ({
         name: m.name ?? '',
+        networkId: m.networkId ?? null,
         role: m.role ?? '',
         background: m.background ?? '',
         employment: m.employment ?? '',
@@ -217,8 +219,6 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
   // 투자기업으로의 전환·담당자 지정·관리현황은 FUND 투자 집행에서만 처리한다(20260724190000).
   // 이 화면에서는 투자기업이면 구분을 읽기 전용으로 보여주고, 비투자면 발굴/보육/미지정 간에만 바꾼다.
   const alreadyInvested = isInvested(str('management_status'))
-  // 투자기업의 딜메이커(리드 담당자) 이름 — 읽기 전용 표시용.
-  const leadName = existingManagers?.find((m) => m.is_lead)?.user?.name ?? null
 
   // 대조에 쓰인 세 칸이 바뀌면 통과권이 사라진다 — 한 번 확인한 뒤 이름을 고쳐도 대조 없이
   // 저장되면, 정작 새로 적은 이름의 중복은 아무도 보지 않는다.
@@ -233,6 +233,9 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
     const payload: Record<string, unknown> = {
       name: v.name.trim(),
       representative: v.representative.trim() || null,
+      // 이름을 지우면 참조도 함께 끊는다 — 이름 없는 연결은 화면이 아무것도 세우지 못하는
+      // 참조가 되고, 그 상태로 저장되면 관계 줄만 살아남아 원장이 서로 다른 말을 한다.
+      representative_network_id: v.representative.trim() ? v.representative_network_id : null,
       company_form: v.company_form.trim() || null,
       founded_on: v.founded_on || null,
       biz_reg_no: v.biz_reg_no.trim() || null,
@@ -286,6 +289,7 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
         members: v.members
           .map((m) => ({
             name: m.name.trim(),
+            networkId: m.name.trim() ? m.networkId : null,
             role: m.role.trim(),
             background: m.background.trim(),
             employment: m.employment.trim(),
@@ -464,7 +468,8 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
             onPickPhoto={onPickPhoto}
             alreadyInvested={alreadyInvested}
             poolStatus={str('pool_status')}
-            leadName={leadName}
+            managers={existingManagers ?? []}
+            companyName={watch('name')}
           />
 
           {/* 요약 구분선(상세페이지와 동일 — 역량보다 위) */}
@@ -483,6 +488,7 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
             setCapabilities={setCapabilities}
             ip={ip}
             setIp={setIp}
+            companyName={watch('name')}
           />
 
           <StartupPerformanceFields

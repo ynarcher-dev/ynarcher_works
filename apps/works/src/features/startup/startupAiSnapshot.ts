@@ -139,6 +139,9 @@ export function toFormValues(merged: EntityRow, v: StartupDetailFormValues): Sta
     hiringPlan: t.hiringPlan ?? '',
     members: (t.members ?? []).map((m) => ({
       name: m.name ?? '',
+      // AI는 사람을 잇지 못한다(서류에서 읽는 것은 이름뿐이다). 이미 이어 둔 참조는
+      // 그대로 들고 가야 초안을 얹는다고 연결이 끊기지 않는다.
+      networkId: m.networkId ?? null,
       role: m.role ?? '',
       background: m.background ?? '',
       employment: m.employment ?? '',

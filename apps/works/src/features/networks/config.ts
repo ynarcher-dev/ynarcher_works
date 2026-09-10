@@ -32,6 +32,9 @@ export type NetworkCategory =
   | 'van'
   | 'exp'
   | 'investors'
+  // 스타트업의 대표자·핵심인력(2026-09-10). **조직이 아니라 사람이다** — 기업 자체는 STARTUP
+  // 원장에 살고, 여기 서는 것은 그 기업을 대표하거나 이끄는 사람 한 줄이다.
+  | 'startup'
   | 'corporates'
   | 'institutions'
   | 'universities'
@@ -51,6 +54,7 @@ export const CATEGORY_LABEL: Record<NetworkCategory, string> = {
   van: 'BAN',
   exp: 'EXP',
   investors: '투자사',
+  startup: '스타트업',
   corporates: '기업',
   institutions: '기관',
   universities: '대학',
@@ -68,6 +72,7 @@ export const CATEGORY_ORDER: NetworkCategory[] = [
   'exp',
   'experts',
   'investors',
+  'startup',
   'corporates',
   'institutions',
   'universities',

@@ -16,6 +16,8 @@ interface Props {
   setCapabilities: (c: string[]) => void
   ip: IpProfile
   setIp: (v: IpProfile) => void
+  /** 지금 폼에 적힌 기업명. 핵심 팀원을 새 인물로 등록할 때 소속으로 채운다. */
+  companyName: string
 }
 
 /**
@@ -28,7 +30,15 @@ interface Props {
  * 낫기도 하다 — 절반 폭에서 3행짜리 텍스트영역은 한 줄이 어디서 끝나는지 눈이 따라가기
  * 어려웠고, 전폭에서는 카드 안의 2열 격자가 그 폭을 나눠 받는다.
  */
-export function StartupCapabilityFields({ register, control, capabilities, setCapabilities, ip, setIp }: Props) {
+export function StartupCapabilityFields({
+  register,
+  control,
+  capabilities,
+  setCapabilities,
+  ip,
+  setIp,
+  companyName,
+}: Props) {
   return (
     <>
       <SectionHeading title="역량" />
@@ -47,6 +57,7 @@ export function StartupCapabilityFields({ register, control, capabilities, setCa
             control={control}
             capabilities={capabilities}
             setCapabilities={setCapabilities}
+            companyName={companyName}
           />
         </PanelCard>
 

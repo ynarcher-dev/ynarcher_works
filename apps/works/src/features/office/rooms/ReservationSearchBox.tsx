@@ -4,7 +4,7 @@ import { Search } from 'lucide-react'
 import { useState } from 'react'
 import type { Branch } from '@/features/office/branches/branchesApi'
 import { useReservationSearch, type ReservationHit } from '@/features/office/rooms/reservationsApi'
-import { useDebounced } from '@/features/office/minutes/networkPeopleSearch'
+import { useDebounced } from '@/lib/useDebounced'
 
 const KO_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 

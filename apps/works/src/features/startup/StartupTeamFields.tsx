@@ -2,6 +2,7 @@ import { Checkbox, Input, Select, TextArea, TokenMultiSelect } from '@ynarcher/u
 import { useFieldArray, type Control, type UseFormRegister } from 'react-hook-form'
 import { FieldLine, FieldLines } from '@/components/FieldGrid'
 import { ItemRows, type ItemCol } from '@/components/ItemRows'
+import { PersonPickerControl } from '@/features/networks/PersonPickerField'
 import { EMPLOYMENT_OPTIONS } from '@/features/startup/startupProfile'
 import type { StartupDetailFormValues } from '@/features/startup/startupFormValues'
 
@@ -10,6 +11,8 @@ interface Props {
   control: Control<StartupDetailFormValues>
   capabilities: string[]
   setCapabilities: (c: string[]) => void
+  /** 이 기업의 이름. 팀원을 새 인물로 등록할 때 소속으로 채운다. */
+  companyName?: string
 }
 
 /** 핵심 팀원 한 줄. 한 줄 설명이 길이를 모르는 값이라 남는 폭을 가져간다. */
@@ -39,7 +42,13 @@ const ADVISOR_COLS: ItemCol[] = [
  * 대표 지분율 칸은 두지 않는다. 주주 구성 이력의 최신 스냅샷이 이미 아는 값이고, 여기 또 받으면
  * 캡테이블을 고쳤을 때 이 칸만 옛 값으로 남는다.
  */
-export function StartupTeamFields({ register, control, capabilities, setCapabilities }: Props) {
+export function StartupTeamFields({
+  register,
+  control,
+  capabilities,
+  setCapabilities,
+  companyName,
+}: Props) {
   const members = useFieldArray({ control, name: 'members' })
   const advisors = useFieldArray({ control, name: 'advisors' })
 
@@ -71,14 +80,31 @@ export function StartupTeamFields({ register, control, capabilities, setCapabili
           rowKey={(f) => f.id}
           onRemove={(i) => members.remove(i)}
           onAdd={() =>
-            members.append({ name: '', role: '', background: '', employment: '', joinedAt: '', hasEquity: false })
+            members.append({
+              name: '',
+              networkId: null,
+              role: '',
+              background: '',
+              employment: '',
+              joinedAt: '',
+              hasEquity: false,
+            })
           }
           addLabel="팀원 추가"
         >
           {(_row, i) => (
             <>
-              <Input {...register(`members.${i}.name`)} />
-              <Input {...register(`members.${i}.role`)} />
+              {/* 팀원도 대표자와 같은 피커다 — 사람이 사는 원장이 하나이므로 담는 손놀림도
+                  하나여야 한다. 직함은 코드가 아니라 명함에 적힌 말 그대로 받는다(공동대표·
+                  각자대표·CTO). 이 값이 그대로 관계 줄의 직함이 된다. */}
+              <PersonPickerControl
+                control={control}
+                namePath={`members.${i}.name`}
+                idPath={`members.${i}.networkId`}
+                createCategory="startup"
+                defaultAffiliation={companyName}
+              />
+              <Input placeholder="대표 · 공동대표 · CTO" {...register(`members.${i}.role`)} />
               <Select {...register(`members.${i}.employment`)}>
                 <option value="">선택</option>
                 {EMPLOYMENT_OPTIONS.map((o) => (

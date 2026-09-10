@@ -1,18 +1,13 @@
 import {
   Button,
   Card,
-  cn,
   Input,
   Modal,
-  PickList,
-  PickMark,
-  PickRow,
   Select,
-  Spinner,
+  TokenMultiSelect,
   useToast,
 } from '@ynarcher/ui'
-import { Check } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   CATEGORY_OPTIONS,
   categoryLabel,
@@ -20,11 +15,9 @@ import {
   type NetworkCategory,
 } from '@/features/networks/config'
 import { checkDuplicateName, useCreateNetwork } from '@/features/networks/hooks'
-import {
-  toExternalPersonLink,
-  useDebounced,
-  useNetworkPeopleSearch,
-} from '@/features/office/minutes/networkPeopleSearch'
+import { useDebounced } from '@/lib/useDebounced'
+import { useNetworkPeopleSearch } from '@/features/networks/personSearch'
+import { toExternalPersonLink } from '@/features/office/minutes/networkPeopleSearch'
 import type { MinuteLink } from '@/features/office/minutes/minuteLinks'
 
 interface Props {
@@ -32,10 +25,8 @@ interface Props {
   onClose: () => void
   /** 이미 명단에 있는 참조(토글 상태 표시). */
   existing: MinuteLink[]
-  /** networks 인물 참조를 명단에 담는다. */
-  onAdd: (link: MinuteLink) => void
-  /** 명단에서 참조를 뺀다(행 재클릭 토글 해제). */
-  onRemove: (link: MinuteLink) => void
+  /** 모달에서 확정한 외부 참석자 명단을 회의록 입력값에 반영한다. */
+  onApply: (links: MinuteLink[]) => void
   /** 열 때 간이 등록 '이름'에 미리 채울 값(인라인에서 검색해도 없을 때 넘어온 이름). */
   initialName?: string
 }
@@ -45,8 +36,8 @@ const linkKey = (l: { targetType: string; targetId: string }) => `${l.targetType
 
 /**
  * 외부 참석자 검색·간이 등록 모달. 상단 검색은 networks 원장(디렉토리 9종) 통합 검색으로,
- * 결과를 입력창 아래 오버레이 드롭다운으로 띄운다 — 결과 개수가 바뀌어도 아래 간이 등록 영역이
- * 들썩이지 않도록 흐름에서 띄운 절대 위치다. 행을 누르면 명단에 추가, 다시 누르면 해제(토글).
+ * 결과를 입력창 아래 드롭다운으로 띄운다. 고른 사람은 입력칸 안의 칩으로 옮겨지고 드롭다운은
+ * 닫힌다. 이 선택은 모달의 임시 명단이며, 하단 [적용]을 눌러야 회의록 입력값에 반영된다.
  * 하단은 검색해도 없을 때 쓰는 간이 등록 — 이름·소속·구분만 받아 해당 구분 원장에 새 인물을
  * 만들고 곧바로 명단에 담는다.
  *
@@ -59,14 +50,15 @@ export function ExternalAttendeeSearchModal({
   open,
   onClose,
   existing,
-  onAdd,
-  onRemove,
+  onApply,
   initialName,
 }: Props) {
   const toast = useToast()
   const [keyword, setKeyword] = useState('')
   const debouncedKeyword = useDebounced(keyword)
-  const { data: hits, isFetching } = useNetworkPeopleSearch(debouncedKeyword, open)
+  const { data: hits } = useNetworkPeopleSearch(debouncedKeyword, open)
+  const [draft, setDraft] = useState<MinuteLink[]>(existing)
+  const options = useMemo(() => (hits ?? []).map(toExternalPersonLink), [hits])
 
   // 간이 등록 폼(이름·소속·구분). 구분은 저장 대상 원장이 아니라 한 컬럼의 값이고, 여기서
   // 반드시 고른다 — 나중에 모아서 분류하던 자리(미분류 데이터베이스)를 접었으므로(2026-09-04)
@@ -76,22 +68,13 @@ export function ExternalAttendeeSearchModal({
   const [newCategory, setNewCategory] = useState<NetworkCategory | ''>('')
   const create = useCreateNetwork()
 
-  // 열릴 때 인라인에서 넘어온 이름을 간이 등록 '이름'에 채운다(검색창에도 같은 값을 넣어 후보를 보여줌).
+  // 열 때 현재 입력값을 임시 명단으로 복사한다. 이후 변경은 [적용] 전까지 이 모달 안에만 남는다.
   useEffect(() => {
     if (!open) return
+    setDraft(existing)
     setNewName(initialName ?? '')
-    setKeyword(initialName ?? '')
-  }, [open, initialName])
-
-  const existingKeys = new Set(existing.map(linkKey))
-  const has = (link: MinuteLink) => existingKeys.has(linkKey(link))
-  const showDropdown = keyword.trim() !== ''
-
-  // 행을 누르면 추가, 다시 누르면 해제(토글).
-  const toggle = (link: MinuteLink) => {
-    if (has(link)) onRemove(link)
-    else onAdd(link)
-  }
+    setKeyword('')
+  }, [existing, initialName, open])
 
   const submitCreate = async () => {
     const name = newName.trim()
@@ -114,15 +97,18 @@ export function ExternalAttendeeSearchModal({
         affiliation: newAffiliation.trim() || null,
         category: newCategory,
       })
-      // 방금 만든 레코드의 참조를 그대로 담는다 — 이름을 베껴 적으면 상호참조가 끊긴다.
-      onAdd({
+      // 방금 만든 레코드의 참조를 임시 명단에 담는다 — [적용] 전에는 회의록 입력값을 바꾸지 않는다.
+      const link: MinuteLink = {
         targetType: NETWORK_TARGET_TYPE,
         targetId: createdId,
         role: 'EXTERNAL_ATTENDEE',
         label: name,
         code: newAffiliation.trim() || null,
-      })
-      toast.show(`${categoryLabel(newCategory)}(으)로 등록하고 참석자로 추가했습니다.`, 'success')
+      }
+      setDraft((current) =>
+        current.some((item) => linkKey(item) === linkKey(link)) ? current : [...current, link],
+      )
+      toast.show(`${categoryLabel(newCategory)}(으)로 등록하고 선택 항목에 담았습니다.`, 'success')
       setNewName('')
       setNewAffiliation('')
     } catch {
@@ -130,72 +116,53 @@ export function ExternalAttendeeSearchModal({
     }
   }
 
+  const cancel = () => {
+    setDraft(existing)
+    onClose()
+  }
+
+  const apply = () => {
+    onApply(draft)
+    onClose()
+  }
+
   return (
     <Modal
       dismissible={false}
       open={open}
-      onClose={onClose}
+      onClose={cancel}
       size="lg"
       sectioned
       title="외부 참석자 검색 · 간이 등록"
       footer={
-        <Button variant="secondary" onClick={onClose}>
-          닫기
-        </Button>
+        <>
+          <Button variant="ghost" onClick={cancel}>
+            취소
+          </Button>
+          <Button onClick={apply}>적용</Button>
+        </>
       }
     >
-      {/* 검색 중에는 오버레이 드롭다운이 들어갈 높이를 확보해 아래 영역이 흔들리지 않게 한다. */}
-      <div className={cn('space-y-5', showDropdown && 'min-h-[20rem]')}>
-        {/* 검색: networks 원장 통합 검색(이름·소속). 결과는 입력창 아래 절대 위치 드롭다운. */}
-        <Card title="원장에서 찾기" bodyClassName="relative">
-          <Input
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
+      <div className="space-y-5">
+        {/* 고른 결과가 칩으로 이 입력칸에 남고, 드롭다운은 선택 즉시 닫힌다. */}
+        <Card title="원장에서 찾기">
+          <TokenMultiSelect<MinuteLink>
+            selected={draft}
+            onChange={setDraft}
+            options={options}
+            getKey={linkKey}
+            getLabel={(link) => link.label ?? '이름 없음'}
+            getMeta={(link) => link.code ?? undefined}
+            getSearchText={(link) => `${link.label ?? ''} ${link.code ?? ''}`}
+            onQueryChange={setKeyword}
             placeholder="이름 또는 소속으로 networks 검색"
-            aria-label="networks 인물 검색"
-            autoFocus
           />
-          {/* 결과가 있거나 조회 중일 때만 오버레이를 띄운다 — 결과가 없으면 아래 간이 등록 폼을 가리지 않도록 숨긴다. */}
-          {showDropdown && (isFetching || (hits ?? []).length > 0) && (
-            <div className="absolute inset-x-0 top-full z-dropdown mt-1 overflow-hidden rounded-radius-md border border-gray-200 bg-white shadow-popover">
-              {isFetching ? (
-                <div className="flex items-center gap-2 px-3 py-4 text-body-sm text-gray-500">
-                  <Spinner />
-                  검색 중…
-                </div>
-              ) : (
-                <PickList>
-                  {(hits ?? []).map((h) => {
-                    const link = toExternalPersonLink(h)
-                    const added = has(link)
-                    return (
-                      // 행 클릭 토글: 추가 ↔ 해제. 별도 버튼 없음.
-                      <PickRow key={h.id} selected={added} onClick={() => toggle(link)}>
-                        <PickMark checked={added}>
-                          <Check className="size-3.5" />
-                        </PickMark>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-body text-gray-900">
-                            <span className="font-medium">{h.name}</span>
-                            {h.affiliation && (
-                              <span className="text-gray-500"> · {h.affiliation}</span>
-                            )}
-                          </span>
-                          <span className="block text-body-sm text-gray-600">{h.categoryLabel}</span>
-                        </span>
-                      </PickRow>
-                    )
-                  })}
-                </PickList>
-              )}
-            </div>
-          )}
         </Card>
 
         {/* 간이 등록: 검색해도 없을 때 이름·소속·구분만 받아 원장에 만들고 곧바로 추가 */}
         <Card
           title="찾는 사람이 없으면 간이 등록"
-          help="선택한 구분의 networks 원장에 새 인물로 등록되고, 회의록 참석자 명단에도 함께 담깁니다."
+          help="선택한 구분의 networks 원장에 새 인물로 등록되고, 위 선택 입력에 담깁니다. 하단 적용을 눌러야 회의록 참석자에 반영됩니다."
         >
           <div className="flex flex-wrap items-start gap-2">
             <div className="w-40">
@@ -233,7 +200,7 @@ export function ExternalAttendeeSearchModal({
               onClick={submitCreate}
               disabled={create.isPending || !newName.trim() || !newCategory}
             >
-              {create.isPending ? '등록 중…' : '등록 후 추가'}
+              {create.isPending ? '등록 중…' : '등록 후 담기'}
             </Button>
           </div>
         </Card>
