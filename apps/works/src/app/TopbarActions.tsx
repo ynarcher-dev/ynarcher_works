@@ -1,5 +1,5 @@
 import { IconButton, cn } from '@ynarcher/ui'
-import { Bell, CalendarDays, CircleUserRound, StickyNote } from 'lucide-react'
+import { Bell, CalendarDays, CircleUserRound } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { hasWorkspaceRead, useAuthStore } from '@/auth/authStore'
 import { useMyPhoto } from '@/features/management/myPhotoHooks'
@@ -37,19 +37,16 @@ interface QuickLink {
  * 토글한다. AI 에이전트는 아이콘만으로 읽히지 않아 "AI" 글자를 얹고, 버튼 크기는 옆의 아이콘
  * 버튼과 같은 정사각을 유지한다.
  *
- * 상단바 순서는 **AI·캘린더·알림·메모**다. 앞의 셋은 "밖에서 내게 오는 것"(도움·일정·소식)이라
- * 한 묶음으로 붙이고, 메모는 "내가 적어 두는 것"이라 그 뒤 개인 메뉴 앞에 세운다. 알림만 렌더가
- * 다르므로(미읽음 배지) 이 목록에 담지 않고 아래에서 따로 그린다 — 그래서 메모도 목록에서 빠진다.
+ * 상단바 순서는 **AI·캘린더·알림**이다. 셋 다 "밖에서 내게 오는 것"(도움·일정·소식)이라 한
+ * 묶음으로 붙고 그 뒤에 '나'(개인 메뉴)가 선다. 알림만 렌더가 다르므로(미읽음 배지) 이 목록에
+ * 담지 않고 아래에서 따로 그린다.
  */
 const QUICK_LINKS: QuickLink[] = [
   { label: 'AI 에이전트', key: 'ai', text: 'AI' },
   { label: '전사 캘린더', icon: CalendarDays, key: 'calendar' },
 ]
 
-/** 알림 뒤에 서는 퀵 메모. 자리만 다르고 규격은 위 목록과 같은 한 벌을 쓴다. */
-const MEMO_LINK: QuickLink = { label: '퀵 메모', icon: StickyNote, key: 'memo' }
-
-/** 퀵 링크 버튼 한 칸 — 목록으로 도는 자리와 따로 세우는 자리(메모)가 같은 모양을 공유한다. */
+/** 퀵 링크 버튼 한 칸 — 목록으로 도는 진입점이 같은 모양을 공유한다. */
 function QuickLinkButton({
   link: { label, icon: Icon, text },
   active,
@@ -82,7 +79,7 @@ function QuickLinkButton({
 }
 
 /**
- * 상단바 우측 전역 액션 — AI·캘린더·알림·퀵 메모·개인 메뉴 진입점. 다섯 다 우측 슬라이드오버(RightPanelHost)를
+ * 상단바 우측 전역 액션 — AI·캘린더·알림·개인 메뉴 진입점. 넷 다 우측 슬라이드오버(RightPanelHost)를
  * 여는 토글이며, 하나를 열면 나머지는 닫힌다(단일 활성). 상단바는 패널보다 z가 높아 패널을 연
  * 채로도 다른 진입점으로 전환할 수 있다. 워크스페이스 전환은 사이드바 소관.
  */
@@ -128,16 +125,7 @@ export function TopbarActions() {
           </>
         }
       />
-      {/* 퀵 메모는 전사 진입점 넷 가운데 가장 오른쪽 — 앞의 셋은 밖에서 내게 오는 것이고
-          메모는 내가 적어 두는 것이라, '나'로 넘어가기 직전 자리가 제자리다. */}
-      {canOffice && (
-        <QuickLinkButton
-          link={MEMO_LINK}
-          active={active === MEMO_LINK.key}
-          onToggle={() => toggle(MEMO_LINK.key)}
-        />
-      )}
-      {/* 세로 구분선 — 앞의 넷(AI·캘린더·알림·메모)은 전사 기능이고 뒤의 하나는 '나'라, 같은 줄에
+      {/* 세로 구분선 — 앞의 셋(AI·캘린더·알림)은 전사 기능이고 뒤의 하나는 '나'라, 같은 줄에
           붙어 있으면 넷이 한 묶음으로 읽힌다. 높이는 40px 버튼보다 낮춰(20px) 선이 버튼과 같은
           무게로 서지 않게 하고, 좌우 여백은 버튼 간격(gap-1)에 조금만 더한다. */}
       <span aria-hidden className="mx-1 h-5 w-px shrink-0 bg-gray-200" />

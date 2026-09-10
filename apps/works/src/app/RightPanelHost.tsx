@@ -4,11 +4,9 @@ import { AiAgentPanel } from '@/features/hub/AiAgentPanel'
 import { CalendarPanel } from '@/features/hub/CalendarPanel'
 import { PersonalPanel } from '@/features/hub/dashboard/PersonalPanel'
 import { NotificationList } from '@/features/notifications/NotificationList'
-import { QuickMemoPanel } from '@/features/quick-memo/QuickMemoPanel'
 import { useRightPanel, type RightPanelKey } from '@/app/rightPanel'
 
 const TITLES: Record<RightPanelKey, string> = {
-  memo: '퀵 메모',
   me: '개인 메뉴',
   ai: 'AI 에이전트',
   calendar: '전사 캘린더',
@@ -57,11 +55,6 @@ export function RightPanelHost() {
       {active === 'notifications' && (
         <div className="min-h-0 flex-1 overflow-hidden">
           <NotificationList onNavigate={close} />
-        </div>
-      )}
-      {active === 'memo' && (
-        <div className="min-h-0 flex-1 overflow-hidden">
-          <QuickMemoPanel />
         </div>
       )}
     </SlideOver>
