@@ -101,6 +101,10 @@ function fillBlanks(item: MediaItem, got: LinkMetadata): MediaItem {
  * 한 번 시도한 주소는 다시 묻지 않는다(성공도 실패도). 실패를 되풀이하면 주소가 잘못된 줄
  * 하나 때문에 목록을 고칠 때마다 왕복이 일어나고, 성공을 되풀이하면 담당자가 지운 제목이
  * 다음 렌더에 되살아난다. 주소를 고치면 그때 다시 묻는다 — 다른 주소이기 때문이다.
+ *
+ * **못 읽은 주소는 목록으로 돌려준다.** 실패를 알리는 자리가 토스트뿐이면 그 줄은 잠시 뒤
+ * 그냥 '제목이 빈 줄'이 되어, 자동이 아직 안 왔는지 영영 안 오는지를 화면이 말하지 못한다.
+ * 손으로 적어야 할 자리를 아는 것은 이 훅뿐이므로 그 사실을 함께 내놓는다.
  */
 export function useAutoLinkMetadata(
   media: MediaItem[],
@@ -109,6 +113,7 @@ export function useAutoLinkMetadata(
 ) {
   const meta = useLinkMetadata()
   const [loadingUrl, setLoadingUrl] = useState<string | null>(null)
+  const [failedUrls, setFailedUrls] = useState<ReadonlySet<string>>(new Set())
 
   // 응답이 돌아오는 사이에 담당자가 다른 줄을 고칠 수 있다. 요청을 보낼 때의 목록에 결과를
   // 얹으면 그 사이의 편집이 지워지므로, 얹을 때는 언제나 지금 화면의 목록을 기준으로 삼는다.
@@ -142,6 +147,7 @@ export function useAutoLinkMetadata(
           )
         })
         .catch((e: unknown) => {
+          setFailedUrls((prev) => new Set(prev).add(pending))
           fail.current?.(e instanceof Error ? e.message : '메타데이터를 불러오지 못했습니다.')
         })
         .finally(() => setLoadingUrl(null))
@@ -150,5 +156,5 @@ export function useAutoLinkMetadata(
     return () => clearTimeout(timer)
   }, [media])
 
-  return { loadingUrl }
+  return { loadingUrl, failedUrls }
 }

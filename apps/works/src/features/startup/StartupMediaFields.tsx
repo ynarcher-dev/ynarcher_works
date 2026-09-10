@@ -25,6 +25,15 @@ const COLS: readonly ItemCol[] = [
  * 없어서, 누르지 않은 줄은 정보가 없는 줄이 아니라 담당자가 한 번 더 눌러야 했던 줄이었다.
  * 채우는 규칙은 `useAutoLinkMetadata`가 갖는다(비어 있는 칸만 채운다).
  *
+ * **손으로 적는 것은 못 읽어 온 줄뿐이다.** 그래서 그 줄임을 제목 칸의 자리 표시가 말한다 —
+ * 실패를 알리는 자리가 토스트뿐이면 잠시 뒤 그 줄은 그냥 '제목이 빈 줄'이 되어, 자동이 아직
+ * 안 왔는지 영영 안 오는지 화면이 답하지 못한다. 안내는 제목 칸에만 세운다: 같은 말이 설명
+ * 칸에도 서면 한 줄에 같은 문장이 둘 서서 정작 무엇을 적으라는 것인지가 그 반복에 묻힌다.
+ *
+ * **칸을 잠그지는 않는다.** 자동으로 온 제목은 사이트 이름이 뒤에 붙어 오는 일이 잦아 손으로
+ * 다듬을 자리가 남아 있어야 하고, 잠근 칸은 그 다듬기를 막는 대신 아무것도 지키지 못한다
+ * (덮어쓰기는 이미 '비어 있는 칸만 채운다'가 막고 있다).
+ *
  * 항목 상자를 걷고 목록 한 줄 규격(`ItemRows`)으로 세운다. 상자였을 때 한 항목이 라벨 넷과
  * 삭제 한 줄을 더해 **다섯 줄**을 썼는데, 라벨을 항목마다 다시 적기 때문이었다. 머리글에 한 번만
  * 적으면 항목이 몇이든 열이 세로로 맞아 위아래 줄을 눈으로 견줄 수 있다.
@@ -38,7 +47,7 @@ export function StartupMediaFields({ media, setMedia }: Props) {
     (message: string) => toast.show(message, 'danger'),
     [toast],
   )
-  const { loadingUrl } = useAutoLinkMetadata(media, setMedia, onError)
+  const { loadingUrl, failedUrls } = useAutoLinkMetadata(media, setMedia, onError)
 
   const patch = (i: number, p: Partial<MediaItem>) => setMedia(patchAt(media, i, p))
 
@@ -51,7 +60,9 @@ export function StartupMediaFields({ media, setMedia }: Props) {
       addLabel="미디어 추가"
     >
       {(m, i) => {
-        const loading = loadingUrl !== null && (m.url ?? '').trim() === loadingUrl
+        const url = (m.url ?? '').trim()
+        const loading = loadingUrl !== null && url === loadingUrl
+        const failed = failedUrls.has(url)
         return (
           <>
             <Select value={m.kind ?? ''} onChange={(e) => patch(i, { kind: e.target.value })}>
@@ -67,9 +78,9 @@ export function StartupMediaFields({ media, setMedia }: Props) {
               onChange={(e) => patch(i, { url: e.target.value })}
             />
             <Input
-              // 불러오는 중임은 자리 표시로만 알린다. 칸을 잠그면 붙여넣자마자 제목을 적으려던
-              // 손이 막히는데, 정작 그 값은 비어 있을 때만 채워지므로 막을 이유가 없다.
-              placeholder={loading ? '불러오는 중…' : ''}
+              placeholder={
+                loading ? '불러오는 중…' : failed ? '자동으로 못 읽었습니다 — 직접 적어 주세요' : ''
+              }
               value={m.title ?? ''}
               onChange={(e) => patch(i, { title: e.target.value })}
             />
