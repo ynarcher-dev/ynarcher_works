@@ -43,6 +43,9 @@ export function ProgramFilters({ filters, onChange }: ProgramFiltersProps) {
   )
   // 선택지는 오늘의 조직도(활성 버전) 기준이되, 값은 계보 id라 지난 단계에 지정된 사업도 함께 걸린다.
   // 라벨은 전체 경로다 — 체크박스 목록에서 동명의 말단('1팀')을 가리려면 상위가 다 보여야 한다.
+  // 상위를 고르면 그 아래 조직이 맡은 사업까지 함께 걸리므로(programIdsByDepartment) 하위 팀을
+  // 일일이 체크할 필요가 없다. 하위 체크박스를 대신 켜 주지는 않는다 — 켜 두면 상위를 끈 뒤에도
+  // 하위가 남아, 화면이 말하는 선택과 실제로 건 조건이 어긋난다.
   const { options } = useDepartmentOptions()
   const departmentOptions = useMemo(
     () => options.map((o) => ({ value: o.lineage, label: o.label })),

@@ -40,6 +40,8 @@ export interface ProgramFilters {
    * 목록 표기에서 '+N'으로 접힌 협업 부서로도 사업을 찾을 수 있어야 한다.
    * 부서 id가 아니라 계보 id인 이유: 부서 id는 조직 버전마다 새로 발급되므로, id로 거르면
    * 개편 전 단계에 같은 부서를 지정한 사업이 통째로 빠진다.
+   * 고른 부서는 **그 아래 조직까지** 함께 건다(programIdsByDepartment) — 상위를 고른다는 것은
+   * 그 조직이 맡은 일을 묻는 것이지 그 이름으로 직접 배정된 건만 묻는 것이 아니다.
    */
   departmentLineages: string[]
   /**
@@ -278,20 +280,58 @@ export function useProgramStatusCounts(
 
 /**
  * 담당 부서 필터를 사업 id 목록으로 환산한다.
- * 계보 → (전 조직 버전의) 부서 id → 그 부서가 배정된 사업 id 순으로 좁힌다. 부서 구성은
- * 사업 원장이 아니라 별도 원장에 있어 조인 조건으로 한 번에 걸 수 없다.
+ * 계보 → (전 조직 버전의) 부서 id → **그 아래 조직 전부** → 그 부서가 배정된 사업 id 순으로
+ * 좁힌다. 부서 구성은 사업 원장이 아니라 별도 원장에 있어 조인 조건으로 한 번에 걸 수 없다.
  * 걸리는 사업이 없으면 공집합 표식을 돌려준다 — 빈 배열을 그대로 넘기면 조건이 사라져
  * 필터를 걸었는데 전체가 나온다.
+ *
+ * 고른 부서 자신만이 아니라 하위 조직까지 함께 거는 이유: 사업이 지정하는 부서는 조직도의
+ * 한 점(대개 말단 팀)이라, 상위를 골랐을 때 그 이름으로 직접 배정된 사업만 답하면 그 조직이
+ * 맡은 일의 대부분이 빠진다('스케일업그룹'을 골랐는데 1~3팀이 맡은 사업이 안 나온다).
+ * 부서 칸이 묻는 것은 '그 이름으로 배정되었는가'가 아니라 '어느 조직이 맡았는가'이고,
+ * 조직에는 그 아래가 포함된다.
+ *
+ * 하위를 계보가 아니라 **parent_id로 내려가며** 모으는 것이 요점이다 — 부모·자식 관계는 조직
+ * 버전마다 다시 그려지므로, 팀이 다른 그룹으로 옮겨 갔다면 각 버전의 트리에서 그때의 상위
+ * 아래에만 걸린다(옮기기 전 사업은 옛 그룹으로, 옮긴 뒤 사업은 새 그룹으로 답한다).
  */
 async function programIdsByDepartment(
   config: ProgramWorkspaceConfig,
   lineages: string[],
 ): Promise<string[]> {
+  // 버전을 가리지 않고 전량을 읽는다 — 지난 단계(옛 조직 버전)에 배정된 사업도 함께 걸려야 하고,
+  // 폐지된 부서도 그 시절의 사업을 여전히 가리킨다(useAllDepartments와 같은 판단).
   const { data: deptRows } = await supabase
     .from('departments')
-    .select('id')
-    .in('lineage_id', lineages)
-  const deptIds = ((deptRows ?? []) as { id: string }[]).map((d) => d.id)
+    .select('id, parent_id, lineage_id')
+  const rows = (deptRows ?? []) as {
+    id: string
+    parent_id: string | null
+    lineage_id: string
+  }[]
+
+  const picked = new Set<string>()
+  const wanted = new Set(lineages)
+  const childrenOf = new Map<string, string[]>()
+  for (const row of rows) {
+    if (wanted.has(row.lineage_id)) picked.add(row.id)
+    if (!row.parent_id) continue
+    const siblings = childrenOf.get(row.parent_id)
+    if (siblings) siblings.push(row.id)
+    else childrenOf.set(row.parent_id, [row.id])
+  }
+  // 고른 부서에서 아래로 훑는다. 방문 표시(picked)가 곧 결과라 parent_id가 꼬여 순환이 생겨도
+  // 멎지 않는다.
+  const queue = [...picked]
+  while (queue.length) {
+    for (const child of childrenOf.get(queue.pop()!) ?? []) {
+      if (picked.has(child)) continue
+      picked.add(child)
+      queue.push(child)
+    }
+  }
+
+  const deptIds = [...picked]
   if (!deptIds.length) return [NO_MATCH_ID]
 
   const { data: assigned } = await supabase
