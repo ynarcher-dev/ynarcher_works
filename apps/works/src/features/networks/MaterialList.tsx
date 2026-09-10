@@ -8,7 +8,6 @@ import { MaterialRow } from '@/features/networks/MaterialRow'
 interface Props {
   materials: Material[]
   loading?: boolean
-  onEdit?: (material: Material) => void
   onDelete?: (id: string) => void
   deletingId?: string
   /** 오디오를 텍스트 입력으로 다시 불러오는 회의 녹음 전용 동작. */
@@ -26,7 +25,6 @@ interface Props {
 export function MaterialList({
   materials,
   loading = false,
-  onEdit,
   onDelete,
   deletingId,
   onTranscribe,
@@ -55,7 +53,6 @@ export function MaterialList({
             key={material.id}
             material={material}
             onPreview={materialPreviewKind(material) ? () => setPreview(material) : undefined}
-            onEdit={onEdit ? () => onEdit(material) : undefined}
             onDelete={onDelete ? () => onDelete(material.id) : undefined}
             deleting={deletingId === material.id}
             onTranscribe={onTranscribe ? () => onTranscribe(material) : undefined}

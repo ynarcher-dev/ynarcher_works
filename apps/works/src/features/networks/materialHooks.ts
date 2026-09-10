@@ -19,16 +19,32 @@ export interface Material {
   byte_size: number | null
   uploaded_by: string | null
   program_module_id: string | null
-  /** 표시명. 비어 있으면 화면은 file_name을 대신 쓴다. */
+  /**
+   * 링크 제목. 링크를 붙일 때 `link-metadata`가 읽어 온 값이 들어간다. 비어 있으면 화면이
+   * 주소를 대신 세운다. **파일에서는 읽지 않는다** — 손으로 표시명을 붙이던 자리를
+   * 2026-09-10에 걷었고, 그 전에 붙은 값은 원장에만 남는다(`materialDisplayName`).
+   */
   label: string | null
   /** 한 줄 설명. */
   description: string | null
   created_at: string
 }
 
-/** 목록에 노출할 이름 — 표시명이 있으면 그것, 없으면 파일명(링크는 호스트). */
+/**
+ * 목록에 노출할 이름 — **파일은 언제나 파일명, 링크는 제목이 있으면 제목, 없으면 주소 전체**다.
+ *
+ * 파일에서 `label`을 보지 않는 것은 2026-09-10에 표시명 편집을 걷으면서 정한 것이다. 그 전에
+ * 붙은 값이 원장에 남아 있으나 이제 고칠 자리가 없어, 계속 세우면 지울 수도 없는 두 줄짜리 행이
+ * 목록에 영원히 남는다(행마다 높이가 갈리는 그 상태가 편집을 걷은 이유였다). 값은 지우지 않는다 —
+ * 되돌리면 그대로 돌아온다.
+ *
+ * 링크에서 호스트(`file_name`)로 물러서지 않는 이유는 그 값이 어디로 가는지 말하지 못하기
+ * 때문이다(`notion.so` 하나로 수십 건이 같은 이름이 된다). 반대로 제목을 얻은 링크는 그
+ * 제목만 세우고 주소는 감춘다 — 부를 이름을 얻은 자리에서 주소는 곁값이 아니라 잡음이다.
+ */
 export function materialDisplayName(m: Material): string {
-  return m.label?.trim() || m.file_name
+  if (!isLinkMaterial(m)) return m.file_name
+  return m.label?.trim() || m.url || m.file_name
 }
 
 /**
@@ -197,24 +213,6 @@ export function useAddMaterialLink(targetType: string, targetId: string, moduleI
   return useMutation({
     mutationFn: (url: string) => addMaterialLink(targetType, targetId, url, moduleId),
     onSuccess: () => invalidateMaterials(qc, targetType, targetId),
-  })
-}
-
-/**
- * 표시명·설명 수정. 파일 자체(Storage 오브젝트·파일명)는 건드리지 않는다 — 바꾸는 것은
- * "이 파일이 무엇인지 부르는 말"이지 파일이 아니다.
- */
-export function useUpdateMaterialMeta(targetType: string, targetId: string) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (input: { id: string; label: string | null; description: string | null }) => {
-      const { error } = await supabase
-        .from('attachments')
-        .update({ label: input.label, description: input.description })
-        .eq('id', input.id)
-      if (error) throw error
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['materials', targetType, targetId] }),
   })
 }
 

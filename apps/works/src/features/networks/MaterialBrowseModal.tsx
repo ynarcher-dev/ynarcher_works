@@ -31,8 +31,8 @@ function extensionOf(fileName: string): string | null {
 }
 
 /**
- * 검색 대상 — 표시명·파일명·주소. 표에 선 이름이 표시명과 파일명 둘 중 하나이므로 둘 다 훑고,
- * 링크는 기억나는 것이 제목이 아니라 주소일 때가 많아 url까지 함께 본다.
+ * 검색 대상 — 표시명·파일명·주소. 표에 선 이름이 셋 중 하나이므로(표시명 → 파일명 → 링크 주소)
+ * 셋을 다 훑는다. 특히 링크는 이름 자리에 제목이 서 있어도 기억나는 것이 주소일 때가 많다.
  */
 function matches(m: Material, keyword: string): boolean {
   const k = keyword.trim().toLowerCase()

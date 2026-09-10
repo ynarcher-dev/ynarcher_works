@@ -8,7 +8,6 @@ import {
   Link as LinkIcon,
   Music,
   Pause,
-  Pencil,
   Play,
   Trash2,
 } from 'lucide-react'
@@ -27,7 +26,6 @@ import {
 interface Props {
   material: Material
   onPreview?: () => void
-  onEdit?: () => void
   onDelete?: () => void
   deleting: boolean
   /** 오디오를 전사 입력으로 불러오는 선택 액션. */
@@ -36,11 +34,10 @@ interface Props {
   showDescription?: boolean
 }
 
-/** 자료 한 건의 이름·용량·재생/미리보기·다운로드·편집·삭제 동작. */
+/** 자료 한 건의 이름·용량·재생/미리보기·다운로드·삭제 동작. */
 export function MaterialRow({
   material,
   onPreview,
-  onEdit,
   onDelete,
   deleting,
   onTranscribe,
@@ -80,10 +77,10 @@ export function MaterialRow({
         )
       }
       name={name}
-      metaLines={[
-        showDescription ? material.description : null,
-        material.label?.trim() ? material.file_name : null,
-      ]}
+      // 이름 아래에는 설명만 선다. 파일명·주소를 한 줄 더 세우지 않는 것은 이름이 이미 그
+      // 값이기 때문이다 — 파일은 파일명이 곧 이름이고, 제목을 얻은 링크에서 주소는 같은 곳을
+      // 두 번 가리키는 잡음이다(어디로 가는지는 눌러 보면 되고, 제목이 없으면 주소가 이름이 된다).
+      metaLines={[showDescription ? material.description : null]}
       size={link ? 'link' : formatBytes(material.byte_size)}
       actions={
         <>
@@ -112,14 +109,6 @@ export function MaterialRow({
             />
           ) : (
             <span className="size-icon-card shrink-0" aria-hidden />
-          )}
-          {onEdit && (
-            <IconButton
-              variant="ghost"
-              label={`${name} 표시명·설명 수정`}
-              onClick={onEdit}
-              icon={<Pencil className="size-4" />}
-            />
           )}
           {onTranscribe && audio && (
             <IconButton

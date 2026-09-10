@@ -1,22 +1,10 @@
-import {
-  Button,
-  Card,
-  formText,
-  Input,
-  TextArea,
-  Tooltip,
-  tooltipScale,
-  useToast,
-} from '@ynarcher/ui'
-import { useState } from 'react'
+import { Card } from '@ynarcher/ui'
 import { MaterialDropZone } from '@/features/networks/MaterialDropZone'
 import { MaterialList } from '@/features/networks/MaterialList'
 import {
   useDeleteMaterial,
   useMaterials,
-  useUpdateMaterialMeta,
   useUploadMaterial,
-  type Material,
 } from '@/features/networks/materialHooks'
 
 /**
@@ -29,17 +17,19 @@ import {
  * (program_module_id)만 더할 뿐이라, 복제도 동기화도 없이 두 화면이 한 원장을 본다.
  * 목록·행·미리보기는 자료 관리 패널과 공용 `MaterialList`를 그대로 쓴다.
  *
- * 파일마다 표시명·설명을 붙일 수 있다(URL첨부와 같은 축). 파일명은 올린 사람의 사정을
- * 그대로 달고 오므로 받는 사람에게 "이게 무엇인지"를 말해 주지 못한다. 다만 업로드를 막지
- * 않기 위해 올린 뒤에 붙인다 — 여러 파일을 한꺼번에 끌어다 놓는 흐름을 폼이 가로막으면
- * 정작 파일이 안 올라간다.
+ * ## 표시명·설명을 손으로 붙이는 자리는 없다 (2026-09-10)
+ *
+ * 파일마다 표시명·설명을 붙이는 폼이 여기 있었으나 걷었다. 파일의 이름은 **파일명 하나**이며,
+ * 그것 말고 부르는 이름을 하나 더 두면 목록의 행이 두 줄이 되어(표시명 위, 파일명 아래) 같은
+ * 자리에 사는 행끼리 높이가 달라지고, 받는 사람이 보는 이름과 실제로 받는 파일의 이름이
+ * 갈린다. 이름이 파일명과 달라야 하는 자료라면 고칠 것은 표시명이 아니라 올리는 파일의
+ * 이름이다. 링크에는 여전히 표시명이 붙지만 그것은 사람이 적는 값이 아니라 주소에서 읽어 온
+ * 제목이다(`materialHooks.addMaterialLink`).
  */
 export function FilePanel({ programId, moduleId }: { programId: string; moduleId: string }) {
   const { data: materials = [], isLoading } = useMaterials('program', programId, moduleId)
   const upload = useUploadMaterial('program', programId, moduleId)
   const remove = useDeleteMaterial('program', programId)
-  // 표시명·설명을 고치는 중인 파일(목록과 자리를 바꾼다).
-  const [editing, setEditing] = useState<Material | null>(null)
 
   const busy = upload.isPending
 
@@ -49,107 +39,24 @@ export function FilePanel({ programId, moduleId }: { programId: string; moduleId
       count={materials.length}
       help="여기에 올린 파일은 이 사업의 자료 관리에도 함께 표시됩니다."
     >
-      {editing ? (
-        <FileMetaForm
-          key={editing.id}
-          programId={programId}
-          material={editing}
-          onDone={() => setEditing(null)}
-          onCancel={() => setEditing(null)}
+      <div className="space-y-3">
+        {/* 파일을 놓는 자리는 이 상자 하나다(헤더 '업로드' 버튼은 2026-09-05에 걷었다). */}
+        <MaterialDropZone onFiles={(files) => files.forEach((f) => upload.mutate(f))} busy={busy} />
+        {upload.isError && (
+          <p className="text-caption text-danger">업로드에 실패했습니다. 다시 시도해 주세요.</p>
+        )}
+        {/* 설명은 편집 폼을 걷기 전에 적힌 값만 남아 있다. 지우지 않고 그대로 펼쳐 보인다 —
+            담당자가 적어 둔 문장을 화면에서만 감추면 그 자료가 무엇인지 답하던 줄이 사라진다. */}
+        <MaterialList
+          materials={materials}
+          loading={isLoading}
+          onDelete={(id) => remove.mutate(id)}
+          deletingId={remove.isPending ? remove.variables : undefined}
+          emptyText="등록된 파일이 없습니다. 위 영역에 파일을 끌어다 놓거나 눌러서 첨부하세요."
+          pageSize={8}
+          showDescription
         />
-      ) : (
-        <div className="space-y-3">
-          {/* 파일을 놓는 자리는 이 상자 하나다(헤더 '업로드' 버튼은 2026-09-05에 걷었다). */}
-          <MaterialDropZone
-            onFiles={(files) => files.forEach((f) => upload.mutate(f))}
-            busy={busy}
-          />
-          {upload.isError && (
-            <p className="text-caption text-danger">업로드에 실패했습니다. 다시 시도해 주세요.</p>
-          )}
-          {/* 설명은 여기서 붙이고 고치는 값이라 이 목록에서만 펼쳐 보인다(상세 우측 자료 관리 패널은 숨김). */}
-          <MaterialList
-            materials={materials}
-            loading={isLoading}
-            onEdit={(m) => setEditing(m)}
-            onDelete={(id) => remove.mutate(id)}
-            deletingId={remove.isPending ? remove.variables : undefined}
-            emptyText="등록된 파일이 없습니다. 위 영역에 파일을 끌어다 놓거나 눌러서 첨부하세요."
-            pageSize={8}
-            showDescription
-          />
-        </div>
-      )}
+      </div>
     </Card>
-  )
-}
-
-/** 파일 1건의 표시명·설명 편집. 파일 자체(파일명·저장 경로)는 바꾸지 않는다. */
-function FileMetaForm({
-  programId,
-  material,
-  onDone,
-  onCancel,
-}: {
-  programId: string
-  material: Material
-  onDone: () => void
-  onCancel: () => void
-}) {
-  const toast = useToast()
-  const update = useUpdateMaterialMeta('program', programId)
-  const [label, setLabel] = useState(material.label ?? '')
-  const [description, setDescription] = useState(material.description ?? '')
-
-  const submit = async () => {
-    if (update.isPending) return
-    try {
-      await update.mutateAsync({
-        id: material.id,
-        label: label.trim() || null,
-        description: description.trim() || null,
-      })
-      onDone()
-    } catch {
-      toast.show('저장에 실패했습니다. 권한을 확인하세요.', 'danger')
-    }
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="space-y-1.5">
-        <label className={formText.label}>
-          표시명
-          <Tooltip
-            label="표시명"
-            content={`비워 두면 파일명(${material.file_name})이 그대로 표시됩니다.`}
-            className={tooltipScale.gap}
-          />
-        </label>
-        <Input
-          autoFocus
-          placeholder={material.file_name}
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-        />
-      </div>
-      <div className="space-y-1.5">
-        <label className={formText.label}>설명</label>
-        <TextArea
-          rows={2}
-          placeholder="이 파일이 무엇인지 한 줄로 적어 주세요."
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
-      </div>
-      <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={onCancel} disabled={update.isPending}>
-          취소
-        </Button>
-        <Button onClick={() => void submit()} disabled={update.isPending}>
-          {update.isPending ? '저장 중…' : '저장'}
-        </Button>
-      </div>
-    </div>
   )
 }
