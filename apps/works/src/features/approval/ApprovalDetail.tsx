@@ -301,6 +301,7 @@ export function ApprovalDetail({
                 draftedAt={doc.created_at}
                 lines={stampLines}
                 recipients={doc.approval_recipients.map((r) => ({
+                  key: r.user_id,
                   userId: r.user_id,
                   read: doc.approval_reads.some((rd) => rd.user_id === r.user_id),
                 }))}

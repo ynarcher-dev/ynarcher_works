@@ -4,6 +4,11 @@ import { spawnSync } from 'node:child_process'
 import { readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
+import {
+  cleanHiworksHtml as cleanHtml,
+  HIWORKS_LINE_PARSER_VERSION,
+  parseHiworksApprovalParticipants,
+} from './hiworks-approval-lines.mjs'
 
 const args = new Set(process.argv.slice(2))
 const apply = args.has('--apply')
@@ -45,20 +50,6 @@ function timestamp(value) {
   if (!value) return 'null'
   const normalized = String(value).replace(' ', 'T')
   return `${sql(/[+-]\d\d:\d\d$|Z$/i.test(normalized) ? normalized : `${normalized}+09:00`)}::timestamptz`
-}
-
-function cleanHtml(value) {
-  return String(value ?? '')
-    .replace(/<br\s*\/?\s*>/gi, ' ')
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/&nbsp;|&#160;/gi, ' ')
-    .replace(/&gt;/gi, '>')
-    .replace(/&lt;/gi, '<')
-    .replace(/&amp;/gi, '&')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;|&apos;/gi, "'")
-    .replace(/\s+/g, ' ')
-    .trim()
 }
 
 function normalizeLabel(value) {
@@ -336,49 +327,6 @@ function profileNumber(profileUrl) {
   return String(profileUrl ?? '').match(/profile_images\/(\d+)\.(?:jpg|png)/i)?.[1] ?? null
 }
 
-function extractLinePeople(document) {
-  const people = []
-  const sectionRole = {
-    first_line: 'APPROVER',
-    second_line: 'CONFIRMER',
-    third_line: 'CC',
-    fourth_line: 'OTHER',
-    fifth_line: 'OTHER',
-    sender_line: 'OTHER',
-  }
-
-  for (const [section, html] of Object.entries(document.approval_line ?? {})) {
-    if (!html) continue
-    const tables = [...String(html).matchAll(/<table\b[^>]*>([\s\S]*?)<\/table>/gi)]
-    for (const table of tables) {
-      const rows = [...table[1].matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)].map((match) =>
-        [...match[1].matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/gi)].map((cell) => cell[1]),
-      )
-      if (rows.length < 3) continue
-      const roleCells = rows[0]
-      const stampCells = rows[1]
-      const nameCells = rows[2]
-      for (let index = 0; index < nameCells.length; index += 1) {
-        const name = cleanHtml(nameCells[index])
-        if (!name) continue
-        const stamp = stampCells[index] ?? ''
-        const decidedAt = stamp.match(/title=["']([^"']+)["']/i)?.[1] ?? null
-        const sourceDecision = stamp.match(/big_stamp_([a-z_]+)\./i)?.[1] ?? null
-        people.push({
-          name,
-          position: cleanHtml(roleCells[index]),
-          section,
-          stepOrder: index + 1,
-          normalizedRole: name === document.user_name ? 'DRAFTER' : sectionRole[section] ?? 'OTHER',
-          sourceDecision,
-          decidedAt,
-        })
-      }
-    }
-  }
-  return people
-}
-
 function actionOf(entry) {
   return cleanHtml(entry.title || entry.comment)
 }
@@ -395,20 +343,14 @@ function eventType(entry, isComment = false) {
   return 'HISTORY'
 }
 
-function participantRole(action) {
-  if (action === '승인') return 'APPROVER'
-  if (action === '확인') return 'CONFIRMER'
-  if (action.includes('재무') && action.includes('합의')) return 'FINANCE_AGREEMENT'
-  if (action.includes('합의')) return 'AGREEMENT'
-  return null
-}
-
 const { raw: rawData, value: allDocuments } = parseAssignment(dataPath, 'HIWORKS_DATA')
 const { value: backupInfo } = parseAssignment(infoPath, 'BACKUP_INFO')
 const documents = allDocuments.slice(0, 10)
 if (documents.length !== 10) throw new Error(`샘플 문서는 10건이어야 합니다. 현재 ${documents.length}건입니다.`)
 
-const linePeople = new Map(documents.map((document) => [document.no, extractLinePeople(document)]))
+const linePeople = new Map(
+  documents.map((document) => [document.no, parseHiworksApprovalParticipants(document)]),
+)
 const signalsByName = new Map()
 
 function observeActor(name, values = {}) {
@@ -438,7 +380,7 @@ for (const document of documents) {
     observeActor(entry.user_name, { profile: profileNumber(entry.profile_url) })
   }
   for (const person of linePeople.get(document.no) ?? []) {
-    observeActor(person.name, { position: person.position })
+    observeActor(person.name, { position: person.position, userNo: person.sourceUserNo })
   }
 }
 
@@ -463,7 +405,7 @@ const actorByName = new Map(actors.map((actor) => [actor.name, actor]))
 
 const archiveSha = hash(rawData)
 const batchId = stableUuid(`HIWORKS:BATCH:${backupInfo.file_name}:${archiveSha}`)
-const statements = ['begin', "set local statement_timeout = '5min'"]
+const statements = ["perform set_config('statement_timeout', '5min', true)"]
 
 const legacyForms = Object.fromEntries(
   Object.entries(legacyFormDefinitions).map(([key, definition]) => [key, {
@@ -510,6 +452,20 @@ on conflict (id) do update set
   failed_document_count = 0,
   status = 'COMPLETED',
   completed_at = now()`)
+
+// v1은 원본 이벤트의 '확인'을 참여자로 승격해 결재자와 참조자를 섞었다. 업무 기록을
+// 지우지 않고 퇴역 표시한 뒤, 원본 결재선 HTML에서 다시 만든 v2 행을 나란히 쌓는다.
+statements.push(`
+update public.approval_legacy_participants p
+   set normalized_role = 'OTHER',
+       source_metadata = p.source_metadata || ${jsonb({
+         superseded_by_parser_version: HIWORKS_LINE_PARSER_VERSION,
+       })}
+  from public.approval_legacy_documents d
+ where d.document_id = p.document_id
+   and d.import_batch_id = ${sql(batchId)}::uuid
+   and p.source_metadata->>'sample_parser_version' = '1'
+   and p.source_metadata->>'superseded_by_parser_version' is null`)
 
 for (const actor of actors) {
   statements.push(`
@@ -616,29 +572,15 @@ on conflict (source_system, source_document_no) do nothing`)
     })
   }
 
-  addParticipant(document.user_name, {
-    normalizedRole: 'DRAFTER',
-    sourceRole: '기안',
-    position: document.position,
-    department: document.node_name,
-    decidedAt: document.regdate,
-  })
   for (const person of linePeople.get(document.no) ?? []) addParticipant(person.name, person)
-  for (const entry of document.comments_history ?? []) {
-    const role = participantRole(actionOf(entry))
-    if (role) {
-      addParticipant(entry.user_name, {
-        normalizedRole: role,
-        sourceRole: actionOf(entry),
-        sourceDecision: actionOf(entry),
-        decidedAt: entry.regdate,
-      })
-    }
-  }
 
   let participantIndex = 0
   for (const participant of participants.values()) {
-    const sourceKey = `${participant.actor.sourceActorKey}:${participant.normalizedRole}`
+    const sourceKey = [
+      participant.actor.sourceActorKey,
+      participant.section ?? participant.normalizedRole,
+      participant.stepOrder ?? 0,
+    ].join(':')
     statements.push(`
 insert into public.approval_legacy_participants (
   id, document_id, actor_id, source_participant_key, source_role, normalized_role,
@@ -649,12 +591,31 @@ insert into public.approval_legacy_participants (
   ${sql(documentId)}::uuid, ${sql(participant.actor.id)}::uuid, ${sql(sourceKey)},
   ${sql(participant.sourceRole)}, ${sql(participant.normalizedRole)}, ${sql(participant.section)},
   ${participant.stepOrder ?? 'null'}, ${sql(participant.sourceDecision)},
-  ${sql(participant.sourceDecision === '승인' ? 'APPROVED' : participant.sourceDecision === '확인' ? 'CONFIRMED' : null)},
+  ${sql(participant.normalizedDecision)},
   ${timestamp(participant.decidedAt)}, ${sql(participant.name)}, ${sql(participant.department)},
-  ${sql(participant.position)}, ${participant.section ? '0.8000' : '1.0000'},
-  ${jsonb({ sample_parser_version: 1, source_index: participantIndex })}
+  ${sql(participant.position)}, ${participant.section ? '0.9500' : '1.0000'},
+  ${jsonb({
+    sample_parser_version: HIWORKS_LINE_PARSER_VERSION,
+    source_index: participantIndex,
+    source_user_no: participant.sourceUserNo ?? null,
+    source_node_id: participant.sourceNodeId ?? null,
+    source_type: participant.sourceType ?? null,
+  })}
 )
-on conflict (document_id, source_participant_key) where source_participant_key is not null do nothing`)
+on conflict (document_id, source_participant_key) where source_participant_key is not null do update set
+  actor_id = excluded.actor_id,
+  source_role = excluded.source_role,
+  normalized_role = excluded.normalized_role,
+  source_line_section = excluded.source_line_section,
+  step_order = excluded.step_order,
+  source_decision = excluded.source_decision,
+  normalized_decision = excluded.normalized_decision,
+  decided_at = excluded.decided_at,
+  original_name = excluded.original_name,
+  original_department = excluded.original_department,
+  original_position = excluded.original_position,
+  parsing_confidence = excluded.parsing_confidence,
+  source_metadata = excluded.source_metadata`)
     participantIndex += 1
   }
 
@@ -697,8 +658,12 @@ on conflict (document_id, source_link_key) where source_link_key is not null do 
   }
 }
 
-statements.push('commit')
-const output = `${statements.join(';\n')};;\n`
+// `supabase db query`는 prepared statement 하나만 받는다. DO 블록 하나로 감싸면 파일 전체가
+// 한 문장이면서 PostgreSQL 문장 자체의 원자성도 유지되어 중간 실패가 반쪽 적재를 남기지 않는다.
+const blockDelimiter = '$hiworks_approval_import$'
+const statementBody = statements.join(';\n')
+if (statementBody.includes(blockDelimiter)) throw new Error('SQL 블록 구분자가 원본 데이터와 충돌합니다.')
+const output = `do ${blockDelimiter}\nbegin\n${statementBody};\nend\n${blockDelimiter};\n`
 
 console.log(
   JSON.stringify({
@@ -728,11 +693,14 @@ if (apply) {
   const tempPath = join(tmpdir(), `hiworks-approval-sample-${process.pid}.sql`)
   writeFileSync(tempPath, output, { encoding: 'utf8', mode: 0o600 })
   try {
-    const command = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm'
+    const supabaseCliPath = resolve(root, 'node_modules', 'supabase', 'dist', 'supabase.js')
+    const databaseTarget = process.env.SUPABASE_DB_URL
+      ? ['--db-url', process.env.SUPABASE_DB_URL]
+      : ['--linked']
     const result = spawnSync(
-      command,
-      ['exec', 'supabase', 'db', 'query', '--linked', '--file', tempPath],
-      { cwd: root, stdio: 'inherit', shell: process.platform === 'win32' },
+      process.execPath,
+      [supabaseCliPath, 'db', 'query', ...databaseTarget, '--file', tempPath],
+      { cwd: root, stdio: 'inherit' },
     )
     if (result.error) throw result.error
     if (result.status !== 0) process.exit(result.status ?? 1)

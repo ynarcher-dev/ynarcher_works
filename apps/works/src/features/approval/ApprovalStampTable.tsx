@@ -29,8 +29,16 @@ export interface StampLine {
 }
 
 export interface StampRecipient {
-  userId: string
+  key?: string
+  userId: string | null
+  snapshotName?: string
   read: boolean
+}
+
+export interface StampDrafterSnapshot {
+  key: string
+  name: string
+  title?: string
 }
 
 interface ApprovalStampTableProps {
@@ -40,6 +48,8 @@ interface ApprovalStampTableProps {
   drafterId: string | null
   /** 기안 일시(기안자 도장 아래 날짜). */
   draftedAt: string | null
+  /** 계정 매핑이 없는 복원 문서의 원본 기안자 스냅샷. */
+  drafterSnapshot?: StampDrafterSnapshot | null
   nameOf: (id: string | null) => string
   /** 직급·직책 표기(있으면 도장 위 칸에 적는다). */
   titleOf?: (id: string | null) => string
@@ -234,6 +244,7 @@ export function ApprovalStampTable({
   recipients,
   drafterId,
   draftedAt,
+  drafterSnapshot,
   nameOf,
   titleOf,
   actionableLineId,
@@ -264,12 +275,12 @@ export function ApprovalStampTable({
 
   // 결재 행의 맨 앞은 항상 기안자 — 문서를 낸 사람이 결재선의 출발점이다. 결재자가 아니라
   // 순번은 붙이지 않고, 그 뒤의 결재자들만 순번대로 세운다.
-  const drafter: GridPerson[] = drafterId
+  const drafter: GridPerson[] = drafterId || drafterSnapshot
     ? [
         {
-          key: `drafter-${drafterId}`,
-          title: titleOf?.(drafterId) ?? '',
-          name: nameOf(drafterId),
+          key: drafterSnapshot?.key ?? `drafter-${drafterId}`,
+          title: drafterSnapshot?.title ?? titleOf?.(drafterId) ?? '',
+          name: drafterSnapshot?.name ?? nameOf(drafterId),
           stamp: <StampMark label="기안" tone="DRAFT" date={draftedAt} />,
         },
       ]
@@ -294,10 +305,10 @@ export function ApprovalStampTable({
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             {recipients.map((r) => (
               <span
-                key={r.userId}
+                key={r.key ?? r.userId ?? r.snapshotName}
                 className={cn('inline-flex items-center gap-1', approvalText.body)}
               >
-                {nameOf(r.userId)}
+                {r.snapshotName ?? nameOf(r.userId)}
                 {/* 열람 확인 — 읽은 사람만 표식이 붙는다(안 읽었으면 아무 것도 적지 않는다). */}
                 {r.read && <Check size={13} className="text-info" strokeWidth={2.5} />}
               </span>
