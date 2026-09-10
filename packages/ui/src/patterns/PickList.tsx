@@ -92,18 +92,26 @@ export interface PickMarkProps {
 /**
  * 여럿을 담는 목록에서 줄 왼쪽에 서는 선택 표식.
  *
- * 상자가 아니라 원인 것은 이 자리가 **폼의 체크박스가 아니라 목록의 상태**이기 때문이다 —
- * 값을 입력하는 칸이 아니라 담았는지를 되읽는 표식이라, 같은 화면의 진짜 체크박스와 모양이
- * 같으면 어느 것이 입력이고 어느 것이 결과인지 갈리지 않는다.
+ * **체크박스 모양이다**(2026-09-10 사용자 지정). 원이었던 동안 담당자는 이 표식을 라디오로
+ * 읽어 한 줄만 고를 수 있는 목록으로 알았다 — 실제로는 셋 다 여럿을 담는 목록인데, 모양이
+ * 그 사실을 부정하고 있었다. 앱의 다른 자리에서 '여럿 고르기'를 말하는 것은 언제나 네모
+ * 체크박스(표의 행 선택)라, 여기만 원이면 규격이 아니라 예외가 된다.
  *
- * 꺼진 상태에서도 원이 서는 것이 요점이다. 담긴 줄에만 표식을 그리면 담을 수 있다는 사실이
+ * 진짜 `<input type="checkbox">`를 두지 않는 이유는 줄 전체가 이미 버튼이기 때문이다
+ * (`PickRow`) — 버튼 안의 입력 컨트롤은 클릭 주인이 둘이 되어, 같은 줄을 눌러도 어디를
+ * 눌렀느냐에 따라 다르게 동작하는 순간이 생긴다. 규격(크기·모서리·브랜드 면)은 `Checkbox`와
+ * 같은 값을 쓴다.
+ *
+ * 꺼진 상태에서도 상자가 서는 것이 요점이다. 담긴 줄에만 표식을 그리면 담을 수 있다는 사실이
  * 눌러 보기 전에는 드러나지 않는다.
  */
 export function PickMark({ checked, children }: PickMarkProps) {
   return (
     <span
       className={cn(
-        'grid size-5 shrink-0 place-items-center rounded-full border',
+        // 모서리는 `Checkbox`와 같은 `rounded`다(§2.3) — 라디오의 원형과 카드의 radius-lg 사이
+        // 어느 토큰도 이 크기에 맞지 않아 체크박스만 이 값을 쓴다.
+        'grid size-4 shrink-0 place-items-center rounded border',
         checked ? 'border-brand bg-brand text-white' : 'border-gray-300 text-transparent',
       )}
     >

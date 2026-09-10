@@ -156,6 +156,9 @@ export { MiniPager, usePaged } from './patterns/MiniPager'
 // 화면마다 갈리지 않도록 한곳에 모은다.
 export { PickList, PickRow, PickMark } from './patterns/PickList'
 export type { PickListProps, PickRowProps, PickMarkProps } from './patterns/PickList'
+// 좌우 두 목록 사이로 줄을 옮기는 창(계정생성·명단 담기)의 골격.
+export { TransferPanes } from './patterns/TransferPanes'
+export type { TransferPanesProps, TransferSide, TransferMove } from './patterns/TransferPanes'
 export { PanelCard } from './patterns/PanelCard'
 export type { PanelCardProps } from './patterns/PanelCard'
 // 설정 한 줄(제목·설명 + 오른쪽 토글)의 소유자.

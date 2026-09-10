@@ -15,6 +15,12 @@ import {
  * 빼면 반드시 다른 쪽에 서야 하고, 그 짝을 화면에서 손으로 맞추면 어느 한 줄이 양쪽에 서거나
  * 어느 쪽에도 서지 않는 순간이 생긴다.
  *
+ * **옮기는 것은 체크한 줄이다**(2026-09-10 사용자 지정). 줄을 누르면 곧바로 건너가던
+ * 종전 방식은 한 번에 한 줄뿐이라, 스무 곳에 계정을 세우는 기수 시작에 스무 번을 눌러야
+ * 했다. 체크 상태를 여기 두는 이유도 목록과 같다 — 어느 줄이 체크됐는가와 그 줄이 어느
+ * 기둥에 서 있는가는 함께 움직여야 하고(옮긴 줄의 체크는 풀린다), 화면에서 손으로 맞추면
+ * 옮겨진 뒤에도 체크가 남아 가운데 버튼의 건수가 거짓을 말한다.
+ *
  * **확정 전에는 아무 일도 일어나지 않는다**(결재선 설정 창과 같은 규약) — 옮기는 동안 계정이
  * 세워지거나 명부 행이 지워지면, 잘못 눌렀다는 것을 알아차렸을 때 이미 되돌릴 수 없다.
  */
@@ -79,6 +85,9 @@ export function useParticipantTransfer(
    * 화면이 원장의 사본을 들게 되어, 저장 직전에 원장이 바뀌어도 옛 값을 보낸다.
    */
   const [typed, setTyped] = useState<Record<string, PersonInput>>({})
+  /** 지금 체크된 줄(원장 행 id). 기둥마다 따로 센다 — 가운데 버튼이 방향별로 서 있다. */
+  const [checkedLeft, setCheckedLeft] = useState<string[]>([])
+  const [checkedRight, setCheckedRight] = useState<string[]>([])
 
   const term = search.trim().toLowerCase()
 
@@ -146,14 +155,55 @@ export function useParticipantTransfer(
     else setDrafts((prev) => prev.filter((d) => d.id !== row.masterId))
   }, [])
 
+  const toggleLeft = useCallback(
+    (id: string) =>
+      setCheckedLeft((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])),
+    [],
+  )
+  const toggleRight = useCallback(
+    (id: string) =>
+      setCheckedRight((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])),
+    [],
+  )
+
   /**
-   * 전체 넣기·전체 빼기는 **보이는 것에만** 걸린다 — 그래서 목록을 인자로 받는다.
+   * 체크는 **지금 그 기둥에 서 있는 줄**만 센다. 검색어를 바꾸면 왼쪽 목록이 갈리는데, 그때
+   * 사라진 줄의 체크가 남아 있으면 가운데 버튼이 화면에 없는 건수를 세어 보여 준다.
+   */
+  const leftChecked = useMemo(() => {
+    const visible = new Set(left.map((r) => r.masterId))
+    return checkedLeft.filter((id) => visible.has(id))
+  }, [checkedLeft, left])
+  const rightChecked = useMemo(() => {
+    const visible = new Set(right.map((r) => r.masterId))
+    return checkedRight.filter((id) => visible.has(id))
+  }, [checkedRight, right])
+
+  const moveRight = useCallback(() => {
+    left.filter((r) => leftChecked.includes(r.masterId)).forEach(add)
+    setCheckedLeft([])
+  }, [add, left, leftChecked])
+
+  const moveLeft = useCallback(() => {
+    right.filter((r) => rightChecked.includes(r.masterId)).forEach(take)
+    setCheckedRight([])
+  }, [right, rightChecked, take])
+
+  /**
+   * 전체 넣기·전체 빼기는 **보이는 것에만** 걸린다.
    *
    * 검색으로 좁혀 놓은 뜻을 '전체'가 무시하면, 담당자는 자기가 무엇을 옮겼는지 화면에서
    * 확인할 수 없는 상태로 확정 버튼 앞에 서게 된다.
    */
-  const addAll = useCallback((rows: LeftRow[]) => rows.forEach(add), [add])
-  const takeAll = useCallback((rows: RightRow[]) => rows.forEach(take), [take])
+  const moveAllRight = useCallback(() => {
+    left.forEach(add)
+    setCheckedLeft([])
+  }, [add, left])
+
+  const moveAllLeft = useCallback(() => {
+    right.forEach(take)
+    setCheckedRight([])
+  }, [right, take])
 
   const setPerson = useCallback(
     (masterId: string, next: PersonInput) => setTyped((prev) => ({ ...prev, [masterId]: next })),
@@ -164,6 +214,8 @@ export function useParticipantTransfer(
     setDrafts([])
     setRemoved([])
     setTyped({})
+    setCheckedLeft([])
+    setCheckedRight([])
   }, [])
 
   /**
@@ -184,10 +236,14 @@ export function useParticipantTransfer(
     left,
     right,
     typed,
-    add,
-    addAll,
-    take,
-    takeAll,
+    checkedLeft: leftChecked,
+    checkedRight: rightChecked,
+    toggleLeft,
+    toggleRight,
+    moveRight,
+    moveLeft,
+    moveAllRight,
+    moveAllLeft,
     setPerson,
     reset,
     additions,

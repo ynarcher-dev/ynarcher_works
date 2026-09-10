@@ -1,5 +1,4 @@
-import { Badge, Field, IconButton, Input, cardText, cn } from '@ynarcher/ui'
-import { X } from 'lucide-react'
+import { Badge, Checkbox, Field, Input, cardText, cn } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import {
   ledgerPerson,
@@ -18,24 +17,35 @@ import type { RightRow } from '@/features/program/participantTransfer'
  *
  * **사람을 고르는 축은 없다**(2026-09-09). 명의는 원장이 답하고, 같은 사람에게 계정이 두 벌
  * 생기지 않는 것은 발급의 멱등성이 보장한다 — 근거는 `participantPerson.ts`에 있다.
+ *
+ * **줄 끝의 X를 걷고 앞머리에 체크박스를 세웠다**(2026-09-10). 왼쪽 기둥이 체크해서 옮기는
+ * 곳이 된 이상 오른쪽만 눌러서 즉시 내리는 곳으로 두면, 같은 창에서 같은 생김새의 줄이
+ * 기둥마다 다르게 동작한다. 내리는 조작은 가운데 [빼기] 하나가 갖는다 — 같은 일을 하는
+ * 컨트롤이 둘이면 어느 쪽이 규격인지 화면이 답하지 못한다.
+ *
+ * 체크박스만 진짜 컨트롤이고 줄 전체를 누르게 하지 않는다 — 이 줄에는 입력칸이 서서,
+ * 이메일을 적으려고 누른 손이 체크를 끄는 일이 생긴다.
  */
 export function ParticipantRightRow({
   spec,
   row,
+  checked,
+  onToggle,
   typed,
   onChange,
-  onRemove,
 }: {
   spec: ParticipantPersona
   row: RightRow
+  /** 지금 체크된 줄인지. 가운데 [빼기]가 옮길 대상이다. */
+  checked: boolean
+  onToggle: () => void
   /** 담당자가 이 줄에 적은 값. 원장이 다 알고 있으면 undefined다. */
   typed: PersonInput | undefined
   onChange: (next: PersonInput) => void
-  onRemove: () => void
 }) {
   if (row.kind === 'existing') {
     return (
-      <RowShell name={row.name} badge={null} onRemove={onRemove} removeLabel={`${row.name} 명부에서 빼기`}>
+      <RowShell name={row.name} badge={null} checked={checked} onToggle={onToggle}>
         <p className={cn('truncate', cardText.meta)}>
           {[row.personName, row.personEmail].filter(Boolean).join(' · ') || '계정 정보 없음'}
         </p>
@@ -47,12 +57,7 @@ export function ParticipantRightRow({
   const value = typed ?? ledgerPerson(c)
 
   return (
-    <RowShell
-      name={c.name}
-      badge={<Badge tone="info">이번에 생성</Badge>}
-      onRemove={onRemove}
-      removeLabel={`${c.name} 빼기`}
-    >
+    <RowShell name={c.name} badge={<Badge tone="info">이번에 생성</Badge>} checked={checked} onToggle={onToggle}>
       {needsPerson(c) ? (
         <div className="space-y-2">
           {/*
@@ -92,34 +97,29 @@ export function ParticipantRightRow({
   )
 }
 
-/** 두 갈래가 공유하는 껍데기 — 이름 줄과 빼기 버튼의 자리는 갈리지 않는다. */
+/** 두 갈래가 공유하는 껍데기 — 이름 줄과 체크박스의 자리는 갈리지 않는다. */
 function RowShell({
   name,
   badge,
-  onRemove,
-  removeLabel,
+  checked,
+  onToggle,
   children,
 }: {
   name: string
   badge: ReactNode
-  onRemove: () => void
-  removeLabel: string
+  checked: boolean
+  onToggle: () => void
   children: ReactNode
 }) {
   return (
     <div className="space-y-2 border-b border-gray-200 px-3 py-2.5 last:border-b-0">
       <div className="flex items-center gap-2">
-        <span className={cn('min-w-0 flex-1 truncate font-medium', cardText.value)}>{name}</span>
+        {/* 이름까지가 클릭 영역이다(입력칸은 아니다) — 라벨 글자는 이름 규격을 그대로 쓴다. */}
+        <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2">
+          <Checkbox checked={checked} onChange={onToggle} />
+          <span className={cn('min-w-0 flex-1 truncate font-medium', cardText.value)}>{name}</span>
+        </label>
         {badge}
-        <IconButton
-          density="table"
-          variant="ghost"
-          danger
-          label={removeLabel}
-          title={removeLabel}
-          onClick={onRemove}
-          icon={<X size={14} />}
-        />
       </div>
       {children}
     </div>

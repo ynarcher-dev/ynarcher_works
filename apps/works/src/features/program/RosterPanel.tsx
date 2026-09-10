@@ -84,16 +84,10 @@ export function RosterPanel({
           keyword={keyword}
           onKeywordChange={setKeyword}
           searchPlaceholder={spec.listSearchPlaceholder}
-          actions={
-            <div className="flex items-center gap-2">
-              {/* 대용량은 옆에 서되 물러선 모양이다 — 한 건씩 담는 일이 이 화면의 주 행동이고,
-                  파일을 올리는 것은 기수 시작처럼 이따금 있는 일이다. */}
-              <Button variant="outline" onClick={() => setBulkOpen(true)}>
-                대용량 담기
-              </Button>
-              <Button onClick={() => setAddOpen(true)}>{spec.label} 추가</Button>
-            </div>
-          }
+          // 담는 입구는 하나다(2026-09-10 사용자 지정). 대용량은 옆에 선 두 번째 버튼이
+          // 아니라 추가 창 안의 다른 길로 들어간다 — 한 건이든 백 건이든 담당자가 하려는
+          // 일은 '명단에 담기' 하나이고, 파일을 올릴지는 원장을 찾아본 다음에 갈리는 문제다.
+          actions={<Button onClick={() => setAddOpen(true)}>{spec.label} 추가</Button>}
         />
 
         {selected.length > 0 && (
@@ -144,6 +138,12 @@ export function RosterPanel({
       <RosterAddModal
         open={addOpen}
         onClose={() => setAddOpen(false)}
+        // 창을 겹쳐 세우지 않고 바꿔 단다 — 겹치면 뒤 창의 검색 결과가 앞 창의 리뷰 표
+        // 뒤로 비쳐 어느 목록을 보고 있는지가 흐려진다.
+        onBulk={() => {
+          setAddOpen(false)
+          setBulkOpen(true)
+        }}
         programId={programId}
         master={persona}
       />
