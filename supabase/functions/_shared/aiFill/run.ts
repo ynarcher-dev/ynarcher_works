@@ -40,7 +40,7 @@ import { dedupe, mergeEnvelopes } from './merge.ts'
 import { buildParts, selectParts } from './parts.ts'
 import { runPool } from './pool.ts'
 import { chunkRanker, type AiFillProfile, type CallerClient } from './profile.ts'
-import { readConcurrency } from './request.ts'
+import { readConcurrency, readThinkingLevel } from './request.ts'
 import { buildEnvelopeSchema } from './schema.ts'
 import { SOURCE_KIND_RULES } from './sourceKinds.ts'
 import { validateSources } from './sources.ts'
@@ -70,6 +70,8 @@ interface RunMetrics {
   promptTokens: number
   cachedTokens: number
   outputTokens: number
+  /** 생각에 쓴 토큰. **출력 요금으로 청구되므로** 비용을 볼 때 출력과 함께 읽는다. */
+  thinkingTokens: number
   verified: number
   unverified: number
   rejected: number
@@ -110,6 +112,8 @@ export async function runAiFill<K extends string, C>(
   }
   // 별칭 모델을 기본값으로 둔다(특정 버전은 신규 프로젝트에 폐기될 수 있어 GEMINI_MODEL로 덮어쓴다).
   const model = Deno.env.get('GEMINI_MODEL') ?? 'gemini-flash-latest'
+  // 생각 깊이는 실행 한 벌에서 하나다 — 묶음마다 다르면 어느 값의 결과인지 로그가 답하지 못한다.
+  const thinkingLevel = readThinkingLevel(Deno.env.get('GEMINI_THINKING_LEVEL'))
 
   const caller = callerClient(token)
 
@@ -254,6 +258,7 @@ export async function runAiFill<K extends string, C>(
       promptTokens: 0,
       cachedTokens: 0,
       outputTokens: 0,
+      thinkingTokens: 0,
       verified: 0,
       unverified: 0,
       rejected: 0,
@@ -275,6 +280,7 @@ export async function runAiFill<K extends string, C>(
         model: viaCache ? cacheModel : model,
         parts: viaCache ? [prompt] : [...selected.parts, prompt],
         cachedContent: viaCache && cache ? cache.name : undefined,
+        thinkingLevel,
         cards: group.cards,
         signal: controller.signal,
         schema: buildEnvelopeSchema(group.cards, profile.cardSchemas),
@@ -321,6 +327,7 @@ export async function runAiFill<K extends string, C>(
       metrics.promptTokens += r.value.telemetry.promptTokens ?? 0
       metrics.cachedTokens += r.value.telemetry.cachedTokens ?? 0
       metrics.outputTokens += r.value.telemetry.outputTokens ?? 0
+      metrics.thinkingTokens += r.value.telemetry.thinkingTokens ?? 0
       metrics.verified += r.value.stats.verified
       metrics.unverified += r.value.stats.unverified
       metrics.rejected += r.value.stats.rejected
@@ -347,6 +354,7 @@ export async function runAiFill<K extends string, C>(
           metrics.promptTokens += again.telemetry.promptTokens ?? 0
           metrics.cachedTokens += again.telemetry.cachedTokens ?? 0
           metrics.outputTokens += again.telemetry.outputTokens ?? 0
+          metrics.thinkingTokens += again.telemetry.thinkingTokens ?? 0
           metrics.verified += again.stats.verified
           metrics.unverified += again.stats.unverified
           metrics.rejected += again.stats.rejected
@@ -381,6 +389,7 @@ export async function runAiFill<K extends string, C>(
           signal: controller.signal,
           schema: buildComposeSchema(targets, spec.cardSchemas),
           temperature: spec.temperature,
+          thinkingLevel,
           normalize: (parsed) =>
             normalizeEnvelope(parsed, targets, {
               normalizeCard: (key, raw, warn) => profile.normalizeCard(key, raw, warn, context),
@@ -413,6 +422,7 @@ export async function runAiFill<K extends string, C>(
           metrics.promptTokens += written.telemetry.promptTokens ?? 0
           metrics.cachedTokens += written.telemetry.cachedTokens ?? 0
           metrics.outputTokens += written.telemetry.outputTokens ?? 0
+          metrics.thinkingTokens += written.telemetry.thinkingTokens ?? 0
         }
       }
     }
@@ -430,6 +440,8 @@ export async function runAiFill<K extends string, C>(
       '[ai-fill] 실행 요약',
       JSON.stringify({
         profile: profile.name,
+        // 이 실행이 쓴 생각 깊이. 비용·시간의 전후 비교가 이 값을 기준으로 갈린다.
+        thinking: thinkingLevel,
         groups: groups.length,
         called: runnable.length,
         topup: topupCalled,

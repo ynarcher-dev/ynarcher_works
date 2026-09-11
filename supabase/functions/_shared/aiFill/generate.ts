@@ -13,6 +13,7 @@
 
 import type { DraftEnvelope, EnvelopeStats } from './envelope.ts'
 import { parseJson } from './envelope.ts'
+import type { ThinkingLevel } from './request.ts'
 import type { SchemaNode } from './schema.ts'
 
 /** 잠깐인 실패. 같은 요청을 다시 보내면 성공할 수 있는 것들만 담는다. */
@@ -145,6 +146,13 @@ export interface GenerateOptions<K extends string> {
    * 이 이름 하나를 가리켜 자료 값을 한 번만 치른다(contextCache.ts).
    */
   cachedContent?: string
+  /**
+   * 답하기 전에 속으로 생각하는 깊이(`request.ts`가 시크릿에서 읽는다).
+   *
+   * 주지 않으면 **설정 자체를 보내지 않아** 공급자의 기본값이 그대로 선다 — 값을 모를 때
+   * 우리가 임의로 정하지 않는다.
+   */
+  thinkingLevel?: ThinkingLevel
 }
 
 /** 사용량 응답에서 수를 꺼낸다. 필드가 없거나 수가 아니면 null(0으로 세면 거짓이 된다). */
@@ -166,19 +174,33 @@ export async function generateDraft<K extends string>(
   const startedAt = Date.now()
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(opts.model)}:generateContent?key=${opts.apiKey}`
-  const payload = JSON.stringify({
-    contents: [{ parts: opts.parts }],
-    // 캐시를 쓰면 자료는 여기 실리지 않고 이 이름이 가리킨다. 값이 없으면 키 자체를 보내지
-    // 않는다 — 빈 문자열을 보내면 공급자가 없는 캐시를 찾다가 요청을 통째로 거절한다.
-    ...(opts.cachedContent ? { cachedContent: opts.cachedContent } : {}),
-    generationConfig: {
-      // 사실을 옮기는 작업이라 온도를 낮게 둔다(같은 자료에서 같은 답이 나와야 한다).
-      temperature: opts.temperature ?? 0.2,
-      responseMimeType: 'application/json',
-      responseSchema: opts.schema,
-    },
-  })
+  /**
+   * 요청 본문. **생각 깊이를 뺀 판을 따로 세울 수 있어야** 하므로 함수로 둔다.
+   *
+   * 모델 이름이 별칭(`gemini-flash-latest`)이라 공급자가 그것을 옮기는 날 이 설정을 받지 않는
+   * 모델이 설 수 있고, 그때 요청이 통째로 400이 되면 **기능이 통째로 죽는다.** 설정 하나 때문에
+   * 초안을 잃어서는 안 되므로, 거절당하면 빼고 한 번 더 보낸다(캐시 실패를 실패로 세지 않는
+   * 것과 같은 판단 — contextCache.ts).
+   */
+  const buildPayload = (withThinking: boolean) =>
+    JSON.stringify({
+      contents: [{ parts: opts.parts }],
+      // 캐시를 쓰면 자료는 여기 실리지 않고 이 이름이 가리킨다. 값이 없으면 키 자체를 보내지
+      // 않는다 — 빈 문자열을 보내면 공급자가 없는 캐시를 찾다가 요청을 통째로 거절한다.
+      ...(opts.cachedContent ? { cachedContent: opts.cachedContent } : {}),
+      generationConfig: {
+        // 사실을 옮기는 작업이라 온도를 낮게 둔다(같은 자료에서 같은 답이 나와야 한다).
+        temperature: opts.temperature ?? 0.2,
+        responseMimeType: 'application/json',
+        responseSchema: opts.schema,
+        ...(withThinking && opts.thinkingLevel
+          ? { thinkingConfig: { thinkingLevel: opts.thinkingLevel } }
+          : {}),
+      },
+    })
 
+  let thinkingSent = opts.thinkingLevel != null
+  let payload = buildPayload(thinkingSent)
   let lastFailure: ModelFailure = { message: 'AI 작성에 실패했습니다.', upstream: null }
   let parseFailures = 0
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
@@ -194,6 +216,14 @@ export async function generateDraft<K extends string>(
       const reason = upstreamReason(resp.status, body)
       console.error('[ai-fill] gemini 오류', resp.status, reason)
       lastFailure = { message: friendly(resp.status, reason), upstream: resp.status }
+      // 생각 깊이를 받지 않는 모델이다. 설정을 빼고 한 번 더 보낸다 — 초안을 잃는 것보다
+      // 비싸게 받는 편이 낫고, 어느 쪽인지는 로그가 답한다.
+      if (resp.status === 400 && thinkingSent && /thinking/i.test(reason)) {
+        console.warn('[ai-fill] 생각 깊이 설정을 이 모델이 받지 않아 빼고 다시 보냅니다', opts.model)
+        thinkingSent = false
+        payload = buildPayload(false)
+        continue
+      }
       if (attempt < MAX_ATTEMPTS - 1 && TRANSIENT.has(resp.status)) {
         const delay = RETRY_BASE_MS * 2 ** attempt + Math.random() * RETRY_JITTER_MS
         await waitBeforeRetry(delay, opts.signal)
@@ -229,7 +259,13 @@ export async function generateDraft<K extends string>(
       // 구조화 로그 한 줄 — 내용은 담지 않고 수와 코드만 담는다(ModelTelemetry 주석 참조).
       console.log(
         '[ai-fill] 모델 사용량',
-        JSON.stringify({ group: opts.label ?? null, cards: opts.cards.length, ...telemetry }),
+        JSON.stringify({
+          group: opts.label ?? null,
+          cards: opts.cards.length,
+          // 어느 깊이로 받은 답인지. 이 값이 없으면 생각 토큰의 변화를 설정 탓으로 돌릴 수 없다.
+          thinking: thinkingSent ? (opts.thinkingLevel ?? null) : null,
+          ...telemetry,
+        }),
       )
       const normalized = opts.normalize(parsed)
       return { ...normalized, telemetry }

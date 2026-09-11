@@ -32,3 +32,30 @@ export function readConcurrency(raw: string | undefined): number {
   if (!Number.isFinite(value) || value < 1) return GROUP_CONCURRENCY
   return Math.min(Math.trunc(value), 4)
 }
+
+/**
+ * 모델이 답하기 전에 **속으로 생각하는 깊이**.
+ *
+ * 이 축을 연 이유는 비용과 시간 둘 다다. 생각은 **출력 요금으로 청구되고**(입력의 다섯 배)
+ * 실측에서 한 요청이 생각에만 26,969토큰·84초를 쓴 날이 있었다 — 그 한 건이 전체 상한(125초)을
+ * 먹어 같은 실행의 다른 카드가 시간 초과로 빠졌다. 자료에서 값을 옮겨 적는 일에 그만한 궁리는
+ * 필요하지 않다.
+ */
+export type ThinkingLevel = 'low' | 'medium' | 'high'
+
+const THINKING_LEVELS: ReadonlySet<string> = new Set<ThinkingLevel>(['low', 'medium', 'high'])
+
+/**
+ * 생각 깊이를 시크릿에서 읽는다. **기본값은 `low`**이고 값이 이상하면 기본값으로 떨어진다.
+ *
+ * 기본을 낮게 두는 것은 이 기능이 하는 일이 추론이 아니라 **옮겨 적기**이기 때문이다. 다만
+ * 코드에 박지 않고 시크릿으로 여는 이유는 품질이 실제로 떨어지는 날 **재배포 없이** 되돌려야
+ * 하기 때문이다(요율 상한을 `GEMINI_MAX_CONCURRENCY`로 조이는 것과 같은 규약).
+ *
+ * **끄는 값은 두지 않는다** — 공급자가 Flash 계열의 전면 해제를 받지 않으므로, 없는 값을
+ * 선택지로 두면 그것을 고른 날 요청이 통째로 거절된다.
+ */
+export function readThinkingLevel(raw: string | undefined): ThinkingLevel {
+  const value = (raw ?? '').trim().toLowerCase()
+  return THINKING_LEVELS.has(value) ? (value as ThinkingLevel) : 'low'
+}
