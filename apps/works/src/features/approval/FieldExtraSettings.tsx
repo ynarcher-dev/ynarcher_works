@@ -1,4 +1,5 @@
-import { Field, Input, TextArea } from '@ynarcher/ui'
+import { Field, Input } from '@ynarcher/ui'
+import { RichTextEditor } from '@/components/RichTextEditor'
 import { FieldColumnRows } from '@/features/approval/FieldColumnRows'
 import type { FormField } from '@/features/approval/fields'
 
@@ -53,11 +54,10 @@ export function FieldExtraSettings({
           옛 결재에서 담당자가 매번 손으로 적던 뼈대라, 양식이 한 번 갖고 있으면 된다. */}
       {field.type === 'RICHTEXT' && (
         <Field label="기본 문구" hint="새 문서가 이 내용으로 시작합니다. 비워 두면 빈 본문입니다.">
-          <TextArea
-            rows={3}
-            placeholder={'1. 행사명 : \n2. 행사일자 : '}
+          <RichTextEditor
+            placeholder="새 문서의 기본 내용을 입력하세요."
             value={field.defaultValue ?? ''}
-            onChange={(e) => onChange({ ...field, defaultValue: e.target.value })}
+            onChange={(html) => onChange({ ...field, defaultValue: html })}
           />
         </Field>
       )}
