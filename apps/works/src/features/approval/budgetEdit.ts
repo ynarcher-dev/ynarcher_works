@@ -31,14 +31,15 @@ function blank(taken: string[], depth: number): BudgetRow {
   return { id: newBudgetRowId(taken), depth, name: '', values: {} }
 }
 
-function entryBlank(taken: string[], levelCount: number): BudgetRow {
-  return {
-    id: newBudgetRowId(taken),
-    depth: 0,
-    name: '',
-    path: Array.from({ length: Math.max(1, levelCount) }, () => ''),
-    values: {},
+function blankBranch(taken: string[], fromDepth: number, toDepth: number): BudgetRow[] {
+  const used = [...taken]
+  const rows: BudgetRow[] = []
+  for (let depth = fromDepth; depth <= toDepth; depth += 1) {
+    const id = newBudgetRowId(used)
+    used.push(id)
+    rows.push({ id, depth, name: '', values: {} })
   }
+  return rows
 }
 
 /** 기존 트리 값을 가로형 항목 행으로 바꾼다. 맨 아래 줄 id와 숫자 값은 그대로다. */
@@ -53,7 +54,7 @@ function withTreeEntries(value: BudgetTreeValue, entries: BudgetRow[]): BudgetTr
 /** 빈 예산표 — 맨 위층 한 줄로 시작한다(무엇을 적는 자리인지 보이도록). */
 export function emptyBudget(levels: string[]): BudgetTreeValue {
   const nextLevels = levels.length > 0 ? [...levels] : ['1단계']
-  return { levels: nextLevels, rows: [entryBlank([], nextLevels.length)] }
+  return { levels: nextLevels, rows: blankBranch([], 0, nextLevels.length - 1) }
 }
 
 /** 분류 단계 수를 바꾸고 각 행의 분류 칸 수도 함께 맞춘다. */
@@ -72,18 +73,51 @@ export function setLevelCount(value: BudgetTreeValue, count: number): BudgetTree
 
 /** 가로형 예산 항목을 표 끝에 한 줄 더한다. */
 export function appendBudgetEntry(value: BudgetTreeValue): BudgetTreeValue {
-  const flat = withEntries(value)
-  return withTreeEntries(value, [
-    ...flat.rows,
-    entryBlank(flat.rows.map((row) => row.id), flat.levels.length),
-  ])
+  const tree = asBudgetTree(value)
+  return {
+    ...tree,
+    rows: [
+      ...tree.rows,
+      ...blankBranch(tree.rows.map((row) => row.id), 0, tree.levels.length - 1),
+    ],
+  }
+}
+
+/** 지정한 분류 아래에 다음 단계부터 맨 아래 예산 항목까지 새 가지를 만든다. */
+export function addBudgetBranch(value: BudgetTreeValue, nodeIndex: number): BudgetTreeValue {
+  const tree = asBudgetTree(value)
+  const node = tree.rows[nodeIndex]
+  if (!node || node.depth >= tree.levels.length - 1) return tree
+  const [, end] = descendantRange(tree.rows, nodeIndex)
+  const branch = blankBranch(
+    tree.rows.map((row) => row.id),
+    node.depth + 1,
+    tree.levels.length - 1,
+  )
+  const rows = [...tree.rows]
+  rows.splice(end, 0, ...branch)
+  return withRows(tree, rows)
 }
 
 /** 가로형 예산 항목 한 줄만 뺀다. */
 export function removeBudgetEntry(value: BudgetTreeValue, index: number): BudgetTreeValue {
-  const flat = withEntries(value)
-  if (flat.rows.length <= 1) return budgetTreeFromEntries(value.levels, flat.rows)
-  return withTreeEntries(value, flat.rows.filter((_, i) => i !== index))
+  const tree = asBudgetTree(value)
+  const grid = budgetGridRows(tree)
+  if (grid.length <= 1) return tree
+  const pathIds = (grid[index]?.nodePath ?? []).map((nodeIndex) => tree.rows[nodeIndex]!.id)
+  if (pathIds.length === 0) return tree
+
+  const rows = tree.rows.filter((row) => row.id !== pathIds[pathIds.length - 1])
+  // 마지막 자식을 지운 부모만 위로 거슬러 올라가며 정리한다. 다른 자식이 하나라도 있으면
+  // 그 위 부모도 당연히 살아 있으므로 멈춘다.
+  for (let level = pathIds.length - 2; level >= 0; level -= 1) {
+    const parentIndex = rows.findIndex((row) => row.id === pathIds[level])
+    if (parentIndex < 0) continue
+    const parentDepth = rows[parentIndex]!.depth
+    if ((rows[parentIndex + 1]?.depth ?? -1) > parentDepth) break
+    rows.splice(parentIndex, 1)
+  }
+  return withRows(tree, rows)
 }
 
 /** 가로형 예산 항목을 바로 위/아래 행과 바꾼다. */

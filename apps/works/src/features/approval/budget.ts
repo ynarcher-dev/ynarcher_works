@@ -267,7 +267,19 @@ export function budgetTreeFromEntries(
 
 /** 저장 모양이 구 트리든 잠시 쓰인 path 행이든 현재의 실제 트리로 정규화한다. */
 export function asBudgetTree(value: BudgetTreeValue): BudgetTreeValue {
-  return budgetTreeFromEntries(value.levels, budgetEntries(value))
+  const levels = value.levels.length > 0 ? value.levels : ['1단계']
+  // path 값은 가로형 1차 구현에서 잠시 저장된 모양이라 실제 트리로 바꾼다.
+  if (value.rows.some((row) => row.path !== undefined)) {
+    return budgetTreeFromEntries(levels, budgetEntries(value))
+  }
+
+  const rows = normalizeDepths(value.rows)
+  // 현재 트리는 모든 예산 줄이 마지막 단계에 선다. 이미 그 모양이면 이름이 같거나 비어 있어도
+  // 다시 묶지 않는다 — 서로 다른 두 대분류는 이름이 같아도 노드 id가 다르면 다른 가지다.
+  const complete = rows.every(
+    (_, index) => !isLeaf(rows, index) || rows[index]!.depth === levels.length - 1,
+  )
+  return complete ? { levels, rows } : budgetTreeFromEntries(levels, budgetEntries({ levels, rows }))
 }
 
 export interface BudgetGridCell {

@@ -15,12 +15,14 @@ import {
   type BudgetTreeValue,
 } from '@/features/approval/budget'
 import {
+  addBudgetBranch,
   addChild,
   appendBudgetEntry,
   addSibling,
   canIndent,
   canMoveBudgetEntry,
   canMove,
+  emptyBudget,
   indent,
   moveRow,
   moveBudgetEntry,
@@ -194,6 +196,46 @@ describe('예산표 — 분류 단계를 가로 열로 편다', () => {
     expect(grid[2]!.cells[0]).toBeNull()
     expect(grid[0]!.cells[1]?.rowSpan).toBe(2)
     expect(grid[2]!.cells[1]?.rowSpan).toBe(1)
+  })
+
+  it('표 아래 추가는 이름이 비어 있어도 별도의 새 대분류를 만든다', () => {
+    const next = appendBudgetEntry(emptyBudget(['대분류', '중분류', '소분류']))
+    const grid = budgetGridRows(next)
+
+    expect(grid).toHaveLength(2)
+    expect(grid[0]!.cells[0]?.rowSpan).toBe(1)
+    expect(grid[1]!.cells[0]?.rowSpan).toBe(1)
+    expect(grid[0]!.nodePath[0]).not.toBe(grid[1]!.nodePath[0])
+  })
+
+  it('상위 분류의 추가는 그 아래 단계에 새 가지를 만든다', () => {
+    const initial = emptyBudget(['대분류', '중분류', '소분류'])
+    const rootIndex = budgetGridRows(initial)[0]!.cells[0]!.nodeIndex
+    const withMiddleBranch = addBudgetBranch(initial, rootIndex)
+    const middleGrid = budgetGridRows(withMiddleBranch)
+
+    expect(middleGrid).toHaveLength(2)
+    expect(middleGrid[0]!.cells[0]?.rowSpan).toBe(2)
+    expect(middleGrid[0]!.cells[1]?.rowSpan).toBe(1)
+    expect(middleGrid[1]!.cells[1]?.rowSpan).toBe(1)
+
+    const middleIndex = middleGrid[0]!.cells[1]!.nodeIndex
+    const withLeafBranch = addBudgetBranch(withMiddleBranch, middleIndex)
+    const leafGrid = budgetGridRows(withLeafBranch)
+
+    expect(leafGrid).toHaveLength(3)
+    expect(leafGrid[0]!.cells[0]?.rowSpan).toBe(3)
+    expect(leafGrid[0]!.cells[1]?.rowSpan).toBe(2)
+  })
+
+  it('마지막 자식을 지우면 비게 된 상위 가지도 함께 정리한다', () => {
+    const twoRoots = appendBudgetEntry(emptyBudget(['대분류', '중분류', '소분류']))
+    const removed = removeBudgetEntry(twoRoots, 0)
+    const grid = budgetGridRows(removed)
+
+    expect(grid).toHaveLength(1)
+    expect(removed.rows).toHaveLength(3)
+    expect(grid[0]!.nodePath).toHaveLength(3)
   })
 
   it('병합된 상위 노드의 이름은 한 번 고치면 모든 하위 경로에 반영된다', () => {

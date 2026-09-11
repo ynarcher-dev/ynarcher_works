@@ -10,6 +10,7 @@ import {
   type BudgetTreeValue,
 } from '@/features/approval/budget'
 import {
+  addBudgetBranch,
   appendBudgetEntry,
   canMoveBudgetEntry,
   moveBudgetEntry,
@@ -154,6 +155,19 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
                           density="table"
                           className="h-full min-h-8"
                           value={tree.rows[cell.nodeIndex]?.name ?? ''}
+                          action={
+                            level < levelCount - 1 ? <Plus aria-hidden size={14} /> : undefined
+                          }
+                          actionLabel={
+                            level < levelCount - 1
+                              ? `${levelLabel(levels, level + 1)} 분기 추가`
+                              : undefined
+                          }
+                          onActionClick={
+                            level < levelCount - 1
+                              ? () => onChange(addBudgetBranch(tree, cell.nodeIndex))
+                              : undefined
+                          }
                           onChange={(e) =>
                             onChange(setName(tree, cell.nodeIndex, e.target.value))
                           }
@@ -222,7 +236,7 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
         <div className="border-t border-gray-100 p-2">
           <Button variant="ghost" density="table" onClick={() => onChange(appendBudgetEntry(tree))}>
             <Plus size={14} className="mr-1" />
-            예산 항목 추가
+            {levelLabel(levels, 0)} 추가
           </Button>
         </div>
       </div>
