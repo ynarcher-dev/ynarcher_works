@@ -41,6 +41,13 @@ export interface Intake<K extends string> {
   subject: string
   /** 수정 모드의 대상 id. 등록 모드는 null. */
   targetId: string | null
+  /**
+   * 등록 화면에서 방금 고른 연결(다른 원장의 행 id). 수정 모드는 null.
+   *
+   * 참조 자료를 찾는 데 이미 쓰던 값을 **맥락에도 넘기기 위해** 함께 돌려준다 — 등록 모드에는
+   * 가리킬 대상 행이 없어, 이 값이 없으면 연결한 원장의 확정 값을 찾아올 방법이 없다.
+   */
+  linkId: string | null
 }
 
 export interface IntakeDeps<K extends string, C> {
@@ -135,7 +142,7 @@ async function readUpload<K extends string, C>(
     })
   }
 
-  return { cards, sources, extracts, subject, targetId: null }
+  return { cards, sources, extracts, subject, targetId: null, linkId }
 }
 
 /** 수정 모드 — 이미 올라간 첨부를 id로 가리킨다. */
@@ -206,6 +213,8 @@ async function readStored<K extends string, C>(
     extracts: extractsFromRows((cached ?? []) as ExtractRow[]),
     subject: await deps.profile.subjectName(deps.caller as unknown as CallerClient, targetId),
     targetId,
+    // 수정 모드에는 저장된 행이 있으므로 후보를 따로 들지 않는다(refs.ts의 coalesce와 같다).
+    linkId: null,
   }
 }
 

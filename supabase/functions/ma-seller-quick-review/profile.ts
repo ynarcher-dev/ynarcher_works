@@ -8,23 +8,29 @@
 //
 // 근거: docs/docs_planning/3_6_1_ma_seller_quick_review.md
 
-import type { AiFillProfile, CallerClient } from '../_shared/aiFill/profile.ts'
+import type { AiFillProfile, CallerClient, ContextTarget } from '../_shared/aiFill/profile.ts'
 import type { Warn } from '../_shared/aiFill/envelope.ts'
 import { CARD_KEYS, CARD_LABELS, CARD_SHAPE, isCardKey, LIMITS, type CardKey } from './cards.ts'
 import { CARD_SCHEMAS } from './schema.ts'
 import { buildPrompt } from './prompts.ts'
 import { quickReviewCompose } from './compose.ts'
 import { crossCheckCards } from './crossCheck.ts'
+import { loadLedgerFacts, type LedgerFacts } from './ledger.ts'
 import { normalizeCard } from './validate.ts'
 
 /**
- * 이 대상은 요청 시점에 원장에서 받아 올 선택지가 없다.
+ * 이 대상의 요청 시점 맥락 — **연결한 스타트업의 확정 값 하나**다.
  *
- * STARTUP은 소재지 목록을 ADMIN 원장에서 받아 오는데(상수로 적으면 원장이 바뀌는 날 서버만
- * 옛 목록으로 판정한다), 퀵 리뷰의 절 어디에도 고정 선택지 칸이 없다 — 전부 문서에서 읽은
- * 그대로를 적는 자리다. 그래서 맥락이 비어 있고, 그것이 이 대상의 사실이다.
+ * 고정 선택지는 여전히 없다(퀵 리뷰의 절은 전부 문서에서 읽은 그대로를 적는 자리이고, STARTUP이
+ * 소재지 목록을 원장에서 받아 오는 것과는 사정이 다르다). 2026-09-11에 이 칸이 생긴 것은 선택지
+ * 때문이 아니라 **이미 확인된 사실** 때문이다 — 셀러가 가리키는 기업의 매출·주주·대표자는 담당자가
+ * 이미 확정해 저장한 값인데, 종전에는 그 값을 두고 값의 출처인 PDF를 다시 읽어 같은 값을 다시
+ * 뽑았다(ledger.ts).
  */
-export type QuickReviewContext = Record<never, never>
+export interface QuickReviewContext {
+  /** 연결이 없거나 볼 수 없거나 원장이 비어 있으면 null — 그때는 종전처럼 자료만으로 뽑는다. */
+  ledger: LedgerFacts | null
+}
 
 /**
  * 같은 자료를 읽더라도 한 요청에 함께 맡길 수 있는 절 묶음.
@@ -80,13 +86,14 @@ export const maSellerQuickReviewProfile: AiFillProfile<CardKey, QuickReviewConte
   cardKeywords: CARD_KEYWORDS,
   maxNotes: LIMITS.notes,
 
-  // 받아 올 선택지가 없다(위 QuickReviewContext 주석). 원장을 부르지 않는다.
-  loadContext() {
-    return Promise.resolve({})
+  // 조회는 호출자 토큰으로 돈다 — 그 기업을 볼 수 없는 사람에게는 null이 오고, 프롬프트에
+  // 확정 사실 칸이 서지 않는다(권한을 한 뼘도 넓히지 않는다).
+  async loadContext(caller: CallerClient, _cards, target: ContextTarget) {
+    return { ledger: await loadLedgerFacts(caller, target) }
   },
 
-  buildPrompt(cards, subject) {
-    return buildPrompt(cards, subject)
+  buildPrompt(cards, subject, context) {
+    return buildPrompt(cards, subject, context.ledger)
   },
 
   normalizeCard(key: CardKey, raw: unknown, warn: Warn<CardKey>) {

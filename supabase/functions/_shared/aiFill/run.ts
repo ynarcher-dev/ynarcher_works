@@ -122,7 +122,7 @@ export async function runAiFill<K extends string, C>(
   if ('error' in intake) {
     return jsonResponse({ error: intake.error.code, message: intake.error.message }, intake.error.status)
   }
-  const { cards, extracts, subject, sources } = intake
+  const { cards, extracts, subject, sources, targetId, linkId } = intake
 
   if (cards.length === 0) {
     return jsonResponse({ error: 'invalid_request', message: '작성할 카드를 선택해야 합니다.' }, 400)
@@ -206,7 +206,8 @@ export async function runAiFill<K extends string, C>(
 
     // 프롬프트·정규화가 함께 쓰는 원장 값(소재지 선택지 등). 상수로 두면 원장이 바뀌는 날
     // 서버만 옛 목록으로 판정하므로 그 카드를 고른 요청에서만 그때그때 받아 온다.
-    const context = await profile.loadContext(caller as unknown as CallerClient, cards)
+    // 맥락은 대상을 함께 받는다 — 연결한 원장의 확정 값처럼 대상마다 다른 것이 있다.
+    const context = await profile.loadContext(caller as unknown as CallerClient, cards, { targetId, linkId })
 
     // 6-2) 묶음마다 조각을 고른다. 지정한 자료를 하나도 못 읽은 묶음은 부르지 않는다 —
     // 근거 없이 부르면 모델이 지어낼 자리만 생기고, 담당자에게는 "못 찾았다"로 보여

@@ -37,6 +37,21 @@ export interface CallerClient {
 }
 
 /**
+ * 맥락을 받아 올 때 "누구의 것인가"를 답하는 한 벌.
+ *
+ * 두 칸인 이유는 두 모드가 대상을 가리키는 방법이 다르기 때문이다 — 수정 모드에는 원장 행이
+ * 있고(`targetId`), 등록 모드에는 아직 행이 없어 **폼이 방금 고른 연결**(`linkId`)만 있다.
+ * 참조 자료가 같은 두 칸으로 대상을 찾는 것과 같은 규약이며(refs.ts), 어느 쪽이든 조회는
+ * 호출자 토큰으로 돌아 그 원장의 SELECT 정책이 그대로 판정한다.
+ */
+export interface ContextTarget {
+  /** 수정 모드의 대상 id. 등록 모드는 null. */
+  targetId: string | null
+  /** 등록 화면에서 방금 고른 연결(다른 원장의 행 id). 없으면 null. */
+  linkId: string | null
+}
+
+/**
  * 한 대상의 AI 작성 규격.
  *
  * @typeParam K 카드 키.
@@ -78,8 +93,14 @@ export interface AiFillProfile<K extends string, C> {
   /** 카드마다 notes 줄 수 상한. */
   maxNotes: number
 
-  /** 요청 시점에 원장에서 받아 오는 맥락(소재지 선택지 등). 카드가 필요로 할 때만 부른다. */
-  loadContext(caller: CallerClient, cards: K[]): Promise<C>
+  /**
+   * 요청 시점에 원장에서 받아 오는 맥락(소재지 선택지 · 이미 확인된 사실 등).
+   *
+   * **대상을 함께 받는다**(2026-09-11). 종전에는 카드 목록만 받아 "무엇을 고를 수 있는가"밖에
+   * 답하지 못했는데, 맥락에는 대상마다 다른 것도 있다 — M&A 셀러가 연결한 스타트업의 확정
+   * 값이 그렇다. 대상을 모르면 그 값을 찾아올 수가 없다.
+   */
+  loadContext(caller: CallerClient, cards: K[], target: ContextTarget): Promise<C>
   /** 체크된 카드의 지시를 이어 붙인다. 근거 규칙은 엔진이 뒤에 덧붙이므로 여기 적지 않는다. */
   buildPrompt(cards: K[], subject: string, context: C): string
   /** 카드 한 장의 값을 규격에 맞춘다. 규격 밖 값은 null로 치환하고 `warn`에 원문을 남긴다. */

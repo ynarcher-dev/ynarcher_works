@@ -26,6 +26,7 @@
 // 근거: docs/docs_planning/3_6_1_ma_seller_quick_review.md §5.4
 
 import { CARD_KEYS, CARD_LABELS, LIMITS, type CardKey } from './cards.ts'
+import type { LedgerFacts } from './ledger.ts'
 
 /**
  * 역할과 원칙 — 근거 없는 값을 만들지 않는다는 이 기능의 계약.
@@ -209,7 +210,7 @@ const CARD_PROMPTS: Record<CardKey, string> = {
  * 아니라 결과다 — 지시가 있으면 모델은 채우려 하고, 화면이 쓰지 않을 값을 만드느라 정작
  * 고른 절의 근거 탐색이 얕아진다.
  */
-export function buildPrompt(cards: CardKey[], subject: string): string {
+export function buildPrompt(cards: CardKey[], subject: string, ledger: LedgerFacts | null): string {
   // 절 순서는 요청 순서가 아니라 문서 순서로 고정한다. 요청 순서를 그대로 쓰면 같은 조합인데
   // 담당자가 체크한 차례에 따라 프롬프트가 달라진다.
   const ordered = CARD_KEYS.filter((k) => cards.includes(k))
@@ -222,10 +223,95 @@ export function buildPrompt(cards: CardKey[], subject: string): string {
     // 절이 둘 이상일 때만 붙인다 — 한 절만 채우는 요청에서는 겹칠 상대가 없다.
     ordered.length > 1 ? ROLE_SPLIT : null,
     ENVELOPE_RULES,
+    // 확정 사실은 **절별 지시 앞**에 선다 — 무엇을 이미 아는지를 읽은 뒤라야 절마다 무엇을
+    // 더 찾아야 하는지가 정해진다. 연결이 없거나 원장이 비면 이 자리가 통째로 빠진다.
+    ledger ? renderLedgerFacts(ledger) : null,
     `매각 대상 기업: ${subject || '(문서에서 확인)'}\n채울 절: ${names}`,
     '--- 절별 지시 ---',
     sections,
   ]
     .filter((s): s is string => s !== null)
     .join('\n\n')
+}
+
+// ── 이미 확인된 사실(연결한 스타트업 원장) ────────────────────────────────
+//
+// **이 블록이 있는 요청과 없는 요청은 하는 일이 다르다.** 없으면 모델은 자료에서 전부를 뽑고,
+// 있으면 **확정된 것 위에 자료가 더하는 것만** 찾는다. 그래서 담당자는 같은 자료를 두 번 읽히지
+// 않고, 같은 기업이 두 화면에서 다른 매출로 서지 않는다.
+//
+// 규칙을 절별 지시가 아니라 블록 바로 옆에 두는 것이 요점이다 — 이 값을 어떻게 다룰지는 절마다
+// 다시 정할 일이 아니고, 절마다 적으면 일곱 벌이 조금씩 어긋난다(ROLE_RULES와 같은 판단).
+
+/**
+ * 확정 사실을 다루는 규칙 넷.
+ *
+ * 2번이 이 기능에서 되돌릴 수 없는 사고가 나는 자리다 — 원장 값이 언제나 옳지는 않고(새 감사
+ * 보고서가 갱신한다) 모델이 조용히 한쪽을 고르면 어느 쪽이 맞는지 아무도 모른다. 그래서
+ * **자료를 우선하되 차이를 반드시 남기게** 한다. 고치는 것은 사람의 일이다.
+ *
+ * 3번은 근거 규약과의 충돌을 막는다 — 엔진은 우리가 발급한 조각 id로만 근거를 인정하므로
+ * (evidence.ts) 원장에서 온 값에 근거를 달면 그 근거는 대조에 실패해 버려지고, 버려진 건수가
+ * 카드 경고로 서서 멀쩡한 초안이 의심받는다.
+ */
+const LEDGER_RULES = `아래 '이미 확인된 사실'은 이 기업의 담당자가 **자료를 보고 확정해 저장한 값**입니다.
+1. 이 값은 첨부 문서와 **동등한 근거**입니다. 문서에 없어도 여기 있으면 그대로 씁니다(지어낸 값이 아닙니다).
+2. 같은 항목을 문서가 다르게 말하면 **문서 값을 쓰고**, 그 절의 notes에 "확인된 사실과 다름:
+   원장 <값> / 문서 <값>" 한 줄을 남깁니다. 조용히 한쪽을 고르지 않습니다 — 어느 쪽이 맞는지는
+   사람이 정합니다.
+3. 여기서 가져온 값에는 **근거(evidence)를 달지 않습니다.** 그 값의 출처는 문서가 아니라 원장입니다.
+4. 여기 없는 항목을 이 블록에서 유추하지 않습니다. 없는 것은 문서에서 찾고, 문서에도 없으면 비웁니다.`
+
+/** 금액 한 칸. 비면 칸을 세우지 않는다 — 빈 칸이 늘어서면 표가 무엇을 말하는지 흐려진다. */
+function money(label: string, v: number | null): string | null {
+  return v === null ? null : `${label} ${v.toLocaleString('en-US')}`
+}
+
+/** 확정 사실을 프롬프트에 실을 글로 세운다. 값이 하나도 없으면 null(빈 표제를 세우지 않는다). */
+export function renderLedgerFacts(f: LedgerFacts): string | null {
+  const lines: string[] = []
+
+  // 평면 칸들 — 한 줄에 모은다. 칸마다 줄을 주면 빈 칸이 그 수만큼 줄을 먹는다.
+  const head = [
+    f.name ? `회사명 ${f.name}` : null,
+    f.companyForm ? `형태 ${f.companyForm}` : null,
+    f.representative ? `대표자 ${f.representative}` : null,
+    f.foundedOn ? `설립 ${f.foundedOn}` : null,
+    f.location ? `소재지 ${f.location}` : null,
+  ].filter((s): s is string => s !== null)
+  if (head.length > 0) lines.push(head.join(' · '))
+
+  for (const d of f.descriptions) lines.push(`${d.label}: ${d.value}`)
+
+  // 표는 연도마다 한 줄이고 **단위를 머리에 한 번 적는다** — 줄마다 적으면 그 글자가 값보다
+  // 길어지고, 안 적으면 모델이 원 단위로 읽어 백만 배가 된다.
+  if (f.revenue.length > 0) {
+    lines.push('손익(백만원):')
+    for (const r of f.revenue) {
+      const cols = [money('매출', r.revenue), money('영업이익', r.operatingProfit), money('당기순이익', r.netIncome)]
+        .filter((s): s is string => s !== null)
+        .join(' · ')
+      if (cols) lines.push(`  ${r.year} — ${cols}`)
+    }
+  }
+  if (f.finance.length > 0) {
+    lines.push('재무상태(백만원):')
+    for (const r of f.finance) {
+      const cols = [money('자산', r.assets), money('부채', r.liabilities), money('자본', r.equity)]
+        .filter((s): s is string => s !== null)
+        .join(' · ')
+      if (cols) lines.push(`  ${r.year} — ${cols}`)
+    }
+  }
+
+  if (f.shareholders.holders.length > 0) {
+    // 기준 시점을 제목에 붙인다 — 이 값이 없으면 지분율이 시점 없는 숫자가 된다(basics 지시와 같은 이유).
+    const asOf = f.shareholders.asOf ? `(기준 ${f.shareholders.asOf})` : ''
+    lines.push(`주주${asOf}: ${f.shareholders.holders
+      .map((h) => (h.ratio === null ? h.name : `${h.name} ${h.ratio}%`))
+      .join(' · ')}`)
+  }
+
+  if (lines.length === 0) return null
+  return [LEDGER_RULES, '--- 이미 확인된 사실(스타트업 원장) ---', ...lines].join('\n')
 }
