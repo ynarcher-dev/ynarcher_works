@@ -1,4 +1,4 @@
-import { Banner, Button, Modal, Spinner, cardText, cn } from '@ynarcher/ui'
+import { Banner, Button, Modal, cardText, cn } from '@ynarcher/ui'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { formatBytes } from '@/features/networks/materialHooks'
 import {
@@ -22,6 +22,7 @@ import { AiCardPicker } from '@/features/ai/AiCardPicker'
 import { AiSourcePanes } from '@/features/ai/AiSourcePanes'
 import { AiFillResultPanel } from '@/features/ai/AiFillResultPanel'
 import { AiBlockedList } from '@/features/ai/AiFillPicker'
+import { AiRunProgress } from '@/features/ai/AiRunProgress'
 
 /**
  * 'AI 작성하기' 모달 — **읽을 자료 한 벌**과 **작성할 카드**를 고르고 한 번에 실행한다.
@@ -128,6 +129,8 @@ export function AiFillModal<K extends string>({
    * 참이 되는지를 이 창이 답할 수 없다.
    */
   const [running, setRunning] = useState(false)
+  /** 실행 시작 시각 — 기다리는 동안의 타이머가 여기서 센다. */
+  const [startedAt, setStartedAt] = useState(0)
 
   useEffect(() => {
     return () => fillAbortRef.current?.abort()
@@ -216,6 +219,7 @@ export function AiFillModal<K extends string>({
     // 끝나지 않은 것처럼 보인다.
     if (running) return
     setRunning(true)
+    setStartedAt(Date.now())
     setError(null)
     // 지난 결과는 실행과 함께 걷는다 — 돌고 있는 스피너 아래에 옛 답이 남아 있으면 그것이
     // 이번 실행의 답으로 읽힌다.
@@ -325,12 +329,9 @@ export function AiFillModal<K extends string>({
         </div>
         {busy && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-radius-md bg-white/70">
-            <Spinner />
-            {/* 서버가 한 번의 응답이라 진척값이 없다. 없는 단계를 지어내지 않는다. */}
-            <p className={cardText.value}>
-              읽을 자료 {read.length}건에서 {chosenCards.length}개 카드를 작성하고 있습니다.
-            </p>
-            <p className={cardText.meta}>자료 크기에 따라 1~2분이 걸릴 수 있습니다.</p>
+            {/* 스피너 대신 시간을 센다(2026-09-11) — 서버가 한 번의 응답이라 진척값은 없고,
+                담당자가 기다리며 묻는 것은 "지금 몇 초째, 최대 얼마까지"다. */}
+            <AiRunProgress startedAt={startedAt} sources={read.length} cards={chosenCards.length} />
           </div>
         )}
       </div>
