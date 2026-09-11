@@ -26,6 +26,21 @@ export interface UploadedFile {
   mime: string
 }
 
+/**
+ * 한도에 걸린 것은 자료의 문제가 아니다 — 파일 이름 없이 한 줄로 말한다.
+ *
+ * 2026-09-11에 구글 월 지출 상한에 걸려 여덟 파일이 전부 429를 받았는데, 화면에는
+ * "자료를 올리지 못했습니다: <파일명>"이 여덟 줄 서서 원인이 파일 쪽에 있는 것처럼 읽혔다.
+ * 파일 이름을 빼는 것은 실행 쪽 dedupe가 같은 문구를 한 줄로 접게 하려는 것이다.
+ */
+function quotaMessage(status: number, detail: string): { message: string } | null {
+  if (status !== 429) return null
+  if (/spending cap/i.test(detail)) {
+    return { message: 'AI 서비스의 이달 지출 상한을 넘겨 자료를 올릴 수 없습니다. 구글 AI 스튜디오(ai.studio/spend)에서 상한을 올린 뒤 다시 실행해 주세요.' }
+  }
+  return { message: 'AI 서비스 사용량 한도에 걸려 자료를 올릴 수 없습니다. 잠시 뒤 다시 실행해 주세요.' }
+}
+
 /** 자료 하나를 올린다. 실패는 사람이 읽을 문구로 돌려준다(어느 자료가 빠졌는지 말해야 한다). */
 export async function uploadFile(
   apiKey: string,
@@ -52,7 +67,7 @@ export async function uploadFile(
   if (!start.ok) {
     const detail = await start.text().catch(() => '')
     console.error('[ai-fill] 업로드 시작 실패', start.status, detail.slice(0, 300))
-    return failed
+    return quotaMessage(start.status, detail) ?? failed
   }
   const uploadUrl = start.headers.get('x-goog-upload-url')
   await start.body?.cancel()
