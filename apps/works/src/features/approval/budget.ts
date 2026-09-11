@@ -7,12 +7,9 @@
  * 문서가 갖고(levels) 코드는 **"몇 번째 층인가"만** 안다. 층 이름은 이름표일 뿐 계산에
  * 끼지 않으므로, 층이 둘이든 다섯이든 차감·합계 방식이 같다.
  *
- * 새 값은 한 행이 전체 분류 경로(path)를 갖고 모든 행이 실제 예산 줄이다. 예전 문서의
- * depth/name 트리도 계속 읽어야 하므로 맨 아래 줄 판정과 위층 합계 함수는 호환 계층으로
- * 남긴다. 화면에 세울 때 budgetEntries가 예전 트리를 가로형 행으로 편다.
- *
- * depth/name은 과거 값과 서버 판독기의 호환 자리다. 새 행은 depth=0으로 저장되어 서버의
- * 기존 "맨 아래 줄" 판정에서도 모든 항목이 정확히 한 번씩 합산된다.
+ * 저장값은 depth/name 부모·자식 트리다. 화면에 세울 때 budgetEntries가 맨 아래 항목마다
+ * 전체 경로를 만들고, budgetGridRows가 같은 부모 셀을 자식 수만큼 세로 병합한다. 잠시 쓰인
+ * path 기반 값도 읽은 뒤 실제 트리로 되돌리므로 이미 작성 중인 문서를 깨뜨리지 않는다.
  */
 import { toNumber } from '@/features/approval/numeric'
 
@@ -25,8 +22,8 @@ export interface BudgetRow {
   /** 항목 이름. */
   name: string
   /**
-   * 가로형 분류 칸. 새 문서는 `['인건비', '강사료', '외부 강사']`처럼 한 행이 전체
-   * 분류 경로를 갖는다. 없으면 예전 depth/name 트리 값이며 읽을 때 경로로 펼친다.
+   * 가로형 입력을 처음 도입했을 때 저장한 분류 경로. 현재 저장값은 depth/name 트리이며,
+   * 이 값은 그 사이 작성된 문서를 실제 트리로 호환 변환하기 위해서만 읽는다.
    */
   path?: string[]
   /** 숫자 열 값(열 key → 값). 열 정의는 양식이 갖는다. */
@@ -160,17 +157,17 @@ export function budgetTotal(rows: BudgetRow[], columnKey: string): number | null
  */
 export function budgetPath(rows: BudgetRow[], index: number): string {
   const direct = rows[index]?.path
-  if (direct) {
-    let last = direct.length - 1
-    while (last >= 0 && !direct[last]!.trim()) last -= 1
-    if (last < 0) return '(이름 없음)'
-    return direct
-      .slice(0, last + 1)
-      .map((part) => part.trim() || '(이름 없음)')
-      .join(' › ')
-  }
+  return displayBudgetPath(direct ?? budgetPathParts(rows, index))
+}
 
-  return budgetPathParts(rows, index).join(' › ')
+function displayBudgetPath(parts: string[]): string {
+  let last = parts.length - 1
+  while (last >= 0 && !parts[last]!.trim()) last -= 1
+  if (last < 0) return '(이름 없음)'
+  return parts
+    .slice(0, last + 1)
+    .map((part) => part.trim() || '(이름 없음)')
+    .join(' › ')
 }
 
 /** 한 줄의 분류 경로. 예전 depth/name 트리도 새 가로형 행과 같은 모양으로 읽는다. */
@@ -183,7 +180,7 @@ export function budgetPathParts(rows: BudgetRow[], index: number): string[] {
   for (let i = index; i >= 0; i -= 1) {
     const row = rows[i]!
     if (row.depth === want) {
-      parts.unshift(row.name || '(이름 없음)')
+      parts.unshift(row.name)
       want -= 1
       if (want < 0) break
     }
@@ -210,6 +207,109 @@ export function budgetEntries(value: BudgetTreeValue): BudgetRow[] {
     })
   }
   return out
+}
+
+function groupId(leafId: string, depth: number, used: Set<string>): string {
+  const base = `group-${leafId}-${depth}`
+  let id = base
+  let suffix = 1
+  while (used.has(id)) {
+    id = `${base}-${suffix}`
+    suffix += 1
+  }
+  used.add(id)
+  return id
+}
+
+/**
+ * 가로 경로 행을 실제 부모·자식 트리로 묶는다. 같은 접두 경로가 연속되면 부모 노드 하나를
+ * 공유하며, 마지막 단계의 id는 지출결의가 가리키므로 원래 예산 줄 id를 그대로 쓴다.
+ */
+export function budgetTreeFromEntries(
+  levels: string[],
+  entries: BudgetRow[],
+): BudgetTreeValue {
+  const nextLevels = levels.length > 0 ? [...levels] : ['1단계']
+  const levelCount = nextLevels.length
+  const rows: BudgetRow[] = []
+  const used = new Set(entries.map((entry) => entry.id))
+  let previous: string[] | null = null
+
+  for (const entry of entries) {
+    const path = [...(entry.path ?? [])].slice(0, levelCount)
+    while (path.length < levelCount) path.push('')
+
+    let shared = 0
+    if (previous) {
+      // 마지막 단계는 이름이 같아도 예산 줄마다 별도 노드다. 금액과 지출 참조가 각각 다르다.
+      while (
+        shared < levelCount - 1 &&
+        previous[shared] === path[shared]
+      ) {
+        shared += 1
+      }
+    }
+
+    for (let depth = shared; depth < levelCount; depth += 1) {
+      const leaf = depth === levelCount - 1
+      rows.push({
+        id: leaf ? entry.id : groupId(entry.id, depth, used),
+        depth,
+        name: path[depth] ?? '',
+        values: leaf ? { ...entry.values } : {},
+      })
+    }
+    previous = path
+  }
+
+  return { levels: nextLevels, rows }
+}
+
+/** 저장 모양이 구 트리든 잠시 쓰인 path 행이든 현재의 실제 트리로 정규화한다. */
+export function asBudgetTree(value: BudgetTreeValue): BudgetTreeValue {
+  return budgetTreeFromEntries(value.levels, budgetEntries(value))
+}
+
+export interface BudgetGridCell {
+  /** 실제 트리 rows에서 이 분류 노드의 자리. */
+  nodeIndex: number
+  /** 이 상위 분류가 차지하는 예산 항목 행 수. */
+  rowSpan: number
+}
+
+export interface BudgetGridRow {
+  /** 실제 트리 rows에서 금액을 가진 맨 아래 노드의 자리. */
+  leafIndex: number
+  row: BudgetRow
+  /** 1단계부터 이 행의 맨 아래 항목까지 실제 트리 노드 자리. */
+  nodePath: number[]
+  /** 이미 위 행에서 세로 병합된 단계는 null이다. */
+  cells: Array<BudgetGridCell | null>
+}
+
+/** 실제 트리를 가로 표의 행과 세로 병합 셀 정보로 편다. */
+export function budgetGridRows(value: BudgetTreeValue): BudgetGridRow[] {
+  const tree = asBudgetTree(value)
+  const nodePaths: number[][] = []
+  const stack: number[] = []
+
+  for (const [index, row] of tree.rows.entries()) {
+    stack[row.depth] = index
+    stack.length = row.depth + 1
+    if (isLeaf(tree.rows, index)) nodePaths.push([...stack])
+  }
+
+  return nodePaths.map((path, rowIndex) => ({
+    leafIndex: path[path.length - 1]!,
+    row: tree.rows[path[path.length - 1]!]!,
+    nodePath: path,
+    cells: path.map((nodeIndex, level) => {
+      if (rowIndex > 0 && nodePaths[rowIndex - 1]?.[level] === nodeIndex) return null
+      let rowSpan = 1
+      while (nodePaths[rowIndex + rowSpan]?.[level] === nodeIndex) rowSpan += 1
+      return { nodeIndex, rowSpan }
+    }),
+  }))
 }
 
 /** 지출결의가 고를 수 있는 예산 줄 한 개. */

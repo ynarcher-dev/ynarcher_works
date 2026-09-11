@@ -1,5 +1,11 @@
 import { cn, tableText } from '@ynarcher/ui'
-import { budgetEntries, budgetTotal, levelLabel, type BudgetTreeValue } from '@/features/approval/budget'
+import {
+  asBudgetTree,
+  budgetGridRows,
+  budgetTotal,
+  levelLabel,
+  type BudgetTreeValue,
+} from '@/features/approval/budget'
 import {
   budgetAmountColumn,
   isNumericColumn,
@@ -29,7 +35,8 @@ function numericText(column: FormColumn, raw: string): string {
 /** 예산표 읽기. 입력 화면과 같은 가로형 분류 열을 유지해 경로를 다시 해석하지 않게 한다. */
 export function BudgetTreeView({ field, value, usage }: Props) {
   const columns = field.columns ?? []
-  const rows = budgetEntries(value)
+  const tree = asBudgetTree(value)
+  const rows = budgetGridRows(tree)
   const levels = value.levels.length > 0 ? value.levels : ['1단계']
   const amountColumn = budgetAmountColumn(field)
 
@@ -37,11 +44,11 @@ export function BudgetTreeView({ field, value, usage }: Props) {
     return <p className={cn('py-2', tableText.empty)}>작성된 예산이 없습니다.</p>
   }
 
-  const totalBudget = amountColumn ? budgetTotal(rows, amountColumn.key) : null
+  const totalBudget = amountColumn ? budgetTotal(tree.rows, amountColumn.key) : null
   const totalUsage = usage
     ? rows.reduce(
-        (acc, row) => {
-          const current = usage.get(row.id)
+        (acc, gridRow) => {
+          const current = usage.get(gridRow.row.id)
           return {
             spent: acc.spent + (current?.spent ?? 0),
             pending: acc.pending + (current?.pending ?? 0),
@@ -83,17 +90,29 @@ export function BudgetTreeView({ field, value, usage }: Props) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => {
-            const current = usage?.get(row.id) ?? (usage ? { spent: 0, pending: 0 } : null)
-            const budget = amountColumn ? toNumber(row.values[amountColumn.key] ?? '') : null
+          {rows.map((gridRow) => {
+            const current =
+              usage?.get(gridRow.row.id) ?? (usage ? { spent: 0, pending: 0 } : null)
+            const budget = amountColumn
+              ? toNumber(gridRow.row.values[amountColumn.key] ?? '')
+              : null
             const remaining = current && budget !== null ? budget - current.spent : null
             return (
-              <tr key={row.id} className="border-b border-gray-100 last:border-b-0">
-                {levels.map((_, level) => (
-                  <td key={level} className={cn('px-3 py-1.5', tableText.body)}>
-                    {row.path?.[level] || '-'}
-                  </td>
-                ))}
+              <tr key={gridRow.row.id} className="border-b border-gray-100 last:border-b-0">
+                {gridRow.cells.map((cell, level) =>
+                  cell ? (
+                    <td
+                      key={level}
+                      rowSpan={cell.rowSpan}
+                      className={cn(
+                        'border-r border-gray-100 px-3 py-1.5 align-middle',
+                        tableText.body,
+                      )}
+                    >
+                      {tree.rows[cell.nodeIndex]?.name || '-'}
+                    </td>
+                  ) : null,
+                )}
                 {columns.map((column) => (
                   <td
                     key={column.key}
@@ -104,8 +123,8 @@ export function BudgetTreeView({ field, value, usage }: Props) {
                     )}
                   >
                     {isNumericColumn(column.type)
-                      ? numericText(column, row.values[column.key] ?? '')
-                      : row.values[column.key] || '-'}
+                      ? numericText(column, gridRow.row.values[column.key] ?? '')
+                      : gridRow.row.values[column.key] || '-'}
                   </td>
                 ))}
                 {usage && current && (
@@ -152,7 +171,7 @@ export function BudgetTreeView({ field, value, usage }: Props) {
                 )}
               >
                 {isNumericColumn(column.type)
-                  ? numericText(column, String(budgetTotal(rows, column.key) ?? ''))
+                  ? numericText(column, String(budgetTotal(tree.rows, column.key) ?? ''))
                   : ''}
               </td>
             ))}

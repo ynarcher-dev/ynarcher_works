@@ -1,15 +1,23 @@
 import { Button, Input, Select, cn, tableText } from '@ynarcher/ui'
 import { Plus } from 'lucide-react'
 import { BudgetRowActions } from '@/features/approval/BudgetRowActions'
-import { budgetEntries, budgetTotal, levelLabel, type BudgetTreeValue } from '@/features/approval/budget'
+import {
+  asBudgetTree,
+  budgetEntries,
+  budgetGridRows,
+  budgetTotal,
+  levelLabel,
+  type BudgetTreeValue,
+} from '@/features/approval/budget'
 import {
   appendBudgetEntry,
+  canMoveBudgetEntry,
   moveBudgetEntry,
   removeBudgetEntry,
-  setBudgetEntryCell,
-  setBudgetPathCell,
+  setCell,
   setLevel,
   setLevelCount,
+  setName,
 } from '@/features/approval/budgetEdit'
 import {
   budgetAmountColumn,
@@ -39,14 +47,17 @@ function numericText(column: FormColumn, raw: string): string {
 export function BudgetTreeInput({ field, value, onChange }: Props) {
   const columns = field.columns ?? []
   const amountColumn = budgetAmountColumn(field)
-  const rows = budgetEntries(value)
+  const tree = asBudgetTree(value)
+  const gridRows = budgetGridRows(tree)
+  const entries = budgetEntries(tree)
+  const rows = gridRows.map((gridRow) => gridRow.row)
   const levelCount = Math.max(1, value.levels.length)
   const levels = value.levels.length > 0 ? value.levels : ['1단계']
   const levelOptions = Array.from({ length: Math.max(5, levelCount) }, (_, i) => i + 1)
 
   const changeLevelCount = (next: number) => {
     if (next < levelCount) {
-      const losesValues = rows.some((row) =>
+      const losesValues = entries.some((row) =>
         (row.path ?? []).slice(next).some((cell) => cell.trim() !== ''),
       )
       if (
@@ -56,7 +67,7 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
         return
       }
     }
-    onChange(setLevelCount(value, next))
+    onChange(setLevelCount(tree, next))
   }
 
   return (
@@ -89,7 +100,7 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
                     aria-label={`${level + 1}단계 이름`}
                     placeholder={`${level + 1}단계`}
                     value={label}
-                    onChange={(e) => onChange(setLevel(value, level, e.target.value))}
+                    onChange={(e) => onChange(setLevel(tree, level, e.target.value))}
                   />
                 </div>
               ))}
@@ -129,19 +140,28 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, index) => (
-              <tr key={row.id} className="border-b border-gray-100 last:border-b-0">
-                {levels.slice(0, levelCount).map((_, level) => (
-                  <td key={level} className="px-2 py-1">
-                    <Input
-                      density="table"
-                      value={row.path?.[level] ?? ''}
-                      onChange={(e) =>
-                        onChange(setBudgetPathCell(value, index, level, e.target.value))
-                      }
-                    />
-                  </td>
-                ))}
+            {gridRows.map((gridRow, index) => (
+              <tr key={gridRow.row.id} className="border-b border-gray-100 last:border-b-0">
+                {gridRow.cells.map((cell, level) =>
+                  cell ? (
+                    <td
+                      key={level}
+                      rowSpan={cell.rowSpan}
+                      className="h-px border-r border-gray-100 px-2 py-1 align-middle"
+                    >
+                      <div className="flex h-full items-stretch">
+                        <Input
+                          density="table"
+                          className="h-full min-h-8"
+                          value={tree.rows[cell.nodeIndex]?.name ?? ''}
+                          onChange={(e) =>
+                            onChange(setName(tree, cell.nodeIndex, e.target.value))
+                          }
+                        />
+                      </div>
+                    </td>
+                  ) : null,
+                )}
 
                 {columns.map((column) => (
                   <td key={column.key} className="px-2 py-1">
@@ -150,9 +170,9 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
                       type={column.type === 'DATE' ? 'date' : 'text'}
                       inputMode={isNumericColumn(column.type) ? 'numeric' : undefined}
                       className={cn(isNumericColumn(column.type) && 'text-right tabular-nums')}
-                      value={row.values[column.key] ?? ''}
+                      value={gridRow.row.values[column.key] ?? ''}
                       onChange={(e) =>
-                        onChange(setBudgetEntryCell(value, index, column.key, e.target.value))
+                        onChange(setCell(tree, gridRow.leafIndex, column.key, e.target.value))
                       }
                     />
                   </td>
@@ -161,10 +181,11 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
                 <td className="px-2 py-1">
                   <BudgetRowActions
                     rows={rows}
-                    index={index}
-                    onMoveUp={() => onChange(moveBudgetEntry(value, index, -1))}
-                    onMoveDown={() => onChange(moveBudgetEntry(value, index, 1))}
-                    onRemove={() => onChange(removeBudgetEntry(value, index))}
+                    canMoveUp={canMoveBudgetEntry(tree, index, -1)}
+                    canMoveDown={canMoveBudgetEntry(tree, index, 1)}
+                    onMoveUp={() => onChange(moveBudgetEntry(tree, index, -1))}
+                    onMoveDown={() => onChange(moveBudgetEntry(tree, index, 1))}
+                    onRemove={() => onChange(removeBudgetEntry(tree, index))}
                   />
                 </td>
               </tr>
@@ -189,7 +210,7 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
                   )}
                 >
                   {isNumericColumn(column.type)
-                    ? numericText(column, String(budgetTotal(rows, column.key) ?? ''))
+                    ? numericText(column, String(budgetTotal(tree.rows, column.key) ?? ''))
                     : ''}
                 </td>
               ))}
@@ -199,7 +220,7 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
         </table>
 
         <div className="border-t border-gray-100 p-2">
-          <Button variant="ghost" density="table" onClick={() => onChange(appendBudgetEntry(value))}>
+          <Button variant="ghost" density="table" onClick={() => onChange(appendBudgetEntry(tree))}>
             <Plus size={14} className="mr-1" />
             예산 항목 추가
           </Button>

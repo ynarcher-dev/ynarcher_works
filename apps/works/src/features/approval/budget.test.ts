@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   budgetLineOptions,
   budgetEntries,
+  budgetGridRows,
   budgetPath,
   budgetTotal,
   descendantRange,
@@ -18,6 +19,7 @@ import {
   appendBudgetEntry,
   addSibling,
   canIndent,
+  canMoveBudgetEntry,
   canMove,
   indent,
   moveRow,
@@ -28,6 +30,7 @@ import {
   setBudgetPathCell,
   setLevelCount,
   setCell,
+  setName,
   usedDepth,
 } from '@/features/approval/budgetEdit'
 
@@ -148,34 +151,73 @@ describe('예산표 — 분류 단계를 가로 열로 편다', () => {
 
   it('단계 수를 줄이면 분류 칸만 줄고 예산 줄 id와 금액은 유지된다', () => {
     const next = setLevelCount(sample(), 2)
+    const entries = budgetEntries(next)
     expect(next.levels).toEqual(['세목', '비목'])
-    expect(next.rows.map((row) => row.id)).toEqual(['a1x', 'a1y', 'a2', 'b1'])
-    expect(next.rows[0]!.path).toEqual(['인건비', '강사료'])
+    expect(entries.map((row) => row.id)).toEqual(['a1x', 'a1y', 'a2', 'b1'])
+    expect(entries[0]!.path).toEqual(['인건비', '강사료'])
     expect(budgetTotal(next.rows, 'amount')).toBe(4700000)
   })
 
   it('비어 있는 마지막 분류 칸은 지출결의의 예산 경로에 붙이지 않는다', () => {
-    const flat = setLevelCount(sample(), 3)
-    expect(budgetPath(flat.rows, 2)).toBe('인건비 › 진행 인력')
+    const tree = setLevelCount(sample(), 3)
+    expect(budgetLineOptions(tree, 'amount').find((line) => line.id === 'a2')?.path).toBe(
+      '인건비 › 진행 인력',
+    )
   })
 
   it('단계 이름과 행의 분류값은 서로 독립적이다', () => {
-    const flat = setLevelCount(sample(), 3)
-    const next = setBudgetPathCell(flat, 0, 2, '온라인 강사')
+    const tree = setLevelCount(sample(), 3)
+    const next = setBudgetPathCell(tree, 0, 2, '온라인 강사')
+    const entries = budgetEntries(next)
     expect(next.levels).toEqual(['세목', '비목', '세세목'])
-    expect(next.rows[0]!.path).toEqual(['인건비', '강사료', '온라인 강사'])
-    expect(next.rows[0]!.name).toBe('온라인 강사')
+    expect(entries[0]!.path).toEqual(['인건비', '강사료', '온라인 강사'])
+    expect(entries[0]!.name).toBe('온라인 강사')
   })
 
   it('리모컨은 행 하나의 순서를 바꾸거나 삭제할 뿐 분류 구조를 바꾸지 않는다', () => {
-    const flat = setLevelCount(sample(), 3)
-    const moved = moveBudgetEntry(flat, 1, -1)
-    expect(moved.rows.slice(0, 2).map((row) => row.id)).toEqual(['a1y', 'a1x'])
+    const tree = setLevelCount(sample(), 3)
+    const moved = moveBudgetEntry(tree, 1, -1)
+    expect(budgetEntries(moved).slice(0, 2).map((row) => row.id)).toEqual(['a1y', 'a1x'])
     const removed = removeBudgetEntry(moved, 0)
-    expect(removed.rows.some((row) => row.id === 'a1y')).toBe(false)
+    expect(budgetEntries(removed).some((row) => row.id === 'a1y')).toBe(false)
     const appended = appendBudgetEntry(removed)
-    expect(appended.rows).toHaveLength(4)
-    expect(appended.rows[3]!.path).toEqual(['', '', ''])
+    const entries = budgetEntries(appended)
+    expect(entries).toHaveLength(4)
+    expect(entries[3]!.path).toEqual(['', '', ''])
+  })
+
+  it('같은 상위 분류는 자식 수만큼 세로로 병합된다', () => {
+    const tree = setLevelCount(sample(), 3)
+    const grid = budgetGridRows(tree)
+    expect(grid[0]!.cells[0]?.rowSpan).toBe(3)
+    expect(grid[1]!.cells[0]).toBeNull()
+    expect(grid[2]!.cells[0]).toBeNull()
+    expect(grid[0]!.cells[1]?.rowSpan).toBe(2)
+    expect(grid[2]!.cells[1]?.rowSpan).toBe(1)
+  })
+
+  it('병합된 상위 노드의 이름은 한 번 고치면 모든 하위 경로에 반영된다', () => {
+    const tree = setLevelCount(sample(), 3)
+    const nodeIndex = budgetGridRows(tree)[0]!.cells[0]!.nodeIndex
+    const next = setName(tree, nodeIndex, '인력비')
+    expect(
+      budgetLineOptions(next, 'amount')
+        .slice(0, 3)
+        .map((line) => line.path),
+    ).toEqual([
+      '인력비 › 강사료 › 외부 강사',
+      '인력비 › 강사료 › 내부 강사',
+      '인력비 › 진행 인력',
+    ])
+  })
+
+  it('분류 경계의 순서 버튼은 상위 가지 전체를 옮긴다', () => {
+    const tree = setLevelCount(sample(), 3)
+    expect(canMoveBudgetEntry(tree, 3, -1)).toBe(true)
+    const next = moveBudgetEntry(tree, 3, -1)
+    expect(budgetEntries(next).map((row) => row.id)).toEqual(['b1', 'a1x', 'a1y', 'a2'])
+    expect(budgetGridRows(next)[0]!.cells[0]?.rowSpan).toBe(1)
+    expect(budgetGridRows(next)[1]!.cells[0]?.rowSpan).toBe(3)
   })
 })
 

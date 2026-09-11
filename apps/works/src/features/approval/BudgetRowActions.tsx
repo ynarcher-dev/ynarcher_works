@@ -4,7 +4,8 @@ import type { BudgetRow } from '@/features/approval/budget'
 
 interface Props {
   rows: BudgetRow[]
-  index: number
+  canMoveUp: boolean
+  canMoveDown: boolean
   onMoveUp: () => void
   onMoveDown: () => void
   onRemove: () => void
@@ -15,7 +16,8 @@ interface Props {
  */
 export function BudgetRowActions({
   rows,
-  index,
+  canMoveUp,
+  canMoveDown,
   onMoveUp,
   onMoveDown,
   onRemove,
@@ -27,7 +29,7 @@ export function BudgetRowActions({
         variant="ghost"
         label="위로"
         onClick={onMoveUp}
-        disabled={index === 0}
+        disabled={!canMoveUp}
         icon={<ArrowUp size={14} />}
       />
       <IconButton
@@ -35,7 +37,7 @@ export function BudgetRowActions({
         variant="ghost"
         label="아래로"
         onClick={onMoveDown}
-        disabled={index === rows.length - 1}
+        disabled={!canMoveDown}
         icon={<ArrowDown size={14} />}
       />
       <IconButton
