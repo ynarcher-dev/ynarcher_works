@@ -46,7 +46,6 @@ import { LINE_KIND_ORDER } from '@/features/approval/config'
 import { APPROVAL_ATTACHMENT_TYPE } from '@/features/approval/config'
 import {
   emptyValues,
-  budgetAmountColumn,
   budgetValue,
   formatMoney,
   missingRequired,
@@ -471,26 +470,15 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
 
           {/* 예산은 품의서 본문과 독립된 카드다. 분류 설정부터 합계까지 한 카드 안에서
               끝나므로 사용자가 일반 본문 필드와 예산 구조를 같은 입력 묶음으로 오해하지 않는다. */}
-          {budgetFields.map((budget) => {
-            const amountColumn = budgetAmountColumn(budget)
-            const total = amountColumn
-              ? primaryAmount([budget], { [budget.key]: budgetValue(values, budget.key) })
-              : null
-            return (
-              <Card
-                key={budget.key}
-                title={budget.label}
-                subtitle={`예산 합계 ${formatMoney(total)}`}
-                help={budget.help}
-              >
-                <BudgetTreeInput
-                  field={budget}
-                  value={budgetValue(values, budget.key)}
-                  onChange={(next) => setValues({ ...values, [budget.key]: next })}
-                />
-              </Card>
-            )
-          })}
+          {budgetFields.map((budget) => (
+            <Card key={budget.key} title={budget.label} help={budget.help}>
+              <BudgetTreeInput
+                field={budget}
+                value={budgetValue(values, budget.key)}
+                onChange={(next) => setValues({ ...values, [budget.key]: next })}
+              />
+            </Card>
+          ))}
 
           {/* 양식을 고르기 전에도 제목은 적어 둘 수 있게 한다(임시저장 경로). */}
           {!form && (
