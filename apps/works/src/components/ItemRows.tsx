@@ -97,6 +97,22 @@ interface Props<T> {
   /** 한 카드에 목록이 둘 이상일 때의 소제목(인증 / 정부과제). */
   title?: string
   /**
+   * 줄 끝 칸을 직접 세운다. 생략하면 '삭제' 버튼 하나가 선다 — 목록 대부분은 거두는 일
+   * 하나뿐이라 그것이 기본이다. 순서를 바꾸는 목록(결재 양식 필드)처럼 조작이 둘 이상일
+   * 때만 여기서 세우고, 그 칸의 폭도 `actionWidth`로 함께 준다.
+   */
+  actions?: (row: T, i: number) => ReactNode
+  /** 줄 끝 칸의 폭(rem). `actions`를 줄 때만 뜻이 있다. */
+  actionWidth?: number
+  /**
+   * **한 줄에 담기지 않는 값**이 그 줄 바로 아래에 전폭으로 서는 자리.
+   *
+   * 상자가 남는 자리가 여기다 — 양식 필드의 선택지·기본 문구·열 정의처럼 항목 하나가 한 줄로
+   * 끝나지 않는 것들이다. 아래 항목의 줄과 섞이지 않도록 테두리로 묶고, **담을 것이 없는 줄에는
+   * 서지 않는다**(빈 상자는 그 줄에 무언가 더 있다고 말한다).
+   */
+  body?: (row: T, i: number) => ReactNode
+  /**
    * 한 줄의 칸들. **`cols`와 같은 수·같은 순서**로 내놓아야 한다 — 머리글이 그 순서로 서 있고,
    * 어긋나면 값이 다른 이름 아래에 선다.
    */
@@ -109,7 +125,20 @@ interface Props<T> {
  * 항목이 없으면 머리글도 서지 않는다 — 채울 것이 없는데 열 이름만 서 있으면 그것이 값의 자리인지
  * 안내인지 화면이 말하지 못한다. 남는 것은 추가 버튼 하나다.
  */
-export function ItemRows<T>({ cols, rows, rowKey, onRemove, onAdd, addLabel, title, children }: Props<T>) {
+export function ItemRows<T>({
+  cols,
+  rows,
+  rowKey,
+  onRemove,
+  onAdd,
+  addLabel,
+  title,
+  actions,
+  actionWidth,
+  body,
+  children,
+}: Props<T>) {
+  const actionW = actionWidth ?? ACTION_WIDTH
   // 남는 폭의 임자: `text` 열이 있으면 그 열이 전부 가져가고, 없으면(연도·금액만 있는 표) 값
   // 칸들이 **균등하게** 나눠 갖는다 — 고정 폭 그대로 두면 줄이 카드 절반에서 끝나 오른쪽이
   // 통째로 빈다. 몫이 같으므로 열 사이의 폭 차이(연도 6 · 금액 9)는 그대로 남는다.
@@ -124,7 +153,7 @@ export function ItemRows<T>({ cols, rows, rowKey, onRemove, onAdd, addLabel, tit
   const fixed = cols.reduce((sum, c) => {
     const kind = c.kind ?? 'text'
     return sum + (kind === 'text' ? TEXT_MIN : COL_WIDTH[kind])
-  }, ACTION_WIDTH)
+  }, actionW)
 
   return (
     <div className="space-y-2">
@@ -135,7 +164,7 @@ export function ItemRows<T>({ cols, rows, rowKey, onRemove, onAdd, addLabel, tit
             // `[&>*]:min-w-0` — 격자 칸의 기본 최소 폭은 '내용이 요구하는 폭'이라, 입력 하나의
             // 기본 너비(약 20자)가 열 폭보다 커지면 표 전체가 밀린다. 칸마다 0으로 풀어 둔다.
             className="grid items-center gap-x-2 gap-y-1.5 [&>*]:min-w-0"
-            style={{ gridTemplateColumns: `${tracks.join(' ')} ${ACTION_WIDTH}rem`, minWidth: `${fixed}rem` }}
+            style={{ gridTemplateColumns: `${tracks.join(' ')} ${actionW}rem`, minWidth: `${fixed}rem` }}
           >
             {cols.map((c, i) => (
               <span key={i} className="text-caption text-gray-700">
@@ -143,14 +172,31 @@ export function ItemRows<T>({ cols, rows, rowKey, onRemove, onAdd, addLabel, tit
               </span>
             ))}
             <span aria-hidden />
-            {rows.map((row, i) => (
-              <Fragment key={rowKey ? rowKey(row, i) : i}>
-                {children(row, i)}
-                <Button type="button" variant="secondary" className="shrink-0" onClick={() => onRemove(i)}>
-                  삭제
-                </Button>
-              </Fragment>
-            ))}
+            {rows.map((row, i) => {
+              const extra = body?.(row, i)
+              return (
+                <Fragment key={rowKey ? rowKey(row, i) : i}>
+                  {children(row, i)}
+                  {actions ? (
+                    <div className="flex items-center justify-end gap-0.5">{actions(row, i)}</div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="shrink-0"
+                      onClick={() => onRemove(i)}
+                    >
+                      삭제
+                    </Button>
+                  )}
+                  {extra ? (
+                    <div className="col-span-full mb-1 rounded-radius-md border border-gray-200 bg-gray-25 p-3">
+                      {extra}
+                    </div>
+                  ) : null}
+                </Fragment>
+              )
+            })}
           </div>
         </div>
       )}

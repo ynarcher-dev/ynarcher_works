@@ -10,6 +10,7 @@
  * 같은 규칙을 따른다 — 여기의 계산은 저장 전 화면 미리보기용이고 최종 판정은 언제나 DB다.
  */
 import {
+  DEFAULT_BUDGET_LEVELS,
   budgetTotal,
   parseBudget,
   type BudgetTreeValue,
@@ -107,8 +108,21 @@ export const FIELD_TYPE_LABEL: Record<FieldType, string> = {
   DATE: '날짜',
   SELECT: '선택',
   TABLE: '표',
-  BUDGET_TREE: '예산표(층 있는 표)',
+  BUDGET_TREE: '예산표',
 }
+
+/** 필드 종류. 순서가 곧 양식 빌더 선택 목록의 순서다. */
+export const FIELD_TYPES: FieldType[] = [
+  'TEXT',
+  'TEXTAREA',
+  'RICHTEXT',
+  'NUMBER',
+  'MONEY',
+  'DATE',
+  'SELECT',
+  'TABLE',
+  'BUDGET_TREE',
+]
 
 /** 표 열에 쓸 수 있는 종류. 순서가 곧 양식 빌더 선택 목록의 순서다. */
 export const COLUMN_TYPES: ColumnType[] = [
@@ -142,6 +156,58 @@ export function isNumericColumn(type: FieldType | ColumnType): boolean {
 /** 대표 금액을 지정할 수 있는 타입. */
 export function canBePrimaryAmount(type: FieldType | ColumnType): boolean {
   return type === 'MONEY' || type === 'NUMBER'
+}
+
+/**
+ * 새 필드·열의 키. 키는 **값이 저장되는 자리**라 라벨과 분리되어야 한다 — 라벨을 고칠 때마다
+ * 키가 바뀌면 이미 쌓인 문서의 값이 갈 곳을 잃는다.
+ */
+export function nextKey(prefix: string, taken: string[]): string {
+  let n = taken.length + 1
+  while (taken.includes(`${prefix}${n}`)) n += 1
+  return `${prefix}${n}`
+}
+
+/** 표의 기본 열 — 항목과 금액 둘이면 표 하나가 성립한다. */
+const DEFAULT_TABLE_COLUMNS: FormColumn[] = [
+  { key: 'col1', label: '항목', type: 'TEXT' },
+  { key: 'col2', label: '금액', type: 'MONEY', primaryAmount: true },
+]
+
+/**
+ * 예산표의 기본 숫자 열 넷. **항목 이름 열은 두지 않는다** — 층을 이루는 왼쪽 칸이 곧 항목이라
+ * 열로 두면 같은 것이 두 번 선다.
+ */
+const DEFAULT_BUDGET_COLUMNS: FormColumn[] = [
+  { key: 'qty', label: '수량', type: 'NUMBER' },
+  { key: 'unitPrice', label: '단가', type: 'MONEY' },
+  { key: 'amount', label: '금액', type: 'MONEY', primaryAmount: true },
+  { key: 'note', label: '비고', type: 'TEXT', wide: true },
+]
+
+/**
+ * 종류를 바꾼 필드.
+ *
+ * 종류가 바뀌면 **그 종류에서만 뜻이 있던 값이 함께 정리된다** — 금액이 아니게 된 필드에
+ * '대표 금액' 표시가 남으면 그 양식의 문서 금액이 사라진 칸을 가리킨다. 반대로 표·예산표는
+ * 열이 없으면 성립하지 않는 물건이라 기본 열을 들려 보낸다. 다만 **이미 짜 둔 열은 건드리지
+ * 않는다** — 종류를 잘못 골랐다 되돌리는 사이에 열이 지워지면 안 된다.
+ */
+export function withFieldType(field: FormField, type: FieldType): FormField {
+  return {
+    ...field,
+    type,
+    primaryAmount: canBePrimaryAmount(type) ? field.primaryAmount : false,
+    options: type === 'SELECT' ? field.options : undefined,
+    columns:
+      type === 'TABLE'
+        ? (field.columns ?? DEFAULT_TABLE_COLUMNS)
+        : type === 'BUDGET_TREE'
+          ? (field.columns ?? DEFAULT_BUDGET_COLUMNS)
+          : undefined,
+    levels: type === 'BUDGET_TREE' ? (field.levels ?? DEFAULT_BUDGET_LEVELS) : undefined,
+    defaultValue: type === 'RICHTEXT' ? field.defaultValue : undefined,
+  }
 }
 
 /**
