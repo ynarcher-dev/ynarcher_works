@@ -76,8 +76,8 @@ export function useApprovalForms() {
         .from('approval_forms')
         .select(FORM_SELECT)
         .is('deleted_at', null)
-        .order('category', { ascending: true })
         .order('sort_order', { ascending: true })
+        .order('category', { ascending: true })
         .order('name', { ascending: true })
       if (error) throw error
       return (data ?? []) as unknown as ApprovalForm[]
@@ -102,7 +102,12 @@ export function groupFormsByCategory(forms: ApprovalForm[]): {
     map.set(key, list)
   }
   return [...map.entries()]
-    .map(([category, list]) => ({ category, forms: list }))
+    .map(([category, list]) => ({
+      category,
+      forms: [...list].sort(
+        (a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name),
+      ),
+    }))
     .sort((a, b) => {
       const oa = Math.min(...a.forms.map((f) => f.sort_order))
       const ob = Math.min(...b.forms.map((f) => f.sort_order))

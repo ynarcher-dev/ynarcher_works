@@ -1,4 +1,4 @@
-import { Badge, Button, DataTable, Spinner, useToast, type Column } from '@ynarcher/ui'
+import { Badge, Button, DataTable, Spinner, Tabs, useToast, type Column } from '@ynarcher/ui'
 import { useMemo, useState } from 'react'
 import { ApprovalFormModal, type ApprovalFormSubmit } from '@/features/admin/ApprovalFormModal'
 import { useApprovalForms, type ApprovalForm } from '@/features/approval/approvalApi'
@@ -30,12 +30,23 @@ export function ApprovalFormAdminPanel() {
 
   // 모달 상태: null이면 닫힘, 'create'면 신규, 양식이면 그 양식 수정.
   const [form, setForm] = useState<'create' | ApprovalForm | null>(null)
+  const [view, setView] = useState<'current' | 'hiworks'>('current')
   const editing = form && form !== 'create' ? form : undefined
+
+  const currentForms = useMemo(
+    () => (forms ?? []).filter((item) => item.security_grade !== '하이웍스 원본'),
+    [forms],
+  )
+  const hiworksForms = useMemo(
+    () => (forms ?? []).filter((item) => item.security_grade === '하이웍스 원본'),
+    [forms],
+  )
+  const visibleForms = view === 'current' ? currentForms : hiworksForms
 
   // 분류 선택지는 지금 살아 있는 양식들이 쓰는 값에서 파생한다(별도 원장 없음).
   const categories = useMemo(
-    () => [...new Set((forms ?? []).map((f) => f.category || '공통'))].sort(),
-    [forms],
+    () => [...new Set(currentForms.map((f) => f.category || '공통'))],
+    [currentForms],
   )
 
   const submit = async (v: ApprovalFormSubmit) => {
@@ -130,7 +141,15 @@ export function ApprovalFormAdminPanel() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex items-end justify-between gap-4">
+        <Tabs
+          items={[
+            { key: 'current', label: '현재 사용 양식', count: currentForms.length },
+            { key: 'hiworks', label: '하이웍스 복원 양식', count: hiworksForms.length },
+          ]}
+          value={view}
+          onChange={(key) => setView(key as 'current' | 'hiworks')}
+        />
         <Button onClick={() => setForm('create')}>결재 양식 등록</Button>
       </div>
 
@@ -141,11 +160,15 @@ export function ApprovalFormAdminPanel() {
       ) : (
         <DataTable
           columns={columns}
-          rows={forms ?? []}
+          rows={visibleForms}
           rowKey={(r) => r.id}
           numbered
           standardColumns={false}
-          emptyText="등록된 결재 양식이 없습니다."
+          emptyText={
+            view === 'current'
+              ? '현재 사용하는 결재 양식이 없습니다.'
+              : '복원된 하이웍스 양식이 없습니다.'
+          }
         />
       )}
 
