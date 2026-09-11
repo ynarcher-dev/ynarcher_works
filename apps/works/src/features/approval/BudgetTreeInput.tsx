@@ -50,6 +50,10 @@ function numericText(column: FormColumn, raw: string): string {
 export function BudgetTreeInput({ field, value, onChange }: Props) {
   const columns = field.columns ?? []
   const amountColumn = budgetAmountColumn(field)
+  const amountColumnIndex = amountColumn
+    ? columns.findIndex((column) => column.key === amountColumn.key)
+    : -1
+  const summaryColumnIndex = amountColumnIndex >= 0 ? amountColumnIndex : columns.length
   const tree = asBudgetTree(value)
   const groups = budgetGridGroups(tree)
   const gridRows = groups.flatMap((group) => group.rows)
@@ -230,6 +234,7 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
                             <Button
                               variant="ghost"
                               density="table"
+                              className="font-normal text-gray-500"
                               onClick={() =>
                                 onChange(
                                   level === 0
@@ -241,8 +246,8 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
                               <Plus size={14} />
                               {levelLabel(levels, level)} 추가
                             </Button>
-                            {level === levelCount - 1 && (
-                              <span className={cn('ml-auto text-gray-700', tableText.head)}>
+                            {level === levelCount - 1 && summaryColumnIndex === 0 && (
+                              <span className={cn(tableText.meta, 'ml-auto font-normal text-gray-500')}>
                                 소계
                               </span>
                             )}
@@ -250,14 +255,24 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
                         </td>
                       )
                     })}
-                    {columns.map((column) => (
+                    {summaryColumnIndex > 0 && (
+                      <td
+                        colSpan={summaryColumnIndex}
+                        className={cn(
+                          tableText.meta,
+                          'px-2 py-1.5 text-right font-normal text-gray-500',
+                        )}
+                      >
+                        소계
+                      </td>
+                    )}
+                    {columns.slice(summaryColumnIndex).map((column) => (
                       <td
                         key={column.key}
                         className={cn(
-                          'px-2 py-1.5',
-                          tableText.body,
-                          isNumericColumn(column.type) &&
-                            'text-right font-semibold tabular-nums',
+                          tableText.meta,
+                          'px-2 py-1.5 font-normal text-gray-500',
+                          isNumericColumn(column.type) && 'text-right tabular-nums',
                         )}
                       >
                         {amountColumn?.key === column.key
@@ -265,9 +280,7 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
                               column,
                               String(budgetTotal(groupRows, column.key) ?? ''),
                             )
-                          : isNumericColumn(column.type)
-                            ? '-'
-                            : ''}
+                          : ''}
                       </td>
                     ))}
                     <td />
@@ -282,10 +295,18 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
                   key={level}
                   className={cn('px-2 py-1.5 text-gray-600', tableText.body)}
                 >
-                  {level === 0 ? '합계' : ''}
+                  {level === levelCount - 1 && summaryColumnIndex === 0 ? '합계' : ''}
                 </td>
               ))}
-              {columns.map((column) => (
+              {summaryColumnIndex > 0 && (
+                <td
+                  colSpan={summaryColumnIndex}
+                  className={cn('px-2 py-1.5 text-right text-gray-700', tableText.head)}
+                >
+                  합계
+                </td>
+              )}
+              {columns.slice(summaryColumnIndex).map((column) => (
                 <td
                   key={column.key}
                   className={cn(
@@ -296,9 +317,7 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
                 >
                   {amountColumn?.key === column.key
                     ? numericText(column, String(budgetTotal(tree.rows, column.key) ?? ''))
-                    : isNumericColumn(column.type)
-                      ? '-'
-                      : ''}
+                    : ''}
                 </td>
               ))}
               <td />

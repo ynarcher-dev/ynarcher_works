@@ -41,6 +41,10 @@ export function BudgetTreeView({ field, value, usage }: Props) {
   const rows = groups.flatMap((group) => group.rows)
   const levels = value.levels.length > 0 ? value.levels : ['1단계']
   const amountColumn = budgetAmountColumn(field)
+  const amountColumnIndex = amountColumn
+    ? columns.findIndex((column) => column.key === amountColumn.key)
+    : -1
+  const summaryColumnIndex = amountColumnIndex >= 0 ? amountColumnIndex : columns.length
 
   if (rows.length === 0) {
     return <p className={cn('py-2', tableText.empty)}>작성된 예산이 없습니다.</p>
@@ -184,48 +188,60 @@ export function BudgetTreeView({ field, value, usage }: Props) {
                 <tr className="border-b border-gray-200 bg-gray-25">
                   <td
                     colSpan={levels.length}
-                    className={cn('px-3 py-1.5 text-right text-gray-700', tableText.head)}
+                    className={cn(
+                      tableText.meta,
+                      'px-3 py-1.5 text-right font-normal text-gray-500',
+                    )}
                   >
-                    소계
+                    {summaryColumnIndex === 0 ? '소계' : ''}
                   </td>
-                  {columns.map((column) => (
+                  {summaryColumnIndex > 0 && (
+                    <td
+                      colSpan={summaryColumnIndex}
+                      className={cn(
+                        tableText.meta,
+                        'px-3 py-1.5 text-right font-normal text-gray-500',
+                      )}
+                    >
+                      소계
+                    </td>
+                  )}
+                  {columns.slice(summaryColumnIndex).map((column) => (
                     <td
                       key={column.key}
                       className={cn(
-                        'px-3 py-1.5',
-                        tableText.body,
-                        isNumericColumn(column.type) && 'text-right font-semibold tabular-nums',
+                        tableText.meta,
+                        'px-3 py-1.5 font-normal text-gray-500',
+                        isNumericColumn(column.type) && 'text-right tabular-nums',
                       )}
                     >
                       {amountColumn?.key === column.key
                         ? numericText(column, String(budgetTotal(groupRows, column.key) ?? ''))
-                        : isNumericColumn(column.type)
-                          ? '-'
-                          : ''}
+                        : ''}
                     </td>
                   ))}
                   {usage && groupUsage && (
                     <>
                       <td
                         className={cn(
-                          'px-3 py-1.5 text-right font-semibold tabular-nums',
-                          tableText.body,
+                          tableText.meta,
+                          'px-3 py-1.5 text-right font-normal tabular-nums text-gray-500',
                         )}
                       >
                         {formatMoney(groupUsage.spent)}
                       </td>
                       <td
                         className={cn(
-                          'px-3 py-1.5 text-right tabular-nums text-gray-500',
-                          tableText.body,
+                          tableText.meta,
+                          'px-3 py-1.5 text-right font-normal tabular-nums text-gray-500',
                         )}
                       >
                         {formatMoney(groupUsage.pending)}
                       </td>
                       <td
                         className={cn(
-                          'px-3 py-1.5 text-right font-semibold tabular-nums',
-                          tableText.body,
+                          tableText.meta,
+                          'px-3 py-1.5 text-right font-normal tabular-nums text-gray-500',
                           groupBudget !== null && groupBudget - groupUsage.spent < 0 &&
                             'text-danger',
                         )}
@@ -244,10 +260,18 @@ export function BudgetTreeView({ field, value, usage }: Props) {
           <tr className="border-t border-gray-200 bg-gray-25">
             {levels.map((_, level) => (
               <td key={level} className={cn('px-3 py-1.5 text-gray-600', tableText.body)}>
-                {level === 0 ? '합계' : ''}
+                {level === levels.length - 1 && summaryColumnIndex === 0 ? '합계' : ''}
               </td>
             ))}
-            {columns.map((column) => (
+            {summaryColumnIndex > 0 && (
+              <td
+                colSpan={summaryColumnIndex}
+                className={cn('px-3 py-1.5 text-right text-gray-700', tableText.head)}
+              >
+                합계
+              </td>
+            )}
+            {columns.slice(summaryColumnIndex).map((column) => (
               <td
                 key={column.key}
                 className={cn(
@@ -258,9 +282,7 @@ export function BudgetTreeView({ field, value, usage }: Props) {
               >
                 {amountColumn?.key === column.key
                   ? numericText(column, String(budgetTotal(tree.rows, column.key) ?? ''))
-                  : isNumericColumn(column.type)
-                    ? '-'
-                    : ''}
+                  : ''}
               </td>
             ))}
             {usage && totalUsage && (
