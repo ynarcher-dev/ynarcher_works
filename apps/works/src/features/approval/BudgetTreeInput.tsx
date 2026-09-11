@@ -79,18 +79,21 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
 
         <div className="space-y-1">
           <span className={tableText.head}>단계별 이름</span>
-          <div className="flex flex-wrap gap-2">
-            {levels.slice(0, levelCount).map((label, level) => (
-              <Input
-                key={level}
-                density="table"
-                className="w-28"
-                aria-label={`${level + 1}단계 이름`}
-                placeholder={`${level + 1}단계`}
-                value={label}
-                onChange={(e) => onChange(setLevel(value, level, e.target.value))}
-              />
-            ))}
+          <div className="overflow-x-auto pb-1">
+            <div className="flex min-w-max flex-nowrap items-center gap-2">
+              {levels.slice(0, levelCount).map((label, level) => (
+                <div key={level} className="w-28 shrink-0">
+                  <Input
+                    density="table"
+                    className="w-full"
+                    aria-label={`${level + 1}단계 이름`}
+                    placeholder={`${level + 1}단계`}
+                    value={label}
+                    onChange={(e) => onChange(setLevel(value, level, e.target.value))}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
