@@ -28,14 +28,20 @@ export interface StartupContext {
 /**
  * 같은 자료를 읽더라도 한 요청에 함께 맡길 수 있는 카드 묶음.
  *
- * 서로 맞물리는 카드(매출·재무·고용·주주·투자)는 한 축에 남긴다 — 지분율과 투자 라운드는 같은
- * 표에서 함께 읽히는 값이라 갈라 물으면 양쪽이 서로 다른 표를 집는다.
+ * 서로 맞물리는 카드는 한 축에 남긴다 — 매출과 재무는 같은 결산표에서 읽히고, 지분율과 투자
+ * 라운드는 같은 주주 표에서 함께 읽히는 값이라 갈라 물으면 양쪽이 서로 다른 표를 집는다.
  *
  * 2026-09-09에 갈린 카드는 **갈리기 전의 축을 그대로 물려받는다**(cert→organization,
- * customers→growth, finance→capital). 체크 단위를 가른 것이지 읽는 자리를 가른 것이 아니라서다
- * — 매출과 재무는 여전히 같은 결산표에서 읽히므로 갈라 물으면 두 요청이 서로 다른 표를 집는다.
+ * customers→growth, finance→capital). 체크 단위를 가른 것이지 읽는 자리를 가른 것이 아니라서다.
+ *
+ * **자본 축을 결산(capital)과 소유(ownership)로 갈랐다(2026-09-11).** 다섯 장을 한 요청에 맡긴
+ * 자본 묶음이 실행 네 번 중 세 번 90초를 넘겨 돌아오지 않았고 나머지 세 묶음은 10~45초에
+ * 왔다 — 붙들린 것이 아니라 **그 요청이 무거운 것**이라 헤지도 소용이 없었다(옆에 세운 둘째도
+ * 60초를 넘겼다). 성공한 한 번은 생각 토큰이 다른 묶음의 두세 배였다. 결산표 두 장과 주주·투자
+ * 표는 서로 다른 문서라 갈라도 같은 표를 두 번 집을 일이 없고, 고용은 결산표에 없는 값이라
+ * 주주 쪽에 둔다.
  */
-const EXTRACTION_FAMILY: Record<CardKey, 'overview' | 'organization' | 'growth' | 'capital'> = {
+const EXTRACTION_FAMILY: Record<CardKey, 'overview' | 'organization' | 'growth' | 'capital' | 'ownership'> = {
   basics: 'overview',
   summary: 'overview',
   business: 'overview',
@@ -48,9 +54,9 @@ const EXTRACTION_FAMILY: Record<CardKey, 'overview' | 'organization' | 'growth' 
   customers: 'growth',
   revenue: 'capital',
   finance: 'capital',
-  employee: 'capital',
-  shareholders: 'capital',
-  investment: 'capital',
+  employee: 'ownership',
+  shareholders: 'ownership',
+  investment: 'ownership',
 }
 
 /**

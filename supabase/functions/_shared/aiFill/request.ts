@@ -24,13 +24,16 @@ export function readCards<K extends string>(raw: unknown, isCardKey: (v: unknown
  * 동시에 보낼 요청 수.
  *
  * 값은 코드가 갖되 **시크릿으로 내릴 수 있게** 둔다. 요율 티어가 낮은 키에서는 셋도 몰림으로
- * 읽히는데, 그것은 배포 없이 고쳐야 하는 종류의 문제다. 올리는 쪽은 막는다 — 넷을 넘겨서
- * 얻는 시간보다 429로 잃는 시간이 크다.
+ * 읽히는데, 그것은 배포 없이 고쳐야 하는 종류의 문제다. 올리는 쪽의 상한은 **묶음 수의 최대**다
+ * (STARTUP 다섯 축, 2026-09-11) — 묶음이 줄을 서면 뒤에 선 것이 예산을 잃고(넷째 묶음이 앞 둘이
+ * 끝난 뒤 51초만 들고 나가 헤지도 못 세웠다), 그보다 올려서 얻는 것은 없다.
  */
+export const MAX_CONCURRENCY = 5
+
 export function readConcurrency(raw: string | undefined): number {
   const value = Number(raw)
   if (!Number.isFinite(value) || value < 1) return GROUP_CONCURRENCY
-  return Math.min(Math.trunc(value), 4)
+  return Math.min(Math.trunc(value), MAX_CONCURRENCY)
 }
 
 /**

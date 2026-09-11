@@ -101,7 +101,13 @@ function hedgedFetch(
       }
     }
     const launch = () => {
-      const gate = attemptGate(outer, Math.max(1_000, Math.min(ATTEMPT_TIMEOUT_MS, leftMs())))
+      // 한 시도의 상한은 60초이되, **접은 뒤 다시 보낼 자리가 없으면 마감까지 그대로 둔다.**
+      // 상한의 뜻은 "붙들린 것을 버리고 다시 보낸다"인데, 다시 보낼 예산이 없는 자리에서 끊는
+      // 것은 오고 있을지 모르는 답을 버리고 곧바로 실패로 접는 일이다(2026-09-11 실측 —
+      // 무거운 묶음이 60초에 끊겨 남은 45초를 아무것도 하지 않고 흘렸다).
+      const left = leftMs()
+      const cap = left - ATTEMPT_TIMEOUT_MS >= MIN_RETRY_BUDGET_MS ? ATTEMPT_TIMEOUT_MS : left
+      const gate = attemptGate(outer, Math.max(1_000, Math.min(cap, left)))
       gates.push(gate)
       pending += 1
       fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: gate.signal, body: payload })

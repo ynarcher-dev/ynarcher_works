@@ -20,15 +20,17 @@ const ALL = [...CARD_KEYS]
 const KEYS = ['a', 'b', 'c']
 
 describe('planGroups — 탐색 축이 묶음을 정하고 자료는 한 벌이다', () => {
-  it('열다섯 카드는 네 탐색 축으로 나뉘고 모든 묶음이 같은 자료를 든다', () => {
-    // 2026-09-09에 카드가 셋 갈려 15개가 됐지만 축은 넷 그대로다 — 갈린 카드가 갈리기 전의
-    // 축을 물려받으므로 묶음 수가 아니라 묶음 안의 카드만 늘어난다.
+  it('열다섯 카드는 다섯 탐색 축으로 나뉘고 모든 묶음이 같은 자료를 든다', () => {
+    // 2026-09-09에 카드가 셋 갈려 15개가 됐지만 축은 넷 그대로였다 — 갈린 카드가 갈리기 전의
+    // 축을 물려받으므로 묶음 수가 아니라 묶음 안의 카드만 늘었다. 2026-09-11에 자본 축을
+    // 결산·소유로 갈라 다섯이 됐다(다섯 장짜리 묶음이 실행 넷 중 셋에서 90초를 넘겼다).
     const groups = planGroups(ALL, KEYS, OPTS)
     expect(groups.map((g) => g.cards)).toEqual([
       ['basics', 'summary', 'business', 'tech'],
       ['team', 'ip', 'cert'],
       ['timeline', 'traction', 'customers'],
-      ['revenue', 'finance', 'employee', 'shareholders', 'investment'],
+      ['revenue', 'finance'],
+      ['employee', 'shareholders', 'investment'],
     ])
     expect(groups.every((g) => g.sourceKeys.join(',') === KEYS.join(','))).toBe(true)
   })

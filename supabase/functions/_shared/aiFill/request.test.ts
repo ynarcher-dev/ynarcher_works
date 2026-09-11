@@ -31,7 +31,7 @@ describe('readConcurrency', () => {
   it('내리는 쪽은 열고 올리는 쪽은 막는다', () => {
     expect(readConcurrency('1')).toBe(1)
     expect(readConcurrency('2')).toBe(2)
-    expect(readConcurrency('9')).toBe(4)
+    expect(readConcurrency('9')).toBe(5)
   })
 
   it('값이 없거나 이상하면 기본값이다', () => {
