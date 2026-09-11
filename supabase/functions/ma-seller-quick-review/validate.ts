@@ -17,6 +17,7 @@
 
 import { LIMITS, type CardKey } from './cards.ts'
 import type { Warn as EngineWarn } from '../_shared/aiFill/envelope.ts'
+import { checkIdentity, checkMagnitude, checkOrder, checkYearSeries } from '../_shared/aiFill/sanity.ts'
 
 type Rec = Record<string, unknown>
 type Warn = EngineWarn<CardKey>
@@ -127,24 +128,36 @@ const BS_FIELDS = [
 ]
 
 /**
- * 재무상태표의 회계 항등식을 확인한다 — 자산 = 부채 + 자본.
+ * 두 표의 숫자가 서로 말이 되는지 본다. 판정 자체는 엔진이 갖는다(_shared/aiFill/sanity.ts) —
+ * *어떤 칸이 자산이고 매출인가*만 이 대상이 답한다.
  *
  * **어긋나도 고치지 않는다.** 셋 중 무엇이 잘못 읽혔는지 알 수 없고, 하나를 계산해 끼우면
  * 문서에 그렇게 적혀 있었다고 말하는 것이 된다. 그래서 경고만 남기고 값은 그대로 둔다 —
  * 이 경고가 바로 담당자가 원문을 열어 볼 신호다.
- *
- * 반올림 잔차를 오류로 세지 않도록 1(백만원) 여유를 둔다.
  */
-function checkBalance(rows: Rec[], warn: Warn): void {
-  for (const r of rows) {
-    const a = r.totalAssets
-    const l = r.totalLiabilities
-    const e = r.totalEquity
-    if (typeof a !== 'number' || typeof l !== 'number' || typeof e !== 'number') continue
-    if (Math.abs(a - (l + e)) > 1) {
-      warn('financials', `${r.fiscalYear}년 자산총계 ≠ 부채+자본 — 원문 확인 필요`)
-    }
-  }
+function checkFinancials(pnl: Rec[], bs: Rec[], warn: Warn): void {
+  // 반올림 잔차를 오류로 세지 않도록 1(백만원) 여유를 둔다.
+  checkIdentity(bs, 'fiscalYear', 'totalAssets', ['totalLiabilities', 'totalEquity'], 1, warn, 'financials', '자산총계 ≠ 부채+자본')
+
+  checkYearSeries(pnl, 'fiscalYear', warn, 'financials', '손익 표')
+  checkYearSeries(bs, 'fiscalYear', warn, 'financials', '재무상태표')
+
+  // 단위가 섞이는 자리는 **표의 기둥 칸**이다. 딸린 칸까지 전부 보면 경고가 표를 덮는다.
+  checkMagnitude(pnl, 'fiscalYear', [{ key: 'netRevenue', label: '순매출' }], warn, 'financials')
+  checkMagnitude(bs, 'fiscalYear', [{ key: 'totalAssets', label: '자산총계' }], warn, 'financials')
+
+  // 정의상 일어날 수 없는 관계만. 매출총이익은 순매출에서 원가를 뺀 값이고,
+  // EBITDA는 그 아래 단이라 둘 다 순매출을 넘을 수 없다.
+  checkOrder(
+    pnl,
+    'fiscalYear',
+    [
+      { larger: 'netRevenue', smaller: 'grossProfit', message: '매출총이익이 순매출보다 큽니다' },
+      { larger: 'netRevenue', smaller: 'ebitda', message: 'EBITDA가 순매출보다 큽니다' },
+    ],
+    warn,
+    'financials',
+  )
 }
 
 /** 절 한 장의 값을 규격에 맞춘다. */
@@ -202,9 +215,10 @@ export function normalizeCard(key: CardKey, raw: unknown, warn: Warn): unknown {
 
     case 'financials': {
       const bs = yearRows(r.bs, 'financials', warn, BS_FIELDS)
-      checkBalance(bs, warn)
+      const pnl = yearRows(r.pnl, 'financials', warn, PNL_FIELDS)
+      checkFinancials(pnl, bs, warn)
       return {
-        pnl: yearRows(r.pnl, 'financials', warn, PNL_FIELDS),
+        pnl,
         bs,
         note: str(r.note, 400),
       }

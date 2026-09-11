@@ -28,6 +28,13 @@ import {
   type CardKey,
 } from './cards.ts'
 import type { Warn as EngineWarn } from '../_shared/aiFill/envelope.ts'
+import {
+  checkIdentity,
+  checkMagnitude,
+  checkOrder,
+  checkYearSeries,
+  type YearRow,
+} from '../_shared/aiFill/sanity.ts'
 
 type Rec = Record<string, unknown>
 
@@ -300,24 +307,45 @@ function normCustomers(v: unknown, warn: Warn): unknown[] {
     .slice(0, LIMITS.customers)
 }
 
-function normRevenue(v: unknown): unknown[] {
-  return list(v)
+function normRevenue(v: unknown, warn: Warn): unknown[] {
+  const rows = list(v)
     .map((raw) => {
       const e = rec(raw)
       const y = year(e.year)
       return y ? { year: y, revenue: num(e.revenue), operatingProfit: num(e.operatingProfit), netIncome: num(e.netIncome) } : null
     })
-    .filter(Boolean)
+    .filter(Boolean) as YearRow[]
+
+  // 규격에는 맞지만 서로 모순되는 값을 본다(_shared/aiFill/sanity.ts). **고치지 않고 알린다** —
+  // 어느 값이 잘못 읽혔는지 알 수 없고, 계산해 끼우면 문서에 그렇게 적혀 있었다고 말하는 것이 된다.
+  checkYearSeries(rows, 'year', warn, 'revenue', '매출 표')
+  checkMagnitude(rows, 'year', [{ key: 'revenue', label: '매출' }], warn, 'revenue')
+  // 영업이익은 매출에서 원가와 판관비를 뺀 값이라 정의상 매출을 넘을 수 없다.
+  checkOrder(
+    rows,
+    'year',
+    [{ larger: 'revenue', smaller: 'operatingProfit', message: '영업이익이 매출보다 큽니다' }],
+    warn,
+    'revenue',
+  )
+  return rows
 }
 
-function normFinance(v: unknown): unknown[] {
-  return list(v)
+function normFinance(v: unknown, warn: Warn): unknown[] {
+  const rows = list(v)
     .map((raw) => {
       const e = rec(raw)
       const y = year(e.year)
       return y ? { year: y, assets: num(e.assets), liabilities: num(e.liabilities), equity: num(e.equity) } : null
     })
-    .filter(Boolean)
+    .filter(Boolean) as YearRow[]
+
+  // 자산 = 부채 + 자본. 이 원장은 금액을 **원 단위**로 담으므로 반올림 잔차가 없고, 여유는
+  // 백만원 미만의 표기 차이만 흡수할 만큼만 둔다(그보다 큰 차이는 옮겨 적기 사고다).
+  checkIdentity(rows, 'year', 'assets', ['liabilities', 'equity'], 1_000_000, warn, 'finance', '자산 ≠ 부채+자본')
+  checkYearSeries(rows, 'year', warn, 'finance', '재무 표')
+  checkMagnitude(rows, 'year', [{ key: 'assets', label: '자산' }], warn, 'finance')
+  return rows
 }
 
 function normEmployee(v: unknown): unknown[] {
@@ -394,8 +422,8 @@ export function normalizeCard(key: CardKey, raw: unknown, warn: Warn, locations:
     case 'timeline': return normTimeline(raw, warn)
     case 'traction': return normTraction(raw, warn)
     case 'customers': return normCustomers(raw, warn)
-    case 'revenue': return normRevenue(raw)
-    case 'finance': return normFinance(raw)
+    case 'revenue': return normRevenue(raw, warn)
+    case 'finance': return normFinance(raw, warn)
     case 'employee': return normEmployee(raw)
     case 'shareholders': return normShareholders(raw, warn)
     case 'investment': return normInvestment(raw, warn)
