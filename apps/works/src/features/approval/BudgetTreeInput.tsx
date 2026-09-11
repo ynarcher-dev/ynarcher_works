@@ -177,28 +177,30 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
                               rowSpan={cell.rowSpan}
                               className="h-px border-r border-gray-100 px-2 py-1 align-middle"
                             >
-                              <div className="flex h-full flex-col items-stretch gap-1">
+                              <div className="flex h-full items-stretch">
                                 <Input
                                   density="table"
-                                  className="min-h-8 flex-1"
+                                  className="h-full min-h-8"
                                   value={tree.rows[cell.nodeIndex]?.name ?? ''}
+                                  action={
+                                    level < levelCount - 1 ? (
+                                      <Plus aria-hidden size={14} />
+                                    ) : undefined
+                                  }
+                                  actionLabel={
+                                    level < levelCount - 1
+                                      ? `${levelLabel(levels, level + 1)} 추가`
+                                      : undefined
+                                  }
+                                  onActionClick={
+                                    level < levelCount - 1
+                                      ? () => onChange(addBudgetBranch(tree, cell.nodeIndex))
+                                      : undefined
+                                  }
                                   onChange={(e) =>
                                     onChange(setName(tree, cell.nodeIndex, e.target.value))
                                   }
                                 />
-                                {level > 0 && level < levelCount - 1 && (
-                                  <Button
-                                    variant="ghost"
-                                    density="table"
-                                    className="self-start font-normal text-gray-500"
-                                    onClick={() =>
-                                      onChange(addBudgetBranch(tree, cell.nodeIndex))
-                                    }
-                                  >
-                                    <Plus size={14} />
-                                    {levelLabel(levels, level + 1)} 추가
-                                  </Button>
-                                )}
                               </div>
                             </td>
                           ) : null,
@@ -242,21 +244,17 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
                       return (
                         <td key={level} className="px-2 py-1">
                           <div className="flex items-center">
-                            {level <= 1 && (
+                            {level === 0 && (
                               <Button
                                 variant="ghost"
                                 density="table"
                                 className="font-normal text-gray-500"
                                 onClick={() =>
-                                  onChange(
-                                    level === 0
-                                      ? addBudgetRootAfter(tree, group.rootIndex)
-                                      : addBudgetBranch(tree, group.rootIndex),
-                                  )
+                                  onChange(addBudgetRootAfter(tree, group.rootIndex))
                                 }
                               >
                                 <Plus size={14} />
-                                {levelLabel(levels, level)} 추가
+                                {levelLabel(levels, 0)} 추가
                               </Button>
                             )}
                             {level === levelCount - 1 && summaryColumnIndex === 0 && (
