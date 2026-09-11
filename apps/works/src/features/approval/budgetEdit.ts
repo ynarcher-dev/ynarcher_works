@@ -83,27 +83,15 @@ export function appendBudgetEntry(value: BudgetTreeValue): BudgetTreeValue {
   }
 }
 
-/** 소계 줄이 속한 최상위 분류 바로 뒤에 새 최상위 분류를 만든다. */
-export function addBudgetRootAfter(value: BudgetTreeValue, rootIndex: number): BudgetTreeValue {
-  const tree = asBudgetTree(value)
-  const root = tree.rows[rootIndex]
-  if (!root || root.depth !== 0) return tree
-  const [, end] = descendantRange(tree.rows, rootIndex)
-  const branch = blankBranch(tree.rows.map((row) => row.id), 0, tree.levels.length - 1)
-  const rows = [...tree.rows]
-  rows.splice(end, 0, ...branch)
-  return withRows(tree, rows)
-}
-
-/** 지정한 분류 아래에 다음 단계부터 맨 아래 예산 항목까지 새 가지를 만든다. */
-export function addBudgetBranch(value: BudgetTreeValue, nodeIndex: number): BudgetTreeValue {
+/** 지정한 입력칸 바로 뒤에 같은 단계의 형제 가지를 만든다. */
+export function addBudgetSiblingBranch(value: BudgetTreeValue, nodeIndex: number): BudgetTreeValue {
   const tree = asBudgetTree(value)
   const node = tree.rows[nodeIndex]
-  if (!node || node.depth >= tree.levels.length - 1) return tree
+  if (!node) return tree
   const [, end] = descendantRange(tree.rows, nodeIndex)
   const branch = blankBranch(
     tree.rows.map((row) => row.id),
-    node.depth + 1,
+    node.depth,
     tree.levels.length - 1,
   )
   const rows = [...tree.rows]

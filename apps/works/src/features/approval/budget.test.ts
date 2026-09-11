@@ -16,8 +16,7 @@ import {
   type BudgetTreeValue,
 } from '@/features/approval/budget'
 import {
-  addBudgetBranch,
-  addBudgetRootAfter,
+  addBudgetSiblingBranch,
   addChild,
   appendBudgetEntry,
   addSibling,
@@ -221,10 +220,10 @@ describe('예산표 — 분류 단계를 가로 열로 편다', () => {
     ).toEqual([3200000, 1500000])
   })
 
-  it('소계의 대분류 추가는 누른 묶음 바로 뒤에 새 대분류를 만든다', () => {
+  it('대분류 입력칸의 추가는 바로 뒤에 새 대분류를 만든다', () => {
     const tree = setLevelCount(sample(), 3)
     const firstRoot = budgetGridGroups(tree)[0]!.rootIndex
-    const next = addBudgetRootAfter(tree, firstRoot)
+    const next = addBudgetSiblingBranch(tree, firstRoot)
     const groups = budgetGridGroups(next)
 
     expect(groups).toHaveLength(3)
@@ -233,10 +232,10 @@ describe('예산표 — 분류 단계를 가로 열로 편다', () => {
     expect(next.rows[groups[2]!.rootIndex]!.name).toBe('운영비')
   })
 
-  it('상위 분류의 추가는 그 아래 단계에 새 가지를 만든다', () => {
+  it('각 입력칸의 추가는 같은 단계의 형제 가지를 만든다', () => {
     const initial = emptyBudget(['대분류', '중분류', '소분류'])
-    const rootIndex = budgetGridRows(initial)[0]!.cells[0]!.nodeIndex
-    const withMiddleBranch = addBudgetBranch(initial, rootIndex)
+    const middleIndex = budgetGridRows(initial)[0]!.cells[1]!.nodeIndex
+    const withMiddleBranch = addBudgetSiblingBranch(initial, middleIndex)
     const middleGrid = budgetGridRows(withMiddleBranch)
 
     expect(middleGrid).toHaveLength(2)
@@ -244,8 +243,8 @@ describe('예산표 — 분류 단계를 가로 열로 편다', () => {
     expect(middleGrid[0]!.cells[1]?.rowSpan).toBe(1)
     expect(middleGrid[1]!.cells[1]?.rowSpan).toBe(1)
 
-    const middleIndex = middleGrid[0]!.cells[1]!.nodeIndex
-    const withLeafBranch = addBudgetBranch(withMiddleBranch, middleIndex)
+    const leafIndex = middleGrid[0]!.cells[2]!.nodeIndex
+    const withLeafBranch = addBudgetSiblingBranch(withMiddleBranch, leafIndex)
     const leafGrid = budgetGridRows(withLeafBranch)
 
     expect(leafGrid).toHaveLength(3)
@@ -255,14 +254,13 @@ describe('예산표 — 분류 단계를 가로 열로 편다', () => {
 
   it('세부항목은 선택한 중분류 아래에서만 늘어난다', () => {
     const initial = emptyBudget(['대분류', '중분류', '세부항목'])
-    const rootIndex = budgetGridRows(initial)[0]!.cells[0]!.nodeIndex
-    const withThreeMiddleRows = addBudgetBranch(
-      addBudgetBranch(initial, rootIndex),
-      rootIndex,
-    )
+    const middleIndex = budgetGridRows(initial)[0]!.cells[1]!.nodeIndex
+    const secondMiddle = addBudgetSiblingBranch(initial, middleIndex)
+    const secondMiddleIndex = budgetGridRows(secondMiddle)[1]!.cells[1]!.nodeIndex
+    const withThreeMiddleRows = addBudgetSiblingBranch(secondMiddle, secondMiddleIndex)
     const before = budgetGridRows(withThreeMiddleRows)
-    const firstMiddleIndex = before[0]!.cells[1]!.nodeIndex
-    const next = addBudgetBranch(withThreeMiddleRows, firstMiddleIndex)
+    const firstLeafIndex = before[0]!.cells[2]!.nodeIndex
+    const next = addBudgetSiblingBranch(withThreeMiddleRows, firstLeafIndex)
     const grid = budgetGridRows(next)
 
     expect(grid).toHaveLength(4)
