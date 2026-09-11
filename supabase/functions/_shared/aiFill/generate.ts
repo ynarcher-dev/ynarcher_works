@@ -13,7 +13,7 @@
 
 import type { DraftEnvelope, EnvelopeStats } from './envelope.ts'
 import { parseJson } from './envelope.ts'
-import { ATTEMPT_TIMEOUT_MS, MIN_RETRY_BUDGET_MS } from './limits.ts'
+import { ATTEMPT_TIMEOUT_MS, HEDGE_AFTER_MS, MIN_HEDGE_BUDGET_MS, MIN_RETRY_BUDGET_MS } from './limits.ts'
 import type { ThinkingLevel } from './request.ts'
 import type { SchemaNode } from './schema.ts'
 
@@ -53,6 +53,10 @@ function attemptGate(outer: AbortSignal, ms: number) {
     get slow() {
       return slow && !outer.aborted
     },
+    /** 진 쪽을 거둔다(헤지에서 먼저 온 답이 정해진 뒤). 느린 것으로 세지 않는다. */
+    cancel() {
+      inner.abort(new DOMException('hedge lost', 'AbortError'))
+    },
     done() {
       clearTimeout(timer)
       outer.removeEventListener('abort', onOuter)
@@ -63,6 +67,87 @@ function attemptGate(outer: AbortSignal, ms: number) {
 /** 끊김으로 인한 예외인가. */
 function isAbort(e: unknown): boolean {
   return e instanceof DOMException && e.name === 'AbortError'
+}
+
+type Gate = ReturnType<typeof attemptGate>
+
+/**
+ * 같은 요청을 보내되, 늦어지면 **옆에 하나 더 세우고 먼저 오는 답을 쓴다.**
+ *
+ * 실측이 이 모양을 정했다(HEDGE_AFTER_MS 주석). 붙들린 요청은 기다려도 오지 않으므로 상한까지
+ * 기다렸다 다시 보내는 것은 예산을 두 번 쓰는 일이고, 옆에 하나를 더 세우는 것은 붙들린 쪽을
+ * 버리고도 예산 안에 드는 유일한 길이다. 온도가 낮아 두 답은 같은 자료에서 같은 값을 말한다.
+ *
+ * 돌려주는 것은 셋 중 하나다 — 먼저 온 응답, 전부 느려 접었다는 표시, 또는 예외(전체 취소·
+ * 네트워크 오류 — 호출자가 그대로 던진다). 진 쪽은 즉시 거둬 요금이 더 붙지 않게 한다.
+ */
+function hedgedFetch(
+  url: string,
+  payload: string,
+  outer: AbortSignal,
+  deadline: number | undefined,
+  label: string | null,
+): Promise<{ resp: Response; hedged: boolean } | { slow: true }> {
+  const leftMs = () => (deadline ? deadline - Date.now() : Number.POSITIVE_INFINITY)
+  return new Promise((resolve, reject) => {
+    const gates: Gate[] = []
+    let settled = false
+    let pending = 0
+    let hedged = false
+    const closeAll = (winner?: Gate) => {
+      for (const g of gates) {
+        if (g !== winner) g.cancel()
+        g.done()
+      }
+    }
+    const launch = () => {
+      const gate = attemptGate(outer, Math.max(1_000, Math.min(ATTEMPT_TIMEOUT_MS, leftMs())))
+      gates.push(gate)
+      pending += 1
+      fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: gate.signal, body: payload })
+        .then((resp) => {
+          if (settled) {
+            // 이미 이긴 답이 있다. 본문을 읽지 않고 닫는다.
+            resp.body?.cancel().catch(() => {})
+            return
+          }
+          settled = true
+          clearTimeout(hedgeTimer)
+          closeAll(gate)
+          resolve({ resp, hedged })
+        })
+        .catch((e: unknown) => {
+          pending -= 1
+          if (settled) return
+          // 전체 취소·네트워크 오류는 그대로 올린다. 이 시도만 느린 경우에만 나머지를 기다린다.
+          if (outer.aborted || !isAbort(e) || !gate.slow) {
+            settled = true
+            clearTimeout(hedgeTimer)
+            closeAll()
+            reject(e)
+            return
+          }
+          if (pending === 0) {
+            settled = true
+            clearTimeout(hedgeTimer)
+            closeAll()
+            resolve({ slow: true })
+          }
+        })
+    }
+    const hedgeTimer = setTimeout(() => {
+      if (settled) return
+      // 둘째가 답할 시간이 남아 있을 때만 세운다 — 못 들 요청은 요금만 붙는다.
+      if (leftMs() < MIN_HEDGE_BUDGET_MS) return
+      hedged = true
+      console.warn(
+        '[ai-fill] 응답 지연 — 같은 요청을 하나 더 보냅니다',
+        JSON.stringify({ group: label, afterMs: HEDGE_AFTER_MS, budgetLeftMs: Math.round(leftMs()) }),
+      )
+      launch()
+    }, HEDGE_AFTER_MS)
+    launch()
+  })
 }
 
 /** 전체 실행이 취소되면 재시도 대기도 즉시 끝낸다. */
@@ -247,24 +332,14 @@ export async function generateDraft<K extends string>(
   let payload = buildPayload(thinkingSent)
   let lastFailure: ModelFailure = { message: 'AI 작성에 실패했습니다.', upstream: null }
   let parseFailures = 0
+  /** 이 답이 헤지 요청에서 왔는가(첫 요청이 붙들려 옆에 세운 쪽이 이겼는가). 로그에만 적는다. */
+  let hedgedWon = false
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
-    // 한 시도가 오래 붙들려 있으면 끊고 다시 보낸다(ATTEMPT_TIMEOUT_MS 주석).
+    // 늦어지면 옆에 하나 더 세우고, 그래도 전부 상한을 넘기면 느린 것으로 접는다(hedgedFetch).
     // **남은 예산보다 길게 기다리지 않는다** — 어차피 바깥이 끊을 시간을 붙들고 있을 이유가 없다.
-    const left = opts.deadline ? opts.deadline - Date.now() : Number.POSITIVE_INFINITY
-    const gate = attemptGate(opts.signal, Math.max(1_000, Math.min(ATTEMPT_TIMEOUT_MS, left)))
-    let resp: Response
-    try {
-      resp = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: gate.signal,
-        body: payload,
-      })
-    } catch (e) {
-      const wasSlow = gate.slow
-      gate.done()
-      // 전체가 끝났거나 담당자가 취소했다 — 여기서 다시 보내지 않는다(위가 처리한다).
-      if (!wasSlow || !isAbort(e)) throw e
+    // 전체 취소·네트워크 오류는 그대로 던져진다(위가 처리한다).
+    const outcome = await hedgedFetch(url, payload, opts.signal, opts.deadline, opts.label ?? null)
+    if ('slow' in outcome) {
       lastFailure = {
         message: 'AI 응답이 오래 걸려 중단됐습니다. 잠시 후 다시 시도해 주세요.',
         upstream: null,
@@ -287,7 +362,8 @@ export async function generateDraft<K extends string>(
       if (attempt < MAX_ATTEMPTS - 1 && budgetLeft >= MIN_RETRY_BUDGET_MS) continue
       return { failure: lastFailure }
     }
-    gate.done()
+    const resp = outcome.resp
+    hedgedWon = outcome.hedged
 
     if (!resp.ok) {
       const body = await resp.text().catch(() => '')
@@ -342,6 +418,8 @@ export async function generateDraft<K extends string>(
           cards: opts.cards.length,
           // 어느 깊이로 받은 답인지. 이 값이 없으면 생각 토큰의 변화를 설정 탓으로 돌릴 수 없다.
           thinking: thinkingSent ? (opts.thinkingLevel ?? null) : null,
+          // 헤지가 실제로 몇 번이나 답을 살렸는지는 이 값이 쌓여야 안다.
+          hedged: hedgedWon,
           ...telemetry,
         }),
       )

@@ -38,19 +38,25 @@ export interface QuickReviewContext {
  * 나누는 목적은 입력을 줄이는 것이 **아니다** — 자료는 그대로이고 요청당 출력이 작아져 답이
  * 잘리지 않는 것이 목적이다(groups.ts 주석).
  *
- * **재무와 투자 포인트를 각자 떼어 둔 것**이 요점이다. 재무는 두 표 열 몇 줄이라 출력이 가장
- * 길고, 투자 포인트는 앞 절 전부를 근거로 삼는 서술이라 함께 물으면 둘 중 하나가 잘린다.
- * 서로 맞물리는 것끼리는 한 축에 남긴다 — 한줄 요약·주요내용·회사 소개는 같은 앞머리를 읽고,
- * Valuation은 재무 표의 숫자를 그대로 쓴다.
+ * **넷에서 둘로 줄였다(2026-09-11).** 종전에는 개요·제품·재무·투자 포인트 네 축이었고 근거는
+ * "재무는 출력이 길고 투자 포인트는 앞 절 전부를 근거로 삼아 함께 물으면 잘린다"였다. 실측이
+ * 그 근거보다 큰 비용을 드러냈다 — 요청이 넷이면 그중 하나가 붙들릴 확률이 그만큼 높고
+ * (실행 8회에서 회당 1~2건이 60초를 넘겨 돌아오지 않았다), 전체 상한 125초는 게이트웨이가
+ * 정한 값이라 늘릴 수 없다. 요청 수를 반으로 줄이면 붙들릴 자리도 반이고, 둘은 한 번에 나가
+ * 줄을 서지 않는다. 출력이 잘릴 걱정은 실측이 지웠다 — 가장 긴 묶음도 8,000토큰이고 모델의
+ * 출력 상한은 그 여덟 배다.
+ *
+ * 남긴 경계는 하나 — **서술과 분석**이다. 앞 넷은 문서의 앞머리를 읽어 회사를 소개하는 절이고,
+ * 뒤 셋은 표와 숫자에서 판단을 세우는 절이라 읽는 자리와 쓰는 방식이 갈린다.
  */
-const EXTRACTION_FAMILY: Record<CardKey, 'overview' | 'product' | 'financial' | 'thesis'> = {
-  summary: 'overview',
-  basics: 'overview',
-  intro: 'overview',
-  products: 'product',
-  financials: 'financial',
-  valuation: 'financial',
-  highlights: 'thesis',
+const EXTRACTION_FAMILY: Record<CardKey, 'narrative' | 'analysis'> = {
+  summary: 'narrative',
+  basics: 'narrative',
+  intro: 'narrative',
+  products: 'narrative',
+  financials: 'analysis',
+  valuation: 'analysis',
+  highlights: 'analysis',
 }
 
 /**
