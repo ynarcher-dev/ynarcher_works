@@ -229,6 +229,11 @@ function upstreamReason(status: number, body: string): string {
 function friendly(status: number, reason: string): string {
   const lower = reason.toLowerCase()
   if (status === 429) return 'AI 요청이 몰려 거절됐습니다. 잠시 후 다시 시도해 주세요.'
+  // 공급자 쪽 혼잡(2026-09-11 실측 — 몇 분 동안 503 "high demand"가 이어졌다). 우리가 고칠 것이
+  // 없고 담당자가 할 일은 기다렸다 다시 누르는 것뿐이라, 영문 원문 대신 그 한 줄을 말한다.
+  if (status === 503 || lower.includes('high demand')) {
+    return 'AI 서비스가 지금 혼잡해 답하지 못했습니다. 몇 분 뒤 다시 시도해 주세요.'
+  }
   if (lower.includes('token') && lower.includes('exceed')) {
     return '자료가 모델이 한 번에 읽는 양을 넘었습니다. 자료를 줄여 다시 시도해 주세요.'
   }
