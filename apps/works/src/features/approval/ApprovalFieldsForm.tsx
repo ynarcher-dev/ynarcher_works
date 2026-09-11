@@ -90,7 +90,6 @@ export function ApprovalFieldsForm({
           return (
             <HtmlTemplateField
               key={field.key}
-              templateHtml={field.defaultValue ?? ''}
               assets={field.htmlAssets}
               context={documentContext}
               value={htmlTemplateValue(values, field.key)}

@@ -75,12 +75,12 @@ export function FieldExtraSettings({
         <div className="space-y-3">
           <Field
             label="HTML 원문"
-            hint="표·셀 병합·인라인 스타일을 포함한 전체 HTML을 그대로 붙여 넣습니다. script·iframe·form은 표시할 때 제거됩니다."
+            hint="표·셀 병합·인라인 스타일을 포함한 전체 HTML을 한 번 붙여 넣습니다. 새 문서에서는 아래와 같은 모양의 본문을 직접 편집합니다. script·iframe·form은 표시할 때 제거됩니다."
           >
             <TextArea
               rows={16}
               value={field.defaultValue ?? ''}
-              placeholder={'<table>...</table> 또는 {{# 수신}}, {{# 문서 제목}}, {{#에디터}}'}
+              placeholder="<div>...</div> 또는 <table>...</table>"
               onChange={(event) => onChange({ ...field, defaultValue: event.target.value })}
             />
           </Field>
@@ -109,10 +109,9 @@ export function FieldExtraSettings({
           {(field.defaultValue ?? '').trim() && (
             <Field label="미리보기" as="div">
               <HtmlTemplateField
-                templateHtml={field.defaultValue ?? ''}
                 assets={templateAssets}
                 context={{ title: '문서 제목 미리보기', docNo: '문서번호 미리보기' }}
-                value={{ slots: {} }}
+                value={{ html: field.defaultValue ?? '' }}
               />
             </Field>
           )}

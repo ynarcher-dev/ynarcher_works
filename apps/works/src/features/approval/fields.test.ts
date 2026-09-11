@@ -171,14 +171,12 @@ describe('missingRequired', () => {
     expect(missingRequired(EXPENSE, emptyValues(EXPENSE))).toEqual(['사용목적'])
   })
 
-  it('HTML 양식은 원문이 있어야 필수 필드로 인정한다', () => {
+  it('HTML 양식은 문서 본문에 내용이 있어야 필수 필드로 인정한다', () => {
     const fields: FormField[] = [
       { key: 'html', label: '공문', type: 'HTML_TEMPLATE', required: true },
     ]
-    expect(missingRequired(fields, { html: { slots: {} } })).toEqual(['공문'])
-    expect(
-      missingRequired([{ ...fields[0]!, defaultValue: '<table></table>' }], { html: { slots: {} } }),
-    ).toEqual([])
+    expect(missingRequired(fields, { html: { html: '<p><br></p>' } })).toEqual(['공문'])
+    expect(missingRequired(fields, { html: { html: '<p>본문</p>' } })).toEqual([])
   })
 })
 
@@ -197,19 +195,24 @@ describe('pruneValues', () => {
     expect(Object.keys(pruned)).toEqual(['a'])
   })
 
-  it('HTML 양식 값은 문자열 슬롯만 정규화해 저장한다', () => {
+  it('HTML 양식 값은 편집한 전체 원문으로 저장한다', () => {
     const fields: FormField[] = [
       { key: 'html', label: '공문', type: 'HTML_TEMPLATE' },
     ]
     const pruned = pruneValues(fields, {
-      html: {
-        slots: {
-          수신: '중소벤처기업부',
-          참조: 3,
-        },
-      } as never,
+      html: { html: '<div><p>수정한 공문</p></div>' },
     })
-    expect(pruned.html).toEqual({ slots: { 수신: '중소벤처기업부', 참조: '' } })
+    expect(pruned.html).toEqual({ html: '<div><p>수정한 공문</p></div>' })
+  })
+
+  it('새 문서는 HTML 기본 원문 전체를 복사해 시작한다', () => {
+    const fields: FormField[] = [
+      { key: 'html', label: '공문', type: 'HTML_TEMPLATE', defaultValue: '<table><tbody><tr><td>본문</td></tr></tbody></table>' },
+    ]
+
+    expect(emptyValues(fields).html).toEqual({
+      html: '<table><tbody><tr><td>본문</td></tr></tbody></table>',
+    })
   })
 })
 

@@ -1,5 +1,4 @@
 import { approvalFormAssetUrl } from '@/features/approval/approvalFormAssets'
-import { htmlTemplateSlotKind, type HtmlTemplateValue } from '@/features/approval/fields'
 
 export interface HtmlTemplateContext {
   title: string
@@ -34,18 +33,13 @@ function escapeHtml(value: string): string {
     .replaceAll("'", '&#39;')
 }
 
-/** 하이웍스 표식은 양식마다 새 코드를 만들지 않고 같은 치환 규칙으로 처리한다. */
-export function fillHtmlTemplate(
-  templateHtml: string,
-  value: HtmlTemplateValue,
-  context: HtmlTemplateContext,
-): string {
-  return templateHtml.replace(/{{#\s*([^{}]+?)\s*}}/g, (_whole, rawToken: string) => {
+/** 문서 원장 값으로 자동 채울 수 있는 시스템 표식만 치환한다. 나머지는 본문에서 직접 고친다. */
+export function fillHtmlTemplate(html: string, context: HtmlTemplateContext): string {
+  return html.replace(/{{#\s*([^{}]+?)\s*}}/g, (whole, rawToken: string) => {
     const token = rawToken.trim()
     if (token === '문서 번호' || token === '문서번호') return escapeHtml(context.docNo ?? '미채번')
     if (token === '문서 제목' || token === '문서제목') return escapeHtml(context.title)
-    const slotValue = value.slots[token] ?? ''
-    return htmlTemplateSlotKind(token) === 'richtext' ? slotValue : escapeHtml(slotValue)
+    return whole
   })
 }
 
@@ -63,8 +57,8 @@ function safeUrl(value: string, image: boolean): boolean {
 }
 
 /**
- * 원문의 표·셀 병합·인라인 스타일은 보존한다. 실행 코드와 폼만 걷고 sandbox iframe에 넣어,
- * 하드코딩한 HTML이 앱 DOM·세션에 접근하지 못하게 한다.
+ * 원문의 표·셀 병합·인라인 스타일은 보존한다. 실행 코드와 폼 요소만 제거한 뒤
+ * sandbox iframe에 넣어, 하드코딩한 HTML이 앱 DOM과 세션에 접근하지 못하게 한다.
  */
 export function sanitizeHtmlTemplate(
   rawHtml: string,

@@ -94,8 +94,8 @@ export interface FormField {
 }
 
 export interface HtmlTemplateValue {
-  /** `{{# 이름}}` 자리의 문서별 값. 문서번호·문서제목은 원장에서 자동 치환한다. */
-  slots: Record<string, string>
+  /** 양식 원문을 복사해 문서에서 직접 편집한 전체 HTML. */
+  html: string
 }
 
 /** 표 한 행 — 열 key → 값. */
@@ -349,22 +349,11 @@ export function isSystemHtmlToken(token: string): boolean {
   return SYSTEM_HTML_TOKENS.has(token.trim())
 }
 
-export function htmlTemplateSlotKind(token: string): 'text' | 'date' | 'richtext' {
-  const normalized = token.replace(/\s/g, '')
-  if (normalized === '에디터' || normalized === '본문' || normalized === '내용') return 'richtext'
-  if (normalized.includes('날짜') || normalized.endsWith('일')) return 'date'
-  return 'text'
-}
-
-/** HTML 양식 값은 과거·잘못된 JSON이 와도 문자열 슬롯만 남겨 읽는다. */
+/** HTML 양식 값은 과거·잘못된 JSON이 와도 문자열 원문 하나로 읽는다. */
 export function htmlTemplateValue(values: FieldValues, key: string): HtmlTemplateValue {
   const value = values[key]
-  if (!isRecord(value) || !isRecord(value.slots)) return { slots: {} }
-  return {
-    slots: Object.fromEntries(
-      Object.entries(value.slots).map(([slot, slotValue]) => [slot, str(slotValue)]),
-    ),
-  }
+  if (!isRecord(value)) return { html: '' }
+  return { html: str(value.html) }
 }
 
 /** 에디터가 남기는 빈 태그·공백 엔티티는 비어 있고, 이미지 한 장만 있는 본문은 내용이다. */
@@ -374,13 +363,6 @@ export function hasRichTextContent(html: string): boolean {
     .replace(/&nbsp;|&#160;/gi, ' ')
     .trim()
   return text.length > 0 || /<img\b/i.test(html)
-}
-
-function localDateValue(now = new Date()): string {
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
 }
 
 /**
@@ -393,13 +375,7 @@ export function emptyValues(fields: FormField[]): FieldValues {
     if (f.type === 'TABLE') out[f.key] = [emptyRow(f)]
     else if (f.type === 'BUDGET_TREE') out[f.key] = emptyBudgetValue(f)
     else if (f.type === 'HTML_TEMPLATE') {
-      out[f.key] = {
-        slots: Object.fromEntries(
-          htmlTemplateTokens(f.defaultValue ?? '')
-            .filter((token) => !isSystemHtmlToken(token))
-            .map((token) => [token, htmlTemplateSlotKind(token) === 'date' ? localDateValue() : '']),
-        ),
-      }
+      out[f.key] = { html: f.defaultValue ?? '' }
     }
     else out[f.key] = f.defaultValue ?? ''
   }
@@ -452,8 +428,7 @@ export function primaryAmount(fields: FormField[], values: FieldValues): number 
 /** 표시용 값 문자열 — 상세·집계에서 타입에 맞는 표기로 편다. */
 export function displayValue(field: FormField, values: FieldValues): string {
   if (field.type === 'HTML_TEMPLATE') {
-    const joined = Object.values(htmlTemplateValue(values, field.key).slots).join(' ')
-    return joined.replace(/<[^>]*>/g, '').trim() || '-'
+    return htmlTemplateValue(values, field.key).html.replace(/<[^>]*>/g, '').trim() || '-'
   }
   const raw = scalarValue(values, field.key)
   if (!raw) return '-'
@@ -485,7 +460,7 @@ export function missingRequired(fields: FormField[], values: FieldValues): strin
       continue
     }
     if (f.type === 'HTML_TEMPLATE') {
-      if (!(f.defaultValue ?? '').trim()) missing.push(f.label)
+      if (!hasRichTextContent(htmlTemplateValue(values, f.key).html)) missing.push(f.label)
       continue
     }
     if (f.type === 'RICHTEXT') {

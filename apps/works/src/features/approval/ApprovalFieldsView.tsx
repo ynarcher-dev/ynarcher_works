@@ -163,7 +163,7 @@ export function ApprovalFieldsView({
           return budgetValue(values, field.key).rows.some((r) => r.name.trim() !== '')
         }
         if (field.type === 'HTML_TEMPLATE') {
-          return Boolean((field.defaultValue ?? '').trim())
+          return hasRichTextContent(htmlTemplateValue(values, field.key).html)
         }
         const value = scalarValue(values, field.key)
         return field.type === 'RICHTEXT' ? hasRichTextContent(value) : value.trim() !== ''
@@ -172,7 +172,6 @@ export function ApprovalFieldsView({
           return (
             <HtmlTemplateField
               key={field.key}
-              templateHtml={field.defaultValue ?? ''}
               assets={field.htmlAssets}
               context={documentContext}
               value={htmlTemplateValue(values, field.key)}
