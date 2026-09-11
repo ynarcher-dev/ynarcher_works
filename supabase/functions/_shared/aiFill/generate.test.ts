@@ -1,103 +1,101 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { buildIndex } from './chunks.ts'
-import { normalizeEnvelope } from './envelope.ts'
+
 import { generateDraft } from './generate.ts'
-import { buildEnvelopeSchema, obj, STR } from './schema.ts'
+import { ATTEMPT_TIMEOUT_MS } from './limits.ts'
 
 /**
- * 모델 호출의 회귀 테스트.
+ * 느린 응답을 다시 묻는 규칙의 회귀 테스트.
  *
- * 엔진은 카드가 무엇인지 모른다 — 그래서 여기서도 **가짜 카드 하나**로 시험한다. 프로파일의
- * 카드를 끌어다 쓰면 그 프로파일이 바뀔 때 호출·재시도 판정의 시험이 함께 흔들린다.
+ * 지키는 것 셋 — **느린 시도는 다시 보낸다**, **담당자가 취소하면 다시 보내지 않는다**,
+ * **다시 보낼 때 기다리지 않는다**(남은 예산이 빠듯해 기다리면 두 번째가 들어갈 자리가 없다).
+ *
+ * 실측이 이 규칙을 만들었다(2026-09-11): 묶음 넷 중 셋은 15~40초에 오는데 남은 하나가 95초
+ * 넘게 붙들려 전체 상한에 걸렸고, 느린 묶음이 실행마다 달랐다.
  */
 
-type Card = 'demo'
-
-const SCHEMA = buildEnvelopeSchema<Card>(['demo'], { demo: obj({ value: STR }) })
-
-/** 이 시험이 재는 것은 호출과 재시도라, 봉투는 들어온 대로 되돌리기만 한다. */
-const normalize = (parsed: unknown) =>
-  normalizeEnvelope<Card>(parsed, ['demo'], {
-    normalizeCard: (_key, raw) => raw,
-    cardShape: { demo: 'object' },
-    index: buildIndex([], []),
-    maxNotes: 5,
-  })
-
-const call = () =>
-  generateDraft<Card>({
-    apiKey: 'test',
-    model: 'test-model',
-    parts: [],
-    cards: ['demo'],
-    signal: new AbortController().signal,
-    schema: SCHEMA,
-    normalize,
-  })
-
-describe('generateDraft — 잠깐인 상위 오류 재시도', () => {
-  afterEach(() => {
-    vi.useRealTimers()
-    vi.restoreAllMocks()
-  })
-
-  it('503을 지수 백오프로 최대 세 번 더 시도한다', async () => {
-    vi.useFakeTimers()
-    vi.spyOn(Math, 'random').mockReturnValue(0)
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ error: { message: 'high demand' } }), { status: 503 }),
-    )
-    vi.stubGlobal('fetch', fetchMock)
-
-    const pending = call()
-    await vi.runAllTimersAsync()
-
-    await expect(pending).resolves.toMatchObject({ failure: { upstream: 503 } })
-    expect(fetchMock).toHaveBeenCalledTimes(4)
-  })
-
-  it('재시도해도 달라지지 않는 400은 한 번만 호출한다', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response('{}', { status: 400 }))
-    vi.stubGlobal('fetch', fetchMock)
-
-    const result = await call()
-
-    expect(result).toMatchObject({ failure: { upstream: 400 } })
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-  })
+const schema = { type: 'object' } as never
+const options = (signal: AbortSignal) => ({
+  apiKey: 'k',
+  model: 'm',
+  parts: [{ text: 'p' }],
+  cards: ['a'] as 'a'[],
+  signal,
+  schema,
+  normalize: () => ({
+    envelope: { cards: { a: 1 }, notes: {}, evidence: {} } as never,
+    stats: { verified: 0, unverified: 0, rejected: 0 },
+  }),
 })
 
-describe('generateDraft — 계측', () => {
-  afterEach(() => vi.restoreAllMocks())
-
-  it('공급자가 재사용한 앞머리 토큰을 함께 남긴다', async () => {
-    // 탐색 축으로 나뉜 요청들은 자료 조각이 같고 프롬프트 꼬리만 달라 앞머리가 겹친다.
-    // 그 겹침에 할인이 실제로 걸리는지는 이 값만이 답한다 — 읽지 않으면 축 분할의 중복
-    // 비용을 재는 방법이 없고, 그러면 줄일지 말지를 감으로 정하게 된다.
-    vi.stubGlobal('fetch', () =>
-      Promise.resolve(
-        Response.json({
-          candidates: [{ content: { parts: [{ text: '{"cards":{"demo":{"value":"A"}}}' }] } }],
-          usageMetadata: { promptTokenCount: 900, cachedContentTokenCount: 700, candidatesTokenCount: 40 },
-        }),
-      ),
-    )
-
-    const result = await call()
-    if ('failure' in result) throw new Error('성공 응답이다')
-    expect(result.telemetry.promptTokens).toBe(900)
-    expect(result.telemetry.cachedTokens).toBe(700)
+/** 성공 응답 한 벌(모델이 JSON을 준 경우). */
+const okResponse = () =>
+  new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{"cards":{}}' }] } }] }), {
+    status: 200,
+    headers: { 'content-type': 'application/json' },
   })
 
-  it('사용량 필드가 없으면 0이 아니라 null이다(0으로 세면 거짓이 된다)', async () => {
-    vi.stubGlobal('fetch', () =>
-      Promise.resolve(
-        Response.json({ candidates: [{ content: { parts: [{ text: '{"cards":{}}' }] } }] }),
-      ),
-    )
+/** 신호가 끊길 때까지 응답하지 않는 요청 — 붙들려 있는 공급자를 흉내 낸다. */
+const hang = (init: RequestInit | undefined) =>
+  new Promise<Response>((_resolve, reject) => {
+    const signal = init?.signal
+    if (!signal) return
+    signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')), { once: true })
+  })
 
-    const result = await call()
-    if ('failure' in result) throw new Error('성공 응답이다')
-    expect(result.telemetry.cachedTokens).toBeNull()
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.useRealTimers()
+})
+
+describe('한 시도가 느릴 때', () => {
+  it('상한을 넘기면 끊고 곧바로 다시 보낸다', async () => {
+    vi.useFakeTimers()
+    const calls: number[] = []
+    vi.stubGlobal('fetch', (_url: string, init?: RequestInit) => {
+      calls.push(Date.now())
+      // 첫 시도만 붙들고, 두 번째는 정상 응답.
+      return calls.length === 1 ? hang(init) : Promise.resolve(okResponse())
+    })
+
+    const outer = new AbortController()
+    const promise = generateDraft(options(outer.signal))
+    // 첫 시도가 상한에 걸릴 때까지 시계를 민다.
+    await vi.advanceTimersByTimeAsync(ATTEMPT_TIMEOUT_MS + 10)
+    const result = await promise
+
+    expect(calls).toHaveLength(2)
+    expect('failure' in result).toBe(false)
+  })
+
+  it('다시 보낼 때 기다리지 않는다 — 지연 대기는 몰림에만 쓴다', async () => {
+    vi.useFakeTimers()
+    const at: number[] = []
+    vi.stubGlobal('fetch', (_url: string, init?: RequestInit) => {
+      at.push(Date.now())
+      return at.length === 1 ? hang(init) : Promise.resolve(okResponse())
+    })
+
+    const outer = new AbortController()
+    const promise = generateDraft(options(outer.signal))
+    await vi.advanceTimersByTimeAsync(ATTEMPT_TIMEOUT_MS + 10)
+    await promise
+
+    // 두 번째 요청이 상한 직후에 나갔다(백오프 2초를 타지 않았다).
+    expect(at[1] - at[0]).toBeLessThan(ATTEMPT_TIMEOUT_MS + 1_000)
+  })
+
+  it('담당자가 취소하면 다시 보내지 않고 그대로 끊긴다', async () => {
+    const calls: number[] = []
+    vi.stubGlobal('fetch', (_url: string, init?: RequestInit) => {
+      calls.push(1)
+      return hang(init)
+    })
+
+    const outer = new AbortController()
+    const promise = generateDraft(options(outer.signal))
+    outer.abort(new DOMException('cancelled', 'AbortError'))
+
+    await expect(promise).rejects.toThrow()
+    expect(calls).toHaveLength(1)
   })
 })

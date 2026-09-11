@@ -13,6 +13,7 @@
 
 import type { DraftEnvelope, EnvelopeStats } from './envelope.ts'
 import { parseJson } from './envelope.ts'
+import { ATTEMPT_TIMEOUT_MS } from './limits.ts'
 import type { ThinkingLevel } from './request.ts'
 import type { SchemaNode } from './schema.ts'
 
@@ -28,6 +29,41 @@ const MAX_ATTEMPTS = 4
  * 재시도가 재시도끼리 부딪히지 않는다.
  */
 const RETRY_JITTER_MS = 2_000
+
+/**
+ * 이 시도에만 거는 신호 — **바깥 상한과 갈라 두는 것이 요점이다.**
+ *
+ * 둘을 한 신호로 두면 "느려서 끊겼다"와 "전체가 끝나서 끊겼다"를 가를 수 없고, 그러면 다시
+ * 보내야 할 자리와 그만둬야 할 자리가 같은 코드로 흐른다. 바깥이 끊기면 여기도 함께 끊기되
+ * 그 사실은 `outer.aborted`가 답한다.
+ */
+function attemptGate(outer: AbortSignal, ms: number) {
+  const inner = new AbortController()
+  let slow = false
+  const timer = setTimeout(() => {
+    slow = true
+    inner.abort(new DOMException('attempt timeout', 'AbortError'))
+  }, ms)
+  const onOuter = () => inner.abort(outer.reason ?? new DOMException('Aborted', 'AbortError'))
+  if (outer.aborted) onOuter()
+  else outer.addEventListener('abort', onOuter, { once: true })
+  return {
+    signal: inner.signal,
+    /** 이 시도만 느렸는가(바깥은 아직 살아 있는가). */
+    get slow() {
+      return slow && !outer.aborted
+    },
+    done() {
+      clearTimeout(timer)
+      outer.removeEventListener('abort', onOuter)
+    },
+  }
+}
+
+/** 끊김으로 인한 예외인가. */
+function isAbort(e: unknown): boolean {
+  return e instanceof DOMException && e.name === 'AbortError'
+}
 
 /** 전체 실행이 취소되면 재시도 대기도 즉시 끝낸다. */
 function waitBeforeRetry(ms: number, signal: AbortSignal): Promise<void> {
@@ -204,12 +240,35 @@ export async function generateDraft<K extends string>(
   let lastFailure: ModelFailure = { message: 'AI 작성에 실패했습니다.', upstream: null }
   let parseFailures = 0
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: opts.signal,
-      body: payload,
-    })
+    // 한 시도가 오래 붙들려 있으면 끊고 다시 보낸다(ATTEMPT_TIMEOUT_MS 주석).
+    const gate = attemptGate(opts.signal, ATTEMPT_TIMEOUT_MS)
+    let resp: Response
+    try {
+      resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: gate.signal,
+        body: payload,
+      })
+    } catch (e) {
+      const wasSlow = gate.slow
+      gate.done()
+      // 전체가 끝났거나 담당자가 취소했다 — 여기서 다시 보내지 않는다(위가 처리한다).
+      if (!wasSlow || !isAbort(e)) throw e
+      lastFailure = {
+        message: 'AI 응답이 오래 걸려 중단됐습니다. 잠시 후 다시 시도해 주세요.',
+        upstream: null,
+      }
+      console.error(
+        '[ai-fill] 응답 지연',
+        JSON.stringify({ group: opts.label ?? null, attempt, limitMs: ATTEMPT_TIMEOUT_MS }),
+      )
+      // **기다리지 않고 곧바로 다시 보낸다.** 무작위 지연이라 다음 시도는 대개 정상 속도이고,
+      // 남은 예산이 빠듯해 여기서 더 기다리면 두 번째 시도가 들어갈 자리가 없어진다.
+      if (attempt < MAX_ATTEMPTS - 1) continue
+      return { failure: lastFailure }
+    }
+    gate.done()
 
     if (!resp.ok) {
       const body = await resp.text().catch(() => '')

@@ -168,6 +168,20 @@ export async function runAiFill<K extends string, C>(
   const cacheModel = Deno.env.get('GEMINI_CACHE_MODEL') ?? model
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
+  /**
+   * 담당자가 취소하면 **서버도 함께 멈춘다**(2026-09-11).
+   *
+   * 종전에는 창의 '취소'가 브라우저 쪽 요청만 끊었고 이 함수는 끝까지 돌았다. 그래서 취소한
+   * 실행이 토큰을 다 쓰고, 담당자가 곧바로 다시 누르면 **두 실행이 같은 키로 겹쳐** 서로를
+   * 느리게 만들었다(실측에서 15초 간격으로 두 실행이 겹쳐 돌았다). 취소가 취소가 아니면
+   * 담당자에게는 멈출 방법이 없다.
+   *
+   * 끊긴 뒤에도 `finally`의 정리는 돈다 — 지우기 요청은 이 신호를 타지 않으므로, 올린 기밀
+   * 자료와 캐시는 취소한 경우에도 그대로 지워진다.
+   */
+  const onClientGone = () => controller.abort(new DOMException('client disconnected', 'AbortError'))
+  if (req.signal.aborted) onClientGone()
+  else req.signal.addEventListener('abort', onClientGone, { once: true })
   try {
     const built = await buildParts(
       sources,
@@ -498,6 +512,19 @@ export async function runAiFill<K extends string, C>(
     })
   } catch (e) {
     const aborted = e instanceof DOMException && e.name === 'AbortError'
+    // **취소와 시간 초과를 로그에서 가른다.** 둘 다 중단으로 보이지만 다음 행동이 반대다 —
+    // 취소는 담당자가 멈춘 것이라 고칠 것이 없고, 시간 초과는 예산을 다시 봐야 하는 신호다.
+    // 겹쳐 돌던 실행을 시간 초과로 오인해 엉뚱한 곳을 고치던 자리라 이 한 줄을 남긴다.
+    if (aborted) {
+      console.log(
+        '[ai-fill] 중단',
+        JSON.stringify({
+          profile: profile.name,
+          reason: req.signal.aborted ? 'cancelled' : 'timeout',
+          elapsedMs: Date.now() - startedAt,
+        }),
+      )
+    }
     return jsonResponse(
       {
         error: aborted ? 'timeout' : 'server_error',
@@ -509,6 +536,7 @@ export async function runAiFill<K extends string, C>(
     )
   } finally {
     clearTimeout(timer)
+    req.signal.removeEventListener('abort', onClientGone)
     // 올린 자료와 캐시는 성공·실패·예외를 가리지 않고 지운다.
     await Promise.all([
       ...uploaded.map((f) => deleteFile(apiKey, f)),
