@@ -8,6 +8,7 @@ import {
   AlignLeft,
   AlignRight,
   Bold,
+  Braces,
   Code,
   Heading1,
   Heading2,
@@ -25,8 +26,8 @@ import {
   Underline as UnderlineIcon,
   Undo2,
 } from 'lucide-react'
-import { IconButton } from '@ynarcher/ui'
-import { useEffect, useRef, type ReactNode } from 'react'
+import { Button, IconButton, Modal, TextArea } from '@ynarcher/ui'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 function buildExtensions(placeholder: string) {
   return [
@@ -41,6 +42,78 @@ function buildExtensions(placeholder: string) {
 }
 
 const extensions = buildExtensions('내용을 입력하세요…')
+
+const inlineTagName: Record<string, string> = {
+  A: 'a',
+  B: 'strong',
+  STRONG: 'strong',
+  I: 'em',
+  EM: 'em',
+  U: 'u',
+  S: 's',
+  STRIKE: 's',
+  DEL: 's',
+  CODE: 'code',
+}
+
+const droppedHtmlTags = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'SVG', 'MATH'])
+
+/** HTML 삽입은 본문 전체 소스가 아니라 현재 커서에 들어갈 안전한 인라인 조각만 받는다. */
+function sanitizeInlineHtml(raw: string): string {
+  const parsed = new DOMParser().parseFromString(raw, 'text/html')
+  const output = parsed.createElement('div')
+
+  const appendChildren = (source: ParentNode, target: Node) => {
+    for (const child of Array.from(source.childNodes)) {
+      if (child.nodeType === 3) {
+        target.appendChild(parsed.createTextNode(child.textContent ?? ''))
+        continue
+      }
+      if (child.nodeType !== 1) continue
+
+      const element = child as Element
+      if (droppedHtmlTags.has(element.tagName)) continue
+      if (element.tagName === 'BR') {
+        target.appendChild(parsed.createElement('br'))
+        continue
+      }
+
+      const tagName = inlineTagName[element.tagName]
+      if (!tagName) {
+        appendChildren(element, target)
+        continue
+      }
+
+      const clean = parsed.createElement(tagName)
+      if (tagName === 'a') {
+        const href = safeInlineHref(element.getAttribute('href'))
+        if (!href) {
+          appendChildren(element, target)
+          continue
+        }
+        clean.setAttribute('href', href)
+      }
+      appendChildren(element, clean)
+      target.appendChild(clean)
+    }
+  }
+
+  appendChildren(parsed.body, output)
+  return output.innerHTML
+}
+
+function safeInlineHref(value: string | null): string | null {
+  const href = value?.trim()
+  if (!href) return null
+  const compact = Array.from(href)
+    .filter((char) => {
+      const code = char.charCodeAt(0)
+      return code > 32 && code !== 127
+    })
+    .join('')
+    .toLowerCase()
+  return /^(https?:|mailto:|tel:|\/|#|\?|\.\.?\/)/.test(compact) ? href : null
+}
 
 /** 읽기 전용 렌더러: 저장된 HTML을 에디터 스키마로 파싱해 안전하게 표시한다. */
 export function RichTextViewer({ html }: { html: string }) {
@@ -108,6 +181,8 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
 /** 툴바: 활성 상태는 useEditorState로 구독해 하이라이트한다. */
 function Toolbar({ editor }: { editor: Editor }) {
   const imageInputRef = useRef<HTMLInputElement>(null)
+  const [htmlInsertOpen, setHtmlInsertOpen] = useState(false)
+  const [htmlDraft, setHtmlDraft] = useState('')
 
   const state = useEditorState({
     editor,
@@ -157,45 +232,94 @@ function Toolbar({ editor }: { editor: Editor }) {
     reader.readAsDataURL(file)
   }
 
-  return (
-    <div className="flex flex-wrap items-center gap-0.5 border-b border-gray-200 bg-gray-25 px-2 py-1.5">
-      <Btn active={state.h1} onClick={() => chain().toggleHeading({ level: 1 }).run()} label="제목 1"><Heading1 className="size-4" /></Btn>
-      <Btn active={state.h2} onClick={() => chain().toggleHeading({ level: 2 }).run()} label="제목 2"><Heading2 className="size-4" /></Btn>
-      <Btn active={state.h3} onClick={() => chain().toggleHeading({ level: 3 }).run()} label="제목 3"><Heading3 className="size-4" /></Btn>
-      <Divider />
-      <Btn active={state.bold} onClick={() => chain().toggleBold().run()} label="굵게"><Bold className="size-4" /></Btn>
-      <Btn active={state.italic} onClick={() => chain().toggleItalic().run()} label="기울임"><Italic className="size-4" /></Btn>
-      <Btn active={state.underline} onClick={() => chain().toggleUnderline().run()} label="밑줄"><UnderlineIcon className="size-4" /></Btn>
-      <Btn active={state.strike} onClick={() => chain().toggleStrike().run()} label="취소선"><Strikethrough className="size-4" /></Btn>
-      <Divider />
-      <Btn active={state.alignLeft} onClick={() => chain().setTextAlign('left').run()} label="왼쪽 정렬"><AlignLeft className="size-4" /></Btn>
-      <Btn active={state.alignCenter} onClick={() => chain().setTextAlign('center').run()} label="가운데 정렬"><AlignCenter className="size-4" /></Btn>
-      <Btn active={state.alignRight} onClick={() => chain().setTextAlign('right').run()} label="오른쪽 정렬"><AlignRight className="size-4" /></Btn>
-      <Divider />
-      <Btn active={state.bullet} onClick={() => chain().toggleBulletList().run()} label="글머리 목록"><List className="size-4" /></Btn>
-      <Btn active={state.ordered} onClick={() => chain().toggleOrderedList().run()} label="번호 목록"><ListOrdered className="size-4" /></Btn>
-      <Btn active={state.quote} onClick={() => chain().toggleBlockquote().run()} label="인용"><Quote className="size-4" /></Btn>
-      <Btn active={state.code} onClick={() => chain().toggleCode().run()} label="인라인 코드"><Code className="size-4" /></Btn>
-      <Btn active={state.codeBlock} onClick={() => chain().toggleCodeBlock().run()} label="코드 블록"><SquareCode className="size-4" /></Btn>
-      <Btn active={state.link} onClick={setLink} label="링크"><LinkIcon className="size-4" /></Btn>
-      <Divider />
-      <Btn onClick={() => imageInputRef.current?.click()} label="이미지"><ImagePlus className="size-4" /></Btn>
-      <Btn onClick={() => chain().setHorizontalRule().run()} label="구분선"><Minus className="size-4" /></Btn>
-      <Divider />
-      <Btn disabled={!state.canUndo} onClick={() => chain().undo().run()} label="실행 취소"><Undo2 className="size-4" /></Btn>
-      <Btn disabled={!state.canRedo} onClick={() => chain().redo().run()} label="다시 실행"><Redo2 className="size-4" /></Btn>
+  const closeHtmlInsert = () => {
+    setHtmlInsertOpen(false)
+    setHtmlDraft('')
+  }
 
-      <input
-        ref={imageInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => {
-          insertImage(e.target.files?.[0])
-          e.target.value = ''
-        }}
-      />
-    </div>
+  const insertInlineHtml = () => {
+    const html = sanitizeInlineHtml(htmlDraft)
+    if (!html) return
+    chain().insertContent(html).run()
+    closeHtmlInsert()
+  }
+
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-0.5 border-b border-gray-200 bg-gray-25 px-2 py-1.5">
+        <Btn active={state.h1} onClick={() => chain().toggleHeading({ level: 1 }).run()} label="제목 1"><Heading1 className="size-4" /></Btn>
+        <Btn active={state.h2} onClick={() => chain().toggleHeading({ level: 2 }).run()} label="제목 2"><Heading2 className="size-4" /></Btn>
+        <Btn active={state.h3} onClick={() => chain().toggleHeading({ level: 3 }).run()} label="제목 3"><Heading3 className="size-4" /></Btn>
+        <Divider />
+        <Btn active={state.bold} onClick={() => chain().toggleBold().run()} label="굵게"><Bold className="size-4" /></Btn>
+        <Btn active={state.italic} onClick={() => chain().toggleItalic().run()} label="기울임"><Italic className="size-4" /></Btn>
+        <Btn active={state.underline} onClick={() => chain().toggleUnderline().run()} label="밑줄"><UnderlineIcon className="size-4" /></Btn>
+        <Btn active={state.strike} onClick={() => chain().toggleStrike().run()} label="취소선"><Strikethrough className="size-4" /></Btn>
+        <Divider />
+        <Btn active={state.alignLeft} onClick={() => chain().setTextAlign('left').run()} label="왼쪽 정렬"><AlignLeft className="size-4" /></Btn>
+        <Btn active={state.alignCenter} onClick={() => chain().setTextAlign('center').run()} label="가운데 정렬"><AlignCenter className="size-4" /></Btn>
+        <Btn active={state.alignRight} onClick={() => chain().setTextAlign('right').run()} label="오른쪽 정렬"><AlignRight className="size-4" /></Btn>
+        <Divider />
+        <Btn active={state.bullet} onClick={() => chain().toggleBulletList().run()} label="글머리 목록"><List className="size-4" /></Btn>
+        <Btn active={state.ordered} onClick={() => chain().toggleOrderedList().run()} label="번호 목록"><ListOrdered className="size-4" /></Btn>
+        <Btn active={state.quote} onClick={() => chain().toggleBlockquote().run()} label="인용"><Quote className="size-4" /></Btn>
+        <Btn active={state.code} onClick={() => chain().toggleCode().run()} label="인라인 코드"><Code className="size-4" /></Btn>
+        <Btn active={state.codeBlock} onClick={() => chain().toggleCodeBlock().run()} label="코드 블록"><SquareCode className="size-4" /></Btn>
+        <Btn active={state.link} onClick={setLink} label="링크"><LinkIcon className="size-4" /></Btn>
+        <Btn onClick={() => setHtmlInsertOpen(true)} label="HTML 삽입"><Braces className="size-4" /></Btn>
+        <Divider />
+        <Btn onClick={() => imageInputRef.current?.click()} label="이미지"><ImagePlus className="size-4" /></Btn>
+        <Btn onClick={() => chain().setHorizontalRule().run()} label="구분선"><Minus className="size-4" /></Btn>
+        <Divider />
+        <Btn disabled={!state.canUndo} onClick={() => chain().undo().run()} label="실행 취소"><Undo2 className="size-4" /></Btn>
+        <Btn disabled={!state.canRedo} onClick={() => chain().redo().run()} label="다시 실행"><Redo2 className="size-4" /></Btn>
+
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            insertImage(e.target.files?.[0])
+            e.target.value = ''
+          }}
+        />
+      </div>
+
+      <Modal
+        open={htmlInsertOpen}
+        onClose={closeHtmlInsert}
+        title="HTML 삽입"
+        help="현재 커서 위치에 인라인 HTML 조각을 삽입합니다."
+        size="sm"
+        dismissible={false}
+        footer={
+          <>
+            <Button variant="secondary" onClick={closeHtmlInsert}>취소</Button>
+            <Button disabled={!htmlDraft.trim()} onClick={insertInlineHtml}>삽입</Button>
+          </>
+        }
+      >
+        <div className="space-y-2">
+          <TextArea
+            autoFocus
+            rows={8}
+            value={htmlDraft}
+            placeholder={'예: <strong>중요</strong> 또는 <a href="https://example.com">링크</a>'}
+            onChange={(e) => setHtmlDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && htmlDraft.trim()) {
+                e.preventDefault()
+                insertInlineHtml()
+              }
+            }}
+          />
+          <p className="text-caption text-gray-500">
+            굵게·기울임·밑줄·취소선·코드·링크·줄바꿈만 유지됩니다.
+          </p>
+        </div>
+      </Modal>
+    </>
   )
 }
 
