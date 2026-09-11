@@ -37,6 +37,7 @@ export function personaMatchSpec(master: MasterTable): LedgerMatchSpec {
     columns: ledger.columns,
     narrow: ledger.narrow,
     matchColumns: ledger.matchColumns,
+    hardKey: ledger.hardKey,
     // 무엇이 '내려감'인지는 원장마다 다르다 — 자격 설정의 `map`이 이미 그 판정을 갖고 있다.
     retired: (row) => ledger.map(row).retired,
   }

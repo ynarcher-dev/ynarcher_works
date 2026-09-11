@@ -1,4 +1,5 @@
 import type { LedgerMatchSpec } from '@/features/master/ledgerMatch'
+import { bizRegNoDigits, formatBizRegNo } from '@/lib/bizRegNo'
 
 /**
  * 사람·회사를 담는 원장 넷의 **정의 한 벌** — 표 이름, 읽는 컬럼, 대조가 견주는 세 칸,
@@ -21,6 +22,16 @@ import type { LedgerMatchSpec } from '@/features/master/ledgerMatch'
 
 export type LedgerKey = 'startups' | 'networks' | 'ma_sellers' | 'ma_buyers'
 
+/**
+ * 확실한 키 — 사업자등록번호(2026-09-11, 3_3_8 §3). 사업체 단위 번호라 한 칸만 같아도 같은
+ * 기업이다. 견줄 때는 숫자만 남기고, 후보를 긁을 때는 저장 모양(XXX-XX-XXXXX)으로 묻는다.
+ */
+const BIZ_REG_NO: NonNullable<LedgerMatchSpec['hardKey']> = {
+  column: 'biz_reg_no',
+  normalize: bizRegNoDigits,
+  stored: formatBizRegNo,
+}
+
 /** 넷이 같은 규칙으로 답하는 '내려간 행' 판정 — 원장마다 다시 적지 않는다. */
 const retired = (row: Record<string, unknown>): boolean =>
   Boolean(row.deleted_at || row.merged_into_id)
@@ -29,8 +40,9 @@ export const LEDGERS: Record<LedgerKey, LedgerMatchSpec> = {
   startups: {
     table: 'startups',
     columns:
-      'id, name, representative, email, phone, management_status, deleted_at, merged_into_id',
+      'id, name, representative, biz_reg_no, email, phone, management_status, deleted_at, merged_into_id',
     matchColumns: { name: 'name', email: 'email', phone: 'phone' },
+    hardKey: BIZ_REG_NO,
     mergedColumn: 'merged_into_id',
     retired,
   },
@@ -45,15 +57,20 @@ export const LEDGERS: Record<LedgerKey, LedgerMatchSpec> = {
     table: 'ma_sellers',
     // 연락처는 20260908220000이 더했다 — 포털 계정의 초기 비밀번호가 되는 값이라
     // 계정이 아니라 원장이 갖는다.
-    columns: 'id, name, contact_name, contact_email, phone, deleted_at, merged_into_id',
+    columns:
+      'id, name, contact_name, contact_email, phone, biz_reg_no, startup_id, deleted_at, merged_into_id',
     matchColumns: { name: 'name', email: 'contact_email', phone: 'phone' },
+    // 미연결 행만 자기 번호를 갖는다 — 연결된 행의 번호는 스타트업 원장이 갖는다(3_3_8 §4).
+    hardKey: BIZ_REG_NO,
     mergedColumn: 'merged_into_id',
     retired,
   },
   ma_buyers: {
     table: 'ma_buyers',
-    columns: 'id, name, contact_name, contact_email, phone, deleted_at, merged_into_id',
+    columns:
+      'id, name, contact_name, contact_email, phone, biz_reg_no, startup_id, deleted_at, merged_into_id',
     matchColumns: { name: 'name', email: 'contact_email', phone: 'phone' },
+    hardKey: BIZ_REG_NO,
     mergedColumn: 'merged_into_id',
     retired,
   },

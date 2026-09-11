@@ -8,21 +8,26 @@ import { supabase } from '@/lib/supabase'
  * 판정 기준이 화면마다 갈리고, 같은 회사를 어느 창에서 넣었느냐에 따라 중복이 되기도 안
  * 되기도 한다(AI 격자 부품을 `features/ai`로 승격한 것과 같은 판단).
  *
- * **기준은 이름·이메일·전화 중 둘 이상 일치**다. 하나만으로 판정하지 않는 이유는 공용
- * 대표번호와 공용 메일(`info@`) 때문이다 — 그 한 칸으로 묶으면 같은 회사의 서로 다른 사람이
- * 한 사람이 된다. 반대로 셋 다 요구하면 연락처 한 칸이 빈 원장 행은 영원히 안 걸린다.
+ * **판정은 두 층이다**(2026-09-11, 3_3_8).
+ *  · 확실한 키(`hardKey`) — 있으면 같은 대상이라 확정할 수 있는 값(스타트업·M&A의 사업자등록번호).
+ *    한 칸만 같아도 걸린다. 무엇을 막을지는 원장별 정책(`identityPolicy`)이 답하고 DB가 마지막으로
+ *    막는다.
+ *  · 의심 조합 — 이름·이메일·전화 중 둘 이상 일치. 하나만으로 판정하지 않는 이유는 공용 대표번호와
+ *    공용 메일(`info@`) 때문이다 — 그 한 칸으로 묶으면 같은 회사의 서로 다른 사람이 한 사람이 된다.
+ *    반대로 셋 다 요구하면 연락처 한 칸이 빈 원장 행은 영원히 안 걸린다.
  *
  * **이름 완전일치를 대신한다.** 종전 `checkDuplicateName`은 `.eq('name', name)` 한 줄이라
  * `딜챗`과 `주식회사 딜챗`, `(주)딜챗`이 서로 남남이었다 — 실무에서 중복이 들어오는 가장 흔한
- * 통로가 그 한 글자 차이였다. 여기서는 이름을 정규화해 견주고(공백·대소문자) 이메일·전화가
- * 두 번째 근거로 받쳐 준다.
+ * 통로가 그 한 글자 차이였다. 이름은 공백·대소문자·법인 형태 표기를 걷고 견준다
+ * (`normEntityName` — DB `app.norm_entity_name`과 같은 규칙).
  *
- * **후보는 이름과 이메일로만 긁는다**(전화로 긁지 않는다). 2개 이상 일치라는 규칙 아래에서
+ * **후보는 이름·이메일·확실한 키로 긁는다**(전화로 긁지 않는다). 2개 이상 일치라는 규칙 아래에서
  * 성립하는 짝은 (이름·이메일)·(이름·전화)·(이메일·전화) 셋인데 **모두 이름이나 이메일을
  * 포함**하므로, 두 축으로 긁으면 놓치는 짝이 없다. 전화만 같은 행은 애초에 한 칸 일치라
  * 기준에 못 미친다. 이렇게 두는 실익은 **전화번호 표기 차이에 판정이 흔들리지 않는 것**이다
  * — 원장마다 하이픈 유무가 다르고, 그 차이로 후보를 못 긁으면 대조가 조용히 헛돈다.
- * 전화는 후보를 모은 뒤 숫자만 남겨 비교한다.
+ * 전화는 후보를 모은 뒤 숫자만 남겨 비교한다. 이름은 정규화 값으로 긁을 수 없어(원장에는
+ * 원문이 있다) 원문으로 긁되, 법인 표기가 다른 행은 이메일·확실한 키 축이 받쳐 준다.
  */
 
 /** 대조에 넣는 한 줄. 세 칸 중 빈 것이 있어도 된다(빈 칸은 일치로 세지 않는다). */
@@ -30,7 +35,12 @@ export interface LedgerProbe {
   name: string
   email: string
   phone: string
+  /** 확실한 키의 원문(사업자등록번호). 원장에 `hardKey`가 없으면 무시된다. */
+  hard?: string
 }
+
+/** 어느 칸이 같았는가. 화면이 "무엇이 같아서 걸렸는지"와 정책이 "막을 것인지"를 이걸로 답한다. */
+export type HitField = 'hard' | 'name' | 'email' | 'phone'
 
 /**
  * 어느 원장을 어떻게 대조하는가. **도메인이 자기 것을 들고 온다** — 여기에 표 목록을 두면
@@ -38,7 +48,7 @@ export interface LedgerProbe {
  */
 export interface LedgerMatchSpec {
   table: string
-  /** PostgREST select 문자열. `id`와 `matchColumns` 셋을 반드시 포함한다. */
+  /** PostgREST select 문자열. `id`와 `matchColumns` 셋(있으면 `hardKey.column`)을 반드시 포함한다. */
   columns: string
   /**
    * 한 원장 안의 일부만 대조 대상일 때 좁히는 조건(NETWORKS 명단은 전문가만 본다).
@@ -49,6 +59,15 @@ export interface LedgerMatchSpec {
   narrow?: { column: string; value: string }
   /** 대조가 견주는 세 칸의 실제 이름. 원장마다 다르다(M&A는 `contact_email`). */
   matchColumns: { name: string; email: string; phone: string }
+  /**
+   * 확실한 키(있는 원장만). `normalize`는 견줄 값(숫자만), `stored`는 원장에 저장된 모양
+   * (`XXX-XX-XXXXX`) — 후보를 긁을 때는 저장 모양으로 묻고, 판정은 정규화 값으로 한다.
+   */
+  hardKey?: {
+    column: string
+    normalize: (v: unknown) => string
+    stored: (norm: string) => string
+  }
   /**
    * 이 행이 원장에서 내려갔는가(비활성·병합). 주지 않으면 전부 살아 있는 것으로 본다.
    *
@@ -74,8 +93,10 @@ export interface LedgerMatch {
   email: string | null
   phone: string | null
   retired: boolean
-  /** 몇 칸이 일치했는가(2 또는 3). 화면이 "무엇이 같아서 걸렸는지"를 말할 때 쓴다. */
+  /** 몇 칸이 일치했는가(확실한 키 포함). 화면이 "무엇이 같아서 걸렸는지"를 말할 때 쓴다. */
   hits: number
+  /** 어느 칸이 같았는가. 정책이 막을지 멈출지를 이걸로 가른다. */
+  hitFields: HitField[]
   /** 원본 행 — 화면이 더 보여 줄 값(대표자·소속…)을 자기 규칙으로 꺼내 쓴다. */
   raw: Record<string, unknown>
 }
@@ -89,7 +110,18 @@ function chunk<T>(arr: T[], size: number): T[][] {
   return out
 }
 
-const normText = (v: unknown): string => String(v ?? '').trim().toLowerCase()
+/**
+ * 이름 대조용 정규화 — 소문자, 공백 제거, 법인 형태 표기 제거. DB `app.norm_entity_name`과
+ * 같은 규칙이어야 화면이 경고한 것과 DB가 막는 것이 같은 행이다.
+ */
+export function normEntityName(v: unknown): string {
+  return String(v ?? '')
+    .replace(/주식회사|유한회사|유한책임회사|합자회사|합명회사|\(주\)|㈜|\(유\)|\(합\)/g, '')
+    .toLowerCase()
+    .replace(/\s/g, '')
+}
+
+const normEmail = (v: unknown): string => String(v ?? '').trim().toLowerCase()
 const normPhone = (v: unknown): string => String(v ?? '').replace(/\D/g, '')
 
 /** 대조 후보 하나(정규화 값을 미리 들고 있다). 테스트가 직접 세울 수 있도록 열어 둔다. */
@@ -103,6 +135,8 @@ export interface LedgerCandidate {
   nName: string
   nEmail: string
   nPhone: string
+  /** 확실한 키의 정규화 값. 원장에 키가 없으면 빈 문자열. */
+  nHard?: string
 }
 
 /**
@@ -110,25 +144,39 @@ export interface LedgerCandidate {
  *
  * 빈 칸은 일치로 세지 않는다. 그러지 않으면 이메일이 둘 다 비었다는 사실이 '이메일이 같다'가
  * 되어, 연락처 없는 행 둘이 이름 하나만으로 같은 대상이 된다.
+ *
+ * `normalizeHard`는 확실한 키를 어떻게 접는지(스타트업은 숫자만). 주지 않으면 그 축은 없다.
  */
 export function bestMatchFor(
   probe: LedgerProbe,
   candidates: LedgerCandidate[],
+  normalizeHard?: (v: unknown) => string,
 ): LedgerMatch | null {
-  const pn = normText(probe.name)
-  const pe = normText(probe.email)
+  const pn = normEntityName(probe.name)
+  const pe = normEmail(probe.email)
   const pp = normPhone(probe.phone)
+  const ph = normalizeHard ? normalizeHard(probe.hard) : ''
 
   let best: LedgerMatch | null = null
   for (const c of candidates) {
-    const hits =
-      (pn && pn === c.nName ? 1 : 0) +
-      (pe && pe === c.nEmail ? 1 : 0) +
-      (pp && pp === c.nPhone ? 1 : 0)
-    if (hits < 2) continue
-    // 일치 수가 많은 쪽 우선, 같으면 살아 있는 행을 앞세운다 — 되살릴 대상보다 지금 쓰는
-    // 행을 가리키는 편이 담당자의 다음 행동을 줄인다.
-    if (!best || hits > best.hits || (hits === best.hits && best.retired && !c.retired)) {
+    const fields: HitField[] = []
+    if (ph && ph === (c.nHard ?? '')) fields.push('hard')
+    if (pn && pn === c.nName) fields.push('name')
+    if (pe && pe === c.nEmail) fields.push('email')
+    if (pp && pp === c.nPhone) fields.push('phone')
+    const hard = fields.includes('hard')
+    const soft = fields.length - (hard ? 1 : 0)
+    if (!hard && soft < 2) continue
+    const hits = fields.length
+    // 확실한 키가 같은 쪽 → 일치 수가 많은 쪽 → 살아 있는 행 순으로 앞세운다. 되살릴 대상보다
+    // 지금 쓰는 행을 가리키는 편이 담당자의 다음 행동을 줄인다.
+    const bestHard = best?.hitFields.includes('hard') ?? false
+    if (
+      !best ||
+      (hard && !bestHard) ||
+      (hard === bestHard && hits > best.hits) ||
+      (hard === bestHard && hits === best.hits && best.retired && !c.retired)
+    ) {
       best = {
         id: c.id,
         name: c.name,
@@ -136,6 +184,7 @@ export function bestMatchFor(
         phone: c.phone,
         retired: c.retired,
         hits,
+        hitFields: fields,
         raw: c.raw,
       }
     }
@@ -148,16 +197,23 @@ export function bestMatchFor(
  *
  * 걸리지 않은 줄은 키가 없다(빈 값을 넣지 않는다 — '안 걸렸다'와 '빈 행이 걸렸다'는 다르다).
  * 등록 창은 한 줄만 넣고, 대용량 업로드는 파일 전체를 한 번에 넣는다.
+ *
+ * `excludeId`는 수정 중인 자기 행이다 — 빼지 않으면 자기 자신이 중복으로 걸린다.
  */
 export async function findLedgerMatches(
   spec: LedgerMatchSpec,
   probes: LedgerProbe[],
+  excludeId?: string,
 ): Promise<Map<number, LedgerMatch>> {
   const cols = spec.matchColumns
+  const hardKey = spec.hardKey
 
   const names = [...new Set(probes.map((p) => p.name.trim()).filter(Boolean))]
   const emails = [...new Set(probes.map((p) => p.email.trim()).filter(Boolean))]
-  if (names.length === 0 && emails.length === 0) return new Map()
+  const hards = hardKey
+    ? [...new Set(probes.map((p) => hardKey.normalize(p.hard)).filter(Boolean))]
+    : []
+  if (names.length === 0 && emails.length === 0 && hards.length === 0) return new Map()
 
   const base = () => {
     let q = supabase.from(spec.table).select(spec.columns)
@@ -169,7 +225,7 @@ export async function findLedgerMatches(
   const collect = (rows: Record<string, unknown>[]) => {
     for (const raw of rows) {
       const id = String(raw.id)
-      if (byId.has(id)) continue
+      if (byId.has(id) || id === excludeId) continue
       const name = String(raw[cols.name] ?? '')
       const email = raw[cols.email] == null ? null : String(raw[cols.email])
       const phone = raw[cols.phone] == null ? null : String(raw[cols.phone])
@@ -180,30 +236,35 @@ export async function findLedgerMatches(
         phone,
         retired: spec.retired?.(raw) ?? false,
         raw,
-        nName: normText(name),
-        nEmail: normText(email),
+        nName: normEntityName(name),
+        nEmail: normEmail(email),
         nPhone: normPhone(phone),
+        nHard: hardKey ? hardKey.normalize(raw[hardKey.column]) : '',
       })
     }
   }
 
+  const run = async (column: string, batch: string[]) => {
+    const { data, error } = await base().in(column, batch)
+    // 대조 실패를 삼키지 않는다 — 삼키면 "중복이 없다"와 "확인하지 못했다"가 같아지고,
+    // 그 침묵이 그대로 중복 등록이 된다.
+    if (error) throw error
+    collect((data ?? []) as unknown as Record<string, unknown>[])
+  }
+
   await Promise.all([
-    ...chunk(names, IN_CHUNK).map(async (batch) => {
-      const { data, error } = await base().in(cols.name, batch)
-      // 대조 실패를 삼키지 않는다 — 삼키면 "중복이 없다"와 "확인하지 못했다"가 같아지고,
-      // 그 침묵이 그대로 중복 등록이 된다.
-      if (error) throw error
-      collect((data ?? []) as unknown as Record<string, unknown>[])
-    }),
-    ...chunk(emails, IN_CHUNK).map(async (batch) => {
-      const { data, error } = await base().in(cols.email, batch)
-      if (error) throw error
-      collect((data ?? []) as unknown as Record<string, unknown>[])
-    }),
+    ...chunk(names, IN_CHUNK).map((batch) => run(cols.name, batch)),
+    ...chunk(emails, IN_CHUNK).map((batch) => run(cols.email, batch)),
+    ...(hardKey
+      ? chunk(hards.map((h) => hardKey.stored(h)), IN_CHUNK).map((batch) =>
+          run(hardKey.column, batch),
+        )
+      : []),
   ])
 
   const idxName = new Map<string, LedgerCandidate[]>()
   const idxEmail = new Map<string, LedgerCandidate[]>()
+  const idxHard = new Map<string, LedgerCandidate[]>()
   const push = (m: Map<string, LedgerCandidate[]>, k: string, c: LedgerCandidate) => {
     if (!k) return
     const arr = m.get(k)
@@ -213,6 +274,7 @@ export async function findLedgerMatches(
   for (const c of byId.values()) {
     push(idxName, c.nName, c)
     push(idxEmail, c.nEmail, c)
+    push(idxHard, c.nHard ?? '', c)
   }
 
   const out = new Map<number, LedgerMatch>()
@@ -220,25 +282,35 @@ export async function findLedgerMatches(
     // 이 줄과 한 칸이라도 겹치는 후보만 모아 판정에 넘긴다.
     const cands = new Map<string, LedgerCandidate>()
     for (const c of [
-      ...(idxName.get(normText(probe.name)) ?? []),
-      ...(idxEmail.get(normText(probe.email)) ?? []),
+      ...(idxName.get(normEntityName(probe.name)) ?? []),
+      ...(idxEmail.get(normEmail(probe.email)) ?? []),
+      ...(hardKey ? (idxHard.get(hardKey.normalize(probe.hard)) ?? []) : []),
     ]) {
       cands.set(c.id, c)
     }
-    const best = bestMatchFor(probe, [...cands.values()])
+    const best = bestMatchFor(probe, [...cands.values()], hardKey?.normalize)
     if (best) out.set(i, best)
   })
 
   return out
 }
 
-/** 원장 행(또는 업로드 페이로드)에서 대조에 견줄 세 값을 꺼낸다. 칸 이름은 원장마다 다르다. */
+/**
+ * 원장 행(또는 업로드 페이로드)에서 대조에 견줄 값을 꺼낸다. 칸 이름은 원장마다 다르므로
+ * 명세(`matchColumns`·`hardKey`)를 그대로 받는다.
+ */
 export function probeOf(
   row: Record<string, unknown>,
-  cols: { name: string; email: string; phone: string },
+  spec: Pick<LedgerMatchSpec, 'matchColumns' | 'hardKey'>,
 ): LedgerProbe {
   const at = (key: string) => (row[key] == null ? '' : String(row[key]))
-  return { name: at(cols.name), email: at(cols.email), phone: at(cols.phone) }
+  const cols = spec.matchColumns
+  return {
+    name: at(cols.name),
+    email: at(cols.email),
+    phone: at(cols.phone),
+    ...(spec.hardKey ? { hard: at(spec.hardKey.column) } : {}),
+  }
 }
 
 /**
@@ -252,9 +324,13 @@ export function probeOf(
  * 판정 규칙은 하나뿐이다(`bestMatchFor`) — 파일 안과 원장을 다른 잣대로 보면, 같은 두 줄이
  * 파일에서는 남남이고 원장에서는 같은 대상이 된다.
  */
-export function findDuplicateProbes(probes: LedgerProbe[]): Map<number, number> {
+export function findDuplicateProbes(
+  probes: LedgerProbe[],
+  normalizeHard?: (v: unknown) => string,
+): Map<number, number> {
   const idxName = new Map<string, LedgerCandidate[]>()
   const idxEmail = new Map<string, LedgerCandidate[]>()
+  const idxHard = new Map<string, LedgerCandidate[]>()
   const push = (m: Map<string, LedgerCandidate[]>, k: string, c: LedgerCandidate) => {
     if (!k) return
     const arr = m.get(k)
@@ -264,16 +340,21 @@ export function findDuplicateProbes(probes: LedgerProbe[]): Map<number, number> 
 
   const out = new Map<number, number>()
   probes.forEach((probe, i) => {
-    const nName = normText(probe.name)
-    const nEmail = normText(probe.email)
+    const nName = normEntityName(probe.name)
+    const nEmail = normEmail(probe.email)
+    const nHard = normalizeHard ? normalizeHard(probe.hard) : ''
 
     // **앞선 줄만** 후보다 — 뒤엣줄이 접히고 앞엣줄이 남아야, 같은 파일을 두 번 올려도
     // 접히는 줄이 같다(뒤를 보면 어느 쪽이 남을지가 순회 순서에 따라 달라진다).
     const cands = new Map<string, LedgerCandidate>()
-    for (const c of [...(idxName.get(nName) ?? []), ...(idxEmail.get(nEmail) ?? [])]) {
+    for (const c of [
+      ...(idxName.get(nName) ?? []),
+      ...(idxEmail.get(nEmail) ?? []),
+      ...(idxHard.get(nHard) ?? []),
+    ]) {
       cands.set(c.id, c)
     }
-    const hit = bestMatchFor(probe, [...cands.values()])
+    const hit = bestMatchFor(probe, [...cands.values()], normalizeHard)
     if (hit) out.set(i, Number(hit.id))
 
     const self: LedgerCandidate = {
@@ -286,18 +367,21 @@ export function findDuplicateProbes(probes: LedgerProbe[]): Map<number, number> 
       nName,
       nEmail,
       nPhone: normPhone(probe.phone),
+      nHard,
     }
     push(idxName, nName, self)
     push(idxEmail, nEmail, self)
+    push(idxHard, nHard, self)
   })
   return out
 }
 
-/** 한 건만 대조한다 — 등록 폼이 저장 직전에 부르는 자리. */
+/** 한 건만 대조한다 — 등록·수정 폼이 저장 직전에 부르는 자리. 수정이면 자기 행을 뺀다. */
 export async function findOneLedgerMatch(
   spec: LedgerMatchSpec,
   probe: LedgerProbe,
+  excludeId?: string,
 ): Promise<LedgerMatch | null> {
-  const found = await findLedgerMatches(spec, [probe])
+  const found = await findLedgerMatches(spec, [probe], excludeId)
   return found.get(0) ?? null
 }

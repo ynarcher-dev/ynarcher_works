@@ -12,24 +12,47 @@ import type { LedgerMatch } from '@/features/master/ledgerMatch'
  * 열어 보는 것'인데, 그 길이 없으면 이름을 외워서 목록에서 다시 찾아야 한다. 새 탭으로 여는
  * 이유는 지금 적던 폼을 잃지 않기 위해서다.
  *
+ * **막힘과 멈춤은 같은 자리, 다른 색이다**(2026-09-11). 확실한 키가 같으면(사업자등록번호,
+ * 사람은 이름+연락처) 저장은 열리지 않고 붉은 톤으로 서며, 의심 조합이면 노란 톤으로 서서
+ * 한 번 더 누르면 통과한다. 자리를 같이 쓰는 이유는 담당자가 보는 것이 언제나 '확정 버튼
+ * 바로 아래 한 줄'이어야 해서다.
+ *
  * 토스트로 띄우지 않는다 — 사라지는 알림은 "한 번 더 누르면 저장됩니다"를 말할 수 없다.
  */
+const FIELD_LABEL: Record<LedgerMatch['hitFields'][number], string> = {
+  hard: '사업자등록번호',
+  name: '이름',
+  email: '이메일',
+  phone: '연락처',
+}
+
 export function DuplicateNotice({
   match,
   noun,
   detailPath,
+  blocked = false,
 }: {
   match: LedgerMatch
   /** 이 원장을 부르는 말(기업·전문가·셀러…). 문장이 자연스러우려면 화면이 준다. */
   noun: string
   /** 찾은 행의 상세 경로. 갈 곳이 없으면 주지 않는다 — 누를 수 없는 링크를 세우지 않는다. */
   detailPath?: (id: string) => string
+  /** 확실한 키가 같아 저장이 열리지 않는가. */
+  blocked?: boolean
 }) {
   const to = detailPath?.(match.id)
+  const what = match.hitFields.map((f) => FIELD_LABEL[f]).join('·')
   return (
-    <div className="rounded-radius-md border border-warning-border bg-warning-subtle px-3 py-2.5">
+    <div
+      className={cn(
+        'rounded-radius-md border px-3 py-2.5',
+        blocked ? 'border-danger-border bg-danger-subtle' : 'border-warning-border bg-warning-subtle',
+      )}
+    >
       <p className="text-body font-semibold text-gray-900">
-        이미 등록된 {noun}일 수 있습니다 — {match.hits}개 항목이 일치합니다.
+        {blocked
+          ? `이미 등록된 ${noun}입니다 — ${what}이(가) 같습니다.`
+          : `이미 등록된 ${noun}일 수 있습니다 — ${what}이(가) 같습니다.`}
       </p>
       <p className={cn('mt-1', cardText.meta)}>
         {to ? (
@@ -51,7 +74,9 @@ export function DuplicateNotice({
       <p className={cn('mt-1.5', cardText.meta)}>
         {match.retired
           ? '원장에서 내려간 행입니다. 되살릴 대상이라면 새로 만들지 말고 그 행을 여세요.'
-          : '다른 곳이라면 한 번 더 저장을 누르세요. 같은 곳이라면 위 링크에서 기존 행을 고치세요.'}
+          : blocked
+            ? '새로 만들 수 없습니다. 위 링크에서 기존 행을 고치세요.'
+            : '다른 곳이라면 한 번 더 저장을 누르세요. 같은 곳이라면 위 링크에서 기존 행을 고치세요.'}
       </p>
     </div>
   )

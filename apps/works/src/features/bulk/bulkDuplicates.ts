@@ -33,13 +33,13 @@ export function useLedgerDuplicates(spec: BulkImportSpec, parsed: BulkParseResul
     queryKey: [
       'bulk-duplicates',
       ledger?.table,
-      ledger ? rows.map((r) => probeOf(r, ledger.matchColumns)) : null,
+      ledger ? rows.map((r) => probeOf(r, ledger)) : null,
     ],
     enabled: Boolean(ledger && rows.length > 0),
     queryFn: async (): Promise<Map<number, string>> => {
       const found = await findLedgerMatches(
         ledger!,
-        rows.map((r) => probeOf(r, ledger!.matchColumns)),
+        rows.map((r) => probeOf(r, ledger!)),
       )
       return new Map([...found].map(([i, m]) => [i, m.name]))
     },

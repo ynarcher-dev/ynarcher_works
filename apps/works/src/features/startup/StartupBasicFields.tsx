@@ -9,14 +9,13 @@ import {
 } from 'react-hook-form'
 import { FieldGrid, type FieldWidth } from '@/components/FieldGrid'
 import { ItemRows, type ItemCol } from '@/components/ItemRows'
-import { PersonPickerControl } from '@/features/networks/PersonPickerField'
 import { PhotoBox } from '@/features/networks/PhotoBox'
 import { TagSelect } from '@/features/admin/TagSelect'
 import { MANAGEMENT_STATUS_OPTIONS, managementStatusLabel } from '@/features/startup/startupClassification'
 import { ADDRESS_KIND_OPTIONS } from '@/features/startup/startupProfile'
 import { Field } from '@/features/startup/StartupFormField'
+import { bizRegNoError } from '@/lib/bizRegNo'
 import type { StartupDetailFormValues } from '@/features/startup/startupFormValues'
-import type { StartupManagerRow } from '@/features/startup/startupPoolHooks'
 
 /** 주소 한 줄 — 구분은 고정 선택지라 좁고, 주소는 길이를 모르는 값이라 남는 폭을 갖는다. */
 const ADDRESS_COLS: ItemCol[] = [{ label: '구분', kind: 'pick' }, { label: '주소' }]
@@ -36,10 +35,7 @@ interface Props {
   /** 이미 투자기업인가. 구분·담당자·관리현황은 이 화면에서 건드리지 않는다(FUND 전용). */
   alreadyInvested: boolean
   poolStatus: string
-  /** 이 기업의 딜메이커 전원(정 먼저). 표시 전용이며 지정은 FUND 투자 집행이 한다. */
-  managers: StartupManagerRow[]
-  /** 지금 폼에 적힌 기업명. 대표자를 새 인물로 등록할 때 그 사람의 소속으로 채운다. */
-  companyName: string
+  leadName: string | null
 }
 
 /**
@@ -59,8 +55,7 @@ export function StartupBasicFields({
   onPickPhoto,
   alreadyInvested,
   poolStatus,
-  managers,
-  companyName,
+  leadName,
 }: Props) {
   // 주소 목록 — 줄의 key는 순번이 아니라 useFieldArray가 준 id다(가운데 줄을 지웠을 때
   // 아래 줄의 DOM 값이 위로 밀려 붙는 것을 막는다).
@@ -120,24 +115,8 @@ export function StartupBasicFields({
             <Input invalid={Boolean(errors.name)} {...register('name', { required: '기업명은 필수입니다.' })} />
             {errors.name && <p className="mt-1 text-caption text-danger">{errors.name.message}</p>}
           </Field>
-          {/* 대표자는 **한 명**이고 사람 원장을 가리킨다(2026-09-10). 이름만 적어도 저장되며
-              (미연결) 그때는 목록의 '대표자 미연결' 축이 나중에 잇는 자리다. 공동대표·각자대표를
-              여기 둘로 적지 못하게 하는 것은 화면의 고집이 아니라 게스트 계정 때문이다 —
-              계정이 원장 행 하나에 하나라 대표가 둘이면 어느 이메일이 로그인 ID인지 원장이
-              답하지 못한다. 둘째 대표는 아래 핵심 팀원에 직함 '공동대표'로 선다. */}
-          <Field
-            label="대표자명"
-            width="lg"
-            hint="대표자는 한 명입니다. 공동대표·각자대표는 핵심 팀원에 직함으로 적으십시오. 이름을 적으면 네트워크 원장에서 같은 사람을 찾아 잇습니다."
-          >
-            <PersonPickerControl
-              control={control}
-              namePath="representative"
-              idPath="representative_network_id"
-              createCategory="startup"
-              defaultAffiliation={companyName}
-              placeholder="이름을 입력해 원장에서 찾습니다"
-            />
+          <Field label="대표자명" width="lg">
+            <Input {...register('representative')} />
           </Field>
           <Field label="회사 형태" width="lg">
             <Select {...register('company_form')}>
@@ -152,8 +131,23 @@ export function StartupBasicFields({
           <Field label="설립일" width="lg">
             <Input type="date" {...register('founded_on')} />
           </Field>
-          <Field label="사업자등록번호" width="lg">
-            <Input {...register('biz_reg_no')} />
+          {/* 확실한 키(3_3_8 §3). 형식·검증은 여기서 먼저 걸리고, 같은 번호의 기업은 저장 직전
+              대조가 막는다. 비워 둘 수 있다 — 발굴 단계에는 명함만 들고 오는 자리가 있고, 번호는
+              보육·투자로 올라갈 때 서버가 요구한다. */}
+          <Field
+            label="사업자등록번호"
+            width="lg"
+            hint="숫자 10자리. 같은 번호의 기업은 두 번 등록할 수 없습니다. 보육·투자로 올릴 때는 필수입니다."
+          >
+            <Input
+              inputMode="numeric"
+              placeholder="000-00-00000"
+              invalid={Boolean(errors.biz_reg_no)}
+              {...register('biz_reg_no', { validate: (v) => bizRegNoError(v) ?? true })}
+            />
+            {errors.biz_reg_no && (
+              <p className="mt-1 text-caption text-danger">{errors.biz_reg_no.message}</p>
+            )}
           </Field>
           {tagField('stage', 'investment_stage_tags', '단계', 'lg')}
           <Field
@@ -270,25 +264,8 @@ export function StartupBasicFields({
           help={'투자기업의 딜메이커·관리현황은 FUND 투자 집행에서 지정·관리합니다.\n이 화면에서는 조회만 됩니다.'}
         >
           <FieldGrid>
-            {/* 정 하나가 아니라 **전원**이 선다(2026-09-10). 종전에는 리드만 세워, 부가 지정된
-                기업에서도 이 칸이 한 사람만 답했다 — 담당자 원장에 있는 사실을 화면이 절반만
-                말하면 "부는 지정이 안 됐나"를 상세의 딜메이커 표까지 가서 되물어야 한다.
-                자리(정·부)는 이름 뒤 괄호가 답하고, 하나뿐인 정은 굵기로 도드라진다
-                (딜메이커 표와 같은 규격 — 색은 상태의 것이다). */}
             <Field label="딜메이커" width="lg">
-              <div className="py-2 text-body text-gray-900">
-                {managers.length === 0
-                  ? '-'
-                  : managers.map((m, i) => (
-                      <span key={m.user_id}>
-                        {i > 0 && ', '}
-                        <span className={m.is_lead ? 'font-semibold' : undefined}>
-                          {m.user?.name ?? '(이름 없음)'}
-                        </span>
-                        <span className="text-gray-600">({m.is_lead ? '정' : '부'})</span>
-                      </span>
-                    ))}
-              </div>
+              <div className="py-2 text-body text-gray-900">{leadName || '-'}</div>
             </Field>
             <Field label="관리현황" width="lg">
               <div className="py-2 text-body text-gray-900">{poolStatus || '-'}</div>

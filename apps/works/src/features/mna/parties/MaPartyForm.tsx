@@ -14,8 +14,12 @@ import { useForm } from 'react-hook-form'
 import { useEditReasonPrompt } from '@/components/EditReasonPrompt'
 import { FormTopBar } from '@/components/FormTopBar'
 import { DuplicateNotice } from '@/features/master/DuplicateNotice'
-import { useDuplicateGuard } from '@/features/master/duplicateGuard'
+import { useDuplicateGuard, useGuardReset } from '@/features/master/duplicateGuard'
+import { ledgerSaveFailureText } from '@/features/master/identityPolicy'
 import { LEDGERS } from '@/features/master/ledgers'
+import { useStartupLinkGuard } from '@/features/mna/parties/partyIdentity'
+import { StartupLinkNotice } from '@/features/mna/parties/StartupLinkNotice'
+import { bizRegNoError, formatBizRegNo } from '@/lib/bizRegNo'
 import { RichTextEditor } from '@/components/RichTextEditor'
 import { useTagTokenField } from '@/features/admin/TagTokenField'
 import { StartupPickerModal } from '@/features/mna/parties/StartupPickerModal'
@@ -55,6 +59,8 @@ interface MaPartyFormValues {
   contactName: string
   contactEmail: string
   contactPhone: string
+  /** 사업자등록번호 — 미연결 행의 확실한 키. 연결되면 잠기고 저장 시 서버가 비운다(3_3_8 §4). */
+  bizRegNo: string
 }
 
 interface Props {
@@ -87,7 +93,8 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
   const isEdit = Boolean(recordId)
   // 중복 가드 — 이 원장은 종전에 대조가 아예 없어 같은 회사가 그대로 두 번 들어왔다
   // (2026-09-09 신설). 어느 원장을 볼지는 화면 설정이 정한다.
-  const dup = useDuplicateGuard(LEDGERS[config.table])
+  // 사업자등록번호가 같으면 막고, 이름·이메일·전화 두 칸 일치면 한 번 멈춘다(3_3_8 §3).
+  const dup = useDuplicateGuard(LEDGERS[config.table], config.table)
   // 수정 저장은 사유를 받아야 확정된다 — 사유는 변동 이력의 note로 남는다.
   const { askReason, reasonModal } = useEditReasonPrompt()
   // 등록 모드에서 미리 고른 자료. 저장 성공 직후 새 id로 일괄 업로드한다.
@@ -111,6 +118,7 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
       contactName: initial?.contact_name ?? '',
       contactEmail: initial?.contact_email ?? '',
       contactPhone: initial?.phone ?? '',
+      bizRegNo: initial?.biz_reg_no ?? '',
     },
   })
 
@@ -141,6 +149,8 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
     setText: (f, value) => setValue(f, value, { shouldValidate: true }),
     setIndustries,
   })
+  // 미연결 행이 스타트업 원장에 있는 기업이면 연결 없이 저장하지 않는다(3_3_8 §4).
+  const linkGuard = useStartupLinkGuard(link.startupId)
 
   /**
    * 'AI 작성하기'가 읽을 자료. **모드가 무엇을 읽는지 정한다** — 수정은 이미 올라간 첨부,
@@ -188,12 +198,15 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
 
   // 대조에 쓰인 세 칸이 바뀌면 통과권이 사라진다 — 한 번 확인한 뒤 이름을 고쳐도 대조 없이
   // 저장되면, 정작 새로 적은 이름의 중복은 아무도 보지 않는다.
-  const probeKey = [watchedName, watch('contactEmail'), watch('contactPhone')].join('|')
-  const [lastProbeKey, setLastProbeKey] = useState(probeKey)
-  if (probeKey !== lastProbeKey) {
-    setLastProbeKey(probeKey)
-    dup.clear()
-  }
+  const probeKey = [
+    watchedName,
+    watch('contactEmail'),
+    watch('contactPhone'),
+    watch('bizRegNo'),
+    link.startupId ?? '',
+  ].join('|')
+  useGuardReset(dup, probeKey)
+  useGuardReset(linkGuard, probeKey)
 
   const onSubmit = async (v: MaPartyFormValues) => {
     const payload: Record<string, unknown> = {
@@ -211,6 +224,8 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
       contact_email: v.contactEmail.trim() || null,
       phone: v.contactPhone.trim() || null,
       startup_id: link.startupId,
+      // 연결된 행은 번호를 갖지 않는다 — 스타트업 원장이 정본이다(서버 트리거도 비운다).
+      biz_reg_no: link.startupId ? null : formatBizRegNo(v.bizRegNo) || null,
       overview_html: overview.trim() || null,
       // 퀵 리뷰를 쓰지 않는 원장에서는 이 칸을 아예 보내지 않는다 — 빈 문서를 저장하면
       // 목록에서 '있는데 비어 있는' 행과 '없는' 행을 가를 수 없다.
@@ -219,6 +234,31 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
 
     try {
       if (isEdit && recordId) {
+        // 수정에서도 같은 두 물음이다 — 연결이 풀린 채 스타트업에 있는 기업인가, 다른 행과
+        // 확실한 키가 겹치는가(자기 행은 뺀다).
+        if (
+          await linkGuard.shouldStop({
+            name: v.name.trim(),
+            email: v.contactEmail.trim(),
+            phone: v.contactPhone.trim(),
+            hard: v.bizRegNo,
+          })
+        ) {
+          return
+        }
+        if (
+          await dup.shouldStop(
+            {
+              name: v.name.trim(),
+              email: v.contactEmail.trim(),
+              phone: v.contactPhone.trim(),
+              hard: v.bizRegNo,
+            },
+            recordId,
+          )
+        ) {
+          return
+        }
         const reason = await askReason()
         if (!reason) return
         await update.mutateAsync({ id: recordId, values: payload, reason })
@@ -227,11 +267,24 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
       } else {
         // 종전에는 이 원장에만 대조가 아예 없어 같은 회사가 그대로 두 번 들어왔다.
         // 걸리면 무엇이 걸렸는지 세우고 멈추며, 한 번 더 누르면 진행한다.
+        // 스타트업 원장에 있는 기업이면 연결을 먼저 요구한다 — 연결 없이 저장하면 자료 참조와
+        // 퀵 리뷰가 그 기업을 모른 채로 자료를 한 벌 더 올리게 된다(3_3_8 §4).
+        if (
+          await linkGuard.shouldStop({
+            name: v.name.trim(),
+            email: v.contactEmail.trim(),
+            phone: v.contactPhone.trim(),
+            hard: v.bizRegNo,
+          })
+        ) {
+          return
+        }
         if (
           await dup.shouldStop({
             name: v.name.trim(),
             email: v.contactEmail.trim(),
             phone: v.contactPhone.trim(),
+            hard: v.bizRegNo,
           })
         ) {
           return
@@ -248,8 +301,9 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
         )
         onDone({ id: newId })
       }
-    } catch {
-      toast.show('저장에 실패했습니다. 권한 또는 입력값을 확인하세요.', 'danger')
+    } catch (e) {
+      // DB가 거절한 사유(스타트업 원장에 있는 기업이다, 같은 번호가 있다 등)는 그대로 옮긴다.
+      toast.show(ledgerSaveFailureText(e, '저장에 실패했습니다. 권한 또는 입력값을 확인하세요.'), 'danger')
     }
   }
 
@@ -265,9 +319,20 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
       />
 
       {/* 확정 버튼 바로 아래 선다 — 저장을 누른 손이 그대로 머무는 자리다. */}
+      {/* 스타트업 원장에 있는 기업 — 되돌릴 길은 연결뿐이라 버튼 하나만 준다. */}
+      {linkGuard.hit && (
+        <StartupLinkNotice
+          hit={linkGuard.hit}
+          onLink={async () => {
+            await link.applyId(linkGuard.hit!.id)
+            linkGuard.clear()
+          }}
+        />
+      )}
       {dup.match && (
         <DuplicateNotice
           match={dup.match}
+          blocked={dup.blocked}
           noun={config.noun}
           detailPath={(id) => `${config.basePath}/${id}`}
         />
@@ -317,6 +382,27 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
                     <TextAction onClick={link.clear}>연결 해제</TextAction>
                   </p>
                 )}
+              </Field>
+              {/* 미연결 행의 확실한 키(3_3_8 §4). 연결되면 잠긴다 — 번호는 스타트업 원장이
+                  갖고, 여기 적으면 같은 사실이 두 곳에 산다. 잠긴 칸으로 세우는 이유는 구분
+                  칸과 같다(값만 적어 두면 그 자리에 칸이 없는 것처럼 읽힌다). */}
+              <Field
+                label="사업자등록번호"
+                error={errors.bizRegNo?.message}
+                hint={
+                  link.startupId
+                    ? '연결한 스타트업 원장의 번호를 씁니다.'
+                    : '숫자 10자리. 같은 번호의 행은 두 번 등록할 수 없습니다.'
+                }
+                hintInline={Boolean(link.startupId)}
+              >
+                <Input
+                  inputMode="numeric"
+                  placeholder="000-00-00000"
+                  disabled={Boolean(link.startupId)}
+                  invalid={Boolean(errors.bizRegNo)}
+                  {...register('bizRegNo', { validate: (v) => bizRegNoError(v) ?? true })}
+                />
               </Field>
               <Field
                 label={config.fundsLabel}

@@ -429,10 +429,15 @@ function withInFileDuplicates(
   result: BulkParseResult,
   spec: BulkImportSpec,
 ): BulkParseResult {
-  const cols = spec.matchLedger?.matchColumns
-  if (!cols || result.rows.length < 2) return result
+  const ledger = spec.matchLedger
+  if (!ledger || result.rows.length < 2) return result
 
-  const dupes = findDuplicateProbes(result.rows.map((r) => probeOf(r, cols)))
+  // 확실한 키(사업자등록번호)도 같은 잣대로 본다 — 원장 대조가 그 축을 보는데 파일 안 대조가
+  // 안 보면, 빈 원장에 같은 번호가 두 줄인 파일이 그대로 들어와 DB 유일 인덱스에서 통째로 죽는다.
+  const dupes = findDuplicateProbes(
+    result.rows.map((r) => probeOf(r, ledger)),
+    ledger.hardKey?.normalize,
+  )
   if (dupes.size === 0) return result
 
   return {

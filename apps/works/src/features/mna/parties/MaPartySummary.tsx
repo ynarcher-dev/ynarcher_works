@@ -97,6 +97,11 @@ export function MaPartySummary({
               // 자리마다 하는 일이 달라서이고 저장값은 원 하나다.
               value={record.available_funds == null ? null : `${toWon(record.available_funds)}원`}
             />
+            {/* 미연결 행에만 선다 — 연결된 행의 번호는 스타트업 원장이 갖는다(3_3_8 §4). 빈 칸으로
+                두면 '연결됐는데 번호가 없다'로 읽힌다. */}
+            {!record.startup_id && (
+              <InfoField label="사업자등록번호" value={record.biz_reg_no ?? null} />
+            )}
             {/* 상대 쪽 창구다(우리 쪽 관리 주체가 아니다 — 이 원장은 영구 공동관리).
                 외부 인물의 개인정보라 마스킹 정책을 거치고, 원본 열람은 사유와 함께
                 access_logs에 남는다. */}

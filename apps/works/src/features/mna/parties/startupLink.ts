@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { useToast } from '@ynarcher/ui'
 import type { StartupPick } from '@/features/mna/parties/StartupPickerModal'
 import { MAX_INDUSTRIES, type MaPartyRow } from '@/features/mna/parties/config'
+import type { EntityRow } from '@/features/master/entityHooks'
+import { readIndustries } from '@/features/startup/startupGrowth'
+import { supabase } from '@/lib/supabase'
 
 /** 폼에서 이 훅이 만지는 칸들 — 이름·담당자·연락은 폼이, 분야는 별도 상태가 갖는다. */
 interface FormBridge {
@@ -72,5 +75,37 @@ export function useStartupLink(initial: MaPartyRow | null, form: FormBridge) {
     form.setText('name', '')
   }
 
-  return { startupId, startupName, picking, setPicking, apply, clear }
+  /**
+   * id만 알 때(저장 직전 대조가 "스타트업 원장에 있는 기업"을 찾았을 때) 그 행을 읽어 얹는다.
+   * 고르기 창과 같은 `apply`를 타므로 담당자가 돋보기로 고른 것과 결과가 같다.
+   */
+  const applyId = async (id: string) => {
+    const { data, error } = await supabase
+      .from('startups')
+      .select('id, name, representative, email, phone, industries, industry, management_status')
+      .eq('id', id)
+      .maybeSingle()
+    if (error) throw error
+    if (!data) {
+      toast.show('연결할 스타트업을 읽지 못했습니다. 돋보기로 다시 찾아 주세요.', 'warning')
+      return
+    }
+    const row = data as EntityRow & {
+      representative?: string | null
+      email?: string | null
+      phone?: string | null
+      management_status?: string | null
+    }
+    apply({
+      id: row.id,
+      name: row.name,
+      representative: row.representative ?? null,
+      email: row.email ?? null,
+      phone: row.phone ?? null,
+      industries: readIndustries(row),
+      management_status: row.management_status ?? null,
+    })
+  }
+
+  return { startupId, startupName, picking, setPicking, apply, applyId, clear }
 }

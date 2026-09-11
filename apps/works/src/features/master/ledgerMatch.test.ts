@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   bestMatchFor,
   findDuplicateProbes,
+  normEntityName,
   type LedgerCandidate,
 } from '@/features/master/ledgerMatch'
 
@@ -23,7 +24,7 @@ const candidate = (
   phone,
   retired,
   raw: { id, name, email, phone },
-  nName: name.trim().toLowerCase(),
+  nName: normEntityName(name),
   nEmail: (email ?? '').trim().toLowerCase(),
   nPhone: (phone ?? '').replace(/\D/g, ''),
 })
@@ -148,5 +149,75 @@ describe('findDuplicateProbes', () => {
   it('한 줄짜리·빈 목록은 접을 것이 없다', () => {
     expect(findDuplicateProbes([probe('딜챗', 'a@x.com')]).size).toBe(0)
     expect(findDuplicateProbes([]).size).toBe(0)
+  })
+})
+
+/**
+ * 확실한 키(사업자등록번호, 2026-09-11) — 한 칸만 같아도 같은 대상이고, 표기(하이픈)가 달라도
+ * 숫자가 같으면 같다. 무엇을 막을지는 정책(identityPolicy)이 답하고 여기서는 "걸리는가"만 본다.
+ */
+describe('hardKey', () => {
+  const digits = (v: unknown) => String(v ?? '').replace(/\D/g, '')
+  const withHard = (c: LedgerCandidate, hard: string): LedgerCandidate => ({
+    ...c,
+    raw: { ...c.raw, biz_reg_no: hard },
+    nHard: digits(hard),
+  })
+
+  it('사업자등록번호가 같으면 이름·연락처가 달라도 걸린다', () => {
+    const found = bestMatchFor(
+      { name: '전혀 다른 이름', email: '', phone: '', hard: '7428702461' },
+      [withHard(candidate('c1', '주식회사 트루골프', null, null), '742-87-02461')],
+      digits,
+    )
+    expect(found?.id).toBe('c1')
+    expect(found?.hitFields).toEqual(['hard'])
+  })
+
+  it('정규화 함수를 주지 않으면 그 축은 없다 — 원장에 키가 없는 경우', () => {
+    expect(
+      bestMatchFor({ name: '다른', email: '', phone: '', hard: '7428702461' }, [
+        withHard(candidate('c1', '트루골프', null, null), '742-87-02461'),
+      ]),
+    ).toBeNull()
+  })
+
+  it('확실한 키가 같은 후보를 두 칸 일치보다 앞세운다', () => {
+    const found = bestMatchFor(
+      { name: '트루골프', email: 'a@x.com', phone: '', hard: '7428702461' },
+      [
+        candidate('soft', '트루골프', 'a@x.com', null),
+        withHard(candidate('hard', '옛 상호', null, null), '742-87-02461'),
+      ],
+      digits,
+    )
+    expect(found?.id).toBe('hard')
+  })
+
+  it('파일 안에서도 같은 번호 두 줄은 접힌다', () => {
+    const found = findDuplicateProbes(
+      [
+        { name: '알투씨컴퍼니', email: '', phone: '', hard: '479-88-02430' },
+        { name: '알투씨컴퍼니2', email: '', phone: '', hard: '4798802430' },
+      ],
+      digits,
+    )
+    expect(found.get(1)).toBe(0)
+  })
+})
+
+describe('normEntityName', () => {
+  it('법인 형태 표기와 공백을 걷는다 — 딜챗과 주식회사 딜챗이 같은 이름이다', () => {
+    expect(normEntityName('주식회사 딜챗')).toBe('딜챗')
+    expect(normEntityName('(주)딜챗')).toBe('딜챗')
+    expect(normEntityName('㈜ 딜챗 ')).toBe('딜챗')
+    expect(normEntityName('Deal Chat')).toBe('dealchat')
+  })
+
+  it('두 칸 판정에도 그대로 쓰인다', () => {
+    const found = bestMatchFor({ name: '(주)트루골프', email: 'a@x.com', phone: '' }, [
+      candidate('c1', '주식회사 트루골프', 'a@x.com', null),
+    ])
+    expect(found?.hitFields).toEqual(['name', 'email'])
   })
 })

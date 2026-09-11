@@ -197,6 +197,11 @@ export interface MaPartyRow {
    * 이 값은 '그 기업이 우리 원장의 어느 행인가'다.
    */
   startup_id: string | null
+  /**
+   * 사업자등록번호(XXX-XX-XXXXX) — 미연결 행의 확실한 키(3_3_8 §4). 연결된 행은 비어 있다:
+   * 번호는 스타트업 원장이 갖고 여기 적으면 같은 사실이 두 곳에 산다(서버 트리거가 비운다).
+   */
+  biz_reg_no?: string | null
   /** 매핑된 기업(임베드). 그 기업을 볼 수 없으면 비어 온다 — 화면은 링크 없이 물러난다. */
   startup?: { id: string; name: string } | null
   /**

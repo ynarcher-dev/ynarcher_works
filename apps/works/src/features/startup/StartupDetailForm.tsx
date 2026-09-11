@@ -3,8 +3,10 @@ import { useState, type ChangeEvent } from 'react'
 import { useForm } from 'react-hook-form'
 import { FormTopBar } from '@/components/FormTopBar'
 import { DuplicateNotice } from '@/features/master/DuplicateNotice'
-import { useDuplicateGuard } from '@/features/master/duplicateGuard'
+import { useDuplicateGuard, useGuardReset } from '@/features/master/duplicateGuard'
+import { ledgerSaveFailureText } from '@/features/master/identityPolicy'
 import { LEDGERS } from '@/features/master/ledgers'
+import { formatBizRegNo } from '@/lib/bizRegNo'
 import { useEditReasonPrompt } from '@/components/EditReasonPrompt'
 import { isInvested } from '@/features/startup/startupClassification'
 import { useStartupManagers } from '@/features/startup/startupPoolHooks'
@@ -47,7 +49,6 @@ import {
 import { readIndustries } from '@/features/startup/startupGrowth'
 import { SectionHeading } from '@/components/SectionHeading'
 import { AiFillButton } from '@/features/ai/AiFillButton'
-import { StartupAiPersonLink } from '@/features/startup/StartupAiPersonLink'
 import { startupAiCatalog } from '@/features/startup/startupAiCards'
 import { sourcesFromFiles, sourcesFromLinks, sourcesFromMaterials } from '@/features/ai/aiFillClient'
 import { useStartupAiDraft } from '@/features/startup/useStartupAiDraft'
@@ -88,7 +89,8 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
   const base = initial ?? ({} as EntityRow)
   const create = useCreateEntity('startups')
   // 중복 가드 — 등록 모드에서만 돈다(수정은 이미 그 행이다).
-  const dup = useDuplicateGuard(LEDGERS.startups)
+  // 사업자등록번호가 같으면 막고, 이름·이메일·전화 두 칸 일치면 한 번 멈춘다(3_3_8 §3).
+  const dup = useDuplicateGuard(LEDGERS.startups, 'startups')
   // 등록 모드에서 미리 고른 자료(분류별). 저장 성공 직후 새 id로 일괄 업로드한다.
   const pending = usePendingMaterials()
   const update = useUpdateEntity('startups')
@@ -150,7 +152,6 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
     values: {
       name: str('name'),
       representative: str('representative'),
-      representative_network_id: (base.representative_network_id as string | null) ?? null,
       company_form: str('company_form'),
       founded_on: str('founded_on').slice(0, 10),
       biz_reg_no: str('biz_reg_no'),
@@ -181,7 +182,6 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
       // 옛 행에는 새 칸이 없다 — 폼 값은 항상 채워 둬야 컨트롤이 비제어로 떨어지지 않는다.
       members: (t.members ?? []).map((m) => ({
         name: m.name ?? '',
-        networkId: m.networkId ?? null,
         role: m.role ?? '',
         background: m.background ?? '',
         employment: m.employment ?? '',
@@ -220,26 +220,22 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
   // 투자기업으로의 전환·담당자 지정·관리현황은 FUND 투자 집행에서만 처리한다(20260724190000).
   // 이 화면에서는 투자기업이면 구분을 읽기 전용으로 보여주고, 비투자면 발굴/보육/미지정 간에만 바꾼다.
   const alreadyInvested = isInvested(str('management_status'))
+  // 투자기업의 딜메이커(리드 담당자) 이름 — 읽기 전용 표시용.
+  const leadName = existingManagers?.find((m) => m.is_lead)?.user?.name ?? null
 
-  // 대조에 쓰인 세 칸이 바뀌면 통과권이 사라진다 — 한 번 확인한 뒤 이름을 고쳐도 대조 없이
+  // 대조에 쓰인 칸이 바뀌면 통과권이 사라진다 — 한 번 확인한 뒤 이름을 고쳐도 대조 없이
   // 저장되면, 정작 새로 적은 이름의 중복은 아무도 보지 않는다.
-  const probeKey = [watch('name'), watch('email'), watch('phone')].join('|')
-  const [lastProbeKey, setLastProbeKey] = useState(probeKey)
-  if (probeKey !== lastProbeKey) {
-    setLastProbeKey(probeKey)
-    dup.clear()
-  }
+  useGuardReset(dup, [watch('name'), watch('email'), watch('phone'), watch('biz_reg_no')].join('|'))
 
   const onSubmit = async (v: StartupDetailFormValues) => {
     const payload: Record<string, unknown> = {
       name: v.name.trim(),
       representative: v.representative.trim() || null,
-      // 이름을 지우면 참조도 함께 끊는다 — 이름 없는 연결은 화면이 아무것도 세우지 못하는
-      // 참조가 되고, 그 상태로 저장되면 관계 줄만 살아남아 원장이 서로 다른 말을 한다.
-      representative_network_id: v.representative.trim() ? v.representative_network_id : null,
       company_form: v.company_form.trim() || null,
       founded_on: v.founded_on || null,
-      biz_reg_no: v.biz_reg_no.trim() || null,
+      // 저장 모양은 하나다(XXX-XX-XXXXX) — 서버 트리거도 같은 모양으로 맞추지만, 대조가
+      // 저장 모양으로 후보를 긁으므로 화면이 먼저 맞춘다.
+      biz_reg_no: formatBizRegNo(v.biz_reg_no) || null,
       // 분야: industries(배열)가 SSOT. 대표값(첫 번째)은 하위 호환용으로 industry 스칼라에 미러링.
       industries,
       industry: industries[0] ?? null,
@@ -290,7 +286,6 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
         members: v.members
           .map((m) => ({
             name: m.name.trim(),
-            networkId: m.name.trim() ? m.networkId : null,
             role: m.role.trim(),
             background: m.background.trim(),
             employment: m.employment.trim(),
@@ -408,6 +403,7 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
             name: String(payload.name ?? ''),
             email: v.email.trim(),
             phone: v.phone.trim(),
+            hard: v.biz_reg_no,
           })
         ) {
           return
@@ -424,6 +420,21 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
         )
         onDone(newId)
       } else {
+        // 수정에서도 대조한다(자기 행은 뺀다) — 다른 기업의 사업자등록번호로 고치는 것을 DB가
+        // 거절하기 전에, 어느 행과 겹치는지 먼저 보여 준다.
+        if (
+          await dup.shouldStop(
+            {
+              name: String(payload.name ?? ''),
+              email: v.email.trim(),
+              phone: v.phone.trim(),
+              hard: v.biz_reg_no,
+            },
+            recordId,
+          )
+        ) {
+          return
+        }
         // 수정은 사유를 받아야 확정된다. 변동 이력 'edited'는 원장 트리거가 사유(note)와 함께
         // 남기며, 값이 실제로 바뀐 경우에만 기록되므로 무변경 저장은 이력에 남지 않는다.
         const reason = await askReason()
@@ -432,8 +443,10 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
         toast.show('스타트업 정보를 수정했습니다.', 'success')
         onDone(recordId)
       }
-    } catch {
-      toast.show('저장에 실패했습니다. 권한 또는 입력값을 확인하세요.', 'danger')
+    } catch (e) {
+      // DB가 거절한 사유(같은 사업자등록번호가 있다, 보육 전환에는 번호가 필요하다 등)는 그대로
+      // 옮긴다 — 뭉뚱그리면 무엇을 고쳐야 하는지 담당자가 알 수 없다.
+      toast.show(ledgerSaveFailureText(e, '저장에 실패했습니다. 권한 또는 입력값을 확인하세요.'), 'danger')
     }
   }
 
@@ -450,7 +463,12 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
 
       {/* 확정 버튼 바로 아래 선다 — 저장을 누른 손이 그대로 머무는 자리다. */}
       {dup.match && (
-        <DuplicateNotice match={dup.match} noun="기업" detailPath={(id) => `/startup/${id}`} />
+        <DuplicateNotice
+          match={dup.match}
+          blocked={dup.blocked}
+          noun="기업"
+          detailPath={(id) => `/startup/${id}`}
+        />
       )}
 
       {/* 상세페이지와 동일한 3열 배치: 좌측 2/3 편집 카드 + 우측 1/3 자료 관리 */}
@@ -469,8 +487,7 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
             onPickPhoto={onPickPhoto}
             alreadyInvested={alreadyInvested}
             poolStatus={str('pool_status')}
-            managers={existingManagers ?? []}
-            companyName={watch('name')}
+            leadName={leadName}
           />
 
           {/* 요약 구분선(상세페이지와 동일 — 역량보다 위) */}
@@ -489,7 +506,6 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
             setCapabilities={setCapabilities}
             ip={ip}
             setIp={setIp}
-            companyName={watch('name')}
           />
 
           <StartupPerformanceFields
@@ -521,14 +537,6 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
             targetId={recordId}
             subjectName={base.name ? String(base.name) : undefined}
             onFilled={ai.applyDraft}
-          />
-
-          {/* 초안이 데려온 사람을 원장에 잇는 줄. 얹기 전에는 서지 않는다. */}
-          <StartupAiPersonLink
-            pending={ai.pending}
-            affiliation={base.name ? String(base.name) : undefined}
-            onLinked={ai.applyLinks}
-            onDismiss={ai.clearPending}
           />
         </div>
       </div>

@@ -12,6 +12,7 @@ import { useForm } from 'react-hook-form'
 import { FormTopBar } from '@/components/FormTopBar'
 import { DuplicateNotice } from '@/features/master/DuplicateNotice'
 import { useDuplicateGuard } from '@/features/master/duplicateGuard'
+import { ledgerSaveFailureText } from '@/features/master/identityPolicy'
 import { LEDGERS } from '@/features/master/ledgers'
 import { useEditReasonPrompt } from '@/components/EditReasonPrompt'
 import { useTagTokenField } from '@/features/admin/TagTokenField'
@@ -120,7 +121,9 @@ export function NetworkForm({
   // 중복 가드. **구분으로 좁히지 않는다**(`LEDGERS.networks`에는 `narrow`가 없다) — 이 폼은
   // 구분을 가리지 않고 한 표에 넣는 자리라, 좁혀서 보면 투자사로 이미 등록된 사람을 전문가로
   // 또 넣게 된다.
-  const dup = useDuplicateGuard(LEDGERS.networks)
+  // 사람에게는 단일 확실 키가 없어 이름 + (이메일|전화)가 같으면 막고, 이메일 + 전화만 같으면
+  // 한 번 멈춘다(3_3_8 §3). DB `app.networks_identity_gate`가 같은 규칙으로 마지막에 막는다.
+  const dup = useDuplicateGuard(LEDGERS.networks, 'networks')
 
   const {
     register,
@@ -216,8 +219,10 @@ export function NetworkForm({
         )
         onDone({ id: newId })
       }
-    } catch {
-      toast.show('저장에 실패했습니다. 권한 또는 입력값을 확인하세요.', 'danger')
+    } catch (e) {
+      // DB가 거절한 사유(같은 사람이 이미 있다 등)는 그대로 옮긴다 — 뭉뚱그리면 무엇을 고쳐야
+      // 하는지 담당자가 알 수 없다.
+      toast.show(ledgerSaveFailureText(e, '저장에 실패했습니다. 권한 또는 입력값을 확인하세요.'), 'danger')
     }
   }
 
@@ -236,6 +241,7 @@ export function NetworkForm({
       {dup.match && (
         <DuplicateNotice
           match={dup.match}
+          blocked={dup.blocked}
           noun={categoryLabel(selectedCategory) || '네트워크'}
           detailPath={(id) => `/networks/${id}`}
         />
