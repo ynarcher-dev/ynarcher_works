@@ -10,6 +10,7 @@ import {
   pruneValues,
   toNumber,
   validateSchema,
+  withFieldType,
   type FormField,
 } from './fields'
 
@@ -74,6 +75,14 @@ describe('parseFields', () => {
       },
     ])
     expect(parsed[0]?.columns?.map((c) => c.key)).toEqual(['ok'])
+  })
+})
+
+describe('withFieldType', () => {
+  it('새 예산표의 자유기입 열은 산출내역과 비고를 함께 안내한다', () => {
+    const field = withFieldType({ key: 'budget', label: '예산', type: 'TEXT' }, 'BUDGET_TREE')
+
+    expect(field.columns?.find((column) => column.key === 'note')?.label).toBe('산출내역/비고')
   })
 })
 

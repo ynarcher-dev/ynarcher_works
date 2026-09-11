@@ -182,7 +182,7 @@ const DEFAULT_BUDGET_COLUMNS: FormColumn[] = [
   { key: 'qty', label: '수량', type: 'NUMBER' },
   { key: 'unitPrice', label: '단가', type: 'MONEY' },
   { key: 'amount', label: '금액', type: 'MONEY', primaryAmount: true },
-  { key: 'note', label: '비고', type: 'TEXT', wide: true },
+  { key: 'note', label: '산출내역/비고', type: 'TEXT', wide: true },
 ]
 
 /**
