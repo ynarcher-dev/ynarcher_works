@@ -27,7 +27,7 @@ export type FieldType =
   | 'TEXT'
   | 'TEXTAREA'
   | 'RICHTEXT'
-  | 'OFFICIAL_DOCUMENT'
+  | 'HTML_TEMPLATE'
   | 'NUMBER'
   | 'MONEY'
   | 'DATE'
@@ -83,39 +83,26 @@ export interface FormField {
    */
   levels?: string[]
   /**
-   * 새 문서가 들고 시작하는 값(RICHTEXT 본문 기본 문구).
+   * 새 문서가 들고 시작하는 값(RICHTEXT 본문 또는 HTML_TEMPLATE 원문).
    * 옛 결재의 본문 틀(`1. 행사명 : …`)을 매번 손으로 적지 않게 한다.
    */
   defaultValue?: string
-  /** 공문 전용 고정 틀. 문서별 수신·참조·발송일·본문은 field_values에 따로 저장한다. */
-  officialDocument?: OfficialDocumentTemplate
+  /** HTML 원문의 이미지 src → approval-form-assets 오브젝트 경로. */
+  htmlAssets?: Record<string, string>
   /** 입력 도움말(폼에서만 보인다). */
   help?: string
 }
 
-export interface OfficialDocumentTemplate {
-  companyName: string
-  address: string
-  telephone: string
-  fax: string
-  website: string
-  /** approval-form-assets 버킷의 오브젝트 경로. */
-  headerImagePath?: string
-  footerImagePath?: string
-}
-
-export interface OfficialDocumentValue {
-  recipient: string
-  reference: string
-  sentOn: string
-  body: string
+export interface HtmlTemplateValue {
+  /** `{{# 이름}}` 자리의 문서별 값. 문서번호·문서제목은 원장에서 자동 치환한다. */
+  slots: Record<string, string>
 }
 
 /** 표 한 행 — 열 key → 값. */
 export type TableRow = Record<string, string>
 
 /** 한 필드에 담기는 값. 스칼라는 문자열, TABLE은 행 배열, BUDGET_TREE는 층 있는 표. */
-export type FieldValue = string | TableRow[] | BudgetTreeValue | OfficialDocumentValue
+export type FieldValue = string | TableRow[] | BudgetTreeValue | HtmlTemplateValue
 
 /** 필드 값 묶음(문서의 field_values). */
 export type FieldValues = Record<string, FieldValue>
@@ -124,7 +111,7 @@ export const FIELD_TYPE_LABEL: Record<FieldType, string> = {
   TEXT: '한 줄 글',
   TEXTAREA: '여러 줄 글',
   RICHTEXT: '서식 있는 본문',
-  OFFICIAL_DOCUMENT: '공문 본문',
+  HTML_TEMPLATE: 'HTML 양식',
   NUMBER: '숫자',
   MONEY: '금액',
   DATE: '날짜',
@@ -138,7 +125,7 @@ export const FIELD_TYPES: FieldType[] = [
   'TEXT',
   'TEXTAREA',
   'RICHTEXT',
-  'OFFICIAL_DOCUMENT',
+  'HTML_TEMPLATE',
   'NUMBER',
   'MONEY',
   'DATE',
@@ -208,14 +195,6 @@ const DEFAULT_BUDGET_COLUMNS: FormColumn[] = [
   { key: 'note', label: '산출내역/비고', type: 'TEXT', wide: true },
 ]
 
-export const DEFAULT_OFFICIAL_DOCUMENT_TEMPLATE: OfficialDocumentTemplate = {
-  companyName: '와이앤아처 주식회사',
-  address: '서울시 강남구 테헤란로7길 22 한국과학기술회관 2관 2층 202호',
-  telephone: '02-2690-1550',
-  fax: '02-6918-6560',
-  website: 'www.ynarcher.com',
-}
-
 /**
  * 종류를 바꾼 필드.
  *
@@ -238,11 +217,8 @@ export function withFieldType(field: FormField, type: FieldType): FormField {
           : undefined,
     levels: type === 'BUDGET_TREE' ? (field.levels ?? DEFAULT_BUDGET_LEVELS) : undefined,
     defaultValue:
-      type === 'RICHTEXT' || type === 'OFFICIAL_DOCUMENT' ? field.defaultValue : undefined,
-    officialDocument:
-      type === 'OFFICIAL_DOCUMENT'
-        ? (field.officialDocument ?? DEFAULT_OFFICIAL_DOCUMENT_TEMPLATE)
-        : undefined,
+      type === 'RICHTEXT' || type === 'HTML_TEMPLATE' ? field.defaultValue : undefined,
+    htmlAssets: type === 'HTML_TEMPLATE' ? field.htmlAssets : undefined,
   }
 }
 
@@ -265,17 +241,12 @@ const isRecord = (v: unknown): v is Record<string, unknown> =>
 
 const str = (v: unknown): string => (typeof v === 'string' ? v : '')
 
-function parseOfficialDocumentTemplate(raw: unknown): OfficialDocumentTemplate | undefined {
+function parseHtmlAssets(raw: unknown): Record<string, string> | undefined {
   if (!isRecord(raw)) return undefined
-  return {
-    companyName: str(raw.companyName) || DEFAULT_OFFICIAL_DOCUMENT_TEMPLATE.companyName,
-    address: str(raw.address) || DEFAULT_OFFICIAL_DOCUMENT_TEMPLATE.address,
-    telephone: str(raw.telephone) || DEFAULT_OFFICIAL_DOCUMENT_TEMPLATE.telephone,
-    fax: str(raw.fax) || DEFAULT_OFFICIAL_DOCUMENT_TEMPLATE.fax,
-    website: str(raw.website) || DEFAULT_OFFICIAL_DOCUMENT_TEMPLATE.website,
-    headerImagePath: str(raw.headerImagePath) || undefined,
-    footerImagePath: str(raw.footerImagePath) || undefined,
-  }
+  const entries = Object.entries(raw).filter(
+    (entry): entry is [string, string] => Boolean(entry[0]) && typeof entry[1] === 'string' && Boolean(entry[1]),
+  )
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined
 }
 
 function parseColumn(raw: unknown): FormColumn | null {
@@ -321,11 +292,7 @@ export function parseFields(raw: unknown): FormField[] {
           ? item.levels.map(str).filter(Boolean)
           : undefined,
       defaultValue: str(item.defaultValue) || undefined,
-      officialDocument:
-        type === 'OFFICIAL_DOCUMENT'
-          ? (parseOfficialDocumentTemplate(item.officialDocument) ??
-            DEFAULT_OFFICIAL_DOCUMENT_TEMPLATE)
-          : undefined,
+      htmlAssets: type === 'HTML_TEMPLATE' ? parseHtmlAssets(item.htmlAssets) : undefined,
       help: str(item.help) || undefined,
     })
   }
@@ -349,15 +316,54 @@ export function budgetValue(values: FieldValues, key: string): BudgetTreeValue {
   return parseBudget(values[key])
 }
 
-/** 공문 값은 과거·잘못된 JSON이 와도 빈 안전값으로 읽는다. */
-export function officialDocumentValue(values: FieldValues, key: string): OfficialDocumentValue {
+/** `{{# 이름}}` 표식을 처음 나온 차례대로, 중복 없이 찾는다. */
+export function htmlTemplateTokens(html: string): string[] {
+  const tokens: string[] = []
+  const seen = new Set<string>()
+  for (const match of html.matchAll(/{{#\s*([^{}]+?)\s*}}/g)) {
+    const token = match[1]?.trim()
+    if (!token || seen.has(token)) continue
+    seen.add(token)
+    tokens.push(token)
+  }
+  return tokens
+}
+
+/** HTML 원문이 참조하는 이미지 주소. 상대 경로도 남겨 ADMIN이 우리 Storage 파일과 연결한다. */
+export function htmlTemplateImageSources(html: string): string[] {
+  const sources: string[] = []
+  const seen = new Set<string>()
+  const pattern = /<img\b[^>]*\bsrc\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi
+  for (const match of html.matchAll(pattern)) {
+    const source = (match[1] ?? match[2] ?? match[3] ?? '').trim()
+    if (!source || seen.has(source) || /^data:image\//i.test(source)) continue
+    seen.add(source)
+    sources.push(source)
+  }
+  return sources
+}
+
+const SYSTEM_HTML_TOKENS = new Set(['문서 번호', '문서번호', '문서 제목', '문서제목'])
+
+export function isSystemHtmlToken(token: string): boolean {
+  return SYSTEM_HTML_TOKENS.has(token.trim())
+}
+
+export function htmlTemplateSlotKind(token: string): 'text' | 'date' | 'richtext' {
+  const normalized = token.replace(/\s/g, '')
+  if (normalized === '에디터' || normalized === '본문' || normalized === '내용') return 'richtext'
+  if (normalized.includes('날짜') || normalized.endsWith('일')) return 'date'
+  return 'text'
+}
+
+/** HTML 양식 값은 과거·잘못된 JSON이 와도 문자열 슬롯만 남겨 읽는다. */
+export function htmlTemplateValue(values: FieldValues, key: string): HtmlTemplateValue {
   const value = values[key]
-  if (!isRecord(value)) return { recipient: '', reference: '', sentOn: '', body: '' }
+  if (!isRecord(value) || !isRecord(value.slots)) return { slots: {} }
   return {
-    recipient: str(value.recipient),
-    reference: str(value.reference),
-    sentOn: str(value.sentOn),
-    body: str(value.body),
+    slots: Object.fromEntries(
+      Object.entries(value.slots).map(([slot, slotValue]) => [slot, str(slotValue)]),
+    ),
   }
 }
 
@@ -386,12 +392,13 @@ export function emptyValues(fields: FormField[]): FieldValues {
   for (const f of fields) {
     if (f.type === 'TABLE') out[f.key] = [emptyRow(f)]
     else if (f.type === 'BUDGET_TREE') out[f.key] = emptyBudgetValue(f)
-    else if (f.type === 'OFFICIAL_DOCUMENT') {
+    else if (f.type === 'HTML_TEMPLATE') {
       out[f.key] = {
-        recipient: '',
-        reference: '',
-        sentOn: localDateValue(),
-        body: f.defaultValue ?? '',
+        slots: Object.fromEntries(
+          htmlTemplateTokens(f.defaultValue ?? '')
+            .filter((token) => !isSystemHtmlToken(token))
+            .map((token) => [token, htmlTemplateSlotKind(token) === 'date' ? localDateValue() : '']),
+        ),
       }
     }
     else out[f.key] = f.defaultValue ?? ''
@@ -444,7 +451,10 @@ export function primaryAmount(fields: FormField[], values: FieldValues): number 
 
 /** 표시용 값 문자열 — 상세·집계에서 타입에 맞는 표기로 편다. */
 export function displayValue(field: FormField, values: FieldValues): string {
-  if (field.type === 'OFFICIAL_DOCUMENT') return officialDocumentValue(values, field.key).body
+  if (field.type === 'HTML_TEMPLATE') {
+    const joined = Object.values(htmlTemplateValue(values, field.key).slots).join(' ')
+    return joined.replace(/<[^>]*>/g, '').trim() || '-'
+  }
   const raw = scalarValue(values, field.key)
   if (!raw) return '-'
   if (field.type === 'MONEY') return formatMoney(toNumber(raw))
@@ -474,11 +484,8 @@ export function missingRequired(fields: FormField[], values: FieldValues): strin
       if (!budgetValue(values, f.key).rows.some((r) => r.name.trim() !== '')) missing.push(f.label)
       continue
     }
-    if (f.type === 'OFFICIAL_DOCUMENT') {
-      const value = officialDocumentValue(values, f.key)
-      if (!value.recipient.trim()) missing.push('수신')
-      if (!value.sentOn.trim()) missing.push('발송일')
-      if (!hasRichTextContent(value.body)) missing.push('내용')
+    if (f.type === 'HTML_TEMPLATE') {
+      if (!(f.defaultValue ?? '').trim()) missing.push(f.label)
       continue
     }
     if (f.type === 'RICHTEXT') {
@@ -504,8 +511,8 @@ export function pruneValues(fields: FormField[], values: FieldValues): FieldValu
       // 그 자식들이 부모를 잃는다. 그리고 지출이 가리키는 자리가 저장 때마다 달라지면
       // 차감이 어느 줄의 것이었는지 되짚을 근거가 사라진다.
       out[f.key] = budgetValue(values, f.key)
-    } else if (f.type === 'OFFICIAL_DOCUMENT') {
-      out[f.key] = officialDocumentValue(values, f.key)
+    } else if (f.type === 'HTML_TEMPLATE') {
+      out[f.key] = htmlTemplateValue(values, f.key)
     } else {
       out[f.key] = scalarValue(values, f.key)
     }
@@ -544,9 +551,6 @@ export function validateSchema(fields: FormField[]): string[] {
   // 지출결의가 어느 표의 줄을 가리키는지도 갈린다.
   if (fields.filter((f) => f.type === 'BUDGET_TREE').length > 1)
     errors.push('예산표는 양식당 하나만 둘 수 있습니다.')
-
-  if (fields.filter((f) => f.type === 'OFFICIAL_DOCUMENT').length > 1)
-    errors.push('공문 본문은 양식당 하나만 둘 수 있습니다.')
 
   // 대표 금액은 한 곳만 — 여럿이면 어느 값이 문서 금액인지 화면과 DB가 갈릴 수 있다.
   const marks = countPrimaryAmount(fields)

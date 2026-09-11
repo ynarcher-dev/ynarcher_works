@@ -3,6 +3,8 @@ import {
   columnSum,
   emptyValues,
   formatMoney,
+  htmlTemplateImageSources,
+  htmlTemplateTokens,
   missingRequired,
   parseFields,
   primaryAmount,
@@ -77,21 +79,24 @@ describe('parseFields', () => {
     expect(parsed[0]?.columns?.map((c) => c.key)).toEqual(['ok'])
   })
 
-  it('공문 고정 틀 설정을 읽고 누락된 회사 정보는 기본값으로 채운다', () => {
+  it('HTML 양식의 이미지 경로 연결을 문자열 값만 남겨 읽는다', () => {
     const [field] = parseFields([
       {
-        key: 'official_document',
-        label: '공문',
-        type: 'OFFICIAL_DOCUMENT',
-        officialDocument: { companyName: '테스트 주식회사', headerImagePath: 'header.png' },
+        key: 'html',
+        label: 'HTML 양식',
+        type: 'HTML_TEMPLATE',
+        htmlAssets: { '/old/logo.png': 'new/logo.png', broken: 3 },
       },
     ])
 
-    expect(field?.officialDocument).toMatchObject({
-      companyName: '테스트 주식회사',
-      telephone: '02-2690-1550',
-      headerImagePath: 'header.png',
-    })
+    expect(field?.htmlAssets).toEqual({ '/old/logo.png': 'new/logo.png' })
+  })
+
+  it('HTML 표식과 이미지 경로는 중복 없이 원문 순서로 찾는다', () => {
+    const html =
+      '<img src="/old/a.png"><p>{{# 수신}} {{#수신}} {{# 문서 제목}}</p><img src=/old/b.png>'
+    expect(htmlTemplateTokens(html)).toEqual(['수신', '문서 제목'])
+    expect(htmlTemplateImageSources(html)).toEqual(['/old/a.png', '/old/b.png'])
   })
 })
 
@@ -102,13 +107,11 @@ describe('withFieldType', () => {
     expect(field.columns?.find((column) => column.key === 'note')?.label).toBe('산출내역/비고')
   })
 
-  it('공문 본문으로 바꾸면 회사 기본 틀을 함께 만든다', () => {
-    const field = withFieldType(
-      { key: 'official_document', label: '공문', type: 'TEXT' },
-      'OFFICIAL_DOCUMENT',
-    )
+  it('HTML 양식으로 바꾸면 기존 원문은 유지하고 다른 종류 설정은 걷는다', () => {
+    const field = withFieldType({ key: 'html', label: '양식', type: 'RICHTEXT', defaultValue: '<table></table>' }, 'HTML_TEMPLATE')
 
-    expect(field.officialDocument?.companyName).toBe('와이앤아처 주식회사')
+    expect(field.defaultValue).toBe('<table></table>')
+    expect(field.columns).toBeUndefined()
   })
 })
 
@@ -168,25 +171,13 @@ describe('missingRequired', () => {
     expect(missingRequired(EXPENSE, emptyValues(EXPENSE))).toEqual(['사용목적'])
   })
 
-  it('필수 공문은 수신·발송일·본문을 각각 확인한다', () => {
+  it('HTML 양식은 원문이 있어야 필수 필드로 인정한다', () => {
     const fields: FormField[] = [
-      { key: 'official_document', label: '공문', type: 'OFFICIAL_DOCUMENT', required: true },
+      { key: 'html', label: '공문', type: 'HTML_TEMPLATE', required: true },
     ]
+    expect(missingRequired(fields, { html: { slots: {} } })).toEqual(['공문'])
     expect(
-      missingRequired(fields, {
-        official_document: { recipient: '', reference: '', sentOn: '', body: '<p></p>' },
-      }),
-    ).toEqual(['수신', '발송일', '내용'])
-
-    expect(
-      missingRequired(fields, {
-        official_document: {
-          recipient: '중소벤처기업부',
-          reference: '',
-          sentOn: '2026-09-11',
-          body: '<img src="data:image/png;base64,AA==">',
-        },
-      }),
+      missingRequired([{ ...fields[0]!, defaultValue: '<table></table>' }], { html: { slots: {} } }),
     ).toEqual([])
   })
 })
@@ -206,25 +197,19 @@ describe('pruneValues', () => {
     expect(Object.keys(pruned)).toEqual(['a'])
   })
 
-  it('공문 값은 정해진 네 칸만 정규화해 저장한다', () => {
+  it('HTML 양식 값은 문자열 슬롯만 정규화해 저장한다', () => {
     const fields: FormField[] = [
-      { key: 'official_document', label: '공문', type: 'OFFICIAL_DOCUMENT' },
+      { key: 'html', label: '공문', type: 'HTML_TEMPLATE' },
     ]
     const pruned = pruneValues(fields, {
-      official_document: {
-        recipient: '중소벤처기업부',
-        reference: '',
-        sentOn: '2026-09-11',
-        body: '<p>본문</p>',
-        ignored: '값',
+      html: {
+        slots: {
+          수신: '중소벤처기업부',
+          참조: 3,
+        },
       } as never,
     })
-    expect(pruned.official_document).toEqual({
-      recipient: '중소벤처기업부',
-      reference: '',
-      sentOn: '2026-09-11',
-      body: '<p>본문</p>',
-    })
+    expect(pruned.html).toEqual({ slots: { 수신: '중소벤처기업부', 참조: '' } })
   })
 })
 
@@ -258,13 +243,6 @@ describe('validateSchema', () => {
     expect(validateSchema([])).toContain('필드를 하나 이상 추가하세요.')
   })
 
-  it('공문 본문은 양식당 하나만 허용한다', () => {
-    const fields: FormField[] = [
-      { key: 'official1', label: '공문 1', type: 'OFFICIAL_DOCUMENT' },
-      { key: 'official2', label: '공문 2', type: 'OFFICIAL_DOCUMENT' },
-    ]
-    expect(validateSchema(fields)).toContain('공문 본문은 양식당 하나만 둘 수 있습니다.')
-  })
 })
 
 describe('primaryAmountLabel / formatMoney', () => {

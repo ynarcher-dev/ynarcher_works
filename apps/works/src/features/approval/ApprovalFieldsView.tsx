@@ -2,9 +2,9 @@ import { cn, tableText } from '@ynarcher/ui'
 import { RichTextViewer } from '@/components/RichTextEditor'
 import { BudgetTreeView, type BudgetUsage } from '@/features/approval/BudgetTreeView'
 import {
-  OfficialDocumentField,
-  type OfficialDocumentContext,
-} from '@/features/approval/OfficialDocumentField'
+  HtmlTemplateField,
+  type HtmlTemplateContext,
+} from '@/features/approval/HtmlTemplateField'
 import { BudgetRefText, PartnerRefText } from '@/features/approval/RefCellText'
 import {
   budgetValue,
@@ -12,8 +12,8 @@ import {
   displayValue,
   formatMoney,
   hasRichTextContent,
+  htmlTemplateValue,
   isNumericColumn,
-  officialDocumentValue,
   scalarValue,
   tableRows,
   toNumber,
@@ -34,7 +34,7 @@ interface ApprovalFieldsViewProps {
    * 자리에서 빈 '사용' 열을 세우면 그 열이 아무 말도 하지 않는다.
    */
   budgetUsage?: Map<string, BudgetUsage>
-  documentContext?: OfficialDocumentContext
+  documentContext?: HtmlTemplateContext
 }
 
 /** 표 필드 하나를 읽기 전용으로 편다. 금액·숫자 열에는 합계 행이 붙는다. */
@@ -162,22 +162,20 @@ export function ApprovalFieldsView({
         if (field.type === 'BUDGET_TREE') {
           return budgetValue(values, field.key).rows.some((r) => r.name.trim() !== '')
         }
-        if (field.type === 'OFFICIAL_DOCUMENT') {
-          const value = officialDocumentValue(values, field.key)
-          return Boolean(
-            value.recipient.trim() || value.reference.trim() || hasRichTextContent(value.body),
-          )
+        if (field.type === 'HTML_TEMPLATE') {
+          return Boolean((field.defaultValue ?? '').trim())
         }
         const value = scalarValue(values, field.key)
         return field.type === 'RICHTEXT' ? hasRichTextContent(value) : value.trim() !== ''
       }).map((field) => {
-        if (field.type === 'OFFICIAL_DOCUMENT') {
+        if (field.type === 'HTML_TEMPLATE') {
           return (
-            <OfficialDocumentField
+            <HtmlTemplateField
               key={field.key}
-              template={field.officialDocument}
+              templateHtml={field.defaultValue ?? ''}
+              assets={field.htmlAssets}
               context={documentContext}
-              value={officialDocumentValue(values, field.key)}
+              value={htmlTemplateValue(values, field.key)}
             />
           )
         }

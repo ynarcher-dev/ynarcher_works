@@ -1,15 +1,15 @@
-import { Field, Input } from '@ynarcher/ui'
+import { Field, Input, TextArea } from '@ynarcher/ui'
 import { ImagePicker } from '@/components/ImagePicker'
 import { RichTextEditor } from '@/components/RichTextEditor'
 import { FieldColumnRows } from '@/features/approval/FieldColumnRows'
+import { HtmlTemplateField } from '@/features/approval/HtmlTemplateField'
 import {
   approvalFormAssetUrl,
   uploadApprovalFormAsset,
 } from '@/features/approval/approvalFormAssets'
 import {
-  DEFAULT_OFFICIAL_DOCUMENT_TEMPLATE,
+  htmlTemplateImageSources,
   type FormField,
-  type OfficialDocumentTemplate,
 } from '@/features/approval/fields'
 
 /** 쉼표로 이어진 한 줄을 목록으로 — 빈 칸은 버린다. */
@@ -32,16 +32,20 @@ export function FieldExtraSettings({
   field: FormField
   onChange: (next: FormField) => void
 }) {
-  const official = field.officialDocument ?? DEFAULT_OFFICIAL_DOCUMENT_TEMPLATE
-  const setOfficial = (next: Partial<OfficialDocumentTemplate>) =>
-    onChange({ ...field, officialDocument: { ...official, ...next } })
-  const assetUrls = [official.headerImagePath, official.footerImagePath]
-    .filter((path): path is string => Boolean(path))
+  const imageSources = htmlTemplateImageSources(field.defaultValue ?? '')
+  const templateAssets = field.htmlAssets ?? {}
+  const assetUrls = Object.values(templateAssets)
     .reduce<Record<string, string>>((urls, path) => {
       const url = approvalFormAssetUrl(path)
       if (url) urls[path] = url
       return urls
     }, {})
+  const setAsset = (source: string, path?: string) => {
+    const next = { ...templateAssets }
+    if (path) next[source] = path
+    else delete next[source]
+    onChange({ ...field, htmlAssets: Object.keys(next).length > 0 ? next : undefined })
+  }
 
   return (
     <div className="space-y-3">
@@ -67,73 +71,51 @@ export function FieldExtraSettings({
         </Field>
       )}
 
-      {field.type === 'OFFICIAL_DOCUMENT' && (
+      {field.type === 'HTML_TEMPLATE' && (
         <div className="space-y-3">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label="회사명">
-              <Input
-                value={official.companyName}
-                onChange={(event) => setOfficial({ companyName: event.target.value })}
-              />
-            </Field>
-            <Field label="웹사이트">
-              <Input
-                value={official.website}
-                onChange={(event) => setOfficial({ website: event.target.value })}
-              />
-            </Field>
-            <Field label="주소">
-              <Input
-                value={official.address}
-                onChange={(event) => setOfficial({ address: event.target.value })}
-              />
-            </Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="전화번호">
-                <Input
-                  value={official.telephone}
-                  onChange={(event) => setOfficial({ telephone: event.target.value })}
-                />
-              </Field>
-              <Field label="팩스번호">
-                <Input
-                  value={official.fax}
-                  onChange={(event) => setOfficial({ fax: event.target.value })}
-                />
-              </Field>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label="상단 이미지" hint="회사 로고 등 공문 오른쪽 위에 표시할 이미지입니다.">
-              <ImagePicker
-                value={official.headerImagePath ? [official.headerImagePath] : []}
-                onChange={(paths) => setOfficial({ headerImagePath: paths[0] })}
-                upload={uploadApprovalFormAsset}
-                urls={assetUrls}
-                max={1}
-                maxBytes={2_000_000}
-              />
-            </Field>
-            <Field label="하단 이미지" hint="서명·직인 등 공문 아래에 표시할 이미지입니다.">
-              <ImagePicker
-                value={official.footerImagePath ? [official.footerImagePath] : []}
-                onChange={(paths) => setOfficial({ footerImagePath: paths[0] })}
-                upload={uploadApprovalFormAsset}
-                urls={assetUrls}
-                max={1}
-                maxBytes={2_000_000}
-              />
-            </Field>
-          </div>
-
-          <Field label="본문 기본 문구" hint="새 공문을 만들 때 본문 편집기에 먼저 채워집니다.">
-            <RichTextEditor
-              placeholder="새 공문의 기본 내용을 입력하세요."
+          <Field
+            label="HTML 원문"
+            hint="표·셀 병합·인라인 스타일을 포함한 전체 HTML을 그대로 붙여 넣습니다. script·iframe·form은 표시할 때 제거됩니다."
+          >
+            <TextArea
+              rows={16}
               value={field.defaultValue ?? ''}
-              onChange={(html) => onChange({ ...field, defaultValue: html })}
+              placeholder={'<table>...</table> 또는 {{# 수신}}, {{# 문서 제목}}, {{#에디터}}'}
+              onChange={(event) => onChange({ ...field, defaultValue: event.target.value })}
             />
           </Field>
+
+          {imageSources.length > 0 && (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {imageSources.map((source) => (
+                <Field
+                  key={source}
+                  label="이미지 경로 교체"
+                  hint={`${source} → 우리 시스템에 올린 파일`}
+                >
+                  <ImagePicker
+                    value={templateAssets[source] ? [templateAssets[source]!] : []}
+                    onChange={(paths) => setAsset(source, paths[0])}
+                    upload={uploadApprovalFormAsset}
+                    urls={assetUrls}
+                    max={1}
+                    maxBytes={2_000_000}
+                  />
+                </Field>
+              ))}
+            </div>
+          )}
+
+          {(field.defaultValue ?? '').trim() && (
+            <Field label="미리보기" as="div">
+              <HtmlTemplateField
+                templateHtml={field.defaultValue ?? ''}
+                assets={templateAssets}
+                context={{ title: '문서 제목 미리보기', docNo: '문서번호 미리보기' }}
+                value={{ slots: {} }}
+              />
+            </Field>
+          )}
         </div>
       )}
 

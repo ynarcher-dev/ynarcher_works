@@ -22,7 +22,7 @@ function hasFieldExtras(field: FormField): boolean {
   return (
     field.type === 'SELECT' ||
     field.type === 'RICHTEXT' ||
-    field.type === 'OFFICIAL_DOCUMENT' ||
+    field.type === 'HTML_TEMPLATE' ||
     field.type === 'TABLE' ||
     field.type === 'BUDGET_TREE'
   )

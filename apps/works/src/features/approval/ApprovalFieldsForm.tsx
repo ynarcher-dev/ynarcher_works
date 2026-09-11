@@ -3,14 +3,14 @@ import { RichTextEditor } from '@/components/RichTextEditor'
 import { BudgetTreeInput } from '@/features/approval/BudgetTreeInput'
 import { FieldTableInput } from '@/features/approval/FieldTableInput'
 import {
-  OfficialDocumentField,
-  type OfficialDocumentContext,
-} from '@/features/approval/OfficialDocumentField'
+  HtmlTemplateField,
+  type HtmlTemplateContext,
+} from '@/features/approval/HtmlTemplateField'
 import {
   budgetValue,
   formatMoney,
+  htmlTemplateValue,
   isNumericColumn,
-  officialDocumentValue,
   scalarValue,
   tableRows,
   toNumber,
@@ -22,7 +22,7 @@ interface ApprovalFieldsFormProps {
   fields: FormField[]
   values: FieldValues
   onChange: (values: FieldValues) => void
-  documentContext?: OfficialDocumentContext
+  documentContext?: HtmlTemplateContext
 }
 
 /** 스칼라 필드 한 칸의 입력 컨트롤. 타입이 곧 입력 방식을 정한다. */
@@ -86,13 +86,14 @@ export function ApprovalFieldsForm({
   return (
     <div className="space-y-4">
       {fields.map((field) => {
-        if (field.type === 'OFFICIAL_DOCUMENT') {
+        if (field.type === 'HTML_TEMPLATE') {
           return (
-            <OfficialDocumentField
+            <HtmlTemplateField
               key={field.key}
-              template={field.officialDocument}
+              templateHtml={field.defaultValue ?? ''}
+              assets={field.htmlAssets}
               context={documentContext}
-              value={officialDocumentValue(values, field.key)}
+              value={htmlTemplateValue(values, field.key)}
               onChange={(next) => set(field.key, next)}
             />
           )

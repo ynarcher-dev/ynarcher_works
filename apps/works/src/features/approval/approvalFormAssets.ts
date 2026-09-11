@@ -6,7 +6,7 @@ function safeName(name: string): string {
   return name.replace(/[^\w.-]+/g, '_')
 }
 
-/** ADMIN 양식 편집에서 공문 머리·꼬리 이미지를 우리 Storage로 올린다. */
+/** ADMIN 양식 편집에서 외부 HTML이 참조하던 이미지를 우리 Storage로 올린다. */
 export async function uploadApprovalFormAsset(file: File): Promise<string> {
   const path = `${crypto.randomUUID()}-${safeName(file.name)}`
   const { error } = await supabase.storage
