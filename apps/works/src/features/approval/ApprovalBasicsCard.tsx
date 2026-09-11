@@ -53,10 +53,10 @@ export function ApprovalBasicsCard({
             formPath: (
               // 대분류와 양식은 한 줄에 나란히 선다(`대분류 > 양식`을 읽는 순서 그대로).
               // 줄바꿈을 허용하면 좁은 칸에서 둘이 위아래로 갈려 두 단 관계가 흐려진다.
-              <div className="flex items-center gap-2">
+              <div className="grid w-full grid-cols-2 items-center gap-2">
                 <Select
                   density="table"
-                  className="min-w-0 flex-1"
+                  className="w-full min-w-0"
                   value={category}
                   onChange={(e) => onCategoryChange(e.target.value)}
                   disabled={locked}
@@ -70,7 +70,7 @@ export function ApprovalBasicsCard({
                 </Select>
                 <Select
                   density="table"
-                  className="min-w-0 flex-1"
+                  className="w-full min-w-0"
                   value={formId}
                   onChange={(e) => onFormChange(e.target.value)}
                   disabled={!category || locked}

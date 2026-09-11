@@ -63,7 +63,7 @@ export function ApprovalInfoTable({ pairs, children }: ApprovalInfoTableProps) {
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[36rem] border-collapse">
+      <table className="w-full min-w-[36rem] table-fixed border-collapse">
         <tbody>
           {rows.map((row, i) => (
             <tr key={i}>
