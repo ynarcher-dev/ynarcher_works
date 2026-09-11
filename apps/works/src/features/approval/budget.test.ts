@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   budgetLineOptions,
   budgetEntries,
+  budgetGridGroups,
   budgetGridRows,
   budgetPath,
   budgetTotal,
@@ -16,6 +17,7 @@ import {
 } from '@/features/approval/budget'
 import {
   addBudgetBranch,
+  addBudgetRootAfter,
   addChild,
   appendBudgetEntry,
   addSibling,
@@ -206,6 +208,29 @@ describe('예산표 — 분류 단계를 가로 열로 편다', () => {
     expect(grid[0]!.cells[0]?.rowSpan).toBe(1)
     expect(grid[1]!.cells[0]?.rowSpan).toBe(1)
     expect(grid[0]!.nodePath[0]).not.toBe(grid[1]!.nodePath[0])
+  })
+
+  it('가로 행은 대분류마다 소계를 붙일 수 있는 묶음으로 나뉜다', () => {
+    const groups = budgetGridGroups(setLevelCount(sample(), 3))
+
+    expect(groups).toHaveLength(2)
+    expect(groups.map((group) => group.rows.length)).toEqual([3, 1])
+    expect(groups.map((group) => group.startIndex)).toEqual([0, 3])
+    expect(
+      groups.map((group) => budgetTotal(group.rows.map((row) => row.row), 'amount')),
+    ).toEqual([3200000, 1500000])
+  })
+
+  it('소계의 대분류 추가는 누른 묶음 바로 뒤에 새 대분류를 만든다', () => {
+    const tree = setLevelCount(sample(), 3)
+    const firstRoot = budgetGridGroups(tree)[0]!.rootIndex
+    const next = addBudgetRootAfter(tree, firstRoot)
+    const groups = budgetGridGroups(next)
+
+    expect(groups).toHaveLength(3)
+    expect(next.rows[groups[0]!.rootIndex]!.name).toBe('인건비')
+    expect(next.rows[groups[1]!.rootIndex]!.name).toBe('')
+    expect(next.rows[groups[2]!.rootIndex]!.name).toBe('운영비')
   })
 
   it('상위 분류의 추가는 그 아래 단계에 새 가지를 만든다', () => {

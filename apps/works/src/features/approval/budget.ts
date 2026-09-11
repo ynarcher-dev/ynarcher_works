@@ -299,6 +299,14 @@ export interface BudgetGridRow {
   cells: Array<BudgetGridCell | null>
 }
 
+export interface BudgetGridGroup {
+  /** 이 묶음을 소유하는 최상위 분류 노드의 자리. */
+  rootIndex: number
+  /** 전체 가로 행에서 이 묶음이 시작하는 자리. */
+  startIndex: number
+  rows: BudgetGridRow[]
+}
+
 /** 실제 트리를 가로 표의 행과 세로 병합 셀 정보로 편다. */
 export function budgetGridRows(value: BudgetTreeValue): BudgetGridRow[] {
   const tree = asBudgetTree(value)
@@ -322,6 +330,22 @@ export function budgetGridRows(value: BudgetTreeValue): BudgetGridRow[] {
       return { nodeIndex, rowSpan }
     }),
   }))
+}
+
+/** 소계와 분기 추가 줄을 세울 수 있도록 가로 행을 최상위 분류별로 묶는다. */
+export function budgetGridGroups(value: BudgetTreeValue): BudgetGridGroup[] {
+  const groups: BudgetGridGroup[] = []
+  for (const [index, row] of budgetGridRows(value).entries()) {
+    const rootIndex = row.nodePath[0]
+    if (rootIndex === undefined) continue
+    const previous = groups[groups.length - 1]
+    if (previous?.rootIndex === rootIndex) {
+      previous.rows.push(row)
+    } else {
+      groups.push({ rootIndex, startIndex: index, rows: [row] })
+    }
+  }
+  return groups
 }
 
 /** 지출결의가 고를 수 있는 예산 줄 한 개. */

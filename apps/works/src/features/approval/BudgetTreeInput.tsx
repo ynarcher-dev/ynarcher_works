@@ -1,16 +1,18 @@
+import { Fragment } from 'react'
 import { Button, Input, Select, cn, tableText } from '@ynarcher/ui'
 import { Plus } from 'lucide-react'
 import { BudgetRowActions } from '@/features/approval/BudgetRowActions'
 import {
   asBudgetTree,
   budgetEntries,
-  budgetGridRows,
+  budgetGridGroups,
   budgetTotal,
   levelLabel,
   type BudgetTreeValue,
 } from '@/features/approval/budget'
 import {
   addBudgetBranch,
+  addBudgetRootAfter,
   appendBudgetEntry,
   canMoveBudgetEntry,
   moveBudgetEntry,
@@ -49,7 +51,8 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
   const columns = field.columns ?? []
   const amountColumn = budgetAmountColumn(field)
   const tree = asBudgetTree(value)
-  const gridRows = budgetGridRows(tree)
+  const groups = budgetGridGroups(tree)
+  const gridRows = groups.flatMap((group) => group.rows)
   const entries = budgetEntries(tree)
   const rows = gridRows.map((gridRow) => gridRow.row)
   const levelCount = Math.max(1, value.levels.length)
@@ -141,69 +144,137 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
             </tr>
           </thead>
           <tbody>
-            {gridRows.map((gridRow, index) => (
-              <tr key={gridRow.row.id} className="border-b border-gray-100 last:border-b-0">
-                {gridRow.cells.map((cell, level) =>
-                  cell ? (
-                    <td
-                      key={level}
-                      rowSpan={cell.rowSpan}
-                      className="h-px border-r border-gray-100 px-2 py-1 align-middle"
-                    >
-                      <div className="flex h-full items-stretch">
-                        <Input
-                          density="table"
-                          className="h-full min-h-8"
-                          value={tree.rows[cell.nodeIndex]?.name ?? ''}
-                          action={
-                            level < levelCount - 1 ? <Plus aria-hidden size={14} /> : undefined
-                          }
-                          actionLabel={
-                            level < levelCount - 1
-                              ? `${levelLabel(levels, level + 1)} 분기 추가`
-                              : undefined
-                          }
-                          onActionClick={
-                            level < levelCount - 1
-                              ? () => onChange(addBudgetBranch(tree, cell.nodeIndex))
-                              : undefined
-                          }
-                          onChange={(e) =>
-                            onChange(setName(tree, cell.nodeIndex, e.target.value))
-                          }
-                        />
-                      </div>
-                    </td>
-                  ) : null,
-                )}
-
-                {columns.map((column) => (
-                  <td key={column.key} className="px-2 py-1">
-                    <Input
-                      density="table"
-                      type={column.type === 'DATE' ? 'date' : 'text'}
-                      inputMode={isNumericColumn(column.type) ? 'numeric' : undefined}
-                      className={cn(isNumericColumn(column.type) && 'text-right tabular-nums')}
-                      value={gridRow.row.values[column.key] ?? ''}
-                      onChange={(e) =>
-                        onChange(setCell(tree, gridRow.leafIndex, column.key, e.target.value))
-                      }
-                    />
-                  </td>
-                ))}
-
-                <td className="px-2 py-1">
-                  <BudgetRowActions
-                    rows={rows}
-                    canMoveUp={canMoveBudgetEntry(tree, index, -1)}
-                    canMoveDown={canMoveBudgetEntry(tree, index, 1)}
-                    onMoveUp={() => onChange(moveBudgetEntry(tree, index, -1))}
-                    onMoveDown={() => onChange(moveBudgetEntry(tree, index, 1))}
-                    onRemove={() => onChange(removeBudgetEntry(tree, index))}
-                  />
+            {groups.length === 0 && (
+              <tr className="border-b border-gray-200 bg-gray-25">
+                <td colSpan={levelCount + columns.length + 1} className="px-2 py-1">
+                  <Button
+                    variant="ghost"
+                    density="table"
+                    onClick={() => onChange(appendBudgetEntry(tree))}
+                  >
+                    <Plus size={14} />
+                    {levelLabel(levels, 0)} 추가
+                  </Button>
                 </td>
               </tr>
-            ))}
+            )}
+            {groups.map((group) => {
+              const groupRows = group.rows.map((row) => row.row)
+              const lastPath = group.rows[group.rows.length - 1]?.nodePath ?? []
+              return (
+                <Fragment key={tree.rows[group.rootIndex]?.id ?? group.rootIndex}>
+                  {group.rows.map((gridRow, localIndex) => {
+                    const index = group.startIndex + localIndex
+                    return (
+                      <tr key={gridRow.row.id} className="border-b border-gray-100">
+                        {gridRow.cells.map((cell, level) =>
+                          cell ? (
+                            <td
+                              key={level}
+                              rowSpan={cell.rowSpan}
+                              className="h-px border-r border-gray-100 px-2 py-1 align-middle"
+                            >
+                              <div className="flex h-full items-stretch">
+                                <Input
+                                  density="table"
+                                  className="h-full min-h-8"
+                                  value={tree.rows[cell.nodeIndex]?.name ?? ''}
+                                  onChange={(e) =>
+                                    onChange(setName(tree, cell.nodeIndex, e.target.value))
+                                  }
+                                />
+                              </div>
+                            </td>
+                          ) : null,
+                        )}
+
+                        {columns.map((column) => (
+                          <td key={column.key} className="px-2 py-1">
+                            <Input
+                              density="table"
+                              type={column.type === 'DATE' ? 'date' : 'text'}
+                              inputMode={isNumericColumn(column.type) ? 'numeric' : undefined}
+                              className={cn(
+                                isNumericColumn(column.type) && 'text-right tabular-nums',
+                              )}
+                              value={gridRow.row.values[column.key] ?? ''}
+                              onChange={(e) =>
+                                onChange(
+                                  setCell(tree, gridRow.leafIndex, column.key, e.target.value),
+                                )
+                              }
+                            />
+                          </td>
+                        ))}
+
+                        <td className="px-2 py-1">
+                          <BudgetRowActions
+                            rows={rows}
+                            canMoveUp={canMoveBudgetEntry(tree, index, -1)}
+                            canMoveDown={canMoveBudgetEntry(tree, index, 1)}
+                            onMoveUp={() => onChange(moveBudgetEntry(tree, index, -1))}
+                            onMoveDown={() => onChange(moveBudgetEntry(tree, index, 1))}
+                            onRemove={() => onChange(removeBudgetEntry(tree, index))}
+                          />
+                        </td>
+                      </tr>
+                    )
+                  })}
+
+                  <tr className="border-b border-gray-200 bg-gray-25">
+                    {levels.slice(0, levelCount).map((_, level) => {
+                      const parentIndex = level === 0 ? undefined : lastPath[level - 1]
+                      return (
+                        <td key={level} className="px-2 py-1">
+                          <div className="flex items-center">
+                            <Button
+                              variant="ghost"
+                              density="table"
+                              onClick={() =>
+                                onChange(
+                                  level === 0
+                                    ? addBudgetRootAfter(tree, group.rootIndex)
+                                    : addBudgetBranch(tree, parentIndex ?? -1),
+                                )
+                              }
+                            >
+                              <Plus size={14} />
+                              {levelLabel(levels, level)} 추가
+                            </Button>
+                            {level === levelCount - 1 && (
+                              <span className={cn('ml-auto text-gray-700', tableText.head)}>
+                                소계
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      )
+                    })}
+                    {columns.map((column) => (
+                      <td
+                        key={column.key}
+                        className={cn(
+                          'px-2 py-1.5',
+                          tableText.body,
+                          isNumericColumn(column.type) &&
+                            'text-right font-semibold tabular-nums',
+                        )}
+                      >
+                        {amountColumn?.key === column.key
+                          ? numericText(
+                              column,
+                              String(budgetTotal(groupRows, column.key) ?? ''),
+                            )
+                          : isNumericColumn(column.type)
+                            ? '-'
+                            : ''}
+                      </td>
+                    ))}
+                    <td />
+                  </tr>
+                </Fragment>
+              )
+            })}
 
             <tr className="border-t border-gray-200 bg-gray-25">
               {levels.slice(0, levelCount).map((_, level) => (
@@ -223,22 +294,17 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
                     isNumericColumn(column.type) && 'text-right font-semibold tabular-nums',
                   )}
                 >
-                  {isNumericColumn(column.type)
+                  {amountColumn?.key === column.key
                     ? numericText(column, String(budgetTotal(tree.rows, column.key) ?? ''))
-                    : ''}
+                    : isNumericColumn(column.type)
+                      ? '-'
+                      : ''}
                 </td>
               ))}
               <td />
             </tr>
           </tbody>
         </table>
-
-        <div className="border-t border-gray-100 p-2">
-          <Button variant="ghost" density="table" onClick={() => onChange(appendBudgetEntry(tree))}>
-            <Plus size={14} className="mr-1" />
-            {levelLabel(levels, 0)} 추가
-          </Button>
-        </div>
       </div>
 
       {!amountColumn && (

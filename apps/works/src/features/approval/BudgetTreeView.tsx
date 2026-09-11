@@ -1,7 +1,8 @@
+import { Fragment } from 'react'
 import { cn, tableText } from '@ynarcher/ui'
 import {
   asBudgetTree,
-  budgetGridRows,
+  budgetGridGroups,
   budgetTotal,
   levelLabel,
   type BudgetTreeValue,
@@ -36,7 +37,8 @@ function numericText(column: FormColumn, raw: string): string {
 export function BudgetTreeView({ field, value, usage }: Props) {
   const columns = field.columns ?? []
   const tree = asBudgetTree(value)
-  const rows = budgetGridRows(tree)
+  const groups = budgetGridGroups(tree)
+  const rows = groups.flatMap((group) => group.rows)
   const levels = value.levels.length > 0 ? value.levels : ['1단계']
   const amountColumn = budgetAmountColumn(field)
 
@@ -90,68 +92,152 @@ export function BudgetTreeView({ field, value, usage }: Props) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((gridRow) => {
-            const current =
-              usage?.get(gridRow.row.id) ?? (usage ? { spent: 0, pending: 0 } : null)
-            const budget = amountColumn
-              ? toNumber(gridRow.row.values[amountColumn.key] ?? '')
+          {groups.map((group) => {
+            const groupRows = group.rows.map((row) => row.row)
+            const groupBudget = amountColumn
+              ? budgetTotal(groupRows, amountColumn.key)
               : null
-            const remaining = current && budget !== null ? budget - current.spent : null
+            const groupUsage = usage
+              ? group.rows.reduce(
+                  (acc, gridRow) => {
+                    const current = usage.get(gridRow.row.id)
+                    return {
+                      spent: acc.spent + (current?.spent ?? 0),
+                      pending: acc.pending + (current?.pending ?? 0),
+                    }
+                  },
+                  { spent: 0, pending: 0 },
+                )
+              : null
             return (
-              <tr key={gridRow.row.id} className="border-b border-gray-100 last:border-b-0">
-                {gridRow.cells.map((cell, level) =>
-                  cell ? (
-                    <td
-                      key={level}
-                      rowSpan={cell.rowSpan}
-                      className={cn(
-                        'border-r border-gray-100 px-3 py-1.5 align-middle',
-                        tableText.body,
+              <Fragment key={tree.rows[group.rootIndex]?.id ?? group.rootIndex}>
+                {group.rows.map((gridRow) => {
+                  const current =
+                    usage?.get(gridRow.row.id) ?? (usage ? { spent: 0, pending: 0 } : null)
+                  const budget = amountColumn
+                    ? toNumber(gridRow.row.values[amountColumn.key] ?? '')
+                    : null
+                  const remaining = current && budget !== null ? budget - current.spent : null
+                  return (
+                    <tr key={gridRow.row.id} className="border-b border-gray-100">
+                      {gridRow.cells.map((cell, level) =>
+                        cell ? (
+                          <td
+                            key={level}
+                            rowSpan={cell.rowSpan}
+                            className={cn(
+                              'border-r border-gray-100 px-3 py-1.5 align-middle',
+                              tableText.body,
+                            )}
+                          >
+                            {tree.rows[cell.nodeIndex]?.name || '-'}
+                          </td>
+                        ) : null,
                       )}
-                    >
-                      {tree.rows[cell.nodeIndex]?.name || '-'}
-                    </td>
-                  ) : null,
-                )}
-                {columns.map((column) => (
+                      {columns.map((column) => (
+                        <td
+                          key={column.key}
+                          className={cn(
+                            'px-3 py-1.5',
+                            tableText.body,
+                            isNumericColumn(column.type) && 'text-right tabular-nums',
+                          )}
+                        >
+                          {isNumericColumn(column.type)
+                            ? numericText(column, gridRow.row.values[column.key] ?? '')
+                            : gridRow.row.values[column.key] || '-'}
+                        </td>
+                      ))}
+                      {usage && current && (
+                        <>
+                          <td
+                            className={cn(
+                              'px-3 py-1.5 text-right tabular-nums',
+                              tableText.body,
+                            )}
+                          >
+                            {current.spent ? formatMoney(current.spent) : '-'}
+                          </td>
+                          <td
+                            className={cn(
+                              'px-3 py-1.5 text-right tabular-nums text-gray-500',
+                              tableText.body,
+                            )}
+                          >
+                            {current.pending ? formatMoney(current.pending) : '-'}
+                          </td>
+                          <td
+                            className={cn(
+                              'px-3 py-1.5 text-right font-medium tabular-nums',
+                              tableText.body,
+                              remaining !== null && remaining < 0 && 'text-danger',
+                            )}
+                          >
+                            {remaining === null ? '-' : formatMoney(remaining)}
+                          </td>
+                        </>
+                      )}
+                    </tr>
+                  )
+                })}
+
+                <tr className="border-b border-gray-200 bg-gray-25">
                   <td
-                    key={column.key}
-                    className={cn(
-                      'px-3 py-1.5',
-                      tableText.body,
-                      isNumericColumn(column.type) && 'text-right tabular-nums',
-                    )}
+                    colSpan={levels.length}
+                    className={cn('px-3 py-1.5 text-right text-gray-700', tableText.head)}
                   >
-                    {isNumericColumn(column.type)
-                      ? numericText(column, gridRow.row.values[column.key] ?? '')
-                      : gridRow.row.values[column.key] || '-'}
+                    소계
                   </td>
-                ))}
-                {usage && current && (
-                  <>
-                    <td className={cn('px-3 py-1.5 text-right tabular-nums', tableText.body)}>
-                      {current.spent ? formatMoney(current.spent) : '-'}
-                    </td>
+                  {columns.map((column) => (
                     <td
+                      key={column.key}
                       className={cn(
-                        'px-3 py-1.5 text-right tabular-nums text-gray-500',
+                        'px-3 py-1.5',
                         tableText.body,
+                        isNumericColumn(column.type) && 'text-right font-semibold tabular-nums',
                       )}
                     >
-                      {current.pending ? formatMoney(current.pending) : '-'}
+                      {amountColumn?.key === column.key
+                        ? numericText(column, String(budgetTotal(groupRows, column.key) ?? ''))
+                        : isNumericColumn(column.type)
+                          ? '-'
+                          : ''}
                     </td>
-                    <td
-                      className={cn(
-                        'px-3 py-1.5 text-right font-medium tabular-nums',
-                        tableText.body,
-                        remaining !== null && remaining < 0 && 'text-danger',
-                      )}
-                    >
-                      {remaining === null ? '-' : formatMoney(remaining)}
-                    </td>
-                  </>
-                )}
-              </tr>
+                  ))}
+                  {usage && groupUsage && (
+                    <>
+                      <td
+                        className={cn(
+                          'px-3 py-1.5 text-right font-semibold tabular-nums',
+                          tableText.body,
+                        )}
+                      >
+                        {formatMoney(groupUsage.spent)}
+                      </td>
+                      <td
+                        className={cn(
+                          'px-3 py-1.5 text-right tabular-nums text-gray-500',
+                          tableText.body,
+                        )}
+                      >
+                        {formatMoney(groupUsage.pending)}
+                      </td>
+                      <td
+                        className={cn(
+                          'px-3 py-1.5 text-right font-semibold tabular-nums',
+                          tableText.body,
+                          groupBudget !== null && groupBudget - groupUsage.spent < 0 &&
+                            'text-danger',
+                        )}
+                      >
+                        {groupBudget === null
+                          ? '-'
+                          : formatMoney(groupBudget - groupUsage.spent)}
+                      </td>
+                    </>
+                  )}
+                </tr>
+              </Fragment>
             )
           })}
 
@@ -170,9 +256,11 @@ export function BudgetTreeView({ field, value, usage }: Props) {
                   isNumericColumn(column.type) && 'text-right font-semibold tabular-nums',
                 )}
               >
-                {isNumericColumn(column.type)
+                {amountColumn?.key === column.key
                   ? numericText(column, String(budgetTotal(tree.rows, column.key) ?? ''))
-                  : ''}
+                  : isNumericColumn(column.type)
+                    ? '-'
+                    : ''}
               </td>
             ))}
             {usage && totalUsage && (
