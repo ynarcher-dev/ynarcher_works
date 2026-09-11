@@ -1,7 +1,7 @@
 import { Button, Checkbox, Field, IconButton, Input, Select, cardText, cn } from '@ynarcher/ui'
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Trash2 } from 'lucide-react'
 import { Fragment, useEffect, useState } from 'react'
-import { FieldExtraSettings, hasFieldExtras } from '@/features/approval/FieldExtraSettings'
+import { FieldExtraSettings } from '@/features/approval/FieldExtraSettings'
 import {
   FIELD_TYPES,
   FIELD_TYPE_LABEL,
@@ -15,6 +15,17 @@ import {
 interface FieldSchemaEditorProps {
   fields: FormField[]
   onChange: (fields: FormField[]) => void
+}
+
+/** 선택지·기본 문구·공문 틀·표 설정처럼 요약 줄 아래에 펼칠 설정이 있는 필드인가. */
+function hasFieldExtras(field: FormField): boolean {
+  return (
+    field.type === 'SELECT' ||
+    field.type === 'RICHTEXT' ||
+    field.type === 'OFFICIAL_DOCUMENT' ||
+    field.type === 'TABLE' ||
+    field.type === 'BUDGET_TREE'
+  )
 }
 
 /**

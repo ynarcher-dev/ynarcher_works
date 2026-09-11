@@ -1,13 +1,19 @@
 import { cn, tableText } from '@ynarcher/ui'
 import { RichTextViewer } from '@/components/RichTextEditor'
 import { BudgetTreeView, type BudgetUsage } from '@/features/approval/BudgetTreeView'
+import {
+  OfficialDocumentField,
+  type OfficialDocumentContext,
+} from '@/features/approval/OfficialDocumentField'
 import { BudgetRefText, PartnerRefText } from '@/features/approval/RefCellText'
 import {
   budgetValue,
   columnSum,
   displayValue,
   formatMoney,
+  hasRichTextContent,
   isNumericColumn,
+  officialDocumentValue,
   scalarValue,
   tableRows,
   toNumber,
@@ -28,6 +34,7 @@ interface ApprovalFieldsViewProps {
    * 자리에서 빈 '사용' 열을 세우면 그 열이 아무 말도 하지 않는다.
    */
   budgetUsage?: Map<string, BudgetUsage>
+  documentContext?: OfficialDocumentContext
 }
 
 /** 표 필드 하나를 읽기 전용으로 편다. 금액·숫자 열에는 합계 행이 붙는다. */
@@ -137,6 +144,7 @@ export function ApprovalFieldsView({
   hideEmpty = false,
   hideSectionLabels = false,
   budgetUsage,
+  documentContext = { title: '', docNo: null },
 }: ApprovalFieldsViewProps) {
   if (fields.length === 0) {
     return <p className={cn('py-4', tableText.empty)}>표시할 내용이 없습니다.</p>
@@ -154,11 +162,26 @@ export function ApprovalFieldsView({
         if (field.type === 'BUDGET_TREE') {
           return budgetValue(values, field.key).rows.some((r) => r.name.trim() !== '')
         }
+        if (field.type === 'OFFICIAL_DOCUMENT') {
+          const value = officialDocumentValue(values, field.key)
+          return Boolean(
+            value.recipient.trim() || value.reference.trim() || hasRichTextContent(value.body),
+          )
+        }
         const value = scalarValue(values, field.key)
-        return field.type === 'RICHTEXT'
-          ? value.replace(/<[^>]*>/g, '').trim() !== ''
-          : value.trim() !== ''
+        return field.type === 'RICHTEXT' ? hasRichTextContent(value) : value.trim() !== ''
       }).map((field) => {
+        if (field.type === 'OFFICIAL_DOCUMENT') {
+          return (
+            <OfficialDocumentField
+              key={field.key}
+              template={field.officialDocument}
+              context={documentContext}
+              value={officialDocumentValue(values, field.key)}
+            />
+          )
+        }
+
         if (field.type === 'RICHTEXT') {
           const html = scalarValue(values, field.key)
           return (

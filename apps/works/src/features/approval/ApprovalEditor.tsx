@@ -461,7 +461,12 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
                   </p>
                 ) : documentFields.length > 0 ? (
                   <BudgetRefContext.Provider value={budgetRefSource}>
-                    <ApprovalFieldsForm fields={documentFields} values={values} onChange={setValues} />
+                    <ApprovalFieldsForm
+                      fields={documentFields}
+                      values={values}
+                      onChange={setValues}
+                      documentContext={{ title, docNo: editing?.doc_no ?? null }}
+                    />
                   </BudgetRefContext.Provider>
                 ) : null}
               </div>

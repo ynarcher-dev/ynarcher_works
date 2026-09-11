@@ -1,7 +1,16 @@
 import { Field, Input } from '@ynarcher/ui'
+import { ImagePicker } from '@/components/ImagePicker'
 import { RichTextEditor } from '@/components/RichTextEditor'
 import { FieldColumnRows } from '@/features/approval/FieldColumnRows'
-import type { FormField } from '@/features/approval/fields'
+import {
+  approvalFormAssetUrl,
+  uploadApprovalFormAsset,
+} from '@/features/approval/approvalFormAssets'
+import {
+  DEFAULT_OFFICIAL_DOCUMENT_TEMPLATE,
+  type FormField,
+  type OfficialDocumentTemplate,
+} from '@/features/approval/fields'
 
 /** 쉼표로 이어진 한 줄을 목록으로 — 빈 칸은 버린다. */
 const splitList = (raw: string): string[] =>
@@ -9,21 +18,6 @@ const splitList = (raw: string): string[] =>
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean)
-
-/**
- * 이 필드가 한 줄에 담기지 않는가 — `ItemRows`의 아래 상자를 세울지 여기서 답한다.
- *
- * 판정을 상자 바깥에 두는 이유는 **담을 것이 없는 줄에는 상자가 서지 않아야** 하기 때문이다.
- * 컴포넌트가 스스로 `null`을 내보내도 요소 자체는 있는 값이라 빈 테두리가 남는다.
- */
-export function hasFieldExtras(field: FormField): boolean {
-  return (
-    field.type === 'SELECT' ||
-    field.type === 'RICHTEXT' ||
-    field.type === 'TABLE' ||
-    field.type === 'BUDGET_TREE'
-  )
-}
 
 /**
  * 필드 한 줄 아래에 서는 설정 — 한 줄에 담기지 않는 것들만 온다.
@@ -38,6 +32,17 @@ export function FieldExtraSettings({
   field: FormField
   onChange: (next: FormField) => void
 }) {
+  const official = field.officialDocument ?? DEFAULT_OFFICIAL_DOCUMENT_TEMPLATE
+  const setOfficial = (next: Partial<OfficialDocumentTemplate>) =>
+    onChange({ ...field, officialDocument: { ...official, ...next } })
+  const assetUrls = [official.headerImagePath, official.footerImagePath]
+    .filter((path): path is string => Boolean(path))
+    .reduce<Record<string, string>>((urls, path) => {
+      const url = approvalFormAssetUrl(path)
+      if (url) urls[path] = url
+      return urls
+    }, {})
+
   return (
     <div className="space-y-3">
       {field.type === 'SELECT' && (
@@ -60,6 +65,76 @@ export function FieldExtraSettings({
             onChange={(html) => onChange({ ...field, defaultValue: html })}
           />
         </Field>
+      )}
+
+      {field.type === 'OFFICIAL_DOCUMENT' && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field label="회사명">
+              <Input
+                value={official.companyName}
+                onChange={(event) => setOfficial({ companyName: event.target.value })}
+              />
+            </Field>
+            <Field label="웹사이트">
+              <Input
+                value={official.website}
+                onChange={(event) => setOfficial({ website: event.target.value })}
+              />
+            </Field>
+            <Field label="주소">
+              <Input
+                value={official.address}
+                onChange={(event) => setOfficial({ address: event.target.value })}
+              />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="전화번호">
+                <Input
+                  value={official.telephone}
+                  onChange={(event) => setOfficial({ telephone: event.target.value })}
+                />
+              </Field>
+              <Field label="팩스번호">
+                <Input
+                  value={official.fax}
+                  onChange={(event) => setOfficial({ fax: event.target.value })}
+                />
+              </Field>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field label="상단 이미지" hint="회사 로고 등 공문 오른쪽 위에 표시할 이미지입니다.">
+              <ImagePicker
+                value={official.headerImagePath ? [official.headerImagePath] : []}
+                onChange={(paths) => setOfficial({ headerImagePath: paths[0] })}
+                upload={uploadApprovalFormAsset}
+                urls={assetUrls}
+                max={1}
+                maxBytes={2_000_000}
+              />
+            </Field>
+            <Field label="하단 이미지" hint="서명·직인 등 공문 아래에 표시할 이미지입니다.">
+              <ImagePicker
+                value={official.footerImagePath ? [official.footerImagePath] : []}
+                onChange={(paths) => setOfficial({ footerImagePath: paths[0] })}
+                upload={uploadApprovalFormAsset}
+                urls={assetUrls}
+                max={1}
+                maxBytes={2_000_000}
+              />
+            </Field>
+          </div>
+
+          <Field label="본문 기본 문구" hint="새 공문을 만들 때 본문 편집기에 먼저 채워집니다.">
+            <RichTextEditor
+              placeholder="새 공문의 기본 내용을 입력하세요."
+              value={field.defaultValue ?? ''}
+              onChange={(html) => onChange({ ...field, defaultValue: html })}
+            />
+          </Field>
+        </div>
       )}
 
       {/* 층 이름은 **기본값**만 양식이 갖는다 — 사업마다 층 이름과 층 수가 달라

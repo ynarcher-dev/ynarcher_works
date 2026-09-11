@@ -27,6 +27,7 @@ export type FieldType =
   | 'TEXT'
   | 'TEXTAREA'
   | 'RICHTEXT'
+  | 'OFFICIAL_DOCUMENT'
   | 'NUMBER'
   | 'MONEY'
   | 'DATE'
@@ -86,15 +87,35 @@ export interface FormField {
    * 옛 결재의 본문 틀(`1. 행사명 : …`)을 매번 손으로 적지 않게 한다.
    */
   defaultValue?: string
+  /** 공문 전용 고정 틀. 문서별 수신·참조·발송일·본문은 field_values에 따로 저장한다. */
+  officialDocument?: OfficialDocumentTemplate
   /** 입력 도움말(폼에서만 보인다). */
   help?: string
+}
+
+export interface OfficialDocumentTemplate {
+  companyName: string
+  address: string
+  telephone: string
+  fax: string
+  website: string
+  /** approval-form-assets 버킷의 오브젝트 경로. */
+  headerImagePath?: string
+  footerImagePath?: string
+}
+
+export interface OfficialDocumentValue {
+  recipient: string
+  reference: string
+  sentOn: string
+  body: string
 }
 
 /** 표 한 행 — 열 key → 값. */
 export type TableRow = Record<string, string>
 
 /** 한 필드에 담기는 값. 스칼라는 문자열, TABLE은 행 배열, BUDGET_TREE는 층 있는 표. */
-export type FieldValue = string | TableRow[] | BudgetTreeValue
+export type FieldValue = string | TableRow[] | BudgetTreeValue | OfficialDocumentValue
 
 /** 필드 값 묶음(문서의 field_values). */
 export type FieldValues = Record<string, FieldValue>
@@ -103,6 +124,7 @@ export const FIELD_TYPE_LABEL: Record<FieldType, string> = {
   TEXT: '한 줄 글',
   TEXTAREA: '여러 줄 글',
   RICHTEXT: '서식 있는 본문',
+  OFFICIAL_DOCUMENT: '공문 본문',
   NUMBER: '숫자',
   MONEY: '금액',
   DATE: '날짜',
@@ -116,6 +138,7 @@ export const FIELD_TYPES: FieldType[] = [
   'TEXT',
   'TEXTAREA',
   'RICHTEXT',
+  'OFFICIAL_DOCUMENT',
   'NUMBER',
   'MONEY',
   'DATE',
@@ -185,6 +208,14 @@ const DEFAULT_BUDGET_COLUMNS: FormColumn[] = [
   { key: 'note', label: '산출내역/비고', type: 'TEXT', wide: true },
 ]
 
+export const DEFAULT_OFFICIAL_DOCUMENT_TEMPLATE: OfficialDocumentTemplate = {
+  companyName: '와이앤아처 주식회사',
+  address: '서울시 강남구 테헤란로7길 22 한국과학기술회관 2관 2층 202호',
+  telephone: '02-2690-1550',
+  fax: '02-6918-6560',
+  website: 'www.ynarcher.com',
+}
+
 /**
  * 종류를 바꾼 필드.
  *
@@ -206,7 +237,12 @@ export function withFieldType(field: FormField, type: FieldType): FormField {
           ? (field.columns ?? DEFAULT_BUDGET_COLUMNS)
           : undefined,
     levels: type === 'BUDGET_TREE' ? (field.levels ?? DEFAULT_BUDGET_LEVELS) : undefined,
-    defaultValue: type === 'RICHTEXT' ? field.defaultValue : undefined,
+    defaultValue:
+      type === 'RICHTEXT' || type === 'OFFICIAL_DOCUMENT' ? field.defaultValue : undefined,
+    officialDocument:
+      type === 'OFFICIAL_DOCUMENT'
+        ? (field.officialDocument ?? DEFAULT_OFFICIAL_DOCUMENT_TEMPLATE)
+        : undefined,
   }
 }
 
@@ -228,6 +264,19 @@ const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v)
 
 const str = (v: unknown): string => (typeof v === 'string' ? v : '')
+
+function parseOfficialDocumentTemplate(raw: unknown): OfficialDocumentTemplate | undefined {
+  if (!isRecord(raw)) return undefined
+  return {
+    companyName: str(raw.companyName) || DEFAULT_OFFICIAL_DOCUMENT_TEMPLATE.companyName,
+    address: str(raw.address) || DEFAULT_OFFICIAL_DOCUMENT_TEMPLATE.address,
+    telephone: str(raw.telephone) || DEFAULT_OFFICIAL_DOCUMENT_TEMPLATE.telephone,
+    fax: str(raw.fax) || DEFAULT_OFFICIAL_DOCUMENT_TEMPLATE.fax,
+    website: str(raw.website) || DEFAULT_OFFICIAL_DOCUMENT_TEMPLATE.website,
+    headerImagePath: str(raw.headerImagePath) || undefined,
+    footerImagePath: str(raw.footerImagePath) || undefined,
+  }
+}
 
 function parseColumn(raw: unknown): FormColumn | null {
   if (!isRecord(raw)) return null
@@ -272,6 +321,11 @@ export function parseFields(raw: unknown): FormField[] {
           ? item.levels.map(str).filter(Boolean)
           : undefined,
       defaultValue: str(item.defaultValue) || undefined,
+      officialDocument:
+        type === 'OFFICIAL_DOCUMENT'
+          ? (parseOfficialDocumentTemplate(item.officialDocument) ??
+            DEFAULT_OFFICIAL_DOCUMENT_TEMPLATE)
+          : undefined,
       help: str(item.help) || undefined,
     })
   }
@@ -295,6 +349,34 @@ export function budgetValue(values: FieldValues, key: string): BudgetTreeValue {
   return parseBudget(values[key])
 }
 
+/** 공문 값은 과거·잘못된 JSON이 와도 빈 안전값으로 읽는다. */
+export function officialDocumentValue(values: FieldValues, key: string): OfficialDocumentValue {
+  const value = values[key]
+  if (!isRecord(value)) return { recipient: '', reference: '', sentOn: '', body: '' }
+  return {
+    recipient: str(value.recipient),
+    reference: str(value.reference),
+    sentOn: str(value.sentOn),
+    body: str(value.body),
+  }
+}
+
+/** 에디터가 남기는 빈 태그·공백 엔티티는 비어 있고, 이미지 한 장만 있는 본문은 내용이다. */
+export function hasRichTextContent(html: string): boolean {
+  const text = html
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;|&#160;/gi, ' ')
+    .trim()
+  return text.length > 0 || /<img\b/i.test(html)
+}
+
+function localDateValue(now = new Date()): string {
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 /**
  * 빈 문서의 초기값(표는 빈 행 하나로 시작해 입력할 자리를 보인다).
  * 본문에 기본 문구가 정의된 양식은 그 문구를 들고 시작한다.
@@ -304,6 +386,14 @@ export function emptyValues(fields: FormField[]): FieldValues {
   for (const f of fields) {
     if (f.type === 'TABLE') out[f.key] = [emptyRow(f)]
     else if (f.type === 'BUDGET_TREE') out[f.key] = emptyBudgetValue(f)
+    else if (f.type === 'OFFICIAL_DOCUMENT') {
+      out[f.key] = {
+        recipient: '',
+        reference: '',
+        sentOn: localDateValue(),
+        body: f.defaultValue ?? '',
+      }
+    }
     else out[f.key] = f.defaultValue ?? ''
   }
   return out
@@ -354,6 +444,7 @@ export function primaryAmount(fields: FormField[], values: FieldValues): number 
 
 /** 표시용 값 문자열 — 상세·집계에서 타입에 맞는 표기로 편다. */
 export function displayValue(field: FormField, values: FieldValues): string {
+  if (field.type === 'OFFICIAL_DOCUMENT') return officialDocumentValue(values, field.key).body
   const raw = scalarValue(values, field.key)
   if (!raw) return '-'
   if (field.type === 'MONEY') return formatMoney(toNumber(raw))
@@ -383,9 +474,16 @@ export function missingRequired(fields: FormField[], values: FieldValues): strin
       if (!budgetValue(values, f.key).rows.some((r) => r.name.trim() !== '')) missing.push(f.label)
       continue
     }
+    if (f.type === 'OFFICIAL_DOCUMENT') {
+      const value = officialDocumentValue(values, f.key)
+      if (!value.recipient.trim()) missing.push('수신')
+      if (!value.sentOn.trim()) missing.push('발송일')
+      if (!hasRichTextContent(value.body)) missing.push('내용')
+      continue
+    }
     if (f.type === 'RICHTEXT') {
       // 빈 에디터는 <p></p> 같은 빈 태그를 남긴다 — 태그를 걷어낸 뒤 판단한다.
-      if (!scalarValue(values, f.key).replace(/<[^>]*>/g, '').trim()) missing.push(f.label)
+      if (!hasRichTextContent(scalarValue(values, f.key))) missing.push(f.label)
       continue
     }
     if (!scalarValue(values, f.key).trim()) missing.push(f.label)
@@ -406,6 +504,8 @@ export function pruneValues(fields: FormField[], values: FieldValues): FieldValu
       // 그 자식들이 부모를 잃는다. 그리고 지출이 가리키는 자리가 저장 때마다 달라지면
       // 차감이 어느 줄의 것이었는지 되짚을 근거가 사라진다.
       out[f.key] = budgetValue(values, f.key)
+    } else if (f.type === 'OFFICIAL_DOCUMENT') {
+      out[f.key] = officialDocumentValue(values, f.key)
     } else {
       out[f.key] = scalarValue(values, f.key)
     }
@@ -444,6 +544,9 @@ export function validateSchema(fields: FormField[]): string[] {
   // 지출결의가 어느 표의 줄을 가리키는지도 갈린다.
   if (fields.filter((f) => f.type === 'BUDGET_TREE').length > 1)
     errors.push('예산표는 양식당 하나만 둘 수 있습니다.')
+
+  if (fields.filter((f) => f.type === 'OFFICIAL_DOCUMENT').length > 1)
+    errors.push('공문 본문은 양식당 하나만 둘 수 있습니다.')
 
   // 대표 금액은 한 곳만 — 여럿이면 어느 값이 문서 금액인지 화면과 DB가 갈릴 수 있다.
   const marks = countPrimaryAmount(fields)

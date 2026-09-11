@@ -3,9 +3,14 @@ import { RichTextEditor } from '@/components/RichTextEditor'
 import { BudgetTreeInput } from '@/features/approval/BudgetTreeInput'
 import { FieldTableInput } from '@/features/approval/FieldTableInput'
 import {
+  OfficialDocumentField,
+  type OfficialDocumentContext,
+} from '@/features/approval/OfficialDocumentField'
+import {
   budgetValue,
   formatMoney,
   isNumericColumn,
+  officialDocumentValue,
   scalarValue,
   tableRows,
   toNumber,
@@ -17,6 +22,7 @@ interface ApprovalFieldsFormProps {
   fields: FormField[]
   values: FieldValues
   onChange: (values: FieldValues) => void
+  documentContext?: OfficialDocumentContext
 }
 
 /** 스칼라 필드 한 칸의 입력 컨트롤. 타입이 곧 입력 방식을 정한다. */
@@ -69,12 +75,29 @@ function ScalarInput({
  * 화면은 어떤 필드가 있는지 모른다(양식이 정한다). 규격 클래스를 직접 쓰지 않고
  * 폼 한 칸은 `Field`가, 표는 `FieldTableInput`이 소유한다.
  */
-export function ApprovalFieldsForm({ fields, values, onChange }: ApprovalFieldsFormProps) {
+export function ApprovalFieldsForm({
+  fields,
+  values,
+  onChange,
+  documentContext = { title: '', docNo: null },
+}: ApprovalFieldsFormProps) {
   const set = (key: string, v: FieldValues[string]) => onChange({ ...values, [key]: v })
 
   return (
     <div className="space-y-4">
       {fields.map((field) => {
+        if (field.type === 'OFFICIAL_DOCUMENT') {
+          return (
+            <OfficialDocumentField
+              key={field.key}
+              template={field.officialDocument}
+              context={documentContext}
+              value={officialDocumentValue(values, field.key)}
+              onChange={(next) => set(field.key, next)}
+            />
+          )
+        }
+
         if (field.type === 'BUDGET_TREE') {
           return (
             <Field

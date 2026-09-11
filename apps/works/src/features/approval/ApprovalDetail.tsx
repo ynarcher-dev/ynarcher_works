@@ -450,6 +450,7 @@ export function ApprovalDetail({
                 fields={bodyFields}
                 values={doc.field_values ?? {}}
                 hideEmpty={Boolean(doc.legacy)}
+                documentContext={{ title: doc.title, docNo: doc.doc_no }}
                 // 예산표에는 이 품의에서 지금까지 나간 돈이 함께 선다 — 예산만 보이는 표는
                 // "얼마 남았나"라는 실제 물음에 답하지 못한다.
                 budgetUsage={ownUsage}
