@@ -164,7 +164,6 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
             )}
             {groups.map((group) => {
               const groupRows = group.rows.map((row) => row.row)
-              const lastPath = group.rows[group.rows.length - 1]?.nodePath ?? []
               return (
                 <Fragment key={tree.rows[group.rootIndex]?.id ?? group.rootIndex}>
                   {group.rows.map((gridRow, localIndex) => {
@@ -178,15 +177,28 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
                               rowSpan={cell.rowSpan}
                               className="h-px border-r border-gray-100 px-2 py-1 align-middle"
                             >
-                              <div className="flex h-full items-stretch">
+                              <div className="flex h-full flex-col items-stretch gap-1">
                                 <Input
                                   density="table"
-                                  className="h-full min-h-8"
+                                  className="min-h-8 flex-1"
                                   value={tree.rows[cell.nodeIndex]?.name ?? ''}
                                   onChange={(e) =>
                                     onChange(setName(tree, cell.nodeIndex, e.target.value))
                                   }
                                 />
+                                {level > 0 && level < levelCount - 1 && (
+                                  <Button
+                                    variant="ghost"
+                                    density="table"
+                                    className="self-start font-normal text-gray-500"
+                                    onClick={() =>
+                                      onChange(addBudgetBranch(tree, cell.nodeIndex))
+                                    }
+                                  >
+                                    <Plus size={14} />
+                                    {levelLabel(levels, level + 1)} 추가
+                                  </Button>
+                                )}
                               </div>
                             </td>
                           ) : null,
@@ -227,25 +239,26 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
 
                   <tr className="border-b border-gray-200 bg-gray-25">
                     {levels.slice(0, levelCount).map((_, level) => {
-                      const parentIndex = level === 0 ? undefined : lastPath[level - 1]
                       return (
                         <td key={level} className="px-2 py-1">
                           <div className="flex items-center">
-                            <Button
-                              variant="ghost"
-                              density="table"
-                              className="font-normal text-gray-500"
-                              onClick={() =>
-                                onChange(
-                                  level === 0
-                                    ? addBudgetRootAfter(tree, group.rootIndex)
-                                    : addBudgetBranch(tree, parentIndex ?? -1),
-                                )
-                              }
-                            >
-                              <Plus size={14} />
-                              {levelLabel(levels, level)} 추가
-                            </Button>
+                            {level <= 1 && (
+                              <Button
+                                variant="ghost"
+                                density="table"
+                                className="font-normal text-gray-500"
+                                onClick={() =>
+                                  onChange(
+                                    level === 0
+                                      ? addBudgetRootAfter(tree, group.rootIndex)
+                                      : addBudgetBranch(tree, group.rootIndex),
+                                  )
+                                }
+                              >
+                                <Plus size={14} />
+                                {levelLabel(levels, level)} 추가
+                              </Button>
+                            )}
                             {level === levelCount - 1 && summaryColumnIndex === 0 && (
                               <span className={cn(tableText.meta, 'ml-auto font-normal text-gray-500')}>
                                 소계

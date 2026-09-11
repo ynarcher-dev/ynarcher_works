@@ -253,6 +253,24 @@ describe('예산표 — 분류 단계를 가로 열로 편다', () => {
     expect(leafGrid[0]!.cells[1]?.rowSpan).toBe(2)
   })
 
+  it('세부항목은 선택한 중분류 아래에서만 늘어난다', () => {
+    const initial = emptyBudget(['대분류', '중분류', '세부항목'])
+    const rootIndex = budgetGridRows(initial)[0]!.cells[0]!.nodeIndex
+    const withThreeMiddleRows = addBudgetBranch(
+      addBudgetBranch(initial, rootIndex),
+      rootIndex,
+    )
+    const before = budgetGridRows(withThreeMiddleRows)
+    const firstMiddleIndex = before[0]!.cells[1]!.nodeIndex
+    const next = addBudgetBranch(withThreeMiddleRows, firstMiddleIndex)
+    const grid = budgetGridRows(next)
+
+    expect(grid).toHaveLength(4)
+    expect(grid[0]!.cells[1]?.rowSpan).toBe(2)
+    expect(grid[2]!.cells[1]?.rowSpan).toBe(1)
+    expect(grid[3]!.cells[1]?.rowSpan).toBe(1)
+  })
+
   it('마지막 자식을 지우면 비게 된 상위 가지도 함께 정리한다', () => {
     const twoRoots = appendBudgetEntry(emptyBudget(['대분류', '중분류', '소분류']))
     const removed = removeBudgetEntry(twoRoots, 0)
