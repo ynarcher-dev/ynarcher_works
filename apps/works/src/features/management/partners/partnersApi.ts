@@ -27,14 +27,9 @@ export interface TradePartner {
   bankCode: string | null
   accountNo: string | null
   accountHolder: string | null
-  /** 법인=사업자등록증, 개인=신분증. 경로와 표시용 파일명이 한 쌍이다. */
-  licensePath: string | null
-  licenseName: string | null
-  bankbookPath: string | null
-  bankbookName: string | null
   isActive: boolean
   /**
-   * 경영지원이 증빙을 보고 계좌를 확인한 시점. 비어 있으면 "확인 전"이다 —
+   * 경영지원이 계좌 정보를 확인한 시점. 비어 있으면 "확인 전"이다 —
    * 송금 요청에서 담당자가 그 자리에서 넣은 거래처가 여기 섞이므로, 확인된 행과 같은
    * 얼굴로 서면 결재자가 둘을 가릴 수 없다.
    */
@@ -51,10 +46,6 @@ export interface TradePartnerInput {
   bankCode: string | null
   accountNo: string | null
   accountHolder: string | null
-  licensePath: string | null
-  licenseName: string | null
-  bankbookPath: string | null
-  bankbookName: string | null
   isActive: boolean
 }
 
@@ -67,10 +58,6 @@ interface PartnerRow {
   bank_code: string | null
   account_no: string | null
   account_holder: string | null
-  license_path: string | null
-  license_name: string | null
-  bankbook_path: string | null
-  bankbook_name: string | null
   is_active: boolean
   verified_at: string | null
   created_by: string | null
@@ -78,7 +65,7 @@ interface PartnerRow {
 }
 
 const COLUMNS =
-  'id, code, name, partner_type, registration_no, bank_code, account_no, account_holder, license_path, license_name, bankbook_path, bankbook_name, is_active, verified_at, created_by, updated_at'
+  'id, code, name, partner_type, registration_no, bank_code, account_no, account_holder, is_active, verified_at, created_by, updated_at'
 
 const toPartner = (r: PartnerRow): TradePartner => ({
   id: r.id,
@@ -89,10 +76,6 @@ const toPartner = (r: PartnerRow): TradePartner => ({
   bankCode: r.bank_code,
   accountNo: r.account_no,
   accountHolder: r.account_holder,
-  licensePath: r.license_path,
-  licenseName: r.license_name,
-  bankbookPath: r.bankbook_path,
-  bankbookName: r.bankbook_name,
   isActive: r.is_active,
   verifiedAt: r.verified_at,
   createdBy: r.created_by,
@@ -107,10 +90,6 @@ const toPartnerRow = (v: TradePartnerInput) => ({
   bank_code: v.bankCode,
   account_no: v.accountNo,
   account_holder: v.accountHolder,
-  license_path: v.licensePath,
-  license_name: v.licenseName,
-  bankbook_path: v.bankbookPath,
-  bankbook_name: v.bankbookName,
   is_active: v.isActive,
 })
 
@@ -150,7 +129,7 @@ function sanitizeOrValue(v: string): string {
  * 거래처를 찾으려면 마지막 페이지를 보면 된다. 이름 순은 검색이 대신한다.
  *
  * 검색은 코드·거래처명·등록번호·예금주를 함께 훑는다. 등록번호는 숫자만 저장되어 있으므로
- * 하이픈을 걷어낸 형태로도 한 번 더 본다(사업자등록증에 적힌 대로 붙여 넣는 사람이 많다).
+ * 하이픈을 걷어낸 형태로도 한 번 더 본다(문서에 적힌 대로 붙여 넣는 사람이 많다).
  */
 export function usePartnersPage(
   keyword: string,

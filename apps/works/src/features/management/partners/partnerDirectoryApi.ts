@@ -20,7 +20,7 @@ export interface PartnerOption {
   accountNoLast4: string | null
   accountHolder: string | null
   isActive: boolean
-  /** 비어 있으면 "확인 전" — 경영지원이 증빙을 보고 계좌를 확인하기 전이다. */
+  /** 비어 있으면 "확인 전" — 경영지원이 계좌 정보를 확인하기 전이다. */
   verifiedAt: string | null
 }
 
@@ -136,7 +136,7 @@ export function useQuickRegisterPartner() {
 }
 
 /**
- * 계좌 확인 — 경영지원이 증빙을 보고 "확인 전" 딱지를 뗀다.
+ * 계좌 확인 — 경영지원이 계좌 정보를 보고 "확인 전" 딱지를 뗀다.
  * 확인한 사람은 화면이 보내지 않는다(원장 트리거가 세션에서 찍는다) — 확인은 책임이 따르는
  * 행위라 누가 했는지를 클라이언트가 주장하게 두지 않는다.
  */

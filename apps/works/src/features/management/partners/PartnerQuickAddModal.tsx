@@ -30,10 +30,9 @@ interface Props {
  * 만들지 않는 것이 이 창의 전부다 — 그런 거래처가 생기면 지급 담당자가 계좌를 어디서
  * 확인해야 하는지 답할 곳이 없다.
  *
- * 여기서 만든 거래처에는 **"확인 전" 딱지가 붙는다**(서버가 정한다). 원장은 원래 경영지원이
- * 사업자등록증·통장사본을 보고 등록하던 곳이라, 증빙 없이 들어온 행이 확인된 행과 같은
- * 얼굴로 서면 결재자가 둘을 가릴 수 없다. 딱지가 붙어도 상신은 막지 않는다 — 거르는 일은
- * 결재자의 반려가 한다.
+ * 여기서 만든 거래처에는 **"확인 전" 딱지가 붙는다**(서버가 정한다). 계좌 정보를 확인하기
+ * 전에 들어온 행이 확인된 행과 같은 얼굴로 서면 결재자가 둘을 가릴 수 없다. 딱지가 붙어도
+ * 상신은 막지 않는다 — 거르는 일은 결재자의 반려가 한다.
  */
 export function PartnerQuickAddModal({ open, onClose, onCreated, initialName }: Props) {
   const toast = useToast()
@@ -103,7 +102,7 @@ export function PartnerQuickAddModal({ open, onClose, onCreated, initialName }: 
           한 번 들어가면 이 화면에서 되돌릴 수 없다 — 되돌릴 수 없는 작업의 파급 효과 고지는
           말풍선 뒤로 숨기지 않는다(CLAUDE.md '안내 문구는 접는다'의 예외). */}
       <p className="mb-3 rounded-radius-md border border-warning-border bg-warning-subtle px-3 py-2 text-body-sm text-gray-700">
-        여기서 등록한 거래처는 거래처 원장에 바로 들어갑니다. 경영지원이 증빙을 확인하기
+        여기서 등록한 거래처는 거래처 원장에 바로 들어갑니다. 경영지원이 계좌 정보를 확인하기
         전까지 <b>확인 전</b>으로 표시됩니다.
       </p>
 

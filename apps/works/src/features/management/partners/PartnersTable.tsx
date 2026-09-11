@@ -20,14 +20,6 @@ interface PartnersTableProps {
   pagination: DataTableProps<TradePartner>['pagination']
 }
 
-/** 첨부된 서류를 한 칸에 적는다 — 두 열로 나누면 '없음'이 두 번 반복될 뿐이다. */
-function docsText(p: TradePartner): string[] {
-  const names: string[] = []
-  if (p.licensePath) names.push(p.partnerType === 'CORPORATE' ? '등록증' : '신분증')
-  if (p.bankbookPath) names.push('통장')
-  return names
-}
-
 /**
  * 거래처 표 — 코드 순으로 늘어놓는다(코드가 곧 등록 순서다).
  *
@@ -101,15 +93,6 @@ export function PartnersTable({
       header: '예금주',
       type: 'person',
       render: (p) => p.accountHolder ?? <EmptyValue />,
-    },
-    {
-      key: 'docs',
-      header: '서류',
-      type: 'code',
-      render: (p) => {
-        const names = docsText(p)
-        return names.length ? names.join('·') : <EmptyValue />
-      },
     },
     // 계좌 확인은 사용 여부와 **다른 축**이다. 저쪽은 "지금 거래하는가"이고 이쪽은
     // "이 계좌를 믿을 근거를 봤는가"다. 송금 요청에서 담당자가 그 자리에서 넣은 거래처가

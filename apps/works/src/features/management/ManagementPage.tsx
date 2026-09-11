@@ -78,7 +78,7 @@ export function ManagementPage() {
       {tab === 'attendance' && <AttendancePanel />}
       {tab === 'assets' && <AssetsPanel />}
       {tab === 'finance' && <FinancePanel />}
-      {/* 거래처 원장: 지급 상대(코드·상호·구분·등록번호·계좌·증빙)의 단일 세팅 지점.
+      {/* 거래처 원장: 지급 상대(코드·상호·구분·등록번호·계좌)의 단일 세팅 지점.
           NETWORKS 외주/거래 마스터와는 다른 원장이다 — 저쪽은 누구와 일하는가, 여기는
           누구에게 어느 계좌로 보내는가를 담는다. */}
       {tab === 'partners' && <PartnersPanel />}

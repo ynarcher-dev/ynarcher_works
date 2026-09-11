@@ -25,11 +25,6 @@ export function registrationLabel(type: PartnerType): string {
   return type === 'CORPORATE' ? '사업자등록번호' : '생년월일'
 }
 
-/** 증빙 서류 칸의 이름도 구분이 정한다(법인=사업자등록증, 개인=신분증). */
-export function licenseLabel(type: PartnerType): string {
-  return type === 'CORPORATE' ? '사업자등록증' : '신분증'
-}
-
 /**
  * 금융기관 목록(코드 3자리 + 이름). 순서는 쓰이는 빈도 순이다 — 사전순으로 두면 목록의
  * 첫머리가 실제로 고를 일이 거의 없는 이름들로 채워진다.
@@ -77,9 +72,3 @@ export function bankLabel(code: string | null): string | null {
   if (!code) return null
   return BANK_LABELS[code] ?? `코드 ${code}`
 }
-
-/** 증빙 서류 한 건의 크기 상한(스캔한 등록증·통장 사본이 넉넉히 들어간다). */
-export const PARTNER_DOC_MAX_BYTES = 10_000_000
-
-/** 서류 첨부 허용 형식 — 스캔본(이미지)과 전자문서(PDF). */
-export const PARTNER_DOC_ACCEPT = 'image/*,application/pdf'

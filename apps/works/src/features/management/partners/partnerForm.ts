@@ -27,10 +27,6 @@ export interface PartnerDraft {
   bankCode: string
   accountNo: string
   accountHolder: string
-  licensePath: string
-  licenseName: string
-  bankbookPath: string
-  bankbookName: string
   isActive: boolean
 }
 
@@ -48,10 +44,6 @@ export function emptyPartnerDraft(): PartnerDraft {
     bankCode: '',
     accountNo: '',
     accountHolder: '',
-    licensePath: '',
-    licenseName: '',
-    bankbookPath: '',
-    bankbookName: '',
     isActive: true,
   }
 }
@@ -64,10 +56,6 @@ export function draftFromPartner(p: TradePartner): PartnerDraft {
     bankCode: p.bankCode ?? '',
     accountNo: p.accountNo ?? '',
     accountHolder: p.accountHolder ?? '',
-    licensePath: p.licensePath ?? '',
-    licenseName: p.licenseName ?? '',
-    bankbookPath: p.bankbookPath ?? '',
-    bankbookName: p.bankbookName ?? '',
     isActive: p.isActive,
   }
 }
@@ -76,8 +64,7 @@ export function draftFromPartner(p: TradePartner): PartnerDraft {
  * 구분 변경 — 등록번호를 비운다.
  *
  * 남겨 두면 사업자등록번호가 생년월일 칸에 그대로 서서, 자릿수 검증에 걸릴 때까지 사용자는
- * 그 값이 옳다고 읽는다. 서류 첨부는 비우지 않는다 — 파일은 이미 올라가 있고, 잘못 붙인
- * 것이라면 그 자리에서 지우면 된다(값과 달리 무엇이 붙어 있는지가 화면에 그대로 보인다).
+ * 그 값이 옳다고 읽는다.
  */
 export function withPartnerType(draft: PartnerDraft, partnerType: PartnerType): PartnerDraft {
   if (draft.partnerType === partnerType) return draft
@@ -216,10 +203,6 @@ export function toPartnerInput(draft: PartnerDraft): TradePartnerInput {
     bankCode: hasAccount ? draft.bankCode : null,
     accountNo: hasAccount ? account : null,
     accountHolder: hasAccount ? holder : null,
-    licensePath: draft.licensePath || null,
-    licenseName: draft.licenseName || null,
-    bankbookPath: draft.bankbookPath || null,
-    bankbookName: draft.bankbookName || null,
     isActive: draft.isActive,
   }
 }

@@ -2,13 +2,11 @@ import { Field, Input, Select, SettingRow, Switch } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
 import {
   BANKS,
-  licenseLabel,
   PARTNER_TYPE_LABELS,
   PARTNER_TYPE_ORDER,
   registrationLabel,
   type PartnerType,
 } from '@/features/management/partners/config'
-import { PartnerDocField } from '@/features/management/partners/PartnerDocField'
 import {
   digitsOnly,
   normalizeAccountNo,
@@ -44,7 +42,7 @@ function Row({ children }: { children: ReactNode }) {
  *
  * 필드 차례는 표의 열 차례와 같다 — 표에서 보던 순서대로 폼이 이어져야 무엇을 고치는 중인지
  * 눈이 헤매지 않는다. 줄 묶음은 함께 정하는 값끼리다: 누구인가(코드·거래처명) /
- * 어떤 상대인가(구분·등록번호) / 어디로 보내나(은행·계좌번호·예금주) / 무엇으로 증명하나(서류 2종).
+ * 어떤 상대인가(구분·등록번호) / 어디로 보내나(은행·계좌번호·예금주).
  *
  * 코드 칸은 등록과 수정에서 다른 값을 보여 준다 — 등록은 저장할 때 붙을 번호, 수정은 이미
  * 발급된 코드다. 어느 쪽도 고칠 수 없으므로 읽기 전용으로만 적는다.
@@ -174,29 +172,6 @@ export function PartnerFormFields({
         </Field>
       </Row>
 
-      <Row>
-        <Field label={licenseLabel(draft.partnerType)} as="div">
-          <PartnerDocField
-            kind="license"
-            partnerType={draft.partnerType}
-            partnerId={partnerId}
-            path={draft.licensePath}
-            fileName={draft.licenseName}
-            onChange={(v) => onChange({ ...draft, licensePath: v.path, licenseName: v.fileName })}
-          />
-        </Field>
-        <Field label="통장사본" as="div">
-          <PartnerDocField
-            kind="bankbook"
-            partnerType={draft.partnerType}
-            partnerId={partnerId}
-            path={draft.bankbookPath}
-            fileName={draft.bankbookName}
-            onChange={(v) => onChange({ ...draft, bankbookPath: v.path, bankbookName: v.fileName })}
-          />
-        </Field>
-      </Row>
-
       {/* 거래 중단은 목록에서 지우는 일이 아니다 — 과거 지급 내역을 설명해야 하므로 행은 남는다. */}
       <SettingRow
         title="사용 여부"
@@ -212,13 +187,13 @@ export function PartnerFormFields({
 
       {/* 계좌 확인 — 사용 여부와 **다른 축**이다. 저쪽은 "지금 거래하는가"이고 이쪽은
           "이 계좌를 믿을 근거를 봤는가"다. 송금 요청 화면에서 담당자가 그 자리에서 넣은
-          거래처는 확인 전으로 들어오며, 증빙을 본 경영지원만 이 스위치를 올린다.
+          거래처는 확인 전으로 들어오며, 계좌 정보를 확인한 경영지원만 이 스위치를 올린다.
           확인한 사람은 화면이 보내지 않는다(원장 트리거가 세션에서 찍는다) — 확인은 책임이
           따르는 행위라 누가 했는지를 클라이언트가 주장하게 두지 않는다. */}
       {onVerifiedChange && (
         <SettingRow
           title="계좌 확인"
-          hint="사업자등록증·통장사본을 확인했으면 켭니다. 꺼져 있으면 결재 화면에 '확인 전' 딱지가 붙습니다."
+          hint="계좌 정보를 확인했으면 켭니다. 꺼져 있으면 결재 화면에 '확인 전' 딱지가 붙습니다."
           control={({ id }) => (
             <Switch id={id} checked={Boolean(verifiedAt)} onChange={onVerifiedChange} />
           )}

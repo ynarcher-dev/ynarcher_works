@@ -8,7 +8,7 @@
 --       해당 테이블 도입 시 케이스를 실제 테이블 접근으로 승격한다.
 -- =====================================================================
 begin;
-select plan(38);
+select plan(40);
 
 -- 픽스처: 테스트 계정 10종 + 데이터 (슈퍼유저로 삽입, 트랜잭션 종료 시 롤백) ----
 insert into public.startups(id, name) values
@@ -383,9 +383,27 @@ select is(
 select is(
   (select count(*)::int from information_schema.columns
     where table_schema = 'public' and table_name = 'trade_partners_directory'
-      and column_name in ('account_no', 'license_path', 'bankbook_path')),
+      and column_name = 'account_no'),
   0,
-  '케이스15d: 거래처 가려진 뷰에 전체 계좌번호·증빙 경로가 없다'
+  '케이스15d: 거래처 가려진 뷰에 전체 계좌번호가 없다'
+);
+select is(
+  (select count(*)::int from information_schema.columns
+    where table_schema = 'public' and table_name = 'trade_partners'
+      and column_name in ('license_path', 'license_name', 'bankbook_path', 'bankbook_name')),
+  0,
+  '케이스15e: 거래처 원장에 증빙 파일 경로와 이름을 보관하지 않는다'
+);
+select is(
+  (select count(*)::int from pg_policies
+    where schemaname = 'storage' and tablename = 'objects'
+      and policyname in (
+        'partner_doc_objects_select',
+        'partner_doc_objects_insert',
+        'partner_doc_objects_update'
+      )),
+  0,
+  '케이스15f: 거래처 증빙 Storage 접근 정책이 남아 있지 않다'
 );
 
 select * from finish();

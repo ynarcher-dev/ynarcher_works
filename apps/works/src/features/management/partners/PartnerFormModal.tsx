@@ -87,7 +87,7 @@ export function PartnerFormModal({
         error={error}
         verifiedAt={partner?.verifiedAt ?? null}
         // 확인은 저장 버튼을 기다리지 않고 그 자리에서 원장에 남는다 — 폼의 다른 값과 함께
-        // 보내면 증빙만 확인하고 창을 닫은 담당자의 확인이 사라진다.
+        // 보내면 계좌만 확인하고 창을 닫은 담당자의 확인이 사라진다.
         onVerifiedChange={
           partner ? (next) => setVerified.mutate({ id: partner.id, verified: next }) : undefined
         }

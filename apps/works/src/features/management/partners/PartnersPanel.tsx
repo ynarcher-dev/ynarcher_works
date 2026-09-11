@@ -39,11 +39,11 @@ const ACTIVE_OPTIONS = [
  * 기획: docs_planning/3_7_4_management_partners.md
  *
  * 이 화면이 지급 상대의 단일 원천이다. NETWORKS 외주/거래 마스터(vendors)가 "누구와 일하는가"를
- * 담는다면 여기는 "누구에게 어느 계좌로 보내는가"를 담는다 — 계좌와 증빙이 붙어 있어 접근 주체가
+ * 담는다면 여기는 "누구에게 어느 계좌로 보내는가"를 담는다 — 계좌가 있어 접근 주체가
  * 좁으므로 원장을 나눠 두었다(migration 20260903210000의 머리말).
  *
  * 이 컴포넌트는 목록의 상태(검색어·필터·페이지·선택)만 소유한다. 표는 PartnersTable이,
- * 값 규칙은 partnerForm이, 서류 업로드·열람은 partnerDocs가 갖는다.
+ * 값 규칙은 partnerForm이 갖는다. 지급 증빙은 거래처 원장에 보관하지 않고 건별로 받는다.
  */
 export function PartnersPanel() {
   const toast = useToast()
@@ -135,8 +135,7 @@ export function PartnersPanel() {
           <FilterResetButton onClick={() => setFilters(EMPTY_PARTNER_FILTERS)} />
         )}
         <div className="sm:ml-auto">
-          {/* 대용량 업로드는 두지 않는다 — 계좌·증빙 서류가 한 벌로 붙는 원장이라 표 한 장으로
-              옮겨지지 않고, 서류 없이 들어온 행은 결국 한 건씩 다시 열어 채워야 한다. */}
+          {/* 계좌 정보는 한 건씩 확인해야 하므로 대용량 업로드를 두지 않는다. */}
           <ListActions createLabel="거래처 등록" onCreate={() => setForm('create')} />
         </div>
       </div>

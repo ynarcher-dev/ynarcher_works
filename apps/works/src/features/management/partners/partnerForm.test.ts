@@ -56,7 +56,7 @@ describe('validatePartnerDraft', () => {
     ).toBe('registrationNo')
   })
 
-  it('등록번호는 비워 둘 수 있다(아직 서류를 못 받은 거래처)', () => {
+  it('등록번호는 비워 둘 수 있다(아직 번호를 확인하지 못한 거래처)', () => {
     expect(validatePartnerDraft(draft({ registrationNo: '' }))).toBeNull()
   })
 
@@ -95,13 +95,6 @@ describe('withPartnerType', () => {
     expect(withPartnerType(before, 'CORPORATE')).toBe(before)
   })
 
-  it('서류 첨부는 비우지 않는다', () => {
-    const next = withPartnerType(
-      draft({ licensePath: 'k', licenseName: '등록증.pdf' }),
-      'INDIVIDUAL',
-    )
-    expect(next.licensePath).toBe('k')
-  })
 })
 
 describe('isValidBusinessNo', () => {
@@ -159,7 +152,6 @@ describe('toPartnerInput', () => {
     const v = toPartnerInput(draft({ registrationNo: '123-45-67891' }))
     expect(v.registrationNo).toBe(VALID_BIZ_NO)
     expect(v.bankCode).toBeNull()
-    expect(v.licensePath).toBeNull()
   })
 
   it('계좌 세 값이 다 차 있을 때만 계좌를 저장한다', () => {
@@ -186,10 +178,6 @@ describe('draftFromPartner', () => {
       bankCode: null,
       accountNo: null,
       accountHolder: null,
-      licensePath: null,
-      licenseName: null,
-      bankbookPath: null,
-      bankbookName: null,
       isActive: true,
       verifiedAt: null,
       createdBy: null,
