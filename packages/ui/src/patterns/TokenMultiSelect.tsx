@@ -219,8 +219,10 @@ export function TokenMultiSelect<T>({
   const runFreeTextAction = () => {
     const text = q.trim()
     if (!text) return
-    if (onFreeTextSelect) onFreeTextSelect(text)
-    else addFreeText()
+    if (onFreeTextSelect) {
+      onFreeTextSelect(text)
+      changeQuery('')
+    } else addFreeText()
   }
 
   const remove = (key: string) => onChange(selected.filter((s) => getKey(s) !== key))

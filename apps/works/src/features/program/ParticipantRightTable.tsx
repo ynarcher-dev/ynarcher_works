@@ -54,7 +54,7 @@ export function ParticipantRightTable({
       render: (r) => value(personOf(r).name),
     },
     { key: 'email', header: '이메일', type: 'long', render: (r) => value(personOf(r).email) },
-    { key: 'phone', header: '연락처', type: 'text', render: (r) => value(personOf(r).phone) },
+    { key: 'phone', header: '연락처', type: 'phone', render: (r) => value(personOf(r).phone) },
     {
       key: 'state',
       header: '상태',

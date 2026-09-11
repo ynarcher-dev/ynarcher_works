@@ -41,7 +41,7 @@ export function RelatedApprovalPanel({
             {pageItems.map((a) => (
               <li key={a.id}>
                 <Link
-                  to={`/office?tab=approval&doc=${a.id}`}
+                  to={`/my-office?tab=approval&doc=${a.id}`}
                   className={`flex min-w-0 items-center gap-2 rounded-radius-md border border-gray-300 bg-white transition-colors hover:bg-gray-50 ${panelRowBox}`}
                 >
                   <Badge tone={DOC_STATUS_TONE[a.status]}>{DOC_STATUS_LABEL[a.status]}</Badge>

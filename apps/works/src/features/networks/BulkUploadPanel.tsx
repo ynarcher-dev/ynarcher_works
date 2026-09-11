@@ -1,10 +1,9 @@
 import {
   Badge,
-  Banner,
   Button,
   cn,
+  InfoField,
   Modal,
-  Select,
   Tooltip,
   tooltipScale,
   useToast,
@@ -19,6 +18,7 @@ import { useCountryOptions } from '@/features/networks/countryOptions'
 import { createUploadBatch, findPriorBatchByHash } from '@/features/networks/hooks'
 import {
   buildEnrichment,
+  countRowsMissingCountry,
   csvCategory,
   buildTemplateCsv,
   downloadCsv,
@@ -27,10 +27,13 @@ import {
   guessCountryName,
   parseBulkCsv,
   rowToPayload,
+  requireCountryTagId,
   sha256Hex,
   type ExistingRef,
 } from '@/features/networks/bulkUpload'
 import { BulkReviewTable, type Decision, type ReviewRow } from '@/features/networks/BulkReviewTable'
+import { BulkSelectionBar } from '@/features/networks/BulkSelectionBar'
+import { BulkUploadNotices } from '@/features/networks/BulkUploadNotices'
 
 /**
  * 구분 선택지. 첫 줄은 **'미지정'이라는 답**이지 빈 자리가 아니다 — 아직 고르지 않은 상태가
@@ -68,6 +71,9 @@ export function BulkUploadPanel() {
   const [revivedLines, setRevivedLines] = useState<number[]>([])
   // 복구 확인 모달 대상 행(열림 = 값 존재).
   const [reviveConfirm, setReviveConfirm] = useState<number | null>(null)
+  // 비활성 사유 모달 대상 행. 사유는 길이를 알 수 없는 문장이라 표의 한 칸에 세우지 않는다
+  // — 그 칸이 열의 선언폭을 밀어내면 밀린 폭은 같은 표의 다른 열에서 깎여 나간다.
+  const [reasonLine, setReasonLine] = useState<number | null>(null)
   const [fileName, setFileName] = useState('')
   const [fileHash, setFileHash] = useState('')
   const [priorUpload, setPriorUpload] = useState<{ filename: string | null; created_at: string } | null>(null)
@@ -78,12 +84,20 @@ export function BulkUploadPanel() {
   // 원장에 없는 이름은 목록 필터에 걸리지 않으므로 올리기 전에 드러낸다(조용히 버리지 않는다).
   const { data: fieldTags } = useTags('field_tags')
   // 국가는 이름으로 올라오므로 태그 원장과 대조해 id로 바꾼다(대소문자·공백 무시).
-  // 못 찾은 값은 버리지 않고 '미확인'으로 남겨 목록에서 채우게 한다.
+  // 못 찾은 값은 버리지 않고 '미확인'으로 남기되, 리뷰에서 확정하기 전에는 업로드를 막는다.
   const { data: countries } = useCountryOptions()
   const countryByName = useMemo(() => {
     const m = new Map<string, { id: string; name: string }>()
     for (const c of [...(countries?.domestic ?? []), ...(countries?.overseas ?? [])]) {
       m.set(c.name.trim().toLowerCase(), { id: c.id, name: c.name })
+    }
+    return m
+  }, [countries])
+  // 고른 id로 표시 라벨을 되찾는 역방향 표. 이름 대조표(countryByName)와 같은 원본을 쓴다.
+  const countryById = useMemo(() => {
+    const m = new Map<string, { id: string; name: string }>()
+    for (const c of [...(countries?.domestic ?? []), ...(countries?.overseas ?? [])]) {
+      m.set(c.id, { id: c.id, name: c.name })
     }
     return m
   }, [countries])
@@ -194,6 +208,26 @@ export function BulkUploadPanel() {
     setRows((prev) => prev.map((r) => (r.line === line ? { ...r, decision: 'merge' } : r)))
     setReviveConfirm(null)
   }
+  /**
+   * 국가 재지정. 저장되는 것은 태그 id 하나이므로 표시 라벨도 그 자리에서 함께 맞춘다 —
+   * 두 칸이 같은 사실을 적고 있어 한쪽만 고치면 고른 값과 보이는 값이 어긋난다.
+   */
+  const setCountry = (line: number, tagId: string) =>
+    setRows((prev) =>
+      prev.map((r) =>
+        r.line === line
+          ? { ...r, countryTagId: tagId || null, countryLabel: countryById.get(tagId)?.name ?? '' }
+          : r,
+      ),
+    )
+  const applyBulkCountry = (tagId: string) =>
+    setRows((prev) =>
+      prev.map((r) =>
+        selected.includes(r.line)
+          ? { ...r, countryTagId: tagId || null, countryLabel: countryById.get(tagId)?.name ?? '' }
+          : r,
+      ),
+    )
   const applyBulkCategory = (value: string) =>
     setRows((prev) =>
       prev.map((r) =>
@@ -230,11 +264,17 @@ export function BulkUploadPanel() {
   const foldedCount = rows.reduce((sum, r) => sum + r.foldedLines.length, 0)
   const corruptCount = rows.filter((r) => r.phoneCorrupt).length
   // 올라가는 행 중 구분이 빈 것 — 막지 않고 '미지정'으로 들어간다(위 CATEGORY_SELECT 주석).
-  const unsetCategory = [...newRows, ...mergeRows].filter((r) => !r.targetCategory).length
+  const uploadRows = [...newRows, ...mergeRows]
+  const unsetCategory = uploadRows.filter((r) => !r.targetCategory).length
+  const unsetCountry = countRowsMissingCountry(uploadRows)
 
   const commit = async () => {
     if (newRows.length === 0 && mergeRows.length === 0) {
       toast.show('처리할 행이 없습니다.', 'warning')
+      return
+    }
+    if (unsetCountry > 0) {
+      toast.show(`국가 미확인 ${unsetCountry}건을 먼저 지정해 주세요.`, 'warning')
       return
     }
     setBusy(true)
@@ -254,7 +294,11 @@ export function BulkUploadPanel() {
         const { error } = await supabase.rpc('upload_insert_entities', {
           p_table: NETWORK_TABLE,
           p_rows: newRows.map((r) =>
-            rowToPayload(r, (r.targetCategory || null) as NetworkCategory | null, r.countryTagId),
+            rowToPayload(
+              r,
+              (r.targetCategory || null) as NetworkCategory | null,
+              requireCountryTagId(r.countryTagId),
+            ),
           ),
           p_batch_id: batchId,
         })
@@ -271,7 +315,7 @@ export function BulkUploadPanel() {
         const patch =
           buildEnrichment(r.match, r, {
             category: (r.targetCategory || null) as NetworkCategory | null,
-            countryTagId: r.countryTagId,
+            countryTagId: requireCountryTagId(r.countryTagId),
           }) ?? {}
         const values = r.match.deleted ? { deleted_at: null, ...patch } : patch
         // 보강할 값이 없는 '재유입'은 원장이 바뀌지 않으므로 RPC가 기록만 남긴다.
@@ -366,88 +410,34 @@ export function BulkUploadPanel() {
             </div>
             <div className="flex gap-2">
               <Button variant="secondary" onClick={reset} disabled={busy}>다시 선택</Button>
-              <Button onClick={() => void commit()} disabled={busy || checking}>
+              <Button onClick={() => void commit()} disabled={busy || checking || unsetCountry > 0}>
                 최종 업로드 ({newRows.length + mergeRows.length})
               </Button>
             </div>
           </div>
 
-          {priorUpload && (
-            <Banner tone="warning">
-              동일한 내용의 파일이 <b>{priorUpload.created_at.slice(0, 10)}</b>에 이미 업로드된 이력이
-              있습니다{priorUpload.filename ? ` (${priorUpload.filename})` : ''}. 중복 업로드가 아닌지 확인하세요.
-            </Banner>
-          )}
-
-          {/* 파일을 읽으며 화면이 대신 판단한 것들. 되돌릴 자리가 있는지까지 함께 말한다. */}
-          {(internalCount > 0 || orgNameCount > 0 || foldedCount > 0 || corruptCount > 0) && (
-            <Banner tone="info">
-              {internalCount > 0 && (
-                <>
-                  자사 임직원 <b>{internalCount}건</b>은 제외했습니다 — 이 원장이 담는 것은 회사 밖
-                  사람입니다.{' '}
-                </>
-              )}
-              {orgNameCount > 0 && (
-                <>
-                  이름 칸이 조직명으로 보이는 <b>{orgNameCount}건</b>은 건너뛰기로 두었습니다. 사람이
-                  맞으면 그 행의 결정을 바꾸십시오.{' '}
-                </>
-              )}
-              {foldedCount > 0 && (
-                <>
-                  같은 파일 안에서 겹친 <b>{foldedCount}건</b>은 한 줄로 접었습니다.{' '}
-                </>
-              )}
-              {corruptCount > 0 && (
-                <>
-                  엑셀이 망가뜨린 번호 <b>{corruptCount}건</b>은 연락처를 비웠습니다. 리멤버에서 받은
-                  원본 CSV를 엑셀로 열어 저장하지 마십시오.
-                </>
-              )}
-            </Banner>
-          )}
-
-          {unsetCategory > 0 && (
-            <Banner tone="warning">
-              구분을 짐작할 소속이 없어 <b>{unsetCategory}건</b>이 미지정으로 올라갑니다. 목록의 구분
-              필터 '미지정'에서 다시 찾아 채울 수 있습니다.
-            </Banner>
-          )}
-
-          {unknownFields.length > 0 && (
-            <Banner tone="warning">
-              ADMIN 영역 관리에 없는 영역이 있습니다 — <b>{unknownFields.join(', ')}</b>. 이대로 올리면
-              값은 저장되지만 목록의 영역 필터에는 걸리지 않습니다. 필요하면 먼저 영역을 등록하세요.
-            </Banner>
-          )}
+          <BulkUploadNotices
+            priorUpload={priorUpload}
+            internalCount={internalCount}
+            orgNameCount={orgNameCount}
+            foldedCount={foldedCount}
+            corruptCount={corruptCount}
+            unsetCategory={unsetCategory}
+            unsetCountry={unsetCountry}
+            unknownFields={unknownFields}
+          />
 
           {selected.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2 rounded-radius-md border border-gray-200 bg-gray-50 px-3 py-2">
-              <span className="text-caption font-medium text-gray-700">선택 {selected.length}건</span>
-              <div className="w-32">
-                <Select
-                  value=""
-                  onChange={(e) => e.target.value && applyBulkDecision(e.target.value as Decision)}
-                >
-                  <option value="">결정 일괄</option>
-                  <option value="merge">합치기</option>
-                  <option value="new">신규 등록</option>
-                  <option value="skip">미업로드</option>
-                </Select>
-              </div>
-              <div className="w-32">
-                <Select value="" onChange={(e) => e.target.value && applyBulkCategory(e.target.value)}>
-                  <option value="">구분 일괄</option>
-                  {CATEGORY_SELECT.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </Select>
-              </div>
-              <Button variant="secondary" onClick={() => setSelected([])}>선택 해제</Button>
-            </div>
+            <BulkSelectionBar
+              count={selected.length}
+              categoryOptions={CATEGORY_SELECT}
+              countryOptions={countries}
+              onDecision={applyBulkDecision}
+              onCategory={applyBulkCategory}
+              onCountry={applyBulkCountry}
+              onClear={() => setSelected([])}
+            />
           )}
-
           <BulkReviewTable
             rows={rows}
             categoryOptions={CATEGORY_SELECT}
@@ -455,9 +445,12 @@ export function BulkUploadPanel() {
             revivedLines={revivedLines}
             busy={busy}
             onSelectionChange={setSelected}
+            countryOptions={countries}
             onCategory={setCategory}
+            onCountry={setCountry}
             onDecision={setDecision}
             onRevive={(line) => setReviveConfirm(line)}
+            onShowReason={(line) => setReasonLine(line)}
           />
 
           <Modal
@@ -475,6 +468,36 @@ export function BulkUploadPanel() {
             <p className="text-body text-gray-700">
               비활성화된 데이터입니다. 정말 복구하시겠습니까?
             </p>
+          </Modal>
+
+          {/*
+            비활성 사유. 표의 칸이 아니라 여기서 읽는다 — 사유는 담당자가 자유롭게 적는 문장이라
+            길이를 알 수 없고, 길이를 모르는 값을 한 줄짜리 셀에 세우면 그 칸이 열을 밀어낸다.
+            읽기만 하는 창이라 확인 버튼 하나로 닫는다.
+          */}
+          <Modal
+            open={reasonLine !== null}
+            onClose={() => setReasonLine(null)}
+            title="비활성화 사유"
+            size="sm"
+            footer={<Button variant="secondary" onClick={() => setReasonLine(null)}>확인</Button>}
+          >
+            {(() => {
+              const m = rows.find((r) => r.line === reasonLine)?.match
+              if (!m) return null
+              return (
+                <div className="space-y-3">
+                  <InfoField label="대상" value={m.name} />
+                  <InfoField label="비활성화" value={m.deactivatedBy ?? '미상'} />
+                  {/* 줄바꿈을 그대로 살린다 — 담당자가 나눠 적은 줄이 한 덩어리로 뭉치면 읽는 순서가 사라진다. */}
+                  <InfoField
+                    label="사유"
+                    value={m.deactivateReason}
+                    valueClassName="whitespace-pre-wrap"
+                  />
+                </div>
+              )
+            })()}
           </Modal>
         </>
       )}

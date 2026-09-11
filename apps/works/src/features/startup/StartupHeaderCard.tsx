@@ -1,12 +1,4 @@
-import {
-  Badge,
-  EntityHeaderCard,
-  EntityHeaderSection,
-  InfoField,
-  InfoGrid,
-  RefLinkList,
-} from '@ynarcher/ui'
-import { Link } from 'react-router-dom'
+import { Badge, EntityHeaderCard, EntityHeaderSection, InfoField, InfoGrid } from '@ynarcher/ui'
 import { PhotoBox } from '@/features/networks/PhotoBox'
 import { SensitiveValue } from '@/features/master/SensitiveValue'
 import type { EntityRow } from '@/features/master/entityHooks'
@@ -85,8 +77,6 @@ export function StartupHeaderCard({
   leadName: string | null
 }) {
   const invested = isInvested(record.management_status)
-  // 대표자가 가리키는 사람 원장 행. 없으면 이름만 아는 미연결이다.
-  const repNetworkId = (record.representative_network_id as string | null) ?? null
   const str = (key: string) => {
     const v = record[key]
     return v == null || v === '' ? '-' : String(v)
@@ -137,31 +127,7 @@ export function StartupHeaderCard({
       }
       info={
         <InfoGrid>
-          {/* 대표자는 **한 명**이고, 사람 원장에 이어져 있으면 이름이 그 사람으로 가는
-              길이 된다(2026-09-10). 상호참조는 배지가 아니라 텍스트 링크다 — 크기는 놓인
-              자리를 물려받고 색만 바뀐다(CLAUDE.md 2026-09-03).
-              이어지지 않은 이름은 마스킹 규칙을 그대로 탄다. 이은 이름을 마스킹하지 않는
-              것은 그 값이 이미 누를 수 있는 길이라, 가린 채로는 무엇을 누르는지 말하지
-              못하기 때문이다. */}
-          {repNetworkId ? (
-            <InfoField
-              label="대표자"
-              value={
-                <RefLinkList
-                  as={Link}
-                  items={[
-                    {
-                      key: repNetworkId,
-                      label: String(record.representative ?? ''),
-                      to: `/networks/${repNetworkId}`,
-                    },
-                  ]}
-                />
-              }
-            />
-          ) : (
-            <Info label="대표자" value={masked('name', record.representative)} />
-          )}
+          <Info label="대표자" value={masked('name', record.representative)} />
           <Info label="이메일" value={masked('email', record.email)} />
           <Info label="연락처" value={masked('phone', record.phone)} />
           <Info label="회사 형태" value={str('company_form')} />

@@ -111,7 +111,7 @@ export function rosterColumns(
     {
       key: 'phone',
       header: '연락처',
-      type: 'text',
+      type: 'phone',
       render: (r) =>
         cell(r.phone, () => (masked.phone ? maskPhone(r.phone!) : r.phone), r.master_id),
     },

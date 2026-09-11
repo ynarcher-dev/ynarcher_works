@@ -182,7 +182,7 @@ function rightColumns(
       render: cell('name', spec.loginNameHeader),
     },
     { key: 'email', header: '이메일', type: 'long', render: cell('email', '이메일', 'email') },
-    { key: 'phone', header: '연락처', type: 'text', render: cell('phone', '연락처', 'tel') },
+    { key: 'phone', header: '연락처', type: 'phone', render: cell('phone', '연락처', 'tel') },
     {
       key: 'state',
       header: '상태',

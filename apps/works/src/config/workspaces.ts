@@ -63,23 +63,40 @@ const MA_LEDGER_SUBNAV = (label: string, glyphKey: string, first = false): SubNa
 /**
  * WORKS 앱 스위처 항목 정의(GUEST 제외).
  *
- * 2026-09-07에 BUSINESS 한 항목이 실행 라인 넷으로 다시 갈렸다(2026-09-06 통합 되돌림).
- * 한 자리에 넷을 세우면 스위처가 답하던 '어느 원장인가'를 사이드바 줄 이름이 대신 답해야 하고,
- * 그 대가로 사업 3종이 공유하던 라벨 한 벌을 워크스페이스마다 갈라야 했다. 갈라 세우면 그 답이
- * 스위처로 돌아오고 줄 이름은 다시 한 벌이 된다. Database는 합친 채로 둔다 — 원장들이 오가며
- * 함께 보는 짝이고 줄이 둘뿐이라 이름만으로 구분이 선다.
+ * 2026-09-11 메뉴 개편에서 개인 업무의 출발점인 `내 오피스`를 맨 앞에 신설하고, 나머지는
+ * 전사 공용 공간 → 데이터 → 조직별 실행 공간 → 시스템 순으로 세웠다. 메뉴를 조직별로 유지하는
+ * 이유는 사업부·M&A팀·투자실의 업무 성격이 서로 다르기 때문이다. 부서 간에 배정되는 일은
+ * 후속 단계에서 내 오피스가 모으되, 그 일의 원장과 운영 화면은 소유 조직에 남긴다.
  *
- * **부제·구분선·섹션 라벨은 두지 않는다(2026-09-07 사용자 지정).** 같은 날 이름이 약어에서
- * 부르는 이름으로 바뀌면서(`Accelerator`·`Investment Office`·`Management Office`) 이름
- * 자체가 그 자리가 무엇인지 답하게 되었고, 부제는 같은 말을 한국어로 한 번 더 적는 층이
- * 되었다. 구분선도 함께 걷는다 — 선은 묶음이 있을 때만 뜻이 서고, 없을 때는 한 목록을 여러
- * 층으로 보이게 만든다. 목록의 순서는 그대로 조직 순이다.
+ * 명칭은 내부에서 실제로 부르는 한국어 이름으로 통일한다. 부제·구분선·섹션 라벨은 두지 않고,
+ * 데이터 센터만 스타트업·네트워크 두 공용 원장을 한 자리에서 오갈 수 있게 유지한다.
  */
 export const WORKSPACES: WorkspaceNavItem[] = [
-  // 업무 허브 — 전사 공통 업무 허브로 최상단에 노출(구 HUB 대시보드·AI 에이전트 통합).
+  // 내 오피스 — 기존 OFFICE 대시보드의 개인화 영역을 먼저 연결한다. 별도 권한을 신설하지 않고
+  // 전 임직원이 쓰는 office 권한을 공유하며, 후속 기능도 이 독립 경로 아래에 붙인다.
+  {
+    id: 'my-office',
+    label: '내 오피스',
+    sections: [
+      {
+        key: 'office',
+        path: '/my-office',
+        subnav: [
+          {
+            items: [
+              { label: '대시보드', tab: 'dashboard' },
+              { label: '전자결재', tab: 'approval', dividerBefore: true },
+            ],
+          },
+        ],
+      },
+    ],
+    implemented: true,
+  },
+  // 공용 오피스 — 기존 OFFICE의 전사 공통 업무와 게시 공간을 그대로 유지한다.
   {
     id: 'office',
-    label: 'Office',
+    label: '공용 오피스',
     sections: solo('office', '/office'),
     implemented: true,
   },
@@ -97,7 +114,7 @@ export const WORKSPACES: WorkspaceNavItem[] = [
   // 항목의 두 줄은 읽기 권한이 갈릴 뿐 대상은 전사 공용이다.
   {
     id: 'database',
-    label: 'Database',
+    label: '데이터 센터',
     sections: [
       { key: 'startup', path: '/startup' },
       { key: 'networks', path: '/networks' },
@@ -106,8 +123,7 @@ export const WORKSPACES: WorkspaceNavItem[] = [
   },
   // 실행 라인 — 사업·딜·펀드. 셋이 각각 자기 항목으로 선다.
   //
-  // 순서는 조직 순이다(2026-09-06 사용자 지정) — AC사업 / M&A팀·PE / 투자실.
-  // 항목명은 영문으로 둔다: 나머지 항목이 전부 영문이라 여기만 한글이면 표기가 섞인다.
+  // 순서는 조직 순이다 — 사업부 / M&A팀 / 투자실.
   //
   // 2026-09-07에 세 항목의 이름을 약어에서 **부르는 이름**으로 바꿨다(사용자 지정) —
   // `AC`→`Accelerator`, `FUND`→`Investment Office`, `M&A/PE`→`M&A·PE`. 약어는 안에서
@@ -129,7 +145,7 @@ export const WORKSPACES: WorkspaceNavItem[] = [
   // 감사 기록은 그대로 둔다 — 그때 그 워크스페이스의 이름은 `ac`였다.
   {
     id: 'project',
-    label: 'Project',
+    label: '사업부',
     sections: solo('project', '/project'),
     implemented: true,
   },
@@ -143,7 +159,7 @@ export const WORKSPACES: WorkspaceNavItem[] = [
   // `/mna/buyers`는 딜 구획에 먼저 걸려, 원장 화면에 서 있는데 사이드바는 딜 줄을 칠한다.
   {
     id: 'mna',
-    label: 'M&A·PE',
+    label: 'M&A팀',
     sections: [
       { key: 'mna', path: '/mna' },
       {
@@ -157,20 +173,20 @@ export const WORKSPACES: WorkspaceNavItem[] = [
   },
   {
     id: 'fund',
-    label: 'Investment Office',
+    label: '투자실',
     sections: solo('fund', '/fund'),
     implemented: true,
   },
   // 경영·시스템 — 백오피스 및 시스템 관리
   {
     id: 'management',
-    label: 'Management Office',
+    label: '경영실',
     sections: solo('management', '/management'),
     implemented: true,
   },
   {
     id: 'admin',
-    label: 'Admin',
+    label: '시스템 관리',
     sections: solo('admin', '/admin'),
     implemented: true,
   },

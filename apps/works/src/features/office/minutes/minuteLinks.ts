@@ -45,6 +45,10 @@ export interface MinuteLinkTargetMeta {
   titleColumn: string
   /** 부가 표기 컬럼(사업코드·소속 등). 없으면 null. */
   codeColumn: string | null
+  /** 외부 참석자 역할일 때 이름으로 읽을 별도 컬럼. 없으면 titleColumn을 쓴다. */
+  attendeeTitleColumn?: string
+  /** 외부 참석자 역할일 때 부가 표기로 읽을 별도 컬럼. 없으면 codeColumn을 쓴다. */
+  attendeeCodeColumn?: string | null
   /**
    * 중복 병합 축을 가진 원장인가(2026-09-09). 참이면 후보 검색이 정본으로 흡수된 행을 뺀다.
    *
@@ -68,8 +72,8 @@ export const MINUTE_LINK_TARGET_TYPES: MinuteLinkTargetType[] = [
   'ma_seller',
 ]
 
-/** 외부 참석자로 걸 수 있는 종류 — 회의에 오는 것은 사람이고 사람은 네트워크 원장에 있다. */
-export const NETWORK_MINUTE_LINK_TYPES: NetworkMinuteLinkType[] = ['network']
+/** 외부 참석자로 걸 수 있는 원장 — NETWORKS 사람 또는 STARTUP이 직접 소유한 대표자. */
+export const EXTERNAL_ATTENDEE_LINK_TYPES: MinuteLinkTargetType[] = ['network', 'startup']
 
 export const MINUTE_LINK_TARGETS: Record<MinuteLinkTargetType, MinuteLinkTargetMeta> = {
   program: {
@@ -91,6 +95,9 @@ export const MINUTE_LINK_TARGETS: Record<MinuteLinkTargetType, MinuteLinkTargetM
     table: 'startups',
     titleColumn: 'name',
     codeColumn: null,
+    // 관련 업무로 걸면 기업명, 외부 참석자로 걸면 대표자명 / 기업명으로 읽는다.
+    attendeeTitleColumn: 'representative',
+    attendeeCodeColumn: 'name',
     hasMergeAxis: true,
     toPath: (id) => `/startup/${id}`,
   },
@@ -131,6 +138,23 @@ export const MINUTE_LINK_TARGETS: Record<MinuteLinkTargetType, MinuteLinkTargetM
     hasMergeAxis: true,
     toPath: (id) => `${MA_SELLER.basePath}/${id}`,
   },
+}
+
+/** 같은 STARTUP 행도 관련 업무에서는 기업명, 외부 참석자에서는 대표자명으로 읽는다. */
+export function minuteLinkDisplayColumns(
+  targetType: MinuteLinkTargetType,
+  role: MinuteLinkRole | null,
+): { titleColumn: string; codeColumn: string | null } {
+  const meta = MINUTE_LINK_TARGETS[targetType]
+  const attendee = role === 'EXTERNAL_ATTENDEE'
+  return {
+    titleColumn:
+      attendee && meta.attendeeTitleColumn ? meta.attendeeTitleColumn : meta.titleColumn,
+    codeColumn:
+      attendee && meta.attendeeCodeColumn !== undefined
+        ? meta.attendeeCodeColumn
+        : meta.codeColumn,
+  }
 }
 
 /**
@@ -182,4 +206,3 @@ export interface MinuteLinkRef {
 export function minuteLinkKindLabel(type: string): string {
   return MINUTE_LINK_TARGETS[type as MinuteLinkTargetType]?.kindLabel ?? type
 }
-

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { foldFileDuplicates, guessCountryName, parseBulkCsv } from '@/features/networks/bulkUpload'
+import {
+  countRowsMissingCountry,
+  foldFileDuplicates,
+  guessCountryName,
+  parseBulkCsv,
+  requireCountryTagId,
+} from '@/features/networks/bulkUpload'
 
 /** 리멤버 명함첩 헤더 그대로. 우리 표준 헤더와 이름이 하나도 같지 않다. */
 const REMEMBER_HEADER =
@@ -92,5 +98,22 @@ describe('guessCountryName', () => {
     expect(guessCountryName('4105436083')).toBe('')
     // 훼손된 번호에서 국가를 읽으면 잘려 나간 자릿수로 짚게 된다.
     expect(guessCountryName('8.41646E+11')).toBe('')
+  })
+})
+
+describe('대량 업로드 국가 확정', () => {
+  it('실제 업로드 대상의 국가 미확인 건을 센다', () => {
+    expect(
+      countRowsMissingCountry([
+        { countryTagId: 'kr' },
+        { countryTagId: null },
+        { countryTagId: '' },
+      ]),
+    ).toBe(2)
+  })
+
+  it('국가가 확정된 값만 저장 페이로드로 통과시킨다', () => {
+    expect(requireCountryTagId('kr')).toBe('kr')
+    expect(() => requireCountryTagId(null)).toThrow('network_country_required')
   })
 })

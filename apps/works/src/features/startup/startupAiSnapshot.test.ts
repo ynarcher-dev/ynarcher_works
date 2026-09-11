@@ -23,7 +23,6 @@ function formValues(over: Partial<StartupDetailFormValues> = {}): StartupDetailF
   return {
     name: '테스트',
     representative: '김대표',
-    representative_network_id: null,
     company_form: '주식회사',
     founded_on: '2020-01-01',
     biz_reg_no: '123-45-67890',
@@ -49,9 +48,7 @@ function formValues(over: Partial<StartupDetailFormValues> = {}): StartupDetailF
     founderStrength: '',
     orgComposition: '',
     hiringPlan: '',
-    members: [
-      { name: '홍길동', networkId: null, role: 'CTO', background: '', employment: '', joinedAt: '', hasEquity: true },
-    ],
+    members: [{ name: '홍길동', role: 'CTO', background: '', employment: '', joinedAt: '', hasEquity: true }],
     advisors: [],
     ...over,
   }

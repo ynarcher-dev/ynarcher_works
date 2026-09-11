@@ -274,7 +274,7 @@ export function WorksLayout() {
         // 시작선이 어긋나 보이는데, 가로형 로고라 어느 선에 맞춰도 어색했다).
         <div className="flex w-full items-center justify-center">
           {!sidebarCollapsed && (
-            <Link to="/office" className="min-w-0 shrink">
+            <Link to="/my-office" className="min-w-0 shrink">
               <img src={logo} alt="Y&ARCHER" className="h-7 object-contain" />
             </Link>
           )}

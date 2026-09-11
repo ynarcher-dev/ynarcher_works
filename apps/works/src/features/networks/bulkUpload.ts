@@ -503,7 +503,7 @@ export function buildEnrichment(
 export function rowToPayload(
   row: ParsedRow,
   category: NetworkCategory | null,
-  countryTagId: string | null,
+  countryTagId: string,
 ): Record<string, unknown> {
   const compact = isCompactCategory(category)
   return {
@@ -523,6 +523,19 @@ export function rowToPayload(
       source: 'bulk_upload',
     },
   }
+}
+
+/** 실제 업로드 대상 중 국가가 확정되지 않은 행 수. 건너뛰는 행은 호출부에서 제외한다. */
+export function countRowsMissingCountry(
+  rows: readonly { countryTagId: string | null }[],
+): number {
+  return rows.filter((row) => !row.countryTagId).length
+}
+
+/** 리뷰를 우회하는 호출이 생겨도 nullable 국가가 저장 페이로드에 들어가지 않게 한다. */
+export function requireCountryTagId(countryTagId: string | null): string {
+  if (!countryTagId) throw new Error('network_country_required')
+  return countryTagId
 }
 
 /** CSV의 구분 원값 → 코드. 알 수 없으면 null(리뷰 화면에서 사람이 채운다). */

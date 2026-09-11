@@ -5,7 +5,6 @@ import {
   GraduationCap,
   Landmark,
   Network,
-  Rocket,
   Shapes,
   Sparkles,
   UsersRound,
@@ -43,8 +42,8 @@ interface TileStyle {
 /**
  * 타일의 **꾸밈**만 여기서 갖는다 — 어떤 구분이 서는지와 그 순서·이름은 `config.ts`가 답한다.
  *
- * 종전에는 이 파일이 구분 목록을 통째로 손으로 들고 있었고, 그래서 구분이 하나 늘었을 때
- * (2026-09-10 `startup`) 폼·필터에는 서는데 이 카드에만 서지 않았다. 카드가 한 칸을 빠뜨리면
+ * 종전에는 이 파일이 구분 목록을 통째로 손으로 들고 있었고, 그래서 구분이 늘어날 때
+ * 폼·필터에는 서는데 이 카드에만 서지 않을 수 있었다. 카드가 한 칸을 빠뜨리면
  * 그 행들은 '전체'에는 세어지면서 어느 타일에도 없어 **칸의 합이 전체와 어긋난다** — 그때
  * 어느 쪽이 사실인지 화면이 답하지 못한다.
  *
@@ -53,11 +52,11 @@ interface TileStyle {
  */
 const TILE_STYLE: Record<NetworkCategory, TileStyle> = {
   van: { eyebrow: '비즈니스', tone: 'blue', icon: Network },
-  exp: { eyebrow: '전문가 그룹', tone: 'purple', icon: Sparkles },
+  // 눈썹은 한 줄이다 — 두 줄로 접히면 그 타일만 라벨·건수가 아래로 밀려, 나란히 견주는
+  // 줄에서 같은 자리에 있어야 할 값들이 칸마다 다른 높이에 선다.
+  exp: { eyebrow: '전문 그룹', tone: 'purple', icon: Sparkles },
   experts: { eyebrow: '전문 인력', tone: 'cyan', icon: UserRoundSearch },
   investors: { eyebrow: '투자 분야', tone: 'amber', icon: BriefcaseBusiness },
-  // 스타트업은 기업(corporates)과 다른 것을 센다 — 저쪽은 조직, 이쪽은 그 기업을 이끄는 사람이다.
-  startup: { eyebrow: '기업 인력', tone: 'orchid', icon: Rocket },
   corporates: { eyebrow: '기업 분야', tone: 'peach', icon: Building2 },
   institutions: { eyebrow: '지원 기관', tone: 'rose', icon: Landmark },
   universities: { eyebrow: '산학 분야', tone: 'lime', icon: GraduationCap },

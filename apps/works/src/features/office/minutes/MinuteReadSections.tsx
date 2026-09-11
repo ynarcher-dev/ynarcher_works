@@ -54,7 +54,7 @@ export function MinuteReadSections({ minute }: { minute: MinuteDetail }) {
       key: `legacy-${i}-${name}`,
       label: name,
       to: null,
-      title: 'networks 원장에서 확인되지 않은 옛 표기입니다',
+      title: 'NETWORKS·STARTUP 원장에 연결하지 않고 회의록에만 남긴 표기입니다',
     })),
   ]
 

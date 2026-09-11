@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import {
   MINUTE_LINK_TARGETS,
+  minuteLinkDisplayColumns,
   type MinuteLink,
   type MinuteLinkRef,
   type MinuteLinkRole,
@@ -65,11 +66,11 @@ export interface MinuteDetail extends MinuteListItem {
   body: string | null
   people: MinutePerson[]
   /**
-   * 외부 참석자 잔존 표기('이름/소속' 문자열). 링크로 승격되지 못한 옛 명단만 남는다
-   * (20260903240000 백필) — 새 입력은 전부 `externalPeople`로 들어간다.
+   * 어느 원장에서도 찾지 못해 회의록에만 남긴 외부 참석자 표기('이름/소속' 문자열).
+   * 원장 참조가 아니므로 나중에 자동 연결하거나 신원을 만들지 않는다.
    */
   externalAttendees: string[]
-  /** 외부 참석자(networks 원장 상호참조). 접근 불가 대상은 label=null. */
+  /** 외부 참석자(NETWORKS 인물 또는 STARTUP 대표자 상호참조). 접근 불가 대상은 label=null. */
   externalPeople: MinuteLink[]
   /** 연동된 사업/스타트업(cross-reference). 접근 불가 대상은 label=null. */
   links: MinuteLink[]
@@ -85,9 +86,9 @@ export interface MinuteDraft {
   body: string | null
   visibility: MinuteVisibility
   people: { userId: string; role: MinutePersonRole }[]
-  /** 링크로 승격되지 못한 옛 표기(빼는 것만 가능 — 새로 담는 경로는 없다). */
+  /** 어느 원장에도 연결하지 않고 회의록에만 남기는 외부 참석자 표기. */
   externalAttendees: string[]
-  /** 외부 참석자(networks 상호참조). 연동과 같은 원장에 role만 달리해 함께 저장된다. */
+  /** 외부 참석자(NETWORKS/STARTUP 상호참조). 연동과 같은 원장에 role만 달리해 저장된다. */
   externalPeople: MinuteLinkRef[]
   /** 연동 대상(종류+id). 저장 시 set_minute_links RPC로 일괄 교체. */
   links: MinuteLinkRef[]
@@ -208,11 +209,20 @@ async function loadMinuteLinks(minuteId: string): Promise<MinuteLink[]> {
     byType.set(r.target_type, list)
   }
 
-  const labelMap = new Map<string, { label: string; code: string | null }>()
+  const sourceMap = new Map<string, Record<string, string | null>>()
   await Promise.all(
     [...byType.entries()].map(async ([type, ids]) => {
       const meta = MINUTE_LINK_TARGETS[type]
-      const cols = ['id', meta.titleColumn, meta.codeColumn].filter(Boolean).join(', ')
+      const cols = [
+        'id',
+        meta.titleColumn,
+        meta.codeColumn,
+        meta.attendeeTitleColumn,
+        meta.attendeeCodeColumn,
+      ]
+        .filter(Boolean)
+        .filter((column, index, all) => all.indexOf(column) === index)
+        .join(', ')
       const { data: rowsData, error: rowsError } = await supabase
         .from(meta.table)
         .select(cols)
@@ -220,22 +230,20 @@ async function loadMinuteLinks(minuteId: string): Promise<MinuteLink[]> {
         .is('deleted_at', null)
       if (rowsError) throw rowsError
       for (const row of (rowsData ?? []) as unknown as Record<string, string | null>[]) {
-        labelMap.set(`${type}:${row.id}`, {
-          label: (row[meta.titleColumn] as string) ?? '(제목 없음)',
-          code: meta.codeColumn ? ((row[meta.codeColumn] as string | null) ?? null) : null,
-        })
+        sourceMap.set(`${type}:${row.id}`, row)
       }
     }),
   )
 
   return rows.map((r) => {
-    const hit = labelMap.get(`${r.target_type}:${r.target_id}`)
+    const source = sourceMap.get(`${r.target_type}:${r.target_id}`)
+    const { titleColumn, codeColumn } = minuteLinkDisplayColumns(r.target_type, r.role)
     return {
       targetType: r.target_type,
       targetId: r.target_id,
       role: r.role ?? 'SUBJECT',
-      label: hit?.label ?? null,
-      code: hit?.code ?? null,
+      label: source ? ((source[titleColumn] as string | null) ?? '(이름 없음)') : null,
+      code: source && codeColumn ? ((source[codeColumn] as string | null) ?? null) : null,
     }
   })
 }

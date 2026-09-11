@@ -1,6 +1,7 @@
 import { PageHeader } from '@ynarcher/ui'
 import { useSearchParams } from 'react-router-dom'
 import { AC_CATEGORIES } from '@/config/programCategories'
+import { GUEST_ACCOUNT_READ_LABEL } from '@/config/navigation'
 import { GuestAccountPanel } from '@/features/admin/GuestAccountPanel'
 import { ProgramBulkPage } from '@/features/program/ProgramBulkPage'
 import { ProgramDetailPage } from '@/features/program/ProgramDetailPage'
@@ -68,7 +69,7 @@ export function ProjectWorkspacePage() {
   if (params.get('tab') === 'guest-accounts') {
     return (
       <div className="space-y-5">
-        <PageHeader title="와이앤아처 GUEST 계정" />
+        <PageHeader title={GUEST_ACCOUNT_READ_LABEL} />
         <GuestAccountPanel
           entityKey={PROJECT_WORKSPACE.entityKey}
           masterTables={PROJECT_WORKSPACE.guestMasterTables}

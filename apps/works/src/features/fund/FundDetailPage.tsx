@@ -60,14 +60,13 @@ const Info = InfoField
 const strategyTone: Record<string, BadgeTone> = { AC: 'info', VC: 'success', PE: 'warning', ETC: 'neutral' }
 
 type DetailTab = 'overview' | 'portfolio' | 'lp' | 'calls' | 'financials' | 'reports'
-// 구분선(divider) = 열람권한 경계. 일반 권한은 개요·포트폴리오까지, 그 뒤(출자자~보고서)는 유관 관리자급만.
-const DETAIL_TABS: { key: DetailTab; label: string; divider?: boolean }[] = [
+const DETAIL_TABS: { key: DetailTab; label: string }[] = [
   { key: 'portfolio', label: '포트폴리오' },
   { key: 'overview', label: '목적달성' },
-  { key: 'lp', label: '출자자', divider: true },
-  { key: 'calls', label: '캐피탈 콜' },
-  { key: 'financials', label: '조합 재무' },
-  { key: 'reports', label: '보고서' },
+  { key: 'lp', label: '🔒 출자자' },
+  { key: 'calls', label: '🔒 캐피탈 콜' },
+  { key: 'financials', label: '🔒 조합 재무' },
+  { key: 'reports', label: '🔒 보고서' },
 ]
 
 /** 카드 안 KPI 타일. */

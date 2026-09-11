@@ -210,6 +210,16 @@ export interface ColumnWidthSet {
   /** 날짜 `YYYY-MM-DD`. 표준 열 '수정일'과 같은 폭이라 표끼리 세로가 맞는다. */
   date: string
   /**
+   * 전화번호 `010-1234-5678`(13자).
+   *
+   * 자릿수 상한을 아는 값이라 `code`·`date`와 같은 고정폭 부류다. 한동안 `text`(가변폭)에
+   * 얹혀 있었는데, 가변폭 열은 남는 폭을 나눠 갖는 자리라 열이 많은 표에서는 90px 남짓까지
+   * 눌리고 그때 번호가 두 줄로 접힌다 — 국번에서 한 번 끊기므로 접힌 자리가 자연스러워
+   * 보이지만, 그 열만 행 높이가 두 배가 되어 행의 기준선이 하나로 읽히지 않는다(기간을
+   * 접지 않기로 한 것과 같은 이유). 날짜(10자)보다 한 칸 넓다.
+   */
+  phone: string
+  /**
    * 기간 `YYYY-MM-DD ~ YYYY-MM-DD`(23자) — 날짜 두 개가 한 줄에 서는 폭.
    *
    * 한동안 날짜와 같은 폭에 두고 값만 두 줄로 접었으나, 2026-09-02에 **표의 모든 값은 한 줄에
@@ -262,6 +272,9 @@ export const columnWidthScale: Record<TableStage, ColumnWidthSet> = {
     // 코드(6자 영숫자)·2~4자 라벨의 상한이 80px이라 카드 자리와 같은 값이 된다.
     code: 'w-20 whitespace-nowrap',
     date: 'w-32 whitespace-nowrap',
+    // `010-9862-3534`(숫자 11 + 하이픈 2)가 14px에서 여백 포함 약 120px. 128px은 8px밖에 남지
+    // 않아 국가번호가 붙은 값(`+82 10-…`)에서 바로 잘리므로 한 칸 위(144px)에 둔다.
+    phone: 'w-36 whitespace-nowrap',
     // `2026-07-13 ~ 2026-07-30`(23자)이 14px에서 약 190px(여백 포함). 192px은 딱 맞아떨어져
     // 반올림 한 픽셀에 말줄임이 났다 — 한 칸 위(208px)에 두어 여유를 남긴다.
     period: 'w-52 whitespace-nowrap',
@@ -284,6 +297,8 @@ export const columnWidthScale: Record<TableStage, ColumnWidthSet> = {
     short: 'w-24 whitespace-nowrap',
     code: 'w-20 whitespace-nowrap',
     date: 'w-28 whitespace-nowrap',
+    // 글자는 같은 14px이고 셀 좌우 여백만 4px 좁아 같은 값이 약 116px. 128px이면 잘리지 않는다.
+    phone: 'w-32 whitespace-nowrap',
     // 같은 23자가 14px에서 약 186px(여백 포함). 192px은 6px밖에 안 남아, 같은 값이 2px 남았을 때
     // 실제로 말줄임이 났던 페이지 자리를 따라 한 칸 위(208px)에 둔다.
     period: 'w-52 whitespace-nowrap',

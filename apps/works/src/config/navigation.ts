@@ -40,7 +40,7 @@ export interface SubNavItem {
    * 사이드바 맨 아래 고정 영역에 세운다(목록이 길어져 스크롤이 생겨도 자리를 지킨다).
    *
    * 목록 안이 아니라 그 아래에 두는 줄은 '이 워크스페이스의 무엇'이 아니라 **거기서 여는
-   * 창구**다 — GUEST계정 발급이 그렇다. 원장 줄 사이에 끼면 위아래 어느 원장의 것인지 화면이
+   * 창구**다 — GUEST 계정 조회가 그렇다. 원장 줄 사이에 끼면 위아래 어느 원장의 것인지 화면이
    * 답하지 못하고, 목록 끝에 그냥 붙이면 원장이 늘 때마다 자리가 밀린다.
    */
   pinBottom?: boolean
@@ -87,6 +87,8 @@ export const PROGRAM_LIST_LABEL = '프로젝트'
 export const NETWORKS_LIST_LABEL = '네트워크 DB'
 export const STARTUP_LIST_LABEL = '스타트업 DB'
 export const FUND_LIST_LABEL = '운용펀드'
+/** 사업·조합별 GUEST 계정 목록의 읽기 전용 창구. */
+export const GUEST_ACCOUNT_READ_LABEL = 'GUEST 계정조회'
 
 /**
  * 사업 워크스페이스(AC/M&A/PROJECT) 공용 사이드바 구성 — `프로젝트` 한 줄.
@@ -112,13 +114,16 @@ function programSubnav(options: { guestAccounts?: boolean } = {}): SubNavGroup[]
         // 셋으로 넓히면서 그 답이 셋이 된다(3_9_2) — 창구는 **자기 원장을 가진 워크스페이스**
         // 것이고, M&A가 세우는 계정의 출처는 ma_sellers·ma_buyers라 AC 창구에 설 수 없다.
         //
-        // 이름은 **와이앤아처 GUEST 계정**이다(2026-09-09 사용자 지정으로 밖에서 부르는 이름이
+        // 이름은 **GUEST 계정조회**다. 사이드바 창구는 사업·조합에 연결된
+        // 계정을 조회하고, 실제 계정 생성은 각 프로젝트 상세에서 한다. 제품명은 2026-09-09에
+        // 사용자 지정으로 밖에서 부르는 이름이
         // '와이앤아처 포털'에서 GUEST로 되돌아왔다). '발급'을 붙이지 않는 것은 그것이 창구가
-        // 하는 일의 절반이기 때문이다 — 이 화면은 이미 있는 계정을 세우고 찾는 자리이기도 하다.
+        // 하는 일이 아니기 때문이다.
         //
         // **사업 상세의 '와이앤아처 GUEST 설정'과 끝 낱말이 다르다.** 같게 적지 않는 이유는
-        // 두 자리가 다른 물음에 답하기 때문이다 — 이 줄은 **계정 자체**를 세우고 찾는 자리(사업을
-        // 가로지른다)이고, 저 버튼은 **이 사업이 밖으로 무엇을 내보내는가**(개요·공지·Q&A·계정)다.
+        // 두 자리가 다른 물음에 답하기 때문이다 — 이 줄은 사업을 가로질러 **발급된 계정과
+        // 참여 현황**을 찾는 자리고, 저 버튼은 **이 사업이 밖으로 무엇을 내보내는가**
+        // (개요·공지·Q&A·계정)다.
         // 같은 이름을 두 곳에 걸면 어느 쪽을 눌러야 하는지가 이름으로 답해지지 않고, 결국
         // 담당자가 둘 다 열어 봐야 안다.
         //
@@ -133,7 +138,7 @@ function programSubnav(options: { guestAccounts?: boolean } = {}): SubNavGroup[]
         // `dividerBefore`는 두지 않는다(고정 영역이 이미 자기 경계선을 그어, 함께 쓰면 선이
         // 두 줄 그어진다).
         ...(options.guestAccounts
-          ? [{ label: '와이앤아처 GUEST 계정', tab: 'guest-accounts', pinBottom: true }]
+          ? [{ label: GUEST_ACCOUNT_READ_LABEL, tab: 'guest-accounts', pinBottom: true }]
           : []),
       ],
     },
@@ -199,7 +204,7 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       items: [
         { label: FUND_LIST_LABEL },
         // 이 창구가 발급하는 대상은 포트폴리오사(STARTUP 원장) 하나다 — 근거는 FUND_GUEST_HOST.
-        { label: '와이앤아처 GUEST 계정', tab: 'guest-accounts', pinBottom: true },
+        { label: GUEST_ACCOUNT_READ_LABEL, tab: 'guest-accounts', pinBottom: true },
       ],
     },
   ],
@@ -250,27 +255,19 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
   office: [
     {
       items: [
-        // 대시보드를 최상단에 배치. AI 에이전트·전사 캘린더는 사이드바가 아니라 상단바
-        // 전역 진입점(우측 슬라이드오버)에서만 연다.
-        { label: '대시보드', tab: 'dashboard' },
         // 전사 원장 조회 블록. 원장은 모두 MANAGEMENT가 갖고 OFFICE는 확인만 한다 —
         // 사람(임직원)·자리(지사)·물건(자산)이 한 블록에 서는 축은 "회사에 무엇이 있나"이며,
         // 자산 현황이 여기 있는 이유도 그것이 빌리는 화면이 아니라 조회면이기 때문이다
         // (2026-09-06 이동 — 종전에는 공간·회의 블록 머리에 있어 예약하는 일로 읽혔다).
         // 임직원 정보 한 메뉴가 조직(목록)과 사람(상세)을 함께 답한다 — 구 '부서 정보'는 여기에 합쳐졌다.
-        { label: '임직원 정보', tab: 'managers', dividerBefore: true },
+        { label: '임직원 정보', tab: 'managers' },
         { label: '지사 정보', tab: 'branches' },
         { label: '자산 현황', tab: 'outbound' },
-        // 위 조회 블록을 떼어내는 구분선. 전자결재 워크스페이스에서 통합 이관한
-        // 결재 블록을 공간·회의 블록보다 앞에 둔다.
-        // 결재는 전사 업무라 OFFICE가 화면을 갖는다. 다만 결재된 '금액'을 모아 보는 일은
-        // 재무 관리와 같은 축이라 MANAGEMENT '결재 금액 집계'가 소유한다.
-        { label: '전자결재', tab: 'approval', dividerBefore: true },
         // 거래처 정보는 여기 두지 않는다(2026-09-06) — 원장·등록·조회를 MANAGEMENT '거래처 정보'
         // 한 자리에 모은다. 같은 원장을 두 자리에서 열면 담당자가 어디서 봐야 하는지를 매번
         // 고르게 되고, 조회면은 가린 값 때문에 원장과 다른 답을 하는 화면이 된다.
         // 공간·회의는 사내 자원을 잡아 쓰는 일 한 블록이다. 뒤는 아래 고정 게시판 그룹 경계가 끊는다.
-        { label: '회의실 예약', tab: 'rooms' },
+        { label: '회의실 예약', tab: 'rooms', dividerBefore: true },
         // 회의록은 STARTUP에서 이관했다.
         { label: '회의록 작성', tab: 'minutes' },
       ],

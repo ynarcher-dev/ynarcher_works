@@ -22,7 +22,6 @@ import { ChangeHistoryPanel, uniqueContributors } from '@/features/networks/Chan
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { AffiliationHistoryPanel } from '@/features/networks/AffiliationHistoryPanel'
-import { AffiliationPanel } from '@/features/networks/AffiliationPanel'
 import { RelatedMinutesPanel } from '@/features/office/minutes/RelatedMinutesPanel'
 import type { MinuteLinkTargetType } from '@/features/office/minutes/minuteLinks'
 import {
@@ -216,14 +215,6 @@ function NetworkView({ record }: { record: NetworkRow }) {
           </>
         }
       />
-
-      {/* 소속 관계: 이 사람이 어느 조직에 어느 직함으로 있(었)는가. 아래 '이력' 카드와 축이
-          다르다 — 저쪽은 소속 칸이 **어떻게 고쳐졌는가**의 감사 기록이고 여기는 **지금 어디에
-          속했는가**의 사실이다. 그래서 겸직(현재가 여럿)과 그 조직으로 가는 길은 여기서만
-          답한다. 사실이 감사보다 먼저 읽혀야 하므로 이 카드가 앞에 선다. */}
-      <SectionCard title="소속 관계">
-        <AffiliationPanel networkId={record.id as string} />
-      </SectionCard>
 
       {/* 이력(소속·부서·직책 변경): 인물·조직 전 유형 공통 노출. 현재값은 부제가, 과거 조합은 이 카드가 담는다. */}
       <SectionCard title="이력">

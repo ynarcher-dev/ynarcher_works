@@ -120,7 +120,7 @@ export type ApprovalNavRef =
   | { axis: 'progress'; key: ApprovalProgressKey }
   | { axis: 'box'; key: ApprovalBoxKey }
 
-/** 그 칸이 켜진 문서함으로 가는 딥링크 쿼리(`/office?tab=approval` 뒤에 붙는다). */
+/** 그 칸이 켜진 문서함으로 가는 딥링크 쿼리(`/my-office?tab=approval` 뒤에 붙는다). */
 export const approvalNavQuery = (ref: ApprovalNavRef): string => `&${ref.axis}=${ref.key}`
 
 export interface ApprovalNavRow {

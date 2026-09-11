@@ -1,7 +1,7 @@
 import { PageHeader } from '@ynarcher/ui'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '@/auth/authStore'
-import { FUND_LIST_LABEL } from '@/config/navigation'
+import { FUND_LIST_LABEL, GUEST_ACCOUNT_READ_LABEL } from '@/config/navigation'
 import { GuestAccountPanel } from '@/features/admin/GuestAccountPanel'
 import { FUND_GUEST_HOST } from '@/features/fund/guestHost'
 import { FundListTab } from '@/features/fund/FundListTab'
@@ -37,7 +37,7 @@ export function FundPage() {
   if (legacyTab === 'guest-accounts') {
     return (
       <div className="space-y-5">
-        <PageHeader title="와이앤아처 GUEST 계정" />
+        <PageHeader title={GUEST_ACCOUNT_READ_LABEL} />
         <GuestAccountPanel
           entityKey={FUND_GUEST_HOST.entityKey}
           masterTables={FUND_GUEST_HOST.guestMasterTables}

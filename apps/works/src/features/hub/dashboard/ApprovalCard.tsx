@@ -9,7 +9,7 @@ import {
   type ApprovalBoxKey,
   type ApprovalNavRef,
 } from '@/features/approval/config'
-import { countByBox, countByProgress } from '@/features/approval/model'
+import { countByBox, countByProgress, inBox, progressBucket } from '@/features/approval/model'
 import { useEmployee } from '@/features/management/hooks'
 import { DashboardRowButton } from '@/features/hub/dashboard/DashboardRowButton'
 
@@ -56,12 +56,18 @@ export function ApprovalCard({ onNavigate }: { onNavigate?: () => void }) {
   const countOf = (ref: ApprovalNavRef) =>
     ref.axis === 'progress' ? progressCounts[ref.key] : boxCounts[ref.key]
 
-  // 제목 옆 건수는 다섯 줄의 합이다. 겹치는 칸이 없어(앞의 넷은 끝나지 않은 문서, '확인'은
-  // 끝난 문서) 같은 문서를 두 번 세지 않는다 — APPROVAL_DASHBOARD_ROWS 주석 참조.
-  const total = APPROVAL_DASHBOARD_ROWS.reduce((sum, r) => sum + countOf(r.ref), 0)
+  // 참조자와 결재자가 같으면 진행 상태와 '확인'에 한 문서가 동시에 설 수 있다. 제목 건수는
+  // 줄별 숫자를 더하지 않고 문서 id를 한 번만 세어, 카드 전체가 할 일 수를 부풀리지 않는다.
+  const total = useMemo(() => {
+    if (!uid) return 0
+    return (docs ?? []).filter(
+      (row) =>
+        progressBucket(row, uid) !== null || inBox(row, 'mine-confirm', uid, myDeptId),
+    ).length
+  }, [docs, uid, myDeptId])
 
   const go = (query: string) => {
-    navigate(`/office?tab=approval${query}`)
+    navigate(`/my-office?tab=approval${query}`)
     onNavigate?.()
   }
 

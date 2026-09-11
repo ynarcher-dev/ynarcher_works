@@ -35,6 +35,7 @@ export type ColumnType =
   | 'tags'
   | 'badge'
   | 'date'
+  | 'phone'
   | 'period'
   | 'datetime'
   | 'money'
@@ -119,6 +120,14 @@ const buildColumnSpec = (stage: TableStage): Record<ColumnType, ColumnSpec> => {
     badge: { width: w.badge, align: 'left', numeric: false, rem: 5 },
     /** 날짜 `YYYY-MM-DD`. */
     date: { width: w.date, align: 'left', numeric: false, rem: page ? 8 : 7 },
+    /**
+     * 전화번호 `010-1234-5678`. **한 줄**에 서고, 폭은 그 13자를 받는다.
+     *
+     * 자릿수 상한을 아는 값이라 가변폭이 아니다 — `text`에 두면 남는 폭을 나눠 갖는 자리가 되어
+     * 열이 많은 표에서 국번 뒤로 접혔다(네트워크 대용량 업로드 리뷰 표가 그랬다). 마스킹된
+     * 값(`010-****-5678`)도 자릿수가 같으므로 같은 폭이면 족하다.
+     */
+    phone: { width: w.phone, align: 'left', numeric: false, rem: page ? 9 : 8 },
     /**
      * 기간(날짜 범위) `2026-08-01 ~ 2026-12-31`. **한 줄**에 서고, 폭은 그 23자를 받는다
      * (`PeriodCell`).
@@ -236,6 +245,23 @@ export interface Column<T> {
   sortValue?: (row: T) => unknown
   /** 헤더·셀에 함께 적용할 추가 클래스(폭·여백 조정 등). 기본 셀 여백 등과 twMerge로 충돌 해소된다. */
   className?: string
+  /**
+   * 종류로 표현되지 않는 고정폭 열의 폭(rem). `className`의 폭 클래스와 **반드시 같은 값**이어야
+   * 한다 — 컨트롤(셀렉트·버튼)이나 여러 값이 묶인 복합 셀처럼 `ColumnType` 어디에도 들지 않는
+   * 열을 위한 자리다.
+   *
+   * **적지 않으면 그 열은 표의 폭 계산에서 통째로 빠진다.** 가변폭 열의 몫은
+   * `(100% − 고정폭 합) × 가중치 비율`인데, `className`으로만 준 폭은 그 합에 잡히지 않아
+   * 가변폭 열들이 그 폭이 없는 셈 치고 100%를 나눠 갖는다. 그러면 표가 요구하는 폭이 컨테이너를
+   * 넘고, 브라우저는 **모든** 열을 비율대로 깎는다 — 네트워크 대용량 업로드 리뷰 표에서
+   * `className`으로만 폭을 준 두 열(416px)이 계산에서 빠져 연락처가 두 줄로 접히고 셀렉트가
+   * 화살표만 남게 눌린 것이 그 결과다. 종류가 정한 `rem`과 같은 일을 하며, 하한으로도 함께 걸려
+   * 표가 넘칠 때 선언한 폭이 깎이지 않게 한다.
+   *
+   * 먼저 물을 것은 **종류로 표현되지 않는가**이다. 값이 놓이는 열이면 `type`이 답해야 하고,
+   * 이 통로는 값이 아닌 것이 놓이는 열에만 쓴다.
+   */
+  widthRem?: number
 }
 
 /**
@@ -583,7 +609,12 @@ export function DataTable<T>({
     (standardColumns
       ? (showAuthor ? stdW.author.rem : 0) + stdW.updated.rem + (showManageColumn ? stdW.manage.rem : 0)
       : 0) +
-    columns.reduce((sum, c) => sum + (c.type ? (columnTypeSpec[c.type].rem ?? 0) : 0), 0)
+    // 종류가 없는 고정폭 열은 `widthRem`이 대신 답한다. 이 항이 빠지면 그 열의 폭만큼을
+    // 가변폭 열들이 더 나눠 갖고, 표가 컨테이너를 넘겨 브라우저가 모든 열을 깎는다.
+    columns.reduce(
+      (sum, c) => sum + (c.type ? (columnTypeSpec[c.type].rem ?? 0) : (c.widthRem ?? 0)),
+      0,
+    )
   const totalFlex = columns.reduce(
     (sum, c) => sum + (c.type ? (columnTypeSpec[c.type].flex ?? 0) : 0),
     0,
@@ -604,7 +635,7 @@ export function DataTable<T>({
   const cellStyle = (col: Column<T>, leadFrozen: boolean) => {
     const spec = col.type ? columnTypeSpec[col.type] : undefined
     const width = flexWidth(col)
-    const minRem = spec?.rem ?? spec?.minRem
+    const minRem = spec?.rem ?? spec?.minRem ?? col.widthRem
     if (!leadFrozen && !width && !minRem) return undefined
     return {
       ...(leadFrozen ? { left: `${leftFirst}rem` } : {}),

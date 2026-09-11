@@ -1,10 +1,8 @@
 import { EmptyState, PageHeader, Spinner } from '@ynarcher/ui'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
-import { ApprovalWorkspace } from '@/features/approval/ApprovalWorkspace'
 import { ArchiveWorkspace } from '@/features/hub/ArchiveWorkspace'
 import { BoardSectionNav } from '@/features/hub/BoardSectionNav'
 import { BoardWorkspace } from '@/features/hub/BoardWorkspace'
-import { DashboardPanel } from '@/features/hub/DashboardPanel'
 import { NoticeWorkspace } from '@/features/hub/NoticeWorkspace'
 import { NOTICE_TAB } from '@/features/hub/boardPostStore'
 import { useBoardPostBoardId } from '@/features/hub/boardPostsApi'
@@ -23,7 +21,7 @@ import { RoomReservationWorkspace } from '@/features/office/rooms/RoomReservatio
 const PLACEHOLDER_TITLES: Record<string, string> = {}
 
 /**
- * OFFICE 워크스페이스: 대시보드 + 임직원 정보·회의실 예약 + 전자결재 + 게시판 홈.
+ * 공용 오피스: 임직원 정보·공용 자원·회의·게시 공간.
  * 좌측 사이드바(?tab)로 섹션을 전환하며, 신규 게시판(ADMIN 게시판 관리 생성)이 모두 이곳에
  * 노출된다. AI 에이전트·전사 캘린더는 상단바 전역 진입점(우측 슬라이드오버)에서 연다.
  */
@@ -47,11 +45,18 @@ export function OfficePage() {
     if (boardsQuery.isLoading || boardIdQuery.isLoading) return <Spinner />
     const postBoard = boards.find((b) => b.id === boardIdQuery.data)
     if (postBoard) return <Navigate to={`/office?tab=${postBoard.slug}&post=${post}`} replace />
-    // 게시판을 못 찾으면(접근 불가·삭제) 아래 일반 흐름으로 떨어진다(탭 없으면 대시보드).
+    // 게시판을 못 찾으면(접근 불가·삭제) 아래 일반 흐름으로 떨어진다(탭 없으면 공지사항).
   }
 
-  // 탭 미지정 시 최상단 대시보드로 정규화(사이드바 활성 상태와 URL 동기화).
-  if (!tab) return <Navigate to="/office?tab=dashboard" replace />
+  // 탭 미지정 시 공용 오피스의 기본 화면인 공지사항으로 정규화한다.
+  // 게시판 상위 메뉴도 공지사항 탭을 자기 활성 상태로 판정하므로 사이드바와 URL이 함께 맞는다.
+  if (!tab) return <Navigate to={`/office?tab=${NOTICE_TAB}`} replace />
+
+  // 메뉴 분리 전 OFFICE에 있던 개인 대시보드·전자결재 딥링크를 새 자리로 넘긴다.
+  if (tab === 'dashboard' || tab === 'approval') {
+    const next = new URLSearchParams(params)
+    return <Navigate to={`/my-office?${next.toString()}`} replace />
+  }
 
   // 부서 정보는 임직원 정보로 합쳐졌다(목록=조직, 상세=임직원). 기존 링크·북마크를 넘겨준다.
   if (tab === 'departments') return <Navigate to="/office?tab=managers" replace />
@@ -157,9 +162,6 @@ export function OfficePage() {
 
   return (
     <div className="flex h-full flex-col gap-5">
-      {/* 대시보드: HUB에서 이관. 여기만 '메뉴명 + 구분선'을 두지 않는다 — 홈은 카드가 스스로
-          제목을 달고 서는 자리라, 페이지 제목까지 얹으면 첫 화면 한 줄을 제목이 먹는다. */}
-      {tab === 'dashboard' && <DashboardPanel />}
       {/* 임직원 정보: 목록은 조직 트리+인물 카드(구 부서 정보), 상세는 임직원 상세로 간다. */}
       {tab === 'managers' && <OfficeManagersPanel />}
       {/* 자산 현황: 회사에 어떤 공용 물품이 어느 지사에 있나(조회 전용). 원장은 MANAGEMENT 자산 관리가 소유한다. */}
@@ -172,16 +174,6 @@ export function OfficePage() {
       {tab === 'minutes' && <MinutesWorkspace />}
       {/* 지사 정보: ADMIN '지사 관리'가 소유한 지사 원장을 조회 전용 리스트뷰로 노출한다. */}
       {tab === 'branches' && <BranchesPanel />}
-      {/* 전자결재: 진행 중 타일(필터) + 문서함 좌패널 + 문서 목록. */}
-      {tab === 'approval' && (
-        <ApprovalWorkspace
-          initialDocumentId={params.get('doc') ?? undefined}
-          // 대시보드 전자결재 카드의 딥링크 — 그 칸이 켜진 채로 열린다. 좌패널의 축이 둘이라
-          // 쿼리도 둘이다(진행 상태 ?progress= / 문서함 ?box=).
-          initialProgress={params.get('progress') ?? undefined}
-          initialBox={params.get('box') ?? undefined}
-        />
-      )}
     </div>
   )
 }

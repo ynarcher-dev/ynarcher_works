@@ -143,7 +143,7 @@ export function EmployeeDirectory({
       key: 'phone',
       header: '연락처',
       render: (r) => r.phone || DASH,
-      type: 'text',
+      type: 'phone',
     },
   ]
 

@@ -16,6 +16,7 @@ import { EmployeeDetailPage } from '@/features/management/EmployeeDetailPage'
 import { MyPage } from '@/features/management/MyPage'
 import { OrgReformPage } from '@/features/management/OrgReformPage'
 import { OfficePage } from '@/features/office/OfficePage'
+import { MyOfficePage } from '@/features/office/MyOfficePage'
 import { MnaBulkPage, MnaProgramDetailPage, MnaWorkspacePage } from '@/features/mna/MnaWorkspace'
 import { MaBuyerDetailPage, MaSellerDetailPage } from '@/features/mna/parties/MaPartyDetailPage'
 import { MaBuyerPage, MaSellerPage } from '@/features/mna/parties/MaPartyPage'
@@ -64,10 +65,22 @@ export const router = createBrowserRouter([
           </RequireAuth>
         ),
         children: [
-          // HUB 워크스페이스 제거됨 → 기본 진입은 OFFICE(전사 대시보드).
-          { index: true, element: <Navigate to="/office" replace /> },
+          // 기본 진입은 개인 업무의 출발점인 내 오피스.
+          { index: true, element: <Navigate to="/my-office" replace /> },
           // 마이페이지(내 계정 관리): 모든 인증 사용자 접근(워크스페이스 권한 불요).
           { path: 'me', element: <MyPage /> },
+
+          // ── MY OFFICE ──────────────────────────────────────────────────
+          // 메뉴 개편의 첫 단계에서는 기존 개인화 대시보드를 그대로 연결한다. 공용 OFFICE의
+          // 기능과 주소는 건드리지 않고, 후속 개인 업무 기능이 붙을 독립 경로만 먼저 확보한다.
+          {
+            path: 'my-office',
+            element: (
+              <RequireWorkspace workspace="office">
+                <MyOfficePage />
+              </RequireWorkspace>
+            ),
+          },
 
           // ── NETWORKS ────────────────────────────────────────────────────
           {
@@ -371,7 +384,7 @@ export const router = createBrowserRouter([
           // 전자결재 워크스페이스는 OFFICE로 통합됨. 기존 링크·북마크는 OFFICE 전자결재 탭으로.
           {
             path: 'approval',
-            element: <Navigate to="/office?tab=approval" replace />,
+            element: <Navigate to="/my-office?tab=approval" replace />,
           },
         ],
       },

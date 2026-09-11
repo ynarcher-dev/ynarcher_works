@@ -3,12 +3,21 @@ import type { NetworkPersonHit } from '@/features/networks/personSearch'
 import type { MinuteLink } from '@/features/office/minutes/minuteLinks'
 
 /**
+ * NETWORKS에서 찾지 못한 참석자를 회의록 문자열 명단에 더한다.
+ * 공백만인 값과 같은 표기의 중복은 받지 않되, 소속이 다른 동명이인 표기는 보존한다.
+ */
+export function addUnlinkedAttendee(current: string[], raw: string): string[] {
+  const value = raw.trim()
+  if (!value || current.some((item) => item.trim() === value)) return current
+  return [...current, value]
+}
+
+/**
  * 회의록이 네트워크 원장의 사람을 담을 때 쓰는 변환 하나.
  *
- * 검색 자체(`useNetworkPeopleSearch`)와 입력 눅이기(`useDebounced`)는 2026-09-10에 각각
- * `features/networks/personSearch`와 `lib/useDebounced`로 올라갔다 — 스타트업 폼의
- * 대표자·핵심인력이 같은 사람을 가리키게 되며 소비자가 둘이 됐고, 그때부터 그것들은 어느
- * 화면의 것도 아니다. 여기 남는 것은 **회의록만 아는 사실**(참석자 역할·상호참조 모양)뿐이다.
+ * 검색 자체(`useNetworkPeopleSearch`)는 NETWORKS 원장을 읽으므로 그 기능 폴더에 있고,
+ * 입력 눅이기(`useDebounced`)는 다른 검색 화면도 함께 쓰므로 공용 자리에 있다. 여기 남는 것은
+ * **회의록만 아는 사실**(참석자 역할·상호참조 모양)뿐이다.
  */
 
 /**

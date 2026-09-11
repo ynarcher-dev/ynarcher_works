@@ -44,14 +44,6 @@ export interface TechProfile {
 /** 핵심 팀원 1인. */
 export interface TeamMember {
   name: string
-  /**
-   * 네트워크 원장의 그 사람(2026-09-10). 없으면 이름만 아는 미연결이다.
-   *
-   * 이름을 지우고 참조만 두지 않는 이유는 이 값이 표시값이기 때문이다 — 상세 카드·AI 초안·
-   * 대량 업로드가 이름을 직접 읽는다. 참조는 그 이름이 **누구인지**를 더할 뿐이며, 그 참조가
-   * 있어야 대표가 바뀌었을 때 전임자에게 "전 OO 대표"가 남는다(network_affiliations).
-   */
-  networkId?: string | null
   role: string
   background: string
   /** 재직 형태(전업/겸업). 초기 기업 심사에서 가장 자주 확인하는 값이라 자유 텍스트에서 칸으로 올렸다. */

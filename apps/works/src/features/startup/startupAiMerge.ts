@@ -85,42 +85,10 @@ const BUSINESS_KEYS = ['oneLiner', 'businessModel', 'targetMarket', 'revenueMode
 const TECH_KEYS = ['product', 'devStage', 'coreTech', 'devInsourcing', 'differentiator']
 const TEAM_TEXT_KEYS = ['founderStrength', 'orgComposition', 'hiringPlan']
 
-/**
- * AI가 데려온 팀원 목록에 **이미 이어 둔 원장 참조를 물려준다**(2026-09-10).
- *
- * 모델은 서류에서 이름만 읽으므로 초안의 팀원에는 `networkId`가 없다. 그런데 목록 카드는
- * 통째 교체라, 그대로 두면 초안을 한 번 얹는 것만으로 그 기업 핵심인력의 연결이 전원
- * 끊긴다 — 그리고 저장하면 `app.sync_startup_affiliations()`가 "이 회사가 더 이상 말하지
- * 않는 사람"으로 보아 관계 줄에 `ended_on`을 찍는다. **초안 한 번이 원장의 재직 이력을
- * 퇴사로 바꾸는 셈**이다. "AI는 값을 지우지 못한다"가 이름에는 걸려 있었지만 연결에는
- * 걸려 있지 않았다.
- *
- * **이름 대조는 '자동으로 잇지 않는다'(2026-09-10 B안)와 충돌하지 않는다.** 그 규칙이 막는
- * 것은 원장에서 낯선 사람을 찾아 붙이는 일이고, 여기서 하는 것은 **이 기업 폼에서 이미 그
- * 이름에 매달려 있던 참조를 유지**하는 것뿐이다. 대조 범위가 한 기업의 팀원 목록이라
- * 동명이인이 걸릴 자리가 사실상 없고, 이름이 달라지면(개명·오탈자 교정) 링크는 그냥
- * 떨어져 미연결이 된다 — 안전한 쪽으로 떨어진다.
- */
-function carryMemberLinks(prev: unknown, next: unknown[]): unknown[] {
-  const links = new Map<string, unknown>()
-  for (const m of arr(prev)) {
-    const row = obj(m)
-    const name = String(row.name ?? '').trim()
-    if (name && row.networkId) links.set(name, row.networkId)
-  }
-  if (links.size === 0) return next
-  return next.map((m) => {
-    const row = obj(m)
-    if (row.networkId) return row
-    const carried = links.get(String(row.name ?? '').trim())
-    return carried ? { ...row, networkId: carried } : row
-  })
-}
-
 /** 팀 카드: 텍스트 3칸은 키 단위로, 목록 3종은 목록 규칙으로 얹는다. */
 function mergeTeam(prev: Rec, next: Rec): Rec {
   const merged = mergeKeys(prev, next, TEAM_TEXT_KEYS)
-  merged.members = carryMemberLinks(prev.members, mergeList(prev.members, next.members))
+  merged.members = mergeList(prev.members, next.members)
   merged.advisors = mergeList(prev.advisors, next.advisors)
   merged.capabilities = mergeList(prev.capabilities, next.capabilities)
   return merged
@@ -186,14 +154,6 @@ export function applyAiDraft(
         const source = record as unknown as Rec
         for (const [from, col] of BASICS_FIELDS) target[col] = keep(v[from], source[col])
         target.addresses = mergeAddresses(source.addresses, v.addressDetail)
-        // 대표자 이름이 바뀌었으면 **참조를 끊는다**(2026-09-10). 이름은 글자 칸이고 참조는
-        // 원장의 그 사람이라, 이름만 갈리면 화면에는 새 대표가 서는데 원장은 전임자를
-        // 가리킨 채로 저장된다 — 피커를 컨트롤 하나로 묶어 막으려던 바로 그 상태다.
-        // 끊는 쪽을 고르는 이유는 되돌릴 수 있어서다: 미연결은 담당자가 다시 이으면 되고,
-        // 틀린 사람을 가리킨 저장은 아무도 그 사실을 모른다. 잇는 것은 사람이 한다.
-        if (String(target.representative ?? '').trim() !== String(source.representative ?? '').trim()) {
-          target.representative_network_id = null
-        }
         break
       }
       case 'summary': {

@@ -7,11 +7,12 @@ import {
   Select,
   Tooltip,
   tooltipScale,
-  type BadgeTone,
   type Column,
 } from '@ynarcher/ui'
-import type { ReactNode } from 'react'
-import { categoryLabel, type NetworkCategory } from '@/features/networks/config'
+import { DupCell } from '@/features/networks/BulkDupCell'
+import { CountryOptionList } from '@/features/networks/CountryOptionList'
+import type { NetworkCategory } from '@/features/networks/config'
+import type { CountryTag } from '@/features/networks/countryOptions'
 import type { ExistingRef, ParsedRow } from '@/features/networks/bulkUpload'
 
 export type Decision = 'new' | 'merge' | 'skip'
@@ -72,68 +73,11 @@ function RowFlag({ row }: { row: ReviewRow }) {
   return null
 }
 
-/** 업로드 행과 기존 레코드가 실제로 겹치는 필드 라벨만 추린다(이름/소속/부서/직책/이메일/연락처). */
-function overlapLabels(row: ReviewRow, match: ExistingRef): string[] {
-  const norm = (v: unknown) => String(v ?? '').trim().toLowerCase()
-  const digits = (v: unknown) => String(v ?? '').replace(/\D/g, '')
-  const eq = (a: string, b: string) => a !== '' && a === b
-  const out: string[] = []
-  if (eq(norm(row.name), norm(match.name))) out.push('이름')
-  if (eq(norm(row.affiliation), norm(match.affiliation))) out.push('소속')
-  if (eq(norm(row.department), norm(match.profile.department))) out.push('부서')
-  if (eq(norm(row.position), norm(match.profile.position))) out.push('직책')
-  if (eq(norm(row.email), norm(match.email))) out.push('이메일')
-  if (eq(digits(row.phone), digits(match.phone))) out.push('연락처')
-  return out
-}
-
-/** 중복 셀의 한 덩이(독립 pill 뱃지). tone으로 경각심 단계, widthCls로 열 정렬용 최소폭을 준다. */
-function Seg({
-  label,
-  value,
-  tone = 'neutral',
-  widthCls,
-}: {
-  label: string
-  value: ReactNode
-  tone?: BadgeTone
-  widthCls?: string
-}) {
-  return (
-    <Badge tone={tone} className={widthCls}>
-      <span className="opacity-60">{label}</span>
-      <span className="font-semibold">{value}</span>
-    </Badge>
-  )
-}
-
-/**
- * 중복 매칭 셀. 최소폭으로 행마다 시작점을 정렬한다.
- * - 비활성(미복구): 비활성화한 사람 · 사유만(둘 다 레드). 구분·중복은 숨긴다.
- * - 활성 매칭 or 복구 확정: 생성자 · 구분 · 중복(앰버).
- */
-function DupCell({ row, match, revived }: { row: ReviewRow; match: ExistingRef; revived: boolean }) {
-  if (match.deleted && !revived) {
-    return (
-      <div className="inline-flex items-center gap-2.5 whitespace-nowrap text-caption leading-snug">
-        <Seg label="비활성" tone="danger" value={match.deactivatedBy ?? '미상'} widthCls="min-w-[6rem]" />
-        <Seg label="사유" tone="danger" value={match.deactivateReason ?? '-'} />
-      </div>
-    )
-  }
-  const dups = overlapLabels(row, match).join(', ')
-  return (
-    <div className="inline-flex items-center gap-2.5 whitespace-nowrap text-caption leading-snug">
-      <Seg label="생성자" value={match.contributor ?? '미상'} widthCls="min-w-[6rem]" />
-      <Seg label="구분" value={categoryLabel(match.category) || '미지정'} widthCls="min-w-[6.5rem]" />
-      <Seg label="중복" tone="warning" value={dups} />
-    </div>
-  )
-}
-
 interface Props {
   rows: ReviewRow[]
   categoryOptions: { value: string; label: string }[]
+  /** 국가 선택지 — 자국이 먼저, 그 아래 구분선, 나머지는 가나다순(등록 폼과 같은 순서). */
+  countryOptions: { domestic: CountryTag[]; overseas: CountryTag[] } | undefined
   /** 선택된 행 번호(제어). */
   selected: number[]
   /** 이미 복구 처리된(활성화된) 행 번호. 해당 행은 '복구됨'으로 잠긴다. */
@@ -141,9 +85,13 @@ interface Props {
   busy?: boolean
   onSelectionChange: (lines: number[]) => void
   onCategory: (line: number, label: string) => void
+  /** 국가 재지정. 빈 값은 '미확인'이며, 실제 업로드 대상에 남아 있으면 저장이 차단된다. */
+  onCountry: (line: number, tagId: string) => void
   onDecision: (line: number, decision: Decision) => void
   /** 비활성 매칭 행 즉시 복구(활성화). */
   onRevive: (line: number) => void
+  /** 비활성 사유를 모달로 연다(사유가 있는 행에서만 불린다). */
+  onShowReason: (line: number) => void
 }
 
 /**
@@ -153,21 +101,63 @@ interface Props {
 export function BulkReviewTable({
   rows,
   categoryOptions,
+  countryOptions,
   selected,
   revivedLines,
   busy,
   onSelectionChange,
   onCategory,
+  onCountry,
   onDecision,
   onRevive,
+  onShowReason,
 }: Props) {
   // 모든 열의 좌우 패딩을 px-2로 통일해 열 간 여백이 들쑥날쑥하지 않게 한다(중복 칸은 폭만 w-72로 넓힘).
   const pad = 'px-2'
+  /**
+   * 셀렉트가 놓이는 열의 폭(8rem = `w-32`).
+   *
+   * 값이 아니라 조작이 놓이는 열이라 `ColumnType` 어디에도 들지 않으므로 `widthRem`으로 직접
+   * 적는다 — 그리고 **적어야 표의 폭 계산에 잡힌다**(`Column.widthRem` 주석). 8rem은 셀 여백
+   * 16px + 셀렉트 좌우 여백 48px을 빼면 글자 자리가 64px이라, 네 글자 라벨(`일반기업`)과
+   * 국가명 대부분이 들어간다. 열 개가 넘는 표라 여기서 더 넓히기보다 긴 국가명이 잘리는 쪽을
+   * 택했고, 잘린 값은 펼친 목록이 온전히 보여 준다.
+   */
+  const selectRem = 8
   // 비활성(미복구) 상태: 복구하기를 아직 누르지 않은 비활성 매칭 행.
   const isDeactivated = (r: ReviewRow) =>
     r.internal || (Boolean(r.match?.deleted) && !revivedLines.includes(r.line))
   // 비활성 행은 원본 데이터 텍스트를 옅게 처리한다.
   const dim = (r: ReviewRow, normal: string) => (isDeactivated(r) ? 'text-gray-300' : normal)
+  /**
+   * 파일에서 온 글자 값 한 열. 길이를 예측할 수 없는 가변폭 열이라 **셀 안에서 말줄임**한다
+   * (전체 값은 `title`이 답한다).
+   *
+   * 접지 않는 이유는 폭이 아니라 리듬이다 — 열 개가 넘는 이 표에서 한 열만 두 줄이 되면 행의
+   * 기준선이 하나로 읽히지 않고, 스물여섯 자짜리 회사 메일 하나가 그 아래 천 행의 높이를
+   * 정하게 된다. 잘리는 것이 문제였다면 늘릴 것은 폭이 아니라 줄일 것이 열이다.
+   */
+  const textCol = (
+    key: string,
+    header: string,
+    type: 'text' | 'long',
+    value: (r: ReviewRow) => string,
+  ): Column<ReviewRow>[] => [
+    {
+      key,
+      header,
+      type,
+      className: pad,
+      render: (r) => {
+        const v = value(r)
+        return (
+          <span className={cn('block truncate', dim(r, 'text-gray-600'))} title={v || undefined}>
+            {v || '-'}
+          </span>
+        )
+      },
+    },
+  ]
   const columns: Column<ReviewRow>[] = [
     {
       key: 'name',
@@ -181,14 +171,14 @@ export function BulkReviewTable({
         </span>
       ),
     },
-    { key: 'affiliation', header: '소속', type: 'long', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.affiliation || '-'}</span> },
-    { key: 'department', header: '부서', type: 'text', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.department || '-'}</span> },
-    { key: 'position', header: '직책', type: 'text', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.position || '-'}</span> },
-    { key: 'email', header: '이메일', type: 'text', className: pad, render: (r) => <span className={dim(r, 'text-gray-600')}>{r.email || '-'}</span> },
+    ...textCol('affiliation', '소속', 'long', (r) => r.affiliation),
+    ...textCol('department', '부서', 'text', (r) => r.department),
+    ...textCol('position', '직책', 'text', (r) => r.position),
+    ...textCol('email', '이메일', 'text', (r) => r.email),
     {
       key: 'phone',
       header: '연락처',
-      type: 'text',
+      type: 'phone',
       className: pad,
       // 엑셀이 지수 표기로 바꾼 번호는 자릿수가 이미 잘려 되돌릴 수 없다. 빈 칸으로 두되
       // 왜 비었는지는 말한다 — 그냥 비워 두면 명함에 번호가 없었던 것으로 읽힌다.
@@ -202,24 +192,40 @@ export function BulkReviewTable({
         ),
     },
     {
-      // 국가는 파일이 답하고, 못 찾은 값은 목록의 '국가 미확인' 축에서 채운다 —
-      // 리뷰 표에 드롭다운을 하나 더 세우면 행마다 두 번 고르게 된다.
+      /**
+       * 국가. 파일이 적어 낸 값이 먼저이고 없으면 연락처로 짐작하는데(`guessCountryName`),
+       * 명함첩에는 국가 열이 없어 **거의 전부가 짐작**이다. 그 짐작은 한쪽으로만 빗나간다 —
+       * 한국 번호를 그대로 쓰는 해외 체류자·해외 법인 담당자는 `미확인`이 아니라 `한국`으로
+       * 확정 저장되어, 목록의 '국가 미확인' 축에도 걸리지 않는다. 그래서 고칠 자리는 저장 뒤가
+       * 아니라 **파일을 보고 있는 지금**이어야 한다(2026-09-10 사용자 지정).
+       *
+       * 원장에 없는 이름으로 온 값은 `title`이 답한다 — 저장되는 것은 태그 id뿐이라 그 글자를
+       * 선택지로 세울 수 없고, 조용히 지우면 파일이 뭐라고 적었는지 물을 곳이 없어진다.
+       */
       key: 'country',
       header: '국가',
-      type: 'text',
-      className: pad,
-      render: (r: ReviewRow) =>
-        r.countryTagId ? (
-          <span className={dim(r, 'text-gray-600')}>{r.countryLabel}</span>
-        ) : (
-          <span className="text-gray-400">{r.countryLabel ? `${r.countryLabel}(미등록)` : '미확인'}</span>
-        ),
+      widthRem: selectRem,
+      className: cn('w-32', pad),
+      render: (r: ReviewRow) => (
+        <Select
+          value={r.countryTagId ?? ''}
+          disabled={r.decision === 'skip' || isDeactivated(r)}
+          title={
+            !r.countryTagId && r.countryLabel
+              ? `파일의 값 '${r.countryLabel}'은 국가 원장에 없습니다.`
+              : undefined
+          }
+          onChange={(e) => onCountry(r.line, e.target.value)}
+        >
+          <CountryOptionList options={countryOptions} emptyLabel="미확인" />
+        </Select>
+      ),
     },
     {
       key: 'category',
       header: '구분',
-      type: 'text',
-      className: pad,
+      widthRem: selectRem,
+      className: cn('w-32', pad),
       render: (r) => (
         <Select
           value={r.targetCategory}
@@ -245,11 +251,17 @@ export function BulkReviewTable({
         </span>
       ),
       // 왼쪽은 좁혀(pl-1) 구분 열에 붙이고, 오른쪽은 키워(pr-8) 주황 '중복' 뱃지가 결정 열에 붙지 않게 한다.
+      widthRem: 18,
       className: 'w-72 pl-1 pr-8',
-      // 중복이 있는 행만 표시. 비활성 미복구는 비활성/사유만, 그 외는 생성자·구분·중복.
+      // 중복이 있는 행만 표시. 비활성 미복구는 '비활성: 이름' 한 줄, 그 외는 생성자·구분·중복.
       render: (r) =>
         r.match ? (
-          <DupCell row={r} match={r.match} revived={revivedLines.includes(r.line)} />
+          <DupCell
+            row={r}
+            match={r.match}
+            revived={revivedLines.includes(r.line)}
+            onShowReason={() => onShowReason(r.line)}
+          />
         ) : (
           <span className="text-gray-300">중복 없음</span>
         ),
@@ -259,6 +271,7 @@ export function BulkReviewTable({
       header: '결정',
       align: 'center',
       // 드롭다운 글씨가 잘리지 않게 열을 넓히고(w-32) 오른쪽 여백(pr-4)으로 우측 끝에서 살짝 당긴다.
+      widthRem: selectRem,
       className: 'w-32 pl-2 pr-4',
       // 비활성 매칭은 먼저 '복구하기'로 의사를 밝힌 뒤에야 결정(합치기/미업로드) 드롭다운이 열린다.
       render: (r) =>

@@ -16,8 +16,6 @@ interface Props {
   setCapabilities: (c: string[]) => void
   ip: IpProfile
   setIp: (v: IpProfile) => void
-  /** 지금 폼에 적힌 기업명. 핵심 팀원을 새 인물로 등록할 때 소속으로 채운다. */
-  companyName: string
 }
 
 /**
@@ -37,7 +35,6 @@ export function StartupCapabilityFields({
   setCapabilities,
   ip,
   setIp,
-  companyName,
 }: Props) {
   return (
     <>
@@ -57,7 +54,6 @@ export function StartupCapabilityFields({
             control={control}
             capabilities={capabilities}
             setCapabilities={setCapabilities}
-            companyName={companyName}
           />
         </PanelCard>
 

@@ -32,9 +32,6 @@ export type NetworkCategory =
   | 'van'
   | 'exp'
   | 'investors'
-  // 스타트업의 대표자·핵심인력(2026-09-10). **조직이 아니라 사람이다** — 기업 자체는 STARTUP
-  // 원장에 살고, 여기 서는 것은 그 기업을 대표하거나 이끄는 사람 한 줄이다.
-  | 'startup'
   | 'corporates'
   | 'institutions'
   | 'universities'
@@ -54,8 +51,7 @@ export const CATEGORY_LABEL: Record<NetworkCategory, string> = {
   van: 'BAN',
   exp: 'EXP',
   investors: '투자사',
-  startup: '스타트업',
-  corporates: '기업',
+  corporates: '일반기업',
   institutions: '기관',
   universities: '대학',
   etc: '기타',
@@ -72,7 +68,6 @@ export const CATEGORY_ORDER: NetworkCategory[] = [
   'exp',
   'experts',
   'investors',
-  'startup',
   'corporates',
   'institutions',
   'universities',
@@ -159,6 +154,14 @@ export const NETWORK_FIELDS: NetworkField[] = [
  * 라벨과 코드를 모두 받아들이고, 알 수 없으면 `null`로 흡수한다 — 그 빈 칸은 업로드 리뷰
  * 화면이 사람에게 채우게 한다(올리는 시점에 구분이 정해지므로 뒤에 정리 대기열이 없다).
  */
+/**
+ * 옛 표시 라벨 → 코드. 라벨을 바꿔도 그 이름으로 적힌 업로드 파일·레거시 값은 계속 읽혀야 한다
+ * (바뀐 것은 부르는 이름이고 그때 그렇게 적은 파일은 그대로 남는다).
+ */
+const LEGACY_CATEGORY_LABEL: Record<string, NetworkCategory> = {
+  기업: 'corporates',
+}
+
 export function resolveCategory(value: string | null | undefined): NetworkCategory | null {
   const trimmed = (value ?? '').trim()
   if (!trimmed) return null
@@ -168,7 +171,7 @@ export function resolveCategory(value: string | null | undefined): NetworkCatego
   const byLabel = (Object.keys(CATEGORY_LABEL) as NetworkCategory[]).find(
     (k) => CATEGORY_LABEL[k] === trimmed,
   )
-  return byLabel ?? null
+  return byLabel ?? LEGACY_CATEGORY_LABEL[trimmed] ?? null
 }
 
 /**

@@ -54,6 +54,38 @@ const database = itemOf('database')
 const project = itemOf('project')
 const mna = itemOf('mna')
 
+describe('워크스페이스 메뉴 — 확정 명칭과 순서', () => {
+  it('내 오피스부터 시스템 관리까지 합의한 여덟 메뉴가 선다', () => {
+    expect(WORKSPACES.map((w) => w.label)).toEqual([
+      '내 오피스',
+      '공용 오피스',
+      '데이터 센터',
+      '사업부',
+      'M&A팀',
+      '투자실',
+      '경영실',
+      '시스템 관리',
+    ])
+  })
+
+  it('내 오피스는 기존 office 권한으로 열리고 독립 경로로 진입한다', () => {
+    const myOffice = itemOf('my-office')
+    const commonOffice = itemOf('office')
+    const user = userWith({ office: 'read' })
+    expect(visibleWorkspaces(userWith({ office: 'read' })).map((w) => w.id)).toEqual([
+      'my-office',
+      'office',
+    ])
+    expect(landingPath(user, myOffice)).toBe('/my-office')
+    expect(shape(buildNavGroups(user, myOffice))).toEqual([
+      ['office:대시보드', 'office:전자결재'],
+    ])
+    const commonTabs = allTabs(plainGroups(buildNavGroups(user, commonOffice)))
+    expect(commonTabs.has('dashboard')).toBe(false)
+    expect(commonTabs.has('approval')).toBe(false)
+  })
+})
+
 describe('DATABASE — 전사 원장 둘', () => {
   it('둘 다 읽으면 한 그룹 두 줄이고 그 사이에 선이 없다', () => {
     const groups = buildNavGroups(userWith({ startup: 'read', networks: 'read' }), database)
@@ -125,8 +157,8 @@ describe('M&A/PE — 딜 한 줄 + 거래상대 원장 두 줄', () => {
     const user = userWith({ office: 'read', mna: 'read', project: 'read' })
     const visible = visibleWorkspaces(user)
     // `/mnaXYZ`는 `/mna`로 시작하지만 그 아래가 아니다. `/projects`도 `/project`가 아니다.
-    expect(resolveWorkspace('/mnaXYZ', visible, user).section?.path).toBe('/office')
-    expect(resolveWorkspace('/projects', visible, user).section?.path).toBe('/office')
+    expect(resolveWorkspace('/mnaXYZ', visible, user).section?.path).toBe('/my-office')
+    expect(resolveWorkspace('/projects', visible, user).section?.path).toBe('/my-office')
     // 반면 자기 자신과 그 아래는 걸린다.
     expect(resolveWorkspace('/mna', visible, user).section?.path).toBe('/mna')
     expect(resolveWorkspace('/project/abc', visible, user).section?.path).toBe('/project')
@@ -142,9 +174,12 @@ describe('M&A/PE — 딜 한 줄 + 거래상대 원장 두 줄', () => {
 })
 
 describe('AC — 사업 목록 + 하단 고정 창구', () => {
-  it('포털 계정 줄은 목록이 아니라 그 아래 고정 영역이라 그룹이 갈린다', () => {
+  it('GUEST 계정 조회 줄은 목록이 아니라 그 아래 고정 영역이라 그룹이 갈린다', () => {
     const groups = buildNavGroups(userWith({ project: 'write' }), project)
-    expect(shape(groups)).toEqual([['project:프로젝트'], ['project:와이앤아처 GUEST 계정']])
+    expect(shape(groups)).toEqual([
+      ['project:프로젝트'],
+      ['project:GUEST 계정조회'],
+    ])
     // 그 탭이 탭 집합에서 빠지면 그 화면에서 사업 목록 줄이 활성으로 칠해진다.
     expect(allTabs(plainGroups(groups)).has('guest-accounts')).toBe(true)
   })
@@ -203,7 +238,7 @@ describe('resolveWorkspace — 항목과 구획을 함께 잡는다', () => {
   it('구획을 읽지 못하는 경로는 그 항목으로 잡히지 않는다(첫 노출 항목으로 폴백)', () => {
     const user = userWith({ networks: 'read', office: 'read' })
     const { ws, section } = resolveWorkspace('/startup/xyz', visibleWorkspaces(user), user)
-    expect(ws?.id).toBe('office')
+    expect(ws?.id).toBe('my-office')
     expect(section?.key).toBe('office')
   })
 })

@@ -10,12 +10,6 @@
 export interface StartupDetailFormValues {
   name: string
   representative: string
-  /**
-   * 대표자가 가리키는 사람 원장 행(2026-09-10). null이면 미연결이며 그때는 위 이름이 전부다.
-   * **한 명뿐이다** — 공동대표·각자대표는 직함이 그것인 핵심 팀원으로 선다(게스트 계정이
-   * 원장 행 하나에 하나라 대표가 둘이면 어느 이메일이 로그인 ID인지 답할 수 없다).
-   */
-  representative_network_id: string | null
   company_form: string
   founded_on: string
   biz_reg_no: string
@@ -52,8 +46,6 @@ export interface StartupDetailFormValues {
   hiringPlan: string
   members: {
     name: string
-    /** 네트워크 원장의 그 사람. null이면 이름만 아는 미연결이다. */
-    networkId: string | null
     role: string
     background: string
     employment: string
