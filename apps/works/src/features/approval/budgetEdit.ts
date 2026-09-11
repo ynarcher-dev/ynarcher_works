@@ -1,14 +1,16 @@
 /**
- * 예산표 편집 조작 — 줄 넣기·빼기·층 올리고 내리기·순서 바꾸기.
+ * 예산표 편집 조작.
  *
  * 조작이 언제나 **줄 하나가 아니라 그 아래 딸린 줄까지 한 덩어리로** 움직인다는 것이 요점이다.
  * 부모만 따로 움직이면 자식들이 다른 부모 밑으로 들어가는데, 화면에서는 들여쓰기만 슬쩍
  * 바뀌어 보여 담당자가 알아채지 못한다. 예산 항목이 남의 항목 밑으로 들어간 표는 합계가
  * 맞아도 틀린 표다.
  *
- * 조작 결과는 언제나 normalizeDepths를 통과한다 — 어떤 조작도 부모 없는 자식을 남기지 않는다.
+ * 앞부분의 가로형 행 조작이 현재 입력 화면의 규칙이다. 아래의 트리 조작은 과거 값 회귀
+ * 테스트와 호환 변환을 위해 남아 있으며, 결과는 normalizeDepths를 통과한다.
  */
 import {
+  budgetEntries,
   descendantRange,
   newBudgetRowId,
   normalizeDepths,
@@ -25,9 +27,107 @@ function blank(taken: string[], depth: number): BudgetRow {
   return { id: newBudgetRowId(taken), depth, name: '', values: {} }
 }
 
+function entryBlank(taken: string[], levelCount: number): BudgetRow {
+  return {
+    id: newBudgetRowId(taken),
+    depth: 0,
+    name: '',
+    path: Array.from({ length: Math.max(1, levelCount) }, () => ''),
+    values: {},
+  }
+}
+
+/** 기존 트리 값을 가로형 항목 행으로 바꾼다. 맨 아래 줄 id와 숫자 값은 그대로다. */
+function withEntries(value: BudgetTreeValue): BudgetTreeValue {
+  return { ...value, rows: budgetEntries(value) }
+}
+
 /** 빈 예산표 — 맨 위층 한 줄로 시작한다(무엇을 적는 자리인지 보이도록). */
 export function emptyBudget(levels: string[]): BudgetTreeValue {
-  return { levels: [...levels], rows: [blank([], 0)] }
+  const nextLevels = levels.length > 0 ? [...levels] : ['1단계']
+  return { levels: nextLevels, rows: [entryBlank([], nextLevels.length)] }
+}
+
+/** 분류 단계 수를 바꾸고 각 행의 분류 칸 수도 함께 맞춘다. */
+export function setLevelCount(value: BudgetTreeValue, count: number): BudgetTreeValue {
+  const size = Math.max(1, Math.trunc(count))
+  const flat = withEntries(value)
+  const levels = flat.levels.slice(0, size)
+  while (levels.length < size) levels.push(`${levels.length + 1}단계`)
+  return {
+    levels,
+    rows: flat.rows.map((row) => {
+      const path = (row.path ?? []).slice(0, size)
+      while (path.length < size) path.push('')
+      return { ...row, path, name: [...path].reverse().find((part) => part.trim()) ?? '' }
+    }),
+  }
+}
+
+/** 가로형 예산 항목을 표 끝에 한 줄 더한다. */
+export function appendBudgetEntry(value: BudgetTreeValue): BudgetTreeValue {
+  const flat = withEntries(value)
+  return {
+    ...flat,
+    rows: [...flat.rows, entryBlank(flat.rows.map((row) => row.id), flat.levels.length)],
+  }
+}
+
+/** 가로형 예산 항목 한 줄만 뺀다. */
+export function removeBudgetEntry(value: BudgetTreeValue, index: number): BudgetTreeValue {
+  const flat = withEntries(value)
+  if (flat.rows.length <= 1) return flat
+  return { ...flat, rows: flat.rows.filter((_, i) => i !== index) }
+}
+
+/** 가로형 예산 항목을 바로 위/아래 행과 바꾼다. */
+export function moveBudgetEntry(
+  value: BudgetTreeValue,
+  index: number,
+  delta: -1 | 1,
+): BudgetTreeValue {
+  const flat = withEntries(value)
+  const target = index + delta
+  if (target < 0 || target >= flat.rows.length) return flat
+  const rows = [...flat.rows]
+  ;[rows[index], rows[target]] = [rows[target]!, rows[index]!]
+  return { ...flat, rows }
+}
+
+/** 행의 한 분류 칸을 고친다. name은 구버전 판독기와 필수값 검사 호환을 위해 함께 둔다. */
+export function setBudgetPathCell(
+  value: BudgetTreeValue,
+  index: number,
+  level: number,
+  cell: string,
+): BudgetTreeValue {
+  const flat = withEntries(value)
+  return {
+    ...flat,
+    rows: flat.rows.map((row, i) => {
+      if (i !== index) return row
+      const path = [...(row.path ?? [])]
+      while (path.length < flat.levels.length) path.push('')
+      path[level] = cell
+      return { ...row, path, name: [...path].reverse().find((part) => part.trim()) ?? '' }
+    }),
+  }
+}
+
+/** 가로형 행의 수량·단가·금액·비고 칸을 고친다. */
+export function setBudgetEntryCell(
+  value: BudgetTreeValue,
+  index: number,
+  columnKey: string,
+  cell: string,
+): BudgetTreeValue {
+  const flat = withEntries(value)
+  return {
+    ...flat,
+    rows: flat.rows.map((row, i) =>
+      i === index ? { ...row, values: { ...row.values, [columnKey]: cell } } : row,
+    ),
+  }
 }
 
 /** 같은 층에 새 줄 — 자기 아래 딸린 줄들 **뒤에** 선다(형제는 자식 다음이다). */

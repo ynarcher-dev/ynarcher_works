@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   budgetLineOptions,
+  budgetEntries,
   budgetPath,
   budgetTotal,
   descendantRange,
@@ -14,13 +15,18 @@ import {
 } from '@/features/approval/budget'
 import {
   addChild,
+  appendBudgetEntry,
   addSibling,
   canIndent,
   canMove,
   indent,
   moveRow,
+  moveBudgetEntry,
   outdent,
   removeRow,
+  removeBudgetEntry,
+  setBudgetPathCell,
+  setLevelCount,
   setCell,
   usedDepth,
 } from '@/features/approval/budgetEdit'
@@ -128,6 +134,48 @@ describe('예산표 — 어느 줄인지 말하기', () => {
       path: '인건비 › 강사료 › 외부 강사',
       budget: 2000000,
     })
+  })
+})
+
+describe('예산표 — 분류 단계를 가로 열로 편다', () => {
+  it('예전 트리는 맨 아래 줄마다 전체 분류 경로를 가진 행으로 읽는다', () => {
+    const rows = budgetEntries(sample())
+    expect(rows.map((row) => row.id)).toEqual(['a1x', 'a1y', 'a2', 'b1'])
+    expect(rows[0]!.path).toEqual(['인건비', '강사료', '외부 강사'])
+    expect(rows[2]!.path).toEqual(['인건비', '진행 인력', ''])
+    expect(budgetTotal(rows, 'amount')).toBe(4700000)
+  })
+
+  it('단계 수를 줄이면 분류 칸만 줄고 예산 줄 id와 금액은 유지된다', () => {
+    const next = setLevelCount(sample(), 2)
+    expect(next.levels).toEqual(['세목', '비목'])
+    expect(next.rows.map((row) => row.id)).toEqual(['a1x', 'a1y', 'a2', 'b1'])
+    expect(next.rows[0]!.path).toEqual(['인건비', '강사료'])
+    expect(budgetTotal(next.rows, 'amount')).toBe(4700000)
+  })
+
+  it('비어 있는 마지막 분류 칸은 지출결의의 예산 경로에 붙이지 않는다', () => {
+    const flat = setLevelCount(sample(), 3)
+    expect(budgetPath(flat.rows, 2)).toBe('인건비 › 진행 인력')
+  })
+
+  it('단계 이름과 행의 분류값은 서로 독립적이다', () => {
+    const flat = setLevelCount(sample(), 3)
+    const next = setBudgetPathCell(flat, 0, 2, '온라인 강사')
+    expect(next.levels).toEqual(['세목', '비목', '세세목'])
+    expect(next.rows[0]!.path).toEqual(['인건비', '강사료', '온라인 강사'])
+    expect(next.rows[0]!.name).toBe('온라인 강사')
+  })
+
+  it('리모컨은 행 하나의 순서를 바꾸거나 삭제할 뿐 분류 구조를 바꾸지 않는다', () => {
+    const flat = setLevelCount(sample(), 3)
+    const moved = moveBudgetEntry(flat, 1, -1)
+    expect(moved.rows.slice(0, 2).map((row) => row.id)).toEqual(['a1y', 'a1x'])
+    const removed = removeBudgetEntry(moved, 0)
+    expect(removed.rows.some((row) => row.id === 'a1y')).toBe(false)
+    const appended = appendBudgetEntry(removed)
+    expect(appended.rows).toHaveLength(4)
+    expect(appended.rows[3]!.path).toEqual(['', '', ''])
   })
 })
 

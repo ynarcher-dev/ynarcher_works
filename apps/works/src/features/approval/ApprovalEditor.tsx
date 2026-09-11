@@ -20,6 +20,7 @@ import { ApprovalBasicsCard } from '@/features/approval/ApprovalBasicsCard'
 import { ApprovalRevisionNotice } from '@/features/approval/ApprovalRevisionNotice'
 import { ApprovalLinePicker } from '@/features/approval/ApprovalLinePicker'
 import { BudgetSourceField } from '@/features/approval/BudgetSourceField'
+import { BudgetTreeInput } from '@/features/approval/BudgetTreeInput'
 import { BudgetRefContext } from '@/features/approval/budgetRefContext'
 import { budgetFormIds } from '@/features/approval/budgetApi'
 import { useBudgetSourceState } from '@/features/approval/budgetSourceHooks'
@@ -45,6 +46,8 @@ import { LINE_KIND_ORDER } from '@/features/approval/config'
 import { APPROVAL_ATTACHMENT_TYPE } from '@/features/approval/config'
 import {
   emptyValues,
+  budgetAmountColumn,
+  budgetValue,
   formatMoney,
   missingRequired,
   parseFields,
@@ -189,7 +192,22 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
 
   const categoryForms = groups.find((g) => g.category === category)?.forms ?? []
   const form = availableForms.find((f) => f.id === formId) ?? null
-  const fields = useMemo(() => parseFields(form?.current_version?.fields), [form])
+  const fields = useMemo(() => {
+    const parsed = parseFields(form?.current_version?.fields)
+    if (!parsed.some((field) => field.type === 'BUDGET_TREE')) return parsed
+    // 예산표가 도입되기 전 품의 양식의 별도 금액 칸. 새 양식 버전에서는 DB에서도 빠지지만,
+    // 그 전 버전으로 만든 임시저장을 고칠 때도 같은 돈을 두 번 입력하게 두지 않는다.
+    return parsed.filter(
+      (field) =>
+        !(
+          field.key === 'amount' &&
+          field.label === '품의 금액' &&
+          (field.type === 'MONEY' || field.type === 'NUMBER')
+        ),
+    )
+  }, [form])
+  const budgetFields = useMemo(() => fields.filter((field) => field.type === 'BUDGET_TREE'), [fields])
+  const documentFields = useMemo(() => fields.filter((field) => field.type !== 'BUDGET_TREE'), [fields])
 
   const me = useMemo(() => (employees ?? []).find((e) => e.id === uid) ?? null, [employees, uid])
   const myDeptId = me?.department_id ?? null
@@ -429,7 +447,7 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
             <Card
               title={form.name}
               subtitle={
-                amountLabel
+                budgetFields.length === 0 && amountLabel
                   ? `${amountLabel}이(가) 이 문서의 금액으로 집계됩니다 — 현재 ${formatMoney(amount)}`
                   : undefined
               }
@@ -442,14 +460,37 @@ export function ApprovalEditor({ documentId, onSaved, onCancel }: ApprovalEditor
                   <p className="py-6 text-center text-body text-gray-500">
                     이 양식에 정의된 필드가 없습니다. ADMIN 결재 양식 관리에서 필드를 추가하세요.
                   </p>
-                ) : (
+                ) : documentFields.length > 0 ? (
                   <BudgetRefContext.Provider value={budgetRefSource}>
-                    <ApprovalFieldsForm fields={fields} values={values} onChange={setValues} />
+                    <ApprovalFieldsForm fields={documentFields} values={values} onChange={setValues} />
                   </BudgetRefContext.Provider>
-                )}
+                ) : null}
               </div>
             </Card>
           )}
+
+          {/* 예산은 품의서 본문과 독립된 카드다. 분류 설정부터 합계까지 한 카드 안에서
+              끝나므로 사용자가 일반 본문 필드와 예산 구조를 같은 입력 묶음으로 오해하지 않는다. */}
+          {budgetFields.map((budget) => {
+            const amountColumn = budgetAmountColumn(budget)
+            const total = amountColumn
+              ? primaryAmount([budget], { [budget.key]: budgetValue(values, budget.key) })
+              : null
+            return (
+              <Card
+                key={budget.key}
+                title={budget.label}
+                subtitle={`예산 합계 ${formatMoney(total)}`}
+                help={budget.help}
+              >
+                <BudgetTreeInput
+                  field={budget}
+                  value={budgetValue(values, budget.key)}
+                  onChange={(next) => setValues({ ...values, [budget.key]: next })}
+                />
+              </Card>
+            )
+          })}
 
           {/* 양식을 고르기 전에도 제목은 적어 둘 수 있게 한다(임시저장 경로). */}
           {!form && (

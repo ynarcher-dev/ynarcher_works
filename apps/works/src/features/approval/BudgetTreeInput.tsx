@@ -1,24 +1,15 @@
-import { Button, Input, cn, tableText } from '@ynarcher/ui'
+import { Button, Input, Select, cn, tableText } from '@ynarcher/ui'
 import { Plus } from 'lucide-react'
 import { BudgetRowActions } from '@/features/approval/BudgetRowActions'
+import { budgetEntries, budgetTotal, levelLabel, type BudgetTreeValue } from '@/features/approval/budget'
 import {
-  budgetTotal,
-  isLeaf,
-  levelLabel,
-  rollup,
-  type BudgetTreeValue,
-} from '@/features/approval/budget'
-import {
-  addSibling,
-  appendRoot,
-  indent,
-  moveRow,
-  outdent,
-  removeRow,
-  setCell,
+  appendBudgetEntry,
+  moveBudgetEntry,
+  removeBudgetEntry,
+  setBudgetEntryCell,
+  setBudgetPathCell,
   setLevel,
-  setName,
-  usedDepth,
+  setLevelCount,
 } from '@/features/approval/budgetEdit'
 import {
   budgetAmountColumn,
@@ -42,153 +33,160 @@ function numericText(column: FormColumn, raw: string): string {
 }
 
 /**
- * 품의서 예산표 입력 — 층(트리)이 있는 표.
- *
- * **금액을 적는 칸은 맨 아래 줄에만 선다.** 위층에는 입력 칸 대신 아래에서 올라온 합이
- * 회색으로 서며, 그 자리를 눌러도 고칠 수 없다. 사람이 위층에도 적을 수 있게 두면 위와
- * 아래가 어긋나는 날이 오고, 그때 어느 쪽이 진짜 예산인지 판정할 근거가 없다.
- *
- * 층 이름 칸이 표 위에 따로 서는 이유는 **사업마다 층 이름이 다르기 때문이다**
- * (`대분류 › 중분류` / `세목 › 비목 › 세세목`). 이름을 코드가 정하면 그 목록에 없는 사업은
- * 예산을 적을 수 없으므로, 이름은 문서가 갖고 코드는 몇 번째 층인지만 안다.
- *
- * 줄 조작(`+ ← → ↑ ↓ 🗑`)은 언제나 그 줄에 딸린 아래 줄까지 함께 움직인다(budgetEdit).
+ * 품의서 예산표 입력. 분류의 단계 수와 이름을 먼저 정하면 각 단계가 독립 열로 서고,
+ * 한 행에서 전체 분류 경로와 숫자를 함께 적는다. 트리 들여쓰기와 층 이동 조작은 없다.
  */
 export function BudgetTreeInput({ field, value, onChange }: Props) {
   const columns = field.columns ?? []
   const amountColumn = budgetAmountColumn(field)
-  const rows = value.rows
-  const depth = usedDepth(rows)
-  // 층 이름 칸은 지금 쓰는 층보다 하나 더 세운다 — 다음 층으로 들이기 전에 이름을 적어 둘 수
-  // 있어야 하고, 그러지 않으면 이름 없는 층이 먼저 생긴다.
-  const levelSlots = Array.from({ length: depth + 1 }, (_, i) => i)
-  const sums = columns.map((c) => rollup(rows, c.key))
+  const rows = budgetEntries(value)
+  const levelCount = Math.max(1, value.levels.length)
+  const levels = value.levels.length > 0 ? value.levels : ['1단계']
+  const levelOptions = Array.from({ length: Math.max(5, levelCount) }, (_, i) => i + 1)
+
+  const changeLevelCount = (next: number) => {
+    if (next < levelCount) {
+      const losesValues = rows.some((row) =>
+        (row.path ?? []).slice(next).some((cell) => cell.trim() !== ''),
+      )
+      if (
+        losesValues &&
+        !window.confirm('단계를 줄이면 삭제되는 분류 값이 있습니다. 계속할까요?')
+      ) {
+        return
+      }
+    }
+    onChange(setLevelCount(value, next))
+  }
 
   return (
-    <div className="space-y-2">
-      {/* 층 이름 — 값에 저장되며 양식은 기본값만 준다. */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className={tableText.head}>층 이름</span>
-        {levelSlots.map((d) => (
-          <Input
-            key={d}
+    <div className="space-y-3">
+      <div className="grid gap-3 rounded-radius-md border border-gray-200 bg-gray-25 p-3 sm:grid-cols-[9rem_1fr]">
+        <label className="space-y-1">
+          <span className={tableText.head}>분류 단계 수</span>
+          <Select
             density="table"
-            className="w-28"
-            placeholder={`${d + 1}단계`}
-            value={value.levels[d] ?? ''}
-            onChange={(e) => onChange(setLevel(value, d, e.target.value))}
-          />
-        ))}
+            value={String(levelCount)}
+            onChange={(e) => changeLevelCount(Number(e.target.value))}
+          >
+            {levelOptions.map((count) => (
+              <option key={count} value={count}>
+                {count}단계
+              </option>
+            ))}
+          </Select>
+        </label>
+
+        <div className="space-y-1">
+          <span className={tableText.head}>단계별 이름</span>
+          <div className="flex flex-wrap gap-2">
+            {levels.slice(0, levelCount).map((label, level) => (
+              <Input
+                key={level}
+                density="table"
+                className="w-28"
+                aria-label={`${level + 1}단계 이름`}
+                placeholder={`${level + 1}단계`}
+                value={label}
+                onChange={(e) => onChange(setLevel(value, level, e.target.value))}
+              />
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-radius-md border border-gray-200">
-        <table className="w-full min-w-[44rem] border-collapse">
+        <table className="w-full min-w-[56rem] border-collapse">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-25">
-              <th className={cn('px-2 py-1.5 text-left', tableText.head)}>항목</th>
-              {columns.map((c) => (
+              {levels.slice(0, levelCount).map((_, level) => (
+                <th key={level} className={cn('w-36 px-2 py-1.5 text-left', tableText.head)}>
+                  {levelLabel(levels, level)}
+                </th>
+              ))}
+              {columns.map((column) => (
                 <th
-                  key={c.key}
+                  key={column.key}
                   className={cn(
                     'px-2 py-1.5 text-left',
                     tableText.head,
-                    isNumericColumn(c.type) ? 'w-32 text-right' : c.wide ? 'w-48' : 'w-28',
+                    isNumericColumn(column.type)
+                      ? 'w-32 text-right'
+                      : column.wide
+                        ? 'w-48'
+                        : 'w-28',
                   )}
                 >
-                  {c.label}
+                  {column.label}
                 </th>
               ))}
-              <th className="w-40 px-2 py-1.5 text-center">
+              <th className="w-24 px-2 py-1.5 text-center">
                 <span className="sr-only">줄 조작</span>
               </th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, i) => {
-              const leaf = isLeaf(rows, i)
-              return (
-                <tr key={row.id} className="border-b border-gray-100 last:border-b-0">
-                  <td className="px-2 py-1">
-                    <div
-                      className="flex items-center gap-1.5"
-                      style={{ paddingLeft: `${row.depth * 1.25}rem` }}
-                    >
-                      {/* 층 이름표 — 이 줄이 몇 번째 층인지 들여쓰기만으로는 세다가 놓친다. */}
-                      <span className={cn('shrink-0', tableText.meta)}>
-                        {levelLabel(value.levels, row.depth)}
-                      </span>
-                      <Input
-                        density="table"
-                        className="min-w-0 flex-1"
-                        value={row.name}
-                        onChange={(e) => onChange(setName(value, i, e.target.value))}
-                      />
-                    </div>
-                  </td>
-
-                  {columns.map((c, ci) => {
-                    // 숫자 열은 맨 아래 줄에만 입력 칸이 선다. 위층은 아래에서 올라온 합이다.
-                    if (isNumericColumn(c.type) && !leaf) {
-                      const sum = sums[ci]!.get(row.id) ?? null
-                      return (
-                        <td
-                          key={c.key}
-                          className={cn(
-                            'px-2 py-1 text-right tabular-nums',
-                            tableText.body,
-                            'text-gray-500',
-                          )}
-                        >
-                          {c.type === 'MONEY'
-                            ? formatMoney(sum)
-                            : (sum?.toLocaleString('ko-KR') ?? '-')}
-                        </td>
-                      )
-                    }
-                    return (
-                      <td key={c.key} className="px-2 py-1">
-                        <Input
-                          density="table"
-                          type={c.type === 'DATE' ? 'date' : 'text'}
-                          inputMode={isNumericColumn(c.type) ? 'numeric' : undefined}
-                          className={cn(isNumericColumn(c.type) && 'text-right tabular-nums')}
-                          value={row.values[c.key] ?? ''}
-                          onChange={(e) => onChange(setCell(value, i, c.key, e.target.value))}
-                        />
-                      </td>
-                    )
-                  })}
-
-                  <td className="px-2 py-1">
-                    <BudgetRowActions
-                      rows={rows}
-                      index={i}
-                      onAddSibling={() => onChange(addSibling(value, i))}
-                      onOutdent={() => onChange(outdent(value, i))}
-                      onIndent={() => onChange(indent(value, i))}
-                      onMoveUp={() => onChange(moveRow(value, i, -1))}
-                      onMoveDown={() => onChange(moveRow(value, i, 1))}
-                      onRemove={() => onChange(removeRow(value, i))}
+            {rows.map((row, index) => (
+              <tr key={row.id} className="border-b border-gray-100 last:border-b-0">
+                {levels.slice(0, levelCount).map((_, level) => (
+                  <td key={level} className="px-2 py-1">
+                    <Input
+                      density="table"
+                      value={row.path?.[level] ?? ''}
+                      onChange={(e) =>
+                        onChange(setBudgetPathCell(value, index, level, e.target.value))
+                      }
                     />
                   </td>
-                </tr>
-              )
-            })}
+                ))}
 
-            {/* 합계 — 맨 아래 줄들의 합이다. 위층을 함께 세면 두 번 센다. */}
+                {columns.map((column) => (
+                  <td key={column.key} className="px-2 py-1">
+                    <Input
+                      density="table"
+                      type={column.type === 'DATE' ? 'date' : 'text'}
+                      inputMode={isNumericColumn(column.type) ? 'numeric' : undefined}
+                      className={cn(isNumericColumn(column.type) && 'text-right tabular-nums')}
+                      value={row.values[column.key] ?? ''}
+                      onChange={(e) =>
+                        onChange(setBudgetEntryCell(value, index, column.key, e.target.value))
+                      }
+                    />
+                  </td>
+                ))}
+
+                <td className="px-2 py-1">
+                  <BudgetRowActions
+                    rows={rows}
+                    index={index}
+                    onMoveUp={() => onChange(moveBudgetEntry(value, index, -1))}
+                    onMoveDown={() => onChange(moveBudgetEntry(value, index, 1))}
+                    onRemove={() => onChange(removeBudgetEntry(value, index))}
+                  />
+                </td>
+              </tr>
+            ))}
+
             <tr className="border-t border-gray-200 bg-gray-25">
-              <td className={cn('px-2 py-1.5 text-gray-600', tableText.body)}>합계</td>
-              {columns.map((c) => (
+              {levels.slice(0, levelCount).map((_, level) => (
                 <td
-                  key={c.key}
+                  key={level}
+                  className={cn('px-2 py-1.5 text-gray-600', tableText.body)}
+                >
+                  {level === 0 ? '합계' : ''}
+                </td>
+              ))}
+              {columns.map((column) => (
+                <td
+                  key={column.key}
                   className={cn(
                     'px-2 py-1.5',
                     tableText.body,
-                    isNumericColumn(c.type) && 'text-right font-semibold tabular-nums',
+                    isNumericColumn(column.type) && 'text-right font-semibold tabular-nums',
                   )}
                 >
-                  {isNumericColumn(c.type)
-                    ? numericText(c, String(budgetTotal(rows, c.key) ?? ''))
+                  {isNumericColumn(column.type)
+                    ? numericText(column, String(budgetTotal(rows, column.key) ?? ''))
                     : ''}
                 </td>
               ))}
@@ -198,9 +196,9 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
         </table>
 
         <div className="border-t border-gray-100 p-2">
-          <Button variant="ghost" density="table" onClick={() => onChange(appendRoot(value))}>
+          <Button variant="ghost" density="table" onClick={() => onChange(appendBudgetEntry(value))}>
             <Plus size={14} className="mr-1" />
-            {levelLabel(value.levels, 0)} 추가
+            예산 항목 추가
           </Button>
         </div>
       </div>

@@ -169,9 +169,17 @@ export function ApprovalDetail({
         )
       : null
   const paymentFields = doc.legacy ? fields.filter((field) => field.key === 'payments') : []
-  const bodyFields = paymentFields.length
-    ? fields.filter((field) => field.key !== 'payments')
-    : fields
+  const bodyFields = fields.filter(
+    (field) =>
+      field.type !== 'BUDGET_TREE' &&
+      (!paymentFields.length || field.key !== 'payments') &&
+      !(
+        ownBudgetField &&
+        field.key === 'amount' &&
+        field.label === '품의 금액' &&
+        (field.type === 'MONEY' || field.type === 'NUMBER')
+      ),
+  )
   const hasPayments = paymentFields.some(
     (field) => field.type === 'TABLE' && tableRows(doc.field_values ?? {}, field.key).length > 0,
   )
@@ -452,6 +460,19 @@ export function ApprovalDetail({
               <p className={`whitespace-pre-wrap ${cardText.value}`}>{doc.body}</p>
             )}
           </Card>
+
+          {/* 예산표는 품의서 본문과 독립된 카드로 읽는다. 작성 화면과 같은 카드 경계라
+              단계별 분류·수량·금액이 일반 본문 필드에 딸린 표로 오해되지 않는다. */}
+          {ownBudgetField && (
+            <Card title={ownBudgetField.label}>
+              <ApprovalFieldsView
+                fields={[ownBudgetField]}
+                values={doc.field_values ?? {}}
+                hideSectionLabels
+                budgetUsage={ownUsage}
+              />
+            </Card>
+          )}
 
           {/* 예산 현황(품의 금액·사용·결재 중·남음·이익률)과 예산 변경 이력.
               예산표를 가진 문서, 곧 품의서에만 선다 — 지출결의서에는 자기 예산이 없다. */}

@@ -1,5 +1,5 @@
 /**
- * 품의서 예산표 — 층(트리)이 있는 표의 순수 계층.
+ * 품의서 예산표 — 분류 단계를 가로 열로 편 표의 순수 계층.
  *
  * **이 모듈이 있는 이유는 사업마다 예산 항목의 층 이름과 층 수가 다르기 때문이다.**
  * 어떤 사업은 `대분류 › 중분류`로 짜고 어떤 사업은 `세목 › 비목 › 세세목`으로 짠다.
@@ -7,13 +7,12 @@
  * 문서가 갖고(levels) 코드는 **"몇 번째 층인가"만** 안다. 층 이름은 이름표일 뿐 계산에
  * 끼지 않으므로, 층이 둘이든 다섯이든 차감·합계 방식이 같다.
  *
- * **금액은 맨 아래 줄에만 적는다.** 위층 금액은 아래 줄의 합으로 파생한다 — 사람이 위층에도
- * 적을 수 있게 두면 위와 아래가 어긋나는 날이 오고, 그때 어느 쪽이 진짜 예산인지 판정할
- * 근거가 없다. 지출결의가 가리키는 자리도 맨 아래 줄뿐이라, 두 규칙이 같은 사실을 말한다.
+ * 새 값은 한 행이 전체 분류 경로(path)를 갖고 모든 행이 실제 예산 줄이다. 예전 문서의
+ * depth/name 트리도 계속 읽어야 하므로 맨 아래 줄 판정과 위층 합계 함수는 호환 계층으로
+ * 남긴다. 화면에 세울 때 budgetEntries가 예전 트리를 가로형 행으로 편다.
  *
- * 저장 형태는 평평한 배열 + 깊이(depth)다. 부모 id로 잇지 않는 이유는 표가 **줄의 순서**로
- * 읽히는 물건이기 때문이다 — 부모 포인터로 저장하면 화면에 세울 때마다 순서를 다시 만들어야
- * 하고, 같은 트리가 두 가지 순서로 그려질 수 있다.
+ * depth/name은 과거 값과 서버 판독기의 호환 자리다. 새 행은 depth=0으로 저장되어 서버의
+ * 기존 "맨 아래 줄" 판정에서도 모든 항목이 정확히 한 번씩 합산된다.
  */
 import { toNumber } from '@/features/approval/numeric'
 
@@ -25,6 +24,11 @@ export interface BudgetRow {
   depth: number
   /** 항목 이름. */
   name: string
+  /**
+   * 가로형 분류 칸. 새 문서는 `['인건비', '강사료', '외부 강사']`처럼 한 행이 전체
+   * 분류 경로를 갖는다. 없으면 예전 depth/name 트리 값이며 읽을 때 경로로 펼친다.
+   */
+  path?: string[]
   /** 숫자 열 값(열 key → 값). 열 정의는 양식이 갖는다. */
   values: Record<string, string>
 }
@@ -39,7 +43,7 @@ export interface BudgetTreeValue {
 export const EMPTY_BUDGET: BudgetTreeValue = { levels: [], rows: [] }
 
 /** 층 이름 기본값 — 양식이 따로 정하지 않았을 때 새 문서가 들고 시작한다. */
-export const DEFAULT_BUDGET_LEVELS = ['대분류', '중분류', '세부항목']
+export const DEFAULT_BUDGET_LEVELS = ['대분류', '중분류', '소분류']
 
 const str = (v: unknown): string => (typeof v === 'string' ? v : '')
 
@@ -76,6 +80,7 @@ export function parseBudget(raw: unknown): BudgetTreeValue {
       id: str(r.id) || `row-${i}`,
       depth: Number.isFinite(r.depth) ? Math.max(0, Math.trunc(r.depth as number)) : 0,
       name: str(r.name),
+      path: Array.isArray(r.path) ? r.path.map(str) : undefined,
       values,
     })
   }
@@ -154,6 +159,25 @@ export function budgetTotal(rows: BudgetRow[], columnKey: string): number | null
  * 지출결의에서 예산 줄을 고를 때 이름만으로는 같은 이름의 줄을 가릴 수 없다.
  */
 export function budgetPath(rows: BudgetRow[], index: number): string {
+  const direct = rows[index]?.path
+  if (direct) {
+    let last = direct.length - 1
+    while (last >= 0 && !direct[last]!.trim()) last -= 1
+    if (last < 0) return '(이름 없음)'
+    return direct
+      .slice(0, last + 1)
+      .map((part) => part.trim() || '(이름 없음)')
+      .join(' › ')
+  }
+
+  return budgetPathParts(rows, index).join(' › ')
+}
+
+/** 한 줄의 분류 경로. 예전 depth/name 트리도 새 가로형 행과 같은 모양으로 읽는다. */
+export function budgetPathParts(rows: BudgetRow[], index: number): string[] {
+  const direct = rows[index]?.path
+  if (direct) return [...direct]
+
   const parts: string[] = []
   let want = rows[index]?.depth ?? 0
   for (let i = index; i >= 0; i -= 1) {
@@ -164,7 +188,28 @@ export function budgetPath(rows: BudgetRow[], index: number): string {
       if (want < 0) break
     }
   }
-  return parts.join(' › ')
+  return parts
+}
+
+/**
+ * 화면에 세울 예산 항목. 예전 트리의 중간 합계 줄은 빼고 맨 아래 줄만 한 행으로 펴며,
+ * 지출결의가 가리키는 맨 아래 줄 id는 그대로 보존한다.
+ */
+export function budgetEntries(value: BudgetTreeValue): BudgetRow[] {
+  const levelCount = Math.max(1, value.levels.length)
+  const out: BudgetRow[] = []
+  for (const [i, row] of value.rows.entries()) {
+    if (!isLeaf(value.rows, i)) continue
+    const path = budgetPathParts(value.rows, i).slice(0, levelCount)
+    while (path.length < levelCount) path.push('')
+    out.push({
+      ...row,
+      depth: 0,
+      name: [...path].reverse().find((part) => part.trim()) ?? '',
+      path,
+    })
+  }
+  return out
 }
 
 /** 지출결의가 고를 수 있는 예산 줄 한 개. */
