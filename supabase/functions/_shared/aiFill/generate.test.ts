@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { generateDraft } from './generate.ts'
-import { ATTEMPT_TIMEOUT_MS } from './limits.ts'
+import { ATTEMPT_TIMEOUT_MS, MIN_RETRY_BUDGET_MS } from './limits.ts'
 
 /**
  * 느린 응답을 다시 묻는 규칙의 회귀 테스트.
@@ -82,6 +82,25 @@ describe('한 시도가 느릴 때', () => {
 
     // 두 번째 요청이 상한 직후에 나갔다(백오프 2초를 타지 않았다).
     expect(at[1] - at[0]).toBeLessThan(ATTEMPT_TIMEOUT_MS + 1_000)
+  })
+
+  it('남은 예산이 모자라면 다시 보내지 않고 곧바로 접는다 — 실패가 뻔한 시도에 예산을 쓰지 않는다', async () => {
+    vi.useFakeTimers()
+    const calls: number[] = []
+    vi.stubGlobal('fetch', (_url: string, init?: RequestInit) => {
+      calls.push(1)
+      return hang(init)
+    })
+
+    const outer = new AbortController()
+    // 상한을 넘기고 나면 재시도 문턱에 못 미치게 남겨 둔다.
+    const deadline = Date.now() + ATTEMPT_TIMEOUT_MS + MIN_RETRY_BUDGET_MS - 5_000
+    const promise = generateDraft({ ...options(outer.signal), deadline })
+    await vi.advanceTimersByTimeAsync(ATTEMPT_TIMEOUT_MS + 10)
+    const result = await promise
+
+    expect(calls).toHaveLength(1)
+    expect('failure' in result).toBe(true)
   })
 
   it('담당자가 취소하면 다시 보내지 않고 그대로 끊긴다', async () => {

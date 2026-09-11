@@ -34,7 +34,7 @@ import { deleteFile, type UploadedFile } from './filesApi.ts'
 import { generateDraft } from './generate.ts'
 import { planGroups, type CardGroup } from './groups.ts'
 import { readIntake } from './intake.ts'
-import { ASSEMBLY_BUDGET_MS, TIMEOUT_MS } from './limits.ts'
+import { ASSEMBLY_BUDGET_MS, COMPOSE_RESERVE_MS, TIMEOUT_MS } from './limits.ts'
 import { readLink } from './linkRead.ts'
 import { dedupe, mergeEnvelopes } from './merge.ts'
 import { buildParts, selectParts } from './parts.ts'
@@ -179,6 +179,13 @@ export async function runAiFill<K extends string, C>(
    * 끊긴 뒤에도 `finally`의 정리는 돈다 — 지우기 요청은 이 신호를 타지 않으므로, 올린 기밀
    * 자료와 캐시는 취소한 경우에도 그대로 지워진다.
    */
+  /**
+   * 묶음 요청들이 끝나야 하는 시각. 전체 상한에서 **작문 몫을 뺀** 값이다.
+   *
+   * 이 선이 없으면 느린 묶음 하나가 예산을 남김없이 쓰고, 멀쩡히 끝난 나머지의 문장 다듬기가
+   * 시작하자마자 끊긴다(실측의 모든 실행이 `composeFailed`였던 이유다).
+   */
+  const groupDeadline = startedAt + TIMEOUT_MS - COMPOSE_RESERVE_MS
   const onClientGone = () => controller.abort(new DOMException('client disconnected', 'AbortError'))
   if (req.signal.aborted) onClientGone()
   else req.signal.addEventListener('abort', onClientGone, { once: true })
@@ -296,6 +303,8 @@ export async function runAiFill<K extends string, C>(
         parts: viaCache ? [prompt] : [...selected.parts, prompt],
         cachedContent: viaCache && cache ? cache.name : undefined,
         thinkingLevel,
+        // 묶음들은 전체 상한보다 **일찍** 끝나야 한다 — 남긴 몫이 문장 다듬기의 자리다.
+        deadline: groupDeadline,
         cards: group.cards,
         signal: controller.signal,
         schema: buildEnvelopeSchema(group.cards, profile.cardSchemas),
@@ -405,6 +414,8 @@ export async function runAiFill<K extends string, C>(
           schema: buildComposeSchema(targets, spec.cardSchemas),
           temperature: spec.temperature,
           thinkingLevel,
+          // 작문은 마지막 일이라 남은 전부를 쓴다(묶음들이 남겨 둔 몫이 여기다).
+          deadline: startedAt + TIMEOUT_MS,
           normalize: (parsed) =>
             normalizeEnvelope(parsed, targets, {
               normalizeCard: (key, raw, warn) => profile.normalizeCard(key, raw, warn, context),

@@ -13,7 +13,7 @@
 
 import type { DraftEnvelope, EnvelopeStats } from './envelope.ts'
 import { parseJson } from './envelope.ts'
-import { ATTEMPT_TIMEOUT_MS } from './limits.ts'
+import { ATTEMPT_TIMEOUT_MS, MIN_RETRY_BUDGET_MS } from './limits.ts'
 import type { ThinkingLevel } from './request.ts'
 import type { SchemaNode } from './schema.ts'
 
@@ -189,6 +189,14 @@ export interface GenerateOptions<K extends string> {
    * 우리가 임의로 정하지 않는다.
    */
   thinkingLevel?: ThinkingLevel
+  /**
+   * 이 호출이 끝나야 하는 시각(epoch ms). 주지 않으면 시도 상한만 본다.
+   *
+   * **다시 보낼지를 남은 시간이 정한다.** 상한을 넘긴 요청을 남은 시간과 무관하게 다시 보내면,
+   * 실패가 뻔한 두 번째 시도에 예산을 쓰고 그 바람에 이미 끝난 묶음의 작문까지 날아간다
+   * (실측 2026-09-11 — 느린 묶음 하나가 혼자 100초를 쓰고도 실패했다).
+   */
+  deadline?: number
 }
 
 /** 사용량 응답에서 수를 꺼낸다. 필드가 없거나 수가 아니면 null(0으로 세면 거짓이 된다). */
@@ -241,7 +249,9 @@ export async function generateDraft<K extends string>(
   let parseFailures = 0
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
     // 한 시도가 오래 붙들려 있으면 끊고 다시 보낸다(ATTEMPT_TIMEOUT_MS 주석).
-    const gate = attemptGate(opts.signal, ATTEMPT_TIMEOUT_MS)
+    // **남은 예산보다 길게 기다리지 않는다** — 어차피 바깥이 끊을 시간을 붙들고 있을 이유가 없다.
+    const left = opts.deadline ? opts.deadline - Date.now() : Number.POSITIVE_INFINITY
+    const gate = attemptGate(opts.signal, Math.max(1_000, Math.min(ATTEMPT_TIMEOUT_MS, left)))
     let resp: Response
     try {
       resp = await fetch(url, {
@@ -259,13 +269,22 @@ export async function generateDraft<K extends string>(
         message: 'AI 응답이 오래 걸려 중단됐습니다. 잠시 후 다시 시도해 주세요.',
         upstream: null,
       }
+      const budgetLeft = opts.deadline ? opts.deadline - Date.now() : Number.POSITIVE_INFINITY
       console.error(
         '[ai-fill] 응답 지연',
-        JSON.stringify({ group: opts.label ?? null, attempt, limitMs: ATTEMPT_TIMEOUT_MS }),
+        JSON.stringify({
+          group: opts.label ?? null,
+          attempt,
+          limitMs: ATTEMPT_TIMEOUT_MS,
+          budgetLeftMs: Number.isFinite(budgetLeft) ? Math.round(budgetLeft) : null,
+        }),
       )
       // **기다리지 않고 곧바로 다시 보낸다.** 무작위 지연이라 다음 시도는 대개 정상 속도이고,
-      // 남은 예산이 빠듯해 여기서 더 기다리면 두 번째 시도가 들어갈 자리가 없어진다.
-      if (attempt < MAX_ATTEMPTS - 1) continue
+      // 여기서 더 기다리면 두 번째 시도가 들어갈 자리가 없어진다(지연 대기는 몰림에만 쓴다).
+      //
+      // **남은 예산이 모자라면 다시 보내지 않고 곧바로 접는다.** 실패가 뻔한 시도에 남은 시간을
+      // 쓰면 이미 끝난 묶음의 작문까지 함께 날아간다 — 이 묶음 하나를 살리려다 전체를 잃는다.
+      if (attempt < MAX_ATTEMPTS - 1 && budgetLeft >= MIN_RETRY_BUDGET_MS) continue
       return { failure: lastFailure }
     }
     gate.done()
