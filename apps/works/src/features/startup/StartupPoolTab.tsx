@@ -3,7 +3,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ListActions } from '@/components/ListActions'
 import { ListScopeToggle } from '@/components/ListScopeToggle'
+import { hasWorkspaceWrite, useAuthStore } from '@/auth/authStore'
 import { useMaskPolicy } from '@/features/admin/sensitiveStore'
+import { InactiveLedgerButton } from '@/features/master/InactiveLedgerModal'
+import { LedgerBulkDeactivateBar } from '@/features/master/LedgerBulkDeactivateBar'
 import { StartupPoolTable, type StartupPoolRow } from '@/features/startup/StartupPoolTable'
 import { StartupPoolFilters } from '@/features/startup/StartupPoolFilters'
 import {
@@ -15,7 +18,7 @@ import {
   useStartupPoolPage,
   type StartupPoolFilters as Filters,
 } from '@/features/startup/startupPoolHooks'
-import { startupListContentKey } from '@/features/startup/startupClassification'
+import { isInvested, startupListContentKey } from '@/features/startup/startupClassification'
 import type { ListScope } from '@/lib/listScope'
 
 /** 목록 페이지당 행 수(서버 사이드 페이지네이션). */
@@ -42,6 +45,8 @@ interface StartupPoolTabProps {
 export function StartupPoolTab({ scope, onScopeChange, userId }: StartupPoolTabProps) {
   const mineUserId = scope === 'mine' ? userId : null
   const navigate = useNavigate()
+  const authUser = useAuthStore((s) => s.user)
+  const canWrite = hasWorkspaceWrite(authUser, 'startup')
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(0)
   const [selected, setSelected] = useState<string[]>([])
@@ -80,6 +85,14 @@ export function StartupPoolTab({ scope, onScopeChange, userId }: StartupPoolTabP
     setPage(0)
     setSelected([])
   }, [scope])
+
+  useEffect(() => setSelected([]), [page])
+
+  const canSelect = (row: StartupPoolRow) =>
+    canWrite &&
+    (!isInvested(row.management_status) ||
+      authUser?.role === 'super_admin' ||
+      (row.managers ?? []).some((manager) => manager.user_id === authUser?.id))
 
   return (
     <div className="space-y-3">
@@ -120,13 +133,26 @@ export function StartupPoolTab({ scope, onScopeChange, userId }: StartupPoolTabP
         actions={
           <ListActions
             leading={
-              <ListScopeToggle scope={scope} onChange={onScopeChange} noun={ENTITY_NOUN} />
+              <>
+                <ListScopeToggle scope={scope} onChange={onScopeChange} noun={ENTITY_NOUN} />
+                <InactiveLedgerButton ledger="startups" />
+              </>
             }
             createLabel="스타트업 등록"
             onCreate={() => navigate('/startup/new')}
             bulkTo="/startup/bulk"
           />
         }
+      />
+
+      <LedgerBulkDeactivateBar
+        ledger="startups"
+        noun={ENTITY_NOUN}
+        selectedIds={selected}
+        onDone={() => {
+          if (selected.length === (data?.rows.length ?? 0) && page > 0) setPage((p) => p - 1)
+          setSelected([])
+        }}
       />
 
       {isLoading ? (
@@ -137,6 +163,8 @@ export function StartupPoolTab({ scope, onScopeChange, userId }: StartupPoolTabP
         contentKey={contentKey}
         selectedKeys={selected}
         onSelectionChange={setSelected}
+        selectable={canWrite}
+        selectableRow={canSelect}
         onRowClick={(row) => navigate(`/startup/${row.id}`)}
         pagination={{
           page,

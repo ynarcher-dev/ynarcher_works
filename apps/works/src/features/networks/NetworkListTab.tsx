@@ -3,7 +3,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ListActions } from '@/components/ListActions'
 import { ListScopeToggle } from '@/components/ListScopeToggle'
+import { hasWorkspaceWrite, useAuthStore } from '@/auth/authStore'
 import { useMaskPolicy } from '@/features/admin/sensitiveStore'
+import { InactiveLedgerButton } from '@/features/master/InactiveLedgerModal'
+import { LedgerBulkDeactivateBar } from '@/features/master/LedgerBulkDeactivateBar'
 import { MasterListView } from '@/features/master/MasterListView'
 import { NetworkListFilters } from '@/features/networks/NetworkListFilters'
 import { NetworkFilteredSummary } from '@/features/networks/NetworkFilteredSummary'
@@ -60,14 +63,22 @@ interface NetworkListTabProps {
  */
 export function NetworkListTab({ scope, onScopeChange }: NetworkListTabProps) {
   const navigate = useNavigate()
+  const authUser = useAuthStore((s) => s.user)
+  const canWrite = hasWorkspaceWrite(authUser, 'networks')
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(0)
+  const [selected, setSelected] = useState<string[]>([])
   const [filters, setFilters] = useState<NetworkFilterState>(EMPTY_NETWORK_FILTERS)
   const contentKey = SCOPE_CONTENT_KEY[scope]
 
   // 검색어·필터·범위 변경 시 첫 페이지로 되돌린다(빈 페이지 방지).
   const filtersKey = JSON.stringify(filters)
-  useEffect(() => setPage(0), [keyword, filtersKey, scope])
+  useEffect(() => {
+    setPage(0)
+    setSelected([])
+  }, [keyword, filtersKey, scope])
+
+  useEffect(() => setSelected([]), [page])
 
   // 검색 가능 범위는 이 목록의 마스킹 정책이 정한다 — 가려진 필드는 검색어로도 잡지 않는다.
   const masked = useMaskPolicy(contentKey)
@@ -122,13 +133,26 @@ export function NetworkListTab({ scope, onScopeChange }: NetworkListTabProps) {
         actions={
           <ListActions
             leading={
-              <ListScopeToggle scope={scope} onChange={onScopeChange} noun={ENTITY_NOUN} />
+              <>
+                <ListScopeToggle scope={scope} onChange={onScopeChange} noun={ENTITY_NOUN} />
+                <InactiveLedgerButton ledger="networks" />
+              </>
             }
             createLabel="신규 등록"
             onCreate={() => navigate('/networks/new')}
             bulkTo="/networks/bulk"
           />
         }
+      />
+
+      <LedgerBulkDeactivateBar
+        ledger="networks"
+        noun={ENTITY_NOUN}
+        selectedIds={selected}
+        onDone={() => {
+          if (selected.length === (data?.rows.length ?? 0) && page > 0) setPage((p) => p - 1)
+          setSelected([])
+        }}
       />
 
       <MasterListView
@@ -141,6 +165,9 @@ export function NetworkListTab({ scope, onScopeChange }: NetworkListTabProps) {
         rows={data?.rows ?? []}
         isLoading={isLoading}
         onRowClick={(r) => navigate(`/networks/${(r as NetworkRow).id}`)}
+        selectedKeys={selected}
+        onSelectionChange={setSelected}
+        selectable={canWrite}
         // 비활성화는 사유·영향 확인이 필요해 목록이 아니라 상세에서 수행한다
         // (핸들러가 없으므로 관리 컬럼 자체가 렌더되지 않는다).
         pagination={{

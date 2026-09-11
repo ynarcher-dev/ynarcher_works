@@ -52,6 +52,10 @@ interface StartupPoolTableProps {
   /** 행 다중선택 키(controlled). 일괄 작업용으로 상위가 소유한다. */
   selectedKeys?: string[]
   onSelectionChange?: (keys: string[]) => void
+  /** 쓰기 권한이 없으면 체크박스 열 자체를 감춘다. */
+  selectable?: boolean
+  /** 투자기업처럼 행마다 쓰기 주체가 다른 경우 선택 가능 여부. */
+  selectableRow?: (row: StartupPoolRow) => boolean
   /** 서버 사이드 페이지네이션(0-base). DataTable로 그대로 전달된다. */
   pagination?: DataTableProps<StartupPoolRow>['pagination']
 }
@@ -86,6 +90,8 @@ export function StartupPoolTable({
   onRowClick,
   selectedKeys,
   onSelectionChange,
+  selectable,
+  selectableRow,
   pagination,
 }: StartupPoolTableProps) {
   const masked = useMaskPolicy(contentKey)
@@ -196,6 +202,8 @@ export function StartupPoolTable({
       // selectable은 자리 기본값(페이지에 바로 놓인 표 = 켬)을 그대로 따른다.
       selectedKeys={selectedKeys}
       onSelectionChange={onSelectionChange}
+      selectable={selectable}
+      selectableRow={selectableRow}
       onRowClick={onRowClick}
       pagination={pagination}
       showManageColumn={false}

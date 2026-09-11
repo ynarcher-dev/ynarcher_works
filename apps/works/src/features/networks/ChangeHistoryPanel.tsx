@@ -11,6 +11,7 @@ export const CONTRIBUTION_ACTION_LABEL: Record<Contribution['action'], string> =
   edited: '수정',
   // 말머리는 격자의 첫 열을 밀지 않도록 짧게 — 다른 넷과 폭을 맞춘다.
   deactivated: '비활',
+  reactivated: '복구',
 }
 
 /** 기여 로그에서 중복 없는 기여자명 목록(최초 기여순). 공동 관리자 표기의 원천. */

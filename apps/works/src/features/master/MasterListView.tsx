@@ -43,6 +43,8 @@ interface MasterListViewProps {
   selectedKeys?: string[]
   /** 선택 변경 콜백. 지정 시 selectable 체크박스 선택을 상위로 전달한다. */
   onSelectionChange?: (keys: string[]) => void
+  /** 체크박스 열 표시 여부. 쓰기 권한이 없는 목록은 false로 내려 선택 액션도 숨긴다. */
+  selectable?: boolean
   /**
    * 서버 사이드 페이지네이션(0-base page). 지정 시 표 하단에 페이저를 노출하고 No. 컬럼을
    * 전체 건수 기준으로 매긴다. 미지정 시 페이저 없이 전달된 rows를 그대로 렌더한다(HUB 등).
@@ -67,6 +69,7 @@ export function MasterListView({
   deactivateWithReason,
   selectedKeys,
   onSelectionChange,
+  selectable,
   pagination,
 }: MasterListViewProps) {
   const masked = useMaskPolicy(contentKey)
@@ -183,6 +186,7 @@ export function MasterListView({
       onRowClick={onRowClick}
       selectedKeys={selectedKeys}
       onSelectionChange={onSelectionChange}
+      selectable={selectable}
       pagination={pagination}
       // 생성자(created_by)는 권한을 주지 않는 축이라 목록에서 내린다 — NETWORKS는 담당자 원장이 없어
       // 영구 공동관리이며, 그 사실은 위 '담당자' 컬럼이 답한다. 최초 생성자는 상세 페이지에만 남는다.

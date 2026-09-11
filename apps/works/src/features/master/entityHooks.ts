@@ -122,7 +122,7 @@ export interface Contribution {
   entity_id: string
   user_id: string | null
   user_name: string | null
-  action: 'created' | 'merged' | 'enriched' | 'edited' | 'deactivated'
+  action: 'created' | 'merged' | 'enriched' | 'edited' | 'deactivated' | 'reactivated'
   source: 'manual' | 'upload'
   batch_id: string | null
   note: string | null
