@@ -10,7 +10,14 @@ import {
 import { cardKeysOf, cardLabelMap, type AiFillCatalog } from '@/features/ai/aiCatalog'
 import type { AiFillOutcome } from '@/features/ai/aiTypes'
 import { useAiExtracts } from '@/features/ai/useAiExtracts'
-import { moveAll, moveSource, pruneReadSet, splitSources, type AiReadSet } from '@/features/ai/aiReadSet'
+import {
+  defaultPlacements,
+  moveAll,
+  moveSource,
+  pruneReadSet,
+  splitSources,
+  type AiReadSet,
+} from '@/features/ai/aiReadSet'
 import { AiCardPicker } from '@/features/ai/AiCardPicker'
 import { AiSourcePanes } from '@/features/ai/AiSourcePanes'
 import { AiFillResultPanel } from '@/features/ai/AiFillResultPanel'
@@ -136,7 +143,9 @@ export function AiFillModal<K extends string>({
   // 자료가 바뀌었을 수 있다(실행 뒤 첨부를 지우거나 더한 경우). 사라진 자료의 자리를 걷지
   // 않으면 같은 이름의 새 파일이 옛 자리를 물려받는다.
   const live = useMemo(() => pruneReadSet(readSet, allKeys), [readSet, allKeys])
-  const { read, skip } = useMemo(() => splitSources(live, readable), [live, readable])
+  // 기본 자리는 목록 전체를 보고 정해진다(참조 자료를 내릴지가 자기 자료의 유무에 걸린다).
+  const defaults = useMemo(() => defaultPlacements(readable), [readable])
+  const { read, skip } = useMemo(() => splitSources(live, defaults, readable), [live, defaults, readable])
   const chosenCards = useMemo(() => allCardKeys.filter((k) => cards.includes(k)), [allCardKeys, cards])
 
   // 분석 상태는 **읽을 자료**에 대해서만 든다 — 아래 칸의 자료는 열지도 보내지도 않는다.
@@ -302,8 +311,8 @@ export function AiFillModal<K extends string>({
             skip={skip}
             extracts={extracts}
             disabled={busy}
-            onMove={(s, to) => onReadSet(moveSource(live, s, to))}
-            onMoveAll={(to) => onReadSet(moveAll(live, to === 'read' ? skip : read, to))}
+            onMove={(s, to) => onReadSet(moveSource(live, defaults, s, to))}
+            onMoveAll={(to) => onReadSet(moveAll(live, defaults, to === 'read' ? skip : read, to))}
           />
           <AiCardPicker
             cards={catalog.cards}

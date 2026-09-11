@@ -152,7 +152,7 @@ export function AiSourcePanes({
       <Card
         title="읽지 않을 자료"
         count={skip.length}
-        help="이 칸의 자료는 AI로 나가지 않습니다. 읽어야 할 자료가 여기 있으면 줄을 눌러 위로 올리세요. 읽을 자료가 적을수록 초안이 정확해집니다."
+        help="이 칸의 자료는 AI로 나가지 않습니다. 읽어야 할 자료가 여기 있으면 줄을 눌러 위로 올리세요. 읽을 자료가 적을수록 초안이 정확해집니다. 다른 원장에서 끌어온 자료(줄 끝에 출처가 붙은 것)는 그 원장에 저장된 값이 이미 사실로 전달되므로 처음부터 여기 섭니다 — 저장된 값에 없는 세부가 필요할 때만 올리세요."
       >
         <div className={cn('overflow-hidden rounded-radius-md border border-gray-200', disabled && 'opacity-60')}>
           <PickList isEmpty={skip.length === 0} empty="모든 자료를 읽습니다." className="max-h-56">
