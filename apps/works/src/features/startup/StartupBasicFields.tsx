@@ -115,8 +115,16 @@ export function StartupBasicFields({
             <Input invalid={Boolean(errors.name)} {...register('name', { required: '기업명은 필수입니다.' })} />
             {errors.name && <p className="mt-1 text-caption text-danger">{errors.name.message}</p>}
           </Field>
-          <Field label="대표자명" width="lg">
-            <Input {...register('representative')} />
+          <Field label="대표자명 / 성별" width="lg">
+            <div className="grid grid-cols-[minmax(0,2fr)_minmax(6rem,1fr)] gap-2">
+              <Input {...register('representative')} />
+              <Select aria-label="대표자 성별" {...register('representative_gender')}>
+                <option value="">성별</option>
+                <option value="남">남</option>
+                <option value="여">여</option>
+                <option value="기타">기타</option>
+              </Select>
+            </div>
           </Field>
           <Field label="회사 형태" width="lg">
             <Select {...register('company_form')}>

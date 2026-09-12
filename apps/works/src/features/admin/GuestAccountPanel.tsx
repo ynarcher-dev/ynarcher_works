@@ -13,7 +13,7 @@ import {
   RefLinkList,
   Spinner,
   Tabs,
-  TagCell,
+  TextAction,
   usePaged,
   TextArea,
   useToast,
@@ -31,7 +31,6 @@ import {
 import type { GuestEntityKey } from '@/features/guest/host'
 import { guestDoorBadge, isDoorOpen } from '@/features/program/guestDoorBadge'
 import { PERSONA_LABEL, type MasterTable } from '@/features/program/participantPersona'
-import { GUEST_TYPE_LABEL } from '@/lib/userTypes'
 
 const DASH = <EmptyValue />
 
@@ -47,6 +46,31 @@ const PROGRAM_PATH: Record<GuestAccountProgram['entity_key'], string> = {
 
 /** 상세 모달의 참여 사업 표 한 장. 모달 안이라 화면 목록(30)보다 짧게 끊는다. */
 const PROGRAM_PAGE_SIZE = 5
+
+type QualificationKey = MasterTable | 'temporary_guest'
+
+/** 계정 목록에 고정으로 세우는 다섯 자격. 원장 자격 넷 + 임시 게스트다. */
+const QUALIFICATIONS: ReadonlyArray<{ key: QualificationKey; label: string }> = [
+  { key: 'startups', label: '스타트업' },
+  { key: 'networks', label: '전문가' },
+  { key: 'ma_sellers', label: 'SELLER' },
+  { key: 'ma_buyers', label: 'BUYER' },
+  { key: 'temporary_guest', label: '임시 게스트' },
+]
+
+function hasQualification(account: GuestAccount, key: QualificationKey): boolean {
+  if (key === 'temporary_guest') return account.user_type === 'temporary_guest'
+  return account.identities.some((identity) => identity.master_table === key)
+}
+
+function qualificationPrograms(
+  account: GuestAccount,
+  key: QualificationKey,
+): GuestAccountProgram[] {
+  return account.programs.filter((program) =>
+    key === 'temporary_guest' ? program.master_table === null : program.master_table === key,
+  )
+}
 
 /** ISO → `YYYY-MM-DD`. 표의 날짜는 자릿수가 맞아야 세로로 견줘진다. */
 function day(v: string | null): string | null {
@@ -134,8 +158,9 @@ export function GuestAccountPanel({
    * '어디에도 안 걸림'이 아니라 '이 워크스페이스에 안 걸림'이 되어 뜻이 달라진다.
    */
   const [onlyOrphans, setOnlyOrphans] = useState(false)
-  /** 상세를 펼쳐 보는 계정. 행을 누르면 열린다. */
+  /** 상세를 펼쳐 보는 계정. 행은 전체, 자격 Y는 같은 상세의 해당 자격만 연다. */
   const [detail, setDetail] = useState<GuestAccount | null>(null)
+  const [detailQualification, setDetailQualification] = useState<QualificationKey | null>(null)
   /** 정지하려는 계정(사유 입력). 해제는 사유를 묻지 않는다. */
   const [suspending, setSuspending] = useState<GuestAccount | null>(null)
   const [reason, setReason] = useState('')
@@ -157,13 +182,18 @@ export function GuestAccountPanel({
    * 모달이 세로로 길어져 아래쪽이 화면 밖으로 나간다 — 표가 자라도 모달 높이는 그대로여야 한다.
    * 서버를 다시 부르지 않는 이유는 목록이 이미 계정 행에 통째로 실려 와 있기 때문이다.
    */
-  const paged = usePaged(detail?.programs ?? [], PROGRAM_PAGE_SIZE)
+  const detailPrograms = detail
+    ? detailQualification
+      ? qualificationPrograms(detail, detailQualification)
+      : detail.programs
+    : []
+  const paged = usePaged(detailPrograms, PROGRAM_PAGE_SIZE)
   const setProgramPage = paged.setPage
 
   // 다른 계정을 열면 첫 장부터 본다. 클램프만으로는 3장짜리 계정을 열 때 2장에서 시작한다.
   useEffect(() => {
     setProgramPage(0)
-  }, [detail?.user_id, setProgramPage])
+  }, [detail?.user_id, detailQualification, setProgramPage])
 
   // 검색어·필터가 바뀌면 첫 페이지로 되돌린다(빈 페이지 방지).
   useEffect(() => {
@@ -197,39 +227,32 @@ export function GuestAccountPanel({
 
   const columns: Column<GuestAccount>[] = [
     { key: 'name', header: '이름', type: 'name', render: (r) => r.name },
-    {
-      // 계정이 가진 자격들. `user_type`은 계정을 처음 세운 자격의 잔재라 더 이상 화면을
-      // 가르지 않는다 — 한 사람이 참여 기업이면서 참여 전문가일 수 있고, 그때 유형 한 칸은
-      // 절반만 말한다. 실제로 무엇으로 참여하는지는 참여 줄이 답하고, 계정이 무엇이 될 수
-      // 있는지는 인격 목록이 답한다.
-      key: 'identities',
-      header: '자격',
-      type: 'badge',
-      render: (r) =>
-        r.identities.length > 0 ? (
-          <span className="flex flex-wrap gap-1">
-            {r.identities.map((i) => (
-              <Badge key={`${i.master_table}:${i.master_id}`} tone="info">
-                {PERSONA_LABEL[i.master_table]}
-              </Badge>
-            ))}
-          </span>
-        ) : (
-          <Badge tone="neutral">{GUEST_TYPE_LABEL[r.user_type] ?? r.user_type}</Badge>
-        ),
-    },
+    ...QUALIFICATIONS.map(
+      (qualification): Column<GuestAccount> => ({
+        key: `qualification_${qualification.key}`,
+        header: qualification.label,
+        type: 'text',
+        align: 'center',
+        render: (account) => {
+          if (!hasQualification(account, qualification.key)) return 'N'
+          return (
+            <span onClick={(event) => event.stopPropagation()}>
+              <TextAction
+                onClick={() => {
+                  setDetailQualification(qualification.key)
+                  setDetail(account)
+                }}
+                title={`${qualification.label} 자격의 참여 프로젝트 보기`}
+              >
+                Y
+              </TextAction>
+            </span>
+          )
+        },
+      }),
+    ),
     { key: 'company', header: '소속 기업', type: 'text', render: (r) => r.company_name || DASH },
     { key: 'email', header: '이메일(로그인 ID)', type: 'long', render: (r) => r.email || DASH },
-    {
-      // 매핑된 사업을 **이름으로** 적는다 — 건수만으로는 어디에 걸려 있는지 답하지 못한다.
-      // 이름 옆의 기간·상태까지는 한 줄에 들어가지 않으므로 그것은 행을 눌러 여는 상세가 답한다.
-      key: 'programs',
-      header: '참여 사업',
-      type: 'tags',
-      // 나열 상한 2는 원장이 정한 값이 아니라 이 열의 폭이다 — 넘는 것은 `외 N`이 답하고,
-      // 전체는 상세가 답한다.
-      render: (r) => <TagCell items={r.programs.map((p) => p.title ?? '(삭제된 사업)')} max={2} />,
-    },
     {
       // 지금 실제로 들어올 수 있는 사업 수 / 걸려 있는 사업 수. 앞의 수는 개방 상태만이 아니라
       // 사업 상태·기간까지 함께 본 결론이라, 명부의 로그인 상태 열과 같은 답을 한다.
@@ -336,7 +359,7 @@ export function GuestAccountPanel({
   }
 
   /** 상세에서 세우지 못한 참여 줄 수(사업을 볼 권한이 없거나 원장에서 삭제된 것). */
-  const hidden = detail ? detail.program_count - detail.programs.length : 0
+  const hidden = detail && !detailQualification ? detail.program_count - detail.programs.length : 0
 
   return (
     <div className="space-y-4">
@@ -391,7 +414,10 @@ export function GuestAccountPanel({
         rowKey={(r) => r.user_id}
         standardColumns={false}
         selectable={false}
-        onRowClick={(r) => setDetail(r)}
+        onRowClick={(r) => {
+          setDetailQualification(null)
+          setDetail(r)
+        }}
         pagination={{
           page,
           pageSize: GUEST_PAGE_SIZE,
@@ -401,10 +427,13 @@ export function GuestAccountPanel({
         emptyText="발급된 게스트 계정이 없습니다."
       />
 
-      {/* 계정 상세 — 읽기만 하므로 바깥을 눌러 닫을 수 있다. */}
+      {/* 어느 칸을 눌러도 같은 계정 상세를 연다. 자격 Y만 참여 사업 범위를 좁힌다. */}
       <Modal
         open={Boolean(detail)}
-        onClose={() => setDetail(null)}
+        onClose={() => {
+          setDetail(null)
+          setDetailQualification(null)
+        }}
         title={detail ? `${detail.name} — 계정 상세` : ''}
         help={
           canSuspend
@@ -443,11 +472,15 @@ export function GuestAccountPanel({
             <div className="space-y-2">
               <CardHeading
                 level="subhead"
-                count={detail.programs.length}
+                count={detailPrograms.length}
                 help="닫힌 사업·끝난 사업도 지우지 않고 남깁니다 — 지금 어디에 걸려 있는지만이 아니라 그동안 어디에 걸렸었는지가 문의에 답할 근거입니다."
                 trailing={hidden > 0 ? `볼 권한이 없는 사업 ${hidden}건 제외` : undefined}
               >
-                참여 사업
+                {detailQualification
+                  ? `${
+                      QUALIFICATIONS.find((item) => item.key === detailQualification)?.label ?? ''
+                    } 참여 프로젝트`
+                  : '참여 프로젝트'}
               </CardHeading>
               <DataTable
                 columns={programColumns}
@@ -459,7 +492,7 @@ export function GuestAccountPanel({
                 pagination={{
                   page: paged.page,
                   pageSize: PROGRAM_PAGE_SIZE,
-                  total: detail.programs.length,
+                  total: detailPrograms.length,
                   onChange: setProgramPage,
                   // 계정을 받치는 보조 목록이라 번호줄이 아니라 화살표 둘이다(한 장뿐이면 사라진다).
                   compact: true,

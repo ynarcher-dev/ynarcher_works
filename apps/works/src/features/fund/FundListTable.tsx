@@ -27,6 +27,8 @@ interface FundListTableProps {
   emptyText?: string
   selectedKeys?: string[]
   onSelectionChange?: (keys: string[]) => void
+  selectableRow?: (row: FundListRow) => boolean
+  selectable?: boolean
   pagination?: DataTableProps<FundListRow>['pagination']
 }
 
@@ -47,6 +49,8 @@ export function FundListTable({
   emptyText,
   selectedKeys,
   onSelectionChange,
+  selectableRow,
+  selectable,
   pagination,
 }: FundListTableProps) {
   // 관리인력은 내부 임직원이라 민감정보 마스킹 대상이 아니다.
@@ -135,7 +139,7 @@ export function FundListTable({
         // 나란히 세우느라(`외 N`까지 붙어) 금액 네 열이 그만큼 좁아져 있었다.
         // 대표펀드매니저는 열이 없어도 검색어가 답한다(툴바 placeholder 참조).
         key: 'admins',
-        header: '관리인력',
+        header: '담당자',
         type: 'person',
         render: (f) => <PersonCell names={fundManagerNames(f.operators)} />,
       },
@@ -149,9 +153,11 @@ export function FundListTable({
       rows={rows}
       rowKey={(f) => f.id}
       onRowClick={onRowClick}
-      // selectable은 자리 기본값(페이지에 바로 놓인 표 = 켬)을 그대로 따른다.
+      // 생성자에게만 행 체크박스를 보이고, 현재 페이지에 대상이 없으면 선택 열도 감춘다.
       selectedKeys={selectedKeys}
       onSelectionChange={onSelectionChange}
+      selectableRow={selectableRow}
+      selectable={selectable}
       pagination={pagination}
       // 단위는 표 위 단서 줄이 아니라 금액 머리글 셋이 직접 적는다(`millionUnit`).
       // 열이 열둘이라 가로가 빠듯하다. 열 폭은 내용에 맞추되(자동 레이아웃) 셀 여백만 좁힌다 —

@@ -23,6 +23,10 @@ interface ProgramTableProps {
   /** 행 다중선택 키(controlled). 상위가 소유한다. */
   selectedKeys?: string[]
   onSelectionChange?: (keys: string[]) => void
+  /** 현재 사용자가 생성한 행만 체크박스를 노출한다. */
+  selectableRow?: (row: Program) => boolean
+  /** 선택 가능한 행이 한 건도 없으면 체크박스 열 자체를 감춘다. */
+  selectable?: boolean
   /** 서버 사이드 페이지네이션(0-base). DataTable로 그대로 전달된다. */
   pagination?: DataTableProps<Program>['pagination']
 }
@@ -31,13 +35,15 @@ interface ProgramTableProps {
  * 프로그램 원장 공용 데이터 테이블(STARTUP StartupPoolTable과 동일 규격).
  * 컬럼: 체크박스·No.·사업명·코드·카테고리·담당 부서·분야·상태·운영 시작일·운영 종료일·담당자.
  * 카테고리는 워크스페이스가 그 축을 운용할 때만 선다(config 주입). 주관은 상세에만 둔다.
- * 비활성화(삭제)는 목록이 아니라 상세 페이지에서 수행하므로 관리 컬럼(showManageColumn=false)은 두지 않는다.
+ * 비활성화는 생성자에게만 보이는 체크박스와 목록 선택 액션이 맡으므로 별도 관리 컬럼은 두지 않는다.
  */
 export function ProgramTable({
   rows,
   onRowClick,
   selectedKeys,
   onSelectionChange,
+  selectableRow,
+  selectable,
   pagination,
 }: ProgramTableProps) {
   const config = useProgramWorkspace()
@@ -163,9 +169,11 @@ export function ProgramTable({
       // 폭을 가져가 값이 여러 개인 열(분야)을 줄바꿈시키는데, 한 행만 두 줄이 되면 행 높이가
       // 어긋나 표가 들쭉날쭉해진다. 고정 폭에서는 모든 값이 한 줄로 서고 넘치면 말줄임된다.
       layout="fixed"
-      // selectable은 자리 기본값(페이지에 바로 놓인 표 = 켬)을 그대로 따른다.
+      // 생성자에게만 행 체크박스를 보이고, 현재 페이지에 대상이 없으면 선택 열도 감춘다.
       selectedKeys={selectedKeys}
       onSelectionChange={onSelectionChange}
+      selectableRow={selectableRow}
+      selectable={selectable}
       onRowClick={onRowClick}
       pagination={pagination}
       showManageColumn={false}

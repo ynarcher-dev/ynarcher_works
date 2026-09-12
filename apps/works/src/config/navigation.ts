@@ -68,16 +68,17 @@ export interface SubNavGroup {
  * 화면의 이름이 달라진다. 범위(내 것/전부)는 이 이름에 담지 않는다: 2026-09-05에 메뉴 두
  * 줄을 한 줄로 합치면서 범위는 목록 안의 토글이 답하게 했다.
  *
- * 사업 3종이 한 라벨을 공유하는 것은 2026-08-20 결정의 연장이다 — 세 워크스페이스는 같은 원장
- * 구조·같은 화면을 쓰므로 메뉴 이름까지 같아야 워크스페이스를 옮겨도 손이 같은 자리를 찾는다.
- * 도메인 명칭(사업·딜)은 목록 안쪽 문구(`entityNoun`)가 계속 답한다.
+ * 사업부는 `관리 사업`, M&A팀은 `M&A 딜`로 부른다. 두 워크스페이스가 같은 목록 화면을 쓰더라도
+ * 실제 조직에서 부르는 대상이 다르므로 메뉴 이름은 각 구획의 말을 따른다. 목록 안쪽 문구도
+ * 각 config의 `entityNoun`이 같은 이름을 이어받는다.
  *
  * 2026-09-06에 이 라벨을 워크스페이스별 조직명(AC사업 / 글로벌·신사업 / M&A팀·PE / 투자실)으로
  * 갈랐다가 2026-09-07에 되돌렸다 — 가른 것은 실행 라인 넷이 BUSINESS 한 항목 아래 나란히 서서
  * '어느 원장인가'를 줄 이름이 홀로 답해야 했기 때문이고, 스위처가 다시 넷으로 갈리면서 그 답이
  * 항목명으로 돌아왔다. 줄 이름이 그 답을 겸하면 워크스페이스마다 같은 자리의 이름이 달라진다.
  */
-export const PROGRAM_LIST_LABEL = '프로젝트'
+export const PROGRAM_LIST_LABEL = '관리 사업'
+const MNA_PROGRAM_LIST_LABEL = 'M&A 딜'
 // 'DB' 꼬리를 되살렸다(2026-09-09 사용자 지정). 2026-09-06에 걷은 근거는 "두 줄이 DATABASE 한
 // 항목 아래 나란히 서니 항목명이 이미 그 말을 한다"였는데, 그 뒤 스위처가 갈리면서 각 줄은
 // **자기 항목 아래 한 줄**로 서게 됐다 — 대신 말해 주던 항목명이 사라진 것이다. 꼬리가 답하는
@@ -91,7 +92,7 @@ export const FUND_LIST_LABEL = '운용펀드'
 export const GUEST_ACCOUNT_READ_LABEL = 'GUEST 계정조회'
 
 /**
- * 사업 워크스페이스(AC/M&A/PROJECT) 공용 사이드바 구성 — `프로젝트` 한 줄.
+ * 사업 워크스페이스 공용 사이드바 구성 — 구획에 따라 `관리 사업` 또는 `M&A 딜` 한 줄.
  *
  * 2026-08-03: 사업구분(카테고리)별 세분화 항목을 내렸다. 분류를 메뉴로 두면 그것이
  * '어디에 있는가'가 되어 상태·부서 같은 다른 축과 함께 걸 수 없고(공공 사업 중 진행중만 같은
@@ -99,14 +100,14 @@ export const GUEST_ACCOUNT_READ_LABEL = 'GUEST 계정조회'
  * 필터 축 하나이며, 미분류 건은 그 필터의 '미지정' 선택지가 답한다 — 종전에 '기타'가 맡던
  * 사각지대 방어는 `전체 ~`가 이미 구분 무관 전부를 보여주므로 필요 없다.
  */
-function programSubnav(options: { guestAccounts?: boolean } = {}): SubNavGroup[] {
+function programSubnav(options: { guestAccounts?: boolean; listLabel?: string } = {}): SubNavGroup[] {
   return [
     {
-      // 한 줄이다(2026-09-05). 범위(내 프로젝트/전체 프로젝트)는 메뉴가 아니라 목록 상단
+      // 한 줄이다(2026-09-05). 범위(내 것/전체)는 메뉴가 아니라 목록 상단
       // 토글이 답한다 — 사업구분(2026-08-03)이 먼저 밟은 길과 같은 이유로, 범위를 메뉴로
       // 두면 그것이 '어디에 있는가'가 되어 상태·부서 같은 다른 축과 함께 걸 수 없다.
       items: [
-        { label: PROGRAM_LIST_LABEL },
+        { label: options.listLabel ?? PROGRAM_LIST_LABEL },
         // 계정생성 — 2026-09-08에 AC 하나에서 **워크스페이스마다 하나**로 늘었다(사용자 지정).
         //
         // 2026-09-07에는 AC에만 세웠고 근거는 "게스트가 실제로 걸려 있는 사업이 전부 AC라
@@ -214,7 +215,7 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
   // SELLER)은 여기 없고 각자의 구획이 직접 갖는다(`WorkspaceSection.subnav`) — 이 표의
   // 열쇠는 권한 키인데 세 구획의 키가 모두 `mna`라, 여기 적으면 세 자리에 같은 줄이 함께
   // 서서 어느 쪽을 눌러도 같은 곳으로 가는 메뉴가 아홉이 된다.
-  mna: programSubnav({ guestAccounts: true }),
+  mna: programSubnav({ guestAccounts: true, listLabel: MNA_PROGRAM_LIST_LABEL }),
   admin: [
     {
       group: '시스템 관리',
@@ -250,7 +251,7 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
       ],
     },
   ],
-  // OFFICE: 임직원 정보·전사 캘린더 + 게시판(공지사항 고정 + 일반, 아코디언 없이 평탄 나열).
+  // OFFICE: 임직원 정보·전사 일정 + 게시판(공지사항 고정 + 일반, 아코디언 없이 평탄 나열).
   // 신규 게시판은 모두 이곳에 생성·노출된다.
   office: [
     {
@@ -266,8 +267,15 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         // 거래처 정보는 여기 두지 않는다(2026-09-06) — 원장·등록·조회를 MANAGEMENT '거래처 정보'
         // 한 자리에 모은다. 같은 원장을 두 자리에서 열면 담당자가 어디서 봐야 하는지를 매번
         // 고르게 되고, 조회면은 가린 값 때문에 원장과 다른 답을 하는 화면이 된다.
-        // 공간·회의는 사내 자원을 잡아 쓰는 일 한 블록이다. 뒤는 아래 고정 게시판 그룹 경계가 끊는다.
-        { label: '회의실 예약', tab: 'rooms', dividerBefore: true },
+        // 일정·공간·회의 블록 — 시간을 잡아 쓰는 일이 한 줄 순서로 선다(일정 → 회의실 → 회의록).
+        // 뒤는 아래 고정 게시판 그룹 경계가 끊는다.
+        //
+        // 전사 일정이 이 블록의 머리인 것은 그것이 **일정 원장(system_events)의 주원장 화면**이기
+        // 때문이다 — 상단바 캘린더 버튼의 우측 슬라이드오버는 같은 원장을 좁게 세운 창이고, 달
+        // 전체를 제목까지 펼쳐 읽고 고치는 일은 여기서 끝난다. 원장 조회 블록(임직원·지사·자산)에
+        // 두지 않는 것은 그 블록의 축이 '회사에 무엇이 있나'여서다: 일정은 가진 것이 아니라 잡는 것이다.
+        { label: '전사 일정', tab: 'calendar', dividerBefore: true },
+        { label: '회의실 예약', tab: 'rooms' },
         // 회의록은 STARTUP에서 이관했다.
         { label: '회의록 작성', tab: 'minutes' },
       ],

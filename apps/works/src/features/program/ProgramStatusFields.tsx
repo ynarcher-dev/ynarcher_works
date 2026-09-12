@@ -4,6 +4,7 @@ import {
   PROGRAM_OPERATION_STATUSES,
   PROGRAM_PROPOSAL_STATUSES,
   PROGRAM_STATUS_LABEL,
+  programStatusOptions,
 } from '@/features/program/config'
 
 /** 프로그램 등록/편집 폼 값(상태는 셀렉트가 별도 상태로 소유). */
@@ -24,6 +25,7 @@ export interface ProgramFormValues {
 interface ProgramStatusFieldsProps {
   /** 제안 단계 운용 여부(ProgramWorkspaceConfig.hasProposalStage). false면 운영 4종만 고른다. */
   hasProposalStage: boolean
+  hasSuspendedStatus?: boolean
   status: string
   onStatusChange: (status: string) => void
   register: UseFormRegister<ProgramFormValues>
@@ -49,10 +51,14 @@ interface ProgramStatusFieldsProps {
  */
 export function ProgramStatusFields({
   hasProposalStage,
+  hasSuspendedStatus = false,
   status,
   onStatusChange,
   register,
 }: ProgramStatusFieldsProps) {
+  const operationStatuses = hasSuspendedStatus
+    ? programStatusOptions(false, true)
+    : PROGRAM_OPERATION_STATUSES
   /*
     세 칸은 폭을 나눠 갖지 않고 **각자 값만큼만** 차지한다(2026-09-06). 3등분 격자였을 때는
     모달 폭(xl)이 그대로 셋으로 갈려 날짜 한 칸이 300px을 넘었고, 옆에 선 사업구분(w-48)과
@@ -71,11 +77,11 @@ export function ProgramStatusFields({
                 <StatusOptions statuses={PROGRAM_PROPOSAL_STATUSES} />
               </optgroup>
               <optgroup label="운영 단계">
-                <StatusOptions statuses={PROGRAM_OPERATION_STATUSES} />
+                <StatusOptions statuses={operationStatuses} />
               </optgroup>
             </>
           ) : (
-            <StatusOptions statuses={PROGRAM_OPERATION_STATUSES} />
+            <StatusOptions statuses={operationStatuses} />
           )}
         </Select>
       </Field>

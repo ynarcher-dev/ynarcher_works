@@ -8,6 +8,7 @@ import { useCreateEmployee } from '@/features/management/hooks'
 
 /** 인사 관리 목록 경로(뒤로가기·취소 목적지). */
 const LIST_PATH = '/management?tab=hr'
+const TODAY = new Date().toISOString().slice(0, 10)
 
 /**
  * 임직원 계정 생성 페이지(인사 관리 전용). 로그인 가능한 계정을 만든다.
@@ -27,6 +28,7 @@ export function EmployeeCreatePage() {
   const [position, setPosition] = useState('')
   const [rank, setRank] = useState('')
   const [payStep, setPayStep] = useState('')
+  const [birthDate, setBirthDate] = useState('')
   const [phone, setPhone] = useState('')
 
   const submit = async () => {
@@ -49,6 +51,7 @@ export function EmployeeCreatePage() {
         position: position.trim() || null,
         rank: rank.trim() || null,
         pay_step: payStep.trim() || null,
+        birth_date: birthDate || null,
         phone: phone.trim() || null,
       })
       toast.show('임직원 계정을 생성했습니다.', 'success')
@@ -102,6 +105,14 @@ export function EmployeeCreatePage() {
           </Field>
           <Field label="호봉">
             <HrTagSelect table="pay_step_tags" value={payStep} onChange={setPayStep} />
+          </Field>
+          <Field label="생년월일">
+            <Input
+              type="date"
+              max={TODAY}
+              value={birthDate}
+              onChange={(e) => setBirthDate(e.target.value)}
+            />
           </Field>
           <Field label="연락처">
             <Input value={phone} onChange={(e) => setPhone(e.target.value)} />

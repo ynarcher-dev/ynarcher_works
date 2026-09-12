@@ -4,6 +4,7 @@ import {
   Ban,
   CircleCheck,
   CircleHelp,
+  CirclePause,
   CirclePlay,
   CircleX,
   ClipboardList,
@@ -168,7 +169,7 @@ export function defaultParticipationMode(moduleType: string): string | null {
 
 /**
  * 프로그램(프로젝트) 상태 수명주기:
- *   [제안 단계] 제안 → 선정 ┈▶ [운영 단계] 준비 → 진행 → 완료 / (중단) 취소
+ *   [제안 단계] 제안 → 선정 ┈▶ [운영 단계] 준비 → 진행 → 완료 / 중단 / 취소
  *              ↘ (미선정) 미선정 … 프로젝트 종료(terminal)
  * 선정(제안이 통과함)과 준비(운영 채비를 함)는 서로 다른 사실이라 자동으로 넘어가지 않는다 —
  * 자동 전환하면 선정만 되고 아직 착수하지 않은 사업이 원장에 남지 않아 목록·집계에서 가려낼 수 없다.
@@ -181,7 +182,8 @@ export function defaultParticipationMode(moduleType: string): string | null {
  * 상태에서 따라 나온다(`programStage()`). 단계라는 사실 자체는 남는다 — AC의 셀렉트는
  * `optgroup`으로 두 묶음을 갈라 보여주고, 진행 현황도 계속 두 줄로 그린다.
  *
- * DB program_status enum: PROPOSED/SELECTED/NOT_SELECTED/DRAFT/OPERATING/FINISHED/CANCELLED.
+ * DB program_status enum:
+ * PROPOSED/SELECTED/NOT_SELECTED/DRAFT/OPERATING/FINISHED/SUSPENDED/CANCELLED.
  *
  * 제안 단계를 운용하는지는 워크스페이스가 정한다(ProgramWorkspaceConfig.hasProposalStage).
  * AC는 제안으로 수주해 운영까지 가지만, M&A·PROJECT는 착수가 곧 시작이라 운영 4단계만 쓴다 —
@@ -190,6 +192,13 @@ export function defaultParticipationMode(moduleType: string): string | null {
  */
 export const PROGRAM_PROPOSAL_STATUSES = ['PROPOSED', 'SELECTED', 'NOT_SELECTED'] as const
 export const PROGRAM_OPERATION_STATUSES = ['DRAFT', 'OPERATING', 'FINISHED', 'CANCELLED'] as const
+export const MNA_OPERATION_STATUSES = [
+  'DRAFT',
+  'OPERATING',
+  'FINISHED',
+  'SUSPENDED',
+  'CANCELLED',
+] as const
 
 export type ProgramStage = 'PROPOSAL' | 'OPERATION'
 
@@ -204,10 +213,16 @@ export function programStage(status: string): ProgramStage {
  * 워크스페이스가 운용하는 상태 전체(폼 셀렉트·목록 필터·상태별 집계가 공유하는 단일 원천).
  * 제안 단계를 쓰지 않는 워크스페이스에서는 운영 4종만 돌려준다.
  */
-export function programStatusOptions(hasProposalStage: boolean): readonly string[] {
-  return hasProposalStage
-    ? [...PROGRAM_PROPOSAL_STATUSES, ...PROGRAM_OPERATION_STATUSES]
+export function programStatusOptions(
+  hasProposalStage: boolean,
+  hasSuspendedStatus = false,
+): readonly string[] {
+  const operationStatuses = hasSuspendedStatus
+    ? MNA_OPERATION_STATUSES
     : PROGRAM_OPERATION_STATUSES
+  return hasProposalStage
+    ? [...PROGRAM_PROPOSAL_STATUSES, ...operationStatuses]
+    : operationStatuses
 }
 
 /** 신규 등록의 기본 상태 — 수명주기의 첫 칸(제안을 쓰면 '제안', 아니면 '준비'). */
@@ -240,10 +255,13 @@ const PROGRAM_FLOW_GROUPS = [
 ] as const
 
 /** 워크스페이스가 실제로 밟는 흐름 묶음만. 운영만 쓰는 곳에는 제안 줄을 그리지 않는다. */
-export function programFlowGroups(hasProposalStage: boolean) {
-  return hasProposalStage
-    ? PROGRAM_FLOW_GROUPS
-    : PROGRAM_FLOW_GROUPS.filter((g) => g.stage === 'OPERATION')
+export function programFlowGroups(hasProposalStage: boolean, hasSuspendedStatus = false) {
+  const groups = PROGRAM_FLOW_GROUPS.map((group) =>
+    group.stage === 'OPERATION' && hasSuspendedStatus
+      ? { ...group, exits: ['SUSPENDED', 'CANCELLED'] as readonly string[] }
+      : group,
+  )
+  return hasProposalStage ? groups : groups.filter((g) => g.stage === 'OPERATION')
 }
 
 export const PROGRAM_STATUS_LABEL: Record<string, string> = {
@@ -252,6 +270,7 @@ export const PROGRAM_STATUS_LABEL: Record<string, string> = {
   DRAFT: '준비',
   OPERATING: '진행',
   FINISHED: '완료',
+  SUSPENDED: '중단',
   CANCELLED: '취소',
   NOT_SELECTED: '미선정',
   // 구 상태값(기존 데이터 표시용) — 신규 등록에서는 사용하지 않는다.
@@ -279,6 +298,7 @@ export const PROGRAM_STATUS_ICON: Record<string, LucideIcon> = {
   DRAFT: ClipboardList,
   OPERATING: CirclePlay,
   FINISHED: Flag,
+  SUSPENDED: CirclePause,
   CANCELLED: Ban,
 }
 
@@ -309,6 +329,7 @@ export const PROGRAM_STATUS_TONE: Record<string, BadgeTone> = {
   DRAFT: 'neutral',
   OPERATING: 'info',
   FINISHED: 'success',
+  SUSPENDED: 'danger',
   CANCELLED: 'danger',
   // 구 상태값 — 셋 다 운영이 굴러가던 중의 표기라 진행(info)으로 함께 묶는다.
   // 종전에 심사·데모데이가 warning이었던 것은 이 표에서 노랑이 '대기'를 뜻하기 전의 잔재다.

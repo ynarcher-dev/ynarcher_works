@@ -6,6 +6,7 @@ import { MaPartyForm } from '@/features/mna/parties/MaPartyForm'
 import { MaPartyView } from '@/features/mna/parties/MaPartyView'
 import { MA_BUYER, MA_SELLER, type MaPartyConfig } from '@/features/mna/parties/config'
 import { useDeleteMaParty, useMaPartyRecord } from '@/features/mna/parties/hooks'
+import { useAuthStore } from '@/auth/authStore'
 
 /**
  * M&A 거래상대 상세페이지. `id`가 'new'면 등록 모드이며, 등록·수정은 모달이 아니라
@@ -18,6 +19,11 @@ function MaPartyDetailPage({ config }: { config: MaPartyConfig }) {
   const [editing, setEditing] = useState(isNew)
   const { data: record, isLoading } = useMaPartyRecord(config, isNew ? undefined : id)
   const remove = useDeleteMaParty(config)
+  const authUser = useAuthStore((state) => state.user)
+  const canEdit =
+    Boolean(record) &&
+    (authUser?.role === 'super_admin' || record?.created_by === authUser?.id)
+  const canDeactivate = Boolean(record) && record?.created_by === authUser?.id
 
   if (!isNew && isLoading) return <Spinner />
   if (!isNew && !record) {
@@ -32,14 +38,17 @@ function MaPartyDetailPage({ config }: { config: MaPartyConfig }) {
           back={<BackButton as={Link} to={config.basePath} />}
           actions={
             !isNew &&
-            record && (
+            record &&
+            canEdit && (
               <>
                 {/* 사유는 원장 컬럼이 아니라 변동 이력의 note로 남는다(deactivate_entity RPC). */}
-                <DetailDeleteButton
-                  name={record.name}
-                  onDelete={(reason) => remove.mutateAsync({ id: record.id, reason: reason ?? '' })}
-                  onDeleted={() => navigate(config.basePath)}
-                />
+                {canDeactivate && (
+                  <DetailDeleteButton
+                    name={record.name}
+                    onDelete={(reason) => remove.mutateAsync({ id: record.id, reason: reason ?? '' })}
+                    onDeleted={() => navigate(config.basePath)}
+                  />
+                )}
                 <Button onClick={() => setEditing(true)}>수정</Button>
               </>
             )

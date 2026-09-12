@@ -34,14 +34,13 @@ export type OperationWorkspaceKey = ProgramWorkspaceKey | 'fund'
  */
 export type OperationRoleKey = ProgramManagerRole | 'LEAD' | 'OPERATION' | 'ADMIN'
 
-/** 자리의 표기 — 타일의 지표 칩이 읽는 표. */
+/** 자리의 짧은 표기 — 대시보드 타일의 좁은 지표 칩이 읽는 표. */
 export const OPERATION_ROLE_LABEL: Record<OperationRoleKey, string> = {
   PM: 'PM',
   MEMBER: 'MEMBER',
-  // 펀드의 세 자리는 펀드 화면에서 부르는 말을 그대로 줄여 적는다(타일 칩이 좁다).
   LEAD: '대펀',
   OPERATION: '운용',
-  ADMIN: '관리',
+  ADMIN: '담당',
 }
 
 /**
@@ -71,10 +70,18 @@ interface ManagerRow {
 
 const SOURCES: ProgramWorkspaceConfig[] = [PROJECT_WORKSPACE, MNA_WORKSPACE]
 
-const ACTIVE_STATUSES = new Set(['PROPOSED', 'SELECTED', 'DRAFT', 'OPERATING', 'RECRUITING', 'SCREENING', 'DEMO_DAY'])
-
-/** 아직 손이 가는 펀드 — 청산까지 마친 펀드(CLOSED)만 뺀다(사업의 종료·취소와 같은 자리). */
-const ACTIVE_FUND_STATUSES = new Set(['RAISING', 'OPERATING', 'LIQUIDATING'])
+/** 누적 성과로 세는 사업 상태. 완료는 포함하고, 성과로 이어지지 않은 미선정·중단·취소는 뺀다. */
+const CUMULATIVE_PROGRAM_STATUSES = new Set([
+  'PROPOSED',
+  'SELECTED',
+  'DRAFT',
+  'OPERATING',
+  'FINISHED',
+  // 구 상태값(기존 데이터)도 실제 운영 이력이므로 누적에 포함한다.
+  'RECRUITING',
+  'SCREENING',
+  'DEMO_DAY',
+])
 
 /**
  * 한 사업에서 나의 자리 — 오늘에 걸친 배정을 먼저 보고, 없으면 전체 배정에서 고른다.
@@ -102,13 +109,14 @@ async function fetchWorkspaceOperations(config: ProgramWorkspaceConfig, userId: 
     .from(config.tables.programs)
     .select('id, status')
     .in('id', ids)
+    .is('deleted_at', null)
   if (programError) throw programError
 
   const grouped = new Map<string, ManagerRow[]>()
   assignments.forEach((row) => grouped.set(row.program_id, [...(grouped.get(row.program_id) ?? []), row]))
 
   return ((programData ?? []) as { id: string; status: string }[])
-    .filter((program) => ACTIVE_STATUSES.has(program.status))
+    .filter((program) => CUMULATIVE_PROGRAM_STATUSES.has(program.status))
     .map((program): BusinessOperation => ({
       workspace: config.key,
       roleKey: currentRole(grouped.get(program.id) ?? []),
@@ -163,8 +171,8 @@ async function fetchFundOperations(userId: string): Promise<BusinessOperation[]>
     .or(parts.join(','))
   if (fundError) throw fundError
 
+  // 청산 완료(CLOSED)도 실제 운용 이력이므로 누적 성과에 포함한다. 소프트 삭제만 위 쿼리에서 뺀다.
   return ((fundData ?? []) as { id: string; status: string; manager_id: string | null }[])
-    .filter((fund) => ACTIVE_FUND_STATUSES.has(fund.status))
     .map((fund) => ({
       workspace: 'fund' as const,
       roleKey: fundRole(fund.manager_id === userId, staffOf.get(fund.id)),

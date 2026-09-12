@@ -1,6 +1,7 @@
 import { BackButton, Banner, Button, DetailTopBar, Spinner } from '@ynarcher/ui'
 import { useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useAuthStore } from '@/auth/authStore'
 import { DetailDeleteButton } from '@/components/DetailDeleteButton'
 import { useDeactivateProgram } from '@/features/program/programsPoolHooks'
 import { ProgramFormModal } from '@/features/program/ProgramFormModal'
@@ -49,6 +50,7 @@ export function ProgramDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const deactivate = useDeactivateProgram()
+  const userId = useAuthStore((s) => s.user?.id)
   const [params] = useSearchParams()
   // 출처 목록 범위(mine/all). 알 수 없는 값이면 전체 범위로 폴백한다 — 내 것이 아닌 사업을
   // 열었을 때 '내 ~' 목록에는 그 행이 없어 뒤로가기가 빈 목록으로 끝난다. 옛 링크가 실어 오는
@@ -86,6 +88,7 @@ export function ProgramDetailPage() {
   // 인스턴스 단위 운영 화면에 넘길 program_module_id.
   const openMod = openModId ? (modules ?? []).find((m) => m.id === openModId) ?? null : null
   const moduleId = openMod?.id
+  const canDeactivate = program.created_by === userId
 
   return (
     <div className="space-y-5">
@@ -96,13 +99,15 @@ export function ProgramDetailPage() {
             actions={
               <>
                 {/* 사업은 삭제 사유 인프라가 없어 확인창(confirm)으로 소프트 삭제한다. */}
-                <DetailDeleteButton
-                  withReason={false}
-                  onDelete={async () => {
-                    await deactivate.mutateAsync(program.id)
-                  }}
-                  onDeleted={() => navigate(backTo)}
-                />
+                {canDeactivate && (
+                  <DetailDeleteButton
+                    withReason={false}
+                    onDelete={async () => {
+                      await deactivate.mutateAsync(program.id)
+                    }}
+                    onDeleted={() => navigate(backTo)}
+                  />
+                )}
                 <Button onClick={() => setEditOpen(true)}>편집</Button>
               </>
             }

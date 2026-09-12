@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import dayjs from 'dayjs'
 import { useMemo } from 'react'
 import { useAuthStore } from '@/auth/authStore'
 import { useSensitiveStore } from '@/features/admin/sensitiveStore'
@@ -8,6 +9,7 @@ import {
   globalSearchPolicyKey,
   type SearchResult,
 } from '@/features/hub/globalSearch'
+import type { CalendarRange } from '@/features/hub/calendarGrid'
 import { supabase } from '@/lib/supabase'
 import { GUEST_USER_TYPE_FILTER } from '@/lib/userTypes'
 
@@ -105,18 +107,28 @@ export function encodeEventBody(meta: Partial<EventMeta>): string | null {
 /**
  * 캘린더 이벤트 — 사용자가 등록한 업무/휴가 일정만 조회한다. 타 워크스페이스에서 자동 반영되는
  * 시스템 레이어(AC/PROJECT/FUND/COMPANY)는 이 캘린더에 노출하지 않는다(데이터는 보존, 표시만 제외).
+ *
+ * **구간을 반드시 받는다.** 종전에는 인자 없이 시작 시각 오름차순 100건을 집었는데, 그 모양은
+ * 원장이 자라면 **가장 이른 100건**만 답한다 — 지난 일정이 100건을 넘으면 이번 달이 통째로 비고,
+ * 화면에는 오류 한 줄 없이 빈 달만 선다. OFFICE '전사 일정'과 우측 슬라이드오버가 같은 원장을
+ * 보므로 한쪽만 구간으로 고치면 두 화면이 같은 달에 다른 답을 한다.
  */
-export function useSystemEvents() {
+export function useSystemEvents(range: CalendarRange) {
   return useQuery({
-    queryKey: ['hub', 'events'],
+    queryKey: ['hub', 'events', range.from, range.to],
     queryFn: async (): Promise<SystemEvent[]> => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('system_events')
         .select('id, event_type, title, starts_at, ends_at, body, created_by')
         .in('event_type', ['WORK', 'LEAVE'])
         .is('deleted_at', null)
+        // 구간과 겹치는 일정 전부 — 여러 날에 걸친 일정은 시작이 구간보다 앞이어도 들어와야 한다.
+        // 종료가 없는 일정은 시작 하루만 차지하므로 시작 시각으로 판정한다.
+        .lt('starts_at', range.to)
+        .or(`ends_at.gte.${range.from},and(ends_at.is.null,starts_at.gte.${range.from})`)
         .order('starts_at', { ascending: true })
-        .limit(100)
+        .limit(500)
+      if (error) throw error
       return (data ?? []) as SystemEvent[]
     },
   })
@@ -317,6 +329,32 @@ export function useEmployees() {
         .order('name', { ascending: true })
         .limit(200)
       return (data ?? []) as Employee[]
+    },
+  })
+}
+
+export interface BirthdayPerson {
+  user_id: string
+  user_name: string
+}
+
+/**
+ * 오늘 생일인 임직원.
+ *
+ * 원장(`hr_profiles.birth_date`)을 읽지 않고 `today_birthdays()` RPC 하나를 두드린다 —
+ * 생년월일은 MANAGEMENT 전용이고 밖으로 복제하지 않기로 했으므로(20260911110813), 카드가
+ * 서려면 **연도를 답하지 않는 창구**가 따로 있어야 한다. 나가는 값은 이름뿐이다.
+ *
+ * 키에 날짜를 넣는 이유는 자정을 넘겨도 어제 답이 남아 있지 않게 하기 위해서다.
+ */
+export function useTodayBirthdays() {
+  return useQuery({
+    queryKey: ['hub', 'birthdays', dayjs().format('YYYY-MM-DD')],
+    staleTime: 10 * 60 * 1000,
+    queryFn: async (): Promise<BirthdayPerson[]> => {
+      const { data, error } = await supabase.rpc('today_birthdays')
+      if (error) throw error
+      return (data ?? []) as BirthdayPerson[]
     },
   })
 }

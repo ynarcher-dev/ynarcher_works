@@ -44,6 +44,10 @@ function headline(type: string): string {
       return '님이 보완한 문서를 재상신했습니다. 기존 승인은 유지됩니다.'
     case 'approval_withdrawn':
       return '님이 본인의 승인을 취소했습니다.'
+    // 기안 취소는 결재자의 승인 취소(approval_withdrawn)와 유형부터 가른다 — 받는 사람이
+    // 할 일이 다르다. 저쪽은 다시 자기 차례가 오는 것이고, 이쪽은 기다릴 것이 없어진 것이다.
+    case 'approval_draft_withdrawn':
+      return '님이 기안을 취소했습니다. 지금까지의 결재는 무효가 됩니다.'
     case 'approval_final_reset':
       return '님이 최종 결재를 초기화해 문서를 반려했습니다.'
     case 'approval_reset_resubmitted':

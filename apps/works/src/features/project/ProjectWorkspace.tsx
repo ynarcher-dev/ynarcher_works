@@ -20,10 +20,9 @@ export const PROJECT_WORKSPACE: ProgramWorkspaceConfig = {
   guestMasterTables: ['startups', 'networks'],
   basePath: '/project',
   detailBase: '/project',
-  // 목록 안쪽 문구의 도메인 명칭 — 워크스페이스 이름이 PROJECT가 된 뒤(2026-09-09) 부르는
-  // 이름도 그것을 따른다(2026-09-10 사용자 지정). 여기 담기는 것이 액셀러레이팅만이 아니라
-  // 신사업·글로벌까지라, 이름이 담는 것보다 좁으면 무엇을 어디에 넣을지를 매번 다시 판단하게 된다.
-  entityNoun: '프로젝트',
+  listLabel: '관리 사업',
+  // 사업부에서 다루는 원장이므로 메뉴와 목록 안쪽 문구를 모두 '사업'으로 부른다.
+  entityNoun: '사업',
   tables: {
     programs: 'programs',
     managers: 'program_managers',
@@ -38,9 +37,8 @@ export const PROJECT_WORKSPACE: ProgramWorkspaceConfig = {
   // 공고를 낸 주관기관/기업이 있어야 제안이 성립하므로 '주관'을 운용한다(AC 전용).
   hasHostOrganization: true,
   categories: AC_CATEGORIES,
-  // M&A와 같은 규격으로 띄어 쓴다 — '사업구분'은 한 낱말이었지만 '프로젝트구분'은 아니다.
-  categoryNoun: '프로젝트 구분',
-  overviewNoun: '프로젝트 개요',
+  categoryNoun: '사업구분',
+  overviewNoun: '사업개요',
   // 담기는 것이 기업과 사람 둘이라 회사로 부를 수 없다.
   rosterLabel: '참가자 목록',
   // 계정 후보는 담당자가 따로 꾸린 참가자 목록에서 고른다 — 이 워크스페이스에는 "누가

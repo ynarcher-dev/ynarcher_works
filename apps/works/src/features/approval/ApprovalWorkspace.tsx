@@ -15,12 +15,15 @@ import {
   type ApprovalProgressKey,
 } from '@/features/approval/config'
 import {
+  bulkTargetFor,
   countByBox,
   countByProgress,
   inBox,
   matchesKeyword,
   progressBucket,
+  type ApprovalBulkTarget,
 } from '@/features/approval/model'
+import { ApprovalBulkBar } from '@/features/approval/ApprovalBulkBar'
 import { useEmployees } from '@/features/management/hooks'
 
 const PAGE_SIZE = 15
@@ -84,10 +87,14 @@ export function ApprovalWorkspace({
   )
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(0)
+  // 일괄 처리로 고른 문서 id. 선택은 지금 보고 있는 페이지의 것이다 — 목록이 갈리거나
+  // 페이지를 넘기면 비운다(보이지 않는 줄을 고른 채로 두면 요약 줄의 건수가 화면과 어긋난다).
+  const [selected, setSelected] = useState<string[]>([])
 
   // 문서함·진행 상태·검색어가 바뀌면 첫 페이지로 되돌린다 — 목록이 통째로 갈리는데 페이지만
   // 남으면 3페이지짜리에서 5페이지를 보던 손이 빈 화면을 받는다(다른 목록 탭과 같은 규약).
   useEffect(() => setPage(0), [box, progress, keyword])
+  useEffect(() => setSelected([]), [box, progress, keyword, page])
 
   const nameById = useMemo(() => {
     const m = new Map<string, string>()
@@ -132,6 +139,21 @@ export function ApprovalWorkspace({
   const pageCount = Math.max(1, Math.ceil(visibleRows.length / PAGE_SIZE))
   const safePage = Math.min(page, pageCount - 1)
   const pageRows = visibleRows.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE)
+
+  // 이 페이지에서 지금 내가 할 일이 있는 줄 — 판정은 model이 하고 여기서는 한 번만 세어 든다
+  // (체크 칸 노출·선택 가능 여부·요약 줄의 대상이 같은 판정을 세 번 다시 하지 않도록).
+  const targetByRow = useMemo(() => {
+    const m = new Map<string, ApprovalBulkTarget>()
+    if (!uid) return m
+    for (const row of pageRows) {
+      const t = bulkTargetFor(row, uid)
+      if (t) m.set(row.id, t)
+    }
+    return m
+  }, [pageRows, uid])
+  const selectedTargets = selected
+    .map((id) => targetByRow.get(id))
+    .filter((t): t is ApprovalBulkTarget => Boolean(t))
 
   // 기안 작성·상세는 문서함 전체를 대신 차지한다(문서 한 건에 집중하는 화면이라
   // 목록·현황판을 함께 띄우면 어디를 보고 있는지가 흐려진다).
@@ -191,6 +213,13 @@ export function ApprovalWorkspace({
               <ListActions createLabel="기안 작성" onCreate={() => setView({ mode: 'create' })} />
             }
           />
+          {uid && (
+            <ApprovalBulkBar
+              targets={selectedTargets}
+              uid={uid}
+              onDone={() => setSelected([])}
+            />
+          )}
           <ApprovalTable
             rows={pageRows}
             uid={uid ?? ''}
@@ -198,6 +227,11 @@ export function ApprovalWorkspace({
             nameOf={nameOf}
             onRowClick={(row) => setView({ mode: 'detail', id: row.id })}
             emptyText={emptyText}
+            // 할 일이 하나도 없는 목록(완료함·부서함 등)에는 체크 칸을 세우지 않는다 —
+            // 고를 수 있다고 말하면서 아무것도 못 하는 컨트롤을 두지 않는다.
+            selectedKeys={targetByRow.size ? selected : undefined}
+            onSelectionChange={targetByRow.size ? setSelected : undefined}
+            selectableRow={(row) => targetByRow.has(row.id)}
             pagination={{
               page: safePage,
               pageSize: PAGE_SIZE,

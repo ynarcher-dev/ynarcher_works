@@ -2,7 +2,7 @@ import { Badge, cardText, cn } from '@ynarcher/ui'
 import dayjs from 'dayjs'
 import { useAuthStore } from '@/auth/authStore'
 import { parseEventMeta, type SystemEvent } from '@/features/hub/hooks'
-import { dotColor, toneOf } from '@/features/hub/eventStyle'
+import { eventDot, toneOf } from '@/features/hub/eventStyle'
 
 /**
  * 기간 라벨. 같은 날이면 시간만('종일'/'HH:mm'/'HH:mm–HH:mm'), 여러 날에 걸치면 날짜를 덧붙인다
@@ -39,7 +39,7 @@ function UserRow({
   const inner = (
     <>
       <div className="flex items-center gap-2">
-        <span className={`size-2 shrink-0 rounded-full ${dotColor[toneOf(ev.event_type)]}`} />
+        <span className={`size-2 shrink-0 rounded-full ${eventDot(ev.event_type)}`} />
         <span className={cn('flex-1 truncate', cardText.value)}>{ev.title}</span>
         <span className={cn('shrink-0 tabular-nums', cardText.meta)}>
           {timeText(ev, meta.allDay)}
@@ -115,6 +115,12 @@ export function DayAgenda({
   const renderUser = (ev: SystemEvent) => (
     <UserRow key={ev.id} ev={ev} canEdit={!!myId && ev.created_by === myId} onEdit={onEdit} />
   )
+  // 휴가는 보기만 한다 — 전자결재 승인이 만드는 행이라 캘린더에서 지우면 결재는 승인인데 일정은
+  // 없는 상태가 된다(2026-09-11 사용자 확정). 화면에서 못 누르게 하는 것과 별개로 RLS가 휴가 행의
+  // INSERT·UPDATE를 함께 막는다 — UI에서 숨기는 것은 보안이 아니다.
+  const renderLeave = (ev: SystemEvent) => (
+    <UserRow key={ev.id} ev={ev} canEdit={false} onEdit={onEdit} />
+  )
 
   if (events.length === 0) {
     return <p className="text-caption text-gray-600">등록된 일정이 없습니다.</p>
@@ -128,7 +134,7 @@ export function DayAgenda({
       <Section title="업무" items={work} render={renderUser} />
       {/* 업무와 휴가 사이 구분선(둘 다 있을 때만). */}
       {work.length > 0 && leave.length > 0 && <hr className="border-gray-200" />}
-      <Section title="휴가" items={leave} render={renderUser} />
+      <Section title="휴가" items={leave} render={renderLeave} />
       <Section title="기타" items={others} render={(ev) => <SystemRow key={ev.id} ev={ev} />} />
     </div>
   )

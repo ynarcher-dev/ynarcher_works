@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   approvalFormDisplayName,
   actionableLineFor,
+  bulkTargetFor,
+  type ApprovalLine,
   countByProgress,
   inBox,
   isLastPending,
@@ -14,7 +16,16 @@ import {
 const ME = 'me'
 const OTHER = 'other'
 
-function row(partial: Partial<ApprovalListRow> = {}): ApprovalListRow {
+/**
+ * 결재선의 자리 id는 판정과 무관하므로(판정은 담당자·순번·회차가 한다) 테스트가 직접 적지
+ * 않고 여기서 순서대로 붙인다. 일괄 승인 대상을 보는 테스트만 그 id를 되읽는다.
+ */
+function row(
+  partial: Partial<Omit<ApprovalListRow, 'approval_lines'>> & {
+    approval_lines?: ApprovalLine[]
+  } = {},
+): ApprovalListRow {
+  const { approval_lines = [], ...rest } = partial
   return {
     id: 'doc-1',
     title: '2026년 8월 4주차 지출의 건',
@@ -28,10 +39,10 @@ function row(partial: Partial<ApprovalListRow> = {}): ApprovalListRow {
     completed_at: null,
     form: { name: '지출결의서' },
     legacy: null,
-    approval_lines: [],
     approval_recipients: [],
     approval_reads: [],
-    ...partial,
+    ...rest,
+    approval_lines: approval_lines.map((l, i) => ({ id: `line-${i + 1}`, ...l })),
   }
 }
 
@@ -428,5 +439,66 @@ describe('countByProgress', () => {
       ongoing: 0,
       revision: 0,
     })
+  })
+})
+
+describe('bulkTargetFor', () => {
+  it('내 차례면 그 자리 id를 대상으로 든다', () => {
+    const target = bulkTargetFor(
+      row({ approval_lines: [{ approver_id: ME, step_order: 1, decision: 'PENDING' }] }),
+      ME,
+    )
+    expect(target).toEqual({ documentId: 'doc-1', approveLineId: 'line-1', needsConfirm: false })
+  })
+
+  it('아직 차례가 아니면 고를 수 없다', () => {
+    const target = bulkTargetFor(
+      row({
+        approval_lines: [
+          { approver_id: OTHER, step_order: 1, decision: 'PENDING' },
+          { approver_id: ME, step_order: 2, decision: 'PENDING' },
+        ],
+      }),
+      ME,
+    )
+    expect(target).toBeNull()
+  })
+
+  it('참조자인데 아직 확인하지 않았으면 확인 대상이다', () => {
+    const target = bulkTargetFor(row({ approval_recipients: [{ user_id: ME }] }), ME)
+    expect(target).toEqual({ documentId: 'doc-1', approveLineId: null, needsConfirm: true })
+  })
+
+  it('이미 확인한 참조 문서는 고를 것이 없다', () => {
+    const target = bulkTargetFor(
+      row({ approval_recipients: [{ user_id: ME }], approval_reads: [{ user_id: ME }] }),
+      ME,
+    )
+    expect(target).toBeNull()
+  })
+
+  it('결재 차례와 확인이 한 문서에 겹치면 둘 다 든다', () => {
+    const target = bulkTargetFor(
+      row({
+        approval_lines: [{ approver_id: ME, step_order: 1, decision: 'PENDING' }],
+        approval_recipients: [{ user_id: ME }],
+      }),
+      ME,
+    )
+    expect(target).toEqual({ documentId: 'doc-1', approveLineId: 'line-1', needsConfirm: true })
+  })
+
+  it('멈춘 문서(보완 요청)는 결재 대상이 아니다', () => {
+    const target = bulkTargetFor(
+      row({
+        status: 'REVISION_REQUIRED',
+        approval_lines: [
+          { approver_id: OTHER, step_order: 1, decision: 'REVISION_REQUESTED' },
+          { approver_id: ME, step_order: 2, decision: 'PENDING' },
+        ],
+      }),
+      ME,
+    )
+    expect(target).toBeNull()
   })
 })

@@ -1,8 +1,10 @@
 import { ListToolbar, Spinner } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { hasWorkspaceWrite, useAuthStore } from '@/auth/authStore'
 import { ListActions } from '@/components/ListActions'
 import { ListScopeToggle } from '@/components/ListScopeToggle'
+import { LedgerBulkDeactivateBar } from '@/features/master/LedgerBulkDeactivateBar'
 import { FundListFilters } from '@/features/fund/FundListFilters'
 import { FundListTable } from '@/features/fund/FundListTable'
 import { FundSummaryPanel } from '@/features/fund/FundSummaryPanel'
@@ -42,6 +44,8 @@ interface FundListTabProps {
 export function FundListTab({ scope, onScopeChange, userId }: FundListTabProps) {
   const mineUserId = scope === 'mine' ? userId : null
   const navigate = useNavigate()
+  const authUser = useAuthStore((s) => s.user)
+  const canWrite = hasWorkspaceWrite(authUser, 'fund')
   const [keyword, setKeyword] = useState('')
   const [filters, setFilters] = useState<FundListFilterState>(EMPTY_FUND_FILTERS)
   const [page, setPage] = useState(0)
@@ -55,6 +59,10 @@ export function FundListTab({ scope, onScopeChange, userId }: FundListTabProps) 
   }, [keyword, filtersKey, scope])
 
   const { data, isLoading } = useFundListPage(keyword, filters, page, PAGE_SIZE, mineUserId)
+  const rows = data?.rows ?? []
+  const canDeactivate = (row: (typeof rows)[number]) =>
+    canWrite && row.created_by === authUser?.id
+  const showSelection = rows.some(canDeactivate)
 
   return (
     <div className="space-y-3">
@@ -89,14 +97,26 @@ export function FundListTab({ scope, onScopeChange, userId }: FundListTabProps) 
         }
       />
 
+      <LedgerBulkDeactivateBar
+        ledger="funds"
+        noun="펀드"
+        selectedIds={selected}
+        onDone={() => {
+          if (selected.length === rows.length && page > 0) setPage((p) => p - 1)
+          setSelected([])
+        }}
+      />
+
       {isLoading ? (
         <Spinner />
       ) : (
         <FundListTable
-          rows={data?.rows ?? []}
+          rows={rows}
           onRowClick={(f) => navigate(`/fund/${f.id}`)}
           selectedKeys={selected}
           onSelectionChange={setSelected}
+          selectable={showSelection}
+          selectableRow={canDeactivate}
           pagination={{ page, pageSize: PAGE_SIZE, total: data?.total ?? 0, onChange: setPage }}
           emptyText="등록된 펀드가 없습니다."
         />

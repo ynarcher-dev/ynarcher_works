@@ -1,17 +1,27 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  fetchLedgerPage,
-  sanitizeOrValue,
-  type LedgerCondition,
-  type LedgerPage,
-} from '@/features/master/ledgerPage'
+import type { LedgerPage } from '@/features/master/ledgerPage'
 import type { Contribution } from '@/features/networks/hooks'
-import {
-  DECISION_UNSET,
-  type MaPartyConfig,
-  type MaPartyRow,
-} from '@/features/mna/parties/config'
+import { type MaPartyConfig, type MaPartyRow } from '@/features/mna/parties/config'
 import { supabase } from '@/lib/supabase'
+
+export interface MaPartyViewerCandidate {
+  id: string
+  name: string
+  email: string | null
+}
+
+/** 실제로 M&A를 읽을 수 있는 임직원만 열람자 후보로 받는다. */
+export function useMaPartyViewerCandidates() {
+  return useQuery({
+    queryKey: ['mna', 'party-viewer-candidates'],
+    queryFn: async (): Promise<MaPartyViewerCandidate[]> => {
+      const { data, error } = await supabase.rpc('ma_party_viewer_candidates')
+      if (error) throw error
+      return (data ?? []) as MaPartyViewerCandidate[]
+    },
+    staleTime: 60_000,
+  })
+}
 
 /**
  * 목록·상세가 함께 읽는 select 문자열. 생성자는 이름만 임베드한다.
@@ -24,7 +34,7 @@ const selectOf = (cfg: MaPartyConfig) =>
   [
     'id, name, industries, wish, available_funds',
     ...(cfg.hasDecision ? ['decision'] : []),
-    'contact_name, contact_email, phone, startup_id, created_at, updated_at, created_by',
+    'contact_name, contact_email, phone, startup_id, created_at, updated_at, created_by, viewer_ids',
     'creator:users!created_by(id, name), startup:startups!startup_id(id, name)',
   ].join(', ')
 
@@ -55,31 +65,33 @@ export function useMaPartyListPage(
     // 필터도 캐시 키에 든다 — 빠뜨리면 '진행'으로 좁힌 결과가 필터를 푼 목록으로 그대로 선다.
     queryKey: [...root(cfg), 'list', keyword, [...decisions].sort().join(','), page, pageSize],
     queryFn: async (): Promise<LedgerPage<MaPartyRow>> => {
-      const narrow: LedgerCondition[] = []
-      const kw = sanitizeOrValue(keyword)
-      if (kw) narrow.push({ kind: 'or', expr: `name.ilike.%${kw}%,wish.ilike.%${kw}%` })
-
-      // 미결정은 저장값이 아니라 null이라 값 배열에 섞이지 못한다. 그래서 표식만 떼어 내고
-      // 한 축을 **OR 하나로** 묶는다 — 두 조건으로 나눠 걸면 AND가 되어 '진행 또는 미결정'이
-      // 언제나 0건이 된다(고를 수 있다고 말하면서 아무것도 답하지 않는 조합).
-      const wantsUnset = decisions.includes(DECISION_UNSET)
-      const values = decisions.filter((d) => d !== DECISION_UNSET)
-      if (wantsUnset || values.length > 0) {
-        const parts: string[] = []
-        if (values.length > 0) parts.push(`decision.in.(${values.join(',')})`)
-        if (wantsUnset) parts.push('decision.is.null')
-        narrow.push({ kind: 'or', expr: parts.join(',') })
-      }
-
-      return fetchLedgerPage<MaPartyRow>({
-        table: cfg.table,
-        select: selectOf(cfg),
-        liveColumns: ['deleted_at'],
-        order: { column: 'updated_at', ascending: false },
-        page,
-        pageSize,
-        narrow,
+      const { data, error } = await supabase.rpc('ma_party_posts_list', {
+        p_target_type: cfg.targetType,
+        p_keyword: keyword.trim() || null,
+        p_decisions: decisions.length > 0 ? decisions : null,
+        p_limit: pageSize,
+        p_offset: page * pageSize,
       })
+      if (error) throw error
+
+      const payload = (data ?? {}) as {
+        rows?: Array<Record<string, unknown> & { creator_name?: string | null }>
+        total?: number | string
+        totalAll?: number | string
+      }
+      const rows = (payload.rows ?? []).map((raw) => {
+        const { creator_name, ...row } = raw
+        return {
+          ...row,
+          viewer_ids: Array.isArray(row.viewer_ids) ? row.viewer_ids : [],
+          creator: creator_name ? { id: String(row.created_by ?? ''), name: creator_name } : null,
+        } as MaPartyRow
+      })
+      return {
+        rows,
+        total: Number(payload.total ?? 0),
+        totalAll: Number(payload.totalAll ?? 0),
+      }
     },
   })
 }

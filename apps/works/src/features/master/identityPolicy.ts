@@ -60,7 +60,11 @@ export function ledgerSaveFailureText(e: unknown, fallback: string): string {
     if (msg.includes('uq_ma_sellers_biz_reg_no_live') || msg.includes('uq_ma_buyers_biz_reg_no_live')) {
       return '같은 사업자등록번호의 행이 이미 있습니다. 새로 만들지 말고 그 행을 고치세요.'
     }
-    if (msg.includes('uq_users_internal_email') || msg.includes('uq_users_guest_email')) {
+    if (
+      msg.includes('uq_users_email_live') ||
+      msg.includes('uq_users_internal_email') ||
+      msg.includes('uq_users_guest_email')
+    ) {
       return '같은 이메일의 계정이 이미 있습니다.'
     }
   }

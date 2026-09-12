@@ -152,6 +152,7 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
     values: {
       name: str('name'),
       representative: str('representative'),
+      representative_gender: str('representative_gender'),
       company_form: str('company_form'),
       founded_on: str('founded_on').slice(0, 10),
       biz_reg_no: str('biz_reg_no'),
@@ -231,6 +232,7 @@ export function StartupDetailForm({ recordId, initial, onDone, onCancel, backTo 
     const payload: Record<string, unknown> = {
       name: v.name.trim(),
       representative: v.representative.trim() || null,
+      representative_gender: v.representative_gender.trim() || null,
       company_form: v.company_form.trim() || null,
       founded_on: v.founded_on || null,
       // 저장 모양은 하나다(XXX-XX-XXXXX) — 서버 트리거도 같은 모양으로 맞추지만, 대조가

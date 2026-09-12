@@ -427,6 +427,7 @@ export function ProgramFormModal({
         <Card title="상태와 기간">
           <ProgramStatusFields
             hasProposalStage={config.hasProposalStage}
+            hasSuspendedStatus={config.hasSuspendedStatus}
             status={status}
             onStatusChange={setStatus}
             register={register}

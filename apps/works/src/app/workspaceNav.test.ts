@@ -123,7 +123,7 @@ describe('M&A/PE — 딜 한 줄 + 거래상대 원장 두 줄', () => {
     const groups = buildNavGroups(user, mna)
     // 계정생성은 하단 고정 영역이라 이 줄들과 그룹이 갈린다(plainGroups가 그것을 뺀다).
     expect(shape(unpinnedOf(groups))).toEqual([
-      ['mna:프로젝트', 'mna:BUYER DB', 'mna:SELLER DB'],
+      ['mna:M&A 딜', 'mna:BUYER DB', 'mna:SELLER DB'],
     ])
     // 층이 갈리는 자리는 딜과 원장 사이 하나다 — 두 원장 사이에 선을 하나 더 그으면
     // 사는 쪽과 파는 쪽이 서로 다른 층으로 보인다.
@@ -173,11 +173,11 @@ describe('M&A/PE — 딜 한 줄 + 거래상대 원장 두 줄', () => {
   })
 })
 
-describe('AC — 사업 목록 + 하단 고정 창구', () => {
+describe('사업부 — 관리 사업 목록 + 하단 고정 창구', () => {
   it('GUEST 계정 조회 줄은 목록이 아니라 그 아래 고정 영역이라 그룹이 갈린다', () => {
     const groups = buildNavGroups(userWith({ project: 'write' }), project)
     expect(shape(groups)).toEqual([
-      ['project:프로젝트'],
+      ['project:관리 사업'],
       ['project:GUEST 계정조회'],
     ])
     // 그 탭이 탭 집합에서 빠지면 그 화면에서 사업 목록 줄이 활성으로 칠해진다.
@@ -198,17 +198,16 @@ describe('AC — 사업 목록 + 하단 고정 창구', () => {
   })
 })
 
-describe('실행 라인 셋 — 사업 2종이 같은 줄 이름을 공유한다', () => {
-  it('어느 원장인지는 스위처 항목이 답하므로 줄 이름은 한 벌이다', () => {
+describe('실행 라인 셋 — 각 조직이 실제로 부르는 목록 이름을 쓴다', () => {
+  it('사업부는 관리 사업, M&A팀은 M&A 딜로 부른다', () => {
     const user = userWith({ project: 'write', mna: 'read' })
-    for (const id of ['project', 'mna']) {
-      // M&A/PE에는 딜 아래로 거래상대 원장 두 줄이 더 서므로 첫 줄만 견준다 — 견주는 것은
-      // 그 워크스페이스가 하는 일의 이름이고, 그 자리는 어디서나 맨 위 한 줄이다.
-      const rows = buildNavGroups(user, itemOf(id)).flatMap((g) =>
+    const firstRow = (id: string) =>
+      buildNavGroups(user, itemOf(id)).flatMap((g) =>
         g.items.filter((b) => !b.item.pinBottom).map((b) => b.item.label),
-      )
-      expect(rows[0]).toBe('프로젝트')
-    }
+      )[0]
+
+    expect(firstRow('project')).toBe('관리 사업')
+    expect(firstRow('mna')).toBe('M&A 딜')
   })
 
   it('셋이 각자 자기 항목으로 서고 도착지는 자기 루트 경로다', () => {

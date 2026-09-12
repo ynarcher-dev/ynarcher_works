@@ -1,9 +1,10 @@
 import { ListToolbar, Spinner } from '@ynarcher/ui'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '@/auth/authStore'
+import { hasWorkspaceWrite, useAuthStore } from '@/auth/authStore'
 import { ListActions } from '@/components/ListActions'
 import { ListScopeToggle } from '@/components/ListScopeToggle'
+import { LedgerBulkDeactivateBar } from '@/features/master/LedgerBulkDeactivateBar'
 import { ProgramFormModal } from '@/features/program/ProgramFormModal'
 import { ProgramFilters } from '@/features/program/ProgramFilters'
 import { ProgramPipeline } from '@/features/program/ProgramPipeline'
@@ -30,7 +31,7 @@ interface ProgramListTabProps {
  * 사업 워크스페이스(AC/M&A/PROJECT 공용): 사업 원장 목록.
  * 검색어(사업명·생성자)·복수 필터(상태·사업구분·부서·시작일)·서버 페이지네이션·다중선택을
  * 소유하고, 검색창과 필터를 한 컨트롤 행으로 함께 배치한다. (STARTUP StartupPoolTab과 동일 구조.)
- * 비활성화(삭제)는 목록이 아니라 상세 페이지에서 수행한다.
+ * 비활성화는 생성자가 목록 체크박스로 선택 실행하거나 상세 페이지에서 수행한다.
  * scope='mine'이면 생성자(created_by)·담당자가 현재 사용자인 사업만 조회한다.
  *
  * 진행 현황 프로세스 뷰는 두 스코프 모두에 둔다. 종전에는 '내 사업'에만 두었는데,
@@ -40,7 +41,9 @@ interface ProgramListTabProps {
 export function ProgramListTab({ scope, onScopeChange }: ProgramListTabProps) {
   const config = useProgramWorkspace()
   const navigate = useNavigate()
-  const userId = useAuthStore((s) => s.user?.id)
+  const authUser = useAuthStore((s) => s.user)
+  const userId = authUser?.id
+  const canWrite = hasWorkspaceWrite(authUser, config.key)
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(0)
   const [selected, setSelected] = useState<string[]>([])
@@ -52,10 +55,14 @@ export function ProgramListTab({ scope, onScopeChange }: ProgramListTabProps) {
   useEffect(() => {
     setPage(0)
     setSelected([])
-  }, [keyword, filtersKey])
+  }, [keyword, filtersKey, scope])
 
   const mineUserId = scope === 'mine' ? userId ?? null : null
   const { data, isLoading } = useProgramsPage(keyword, filters, page, PAGE_SIZE, mineUserId)
+  const rows = data?.rows ?? []
+  const canDeactivate = (row: (typeof rows)[number]) =>
+    canWrite && row.created_by === userId
+  const showSelection = rows.some(canDeactivate)
 
   /** 카드 한 칸이 대표하는 실제 상태를 한 번에 토글한다(합산 카드도 한 동작으로 유지). */
   const toggleStatuses = (statuses: readonly string[]) =>
@@ -91,13 +98,25 @@ export function ProgramListTab({ scope, onScopeChange }: ProgramListTabProps) {
         }
       />
 
+      <LedgerBulkDeactivateBar
+        ledger={config.tables.programs}
+        noun={config.entityNoun}
+        selectedIds={selected}
+        onDone={() => {
+          if (selected.length === rows.length && page > 0) setPage((p) => p - 1)
+          setSelected([])
+        }}
+      />
+
       {isLoading ? (
         <Spinner />
       ) : (
         <ProgramTable
-          rows={data?.rows ?? []}
+          rows={rows}
           selectedKeys={selected}
           onSelectionChange={setSelected}
+          selectable={showSelection}
+          selectableRow={canDeactivate}
           // 출처 범위를 쿼리로 넘겨 상세의 뒤로가기가 방금 보던 목록으로 돌아오게 한다
           // (내 것이 아닌 사업을 '전체'에서 열었다면 '내 ~' 목록에는 그 행이 없다).
           onRowClick={(row) =>

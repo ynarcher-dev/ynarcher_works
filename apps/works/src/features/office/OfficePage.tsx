@@ -11,6 +11,7 @@ import { BOARD_KIND_LABEL, boardsOfKind, type BoardKind } from '@/features/hub/b
 import { OfficeManagersPanel } from '@/features/office/OfficeManagersPanel'
 import { BranchesPanel } from '@/features/office/branches/BranchesPanel'
 import { AssetListWorkspace } from '@/features/office/assets/AssetListWorkspace'
+import { CompanyCalendarWorkspace } from '@/features/office/calendar/CompanyCalendarWorkspace'
 import { MinutesWorkspace } from '@/features/office/minutes/MinutesWorkspace'
 import { RoomReservationWorkspace } from '@/features/office/rooms/RoomReservationWorkspace'
 
@@ -23,7 +24,8 @@ const PLACEHOLDER_TITLES: Record<string, string> = {}
 /**
  * 공용 오피스: 임직원 정보·공용 자원·회의·게시 공간.
  * 좌측 사이드바(?tab)로 섹션을 전환하며, 신규 게시판(ADMIN 게시판 관리 생성)이 모두 이곳에
- * 노출된다. AI 에이전트·전사 캘린더는 상단바 전역 진입점(우측 슬라이드오버)에서 연다.
+ * 노출된다. 전사 일정은 이곳이 주원장 화면이고(?tab=calendar), 상단바의 캘린더 슬라이드오버는 같은
+ * 원장을 좁게 세운 창이다. AI 에이전트는 상단바 전역 진입점(우측 슬라이드오버)에서만 연다.
  */
 export function OfficePage() {
   const [params] = useSearchParams()
@@ -48,9 +50,10 @@ export function OfficePage() {
     // 게시판을 못 찾으면(접근 불가·삭제) 아래 일반 흐름으로 떨어진다(탭 없으면 공지사항).
   }
 
-  // 탭 미지정 시 공용 오피스의 기본 화면인 공지사항으로 정규화한다.
-  // 게시판 상위 메뉴도 공지사항 탭을 자기 활성 상태로 판정하므로 사이드바와 URL이 함께 맞는다.
-  if (!tab) return <Navigate to={`/office?tab=${NOTICE_TAB}`} replace />
+  // 탭 미지정 시 전사 일정으로 정규화한다(2026-09-11 사용자 지정 — 종전 기본은 공지사항).
+  // 공용 오피스를 여는 대부분의 이유가 '오늘·이번 주에 무엇이 있나'라, 문을 열면 그 답이 먼저 선다.
+  // 공지사항은 새 글이 있을 때만 볼 것이 있어 매번 여는 화면으로는 대개 빈 걸음이었다.
+  if (!tab) return <Navigate to="/office?tab=calendar" replace />
 
   // 메뉴 분리 전 OFFICE에 있던 개인 대시보드·전자결재 딥링크를 새 자리로 넘긴다.
   if (tab === 'dashboard' || tab === 'approval') {
@@ -168,6 +171,9 @@ export function OfficePage() {
       {tab === 'outbound' && (
         <AssetListWorkspace initialAssetId={params.get('asset') ?? undefined} />
       )}
+      {/* 전사 일정: 일정 원장(system_events)의 주원장 화면. 우측 슬라이드오버의 캘린더와 같은 훅을
+          쓰고 배치만 다르다(`features/hub/calendarView`). */}
+      {tab === 'calendar' && <CompanyCalendarWorkspace />}
       {/* 회의실 예약: 지사 탭 + 날짜 이동 + 회의실 카드. 설정은 ADMIN이 소유한다. */}
       {tab === 'rooms' && <RoomReservationWorkspace />}
       {/* 회의록: STARTUP에서 이관. 자체 목록/상세/작성 흐름과 헤더를 소유한다. */}

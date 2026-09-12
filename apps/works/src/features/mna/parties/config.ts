@@ -221,6 +221,10 @@ export interface MaPartyRow {
   created_at: string
   updated_at: string
   created_by: string | null
+  /** 작성자 외 본문 열람자. 작성자는 created_by가 답하므로 이 배열에 중복 저장하지 않는다. */
+  viewer_ids: string[]
+  /** 목록 안전 투영에서만 내려온다. false면 나머지 필드는 잠금용 placeholder다. */
+  can_read?: boolean
   creator?: { id: string; name: string } | null
 }
 

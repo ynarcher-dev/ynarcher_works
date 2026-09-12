@@ -23,7 +23,7 @@ export interface LedgerStat {
   total: number
 }
 
-export type LedgerKey = 'startup' | 'networks'
+export type LedgerKey = 'startup' | 'networks' | 'ma_seller' | 'ma_buyer'
 
 /**
  * 원장별 정의 — 라벨·권한 키·목적지. 어느 원장을 세울지는 화면이 아니라 이 표가 답한다.
@@ -41,6 +41,8 @@ export const LEDGERS: Omit<LedgerStat, 'mine' | 'total'>[] = [
   // 국내·글로벌 두 줄이 2026-09-04 원장 통합으로 한 줄이 되었다. 지역은 그 목록의 필터
   // 축이므로 카드에서 두 줄로 갈라 놓으면 눌러서 도착한 화면과 건수가 어긋난다.
   { key: 'networks', label: '네트워크', workspace: 'networks', path: '/networks?scope=mine' },
+  { key: 'ma_seller', label: 'M&A SELLER', workspace: 'mna', path: '/mna/sellers' },
+  { key: 'ma_buyer', label: 'M&A BUYER', workspace: 'mna', path: '/mna/buyers' },
 ]
 
 /**
@@ -98,9 +100,25 @@ async function fetchNetworkStat(): Promise<LedgerCounts> {
   return { mine, total }
 }
 
+/**
+ * M&A 거래상대 원장 — 생성자 또는 변동 이력의 기여자이면 내 누적 데이터다.
+ *
+ * 행 id를 내려받아 합산하지 않고 DB 집계 함수를 쓴다. 브라우저에서 기여 행을 먼저 모으면
+ * PostgREST 기본 반환 상한을 넘는 순간 누적 건수가 조용히 작아질 수 있고, 생성자와 기여자가
+ * 같은 행의 중복도 다시 제거해야 한다. 함수는 두 원장의 공통 규칙을 원장 안에서 한 번에 센다.
+ */
+async function fetchMaPartyStat(table: 'ma_sellers' | 'ma_buyers'): Promise<LedgerCounts> {
+  const { data, error } = await supabase.rpc('ma_party_ledger_counts', { p_table: table })
+  if (error) throw error
+  const row = ((data ?? []) as { mine?: number | string; total?: number | string }[])[0]
+  return { mine: Number(row?.mine ?? 0), total: Number(row?.total ?? 0) }
+}
+
 const FETCHERS: Record<LedgerKey, (userId: string) => Promise<LedgerCounts>> = {
   startup: fetchStartupStat,
   networks: fetchNetworkStat,
+  ma_seller: () => fetchMaPartyStat('ma_sellers'),
+  ma_buyer: () => fetchMaPartyStat('ma_buyers'),
 }
 
 /**

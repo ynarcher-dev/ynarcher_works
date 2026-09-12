@@ -10,6 +10,7 @@
 export interface StartupDetailFormValues {
   name: string
   representative: string
+  representative_gender: string
   company_form: string
   founded_on: string
   biz_reg_no: string

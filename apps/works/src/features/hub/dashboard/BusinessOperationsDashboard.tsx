@@ -1,7 +1,9 @@
 import { useNavigate } from 'react-router-dom'
 import { BriefcaseBusiness, Target, WalletCards, type LucideIcon } from 'lucide-react'
-import { Card, EmptyState, Skeleton, SummaryTile, type SummaryTileTone } from '@ynarcher/ui'
+import { Card, EmptyState, Skeleton, SummaryTile, cardText, type SummaryTileTone } from '@ynarcher/ui'
 import { hasWorkspaceRead, useAuthStore } from '@/auth/authStore'
+import { useMyKpiDashboard } from '@/features/management/kpi/kpiApi'
+import type { KpiScope } from '@/features/management/kpi/kpiTypes'
 import { MyDatabaseCard } from './MyDatabaseCard'
 import {
   OPERATION_MINE_PATH,
@@ -27,11 +29,11 @@ const WORKSPACE_SUMMARIES: {
   roles: OperationRoleKey[]
 }[] = [
   {
-    key: 'project', label: '프로젝트', caption: '사업 운영', icon: Target,
+    key: 'project', label: '관리 사업', caption: '사업 운영', icon: Target,
     tone: 'blue', roles: ['PM', 'MEMBER'],
   },
   {
-    key: 'mna', label: 'M&A·PE', caption: '딜 운영', icon: BriefcaseBusiness,
+    key: 'mna', label: 'M&A 딜', caption: '딜 운영', icon: BriefcaseBusiness,
     tone: 'purple', roles: ['PM', 'MEMBER'],
   },
   // 펀드는 사업 원장(features/program)이 아니지만 "내가 지금 무엇을 굴리고 있는가"라는
@@ -42,6 +44,32 @@ const WORKSPACE_SUMMARIES: {
     tone: 'amber', roles: ['LEAD', 'OPERATION', 'ADMIN'],
   },
 ]
+
+/**
+ * KPI 카드 머리 우측 한 줄 — 부서명과 적용기간.
+ *
+ * 둘 다 `my_kpi_dashboard` 하나가 답한다. 부서는 기준일의 `dept_members` 소속을 통해 상속된
+ * 부서 KPI 행이 들고 있는 이름이고(그 소속이 곧 이 점수가 걸린 자리다), 적용기간은 KPI 버전이
+ * 따로 저장하지 않고 짝인 조직 원장 버전의 기간을 그대로 읽는다. 그래서 두 카드의 기간은
+ * 언제나 같은 값이며, 개인 카드에는 부서를 적지 않는다(본인 이름은 카드 제목이 이미 답한다).
+ *
+ * 머릿말(`부서 …`·`적용기간 …`)은 붙이지 않는다 — 부서명과 날짜 범위는 생김새가 이미 자기가
+ * 무엇인지를 말한다. 같은 이유로 값이 없으면 `—`가 아니라 아무것도 세우지 않는다: 이름표가
+ * 없는 자리에서 빈 표시만 남으면 그것이 무엇의 빈 자리인지 화면이 답하지 못한다.
+ */
+function KpiHeaderMeta({ scope }: { scope: KpiScope }) {
+  const { data = [] } = useMyKpiDashboard()
+  const version = data[0]
+  const department = data.find((row) => row.scope_type === 'DEPARTMENT')?.subject_name
+
+  const parts = [
+    scope === 'DEPARTMENT' ? department : null,
+    version ? `${version.effective_from} ~ ${version.effective_to ?? '무기한'}` : null,
+  ].filter(Boolean)
+  if (!parts.length) return null
+
+  return <span className={cardText.meta}>{parts.join(' · ')}</span>
+}
 
 /**
  * 대시보드 좌측 상단 — 「나의 워크스페이스」(내가 맡은 운영 건수) + 「나의 데이터베이스」.
@@ -77,9 +105,30 @@ export function BusinessOperationsDashboard() {
   if (isError) return <Card><EmptyState title="사업 운영 현황을 불러오지 못했습니다." description="잠시 후 다시 시도해주세요." /></Card>
 
   return (
-    <div className="space-y-4">
-      <Card title="나의 워크스페이스">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="flex h-full flex-col gap-4">
+      {/* KPI는 부서·개인 두 카드로 나란히 선다. 머리 우측의 부서·적용기간만 원장을 읽고
+          본문(지표·점수)은 후속 작업에서 채운다. 데스크톱에서는 두 카드가 남은 높이를 받아
+          좌측 열 최상단을 채우고, 작은 화면에서는 1열로 쌓인다. */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:flex-1">
+        <Card
+          title="부서 KPI"
+          actions={<KpiHeaderMeta scope="DEPARTMENT" />}
+          className="min-h-48 lg:flex lg:flex-col"
+          bodyClassName="lg:flex-1"
+        >
+          {null}
+        </Card>
+        <Card
+          title="개인 KPI"
+          actions={<KpiHeaderMeta scope="PERSON" />}
+          className="min-h-48 lg:flex lg:flex-col"
+          bodyClassName="lg:flex-1"
+        >
+          {null}
+        </Card>
+      </div>
+      <Card title="누적 업무">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {WORKSPACE_SUMMARIES.map((item) => {
             const Icon = item.icon
             const summary = workspaceSummary(item.key, item.roles)
@@ -99,7 +148,7 @@ export function BusinessOperationsDashboard() {
                 eyebrow={item.caption}
                 value={summary.total}
                 // 단위는 '개'까지다 — 카드 이름이 이미 '나의 워크스페이스'라 무엇을 세는지는
-                // 타일 제목이 답하고, 자리 칩(대펀·운용)까지 선 칸에서는 '운영'이 줄을 넘겨 접혔다.
+                // 타일 제목이 답하므로 단위에는 '운영'을 반복하지 않고 '개'만 적는다.
                 unit="개"
                 tone={item.tone}
                 icon={<Icon aria-hidden className="size-[18px]" strokeWidth={1.8} />}

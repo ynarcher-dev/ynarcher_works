@@ -2,6 +2,13 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { supabase } from '@/lib/supabase'
 
 export type InactiveLedgerKey = 'startups' | 'networks'
+export type BulkDeactivateEntityKey =
+  | InactiveLedgerKey
+  | 'programs'
+  | 'ma_programs'
+  | 'ma_buyers'
+  | 'ma_sellers'
+  | 'funds'
 
 export interface InactiveLedgerRow {
   entity_id: string
@@ -89,7 +96,17 @@ export function useRestoreEntities(ledger: InactiveLedgerKey) {
 }
 
 /** 선택한 활성 행을 모두 성공하거나 모두 롤백되는 한 번의 RPC로 비활성화한다. */
-export function useBulkDeactivateEntities(ledger: InactiveLedgerKey) {
+const bulkInvalidateKey: Record<BulkDeactivateEntityKey, readonly string[]> = {
+  startups: ['startups'],
+  networks: ['networks'],
+  programs: ['project'],
+  ma_programs: ['mna'],
+  ma_buyers: ['ma-parties', 'ma_buyers'],
+  ma_sellers: ['ma-parties', 'ma_sellers'],
+  funds: ['fund'],
+}
+
+export function useBulkDeactivateEntities(ledger: BulkDeactivateEntityKey) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ ids, reason }: { ids: string[]; reason: string }) => {
@@ -102,8 +119,10 @@ export function useBulkDeactivateEntities(ledger: InactiveLedgerKey) {
       return Number(data ?? 0)
     },
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: [ledger] })
-      void qc.invalidateQueries({ queryKey: ['inactive-ledger', ledger] })
+      void qc.invalidateQueries({ queryKey: bulkInvalidateKey[ledger] })
+      if (ledger === 'startups' || ledger === 'networks') {
+        void qc.invalidateQueries({ queryKey: ['inactive-ledger', ledger] })
+      }
     },
   })
 }

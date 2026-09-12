@@ -23,8 +23,9 @@ export const MNA_WORKSPACE: ProgramWorkspaceConfig = {
   guestMasterTables: ['ma_sellers', 'ma_buyers'],
   basePath: '/mna',
   detailBase: '/mna/deals',
-  // 목록 안쪽 문구의 도메인 명칭. M&A 딜도 화면상으로는 '프로젝트'로 부른다.
-  entityNoun: '프로젝트',
+  listLabel: 'M&A 딜',
+  // M&A팀의 메뉴와 목록 안쪽 문구는 실제 관리 대상인 'M&A 딜'로 부른다.
+  entityNoun: 'M&A 딜',
   tables: {
     programs: 'ma_programs',
     managers: 'ma_program_managers',
@@ -34,15 +35,15 @@ export const MNA_WORKSPACE: ProgramWorkspaceConfig = {
   rpcs: {
     setStaffing: 'set_ma_program_staffing',
   },
-  // 딜은 착수 결정이 곧 시작이라 제안 단계를 밟지 않는다 — 운영 4단계만 쓴다.
+  // 딜은 착수 결정이 곧 시작이라 제안 단계를 밟지 않는다.
   hasProposalStage: false,
+  // 진행하다 멈춘 딜(중단)과 착수 자체를 접은 딜(취소)을 저장값으로 구분한다.
+  hasSuspendedStatus: true,
   // 딜은 우리가 스스로 여는 일이라 발주·주관하는 바깥 기관이 없다.
   hasHostOrganization: false,
   categories: MNA_CATEGORIES,
-  // AC의 '사업구분'과 한 낱말로 붙지 않는다 — 이 워크스페이스에서 부르는 이름이 프로젝트다.
-  categoryNoun: '프로젝트 구분',
-  // '사업개요'와 달리 띄어 쓴다(2026-09-09 사용자 지정) — 규칙으로 짓지 못하는 말이라 값이다.
-  overviewNoun: '프로젝트 개요',
+  categoryNoun: 'M&A 딜 구분',
+  overviewNoun: 'M&A 딜 개요',
   // 담기는 것이 SELLER·BUYER 둘 다 회사이고, 그 회사들이 무엇에 매달렸는지는 이 워크스페이스가
   // URL·메뉴에서 이미 쓰는 낱말(딜)이 답한다.
   rosterLabel: '딜 참여사',

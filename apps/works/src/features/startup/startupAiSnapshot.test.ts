@@ -23,6 +23,7 @@ function formValues(over: Partial<StartupDetailFormValues> = {}): StartupDetailF
   return {
     name: '테스트',
     representative: '김대표',
+    representative_gender: '여성',
     company_form: '주식회사',
     founded_on: '2020-01-01',
     biz_reg_no: '123-45-67890',
@@ -94,6 +95,7 @@ describe('왕복 — 초안 없이 돌려도 값이 그대로다', () => {
     const v = formValues()
     const back = toFormValues(buildCardSnapshot(v, cardState()), v)
     expect(back.name).toBe('테스트')
+    expect(back.representative_gender).toBe('여성')
     expect(back.email).toBe('a@b.com')
     expect(back.phone).toBe('01012345678')
     expect(back.management_status).toBe('sourced')

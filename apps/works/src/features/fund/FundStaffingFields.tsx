@@ -96,7 +96,7 @@ export function FundStaffingFields({
       <Field label="운용인력" as="div">
         <MemberPicker employees={list} selected={value.operators} onChange={setOps} placeholder="임직원 검색 후 추가" />
       </Field>
-      <Field label="관리인력" as="div">
+      <Field label="담당자" as="div">
         <MemberPicker employees={list} selected={value.admins} onChange={setAdm} placeholder="임직원 검색 후 추가" />
       </Field>
     </div>

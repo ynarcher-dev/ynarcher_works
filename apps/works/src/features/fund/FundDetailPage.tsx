@@ -17,6 +17,7 @@ import {
 } from '@ynarcher/ui'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useAuthStore } from '@/auth/authStore'
 import { DetailDeleteButton } from '@/components/DetailDeleteButton'
 import { GuestHostProvider } from '@/features/guest/host'
 import { FUND_GUEST_HOST, fundAsGuestHost } from '@/features/fund/guestHost'
@@ -85,6 +86,7 @@ export function FundDetailPage() {
   const { data: purposes } = useFundPurposes(id)
   const { data: contributions } = useFundContributions(id)
   const deactivate = useDeactivateFund()
+  const userId = useAuthStore((s) => s.user?.id)
   const [editing, setEditing] = useState(false)
   const [tab, setTab] = useState<DetailTab>('portfolio')
   // 이 화면의 투자 폼은 **등록 전용**이다 — 수정·삭제는 집행 건 상세 페이지가 갖는다.
@@ -117,14 +119,16 @@ export function FundDetailPage() {
         actions={
           <>
             {/* 펀드는 삭제 사유 인프라가 없어 확인창(confirm)으로 소프트 삭제한다. */}
-            <DetailDeleteButton
-              name={fund.name}
-              withReason={false}
-              onDelete={async () => {
-                await deactivate.mutateAsync(fund.id)
-              }}
-              onDeleted={() => navigate('/fund')}
-            />
+            {fund.created_by === userId && (
+              <DetailDeleteButton
+                name={fund.name}
+                withReason={false}
+                onDelete={async () => {
+                  await deactivate.mutateAsync(fund.id)
+                }}
+                onDeleted={() => navigate('/fund')}
+              />
+            )}
             <Button onClick={() => setEditing(true)}>편집</Button>
           </>
         }
@@ -206,7 +210,7 @@ export function FundDetailPage() {
               <InfoGrid>
                 <Info label="대표펀드매니저" value={fund.manager?.name || null} />
                 <Info label="운용인력" value={fundOperatorLabel(operators, true)} />
-                <Info label="관리인력" value={fundManagerLabel(operators, true)} />
+                <Info label="담당자" value={fundManagerLabel(operators, true)} />
                 {/* 생성자(created_by) — 관리 주체(대표펀드매니저·운용·관리인력)와 별개 축이다. */}
                 <Info label="생성자" value={fund.creator?.name || null} meta />
                 <Info label="수정일" value={fundDate(fund.updated_at ?? null)} meta />

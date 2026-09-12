@@ -5,14 +5,16 @@ import {
   EmptyValue,
   ListToolbar,
   MultiSelectFilter,
-  PersonCell,
   Spinner,
   TagCell,
   type Column,
 } from '@ynarcher/ui'
+import { LockKeyhole } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { hasWorkspaceWrite, useAuthStore } from '@/auth/authStore'
 import { ListActions } from '@/components/ListActions'
+import { LedgerBulkDeactivateBar } from '@/features/master/LedgerBulkDeactivateBar'
 import {
   DECISION_UNSET,
   MA_DECISIONS,
@@ -52,6 +54,7 @@ const decisionColumn: Column<MaPartyRow> = {
   header: '진행여부',
   type: 'badge',
   render: (r) => {
+    if (r.can_read === false) return <EmptyValue />
     const { label, tone } = decisionBadge(r.decision)
     return <Badge tone={tone}>{label}</Badge>
   },
@@ -75,7 +78,20 @@ const decisionColumn: Column<MaPartyRow> = {
  */
 function columnsOf(cfg: MaPartyConfig): Column<MaPartyRow>[] {
   return [
-    { key: 'name', header: '기업명', type: 'name' },
+    {
+      key: 'name',
+      header: '기업명',
+      type: 'name',
+      render: (r) =>
+        r.can_read === false ? (
+          <span className="inline-flex items-center gap-1.5 text-gray-500">
+            <LockKeyhole className="size-3.5" aria-hidden="true" />
+            열람 권한이 없는 게시글
+          </span>
+        ) : (
+          r.name
+        ),
+    },
     ...(cfg.hasDecision ? [decisionColumn] : []),
     {
       key: 'industries',
@@ -86,15 +102,6 @@ function columnsOf(cfg: MaPartyConfig): Column<MaPartyRow>[] {
       render: (r) => <TagCell items={r.industries ?? []} />,
     },
     { key: 'wish', header: '희망사항', type: 'long', render: (r) => r.wish || <EmptyValue /> },
-    // 상대 쪽 창구다 — 우리 쪽 관리 주체가 아니다(표준 컬럼의 '생성자'와 다른 축).
-    // 이메일은 열로 세우지 않는다: 목록에서 견주는 값이 아니라 한 건을 열어 꺼내 쓰는 값이고,
-    // 개인정보라 마스킹까지 걸리면 열의 대부분이 가려진 글자가 된다.
-    {
-      key: 'contact_name',
-      header: '담당자',
-      type: 'person',
-      render: (r) => <PersonCell names={[r.contact_name]} />,
-    },
     {
       key: 'available_funds',
       header: (
@@ -118,26 +125,44 @@ function columnsOf(cfg: MaPartyConfig): Column<MaPartyRow>[] {
  * 분야는 여전히 축이 아니다 — 값이 태그라 선택지가 원장에서 자라고, 실제로 좁히는
  * 일은 검색어가 먼저 한다(건수가 쌓이면 그때 연다. 요약 카드도 같은 조건이다).
  *
- * 범위 토글(내 것/전체)도 없다. 이 원장들은 담당자 원장을 두지 않은 공동관리라 '내 바이어'
- * 라는 것이 성립하지 않는다 — 생성자는 권한 축이 아니므로 범위가 되지 못한다.
+ * 범위 토글(내 것/전체)도 없다. 생성자는 비활성화 권한만 가지며 목록 범위를 가르는 축은 아니다.
  */
 export function MaPartyListTab({ config }: { config: MaPartyConfig }) {
   const navigate = useNavigate()
+  const authUser = useAuthStore((s) => s.user)
+  const canWrite = hasWorkspaceWrite(authUser, 'mna')
   const [keyword, setKeyword] = useState('')
   const [decisions, setDecisions] = useState<string[]>([])
   const [page, setPage] = useState(0)
+  const [selected, setSelected] = useState<string[]>([])
   const columns = useMemo(() => columnsOf(config), [config])
 
   // 좁힘 조건을 바꾸면 첫 페이지로 되돌린다(3페이지를 보던 중 필터를 걸면 빈 페이지가 선다).
-  useEffect(() => setPage(0), [keyword, decisions])
+  useEffect(() => {
+    setPage(0)
+    setSelected([])
+  }, [keyword, decisions])
   // 원장을 옮겨도 컴포넌트는 그대로 서므로(같은 화면 한 벌) 검색어·필터·페이지를 함께 되돌린다.
   useEffect(() => {
     setKeyword('')
     setDecisions([])
     setPage(0)
+    setSelected([])
   }, [config])
 
-  const { data, isLoading } = useMaPartyListPage(config, keyword, decisions, page, PAGE_SIZE)
+  useEffect(() => setSelected([]), [page])
+
+  const { data, isLoading, isError } = useMaPartyListPage(
+    config,
+    keyword,
+    decisions,
+    page,
+    PAGE_SIZE,
+  )
+  const rows = data?.rows ?? []
+  const canDeactivate = (row: MaPartyRow) =>
+    canWrite && row.can_read !== false && row.created_by === authUser?.id
+  const showSelection = rows.some(canDeactivate)
 
   return (
     <div className="space-y-3">
@@ -165,18 +190,40 @@ export function MaPartyListTab({ config }: { config: MaPartyConfig }) {
         }
       />
 
+      <LedgerBulkDeactivateBar
+        ledger={config.table}
+        noun={config.noun}
+        selectedIds={selected}
+        onDone={() => {
+          if (selected.length === rows.length && page > 0) setPage((p) => p - 1)
+          setSelected([])
+        }}
+      />
+
       {isLoading ? (
         <Spinner />
       ) : (
         <DataTable<MaPartyRow>
           columns={columns}
-          rows={data?.rows ?? []}
+          rows={rows}
           rowKey={(r) => r.id}
-          onRowClick={(r) => navigate(`${config.basePath}/${r.id}`)}
-          emptyText={`등록된 ${config.noun}이(가) 없습니다.`}
+          selectedKeys={selected}
+          onSelectionChange={setSelected}
+          selectable={showSelection}
+          selectableRow={canDeactivate}
+          onRowClick={(r) => {
+            if (r.can_read !== false) navigate(`${config.basePath}/${r.id}`)
+          }}
+          // 조회 실패와 실제 0건을 구분한다. RPC 누락·권한 오류를 빈 원장으로 보이면
+          // 사용자는 데이터가 사라졌다고 판단하게 된다.
+          emptyText={
+            isError
+              ? `${config.noun} 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.`
+              : `등록된 ${config.noun}이(가) 없습니다.`
+          }
           // 생성자 값은 uuid가 아니라 임베드한 이름이 답한다(기본 추론은 created_by 원값을 읽는다).
           meta={{ author: (r) => r.creator?.name ?? <EmptyValue /> }}
-          // 삭제는 목록이 아니라 상세에서 한다 — 빈 관리 열이 남지 않게 열 자체를 내린다.
+          // 비활성화는 생성자 전용 체크박스와 선택 액션이 맡으므로 별도 관리 열은 내린다.
           showManageColumn={false}
           pagination={{
             page,

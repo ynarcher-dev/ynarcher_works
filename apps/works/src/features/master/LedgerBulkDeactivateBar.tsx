@@ -1,17 +1,17 @@
 import { Button, useToast } from '@ynarcher/ui'
 import {
   useBulkDeactivateEntities,
-  type InactiveLedgerKey,
+  type BulkDeactivateEntityKey,
 } from '@/features/master/inactiveLedgerHooks'
 
 interface Props {
-  ledger: InactiveLedgerKey
+  ledger: BulkDeactivateEntityKey
   noun: string
   selectedIds: string[]
   onDone: () => void
 }
 
-/** 공용 DB 목록에서 체크한 현재 페이지 행을 한 번에 비활성화하는 선택 액션 줄. */
+/** 목록에서 체크한 현재 페이지 행을 한 번에 비활성화하는 선택 액션 줄. */
 export function LedgerBulkDeactivateBar({ ledger, noun, selectedIds, onDone }: Props) {
   const toast = useToast()
   const deactivate = useBulkDeactivateEntities(ledger)

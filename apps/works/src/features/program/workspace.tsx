@@ -44,13 +44,13 @@ export interface ProgramWorkspaceConfig extends GuestHostConfig {
    * 그 구획만 아는 사실이라, 공용 화면이 규칙으로 조립하면 한쪽이 반드시 틀린다.
    */
   detailBase: string
+  /** 사이드바·breadcrumb·페이지 제목에 쓰는 목록 화면 이름. */
+  listLabel: string
   /**
    * 목록 안쪽 문구(검색 자리표시자·등록 버튼·업로드 템플릿)에 쓰는 도메인 명칭.
    *
-   * 사이드바·페이지 제목은 2026-08-20부터 워크스페이스와 무관하게 `내 프로젝트`/`전체 프로젝트`
-   * 한 쌍으로 통일되어 여기서 조립하지 않는다(navigation.ts의 PROGRAM_MINE_LABEL·
-   * PROGRAM_ALL_LABEL이 단일 원천) — 워크스페이스별 라벨 필드를 두면 사이드바와 제목이
-   * 따로 관리되어 어긋난다.
+   * 사이드바·breadcrumb·페이지 제목은 `listLabel`이 답하고, 이 값은 그 안에서 관리하는
+   * 한 건을 무엇이라 부르는지 답한다. 예: 사업부는 listLabel=`관리 사업`, entityNoun=`사업`.
    */
   entityNoun: string
   /**
@@ -60,7 +60,7 @@ export interface ProgramWorkspaceConfig extends GuestHostConfig {
    * 다시 적으면 "갈릴 수 있는 값"으로 읽혀, 실제로는 하나인 원장을 갈라 놓으려는 시도가 는다.
    */
   tables: {
-    programs: string
+    programs: 'programs' | 'ma_programs'
     managers: string
     departments: string
     timeline: string
@@ -78,6 +78,8 @@ export interface ProgramWorkspaceConfig extends GuestHostConfig {
    * 보안이 아니다.
    */
   hasProposalStage: boolean
+  /** M&A에서만 운용하는 중단(SUSPENDED) 상태. 취소와 저장 의미는 갈리지만 현황에서는 함께 센다. */
+  hasSuspendedStatus?: boolean
   /**
    * 주관(host_organization — 이 사업을 발주·주관하는 기관/기업) 운용 여부.
    * false면 목록 열·등록 폼 칸·상세 항목·업로드 열이 함께 사라진다.

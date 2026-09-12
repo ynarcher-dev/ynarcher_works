@@ -1,4 +1,4 @@
-import { Button, Checkbox, Input, Modal, SegmentedToggle, TagChip, TextArea, cn, formText } from '@ynarcher/ui'
+import { Button, Checkbox, Input, Modal, TextArea, cn, formText } from '@ynarcher/ui'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '@/auth/authStore'
@@ -9,15 +9,9 @@ import {
   useCreateSystemEvent,
   useDeleteSystemEvent,
   useUpdateSystemEvent,
-  type EventCategory,
   type EventCompanion,
   type SystemEvent,
 } from '@/features/hub/hooks'
-
-const CATEGORIES: { key: EventCategory; label: string }[] = [
-  { key: 'WORK', label: '업무' },
-  { key: 'LEAVE', label: '휴가' },
-]
 
 /** 좌측 라벨 + 우측 컨트롤 한 줄. tall이면 라벨을 위쪽에 맞춘다(내용·동행자). */
 function Row({
@@ -45,9 +39,19 @@ function Row({
 }
 
 /**
- * 전사 캘린더 일정 등록/수정 모달. `event`가 주어지면 그 일정을 수정하고 삭제 버튼을 띄운다.
- * 좌측 라벨 행 구성 — 구분(업무/휴가) · 제목 · 시작(날짜·시간) · 종료(날짜·시간·종일) · 동행자 · 내용.
+ * 전사 일정 등록/수정 모달. `event`가 주어지면 그 일정을 수정하고 삭제 버튼을 띄운다.
+ * 좌측 라벨 행 구성 — 제목 · 시작(날짜·시간) · 종료(날짜·시간·종일) · 작성자 · 동행자 · 내용.
  * 시작/종료를 각각 날짜+시간으로 지정해 여러 날에 걸친 일정도 만들 수 있다.
+ *
+ * **사람이 손으로 만드는 일정은 업무 하나다**(2026-09-11 사용자 확정). 휴가(`LEAVE`)는 전자결재
+ * 승인이 자동으로 배정할 것이라 여기에 선택지로 두면 같은 휴가가 두 경로로 생겨 어느 쪽이 사실인지
+ * 판정할 근거가 없어진다(결재 없이 캘린더에만 선 휴가, 캘린더에서 지웠는데 결재에는 승인으로 남은
+ * 휴가). 그래서 **만드는 자리만** 닫고 보는 자리는 그대로 둔다 — 원장·조회(`useSystemEvents`)·
+ * 상세 묶음(`DayAgenda`의 '휴가')·색(`eventStyle`)은 손대지 않는다.
+ *
+ * 이미 있는 휴가 행은 계속 열어 고칠 수 있어 `category` 상태는 남는다 — 값이 사라지면 휴가 행을
+ * 열어 저장하는 순간 업무로 조용히 바뀌고, 구분을 고르는 칸이 없으니 담당자는 그 사실을 화면에서
+ * 알 길이 없다.
  */
 export function EventEditorModal({
   open,
@@ -65,7 +69,6 @@ export function EventEditorModal({
   const del = useDeleteSystemEvent()
   const userName = useAuthStore((s) => s.user?.name ?? '사용자')
 
-  const [category, setCategory] = useState<EventCategory>('WORK')
   const [title, setTitle] = useState('')
   const [allDay, setAllDay] = useState(false)
   const [startDate, setStartDate] = useState('')
@@ -86,7 +89,6 @@ export function EventEditorModal({
       const meta = parseEventMeta(event.body)
       const s = event.starts_at ? dayjs(event.starts_at) : dayjs(dateKey)
       const e = event.ends_at ? dayjs(event.ends_at) : null
-      setCategory(event.event_type === 'LEAVE' ? 'LEAVE' : 'WORK')
       setTitle(event.title ?? '')
       setAllDay(meta.allDay)
       setStartDate(s.format('YYYY-MM-DD'))
@@ -96,7 +98,6 @@ export function EventEditorModal({
       setMemo(meta.memo)
       setCompanions(meta.companions)
     } else {
-      setCategory('WORK')
       setTitle('')
       setAllDay(false)
       setStartDate(dateKey)
@@ -111,12 +112,11 @@ export function EventEditorModal({
 
   /** keepOpen=true(저장 후 계속 추가)이면 제목·내용·동행자만 비우고 모달을 유지한다. */
   const submit = (keepOpen: boolean) => {
-    let t = title.trim()
-    if (category === 'WORK' && !t) {
+    const t = title.trim()
+    if (!t) {
       setErr('제목을 입력하세요.')
       return
     }
-    if (category === 'LEAVE' && !t) t = `${userName} 휴가`
 
     if (!startDate) {
       setErr('시작 날짜를 선택하세요.')
@@ -144,10 +144,11 @@ export function EventEditorModal({
     const body = encodeEventBody({
       allDay,
       memo: memo.trim(),
-      companions: category === 'WORK' ? companions : [],
+      companions,
     })
     setErr('')
-    const payload = { event_type: category, title: t, starts_at: startsAt, ends_at: endsAt, body }
+    // 구분은 고정이다 — 휴가는 전자결재가 서버에서 만든다(RLS가 화면발 LEAVE 삽입을 막는다).
+    const payload = { event_type: 'WORK' as const, title: t, starts_at: startsAt, ends_at: endsAt, body }
     if (event) {
       update.mutate({ id: event.id, ...payload }, { onSuccess: onClose })
       return
@@ -192,36 +193,26 @@ export function EventEditorModal({
             <Button
               variant="outline"
               onClick={() => submit(true)}
-              disabled={busy || (category === 'WORK' && !title.trim())}
+              disabled={busy || !title.trim()}
             >
               저장 후 계속 추가
             </Button>
           )}
           <Button
             onClick={() => submit(false)}
-            disabled={busy || (category === 'WORK' && !title.trim())}
+            disabled={busy || !title.trim()}
           >
-            {busy ? '처리 중…' : isEdit ? '저장' : '저장'}
+            {busy ? '처리 중…' : '저장'}
           </Button>
         </>
       }
     >
       <div className="grid grid-cols-[4.5rem_1fr] items-center gap-x-4 gap-y-3">
-        <Row label="구분">
-          <SegmentedToggle
-            block
-            label="일정 구분"
-            options={CATEGORIES.map((c) => ({ key: c.key, label: c.label }))}
-            value={category}
-            onChange={setCategory}
-          />
-        </Row>
-
-        <Row label={category === 'WORK' ? '제목' : '제목(선택)'}>
+        <Row label="제목">
           <Input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder={category === 'WORK' ? '제목을 입력하세요.' : `비우면 '${userName} 휴가'로 등록`}
+            placeholder="제목을 입력하세요."
             autoFocus
           />
         </Row>
@@ -264,19 +255,15 @@ export function EventEditorModal({
           </div>
         </Row>
 
-        {category === 'WORK' && (
-          <>
-            <Row label="작성자">
-              {/* 작성자는 고정값(제거 불가) — 동행자 칩과 같은 규격을 위해 TagChip을 쓰되 클릭은 막는다. */}
-              <TagChip selected tabIndex={-1} className="cursor-default">
-                {userName}
-              </TagChip>
-            </Row>
-            <Row label="동행자" tall>
-              <CompanionPicker selected={companions} onChange={setCompanions} />
-            </Row>
-          </>
-        )}
+        <Row label="작성자">
+          {/* 고정값이라 텍스트로 세운다 — 지울 수 없는 값이 동행자 칩과 같은 모양으로 서면
+              지울 수 있다고 말하는 컨트롤이 된다. */}
+          <span className="text-body text-gray-900">{userName}</span>
+        </Row>
+
+        <Row label="동행자" tall>
+          <CompanionPicker selected={companions} onChange={setCompanions} />
+        </Row>
 
         <Row label="내용" tall>
           <TextArea

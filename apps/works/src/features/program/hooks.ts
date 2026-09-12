@@ -60,6 +60,7 @@ export interface ProgramManager extends ProgramManagerDraft {
 
 export interface Program {
   id: string
+  created_by: string | null
   /** 사업코드(6자리 영숫자 난수, 유니크). DB 트리거가 등록 시 자동 부여. */
   code: string | null
   /** 사업구분: PUBLIC(공공)/PRIVATE(민간)/REVENUE(매출)/NEW(신규)/ETC(기타). null=미지정. */
@@ -107,7 +108,7 @@ export function programCols(config: ProgramWorkspaceConfig): string {
   return (
     // host_organization은 세 원장에 모두 있는 컬럼이라 select는 갈라지지 않는다 —
     // 표시·저장만 config(hasHostOrganization)가 가른다.
-    'id, code, category, industries, host_organization, title, status, proposal_start_date, proposal_end_date, start_date, end_date, description, guest_access_ends_at, updated_at, ' +
+    'id, code, category, industries, host_organization, title, status, proposal_start_date, proposal_end_date, start_date, end_date, description, guest_access_ends_at, created_by, updated_at, ' +
     `departments:${departments}(org_version_id, department_id, kind, collaboration_ratio, department:departments!${departments}_department_id_fkey(id, name)), ` +
     `managers:${managers}(user_id, org_version_id, department_id, role, allocation_rate, start_date, end_date, user:users!${managers}_user_id_fkey(id, name), department:departments!${managers}_department_id_fkey(id, name)), ` +
     'creator:users!created_by(id, name)'

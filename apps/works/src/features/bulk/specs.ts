@@ -223,7 +223,7 @@ export function programBulkSpec(config: ProgramWorkspaceConfig): BulkImportSpec 
   // 등록으로 지정할 수 있는 상태 = 워크스페이스 수명주기 그대로. 구 상태값(모집·심사·데모데이)은
   // 표시 전용이라 빠지고, 제안 단계를 쓰지 않는 워크스페이스에서는 운영 4종만 남는다(config.ts).
   const statusLabels: Record<string, string> = Object.fromEntries(
-    programStatusOptions(config.hasProposalStage).map((code) => [
+    programStatusOptions(config.hasProposalStage, config.hasSuspendedStatus).map((code) => [
       code,
       PROGRAM_STATUS_LABEL[code] ?? code,
     ]),

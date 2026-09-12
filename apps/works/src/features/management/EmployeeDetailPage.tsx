@@ -22,7 +22,12 @@ import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
 import { EmployeeActivitySection } from '@/features/management/EmployeeActivitySection'
 import { ROLE_LABELS } from '@/features/management/config'
 import { affiliationLabel } from '@/features/management/departmentOptions'
-import { useDeactivateEmployee, useDepartments, useEmployee } from '@/features/management/hooks'
+import {
+  useDeactivateEmployee,
+  useDepartments,
+  useEmployee,
+  useEmployeeHrProfile,
+} from '@/features/management/hooks'
 import { useJobTitleLabel } from '@/features/management/jobTitleHooks'
 import { legacyNote, parseNote } from '@/features/management/noteConfig'
 import { useEmployeeBranchNames } from '@/features/office/branches/branchMembers'
@@ -69,6 +74,8 @@ export function EmployeeDetailPage({
   // 임직원은 내부 구성원이라 개인정보 마스킹 대상이 아니다(민감정보 정책은 외부 인물·기업만 다룬다).
   const [editing, setEditing] = useState(false)
   const { data: emp, isLoading } = useEmployee(id)
+  // 생년월일은 MANAGEMENT 전용 hr_profiles에 있으므로 OFFICE 상세에서는 요청조차 보내지 않는다.
+  const { data: hrProfile, isLoading: isHrProfileLoading } = useEmployeeHrProfile(id, !readOnly)
   const { data: depts } = useDepartments()
   // 비활성화(소프트 삭제)는 목록의 관리 컬럼이 아니라 이 상세 상단바가 소유한다.
   const deactivate = useDeactivateEmployee()
@@ -77,7 +84,7 @@ export function EmployeeDetailPage({
   // 이름 옆 호칭은 직급·직책 태그 원장의 표기 방식이 정한다(코드에 목록을 박지 않는다).
   const jobTitle = useJobTitleLabel()
 
-  if (isLoading) return <Spinner />
+  if (isLoading || (!readOnly && isHrProfileLoading)) return <Spinner />
   if (!emp) return <Banner tone="warning">임직원 정보를 찾을 수 없습니다.</Banner>
 
   // 부서/팀 표기(상위 · 하위)의 규칙은 departmentOptions.affiliationLabel이 소유한다.
@@ -132,6 +139,7 @@ export function EmployeeDetailPage({
         <EmployeeForm
           recordId={emp.id}
           initial={emp}
+          initialBirthDate={hrProfile?.birth_date ?? ''}
           backTo={backTo}
           onDone={() => setEditing(false)}
           onCancel={() => setEditing(false)}
@@ -160,6 +168,7 @@ export function EmployeeDetailPage({
                   {/* 호봉은 인사 관리 맥락에서만 표기한다(OFFICE 임직원 정보에서는 감춤). */}
                   {showPayStep && <Info label="호봉" value={payStep || null} />}
                   <Info label="입사일" value={hireDate || null} />
+                  {!readOnly && <Info label="생년월일" value={hrProfile?.birth_date ?? null} />}
                   <Info label="연락처" value={phone} />
                   <Info label="이메일" value={email} />
                   <Info label="수정일" value={formatDate(emp.updated_at)} meta />

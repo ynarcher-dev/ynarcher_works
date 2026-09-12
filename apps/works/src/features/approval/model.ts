@@ -18,6 +18,15 @@ export interface ApprovalLine {
   round?: number
 }
 
+/**
+ * 목록 행의 결재선. 자리 id가 더 붙는 이유는 목록에서 일괄 승인을 하기 때문이다 — 서버가
+ * 받는 것은 문서가 아니라 **자리**(`decide_approval_document(p_line_id)`)라, 그 자리를
+ * 가리킬 수 없으면 목록에서는 결재를 시작할 수 없다.
+ */
+export interface ApprovalListLine extends ApprovalLine {
+  id: string
+}
+
 /** 문서함 목록 한 행 — approvalApi의 LIST_SELECT와 형태가 일치해야 한다. */
 export interface ApprovalListRow {
   id: string
@@ -33,7 +42,7 @@ export interface ApprovalListRow {
   form: { name: string } | null
   /** 하이웍스 원본과 연결된 문서인지 목록에서도 이름 문자열에 기대지 않고 판별한다. */
   legacy: { source_system: string } | null
-  approval_lines: ApprovalLine[]
+  approval_lines: ApprovalListLine[]
   approval_recipients: { user_id: string }[]
   approval_reads: { user_id: string }[]
 }
@@ -250,6 +259,32 @@ export function inBox(
     case 'dept-all':
       return Boolean(myDeptId) && row.department_id === myDeptId && row.status !== 'DRAFT'
   }
+}
+
+/**
+ * 목록에서 골라 한꺼번에 할 수 있는 일. 둘 다 없으면 null — 그 행은 목록에서 고를 것이 없다.
+ *
+ * **일괄로 여는 것은 승인과 확인 둘뿐이다.** 보완 요청·반려는 사유가 문서마다 다르고
+ * 그 사유가 곧 기안자의 다음 판단 근거라(서버도 빈 사유를 거절한다) 한 문장을 여러 문서에
+ * 돌려 쓰는 자리를 만들면 그 사유가 아무 말도 하지 않게 된다.
+ *
+ * 확인 여부는 문서함 판정(`mine-confirm`)을 그대로 되묻는다 — 같은 뜻을 두 곳에 적으면
+ * 어긋나는 날 좌패널 건수와 고를 수 있는 줄이 서로를 부정한다. 부서는 이 칸의 판정에
+ * 끼지 않으므로 null을 넘긴다.
+ */
+export interface ApprovalBulkTarget {
+  documentId: string
+  /** 지금 내 차례인 결재선 자리 id. 없으면 내 차례가 아니다. */
+  approveLineId: string | null
+  /** 참조자인데 아직 확인 스탬프를 남기지 않았다. */
+  needsConfirm: boolean
+}
+
+export function bulkTargetFor(row: ApprovalListRow, uid: string): ApprovalBulkTarget | null {
+  const line = actionableLineFor(row.approval_lines, uid)
+  const needsConfirm = inBox(row, 'mine-confirm', uid, null)
+  if (!line && !needsConfirm) return null
+  return { documentId: row.id, approveLineId: line?.id ?? null, needsConfirm }
 }
 
 /**

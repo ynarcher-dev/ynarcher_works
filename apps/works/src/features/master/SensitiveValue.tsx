@@ -1,5 +1,5 @@
 import { Button, EmptyValue, Modal, TextArea, useToast } from '@ynarcher/ui'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { maskBy } from '@/lib/mask'
 import { supabase } from '@/lib/supabase'
 import { useMaskPolicy, type SensitiveField } from '@/features/admin/sensitiveStore'
@@ -9,6 +9,8 @@ interface Props {
   /** 민감정보 정책 콘텐츠 키(어느 메뉴의 상세인지). 카탈로그: features/admin/sensitiveContents.ts */
   contentKey: string
   value: string | null | undefined
+  /** 원문·마스킹 값 바로 뒤에 함께 붙이고, 열람 버튼보다 앞에 두는 표시값. */
+  suffix?: ReactNode
   /** 접근 로그용 컨텍스트. */
   resourceType?: string
   resourceId?: string
@@ -19,7 +21,7 @@ interface Props {
  * 열람 로그는 서버 RPC(log_sensitive_access)가 강제하며, 로그 적재에 실패하면
  * 원본을 표시하지 않는다(사유 검증도 서버에서 수행).
  */
-export function SensitiveValue({ field, contentKey, value, resourceType, resourceId }: Props) {
+export function SensitiveValue({ field, contentKey, value, suffix, resourceType, resourceId }: Props) {
   const policy = useMaskPolicy(contentKey)
   const toast = useToast()
   const [revealed, setRevealed] = useState(false)
@@ -29,7 +31,7 @@ export function SensitiveValue({ field, contentKey, value, resourceType, resourc
   // 값이 없는 자리의 글자와 색은 이 화면이 아니라 `EmptyValue`가 정한다 — 직접 찍으면 값과
   // 같은 진한 톤이 되어, 마스킹 대상이 비어 있는 칸이 실제 값만큼 무겁게 읽힌다.
   if (!value) return <EmptyValue />
-  if (!policy[field] || revealed) return <>{value}</>
+  if (!policy[field] || revealed) return <>{value}{suffix}</>
 
   const masked = maskBy(field, value)
 
@@ -56,7 +58,7 @@ export function SensitiveValue({ field, contentKey, value, resourceType, resourc
 
   return (
     <span className="inline-flex items-center gap-2">
-      <span>{masked}</span>
+      <span>{masked}{suffix}</span>
       {/* 마스킹된 값 옆에 붙는 자리라 표 셀 규격(24px)을 명시한다. */}
       <Button variant="outline" density="table" onClick={() => setAsking(true)}>
         보기

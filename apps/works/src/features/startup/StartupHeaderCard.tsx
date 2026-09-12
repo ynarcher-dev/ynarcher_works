@@ -83,15 +83,18 @@ export function StartupHeaderCard({
   }
   const logo = record.logo_url ? String(record.logo_url) : null
   const industries = readIndustries(record)
+  const representative = text(record.representative)
+  const representativeGender = text(record.representative_gender)
   // 부제 자리에는 한 줄 소개(business_profile.oneLiner)를 노출한다.
   const oneLiner = readBusiness(record).oneLiner ?? ''
 
   /** 대표자·이메일·연락처는 외부 기업 정보 — 정책 키와 로그 컨텍스트를 세 번 적지 않는다. */
-  const masked = (field: 'name' | 'email' | 'phone', value: unknown) => (
+  const masked = (field: 'name' | 'email' | 'phone', value: unknown, suffix?: string) => (
     <SensitiveValue
       field={field}
       contentKey={contentKey}
       value={text(value)}
+      suffix={suffix}
       resourceType={RESOURCE_TYPE}
       resourceId={record.id}
     />
@@ -127,7 +130,14 @@ export function StartupHeaderCard({
       }
       info={
         <InfoGrid>
-          <Info label="대표자" value={masked('name', record.representative)} />
+          <Info
+            label="대표자"
+            value={
+              representative
+                ? masked('name', representative, representativeGender ? ` / ${representativeGender}` : undefined)
+                : null
+            }
+          />
           <Info label="이메일" value={masked('email', record.email)} />
           <Info label="연락처" value={masked('phone', record.phone)} />
           <Info label="회사 형태" value={str('company_form')} />

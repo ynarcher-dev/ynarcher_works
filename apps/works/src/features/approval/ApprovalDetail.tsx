@@ -1,7 +1,6 @@
 import {
   BackButton,
   Badge,
-  Button,
   Card,
   DetailTopBar,
   EmptyState,
@@ -17,7 +16,7 @@ import { ApprovalDecideModal } from '@/features/approval/ApprovalDecideModal'
 import { ApprovalFieldsView } from '@/features/approval/ApprovalFieldsView'
 import { ApprovalInfoTable } from '@/features/approval/ApprovalInfoTable'
 import { HiworksSourceMark } from '@/features/approval/HiworksSourceMark'
-import { ApprovalRecallModal } from '@/features/approval/ApprovalRecallModal'
+import { ApprovalDetailActions } from '@/features/approval/ApprovalDetailActions'
 import { approvalHeaderPairs } from '@/features/approval/approvalHeader'
 import { ApprovalLinkPanel } from '@/features/approval/ApprovalLinkPanel'
 import { LegacyApprovalLineTable } from '@/features/approval/LegacyApprovalLineTable'
@@ -32,8 +31,6 @@ import { useApprovalDocument, useMarkApprovalRead } from '@/features/approval/ap
 import {
   APPROVAL_ATTACHMENT_TYPE,
   APPROVAL_FEEDBACK_TYPE,
-  DOC_STATUS_LABEL,
-  DOC_STATUS_TONE,
   LINE_KIND_LABEL,
 } from '@/features/approval/config'
 import {
@@ -52,9 +49,9 @@ import {
   isLastPending,
 } from '@/features/approval/model'
 import {
-  approvalRecallActionFor,
-  isFinalApprovalReset,
-} from '@/features/approval/approvalRecall'
+  approvalStatusLabel,
+  approvalStatusTone,
+} from '@/features/approval/approvalDraftActions'
 import { maxRound, stampLinesForRound } from '@/features/approval/stampRounds'
 import { useEmployees } from '@/features/management/hooks'
 import { useJobTitleLabel } from '@/features/management/jobTitleHooks'
@@ -100,7 +97,6 @@ export function ApprovalDetail({
   const toast = useToast()
   // 결재 처리 창의 열림 여부. 문서를 다 읽고 [○○ 처리]를 누른 사람만 결정 앞에 선다.
   const [deciding, setDeciding] = useState(false)
-  const [recalling, setRecalling] = useState(false)
   // 지금 열어 읽고 있는 결재 의견의 결재선 행. 의견은 도장을 눌러야 열린다.
   const [commentLineId, setCommentLineId] = useState<string | null>(null)
   // 지난 회차 이력의 펼침 상태. 기본은 접힘 — 대부분의 문서는 1차이고, 되돌아온 문서도
@@ -206,8 +202,6 @@ export function ApprovalDetail({
   // "그때 누가 무엇을 했나"를 되짚을 때만 필요하다.
   const pastRounds = Array.from({ length: round - 1 }, (_, i) => round - 1 - i)
   const openedComment = stampLines.find((l) => l.id === commentLineId)
-  const finalApprovalReset = isFinalApprovalReset(doc.status, lines)
-  const recallAction = uid ? approvalRecallActionFor(doc.status, lines, uid) : null
   const isHiworks = doc.legacy?.source_system === 'HIWORKS'
   const canConfirmRecipient = Boolean(
     uid &&
@@ -217,51 +211,29 @@ export function ApprovalDetail({
   const confirmRecipient = () => {
     if (!uid || !canConfirmRecipient || markRead.isPending) return
     markRead.mutate(
-      { documentId: doc.id, userId: uid },
+      { documentIds: [doc.id], userId: uid },
       {
         onSuccess: () => toast.show('문서를 확인했습니다.', 'success'),
         onError: () => toast.show('확인 처리에 실패했습니다.', 'danger'),
       },
     )
   }
-  // 기안자는 임시저장 또는 보완 요청 문서만 고칠 수 있다. 반려는 종결이라 수정·재상신이 없다.
-  const canEdit =
-    Boolean(onEdit) &&
-    doc.drafter_id === uid &&
-    (doc.status === 'DRAFT' || doc.status === 'REVISION_REQUIRED' || finalApprovalReset)
-
   return (
     <div className="space-y-5">
       <DetailTopBar
         back={<BackButton onClick={onBack}>문서함</BackButton>}
         actions={
-          <>
-          {/* 기안자 본인이 고칠 수 있는 문서는 둘뿐이다 — 아직 조직에 내보내지 않은
-              임시저장과, 보완 요청으로 흐름이 멈춘 문서다. 반려는 결재를 끝내므로 열지 않는다.
-              흐르는 중인 문서도 이미 찍힌 도장이 무엇에 대한 것인지 흐려지므로 수정할 수 없다.
-              (같은 조건을 서버 RPC가 다시 확인한다 — 화면에서 숨기는 것은 보안이 아니다.) */}
-          {canEdit && (
-            <Button variant="outline" onClick={() => onEdit?.(doc.id)}>
-              {doc.status === 'DRAFT' ? '수정' : '보완 후 재상신'}
-            </Button>
-          )}
-          {recallAction && (
-            <Button
-              variant={recallAction.action === 'RESET' ? 'outline-danger' : 'outline'}
-              onClick={() => setRecalling(true)}
-            >
-              {recallAction.action === 'RESET' ? '결재 초기화' : '승인 취소'}
-            </Button>
-          )}
-          {/* 결재 처리는 창으로 연다 — 승인·반려 버튼이 문서 옆에 상시로 서 있으면 다 읽기
-              전에 손이 먼저 나간다. 이 버튼은 "처리하겠다"는 의사를 밝히는 자리이고, 실제
-              결정은 창 안에서 한 번 더 고르고 [확인]을 눌러야 내려간다. */}
-          {canDecide && myLine && (
-            <Button onClick={() => setDeciding(true)}>
-              {LINE_KIND_LABEL[myLine.kind ?? 'APPROVAL']} 처리
-            </Button>
-          )}
-          </>
+          // 이 문서에서 내가 할 수 있는 일 — 기안자 축과 결재자 축의 판정이 한 자리에 모인다.
+          <ApprovalDetailActions
+            doc={doc}
+            uid={uid}
+            onEdit={onEdit}
+            onDeleted={onBack}
+            onDecide={() => setDeciding(true)}
+            decideKindLabel={
+              canDecide && myLine ? LINE_KIND_LABEL[myLine.kind ?? 'APPROVAL'] : null
+            }
+          />
         }
       />
 
@@ -273,16 +245,6 @@ export function ApprovalDetail({
           lineId={myLine.id}
           kind={myLine.kind ?? 'APPROVAL'}
           isFinal={isFinal}
-        />
-      )}
-
-      {recallAction && (
-        <ApprovalRecallModal
-          open={recalling}
-          onClose={() => setRecalling(false)}
-          documentId={doc.id}
-          lineId={recallAction.lineId}
-          action={recallAction.action}
         />
       )}
 
@@ -299,7 +261,11 @@ export function ApprovalDetail({
                   {isHiworks && <HiworksSourceMark />}
                   <span>{doc.form ? approvalFormDisplayName(doc.form.name) : '결재 문서'}</span>
                 </h2>
-                <Badge tone={DOC_STATUS_TONE[doc.status]}>{DOC_STATUS_LABEL[doc.status]}</Badge>
+                {/* 취소된 문서는 '임시저장'이 아니라 '기안 취소'로 선다 — 도장을 찍었던
+                    결재자가 이 배지만 보고도 무슨 일이 있었는지 알아야 한다. */}
+                <Badge tone={approvalStatusTone(doc.status, lines)}>
+                  {approvalStatusLabel(doc.status, lines)}
+                </Badge>
                 {/* 회차는 1차일 때 적지 않는다 — 대부분의 문서가 1차이고, 늘 붙어 있으면
                     '2차'라는 사실이 눈에 걸리지 않는다. 예외일 때만 말하는 표식이다. */}
                 {round > 1 && <Badge tone="neutral">{round}차 상신</Badge>}

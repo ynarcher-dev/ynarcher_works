@@ -1,5 +1,5 @@
 // [Phase 7] 임직원 계정 생성 (관리자/경영지원 전용)
-// 요청: { email, name, password, user_type, department_id?, phone?, position? }
+// 요청: { email, name, password, user_type, department_id?, phone?, position?, birth_date? }
 // 응답: { id } | 4xx/5xx
 //
 // 보안:
@@ -11,6 +11,7 @@
 //       supabase/functions/guest-auth-verify/index.ts(프로비저닝 패턴)
 import { jsonResponse, withCors } from '../_shared/cors.ts'
 import { supabaseAdmin } from '../_shared/supabaseAdmin.ts'
+import { isValidBirthDate } from './birthDate.ts'
 
 /** 계정 생성 시 부여 가능한 임직원 역할(외부 게스트 유형은 제외). */
 const INTERNAL_ROLES = new Set([
@@ -41,6 +42,7 @@ Deno.serve(withCors(async (req: Request) => {
     const position = body.position ? String(body.position).trim() : null
     const rank = body.rank ? String(body.rank).trim() : null
     const payStep = body.pay_step ? String(body.pay_step).trim() : null
+    const birthDate = body.birth_date ? String(body.birth_date).trim() : null
 
     if (!email || !name || !password) {
       return jsonResponse({ error: 'invalid_request', message: '이메일·이름·비밀번호는 필수입니다.' }, 400)
@@ -50,6 +52,9 @@ Deno.serve(withCors(async (req: Request) => {
     }
     if (!INTERNAL_ROLES.has(userType)) {
       return jsonResponse({ error: 'invalid_role', message: '유효한 역할을 선택하세요.' }, 400)
+    }
+    if (birthDate && !isValidBirthDate(birthDate)) {
+      return jsonResponse({ error: 'invalid_birth_date', message: '생년월일을 올바르게 입력하세요.' }, 400)
     }
 
     const db = supabaseAdmin()
@@ -116,6 +121,18 @@ Deno.serve(withCors(async (req: Request) => {
     if (insErr || !newUser) {
       await db.auth.admin.deleteUser(authUserId)
       return jsonResponse({ error: 'provision_failed', message: '계정 레코드 생성에 실패했습니다.' }, 500)
+    }
+
+    // 생년월일은 전사 공용 users/profile에 넣지 않는다. MANAGEMENT 권한으로만 읽을 수 있는
+    // hr_profiles에 분리하고, 저장 실패 시 public/auth 계정을 함께 되돌린다.
+    const { error: hrErr } = await db.from('hr_profiles').insert({
+      user_id: newUser.id,
+      birth_date: birthDate,
+    })
+    if (hrErr) {
+      await db.from('users').delete().eq('id', newUser.id)
+      await db.auth.admin.deleteUser(authUserId)
+      return jsonResponse({ error: 'provision_failed', message: '인사 정보 생성에 실패했습니다.' }, 500)
     }
 
     // 4) 권한 템플릿 프로비저닝(유형별 기본 매트릭스) -----------------------------

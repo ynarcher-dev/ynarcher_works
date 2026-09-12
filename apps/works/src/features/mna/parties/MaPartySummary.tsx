@@ -5,6 +5,7 @@ import {
   InfoField,
   InfoGrid,
   PanelCard,
+  PersonCell,
 } from '@ynarcher/ui'
 import { RichTextViewer } from '@/components/RichTextEditor'
 import { MaQuickReviewSection } from '@/features/mna/parties/MaQuickReviewSection'
@@ -15,6 +16,7 @@ import {
   type MaPartyRow,
 } from '@/features/mna/parties/config'
 import { SensitiveValue } from '@/features/master/SensitiveValue'
+import { useEmployees } from '@/features/hub/hooks'
 
 /**
  * 날짜 한 칸. 값이 없으면 하이픈을 직접 찍지 않고 `null`을 돌려준다 — 빈 값의 글자와 색은
@@ -57,6 +59,11 @@ export function MaPartySummary({
   config: MaPartyConfig
   record: MaPartyRow
 }) {
+  const { data: employees } = useEmployees()
+  const employeeNames = new Map((employees ?? []).map((employee) => [employee.id, employee.name]))
+  const viewerNames = (record.viewer_ids ?? []).map(
+    (id) => employeeNames.get(id) ?? '알 수 없음',
+  )
   const industries = Array.isArray(record.industries) ? record.industries : []
   const decision = config.hasDecision ? decisionBadge(record.decision) : null
   const overview = record.overview_html ?? ''
@@ -146,6 +153,11 @@ export function MaPartySummary({
             {/* 레코드 자체의 값이 아니라 레코드를 다룬 흔적이라 한 단 연한 톤으로 물러난다
                 (`InfoField`의 `meta` — STARTUP·NETWORKS 상세와 같은 처리). */}
             <InfoField label="생성자" value={record.creator?.name || null} meta />
+            <InfoField
+              label="열람자"
+              value={viewerNames.length > 0 ? <PersonCell names={viewerNames} wrap /> : null}
+              meta
+            />
             <InfoField label="등록일" value={formatDate(record.created_at)} meta />
             <InfoField label="수정일" value={formatDate(record.updated_at)} meta />
           </InfoGrid>

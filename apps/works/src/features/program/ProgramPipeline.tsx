@@ -59,7 +59,7 @@ export function ProgramPipeline({
   }
   if (!data) return null
 
-  const groups = programFlowGroups(config.hasProposalStage)
+  const groups = programFlowGroups(config.hasProposalStage, config.hasSuspendedStatus)
   const statusKeys = groups.flatMap((group) => [...group.statuses, ...group.exits])
   const phaseByStatus = new Map(groups.flatMap((group) =>
     [...group.statuses, ...group.exits].map((status) => [status, group.label] as const),
@@ -83,13 +83,30 @@ export function ProgramPipeline({
           statuses: ['NOT_SELECTED', 'CANCELLED'],
         },
       ]
-    : statusKeys.map((status) => ({
-        key: status,
-        label: PROGRAM_STATUS_LABEL[status] ?? status,
-        eyebrow: phaseByStatus.get(status) ?? '운영 단계',
-        count: data.byStatus[status] ?? 0,
-        statuses: [status],
-      }))
+    : config.hasSuspendedStatus
+      ? [
+          ...(['DRAFT', 'OPERATING', 'FINISHED'] as const).map((status) => ({
+            key: status,
+            label: PROGRAM_STATUS_LABEL[status] ?? status,
+            eyebrow: phaseByStatus.get(status) ?? '운영 단계',
+            count: data.byStatus[status] ?? 0,
+            statuses: [status],
+          })),
+          {
+            key: 'SUSPENDED_CANCELLED',
+            label: '중단·취소',
+            eyebrow: '종료 상태',
+            count: (data.byStatus.SUSPENDED ?? 0) + (data.byStatus.CANCELLED ?? 0),
+            statuses: ['SUSPENDED', 'CANCELLED'],
+          },
+        ]
+      : statusKeys.map((status) => ({
+          key: status,
+          label: PROGRAM_STATUS_LABEL[status] ?? status,
+          eyebrow: phaseByStatus.get(status) ?? '운영 단계',
+          count: data.byStatus[status] ?? 0,
+          statuses: [status],
+        }))
 
   const tiles: FlatStatus[] = [
     { key: 'TOTAL', label: `전체 ${config.entityNoun}`, eyebrow: '전체 현황', count: data.total, statuses: [] },

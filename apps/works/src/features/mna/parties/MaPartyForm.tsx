@@ -6,11 +6,13 @@ import {
   PanelCard,
   Select,
   TextAction,
+  TokenMultiSelect,
   useToast,
 } from '@ynarcher/ui'
 import { Search } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { useAuthStore } from '@/auth/authStore'
 import { useEditReasonPrompt } from '@/components/EditReasonPrompt'
 import { FormTopBar } from '@/components/FormTopBar'
 import { DuplicateNotice } from '@/features/master/DuplicateNotice'
@@ -33,7 +35,12 @@ import {
   type MaPartyConfig,
   type MaPartyRow,
 } from '@/features/mna/parties/config'
-import { useCreateMaParty, useUpdateMaParty } from '@/features/mna/parties/hooks'
+import {
+  useCreateMaParty,
+  useMaPartyViewerCandidates,
+  useUpdateMaParty,
+  type MaPartyViewerCandidate,
+} from '@/features/mna/parties/hooks'
 import { readQuickReview, type QuickReview } from '@/features/mna/parties/quickReview'
 import { MaQuickReviewFields } from '@/features/mna/parties/MaQuickReviewFields'
 import { MaQuickReviewFinancialFields } from '@/features/mna/parties/MaQuickReviewFinancialFields'
@@ -47,6 +54,41 @@ import { useStartupLink } from '@/features/mna/parties/startupLink'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 import { PendingMaterialPanel } from '@/features/networks/PendingMaterialPanel'
 import { usePendingMaterials } from '@/features/networks/pendingMaterials'
+
+/** 작성자는 created_by로 이미 열람하므로 후보에서 빼고, 추가 열람자만 토큰으로 관리한다. */
+function MaPartyViewerPicker({
+  value,
+  onChange,
+  authorId,
+}: {
+  value: string[]
+  onChange: (next: string[]) => void
+  authorId: string | null
+}) {
+  const { data: employees } = useMaPartyViewerCandidates()
+  const list = useMemo(
+    () => (employees ?? []).filter((employee) => employee.id !== authorId),
+    [authorId, employees],
+  )
+  const byId = useMemo(() => new Map(list.map((employee) => [employee.id, employee])), [list])
+  const selected = value.map(
+    (id): MaPartyViewerCandidate =>
+      byId.get(id) ?? { id, name: '알 수 없음', email: null },
+  )
+
+  return (
+    <TokenMultiSelect<MaPartyViewerCandidate>
+      selected={selected}
+      onChange={(next) => onChange(next.map((employee) => employee.id))}
+      options={list}
+      getKey={(employee) => employee.id}
+      getLabel={(employee) => employee.name}
+      getMeta={(employee) => employee.email ?? undefined}
+      getSearchText={(employee) => `${employee.name} ${employee.email ?? ''}`}
+      placeholder="이 게시글을 열람할 임직원을 추가하세요"
+    />
+  )
+}
 
 interface MaPartyFormValues {
   name: string
@@ -87,6 +129,7 @@ interface Props {
  * 보류 목록(`PendingMaterialPanel`)이 그 자리를 대신한 뒤 저장 직후 한꺼번에 올라간다.
  */
 export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backTo }: Props) {
+  const currentUserId = useAuthStore((state) => state.user?.id ?? null)
   const toast = useToast()
   const create = useCreateMaParty(config)
   const update = useUpdateMaParty(config)
@@ -136,6 +179,7 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
   })
 
   const [overview, setOverview] = useState<string>(initial?.overview_html ?? '')
+  const [viewerIds, setViewerIds] = useState<string[]>(initial?.viewer_ids ?? [])
 
   // 퀵 리뷰는 절 7종을 통째로 들고 있는 값이라 폼 값(react-hook-form)이 아니라 상태다 —
   // 저장 단위가 절 하나이고 목록(주주·지표·연도 행)이 그 안에 있어, 칸 단위 등록으로는
@@ -227,6 +271,7 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
       // 연결된 행은 번호를 갖지 않는다 — 스타트업 원장이 정본이다(서버 트리거도 비운다).
       biz_reg_no: link.startupId ? null : formatBizRegNo(v.bizRegNo) || null,
       overview_html: overview.trim() || null,
+      viewer_ids: viewerIds,
       // 퀵 리뷰를 쓰지 않는 원장에서는 이 칸을 아예 보내지 않는다 — 빈 문서를 저장하면
       // 목록에서 '있는데 비어 있는' 행과 '없는' 행을 가를 수 없다.
       ...(config.hasQuickReview ? { quick_review: quickReview } : {}),
@@ -479,6 +524,18 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
                   </Select>
                 </Field>
               )}
+              <Field
+                label="열람자"
+                hint="작성자와 최고관리자는 항상 열람할 수 있습니다. 여기 지정한 임직원만 추가로 내용을 볼 수 있습니다."
+                className="sm:col-span-2"
+                as="div"
+              >
+                <MaPartyViewerPicker
+                  value={viewerIds}
+                  onChange={setViewerIds}
+                  authorId={initial?.created_by ?? currentUserId}
+                />
+              </Field>
             </div>
           </CardShell>
 

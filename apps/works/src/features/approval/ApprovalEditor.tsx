@@ -37,11 +37,13 @@ import {
   useApprovalDocument,
   useApprovalForms,
   useCreateApproval,
-  useResubmitApproval,
-  useSaveApprovalDraft,
   usesBudgetSource,
   type ApprovalLineInput,
 } from '@/features/approval/approvalApi'
+import {
+  useResubmitApproval,
+  useSaveApprovalDraft,
+} from '@/features/approval/approvalDraftApi'
 import { LINE_KIND_ORDER } from '@/features/approval/config'
 import { APPROVAL_ATTACHMENT_TYPE } from '@/features/approval/config'
 import {

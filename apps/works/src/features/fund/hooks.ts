@@ -16,6 +16,7 @@ export interface FundManagerRef {
 
 export interface Fund {
   id: string
+  created_by?: string | null
   /** 펀드코드(6자리 영숫자 난수, 워크스페이스 전역 유니크). 목록 최소 조회에서는 미포함이라 옵셔널. */
   code?: string | null
   name: string
@@ -69,7 +70,7 @@ export function useFund(id: string | undefined) {
       const { data } = await supabase
         .from('funds')
         .select(
-          'id, code, name, vintage_year, total_commitment, drawn_amount, status, source_type, character_type, strategy_type, fund_type, subscription_type, term_start, term_end, operation_start, operation_end, paid_in_amount, guest_access_ends_at, updated_at, manager:users!manager_id(id, name), creator:users!created_by(id, name), operators:fund_managers(user_id, role, is_lead, user:users!user_id(id, name))',
+          'id, code, name, vintage_year, total_commitment, drawn_amount, status, source_type, character_type, strategy_type, fund_type, subscription_type, term_start, term_end, operation_start, operation_end, paid_in_amount, guest_access_ends_at, created_by, updated_at, manager:users!manager_id(id, name), creator:users!created_by(id, name), operators:fund_managers(user_id, role, is_lead, user:users!user_id(id, name))',
         )
         .eq('id', id)
         .maybeSingle()

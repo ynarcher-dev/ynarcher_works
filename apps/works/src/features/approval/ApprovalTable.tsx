@@ -1,8 +1,6 @@
 import { DataTable, type Column, type DataTableProps } from '@ynarcher/ui'
-import {
-  APPROVAL_ROLE_LABEL,
-  DOC_STATUS_LABEL,
-} from '@/features/approval/config'
+import { APPROVAL_ROLE_LABEL } from '@/features/approval/config'
+import { approvalStatusLabel } from '@/features/approval/approvalDraftActions'
 import { docTypeName, myRole, type ApprovalListRow } from '@/features/approval/model'
 import { HiworksSourceMark } from '@/features/approval/HiworksSourceMark'
 
@@ -21,12 +19,33 @@ export interface ApprovalTableProps {
    * 목록을 걸러 내는 쪽(워크스페이스)이 갖고, 표는 받아 그대로 넘긴다.
    */
   pagination?: DataTableProps<ApprovalListRow>['pagination']
+  /**
+   * 선택 상태(일괄 승인·확인). 고른 줄에 대고 할 일은 요약 줄이 갖고, 표는 고르는 자리만 낸다.
+   * 핸들러를 주지 않으면 체크 칸 자체가 서지 않는다 — 고른들 할 일이 없는 목록에
+   * 빈 칸 한 줄을 세우지 않는다.
+   */
+  selectedKeys?: string[]
+  onSelectionChange?: (keys: string[]) => void
+  /** 그 줄에 지금 내가 할 일이 있는가. 없는 줄은 체크 칸이 빈 채로 남는다. */
+  selectableRow?: (row: ApprovalListRow) => boolean
+}
+
+/**
+ * 끝난 판단(반려)과 멈춘 판단(보완)만 행 전체를 물들인다 — 진행·완료는 목록의 보통 상태라
+ * 색으로 가를 것이 없고, 색이 여러 줄에 깔리면 정작 손이 필요한 두 줄이 그 사이에 묻힌다.
+ *
+ * 셀이 저마다 자기 색(`text-gray-900`/`gray-700`)을 들고 있어 행에 건 색은 그 값을 이기지 못한다.
+ * 그래서 자식 선택자로 td에 직접 건다.
+ */
+function rowTone(r: ApprovalListRow): string | undefined {
+  if (r.status === 'REJECTED') return '[&>td]:text-danger'
+  if (r.status === 'REVISION_REQUIRED') return '[&>td]:text-warning'
+  return undefined
 }
 
 /**
  * 전자결재 문서 목록. 폭·정렬은 열의 종류(type)가 정한다.
- * 표준 메타 컬럼과 No. 넘버링은 쓰지 않고(문서 번호가 그 자리를 대신한다),
- * 일괄 처리가 없으므로 선택 체크박스도 내린다.
+ * 표준 메타 컬럼과 No. 넘버링은 쓰지 않는다(문서 번호가 그 자리를 대신한다).
  */
 export function ApprovalTable({
   rows,
@@ -36,6 +55,9 @@ export function ApprovalTable({
   onRowClick,
   emptyText = '전자결재 문서가 없습니다.',
   pagination,
+  selectedKeys,
+  onSelectionChange,
+  selectableRow,
 }: ApprovalTableProps) {
   const columns: Column<ApprovalListRow>[] = [
     {
@@ -90,11 +112,12 @@ export function ApprovalTable({
       key: 'status',
       header: '상태',
       type: 'badge',
-      render: (r) => (
-        <span className={r.status === 'REJECTED' ? 'text-danger' : 'text-gray-900'}>
-          {DOC_STATUS_LABEL[r.status]}
-        </span>
-      ),
+      // 색은 행이 지므로(rowTone) 셀에서 다시 칠하지 않는다 — 셀에 색을 두면 상태 칸만
+      // 행의 색과 다르게 남는다.
+      // 기안 취소된 문서는 '임시저장'으로 적지 않는다 — 결재를 돌던 문서가 기안자에게
+      // 돌아온 것이라, 한 번도 올라오지 않은 임시저장과 같은 말로 적으면 목록이 사실을
+      // 말하지 못한다(판정은 상태 + 회차뿐이라 목록이 서버에 따로 물을 것이 없다).
+      render: (r) => approvalStatusLabel(r.status, r.approval_lines),
     },
   ]
 
@@ -103,12 +126,16 @@ export function ApprovalTable({
       columns={columns}
       rows={rows}
       rowKey={(r) => r.id}
-      selectable={false}
+      selectable={Boolean(onSelectionChange)}
+      selectableRow={selectableRow}
+      selectedKeys={selectedKeys}
+      onSelectionChange={onSelectionChange}
       numbered={false}
       standardColumns={false}
       onRowClick={onRowClick}
       emptyText={emptyText}
       pagination={pagination}
+      rowClassName={rowTone}
       layout="fixed"
     />
   )

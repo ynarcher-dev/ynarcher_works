@@ -41,6 +41,7 @@
     "supabase/functions/guest-auth-login/**/*.ts",
     "supabase/functions/guest-auth-context/**/*.ts",
     "supabase/functions/guest-auth-refresh/**/*.ts",
-    "supabase/functions/guest-access-invite/**/*.ts"
+    "supabase/functions/guest-access-invite/**/*.ts",
+    "supabase/functions/employee-create/**/*.ts"
   ]
 }

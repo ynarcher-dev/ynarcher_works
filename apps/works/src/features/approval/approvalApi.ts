@@ -10,7 +10,8 @@ const LIST_SELECT =
   'id, title, doc_no, form_type, status, drafter_id, department_id, amount, created_at, completed_at, ' +
   'form:form_id(name), ' +
   'legacy:approval_legacy_documents(source_system), ' +
-  'approval_lines(approver_id, step_order, decision, kind, round), ' +
+  // 자리 id는 목록에서 일괄 승인을 걸기 위해 함께 받는다(서버가 받는 것은 문서가 아니라 자리다).
+  'approval_lines(id, approver_id, step_order, decision, kind, round), ' +
   'approval_recipients(user_id), ' +
   'approval_reads(user_id)'
 
@@ -337,54 +338,6 @@ export function useCreateApproval() {
   })
 }
 
-export interface SaveDraftInput extends CreateApprovalInput {
-  /** 고칠 임시저장 문서. */
-  documentId: string
-}
-
-/**
- * 임시저장 문서 수정 — 값과 결재선을 통째로 갈아끼운다.
- *
- * 결재선 교체가 `save_approval_draft` RPC 한 경로로만 이뤄지는 이유는, 기존 결재선 행을
- * 지워야 하는데 `approval_lines`·`approval_recipients`에 DELETE 정책이 없기 때문이다
- * (보안 게이트가 업무 테이블의 DELETE 정책을 금지한다). 삭제 권한을 테이블에 상시로 여는
- * 대신 "내가 기안한 DRAFT 문서"라는 조건을 함수 안에서 확인하고 그 안에서만 교체한다.
- * 문서 번호 채번은 상신 시 DB 트리거가 맡으므로 여기서 만들지 않는다.
- */
-export function useSaveApprovalDraft() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (v: SaveDraftInput): Promise<string> => {
-      const lineRows = (Object.keys(v.lines) as (keyof ApprovalLineInput)[]).flatMap((kind) =>
-        v.lines[kind].map((approver_id, i) => ({
-          approver_id,
-          step_order: i + 1,
-          kind,
-        })),
-      )
-      const { error } = await supabase.rpc('save_approval_draft', {
-        p_document_id: v.documentId,
-        p_title: v.title,
-        p_form_id: v.formId,
-        p_form_version_id: v.formVersionId,
-        p_field_values: v.fieldValues,
-        p_department_id: v.departmentId,
-        p_lines: lineRows,
-        p_recipient_ids: v.recipientIds,
-        p_submit: !v.asDraft,
-        p_budget_document_id: v.budgetDocumentId ?? null,
-      })
-      if (error) throw error
-      return v.documentId
-    },
-    onSuccess: (_data, v) => {
-      void qc.invalidateQueries({ queryKey: ['approval', 'documents'] })
-      void qc.invalidateQueries({
-        queryKey: ['approval', 'document', v.documentId],
-      })
-    },
-  })
-}
 
 /**
  * 결재 처리(승인·반려·보완 요청) — `decide_approval_document` RPC 한 경로.
@@ -425,6 +378,40 @@ export function useDecideApproval() {
 }
 
 /**
+ * 일괄 승인 — 고른 자리마다 `decide_approval_document`를 한 번씩 부른다.
+ *
+ * **서버 함수 하나로 묶지 않는다.** 묶으면 한 건의 실패가 나머지를 통째로 되돌린다 —
+ * 고른 열 건 중 하나가 방금 남의 보완으로 멈췄다고 나머지 아홉 건의 승인을 무를 이유가
+ * 없고, 그 되돌림은 담당자가 다시 고를 수도 없는 실패다(무엇이 걸렸는지 화면이 모른다).
+ * 대신 건별 성패를 세어 돌려주고 부르는 쪽이 그 사실을 밝힌다.
+ *
+ * 차례·회차·자격은 건마다 서버가 다시 판정한다 — 화면이 고를 수 있게 둔 것은 보안이 아니다.
+ */
+export function useBulkApproveApprovals() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (lineIds: string[]): Promise<{ done: number; failed: number }> => {
+      let done = 0
+      let failed = 0
+      for (const lineId of lineIds) {
+        const { error } = await supabase.rpc('decide_approval_document', {
+          p_line_id: lineId,
+          p_decision: 'APPROVED',
+          p_comment: null,
+        })
+        if (error) failed += 1
+        else done += 1
+      }
+      return { done, failed }
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['approval', 'documents'] })
+      void qc.invalidateQueries({ queryKey: ['approval', 'document'] })
+    },
+  })
+}
+
+/**
  * 이미 찍은 본인 승인을 회수한다. 서버가 현재 회차의 남은 줄과 문서 완료 여부를 다시 확인해
  * 진행 중이면 WITHDRAWN, 최종 승인 완료 뒤면 RESET을 반환한다.
  */
@@ -450,76 +437,34 @@ export function useRecallApproval() {
   })
 }
 
+
 /**
- * 재상신 — 보완 요청으로 멈춘(REVISION_REQUIRED) 문서를 고쳐 다시 올린다.
+ * 참조 확인 스탬프 — 본인이 직접 누른 것만 남긴다(상세의 이름 옆 체크, 목록의 일괄 확인).
+ * RLS도 본인 행만 허용한다.
  *
- * 임시저장 수정(`save_approval_draft`)과 경로를 나눈 이유는 그 함수가 결재선을 통째로
- * `delete` 후 재삽입하기 때문이다. 도장이 찍힌 행을 지우게 되므로 재상신은 **값만 고치고
- * 결재선은 건드리지 않는다.** 서버가 보완 요청 자리와 아직 처리하지 않은 자리만 새 회차에
- * 세워 기존 결재를 이어간다.
+ * 여러 건을 받는 이유는 목록의 일괄 확인이 같은 도장이기 때문이다 — 훅을 둘로 두면 같은
+ * 규칙(무엇을 쓰고 어느 캐시를 버리는가)이 두 곳에 살게 된다. 승인과 달리 한 번의 upsert로
+ * 끝나는 것은 여기에 서버가 다시 판정할 차례·회차가 없어서다.
  */
-export function useResubmitApproval() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (v: {
-      documentId: string
-      title: string
-      fieldValues: FieldValues
-    }): Promise<string> => {
-      const { error } = await supabase.rpc('resubmit_approval_document', {
-        p_document_id: v.documentId,
-        p_title: v.title,
-        p_field_values: v.fieldValues,
-      })
-      if (error) throw error
-      return v.documentId
-    },
-    onSuccess: (_data, v) => {
-      void qc.invalidateQueries({ queryKey: ['approval', 'documents'] })
-      void qc.invalidateQueries({
-        queryKey: ['approval', 'document', v.documentId],
-      })
-    },
-  })
-}
-
-/** 기안 회수·문서 비활성화(소프트 삭제). 기안자·management 쓰기 권한자만 통과한다. */
-export function useDeleteApproval() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('approval_documents')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', id)
-      if (error) throw error
-    },
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['approval', 'documents'] })
-    },
-  })
-}
-
-/** 참조 확인 스탬프 — 본인이 이름 옆 체크를 눌렀을 때만 남긴다. RLS도 본인 행만 허용한다. */
 export function useMarkApprovalRead() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (v: { documentId: string; userId: string }) => {
+    mutationFn: async (v: { documentIds: string[]; userId: string }) => {
+      if (!v.documentIds.length) return
+      const readAt = new Date().toISOString()
       const { error } = await supabase.from('approval_reads').upsert(
-        {
-          document_id: v.documentId,
+        v.documentIds.map((id) => ({
+          document_id: id,
           user_id: v.userId,
-          read_at: new Date().toISOString(),
-        },
+          read_at: readAt,
+        })),
         { onConflict: 'document_id,user_id' },
       )
       if (error) throw error
     },
-    onSuccess: (_data, v) => {
+    onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['approval', 'documents'] })
-      void qc.invalidateQueries({
-        queryKey: ['approval', 'document', v.documentId],
-      })
+      void qc.invalidateQueries({ queryKey: ['approval', 'document'] })
     },
   })
 }

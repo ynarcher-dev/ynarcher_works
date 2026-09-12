@@ -49,7 +49,7 @@ export function RightPanelHost() {
       )}
       {active === 'calendar' && (
         <div className="flex min-h-0 flex-1 flex-col p-4">
-          <CalendarPanel />
+          <CalendarPanel onNavigate={close} />
         </div>
       )}
       {active === 'notifications' && (

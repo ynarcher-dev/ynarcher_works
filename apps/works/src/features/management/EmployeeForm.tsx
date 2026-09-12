@@ -6,7 +6,11 @@ import { EmployeeNoteFields } from '@/features/management/EmployeeNoteFields'
 import { HrTagSelect } from '@/features/management/HrTagSelect'
 import { noteEditorInit, noteValues } from '@/features/management/noteConfig'
 import { useDepartmentOptions } from '@/features/management/departmentOptions'
-import { useUpdateEmployee, type Employee } from '@/features/management/hooks'
+import {
+  useUpdateEmployee,
+  useUpdateEmployeeBirthDate,
+  type Employee,
+} from '@/features/management/hooks'
 import { useEmployeeBranchNames } from '@/features/office/branches/branchMembers'
 import { useBranches, useSetUserBranches } from '@/features/office/branches/branchesApi'
 import { CareerEditor } from '@/features/management/CareerEditor'
@@ -17,6 +21,8 @@ function str(v: unknown): string {
   return typeof v === 'string' ? v : ''
 }
 
+const TODAY = new Date().toISOString().slice(0, 10)
+
 interface Props {
   recordId: string
   initial: Employee
@@ -25,6 +31,8 @@ interface Props {
   onCancel: () => void
   /** 상단 바 뒤로가기 목적지(목록 경로). */
   backTo: string
+  /** MANAGEMENT 전용 hr_profiles에서 별도로 읽은 생년월일. */
+  initialBirthDate: string
 }
 
 /**
@@ -34,9 +42,10 @@ interface Props {
  * 사진(photo)·약력(background)은 NETWORKS와 동일한 공용 편집기·저장 규약을 그대로 쓴다.
  * 관계형 연동 도메인(관리기업/운영사업/M&A/프로젝트/펀드)은 자동 기록 대상이라 편집하지 않는다.
  */
-export function EmployeeForm({ recordId, initial, onDone, onCancel, backTo }: Props) {
+export function EmployeeForm({ recordId, initial, initialBirthDate, onDone, onCancel, backTo }: Props) {
   const toast = useToast()
   const update = useUpdateEmployee()
+  const updateBirthDate = useUpdateEmployeeBirthDate()
   const setUserBranches = useSetUserBranches()
   // 부서 선택지는 조직도 순서 + 전체 경로 라벨(departmentOptions). 2단만 접던 예전 방식으로는
   // 본부 > 그룹 > 팀처럼 3단 이상인 조직에서 하위가 상위 없이 평탄하게 섞였다.
@@ -53,6 +62,7 @@ export function EmployeeForm({ recordId, initial, onDone, onCancel, backTo }: Pr
   const [rank, setRank] = useState(str(profile.rank))
   const [payStep, setPayStep] = useState(str(profile.pay_step))
   const [hireDate, setHireDate] = useState(str(profile.hire_date))
+  const [birthDate, setBirthDate] = useState(initialBirthDate)
   const [phone, setPhone] = useState(initial.phone ?? '')
   const [email, setEmail] = useState(initial.email ?? '')
   // 노트는 철학·관심분야·한마디 세 항목이다. 세 항목이 비어 있고 이전 자유 텍스트 노트만 있으면
@@ -98,6 +108,10 @@ export function EmployeeForm({ recordId, initial, onDone, onCancel, backTo }: Pr
     setBusy(true)
     try {
       await update.mutateAsync({ id: recordId, values })
+      await updateBirthDate.mutateAsync({
+        userId: recordId,
+        birthDate: birthDate || null,
+      })
       // 지사는 별도 원장이라 저장 경로도 별도다. 안 고쳤으면 호출을 아낀다.
       if (editedBranchId !== null) {
         await setUserBranches.mutateAsync({
@@ -182,6 +196,14 @@ export function EmployeeForm({ recordId, initial, onDone, onCancel, backTo }: Pr
           </Field>
           <Field label="입사일">
             <Input type="date" value={hireDate} onChange={(e) => setHireDate(e.target.value)} />
+          </Field>
+          <Field label="생년월일">
+            <Input
+              type="date"
+              max={TODAY}
+              value={birthDate}
+              onChange={(e) => setBirthDate(e.target.value)}
+            />
           </Field>
           <Field label="연락처">
             <Input value={phone} onChange={(e) => setPhone(e.target.value)} />

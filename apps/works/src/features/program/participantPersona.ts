@@ -61,6 +61,28 @@ export interface LedgerFacts {
   retired: boolean
 }
 
+/**
+ * 명부 줄이 가리키는 원장 행의 **상태 셋**(2026-09-11 사용자 지정).
+ *
+ * - `active`  — 원장에 살아 있다.
+ * - `retired` — 행은 있으나 내려갔다(비활성화·중복 병합). 이름은 그대로 서고 옆에 붉은
+ *   `※비활성화`가 붙는다.
+ * - `missing` — 행 자체가 없다(하드 딜리트, 또는 읽을 수 없어 돌아오지 않았다). 값 칸 전부가
+ *   붉은 `삭제됨`이다 — 지어낸 이름(`미지정`)이나 원장으로 가는 `입력` 링크를 세우지 않는다.
+ *   갈 곳이 없는 링크는 눌러도 빈 화면이고, 빈 이름은 '아직 안 정함'으로 읽혀 담당자가 채우러 간다.
+ *
+ * 둘 다 붉은 이유는 **이 줄로는 아무것도 진행할 수 없다**는 같은 무게의 사실이어서다. 회색으로
+ * 물러서게 두면(2026-09-09 표기) 진행 중 사업에서 왜 연락이 닿지 않는지의 답이 눈에 띄지 않았다.
+ * 명부에서 줄을 빼지 않는 원칙은 그대로다(`LedgerFacts.retired`).
+ */
+export type LedgerPresence = 'active' | 'retired' | 'missing'
+
+/** 원장 조회 결과 한 건(없으면 undefined)에서 상태를 읽는다 — 세 화면이 같은 판정을 쓴다. */
+export function ledgerPresence(facts: Pick<LedgerFacts, 'retired'> | undefined): LedgerPresence {
+  if (!facts) return 'missing'
+  return facts.retired ? 'retired' : 'active'
+}
+
 export interface ParticipantPersona {
   /**
    * 탭·배지·추가 버튼이 함께 쓰는 이름 — **그 사람이 무엇으로 들어오는가**다.

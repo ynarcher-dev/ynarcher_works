@@ -98,7 +98,7 @@ const STARTUP_COLUMNS: ActivityColumn<ActivityStartup>[] = [
 const FUND_SEAT_LABEL: Record<FundSeat, string> = {
   LEAD: '대표펀드매니저',
   OPERATION: '운용인력',
-  ADMIN: '관리인력',
+  ADMIN: '담당자',
 }
 const FUND_SEAT_ORDER: FundSeat[] = ['LEAD', 'OPERATION', 'ADMIN']
 

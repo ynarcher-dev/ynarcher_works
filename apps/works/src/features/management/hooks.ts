@@ -257,6 +257,8 @@ export interface CreateEmployeeInput {
   position?: string | null
   rank?: string | null
   pay_step?: string | null
+  /** MANAGEMENT 전용 인사 원장(hr_profiles)에 저장하며 공용 users 응답에는 싣지 않는다. */
+  birth_date?: string | null
 }
 
 /**
@@ -282,6 +284,48 @@ export function useCreateEmployee() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['management', 'employees-page'] })
       void qc.invalidateQueries({ queryKey: ['management', 'employees'] })
+    },
+  })
+}
+
+export interface EmployeeHrProfile {
+  user_id: string
+  birth_date: string | null
+}
+
+/** MANAGEMENT 전용 인사 민감정보. OFFICE에서는 훅 자체를 활성화하지 않는다. */
+export function useEmployeeHrProfile(id: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: ['management', 'employee-hr-profile', id],
+    enabled: Boolean(id) && enabled,
+    queryFn: async (): Promise<EmployeeHrProfile | null> => {
+      const { data, error } = await supabase
+        .from('hr_profiles')
+        .select('user_id, birth_date')
+        .eq('user_id', id)
+        .maybeSingle()
+      if (error) throw error
+      return (data ?? null) as EmployeeHrProfile | null
+    },
+  })
+}
+
+/** 생년월일은 공용 users/profile과 분리해 MANAGEMENT 전용 원장에만 갱신한다. */
+export function useUpdateEmployeeBirthDate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (v: { userId: string; birthDate: string | null }) => {
+      const { error } = await supabase.from('hr_profiles').upsert(
+        {
+          user_id: v.userId,
+          birth_date: v.birthDate,
+        },
+        { onConflict: 'user_id' },
+      )
+      if (error) throw error
+    },
+    onSuccess: (_data, v) => {
+      void qc.invalidateQueries({ queryKey: ['management', 'employee-hr-profile', v.userId] })
     },
   })
 }

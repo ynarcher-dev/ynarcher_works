@@ -26,11 +26,11 @@ export function ProgramFilters({ filters, onChange }: ProgramFiltersProps) {
   // 시도·선정·미선정을 남겨 두면 아무것도 걸리지 않는 필터가 된다.
   const statusOptions = useMemo(
     () =>
-      programStatusOptions(config.hasProposalStage).map((value) => ({
+      programStatusOptions(config.hasProposalStage, config.hasSuspendedStatus).map((value) => ({
         value,
         label: PROGRAM_STATUS_LABEL[value] ?? value,
       })),
-    [config.hasProposalStage],
+    [config.hasProposalStage, config.hasSuspendedStatus],
   )
   // 사업구분 선택지 끝에 '미지정'을 둔다 — 세분화 메뉴를 내린 뒤로 미분류(category is null)
   // 건을 골라 볼 길이 여기뿐이다. 종전에는 사이드바 '기타'가 그 역할을 겸했다.
