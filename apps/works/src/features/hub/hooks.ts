@@ -203,7 +203,7 @@ export interface HubSummary {
   networks: {
     managers: number
     startups: number
-    /** 투자/전문가 네트워크(전문가+VAN+투자사) 합계. */
+    /** 인물형 네트워크(전문가+VAN+EXP+투자사+스타트업) 합계. */
     investExperts: number
     /** 협력사 네트워크(기관+기업+대학+기타) 합계. */
     partners: number
@@ -246,14 +246,14 @@ export function useHubSummary() {
           .is('deleted_at', null)
           .not('user_type', 'in', GUEST_USER_TYPE_FILTER),
         headCount('startups'),
-        // 원장 통합(2026-09-04) 이후 구분은 표가 아니라 컬럼이라, 여덟 번 세던 것을
+        // 원장 통합(2026-09-04) 이후 구분은 표가 아니라 컬럼이라, 구분별로 세던 것을
         // 두 번의 in() 집계로 대신한다.
         supabase
           .from('networks')
           .select('*', { count: 'exact', head: true })
           .is('deleted_at', null)
           .is('merged_into_id', null)
-          .in('category', ['experts', 'van', 'exp', 'investors']),
+          .in('category', ['experts', 'van', 'exp', 'investors', 'startup']),
         supabase
           .from('networks')
           .select('*', { count: 'exact', head: true })

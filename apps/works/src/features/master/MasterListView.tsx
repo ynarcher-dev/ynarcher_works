@@ -144,7 +144,7 @@ export function MasterListView({
         return v ?? '-'
       },
     }))
-    // 담당자(관리 주체) 컬럼: NETWORKS 8종은 모두 공동관리(쓰기 권한자 누구나 수정)다.
+    // 담당자(관리 주체) 컬럼: NETWORKS 9종은 모두 공동관리(쓰기 권한자 누구나 수정)다.
     // 목록은 개념만 배지로 노출하고, 실제 기여자와 최초 생성자는 상세 페이지에서 확인한다.
     base.push({
       key: '_manager',

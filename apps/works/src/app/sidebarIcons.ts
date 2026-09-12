@@ -87,7 +87,7 @@ export const sidebarIconByTab: Record<string, LucideIcon> = {
   partners: Handshake,
   orgs: Handshake,
 
-  // NETWORKS 8종 네트워크(원장별 메뉴는 2026-08-20에 내렸으나, 상세·HUB 등 다른 화면이
+  // NETWORKS 9종 네트워크(원장별 메뉴는 2026-08-20에 내렸으나, 상세·HUB 등 다른 화면이
   // 같은 탭 키를 쓰므로 매핑은 남긴다)
   van: Handshake,
   exp: Star,

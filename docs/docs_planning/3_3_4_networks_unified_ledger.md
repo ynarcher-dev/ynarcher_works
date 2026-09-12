@@ -35,10 +35,12 @@
 
 `public.networks` 한 원장에 다음 두 컬럼이 서로 독립해 섭니다.
 
-* **구분(`category`)**: 전문가·BAN·EXP·투자사·기업·기관·대학·기타. 값은 **코드**(`experts`·`van`·`exp`·`investors`·`corporates`·`institutions`·`universities`·`etc`)이며 라벨은 코드가 아니라 화면 상수(`CATEGORY_LABEL`)가 소유합니다. 값이 `null`이면 **구분 미지정**이며, 그 상태를 찾는 자리는 목록 구분 필터의 `미지정` 선택지 하나입니다(§3.1).
+* **구분(`category`)**: 전문가·BAN·EXP·투자사·스타트업·일반기업·기관·대학·기타. 값은 **코드**(`experts`·`van`·`exp`·`investors`·`startup`·`corporates`·`institutions`·`universities`·`etc`)이며 라벨은 코드가 아니라 화면 상수(`CATEGORY_LABEL`)가 소유합니다. 값이 `null`이면 **구분 미지정**이며, 그 상태를 찾는 자리는 목록 구분 필터의 `미지정` 선택지 하나입니다(§3.1).
 * **국가(`country_tag_id`)**: 기준정보 태그(`country_tags`)를 참조합니다. **한국도 다른 나라와 같은 국가 한 줄**이며, 담당자가 지역에 대해 고르는 칸은 이것 하나뿐입니다.
 
 두 축이 직교하므로 **해외 대학·국내 기업이 같은 문법으로** 섭니다. 구분이 늘어도 테이블이 늘지 않고, 국가가 바뀌어도 행이 이동하지 않습니다.
+
+`startup`은 리멤버 명함첩 등으로 들어오는 스타트업 대표·임직원 **사람의 분류**입니다(2026-09-12). 기업 자체는 계속 `public.startups`가 소유하며, 이 구분을 고르는 것만으로 STARTUP 기업과 연결되거나 NETWORKS 사람이 자동 생성되지는 않습니다. 동일인 관계가 필요할 때만 담당자가 별도로 확인합니다.
 
 ### 3.1 미지정은 카테고리가 아니라 빈 값입니다
 
@@ -86,7 +88,7 @@ public.networks
   created_at / updated_at / deleted_at
 ```
 
-* **CHECK**: `category`는 코드 8종 또는 `null`. `region_scope`는 2값(값 자체는 트리거가 채웁니다).
+* **CHECK**: `category`는 코드 9종 또는 `null`. `region_scope`는 2값(값 자체는 트리거가 채웁니다).
 * **기준정보**: `country_tags.is_domestic`(자국 여부) 신설. 국내/해외 판정의 단일 원천이며, 네트워크 행이 아니라 국가가 갖습니다.
 * **RLS**: 종전과 동일하게 `app.can_read_workspace('networks')` / `can_write_workspace('networks')`. 원장이 하나로 줄어 정책도 11벌에서 1벌이 됩니다.
 * **트리거**: `set_updated_at` · `sync_network_region_scope`(국가 → 국내/해외 파생) · `guard_network_destructive`(비활성·병합 가드) · `log_entity_contribution('networks')` · `track_affiliation_history` · `audit_networks_merge` · 생성자 기본값. 종전 11벌 루프가 1벌이 됩니다.

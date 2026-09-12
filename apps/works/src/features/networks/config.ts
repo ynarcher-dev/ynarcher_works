@@ -32,6 +32,9 @@ export type NetworkCategory =
   | 'van'
   | 'exp'
   | 'investors'
+  // 스타트업 대표·임직원 등 리멤버 명함첩으로 들어오는 사람의 분류다. STARTUP 기업 원장과의
+  // 동일인 연결을 뜻하지 않으며, 그 관계가 필요하면 담당자가 별도로 확인한다.
+  | 'startup'
   | 'corporates'
   | 'institutions'
   | 'universities'
@@ -51,6 +54,7 @@ export const CATEGORY_LABEL: Record<NetworkCategory, string> = {
   van: 'BAN',
   exp: 'EXP',
   investors: '투자사',
+  startup: '스타트업',
   corporates: '일반기업',
   institutions: '기관',
   universities: '대학',
@@ -68,6 +72,7 @@ export const CATEGORY_ORDER: NetworkCategory[] = [
   'exp',
   'experts',
   'investors',
+  'startup',
   'corporates',
   'institutions',
   'universities',
@@ -90,7 +95,7 @@ export const CATEGORY_OPTIONS: { key: NetworkCategory; label: string }[] = CATEG
  */
 export const CATEGORY_UNSET = 'UNSET'
 
-/** 목록 구분 필터 선택지 — 구분 8종 + 미지정. 서버에서는 두 값이 한 축으로 OR 판정된다. */
+/** 목록 구분 필터 선택지 — 구분 9종 + 미지정. 서버에서는 두 값이 한 축으로 OR 판정된다. */
 export const CATEGORY_FILTER_OPTIONS: { value: string; label: string }[] = [
   ...CATEGORY_ORDER.map((key) => ({ value: key as string, label: CATEGORY_LABEL[key] })),
   { value: CATEGORY_UNSET, label: '미지정' },

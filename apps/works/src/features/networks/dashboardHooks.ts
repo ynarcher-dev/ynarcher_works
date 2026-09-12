@@ -66,7 +66,7 @@ export interface StatusItem {
 }
 
 export interface NetworksSummary {
-  /** 총보유(맨 앞) + 구분 8종 + 미지정. 표시 순서 고정. */
+  /** 총보유(맨 앞) + 구분 9종 + 미지정. 표시 순서 고정. */
   items: StatusItem[]
   /** 구분별 분포 도넛용(내림차순). */
   byCategory: { key: NetworkCategory; label: string; count: number }[]
@@ -223,7 +223,7 @@ export interface ExpertRankRow {
 }
 
 /** 평가랭킹 대상 — 영역·활동·만족도를 갖는 인물형 구분. */
-const RANKING_CATEGORIES: NetworkCategory[] = ['experts', 'van', 'exp', 'investors']
+const RANKING_CATEGORIES: NetworkCategory[] = ['experts', 'van', 'exp', 'investors', 'startup']
 
 /**
  * 네트워크 평가랭킹용 목록(인물형 구분, 이름·구분·영역). 활동건·만족도는 실집계 연동 전이라

@@ -18,7 +18,7 @@
 | **3-1-1. OFFICE 게시·자료·공지** | [3_1_1_board_archive_notice.md](./3_1_1_board_archive_notice.md) | 공지 고정 뷰, 동적 게시판/자료실 레지스트리와 작성·다운로드 흐름 | 구현 반영 |
 | **3-1-2. OFFICE 반출대장** | [3_1_2_office_asset_checkout.md](./3_1_2_office_asset_checkout.md) | 자산 중심 예약·승인·반출·반납·연체·재고·이력 규칙 | 구현 반영 |
 | **3-2. ADMIN (관리자)** | [3_2_workspace_admin.md](./3_2_workspace_admin.md) | 사용자 권한 통제 콘솔, 게시판/태그/민감정보 관리, 보안 감사 로그 요건 | 구현 반영 |
-| **3-3. NETWORKS (네트워크 원장)** | [3_3_workspace_networks.md](./3_3_workspace_networks.md) | 8종 국내·미분류·글로벌 원장, 내 네트워크, 대량 업로드. 전체 대시보드는 재설계 대기 | 혼합 |
+| **3-3. NETWORKS (네트워크 원장)** | [3_3_workspace_networks.md](./3_3_workspace_networks.md) | 9종 구분·미분류·국가 축의 통합 원장, 내 네트워크, 대량 업로드. 전체 대시보드는 재설계 대기 | 혼합 |
 | **3-3-1. STARTUP (스타트업 풀)** | [3_3_1_startup_pool_classification.md](./3_3_1_startup_pool_classification.md) | 투자·보육·발굴·기타기업 구분, 담당자, 관리현황, STARTUP 4개 목록 뷰 요건 | 구현 반영 |
 | **3-3-2. NETWORKS 대시보드** | [3_3_2_networks_dashboard.md](./3_3_2_networks_dashboard.md) | 네트워크 규모 KPI, 구분별 분포, 최근 업로드 통합 현황 | 목표 기획 |
 | **3-3-3. STARTUP 메뉴 통계 카드** | [3_3_3_startup_menu_stat_cards.md](./3_3_3_startup_menu_stat_cards.md) | 내 기업·4개 구분 목록 위 통계 카드 후보와 집계 정의 | 후보 기획 |
@@ -60,4 +60,3 @@
 ### 진행 예정
 * 각 개별 워크스페이스 상세 기능 요건 검토 및 구체화 진행.
 * AC Program First 확장 문서(3-4-6 ~ 3-4-14)를 기준으로 서면평가, 대면평가, OT, N:N 멘토링, 1:1 비즈니스 매칭, 데모데이, 통합 타임라인, KPI/Export, Custom Activity의 DB/API/RLS 연계 규격 검증.
-
