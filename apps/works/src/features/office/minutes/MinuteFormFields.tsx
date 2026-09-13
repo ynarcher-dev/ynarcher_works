@@ -139,7 +139,7 @@ export function MinuteFormFields(props: Props) {
       <FormSection title="관련 업무">
         <Field
           label="연동 대상"
-          hint="관련 사업·스타트업·네트워크를 연결하면 상호 참조됩니다. 비워 두면 일반 회의록입니다."
+          hint="관련 프로젝트·스타트업·네트워크를 연결하면 상호 참조됩니다. 비워 두면 일반 회의록입니다."
           as="div"
         >
           <MinuteLinkPicker value={props.links} onChange={props.onLinksChange} />

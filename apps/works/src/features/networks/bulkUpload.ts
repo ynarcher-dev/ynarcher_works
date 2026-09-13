@@ -295,6 +295,8 @@ export interface ExistingRef {
   deactivatedBy: string | null
   /** 비활성화 사유(가장 최근 deactivated 기여의 note). */
   deactivateReason: string | null
+  /** 두 명 이상의 기존 인물에 동시에 걸리면 자동 합치기를 금지한다. */
+  conflictNames?: string[]
 }
 
 interface ExistingRow {
@@ -407,16 +409,25 @@ export async function findExistingMatches(
       cands.set(c.ref.id, c)
     }
     let best: { ref: ExistingRef; count: number } | null = null
+    const matched: { ref: ExistingRef; count: number }[] = []
     for (const c of cands.values()) {
       const count =
         (rn && rn === c.nName ? 1 : 0) + (re && re === c.nEmail ? 1 : 0) + (rp && rp === c.nPhone ? 1 : 0)
       if (count < 2) continue
+      matched.push({ ref: c.ref, count })
       // 일치 수가 많은 후보 우선, 동률이면 활성 레코드를 우선한다.
       if (!best || count > best.count || (count === best.count && best.ref.deleted && !c.ref.deleted)) {
         best = { ref: c.ref, count }
       }
     }
-    if (best) out.set(r.line, best.ref)
+    if (best) {
+      out.set(
+        r.line,
+        matched.length > 1
+          ? { ...best.ref, conflictNames: matched.map((m) => m.ref.name) }
+          : best.ref,
+      )
+    }
   }
 
   // 기여 로그에서 선행 생성자(최초 기여자)와, 비활성 매칭의 비활성화자·사유(가장 최근 deactivated)를 채운다.
@@ -469,12 +480,19 @@ export function buildEnrichment(
   existing: ExistingRef,
   row: ParsedRow,
   target?: { category: NetworkCategory | null; countryTagId: string | null },
+  replaceContacts = false,
 ): Record<string, unknown> | null {
   const patch: Record<string, unknown> = {}
   const prof = { ...existing.profile }
   let profChanged = false
-  if (!existing.email && row.email) patch.email = row.email
-  if (!existing.phone && row.phone) patch.phone = row.phone.replace(/\D/g, '')
+  if (row.email && (!existing.email || (replaceContacts && row.email !== existing.email))) {
+    patch.email = row.email
+  }
+  const rowPhone = row.phone.replace(/\D/g, '')
+  const existingPhone = String(existing.phone ?? '').replace(/\D/g, '')
+  if (rowPhone && (!existingPhone || (replaceContacts && rowPhone !== existingPhone))) {
+    patch.phone = rowPhone
+  }
   if (!existing.profile.linkedin_url && row.linkedin) patch.linkedin_url = row.linkedin
   if (existing.expertise.length === 0 && row.expertise.length > 0) patch.expertise = row.expertise
   if (row.affiliation && row.affiliation !== (existing.affiliation ?? '')) {

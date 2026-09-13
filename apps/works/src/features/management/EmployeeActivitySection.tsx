@@ -33,16 +33,15 @@ function seatText(r: ActivityProgram): string {
 }
 
 /**
- * 사업 열 구성은 원장별로 두 벌이다. 스키마는 셋 다 같지만 **부르는 이름이 다르다** —
- * AC는 수주해 운영하는 '사업'이고, M&A·PROJECT는 착수해서 끝내는 '프로젝트'다.
- * 분야 태그도 AC만 운용 축으로 쓰므로(어느 분야의 기업을 발굴하는 사업인가) 거기에만 둔다.
+ * 프로젝트 열 구성은 원장별로 두 벌이다. 스키마는 같지만 분야 등 운용 축은 서로 다르다.
+ * 분야 태그는 사업부 프로젝트만 운용 축으로 쓰므로 거기에만 둔다.
  *
  * AC의 끝 열이 설명이 아니라 **참여 기업 수**인 것도 같은 축이다. 운영사업에서 그 사업의 규모를
  * 말하는 값은 소개 문장이 아니라 몇 개사를 받아 굴렸는가이고, 설명은 어차피 말줄임으로 잘려
  * 첫 몇 글자만 남는다 — 잘린 문장은 폭을 먹으면서 아무것도 답하지 않는다.
  */
 const AC_PROGRAM_COLUMNS: ActivityColumn<ActivityProgram>[] = [
-  { header: '사업명', primary: true, type: 'name', render: (r) => r.title },
+  { header: '프로젝트명', primary: true, type: 'name', render: (r) => r.title },
   {
     header: '운영기간',
     type: 'period',
@@ -179,7 +178,7 @@ export function EmployeeActivitySection({ userId }: { userId: string }) {
   // 사업 카드 2종은 원장만 다르고 표가 답하는 물음은 같다(features/program 공유 원칙과 같은 축).
   const programCards: ProgramCard[] = [
     {
-      title: '운영사업',
+      title: '프로젝트',
       workspace: 'project',
       basePath: '/project',
       columns: AC_PROGRAM_COLUMNS,

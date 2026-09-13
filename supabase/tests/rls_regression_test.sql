@@ -8,7 +8,7 @@
 --       해당 테이블 도입 시 케이스를 실제 테이블 접근으로 승격한다.
 -- =====================================================================
 begin;
-select plan(40);
+select plan(46);
 
 -- 픽스처: 테스트 계정 10종 + 데이터 (슈퍼유저로 삽입, 트랜잭션 종료 시 롤백) ----
 insert into public.startups(id, name) values
@@ -29,7 +29,8 @@ insert into public.users(id, user_type, name, session_version, company_id) value
 
 insert into public.workspace_permissions(user_id, workspace_key, permission_level, scope_type, expires_at) values
   ('00000000-0000-0000-0000-0000000000e3', 'networks', 'read',  'global', null),                 -- read_only
-  ('00000000-0000-0000-0000-0000000000e4', 'ac',       'write', 'program', null),                -- ac write only
+  ('00000000-0000-0000-0000-0000000000e3', 'startup',  'read',  'global', null),                 -- startups 읽기 키(20260731140000)
+  ('00000000-0000-0000-0000-0000000000e4', 'project',  'write', 'program', null),           -- project(구 ac) write only
   ('00000000-0000-0000-0000-0000000000e5', 'mna',      'read',  'temporary', now() - interval '1 day'), -- 만료
   ('00000000-0000-0000-0000-0000000000e6', 'guest',    'write', 'company', null),
   ('00000000-0000-0000-0000-0000000000e8', 'fund',     'write', 'fund', null),
@@ -48,16 +49,42 @@ select set_config('request.jwt.claims', '{"app_user_id":"00000000-0000-0000-0000
 select is((select count(*)::int from public.startups), 0, '케이스1: 무권한 사용자 startups SELECT 0건');
 reset role;
 
--- 케이스 2: read_only 사용자가 startups INSERT 시 RLS 차단(권한 오류)
+-- 케이스 2: STARTUP 원장의 읽기·쓰기 경계
+-- 근거 ① SELECT = app.can_read_workspace('startup') — 20260731140000_startups_workspace_key.sql
+--      (원장 키가 networks에서 startup으로 옮겨졌다. 픽스처의 read 키도 그때 함께 옮긴다.)
+-- 근거 ② INSERT는 워크스페이스 write가 아니라 **내부 사용자 여부**로 판정한다 —
+--      20260909190000_startup_networks_internal_write.sql, 정책 주석
+--      "내부 사용자 전원이 스타트업을 등록한다(2026-09-09)". 따라서 내부 read_only 계정의
+--      등록 성공은 취약점이 아니라 그날의 결정이다. 여기서는 그 긍정 경로와 외부 게스트
+--      차단을 함께 고정하고, invested 직등록 잠금은 케이스13이 본다.
 set local role authenticated;
 select set_config('request.jwt.claims', '{"app_user_id":"00000000-0000-0000-0000-0000000000e3","session_version":1}', true);
+-- 초기 이력에 데모 스타트업이 섞여 있어 전체 건수는 고정값이 아니다. 픽스처 두 건으로 본다.
+select is(
+  (select count(*)::int from public.startups
+    where id in ('a0000000-0000-0000-0000-0000000000a1', 'b0000000-0000-0000-0000-0000000000b2')),
+  2,
+  '케이스2a: startup read 권한자는 스타트업 원장을 읽는다'
+);
+select lives_ok(
+  $$ insert into public.startups(name) values ('내부 일반 등록사') $$,
+  '케이스2b: 내부 사용자는 스타트업을 등록할 수 있다(2026-09-09 결정)'
+);
+select is(
+  (select count(*)::int from public.startups where name = '내부 일반 등록사'),
+  1,
+  '케이스2c: 등록한 행이 원장에 남고 등록자에게 보인다'
+);
+reset role;
+
+set local role authenticated;
+select set_config('request.jwt.claims', '{"app_user_id":"00000000-0000-0000-0000-0000000000e6","session_version":1}', true);
 select throws_ok(
-  $$ insert into public.startups(name) values ('불가') $$,
+  $$ insert into public.startups(name) values ('외부 게스트 등록') $$,
   '42501',
   null,
-  '케이스2: read_only 사용자 INSERT는 RLS로 차단'
+  '케이스2d: 외부 게스트는 내부 STARTUP 원장에 등록할 수 없다'
 );
-select is((select count(*)::int from public.startups), 2, '케이스2b: read_only 사용자는 전체 마스터 SELECT 가능');
 reset role;
 
 -- 케이스 3: 만료 권한 사용자는 해당 데이터 접근이 차단된다
@@ -90,17 +117,23 @@ reset role;
 insert into public.audit_logs(action) values ('SEED_FOR_TEST');
 set local role authenticated;
 select set_config('request.jwt.claims', '{"app_user_id":"00000000-0000-0000-0000-0000000000e1","session_version":1}', true);
-select is(
-  (with d as (delete from public.audit_logs returning 1) select count(*)::int from d),
-  0,
-  '케이스7a: 관리자도 audit_logs DELETE 불가(0건 영향)'
+-- 데이터 변경 CTE는 최상위 문에서만 허용된다. 시도 자체를 실행하고 결과로 판정한다.
+select throws_ok(
+  $$delete from public.audit_logs$$,
+  '42501', null,
+  '케이스7a: 관리자 클레임으로도 audit_logs DELETE가 거부된다'
 );
-select is(
-  (with u as (update public.audit_logs set reason = '변조' returning 1) select count(*)::int from u),
-  0,
-  '케이스7b: audit_logs UPDATE 불가(0건 영향)'
+select throws_ok(
+  $$update public.audit_logs set reason = '변조'$$,
+  '42501', null,
+  '케이스7b: audit_logs UPDATE도 거부된다'
 );
 reset role;
+select is(
+  (select count(*)::int from public.audit_logs where action = 'SEED_FOR_TEST' and reason is null),
+  1,
+  '케이스7c: 감사 로그 행이 삭제·변조되지 않고 남아 있다'
+);
 
 -- 케이스 9: office/startup 신설 워크스페이스 키 권한 판정 (P0-2 정합화 회귀)
 set local role authenticated;
@@ -274,8 +307,13 @@ select is(
 reset role;
 set local role authenticated;
 select set_config('request.jwt.claims', '{"app_user_id":"00000000-0000-0000-0000-0000000000e4","session_version":1}', true);
+-- invested 행은 RLS 앞에 식별 게이트(20260911221000_ledger_identity_rules.sql)를 지난다.
+-- 사업자등록번호가 없으면 거기서 23514로 먼저 끊기므로, RLS 판정을 보려면 체크섬이 맞는
+-- 번호를 준다(가중치 1,3,7,1,3,7,1,3,5 — app.is_valid_biz_reg_no). 아래 번호는 데모 시드
+-- (111-81-0000X)와 겹치지 않는다.
 select throws_ok(
-  $$ insert into public.startups(name, management_status) values ('우회투자사', 'invested') $$,
+  $$ insert into public.startups(name, management_status, biz_reg_no)
+     values ('우회투자사', 'invested', '123-45-67891') $$,
   '42501',
   null,
   '케이스13a: startup 쓰기 권한자도 invested 로 직접 등록할 수 없다'
@@ -284,12 +322,25 @@ select lives_ok(
   $$ insert into public.startups(name, management_status) values ('정상발굴사', 'sourced') $$,
   '케이스13b: 같은 사용자의 일반 등록(sourced)은 그대로 통과한다'
 );
+-- 번호 없는 invested는 RLS 이전에 식별 게이트가 끊는다(잠금이 둘이라는 사실을 고정한다).
+select throws_ok(
+  $$ insert into public.startups(name, management_status) values ('번호없는투자사', 'invested') $$,
+  '23514',
+  null,
+  '케이스13d: 사업자등록번호가 없으면 invested 등록은 식별 게이트가 먼저 막는다'
+);
 reset role;
 set local role authenticated;
 select set_config('request.jwt.claims', '{"app_user_id":"00000000-0000-0000-0000-0000000000e1","session_version":1}', true);
 select lives_ok(
-  $$ insert into public.startups(name, management_status) values ('관리자수습사', 'invested') $$,
+  $$ insert into public.startups(name, management_status, biz_reg_no)
+     values ('관리자수습사', 'invested', '222-22-22227') $$,
   '케이스13c: 관리자는 오등록 수습을 위한 브레이크글라스로 남는다'
+);
+select is(
+  (select management_status::text from public.startups where name = '관리자수습사'),
+  'invested',
+  '케이스13e: 관리자가 넣은 수습 행은 invested 로 남는다'
 );
 reset role;
 

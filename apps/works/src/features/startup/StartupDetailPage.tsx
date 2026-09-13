@@ -7,11 +7,10 @@ import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
 import { RelatedMinutesPanel } from '@/features/office/minutes/RelatedMinutesPanel'
 import { useContributions, useDeactivateEntity, useEntity } from '@/features/master/entityHooks'
-import { useAuthStore } from '@/auth/authStore'
 import { StartupDetailForm } from '@/features/startup/StartupDetailForm'
 import { StartupCapabilitySection } from '@/features/startup/StartupCapabilitySection'
 import { StartupPerformanceSection } from '@/features/startup/StartupPerformanceSection'
-import { useStartupManagers } from '@/features/startup/startupPoolHooks'
+import { useCanWriteStartup, useStartupManagers } from '@/features/startup/startupPoolHooks'
 import { isInvested, startupContentKey } from '@/features/startup/startupClassification'
 import { SectionHeading } from '@/components/SectionHeading'
 import { StartupManagementSection } from '@/features/startup/StartupManagementSection'
@@ -35,18 +34,18 @@ export function StartupDetailPage() {
   const { data: record, isLoading } = useEntity('startups', id)
   const { data: contributions } = useContributions('startups', id)
   const { data: managers } = useStartupManagers(id)
-  const authUser = useAuthStore((s) => s.user)
+  const { data: canWrite } = useCanWriteStartup(id)
   const deactivate = useDeactivateEntity('startups')
   const [editing, setEditing] = useState(false)
 
   if (isLoading) return <Spinner />
   if (!record) return <Banner tone="warning">스타트업 정보를 찾을 수 없습니다.</Banner>
 
-  // 투자기업은 지정 담당자 또는 관리자만 수정 가능(서버 RLS가 최종 강제, 여기선 UI 게이팅).
+  // 투자기업은 관리자 또는 관리 주체(딜메이커 정·부 + 자사 투자 펀드의 관리인력)만 수정할 수
+  // 있다. 그 판정을 화면이 다시 적지 않고 서버 함수에 되묻는다 — 뒤엣것은 FUND 원장을 읽어야
+  // 알 수 있어, 담당자 목록만 보고 세운 버튼은 정책과 어긋난다(20260913120000).
   const invested = isInvested(record.management_status)
-  const isAdmin = authUser?.role === 'super_admin'
-  const isManager = (managers ?? []).some((m) => m.user_id === authUser?.id)
-  const canEdit = !invested || isAdmin || isManager
+  const canEdit = canWrite === true
   // 딜메이커 = 담당자 원장의 리드. 투자기업에만 지정되므로 그 외에는 빈 값으로 선다.
   const leadName = (managers ?? []).find((m) => m.is_lead)?.user?.name ?? null
 
@@ -69,9 +68,13 @@ export function StartupDetailPage() {
                 />
                 <Button onClick={() => setEditing(true)}>수정</Button>
               </>
-            ) : (
-              <span className={formText.hint}>지정 담당자만 수정할 수 있습니다.</span>
-            )
+            ) : canWrite === false ? (
+              // 판정이 오기 전(undefined)에는 아무것도 적지 않는다 — 곧 버튼이 설 자리에
+              // "권한이 없습니다"를 한 박자 띄우면 화면이 사실이 아닌 것을 먼저 말한다.
+              <span className={formText.hint}>
+                딜메이커 또는 투자 펀드의 관리인력만 수정할 수 있습니다.
+              </span>
+            ) : null
           }
         />
       )}

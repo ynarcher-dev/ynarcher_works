@@ -35,14 +35,12 @@ where c.deleted_at is null
 order by c.sort_order, c.name
 limit 1;
 
--- 활성 중복 차단 픽스처(이름·이메일 두 칸 일치).
-insert into public.startups (id, name, email, phone)
+-- 활성 중복 차단 픽스처(이름·이메일 두 칸 일치). 현재 원장 규칙은 같은 값을 가진 두
+-- 활성 행의 저장 자체를 막으므로, 복구 대상은 처음부터 삭제 이력으로 넣는다.
+insert into public.startups (id, name, email, phone, deleted_at)
 values
-  ('94100000-0000-0000-0000-000000000002', '중복 스타트업', 'duplicate@example.test', '010-5555-0001'),
-  ('94100000-0000-0000-0000-000000000003', '중복 스타트업', 'duplicate@example.test', '010-5555-0002');
-update public.startups
-   set deleted_at = now()
- where id = '94100000-0000-0000-0000-000000000003';
+  ('94100000-0000-0000-0000-000000000002', '중복 스타트업', 'duplicate@example.test', '010-5555-0001', null),
+  ('94100000-0000-0000-0000-000000000003', '중복 스타트업', 'duplicate@example.test', '010-5555-0002', now());
 
 -- 활성 NETWORKS 국가 필수 제약을 복구 시에도 지키는지 확인할 삭제 이력.
 insert into public.networks (id, name, category, deleted_at)
@@ -136,14 +134,16 @@ select is(
   null::timestamptz,
   '복구된 스타트업의 deleted_at이 비워진다'
 );
+-- entity_contributions.created_at은 now()(트랜잭션 시각)이라 같은 트랜잭션의 비활성·복구
+-- 두 행이 같은 시각을 갖는다. '가장 최근 한 건'으로 고르면 uuid 순서에 따라 결과가 갈리므로
+-- 복구 이력 자체를 지목해 확인한다.
 select is(
-  (select action
+  (select count(*)::integer
      from public.entity_contributions
     where entity_table = 'startups'
       and entity_id = '94100000-0000-0000-0000-000000000001'
-    order by created_at desc, id desc
-    limit 1),
-  'reactivated',
+      and action = 'reactivated'),
+  1,
   '복구 행위는 reactivated 이력으로 기록된다'
 );
 select is(
@@ -151,8 +151,7 @@ select is(
      from public.entity_contributions
     where entity_table = 'startups'
       and entity_id = '94100000-0000-0000-0000-000000000001'
-    order by created_at desc, id desc
-    limit 1),
+      and action = 'reactivated'),
   '관리자 확인 후 복구',
   '복구 사유가 원장 변경과 같은 트랜잭션에서 기록된다'
 );

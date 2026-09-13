@@ -27,7 +27,7 @@ export function ProgramHostField({ value, onChange }: ProgramHostFieldProps) {
     <Field
       as="div"
       label="주관"
-      hint={`이 사업을 발주·주관하는 기관 또는 기업 · 받아 온 사업이 아니면 '${SELF_HOSTED_PROGRAM_HOST}'`}
+      hint={`이 프로젝트를 발주·주관하는 기관 또는 기업 · 받아 온 프로젝트가 아니면 '${SELF_HOSTED_PROGRAM_HOST}'`}
     >
       {/*
         체크는 입력 칸 **바로 옆**에 선다. 라벨 줄 오른쪽 끝에 두었을 때는 폼 폭이 넓어질수록

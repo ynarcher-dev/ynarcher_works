@@ -4,11 +4,14 @@ import { useNavigate } from 'react-router-dom'
 import { hasWorkspaceWrite, useAuthStore } from '@/auth/authStore'
 import { ListActions } from '@/components/ListActions'
 import { ListScopeToggle } from '@/components/ListScopeToggle'
+import { InactiveLedgerButton } from '@/features/master/InactiveLedgerModal'
 import { LedgerBulkDeactivateBar } from '@/features/master/LedgerBulkDeactivateBar'
+import { creatorDeactivateSelection } from '@/features/master/ledgerSelection'
 import { ProgramFormModal } from '@/features/program/ProgramFormModal'
 import { ProgramFilters } from '@/features/program/ProgramFilters'
 import { ProgramPipeline } from '@/features/program/ProgramPipeline'
 import { ProgramTable } from '@/features/program/ProgramTable'
+import type { Program } from '@/features/program/hooks'
 import {
   EMPTY_PROGRAM_FILTERS,
   useProgramsPage,
@@ -57,12 +60,20 @@ export function ProgramListTab({ scope, onScopeChange }: ProgramListTabProps) {
     setSelected([])
   }, [keyword, filtersKey, scope])
 
+  // 페이지를 넘기면 선택을 비운다 — 화면에서 사라진 행의 선택이 남으면 일괄 비활성화가
+  // 보이지 않는 행에 걸린다(STARTUP·NETWORKS 목록과 같은 처리).
+  useEffect(() => setSelected([]), [page])
+
   const mineUserId = scope === 'mine' ? userId ?? null : null
   const { data, isLoading } = useProgramsPage(keyword, filters, page, PAGE_SIZE, mineUserId)
   const rows = data?.rows ?? []
-  const canDeactivate = (row: (typeof rows)[number]) =>
-    canWrite && row.created_by === userId
-  const showSelection = rows.some(canDeactivate)
+  // 선택 열은 쓰기 권한으로 서고, 고를 수 있는 행은 생성자 전용 트리거와 같은 조건이다.
+  // 사업 원장 둘(programs·ma_programs)이 같은 트리거를 지므로 워크스페이스별로 가르지 않는다.
+  const { selectable, selectableRow } = creatorDeactivateSelection<Program>(
+    canWrite,
+    userId,
+    authUser?.role === 'super_admin',
+  )
 
   /** 카드 한 칸이 대표하는 실제 상태를 한 번에 토글한다(합산 카드도 한 동작으로 유지). */
   const toggleStatuses = (statuses: readonly string[]) =>
@@ -89,7 +100,10 @@ export function ProgramListTab({ scope, onScopeChange }: ProgramListTabProps) {
         actions={
           <ListActions
             leading={
-              <ListScopeToggle scope={scope} onChange={onScopeChange} noun={config.entityNoun} />
+              <>
+                <ListScopeToggle scope={scope} onChange={onScopeChange} noun={config.entityNoun} />
+                <InactiveLedgerButton ledger={config.tables.programs} />
+              </>
             }
             createLabel={`${config.entityNoun} 등록`}
             onCreate={() => setCreating(true)}
@@ -115,8 +129,8 @@ export function ProgramListTab({ scope, onScopeChange }: ProgramListTabProps) {
           rows={rows}
           selectedKeys={selected}
           onSelectionChange={setSelected}
-          selectable={showSelection}
-          selectableRow={canDeactivate}
+          selectable={selectable}
+          selectableRow={selectableRow}
           // 출처 범위를 쿼리로 넘겨 상세의 뒤로가기가 방금 보던 목록으로 돌아오게 한다
           // (내 것이 아닌 사업을 '전체'에서 열었다면 '내 ~' 목록에는 그 행이 없다).
           onRowClick={(row) =>

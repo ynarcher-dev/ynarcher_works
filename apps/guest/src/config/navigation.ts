@@ -55,7 +55,14 @@ export function modulePath(moduleId: string): string {
  * 원장이 세우는 하위 메뉴와는 사이드바가 구분선으로 가른다(GuestLayout).
  */
 const PROGRAM_FIXED_NAV: readonly [GuestNavItem, ...GuestNavItem[]] = [
-  { path: '/overview', label: '사업개요', icon: BookOpen },
+  { path: '/overview', label: '프로젝트 개요', icon: BookOpen },
+  { path: '/announcements', label: '공지사항', icon: Bell },
+  { path: '/schedule', label: '일정안내', icon: CalendarDays },
+  { path: '/qna', label: 'Q&A', icon: CircleHelp },
+]
+
+const MNA_FIXED_NAV: readonly [GuestNavItem, ...GuestNavItem[]] = [
+  { path: '/overview', label: 'M&A 프로젝트 개요', icon: BookOpen },
   { path: '/announcements', label: '공지사항', icon: Bell },
   { path: '/schedule', label: '일정안내', icon: CalendarDays },
   { path: '/qna', label: 'Q&A', icon: CircleHelp },
@@ -82,7 +89,9 @@ const FUND_FIXED_NAV: readonly [GuestNavItem, ...GuestNavItem[]] = [
 export function fixedNavOf(
   entityKey: string | null | undefined,
 ): readonly [GuestNavItem, ...GuestNavItem[]] {
-  return entityKey === 'fund' ? FUND_FIXED_NAV : PROGRAM_FIXED_NAV
+  if (entityKey === 'fund') return FUND_FIXED_NAV
+  if (entityKey === 'ma_program') return MNA_FIXED_NAV
+  return PROGRAM_FIXED_NAV
 }
 
 /**

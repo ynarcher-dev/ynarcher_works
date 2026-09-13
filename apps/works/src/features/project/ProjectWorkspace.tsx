@@ -1,8 +1,5 @@
-import { PageHeader } from '@ynarcher/ui'
-import { useSearchParams } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import { AC_CATEGORIES } from '@/config/programCategories'
-import { GUEST_ACCOUNT_READ_LABEL } from '@/config/navigation'
-import { GuestAccountPanel } from '@/features/admin/GuestAccountPanel'
 import { ProgramBulkPage } from '@/features/program/ProgramBulkPage'
 import { ProgramDetailPage } from '@/features/program/ProgramDetailPage'
 import { ProgramWorkspacePage } from '@/features/program/ProgramWorkspacePage'
@@ -20,9 +17,9 @@ export const PROJECT_WORKSPACE: ProgramWorkspaceConfig = {
   guestMasterTables: ['startups', 'networks'],
   basePath: '/project',
   detailBase: '/project',
-  listLabel: '관리 사업',
-  // 사업부에서 다루는 원장이므로 메뉴와 목록 안쪽 문구를 모두 '사업'으로 부른다.
-  entityNoun: '사업',
+  listLabel: '프로젝트',
+  // 조직 이름은 '사업부'로 유지하되, 이 원장의 대상은 메뉴부터 상세까지 '프로젝트'로 부른다.
+  entityNoun: '프로젝트',
   tables: {
     programs: 'programs',
     managers: 'program_managers',
@@ -37,10 +34,10 @@ export const PROJECT_WORKSPACE: ProgramWorkspaceConfig = {
   // 공고를 낸 주관기관/기업이 있어야 제안이 성립하므로 '주관'을 운용한다(AC 전용).
   hasHostOrganization: true,
   categories: AC_CATEGORIES,
-  categoryNoun: '사업구분',
-  overviewNoun: '사업개요',
+  categoryNoun: '프로젝트 구분',
+  overviewNoun: '프로젝트 개요',
   // 담기는 것이 기업과 사람 둘이라 회사로 부를 수 없다.
-  rosterLabel: '참가자 목록',
+  rosterLabel: '프로젝트 참가자 목록',
   // 계정 후보는 담당자가 따로 꾸린 참가자 목록에서 고른다 — 이 워크스페이스에는 "누가
   // 참가하는가"를 이미 답하고 있는 업무 원장이 없다(사업은 담는 일 자체가 결정이다).
   rosterSource: { kind: 'entries' },
@@ -65,15 +62,7 @@ export function ProjectWorkspacePage() {
   //    근거가 사라진다 — 발급 대상이 다른 원장 행이라 재시도가 일어날 수 있는 같은
   //    대상이 아니고, 반대로 `ma_sellers` 인격이 여기 서면 그 사람 계정의 존재가 드러난다.
   if (params.get('tab') === 'guest-accounts') {
-    return (
-      <div className="space-y-5">
-        <PageHeader title={GUEST_ACCOUNT_READ_LABEL} />
-        <GuestAccountPanel
-          entityKey={PROJECT_WORKSPACE.entityKey}
-          masterTables={PROJECT_WORKSPACE.guestMasterTables}
-        />
-      </div>
-    )
+    return <Navigate to="/guest-accounts" replace />
   }
 
   return (

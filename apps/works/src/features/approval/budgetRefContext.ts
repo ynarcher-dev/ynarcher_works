@@ -13,6 +13,12 @@ export interface BudgetRefSource {
   options: BudgetLineOption[]
   /** 줄별 사용 현황 — 고르는 자리에서 "얼마 남았나"가 함께 보여야 한다. */
   usage: Map<string, BudgetUsage>
+  /**
+   * 사용 현황을 아직 못 읽었거나 읽지 못했다. 빈 Map을 그대로 그리면 사용액 0·전액 잔여로
+   * 보여 **읽기 실패가 여유 예산으로 둔갑한다.** 숫자 자리에 그 사실을 대신 적는다.
+   */
+  usageLoading: boolean
+  usageError: boolean
   /** 고를 것이 없을 때 그 이유. 빈 목록만 보여 주면 담당자가 다음에 할 일을 모른다. */
   emptyHint: string
 }
@@ -20,6 +26,8 @@ export interface BudgetRefSource {
 const EMPTY: BudgetRefSource = {
   options: [],
   usage: new Map(),
+  usageLoading: false,
+  usageError: false,
   emptyHint: '근거 품의를 먼저 고르세요.',
 }
 

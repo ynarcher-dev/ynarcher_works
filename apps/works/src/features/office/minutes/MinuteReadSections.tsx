@@ -124,7 +124,7 @@ export function MinuteReadSections({ minute }: { minute: MinuteDetail }) {
 
         <EntityHeaderSection
           label="관련 업무"
-          help="연동된 사업·스타트업·네트워크와 상호 참조됩니다. 비어 있으면 일반 회의록입니다."
+          help="연동된 프로젝트·스타트업·네트워크와 상호 참조됩니다. 비어 있으면 일반 회의록입니다."
         >
           <InfoRows
             items={[

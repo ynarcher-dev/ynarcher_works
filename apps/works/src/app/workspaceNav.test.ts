@@ -9,8 +9,10 @@ import {
   visibleWorkspaces,
   type BoundNavGroup,
 } from '@/app/workspaceNav'
+import { sidebarIconByTab } from '@/app/sidebarIcons'
 import { allTabs } from '@/config/navigation'
 import { WORKSPACES, type WorkspaceNavItem } from '@/config/workspaces'
+import { ADMIN_TAG_CONFIGS, TAG_CONFIG_GROUPS } from '@/features/admin/tagConfig'
 
 function userWith(perms: Partial<Record<WorkspaceKey, PermissionLevel>>): AuthUser {
   return {
@@ -55,11 +57,11 @@ const project = itemOf('project')
 const mna = itemOf('mna')
 
 describe('워크스페이스 메뉴 — 확정 명칭과 순서', () => {
-  it('내 오피스부터 시스템 관리까지 합의한 여덟 메뉴가 선다', () => {
+  it('GUEST를 독립 항목으로 두지 않은 여덟 워크스페이스가 선다', () => {
     expect(WORKSPACES.map((w) => w.label)).toEqual([
       '내 오피스',
       '공용 오피스',
-      '데이터 센터',
+      '데이터베이스',
       '사업부',
       'M&A팀',
       '투자실',
@@ -77,27 +79,222 @@ describe('워크스페이스 메뉴 — 확정 명칭과 순서', () => {
       'office',
     ])
     expect(landingPath(user, myOffice)).toBe('/my-office')
-    expect(shape(buildNavGroups(user, myOffice))).toEqual([
-      ['office:대시보드', 'office:전자결재'],
+    expect(shape(unpinnedOf(buildNavGroups(user, myOffice)))).toEqual([
+      [
+        'office:대시보드',
+        'office:전자결재',
+        'office:그룹KPI 관리',
+        'office:개인KPI 관리',
+        'office:주간 회의록',
+      ],
     ])
     const commonTabs = allTabs(plainGroups(buildNavGroups(user, commonOffice)))
     expect(commonTabs.has('dashboard')).toBe(false)
     expect(commonTabs.has('approval')).toBe(false)
+  })
+
+  it('준비 중 메뉴는 모두 하위 메뉴 없이 독립된 한 줄로 선다', () => {
+    const user = userWith({ office: 'read', fund: 'read' })
+    const labels = (id: string) =>
+      unpinnedOf(buildNavGroups(user, itemOf(id))).flatMap((g) =>
+        g.items.filter((b) => b.item.comingSoon).map((b) => b.item.label),
+      )
+
+    expect(labels('my-office')).toEqual(['그룹KPI 관리', '개인KPI 관리', '주간 회의록'])
+    expect(labels('office')).toEqual([])
+    expect(labels('fund')).toEqual(['예비투자심사', '본투자심사', '반기/온기보고'])
+
+    for (const id of ['my-office', 'office', 'fund']) {
+      const pendingItems = unpinnedOf(buildNavGroups(user, itemOf(id)))
+        .flatMap((g) => g.items)
+        .filter((b) => b.item.comingSoon)
+      expect(pendingItems.every((b) => !b.item.children && !b.item.tab && !b.item.path)).toBe(true)
+    }
+  })
+
+  it('내 오피스 메뉴와 구분선을 지정한 순서로 세운다', () => {
+    const groups = unpinnedOf(
+      buildNavGroups(userWith({ office: 'read' }), itemOf('my-office')),
+    )
+    expect(shape(groups)).toEqual([
+      [
+        'office:대시보드',
+        'office:전자결재',
+        'office:그룹KPI 관리',
+        'office:개인KPI 관리',
+        'office:주간 회의록',
+      ],
+    ])
+    expect(groups[0]?.group).toBe('개인업무')
+    expect(groups[0]?.items.map((b) => b.item.dividerBefore)).toEqual([
+      undefined,
+      '결재',
+      '성과관리',
+      undefined,
+      '부서업무',
+    ])
+  })
+
+  it('공용 오피스 메뉴와 구분선을 지정한 순서로 세운다', () => {
+    const groups = unpinnedOf(
+      buildNavGroups(userWith({ office: 'read' }), itemOf('office')),
+    )
+    expect(shape(groups)).toEqual([
+      [
+        'office:전사 일정',
+        'office:임직원 정보',
+        'office:지사 정보',
+        'office:자산 현황',
+        'office:회의실 예약',
+        'office:회의록 작성',
+      ],
+      ['office:게시판', 'office:자료실'],
+    ])
+    expect(groups[0]?.items.map((b) => b.item.dividerBefore)).toEqual([
+      undefined,
+      '회사정보',
+      undefined,
+      undefined,
+      '회의',
+      undefined,
+    ])
+    expect(groups[0]?.group).toBe('일정')
+    expect(groups[1]?.group).toBe('게시')
+  })
+
+  it('투자실 메뉴와 구분선을 지정한 순서로 세운다', () => {
+    const groups = unpinnedOf(buildNavGroups(userWith({ fund: 'read' }), itemOf('fund')))
+    expect(shape(groups)).toEqual([
+      [
+        'fund:운용펀드',
+        'fund:예비투자심사',
+        'fund:본투자심사',
+        'fund:반기/온기보고',
+      ],
+    ])
+    expect(groups[0]?.items.map((b) => b.item.dividerBefore)).toEqual([
+      undefined,
+      '투자심사',
+      undefined,
+      '보고',
+    ])
+    expect(groups[0]?.group).toBe('펀드 관리')
+  })
+
+  it('메뉴가 하나뿐인 워크스페이스도 첫 항목 위에 그룹명을 세운다', () => {
+    const user = userWith({ startup: 'read', networks: 'read', project: 'read', mna: 'read' })
+
+    expect(unpinnedOf(buildNavGroups(user, itemOf('database')))[0]?.group).toBe('데이터 원장')
+    expect(unpinnedOf(buildNavGroups(user, itemOf('project')))[0]?.group).toBe('프로젝트 관리')
+    expect(unpinnedOf(buildNavGroups(user, itemOf('mna')))[0]?.group).toBe('딜 관리')
+  })
+
+  it('경영실은 기능 열 개를 노출하고 경영요소 경계에 이름을 붙인다', () => {
+    const groups = unpinnedOf(
+      buildNavGroups(userWith({ management: 'read' }), itemOf('management')),
+    )
+    const items = groups[0]?.items ?? []
+
+    expect(items.map((b) => b.item.label)).toEqual([
+      '경영 현황',
+      'KPI 관리',
+      '조직 관리',
+      '인사 관리',
+      '근태 관리',
+      '재무 관리',
+      '거래처 정보',
+      '결재 금액 집계',
+      '지사 관리',
+      '자산 관리',
+    ])
+    expect(items.map((b) => b.item.dividerBefore)).toEqual([
+      undefined,
+      undefined,
+      '조직·인사',
+      undefined,
+      undefined,
+      '재무',
+      undefined,
+      undefined,
+      '총무·인프라',
+      undefined,
+    ])
+    expect(allTabs(plainGroups(groups))).toEqual(
+      new Set([
+        'dashboard',
+        'kpi',
+        'departments',
+        'hr',
+        'attendance',
+        'finance',
+        'partners',
+        'approval-stats',
+        'branches',
+        'assets',
+      ]),
+    )
+  })
+
+  it('시스템 관리는 권한부터 감사까지 다섯 운영요소로 세운다', () => {
+    const groups = unpinnedOf(
+      buildNavGroups(userWith({ admin: 'write' }), itemOf('admin')),
+    )
+    const items = groups[0]?.items ?? []
+
+    expect(groups[0]?.group).toBe('권한·보안')
+    expect(items.map((b) => b.item.label)).toEqual([
+      '권한 제어 콘솔',
+      '민감정보 관리',
+      '게시판 관리',
+      '회의실 관리',
+      '결재 양식 관리',
+      '모듈 관리',
+      '태그 관리',
+      '중복 병합 검증',
+      '생성자 교체',
+      '감사 로그 모니터',
+      '다운로드 사유 로그',
+    ])
+    expect(items.map((b) => b.item.dividerBefore)).toEqual([
+      undefined,
+      undefined,
+      '운영 설정',
+      undefined,
+      undefined,
+      undefined,
+      '기준정보',
+      '데이터 관리',
+      undefined,
+      '감사·로그',
+      undefined,
+    ])
+    const tagItem = items.find((b) => b.item.tab === 'tags')?.item
+    expect(tagItem?.children).toBeUndefined()
+    expect(items.every((b) => Boolean(b.item.tab && sidebarIconByTab[b.item.tab]))).toBe(true)
+  })
+
+  it('태그 관리는 한 줄로 진입하고 2차 메뉴의 모든 종류에 그룹과 아이콘이 있다', () => {
+    expect(new Set(ADMIN_TAG_CONFIGS.map((config) => config.group))).toEqual(
+      new Set(TAG_CONFIG_GROUPS),
+    )
+    expect(ADMIN_TAG_CONFIGS.every((config) => Boolean(sidebarIconByTab[config.tab]))).toBe(true)
   })
 })
 
 describe('DATABASE — 전사 원장 둘', () => {
   it('둘 다 읽으면 한 그룹 두 줄이고 그 사이에 선이 없다', () => {
     const groups = buildNavGroups(userWith({ startup: 'read', networks: 'read' }), database)
-    expect(shape(groups)).toEqual([['startup:스타트업 DB', 'networks:네트워크 DB']])
+    expect(shape(unpinnedOf(groups))).toEqual([['startup:스타트업', 'networks:네트워크']])
     // 같은 층의 전사 원장이라 선을 그으면 서로 다른 층으로 보인다.
     const rows = groups[0]!.items
-    expect(rows.map((b) => Boolean(b.item.dividerBefore))).toEqual([false, false])
+    expect(rows.map((b) => b.item.dividerBefore)).toEqual([undefined, undefined])
   })
 
   it('한 구획만 읽으면 그 줄만 선다 — 자리를 합쳐도 권한은 구획마다 판정한다', () => {
     const user = userWith({ networks: 'read' })
-    expect(shape(buildNavGroups(user, database))).toEqual([['networks:네트워크 DB']])
+    expect(shape(unpinnedOf(buildNavGroups(user, database)))).toEqual([
+      ['networks:네트워크'],
+    ])
     expect(readableSections(user, database)).toHaveLength(1)
   })
 
@@ -105,7 +302,7 @@ describe('DATABASE — 전사 원장 둘', () => {
     expect(visibleWorkspaces(userWith({ project: 'write' })).map((w) => w.id)).not.toContain('database')
   })
 
-  it('포털 계정 줄은 여기 없다 — 창구는 사업 워크스페이스가 갖는다', () => {
+  it('데이터베이스에는 GUEST 계정 창구가 서지 않는다', () => {
     const groups = buildNavGroups(userWith({ startup: 'read', networks: 'read' }), database)
     expect(pinnedOf(groups)).toHaveLength(0)
     expect(allTabs(plainGroups(groups)).has('guest-accounts')).toBe(false)
@@ -123,12 +320,16 @@ describe('M&A/PE — 딜 한 줄 + 거래상대 원장 두 줄', () => {
     const groups = buildNavGroups(user, mna)
     // 계정생성은 하단 고정 영역이라 이 줄들과 그룹이 갈린다(plainGroups가 그것을 뺀다).
     expect(shape(unpinnedOf(groups))).toEqual([
-      ['mna:M&A 딜', 'mna:BUYER DB', 'mna:SELLER DB'],
+      ['mna:M&A 프로젝트', 'mna:매수자 명단', 'mna:매도자 명단'],
     ])
     // 층이 갈리는 자리는 딜과 원장 사이 하나다 — 두 원장 사이에 선을 하나 더 그으면
     // 사는 쪽과 파는 쪽이 서로 다른 층으로 보인다.
     const rows = unpinnedOf(groups).flatMap((g) => g.items)
-    expect(rows.map((b) => Boolean(b.item.dividerBefore))).toEqual([false, true, false])
+    expect(rows.map((b) => b.item.dividerBefore)).toEqual([
+      undefined,
+      '거래상대',
+      undefined,
+    ])
   })
 
   it('구획의 신원은 키가 아니라 경로다 — 셋이 각자 자기 경로로 잡힌다', () => {
@@ -173,24 +374,32 @@ describe('M&A/PE — 딜 한 줄 + 거래상대 원장 두 줄', () => {
   })
 })
 
-describe('사업부 — 관리 사업 목록 + 하단 고정 창구', () => {
-  it('GUEST 계정 조회 줄은 목록이 아니라 그 아래 고정 영역이라 그룹이 갈린다', () => {
+describe('GUEST 계정 — 전사 통합 진입점', () => {
+  it('사업부 하단에서 통합 GUEST URL을 연다', () => {
     const groups = buildNavGroups(userWith({ project: 'write' }), project)
-    expect(shape(groups)).toEqual([
-      ['project:관리 사업'],
-      ['project:GUEST 계정조회'],
-    ])
-    // 그 탭이 탭 집합에서 빠지면 그 화면에서 사업 목록 줄이 활성으로 칠해진다.
-    expect(allTabs(plainGroups(groups)).has('guest-accounts')).toBe(true)
+    expect(shape(unpinnedOf(groups))).toEqual([['project:프로젝트']])
+    expect(shape(pinnedOf(groups))).toEqual([['project:GUEST 계정 관리']])
+    expect(pinnedOf(groups)[0]?.group).toBe('외부계정')
+    expect(allTabs(plainGroups(groups)).has('guest-accounts')).toBe(false)
+    expect(pinnedOf(groups)[0]?.items[0]?.item.path).toBe('/guest-accounts')
   })
 
-  it('M&A에도 창구가 선다 — 외부인이 들어오는 자리가 셋으로 넓어졌다(2026-09-08)', () => {
-    // 2026-09-07에는 AC에만 있었고 근거는 "게스트가 걸리는 사업이 전부 AC"였다. M&A가
-    // 자기 원장(ma_sellers·ma_buyers)에서 계정을 세우게 되면서 그 근거가 사라진다 —
-    // 그 인격은 AC 창구에 설 수 없으므로(3_9_2 §6) 창구가 워크스페이스마다 하나여야 한다.
+  it('GUEST는 스위처에 없고 사업부·M&A팀·투자실 하단에만 선다', () => {
+    const user = userWith({ office: 'read', startup: 'read', project: 'read', fund: 'read', mna: 'read' })
+    expect(visibleWorkspaces(user).map((w) => w.id)).not.toContain('guest-accounts')
+    for (const id of ['project', 'mna', 'fund']) {
+      expect(pinnedOf(buildNavGroups(user, itemOf(id)))[0]?.items[0]?.item.path).toBe(
+        '/guest-accounts',
+      )
+    }
+    for (const id of ['my-office', 'office', 'database']) {
+      expect(pinnedOf(buildNavGroups(user, itemOf(id)))).toHaveLength(0)
+    }
+  })
+
+  it('M&A에도 같은 하단 계정 창구가 선다', () => {
     const pinned = pinnedOf(buildNavGroups(userWith({ mna: 'read' }), mna))
-    expect(pinned).toHaveLength(1)
-    expect(pinned[0]?.items.map((b) => b.item.tab)).toEqual(['guest-accounts'])
+    expect(shape(pinned)).toEqual([['mna:GUEST 계정 관리']])
   })
 
   it('AC를 읽지 못하면 스위처에서 항목 자체가 빠진다', () => {
@@ -199,22 +408,26 @@ describe('사업부 — 관리 사업 목록 + 하단 고정 창구', () => {
 })
 
 describe('실행 라인 셋 — 각 조직이 실제로 부르는 목록 이름을 쓴다', () => {
-  it('사업부는 관리 사업, M&A팀은 M&A 딜로 부른다', () => {
+  it('사업부는 프로젝트, M&A팀은 M&A 프로젝트로 부른다', () => {
     const user = userWith({ project: 'write', mna: 'read' })
     const firstRow = (id: string) =>
       buildNavGroups(user, itemOf(id)).flatMap((g) =>
         g.items.filter((b) => !b.item.pinBottom).map((b) => b.item.label),
       )[0]
 
-    expect(firstRow('project')).toBe('관리 사업')
-    expect(firstRow('mna')).toBe('M&A 딜')
+    expect(firstRow('project')).toBe('프로젝트')
+    expect(firstRow('mna')).toBe('M&A 프로젝트')
   })
 
   it('셋이 각자 자기 항목으로 서고 도착지는 자기 루트 경로다', () => {
     const user = userWith({ project: 'write', mna: 'read', fund: 'read' })
     // DATABASE는 서지 않는다 — 그 항목이 덮는 구획은 startup·networks 둘뿐이고, 딜 권한은
     // 이제 M&A/PE 한 자리만 연다(2026-09-07 M&A BUYER 이관).
-    expect(visibleWorkspaces(user).map((w) => w.id)).toEqual(['project', 'mna', 'fund'])
+    expect(visibleWorkspaces(user).map((w) => w.id)).toEqual([
+      'project',
+      'mna',
+      'fund',
+    ])
     expect(landingPath(user, itemOf('fund'))).toBe('/fund')
   })
 })

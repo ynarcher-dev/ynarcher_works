@@ -180,10 +180,10 @@ export function useUpdateMaParty(cfg: MaPartyConfig) {
 }
 
 /**
- * 사유를 남기는 삭제(소프트). 원장 UPDATE와 사유 기록이 한 트랜잭션에 묶이므로,
- * '삭제 기록만 남고 행은 살아 있는' 어긋난 상태가 생기지 않는다.
+ * 사유를 남기는 비활성화. 원장 UPDATE와 사유 기록이 한 트랜잭션에 묶이므로,
+ * '비활성화 기록만 남고 행은 살아 있는' 어긋난 상태가 생기지 않는다.
  */
-export function useDeleteMaParty(cfg: MaPartyConfig) {
+export function useDeactivateMaParty(cfg: MaPartyConfig) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
@@ -197,6 +197,7 @@ export function useDeleteMaParty(cfg: MaPartyConfig) {
     onSuccess: (_v, { id }) => {
       void qc.invalidateQueries({ queryKey: root(cfg) })
       void qc.invalidateQueries({ queryKey: [...root(cfg), 'contributions', id] })
+      void qc.invalidateQueries({ queryKey: ['inactive-ledger', cfg.table] })
     },
   })
 }

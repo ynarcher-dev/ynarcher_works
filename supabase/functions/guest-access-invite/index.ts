@@ -94,7 +94,7 @@ Deno.serve(withCors(async (req: Request) => {
           templateCode: row.account_is_new ? 'GUEST_INVITE_NEW' : 'GUEST_INVITE_ADD',
           variables: {
             name: row.target_name,
-            program: titles.get(programId) ?? '참여 사업',
+            program: titles.get(programId) ?? '참여 프로젝트',
             code: row.program_code,
           },
         })

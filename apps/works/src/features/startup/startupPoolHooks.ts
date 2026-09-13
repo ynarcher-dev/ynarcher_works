@@ -234,6 +234,69 @@ export function useStartupManagers(startupId: string | undefined) {
 }
 
 /**
+ * 이 기업의 행을 고칠 자격이 있는가 — **판정을 화면이 다시 적지 않고 서버에 되묻는다.**
+ *
+ * 투자기업의 관리 주체는 담당자 원장 하나로 답하지 않는다(딜메이커 정·부 + 그 기업에 자사
+ * 투자를 집행한 펀드의 관리인력, 20260913120000). 뒤엣것은 FUND 원장을 읽어야 알 수 있어
+ * 화면에서 재현하면 정책과 어긋나기 쉽다 — `public.can_write_startup`이 RLS의 USING 절과
+ * **같은 함수**를 호출자 기준으로 돌려주므로, 버튼과 저장이 같은 답을 본다.
+ *
+ * 실패·미판정은 false로 둔다(Default Deny): 버튼이 안 서는 쪽은 되물을 수 있지만, 섰다가
+ * 저장이 거절되는 쪽은 고친 내용을 잃는다.
+ */
+export function useCanWriteStartup(startupId: string | undefined) {
+  return useQuery({
+    queryKey: ['startups', 'can-write', startupId],
+    enabled: Boolean(startupId),
+    queryFn: async (): Promise<boolean> => {
+      const { data, error } = await supabase.rpc('can_write_startup', { p_id: startupId })
+      if (error) throw error
+      return data === true
+    },
+  })
+}
+
+/**
+ * 내가 **관리인력(ADMIN)**으로 걸린 펀드가 자사 투자한 기업 id 집합.
+ *
+ * 목록은 행마다 서버에 자격을 되물을 수 없어(한 화면에 수십 행이다) 판정에 필요한 최소 집합을
+ * 한 번에 받아 둔다. 상세의 `useCanWriteStartup`과 답이 같아야 하므로 조건도 같은 것을 건다 —
+ * 자사 투자, 미삭제 집행 건(펀드 비활성은 FUND 목록 RLS가 이미 가린다).
+ *
+ * FUND 열람 권한이 없으면 빈 집합이 온다 — 그 사람은 목록에서 고르지 못하고 상세에서 고친다.
+ * 목록에서 가리는 것은 인가가 아니므로(서버가 최종 판정) 이 축소는 안전한 쪽으로 틀린다.
+ */
+export function useFundAdminStartupIds(userId: string | undefined) {
+  return useQuery({
+    queryKey: ['startups', 'fund-admin-ids', userId],
+    enabled: Boolean(userId),
+    queryFn: async (): Promise<Set<string>> => {
+      const { data: staffed, error: staffError } = await supabase
+        .from('fund_managers')
+        .select('fund_id')
+        .eq('user_id', userId)
+        .eq('role', 'ADMIN')
+      if (staffError) throw staffError
+      const fundIds = (staffed ?? []).map((r) => (r as { fund_id: string }).fund_id)
+      if (fundIds.length === 0) return new Set<string>()
+
+      const { data, error } = await supabase
+        .from('investments')
+        .select('startup_id')
+        .in('fund_id', fundIds)
+        .eq('is_own_investment', true)
+        .is('deleted_at', null)
+      if (error) throw error
+      return new Set(
+        (data ?? [])
+          .map((r) => (r as { startup_id: string | null }).startup_id)
+          .filter((v): v is string => Boolean(v)),
+      )
+    },
+  })
+}
+
+/**
  * 투자 승격 RPC 호출(담당자 지정 + investment 전환 + 관리현황·단계 지정 원자 처리).
  * 미투자 → 투자 전환은 자사 투자 집행이 있을 때만 서버가 허용한다(20260724190000).
  * poolStatus·stage 를 주면 승격과 동시에 관리현황·단계를 세팅한다(생략 시 기존값 유지, 20260724220000).

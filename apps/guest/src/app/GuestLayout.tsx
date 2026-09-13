@@ -1,4 +1,4 @@
-import { AppShell, Sidebar, SidebarItem } from '@ynarcher/ui'
+import { AppShell, Sidebar, SidebarDivider, SidebarItem } from '@ynarcher/ui'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import logo from '@/assets/logo.png'
 import { GuestContextSwitcher } from '@/app/GuestContextSwitcher'
@@ -71,11 +71,12 @@ export function GuestLayout() {
       }
     >
       <div className="flex flex-col gap-1">
+        <SidebarDivider label="안내" />
         {/* 상단은 고정 메뉴 묶음(첫 줄이 로그인 직후 착지점)이다. 무엇이 서는지는 맥락이
             정한다 — 사업은 넷, 조합은 셋이다(2026-09-09). 원장이 세우는 하위 메뉴와는
             구분선으로 가른다 — 층이 다른 메뉴임을 선 하나가 답한다. */}
         {fixedNavOf(program?.entityKey).map(renderItem)}
-        {items.length > 0 && <div aria-hidden className="my-1 border-t border-white/20" />}
+        {items.length > 0 && <SidebarDivider label="참여 메뉴" />}
         {items.map(renderItem)}
       </div>
     </Sidebar>

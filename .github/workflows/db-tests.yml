@@ -1,0 +1,37 @@
+name: DB Tests
+
+# supabase/migrations 전체를 빈 로컬 Supabase DB에 재생하고 supabase/tests의 pgTAP을 돌린다.
+# 운영 프로젝트에는 접근하지 않는다(러너가 --workdir/--local만 쓰고 원격 인자를 거부한다).
+# push/pull_request 트리거는 두지 않는다 — CI가 workflow_call로 부른다.
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+# 호출된 실행과 수동 실행이 서로를 취소하지 않도록 workflow 이름까지 넣는다.
+concurrency:
+  group: db-tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  pgtap:
+    name: 마이그레이션 재생 + pgTAP 회귀
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # pnpm-lock.yaml이 고정한 버전과 같게 맞춘다.
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.0
+
+      - name: 마이그레이션 전체 재생 + pgTAP 회귀
+        run: node scripts/db-test/run-db-tests.mjs

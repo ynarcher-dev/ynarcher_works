@@ -1,5 +1,6 @@
 import { Button, Modal } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
+import { useGuestHost } from '@/features/guest/host'
 
 /** 확인이 필요한 명부 일괄 작업. null이면 창을 닫는다. */
 export type ParticipantAction = 'open' | 'block' | 'unblock' | 'reset'
@@ -30,6 +31,7 @@ export function ParticipantActionConfirm({
   onClose: () => void
   busy: boolean
 }) {
+  const { entityNoun } = useGuestHost()
   if (!action) return null
 
   const spec: Record<
@@ -52,7 +54,7 @@ export function ParticipantActionConfirm({
       body: (
         <>
           계정 <b>{count}개</b>의 본인 연락처로 재설정 링크를 보냅니다. 비밀번호 값은 담당자
-          화면에 오지 않습니다 — 계정 하나가 여러 사업을 열기 때문입니다.
+          화면에 오지 않습니다 — 계정 하나가 여러 프로젝트/FUND를 열기 때문입니다.
         </>
       ),
       confirm: '안내 보내기',
@@ -62,10 +64,10 @@ export function ParticipantActionConfirm({
       title: '차단 해제',
       body: (
         <>
-          <b>{count}건</b>의 차단을 풉니다. 상태는 <b>차단 전으로 돌아갑니다</b> — 이 사업에
+          <b>{count}건</b>의 차단을 풉니다. 상태는 <b>차단 전으로 돌아갑니다</b> — 이 {entityNoun}에
           들어와 본 적이 있으면 <b>이용 중</b>, 초대만 되어 있었으면 <b>초대</b>입니다.
           안내는 다시 보내지 않습니다(다시 알리려면 `로그인 열기`를 쓰세요). 접근 기간이 이미
-          지난 사업이라면 해제해도 들어오지 못하며, 그때는 <b>로그인 가능 기간</b>을 늘려야
+          지난 {entityNoun}라면 해제해도 들어오지 못하며, 그때는 <b>로그인 가능 기간</b>을 늘려야
           합니다.
         </>
       ),
@@ -73,11 +75,11 @@ export function ParticipantActionConfirm({
       danger: false,
     },
     block: {
-      title: '이 사업 차단',
+      title: `이 ${entityNoun} 차단`,
       body: (
         <>
-          <b>{count}건</b>의 이 사업 접근을 막고, 접속 중인 세션도 즉시 끊습니다. 계정 자체는
-          정지되지 않으므로 그 대상이 참여 중인 <b>다른 사업</b>은 그대로 열려 있습니다(계정
+          <b>{count}건</b>의 이 {entityNoun} 접근을 막고, 접속 중인 세션도 즉시 끊습니다. 계정 자체는
+          정지되지 않으므로 그 대상이 참여 중인 <b>다른 프로젝트/FUND</b>는 그대로 열려 있습니다(계정
           정지는 ADMIN이 합니다).
         </>
       ),

@@ -32,7 +32,7 @@ export interface TagTokenField {
 /**
  * ADMIN 태그 원장에서 **여럿** 고르는 칸 한 벌 — 단일 선택 `TagSelect`의 짝이다.
  *
- * 규격의 정본은 NETWORKS 네트워크 DB의 '전문 영역' 칸이며, 근거는
+ * 규격의 정본은 NETWORKS 네트워크 목록의 '전문 영역' 칸이며, 근거는
  * [5_component_spec_rules §2.3](../../../../../docs/docs_design/5_component_spec_rules.md)에 있다.
  * 요약하면 **원장에서 자라는 목록은 태그판으로 펼치지 않는다** — 화면은 그 칸이 몇 줄이 될지
  * 모르고, 고른 것과 안 고른 것이 색 하나로만 갈리며, 상한을 채워 회색이 된 칩이 '더 못 고름'인지

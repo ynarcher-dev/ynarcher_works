@@ -191,8 +191,9 @@ export default tseslint.config(
       '**/.turbo/**',
       '**/coverage/**',
       'docs/**',
-      // Supabase Edge Functions은 Deno 런타임/URL 임포트 사용 → 별도 툴체인
-      'supabase/functions/**',
+      // Supabase Edge Functions은 제외하지 않는다(2026-09-12, CI-1).
+      // 앱 규칙이 맞지 않는다는 것은 규칙을 갈아 끼울 이유이지 검사를 빼는 이유가 아니다.
+      // 아래 `supabase/functions/**` 전용 블록이 이 트리의 규칙을 따로 건다.
       // 하이웍스에서 내려받은 원본 백업(우리 소스가 아니다). 압축된 정적 파일이 들어 있어
       // 검사하면 에러 수천 건이 쏟아지고, 그 소음에 정작 우리 코드의 에러가 묻힌다 —
       // 규칙을 지킬 주체가 없는 파일에 규칙을 들이대면 린트 자체가 못 쓰는 도구가 된다.
@@ -201,8 +202,11 @@ export default tseslint.config(
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  // 브라우저(SPA) 맥락 — React 훅·Fast Refresh 규칙과 브라우저 전역.
+  // Edge Function은 컴포넌트도 DOM도 쓰지 않으므로 여기서 뺀다(전용 블록이 아래에 있다).
   {
     files: ['**/*.{ts,tsx}'],
+    ignores: ['supabase/functions/**'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',
@@ -273,13 +277,163 @@ export default tseslint.config(
       'no-restricted-syntax': ['error', ...designSystemRules()],
     },
   },
-  // 설정/빌드 스크립트는 Node 전역 사용
+  // Supabase Edge Function — 2026-09-12 신설(CI-1).
+  //
+  // 앱 규칙 대신 이 트리의 경계만 규칙으로 세운다. 디자인 시스템·React 규칙은 닿지 않는다
+  // (그 블록은 apps/packages의 .tsx만 본다). recommended 규칙(no-explicit-any,
+  // ban-ts-comment 등)은 그대로 적용된다.
   {
-    files: ['**/*.config.{js,mjs,ts}', '**/vite.config.ts', 'tailwind-preset.mjs'],
+    files: ['supabase/functions/**/*.ts'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+      globals: {
+        ...globals.es2022,
+        // 함수들이 실제로 쓰는 전역만 적는다. 브라우저 전역을 통째로 붓지 않는 것이 요점이다.
+        Deno: 'readonly',
+        console: 'readonly',
+        fetch: 'readonly',
+        Request: 'readonly',
+        Response: 'readonly',
+        Headers: 'readonly',
+        FormData: 'readonly',
+        Blob: 'readonly',
+        File: 'readonly',
+        URL: 'readonly',
+        URLSearchParams: 'readonly',
+        AbortController: 'readonly',
+        AbortSignal: 'readonly',
+        TextEncoder: 'readonly',
+        TextDecoder: 'readonly',
+        ReadableStream: 'readonly',
+        WritableStream: 'readonly',
+        TransformStream: 'readonly',
+        crypto: 'readonly',
+        Crypto: 'readonly',
+        CryptoKey: 'readonly',
+        SubtleCrypto: 'readonly',
+        atob: 'readonly',
+        btoa: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        queueMicrotask: 'readonly',
+        structuredClone: 'readonly',
+        performance: 'readonly',
+        Event: 'readonly',
+        EventTarget: 'readonly',
+        DOMException: 'readonly',
+        ErrorEvent: 'readonly',
+        BroadcastChannel: 'readonly',
+        WebSocket: 'readonly',
+        MessageEvent: 'readonly',
+        CloseEvent: 'readonly',
+        BodyInit: 'readonly',
+        RequestInit: 'readonly',
+        ResponseInit: 'readonly',
+        HeadersInit: 'readonly',
+      },
+    },
+    rules: {
+      // 앱과 같은 밑줄 규약을 쓰되 `catch (_e)`까지 포함한다. 앱 설정에는 catch 항목이
+      // 없어 기존 9곳이 걸렸는데, 규칙 위반이 아니라 규약이 한 자리 덜 적힌 것이었다.
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+      ],
+
+      // Edge 함수는 브라우저 맥락이 아니다 — DOM·브라우저 저장소를 쓰지 않는다.
+      // 요청 정보는 Request에서, 설정값은 Deno.env에서 읽는다.
+      'no-restricted-globals': [
+        'error',
+        ...['window', 'document', 'localStorage', 'sessionStorage', 'history', 'location', 'alert', 'confirm', 'XMLHttpRequest'].map(
+          (name) => ({
+            name,
+            message:
+              'Edge 함수는 브라우저 맥락이 아닙니다. 요청 정보는 Request에서, 설정값은 Deno.env에서 읽으세요.',
+          }),
+        ),
+      ],
+
+      // 의존성 경계: 함수는 SPA 소스를 참조하지 않는다. 공유 코드는 _shared에 둔다.
+      // supabase-js는 이 트리에서 URL 고정 버전으로만 쓴다(기존 13곳 전부 그렇다).
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@supabase/supabase-js',
+              message:
+                "이 트리에서는 'https://esm.sh/@supabase/supabase-js@2'처럼 URL로 버전을 고정해 import합니다.",
+            },
+          ],
+          patterns: [
+            {
+              group: ['@ynarcher/*', '**/apps/**', '**/packages/**'],
+              message:
+                'Edge 함수는 SPA 소스를 참조하지 않습니다. 공유가 필요하면 supabase/functions/_shared에 두세요.',
+            },
+          ],
+        },
+      ],
+
+      // 정규식 문자 클래스 안의 전각 공백(U+3000)은 한글 입력을 지우기 위한 의도한 데이터다.
+      // 정규식 자리만 예외로 두고 코드 자리의 불규칙 공백은 그대로 에러로 남긴다.
+      'no-irregular-whitespace': [
+        'error',
+        { skipStrings: true, skipTemplates: true, skipComments: true, skipRegExps: true },
+      ],
+
+      // 문자 클래스 안의 `\-`는 범위로 읽히지 않게 방어적으로 이스케이프한 것이다(2곳).
+      'no-useless-escape': ['error', { allowRegexCharacters: ['-'] }],
+
+      // `interface A extends B {}`는 이름을 세우려는 의도다(1곳). `{}` 자체는 계속 막는다.
+      '@typescript-eslint/no-empty-object-type': ['error', { allowInterfaces: 'with-single-extends' }],
+
+      // == 비교는 서버 판정에서 조용히 틀린다. null 비교만 허용한다.
+      eqeqeq: ['error', 'smart'],
+    },
+  },
+  // 배포되는 모듈의 import 규약. 테스트 파일은 vitest에서 돌므로 뺀다.
+  {
+    files: ['supabase/functions/**/*.ts'],
+    ignores: ['supabase/functions/**/*.test.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            'ImportDeclaration[source.value=/^\\.{1,2}\\//][source.value!=/\\.(ts|tsx|json|js|mjs)$/]',
+          message:
+            '이 트리의 상대 경로 import에는 확장자를 붙입니다(예: ../_shared/cors.ts).',
+        },
+        {
+          selector:
+            'ImportDeclaration[source.value!=/^(\\.{1,2}\\/|https:\\/\\/|npm:|node:|jsr:)/]',
+          message:
+            "외부 모듈은 URL('https://esm.sh/...') 또는 npm:/node: 스펙파이어로 고정해 import합니다.",
+        },
+      ],
+    },
+  },
+  // 설정/빌드 스크립트와 `scripts/**`는 Node로 직접 실행하므로 Node 전역을 쓴다.
+  {
+    files: [
+      '**/*.config.{js,mjs,ts}',
+      '**/vite.config.ts',
+      'tailwind-preset.mjs',
+      'scripts/**/*.{js,mjs,cjs}',
+    ],
     languageOptions: {
       globals: {
         ...globals.node,
       },
+    },
+    rules: {
+      // 일부 스크립트에 남아 있는 `/* global process, console */` 주석은 이제 중복일 뿐이다.
+      // 내장 전역과의 겹침만 빼고, 같은 이름을 두 번 선언하는 경우는 계속 걸린다.
+      'no-redeclare': ['error', { builtinGlobals: false }],
     },
   },
 )

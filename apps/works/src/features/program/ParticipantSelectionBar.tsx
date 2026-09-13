@@ -1,4 +1,5 @@
 import { Button } from '@ynarcher/ui'
+import { useGuestHost } from '@/features/guest/host'
 
 /**
  * 명부에서 행을 고른 뒤에만 서는 줄 — 고른 건수와, 그 선택에 대고 할 수 있는 일.
@@ -37,6 +38,7 @@ export function ParticipantSelectionBar({
   onClear: () => void
   busy: boolean
 }) {
+  const { entityNoun } = useGuestHost()
   if (count === 0) return null
 
   // 차단과 해제는 서로 반대인 한 축이라 **고른 것에 실제로 걸리는 쪽만** 세운다. 둘을 늘
@@ -70,7 +72,7 @@ export function ParticipantSelectionBar({
         )}
         {openCount > 0 && (
           <Button variant="outline-danger" onClick={onBlock} disabled={busy}>
-            이 사업 차단{mixed ? ` (${openCount})` : ''}
+            이 {entityNoun} 차단{mixed ? ` (${openCount})` : ''}
           </Button>
         )}
         {/*

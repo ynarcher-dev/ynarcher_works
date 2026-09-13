@@ -1,6 +1,24 @@
 name: Deploy
 
-# main 브랜치 반영 시 WORKS/GUEST SPA를 S3에 업로드하고 CloudFront 캐시를 무효화한다.
+# main 반영분(WORKS/GUEST SPA)을 S3에 업로드하고 CloudFront 캐시를 무효화한다.
+#
+# 배포 게이트(2026-09-12, OPS-1)
+# ─────────────────────────────
+# 이전에는 `push: [main]`으로 CI와 **나란히** 시작했다. 두 워크플로가 같은 커밋에서 각자
+# 달리므로, 린트·테스트가 실패한 커밋이 그대로 운영 정적 호스팅에 올라갈 수 있었다.
+#
+#   · 트리거는 **CI 완료(workflow_run)** 와 **수동 실행(workflow_dispatch)** 둘뿐이다.
+#     main 푸시에 직접 붙은 트리거는 없앴다 — 그것이 병주(竝走)의 원인이었다.
+#   · `gate` 잡이 배포 대상 커밋 SHA를 확정하고, **그 SHA의 CI 결과**를 Actions API로
+#     직접 확인한다. `success`가 아닌 모든 상태(기록 없음·진행 중·실패·취소·건너뜀)와
+#     조회 실패는 배포를 막는다(fail-closed).
+#   · PR CI는 승인 근거가 아니다(`event == push`만 인정). 포크 저장소의 실행도 거절하므로
+#     신뢰할 수 없는 코드가 배포 경로에 들어오지 않는다.
+#   · 게이트가 승인한 SHA가 이미 main 최신이 아니면 거절한다 — 늦게 끝난 옛 커밋의 CI가
+#     최신 상태를 옛 상태로 덮어쓰는 일을 막는다.
+#   · `environment: production` 보호는 그대로 두고, 사람이 누르는 승인 단계를 새로
+#     끼워 넣지 않는다. OIDC 권한(`id-token: write`)은 배포 잡에만 준다.
+#
 # 필요한 시크릿(Settings → Secrets and variables → Actions):
 #   AWS_ROLE_ARN            OIDC 배포 역할 ARN(권장) 또는 AWS_ACCESS_KEY_ID/SECRET
 #   AWS_REGION              예: ap-northeast-2
@@ -10,7 +28,9 @@ name: Deploy
 #   CF_DISTRIBUTION_GUEST   GUEST CloudFront 배포 ID
 # 앱 빌드 환경변수(VITE_*)는 Repository Variables로 주입한다.
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 
@@ -19,18 +39,157 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  id-token: write # OIDC
   contents: read
 
 jobs:
+  # 게이트: 배포할 커밋을 확정하고 그 커밋의 CI 성공을 확인한다.
+  # 읽기 권한만 가진다 — 여기서는 AWS 자격을 얻지 않는다.
+  gate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      sha: ${{ steps.verify.outputs.sha }}
+    steps:
+      - name: 같은 커밋의 CI 성공 확인
+        id: verify
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          DEPLOY_BRANCH: main
+          CI_WORKFLOW_FILE: ci.yml
+          WR_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
+          WR_EVENT: ${{ github.event.workflow_run.event }}
+          WR_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          WR_SHA: ${{ github.event.workflow_run.head_sha }}
+          WR_STATUS: ${{ github.event.workflow_run.status }}
+          WR_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          DISPATCH_REF: ${{ github.ref }}
+          DISPATCH_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          deny() {
+            echo "::error::배포 차단 — $1"
+            exit 1
+          }
+
+          # ── 1. 배포 대상 커밋 확정 ──────────────────────────────────────────
+          # 트리거마다 "무엇을 배포하려는가"의 근거가 다르므로 여기서 갈라 본다.
+          case "${EVENT_NAME}" in
+            workflow_run)
+              # 포크에서 실행된 CI는 이 저장소의 승인이 아니다.
+              [ "${WR_REPO:-}" = "${REPO}" ] \
+                || deny "CI 실행 저장소가 이 저장소가 아닙니다(${WR_REPO:-없음})."
+              # PR CI를 배포 승인으로 쓰지 않는다 — 병합되지 않은 코드다.
+              [ "${WR_EVENT:-}" = "push" ] \
+                || deny "CI 트리거가 push가 아닙니다(${WR_EVENT:-없음}). PR CI는 배포 승인 근거가 아닙니다."
+              [ "${WR_BRANCH:-}" = "${DEPLOY_BRANCH}" ] \
+                || deny "CI 대상 브랜치가 ${DEPLOY_BRANCH}가 아닙니다(${WR_BRANCH:-없음})."
+              [ "${WR_STATUS:-}" = "completed" ] \
+                || deny "CI가 끝나지 않았습니다(status=${WR_STATUS:-없음})."
+              [ "${WR_CONCLUSION:-}" = "success" ] \
+                || deny "CI 결과가 success가 아닙니다(conclusion=${WR_CONCLUSION:-없음})."
+              sha="${WR_SHA:-}"
+              ;;
+            workflow_dispatch)
+              [ "${DISPATCH_REF:-}" = "refs/heads/${DEPLOY_BRANCH}" ] \
+                || deny "수동 배포는 ${DEPLOY_BRANCH}에서만 실행합니다(ref=${DISPATCH_REF:-없음})."
+              sha="${DISPATCH_SHA:-}"
+              ;;
+            *)
+              deny "지원하지 않는 트리거입니다(${EVENT_NAME:-없음})."
+              ;;
+          esac
+
+          printf '%s' "${sha}" | grep -Eq '^[0-9a-f]{40}$' \
+            || deny "배포 대상 커밋 SHA를 확정하지 못했습니다(${sha:-없음})."
+
+          # ── 2. 그 커밋의 CI 실행 이력 조회 ─────────────────────────────────
+          # workflow_run 페이로드의 결론만 믿지 않는다. 재실행(run_attempt)으로 결론이
+          # 바뀌었을 수 있고, 수동 실행에는 페이로드 자체가 없다. API가 정본이다.
+          query="repos/${REPO}/actions/workflows/${CI_WORKFLOW_FILE}/runs?head_sha=${sha}&branch=${DEPLOY_BRANCH}&event=push&per_page=100"
+          if ! runs="$(gh api "${query}" --jq '.workflow_runs[] | "\(.run_number)\t\(.run_attempt)\t\(.head_sha)\t\(.head_branch)\t\(.event)\t\(.status)\t\(.conclusion // "none")"')"; then
+            deny "CI 실행 이력을 조회하지 못했습니다(GitHub API 실패). 확인할 수 없으면 배포하지 않습니다."
+          fi
+
+          # 같은 SHA에 실행이 여럿이면 가장 최근 것(run_number → run_attempt 순)만 본다.
+          latest=""
+          latest_key=""
+          while IFS=$'\t' read -r r_number r_attempt r_sha r_branch r_event r_status r_conclusion; do
+            [ -n "${r_number:-}" ] || continue
+            [ "${r_sha:-}" = "${sha}" ] || continue
+            [ "${r_branch:-}" = "${DEPLOY_BRANCH}" ] || continue
+            [ "${r_event:-}" = "push" ] || continue
+            printf '%s' "${r_number}${r_attempt}" | grep -Eq '^[0-9]+$' \
+              || deny "CI 실행 이력 형식이 예상과 다릅니다. 확인할 수 없으면 배포하지 않습니다."
+            key="$(printf '%012d%06d' "${r_number}" "${r_attempt}")"
+            if [ -z "${latest_key}" ] || [ "${key}" ">" "${latest_key}" ]; then
+              latest_key="${key}"
+              latest="${r_status:-none}|${r_conclusion:-none}"
+            fi
+          done <<< "${runs}"
+
+          [ -n "${latest}" ] \
+            || deny "이 커밋(${sha})의 CI 실행 기록이 없습니다. CI를 거치지 않은 커밋은 배포하지 않습니다."
+
+          ci_status="${latest%%|*}"
+          ci_conclusion="${latest##*|}"
+          [ "${ci_status}" = "completed" ] \
+            || deny "이 커밋(${sha})의 CI가 아직 진행 중입니다(status=${ci_status})."
+          [ "${ci_conclusion}" = "success" ] \
+            || deny "이 커밋(${sha})의 CI 결과가 success가 아닙니다(conclusion=${ci_conclusion})."
+
+          # ── 3. 지난 커밋 방지 ──────────────────────────────────────────────
+          # 옛 커밋의 CI가 늦게 끝나 배포로 이어지면 운영이 과거 상태로 되돌아간다.
+          if ! tip="$(gh api "repos/${REPO}/commits/${DEPLOY_BRANCH}" --jq '.sha')"; then
+            deny "${DEPLOY_BRANCH} 최신 커밋을 조회하지 못했습니다(GitHub API 실패)."
+          fi
+          printf '%s' "${tip}" | grep -Eq '^[0-9a-f]{40}$' \
+            || deny "${DEPLOY_BRANCH} 최신 커밋 SHA를 확인하지 못했습니다."
+          [ "${tip}" = "${sha}" ] \
+            || deny "지난 커밋입니다(대상 ${sha} / ${DEPLOY_BRANCH} 최신 ${tip}). 최신 상태를 옛 상태로 덮어쓰지 않습니다."
+
+          echo "sha=${sha}" >> "${GITHUB_OUTPUT}"
+          echo "::notice::배포 대상 커밋 ${sha} — 같은 커밋의 CI 성공을 확인했습니다."
+          {
+            echo "### 배포 게이트 통과"
+            echo ""
+            echo "- 트리거: ${EVENT_NAME}"
+            echo "- 커밋: ${sha}"
+            echo "- CI: ${ci_status} / ${ci_conclusion}"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
   deploy:
+    needs: gate
     runs-on: ubuntu-latest
     environment: production
+    permissions:
+      contents: read
+      id-token: write # OIDC — 배포 잡에만 준다
     env:
       VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
       VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
     steps:
+      # workflow_run의 기본 체크아웃은 기본 브랜치 끝이다. 게이트가 승인한 **그 커밋**을
+      # 명시적으로 받는다 — 검증한 것과 배포하는 것이 같아야 한다.
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.gate.outputs.sha }}
+
+      - name: 체크아웃 커밋 대조
+        env:
+          EXPECTED_SHA: ${{ needs.gate.outputs.sha }}
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          if [ "${actual}" != "${EXPECTED_SHA}" ]; then
+            echo "::error::체크아웃 커밋이 게이트 승인 커밋과 다릅니다(${actual} ≠ ${EXPECTED_SHA})."
+            exit 1
+          fi
+          echo "배포 커밋 ${actual}"
 
       - uses: pnpm/action-setup@v4
         with:

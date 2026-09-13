@@ -4,7 +4,9 @@ import { useNavigate } from 'react-router-dom'
 import { hasWorkspaceWrite, useAuthStore } from '@/auth/authStore'
 import { ListActions } from '@/components/ListActions'
 import { ListScopeToggle } from '@/components/ListScopeToggle'
+import { InactiveLedgerButton } from '@/features/master/InactiveLedgerModal'
 import { LedgerBulkDeactivateBar } from '@/features/master/LedgerBulkDeactivateBar'
+import { creatorDeactivateSelection } from '@/features/master/ledgerSelection'
 import { FundListFilters } from '@/features/fund/FundListFilters'
 import { FundListTable } from '@/features/fund/FundListTable'
 import { FundSummaryPanel } from '@/features/fund/FundSummaryPanel'
@@ -12,6 +14,7 @@ import {
   EMPTY_FUND_FILTERS,
   useFundListPage,
   type FundListFilterState,
+  type FundListRow,
 } from '@/features/fund/fundListHooks'
 import type { ListScope } from '@/lib/listScope'
 
@@ -58,11 +61,24 @@ export function FundListTab({ scope, onScopeChange, userId }: FundListTabProps) 
     setSelected([])
   }, [keyword, filtersKey, scope])
 
-  const { data, isLoading } = useFundListPage(keyword, filters, page, PAGE_SIZE, mineUserId)
+  // 페이지를 넘기면 선택을 비운다 — 화면에서 사라진 행의 선택이 남으면 일괄 비활성화가
+  // 보이지 않는 행에 걸린다(STARTUP·NETWORKS 목록과 같은 처리).
+  useEffect(() => setSelected([]), [page])
+
+  const { data, isLoading, isPlaceholderData } = useFundListPage(
+    keyword,
+    filters,
+    page,
+    PAGE_SIZE,
+    mineUserId,
+  )
   const rows = data?.rows ?? []
-  const canDeactivate = (row: (typeof rows)[number]) =>
-    canWrite && row.created_by === authUser?.id
-  const showSelection = rows.some(canDeactivate)
+  // 선택 열은 쓰기 권한으로 서고, 고를 수 있는 행은 생성자 전용 트리거와 같은 조건이다.
+  const { selectable, selectableRow } = creatorDeactivateSelection<FundListRow>(
+    canWrite,
+    authUser?.id,
+    authUser?.role === 'super_admin',
+  )
 
   return (
     <div className="space-y-3">
@@ -74,6 +90,7 @@ export function FundListTab({ scope, onScopeChange, userId }: FundListTabProps) 
         filters={filters}
         mineUserId={mineUserId}
         listTotal={data?.total}
+        listIsPlaceholderData={isPlaceholderData}
       />
 
       <ListToolbar
@@ -88,7 +105,10 @@ export function FundListTab({ scope, onScopeChange, userId }: FundListTabProps) 
         actions={
           <ListActions
             leading={
-              <ListScopeToggle scope={scope} onChange={onScopeChange} label={SCOPE_LABEL} />
+              <>
+                <ListScopeToggle scope={scope} onChange={onScopeChange} label={SCOPE_LABEL} />
+                <InactiveLedgerButton ledger="funds" />
+              </>
             }
             createLabel="펀드 등록"
             onCreate={() => navigate('/fund/new')}
@@ -115,8 +135,8 @@ export function FundListTab({ scope, onScopeChange, userId }: FundListTabProps) 
           onRowClick={(f) => navigate(`/fund/${f.id}`)}
           selectedKeys={selected}
           onSelectionChange={setSelected}
-          selectable={showSelection}
-          selectableRow={canDeactivate}
+          selectable={selectable}
+          selectableRow={selectableRow}
           pagination={{ page, pageSize: PAGE_SIZE, total: data?.total ?? 0, onChange: setPage }}
           emptyText="등록된 펀드가 없습니다."
         />

@@ -5,7 +5,7 @@
   "description": "와이앤아처 통합 Works 플랫폼 모노레포 (내부 WORKS 앱 + 외부 GUEST 앱)",
   "packageManager": "pnpm@10.33.0",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.12"
   },
   "scripts": {
     "build": "turbo run build",
@@ -13,7 +13,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "turbo run typecheck",
-    "test": "turbo run test",
+    "test": "turbo run test && pnpm test:baseline",
+    "test:db": "node scripts/db-test/run-db-tests.mjs",
     "clean": "turbo run clean",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
@@ -21,9 +22,10 @@
     "db:reset": "supabase db reset",
     "db:diff": "supabase db diff",
     "db:migration": "supabase migration new",
-    "db:baseline:refresh": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/refresh-db-baseline.ps1",
-    "db:baseline:check": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-db-baseline.ps1",
-    "db:baseline:verify": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-db-baseline.ps1 -Full",
+    "db:baseline:refresh": "node scripts/db-baseline/refresh.mjs",
+    "db:baseline:check": "node scripts/db-baseline/check.mjs",
+    "db:baseline:verify": "node scripts/db-baseline/check.mjs --full",
+    "test:baseline": "node --test \"scripts/db-baseline/*.node-test.mjs\"",
     "functions:serve": "supabase functions serve",
     "typecheck:functions": "tsc --noEmit -p tsconfig.functions.json"
   },
@@ -35,6 +37,7 @@
     "globals": "^15.14.0",
     "supabase": "^2.109.0",
     "turbo": "^2.5.0",
+    "typescript": "^5.7.0",
     "typescript-eslint": "^8.18.0"
   },
   "pnpm": {

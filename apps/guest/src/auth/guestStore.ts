@@ -52,9 +52,9 @@ export type GuestEntityKey = 'program' | 'ma_program' | 'fund'
  * 배지가 아니라 글자다 — 색은 상태에만 쓰고, 여기서 답하는 것은 상태가 아니라 종류다.
  */
 export const CONTEXT_KIND_LABEL: Record<GuestEntityKey, string> = {
-  program: '사업',
-  ma_program: '딜',
-  fund: '조합',
+  program: '프로젝트',
+  ma_program: 'M&A 프로젝트',
+  fund: 'FUND',
 }
 
 /** 종류 라벨. 모르는 값(구 세션·새 종류)이면 아무 말도 하지 않는다 — 지어내지 않는다. */

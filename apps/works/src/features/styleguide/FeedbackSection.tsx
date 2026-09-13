@@ -57,7 +57,7 @@ export function FeedbackSection() {
         }
       >
         <div className="space-y-4">
-          <Field label="주관" hint="이 사업을 발주·주관하는 기관 또는 기업.">
+          <Field label="주관" hint="이 프로젝트를 발주·주관하는 기관 또는 기업.">
             <Input placeholder="예: 중소벤처기업부" />
           </Field>
           <Field

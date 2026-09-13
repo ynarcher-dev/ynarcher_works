@@ -38,6 +38,7 @@ export async function transcribeAudio(blob: Blob): Promise<string> {
 export async function generateMinuteDraft(
   transcript: string,
   ctx: DraftContext,
+  recordingId?: string,
 ): Promise<MinuteDraft> {
   const { data, error } = await supabase.functions.invoke<MinuteDraft & { message?: string }>(
     'ai-minute-draft',
@@ -48,6 +49,7 @@ export async function generateMinuteDraft(
         meetingDate: ctx.meetingDate || undefined,
         attendees: ctx.attendees?.length ? ctx.attendees : undefined,
         agenda: ctx.agenda || undefined,
+        recordingId,
       },
     },
   )

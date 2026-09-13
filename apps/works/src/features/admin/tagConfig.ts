@@ -33,8 +33,10 @@ export interface TagConfig {
   table: string
   /** 메뉴·페이지 제목 */
   heading: string
-  /** 사이드바 '태그 관리' 그룹 안에서 쓰는 짧은 표기(그룹명이 '태그'를 이미 말하므로 접미어를 뺀다) */
+  /** 태그 관리 2차 사이드바에서 쓰는 짧은 표기(화면이 '태그'를 이미 말하므로 접미어를 뺀다). */
   menuLabel: string
+  /** 콘텐츠 영역의 2차 사이드바에서 이 태그가 속하는 기준정보 묶음. */
+  group: TagConfigGroup
   /** UI 문구에 쓰는 분류 명사(예: '분야', '영역') */
   noun: string
   /** 2뎁스 태그일 때 부모 설정(예: 국가 태그의 부모 권역). 미지정 시 평면 태그. */
@@ -46,6 +48,9 @@ export interface TagConfig {
   modes?: TagModeOption[]
 }
 
+export const TAG_CONFIG_GROUPS = ['공통 기준정보', '기업·투자', '인사'] as const
+export type TagConfigGroup = (typeof TAG_CONFIG_GROUPS)[number]
+
 export const TAG_CONFIGS = {
   // 분야(핀테크·헬스케어…) — 기업·사업이 뛰는 산업 영역. 물리 테이블명은 industry_tags로 남아
   // 있다(2026-08-03 표기만 '산업' → '분야'로 정정). 스키마를 바꾸지 않은 이유는 startups.industries·
@@ -55,6 +60,7 @@ export const TAG_CONFIGS = {
     table: 'industry_tags',
     heading: '분야태그 관리',
     menuLabel: '분야',
+    group: '공통 기준정보',
     noun: '분야',
   },
   // 영역(마케팅·재무/회계…) — 사람이 잘하는 일. 물리 테이블명은 field_tags(구 표기 '분야').
@@ -64,6 +70,7 @@ export const TAG_CONFIGS = {
     table: 'field_tags',
     heading: '영역태그 관리',
     menuLabel: '영역',
+    group: '공통 기준정보',
     noun: '영역',
   },
   categories: {
@@ -71,6 +78,7 @@ export const TAG_CONFIGS = {
     table: 'category_tags',
     heading: '구분태그 관리',
     menuLabel: '구분',
+    group: '공통 기준정보',
     noun: '구분',
   },
   regions: {
@@ -78,6 +86,7 @@ export const TAG_CONFIGS = {
     table: 'region_tags',
     heading: '권역태그 관리',
     menuLabel: '권역',
+    group: '공통 기준정보',
     noun: '권역',
   },
   countries: {
@@ -85,6 +94,7 @@ export const TAG_CONFIGS = {
     table: 'country_tags',
     heading: '국가태그 관리',
     menuLabel: '국가',
+    group: '공통 기준정보',
     noun: '국가',
     // 2뎁스: 권역(region_tags)을 부모로 참조한다. 등록 시 권역을 먼저 고르고 국가를 넣는다.
     parent: { table: 'region_tags', column: 'region_tag_id', noun: '권역' },
@@ -95,6 +105,7 @@ export const TAG_CONFIGS = {
     table: 'investment_stage_tags',
     heading: '투자단계태그 관리',
     menuLabel: '투자단계',
+    group: '기업·투자',
     noun: '투자단계',
   },
   companyCategories: {
@@ -102,6 +113,7 @@ export const TAG_CONFIGS = {
     table: 'company_category_tags',
     heading: '기업구분태그 관리',
     menuLabel: '기업구분',
+    group: '기업·투자',
     noun: '기업구분',
   },
   companyStatuses: {
@@ -109,6 +121,7 @@ export const TAG_CONFIGS = {
     table: 'company_status_tags',
     heading: '기업현황태그 관리',
     menuLabel: '기업현황',
+    group: '기업·투자',
     noun: '기업현황',
   },
   // 소재지 권역(수도권·충청·해외…) — 시·도를 접는 상위 축. NETWORKS의 권역(region_tags)과
@@ -119,6 +132,7 @@ export const TAG_CONFIGS = {
     table: 'location_region_tags',
     heading: '소재지권역태그 관리',
     menuLabel: '소재지권역',
+    group: '기업·투자',
     noun: '소재지권역',
   },
   locations: {
@@ -126,6 +140,7 @@ export const TAG_CONFIGS = {
     table: 'location_tags',
     heading: '소재지태그 관리',
     menuLabel: '소재지',
+    group: '기업·투자',
     noun: '소재지',
     // 2뎁스: 권역을 부모로 참조한다. 여기서 비워 두면 STARTUP 목록의 권역 카드에서
     // 그 시·도의 기업들이 '미지정' 칸에 모인다.
@@ -137,6 +152,7 @@ export const TAG_CONFIGS = {
     table: 'investment_method_tags',
     heading: '투자방식태그 관리',
     menuLabel: '투자방식',
+    group: '기업·투자',
     noun: '투자방식',
   },
   // 인사 기준정보(직책·직급·호봉) — 2026-08-03 MANAGEMENT에서 이관. 목록 끝에 함께 둔다:
@@ -146,6 +162,7 @@ export const TAG_CONFIGS = {
     table: 'position_tags',
     heading: '직책태그 관리',
     menuLabel: '직책',
+    group: '인사',
     noun: '직책',
     // 실장·팀장처럼 자리 자체가 위계인 직책은 기본(직책만), 심사역·매니저처럼 역할을 가리키는
     // 이름은 병렬 표기로 둔다 — 직급이 앞에 붙어야 위계가 드러난다.
@@ -161,6 +178,7 @@ export const TAG_CONFIGS = {
     table: 'rank_tags',
     heading: '직급태그 관리',
     menuLabel: '직급',
+    group: '인사',
     noun: '직급',
     // 직급 쪽 설정이 직책 쪽을 이긴다 — 둘 다 '우선'이면 직급만 남는다.
     modes: [
@@ -175,14 +193,18 @@ export const TAG_CONFIGS = {
     table: 'pay_step_tags',
     heading: '호봉태그 관리',
     menuLabel: '호봉',
+    group: '인사',
     noun: '호봉',
   },
 } satisfies Record<string, TagConfig>
 
-/** ADMIN '태그 관리' 그룹에 실리는 전사 기준정보 태그. 선언 순서가 곧 사이드바 노출 순서다. */
+/** ADMIN '태그 관리' 2차 사이드바에 실리는 전사 기준정보 태그. 선언 순서가 곧 노출 순서다. */
 export const ADMIN_TAG_CONFIGS: TagConfig[] = Object.values(TAG_CONFIGS)
 
-/** `?tab` → 태그 설정. 태그 탭이 아니면 undefined(그 탭은 다른 패널이 답한다). */
+/** 태그 관리에 처음 들어왔을 때 여는 기준정보. */
+export const DEFAULT_TAG_CONFIG: TagConfig = TAG_CONFIGS.industries
+
+/** 종전 `?tab=` 또는 현재 `?tag=` 값 → 태그 설정. 목록에 없으면 undefined. */
 export function tagConfigOf(tab: string): TagConfig | undefined {
   return ADMIN_TAG_CONFIGS.find((c) => c.tab === tab)
 }

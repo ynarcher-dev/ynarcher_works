@@ -3,13 +3,17 @@ import { supabase } from '@/lib/supabase'
 import { MINUTE_LINK_TARGETS, type MinuteLinkPickKind } from '@/features/office/minutes/minuteLinks'
 
 /**
- * 결재 문서에 걸 수 있는 사업 원장 2종. 값은 DB의 다형 키(approval_program_links.target_type)이자
- * 사업 워크스페이스의 entityKey이며, 둘 다 CHECK 제약으로 고정되어 있다.
+ * 결재 문서에 걸 수 있는 원장 3종. 값은 DB의 다형 키(approval_program_links.target_type)이자
+ * 워크스페이스의 entityKey이며, 둘 다 CHECK 제약으로 고정되어 있다.
+ *
+ * FUND가 뒤늦게 들어온 이유는 조합 운영비 품의가 조합 자체를 예산 주체로 삼기 때문이다 —
+ * 사업이 아니라 조합에 배정되는 예산이 실제로 있고, 그 예산의 집행 현황은 조합 상세에서
+ * 보여야 한다.
  */
-export type ProgramLinkType = 'program' | 'ma_program'
+export type ProgramLinkType = 'program' | 'ma_program' | 'fund'
 
-/** 종류를 늘 이 순서로 놓는다(AC → M&A). */
-export const PROGRAM_LINK_TYPES: ProgramLinkType[] = ['program', 'ma_program']
+/** 종류를 늘 이 순서로 놓는다(PROJECT → M&A → FUND). */
+export const PROGRAM_LINK_TYPES: ProgramLinkType[] = ['program', 'ma_program', 'fund']
 
 /**
  * 원장 테이블·상세 경로·라벨은 회의록 연동이 이미 소유한 메타(MINUTE_LINK_TARGETS)를
@@ -30,7 +34,7 @@ const programKind = (t: ProgramLinkType): MinuteLinkPickKind => ({
 
 export const PROGRAM_LINK_PICK_KINDS: MinuteLinkPickKind[] = PROGRAM_LINK_TYPES.map(programKind)
 
-/** 피커 최초 진입 종류(프로젝트 사업). */
+/** 피커 최초 진입 종류(프로젝트). */
 export const DEFAULT_PROGRAM_LINK_KIND: MinuteLinkPickKind = programKind('program')
 
 /** 드롭다운 선택값(key) → 종류. 모르는 값이면 기본 종류로 되돌린다. */

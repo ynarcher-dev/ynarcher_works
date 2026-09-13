@@ -6,9 +6,15 @@ interface Props {
   documentId: string
   /** 품의 금액 — 예산표 합계(문서의 대표 금액). */
   budgetTotal: number | null
+  /** 줄별 사용 현황. **undefined는 0이 아니라 '모른다'**이다(읽는 중이거나 읽지 못했다). */
   usage: Map<string, BudgetUsage> | undefined
   /** 이름을 붙이는 함수(적용자 표시). */
   nameOf: (id: string | null) => string
+  /** 카드 제목·설명 재지정. 변경 품의는 남의 예산을 놓고 말하므로 같은 문구를 쓸 수 없다. */
+  title?: string
+  help?: string
+  /** '품의 금액' 칸의 이름. 변경 품의에서는 그 값이 **변경 후 예산**이다. */
+  totalLabel?: string
 }
 
 function dateOnly(v: string): string {
@@ -25,22 +31,32 @@ function dateOnly(v: string): string {
  * 반려된 지출이 이익을 계속 깎고, 그 사실을 화면이 스스로 정정할 방법이 없다. 대신 한 칸을
  * 따로 세워 "곧 빠질 수 있다"를 함께 보인다.
  */
-export function BudgetSummaryCard({ documentId, budgetTotal, usage, nameOf }: Props) {
+export function BudgetSummaryCard({
+  documentId,
+  budgetTotal,
+  usage,
+  nameOf,
+  title = '예산 현황',
+  help = '이익은 품의 금액에서 승인이 끝난 지출을 뺀 값입니다. 결재 중인 지출은 아직 나가지 않아 이익에서 빼지 않습니다.',
+  totalLabel = '품의 금액',
+}: Props) {
   const { data: revisions } = useBudgetRevisions(documentId)
 
-  const spent = usage ? [...usage.values()].reduce((a, u) => a + u.spent, 0) : 0
-  const pending = usage ? [...usage.values()].reduce((a, u) => a + u.pending, 0) : 0
-  const profit = budgetTotal === null ? null : budgetTotal - spent
+  // 사용 현황을 모를 때 0으로 접으면 "한 푼도 안 썼고 전액 남았다"가 되어 버린다.
+  const spent = usage ? [...usage.values()].reduce((a, u) => a + u.spent, 0) : null
+  const pending = usage ? [...usage.values()].reduce((a, u) => a + u.pending, 0) : null
+  const profit = budgetTotal === null || spent === null ? null : budgetTotal - spent
   const over = profit !== null && profit < 0
+  const available =
+    budgetTotal === null || spent === null || pending === null
+      ? null
+      : budgetTotal - spent - pending
 
   return (
-    <Card
-      title="예산 현황"
-      help="이익은 품의 금액에서 승인이 끝난 지출을 뺀 값입니다. 결재 중인 지출은 아직 나가지 않아 이익에서 빼지 않습니다."
-    >
+    <Card title={title} help={help}>
       <div className="space-y-4">
         <InfoGrid>
-          <InfoField label="품의 금액" value={formatMoney(budgetTotal)} />
+          <InfoField label={totalLabel} value={formatMoney(budgetTotal)} />
           <InfoField label="사용(승인)" value={formatMoney(spent)} />
           <InfoField label="결재 중" value={formatMoney(pending)} />
           {/* **막지 않고 빨갛게 적기만 한다.** 초과를 걸러 내는 일은 결재자의 반려가 한다. */}
@@ -53,13 +69,23 @@ export function BudgetSummaryCard({ documentId, budgetTotal, usage, nameOf }: Pr
               </span>
             }
           />
+          {/* 남는 금액(이익)과 다르다 — 결재 중인 지출까지 뺀 **지금 더 올릴 수 있는 돈**이다.
+              서버가 상신을 막는 기준도 이 값이라, 화면에 없으면 담당자가 왜 막혔는지 모른다. */}
+          <InfoField
+            label="사용 가능액"
+            value={
+              <span className={cn('tabular-nums', available !== null && available < 0 && 'text-danger')}>
+                {formatMoney(available)}
+              </span>
+            }
+          />
           <InfoField label="이익률" value={formatRate(profit, budgetTotal)} />
         </InfoGrid>
 
         {(revisions ?? []).length > 0 && (
           <section className="space-y-1">
             <h4 className={tableText.head}>예산 변경 이력</h4>
-            <div className="overflow-x-auto rounded-radius-md border border-gray-200">
+            <div className="relative min-w-0 max-w-full overflow-x-auto rounded-radius-md border border-gray-200">
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-25">

@@ -15,6 +15,7 @@ import type { PickerPerson } from '@/features/office/minutes/MinutePeoplePicker'
 import type { MinuteLink } from '@/features/office/minutes/minuteLinks'
 import { VoiceMinutePanel } from '@/features/office/minutes/voice/VoiceMinutePanel'
 import type { MinuteDraft } from '@/features/office/minutes/voice/voiceMinuteApi'
+import { attachRecording } from '@/features/office/minutes/voice/recordingApi'
 
 interface Props {
   /** 수정 대상(신규면 null). */
@@ -42,6 +43,9 @@ export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
   const [externalPeople, setExternalPeople] = useState<MinuteLink[]>(initial?.externalPeople ?? [])
   const [externalAttendees, setExternalAttendees] = useState<string[]>(initial?.externalAttendees ?? [])
   const [links, setLinks] = useState<MinuteLink[]>(initial?.links ?? [])
+  const [recordingId, setRecordingId] = useState<string | null>(null)
+  const [recordingActive, setRecordingActive] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   /** 음성 초안(STT)에 힌트로 넘길 외부 참석자 이름 — 참조든 옛 표기든 화면에 적힌 이름 그대로. */
   const externalNames = [
@@ -50,6 +54,7 @@ export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
   ].filter(Boolean)
 
   const submit = () => {
+    setSubmitError(null)
     save.mutate(
       {
         id: initial?.id,
@@ -69,10 +74,17 @@ export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
       },
       {
         onSuccess: async (id) => {
-          // 새 녹음은 신규·수정 모두 상단 저장 하나에 맞춰 이 시점에 함께 올린다.
-          // 일반 첨부는 기존 규약대로 신규만 보류되고, 수정 중에는 MaterialPanel이 즉시 올린다.
-          if (pending.count > 0) await pending.flush(id)
-          onSaved(id)
+          try {
+            // 분할 녹음은 이미 안전 저장돼 있고, 신규 회의록이면 여기서 논리 세션만 연결한다.
+            if (recordingId && !initial?.id) await attachRecording(recordingId, id)
+            if (pending.count > 0) {
+              const result = await pending.flush(id)
+              if (result.failed > 0) throw new Error(`첨부 ${result.failed}건 저장에 실패했습니다. 다시 저장해 주세요.`)
+            }
+            onSaved(id)
+          } catch (error) {
+            setSubmitError(error instanceof Error ? error.message : '녹음 또는 첨부 연결에 실패했습니다.')
+          }
         },
       },
     )
@@ -107,14 +119,19 @@ export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
     for (let i = current.length - 1; i >= 0; i -= 1) pending.remove(MINUTE_VOICE_ATTACHMENT_TYPE, i)
   }
 
+  const cancel = () => {
+    if (recordingActive && !window.confirm('녹음 중입니다. 지금 나가면 현재 5분 구간은 저장되지 않을 수 있습니다. 나가시겠습니까?')) return
+    onCancel()
+  }
+
   return (
     <div className="space-y-5">
       {/* 상단 바 — 게시판 편집과 동일하게 좌측 뒤로가기, 우측 저장.
           한 줄 규격은 화면이 아니라 공용 `DetailTopBar`가 갖는다. */}
       <DetailTopBar
-        back={<BackButton onClick={onCancel} />}
+        back={<BackButton onClick={cancel} />}
         actions={
-          <Button onClick={submit} disabled={save.isPending || !title.trim()}>
+          <Button onClick={submit} disabled={save.isPending || recordingActive || !title.trim()}>
             {save.isPending ? '저장 중…' : '저장'}
           </Button>
         }
@@ -155,6 +172,8 @@ export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
           <VoiceMinutePanel
             context={{ title, meetingDate, attendees: externalNames, agenda }}
             onApplyDraft={applyDraft}
+            onRecordingReady={setRecordingId}
+            onRecordingStateChange={setRecordingActive}
             targetId={initial?.id}
             queuedAudio={pending.files(MINUTE_VOICE_ATTACHMENT_TYPE)[0] ?? null}
             onQueueAudio={queueAudio}
@@ -168,6 +187,7 @@ export function MinutesEditor({ initial, onSaved, onCancel }: Props) {
           {save.error instanceof Error ? save.error.message : '저장에 실패했습니다.'}
         </p>
       )}
+      {submitError && <p className={formText.error}>{submitError}</p>}
     </div>
   )
 }

@@ -1,0 +1,2354 @@
+{
+  "provenance": {
+    "generator": "scripts/security/rpc-reachability.mjs",
+    "project_id": "yna_acl_76e37730",
+    "source_cutoff": "20260913160000_guest_accounts_list_facets.sql",
+    "migrations_sha256": "ed458e9066f141ce951152cec2d30fa0973e50688be5d19fecd6aada26308d99",
+    "method": "pg_proc.prosrc 텍스트 대조 + INVOKER 전이 폐포. 함수 본문은 저장하지 않습니다.",
+    "limits": [
+      "execute format(...) 같은 동적 SQL의 대상은 잡히지 않습니다 — dynamic_sql_in으로 표시합니다.",
+      "SECURITY DEFINER를 만나면 그 가지에서 멈춥니다(권한 경계).",
+      "이 파일은 근거이며 결정이 아닙니다. 결정은 acl-decisions.json이 갖습니다."
+    ]
+  },
+  "counts": {
+    "routines_public_app": 291,
+    "rpc_called_by_source": 93,
+    "rpc_not_found_in_db": 0,
+    "rpc_definer": 48,
+    "rpc_invoker": 45,
+    "rpc_invoker_requiring_caller_table_ops": 32,
+    "rpc_with_dynamic_sql": 11
+  },
+  "required_by_authenticated": {
+    "attachments": {
+      "ops": [
+        "SELECT"
+      ],
+      "via_rpc": [
+        "attachment_refs"
+      ]
+    },
+    "attendance_days": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "via_rpc": [
+        "attendance_board",
+        "attendance_month",
+        "set_attendance_record",
+        "set_attendance_status_bulk"
+      ]
+    },
+    "attendance_edits": {
+      "ops": [
+        "INSERT"
+      ],
+      "via_rpc": [
+        "set_attendance_record",
+        "set_attendance_status_bulk"
+      ]
+    },
+    "capital_call_payments": {
+      "ops": [
+        "DELETE",
+        "INSERT",
+        "SELECT"
+      ],
+      "via_rpc": [
+        "set_capital_call_payments",
+        "set_fund_lps"
+      ]
+    },
+    "capital_calls": {
+      "ops": [
+        "SELECT"
+      ],
+      "via_rpc": [
+        "set_capital_call_payments"
+      ]
+    },
+    "departments": {
+      "ops": [
+        "SELECT"
+      ],
+      "via_rpc": [
+        "my_kpi_dashboard",
+        "set_department_membership"
+      ]
+    },
+    "dept_members": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "via_rpc": [
+        "my_kpi_dashboard",
+        "set_department_membership"
+      ]
+    },
+    "entity_contributions": {
+      "ops": [
+        "INSERT",
+        "SELECT"
+      ],
+      "via_rpc": [
+        "admin_inactive_ledger_entities",
+        "merge_entity",
+        "upload_enrich_entity"
+      ]
+    },
+    "fund_lps": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "via_rpc": [
+        "set_capital_call_payments",
+        "set_fund_lps"
+      ]
+    },
+    "fund_managers": {
+      "ops": [
+        "DELETE",
+        "INSERT",
+        "SELECT"
+      ],
+      "via_rpc": [
+        "fund_list_totals",
+        "set_fund_staffing"
+      ]
+    },
+    "fund_purposes": {
+      "ops": [
+        "DELETE",
+        "INSERT",
+        "SELECT"
+      ],
+      "via_rpc": [
+        "set_fund_purposes",
+        "set_investment_purposes"
+      ]
+    },
+    "funds": {
+      "ops": [
+        "SELECT",
+        "UPDATE"
+      ],
+      "via_rpc": [
+        "admin_inactive_ledger_entities",
+        "fund_list_totals",
+        "guest_accounts_list",
+        "set_fund_staffing"
+      ]
+    },
+    "guest_identities": {
+      "ops": [
+        "SELECT"
+      ],
+      "via_rpc": [
+        "guest_accounts_list"
+      ]
+    },
+    "guest_invitations": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "via_rpc": [
+        "guest_accounts_list",
+        "open_program_guest_access"
+      ]
+    },
+    "investment_purposes": {
+      "ops": [
+        "DELETE",
+        "INSERT",
+        "SELECT"
+      ],
+      "via_rpc": [
+        "set_investment_purposes"
+      ]
+    },
+    "investments": {
+      "ops": [
+        "SELECT"
+      ],
+      "via_rpc": [
+        "set_investment_purposes"
+      ]
+    },
+    "kpi_actual_revisions": {
+      "ops": [
+        "INSERT",
+        "SELECT"
+      ],
+      "via_rpc": [
+        "my_kpi_dashboard",
+        "save_kpi_actual"
+      ]
+    },
+    "kpi_assignments": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "via_rpc": [
+        "my_kpi_dashboard",
+        "set_kpi_primary_assignment"
+      ]
+    },
+    "kpi_results": {
+      "ops": [
+        "SELECT"
+      ],
+      "via_rpc": [
+        "my_kpi_dashboard"
+      ]
+    },
+    "kpi_template_items": {
+      "ops": [
+        "SELECT"
+      ],
+      "via_rpc": [
+        "my_kpi_dashboard"
+      ]
+    },
+    "kpi_templates": {
+      "ops": [
+        "SELECT"
+      ],
+      "via_rpc": [
+        "my_kpi_dashboard"
+      ]
+    },
+    "kpi_versions": {
+      "ops": [
+        "SELECT"
+      ],
+      "via_rpc": [
+        "my_kpi_dashboard"
+      ]
+    },
+    "location_tags": {
+      "ops": [
+        "SELECT"
+      ],
+      "via_rpc": [
+        "startup_facet_counts",
+        "startup_pool_entities"
+      ]
+    },
+    "ma_buyers": {
+      "ops": [
+        "SELECT"
+      ],
+      "via_rpc": [
+        "guest_accounts_list"
+      ]
+    },
+    "ma_programs": {
+      "ops": [
+        "SELECT"
+      ],
+      "via_rpc": [
+        "admin_inactive_ledger_entities",
+        "guest_accounts_list"
+      ]
+    },
+    "ma_sellers": {
+      "ops": [
+        "SELECT"
+      ],
+      "via_rpc": [
+        "attachment_refs",
+        "guest_accounts_list"
+      ]
+    },
+    "module_templates": {
+      "ops": [
+        "SELECT",
+        "UPDATE"
+      ],
+      "via_rpc": [
+        "set_module_public_link",
+        "set_module_templates"
+      ]
+    },
+    "networks": {
+      "ops": [
+        "SELECT"
+      ],
+      "via_rpc": [
+        "admin_inactive_ledger_entities",
+        "guest_accounts_list",
+        "restore_entities"
+      ]
+    },
+    "org_versions": {
+      "ops": [
+        "SELECT"
+      ],
+      "via_rpc": [
+        "my_kpi_dashboard",
+        "set_department_membership"
+      ]
+    },
+    "program_module_public_links": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "via_rpc": [
+        "rotate_module_public_link",
+        "set_module_public_link"
+      ]
+    },
+    "program_modules": {
+      "ops": [
+        "SELECT"
+      ],
+      "via_rpc": [
+        "set_module_public_link"
+      ]
+    },
+    "program_participants": {
+      "ops": [
+        "SELECT",
+        "UPDATE"
+      ],
+      "via_rpc": [
+        "guest_accounts_list",
+        "open_program_guest_access"
+      ]
+    },
+    "programs": {
+      "ops": [
+        "SELECT"
+      ],
+      "via_rpc": [
+        "admin_inactive_ledger_entities",
+        "guest_accounts_list"
+      ]
+    },
+    "startup_managers": {
+      "ops": [
+        "SELECT"
+      ],
+      "via_rpc": [
+        "startup_facet_counts",
+        "startup_pool_entities"
+      ]
+    },
+    "startups": {
+      "ops": [
+        "SELECT"
+      ],
+      "via_rpc": [
+        "admin_inactive_ledger_entities",
+        "attachment_refs",
+        "guest_accounts_list",
+        "restore_entities",
+        "startup_facet_counts",
+        "startup_pool_entities"
+      ]
+    },
+    "users": {
+      "ops": [
+        "SELECT",
+        "UPDATE"
+      ],
+      "via_rpc": [
+        "attendance_board",
+        "fund_list_totals",
+        "guest_accounts_list",
+        "my_kpi_dashboard",
+        "open_program_guest_access",
+        "set_department_membership",
+        "set_entity_creator",
+        "startup_facet_counts",
+        "startup_pool_entities"
+      ]
+    }
+  },
+  "required_by_service_role": {
+    "guest_credentials": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "via_rpc": [
+        "guest_password_commit",
+        "guest_reset_token_consume",
+        "guest_reset_token_issue"
+      ]
+    },
+    "program_module_public_links": {
+      "ops": [
+        "SELECT",
+        "UPDATE"
+      ],
+      "via_rpc": [
+        "bump_module_public_link_view"
+      ]
+    },
+    "users": {
+      "ops": [
+        "SELECT",
+        "UPDATE"
+      ],
+      "via_rpc": [
+        "guest_password_commit",
+        "guest_reset_token_consume",
+        "guest_reset_token_issue"
+      ]
+    }
+  },
+  "rpcs": {
+    "admin_entities_delete_blockers": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/master/inactiveLedgerHooks.ts:187"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.admin_entities_delete_blockers"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "admin_hard_delete_entities": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/master/inactiveLedgerHooks.ts:206"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.admin_hard_delete_entities"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "admin_inactive_ledger_entities": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/master/inactiveLedgerHooks.ts:109",
+        "apps/works/src/features/master/inactiveLedgerHooks.ts:83"
+      ],
+      "caller_required_table_ops": {
+        "entity_contributions": [
+          "SELECT"
+        ],
+        "funds": [
+          "SELECT"
+        ],
+        "ma_programs": [
+          "SELECT"
+        ],
+        "networks": [
+          "SELECT"
+        ],
+        "programs": [
+          "SELECT"
+        ],
+        "startups": [
+          "SELECT"
+        ]
+      },
+      "definer_boundary_at": [
+        "app.admin_inactive_ma_party_page",
+        "app.is_admin"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "admin_ledger_console_capabilities": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/master/inactiveLedgerHooks.ts:61"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "app.is_admin"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "admin_reset_guest_password": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/admin/guestContactHooks.ts:287"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.admin_reset_guest_password"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "admin_set_permission_template": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:34"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.admin_set_permission_template"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "admin_update_guest_contact": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/admin/guestContactHooks.ts:259"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.admin_update_guest_contact"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "approval_budget_status": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/approval/budgetApi.ts:135"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.approval_budget_status"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "attach_meeting_recording": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/office/minutes/voice/recordingApi.ts:129"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.attach_meeting_recording"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "attachment_refs": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client",
+        "edge-caller-inferred"
+      ],
+      "sites": [
+        "apps/works/src/features/networks/materialRefs.ts:91",
+        "supabase/functions/_shared/aiFill/refs.ts:45"
+      ],
+      "caller_required_table_ops": {
+        "attachments": [
+          "SELECT"
+        ],
+        "ma_sellers": [
+          "SELECT"
+        ],
+        "startups": [
+          "SELECT"
+        ]
+      },
+      "definer_boundary_at": [],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 2
+    },
+    "attendance_board": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/management/attendance/attendanceApi.ts:48"
+      ],
+      "caller_required_table_ops": {
+        "attendance_days": [
+          "SELECT"
+        ],
+        "users": [
+          "SELECT"
+        ]
+      },
+      "definer_boundary_at": [
+        "app.can_read_workspace",
+        "app.resolve_attendance_policy"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "attendance_check_in": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/management/attendance/attendanceApi.ts:161"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.attendance_check_in"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "attendance_check_out": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/management/attendance/attendanceApi.ts:172"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.attendance_check_out"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "attendance_month": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/management/attendance/attendanceApi.ts:70"
+      ],
+      "caller_required_table_ops": {
+        "attendance_days": [
+          "SELECT"
+        ]
+      },
+      "definer_boundary_at": [
+        "app.resolve_attendance_policy"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "authorize_guest_password_reset": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "edge-unknown"
+      ],
+      "sites": [
+        "supabase/functions/guest-password-reset/handler.ts:68"
+      ],
+      "caller_required_table_ops": {
+        "users": [
+          "SELECT"
+        ]
+      },
+      "definer_boundary_at": [
+        "app.current_app_user_id",
+        "app.is_guest",
+        "app.log_guest_access"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 2
+    },
+    "bump_module_public_link_view": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "edge-service_role"
+      ],
+      "sites": [
+        "supabase/functions/public-module-get/index.ts:85"
+      ],
+      "caller_required_table_ops": {
+        "program_module_public_links": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      "definer_boundary_at": [],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "can_create_ma_seller": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "edge-caller-inferred"
+      ],
+      "sites": [
+        "supabase/functions/ma-seller-quick-review/profile.ts:133"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "app.can_write_workspace"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "can_create_startup": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "edge-caller-inferred"
+      ],
+      "sites": [
+        "supabase/functions/startup-ai-fill/profile.ts:129"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "app.is_internal_user"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "can_write_ma_seller": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "edge-caller-inferred"
+      ],
+      "sites": [
+        "supabase/functions/ma-seller-quick-review/profile.ts:124"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "app.can_manage_ma_party"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "can_write_startup": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client",
+        "edge-caller-inferred"
+      ],
+      "sites": [
+        "apps/works/src/features/startup/startupPoolHooks.ts:252",
+        "supabase/functions/startup-ai-fill/profile.ts:120"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "app.can_write_startup"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "clone_org_version": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/management/orgHooks.ts:352"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "app.clone_org_version_with_kpi"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "close_program_guest_access": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/program/participantAccessHooks.ts:136"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.close_program_guest_access"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "complete_meeting_recording": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/office/minutes/voice/recordingApi.ts:120"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.complete_meeting_recording"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "complete_meeting_recording_segment": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/office/minutes/voice/recordingApi.ts:82",
+        "apps/works/src/features/office/minutes/voice/recordingApi.ts:90"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.complete_meeting_recording_segment"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "create_guest_account": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/guest/guestAccountService.ts:20"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.create_guest_account"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "deactivate_entities": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/master/inactiveLedgerHooks.ts:166"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [],
+      "dynamic_sql_in": [
+        "public.deactivate_entity"
+      ],
+      "invoker_chain_size": 3
+    },
+    "deactivate_entity": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/fund/hooks.ts:175",
+        "apps/works/src/features/master/entityHooks.ts:107",
+        "apps/works/src/features/mna/parties/hooks.ts:190",
+        "apps/works/src/features/networks/hooks.ts:350",
+        "apps/works/src/features/program/programsPoolHooks.ts:353"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [],
+      "dynamic_sql_in": [
+        "public.deactivate_entity"
+      ],
+      "invoker_chain_size": 2
+    },
+    "decide_approval_document": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/approval/approvalApi.ts:364",
+        "apps/works/src/features/approval/approvalApi.ts:397"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.decide_approval_document"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "delete_approval_document": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/approval/approvalDraftApi.ts:131"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.delete_approval_document"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "delete_program_module": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/program/hooks.ts:430"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.delete_program_module"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "finish_meeting_recording": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/office/minutes/voice/recordingApi.ts:108"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.finish_meeting_recording"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "fund_list_totals": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/fund/fundSummaryHooks.ts:52"
+      ],
+      "caller_required_table_ops": {
+        "fund_managers": [
+          "SELECT"
+        ],
+        "funds": [
+          "SELECT"
+        ],
+        "users": [
+          "SELECT"
+        ]
+      },
+      "definer_boundary_at": [],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "guest_accounts_list": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/admin/guestAccountHooks.ts:142",
+        "apps/works/src/features/program/participantHooks.ts:422"
+      ],
+      "caller_required_table_ops": {
+        "funds": [
+          "SELECT"
+        ],
+        "guest_identities": [
+          "SELECT"
+        ],
+        "guest_invitations": [
+          "SELECT"
+        ],
+        "ma_buyers": [
+          "SELECT"
+        ],
+        "ma_programs": [
+          "SELECT"
+        ],
+        "ma_sellers": [
+          "SELECT"
+        ],
+        "networks": [
+          "SELECT"
+        ],
+        "program_participants": [
+          "SELECT"
+        ],
+        "programs": [
+          "SELECT"
+        ],
+        "startups": [
+          "SELECT"
+        ],
+        "users": [
+          "SELECT"
+        ]
+      },
+      "definer_boundary_at": [
+        "app.can_read_ma_party",
+        "app.current_app_user_id",
+        "app.guest_account_has_any_participation",
+        "app.guest_account_is_unlinked",
+        "app.guest_has_password",
+        "app.is_admin",
+        "app.is_guest"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 7
+    },
+    "guest_password_commit": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "edge-service_role-inferred"
+      ],
+      "sites": [
+        "supabase/functions/_shared/guestAccount.ts:178"
+      ],
+      "caller_required_table_ops": {
+        "guest_credentials": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ],
+        "users": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      "definer_boundary_at": [],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "guest_reset_token_consume": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "edge-service_role-inferred"
+      ],
+      "sites": [
+        "supabase/functions/_shared/guestAccount.ts:524"
+      ],
+      "caller_required_table_ops": {
+        "guest_credentials": [
+          "SELECT",
+          "UPDATE"
+        ],
+        "users": [
+          "SELECT"
+        ]
+      },
+      "definer_boundary_at": [],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "guest_reset_token_issue": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "edge-service_role-inferred"
+      ],
+      "sites": [
+        "supabase/functions/_shared/guestAccount.ts:485"
+      ],
+      "caller_required_table_ops": {
+        "guest_credentials": [
+          "INSERT"
+        ],
+        "users": [
+          "SELECT"
+        ]
+      },
+      "definer_boundary_at": [],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "hard_delete_guest_accounts": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/admin/guestAccountHooks.ts:250"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.hard_delete_guest_accounts"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "increment_board_post_view": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/hub/boardPostsApi.ts:233"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.increment_board_post_view"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "increment_minute_view": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/office/minutes/minutesApi.ts:177"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.increment_minute_view"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "log_sensitive_access": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/master/SensitiveValue.tsx:44"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.log_sensitive_access"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "ma_party_ledger_counts": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/hub/dashboard/myDatabaseHooks.ts:111"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.ma_party_ledger_counts"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "ma_party_posts_list": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/mna/parties/hooks.ts:68"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.ma_party_posts_list"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "ma_party_viewer_candidates": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/mna/parties/hooks.ts:18"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.ma_party_viewer_candidates"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "merge_entity": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/networks/hooks.ts:381"
+      ],
+      "caller_required_table_ops": {
+        "entity_contributions": [
+          "INSERT"
+        ]
+      },
+      "definer_boundary_at": [],
+      "dynamic_sql_in": [
+        "public.merge_entity"
+      ],
+      "invoker_chain_size": 6
+    },
+    "my_attendance_policy": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/management/attendance/attendanceConfigApi.ts:152"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.my_attendance_policy"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "my_kpi_dashboard": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/management/kpi/kpiQueries.ts:101"
+      ],
+      "caller_required_table_ops": {
+        "departments": [
+          "SELECT"
+        ],
+        "dept_members": [
+          "SELECT"
+        ],
+        "kpi_actual_revisions": [
+          "SELECT"
+        ],
+        "kpi_assignments": [
+          "SELECT"
+        ],
+        "kpi_results": [
+          "SELECT"
+        ],
+        "kpi_template_items": [
+          "SELECT"
+        ],
+        "kpi_templates": [
+          "SELECT"
+        ],
+        "kpi_versions": [
+          "SELECT"
+        ],
+        "org_versions": [
+          "SELECT"
+        ],
+        "users": [
+          "SELECT"
+        ]
+      },
+      "definer_boundary_at": [
+        "app.current_app_user_id"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "network_facet_counts": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/networks/facetHooks.ts:53"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [],
+      "dynamic_sql_in": [
+        "public.network_facet_counts"
+      ],
+      "invoker_chain_size": 1
+    },
+    "open_program_guest_access": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "edge-caller-inferred"
+      ],
+      "sites": [
+        "supabase/functions/guest-access-invite/index.ts:53"
+      ],
+      "caller_required_table_ops": {
+        "guest_invitations": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ],
+        "program_participants": [
+          "SELECT",
+          "UPDATE"
+        ],
+        "users": [
+          "SELECT"
+        ]
+      },
+      "definer_boundary_at": [
+        "app.current_app_user_id",
+        "app.default_access_end",
+        "app.is_program_manager",
+        "app.log_guest_access",
+        "app.program_row",
+        "app.program_ws"
+      ],
+      "dynamic_sql_in": [
+        "public.open_program_guest_access"
+      ],
+      "invoker_chain_size": 2
+    },
+    "prepare_meeting_recording_segment": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/office/minutes/voice/recordingApi.ts:59"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.prepare_meeting_recording_segment"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "program_module_delete_blockers": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/program/hooks.ts:411"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.program_module_delete_blockers"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "program_participant_removal_preview": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/program/participantAccessHooks.ts:168"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.program_participant_removal_preview"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "promote_to_invested": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/startup/startupPoolHooks.ts:318"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.promote_to_invested"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "publish_org_and_kpi_version": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/management/kpi/kpiMutations.ts:89"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "app.publish_org_and_kpi_version"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "recall_approval_decision": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/approval/approvalApi.ts:426"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.recall_approval_decision"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "register_trade_partner_quick": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/management/partners/partnerDirectoryApi.ts:120"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.register_trade_partner_quick"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "remove_program_participants": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/program/participantAccessHooks.ts:196"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.remove_program_participants"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "reopen_program_guest_access": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/program/participantAccessHooks.ts:118"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.reopen_program_guest_access"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "restore_entities": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/master/inactiveLedgerHooks.ts:149"
+      ],
+      "caller_required_table_ops": {
+        "networks": [
+          "SELECT"
+        ],
+        "startups": [
+          "SELECT"
+        ]
+      },
+      "definer_boundary_at": [
+        "app.admin_restore_ma_party",
+        "app.is_admin"
+      ],
+      "dynamic_sql_in": [
+        "public.restore_entity"
+      ],
+      "invoker_chain_size": 2
+    },
+    "resubmit_approval_document": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/approval/approvalDraftApi.ts:80"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.resubmit_approval_document"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "rotate_module_public_link": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/program/publicLinkHooks.ts:125"
+      ],
+      "caller_required_table_ops": {
+        "program_module_public_links": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      "definer_boundary_at": [],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 2
+    },
+    "save_approval_draft": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/approval/approvalDraftApi.ts:41"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.save_approval_draft"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "save_kpi_actual": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/management/kpi/kpiMutations.ts:81"
+      ],
+      "caller_required_table_ops": {
+        "kpi_actual_revisions": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      "definer_boundary_at": [
+        "app.current_app_user_id"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "set_application_form": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/program/recruitment/recruitmentHooks.ts:200"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.set_application_form"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "set_attendance_record": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/management/attendance/attendanceApi.ts:231"
+      ],
+      "caller_required_table_ops": {
+        "attendance_days": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ],
+        "attendance_edits": [
+          "INSERT"
+        ]
+      },
+      "definer_boundary_at": [
+        "app.resolve_attendance_policy"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 2
+    },
+    "set_attendance_status_bulk": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/management/attendance/attendanceApi.ts:213"
+      ],
+      "caller_required_table_ops": {
+        "attendance_days": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ],
+        "attendance_edits": [
+          "INSERT"
+        ]
+      },
+      "definer_boundary_at": [
+        "app.resolve_attendance_policy"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 2
+    },
+    "set_branch_members": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/office/branches/branchesApi.ts:92"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.set_branch_members"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "set_capital_call_payments": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/fund/hooks.ts:432"
+      ],
+      "caller_required_table_ops": {
+        "capital_call_payments": [
+          "DELETE",
+          "INSERT",
+          "SELECT"
+        ],
+        "capital_calls": [
+          "SELECT"
+        ],
+        "fund_lps": [
+          "SELECT"
+        ]
+      },
+      "definer_boundary_at": [
+        "app.current_app_user_id"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "set_department_membership": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/management/orgHooks.ts:461"
+      ],
+      "caller_required_table_ops": {
+        "departments": [
+          "SELECT"
+        ],
+        "dept_members": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ],
+        "org_versions": [
+          "SELECT"
+        ],
+        "users": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      "definer_boundary_at": [
+        "app.can_write_workspace",
+        "app.is_admin"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 2
+    },
+    "set_entity_creator": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/admin/creatorTransfer.ts:83"
+      ],
+      "caller_required_table_ops": {
+        "users": [
+          "SELECT"
+        ]
+      },
+      "definer_boundary_at": [
+        "app.is_admin",
+        "app.log_admin_audit"
+      ],
+      "dynamic_sql_in": [
+        "public.set_entity_creator"
+      ],
+      "invoker_chain_size": 2
+    },
+    "set_fund_lps": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/fund/hooks.ts:257"
+      ],
+      "caller_required_table_ops": {
+        "capital_call_payments": [
+          "DELETE",
+          "SELECT"
+        ],
+        "fund_lps": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      "definer_boundary_at": [
+        "app.can_access_fund",
+        "app.can_write_workspace",
+        "app.current_app_user_id"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "set_fund_purposes": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/fund/hooks.ts:499"
+      ],
+      "caller_required_table_ops": {
+        "fund_purposes": [
+          "DELETE",
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      "definer_boundary_at": [
+        "app.can_access_fund",
+        "app.can_write_workspace",
+        "app.current_app_user_id"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "set_fund_staffing": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/bulk/bulkAssign.tsx:63",
+        "apps/works/src/features/fund/hooks.ts:158"
+      ],
+      "caller_required_table_ops": {
+        "fund_managers": [
+          "DELETE",
+          "INSERT",
+          "SELECT"
+        ],
+        "funds": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      "definer_boundary_at": [
+        "app.current_app_user_id"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "set_guest_accounts_active": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/admin/guestAccountHooks.ts:219"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.set_guest_accounts_active"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "set_investment_purposes": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/fund/hooks.ts:514"
+      ],
+      "caller_required_table_ops": {
+        "fund_purposes": [
+          "SELECT"
+        ],
+        "investment_purposes": [
+          "DELETE",
+          "INSERT",
+          "SELECT"
+        ],
+        "investments": [
+          "SELECT"
+        ]
+      },
+      "definer_boundary_at": [
+        "app.current_app_user_id"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "set_kpi_primary_assignment": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/management/kpi/kpiMutations.ts:73"
+      ],
+      "caller_required_table_ops": {
+        "kpi_assignments": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      "definer_boundary_at": [
+        "app.can_write_workspace",
+        "app.is_admin"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "set_ma_program_party_links": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/mna/programPartyLinks.ts:156"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.set_ma_program_party_links"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "set_minute_links": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/office/minutes/minutesApi.ts:336"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.set_minute_links"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "set_minute_people": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/office/minutes/minutesApi.ts:328"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.set_minute_people"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "set_module_public_link": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/program/publicLinkHooks.ts:100"
+      ],
+      "caller_required_table_ops": {
+        "module_templates": [
+          "SELECT"
+        ],
+        "program_module_public_links": [
+          "INSERT",
+          "SELECT"
+        ],
+        "program_modules": [
+          "SELECT"
+        ]
+      },
+      "definer_boundary_at": [
+        "app.current_app_user_id"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 4
+    },
+    "set_module_templates": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/program/moduleTemplateHooks.ts:89"
+      ],
+      "caller_required_table_ops": {
+        "module_templates": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      "definer_boundary_at": [
+        "app.is_admin"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "set_program_guest_access_window": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/program/participantAccessHooks.ts:89"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "app.is_program_manager",
+        "app.log_guest_access",
+        "app.program_ws"
+      ],
+      "dynamic_sql_in": [
+        "public.set_program_guest_access_window"
+      ],
+      "invoker_chain_size": 1
+    },
+    "set_program_module": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/program/hooks.ts:342"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.set_program_module"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "set_user_branches": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/office/branches/branchesApi.ts:161"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.set_user_branches"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "start_meeting_recording": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/office/minutes/voice/recordingApi.ts:40"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.start_meeting_recording"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "startup_facet_counts": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/startup/startupFacetHooks.ts:51"
+      ],
+      "caller_required_table_ops": {
+        "location_tags": [
+          "SELECT"
+        ],
+        "startup_managers": [
+          "SELECT"
+        ],
+        "startups": [
+          "SELECT"
+        ],
+        "users": [
+          "SELECT"
+        ]
+      },
+      "definer_boundary_at": [],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 3
+    },
+    "startup_fund_investments": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/fund/hooks.ts:831"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.startup_fund_investments"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "startup_pool_entities": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/startup/startupPoolHooks.ts:172",
+        "apps/works/src/features/startup/startupPoolHooks.ts:185"
+      ],
+      "caller_required_table_ops": {
+        "location_tags": [
+          "SELECT"
+        ],
+        "startup_managers": [
+          "SELECT"
+        ],
+        "startups": [
+          "SELECT"
+        ],
+        "users": [
+          "SELECT"
+        ]
+      },
+      "definer_boundary_at": [],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 3
+    },
+    "today_birthdays": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/hub/hooks.ts:355"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.today_birthdays"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "update_entity": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/master/entityHooks.ts:87",
+        "apps/works/src/features/mna/parties/hooks.ts:167",
+        "apps/works/src/features/networks/hooks.ts:325",
+        "apps/works/src/features/program/detail/detailHooks.ts:39"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [],
+      "dynamic_sql_in": [
+        "public.update_entity"
+      ],
+      "invoker_chain_size": 2
+    },
+    "update_my_profile": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/management/hooks.ts:351"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.update_my_profile"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "upload_enrich_entity": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/networks/BulkUploadPanel.tsx:335"
+      ],
+      "caller_required_table_ops": {
+        "entity_contributions": [
+          "INSERT"
+        ]
+      },
+      "definer_boundary_at": [],
+      "dynamic_sql_in": [
+        "public.upload_enrich_entity"
+      ],
+      "invoker_chain_size": 2
+    },
+    "upload_insert_entities": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/bulk/BulkImportPage.tsx:145",
+        "apps/works/src/features/networks/BulkUploadPanel.tsx:302"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [],
+      "dynamic_sql_in": [
+        "app.insert_entity_row"
+      ],
+      "invoker_chain_size": 3
+    },
+    "withdraw_approval_document": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/approval/approvalDraftApi.ts:107"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.withdraw_approval_document"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    }
+  }
+}

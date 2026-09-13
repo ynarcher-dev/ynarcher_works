@@ -40,7 +40,7 @@ function guideSections(landing: Landing): GuideSection[] {
   if (landing.sections && landing.sections.length) return landing.sections
   return [
     { title: '모집 개요', body: landing.overview ?? '' },
-    { title: '모집/사업 일정', body: landing.schedule ?? '' },
+    { title: '모집/프로젝트 일정', body: landing.schedule ?? '' },
     { title: '지원 대상', body: landing.target ?? '' },
     { title: '제출 서류 안내', body: landing.doc_guide ?? '' },
   ]

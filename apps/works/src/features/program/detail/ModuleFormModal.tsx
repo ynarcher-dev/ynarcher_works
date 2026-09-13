@@ -30,6 +30,7 @@ import { failureText } from '@/lib/failureText'
 import { ModulePublicLinkFields } from '@/features/program/detail/ModulePublicLinkFields'
 import { useModuleTemplateMap } from '@/features/program/moduleTemplateHooks'
 import { useModulePublicLinkForm } from '@/features/program/detail/publicLinkForm'
+import { useProgramWorkspace } from '@/features/program/workspace'
 import {
   isCompleteRange,
   moduleWithin,
@@ -79,6 +80,7 @@ export function ModuleFormModal({
   onClose: () => void
   onSaved?: (moduleId: string) => void
 }) {
+  const { entityNoun } = useProgramWorkspace()
   const toast = useToast()
   const save = useSetProgramModule(program.id)
   const isEdit = Boolean(module)
@@ -229,7 +231,7 @@ export function ModuleFormModal({
     if (!ledgerOwned && assignees.length === 0) {
       toast.show(
         pool.length === 0
-          ? '먼저 개요에서 사업 담당자를 배정한 뒤 담당자를 지정하세요.'
+          ? `먼저 개요에서 ${entityNoun} 담당자를 배정한 뒤 담당자를 지정하세요.`
           : '담당자를 최소 한 명 이상 지정하세요.',
         'warning',
       )
@@ -452,7 +454,7 @@ export function ModuleFormModal({
             <Field as="div" label="담당자" required>
               {pool.length === 0 ? (
                 <p className="rounded-radius-sm border border-gray-200 bg-gray-25 px-3 py-2 text-body-sm text-gray-500">
-                  사업 담당자 풀이 비어 있습니다. 개요에서 담당자를 먼저 배정하세요.
+                  {entityNoun} 담당자 풀이 비어 있습니다. 개요에서 담당자를 먼저 배정하세요.
                 </p>
               ) : (
                 /* 사람 이름은 읽어야 고를 수 있는 값이 아니라 boxed 체크박스가 과했다(2026-09-05).

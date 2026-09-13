@@ -164,7 +164,11 @@ export function BulkUploadPanel() {
             match: m,
             // 비활성 중복은 기본 건너뛰기(보수적) — 복구는 명시적으로 선택.
             decision:
-              !r.name || r.internal || r.orgLikeName ? 'skip' : m.deleted ? 'skip' : 'merge',
+              !r.name || r.internal || r.orgLikeName || m.conflictNames
+                ? 'skip'
+                : m.deleted
+                  ? 'skip'
+                  : 'merge',
             targetCategory: presetCategory(
               csvCategory(r.category) ?? suggestCategory(r.affiliation, r.email),
               m,
@@ -190,13 +194,17 @@ export function BulkUploadPanel() {
     )
   // 자사 행은 결정을 바꿀 수 없다 — 추천이 아니라 정책이라 되돌릴 자리를 두지 않는다.
   const setDecision = (line: number, decision: Decision) =>
-    setRows((prev) => prev.map((r) => (r.line === line && !r.internal ? { ...r, decision } : r)))
+    setRows((prev) =>
+      prev.map((r) =>
+        r.line === line && !r.internal && !r.match?.conflictNames ? { ...r, decision } : r,
+      ),
+    )
   const applyBulkDecision = (d: Decision) =>
     setRows((prev) =>
       prev.map((r) => {
         if (!selected.includes(r.line) || r.internal) return r
         // 합치기는 활성 중복만 유효(비활성은 행별 복구 버튼으로 처리).
-        if (d === 'merge' && !(r.match && !r.match.deleted)) return r
+        if ((d === 'merge' || d === 'merge_replace') && !(r.match && !r.match.deleted && !r.match.conflictNames)) return r
         return { ...r, decision: d }
       }),
     )
@@ -247,7 +255,7 @@ export function BulkUploadPanel() {
   // 합치기 대상: 활성 매칭 + 복구 예정(비활성이지만 복구하기를 누른) 매칭.
   const mergeRows = rows.filter(
     (r) =>
-      r.decision === 'merge' &&
+      (r.decision === 'merge' || r.decision === 'merge_replace') &&
       r.match &&
       r.name &&
       !r.internal &&
@@ -313,10 +321,15 @@ export function BulkUploadPanel() {
       for (const r of mergeRows) {
         if (!r.match) continue
         const patch =
-          buildEnrichment(r.match, r, {
-            category: (r.targetCategory || null) as NetworkCategory | null,
-            countryTagId: requireCountryTagId(r.countryTagId),
-          }) ?? {}
+          buildEnrichment(
+            r.match,
+            r,
+            {
+              category: (r.targetCategory || null) as NetworkCategory | null,
+              countryTagId: requireCountryTagId(r.countryTagId),
+            },
+            r.decision === 'merge_replace',
+          ) ?? {}
         const values = r.match.deleted ? { deleted_at: null, ...patch } : patch
         // 보강할 값이 없는 '재유입'은 원장이 바뀌지 않으므로 RPC가 기록만 남긴다.
         const { error } = await supabase.rpc('upload_enrich_entity', {
@@ -327,7 +340,9 @@ export function BulkUploadPanel() {
           p_note: r.match.deleted
             ? '재업로드 복구·병합'
             : Object.keys(patch).length
-              ? '업로드 병합·보강'
+              ? r.decision === 'merge_replace'
+                ? '업로드 병합·현재 연락처 갱신'
+                : '업로드 병합·보강'
               : '업로드 재유입',
         })
         if (error) throw error

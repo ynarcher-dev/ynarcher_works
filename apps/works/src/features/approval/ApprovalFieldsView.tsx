@@ -20,6 +20,7 @@ import {
   type FieldValues,
   type FormField,
 } from '@/features/approval/fields'
+import { vatKindLabel } from '@/features/approval/vat'
 
 interface ApprovalFieldsViewProps {
   fields: FormField[]
@@ -48,7 +49,7 @@ function TableView({ field, values }: { field: FormField; values: FieldValues })
   }
 
   return (
-    <div className="overflow-x-auto rounded-radius-md border border-gray-200">
+    <div className="relative min-w-0 max-w-full overflow-x-auto rounded-radius-md border border-gray-200">
       <table className="w-full border-collapse">
         <thead>
           <tr className="border-b border-gray-200 bg-gray-25">
@@ -86,6 +87,9 @@ function TableView({ field, values }: { field: FormField; values: FieldValues })
                       <BudgetRefText value={raw} />
                     ) : c.type === 'PARTNER_REF' ? (
                       <PartnerRefText value={raw} />
+                    ) : c.type === 'VAT_KIND' ? (
+                      // 저장된 값은 코드(TAXABLE)다. 모르는 값은 '과세'로 되돌리지 않고 '-'로 둔다.
+                      (vatKindLabel(raw) ?? '-')
                     ) : numeric && n !== null ? (
                       c.type === 'MONEY' ? (
                         formatMoney(n)

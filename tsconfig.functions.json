@@ -1,9 +1,8 @@
 {
   // Edge Function 트리의 타입 점검 전용 설정.
   //
-  // 함수는 Deno로 배포되고 배포 도구는 타입을 보지 않으므로, 이 설정이 없으면 타입 오류가
-  // 실행 순간까지 드러나지 않는다. 원격 import(`https://esm.sh/...`)는 tsc가 풀지 못하므로
-  // 설치된 같은 패키지의 타입으로 이어 준다 — 타입만 빌리는 것이라 런타임과 무관하다.
+  // 원격 import(`https://esm.sh/...`)는 tsc가 풀지 못하므로 설치된 같은 패키지의 타입으로
+  // 이어 준다(types/deno-remote.d.ts). 타입만 빌리는 것이라 런타임과 무관하다.
   "compilerOptions": {
     "noEmit": true,
     "skipLibCheck": true,
@@ -20,28 +19,10 @@
       "https://esm.sh/@supabase/supabase-js@2": ["./apps/works/node_modules/@supabase/supabase-js/dist/index.d.mts"]
     }
   },
+  // 테스트는 vitest 전역·모킹을 쓰므로 이 설정의 대상이 아니다.
   "exclude": ["**/*.test.ts"],
-  "include": [
-    "types/deno-remote.d.ts",
-    "supabase/functions/_shared/aiFill/**/*.ts",
-    "supabase/functions/_shared/docParse/**/*.ts",
-    "supabase/functions/startup-ai-fill/**/*.ts",
-    "supabase/functions/startup-material-extract/**/*.ts",
-    // 대상이 늘면 여기 함께 늘린다. 목록을 손으로 드는 것은 이 설정이 **원격 import를 가진
-    // 트리만** 골라 보기 때문인데, 빠뜨리면 검사되지 않는다는 사실이 아무 데서도 드러나지
-    // 않는다 — 실제로 M&A 함수 두 벌이 한동안 이 목록 밖에 있었다.
-    "supabase/functions/ma-seller-quick-review/**/*.ts",
-    "supabase/functions/ma-seller-material-extract/**/*.ts",
-    // 게스트 인증 계통(2026-09-09 추가). 맥락이 셋이 되면서 원장별로 갈리는 값(제목 칸·죽은
-    // 상태)을 `programLedger`가 지게 됐고, 그 계약이 어긋나면 로그인·갱신이 **실행 순간에만**
-    // 죽는다 — 밖에서 들어오는 사람이 먼저 마주치는 자리라 그 자리를 검사 밖에 두지 않는다.
-    "supabase/functions/_shared/programLedger.ts",
-    "supabase/functions/_shared/guestAccount.ts",
-    "supabase/functions/_shared/guestSession.ts",
-    "supabase/functions/guest-auth-login/**/*.ts",
-    "supabase/functions/guest-auth-context/**/*.ts",
-    "supabase/functions/guest-auth-refresh/**/*.ts",
-    "supabase/functions/guest-access-invite/**/*.ts",
-    "supabase/functions/employee-create/**/*.ts"
-  ]
+  // 함수 트리 전체를 본다. 예전에는 트리를 하나씩 손으로 적었는데, 목록에서 빠진 함수는
+  // 검사되지 않는다는 사실이 어디에도 드러나지 않았다 — 실제로 여러 함수가 한동안 목록
+  // 밖에 있었다. 새 함수가 자동으로 포함되도록 글로브로 바꾼다.
+  "include": ["types/deno-remote.d.ts", "supabase/functions/**/*.ts"]
 }

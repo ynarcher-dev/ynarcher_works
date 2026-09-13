@@ -3,14 +3,23 @@ import { Plus, Trash2 } from 'lucide-react'
 import { BudgetRefCell } from '@/features/approval/BudgetRefCell'
 import { PartnerRefCell } from '@/features/approval/PartnerRefCell'
 import {
+  amountKeys,
   columnSum,
   emptyRow,
   formatMoney,
+  hasVatColumns,
   isNumericColumn,
   type FormColumn,
   type FormField,
   type TableRow,
 } from '@/features/approval/fields'
+import {
+  VAT_KINDS,
+  VAT_KIND_LABEL,
+  applyAmountEdit,
+  readAmounts,
+  validateAmounts,
+} from '@/features/approval/vat'
 
 interface FieldTableInputProps {
   field: FormField
@@ -36,13 +45,19 @@ function CellInput({
   if (column.type === 'PARTNER_REF') {
     return <PartnerRefCell value={value} onChange={onChange} />
   }
-  if (column.type === 'SELECT') {
+  if (column.type === 'SELECT' || column.type === 'VAT_KIND') {
+    // 과세 유형의 선택지는 양식이 아니라 vat.ts가 갖는다 — 양식마다 적어 넣게 두면
+    // '면세'와 '면세(0%)'가 섞여 부가세 신고 자료를 다시 만들 수 없다.
+    const options =
+      column.type === 'VAT_KIND'
+        ? VAT_KINDS.map((k) => ({ value: k, label: VAT_KIND_LABEL[k] }))
+        : (column.options ?? []).map((o) => ({ value: o, label: o }))
     return (
       <Select density="table" value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">선택</option>
-        {(column.options ?? []).map((o) => (
-          <option key={o} value={o}>
-            {o}
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
           </option>
         ))}
       </Select>
@@ -74,15 +89,37 @@ function CellInput({
 export function FieldTableInput({ field, rows, onChange }: FieldTableInputProps) {
   const columns = field.columns ?? []
   const numericColumns = columns.filter((c) => isNumericColumn(c.type))
+  const keys = amountKeys(field)
+  const vatRows = hasVatColumns(field)
 
+  // 한 칸을 고치면 같은 줄의 나머지 금액 칸이 따라간다. 규칙은 vat.ts 한 곳에만 있고
+  // 예산표 입력도 같은 함수를 쓴다.
   const setCell = (index: number, key: string, value: string) =>
-    onChange(rows.map((r, i) => (i === index ? { ...r, [key]: value } : r)))
+    onChange(
+      rows.map((r, i) => {
+        if (i !== index) return r
+        const next = { ...r, [key]: value }
+        return keys ? applyAmountEdit(next, keys, key) : next
+      }),
+    )
+
+  // 상신 전에 서버가 같은 규칙으로 다시 본다(app.assert_approval_amounts). 여기서 먼저
+  // 보이는 이유는 되돌아오는 오류보다 적는 자리에서 알려 주는 편이 낫기 때문이다.
+  const issues = !keys || !vatRows
+    ? []
+    : rows
+        .map((r, i) => {
+          const amounts = readAmounts(r, keys)
+          const message = validateAmounts(amounts, amounts.kind, true)
+          return message ? `${i + 1}행: ${message}` : null
+        })
+        .filter((m): m is string => m !== null)
 
   const addRow = () => onChange([...rows, emptyRow(field)])
   const removeRow = (index: number) => onChange(rows.filter((_, i) => i !== index))
 
   return (
-    <div className="overflow-x-auto rounded-radius-md border border-gray-200">
+    <div className="relative min-w-0 max-w-full overflow-x-auto rounded-radius-md border border-gray-200">
       <table className="w-full min-w-[32rem] border-collapse">
         <thead>
           <tr className="border-b border-gray-200 bg-gray-25">
@@ -160,6 +197,14 @@ export function FieldTableInput({ field, rows, onChange }: FieldTableInputProps)
           )}
         </tbody>
       </table>
+
+      {issues.length > 0 && (
+        <ul className={cn('border-t border-gray-100 px-3 py-2 text-danger', tableText.body)}>
+          {issues.map((m) => (
+            <li key={m}>{m}</li>
+          ))}
+        </ul>
+      )}
 
       <div className="border-t border-gray-100 p-2">
         <Button variant="ghost" density="table" onClick={addRow}>

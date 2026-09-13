@@ -25,10 +25,17 @@ export interface BudgetSourceDoc {
 /**
  * 예산표를 가진 양식들 — "이 양식이 품의서인가"는 budget_link가 아니라 **필드에 예산표가
  * 있는가**가 답한다(같은 사실을 두 곳에 적지 않는다. 서버 app.approval_budget_keys도 같다).
+ *
+ * **예산 변경 양식(REVISE)은 뺀다.** 변경 품의도 예산표를 갖지만 그 금액은 원 품의에 이미
+ * 반영되어 있어, 근거로 고를 수 있게 두면 같은 돈을 두 번 쓴다(서버도 같은 줄에서 막는다).
  */
 export function budgetFormIds(forms: ApprovalForm[]): string[] {
   return forms
-    .filter((f) => budgetField(parseFields(f.current_version?.fields)) !== null)
+    .filter(
+      (f) =>
+        f.budget_link !== 'REVISE' &&
+        budgetField(parseFields(f.current_version?.fields)) !== null,
+    )
     .map((f) => f.id)
 }
 
@@ -198,12 +205,23 @@ export function useBudgetRevisions(documentId: string | null | undefined) {
   })
 }
 
-/** 저장 뒤 예산 관련 조회를 함께 새로 읽는다(지출 하나가 여러 화면의 숫자를 바꾼다). */
+/**
+ * 저장·결재 뒤 예산 관련 조회를 함께 새로 읽는다(지출 하나가 여러 화면의 숫자를 바꾼다).
+ *
+ * 문서 id를 알면 그 품의만, 모르면 예산 조회 전부를 새로 읽는다. 모를 때 아무것도 하지
+ * 않으면 지출결의를 승인한 화면에서 품의 잔액이 옛 숫자로 남는다 — 어느 품의의 줄을
+ * 가리켰는지는 그 지출 문서를 열어야 알 수 있는데, 승인하는 사람은 그것까지 들고 있지 않다.
+ * 워크스페이스 예산 탭도 같은 사실을 보므로 함께 털어 낸다.
+ */
 export function useInvalidateBudget() {
   const qc = useQueryClient()
   return (documentId?: string | null) => {
-    void qc.invalidateQueries({ queryKey: ['approval', 'budget-status', documentId] })
-    void qc.invalidateQueries({ queryKey: ['approval', 'budget-revisions', documentId] })
+    const scope = (key: string) =>
+      documentId ? ['approval', key, documentId] : ['approval', key]
+    void qc.invalidateQueries({ queryKey: scope('budget-status') })
+    void qc.invalidateQueries({ queryKey: scope('budget-revisions') })
+    void qc.invalidateQueries({ queryKey: ['approval', 'workspace-budget'] })
+    void qc.invalidateQueries({ queryKey: ['approval', 'related'] })
   }
 }
 

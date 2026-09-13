@@ -344,23 +344,23 @@ async function programIdsByDepartment(
   return programIds.length ? programIds : [NO_MATCH_ID]
 }
 
-/** 프로그램 비활성화(소프트 삭제 — deleted_at 기록). */
+/** 사유를 남기는 프로그램 비활성화. */
 export function useDeactivateProgram() {
   const qc = useQueryClient()
   const config = useProgramWorkspace()
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from(config.tables.programs)
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', id)
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      const { error } = await supabase.rpc('deactivate_entity', {
+        p_entity_key: config.tables.programs,
+        p_id: id,
+        p_reason: reason,
+      })
       if (error) throw error
-      return id
     },
-    onSuccess: (id) => {
+    onSuccess: (_value, { id }) => {
       void qc.invalidateQueries({ queryKey: [config.key, 'programs'] })
-      // 비활성화도 이제 원장 트리거가 'deactivated'로 남기므로 변동 이력을 무효화한다.
       void qc.invalidateQueries({ queryKey: [config.key, 'contributions', id] })
+      void qc.invalidateQueries({ queryKey: ['inactive-ledger', config.tables.programs] })
     },
   })
 }

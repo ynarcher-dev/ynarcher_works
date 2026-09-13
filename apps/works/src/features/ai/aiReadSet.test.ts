@@ -43,7 +43,7 @@ const ref = (key: string, name: string): AiSource => ({
   readable: true,
   url: null,
   contentType: null,
-  origin: '스타트업DB',
+  origin: '스타트업',
 })
 
 /** 기본 자리를 한 줄로 묻는다. 목록 전체가 판정에 드는 값이 됐으므로 시험도 목록으로 묻는다. */

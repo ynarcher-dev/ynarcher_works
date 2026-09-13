@@ -48,7 +48,7 @@ const solo = (key: WorkspaceKey, path: string): WorkspaceSection[] => [{ key, pa
 /**
  * M&A/PE의 원장 두 줄(BUYER·SELLER).
  *
- * 딜 목록('프로젝트') 아래에 선을 긋고 선다(`dividerBefore`는 첫 줄에만) — 두 줄 사이가
+ * 딜 목록('프로젝트') 아래에 `거래상대` 경계를 긋고 선다(`dividerBefore`는 첫 줄에만) — 두 줄 사이가
  * 아니라 **딜과 원장 사이**가 층이 갈리는 자리이기 때문이다. 딜은 열리고 닫히는 진행 중인
  * 일이고 BUYER·SELLER는 딜보다 먼저 쌓여 어느 딜로도 이어질 수 있는 원장이라, 선이 없으면
  * 셋이 같은 층의 목록 셋으로 읽힌다. 반대로 두 원장 사이에 선을 하나 더 그으면 사는 쪽과
@@ -57,7 +57,7 @@ const solo = (key: WorkspaceKey, path: string): WorkspaceSection[] => [{ key, pa
 const MA_LEDGER_SUBNAV = (label: string, glyphKey: string, first = false): SubNavGroup[] => [
   // 글리프를 줄이 직접 고른다 — 세 구획의 권한 키가 모두 `mna`라 워크스페이스 글리프에
   // 맡기면 딜·BUYER·SELLER가 같은 아이콘 셋으로 선다.
-  { items: [{ label, glyphKey, dividerBefore: first }] },
+  { items: [{ label, glyphKey, dividerBefore: first ? '거래상대' : undefined }] },
 ]
 
 /**
@@ -69,11 +69,12 @@ const MA_LEDGER_SUBNAV = (label: string, glyphKey: string, first = false): SubNa
  * 후속 단계에서 내 오피스가 모으되, 그 일의 원장과 운영 화면은 소유 조직에 남긴다.
  *
  * 명칭은 내부에서 실제로 부르는 한국어 이름으로 통일한다. 부제·구분선·섹션 라벨은 두지 않고,
- * 데이터 센터만 스타트업·네트워크 두 공용 원장을 한 자리에서 오갈 수 있게 유지한다.
+ * 데이터베이스만 스타트업·네트워크 두 공용 원장을 한 자리에서 오갈 수 있게 유지한다.
  */
 export const WORKSPACES: WorkspaceNavItem[] = [
   // 내 오피스 — 기존 OFFICE 대시보드의 개인화 영역을 먼저 연결한다. 별도 권한을 신설하지 않고
-  // 전 임직원이 쓰는 office 권한을 공유하며, 후속 기능도 이 독립 경로 아래에 붙인다.
+  // 전 임직원이 쓰는 office 권한을 공유한다. 개인·그룹 KPI는 후속 화면이 들어올 독립 메뉴
+  // 자리만 먼저 세우며, 현재는 준비 중 안내만 표시한다.
   {
     id: 'my-office',
     label: '내 오피스',
@@ -83,9 +84,23 @@ export const WORKSPACES: WorkspaceNavItem[] = [
         path: '/my-office',
         subnav: [
           {
+            group: '개인업무',
             items: [
               { label: '대시보드', tab: 'dashboard' },
-              { label: '전자결재', tab: 'approval', dividerBefore: true },
+              { label: '전자결재', tab: 'approval', dividerBefore: '결재' },
+              {
+                label: '그룹KPI 관리',
+                glyphKey: 'group-kpi',
+                comingSoon: true,
+                dividerBefore: '성과관리',
+              },
+              { label: '개인KPI 관리', glyphKey: 'personal-kpi', comingSoon: true },
+              {
+                label: '주간 회의록',
+                glyphKey: 'weekly-meeting',
+                comingSoon: true,
+                dividerBefore: '부서업무',
+              },
             ],
           },
         ],
@@ -112,9 +127,14 @@ export const WORKSPACES: WorkspaceNavItem[] = [
   // 쓰는 SSOT이고 BUYER·SELLER는 M&A/PE가 쌓고 M&A/PE만 읽는 업무 원장이라, 여기 세우면
   // 네트워크를 볼 수 있는 사람에게 그 줄이 왜 안 보이는지 화면이 답하지 못한다. 지금 이
   // 항목의 두 줄은 읽기 권한이 갈릴 뿐 대상은 전사 공용이다.
+  //
+  // **2026-09-13에 항목명을 `데이터 센터`에서 `데이터베이스`로 바꿨다(사용자 지정).** 데이터
+  // 센터는 한국어에서 서버가 있는 물리 시설(IDC)을 먼저 가리키는 말이라, 바로 아래에 `네트워크`
+  // 줄이 서면 인프라 관리 메뉴로 읽힌다 — 여기는 전사 공용 원장을 쌓아 두고 찾아 보는 자리다.
+  // 같은 날 두 줄의 `DB` 꼬리도 떼었다(근거는 navigation.ts의 줄 이름 주석).
   {
     id: 'database',
-    label: '데이터 센터',
+    label: '데이터베이스',
     sections: [
       { key: 'startup', path: '/startup' },
       { key: 'networks', path: '/networks' },

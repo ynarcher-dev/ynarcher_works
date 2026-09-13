@@ -1,5 +1,5 @@
 begin;
-select plan(21);
+select plan(22);
 
 insert into public.users (id, user_type, name, session_version)
 values

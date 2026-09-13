@@ -1,0 +1,9 @@
+# 베이스라인 산출물은 해시로 대조하는 파일입니다. 체크아웃에서 줄바꿈이 바뀌면
+# Windows 클론(core.autocrlf=true)과 Linux 클론의 바이트가 달라지므로 변환을 끕니다.
+#
+# 해시 자체는 정규형(LF) 내용으로 계산하므로 이 설정이 없어도 점검은 통과합니다
+# (scripts/db-baseline/lib/canonical.mjs). 이 설정은 작업 트리의 파일과 저장소의
+# 바이트를 같게 유지해, LF 체크아웃에서 `sha256sum supabase/baseline/current_schema.sql`이
+# manifest의 schemaSha256을 그대로 재현하도록 만드는 역할입니다.
+supabase/baseline/current_schema.sql -text
+supabase/baseline/manifest.json      -text

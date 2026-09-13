@@ -13,6 +13,8 @@ interface Props {
   elapsedLabel: string
   /** 녹음 종료 → 부모가 오디오 확보 + 전사. */
   onStop: () => void
+  /** 저장 세션을 먼저 만든 뒤 녹음을 시작한다. */
+  onStart: () => void
   /** 녹취파일 선택 → 부모가 전사. */
   onFile: (file: File) => void
 }
@@ -22,7 +24,7 @@ interface Props {
  * 녹음 시작이 마이크 권한 요청까지 함께 맡아, 시작 전에 별도 확인 버튼을 거치지 않는다.
  * 녹음 종료 후 오디오 처리와 전사는 부모(VoiceMinutePanel)가 담당한다.
  */
-export function RecorderControls({ rec, busy, hasContent, elapsedLabel, onStop, onFile }: Props) {
+export function RecorderControls({ rec, busy, hasContent, elapsedLabel, onStart, onStop, onFile }: Props) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const recording = rec.status === 'recording'
   const canTranscribe = !busy && !recording
@@ -37,7 +39,7 @@ export function RecorderControls({ rec, busy, hasContent, elapsedLabel, onStop, 
     <>
       {/* 마이크 상태 컨트롤 -------------------------------------------------- */}
       {rec.status === 'idle' && (
-        <Button className="w-full" onClick={() => rec.start()} disabled={busy}>
+        <Button className="w-full" onClick={onStart} disabled={busy}>
           <Mic className="h-4 w-4" strokeWidth={1.75} />
           {hasContent ? '다시 녹음' : '녹음 시작'}
         </Button>
@@ -56,7 +58,7 @@ export function RecorderControls({ rec, busy, hasContent, elapsedLabel, onStop, 
             {rec.error}
           </p>
           {rec.status !== 'unsupported' && (
-            <Button variant="outline" className="w-full" onClick={() => rec.start()}>
+            <Button variant="outline" className="w-full" onClick={onStart}>
               녹음 다시 시도
             </Button>
           )}
@@ -65,7 +67,7 @@ export function RecorderControls({ rec, busy, hasContent, elapsedLabel, onStop, 
 
       {rec.status === 'ready' && !recording && (
         <>
-          <Button className="w-full" onClick={() => rec.start()} disabled={busy}>
+          <Button className="w-full" onClick={onStart} disabled={busy}>
             <Mic className="h-4 w-4" strokeWidth={1.75} />
             {hasContent ? '다시 녹음' : '녹음 시작'}
           </Button>

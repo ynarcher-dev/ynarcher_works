@@ -14,6 +14,18 @@ export function toNumber(raw: string): number | null {
   return Number.isFinite(n) ? n : null
 }
 
+/**
+ * 적혀 있는데 숫자로 읽을 수 없는 칸인가 — **빈 칸과 오타를 가른다.**
+ *
+ * 둘 다 `toNumber`가 null이라, 구분하지 않으면 `1oo원`이나 `Infinity`를 적은 행이 '아직 쓰지
+ * 않은 행'으로 통과해 예산을 한 푼도 깎지 않은 채 결재가 흐른다. 서버 `app.amount_text_bad`가
+ * 같은 규칙을 갖는다.
+ */
+export function isBadNumberText(raw: string | null | undefined): boolean {
+  const text = (raw ?? '').trim()
+  return text !== '' && toNumber(text) === null
+}
+
 /** 금액 표기(원). 값이 없으면 '-'. */
 export function formatMoney(n: number | null | undefined): string {
   if (n === null || n === undefined || !Number.isFinite(n)) return '-'

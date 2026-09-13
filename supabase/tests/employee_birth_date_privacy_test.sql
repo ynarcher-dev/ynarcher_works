@@ -1,5 +1,5 @@
 begin;
-select plan(5);
+select plan(6);
 
 select has_column(
   'public',
@@ -52,18 +52,20 @@ select is(
   'OFFICE 등 다른 내부 화면 권한만 가진 임직원에게 인사 원장 행이 보이지 않는다'
 );
 
+-- 데이터 변경 CTE는 최상위 문에서만 허용되므로 UPDATE를 따로 실행하고 결과를 확인한다.
+select lives_ok(
+  $$update public.hr_profiles
+       set birth_date = date '1991-01-01'
+     where user_id = '97000000-0000-0000-0000-000000000003'$$,
+  'MANAGEMENT 쓰기 권한이 없는 사용자의 UPDATE는 오류 없이 0건에 그친다'
+);
+
+reset role;
 select is(
-  (
-    with changed as (
-      update public.hr_profiles
-         set birth_date = date '1991-01-01'
-       where user_id = '97000000-0000-0000-0000-000000000003'
-      returning 1
-    )
-    select count(*)::integer from changed
-  ),
-  0,
-  'MANAGEMENT 쓰기 권한이 없으면 생년월일도 수정할 수 없다'
+  (select birth_date::text from public.hr_profiles
+    where user_id = '97000000-0000-0000-0000-000000000003'),
+  '1990-05-14',
+  'MANAGEMENT 쓰기 권한이 없으면 생년월일이 바뀌지 않는다'
 );
 
 select * from finish();

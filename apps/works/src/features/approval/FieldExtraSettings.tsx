@@ -124,7 +124,7 @@ export function FieldExtraSettings({
       {field.type === 'BUDGET_TREE' && (
         <Field
           label="층 이름 기본값"
-          hint="쉼표로 구분하며 위에서 아래 순서입니다. 문서를 쓰면서 사업에 맞게 고칠 수 있습니다."
+          hint="쉼표로 구분하며 위에서 아래 순서입니다. 문서를 쓰면서 프로젝트에 맞게 고칠 수 있습니다."
         >
           <Input
             placeholder="세목, 비목, 세세목"

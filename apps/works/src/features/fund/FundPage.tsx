@@ -1,9 +1,7 @@
 import { PageHeader } from '@ynarcher/ui'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '@/auth/authStore'
-import { FUND_LIST_LABEL, GUEST_ACCOUNT_READ_LABEL } from '@/config/navigation'
-import { GuestAccountPanel } from '@/features/admin/GuestAccountPanel'
-import { FUND_GUEST_HOST } from '@/features/fund/guestHost'
+import { FUND_LIST_LABEL } from '@/config/navigation'
 import { FundListTab } from '@/features/fund/FundListTab'
 import { useListScope } from '@/lib/listScope'
 
@@ -35,15 +33,7 @@ export function FundPage() {
   // 이 줄이 legacy 탭 처리보다 **앞에** 서야 한다 — 아래 분기가 tab이 있으면 무조건
   // 목록으로 돌려보내므로, 뒤에 두면 메뉴를 눌러도 목록만 뜬다.
   if (legacyTab === 'guest-accounts') {
-    return (
-      <div className="space-y-5">
-        <PageHeader title={GUEST_ACCOUNT_READ_LABEL} />
-        <GuestAccountPanel
-          entityKey={FUND_GUEST_HOST.entityKey}
-          masterTables={FUND_GUEST_HOST.guestMasterTables}
-        />
-      </div>
-    )
+    return <Navigate to="/guest-accounts" replace />
   }
 
   if (legacyTab) {

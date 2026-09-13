@@ -37,6 +37,21 @@ export interface BudgetTreeValue {
   rows: BudgetRow[]
 }
 
+/**
+ * 금액 산식 — 수량 × 단가 = 금액.
+ *
+ * 어느 열이 수량이고 어느 열이 단가인지는 **양식이 정한다**. 열 이름은 문서마다 달라질 수
+ * 있으므로 이름이 아니라 열 key로 들고 다니고, 자리가 가려지지 않는 열 구성에서는 이 값이
+ * 아예 없다 — 그때 금액은 손으로 적는다.
+ */
+export interface BudgetAmountFormula {
+  qtyKey: string
+  unitPriceKey: string
+  amountKey: string
+  /** 금액 열이 원 단위인가 — 곱이 소수로 떨어질 때 어디서 끊을지가 여기서 갈린다. */
+  money: boolean
+}
+
 export const EMPTY_BUDGET: BudgetTreeValue = { levels: [], rows: [] }
 
 /** 층 이름 기본값 — 양식이 따로 정하지 않았을 때 새 문서가 들고 시작한다. */

@@ -12,8 +12,10 @@
 // 근거: docs/docs_dev/11_migration_security_gate.md,
 //       supabase/functions/link-metadata/index.ts(인증 검증 패턴),
 //       https://ai.google.dev/gemini-api/docs/audio (지원 포맷·인라인 20MB 한도)
-import { jsonResponse, withCors } from '../_shared/cors.ts'
+import { jsonResponse, requireStrictBrowserOrigin, withCors } from '../_shared/cors.ts'
+import { resolveOfficeWriter } from '../_shared/internalAuth.ts'
 import { supabaseAdmin } from '../_shared/supabaseAdmin.ts'
+import { withinMeetingAiQuota } from '../_shared/aiQuota.ts'
 
 /** 인라인 오디오 상한(14MB). base64 팽창(≈1.33x) 후에도 Gemini 20MB 요청 한도 안에 든다. */
 const MAX_BYTES = 14 * 1024 * 1024
@@ -32,18 +34,20 @@ function toBase64(buf: ArrayBuffer): string {
 Deno.serve(
   withCors(async (req: Request): Promise<Response> => {
     if (req.method !== 'POST') return jsonResponse({ error: 'method_not_allowed' }, 405)
+    const originError = requireStrictBrowserOrigin(req)
+    if (originError) return originError
 
     // 1) 호출자 인증(내부 사용자) ------------------------------------------------
     const token = req.headers.get('Authorization')?.replace(/^Bearer\s+/i, '')
     if (!token) return jsonResponse({ error: 'unauthorized' }, 401)
-    const { data: authData, error: authErr } = await supabaseAdmin().auth.getUser(token)
-    if (authErr || !authData.user) return jsonResponse({ error: 'unauthorized' }, 401)
+    const appUserId = await resolveOfficeWriter(token)
+    if (!appUserId) return jsonResponse({ error: 'forbidden' }, 403)
 
     // 2) 서버 시크릿 확인 --------------------------------------------------------
     const apiKey = Deno.env.get('GEMINI_API_KEY')
     if (!apiKey) return jsonResponse({ error: 'not_configured', message: '음성인식 키가 설정되지 않았습니다.' }, 503)
-    // 별칭 모델을 기본값으로 둔다(특정 버전은 신규 프로젝트에 폐기될 수 있어 GEMINI_MODEL로 덮어쓴다).
-    const model = Deno.env.get('GEMINI_MODEL') ?? 'gemini-flash-latest'
+    // 운영 중 결과가 갑자기 바뀌지 않도록 latest 별칭 대신 안정 버전을 기본값으로 둔다.
+    const model = Deno.env.get('GEMINI_TRANSCRIBE_MODEL') ?? Deno.env.get('GEMINI_MODEL') ?? 'gemini-2.5-flash'
 
     // 3) 업로드 파싱 -------------------------------------------------------------
     let form: FormData
@@ -57,9 +61,21 @@ Deno.serve(
       return jsonResponse({ error: 'invalid_request', message: '오디오 파일이 비어 있습니다.' }, 400)
     }
     if (file.size > MAX_BYTES) {
-      return jsonResponse({ error: 'too_large', message: '녹음이 너무 깁니다(약 7분 이하로 나눠 녹음하세요).' }, 413)
+      return jsonResponse({ error: 'too_large', message: '오디오 구간이 너무 큽니다. 더 짧게 나눠 주세요.' }, 413)
     }
     const mime = file.type || 'audio/wav'
+
+    // 외부 AI 반출 감사 로그가 없으면 전사를 시작하지 않는다.
+    if (!(await withinMeetingAiQuota(appUserId, 'transcription'))) {
+      return jsonResponse({ error: 'rate_limited', message: '시간당 음성 처리 한도를 초과했습니다.' }, 429)
+    }
+    const { error: logError } = await supabaseAdmin().from('access_logs').insert({
+      user_id: appUserId,
+      resource_type: 'meeting_audio_ai_transcription',
+      resource_id: null,
+      reason: `사용자 업로드 회의 음성 AI 전사 (${file.name || 'audio'})`,
+    })
+    if (logError) return jsonResponse({ error: 'log_failed', message: 'AI 처리 기록을 남기지 못했습니다.' }, 500)
 
     // 4) Gemini 전사(60초 타임아웃) — 오디오 인라인 + 전사 지시 -------------------
     const controller = new AbortController()

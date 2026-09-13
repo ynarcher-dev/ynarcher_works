@@ -14,7 +14,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { hasWorkspaceWrite, useAuthStore } from '@/auth/authStore'
 import { ListActions } from '@/components/ListActions'
+import { InactiveLedgerButton } from '@/features/master/InactiveLedgerModal'
 import { LedgerBulkDeactivateBar } from '@/features/master/LedgerBulkDeactivateBar'
+import { creatorDeactivateSelection } from '@/features/master/ledgerSelection'
 import {
   DECISION_UNSET,
   MA_DECISIONS,
@@ -160,9 +162,13 @@ export function MaPartyListTab({ config }: { config: MaPartyConfig }) {
     PAGE_SIZE,
   )
   const rows = data?.rows ?? []
+  const selection = creatorDeactivateSelection<MaPartyRow>(
+    canWrite,
+    authUser?.id,
+    authUser?.role === 'super_admin',
+  )
   const canDeactivate = (row: MaPartyRow) =>
-    canWrite && row.can_read !== false && row.created_by === authUser?.id
-  const showSelection = rows.some(canDeactivate)
+    row.can_read !== false && selection.selectableRow(row)
 
   return (
     <div className="space-y-3">
@@ -184,6 +190,7 @@ export function MaPartyListTab({ config }: { config: MaPartyConfig }) {
         }
         actions={
           <ListActions
+            leading={<InactiveLedgerButton ledger={config.table} />}
             createLabel={`${config.noun} 등록`}
             onCreate={() => navigate(`${config.basePath}/new`)}
           />
@@ -209,7 +216,7 @@ export function MaPartyListTab({ config }: { config: MaPartyConfig }) {
           rowKey={(r) => r.id}
           selectedKeys={selected}
           onSelectionChange={setSelected}
-          selectable={showSelection}
+          selectable={selection.selectable}
           selectableRow={canDeactivate}
           onRowClick={(r) => {
             if (r.can_read !== false) navigate(`${config.basePath}/${r.id}`)

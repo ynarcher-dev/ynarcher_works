@@ -1,0 +1,1805 @@
+{
+  "provenance": {
+    "artifact": "supabase/security/edge-source-findings.json",
+    "note": "Edge/RPC 담당 작업자의 소스 전수 감사 결과에서 **ACL 결정에 쓰는 부분만** 추려 저장소에 들여온 사본입니다. 이 저장소의 스크립트로는 재생성되지 않으므로 파생물이 아니라 입력입니다.",
+    "upstream": {
+      "artifact": "edge-inventory.json",
+      "role": "edge worker (source authorization auditor) — READ-ONLY source pass",
+      "repo": "C:/Users/Admin/Documents/GitHub/ynarcher_works",
+      "branch": "main",
+      "baseCommit": "846dfb83",
+      "generatedAt": "2026-09-12",
+      "scope": "supabase/functions/**, apps/**, packages/** — source text only",
+      "authority": "SOURCE ONLY. Effective DB privileges, policy predicates, view security_invoker, RPC secdef/search_path and storage policy rows are the ACL worker catalog's to state. Policy/RLS columns here are HINTS and several are known-wrong because many policies are created inside `execute format(...)` loops (see unknowns.dynamicDdl).",
+      "method": "Full read of all 22 function entrypoints + 17 _shared modules; scripted AST-free scan of every .from()/.rpc() in apps+packages with hand resolution of every dynamic table expression; grep of all 363 migrations for grant/policy/bucket text."
+    },
+    "upstream_counts": {
+      "edgeFunctionDirs": 23,
+      "edgeFunctions": 22,
+      "sharedModules": 17,
+      "edgeFunctionsFullyRead": 22,
+      "browserFromCallsites_total": 375,
+      "browserFromCallsites_production": 373,
+      "browserFromCallsites_literalTable": 246,
+      "browserFromCallsites_dynamicExpression": 127,
+      "dynamicExpressions_resolvedToTables": 101,
+      "dynamicExpressions_storageBuckets": 13,
+      "dynamicExpressions_nonSupabaseNoise": 13,
+      "dynamicExpressions_unresolved": 0,
+      "distinctTablesTouchedByBrowser": 103,
+      "distinctRpcsCalledByBrowser": 80,
+      "browserRpcCallsites": 91,
+      "tablesWithGrantInMigrationSource": 22,
+      "tablesTouchedByBrowserWithGrantGap": 83,
+      "storageBuckets": 8,
+      "edgeFunctionsWithZeroInRepoCallers": 1,
+      "danglingEdgeCallers": 1
+    },
+    "imported_fields": [
+      "browser_tables",
+      "edge_service_role_tables",
+      "edge_caller_tables",
+      "findings",
+      "unknowns",
+      "role_map",
+      "storage"
+    ]
+  },
+  "browser_tables": {
+    "access_logs": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:252[SELECT]"
+      ]
+    },
+    "application_forms": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/program/recruitment/recruitmentHooks.ts:155[SELECT]"
+      ]
+    },
+    "application_submissions": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/program/recruitment/recruitmentHooks.ts:286[SELECT]"
+      ]
+    },
+    "approval_budget_revisions": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/approval/budgetApi.ts:168[SELECT]"
+      ]
+    },
+    "approval_document_links": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/approval/documentLinkApi.ts:62[SELECT]",
+        "apps/works/src/features/approval/documentLinkApi.ts:102[SELECT]",
+        "apps/works/src/features/approval/documentLinkApi.ts:121[INSERT]",
+        "apps/works/src/features/approval/documentLinkApi.ts:135[UPDATE]"
+      ]
+    },
+    "approval_documents": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/approval/approvalApi.ts:28[SELECT]",
+        "apps/works/src/features/approval/approvalApi.ts:212[SELECT]",
+        "apps/works/src/features/approval/approvalApi.ts:246[SELECT]",
+        "apps/works/src/features/approval/approvalApi.ts:295[INSERT]",
+        "apps/works/src/features/approval/budgetApi.ts:46[SELECT]",
+        "apps/works/src/features/approval/budgetApi.ts:93[SELECT]",
+        "apps/works/src/features/hub/hooks.ts:254[SELECT]",
+        "apps/works/src/features/management/hooks.ts:33[SELECT]",
+        "apps/works/src/features/management/hooks.ts:56[INSERT]",
+        "apps/works/src/features/management/hooks.ts:100[UPDATE]"
+      ]
+    },
+    "approval_form_versions": {
+      "ops": [
+        "INSERT",
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/approval/formsAdminApi.ts:57[SELECTINSERT]"
+      ]
+    },
+    "approval_forms": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/approval/approvalApi.ts:77[SELECT]",
+        "apps/works/src/features/approval/formsAdminApi.ts:23[INSERT]",
+        "apps/works/src/features/approval/formsAdminApi.ts:39[UPDATE]",
+        "apps/works/src/features/approval/formsAdminApi.ts:89[UPDATE]",
+        "apps/works/src/features/approval/formsAdminApi.ts:107[UPDATE]"
+      ]
+    },
+    "approval_lines": {
+      "ops": [
+        "INSERT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/approval/approvalApi.ts:320[INSERT]",
+        "apps/works/src/features/management/hooks.ts:73[INSERT]",
+        "apps/works/src/features/management/hooks.ts:93[UPDATE]"
+      ]
+    },
+    "approval_program_links": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/approval/programLinkApi.ts:105[SELECT]",
+        "apps/works/src/features/approval/programLinkApi.ts:164[SELECT]",
+        "apps/works/src/features/approval/programLinkApi.ts:185[INSERT]",
+        "apps/works/src/features/approval/programLinkApi.ts:200[UPDATE]",
+        "apps/works/src/features/approval/relatedApprovalsApi.ts:54[SELECT]"
+      ]
+    },
+    "approval_reads": {
+      "ops": [
+        "INSERT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/approval/approvalApi.ts:455[UPSERT]"
+      ]
+    },
+    "approval_recipients": {
+      "ops": [
+        "INSERT"
+      ],
+      "sites": [
+        "apps/works/src/features/approval/approvalApi.ts:324[INSERT]"
+      ]
+    },
+    "assets": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/hub/globalSearch.ts:432[SELECT]",
+        "apps/works/src/features/management/assets/assetsApi.ts:229[SELECT]",
+        "apps/works/src/features/management/assets/assetsApi.ts:261[SELECT]",
+        "apps/works/src/features/management/assets/assetsApi.ts:282[SELECT]",
+        "apps/works/src/features/management/assets/assetsApi.ts:301[INSERT]",
+        "apps/works/src/features/management/assets/assetsApi.ts:312[UPDATE]",
+        "apps/works/src/features/management/assets/assetsApi.ts:332[UPDATE]",
+        "apps/works/src/features/management/assets/assetsApi.ts:351[INSERT]"
+      ]
+    },
+    "attachment_extracts": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/ai/aiExtract.ts:67[SELECT]"
+      ]
+    },
+    "attachments": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/guest/src/features/announcementHooks.ts:54[SELECT]",
+        "apps/guest/src/features/attachmentCounts.ts:20[SELECT]",
+        "apps/guest/src/features/moduleHooks.ts:134[SELECT]",
+        "apps/guest/src/features/overviewHooks.ts:43[SELECT]",
+        "apps/guest/src/features/qnaHooks.ts:55[SELECT]",
+        "apps/works/src/features/approval/approvalDraftApi.ts:157[SELECT]",
+        "apps/works/src/features/hub/boardPostsApi.ts:124[SELECT]",
+        "apps/works/src/features/hub/boardPostsApi.ts:142[SELECT]",
+        "apps/works/src/features/networks/materialHooks.ts:93[SELECT]",
+        "apps/works/src/features/networks/materialHooks.ts:129[INSERT]",
+        "apps/works/src/features/networks/materialHooks.ts:193[INSERT]",
+        "apps/works/src/features/networks/materialHooks.ts:225[UPDATE]",
+        "apps/works/src/features/office/minutes/minutesApi.ts:367[SELECT]",
+        "apps/works/src/features/program/detail/attachmentCounts.ts:22[SELECT]"
+      ]
+    },
+    "attendance_days": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/management/attendance/attendanceApi.ts:119[SELECT]"
+      ]
+    },
+    "attendance_edits": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/management/attendance/attendanceApi.ts:138[SELECT]"
+      ]
+    },
+    "attendance_policies": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/management/attendance/attendanceConfigApi.ts:136[SELECT]",
+        "apps/works/src/features/management/attendance/attendanceConfigApi.ts:202[UPDATE]",
+        "apps/works/src/features/management/attendance/attendanceConfigApi.ts:203[INSERT]",
+        "apps/works/src/features/management/attendance/attendanceConfigApi.ts:219[UPDATE]"
+      ]
+    },
+    "attendance_statuses": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/management/attendance/attendanceConfigApi.ts:49[SELECT]",
+        "apps/works/src/features/management/attendance/attendanceConfigApi.ts:73[UPSERT]"
+      ]
+    },
+    "audit_logs": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:66[SELECT]"
+      ]
+    },
+    "board_posts": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/hub/boardPostsApi.ts:67[SELECT]",
+        "apps/works/src/features/hub/boardPostsApi.ts:86[SELECT]",
+        "apps/works/src/features/hub/boardPostsApi.ts:107[SELECT]",
+        "apps/works/src/features/hub/boardPostsApi.ts:175[INSERT]",
+        "apps/works/src/features/hub/boardPostsApi.ts:206[UPDATE]",
+        "apps/works/src/features/hub/boardPostsApi.ts:219[UPDATE]",
+        "apps/works/src/features/hub/boardPostsApi.ts:257[SELECT]",
+        "apps/works/src/features/hub/globalSearch.ts:362[SELECT]"
+      ]
+    },
+    "boards": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/hub/boardHooks.ts:45[SELECT]",
+        "apps/works/src/features/hub/boardHooks.ts:69[SELECT]",
+        "apps/works/src/features/hub/boardHooks.ts:76[INSERT]",
+        "apps/works/src/features/hub/boardHooks.ts:97[UPDATE]",
+        "apps/works/src/features/hub/boardHooks.ts:112[UPDATE]"
+      ]
+    },
+    "branch_members": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/office/branches/branchesApi.ts:75[SELECT]"
+      ]
+    },
+    "branches": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/office/branches/branchesApi.ts:56[SELECT]",
+        "apps/works/src/features/office/branches/branchesApi.ts:107[SELECT]",
+        "apps/works/src/features/office/branches/branchesApi.ts:113[SELECTINSERT]",
+        "apps/works/src/features/office/branches/branchesApi.ts:139[UPDATE]",
+        "apps/works/src/features/office/branches/branchesApi.ts:176[UPDATE]"
+      ]
+    },
+    "capital_call_payments": {
+      "ops": [
+        "DELETE",
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/fund/hooks.ts:327[DELETE]",
+        "apps/works/src/features/fund/hooks.ts:362[SELECT]",
+        "apps/works/src/features/fund/hooks.ts:397[SELECT]"
+      ]
+    },
+    "capital_calls": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/fund/hooks.ts:292[SELECTINSERT]",
+        "apps/works/src/features/fund/hooks.ts:307[UPDATE]",
+        "apps/works/src/features/fund/hooks.ts:332[UPDATE]",
+        "apps/works/src/features/fund/hooks.ts:525[SELECT]"
+      ]
+    },
+    "category_tags": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:116[dyn]",
+        "apps/works/src/features/admin/hooks.ts:146[dyn]",
+        "apps/works/src/features/admin/hooks.ts:161[dyn]",
+        "apps/works/src/features/admin/hooks.ts:178[dyn]",
+        "apps/works/src/features/admin/hooks.ts:194[dyn]",
+        "apps/works/src/features/admin/hooks.ts:216[dyn]",
+        "apps/works/src/features/admin/hooks.ts:229[dyn]",
+        "apps/works/src/features/bulk/bulkTags.ts:26[dyn]"
+      ]
+    },
+    "company_category_tags": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:116[dyn]",
+        "apps/works/src/features/admin/hooks.ts:146[dyn]",
+        "apps/works/src/features/admin/hooks.ts:161[dyn]",
+        "apps/works/src/features/admin/hooks.ts:178[dyn]",
+        "apps/works/src/features/admin/hooks.ts:194[dyn]",
+        "apps/works/src/features/admin/hooks.ts:216[dyn]",
+        "apps/works/src/features/admin/hooks.ts:229[dyn]",
+        "apps/works/src/features/bulk/bulkTags.ts:26[dyn]"
+      ]
+    },
+    "company_status_tags": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:116[dyn]",
+        "apps/works/src/features/admin/hooks.ts:146[dyn]",
+        "apps/works/src/features/admin/hooks.ts:161[dyn]",
+        "apps/works/src/features/admin/hooks.ts:178[dyn]",
+        "apps/works/src/features/admin/hooks.ts:194[dyn]",
+        "apps/works/src/features/admin/hooks.ts:216[dyn]",
+        "apps/works/src/features/admin/hooks.ts:229[dyn]",
+        "apps/works/src/features/bulk/bulkTags.ts:26[dyn]"
+      ]
+    },
+    "country_tags": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:116[dyn]",
+        "apps/works/src/features/admin/hooks.ts:146[dyn]",
+        "apps/works/src/features/admin/hooks.ts:161[dyn]",
+        "apps/works/src/features/admin/hooks.ts:178[dyn]",
+        "apps/works/src/features/admin/hooks.ts:194[dyn]",
+        "apps/works/src/features/admin/hooks.ts:216[dyn]",
+        "apps/works/src/features/admin/hooks.ts:229[dyn]",
+        "apps/works/src/features/bulk/bulkTags.ts:26[dyn]",
+        "apps/works/src/features/networks/countryOptions.ts:28[dyn]"
+      ]
+    },
+    "departments": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/management/orgHooks.ts:44[SELECT]",
+        "apps/works/src/features/management/orgHooks.ts:69[SELECT]",
+        "apps/works/src/features/management/orgHooks.ts:202[SELECTINSERT]",
+        "apps/works/src/features/management/orgHooks.ts:218[UPDATE]",
+        "apps/works/src/features/management/orgHooks.ts:234[UPDATE]",
+        "apps/works/src/features/management/orgHooks.ts:250[UPDATE]",
+        "apps/works/src/features/management/orgHooks.ts:267[UPDATE]",
+        "apps/works/src/features/management/orgHooks.ts:325[UPDATE]",
+        "apps/works/src/features/program/programsPoolHooks.ts:305[SELECT]"
+      ]
+    },
+    "dept_budgets": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/management/hooks.ts:421[SELECT]"
+      ]
+    },
+    "dept_members": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/bulk/bulkAssign.tsx:139[SELECT]",
+        "apps/works/src/features/management/kpi/kpiQueries.ts:68[SELECT]",
+        "apps/works/src/features/management/orgHooks.ts:418[SELECT]"
+      ]
+    },
+    "entity_contributions": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/fund/hooks.ts:134[SELECT]",
+        "apps/works/src/features/master/entityHooks.ts:142[SELECT]",
+        "apps/works/src/features/mna/parties/hooks.ts:214[SELECT]",
+        "apps/works/src/features/networks/bulkUpload.ts:430[SELECT]",
+        "apps/works/src/features/networks/hooks.ts:418[SELECT]",
+        "apps/works/src/features/program/detail/programContributions.ts:19[SELECT]"
+      ]
+    },
+    "entity_feedback": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/approval/approvalDraftApi.ts:163[SELECT]",
+        "apps/works/src/features/networks/feedbackHooks.ts:22[SELECT]",
+        "apps/works/src/features/networks/feedbackHooks.ts:49[INSERT]",
+        "apps/works/src/features/networks/feedbackHooks.ts:68[UPDATE]"
+      ]
+    },
+    "field_tags": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/networks/dashboardHooks.ts:121[SELECT]",
+        "apps/works/src/features/admin/hooks.ts:116[dyn]",
+        "apps/works/src/features/admin/hooks.ts:146[dyn]",
+        "apps/works/src/features/admin/hooks.ts:161[dyn]",
+        "apps/works/src/features/admin/hooks.ts:178[dyn]",
+        "apps/works/src/features/admin/hooks.ts:194[dyn]",
+        "apps/works/src/features/admin/hooks.ts:216[dyn]",
+        "apps/works/src/features/admin/hooks.ts:229[dyn]",
+        "apps/works/src/features/bulk/bulkTags.ts:26[dyn]"
+      ]
+    },
+    "fund_lps": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/fund/hooks.ts:211[SELECT]"
+      ]
+    },
+    "fund_managers": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/hub/dashboard/businessDashboardHooks.ts:155[SELECT]",
+        "apps/works/src/features/management/employeeActivity.ts:244[SELECT]"
+      ]
+    },
+    "fund_purposes": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/fund/hooks.ts:462[SELECT]"
+      ]
+    },
+    "funds": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/fund/hooks.ts:54[SELECT]",
+        "apps/works/src/features/fund/hooks.ts:71[SELECT]",
+        "apps/works/src/features/fund/hooks.ts:104[SELECTINSERT]",
+        "apps/works/src/features/fund/hooks.ts:117[UPDATE]",
+        "apps/works/src/features/fund/hooks.ts:176[UPDATE]",
+        "apps/works/src/features/hub/dashboard/businessDashboardHooks.ts:168[SELECT]",
+        "apps/works/src/features/hub/globalSearch.ts:292[SELECT]",
+        "apps/works/src/features/hub/hooks.ts:253[SELECT]",
+        "apps/works/src/features/management/employeeActivity.ts:260[SELECT]",
+        "apps/works/src/features/admin/creatorTransfer.ts:53[dyn]",
+        "apps/works/src/features/approval/programLinkApi.ts:81[dyn]",
+        "apps/works/src/features/office/minutes/minuteLinkSearch.ts:27[dyn]",
+        "apps/works/src/features/office/minutes/minutesApi.ts:227[dyn]"
+      ]
+    },
+    "guest_identities": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/admin/guestAccountHooks.ts:181[SELECT]",
+        "apps/works/src/features/program/participantHooks.ts:208[SELECT]"
+      ]
+    },
+    "guest_invitations": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/program/participantHooks.ts:228[SELECT]"
+      ]
+    },
+    "hr_profiles": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/management/hooks.ts:303[SELECT]",
+        "apps/works/src/features/management/hooks.ts:318[UPSERT]"
+      ]
+    },
+    "industry_tags": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:116[dyn]",
+        "apps/works/src/features/admin/hooks.ts:146[dyn]",
+        "apps/works/src/features/admin/hooks.ts:161[dyn]",
+        "apps/works/src/features/admin/hooks.ts:178[dyn]",
+        "apps/works/src/features/admin/hooks.ts:194[dyn]",
+        "apps/works/src/features/admin/hooks.ts:216[dyn]",
+        "apps/works/src/features/admin/hooks.ts:229[dyn]",
+        "apps/works/src/features/bulk/bulkTags.ts:26[dyn]"
+      ]
+    },
+    "investment_method_tags": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:116[dyn]",
+        "apps/works/src/features/admin/hooks.ts:146[dyn]",
+        "apps/works/src/features/admin/hooks.ts:161[dyn]",
+        "apps/works/src/features/admin/hooks.ts:178[dyn]",
+        "apps/works/src/features/admin/hooks.ts:194[dyn]",
+        "apps/works/src/features/admin/hooks.ts:216[dyn]",
+        "apps/works/src/features/admin/hooks.ts:229[dyn]",
+        "apps/works/src/features/bulk/bulkTags.ts:26[dyn]"
+      ]
+    },
+    "investment_stage_tags": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:116[dyn]",
+        "apps/works/src/features/admin/hooks.ts:146[dyn]",
+        "apps/works/src/features/admin/hooks.ts:161[dyn]",
+        "apps/works/src/features/admin/hooks.ts:178[dyn]",
+        "apps/works/src/features/admin/hooks.ts:194[dyn]",
+        "apps/works/src/features/admin/hooks.ts:216[dyn]",
+        "apps/works/src/features/admin/hooks.ts:229[dyn]",
+        "apps/works/src/features/bulk/bulkTags.ts:26[dyn]"
+      ]
+    },
+    "investments": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/fund/hooks.ts:644[SELECT]",
+        "apps/works/src/features/fund/hooks.ts:707[SELECTINSERT]",
+        "apps/works/src/features/fund/hooks.ts:727[UPDATE]",
+        "apps/works/src/features/fund/hooks.ts:744[UPDATE]"
+      ]
+    },
+    "kpi_actual_revisions": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/management/kpi/kpiQueries.ts:55[SELECT]"
+      ]
+    },
+    "kpi_assignments": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/management/kpi/kpiQueries.ts:45[SELECT]"
+      ]
+    },
+    "kpi_blueprint_items": {
+      "ops": [
+        "INSERT",
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/management/kpi/kpiMutations.ts:18[SELECT]",
+        "apps/works/src/features/management/kpi/kpiMutations.ts:43[INSERT]",
+        "apps/works/src/features/management/kpi/kpiQueries.ts:93[SELECT]"
+      ]
+    },
+    "kpi_blueprints": {
+      "ops": [
+        "INSERT",
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/management/kpi/kpiMutations.ts:40[SELECTINSERT]",
+        "apps/works/src/features/management/kpi/kpiQueries.ts:85[SELECT]"
+      ]
+    },
+    "kpi_records": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/management/hooks.ts:443[SELECT]"
+      ]
+    },
+    "kpi_template_items": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/management/kpi/kpiMutations.ts:23[INSERT]",
+        "apps/works/src/features/management/kpi/kpiMutations.ts:56[UPDATE]",
+        "apps/works/src/features/management/kpi/kpiMutations.ts:56[UPDATE]",
+        "apps/works/src/features/management/kpi/kpiQueries.ts:35[SELECT]",
+        "apps/works/src/features/management/kpi/kpiMutations.ts:65[dyn]"
+      ]
+    },
+    "kpi_templates": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/management/kpi/kpiMutations.ts:12[SELECTINSERT]",
+        "apps/works/src/features/management/kpi/kpiQueries.ts:25[SELECT]",
+        "apps/works/src/features/management/kpi/kpiMutations.ts:65[dyn]"
+      ]
+    },
+    "kpi_versions": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/management/kpi/kpiQueries.ts:10[SELECT]"
+      ]
+    },
+    "location_region_tags": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:116[dyn]",
+        "apps/works/src/features/admin/hooks.ts:146[dyn]",
+        "apps/works/src/features/admin/hooks.ts:161[dyn]",
+        "apps/works/src/features/admin/hooks.ts:178[dyn]",
+        "apps/works/src/features/admin/hooks.ts:194[dyn]",
+        "apps/works/src/features/admin/hooks.ts:216[dyn]",
+        "apps/works/src/features/admin/hooks.ts:229[dyn]",
+        "apps/works/src/features/bulk/bulkTags.ts:26[dyn]"
+      ]
+    },
+    "location_tags": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:116[dyn]",
+        "apps/works/src/features/admin/hooks.ts:146[dyn]",
+        "apps/works/src/features/admin/hooks.ts:161[dyn]",
+        "apps/works/src/features/admin/hooks.ts:178[dyn]",
+        "apps/works/src/features/admin/hooks.ts:194[dyn]",
+        "apps/works/src/features/admin/hooks.ts:216[dyn]",
+        "apps/works/src/features/admin/hooks.ts:229[dyn]",
+        "apps/works/src/features/bulk/bulkTags.ts:26[dyn]"
+      ]
+    },
+    "ma_buyers": {
+      "ops": [
+        "INSERT",
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/approval/programLinkApi.ts:81[dyn]",
+        "apps/works/src/features/master/ledgerMatch.ts:219[dyn]",
+        "apps/works/src/features/master/ledgerPage.ts:113[dyn]",
+        "apps/works/src/features/master/ledgerPage.ts:144[dyn]",
+        "apps/works/src/features/mna/parties/hooks.ts:106[dyn]",
+        "apps/works/src/features/mna/parties/hooks.ts:137[dyn]",
+        "apps/works/src/features/mna/programPartyLinks.ts:132[dyn]",
+        "apps/works/src/features/office/minutes/minuteLinkSearch.ts:27[dyn]",
+        "apps/works/src/features/office/minutes/minutesApi.ts:227[dyn]"
+      ]
+    },
+    "ma_program_departments": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/program/programsPoolHooks.ts:338[dyn]"
+      ]
+    },
+    "ma_program_managers": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/hub/dashboard/businessDashboardHooks.ts:99[dyn]",
+        "apps/works/src/features/management/employeeActivity.ts:158[dyn]",
+        "apps/works/src/features/master/ledgerPage.ts:186[dyn]",
+        "apps/works/src/features/program/hooks.ts:376[dyn]"
+      ]
+    },
+    "ma_program_party_links": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/mna/programPartyLinks.ts:44[SELECT]"
+      ]
+    },
+    "ma_program_timeline_items": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/program/moduleHooks.ts:22[dyn]",
+        "apps/works/src/features/program/moduleHooks.ts:44[dyn]"
+      ]
+    },
+    "ma_programs": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/hub/hooks.ts:252[SELECT]",
+        "apps/works/src/features/admin/creatorTransfer.ts:53[dyn]",
+        "apps/works/src/features/approval/programLinkApi.ts:81[dyn]",
+        "apps/works/src/features/hub/dashboard/businessDashboardHooks.ts:109[dyn]",
+        "apps/works/src/features/hub/globalSearch.ts:258[dyn]",
+        "apps/works/src/features/office/minutes/minuteLinkSearch.ts:27[dyn]",
+        "apps/works/src/features/office/minutes/minutesApi.ts:227[dyn]",
+        "apps/works/src/features/program/hooks.ts:134[dyn]",
+        "apps/works/src/features/program/hooks.ts:161[dyn]",
+        "apps/works/src/features/program/programsPoolHooks.ts:354[dyn]",
+        "apps/works/src/features/startup/startupProgramHooks.ts:67[dyn]"
+      ]
+    },
+    "ma_sellers": {
+      "ops": [
+        "INSERT",
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/approval/programLinkApi.ts:81[dyn]",
+        "apps/works/src/features/master/ledgerMatch.ts:219[dyn]",
+        "apps/works/src/features/master/ledgerPage.ts:113[dyn]",
+        "apps/works/src/features/master/ledgerPage.ts:144[dyn]",
+        "apps/works/src/features/mna/parties/hooks.ts:106[dyn]",
+        "apps/works/src/features/mna/parties/hooks.ts:137[dyn]",
+        "apps/works/src/features/mna/programPartyLinks.ts:132[dyn]",
+        "apps/works/src/features/office/minutes/minuteLinkSearch.ts:27[dyn]",
+        "apps/works/src/features/office/minutes/minutesApi.ts:227[dyn]"
+      ]
+    },
+    "meeting_minute_links": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/office/minutes/minutesApi.ts:193[SELECT]",
+        "apps/works/src/features/office/minutes/relatedMinutesApi.ts:41[SELECT]"
+      ]
+    },
+    "meeting_minutes": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/hub/globalSearch.ts:398[SELECT]",
+        "apps/works/src/features/office/minutes/minutesApi.ts:157[SELECT]",
+        "apps/works/src/features/office/minutes/minutesApi.ts:258[SELECT]",
+        "apps/works/src/features/office/minutes/minutesApi.ts:316[UPDATE]",
+        "apps/works/src/features/office/minutes/minutesApi.ts:320[SELECTINSERT]",
+        "apps/works/src/features/office/minutes/minutesApi.ts:383[UPDATE]"
+      ]
+    },
+    "meeting_recording_segments": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/office/minutes/voice/recordingApi.ts:161[SELECT]"
+      ]
+    },
+    "meeting_recordings": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/office/minutes/voice/recordingApi.ts:138[SELECT]"
+      ]
+    },
+    "meeting_room_reservations": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/office/rooms/reservationsApi.ts:59[SELECT]",
+        "apps/works/src/features/office/rooms/reservationsApi.ts:112[SELECT]",
+        "apps/works/src/features/office/rooms/reservationsApi.ts:143[INSERT]",
+        "apps/works/src/features/office/rooms/reservationsApi.ts:163[UPDATE]"
+      ]
+    },
+    "meeting_rooms": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/office/rooms/meetingRoomsApi.ts:92[SELECT]",
+        "apps/works/src/features/office/rooms/meetingRoomsApi.ts:116[SELECT]",
+        "apps/works/src/features/office/rooms/meetingRoomsApi.ts:158[SELECT]",
+        "apps/works/src/features/office/rooms/meetingRoomsApi.ts:165[INSERT]",
+        "apps/works/src/features/office/rooms/meetingRoomsApi.ts:178[UPDATE]",
+        "apps/works/src/features/office/rooms/meetingRoomsApi.ts:190[UPDATE]"
+      ]
+    },
+    "module_templates": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/program/moduleTemplateHooks.ts:58[SELECT]"
+      ]
+    },
+    "networks": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/hub/hooks.ts:264[SELECT]",
+        "apps/works/src/features/hub/hooks.ts:270[SELECT]",
+        "apps/works/src/features/admin/creatorTransfer.ts:53[dyn]",
+        "apps/works/src/features/approval/programLinkApi.ts:81[dyn]",
+        "apps/works/src/features/hub/globalSearch.ts:208[dyn]",
+        "apps/works/src/features/master/inactiveLedgerHooks.ts:42[dyn]",
+        "apps/works/src/features/master/ledgerMatch.ts:219[dyn]",
+        "apps/works/src/features/master/ledgerPage.ts:113[dyn]",
+        "apps/works/src/features/master/ledgerPage.ts:144[dyn]",
+        "apps/works/src/features/networks/bulkUpload.ts:373[dyn]",
+        "apps/works/src/features/networks/dashboardHooks.ts:45[dyn]",
+        "apps/works/src/features/networks/dashboardHooks.ts:123[dyn]",
+        "apps/works/src/features/networks/dashboardHooks.ts:159[dyn]",
+        "apps/works/src/features/networks/dashboardHooks.ts:200[dyn]",
+        "apps/works/src/features/networks/dashboardHooks.ts:237[dyn]",
+        "apps/works/src/features/networks/hooks.ts:192[dyn]",
+        "apps/works/src/features/networks/hooks.ts:213[dyn]",
+        "apps/works/src/features/networks/hooks.ts:244[dyn]",
+        "apps/works/src/features/networks/hooks.ts:283[dyn]",
+        "apps/works/src/features/networks/hooks.ts:297[dyn]",
+        "apps/works/src/features/networks/personSearch.ts:43[dyn]",
+        "apps/works/src/features/office/minutes/minuteLinkSearch.ts:27[dyn]",
+        "apps/works/src/features/office/minutes/minutesApi.ts:227[dyn]",
+        "apps/works/src/features/program/participantHooks.ts:165[dyn]",
+        "apps/works/src/features/program/participantHooks.ts:289[dyn]",
+        "apps/works/src/features/program/rosterHooks.ts:191[dyn]",
+        "apps/works/src/features/program/rosterHooks.ts:215[dyn]",
+        "apps/works/src/features/program/rosterHooks.ts:304[dyn]",
+        "apps/works/src/features/program/rosterHooks.ts:357[dyn]"
+      ]
+    },
+    "notifications": {
+      "ops": [
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/notifications/notificationHooks.ts:24[SELECT]",
+        "apps/works/src/features/notifications/notificationHooks.ts:42[UPDATE]",
+        "apps/works/src/features/notifications/notificationHooks.ts:58[UPDATE]"
+      ]
+    },
+    "org_levels": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/management/orgHooks.ts:166[SELECT]",
+        "apps/works/src/features/management/orgHooks.ts:291[INSERT]",
+        "apps/works/src/features/management/orgHooks.ts:304[UPDATE]",
+        "apps/works/src/features/management/orgHooks.ts:320[UPDATE]"
+      ]
+    },
+    "org_versions": {
+      "ops": [
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/bulk/bulkAssign.tsx:127[SELECT]",
+        "apps/works/src/features/management/orgHooks.ts:112[SELECT]",
+        "apps/works/src/features/management/orgHooks.ts:133[SELECT]",
+        "apps/works/src/features/management/orgHooks.ts:388[UPDATE]"
+      ]
+    },
+    "pay_step_tags": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:116[dyn]",
+        "apps/works/src/features/admin/hooks.ts:146[dyn]",
+        "apps/works/src/features/admin/hooks.ts:161[dyn]",
+        "apps/works/src/features/admin/hooks.ts:178[dyn]",
+        "apps/works/src/features/admin/hooks.ts:194[dyn]",
+        "apps/works/src/features/admin/hooks.ts:216[dyn]",
+        "apps/works/src/features/admin/hooks.ts:229[dyn]",
+        "apps/works/src/features/bulk/bulkTags.ts:26[dyn]"
+      ]
+    },
+    "permission_templates": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:17[SELECT]"
+      ]
+    },
+    "portable_assets": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/office/assets/portableAssetsApi.ts:82[SELECT]",
+        "apps/works/src/features/office/assets/portableAssetsApi.ts:105[SELECT]",
+        "apps/works/src/features/office/assets/portableAssetsApi.ts:127[SELECT]"
+      ]
+    },
+    "position_tags": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:116[dyn]",
+        "apps/works/src/features/admin/hooks.ts:146[dyn]",
+        "apps/works/src/features/admin/hooks.ts:161[dyn]",
+        "apps/works/src/features/admin/hooks.ts:178[dyn]",
+        "apps/works/src/features/admin/hooks.ts:194[dyn]",
+        "apps/works/src/features/admin/hooks.ts:216[dyn]",
+        "apps/works/src/features/admin/hooks.ts:229[dyn]",
+        "apps/works/src/features/bulk/bulkTags.ts:26[dyn]"
+      ]
+    },
+    "program_announcements": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/guest/src/features/announcementHooks.ts:29[SELECT]",
+        "apps/works/src/features/program/announcementHooks.ts:39[dyn]",
+        "apps/works/src/features/program/announcementHooks.ts:67[dyn]",
+        "apps/works/src/features/program/announcementHooks.ts:74[dyn]",
+        "apps/works/src/features/program/announcementHooks.ts:94[dyn]"
+      ]
+    },
+    "program_departments": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/program/programsPoolHooks.ts:338[dyn]"
+      ]
+    },
+    "program_links": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/guest/src/features/moduleHooks.ts:105[SELECT]",
+        "apps/works/src/features/program/moduleContentHooks.ts:108[dyn:SHARED_TABLES.links]",
+        "apps/works/src/features/program/moduleContentHooks.ts:144[dyn:SHARED_TABLES.links]",
+        "apps/works/src/features/program/moduleContentHooks.ts:151[dyn:SHARED_TABLES.links]",
+        "apps/works/src/features/program/moduleContentHooks.ts:171[dyn:SHARED_TABLES.links]"
+      ]
+    },
+    "program_managers": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/hub/dashboard/businessDashboardHooks.ts:99[dyn]",
+        "apps/works/src/features/management/employeeActivity.ts:158[dyn]",
+        "apps/works/src/features/master/ledgerPage.ts:186[dyn]",
+        "apps/works/src/features/program/hooks.ts:376[dyn]"
+      ]
+    },
+    "program_module_public_links": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/program/publicLinkHooks.ts:59[SELECT]",
+        "apps/works/src/features/program/publicLinkHooks.ts:78[SELECT]",
+        "apps/works/src/features/program/recruitment/recruitmentHooks.ts:163[SELECT]"
+      ]
+    },
+    "program_modules": {
+      "ops": [
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/guest/src/features/moduleHooks.ts:46[SELECT]",
+        "apps/works/src/features/admin/moduleAdminHooks.ts:24[SELECT]",
+        "apps/works/src/features/program/detail/detailHooks.ts:66[dyn:SHARED_TABLES.modules]",
+        "apps/works/src/features/program/hooks.ts:257[dyn:SHARED_TABLES.modules]",
+        "apps/works/src/features/program/hooks.ts:310[dyn:SHARED_TABLES.modules]"
+      ]
+    },
+    "program_notices": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/guest/src/features/noticeHooks.ts:27[SELECT]",
+        "apps/works/src/features/program/noticeHooks.ts:32[dyn]",
+        "apps/works/src/features/program/noticeHooks.ts:53[dyn]",
+        "apps/works/src/features/program/noticeHooks.ts:59[dyn]",
+        "apps/works/src/features/program/noticeHooks.ts:79[dyn]"
+      ]
+    },
+    "program_overviews": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/guest/src/features/overviewHooks.ts:20[SELECT]",
+        "apps/works/src/features/program/overviewHooks.ts:27[dyn]",
+        "apps/works/src/features/program/overviewHooks.ts:48[dyn]"
+      ]
+    },
+    "program_participant_entries": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/program/participantHooks.ts:332[dyn:SHARED_TABLES.participantEntries]",
+        "apps/works/src/features/program/rosterHooks.ts:103[dyn:SHARED_TABLES.participantEntries]",
+        "apps/works/src/features/program/rosterHooks.ts:154[dyn:SHARED_TABLES.participantEntries]",
+        "apps/works/src/features/program/rosterHooks.ts:250[dyn:SHARED_TABLES.participantEntries]",
+        "apps/works/src/features/program/rosterHooks.ts:311[dyn:SHARED_TABLES.participantEntries]",
+        "apps/works/src/features/program/rosterHooks.ts:365[dyn:SHARED_TABLES.participantEntries]",
+        "apps/works/src/features/program/rosterHooks.ts:396[dyn:SHARED_TABLES.participantEntries]"
+      ]
+    },
+    "program_participants": {
+      "ops": [
+        "INSERT",
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/management/employeeActivity.ts:188[dyn:SHARED_TABLES.participants]",
+        "apps/works/src/features/program/participantHooks.ts:186[dyn:SHARED_TABLES.participants]",
+        "apps/works/src/features/program/participantHooks.ts:409[dyn:SHARED_TABLES.participants]",
+        "apps/works/src/features/program/participantHooks.ts:509[dyn:SHARED_TABLES.participants]",
+        "apps/works/src/features/startup/startupProgramHooks.ts:52[dyn:SHARED_TABLES.participants]"
+      ]
+    },
+    "program_posts": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/guest/src/features/moduleHooks.ts:77[SELECT]",
+        "apps/works/src/features/program/moduleContentHooks.ts:34[dyn:SHARED_TABLES.posts]",
+        "apps/works/src/features/program/moduleContentHooks.ts:54[dyn:SHARED_TABLES.posts]",
+        "apps/works/src/features/program/moduleContentHooks.ts:60[dyn:SHARED_TABLES.posts]",
+        "apps/works/src/features/program/moduleContentHooks.ts:80[dyn:SHARED_TABLES.posts]"
+      ]
+    },
+    "program_questions": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/guest/src/features/qnaHooks.ts:32[SELECT]",
+        "apps/guest/src/features/qnaHooks.ts:74[INSERT]",
+        "apps/works/src/features/program/questionHooks.ts:44[dyn]",
+        "apps/works/src/features/program/questionHooks.ts:66[dyn]",
+        "apps/works/src/features/program/questionHooks.ts:88[dyn]"
+      ]
+    },
+    "program_timeline_items": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/program/moduleHooks.ts:22[dyn]",
+        "apps/works/src/features/program/moduleHooks.ts:44[dyn]"
+      ]
+    },
+    "programs": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/hub/hooks.ts:250[SELECT]",
+        "apps/works/src/features/admin/creatorTransfer.ts:53[dyn]",
+        "apps/works/src/features/approval/programLinkApi.ts:81[dyn]",
+        "apps/works/src/features/hub/dashboard/businessDashboardHooks.ts:109[dyn]",
+        "apps/works/src/features/hub/globalSearch.ts:258[dyn]",
+        "apps/works/src/features/office/minutes/minuteLinkSearch.ts:27[dyn]",
+        "apps/works/src/features/office/minutes/minutesApi.ts:227[dyn]",
+        "apps/works/src/features/program/hooks.ts:134[dyn]",
+        "apps/works/src/features/program/hooks.ts:161[dyn]",
+        "apps/works/src/features/program/programsPoolHooks.ts:354[dyn]",
+        "apps/works/src/features/startup/startupProgramHooks.ts:67[dyn]"
+      ]
+    },
+    "rank_tags": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:116[dyn]",
+        "apps/works/src/features/admin/hooks.ts:146[dyn]",
+        "apps/works/src/features/admin/hooks.ts:161[dyn]",
+        "apps/works/src/features/admin/hooks.ts:178[dyn]",
+        "apps/works/src/features/admin/hooks.ts:194[dyn]",
+        "apps/works/src/features/admin/hooks.ts:216[dyn]",
+        "apps/works/src/features/admin/hooks.ts:229[dyn]",
+        "apps/works/src/features/bulk/bulkTags.ts:26[dyn]"
+      ]
+    },
+    "region_tags": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:116[dyn]",
+        "apps/works/src/features/admin/hooks.ts:146[dyn]",
+        "apps/works/src/features/admin/hooks.ts:161[dyn]",
+        "apps/works/src/features/admin/hooks.ts:178[dyn]",
+        "apps/works/src/features/admin/hooks.ts:194[dyn]",
+        "apps/works/src/features/admin/hooks.ts:216[dyn]",
+        "apps/works/src/features/admin/hooks.ts:229[dyn]",
+        "apps/works/src/features/bulk/bulkTags.ts:26[dyn]"
+      ]
+    },
+    "startup_managers": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/management/employeeActivity.ts:71[SELECT]",
+        "apps/works/src/features/startup/startupPoolHooks.ts:222[SELECT]",
+        "apps/works/src/features/master/ledgerPage.ts:186[dyn]"
+      ]
+    },
+    "startups": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/fund/hooks.ts:782[SELECT]",
+        "apps/works/src/features/hub/globalSearch.ts:161[SELECT]",
+        "apps/works/src/features/mna/parties/startupLink.ts:84[SELECT]",
+        "apps/works/src/features/mna/parties/StartupPickerModal.tsx:47[SELECT]",
+        "apps/works/src/features/office/minutes/startupRepresentativeSearch.ts:30[SELECT]",
+        "apps/works/src/features/startup/dashboard/startupDashboardHooks.ts:33[SELECT]",
+        "apps/works/src/features/startup/dashboard/startupDashboardHooks.ts:59[SELECT]",
+        "apps/works/src/features/admin/creatorTransfer.ts:53[dyn]",
+        "apps/works/src/features/approval/programLinkApi.ts:81[dyn]",
+        "apps/works/src/features/hub/dashboard/myDatabaseHooks.ts:64[dyn]",
+        "apps/works/src/features/hub/hooks.ts:236[dyn]",
+        "apps/works/src/features/master/entityHooks.ts:35[dyn]",
+        "apps/works/src/features/master/entityHooks.ts:60[dyn]",
+        "apps/works/src/features/master/inactiveLedgerHooks.ts:42[dyn]",
+        "apps/works/src/features/master/ledgerMatch.ts:219[dyn]",
+        "apps/works/src/features/master/ledgerPage.ts:113[dyn]",
+        "apps/works/src/features/master/ledgerPage.ts:144[dyn]",
+        "apps/works/src/features/office/minutes/minuteLinkSearch.ts:27[dyn]",
+        "apps/works/src/features/office/minutes/minutesApi.ts:227[dyn]",
+        "apps/works/src/features/program/participantHooks.ts:165[dyn]",
+        "apps/works/src/features/program/participantHooks.ts:289[dyn]",
+        "apps/works/src/features/program/rosterHooks.ts:191[dyn]",
+        "apps/works/src/features/program/rosterHooks.ts:215[dyn]",
+        "apps/works/src/features/program/rosterHooks.ts:304[dyn]",
+        "apps/works/src/features/program/rosterHooks.ts:357[dyn]"
+      ]
+    },
+    "system_events": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/hub/hooks.ts:121[SELECT]",
+        "apps/works/src/features/hub/hooks.ts:155[INSERT]",
+        "apps/works/src/features/hub/hooks.ts:176[UPDATE]",
+        "apps/works/src/features/hub/hooks.ts:200[UPDATE]"
+      ]
+    },
+    "trade_partners": {
+      "ops": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/features/management/partners/partnerDirectoryApi.ts:148[UPDATE]",
+        "apps/works/src/features/management/partners/partnersApi.ts:149[SELECT]",
+        "apps/works/src/features/management/partners/partnersApi.ts:175[SELECT]",
+        "apps/works/src/features/management/partners/partnersApi.ts:196[SELECT]",
+        "apps/works/src/features/management/partners/partnersApi.ts:218[SELECT]",
+        "apps/works/src/features/management/partners/partnersApi.ts:237[INSERT]",
+        "apps/works/src/features/management/partners/partnersApi.ts:248[UPDATE]",
+        "apps/works/src/features/management/partners/partnersApi.ts:265[UPDATE]"
+      ]
+    },
+    "trade_partners_directory": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/management/partners/partnerDirectoryApi.ts:64[SELECT]",
+        "apps/works/src/features/management/partners/partnerDirectoryApi.ts:88[SELECT]"
+      ]
+    },
+    "upload_batches": {
+      "ops": [
+        "INSERT",
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/features/networks/hooks.ts:446[INSERT]",
+        "apps/works/src/features/networks/hooks.ts:466[SELECT]"
+      ]
+    },
+    "users": {
+      "ops": [
+        "SELECT",
+        "UPDATE"
+      ],
+      "sites": [
+        "apps/works/src/auth/employeeAuthService.ts:15[SELECT]",
+        "apps/works/src/features/hub/globalSearch.ts:321[SELECT]",
+        "apps/works/src/features/hub/hooks.ts:29[SELECT]",
+        "apps/works/src/features/hub/hooks.ts:256[SELECT]",
+        "apps/works/src/features/hub/hooks.ts:325[SELECT]",
+        "apps/works/src/features/management/hooks.ts:141[SELECT]",
+        "apps/works/src/features/management/hooks.ts:162[SELECT]",
+        "apps/works/src/features/management/hooks.ts:208[SELECT]",
+        "apps/works/src/features/management/hooks.ts:223[SELECT]",
+        "apps/works/src/features/management/hooks.ts:239[UPDATE]",
+        "apps/works/src/features/management/hooks.ts:374[UPDATE]",
+        "apps/works/src/features/management/kpi/kpiQueries.ts:69[SELECT]",
+        "apps/works/src/features/management/myPhotoHooks.ts:21[SELECT]",
+        "apps/works/src/features/master/ledgerPage.ts:170[SELECT]"
+      ]
+    },
+    "workspace_permissions": {
+      "ops": [
+        "SELECT"
+      ],
+      "sites": [
+        "apps/works/src/auth/employeeAuthService.ts:22[SELECT]"
+      ]
+    }
+  },
+  "edge_service_role_tables": {
+    "access_logs": [
+      "INSERT",
+      "SELECT"
+    ],
+    "application_answers": [
+      "INSERT"
+    ],
+    "application_form_fields": [
+      "SELECT"
+    ],
+    "application_forms": [
+      "SELECT"
+    ],
+    "application_submissions": [
+      "INSERT"
+    ],
+    "attachment_extracts": [
+      "INSERT",
+      "SELECT",
+      "UPDATE"
+    ],
+    "attachments": [
+      "INSERT",
+      "SELECT"
+    ],
+    "audit_logs": [
+      "INSERT"
+    ],
+    "funds": [
+      "SELECT"
+    ],
+    "guest_credentials": [
+      "INSERT",
+      "SELECT",
+      "UPDATE"
+    ],
+    "guest_identities": [
+      "SELECT"
+    ],
+    "guest_invitations": [
+      "UPDATE"
+    ],
+    "hr_profiles": [
+      "INSERT"
+    ],
+    "location_tags": [
+      "SELECT"
+    ],
+    "ma_programs": [
+      "SELECT"
+    ],
+    "meeting_recording_segments": [
+      "SELECT",
+      "UPDATE"
+    ],
+    "meeting_recordings": [
+      "SELECT"
+    ],
+    "module_templates": [
+      "SELECT"
+    ],
+    "networks": [
+      "SELECT"
+    ],
+    "permission_templates": [
+      "SELECT"
+    ],
+    "program_links": [
+      "SELECT"
+    ],
+    "program_module_public_links": [
+      "SELECT"
+    ],
+    "program_modules": [
+      "SELECT"
+    ],
+    "program_participants": [
+      "SELECT",
+      "UPDATE"
+    ],
+    "program_posts": [
+      "SELECT"
+    ],
+    "programs": [
+      "SELECT"
+    ],
+    "startups": [
+      "SELECT"
+    ],
+    "users": [
+      "DELETE",
+      "INSERT",
+      "SELECT",
+      "UPDATE"
+    ],
+    "workspace_permissions": [
+      "INSERT",
+      "SELECT"
+    ]
+  },
+  "edge_caller_tables": {
+    "funds": [
+      "SELECT"
+    ],
+    "ma_programs": [
+      "SELECT"
+    ],
+    "program_participants": [
+      "SELECT"
+    ],
+    "programs": [
+      "SELECT"
+    ]
+  },
+  "role_map": {
+    "dbRoles": {
+      "anon": "Anonymous public endpoints (application-*, public-module-*) reach the DB only through service_role inside the function, so anon needs no table privilege for them.",
+      "authenticated": "CRITICAL: both WORKS employees AND logged-in GUESTs run as this single Postgres role. The guest custom JWT carries role:\"authenticated\" (guestAccount.ts:328) and is signed with GUEST_JWT_SECRET, which crypto.ts:15 states must equal the project JWT secret. Therefore every GRANT ... TO authenticated is reachable by a guest session and is separated from employee data by RLS predicates alone.",
+      "service_role": "Edge functions only. No browser path."
+    },
+    "appRoles": {
+      "source": "public.user_type enum, supabase/migrations/20260705120000_init_schema_enums.sql:31",
+      "values": [
+        "super_admin",
+        "executive",
+        "management_support",
+        "ac_business",
+        "fund_manager",
+        "mna_manager",
+        "project_manager",
+        "external_startup",
+        "external_expert",
+        "temporary_guest",
+        "read_only"
+      ],
+      "guestTypes": [
+        "external_startup",
+        "external_expert",
+        "temporary_guest"
+      ],
+      "guestTypesConst": "apps/works/src/lib/userTypes.ts:16"
+    },
+    "workspaces": {
+      "source": "public.workspace_key enum",
+      "initial": [
+        "hub",
+        "networks",
+        "ac",
+        "fund",
+        "mna",
+        "project",
+        "management",
+        "admin",
+        "guest"
+      ],
+      "mutations": [
+        "20260716130000:17 rename 'hub' -> 'office'",
+        "20260716130000:19 add 'startup'",
+        "20260909150000:49 rename 'project' -> 'project_retired'",
+        "20260909150000:50 rename 'ac' -> 'project'"
+      ],
+      "effectiveNow": [
+        "office",
+        "startup",
+        "networks",
+        "project",
+        "fund",
+        "mna",
+        "project_retired",
+        "management",
+        "admin",
+        "guest"
+      ],
+      "permissionLevels": [
+        "none",
+        "read",
+        "write"
+      ],
+      "scopeTypes": [
+        "none",
+        "global",
+        "department",
+        "program",
+        "project",
+        "fund",
+        "company",
+        "self",
+        "temporary"
+      ]
+    },
+    "docComparison": [
+      {
+        "doc": "docs_planning/1_roles_permissions.md §1.1",
+        "claim": "7 internal roles",
+        "code": "8 internal user_type values (adds read_only, splits executive)",
+        "status": "DIFFERENCE — doc omits read_only from the role list although the matrix in §2.1 has no column for it either."
+      },
+      {
+        "doc": "docs_planning/1_roles_permissions.md §2.1",
+        "claim": "matrix columns: OFFICE, STARTUP, NETWORKS, AC, M&A, FUND, MANAGEMENT, PROJECT, ADMIN, GUEST",
+        "code": "enum now has 'project' meaning the old AC, plus a retired 'project_retired'",
+        "status": "DIFFERENCE — the doc still names AC and PROJECT as two live workspaces. After 20260909150000 the old AC IS project, and the old project is retired. The doc's own IMPORTANT callout already flags this as pending reconciliation."
+      },
+      {
+        "doc": "docs_planning/1_roles_permissions.md §3",
+        "claim": "Guest login = name + contact + business code, then 6-digit OTP",
+        "code": "guest-auth-login/handler.ts — email ID + password; business code removed (handler.ts:10-12); OTP not used for login",
+        "status": "SUPERSEDED — replaced by docs_planning/3_9_1 §6, which docs_master/CLAUDE.md §3 records as user-confirmed on 2026-09-12. Do NOT reconcile toward this doc."
+      },
+      {
+        "doc": "docs_dev/3_database_rls_policy_matrix.md §4",
+        "claim": "per-table matrix naming companies, experts, applications, mentoring_sessions, ndas, deals, evaluations, milestones, negotiations, dd_files, lps, portfolio_financials, performance_reviews, salaries, custom_events, global_networks, partners, feedbacks",
+        "code": "None of these appear in any browser callsite. The live unified ledgers are startups / networks / ma_sellers / ma_buyers / program_* / funds.",
+        "status": "DIFFERENCE — the matrix predates the 2026-09-03/04 ledger unification. It covers roughly 30 tables; the browser touches 103. Not usable as the ACL source of truth."
+      },
+      {
+        "doc": "docs_dev/3_database_rls_policy_matrix.md §2.5 (cited by 20260912025406:21)",
+        "claim": "physical delete forbidden; soft delete via deleted_at UPDATE",
+        "code": "One browser DELETE remains: capital_call_payments (apps/works/src/features/fund/hooks.ts).",
+        "status": "EXCEPTION TO CONFIRM — see finding E-7."
+      },
+      {
+        "doc": "docs_master/CLAUDE.md §3 (entity_contributions)",
+        "claim": "actor column owned by a DB trigger; client INSERT allowed under policy",
+        "code": "Matches: grant select,insert exists (20260912025406:153) and the browser only SELECTs it.",
+        "status": "CONFIRMED"
+      },
+      {
+        "doc": "docs_master/CLAUDE.md §3 (guest login policy)",
+        "claim": "email ID + initial contact valid only before a personal password, no session before it is set, offline credential handling",
+        "code": "guest-auth-login/handler.ts:77-105 — exactly this. Initial path yields only a change ticket, never a session.",
+        "status": "CONFIRMED — preserved unchanged by this audit."
+      }
+    ]
+  },
+  "storage": {
+    "buckets": [
+      {
+        "id": "attachments",
+        "public": false,
+        "definedIn": "20260707230000_attachments_storage.sql:14",
+        "clientsBrowser": [
+          "apps/works/src/features/networks/materialHooks.ts:125,141 (upload/remove)"
+        ],
+        "clientsEdge": [
+          "application-submit (upload)",
+          "material-download (createSignedUrl 60s)",
+          "public-module-file (createSignedUrl)",
+          "_shared/aiFill/run.ts:199 (download)",
+          "_shared/aiFill/extractRun.ts:119 (download)"
+        ],
+        "objectPolicies": "INSERT+UPDATE internal-user policies retained; SELECT policy DROPPED by 20260716130300 so browsers cannot mint their own signed URLs. Download is funnelled through material-download, which refuses to issue a URL if access_logs insert fails.",
+        "isolationCheck": "Row-level: material-download re-queries attachments with the caller token, so guests only see files their RLS allows."
+      },
+      {
+        "id": "program-posters",
+        "public": true,
+        "definedIn": "20260716180000_recruitment_poster_bucket.sql:14",
+        "clientsBrowser": [
+          "apps/works/src/features/program/recruitment/recruitmentHooks.ts:228,237"
+        ],
+        "objectPolicies": "poster_objects_insert / poster_objects_update only. No SELECT policy needed — bucket is public.",
+        "isolationCheck": "NONE by design (public recruitment poster). Confirm no PII is ever written here."
+      },
+      {
+        "id": "meeting-room-photos",
+        "public": true,
+        "definedIn": "20260728120000_meeting_rooms.sql:254",
+        "clientsBrowser": [
+          "apps/works/src/features/office/rooms/meetingRoomsApi.ts:209,218"
+        ],
+        "objectPolicies": "room_photo_objects_insert / _update.",
+        "isolationCheck": "NONE by design (public)."
+      },
+      {
+        "id": "asset-photos",
+        "public": false,
+        "definedIn": "20260730160000_asset_photos.sql:51",
+        "clientsBrowser": [
+          "apps/works/src/features/management/assets/assetPhotos.ts:27,49"
+        ],
+        "objectPolicies": "asset_photo_objects_select/_insert/_update (SELECT redefined by 20260730190000:200).",
+        "isolationCheck": "Storage policy predicate — catalog worker to confirm."
+      },
+      {
+        "id": "ma-quick-review-images",
+        "public": false,
+        "definedIn": "20260908120000_ma_quick_review_images.sql:41",
+        "clientsBrowser": [
+          "apps/works/src/features/mna/parties/quickReviewImages.ts:39,61"
+        ],
+        "objectPolicies": "ma_quick_review_image_objects_select/_insert/_update.",
+        "isolationCheck": "M&A confidential-deal boundary — catalog worker to confirm the predicate matches ma_sellers RLS."
+      },
+      {
+        "id": "approval-form-assets",
+        "public": true,
+        "definedIn": "20260911193000_official_document_template.sql:9",
+        "clientsBrowser": [
+          "apps/works/src/features/approval/approvalFormAssets.ts:13,23"
+        ],
+        "objectPolicies": "INSERT only, `to authenticated with check (bucket_id=... and app.is_admin())`. No UPDATE/DELETE policy — versions are preserved by new-UUID INSERT.",
+        "isolationCheck": "Public bucket holding company logo/seal. Intentional per the migration header."
+      },
+      {
+        "id": "meeting-recordings",
+        "public": false,
+        "definedIn": "20260912012905_meeting_recording_sessions.sql:333",
+        "clientsBrowser": [
+          "apps/works/src/features/office/minutes/voice/recordingApi.ts:74 (upload)"
+        ],
+        "clientsEdge": [
+          "meeting-recording-process (download)",
+          "meeting-recording-playback (createSignedUrl)"
+        ],
+        "objectPolicies": "meeting_recordings_objects_insert `to authenticated with check (bucket_id=... and app.can_upload_recording_object(name))`. No SELECT policy — playback goes through the edge function.",
+        "isolationCheck": "Path-bound upload predicate + owner_id check in meeting-recording-process:50."
+      },
+      {
+        "id": "partner-docs",
+        "public": false,
+        "definedIn": "20260903210000_trade_partners.sql:209",
+        "clientsBrowser": [],
+        "objectPolicies": "partner_doc_objects_select/_insert/_update were DROPPED by 20260911054939_remove_trade_partner_documents.sql:21-23.",
+        "isolationCheck": "ORPHAN — bucket row still exists with no policies and no clients. Flag for the catalog worker: confirm whether the bucket should be removed."
+      }
+    ]
+  },
+  "findings": [
+    {
+      "id": "E-1",
+      "severity": "P0 (latent — no send path exists today)",
+      "title": "notifications-dispatch accepts an arbitrary recipient and an arbitrary credential-bearing template from any Supabase Auth user",
+      "why": "The template registry (_shared/notifications.ts:15-62) contains GUEST_OTP, GUEST_PASSWORD_RESET (with a caller-supplied {{link}}), and GUEST_INVITE_NEW (which instructs the reader to log in with their registered phone digits). Any holder of any employee session could therefore send an arbitrary address a message that renders as an official Y&Archer password-reset carrying an attacker-chosen URL, from the company's own verified sender."
+    },
+    {
+      "id": "E-2",
+      "severity": "P1",
+      "title": "notifications-dispatch has zero callers anywhere and writes no audit record",
+      "why": "A generic, unauthenticated-in-practice send primitive that nothing uses is pure attack surface, and it would leave no trace if used."
+    },
+    {
+      "id": "E-3",
+      "severity": "P1",
+      "title": "apps/guest calls an edge function that does not exist in the repo",
+      "why": "Either a deployed function exists with no source under version control — in which case its authorization is unreviewable and unreproducible from a clean replay — or the temporary-guest page is silently broken. Both need an answer before AUTHZ closes. This is a source-side observation; the deployed function list is not visible from here."
+    },
+    {
+      "id": "E-4",
+      "severity": "P2",
+      "title": "Four functions resolve the caller without the is_active / external-role checks that internalAuth performs",
+      "why": "A deactivated employee whose Supabase Auth session is still alive passes these gates. Impact is bounded — the aiFill functions immediately re-ask canWrite/canCreate under the caller token, material-download re-queries rows under the caller token, and employee-create still requires super_admin or management write — so this is a defence-in-depth inconsistency, not an open door. But it means \"deactivate the employee\" is not by itself a complete revocation for these five paths; the RLS helper behind current_app_user_id() is what actually has to hold the line."
+    },
+    {
+      "id": "E-5",
+      "severity": "P1",
+      "title": "CORS grace mode leaves 18 of 22 functions callable from any origin",
+      "why": "guest-auth-login, guest-auth-password, employee-create and material-download are all reachable cross-origin until the operations secret is set. The code already documents this as a pre-production requirement; it belongs on the deploy checklist, not in a code change."
+    },
+    {
+      "id": "E-6",
+      "severity": "P0 for the ACL decision (not an exposure)",
+      "title": "GUEST sessions and WORKS employees share the single `authenticated` Postgres role",
+      "why": "Every `grant ... to authenticated` the ACL worker writes is simultaneously a grant to logged-in external startups and experts. Nothing at the privilege layer separates them — only the RLS predicate does. Concretely, apps/guest reads program_announcements, program_modules, program_posts, program_links, program_notices, program_overviews, attachments and reads+inserts program_questions with that role. The finite grant set must be justified against the guest threat model, not only the employee one."
+    },
+    {
+      "id": "E-7",
+      "severity": "P2",
+      "title": "One browser DELETE survives the soft-delete rule",
+      "why": "Either this is an approved exception (payment lines are a replace-set, re-inserted wholesale by set_capital_call_payments) and DELETE must be granted, or the client path is dead code that the RPC already superseded. `set_capital_call_payments` exists at fund/hooks.ts:427, which suggests the latter. Needs one look before the grant matrix is fixed."
+    },
+    {
+      "id": "E-8",
+      "severity": "INFO",
+      "title": "partner-docs bucket retains its row after its policies were dropped"
+    }
+  ],
+  "non_findings": [
+    "The three anonymous endpoints (public-module-get, public-module-file, application-form-get, application-submit) use service_role deliberately and are gated by a single unit-tested pure function (publicModuleLinkGate.ts, publicModuleLinkGate.test.ts). Bypassing RLS here is the design, not a defect — the gate is the authorization and each function narrows its own output.",
+    "guest-access-invite and guest-password-reset do NOT use service_role for the authorization decision; they delegate to SECURITY INVOKER RPCs under the caller token and only then escalate. This is the correct pattern and should not be flagged.",
+    "A SECURITY DEFINER function with public EXECUTE is not automatically a defect. The aiFill profiles depend on can_write_startup / can_create_startup / can_write_ma_seller / can_create_ma_seller / attachment_refs being callable by authenticated — that is the mechanism by which the edge function refuses to copy the permission predicate. Revoking EXECUTE on these would break the AI-fill authorization path, not harden it.",
+    "entity_contributions INSERT by authenticated is intentional and documented (docs_master/CLAUDE.md §3): the actor column is overwritten by a BEFORE INSERT trigger."
+  ],
+  "unknowns": [
+    {
+      "id": "U-1",
+      "item": "Effective privileges",
+      "note": "Everything in tables[].grantInSource is migration TEXT, not catalog state. Legacy auto-exposed privileges from before auto_expose_new_tables was unset are invisible from source and are exactly what the ACL worker's replayed catalog must enumerate."
+    },
+    {
+      "id": "U-2",
+      "item": "Policy existence and predicates",
+      "dynamicDdl": "Policies for at least these migrations are created inside `execute format(...)` loops and cannot be read by grep: 20260705150500_ac_rls, 20260705170000_fund_schema, 20260705180000_mna_schema, 20260705200000_project_schema, 20260705210000_management_schema, 20260803230100_program_module_content, 20260903100000_program_module_ledger_unify, 20260903110000_module_content_rls_polymorphic, 20260903120000_guest_portal_all_program_workspaces. A naive scan reports funds, investments, capital_calls, assets, kpi_records, dept_budgets, application_forms and application_submissions as having no policy; they do, via those loops. No policy conclusion should be drawn from this artifact."
+    },
+    {
+      "id": "U-3",
+      "item": "Views vs tables",
+      "note": "trade_partners_directory is a VIEW (20260903230000:32) already granted SELECT. app.network_entities_union is an app-schema view granted SELECT (20260731230000:77). kpi_results is granted but has no browser callsite. security_invoker settings are unverified here."
+    },
+    {
+      "id": "U-4",
+      "item": "RPC metadata",
+      "note": "The 80 RPCs are listed as demand only. secdef / search_path / EXECUTE grants unverified from source."
+    },
+    {
+      "id": "U-5",
+      "item": "Deployed function list",
+      "note": "guest-temp-resolve (E-3) cannot be resolved from the repo. Requires whoever can see the deployment."
+    },
+    {
+      "id": "U-6",
+      "item": "verify_jwt",
+      "note": "supabase/config.toml has no [functions] section and no verify_jwt setting anywhere in the repo. Whether the platform pre-validates Authorization before the handler runs — and therefore whether the guest custom JWT and the anonymous endpoints behave as the code assumes — is a deployment fact this audit cannot establish."
+    },
+    {
+      "id": "U-7",
+      "item": "kpi_results / board_comments",
+      "note": "Both carry grants in migration source but have zero browser callsites in this scan. Either RPC-only or dead. Candidates for revocation review."
+    }
+  ]
+}

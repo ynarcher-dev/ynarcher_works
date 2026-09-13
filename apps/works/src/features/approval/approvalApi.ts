@@ -284,52 +284,41 @@ export interface CreateApprovalInput {
 }
 
 /**
- * 기안 상신. 문서 번호·대표 금액·완료 일시는 DB 트리거가 채우므로 여기서 계산해 보내지 않는다
- * (화면이 계산해 보내면 화면마다 값이 갈린다). 결재선·참조자는 문서를 만든 뒤 잇는다.
+ * 기안의 **빈 껍데기 DRAFT**를 만들어 id만 받아 온다.
+ *
+ * 종전에는 이 자리에서 문서·결재선·참조자를 차례로 INSERT하고 맨 끝에 id를 돌려줬다. 중간에
+ * 끊기면(네트워크·권한·정책) 화면은 id를 들지 못한 채였고, 담당자가 다시 누르면 반쯤 채워진
+ * 문서가 한 건 더 생겼다. 그래서 **id부터** 확보한다 — 이후 본문·결재선·참조자·첨부는 모두
+ * 그 id를 향하고, 다시 눌러도 같은 문서를 고쳐 쓴다.
+ *
+ * 껍데기가 DRAFT인 것은 상신 검증(금액·예산 초과)이 DRAFT를 막지 않기 때문이다. 내용과 상신은
+ * `save_approval_draft` 한 번이 트랜잭션으로 처리한다. 문서 번호·대표 금액·완료 일시는 DB
+ * 트리거가 채우므로 화면이 계산해 보내지 않는다.
  */
+export interface CreateApprovalShellInput {
+  title: string
+  formId: string
+  formVersionId: string
+  departmentId: string | null
+}
+
 export function useCreateApproval() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (v: CreateApprovalInput): Promise<string> => {
+    mutationFn: async (v: CreateApprovalShellInput): Promise<string> => {
       const { data: doc, error } = await supabase
         .from('approval_documents')
         .insert({
           title: v.title,
           form_id: v.formId,
           form_version_id: v.formVersionId,
-          field_values: v.fieldValues,
+          field_values: {},
           department_id: v.departmentId,
-          budget_document_id: v.budgetDocumentId ?? null,
-          status: v.asDraft ? 'DRAFT' : 'PENDING',
+          status: 'DRAFT',
         })
         .select('id')
         .single()
       if (error) throw error
-
-      // 결재는 배열 순서가 곧 순번이고, 합의·재무합의는 병렬이라 순번이 판정에 쓰이지 않는다
-      // (그래도 표에 놓이는 순서를 위해 지정 순서를 그대로 적어 둔다).
-      const lineRows = (Object.keys(v.lines) as (keyof ApprovalLineInput)[]).flatMap((kind) =>
-        v.lines[kind].map((approver_id, i) => ({
-          document_id: doc.id,
-          approver_id,
-          step_order: i + 1,
-          kind,
-        })),
-      )
-      if (lineRows.length > 0) {
-        const { error: le } = await supabase.from('approval_lines').insert(lineRows)
-        if (le) throw le
-      }
-      if (v.recipientIds.length > 0) {
-        const { error: re } = await supabase.from('approval_recipients').insert(
-          v.recipientIds.map((user_id, i) => ({
-            document_id: doc.id,
-            user_id,
-            sort_order: i,
-          })),
-        )
-        if (re) throw re
-      }
       return doc.id as string
     },
     onSuccess: () => {

@@ -7,6 +7,7 @@ import { ModuleBoardCard } from '@/features/program/detail/ModuleBoardCard'
 import { ProgramRosterCard } from '@/features/program/detail/ProgramRosterCard'
 import { ProgramInfoCard } from '@/features/program/detail/ProgramInfoCard'
 import { RelatedApprovalPanel } from '@/features/program/detail/RelatedApprovalPanel'
+import { WorkspaceBudgetTab } from '@/features/approval/WorkspaceBudgetTab'
 import { RelatedMinutesPanel } from '@/features/office/minutes/RelatedMinutesPanel'
 import { useProgramContributions } from '@/features/program/detail/programContributions'
 import { useProgramWorkspace } from '@/features/program/workspace'
@@ -59,11 +60,13 @@ export function ProgramOverviewTab({
   // 이 워크스페이스가 쓰는 자격. 무엇이 서는지는 `guestMasterTables`가 답하고, 그 값은
   // 사이드바 창구의 하위 탭·참가자 목록의 자격 탭과 **같은 한 벌**이다.
   const personas = config.guestMasterTables ?? []
-  const [tab, setTab] = useState<'workflow' | 'roster'>('workflow')
+  const [tab, setTab] = useState<'workflow' | 'roster' | 'budget'>('workflow')
 
   return (
     <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
-      <div className="space-y-4 lg:col-span-2">
+      {/* min-w-0 — 격자 칸의 기본 최소 폭은 내용 폭이라, 안에 든 넓은 표가 칸을 밀어 화면
+          전체가 가로로 스크롤된다(표의 가로 스크롤은 표 자기 상자 안에서만 일어나야 한다). */}
+      <div className="min-w-0 space-y-4 lg:col-span-2">
         <ProgramInfoCard program={program} />
         {/* 사업이 무엇인지(위) 다음에 오는 것이 **누구를 상대로 도는가**이고, 그다음이 무엇을
             하는가(아래 탭 줄)다. 우측 컬럼에 두지 않은 이유는 그쪽이 이미 패널 다섯 장이라
@@ -73,16 +76,22 @@ export function ProgramOverviewTab({
           items={[
             { key: 'workflow', label: MODULE_BOARD_LABEL },
             { key: 'roster', label: config.rosterLabel },
+            // 예산/지출이 셋째로 선 근거도 같다 — 이 사업 안에서 하는 일의 한 축(돈)이고,
+            // 우측 '전자결재' 패널이 답하는 "무슨 결재가 오갔나"와는 질문이 다르다
+            // (여기는 배정된 예산과 그 줄에서 나간 돈을 묻는다).
+            { key: 'budget', label: '예산/지출' },
           ]}
           value={tab}
-          onChange={(key) => setTab(key as 'workflow' | 'roster')}
+          onChange={(key) => setTab(key as 'workflow' | 'roster' | 'budget')}
         />
         {/* 탭을 감추지 않고 갈아 끼운다 — 워크플로우 카드는 뷰 전환·펼침 같은 자기 상태를
             들고 있어, 숨겨 둔 채로 살려 두면 보이지 않는 화면이 조회를 계속 돌린다. */}
         {tab === 'workflow' ? (
           <ModuleBoardCard program={program} onOpenModule={onOpenModule} />
-        ) : (
+        ) : tab === 'roster' ? (
           <ProgramRosterCard programId={program.id} personas={personas} />
+        ) : (
+          <WorkspaceBudgetTab targetType={config.entityKey} targetId={program.id} />
         )}
       </div>
       {/* 우측(1/3): 자료 관리 → 전자결재 → 관련 회의록 → 변동 이력 → 코멘트.
@@ -91,7 +100,7 @@ export function ProgramOverviewTab({
       <div className="space-y-4 lg:col-span-1">
         <MaterialPanel targetType="program" targetId={program.id} />
         {/* 결재 연동의 대상 키도 회의록과 같은 워크스페이스별 entityKey다(program / ma_program)
-            — 하나를 공유하면 AC 결재가 M&A 딜에 붙어 보인다. */}
+            — 하나를 공유하면 AC 결재가 M&A 프로젝트에 붙어 보인다. */}
         <RelatedApprovalPanel targetType={config.entityKey} targetId={program.id} />
         <RelatedMinutesPanel targetType={config.entityKey} targetId={program.id} />
         <ChangeHistoryPanel contributions={contributions} />

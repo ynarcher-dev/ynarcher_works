@@ -34,7 +34,7 @@ export function StartupPage() {
   // 떨어뜨리지 않고 **새 자리로 보낸다** — 그 사이에 즐겨찾기한 사람에게 목록을 보여 주면
   // 화면이 왜 다른 것을 열었는지 답하지 못한다.
   if (tab === 'guest-accounts') {
-    return <Navigate to="/ac?tab=guest-accounts" replace />
+    return <Navigate to="/guest-accounts" replace />
   }
 
   if (tab && !pending) {

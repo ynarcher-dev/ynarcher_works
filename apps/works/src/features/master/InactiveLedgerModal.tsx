@@ -1,19 +1,26 @@
 import { Button, DataTable, ListToolbar, Modal, Spinner, type Column } from '@ynarcher/ui'
 import { useEffect, useMemo, useState } from 'react'
 import { useAuthStore } from '@/auth/authStore'
+import { AC_CATEGORIES, MNA_CATEGORIES } from '@/config/programCategories'
 import { InactiveLedgerDeleteModal } from '@/features/master/InactiveLedgerDeleteModal'
 import { InactiveLedgerRestoreModal } from '@/features/master/InactiveLedgerRestoreModal'
 import {
   useInactiveLedgerCount,
   useInactiveLedgerPage,
+  useLedgerConsoleCapability,
   type InactiveLedgerKey,
   type InactiveLedgerRow,
 } from '@/features/master/inactiveLedgerHooks'
+import { fundStatusLabel } from '@/features/fund/fundListHooks'
 import { categoryLabel } from '@/features/networks/config'
 import { managementStatusLabel } from '@/features/startup/startupClassification'
 import { useDebounced } from '@/lib/useDebounced'
 
 const PAGE_SIZE = 20
+const optionLabel = (
+  options: readonly { value: string; label: string }[],
+  value: string | null,
+) => options.find((option) => option.value === value)?.label ?? value ?? '-'
 
 const LEDGER_META: Record<InactiveLedgerKey, {
   noun: string
@@ -32,6 +39,36 @@ const LEDGER_META: Record<InactiveLedgerKey, {
     detailHeader: '소속',
     searchPlaceholder: '이름·소속 검색',
     categoryLabel: (value) => categoryLabel(value) || '-',
+  },
+  programs: {
+    noun: '프로젝트',
+    detailHeader: '주관기관',
+    searchPlaceholder: '프로젝트명·코드·주관기관 검색',
+    categoryLabel: (value) => optionLabel(AC_CATEGORIES, value),
+  },
+  ma_programs: {
+    noun: 'M&A 프로젝트',
+    detailHeader: '주관기관',
+    searchPlaceholder: 'M&A 프로젝트명·코드·주관기관 검색',
+    categoryLabel: (value) => optionLabel(MNA_CATEGORIES, value),
+  },
+  ma_buyers: {
+    noun: 'BUYER',
+    detailHeader: '담당자',
+    searchPlaceholder: '기업명·담당자 검색',
+    categoryLabel: (value) => value || '-',
+  },
+  ma_sellers: {
+    noun: 'SELLER',
+    detailHeader: '담당자',
+    searchPlaceholder: '기업명·담당자 검색',
+    categoryLabel: (value) => value || '-',
+  },
+  funds: {
+    noun: '펀드',
+    detailHeader: '코드',
+    searchPlaceholder: '펀드명·코드 검색',
+    categoryLabel: fundStatusLabel,
   },
 }
 
@@ -59,6 +96,9 @@ export function InactiveLedgerModal({ ledger, open, onClose }: ModalProps) {
     PAGE_SIZE,
     open,
   )
+  const { data: capability } = useLedgerConsoleCapability(ledger, open)
+  const canRestore = capability?.can_restore === true
+  const canHardDelete = capability?.can_hard_delete === true
 
   useEffect(() => {
     setPage(0)
@@ -124,26 +164,30 @@ export function InactiveLedgerModal({ ledger, open, onClose }: ModalProps) {
     {
       key: 'restore',
       header: '',
-      widthRem: 10,
+      widthRem: 12,
       align: 'right',
       render: (r) => (
         <div className="flex justify-end gap-1">
-          <Button variant="outline" onClick={() => askRestore(r)}>
-            복구
-          </Button>
-          <Button
-            variant="outline-danger"
-            onClick={() => {
-              setDeleteTargets([r])
-              setBulkDelete(false)
-            }}
-          >
-            영구 삭제
-          </Button>
+          {canRestore && (
+            <Button variant="outline" onClick={() => askRestore(r)}>
+              복구
+            </Button>
+          )}
+          {canHardDelete && (
+            <Button
+              variant="outline-danger"
+              onClick={() => {
+                setDeleteTargets([r])
+                setBulkDelete(false)
+              }}
+            >
+              영구 삭제
+            </Button>
+          )}
         </div>
       ),
     },
-  ], [meta])
+  ], [canHardDelete, canRestore, meta])
 
   return (
     <>
@@ -167,24 +211,28 @@ export function InactiveLedgerModal({ ledger, open, onClose }: ModalProps) {
                 {selectedRows.length}건 선택
               </span>
               <div className="ml-auto flex gap-1">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setRestoreTargets(selectedRows)
-                    setBulkRestore(true)
-                  }}
-                >
-                  선택 복구
-                </Button>
-                <Button
-                  variant="outline-danger"
-                  onClick={() => {
-                    setDeleteTargets(selectedRows)
-                    setBulkDelete(true)
-                  }}
-                >
-                  선택 영구 삭제
-                </Button>
+                {canRestore && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setRestoreTargets(selectedRows)
+                      setBulkRestore(true)
+                    }}
+                  >
+                    선택 복구
+                  </Button>
+                )}
+                {canHardDelete && (
+                  <Button
+                    variant="outline-danger"
+                    onClick={() => {
+                      setDeleteTargets(selectedRows)
+                      setBulkDelete(true)
+                    }}
+                  >
+                    선택 영구 삭제
+                  </Button>
+                )}
               </div>
             </div>
           )}
@@ -234,7 +282,7 @@ export function InactiveLedgerModal({ ledger, open, onClose }: ModalProps) {
         />
       )}
 
-      {deleteTargets.length > 0 && (
+      {canHardDelete && deleteTargets.length > 0 && (
         <InactiveLedgerDeleteModal
           ledger={ledger}
           targets={deleteTargets}

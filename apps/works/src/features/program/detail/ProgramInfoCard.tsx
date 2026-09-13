@@ -139,7 +139,7 @@ export function ProgramInfoCard({ program }: { program: Program }) {
       description={program.description}
       info={
         <InfoGrid>
-          <Info label="사업코드" value={program.code || '-'} />
+          <Info label={`${config.entityNoun} 코드`} value={program.code || '-'} />
           {/* M&A는 사업구분을 제목 옆 배지로 옮겼다. AC의 기존 정보 배치는 유지한다. */}
           {config.key !== 'mna' && config.categories.length > 0 && (
             <Info

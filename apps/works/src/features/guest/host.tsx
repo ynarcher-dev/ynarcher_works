@@ -51,6 +51,8 @@ export type GuestRosterSource =
 export interface GuestHostConfig {
   /** react-query 캐시 키의 앞머리이자 이 화면이 선 자리. */
   key: GuestHostKey
+  /** 현재 대상 한 건을 화면에서 부르는 이름. PROJECT는 프로젝트, M&A는 M&A 프로젝트, FUND는 FUND다. */
+  entityNoun: string
   /**
    * 통합 원장에서 이 행의 소속을 답하는 값.
    *
@@ -61,8 +63,8 @@ export interface GuestHostConfig {
   /**
    * 게스트에게 나가는 소개문의 이름(GUEST 설정 모달의 첫 탭·카드 제목·작성 모달 제목).
    *
-   * 규칙으로 짓지 못하는 말이라 값이다 — PROJECT는 '사업개요'가 한 낱말로 붙고, M&A는
-   * '프로젝트 개요'로 띄어 쓰며, FUND는 '조합 개요'다.
+   * 규칙으로 짓지 못하는 말이라 값이다 — PROJECT는 '프로젝트 개요', M&A는
+   * 'M&A 프로젝트 개요', FUND는 '조합 개요'다.
    */
   overviewNoun: string
   /**

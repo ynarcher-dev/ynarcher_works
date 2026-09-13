@@ -12,6 +12,7 @@ import {
   normalizeDepths,
   parseBudget,
   rollup,
+  type BudgetAmountFormula,
   type BudgetRow,
   type BudgetTreeValue,
 } from '@/features/approval/budget'
@@ -33,6 +34,7 @@ import {
   setBudgetPathCell,
   setLevelCount,
   setCell,
+  setCellWithAmount,
   setName,
   usedDepth,
 } from '@/features/approval/budgetEdit'
@@ -392,5 +394,87 @@ describe('예산표 편집 — 딸린 줄까지 한 덩어리로 움직인다', 
 
   it('쓰고 있는 층 수를 센다(층 이름 칸을 몇 개 세울지)', () => {
     expect(usedDepth(sample().rows)).toBe(3)
+  })
+})
+
+describe('예산표 — 수량 × 단가가 금액 칸에 적힌다', () => {
+  const FORMULA: BudgetAmountFormula = {
+    qtyKey: 'qty',
+    unitPriceKey: 'unitPrice',
+    amountKey: 'amount',
+    money: true,
+  }
+
+  /** 맨 아래 줄 하나짜리 표 — 금액 자동 계산은 맨 아래 줄에서만 일어난다. */
+  const line = (values: Record<string, string>): BudgetTreeValue => ({
+    levels: ['대분류'],
+    rows: [{ id: 'x', depth: 0, name: '제품구매', values }],
+  })
+
+  const cell = (
+    values: Record<string, string>,
+    columnKey: string,
+    next: string,
+    formula: BudgetAmountFormula | null = FORMULA,
+  ) => setCellWithAmount(line(values), 0, columnKey, next, formula).rows[0]!.values
+
+  it('단가를 적으면 곱이 금액에 들어간다', () => {
+    expect(cell({ qty: '3' }, 'unitPrice', '50000')).toEqual({
+      qty: '3',
+      unitPrice: '50000',
+      amount: '150000',
+    })
+  })
+
+  it('수량을 고치면 금액도 따라 바뀐다 — 손으로 적어 둔 금액도 덮는다', () => {
+    expect(cell({ qty: '3', unitPrice: '50000', amount: '140000' }, 'qty', '4').amount).toBe(
+      '200000',
+    )
+  })
+
+  it('쉼표가 섞여 있어도 읽는다', () => {
+    expect(cell({ qty: '3' }, 'unitPrice', '1,200,000').amount).toBe('3600000')
+  })
+
+  it('원 단위는 정수로 끊는다', () => {
+    expect(cell({ qty: '1.5' }, 'unitPrice', '333').amount).toBe('500')
+  })
+
+  it('금액 열이 숫자 열이면 부동소수 찌꺼기만 걷어낸다', () => {
+    const asNumber = { ...FORMULA, money: false }
+    expect(cell({ qty: '0.1' }, 'unitPrice', '3', asNumber).amount).toBe('0.3')
+  })
+
+  it('한쪽을 비우면 금액도 비워진다 — 그 자리에 직전 곱이 들어 있을 때만', () => {
+    expect(cell({ qty: '3', unitPrice: '50000', amount: '150000' }, 'unitPrice', '')).toEqual({
+      qty: '3',
+      unitPrice: '',
+      amount: '',
+    })
+  })
+
+  it('손으로 적은 금액은 단가를 비워도 남는다 — 수량만 세는 줄이 값을 잃지 않는다', () => {
+    expect(
+      cell({ qty: '10', unitPrice: '50000', amount: '3000000' }, 'unitPrice', '').amount,
+    ).toBe('3000000')
+  })
+
+  it('금액 칸을 직접 고치면 그대로 들어간다', () => {
+    expect(cell({ qty: '3', unitPrice: '50000', amount: '150000' }, 'amount', '140000')).toEqual({
+      qty: '3',
+      unitPrice: '50000',
+      amount: '140000',
+    })
+  })
+
+  it('산식이 없는 양식에서는 적은 값만 바뀐다', () => {
+    expect(cell({ qty: '3' }, 'unitPrice', '50000', null)).toEqual({
+      qty: '3',
+      unitPrice: '50000',
+    })
+  })
+
+  it('비고 같은 다른 칸을 고쳐도 금액은 건드리지 않는다', () => {
+    expect(cell({ qty: '3', unitPrice: '50000' }, 'note', '세트 구매').amount).toBeUndefined()
   })
 })

@@ -1,76 +1,165 @@
 # [12] 데이터베이스 베이스라인 운영 가이드
 
+> [!IMPORTANT]
+> **이 스냅샷이 보증하는 것은 cutoff 시점 스키마의 재현성 하나입니다.** 신규 환경 부트스트랩이나 복구가 된다는 증명이 아니며, 대상은 `public`·`app` 두 스키마뿐입니다. 한계는 §6이 가집니다.
+
+---
+
+## 0. 현재 산출물과 값의 정본
+
+`supabase/baseline/`에 `current_schema.sql`·`manifest.json` 한 쌍이 있습니다. 다만 **값을 여기에 적어 두지 않습니다.**
+
+* **cutoff·마이그레이션 수·해시·생성 환경의 정본은 [`supabase/baseline/manifest.json`](../../supabase/baseline/manifest.json)입니다.** 문서에 베껴 두면 갱신할 때마다 두 곳이 어긋납니다 — 값이 필요하면 `pnpm db:baseline:check`를 돌리거나 manifest를 직접 보십시오.
+* **최근 실행한 검증의 수치와 날짜는 [CURRENT_STATUS.md](../CURRENT_STATUS.md)가 가집니다.** 이 문서는 절차·규칙·한계를 소유하고 측정값은 소유하지 않습니다.
+
+이 문서가 사실로 적어 두는 것은 **로컬에서 재현되는 성질** 하나입니다.
+
+* `pnpm db:baseline:verify`가 **새 스택에서 cutoff까지 다시 재생한 덤프의 정규형이 작업 트리의 스냅샷과 바이트까지 같음**을 확인했습니다.
+* 생성 중 `supabase/migrations`의 파일은 한 바이트도 바뀌지 않았습니다(생성 전후 파일별 SHA-256 대조).
+* LF 체크아웃에서 `sha256sum supabase/baseline/current_schema.sql`이 `manifest.schemaSha256`을 그대로 재현합니다.
+
+> [!NOTE]
+> 산출물은 **작업 트리에만** 있습니다. 커밋·배포하지 않았으므로 이 문서는 "저장된 스냅샷" 또는 "작업 트리의 스냅샷"이라고만 적습니다.
+
+---
+
 ## 1. 목적과 원칙
 
-베이스라인은 특정 마이그레이션 버전까지의 **최종 스키마 스냅샷**입니다. 기존 운영 DB의 적용 이력을 삭제하거나 다시 실행하는 장치가 아닙니다.
+베이스라인은 특정 마이그레이션 버전(`cutoff`)까지의 **최종 스키마 스냅샷**입니다. 기존 운영 DB의 적용 이력을 삭제하거나 다시 실행하는 장치가 아닙니다.
 
-- 운영·스테이징 DB는 기존 적용 이력을 유지하고 신규 마이그레이션만 적용한다.
-- `supabase/migrations`는 감사와 기존 환경 호환을 위해 보존하며, 적용된 파일은 수정하지 않는다.
-- 신규 환경은 검증된 베이스라인과 cutoff 이후 마이그레이션으로 구축할 수 있다.
-- 현재 cutoff는 `supabase/baseline/manifest.json`을 정본으로 삼는다.
+* **운영·스테이징은 건드리지 않습니다.** 기존 적용 이력을 유지하고 신규 마이그레이션만 적용합니다.
+* **마이그레이션은 보존합니다.** `supabase/migrations`는 감사와 기존 환경 호환을 위해 남기며, 적용된 파일은 수정하지 않습니다.
+* **정본은 산출물입니다.** 현재 cutoff는 `supabase/baseline/manifest.json`이 답합니다.
+* **산출물은 한 쌍입니다.** `current_schema.sql`과 `manifest.json`은 같은 실행에서 나온 짝이며, 한쪽만 갱신된 상태는 점검이 해시 불일치로 거부합니다.
 
-## 2. 생성과 검증
+---
 
-운영과 완전히 분리된 **베이스라인 전용 Supabase 프로젝트**와 Supabase CLI가 필요합니다. 아래 DB는 명령 실행 때마다 초기화되므로 운영·스테이징 프로젝트를 지정하면 안 됩니다.
+## 2. 지원 경로 — 격리된 로컬 스택
+
+현재 지원하는 유일한 생성·검증 경로입니다. **원격 DB에 닿지 않습니다.** Docker와 `pnpm install`로 설치된 Supabase CLI가 필요합니다. 어떤 CLI를 쓸지는 `pnpm-lock.yaml`이 정하며, 도구는 **설치된 패키지가 스스로 밝히는 버전**(`node_modules/supabase/package.json`)을 정체성으로 삼아 실행 파일이 보고하는 버전과 대조합니다. 루트 `package.json`의 `^2.109.0`은 범위이므로 그 숫자를 고정값처럼 쓰지 않습니다.
 
 ```powershell
-$env:BASELINE_DB_URL = "postgresql://postgres.<ref>:<password>@..."
-$env:BASELINE_PROJECT_REF = "<ref>"
-$env:BASELINE_DB_CONFIRM = "RESET_DISPOSABLE_BASELINE_DB"
-pnpm db:baseline:refresh
-pnpm db:baseline:verify
+pnpm db:baseline:refresh   # 격리 스택에서 전체 이력을 재생하고 산출물 한 쌍을 기록
+pnpm db:baseline:check     # 빠른 점검 — Docker 불필요, 해시만 대조
+pnpm db:baseline:verify    # 전체 검증 — 새 스택에서 cutoff까지 재생해 바이트로 대조
 ```
 
-`refresh`는 전용 DB를 초기화한 뒤 전체 마이그레이션을 `--no-seed`로 적용하고, 성공한 DB의 `public`, `app` 스키마를 덤프해 cutoff와 이력 SHA-256을 기록합니다. SQL과 manifest의 diff를 리뷰해 함께 커밋하며 산출물을 직접 편집하지 않습니다.
+세 명령 모두 `scripts/db-baseline/`의 Node 구현을 직접 부릅니다. 실행마다 OS 임시 디렉터리에 **새 작업 디렉터리와 고유 `project_id`**를 만들고, 포트는 `548xx` 전용을 씁니다(개발자 스택 `543xx`·DB 회귀 스택 `547xx`와 겹치지 않습니다). 저장소 `config.toml`은 그대로 쓰되 `project_id`·포트·시드만 바꿉니다.
 
-안전장치로 다음 세 값이 모두 필요합니다.
+* **원격 환경변수를 대체 입력으로 받지 않습니다.** `BASELINE_DB_URL`·`BASELINE_PROJECT_REF`·`BASELINE_DB_CONFIRM` 중 하나라도 값이 있으면 시작하지 않습니다 — 어느 DB를 썼는지가 흐려지면 안 되기 때문입니다.
+* **원격을 가리킬 수 있는 인자를 거부합니다.** `--linked`·`--db-url`·`--project-ref`·`push`·`repair`·`link`는 붙여 쓴 형태(`--db-url=…`)까지 막습니다. 거절 메시지에는 **플래그 이름만 남고 값은 실리지 않습니다**(연결 문자열에 비밀번호가 들어 있습니다).
+* **자격증명을 출력하지 않습니다.** CLI 출력은 줄 단위로 훑어 키·토큰·연결 문자열을 가립니다. 다만 `ERROR:` 같은 진단 문구는 가리지 않습니다 — 실패 원인을 감추지 않습니다.
+* **재생한 파일이 해시를 낸 그 파일임을 증명합니다.** 작업 디렉터리로 복사한 마이그레이션을 다시 읽어 이력 해시를 내고, 저장소에서 계산한 값과 다르면 산출물을 쓰지 않습니다.
+* **스택은 성공·실패·예외 어디서 끝나도 내립니다.** 내리기에 실패하면 그 사실을 종료 코드로 알리고 산출물을 기록하지 않습니다. 정리 단서는 `%TEMP%/yna-baseline-stacks/`에 남습니다.
 
-- `BASELINE_DB_URL`: 비밀번호를 포함한 전용 DB 연결 문자열. Git에 저장하지 않는다.
-- `BASELINE_PROJECT_REF`: 전용 Supabase project ref. DB URL 호스트에 이 값이 없으면 중단한다.
-- `BASELINE_DB_CONFIRM`: 정확히 `RESET_DISPOSABLE_BASELINE_DB`여야 한다.
+`--dry-run`을 주면 해시만 계산해 보여 주고 아무 파일도 쓰지 않습니다.
 
-CI에서는 세 값을 secret으로 주입하고 로그에 URL을 출력하지 않습니다. 작업 후 현재 PowerShell 세션에서 `Remove-Item Env:BASELINE_DB_URL`로 연결 문자열을 제거합니다.
+`manifest.json`의 `source`는 **고정 문구**입니다. 같은 스키마를 다시 만들면 manifest도 같은 바이트여야 하므로 실행마다 달라지는 값(`project_id`·작업 디렉터리)은 넣지 않습니다. 이번 실행이 어떤 스택을 썼는지는 실행 로그와 `%TEMP%/yna-baseline-stacks/`의 기록이 가집니다. 실행마다 달라지는 manifest 필드는 `generatedAtUtc` 하나이며, 이 값은 어떤 해시에도 들어가지 않습니다.
 
-## 3. 최신화 시점
+### 산출물이 어긋난 상태의 복구
+
+산출물 기록은 임시 파일에 다 쓰고 제자리로 옮기는 방식이라, **오류로 끝난 실행은 기존 쌍을 그대로 둡니다.** 다만 **원자적이지는 않습니다** — 두 파일을 옮기는 사이에 프로세스가 강제 종료되거나(SIGKILL·전원 차단) 저장소가 끊기면 되돌릴 코드가 돌지 못하고 `새 스키마 + 옛 manifest`가 남을 수 있습니다. 두 파일을 파일시스템 수준에서 한 번에 바꾸는 이식 가능한 방법이 없으므로, 대신 **그 상태가 반드시 드러나게** 만들어 두었습니다.
+
+* `pnpm db:baseline:check`가 `schemaSha256` 불일치로 **반드시 실패**합니다. 조용히 지나가지 않습니다.
+* 복구는 **`pnpm db:baseline:refresh`를 다시 도는 것**입니다. 산출물을 손으로 맞추지 않습니다.
+* 되돌리기 자체가 실패한 경우에는 옛 스키마 사본(`.current_schema.sql.<실행식별자>.bak`)을 지우지 않고 남기며, 오류 메시지가 그 경로를 알려 줍니다. 그 파일이 남은 유일한 정상 스키마이므로, 내용을 확인한 뒤 refresh를 다시 돌고 사본은 그때 지웁니다.
+
+### 정규화와 해시
+
+`pg_dump`는 실행마다 `\restrict <난수토큰>` 줄을 새로 찍습니다. 정규화는 **이 메타 명령 줄과 BOM·줄바꿈·끝 빈 줄만** 정리하며, 스키마의 의미(권한·함수 본문·`search_path`·보안 속성)는 한 글자도 건드리지 않습니다.
+
+* 메타 명령 줄은 **SQL 인용 밖(top level)에 있을 때만** 지웁니다. 달러 인용 함수 본문 안에 같은 모양의 줄이 있어도 본문이므로 남습니다.
+* 해시는 정규형(LF·BOM 없음) 바이트로 계산하므로, Windows(`core.autocrlf=true`)와 Linux 체크아웃이 같은 값을 냅니다.
+* 정규화 규칙을 바꾸면 `NORMALIZER.version`을 올려야 하고, 옛 `manifest`는 점검이 **해시를 비교하지 않고** 거부합니다.
+* `.gitattributes`가 두 산출물의 줄바꿈 변환을 끕니다. 작업 트리의 바이트와 저장소의 바이트를 같게 유지해, 평범한 `sha256sum`으로도 manifest 값을 대조할 수 있게 하는 설정입니다(§0).
+
+---
+
+## 3. 원격 전용 프로젝트 경로 (보존, 미검증)
+
+`scripts/refresh-db-baseline.ps1`과 `scripts/check-db-baseline.ps1`에는 **일회용 원격 Supabase 프로젝트**를 초기화해 만드는 옛 경로가 남아 있습니다. 관문(세 환경변수, project ref와 DB 호스트 대조, 확인 문자열)은 그대로 두었으나 **현재 사용하지 않으며 이번 작업에서 검증하지 않았습니다.**
+
+* `pnpm` 스크립트는 이 경로를 부르지 않습니다. 로컬 경로는 두 PS 스크립트의 `-Local` 스위치가 받아 Node 구현으로 넘깁니다.
+* `-Local`은 원격 인자·환경변수와 함께 쓰면 거부합니다.
+* 원격 경로의 `-Full`은 **전체 이력**을 재생해 cutoff 스냅샷과 비교하므로, cutoff 이후 마이그레이션이 쌓이면 구조적으로 실패합니다. 로컬 경로(`-Local -Full`)는 cutoff까지만 재생해 비교합니다.
+* 원격 경로의 해시는 **원시 바이트** 기준이라 로컬 경로의 정규형 해시와 값이 다릅니다. 두 경로의 산출물을 섞어 쓸 수 없습니다.
+
+> [!NOTE]
+> 이 경로를 다시 쓰려면 먼저 검증하고 이 문서를 고쳐야 합니다. 지금 상태로 실행한 결과를 베이스라인으로 커밋하지 않습니다.
+
+---
+
+## 4. 최신화 시점
 
 매 마이그레이션마다 갱신하지 않습니다. 다음 중 하나일 때 별도 PR로 갱신합니다.
 
-- cutoff 이후 마이그레이션이 50개 이상 누적
-- 빈 DB 전체 재구축 시간이 팀의 허용 시간을 초과
-- PostgreSQL 또는 Supabase 메이저 버전 업그레이드 전후
-- 대규모 스키마 개편 완료 후
-- 재해복구 훈련 또는 신규 프로젝트 프로비저닝 전
+* cutoff 이후 마이그레이션이 50개 이상 누적
+* 빈 DB 전체 재구축 시간이 팀의 허용 시간을 초과
+* PostgreSQL 또는 Supabase 메이저 버전 업그레이드 전후
+* 대규모 스키마 개편 완료 후
+* 재해복구 훈련 또는 신규 프로젝트 프로비저닝 전
 
-후속 개발자는 평소 새 마이그레이션만 추가합니다. cutoff 이하 파일 변경은 `db:baseline:check`가 해시 불일치로 감지합니다.
+평소에는 새 마이그레이션만 추가합니다. cutoff 이하 파일 변경은 `pnpm db:baseline:check`가 이력 해시 불일치로 잡습니다.
 
-## 4. 신규 환경 적용
+---
 
-신규 환경의 기본 경로로 채택할 때는 별도 전환 PR과 빈 DB 검증을 거칩니다.
+## 5. 신규 환경 적용
 
-1. `current_schema.sql`을 빈 Supabase DB에 적용한다.
-2. Storage bucket/policy와 필수 기준정보 bootstrap SQL을 적용한다.
-3. manifest cutoff 이후 마이그레이션을 순서대로 적용한다.
-4. Supabase 마이그레이션 이력을 cutoff와 일치하도록 기록한다.
-5. `supabase/tests/rls_regression_test.sql`과 스키마 diff를 실행한다.
+> [!WARNING]
+> **지금은 지원되는 부트스트랩 지름길이 아닙니다.** 아래 절차는 **실행해 본 적이 없습니다** — 전환 PR에서 빈 DB로 검증해야 할 계획이며, 산출물이 존재한다는 사실이 이 경로를 보증하지 않습니다. 현재 베이스라인은 **재현성이 확인된 스키마 스냅샷**이고 `supabase db reset`을 대체하지 않습니다.
 
-운영 DB에는 베이스라인 SQL을 적용하지 않습니다. 이미 존재하는 객체와 충돌할 수 있습니다.
+1. `current_schema.sql`을 빈 Supabase DB에 적용합니다.
+2. Storage bucket/policy와 필수 기준정보 bootstrap SQL을 적용합니다.
+3. manifest cutoff 이후 마이그레이션을 순서대로 적용합니다.
+4. Supabase 마이그레이션 이력을 cutoff와 일치하도록 기록합니다.
+5. `supabase/tests/rls_regression_test.sql`과 스키마 diff를 실행합니다.
 
-## 5. 제한과 후속 분리 작업
+운영 DB에는 베이스라인 SQL을 적용하지 않습니다. 이미 존재하는 객체와 충돌합니다.
 
-자동 덤프는 애플리케이션 소유 스키마 `public`, `app`만 대상으로 하며 운영 데이터나 인증 사용자를 포함하지 않습니다. 다음은 별도 관리 대상입니다.
+---
 
-- `storage.buckets` 행과 `storage.objects` 정책
-- 권한 템플릿·태그·게시판 등 필수 기준정보
-- Auth 사용자와 운영 데이터
-- Edge Function 환경변수와 외부 인프라
+## 6. 제한
 
-현재 초기 이력에는 DDL, 기준정보, 데모 데이터가 섞여 있습니다. 최초 베이스라인을 신규 환경 기본 경로로 전환하기 전에 필수 기준정보와 Storage 정책을 bootstrap SQL로, 데모 데이터는 개발 전용 seed로 분리해야 합니다. 그 전까지 베이스라인은 **검증·복구용 스키마 스냅샷**이며 기존 `db reset`을 대체하지 않습니다.
+자동 덤프는 애플리케이션 소유 스키마 `public`, `app`만 담으며 운영 데이터나 인증 사용자를 포함하지 않습니다. 다음은 별도 관리 대상입니다.
 
-## 6. PR 체크리스트
+* `storage.buckets` 행과 `storage.objects` 정책
+* 권한 템플릿·태그·게시판 등 필수 기준정보
+* Auth 사용자와 운영 데이터
+* Edge Function 환경변수와 외부 인프라
+
+현재 초기 이력에는 DDL, 기준정보, 데모 데이터가 섞여 있습니다. 최초 베이스라인을 신규 환경 기본 경로로 전환하기 전에 필수 기준정보와 Storage 정책을 bootstrap SQL로, 데모 데이터는 개발 전용 seed로 분리해야 합니다.
+
+### 통과가 말하는 것과 말하지 않는 것
+
+`pnpm db:baseline:verify` 통과가 보증하는 것은 **cutoff 시점 스냅샷의 재현성 하나**입니다. 아래는 **보증하지 않습니다.**
+
+* **신규 환경 부트스트랩·복구가 된다는 증명이 아닙니다.** 스냅샷을 빈 DB에 적용하는 경로는 검증하지 않았습니다(§5는 전환 PR에서 밟을 절차이며 실행 결과가 아닙니다).
+* **`public`·`app` 밖은 담기지 않습니다.** `auth`·`storage`·`extensions` 등 다른 스키마와 그 정책·권한은 스냅샷에 없습니다.
+* **cutoff 이후 마이그레이션은 검증 대상이 아닙니다.** "베이스라인 + 이후 마이그레이션"이 전체 이력 재생과 같은 결과라는 뜻도 아닙니다. 전체 이력 재생과 pgTAP 회귀는 `pnpm test:db`가 따로 확인합니다.
+* **런타임 동작의 증명이 아닙니다.** 스키마 텍스트가 같다는 것이지 RLS·권한이 의도대로 막는다는 뜻이 아닙니다. 그것은 pgTAP 회귀가 가집니다.
+
+또한 스택은 스키마 덤프에 필요한 서비스만 띄웁니다(`studio`·`imgproxy`·`mailpit`·`edge-runtime`·`vector`·`logflare`·`realtime` 제외). CLI가 모르는 이름을 제외 목록에 주면 **경고만 하고 그 서비스를 그대로 띄우므로**, 도구는 그 경고를 실패로 다뤄 "무엇을 띄우고 만든 스냅샷인가"가 기록과 어긋나지 않게 합니다.
+
+---
+
+## 7. 도구 자체의 테스트
+
+정규화·이력 해시·산출물 쌍·원격 차단 판정은 Docker 없이 도는 단위 테스트가 지킵니다.
+
+```powershell
+pnpm test:baseline   # node:test 러너, scripts/db-baseline/*.node-test.mjs
+```
+
+`pnpm test`(루트)가 이 테스트를 함께 돌리므로 CI의 `테스트` 단계에 포함됩니다. 파일명이 `*.node-test.mjs`인 이유는 WORKS Vitest가 `scripts/**/*.test.mjs`를 가져가기 때문입니다 — 두 러너가 같은 파일을 집으면 한쪽은 반드시 깨집니다. 실제 스택 기동·덤프는 단위 테스트 대상이 아니며 `pnpm db:baseline:verify`가 확인합니다.
+
+---
+
+## 8. PR 체크리스트
 
 - [ ] 새 timestamp 마이그레이션으로 변경했다.
 - [ ] cutoff 이하 마이그레이션을 수정하지 않았다.
 - [ ] `pnpm db:baseline:check`를 통과했다.
 - [ ] 새 테이블/RPC/RLS가 있으면 보안 게이트와 회귀 테스트를 갱신했다.
-- [ ] 갱신 조건이면 `pnpm db:baseline:refresh`와 전체 검증을 수행했다.
+- [ ] 갱신 조건이면 `pnpm db:baseline:refresh`와 `pnpm db:baseline:verify`를 수행했다.
 - [ ] manifest와 schema snapshot을 같은 커밋에 포함했다.
+- [ ] 산출물을 손으로 고치지 않았다.

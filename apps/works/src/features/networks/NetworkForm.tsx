@@ -188,6 +188,16 @@ export function NetworkForm({
 
     try {
       if (isEdit && recordId) {
+        // 이직·연락처 변경은 같은 행을 고치는 정상 흐름이다. 다만 바꾼 결과가 다른 기존 인물과
+        // 이름+연락처로 겹치면 어느 행을 이어야 하는지 먼저 확인한다(자기 행은 제외).
+        if (
+          await dup.shouldStop(
+            { name: v.name.trim(), email: v.email.trim(), phone: v.phone.trim() },
+            recordId,
+          )
+        ) {
+          return
+        }
         // 사유는 필수 — 변동 이력에 note로 남는다.
         const reason = await askReason()
         if (!reason) return

@@ -253,10 +253,13 @@ export function useProgramModules(programId: string | undefined) {
     queryKey: [config.key, 'modules', programId],
     enabled: Boolean(programId),
     queryFn: async (): Promise<ProgramModule[]> => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from(SHARED_TABLES.modules)
         .select(moduleCols())
         .eq('program_id', programId)
+      // An embedded relation needs its own table privilege. Never turn a rejected module query
+      // into an empty board; that hides ACL regressions as "there are no modules".
+      if (error) throw error
       return (data ?? []) as unknown as ProgramModule[]
     },
   })

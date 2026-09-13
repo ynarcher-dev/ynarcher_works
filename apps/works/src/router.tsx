@@ -35,6 +35,8 @@ import { StartupDetailPage } from '@/features/startup/StartupDetailPage'
 import { StartupCreatePage } from '@/features/startup/StartupCreatePage'
 import { LoginPage } from '@/pages/LoginPage'
 import { RootLayout } from '@/pages/RootLayout'
+import { GuestAccountsPage } from '@/features/guest/GuestAccountsPage'
+import { GuestAccountsBulkPage } from '@/features/guest/GuestAccountsBulkPage'
 
 /**
  * WORKS 앱 루트 라우터. 인증 셸(WorksLayout) 하위에 워크스페이스 라우트를 배치.
@@ -69,6 +71,10 @@ export const router = createBrowserRouter([
           { index: true, element: <Navigate to="/my-office" replace /> },
           // 마이페이지(내 계정 관리): 모든 인증 사용자 접근(워크스페이스 권한 불요).
           { path: 'me', element: <MyPage /> },
+          // GUEST 원장은 모든 내부 사용자의 생성·조회 진입점. 파일 업로드는 목록 버튼에서
+          // 전용 페이지로 들어가며, 변경·삭제 권한은 RPC가 별도로 가른다.
+          { path: 'guest-accounts/bulk', element: <GuestAccountsBulkPage /> },
+          { path: 'guest-accounts', element: <GuestAccountsPage /> },
 
           // ── MY OFFICE ──────────────────────────────────────────────────
           // 메뉴 개편의 첫 단계에서는 기존 개인화 대시보드를 그대로 연결한다. 공용 OFFICE의

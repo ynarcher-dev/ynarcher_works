@@ -14,12 +14,11 @@ import { failureText } from '@/lib/failureText'
  * `app.ma_party_identity_gate`·유일 인덱스). 여기서 막는 것은 담당자에게 **미리** 이유와 갈
  * 곳을 보여 주기 위해서이지 보안이 아니다.
  *
- *  · startups     사업자등록번호가 같다 → 막음. 내 번호가 비었는데 번호 있는 행과 이름 +
- *                 (이메일|전화)가 같다 → 막음(그 기업은 이미 번호를 갖고 있다). 둘 다 번호가
- *                 없으면 → 멈춤(확정 근거가 없다).
+ *  · startups     사업자등록번호·이메일·전화 중 하나라도 같다 → 막음. 그 밖의 이름+연락처
+ *                 조합은 기존 보조 판정을 유지한다.
  *  · networks     이름 + (이메일|전화)가 같다 → 막음(사람에게는 단일 확실 키가 없어 조합으로
  *                 본다). 이메일 + 전화만 같다 → 멈춤(공용 대표번호·팀 메일).
- *  · ma_*         사업자등록번호가 같다 → 막음. 나머지 → 멈춤.
+ *  · ma_*         사업자등록번호·이메일·전화 중 하나라도 같다 → 막음. 나머지 → 멈춤.
  *
  * 내려간 행(비활성·병합)은 막지 않는다 — DB 유일 인덱스도 살아있는 행만 보고, 되살릴지는
  * 사람이 정한다(화면은 '되살릴 행'이라고 안내한다).
@@ -30,7 +29,7 @@ export function isHardDuplicate(key: LedgerKey, probe: LedgerProbe, match: Ledge
   const nameAndContact = has('name') && (has('email') || has('phone'))
   switch (key) {
     case 'startups': {
-      if (has('hard')) return true
+      if (has('hard') || has('email') || has('phone')) return true
       const probeHasBiz = String(probe.hard ?? '').replace(/\D/g, '').length > 0
       const matchHasBiz = String(match.raw.biz_reg_no ?? '').replace(/\D/g, '').length > 0
       return !probeHasBiz && matchHasBiz && nameAndContact
@@ -39,7 +38,7 @@ export function isHardDuplicate(key: LedgerKey, probe: LedgerProbe, match: Ledge
       return nameAndContact
     case 'ma_sellers':
     case 'ma_buyers':
-      return has('hard')
+      return has('hard') || has('email') || has('phone')
   }
 }
 
@@ -54,11 +53,23 @@ export function ledgerSaveFailureText(e: unknown, fallback: string): string {
     if (msg.includes('uq_startups_biz_reg_no_live')) {
       return '같은 사업자등록번호의 기업이 이미 있습니다. 새로 만들지 말고 그 행을 고치세요.'
     }
+    if (msg.includes('uq_startups_email_live')) {
+      return '같은 이메일의 스타트업이 이미 있습니다. 새로 만들지 말고 그 행을 고치세요.'
+    }
+    if (msg.includes('uq_startups_phone_live')) {
+      return '같은 전화번호의 스타트업이 이미 있습니다. 새로 만들지 말고 그 행을 고치세요.'
+    }
     if (msg.includes('uq_ma_sellers_startup_live') || msg.includes('uq_ma_buyers_startup_live')) {
       return '이 스타트업에 연결된 행이 이미 있습니다. 그 행을 고치세요.'
     }
     if (msg.includes('uq_ma_sellers_biz_reg_no_live') || msg.includes('uq_ma_buyers_biz_reg_no_live')) {
       return '같은 사업자등록번호의 행이 이미 있습니다. 새로 만들지 말고 그 행을 고치세요.'
+    }
+    if (msg.includes('uq_ma_sellers_email_live') || msg.includes('uq_ma_buyers_email_live')) {
+      return '같은 이메일의 행이 이미 있습니다. 새로 만들지 말고 그 행을 고치세요.'
+    }
+    if (msg.includes('uq_ma_sellers_phone_live') || msg.includes('uq_ma_buyers_phone_live')) {
+      return '같은 전화번호의 행이 이미 있습니다. 새로 만들지 말고 그 행을 고치세요.'
     }
     if (
       msg.includes('uq_users_email_live') ||
@@ -66,6 +77,9 @@ export function ledgerSaveFailureText(e: unknown, fallback: string): string {
       msg.includes('uq_users_guest_email')
     ) {
       return '같은 이메일의 계정이 이미 있습니다.'
+    }
+    if (msg.includes('uq_users_guest_phone')) {
+      return '같은 전화번호의 GUEST 계정이 이미 있습니다.'
     }
   }
   return failureText(e, fallback)

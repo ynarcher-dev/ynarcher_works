@@ -43,7 +43,7 @@ export function StartupProgramCard({
     () => [
       {
         key: 'title',
-        header: '사업명',
+        header: `${config.entityNoun}명`,
         type: 'name',
         render: (r) => <span title={r.title}>{r.title}</span>,
       },

@@ -68,6 +68,8 @@ export interface LedgerMatchSpec {
     normalize: (v: unknown) => string
     stored: (norm: string) => string
   }
+  /** 이메일 또는 전화 하나만 같아도 중복으로 확정하는 기업 원장. */
+  singleContactIsHard?: boolean
   /**
    * 이 행이 원장에서 내려갔는가(비활성·병합). 주지 않으면 전부 살아 있는 것으로 본다.
    *
@@ -151,6 +153,7 @@ export function bestMatchFor(
   probe: LedgerProbe,
   candidates: LedgerCandidate[],
   normalizeHard?: (v: unknown) => string,
+  singleContactIsHard = false,
 ): LedgerMatch | null {
   const pn = normEntityName(probe.name)
   const pe = normEmail(probe.email)
@@ -166,7 +169,8 @@ export function bestMatchFor(
     if (pp && pp === c.nPhone) fields.push('phone')
     const hard = fields.includes('hard')
     const soft = fields.length - (hard ? 1 : 0)
-    if (!hard && soft < 2) continue
+    const contactHard = singleContactIsHard && (fields.includes('email') || fields.includes('phone'))
+    if (!hard && !contactHard && soft < 2) continue
     const hits = fields.length
     // 확실한 키가 같은 쪽 → 일치 수가 많은 쪽 → 살아 있는 행 순으로 앞세운다. 되살릴 대상보다
     // 지금 쓰는 행을 가리키는 편이 담당자의 다음 행동을 줄인다.
@@ -210,10 +214,15 @@ export async function findLedgerMatches(
 
   const names = [...new Set(probes.map((p) => p.name.trim()).filter(Boolean))]
   const emails = [...new Set(probes.map((p) => p.email.trim()).filter(Boolean))]
+  const phones = [
+    ...new Set(probes.flatMap((p) => [p.phone.trim(), normPhone(p.phone)]).filter(Boolean)),
+  ]
   const hards = hardKey
     ? [...new Set(probes.map((p) => hardKey.normalize(p.hard)).filter(Boolean))]
     : []
-  if (names.length === 0 && emails.length === 0 && hards.length === 0) return new Map()
+  if (names.length === 0 && emails.length === 0 && phones.length === 0 && hards.length === 0) {
+    return new Map()
+  }
 
   const base = () => {
     let q = supabase.from(spec.table).select(spec.columns)
@@ -255,6 +264,9 @@ export async function findLedgerMatches(
   await Promise.all([
     ...chunk(names, IN_CHUNK).map((batch) => run(cols.name, batch)),
     ...chunk(emails, IN_CHUNK).map((batch) => run(cols.email, batch)),
+    ...(spec.singleContactIsHard
+      ? chunk(phones, IN_CHUNK).map((batch) => run(cols.phone, batch))
+      : []),
     ...(hardKey
       ? chunk(hards.map((h) => hardKey.stored(h)), IN_CHUNK).map((batch) =>
           run(hardKey.column, batch),
@@ -264,6 +276,7 @@ export async function findLedgerMatches(
 
   const idxName = new Map<string, LedgerCandidate[]>()
   const idxEmail = new Map<string, LedgerCandidate[]>()
+  const idxPhone = new Map<string, LedgerCandidate[]>()
   const idxHard = new Map<string, LedgerCandidate[]>()
   const push = (m: Map<string, LedgerCandidate[]>, k: string, c: LedgerCandidate) => {
     if (!k) return
@@ -274,6 +287,7 @@ export async function findLedgerMatches(
   for (const c of byId.values()) {
     push(idxName, c.nName, c)
     push(idxEmail, c.nEmail, c)
+    push(idxPhone, c.nPhone, c)
     push(idxHard, c.nHard ?? '', c)
   }
 
@@ -284,11 +298,17 @@ export async function findLedgerMatches(
     for (const c of [
       ...(idxName.get(normEntityName(probe.name)) ?? []),
       ...(idxEmail.get(normEmail(probe.email)) ?? []),
+      ...(idxPhone.get(normPhone(probe.phone)) ?? []),
       ...(hardKey ? (idxHard.get(hardKey.normalize(probe.hard)) ?? []) : []),
     ]) {
       cands.set(c.id, c)
     }
-    const best = bestMatchFor(probe, [...cands.values()], hardKey?.normalize)
+    const best = bestMatchFor(
+      probe,
+      [...cands.values()],
+      hardKey?.normalize,
+      spec.singleContactIsHard,
+    )
     if (best) out.set(i, best)
   })
 
@@ -327,9 +347,11 @@ export function probeOf(
 export function findDuplicateProbes(
   probes: LedgerProbe[],
   normalizeHard?: (v: unknown) => string,
+  singleContactIsHard = false,
 ): Map<number, number> {
   const idxName = new Map<string, LedgerCandidate[]>()
   const idxEmail = new Map<string, LedgerCandidate[]>()
+  const idxPhone = new Map<string, LedgerCandidate[]>()
   const idxHard = new Map<string, LedgerCandidate[]>()
   const push = (m: Map<string, LedgerCandidate[]>, k: string, c: LedgerCandidate) => {
     if (!k) return
@@ -342,6 +364,7 @@ export function findDuplicateProbes(
   probes.forEach((probe, i) => {
     const nName = normEntityName(probe.name)
     const nEmail = normEmail(probe.email)
+    const nPhone = normPhone(probe.phone)
     const nHard = normalizeHard ? normalizeHard(probe.hard) : ''
 
     // **앞선 줄만** 후보다 — 뒤엣줄이 접히고 앞엣줄이 남아야, 같은 파일을 두 번 올려도
@@ -350,11 +373,12 @@ export function findDuplicateProbes(
     for (const c of [
       ...(idxName.get(nName) ?? []),
       ...(idxEmail.get(nEmail) ?? []),
+      ...(idxPhone.get(nPhone) ?? []),
       ...(idxHard.get(nHard) ?? []),
     ]) {
       cands.set(c.id, c)
     }
-    const hit = bestMatchFor(probe, [...cands.values()], normalizeHard)
+    const hit = bestMatchFor(probe, [...cands.values()], normalizeHard, singleContactIsHard)
     if (hit) out.set(i, Number(hit.id))
 
     const self: LedgerCandidate = {
@@ -366,11 +390,12 @@ export function findDuplicateProbes(
       raw: {},
       nName,
       nEmail,
-      nPhone: normPhone(probe.phone),
+      nPhone,
       nHard,
     }
     push(idxName, nName, self)
     push(idxEmail, nEmail, self)
+    push(idxPhone, nPhone, self)
     push(idxHard, nHard, self)
   })
   return out

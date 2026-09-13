@@ -36,6 +36,15 @@ export interface ProgramLinkDraft {
 interface Props {
   value: ProgramLinkDraft[]
   onChange: (next: ProgramLinkDraft[]) => void
+  /**
+   * 한 곳만 고를 수 있는가 — **예산을 배정하는 품의에만** 세운다.
+   *
+   * 예산표를 가진 품의는 그 표가 곧 한 워크스페이스의 예산이라, 두 곳에 걸면 같은 예산이
+   * 두 사업에서 각각 자기 것으로 집계된다(서버도 app.check_approval_program_link_rules로
+   * 같은 규칙을 강제한다). 예산과 무관한 일반 결재는 종전대로 여러 곳에 건다 — 좁히면
+   * "이 결재는 A·B 공동 건"이라는 사실을 적을 자리가 사라진다.
+   */
+  single?: boolean
 }
 
 /**
@@ -46,7 +55,7 @@ interface Props {
  * 고른 명단은 문서가 저장될 때 한 번에 원장에 반영된다(useSyncProgramLinks) — 여기서 즉시
  * 저장하면 아직 존재하지 않는(또는 결국 버려질) 기안이 사업에 걸린 것으로 읽힌다.
  */
-export function ApprovalProgramField({ value, onChange }: Props) {
+export function ApprovalProgramField({ value, onChange, single = false }: Props) {
   const [picking, setPicking] = useState(false)
 
   return (
@@ -55,12 +64,16 @@ export function ApprovalProgramField({ value, onChange }: Props) {
       count={value.length}
       action={
         <Button variant="secondary" onClick={() => setPicking(true)}>
-          프로젝트 연동
+          {single ? '워크스페이스 선택' : '프로젝트 연동'}
         </Button>
       }
     >
       {value.length === 0 ? (
-        <p className={approvalText.empty}>연동된 프로젝트가 없습니다.</p>
+        <p className={approvalText.empty}>
+          {single
+            ? '예산을 배정할 워크스페이스를 한 곳 고르세요.'
+            : '연동된 프로젝트가 없습니다.'}
+        </p>
       ) : (
         // 상세 패널과 같은 한 줄짜리 행 규격. 다른 것은 행이 건너가는 버튼이 아니라 **떼는
         // 자리**라는 것뿐이라, 누르는 곳을 행 전체가 아니라 끝의 X 하나로 좁힌다 — 아직 문서를
@@ -92,7 +105,12 @@ export function ApprovalProgramField({ value, onChange }: Props) {
       {/* 열려 있는 동안에만 세운다 — 창을 닫으면 고르던 것이 함께 사라져야 하고(취소),
           다시 열면 지금의 명단에서 출발해야 한다. 마운트가 그 초기화를 대신한다. */}
       {picking && (
-        <ProgramPickerModal value={value} onChange={onChange} onClose={() => setPicking(false)} />
+        <ProgramPickerModal
+          value={value}
+          onChange={onChange}
+          single={single}
+          onClose={() => setPicking(false)}
+        />
       )}
     </PanelCard>
   )
@@ -104,9 +122,18 @@ export function ApprovalProgramField({ value, onChange }: Props) {
  * 창 안의 선택은 [확인]을 눌러야 문서에 반영된다 — 원장을 뒤지다 창을 닫았을 뿐인데 연동이
  * 바뀌어 있으면 안 된다(결재선 설정 창과 같은 규칙).
  */
-function ProgramPickerModal({ value, onChange, onClose }: Props & { onClose: () => void }) {
+function ProgramPickerModal({
+  value,
+  onChange,
+  single = false,
+  onClose,
+}: Props & { onClose: () => void }) {
   const [kind, setKind] = useState<MinuteLinkPickKind>(DEFAULT_PROGRAM_LINK_KIND)
   const [draft, setDraft] = useState<ProgramLinkDraft[]>(value)
+  // 한 곳만 고르는 창에서는 **나중에 고른 것이 이긴다** — 먼저 떼라고 요구하면 바꾸려는
+  // 사람이 두 번 눌러야 하고, 그 사이 아무것도 고르지 않은 상태가 생긴다.
+  const pick = (next: ProgramLinkDraft[]) =>
+    setDraft(single && next.length > 1 ? [next[next.length - 1]!] : next)
   // 후보 풀은 창이 서 있는 동안에만 읽는다(기안 화면 첫 로딩에 얹히지 않게).
   const { data: pool } = useMinuteLinkPool(kind)
 
@@ -147,7 +174,9 @@ function ProgramPickerModal({ value, onChange, onClose }: Props & { onClose: () 
     >
       <div className="space-y-3">
         <p className={approvalText.meta}>
-          이 결재가 어느 사업의 일인지 밝힙니다. 여러 건을 고를 수 있습니다.
+          {single
+            ? '이 품의의 예산이 어느 워크스페이스의 것인지 밝힙니다. 한 곳만 고를 수 있습니다.'
+            : '이 결재가 어느 프로젝트의 일인지 밝힙니다. 여러 건을 고를 수 있습니다.'}
         </p>
         <div className="flex items-start gap-2">
           <div className="w-32 shrink-0">
@@ -166,7 +195,7 @@ function ProgramPickerModal({ value, onChange, onClose }: Props & { onClose: () 
           <div className="min-w-0 flex-1">
             <TokenMultiSelect<ProgramLinkDraft>
               selected={draft}
-              onChange={setDraft}
+              onChange={pick}
               options={options}
               getKey={programRefKey}
               getLabel={(c) => `${PROGRAM_LINK_META[c.targetType].kindLabel} · ${c.label}`}

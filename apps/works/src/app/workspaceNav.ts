@@ -1,6 +1,11 @@
 import { hasWorkspaceRead } from '@/auth/authStore'
 import type { AuthUser } from '@/auth/types'
-import { WORKSPACE_SUBNAV, type SubNavGroup, type SubNavItem } from '@/config/navigation'
+import {
+  GUEST_ACCOUNT_READ_LABEL,
+  WORKSPACE_SUBNAV,
+  type SubNavGroup,
+  type SubNavItem,
+} from '@/config/navigation'
 import { WORKSPACES, type WorkspaceNavItem, type WorkspaceSection } from '@/config/workspaces'
 
 /**
@@ -21,6 +26,9 @@ export interface BoundNavGroup {
   /** 사이드바 스크롤 영역이 아니라 그 아래 고정 영역에 서는 그룹(`SubNavItem.pinBottom`). */
   pinned?: boolean
 }
+
+/** 외부 참여자를 실제로 다루는 실행 워크스페이스만 통합 GUEST 창구를 가까이 둔다. */
+const GUEST_ACCOUNT_WORKSPACES = new Set(['project', 'mna', 'fund'])
 
 /** 사용자가 읽을 수 있는 구획만 남긴다. */
 export function readableSections(
@@ -114,6 +122,9 @@ export function buildNavGroups(user: AuthUser | null, ws: WorkspaceNavItem): Bou
         }))
       : [
           {
+            // 여러 권한 구획을 한 스위처 항목에 모아도 첫 구획의 그룹명은 유지한다.
+            // DATABASE의 단일 원장 둘과 M&A의 딜 한 줄도 첫 항목부터 이름 있는 선 아래 선다.
+            group: subnavOf(first)[0]?.group,
             items: sections.flatMap((section) =>
               subnavOf(section).flatMap((g) =>
                 g.items.map((item) => ({ item, section })),
@@ -122,12 +133,33 @@ export function buildNavGroups(user: AuthUser | null, ws: WorkspaceNavItem): Bou
           },
         ]
 
-  const pinned = built.flatMap((g) => g.items.filter((b) => b.item.pinBottom))
-  if (!pinned.length) return built
-  const rest = built
+  // 통합 GUEST 원장은 스위처의 독립 워크스페이스가 아니다. 외부 참여자를 실제로 운영하는
+  // 사업부·M&A팀·투자실에서만 가까이 열 수 있도록 하단에 같은 절대 경로를 붙인다.
+  const withGuest: BoundNavGroup[] = user && GUEST_ACCOUNT_WORKSPACES.has(ws.id)
+    ? [
+        ...built,
+        {
+          items: [
+            {
+              item: {
+                label: GUEST_ACCOUNT_READ_LABEL,
+                path: '/guest-accounts',
+                glyphKey: 'guest-accounts',
+                pinBottom: true,
+              },
+              section: first,
+            },
+          ],
+        },
+      ]
+    : built
+
+  const pinned = withGuest.flatMap((g) => g.items.filter((b) => b.item.pinBottom))
+  if (!pinned.length) return withGuest
+  const rest = withGuest
     .map((g) => ({ ...g, items: g.items.filter((b) => !b.item.pinBottom) }))
     .filter((g) => g.items.length)
-  return [...rest, { items: pinned, pinned: true }]
+  return [...rest, { group: '외부계정', items: pinned, pinned: true }]
 }
 
 /** 탭 헬퍼(`firstTab`·`allTabs`·`pathTabOf`)에 넘길 순수 그룹 목록. */

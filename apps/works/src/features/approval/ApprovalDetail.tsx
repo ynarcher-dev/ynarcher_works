@@ -1,6 +1,7 @@
 import {
   BackButton,
   Badge,
+  Banner,
   Card,
   DetailTopBar,
   EmptyState,
@@ -107,11 +108,18 @@ export function ApprovalDetail({
   // 훅은 문서를 못 읽는 경우의 조기 반환보다 앞에 둔다 — 렌더마다 훅 순서가 같아야 한다.
   // 지출 내역의 '예산 줄' 값을 이름으로 펴려면 근거 품의의 예산표가 필요하다(기안 화면과
   // 같은 파생을 쓴다 — 고르는 자리와 읽는 자리가 다른 규칙으로 줄을 세우면 안 된다).
-  const { sourceDoc, refSource: budgetRefSource } = useBudgetSourceState(
-    doc?.budget_document_id ?? null,
-    '근거 품의를 읽을 수 없습니다.',
-  )
+  const {
+    sourceDoc,
+    usage: sourceUsage,
+    usageError: sourceUsageError,
+    refSource: budgetRefSource,
+  } = useBudgetSourceState(doc?.budget_document_id ?? null, '근거 품의를 읽을 수 없습니다.')
   const { data: ownUsage } = useBudgetStatus(doc?.id ?? null)
+  // 변경 품의의 예산표는 **남의 예산을 바꾸자는 안**이다. 지출은 대상 품의에 걸려 있으므로
+  // 자기 사용 현황(늘 0)을 붙이면 "아무도 안 썼으니 전액 쓸 수 있다"고 읽힌다. 대상 품의의
+  // 사용·결재 중을 붙여야 변경 후 예산이 이미 나간 돈에 못 미치는지가 그 자리에서 보인다.
+  const isRevise = doc?.form?.budget_link === 'REVISE'
+  const budgetUsage = isRevise ? sourceUsage : ownUsage
 
   const nameById = useMemo(() => {
     const m = new Map<string, string>()
@@ -417,9 +425,9 @@ export function ApprovalDetail({
                 values={doc.field_values ?? {}}
                 hideEmpty={Boolean(doc.legacy)}
                 documentContext={{ title: doc.title, docNo: doc.doc_no }}
-                // 예산표에는 이 품의에서 지금까지 나간 돈이 함께 선다 — 예산만 보이는 표는
-                // "얼마 남았나"라는 실제 물음에 답하지 못한다.
-                budgetUsage={ownUsage}
+                // 예산표에는 지금까지 나간 돈이 함께 선다 — 예산만 보이는 표는 "얼마 남았나"
+                // 라는 실제 물음에 답하지 못한다(변경 품의는 대상 품의의 사용 현황이 답한다).
+                budgetUsage={budgetUsage}
               />
             </BudgetRefContext.Provider>
             {/* 양식 도입 전 문서(구 body 단일 텍스트)도 그대로 읽힌다. */}
@@ -432,11 +440,18 @@ export function ApprovalDetail({
               단계별 분류·수량·금액이 일반 본문 필드에 딸린 표로 오해되지 않는다. */}
           {ownBudgetField && (
             <Card title={ownBudgetField.label}>
+              {isRevise && sourceUsageError && (
+                // 0으로 채우지 않는다 — 모르는 것을 숫자로 적으면 초과가 숨는다.
+                <Banner tone="danger" className="mb-2">
+                  변경 대상 품의의 사용 현황을 읽지 못했습니다. 아래 표의 사용·남음 칸은 서지
+                  않습니다.
+                </Banner>
+              )}
               <ApprovalFieldsView
                 fields={[ownBudgetField]}
                 values={doc.field_values ?? {}}
                 hideSectionLabels
-                budgetUsage={ownUsage}
+                budgetUsage={budgetUsage}
               />
             </Card>
           )}
@@ -445,10 +460,18 @@ export function ApprovalDetail({
               예산표를 가진 문서, 곧 품의서에만 선다 — 지출결의서에는 자기 예산이 없다. */}
           {ownBudgetField && (
             <BudgetSummaryCard
-              documentId={doc.id}
+              // 변경 품의에서는 이력도 대상 품의의 것이다(이 문서는 아직 이력이 없다).
+              documentId={isRevise ? (doc.budget_document_id ?? doc.id) : doc.id}
               budgetTotal={ownBudgetTotal}
-              usage={ownUsage}
+              usage={budgetUsage}
               nameOf={nameOf}
+              title={isRevise ? '변경 후 예산 현황(대상 품의 기준)' : undefined}
+              help={
+                isRevise
+                  ? '사용·결재 중 금액은 변경 대상 품의에 이미 걸린 지출입니다. 사용 가능액이 음수이면 변경 후 예산이 이미 나간 돈에 못 미친다는 뜻이며, 상신은 막지 않습니다.'
+                  : undefined
+              }
+              totalLabel={isRevise ? '변경 후 예산' : undefined}
             />
           )}
 

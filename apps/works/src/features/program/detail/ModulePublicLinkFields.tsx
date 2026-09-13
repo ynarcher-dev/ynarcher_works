@@ -3,6 +3,7 @@ import { publicModuleUrl, type PublicLinkStatus } from '@/features/program/publi
 import type { PublicLinkForm } from '@/features/program/detail/publicLinkForm'
 import { localToIso } from '@/features/program/detail/publicLinkTime'
 import { effectiveLinkWindow, windowReadback } from '@/features/program/detail/publicLinkWindow'
+import { useProgramWorkspace } from '@/features/program/workspace'
 
 const STATUS_OPTIONS: { value: PublicLinkStatus; label: string }[] = [
   { value: 'OPEN', label: '공개중' },
@@ -36,6 +37,7 @@ export function ModulePublicLinkFields({
   moduleStartDate?: string
   moduleEndDate?: string
 }) {
+  const { entityNoun } = useProgramWorkspace()
   const toast = useToast()
   if (!form.available) return null
 
@@ -82,7 +84,7 @@ export function ModulePublicLinkFields({
         label="링크 공유"
         hint={
           '로그인 없이 이 메뉴 하나만 볼 수 있는 주소를 만듭니다.\n' +
-          '같은 사업의 다른 메뉴·명부·내부 메모는 이 주소로 보이지 않습니다.\n' +
+          `같은 ${entityNoun}의 다른 메뉴·명부·내부 메모는 이 주소로 보이지 않습니다.\n` +
           '주소를 아는 사람은 누구나 열 수 있으므로, 개인정보가 든 자료는 올리지 마십시오.'
         }
       >

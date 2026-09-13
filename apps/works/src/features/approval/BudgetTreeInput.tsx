@@ -16,18 +16,27 @@ import {
   canMoveBudgetEntry,
   moveBudgetEntry,
   removeBudgetEntry,
-  setCell,
+  setBudgetCellWithVat,
   setLevel,
   setLevelCount,
   setName,
 } from '@/features/approval/budgetEdit'
 import {
+  amountKeys,
   budgetAmountColumn,
+  budgetAmountFormula,
+  hasVatColumns,
   isNumericColumn,
   type FormColumn,
   type FormField,
 } from '@/features/approval/fields'
 import { formatMoney, toNumber } from '@/features/approval/numeric'
+import {
+  VAT_KINDS,
+  VAT_KIND_LABEL,
+  readAmounts,
+  validateAmounts,
+} from '@/features/approval/vat'
 
 interface Props {
   field: FormField
@@ -49,10 +58,12 @@ function numericText(column: FormColumn, raw: string): string {
 export function BudgetTreeInput({ field, value, onChange }: Props) {
   const columns = field.columns ?? []
   const amountColumn = budgetAmountColumn(field)
+  const formula = budgetAmountFormula(field)
   const amountColumnIndex = amountColumn
     ? columns.findIndex((column) => column.key === amountColumn.key)
     : -1
   const summaryColumnIndex = amountColumnIndex >= 0 ? amountColumnIndex : columns.length
+  const keys = amountKeys(field)
   const tree = asBudgetTree(value)
   const groups = budgetGridGroups(tree)
   const gridRows = groups.flatMap((group) => group.rows)
@@ -61,6 +72,18 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
   const levelCount = Math.max(1, value.levels.length)
   const levels = value.levels.length > 0 ? value.levels : ['1단계']
   const levelOptions = Array.from({ length: Math.max(5, levelCount) }, (_, i) => i + 1)
+
+  // 맨 아래 줄만 본다 — 위층 값은 합으로 파생하므로 스스로 어긋날 수 없다.
+  const issues =
+    !keys || !hasVatColumns(field)
+      ? []
+      : entries
+          .map((row) => {
+            const amounts = readAmounts(row.values, keys)
+            const message = validateAmounts(amounts, amounts.kind, true)
+            return message ? `${row.name || '이름 없는 항목'}: ${message}` : null
+          })
+          .filter((m): m is string => m !== null)
 
   const changeLevelCount = (next: number) => {
     if (next < levelCount) {
@@ -97,7 +120,7 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
 
         <div className="space-y-1">
           <span className={tableText.head}>단계별 이름</span>
-          <div className="overflow-x-auto pb-1">
+          <div className="relative min-w-0 max-w-full overflow-x-auto pb-1">
             <div className="flex min-w-max flex-nowrap items-center gap-2">
               {levels.slice(0, levelCount).map((label, level) => (
                 <div key={level} className="w-28 shrink-0">
@@ -116,7 +139,7 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-radius-md border border-gray-200">
+      <div className="relative min-w-0 max-w-full overflow-x-auto rounded-radius-md border border-gray-200">
         <table className="w-full min-w-[56rem] border-collapse">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-25">
@@ -195,24 +218,52 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
                           ) : null,
                         )}
 
-                        {columns.map((column) => (
-                          <td key={column.key} className="px-2 py-1">
-                            <Input
-                              density="table"
-                              type={column.type === 'DATE' ? 'date' : 'text'}
-                              inputMode={isNumericColumn(column.type) ? 'numeric' : undefined}
-                              className={cn(
-                                isNumericColumn(column.type) && 'text-right tabular-nums',
+                        {columns.map((column) => {
+                          const setCell = (next: string) =>
+                            onChange(
+                              setBudgetCellWithVat(
+                                tree,
+                                gridRow.leafIndex,
+                                column.key,
+                                next,
+                                formula,
+                                keys,
+                              ),
+                            )
+                          return (
+                            <td key={column.key} className="px-2 py-1">
+                              {column.type === 'VAT_KIND' ? (
+                                <Select
+                                  density="table"
+                                  aria-label={column.label}
+                                  value={gridRow.row.values[column.key] ?? ''}
+                                  onChange={(e) => setCell(e.target.value)}
+                                >
+                                  <option value="">선택</option>
+                                  {VAT_KINDS.map((k) => (
+                                    <option key={k} value={k}>
+                                      {VAT_KIND_LABEL[k]}
+                                    </option>
+                                  ))}
+                                </Select>
+                              ) : (
+                                <Input
+                                  density="table"
+                                  type={column.type === 'DATE' ? 'date' : 'text'}
+                                  inputMode={isNumericColumn(column.type) ? 'numeric' : undefined}
+                                  placeholder={
+                                    formula?.amountKey === column.key ? '수량 × 단가' : undefined
+                                  }
+                                  className={cn(
+                                    isNumericColumn(column.type) && 'text-right tabular-nums',
+                                  )}
+                                  value={gridRow.row.values[column.key] ?? ''}
+                                  onChange={(e) => setCell(e.target.value)}
+                                />
                               )}
-                              value={gridRow.row.values[column.key] ?? ''}
-                              onChange={(e) =>
-                                onChange(
-                                  setCell(tree, gridRow.leafIndex, column.key, e.target.value),
-                                )
-                              }
-                            />
-                          </td>
-                        ))}
+                            </td>
+                          )
+                        })}
 
                         <td className="px-2 py-1">
                           <BudgetRowActions
@@ -312,6 +363,14 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
           </tbody>
         </table>
       </div>
+
+      {issues.length > 0 && (
+        <ul className={cn(tableText.body, 'text-danger')}>
+          {issues.map((m) => (
+            <li key={m}>{m}</li>
+          ))}
+        </ul>
+      )}
 
       {!amountColumn && (
         <p className={tableText.empty}>

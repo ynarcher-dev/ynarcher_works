@@ -8,6 +8,7 @@ import {
   type Column,
 } from '@ynarcher/ui'
 import type { ReactNode } from 'react'
+import { useGuestHost } from '@/features/guest/host'
 import type { PersonField } from '@/features/program/participantPerson'
 import {
   PARTICIPANT_PERSONAS,
@@ -51,6 +52,7 @@ export function RosterPickPanes({
   busy: boolean
   footer?: ReactNode
 }) {
+  const { entityNoun } = useGuestHost()
   const spec = PARTICIPANT_PERSONAS[master]
 
   return (
@@ -74,7 +76,7 @@ export function RosterPickPanes({
         ),
       }}
       right={{
-        title: '이 사업 명단',
+        title: `이 ${entityNoun} 명단`,
         count: pick.right.length,
         children: (
           <div className="space-y-2">

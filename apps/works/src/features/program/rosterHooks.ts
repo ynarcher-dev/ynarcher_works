@@ -46,6 +46,8 @@ export interface RosterRow {
    * 빈 화면 대신 오류를 말한다 — 못 읽은 것을 '내려갔다'로 적으면 화면이 거짓을 말한다.
    */
   retired: boolean
+  /** 이 참가 사실을 가리키는 GUEST 명부 행이 있는가. 있으면 GUEST 연결을 먼저 거둬야 한다. */
+  hasGuestLink: boolean
   createdAt: string
 }
 
@@ -99,16 +101,37 @@ export function useProgramRoster(programId: string | undefined) {
     queryKey: [config.key, 'roster', programId],
     enabled: Boolean(programId),
     queryFn: async (): Promise<RosterRow[]> => {
-      const { data, error } = await supabase
-        .from(SHARED_TABLES.participantEntries)
-        .select(ENTRY_COLS)
-        .eq('entity_key', config.entityKey)
-        .eq('program_id', programId)
-        .is('deleted_at', null)
-        .order('created_at', { ascending: true })
+      const [entriesResult, guestLinksResult] = await Promise.all([
+        supabase
+          .from(SHARED_TABLES.participantEntries)
+          .select(ENTRY_COLS)
+          .eq('entity_key', config.entityKey)
+          .eq('program_id', programId)
+          .is('deleted_at', null)
+          .order('created_at', { ascending: true }),
+        // 두 표는 soft reference라 FK embed가 없다. 같은 사업의 연결 키만 읽어 클라이언트에서
+        // 합성한다. 이 조회가 실패하면 삭제 가능 여부를 거짓으로 만들지 않고 목록 전체를 막는다.
+        supabase
+          .from(SHARED_TABLES.participants)
+          .select('master_table, master_id')
+          .eq('entity_key', config.entityKey)
+          .eq('program_id', programId)
+          .not('master_table', 'is', null)
+          .not('master_id', 'is', null),
+      ])
+      const { data, error } = entriesResult
       // 조회 실패를 삼키지 않는다 — 삼키면 "권한이 없다"와 "명단이 비었다"가 같은 화면이 된다.
       if (error) throw error
+      if (guestLinksResult.error) throw guestLinksResult.error
       const rows = (data ?? []) as unknown as RawEntry[]
+      const guestLinks = new Set(
+        ((guestLinksResult.data ?? []) as {
+          master_table: string | null
+          master_id: string | null
+        }[]).flatMap((r) =>
+          r.master_table && r.master_id ? [`${r.master_table}:${r.master_id}`] : [],
+        ),
+      )
 
       const facts = await loadLedgerFacts(rows)
 
@@ -124,6 +147,7 @@ export function useProgramRoster(programId: string | undefined) {
           email: master?.email ?? null,
           phone: master?.phone ?? null,
           retired: master?.retired ?? false,
+          hasGuestLink: guestLinks.has(`${r.master_table}:${r.master_id}`),
           createdAt: r.created_at,
         }
       })

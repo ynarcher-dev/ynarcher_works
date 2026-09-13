@@ -8,8 +8,9 @@ select is(
   '구간형 KPI는 열린 상단 구간 점수를 계산한다'
 );
 
+-- TARGET_RATE의 입력은 실적/목표를 백분율로 환산한 값이다(app.kpi_score: actual/target*100).
 select is(
-  app.kpi_score('BAND', '{"bands":[{"min":1,"max":1.2,"score":7}]}'::jsonb, 'TARGET_RATE', 100, 110, null, null),
+  app.kpi_score('BAND', '{"bands":[{"min":100,"max":120,"score":7}]}'::jsonb, 'TARGET_RATE', 100, 110, null, null),
   7::numeric,
   '목표 대비 KPI는 실적/목표 비율로 계산한다'
 );

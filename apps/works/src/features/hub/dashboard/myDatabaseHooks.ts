@@ -41,8 +41,8 @@ export const LEDGERS: Omit<LedgerStat, 'mine' | 'total'>[] = [
   // 국내·글로벌 두 줄이 2026-09-04 원장 통합으로 한 줄이 되었다. 지역은 그 목록의 필터
   // 축이므로 카드에서 두 줄로 갈라 놓으면 눌러서 도착한 화면과 건수가 어긋난다.
   { key: 'networks', label: '네트워크', workspace: 'networks', path: '/networks?scope=mine' },
-  { key: 'ma_seller', label: 'M&A SELLER', workspace: 'mna', path: '/mna/sellers' },
-  { key: 'ma_buyer', label: 'M&A BUYER', workspace: 'mna', path: '/mna/buyers' },
+  { key: 'ma_seller', label: '매도자 명단', workspace: 'mna', path: '/mna/sellers' },
+  { key: 'ma_buyer', label: '매수자 명단', workspace: 'mna', path: '/mna/buyers' },
 ]
 
 /**

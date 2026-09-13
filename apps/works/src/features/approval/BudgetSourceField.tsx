@@ -21,9 +21,16 @@ interface Props {
 function Row({ doc, onPick }: { doc: BudgetSourceDoc; onPick: () => void }) {
   return (
     <tr className="border-b border-gray-100 last:border-b-0">
-      <td className={cn('px-3 py-1.5 tabular-nums', tableText.body)}>{doc.docNo ?? '-'}</td>
-      <td className={cn('px-3 py-1.5', tableText.body)}>{doc.title}</td>
-      <td className={cn('px-3 py-1.5 text-right tabular-nums', tableText.body)}>
+      <td className={cn('whitespace-nowrap px-3 py-1.5 tabular-nums', tableText.body)}>
+        {doc.docNo ?? '-'}
+      </td>
+      <td className={cn('px-3 py-1.5', tableText.body)}>
+        {/* 띄어쓰기 없는 긴 제목은 한 낱말이라 셀의 최소 폭이 제목 전체가 된다 — 여기서 묶는다. */}
+        <div className="min-w-[8rem] max-w-[24rem] break-all" title={doc.title}>
+          {doc.title}
+        </div>
+      </td>
+      <td className={cn('whitespace-nowrap px-3 py-1.5 text-right tabular-nums', tableText.body)}>
         {formatMoney(doc.amount)}
       </td>
       <td className="px-3 py-1.5 text-right">
@@ -55,7 +62,7 @@ export function BudgetSourceField({
 }: Props) {
   const [open, setOpen] = useState(false)
   const [keyword, setKeyword] = useState('')
-  const { data: docs, isLoading } = useBudgetSourceDocuments(formIds, keyword)
+  const { data: docs, isLoading, isError } = useBudgetSourceDocuments(formIds, keyword)
   const label = revise ? '변경 대상 품의' : '근거 품의'
 
   return (
@@ -102,7 +109,7 @@ export function BudgetSourceField({
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
           />
-          <div className="overflow-x-auto rounded-radius-md border border-gray-200">
+          <div className="relative min-w-0 max-w-full overflow-x-auto rounded-radius-md border border-gray-200">
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-25">
@@ -123,12 +130,29 @@ export function BudgetSourceField({
                     }}
                   />
                 ))}
-                {!isLoading && (docs ?? []).length === 0 && (
+                {/* 조회 중·실패를 '없음'으로 적지 않는다 — 권한 밖과 정말 없음이 섞인다. */}
+                {(docs ?? []).length === 0 && (isLoading || isError) && (
+                  <tr>
+                    <td
+                      colSpan={4}
+                      className={cn(
+                        'px-3 py-6 text-center',
+                        isError ? 'text-danger' : '',
+                        tableText.empty,
+                      )}
+                    >
+                      {isError
+                        ? '목록을 읽지 못했습니다. 새로고침 후 다시 시도해 주세요.'
+                        : '불러오는 중입니다…'}
+                    </td>
+                  </tr>
+                )}
+                {!isLoading && !isError && (docs ?? []).length === 0 && (
                   <tr>
                     <td colSpan={4} className={cn('px-3 py-6 text-center', tableText.empty)}>
                       {formIds.length === 0
                         ? '예산표를 가진 양식이 없습니다. ADMIN 결재 양식 관리에서 품의서 양식에 예산표를 추가하세요.'
-                        : '승인이 끝난 품의가 없습니다.'}
+                        : '조회 가능한 승인 품의가 없습니다.'}
                     </td>
                   </tr>
                 )}

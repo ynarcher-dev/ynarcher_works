@@ -49,7 +49,7 @@ export interface LandingContent {
 /** 신규 인스턴스의 기본 안내 섹션(레퍼런스 표준 4종). 운영자가 자유롭게 편집한다. */
 export const DEFAULT_GUIDE_SECTIONS: GuideSection[] = [
   { title: '모집 개요', body: '' },
-  { title: '모집/사업 일정', body: '' },
+  { title: '모집/프로젝트 일정', body: '' },
   { title: '지원 대상', body: '' },
   { title: '제출 서류 안내', body: '' },
 ]
@@ -62,7 +62,7 @@ export function guideSectionsFromLanding(landing: LandingContent): GuideSection[
   if (landing.sections && landing.sections.length) return landing.sections.map((s) => ({ ...s }))
   const legacy: [keyof LandingContent, string][] = [
     ['overview', '모집 개요'],
-    ['schedule', '모집/사업 일정'],
+    ['schedule', '모집/프로젝트 일정'],
     ['target', '지원 대상'],
     ['doc_guide', '제출 서류 안내'],
   ]

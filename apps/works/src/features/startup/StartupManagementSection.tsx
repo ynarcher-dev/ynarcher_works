@@ -49,7 +49,7 @@ export function StartupManagementSection({
   invested: boolean
   managers: StartupManagerRow[]
 }) {
-  const ac = useParticipation(PROJECT_WORKSPACE, '참여 사업', startupId)
+  const ac = useParticipation(PROJECT_WORKSPACE, '참여 프로젝트', startupId)
   const mna = useParticipation(MNA_WORKSPACE, '참여 M&A', startupId)
 
   const cards = [ac, mna]

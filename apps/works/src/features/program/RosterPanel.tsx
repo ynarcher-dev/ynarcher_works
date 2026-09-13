@@ -57,6 +57,11 @@ export function RosterPanel({
   /** 이 탭의 자격만 남긴다 — 자격은 탭이 답하므로 표에 구분 열을 두지 않는다. */
   const personaRows = useMemo(() => rows.filter((r) => r.master_table === persona), [rows, persona])
   const filtered = useMemo(() => personaRows.filter((r) => matches(r, keyword)), [personaRows, keyword])
+  const selectedRows = useMemo(
+    () => personaRows.filter((r) => selected.includes(r.id)),
+    [personaRows, selected],
+  )
+  const guestLinkedCount = selectedRows.filter((r) => r.hasGuestLink).length
 
   const { pageItems, page, setPage } = usePaged(filtered, PAGE_SIZE)
   const columns = useMemo(() => rosterColumns(masked, persona), [masked, persona])
@@ -170,7 +175,11 @@ export function RosterPanel({
             <Button variant="ghost" onClick={() => setConfirmOpen(false)} disabled={remove.isPending}>
               취소
             </Button>
-            <Button variant="danger" onClick={runRemove} disabled={remove.isPending}>
+            <Button
+              variant="danger"
+              onClick={runRemove}
+              disabled={remove.isPending || guestLinkedCount > 0}
+            >
               {remove.isPending ? '삭제 중…' : '삭제'}
             </Button>
           </div>
@@ -180,6 +189,12 @@ export function RosterPanel({
           <b>{selected.length}건</b>을 {config.rosterLabel}에서 뺍니다. 원장(
           {spec.label})의 데이터는 지워지지 않으며, 같은 대상을 다시 담을 수 있습니다.
         </p>
+        {guestLinkedCount > 0 && (
+          <p className="mt-3 text-body-sm text-danger">
+            선택한 항목 중 <b>{guestLinkedCount}건</b>은 GUEST 명부에 연결되어 있어 지금 삭제할 수
+            없습니다. 먼저 와이앤아처 GUEST 설정에서 해당 계정 연결을 제거해 주세요.
+          </p>
+        )}
       </Modal>
     </>
   )

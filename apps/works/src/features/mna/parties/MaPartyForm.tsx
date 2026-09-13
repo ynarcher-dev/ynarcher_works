@@ -392,7 +392,7 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
                 label="기업명"
                 required
                 error={errors.name?.message}
-                hint="스타트업 DB에 있는 기업이면 돋보기로 찾아 연결하세요. 없으면 직접 입력합니다."
+                hint="스타트업 원장에 있는 기업이면 돋보기로 찾아 연결하세요. 없으면 직접 입력합니다."
                 as="div"
               >
                 {/* 돋보기는 이름을 대신 채워 주는 것이 아니라 원장의 행을 가리키는 일이다.
@@ -400,7 +400,7 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
                     때문이며, 그 규격은 화면이 아니라 공용 `Input`의 `action` 슬롯이 소유한다.
 
                     **연결된 동안 이 칸은 잠긴다**(2026-09-08 사용자 지정). 종전에는 고른 뒤에도
-                    고칠 수 있었는데, 그러면 바로 아래 줄의 `스타트업 DB 연결: ○○`와 칸의 글자가
+                    고칠 수 있었는데, 그러면 바로 아래 줄의 `스타트업 원장 연결: ○○`와 칸의 글자가
                     어긋나고 어느 쪽이 이 레코드의 이름인지 화면이 답하지 못한다. 잠그면 답은
                     언제나 원장이다.
 
@@ -411,7 +411,7 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
                   invalid={Boolean(errors.name)}
                   disabled={Boolean(link.startupId)}
                   action={<Search />}
-                  actionLabel="스타트업 DB에서 찾기"
+                  actionLabel="스타트업 원장에서 찾기"
                   onActionClick={() => link.setPicking(true)}
                   {...register('name', { required: '기업명은 필수입니다.' })}
                 />
@@ -421,7 +421,7 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
                   // 도움말과 크기·색이 갈리면 한 칸 안에서 캡션이 두 규격이 된다.
                   <p className={`mt-1.5 flex items-center gap-2 ${formText.hint}`}>
                     <span className="truncate">
-                      스타트업 DB 연결:{' '}
+                      스타트업 원장 연결:{' '}
                       <span className="text-gray-900">{link.startupName || '기업'}</span>
                     </span>
                     <TextAction onClick={link.clear}>연결 해제</TextAction>

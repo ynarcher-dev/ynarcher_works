@@ -177,7 +177,7 @@ export function ApprovalFormModal({
                 onChange={(e) => setBudgetLink(e.target.value as BudgetLink)}
               >
                 <option value="NONE">사용 안 함</option>
-                <option value="SPEND_REQUIRED">근거 품의 필수 (사업 지출결의서)</option>
+                <option value="SPEND_REQUIRED">근거 품의 필수 (프로젝트 지출결의서)</option>
                 <option value="SPEND_OPTIONAL">근거 품의 선택 (법인카드·인건비)</option>
                 <option value="REVISE">예산 변경 품의</option>
               </Select>

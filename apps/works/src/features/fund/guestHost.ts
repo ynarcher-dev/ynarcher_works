@@ -21,6 +21,7 @@ import type { Fund } from '@/features/fund/hooks'
 export const FUND_GUEST_HOST: GuestHostConfig = {
   key: 'fund',
   entityKey: 'fund',
+  entityNoun: 'FUND',
   // '사업개요'·'프로젝트 개요'와 같은 자리. 조합이 밖에 내놓는 소개문이다.
   overviewNoun: '조합 개요',
   // 명단을 부르는 이름은 그 명단이 실제로 사는 곳의 이름이어야 한다 — 담당자가 여는 탭도

@@ -239,8 +239,8 @@ interface ProgramSearchSpec {
 }
 
 const PROGRAM_SPECS: ProgramSearchSpec[] = [
-  { table: 'programs', workspace: '프로젝트', badge: '사업', detailBase: '/project', tone: 'info' },
-  { table: 'ma_programs', workspace: 'M&A', badge: '딜', detailBase: '/mna/deals', tone: 'warning' },
+  { table: 'programs', workspace: '프로젝트', badge: '프로젝트', detailBase: '/project', tone: 'info' },
+  { table: 'ma_programs', workspace: 'M&A', badge: 'M&A 프로젝트', detailBase: '/mna/deals', tone: 'warning' },
 ]
 
 interface ProgramRow {

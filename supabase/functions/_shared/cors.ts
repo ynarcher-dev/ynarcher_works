@@ -46,6 +46,10 @@ export function withCors(
 ): (req: Request) => Promise<Response> {
   return async (req: Request): Promise<Response> => {
     const cors = corsHeadersFor(req)
+    // preflight를 우회한 실제 요청도 같은 origin 경계를 통과해야 한다.
+    if (req.headers.get('origin') && Object.keys(cors).length === 0) {
+      return new Response('forbidden', { status: 403 })
+    }
     if (req.method === 'OPTIONS') {
       // 브라우저 preflight: 미허용 origin은 403(CORS 헤더 없음)으로 거부
       if (req.headers.get('origin') && Object.keys(cors).length === 0) {
@@ -59,6 +63,18 @@ export function withCors(
     for (const [k, v] of Object.entries(cors)) headers.set(k, v)
     return new Response(res.body, { status: res.status, headers })
   }
+}
+
+/**
+ * 회의 원본·전사처럼 Restricted 데이터를 다루는 브라우저 API는 운영 allowlist가 없으면
+ * 유예 모드로 열지 않는다. Origin이 없는 서버 간 호출과 로컬 개발만 예외다.
+ */
+export function requireStrictBrowserOrigin(req: Request): Response | null {
+  const origin = req.headers.get('origin')
+  if (!origin || LOCAL_ORIGIN.test(origin)) return null
+  const configured = Deno.env.get('ALLOWED_ORIGINS')?.trim()
+  if (configured) return null
+  return jsonResponse({ error: 'origin_not_configured', message: '운영 Origin 허용 목록이 설정되지 않았습니다.' }, 503)
 }
 
 export function jsonResponse(body: unknown, status = 200): Response {

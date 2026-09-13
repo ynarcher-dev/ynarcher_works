@@ -35,8 +35,22 @@ jobs:
       - name: 타입체크
         run: pnpm typecheck
 
+      # Edge Function 트리의 타입 점검(tsconfig.functions.json). 함수는 앱 빌드에
+      # 포함되지 않으므로 `pnpm typecheck`가 보지 않는다.
+      - name: 함수 타입체크(Edge)
+        run: pnpm typecheck:functions
+
       - name: 빌드
         run: pnpm build
 
       - name: 테스트
         run: pnpm test
+
+  # DB 회귀(마이그레이션 재생 + pgTAP)도 CI의 일부로 돌린다.
+  # 배포 게이트는 CI **실행 전체**의 결론을 보므로, 이 잡이 실패하면 배포도 막힌다.
+  # 워크플로 정의는 DB 담당이 소유한다(.github/workflows/db-tests.yml).
+  db-tests:
+    name: DB 회귀
+    uses: ./.github/workflows/db-tests.yml
+    permissions:
+      contents: read

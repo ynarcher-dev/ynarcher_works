@@ -29,11 +29,11 @@ const WORKSPACE_SUMMARIES: {
   roles: OperationRoleKey[]
 }[] = [
   {
-    key: 'project', label: '관리 사업', caption: '사업 운영', icon: Target,
+    key: 'project', label: '프로젝트', caption: '프로젝트 운영', icon: Target,
     tone: 'blue', roles: ['PM', 'MEMBER'],
   },
   {
-    key: 'mna', label: 'M&A 딜', caption: '딜 운영', icon: BriefcaseBusiness,
+    key: 'mna', label: 'M&A 프로젝트', caption: '프로젝트 운영', icon: BriefcaseBusiness,
     tone: 'purple', roles: ['PM', 'MEMBER'],
   },
   // 펀드는 사업 원장(features/program)이 아니지만 "내가 지금 무엇을 굴리고 있는가"라는
@@ -102,7 +102,7 @@ export function BusinessOperationsDashboard() {
   }
 
   if (isLoading) return <Skeleton className="h-80 rounded-radius-lg" />
-  if (isError) return <Card><EmptyState title="사업 운영 현황을 불러오지 못했습니다." description="잠시 후 다시 시도해주세요." /></Card>
+  if (isError) return <Card><EmptyState title="프로젝트 운영 현황을 불러오지 못했습니다." description="잠시 후 다시 시도해주세요." /></Card>
 
   return (
     <div className="flex h-full flex-col gap-4">

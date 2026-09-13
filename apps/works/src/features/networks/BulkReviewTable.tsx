@@ -15,7 +15,7 @@ import type { NetworkCategory } from '@/features/networks/config'
 import type { CountryTag } from '@/features/networks/countryOptions'
 import type { ExistingRef, ParsedRow } from '@/features/networks/bulkUpload'
 
-export type Decision = 'new' | 'merge' | 'skip'
+export type Decision = 'new' | 'merge' | 'merge_replace' | 'skip'
 
 export interface ReviewRow extends ParsedRow {
   /** 편집 가능한 저장 대상 구분(코드). 빈 값이면 아직 고르지 않은 상태라 업로드가 막힌다. */
@@ -44,7 +44,8 @@ export interface ReviewRow extends ParsedRow {
 function decisionOptions(hasMatch: boolean): { value: Decision; label: string }[] {
   return hasMatch
     ? [
-        { value: 'merge', label: '합치기' },
+        { value: 'merge', label: '합치기(빈칸 보강)' },
+        { value: 'merge_replace', label: '합치기(연락처 갱신)' },
         { value: 'skip', label: '미업로드' },
       ]
     : [
@@ -277,6 +278,10 @@ export function BulkReviewTable({
       render: (r) =>
         r.internal ? (
           <span className="text-caption text-gray-500">제외</span>
+        ) : r.match?.conflictNames ? (
+          <span className="text-caption text-danger" title={r.match.conflictNames.join(', ')}>
+            여러 인물 충돌 · 미업로드
+          </span>
         ) : r.match?.deleted && !revivedLines.includes(r.line) ? (
           <Button disabled={busy} onClick={() => onRevive(r.line)}>
             복구하기

@@ -26,9 +26,19 @@ type GuestTab = 'intro' | 'announcements' | 'qna' | 'accounts'
  * **첫 탭 이름은 워크스페이스가 답한다**(AC는 사업개요, M&A는 프로젝트 개요) — 같은 화면을
  * 부르는 말이 사이드바·목록과 어긋나면 둘이 다른 것인지 되묻게 된다.
  *
- * **계정생성 탭은 자격이 있을 때만 선다.** 나머지 셋은 세 워크스페이스가 모두 운용하므로
- * 버튼 자체는 언제나 서고, 자격이 없는 워크스페이스에서 탭 하나가 빠질 뿐이다 — 눌러도 빈
- * 화면이 뜨는 탭을 두지 않는다.
+ * **넷째 탭은 `GUEST 계정 추가`다**(2026-09-13에 `계정생성`에서 바꿈, 사용자 확정). 그 탭에서
+ * 계정을 **만들지 않기** 때문이다 — 만드는 곳은 ADMIN의 `GUEST 계정 관리` 하나이고, 여기서
+ * 하는 일은 이미 있는 계정을 이 사업에 잇고 거두는 것이다. 이름이 '생성'인 채로 두면 담당자가
+ * 없는 계정을 만들러 들어와 빈손으로 나간다.
+ *
+ * **탭은 자격이 있을 때만 선다.** 나머지 셋은 세 워크스페이스가 모두 운용하므로 버튼 자체는
+ * 언제나 서고, 자격이 없는 워크스페이스에서 탭 하나가 빠질 뿐이다.
+ *
+ * > [!NOTE]
+ * > 이 게이트는 자격이 명부의 축이던 때의 것이다. 원장 연결이 선택이 된 지금은 자격이 없는
+ * > 워크스페이스에도 계정을 들일 수 있으므로 근거가 약해졌으나, PROJECT·M&A·FUND 셋이 모두
+ * > 자격을 가지고 있어 **지금 이 게이트가 무엇을 가리는 일은 없다.** 넷째 워크스페이스가
+ * > 열리는 날 함께 판단한다(범위 밖이라 이번에 바꾸지 않는다).
  *
  * **폭이 꽉 찬 이유**는 아래 `+ 워크플로우 추가`와 같은 규격이기 때문이다 — 한 줄을 통째로
  * 차지하는 버튼은 이 앱에서 이미 '이 자리에서 새로 여는 일'을 뜻한다. 오른쪽 끝에 작게
@@ -50,7 +60,7 @@ export function GuestSettingsButton({
     { key: 'intro' as const, label: config.overviewNoun },
     { key: 'announcements' as const, label: '공지사항' },
     { key: 'qna' as const, label: 'Q&A' },
-    ...(personas.length > 0 ? [{ key: 'accounts' as const, label: '계정생성' }] : []),
+    ...(personas.length > 0 ? [{ key: 'accounts' as const, label: 'GUEST 계정 추가' }] : []),
   ]
 
   return (
@@ -87,7 +97,7 @@ export function GuestSettingsButton({
         {tab === 'intro' && <ProgramIntroPanel programId={host.id} />}
         {tab === 'announcements' && <ProgramAnnouncementsPanel programId={host.id} />}
         {tab === 'qna' && <ProgramQnaPanel programId={host.id} />}
-        {tab === 'accounts' && <GuestAccountsPanel host={host} personas={personas} />}
+        {tab === 'accounts' && <GuestAccountsPanel host={host} />}
       </Modal>
     </>
   )

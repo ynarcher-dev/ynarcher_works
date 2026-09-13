@@ -19,6 +19,7 @@ import {
   buildNavGroups,
   landingPath,
   plainGroups,
+  readableSections,
   resolveWorkspace,
   visibleWorkspaces,
   type BoundNavItem,
@@ -61,11 +62,29 @@ export function WorksLayout() {
   // 현재 스위처 항목 + 그 안의 권한 구획(경로 기준). 미매칭 시 첫 노출 항목으로 폴백.
   // 구획까지 함께 잡는 이유는 경로·글리프·활성 판정이 항목이 아니라 구획 단위이기 때문이다
   // (DATABASE 한 항목이 스타트업·네트워크 두 구획을 덮는다).
-  const { ws: currentWs, section: currentSection } = resolveWorkspace(
+  const resolved = resolveWorkspace(
     location.pathname,
     visible,
     user,
   )
+  // 공용 GUEST URL은 어느 워크스페이스 소유도 아니다. 사이드바에서 들어온 경우 history state에
+  // 출발 워크스페이스만 실어 같은 메뉴 맥락을 유지한다(URL과 데이터 원장은 계속 하나다).
+  const guestSourceId =
+    location.pathname.startsWith('/guest-accounts') &&
+    location.state &&
+    typeof location.state === 'object' &&
+    'workspaceNavId' in location.state
+      ? String(location.state.workspaceNavId)
+      : null
+  const guestSource =
+    location.pathname.startsWith('/guest-accounts')
+      ? (guestSourceId ? visible.find((ws) => ws.id === guestSourceId) : undefined) ??
+        visible.find((ws) => ['project', 'mna', 'fund'].includes(ws.id))
+      : undefined
+  const currentWs = guestSource ?? resolved.ws
+  const currentSection = guestSource
+    ? readableSections(user, guestSource)[0]
+    : resolved.section
 
   // 현재 항목의 세부 메뉴(줄마다 자기 구획이 묶여 있다) + 활성 섹션(?tab, 없으면 기본 첫 항목).
   const boundGroups = currentWs ? buildNavGroups(user, currentWs) : []
@@ -87,6 +106,15 @@ export function WorksLayout() {
   // 언제 활성인지를 이 값이 정한다 — 형제가 활성이면 루트는 물러나고, 아무도 갖지 않은
   // 탭이면(옛 주소 ?tab=mine 등) 루트가 활성으로 남는다.
   const tabOwned = activeTab ? allTabs(groups).has(activeTab) : false
+  const isItemPathActive = (path?: string) =>
+    Boolean(
+      path &&
+        (path === location.pathname ||
+          (path === '/guest-accounts' && location.pathname.startsWith(`${path}/`))),
+    )
+  const pathOwned = boundGroups.some((group) =>
+    group.items.some(({ item }) => isItemPathActive(item.path)),
+  )
 
   // 상단바 현재 위치 표시용 섹션명. 사이드바 트리에서 활성 탭의 라벨을 찾고,
   // 레지스트리에서 주입되는 게시판·자료실 상세 탭은 그 상위 1차 메뉴명으로 보완한다.
@@ -99,6 +127,7 @@ export function WorksLayout() {
     for (const g of boundGroups) {
       for (const { item, section } of g.items) {
         if (item.tab === activeTab) return item.label
+        if (isItemPathActive(item.path)) return item.label
         if (!item.tab && multiSection && section.path === currentSection?.path && !tabOwned) {
           return item.label
         }
@@ -120,7 +149,15 @@ export function WorksLayout() {
     disabled: !w.implemented,
   }))
 
-  const goToSection = (item: { tab?: string }, section: WorkspaceSection) => {
+  const goToSection = (item: SubNavItem, section: WorkspaceSection) => {
+    if (item.comingSoon) {
+      window.alert('준비중입니다.')
+      return
+    }
+    if (item.path) {
+      navigate(item.path, { state: { workspaceNavId: currentWs?.id } })
+      return
+    }
     navigate(item.tab ? `${section.path}?tab=${item.tab}` : section.path)
   }
 
@@ -158,7 +195,13 @@ export function WorksLayout() {
         // 키를 쓸 수 있으므로(M&A/PE의 딜·BUYER·SELLER가 모두 mna) 키로 견주면 그 셋이 늘
         // 함께 칠해진다. 경로는 구획마다 유일하고 `resolveWorkspace`도 그것으로 판정한다.
         active={
-          item.tab ? item.tab === activeTab : !tabOwned && section.path === currentSection?.path
+          item.comingSoon
+            ? false
+            : item.path
+            ? isItemPathActive(item.path)
+            : item.tab
+              ? item.tab === activeTab
+              : !tabOwned && !pathOwned && section.path === currentSection?.path
         }
         collapsed={sidebarCollapsed}
         onClick={() => goToSection(item, section)}
@@ -306,6 +349,7 @@ export function WorksLayout() {
       footer={
         pinnedGroup && (
           <div className="flex flex-col gap-1">
+            <SidebarDivider collapsed={sidebarCollapsed} label={pinnedGroup.group} />
             {pinnedGroup.items.map((bound) => (
               <Fragment key={bound.item.label}>{renderItem(bound)}</Fragment>
             ))}
@@ -317,10 +361,17 @@ export function WorksLayout() {
       <div className="flex flex-col gap-1">
         {bodyGroups.map((g, gi) => (
           <Fragment key={g.group ?? gi}>
-            {gi > 0 && <SidebarDivider collapsed={sidebarCollapsed} />}
+            {(gi > 0 || g.group) && (
+              <SidebarDivider collapsed={sidebarCollapsed} label={g.group} />
+            )}
             {g.items.map((bound) => (
               <Fragment key={bound.item.label}>
-                {bound.item.dividerBefore && <SidebarDivider collapsed={sidebarCollapsed} />}
+                {bound.item.dividerBefore && (
+                  <SidebarDivider
+                    collapsed={sidebarCollapsed}
+                    label={bound.item.dividerBefore}
+                  />
+                )}
                 {renderItem(bound)}
               </Fragment>
             ))}

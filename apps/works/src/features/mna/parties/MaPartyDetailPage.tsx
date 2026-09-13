@@ -5,7 +5,7 @@ import { DetailDeleteButton } from '@/components/DetailDeleteButton'
 import { MaPartyForm } from '@/features/mna/parties/MaPartyForm'
 import { MaPartyView } from '@/features/mna/parties/MaPartyView'
 import { MA_BUYER, MA_SELLER, type MaPartyConfig } from '@/features/mna/parties/config'
-import { useDeleteMaParty, useMaPartyRecord } from '@/features/mna/parties/hooks'
+import { useDeactivateMaParty, useMaPartyRecord } from '@/features/mna/parties/hooks'
 import { useAuthStore } from '@/auth/authStore'
 
 /**
@@ -18,12 +18,14 @@ function MaPartyDetailPage({ config }: { config: MaPartyConfig }) {
   const isNew = id === 'new'
   const [editing, setEditing] = useState(isNew)
   const { data: record, isLoading } = useMaPartyRecord(config, isNew ? undefined : id)
-  const remove = useDeleteMaParty(config)
+  const deactivate = useDeactivateMaParty(config)
   const authUser = useAuthStore((state) => state.user)
   const canEdit =
     Boolean(record) &&
     (authUser?.role === 'super_admin' || record?.created_by === authUser?.id)
-  const canDeactivate = Boolean(record) && record?.created_by === authUser?.id
+  const canDeactivate =
+    Boolean(record) &&
+    (authUser?.role === 'super_admin' || record?.created_by === authUser?.id)
 
   if (!isNew && isLoading) return <Spinner />
   if (!isNew && !record) {
@@ -45,7 +47,9 @@ function MaPartyDetailPage({ config }: { config: MaPartyConfig }) {
                 {canDeactivate && (
                   <DetailDeleteButton
                     name={record.name}
-                    onDelete={(reason) => remove.mutateAsync({ id: record.id, reason: reason ?? '' })}
+                    onDelete={(reason) =>
+                      deactivate.mutateAsync({ id: record.id, reason: reason ?? '' })
+                    }
                     onDeleted={() => navigate(config.basePath)}
                   />
                 )}

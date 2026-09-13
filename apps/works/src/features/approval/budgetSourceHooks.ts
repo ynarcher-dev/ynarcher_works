@@ -22,8 +22,12 @@ export function useBudgetSourceState(
   emptyHint: string,
 ) {
   const id = budgetDocumentId ?? null
-  const { data: sourceDoc } = useBudgetSourceDetail(id)
-  const { data: usage } = useBudgetStatus(id)
+  const { data: sourceDoc, isLoading: docLoading, isError: docError } = useBudgetSourceDetail(id)
+  const {
+    data: usage,
+    isLoading: usageLoading,
+    isError: usageError,
+  } = useBudgetStatus(id)
 
   const refSource = useMemo<BudgetRefSource>(() => {
     const field = sourceDoc ? budgetField(sourceDoc.fields) : null
@@ -38,9 +42,12 @@ export function useBudgetSourceState(
             )
           : [],
       usage: usage ?? new Map(),
+      // 근거 품의 자체를 못 읽으면 줄별 현황도 알 수 없다 — 둘을 한 사실로 합쳐 내려보낸다.
+      usageLoading: docLoading || usageLoading,
+      usageError: docError || usageError,
       emptyHint,
     }
-  }, [sourceDoc, usage, emptyHint])
+  }, [sourceDoc, usage, docLoading, docError, usageLoading, usageError, emptyHint])
 
-  return { sourceDoc, usage, refSource }
+  return { sourceDoc, usage, usageLoading, usageError, refSource }
 }

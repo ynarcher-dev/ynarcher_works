@@ -15,6 +15,7 @@ import {
 } from '@/features/startup/StartupFacetSummary'
 import {
   EMPTY_STARTUP_FILTERS,
+  useFundAdminStartupIds,
   useStartupPoolPage,
   type StartupPoolFilters as Filters,
 } from '@/features/startup/startupPoolHooks'
@@ -26,6 +27,9 @@ const PAGE_SIZE = 30
 
 /** 표가 비었을 때·토글에서 부르는 원장 단위 이름. */
 const ENTITY_NOUN = '스타트업'
+
+/** 로딩 중 자리를 메우는 빈 집합(매 렌더 새 Set을 만들지 않기 위해 모듈 상수로 둔다). */
+const EMPTY_ID_SET: ReadonlySet<string> = new Set<string>()
 
 interface StartupPoolTabProps {
   /** 'mine'은 담당자 또는 생성자가 나인 기업만, 'all'은 볼 수 있는 전부. */
@@ -47,6 +51,8 @@ export function StartupPoolTab({ scope, onScopeChange, userId }: StartupPoolTabP
   const navigate = useNavigate()
   const authUser = useAuthStore((s) => s.user)
   const canWrite = hasWorkspaceWrite(authUser, 'startup')
+  const { data: fundAdminIds } = useFundAdminStartupIds(authUser?.id)
+  const fundAdminStartupIds = fundAdminIds ?? EMPTY_ID_SET
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(0)
   const [selected, setSelected] = useState<string[]>([])
@@ -88,11 +94,14 @@ export function StartupPoolTab({ scope, onScopeChange, userId }: StartupPoolTabP
 
   useEffect(() => setSelected([]), [page])
 
+  // 투자기업의 관리 주체는 두 갈래다 — 딜메이커(담당자 원장) 또는 그 기업에 자사 투자를
+  // 집행한 펀드의 관리인력(20260913120000). 뒤엣것은 행에 실려 오지 않아 별도 집합으로 받는다.
   const canSelect = (row: StartupPoolRow) =>
     canWrite &&
     (!isInvested(row.management_status) ||
       authUser?.role === 'super_admin' ||
-      (row.managers ?? []).some((manager) => manager.user_id === authUser?.id))
+      (row.managers ?? []).some((manager) => manager.user_id === authUser?.id) ||
+      fundAdminStartupIds.has(row.id))
 
   return (
     <div className="space-y-3">

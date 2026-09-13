@@ -206,6 +206,39 @@ describe('hardKey', () => {
   })
 })
 
+describe('기업 원장의 단일 연락처 확정키', () => {
+  it('기업 원장은 이메일 하나만 같아도 중복으로 본다', () => {
+    const found = bestMatchFor(
+      { name: '서로 다른 표기', email: 'shared@example.com', phone: '' },
+      [candidate('c1', '기존 기업', 'shared@example.com', null)],
+      undefined,
+      true,
+    )
+    expect(found?.hitFields).toEqual(['email'])
+  })
+
+  it('기업 원장은 전화 하나만 같아도 파일 안 중복을 막는다', () => {
+    const found = findDuplicateProbes(
+      [
+        { name: 'A', email: '', phone: '010-1234-5678' },
+        { name: 'B', email: '', phone: '01012345678' },
+      ],
+      undefined,
+      true,
+    )
+    expect(found.get(1)).toBe(0)
+  })
+
+  it('네트워크 기본 규칙에서는 연락처 하나만으로 사람을 합치지 않는다', () => {
+    expect(
+      bestMatchFor(
+        { name: '후임자', email: 'team@example.com', phone: '' },
+        [candidate('c1', '퇴사자', 'team@example.com', null)],
+      ),
+    ).toBeNull()
+  })
+})
+
 describe('normEntityName', () => {
   it('법인 형태 표기와 공백을 걷는다 — 딜챗과 주식회사 딜챗이 같은 이름이다', () => {
     expect(normEntityName('주식회사 딜챗')).toBe('딜챗')

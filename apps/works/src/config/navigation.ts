@@ -1,9 +1,15 @@
 import type { WorkspaceKey } from '@/auth/types'
-import { ADMIN_TAG_CONFIGS } from '@/features/admin/tagConfig'
 
 /** 사이드바 세부 메뉴 항목. tab은 페이지 내부 섹션을 제어하는 `?tab=` 쿼리 값. */
 export interface SubNavItem {
   label: string
+  /**
+   * 화면과 주소를 아직 만들지 않은 메뉴 자리. 클릭하면 이동하지 않고 준비 중 안내만 띄운다.
+   * 실제 화면을 연결하는 날 이 값을 걷고 `tab` 또는 `path`를 지정한다.
+   */
+  comingSoon?: boolean
+  /** 워크스페이스 루트·탭이 아닌 공용 절대 경로. 하단 GUEST 계정 창구가 이 값을 쓴다. */
+  path?: string
   /** 미지정 시 워크스페이스 루트를 의미한다(대시보드 하나·목록 하나뿐인 워크스페이스). */
   tab?: string
   /**
@@ -34,8 +40,8 @@ export interface SubNavItem {
    * 세 줄이 같은 아이콘으로 선다. 그때만 줄이 자기 글리프를 직접 고른다.
    */
   glyphKey?: string
-  /** 이 항목 위에 같은 그룹 내 구분선을 그린다(그룹은 유지한 채 항목 사이만 시각적으로 나눌 때). */
-  dividerBefore?: boolean
+  /** 이 항목 위에 `그룹명 + 선` 구분자를 그린다. 값은 새로 시작하는 그룹명이다. */
+  dividerBefore?: string
   /**
    * 사이드바 맨 아래 고정 영역에 세운다(목록이 길어져 스크롤이 생겨도 자리를 지킨다).
    *
@@ -68,7 +74,7 @@ export interface SubNavGroup {
  * 화면의 이름이 달라진다. 범위(내 것/전부)는 이 이름에 담지 않는다: 2026-09-05에 메뉴 두
  * 줄을 한 줄로 합치면서 범위는 목록 안의 토글이 답하게 했다.
  *
- * 사업부는 `관리 사업`, M&A팀은 `M&A 딜`로 부른다. 두 워크스페이스가 같은 목록 화면을 쓰더라도
+ * 사업부는 `프로젝트`, M&A팀은 `M&A 프로젝트`로 부른다. 두 워크스페이스가 같은 목록 화면을 쓰더라도
  * 실제 조직에서 부르는 대상이 다르므로 메뉴 이름은 각 구획의 말을 따른다. 목록 안쪽 문구도
  * 각 config의 `entityNoun`이 같은 이름을 이어받는다.
  *
@@ -77,22 +83,24 @@ export interface SubNavGroup {
  * '어느 원장인가'를 줄 이름이 홀로 답해야 했기 때문이고, 스위처가 다시 넷으로 갈리면서 그 답이
  * 항목명으로 돌아왔다. 줄 이름이 그 답을 겸하면 워크스페이스마다 같은 자리의 이름이 달라진다.
  */
-export const PROGRAM_LIST_LABEL = '관리 사업'
-const MNA_PROGRAM_LIST_LABEL = 'M&A 딜'
-// 'DB' 꼬리를 되살렸다(2026-09-09 사용자 지정). 2026-09-06에 걷은 근거는 "두 줄이 DATABASE 한
-// 항목 아래 나란히 서니 항목명이 이미 그 말을 한다"였는데, 그 뒤 스위처가 갈리면서 각 줄은
-// **자기 항목 아래 한 줄**로 서게 됐다 — 대신 말해 주던 항목명이 사라진 것이다. 꼬리가 답하는
-// 것은 '이 자리가 무엇을 하는 곳인가'다: 원장을 보는 자리이지 그 대상으로 업무를 하는 화면이
-// 아니다(같은 스타트업을 다루는 자리가 프로젝트 명부에도 있다). M&A 두 줄의 이름은 여기가
-// 아니라 각자의 원장 설정(MaPartyConfig.listLabel)이 갖는다.
-export const NETWORKS_LIST_LABEL = '네트워크 DB'
-export const STARTUP_LIST_LABEL = '스타트업 DB'
+export const PROGRAM_LIST_LABEL = '프로젝트'
+const MNA_PROGRAM_LIST_LABEL = 'M&A 프로젝트'
+// 줄 이름에 `DB` 꼬리를 두지 않는다(2026-09-13 사용자 지정 — 스위처 항목을 `데이터베이스`로
+// 바꾸면서 함께 떼었다). 꼬리가 맡던 말은 '이 자리가 무엇을 하는 곳인가'였다: 원장을 보는
+// 자리이지 그 대상으로 업무를 하는 화면이 아니다(같은 스타트업을 다루는 자리가 프로젝트
+// 명부에도 있다). 지금은 그 답을 항목명이 하므로, 꼬리를 함께 달면 한 자리에서 같은 말을 두 번
+// 한다(`데이터베이스 > 스타트업 DB`). 2026-09-06에 걷었다가 2026-09-09에 되살린 이력이 있고,
+// 되살린 근거는 "스위처가 갈려 각 줄이 자기 항목 아래 홀로 선다"였는데 이 두 줄은 그사이 다시
+// 한 항목 아래로 돌아왔다. M&A 두 줄의 이름은 여기가 아니라 각자의 원장 설정
+// (MaPartyConfig.listLabel)이 갖는다.
+export const NETWORKS_LIST_LABEL = '네트워크'
+export const STARTUP_LIST_LABEL = '스타트업'
 export const FUND_LIST_LABEL = '운용펀드'
-/** 사업·조합별 GUEST 계정 목록의 읽기 전용 창구. */
-export const GUEST_ACCOUNT_READ_LABEL = 'GUEST 계정조회'
+/** 모든 사업·원장을 함께 보는 전사 GUEST 계정 관리 창구. */
+export const GUEST_ACCOUNT_READ_LABEL = 'GUEST 계정 관리'
 
 /**
- * 사업 워크스페이스 공용 사이드바 구성 — 구획에 따라 `관리 사업` 또는 `M&A 딜` 한 줄.
+ * 프로젝트 워크스페이스 공용 사이드바 구성 — 구획에 따라 `프로젝트` 또는 `M&A 프로젝트` 한 줄.
  *
  * 2026-08-03: 사업구분(카테고리)별 세분화 항목을 내렸다. 분류를 메뉴로 두면 그것이
  * '어디에 있는가'가 되어 상태·부서 같은 다른 축과 함께 걸 수 없고(공공 사업 중 진행중만 같은
@@ -100,47 +108,17 @@ export const GUEST_ACCOUNT_READ_LABEL = 'GUEST 계정조회'
  * 필터 축 하나이며, 미분류 건은 그 필터의 '미지정' 선택지가 답한다 — 종전에 '기타'가 맡던
  * 사각지대 방어는 `전체 ~`가 이미 구분 무관 전부를 보여주므로 필요 없다.
  */
-function programSubnav(options: { guestAccounts?: boolean; listLabel?: string } = {}): SubNavGroup[] {
+function programSubnav(
+  options: { groupLabel?: string; listLabel?: string } = {},
+): SubNavGroup[] {
   return [
     {
+      group: options.groupLabel ?? '프로젝트 관리',
       // 한 줄이다(2026-09-05). 범위(내 것/전체)는 메뉴가 아니라 목록 상단
       // 토글이 답한다 — 사업구분(2026-08-03)이 먼저 밟은 길과 같은 이유로, 범위를 메뉴로
       // 두면 그것이 '어디에 있는가'가 되어 상태·부서 같은 다른 축과 함께 걸 수 없다.
       items: [
         { label: options.listLabel ?? PROGRAM_LIST_LABEL },
-        // 계정생성 — 2026-09-08에 AC 하나에서 **워크스페이스마다 하나**로 늘었다(사용자 지정).
-        //
-        // 2026-09-07에는 AC에만 세웠고 근거는 "게스트가 실제로 걸려 있는 사업이 전부 AC라
-        // 창구를 어디에 둘지의 답이 하나뿐이다"였다. 외부인이 들어오는 자리를 AC·FUND·M&A
-        // 셋으로 넓히면서 그 답이 셋이 된다(3_9_2) — 창구는 **자기 원장을 가진 워크스페이스**
-        // 것이고, M&A가 세우는 계정의 출처는 ma_sellers·ma_buyers라 AC 창구에 설 수 없다.
-        //
-        // 이름은 **GUEST 계정조회**다. 사이드바 창구는 사업·조합에 연결된
-        // 계정을 조회하고, 실제 계정 생성은 각 프로젝트 상세에서 한다. 제품명은 2026-09-09에
-        // 사용자 지정으로 밖에서 부르는 이름이
-        // '와이앤아처 포털'에서 GUEST로 되돌아왔다). '발급'을 붙이지 않는 것은 그것이 창구가
-        // 하는 일이 아니기 때문이다.
-        //
-        // **사업 상세의 '와이앤아처 GUEST 설정'과 끝 낱말이 다르다.** 같게 적지 않는 이유는
-        // 두 자리가 다른 물음에 답하기 때문이다 — 이 줄은 사업을 가로질러 **발급된 계정과
-        // 참여 현황**을 찾는 자리고, 저 버튼은 **이 사업이 밖으로 무엇을 내보내는가**
-        // (개요·공지·Q&A·계정)다.
-        // 같은 이름을 두 곳에 걸면 어느 쪽을 눌러야 하는지가 이름으로 답해지지 않고, 결국
-        // 담당자가 둘 다 열어 봐야 안다.
-        //
-        // **보는 범위는 두 축으로 좁힌다.** `entityKey`는 참여 사업 칸이 어느 사업을 세는가,
-        // `guestMasterTables`는 어느 인격이 목록에 서는가다(그 값이 하위 원장 탭도 편다).
-        // 남의 원장 인격이 여기 서면 참여 사업 칸이 비어 있어도 "그 사람 계정이 있다"가
-        // 드러난다. 전사 축은 ADMIN '게스트 계정 관리'가 계속 소유한다: 정지·해제는 계정
-        // 자체에 걸리는 일이라 원장도 사업도 가려서는 안 된다.
-        //
-        // 사이드바 맨 아래 고정 영역에 선다(`pinBottom`) — 사업 목록 줄 옆에 나란히 두면
-        // 이 워크스페이스의 원장 하나로 읽힌다. 자리를 가르는 것은 `buildNavGroups`이므로
-        // `dividerBefore`는 두지 않는다(고정 영역이 이미 자기 경계선을 그어, 함께 쓰면 선이
-        // 두 줄 그어진다).
-        ...(options.guestAccounts
-          ? [{ label: GUEST_ACCOUNT_READ_LABEL, tab: 'guest-accounts', pinBottom: true }]
-          : []),
       ],
     },
   ]
@@ -157,6 +135,7 @@ function programSubnav(options: { guestAccounts?: boolean; listLabel?: string } 
 export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
   startup: [
     {
+      group: '데이터 원장',
       // 한 줄이다(2026-09-05 '내 업로드 DB'/'스타트업 DB' 통합). 범위는 목록 상단 토글이
       // 답하고, 구분(투자·보육·발굴·기타)은 2026-08-20에 이미 목록의 필터 축이 되었다 —
       // 분류든 범위든 메뉴로 두면 그것이 '어디에 있는가'가 되어 소재지·단계 같은 다른 축과
@@ -183,11 +162,13 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
   // (/networks/bulk) — 메뉴로 두면 어느 원장으로 들어가는 업로드인지가 이름에 드러나지 않는다.
   networks: [
     {
+      group: '데이터 원장',
       items: [{ label: NETWORKS_LIST_LABEL }],
     },
   ],
-  // PROJECT·M&A·FUND 셋 다 창구를 갖는다. 이유는 위 `programSubnav` 주석 — 외부인이
-  // 들어오는 자리가 셋이고, 창구는 자기 원장을 가진 워크스페이스의 것이다.
+  // GUEST 계정 창구는 특정 워크스페이스의 하위 탭이 아니라 사업부·M&A팀·투자실이 함께 쓰는
+  // 절대 경로다. 그래서 이 표에 복제하지 않고 `buildNavGroups`가 세 실행 워크스페이스의
+  // 사이드바 하단에 한 번씩 붙인다. URL과 계정 원장은 하나인 채 접근 동선만 업무 가까이에 둔다.
   //
   // FUND가 2026-09-10에 합류했다(사용자 지적 "INVESTMENT에는 사이드바 하단에 안 보여").
   // 종전 주석은 "명부에 해당하는 것이 없어 어디에도 연결할 수 없는 계정만 생긴다"였는데,
@@ -195,17 +176,30 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
   // 답하고**(`rosterSource.kind = 'table'`), 서버의 `guest_accounts_list`도 그때 조합을
   // 세도록 넓혀 두었다. 창구만 없어서, 조합에 게스트를 연 담당자가 그 계정을 되찾을 자리가
   // 없었다.
-  project: programSubnav({ guestAccounts: true }),
-  // FUND: 메뉴 한 줄이다(2026-09-05 '내 운용펀드'/'전체 운용펀드' 통합) — 범위는 목록 상단
-  // 토글이 답한다. 펀드 종류(AC·VC·PE)는 2026-08-20에 이미 목록의 '구분' 필터로 내려갔다:
+  project: programSubnav(),
+  // FUND: 실제 연결 화면은 운용펀드 한 줄이고, 투자심사 둘과 반기/온기보고는 후속 화면이
+  // 들어올 독립 메뉴 자리만 먼저 세운다. 운용펀드의 범위는 목록 상단 토글이 답한다.
+  // 펀드 종류(AC·VC·PE)는 2026-08-20에 이미 목록의 '구분' 필터로 내려갔다:
   // 분류를 메뉴로 두면 재원·성격·상태와 함께 걸 수 없고(VC 펀드 중 모태 재원만, 같은 질문에
   // 답할 수 없다), 구분이 비어 있는 펀드는 어느 메뉴에도 나타나지 않아 아예 보이지 않았다.
   fund: [
     {
+      group: '펀드 관리',
       items: [
         { label: FUND_LIST_LABEL },
-        // 이 창구가 발급하는 대상은 포트폴리오사(STARTUP 원장) 하나다 — 근거는 FUND_GUEST_HOST.
-        { label: GUEST_ACCOUNT_READ_LABEL, tab: 'guest-accounts', pinBottom: true },
+        {
+          label: '예비투자심사',
+          glyphKey: 'preliminary-investment-review',
+          comingSoon: true,
+          dividerBefore: '투자심사',
+        },
+        { label: '본투자심사', glyphKey: 'investment-review', comingSoon: true },
+        {
+          label: '반기/온기보고',
+          glyphKey: 'periodic-report',
+          comingSoon: true,
+          dividerBefore: '보고',
+        },
       ],
     },
   ],
@@ -215,13 +209,15 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
   // SELLER)은 여기 없고 각자의 구획이 직접 갖는다(`WorkspaceSection.subnav`) — 이 표의
   // 열쇠는 권한 키인데 세 구획의 키가 모두 `mna`라, 여기 적으면 세 자리에 같은 줄이 함께
   // 서서 어느 쪽을 눌러도 같은 곳으로 가는 메뉴가 아홉이 된다.
-  mna: programSubnav({ guestAccounts: true, listLabel: MNA_PROGRAM_LIST_LABEL }),
+  mna: programSubnav({ groupLabel: '딜 관리', listLabel: MNA_PROGRAM_LIST_LABEL }),
   admin: [
     {
-      group: '시스템 관리',
+      group: '권한·보안',
       items: [
         { label: '권한 제어 콘솔', tab: 'permissions' },
-        { label: '게시판 관리', tab: 'boards' },
+        // 화면별 개인정보 마스킹은 데이터 정리 기능이 아니라 누가 무엇을 볼지 정하는 노출 통제다.
+        { label: '민감정보 관리', tab: 'sensitive' },
+        { label: '게시판 관리', tab: 'boards', dividerBefore: '운영 설정' },
         { label: '회의실 관리', tab: 'rooms' },
         // 결재 양식: 전자결재가 무엇을 입력받을지(필드 정의) 정하는 곳. 문서 번호 약칭도 여기서 정한다.
         { label: '결재 양식 관리', tab: 'approval-forms' },
@@ -232,21 +228,17 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         // 게스트 계정 원장. 계정을 만드는 자리가 아니라(계정은 사업 담당자가 명부에서 로그인을
         // 열 때 생긴다) 전사에 걸친 계정을 세우고 재우는 자리다 — 사업의 문은 담당자가,
         // 계정 자체는 ADMIN이 소유한다. 인사 관리는 임직원만 답하므로 게스트는 여기로만 온다.
-        { label: '게스트 계정 관리', tab: 'guest-accounts' },
-        // 전사 기준정보 태그는 종류가 계속 늘어나므로 사이드바에 평탄 나열하지 않고
-        // 상위 한 줄로 두고 우측 플라이아웃으로 편다(게시판·자료실과 같은 조작감).
-        // 항목은 TAG_CONFIGS에서 파생되므로 태그를 추가할 때 이 파일은 손대지 않는다.
+        // 전사 기준정보 태그는 1차 사이드바에 종류를 펼치지 않는다. 이 한 줄로 들어간 뒤
+        // 게시판과 같은 콘텐츠 영역의 2차 사이드바에서 종류를 고른다.
         {
           label: '태그 관리',
-          groupIconKey: 'tags',
-          dividerBefore: true,
-          children: ADMIN_TAG_CONFIGS.map((c) => ({ label: c.menuLabel, tab: c.tab })),
+          tab: 'tags',
+          dividerBefore: '기준정보',
         },
-        { label: '민감정보 관리', tab: 'sensitive', dividerBefore: true },
-        { label: '중복 병합 검증', tab: 'merge' },
+        { label: '중복 병합 검증', tab: 'merge', dividerBefore: '데이터 관리' },
         // 생성자(created_by) 강제 교체. 권한 축이 아니라 표기·소속 정리용 관리자 오버라이드다.
         { label: '생성자 교체', tab: 'creators' },
-        { label: '감사 로그 모니터', tab: 'audit' },
+        { label: '감사 로그 모니터', tab: 'audit', dividerBefore: '감사·로그' },
         { label: '다운로드 사유 로그', tab: 'downloads' },
       ],
     },
@@ -255,27 +247,22 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
   // 신규 게시판은 모두 이곳에 생성·노출된다.
   office: [
     {
+      group: '일정',
       items: [
+        // 전사 일정은 공용 오피스의 기본 진입점이다.
+        { label: '전사 일정', tab: 'calendar' },
         // 전사 원장 조회 블록. 원장은 모두 MANAGEMENT가 갖고 OFFICE는 확인만 한다 —
-        // 사람(임직원)·자리(지사)·물건(자산)이 한 블록에 서는 축은 "회사에 무엇이 있나"이며,
-        // 자산 현황이 여기 있는 이유도 그것이 빌리는 화면이 아니라 조회면이기 때문이다
-        // (2026-09-06 이동 — 종전에는 공간·회의 블록 머리에 있어 예약하는 일로 읽혔다).
+        // 사람(임직원)·자리(지사)·물건(자산)이 한 블록에 서는 축은 "회사에 무엇이 있나"이다.
         // 임직원 정보 한 메뉴가 조직(목록)과 사람(상세)을 함께 답한다 — 구 '부서 정보'는 여기에 합쳐졌다.
-        { label: '임직원 정보', tab: 'managers' },
+        { label: '임직원 정보', tab: 'managers', dividerBefore: '회사정보' },
         { label: '지사 정보', tab: 'branches' },
         { label: '자산 현황', tab: 'outbound' },
         // 거래처 정보는 여기 두지 않는다(2026-09-06) — 원장·등록·조회를 MANAGEMENT '거래처 정보'
         // 한 자리에 모은다. 같은 원장을 두 자리에서 열면 담당자가 어디서 봐야 하는지를 매번
         // 고르게 되고, 조회면은 가린 값 때문에 원장과 다른 답을 하는 화면이 된다.
-        // 일정·공간·회의 블록 — 시간을 잡아 쓰는 일이 한 줄 순서로 선다(일정 → 회의실 → 회의록).
-        // 뒤는 아래 고정 게시판 그룹 경계가 끊는다.
-        //
-        // 전사 일정이 이 블록의 머리인 것은 그것이 **일정 원장(system_events)의 주원장 화면**이기
-        // 때문이다 — 상단바 캘린더 버튼의 우측 슬라이드오버는 같은 원장을 좁게 세운 창이고, 달
-        // 전체를 제목까지 펼쳐 읽고 고치는 일은 여기서 끝난다. 원장 조회 블록(임직원·지사·자산)에
-        // 두지 않는 것은 그 블록의 축이 '회사에 무엇이 있나'여서다: 일정은 가진 것이 아니라 잡는 것이다.
-        { label: '전사 일정', tab: 'calendar', dividerBefore: true },
-        { label: '회의실 예약', tab: 'rooms' },
+        // 공간·회의 블록. 부서별 주간 회의록은 개인의 소속 부서 맥락에서 작성하므로
+        // `내 오피스 > 부서업무`가 소유하고, 여기는 전사 공용 회의 기록만 둔다.
+        { label: '회의실 예약', tab: 'rooms', dividerBefore: '회의' },
         // 회의록은 STARTUP에서 이관했다.
         { label: '회의록 작성', tab: 'minutes' },
       ],
@@ -295,29 +282,27 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
   ],
   management: [
     {
-      group: '경영지원',
+      group: '경영관리',
       items: [
+        // 경영실은 열 개 기능을 감추지 않고 모두 노출하되, 경영요소가 바뀌는 경계에 이름을 붙인다.
+        // 기존 tab 키를 그대로 두어 북마크·상세 돌아가기 URL은 바뀌지 않는다.
         { label: '경영 현황', tab: 'dashboard' },
-        { label: '조직 관리', tab: 'departments', dividerBefore: true },
-        // 지사 원장(지사명·주소·전화번호·상주인력)의 단일 세팅 지점. 조직 관리와 같은 조직
-        // 축이라 MANAGEMENT가 소유하고, OFFICE '지사 정보'와 회의실 예약의 지사 탭이 조회한다.
-        { label: '지사 관리', tab: 'branches' },
-        { label: '자산 관리', tab: 'assets' },
-        // 직책·직급·호봉 태그는 ADMIN '태그 관리'로 이관했다(2026-08-03) — 쓰기 정책이
-        // is_admin() 하나뿐이라 여기 두면 MANAGEMENT 사용자는 볼 수만 있었다.
-        { label: '인사 관리', tab: 'hr', dividerBefore: true },
-        // 근태 원장(정책·상태·일별 기록)의 소유 자리. OFFICE 대시보드 '근무체크' 위젯은
+        { label: 'KPI 관리', tab: 'kpi' },
+        { label: '조직 관리', tab: 'departments', dividerBefore: '조직·인사' },
+        // 직책·직급·호봉 태그는 ADMIN '태그 관리'로 이관했다(2026-08-03) — 쓰기
+        // 정책이 is_admin() 하나뿐이라 여기 두면 MANAGEMENT 사용자는 볼 수만 있었다.
+        { label: '인사 관리', tab: 'hr' },
+        // 근태 원장(정책·상태·일별 기록)의 소유 자리. OFFICE 대시보드 '근무체크'는
         // 본인 기록을 찍기만 하고, 판독·정정은 여기서만 한다.
         { label: '근태 관리', tab: 'attendance' },
-        { label: '재무 관리', tab: 'finance', dividerBefore: true },
-        // 거래처 원장(코드·상호·구분·등록번호·계좌·증빙)의 단일 세팅 지점. 돈이 나가는 상대를
-        // 다루는 일이라 재무 블록에 둔다. OFFICE '거래처 정보'는 이 원장을 조회할 자리이며
-        // 노출 범위(계좌·등록번호 마스킹)를 정한 뒤 연결한다.
+        { label: '재무 관리', tab: 'finance', dividerBefore: '재무' },
+        // 거래처 원장은 돈이 나가는 상대와 계좌·증빙을 다루므로 재무가 소유한다.
         { label: '거래처 정보', tab: 'partners' },
         // 승인된 결재 문서의 금액을 항목·문서·월로 모은다(양식의 금액 필드가 원천).
-        // KPI 관리와 같은 성과·집계 블록에 둔다.
-        { label: 'KPI 관리', tab: 'kpi' },
         { label: '결재 금액 집계', tab: 'approval-stats' },
+        // 지사 원장은 OFFICE 지사 정보와 회의실 예약이 함께 읽는 회사 운영 인프라의 원장이다.
+        { label: '지사 관리', tab: 'branches', dividerBefore: '총무·인프라' },
+        { label: '자산 관리', tab: 'assets' },
       ],
     },
   ],

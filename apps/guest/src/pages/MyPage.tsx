@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Badge, Banner, Card, EmptyState, InfoField, InfoGrid, Spinner } from '@ynarcher/ui'
 import { guestAuth, type GuestMe } from '@/auth/guestAuthService'
-import { PERSONA_LABEL } from '@/auth/guestStore'
+import { contextKindLabel, PERSONA_LABEL } from '@/auth/guestStore'
 import { PasswordChangeCard } from '@/pages/PasswordChangeCard'
 import { PROGRAM_STATUS_LABEL, PROGRAM_STATUS_TONE } from '@/features/programMeta'
 import { formatDate } from '@/lib/format'
@@ -36,6 +36,7 @@ export function MyPage() {
     me.program.start_date || me.program.end_date
       ? `${formatDate(me.program.start_date)} ~ ${formatDate(me.program.end_date)}`
       : null
+  const entityNoun = contextKindLabel(me.program.entity_key) ?? '프로젝트'
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
@@ -52,7 +53,7 @@ export function MyPage() {
       </Card>
 
       <Card
-        title="참여 중인 사업"
+        title={`참여 중인 ${entityNoun}`}
         actions={
           // 라벨 표에 있는 운영 상태만 배지로 그린다 — 내부 상태 코드를 원문으로 흘리지 않는다.
           me.program.status && PROGRAM_STATUS_LABEL[me.program.status] && (
@@ -63,9 +64,9 @@ export function MyPage() {
         }
       >
         <InfoGrid columns={2}>
-          <InfoField label="사업명" value={me.program.title} />
-          <InfoField label="사업 코드" value={me.program.code} />
-          <InfoField label="사업 기간" value={period} />
+          <InfoField label={`${entityNoun}명`} value={me.program.title} />
+          <InfoField label={`${entityNoun} 코드`} value={me.program.code} />
+          <InfoField label={`${entityNoun} 기간`} value={period} />
           <InfoField label="주관기관" value={me.program.host_organization} />
           <InfoField
             label="참여 시작일"
@@ -74,15 +75,14 @@ export function MyPage() {
           />
         </InfoGrid>
         <Banner tone="info" className="mt-4">
-          사업은 로그인에 쓴 사업 코드에 고정됩니다. 다른 사업은 그 사업의 코드로 다시
-          로그인해 주세요.
+          참여 중인 다른 프로젝트/FUND가 있으면 사이드바 상단의 참여 전환기에서 이동할 수 있습니다.
         </Banner>
       </Card>
 
       <PasswordChangeCard />
 
       <Banner tone="info">
-        수집된 개인정보는 사업 종료 후 보존이 필요한 사항을 제외하고 파기됩니다.
+        수집된 개인정보는 해당 프로젝트/FUND 종료 후 보존이 필요한 사항을 제외하고 파기됩니다.
       </Banner>
     </div>
   )

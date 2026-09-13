@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  budgetAmountFormula,
   columnSum,
   emptyValues,
   formatMoney,
@@ -13,6 +14,7 @@ import {
   toNumber,
   validateSchema,
   withFieldType,
+  type FormColumn,
   type FormField,
 } from './fields'
 
@@ -260,5 +262,63 @@ describe('primaryAmountLabel / formatMoney', () => {
   it('금액은 천단위 쉼표와 원을 붙인다', () => {
     expect(formatMoney(41665525)).toBe('41,665,525원')
     expect(formatMoney(null)).toBe('-')
+  })
+})
+
+describe('예산표 금액 산식 — 어느 열을 곱할지 가리기', () => {
+  const budget = (columns: FormColumn[]): FormField => ({
+    key: 'budget',
+    label: '예산',
+    type: 'BUDGET_TREE',
+    columns,
+  })
+
+  it('수량 하나 · 단가 하나 · 대표 금액 하나면 산식이 선다', () => {
+    expect(
+      budgetAmountFormula(
+        budget([
+          { key: 'qty', label: '수량', type: 'NUMBER' },
+          { key: 'unitPrice', label: '단가', type: 'MONEY' },
+          { key: 'amount', label: '금액', type: 'MONEY', primaryAmount: true },
+          { key: 'note', label: '산출내역/비고', type: 'TEXT' },
+        ]),
+      ),
+    ).toEqual({ qtyKey: 'qty', unitPriceKey: 'unitPrice', amountKey: 'amount', money: true })
+  })
+
+  it('대표 금액 표시가 없으면 세우지 않는다 — 단가 자리에 곱이 적힐 수 있다', () => {
+    expect(
+      budgetAmountFormula(
+        budget([
+          { key: 'qty', label: '수량', type: 'NUMBER' },
+          { key: 'unitPrice', label: '단가', type: 'MONEY' },
+          { key: 'amount', label: '금액', type: 'MONEY' },
+        ]),
+      ),
+    ).toBeNull()
+  })
+
+  it('곱할 후보가 둘이면 세우지 않는다', () => {
+    expect(
+      budgetAmountFormula(
+        budget([
+          { key: 'qty', label: '수량', type: 'NUMBER' },
+          { key: 'months', label: '개월', type: 'NUMBER' },
+          { key: 'unitPrice', label: '단가', type: 'MONEY' },
+          { key: 'amount', label: '금액', type: 'MONEY', primaryAmount: true },
+        ]),
+      ),
+    ).toBeNull()
+  })
+
+  it('단가 자리가 없으면 세우지 않는다', () => {
+    expect(
+      budgetAmountFormula(
+        budget([
+          { key: 'qty', label: '수량', type: 'NUMBER' },
+          { key: 'amount', label: '금액', type: 'MONEY', primaryAmount: true },
+        ]),
+      ),
+    ).toBeNull()
   })
 })

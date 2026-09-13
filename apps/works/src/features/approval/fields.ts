@@ -12,16 +12,19 @@
 import {
   DEFAULT_BUDGET_LEVELS,
   budgetTotal,
+  leafRows,
   parseBudget,
+  type BudgetAmountFormula,
   type BudgetTreeValue,
 } from '@/features/approval/budget'
 import { emptyBudget } from '@/features/approval/budgetEdit'
 import { formatMoney, toNumber } from '@/features/approval/numeric'
+import { readAmounts, validateAmounts, type AmountKeys } from '@/features/approval/vat'
 
 // 수치 해석·표기는 numeric.ts가 소유한다. 여기서 다시 내보내는 것은 이 모듈을 통해 읽던
 // 화면들이 계속 그대로 동작하게 하기 위해서다(규칙은 한 곳에만 있다).
 export { formatMoney, formatRate, toNumber } from '@/features/approval/numeric'
-export type { BudgetRow, BudgetTreeValue } from '@/features/approval/budget'
+export type { BudgetAmountFormula, BudgetRow, BudgetTreeValue } from '@/features/approval/budget'
 
 export type FieldType =
   | 'TEXT'
@@ -52,6 +55,17 @@ export type ColumnType =
   | 'BUDGET_REF'
   /** 거래처 원장의 행을 가리킨다 — 은행·계좌·예금주가 그 행에서 따라온다. */
   | 'PARTNER_REF'
+  /** 과세 유형(과세·면세·영세율·과세대상 아님). 값과 선택지는 vat.ts가 갖는다. */
+  | 'VAT_KIND'
+
+/**
+ * 금액 열이 세 값 중 무엇인가.
+ *
+ * 타입(MONEY)만으로는 가릴 수 없어 따로 둔다 — 한 표에 금액 열이 셋이면 "어느 것이 합계액인가"를
+ * 자리로 가릴 수 없고, 자리로 가리면 양식 관리에서 열 순서를 바꾸는 순간 예산에서 깎이는 값이
+ * 달라진다. 역할이 없는 옛 양식은 종전 규칙(대표 금액 → 첫 금액 열)이 그대로 답한다.
+ */
+export type AmountRole = 'NET' | 'VAT' | 'GROSS'
 
 /** 표(TABLE) 한 열의 정의. TABLE 중첩은 허용하지 않는다. */
 export interface FormColumn {
@@ -61,6 +75,8 @@ export interface FormColumn {
   options?: string[]
   /** 이 열의 합계가 문서 대표 금액(amount)이 된다. 양식당 한 곳만 지정한다. */
   primaryAmount?: boolean
+  /** 공급가액·부가세·합계액 중 무엇인가(MONEY·NUMBER 한정). 없으면 옛 규칙을 따른다. */
+  role?: AmountRole
   /** 열 폭 힌트(표 안에서만 의미). */
   wide?: boolean
 }
@@ -143,6 +159,7 @@ export const COLUMN_TYPES: ColumnType[] = [
   'SELECT',
   'BUDGET_REF',
   'PARTNER_REF',
+  'VAT_KIND',
 ]
 
 export const COLUMN_TYPE_LABEL: Record<ColumnType, string> = {
@@ -153,6 +170,13 @@ export const COLUMN_TYPE_LABEL: Record<ColumnType, string> = {
   SELECT: '선택',
   BUDGET_REF: '예산 줄',
   PARTNER_REF: '거래처',
+  VAT_KIND: '과세 유형',
+}
+
+export const AMOUNT_ROLE_LABEL: Record<AmountRole, string> = {
+  NET: '공급가액',
+  VAT: '부가세',
+  GROSS: '합계액',
 }
 
 /**
@@ -227,8 +251,128 @@ export function withFieldType(field: FormField, type: FieldType): FormField {
  * 이 한 열이 차감·이익률·합계가 모두 보는 자리다.
  */
 export function budgetAmountColumn(field: FormField): FormColumn | null {
+  return amountColumns(field).gross
+}
+
+/**
+ * 한 표의 금액 칸들 — 서버 app.approval_amount_keys와 **같은 규칙**이다.
+ *
+ * 합계액은 `역할 GROSS → 대표 금액 열 → 첫 금액(MONEY) 열` 순으로 가린다. 역할을 맨 앞에 두는
+ * 이유는 부가세를 도입한 양식에서 대표 금액이 곧 합계액이지만, 그 둘이 어긋난 양식이 생기더라도
+ * **깎이는 값은 언제나 합계액**이어야 하기 때문이다.
+ *
+ * `looseGross`는 지출 내역 표가 쓰던 되돌림(첫 MONEY **또는** NUMBER 열)이다. 예산표와 서로
+ * 다른 되돌림을 갖고 있었으므로 둘 다 보존한다 — 하나로 합치면 옛 양식으로 쓰인 문서의 금액이
+ * 오늘 다르게 읽힌다.
+ */
+export function amountColumns(field: FormField): {
+  gross: FormColumn | null
+  looseGross: FormColumn | null
+  net: FormColumn | null
+  vat: FormColumn | null
+  kind: FormColumn | null
+  ref: FormColumn | null
+} {
   const columns = field.columns ?? []
-  return columns.find((c) => c.primaryAmount) ?? columns.find((c) => c.type === 'MONEY') ?? null
+  const numeric = columns.filter((c) => isNumericColumn(c.type))
+  const byRole = (role: AmountRole) => numeric.find((c) => c.role === role) ?? null
+  const primary = numeric.find((c) => c.primaryAmount) ?? null
+  const role = byRole('GROSS')
+  return {
+    gross: role ?? primary ?? numeric.find((c) => c.type === 'MONEY') ?? null,
+    looseGross: role ?? primary ?? numeric[0] ?? null,
+    net: byRole('NET'),
+    vat: byRole('VAT'),
+    kind: columns.find((c) => c.type === 'VAT_KIND') ?? null,
+    ref: columns.find((c) => c.type === 'BUDGET_REF') ?? null,
+  }
+}
+
+/** 이 표가 부가세를 쪼개 적는가 — 공급가액·부가세 칸이 둘 다 있을 때만 그렇다. */
+export function hasVatColumns(field: FormField): boolean {
+  const cols = amountColumns(field)
+  return cols.net !== null && cols.vat !== null
+}
+
+/**
+ * 금액 칸의 키 묶음 — 입력 화면이 부가세를 자동으로 셀 때 쓴다.
+ * 합계액 칸조차 없으면 null이다(금액을 담을 자리가 없는 표).
+ */
+export function amountKeys(field: FormField): AmountKeys | null {
+  const cols = amountColumns(field)
+  const gross = cols.gross ?? cols.looseGross
+  if (!gross) return null
+  return {
+    grossKey: gross.key,
+    netKey: cols.net?.key,
+    vatKey: cols.vat?.key,
+    kindKey: cols.kind?.key,
+  }
+}
+
+/**
+ * 부가세 칸 한 벌 세우기 — 양식 관리의 '부가세 칸 추가' 한 번이 하는 일.
+ *
+ * 지금 합계액 노릇을 하던 열에 `GROSS` 역할을 붙이고, 그 **앞에** 과세 유형·공급가액·부가세를
+ * 세운다. 금액 열이 아예 없으면 무엇이 합계액인지 말할 수 없으므로 아무것도 하지 않는다.
+ *
+ * 이 조작은 **새 양식 버전에만 닿는다**. 이미 쌓인 문서는 자기가 상신될 때의 버전 스키마로
+ * 읽히므로 여기서 칸을 늘려도 옛 문서의 금액이 다시 쪼개지거나 미입력으로 바뀌지 않는다.
+ */
+export function withVatColumns(columns: FormColumn[]): FormColumn[] {
+  const numeric = columns.filter((c) => isNumericColumn(c.type))
+  const gross =
+    numeric.find((c) => c.role === 'GROSS') ??
+    numeric.find((c) => c.primaryAmount) ??
+    numeric.find((c) => c.type === 'MONEY')
+  if (!gross) return columns
+
+  const taken = columns.map((c) => c.key)
+  const added: FormColumn[] = []
+  const add = (label: string, type: ColumnType, role?: AmountRole) => {
+    const key = nextKey('col', [...taken, ...added.map((c) => c.key)])
+    added.push({ key, label, type, role })
+  }
+  if (!columns.some((c) => c.type === 'VAT_KIND')) add('과세 유형', 'VAT_KIND')
+  if (!numeric.some((c) => c.role === 'NET')) add('공급가액', 'MONEY', 'NET')
+  if (!numeric.some((c) => c.role === 'VAT')) add('부가세', 'MONEY', 'VAT')
+
+  const out: FormColumn[] = []
+  for (const c of columns) {
+    if (c.key === gross.key) out.push(...added, { ...c, role: 'GROSS' })
+    else out.push(c)
+  }
+  return out
+}
+
+/**
+ * 예산표의 금액 산식 — `수량 × 단가 = 금액`. 세울 수 없으면 null(금액을 손으로 적는다).
+ *
+ * 열 이름은 양식마다 바뀌므로 이름이 아니라 **자리로 가린다**: 금액은 대표 금액으로 표시된
+ * 열이고, 수량은 나머지 중 유일한 숫자 열, 단가는 나머지 중 유일한 금액 열이다. 후보가 둘
+ * 이상이면 무엇을 곱해야 하는지 양식이 말해 주지 않는 것이므로 산식을 세우지 않는다.
+ *
+ * 대표 금액 표시가 없는 양식도 마찬가지로 세우지 않는다 — budgetAmountColumn의 되돌림(첫
+ * 금액 열)을 그대로 쓰면 단가 자리에 곱이 적힐 수 있다.
+ */
+export function budgetAmountFormula(field: FormField): BudgetAmountFormula | null {
+  const columns = field.columns ?? []
+  const amount = columns.find((c) => c.primaryAmount && isNumericColumn(c.type))
+  if (!amount) return null
+  // 공급가액·부가세 칸은 곱의 재료가 아니라 합계액에서 갈라 나온 값이므로 후보에서 뺀다.
+  // 빼지 않으면 금액 열 후보가 셋이 되어, 부가세를 쓰는 양식에서는 수량×단가가 통째로 꺼진다.
+  const rest = columns.filter(
+    (c) => c.key !== amount.key && c.role !== 'NET' && c.role !== 'VAT',
+  )
+  const qty = rest.filter((c) => c.type === 'NUMBER')
+  const unitPrice = rest.filter((c) => c.type === 'MONEY')
+  if (qty.length !== 1 || unitPrice.length !== 1) return null
+  return {
+    qtyKey: qty[0]!.key,
+    unitPriceKey: unitPrice[0]!.key,
+    amountKey: amount.key,
+    money: amount.type === 'MONEY',
+  }
 }
 
 /** 이 양식의 예산표 필드(있다면 하나). 품의서인지 아닌지를 이 값이 답한다. */
@@ -254,12 +398,19 @@ function parseColumn(raw: unknown): FormColumn | null {
   const key = str(raw.key)
   const type = str(raw.type) as ColumnType
   if (!key || !COLUMN_TYPES.includes(type)) return null
+  // 역할은 금액 칸에만 뜻이 있다. 다른 타입에 붙은 값은 조용히 버린다 — 남겨 두면
+  // 숫자가 아닌 칸이 합계액 후보로 서고, 그 자리에서 예산이 깎인다.
+  const role = str(raw.role).toUpperCase() as AmountRole
   return {
     key,
     label: str(raw.label) || key,
     type,
     options: Array.isArray(raw.options) ? raw.options.map(str).filter(Boolean) : undefined,
     primaryAmount: raw.primaryAmount === true,
+    role:
+      isNumericColumn(type) && (role === 'NET' || role === 'VAT' || role === 'GROSS')
+        ? role
+        : undefined,
     wide: raw.wide === true,
   }
 }
@@ -473,6 +624,36 @@ export function missingRequired(fields: FormField[], values: FieldValues): strin
   return missing
 }
 
+/**
+ * 상신 직전 금액 정합성 — 서버 app.assert_approval_amounts가 볼 것을 화면이 먼저 본다.
+ *
+ * 부가세 칸을 갖춘 표만 본다. 역할 열이 없는 옛 양식은 합계액 한 칸뿐이라 쪼개진 값을
+ * 요구할 수 없고, 요구하면 옛 문서를 고칠 길까지 함께 막힌다.
+ */
+export function amountIssues(fields: FormField[], values: FieldValues): string[] {
+  const out: string[] = []
+  for (const f of fields) {
+    if (f.type !== 'TABLE' && f.type !== 'BUDGET_TREE') continue
+    const keys = amountKeys(f)
+    if (!keys) continue
+    const split = hasVatColumns(f)
+    // 부가세를 쪼개 적지 않는 표라도 **예산과 맞물린 표**는 본다 — 서버가 보는 범위와 같다
+    // (예산표, 예산 줄을 가리키는 지출 표). 오타를 빈 행으로 흘려보내면 예산이 깎이지 않는다.
+    if (!split && !(f.type === 'BUDGET_TREE' || amountColumns(f).ref !== null)) continue
+    // 예산표는 맨 아래 줄만 값이 적히는 자리다(위층은 합으로 파생한다).
+    const rows: Record<string, string>[] =
+      f.type === 'TABLE'
+        ? tableRows(values, f.key)
+        : leafRows(budgetValue(values, f.key).rows).map((r) => r.values)
+    for (const [i, row] of rows.entries()) {
+      const amounts = readAmounts(row, keys)
+      const message = validateAmounts(amounts, amounts.kind, split)
+      if (message) out.push(`${f.label} ${i + 1}행: ${message}`)
+    }
+  }
+  return out
+}
+
 /** 저장 직전 정리 — 완전히 빈 표 행은 떨어낸다(빈 행이 집계에 섞이지 않게). */
 export function pruneValues(fields: FormField[], values: FieldValues): FieldValues {
   const out: FieldValues = {}
@@ -520,6 +701,25 @@ export function validateSchema(fields: FormField[]): string[] {
     // 예산표에는 금액을 담을 자리가 반드시 있어야 한다 — 없으면 차감도 이익률도 설 곳이 없다.
     if (f.type === 'BUDGET_TREE' && !budgetAmountColumn(f))
       errors.push(`예산표에 금액 열이 없습니다: ${f.label}`)
+
+    // 부가세 칸의 짝 맞추기. 셋 중 둘만 두면 화면은 세 값을 세지만 서버는 "모두 입력하라"고
+    // 돌려보내, 담당자가 채울 수 없는 칸을 요구받는다.
+    if (f.type === 'TABLE' || f.type === 'BUDGET_TREE') {
+      const roles = (f.columns ?? []).filter((c) => c.role)
+      for (const role of ['NET', 'VAT', 'GROSS'] as AmountRole[]) {
+        if (roles.filter((c) => c.role === role).length > 1)
+          errors.push(`${AMOUNT_ROLE_LABEL[role]} 열은 하나만 둘 수 있습니다: ${f.label}`)
+      }
+      if (roles.length > 0) {
+        const cols = amountColumns(f)
+        if (!cols.net || !cols.vat || !roles.some((c) => c.role === 'GROSS'))
+          errors.push(`부가세를 쓰는 표에는 공급가액·부가세·합계액 열이 모두 필요합니다: ${f.label}`)
+      }
+      if ((f.columns ?? []).filter((c) => c.type === 'VAT_KIND').length > 1)
+        errors.push(`과세 유형 열은 하나만 둘 수 있습니다: ${f.label}`)
+      if ((f.columns ?? []).some((c) => c.type === 'VAT_KIND') && roles.length === 0)
+        errors.push(`과세 유형 열만 두고 금액 역할을 지정하지 않았습니다: ${f.label}`)
+    }
   }
 
   // 예산표는 양식당 하나다. 둘이면 "이 품의의 예산"이 무엇인지 문서가 스스로 답하지 못하고,

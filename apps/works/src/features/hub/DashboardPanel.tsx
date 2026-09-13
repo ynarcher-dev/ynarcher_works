@@ -2,7 +2,7 @@ import { PersonalPanel } from '@/features/hub/dashboard/PersonalPanel'
 import { BusinessOperationsDashboard } from '@/features/hub/dashboard/BusinessOperationsDashboard'
 
 /**
- * 내 오피스 대시보드. 좌측은 내가 맡은 사업·M&A 딜과 데이터베이스를, 우측은 지금 처리할
+ * 내 오피스 대시보드. 좌측은 내가 맡은 사업·M&A 프로젝트와 데이터베이스를, 우측은 지금 처리할
  * 개인 업무를 보여 준다. 데스크톱에서는 본문 2/3 + 개인 패널 1/3, 작은 화면에서는 1열이다.
  */
 export function DashboardPanel() {

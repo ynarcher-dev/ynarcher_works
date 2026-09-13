@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { downsample, encodeWav, mergeChunks, TARGET_SAMPLE_RATE } from './wav'
 
-/** 녹음기 상태 머신. `checking`은 마이크 권한 요청 중, `ready`는 권한 확보 후 대기. */
+/** 기본 5분. 서버 제한(7분)보다 짧아 회전·업로드 지연에도 파일 상한을 안정적으로 지킨다. */
+export const RECORDING_SEGMENT_MS = 5 * 60 * 1000
+
 export type RecorderStatus =
   | 'idle'
   | 'checking'
@@ -11,29 +12,36 @@ export type RecorderStatus =
   | 'unsupported'
   | 'error'
 
+export interface CapturedSegment {
+  blob: Blob
+  durationMs: number
+  mimeType: string
+}
+
 export interface VoiceRecorder {
   status: RecorderStatus
   error: string | null
-  /** 녹음 경과(ms). 시각화·타이머 표시에 사용. */
   elapsedMs: number
-  /** 주파수 시각화용 분석 노드(권한 확보 후 채워짐). */
   analyserRef: React.MutableRefObject<AnalyserNode | null>
-  /** 마이크 권한 요청 + 오디오 그래프 구성(정상 동작 확인). */
   checkMic: () => Promise<boolean>
   start: () => Promise<void>
-  /** 녹음 종료. 수집한 오디오를 16kHz 모노 WAV Blob으로 반환(없으면 null). */
-  stop: () => Promise<Blob | null>
-  /** 스트림·컨텍스트를 해제하고 초기 상태로 되돌린다. */
+  /** 현재 구간을 닫고, 마지막 구간 저장 콜백까지 기다린다. */
+  stop: () => Promise<void>
   reset: () => void
 }
 
+function preferredMimeType(): string {
+  const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus']
+  return candidates.find((type) => MediaRecorder.isTypeSupported(type)) ?? ''
+}
+
 /**
- * 회의록 음성 녹음 훅. 마이크 권한 확인 → 실시간 주파수 분석(AnalyserNode) → PCM 캡처를
- * 하나의 상태 머신으로 묶는다. Gemini는 webm/opus를 받지 않으므로 MediaRecorder 대신
- * ScriptProcessor로 PCM을 모아 종료 시 16kHz 모노 WAV로 인코딩한다.
- * Web Audio 그래프와 스트림은 언마운트 시 확실히 해제한다.
+ * 마이크 스트림은 한 번만 열고 MediaRecorder만 5분마다 교체한다. 각 구간은 독립 재생 가능한
+ * 압축 파일이 되어 메모리에 장시간 PCM을 쌓지 않으며, 구간이 닫힐 때마다 즉시 저장할 수 있다.
  */
-export function useVoiceRecorder(): VoiceRecorder {
+export function useVoiceRecorder(
+  onSegment?: (segment: CapturedSegment) => Promise<void> | void,
+): VoiceRecorder {
   const [status, setStatus] = useState<RecorderStatus>('idle')
   const [error, setError] = useState<string | null>(null)
   const [elapsedMs, setElapsedMs] = useState(0)
@@ -41,33 +49,101 @@ export function useVoiceRecorder(): VoiceRecorder {
   const streamRef = useRef<MediaStream | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
-  const processorRef = useRef<ScriptProcessorNode | null>(null)
-  const chunksRef = useRef<Float32Array[]>([])
-  const capturingRef = useRef(false)
-  const timerRef = useRef<number | null>(null)
-  const startedAtRef = useRef(0)
+  const recorderRef = useRef<MediaRecorder | null>(null)
+  const chunksRef = useRef<Blob[]>([])
+  const segmentStartedAtRef = useRef(0)
+  const recordingStartedAtRef = useRef(0)
+  const segmentTimerRef = useRef<number | null>(null)
+  const elapsedTimerRef = useRef<number | null>(null)
+  const recordingRef = useRef(false)
+  const rotationRef = useRef<Promise<void> | null>(null)
+  const onSegmentRef = useRef(onSegment)
+  onSegmentRef.current = onSegment
 
-  const teardown = useCallback(() => {
-    if (timerRef.current) window.clearInterval(timerRef.current)
-    timerRef.current = null
-    capturingRef.current = false
-    chunksRef.current = []
-    if (processorRef.current) {
-      processorRef.current.onaudioprocess = null
-      processorRef.current.disconnect()
-    }
-    processorRef.current = null
-    analyserRef.current = null
-    audioCtxRef.current?.close().catch(() => {})
-    audioCtxRef.current = null
-    streamRef.current?.getTracks().forEach((t) => t.stop())
-    streamRef.current = null
+  const clearTimers = useCallback(() => {
+    if (segmentTimerRef.current) window.clearTimeout(segmentTimerRef.current)
+    if (elapsedTimerRef.current) window.clearInterval(elapsedTimerRef.current)
+    segmentTimerRef.current = null
+    elapsedTimerRef.current = null
   }, [])
 
-  useEffect(() => teardown, [teardown])
+  const beginSegmentRef = useRef<() => void>(() => {})
+
+  const closeSegment = useCallback(async (continueRecording: boolean) => {
+    const recorder = recorderRef.current
+    if (!recorder || recorder.state === 'inactive') return
+    if (segmentTimerRef.current) window.clearTimeout(segmentTimerRef.current)
+    segmentTimerRef.current = null
+    const startedAt = segmentStartedAtRef.current
+
+    const segment = await new Promise<CapturedSegment | null>((resolve) => {
+      recorder.addEventListener('stop', () => {
+        const blob = chunksRef.current.length
+          ? new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' })
+          : null
+        chunksRef.current = []
+        resolve(blob ? {
+          blob,
+          durationMs: Math.max(1, Date.now() - startedAt),
+          mimeType: (recorder.mimeType || blob.type || 'audio/webm').split(';')[0] ?? 'audio/webm',
+        } : null)
+      }, { once: true })
+      recorder.stop()
+    })
+
+    // 업로드가 느려도 다음 구간 녹음은 바로 시작한다.
+    if (continueRecording && recordingRef.current) beginSegmentRef.current()
+    if (segment) void onSegmentRef.current?.(segment)
+  }, [])
+
+  const rotate = useCallback(() => {
+    if (rotationRef.current || !recordingRef.current) return
+    const work = closeSegment(true).finally(() => {
+      if (rotationRef.current === work) rotationRef.current = null
+    })
+    rotationRef.current = work
+  }, [closeSegment])
+
+  const beginSegment = useCallback(() => {
+    const stream = streamRef.current
+    if (!stream || !recordingRef.current) return
+    chunksRef.current = []
+    const mimeType = preferredMimeType()
+    const recorder = new MediaRecorder(stream, mimeType ? { mimeType, audioBitsPerSecond: 32_000 } : undefined)
+    recorder.ondataavailable = (event) => {
+      if (event.data.size > 0) chunksRef.current.push(event.data)
+    }
+    recorder.onerror = () => {
+      recordingRef.current = false
+      clearTimers()
+      setStatus('error')
+      setError('녹음 파일을 만드는 중 오류가 발생했습니다.')
+    }
+    recorderRef.current = recorder
+    segmentStartedAtRef.current = Date.now()
+    recorder.start(1_000)
+    segmentTimerRef.current = window.setTimeout(rotate, RECORDING_SEGMENT_MS)
+  }, [clearTimers, rotate])
+  beginSegmentRef.current = beginSegment
+
+  const releaseMedia = useCallback(() => {
+    clearTimers()
+    recordingRef.current = false
+    const recorder = recorderRef.current
+    if (recorder && recorder.state !== 'inactive') recorder.stop()
+    recorderRef.current = null
+    chunksRef.current = []
+    analyserRef.current = null
+    void audioCtxRef.current?.close().catch(() => {})
+    audioCtxRef.current = null
+    streamRef.current?.getTracks().forEach((track) => track.stop())
+    streamRef.current = null
+  }, [clearTimers])
+
+  useEffect(() => releaseMedia, [releaseMedia])
 
   const checkMic = useCallback(async (): Promise<boolean> => {
-    if (!navigator.mediaDevices?.getUserMedia || typeof AudioContext === 'undefined') {
+    if (!navigator.mediaDevices?.getUserMedia || typeof AudioContext === 'undefined' || typeof MediaRecorder === 'undefined') {
       setStatus('unsupported')
       setError('이 브라우저는 마이크 녹음을 지원하지 않습니다.')
       return false
@@ -75,33 +151,22 @@ export function useVoiceRecorder(): VoiceRecorder {
     setStatus('checking')
     setError(null)
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
+      })
       streamRef.current = stream
-      const ctx = new AudioContext()
-      const source = ctx.createMediaStreamSource(stream)
-
-      const analyser = ctx.createAnalyser()
+      const context = new AudioContext()
+      const source = context.createMediaStreamSource(stream)
+      const analyser = context.createAnalyser()
       analyser.fftSize = 256
       analyser.smoothingTimeConstant = 0.75
       source.connect(analyser)
-
-      // ScriptProcessor로 원시 PCM을 캡처한다(녹음 중일 때만 축적).
-      // 출력 버퍼에 아무것도 쓰지 않아 스피커 피드백은 없다.
-      const processor = ctx.createScriptProcessor(4096, 1, 1)
-      processor.onaudioprocess = (ev) => {
-        if (!capturingRef.current) return
-        chunksRef.current.push(new Float32Array(ev.inputBuffer.getChannelData(0)))
-      }
-      source.connect(processor)
-      processor.connect(ctx.destination)
-
-      audioCtxRef.current = ctx
+      audioCtxRef.current = context
       analyserRef.current = analyser
-      processorRef.current = processor
       setStatus('ready')
       return true
-    } catch (e) {
-      const denied = e instanceof DOMException && (e.name === 'NotAllowedError' || e.name === 'SecurityError')
+    } catch (caught) {
+      const denied = caught instanceof DOMException && (caught.name === 'NotAllowedError' || caught.name === 'SecurityError')
       setStatus(denied ? 'denied' : 'error')
       setError(denied ? '마이크 권한이 거부되었습니다. 브라우저 주소창의 권한 설정을 확인하세요.' : '마이크를 열 수 없습니다.')
       return false
@@ -114,36 +179,32 @@ export function useVoiceRecorder(): VoiceRecorder {
       if (!ok) return
     }
     await audioCtxRef.current?.resume().catch(() => {})
-    chunksRef.current = []
-    capturingRef.current = true
-    startedAtRef.current = Date.now()
+    recordingRef.current = true
+    recordingStartedAtRef.current = Date.now()
     setElapsedMs(0)
-    timerRef.current = window.setInterval(() => setElapsedMs(Date.now() - startedAtRef.current), 200)
+    setError(null)
+    beginSegmentRef.current()
+    elapsedTimerRef.current = window.setInterval(
+      () => setElapsedMs(Date.now() - recordingStartedAtRef.current),
+      200,
+    )
     setStatus('recording')
   }, [checkMic])
 
-  const stop = useCallback((): Promise<Blob | null> => {
-    if (timerRef.current) window.clearInterval(timerRef.current)
-    timerRef.current = null
-    capturingRef.current = false
-    setStatus((s) => (s === 'recording' ? 'ready' : s))
-
-    const ctx = audioCtxRef.current
-    const chunks = chunksRef.current
-    chunksRef.current = []
-    if (!ctx || chunks.length === 0) return Promise.resolve(null)
-
-    const merged = mergeChunks(chunks)
-    const pcm16k = downsample(merged, ctx.sampleRate, TARGET_SAMPLE_RATE)
-    return Promise.resolve(encodeWav(pcm16k, TARGET_SAMPLE_RATE))
-  }, [])
+  const stop = useCallback(async () => {
+    recordingRef.current = false
+    clearTimers()
+    await rotationRef.current
+    if (recorderRef.current?.state !== 'inactive') await closeSegment(false)
+    setStatus('ready')
+  }, [clearTimers, closeSegment])
 
   const reset = useCallback(() => {
-    teardown()
+    releaseMedia()
     setStatus('idle')
     setError(null)
     setElapsedMs(0)
-  }, [teardown])
+  }, [releaseMedia])
 
   return { status, error, elapsedMs, analyserRef, checkMic, start, stop, reset }
 }

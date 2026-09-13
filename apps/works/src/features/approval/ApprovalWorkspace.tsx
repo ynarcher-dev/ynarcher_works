@@ -82,9 +82,15 @@ export function ApprovalWorkspace({
   // 둘이 함께 오면 진행 상태가 이긴다 — 한 번에 하나만 켜지는 축이라 어느 하나를 골라야 하고,
   // 카드가 두 값을 함께 싣는 경우는 없으므로 여기 오는 것은 손으로 고친 주소뿐이다.
   const [box, setBox] = useState<ApprovalBoxKey>(() => parseBox(initialBox) ?? 'mine-all')
-  const [progress, setProgress] = useState<ApprovalProgressKey | null>(() =>
-    parseProgress(initialProgress),
-  )
+  // 딥링크 없이 전자결재에 들어오면 첫 화면은 **진행 중인 문서 · 전체**다(2026-09-13 사용자
+  // 지정). 처음 보이는 것이 "지금 내 손이 가야 할 문서 전부"여야 하기 때문이다. 링크가 칸을
+  // 지정해 오면 그 칸이 이기고(`?progress=` / `?box=`), 모르는 값이면 예전대로 아무 칸도
+  // 켜지 않는다 — 주소가 가리키는 것과 다른 목록을 임의로 보이지 않기 위해서다.
+  const [progress, setProgress] = useState<ApprovalProgressKey | null>(() => {
+    const parsed = parseProgress(initialProgress)
+    if (parsed) return parsed
+    return !initialProgress && !initialBox ? 'all' : null
+  })
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(0)
   // 일괄 처리로 고른 문서 id. 선택은 지금 보고 있는 페이지의 것이다 — 목록이 갈리거나

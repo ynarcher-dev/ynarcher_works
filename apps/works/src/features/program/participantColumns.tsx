@@ -1,9 +1,9 @@
-import { Badge, type BadgeTone, type Column } from '@ynarcher/ui'
+import { Badge, EmptyValue, type BadgeTone, type Column } from '@ynarcher/ui'
 import { Link } from 'react-router-dom'
 import { maskEmail, maskName, maskPhone } from '@/lib/mask'
 import type { SensitiveField } from '@/features/admin/sensitiveContents'
 import { guestDoorBadge } from '@/features/program/guestDoorBadge'
-import { PARTICIPANT_PERSONAS, type MasterTable } from '@/features/program/participantPersona'
+import { PARTICIPANT_PERSONAS } from '@/features/program/participantPersona'
 import type { ParticipantRow } from '@/features/program/participantHooks'
 
 interface LoginBadge {
@@ -16,12 +16,16 @@ interface LoginBadge {
  *
  * 종전에는 `계정`(있음/없음) · `상태`(허용 전·초대·완료·차단) · `접근 기간`(제한 없음·만료)
  * 세 열이 재료를 늘어놓고, "이 사람 지금 들어올 수 있나"의 조합은 담당자가 머리로 했다.
- * 실제 게이트는 그 셋의 AND이므로 한 열이 그 결과를 답한다. 계정 유무는 열을 잃지 않는다 —
- * 계정이 없으면 애초에 '미발급'이고, 있으면 옆의 최종 접속이 그것을 증언한다.
+ * 실제 게이트는 그 셋의 AND이므로 한 열이 그 결과를 답한다.
  *
  * **판정 자체는 여기 살지 않는다**(2026-09-07). GUEST계정 발급 화면의 참여 사업 목록이 같은
  * 사실을 답해야 하는데, 각자 조합하면 어긋난 날 어느 쪽이 사실인지 판정할 근거가 없다 —
  * 순서와 라벨의 소유자는 `guestDoorBadge`이고, 여기서는 명부 행을 그 입력으로 옮길 뿐이다.
+ *
+ * **`hasTarget`은 원장이 아니라 "로그인이라는 개념이 서는가"를 묻는다**(2026-09-13). 그
+ * 판정에 원장 연결을 쓰던 동안, 원장 없는 게스트 계정은 문이 실제로 열려 있어도 화면에서
+ * `해당 없음`으로 읽혔다 — 계정이 달린 줄은 원장이 없어도 들어올 수 있으므로 그 줄에는
+ * 문이 있다. 계정도 원장도 없는 줄만 여전히 `해당 없음`이다.
  */
 export function loginBadge(
   row: ParticipantRow,
@@ -30,7 +34,7 @@ export function loginBadge(
 ): LoginBadge {
   return guestDoorBadge({
     loginStatus: row.login_status,
-    hasTarget: Boolean(row.master_id),
+    hasTarget: Boolean(row.master_id) || row.isGuestAccount,
     programStatus,
     accessEndsAt: guestAccessEndsAt,
   })
@@ -51,34 +55,79 @@ function formatLastLogin(iso: string): string {
 }
 
 /**
- * 참가자 명부 표의 컬럼.
+ * GUEST 계정 명부 표의 컬럼 — **계정이 첫 열이고 원장은 곁들이는 열이다**(2026-09-13 개편).
  *
- * 머리글은 자격을 그대로 부른다 — 기업 탭에서 '대상'·'성명'이라 적으면 무엇의 이름인지가
- * 한 번 더 번역을 거친다. 그 낱말의 소유자는 이 파일이 아니라 자격 설정
- * (`PARTICIPANT_PERSONAS`)이다 — 자격이 셋 이상이 되면 삼항으로는 답할 수 없고, 자격마다
- * 여기를 열어 분기를 늘리면 새 자격을 여는 일이 표를 고치는 일이 된다.
+ * 종전 이 표의 축은 자격(원장)이었다. 첫 열이 기업명이고 머리글이 자격마다 갈렸으며
+ * (`기업명`·`전문가명`), 원장이 없는 줄은 `임직원`이라 적혔다. 명부가 자격 탭을 걷고 한 벌로
+ * 서면서 그 셋이 모두 성립하지 않는다.
  *
- * 연락처는 그 사람에게 인증이 어디로 가는가이므로 이름 옆에 붙어 한 짝으로 읽힌다 —
- * 매핑이 막혔을 때 성명이 빈 건지 연락처가 빈 건지 눈으로 가려야 한다.
+ *  · 머리글은 **자격을 부르지 않는다.** 한 표에 여러 자격이 함께 서므로 자격을 부르는 머리글은
+ *    그중 하나를 골라 전체에 붙이는 일이 된다.
+ *  · 첫 열은 **계정명**이다. 이 표가 답하는 물음이 "누가 이 사업에 들어오는가"이고, 그 답을
+ *    가진 것은 원장의 기업명이 아니라 문을 여는 계정이다.
+ *  · `연결 원장`은 **선택적 표시**다. 없으면 빈 칸이며 `임직원`이라 적지 않는다 — 임직원 줄은
+ *    애초에 이 명부에 서지 않는다(`isGuestRosterRow`).
+ *
  * 표기는 ADMIN '민감정보 관리'의 정책을 그대로 따른다.
  */
 export function participantColumns(
   masked: Record<SensitiveField, boolean>,
   programStatus: string,
   guestAccessEndsAt: string | null,
-  persona: MasterTable,
 ): Column<ParticipantRow>[] {
-  const spec = PARTICIPANT_PERSONAS[persona]
   return [
     {
-      key: 'targetName',
-      header: spec.nameHeader,
+      key: 'accountName',
+      header: '계정명',
       type: 'name',
+      primary: true,
       render: (r) => {
-        // 명부는 값을 복제하지 않고 원장을 가리키므로, 이름을 누르면 그 원장으로 간다.
-        // 원장이 없는 내부 임직원 행은 갈 곳이 없어 링크를 걸지 않는다.
-        const to = r.master_id ? spec.detailPath(r.master_id) : null
-        return to ? (
+        // 계정이 아직 없는 줄은 원장이 적어 둔 대상 이름으로 선다. 그 사실을 함께 적지 않으면
+        // 이름이 있으니 계정도 있는 것으로 읽힌다.
+        if (!r.accountName) {
+          return (
+            <span>
+              {r.targetName} <span className="text-body-sm text-gray-500">(계정 없음)</span>
+            </span>
+          )
+        }
+        return masked.name ? maskName(r.accountName) : r.accountName
+      },
+    },
+    {
+      key: 'accountEmail',
+      header: '이메일',
+      type: 'long',
+      // 계정의 이메일은 **로그인 아이디**다. 원장 이메일과 갈리므로 원장값으로 대신 채우지
+      // 않는다 — 담당자가 그 값으로 안내하면 들어오지 못한다.
+      render: (r) => {
+        if (!r.accountEmail) return <EmptyValue />
+        return masked.email ? maskEmail(r.accountEmail) : r.accountEmail
+      },
+    },
+    {
+      key: 'phone',
+      header: '연락처',
+      type: 'phone',
+      render: (r) => {
+        if (!r.phone) return <EmptyValue />
+        return masked.phone ? maskPhone(r.phone) : r.phone
+      },
+    },
+    {
+      key: 'source',
+      header: '연결 원장',
+      type: 'text',
+      /*
+        명부가 스스로 분류를 만들지 않는다 — 분류는 원장이 소유하고 자격 설정이 라벨·톤만
+        빌린다. 연결이 없으면 빈 칸이다(없는 사실을 채우지 않는다).
+      */
+      render: (r) => {
+        if (!r.master_table || !r.master_id) return <EmptyValue />
+        const spec = PARTICIPANT_PERSONAS[r.master_table]
+        const badge = spec.categoryBadge(r.masterCategory)
+        const to = spec.detailPath(r.master_id)
+        const name = to ? (
           <Link
             to={to}
             onClick={(e) => e.stopPropagation()}
@@ -89,49 +138,18 @@ export function participantColumns(
         ) : (
           r.targetName
         )
-      },
-    },
-    {
-      key: 'masterCategory',
-      header: '구분',
-      type: 'badge',
-      // 명부가 스스로 분류를 만들지 않는다 — 분류는 원장이 소유하고 자격 설정이 라벨·톤만 빌린다.
-      render: (r) => {
-        if (!r.master_table) return '임직원'
-        const b = spec.categoryBadge(r.masterCategory)
-        return <Badge tone={b.tone}>{b.label}</Badge>
-      },
-    },
-    {
-      key: 'loginName',
-      header: spec.loginNameHeader,
-      type: 'person',
-      render: (r) => {
-        if (!r.master_id) return '—'
-        if (!r.loginName) return <span className="text-danger">{spec.loginNameMissing}</span>
-        return masked.name ? maskName(r.loginName) : r.loginName
-      },
-    },
-    {
-      key: 'contact',
-      header: '연락처',
-      type: 'text',
-      render: (r) => {
-        if (!r.master_id) return '—'
-        if (r.email) return masked.email ? maskEmail(r.email) : r.email
-        if (r.phone) return masked.phone ? maskPhone(r.phone) : r.phone
-        return <span className="text-danger">연락처 없음</span>
+        return (
+          <div className="flex min-w-0 items-center gap-1.5">
+            <Badge tone={badge.tone}>{badge.label}</Badge>
+            <span className="truncate">{name}</span>
+          </div>
+        )
       },
     },
     {
       // 머리글이 `로그인 상태`이던 것을 `상태`로 줄인다(2026-09-08). 배지 열의 폭(80px)은
       // 담기는 **값**이 정한 규격인데(배지 네 글자), 여섯 글자 머리글이 그 폭을 넘겨 두 줄로
-      // 접히며 표 전체의 행 높이를 밀어 올리고 있었다. 규격을 정해 놓고 머리글이 그것을
-      // 이기면 규격이 아니므로, 줄일 것은 열 폭이 아니라 머리글이다(DataTable 머리글 주석).
-      //
-      // 뜻을 잃지 않는 이유: 이 표에서 상태라 부를 만한 축은 문(門) 하나뿐이고, 옆의
-      // `구분`은 원장의 분류라 헷갈릴 자리가 없다. 값 자체도 초대·이용 중·차단이라
-      // 무엇의 상태인지 스스로 말한다.
+      // 접히며 표 전체의 행 높이를 밀어 올리고 있었다.
       key: 'login_status',
       header: '상태',
       type: 'badge',
@@ -145,7 +163,6 @@ export function participantColumns(
       header: '최종 접속',
       type: 'datetime',
       render: (r) => {
-        if (!r.master_id) return '—'
         if (!r.lastLoginAt) return <span className="text-gray-500">없음</span>
         return formatLastLogin(r.lastLoginAt)
       },

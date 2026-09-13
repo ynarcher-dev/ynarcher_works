@@ -3,6 +3,7 @@ import type { GuestEntityKey } from '@/features/guest/host'
 import { supabase } from '@/lib/supabase'
 import type { MasterTable } from '@/features/program/participantPersona'
 import type { GuestUserType } from '@/lib/userTypes'
+import { createGuestAccount, type CreateGuestAccountInput } from '@/features/guest/guestAccountService'
 
 /**
  * ADMIN 게스트 계정 관리 데이터 계층.
@@ -78,6 +79,9 @@ export interface GuestAccountPage {
   total: number
 }
 
+/** 통합 GUEST 계정 관리 목록의 탭. `unlinked`는 인격과 FUND 참여가 모두 없는 계정이다. */
+export type GuestAccountFacet = MasterTable | 'fund' | 'unlinked'
+
 /** 목록 페이지당 행 수. */
 export const GUEST_PAGE_SIZE = 30
 
@@ -119,6 +123,8 @@ export function useGuestAccounts(
    * 안에서만 걸러져 '2쪽에는 더 있는데 1쪽에서 0건'이 된다.
    */
   onlyOrphans?: boolean,
+  /** 통합 관리 목록의 탭. 서버에서 필터링해 전체 건수와 페이지를 같은 조건으로 계산한다. */
+  facet?: GuestAccountFacet,
 ) {
   return useQuery({
     queryKey: [
@@ -129,6 +135,7 @@ export function useGuestAccounts(
       entityKey ?? 'all',
       masterTables?.join(',') ?? 'all',
       onlyOrphans ? 'orphans' : 'all',
+      facet ?? 'all-facets',
     ],
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<GuestAccountPage> => {
@@ -139,6 +146,7 @@ export function useGuestAccounts(
         p_entity_key: entityKey ?? null,
         p_master_tables: masterTables ? [...masterTables] : null,
         p_only_orphans: Boolean(onlyOrphans),
+        p_facet: facet ?? null,
       })
       // 조회 실패를 삼키지 않는다 — 삼키면 "권한이 없다"와 "게스트가 없다"가 같은 빈 화면이 된다.
       if (error) throw error
@@ -204,19 +212,51 @@ export function useLedgerAccounts(masterTable: MasterTable, masterId: string | n
  * 사업 단위로 닫는 것은 그 사업 담당자의 몫이다(참가자 명부의 로그인 차단).
  * **ADMIN 전용**이다 — 한 계정이 여러 사업에 걸리므로 담당자가 정지하면 남의 사업까지 죽는다.
  */
-export function useSetGuestAccountActive() {
+export function useSetGuestAccountsActive() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (v: { userId: string; active: boolean; reason?: string }) => {
-      const { error } = await supabase.rpc('set_guest_account_active', {
-        p_user_id: v.userId,
+    mutationFn: async (v: { userIds: string[]; active: boolean; reason?: string }) => {
+      const { data, error } = await supabase.rpc('set_guest_accounts_active', {
+        p_user_ids: v.userIds,
         p_active: v.active,
         p_reason: v.reason ?? null,
       })
       if (error) throw error
+      return Number(data ?? 0)
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['admin', 'guest-accounts'] })
+    },
+  })
+}
+
+/** 통합 원장과 모든 워크스페이스가 공유하는 GUEST 계정 생성 mutation. */
+export function useCreateGuestAccount() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: CreateGuestAccountInput) => createGuestAccount(input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'guest-accounts'] })
+      void qc.invalidateQueries({ queryKey: ['admin', 'guest-ledger-accounts'] })
+    },
+  })
+}
+
+/** 관리자 전용 물리 삭제. 계정 접근자료를 지우고 보존할 업무 기록에서는 사용자 참조만 익명화한다. */
+export function useHardDeleteGuestAccounts() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (v: { userIds: string[]; reason: string }) => {
+      const { data, error } = await supabase.rpc('hard_delete_guest_accounts', {
+        p_user_ids: v.userIds,
+        p_reason: v.reason.trim(),
+      })
+      if (error) throw error
+      return Number(data ?? 0)
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'guest-accounts'] })
+      void qc.invalidateQueries({ queryKey: ['admin', 'guest-ledger-accounts'] })
     },
   })
 }

@@ -1,15 +1,16 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { sanitizeOrValue } from '@/features/master/ledgerPage'
-import type { PersonInput } from '@/features/program/participantPerson'
 import {
   PARTICIPANT_PERSONAS,
   isMasterTable,
   type LedgerFacts,
   type MasterTable,
 } from '@/features/program/participantPersona'
-import { useGuestHost, type GuestRosterSource } from '@/features/guest/host'
+import { useGuestHost } from '@/features/guest/host'
 import { SHARED_TABLES } from '@/features/program/workspace'
+import { isGuestUserType } from '@/lib/userTypes'
+import { addProgramGuestAccounts } from '@/features/program/programGuestAccountService'
 
 /**
  * 참가자 명부(참여 기업·참여 전문가) 데이터 계층.
@@ -56,6 +57,22 @@ export interface ParticipantRow {
    */
   accountName: string | null
   accountEmail: string | null
+  /**
+   * 그 계정의 유형(`users.user_type`). 계정이 붙지 않은 줄은 null이다.
+   *
+   * 2026-09-13에 실었다. GUEST 명부가 자격 탭을 걷고 **계정 하나로 서는 명부**가 되면서,
+   * "원장이 없는 줄"이 두 갈래로 갈렸기 때문이다 — 원장을 잇지 않은 **게스트 계정**과 실제
+   * **내부 임직원**. 종전에는 `master_table`이 비었다는 사실 하나로 둘을 구분하지 않고
+   * 임직원이라 적었고, 그래서 원장 없는 게스트가 화면에서 임직원으로 불렸다.
+   */
+  userType: string | null
+  /**
+   * 이 줄이 **외부 게스트 계정**을 달고 있는가. 판정은 `lib/userTypes` 한 벌이 소유한다.
+   *
+   * 계정이 아직 없는 줄(`user_id`가 null)은 false다 — 게스트가 아니라는 뜻이 아니라
+   * *아직 계정이 없다*는 뜻이며, 임직원인지 여부는 `isGuestRosterRow`가 따로 답한다.
+   */
+  isGuestAccount: boolean
   /** 그 계정의 마지막 접속 시각. 아직 한 번도 없으면 null. */
   lastLoginAt: string | null
   /**
@@ -73,6 +90,7 @@ export interface ParticipantRow {
   /** 로그인 주체의 성명(기업=대표자, 전문가=본인). 원장이 없으면 null. */
   loginName: string | null
   email: string | null
+  /** 계정이 있으면 계정 생성 시 확정한 전화번호, 없으면 원장의 현재 연락처. */
   phone: string | null
   /**
    * 원장이 이 대상을 무엇으로 분류하는가. 명부가 스스로 분류하지 않고 원장의 분류를 그대로
@@ -99,7 +117,12 @@ interface RawParticipant {
   master_id: string | null
   user_id: string | null
   login_status: ParticipantLoginStatus
-  user: { name: string | null; email: string | null } | null
+  user: {
+    name: string | null
+    email: string | null
+    phone: string | null
+    user_type: string | null
+  } | null
   creator: { name: string | null } | null
 }
 
@@ -113,7 +136,8 @@ interface RawParticipant {
 function participantCols(table: string): string {
   return (
     'id, master_table, master_id, user_id, login_status, ' +
-    `user:users!${table}_user_id_fkey(name, email), ` +
+    // 계정 유형을 함께 읽는다 — 원장 없는 게스트와 내부 임직원을 가르는 유일한 값이다.
+    `user:users!${table}_user_id_fkey(name, email, phone, user_type), ` +
     `creator:users!${table}_created_by_fkey(name)`
   )
 }
@@ -256,13 +280,17 @@ export function useProgramParticipants(programId: string | undefined) {
           accountId,
           accountName: r.user?.name ?? null,
           accountEmail: r.user?.email ?? null,
+          userType: r.user?.user_type ?? null,
+          isGuestAccount: Boolean(accountId) && isGuestUserType(r.user?.user_type),
           lastLoginAt: accountId ? (lastLogin.get(accountId) ?? null) : null,
           createdByName: r.creator?.name ?? null,
           targetName: master?.name || r.user?.name || '미지정',
           subtitle: master?.subtitle ?? '',
           loginName: master?.loginName ?? null,
           email: master?.email ?? r.user?.email ?? null,
-          phone: master?.phone ?? null,
+          // 계정이 선 뒤에는 계정 생성 때 확정한 전화번호를 보여 준다. 원장 연락처가 바뀌어도
+          // 로그인 초기값은 바뀌지 않으며, 계정이 아직 없는 옛 명부 행만 원장값을 미리 본다.
+          phone: r.user?.phone ?? master?.phone ?? null,
           masterCategory: master?.category ?? null,
         }
       })
@@ -314,217 +342,141 @@ export async function fetchLedgerCandidates(
 }
 
 /**
- * 명단이 사는 자리에서 원장 행 id를 읽는다.
+ * 후보 목록 한 페이지에 서는 계정 수.
  *
- * 두 갈래가 답하는 것은 같다 — "이 사업·조합이 누구를 들이기로 했는가". 다른 것은 그 사실이
- * 이미 적혀 있는 표가 있는가뿐이다: 사업은 없어서 명단을 따로 꾸리고, 조합은 포트폴리오가
- * 그것을 이미 답하고 있다. 그래서 갈리는 것은 표 이름과 칸 이름 셋이고, 이 함수 밖으로는
- * 같은 모양(`자격 + 원장 행 id`)만 나간다.
+ * 서버 페이징이다(ADMIN 창구의 30보다 작다) — 이 목록은 모달 안 왼쪽 기둥이라 한 화면에
+ * 서는 줄이 그만큼 적고, 페이지가 길면 아래쪽 줄은 스크롤해야만 보인다.
  */
-async function fetchRosterIds(
-  source: GuestRosterSource,
-  entityKey: string,
-  programId: string,
-  master: MasterTable,
-): Promise<{ master_table: MasterTable; master_id: string }[]> {
-  if (source.kind === 'entries') {
-    const { data, error } = await supabase
-      .from(SHARED_TABLES.participantEntries)
-      .select('master_table, master_id')
-      // 통합 원장이라 사업 id만으로는 소속이 정해지지 않는다.
-      .eq('entity_key', entityKey)
-      .eq('program_id', programId)
-      .eq('master_table', master)
-      .is('deleted_at', null)
-      .order('created_at', { ascending: true })
-    if (error) throw error
-    return (data ?? []) as unknown as { master_table: MasterTable; master_id: string }[]
-  }
+export const GUEST_CANDIDATE_PAGE_SIZE = 20
 
-  // 업무 원장을 그대로 명단으로 읽는 갈래. 이 표는 한 자격만 담으므로, 다른 자격을 물으면
-  // 빈 목록이 옳다(있지도 않은 자격의 후보를 지어내지 않는다).
-  if (source.master !== master) return []
-  let query = supabase
-    .from(source.table)
-    .select(`${source.idColumn}`)
-    .eq(source.parentColumn, programId)
-  if (source.deletedColumn) query = query.is(source.deletedColumn, null)
-  const { data, error } = await query
-  if (error) throw error
+/** 계정이 가진 인격 하나 — 어느 원장의 누구인가. */
+export interface GuestAccountIdentity {
+  masterTable: MasterTable
+  masterId: string
+  name: string | null
+}
 
-  // 같은 대상이 두 줄로 들어올 수 있다(한 기업에 투자를 두 번 집행한 경우). 명단은
-  // 대상의 목록이므로 여기서 접는다 — 접지 않으면 추가 모달에 같은 회사가 두 번 선다.
-  const ids = new Set(
-    ((data ?? []) as unknown as Record<string, string | null>[])
-      .map((r) => r[source.idColumn])
-      .filter((v): v is string => Boolean(v)),
-  )
-  return [...ids].map((id) => ({ master_table: master, master_id: id }))
+/** GUEST 명부에 이을 수 있는 **이미 있는 계정** 한 건. */
+export interface GuestAccountCandidate {
+  userId: string
+  name: string
+  /**
+   * 연락처. **서버가 정책대로 마스킹해 보낸 값**이라 화면에서 다시 가리지 않는다
+   * (ADMIN에게만 원본이 온다 — `guest_accounts_list`).
+   */
+  email: string | null
+  phone: string | null
+  /** 계정 축의 정지 여부. 정지된 계정도 명부에는 이을 수 있고, 문은 따로 답한다. */
+  isActive: boolean
+  /**
+   * 이 계정이 가진 인격 **전부**. 하나를 골라 대표로 적지 않는다 — 한 사람이 스타트업
+   * 대표이면서 전문가일 수 있고, 화면이 조용히 하나를 고르면 담당자가 본 자격과 실제로
+   * 이어지는 자격이 어긋난다. 인격이 없는 계정(원장 미연결)은 빈 배열이다.
+   */
+  identities: GuestAccountIdentity[]
+}
+
+export interface GuestAccountCandidatePage {
+  rows: GuestAccountCandidate[]
+  /** 검색어를 반영한 전체 건수(서버 윈도 카운트). 페이저가 몇 장인지 답한다. */
+  total: number
+}
+
+interface RawGuestAccountRow {
+  user_id: string
+  name: string | null
+  email: string | null
+  phone: string | null
+  is_active: boolean
+  identities: { master_table: string; master_id: string; name: string | null }[] | null
+  total_count: number | string
 }
 
 /**
- * GUEST 계정 후보 — **이 사업·조합의 명단에서만 고른다**(2026-09-09 좁힘).
+ * GUEST 명부에 이을 **계정 후보** — 전사 GUEST 계정 원장에서 고른다(2026-09-13 사용자 확정).
  *
- * 종전에는 전사 원장 전체(`fetchLedgerCandidates`)를 읽었고, `program_participant_entries`가
- * 생긴 뒤에도 그대로였다. 그래서 참가자 목록에 담은 적 없는 기업에 계정을 세울 수 있었고,
- * 반대로 담아 둔 기업은 원장 수백 건 사이에 이름순으로 섞여 검색해야 찾을 수 있었다 —
- * 두 목록이 어긋나도 화면이 알려 주는 것이 없었다.
+ * 종전 이 자리는 *원장 후보*였다(`useMasterCandidates`, 2026-09-09~2026-09-13). 그때는 이
+ * 창이 계정을 **세우는** 자리였으므로 "누구를 들일지 정한 목록에서만 고른다"가 옳았다.
+ * 지금은 세우지 않는다 — 생성 창구는 `/guest-accounts` 하나뿐이고 이 창은 **이미 있는
+ * 계정을 잇기만 한다.** 그래서 고르는 대상이 원장 행이 아니라 계정이 되었고, 원장 연결은
+ * 계정의 선택적 속성이라 연결이 없는 계정도 후보에 선다.
  *
- * **좁히는 근거는 순서다.** 계정은 "누구를 들일지 정한 다음"에 세우는 것이고, 그 결정이
- * 사는 곳이 참가자 목록이다(`SHARED_TABLES.participantEntries`가 "계정은 이 명단을 보고
- * 골라서 만든다"고 이미 적어 두었다 — 좁히지 않는 한 그 문장은 규약이 아니라 희망이다).
- * 원장에서 곧바로 고를 수 있으면 참가 여부를 정한 적 없는 대상에게 문이 열리고, 그 사람이
- * 참가자인지 묻는 화면과 계정이 있는지 묻는 화면이 서로 다른 답을 갖게 된다.
+ * **서버가 걸러 서버가 페이징한다.** 계정은 전사 규모라 한 번에 받아 화면에서 거르면 첫
+ * 페이지 안에서만 검색이 걸린다 — '2쪽에는 있는데 1쪽에서 0건'이 되는 그 오작동이다.
  *
- * **두 원장을 다시 합치는 것이 아니다.** 여기서 읽는 것은 참가 사실 하나뿐이고, 계정·문·
- * 기간은 여전히 `program_participants`가 진다. 이미 명부에 있는 행은 명단에서 빠져도 그대로
- * 남는다 — 좁히는 것은 **담는 자리**이지 담긴 것이 아니다(빼는 것은 문을 닫는 일이고, 그
- * 축은 `login_status`가 답한다).
+ * **보이지 않아야 할 계정은 애초에 오지 않는다.** `guest_accounts_list`는 SECURITY INVOKER로
+ * 호출자가 실제로 읽을 수 있는 인격·참여만 세우므로, M&A 전용 계정은 그 원장을 읽을 수 없는
+ * 담당자에게 **존재 자체가 보이지 않는다.** 화면에서 숨기는 것이 아니라 서버가 답하지 않는다.
  *
- * 검색은 **화면에 서는 값**으로 건다(이름·명의·이메일·연락처). 원장 검색 컬럼을 쓰지 않는
- * 이유는 그 값이 이 목록에 보이지 않기 때문이다 — 보이지 않는 값으로 걸러지면 방금 눈으로
- * 본 줄이 사라진 이유를 화면이 답하지 못한다. 명단은 수십 건이라 클라이언트에서 거른다.
- *
- * **명단이 어디에 사는지는 이 파일이 정하지 않는다**(2026-09-09). 사업은 담당자가 따로
- * 꾸린 참가자 목록이 답하지만, 조합(FUND)은 **포트폴리오가 곧 명단**이다 — `investments`가
- * 이미 "이 조합이 누구에게 투자했는가"를 답하고 있어 같은 사실을 적는 표를 하나 더 두면
- * 어긋날 자리만 는다. 그 자리는 `GuestHostConfig.rosterSource`가 든다.
+ * **자격으로 좁히지 않는다**(`p_master_tables`를 보내지 않는다). 그 인자는 "이 원장의 인격을
+ * 가진 계정만"이라는 뜻이라, 보내는 순간 **원장 연결이 없는 계정이 전부 사라진다** — 이번
+ * 개편이 세우려는 바로 그 계정들이다.
  */
-export function useMasterCandidates(
-  programId: string | undefined,
-  master: MasterTable,
-  search: string,
-) {
-  const config = useGuestHost()
-  const source = config.rosterSource
-  const term = search.trim().toLowerCase()
+export function useGuestAccountCandidates(search: string, page: number) {
+  const term = search.trim()
   return useQuery({
-    // `entityKey`가 키에 든다 — 명단은 통합 원장이라 사업 id만으로는 소속이 정해지지 않는다.
-    queryKey: [config.key, 'master-candidates', config.entityKey, programId, master, term],
-    enabled: Boolean(programId),
-    queryFn: async (): Promise<MasterCandidate[]> => {
-      const [entries, mapped] = await Promise.all([
-        fetchRosterIds(source, config.entityKey, programId!, master),
-        supabase
-          .from(SHARED_TABLES.participants)
-          .select('master_id')
-          .eq('entity_key', config.entityKey)
-          .eq('program_id', programId)
-          .eq('master_table', master),
-      ])
-      // 조회 실패를 삼키지 않는다 — 삼키면 "권한이 없다"와 "명단이 비었다"가 같은 화면이 되고,
-      // 이 모달에서 그 둘은 담당자가 해야 할 일이 정반대다.
-      if (mapped.error) throw mapped.error
-
-      const rows = entries
-      const taken = new Set(
-        ((mapped.data ?? []) as { master_id: string | null }[])
-          .map((r) => r.master_id)
-          .filter(Boolean) as string[],
-      )
-
-      // 값은 복제하지 않고 원장을 가리킨다 — 명단·GUEST 명부와 같은 합성 함수를 쓴다.
-      const facts = await loadLedgerFacts(rows)
-
-      return rows
-        .map((r): MasterCandidate => {
-          const f = facts.get(`${r.master_table}:${r.master_id}`)
-          return {
-            id: r.master_id,
-            // 원장 행이 지워졌거나 읽을 권한이 없으면 이름을 지어내지 않는다(명단 표와 같다).
-            name: f?.name || '미지정',
-            loginName: f?.loginName ?? null,
-            email: f?.email ?? null,
-            phone: f?.phone ?? null,
-            alreadyMapped: taken.has(r.master_id),
-          }
-        })
-        .filter((c) => !term || candidateMatches(c, term))
+    queryKey: ['guest-account-candidates', term, page],
+    // 페이지·검색어를 바꿀 때 목록이 빈 화면으로 깜빡이면 방금 무엇을 보고 있었는지 잃는다.
+    placeholderData: keepPreviousData,
+    queryFn: async (): Promise<GuestAccountCandidatePage> => {
+      const { data, error } = await supabase.rpc('guest_accounts_list', {
+        p_search: term || null,
+        p_limit: GUEST_CANDIDATE_PAGE_SIZE,
+        p_offset: page * GUEST_CANDIDATE_PAGE_SIZE,
+        p_entity_key: null,
+        p_master_tables: null,
+        p_only_orphans: false,
+      })
+      // 조회 실패를 삼키지 않는다 — 삼키면 "권한이 없다"와 "계정이 없다"가 같은 빈 화면이 된다.
+      if (error) throw error
+      const rows = (data ?? []) as RawGuestAccountRow[]
+      return {
+        rows: rows.map((r) => ({
+          userId: r.user_id,
+          // 이름 없는 계정은 있을 수 없지만, 없다면 지어내지 않고 없다고 적는다.
+          name: r.name?.trim() || '(이름 없음)',
+          email: r.email,
+          phone: r.phone,
+          isActive: r.is_active,
+          identities: (r.identities ?? [])
+            .filter((i) => isMasterTable(i.master_table))
+            .map((i) => ({
+              masterTable: i.master_table as MasterTable,
+              masterId: i.master_id,
+              name: i.name,
+            })),
+        })),
+        // 총 건수는 행마다 같은 값으로 실려 온다(윈도 카운트). 행이 없으면 0이다.
+        total: rows[0] ? Number(rows[0].total_count) : 0,
+      }
     },
   })
 }
 
-/** 후보 한 줄이 검색어에 걸리는가. 견주는 값은 그 줄이 실제로 보여 주는 것뿐이다. */
-function candidateMatches(c: MasterCandidate, lowerTerm: string): boolean {
-  return [c.name, c.loginName, c.email, c.phone].some((v) =>
-    (v ?? '').toLowerCase().includes(lowerTerm),
-  )
-}
-
-export interface AddParticipantsResult {
-  added: number
-  /** 계정을 세우지 못한 줄의 사유. 나머지는 담긴다 — 하나가 막혔다고 나머지를 버리지 않는다. */
-  failed: string[]
-}
-
 /**
- * 원장에서 고른 대상을 **사람까지 정해** 명부에 올린다. 로그인은 아직 열리지 않는다.
+ * 고른 계정을 이 사업·조합의 GUEST 명부에 **잇는다**. 계정을 만들지 않는다.
  *
- * 명부에 담는 일과 문을 여는 일은 갈려 있다 — 참여 후보를 쌓아 두더라도 확정 전에는 문이
- * 열리지 않고, 여는 것은 그 사업 담당자(PM·MEMBER)뿐이다.
+ * 쓰기는 서버 창구 하나가 진다(`programGuestAccountService`) — 화면에서 `program_participants`에
+ * 직접 INSERT하면 `entity_key`·중복·인가를 화면이 저마다 판정하게 되고, 그중 하나를 빠뜨린
+ * 화면이 남의 사업에 줄을 만든다. 응답 계약이 아직 미확정이라 그 미확정도 그 파일이 가둔다.
  *
- * **계정은 여기서 세워진다**(2026-09-08 사용자 지정). 종전에는 `로그인 열기`가 원장 행에서
- * 한 명을 자동으로 꺼내 세웠고, 그래서 한 회사에 담당자를 여럿 둘 수 없었다. 담을 때 정하면
- * 명부 행이 처음부터 "어느 회사의 누구"를 들고, 개방은 그 값을 쓴다(20260908210000).
- *
- * **삽입 전에 계정을 세운다.** 순서를 뒤집어 명부 행을 먼저 넣으면, 발급이 실패했을 때
- * 사람 없는 줄이 남아 담당자가 그것을 지우고 다시 담아야 한다.
- *
- * 발급은 멱등이라 같은 이메일이 이미 있으면 그 계정을 그대로 돌려받는다 — 그래서 같은
- * 사람을 두 번째 사업에 담아도 계정도 비밀번호도 늘지 않는다.
+ * 명부에 담는 일과 **문을 여는 일은 여전히 갈려 있다** — 이어도 로그인은 열리지 않으며,
+ * 여는 것은 그 사업 담당자(PM·MEMBER)의 별도 동작이다(`participantAccessHooks`).
  */
-export function useAddParticipants(programId: string) {
+export function useAddGuestAccounts(programId: string) {
   const config = useGuestHost()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (input: {
-      master: MasterTable
-      rows: { masterId: string; person: PersonInput }[]
-    }): Promise<AddParticipantsResult> => {
-      const failed: string[] = []
-      const resolved: { masterId: string; userId: string }[] = []
-
-      /*
-        **원장은 건드리지 않는다**(2026-09-10 사용자 결정). 종전에는 담당자가 창에서 채운
-        명의를 원장에 먼저 되쓰고(①) 계정을 세웠다. 그 보완은 명단 담기가 지므로(갖춰지지
-        않은 대상은 담기지 않는다) 여기 남는 것은 발급과 삽입뿐이다 — 원장 쓰기 권한이 없는
-        담당자에게 조용히 실패하던 경로도 함께 사라진다.
-      */
-      for (const row of input.rows) {
-        // 발급은 (원장 행 × 이메일)로 멱등이라 같은 명의면 이미 있는 계정이 돌아온다.
-        const { data, error } = await supabase.rpc('issue_guest_account', {
-          p_master_table: input.master,
-          p_master_id: row.masterId,
-          p_name: row.person.name.trim() || null,
-          p_email: row.person.email.trim() || null,
-          p_phone: row.person.phone.trim() || null,
-        })
-        // 사유를 그대로 옮긴다 — 서버가 "연락처가 없어 계정을 세울 수 없습니다"처럼 무엇을
-        // 보완해야 하는지 답하는데, 여기서 뭉뚱그리면 담당자가 그 답을 잃는다.
-        if (error) failed.push(`${row.person.name || row.masterId}: ${error.message}`)
-        else resolved.push({ masterId: row.masterId, userId: data as string })
-      }
-
-      if (resolved.length > 0) {
-        const { error } = await supabase.from(SHARED_TABLES.participants).insert(
-          resolved.map((r) => ({
-            entity_key: config.entityKey,
-            program_id: programId,
-            master_table: input.master,
-            master_id: r.masterId,
-            user_id: r.userId,
-          })),
-        )
-        if (error) throw error
-      }
-      return { added: resolved.length, failed }
-    },
-    onSuccess: () => {
+    mutationFn: (userIds: string[]) =>
+      addProgramGuestAccounts({ entityKey: config.entityKey, programId, userIds }),
+    // 응답이 끊겨도 서버에서는 반영됐을 수 있다. 성공 때만 새로고침하면 같은 계정을 다시
+    // 보낼 수 있으므로, 어느 결말이든 정본인 명부와 후보 목록을 다시 읽는다.
+    onSettled: () => {
       void qc.invalidateQueries({ queryKey: [config.key, 'participants', programId] })
-      void qc.invalidateQueries({ queryKey: [config.key, 'master-candidates', programId] })
-      // 계정을 세웠으므로 창구의 목록과 원장 행별 계정 수도 함께 상한다.
+      // 후보 목록은 '이미 담긴 계정'을 화면에서 걸러 세우므로 함께 상한다.
+      void qc.invalidateQueries({ queryKey: ['guest-account-candidates'] })
+      // 계정의 참여 사업 수가 달라졌으므로 ADMIN 창구의 목록도 함께 상한다.
       void qc.invalidateQueries({ queryKey: ['admin', 'guest-accounts'] })
-      void qc.invalidateQueries({ queryKey: ['admin', 'guest-ledger-accounts'] })
     },
   })
 }

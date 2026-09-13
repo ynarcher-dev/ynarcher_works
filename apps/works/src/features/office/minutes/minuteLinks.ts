@@ -77,14 +77,14 @@ export const EXTERNAL_ATTENDEE_LINK_TYPES: MinuteLinkTargetType[] = ['network', 
 
 export const MINUTE_LINK_TARGETS: Record<MinuteLinkTargetType, MinuteLinkTargetMeta> = {
   program: {
-    kindLabel: '프로젝트 사업',
+    kindLabel: '프로젝트',
     table: 'programs',
     titleColumn: 'title',
     codeColumn: 'code',
     toPath: (id) => `/project/${id}`,
   },
   ma_program: {
-    kindLabel: 'M&A 딜',
+    kindLabel: 'M&A 프로젝트',
     table: 'ma_programs',
     titleColumn: 'title',
     codeColumn: 'code',
@@ -175,7 +175,7 @@ export const MINUTE_LINK_PICK_KINDS: MinuteLinkPickKind[] = MINUTE_LINK_TARGET_T
   types: [t],
 }))
 
-/** 피커 최초 진입 종류(프로젝트 사업). */
+/** 피커 최초 진입 종류(프로젝트). */
 export const DEFAULT_MINUTE_LINK_PICK_KIND: MinuteLinkPickKind = MINUTE_LINK_PICK_KINDS[0]!
 
 /** 드롭다운 선택값(key) → 종류. 모르는 값이면 기본 종류로 되돌린다. */

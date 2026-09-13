@@ -37,6 +37,7 @@ export function BulkSelectionBar({
         <Select value="" onChange={(e) => e.target.value && onDecision(e.target.value as Decision)}>
           <option value="">결정 일괄</option>
           <option value="merge">합치기</option>
+          <option value="merge_replace">합치기+연락처 갱신</option>
           <option value="new">신규 등록</option>
           <option value="skip">미업로드</option>
         </Select>

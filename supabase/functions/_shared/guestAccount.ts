@@ -141,6 +141,66 @@ export async function clearFailures(db: SupabaseClient, userId: string): Promise
     .eq('user_id', userId)
 }
 
+/** 비밀번호 커밋이 실패한 이유. `rpc_failed`만 우리 쪽 장애이고 나머지는 경합·만료다. */
+export type CommitFailure =
+  | 'account_unavailable'
+  | 'version_mismatch'
+  | 'password_changed'
+  | 'rpc_failed'
+
+export type PasswordCommit =
+  | { committed: true; sessionVersion: number }
+  | { committed: false; reason: CommitFailure }
+
+/**
+ * 비밀번호를 저장하는 **유일한 경로**. 조건부 쓰기(비교 후 교체)를 DB에 맡긴다.
+ *
+ * 종전에는 핸들러가 계정·자격증명을 읽고, 해시를 만들고(PBKDF2 12만 회 — 수백 ms),
+ * 그 다음에 조건 없이 `update`했다. 그 사이에 ADMIN이 초기화하면 **초기화가 비운 자리에
+ * 옛 티켓의 해시가 얹혔다.** 티켓에 판을 실어도 그 대조는 읽는 시점의 일이라 이 창을
+ * 닫지 못한다. 그래서 "내가 봤던 판과 해시가 그대로일 때만 써라"를 DB가 판정한다.
+ *
+ * `expectedSessionVersion`은 **호출자가 실제로 검증한 값**이어야 한다 — 계정을 다시 읽어
+ * 얻은 값이면 그 재조회가 새 경합 창이 되고, 옛 자격이 새 판으로 승격된다.
+ */
+export async function commitGuestPassword(
+  db: SupabaseClient,
+  params: {
+    userId: string
+    expectedSessionVersion: number
+    /** 호출자가 읽은 저장 해시. 개시 상태(해시 없음)를 기대하면 null. */
+    expectedPasswordHash: string | null
+    newPasswordHash: string
+    /** 단명 티켓으로 온 경로면 true — 성공 시 판을 올려 그 티켓을 소진한다. */
+    consumeTicket: boolean
+  },
+): Promise<PasswordCommit> {
+  const { data, error } = await db.rpc('guest_password_commit', {
+    p_user_id: params.userId,
+    p_expected_session_version: params.expectedSessionVersion,
+    p_expected_password_hash: params.expectedPasswordHash,
+    p_new_password_hash: params.newPasswordHash,
+    p_consume_ticket: params.consumeTicket,
+  })
+  if (error || !data) return { committed: false, reason: 'rpc_failed' }
+
+  const row = data as { committed?: boolean; reason?: string; session_version?: number }
+  if (row.committed === true && typeof row.session_version === 'number') {
+    return { committed: true, sessionVersion: row.session_version }
+  }
+  // 사유를 못 읽었어도 성공으로 읽지 않는다 — 여기서 관대하면 "저장 안 됐는데 세션 발급"이 된다.
+  const reason = row.reason
+  return {
+    committed: false,
+    reason:
+      reason === 'account_unavailable' ||
+      reason === 'version_mismatch' ||
+      reason === 'password_changed'
+        ? reason
+        : 'rpc_failed',
+  }
+}
+
 /**
  * 이 계정이 지금 들어갈 수 있는 참여 목록.
  *
@@ -217,48 +277,6 @@ export async function loadParticipations(
       title: live.get(r.program_id)!.title,
     }))
     .sort((a, b) => a.title.localeCompare(b.title, 'ko'))
-}
-
-/**
- * 원장에서 지금 연락처를 읽는다. 초기 비밀번호 판정에 쓴다.
- *
- * 계정의 `users.phone`은 발급 시점의 복사본이라, 담당자가 NETWORKS에서 연락처를 고쳐도
- * 낡은 채로 남는다. 초기 비밀번호는 "참여자가 이미 가지고 있는 값"이어야 성립하므로
- * 정본인 원장을 읽는다(이름의 정본이 원장인 것과 같은 원리).
- */
-export async function readLedgerPhones(
-  db: SupabaseClient,
-  account: GuestAccount,
-): Promise<string[]> {
-  const { data: rows } = await db
-    .from('guest_identities')
-    .select('master_table, master_id')
-    .eq('user_id', account.id)
-  const identities = (rows ?? []) as { master_table: string; master_id: string }[]
-
-  // 인격이 둘일 수 있으므로(참가기업 + 참가전문가) 어느 쪽 연락처든 통하게 한다. 이 값이
-  // 쓰이는 시점은 계정에 비밀번호가 아직 없을 때뿐이고, 그때 참여자가 손에 쥔 것은 자기
-  // 연락처다 — 어느 인격으로 등록됐는지까지 맞히라고 요구할 일이 아니다.
-  const phones: string[] = []
-  const startupIds = identities.filter((i) => i.master_table === 'startups').map((i) => i.master_id)
-  const networkIds = identities.filter((i) => i.master_table === 'networks').map((i) => i.master_id)
-
-  if (startupIds.length > 0) {
-    const { data } = await db.from('startups').select('contact').in('id', startupIds)
-    for (const row of (data ?? []) as { contact: Record<string, string> | null }[]) {
-      if (row.contact?.phone) phones.push(row.contact.phone)
-    }
-  }
-  if (networkIds.length > 0) {
-    const { data } = await db.from('networks').select('phone').in('id', networkIds)
-    for (const row of (data ?? []) as { phone: string | null }[]) {
-      if (row.phone) phones.push(row.phone)
-    }
-  }
-  // 계정의 복사본은 마지막 폴백이다 — 원장이 정본이지만, 인격 매핑이 아직 없는 계정
-  // (temporary_guest 등)은 이 값밖에 없다.
-  if (account.phone) phones.push(account.phone)
-  return [...new Set(phones)]
 }
 
 export interface GuestSessionPayload {
@@ -361,11 +379,54 @@ export async function issueSession(
   }
 }
 
+/**
+ * 단명 티켓도 계정의 세션 판(session_version)에 묶는다.
+ *
+ * 세션 JWT는 처음부터 판을 실어 검증했지만(guestSession.ts), 선택·설정 티켓은 `sub`만
+ * 실어 발급자 쪽 사실을 하나도 담지 않았다. 그래서 ADMIN이 연락처를 고치거나 비밀번호를
+ * 초기화해 판을 올린 뒤에도, 그 직전에 나간 티켓이 남은 수명(10분) 동안 그대로 통했다 —
+ * 초기화가 죽여야 하는 것은 세션만이 아니라 **"곧 비밀번호를 정하러 올 사람"의 자리**다.
+ * 발급 시점의 판을 싣고 회수 시점에 다시 대조하면 그 재생이 닫힌다.
+ *
+ * 인자로 id가 아니라 계정을 받는 이유: 두 값을 따로 받으면 한쪽을 빼먹은 호출이 조용히
+ * 컴파일된다. 판이 없는 티켓은 만들 수 없어야 한다.
+ */
+/**
+ * 티켓을 서명할 때 필요한 최소 사실 — 누구이고, 그 시점의 판이 무엇인가.
+ *
+ * 계정 전체가 아니라 이 둘만 요구하는 이유: 재설정 링크 소진처럼 **계정을 다시 읽지 않는**
+ * 경로가 있고, 거기서는 DB가 검증해 돌려준 (id, 판)만 손에 있다. 계정을 억지로 채워 넘기면
+ * 그 채우는 재조회가 곧 새 경합 창이 된다.
+ */
+export type TicketSubject = Pick<GuestAccount, 'id' | 'session_version'>
+
+export function accountSessionVersion(account: TicketSubject): number {
+  return account.session_version ?? 1
+}
+
+/**
+ * 티켓이 실은 판. 없거나 숫자가 아니면 null이고, 그 티켓은 거절해야 한다 — 배포 직전에
+ * 나간 티켓은 수명이 10분이라 다시 로그인하면 되지만, 없는 값을 통과시키면 판 대조 자체가
+ * 선택 사항이 된다(세션 토큰과 달리 티켓은 8시간을 살지 않는다).
+ *
+ * 대조는 호출부가 한다. 호출부마다 "무엇과 비교해야 하는가"가 다르기 때문이다 — 설정
+ * 경로는 방금 읽은 계정과, 맥락 경로는 **마지막으로 읽은** 계정과 비교해야 한다.
+ */
+export function ticketVersionClaim(claims: Record<string, unknown>): number | null {
+  return typeof claims.sv === 'number' ? claims.sv : null
+}
+
 /** 참여가 둘 이상일 때 주는 선택 티켓. 데이터 접근 권한이 없다. */
-export async function signSelectTicket(userId: string): Promise<string> {
+export async function signSelectTicket(account: TicketSubject): Promise<string> {
   const nowSec = Math.floor(Date.now() / 1000)
   return await signJwt(
-    { sub: userId, aud: 'guest-context-select', iat: nowSec, exp: nowSec + SELECT_TTL_SEC },
+    {
+      sub: account.id,
+      aud: 'guest-context-select',
+      sv: accountSessionVersion(account),
+      iat: nowSec,
+      exp: nowSec + SELECT_TTL_SEC,
+    },
     requireSecret(),
   )
 }
@@ -373,22 +434,117 @@ export async function signSelectTicket(userId: string): Promise<string> {
 /**
  * 비밀번호 설정 티켓. 초기 비밀번호로 확인된 직후, 또는 재설정 링크를 소진한 직후에만 발급한다.
  *
- * `rst`는 "이미 비밀번호가 있어도 덮어쓴다"는 표시다. 재설정 경로에서 저장된 해시를 미리
- * 비우지 않기 위해 필요하다 — 비워 두면 그 계정이 다시 **초기 상태**가 되어 원장 연락처가
- * 비밀번호로 통하게 되고, 사용자가 링크를 열어 놓고 그만두면 그 상태로 남는다.
+ * `rst`는 "이미 비밀번호가 있어도 덮어쓴다"는 표시다. 재설정 링크 경로에서 저장된 해시를
+ * 미리 비우지 않기 위해 필요하다 — 비워 두면 그 계정이 다시 **초기 상태**가 되어 계정
+ * 생성 때 확정한 전화번호가 비밀번호로 통하고, 사용자가 링크를 열어 놓고 그만두면 그
+ * 상태로 남는다. (ADMIN 초기화는 사유를 적어 의도적으로 그 상태로 되돌리는 별개 창구이며,
+ * 그때는 DB가 해시를 비우고 판을 올린다 — 그래서 그 전에 나간 티켓은 여기서 죽는다.)
  */
-export async function signChangeTicket(userId: string, isReset = false): Promise<string> {
+export async function signChangeTicket(
+  account: TicketSubject,
+  isReset = false,
+): Promise<string> {
   const nowSec = Math.floor(Date.now() / 1000)
   return await signJwt(
     {
-      sub: userId,
+      sub: account.id,
       aud: 'guest-password-change',
       rst: isReset,
+      sv: accountSessionVersion(account),
       iat: nowSec,
       exp: nowSec + CHANGE_TTL_SEC,
     },
     requireSecret(),
   )
+}
+
+/** 재설정 링크 발급이 실패한 이유. */
+export type ResetIssueFailure = 'account_unavailable' | 'version_mismatch' | 'rpc_failed'
+
+export type ResetIssue =
+  | { issued: true; sessionVersion: number }
+  | { issued: false; reason: ResetIssueFailure }
+
+/**
+ * 재설정 링크 토큰을 **조건부로** 저장한다.
+ *
+ * `expectedSessionVersion`은 호출자가 **수신처를 읽은 그 계정**의 판이다. 그 사이에 ADMIN이
+ * 이메일을 고치면(연락처 수정은 판을 올리고 살아 있는 링크를 비운다) 저장이 거절되고,
+ * 그래서 옛 주소로 링크가 나가지 않는다 — 발송은 저장이 성공한 뒤에만 한다.
+ */
+export async function issueGuestResetToken(
+  db: SupabaseClient,
+  params: {
+    userId: string
+    expectedSessionVersion: number
+    /** 토큰의 SHA-256. **원문은 DB로 보내지 않는다.** */
+    tokenHash: string
+    expiresAt: string
+  },
+): Promise<ResetIssue> {
+  const { data, error } = await db.rpc('guest_reset_token_issue', {
+    p_user_id: params.userId,
+    p_expected_session_version: params.expectedSessionVersion,
+    p_token_hash: params.tokenHash,
+    p_expires_at: params.expiresAt,
+  })
+  if (error || !data) return { issued: false, reason: 'rpc_failed' }
+
+  const row = data as { issued?: boolean; reason?: string; session_version?: number }
+  if (row.issued === true && typeof row.session_version === 'number') {
+    return { issued: true, sessionVersion: row.session_version }
+  }
+  return {
+    issued: false,
+    reason:
+      row.reason === 'account_unavailable' || row.reason === 'version_mismatch'
+        ? row.reason
+        : 'rpc_failed',
+  }
+}
+
+export type ResetConsume =
+  | { consumed: true; userId: string; sessionVersion: number; name: string }
+  | { consumed: false }
+
+/**
+ * 재설정 링크를 **정확히 한 번** 소진한다.
+ *
+ * 해시·만료·계정 상태·발급 시점 판을 한 트랜잭션에서 보고 그 자리에서 비운다. 돌아오는
+ * 판은 그 검증을 통과한 값이며, 설정 티켓은 **그 값으로** 서명해야 한다 — 계정을 다시
+ * 읽어 얻은 판을 실으면 그 사이에 오른 판으로 옛 링크가 승격된다.
+ *
+ * 실패 사유는 하나로 접어 돌려준다. 호출자의 응답이 이미 하나이기 때문이다(만료·재사용·
+ * 위조를 가려 답하면 그 차이가 곧 링크 존재 여부의 신호가 된다).
+ */
+export async function consumeGuestResetToken(
+  db: SupabaseClient,
+  tokenHash: string,
+): Promise<ResetConsume> {
+  const { data, error } = await db.rpc('guest_reset_token_consume', {
+    p_token_hash: tokenHash,
+  })
+  if (error || !data) return { consumed: false }
+
+  const row = data as {
+    consumed?: boolean
+    user_id?: string
+    session_version?: number
+    name?: string
+  }
+  if (
+    row.consumed === true &&
+    typeof row.user_id === 'string' &&
+    typeof row.session_version === 'number'
+  ) {
+    return {
+      consumed: true,
+      userId: row.user_id,
+      sessionVersion: row.session_version,
+      name: typeof row.name === 'string' ? row.name : '',
+    }
+  }
+  return { consumed: false }
 }
 
 /** 계정 한 건을 id로 읽는다(티켓 회수 경로). 정지·삭제된 계정은 null이다. */

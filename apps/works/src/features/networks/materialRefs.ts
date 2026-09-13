@@ -28,13 +28,13 @@ import type { Material } from '@/features/networks/materialHooks'
  * 있어(`target_type`) 같은 사실을 두 곳에 적을 이유가 없다.
  */
 const LOCATION_LABEL: Record<string, string> = {
-  startup: '스타트업DB',
+  startup: '스타트업',
   ma_seller: 'M&A SELLER',
   ma_buyer: 'M&A BUYER',
   network: 'NETWORKS',
   fund: 'FUND',
-  program: '프로젝트 사업',
-  ma_program: 'M&A 딜',
+  program: '프로젝트',
+  ma_program: 'M&A 프로젝트',
 }
 
 /**

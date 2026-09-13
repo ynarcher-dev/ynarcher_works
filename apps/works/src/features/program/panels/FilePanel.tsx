@@ -6,6 +6,7 @@ import {
   useMaterials,
   useUploadMaterial,
 } from '@/features/networks/materialHooks'
+import { useProgramWorkspace } from '@/features/program/workspace'
 
 /**
  * 파일첨부 모듈(전체 화면). GUEST의 파일첨부 메뉴와 **같은 구성**(파일 목록)이며, 차이는
@@ -27,6 +28,7 @@ import {
  * 제목이다(`materialHooks.addMaterialLink`).
  */
 export function FilePanel({ programId, moduleId }: { programId: string; moduleId: string }) {
+  const { entityNoun } = useProgramWorkspace()
   const { data: materials = [], isLoading } = useMaterials('program', programId, moduleId)
   const upload = useUploadMaterial('program', programId, moduleId)
   const remove = useDeleteMaterial('program', programId)
@@ -37,7 +39,7 @@ export function FilePanel({ programId, moduleId }: { programId: string; moduleId
     <Card
       title="파일"
       count={materials.length}
-      help="여기에 올린 파일은 이 사업의 자료 관리에도 함께 표시됩니다."
+      help={`여기에 올린 파일은 이 ${entityNoun}의 자료 관리에도 함께 표시됩니다.`}
     >
       <div className="space-y-3">
         {/* 파일을 놓는 자리는 이 상자 하나다(헤더 '업로드' 버튼은 2026-09-05에 걷었다). */}

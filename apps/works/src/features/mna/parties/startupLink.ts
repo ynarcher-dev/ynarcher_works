@@ -54,7 +54,7 @@ export function useStartupLink(initial: MaPartyRow | null, form: FormBridge) {
 
     // 무엇이 함께 들어왔는지 밝힌다 — 연결 버튼 하나에 칸 셋이 조용히 바뀌면, 담당자는
     // 자기가 적지 않은 값이 언제 들어왔는지 알 수 없다.
-    toast.show('스타트업 DB를 연결하고 기업 정보를 원장 값으로 변경했습니다.', 'success')
+    toast.show('스타트업 원장을 연결하고 기업 정보를 원장 값으로 변경했습니다.', 'success')
   }
 
   /**

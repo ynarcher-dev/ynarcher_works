@@ -57,7 +57,9 @@ export function Sidebar({
         {children}
       </div>
       {footer && (
-        <div className="border-t border-white/15 px-2 py-2">{footer}</div>
+        // footer도 본문과 같은 `그룹명 + 선` 구분자를 주입할 수 있도록 컨테이너가 익명 선을
+        // 강제하지 않는다. WORKS의 외부계정 고정 메뉴가 그 규격을 쓴다.
+        <div className="px-2 py-2">{footer}</div>
       )}
     </nav>
   )

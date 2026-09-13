@@ -1,5 +1,6 @@
 import { Button, Input, Modal, Spinner } from '@ynarcher/ui'
 import { useState } from 'react'
+import { useGuestHost } from '@/features/guest/host'
 import { useRemovalPreview } from '@/features/program/participantAccessHooks'
 
 /**
@@ -37,6 +38,7 @@ export function ParticipantRemoveConfirm({
   onClose: () => void
   busy: boolean
 }) {
+  const { entityNoun } = useGuestHost()
   const [typed, setTyped] = useState('')
   const preview = useRemovalPreview(programId, participantIds, open)
 
@@ -70,13 +72,13 @@ export function ParticipantRemoveConfirm({
     >
       <div className="space-y-3">
         <p className="text-body text-gray-700">
-          <b>{participantIds.length}건</b>을 이 사업의 게스트 명부에서 뺍니다.{' '}
+          <b>{participantIds.length}건</b>을 이 {entityNoun}의 게스트 명부에서 뺍니다.{' '}
           <b>되돌릴 수 없습니다.</b> 접속 중이라면 그 자리에서 끊깁니다.
         </p>
 
         <p className="text-body text-gray-700">
-          계정과 비밀번호는 지워지지 않으며, 같은 사람이 참여 중인 <b>다른 사업은 그대로</b>
-          입니다. 다시 담을 수는 있지만 그때는 새 줄이 되고 <b>이 사업의 이용 기록은 이어지지
+          계정과 비밀번호는 지워지지 않으며, 같은 사람이 참여 중인 <b>다른 프로젝트/FUND는 그대로</b>
+          입니다. 다시 담을 수는 있지만 그때는 새 줄이 되고 <b>이 {entityNoun}의 이용 기록은 이어지지
           않습니다.</b>
         </p>
 

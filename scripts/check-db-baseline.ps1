@@ -1,5 +1,15 @@
+# 베이스라인 점검.
+#
+#   -Local [-Full] : 격리된 로컬 스택 기준의 **현재 지원 경로**. scripts/db-baseline/check.mjs로 넘깁니다.
+#   기본값         : 아래의 전용 원격 프로젝트 경로. 관문은 그대로 두었으나 현재 사용하지 않으며
+#                    이번 작업에서 검증하지 않았습니다(12_database_baseline_operations.md §3).
+#
+# 주의: 원격 경로의 -Full은 **전체 이력**을 재생해 cutoff 스냅샷과 비교하므로,
+#       cutoff 이후 마이그레이션이 쌓이면 구조적으로 실패합니다. 로컬 경로(-Local -Full)는
+#       cutoff까지만 재생해 비교하며, 그 차이는 위 문서가 설명합니다.
 [CmdletBinding()]
 param(
+  [switch]$Local,
   [switch]$Full,
   [string]$DbUrl = $env:BASELINE_DB_URL,
   [string]$ProjectRef = $env:BASELINE_PROJECT_REF,
@@ -8,6 +18,19 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
+
+if ($Local) {
+  # 원격 값이 하나라도 살아 있으면 시작하지 않습니다(check.mjs도 같은 검사를 다시 합니다).
+  if (-not [string]::IsNullOrWhiteSpace($DbUrl) -or
+      -not [string]::IsNullOrWhiteSpace($ProjectRef) -or
+      -not [string]::IsNullOrWhiteSpace($Confirm)) {
+    throw '-Local은 원격 인자·환경변수(BASELINE_DB_URL/PROJECT_REF/DB_CONFIRM)와 함께 쓰지 않습니다. 어느 DB를 썼는지 흐려지면 안 됩니다.'
+  }
+  $nodeArgs = @((Join-Path $PSScriptRoot 'db-baseline\check.mjs'))
+  if ($Full) { $nodeArgs += '--full' }
+  & node @nodeArgs
+  exit $LASTEXITCODE
+}
 $migrationDir = Join-Path $repoRoot 'supabase\migrations'
 $baselineDir = Join-Path $repoRoot 'supabase\baseline'
 $schemaPath = Join-Path $baselineDir 'current_schema.sql'

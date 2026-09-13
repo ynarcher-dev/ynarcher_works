@@ -137,6 +137,8 @@ export const sidebarIconByTab: Record<string, LucideIcon> = {
   matching: LayoutGrid,
   permissions: LockKeyhole,
   boards: ClipboardList,
+  modules: Boxes,
+  tags: Tags,
   // 게스트 계정 관리: 사람(User) 계열이되 인사(User)·생성자(UserCog)와 다른 글리프를 쓴다 —
   // 사이드바에서 세 메뉴가 같은 일로 읽히면 안 된다.
   'guest-accounts': UserRoundCheck,
@@ -158,6 +160,12 @@ export const sidebarIconByTab: Record<string, LucideIcon> = {
   departments: Network,
   branches: Building,
   kpi: Gauge,
+  'personal-kpi': Gauge,
+  'group-kpi': Users,
+  'weekly-meeting': CalendarDays,
+  'preliminary-investment-review': Search,
+  'investment-review': BadgeCheck,
+  'periodic-report': FileSpreadsheet,
 
   // STARTUP 워크스페이스
   invested: Coins,
@@ -180,6 +188,7 @@ export const sidebarIconByTab: Record<string, LucideIcon> = {
   company_categories: Building2,
   company_statuses: Activity,
   investment_methods: HandCoins,
+  location_regions: Map,
   locations: MapPin,
 }
 

@@ -22,6 +22,7 @@ import { DetailDeleteButton } from '@/components/DetailDeleteButton'
 import { GuestHostProvider } from '@/features/guest/host'
 import { FUND_GUEST_HOST, fundAsGuestHost } from '@/features/fund/guestHost'
 import { GuestSettingsButton } from '@/features/program/detail/GuestSettingsButton'
+import { WorkspaceBudgetTab } from '@/features/approval/WorkspaceBudgetTab'
 import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
@@ -60,19 +61,29 @@ const Info = InfoField
 
 const strategyTone: Record<string, BadgeTone> = { AC: 'info', VC: 'success', PE: 'warning', ETC: 'neutral' }
 
-type DetailTab = 'overview' | 'portfolio' | 'lp' | 'calls' | 'financials' | 'reports'
+type DetailTab =
+  | 'overview'
+  | 'portfolio'
+  | 'lp'
+  | 'calls'
+  | 'financials'
+  | 'budget'
+  | 'reports'
 const DETAIL_TABS: { key: DetailTab; label: string }[] = [
   { key: 'portfolio', label: '포트폴리오' },
   { key: 'overview', label: '목적달성' },
-  { key: 'lp', label: '🔒 출자자' },
-  { key: 'calls', label: '🔒 캐피탈 콜' },
-  { key: 'financials', label: '🔒 조합 재무' },
-  { key: 'reports', label: '🔒 보고서' },
+  { key: 'lp', label: '출자자' },
+  { key: 'calls', label: '캐피탈 콜' },
+  { key: 'financials', label: '조합 재무' },
+  // 조합 재무(조합 자체의 회계) 다음에 선다 — 이쪽은 **전자결재로 배정된 운영 예산**이라
+  // 서로 다른 돈이고, 그래서 한 탭에 합치지 않는다.
+  { key: 'budget', label: '예산/지출' },
+  { key: 'reports', label: '보고서' },
 ]
 
 /** 카드 안 KPI 타일. */
 /**
- * 펀드 상세: 상단 편집/삭제 + 2:1 카드 섹션. 좌측 개요 카드 아래 서브 탭바(출자자/포트폴리오/캐피탈 콜)로
+ * 펀드 상세: 상단 편집/비활성화 + 2:1 카드 섹션. 좌측 개요 카드 아래 서브 탭바(출자자/포트폴리오/캐피탈 콜)로
  * 운영 섹션을 전환한다(AC ProgramOverviewTab 구조). 우측(1/3)은 운용 인력·관리 정보 고정.
  * 편집은 페이지형 FundForm으로 인라인 전환한다.
  */
@@ -86,7 +97,7 @@ export function FundDetailPage() {
   const { data: purposes } = useFundPurposes(id)
   const { data: contributions } = useFundContributions(id)
   const deactivate = useDeactivateFund()
-  const userId = useAuthStore((s) => s.user?.id)
+  const authUser = useAuthStore((s) => s.user)
   const [editing, setEditing] = useState(false)
   const [tab, setTab] = useState<DetailTab>('portfolio')
   // 이 화면의 투자 폼은 **등록 전용**이다 — 수정·삭제는 집행 건 상세 페이지가 갖는다.
@@ -118,14 +129,12 @@ export function FundDetailPage() {
         back={<BackButton as={Link} to="/fund" />}
         actions={
           <>
-            {/* 펀드는 삭제 사유 인프라가 없어 확인창(confirm)으로 소프트 삭제한다. */}
-            {fund.created_by === userId && (
+            {(authUser?.role === 'super_admin' || fund.created_by === authUser?.id) && (
               <DetailDeleteButton
                 name={fund.name}
-                withReason={false}
-                onDelete={async () => {
-                  await deactivate.mutateAsync(fund.id)
-                }}
+                onDelete={(reason) =>
+                  deactivate.mutateAsync({ id: fund.id, reason: reason ?? '' })
+                }
                 onDeleted={() => navigate('/fund')}
               />
             )}
@@ -265,6 +274,7 @@ export function FundDetailPage() {
                   onAdd={() => setAddingInv(true)}
                 />
               )}
+              {tab === 'budget' && <WorkspaceBudgetTab targetType="fund" targetId={id} />}
               {tab === 'calls' && (
                 <CapitalCallPanel
                   fundId={id}

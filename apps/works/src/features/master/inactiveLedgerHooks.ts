@@ -1,14 +1,22 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 
-export type InactiveLedgerKey = 'startups' | 'networks'
-export type BulkDeactivateEntityKey =
-  | InactiveLedgerKey
+/**
+ * 비활성 원장 콘솔이 다루는 원장 7종. 서버(admin_inactive_ledger_entities·restore_entities·
+ * admin_ledger_console_capabilities)가 정확히 이 집합을 받는다 — 여기에 값을 늘리면
+ * 서버가 `unsupported_entity`로 거절한다.
+ */
+export type InactiveLedgerKey =
+  | 'startups'
+  | 'networks'
   | 'programs'
   | 'ma_programs'
   | 'ma_buyers'
   | 'ma_sellers'
   | 'funds'
+
+/** 일괄 비활성화 대상. 콘솔이 다루는 원장과 같은 집합이다. */
+export type BulkDeactivateEntityKey = InactiveLedgerKey
 
 export interface InactiveLedgerRow {
   entity_id: string
@@ -32,19 +40,55 @@ export interface EntityDeleteBlocker {
   row_count: number | string
 }
 
-/** ADMIN 버튼에 표시할 비활성·미병합 행 수. 모달을 열기 전에는 목록 본문을 가져오지 않는다. */
+export interface LedgerConsoleCapability {
+  entity_key: InactiveLedgerKey
+  can_list: boolean
+  can_restore: boolean
+  can_hard_delete: boolean
+  unsupported_note: string | null
+}
+
+/**
+ * 원장별로 무엇이 열려 있는지는 화면이 추측하지 않고 서버가 답한다.
+ * 삭제 컨트롤의 노출 조건이 이 값이므로, 서버가 삭제를 닫으면 화면도 같은 순간에 닫힌다.
+ */
+export function useLedgerConsoleCapability(ledger: InactiveLedgerKey, enabled: boolean) {
+  return useQuery({
+    queryKey: ['inactive-ledger', ledger, 'capabilities'],
+    enabled,
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<LedgerConsoleCapability | null> => {
+      const { data, error } = await supabase.rpc('admin_ledger_console_capabilities', {
+        p_entity_key: ledger,
+      })
+      if (error) throw error
+      return ((data ?? []) as LedgerConsoleCapability[])[0] ?? null
+    },
+  })
+}
+
+/**
+ * ADMIN 버튼에 표시할 비활성 행 수.
+ *
+ * 원장 테이블을 직접 세지 않고 목록 RPC의 `total_count`를 한 행만 받아 읽는다 — 원장 일곱 중
+ * `merged_into_id`가 없는 것이 있고(programs·ma_programs·funds), M&A 당사자 둘은 SELECT 정책이
+ * 비활성 행을 가려 직접 조회로는 언제나 0이 된다. 건수와 목록이 같은 계약을 읽어야
+ * "(3)인데 열면 비어 있다"가 생기지 않는다.
+ */
 export function useInactiveLedgerCount(ledger: InactiveLedgerKey, enabled: boolean) {
   return useQuery({
     queryKey: ['inactive-ledger', ledger, 'count'],
     enabled,
     queryFn: async (): Promise<number> => {
-      const { count, error } = await supabase
-        .from(ledger)
-        .select('*', { count: 'exact', head: true })
-        .not('deleted_at', 'is', null)
-        .is('merged_into_id', null)
+      const { data, error } = await supabase.rpc('admin_inactive_ledger_entities', {
+        p_entity_key: ledger,
+        p_keyword: null,
+        p_limit: 1,
+        p_offset: 0,
+      })
       if (error) throw error
-      return count ?? 0
+      const rows = (data ?? []) as InactiveLedgerRow[]
+      return Number(rows[0]?.total_count ?? 0)
     },
   })
 }
@@ -75,6 +119,28 @@ export function useInactiveLedgerPage(
   })
 }
 
+/**
+ * 원장별 **활성 목록** 캐시 키의 뿌리. 비활성/복구 어느 쪽으로 움직여도 이 키를 무효화해야
+ * 방금 처리한 행이 업무 목록에서 사라지거나 되살아난다. 키의 모양은 각 원장의 조회 훅이
+ * 소유하므로(`[config.key, 'programs', ...]` / `['ma-parties', table, ...]` 등) 여기서는
+ * 그 앞머리만 적는다 — 앞머리가 어긋나면 무효화가 조용히 아무것도 하지 않는다.
+ */
+const ledgerInvalidateKey: Record<InactiveLedgerKey, readonly string[]> = {
+  startups: ['startups'],
+  networks: ['networks'],
+  programs: ['project'],
+  ma_programs: ['mna'],
+  ma_buyers: ['ma-parties', 'ma_buyers'],
+  ma_sellers: ['ma-parties', 'ma_sellers'],
+  funds: ['fund'],
+}
+
+/** 활성 목록과 비활성 콘솔(목록·건수) 캐시를 한 번에 걷는다. 원장 일곱이 같은 처리를 쓴다. */
+function invalidateLedger(qc: ReturnType<typeof useQueryClient>, ledger: InactiveLedgerKey) {
+  void qc.invalidateQueries({ queryKey: ledgerInvalidateKey[ledger] })
+  void qc.invalidateQueries({ queryKey: ['inactive-ledger', ledger] })
+}
+
 /** ADMIN 선택 행 복구. 단건과 같은 검증을 쓰며 어느 하나라도 실패하면 전체 롤백한다. */
 export function useRestoreEntities(ledger: InactiveLedgerKey) {
   const qc = useQueryClient()
@@ -88,24 +154,11 @@ export function useRestoreEntities(ledger: InactiveLedgerKey) {
       if (error) throw error
       return Number(data ?? 0)
     },
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: [ledger] })
-      void qc.invalidateQueries({ queryKey: ['inactive-ledger', ledger] })
-    },
+    onSuccess: () => invalidateLedger(qc, ledger),
   })
 }
 
 /** 선택한 활성 행을 모두 성공하거나 모두 롤백되는 한 번의 RPC로 비활성화한다. */
-const bulkInvalidateKey: Record<BulkDeactivateEntityKey, readonly string[]> = {
-  startups: ['startups'],
-  networks: ['networks'],
-  programs: ['project'],
-  ma_programs: ['mna'],
-  ma_buyers: ['ma-parties', 'ma_buyers'],
-  ma_sellers: ['ma-parties', 'ma_sellers'],
-  funds: ['fund'],
-}
-
 export function useBulkDeactivateEntities(ledger: BulkDeactivateEntityKey) {
   const qc = useQueryClient()
   return useMutation({
@@ -118,12 +171,7 @@ export function useBulkDeactivateEntities(ledger: BulkDeactivateEntityKey) {
       if (error) throw error
       return Number(data ?? 0)
     },
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: bulkInvalidateKey[ledger] })
-      if (ledger === 'startups' || ledger === 'networks') {
-        void qc.invalidateQueries({ queryKey: ['inactive-ledger', ledger] })
-      }
-    },
+    onSuccess: () => invalidateLedger(qc, ledger),
   })
 }
 
@@ -164,10 +212,7 @@ export function useHardDeleteEntities(ledger: InactiveLedgerKey) {
       if (error) throw error
       return Number(data ?? 0)
     },
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: [ledger] })
-      void qc.invalidateQueries({ queryKey: ['inactive-ledger', ledger] })
-    },
+    onSuccess: () => invalidateLedger(qc, ledger),
   })
 }
 

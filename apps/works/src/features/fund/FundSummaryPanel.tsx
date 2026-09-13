@@ -1,5 +1,6 @@
 import { Banknote, CircleDollarSign, HandCoins, Layers3, WalletCards } from 'lucide-react'
 import { Card, Skeleton, SummaryTile, type SummaryTileTone } from '@ynarcher/ui'
+import { useEffect, useRef } from 'react'
 import type { FundListFilterState } from '@/features/fund/fundListHooks'
 import { useFundListTotals } from '@/features/fund/fundSummaryHooks'
 
@@ -8,6 +9,8 @@ interface FundSummaryPanelProps {
   filters: FundListFilterState
   mineUserId?: string | null
   listTotal?: number
+  /** 목록이 이전 검색·필터 결과를 임시 표시 중인지. 이때는 새 요약과 건수를 대조하지 않는다. */
+  listIsPlaceholderData?: boolean
 }
 
 interface FundTile {
@@ -33,9 +36,34 @@ export function FundSummaryPanel({
   filters,
   mineUserId,
   listTotal,
+  listIsPlaceholderData = false,
 }: FundSummaryPanelProps) {
   // 지표는 지금 목록에 선 그대로를 답해야 하므로 필터를 전부 건 집계를 쓴다.
-  const { data, isPending } = useFundListTotals(keyword, filters, mineUserId)
+  const { data, isPending, isPlaceholderData } = useFundListTotals(keyword, filters, mineUserId)
+  const lastWarning = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (
+      !import.meta.env.DEV ||
+      !data ||
+      listTotal === undefined ||
+      listIsPlaceholderData ||
+      isPlaceholderData
+    )
+      return
+
+    if (listTotal === data.fundCount) {
+      lastWarning.current = null
+      return
+    }
+
+    const warningKey = `${listTotal}:${data.fundCount}`
+    if (lastWarning.current === warningKey) return
+    lastWarning.current = warningKey
+    console.warn(
+      `[FUND] 요약 지표와 목록 건수가 다릅니다(목록 ${listTotal} / 지표 ${data.fundCount}).`,
+    )
+  }, [data, isPlaceholderData, listIsPlaceholderData, listTotal])
 
   if (isPending) {
     return (
@@ -45,12 +73,6 @@ export function FundSummaryPanel({
     )
   }
   if (!data) return null
-
-  if (import.meta.env.DEV && listTotal !== undefined && listTotal !== data.fundCount) {
-    console.warn(
-      `[FUND] 요약 지표와 목록 건수가 다릅니다(목록 ${listTotal} / 지표 ${data.fundCount}).`,
-    )
-  }
 
   const base = data.totalCommitment
   const tiles: FundTile[] = [

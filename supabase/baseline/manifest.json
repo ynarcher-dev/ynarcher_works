@@ -1,0 +1,20 @@
+{
+  "formatVersion": 2,
+  "normalizer": {
+    "name": "yna-baseline-canonical",
+    "version": 2
+  },
+  "historyAlgorithm": "yna-baseline-history/1",
+  "generatedAtUtc": "2026-09-13T05:30:38.007Z",
+  "postgresMajorVersion": 17,
+  "supabaseCliVersion": "2.109.0",
+  "cutoffVersion": "20260913200000",
+  "migrationCount": 380,
+  "migrationHistorySha256": "4c63725493055cdbd65e6e048c730d33196c840ef896c6b5658228ec57689668",
+  "schemas": [
+    "public",
+    "app"
+  ],
+  "schemaSha256": "40eac0de2931c4a4fd2d127a112223397d1e1329e43899be84d56a4f4f16cb49",
+  "source": "isolated local stack (supabase start, seed disabled)"
+}

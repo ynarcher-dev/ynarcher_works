@@ -24,26 +24,29 @@ import {
   type ParticipantRow,
 } from '@/features/program/participantHooks'
 import {
+  countNotified,
   useCloseGuestAccess,
   useOpenGuestAccess,
   useRemoveParticipants,
   useReopenGuestAccess,
   useSendPasswordReset,
 } from '@/features/program/participantAccessHooks'
-import {
-  PARTICIPANT_PERSONAS,
-  type MasterTable,
-} from '@/features/program/participantPersona'
+import { isGuestRosterRow } from '@/features/program/guestRoster'
 import { ProgramAccessWindowModal } from '@/features/program/ProgramAccessWindowModal'
 
 /** 한 페이지에 세우는 행 수 — 페이징 훅과 표 페이저가 같은 값을 봐야 한다. */
 const PAGE_SIZE = 10
 
-/** 검색이 걸리는 축 — 대상명과 로그인 계정(성명·연락처). 명부에서 사람을 찾는 길은 이 넷뿐이다. */
+/**
+ * 검색이 걸리는 축 — **계정의 값이 앞이고 원장 이름이 뒤다**.
+ *
+ * 표가 세우는 값으로만 건다. 보이지 않는 값으로 걸러지면 방금 눈으로 본 줄이 사라진 이유를
+ * 화면이 답하지 못한다. 원장 이름을 함께 두는 이유는 그것도 표에 서기 때문이다(연결 원장 열).
+ */
 function matches(row: ParticipantRow, keyword: string): boolean {
   const kw = keyword.trim().toLowerCase()
   if (!kw) return true
-  return [row.targetName, row.loginName, row.email, row.phone]
+  return [row.accountName, row.accountEmail, row.phone, row.targetName]
     .filter(Boolean)
     .some((v) => String(v).toLowerCase().includes(kw))
 }
@@ -71,13 +74,19 @@ function accessWindowLabel(iso: string | null): string {
 }
 
 /**
- * 사업 상세 '와이앤아처 GUEST 설정' 모달 계정생성 탭의 본문. **자격 하나만 담는다.**
+ * 사업 상세 '와이앤아처 GUEST 설정' 모달 `GUEST 계정 추가` 탭의 본문. **명부 한 벌이 선다.**
  *
- * 자격이 어느 층에 서는가는 이 파일이 정하지 않는다 — 2026-09-08부터 상위 탭 하나 아래
- * 하위 탭으로 서고, 그 근거는 `GuestAccountsPanel` 주석에 있다.
+ * **자격 탭을 걷었다**(2026-09-13 사용자 확정). 종전에는 자격(원장)마다 하위 탭이 서고 이
+ * 컴포넌트가 그중 하나만 담았는데, 그 구조에서는 **원장에 붙지 않은 게스트 계정이 어느 탭에도
+ * 서지 못했다.** 원장 연결이 계정의 선택적 속성이 된 이상 자격은 명부를 가르는 축이 될 수
+ * 없고, 표의 한 열(`연결 원장`)로 내려온다.
  *
- * 자격이 바뀌면 이 컴포넌트는 통째로 다시 선다(부모가 조건부로 렌더한다) — 선택·검색·페이지가
- * 함께 비워져야 일괄 작업이 안 보이는 행을 집지 않는다.
+ * **내부 임직원 줄은 서지 않는다.** 이 명부는 *밖에서 들어오는 사람*의 축이고 임직원은
+ * WORKS로 들어온다. 가르는 값은 원장 유무가 아니라 계정 유형이다(`isGuestRosterRow`) —
+ * 원장 유무로 가르면 원장 없는 게스트가 임직원으로 불린다.
+ *
+ * **여기서 계정을 만들지 않는다.** 생성 창구는 `/guest-accounts` 하나이며, 이 화면의 추가는
+ * 이미 있는 계정을 이 사업에 잇는 일이다(`ParticipantAddModal`).
  *
  * **버튼이 서는 자리는 걸리는 범위가 정한다**(2026-09-05 개편). 사업 전체에 걸리는
  * '로그인 가능 기간'은 선택과 무관하므로 툴바에 상시로 서고, 고른 행에 걸리는 것들(열기·재설정
@@ -93,17 +102,8 @@ function accessWindowLabel(iso: string | null): string {
  * 문이 열리지 않는다. 문을 여닫을 수 있는 사람은 그 사업의 담당자(PM·MEMBER)뿐이며,
  * 화면의 숨김은 편의일 뿐 실제 강제는 서버(RPC)가 한다.
  */
-export function ParticipantPool({
-  host,
-  persona,
-}: {
-  host: GuestHostEntity
-  persona: MasterTable
-}) {
+export function ParticipantPool({ host }: { host: GuestHostEntity }) {
   const config = useGuestHost()
-  // 자격이 정하는 것(제목·머리글·검색 문구·원장 조회·구분 배지)은 전부 이 한 벌에서 나온다.
-  // 화면이 `persona === 'startups'` 삼항으로 갈라 쓰면 자격이 셋 이상일 때 답할 수 없다.
-  const spec = PARTICIPANT_PERSONAS[persona]
   const toast = useToast()
   const myId = useAuthStore((s) => s.user?.id)
   const masked = useMaskPolicy(participantContentKey(config.key))
@@ -131,18 +131,14 @@ export function ParticipantPool({
   const canOpenDoor = isManager
 
   /**
-   * 이 탭의 자격만 남긴다. 원장이 없는 행(내부 임직원 참가자)은 게스트 자격이 아니므로
-   * 어느 탭에도 세우지 않는다 — 이 두 탭은 '밖에서 들어오는 사람'의 축이고, 임직원은
-   * WORKS로 들어온다.
+   * 게스트 명부에 서는 줄만 남긴다 — 거르는 것은 **실제 내부 임직원 계정뿐**이다.
+   * 자격(원장)으로는 거르지 않는다: 원장에 붙지 않은 게스트 계정도 이 명부의 대상이다.
    */
-  const personaRows = useMemo(
-    () => rows.filter((r) => r.master_table === persona),
-    [rows, persona],
-  )
+  const guestRows = useMemo(() => rows.filter(isGuestRosterRow), [rows])
 
   const filtered = useMemo(
-    () => personaRows.filter((r) => matches(r, keyword)),
-    [personaRows, keyword],
+    () => guestRows.filter((r) => matches(r, keyword)),
+    [guestRows, keyword],
   )
 
   // 선택(selected)은 페이지를 넘겨도 유지된다 — 일괄 처리는 화면에 보이는 행이 아니라 고른 행이
@@ -150,13 +146,13 @@ export function ParticipantPool({
   const { pageItems, page, setPage } = usePaged(filtered, PAGE_SIZE)
 
   const columns = useMemo(
-    () => participantColumns(masked, host.status, host.guest_access_ends_at, persona),
-    [masked, host.status, host.guest_access_ends_at, persona],
+    () => participantColumns(masked, host.status, host.guest_access_ends_at),
+    [masked, host.status, host.guest_access_ends_at],
   )
 
   const selectedRows = useMemo(
-    () => personaRows.filter((r) => selected.includes(r.id)),
-    [personaRows, selected],
+    () => guestRows.filter((r) => selected.includes(r.id)),
+    [guestRows, selected],
   )
 
   /** 고른 행 중 계정이 있는 대상의 계정 id — 재설정 안내는 줄이 아니라 계정이 대상이다. */
@@ -201,7 +197,7 @@ export function ParticipantPool({
       onSuccess: (n) => {
         setSelected([])
         setConfirming(null)
-        toast.show(`이 사업 접근 ${n}건을 차단했습니다.`, 'success')
+        toast.show(`이 ${config.entityNoun} 접근 ${n}건을 차단했습니다.`, 'success')
       },
       onError: (e: unknown) =>
         toast.show(e instanceof Error ? e.message : '차단에 실패했습니다.', 'danger'),
@@ -233,8 +229,8 @@ export function ParticipantPool({
       (results) => {
         setSelected([])
         setConfirming(null)
-        const sent = results.filter((r) => r.status === 'fulfilled').length
-        const failed = results.length - sent
+        // 호출이 성공한 것과 안내가 나간 것은 다르다(countNotified 주석 참조).
+        const { sent, failed } = countNotified(results)
         if (failed > 0) {
           toast.show(`재설정 안내 ${sent}건 발송 · ${failed}건 실패`, 'warning')
         } else {
@@ -277,7 +273,7 @@ export function ParticipantPool({
           <ListToolbar
             keyword={keyword}
             onKeywordChange={setKeyword}
-            searchPlaceholder={spec.listSearchPlaceholder}
+            searchPlaceholder="계정명 · 이메일 · 연락처 · 연결 원장 검색"
             actions={
               <div className="flex items-center gap-2">
                 {canOpenDoor && (
@@ -285,7 +281,8 @@ export function ParticipantPool({
                     {accessWindowLabel(host.guest_access_ends_at)}
                   </Button>
                 )}
-                <Button onClick={() => setAddOpen(true)}>{spec.label} 계정 생성</Button>
+                {/* '생성'이 아니라 '추가'다 — 이 버튼은 이미 있는 계정을 이 사업에 잇는다. */}
+                <Button onClick={() => setAddOpen(true)}>GUEST 계정 추가</Button>
               </div>
             }
           />
@@ -322,7 +319,7 @@ export function ParticipantPool({
               page,
               pageSize: PAGE_SIZE,
               total: filtered.length,
-              totalAll: personaRows.length,
+              totalAll: guestRows.length,
               onChange: setPage,
             }}
           />
@@ -332,7 +329,6 @@ export function ParticipantPool({
         open={addOpen}
         onClose={() => setAddOpen(false)}
         programId={host.id}
-        master={persona}
       />
       <ProgramAccessWindowModal
         host={host}

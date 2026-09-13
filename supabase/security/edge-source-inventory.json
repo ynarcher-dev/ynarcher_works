@@ -1,0 +1,3037 @@
+{
+  "meta": {
+    "artifact": "edge-source-inventory.json",
+    "role": "edge worker (source authorization auditor) — READ-ONLY source pass",
+    "repo": "C:/Users/Admin/Documents/GitHub/ynarcher_works",
+    "branch": "main",
+    "baseCommit": "846dfb83",
+    "generatedAt": "2026-09-12",
+    "scope": "supabase/functions/**, apps/**, packages/** — source text only",
+    "authority": "SOURCE ONLY. Effective DB privileges, policy predicates, view security_invoker, RPC secdef/search_path and storage policy rows are the ACL worker catalog's to state. Policy/RLS columns here are HINTS and several are known-wrong because many policies are created inside `execute format(...)` loops (see unknowns.dynamicDdl).",
+    "method": "Full read of all 22 function entrypoints + 17 _shared modules; scripted AST-free scan of every .from()/.rpc() in apps+packages with hand resolution of every dynamic table expression; grep of all 363 migrations for grant/policy/bucket text.",
+    "provenance": "Parent-reviewed copy of the edge worker temp artifact edge-inventory.json, with the E-7 correction applied. Placed here at parent instruction so the ACL worker has the browser/RPC/Edge/Storage demand-side facts alongside its catalog evidence.",
+    "ownership": "Created by the edge worker. Every other file in supabase/security/ and the canonical §15 doc belong to the ACL worker.",
+    "correctionsApplied": [
+      "E-7 reversed: capital_call_payments DELETE is live (useDeleteCapitalCall), not superseded by set_capital_call_payments."
+    ]
+  },
+  "counts": {
+    "edgeFunctionDirs": 23,
+    "edgeFunctions": 22,
+    "sharedModules": 17,
+    "edgeFunctionsFullyRead": 22,
+    "browserFromCallsites_total": 375,
+    "browserFromCallsites_production": 373,
+    "browserFromCallsites_literalTable": 246,
+    "browserFromCallsites_dynamicExpression": 127,
+    "dynamicExpressions_resolvedToTables": 101,
+    "dynamicExpressions_storageBuckets": 13,
+    "dynamicExpressions_nonSupabaseNoise": 13,
+    "dynamicExpressions_unresolved": 0,
+    "distinctTablesTouchedByBrowser": 103,
+    "distinctRpcsCalledByBrowser": 80,
+    "browserRpcCallsites": 91,
+    "tablesWithGrantInMigrationSource": 22,
+    "tablesTouchedByBrowserWithGrantGap": 83,
+    "storageBuckets": 8,
+    "edgeFunctionsWithZeroInRepoCallers": 1,
+    "danglingEdgeCallers": 1
+  },
+  "authPrimitives": {
+    "supabaseAdmin()": {
+      "path": "supabase/functions/_shared/supabaseAdmin.ts:7",
+      "note": "service_role, RLS bypass. Header comment restricts it to guest auth; 15 of 22 functions now use it."
+    },
+    "resolveInternalCaller()": {
+      "path": "_shared/internalAuth.ts:11",
+      "checks": "auth.getUser -> public.users by auth_user_id, deleted_at null, is_active true, user_type NOT in (external_startup, external_expert, temporary_guest)"
+    },
+    "resolveOfficeWriter()": {
+      "path": "_shared/internalAuth.ts:29",
+      "checks": "resolveInternalCaller + (super_admin OR workspace_permissions[office].permission_level=write with expires_at honoured)"
+    },
+    "supabaseAsCaller()": {
+      "path": "_shared/internalAuth.ts:48",
+      "note": "anon key + caller Authorization header — RLS applies. The correct primitive for row-visibility questions."
+    },
+    "verifyGuestSession()": {
+      "path": "_shared/guestSession.ts:41",
+      "checks": "HS256 verify (GUEST_JWT_SECRET, aud=authenticated) + DB re-read of users(is_active, deleted_at, session_version). Rejects a valid token whose session_version was bumped."
+    },
+    "gate()": {
+      "path": "_shared/publicModuleLinkGate.ts:76",
+      "note": "Pure function, unit-tested. Sole authorization for the three anonymous public endpoints."
+    },
+    "withCors()": {
+      "path": "_shared/cors.ts:44",
+      "note": "GRACE MODE: when ALLOWED_ORIGINS is unset every origin is allowed (cors.ts:22-24) with only a console warning."
+    },
+    "requireStrictBrowserOrigin()": {
+      "path": "_shared/cors.ts:72",
+      "note": "Refuses grace mode. Applied ONLY to ai-minute-draft, stt-transcribe, meeting-recording-playback, meeting-recording-process."
+    }
+  },
+  "roleMap": {
+    "dbRoles": {
+      "anon": "Anonymous public endpoints (application-*, public-module-*) reach the DB only through service_role inside the function, so anon needs no table privilege for them.",
+      "authenticated": "CRITICAL: both WORKS employees AND logged-in GUESTs run as this single Postgres role. The guest custom JWT carries role:\"authenticated\" (guestAccount.ts:328) and is signed with GUEST_JWT_SECRET, which crypto.ts:15 states must equal the project JWT secret. Therefore every GRANT ... TO authenticated is reachable by a guest session and is separated from employee data by RLS predicates alone.",
+      "service_role": "Edge functions only. No browser path."
+    },
+    "appRoles": {
+      "source": "public.user_type enum, supabase/migrations/20260705120000_init_schema_enums.sql:31",
+      "values": [
+        "super_admin",
+        "executive",
+        "management_support",
+        "ac_business",
+        "fund_manager",
+        "mna_manager",
+        "project_manager",
+        "external_startup",
+        "external_expert",
+        "temporary_guest",
+        "read_only"
+      ],
+      "guestTypes": [
+        "external_startup",
+        "external_expert",
+        "temporary_guest"
+      ],
+      "guestTypesConst": "apps/works/src/lib/userTypes.ts:16"
+    },
+    "workspaces": {
+      "source": "public.workspace_key enum",
+      "initial": [
+        "hub",
+        "networks",
+        "ac",
+        "fund",
+        "mna",
+        "project",
+        "management",
+        "admin",
+        "guest"
+      ],
+      "mutations": [
+        "20260716130000:17 rename 'hub' -> 'office'",
+        "20260716130000:19 add 'startup'",
+        "20260909150000:49 rename 'project' -> 'project_retired'",
+        "20260909150000:50 rename 'ac' -> 'project'"
+      ],
+      "effectiveNow": [
+        "office",
+        "startup",
+        "networks",
+        "project",
+        "fund",
+        "mna",
+        "project_retired",
+        "management",
+        "admin",
+        "guest"
+      ],
+      "permissionLevels": [
+        "none",
+        "read",
+        "write"
+      ],
+      "scopeTypes": [
+        "none",
+        "global",
+        "department",
+        "program",
+        "project",
+        "fund",
+        "company",
+        "self",
+        "temporary"
+      ]
+    },
+    "docComparison": [
+      {
+        "doc": "docs_planning/1_roles_permissions.md §1.1",
+        "claim": "7 internal roles",
+        "code": "8 internal user_type values (adds read_only, splits executive)",
+        "status": "DIFFERENCE — doc omits read_only from the role list although the matrix in §2.1 has no column for it either."
+      },
+      {
+        "doc": "docs_planning/1_roles_permissions.md §2.1",
+        "claim": "matrix columns: OFFICE, STARTUP, NETWORKS, AC, M&A, FUND, MANAGEMENT, PROJECT, ADMIN, GUEST",
+        "code": "enum now has 'project' meaning the old AC, plus a retired 'project_retired'",
+        "status": "DIFFERENCE — the doc still names AC and PROJECT as two live workspaces. After 20260909150000 the old AC IS project, and the old project is retired. The doc's own IMPORTANT callout already flags this as pending reconciliation."
+      },
+      {
+        "doc": "docs_planning/1_roles_permissions.md §3",
+        "claim": "Guest login = name + contact + business code, then 6-digit OTP",
+        "code": "guest-auth-login/handler.ts — email ID + password; business code removed (handler.ts:10-12); OTP not used for login",
+        "status": "SUPERSEDED — replaced by docs_planning/3_9_1 §6, which docs_master/CLAUDE.md §3 records as user-confirmed on 2026-09-12. Do NOT reconcile toward this doc."
+      },
+      {
+        "doc": "docs_dev/3_database_rls_policy_matrix.md §4",
+        "claim": "per-table matrix naming companies, experts, applications, mentoring_sessions, ndas, deals, evaluations, milestones, negotiations, dd_files, lps, portfolio_financials, performance_reviews, salaries, custom_events, global_networks, partners, feedbacks",
+        "code": "None of these appear in any browser callsite. The live unified ledgers are startups / networks / ma_sellers / ma_buyers / program_* / funds.",
+        "status": "DIFFERENCE — the matrix predates the 2026-09-03/04 ledger unification. It covers roughly 30 tables; the browser touches 103. Not usable as the ACL source of truth."
+      },
+      {
+        "doc": "docs_dev/3_database_rls_policy_matrix.md §2.5 (cited by 20260912025406:21)",
+        "claim": "physical delete forbidden; soft delete via deleted_at UPDATE",
+        "code": "One browser DELETE remains: capital_call_payments (apps/works/src/features/fund/hooks.ts).",
+        "status": "EXCEPTION TO CONFIRM — see finding E-7."
+      },
+      {
+        "doc": "docs_master/CLAUDE.md §3 (entity_contributions)",
+        "claim": "actor column owned by a DB trigger; client INSERT allowed under policy",
+        "code": "Matches: grant select,insert exists (20260912025406:153) and the browser only SELECTs it.",
+        "status": "CONFIRMED"
+      },
+      {
+        "doc": "docs_master/CLAUDE.md §3 (guest login policy)",
+        "claim": "email ID + initial contact valid only before a personal password, no session before it is set, offline credential handling",
+        "code": "guest-auth-login/handler.ts:77-105 — exactly this. Initial path yields only a change ticket, never a session.",
+        "status": "CONFIRMED — preserved unchanged by this audit."
+      }
+    ]
+  },
+  "storage": {
+    "buckets": [
+      {
+        "id": "attachments",
+        "public": false,
+        "definedIn": "20260707230000_attachments_storage.sql:14",
+        "clientsBrowser": [
+          "apps/works/src/features/networks/materialHooks.ts:125,141 (upload/remove)"
+        ],
+        "clientsEdge": [
+          "application-submit (upload)",
+          "material-download (createSignedUrl 60s)",
+          "public-module-file (createSignedUrl)",
+          "_shared/aiFill/run.ts:199 (download)",
+          "_shared/aiFill/extractRun.ts:119 (download)"
+        ],
+        "objectPolicies": "INSERT+UPDATE internal-user policies retained; SELECT policy DROPPED by 20260716130300 so browsers cannot mint their own signed URLs. Download is funnelled through material-download, which refuses to issue a URL if access_logs insert fails.",
+        "isolationCheck": "Row-level: material-download re-queries attachments with the caller token, so guests only see files their RLS allows."
+      },
+      {
+        "id": "program-posters",
+        "public": true,
+        "definedIn": "20260716180000_recruitment_poster_bucket.sql:14",
+        "clientsBrowser": [
+          "apps/works/src/features/program/recruitment/recruitmentHooks.ts:228,237"
+        ],
+        "objectPolicies": "poster_objects_insert / poster_objects_update only. No SELECT policy needed — bucket is public.",
+        "isolationCheck": "NONE by design (public recruitment poster). Confirm no PII is ever written here."
+      },
+      {
+        "id": "meeting-room-photos",
+        "public": true,
+        "definedIn": "20260728120000_meeting_rooms.sql:254",
+        "clientsBrowser": [
+          "apps/works/src/features/office/rooms/meetingRoomsApi.ts:209,218"
+        ],
+        "objectPolicies": "room_photo_objects_insert / _update.",
+        "isolationCheck": "NONE by design (public)."
+      },
+      {
+        "id": "asset-photos",
+        "public": false,
+        "definedIn": "20260730160000_asset_photos.sql:51",
+        "clientsBrowser": [
+          "apps/works/src/features/management/assets/assetPhotos.ts:27,49"
+        ],
+        "objectPolicies": "asset_photo_objects_select/_insert/_update (SELECT redefined by 20260730190000:200).",
+        "isolationCheck": "Storage policy predicate — catalog worker to confirm."
+      },
+      {
+        "id": "ma-quick-review-images",
+        "public": false,
+        "definedIn": "20260908120000_ma_quick_review_images.sql:41",
+        "clientsBrowser": [
+          "apps/works/src/features/mna/parties/quickReviewImages.ts:39,61"
+        ],
+        "objectPolicies": "ma_quick_review_image_objects_select/_insert/_update.",
+        "isolationCheck": "M&A confidential-deal boundary — catalog worker to confirm the predicate matches ma_sellers RLS."
+      },
+      {
+        "id": "approval-form-assets",
+        "public": true,
+        "definedIn": "20260911193000_official_document_template.sql:9",
+        "clientsBrowser": [
+          "apps/works/src/features/approval/approvalFormAssets.ts:13,23"
+        ],
+        "objectPolicies": "INSERT only, `to authenticated with check (bucket_id=... and app.is_admin())`. No UPDATE/DELETE policy — versions are preserved by new-UUID INSERT.",
+        "isolationCheck": "Public bucket holding company logo/seal. Intentional per the migration header."
+      },
+      {
+        "id": "meeting-recordings",
+        "public": false,
+        "definedIn": "20260912012905_meeting_recording_sessions.sql:333",
+        "clientsBrowser": [
+          "apps/works/src/features/office/minutes/voice/recordingApi.ts:74 (upload)"
+        ],
+        "clientsEdge": [
+          "meeting-recording-process (download)",
+          "meeting-recording-playback (createSignedUrl)"
+        ],
+        "objectPolicies": "meeting_recordings_objects_insert `to authenticated with check (bucket_id=... and app.can_upload_recording_object(name))`. No SELECT policy — playback goes through the edge function.",
+        "isolationCheck": "Path-bound upload predicate + owner_id check in meeting-recording-process:50."
+      },
+      {
+        "id": "partner-docs",
+        "public": false,
+        "definedIn": "20260903210000_trade_partners.sql:209",
+        "clientsBrowser": [],
+        "objectPolicies": "partner_doc_objects_select/_insert/_update were DROPPED by 20260911054939_remove_trade_partner_documents.sql:21-23.",
+        "isolationCheck": "ORPHAN — bucket row still exists with no policies and no clients. Flag for the catalog worker: confirm whether the bucket should be removed."
+      }
+    ]
+  },
+  "browserRpcs": {
+    "note": "All 91 RPC callsites are in apps/works. apps/guest calls ZERO RPCs — it only does direct .from() reads plus edge functions. Signature, SECURITY DEFINER status, proconfig search_path and EXECUTE grants are the catalog worker's to state; this list is the demand side only.",
+    "distinct": 80,
+    "variableTargets": [
+      {
+        "site": "apps/works/src/features/bulk/bulkAssign.tsx:234, apps/works/src/features/program/hooks.ts:194",
+        "expr": "config.rpcs.setStaffing",
+        "resolvesTo": [
+          "set_program_staffing",
+          "set_ma_program_staffing"
+        ]
+      },
+      {
+        "site": "apps/works/src/features/hub/dashboard/myDatabaseHooks.ts:55",
+        "expr": "fn",
+        "resolvesTo": [
+          "UNRESOLVED — locally-passed callback name; low ACL impact (dashboard counts). Catalog worker can cross-check against the RPC list."
+        ]
+      }
+    ]
+  },
+  "tables": [
+    {
+      "table": "access_logs",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:252[SELECT]"
+      ]
+    },
+    {
+      "table": "application_forms",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/program/recruitment/recruitmentHooks.ts:155[SELECT]"
+      ]
+    },
+    {
+      "table": "application_submissions",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/program/recruitment/recruitmentHooks.ts:286[SELECT]"
+      ]
+    },
+    {
+      "table": "approval_budget_revisions",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/approval/budgetApi.ts:168[SELECT]"
+      ]
+    },
+    {
+      "table": "approval_document_links",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 2,
+        "INSERT": 1,
+        "UPDATE": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/approval/documentLinkApi.ts:62[SELECT]",
+        "apps/works/src/features/approval/documentLinkApi.ts:102[SELECT]",
+        "apps/works/src/features/approval/documentLinkApi.ts:121[INSERT]",
+        "apps/works/src/features/approval/documentLinkApi.ts:135[UPDATE]"
+      ]
+    },
+    {
+      "table": "approval_documents",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 7,
+        "INSERT": 2,
+        "UPDATE": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/approval/approvalApi.ts:28[SELECT]",
+        "apps/works/src/features/approval/approvalApi.ts:212[SELECT]",
+        "apps/works/src/features/approval/approvalApi.ts:246[SELECT]",
+        "apps/works/src/features/approval/approvalApi.ts:295[INSERT]",
+        "apps/works/src/features/approval/budgetApi.ts:46[SELECT]",
+        "apps/works/src/features/approval/budgetApi.ts:93[SELECT]",
+        "apps/works/src/features/hub/hooks.ts:254[SELECT]",
+        "apps/works/src/features/management/hooks.ts:33[SELECT]",
+        "apps/works/src/features/management/hooks.ts:56[INSERT]",
+        "apps/works/src/features/management/hooks.ts:100[UPDATE]"
+      ]
+    },
+    {
+      "table": "approval_form_versions",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT",
+      "opCounts": {
+        "SELECT": 1,
+        "INSERT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/approval/formsAdminApi.ts:57[SELECTINSERT]"
+      ]
+    },
+    {
+      "table": "approval_forms",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 1,
+        "INSERT": 1,
+        "UPDATE": 3
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/approval/approvalApi.ts:77[SELECT]",
+        "apps/works/src/features/approval/formsAdminApi.ts:23[INSERT]",
+        "apps/works/src/features/approval/formsAdminApi.ts:39[UPDATE]",
+        "apps/works/src/features/approval/formsAdminApi.ts:89[UPDATE]",
+        "apps/works/src/features/approval/formsAdminApi.ts:107[UPDATE]"
+      ]
+    },
+    {
+      "table": "approval_lines",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "INSERT/UPDATE",
+      "opCounts": {
+        "INSERT": 2,
+        "UPDATE": 1
+      },
+      "grantInSource": null,
+      "grantGap": "INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/approval/approvalApi.ts:320[INSERT]",
+        "apps/works/src/features/management/hooks.ts:73[INSERT]",
+        "apps/works/src/features/management/hooks.ts:93[UPDATE]"
+      ]
+    },
+    {
+      "table": "approval_program_links",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 3,
+        "INSERT": 1,
+        "UPDATE": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/approval/programLinkApi.ts:105[SELECT]",
+        "apps/works/src/features/approval/programLinkApi.ts:164[SELECT]",
+        "apps/works/src/features/approval/programLinkApi.ts:185[INSERT]",
+        "apps/works/src/features/approval/programLinkApi.ts:200[UPDATE]",
+        "apps/works/src/features/approval/relatedApprovalsApi.ts:54[SELECT]"
+      ]
+    },
+    {
+      "table": "approval_reads",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "UPSERT",
+      "opCounts": {
+        "UPSERT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/approval/approvalApi.ts:455[UPSERT]"
+      ]
+    },
+    {
+      "table": "approval_recipients",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "INSERT",
+      "opCounts": {
+        "INSERT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "INSERT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/approval/approvalApi.ts:324[INSERT]"
+      ]
+    },
+    {
+      "table": "assets",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 4,
+        "INSERT": 2,
+        "UPDATE": 2
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/hub/globalSearch.ts:432[SELECT]",
+        "apps/works/src/features/management/assets/assetsApi.ts:229[SELECT]",
+        "apps/works/src/features/management/assets/assetsApi.ts:261[SELECT]",
+        "apps/works/src/features/management/assets/assetsApi.ts:282[SELECT]",
+        "apps/works/src/features/management/assets/assetsApi.ts:301[INSERT]",
+        "apps/works/src/features/management/assets/assetsApi.ts:312[UPDATE]",
+        "apps/works/src/features/management/assets/assetsApi.ts:332[UPDATE]",
+        "apps/works/src/features/management/assets/assetsApi.ts:351[INSERT]"
+      ]
+    },
+    {
+      "table": "attachment_extracts",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/ai/aiExtract.ts:67[SELECT]"
+      ]
+    },
+    {
+      "table": "attachments",
+      "apps": [
+        "GUEST",
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 11,
+        "INSERT": 2,
+        "UPDATE": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": "read",
+      "sites": [
+        "apps/guest/src/features/announcementHooks.ts:54[SELECT]",
+        "apps/guest/src/features/attachmentCounts.ts:20[SELECT]",
+        "apps/guest/src/features/moduleHooks.ts:134[SELECT]",
+        "apps/guest/src/features/overviewHooks.ts:43[SELECT]",
+        "apps/guest/src/features/qnaHooks.ts:55[SELECT]",
+        "apps/works/src/features/approval/approvalDraftApi.ts:157[SELECT]",
+        "apps/works/src/features/hub/boardPostsApi.ts:124[SELECT]",
+        "apps/works/src/features/hub/boardPostsApi.ts:142[SELECT]",
+        "apps/works/src/features/networks/materialHooks.ts:93[SELECT]",
+        "apps/works/src/features/networks/materialHooks.ts:129[INSERT]",
+        "apps/works/src/features/networks/materialHooks.ts:193[INSERT]",
+        "apps/works/src/features/networks/materialHooks.ts:225[UPDATE]",
+        "apps/works/src/features/office/minutes/minutesApi.ts:367[SELECT]",
+        "apps/works/src/features/program/detail/attachmentCounts.ts:22[SELECT]"
+      ]
+    },
+    {
+      "table": "attendance_days",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/management/attendance/attendanceApi.ts:119[SELECT]"
+      ]
+    },
+    {
+      "table": "attendance_edits",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/management/attendance/attendanceApi.ts:138[SELECT]"
+      ]
+    },
+    {
+      "table": "attendance_policies",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 1,
+        "UPDATE": 2,
+        "INSERT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/management/attendance/attendanceConfigApi.ts:136[SELECT]",
+        "apps/works/src/features/management/attendance/attendanceConfigApi.ts:202[UPDATE]",
+        "apps/works/src/features/management/attendance/attendanceConfigApi.ts:203[INSERT]",
+        "apps/works/src/features/management/attendance/attendanceConfigApi.ts:219[UPDATE]"
+      ]
+    },
+    {
+      "table": "attendance_statuses",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/UPSERT",
+      "opCounts": {
+        "SELECT": 1,
+        "UPSERT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/management/attendance/attendanceConfigApi.ts:49[SELECT]",
+        "apps/works/src/features/management/attendance/attendanceConfigApi.ts:73[UPSERT]"
+      ]
+    },
+    {
+      "table": "audit_logs",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 1
+      },
+      "grantInSource": "S",
+      "grantGap": null,
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:66[SELECT]"
+      ]
+    },
+    {
+      "table": "board_posts",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 5,
+        "INSERT": 1,
+        "UPDATE": 2
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/hub/boardPostsApi.ts:67[SELECT]",
+        "apps/works/src/features/hub/boardPostsApi.ts:86[SELECT]",
+        "apps/works/src/features/hub/boardPostsApi.ts:107[SELECT]",
+        "apps/works/src/features/hub/boardPostsApi.ts:175[INSERT]",
+        "apps/works/src/features/hub/boardPostsApi.ts:206[UPDATE]",
+        "apps/works/src/features/hub/boardPostsApi.ts:219[UPDATE]",
+        "apps/works/src/features/hub/boardPostsApi.ts:257[SELECT]",
+        "apps/works/src/features/hub/globalSearch.ts:362[SELECT]"
+      ]
+    },
+    {
+      "table": "boards",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 2,
+        "INSERT": 1,
+        "UPDATE": 2
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/hub/boardHooks.ts:45[SELECT]",
+        "apps/works/src/features/hub/boardHooks.ts:69[SELECT]",
+        "apps/works/src/features/hub/boardHooks.ts:76[INSERT]",
+        "apps/works/src/features/hub/boardHooks.ts:97[UPDATE]",
+        "apps/works/src/features/hub/boardHooks.ts:112[UPDATE]"
+      ]
+    },
+    {
+      "table": "branch_members",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/office/branches/branchesApi.ts:75[SELECT]"
+      ]
+    },
+    {
+      "table": "branches",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 3,
+        "INSERT": 1,
+        "UPDATE": 2
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/office/branches/branchesApi.ts:56[SELECT]",
+        "apps/works/src/features/office/branches/branchesApi.ts:107[SELECT]",
+        "apps/works/src/features/office/branches/branchesApi.ts:113[SELECTINSERT]",
+        "apps/works/src/features/office/branches/branchesApi.ts:139[UPDATE]",
+        "apps/works/src/features/office/branches/branchesApi.ts:176[UPDATE]"
+      ]
+    },
+    {
+      "table": "capital_call_payments",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/DELETE",
+      "opCounts": {
+        "DELETE": 1,
+        "SELECT": 2
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,DELETE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/fund/hooks.ts:327[DELETE]",
+        "apps/works/src/features/fund/hooks.ts:362[SELECT]",
+        "apps/works/src/features/fund/hooks.ts:397[SELECT]"
+      ]
+    },
+    {
+      "table": "capital_calls",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 2,
+        "INSERT": 1,
+        "UPDATE": 2
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/fund/hooks.ts:292[SELECTINSERT]",
+        "apps/works/src/features/fund/hooks.ts:307[UPDATE]",
+        "apps/works/src/features/fund/hooks.ts:332[UPDATE]",
+        "apps/works/src/features/fund/hooks.ts:525[SELECT]"
+      ]
+    },
+    {
+      "table": "category_tags",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 2,
+        "INSERT": 1,
+        "UPDATE": 5
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:116[dyn]",
+        "apps/works/src/features/admin/hooks.ts:146[dyn]",
+        "apps/works/src/features/admin/hooks.ts:161[dyn]",
+        "apps/works/src/features/admin/hooks.ts:178[dyn]",
+        "apps/works/src/features/admin/hooks.ts:194[dyn]",
+        "apps/works/src/features/admin/hooks.ts:216[dyn]",
+        "apps/works/src/features/admin/hooks.ts:229[dyn]",
+        "apps/works/src/features/bulk/bulkTags.ts:26[dyn]"
+      ]
+    },
+    {
+      "table": "company_category_tags",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 2,
+        "INSERT": 1,
+        "UPDATE": 5
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:116[dyn]",
+        "apps/works/src/features/admin/hooks.ts:146[dyn]",
+        "apps/works/src/features/admin/hooks.ts:161[dyn]",
+        "apps/works/src/features/admin/hooks.ts:178[dyn]",
+        "apps/works/src/features/admin/hooks.ts:194[dyn]",
+        "apps/works/src/features/admin/hooks.ts:216[dyn]",
+        "apps/works/src/features/admin/hooks.ts:229[dyn]",
+        "apps/works/src/features/bulk/bulkTags.ts:26[dyn]"
+      ]
+    },
+    {
+      "table": "company_status_tags",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 2,
+        "INSERT": 1,
+        "UPDATE": 5
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:116[dyn]",
+        "apps/works/src/features/admin/hooks.ts:146[dyn]",
+        "apps/works/src/features/admin/hooks.ts:161[dyn]",
+        "apps/works/src/features/admin/hooks.ts:178[dyn]",
+        "apps/works/src/features/admin/hooks.ts:194[dyn]",
+        "apps/works/src/features/admin/hooks.ts:216[dyn]",
+        "apps/works/src/features/admin/hooks.ts:229[dyn]",
+        "apps/works/src/features/bulk/bulkTags.ts:26[dyn]"
+      ]
+    },
+    {
+      "table": "country_tags",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 3,
+        "INSERT": 1,
+        "UPDATE": 5
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:116[dyn]",
+        "apps/works/src/features/admin/hooks.ts:146[dyn]",
+        "apps/works/src/features/admin/hooks.ts:161[dyn]",
+        "apps/works/src/features/admin/hooks.ts:178[dyn]",
+        "apps/works/src/features/admin/hooks.ts:194[dyn]",
+        "apps/works/src/features/admin/hooks.ts:216[dyn]",
+        "apps/works/src/features/admin/hooks.ts:229[dyn]",
+        "apps/works/src/features/bulk/bulkTags.ts:26[dyn]",
+        "apps/works/src/features/networks/countryOptions.ts:28[dyn]"
+      ]
+    },
+    {
+      "table": "departments",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 4,
+        "INSERT": 1,
+        "UPDATE": 5
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/management/orgHooks.ts:44[SELECT]",
+        "apps/works/src/features/management/orgHooks.ts:69[SELECT]",
+        "apps/works/src/features/management/orgHooks.ts:202[SELECTINSERT]",
+        "apps/works/src/features/management/orgHooks.ts:218[UPDATE]",
+        "apps/works/src/features/management/orgHooks.ts:234[UPDATE]",
+        "apps/works/src/features/management/orgHooks.ts:250[UPDATE]",
+        "apps/works/src/features/management/orgHooks.ts:267[UPDATE]",
+        "apps/works/src/features/management/orgHooks.ts:325[UPDATE]",
+        "apps/works/src/features/program/programsPoolHooks.ts:305[SELECT]"
+      ]
+    },
+    {
+      "table": "dept_budgets",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/management/hooks.ts:421[SELECT]"
+      ]
+    },
+    {
+      "table": "dept_members",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 3
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/bulk/bulkAssign.tsx:139[SELECT]",
+        "apps/works/src/features/management/kpi/kpiQueries.ts:68[SELECT]",
+        "apps/works/src/features/management/orgHooks.ts:418[SELECT]"
+      ]
+    },
+    {
+      "table": "entity_contributions",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 6
+      },
+      "grantInSource": "S,I",
+      "grantGap": null,
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/fund/hooks.ts:134[SELECT]",
+        "apps/works/src/features/master/entityHooks.ts:142[SELECT]",
+        "apps/works/src/features/mna/parties/hooks.ts:214[SELECT]",
+        "apps/works/src/features/networks/bulkUpload.ts:430[SELECT]",
+        "apps/works/src/features/networks/hooks.ts:418[SELECT]",
+        "apps/works/src/features/program/detail/programContributions.ts:19[SELECT]"
+      ]
+    },
+    {
+      "table": "entity_feedback",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 2,
+        "INSERT": 1,
+        "UPDATE": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/approval/approvalDraftApi.ts:163[SELECT]",
+        "apps/works/src/features/networks/feedbackHooks.ts:22[SELECT]",
+        "apps/works/src/features/networks/feedbackHooks.ts:49[INSERT]",
+        "apps/works/src/features/networks/feedbackHooks.ts:68[UPDATE]"
+      ]
+    },
+    {
+      "table": "field_tags",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 3,
+        "INSERT": 1,
+        "UPDATE": 5
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/networks/dashboardHooks.ts:121[SELECT]",
+        "apps/works/src/features/admin/hooks.ts:116[dyn]",
+        "apps/works/src/features/admin/hooks.ts:146[dyn]",
+        "apps/works/src/features/admin/hooks.ts:161[dyn]",
+        "apps/works/src/features/admin/hooks.ts:178[dyn]",
+        "apps/works/src/features/admin/hooks.ts:194[dyn]",
+        "apps/works/src/features/admin/hooks.ts:216[dyn]",
+        "apps/works/src/features/admin/hooks.ts:229[dyn]",
+        "apps/works/src/features/bulk/bulkTags.ts:26[dyn]"
+      ]
+    },
+    {
+      "table": "fund_lps",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/fund/hooks.ts:211[SELECT]"
+      ]
+    },
+    {
+      "table": "fund_managers",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 2
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/hub/dashboard/businessDashboardHooks.ts:155[SELECT]",
+        "apps/works/src/features/management/employeeActivity.ts:244[SELECT]"
+      ]
+    },
+    {
+      "table": "fund_purposes",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/fund/hooks.ts:462[SELECT]"
+      ]
+    },
+    {
+      "table": "funds",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 11,
+        "INSERT": 1,
+        "UPDATE": 2
+      },
+      "grantInSource": "S,I,U",
+      "grantGap": null,
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/fund/hooks.ts:54[SELECT]",
+        "apps/works/src/features/fund/hooks.ts:71[SELECT]",
+        "apps/works/src/features/fund/hooks.ts:104[SELECTINSERT]",
+        "apps/works/src/features/fund/hooks.ts:117[UPDATE]",
+        "apps/works/src/features/fund/hooks.ts:176[UPDATE]",
+        "apps/works/src/features/hub/dashboard/businessDashboardHooks.ts:168[SELECT]",
+        "apps/works/src/features/hub/globalSearch.ts:292[SELECT]",
+        "apps/works/src/features/hub/hooks.ts:253[SELECT]",
+        "apps/works/src/features/management/employeeActivity.ts:260[SELECT]",
+        "apps/works/src/features/admin/creatorTransfer.ts:53[dyn]",
+        "apps/works/src/features/approval/programLinkApi.ts:81[dyn]",
+        "apps/works/src/features/office/minutes/minuteLinkSearch.ts:27[dyn]",
+        "apps/works/src/features/office/minutes/minutesApi.ts:227[dyn]"
+      ]
+    },
+    {
+      "table": "guest_identities",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 2
+      },
+      "grantInSource": "S",
+      "grantGap": null,
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/admin/guestAccountHooks.ts:181[SELECT]",
+        "apps/works/src/features/program/participantHooks.ts:208[SELECT]"
+      ]
+    },
+    {
+      "table": "guest_invitations",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/program/participantHooks.ts:228[SELECT]"
+      ]
+    },
+    {
+      "table": "hr_profiles",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/UPSERT",
+      "opCounts": {
+        "SELECT": 1,
+        "UPSERT": 1
+      },
+      "grantInSource": "S,I,U",
+      "grantGap": null,
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/management/hooks.ts:303[SELECT]",
+        "apps/works/src/features/management/hooks.ts:318[UPSERT]"
+      ]
+    },
+    {
+      "table": "industry_tags",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 2,
+        "INSERT": 1,
+        "UPDATE": 5
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:116[dyn]",
+        "apps/works/src/features/admin/hooks.ts:146[dyn]",
+        "apps/works/src/features/admin/hooks.ts:161[dyn]",
+        "apps/works/src/features/admin/hooks.ts:178[dyn]",
+        "apps/works/src/features/admin/hooks.ts:194[dyn]",
+        "apps/works/src/features/admin/hooks.ts:216[dyn]",
+        "apps/works/src/features/admin/hooks.ts:229[dyn]",
+        "apps/works/src/features/bulk/bulkTags.ts:26[dyn]"
+      ]
+    },
+    {
+      "table": "investment_method_tags",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 2,
+        "INSERT": 1,
+        "UPDATE": 5
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:116[dyn]",
+        "apps/works/src/features/admin/hooks.ts:146[dyn]",
+        "apps/works/src/features/admin/hooks.ts:161[dyn]",
+        "apps/works/src/features/admin/hooks.ts:178[dyn]",
+        "apps/works/src/features/admin/hooks.ts:194[dyn]",
+        "apps/works/src/features/admin/hooks.ts:216[dyn]",
+        "apps/works/src/features/admin/hooks.ts:229[dyn]",
+        "apps/works/src/features/bulk/bulkTags.ts:26[dyn]"
+      ]
+    },
+    {
+      "table": "investment_stage_tags",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 2,
+        "INSERT": 1,
+        "UPDATE": 5
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:116[dyn]",
+        "apps/works/src/features/admin/hooks.ts:146[dyn]",
+        "apps/works/src/features/admin/hooks.ts:161[dyn]",
+        "apps/works/src/features/admin/hooks.ts:178[dyn]",
+        "apps/works/src/features/admin/hooks.ts:194[dyn]",
+        "apps/works/src/features/admin/hooks.ts:216[dyn]",
+        "apps/works/src/features/admin/hooks.ts:229[dyn]",
+        "apps/works/src/features/bulk/bulkTags.ts:26[dyn]"
+      ]
+    },
+    {
+      "table": "investments",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 2,
+        "INSERT": 1,
+        "UPDATE": 2
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/fund/hooks.ts:644[SELECT]",
+        "apps/works/src/features/fund/hooks.ts:707[SELECTINSERT]",
+        "apps/works/src/features/fund/hooks.ts:727[UPDATE]",
+        "apps/works/src/features/fund/hooks.ts:744[UPDATE]"
+      ]
+    },
+    {
+      "table": "kpi_actual_revisions",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 1
+      },
+      "grantInSource": "S,I",
+      "grantGap": null,
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/management/kpi/kpiQueries.ts:55[SELECT]"
+      ]
+    },
+    {
+      "table": "kpi_assignments",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/management/kpi/kpiQueries.ts:45[SELECT]"
+      ]
+    },
+    {
+      "table": "kpi_blueprint_items",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT",
+      "opCounts": {
+        "SELECT": 2,
+        "INSERT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/management/kpi/kpiMutations.ts:18[SELECT]",
+        "apps/works/src/features/management/kpi/kpiMutations.ts:43[INSERT]",
+        "apps/works/src/features/management/kpi/kpiQueries.ts:93[SELECT]"
+      ]
+    },
+    {
+      "table": "kpi_blueprints",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT",
+      "opCounts": {
+        "SELECT": 2,
+        "INSERT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/management/kpi/kpiMutations.ts:40[SELECTINSERT]",
+        "apps/works/src/features/management/kpi/kpiQueries.ts:85[SELECT]"
+      ]
+    },
+    {
+      "table": "kpi_records",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/management/hooks.ts:443[SELECT]"
+      ]
+    },
+    {
+      "table": "kpi_template_items",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "INSERT": 1,
+        "UPDATE": 3,
+        "SELECT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/management/kpi/kpiMutations.ts:23[INSERT]",
+        "apps/works/src/features/management/kpi/kpiMutations.ts:56[UPDATE]",
+        "apps/works/src/features/management/kpi/kpiMutations.ts:56[UPDATE]",
+        "apps/works/src/features/management/kpi/kpiQueries.ts:35[SELECT]",
+        "apps/works/src/features/management/kpi/kpiMutations.ts:65[dyn]"
+      ]
+    },
+    {
+      "table": "kpi_templates",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 2,
+        "INSERT": 1,
+        "UPDATE": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/management/kpi/kpiMutations.ts:12[SELECTINSERT]",
+        "apps/works/src/features/management/kpi/kpiQueries.ts:25[SELECT]",
+        "apps/works/src/features/management/kpi/kpiMutations.ts:65[dyn]"
+      ]
+    },
+    {
+      "table": "kpi_versions",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/management/kpi/kpiQueries.ts:10[SELECT]"
+      ]
+    },
+    {
+      "table": "location_region_tags",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 2,
+        "INSERT": 1,
+        "UPDATE": 5
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:116[dyn]",
+        "apps/works/src/features/admin/hooks.ts:146[dyn]",
+        "apps/works/src/features/admin/hooks.ts:161[dyn]",
+        "apps/works/src/features/admin/hooks.ts:178[dyn]",
+        "apps/works/src/features/admin/hooks.ts:194[dyn]",
+        "apps/works/src/features/admin/hooks.ts:216[dyn]",
+        "apps/works/src/features/admin/hooks.ts:229[dyn]",
+        "apps/works/src/features/bulk/bulkTags.ts:26[dyn]"
+      ]
+    },
+    {
+      "table": "location_tags",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 2,
+        "INSERT": 1,
+        "UPDATE": 5
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:116[dyn]",
+        "apps/works/src/features/admin/hooks.ts:146[dyn]",
+        "apps/works/src/features/admin/hooks.ts:161[dyn]",
+        "apps/works/src/features/admin/hooks.ts:178[dyn]",
+        "apps/works/src/features/admin/hooks.ts:194[dyn]",
+        "apps/works/src/features/admin/hooks.ts:216[dyn]",
+        "apps/works/src/features/admin/hooks.ts:229[dyn]",
+        "apps/works/src/features/bulk/bulkTags.ts:26[dyn]"
+      ]
+    },
+    {
+      "table": "ma_buyers",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT",
+      "opCounts": {
+        "SELECT": 9,
+        "INSERT": 1
+      },
+      "grantInSource": "S,I,U",
+      "grantGap": null,
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/approval/programLinkApi.ts:81[dyn]",
+        "apps/works/src/features/master/ledgerMatch.ts:219[dyn]",
+        "apps/works/src/features/master/ledgerPage.ts:113[dyn]",
+        "apps/works/src/features/master/ledgerPage.ts:144[dyn]",
+        "apps/works/src/features/mna/parties/hooks.ts:106[dyn]",
+        "apps/works/src/features/mna/parties/hooks.ts:137[dyn]",
+        "apps/works/src/features/mna/programPartyLinks.ts:132[dyn]",
+        "apps/works/src/features/office/minutes/minuteLinkSearch.ts:27[dyn]",
+        "apps/works/src/features/office/minutes/minutesApi.ts:227[dyn]"
+      ]
+    },
+    {
+      "table": "ma_program_departments",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/program/programsPoolHooks.ts:338[dyn]"
+      ]
+    },
+    {
+      "table": "ma_program_managers",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 4
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/hub/dashboard/businessDashboardHooks.ts:99[dyn]",
+        "apps/works/src/features/management/employeeActivity.ts:158[dyn]",
+        "apps/works/src/features/master/ledgerPage.ts:186[dyn]",
+        "apps/works/src/features/program/hooks.ts:376[dyn]"
+      ]
+    },
+    {
+      "table": "ma_program_party_links",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 1
+      },
+      "grantInSource": "S",
+      "grantGap": null,
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/mna/programPartyLinks.ts:44[SELECT]"
+      ]
+    },
+    {
+      "table": "ma_program_timeline_items",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 2
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/program/moduleHooks.ts:22[dyn]",
+        "apps/works/src/features/program/moduleHooks.ts:44[dyn]"
+      ]
+    },
+    {
+      "table": "ma_programs",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 10,
+        "INSERT": 1,
+        "UPDATE": 1
+      },
+      "grantInSource": "S,I,U",
+      "grantGap": null,
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/hub/hooks.ts:252[SELECT]",
+        "apps/works/src/features/admin/creatorTransfer.ts:53[dyn]",
+        "apps/works/src/features/approval/programLinkApi.ts:81[dyn]",
+        "apps/works/src/features/hub/dashboard/businessDashboardHooks.ts:109[dyn]",
+        "apps/works/src/features/hub/globalSearch.ts:258[dyn]",
+        "apps/works/src/features/office/minutes/minuteLinkSearch.ts:27[dyn]",
+        "apps/works/src/features/office/minutes/minutesApi.ts:227[dyn]",
+        "apps/works/src/features/program/hooks.ts:134[dyn]",
+        "apps/works/src/features/program/hooks.ts:161[dyn]",
+        "apps/works/src/features/program/programsPoolHooks.ts:354[dyn]",
+        "apps/works/src/features/startup/startupProgramHooks.ts:67[dyn]"
+      ]
+    },
+    {
+      "table": "ma_sellers",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT",
+      "opCounts": {
+        "SELECT": 9,
+        "INSERT": 1
+      },
+      "grantInSource": "S,I,U",
+      "grantGap": null,
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/approval/programLinkApi.ts:81[dyn]",
+        "apps/works/src/features/master/ledgerMatch.ts:219[dyn]",
+        "apps/works/src/features/master/ledgerPage.ts:113[dyn]",
+        "apps/works/src/features/master/ledgerPage.ts:144[dyn]",
+        "apps/works/src/features/mna/parties/hooks.ts:106[dyn]",
+        "apps/works/src/features/mna/parties/hooks.ts:137[dyn]",
+        "apps/works/src/features/mna/programPartyLinks.ts:132[dyn]",
+        "apps/works/src/features/office/minutes/minuteLinkSearch.ts:27[dyn]",
+        "apps/works/src/features/office/minutes/minutesApi.ts:227[dyn]"
+      ]
+    },
+    {
+      "table": "meeting_minute_links",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 2
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/office/minutes/minutesApi.ts:193[SELECT]",
+        "apps/works/src/features/office/minutes/relatedMinutesApi.ts:41[SELECT]"
+      ]
+    },
+    {
+      "table": "meeting_minutes",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 4,
+        "UPDATE": 2,
+        "INSERT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/hub/globalSearch.ts:398[SELECT]",
+        "apps/works/src/features/office/minutes/minutesApi.ts:157[SELECT]",
+        "apps/works/src/features/office/minutes/minutesApi.ts:258[SELECT]",
+        "apps/works/src/features/office/minutes/minutesApi.ts:316[UPDATE]",
+        "apps/works/src/features/office/minutes/minutesApi.ts:320[SELECTINSERT]",
+        "apps/works/src/features/office/minutes/minutesApi.ts:383[UPDATE]"
+      ]
+    },
+    {
+      "table": "meeting_recording_segments",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 1
+      },
+      "grantInSource": "S",
+      "grantGap": null,
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/office/minutes/voice/recordingApi.ts:161[SELECT]"
+      ]
+    },
+    {
+      "table": "meeting_recordings",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 1
+      },
+      "grantInSource": "S",
+      "grantGap": null,
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/office/minutes/voice/recordingApi.ts:138[SELECT]"
+      ]
+    },
+    {
+      "table": "meeting_room_reservations",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 2,
+        "INSERT": 1,
+        "UPDATE": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/office/rooms/reservationsApi.ts:59[SELECT]",
+        "apps/works/src/features/office/rooms/reservationsApi.ts:112[SELECT]",
+        "apps/works/src/features/office/rooms/reservationsApi.ts:143[INSERT]",
+        "apps/works/src/features/office/rooms/reservationsApi.ts:163[UPDATE]"
+      ]
+    },
+    {
+      "table": "meeting_rooms",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 3,
+        "INSERT": 1,
+        "UPDATE": 2
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/office/rooms/meetingRoomsApi.ts:92[SELECT]",
+        "apps/works/src/features/office/rooms/meetingRoomsApi.ts:116[SELECT]",
+        "apps/works/src/features/office/rooms/meetingRoomsApi.ts:158[SELECT]",
+        "apps/works/src/features/office/rooms/meetingRoomsApi.ts:165[INSERT]",
+        "apps/works/src/features/office/rooms/meetingRoomsApi.ts:178[UPDATE]",
+        "apps/works/src/features/office/rooms/meetingRoomsApi.ts:190[UPDATE]"
+      ]
+    },
+    {
+      "table": "module_templates",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 1
+      },
+      "grantInSource": "S,I,U",
+      "grantGap": null,
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/program/moduleTemplateHooks.ts:58[SELECT]"
+      ]
+    },
+    {
+      "table": "networks",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 28,
+        "INSERT": 3,
+        "UPDATE": 1
+      },
+      "grantInSource": "S,I,U",
+      "grantGap": null,
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/hub/hooks.ts:264[SELECT]",
+        "apps/works/src/features/hub/hooks.ts:270[SELECT]",
+        "apps/works/src/features/admin/creatorTransfer.ts:53[dyn]",
+        "apps/works/src/features/approval/programLinkApi.ts:81[dyn]",
+        "apps/works/src/features/hub/globalSearch.ts:208[dyn]",
+        "apps/works/src/features/master/inactiveLedgerHooks.ts:42[dyn]",
+        "apps/works/src/features/master/ledgerMatch.ts:219[dyn]",
+        "apps/works/src/features/master/ledgerPage.ts:113[dyn]",
+        "apps/works/src/features/master/ledgerPage.ts:144[dyn]",
+        "apps/works/src/features/networks/bulkUpload.ts:373[dyn]",
+        "apps/works/src/features/networks/dashboardHooks.ts:45[dyn]",
+        "apps/works/src/features/networks/dashboardHooks.ts:123[dyn]",
+        "apps/works/src/features/networks/dashboardHooks.ts:159[dyn]",
+        "apps/works/src/features/networks/dashboardHooks.ts:200[dyn]",
+        "apps/works/src/features/networks/dashboardHooks.ts:237[dyn]",
+        "apps/works/src/features/networks/hooks.ts:192[dyn]",
+        "apps/works/src/features/networks/hooks.ts:213[dyn]",
+        "apps/works/src/features/networks/hooks.ts:244[dyn]",
+        "apps/works/src/features/networks/hooks.ts:283[dyn]",
+        "apps/works/src/features/networks/hooks.ts:297[dyn]",
+        "apps/works/src/features/networks/personSearch.ts:43[dyn]",
+        "apps/works/src/features/office/minutes/minuteLinkSearch.ts:27[dyn]",
+        "apps/works/src/features/office/minutes/minutesApi.ts:227[dyn]",
+        "apps/works/src/features/program/participantHooks.ts:165[dyn]",
+        "apps/works/src/features/program/participantHooks.ts:289[dyn]",
+        "apps/works/src/features/program/rosterHooks.ts:191[dyn]",
+        "apps/works/src/features/program/rosterHooks.ts:215[dyn]",
+        "apps/works/src/features/program/rosterHooks.ts:304[dyn]",
+        "apps/works/src/features/program/rosterHooks.ts:357[dyn]"
+      ]
+    },
+    {
+      "table": "notifications",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/UPDATE",
+      "opCounts": {
+        "SELECT": 1,
+        "UPDATE": 2
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/notifications/notificationHooks.ts:24[SELECT]",
+        "apps/works/src/features/notifications/notificationHooks.ts:42[UPDATE]",
+        "apps/works/src/features/notifications/notificationHooks.ts:58[UPDATE]"
+      ]
+    },
+    {
+      "table": "org_levels",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 1,
+        "INSERT": 1,
+        "UPDATE": 2
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/management/orgHooks.ts:166[SELECT]",
+        "apps/works/src/features/management/orgHooks.ts:291[INSERT]",
+        "apps/works/src/features/management/orgHooks.ts:304[UPDATE]",
+        "apps/works/src/features/management/orgHooks.ts:320[UPDATE]"
+      ]
+    },
+    {
+      "table": "org_versions",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/UPDATE",
+      "opCounts": {
+        "SELECT": 3,
+        "UPDATE": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/bulk/bulkAssign.tsx:127[SELECT]",
+        "apps/works/src/features/management/orgHooks.ts:112[SELECT]",
+        "apps/works/src/features/management/orgHooks.ts:133[SELECT]",
+        "apps/works/src/features/management/orgHooks.ts:388[UPDATE]"
+      ]
+    },
+    {
+      "table": "pay_step_tags",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 2,
+        "INSERT": 1,
+        "UPDATE": 5
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:116[dyn]",
+        "apps/works/src/features/admin/hooks.ts:146[dyn]",
+        "apps/works/src/features/admin/hooks.ts:161[dyn]",
+        "apps/works/src/features/admin/hooks.ts:178[dyn]",
+        "apps/works/src/features/admin/hooks.ts:194[dyn]",
+        "apps/works/src/features/admin/hooks.ts:216[dyn]",
+        "apps/works/src/features/admin/hooks.ts:229[dyn]",
+        "apps/works/src/features/bulk/bulkTags.ts:26[dyn]"
+      ]
+    },
+    {
+      "table": "permission_templates",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:17[SELECT]"
+      ]
+    },
+    {
+      "table": "portable_assets",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 3
+      },
+      "grantInSource": "S",
+      "grantGap": null,
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/office/assets/portableAssetsApi.ts:82[SELECT]",
+        "apps/works/src/features/office/assets/portableAssetsApi.ts:105[SELECT]",
+        "apps/works/src/features/office/assets/portableAssetsApi.ts:127[SELECT]"
+      ]
+    },
+    {
+      "table": "position_tags",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 2,
+        "INSERT": 1,
+        "UPDATE": 5
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:116[dyn]",
+        "apps/works/src/features/admin/hooks.ts:146[dyn]",
+        "apps/works/src/features/admin/hooks.ts:161[dyn]",
+        "apps/works/src/features/admin/hooks.ts:178[dyn]",
+        "apps/works/src/features/admin/hooks.ts:194[dyn]",
+        "apps/works/src/features/admin/hooks.ts:216[dyn]",
+        "apps/works/src/features/admin/hooks.ts:229[dyn]",
+        "apps/works/src/features/bulk/bulkTags.ts:26[dyn]"
+      ]
+    },
+    {
+      "table": "program_announcements",
+      "apps": [
+        "GUEST",
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 3,
+        "UPDATE": 2,
+        "INSERT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": "read",
+      "sites": [
+        "apps/guest/src/features/announcementHooks.ts:29[SELECT]",
+        "apps/works/src/features/program/announcementHooks.ts:39[dyn]",
+        "apps/works/src/features/program/announcementHooks.ts:67[dyn]",
+        "apps/works/src/features/program/announcementHooks.ts:74[dyn]",
+        "apps/works/src/features/program/announcementHooks.ts:94[dyn]"
+      ]
+    },
+    {
+      "table": "program_departments",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/program/programsPoolHooks.ts:338[dyn]"
+      ]
+    },
+    {
+      "table": "program_links",
+      "apps": [
+        "GUEST",
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 2,
+        "UPDATE": 2,
+        "INSERT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": "read",
+      "sites": [
+        "apps/guest/src/features/moduleHooks.ts:105[SELECT]",
+        "apps/works/src/features/program/moduleContentHooks.ts:108[dyn:SHARED_TABLES.links]",
+        "apps/works/src/features/program/moduleContentHooks.ts:144[dyn:SHARED_TABLES.links]",
+        "apps/works/src/features/program/moduleContentHooks.ts:151[dyn:SHARED_TABLES.links]",
+        "apps/works/src/features/program/moduleContentHooks.ts:171[dyn:SHARED_TABLES.links]"
+      ]
+    },
+    {
+      "table": "program_managers",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 4
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/hub/dashboard/businessDashboardHooks.ts:99[dyn]",
+        "apps/works/src/features/management/employeeActivity.ts:158[dyn]",
+        "apps/works/src/features/master/ledgerPage.ts:186[dyn]",
+        "apps/works/src/features/program/hooks.ts:376[dyn]"
+      ]
+    },
+    {
+      "table": "program_module_public_links",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 3
+      },
+      "grantInSource": "S,I,U",
+      "grantGap": null,
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/program/publicLinkHooks.ts:59[SELECT]",
+        "apps/works/src/features/program/publicLinkHooks.ts:78[SELECT]",
+        "apps/works/src/features/program/recruitment/recruitmentHooks.ts:163[SELECT]"
+      ]
+    },
+    {
+      "table": "program_modules",
+      "apps": [
+        "GUEST",
+        "WORKS"
+      ],
+      "ops": "SELECT/UPDATE",
+      "opCounts": {
+        "SELECT": 3,
+        "UPDATE": 2
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,UPDATE",
+      "guestReachable": "read",
+      "sites": [
+        "apps/guest/src/features/moduleHooks.ts:46[SELECT]",
+        "apps/works/src/features/admin/moduleAdminHooks.ts:24[SELECT]",
+        "apps/works/src/features/program/detail/detailHooks.ts:66[dyn:SHARED_TABLES.modules]",
+        "apps/works/src/features/program/hooks.ts:257[dyn:SHARED_TABLES.modules]",
+        "apps/works/src/features/program/hooks.ts:310[dyn:SHARED_TABLES.modules]"
+      ]
+    },
+    {
+      "table": "program_notices",
+      "apps": [
+        "GUEST",
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 2,
+        "UPDATE": 2,
+        "INSERT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": "read",
+      "sites": [
+        "apps/guest/src/features/noticeHooks.ts:27[SELECT]",
+        "apps/works/src/features/program/noticeHooks.ts:32[dyn]",
+        "apps/works/src/features/program/noticeHooks.ts:53[dyn]",
+        "apps/works/src/features/program/noticeHooks.ts:59[dyn]",
+        "apps/works/src/features/program/noticeHooks.ts:79[dyn]"
+      ]
+    },
+    {
+      "table": "program_overviews",
+      "apps": [
+        "GUEST",
+        "WORKS"
+      ],
+      "ops": "SELECT/UPSERT",
+      "opCounts": {
+        "SELECT": 2,
+        "UPSERT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": "read",
+      "sites": [
+        "apps/guest/src/features/overviewHooks.ts:20[SELECT]",
+        "apps/works/src/features/program/overviewHooks.ts:27[dyn]",
+        "apps/works/src/features/program/overviewHooks.ts:48[dyn]"
+      ]
+    },
+    {
+      "table": "program_participant_entries",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 3,
+        "INSERT": 3,
+        "UPDATE": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/program/participantHooks.ts:332[dyn:SHARED_TABLES.participantEntries]",
+        "apps/works/src/features/program/rosterHooks.ts:103[dyn:SHARED_TABLES.participantEntries]",
+        "apps/works/src/features/program/rosterHooks.ts:154[dyn:SHARED_TABLES.participantEntries]",
+        "apps/works/src/features/program/rosterHooks.ts:250[dyn:SHARED_TABLES.participantEntries]",
+        "apps/works/src/features/program/rosterHooks.ts:311[dyn:SHARED_TABLES.participantEntries]",
+        "apps/works/src/features/program/rosterHooks.ts:365[dyn:SHARED_TABLES.participantEntries]",
+        "apps/works/src/features/program/rosterHooks.ts:396[dyn:SHARED_TABLES.participantEntries]"
+      ]
+    },
+    {
+      "table": "program_participants",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT",
+      "opCounts": {
+        "SELECT": 4,
+        "INSERT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/management/employeeActivity.ts:188[dyn:SHARED_TABLES.participants]",
+        "apps/works/src/features/program/participantHooks.ts:186[dyn:SHARED_TABLES.participants]",
+        "apps/works/src/features/program/participantHooks.ts:409[dyn:SHARED_TABLES.participants]",
+        "apps/works/src/features/program/participantHooks.ts:509[dyn:SHARED_TABLES.participants]",
+        "apps/works/src/features/startup/startupProgramHooks.ts:52[dyn:SHARED_TABLES.participants]"
+      ]
+    },
+    {
+      "table": "program_posts",
+      "apps": [
+        "GUEST",
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 2,
+        "UPDATE": 2,
+        "INSERT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": "read",
+      "sites": [
+        "apps/guest/src/features/moduleHooks.ts:77[SELECT]",
+        "apps/works/src/features/program/moduleContentHooks.ts:34[dyn:SHARED_TABLES.posts]",
+        "apps/works/src/features/program/moduleContentHooks.ts:54[dyn:SHARED_TABLES.posts]",
+        "apps/works/src/features/program/moduleContentHooks.ts:60[dyn:SHARED_TABLES.posts]",
+        "apps/works/src/features/program/moduleContentHooks.ts:80[dyn:SHARED_TABLES.posts]"
+      ]
+    },
+    {
+      "table": "program_questions",
+      "apps": [
+        "GUEST",
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 2,
+        "INSERT": 1,
+        "UPDATE": 2
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": "read+write",
+      "sites": [
+        "apps/guest/src/features/qnaHooks.ts:32[SELECT]",
+        "apps/guest/src/features/qnaHooks.ts:74[INSERT]",
+        "apps/works/src/features/program/questionHooks.ts:44[dyn]",
+        "apps/works/src/features/program/questionHooks.ts:66[dyn]",
+        "apps/works/src/features/program/questionHooks.ts:88[dyn]"
+      ]
+    },
+    {
+      "table": "program_timeline_items",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 2
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/program/moduleHooks.ts:22[dyn]",
+        "apps/works/src/features/program/moduleHooks.ts:44[dyn]"
+      ]
+    },
+    {
+      "table": "programs",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 10,
+        "INSERT": 1,
+        "UPDATE": 1
+      },
+      "grantInSource": "S,I,U",
+      "grantGap": null,
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/hub/hooks.ts:250[SELECT]",
+        "apps/works/src/features/admin/creatorTransfer.ts:53[dyn]",
+        "apps/works/src/features/approval/programLinkApi.ts:81[dyn]",
+        "apps/works/src/features/hub/dashboard/businessDashboardHooks.ts:109[dyn]",
+        "apps/works/src/features/hub/globalSearch.ts:258[dyn]",
+        "apps/works/src/features/office/minutes/minuteLinkSearch.ts:27[dyn]",
+        "apps/works/src/features/office/minutes/minutesApi.ts:227[dyn]",
+        "apps/works/src/features/program/hooks.ts:134[dyn]",
+        "apps/works/src/features/program/hooks.ts:161[dyn]",
+        "apps/works/src/features/program/programsPoolHooks.ts:354[dyn]",
+        "apps/works/src/features/startup/startupProgramHooks.ts:67[dyn]"
+      ]
+    },
+    {
+      "table": "rank_tags",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 2,
+        "INSERT": 1,
+        "UPDATE": 5
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:116[dyn]",
+        "apps/works/src/features/admin/hooks.ts:146[dyn]",
+        "apps/works/src/features/admin/hooks.ts:161[dyn]",
+        "apps/works/src/features/admin/hooks.ts:178[dyn]",
+        "apps/works/src/features/admin/hooks.ts:194[dyn]",
+        "apps/works/src/features/admin/hooks.ts:216[dyn]",
+        "apps/works/src/features/admin/hooks.ts:229[dyn]",
+        "apps/works/src/features/bulk/bulkTags.ts:26[dyn]"
+      ]
+    },
+    {
+      "table": "region_tags",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 2,
+        "INSERT": 1,
+        "UPDATE": 5
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/admin/hooks.ts:116[dyn]",
+        "apps/works/src/features/admin/hooks.ts:146[dyn]",
+        "apps/works/src/features/admin/hooks.ts:161[dyn]",
+        "apps/works/src/features/admin/hooks.ts:178[dyn]",
+        "apps/works/src/features/admin/hooks.ts:194[dyn]",
+        "apps/works/src/features/admin/hooks.ts:216[dyn]",
+        "apps/works/src/features/admin/hooks.ts:229[dyn]",
+        "apps/works/src/features/bulk/bulkTags.ts:26[dyn]"
+      ]
+    },
+    {
+      "table": "startup_managers",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 3
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/management/employeeActivity.ts:71[SELECT]",
+        "apps/works/src/features/startup/startupPoolHooks.ts:222[SELECT]",
+        "apps/works/src/features/master/ledgerPage.ts:186[dyn]"
+      ]
+    },
+    {
+      "table": "startups",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 24,
+        "INSERT": 3,
+        "UPDATE": 1
+      },
+      "grantInSource": "S,I,U",
+      "grantGap": null,
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/fund/hooks.ts:782[SELECT]",
+        "apps/works/src/features/hub/globalSearch.ts:161[SELECT]",
+        "apps/works/src/features/mna/parties/startupLink.ts:84[SELECT]",
+        "apps/works/src/features/mna/parties/StartupPickerModal.tsx:47[SELECT]",
+        "apps/works/src/features/office/minutes/startupRepresentativeSearch.ts:30[SELECT]",
+        "apps/works/src/features/startup/dashboard/startupDashboardHooks.ts:33[SELECT]",
+        "apps/works/src/features/startup/dashboard/startupDashboardHooks.ts:59[SELECT]",
+        "apps/works/src/features/admin/creatorTransfer.ts:53[dyn]",
+        "apps/works/src/features/approval/programLinkApi.ts:81[dyn]",
+        "apps/works/src/features/hub/dashboard/myDatabaseHooks.ts:64[dyn]",
+        "apps/works/src/features/hub/hooks.ts:236[dyn]",
+        "apps/works/src/features/master/entityHooks.ts:35[dyn]",
+        "apps/works/src/features/master/entityHooks.ts:60[dyn]",
+        "apps/works/src/features/master/inactiveLedgerHooks.ts:42[dyn]",
+        "apps/works/src/features/master/ledgerMatch.ts:219[dyn]",
+        "apps/works/src/features/master/ledgerPage.ts:113[dyn]",
+        "apps/works/src/features/master/ledgerPage.ts:144[dyn]",
+        "apps/works/src/features/office/minutes/minuteLinkSearch.ts:27[dyn]",
+        "apps/works/src/features/office/minutes/minutesApi.ts:227[dyn]",
+        "apps/works/src/features/program/participantHooks.ts:165[dyn]",
+        "apps/works/src/features/program/participantHooks.ts:289[dyn]",
+        "apps/works/src/features/program/rosterHooks.ts:191[dyn]",
+        "apps/works/src/features/program/rosterHooks.ts:215[dyn]",
+        "apps/works/src/features/program/rosterHooks.ts:304[dyn]",
+        "apps/works/src/features/program/rosterHooks.ts:357[dyn]"
+      ]
+    },
+    {
+      "table": "system_events",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "SELECT": 1,
+        "INSERT": 1,
+        "UPDATE": 2
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/hub/hooks.ts:121[SELECT]",
+        "apps/works/src/features/hub/hooks.ts:155[INSERT]",
+        "apps/works/src/features/hub/hooks.ts:176[UPDATE]",
+        "apps/works/src/features/hub/hooks.ts:200[UPDATE]"
+      ]
+    },
+    {
+      "table": "trade_partners",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT/UPDATE",
+      "opCounts": {
+        "UPDATE": 3,
+        "SELECT": 4,
+        "INSERT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT,UPDATE",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/management/partners/partnerDirectoryApi.ts:148[UPDATE]",
+        "apps/works/src/features/management/partners/partnersApi.ts:149[SELECT]",
+        "apps/works/src/features/management/partners/partnersApi.ts:175[SELECT]",
+        "apps/works/src/features/management/partners/partnersApi.ts:196[SELECT]",
+        "apps/works/src/features/management/partners/partnersApi.ts:218[SELECT]",
+        "apps/works/src/features/management/partners/partnersApi.ts:237[INSERT]",
+        "apps/works/src/features/management/partners/partnersApi.ts:248[UPDATE]",
+        "apps/works/src/features/management/partners/partnersApi.ts:265[UPDATE]"
+      ]
+    },
+    {
+      "table": "trade_partners_directory",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 2
+      },
+      "grantInSource": "S(view)",
+      "grantGap": null,
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/management/partners/partnerDirectoryApi.ts:64[SELECT]",
+        "apps/works/src/features/management/partners/partnerDirectoryApi.ts:88[SELECT]"
+      ]
+    },
+    {
+      "table": "upload_batches",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/INSERT",
+      "opCounts": {
+        "INSERT": 1,
+        "SELECT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT,INSERT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/features/networks/hooks.ts:446[INSERT]",
+        "apps/works/src/features/networks/hooks.ts:466[SELECT]"
+      ]
+    },
+    {
+      "table": "users",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT/UPDATE",
+      "opCounts": {
+        "SELECT": 12,
+        "UPDATE": 2
+      },
+      "grantInSource": "S,U",
+      "grantGap": null,
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/auth/employeeAuthService.ts:15[SELECT]",
+        "apps/works/src/features/hub/globalSearch.ts:321[SELECT]",
+        "apps/works/src/features/hub/hooks.ts:29[SELECT]",
+        "apps/works/src/features/hub/hooks.ts:256[SELECT]",
+        "apps/works/src/features/hub/hooks.ts:325[SELECT]",
+        "apps/works/src/features/management/hooks.ts:141[SELECT]",
+        "apps/works/src/features/management/hooks.ts:162[SELECT]",
+        "apps/works/src/features/management/hooks.ts:208[SELECT]",
+        "apps/works/src/features/management/hooks.ts:223[SELECT]",
+        "apps/works/src/features/management/hooks.ts:239[UPDATE]",
+        "apps/works/src/features/management/hooks.ts:374[UPDATE]",
+        "apps/works/src/features/management/kpi/kpiQueries.ts:69[SELECT]",
+        "apps/works/src/features/management/myPhotoHooks.ts:21[SELECT]",
+        "apps/works/src/features/master/ledgerPage.ts:170[SELECT]"
+      ]
+    },
+    {
+      "table": "workspace_permissions",
+      "apps": [
+        "WORKS"
+      ],
+      "ops": "SELECT",
+      "opCounts": {
+        "SELECT": 1
+      },
+      "grantInSource": null,
+      "grantGap": "SELECT",
+      "guestReachable": null,
+      "sites": [
+        "apps/works/src/auth/employeeAuthService.ts:22[SELECT]"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "E-1",
+      "severity": "P0 (latent — no send path exists today)",
+      "kind": "concrete exposure bug",
+      "title": "notifications-dispatch accepts an arbitrary recipient and an arbitrary credential-bearing template from any Supabase Auth user",
+      "evidence": "supabase/functions/notifications-dispatch/index.ts:14-24. Auth is `supabaseAdmin().auth.getUser(token)` and nothing else. `to`, `templateCode` and `variables` come from the request body and are forwarded verbatim to sendNotification.",
+      "why": "The template registry (_shared/notifications.ts:15-62) contains GUEST_OTP, GUEST_PASSWORD_RESET (with a caller-supplied {{link}}), and GUEST_INVITE_NEW (which instructs the reader to log in with their registered phone digits). Any holder of any employee session could therefore send an arbitrary address a message that renders as an official Y&Archer password-reset carrying an attacker-chosen URL, from the company's own verified sender.",
+      "currentlyBlockedBy": "_shared/notifications.ts:108-118 — no provider adapter exists, so every keyed send returns ok:false and nothing leaves. On a local http stack with no key the body is console-logged. The exposure arms itself the moment an adapter lands.",
+      "compoundedBy": "_shared/cors.ts:22-24 grace mode (any origin when ALLOWED_ORIGINS is unset) and the absence of requireStrictBrowserOrigin on this function.",
+      "notAffected": "Guests cannot reach it: a guest custom JWT has no auth.users row, so getUser fails. service_role key is not a user token either. The gap is employee-side, not guest-side."
+    },
+    {
+      "id": "E-2",
+      "severity": "P1",
+      "kind": "dead privileged surface",
+      "title": "notifications-dispatch has zero callers anywhere and writes no audit record",
+      "evidence": "No reference in apps/** or packages/** (0 hits). No pg_net/net.http_post call from any migration. In-app notification is already handled DB-side by triggers inserting public.notifications (20260722120000:89, 20260731110000:75,119, 20260905200000:193). public.notification_logs exists (20260705230000) but notifications-dispatch never writes to it.",
+      "why": "A generic send primitive that nothing uses is pure attack surface, and it would leave no trace if used. Note the caller IS authenticated — employee Supabase Auth accounts exist and pass auth.getUser. The defect was the absence of AUTHORIZATION (role, send authority, recipient ownership), not the absence of authentication."
+    },
+    {
+      "id": "E-3",
+      "severity": "P1",
+      "kind": "dangling caller / deployment mismatch",
+      "title": "apps/guest calls an edge function that does not exist in the repo",
+      "evidence": "apps/guest/src/pages/TempGuestPage.tsx:28 POSTs to `${functionsBase}/guest-temp-resolve`. No supabase/functions/guest-temp-resolve directory exists.",
+      "why": "Either a deployed function exists with no source under version control — in which case its authorization is unreviewable and unreproducible from a clean replay — or the temporary-guest page is silently broken. Both need an answer before AUTHZ closes. This is a source-side observation; the deployed function list is not visible from here."
+    },
+    {
+      "id": "E-4",
+      "severity": "P2",
+      "kind": "inconsistent caller gate",
+      "title": "Four functions resolve the caller without the is_active / external-role checks that internalAuth performs",
+      "evidence": "_shared/aiFill/run.ts:99-106, _shared/aiFill/extractRun.ts:150-157, material-download/index.ts:43-49, employee-create/index.ts:66-72 all do `select id from users where auth_user_id = ... and deleted_at is null` with no `is_active` filter. link-metadata/index.ts:63 does not even look at public.users. Contrast _shared/internalAuth.ts:22, which checks is_active AND excludes the three external user_types.",
+      "why": "A deactivated employee whose Supabase Auth session is still alive passes these gates. Impact is bounded — the aiFill functions immediately re-ask canWrite/canCreate under the caller token, material-download re-queries rows under the caller token, and employee-create still requires super_admin or management write — so this is a defence-in-depth inconsistency, not an open door. But it means \"deactivate the employee\" is not by itself a complete revocation for these five paths; the RLS helper behind current_app_user_id() is what actually has to hold the line.",
+      "recommendation": "Route all five through resolveInternalCaller(). Out of scope for AUTHZ-1/2; log as a bounded follow-up."
+    },
+    {
+      "id": "E-5",
+      "severity": "P1",
+      "kind": "deployment configuration gate — NOT an authorization finding",
+      "title": "CORS grace mode leaves 18 of 22 functions callable from any origin",
+      "evidence": "_shared/cors.ts:22-24 returns true for every origin with only a console.warn when ALLOWED_ORIGINS is unset. requireStrictBrowserOrigin (cors.ts:72) refuses that grace, but only ai-minute-draft, stt-transcribe, meeting-recording-playback and meeting-recording-process call it.",
+      "why": "guest-auth-login, guest-auth-password, employee-create and material-download are all reachable cross-origin until the operations secret is set. The code already documents this as a pre-production requirement; it belongs on the deploy checklist, not in a code change.",
+      "clarification": "CORS is not a server-side authorization control and no data is exposed by this item alone. Every function still enforces its own token check and RLS. The only effect is that the browser-reachable call surface is not narrowed until ALLOWED_ORIGINS is set. Do not treat this as an access-control gap."
+    },
+    {
+      "id": "E-6",
+      "severity": "P0 for the ACL decision (not an exposure)",
+      "kind": "role-collision the grant matrix must account for",
+      "title": "GUEST sessions and WORKS employees share the single `authenticated` Postgres role",
+      "evidence": "_shared/guestAccount.ts:325-341 signs `role: \"authenticated\"`; _shared/crypto.ts:15 records that the signing secret must equal the project JWT secret so PostgREST trusts it; apps/guest/src/lib/supabase.ts:10-14 sends that token as the Authorization header against the anon key client.",
+      "why": "Every `grant ... to authenticated` the ACL worker writes is simultaneously a grant to logged-in external startups and experts. Nothing at the privilege layer separates them — only the RLS predicate does. Concretely, apps/guest reads program_announcements, program_modules, program_posts, program_links, program_notices, program_overviews, attachments and reads+inserts program_questions with that role. The finite grant set must be justified against the guest threat model, not only the employee one."
+    },
+    {
+      "id": "E-7",
+      "severity": "DECISION INPUT (corrected 2026-09-12 — my earlier reading was wrong)",
+      "kind": "live DELETE requiring an explicit grant decision",
+      "title": "capital_call_payments DELETE is a LIVE client path, not dead code",
+      "evidence": "apps/works/src/features/fund/hooks.ts:322-343 useDeleteCapitalCall — deletes capital_call_payments rows by capital_call_id, then soft-deletes the capital_calls row. Wired at apps/works/src/features/fund/CapitalCallPanel.tsx:28 behind a confirm dialog.",
+      "why": "authenticated therefore genuinely needs DELETE on capital_call_payments, or this feature breaks. 20260912025406:21-23 deliberately grants no DELETE anywhere, citing 3_database_rls_policy_matrix.md §2.5. This is the one documented exception the grant matrix has to decide explicitly rather than by omission — including whether a `for delete` policy exists to back it.",
+      "correction": "My first pass claimed set_capital_call_payments (fund/hooks.ts:427) superseded this path. It does NOT. That RPC is the atomic replace-set used when editing one call's payment lines; useDeleteCapitalCall is the separate delete-the-whole-call path. The source comment at hooks.ts:315-320 states the reason for the hard DELETE: hiding only the call would leave its payment rows counted in fund_lps.paid_amount and funds aggregates, contradicting the confirm dialog text.",
+      "owner": "Passed to the ACL worker by the parent."
+    },
+    {
+      "id": "E-8",
+      "severity": "INFO",
+      "kind": "orphan resource",
+      "title": "partner-docs bucket retains its row after its policies were dropped",
+      "evidence": "Bucket created 20260903210000:209; all three storage.objects policies dropped by 20260911054939:21-23. No browser or edge client references it."
+    }
+  ],
+  "nonFindings": [
+    "The three anonymous endpoints (public-module-get, public-module-file, application-form-get, application-submit) use service_role deliberately and are gated by a single unit-tested pure function (publicModuleLinkGate.ts, publicModuleLinkGate.test.ts). Bypassing RLS here is the design, not a defect — the gate is the authorization and each function narrows its own output.",
+    "guest-access-invite and guest-password-reset do NOT use service_role for the authorization decision; they delegate to SECURITY INVOKER RPCs under the caller token and only then escalate. This is the correct pattern and should not be flagged.",
+    "A SECURITY DEFINER function with public EXECUTE is not automatically a defect. The aiFill profiles depend on can_write_startup / can_create_startup / can_write_ma_seller / can_create_ma_seller / attachment_refs being callable by authenticated — that is the mechanism by which the edge function refuses to copy the permission predicate. Revoking EXECUTE on these would break the AI-fill authorization path, not harden it.",
+    "entity_contributions INSERT by authenticated is intentional and documented (docs_master/CLAUDE.md §3): the actor column is overwritten by a BEFORE INSERT trigger."
+  ],
+  "unknowns": [
+    {
+      "id": "U-1",
+      "item": "Effective privileges",
+      "note": "Everything in tables[].grantInSource is migration TEXT, not catalog state. Legacy auto-exposed privileges from before auto_expose_new_tables was unset are invisible from source and are exactly what the ACL worker's replayed catalog must enumerate."
+    },
+    {
+      "id": "U-2",
+      "item": "Policy existence and predicates",
+      "dynamicDdl": "Policies for at least these migrations are created inside `execute format(...)` loops and cannot be read by grep: 20260705150500_ac_rls, 20260705170000_fund_schema, 20260705180000_mna_schema, 20260705200000_project_schema, 20260705210000_management_schema, 20260803230100_program_module_content, 20260903100000_program_module_ledger_unify, 20260903110000_module_content_rls_polymorphic, 20260903120000_guest_portal_all_program_workspaces. A naive scan reports funds, investments, capital_calls, assets, kpi_records, dept_budgets, application_forms and application_submissions as having no policy; they do, via those loops. No policy conclusion should be drawn from this artifact.",
+      "note": "NO RLS BEHAVIOUR IS VERIFIED BY THIS ARTIFACT. Nothing here establishes that any policy exists, that its predicate is correct, or that it actually restricts rows. Policy text was grepped only to spot obvious mismatches, and that grep is known to be wrong for every table whose policies are built in `execute format(...)` loops. Row-level behaviour must come from the replayed catalog plus supabase/tests."
+    },
+    {
+      "id": "U-3",
+      "item": "Views vs tables",
+      "note": "trade_partners_directory is a VIEW (20260903230000:32) already granted SELECT. app.network_entities_union is an app-schema view granted SELECT (20260731230000:77). kpi_results is granted but has no browser callsite. security_invoker settings are unverified here."
+    },
+    {
+      "id": "U-4",
+      "item": "RPC metadata",
+      "note": "The 80 RPCs are listed as demand only. secdef / search_path / EXECUTE grants unverified from source."
+    },
+    {
+      "id": "U-5",
+      "item": "Deployed function list",
+      "note": "guest-temp-resolve (E-3) cannot be resolved from the repo. Requires whoever can see the deployment."
+    },
+    {
+      "id": "U-6",
+      "item": "verify_jwt",
+      "note": "supabase/config.toml has no [functions] section and no verify_jwt setting anywhere in the repo. Whether the platform pre-validates Authorization before the handler runs — and therefore whether the guest custom JWT and the anonymous endpoints behave as the code assumes — is a deployment fact this audit cannot establish."
+    },
+    {
+      "id": "U-7",
+      "item": "kpi_results / board_comments",
+      "note": "Both carry grants in migration source but have zero browser callsites in this scan. Either RPC-only or dead. Candidates for revocation review."
+    }
+  ],
+  "edgeFunctions": [
+    {
+      "name": "guest-auth-login",
+      "path": "supabase/functions/guest-auth-login/index.ts",
+      "entry": "index.ts:9 -> handler.ts:createLoginHandler",
+      "publicEntry": true,
+      "authMechanism": "NONE (anonymous). Credentials in body: {email,password}. Anon apikey header only.",
+      "callerGate": "handler.ts:69 findAccountByEmail restricts to user_type in (external_startup,external_expert,temporary_guest), is_active, deleted_at null. handler.ts:73 account lockout 5/15min. handler.ts:79-89 initial password = ledger phone digits ONLY when guest_credentials.password_hash is null.",
+      "serviceRole": "YES — supabaseAdmin() for the whole flow (index.ts:6,9).",
+      "validationBeforePrivilege": "Uniform 401 for unknown account and bad password (enumeration guard). No session issued in initial-password state — only a 10-min change ticket (aud=guest-password-change).",
+      "tablesTouched": {
+        "users": "S,U",
+        "guest_credentials": "S,I,U",
+        "program_participants": "S,U",
+        "guest_invitations": "U",
+        "guest_identities": "S",
+        "startups": "S",
+        "networks": "S",
+        "programs": "S",
+        "ma_programs": "S",
+        "funds": "S"
+      },
+      "inRepoCallers": [
+        "apps/guest/src/auth/guestAuthService.ts"
+      ],
+      "verdict": "INTENTIONAL protected server path. Matches user-fixed GUEST policy (3_9_1 §6): email ID + initial registered phone before personal password, no session before password set."
+    },
+    {
+      "name": "guest-auth-password",
+      "path": "supabase/functions/guest-auth-password/index.ts",
+      "entry": "index.ts:6 -> handler.ts:createPasswordHandler",
+      "publicEntry": true,
+      "authMechanism": "Two modes. SET: {changeTicket,newPassword} — HS256 ticket, aud=guest-password-change, 10 min. CHANGE: {currentPassword,newPassword} + Bearer guest session JWT.",
+      "callerGate": "handler.ts:107 verifyJwt aud check; :117 refuses SET when a hash already exists unless ticket carries rst=true (reset path); handler.ts:136 verifyGuestSession (session_version re-checked against DB); :145 current password re-verified; :120/:151 passwordPolicyError forbids reusing the ledger phone.",
+      "serviceRole": "YES — supabaseAdmin().",
+      "validationBeforePrivilege": "Policy check precedes savePassword; savePassword clears reset token, attempts, lock.",
+      "tablesTouched": {
+        "users": "S",
+        "guest_credentials": "S,I,U",
+        "program_participants": "S,U",
+        "guest_invitations": "U",
+        "guest_identities": "S",
+        "startups": "S",
+        "networks": "S"
+      },
+      "inRepoCallers": [
+        "apps/guest/src/auth/guestAuthService.ts"
+      ],
+      "verdict": "INTENTIONAL protected server path."
+    },
+    {
+      "name": "guest-auth-refresh",
+      "path": "supabase/functions/guest-auth-refresh/index.ts",
+      "authMechanism": "Bearer guest custom JWT (HS256, GUEST_JWT_SECRET, aud=authenticated).",
+      "callerGate": "_shared/guestSession.ts:41 verifyGuestSession — signature + exp + aud + DB re-read of users(is_active, deleted_at, session_version). index.ts:51 loadOpenParticipations re-applies the RLS predicate (login_status in INVITED/ACTIVE + ledger guest_access_ends_at). :75 dead/deleted program => 401.",
+      "serviceRole": "YES — supabaseAdmin(); response fields are hand-narrowed (index.ts:83-107) and INTERNAL_ONLY_STATUSES (PROPOSED/SELECTED/NOT_SELECTED) are nulled out.",
+      "validationBeforePrivilege": "Session -> open participation -> live program, all before any data is returned.",
+      "tablesTouched": {
+        "users": "S,U",
+        "program_participants": "S",
+        "programs": "S",
+        "ma_programs": "S",
+        "funds": "S",
+        "startups": "S",
+        "networks": "S",
+        "guest_invitations": "U"
+      },
+      "inRepoCallers": [
+        "apps/guest/src/auth/guestAuthService.ts"
+      ],
+      "verdict": "INTENTIONAL protected server path. Deliberately avoids granting guests SELECT on programs."
+    },
+    {
+      "name": "guest-auth-context",
+      "path": "supabase/functions/guest-auth-context/index.ts",
+      "authMechanism": "Either {selectTicket} (aud=guest-context-select, 10 min) or Bearer guest session JWT.",
+      "callerGate": "index.ts:38-52 resolveUserId; :78 requested participantId must appear in loadParticipations() for THAT account, else 403. Explicit anti-IDOR comment at index.ts:14-16.",
+      "serviceRole": "YES — supabaseAdmin().",
+      "validationBeforePrivilege": "Server re-derives the allowed participation set; the client-supplied id is only used as a lookup key.",
+      "tablesTouched": {
+        "users": "S",
+        "program_participants": "S,U",
+        "programs": "S",
+        "ma_programs": "S",
+        "funds": "S",
+        "guest_invitations": "U"
+      },
+      "inRepoCallers": [
+        "apps/guest/src/auth/guestAuthService.ts"
+      ],
+      "verdict": "INTENTIONAL protected server path."
+    },
+    {
+      "name": "guest-password-reset",
+      "path": "supabase/functions/guest-password-reset/index.ts",
+      "authMechanism": "SEND: Bearer internal caller JWT + {userId}. CONSUME: {resetToken}, anonymous.",
+      "callerGate": "SEND — index.ts:52 caller.rpc(authorize_guest_password_reset) executed with the CALLER token via anon key client, so SECURITY INVOKER + RLS decide; 42501 -> 403. CONSUME — index.ts:108 token looked up by sha256 hash, expiry enforced, single use (:124 nulls the hash).",
+      "serviceRole": "YES, but only AFTER the RPC authorization returns (index.ts:62). Comment at :13-16 states the reason.",
+      "validationBeforePrivilege": "Recipient is read from the account ledger (index.ts:83), never from the request body. Caller receives {ok,notified} only — no token, no contact.",
+      "tablesTouched": {
+        "users": "S",
+        "guest_credentials": "S,U (upsert)"
+      },
+      "rpcs": [
+        "authorize_guest_password_reset (invoker)"
+      ],
+      "inRepoCallers": [
+        "apps/works/src/features/admin/guestAccountHooks.ts"
+      ],
+      "verdict": "INTENTIONAL protected server path. This is the reference pattern SEC-1 should copy."
+    },
+    {
+      "name": "guest-access-invite",
+      "path": "supabase/functions/guest-access-invite/index.ts",
+      "authMechanism": "Bearer internal caller JWT + {participantIds[]}.",
+      "callerGate": "index.ts:53 caller.rpc(open_program_guest_access) under the caller token (anon key client) — RLS/invoker decides; 42501 -> 403. No service_role anywhere in this function.",
+      "serviceRole": "NO.",
+      "validationBeforePrivilege": "Recipients come back FROM the RPC (email/phone read from the ledger server-side), not from the request. Send failures do not roll back the access opening (documented at :104).",
+      "tablesTouched": {
+        "program_participants": "S (via caller)",
+        "programs": "S",
+        "ma_programs": "S",
+        "funds": "S"
+      },
+      "rpcs": [
+        "open_program_guest_access (invoker)"
+      ],
+      "inRepoCallers": [
+        "apps/works/src/features/program/participantAccessHooks.ts"
+      ],
+      "verdict": "INTENTIONAL protected server path. Best-in-repo example."
+    },
+    {
+      "name": "employee-create",
+      "path": "supabase/functions/employee-create/index.ts",
+      "authMechanism": "Bearer Supabase Auth JWT.",
+      "callerGate": "index.ts:63 db.auth.getUser(token); :66 public.users row (deleted_at null); :74 super_admin OR :76-83 workspace_permissions(management)=write with expires_at honoured; else 403.",
+      "serviceRole": "YES — creates auth.users, public.users, hr_profiles, workspace_permissions, audit_logs.",
+      "validationBeforePrivilege": "Input validated (:47-58: email/name/password, >=8 chars, INTERNAL_ROLES allowlist that excludes all three guest user_types, birth date). Permission check precedes auth.admin.createUser. Rollback on partial failure (:122, :133-134).",
+      "tablesTouched": {
+        "users": "S,I,D(rollback)",
+        "workspace_permissions": "S,I",
+        "hr_profiles": "I",
+        "permission_templates": "S",
+        "audit_logs": "I"
+      },
+      "inRepoCallers": [
+        "apps/works/src/features/management/EmployeeCreatePage.tsx"
+      ],
+      "verdict": "INTENTIONAL protected server path. Note: caller row lookup omits is_active (see finding E-4)."
+    },
+    {
+      "name": "material-download",
+      "path": "supabase/functions/material-download/index.ts",
+      "authMechanism": "Dual: Supabase Auth JWT (internal) OR guest custom JWT. index.ts:37-70 resolveCaller.",
+      "callerGate": "Identity only from resolveCaller; ROW visibility is decided by re-querying attachments with the CALLER token (index.ts:88-103) so RLS applies end to end. Guest branch re-checks users.session_version (:66) so revocation is immediate.",
+      "serviceRole": "YES — only for access_logs insert (:112) and createSignedUrl (:121). Never for the authorization query.",
+      "validationBeforePrivilege": "access_logs insert failure blocks the signed URL (:112-120) — \"no log, no export\". TTL 60 s. LINK-kind attachments short-circuit (:107).",
+      "storage": {
+        "bucket": "attachments",
+        "op": "createSignedUrl 60s"
+      },
+      "tablesTouched": {
+        "users": "S",
+        "attachments": "S (caller token)",
+        "access_logs": "I"
+      },
+      "inRepoCallers": [
+        "10 sites across works+guest"
+      ],
+      "verdict": "INTENTIONAL protected server path. Sole download path since 20260716130300 revoked storage.objects SELECT."
+    },
+    {
+      "name": "public-module-get",
+      "path": "supabase/functions/public-module-get/index.ts",
+      "publicEntry": true,
+      "authMechanism": "NONE (anonymous by design). Bearer token: {token}.",
+      "callerGate": "_shared/publicModuleLink.ts:66 resolvePublicLink -> publicModuleLinkGate.ts:76 gate(): link status/window -> module exists/enabled/status -> program alive -> module_templates.visibility = PUBLIC_LINK. Deny reasons mapped to 403/404.",
+      "serviceRole": "YES — RLS is bypassed on purpose; the gate is the only authorization and the function narrows its own output fields.",
+      "validationBeforePrivilege": "Gate runs before any content read. RPC bump_module_public_link_view only after a pass.",
+      "tablesTouched": {
+        "program_module_public_links": "S",
+        "program_modules": "S",
+        "programs": "S",
+        "ma_programs": "S",
+        "module_templates": "S",
+        "program_posts": "S",
+        "program_links": "S",
+        "attachments": "S"
+      },
+      "rpcs": [
+        "bump_module_public_link_view"
+      ],
+      "inRepoCallers": [
+        "apps/guest/src/pages/PublicModulePage.tsx"
+      ],
+      "verdict": "INTENTIONAL public path with a unit-tested gate (publicModuleLinkGate.test.ts)."
+    },
+    {
+      "name": "public-module-file",
+      "path": "supabase/functions/public-module-file/index.ts",
+      "publicEntry": true,
+      "authMechanism": "NONE (anonymous by design).",
+      "callerGate": "Same resolvePublicLink gate; additionally moduleType must be FILE (:43) and the attachment must belong to that module.",
+      "serviceRole": "YES.",
+      "validationBeforePrivilege": "access_logs insert failure blocks the signed URL (:62-72). TTL short.",
+      "storage": {
+        "bucket": "attachments",
+        "op": "createSignedUrl"
+      },
+      "tablesTouched": {
+        "attachments": "S",
+        "access_logs": "I"
+      },
+      "inRepoCallers": [
+        "apps/guest/src/pages/PublicModulePage.tsx"
+      ],
+      "verdict": "INTENTIONAL public path."
+    },
+    {
+      "name": "application-form-get",
+      "path": "supabase/functions/application-form-get/index.ts",
+      "publicEntry": true,
+      "authMechanism": "NONE (anonymous applicant).",
+      "callerGate": "Same resolvePublicLink gate + moduleType must be RECRUITMENT (:50).",
+      "serviceRole": "YES, with an explicit public column allowlist (:56-58); returns form definition only, no submissions, no PII.",
+      "validationBeforePrivilege": "Gate first; the form is not even acknowledged when the gate denies.",
+      "tablesTouched": {
+        "application_forms": "S",
+        "application_form_fields": "S (embedded)"
+      },
+      "inRepoCallers": [
+        "apps/guest/src/pages/ApplyPage.tsx"
+      ],
+      "verdict": "INTENTIONAL public path."
+    },
+    {
+      "name": "application-submit",
+      "path": "supabase/functions/application-submit/index.ts",
+      "publicEntry": true,
+      "authMechanism": "NONE (anonymous applicant).",
+      "callerGate": "Same gate + RECRUITMENT check + consent===true required (:56).",
+      "serviceRole": "YES — inserts submissions/answers/attachments on behalf of an anonymous submitter.",
+      "validationBeforePrivilege": "Answers and files filtered to fields that actually belong to the resolved form (:85-97); required-field enforcement (:100-108); MAX_FILES 10, MAX_FILE_BYTES 20MB; filename sanitised (:38); upload target path namespaced by submission id. Response is {ok:true} only.",
+      "storage": {
+        "bucket": "attachments",
+        "op": "upload"
+      },
+      "tablesTouched": {
+        "application_forms": "S",
+        "application_submissions": "I",
+        "application_answers": "I",
+        "attachments": "I"
+      },
+      "inRepoCallers": [
+        "apps/guest/src/pages/ApplyPage.tsx"
+      ],
+      "verdict": "INTENTIONAL public path. Unauthenticated write is bounded by the gate + form-field allowlist."
+    },
+    {
+      "name": "ai-minute-draft",
+      "path": "supabase/functions/ai-minute-draft/index.ts",
+      "authMechanism": "Bearer Supabase Auth JWT.",
+      "callerGate": "requireStrictBrowserOrigin (:87) + resolveOfficeWriter (:93) = active non-external public.users row AND (super_admin OR workspace_permissions[office]=write, expiry honoured). recordingId, if given, must be owned by the caller (:120).",
+      "serviceRole": "YES — recordings lookup, quota, access_logs.",
+      "validationBeforePrivilege": "MAX_TRANSCRIPT 240k enforced; withinMeetingAiQuota(draft,20/h) fail-closed on query error; access_logs insert failure blocks the model call.",
+      "external": "Gemini — confidential meeting content leaves the boundary by explicit user decision.",
+      "tablesTouched": {
+        "users": "S",
+        "workspace_permissions": "S",
+        "meeting_recordings": "S",
+        "access_logs": "S,I"
+      },
+      "verdict": "INTENTIONAL protected server path; strongest caller gate in the repo."
+    },
+    {
+      "name": "stt-transcribe",
+      "path": "supabase/functions/stt-transcribe/index.ts",
+      "authMechanism": "Bearer Supabase Auth JWT.",
+      "callerGate": "requireStrictBrowserOrigin + resolveOfficeWriter (:43).",
+      "serviceRole": "YES — quota + access_logs.",
+      "validationBeforePrivilege": "withinMeetingAiQuota(transcription,72/h); access_logs failure blocks the provider call.",
+      "tablesTouched": {
+        "users": "S",
+        "workspace_permissions": "S",
+        "access_logs": "S,I"
+      },
+      "verdict": "INTENTIONAL protected server path."
+    },
+    {
+      "name": "meeting-recording-playback",
+      "path": "supabase/functions/meeting-recording-playback/index.ts",
+      "authMechanism": "Bearer Supabase Auth JWT.",
+      "callerGate": "requireStrictBrowserOrigin + resolveInternalCaller (:16), then the recording and segment rows are re-read with supabaseAsCaller(token) (:23-28) so RLS decides visibility; miss -> 403.",
+      "serviceRole": "YES — access_logs + createSignedUrl only.",
+      "validationBeforePrivilege": "access_logs insert failure blocks the signed URL (:36).",
+      "storage": {
+        "bucket": "meeting-recordings",
+        "op": "createSignedUrl"
+      },
+      "tablesTouched": {
+        "meeting_recordings": "S (caller)",
+        "meeting_recording_segments": "S (caller)",
+        "access_logs": "I"
+      },
+      "verdict": "INTENTIONAL protected server path."
+    },
+    {
+      "name": "meeting-recording-process",
+      "path": "supabase/functions/meeting-recording-process/index.ts",
+      "authMechanism": "Bearer Supabase Auth JWT.",
+      "callerGate": "requireStrictBrowserOrigin + resolveOfficeWriter (:28); segment read via supabaseAsCaller (:38); recording.owner_id must equal the caller (:50).",
+      "serviceRole": "YES — quota, access_logs, segment status writes, storage download.",
+      "validationBeforePrivilege": "Ownership + quota + access_logs all precede the provider call; failure states are written back as FAILED with an error_code.",
+      "storage": {
+        "bucket": "meeting-recordings",
+        "op": "download"
+      },
+      "tablesTouched": {
+        "meeting_recording_segments": "S(caller),U",
+        "meeting_recordings": "S",
+        "access_logs": "I"
+      },
+      "verdict": "INTENTIONAL protected server path."
+    },
+    {
+      "name": "link-metadata",
+      "path": "supabase/functions/link-metadata/index.ts",
+      "authMechanism": "Bearer Supabase Auth JWT.",
+      "callerGate": "index.ts:63 supabaseAdmin().auth.getUser(token) ONLY. No public.users lookup, no is_active, no role/workspace check.",
+      "serviceRole": "Client created solely to call auth.getUser; no privileged DB work.",
+      "validationBeforePrivilege": "SSRF defence via _shared/urlFetch.ts (scheme, host string, DNS result, per-hop redirect re-check).",
+      "verdict": "ACCEPTABLE but weakest internal gate — see finding E-4. Impact bounded: only an OG preview fetch, no DB access."
+    },
+    {
+      "name": "startup-ai-fill",
+      "path": "supabase/functions/startup-ai-fill/index.ts",
+      "entry": "index.ts:24 -> _shared/aiFill/run.ts:runAiFill",
+      "authMechanism": "Bearer Supabase Auth JWT.",
+      "callerGate": "run.ts:97-106 getUser + public.users (deleted_at null) -> app user id. Authorization proper comes from the profile: startup-ai-fill/profile.ts:120 rpc(can_write_startup) / :129 rpc(can_create_startup), both executed under the CALLER token, so invoker+RLS decide. intake.ts:93/:170 return 403 on failure. Attachment rows and extract cache are read with the caller token.",
+      "serviceRole": "YES — access_logs and storage download only.",
+      "validationBeforePrivilege": "canWrite/canCreate -> source size validation -> group planning -> access_logs insert (failure blocks the model call) -> Gemini.",
+      "storage": {
+        "bucket": "attachments",
+        "op": "download"
+      },
+      "tablesTouched": {
+        "users": "S",
+        "attachments": "S (caller)",
+        "attachment_extracts": "S (caller)",
+        "access_logs": "I",
+        "location_tags": "S (caller)",
+        "startups": "S (caller)"
+      },
+      "rpcs": [
+        "can_write_startup",
+        "can_create_startup",
+        "attachment_refs"
+      ],
+      "verdict": "INTENTIONAL protected server path; delegates the decision to invoker RPCs rather than copying it."
+    },
+    {
+      "name": "ma-seller-quick-review",
+      "path": "supabase/functions/ma-seller-quick-review/index.ts",
+      "entry": "index.ts:24 -> _shared/aiFill/run.ts:runAiFill (maSellerQuickReviewProfile)",
+      "authMechanism": "Bearer Supabase Auth JWT.",
+      "callerGate": "Same as startup-ai-fill but ma-seller-quick-review/profile.ts:124 rpc(can_write_ma_seller) / :133 rpc(can_create_ma_seller).",
+      "serviceRole": "YES — access_logs and storage download only.",
+      "storage": {
+        "bucket": "attachments",
+        "op": "download"
+      },
+      "rpcs": [
+        "can_write_ma_seller",
+        "can_create_ma_seller",
+        "attachment_refs"
+      ],
+      "verdict": "INTENTIONAL protected server path."
+    },
+    {
+      "name": "startup-material-extract",
+      "path": "supabase/functions/startup-material-extract/index.ts",
+      "entry": "index.ts:18 -> _shared/aiFill/extractRun.ts:runMaterialExtract",
+      "authMechanism": "Bearer Supabase Auth JWT.",
+      "callerGate": "extractRun.ts:148-157 getUser + public.users; :169-173 profile.canWrite/canCreate under the caller token -> 403.",
+      "serviceRole": "YES — storage download + attachment_extracts upsert.",
+      "storage": {
+        "bucket": "attachments",
+        "op": "download"
+      },
+      "tablesTouched": {
+        "users": "S",
+        "attachments": "S (caller)",
+        "attachment_extracts": "S(caller),I,U"
+      },
+      "verdict": "INTENTIONAL protected server path."
+    },
+    {
+      "name": "ma-seller-material-extract",
+      "path": "supabase/functions/ma-seller-material-extract/index.ts",
+      "entry": "index.ts:20 -> _shared/aiFill/extractRun.ts:runMaterialExtract (maSellerQuickReviewProfile)",
+      "authMechanism": "Bearer Supabase Auth JWT.",
+      "callerGate": "Same as startup-material-extract with can_write_ma_seller / can_create_ma_seller.",
+      "serviceRole": "YES — storage download + attachment_extracts upsert.",
+      "verdict": "INTENTIONAL protected server path."
+    },
+    {
+      "name": "notifications-dispatch",
+      "path": "supabase/functions/notifications-dispatch/index.ts",
+      "authMechanism": "Bearer token validated ONLY by supabaseAdmin().auth.getUser(token) (index.ts:16).",
+      "callerGate": "NONE beyond \"a Supabase Auth account exists\". No public.users lookup, no is_active, no user_type, no workspace permission, no relationship to the recipient.",
+      "serviceRole": "YES — supabaseAdmin() instantiated purely to validate the token.",
+      "validationBeforePrivilege": "index.ts:21 checks only that channel is in the enum and that `to` and `templateCode` are non-empty. `to`, `templateCode` and `variables` are passed straight through to sendNotification.",
+      "inRepoCallers": [],
+      "verdict": "P0 DESIGN GAP (latent). See findings E-1 / E-2 and the SEC-1 proposal."
+    }
+  ],
+  "sec1Status": {
+    "decision": "Parent chose alternative (c): fail closed. The derived-contract option (a)+(b) was NOT built.",
+    "rationale": [
+      "Read permission does not imply send permission.",
+      "Role/template send policy is not yet approved.",
+      "No replay controls exist, so an arbitrary-replay surface would be new debt.",
+      "Zero repo callers and no provider adapter mean no currently supported delivery is lost."
+    ],
+    "implemented": "supabase/functions/notifications-dispatch/handler.ts (POST -> 403 endpoint_disabled, other methods -> 405; synchronous; no body read, no Authorization read, no service_role client, no send import) + index.ts wiring through the existing withCors wrapper + handler.test.ts (32 assertions).",
+    "notImplemented": "No recipient resolver, no send-authority RPC, no APPROVAL_RESULT contract, no provider delivery. Actual authorized delivery remains pending a future contract and SEC-2.",
+    "reopenConditions": [
+      "Recipient and content derived server-side from an approved domain record.",
+      "Caller SEND authority judged separately from read permission.",
+      "Replay and rate controls in place.",
+      "All three before any provider adapter."
+    ],
+    "untouched": "_shared/notifications.ts and its two callers (guest-access-invite, guest-password-reset) are unchanged, as are all other auth handlers and every migration.",
+    "reviewState": "Working tree only. Parent reviews the diff and runs checks afterwards; nothing is committed."
+  },
+  "recordedFollowups": [
+    {
+      "ref": "E-3",
+      "item": "guest-temp-resolve",
+      "note": "apps/guest/src/pages/TempGuestPage.tsx:28 calls a function with no source in the repo. NOT investigated or implemented in this pass by parent instruction. Needs an owner and a decision: locate the deployed function or remove the caller."
+    },
+    {
+      "ref": "E-4",
+      "item": "unified internal caller resolution",
+      "note": "aiFill/run.ts:99, aiFill/extractRun.ts:150, material-download:43, employee-create:66 skip is_active; link-metadata:63 skips public.users entirely. NOT changed in this pass by parent instruction. Candidate: route all five through _shared/internalAuth.ts resolveInternalCaller."
+    }
+  ]
+}

@@ -35,7 +35,7 @@ export interface PendingMaterials {
   /**
    * 생성된 레코드 id로 보류 자료를 모두 업로드한다.
    * `resolveType`은 슬롯 → target_type 변환(미지정 시 슬롯 자체를 target_type으로 사용).
-   * 개별 실패는 삼키고 실패 건수를 반환한다(레코드 자체는 이미 저장된 상태이므로).
+   * 실패 건은 목록에 남겨 다시 시도할 수 있게 하고 실패 건수를 반환한다.
    */
   flush: (
     targetId: string,
@@ -90,6 +90,8 @@ export function usePendingMaterials(): PendingMaterials {
     async (targetId, resolveType) => {
       let uploaded = 0
       let failed = 0
+      const failedFiles: Record<string, File[]> = {}
+      const failedLinks: Record<string, string[]> = {}
       for (const [slot, list] of Object.entries(bySlot)) {
         const targetType = resolveType ? resolveType(slot) : slot
         for (const file of list) {
@@ -98,6 +100,7 @@ export function usePendingMaterials(): PendingMaterials {
             uploaded += 1
           } catch {
             failed += 1
+            failedFiles[slot] = [...(failedFiles[slot] ?? []), file]
           }
         }
       }
@@ -111,11 +114,12 @@ export function usePendingMaterials(): PendingMaterials {
             uploaded += 1
           } catch {
             failed += 1
+            failedLinks[slot] = [...(failedLinks[slot] ?? []), url]
           }
         }
       }
-      setBySlot({})
-      setLinksBySlot({})
+      setBySlot(failedFiles)
+      setLinksBySlot(failedLinks)
       return { uploaded, failed }
     },
     [bySlot, linksBySlot],

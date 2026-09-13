@@ -43,6 +43,12 @@
 --   · 감사 로그: 행마다 audit_logs 'LEDGER_HARD_DELETE' 1건
 --   · 운영 영향: 삭제 대상 id로 열려 있던 북마크는 404가 된다(정본 id로 다시 찾는다)
 --
+-- 2026-09-12 재생 호환 수정(로컬 안정화)
+--   빈 DB 재생에서 이 파일이 P0001로 멈춰 마이그레이션 전체 재생이 불가능했다.
+--   정본·사본이 **둘 다 물리적으로 없을 때만** 그 쌍을 건너뛴다. 행이 하나라도 있으면
+--   종전 의미 그대로다(사본만 있거나 정본이 비활성·병합이면 오류).
+--   새 표·정책·RPC·SECURITY DEFINER 없음. 배포된 DB의 상태는 확인하지 않았다.
+--
 -- 근거: 3_3_8_ledger_identity_dedup.md §7, 20260909210000(재배선 카탈로그),
 --       20260911050629(하드 딜리트 동반 삭제 목록)
 -- =====================================================================
@@ -73,6 +79,7 @@ declare
   v_type     text;
   v_snap     jsonb;
   v_keepsnap jsonb;
+  v_keepany  boolean;
   v_hit      integer;
   v_rows     integer;
   v_col      text;
@@ -92,7 +99,16 @@ begin
       'select to_jsonb(x) from public.%I x where x.id = $1',
       v_ledger) into v_snap using v_drop;
 
+    execute format('select exists (select 1 from public.%I x where x.id = $1)', v_ledger)
+      into v_keepany using v_keep;
+
     if v_keepsnap is null then
+      -- 정본도 사본도 물리적으로 없으면 이 쌍은 정리할 것이 없다(빈 DB 재생·신규 환경).
+      -- 둘 중 하나라도 있으면 종전대로 멈춘다 — 비활성·병합된 정본은 여전히 오류다.
+      if not v_keepany and v_snap is null then
+        raise notice '두 행 모두 없어 건너뜁니다: % % → %', v_ledger, v_drop, v_keep;
+        continue;
+      end if;
       raise exception '정본 행이 살아 있지 않습니다: % %', v_ledger, v_keep;
     end if;
     if v_snap is null then

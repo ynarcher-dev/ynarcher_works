@@ -23,8 +23,8 @@ type Step = 'creds' | 'password' | 'choose' | 'none'
 const STEP_LABEL: Record<Step, string> = {
   creds: '참여자 로그인',
   password: '새 비밀번호 설정',
-  choose: '들어갈 사업 선택',
-  none: '접근 가능한 사업 없음',
+  choose: '들어갈 프로젝트/FUND 선택',
+  none: '접근 가능한 프로젝트/FUND 없음',
 }
 
 function endLabel(iso?: string | null): string | null {
@@ -135,7 +135,7 @@ export function GuestLoginPage() {
       await guestAuth.enterContext(participantId, selectTicket ?? undefined)
       navigate('/', { replace: true })
     } catch (e) {
-      setError(e instanceof Error ? e.message : '해당 사업으로 들어갈 수 없습니다.')
+      setError(e instanceof Error ? e.message : '해당 프로젝트/FUND로 들어갈 수 없습니다.')
     } finally {
       setBusy(false)
     }
@@ -244,7 +244,7 @@ export function GuestLoginPage() {
       {step === 'choose' && (
         <div className="mt-6 space-y-3">
           <p className="text-caption text-gray-500">
-            참여 중인 사업이 여러 건입니다. 들어갈 곳을 선택하세요. 안에서도 바꿀 수 있습니다.
+            참여 중인 프로젝트/FUND가 여러 건입니다. 들어갈 곳을 선택하세요. 안에서도 바꿀 수 있습니다.
           </p>
           <ul className="space-y-2">
             {choices.map((c) => (
@@ -273,8 +273,8 @@ export function GuestLoginPage() {
         <div className="mt-6 space-y-4">
           <p className="text-body text-gray-700">{notice}</p>
           <p className="text-caption text-gray-500">
-            사업이 끝났거나 접근 기간이 지났을 수 있습니다. 계정은 그대로 살아 있으므로, 새 사업에
-            참여하시면 같은 이메일과 비밀번호로 들어오실 수 있습니다.
+            프로젝트/FUND가 끝났거나 접근 기간이 지났을 수 있습니다. 계정은 그대로 살아 있으므로,
+            새 프로젝트/FUND에 참여하시면 같은 이메일과 비밀번호로 들어오실 수 있습니다.
           </p>
           <GuestButton className="w-full" onClick={() => setStep('creds')}>
             다시 로그인

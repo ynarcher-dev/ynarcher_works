@@ -50,7 +50,7 @@ export interface ProgramWorkspaceConfig extends GuestHostConfig {
    * 목록 안쪽 문구(검색 자리표시자·등록 버튼·업로드 템플릿)에 쓰는 도메인 명칭.
    *
    * 사이드바·breadcrumb·페이지 제목은 `listLabel`이 답하고, 이 값은 그 안에서 관리하는
-   * 한 건을 무엇이라 부르는지 답한다. 예: 사업부는 listLabel=`관리 사업`, entityNoun=`사업`.
+   * 한 건을 무엇이라 부르는지 답한다. 예: 사업부는 listLabel=`프로젝트`, entityNoun=`프로젝트`.
    */
   entityNoun: string
   /**

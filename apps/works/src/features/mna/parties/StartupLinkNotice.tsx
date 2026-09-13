@@ -41,7 +41,7 @@ export function StartupLinkNotice({
       </p>
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <span className={cardText.meta}>
-          새로 만들 수 없습니다. 스타트업 DB를 연결한 뒤 저장하세요.
+          새로 만들 수 없습니다. 스타트업 원장을 연결한 뒤 저장하세요.
         </span>
         <Button
           type="button"

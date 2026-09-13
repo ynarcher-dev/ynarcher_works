@@ -212,6 +212,7 @@
 * **"이 양식이 품의서인가"는 `budget_link`가 아니라 필드에 `BUDGET_TREE`가 있는가가 답합니다** — 같은 사실을 두 곳에 적지 않습니다. 화면은 `budgetField()`, 서버는 `app.approval_budget_keys()`가 같은 규칙으로 판정합니다.
 * **시드**: 품의서에 예산표, 지출결의서에 예산 줄 열과 송금 요청 표를 **덧붙이고**(덮어쓰지 않음 — ADMIN이 손댄 양식을 되돌리면 안 됩니다) 예산 변경 품의 양식을 새로 만듭니다. 두 번 돌려도 같은 결과입니다.
 * 보안 게이트([11_migration_security_gate.md](../docs_dev/11_migration_security_gate.md)) 통과 항목은 마이그레이션 머리에 자기점검으로 적혀 있고, 회귀 테스트에 케이스 15(a~d)를 더했습니다.
+* **워크스페이스 집행 규칙(2026-09-13, 마이그레이션 `20260913190000_workspace_budget_execution_rules`·`20260913200000_approval_budget_spend_items`)**: 부가세 세 칸(`VAT_KIND`/`NET`·`VAT`·`GROSS`), 사업 워크스페이스의 공용 `예산/지출` 탭, 예산 변경 품의의 열 역할 매핑(`app.approval_budget_remap` ↔ `remapBudgetColumns`)이 이 문서 위에 얹혔습니다. 범위·판단·검증 기록의 정본은 [workspace_budget_execution.md](./workspace_budget_execution.md)의 체크포인트이며 여기서 되풀이하지 않습니다. 기억할 경계 셋: **차감은 언제나 합계액**이고, **없는 금액 칸은 만들지 않으며**(옛 합계액-only 문서의 공급가액·부가세를 추정해 채우지 않습니다), **연결 불변·단일 워크스페이스 의무는 배정 품의**(`BUDGET_TREE` 보유 + `budget_link <> 'REVISE'`)에만 걸립니다.
 
 ---
 

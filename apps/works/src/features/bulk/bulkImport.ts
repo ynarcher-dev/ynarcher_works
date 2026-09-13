@@ -437,6 +437,7 @@ function withInFileDuplicates(
   const dupes = findDuplicateProbes(
     result.rows.map((r) => probeOf(r, ledger)),
     ledger.hardKey?.normalize,
+    ledger.singleContactIsHard,
   )
   if (dupes.size === 0) return result
 

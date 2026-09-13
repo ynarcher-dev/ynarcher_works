@@ -51,9 +51,10 @@ Deno.serve(withCors(async (req: Request) => {
 
     const { data: form, error } = await db
       .from('application_forms')
+      // 한 줄 리터럴로 둔다 — 이어 붙이면 리터럴 타입이 아니게 되어 supabase-js가 행 타입을
+      // 만들지 못한다(title·landing·fields가 없다고 나온다).
       .select(
-        'title, landing, ' +
-          'fields:application_form_fields(id, field_type, label, is_required, options, file_constraints, sort_order)',
+        'title, landing, fields:application_form_fields(id, field_type, label, is_required, options, file_constraints, sort_order)',
       )
       .eq('program_module_id', link.moduleId)
       .maybeSingle()

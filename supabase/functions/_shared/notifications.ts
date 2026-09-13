@@ -32,10 +32,10 @@ export const TEMPLATES: Record<
       '새 비밀번호를 정해 주세요.',
   },
   GUEST_INVITE_ADD: {
-    title: '[와이앤아처] 참여 사업이 추가되었습니다',
+    title: '[와이앤아처] 참여 프로젝트/FUND가 추가되었습니다',
     body:
       '{{name}}님, "{{program}}" 참여자 포털 접속이 열렸습니다. ' +
-      '기존에 사용하시던 이메일과 비밀번호로 로그인하시면 목록에 이 사업이 추가되어 있습니다.',
+      '기존에 사용하시던 이메일과 비밀번호로 로그인하시면 목록에 이 프로젝트/FUND가 추가되어 있습니다.',
   },
   GUEST_PASSWORD_RESET: {
     title: '[와이앤아처] 비밀번호 재설정 안내',
@@ -75,6 +75,10 @@ function isLocalStack(): boolean {
  * 프로바이더 미설정 시: 로컬 스택에서만 콘솔 로그 폴백을 성공으로 처리한다.
  * 운영(https) 환경에서 키가 없으면 실패를 반환한다 — OTP 등 인증성 메시지가
  * "발송된 척" 성공 처리되는 것을 차단한다(P1-4.3).
+ *
+ * **어댑터가 아직 없다.** 키가 설정돼 있어도 한 통도 나가지 않으므로 그 자리도 `ok: false`다
+ * (2026-09-12, SEC-2 — 종전의 `ok: true`는 키를 넣은 순간부터 "n건 발송"이라는 거짓 집계가
+ * 됐다). 로컬에서 본문을 눈으로 봐야 하면 키를 비워 둔다(아래 로그 폴백).
  */
 export async function sendNotification(
   req: NotificationRequest,
@@ -105,6 +109,11 @@ export async function sendNotification(
   //  - ALIMTALK: 카카오 알림톡(사업자 발신 프로파일 + 템플릿 사전 승인)
   //  - SMS: 국내 SMS 게이트웨이
   //  - EMAIL: 트랜잭션 메일 프로바이더
-  console.log(`[notify:${req.channel}] provider configured, dispatch stub`)
-  return { ok: true, provider: req.channel.toLowerCase() }
+  //
+  // 어댑터가 붙기 전까지는 실패다. 수신처·본문은 남기지 않는다(키가 설정된 환경은 운영으로
+  // 본다 — 로컬 확인용 로그는 키 미설정 경로가 진다).
+  console.error(
+    `[notify:${req.channel}] provider adapter not implemented — dispatch failed (${req.templateCode})`,
+  )
+  return { ok: false, provider: `${req.channel.toLowerCase()}:unimplemented` }
 }

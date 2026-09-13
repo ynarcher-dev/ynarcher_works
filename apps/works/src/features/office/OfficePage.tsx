@@ -68,7 +68,7 @@ export function OfficePage() {
   // programSubnav 주석). OFFICE 사이드바에서는 그때 줄이 빠졌는데 화면 분기만 남아 있어, 메뉴에는
   // 없고 주소로는 열리는 자리가 됐다 — 그것도 **전사 범위**라 AC의 좁힌 화면과 같은 목록을 다르게
   // 답했다. 목록으로 떨어뜨리지 않고 새 자리로 보내는 것은 STARTUP과 같은 이유다.
-  if (tab === 'guest-accounts') return <Navigate to="/ac?tab=guest-accounts" replace />
+  if (tab === 'guest-accounts') return <Navigate to="/guest-accounts" replace />
 
   // 1차 메뉴(`boards`/`archives`)로 들어오면 해당 종류의 첫 항목을 기본 선택한다. 실제 게시판
   // slug URL도 그대로 받으므로 알림·북마크 딥링크는 이전 주소를 유지한다.

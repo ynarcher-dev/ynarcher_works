@@ -7,6 +7,7 @@ import {
   type ProgramModule,
 } from '@/features/program/hooks'
 import { moduleContentLabel } from '@/features/program/detail/moduleContentLabels'
+import { useProgramWorkspace } from '@/features/program/workspace'
 
 /**
  * 따라쓸 문구 — 모듈 종류·이름과 무관하게 언제나 이 한 문구다(2026-09-02 통일).
@@ -56,6 +57,7 @@ export function ModuleDeleteModal({
   onClose: () => void
   onDeleted: () => void
 }) {
+  const { entityNoun } = useProgramWorkspace()
   const toast = useToast()
   const { data: blockers, isLoading } = useModuleDeleteBlockers(mod.id)
   const remove = useDeleteProgramModule(programId)
@@ -82,7 +84,7 @@ export function ModuleDeleteModal({
       const code = (e as { code?: string })?.code
       const message =
         code === '42501'
-          ? '모듈 삭제는 이 사업의 PM만 할 수 있습니다.'
+          ? `모듈 삭제는 이 ${entityNoun}의 PM만 할 수 있습니다.`
           : code === '22023'
             ? '확인 문구가 일치하지 않습니다.'
             : code === '23001'
@@ -160,7 +162,7 @@ export function ModuleDeleteModal({
         {!isLoading && !blocked && detachedRow && (
           <Banner tone="info">
             첨부 파일 <span className="tabular-nums font-semibold">{detachedRow.row_count}</span>건은
-            지워지지 않고 <strong>사업 자료</strong>로 옮겨집니다.
+            지워지지 않고 <strong>{entityNoun} 자료</strong>로 옮겨집니다.
           </Banner>
         )}
 

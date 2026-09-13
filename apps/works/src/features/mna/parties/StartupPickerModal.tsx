@@ -67,7 +67,7 @@ function useStartupPool(enabled: boolean) {
 }
 
 /**
- * 스타트업 DB에서 기업 하나 고르기 — 거래상대 기업명 칸의 돋보기가 여는 창.
+ * 스타트업 원장에서 기업 하나 고르기 — 거래상대 기업명 칸의 돋보기가 여는 창.
  *
  * 고르는 즉시 닫힌다. 여러 건을 담는 피커(회의록 연동·결재 연동)가 [확인]을 받는 것은
  * 담는 동안 창 안의 상태와 바깥 상태가 갈리기 때문인데, 여기서는 고를 것이 하나뿐이라
@@ -107,7 +107,7 @@ export function StartupPickerModal({
     <Modal
       open
       onClose={onClose}
-      title="스타트업 DB에서 찾기"
+      title="스타트업 원장에서 찾기"
       help="한 번에 최대 50건까지 보여줍니다. 찾는 기업이 없으면 검색어로 좁히세요."
       size="md"
       footer={

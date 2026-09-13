@@ -61,6 +61,18 @@ export function useSendPasswordReset() {
 }
 
 /**
+ * 재설정 안내 여러 건의 결과 집계. 호출 성공과 발송은 다르다 — 함수는 토큰을 저장한 뒤
+ * 발송이 실패해도 200 `{ ok: true, notified: false }`로 답한다. `notified === true`만 발송이고
+ * 거절·값 없음·false는 실패다.
+ */
+export function countNotified(
+  results: PromiseSettledResult<{ notified?: boolean }>[],
+): { sent: number; failed: number } {
+  const sent = results.filter((r) => r.status === 'fulfilled' && r.value?.notified === true).length
+  return { sent, failed: results.length - sent }
+}
+
+/**
  * 이 사업 게스트의 접근 종료일 설정(2026-09-05 사업 단위로 올라왔다).
  *
  * 기간은 사업의 사실이지 기업의 사실이 아니다 — 참여 기업이 스무 곳이면 종전 구조는 같은

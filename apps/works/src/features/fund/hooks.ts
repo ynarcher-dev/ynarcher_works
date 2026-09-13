@@ -167,18 +167,23 @@ export function useSetFundStaffing() {
   })
 }
 
-/** 펀드 삭제(soft delete). */
+/** 사유를 남기는 펀드 비활성화. */
 export function useDeactivateFund() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('funds')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', id)
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      const { error } = await supabase.rpc('deactivate_entity', {
+        p_entity_key: 'funds',
+        p_id: id,
+        p_reason: reason,
+      })
       if (error) throw error
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['fund'] }),
+    onSuccess: (_value, { id }) => {
+      void qc.invalidateQueries({ queryKey: ['fund'] })
+      void qc.invalidateQueries({ queryKey: ['fund', 'contributions', id] })
+      void qc.invalidateQueries({ queryKey: ['inactive-ledger', 'funds'] })
+    },
   })
 }
 

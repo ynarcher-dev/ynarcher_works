@@ -131,7 +131,7 @@ export function CreatorTransferPanel() {
               setKeyword(e.target.value)
               setTargetId('')
             }}
-            placeholder={ledger.nameColumn === 'title' ? '사업명으로 검색' : '이름으로 검색'}
+            placeholder={ledger.nameColumn === 'title' ? '프로젝트명으로 검색' : '이름으로 검색'}
           />
         </div>
       </div>

@@ -285,24 +285,66 @@ function cellValue(tag: string, inner: string, shared: string[]): string {
   return unescapeXml(raw)
 }
 
-/** 시트 하나를 행·열 배열로. 빠진 칸을 채워 넣는 것이 이 함수의 일이다. */
+/** 행 하나의 칸들. 빠진 칸을 채워 넣는 것이 이 함수의 일이다. */
+function rowCells(inner: string, shared: string[]): string[] {
+  const cells: string[] = []
+  const cellRe = /<c\b([^>]*?)\/>|<c\b([^>]*?)>([\s\S]*?)<\/c>/g
+  for (let c = cellRe.exec(inner); c; c = cellRe.exec(inner)) {
+    const tag = c[1] ?? c[2] ?? ''
+    const value = c[3] == null ? '' : cellValue(tag, c[3], shared)
+    const at = columnIndex(attr(tag, 'r') ?? '')
+    const i = at >= 0 ? at : cells.length
+    while (cells.length < i) cells.push('')
+    cells[i] = value.replace(/[\t\n\r]+/g, ' ').trim()
+  }
+  return cells
+}
+
+/**
+ * 시트 하나를 행·열 배열로. **앞 `MAX_ROWS`줄만** 본다(자료 분석용 — 앞부분만 봐도 구조와
+ * 최근 값이 들어온다). 상한은 원본 행 기준이고, 그중 빈 줄은 `tidyTable`이 걷어 낸다.
+ */
 function sheetRows(xml: string, shared: string[]): string[][] {
   const rows: string[][] = []
   const rowRe = /<row\b[^>]*>([\s\S]*?)<\/row>/g
   for (let r = rowRe.exec(xml); r && rows.length < MAX_ROWS; r = rowRe.exec(xml)) {
-    const cells: string[] = []
-    const cellRe = /<c\b([^>]*?)\/>|<c\b([^>]*?)>([\s\S]*?)<\/c>/g
-    for (let c = cellRe.exec(r[1]!); c; c = cellRe.exec(r[1]!)) {
-      const tag = c[1] ?? c[2] ?? ''
-      const value = c[3] == null ? '' : cellValue(tag, c[3], shared)
-      const at = columnIndex(attr(tag, 'r') ?? '')
-      const i = at >= 0 ? at : cells.length
-      while (cells.length < i) cells.push('')
-      cells[i] = value.replace(/[\t\n\r]+/g, ' ').trim()
-    }
-    rows.push(cells)
+    rows.push(rowCells(r[1]!, shared))
   }
   return tidyTable(rows)
+}
+
+/** 뒤쪽 빈 칸을 걷는다(`tidyTable`과 같은 규칙). 다 비면 길이 0 — 내용이 없는 줄이다. */
+function trimTrailingEmpty(cells: string[]): string[] {
+  const out = [...cells]
+  while (out.length > 0 && (out[out.length - 1] ?? '') === '') out.pop()
+  return out
+}
+
+/**
+ * 시트 하나를 **내용 있는 줄 기준**으로 읽는다. `maxRows`를 넘으면 `{ overflow: true }`.
+ *
+ * 원본 행이 아니라 **내용 있는 줄을 세는 것**이 요점이다. 원본 행으로 세고 나서 빈 줄을 걷어
+ * 내면, 상한 근처에 빈 줄이 섞인 파일에서 걷어 낸 만큼 결과가 상한 아래로 내려와 **넘치지
+ * 않은 것으로 읽힌다** — 그러면 상한 뒤의 줄은 읽히지도 않은 채 조용히 사라진다. 명단에서는
+ * 그 줄이 곧 만들어지지 않은 계정이고, 아무도 그 사실을 모른다.
+ *
+ * 넘친 순간 곧바로 돌아온다 — 시트 끝까지 훑지 않으므로 기억과 시간이 상한에 묶인다.
+ */
+function sheetRowsCapped(
+  xml: string,
+  shared: string[],
+  maxRows: number,
+): string[][] | { overflow: true } {
+  const rows: string[][] = []
+  const rowRe = /<row\b[^>]*>([\s\S]*?)<\/row>/g
+  for (let r = rowRe.exec(xml); r; r = rowRe.exec(xml)) {
+    const cells = trimTrailingEmpty(rowCells(r[1]!, shared))
+    // 빈 줄은 세지 않는다(`tidyTable`이 어차피 걷어 내는 줄이다).
+    if (cells.length === 0) continue
+    if (rows.length >= maxRows) return { overflow: true }
+    rows.push(cells)
+  }
+  return rows
 }
 
 async function xlsxChunks(buf: ArrayBuffer, index: Map<string, ZipEntry>): Promise<ExtractChunk[]> {
@@ -320,6 +362,49 @@ async function xlsxChunks(buf: ArrayBuffer, index: Map<string, ZipEntry>): Promi
     out.push({ kind: 'sheet', location: `시트: ${sheet.name}`, text: tableToText(rows), tables: [rows] })
   }
   return out
+}
+
+/** 값이 있는 첫 시트의 표 전체. `xlsxFirstSheetGrid`의 성공 결과. */
+export interface XlsxGrid {
+  sheetName: string
+  /** 첫 줄이 헤더인 표. 상한 안이면 **자르지 않은 전체**다. */
+  rows: string[][]
+}
+
+/**
+ * 값이 있는 **첫 시트의 표를 통째로** 읽는다 — 원장 대용량 업로드가 쓰는 자리다.
+ *
+ * 조각 API(`officeChunks`)와 가르는 이유는 **자른 결과를 쓸 수 없기 때문**이다. 자료 분석은
+ * 앞 400줄만 읽어도 "무엇이 적힌 문서인가"에 답하지만, 명단 업로드에서 401번째 줄이 사라지면
+ * 그 사람의 계정이 만들어지지 않고 **아무도 그 사실을 모른다.** 게다가 목록 안 중복 판정은
+ * 전체를 봐야 성립해서, 잘린 채로는 401번째 줄과 겹치는 3번째 줄이 멀쩡한 줄로 통과한다.
+ *
+ * 그래서 상한을 넘으면 **잘라 주지 않고 `{ overflow: true }`로 거절한다.** 호출부는 파일을
+ * 나눠 올리게 안내해야 하며, 일부만 처리해서는 안 된다.
+ *
+ * 상한은 `sheetRowsCapped`가 **내용 있는 줄로** 재며, 자료 분석의 `MAX_ROWS`와는 무관하다.
+ */
+export async function xlsxFirstSheetGrid(
+  buf: ArrayBuffer,
+  maxRows: number,
+): Promise<XlsxGrid | { overflow: true } | { message: string }> {
+  const index = readZipIndex(buf)
+  if (!index) return { message: '열 수 없는 파일입니다(암호가 걸렸거나 손상된 문서).' }
+
+  const shared = await sharedStrings(buf, index)
+  const sheets = await sheetTargets(buf, index)
+  for (const sheet of sheets) {
+    const entry = index.get(sheet.path)
+    if (!entry) continue
+    const xml = await readZipText(buf, entry)
+    if (!xml) continue
+    const rows = sheetRowsCapped(xml, shared, maxRows)
+    if (!Array.isArray(rows)) return rows
+    // 빈 시트는 건너뛴다 — 서식만 잡아 둔 빈 시트가 실제로 흔하다.
+    if (rows.length === 0) continue
+    return { sheetName: sheet.name, rows }
+  }
+  return { message: '시트에서 읽을 내용이 없습니다.' }
 }
 
 // ── 한글(HWPX) ─────────────────────────────────────────────────────────

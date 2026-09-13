@@ -1,195 +1,127 @@
-import { useCallback, useMemo, useState } from 'react'
-import type { MasterCandidate, ParticipantRow } from '@/features/program/participantHooks'
-import { isLedgerReady, ledgerPerson } from '@/features/program/participantPerson'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { GuestAccountCandidate } from '@/features/program/participantHooks'
+import {
+  buildLeftRows,
+  buildRightRows,
+  dropStaged,
+  stageAccount,
+  type GuestRosterRow,
+  type TransferLeftRow,
+  type TransferRightRow,
+} from '@/features/program/guestRoster'
 
 /**
- * 계정생성 창의 좌우 이관 상태 — **왼쪽은 계정 없음, 오른쪽은 계정 있음**이고 그 사이를 옮기는 일이
- * 곧 계정을 세우고 거두는 일이다.
+ * `GUEST 계정 추가` 창의 좌우 이관 상태 — **왼쪽은 이 사업 밖의 계정, 오른쪽은 이 사업의
+ * GUEST 명부**이고 그 사이를 옮기는 일이 곧 명부에 잇고 거두는 일이다.
+ *
+ * **계정을 만들지 않는다**(2026-09-13 사용자 확정). 종전 이 창은 원장 후보를 올린 뒤 오른쪽
+ * 표에서 성명·이메일·연락처를 받아 **계정을 세웠다.** 지금은 세우는 자리가 `/guest-accounts`
+ * 하나이고, 여기서 하는 일은 이미 있는 계정을 고르는 것뿐이다. 그래서 입력칸이 사라지고
+ * (`people`·`patchPerson`·`importLedgerPerson`·`ready`), 오른쪽 표는 계정의 사실을 읽기만 한다.
+ *
+ * **키는 계정 id다**(원장 행 id가 아니다). 원장 연결은 계정의 선택적 속성이라, 원장으로
+ * 키를 삼으면 연결이 없는 계정은 애초에 다룰 수 없다.
  *
  * 상태를 화면이 아니라 여기 두는 이유는 두 목록이 **같은 사실의 두 면**이기 때문이다. 한쪽에서
  * 빼면 반드시 다른 쪽에 서야 하고, 그 짝을 화면에서 손으로 맞추면 어느 한 줄이 양쪽에 서거나
  * 어느 쪽에도 서지 않는 순간이 생긴다.
  *
- * **옮기는 것은 체크한 줄이다**(2026-09-10 사용자 지정). 줄을 누르면 곧바로 건너가던
- * 종전 방식은 한 번에 한 줄뿐이라, 스무 곳에 계정을 세우는 기수 시작에 스무 번을 눌러야
- * 했다. 체크 상태를 여기 두는 이유도 목록과 같다 — 어느 줄이 체크됐는가와 그 줄이 어느
- * 기둥에 서 있는가는 함께 움직여야 하고(옮긴 줄의 체크는 풀린다), 화면에서 손으로 맞추면
- * 옮겨진 뒤에도 체크가 남아 가운데 버튼의 건수가 거짓을 말한다.
- *
- * **확정 전에는 아무 일도 일어나지 않는다**(결재선 설정 창과 같은 규약) — 옮기는 동안 계정이
- * 세워지거나 명부 행이 지워지면, 잘못 눌렀다는 것을 알아차렸을 때 이미 되돌릴 수 없다.
+ * **확정 전에는 아무 일도 일어나지 않는다**(결재선 설정 창과 같은 규약) — 옮기는 동안 명부
+ * 줄이 생기거나 지워지면, 잘못 눌렀다는 것을 알아차렸을 때 이미 되돌릴 수 없다.
  */
 
-/** 좌측(계정 없음)에 서는 한 줄. */
-export interface LeftRow {
-  masterId: string
-  name: string
-  /**
-   * 원장 연락처(되돌림 줄이면 지금 걸려 있는 계정).
-   *
-   * **화면에는 서지 않고 검색만 탄다**(2026-09-10). 왼쪽 기둥에서 하는 일은 이름으로 찾아
-   * 고르는 것이고, 연락처는 옮기고 나서 오른쪽 기둥이 답한다. 줄에서 걷으면서도 여기 남긴
-   * 것은 이메일 조각으로 찾아 들어오는 길이 실제로 쓰이기 때문이다 — 검색칸의 안내 문구가
-   * 무엇으로 찾을 수 있는지를 대신 말한다.
-   */
-  meta: string
-  /**
-   * 확정하면 명부에서 **실제로 빠지는** 행의 id. 우측에서 내린 줄만 값을 갖는다.
-   *
-   * 두 갈래(아직 안 담은 후보 / 방금 내린 기존 행)를 한 모양으로 맞춘 이유는 담당자가 하는
-   * 일이 같기 때문이다 — 둘 다 "왼쪽에 있고, 누르면 오른쪽으로 간다". 다른 것은 확정할 때의
-   * 파급뿐이고, 그 차이는 이 한 칸이 답한다.
-   */
-  removingParticipantId: string | null
-  /** 우측으로 올릴 때 쓰는 원장 후보. 되돌림 줄은 제자리로 돌아갈 뿐이라 null이다. */
-  candidate: MasterCandidate | null
-}
-
-/** 우측(계정 있음)에 서는 한 줄. */
-export type RightRow =
-  | {
-      /** 이미 명부에 있는 줄 — 계정이 서 있고, 내리면 그 줄이 지워진다. */
-      kind: 'existing'
-      participantId: string
-      masterId: string
-      name: string
-      personName: string | null
-      personEmail: string | null
-      /**
-       * 연락처는 **원장이 답한다** — 계정(`users`)에는 연락처 칸이 없다.
-       *
-       * 명의·이메일과 원천이 갈리는 유일한 열이라 적어 둔다. 그 둘은 '누가 문을 여는가'라
-       * 계정이 서면 계정이 답하지만, 연락처는 초기 비밀번호가 되는 원장 값이고 계정이 선
-       * 뒤에는 아무것도 바꾸지 않는다.
-       */
-      phone: string | null
-    }
-  | {
-      /** 이번에 올린 줄 — 아직 아무것도 세워지지 않았고, 누구로 들어올지를 이 줄에서 정한다. */
-      kind: 'draft'
-      masterId: string
-      name: string
-      candidate: MasterCandidate
-    }
-
-/** 그 줄이 검색어에 걸리는가. 견주는 값은 그 줄이 실제로 보여 주는 것뿐이다. */
-function hits(row: { name: string; meta: string }, lowerTerm: string): boolean {
-  if (!lowerTerm) return true
-  return `${row.name} ${row.meta}`.toLowerCase().includes(lowerTerm)
-}
+export type { TransferLeftRow, TransferRightRow }
 
 export function useParticipantTransfer(
-  candidates: MasterCandidate[] | undefined,
-  participants: ParticipantRow[],
+  /** 이번 페이지의 계정 후보(서버가 검색·페이징해 보낸다). */
+  candidates: GuestAccountCandidate[] | undefined,
+  /** 이 사업의 현재 GUEST 명부. */
+  roster: GuestRosterRow[],
   search: string,
 ) {
-  /** 이번에 올린 대상(원장 후보 그대로). 순서는 올린 순서다. */
-  const [drafts, setDrafts] = useState<MasterCandidate[]>([])
-  /** 이번에 내린 기존 행(`participant_id`). 확정 전까지는 표시일 뿐이다. */
+  /** 이번에 올린 계정. 순서는 올린 순서다. */
+  const [staged, setStaged] = useState<GuestAccountCandidate[]>([])
+  /** 이번에 내린 명부 줄(`participant_id`). 확정 전까지는 표시일 뿐이다. */
   const [removed, setRemoved] = useState<string[]>([])
-  /** 지금 체크된 줄(원장 행 id). 기둥마다 따로 센다 — 가운데 버튼이 방향별로 서 있다. */
+  /** 지금 체크된 줄. 기둥마다 따로 센다 — 가운데 버튼이 방향별로 서 있다. */
   const [checkedLeft, setCheckedLeft] = useState<string[]>([])
   const [checkedRight, setCheckedRight] = useState<string[]>([])
 
-  const term = search.trim().toLowerCase()
+  /**
+   * 저장 응답이 끊겨도 서버에서는 줄이 생겼을 수 있다. 재조회한 정본 명부에 이미 선 계정은
+   * `추가 예정`에서 걷어, 담당자가 같은 계정을 재전송하지 않게 한다. 실제로 생기지 않은 줄은
+   * 그대로 남으므로 다시 시도할 수 있다.
+   */
+  const rosterUserIds = useMemo(
+    () => new Set(roster.flatMap((row) => (row.userId ? [row.userId] : []))),
+    [roster],
+  )
+  useEffect(() => {
+    setStaged((prev) => {
+      const next = prev.filter((row) => !rosterUserIds.has(row.userId))
+      return next.length === prev.length ? prev : next
+    })
+  }, [rosterUserIds])
 
-  const right = useMemo<RightRow[]>(() => {
-    // 이번에 올린 줄이 위에 선다 — 그 줄만 입력을 기다리고 있으므로, 기존 수십 건 아래로
-    // 밀리면 담당자가 무엇을 채워야 하는지 찾으러 스크롤해야 한다.
-    const fresh: RightRow[] = drafts.map((c) => ({
-      kind: 'draft',
-      masterId: c.id,
-      name: c.name,
-      candidate: c,
-    }))
-    const kept: RightRow[] = participants
-      .filter((p) => p.master_id && !removed.includes(p.id))
-      .map((p) => ({
-        kind: 'existing',
-        participantId: p.id,
-        masterId: p.master_id!,
-        name: p.targetName,
-        personName: p.accountName,
-        personEmail: p.accountEmail,
-        phone: p.phone,
-      }))
-    return [...fresh, ...kept]
-  }, [drafts, participants, removed])
+  const right = useMemo(
+    () => buildRightRows(staged, roster, removed),
+    [staged, roster, removed],
+  )
+  const left = useMemo(
+    () => buildLeftRows(candidates ?? [], roster, staged, removed, search),
+    [candidates, roster, staged, removed, search],
+  )
 
-  const left = useMemo<LeftRow[]>(() => {
-    // 내린 줄이 맨 위에 선다(방금 한 조작의 결과는 눈에 보이는 자리에 있어야 되돌릴 수 있다).
-    const back: LeftRow[] = participants
-      .filter((p) => removed.includes(p.id) && p.master_id)
-      .map((p) => ({
-        masterId: p.master_id!,
-        name: p.targetName,
-        meta: [p.accountName, p.accountEmail].filter(Boolean).join(' · ') || '계정 정보 없음',
-        removingParticipantId: p.id,
-        candidate: null,
-      }))
-    const backIds = new Set(back.map((r) => r.masterId))
-    const inRight = new Set(right.map((r) => r.masterId))
-    const fresh: LeftRow[] = (candidates ?? [])
-      .filter((c) => !inRight.has(c.id) && !backIds.has(c.id))
-      .map((c) => ({
-        masterId: c.id,
-        name: c.name,
-        meta: c.email ?? c.phone ?? '',
-        removingParticipantId: null,
-        candidate: c,
-      }))
-    // 후보는 조회가 이미 걸렀고(같은 검색어), 내린 줄은 여기서 건다 — 걸지 않으면 검색으로
-    // 좁힌 목록에 방금 내린 줄만 남아 검색어와 무관한 행이 하나 서 있게 된다.
-    return [...back.filter((r) => hits(r, term)), ...fresh]
-  }, [candidates, participants, removed, right, term])
-
-  const add = useCallback((row: LeftRow) => {
-    if (row.removingParticipantId) {
-      setRemoved((prev) => prev.filter((id) => id !== row.removingParticipantId))
+  const add = useCallback((row: TransferLeftRow) => {
+    if (row.kind === 'returning') {
+      setRemoved((prev) => prev.filter((id) => id !== row.participantId))
       return
     }
-    if (row.candidate) setDrafts((prev) => [...prev, row.candidate!])
+    // 같은 계정을 두 번 올려도 한 줄이다(`stageAccount`).
+    setStaged((prev) => stageAccount(prev, row.candidate))
   }, [])
 
-  const take = useCallback((row: RightRow) => {
-    if (row.kind === 'existing') setRemoved((prev) => [...prev, row.participantId])
-    else setDrafts((prev) => prev.filter((d) => d.id !== row.masterId))
+  const take = useCallback((row: TransferRightRow) => {
+    if (row.kind === 'member') setRemoved((prev) => [...prev, row.row.participantId])
+    else setStaged((prev) => dropStaged(prev, [row.userId]))
   }, [])
 
   const toggleLeft = useCallback(
-    (id: string) =>
-      setCheckedLeft((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])),
+    (key: string) =>
+      setCheckedLeft((prev) =>
+        prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key],
+      ),
     [],
   )
 
   /**
-   * 체크는 **지금 그 기둥에 서 있는 줄**만 센다. 검색어를 바꾸면 왼쪽 목록이 갈리는데, 그때
-   * 사라진 줄의 체크가 남아 있으면 가운데 버튼이 화면에 없는 건수를 세어 보여 준다.
+   * 체크는 **지금 그 기둥에 서 있는 줄**만 센다. 검색어나 페이지를 바꾸면 목록이 갈리는데,
+   * 그때 사라진 줄의 체크가 남아 있으면 가운데 버튼이 화면에 없는 건수를 세어 보여 준다.
+   *
+   * 원본 상태에서는 지우지 않는다 — 페이지를 넘겼다 되돌아오면 체크가 그대로 있어야 한다.
    */
   const leftChecked = useMemo(() => {
-    const visible = new Set(left.map((r) => r.masterId))
-    return checkedLeft.filter((id) => visible.has(id))
+    const visible = new Set(left.map((r) => r.key))
+    return checkedLeft.filter((key) => visible.has(key))
   }, [checkedLeft, left])
   const rightChecked = useMemo(() => {
-    const visible = new Set(right.map((r) => r.masterId))
-    return checkedRight.filter((id) => visible.has(id))
+    const visible = new Set(right.map((r) => r.key))
+    return checkedRight.filter((key) => visible.has(key))
   }, [checkedRight, right])
 
   const moveRight = useCallback(() => {
-    left.filter((r) => leftChecked.includes(r.masterId)).forEach(add)
+    left.filter((r) => leftChecked.includes(r.key)).forEach(add)
     setCheckedLeft([])
   }, [add, left, leftChecked])
 
   const moveLeft = useCallback(() => {
-    right.filter((r) => rightChecked.includes(r.masterId)).forEach(take)
+    right.filter((r) => rightChecked.includes(r.key)).forEach(take)
     setCheckedRight([])
   }, [right, rightChecked, take])
 
   /**
-   * 전체 넣기·전체 빼기는 **보이는 것에만** 걸린다.
-   *
-   * 검색으로 좁혀 놓은 뜻을 '전체'가 무시하면, 담당자는 자기가 무엇을 옮겼는지 화면에서
-   * 확인할 수 없는 상태로 확정 버튼 앞에 서게 된다.
+   * 전체 넣기·전체 빼기는 **보이는 것에만** 걸린다(검색·페이지가 좁힌 뜻을 '전체'가 무시하면,
+   * 담당자는 자기가 무엇을 옮겼는지 확인할 수 없는 상태로 확정 버튼 앞에 서게 된다).
    */
   const moveAllRight = useCallback(() => {
     left.forEach(add)
@@ -202,24 +134,32 @@ export function useParticipantTransfer(
   }, [right, take])
 
   const reset = useCallback(() => {
-    setDrafts([])
+    setStaged([])
     setRemoved([])
     setCheckedLeft([])
     setCheckedRight([])
   }, [])
 
   /**
-   * 확정하면 계정을 세울 줄.
+   * **끝난 일은 상태에서 지운다** — 빼기는 성공하고 담기가 실패하는 순간이 실제로 있다.
    *
-   * **원장을 쓰지 않는다**(2026-09-10 사용자 결정). 종전에는 담당자가 이 창에서 채운 값을
-   * 계정과 함께 원장에도 되썼고, 그래서 여기에 `writeLedger` 판정과 부분 실패 처리가 있었다.
-   * 값의 집이 원장이라면 묻는 자리도 원장 문 앞 하나여야 하므로, 그 일은 명단 담기가 진다
-   * (갖춰지지 않은 대상은 애초에 담기지 않는다). 여기서는 원장이 아는 명의를 그대로 옮긴다.
+   * 지우지 않으면 담당자가 사유를 보고 다시 [저장]을 누를 때 이미 끝난 빼기가 **다시** 나가고,
+   * 따라쓰기 확인창도 한 번 더 뜬다. 이미 사라진 줄에 대고 빼기를 또 부르는 것은 아무 일도
+   * 하지 않거나(0건) 오류가 되는데, 어느 쪽이든 화면이 말하는 건수가 사실과 어긋난다.
    */
-  const additions = useMemo(
-    () => drafts.map((d) => ({ masterId: d.id, person: ledgerPerson(d) })),
-    [drafts],
-  )
+  const commitRemovals = useCallback((ids: readonly string[]) => {
+    setRemoved((prev) => prev.filter((id) => !ids.includes(id)))
+    setCheckedLeft([])
+  }, [])
+
+  /** 담기가 끝난 계정을 대기 목록에서 뺀다 — 같은 이유로, 성공한 것을 다시 보내지 않는다. */
+  const commitAdditions = useCallback((userIds: readonly string[]) => {
+    setStaged((prev) => dropStaged(prev, userIds))
+    setCheckedRight([])
+  }, [])
+
+  /** 확정하면 이 사업 명부에 이어질 계정 id. */
+  const additions = useMemo(() => staged.map((c) => c.userId), [staged])
 
   return {
     left,
@@ -229,8 +169,7 @@ export function useParticipantTransfer(
     toggleLeft,
     /**
      * 오른쪽은 표라 선택을 통째로 받는다(표의 머리글 체크가 여러 줄을 한 번에 바꾼다).
-     * 왼쪽은 줄을 눌러 하나씩 켜는 목록이라 `toggleLeft`가 그대로 남는다 — 같은 이름의 두
-     * 축이 아니라 서로 다른 컨트롤이 내는 서로 다른 신호다.
+     * 왼쪽은 줄을 눌러 하나씩 켜는 목록이라 `toggleLeft`가 그대로 남는다.
      */
     setCheckedRight,
     moveRight,
@@ -238,17 +177,11 @@ export function useParticipantTransfer(
     moveAllRight,
     moveAllLeft,
     reset,
+    commitRemovals,
+    commitAdditions,
     additions,
     /** 확정하면 명부에서 빠질 줄(되돌릴 수 없다). */
     removals: removed,
-    /** 올린 줄마다 명의가 갖춰졌는가(원장이 답했든 담당자가 적었든). */
-    /**
-     * 올린 줄이 전부 계정을 세울 수 있는가.
-     *
-     * 게이트가 선 뒤로 담기지 않는 조합이지만 판정을 남긴다 — 게이트 이전에 담긴 줄이
-     * 명단에 남아 있고, 그 줄로 계정을 열려는 시도를 막는 것은 여기다.
-     */
-    ready: drafts.every((d) => isLedgerReady(d)),
-    dirty: drafts.length > 0 || removed.length > 0,
+    dirty: staged.length > 0 || removed.length > 0,
   }
 }

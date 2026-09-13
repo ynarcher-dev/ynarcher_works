@@ -3,6 +3,9 @@
 작성일: 2026-07-16  
 목적: 앞으로 기능을 추가할 때 매번 확인해야 할 보안, 권한, 데이터, 테스트, 운영 기준을 정리한다. 이 문서는 개발 속도를 멈추기 위한 문서가 아니라, 나중에 큰 리팩토링으로 되돌아오지 않도록 기능 단위로 안전장치를 같이 쌓기 위한 기준이다.
 
+> [!IMPORTANT]
+> **작업 흐름의 정본은 [docs_master/CLAUDE.md](../docs_master/CLAUDE.md) §4 「기본 작업 흐름」입니다.** 이 문서는 그보다 앞서 쓰인 참고 자료이며, 단계 진행·완료 판정·리뷰 규칙이 서로 다르면 정본이 우선합니다. 아래 점검 항목은 그 흐름 안에서 **범위에 맞는 것만** 고르는 참고 목록으로 읽습니다. 전체 내용을 최근 구현과 대조하지는 않았으므로, 인용 전에 현재 코드·정책과 맞는지 확인하십시오.
+
 ---
 
 ## 1. 기본 방향
@@ -22,7 +25,8 @@
 새 기능을 시작하기 전에 아래 질문에 답한다.
 
 1. 이 기능은 어느 workspace에 속하는가?
-   - `office`, `startup`, `networks`, `ac`, `fund`, `mna`, `project`, `management`, `admin`, `guest`
+   - `office`, `startup`, `networks`, `fund`, `mna`, `project`, `management`, `admin`, `guest`
+   - 구 `ac` 키는 2026-09-09(`20260909150000`)에 `project`로 개명되어 더 이상 없다. 같은 변경에서 옛 `project` 값은 `project_retired`(죽은 값)로 밀려났다.
 2. 읽기 권한과 쓰기 권한이 분리되어 있는가?
 3. 데이터 scope가 있는가?
    - `global`, `department`, `program`, `project`, `fund`, `company`, `self`, `temporary`

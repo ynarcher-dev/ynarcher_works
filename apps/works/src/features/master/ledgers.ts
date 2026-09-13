@@ -43,6 +43,7 @@ export const LEDGERS: Record<LedgerKey, LedgerMatchSpec> = {
       'id, name, representative, biz_reg_no, email, phone, management_status, deleted_at, merged_into_id',
     matchColumns: { name: 'name', email: 'email', phone: 'phone' },
     hardKey: BIZ_REG_NO,
+    singleContactIsHard: true,
     mergedColumn: 'merged_into_id',
     retired,
   },
@@ -62,6 +63,7 @@ export const LEDGERS: Record<LedgerKey, LedgerMatchSpec> = {
     matchColumns: { name: 'name', email: 'contact_email', phone: 'phone' },
     // 미연결 행만 자기 번호를 갖는다 — 연결된 행의 번호는 스타트업 원장이 갖는다(3_3_8 §4).
     hardKey: BIZ_REG_NO,
+    singleContactIsHard: true,
     mergedColumn: 'merged_into_id',
     retired,
   },
@@ -71,6 +73,7 @@ export const LEDGERS: Record<LedgerKey, LedgerMatchSpec> = {
       'id, name, contact_name, contact_email, phone, biz_reg_no, startup_id, deleted_at, merged_into_id',
     matchColumns: { name: 'name', email: 'contact_email', phone: 'phone' },
     hardKey: BIZ_REG_NO,
+    singleContactIsHard: true,
     mergedColumn: 'merged_into_id',
     retired,
   },

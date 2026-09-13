@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { programFlowGroups, programStatusOptions } from './config'
 
-describe('M&A 딜 상태 수명주기', () => {
+describe('M&A 프로젝트 상태 수명주기', () => {
   it('M&A에만 중단 상태를 연다', () => {
     expect(programStatusOptions(false, true)).toEqual([
       'DRAFT',

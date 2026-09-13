@@ -20,5 +20,13 @@ export default defineConfig({
       // 러너를 세우지 않은 이유는, 테스트가 사는 곳이 둘이 되면 한쪽은 곧 돌지 않기 때문이다.
       '../../supabase/functions/**/*.test.ts',
     ],
+    // `src/lib/env.ts`가 모듈 로드 시점에 VITE_ 변수를 검증하므로 러너가 값을 세워 준다.
+    // 형식만 맞춘 **가짜**이며 실제 프로젝트를 가리키지 않는다 — 테스트는 fetch를 세워 두고
+    // 네트워크로 나가지 않음을 확인한다. GUEST 러너(`apps/guest/vitest.config.ts`)와 같은 값이다.
+    env: {
+      VITE_SUPABASE_URL: 'http://localhost:54321',
+      VITE_SUPABASE_ANON_KEY: 'test-anon-key',
+      VITE_APP_ENV: 'local',
+    },
   },
 })

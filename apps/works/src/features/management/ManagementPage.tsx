@@ -26,8 +26,9 @@ const HEADINGS: Record<string, string> = {
 }
 
 /**
- * MANAGEMENT 워크스페이스: 대시보드 / 조직·지사 / 인사 / 자산 / 재무 / KPI.
- * 섹션 전환은 사이드바(?tab). 지사 원장은 조직 축이므로 ADMIN에서 이관해 여기서 소유하고,
+ * MANAGEMENT 워크스페이스: 경영관리 / 조직·인사 / 재무 / 총무·인프라.
+ * 섹션 전환은 경영요소 이름이 붙은 사이드바 구분선 아래의 메뉴(?tab). 지사 원장은 회사 운영 인프라이므로
+ * ADMIN에서 이관해 여기서 소유하고,
  * 반대로 인사 기준정보 태그(직책·직급·호봉)는 쓰기 권한이 ADMIN 하나뿐이라 ADMIN이 소유한다.
  */
 export function ManagementPage() {

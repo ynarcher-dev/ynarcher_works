@@ -12,6 +12,7 @@ const CONFIRM_PHRASE = '삭제합니다'
 const REASON_MAX = 100
 
 interface Props {
+  /** 서버 capability가 물리 삭제를 연 원장만 받는다. */
   ledger: InactiveLedgerKey
   targets: InactiveLedgerRow[]
   bulk: boolean
@@ -32,7 +33,7 @@ export function InactiveLedgerDeleteModal({ ledger, targets, bulk, onClose, onDe
   const matched = typed.replace(/^[\s.]+|[\s.]+$/g, '') === CONFIRM_PHRASE
 
   const submit = async () => {
-    const deleteReason = bulk ? '일괄삭제' : reason.trim()
+    const deleteReason = bulk ? '일괄 영구 삭제' : reason.trim()
     if (blocked || !matched || !deleteReason) return
     try {
       const count = await remove.mutateAsync({

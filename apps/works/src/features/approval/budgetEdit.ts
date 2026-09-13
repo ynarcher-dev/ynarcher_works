@@ -18,9 +18,12 @@ import {
   descendantRange,
   newBudgetRowId,
   normalizeDepths,
+  type BudgetAmountFormula,
   type BudgetRow,
   type BudgetTreeValue,
 } from '@/features/approval/budget'
+import { toNumber } from '@/features/approval/numeric'
+import { applyAmountEdit, type AmountKeys } from '@/features/approval/vat'
 
 const withRows = (v: BudgetTreeValue, rows: BudgetRow[]): BudgetTreeValue => ({
   ...v,
@@ -316,6 +319,81 @@ export function setCell(
       i === index ? { ...r, values: { ...r.values, [columnKey]: cell } } : r,
     ),
   )
+}
+
+/** 수량 × 단가 — 한쪽이라도 읽히지 않으면 곱이 서지 않는다(null). */
+function amountProduct(
+  values: Record<string, string>,
+  formula: BudgetAmountFormula,
+): number | null {
+  const qty = toNumber(values[formula.qtyKey] ?? '')
+  const unitPrice = toNumber(values[formula.unitPriceKey] ?? '')
+  if (qty === null || unitPrice === null) return null
+  // 원 단위는 정수로 끊고 그 밖의 숫자 열도 여섯 자리에서 끊는다 — 그러지 않으면 0.1×3이
+  // 0.30000000000000004로 적히고, 그 값이 그대로 합계와 문서 금액에 올라간다.
+  const product = qty * unitPrice
+  return formula.money ? Math.round(product) : Math.round(product * 1e6) / 1e6
+}
+
+/**
+ * 숫자 칸 고치기 — 수량·단가를 고치면 금액이 따라 바뀐다.
+ *
+ * 곱이 서면 금액 칸을 그 값으로 덮는다. 반대로 한쪽을 비워 곱이 서지 않게 되면 **그 칸에
+ * 직전 곱이 그대로 들어 있을 때만** 비운다 — 손으로 적은 금액까지 지우면 수량만 세는 줄
+ * (인원 10명·정액 지급)이 적어 둔 값을 잃는다.
+ *
+ * 값을 실제로 써 두는 것이 요점이다. 합계도 문서 대표 금액도 저장된 금액 칸을 읽으므로
+ * (서버 app.approval_primary_amount), 화면에서만 곱해 보이면 표와 결재 금액이 갈린다.
+ */
+export function setCellWithAmount(
+  value: BudgetTreeValue,
+  index: number,
+  columnKey: string,
+  cell: string,
+  formula: BudgetAmountFormula | null,
+): BudgetTreeValue {
+  const next = setCell(value, index, columnKey, cell)
+  if (!formula) return next
+  if (columnKey !== formula.qtyKey && columnKey !== formula.unitPriceKey) return next
+
+  const after = next.rows[index]?.values ?? {}
+  const product = amountProduct(after, formula)
+  if (product !== null) return setCell(next, index, formula.amountKey, String(product))
+
+  const before = amountProduct(value.rows[index]?.values ?? {}, formula)
+  const written = toNumber(after[formula.amountKey] ?? '')
+  if (before !== null && written === before) return setCell(next, index, formula.amountKey, '')
+  return next
+}
+
+/**
+ * 숫자 칸 고치기 + 부가세 되짚기 — 예산표의 단일 입력 경로.
+ *
+ * 수량·단가를 고치면 합계액이 곱으로 다시 서고, 그 합계액에서 공급가액·부가세를 다시 쪼갠다.
+ * 그래서 "고친 칸"은 곱이 걸린 경우 합계액 칸으로 바뀐다 — 수량 칸을 그대로 넘기면 부가세가
+ * 옛 합계액 기준으로 남아 표 한 줄 안에서 세 값이 어긋난다.
+ *
+ * `keys`가 없으면(역할 열이 없는 옛 양식) 종전 동작 그대로다.
+ */
+export function setBudgetCellWithVat(
+  value: BudgetTreeValue,
+  index: number,
+  columnKey: string,
+  cell: string,
+  formula: BudgetAmountFormula | null,
+  keys: AmountKeys | null,
+): BudgetTreeValue {
+  const next = setCellWithAmount(value, index, columnKey, cell, formula)
+  if (!keys) return next
+  const derived =
+    formula && (columnKey === formula.qtyKey || columnKey === formula.unitPriceKey)
+      ? keys.grossKey
+      : columnKey
+  const row = next.rows[index]
+  if (!row) return next
+  const values = applyAmountEdit(row.values, keys, derived)
+  if (values === row.values) return next
+  return { ...next, rows: next.rows.map((r, i) => (i === index ? { ...r, values } : r)) }
 }
 
 /** 층 이름 고치기 — 문서마다 다르므로 값에 저장한다(양식은 기본값만 준다). */

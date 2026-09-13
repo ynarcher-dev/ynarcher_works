@@ -14,6 +14,7 @@ import {
   type FormField,
 } from '@/features/approval/fields'
 import { formatMoney, toNumber } from '@/features/approval/numeric'
+import { vatKindLabel } from '@/features/approval/vat'
 
 /** 한 예산 줄에서 지금까지 나간 돈. 서버(approval_budget_status)가 답한다. */
 export interface BudgetUsage {
@@ -65,7 +66,8 @@ export function BudgetTreeView({ field, value, usage }: Props) {
     : null
 
   return (
-    <div className="overflow-x-auto rounded-radius-md border border-gray-200">
+    // relative가 없으면 스크롤 상자가 자기 폭을 부모에 맞추지 못해 문서 전체가 가로로 밀린다.
+    <div className="relative min-w-0 max-w-full overflow-x-auto rounded-radius-md border border-gray-200">
       <table className="w-full min-w-[48rem] border-collapse">
         <thead>
           <tr className="border-b border-gray-200 bg-gray-25">
@@ -91,6 +93,9 @@ export function BudgetTreeView({ field, value, usage }: Props) {
                 <th className={cn('w-32 px-3 py-1.5 text-right', tableText.head)}>사용</th>
                 <th className={cn('w-32 px-3 py-1.5 text-right', tableText.head)}>결재 중</th>
                 <th className={cn('w-32 px-3 py-1.5 text-right', tableText.head)}>남음</th>
+                {/* 남음(예산−사용)과 사용 가능(예산−사용−결재 중)은 다른 값이다. 앞의 것은
+                    지금까지의 이익, 뒤의 것은 **지금 더 올릴 수 있는 돈**이다. */}
+                <th className={cn('w-32 px-3 py-1.5 text-right', tableText.head)}>사용 가능</th>
               </>
             )}
           </tr>
@@ -122,6 +127,10 @@ export function BudgetTreeView({ field, value, usage }: Props) {
                     ? toNumber(gridRow.row.values[amountColumn.key] ?? '')
                     : null
                   const remaining = current && budget !== null ? budget - current.spent : null
+                  const available =
+                    current && budget !== null
+                      ? budget - current.spent - current.pending
+                      : null
                   return (
                     <tr key={gridRow.row.id} className="border-b border-gray-100">
                       {gridRow.cells.map((cell, level) =>
@@ -134,7 +143,17 @@ export function BudgetTreeView({ field, value, usage }: Props) {
                               tableText.body,
                             )}
                           >
-                            {tree.rows[cell.nodeIndex]?.name || '-'}
+                            {/* 항목 이름은 칸 안에서 접는다 — 본문이 word-break:keep-all이라
+                                긴 이름 하나가 표 전체를 늘린다(한 항목으로 2980px까지 늘었다).
+                                다만 `break-all`만 두면 반대로 칸이 두 글자까지 찌그러져 한 줄이
+                                1500px 높이가 된다. 최소 폭으로 칸을 버티게 하고 두 줄에서
+                                끊으며, 잘린 전체 이름은 title로 준다. */}
+                            <div
+                              className="line-clamp-2 min-w-[8rem] max-w-[14rem] break-all"
+                              title={tree.rows[cell.nodeIndex]?.name || undefined}
+                            >
+                              {tree.rows[cell.nodeIndex]?.name || '-'}
+                            </div>
                           </td>
                         ) : null,
                       )}
@@ -149,7 +168,9 @@ export function BudgetTreeView({ field, value, usage }: Props) {
                         >
                           {isNumericColumn(column.type)
                             ? numericText(column, gridRow.row.values[column.key] ?? '')
-                            : gridRow.row.values[column.key] || '-'}
+                            : column.type === 'VAT_KIND'
+                              ? (vatKindLabel(gridRow.row.values[column.key]) ?? '-')
+                              : gridRow.row.values[column.key] || '-'}
                         </td>
                       ))}
                       {usage && current && (
@@ -178,6 +199,15 @@ export function BudgetTreeView({ field, value, usage }: Props) {
                             )}
                           >
                             {remaining === null ? '-' : formatMoney(remaining)}
+                          </td>
+                          <td
+                            className={cn(
+                              'px-3 py-1.5 text-right tabular-nums',
+                              tableText.body,
+                              available !== null && available < 0 && 'text-danger',
+                            )}
+                          >
+                            {available === null ? '-' : formatMoney(available)}
                           </td>
                         </>
                       )}
@@ -250,6 +280,19 @@ export function BudgetTreeView({ field, value, usage }: Props) {
                           ? '-'
                           : formatMoney(groupBudget - groupUsage.spent)}
                       </td>
+                      <td
+                        className={cn(
+                          tableText.meta,
+                          'px-3 py-1.5 text-right font-normal tabular-nums text-gray-500',
+                          groupBudget !== null &&
+                            groupBudget - groupUsage.spent - groupUsage.pending < 0 &&
+                            'text-danger',
+                        )}
+                      >
+                        {groupBudget === null
+                          ? '-'
+                          : formatMoney(groupBudget - groupUsage.spent - groupUsage.pending)}
+                      </td>
                     </>
                   )}
                 </tr>
@@ -301,6 +344,19 @@ export function BudgetTreeView({ field, value, usage }: Props) {
                   )}
                 >
                   {totalBudget === null ? '-' : formatMoney(totalBudget - totalUsage.spent)}
+                </td>
+                <td
+                  className={cn(
+                    'px-3 py-1.5 text-right font-semibold tabular-nums',
+                    tableText.body,
+                    totalBudget !== null &&
+                      totalBudget - totalUsage.spent - totalUsage.pending < 0 &&
+                      'text-danger',
+                  )}
+                >
+                  {totalBudget === null
+                    ? '-'
+                    : formatMoney(totalBudget - totalUsage.spent - totalUsage.pending)}
                 </td>
               </>
             )}
