@@ -2,7 +2,7 @@
   "provenance": {
     "generator": "scripts/security/build-acl-decisions.mjs",
     "input": "supabase/security/acl-evidence.json",
-    "source_cutoff": "20260913160000_guest_accounts_list_facets.sql",
+    "source_cutoff": "20260913210500_file_collection_schema.sql (미적용 — 파일받기 6종은 손으로 더한 결정)",
     "migrations_sha256": "ed458e9066f141ce951152cec2d30fa0973e50688be5d19fecd6aada26308d99",
     "status": "이 파일은 마이그레이션이 아니며 DB를 바꾸지 않습니다. 결정과 기대 권한의 정본입니다.",
     "catalog_state": "ACL 마이그레이션 반영 후",
@@ -23,12 +23,12 @@
     "unresolved": "호출 증거가 없거나 간접 증거만 있어 소유자 확인이 필요한 표."
   },
   "counts": {
-    "tables": 159,
+    "tables": 165,
     "by_decision": {
       "policy-backed-client-dml": 64,
       "read-only": 20,
       "lookup": 14,
-      "server-only-protected": 12,
+      "server-only-protected": 18,
       "legacy-unused": 17,
       "unresolved": 32
     },
@@ -5248,6 +5248,426 @@
         "authenticated_unjustified_review": []
       },
       "notes": []
+    },
+    {
+      "table": "file_collection_assignments",
+      "decision": "server-only-protected",
+      "rls_enabled": true,
+      "policy_commands": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "evidence": {
+        "client_ops_direct": [
+          "SELECT"
+        ],
+        "client_ops_resolved_indirect": [],
+        "client_ops_edge_caller": [
+          "SELECT"
+        ],
+        "edge_service_role_ops": [],
+        "edge_unresolved_ops": [],
+        "direct_call_sites": 0,
+        "name_literal_sites": 0,
+        "indirect_why": null,
+        "indirect_evidence": [],
+        "edge_audit_browser_ops": [
+          "SELECT"
+        ],
+        "edge_audit_caller_ops": [
+          "SELECT"
+        ],
+        "edge_audit_service_role_ops": [],
+        "edge_audit_sites": [],
+        "invoker_rpc_required_ops": [],
+        "invoker_rpc_via": [],
+        "dynamic_rpc_ops": [],
+        "dynamic_rpc_evidence": [],
+        "policy_gap_blocked": null
+      },
+      "proposed": {
+        "authenticated": [
+          "SELECT"
+        ],
+        "service_role": [],
+        "anon": []
+      },
+      "expected": {
+        "authenticated": [
+          "SELECT"
+        ],
+        "service_role": [],
+        "anon": []
+      },
+      "current": {
+        "authenticated": [],
+        "service_role": []
+      },
+      "delta": {
+        "authenticated_grant": [
+          "SELECT"
+        ],
+        "service_role_grant": [],
+        "non_row_revoke": {
+          "anon": [],
+          "authenticated": []
+        },
+        "authenticated_unjustified_review": []
+      },
+      "notes": [
+        "파일받기(2026-09-13, 미적용 마이그레이션 20260913210500). 쓰기는 전부 SECURITY DEFINER RPC를 지나므로 앱 롤에는 SELECT만 줍니다. Edge는 호출자 JWT로 읽고 RPC로 쓰며 service_role은 Storage·access_logs에만 쓰므로 이 표에는 service_role 권한이 필요 없습니다."
+      ]
+    },
+    {
+      "table": "file_collection_comments",
+      "decision": "server-only-protected",
+      "rls_enabled": true,
+      "policy_commands": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "evidence": {
+        "client_ops_direct": [
+          "SELECT"
+        ],
+        "client_ops_resolved_indirect": [],
+        "client_ops_edge_caller": [
+          "SELECT"
+        ],
+        "edge_service_role_ops": [],
+        "edge_unresolved_ops": [],
+        "direct_call_sites": 0,
+        "name_literal_sites": 0,
+        "indirect_why": null,
+        "indirect_evidence": [],
+        "edge_audit_browser_ops": [
+          "SELECT"
+        ],
+        "edge_audit_caller_ops": [
+          "SELECT"
+        ],
+        "edge_audit_service_role_ops": [],
+        "edge_audit_sites": [],
+        "invoker_rpc_required_ops": [],
+        "invoker_rpc_via": [],
+        "dynamic_rpc_ops": [],
+        "dynamic_rpc_evidence": [],
+        "policy_gap_blocked": null
+      },
+      "proposed": {
+        "authenticated": [
+          "SELECT"
+        ],
+        "service_role": [],
+        "anon": []
+      },
+      "expected": {
+        "authenticated": [
+          "SELECT"
+        ],
+        "service_role": [],
+        "anon": []
+      },
+      "current": {
+        "authenticated": [],
+        "service_role": []
+      },
+      "delta": {
+        "authenticated_grant": [
+          "SELECT"
+        ],
+        "service_role_grant": [],
+        "non_row_revoke": {
+          "anon": [],
+          "authenticated": []
+        },
+        "authenticated_unjustified_review": []
+      },
+      "notes": [
+        "파일받기(2026-09-13, 미적용 마이그레이션 20260913210500). 쓰기는 전부 SECURITY DEFINER RPC를 지나므로 앱 롤에는 SELECT만 줍니다. Edge는 호출자 JWT로 읽고 RPC로 쓰며 service_role은 Storage·access_logs에만 쓰므로 이 표에는 service_role 권한이 필요 없습니다."
+      ]
+    },
+    {
+      "table": "file_collection_files",
+      "decision": "server-only-protected",
+      "rls_enabled": true,
+      "policy_commands": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "evidence": {
+        "client_ops_direct": [
+          "SELECT"
+        ],
+        "client_ops_resolved_indirect": [],
+        "client_ops_edge_caller": [
+          "SELECT"
+        ],
+        "edge_service_role_ops": [],
+        "edge_unresolved_ops": [],
+        "direct_call_sites": 0,
+        "name_literal_sites": 0,
+        "indirect_why": null,
+        "indirect_evidence": [],
+        "edge_audit_browser_ops": [
+          "SELECT"
+        ],
+        "edge_audit_caller_ops": [
+          "SELECT"
+        ],
+        "edge_audit_service_role_ops": [],
+        "edge_audit_sites": [],
+        "invoker_rpc_required_ops": [],
+        "invoker_rpc_via": [],
+        "dynamic_rpc_ops": [],
+        "dynamic_rpc_evidence": [],
+        "policy_gap_blocked": null
+      },
+      "proposed": {
+        "authenticated": [
+          "SELECT"
+        ],
+        "service_role": [],
+        "anon": []
+      },
+      "expected": {
+        "authenticated": [
+          "SELECT"
+        ],
+        "service_role": [],
+        "anon": []
+      },
+      "current": {
+        "authenticated": [],
+        "service_role": []
+      },
+      "delta": {
+        "authenticated_grant": [
+          "SELECT"
+        ],
+        "service_role_grant": [],
+        "non_row_revoke": {
+          "anon": [],
+          "authenticated": []
+        },
+        "authenticated_unjustified_review": []
+      },
+      "notes": [
+        "파일받기(2026-09-13, 미적용 마이그레이션 20260913210500). 쓰기는 전부 SECURITY DEFINER RPC를 지나므로 앱 롤에는 SELECT만 줍니다. Edge는 호출자 JWT로 읽고 RPC로 쓰며 service_role은 Storage·access_logs에만 쓰므로 이 표에는 service_role 권한이 필요 없습니다."
+      ]
+    },
+    {
+      "table": "file_collection_nodes",
+      "decision": "server-only-protected",
+      "rls_enabled": true,
+      "policy_commands": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "evidence": {
+        "client_ops_direct": [
+          "SELECT"
+        ],
+        "client_ops_resolved_indirect": [],
+        "client_ops_edge_caller": [
+          "SELECT"
+        ],
+        "edge_service_role_ops": [],
+        "edge_unresolved_ops": [],
+        "direct_call_sites": 0,
+        "name_literal_sites": 0,
+        "indirect_why": null,
+        "indirect_evidence": [],
+        "edge_audit_browser_ops": [
+          "SELECT"
+        ],
+        "edge_audit_caller_ops": [
+          "SELECT"
+        ],
+        "edge_audit_service_role_ops": [],
+        "edge_audit_sites": [],
+        "invoker_rpc_required_ops": [],
+        "invoker_rpc_via": [],
+        "dynamic_rpc_ops": [],
+        "dynamic_rpc_evidence": [],
+        "policy_gap_blocked": null
+      },
+      "proposed": {
+        "authenticated": [
+          "SELECT"
+        ],
+        "service_role": [],
+        "anon": []
+      },
+      "expected": {
+        "authenticated": [
+          "SELECT"
+        ],
+        "service_role": [],
+        "anon": []
+      },
+      "current": {
+        "authenticated": [],
+        "service_role": []
+      },
+      "delta": {
+        "authenticated_grant": [
+          "SELECT"
+        ],
+        "service_role_grant": [],
+        "non_row_revoke": {
+          "anon": [],
+          "authenticated": []
+        },
+        "authenticated_unjustified_review": []
+      },
+      "notes": [
+        "파일받기(2026-09-13, 미적용 마이그레이션 20260913210500). 쓰기는 전부 SECURITY DEFINER RPC를 지나므로 앱 롤에는 SELECT만 줍니다. Edge는 호출자 JWT로 읽고 RPC로 쓰며 service_role은 Storage·access_logs에만 쓰므로 이 표에는 service_role 권한이 필요 없습니다."
+      ]
+    },
+    {
+      "table": "file_collection_responses",
+      "decision": "server-only-protected",
+      "rls_enabled": true,
+      "policy_commands": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "evidence": {
+        "client_ops_direct": [
+          "SELECT"
+        ],
+        "client_ops_resolved_indirect": [],
+        "client_ops_edge_caller": [
+          "SELECT"
+        ],
+        "edge_service_role_ops": [],
+        "edge_unresolved_ops": [],
+        "direct_call_sites": 0,
+        "name_literal_sites": 0,
+        "indirect_why": null,
+        "indirect_evidence": [],
+        "edge_audit_browser_ops": [
+          "SELECT"
+        ],
+        "edge_audit_caller_ops": [
+          "SELECT"
+        ],
+        "edge_audit_service_role_ops": [],
+        "edge_audit_sites": [],
+        "invoker_rpc_required_ops": [],
+        "invoker_rpc_via": [],
+        "dynamic_rpc_ops": [],
+        "dynamic_rpc_evidence": [],
+        "policy_gap_blocked": null
+      },
+      "proposed": {
+        "authenticated": [
+          "SELECT"
+        ],
+        "service_role": [],
+        "anon": []
+      },
+      "expected": {
+        "authenticated": [
+          "SELECT"
+        ],
+        "service_role": [],
+        "anon": []
+      },
+      "current": {
+        "authenticated": [],
+        "service_role": []
+      },
+      "delta": {
+        "authenticated_grant": [
+          "SELECT"
+        ],
+        "service_role_grant": [],
+        "non_row_revoke": {
+          "anon": [],
+          "authenticated": []
+        },
+        "authenticated_unjustified_review": []
+      },
+      "notes": [
+        "파일받기(2026-09-13, 미적용 마이그레이션 20260913210500). 쓰기는 전부 SECURITY DEFINER RPC를 지나므로 앱 롤에는 SELECT만 줍니다. Edge는 호출자 JWT로 읽고 RPC로 쓰며 service_role은 Storage·access_logs에만 쓰므로 이 표에는 service_role 권한이 필요 없습니다."
+      ]
+    },
+    {
+      "table": "file_collections",
+      "decision": "server-only-protected",
+      "rls_enabled": true,
+      "policy_commands": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "evidence": {
+        "client_ops_direct": [
+          "SELECT"
+        ],
+        "client_ops_resolved_indirect": [],
+        "client_ops_edge_caller": [
+          "SELECT"
+        ],
+        "edge_service_role_ops": [],
+        "edge_unresolved_ops": [],
+        "direct_call_sites": 0,
+        "name_literal_sites": 0,
+        "indirect_why": null,
+        "indirect_evidence": [],
+        "edge_audit_browser_ops": [
+          "SELECT"
+        ],
+        "edge_audit_caller_ops": [
+          "SELECT"
+        ],
+        "edge_audit_service_role_ops": [],
+        "edge_audit_sites": [],
+        "invoker_rpc_required_ops": [],
+        "invoker_rpc_via": [],
+        "dynamic_rpc_ops": [],
+        "dynamic_rpc_evidence": [],
+        "policy_gap_blocked": null
+      },
+      "proposed": {
+        "authenticated": [
+          "SELECT"
+        ],
+        "service_role": [],
+        "anon": []
+      },
+      "expected": {
+        "authenticated": [
+          "SELECT"
+        ],
+        "service_role": [],
+        "anon": []
+      },
+      "current": {
+        "authenticated": [],
+        "service_role": []
+      },
+      "delta": {
+        "authenticated_grant": [
+          "SELECT"
+        ],
+        "service_role_grant": [],
+        "non_row_revoke": {
+          "anon": [],
+          "authenticated": []
+        },
+        "authenticated_unjustified_review": []
+      },
+      "notes": [
+        "파일받기(2026-09-13, 미적용 마이그레이션 20260913210500). 쓰기는 전부 SECURITY DEFINER RPC를 지나므로 앱 롤에는 SELECT만 줍니다. Edge는 호출자 JWT로 읽고 RPC로 쓰며 service_role은 Storage·access_logs에만 쓰므로 이 표에는 service_role 권한이 필요 없습니다."
+      ]
     },
     {
       "table": "fund_lps",

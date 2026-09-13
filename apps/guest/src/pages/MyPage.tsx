@@ -1,8 +1,7 @@
-import { useQuery } from '@tanstack/react-query'
 import { Badge, Banner, Card, EmptyState, InfoField, InfoGrid, Spinner } from '@ynarcher/ui'
-import { guestAuth, type GuestMe } from '@/auth/guestAuthService'
 import { contextKindLabel, PERSONA_LABEL } from '@/auth/guestStore'
 import { PasswordChangeCard } from '@/pages/PasswordChangeCard'
+import { useGuestMe } from '@/features/meHooks'
 import { PROGRAM_STATUS_LABEL, PROGRAM_STATUS_TONE } from '@/features/programMeta'
 import { formatDate } from '@/lib/format'
 
@@ -15,10 +14,8 @@ import { formatDate } from '@/lib/format'
  * 거친 표시용 응답만 받는다.
  */
 export function MyPage() {
-  const { data: me, isLoading } = useQuery<GuestMe | null>({
-    queryKey: ['guest', 'me'],
-    queryFn: () => guestAuth.refreshSession(),
-  })
+  // 질의 키는 개요 요약·사이드바 전환기와 같다(`useGuestMe`) — 세 자리가 같은 시점의 사실을 쓴다.
+  const { data: me, isLoading } = useGuestMe()
 
   if (isLoading) return <Spinner />
   // 401이면 refreshSession이 세션을 비워 RequireGuestAuth가 로그인으로 돌려보낸다.

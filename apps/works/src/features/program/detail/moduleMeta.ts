@@ -2,6 +2,7 @@ import { MODULE_STATUS_BAR_CLASS, MODULE_STATUS_LABEL, MODULE_STATUS_TONE } from
 import type { BadgeTone } from '@ynarcher/ui'
 import {
   ClipboardCheck,
+  Inbox,
   Link as LinkIcon,
   Megaphone,
   Paperclip,
@@ -41,6 +42,19 @@ export const MODULE_META: Record<string, ModuleMeta> = {
     detail:
       '공개 랜딩페이지 기반의 참여 기업 모집을 운영합니다. 신청서 폼을 직접 구성하고, 공개 URL로 지원을 접수하며, 접수된 신청 내역과 첨부서류를 한곳에서 검토합니다.',
     tab: 'recruitment',
+  },
+  /**
+   * 파일받기(2026-09-13). 아이콘이 `Inbox`인 이유는 방향이다 — 파일첨부(`Paperclip`)는
+   * 나눠 주는 자리이고 이곳은 받는 자리이므로, 보드에서 두 모듈이 같은 모양으로 서지 않아야
+   * 담당자가 카드만 보고 방향을 읽는다.
+   */
+  FILE_COLLECTION: {
+    icon: Inbox,
+    emoji: '📥',
+    description: '문항을 세워 대상별로 자료를 받고 검토합니다.',
+    detail:
+      '폴더와 문항으로 받을 자료의 목록을 짜고, 명부의 게스트를 골라 배정합니다. 공개하면 문항 구조가 잠기고 대상마다 독립한 제출 공간이 서며, 같은 기업의 다른 게스트라도 서로의 파일을 보지 못합니다. 문항 단위로 제출을 받아 완료 또는 보완 요청으로 회차를 올리고, 이전 회차의 파일과 피드백은 그대로 남습니다.',
+    tab: 'file-collection',
   },
   QUICK_REVIEW: {
     icon: ClipboardCheck,

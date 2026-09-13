@@ -19,3 +19,13 @@ describe('GUEST 프로젝트/FUND 명칭', () => {
     expect(fixedNavOf(null)[0].label).toBe('프로젝트 개요')
   })
 })
+
+describe('GUEST 일정안내 철회(2026-09-13)', () => {
+  it('어느 맥락에서도 일정안내 메뉴를 세우지 않는다', () => {
+    for (const key of ['program', 'ma_program', 'fund', null]) {
+      const paths = fixedNavOf(key).map((item) => item.path)
+      expect(paths).not.toContain('/schedule')
+      expect(paths).toEqual(['/overview', '/announcements', '/qna'])
+    }
+  })
+})

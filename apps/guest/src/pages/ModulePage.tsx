@@ -10,6 +10,7 @@ import { useParams } from 'react-router-dom'
 import { GuestNoticeRail } from '@/app/GuestNoticeRail'
 import { useGuestModules, useModuleFiles, type GuestModule } from '@/features/moduleHooks'
 import { isModuleLocked, moduleNotice } from '@/features/moduleMeta'
+import { FileCollectionModule } from '@/pages/modules/FileCollectionModule'
 import { FileModule } from '@/pages/modules/FileModule'
 import { LinkModule } from '@/pages/modules/LinkModule'
 import { LockedModuleBody } from '@/pages/modules/LockedModuleBody'
@@ -51,7 +52,12 @@ export function ModulePage() {
   // 준비·취소 메뉴는 머리만 세우고 몸통은 열지 않는다. 화면은 안내일 뿐이고 판정은
   // RLS(app.guest_open_module_ids)가 하므로, 잠긴 동안에는 글·링크·파일을 부르지도 않는다.
   const locked = isModuleLocked(mod.status)
-
+  /*
+    본문은 템플릿을 가리지 않고 2:1로 선다(2026-09-14 사용자 지정 — 파일받기만 전체 폭으로
+    세우던 예외를 거뒀다). 문항 트리는 좌측 2/3에서도 이름·상태가 한 줄에 서고, 우측 1/3의
+    맨 위에는 NOTICE가 먼저 선다 — 무엇을 언제까지 내라는 말은 문항의 상태가 아니라 공지가
+    답하는 자리다.
+  */
   return (
     <div className="space-y-5">
       {/* 머리와 그 밑 구분선은 전체 폭으로 선다. 본문은 구분선 아래에서 2:1로 갈리고
@@ -123,6 +129,8 @@ function ModuleBody({ module: mod }: { module: GuestModule }) {
       return <LinkModule moduleId={mod.id} />
     case 'FILE':
       return <FileModule moduleId={mod.id} />
+    case 'FILE_COLLECTION':
+      return <FileCollectionModule moduleId={mod.id} moduleStatus={mod.status} />
     default:
       return null
   }

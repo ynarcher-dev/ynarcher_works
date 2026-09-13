@@ -1,10 +1,4 @@
-import {
-  Bell,
-  BookOpen,
-  CalendarDays,
-  CircleHelp,
-  type LucideIcon,
-} from 'lucide-react'
+import { Bell, BookOpen, CircleHelp, type LucideIcon } from 'lucide-react'
 import { moduleDisplayName } from '@ynarcher/master-data'
 import { moduleIcon } from '@/features/moduleMeta'
 import type { GuestModule } from '@/features/moduleHooks'
@@ -50,31 +44,26 @@ export function modulePath(moduleId: string): string {
  * 모듈 메뉴는 원장이 세우지만(위 moduleNavItems), 이 줄들은 메뉴(모듈)가 아니라 맥락 자체를
  * 향한 화면이라 코드에 고정으로 선다 — 담당자가 켜고 끄는 대상이 아니고, 공개 메뉴가
  * 하나도 없어도 로그인이 열렸다면 소개·공지·문의는 닿을 수 있어야 한다.
- * 일정안내만은 성격이 반쯤 다르다 — 보여 주는 내용 자체가 공개 메뉴들의 기간이라
- * 공개 메뉴가 없으면 빈 화면이 되지만, 자리는 고정으로 지킨다(메뉴가 열리는 날 바로 선다).
  * 원장이 세우는 하위 메뉴와는 사이드바가 구분선으로 가른다(GuestLayout).
+ *
+ * 2026-09-13 — 사용자 지정으로 **일정안내를 모든 맥락에서 공통 철회했다**(한시적). 지금 세
+ * 맥락의 고정 메뉴는 모두 소개·공지사항·Q&A 셋이다.
  */
 const PROGRAM_FIXED_NAV: readonly [GuestNavItem, ...GuestNavItem[]] = [
   { path: '/overview', label: '프로젝트 개요', icon: BookOpen },
   { path: '/announcements', label: '공지사항', icon: Bell },
-  { path: '/schedule', label: '일정안내', icon: CalendarDays },
   { path: '/qna', label: 'Q&A', icon: CircleHelp },
 ]
 
 const MNA_FIXED_NAV: readonly [GuestNavItem, ...GuestNavItem[]] = [
   { path: '/overview', label: 'M&A 프로젝트 개요', icon: BookOpen },
   { path: '/announcements', label: '공지사항', icon: Bell },
-  { path: '/schedule', label: '일정안내', icon: CalendarDays },
   { path: '/qna', label: 'Q&A', icon: CircleHelp },
 ]
 
 /**
- * 조합(FUND) 맥락의 고정 메뉴 — **셋뿐이고 일정안내가 없다**(2026-09-09).
- *
- * 없는 이유는 자리를 아껴서가 아니라 그 화면이 세우는 것이 공개 메뉴(모듈)들의 기간이기
- * 때문이다. 조합에는 아직 모듈이 서지 않으므로(온기보고를 여는 날 함께 선다) 지금 두면
- * 언제 눌러도 빈 화면이고, 빈 화면으로 데려가는 메뉴는 '아직 안 온 것'이 아니라 '고장'으로
- * 읽힌다. 사업에서 그 자리를 지킨 근거(메뉴가 열리는 날 바로 선다)가 여기서는 아직 없다.
+ * 조합(FUND) 맥락의 고정 메뉴. 2026-09-09에 일정안내를 뺀 뒤로 셋이었고, 2026-09-13에
+ * 나머지 맥락이 같은 셋이 되면서 이제 차이는 소개 줄의 이름(`조합 개요`)뿐이다.
  */
 const FUND_FIXED_NAV: readonly [GuestNavItem, ...GuestNavItem[]] = [
   { path: '/overview', label: '조합 개요', icon: BookOpen },

@@ -9,6 +9,7 @@ import { ProgramOverviewTab } from '@/features/program/detail/ProgramOverviewTab
 import { ModuleHeaderCard } from '@/features/program/detail/ModuleHeaderCard'
 import { MODULE_META, moduleDisplayName } from '@/features/program/detail/moduleMeta'
 import { useProgramModules, type ProgramModule } from '@/features/program/hooks'
+import { FileCollectionPanel } from '@/features/program/panels/FileCollectionPanel'
 import { FilePanel } from '@/features/program/panels/FilePanel'
 import { LinkPanel } from '@/features/program/panels/LinkPanel'
 import { ModuleNoticeSplit } from '@/features/program/panels/NoticePanel'
@@ -28,6 +29,7 @@ type Tab =
   | 'post'
   | 'link'
   | 'file'
+  | 'file-collection'
   | 'quick-review'
 
 const TAB_KEYS = new Set<string>([
@@ -37,6 +39,7 @@ const TAB_KEYS = new Set<string>([
   'post',
   'link',
   'file',
+  'file-collection',
   'quick-review',
 ])
 
@@ -165,6 +168,15 @@ export function ProgramDetailPage() {
           {moduleId && tab === 'file' && (
             <ModuleNoticeSplit programId={id} moduleId={moduleId}>
               <FilePanel programId={id} moduleId={moduleId} />
+            </ModuleNoticeSplit>
+          )}
+          {/* 파일받기도 다른 게스트 모듈과 **같은 자리·같은 비율**로 선다(2026-09-13 사용자
+              결정). 본문이 2/3으로 접히면 문항·명단·관제 표는 좁아지는 대신 자기 칸 안에서
+              가로로 스크롤한다 — 표를 넓게 두는 것보다 모듈마다 NOTICE가 같은 자리에 있는
+              편이 낫다고 보았다. */}
+          {moduleId && tab === 'file-collection' && (
+            <ModuleNoticeSplit programId={id} moduleId={moduleId}>
+              <FileCollectionPanel programId={id} moduleId={moduleId} />
             </ModuleNoticeSplit>
           )}
           {moduleId && tab === 'recruitment' && (

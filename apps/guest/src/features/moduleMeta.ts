@@ -1,5 +1,6 @@
 import {
   CalendarDays,
+  Inbox,
   Link as LinkIcon,
   Megaphone,
   Paperclip,
@@ -20,6 +21,9 @@ export const MODULE_ICON: Record<string, LucideIcon> = {
   POST: PenLine,
   LINK: LinkIcon,
   FILE: Paperclip,
+  // 파일받기는 **받는 쪽**의 메뉴다. 클립(FILE)은 '붙은 자료'를 뜻해 내려받는 자리와 같은
+  // 표식이 되므로, 들어오는 상자(Inbox)로 가른다 — 두 메뉴가 한 사이드바에 같이 선다.
+  FILE_COLLECTION: Inbox,
 }
 
 /** 메뉴 아이콘(미지의 템플릿은 일정 아이콘으로 떨어진다 — 모든 모듈은 최소한 기간을 가진다). */

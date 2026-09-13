@@ -1,3 +1,4 @@
+import { hierarchyGridRows, hierarchyGridGroups, type HierarchyGridCell, type HierarchyGridRow, type HierarchyGridGroup } from '@ynarcher/ui'
 /**
  * 품의서 예산표 — 분류 단계를 가로 열로 편 표의 순수 계층.
  *
@@ -297,70 +298,17 @@ export function asBudgetTree(value: BudgetTreeValue): BudgetTreeValue {
   return complete ? { levels, rows } : budgetTreeFromEntries(levels, budgetEntries({ levels, rows }))
 }
 
-export interface BudgetGridCell {
-  /** 실제 트리 rows에서 이 분류 노드의 자리. */
-  nodeIndex: number
-  /** 이 상위 분류가 차지하는 예산 항목 행 수. */
-  rowSpan: number
-}
+export type BudgetGridCell = HierarchyGridCell
+export type BudgetGridRow = HierarchyGridRow<BudgetRow>
+export type BudgetGridGroup = HierarchyGridGroup<BudgetRow>
 
-export interface BudgetGridRow {
-  /** 실제 트리 rows에서 금액을 가진 맨 아래 노드의 자리. */
-  leafIndex: number
-  row: BudgetRow
-  /** 1단계부터 이 행의 맨 아래 항목까지 실제 트리 노드 자리. */
-  nodePath: number[]
-  /** 이미 위 행에서 세로 병합된 단계는 null이다. */
-  cells: Array<BudgetGridCell | null>
-}
-
-export interface BudgetGridGroup {
-  /** 이 묶음을 소유하는 최상위 분류 노드의 자리. */
-  rootIndex: number
-  /** 전체 가로 행에서 이 묶음이 시작하는 자리. */
-  startIndex: number
-  rows: BudgetGridRow[]
-}
-
-/** 실제 트리를 가로 표의 행과 세로 병합 셀 정보로 편다. */
+/** 예산 값의 호환 처리는 도메인에 두고, 병합 계산은 공용 UI에 위임한다. */
 export function budgetGridRows(value: BudgetTreeValue): BudgetGridRow[] {
-  const tree = asBudgetTree(value)
-  const nodePaths: number[][] = []
-  const stack: number[] = []
-
-  for (const [index, row] of tree.rows.entries()) {
-    stack[row.depth] = index
-    stack.length = row.depth + 1
-    if (isLeaf(tree.rows, index)) nodePaths.push([...stack])
-  }
-
-  return nodePaths.map((path, rowIndex) => ({
-    leafIndex: path[path.length - 1]!,
-    row: tree.rows[path[path.length - 1]!]!,
-    nodePath: path,
-    cells: path.map((nodeIndex, level) => {
-      if (rowIndex > 0 && nodePaths[rowIndex - 1]?.[level] === nodeIndex) return null
-      let rowSpan = 1
-      while (nodePaths[rowIndex + rowSpan]?.[level] === nodeIndex) rowSpan += 1
-      return { nodeIndex, rowSpan }
-    }),
-  }))
+  return hierarchyGridRows(asBudgetTree(value).rows)
 }
 
-/** 소계와 분기 추가 줄을 세울 수 있도록 가로 행을 최상위 분류별로 묶는다. */
 export function budgetGridGroups(value: BudgetTreeValue): BudgetGridGroup[] {
-  const groups: BudgetGridGroup[] = []
-  for (const [index, row] of budgetGridRows(value).entries()) {
-    const rootIndex = row.nodePath[0]
-    if (rootIndex === undefined) continue
-    const previous = groups[groups.length - 1]
-    if (previous?.rootIndex === rootIndex) {
-      previous.rows.push(row)
-    } else {
-      groups.push({ rootIndex, startIndex: index, rows: [row] })
-    }
-  }
-  return groups
+  return hierarchyGridGroups(asBudgetTree(value).rows)
 }
 
 /** 지출결의가 고를 수 있는 예산 줄 한 개. */

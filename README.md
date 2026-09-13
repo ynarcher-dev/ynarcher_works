@@ -3,7 +3,7 @@
 와이앤아처의 AC/VC 업무와 전사 운영을 하나로 연결하는 통합 플랫폼입니다. 내부 임직원용 `WORKS`와 외부 참여자용 `GUEST`를 별도 SPA로 운영하며, 공통 백엔드는 Supabase(PostgreSQL, RLS, Storage, Edge Functions/RPC)를 사용합니다.
 
 > [!IMPORTANT]
-> 이 문서는 첫 진입점입니다. 작업 전 [현재 상태](./docs/CURRENT_STATUS.md)와 [운영 가이드](./docs/OPERATIONS.md)를 확인합니다. 기준 커밋은 `main` / `846dfb83`(2026-09-12)입니다.
+> 이 문서는 첫 진입점입니다. 작업에 필요할 때 [현재 상태](./docs/CURRENT_STATUS.md)와 [운영 가이드](./docs/OPERATIONS.md)의 관련 절을 확인합니다. 기준 커밋은 `main` / `846dfb83`(2026-09-12)입니다.
 
 ---
 
@@ -12,7 +12,7 @@
 | 영역 | 역할 | 경로 |
 | :--- | :--- | :--- |
 | `WORKS` | 내부 임직원용 앱. OFFICE, STARTUP, NETWORKS, PROJECT(구 AC), FUND, M&A/PE, MANAGEMENT, 전자결재, ADMIN | `apps/works` |
-| `GUEST` | 외부 참여자용 모바일 우선 채널. 사업 개요·공지·일정·Q&A·지원·모듈 참여 | `apps/guest` |
+| `GUEST` | 외부 참여자용 모바일 우선 채널. 사업 개요·공지·Q&A·지원·모듈 참여 | `apps/guest` |
 | 공통 UI | 디자인 토큰과 순수 UI 컴포넌트 | `packages/ui` |
 | 마스터 데이터 | 데이터 연동형 공통 UI와 마스터 데이터 계층 | `packages/master-data` |
 | 백엔드 | DB 마이그레이션, RLS 테스트, Edge Functions | `supabase` |
@@ -87,6 +87,7 @@ DB 관련 보조 명령은 `pnpm db:start|stop|status|reset|diff|migration`, 베
 | [작업 규칙](./docs/docs_master/CLAUDE.md) | 확정 아키텍처와 개발 수칙 |
 | [서비스 비전](./docs/docs_master/readme_master.md) | 비즈니스 배경과 워크스페이스 정의 |
 | [진행 이력](./docs/docs_master/PROGRESS.md) | 과거 추적 기록 — 작업 선정용 아님 |
+| [파일받기 모듈](./docs/docs_planning/3_4_16_file_collection.md) | PROJECT·M&A 파일받기(`FILE_COLLECTION`)의 DB·Edge 계약 정본 |
 
 문서가 서로 다르면 실제 코드와 검증 결과를 먼저 확인하고, 확인한 날짜와 근거를 `CURRENT_STATUS.md`에 반영합니다.
 
@@ -94,7 +95,7 @@ DB 관련 보조 명령은 `pnpm db:start|stop|status|reset|diff|migration`, 베
 
 ## 5. 작업 진행 규칙
 
-1. `README.md` → `docs/CURRENT_STATUS.md` → `docs/OPERATIONS.md` 순으로 읽습니다.
+1. 처음에는 `README.md`와 작업 규칙을 읽고, 나머지 문서는 작업에 필요한 절만 확인합니다. 같은 세션에서 변경되지 않은 문서를 이유 없이 다시 읽지 않습니다.
 2. 작업 범위는 사용자가 정합니다. `PROGRESS.md`의 미체크 항목을 다음 작업으로 자동 선정하지 않습니다.
 3. 사용자가 이미 범위를 승인했다면 다시 묻지 않고 수행합니다. 승인은 그 범위에만 유효하며 다음 작업으로 연장되지 않습니다.
 4. 승인 범위가 불명확할 때만, 판단이 갈리는 지점을 특정해 확인합니다.

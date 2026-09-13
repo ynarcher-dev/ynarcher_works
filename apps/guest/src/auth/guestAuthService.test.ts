@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { guestAuth } from '@/auth/guestAuthService'
 import { GUEST_STORAGE_KEY, useGuestStore } from '@/auth/guestStore'
+import { queryClient } from '@/lib/queryClient'
 
 /**
  * 게스트 인증 서비스 회귀 테스트 — 네 갈래 착지마다 **무엇이 저장되는가**를 본다.
@@ -25,6 +26,8 @@ function jwt(expMs: number): string {
 }
 
 const LIVE_TOKEN = jwt(Date.now() + 60 * 60 * 1000)
+/** 갈아탄 뒤의 토큰. 만료가 달라야 LIVE_TOKEN과 다른 문자열이 된다. */
+const NEXT_TOKEN = jwt(Date.now() + 2 * 60 * 60 * 1000)
 const DEAD_TOKEN = jwt(Date.now() - 60 * 1000)
 
 const SESSION_BODY = {
@@ -93,12 +96,39 @@ beforeEach(() => {
     contexts: [],
     accessToken: null,
   })
+  queryClient.clear()
 })
 
 afterEach(() => {
   g.fetch = realFetch
   vi.restoreAllMocks()
 })
+
+const USER = { id: 'u-1', name: '김참여', role: 'external_startup' }
+
+/** guest-auth-refresh 응답 한 벌. 덮어써야 하는 칸만 인자로 받는다. */
+function meBody(over: Record<string, unknown> = {}) {
+  return {
+    user: { id: 'u-1', name: '김참여', user_type: 'external_startup', email: null },
+    program: {
+      id: 'pg-1',
+      title: '2026 액셀러레이팅',
+      code: 'AC-2026',
+      status: null,
+      start_date: null,
+      end_date: null,
+      entity_key: 'program',
+    },
+    participation: { persona: 'startups', joined_at: null },
+    company: null,
+    currentParticipantId: 'pp-1',
+    contexts: [
+      { participantId: 'pp-1', programId: 'pg-1', entityKey: 'program', code: null, title: 'A' },
+      { participantId: 'pp-2', programId: 'pg-2', entityKey: 'fund', code: null, title: 'B' },
+    ],
+    ...over,
+  }
+}
 
 /** 저장소와 스토어 둘 다에 세션이 없는가. 한쪽만 보면 새로고침 뒤 되살아나는 세션을 놓친다. */
 function expectNoSession() {
@@ -449,6 +479,169 @@ describe('세션 복원과 종료', () => {
     expectNoSession()
     expect(useGuestStore.getState().contexts).toEqual([])
     expect(useGuestStore.getState().status).toBe('unauthenticated')
+  })
+})
+
+describe('세션 갱신 — 자격과 목록은 갱신을 견뎌야 한다', () => {
+  it('참여 자격(persona)을 이어받는다 — 새로고침 한 번에 사라지지 않는다', async () => {
+    useGuestStore.getState().setSession(LIVE_TOKEN, USER, {
+      id: 'pg-1',
+      title: 'A',
+      code: null,
+      entityKey: 'program',
+      participantId: 'pp-1',
+      persona: 'startups',
+    })
+    reply(meBody({ participation: { persona: 'networks', joined_at: null } }))
+
+    await guestAuth.refreshSession()
+
+    // 사이드바의 자격 줄과 화면 구성이 이 값에 걸린다(3_9_1 §4).
+    expect(useGuestStore.getState().program?.persona).toBe('networks')
+    const saved = JSON.parse(storage.getItem(GUEST_STORAGE_KEY) as string)
+    expect(saved.program.persona).toBe('networks')
+  })
+
+  it('자격이 비어 오면 비운다 — 옛 값을 붙들어 틀린 자격을 보여 주지 않는다', async () => {
+    useGuestStore.getState().setSession(LIVE_TOKEN, USER, {
+      id: 'pg-1',
+      title: 'A',
+      code: null,
+      persona: 'startups',
+    })
+    reply(meBody({ participation: { persona: null, joined_at: null } }))
+
+    await guestAuth.refreshSession()
+
+    expect(useGuestStore.getState().program?.persona).toBeNull()
+  })
+
+  it('전환 목록을 응답에서 받아 채운다 — 방금 로그인한 세션도 갈아탈 수 있다', async () => {
+    useGuestStore.getState().setSession(LIVE_TOKEN, USER, null)
+    reply(meBody())
+
+    await guestAuth.refreshSession()
+
+    expect(useGuestStore.getState().contexts).toHaveLength(2)
+  })
+
+  it('응답에 목록 칸이 없으면 가지고 있던 목록을 지우지 않는다(모른다 ≠ 없다)', async () => {
+    useGuestStore.getState().setSession(LIVE_TOKEN, USER, null)
+    const kept = [
+      { participantId: 'pp-1', programId: 'pg-1', entityKey: 'program', code: null, title: 'A' },
+      { participantId: 'pp-2', programId: 'pg-2', entityKey: 'fund', code: null, title: 'B' },
+    ]
+    useGuestStore.getState().setContexts(kept)
+    const body = meBody()
+    delete (body as { contexts?: unknown }).contexts
+    reply(body)
+
+    await guestAuth.refreshSession()
+
+    expect(useGuestStore.getState().contexts).toEqual(kept)
+  })
+})
+
+describe('늦게 온 응답 — 갈아탄 뒤에 도착한 것은 쓰지 않는다', () => {
+  /** 응답을 붙잡아 두었다가 원하는 시점에 놓아 준다. */
+  function heldReply(): (body: unknown, status?: number) => void {
+    let release!: (res: Response) => void
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          release = resolve
+        }),
+    )
+    return (body, status = 200) =>
+      release(
+        new Response(JSON.stringify(body), {
+          status,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+  }
+
+  /** 갱신이 나간 뒤 사용자가 다른 맥락으로 갈아탄 상태를 만든다. */
+  function switchedAway() {
+    useGuestStore.getState().setSession(NEXT_TOKEN, USER, {
+      id: 'pg-2',
+      title: '2026 조합',
+      code: null,
+      entityKey: 'fund',
+      participantId: 'pp-2',
+      persona: 'networks',
+    })
+  }
+
+  it('옛 맥락의 갱신 응답이 새 맥락의 세션을 덮지 않는다', async () => {
+    useGuestStore.getState().setSession(LIVE_TOKEN, USER, {
+      id: 'pg-1',
+      title: 'A',
+      code: null,
+      participantId: 'pp-1',
+    })
+    const release = heldReply()
+    const pending = guestAuth.refreshSession()
+
+    switchedAway()
+    release(meBody())
+    await pending
+
+    const s = useGuestStore.getState()
+    expect(s.accessToken).toBe(NEXT_TOKEN)
+    expect(s.program?.id).toBe('pg-2')
+    expect(s.program?.persona).toBe('networks')
+    // 늦은 응답의 목록도 쓰지 않는다 — 그 시점의 사실이 아니다.
+    expect(s.contexts).toEqual([])
+  })
+
+  it('옛 맥락이 닫혔다는 401이 방금 연 세션을 끊지 않는다', async () => {
+    useGuestStore.getState().setSession(LIVE_TOKEN, USER, { id: 'pg-1', title: 'A', code: null })
+    const release = heldReply()
+    const pending = guestAuth.refreshSession()
+
+    switchedAway()
+    release({ message: 'session_expired' }, 401)
+    await pending
+
+    const s = useGuestStore.getState()
+    expect(s.status).toBe('authenticated')
+    expect(s.accessToken).toBe(NEXT_TOKEN)
+  })
+})
+
+describe('맥락이 바뀌면 옛 맥락의 응답을 끌고 가지 않는다', () => {
+  it('갈아타면 맥락에 매인 조회 캐시를 버린다', async () => {
+    useGuestStore.getState().setSession(LIVE_TOKEN, USER, { id: 'pg-1', title: 'A', code: null })
+    queryClient.setQueryData(['guest', 'me'], { marker: 'old' })
+    queryClient.setQueryData(['guest', 'program-overview', 'pg-1'], '옛 소개문')
+    reply({ ...SESSION_BODY, accessToken: NEXT_TOKEN })
+
+    await guestAuth.enterContext('pp-2')
+
+    // 캐시 기본 신선도가 60초라, 버리지 않으면 새 맥락 화면이 1분 동안 옛 사업을 보여 준다.
+    expect(queryClient.getQueryData(['guest', 'me'])).toBeUndefined()
+    expect(queryClient.getQueryData(['guest', 'program-overview', 'pg-1'])).toBeUndefined()
+  })
+
+  it('전환이 거절되면 세션도 캐시도 그대로 둔다', async () => {
+    useGuestStore.getState().setSession(LIVE_TOKEN, USER, { id: 'pg-1', title: 'A', code: null })
+    queryClient.setQueryData(['guest', 'me'], { marker: 'keep' })
+    reply({ message: '지금 들어갈 수 없습니다.' }, { status: 403 })
+
+    await expect(guestAuth.enterContext('pp-9')).rejects.toThrow('지금 들어갈 수 없습니다.')
+
+    expect(useGuestStore.getState().accessToken).toBe(LIVE_TOKEN)
+    expect(queryClient.getQueryData(['guest', 'me'])).toEqual({ marker: 'keep' })
+  })
+
+  it('로그아웃은 조회 캐시까지 비운다 — 다음 사람의 화면에 옛 응답이 먼저 그려지지 않는다', () => {
+    useGuestStore.getState().setSession(LIVE_TOKEN, USER, { id: 'pg-1', title: 'A', code: null })
+    queryClient.setQueryData(['guest', 'me'], { marker: 'old' })
+
+    guestAuth.signOut()
+
+    expect(queryClient.getQueryData(['guest', 'me'])).toBeUndefined()
   })
 })
 

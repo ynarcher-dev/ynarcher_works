@@ -56,7 +56,12 @@ export function Card({
             )}
             {subtitle && <p className={cardText.subtitle}>{subtitle}</p>}
           </div>
-          {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+          {/* 좁은 화면에서는 **줄을 바꾼다.** 예전에는 shrink-0이라 조작이 서넛만 돼도 카드
+              밖으로 밀려 페이지가 통째로 가로 스크롤을 했다(320px). 넉넉한 폭에서는 지금까지와
+              똑같이 제목 오른쪽에 한 줄로 선다. */}
+          {actions && (
+            <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">{actions}</div>
+          )}
         </div>
       )}
       <div className={cn(bodyClassName)}>{children}</div>

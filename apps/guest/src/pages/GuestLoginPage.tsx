@@ -1,12 +1,14 @@
-import { formText } from '@ynarcher/ui'
+import { Badge, CardShell, formText } from '@ynarcher/ui'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { ChevronRight } from 'lucide-react'
 import { z } from 'zod'
 import { GuestButton } from '@/components/GuestButton'
 import { guestAuth, type GuestCredentials, type GuestLoginResult } from '@/auth/guestAuthService'
-import { PERSONA_LABEL, type GuestContextChoice } from '@/auth/guestStore'
+import { accessEndLabel, contextTags } from '@/auth/contextDisplay'
+import { type GuestContextChoice } from '@/auth/guestStore'
 import { passwordRuleOk } from '@/lib/passwordRule'
 
 const credsSchema = z.object({
@@ -27,10 +29,57 @@ const STEP_LABEL: Record<Step, string> = {
   none: '접근 가능한 프로젝트/FUND 없음',
 }
 
-function endLabel(iso?: string | null): string | null {
-  if (!iso) return null
-  const d = new Date(iso)
-  return Number.isNaN(d.getTime()) ? null : `~ ${d.toLocaleDateString('ko-KR')}`
+/**
+ * 고를 수 있는 참여 한 건. **카드 한 장이 한 곳**이며, 종류(프로젝트·M&A 프로젝트·FUND)와
+ * 자격(참여 기업·참여 전문가)이 제목 아래 중립 태그로 선다(2026-09-13).
+ *
+ * 종전에는 제목과 회색 한 줄(자격·코드·기간)이 전부였다. 그 줄에는 **종류가 아예 없어서**,
+ * 같은 회사가 사업에도 조합에도 걸리면 목록의 두 줄이 서로 다른 화면으로 데려가는데 그
+ * 차이가 화면에 없었다 — 고르는 자리에서 무엇을 고르는지 답하지 못한 셈이다.
+ *
+ * 상자는 `CardShell`이 그린다(수제 카드는 밀도 맥락을 내려주지 못한다). 누르는 일은 그 안의
+ * 버튼이 맡아, 카드 규격과 터치 하한(48px)이 한 곳에서 어긋나지 않게 한다.
+ */
+function ContextChoiceCard({
+  choice,
+  disabled,
+  onSelect,
+}: {
+  choice: GuestContextChoice
+  disabled: boolean
+  onSelect: () => void
+}) {
+  const tags = contextTags(choice.entityKey, choice.persona)
+  const meta = [choice.code, accessEndLabel(choice.accessEndsAt)].filter(Boolean).join(' · ')
+  return (
+    <CardShell className="p-0">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={onSelect}
+        className="flex min-h-12 w-full items-center gap-3 rounded-radius-lg p-4 text-left transition-colors duration-fast hover:bg-brand/5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/10 disabled:opacity-60"
+      >
+        <span className="min-w-0 flex-1 space-y-1.5">
+          {/*
+            이름은 자르지 않는다(2026-09-13 리뷰). 이 카드의 일이 **무엇을 고르는지 답하는
+            것**인데, 사업명은 앞머리가 길게 겹치는 일이 잦아 꼬리를 자르면 두 카드가 같은
+            글자로 보인다. 네이티브 tooltip은 마우스에만 있어 모바일에서는 대안이 못 된다.
+            `break-words`가 띄어쓰기 없는 긴 이름도 상자 안에서 끊어, 폭은 그대로 둔다.
+          */}
+          <span className="block break-words text-body font-semibold text-gray-900">
+            {choice.title}
+          </span>
+          <span className="flex flex-wrap items-center gap-1">
+            {tags.map((t) => (
+              <Badge key={t.key}>{t.label}</Badge>
+            ))}
+            {meta && <span className="text-caption text-gray-500">{meta}</span>}
+          </span>
+        </span>
+        <ChevronRight aria-hidden className="size-4 shrink-0 text-gray-400" />
+      </button>
+    </CardShell>
+  )
 }
 
 /**
@@ -243,29 +292,26 @@ export function GuestLoginPage() {
 
       {step === 'choose' && (
         <div className="mt-6 space-y-3">
-          <p className="text-caption text-gray-500">
-            참여 중인 프로젝트/FUND가 여러 건입니다. 들어갈 곳을 선택하세요. 안에서도 바꿀 수 있습니다.
+          <p className="text-body text-gray-600">
+            참여 중인 곳이 여러 건입니다. 들어갈 곳을 선택하세요. 들어간 뒤 사이드바 상단의 참여
+            전환에서 언제든 바꿀 수 있습니다.
           </p>
-          <ul className="space-y-2">
+          <ul className="space-y-3">
             {choices.map((c) => (
               <li key={c.participantId}>
-                <button
-                  type="button"
+                <ContextChoiceCard
+                  choice={c}
                   disabled={busy}
-                  onClick={() => void onChoose(c.participantId)}
-                  className="flex min-h-12 w-full flex-col items-start gap-0.5 rounded-radius-md border border-gray-300 px-3 py-2 text-left hover:border-brand hover:bg-brand/5 focus-visible:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 disabled:opacity-60"
-                >
-                  <span className="text-body font-medium text-gray-900">{c.title}</span>
-                  <span className="text-caption text-gray-500">
-                    {[c.persona ? PERSONA_LABEL[c.persona] : null, c.code, endLabel(c.accessEndsAt)]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </span>
-                </button>
+                  onSelect={() => void onChoose(c.participantId)}
+                />
               </li>
             ))}
           </ul>
-          {error && <p className="text-caption text-danger">{error}</p>}
+          {error && (
+            <p className="text-caption text-danger" role="alert">
+              {error}
+            </p>
+          )}
         </div>
       )}
 

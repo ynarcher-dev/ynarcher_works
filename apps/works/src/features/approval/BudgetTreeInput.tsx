@@ -1,5 +1,4 @@
-import { Fragment } from 'react'
-import { Button, Input, Select, cn, tableText } from '@ynarcher/ui'
+import { Button, Input, Select, HierarchyTable, HierarchyLevelFields, HierarchyNameInput, cn, tableText } from '@ynarcher/ui'
 import { Plus } from 'lucide-react'
 import { BudgetRowActions } from '@/features/approval/BudgetRowActions'
 import {
@@ -71,19 +70,18 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
   const rows = gridRows.map((gridRow) => gridRow.row)
   const levelCount = Math.max(1, value.levels.length)
   const levels = value.levels.length > 0 ? value.levels : ['1단계']
-  const levelOptions = Array.from({ length: Math.max(5, levelCount) }, (_, i) => i + 1)
 
   // 맨 아래 줄만 본다 — 위층 값은 합으로 파생하므로 스스로 어긋날 수 없다.
   const issues =
     !keys || !hasVatColumns(field)
       ? []
       : entries
-          .map((row) => {
-            const amounts = readAmounts(row.values, keys)
-            const message = validateAmounts(amounts, amounts.kind, true)
-            return message ? `${row.name || '이름 없는 항목'}: ${message}` : null
-          })
-          .filter((m): m is string => m !== null)
+        .map((row) => {
+          const amounts = readAmounts(row.values, keys)
+          const message = validateAmounts(amounts, amounts.kind, true)
+          return message ? `${row.name || '이름 없는 항목'}: ${message}` : null
+        })
+        .filter((m): m is string => m !== null)
 
   const changeLevelCount = (next: number) => {
     if (next < levelCount) {
@@ -102,267 +100,179 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
 
   return (
     <div className="space-y-3">
-      <div className="grid gap-3 rounded-radius-md border border-gray-200 bg-gray-25 p-3 sm:grid-cols-[9rem_1fr]">
-        <label className="space-y-1">
-          <span className={tableText.head}>분류 단계 수</span>
-          <Select
-            density="table"
-            value={String(levelCount)}
-            onChange={(e) => changeLevelCount(Number(e.target.value))}
-          >
-            {levelOptions.map((count) => (
-              <option key={count} value={count}>
-                {count}단계
-              </option>
-            ))}
-          </Select>
-        </label>
-
-        <div className="space-y-1">
-          <span className={tableText.head}>단계별 이름</span>
-          <div className="relative min-w-0 max-w-full overflow-x-auto pb-1">
-            <div className="flex min-w-max flex-nowrap items-center gap-2">
-              {levels.slice(0, levelCount).map((label, level) => (
-                <div key={level} className="w-28 shrink-0">
-                  <Input
-                    density="table"
-                    className="w-full"
-                    aria-label={`${level + 1}단계 이름`}
-                    placeholder={`${level + 1}단계`}
-                    value={label}
-                    onChange={(e) => onChange(setLevel(tree, level, e.target.value))}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="relative min-w-0 max-w-full overflow-x-auto rounded-radius-md border border-gray-200">
-        <table className="w-full min-w-[56rem] border-collapse">
-          <thead>
-            <tr className="border-b border-gray-200 bg-gray-25">
-              {levels.slice(0, levelCount).map((_, level) => (
-                <th key={level} className={cn('w-36 px-2 py-1.5 text-left', tableText.head)}>
-                  {levelLabel(levels, level)}
-                </th>
-              ))}
-              {columns.map((column) => (
-                <th
-                  key={column.key}
-                  className={cn(
-                    'px-2 py-1.5 text-left',
-                    tableText.head,
-                    isNumericColumn(column.type)
-                      ? 'w-32 text-right'
-                      : column.wide
-                        ? 'w-48'
-                        : 'w-28',
-                  )}
-                >
-                  {column.label}
-                </th>
-              ))}
-              <th className="w-24 px-2 py-1.5 text-center">
-                <span className="sr-only">줄 조작</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {groups.length === 0 && (
-              <tr className="border-b border-gray-200 bg-gray-25">
-                <td colSpan={levelCount + columns.length + 1} className="px-2 py-1">
-                  <Button
-                    variant="ghost"
-                    density="table"
-                    onClick={() => onChange(appendBudgetEntry(tree))}
-                  >
-                    <Plus size={14} />
-                    {levelLabel(levels, 0)} 추가
-                  </Button>
-                </td>
-              </tr>
-            )}
-            {groups.map((group) => {
-              const groupRows = group.rows.map((row) => row.row)
+      <HierarchyLevelFields
+        levels={levels}
+        onCountChange={changeLevelCount}
+        onNameChange={(level, name) => onChange(setLevel(tree, level, name))}
+      />
+      <HierarchyTable
+        caption={field.label}
+        levels={levels}
+        groups={groups}
+        columns={columns.map((column) => ({
+          key: column.key,
+          label: column.label,
+          className: isNumericColumn(column.type) ? 'w-32 text-right' : column.wide ? 'w-48' : 'w-28',
+        }))}
+        emptyContent={
+          <Button variant="ghost" density="table" onClick={() => onChange(appendBudgetEntry(tree))}>
+            <Plus size={14} />{levelLabel(levels, 0)} 추가
+          </Button>
+        }
+        renderHierarchyCell={(cell, level) => (
+          <HierarchyNameInput
+            levelLabel={levelLabel(levels, level)}
+            value={tree.rows[cell.nodeIndex]?.name ?? ''}
+            onAdd={() => onChange(addBudgetSiblingBranch(tree, cell.nodeIndex))}
+            onChange={(e) => onChange(setName(tree, cell.nodeIndex, e.target.value))}
+          />
+        )}
+        renderCells={(gridRow) => (
+          <>
+            {columns.map((column) => {
+              const setCell = (next: string) =>
+                onChange(
+                  setBudgetCellWithVat(
+                    tree,
+                    gridRow.leafIndex,
+                    column.key,
+                    next,
+                    formula,
+                    keys,
+                  ),
+                )
               return (
-                <Fragment key={tree.rows[group.rootIndex]?.id ?? group.rootIndex}>
-                  {group.rows.map((gridRow, localIndex) => {
-                    const index = group.startIndex + localIndex
-                    return (
-                      <tr key={gridRow.row.id} className="border-b border-gray-100">
-                        {gridRow.cells.map((cell, level) =>
-                          cell ? (
-                            <td
-                              key={level}
-                              rowSpan={cell.rowSpan}
-                              className="h-px border-r border-gray-100 px-2 py-1 align-middle"
-                            >
-                              <div className="flex h-full items-stretch">
-                                <Input
-                                  density="table"
-                                  className="h-full min-h-8"
-                                  value={tree.rows[cell.nodeIndex]?.name ?? ''}
-                                  action={<Plus aria-hidden size={14} />}
-                                  actionLabel={`${levelLabel(levels, level)} 추가`}
-                                  onActionClick={() =>
-                                    onChange(addBudgetSiblingBranch(tree, cell.nodeIndex))
-                                  }
-                                  onChange={(e) =>
-                                    onChange(setName(tree, cell.nodeIndex, e.target.value))
-                                  }
-                                />
-                              </div>
-                            </td>
-                          ) : null,
-                        )}
-
-                        {columns.map((column) => {
-                          const setCell = (next: string) =>
-                            onChange(
-                              setBudgetCellWithVat(
-                                tree,
-                                gridRow.leafIndex,
-                                column.key,
-                                next,
-                                formula,
-                                keys,
-                              ),
-                            )
-                          return (
-                            <td key={column.key} className="px-2 py-1">
-                              {column.type === 'VAT_KIND' ? (
-                                <Select
-                                  density="table"
-                                  aria-label={column.label}
-                                  value={gridRow.row.values[column.key] ?? ''}
-                                  onChange={(e) => setCell(e.target.value)}
-                                >
-                                  <option value="">선택</option>
-                                  {VAT_KINDS.map((k) => (
-                                    <option key={k} value={k}>
-                                      {VAT_KIND_LABEL[k]}
-                                    </option>
-                                  ))}
-                                </Select>
-                              ) : (
-                                <Input
-                                  density="table"
-                                  type={column.type === 'DATE' ? 'date' : 'text'}
-                                  inputMode={isNumericColumn(column.type) ? 'numeric' : undefined}
-                                  placeholder={
-                                    formula?.amountKey === column.key ? '수량 × 단가' : undefined
-                                  }
-                                  className={cn(
-                                    isNumericColumn(column.type) && 'text-right tabular-nums',
-                                  )}
-                                  value={gridRow.row.values[column.key] ?? ''}
-                                  onChange={(e) => setCell(e.target.value)}
-                                />
-                              )}
-                            </td>
-                          )
-                        })}
-
-                        <td className="px-2 py-1">
-                          <BudgetRowActions
-                            rows={rows}
-                            canMoveUp={canMoveBudgetEntry(tree, index, -1)}
-                            canMoveDown={canMoveBudgetEntry(tree, index, 1)}
-                            onMoveUp={() => onChange(moveBudgetEntry(tree, index, -1))}
-                            onMoveDown={() => onChange(moveBudgetEntry(tree, index, 1))}
-                            onRemove={() => onChange(removeBudgetEntry(tree, index))}
-                          />
-                        </td>
-                      </tr>
-                    )
-                  })}
-
-                  <tr className="border-b border-gray-200 bg-gray-25">
-                    {levels.slice(0, levelCount).map((_, level) => {
-                      return (
-                        <td key={level} className="px-2 py-1">
-                          <div className="flex items-center">
-                            {level === levelCount - 1 && summaryColumnIndex === 0 && (
-                              <span className={cn(tableText.meta, 'ml-auto font-normal text-gray-500')}>
-                                소계
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                      )
-                    })}
-                    {summaryColumnIndex > 0 && (
-                      <td
-                        colSpan={summaryColumnIndex}
-                        className={cn(
-                          tableText.meta,
-                          'px-2 py-1.5 text-right font-normal text-gray-500',
-                        )}
-                      >
-                        소계
-                      </td>
-                    )}
-                    {columns.slice(summaryColumnIndex).map((column) => (
-                      <td
-                        key={column.key}
-                        className={cn(
-                          tableText.meta,
-                          'px-2 py-1.5 font-normal text-gray-500',
-                          isNumericColumn(column.type) && 'text-right tabular-nums',
-                        )}
-                      >
-                        {amountColumn?.key === column.key
-                          ? numericText(
-                              column,
-                              String(budgetTotal(groupRows, column.key) ?? ''),
-                            )
-                          : ''}
-                      </td>
-                    ))}
-                    <td />
-                  </tr>
-                </Fragment>
+                <td key={column.key} className="px-2 py-1">
+                  {column.type === 'VAT_KIND' ? (
+                    <Select
+                      density="table"
+                      aria-label={column.label}
+                      value={gridRow.row.values[column.key] ?? ''}
+                      onChange={(e) => setCell(e.target.value)}
+                    >
+                      <option value="">선택</option>
+                      {VAT_KINDS.map((k) => (
+                        <option key={k} value={k}>
+                          {VAT_KIND_LABEL[k]}
+                        </option>
+                      ))}
+                    </Select>
+                  ) : (
+                    <Input
+                      density="table"
+                      type={column.type === 'DATE' ? 'date' : 'text'}
+                      inputMode={isNumericColumn(column.type) ? 'numeric' : undefined}
+                      placeholder={
+                        formula?.amountKey === column.key ? '수량 × 단가' : undefined
+                      }
+                      className={cn(
+                        isNumericColumn(column.type) && 'text-right tabular-nums',
+                      )}
+                      value={gridRow.row.values[column.key] ?? ''}
+                      onChange={(e) => setCell(e.target.value)}
+                    />
+                  )}
+                </td>
               )
             })}
 
-            <tr className="border-t border-gray-200 bg-gray-25">
-              {levels.slice(0, levelCount).map((_, level) => (
-                <td
-                  key={level}
-                  className={cn('px-2 py-1.5 text-gray-600', tableText.body)}
-                >
-                  {level === levelCount - 1 && summaryColumnIndex === 0 ? '합계' : ''}
-                </td>
-              ))}
+          </>
+        )}
+        renderActions={(_, index) => (
+          <BudgetRowActions
+            rows={rows}
+            canMoveUp={canMoveBudgetEntry(tree, index, -1)}
+            canMoveDown={canMoveBudgetEntry(tree, index, 1)}
+            onMoveUp={() => onChange(moveBudgetEntry(tree, index, -1))}
+            onMoveDown={() => onChange(moveBudgetEntry(tree, index, 1))}
+            onRemove={() => onChange(removeBudgetEntry(tree, index))}
+          />
+        )}
+        renderGroupFooter={(group) => {
+          const groupRows = group.rows.map((row) => row.row)
+          return (
+            <tr className="border-b border-gray-200 bg-gray-25">
+              {levels.slice(0, levelCount).map((_, level) => {
+                return (
+                  <td key={level} className="px-2 py-1">
+                    <div className="flex items-center">
+                      {level === levelCount - 1 && summaryColumnIndex === 0 && (
+                        <span className={cn(tableText.meta, 'ml-auto font-normal text-gray-500')}>
+                          소계
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                )
+              })}
               {summaryColumnIndex > 0 && (
                 <td
                   colSpan={summaryColumnIndex}
-                  className={cn('px-2 py-1.5 text-right text-gray-700', tableText.head)}
+                  className={cn(
+                    tableText.meta,
+                    'px-2 py-1.5 text-right font-normal text-gray-500',
+                  )}
                 >
-                  합계
+                  소계
                 </td>
               )}
               {columns.slice(summaryColumnIndex).map((column) => (
                 <td
                   key={column.key}
                   className={cn(
-                    'px-2 py-1.5',
-                    tableText.body,
-                    isNumericColumn(column.type) && 'text-right font-semibold tabular-nums',
+                    tableText.meta,
+                    'px-2 py-1.5 font-normal text-gray-500',
+                    isNumericColumn(column.type) && 'text-right tabular-nums',
                   )}
                 >
                   {amountColumn?.key === column.key
-                    ? numericText(column, String(budgetTotal(tree.rows, column.key) ?? ''))
+                    ? numericText(
+                      column,
+                      String(budgetTotal(groupRows, column.key) ?? ''),
+                    )
                     : ''}
                 </td>
               ))}
               <td />
             </tr>
-          </tbody>
-        </table>
-      </div>
+          )
+        }}
+        footer={
+          <tr className="border-t border-gray-200 bg-gray-25">
+            {levels.slice(0, levelCount).map((_, level) => (
+              <td
+                key={level}
+                className={cn('px-2 py-1.5 text-gray-600', tableText.body)}
+              >
+                {level === levelCount - 1 && summaryColumnIndex === 0 ? '합계' : ''}
+              </td>
+            ))}
+            {summaryColumnIndex > 0 && (
+              <td
+                colSpan={summaryColumnIndex}
+                className={cn('px-2 py-1.5 text-right text-gray-700', tableText.head)}
+              >
+                합계
+              </td>
+            )}
+            {columns.slice(summaryColumnIndex).map((column) => (
+              <td
+                key={column.key}
+                className={cn(
+                  'px-2 py-1.5',
+                  tableText.body,
+                  isNumericColumn(column.type) && 'text-right font-semibold tabular-nums',
+                )}
+              >
+                {amountColumn?.key === column.key
+                  ? numericText(column, String(budgetTotal(tree.rows, column.key) ?? ''))
+                  : ''}
+              </td>
+            ))}
+            <td />
+          </tr>
+        }
+      />
 
       {issues.length > 0 && (
         <ul className={cn(tableText.body, 'text-danger')}>

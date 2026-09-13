@@ -199,6 +199,15 @@ export async function loadLedgerFacts(
   return facts
 }
 
+/**
+ * 한 번에 받아 오는 명부 행 수와 안전 상한. PostgREST 기본 상한이 1000이라 한 번의 SELECT는
+ * 1000행에서 **조용히** 잘린다 — 대상 1200명인 사업에서 뒤쪽 200명이 목록에도, 파일받기
+ * 대상 고르기에도 없는 채로 화면이 정상처럼 보인다. 그래서 나눠 읽고, 상한에 닿으면
+ * 자르지 않고 던진다(틀린 명단을 맞는 것처럼 보여 주는 쪽이 더 나쁘다).
+ */
+const PARTICIPANT_PAGE_SIZE = 1000
+const PARTICIPANT_MAX_ROWS = 20000
+
 /** 명부 전체(자격 탭은 화면이 거른다). 원장 값은 조회로 합성한다. */
 export function useProgramParticipants(programId: string | undefined) {
   const config = useGuestHost()
@@ -206,18 +215,33 @@ export function useProgramParticipants(programId: string | undefined) {
     queryKey: [config.key, 'participants', programId],
     enabled: Boolean(programId),
     queryFn: async (): Promise<ParticipantRow[]> => {
-      const { data, error } = await supabase
-        .from(SHARED_TABLES.participants)
-        .select(participantCols(SHARED_TABLES.participants))
-        // 통합 원장이므로 소속을 함께 건다. 사업 id로 좁히면 실제로는 한 원장의 행만 오지만,
-        // 그 사실에 기대는 조회는 원장이 하나 더 열리는 날 조용히 남의 행을 집는다.
-        .eq('entity_key', config.entityKey)
-        .eq('program_id', programId)
-        .order('created_at', { ascending: true })
-      // 조회 실패를 삼키지 않는다 — 삼키면 "권한이 없다"와 "명부가 비었다"가 같은 화면이 되고,
-      // 실제로 임베드가 깨졌을 때 빈 목록만 남아 원인을 짚을 수 없다.
-      if (error) throw error
-      const rows = (data ?? []) as unknown as RawParticipant[]
+      // 정렬은 `created_at` 뒤에 `id`를 붙여 **같은 값이 없는 순서**를 세운다. 같은 시각에
+      // 담긴 행이 여럿일 수 있으므로 `created_at`만으로 나눠 읽으면 페이지 경계에서 같은 행이
+      // 두 번 오거나 한 행이 아예 빠진다.
+      const rows: RawParticipant[] = []
+      for (;;) {
+        const { data, error } = await supabase
+          .from(SHARED_TABLES.participants)
+          .select(participantCols(SHARED_TABLES.participants))
+          // 통합 원장이므로 소속을 함께 건다. 사업 id로 좁히면 실제로는 한 원장의 행만 오지만,
+          // 그 사실에 기대는 조회는 원장이 하나 더 열리는 날 조용히 남의 행을 집는다.
+          .eq('entity_key', config.entityKey)
+          .eq('program_id', programId)
+          .order('created_at', { ascending: true })
+          .order('id', { ascending: true })
+          .range(rows.length, rows.length + PARTICIPANT_PAGE_SIZE - 1)
+        // 조회 실패를 삼키지 않는다 — 삼키면 "권한이 없다"와 "명부가 비었다"가 같은 화면이 되고,
+        // 실제로 임베드가 깨졌을 때 빈 목록만 남아 원인을 짚을 수 없다.
+        if (error) throw error
+        const batch = (data ?? []) as unknown as RawParticipant[]
+        rows.push(...batch)
+        if (batch.length < PARTICIPANT_PAGE_SIZE) break
+        if (rows.length >= PARTICIPANT_MAX_ROWS) {
+          throw new Error(
+            `명부가 ${PARTICIPANT_MAX_ROWS}건을 넘어 전부 읽지 못했습니다. 조용히 자르지 않고 멈춥니다.`,
+          )
+        }
+      }
 
       const facts = await loadLedgerFacts(rows)
 

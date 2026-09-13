@@ -412,3 +412,9 @@ enabled = true
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+# 파일받기(FILE_COLLECTION) 파일 창구.
+# 게스트는 우리가 발급한 커스텀 JWT를 들고 오므로 플랫폼의 verify_jwt를 끕니다.
+# 인증은 함수가 직접 강제합니다 — 내부는 auth.getUser(), 게스트는 verifyGuestSession().
+[functions.file-collection-file]
+verify_jwt = false

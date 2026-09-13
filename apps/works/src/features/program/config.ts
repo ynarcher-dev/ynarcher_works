@@ -56,7 +56,7 @@ export function isBaseModuleType(moduleType: string): boolean {
  * 모듈 보드에 서는 템플릿 순서. 라벨은 `@ynarcher/master-data`의 공통 어휘가 소유한다 —
  * 같은 모듈이 GUEST 사이드바에도 서므로, 이름을 두 벌 들면 두 화면이 다른 말을 하게 된다.
  */
-export const MODULE_TYPES: ModuleTypeDef[] = ['RECRUITMENT']
+export const MODULE_TYPES: ModuleTypeDef[] = ['RECRUITMENT', 'FILE_COLLECTION']
   .map((type) => ({ type, label: moduleTypeLabel(type), implemented: true }))
   .concat(BASE_MODULE_TYPES)
 
@@ -156,6 +156,8 @@ export const PARTICIPATION_MODE_LABEL: Record<string, string> = {
  */
 export const MODULE_PARTICIPATION: Record<string, { default: string; options?: string[] }> = {
   RECRUITMENT: { default: 'OPEN_APPLICATION' },
+  // 파일받기는 담당자가 명부에서 대상을 골라 배정한다 — 지원해서 들어오는 구조가 아니다.
+  FILE_COLLECTION: { default: 'MANUAL_ALLOCATION' },
   // 기본 템플릿 3종은 운영자가 직접 남기는 기록이라 배정 개념이 없다.
   POST: { default: 'ADMIN_ONLY' },
   LINK: { default: 'ADMIN_ONLY' },

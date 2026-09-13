@@ -19,6 +19,9 @@ export const MODULE_TYPE_LABEL: Record<string, string> = {
   // M&A 전용(2026-09-08). 프로젝트에 연결된 매물의 희망사항·퀵 리뷰를 비추는 모듈이며,
   // 값은 이 모듈이 아니라 M&A 원장이 소유한다.
   QUICK_REVIEW: '퀵리뷰',
+  // PROJECT·M&A 공용(2026-09-13). 배정된 게스트마다 독립한 제출 공간이 서므로 '파일첨부'
+  // (WORKS가 올려 두고 다 같이 내려받는 것)와는 방향이 반대다 — 이름이 그 방향을 답한다.
+  FILE_COLLECTION: '파일받기',
   POST: '글쓰기',
   LINK: 'URL첨부',
   FILE: '파일첨부',

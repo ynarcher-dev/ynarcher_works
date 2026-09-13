@@ -11,7 +11,6 @@ import { MyPage } from '@/pages/MyPage'
 import { OverviewPage } from '@/pages/OverviewPage'
 import { PublicModulePage } from '@/pages/PublicModulePage'
 import { RootLayout } from '@/pages/RootLayout'
-import { SchedulePage } from '@/pages/SchedulePage'
 import { TempGuestPage } from '@/pages/TempGuestPage'
 
 /**
@@ -20,6 +19,9 @@ import { TempGuestPage } from '@/pages/TempGuestPage'
  * 종전에는 계정 역할이 뷰(스타트업/전문가)를 갈랐으나 2026-09-03에 전문가 뷰가 걷혔고,
  * 그보다 앞서 첫 공개 모듈을 기다렸다가 없으면 '열린 메뉴가 없다'를 말하던 분기도
  * 사라졌다. 공개 메뉴가 없어도 사업소개는 있다.
+ *
+ * 걷힌 화면의 옛 경로도 여기로 보낸다(아래 `/schedule`) — 착지점이 언제나 있는 화면이므로
+ * 리다이렉트 대상을 경로마다 따로 고를 이유가 없다.
  */
 function GuestEntry() {
   return <Navigate to={GUEST_HOME_PATH} replace />
@@ -54,11 +56,12 @@ export const router = createBrowserRouter([
         ),
         children: [
           { path: '/', element: <GuestEntry /> },
-          // 스타트업 뷰 — 상단 고정 메뉴 4종(사업개요는 로그인 직후 첫 화면).
+          // 스타트업 뷰 — 상단 고정 메뉴 3종(사업개요는 로그인 직후 첫 화면).
           { path: '/overview', element: <OverviewPage /> },
           { path: '/announcements', element: <AnnouncementsPage /> },
-          { path: '/schedule', element: <SchedulePage /> },
           { path: '/qna', element: <QnaPage /> },
+          // 구 일정안내(2026-09-13 철회). 즐겨찾기·옛 링크가 죽지 않도록 소개로 보낸다.
+          { path: '/schedule', element: <GuestEntry /> },
           // 그 아래는 화면 하나가 공개 메뉴(모듈) 하나에 대응한다. 경로가 코드에 고정된
           // 모듈 메뉴는 없다(3_9_workspace_guest.md §1.1).
           { path: '/m/:moduleId', element: <ModulePage /> },

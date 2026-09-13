@@ -23,3 +23,48 @@ export {
   MODULE_STATUS_COLUMNS,
 } from './programModule'
 export type { ModuleStatusTone } from './programModule'
+
+// 파일받기 공통 어휘 — WORKS 관제와 GUEST 제출이 같은 상태말·같은 진행률 셈을 쓴다.
+export {
+  FILE_COLLECTION_STATUS_LABEL,
+  FILE_COLLECTION_STATUS_TONE,
+  FILE_COLLECTION_NODE_TYPE_LABEL,
+  fileCollectionStatusLabel,
+  fileCollectionStatusTone,
+  canReviewResponse,
+  isCollectionPublished,
+  isCountableFile,
+  toCollectionTreeNodes,
+  siblingsOf,
+  nextSortOrder,
+  descendantIdsOf,
+  parentFolderOptions,
+  nodePath,
+  reorderSibling,
+  questionNodes,
+  assignmentProgress,
+  assignmentProgressRows,
+  questionProgressRows,
+  collectionSummary,
+  fractionText,
+  formatFileSize,
+  roundLabel,
+  filesByRound,
+} from './fileCollection'
+export type {
+  FileCollectionNodeType,
+  FileCollectionStatus,
+  FileCollectionFileStatus,
+  FileCollectionAuthorSide,
+  FileCollectionDto,
+  FileCollectionNodeDto,
+  FileCollectionAssignmentDto,
+  FileCollectionResponseDto,
+  FileCollectionFileDto,
+  FileCollectionCommentDto,
+  FileCollectionTreeNode,
+  FileCollectionProgress,
+  AssignmentProgressRow,
+  QuestionProgressRow,
+  CollectionSummary,
+} from './fileCollection'

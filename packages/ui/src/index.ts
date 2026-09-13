@@ -203,6 +203,21 @@ export type {
   SidePanelNavRowProps,
   SidePanelNavIcon,
 } from './patterns/SidePanelNav'
+// 폴더 트리 표(파일받기 문항 묶음) — WORKS 편집 화면과 GUEST 제출 화면이 함께 쓴다.
+// 줄 세우기(순환·유실 방어 포함)는 순수 함수가 갖고, 표는 그 결과만 그린다.
+export { CollectionTreeTable } from './patterns/CollectionTreeTable'
+export type { CollectionTreeTableProps } from './patterns/CollectionTreeTable'
+export {
+  flattenCollectionTree,
+  collectExpandableIds,
+  collectDescendantIds,
+  findParentRowId,
+} from './patterns/collectionTree'
+export type {
+  CollectionNodeKind,
+  CollectionTreeNode,
+  CollectionTreeRow,
+} from './patterns/collectionTree'
 export { FullscreenPanel, ExpandToggleButton } from './patterns/FullscreenPanel'
 export type {
   FullscreenPanelProps,
@@ -228,3 +243,9 @@ export type {
   ScheduleEvent,
   ScheduleView,
 } from './patterns/ScheduleBoard'
+
+// 단계별 열과 셀 병합을 사용하는 공용 계층 표.
+export { HierarchyTable, HierarchyLevelFields, HierarchyNameInput, HierarchyRowActions } from './patterns/HierarchyTable'
+export type { HierarchyTableProps, HierarchyTableColumn, HierarchyLevelFieldsProps, HierarchyNameInputProps, HierarchyRowActionsProps } from './patterns/HierarchyTable'
+export { hierarchyGridRows, hierarchyGridGroups } from './patterns/hierarchyGrid'
+export type { HierarchyNode, HierarchyGridCell, HierarchyGridRow, HierarchyGridGroup } from './patterns/hierarchyGrid'

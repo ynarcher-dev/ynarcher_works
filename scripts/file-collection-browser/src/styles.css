@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  앱과 같은 바탕색만 깔아 둔다. 픽스처는 화면을 새로 디자인하는 자리가 아니라 실제 부품을
+  실제 CSS로 세워 보는 자리라, 여기서 추가로 정의하는 스타일은 없다.
+*/
+html,
+body,
+#root {
+  height: 100%;
+}

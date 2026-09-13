@@ -4,7 +4,7 @@
 
 @docs/docs_master/CLAUDE.md
 
-읽는 순서는 [README.md](./README.md) → [docs/CURRENT_STATUS.md](./docs/CURRENT_STATUS.md) → [docs/OPERATIONS.md](./docs/OPERATIONS.md)이며, 문서 전체 지도는 [docs/DOCUMENTATION_MAP.md](./docs/DOCUMENTATION_MAP.md)에 있습니다.
+처음 저장소를 파악할 때 [README.md](./README.md)를 읽고, 현재 상태나 실행 절차가 필요할 때만 [docs/CURRENT_STATUS.md](./docs/CURRENT_STATUS.md)·[docs/OPERATIONS.md](./docs/OPERATIONS.md)의 관련 절을 확인합니다. 같은 세션에서 읽은 문서는 변경되거나 다시 확인할 이유가 있을 때만 읽습니다. 문서 전체 지도는 [docs/DOCUMENTATION_MAP.md](./docs/DOCUMENTATION_MAP.md)에 있습니다.
 
 핵심 규칙 둘만 여기에 옮겨 둡니다.
 

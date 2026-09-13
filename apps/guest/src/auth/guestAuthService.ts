@@ -1,4 +1,5 @@
 import { anonHeaders, functionsBase } from '@/lib/supabase'
+import { queryClient } from '@/lib/queryClient'
 import {
   useGuestStore,
   type GuestContextChoice,
@@ -105,6 +106,20 @@ function applySession(data: SessionResponse): void {
         }
       : null,
   )
+}
+
+/**
+ * 맥락이 바뀌면 **이전 맥락의 응답을 전부 버린다**(2026-09-13).
+ *
+ * 조회 캐시의 기본 신선도가 60초라, 키에 사업 id가 들어가지 않는 질의(`['guest','me']`)는
+ * 갈아탄 뒤에도 옛 사업을 1분 동안 그대로 보여 준다 — 사이드바는 새 사업인데 화면 요약은
+ * 옛 사업인 상태가 만들어진다. 로그아웃에서는 캐시를 통째로 비운다: 같은 탭에서 다른 계정이
+ * 이어 들어오면 옛 응답이 새 사람의 화면에 먼저 그려지기 때문이다.
+ */
+function dropContextQueries(): void {
+  // `reset`은 화면에 붙어 있는 질의를 **비우고 곧바로 다시 받게** 한다. 그냥 지우면 그 자리에
+  // 붙어 있던 관찰자(사이드바 전환기·개요 요약)의 다음 동작이 렌더 시점에 달리게 된다.
+  void queryClient.resetQueries({ queryKey: ['guest'] })
 }
 
 async function post<T>(
@@ -218,14 +233,23 @@ export const guestAuth = {
       throw new Error(data?.message ?? '그곳으로 들어갈 수 없습니다.')
     }
     applySession(data)
+    // 새 맥락의 세션이 열렸으므로 옛 맥락의 응답은 더 이상 이 화면의 사실이 아니다.
+    // 화면에 붙어 있는 질의는 이 자리에서 곧바로 새 토큰으로 다시 나간다.
+    dropContextQueries()
   },
 
   /**
    * 세션 새로고침 — 원장의 현재 값(이름·사업 정보)과 전환기 목록을 되받아 저장한다.
    *
    * 이름은 로그인 시점의 복사본이 localStorage에 남는 구조라, WORKS에서 원장을 고쳐도
-   * 이 호출 없이는 게스트 화면이 영영 옛 이름을 보여준다. 앱 구동과 마이페이지 진입에서 부른다.
+   * 이 호출 없이는 게스트 화면이 영영 옛 이름을 보여준다. 앱 구동과 전환기·마이페이지가
+   * 같은 질의 키(`['guest','me']`)로 부르므로 한 화면에 여러 번 떠도 왕복은 한 번이다.
    * 401은 '접근이 닫혔다'는 뜻이므로 그 자리에서 로그아웃한다(즉시 차단 규칙).
+   *
+   * **늦게 온 응답은 쓰지 않는다.** 이 요청이 나간 뒤 사용자가 맥락을 갈아타면 세션 토큰이
+   * 바뀌는데, 그때 돌아온 옛 응답을 그대로 저장하면 새 맥락의 세션이 옛 사업·옛 토큰으로
+   * 덮인다(사이드바는 새 사업인데 조회는 옛 사업으로 나가는 상태). 401도 마찬가지다 —
+   * 옛 맥락이 닫혔다는 사실이 방금 연 새 세션을 끊어서는 안 된다.
    */
   async refreshSession(): Promise<GuestMe | null> {
     const token = useGuestStore.getState().accessToken
@@ -235,11 +259,13 @@ export const guestAuth = {
       {},
       token,
     )
+    const stale = useGuestStore.getState().accessToken !== token
     if (status === 401) {
-      useGuestStore.getState().reset()
+      if (!stale) useGuestStore.getState().reset()
       return null
     }
     if (!ok) throw new Error(data?.message ?? '세션 정보를 불러오지 못했습니다.')
+    if (stale) return data
     useGuestStore.getState().setSession(
       token,
       { id: data.user.id, name: data.user.name, role: data.user.user_type },
@@ -249,9 +275,15 @@ export const guestAuth = {
         code: data.program.code,
         entityKey: data.program.entity_key ?? null,
         participantId: data.currentParticipantId ?? null,
+        // 자격(참여 기업/참여 전문가)은 세션에 실려 들어왔다가 이 갱신에서 조용히 지워지고
+        // 있었다 — 저장 값에 칸이 없으니 새로고침 한 번으로 사이드바의 자격 줄이 사라지고,
+        // 같은 사업에 두 자격으로 참여한 사람은 어느 쪽으로 들어와 있는지 알 수 없게 된다.
+        // 서버가 이 맥락의 자격을 함께 보내므로(participation) 그 값을 그대로 잇는다.
+        persona: data.participation?.persona ?? null,
       },
     )
-    useGuestStore.getState().setContexts(data.contexts ?? [])
+    // 목록이 응답에 없으면 '없다'가 아니라 '모른다'이므로 가지고 있던 목록을 지우지 않는다.
+    if (Array.isArray(data.contexts)) useGuestStore.getState().setContexts(data.contexts)
     return data
   },
 
@@ -269,5 +301,7 @@ export const guestAuth = {
 
   signOut(): void {
     useGuestStore.getState().reset()
+    // 세션만 비우면 조회 캐시에는 그 사람의 응답이 남는다(기본 신선도 60초).
+    queryClient.clear()
   },
 }
