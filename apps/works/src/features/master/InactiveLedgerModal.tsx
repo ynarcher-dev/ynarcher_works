@@ -291,8 +291,9 @@ export function InactiveLedgerModal({ ledger, open, onClose }: ModalProps) {
             setDeleteTargets([])
             setBulkDelete(false)
           }}
-          onDeleted={() => {
-            if (deleteTargets.length === (data?.rows.length ?? 0) && page > 0) {
+          onDeleted={(deletedCount) => {
+            // 일부만 지워질 수 있으므로 페이지 되돌림은 선택 수가 아니라 실제 삭제 수로 판단한다.
+            if (deletedCount === (data?.rows.length ?? 0) && page > 0) {
               setPage((p) => p - 1)
             }
             setSelected([])

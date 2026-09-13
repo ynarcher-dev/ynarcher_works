@@ -34,7 +34,8 @@ export interface InactiveLedgerPage {
   total: number
 }
 
-export interface EntityDeleteBlocker {
+export interface EntityDeleteBlockerRow {
+  entity_id: string
   blocker_key: string
   blocker_label: string
   row_count: number | string
@@ -175,21 +176,25 @@ export function useBulkDeactivateEntities(ledger: BulkDeactivateEntityKey) {
   })
 }
 
-/** 영구 삭제 확인창에서 먼저 보여 줄 연결 데이터. 서버가 삭제 직전 같은 값을 다시 검사한다. */
-export function useEntityDeleteBlockers(
+/**
+ * 영구 삭제 확인창이 보여 줄 연결 데이터를 **선택 행별로** 받는다. 합계가 아니라 행별이어야
+ * 어느 원장이 어떤 이유로 막혔는지 말할 수 있고, 막히지 않은 행만 골라 삭제할 수 있다.
+ * 서버는 삭제 직전 같은 판정을 행마다 다시 한다 — 여기 결과는 안내일 뿐 허가가 아니다.
+ */
+export function useEntityDeleteBlockerRows(
   ledger: InactiveLedgerKey,
   ids: string[],
 ) {
   return useQuery({
-    queryKey: ['inactive-ledger', ledger, 'delete-blockers', ids],
+    queryKey: ['inactive-ledger', ledger, 'delete-blocker-rows', ids],
     enabled: ids.length > 0,
-    queryFn: async (): Promise<EntityDeleteBlocker[]> => {
-      const { data, error } = await supabase.rpc('admin_entities_delete_blockers', {
+    queryFn: async (): Promise<EntityDeleteBlockerRow[]> => {
+      const { data, error } = await supabase.rpc('admin_entities_delete_blocker_rows', {
         p_entity_key: ledger,
         p_ids: ids,
       })
       if (error) throw error
-      return (data ?? []) as EntityDeleteBlocker[]
+      return (data ?? []) as EntityDeleteBlockerRow[]
     },
   })
 }

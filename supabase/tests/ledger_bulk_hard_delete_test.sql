@@ -1,5 +1,5 @@
 begin;
-select plan(22);
+select plan(24);
 
 insert into public.users (id, user_type, name, session_version)
 values
@@ -55,13 +55,15 @@ select ok(
   and not has_function_privilege('anon', 'public.admin_hard_delete_entity(text,uuid,text,text)', 'EXECUTE')
   and not has_function_privilege('anon', 'public.restore_entities(text,uuid[],text)', 'EXECUTE')
   and not has_function_privilege('anon', 'public.admin_entities_delete_blockers(text,uuid[])', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.admin_entities_delete_blocker_rows(text,uuid[])', 'EXECUTE')
   and not has_function_privilege('anon', 'public.admin_hard_delete_entities(text,uuid[],text,text)', 'EXECUTE'),
   '익명 사용자는 일괄 비활성화·영구 삭제 RPC를 실행할 수 없다'
 );
 select ok(
   has_function_privilege('authenticated', 'public.deactivate_entities(text,uuid[],text)', 'EXECUTE')
   and has_function_privilege('authenticated', 'public.restore_entities(text,uuid[],text)', 'EXECUTE')
-  and has_function_privilege('authenticated', 'public.admin_hard_delete_entities(text,uuid[],text,text)', 'EXECUTE'),
+  and has_function_privilege('authenticated', 'public.admin_hard_delete_entities(text,uuid[],text,text)', 'EXECUTE')
+  and has_function_privilege('authenticated', 'public.admin_entities_delete_blocker_rows(text,uuid[])', 'EXECUTE'),
   '인증 사용자는 일괄 비활성화 RPC에 진입하고 함수 내부 RLS 판정을 받는다'
 );
 
@@ -110,13 +112,35 @@ select is(
   1,
   '병합 원본이 가리키는 비활성 원장은 영구 삭제 차단 사유를 돌려준다'
 );
+-- 확인창이 "가능한 것만 삭제"하려면 합계가 아니라 행별 판정이 필요하다.
+-- 삭제 가능한 0001은 결과에 없어야 하고, 막힌 0002만 자기 사유와 함께 나와야 한다.
+select results_eq(
+  $select distinct entity_id from public.admin_entities_delete_blocker_rows(
+      'networks',
+      array[
+        '95200000-0000-0000-0000-000000000001'::uuid,
+        '95200000-0000-0000-0000-000000000002'::uuid
+      ])$,
+  $values ('95200000-0000-0000-0000-000000000002'::uuid)$,
+  '행별 차단 조회는 막힌 행만 돌려주고 삭제 가능한 행은 내보내지 않는다'
+);
+select results_eq(
+  $select blocker_label, row_count from public.admin_entities_delete_blocker_rows(
+      'networks',
+      array[
+        '95200000-0000-0000-0000-000000000001'::uuid,
+        '95200000-0000-0000-0000-000000000002'::uuid
+      ])$,
+  $values ('병합 원본'::text, 1::bigint)$,
+  '막힌 행에는 어떤 연결이 몇 건인지가 함께 온다'
+);
 select throws_ok(
-  $$select public.admin_hard_delete_entity(
+  $select public.admin_hard_delete_entity(
     'networks',
     '95200000-0000-0000-0000-000000000002',
     '연결 데이터가 있어도 삭제 시도',
     '삭제합니다'
-  )$$,
+  )$,
   '23001',
   'dependent_records_exist: 병합 원본 1건',
   '연결 데이터가 있는 비활성 원장은 영구 삭제되지 않는다'
