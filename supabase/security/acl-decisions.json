@@ -2,8 +2,8 @@
   "provenance": {
     "generator": "scripts/security/build-acl-decisions.mjs",
     "input": "supabase/security/acl-evidence.json",
-    "source_cutoff": "20260913210500_file_collection_schema.sql (미적용 — 파일받기 6종은 손으로 더한 결정)",
-    "migrations_sha256": "ed458e9066f141ce951152cec2d30fa0973e50688be5d19fecd6aada26308d99",
+    "source_cutoff": "20260914230000_guest_independent_account_cleanup.sql",
+    "migrations_sha256": "15b59f9fc945db26767b2e1a718bd98af14fca7929ad7b7df66c494bbd2ae288",
     "status": "이 파일은 마이그레이션이 아니며 DB를 바꾸지 않습니다. 결정과 기대 권한의 정본입니다.",
     "catalog_state": "ACL 마이그레이션 반영 후",
     "applied_by": [
@@ -23,28 +23,22 @@
     "unresolved": "호출 증거가 없거나 간접 증거만 있어 소유자 확인이 필요한 표."
   },
   "counts": {
-    "tables": 165,
+    "tables": 164,
     "by_decision": {
       "policy-backed-client-dml": 64,
-      "read-only": 20,
+      "read-only": 26,
       "lookup": 14,
-      "server-only-protected": 18,
+      "server-only-protected": 11,
       "legacy-unused": 17,
       "unresolved": 32
     },
-    "authenticated_grant_changes": 3,
+    "authenticated_grant_changes": 0,
     "authenticated_review_candidates": 13,
     "service_role_grant_changes": 0,
     "non_row_revoke_tables": 0
   },
   "named_lists": {
-    "grant_authenticated": {
-      "SELECT": [
-        "approval_reads",
-        "approval_recipients",
-        "program_module_assignees"
-      ]
-    },
+    "grant_authenticated": {},
     "review_authenticated_row": {
       "SELECT": [
         "approval_document_events",
@@ -215,6 +209,12 @@
       "attachment_extracts",
       "branch_members",
       "dept_budgets",
+      "file_collection_assignments",
+      "file_collection_comments",
+      "file_collection_files",
+      "file_collection_nodes",
+      "file_collection_responses",
+      "file_collections",
       "kpi_records",
       "kpi_results",
       "kpi_versions",
@@ -256,7 +256,6 @@
       "audit_logs",
       "entity_codes",
       "guest_credentials",
-      "guest_identities",
       "notification_logs",
       "permission_templates",
       "workspace_permissions"
@@ -1289,8 +1288,8 @@
           "INSERT",
           "SELECT"
         ],
-        "direct_call_sites": 9,
-        "name_literal_sites": 9,
+        "direct_call_sites": 10,
+        "name_literal_sites": 10,
         "indirect_why": null,
         "indirect_evidence": [],
         "edge_audit_browser_ops": [
@@ -2054,8 +2053,8 @@
         "client_ops_edge_caller": [],
         "edge_service_role_ops": [],
         "edge_unresolved_ops": [],
-        "direct_call_sites": 4,
-        "name_literal_sites": 4,
+        "direct_call_sites": 5,
+        "name_literal_sites": 6,
         "indirect_why": null,
         "indirect_evidence": [],
         "edge_audit_browser_ops": [
@@ -2133,7 +2132,7 @@
         "client_ops_edge_caller": [],
         "edge_service_role_ops": [],
         "edge_unresolved_ops": [],
-        "direct_call_sites": 10,
+        "direct_call_sites": 11,
         "name_literal_sites": 11,
         "indirect_why": null,
         "indirect_evidence": [],
@@ -2788,8 +2787,8 @@
         "client_ops_edge_caller": [],
         "edge_service_role_ops": [],
         "edge_unresolved_ops": [],
-        "direct_call_sites": 3,
-        "name_literal_sites": 4,
+        "direct_call_sites": 2,
+        "name_literal_sites": 3,
         "indirect_why": null,
         "indirect_evidence": [],
         "edge_audit_browser_ops": [
@@ -2865,8 +2864,8 @@
         "client_ops_edge_caller": [],
         "edge_service_role_ops": [],
         "edge_unresolved_ops": [],
-        "direct_call_sites": 5,
-        "name_literal_sites": 5,
+        "direct_call_sites": 6,
+        "name_literal_sites": 6,
         "indirect_why": null,
         "indirect_evidence": [],
         "edge_audit_browser_ops": [
@@ -2989,14 +2988,13 @@
       "current": {
         "authenticated": [
           "INSERT",
+          "SELECT",
           "UPDATE"
         ],
         "service_role": []
       },
       "delta": {
-        "authenticated_grant": [
-          "SELECT"
-        ],
+        "authenticated_grant": [],
         "service_role_grant": [],
         "non_row_revoke": {
           "anon": [],
@@ -3015,17 +3013,15 @@
         "SELECT"
       ],
       "evidence": {
-        "client_ops_direct": [
-          "INSERT"
-        ],
+        "client_ops_direct": [],
         "client_ops_resolved_indirect": [
           "SELECT"
         ],
         "client_ops_edge_caller": [],
         "edge_service_role_ops": [],
         "edge_unresolved_ops": [],
-        "direct_call_sites": 1,
-        "name_literal_sites": 2,
+        "direct_call_sites": 0,
+        "name_literal_sites": 1,
         "indirect_why": "Approval list/detail selects approval_recipients as a PostgREST embedded relation; the embedded table therefore needs SELECT in addition to its direct INSERT path.",
         "indirect_evidence": [
           "apps/works/src/features/approval/approvalApi.ts:9-16",
@@ -3063,14 +3059,13 @@
       },
       "current": {
         "authenticated": [
-          "INSERT"
+          "INSERT",
+          "SELECT"
         ],
         "service_role": []
       },
       "delta": {
-        "authenticated_grant": [
-          "SELECT"
-        ],
+        "authenticated_grant": [],
         "service_role_grant": [],
         "non_row_revoke": {
           "anon": [],
@@ -3275,8 +3270,8 @@
         "edge_unresolved_ops": [
           "SELECT"
         ],
-        "direct_call_sites": 20,
-        "name_literal_sites": 33,
+        "direct_call_sites": 23,
+        "name_literal_sites": 40,
         "indirect_why": null,
         "indirect_evidence": [],
         "edge_audit_browser_ops": [
@@ -5251,7 +5246,7 @@
     },
     {
       "table": "file_collection_assignments",
-      "decision": "server-only-protected",
+      "decision": "read-only",
       "rls_enabled": true,
       "policy_commands": [
         "INSERT",
@@ -5263,21 +5258,15 @@
           "SELECT"
         ],
         "client_ops_resolved_indirect": [],
-        "client_ops_edge_caller": [
-          "SELECT"
-        ],
+        "client_ops_edge_caller": [],
         "edge_service_role_ops": [],
         "edge_unresolved_ops": [],
-        "direct_call_sites": 0,
-        "name_literal_sites": 0,
+        "direct_call_sites": 2,
+        "name_literal_sites": 2,
         "indirect_why": null,
         "indirect_evidence": [],
-        "edge_audit_browser_ops": [
-          "SELECT"
-        ],
-        "edge_audit_caller_ops": [
-          "SELECT"
-        ],
+        "edge_audit_browser_ops": [],
+        "edge_audit_caller_ops": [],
         "edge_audit_service_role_ops": [],
         "edge_audit_sites": [],
         "invoker_rpc_required_ops": [],
@@ -5301,13 +5290,13 @@
         "anon": []
       },
       "current": {
-        "authenticated": [],
+        "authenticated": [
+          "SELECT"
+        ],
         "service_role": []
       },
       "delta": {
-        "authenticated_grant": [
-          "SELECT"
-        ],
+        "authenticated_grant": [],
         "service_role_grant": [],
         "non_row_revoke": {
           "anon": [],
@@ -5315,13 +5304,11 @@
         },
         "authenticated_unjustified_review": []
       },
-      "notes": [
-        "파일받기(2026-09-13, 미적용 마이그레이션 20260913210500). 쓰기는 전부 SECURITY DEFINER RPC를 지나므로 앱 롤에는 SELECT만 줍니다. Edge는 호출자 JWT로 읽고 RPC로 쓰며 service_role은 Storage·access_logs에만 쓰므로 이 표에는 service_role 권한이 필요 없습니다."
-      ]
+      "notes": []
     },
     {
       "table": "file_collection_comments",
-      "decision": "server-only-protected",
+      "decision": "read-only",
       "rls_enabled": true,
       "policy_commands": [
         "INSERT",
@@ -5333,21 +5320,15 @@
           "SELECT"
         ],
         "client_ops_resolved_indirect": [],
-        "client_ops_edge_caller": [
-          "SELECT"
-        ],
+        "client_ops_edge_caller": [],
         "edge_service_role_ops": [],
         "edge_unresolved_ops": [],
-        "direct_call_sites": 0,
-        "name_literal_sites": 0,
+        "direct_call_sites": 2,
+        "name_literal_sites": 2,
         "indirect_why": null,
         "indirect_evidence": [],
-        "edge_audit_browser_ops": [
-          "SELECT"
-        ],
-        "edge_audit_caller_ops": [
-          "SELECT"
-        ],
+        "edge_audit_browser_ops": [],
+        "edge_audit_caller_ops": [],
         "edge_audit_service_role_ops": [],
         "edge_audit_sites": [],
         "invoker_rpc_required_ops": [],
@@ -5371,13 +5352,13 @@
         "anon": []
       },
       "current": {
-        "authenticated": [],
+        "authenticated": [
+          "SELECT"
+        ],
         "service_role": []
       },
       "delta": {
-        "authenticated_grant": [
-          "SELECT"
-        ],
+        "authenticated_grant": [],
         "service_role_grant": [],
         "non_row_revoke": {
           "anon": [],
@@ -5385,13 +5366,11 @@
         },
         "authenticated_unjustified_review": []
       },
-      "notes": [
-        "파일받기(2026-09-13, 미적용 마이그레이션 20260913210500). 쓰기는 전부 SECURITY DEFINER RPC를 지나므로 앱 롤에는 SELECT만 줍니다. Edge는 호출자 JWT로 읽고 RPC로 쓰며 service_role은 Storage·access_logs에만 쓰므로 이 표에는 service_role 권한이 필요 없습니다."
-      ]
+      "notes": []
     },
     {
       "table": "file_collection_files",
-      "decision": "server-only-protected",
+      "decision": "read-only",
       "rls_enabled": true,
       "policy_commands": [
         "INSERT",
@@ -5403,21 +5382,17 @@
           "SELECT"
         ],
         "client_ops_resolved_indirect": [],
-        "client_ops_edge_caller": [
+        "client_ops_edge_caller": [],
+        "edge_service_role_ops": [],
+        "edge_unresolved_ops": [
           "SELECT"
         ],
-        "edge_service_role_ops": [],
-        "edge_unresolved_ops": [],
-        "direct_call_sites": 0,
-        "name_literal_sites": 0,
+        "direct_call_sites": 3,
+        "name_literal_sites": 5,
         "indirect_why": null,
         "indirect_evidence": [],
-        "edge_audit_browser_ops": [
-          "SELECT"
-        ],
-        "edge_audit_caller_ops": [
-          "SELECT"
-        ],
+        "edge_audit_browser_ops": [],
+        "edge_audit_caller_ops": [],
         "edge_audit_service_role_ops": [],
         "edge_audit_sites": [],
         "invoker_rpc_required_ops": [],
@@ -5441,13 +5416,13 @@
         "anon": []
       },
       "current": {
-        "authenticated": [],
+        "authenticated": [
+          "SELECT"
+        ],
         "service_role": []
       },
       "delta": {
-        "authenticated_grant": [
-          "SELECT"
-        ],
+        "authenticated_grant": [],
         "service_role_grant": [],
         "non_row_revoke": {
           "anon": [],
@@ -5456,12 +5431,12 @@
         "authenticated_unjustified_review": []
       },
       "notes": [
-        "파일받기(2026-09-13, 미적용 마이그레이션 20260913210500). 쓰기는 전부 SECURITY DEFINER RPC를 지나므로 앱 롤에는 SELECT만 줍니다. Edge는 호출자 JWT로 읽고 RPC로 쓰며 service_role은 Storage·access_logs에만 쓰므로 이 표에는 service_role 권한이 필요 없습니다."
+        "우리 스캔에서 Edge 자격이 미상인 호출이 있었습니다(SELECT). Edge 전수 감사 결과로 갈음합니다."
       ]
     },
     {
       "table": "file_collection_nodes",
-      "decision": "server-only-protected",
+      "decision": "read-only",
       "rls_enabled": true,
       "policy_commands": [
         "INSERT",
@@ -5473,21 +5448,15 @@
           "SELECT"
         ],
         "client_ops_resolved_indirect": [],
-        "client_ops_edge_caller": [
-          "SELECT"
-        ],
+        "client_ops_edge_caller": [],
         "edge_service_role_ops": [],
         "edge_unresolved_ops": [],
-        "direct_call_sites": 0,
-        "name_literal_sites": 0,
+        "direct_call_sites": 2,
+        "name_literal_sites": 2,
         "indirect_why": null,
         "indirect_evidence": [],
-        "edge_audit_browser_ops": [
-          "SELECT"
-        ],
-        "edge_audit_caller_ops": [
-          "SELECT"
-        ],
+        "edge_audit_browser_ops": [],
+        "edge_audit_caller_ops": [],
         "edge_audit_service_role_ops": [],
         "edge_audit_sites": [],
         "invoker_rpc_required_ops": [],
@@ -5511,13 +5480,13 @@
         "anon": []
       },
       "current": {
-        "authenticated": [],
+        "authenticated": [
+          "SELECT"
+        ],
         "service_role": []
       },
       "delta": {
-        "authenticated_grant": [
-          "SELECT"
-        ],
+        "authenticated_grant": [],
         "service_role_grant": [],
         "non_row_revoke": {
           "anon": [],
@@ -5525,13 +5494,11 @@
         },
         "authenticated_unjustified_review": []
       },
-      "notes": [
-        "파일받기(2026-09-13, 미적용 마이그레이션 20260913210500). 쓰기는 전부 SECURITY DEFINER RPC를 지나므로 앱 롤에는 SELECT만 줍니다. Edge는 호출자 JWT로 읽고 RPC로 쓰며 service_role은 Storage·access_logs에만 쓰므로 이 표에는 service_role 권한이 필요 없습니다."
-      ]
+      "notes": []
     },
     {
       "table": "file_collection_responses",
-      "decision": "server-only-protected",
+      "decision": "read-only",
       "rls_enabled": true,
       "policy_commands": [
         "INSERT",
@@ -5543,21 +5510,15 @@
           "SELECT"
         ],
         "client_ops_resolved_indirect": [],
-        "client_ops_edge_caller": [
-          "SELECT"
-        ],
+        "client_ops_edge_caller": [],
         "edge_service_role_ops": [],
         "edge_unresolved_ops": [],
-        "direct_call_sites": 0,
-        "name_literal_sites": 0,
+        "direct_call_sites": 2,
+        "name_literal_sites": 2,
         "indirect_why": null,
         "indirect_evidence": [],
-        "edge_audit_browser_ops": [
-          "SELECT"
-        ],
-        "edge_audit_caller_ops": [
-          "SELECT"
-        ],
+        "edge_audit_browser_ops": [],
+        "edge_audit_caller_ops": [],
         "edge_audit_service_role_ops": [],
         "edge_audit_sites": [],
         "invoker_rpc_required_ops": [],
@@ -5581,13 +5542,13 @@
         "anon": []
       },
       "current": {
-        "authenticated": [],
+        "authenticated": [
+          "SELECT"
+        ],
         "service_role": []
       },
       "delta": {
-        "authenticated_grant": [
-          "SELECT"
-        ],
+        "authenticated_grant": [],
         "service_role_grant": [],
         "non_row_revoke": {
           "anon": [],
@@ -5595,13 +5556,11 @@
         },
         "authenticated_unjustified_review": []
       },
-      "notes": [
-        "파일받기(2026-09-13, 미적용 마이그레이션 20260913210500). 쓰기는 전부 SECURITY DEFINER RPC를 지나므로 앱 롤에는 SELECT만 줍니다. Edge는 호출자 JWT로 읽고 RPC로 쓰며 service_role은 Storage·access_logs에만 쓰므로 이 표에는 service_role 권한이 필요 없습니다."
-      ]
+      "notes": []
     },
     {
       "table": "file_collections",
-      "decision": "server-only-protected",
+      "decision": "read-only",
       "rls_enabled": true,
       "policy_commands": [
         "INSERT",
@@ -5613,21 +5572,15 @@
           "SELECT"
         ],
         "client_ops_resolved_indirect": [],
-        "client_ops_edge_caller": [
-          "SELECT"
-        ],
+        "client_ops_edge_caller": [],
         "edge_service_role_ops": [],
         "edge_unresolved_ops": [],
-        "direct_call_sites": 0,
-        "name_literal_sites": 0,
+        "direct_call_sites": 2,
+        "name_literal_sites": 2,
         "indirect_why": null,
         "indirect_evidence": [],
-        "edge_audit_browser_ops": [
-          "SELECT"
-        ],
-        "edge_audit_caller_ops": [
-          "SELECT"
-        ],
+        "edge_audit_browser_ops": [],
+        "edge_audit_caller_ops": [],
         "edge_audit_service_role_ops": [],
         "edge_audit_sites": [],
         "invoker_rpc_required_ops": [],
@@ -5651,13 +5604,13 @@
         "anon": []
       },
       "current": {
-        "authenticated": [],
+        "authenticated": [
+          "SELECT"
+        ],
         "service_role": []
       },
       "delta": {
-        "authenticated_grant": [
-          "SELECT"
-        ],
+        "authenticated_grant": [],
         "service_role_grant": [],
         "non_row_revoke": {
           "anon": [],
@@ -5665,9 +5618,7 @@
         },
         "authenticated_unjustified_review": []
       },
-      "notes": [
-        "파일받기(2026-09-13, 미적용 마이그레이션 20260913210500). 쓰기는 전부 SECURITY DEFINER RPC를 지나므로 앱 롤에는 SELECT만 줍니다. Edge는 호출자 JWT로 읽고 RPC로 쓰며 service_role은 Storage·access_logs에만 쓰므로 이 표에는 service_role 권한이 필요 없습니다."
-      ]
+      "notes": []
     },
     {
       "table": "fund_lps",
@@ -6098,86 +6049,6 @@
       ]
     },
     {
-      "table": "guest_identities",
-      "decision": "server-only-protected",
-      "rls_enabled": true,
-      "policy_commands": [
-        "SELECT"
-      ],
-      "evidence": {
-        "client_ops_direct": [
-          "SELECT"
-        ],
-        "client_ops_resolved_indirect": [],
-        "client_ops_edge_caller": [],
-        "edge_service_role_ops": [],
-        "edge_unresolved_ops": [],
-        "direct_call_sites": 2,
-        "name_literal_sites": 3,
-        "indirect_why": null,
-        "indirect_evidence": [],
-        "edge_audit_browser_ops": [
-          "SELECT"
-        ],
-        "edge_audit_caller_ops": [],
-        "edge_audit_service_role_ops": [
-          "SELECT"
-        ],
-        "edge_audit_sites": [
-          "apps/works/src/features/admin/guestAccountHooks.ts:181[SELECT]",
-          "apps/works/src/features/program/participantHooks.ts:208[SELECT]"
-        ],
-        "invoker_rpc_required_ops": [
-          "SELECT"
-        ],
-        "invoker_rpc_via": [
-          "guest_accounts_list"
-        ],
-        "dynamic_rpc_ops": [],
-        "dynamic_rpc_evidence": [],
-        "policy_gap_blocked": null
-      },
-      "proposed": {
-        "authenticated": [
-          "SELECT"
-        ],
-        "service_role": [
-          "SELECT"
-        ],
-        "anon": []
-      },
-      "expected": {
-        "authenticated": [
-          "SELECT"
-        ],
-        "service_role": [
-          "SELECT"
-        ],
-        "anon": []
-      },
-      "current": {
-        "authenticated": [
-          "SELECT"
-        ],
-        "service_role": [
-          "SELECT"
-        ]
-      },
-      "delta": {
-        "authenticated_grant": [],
-        "service_role_grant": [],
-        "non_row_revoke": {
-          "anon": [],
-          "authenticated": []
-        },
-        "authenticated_unjustified_review": []
-      },
-      "notes": [
-        "원장 행과 게스트 계정의 연결. 생성·연결은 ADMIN Edge 경로가 맡습니다(기존 결정 유지).",
-        "INVOKER RPC가 호출자 권한으로 요구: SELECT (경유 guest_accounts_list)."
-      ]
-    },
-    {
       "table": "guest_invitations",
       "decision": "policy-backed-client-dml",
       "rls_enabled": true,
@@ -6197,8 +6068,8 @@
           "UPDATE"
         ],
         "edge_unresolved_ops": [],
-        "direct_call_sites": 3,
-        "name_literal_sites": 3,
+        "direct_call_sites": 2,
+        "name_literal_sites": 2,
         "indirect_why": null,
         "indirect_evidence": [],
         "edge_audit_browser_ops": [
@@ -7795,7 +7666,7 @@
         "edge_service_role_ops": [],
         "edge_unresolved_ops": [],
         "direct_call_sites": 0,
-        "name_literal_sites": 13,
+        "name_literal_sites": 11,
         "indirect_why": "MaPartyConfig.table + LEDGERS.ma_buyers — 목록·등록·수정(soft delete 포함).",
         "indirect_evidence": [
           "apps/works/src/features/mna/parties/config.ts:82",
@@ -7819,12 +7690,8 @@
           "apps/works/src/features/office/minutes/minuteLinkSearch.ts:27[dyn]",
           "apps/works/src/features/office/minutes/minutesApi.ts:227[dyn]"
         ],
-        "invoker_rpc_required_ops": [
-          "SELECT"
-        ],
-        "invoker_rpc_via": [
-          "guest_accounts_list"
-        ],
+        "invoker_rpc_required_ops": [],
+        "invoker_rpc_via": [],
         "dynamic_rpc_ops": [
           "UPDATE"
         ],
@@ -7869,7 +7736,6 @@
         "authenticated_unjustified_review": []
       },
       "notes": [
-        "INVOKER RPC가 호출자 권한으로 요구: SELECT (경유 guest_accounts_list).",
         "동적 SQL RPC 대상: update_entity(p_table=cfg.table) — 화면은 직접 UPDATE 하지 않고 이 RPC를 경유합니다."
       ]
     },
@@ -8498,7 +8364,7 @@
         "edge_service_role_ops": [],
         "edge_unresolved_ops": [],
         "direct_call_sites": 2,
-        "name_literal_sites": 19,
+        "name_literal_sites": 16,
         "indirect_why": "MaPartyConfig.table + LEDGERS.ma_sellers — 같은 경로.",
         "indirect_evidence": [
           "apps/works/src/features/mna/parties/config.ts:94",
@@ -8526,8 +8392,7 @@
           "SELECT"
         ],
         "invoker_rpc_via": [
-          "attachment_refs",
-          "guest_accounts_list"
+          "attachment_refs"
         ],
         "dynamic_rpc_ops": [
           "UPDATE"
@@ -8573,7 +8438,7 @@
         "authenticated_unjustified_review": []
       },
       "notes": [
-        "INVOKER RPC가 호출자 권한으로 요구: SELECT (경유 attachment_refs, guest_accounts_list).",
+        "INVOKER RPC가 호출자 권한으로 요구: SELECT (경유 attachment_refs).",
         "동적 SQL RPC 대상: 같음."
       ]
     },
@@ -9325,12 +9190,10 @@
           "UPDATE"
         ],
         "client_ops_edge_caller": [],
-        "edge_service_role_ops": [
-          "SELECT"
-        ],
+        "edge_service_role_ops": [],
         "edge_unresolved_ops": [],
-        "direct_call_sites": 3,
-        "name_literal_sites": 61,
+        "direct_call_sites": 2,
+        "name_literal_sites": 53,
         "indirect_why": "NETWORK_TABLE + LEDGERS.networks — NETWORKS 목록·등록·수정.",
         "indirect_evidence": [
           "apps/works/src/features/networks/config.ts:17",
@@ -9382,7 +9245,7 @@
         ],
         "invoker_rpc_via": [
           "admin_inactive_ledger_entities",
-          "guest_accounts_list",
+          "guest_account_ledger_candidates",
           "restore_entities"
         ],
         "dynamic_rpc_ops": [
@@ -9436,7 +9299,7 @@
         "authenticated_unjustified_review": []
       },
       "notes": [
-        "INVOKER RPC가 호출자 권한으로 요구: SELECT (경유 admin_inactive_ledger_entities, guest_accounts_list, restore_entities).",
+        "INVOKER RPC가 호출자 권한으로 요구: SELECT (경유 admin_inactive_ledger_entities, guest_account_ledger_candidates, restore_entities).",
         "동적 SQL RPC 대상: 같음 + upload_enrich_entity(대량 보강)."
       ]
     },
@@ -10445,13 +10308,13 @@
         "anon": []
       },
       "current": {
-        "authenticated": [],
+        "authenticated": [
+          "SELECT"
+        ],
         "service_role": []
       },
       "delta": {
-        "authenticated_grant": [
-          "SELECT"
-        ],
+        "authenticated_grant": [],
         "service_role_grant": [],
         "non_row_revoke": {
           "anon": [],
@@ -11908,12 +11771,10 @@
         "client_ops_edge_caller": [
           "SELECT"
         ],
-        "edge_service_role_ops": [
-          "SELECT"
-        ],
+        "edge_service_role_ops": [],
         "edge_unresolved_ops": [],
-        "direct_call_sites": 10,
-        "name_literal_sites": 63,
+        "direct_call_sites": 9,
+        "name_literal_sites": 56,
         "indirect_why": "LEDGERS.startups + useCreateEntity/useEntity — 목록·등록·수정과 deactivate_entities의 soft delete.",
         "indirect_evidence": [
           "apps/works/src/features/master/ledgers.ts:41",
@@ -11962,7 +11823,6 @@
         "invoker_rpc_via": [
           "admin_inactive_ledger_entities",
           "attachment_refs",
-          "guest_accounts_list",
           "restore_entities",
           "startup_facet_counts",
           "startup_pool_entities"
@@ -12018,7 +11878,7 @@
         "authenticated_unjustified_review": []
       },
       "notes": [
-        "INVOKER RPC가 호출자 권한으로 요구: SELECT (경유 admin_inactive_ledger_entities, attachment_refs, guest_accounts_list, restore_entities).",
+        "INVOKER RPC가 호출자 권한으로 요구: SELECT (경유 admin_inactive_ledger_entities, attachment_refs, restore_entities, startup_facet_counts).",
         "동적 SQL RPC 대상: update_entity/merge_entity/restore_entity가 호출자 권한으로 UPDATE 합니다."
       ]
     },
@@ -12386,12 +12246,11 @@
         "edge_service_role_ops": [
           "DELETE",
           "INSERT",
-          "SELECT",
-          "UPDATE"
+          "SELECT"
         ],
         "edge_unresolved_ops": [],
         "direct_call_sites": 27,
-        "name_literal_sites": 33,
+        "name_literal_sites": 31,
         "indirect_why": null,
         "indirect_evidence": [],
         "edge_audit_browser_ops": [

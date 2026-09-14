@@ -13,7 +13,7 @@ import { guestAuth, type GuestMe } from '@/auth/guestAuthService'
 export const GUEST_ME_KEY = ['guest', 'me'] as const
 
 /**
- * 내 계정과 지금 맥락. 부르는 것 자체가 원장 이름 동기화이기도 하다(서비스 주석 참조).
+ * 내 계정과 지금 맥락. 계정 프로필과 현재 참여 상태를 한 응답으로 새로고침한다.
  *
  * 응답이 `null`이면 접근이 닫혔다는 뜻이며(401) 그 자리에서 세션이 비워져 `RequireGuestAuth`가
  * 로그인으로 돌려보낸다. 그 밖의 실패는 `isError`로 남고 세션은 유지된다 — 네트워크가 한 번

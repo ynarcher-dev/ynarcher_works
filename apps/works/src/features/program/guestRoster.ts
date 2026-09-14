@@ -62,152 +62,40 @@ export function toGuestRosterRows(participants: readonly ParticipantRow[]): Gues
   }))
 }
 
-/** 왼쪽 기둥(아직 이 사업에 없는 계정)에 서는 한 줄. */
-export type TransferLeftRow =
-  | {
-      kind: 'candidate'
-      /** 목록 키. 계정 후보는 계정 id 하나로 유일하다. */
-      key: string
-      userId: string
-      name: string
-      /** 이름 아래가 아니라 검색에만 쓰이는 보조값(`PickLine`은 이름 한 줄만 세운다). */
-      meta: string
-      candidate: GuestAccountCandidate
-    }
-  | {
-      /** 오른쪽에서 내린 줄 — 확정하면 명부에서 **빠진다**. 다시 올리면 없던 일이 된다. */
-      kind: 'returning'
-      key: string
-      participantId: string
-      userId: string | null
-      name: string
-      meta: string
-    }
-
-/** 오른쪽 기둥(이 사업의 GUEST 명부)에 서는 한 줄. */
-export type TransferRightRow =
-  | {
-      /** 이번에 올린 계정 — 아직 아무 줄도 생기지 않았다. */
-      kind: 'staged'
-      key: string
-      userId: string
-      candidate: GuestAccountCandidate
-    }
-  | {
-      /** 이미 명부에 있는 줄. 내리면 확정할 때 지워진다. */
-      kind: 'member'
-      key: string
-      row: GuestRosterRow
-    }
-
-/** 후보 한 줄이 들고 있는 검색·표시용 보조값. 계정의 사실만 쓴다. */
-export function candidateMeta(c: GuestAccountCandidate): string {
-  return [c.email, c.phone].filter(Boolean).join(' · ')
-}
-
-/** 명부 한 줄이 들고 있는 보조값. 계정이 아직 없으면 그 사실을 적는다(지어내지 않는다). */
-export function rosterMeta(row: GuestRosterRow): string {
-  return [row.accountEmail, row.accountPhone].filter(Boolean).join(' · ') || '계정 정보 없음'
+/** 계정 고르기 표에 서는 한 줄 — 후보 계정에 이 사업에서의 사실 하나를 얹은 것. */
+export interface GuestAccountPickRow extends GuestAccountCandidate {
+  /**
+   * 이 계정이 **이미 이 사업의 명부에 있는가**. 있으면 목록에서 지우지 않고 그 사실을 적은 채
+   * 세우며, 고를 수만 없게 한다.
+   *
+   * 숨기지 않는 이유는 숨김이 담당자에게 "없다"로 읽히기 때문이다. 이미 담긴 계정이 목록에서
+   * 사라지면 담당자는 그 사람이 아직 안 들어와 있다고 보고 계정을 **하나 더 만들러 간다** —
+   * 같은 사람의 계정이 두 벌 생기는 길이 거기서 열린다.
+   */
+  alreadyAdded: boolean
 }
 
 /**
- * 오른쪽 기둥을 세운다 — **이번에 올린 계정이 위**, 그 아래 기존 명부.
+ * 이 명부가 이미 들고 있는 **계정 id**의 집합.
  *
- * 올린 줄이 위에 서는 이유는 그 줄만 방금 한 조작의 결과이기 때문이다. 기존 수십 건 아래로
- * 밀리면 무엇을 올렸는지 확인하러 스크롤해야 한다.
+ * 판정 키가 계정 id인 것이 요점이다. 원장 id로 보면 원장에 붙지 않은 계정을 판정할 수 없고
+ * (그 계정에는 원장 id가 없다), 그때 이미 담긴 계정이 후보에 다시 서서 두 번 담긴다.
+ * 계정이 아직 없는 옛 명부 줄(`userId`가 null)은 어느 계정과도 겹치지 않으므로 빠진다.
  */
-export function buildRightRows(
-  staged: readonly GuestAccountCandidate[],
-  roster: readonly GuestRosterRow[],
-  removed: readonly string[],
-): TransferRightRow[] {
-  const fresh: TransferRightRow[] = staged.map((c) => ({
-    kind: 'staged',
-    key: `staged:${c.userId}`,
-    userId: c.userId,
-    candidate: c,
-  }))
-  const kept: TransferRightRow[] = roster
-    .filter((r) => !removed.includes(r.participantId))
-    .map((r) => ({ kind: 'member', key: `member:${r.participantId}`, row: r }))
-  return [...fresh, ...kept]
+export function rosterAccountIds(roster: readonly GuestRosterRow[]): Set<string> {
+  return new Set(roster.map((r) => r.userId).filter((id): id is string => Boolean(id)))
 }
 
 /**
- * 왼쪽 기둥을 세운다 — **내린 줄이 맨 위**, 그 아래 이번 페이지의 계정 후보.
+ * 후보 계정에 '이미 담김'을 표시해 표의 줄로 옮긴다 — **거르지 않고 표시만 한다.**
  *
- * 내린 줄이 위에 서는 이유도 같다: 방금 한 조작의 결과는 눈에 보이는 자리에 있어야 되돌릴
- * 수 있다.
- *
- * **후보에서 빠지는 계정은 셋이다.** 이미 이 명부에 서 있는 계정, 이번에 올린 계정, 그리고
- * 방금 내린 줄과 같은 계정. 마지막이 요점이다 — 내린 계정이 후보로 다시 서면 같은 계정이
- * 한 기둥에 두 줄로 서고, 담당자가 아래쪽(후보) 줄을 올리면 위의 '뺌'은 그대로 남아 **같은
- * 계정을 빼면서 동시에 담는** 확정이 만들어진다.
- *
- * 후보는 서버가 이미 검색어로 걸러 보냈으므로 여기서 다시 걸지 않는다. 내린 줄만 건다 —
- * 걸지 않으면 검색으로 좁힌 목록에 검색어와 무관한 줄 하나가 남는다.
+ * 서버가 검색·탭·페이지로 이미 걸러 보낸 목록이므로 여기서 다시 걸지 않는다. 여기서 한 번 더
+ * 걸면 서버가 답한 전체 건수와 화면의 줄 수가 어긋나 페이저가 빈 페이지를 만든다.
  */
-export function buildLeftRows(
+export function markAlreadyAdded(
   candidates: readonly GuestAccountCandidate[],
   roster: readonly GuestRosterRow[],
-  staged: readonly GuestAccountCandidate[],
-  removed: readonly string[],
-  search: string,
-): TransferLeftRow[] {
-  const term = search.trim().toLowerCase()
-  const back: TransferLeftRow[] = roster
-    .filter((r) => removed.includes(r.participantId))
-    .map((r) => ({
-      kind: 'returning' as const,
-      key: `member:${r.participantId}`,
-      participantId: r.participantId,
-      userId: r.userId,
-      name: r.accountName || r.source?.name || '(이름 없음)',
-      meta: rosterMeta(r),
-    }))
-    .filter((r) => !term || `${r.name} ${r.meta}`.toLowerCase().includes(term))
-
-  const taken = new Set<string>()
-  for (const r of roster) {
-    // 내린 줄의 계정은 '이미 있음'으로 치지 않는다 — 위의 되돌림 줄이 그 계정을 이미 세운다.
-    if (r.userId && !removed.includes(r.participantId)) taken.add(r.userId)
-  }
-  for (const r of back) if (r.userId) taken.add(r.userId)
-  for (const s of staged) taken.add(s.userId)
-
-  const fresh: TransferLeftRow[] = candidates
-    .filter((c) => !taken.has(c.userId))
-    .map((c) => ({
-      kind: 'candidate' as const,
-      key: `candidate:${c.userId}`,
-      userId: c.userId,
-      name: c.name,
-      meta: candidateMeta(c),
-      candidate: c,
-    }))
-
-  return [...back, ...fresh]
-}
-
-/**
- * 계정을 대기 목록에 올린다 — **같은 계정은 한 번만 선다.**
- *
- * 멱등이어야 하는 이유는 같은 계정에 이르는 길이 둘이기 때문이다: 후보 목록에서 고르는 길과,
- * 검색·페이지를 바꿔 같은 계정을 다시 만나 고르는 길. 두 번 실리면 확정할 때 같은 계정 id가
- * 두 번 나가고, 서버가 그것을 중복으로 볼지 무시할지에 화면의 건수가 매달린다.
- */
-export function stageAccount(
-  staged: readonly GuestAccountCandidate[],
-  candidate: GuestAccountCandidate,
-): GuestAccountCandidate[] {
-  if (staged.some((c) => c.userId === candidate.userId)) return [...staged]
-  return [...staged, candidate]
-}
-
-/** 대기 목록에서 계정을 뺀다(내리기·확정 완료가 함께 쓴다). */
-export function dropStaged(
-  staged: readonly GuestAccountCandidate[],
-  userIds: readonly string[],
-): GuestAccountCandidate[] {
-  return staged.filter((c) => !userIds.includes(c.userId))
+): GuestAccountPickRow[] {
+  const taken = rosterAccountIds(roster)
+  return candidates.map((c) => ({ ...c, alreadyAdded: taken.has(c.userId) }))
 }

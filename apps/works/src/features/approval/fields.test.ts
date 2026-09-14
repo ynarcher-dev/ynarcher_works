@@ -6,8 +6,12 @@ import {
   formatMoney,
   htmlTemplateImageSources,
   htmlTemplateTokens,
+  isEmptyPlan,
   missingRequired,
   parseFields,
+  planProfit,
+  planValue,
+  displayValue,
   primaryAmount,
   primaryAmountLabel,
   pruneValues,
@@ -320,5 +324,52 @@ describe('예산표 금액 산식 — 어느 열을 곱할지 가리기', () => 
         ]),
       ),
     ).toBeNull()
+  })
+})
+
+const PLAN_FIELD: FormField = { key: 'plan', label: '수지 계획', type: 'PROFIT_PLAN', required: true }
+
+describe('수지 계획(PROFIT_PLAN)', () => {
+  it('이익은 적는 값이 아니라 매출 − 예산이다', () => {
+    expect(planProfit({ revenue: '10,000,000', budget: '7,500,000' }).profit).toBe(2_500_000)
+  })
+
+  it('한 칸이라도 비면 이익을 세우지 않는다(0이 아니라 모름)', () => {
+    expect(planProfit({ revenue: '10,000,000', budget: '' }).profit).toBeNull()
+    expect(planProfit({ revenue: '', budget: '7,500,000' }).profit).toBeNull()
+  })
+
+  it('계획이 적자면 그대로 음수로 답한다', () => {
+    expect(planProfit({ revenue: '1,000', budget: '1,500' }).profit).toBe(-500)
+  })
+
+  it('빈 문서·옛 문서는 빈 계획으로 읽힌다(0원으로 읽지 않는다)', () => {
+    expect(planValue({}, 'plan')).toEqual({ revenue: '', budget: '' })
+    expect(planValue({ plan: '옛 값' }, 'plan')).toEqual({ revenue: '', budget: '' })
+    expect(isEmptyPlan(planValue({}, 'plan'))).toBe(true)
+  })
+
+  it('새 문서는 두 칸이 빈 계획으로 시작한다', () => {
+    expect(emptyValues([PLAN_FIELD]).plan).toEqual({ revenue: '', budget: '' })
+  })
+
+  it('필수 계획은 두 칸이 다 적혀야 채워진 것으로 본다', () => {
+    expect(missingRequired([PLAN_FIELD], { plan: { revenue: '100', budget: '' } })).toEqual([
+      '수지 계획',
+    ])
+    expect(missingRequired([PLAN_FIELD], { plan: { revenue: '100', budget: '60' } })).toEqual([])
+  })
+
+  it('한 줄 표기는 세 값을 함께 적는다', () => {
+    expect(displayValue(PLAN_FIELD, { plan: { revenue: '1000', budget: '600' } })).toBe(
+      '매출 1,000원 · 예산 600원 · 이익 400원',
+    )
+    expect(displayValue(PLAN_FIELD, { plan: { revenue: '', budget: '' } })).toBe('-')
+  })
+
+  it('스키마 왕복에서 종류가 살아남는다', () => {
+    expect(parseFields([{ key: 'plan', label: '수지 계획', type: 'PROFIT_PLAN' }])[0]?.type).toBe(
+      'PROFIT_PLAN',
+    )
   })
 })

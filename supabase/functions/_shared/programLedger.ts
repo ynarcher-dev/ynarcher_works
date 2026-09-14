@@ -99,10 +99,23 @@ export function isDeadProgram(table: string, status: string | null): boolean {
 
 /**
  * 맥락 고르기 목록이 읽는 칸(코드·제목·상태·기간). 원장이 셋이라 별칭으로 이름을 맞춘다.
+ *
+ * **사업 기간(시작·종료)도 함께 읽는다**(2026-09-14 사용자 지정) — 목록의 줄이 답해야 하는
+ * 것이 '언제까지 내 문이 열려 있는가'가 아니라 '이 사업이 언제부터 언제까지인가'로 바뀌었다.
+ * 조합에서는 존속기간이 그 자리에 선다(`LEDGER_META`가 칸 이름을 안다).
  */
 export function contextSelect(table: string): string {
   const meta = LEDGER_META[table] ?? LEDGER_META.programs
-  return `id, code, ${aliased('title', meta.titleColumn)}, status, deleted_at, guest_access_ends_at`
+  return [
+    'id',
+    'code',
+    aliased('title', meta.titleColumn),
+    'status',
+    aliased('start_date', meta.startColumn),
+    aliased('end_date', meta.endColumn),
+    'deleted_at',
+    'guest_access_ends_at',
+  ].join(', ')
 }
 
 /**

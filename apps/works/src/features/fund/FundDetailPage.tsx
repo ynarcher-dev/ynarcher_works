@@ -22,6 +22,7 @@ import { DetailDeleteButton } from '@/components/DetailDeleteButton'
 import { GuestHostProvider } from '@/features/guest/host'
 import { FUND_GUEST_HOST, fundAsGuestHost } from '@/features/fund/guestHost'
 import { GuestSettingsButton } from '@/features/program/detail/GuestSettingsButton'
+import { WorkspaceApprovalTab } from '@/features/approval/WorkspaceApprovalTab'
 import { WorkspaceBudgetTab } from '@/features/approval/WorkspaceBudgetTab'
 import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
@@ -68,6 +69,7 @@ type DetailTab =
   | 'calls'
   | 'financials'
   | 'budget'
+  | 'approval'
   | 'reports'
 const DETAIL_TABS: { key: DetailTab; label: string }[] = [
   { key: 'portfolio', label: '포트폴리오' },
@@ -78,6 +80,10 @@ const DETAIL_TABS: { key: DetailTab; label: string }[] = [
   // 조합 재무(조합 자체의 회계) 다음에 선다 — 이쪽은 **전자결재로 배정된 운영 예산**이라
   // 서로 다른 돈이고, 그래서 한 탭에 합치지 않는다.
   { key: 'budget', label: '예산/지출' },
+  // 예산 바로 오른쪽이 전자결재다(2026-09-14) — 배정 품의가 예산을 세우고 그 줄에서 지출이
+  // 나가므로 "얼마가 배정됐나" 다음 질문이 "무슨 결재가 오갔나"다. 사업 상세(PROJECT·M&A)의
+  // 탭 줄과 같은 자리·같은 한 벌을 쓴다.
+  { key: 'approval', label: '전자결재' },
   { key: 'reports', label: '보고서' },
 ]
 
@@ -275,6 +281,7 @@ export function FundDetailPage() {
                 />
               )}
               {tab === 'budget' && <WorkspaceBudgetTab targetType="fund" targetId={id} />}
+              {tab === 'approval' && <WorkspaceApprovalTab targetType="fund" targetId={id} />}
               {tab === 'calls' && (
                 <CapitalCallPanel
                   fundId={id}
@@ -302,11 +309,12 @@ export function FundDetailPage() {
           </div>
         </div>
 
-        {/* 우측(1/3): AC 상세와 동일한 공용 패널 — 자료 관리 → 관련 회의록 → 변동 이력 → 코멘트.
-            '전자결재' 패널은 2026-08-26 걷어냈다 — 결재 문서의 워크스페이스 연동이 받는 대상은
-            사업 3종(AC·M&A·PROJECT)뿐이라(approval_program_links의 CHECK 제약), 조합은 걸릴 수
-            있는 대상이 아니어서 이 자리가 영원히 "연결된 전자결재가 없습니다"로 남는다. 없는
-            연결을 빈 칸으로 세워 두면 언젠가 채워질 자리로 읽힌다. */}
+        {/* 우측(1/3): 사업 상세와 동일한 공용 패널 — 자료 관리 → 관련 회의록 → 변동 이력 → 코멘트.
+            '전자결재' 패널은 2026-08-26에 걷어냈다 — 그때는 결재 연동이 받는 대상이 사업뿐이라
+            (approval_program_links의 CHECK 제약) 이 자리가 영원히 "연결된 전자결재가 없습니다"로
+            남았기 때문이다. **조합은 2026-09-13에 연동 대상으로 들어왔고**(같은 CHECK에 fund 추가,
+            조합 운영비 품의가 조합 자체를 예산 주체로 삼는다) 그래서 2026-09-14에 다시 섰다 —
+            다만 우측이 아니라 좌측 탭 줄의 예산/지출 오른쪽이며, 근거는 사업 상세와 같다. */}
         <div className="space-y-4 lg:col-span-1">
           {/* 자료 업로드는 편집 페이지에서 — 상세는 읽기 전용 뷰. */}
           <MaterialPanel targetType="fund" targetId={fund.id} readOnly />

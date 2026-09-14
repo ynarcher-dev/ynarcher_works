@@ -4,13 +4,14 @@
 --
 -- 확인하는 것
 --   · 허용: 사업 담당자가 트리를 짜고 배정·공개하고, 배정된 게스트가 올리고 문항마다 제출한다
+--   · 문항 자료: 담당자가 붙인 양식은 배정된 게스트만 읽는다(폴더·엉뚱한 모듈·읽기 전용 거절)
 --   · 거절: 다른 워크스페이스 · 읽기 전용 · 다른 게스트 · 정지 명부 · 비활성 계정 ·
 --           세션 버전 불일치 · 다른 맥락 세션 · 모듈 CLOSED 쓰기 · 파일받기가 아닌 모듈 · 직접 DML
 --   · 실물: storage.objects에 실물이 없으면 확정되지 않는다(크기 위조 불가)
 --   · 구조: 순환 · 교차 모듈 · 부모 규칙 · 자유 깊이(65단계 이상) · 공개 후 트리 잠금
 --   · 순서: 형제 한 칸 이동이 한 호출로 실제 순서를 바꾸고 1..n을 다시 매긴다(양 끝은 무변화)
 --   · 상태: NOT_SUBMITTED → DRAFT → SUBMITTED → REWORK_REQUESTED(회차+1) → 재제출 → APPROVED
---   · 보존: 소프트 삭제만 · 제출·지난 회차 파일은 누구도 못 내린다 · 명부가 사라져도 제출물은 남는다
+--   · 보존: 소프트 삭제만 · 검토 중·완료 파일은 누구도 못 내린다(회차는 가르지 않는다) · 명부가 사라져도 제출물은 남는다
 --   · RLS SELECT가 실제로 실행된다(판정 헬퍼 EXECUTE 권한 회귀)
 --
 -- 동시성(잠금 순서 collection → response)은 단일 세션 pgTAP으로 실제 경합을 재현할 수 없어
@@ -18,7 +19,7 @@
 -- =====================================================================
 
 begin;
-select plan(113);
+select plan(125);
 
 -- ---------------------------------------------------------------------
 -- 셋업
@@ -36,11 +37,11 @@ insert into public.workspace_permissions (user_id, workspace_key, permission_lev
   ('a1000000-0000-0000-0000-000000000004', 'project', 'read',  'global');
 
 insert into public.users (id, user_type, name, email, phone, session_version, is_active) values
-  ('a2000000-0000-0000-0000-000000000001', 'temporary_guest', '게스트 1', 'fc-g1@example.test', '01052000001', 1, true),
-  ('a2000000-0000-0000-0000-000000000002', 'temporary_guest', '게스트 2', 'fc-g2@example.test', '01052000002', 1, true),
-  ('a2000000-0000-0000-0000-000000000003', 'temporary_guest', '정지 게스트', 'fc-g3@example.test', '01052000003', 1, true),
-  ('a2000000-0000-0000-0000-000000000004', 'temporary_guest', '다른 사업 게스트', 'fc-g4@example.test', '01052000004', 1, true),
-  ('a2000000-0000-0000-0000-000000000006', 'temporary_guest', '비활성 게스트', 'fc-g6@example.test', '01052000006', 1, false);
+  ('a2000000-0000-0000-0000-000000000001', 'temporary_guest', '게스트 1', 'fc-g1@example.test', null, 1, true),
+  ('a2000000-0000-0000-0000-000000000002', 'temporary_guest', '게스트 2', 'fc-g2@example.test', null, 1, true),
+  ('a2000000-0000-0000-0000-000000000003', 'temporary_guest', '정지 게스트', 'fc-g3@example.test', null, 1, true),
+  ('a2000000-0000-0000-0000-000000000004', 'temporary_guest', '다른 사업 게스트', 'fc-g4@example.test', null, 1, true),
+  ('a2000000-0000-0000-0000-000000000006', 'temporary_guest', '비활성 게스트', 'fc-g6@example.test', null, 1, false);
 
 insert into public.programs (id, title) values
   ('a3000000-0000-0000-0000-000000000001', '파일받기 사업'),
@@ -329,12 +330,35 @@ select set_config('request.jwt.claims',
   '{"app_user_id":"a1000000-0000-0000-0000-000000000001","session_version":1}', true);
 
 -- ---------------------------------------------------------------------
--- (2) 공개 전제 — 문항 없음 · 대상 없음 · 대상 자격
+-- (2) 대상 — 고르지 않는다(2026-09-14). 명부가 대상을 정한다.
+--     원장을 세우는 순간(file_collection_upsert) 명부의 유효한 게스트가 배정으로 선다.
 -- ---------------------------------------------------------------------
-select throws_ok(
-  $$select public.file_collection_publish((select id from public.file_collections limit 1))$$,
-  'P0001', null,
-  '받는 사람이 없으면 공개할 수 없다'
+select is(
+  (select count(*)::int from public.file_collection_assignments
+    where collection_id = (select id from public.file_collections
+                            where program_module_id = 'a5000000-0000-0000-0000-000000000001')
+      and revoked_at is null and deleted_at is null),
+  2,
+  '대상을 고르지 않아도 명부의 유효한 게스트 둘이 자동으로 선다'
+);
+
+select ok(
+  not exists (
+    select 1 from public.file_collection_assignments
+     where guest_user_id in (
+       'a2000000-0000-0000-0000-000000000003',  -- 로그인이 막힌 명부 줄
+       'a2000000-0000-0000-0000-000000000004',  -- 다른 사업의 게스트
+       'a2000000-0000-0000-0000-000000000006'   -- 비활성 계정
+     )
+  ),
+  '로그인이 막힌 줄·다른 사업·비활성 계정은 자동 대상에서 빠진다'
+);
+
+select ok(
+  not has_function_privilege('authenticated', 'app.fc_sync_targets(uuid)', 'EXECUTE')
+  and not has_function_privilege('authenticated', 'app.fc_sync_assignments(uuid, uuid)', 'EXECUTE')
+  and not has_function_privilege('anon', 'app.fc_sync_targets(uuid)', 'EXECUTE'),
+  '대상 동기화 함수는 앱 롤이 직접 부를 수 없다(정의자 경로·트리거만 부른다)'
 );
 
 select throws_ok(
@@ -425,13 +449,21 @@ select set_config('request.jwt.claims',
 -- 공개 이후에 더한 대상에게도 응답 칸이 바로 선다.
 reset role;
 insert into public.users (id, user_type, name, email, phone, session_version) values
-  ('a2000000-0000-0000-0000-000000000005', 'temporary_guest', '추가 게스트', 'fc-g5@example.test', '01052000005', 1);
+  ('a2000000-0000-0000-0000-000000000005', 'temporary_guest', '추가 게스트', 'fc-g5@example.test', null, 1);
 insert into public.program_participants (id, entity_key, program_id, user_id, login_status) values
   ('a4000000-0000-0000-0000-000000000005', 'program', 'a3000000-0000-0000-0000-000000000001',
    'a2000000-0000-0000-0000-000000000005', 'ACTIVE');
 set local role authenticated;
 select set_config('request.jwt.claims',
   '{"app_user_id":"a1000000-0000-0000-0000-000000000001","session_version":1}', true);
+
+select is(
+  (select count(*)::int from public.file_collection_assignments
+    where guest_user_id = 'a2000000-0000-0000-0000-000000000005'
+      and revoked_at is null and deleted_at is null),
+  1,
+  '명부에 게스트를 더하면 그 사업의 파일받기 대상이 곧바로 선다(트리거)'
+);
 
 select is(
   (select public.file_collection_assign(
@@ -446,6 +478,76 @@ select is(
   6,
   '나중에 더한 대상에게도 응답 칸이 바로 선다'
 );
+
+-- ---------------------------------------------------------------------
+-- (2-1) 문항 자료 — 담당자가 건네는 양식(공용 attachments, 20260914150000)
+--       방향이 제출물과 반대다: 담당자가 붙이고 **배정된 사람 전원**이 같은 것을 읽는다.
+-- ---------------------------------------------------------------------
+select lives_ok(
+  $$insert into public.attachments (target_type, target_id, program_module_id, file_name, storage_path)
+    values ('file_collection_node',
+            (select id from public.file_collection_nodes where title = '재무제표'),
+            'a5000000-0000-0000-0000-000000000001', '양식.xlsx', 'file_collection_node/x/양식.xlsx')$$,
+  '사업 쓰기 권한자는 문항에 자료를 붙인다'
+);
+
+select throws_ok(
+  $$insert into public.attachments (target_type, target_id, program_module_id, file_name, storage_path)
+    values ('file_collection_node',
+            (select id from public.file_collection_nodes where title = '1. 재무'),
+            'a5000000-0000-0000-0000-000000000001', '폴더양식.xlsx', 'file_collection_node/y/폴더양식.xlsx')$$,
+  '42501', null,
+  '폴더 마디에는 붙일 수 없다(받는 쪽이 여는 자리는 문항뿐이다)'
+);
+
+select throws_ok(
+  $$insert into public.attachments (target_type, target_id, program_module_id, file_name, storage_path)
+    values ('file_collection_node',
+            (select id from public.file_collection_nodes where title = '재무제표'),
+            'a5000000-0000-0000-0000-000000000002', '엉뚱한모듈.xlsx', 'file_collection_node/z/엉뚱.xlsx')$$,
+  '42501', null,
+  '귀속 칸 둘이 어긋나면(문항과 다른 모듈) 거절한다'
+);
+
+select set_config('request.jwt.claims',
+  '{"app_user_id":"a1000000-0000-0000-0000-000000000004","session_version":1}', true);
+select throws_ok(
+  $$insert into public.attachments (target_type, target_id, program_module_id, file_name, storage_path)
+    values ('file_collection_node',
+            (select id from public.file_collection_nodes where title = '재무제표'),
+            'a5000000-0000-0000-0000-000000000001', '열람자.xlsx', 'file_collection_node/r/열람자.xlsx')$$,
+  '42501', null,
+  '읽기 전용 내부 사용자는 문항 자료를 붙일 수 없다'
+);
+
+select set_config('request.jwt.claims',
+  '{"app_user_id":"a1000000-0000-0000-0000-000000000002","session_version":1}', true);
+select is(
+  (select count(*)::int from public.attachments where target_type = 'file_collection_node'),
+  0,
+  '다른 워크스페이스(FUND) 사용자에게는 그 문항 자료가 보이지도 않는다'
+);
+
+select set_config('request.jwt.claims',
+  '{"app_user_id":"a2000000-0000-0000-0000-000000000001","session_version":1,'
+  '"context_type":"program","context_id":"a3000000-0000-0000-0000-000000000001"}', true);
+select is(
+  (select count(*)::int from public.attachments where target_type = 'file_collection_node'),
+  1,
+  '배정된 게스트는 문항에 붙은 자료를 읽는다'
+);
+
+select set_config('request.jwt.claims',
+  '{"app_user_id":"a2000000-0000-0000-0000-000000000004","session_version":1,'
+  '"context_type":"program","context_id":"a3000000-0000-0000-0000-000000000002"}', true);
+select is(
+  (select count(*)::int from public.attachments where target_type = 'file_collection_node'),
+  0,
+  '배정이 없는 게스트에게는 문항 자료가 보이지 않는다(모듈 메뉴가 열려 있어도)'
+);
+
+select set_config('request.jwt.claims',
+  '{"app_user_id":"a1000000-0000-0000-0000-000000000001","session_version":1}', true);
 
 -- ---------------------------------------------------------------------
 -- (3) 게스트 — 자기 것만 보이고, 자기 것만 쓴다
@@ -723,12 +825,26 @@ select is(
   '검토 코멘트는 WORKS 쪽으로 기록된다'
 );
 
-select throws_ok(
+-- 보완 요청으로 회차가 오른 뒤에는 **지난 회차 파일도 내릴 수 있다**(2026-09-14 사용자 지정).
+-- 회차가 아니라 응답 칸의 상태가 가른다 — 문항이 아직 이쪽 손에 있는가만 본다.
+-- 실제로 지우면 뒤따르는 단언(경로 불변·다운로드 인가)이 대상 파일을 잃으므로 세이브포인트로
+-- 되돌린다. 확인하려는 것은 인가 판정이지 남는 상태가 아니다.
+savepoint fc_remove_past_round;
+
+select lives_ok(
   $$select public.file_collection_remove_file(
       (select id from public.file_collection_files where original_name = '재무제표.pdf'))$$,
-  'P0001', null,
-  'WORKS도 지난 회차의 제출 파일은 내릴 수 없다(이력 불변)'
+  '보완 요청 중이면 WORKS도 지난 회차 파일을 내릴 수 있다'
 );
+
+select is(
+  (select count(*)::int from public.file_collection_files
+    where original_name = '재무제표.pdf' and deleted_at is not null),
+  1,
+  '내린 파일은 소프트 삭제로만 남는다(행은 지워지지 않는다)'
+);
+
+rollback to savepoint fc_remove_past_round;
 
 select throws_ok(
   $$select public.file_collection_review(
@@ -760,6 +876,18 @@ select ok(
   (select storage_path like '%/r2/%' from public.file_collection_files where original_name = '보완.pdf'),
   '새 파일은 2회차 경로에 선다'
 );
+
+-- 참여자 쪽도 같다 — 보완 요청을 받은 문항에서는 앞서 낸 자료를 스스로 치울 수 있다.
+-- (뒤 단언들이 1회차 파일을 다시 쓰므로 세이브포인트로 되돌린다.)
+savepoint fc_guest_remove_past_round;
+
+select lives_ok(
+  $$select public.file_collection_remove_file(
+      (select id from public.file_collection_files where original_name = '재무제표.pdf'))$$,
+  '게스트도 보완 요청 중이면 지난 회차에 낸 자기 파일을 내릴 수 있다'
+);
+
+rollback to savepoint fc_guest_remove_past_round;
 
 reset role;
 insert into storage.objects (bucket_id, name, metadata)

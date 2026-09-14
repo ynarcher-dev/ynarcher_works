@@ -21,7 +21,7 @@ insert into public.users(id, user_type, name, session_version, company_id) value
   ('00000000-0000-0000-0000-0000000000e3', 'read_only',        'test_read_only_user',        1, null),
   ('00000000-0000-0000-0000-0000000000e4', 'ac_business',      'test_ac_write_user',         1, null),
   ('00000000-0000-0000-0000-0000000000e5', 'temporary_guest',  'test_expired_permission_user',1, null),
-  ('00000000-0000-0000-0000-0000000000e6', 'external_startup', 'test_guest_startup_user',    1, 'a0000000-0000-0000-0000-0000000000a1'),
+  ('00000000-0000-0000-0000-0000000000e6', 'external_startup', 'test_guest_startup_user',    1, null),
   ('00000000-0000-0000-0000-0000000000e7', 'external_expert',  'test_guest_expert_user',     1, null),
   ('00000000-0000-0000-0000-0000000000e8', 'fund_manager',     'test_fund_user',             1, null),
   ('00000000-0000-0000-0000-0000000000e9', 'mna_manager',      'test_mna_user',              1, null),
@@ -93,10 +93,10 @@ select set_config('request.jwt.claims', '{"app_user_id":"00000000-0000-0000-0000
 select is(app.can_read_workspace('mna'), false, '케이스3: 만료된 mna 권한은 read 불가');
 reset role;
 
--- 케이스 4: 외부 스타트업은 타사(B) 데이터 접근이 원천 차단된다
+-- 케이스 4: 독립 GUEST는 원장 회사 FK가 없으므로 어떤 회사에도 접근하지 못한다
 set local role authenticated;
 select set_config('request.jwt.claims', '{"app_user_id":"00000000-0000-0000-0000-0000000000e6","session_version":1}', true);
-select is(app.can_access_company('a0000000-0000-0000-0000-0000000000a1'), true,  '케이스4a: 본인 기업(A) 접근 허용');
+select is(app.can_access_company('a0000000-0000-0000-0000-0000000000a1'), false, '케이스4a: GUEST는 종전 연결 기업(A)에도 접근 불가');
 select is(app.can_access_company('b0000000-0000-0000-0000-0000000000b2'), false, '케이스4b: 타사(B) 접근 차단');
 select is((select count(*)::int from public.startups), 0, '케이스4c: 외부 스타트업 마스터 직접 SELECT 0건');
 reset role;

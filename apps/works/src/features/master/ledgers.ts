@@ -56,8 +56,8 @@ export const LEDGERS: Record<LedgerKey, LedgerMatchSpec> = {
   },
   ma_sellers: {
     table: 'ma_sellers',
-    // 연락처는 20260908220000이 더했다 — 포털 계정의 초기 비밀번호가 되는 값이라
-    // 계정이 아니라 원장이 갖는다.
+    // 연락처는 20260908220000이 더했다 — 원장의 연락 수단이라 계정이 아니라 원장이 갖는다
+    // (2026-09-14부터 자격증명이 아니다: 초기 비밀번호는 고정값이다, 3_9_1 §6).
     columns:
       'id, name, contact_name, contact_email, phone, biz_reg_no, startup_id, deleted_at, merged_into_id',
     matchColumns: { name: 'name', email: 'contact_email', phone: 'phone' },

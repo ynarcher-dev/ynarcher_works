@@ -18,7 +18,7 @@ export interface StartupPick {
   name: string
   representative: string | null
   email: string | null
-  /** 연결 시 거래상대 원장의 연락처 칸으로 함께 넘어간다(포털 계정의 초기 비밀번호). */
+  /** 연결 시 거래상대 원장의 연락처 칸으로 함께 넘어간다(원장의 연락 수단 — 자격증명이 아니다). */
   phone: string | null
   /** 분야 태그 이름 배열(최대 3). 거래상대 원장도 같은 원장(industry_tags)의 이름을 담는다. */
   /** 분야 태그 이름 배열. 옛 단일 컬럼(industry)까지 합친 값이다. */

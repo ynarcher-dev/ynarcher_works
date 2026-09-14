@@ -51,7 +51,9 @@ const CONTEXTS = [
     entityKey: 'program',
     code: 'AC-2026',
     title: TITLE['pp-1'],
-    persona: 'startups',
+    accessEndsAt: null,
+    startDate: null,
+    endDate: null,
   },
   {
     participantId: 'pp-2',
@@ -59,7 +61,9 @@ const CONTEXTS = [
     entityKey: 'fund',
     code: 'FUND-01',
     title: TITLE['pp-2'],
-    persona: 'networks',
+    accessEndsAt: null,
+    startDate: null,
+    endDate: null,
   },
 ]
 
@@ -82,14 +86,20 @@ function sessionBody(participantId: Pid) {
   const c = CONTEXTS.find((x) => x.participantId === participantId)!
   return {
     accessToken: TOKEN[participantId],
-    user: { id: 'u-1', name: '김참여', user_type: 'external_startup' },
+    user: {
+      id: 'u-1',
+      name: '김참여',
+      user_type: 'external_startup',
+      email: 'a@b.com',
+      affiliation: '테스트 소속',
+    },
     context: {
       participant_id: c.participantId,
       program_id: c.programId,
       entity_key: c.entityKey,
       code: c.code,
       title: c.title,
-      persona: c.persona,
+      access_ends_at: null,
     },
   }
 }
@@ -97,7 +107,13 @@ function sessionBody(participantId: Pid) {
 function meBody(participantId: Pid) {
   const c = CONTEXTS.find((x) => x.participantId === participantId)!
   return {
-    user: { id: 'u-1', name: '김참여', user_type: 'external_startup', email: 'a@b.com' },
+    user: {
+      id: 'u-1',
+      name: '김참여',
+      user_type: 'external_startup',
+      email: 'a@b.com',
+      affiliation: '테스트 소속',
+    },
     program: {
       id: c.programId,
       title: c.title,
@@ -107,8 +123,7 @@ function meBody(participantId: Pid) {
       end_date: null,
       entity_key: c.entityKey,
     },
-    participation: { persona: c.persona, joined_at: null },
-    company: null,
+    participation: { joined_at: null },
     currentParticipantId: c.participantId,
     contexts: CONTEXTS,
   }
@@ -224,14 +239,13 @@ beforeEach(() => {
   // 이 상태가 영영 풀리지 않았다(앱 구동 효과가 이미 지나갔으므로).
   useGuestStore.setState({
     status: 'authenticated',
-    user: { id: 'u-1', name: '김참여', role: 'external_startup' },
+    user: { id: 'u-1', name: '김참여', role: 'external_startup', affiliation: '테스트 소속' },
     program: {
       id: 'pg-1',
       title: TITLE['pp-1'],
       code: 'AC-2026',
       entityKey: 'program',
       participantId: 'pp-1',
-      persona: 'startups',
     },
     contexts: [],
     accessToken: TOKEN['pp-1'],

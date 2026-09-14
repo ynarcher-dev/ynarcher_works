@@ -78,8 +78,13 @@ export function CompanyCalendarGrid({ view }: { view: CalendarView }) {
         const isToday = day.isSame(view.today, 'day')
         const isSelected = key === view.selected
         const dayEvents = view.byDate.get(key) ?? []
-        const shown = dayEvents.slice(0, ROWS_PER_CELL)
-        const hidden = dayEvents.length - shown.length
+        // 생일은 일정 원장에 복제하지 않고 해당 날짜 칸의 표시 행으로만 합성한다. 같은 날 일정이 있어도
+        // 생일자가 먼저 보이고, 나머지는 기존 셀의 3줄/+N 규칙을 함께 따른다.
+        const dayBirthdays = view.birthdaysByDate.get(key) ?? []
+        const shownBirthdays = dayBirthdays.slice(0, ROWS_PER_CELL)
+        const eventSlots = ROWS_PER_CELL - shownBirthdays.length
+        const shownEvents = dayEvents.slice(0, eventSlots)
+        const hidden = dayBirthdays.length + dayEvents.length - shownBirthdays.length - shownEvents.length
 
         return (
           <button
@@ -110,7 +115,16 @@ export function CompanyCalendarGrid({ view }: { view: CalendarView }) {
             </span>
             {/* 칸 안의 줄은 제목을 담으므로 넘치는 폭은 자르고(truncate) 칸 밖으로 밀지 않는다. */}
             <span className="flex min-h-0 min-w-0 flex-1 flex-col gap-0.5 overflow-hidden">
-              {shown.map((ev) => (
+              {shownBirthdays.map((person) => (
+                <span
+                  key={`birthday-${person.user_id}`}
+                  className="truncate text-caption font-medium text-gray-800"
+                  title={`${person.user_name}님의 생일`}
+                >
+                  🎉 {person.user_name}
+                </span>
+              ))}
+              {shownEvents.map((ev) => (
                 <CellEvent key={ev.id} ev={ev} />
               ))}
             </span>

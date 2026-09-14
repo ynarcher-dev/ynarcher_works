@@ -1,7 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { ApprovalStatus } from '@/features/management/config'
-import { budgetField, parseFields, type FieldValues, type FormField } from '@/features/approval/fields'
+import {
+  budgetField,
+  parseFields,
+  planField,
+  type FieldValues,
+  type FormField,
+} from '@/features/approval/fields'
 import type { ProgramLinkType } from '@/features/approval/programLinkApi'
 
 /**
@@ -25,6 +31,11 @@ export interface WorkspaceBudgetDoc {
   formName: string | null
   /** 이 품의의 예산표 필드(반드시 있다 — 없는 문서는 목록에서 빠진다). */
   field: FormField
+  /**
+   * 이 품의의 수지 계획 필드(예상 매출·예산). 양식에 없으면 null이다 — 계획을 받지 않는
+   * 양식으로 올린 옛 품의가 그렇고, 그때 화면은 계획 칸을 세우지 않는다(0으로 그리지 않는다).
+   */
+  plan: FormField | null
   values: FieldValues
 }
 
@@ -66,13 +77,15 @@ export function useWorkspaceBudgets(
       for (const row of (data ?? []) as unknown as LinkRow[]) {
         const d = row.approval_documents
         if (!d) continue
-        const field = budgetField(parseFields(d.version?.fields))
+        const fields = parseFields(d.version?.fields)
+        const field = budgetField(fields)
         // 예산표가 없으면 배정 품의가 아니다(일반 결재도 같은 원장으로 사업에 걸린다).
         if (!field) continue
         // 예산 변경 품의는 배정이 아니다 — 그 금액은 원 품의에 이미 반영되어 있어,
         // 여기 한 줄을 더 세우면 같은 예산이 두 번 배정된 것처럼 보인다.
         if (d.form?.budget_link === 'REVISE') continue
         docs.push({
+          plan: planField(fields),
           id: d.id,
           title: d.title,
           docNo: d.doc_no,
@@ -88,21 +101,23 @@ export function useWorkspaceBudgets(
   })
 }
 
-/** 한 예산 줄에서 나간 결재 1건. */
+/** 한 예산 줄에서 나간 지출 항목 1건 — 문서 하나가 품목마다 한 줄을 낸다. */
 export interface BudgetSpendItem {
   lineId: string
   documentId: string
   docNo: string | null
   title: string | null
+  /** 지출 내역 표에 적힌 품목 이름. 제목과 같은 게이트라 열람할 수 없으면 null이다. */
+  item: string | null
   status: ApprovalStatus
   amount: number
   createdAt: string
-  /** 이 지출 문서를 열어 볼 수 있는가. false면 제목·번호가 비어 온다(금액은 사실 그대로). */
+  /** 이 지출 문서를 열어 볼 수 있는가. false면 제목·번호·품목이 비어 온다(금액은 사실 그대로). */
   readable: boolean
 }
 
 /**
- * 예산 줄별 지출 내역 — 합계가 아니라 **건별**이다.
+ * 예산 줄별 지출 내역 — 합계가 아니라 **품목 한 줄씩**이다.
  *
  * 서버 RPC(public.approval_budget_spend_items)가 게이트와 투영을 모두 갖는다. 화면이
  * 지출 문서를 직접 훑지 않는 이유는, 열람할 수 없는 지출이 조용히 빠져 합계보다 모자란
@@ -123,6 +138,7 @@ export function useBudgetSpendItems(documentId: string | undefined) {
         document_id: string
         doc_no: string | null
         title: string | null
+        item: string | null
         status: ApprovalStatus
         amount: string | number
         created_at: string
@@ -132,6 +148,7 @@ export function useBudgetSpendItems(documentId: string | undefined) {
         documentId: r.document_id,
         docNo: r.doc_no,
         title: r.title,
+        item: r.item,
         status: r.status,
         amount: Number(r.amount),
         createdAt: r.created_at,

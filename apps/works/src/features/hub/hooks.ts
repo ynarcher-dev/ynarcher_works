@@ -338,6 +338,33 @@ export interface BirthdayPerson {
   user_name: string
 }
 
+export interface BirthdayOccurrence extends BirthdayPerson {
+  /** 출생연도는 제외하고, 요청한 달력 연도에 매핑한 생일 날짜. */
+  birthday_on: string
+}
+
+/**
+ * 달력 조회 구간의 임직원 생일. MANAGEMENT 원장의 생년월일을 직접 읽지 않고, 출생연도를
+ * 제거한 `birthdays_in_range` RPC 응답만 사용한다. 서버가 최대 62일 범위를 강제한다.
+ */
+export function useBirthdaysInRange(range: CalendarRange) {
+  const from = dayjs(range.from).format('YYYY-MM-DD')
+  const to = dayjs(range.to).format('YYYY-MM-DD')
+
+  return useQuery({
+    queryKey: ['hub', 'birthdays', 'range', from, to],
+    staleTime: 10 * 60 * 1000,
+    queryFn: async (): Promise<BirthdayOccurrence[]> => {
+      const { data, error } = await supabase.rpc('birthdays_in_range', {
+        p_from: from,
+        p_to: to,
+      })
+      if (error) throw error
+      return (data ?? []) as BirthdayOccurrence[]
+    },
+  })
+}
+
 /**
  * 오늘 생일인 임직원.
  *

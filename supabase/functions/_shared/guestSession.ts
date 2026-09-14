@@ -23,6 +23,7 @@ export interface GuestSessionUser {
   user_type: string
   name: string
   email: string | null
+  affiliation: string | null
   session_version: number
 }
 
@@ -65,7 +66,7 @@ export async function verifyGuestSession(
 
   const { data } = await db
     .from('users')
-    .select('id, user_type, name, email, session_version, is_active, deleted_at')
+    .select('id, user_type, name, email, affiliation, session_version, is_active, deleted_at')
     .eq('id', appUserId)
     .maybeSingle()
 
@@ -86,8 +87,6 @@ export async function verifyGuestSession(
 export interface GuestParticipation {
   id: string
   joined_at: string | null
-  master_table: string | null
-  master_id: string | null
 }
 
 /**
@@ -103,7 +102,7 @@ export async function loadOpenParticipations(
   const now = Date.now()
   const { data } = await db
     .from('program_participants')
-    .select('id, joined_at, master_table, master_id, login_status, entity_key')
+    .select('id, joined_at, login_status, entity_key')
     .eq('program_id', programId)
     .eq('user_id', userId)
     .in('login_status', ['INVITED', 'ACTIVE'])
@@ -127,66 +126,4 @@ export async function loadOpenParticipations(
   if (endsAt && new Date(endsAt).getTime() <= now) return []
 
   return rows.map(({ login_status: _s, entity_key: _e, ...p }) => p)
-}
-
-export interface LedgerIdentity {
-  /** 로그인 인격의 현재 이름(기업이면 대표자, 전문가면 본인). 원장에 없으면 null. */
-  name: string | null
-  /** 소속 기업명(기업 참여자만). */
-  companyName: string | null
-}
-
-/**
- * 명부가 가리키는 원장(기업·통합 네트워크)에서 지금 이름을 읽는다.
- *
- * 게스트 계정(users.name)은 발급 시점의 원장 복사본이라, WORKS에서 원장을 고치면 낡는다.
- * 이름의 정본은 언제나 원장이므로 세션 쪽이 원장을 다시 읽어 와야 한다.
- */
-export async function readLedgerIdentity(
-  db: SupabaseClient,
-  p: GuestParticipation | undefined,
-): Promise<LedgerIdentity> {
-  if (!p?.master_table || !p.master_id) return { name: null, companyName: null }
-  if (p.master_table === 'startups') {
-    const { data } = await db
-      .from('startups')
-      .select('name, representative')
-      .eq('id', p.master_id)
-      .maybeSingle()
-    const row = data as { name: string | null; representative: string | null } | null
-    return { name: row?.representative ?? null, companyName: row?.name ?? null }
-  }
-  // 2026-09-04 원장 통합: 종전 'experts'는 통합 원장 networks가 되었다. 명부에 남아 있는
-  // 옛 값도 같은 표를 가리키므로 함께 받아 준다(이관이 id를 보존해 행은 그대로다).
-  if (p.master_table === 'networks' || p.master_table === 'experts') {
-    const { data } = await db
-      .from('networks')
-      .select('name')
-      .eq('id', p.master_id)
-      .maybeSingle()
-    return { name: (data as { name: string | null } | null)?.name ?? null, companyName: null }
-  }
-  return { name: null, companyName: null }
-}
-
-/**
- * 원장 이름이 계정·초대장의 복사본과 다르면 복사본을 원장 값으로 바로잡는다.
- * 돌려주는 값은 화면에 보여줄 최종 이름이다.
- */
-export async function syncGuestName(
-  db: SupabaseClient,
-  user: GuestSessionUser,
-  participations: GuestParticipation[],
-  ledgerName: string | null,
-): Promise<string> {
-  if (!ledgerName || ledgerName === user.name) return user.name
-  await db.from('users').update({ name: ledgerName }).eq('id', user.id)
-  const participantIds = participations.map((p) => p.id)
-  if (participantIds.length > 0) {
-    await db
-      .from('guest_invitations')
-      .update({ name: ledgerName })
-      .in('participant_id', participantIds)
-  }
-  return ledgerName
 }

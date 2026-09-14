@@ -143,7 +143,7 @@ export function ModuleFormModal({
     () => assignees.map((a) => pool.find((p) => p.id === a.id) ?? { id: a.id, name: '이름 미상' }),
     [assignees, pool],
   )
-  /** 사람 목록 변경(칩 추가·삭제). 이미 적어 둔 업무롤은 그대로 들고 간다. */
+  /** 사람 목록 변경(칩 추가·삭제). 이미 적어 둔 주요 업무는 그대로 들고 간다. */
   const onChangeAssignees = (next: { id: string }[]) => {
     setAssignees((prev) =>
       next.map((n) => ({
@@ -265,7 +265,7 @@ export function ModuleFormModal({
           end_date: values.end_date || undefined,
           memo: values.memo || undefined,
         },
-        // 빈 업무롤은 빈 문자열이 아니라 null로 보낸다 — '안 적었다'와 '지웠다'가 원장에서
+        // 빈 주요 업무는 빈 문자열이 아니라 null로 보낸다 — '안 적었다'와 '지웠다'가 원장에서
         // 같은 모양이어야 화면이 둘을 가르지 않는다(서버도 같은 규칙으로 접는다).
         assignees: assignees.map((a) => ({
           userId: a.id,
@@ -473,13 +473,13 @@ export function ModuleFormModal({
             </Field>
 
             {/*
-              업무롤 — 위 칸이 '누구인가'를 묻고 여기가 '무엇을 하는가'를 묻는다. 같은 이름이 칩과
+              주요 업무 — 위 칸이 '누구인가'를 묻고 여기가 '무엇을 하는가'를 묻는다. 같은 이름이 칩과
               이 줄에 두 번 서지만 두 값은 다른 물음의 답이고, 이름이 곧 이 줄의 라벨이라 지울 수
               없다. 역할(PM·멤버)은 여기서 받지 않는다 — 사업 담당자 원장이 이미 아는 사실이다.
               선택 전에는 줄 자체를 세우지 않는다(늘 비어 있는 칸은 곧 안 읽히는 칸이 된다).
             */}
             {assignees.length > 0 && (
-              <Field as="div" label="업무롤">
+              <Field as="div" label="주요 업무">
                 <div className="space-y-2">
                   {assignees.map((a) => (
                     <div

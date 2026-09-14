@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { accessEndLabel, contextTags, switcherState } from '@/auth/contextDisplay'
+import {
+  accessEndLabel,
+  contextTags,
+  programPeriodLabel,
+  switcherState,
+} from '@/auth/contextDisplay'
 
 /**
  * 맥락 표시 규칙 회귀 — 세 화면(로그인 선택·사이드바 전환기·개요 요약)이 같은 맥락을
@@ -7,32 +12,25 @@ import { accessEndLabel, contextTags, switcherState } from '@/auth/contextDispla
  * 순수 함수라, 화면 없이 여기서 고정한다.
  */
 
-describe('맥락 태그 — 종류와 자격', () => {
-  it('종류 다음 자격 순서로 선다', () => {
-    expect(contextTags('program', 'startups').map((t) => t.label)).toEqual([
-      '프로젝트',
-      '참여 기업',
-    ])
+describe('맥락 태그 — 종류', () => {
+  it('프로젝트 종류를 표시한다', () => {
+    expect(contextTags('program').map((t) => t.label)).toEqual(['프로젝트'])
   })
 
   it('세 종류를 각각 자기 이름으로 부른다', () => {
-    expect(contextTags('ma_program', null).map((t) => t.label)).toEqual(['M&A 프로젝트'])
-    expect(contextTags('fund', null).map((t) => t.label)).toEqual(['FUND'])
-    expect(contextTags('program', null).map((t) => t.label)).toEqual(['프로젝트'])
+    expect(contextTags('ma_program').map((t) => t.label)).toEqual(['M&A 프로젝트'])
+    expect(contextTags('fund').map((t) => t.label)).toEqual(['FUND'])
+    expect(contextTags('program').map((t) => t.label)).toEqual(['프로젝트'])
   })
 
-  it('전문가 자격은 명부 탭과 같은 말을 쓴다', () => {
-    expect(contextTags('fund', 'networks').map((t) => t.label)).toEqual(['FUND', '참여 전문가'])
-  })
-
-  it('모르는 종류·빈 자격은 지어내지 않는다', () => {
-    expect(contextTags(null, null)).toEqual([])
-    expect(contextTags('unknown_kind', null)).toEqual([])
-    expect(contextTags(undefined, 'startups').map((t) => t.label)).toEqual(['참여 기업'])
+  it('모르는 종류는 지어내지 않는다', () => {
+    expect(contextTags(null)).toEqual([])
+    expect(contextTags('unknown_kind')).toEqual([])
+    expect(contextTags(undefined)).toEqual([])
   })
 
   it('한 목록 안에서 태그 key가 겹치지 않는다', () => {
-    const keys = contextTags('program', 'startups').map((t) => t.key)
+    const keys = contextTags('program').map((t) => t.key)
     expect(new Set(keys).size).toBe(keys.length)
   })
 })
@@ -46,6 +44,25 @@ describe('접근 종료일', () => {
     expect(accessEndLabel(null)).toBeNull()
     expect(accessEndLabel(undefined)).toBeNull()
     expect(accessEndLabel('언젠가')).toBeNull()
+  })
+})
+
+describe('사업 기간 — 목록 줄의 넷째 값', () => {
+  it('시작·종료가 다 있으면 물결표로 잇는다', () => {
+    const label = programPeriodLabel('2026-09-12T00:00:00.000Z', '2027-01-14T00:00:00.000Z')
+    expect(label).toContain('~')
+    expect(label?.split('~')).toHaveLength(2)
+  })
+
+  it('한쪽만 있으면 아는 쪽만 세운다', () => {
+    expect(programPeriodLabel('2026-09-12T00:00:00.000Z', null)?.endsWith('~')).toBe(true)
+    expect(programPeriodLabel(null, '2027-01-14T00:00:00.000Z')?.startsWith('~')).toBe(true)
+  })
+
+  it('둘 다 없거나 읽을 수 없으면 아무 말도 하지 않는다', () => {
+    expect(programPeriodLabel(null, null)).toBeNull()
+    expect(programPeriodLabel(undefined, undefined)).toBeNull()
+    expect(programPeriodLabel('언젠가', '언젠가')).toBeNull()
   })
 })
 

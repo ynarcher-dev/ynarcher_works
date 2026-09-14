@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { cn } from '../utils/cn'
 import { Button } from '../components/Button'
 
 export interface ExpandToggleButtonProps {
@@ -51,6 +52,15 @@ export interface FullscreenPanelProps {
   title: ReactNode
   /** 헤더 우측 액션(뷰 토글·축소 버튼 등). */
   actions?: ReactNode
+  /**
+   * 사이드바까지 덮을지(기본 `true`).
+   *
+   * `false`면 본문 자리만 덮고 **사이드바는 그대로 남는다** — 넓게 펼친 목록을 보는 중에도 다른
+   * 메뉴로 갈 수 있어야 하는 화면이 있다. 이때는 화면을 가둔 대화가 아니므로 `aria-modal`과
+   * 탭 가두기를 함께 걷는다(보이는 사이드바를 키보드로는 못 가는 상태를 만들지 않기 위해서다).
+   * Esc로 닫는 것은 두 경우 모두 같다.
+   */
+  coverSidebar?: boolean
   children: ReactNode
 }
 
@@ -64,6 +74,7 @@ export function FullscreenPanel({
   onClose,
   title,
   actions,
+  coverSidebar = true,
   children,
 }: FullscreenPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null)
@@ -83,7 +94,9 @@ export function FullscreenPanel({
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
-      if (e.key !== 'Tab') return
+      // 사이드바를 남겨 둔 경우에는 탭을 가두지 않는다 — 화면에 보이는데 키보드로는 닿지 못하는
+      // 자리를 만들지 않기 위해서다.
+      if (e.key !== 'Tab' || !coverSidebar) return
       const items = focusable()
       if (items.length === 0) {
         e.preventDefault()
@@ -105,7 +118,7 @@ export function FullscreenPanel({
       window.removeEventListener('keydown', onKey)
       previouslyFocused?.focus()
     }
-  }, [open, onClose])
+  }, [open, onClose, coverSidebar])
 
   if (!open) return null
 
@@ -113,10 +126,15 @@ export function FullscreenPanel({
     <div
       ref={panelRef}
       role="dialog"
-      aria-modal="true"
+      aria-modal={coverSidebar || undefined}
       aria-labelledby={titleId}
       tabIndex={-1}
-      className="fixed inset-0 z-fullscreen flex flex-col bg-gray-25 focus:outline-none"
+      className={cn(
+        'fixed inset-y-0 right-0 left-0 z-fullscreen flex flex-col bg-gray-25 focus:outline-none',
+        // 사이드바 폭은 셸이 주입하는 `--app-sidebar-w`(펼침 15rem/접힘 4rem)를 따른다 —
+        // 접었다 폈다 해도 덮는 경계가 사이드바와 함께 움직인다.
+        !coverSidebar && 'lg:left-[var(--app-sidebar-w,15rem)]',
+      )}
     >
       <header className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-200 bg-white px-5 py-3">
         <div id={titleId} className="flex min-w-0 items-center gap-2">{title}</div>

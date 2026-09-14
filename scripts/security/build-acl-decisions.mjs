@@ -201,10 +201,6 @@ const PROTECTED = {
     client: [],
     why: '발송 로그. 적재는 서버 경로이며 화면 직접 조회 증거가 없습니다.',
   },
-  guest_identities: {
-    client: ['SELECT'],
-    why: '원장 행과 게스트 계정의 연결. 생성·연결은 ADMIN Edge 경로가 맡습니다(기존 결정 유지).',
-  },
   workspace_permissions: {
     client: ['SELECT'],
     why: '권한 원장. 변경은 권한 변경 RPC/Edge 경로가 맡고 감사 로그가 함께 남습니다.',

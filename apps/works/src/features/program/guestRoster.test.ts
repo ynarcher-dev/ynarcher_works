@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
-  buildLeftRows,
-  buildRightRows,
-  dropStaged,
   isGuestRosterRow,
-  stageAccount,
+  markAlreadyAdded,
+  rosterAccountIds,
   toGuestRosterRows,
   type GuestRosterRow,
 } from '@/features/program/guestRoster'
@@ -16,7 +14,7 @@ import type { GuestAccountCandidate, ParticipantRow } from '@/features/program/p
  *  · 원장 없는 게스트 계정이 명부에 선다(종전에는 `임직원`으로 불리며 걸러졌다).
  *  · 실제 내부 임직원만 걸러진다.
  *  · '이미 담김'은 **계정 id**로 판정한다 — 원장 id로 보면 원장 없는 계정을 판정할 수 없다.
- *  · 같은 계정을 두 번 올려도 한 번만 나가고, 끝난 일은 대기 목록에서 지워져 다시 나가지 않는다.
+ *  · 이미 담긴 계정은 **목록에서 사라지지 않고** 표시만 달린다(사라지면 계정을 또 만들러 간다).
  */
 
 function row(over: Partial<ParticipantRow>): ParticipantRow {
@@ -49,9 +47,8 @@ function candidate(over: Partial<GuestAccountCandidate>): GuestAccountCandidate 
     userId: 'u9',
     name: '박후보',
     email: 'cand@example.com',
-    phone: '01099999999',
+    affiliation: '주식회사 후보',
     isActive: true,
-    identities: [],
     ...over,
   }
 }
@@ -118,76 +115,47 @@ describe('toGuestRosterRows', () => {
   })
 })
 
-describe('buildLeftRows', () => {
-  it('이미 명부에 있는 계정은 후보에서 빠진다 — 판정 키는 계정 id다', () => {
-    const left = buildLeftRows(
+describe('rosterAccountIds', () => {
+  it('명부가 든 계정 id만 모은다', () => {
+    const ids = rosterAccountIds([
+      roster({ participantId: 'p1', userId: 'u1' }),
+      roster({ participantId: 'p2', userId: 'u2' }),
+    ])
+    expect([...ids].sort()).toEqual(['u1', 'u2'])
+  })
+
+  it('계정이 아직 없는 옛 줄은 어느 계정과도 겹치지 않으므로 빠진다', () => {
+    expect(rosterAccountIds([roster({ userId: null })]).size).toBe(0)
+  })
+})
+
+describe('markAlreadyAdded', () => {
+  it("이미 명부에 있는 계정에만 '이미 담김'이 붙는다 — 판정 키는 계정 id다", () => {
+    const rows = markAlreadyAdded(
       [candidate({ userId: 'u1' }), candidate({ userId: 'u2' })],
       [roster({ participantId: 'p1', userId: 'u1' })],
-      [],
-      [],
-      '',
     )
-    expect(left.map((r) => r.key)).toEqual(['candidate:u2'])
+    expect(rows.map((r) => [r.userId, r.alreadyAdded])).toEqual([
+      ['u1', true],
+      ['u2', false],
+    ])
   })
 
-  it('원장이 없는 명부 줄도 같은 키로 걸러진다', () => {
-    const left = buildLeftRows(
-      [candidate({ userId: 'u1' })],
-      [roster({ userId: 'u1', source: null })],
-      [],
-      [],
-      '',
-    )
-    expect(left).toEqual([])
+  it('원장이 없는 명부 줄도 같은 키로 판정된다', () => {
+    const rows = markAlreadyAdded([candidate({ userId: 'u1' })], [roster({ userId: 'u1', source: null })])
+    expect(rows[0]!.alreadyAdded).toBe(true)
   })
 
-  it('이번에 올린 계정은 왼쪽에 남지 않는다', () => {
-    const left = buildLeftRows([candidate({ userId: 'u2' })], [], [candidate({ userId: 'u2' })], [], '')
-    expect(left).toEqual([])
-  })
-
-  it('내린 줄이 맨 위에 서고, 같은 계정이 후보로 다시 서지 않는다', () => {
-    const left = buildLeftRows(
+  it('이미 담긴 계정을 목록에서 지우지 않는다 — 사라지면 계정을 하나 더 만들러 간다', () => {
+    const rows = markAlreadyAdded(
       [candidate({ userId: 'u1' })],
       [roster({ participantId: 'p1', userId: 'u1' })],
-      [],
-      ['p1'],
-      '',
     )
-    expect(left).toHaveLength(1)
-    expect(left[0]).toMatchObject({ kind: 'returning', participantId: 'p1' })
+    expect(rows).toHaveLength(1)
   })
 
-  it('내린 줄도 검색어에 걸린다 — 좁힌 목록에 무관한 줄이 남지 않는다', () => {
-    const left = buildLeftRows([], [roster({ participantId: 'p1', accountName: '김게스트' })], [], ['p1'], '박')
-    expect(left).toEqual([])
-  })
-})
-
-describe('buildRightRows', () => {
-  it('이번에 올린 계정이 기존 명부 위에 선다', () => {
-    const right = buildRightRows(
-      [candidate({ userId: 'u9' })],
-      [roster({ participantId: 'p1' })],
-      [],
-    )
-    expect(right.map((r) => r.key)).toEqual(['staged:u9', 'member:p1'])
-  })
-
-  it('내린 줄은 오른쪽에서 사라진다', () => {
-    expect(buildRightRows([], [roster({ participantId: 'p1' })], ['p1'])).toEqual([])
-  })
-})
-
-describe('stageAccount / dropStaged', () => {
-  it('같은 계정을 두 번 올려도 한 줄이다', () => {
-    const once = stageAccount([], candidate({ userId: 'u9' }))
-    const twice = stageAccount(once, candidate({ userId: 'u9' }))
-    expect(twice.map((c) => c.userId)).toEqual(['u9'])
-  })
-
-  it('확정이 끝난 계정은 대기 목록에서 지워져 다시 나가지 않는다', () => {
-    const staged = [candidate({ userId: 'u1' }), candidate({ userId: 'u2' })]
-    expect(dropStaged(staged, ['u1']).map((c) => c.userId)).toEqual(['u2'])
+  it('서버가 보낸 값을 그대로 들고 간다(화면에서 다시 거르지 않는다)', () => {
+    const rows = markAlreadyAdded([candidate({ userId: 'u9', affiliation: '뉴런랩스' })], [])
+    expect(rows[0]).toMatchObject({ userId: 'u9', affiliation: '뉴런랩스', alreadyAdded: false })
   })
 })

@@ -14,7 +14,7 @@ import type { GuestEntityKey } from '@/features/guest/host'
  * 예외**다. 그래서 여기서도 전자는 결과로, 후자는 throw로 갈라 내보낸다.
  *
  * **계정을 만들지 않는다.** 생성 창구는 `/guest-accounts` 하나뿐이며(사용자 확정 2026-09-13),
- * 이 파일은 `create_guest_account`·`issue_guest_account` 어느 쪽도 부르지 않는다.
+ * 이 파일은 계정 생성 RPC를 부르지 않는다.
  */
 
 /** 서버 창구 이름. 호출부가 문자열을 손으로 적지 않도록 여기 한 곳에 둔다. */

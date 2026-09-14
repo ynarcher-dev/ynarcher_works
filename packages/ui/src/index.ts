@@ -225,6 +225,9 @@ export type {
 } from './patterns/FullscreenPanel'
 export { BoardItemCard, BoardEmptyRow } from './patterns/BoardItemCard'
 export type { BoardItemCardProps } from './patterns/BoardItemCard'
+// 파일을 받는 자리 — WORKS 자료 관리·파일첨부와 GUEST 파일받기가 같은 상자를 쓴다.
+export { FileDropZone } from './patterns/FileDropZone'
+export type { FileDropZoneProps } from './patterns/FileDropZone'
 // 첨부 파일 1건 행 — WORKS 자료 관리와 GUEST 파일 목록이 같은 표시 규격을 쓴다.
 export { AttachmentRow } from './patterns/AttachmentRow'
 export type { AttachmentRowProps } from './patterns/AttachmentRow'

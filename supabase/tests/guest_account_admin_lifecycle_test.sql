@@ -25,7 +25,7 @@ select set_config(
 
 select lives_ok(
   $$select public.create_guest_account(
-      '수동 게스트', 'manual-guest@example.test', '01020000002', null, null
+      '수동 게스트', 'manual-guest@example.test', '01020000002', null, null, '수동 소속'
     )$$,
   '일반 내부 사용자는 원장 연결 없이 GUEST 계정을 생성할 수 있다'
 );
@@ -39,7 +39,7 @@ select is(
 
 select is(
   (select count(*)::int
-     from public.guest_accounts_list(null, 50, 0, null, null, false)
+     from public.guest_accounts_list(null, 50, 0, null, false)
     where name = '수동 게스트'),
   1,
   '일반 사용자는 방금 생성한 미연결 임시 계정을 목록에서 조회한다'
@@ -47,7 +47,7 @@ select is(
 
 select lives_ok(
   $$select public.create_guest_account(
-      '수동 게스트', 'MANUAL-GUEST@example.test', '01020000002', null, null
+      '수동 게스트', 'MANUAL-GUEST@example.test', '01020000002', null, null, '수동 소속'
     )$$,
   '같은 이메일과 같은 이름의 재시도는 기존 계정을 재사용한다'
 );
@@ -60,7 +60,7 @@ select is(
 
 select throws_ok(
   $$select public.create_guest_account(
-      '다른 사람', 'manual-guest@example.test', '01020000003', null, null
+      '다른 사람', 'manual-guest@example.test', '01020000003', null, null, '수동 소속'
     )$$,
   '23505', null,
   '같은 이메일인데 이름이 다른 계정 생성은 거부한다'
@@ -69,18 +69,18 @@ select throws_ok(
 select lives_ok(
   $$select public.create_guest_account(
       '원장 대표', 'ledger-guest@example.test', '01020000001',
-      'startups', '98200000-0000-0000-0000-000000000001'
+      'startups', '98200000-0000-0000-0000-000000000001', 'Ledger affiliation'
     )$$,
   '워크스페이스 생성도 같은 중앙 함수에서 원장 인격을 연결한다'
 );
 
 select is(
   (select count(*)::int
-     from public.guest_identities gi
-     join public.users u on u.id = gi.user_id
-    where gi.master_table = 'startups'
-      and gi.master_id = '98200000-0000-0000-0000-000000000001'
-      and u.email = 'ledger-guest@example.test'),
+     from public.users u
+    where u.email = 'ledger-guest@example.test'
+      and u.phone is null
+      and u.company_id is null
+      and u.user_type = 'temporary_guest'),
   1,
   '원장 기반 생성 결과에 guest_identities가 정확히 한 건 생긴다'
 );
@@ -95,7 +95,7 @@ select set_config(
 );
 select throws_ok(
   $$select public.create_guest_account(
-      '게스트가 만든 계정', 'nested-guest@example.test', '01020000004', null, null
+      '게스트가 만든 계정', 'nested-guest@example.test', '01020000004', null, null, '게스트 소속'
     )$$,
   '42501', null,
   'GUEST는 다른 GUEST 계정을 만들 수 없다'
@@ -163,11 +163,11 @@ select throws_ok(
 
 select lives_ok(
   $$select public.create_guest_account(
-      '일괄 계정 A', 'bulk-guest-a@example.test', '01020000005', null, null
+      '일괄 계정 A', 'bulk-guest-a@example.test', '01020000005', null, null, '일괄 소속'
     )
     union all
     select public.create_guest_account(
-      '일괄 계정 B', 'bulk-guest-b@example.test', '01020000006', null, null
+      '일괄 계정 B', 'bulk-guest-b@example.test', '01020000006', null, null, '일괄 소속'
     )$$,
   '관리자는 일괄 작업용 GUEST 계정을 생성할 수 있다'
 );

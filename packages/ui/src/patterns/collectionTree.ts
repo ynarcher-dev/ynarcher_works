@@ -21,6 +21,15 @@ export interface CollectionTreeNode {
   /** 같은 부모 안에서의 순서. */
   sort_order: number
   is_required?: boolean
+  /** 이름 옆에 곁들이는 설명 한 줄(원장의 안내 문구). 길면 화면이 말줄임한다. */
+  description?: string | null
+  /**
+   * 그 마디에 **딸려 온 자료**가 있는가(담당자가 붙인 양식·견본). 참이면 이름 뒤에 클립이 선다.
+   *
+   * 건수가 아니라 있고 없음만 받는다 — 줄에서 답할 물음은 "열어 볼 것이 있는가" 하나이고,
+   * 몇 건인지는 줄을 눌러 연 화면이 답한다.
+   */
+  has_files?: boolean
 }
 
 export interface CollectionTreeRow {

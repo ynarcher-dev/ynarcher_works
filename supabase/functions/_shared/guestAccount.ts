@@ -39,8 +39,7 @@ export interface GuestAccount {
   user_type: string
   name: string
   email: string | null
-  phone: string | null
-  company_id: string | null
+  affiliation: string | null
   session_version: number
 }
 
@@ -55,8 +54,6 @@ export interface GuestParticipation {
   participant_id: string
   program_id: string
   entity_key: ProgramEntityKey
-  master_table: string | null
-  master_id: string | null
   /**
    * 이 맥락 게스트의 접근 종료(2026-09-05부터 **본체 원장**의 guest_access_ends_at).
    * 참여 줄이 아니라 사업·조합이 갖는 값이라, 같은 맥락의 두 줄은 같은 값을 본다.
@@ -64,9 +61,16 @@ export interface GuestParticipation {
   access_ends_at: string | null
   code: string | null
   title: string
+  /**
+   * 사업(조합) 기간 — 목록 줄이 세우는 값이다(2026-09-14 사용자 지정). 참여 줄이 아니라
+   * 본체가 갖는 값이라 같은 맥락의 두 줄은 같은 기간을 본다. 없으면 null이며 화면은
+   * 아는 쪽만 세운다(지어내지 않는다).
+   */
+  start_date: string | null
+  end_date: string | null
 }
 
-const ACCOUNT_COLS = 'id, user_type, name, email, phone, company_id, session_version'
+const ACCOUNT_COLS = 'id, user_type, name, email, affiliation, session_version'
 
 /**
  * 이메일로 살아 있는 게스트 계정을 찾는다.
@@ -215,7 +219,7 @@ export async function loadParticipations(
   const now = Date.now()
   const { data } = await db
     .from('program_participants')
-    .select('id, program_id, entity_key, master_table, master_id')
+    .select('id, program_id, entity_key')
     .eq('user_id', userId)
     .in('login_status', OPEN_STATUSES)
 
@@ -223,8 +227,6 @@ export async function loadParticipations(
     id: string
     program_id: string
     entity_key: string
-    master_table: string | null
-    master_id: string | null
   }[]
   if (rows.length === 0) return []
 
@@ -244,7 +246,16 @@ export async function loadParticipations(
   // 제목 칸과 죽은 상태의 값은 원장마다 다르므로 `programLedger`가 답한다(조합의 제목은
   // `name`이고 죽은 상태는 해산 하나다). 여기서 다시 적으면 원장을 하나 더 여는 날
   // 이 파일과 그 파일이 서로 다른 규칙을 갖는다.
-  const live = new Map<string, { code: string | null; title: string; accessEndsAt: string | null }>()
+  const live = new Map<
+    string,
+    {
+      code: string | null
+      title: string
+      accessEndsAt: string | null
+      startDate: string | null
+      endDate: string | null
+    }
+  >()
   for (const [table, ids] of byLedger) {
     const { data: progs } = await db
       .from(table)
@@ -255,12 +266,20 @@ export async function loadParticipations(
       code: string | null
       title: string
       status: string
+      start_date: string | null
+      end_date: string | null
       deleted_at: string | null
       guest_access_ends_at: string | null
     }[]) {
       if (p.deleted_at || isDeadProgram(table, p.status)) continue
       if (p.guest_access_ends_at && new Date(p.guest_access_ends_at).getTime() <= now) continue
-      live.set(p.id, { code: p.code, title: p.title, accessEndsAt: p.guest_access_ends_at })
+      live.set(p.id, {
+        code: p.code,
+        title: p.title,
+        accessEndsAt: p.guest_access_ends_at,
+        startDate: p.start_date,
+        endDate: p.end_date,
+      })
     }
   }
 
@@ -270,11 +289,11 @@ export async function loadParticipations(
       participant_id: r.id,
       program_id: r.program_id,
       entity_key: r.entity_key as ProgramEntityKey,
-      master_table: r.master_table,
-      master_id: r.master_id,
       access_ends_at: live.get(r.program_id)!.accessEndsAt,
       code: live.get(r.program_id)!.code,
       title: live.get(r.program_id)!.title,
+      start_date: live.get(r.program_id)!.startDate,
+      end_date: live.get(r.program_id)!.endDate,
     }))
     .sort((a, b) => a.title.localeCompare(b.title, 'ko'))
 }
@@ -286,7 +305,7 @@ export interface GuestSessionPayload {
     user_type: string
     name: string
     email: string | null
-    company_id: string | null
+    affiliation: string | null
   }
   context: {
     participant_id: string
@@ -294,8 +313,6 @@ export interface GuestSessionPayload {
     entity_key: string
     code: string | null
     title: string
-    /** 이 맥락의 자격 — startups(참가기업) | networks(참가전문가). 화면을 가르는 축이다. */
-    persona: string | null
     access_ends_at: string | null
   }
 }
@@ -365,7 +382,7 @@ export async function issueSession(
       user_type: account.user_type,
       name: account.name,
       email: account.email,
-      company_id: account.company_id,
+      affiliation: account.affiliation,
     },
     context: {
       participant_id: participation.participant_id,
@@ -373,7 +390,6 @@ export async function issueSession(
       entity_key: participation.entity_key,
       code: participation.code,
       title: participation.title,
-      persona: participation.master_table,
       access_ends_at: participation.access_ends_at,
     },
   }
@@ -383,7 +399,7 @@ export async function issueSession(
  * 단명 티켓도 계정의 세션 판(session_version)에 묶는다.
  *
  * 세션 JWT는 처음부터 판을 실어 검증했지만(guestSession.ts), 선택·설정 티켓은 `sub`만
- * 실어 발급자 쪽 사실을 하나도 담지 않았다. 그래서 ADMIN이 연락처를 고치거나 비밀번호를
+ * 실어 발급자 쪽 사실을 하나도 담지 않았다. 그래서 ADMIN이 이메일을 고치거나 비밀번호를
  * 초기화해 판을 올린 뒤에도, 그 직전에 나간 티켓이 남은 수명(10분) 동안 그대로 통했다 —
  * 초기화가 죽여야 하는 것은 세션만이 아니라 **"곧 비밀번호를 정하러 올 사람"의 자리**다.
  * 발급 시점의 판을 싣고 회수 시점에 다시 대조하면 그 재생이 닫힌다.
@@ -469,7 +485,7 @@ export type ResetIssue =
  * 재설정 링크 토큰을 **조건부로** 저장한다.
  *
  * `expectedSessionVersion`은 호출자가 **수신처를 읽은 그 계정**의 판이다. 그 사이에 ADMIN이
- * 이메일을 고치면(연락처 수정은 판을 올리고 살아 있는 링크를 비운다) 저장이 거절되고,
+ * 이메일을 고치면(이메일 수정은 판을 올리고 살아 있는 링크를 비운다) 저장이 거절되고,
  * 그래서 옛 주소로 링크가 나가지 않는다 — 발송은 저장이 성공한 뒤에만 한다.
  */
 export async function issueGuestResetToken(
@@ -563,7 +579,7 @@ export async function loadAccount(
   return account
 }
 
-/** 목록 응답용 축약형(비밀번호·연락처를 싣지 않는다). */
+/** 목록 응답용 축약형(계정 개인정보를 싣지 않는다). */
 export function toChoice(p: GuestParticipation) {
   return {
     participantId: p.participant_id,
@@ -571,7 +587,8 @@ export function toChoice(p: GuestParticipation) {
     entityKey: p.entity_key,
     code: p.code,
     title: p.title,
-    persona: p.master_table,
     accessEndsAt: p.access_ends_at,
+    startDate: p.start_date,
+    endDate: p.end_date,
   }
 }

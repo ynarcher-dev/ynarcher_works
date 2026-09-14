@@ -243,6 +243,7 @@ export function useUpdateEmployee() {
       void qc.invalidateQueries({ queryKey: ['management', 'employees-page'] })
       void qc.invalidateQueries({ queryKey: ['management', 'employees'] })
       void qc.invalidateQueries({ queryKey: ['management', 'employee', v.id] })
+      void qc.invalidateQueries({ queryKey: ['hub', 'birthdays'] })
     },
   })
 }
@@ -284,6 +285,7 @@ export function useCreateEmployee() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['management', 'employees-page'] })
       void qc.invalidateQueries({ queryKey: ['management', 'employees'] })
+      void qc.invalidateQueries({ queryKey: ['hub', 'birthdays'] })
     },
   })
 }
@@ -326,6 +328,7 @@ export function useUpdateEmployeeBirthDate() {
     },
     onSuccess: (_data, v) => {
       void qc.invalidateQueries({ queryKey: ['management', 'employee-hr-profile', v.userId] })
+      void qc.invalidateQueries({ queryKey: ['hub', 'birthdays'] })
     },
   })
 }
@@ -379,6 +382,7 @@ export function useDeactivateEmployee() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['management', 'employees-page'] })
       void qc.invalidateQueries({ queryKey: ['management', 'employees'] })
+      void qc.invalidateQueries({ queryKey: ['hub', 'birthdays'] })
     },
   })
 }

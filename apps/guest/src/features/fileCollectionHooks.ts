@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { FILE_COLLECTION_NODE_ATTACHMENT_TYPE } from '@ynarcher/master-data'
 import type {
   FileCollectionAssignmentDto,
   FileCollectionCommentDto,
@@ -22,6 +23,7 @@ import type {
   FileCollectionResponseDto,
 } from '@ynarcher/master-data'
 import { useGuestStore } from '@/auth/guestStore'
+import type { GuestFile } from '@/features/moduleHooks'
 import { useGuestClient } from '@/lib/useGuestClient'
 import {
   FILE_ENDPOINT,
@@ -299,6 +301,58 @@ export function useCollectionNodes(scope: FileCollectionScope, collectionId: str
           .order('id', { ascending: true })
           .range(from, to),
       ),
+  })
+}
+
+/**
+ * 문항에 딸린 **담당자 자료**(양식·견본) — 문항 id → 건수.
+ *
+ * 내가 올린 파일(`file_collection_files`)과 방향이 반대인 자료라 원장도 다르다(공용
+ * `attachments`). 볼 수 있는 범위는 화면이 아니라 RLS가 정한다 — 내 배정이 있는 파일받기의
+ * 문항만 돌아온다(`attachments_fc_node_guest_select`).
+ *
+ * 문항 id를 묶어 묻지 않고 모듈 한 칸으로 묻는다 — 문항이 수백 개여도 조회는 하나다.
+ */
+export function useNodeFileCounts(scope: FileCollectionScope) {
+  const client = useGuestClient()
+  const moduleId = scope.moduleId
+  return useQuery({
+    queryKey: [...scope.key, 'node-file-counts'],
+    enabled: Boolean(client && moduleId),
+    queryFn: async (): Promise<Record<string, number>> => {
+      const rows = await fetchAllRows<{ target_id: string }>('node-files', (from, to) =>
+        client!
+          .from('attachments')
+          .select('target_id, id')
+          .eq('target_type', FILE_COLLECTION_NODE_ATTACHMENT_TYPE)
+          .eq('program_module_id', moduleId)
+          .order('id', { ascending: true })
+          .range(from, to),
+      )
+      const counts: Record<string, number> = {}
+      for (const row of rows) counts[row.target_id] = (counts[row.target_id] ?? 0) + 1
+      return counts
+    },
+  })
+}
+
+/** 문항 하나에 붙은 담당자 자료 목록(최신순). 내려받기는 파일첨부 모듈과 같은 통로를 쓴다. */
+export function useNodeFiles(scope: FileCollectionScope, nodeId: string | undefined) {
+  const client = useGuestClient()
+  return useQuery({
+    queryKey: [...scope.key, 'node-files', nodeId ?? null],
+    enabled: Boolean(client && nodeId),
+    queryFn: async (): Promise<GuestFile[]> => {
+      const { data, error } = await client!
+        .from('attachments')
+        .select('id, file_name, content_type, byte_size, created_at')
+        .eq('target_type', FILE_COLLECTION_NODE_ATTACHMENT_TYPE)
+        .eq('target_id', nodeId)
+        .order('created_at', { ascending: false })
+        .limit(100)
+      if (error) throw error
+      return (data ?? []) as unknown as GuestFile[]
+    },
   })
 }
 

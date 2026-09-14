@@ -95,7 +95,6 @@ export function ModuleHeaderCard({
     return rows.some((m) => m.role === 'PM') ? 'PM' : '멤버'
   }
   const meta = MODULE_META[mod.module_type]
-  const Icon = meta?.icon
   const status = moduleStatusMeta(mod.status)
   const settings = readModuleSettings(mod.settings)
   const linkOpen = Boolean(openLinkIds?.has(mod.id))
@@ -131,9 +130,18 @@ export function ModuleHeaderCard({
       <Card
         title={
           <span className="flex min-w-0 items-center gap-2">
-            {Icon && (
-              <span className="grid size-7 shrink-0 place-items-center rounded-radius-sm bg-gray-50 text-gray-600">
-                <Icon className="size-4" />
+            {/*
+              머리의 표식은 **개요 보드와 같은 이모지**다(2026-09-14 사용자 지정). 종전에는 같은
+              모듈이 보드에서는 이모지로, 열고 들어오면 선 아이콘으로 서서 방금 누른 줄과 지금
+              열린 화면이 다른 그림으로 읽혔다. 상자(회색 바탕·둥근 모서리)는 그대로 두고 안에
+              드는 것만 바꾼다 — 자리는 화면의 규격이고 그림은 모듈의 것이다(`MODULE_META`).
+            */}
+            {meta?.emoji && (
+              <span
+                aria-hidden
+                className="grid size-7 shrink-0 place-items-center rounded-radius-sm bg-gray-50 text-sm leading-none"
+              >
+                {meta.emoji}
               </span>
             )}
             <span className="truncate">{name}</span>
@@ -194,7 +202,7 @@ export function ModuleHeaderCard({
         </InfoGrid>
 
         {/*
-          담당자는 라벨:값 한 줄에서 구분선 아래 세 칸(역할·이름·업무롤)으로 내려왔다(2026-09-06).
+          담당자는 라벨:값 한 줄에서 구분선 아래 세 칸(역할·이름·주요 업무)으로 내려왔다(2026-09-06).
           이름만 쉼표로 잇던 동안 두 사람이 걸린 모듈에서 누가 무엇을 맡았는지를 화면이 답하지
           못했다 — 그래서 사람마다 한 줄을 준다. 구분선·라벨 규격은 `EntityHeaderSection`이
           소유한다(사업·기업 상세의 '담당자' 섹션과 같은 자리다).
@@ -208,20 +216,20 @@ export function ModuleHeaderCard({
                모양이 되면, 사업 담당자에서 빠지며 함께 비워진 모듈을 아무도 알아채지 못한다. */
             <p className={tableText.body}>
               <span className="text-warning">담당자가 지정되지 않았습니다.</span> 오른쪽 위
-              ‘설정’에서 담당자와 업무롤을 지정하세요.
+              ‘설정’에서 담당자와 주요 업무를 지정하세요.
             </p>
           ) : (
             <div className="grid grid-cols-[4rem_7rem_minmax(0,1fr)] gap-x-3 gap-y-1.5">
               <span className={tableText.head}>역할</span>
               <span className={tableText.head}>이름</span>
-              <span className={tableText.head}>업무롤</span>
+              <span className={tableText.head}>주요 업무</span>
               {mod.assignees.map((a) => (
                 <div key={a.user_id} className="contents">
                   <span className={tableText.body}>{roleLabelOf(a.user_id)}</span>
                   <span className={cn(tableText.primary, 'truncate')}>
                     {a.user?.name ?? '이름 미상'}
                   </span>
-                  {/* 안 적힌 업무롤은 하이픈으로 물러난다 — '아직 안 정했다'가 값처럼 읽히면 안 된다. */}
+                  {/* 안 적힌 주요 업무는 하이픈으로 물러난다 — '아직 안 정했다'가 값처럼 읽히면 안 된다. */}
                   <span className={cn(tableText.body, 'min-w-0')}>
                     {a.duty?.trim() || <span className={tableText.empty}>-</span>}
                   </span>

@@ -21,3 +21,12 @@ export function useAuthStore<T>(selector: (state: { user: MockUser }) => T): T {
 export function hasWorkspaceWrite(_user: unknown, _workspaceKey: string): boolean {
   return scenario.canWrite
 }
+
+/**
+ * 읽기 권한. `GUEST 계정 생성`의 `데이터베이스 연결` 칸은 이 값이 거짓이면 입력칸 대신 한 줄
+ * 문구로 바뀌므로, 7번째 트랙의 두 모습을 모두 재려면 주소로 갈릴 수 있어야 한다
+ * (`?canRead=0`). 기본은 참이다 — 화면에서 감추는 것은 인가가 아니다(서버가 판정한다).
+ */
+export function hasWorkspaceRead(_user: unknown, _workspaceKey: string): boolean {
+  return new URLSearchParams(globalThis.location?.search ?? '').get('canRead') !== '0'
+}

@@ -209,7 +209,7 @@ export function useSetProgramStaffing() {
 export interface ModuleAssignee {
   user_id: string
   /**
-   * 이 모듈에서 하는 일(업무롤) 한 줄. **역할(PM·멤버)은 여기 없다** — 그것은 사업 담당자
+   * 이 모듈에서 하는 일(주요 업무) 한 줄. **역할(PM·멤버)은 여기 없다** — 그것은 사업 담당자
    * 원장(`program.managers`)이 이미 아는 사실이라 복제하지 않는다(2026-09-06).
    */
   duty: string | null

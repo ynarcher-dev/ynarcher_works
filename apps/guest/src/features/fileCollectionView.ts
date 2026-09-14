@@ -8,10 +8,10 @@
 
 import {
   assignmentProgress,
-  descendantIdsOf,
+  fileCollectionStatusLabel,
   filesByRound,
-  fractionText,
   questionNodes,
+  siblingsOf,
   type FileCollectionFileDto,
   type FileCollectionNodeDto,
   type FileCollectionResponseDto,
@@ -36,6 +36,22 @@ export function writeStateOfModule(moduleStatus: string | null | undefined): Wri
     return { writable: false, reason: '마감된 요청입니다. 낸 자료와 피드백은 계속 볼 수 있습니다.' }
   }
   return { writable: false, reason: '아직 열리지 않은 요청입니다.' }
+}
+
+/**
+ * 참여자에게 보이는 상태말 — **작성 중(`DRAFT`)은 미제출로 읽는다**(2026-09-14 사용자 지정).
+ *
+ * 파일을 올려 두기만 한 문항도 담당자에게 가지 않았으므로 참여자가 할 일은 미제출과 같다.
+ * 진행 요약이 이미 둘을 한 칸에 세고 있어(`guestProgressSummary`), 표의 배지만 다른 말을 하면
+ * 같은 화면이 같은 문항을 두 이름으로 부른다.
+ *
+ * WORKS 관제는 종전대로 다섯 상태를 가른다(`fileCollectionStatusLabel`) — 담당자에게는 '손도
+ * 대지 않은 대상'과 '쓰다 만 대상'이 다른 독촉을 보낼 자리다. 그래서 원장의 상태말을 고치지
+ * 않고 **이 화면에서만** 접는다.
+ */
+export function guestStatusLabel(status: string | null | undefined): string {
+  if (status === 'DRAFT') return fileCollectionStatusLabel('NOT_SUBMITTED')
+  return fileCollectionStatusLabel(status)
 }
 
 /** 문항별 응답 칸을 문항 id로 찾기 좋게 묶는다. */
@@ -80,8 +96,6 @@ export interface QuestionControls {
   canUpload: boolean
   canSubmit: boolean
   canComment: boolean
-  /** 못 하는 이유 한 줄(할 수 있으면 `null`). 버튼 옆에 그대로 선다. */
-  blockedReason: string | null
   /** 제출만 막힌 이유(올릴 수는 있는데 아직 낼 것이 없는 경우). */
   submitHint: string | null
 }
@@ -128,23 +142,21 @@ export function questionControls(input: {
   const openStatus = OPEN_STATUS.includes(status)
   const hasResponse = Boolean(response)
 
-  let blockedReason: string | null = null
-  if (!write.writable) blockedReason = write.reason
-  else if (!hasResponse) blockedReason = '아직 이 문항의 제출 칸이 열리지 않았습니다.'
-  else if (status === 'SUBMITTED') blockedReason = '제출한 문항입니다. 담당자의 검토를 기다리는 중입니다.'
-  else if (status === 'APPROVED') blockedReason = '완료된 문항입니다.'
+  // 상태를 문장으로 다시 적지 않는다(2026-09-14 사용자 지정) — 문항이 어디에 있는지는 상태
+  // 배지가, 마감된 요청이라는 사실은 모듈 화면이 각각 한 번씩 말한다. 여기서 한 줄 더 만들면
+  // 같은 사실이 세 자리에 살고, 그중 하나만 고쳐지는 날이 온다.
 
   const canUpload = write.writable && hasResponse && openStatus
   const canSubmit = canUpload && currentFiles.length > 0
   // 코멘트는 제출 뒤에도 남길 수 있다 — 검토 중에 설명을 덧붙이는 것이 이 칸의 쓸모다.
   const canComment = write.writable && hasResponse
 
+  // 낼 것이 없다는 말은 적지 않는다(2026-09-14 사용자 지정) — 받는 상자가 바로 위에 서 있고
+  // '제출 파일'이 비어 있다고 이미 말하므로, 한 줄 더 두면 같은 사실이 세 번 선다. 다만
+  // **올리다 끊긴 파일**은 다르다: 올려 둔 것이 있는데 제출이 막히는 이유는 화면 어디에도 없다.
   let submitHint: string | null = null
-  if (canUpload && currentFiles.length === 0) {
-    submitHint =
-      pendingFiles.length > 0
-        ? '아직 확인되지 않은 파일이 있습니다. 확인이 끝난 파일이 하나도 없으면 제출할 수 없습니다.'
-        : '제출할 파일을 먼저 올려 주십시오.'
+  if (canUpload && currentFiles.length === 0 && pendingFiles.length > 0) {
+    submitHint = '아직 확인되지 않은 파일이 있습니다. 확인이 끝난 파일이 하나도 없으면 제출할 수 없습니다.'
   }
 
   return {
@@ -156,56 +168,60 @@ export function questionControls(input: {
     canUpload,
     canSubmit,
     canComment,
-    blockedReason,
     submitHint,
   }
 }
 
 /**
  * 이 파일을 내릴 수 있는가. 서버(`file_collection_remove_file`)와 같은 조건이다 —
- * 쓰기 가능 · 미제출 상태 · **현재 회차**. 지난 회차의 제출물은 누구도 지우지 못한다.
+ * 쓰기 가능 · **문항이 아직 이쪽 손에 있는 상태**(미제출·작성 중·보완 요청).
+ *
+ * 회차는 보지 않는다(2026-09-14 사용자 지정). 보완 요청은 회차를 올리므로, 회차로 가르면
+ * 보완을 받은 사람이 **잘못 낸 자료를 스스로 치우지 못한다** — 화면에 남은 것은 내려받기뿐이고
+ * 지울 길이 어디에도 없었다. 검토 중(SUBMITTED)·완료(APPROVED)에서 못 내리는 것은 그대로다.
  */
 export function canRemoveFile(input: {
   file: Pick<FileCollectionFileDto, 'round'>
   response: FileCollectionResponseDto | null | undefined
   write: WriteState
 }): boolean {
-  const { file, response, write } = input
+  const { response, write } = input
   if (!write.writable || !response) return false
-  if (!OPEN_STATUS.includes(response.status)) return false
-  return file.round === response.round
-}
-
-/** 폴더 줄에 서는 한 칸 — 그 아래 문항 중 이미 낸 것(검토 대기·완료)의 비율. */
-export function folderProgressText(
-  nodes: readonly FileCollectionNodeDto[],
-  byNode: Map<string, FileCollectionResponseDto>,
-  folderId: string,
-): string {
-  const ids = new Set(descendantIdsOf(nodes, folderId))
-  const questions = questionNodes(nodes).filter((n) => ids.has(n.id))
-  const done = questions.filter((n) => {
-    const status = statusOfNode(byNode, n.id)
-    return status === 'SUBMITTED' || status === 'APPROVED'
-  }).length
-  return fractionText(done, questions.length)
+  return OPEN_STATUS.includes(response.status)
 }
 
 export interface GuestProgressSummary {
-  /** 문항 수와 그중 이미 낸 것(검토 대기 + 완료). */
-  submittedText: string
-  /** 필수 문항 완료 비율. 필수가 없으면 `-`. */
-  requiredText: string
-  /** 보완 요청을 받은 문항 수. */
-  rework: number
-  /** 아직 손대지 않은 문항 수. */
-  notSubmitted: number
+  /** 문항 수 — 분모는 언제나 문항이며 폴더는 세지 않는다. */
   total: number
+  /** 필수 문항 수. */
+  requiredTotal: number
+  /**
+   * 아직 내지 않은 문항 — 손대지 않은 것과 파일만 올려 둔 것을 함께 센다.
+   *
+   * 둘을 가르지 않는 이유는 참여자가 할 일이 같기 때문이다(2026-09-14 사용자 지정). 올려 두기만
+   * 한 문항도 담당자에게 가지 않았으므로 남은 일이며, 두 칸으로 갈라 놓으면 '무엇이 몇 개
+   * 남았는가'를 두 수를 더해 읽어야 한다. 무엇이 올라가 있고 무엇이 비어 있는지는 문항 표의
+   * 상태 배지가 문항마다 답한다.
+   */
+  notSubmitted: number
+  /** 보완 요청을 받은 문항. */
+  rework: number
+  /** 내고 담당자의 검토를 기다리는 문항. */
+  submitted: number
+  /** 담당자의 확인이 끝난 문항. */
+  approved: number
 }
 
 /**
- * 내 진행 상태 한 줄. **내 것만** 센다 — 대상이 몇 명인지, 다른 사람이 어디까지 냈는지는
- * 이 화면이 답하지 않는다(조회 자체가 RLS에서 막힌다).
+ * 내 진행 상태 카드보드가 읽는 값. **내 것만** 센다 — 대상이 몇 명인지, 다른 사람이 어디까지
+ * 냈는지는 이 화면이 답하지 않는다(조회 자체가 RLS에서 막힌다).
+ *
+ * 구성(총·필수)과 상태(미제출·검토 대기·보완·완료)를 갈라 내놓는다. 종전에는 `1/3`·`0/2` 같은
+ * 분수만 서 있었는데 분모가 칸마다 달라(문항 수인지 필수 수인지) "무엇이 몇 개 남았는가"를
+ * 읽으려면 눈으로 두 번 계산해야 했다.
+ *
+ * `SUBMITTED`는 완료에 흡수시키지 않고 제 칸(`검토 대기`)으로 선다 — 표의 배지가 '검토 대기'라고
+ * 말하는 문항을 요약이 완료로 세면 두 자리가 같은 문항을 다르게 읽는다.
  */
 export function guestProgressSummary(
   nodes: readonly FileCollectionNodeDto[],
@@ -214,10 +230,127 @@ export function guestProgressSummary(
 ): GuestProgressSummary {
   const progress = assignmentProgress(questionNodes(nodes), responses, assignmentId)
   return {
-    submittedText: fractionText(progress.submitted + progress.approved, progress.total),
-    requiredText: fractionText(progress.requiredApproved, progress.requiredTotal),
-    rework: progress.rework,
-    notSubmitted: progress.notSubmitted,
     total: progress.total,
+    requiredTotal: progress.requiredTotal,
+    notSubmitted: progress.notSubmitted + progress.draft,
+    rework: progress.rework,
+    submitted: progress.submitted,
+    approved: progress.approved,
   }
+}
+
+// ---------------------------------------------------------------------------
+// 목록 다루기 — 검색과 쪽 나눔 (2026-09-14 사용자 지정)
+// ---------------------------------------------------------------------------
+
+/** 검색어 정규화 — 앞뒤 공백을 버리고 대소문자를 접는다. */
+function normalize(value: string): string {
+  return value.trim().toLowerCase()
+}
+
+/**
+ * 이름·안내 문구로 문항을 좁힌다.
+ *
+ * **걸린 줄의 조상을 함께 남긴다.** 트리에서 자식만 남기면 그 줄이 어느 묶음에 속했는지가
+ * 사라지고, 화면 부품은 부모를 찾지 못한 줄을 '상위 항목 없음'으로 표시한다 — 검색했을 뿐인데
+ * 원장이 망가진 것처럼 보인다. 반대로 **묶음이 걸리면 그 아래는 통째로 남긴다**: 폴더 이름으로
+ * 찾는 사람은 그 안의 목록을 보려는 것이다.
+ */
+export function filterCollectionNodes(
+  nodes: readonly FileCollectionNodeDto[],
+  query: string,
+): FileCollectionNodeDto[] {
+  const needle = normalize(query)
+  if (!needle) return [...nodes]
+
+  const byId = new Map(nodes.map((n) => [n.id, n]))
+  const hit = (n: FileCollectionNodeDto) =>
+    normalize(n.title).includes(needle) || normalize(n.guide ?? '').includes(needle)
+
+  const keep = new Set<string>()
+  const keepAncestors = (node: FileCollectionNodeDto) => {
+    let parentId = node.parent_id
+    // 순환 참조가 원장에 남아 있어도 멈춘다 — 본 적 있는 마디를 다시 만나면 그만둔다.
+    const seen = new Set<string>([node.id])
+    while (parentId && !seen.has(parentId)) {
+      seen.add(parentId)
+      const parent = byId.get(parentId)
+      if (!parent) break
+      keep.add(parent.id)
+      parentId = parent.parent_id
+    }
+  }
+
+  const matchedFolders: string[] = []
+  for (const node of nodes) {
+    if (!hit(node)) continue
+    keep.add(node.id)
+    keepAncestors(node)
+    if (node.node_type === 'FOLDER') matchedFolders.push(node.id)
+  }
+
+  // 걸린 묶음의 자손을 모두 끌어온다(깊이 제한 없이, 같은 줄을 두 번 밟지 않는다).
+  const children = new Map<string, FileCollectionNodeDto[]>()
+  for (const node of nodes) {
+    const list = children.get(node.parent_id ?? '') ?? []
+    list.push(node)
+    children.set(node.parent_id ?? '', list)
+  }
+  const stack = [...matchedFolders]
+  while (stack.length > 0) {
+    const id = stack.pop()!
+    for (const child of children.get(id) ?? []) {
+      if (keep.has(child.id)) continue
+      keep.add(child.id)
+      stack.push(child.id)
+    }
+  }
+
+  return nodes.filter((n) => keep.has(n.id))
+}
+
+/** 한 쪽에 담은 결과. */
+export interface CollectionPage {
+  nodes: FileCollectionNodeDto[]
+  /** 전체 쪽 수(비어 있어도 1). */
+  pageCount: number
+  /** 실제로 보여 준 쪽(범위를 벗어난 요청은 마지막 쪽으로 당긴다). */
+  page: number
+}
+
+/**
+ * 최상위 묶음 단위로 쪽을 나눈다.
+ *
+ * **가지 중간을 자르지 않는다** — 줄 수로 자르면 자식만 다음 쪽으로 넘어가 부모 없는 줄이
+ * 생기고, 한 묶음을 보려면 쪽을 넘겨 가며 이어 붙여야 한다. 그래서 자르는 단위는 줄이 아니라
+ * 최상위 마디이며, 한 묶음은 언제나 한 쪽 안에 통째로 선다.
+ */
+export function pageCollectionNodes(
+  nodes: readonly FileCollectionNodeDto[],
+  page: number,
+  size: number,
+): CollectionPage {
+  const roots = siblingsOf(nodes, null)
+  const pageCount = Math.max(1, Math.ceil(roots.length / size))
+  const safePage = Math.min(Math.max(page, 0), pageCount - 1)
+  const visible = new Set(roots.slice(safePage * size, (safePage + 1) * size).map((n) => n.id))
+
+  // 보이는 뿌리의 자손을 따라 내려가며 담는다.
+  const children = new Map<string, FileCollectionNodeDto[]>()
+  for (const node of nodes) {
+    const list = children.get(node.parent_id ?? '') ?? []
+    list.push(node)
+    children.set(node.parent_id ?? '', list)
+  }
+  const stack = [...visible]
+  while (stack.length > 0) {
+    const id = stack.pop()!
+    for (const child of children.get(id) ?? []) {
+      if (visible.has(child.id)) continue
+      visible.add(child.id)
+      stack.push(child.id)
+    }
+  }
+
+  return { nodes: nodes.filter((n) => visible.has(n.id)), pageCount, page: safePage }
 }

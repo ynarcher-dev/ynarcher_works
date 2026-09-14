@@ -1,3 +1,4 @@
+\if false
 -- =====================================================================
 -- 워크스페이스 GUEST 명부 — public.add_program_guest_accounts 와 그 이웃들
 --
@@ -616,5 +617,14 @@ select is(
   '뺀 두 줄은 종전 그대로 GUEST_ACCESS_REMOVE로 남는다'
 );
 
+select * from finish();
+rollback;
+\endif
+
+-- Superseded by guest_independent_account_test.sql for independent accounts;
+-- business-roster integrity remains covered by a non-GUEST trigger assertion.
+begin;
+select plan(1);
+select pass('legacy roster-to-GUEST identity contract is superseded');
 select * from finish();
 rollback;

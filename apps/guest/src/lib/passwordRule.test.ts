@@ -33,9 +33,19 @@ describe('passwordRuleOk', () => {
     expect(passwordRuleOk('')).toBe(false)
   })
 
-  it('안내 문구가 규칙의 두 축(영문·숫자, 8자)을 모두 말한다', () => {
+  it('고정 개시 비밀번호를 그대로 다시 쓰지 못한다 — 대소문자는 접는다', () => {
+    // 서버 `passwordPolicyError`와 같은 경계다. 여기서 통과시키면 화면은 버튼을 열어 두고
+    // 서버가 400으로 거절해, 사용자는 이유 없는 실패를 보게 된다.
+    expect(passwordRuleOk('ynarcher')).toBe(false)
+    expect(passwordRuleOk('YnArcher')).toBe(false)
+    // 값을 포함하기만 한 비밀번호는 막지 않는다 — 금지는 '같은 값'까지다.
+    expect(passwordRuleOk('ynarcher2026')).toBe(true)
+  })
+
+  it('안내 문구가 규칙의 세 축(영문·숫자, 8자, 최초 비밀번호 금지)을 모두 말한다', () => {
     expect(PASSWORD_RULE_TEXT).toContain('영문')
     expect(PASSWORD_RULE_TEXT).toContain('숫자')
     expect(PASSWORD_RULE_TEXT).toContain('8자')
+    expect(PASSWORD_RULE_TEXT).toContain('최초 비밀번호')
   })
 })

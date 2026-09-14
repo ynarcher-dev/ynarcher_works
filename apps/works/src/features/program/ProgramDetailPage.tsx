@@ -176,7 +176,7 @@ export function ProgramDetailPage() {
               편이 낫다고 보았다. */}
           {moduleId && tab === 'file-collection' && (
             <ModuleNoticeSplit programId={id} moduleId={moduleId}>
-              <FileCollectionPanel programId={id} moduleId={moduleId} />
+              <FileCollectionPanel moduleId={moduleId} />
             </ModuleNoticeSplit>
           )}
           {moduleId && tab === 'recruitment' && (

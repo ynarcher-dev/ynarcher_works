@@ -71,23 +71,47 @@ export async function verifyPassword(password: string, stored: string | null): P
   }
 }
 
-/** 전화번호 표기 흔들림(하이픈·공백·국가번호 접두)을 흡수한 숫자열. */
-export function normalizePhone(raw: unknown): string {
-  return String(raw ?? '').replace(/\D/g, '')
+/**
+ * 개시 비밀번호 — ADMIN이 계정을 넘겨줄 때 오프라인으로 전달하는 **고정값**이다(3_9_1 §6).
+ *
+ * 이 값은 비밀이 아니다. 소스에도 안내문에도 남고, 게스트 계정이 있다는 것만 알면 누구나
+ * 짐작할 수 있다. **그래서** 이 값으로는 세션이 나가지 않는다 — 통과해도 얻는 것은 10분짜리
+ * 설정 티켓뿐이고, 본인이 비밀번호를 정한 순간 이 값은 그 계정에서 영영 죽는다(로그인
+ * 판정은 `guest_credentials.password_hash`가 비어 있을 때만 여기까지 온다).
+ *
+ * 종전에는 원장의 연락처(숫자만)가 이 자리였다. 연락처는 비밀이 아니면서 **사람마다 달라**
+ * 비밀처럼 보였고, 그 착시 때문에 번호가 없거나 바뀐 계정이 열리지 않는 문제가 따라왔다.
+ */
+export const INITIAL_GUEST_PASSWORD = 'ynarcher'
+
+/**
+ * 입력이 개시 비밀번호인가 — **글자 그대로 같을 때만** 참이다.
+ *
+ * 대소문자 접기도 공백 다듬기도 하지 않는다. 여기는 문을 **여는** 자리이므로 통하는 값이
+ * 몇 가지인지 셀 수 있어야 하고, 관대함은 곧 추측 가능한 값의 가짓수를 늘린다. 오타는
+ * 실패 카운터에 잡히면 그만이지만, 넓힌 판정은 어디까지 넓혔는지 아무도 세지 않는다.
+ */
+export function isInitialGuestPassword(input: unknown): boolean {
+  return input === INITIAL_GUEST_PASSWORD
 }
 
 /**
  * 새 비밀번호 규칙 — 영문+숫자 조합 8자 이상(특수문자는 자유). 외부 참여자가 쓰는
  * 자리라 이 이상의 복잡도는 요구하지 않는다 — 기억하지 못할 규칙은 결국 메모지에 적힌다.
  * 클라이언트 사전 검사(apps/guest/src/lib/passwordRule.ts)와 안내 문구를 함께 맞출 것.
+ *
+ * 개시 비밀번호를 그대로 다시 쓰는 것은 막는다. 이 검사만 **대소문자를 접는데**, 판정의
+ * 방향이 반대이기 때문이다 — 무엇이 문을 여는가는 좁게(`isInitialGuestPassword`는 완전
+ * 일치), 무엇을 금지하는가는 넓게 본다. 금지를 넓혀서 잃는 것은 후보 하나뿐이다.
+ *
+ * 순서상 조합 규칙보다 앞에 둔다. 뒤에 두면 `ynarcher`에는 숫자가 없어 조합 규칙에서 먼저
+ * 걸리고, 사용자는 "영문과 숫자를 모두 포함하세요"라는 **틀린 이유**를 듣게 된다.
  */
-export function passwordPolicyError(password: string, initialPassword: string): string | null {
+export function passwordPolicyError(password: string): string | null {
   const pw = String(password ?? '')
   if (pw.length < 8) return '비밀번호는 8자 이상이어야 합니다.'
   if (pw.length > 72) return '비밀번호는 72자 이하여야 합니다.'
+  if (pw.toLowerCase() === INITIAL_GUEST_PASSWORD) return '초기 비밀번호와 다른 값을 사용하세요.'
   if (!/[A-Za-z]/.test(pw) || !/\d/.test(pw)) return '영문과 숫자를 모두 포함해야 합니다.'
-  if (normalizePhone(pw) && normalizePhone(pw) === normalizePhone(initialPassword)) {
-    return '초기 비밀번호(연락처)와 다른 값을 사용하세요.'
-  }
   return null
 }

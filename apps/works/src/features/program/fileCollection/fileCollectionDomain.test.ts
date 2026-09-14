@@ -204,6 +204,38 @@ describe('관제 집계', () => {
     expect(covered).toBe(6)
   })
 
+  it('요약 카드보드의 사람 3분류는 낸 적이 있는가로만 갈린다', () => {
+    // a1: 낸 것 둘 + 미제출 하나, a2: 보완 요청 하나 + 작성 중 하나 + 미제출 하나,
+    // a4: 한 문항도 내지 않음(작성 중만), a5: 세 문항을 모두 냄.
+    const people = [...assignments, assignment('a4'), assignment('a5')]
+    const rows = [
+      ...responses,
+      response('a2', 'q2', 'DRAFT'),
+      response('a4', 'q1', 'DRAFT'),
+      response('a5', 'q1', 'APPROVED'),
+      response('a5', 'q2', 'REWORK_REQUESTED', 2),
+      response('a5', 'q3', 'SUBMITTED'),
+    ]
+    const summary = collectionSummary(nodes, people, rows)
+    expect(summary.targets).toBe(4)
+    // 작성 중은 아직 낸 것이 아니다 — a4만 미제출이다.
+    expect(summary.notStartedTargets).toBe(1)
+    expect(summary.inProgressTargets).toBe(2)
+    // 보완 요청·검토 대기도 이미 낸 것이라 a5는 제출 완료다(검토 결과와 무관하다).
+    expect(summary.completedSubmissionTargets).toBe(1)
+    expect(
+      summary.notStartedTargets + summary.inProgressTargets + summary.completedSubmissionTargets,
+    ).toBe(summary.targets)
+  })
+
+  it('문항이 하나도 없으면 아무도 제출 완료가 아니다', () => {
+    // 낼 것이 없는 모듈에서 전원이 '제출 완료'로 읽히면 숫자가 거짓말을 한다.
+    const summary = collectionSummary([node('f', null, 'FOLDER', 1)], assignments, [])
+    expect(summary.completedSubmissionTargets).toBe(0)
+    expect(summary.notStartedTargets).toBe(2)
+    expect(summary.inProgressTargets).toBe(0)
+  })
+
   it('대상별·문항별 줄도 다섯 상태가 칸을 남김없이 덮는다', () => {
     const withDraft = [...responses, response('a2', 'q2', 'DRAFT')]
     const cover = (p: {

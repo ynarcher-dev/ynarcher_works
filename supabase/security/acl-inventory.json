@@ -4,29 +4,29 @@
     "query": "supabase/security/catalog_inventory.sql",
     "cli_version": "2.109.0",
     "postgres_version": "17.6",
-    "source_cutoff": "20260913160000_guest_accounts_list_facets.sql",
-    "migrations_count": 375,
-    "migrations_sha256": "ed458e9066f141ce951152cec2d30fa0973e50688be5d19fecd6aada26308d99",
+    "source_cutoff": "20260914230000_guest_independent_account_cleanup.sql",
+    "migrations_count": 394,
+    "migrations_sha256": "15b59f9fc945db26767b2e1a718bd98af14fca7929ad7b7df66c494bbd2ae288",
     "migrations_hashed_from": "replayed copy in the disposable stack workdir",
     "replay_matches_repo": true,
-    "config_sha256": "f6966c907fdcbc6403439b08aee0c8d5e08a444177b6eed35a18638fc9dd6e5a",
+    "config_sha256": "e5b2378ebc162d18774a1afba8f78a9075d78c1f2f134ce8e36d9083b8ffc784",
     "query_sha256": "24008b271d0e65bdbf328a0095ebfd3acb74048e347fae1ee7875aa159a3a2fd",
-    "project_id": "yna_acl_76e37730",
+    "project_id": "yna_acl_13f8840a",
     "seed": "disabled",
     "contains": "catalog metadata only — no rows, no credentials, no user data"
   },
   "counts": {
     "views": 2,
-    "tables": 159,
-    "policies": 432,
-    "routines": 291,
+    "tables": 164,
+    "policies": 456,
+    "routines": 344,
     "sequences": 0,
     "foreign_tables": 0,
-    "storage_buckets": 8,
+    "storage_buckets": 9,
     "storage_policies": 14,
     "materialized_views": 0,
-    "routines_acl_default": 82,
-    "routines_security_definer": 165,
+    "routines_acl_default": 85,
+    "routines_security_definer": 201,
     "routines_security_definer_without_search_path": 0
   },
   "source": "supabase/security/catalog_inventory.sql",
@@ -298,6 +298,15 @@
         "type": "STANDARD",
         "public": false,
         "file_size_limit": null,
+        "allowed_mime_types": null,
+        "avif_autodetection": false
+      },
+      {
+        "id": "file-collection",
+        "name": "file-collection",
+        "type": "STANDARD",
+        "public": false,
+        "file_size_limit": 104857600,
         "allowed_mime_types": null,
         "avif_autodetection": false
       },
@@ -589,6 +598,25 @@
     },
     {
       "kind": "function",
+      "name": "amount_text_bad",
+      "owner": "postgres",
+      "result": "boolean",
+      "schema": "app",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "IMMUTABLE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_text text",
+      "acl_is_default": false,
+      "security_definer": false,
+      "execute_effective": [],
+      "execute_granted_direct": [
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
       "name": "apply_approval_budget_revision",
       "owner": "postgres",
       "result": "void",
@@ -601,6 +629,63 @@
       "identity_args": "p_change_document_id uuid",
       "acl_is_default": false,
       "security_definer": true,
+      "execute_effective": [],
+      "execute_granted_direct": [
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "approval_amount_keys",
+      "owner": "postgres",
+      "result": "TABLE(gross_key text, loose_gross_key text, net_key text, vat_key text, kind_key text, ref_key text)",
+      "schema": "app",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "IMMUTABLE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_field jsonb",
+      "acl_is_default": false,
+      "security_definer": false,
+      "execute_effective": [],
+      "execute_granted_direct": [
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "approval_budget_field",
+      "owner": "postgres",
+      "result": "jsonb",
+      "schema": "app",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "IMMUTABLE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_fields jsonb",
+      "acl_is_default": false,
+      "security_definer": false,
+      "execute_effective": [],
+      "execute_granted_direct": [
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "approval_budget_item_amounts",
+      "owner": "postgres",
+      "result": "TABLE(line_id text, net numeric, vat numeric, gross numeric, vat_kind text, split_required boolean, bad_amount boolean)",
+      "schema": "app",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "STABLE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_fields jsonb, p_values jsonb",
+      "acl_is_default": false,
+      "security_definer": false,
       "execute_effective": [],
       "execute_granted_direct": [
         "postgres"
@@ -650,6 +735,25 @@
     },
     {
       "kind": "function",
+      "name": "approval_budget_remap",
+      "owner": "postgres",
+      "result": "jsonb",
+      "schema": "app",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "IMMUTABLE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_from jsonb, p_to jsonb, p_value jsonb",
+      "acl_is_default": false,
+      "security_definer": false,
+      "execute_effective": [],
+      "execute_granted_direct": [
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
       "name": "approval_budget_usage",
       "owner": "postgres",
       "result": "TABLE(line_id text, spent numeric, pending numeric)",
@@ -660,6 +764,25 @@
       "volatility": "STABLE",
       "search_path": "search_path=app, public",
       "identity_args": "p_document_id uuid",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [],
+      "execute_granted_direct": [
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "approval_budget_usage_ex",
+      "owner": "postgres",
+      "result": "TABLE(line_id text, spent numeric, pending numeric)",
+      "schema": "app",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "STABLE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_document_id uuid, p_exclude_document_id uuid",
       "acl_is_default": false,
       "security_definer": true,
       "execute_effective": [],
@@ -713,6 +836,25 @@
     },
     {
       "kind": "function",
+      "name": "approval_spend_item_amounts",
+      "owner": "postgres",
+      "result": "TABLE(line_id text, net numeric, vat numeric, gross numeric, vat_kind text, split_required boolean, bad_amount boolean, item text)",
+      "schema": "app",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "STABLE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_fields jsonb, p_values jsonb",
+      "acl_is_default": false,
+      "security_definer": false,
+      "execute_effective": [],
+      "execute_granted_direct": [
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
       "name": "approval_spend_lines",
       "owner": "postgres",
       "result": "TABLE(line_id text, amount numeric)",
@@ -731,6 +873,97 @@
         "service_role"
       ],
       "execute_granted_direct": []
+    },
+    {
+      "kind": "function",
+      "name": "approval_table_label_key",
+      "owner": "postgres",
+      "result": "text",
+      "schema": "app",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "IMMUTABLE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_field jsonb",
+      "acl_is_default": false,
+      "security_definer": false,
+      "execute_effective": [],
+      "execute_granted_direct": [
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "approval_vat_rate",
+      "owner": "postgres",
+      "result": "numeric",
+      "schema": "app",
+      "volatility": "IMMUTABLE",
+      "identity_args": "p_kind text",
+      "acl_is_default": false,
+      "security_definer": false,
+      "execute_effective": [],
+      "execute_granted_direct": [
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "assert_approval_amounts",
+      "owner": "postgres",
+      "result": "void",
+      "schema": "app",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "STABLE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_fields jsonb, p_values jsonb",
+      "acl_is_default": false,
+      "security_definer": false,
+      "execute_effective": [],
+      "execute_granted_direct": [
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "assert_budget_spend_submittable",
+      "owner": "postgres",
+      "result": "void",
+      "schema": "app",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_document_id uuid, p_form_id uuid, p_form_version_id uuid, p_field_values jsonb, p_budget_document_id uuid",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [],
+      "execute_granted_direct": [
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "assert_no_active_budget_children",
+      "owner": "postgres",
+      "result": "void",
+      "schema": "app",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_document_id uuid",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [],
+      "execute_granted_direct": [
+        "postgres"
+      ]
     },
     {
       "kind": "function",
@@ -859,6 +1092,28 @@
         "service_role"
       ],
       "execute_granted_direct": []
+    },
+    {
+      "kind": "function",
+      "name": "birthdays_in_range_impl",
+      "owner": "postgres",
+      "result": "TABLE(user_id uuid, user_name text, birthday_on date)",
+      "schema": "app",
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "volatility": "STABLE",
+      "search_path": "search_path=\"\"",
+      "identity_args": "p_from date, p_to date",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [
+        "authenticated"
+      ],
+      "execute_granted_direct": [
+        "authenticated",
+        "postgres"
+      ]
     },
     {
       "kind": "function",
@@ -1472,6 +1727,44 @@
     },
     {
       "kind": "function",
+      "name": "check_approval_program_link_rules",
+      "owner": "postgres",
+      "result": "trigger",
+      "schema": "app",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=app, public",
+      "identity_args": "",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [],
+      "execute_granted_direct": [
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "check_approval_submission",
+      "owner": "postgres",
+      "result": "trigger",
+      "schema": "app",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=app, public",
+      "identity_args": "",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [],
+      "execute_granted_direct": [
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
       "name": "clear_dept_members_on_dept_delete",
       "owner": "postgres",
       "result": "trigger",
@@ -1490,6 +1783,25 @@
         "service_role"
       ],
       "execute_granted_direct": []
+    },
+    {
+      "kind": "function",
+      "name": "clear_guest_invitation_legacy_fields",
+      "owner": "postgres",
+      "result": "trigger",
+      "schema": "app",
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=\"\"",
+      "identity_args": "",
+      "acl_is_default": false,
+      "security_definer": false,
+      "execute_effective": [],
+      "execute_granted_direct": [
+        "postgres"
+      ]
     },
     {
       "kind": "function",
@@ -1802,6 +2114,309 @@
         "service_role"
       ],
       "execute_granted_direct": []
+    },
+    {
+      "kind": "function",
+      "name": "fc_assignment_guard",
+      "owner": "postgres",
+      "result": "trigger",
+      "schema": "app",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=app, public",
+      "identity_args": "",
+      "acl_is_default": true,
+      "security_definer": true,
+      "execute_effective": [
+        "anon",
+        "authenticated",
+        "service_role"
+      ],
+      "execute_granted_direct": []
+    },
+    {
+      "kind": "function",
+      "name": "fc_file_guard",
+      "owner": "postgres",
+      "result": "trigger",
+      "schema": "app",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=app, public",
+      "identity_args": "",
+      "acl_is_default": true,
+      "security_definer": true,
+      "execute_effective": [
+        "anon",
+        "authenticated",
+        "service_role"
+      ],
+      "execute_granted_direct": []
+    },
+    {
+      "kind": "function",
+      "name": "fc_node_guard",
+      "owner": "postgres",
+      "result": "trigger",
+      "schema": "app",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=app, public",
+      "identity_args": "",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [],
+      "execute_granted_direct": [
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "fc_node_has_submission",
+      "owner": "postgres",
+      "result": "boolean",
+      "schema": "app",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "STABLE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_node_id uuid",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [],
+      "execute_granted_direct": [
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "fc_participant_sync_targets",
+      "owner": "postgres",
+      "result": "trigger",
+      "schema": "app",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=app, public",
+      "identity_args": "",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [],
+      "execute_granted_direct": [
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "fc_response_guard",
+      "owner": "postgres",
+      "result": "trigger",
+      "schema": "app",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=app, public",
+      "identity_args": "",
+      "acl_is_default": true,
+      "security_definer": true,
+      "execute_effective": [
+        "anon",
+        "authenticated",
+        "service_role"
+      ],
+      "execute_granted_direct": []
+    },
+    {
+      "kind": "function",
+      "name": "fc_structure_deletes",
+      "owner": "postgres",
+      "result": "TABLE(node_id uuid, expected_updated_at timestamp with time zone)",
+      "schema": "app",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "IMMUTABLE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_deletes jsonb",
+      "acl_is_default": false,
+      "security_definer": false,
+      "execute_effective": [],
+      "execute_granted_direct": [
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "fc_structure_items",
+      "owner": "postgres",
+      "result": "TABLE(ord integer, key text, parent_key text, node_id uuid, node_type text, title text, guide text, is_required boolean, expected_updated_at timestamp with time zone)",
+      "schema": "app",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "IMMUTABLE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_nodes jsonb",
+      "acl_is_default": false,
+      "security_definer": false,
+      "execute_effective": [],
+      "execute_granted_direct": [
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "fc_sync_assignments",
+      "owner": "postgres",
+      "result": "integer",
+      "schema": "app",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_collection_id uuid, p_module_id uuid",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [],
+      "execute_granted_direct": [
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "fc_sync_responses",
+      "owner": "postgres",
+      "result": "integer",
+      "schema": "app",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_collection_id uuid, p_module_id uuid",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [],
+      "execute_granted_direct": [
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "fc_sync_targets",
+      "owner": "postgres",
+      "result": "integer",
+      "schema": "app",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_module_id uuid",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [],
+      "execute_granted_direct": [
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "file_collection_guest_assignment_ids",
+      "owner": "postgres",
+      "result": "SETOF uuid",
+      "schema": "app",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "STABLE",
+      "search_path": "search_path=app, public",
+      "identity_args": "",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [
+        "authenticated"
+      ],
+      "execute_granted_direct": [
+        "authenticated",
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "file_collection_guest_writable_assignment_ids",
+      "owner": "postgres",
+      "result": "SETOF uuid",
+      "schema": "app",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "STABLE",
+      "search_path": "search_path=app, public",
+      "identity_args": "",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [
+        "authenticated"
+      ],
+      "execute_granted_direct": [
+        "authenticated",
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "file_collection_internal_read",
+      "owner": "postgres",
+      "result": "boolean",
+      "schema": "app",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "STABLE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_module_id uuid",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [
+        "authenticated"
+      ],
+      "execute_granted_direct": [
+        "authenticated",
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "file_collection_internal_write",
+      "owner": "postgres",
+      "result": "boolean",
+      "schema": "app",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "STABLE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_module_id uuid",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [
+        "authenticated"
+      ],
+      "execute_granted_direct": [
+        "authenticated",
+        "postgres"
+      ]
     },
     {
       "kind": "function",
@@ -2123,7 +2738,7 @@
       "search_path": "search_path=\"\"",
       "identity_args": "p_user_id uuid",
       "acl_is_default": false,
-      "security_definer": true,
+      "security_definer": false,
       "execute_effective": [
         "authenticated"
       ],
@@ -2139,21 +2754,19 @@
       "result": "boolean",
       "schema": "app",
       "proconfig": [
-        "search_path=app, public"
+        "search_path=\"\""
       ],
       "volatility": "STABLE",
-      "search_path": "search_path=app, public",
+      "search_path": "search_path=\"\"",
       "identity_args": "p_user_id uuid",
       "acl_is_default": false,
       "security_definer": false,
       "execute_effective": [
-        "authenticated",
-        "service_role"
+        "authenticated"
       ],
       "execute_granted_direct": [
         "authenticated",
-        "postgres",
-        "service_role"
+        "postgres"
       ]
     },
     {
@@ -2163,21 +2776,19 @@
       "result": "boolean",
       "schema": "app",
       "proconfig": [
-        "search_path=app, public"
+        "search_path=\"\""
       ],
       "volatility": "STABLE",
-      "search_path": "search_path=app, public",
+      "search_path": "search_path=\"\"",
       "identity_args": "p_user_id uuid, p_excluded_participant_id uuid",
       "acl_is_default": false,
       "security_definer": false,
       "execute_effective": [
-        "authenticated",
-        "service_role"
+        "authenticated"
       ],
       "execute_granted_direct": [
         "authenticated",
-        "postgres",
-        "service_role"
+        "postgres"
       ]
     },
     {
@@ -2716,6 +3327,21 @@
     },
     {
       "kind": "function",
+      "name": "lock_budget_source",
+      "owner": "postgres",
+      "result": "void",
+      "schema": "app",
+      "volatility": "VOLATILE",
+      "identity_args": "p_document_id uuid",
+      "acl_is_default": false,
+      "security_definer": false,
+      "execute_effective": [],
+      "execute_granted_direct": [
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
       "name": "log_admin_audit",
       "owner": "postgres",
       "result": "void",
@@ -2927,22 +3553,21 @@
       "result": "TABLE(rel_name text, type_col text, id_col text, type_value text, conflict_cols text[], on_conflict text)",
       "schema": "app",
       "proconfig": [
-        "search_path=app, public"
+        "search_path=\"\""
       ],
       "volatility": "STABLE",
-      "search_path": "search_path=app, public",
+      "search_path": "search_path=\"\"",
       "identity_args": "p_ledger text",
       "acl_is_default": false,
       "security_definer": false,
       "execute_effective": [
-        "anon",
         "authenticated",
         "service_role"
       ],
       "execute_granted_direct": [
-        "PUBLIC",
         "authenticated",
-        "postgres"
+        "postgres",
+        "service_role"
       ]
     },
     {
@@ -4180,10 +4805,10 @@
       "result": "trigger",
       "schema": "app",
       "proconfig": [
-        "search_path=app, public"
+        "search_path=\"\""
       ],
       "volatility": "VOLATILE",
-      "search_path": "search_path=app, public",
+      "search_path": "search_path=\"\"",
       "identity_args": "",
       "acl_is_default": false,
       "security_definer": true,
@@ -4294,6 +4919,28 @@
       "identity_args": "p_entity_key text, p_program_id uuid, p_user_ids uuid[]",
       "acl_is_default": false,
       "security_definer": false,
+      "execute_effective": [
+        "authenticated"
+      ],
+      "execute_granted_direct": [
+        "authenticated",
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "admin_entities_delete_blocker_rows",
+      "owner": "postgres",
+      "result": "TABLE(entity_id uuid, blocker_key text, blocker_label text, row_count bigint)",
+      "schema": "public",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_entity_key text, p_ids uuid[]",
+      "acl_is_default": false,
+      "security_definer": true,
       "execute_effective": [
         "authenticated"
       ],
@@ -4489,7 +5136,29 @@
       ],
       "volatility": "VOLATILE",
       "search_path": "search_path=\"\"",
-      "identity_args": "p_user_id uuid, p_email text, p_phone text, p_reason text",
+      "identity_args": "p_user_id uuid, p_email text, p_phone text, p_affiliation text, p_reason text",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [
+        "authenticated"
+      ],
+      "execute_granted_direct": [
+        "authenticated",
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "admin_update_guest_contact",
+      "owner": "postgres",
+      "result": "jsonb",
+      "schema": "public",
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=\"\"",
+      "identity_args": "p_user_id uuid, p_name text, p_email text, p_affiliation text, p_reason text, p_phone text",
       "acl_is_default": false,
       "security_definer": true,
       "execute_effective": [
@@ -4514,6 +5183,28 @@
       "identity_args": "p_keyword text, p_limit integer, p_offset integer, p_categories text[], p_uncategorized boolean, p_region_scope text[], p_regions uuid[], p_countries uuid[], p_country_unset boolean, p_search_email boolean, p_search_phone boolean, p_expertise text[], p_match text, p_activity_min integer, p_activity_max integer, p_satisfaction_min numeric, p_satisfaction_max numeric",
       "acl_is_default": false,
       "security_definer": false,
+      "execute_effective": [
+        "authenticated"
+      ],
+      "execute_granted_direct": [
+        "authenticated",
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "approval_budget_spend_items",
+      "owner": "postgres",
+      "result": "TABLE(line_id text, document_id uuid, doc_no text, title text, item text, status text, amount numeric, created_at timestamp with time zone, readable boolean)",
+      "schema": "public",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "STABLE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_document_id uuid",
+      "acl_is_default": false,
+      "security_definer": true,
       "execute_effective": [
         "authenticated"
       ],
@@ -4705,6 +5396,28 @@
       "schema": "public",
       "volatility": "VOLATILE",
       "identity_args": "p_user_id uuid",
+      "acl_is_default": false,
+      "security_definer": false,
+      "execute_effective": [
+        "authenticated"
+      ],
+      "execute_granted_direct": [
+        "authenticated",
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "birthdays_in_range",
+      "owner": "postgres",
+      "result": "TABLE(user_id uuid, user_name text, birthday_on date)",
+      "schema": "public",
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "volatility": "STABLE",
+      "search_path": "search_path=\"\"",
+      "identity_args": "p_from date, p_to date",
       "acl_is_default": false,
       "security_definer": false,
       "execute_effective": [
@@ -4943,9 +5656,31 @@
       ],
       "volatility": "VOLATILE",
       "search_path": "search_path=\"\"",
-      "identity_args": "p_name text, p_email text, p_phone text, p_master_table text, p_master_id uuid",
+      "identity_args": "p_name text, p_email text, p_affiliation text",
       "acl_is_default": false,
       "security_definer": true,
+      "execute_effective": [
+        "authenticated"
+      ],
+      "execute_granted_direct": [
+        "authenticated",
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "create_guest_account",
+      "owner": "postgres",
+      "result": "uuid",
+      "schema": "public",
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=\"\"",
+      "identity_args": "p_name text, p_email text, p_phone text, p_master_table text, p_master_id uuid, p_affiliation text",
+      "acl_is_default": false,
+      "security_definer": false,
       "execute_effective": [
         "authenticated"
       ],
@@ -5152,6 +5887,358 @@
     },
     {
       "kind": "function",
+      "name": "file_collection_add_comment",
+      "owner": "postgres",
+      "result": "uuid",
+      "schema": "public",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_response_id uuid, p_body text",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [
+        "authenticated"
+      ],
+      "execute_granted_direct": [
+        "authenticated",
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "file_collection_assign",
+      "owner": "postgres",
+      "result": "integer",
+      "schema": "public",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_collection_id uuid, p_participant_ids uuid[]",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [
+        "authenticated"
+      ],
+      "execute_granted_direct": [
+        "authenticated",
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "file_collection_authorize_download",
+      "owner": "postgres",
+      "result": "TABLE(storage_bucket text, storage_path text, original_name text, content_type text)",
+      "schema": "public",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_file_id uuid",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [
+        "authenticated"
+      ],
+      "execute_granted_direct": [
+        "authenticated",
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "file_collection_commit_upload",
+      "owner": "postgres",
+      "result": "uuid",
+      "schema": "public",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_file_id uuid",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [
+        "authenticated"
+      ],
+      "execute_granted_direct": [
+        "authenticated",
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "file_collection_delete_node",
+      "owner": "postgres",
+      "result": "integer",
+      "schema": "public",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_node_id uuid",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [
+        "authenticated"
+      ],
+      "execute_granted_direct": [
+        "authenticated",
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "file_collection_move_node",
+      "owner": "postgres",
+      "result": "void",
+      "schema": "public",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_node_id uuid, p_parent_id uuid, p_sort_order integer",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [
+        "authenticated"
+      ],
+      "execute_granted_direct": [
+        "authenticated",
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "file_collection_publish",
+      "owner": "postgres",
+      "result": "timestamp with time zone",
+      "schema": "public",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_collection_id uuid",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [
+        "authenticated"
+      ],
+      "execute_granted_direct": [
+        "authenticated",
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "file_collection_register_upload",
+      "owner": "postgres",
+      "result": "TABLE(file_id uuid, storage_bucket text, storage_path text)",
+      "schema": "public",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_response_id uuid, p_original_name text, p_content_type text, p_byte_size bigint",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [
+        "authenticated"
+      ],
+      "execute_granted_direct": [
+        "authenticated",
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "file_collection_remove_file",
+      "owner": "postgres",
+      "result": "void",
+      "schema": "public",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_file_id uuid",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [
+        "authenticated"
+      ],
+      "execute_granted_direct": [
+        "authenticated",
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "file_collection_reorder_node",
+      "owner": "postgres",
+      "result": "boolean",
+      "schema": "public",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_node_id uuid, p_direction text",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [
+        "authenticated"
+      ],
+      "execute_granted_direct": [
+        "authenticated",
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "file_collection_review",
+      "owner": "postgres",
+      "result": "file_collection_status",
+      "schema": "public",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_response_id uuid, p_decision text, p_comment text",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [
+        "authenticated"
+      ],
+      "execute_granted_direct": [
+        "authenticated",
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "file_collection_revoke_assignment",
+      "owner": "postgres",
+      "result": "void",
+      "schema": "public",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_assignment_id uuid",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [
+        "authenticated"
+      ],
+      "execute_granted_direct": [
+        "authenticated",
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "file_collection_save_node",
+      "owner": "postgres",
+      "result": "uuid",
+      "schema": "public",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_collection_id uuid, p_node_id uuid, p_parent_id uuid, p_node_type text, p_title text, p_guide text, p_is_required boolean, p_sort_order integer, p_expected_updated_at timestamp with time zone",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [
+        "authenticated"
+      ],
+      "execute_granted_direct": [
+        "authenticated",
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "file_collection_save_structure",
+      "owner": "postgres",
+      "result": "jsonb",
+      "schema": "public",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_collection_id uuid, p_nodes jsonb, p_deletes jsonb, p_level_names text[], p_expected_updated_at timestamp with time zone",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [
+        "authenticated"
+      ],
+      "execute_granted_direct": [
+        "authenticated",
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "file_collection_submit",
+      "owner": "postgres",
+      "result": "file_collection_status",
+      "schema": "public",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_response_id uuid",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [
+        "authenticated"
+      ],
+      "execute_granted_direct": [
+        "authenticated",
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "file_collection_upsert",
+      "owner": "postgres",
+      "result": "uuid",
+      "schema": "public",
+      "proconfig": [
+        "search_path=app, public"
+      ],
+      "volatility": "VOLATILE",
+      "search_path": "search_path=app, public",
+      "identity_args": "p_program_module_id uuid, p_title text, p_guide text",
+      "acl_is_default": false,
+      "security_definer": true,
+      "execute_effective": [
+        "authenticated"
+      ],
+      "execute_granted_direct": [
+        "authenticated",
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
       "name": "finish_meeting_recording",
       "owner": "postgres",
       "result": "void",
@@ -5217,16 +6304,60 @@
     },
     {
       "kind": "function",
-      "name": "guest_accounts_list",
+      "name": "guest_account_ledger_candidates",
       "owner": "postgres",
-      "result": "TABLE(user_id uuid, name text, email text, phone text, user_type text, is_active boolean, company_name text, identities jsonb, has_password boolean, created_at timestamp with time zone, last_login_at timestamp with time zone, program_count integer, open_count integer, programs jsonb, total_count bigint)",
+      "result": "TABLE(source_id uuid, name text, email text, affiliation text, total_count bigint)",
       "schema": "public",
       "proconfig": [
-        "search_path=app, public"
+        "search_path=\"\""
       ],
       "volatility": "STABLE",
-      "search_path": "search_path=app, public",
+      "search_path": "search_path=\"\"",
+      "identity_args": "p_search text, p_limit integer, p_offset integer, p_category text",
+      "acl_is_default": false,
+      "security_definer": false,
+      "execute_effective": [
+        "authenticated"
+      ],
+      "execute_granted_direct": [
+        "authenticated",
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "guest_accounts_list",
+      "owner": "postgres",
+      "result": "TABLE(user_id uuid, name text, email text, affiliation text, user_type text, is_active boolean, has_password boolean, created_at timestamp with time zone, last_login_at timestamp with time zone, program_count integer, open_count integer, programs jsonb, total_count bigint)",
+      "schema": "public",
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "volatility": "STABLE",
+      "search_path": "search_path=\"\"",
       "identity_args": "p_search text, p_limit integer, p_offset integer, p_entity_key text, p_master_tables text[], p_only_orphans boolean, p_facet text",
+      "acl_is_default": false,
+      "security_definer": false,
+      "execute_effective": [
+        "authenticated"
+      ],
+      "execute_granted_direct": [
+        "authenticated",
+        "postgres"
+      ]
+    },
+    {
+      "kind": "function",
+      "name": "guest_accounts_list",
+      "owner": "postgres",
+      "result": "TABLE(user_id uuid, name text, email text, affiliation text, user_type text, is_active boolean, has_password boolean, created_at timestamp with time zone, last_login_at timestamp with time zone, program_count integer, open_count integer, programs jsonb, total_count bigint)",
+      "schema": "public",
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "volatility": "STABLE",
+      "search_path": "search_path=\"\"",
+      "identity_args": "p_search text, p_limit integer, p_offset integer, p_entity_key text, p_only_orphans boolean",
       "acl_is_default": false,
       "security_definer": false,
       "execute_effective": [
@@ -5403,28 +6534,6 @@
       "volatility": "VOLATILE",
       "search_path": "search_path=app, public",
       "identity_args": "p_minute_id uuid",
-      "acl_is_default": false,
-      "security_definer": true,
-      "execute_effective": [
-        "authenticated"
-      ],
-      "execute_granted_direct": [
-        "authenticated",
-        "postgres"
-      ]
-    },
-    {
-      "kind": "function",
-      "name": "issue_guest_account",
-      "owner": "postgres",
-      "result": "uuid",
-      "schema": "public",
-      "proconfig": [
-        "search_path=\"\""
-      ],
-      "volatility": "VOLATILE",
-      "search_path": "search_path=\"\"",
-      "identity_args": "p_master_table text, p_master_id uuid, p_name text, p_email text, p_phone text",
       "acl_is_default": false,
       "security_definer": true,
       "execute_effective": [
@@ -5661,13 +6770,13 @@
       "kind": "function",
       "name": "open_program_guest_access",
       "owner": "postgres",
-      "result": "TABLE(participant_id uuid, program_code text, target_name text, email text, phone text, account_is_new boolean)",
+      "result": "TABLE(participant_id uuid, program_code text, target_name text, email text, account_is_new boolean)",
       "schema": "public",
       "proconfig": [
-        "search_path=app, public"
+        "search_path=\"\""
       ],
       "volatility": "VOLATILE",
-      "search_path": "search_path=app, public",
+      "search_path": "search_path=\"\"",
       "identity_args": "p_participant_ids uuid[]",
       "acl_is_default": false,
       "security_definer": false,
@@ -5891,24 +7000,6 @@
       "identity_args": "p_participant_ids uuid[], p_reason text",
       "acl_is_default": false,
       "security_definer": true,
-      "execute_effective": [
-        "authenticated"
-      ],
-      "execute_granted_direct": [
-        "authenticated",
-        "postgres"
-      ]
-    },
-    {
-      "kind": "function",
-      "name": "reset_program_guest_password",
-      "owner": "postgres",
-      "result": "integer",
-      "schema": "public",
-      "volatility": "VOLATILE",
-      "identity_args": "p_participant_ids uuid[]",
-      "acl_is_default": false,
-      "security_definer": false,
       "execute_effective": [
         "authenticated"
       ],
@@ -9451,6 +10542,7 @@
         ],
         "authenticated": [
           "INSERT",
+          "SELECT",
           "UPDATE"
         ]
       },
@@ -9469,6 +10561,7 @@
         ],
         "authenticated": [
           "INSERT",
+          "SELECT",
           "UPDATE"
         ]
       },
@@ -9512,7 +10605,8 @@
           "TRUNCATE"
         ],
         "authenticated": [
-          "INSERT"
+          "INSERT",
+          "SELECT"
         ]
       },
       "rls_forced": false,
@@ -9529,7 +10623,8 @@
           "TRUNCATE"
         ],
         "authenticated": [
-          "INSERT"
+          "INSERT",
+          "SELECT"
         ]
       },
       "policy_commands": [
@@ -9682,11 +10777,20 @@
           "permissive": true
         },
         {
+          "name": "attachments_fc_node_guest_select",
+          "roles": [
+            "PUBLIC"
+          ],
+          "using": "(app.is_guest() AND (deleted_at IS NULL) AND (target_type = 'file_collection_node'::text) AND (EXISTS ( SELECT 1\n   FROM (file_collection_nodes n\n     JOIN file_collection_assignments a ON ((a.collection_id = n.collection_id)))\n  WHERE ((n.id = attachments.target_id) AND (n.deleted_at IS NULL) AND (a.id IN ( SELECT app.file_collection_guest_assignment_ids() AS file_collection_guest_assignment_ids))))))",
+          "command": "SELECT",
+          "permissive": true
+        },
+        {
           "name": "attachments_guest_select",
           "roles": [
             "PUBLIC"
           ],
-          "using": "(app.is_guest() AND (deleted_at IS NULL) AND (program_module_id IS NOT NULL) AND (program_module_id IN ( SELECT app.guest_open_module_ids() AS guest_open_module_ids)))",
+          "using": "(app.is_guest() AND (deleted_at IS NULL) AND (target_type <> 'file_collection_node'::text) AND (program_module_id IS NOT NULL) AND (program_module_id IN ( SELECT app.guest_open_module_ids() AS guest_open_module_ids)))",
           "command": "SELECT",
           "permissive": true
         },
@@ -9697,7 +10801,7 @@
           ],
           "command": "INSERT",
           "permissive": true,
-          "with_check": "((uploaded_by = app.current_app_user_id()) AND (app.current_app_user_id() IS NOT NULL) AND\nCASE\n    WHEN (target_type = 'ma_buyer'::text) THEN app.can_manage_ma_party('ma_buyer'::text, target_id)\n    WHEN (target_type = 'ma_seller'::text) THEN app.can_manage_ma_party('ma_seller'::text, target_id)\n    ELSE true\nEND AND ((target_type <> ALL (ARRAY['office_minute'::text, 'office_minute_voice'::text])) OR app.is_minute_author(target_id)) AND ((target_type <> 'approval'::text) OR app.is_approval_drafter(target_id)))"
+          "with_check": "((uploaded_by = app.current_app_user_id()) AND (app.current_app_user_id() IS NOT NULL) AND\nCASE\n    WHEN (target_type = 'ma_buyer'::text) THEN app.can_manage_ma_party('ma_buyer'::text, target_id)\n    WHEN (target_type = 'ma_seller'::text) THEN app.can_manage_ma_party('ma_seller'::text, target_id)\n    ELSE true\nEND AND ((target_type <> ALL (ARRAY['office_minute'::text, 'office_minute_voice'::text])) OR app.is_minute_author(target_id)) AND ((target_type <> 'approval'::text) OR app.is_approval_drafter(target_id)) AND ((target_type <> 'file_collection_node'::text) OR ((program_module_id IS NOT NULL) AND app.file_collection_internal_write(program_module_id) AND (EXISTS ( SELECT 1\n   FROM file_collection_nodes n\n  WHERE ((n.id = attachments.target_id) AND (n.program_module_id = attachments.program_module_id) AND (n.node_type = 'QUESTION'::text) AND (n.deleted_at IS NULL)))))))"
         },
         {
           "name": "attachments_overview_guest_select",
@@ -9722,7 +10826,7 @@
           "roles": [
             "authenticated"
           ],
-          "using": "(app.is_admin() OR ((app.current_app_user_id() IS NOT NULL) AND (app.current_app_role() <> ALL (ARRAY['external_startup'::text, 'external_expert'::text, 'temporary_guest'::text])) AND\nCASE\n    WHEN (target_type = 'ma_buyer'::text) THEN app.can_read_ma_party('ma_buyer'::text, target_id)\n    WHEN (target_type = 'ma_seller'::text) THEN app.can_read_ma_party('ma_seller'::text, target_id)\n    ELSE true\nEND AND ((target_type <> ALL (ARRAY['office_minute'::text, 'office_minute_voice'::text])) OR app.can_read_minute(target_id)) AND ((target_type <> 'approval'::text) OR app.can_read_approval(target_id))))",
+          "using": "(app.is_admin() OR ((app.current_app_user_id() IS NOT NULL) AND (app.current_app_role() <> ALL (ARRAY['external_startup'::text, 'external_expert'::text, 'temporary_guest'::text])) AND\nCASE\n    WHEN (target_type = 'ma_buyer'::text) THEN app.can_read_ma_party('ma_buyer'::text, target_id)\n    WHEN (target_type = 'ma_seller'::text) THEN app.can_read_ma_party('ma_seller'::text, target_id)\n    ELSE true\nEND AND ((target_type <> ALL (ARRAY['office_minute'::text, 'office_minute_voice'::text])) OR app.can_read_minute(target_id)) AND ((target_type <> 'approval'::text) OR app.can_read_approval(target_id)) AND ((target_type <> 'file_collection_node'::text) OR ((program_module_id IS NOT NULL) AND app.file_collection_internal_read(program_module_id)))))",
           "command": "SELECT",
           "permissive": true
         },
@@ -9731,10 +10835,10 @@
           "roles": [
             "authenticated"
           ],
-          "using": "\nCASE\n    WHEN (target_type = 'ma_buyer'::text) THEN app.can_manage_ma_party('ma_buyer'::text, target_id)\n    WHEN (target_type = 'ma_seller'::text) THEN app.can_manage_ma_party('ma_seller'::text, target_id)\n    ELSE (app.is_admin() OR (uploaded_by = app.current_app_user_id()))\nEND",
+          "using": "\nCASE\n    WHEN (target_type = 'ma_buyer'::text) THEN app.can_manage_ma_party('ma_buyer'::text, target_id)\n    WHEN (target_type = 'ma_seller'::text) THEN app.can_manage_ma_party('ma_seller'::text, target_id)\n    WHEN (target_type = 'file_collection_node'::text) THEN ((program_module_id IS NOT NULL) AND app.file_collection_internal_write(program_module_id))\n    ELSE (app.is_admin() OR (uploaded_by = app.current_app_user_id()))\nEND",
           "command": "UPDATE",
           "permissive": true,
-          "with_check": "\nCASE\n    WHEN (target_type = 'ma_buyer'::text) THEN app.can_manage_ma_party('ma_buyer'::text, target_id)\n    WHEN (target_type = 'ma_seller'::text) THEN app.can_manage_ma_party('ma_seller'::text, target_id)\n    ELSE (app.is_admin() OR (uploaded_by = app.current_app_user_id()))\nEND"
+          "with_check": "\nCASE\n    WHEN (target_type = 'ma_buyer'::text) THEN app.can_manage_ma_party('ma_buyer'::text, target_id)\n    WHEN (target_type = 'ma_seller'::text) THEN app.can_manage_ma_party('ma_seller'::text, target_id)\n    WHEN (target_type = 'file_collection_node'::text) THEN ((program_module_id IS NOT NULL) AND app.file_collection_internal_write(program_module_id))\n    ELSE (app.is_admin() OR (uploaded_by = app.current_app_user_id()))\nEND"
         }
       ],
       "privileges": {
@@ -11435,6 +12539,414 @@
     },
     {
       "kind": "table",
+      "name": "file_collection_assignments",
+      "owner": "postgres",
+      "schema": "public",
+      "policies": [
+        {
+          "name": "file_collection_assignments_guest_select",
+          "roles": [
+            "PUBLIC"
+          ],
+          "using": "(id IN ( SELECT app.file_collection_guest_assignment_ids() AS file_collection_guest_assignment_ids))",
+          "command": "SELECT",
+          "permissive": true
+        },
+        {
+          "name": "file_collection_assignments_internal_insert",
+          "roles": [
+            "PUBLIC"
+          ],
+          "command": "INSERT",
+          "permissive": true,
+          "with_check": "app.file_collection_internal_write(program_module_id)"
+        },
+        {
+          "name": "file_collection_assignments_internal_select",
+          "roles": [
+            "PUBLIC"
+          ],
+          "using": "((deleted_at IS NULL) AND app.file_collection_internal_read(program_module_id))",
+          "command": "SELECT",
+          "permissive": true
+        },
+        {
+          "name": "file_collection_assignments_internal_update",
+          "roles": [
+            "PUBLIC"
+          ],
+          "using": "app.file_collection_internal_write(program_module_id)",
+          "command": "UPDATE",
+          "permissive": true,
+          "with_check": "app.file_collection_internal_write(program_module_id)"
+        }
+      ],
+      "privileges": {
+        "anon": [],
+        "service_role": [],
+        "authenticated": [
+          "SELECT"
+        ]
+      },
+      "rls_forced": false,
+      "rls_enabled": true,
+      "granted_other": [
+        "postgres"
+      ],
+      "acl_is_default": false,
+      "granted_direct": {
+        "authenticated": [
+          "SELECT"
+        ]
+      },
+      "policy_commands": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    {
+      "kind": "table",
+      "name": "file_collection_comments",
+      "owner": "postgres",
+      "schema": "public",
+      "policies": [
+        {
+          "name": "file_collection_comments_guest_select",
+          "roles": [
+            "PUBLIC"
+          ],
+          "using": "((deleted_at IS NULL) AND (EXISTS ( SELECT 1\n   FROM file_collection_responses r\n  WHERE ((r.id = file_collection_comments.response_id) AND (r.assignment_id IN ( SELECT app.file_collection_guest_assignment_ids() AS file_collection_guest_assignment_ids))))))",
+          "command": "SELECT",
+          "permissive": true
+        },
+        {
+          "name": "file_collection_comments_internal_insert",
+          "roles": [
+            "PUBLIC"
+          ],
+          "command": "INSERT",
+          "permissive": true,
+          "with_check": "app.file_collection_internal_write(program_module_id)"
+        },
+        {
+          "name": "file_collection_comments_internal_select",
+          "roles": [
+            "PUBLIC"
+          ],
+          "using": "((deleted_at IS NULL) AND app.file_collection_internal_read(program_module_id))",
+          "command": "SELECT",
+          "permissive": true
+        },
+        {
+          "name": "file_collection_comments_internal_update",
+          "roles": [
+            "PUBLIC"
+          ],
+          "using": "app.file_collection_internal_write(program_module_id)",
+          "command": "UPDATE",
+          "permissive": true,
+          "with_check": "app.file_collection_internal_write(program_module_id)"
+        }
+      ],
+      "privileges": {
+        "anon": [],
+        "service_role": [],
+        "authenticated": [
+          "SELECT"
+        ]
+      },
+      "rls_forced": false,
+      "rls_enabled": true,
+      "granted_other": [
+        "postgres"
+      ],
+      "acl_is_default": false,
+      "granted_direct": {
+        "authenticated": [
+          "SELECT"
+        ]
+      },
+      "policy_commands": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    {
+      "kind": "table",
+      "name": "file_collection_files",
+      "owner": "postgres",
+      "schema": "public",
+      "policies": [
+        {
+          "name": "file_collection_files_guest_select",
+          "roles": [
+            "PUBLIC"
+          ],
+          "using": "((deleted_at IS NULL) AND (EXISTS ( SELECT 1\n   FROM file_collection_responses r\n  WHERE ((r.id = file_collection_files.response_id) AND (r.assignment_id IN ( SELECT app.file_collection_guest_assignment_ids() AS file_collection_guest_assignment_ids))))))",
+          "command": "SELECT",
+          "permissive": true
+        },
+        {
+          "name": "file_collection_files_internal_insert",
+          "roles": [
+            "PUBLIC"
+          ],
+          "command": "INSERT",
+          "permissive": true,
+          "with_check": "app.file_collection_internal_write(program_module_id)"
+        },
+        {
+          "name": "file_collection_files_internal_select",
+          "roles": [
+            "PUBLIC"
+          ],
+          "using": "((deleted_at IS NULL) AND app.file_collection_internal_read(program_module_id))",
+          "command": "SELECT",
+          "permissive": true
+        },
+        {
+          "name": "file_collection_files_internal_update",
+          "roles": [
+            "PUBLIC"
+          ],
+          "using": "app.file_collection_internal_write(program_module_id)",
+          "command": "UPDATE",
+          "permissive": true,
+          "with_check": "app.file_collection_internal_write(program_module_id)"
+        }
+      ],
+      "privileges": {
+        "anon": [],
+        "service_role": [],
+        "authenticated": [
+          "SELECT"
+        ]
+      },
+      "rls_forced": false,
+      "rls_enabled": true,
+      "granted_other": [
+        "postgres"
+      ],
+      "acl_is_default": false,
+      "granted_direct": {
+        "authenticated": [
+          "SELECT"
+        ]
+      },
+      "policy_commands": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    {
+      "kind": "table",
+      "name": "file_collection_nodes",
+      "owner": "postgres",
+      "schema": "public",
+      "policies": [
+        {
+          "name": "file_collection_nodes_guest_select",
+          "roles": [
+            "PUBLIC"
+          ],
+          "using": "((deleted_at IS NULL) AND app.is_guest() AND (EXISTS ( SELECT 1\n   FROM file_collection_assignments a\n  WHERE ((a.collection_id = file_collection_nodes.collection_id) AND (a.id IN ( SELECT app.file_collection_guest_assignment_ids() AS file_collection_guest_assignment_ids))))))",
+          "command": "SELECT",
+          "permissive": true
+        },
+        {
+          "name": "file_collection_nodes_internal_insert",
+          "roles": [
+            "PUBLIC"
+          ],
+          "command": "INSERT",
+          "permissive": true,
+          "with_check": "app.file_collection_internal_write(program_module_id)"
+        },
+        {
+          "name": "file_collection_nodes_internal_select",
+          "roles": [
+            "PUBLIC"
+          ],
+          "using": "((deleted_at IS NULL) AND app.file_collection_internal_read(program_module_id))",
+          "command": "SELECT",
+          "permissive": true
+        },
+        {
+          "name": "file_collection_nodes_internal_update",
+          "roles": [
+            "PUBLIC"
+          ],
+          "using": "app.file_collection_internal_write(program_module_id)",
+          "command": "UPDATE",
+          "permissive": true,
+          "with_check": "app.file_collection_internal_write(program_module_id)"
+        }
+      ],
+      "privileges": {
+        "anon": [],
+        "service_role": [],
+        "authenticated": [
+          "SELECT"
+        ]
+      },
+      "rls_forced": false,
+      "rls_enabled": true,
+      "granted_other": [
+        "postgres"
+      ],
+      "acl_is_default": false,
+      "granted_direct": {
+        "authenticated": [
+          "SELECT"
+        ]
+      },
+      "policy_commands": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    {
+      "kind": "table",
+      "name": "file_collection_responses",
+      "owner": "postgres",
+      "schema": "public",
+      "policies": [
+        {
+          "name": "file_collection_responses_guest_select",
+          "roles": [
+            "PUBLIC"
+          ],
+          "using": "((deleted_at IS NULL) AND (assignment_id IN ( SELECT app.file_collection_guest_assignment_ids() AS file_collection_guest_assignment_ids)))",
+          "command": "SELECT",
+          "permissive": true
+        },
+        {
+          "name": "file_collection_responses_internal_insert",
+          "roles": [
+            "PUBLIC"
+          ],
+          "command": "INSERT",
+          "permissive": true,
+          "with_check": "app.file_collection_internal_write(program_module_id)"
+        },
+        {
+          "name": "file_collection_responses_internal_select",
+          "roles": [
+            "PUBLIC"
+          ],
+          "using": "((deleted_at IS NULL) AND app.file_collection_internal_read(program_module_id))",
+          "command": "SELECT",
+          "permissive": true
+        },
+        {
+          "name": "file_collection_responses_internal_update",
+          "roles": [
+            "PUBLIC"
+          ],
+          "using": "app.file_collection_internal_write(program_module_id)",
+          "command": "UPDATE",
+          "permissive": true,
+          "with_check": "app.file_collection_internal_write(program_module_id)"
+        }
+      ],
+      "privileges": {
+        "anon": [],
+        "service_role": [],
+        "authenticated": [
+          "SELECT"
+        ]
+      },
+      "rls_forced": false,
+      "rls_enabled": true,
+      "granted_other": [
+        "postgres"
+      ],
+      "acl_is_default": false,
+      "granted_direct": {
+        "authenticated": [
+          "SELECT"
+        ]
+      },
+      "policy_commands": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    {
+      "kind": "table",
+      "name": "file_collections",
+      "owner": "postgres",
+      "schema": "public",
+      "policies": [
+        {
+          "name": "file_collections_guest_select",
+          "roles": [
+            "PUBLIC"
+          ],
+          "using": "((deleted_at IS NULL) AND app.is_guest() AND (EXISTS ( SELECT 1\n   FROM file_collection_assignments a\n  WHERE ((a.collection_id = file_collections.id) AND (a.id IN ( SELECT app.file_collection_guest_assignment_ids() AS file_collection_guest_assignment_ids))))))",
+          "command": "SELECT",
+          "permissive": true
+        },
+        {
+          "name": "file_collections_internal_insert",
+          "roles": [
+            "PUBLIC"
+          ],
+          "command": "INSERT",
+          "permissive": true,
+          "with_check": "app.file_collection_internal_write(program_module_id)"
+        },
+        {
+          "name": "file_collections_internal_select",
+          "roles": [
+            "PUBLIC"
+          ],
+          "using": "((deleted_at IS NULL) AND app.file_collection_internal_read(program_module_id))",
+          "command": "SELECT",
+          "permissive": true
+        },
+        {
+          "name": "file_collections_internal_update",
+          "roles": [
+            "PUBLIC"
+          ],
+          "using": "app.file_collection_internal_write(program_module_id)",
+          "command": "UPDATE",
+          "permissive": true,
+          "with_check": "app.file_collection_internal_write(program_module_id)"
+        }
+      ],
+      "privileges": {
+        "anon": [],
+        "service_role": [],
+        "authenticated": [
+          "SELECT"
+        ]
+      },
+      "rls_forced": false,
+      "rls_enabled": true,
+      "granted_other": [
+        "postgres"
+      ],
+      "acl_is_default": false,
+      "granted_direct": {
+        "authenticated": [
+          "SELECT"
+        ]
+      },
+      "policy_commands": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    {
+      "kind": "table",
       "name": "fund_lps",
       "owner": "postgres",
       "schema": "public",
@@ -11788,57 +13300,6 @@
         ]
       },
       "policy_commands": []
-    },
-    {
-      "kind": "table",
-      "name": "guest_identities",
-      "owner": "postgres",
-      "schema": "public",
-      "policies": [
-        {
-          "name": "guest_identities_select",
-          "roles": [
-            "PUBLIC"
-          ],
-          "using": "((app.current_app_user_id() IS NOT NULL) AND (NOT app.is_guest()) AND app.can_read_master_table(master_table) AND\nCASE master_table\n    WHEN 'ma_sellers'::text THEN app.can_read_ma_party('ma_seller'::text, master_id)\n    WHEN 'ma_buyers'::text THEN app.can_read_ma_party('ma_buyer'::text, master_id)\n    ELSE true\nEND)",
-          "command": "SELECT",
-          "permissive": true
-        }
-      ],
-      "privileges": {
-        "anon": [],
-        "service_role": [
-          "MAINTAIN",
-          "REFERENCES",
-          "SELECT",
-          "TRIGGER",
-          "TRUNCATE"
-        ],
-        "authenticated": [
-          "SELECT"
-        ]
-      },
-      "rls_forced": false,
-      "rls_enabled": true,
-      "granted_other": [
-        "postgres"
-      ],
-      "acl_is_default": false,
-      "granted_direct": {
-        "service_role": [
-          "MAINTAIN",
-          "REFERENCES",
-          "SELECT",
-          "TRIGGER",
-          "TRUNCATE"
-        ],
-        "authenticated": [
-          "SELECT"
-        ]
-      },
-      "policy_commands": [
-        "SELECT"
-      ]
     },
     {
       "kind": "table",
@@ -15667,7 +17128,9 @@
           "TRIGGER",
           "TRUNCATE"
         ],
-        "authenticated": []
+        "authenticated": [
+          "SELECT"
+        ]
       },
       "rls_forced": false,
       "rls_enabled": true,
@@ -15681,6 +17144,9 @@
           "REFERENCES",
           "TRIGGER",
           "TRUNCATE"
+        ],
+        "authenticated": [
+          "SELECT"
         ]
       },
       "policy_commands": [

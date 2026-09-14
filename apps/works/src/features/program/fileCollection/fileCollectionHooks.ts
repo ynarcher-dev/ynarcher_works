@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { FILE_COLLECTION_NODE_ATTACHMENT_TYPE } from '@ynarcher/master-data'
 import type {
   FileCollectionAssignmentDto,
   FileCollectionCommentDto,
@@ -11,6 +12,7 @@ import type {
   StructureDeleteItem,
   StructurePayloadItem,
 } from '@/features/program/fileCollection/structureDraft'
+import { ATTACHMENT_COUNT_KEY } from '@/features/networks/materialHooks'
 import { supabase } from '@/lib/supabase'
 
 /**
@@ -106,6 +108,40 @@ export function useCollectionNodes(moduleId: string | undefined, collectionId: s
           error: { message: string } | null
         }>,
       ),
+  })
+}
+
+/**
+ * 문항별 **담당자 자료** 건수(문항 id → 건수).
+ *
+ * 이 조회만 `attachments`를 본다 — 게스트 제출물이 아니라 담당자가 문항에 붙여 건네는
+ * 양식·견본이고, 그쪽 원장이 공용 첨부이기 때문이다(20260914150000).
+ *
+ * 문항 id 묶음으로 묻지 않고 **모듈 하나로** 묻는다. 문항은 수백 개가 될 수 있어 id를 다
+ * 실으면 조회 주소가 그만큼 길어지는데, 이 종류의 첨부는 행마다 `program_module_id`를 들고
+ * 있어 모듈 한 칸으로 같은 답을 얻는다.
+ *
+ * 키 앞자리를 `ATTACHMENT_COUNT_KEY`로 두는 것은 약속이다 — 자료를 올리거나 내리는
+ * 뮤테이션이 그 접두사를 무효화하므로, 창에서 파일을 붙이면 표의 클립도 함께 갱신된다.
+ */
+export function useNodeFileCounts(moduleId: string | undefined) {
+  return useQuery({
+    queryKey: [ATTACHMENT_COUNT_KEY, FILE_COLLECTION_NODE_ATTACHMENT_TYPE, 'module', moduleId],
+    enabled: Boolean(moduleId),
+    queryFn: async (): Promise<Record<string, number>> => {
+      const { data, error } = await supabase
+        .from('attachments')
+        .select('target_id')
+        .eq('target_type', FILE_COLLECTION_NODE_ATTACHMENT_TYPE)
+        .eq('program_module_id', moduleId)
+        .is('deleted_at', null)
+      if (error) throw error
+      const counts: Record<string, number> = {}
+      for (const row of (data ?? []) as { target_id: string }[]) {
+        counts[row.target_id] = (counts[row.target_id] ?? 0) + 1
+      }
+      return counts
+    },
   })
 }
 
@@ -439,38 +475,13 @@ export function useDeleteNode(moduleId: string) {
   })
 }
 
-/** 대상 배정(일괄). 회수된 배정은 서버가 같은 행을 되살려 이력을 잇는다. */
-export function useAssignTargets(moduleId: string) {
-  const refresh = useRefreshModule(moduleId)
-  return useMutation({
-    mutationFn: async (input: {
-      collectionId: string
-      participantIds: string[]
-    }): Promise<number> => {
-      const { data, error } = await supabase.rpc('file_collection_assign', {
-        p_collection_id: input.collectionId,
-        p_participant_ids: input.participantIds,
-      })
-      if (error) throw error
-      return Number(data ?? 0)
-    },
-    onSettled: refresh,
-  })
-}
-
-/** 배정 회수(소프트). 이미 받은 파일·피드백은 남는다. */
-export function useRevokeAssignment(moduleId: string) {
-  const refresh = useRefreshModule(moduleId)
-  return useMutation({
-    mutationFn: async (assignmentId: string): Promise<void> => {
-      const { error } = await supabase.rpc('file_collection_revoke_assignment', {
-        p_assignment_id: assignmentId,
-      })
-      if (error) throw error
-    },
-    onSettled: refresh,
-  })
-}
+/*
+ * 배정 훅은 두지 않는다(2026-09-14). 대상은 사업 명부에서 로그인이 열린 게스트 전원이며
+ * 서버가 자동으로 세운다 — 명부가 바뀌면 트리거가, 원장을 처음 세우면 file_collection_upsert가
+ * `app.fc_sync_targets`를 부른다. 화면에서 사람을 고르거나 회수하는 경로는 없다.
+ * (RPC `file_collection_assign`·`file_collection_revoke_assignment`는 DB에 남아 있지만
+ *  어느 화면도 부르지 않는다.)
+ */
 
 /** 공개. 이 시점부터 트리가 잠기고 응답 칸이 선다(되돌리지 못한다). */
 export function usePublishCollection(moduleId: string) {

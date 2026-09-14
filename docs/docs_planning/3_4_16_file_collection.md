@@ -11,6 +11,7 @@
 PROJECT·M&A 사업에서 **게스트마다 다른 자료를 받아 검토**하는 모듈입니다. WORKS가 자유 깊이의 폴더·문항 트리를 짜고 게스트별로 배포하면, 게스트는 자기 문항에만 파일 여러 개와 댓글을 붙여 **문항 단위로** 제출하고, WORKS는 문항마다 승인 또는 보완요청을 냅니다.
 
 * **격리**: 같은 기업·같은 사업의 게스트라도 서로의 파일·댓글·진행률을 보지 못합니다. 격리 단위는 **게스트 계정 하나**(배정 1행)입니다.
+* **받는 사람은 명부가 정합니다**(2026-09-14 사용자 확정, `20260914200000_file_collection_targets_from_roster.sql`). 파일받기마다 대상을 고르던 단계를 없앴습니다 — 그 사업 명부에서 로그인이 열린(`login_status = 'ACTIVE'`) 게스트 계정 **전원**이 자동으로 대상이 됩니다. 배정 원장은 그대로 남고(제출 공간·격리가 이 행에 달려 있습니다) 서버가 명부를 보고 채웁니다. WORKS 화면의 `받는 사람` 탭도 함께 없앴습니다.
 * **분리 저장소**: 기존 `attachments`(모듈 전체 공유)와 정책 전제가 반대이므로 전용 표와 전용 비공개 버킷 `file-collection`을 씁니다.
 * **범위**: 워크스페이스는 `project`·`mna` 둘뿐입니다. FUND는 이번 범위에서 제외했습니다(사용자 확정).
 * **등록**: `module_templates`에 `FILE_COLLECTION`(category `OPERATION`, visibility `GUEST_ONLY`, workspaces `project,mna`, sort_order 11) 한 줄이 서고, ADMIN이 카탈로그에서 토글합니다.
@@ -44,6 +45,9 @@ PROJECT·M&A 사업에서 **게스트마다 다른 자료를 받아 검토**하�
   * `app.file_collection_internal_read(uuid)` / `app.file_collection_internal_write(uuid)` — 로그인한 **내부** 사용자, 대상이 `FILE_COLLECTION` 모듈, `entity_key in ('program','ma_program')`, 해당 워크스페이스 읽기/쓰기 권한, `app.can_access_ws_program()`(M&A 비밀딜 경계 포함). FUND는 `entity_key`에서 걸러집니다.
   * `app.file_collection_guest_assignment_ids()` — 게스트 본인(`current_app_user_id()`, session_version 검사 포함), 계정 활성(`users.is_active`·`deleted_at`·게스트 종류), 명부 줄 생존·`login_status='ACTIVE'`, 모듈 개방(`app.guest_open_module_ids()` — 세션 고정 맥락 포함), 미회수·미삭제를 모두 통과한 배정. **파일받기 자체의 공개 판정은 2026-09-13에 없앴습니다** — 밖으로 나가는 시점은 모듈 공개 여부 하나가 답합니다.
   * `app.file_collection_guest_writable_assignment_ids()` — 위 집합 ∩ 모듈 `status = 'OPEN'`.
+* **대상 동기화 함수**(`app` 스키마, 앱 롤 EXECUTE **없음** — 정의자 경로와 트리거만 부릅니다):
+  * `app.fc_sync_assignments(collection, module)` — 명부의 유효한 게스트 계정을 배정으로 맞춥니다(멱등). 고르는 조건은 배정 트리거 `app.fc_assignment_guard`가 보는 것과 같은 넷(같은 사업 명부 줄 · `login_status='ACTIVE'` · 게스트 종류 · 계정 활성)이며, 같은 계정이 명부에 여러 줄이면 한 줄만 씁니다. 자동으로 선 행은 `assigned_by`가 NULL입니다. 명부에 살아 있는 대상의 회수는 되돌리고, 명부에서 빠진 행은 건드리지 않습니다.
+  * `app.fc_sync_targets(module)` — 모듈 하나의 대상과 응답 칸을 함께 맞춥니다. 부르는 자리는 셋입니다: 명부 트리거 `trg_fc_participant_sync`(`program_participants` INSERT·UPDATE, `WHEN new.user_id is not null and new.login_status='ACTIVE'`), `file_collection_upsert`(원장 최초 생성), 마이그레이션의 소급 한 번.
 * **날짜 마감은 없습니다.** 게스트 쓰기 가능 여부는 **모듈 상태**가 결정합니다 — `OPEN`이면 쓰기·읽기, `CLOSED`면 읽기만(다운로드 인가는 계속 납니다), `DRAFT`면 내용이 닫힙니다. 자동 마감 일정 기능은 구현하지 않았습니다.
 
 ---
@@ -56,14 +60,14 @@ PROJECT·M&A 사업에서 **게스트마다 다른 자료를 받아 검토**하�
 
 | RPC | 인자 | 반환 | 하는 일 |
 | :--- | :--- | :--- | :--- |
-| `file_collection_upsert` | `p_program_module_id uuid, p_title text default '', p_guide text default null` | `uuid`(collection id) | 머리 행 생성·수정. 모듈이 `DRAFT`여도 초안은 가능 |
-| `file_collection_save_node` | `p_collection_id uuid, p_node_id uuid default null, p_parent_id uuid default null, p_node_type text default 'QUESTION', p_title text default '', p_guide text default null, p_is_required boolean default false, p_sort_order integer default 0, p_expected_updated_at timestamptz default null` | `uuid`(node id) | 노드 생성(= `p_node_id` null)·수정. `p_expected_updated_at`이 오면 대조(불일치 `40001`). 이미 자료를 받은 문항은 삭제·이동·종류 변경 불가 |
+| `file_collection_upsert` | `p_program_module_id uuid, p_title text default '', p_guide text default null` | `uuid`(collection id) | 머리 행 생성·수정. 모듈이 `DRAFT`여도 초안은 가능. 끝에서 `app.fc_sync_targets`를 불러 **명부의 게스트를 대상으로 세웁니다** |
+| `file_collection_save_node` | `p_collection_id uuid, p_node_id uuid default null, p_parent_id uuid default null, p_node_type text default 'QUESTION', p_title text default '', p_guide text default null, p_is_required boolean default false, p_sort_order integer default 0, p_expected_updated_at timestamptz default null` | `uuid`(node id) | 노드 생성(= `p_node_id` null)·수정. `p_expected_updated_at`이 오면 대조(불일치 `40001`). 이미 자료를 받은 문항은 삭제·이동·종류 변경 불가. 끝에서 응답 칸을 맞춥니다(2026-09-14 — 격자 저장에만 있던 줄입니다) |
 | `file_collection_move_node` | `p_node_id uuid, p_parent_id uuid default null, p_sort_order integer default 0` | `void` | 부모·순서 변경. 이미 자료를 받은 문항은 삭제·이동·종류 변경 불가 |
 | `file_collection_reorder_node` | `p_node_id uuid, p_direction text('up'\|'down')` | `boolean`(실제로 바뀌었는가) | **형제 순서 한 칸 이동.** `file_collections` 행을 `FOR UPDATE`로 잡고, 같은 부모(최상위는 `parent_id is null`)의 살아 있는 형제만 세어 인접한 둘을 맞바꾸고 `1..n` 재번호를 **한 UPDATE**로 끝냅니다 — 중간 상태가 없습니다. 양 끝에서 누르면 오류 없이 `false`(무변화), 방향이 `up`/`down`이 아니면 `P0001`, 이미 자료를 받은 문항은 삭제·이동·종류 변경 불가. 부모 변경은 `move_node`가 맡습니다 |
 | `file_collection_delete_node` | `p_node_id uuid` | `integer`(지운 노드 수) | 자손까지 소프트 삭제. 이미 자료를 받은 문항은 삭제·이동·종류 변경 불가 |
 | `file_collection_save_structure` | `p_collection_id uuid, p_nodes jsonb default '[]', p_deletes jsonb default '[]', p_level_names text[] default null, p_expected_updated_at timestamptz default null` | `jsonb` | **구성 전체를 한 번에 저장합니다(2026-09-13 신설, 미적용).** 가로 계층 격자 화면이 부르는 유일한 쓰기입니다. `p_nodes`는 `{key, parent_key, node_id, node_type, title, guide, is_required, expected_updated_at}` 배열이며 **부모가 자기보다 앞에 서야** 합니다(순환·유령 부모를 값 단계에서 막습니다). 기존 마디는 `node_id`와 `expected_updated_at`을 반드시 함께 싣고, 살아 있는 마디는 `p_nodes`나 `p_deletes` 중 **한쪽에 반드시** 있어야 합니다 — 어느 쪽에도 없으면 `40001`(내가 못 본 마디를 조용히 지우지 않습니다). 적용은 삭제 → 분류(위→아래) → 문항(자리 먼저, 종류는 마지막)의 세 걸음이며 `sort_order`는 서버가 `1..n`으로 매깁니다. 반환은 `{collection_id, created, changed, deleted, keys, updated_at, level_names, nodes}`로, `nodes`는 저장 직후 살아 있는 트리 전부입니다(화면이 조회를 기다리지 않고 기준을 다시 세웁니다). 이미 자료를 받은 문항은 삭제·이동·종류 변경 불가 |
-| `file_collection_assign` | `p_collection_id uuid, p_participant_ids uuid[]` | `integer`(처리한 대상 수) | 명부 줄로 배정. 이미 회수된 대상은 **같은 행을 되살려** 이력을 잇고 명부 연결을 다시 맺습니다. 공개 이후면 응답 칸을 즉시 생성 |
-| `file_collection_revoke_assignment` | `p_assignment_id uuid` | `void` | 배정 회수(소프트). 명부가 이미 정지·삭제된 대상도 회수됩니다 |
+| `file_collection_assign` | `p_collection_id uuid, p_participant_ids uuid[]` | `integer`(처리한 대상 수) | **2026-09-14부터 화면이 부르지 않습니다**(대상을 명부가 정합니다). 명부 줄로 배정하고 회수된 대상은 같은 행을 되살립니다 |
+| `file_collection_revoke_assignment` | `p_assignment_id uuid` | `void` | **2026-09-14부터 화면이 부르지 않습니다.** 배정 회수(소프트)이며, 명부에 살아 있는 대상은 다음 동기화에서 다시 섭니다 |
 | `file_collection_publish` | `p_collection_id uuid` | `timestamptz`(published_at) | **2026-09-13부터 화면이 부르지 않습니다**(공개 판정이 모듈로 옮겨갔습니다). 함수와 `published_at` 열은 기록으로 남아 있을 뿐 어떤 판정에도 쓰이지 않습니다 |
 | `file_collection_review` | `p_response_id uuid, p_decision text('APPROVED'\|'REWORK_REQUESTED'), p_comment text default null` | `file_collection_status` | `SUBMITTED` 문항만 검토. `REWORK_REQUESTED`면 `round`+1(이전 회차 파일은 보존). 코멘트가 있으면 `WORKS` 쪽으로 적재 |
 
@@ -73,7 +77,7 @@ PROJECT·M&A 사업에서 **게스트마다 다른 자료를 받아 검토**하�
 | :--- | :--- | :--- | :--- |
 | `file_collection_register_upload` | `p_response_id uuid, p_original_name text, p_content_type text default null, p_byte_size bigint default null` | `table (file_id uuid, storage_bucket text, storage_path text)` | 업로드 자리를 예약합니다. **경로는 서버가 만듭니다** — `{module}/{assignment}/{response}/r{round}/{file_id}`. 상태 `PENDING`. 제출·승인된 문항이면 거절. `p_byte_size`는 신고값일 뿐이며 범위(0 초과 100MB 이하)만 봅니다 |
 | `file_collection_commit_upload` | `p_file_id uuid` | `uuid`(file id) | **DB가 `storage.objects`를 직접 읽어** 정확한 버킷·이름의 실물 존재·크기·형식을 확인하고 `READY`로 올립니다. 크기·형식은 실물이 답합니다(클라이언트가 크기를 보내는 인자가 없습니다). 본인 파일·쓰기 가능 배정·현재 회차·미제출 상태를 모두 재확인하며, 이미 `READY`면 멱등 |
-| `file_collection_remove_file` | `p_file_id uuid` | `void` | **현재 회차의 미제출 파일만** 소프트 삭제. 게스트는 본인 업로드만, 내부는 모듈 쓰기 권한으로. 제출·승인 문항과 지난 회차는 **누구도** 내리지 못하며 되살리기도 없습니다. `audit_logs`에 `FILE_COLLECTION_FILE_REMOVE` 적재 |
+| `file_collection_remove_file` | `p_file_id uuid` | `void` | **낼 수 있는 상태(`NOT_SUBMITTED`·`DRAFT`·`REWORK_REQUESTED`)의 파일**을 소프트 삭제. 게스트는 본인 업로드만, 내부는 모듈 쓰기 권한으로. **회차는 가르지 않습니다**(2026-09-14 사용자 지정 — 보완 요청이 회차를 올리므로, 회차로 가르면 보완을 받은 참여자가 잘못 낸 자료를 치우지 못합니다). 검토 중(`SUBMITTED`)·완료(`APPROVED`) 문항은 **누구도** 내리지 못하며 되살리기도 없습니다. `audit_logs`에 `FILE_COLLECTION_FILE_REMOVE` 적재 |
 | `file_collection_submit` | `p_response_id uuid` | `file_collection_status`(`SUBMITTED`) | **문항 단위 제출.** 현재 회차에 `READY` 파일이 1개 이상이어야 하며, 다른 문항이 비어 있어도 막히지 않습니다. 전체 필수 진행률은 관제 화면이 응답 목록에서 파생합니다 |
 | `file_collection_add_comment` | `p_response_id uuid, p_body text` | `uuid`(comment id) | `author_user_id`·`author_side`는 서버가 적습니다(게스트가 WORKS를 사칭할 수 없습니다). 게스트는 쓰기 가능 배정일 때만 |
 | `file_collection_authorize_download` | `p_file_id uuid` | `table (storage_bucket text, storage_path text, original_name text, content_type text)` | **권한 판정과 경로 회신만** 합니다. 게스트는 자기 배정(읽기 폭과 동일), 내부는 모듈 읽기 권한. `READY`가 아니면 거절 |
@@ -104,8 +108,23 @@ Edge Function은 **하나**입니다 — `file-collection-file`. 함수를 업�
 * **WORKS 검토**: 응답 1행 + 그 응답의 `file_collection_files`(`deleted_at is null`, `round` 내림차순) + `file_collection_comments`. 검토는 `SUBMITTED`인 응답에만 뜹니다.
 * **GUEST**: 자기 배정 1행 → 트리(`file_collection_nodes`) + 자기 응답(`file_collection_responses`) + 파일. RLS가 이미 남의 것을 지우므로 화면은 추가 필터 없이 그대로 그립니다. 모듈이 `CLOSED`면 쓰기 버튼을 감추되, **막는 것은 서버입니다**.
   * 제출은 **문항 단위**입니다 — 한 문항의 파일을 올리고 그 문항만 냅니다. 다른 문항이 비어 있어도 막히지 않습니다.
-  * 지난 회차는 **이력으로 남습니다**(`filesByRound`, 최신 회차가 위). 보완 요청 뒤에도 무엇을 처음 냈는지가 남아야 검토 근거가 섭니다.
-  * 게스트 쪽 '아직 시작 전' 문구는 `NOT_SUBMITTED` 하나만 가리킵니다 — 작성 중(`DRAFT`)은 그 말에 들지 않습니다.
+  * 지난 회차는 **이력으로 남습니다**(`filesByRound`, 최신 회차가 위). 다만 문항이 아직 참여자 손에 있는 동안(보완 요청 등)에는 지난 회차 파일도 **내릴 수 있습니다**(2026-09-14 사용자 지정) — 잘못 낸 자료를 치우는 일까지가 보완이기 때문입니다. 내린 자료는 소프트 삭제라 원장과 `audit_logs`에는 남지만 **화면에서는 사라지므로**, 담당자가 무엇을 보고 보완을 요청했는지의 실물이 없어질 수 있습니다.
+  * **참여자 화면의 상태 배지는 `DRAFT`를 `미제출`로 읽습니다**(2026-09-14 사용자 지정, `guestStatusLabel`). 올려 두기만 한 문항도 담당자에게 가지 않아 참여자가 할 일은 미제출과 같고, 진행 요약이 이미 둘을 한 칸에 셉니다. 원장의 상태말(`FILE_COLLECTION_STATUS_LABEL`)과 **WORKS 관제는 그대로 다섯 상태를 가릅니다** — 담당자는 '손도 대지 않은 대상'과 '쓰다 만 대상'에 다른 독촉을 보냅니다.
+
+---
+
+## 6-1. 첨부파일 — 문항에 담당자가 건네는 양식 (2026-09-14 추가, **운영 DB 적용 완료**)
+
+제출물과 **방향이 반대인 파일**입니다. 게스트가 올리는 것은 사람마다 다르고 서로 보지 못하지만, 담당자가 문항에 붙이는 양식·견본은 그 파일받기에 **배정된 사람 전원이 같은 것**을 읽습니다. 전제가 반대이므로 원장도 반대쪽인 공용 첨부(`public.attachments`, 버킷 `attachments`)를 씁니다 — 전용 표(`file_collection_files`)는 계속 제출물만 갖습니다.
+
+* **귀속**: `target_type = 'file_collection_node'`, `target_id` = 문항 마디 id, `program_module_id` = 그 파일받기 모듈. 값은 `FILE_COLLECTION_NODE_ATTACHMENT_TYPE`(`packages/master-data`) 한 곳이 소유합니다. 붙는 자리는 **문항(`QUESTION`)뿐**입니다 — 받는 쪽이 여는 자리가 문항이라 폴더에 붙이면 어디에도 뜨지 않습니다.
+* **정책**(`supabase/migrations/20260914150000_file_collection_node_attachments.sql`): 내부 읽기는 `app.file_collection_internal_read()`, 쓰기(붙이기·내리기)는 `app.file_collection_internal_write()`를 함께 통과해야 합니다 — 공용 첨부 정책은 `target_type`을 가리지 않아, 손대지 않으면 M&A 비밀딜의 양식이 사업 밖 내부 사용자에게 열리고 남의 사업 문항에도 파일을 붙일 수 있습니다. 게스트는 공용 정책에서 이 종류를 빼고 전용 정책(`attachments_fc_node_guest_select`)이 받으며, **자기 배정이 있는 파일받기의 문항만** 읽습니다.
+* **화면**: 양쪽 모두 이름은 `첨부파일`이고 표식은 다른 목록 화면과 같은 클립(lucide `Paperclip`)입니다. WORKS는 문항 구성 표의 `첨부파일` 칸에서 붙이고 내립니다 — 아직 저장되지 않은 줄에는 붙일 수 없습니다(첨부가 마디 id에 매달리기 때문). GUEST는 문항 목록의 **상태 왼쪽 `첨부파일` 열**에서 있고 없음을 읽고(건수는 세우지 않습니다 — 게시판 목록과 같은 규칙), 문항을 열면 `첨부파일` 카드에서 내려받습니다.
+* **통로**: 업로드·다운로드 모두 자료 관리와 같은 길입니다(다운로드는 `material-download` Edge Function — 호출자 JWT로 RLS 재검증, `access_logs` 적재 후 서명 URL). 제출물 전용 Edge(`file-collection-file`)는 이 파일을 다루지 않습니다.
+* **모듈 삭제**: `program_module_id`를 들고 있으므로 살아 있는 문항 자료가 있으면 모듈 하드 삭제가 막힙니다(`program_module_delete_blockers`).
+* **운영 반영(2026-09-14)**: `20260914150000_file_collection_node_attachments.sql`을 `scripts/db/run-sql.mjs … --commit`으로 운영 DB(`alopryrwakfpkgjumhba`)에 직접 적용했습니다(`supabase db push`는 쓰지 않습니다 — 원격 이력 번호가 어긋납니다). 적용 뒤 `pg_policies`로 정책 다섯(`attachments_select`·`_insert`·`_update`·`_guest_select`·신규 `_fc_node_guest_select`)이 모두 `file_collection_node` 가드를 들고 선 것을 확인했습니다.
+* **적용 전 행위 시험(롤백 트랜잭션)**: 운영 DB에 pgTAP이 없어 `file_collection_isolation_test.sql`에 넣은 7단언과 **같은 내용을 평문 SQL로** 옮겨, 마이그레이션을 적용한 같은 트랜잭션 안에서 허용 1·거절 4·게스트 2를 모두 통과시킨 뒤 되돌렸습니다. pgTAP 파일 자체는 로컬에서 실행하지 못했고(psql·Docker 없음) CI에서 돌아갑니다.
+* **남은 공백**: 실제 로그인 계정으로 붙이고 내려받는 **화면 E2E는 하지 않았습니다**. 프론트엔드는 아직 커밋·배포 전입니다.
 
 ---
 

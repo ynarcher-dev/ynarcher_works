@@ -24,6 +24,13 @@ const MOCKS = new Map([
   [`${WORKS_SRC}/auth/authStore`, here('./src/mocks/works/authStore.ts')],
   [`${WORKS_SRC}/features/program/workspace`, here('./src/mocks/works/workspace.ts')],
   [`${WORKS_SRC}/features/program/participantHooks`, here('./src/mocks/works/participantHooks.ts')],
+  /*
+    Supabase 클라이언트는 **적재되는 순간** `getEnv()`로 환경변수를 요구한다(zod). 이 픽스처에는
+    그 값이 없으므로 화면이 서기 전에 던진다 — 그래서 GUEST 계정 창들이 끌고 오는 서비스
+    모듈들을 실물로 두려면 이 한 자리를 갈아 끼워야 한다.
+  */
+  [`${WORKS_SRC}/lib/supabase`, here('./src/mocks/works/supabase.ts')],
+  [`${WORKS_SRC}/features/networks/hooks`, here('./src/mocks/works/networksHooks.ts')],
   [
     `${WORKS_SRC}/features/program/fileCollection/fileCollectionHooks`,
     here('./src/mocks/works/fileCollectionHooks.ts'),
@@ -89,9 +96,22 @@ export default {
   root: here('.'),
   plugins: [appSources(), react()],
   resolve: {
-    dedupe: ['react', 'react-dom'],
+    dedupe: ['react', 'react-dom', '@tanstack/react-query', 'react-router-dom'],
     alias: [
       { find: /^@ynarcher\/ui$/, replacement: here('../../packages/ui/src/index.ts') },
+      {
+        // 자료 파서. WORKS는 이 별칭을 자기 설정에 두고 있고(`apps/works/vite.config.ts`),
+        // `guestBatchFile`이 xlsx를 열 때 그 경로로 들어간다.
+        find: /^@docparse\/(.*)$/,
+        replacement: `${here('../../supabase/functions/_shared/docParse')}/$1`,
+      },
+      /*
+        Provider가 필요한 화면들. 픽스처 파일에는 `node_modules`가 없어 bare import가 풀리지
+        않으므로 앱이 쓰는 그 사본을 절대 경로로 박는다 — 앱 소스 쪽 bare import도 같은
+        파일로 풀리므로 컨텍스트 인스턴스가 하나로 유지된다(`dedupe`).
+      */
+      { find: /^@tanstack\/react-query$/, replacement: resolveFromApp('@tanstack/react-query') },
+      { find: /^react-router-dom$/, replacement: resolveFromApp('react-router-dom') },
       { find: /^@ynarcher\/master-data$/, replacement: here('../../packages/master-data/src/index.ts') },
       { find: /^react$/, replacement: resolveFromApp('react') },
       { find: /^react\/jsx-runtime$/, replacement: resolveFromApp('react/jsx-runtime') },

@@ -2,7 +2,12 @@ import dayjs, { type Dayjs } from 'dayjs'
 import { useMemo, useState } from 'react'
 import { hasWorkspaceWrite, useAuthStore } from '@/auth/authStore'
 import { buildWeeks, DATE_KEY, groupByDate, monthRange } from '@/features/hub/calendarGrid'
-import { useSystemEvents, type SystemEvent } from '@/features/hub/hooks'
+import {
+  useBirthdaysInRange,
+  useSystemEvents,
+  type BirthdayPerson,
+  type SystemEvent,
+} from '@/features/hub/hooks'
 
 export interface CalendarView {
   today: Dayjs
@@ -10,6 +15,8 @@ export interface CalendarView {
   month: Dayjs
   weeks: Dayjs[][]
   byDate: Map<string, SystemEvent[]>
+  /** 인사 원장의 생년월일을 조회 연도 생일 날짜로만 매핑한 달력 표시 데이터. */
+  birthdaysByDate: Map<string, BirthdayPerson[]>
   /** 선택한 날짜(YYYY-MM-DD). */
   selected: string
   selectedEvents: SystemEvent[]
@@ -50,8 +57,19 @@ export function useCalendarView(): CalendarView {
 
   const range = useMemo(() => monthRange(month), [month])
   const { data, isLoading } = useSystemEvents(range)
+  const { data: birthdayOccurrences } = useBirthdaysInRange(range)
 
   const byDate = useMemo(() => groupByDate(data ?? []), [data])
+  const birthdaysByDate = useMemo(() => {
+    const map = new Map<string, BirthdayPerson[]>()
+    for (const occurrence of birthdayOccurrences ?? []) {
+      const bucket = map.get(occurrence.birthday_on)
+      const person = { user_id: occurrence.user_id, user_name: occurrence.user_name }
+      if (bucket) bucket.push(person)
+      else map.set(occurrence.birthday_on, [person])
+    }
+    return map
+  }, [birthdayOccurrences])
   const weeks = useMemo(() => buildWeeks(month), [month])
   const selectedEvents = byDate.get(selected) ?? []
 
@@ -60,6 +78,7 @@ export function useCalendarView(): CalendarView {
     month,
     weeks,
     byDate,
+    birthdaysByDate,
     selected,
     selectedEvents,
     isLoading,

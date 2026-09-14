@@ -37,6 +37,8 @@ export type FieldType =
   | 'SELECT'
   | 'TABLE'
   | 'BUDGET_TREE'
+  /** 사업 수지 계획 — 예상 매출·예상 예산 두 칸(이익은 그 차액이라 적지 않는다). */
+  | 'PROFIT_PLAN'
 
 /**
  * 표 한 열의 종류.
@@ -117,8 +119,30 @@ export interface HtmlTemplateValue {
 /** 표 한 행 — 열 key → 값. */
 export type TableRow = Record<string, string>
 
+/**
+ * 사업 수지 계획(PROFIT_PLAN)의 값 — **적는 것은 둘뿐이다.**
+ *
+ * 이익 칸을 따로 두지 않는 이유는 그것이 입력이 아니라 뺄셈이기 때문이다. 세 칸을 다 받으면
+ * 매출 − 예산 ≠ 이익인 문서가 결재를 통과할 수 있고, 그때 어느 숫자가 참인지 판정할 근거가
+ * 없다. 이익은 언제나 'planProfit'이 답한다(예산 사용액을 저장하지 않고 함수가 답하는 것과
+ * 같은 규칙).
+ *
+ * 값은 사람이 적은 문자열 그대로 담는다(쉼표 포함). 수치 해석은 읽는 쪽이 한 번만 한다.
+ */
+export interface ProfitPlanValue {
+  /** 예상 매출. */
+  revenue: string
+  /** 예상 예산(집행 계획). 예산표 합계와 다를 수 있다 — 이쪽은 사업 전체의 어림이다. */
+  budget: string
+}
+
 /** 한 필드에 담기는 값. 스칼라는 문자열, TABLE은 행 배열, BUDGET_TREE는 층 있는 표. */
-export type FieldValue = string | TableRow[] | BudgetTreeValue | HtmlTemplateValue
+export type FieldValue =
+  | string
+  | TableRow[]
+  | BudgetTreeValue
+  | HtmlTemplateValue
+  | ProfitPlanValue
 
 /** 필드 값 묶음(문서의 field_values). */
 export type FieldValues = Record<string, FieldValue>
@@ -134,6 +158,7 @@ export const FIELD_TYPE_LABEL: Record<FieldType, string> = {
   SELECT: '선택',
   TABLE: '표',
   BUDGET_TREE: '예산표',
+  PROFIT_PLAN: '수지 계획',
 }
 
 /** 필드 종류. 순서가 곧 양식 빌더 선택 목록의 순서다. */
@@ -148,6 +173,7 @@ export const FIELD_TYPES: FieldType[] = [
   'SELECT',
   'TABLE',
   'BUDGET_TREE',
+  'PROFIT_PLAN',
 ]
 
 /** 표 열에 쓸 수 있는 종류. 순서가 곧 양식 빌더 선택 목록의 순서다. */
@@ -380,6 +406,11 @@ export function budgetField(fields: FormField[]): FormField | null {
   return fields.find((f) => f.type === 'BUDGET_TREE') ?? null
 }
 
+/** 양식의 수지 계획 필드(첫 번째). 예산표와 같은 규격으로 고른다 — 한 양식에 한 벌이다. */
+export function planField(fields: FormField[]): FormField | null {
+  return fields.find((f) => f.type === 'PROFIT_PLAN') ?? null
+}
+
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v)
 
@@ -448,6 +479,41 @@ export function parseFields(raw: unknown): FormField[] {
     })
   }
   return out
+}
+
+/**
+ * 값 묶음에서 수지 계획을 안전하게 꺼낸다. 옛 문서·빈 문서는 두 칸이 빈 계획으로 읽힌다 —
+ * 없는 계획을 0원으로 읽으면 "매출 0원을 계획했다"가 되어 버린다.
+ */
+export function planValue(values: FieldValues, key: string): ProfitPlanValue {
+  const v = values[key]
+  if (!isRecord(v)) return { revenue: '', budget: '' }
+  return { revenue: str(v.revenue), budget: str(v.budget) }
+}
+
+/**
+ * 계획의 세 수 — 매출·예산과 그 차액인 이익.
+ *
+ * **적히지 않은 칸은 0이 아니라 null이다.** 매출을 아직 적지 않았는데 이익을 −예산으로 그리면
+ * 화면이 "이 사업은 적자 계획"이라고 말하게 된다. 그래서 둘 다 적혔을 때만 이익이 선다.
+ */
+export function planProfit(plan: ProfitPlanValue): {
+  revenue: number | null
+  budget: number | null
+  profit: number | null
+} {
+  const revenue = toNumber(plan.revenue)
+  const budget = toNumber(plan.budget)
+  return {
+    revenue,
+    budget,
+    profit: revenue === null || budget === null ? null : revenue - budget,
+  }
+}
+
+/** 계획이 비어 있는가(두 칸 모두 미입력). */
+export function isEmptyPlan(plan: ProfitPlanValue): boolean {
+  return plan.revenue.trim() === '' && plan.budget.trim() === ''
 }
 
 /** 값 묶음에서 스칼라 값을 안전하게 꺼낸다. */
@@ -528,6 +594,7 @@ export function emptyValues(fields: FormField[]): FieldValues {
     else if (f.type === 'HTML_TEMPLATE') {
       out[f.key] = { html: f.defaultValue ?? '' }
     }
+    else if (f.type === 'PROFIT_PLAN') out[f.key] = { revenue: '', budget: '' }
     else out[f.key] = f.defaultValue ?? ''
   }
   return out
@@ -578,6 +645,12 @@ export function primaryAmount(fields: FormField[], values: FieldValues): number 
 
 /** 표시용 값 문자열 — 상세·집계에서 타입에 맞는 표기로 편다. */
 export function displayValue(field: FormField, values: FieldValues): string {
+  if (field.type === 'PROFIT_PLAN') {
+    const plan = planValue(values, field.key)
+    if (isEmptyPlan(plan)) return '-'
+    const { revenue, budget, profit } = planProfit(plan)
+    return `매출 ${formatMoney(revenue)} · 예산 ${formatMoney(budget)} · 이익 ${formatMoney(profit)}`
+  }
   if (field.type === 'HTML_TEMPLATE') {
     return htmlTemplateValue(values, field.key).html.replace(/<[^>]*>/g, '').trim() || '-'
   }
@@ -617,6 +690,12 @@ export function missingRequired(fields: FormField[], values: FieldValues): strin
     if (f.type === 'RICHTEXT') {
       // 빈 에디터는 <p></p> 같은 빈 태그를 남긴다 — 태그를 걷어낸 뒤 판단한다.
       if (!hasRichTextContent(scalarValue(values, f.key))) missing.push(f.label)
+      continue
+    }
+    if (f.type === 'PROFIT_PLAN') {
+      // 한 칸만 적힌 계획은 계획이 아니다 — 이익이 서지 않아 비교할 것이 생기지 않는다.
+      const plan = planValue(values, f.key)
+      if (!plan.revenue.trim() || !plan.budget.trim()) missing.push(f.label)
       continue
     }
     if (!scalarValue(values, f.key).trim()) missing.push(f.label)

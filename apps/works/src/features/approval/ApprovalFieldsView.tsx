@@ -13,6 +13,8 @@ import {
   formatMoney,
   hasRichTextContent,
   htmlTemplateValue,
+  isEmptyPlan,
+  planValue,
   isNumericColumn,
   scalarValue,
   tableRows,
@@ -168,6 +170,9 @@ export function ApprovalFieldsView({
         }
         if (field.type === 'HTML_TEMPLATE') {
           return hasRichTextContent(htmlTemplateValue(values, field.key).html)
+        }
+        if (field.type === 'PROFIT_PLAN') {
+          return !isEmptyPlan(planValue(values, field.key))
         }
         const value = scalarValue(values, field.key)
         return field.type === 'RICHTEXT' ? hasRichTextContent(value) : value.trim() !== ''

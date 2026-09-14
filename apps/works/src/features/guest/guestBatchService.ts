@@ -12,17 +12,17 @@ import {
  *
  * 한 줄 생성은 `guestAccountService.createGuestAccount`(`create_guest_account`)가 계속 소유한다.
  * 두 경로를 합치지 않는 것은 **계약이 다르기 때문**이다 — 한 줄 경로는 멱등이라 같은 이메일이면
- * 기존 계정을 돌려주고, 이 경로는 엄격해서 이미 쓰이는 이메일·연락처를 **행 실패**로 돌려준다.
+ * 기존 계정을 돌려주고, 이 경로는 엄격해서 이미 쓰이는 이메일을 **행 실패**로 돌려준다.
  * 일괄 입력에서 "만들었습니다"가 실은 남의 계정 재사용이면 담당자가 알 방법이 없기 때문이다
  * (`20260913140000_strict_guest_account_batch.sql` 머리말).
  *
  * **서버 계약**(`public.create_guest_accounts(p_rows jsonb)`, SECURITY DEFINER, `authenticated`에만
  * EXECUTE):
  *
- *  · 입력은 `{key, name, email, phone, master_table?, master_id?}` 배열, 한 번에 최대 200건.
+ *  · 입력은 `{key, name, email, affiliation}` 배열, 한 번에 최대 200건이다.
  *    비거나 넘치면 행 사유가 아니라 **호출 전체가 거절된다**(22023). 미인증·게스트는 42501.
  *  · 결과는 배열이 아니라 객체다 — `{total, created, failed, rows:[{index, key, status:'CREATED'|
- *    'FAILED', user_id, user_type, master_table, master_id, errors:[{field, code, message}]}]}`.
+ *    'FAILED', user_id, user_type, errors:[{field, code, message}]}]}`.
  *  · 행 단위로 독립이다(부분 성공). 배치 안 중복은 겹친 행을 **전부** 실패로 세운다.
  *
  * 이 어댑터는 한 줄에서 `key`·`status`·`user_id`·`errors`만 꺼낸다. `total`·`created`·`failed`는
@@ -30,10 +30,8 @@ import {
  * 두 숫자가 같은 배너에 섞이면 어느 쪽이 답인지 알 수 없다(`applyBatchOutcomes`가 센다).
  *
  * **실패 사유 문구는 서버 것을 그대로 옮긴다.** 덮으면 담당자가 무엇을 고쳐야 하는지 알 수 없다.
- * 그럴 수 있는 것은 서버 문구가 **무엇과 겹쳤는지를 말하지 않기** 때문이다 — 원장 연결 실패는
- * '없음'과 '권한 없음'을 같은 `MASTER_FORBIDDEN`으로 접고(그러지 않으면 이메일 하나로 매각 검토
- * 대상을 알 수 있다), 이메일·연락처 중복은 기존 계정의 이름도 소속도 밝히지 않는다. 그 성질이
- * 깨지면 여기가 아니라 **RPC를 고쳐야 한다** — 화면에서 덮는 것은 가림이지 보호가 아니다.
+ * 이메일 중복은 기존 계정의 이름이나 소속을 밝히지 않는다. 그 성질이 깨지면 여기가 아니라
+ * **RPC를 고쳐야 한다** — 화면에서 덮는 것은 가림이지 보호가 아니다.
  */
 
 const RPC_NAME = 'create_guest_accounts'
@@ -56,13 +54,11 @@ interface RawIssue {
   message?: unknown
 }
 
-/** 서버의 칸 이름 → 화면의 칸. 원장은 두 칸으로 오지만 화면에는 연결 칸이 하나다. */
+/** 서버의 칸 이름 → 화면의 칸. 계약 밖의 칸은 줄 전체 사유로 접는다. */
 const FIELD_MAP: Record<string, GuestBatchField> = {
   name: 'name',
   email: 'email',
-  phone: 'phone',
-  master_table: 'ledger',
-  master_id: 'ledger',
+  affiliation: 'affiliation',
   // `key`는 우리가 만든 줄 식별자라 담당자가 고칠 수 있는 칸이 아니다 — 줄 사유로 세운다.
   key: 'row',
   row: 'row',

@@ -52,6 +52,8 @@ const INDENT_MAX_DEPTH = 8
  * 모자라는 폭은 안쪽 상자의 가로 스크롤이 받는다. 감추는 것보다 밀어 보이는 쪽을 택한다.
  */
 const TABLE_MIN_WIDTH = 'min-w-[40rem]'
+/** 설명 열이 함께 서는 경우의 하한 — 이름·설명·상태가 각자 읽히려면 한 칸 더 필요하다. */
+const TABLE_MIN_WIDTH_WIDE = 'min-w-[52rem]'
 
 const chevronPath = (expanded: boolean) => (expanded ? 'M4 6l4 4 4-4' : 'M6 4l4 4-4 4')
 
@@ -113,6 +115,23 @@ export interface CollectionTreeTableProps {
    * 내야 하는지가 화면의 주제라 접힌 채로 시작하면 그 답이 한 단계 뒤로 숨는다.
    */
   defaultExpandedIds?: readonly string[]
+  /**
+   * 설명 열을 세울지. 마디의 `description`이 한 줄로 서고 넘치면 말줄임한다.
+   *
+   * 이름 칸에 곁들이지 않고 **제 열**로 두는 이유는 폭 때문이다 — 한 칸에 둘을 담으면 이름과
+   * 설명이 서로의 폭을 빼앗아 둘 다 잘리고, 줄마다 잘리는 지점이 달라 세로로 읽히지 않는다.
+   */
+  showDescription?: boolean
+  descriptionLabel?: string
+  /**
+   * 첨부파일 열(상태 **왼쪽**). 주지 않으면 열 자체가 서지 않는다.
+   *
+   * 표식을 여기서 그리지 않고 화면에서 받는 이유는 `packages/ui`가 아이콘 라이브러리에 기대지
+   * 않기 때문이다 — 목록 화면들이 이미 쓰는 클립(lucide `Paperclip`)을 그대로 넘겨야 같은
+   * 표식이 앱 전체에서 한 모양으로 선다.
+   */
+  renderAttachment?: (node: CollectionTreeNode) => ReactNode
+  attachmentLabel?: string
   /** 상태 열. 주지 않으면 열 자체가 서지 않는다. */
   renderStatus?: (node: CollectionTreeNode) => ReactNode
   statusLabel?: string
@@ -148,6 +167,10 @@ export function CollectionTreeTable({
   expandedIds,
   onExpandedChange,
   defaultExpandedIds,
+  showDescription = false,
+  descriptionLabel = '설명',
+  renderAttachment,
+  attachmentLabel = '첨부파일',
   renderStatus,
   statusLabel = '상태',
   renderActions,
@@ -273,7 +296,12 @@ export function CollectionTreeTable({
     [rows, focusRow, setExpanded, onSelect],
   )
 
-  const columnCount = 1 + (renderStatus ? 1 : 0) + (renderActions ? 1 : 0)
+  const columnCount =
+    1 +
+    (showDescription ? 1 : 0) +
+    (renderAttachment ? 1 : 0) +
+    (renderStatus ? 1 : 0) +
+    (renderActions ? 1 : 0)
 
   return (
     <DensityProvider value={tableCellDensity[stage]}>
@@ -303,7 +331,10 @@ export function CollectionTreeTable({
           <table
             role="treegrid"
             aria-label={caption}
-            className={cn('w-full table-fixed border-separate border-spacing-0', TABLE_MIN_WIDTH)}
+            className={cn(
+              'w-full table-fixed border-separate border-spacing-0',
+              showDescription ? TABLE_MIN_WIDTH_WIDE : TABLE_MIN_WIDTH,
+            )}
           >
             <caption className="sr-only">{caption}</caption>
             <thead className="bg-gray-25">
@@ -311,10 +342,55 @@ export function CollectionTreeTable({
                 <th
                   role="columnheader"
                   scope="col"
-                  className={cn(grid.row, 'border-b border-gray-300 text-left', grid.cellX, text.head)}
+                  className={cn(
+                    grid.row,
+                    // 설명이 함께 설 때만 이름 폭을 묶는다. 이름은 대개 짧고(문서 한 장의 이름)
+                    // 넘치면 그 자리에서 접히지만, 설명은 문장이라 폭이 모자라면 바로 잘린다 —
+                    // 그래서 남는 폭은 설명에 주고 이름은 1/4로 묶는다(2026-09-14 사용자 지정).
+                    // 들여쓰기·글리프가 함께 서는 칸이라 표 하한(52rem)에서도 13rem은 남는다.
+                    showDescription && 'w-1/4',
+                    'border-b border-gray-300 text-left',
+                    grid.cellX,
+                    text.head,
+                  )}
                 >
                   {nameLabel}
                 </th>
+                {showDescription && (
+                  <th
+                    role="columnheader"
+                    scope="col"
+                    className={cn(
+                      grid.row,
+                      // 이름과 상태가 제 폭을 가진 뒤 **남는 자리를 전부** 설명이 받는다.
+                      'border-b border-gray-300 text-left',
+                      grid.cellX,
+                      text.head,
+                    )}
+                  >
+                    {descriptionLabel}
+                  </th>
+                )}
+                {/*
+                  첨부파일 열은 **상태 왼쪽**에 선다(2026-09-14 사용자 지정). 줄에서 답하는 물음의
+                  순서가 그렇다 — 무엇을 내야 하는가(이름·설명) → 받아 갈 것이 있는가 → 내 것은
+                  어디까지 왔는가. 표식 하나만 놓이는 칸이라 가운데로 모은다.
+                */}
+                {renderAttachment && (
+                  <th
+                    role="columnheader"
+                    scope="col"
+                    className={cn(
+                      grid.row,
+                      width.count,
+                      'border-b border-gray-300 text-center',
+                      grid.cellXTight,
+                      text.head,
+                    )}
+                  >
+                    {attachmentLabel}
+                  </th>
+                )}
                 {renderStatus && (
                   <th
                     role="columnheader"
@@ -369,6 +445,8 @@ export function CollectionTreeTable({
                   onSelect={onSelect}
                   onFocusRow={setFocusId}
                   onToggle={setExpanded}
+                  showDescription={showDescription}
+                  renderAttachment={renderAttachment}
                   renderStatus={renderStatus}
                   renderActions={renderActions}
                 />
@@ -390,6 +468,8 @@ interface RowProps {
   /** 실제로 초점이 간 줄을 위로 알린다 — 굴러다니는 `tabIndex`가 화면과 어긋나지 않게 한다. */
   onFocusRow: (id: string) => void
   onToggle: (id: string, open: boolean) => void
+  showDescription: boolean
+  renderAttachment?: (node: CollectionTreeNode) => ReactNode
   renderStatus?: (node: CollectionTreeNode) => ReactNode
   renderActions?: (node: CollectionTreeNode) => ReactNode
 }
@@ -402,6 +482,8 @@ function CollectionTreeTableRow({
   onSelect,
   onFocusRow,
   onToggle,
+  showDescription,
+  renderAttachment,
   renderStatus,
   renderActions,
 }: RowProps) {
@@ -433,7 +515,7 @@ function CollectionTreeTableRow({
     >
       <td role="gridcell" className={cn(grid.row, 'border-b border-gray-200', grid.cellX)}>
         {/* `min-w-0`가 없으면 긴 이름이 셀을 밀어 `truncate`가 일하지 못한다. */}
-        <div className="flex min-w-0 items-center gap-1">
+        <div className="flex min-w-0 items-center gap-1.5">
           {/* 들여쓰기는 빈 상자가 만든다 — 글자에 좌여백을 주면 말줄임 폭 계산에 섞인다. */}
           <span aria-hidden className="shrink-0" style={{ width: `${indent}px` }} />
           {hasChildren ? (
@@ -464,6 +546,10 @@ function CollectionTreeTableRow({
             공백 없는 긴 이름도 `anywhere`로 끊어 셀 안에서 접는다 — 접는 것은 줄이지, 정보가 아니다.
             전체 경로는 `title`과 선택 시 `onSelect`(화면 쪽 상세)가 함께 답한다.
           */}
+          {/*
+            필수 표식은 **이름에 붙는다**(2026-09-14 사용자 지정). 줄 끝에 따로 세우면 이름과
+            떨어져 상태 배지 옆에 서고, 그러면 무엇이 필수인지를 두 칸 건너 읽게 된다.
+          */}
           <span
             title={`${fullPath} (${depth + 1}단)`}
             className={cn(
@@ -472,13 +558,21 @@ function CollectionTreeTableRow({
             )}
           >
             {node.title}
+            {/*
+              폴더는 이름 뒤에 **몇 항목을 품었는지**를 달고 선다(2026-09-14 사용자 지정) —
+              `기본서류(2항목)`. 묶음의 크기는 그 묶음의 성질이라 이름 옆이 제자리이고, 상태 열은
+              '얼마나 냈는가'만 답한다.
+            */}
+            {node.node_kind === 'FOLDER' && hasChildren && (
+              <span className={cn('ml-0.5', text.meta)}>({row.childCount}항목)</span>
+            )}
+            {node.is_required && (
+              <span className={cn('ml-0.5', formText.required)}>
+                <span aria-hidden>*</span>
+                <span className="sr-only">필수</span>
+              </span>
+            )}
           </span>
-          {node.is_required && (
-            <span className={cn('shrink-0', formText.required)}>
-              <span aria-hidden>*</span>
-              <span className="sr-only">필수</span>
-            </span>
-          )}
           {row.detached && (
             <span className={cn('shrink-0', text.empty)} title="상위 항목을 찾지 못해 최상위에 둔 항목입니다.">
               <span aria-hidden>⚠</span>
@@ -487,6 +581,19 @@ function CollectionTreeTableRow({
           )}
         </div>
       </td>
+      {showDescription && (
+        <td role="gridcell" className={cn(grid.row, 'border-b border-gray-200', grid.cellX)}>
+          {/* 설명은 곁값이라 한 줄만 맛보인다 — 전체 문장은 줄을 눌러 연 화면이 답한다. */}
+          <span title={node.description ?? undefined} className={cn('block truncate', text.meta)}>
+            {node.description}
+          </span>
+        </td>
+      )}
+      {renderAttachment && (
+        <td role="gridcell" className={cn(grid.row, 'border-b border-gray-200', grid.cellXTight)}>
+          <div className="flex min-w-0 items-center justify-center">{renderAttachment(node)}</div>
+        </td>
+      )}
       {renderStatus && (
         <td role="gridcell" className={cn(grid.row, 'border-b border-gray-200', grid.cellXTight)}>
           <div className="flex min-w-0 items-center">{renderStatus(node)}</div>

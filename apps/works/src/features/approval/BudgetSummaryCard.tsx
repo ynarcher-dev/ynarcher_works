@@ -1,4 +1,5 @@
 import { Card, InfoField, InfoGrid, cn, tableText } from '@ynarcher/ui'
+import type { ReactNode } from 'react'
 import { useBudgetRevisions, type BudgetUsage } from '@/features/approval/budgetApi'
 import { formatMoney, formatRate } from '@/features/approval/numeric'
 
@@ -15,6 +16,23 @@ interface Props {
   help?: string
   /** '품의 금액' 칸의 이름. 변경 품의에서는 그 값이 **변경 후 예산**이다. */
   totalLabel?: string
+  /**
+   * 이 숫자들이 어느 품의의 것인지 — 카드 맨 위, 구분선 위에 선다.
+   *
+   * 별도 카드로 띄우지 않는 이유는 **근거와 결과가 한 덩어리**이기 때문이다. 아래 칸들은 전부
+   * 이 한 건에서 나온 값이라, 상자를 갈라 두면 배정 품의를 바꿨을 때 어느 카드가 따라 바뀐
+   * 것인지 화면이 말해 주지 못한다. 구분선은 부르는 쪽이 함께 넘긴다 — 이 카드는 자기 본문만
+   * 알고, 무엇이 그 자리에 서는지는 부르는 화면이 정한다.
+   */
+  source?: ReactNode
+  /**
+   * 이 품의가 세운 수지 계획(예상 매출·예산·이익). 양식이 계획을 받지 않으면 undefined이며,
+   * 그때 계획 구역 자체가 서지 않는다 — 빈 칸을 세워 두면 "계획을 안 세웠다"로 읽힌다.
+   *
+   * **실적과 견주는 것은 아직 예산 한 축뿐이다.** 매출 실적을 담는 원장이 정해지지 않았고,
+   * 없는 실적을 0원으로 그리면 화면이 "한 푼도 못 벌었다"고 거짓말을 한다.
+   */
+  plan?: { revenue: number | null; budget: number | null; profit: number | null }
 }
 
 function dateOnly(v: string): string {
@@ -36,9 +54,11 @@ export function BudgetSummaryCard({
   budgetTotal,
   usage,
   nameOf,
-  title = '예산 현황',
+  title = '예산 요약',
   help = '이익은 품의 금액에서 승인이 끝난 지출을 뺀 값입니다. 결재 중인 지출은 아직 나가지 않아 이익에서 빼지 않습니다.',
   totalLabel = '품의 금액',
+  source,
+  plan,
 }: Props) {
   const { data: revisions } = useBudgetRevisions(documentId)
 
@@ -47,6 +67,8 @@ export function BudgetSummaryCard({
   const pending = usage ? [...usage.values()].reduce((a, u) => a + u.pending, 0) : null
   const profit = budgetTotal === null || spent === null ? null : budgetTotal - spent
   const over = profit !== null && profit < 0
+  // 계획한 예산과 실제로 나간 돈의 차이. 둘 중 하나라도 모르면 세우지 않는다.
+  const planGap = plan?.budget == null || spent === null ? null : plan.budget - spent
   const available =
     budgetTotal === null || spent === null || pending === null
       ? null
@@ -55,6 +77,7 @@ export function BudgetSummaryCard({
   return (
     <Card title={title} help={help}>
       <div className="space-y-4">
+        {source}
         <InfoGrid>
           <InfoField label={totalLabel} value={formatMoney(budgetTotal)} />
           <InfoField label="사용(승인)" value={formatMoney(spent)} />
@@ -81,6 +104,44 @@ export function BudgetSummaryCard({
           />
           <InfoField label="이익률" value={formatRate(profit, budgetTotal)} />
         </InfoGrid>
+
+        {plan && (
+          <section className="space-y-2 border-t border-gray-200 pt-4">
+            <h4 className={tableText.head}>수지 계획(예상)</h4>
+            <InfoGrid>
+              <InfoField label="예상 매출" value={formatMoney(plan.revenue)} />
+              <InfoField label="예상 예산" value={formatMoney(plan.budget)} />
+              <InfoField
+                label="예상 이익"
+                value={
+                  <span
+                    className={cn(
+                      'tabular-nums',
+                      plan.profit !== null && plan.profit < 0 && 'font-semibold text-danger',
+                    )}
+                  >
+                    {formatMoney(plan.profit)}
+                  </span>
+                }
+              />
+              {/* 지금 견줄 수 있는 한 축. 계획한 예산에서 실제로 나간 돈을 뺀 값이며,
+                  음수면 계획보다 더 썼다는 뜻이다. 매출·이익 쪽은 실적 원장이 정해지면 선다. */}
+              <InfoField
+                label="예산 차이(예상−사용)"
+                value={
+                  <span
+                    className={cn(
+                      'tabular-nums',
+                      planGap !== null && planGap < 0 && 'font-semibold text-danger',
+                    )}
+                  >
+                    {formatMoney(planGap)}
+                  </span>
+                }
+              />
+            </InfoGrid>
+          </section>
+        )}
 
         {(revisions ?? []).length > 0 && (
           <section className="space-y-1">

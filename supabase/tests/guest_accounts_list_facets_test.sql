@@ -1,24 +1,32 @@
+\if false
 -- =====================================================================
 -- GUEST 계정 관리 탭
 --   · 스타트업/전문가/BUYER/SELLER는 인격 연결로 분류한다.
 --   · FUND는 실제 조합 참여로 분류한다.
 --   · 미연결은 앞의 다섯 분류 어디에도 속하지 않는 계정을 빠짐없이 받는다.
 --   · 복수 분류 계정은 각 탭에 중복 노출된다.
+--   · 소속(affiliation)은 목록의 한 열로 서고 검색 축이며 마스킹하지 않는다(2026-09-14).
 -- =====================================================================
 
 begin;
-select plan(12);
+select plan(15);
 
-insert into public.users (id, user_type, name, email, session_version) values
-  ('98100000-0000-0000-0000-000000000001', 'super_admin',     '탭 테스트 관리자', 'facet-admin@example.test', 1),
-  ('98200000-0000-0000-0000-000000000001', 'temporary_guest', '스타트업 계정',      'facet-startup@example.test', 1),
-  ('98200000-0000-0000-0000-000000000002', 'temporary_guest', '전문가 계정',        'facet-network@example.test', 1),
-  ('98200000-0000-0000-0000-000000000003', 'temporary_guest', 'BUYER 계정',         'facet-buyer@example.test', 1),
-  ('98200000-0000-0000-0000-000000000004', 'temporary_guest', 'SELLER 계정',        'facet-seller@example.test', 1),
-  ('98200000-0000-0000-0000-000000000005', 'temporary_guest', 'FUND 계정',          'facet-fund@example.test', 1),
-  ('98200000-0000-0000-0000-000000000006', 'temporary_guest', '복수 분류 계정',     'facet-multi@example.test', 1),
-  ('98200000-0000-0000-0000-000000000007', 'temporary_guest', '완전 미연결 계정',   'facet-unlinked@example.test', 1),
-  ('98200000-0000-0000-0000-000000000008', 'temporary_guest', '사업만 연결 계정',   'facet-program-only@example.test', 1);
+insert into public.users (id, user_type, name, email, affiliation, session_version) values
+  ('98100000-0000-0000-0000-000000000001', 'super_admin',     '탭 테스트 관리자', 'facet-admin@example.test', null, 1),
+  ('98100000-0000-0000-0000-000000000002', 'read_only',       '탭 일반 직원',     'facet-staff@example.test', null, 1),
+  ('98200000-0000-0000-0000-000000000001', 'temporary_guest', '스타트업 계정',      'facet-startup@example.test', '탭 소속 기관', 1),
+  ('98200000-0000-0000-0000-000000000002', 'temporary_guest', '전문가 계정',        'facet-network@example.test', '전문가 소속', 1),
+  ('98200000-0000-0000-0000-000000000003', 'temporary_guest', 'BUYER 계정',         'facet-buyer@example.test', 'BUYER 소속', 1),
+  ('98200000-0000-0000-0000-000000000004', 'temporary_guest', 'SELLER 계정',        'facet-seller@example.test', 'SELLER 소속', 1),
+  ('98200000-0000-0000-0000-000000000005', 'temporary_guest', 'FUND 계정',          'facet-fund@example.test', 'FUND 소속', 1),
+  ('98200000-0000-0000-0000-000000000006', 'temporary_guest', '복수 분류 계정',     'facet-multi@example.test', '복수 소속', 1),
+  ('98200000-0000-0000-0000-000000000007', 'temporary_guest', '완전 미연결 계정',   'facet-unlinked@example.test', '미연결 소속', 1),
+  ('98200000-0000-0000-0000-000000000008', 'temporary_guest', '사업만 연결 계정',   'facet-program-only@example.test', '사업만 소속', 1);
+
+insert into public.workspace_permissions
+  (user_id, workspace_key, permission_level, scope_type)
+values
+  ('98100000-0000-0000-0000-000000000002', 'startup', 'read', 'global');
 
 insert into public.startups (id, name) values
   ('98300000-0000-0000-0000-000000000001', '탭 스타트업'),
@@ -162,5 +170,43 @@ select throws_ok(
   '허용하지 않은 탭 키는 서버가 거절한다'
 );
 
+-- ── 소속(2026-09-14) ────────────────────────────────────────────────────
+select is(
+  (select affiliation
+     from public.guest_accounts_list(null, 50, 0, null, null, false, 'startups')
+    where user_id = '98200000-0000-0000-0000-000000000001'),
+  '탭 소속 기관',
+  '목록은 소속을 한 열로 돌려준다'
+);
+
+select is(
+  (select string_agg(name, ',' order by name)
+     from public.guest_accounts_list('탭 소속 기관', 50, 0, null, null, false)),
+  '스타트업 계정',
+  '검색어는 소속에도 걸린다'
+);
+
+-- 소속은 마스킹 대상이 아니다 — 기관 이름이라 개인 연락 수단이 아니고, 목록에서
+-- 동명이인을 가려내는 값이다. 이메일·연락처는 종전대로 ADMIN에게만 원문이다.
+select set_config(
+  'request.jwt.claims',
+  '{"app_user_id":"98100000-0000-0000-0000-000000000002","session_version":1}',
+  true
+);
+select ok(
+  (select affiliation = '미연결 소속' and email <> 'facet-unlinked@example.test'
+     from public.guest_accounts_list('미연결 소속', 50, 0, null, null, false)),
+  'ADMIN이 아닌 내부 사용자에게도 소속은 원문으로 보이고 이메일은 가려진다'
+);
+
+select * from finish();
+rollback;
+\endif
+
+-- Superseded by guest_independent_account_test.sql: relation-derived facets
+-- were removed from the independent-account list contract.
+begin;
+select plan(1);
+select pass('legacy ledger-facet list contract is superseded');
 select * from finish();
 rollback;

@@ -27,6 +27,17 @@ export type FileCollectionFileStatus = 'PENDING' | 'READY'
 /** 코멘트를 남긴 쪽. 서버가 적으므로 화면은 읽기만 한다. */
 export type FileCollectionAuthorSide = 'WORKS' | 'GUEST'
 
+/**
+ * 문항에 딸린 **담당자 자료**(양식·견본)의 귀속 종류 — `public.attachments.target_type`.
+ *
+ * 게스트가 올리는 제출물(`file_collection_files`)과 방향이 반대인 자료다: 담당자가 붙이고
+ * 배정된 사람 **전원**이 같은 것을 읽는다. 그래서 제출물의 전용 표가 아니라 공용 첨부 원장에
+ * 산다(정책 근거: 20260914150000_file_collection_node_attachments.sql).
+ *
+ * 값을 앱마다 적지 않고 여기 한 곳에 둔다 — 두 앱과 RLS 정책이 같은 문자열을 봐야 한다.
+ */
+export const FILE_COLLECTION_NODE_ATTACHMENT_TYPE = 'file_collection_node'
+
 // ---------------------------------------------------------------------------
 // DTO — 원장 컬럼 그대로. 표시용으로 이름을 바꾸지 않는다(조회문과 한눈에 맞춰 읽는다).
 // ---------------------------------------------------------------------------
@@ -195,11 +206,25 @@ export interface FileCollectionTreeNode {
   node_kind: FileCollectionNodeType
   sort_order: number
   is_required?: boolean
+  /**
+   * 트리 줄에 곁들이는 설명 한 줄(문항 안내). 이름만으로는 무엇을 내라는 것인지 갈리지 않는
+   * 문항이 있다(2026-09-14). 길면 부품이 한 줄로 말줄임한다.
+   */
+  description?: string | null
+  /** 담당자가 이 문항에 붙여 둔 자료가 있는가 — 부품이 이름 뒤에 클립을 단다. */
+  has_files?: boolean
 }
 
-/** 원장 행(`node_type`)을 화면 부품의 어휘(`node_kind`)로 옮긴다. 이 한 줄이 어댑터 전부다. */
+/**
+ * 원장 행(`node_type`)을 화면 부품의 어휘(`node_kind`)로 옮긴다.
+ *
+ * `fileCounts`는 문항별 **담당자 자료** 건수다(`attachments`, `target_type =
+ * FILE_COLLECTION_NODE_ATTACHMENT_TYPE). 주지 않으면 클립은 서지 않는다 — 아직 세지 못한
+ * 것과 없는 것을 같게 보이지 않으려고 세는 쪽이 주는 값만 읽는다.
+ */
 export function toCollectionTreeNodes(
   nodes: readonly FileCollectionNodeDto[],
+  fileCounts?: Readonly<Record<string, number>>,
 ): FileCollectionTreeNode[] {
   return nodes.map((n) => ({
     id: n.id,
@@ -208,6 +233,8 @@ export function toCollectionTreeNodes(
     node_kind: n.node_type,
     sort_order: n.sort_order,
     is_required: n.is_required,
+    description: n.guide,
+    has_files: (fileCounts?.[n.id] ?? 0) > 0,
   }))
 }
 
@@ -509,6 +536,33 @@ export interface CollectionSummary {
   draft: number
   /** 필수 문항을 전부 완료한 대상 수. 필수 문항이 없으면 0이다. */
   completedTargets: number
+  /**
+   * **사람 단위 3분류**(2026-09-14 사용자 확정). 위의 `건` 값들이 응답 칸(대상 × 문항)을 세는
+   * 반면 이 셋은 **사람**을 센다 — 요약 카드보드가 읽는 값이며 세 수의 합은 언제나 `targets`다.
+   *
+   * 가르는 기준은 **낸 적이 있는가** 하나다. 검토 대기·보완 요청은 이미 낸 것이므로 미제출이
+   * 아니고, 작성 중은 아직 낸 것이 아니므로 미제출이다.
+   *
+   * - `notStartedTargets` 한 문항도 낸 적이 없는 사람
+   * - `inProgressTargets` 한 문항이라도 냈지만 아직 남은 문항이 있는 사람
+   * - `completedSubmissionTargets` 모든 문항을 낸 사람(검토 결과와 무관하다 — 검토는 `pendingReview`가 답한다)
+   */
+  notStartedTargets: number
+  inProgressTargets: number
+  completedSubmissionTargets: number
+}
+
+/** 이 사람이 한 문항이라도 낸 적이 있는가. 보완 요청은 되돌아온 것이지 안 낸 것이 아니다. */
+function hasAnySubmission(p: FileCollectionProgress): boolean {
+  return p.submitted + p.rework + p.approved > 0
+}
+
+/**
+ * 이 사람이 **모든 문항을 냈는가**. 문항이 하나도 없으면 성립하지 않는다 —
+ * 낼 것이 없는 모듈에서 전원이 '제출 완료'로 읽히면 숫자가 거짓말을 한다.
+ */
+function hasSubmittedAll(p: FileCollectionProgress): boolean {
+  return p.total > 0 && p.notSubmitted === 0 && p.draft === 0
 }
 
 export function collectionSummary(
@@ -521,6 +575,10 @@ export function collectionSummary(
   const rows = assignmentProgressRows(nodes, live, responses)
   const sum = (pick: (p: FileCollectionProgress) => number) =>
     rows.reduce((acc, row) => acc + pick(row.progress), 0)
+  // 사람 단위 3분류는 서로 겹치지 않는다 — '모두 냈다'는 '한 번은 냈다'를 포함하므로
+  // 양쪽에 걸리는 사람은 없고, 나머지를 빼서 진행 중을 얻는다(합이 대상 수와 어긋나지 않는다).
+  const notStartedTargets = rows.filter((row) => !hasAnySubmission(row.progress)).length
+  const completedSubmissionTargets = rows.filter((row) => hasSubmittedAll(row.progress)).length
   return {
     questions: questions.length,
     requiredQuestions: questions.filter((q) => q.is_required).length,
@@ -534,6 +592,9 @@ export function collectionSummary(
     completedTargets: rows.filter(
       (row) => row.progress.requiredTotal > 0 && row.progress.requiredApproved === row.progress.requiredTotal,
     ).length,
+    notStartedTargets,
+    inProgressTargets: live.length - notStartedTargets - completedSubmissionTargets,
+    completedSubmissionTargets,
   }
 }
 

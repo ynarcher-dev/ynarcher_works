@@ -34,7 +34,9 @@ const DEFAULT_WIDTH =
  *  - 래퍼도 `pointer-events-none`이고 오직 패널(`aside`)만 클릭을 받으므로, 패널이 덮지 않는
  *    좌측 본문은 계속 조작할 수 있다.
  *  - z-panel(150)은 navbar(200)·sidebar(300)보다 낮아 상단바·사이드바가 위에 남는다. 덕분에
- *    패널을 연 채로 다른 진입점 버튼을 눌러 전환할 수 있고, 패널 상단은 상단바 뒤로 자연히 물린다.
+ *    패널을 연 채로 다른 진입점 버튼을 눌러 전환할 수 있다.
+ * 세로로는 상단바 아래(top-16)에서 시작한다 — 상단바가 위에 남는 z 규칙과 패널 머리를 볼 수 있어야
+ * 한다는 요구를 함께 만족시키는 자리다.
  * 딤으로 막는 대화는 Modal, 다크 내비 드로어는 Drawer를 쓴다.
  * 근거: 6_motion_transition_rules.md §4.1(slide+fade), 8_z_index_system_rules.md
  */
@@ -88,9 +90,15 @@ export function SlideOver({
             if (!open) setRendered(false)
           }}
           className={cn(
-            'pointer-events-auto absolute inset-y-0 right-0 flex flex-col overflow-hidden',
+            // 상단바(h-16, z-navbar) **아래에서** 시작한다. inset-y-0으로 화면 꼭대기에 붙이면
+            // z-panel(150) < z-navbar(200)이라 패널의 첫 64px이 상단바에 덮여, 그 자리에 있는
+            // 머리(제목·닫기 버튼)가 통째로 보이지 않는다(2026-09-14).
+            'pointer-events-auto absolute bottom-0 right-0 top-16 flex flex-col overflow-hidden',
             'border-l border-gray-200 bg-white shadow-dialog',
-            'rounded-l-radius-lg transition-transform duration-slow ease-decelerate',
+            // 모서리는 각지게 둔다(2026-09-14 사용자 지정). 위·아래·오른쪽이 화면 끝에 붙어 있는
+            // 면이라 왼쪽 두 귀퉁이만 둥글면 상단바 아래에서 패널이 카드처럼 떠 보이고, 안에 선
+            // 카드들의 모서리와도 같은 반지름이 두 겹으로 겹친다.
+            'transition-transform duration-slow ease-decelerate',
             widthClassName ?? DEFAULT_WIDTH,
             open ? 'translate-x-0' : 'translate-x-full',
             className,

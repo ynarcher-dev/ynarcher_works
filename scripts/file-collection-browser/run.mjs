@@ -26,6 +26,17 @@ import { IN_PAGE } from './checks.mjs'
 const require = createRequire(import.meta.url)
 
 const VIEWPORTS = [320, 375, 768, 1280, 1440]
+/** GUEST 계정 창들이 서는 폭. 창은 `3xl` 고정이라 갈리는 자리가 셋뿐이다(좁힘·중간·넓힘). */
+const MODAL_VIEWPORTS = [375, 768, 1280]
+
+/**
+ * `GUEST 계정 추가` 창이 **실제로 고를 수 있게 된** 상태.
+ *
+ * 줄이 섰다고 고를 수 있는 것은 아니다 — 이 창은 이 사업의 명부를 다 읽기 전까지 체크를
+ * 잠근다(잠긴 채로 고르면 '이미 담김'을 모르는 채 담게 된다). 줄만 기다려 찍으면 화면 절반이
+ * 그 안내 배너인 장이 나오고, 그 장으로는 조판을 볼 수 없다.
+ */
+const ROSTER_READY = '[role="dialog"] tbody input[type="checkbox"]:not([disabled])'
 
 /** 화면에 표가 서는 줄에서 함께 보는 검사. */
 const TABLE_CHECKS = ['tableScrollContained']
@@ -316,6 +327,167 @@ const CASES = [
     ready: 'text=다시 시도',
     checks: BASE_CHECKS,
   },
+
+  /*
+    4) GUEST 계정 창 — 같은 `Modal size="3xl"` 위에 선 세 화면.
+
+    `ROSTER_READY`는 아래 세 자리가 함께 쓴다(정의는 이 배열 위).
+
+    재는 것은 폭이다. `GUEST 계정 추가`는 탭 일곱 + 열 여섯짜리 표를 창 안에 담고,
+    `GUEST 계정 생성`은 트랙 여섯짜리 격자를 담는다. 둘 다 좁은 화면에서 무너질 자리가
+    분명하므로 창이 화면에 맞는가(`modalFits`)·표의 넘침에 닿는가(`tableScrollContained`)·
+    페이지가 통째로 밀리지 않는가를 함께 본다. 기준선은 `ledger-picker`다 — 같은 폭·같은
+    조판의 자매 창이라 두 창의 조판을 그 장과 나란히 놓고 볼 수 있다.
+  */
+  {
+    name: 'acct-participant-add',
+    query: 'case=participant-add',
+    /*
+      **줄이 섰다고 고를 수 있는 것은 아니다.** 이 창은 이 사업의 명부를 다 읽기 전까지
+      체크를 잠근다(잠긴 채로 고르면 '이미 담김'을 모르는 채 담게 된다). 줄만 기다려 찍으면
+      화면 절반이 그 안내 배너인 장이 나오고, 그 장으로는 조판을 볼 수 없다 — 그래서
+      **잠금이 풀린 체크박스**를 기다린다.
+    */
+    ready: ROSTER_READY,
+    checks: [...BASE_CHECKS, ...TABLE_CHECKS, 'modalFits'],
+    modal: true,
+    viewports: MODAL_VIEWPORTS,
+  },
+  {
+    name: 'acct-participant-add-last-tab',
+    query: 'case=participant-add',
+    // 탭이 일곱이다. 마지막 탭까지 실제로 닿아 눌리는지는 눌러 봐야 안다(줄어들면 접히거나
+    // 밀려 나간다). 누른 뒤의 목록이 그 탭의 목록으로 바뀌는 것까지 확인한다.
+    setup: async (page) => {
+      await page.getByRole('tab', { name: '미연결' }).click()
+      await page.locator('[role="dialog"] table tbody tr').first().waitFor({ timeout: 10000 })
+      const selected = await page.getByRole('tab', { name: '미연결' }).getAttribute('aria-selected')
+      assert(selected === 'true', '마지막 탭을 눌렀는데 선택되지 않았다', { selected })
+    },
+    ready: '[role="dialog"] table tbody tr',
+    checks: [...BASE_CHECKS, ...TABLE_CHECKS, 'modalFits'],
+    modal: true,
+    viewports: MODAL_VIEWPORTS,
+  },
+  {
+    name: 'acct-participant-add-issues',
+    query: 'case=participant-add&addFail=1',
+    // 배너가 표를 덮는가 — 여섯 줄을 골라 전부 막히게 하고(사유 5줄 + '외 1건') 그 상태를 찍는다.
+    setup: async (page) => {
+      // 명부를 다 읽어 체크가 풀린 뒤에 고른다(그 전에는 눌러도 선택되지 않는다).
+      await page.locator(ROSTER_READY).first().waitFor({ timeout: 15000 })
+      const rows = page.locator('[role="dialog"] table tbody tr')
+      for (let i = 0; i < 6; i += 1) await rows.nth(i).click()
+      await page.getByRole('button', { name: /계정 추가$/ }).click()
+      await page.getByText('건을 담지 못했습니다').first().waitFor({ timeout: 10000 })
+    },
+    ready: '[role="dialog"] table tbody tr',
+    checks: [...BASE_CHECKS, ...TABLE_CHECKS, 'modalFits'],
+    modal: true,
+    viewports: MODAL_VIEWPORTS,
+  },
+  {
+    name: 'acct-participant-add-empty',
+    query: 'case=participant-add',
+    setup: async (page) => {
+      await page.getByPlaceholder('계정명 · 이메일 · 소속 · 연락처 검색').fill('없는이름zzz')
+      await page.getByText('검색과 일치하는 GUEST 계정이 없습니다.').waitFor({ timeout: 10000 })
+    },
+    ready: '[role="dialog"]',
+    checks: [...BASE_CHECKS, 'modalFits'],
+    modal: true,
+    viewports: MODAL_VIEWPORTS,
+  },
+  {
+    name: 'acct-ledger-picker',
+    query: 'case=ledger-picker',
+    ready: '[role="dialog"] table tbody tr',
+    checks: [...BASE_CHECKS, ...TABLE_CHECKS, 'modalFits'],
+    modal: true,
+    viewports: MODAL_VIEWPORTS,
+  },
+  {
+    name: 'acct-guest-create',
+    query: 'case=guest-create',
+    // 줄 셋 — 긴 값을 담은 줄, 원장에서 불러온 줄, 빈 줄. 여섯 트랙이 실제 값 아래에서 어떻게
+    // 나뉘는지는 빈 격자로는 보이지 않는다.
+    setup: async (page) => {
+      const add = page.getByRole('button', { name: '줄 추가' })
+      await add.click()
+      await add.click()
+      await page.getByLabel('1번째 줄 이름').fill('김와이앤아처대표이사')
+      await page
+        .getByLabel('1번째 줄 이메일')
+        .fill('very.long.mailbox.name.for.overflow.check@ynarcher-partners-company.co.kr')
+      await page
+        .getByLabel('1번째 줄 소속')
+        .fill('주식회사 와이앤아처파트너스 글로벌사업본부 해외투자전략실')
+    },
+    ready: '[role="dialog"] input',
+    checks: [...BASE_CHECKS, 'modalFits'],
+    modal: true,
+    viewports: MODAL_VIEWPORTS,
+  },
+  {
+    name: 'acct-guest-create-issues',
+    query: 'case=guest-create',
+    // 사유는 칸 **바로 아래**에 선다. 좁은 화면에서 그 줄이 격자를 밀어 내지 않는지 본다.
+    setup: async (page) => {
+      await page.getByLabel('1번째 줄 이름').fill('김표본')
+      await page.getByLabel('1번째 줄 이메일').fill('메일주소아님')
+      await page.getByLabel('1번째 줄 소속').fill('')
+      await page.getByText('이메일 형식이 올바르지 않습니다.').first().waitFor({ timeout: 10000 })
+    },
+    ready: '[role="dialog"] input',
+    checks: [...BASE_CHECKS, 'modalFits'],
+    modal: true,
+    viewports: MODAL_VIEWPORTS,
+  },
+  {
+    name: 'acct-guest-create-picker',
+    query: 'case=guest-create',
+    // 생성 창 위에 원장 찾기 창이 겹쳐 선다 — 같은 3xl 두 장이 겹쳤을 때도 화면에 맞는가.
+    setup: async (page) => {
+      await page.getByLabel('1번째 줄 NETWORKS에서 불러오기').click()
+      await page.getByText('데이터베이스(NETWORKS)에서 불러오기').first().waitFor({ timeout: 10000 })
+      await page.locator('[role="dialog"]').last().locator('table tbody tr').first().waitFor({ timeout: 10000 })
+    },
+    ready: '[role="dialog"] table tbody tr',
+    checks: [...BASE_CHECKS, ...TABLE_CHECKS, 'modalFits'],
+    modal: true,
+    viewports: MODAL_VIEWPORTS,
+  },
+  {
+    name: 'acct-guest-create-noread',
+    query: 'case=guest-create&canRead=0',
+    // NETWORKS 조회 권한이 없으면 불러오기 트랙이 입력칸이 아니라 한 줄 문구가 된다.
+    ready: 'text=NETWORKS 조회 권한 없음',
+    checks: [...BASE_CHECKS, 'modalFits'],
+    modal: true,
+    viewports: MODAL_VIEWPORTS,
+  },
+  {
+    name: 'acct-guest-bulk',
+    query: 'case=guest-bulk',
+    // 전용 업로드 페이지는 파일 한 장이 작업 단위다. 실제 CSV를 물려 같은 격자를 페이지 폭에
+    // 세운다 — 창 폭(3xl)이 아니라 페이지 폭이라 트랙이 다르게 눌린다.
+    setup: async (page) => {
+      // 정본 템플릿은 세 열이다(연락처는 계정 등록이 받지 않는다). 마지막 줄은 소속이 비어
+      // 있어 사유가 서는 줄이다 — 사유 줄이 격자를 밀어 내지 않는지 함께 본다.
+      const csv =
+        '이름,이메일,소속\n' +
+        '김와이앤아처대표이사,very.long.mailbox.name.for.overflow.check@ynarcher-partners-company.co.kr,주식회사 와이앤아처파트너스 글로벌사업본부 해외투자전략실\n' +
+        '이빈칸,blank@example.com,표본벤처스\n' +
+        '박오류,메일주소아님,\n'
+      await page
+        .locator('input[type="file"]')
+        .setInputFiles({ name: 'guests.csv', mimeType: 'text/csv', buffer: Buffer.from(csv, 'utf8') })
+      await page.getByLabel('1번째 줄 이름').waitFor({ timeout: 15000 })
+    },
+    ready: 'input[aria-label="1번째 줄 이름"]',
+    checks: [...BASE_CHECKS],
+    viewports: MODAL_VIEWPORTS,
+  },
 ]
 
 /**
@@ -423,17 +595,32 @@ async function main() {
   try {
     browser = await chromium.launch({ executablePath, headless: !headed })
     for (const testCase of cases) {
-      for (const width of VIEWPORTS) {
+      for (const width of testCase.viewports ?? VIEWPORTS) {
         const page = await browser.newPage({ viewport: { width, height: 900 } })
         const consoleErrors = []
         page.on('console', (m) => m.type() === 'error' && consoleErrors.push(m.text()))
-        page.on('pageerror', (e) => consoleErrors.push(String(e)))
+        /*
+          **던진 화면은 기다리지 않는다.** 모듈 하나가 못 읽혀 본문이 비면 `ready` 선택자는
+          영영 오지 않고, 그때 15초를 기다린 끝에 나오는 말은 "시간이 지났다"뿐이다 — 진짜
+          사유(어느 모듈의 어느 export)는 pageerror에만 있다. 그래서 그 사유가 오는 즉시
+          기다림을 끊고 그 문장을 그대로 실패 사유로 세운다.
+        */
+        let pageError = null
+        const thrown = new Promise((_res, reject) => {
+          page.on('pageerror', (e) => {
+            pageError = String(e)
+            consoleErrors.push(pageError)
+            reject(new Error(`페이지가 던졌습니다 — ${pageError}`))
+          })
+        })
+        // 아무도 받지 않는 거절로 프로세스가 죽지 않게 한 번은 받아 둔다(실제 판정은 race).
+        thrown.catch(() => {})
 
         const entry = { case: testCase.name, width, checks: {}, screenshots: {}, consoleErrors }
         try {
           await page.goto(`${base}/?${testCase.query}`, { waitUntil: 'load' })
-          if (testCase.setup) await testCase.setup(page)
-          await page.locator(testCase.ready).first().waitFor({ timeout: 15000 })
+          if (testCase.setup) await Promise.race([testCase.setup(page), thrown])
+          await Promise.race([page.locator(testCase.ready).first().waitFor({ timeout: 15000 }), thrown])
           // 실제 앱 글꼴(Pretendard)이 서기 전에 재면 폭이 달라진다.
           await page.evaluate('document.fonts ? document.fonts.ready.then(() => true) : true')
           await page.evaluate(IN_PAGE)

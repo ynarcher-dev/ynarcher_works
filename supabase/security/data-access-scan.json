@@ -23,11 +23,11 @@
     "caveat": "direct/rpc는 정적 증거, dynamic은 대상 미상, literals는 보조 증거입니다. ACL 결정은 이 파일만으로 내리지 않고 정책·화면 경로와 함께 읽습니다."
   },
   "counts": {
-    "direct_tables": 85,
-    "direct_sites": 318,
-    "dynamic_sites": 96,
-    "rpc_names": 93,
-    "storage_bucket_exprs": 4
+    "direct_tables": 89,
+    "direct_sites": 331,
+    "dynamic_sites": 97,
+    "rpc_names": 108,
+    "storage_bucket_exprs": 5
   },
   "direct": {
     "access_logs": {
@@ -78,6 +78,14 @@
             "INSERT"
           ],
           "site": "supabase/functions/ai-minute-draft/index.ts:126"
+        },
+        {
+          "actor": "edge-service_role-inferred",
+          "op": "insert",
+          "requires": [
+            "INSERT"
+          ],
+          "site": "supabase/functions/file-collection-file/handler.ts:217"
         },
         {
           "actor": "edge-service_role",
@@ -232,7 +240,7 @@
           "requires": [
             "SELECT"
           ],
-          "site": "apps/works/src/features/approval/budgetApi.ts:168"
+          "site": "apps/works/src/features/approval/budgetApi.ts:175"
         }
       ]
     },
@@ -283,6 +291,14 @@
             "SELECT"
           ],
           "site": "apps/works/src/features/approval/documentLinkApi.ts:62"
+        },
+        {
+          "actor": "client",
+          "op": "select",
+          "requires": [
+            "SELECT"
+          ],
+          "site": "apps/works/src/features/approval/relatedApprovalsApi.ts:151"
         }
       ]
     },
@@ -332,7 +348,7 @@
             "INSERT",
             "SELECT"
           ],
-          "site": "apps/works/src/features/approval/approvalApi.ts:295"
+          "site": "apps/works/src/features/approval/approvalApi.ts:310"
         },
         {
           "actor": "client",
@@ -340,7 +356,7 @@
           "requires": [
             "SELECT"
           ],
-          "site": "apps/works/src/features/approval/budgetApi.ts:46"
+          "site": "apps/works/src/features/approval/budgetApi.ts:100"
         },
         {
           "actor": "client",
@@ -348,7 +364,15 @@
           "requires": [
             "SELECT"
           ],
-          "site": "apps/works/src/features/approval/budgetApi.ts:93"
+          "site": "apps/works/src/features/approval/budgetApi.ts:53"
+        },
+        {
+          "actor": "client",
+          "op": "select",
+          "requires": [
+            "SELECT"
+          ],
+          "site": "apps/works/src/features/approval/relatedApprovalsApi.ts:134"
         },
         {
           "actor": "client",
@@ -492,14 +516,6 @@
           "requires": [
             "INSERT"
           ],
-          "site": "apps/works/src/features/approval/approvalApi.ts:320"
-        },
-        {
-          "actor": "client",
-          "op": "insert",
-          "requires": [
-            "INSERT"
-          ],
           "site": "apps/works/src/features/management/hooks.ts:73"
         },
         {
@@ -534,7 +550,7 @@
           "requires": [
             "SELECT"
           ],
-          "site": "apps/works/src/features/approval/programLinkApi.ts:105"
+          "site": "apps/works/src/features/approval/programLinkApi.ts:109"
         },
         {
           "actor": "client",
@@ -542,7 +558,7 @@
           "requires": [
             "SELECT"
           ],
-          "site": "apps/works/src/features/approval/programLinkApi.ts:164"
+          "site": "apps/works/src/features/approval/programLinkApi.ts:168"
         },
         {
           "actor": "client",
@@ -550,7 +566,7 @@
           "requires": [
             "INSERT"
           ],
-          "site": "apps/works/src/features/approval/programLinkApi.ts:185"
+          "site": "apps/works/src/features/approval/programLinkApi.ts:189"
         },
         {
           "actor": "client",
@@ -559,7 +575,7 @@
             "UPDATE",
             "SELECT"
           ],
-          "site": "apps/works/src/features/approval/programLinkApi.ts:200"
+          "site": "apps/works/src/features/approval/programLinkApi.ts:204"
         },
         {
           "actor": "client",
@@ -567,7 +583,15 @@
           "requires": [
             "SELECT"
           ],
-          "site": "apps/works/src/features/approval/relatedApprovalsApi.ts:54"
+          "site": "apps/works/src/features/approval/relatedApprovalsApi.ts:115"
+        },
+        {
+          "actor": "client",
+          "op": "select",
+          "requires": [
+            "SELECT"
+          ],
+          "site": "apps/works/src/features/approval/workspaceBudgetApi.ts:64"
         }
       ]
     },
@@ -591,28 +615,7 @@
             "INSERT",
             "UPDATE"
           ],
-          "site": "apps/works/src/features/approval/approvalApi.ts:455"
-        }
-      ]
-    },
-    "approval_recipients": {
-      "ops": [
-        "INSERT"
-      ],
-      "client_ops": [
-        "INSERT"
-      ],
-      "edge_service_role_ops": [],
-      "edge_caller_ops": [],
-      "edge_unknown_ops": [],
-      "sites": [
-        {
-          "actor": "client",
-          "op": "insert",
-          "requires": [
-            "INSERT"
-          ],
-          "site": "apps/works/src/features/approval/approvalApi.ts:324"
+          "site": "apps/works/src/features/approval/approvalApi.ts:444"
         }
       ]
     },
@@ -805,6 +808,22 @@
           "requires": [
             "SELECT"
           ],
+          "site": "apps/guest/src/features/fileCollectionHooks.ts:325"
+        },
+        {
+          "actor": "client",
+          "op": "select",
+          "requires": [
+            "SELECT"
+          ],
+          "site": "apps/guest/src/features/fileCollectionHooks.ts:347"
+        },
+        {
+          "actor": "client",
+          "op": "select",
+          "requires": [
+            "SELECT"
+          ],
           "site": "apps/guest/src/features/moduleHooks.ts:134"
         },
         {
@@ -895,6 +914,14 @@
             "SELECT"
           ],
           "site": "apps/works/src/features/program/detail/attachmentCounts.ts:22"
+        },
+        {
+          "actor": "client",
+          "op": "select",
+          "requires": [
+            "SELECT"
+          ],
+          "site": "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:133"
         },
         {
           "actor": "edge-caller-inferred",
@@ -1534,7 +1561,7 @@
           "requires": [
             "SELECT"
           ],
-          "site": "apps/works/src/features/management/hooks.ts:421"
+          "site": "apps/works/src/features/management/hooks.ts:425"
         }
       ]
     },
@@ -1704,6 +1731,190 @@
             "SELECT"
           ],
           "site": "apps/works/src/features/networks/dashboardHooks.ts:121"
+        }
+      ]
+    },
+    "file_collection_assignments": {
+      "ops": [
+        "SELECT"
+      ],
+      "client_ops": [
+        "SELECT"
+      ],
+      "edge_service_role_ops": [],
+      "edge_caller_ops": [],
+      "edge_unknown_ops": [],
+      "sites": [
+        {
+          "actor": "client",
+          "op": "select",
+          "requires": [
+            "SELECT"
+          ],
+          "site": "apps/guest/src/features/fileCollectionHooks.ts:273"
+        },
+        {
+          "actor": "client",
+          "op": "select",
+          "requires": [
+            "SELECT"
+          ],
+          "site": "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:172"
+        }
+      ]
+    },
+    "file_collection_comments": {
+      "ops": [
+        "SELECT"
+      ],
+      "client_ops": [
+        "SELECT"
+      ],
+      "edge_service_role_ops": [],
+      "edge_caller_ops": [],
+      "edge_unknown_ops": [],
+      "sites": [
+        {
+          "actor": "client",
+          "op": "select",
+          "requires": [
+            "SELECT"
+          ],
+          "site": "apps/guest/src/features/fileCollectionHooks.ts:408"
+        },
+        {
+          "actor": "client",
+          "op": "select",
+          "requires": [
+            "SELECT"
+          ],
+          "site": "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:263"
+        }
+      ]
+    },
+    "file_collection_files": {
+      "ops": [
+        "SELECT"
+      ],
+      "client_ops": [
+        "SELECT"
+      ],
+      "edge_service_role_ops": [],
+      "edge_caller_ops": [],
+      "edge_unknown_ops": [
+        "SELECT"
+      ],
+      "sites": [
+        {
+          "actor": "client",
+          "op": "select",
+          "requires": [
+            "SELECT"
+          ],
+          "site": "apps/guest/src/features/fileCollectionHooks.ts:387"
+        },
+        {
+          "actor": "client",
+          "op": "select",
+          "requires": [
+            "SELECT"
+          ],
+          "site": "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:247"
+        },
+        {
+          "actor": "edge-unknown",
+          "op": "select",
+          "requires": [
+            "SELECT"
+          ],
+          "site": "supabase/functions/file-collection-file/handler.ts:153"
+        }
+      ]
+    },
+    "file_collection_nodes": {
+      "ops": [
+        "SELECT"
+      ],
+      "client_ops": [
+        "SELECT"
+      ],
+      "edge_service_role_ops": [],
+      "edge_caller_ops": [],
+      "edge_unknown_ops": [],
+      "sites": [
+        {
+          "actor": "client",
+          "op": "select",
+          "requires": [
+            "SELECT"
+          ],
+          "site": "apps/guest/src/features/fileCollectionHooks.ts:296"
+        },
+        {
+          "actor": "client",
+          "op": "select",
+          "requires": [
+            "SELECT"
+          ],
+          "site": "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:100"
+        }
+      ]
+    },
+    "file_collection_responses": {
+      "ops": [
+        "SELECT"
+      ],
+      "client_ops": [
+        "SELECT"
+      ],
+      "edge_service_role_ops": [],
+      "edge_caller_ops": [],
+      "edge_unknown_ops": [],
+      "sites": [
+        {
+          "actor": "client",
+          "op": "select",
+          "requires": [
+            "SELECT"
+          ],
+          "site": "apps/guest/src/features/fileCollectionHooks.ts:368"
+        },
+        {
+          "actor": "client",
+          "op": "select",
+          "requires": [
+            "SELECT"
+          ],
+          "site": "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:210"
+        }
+      ]
+    },
+    "file_collections": {
+      "ops": [
+        "SELECT"
+      ],
+      "client_ops": [
+        "SELECT"
+      ],
+      "edge_service_role_ops": [],
+      "edge_caller_ops": [],
+      "edge_unknown_ops": [],
+      "sites": [
+        {
+          "actor": "client",
+          "op": "select",
+          "requires": [
+            "SELECT"
+          ],
+          "site": "apps/guest/src/features/fileCollectionHooks.ts:255"
+        },
+        {
+          "actor": "client",
+          "op": "select",
+          "requires": [
+            "SELECT"
+          ],
+          "site": "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:81"
         }
       ]
     },
@@ -1890,7 +2101,7 @@
           "requires": [
             "SELECT"
           ],
-          "site": "supabase/functions/_shared/guestAccount.ts:112"
+          "site": "supabase/functions/_shared/guestAccount.ts:116"
         },
         {
           "actor": "edge-service_role-inferred",
@@ -1898,7 +2109,7 @@
           "requires": [
             "INSERT"
           ],
-          "site": "supabase/functions/_shared/guestAccount.ts:118"
+          "site": "supabase/functions/_shared/guestAccount.ts:122"
         },
         {
           "actor": "edge-service_role-inferred",
@@ -1907,7 +2118,7 @@
             "UPDATE",
             "SELECT"
           ],
-          "site": "supabase/functions/_shared/guestAccount.ts:134"
+          "site": "supabase/functions/_shared/guestAccount.ts:138"
         },
         {
           "actor": "edge-service_role-inferred",
@@ -1915,36 +2126,7 @@
           "requires": [
             "UPDATE"
           ],
-          "site": "supabase/functions/_shared/guestAccount.ts:139"
-        }
-      ]
-    },
-    "guest_identities": {
-      "ops": [
-        "SELECT"
-      ],
-      "client_ops": [
-        "SELECT"
-      ],
-      "edge_service_role_ops": [],
-      "edge_caller_ops": [],
-      "edge_unknown_ops": [],
-      "sites": [
-        {
-          "actor": "client",
-          "op": "select",
-          "requires": [
-            "SELECT"
-          ],
-          "site": "apps/works/src/features/admin/guestAccountHooks.ts:189"
-        },
-        {
-          "actor": "client",
-          "op": "select",
-          "requires": [
-            "SELECT"
-          ],
-          "site": "apps/works/src/features/program/participantHooks.ts:232"
+          "site": "supabase/functions/_shared/guestAccount.ts:143"
         }
       ]
     },
@@ -1969,7 +2151,7 @@
           "requires": [
             "SELECT"
           ],
-          "site": "apps/works/src/features/program/participantHooks.ts:252"
+          "site": "apps/works/src/features/program/participantHooks.ts:251"
         },
         {
           "actor": "edge-service_role-inferred",
@@ -1978,16 +2160,7 @@
             "UPDATE",
             "SELECT"
           ],
-          "site": "supabase/functions/_shared/guestAccount.ts:339"
-        },
-        {
-          "actor": "edge-service_role-inferred",
-          "op": "update",
-          "requires": [
-            "UPDATE",
-            "SELECT"
-          ],
-          "site": "supabase/functions/_shared/guestSession.ts:187"
+          "site": "supabase/functions/_shared/guestAccount.ts:356"
         }
       ]
     },
@@ -2014,7 +2187,7 @@
           "requires": [
             "SELECT"
           ],
-          "site": "apps/works/src/features/management/hooks.ts:303"
+          "site": "apps/works/src/features/management/hooks.ts:305"
         },
         {
           "actor": "client",
@@ -2023,7 +2196,7 @@
             "INSERT",
             "UPDATE"
           ],
-          "site": "apps/works/src/features/management/hooks.ts:318"
+          "site": "apps/works/src/features/management/hooks.ts:320"
         },
         {
           "actor": "edge-service_role",
@@ -2225,7 +2398,7 @@
           "requires": [
             "SELECT"
           ],
-          "site": "apps/works/src/features/management/hooks.ts:443"
+          "site": "apps/works/src/features/management/hooks.ts:447"
         }
       ]
     },
@@ -2822,9 +2995,7 @@
       "client_ops": [
         "SELECT"
       ],
-      "edge_service_role_ops": [
-        "SELECT"
-      ],
+      "edge_service_role_ops": [],
       "edge_caller_ops": [],
       "edge_unknown_ops": [],
       "sites": [
@@ -2843,14 +3014,6 @@
             "SELECT"
           ],
           "site": "apps/works/src/features/hub/hooks.ts:270"
-        },
-        {
-          "actor": "edge-service_role-inferred",
-          "op": "select",
-          "requires": [
-            "SELECT"
-          ],
-          "site": "supabase/functions/_shared/guestSession.ts:163"
         }
       ]
     },
@@ -3243,7 +3406,7 @@
           "requires": [
             "SELECT"
           ],
-          "site": "supabase/functions/_shared/guestAccount.ts:217"
+          "site": "supabase/functions/_shared/guestAccount.ts:221"
         },
         {
           "actor": "edge-service_role-inferred",
@@ -3252,7 +3415,7 @@
             "UPDATE",
             "SELECT"
           ],
-          "site": "supabase/functions/_shared/guestAccount.ts:329"
+          "site": "supabase/functions/_shared/guestAccount.ts:346"
         },
         {
           "actor": "edge-service_role-inferred",
@@ -3260,7 +3423,7 @@
           "requires": [
             "SELECT"
           ],
-          "site": "supabase/functions/_shared/guestSession.ts:105"
+          "site": "supabase/functions/_shared/guestSession.ts:104"
         },
         {
           "actor": "edge-caller-inferred",
@@ -3268,7 +3431,7 @@
           "requires": [
             "SELECT"
           ],
-          "site": "supabase/functions/guest-access-invite/index.ts:69"
+          "site": "supabase/functions/guest-access-invite/handler.ts:58"
         }
       ]
     },
@@ -3381,9 +3544,7 @@
       "client_ops": [
         "SELECT"
       ],
-      "edge_service_role_ops": [
-        "SELECT"
-      ],
+      "edge_service_role_ops": [],
       "edge_caller_ops": [
         "SELECT"
       ],
@@ -3444,14 +3605,6 @@
             "SELECT"
           ],
           "site": "apps/works/src/features/startup/dashboard/startupDashboardHooks.ts:59"
-        },
-        {
-          "actor": "edge-service_role-inferred",
-          "op": "select",
-          "requires": [
-            "SELECT"
-          ],
-          "site": "supabase/functions/_shared/guestSession.ts:152"
         },
         {
           "actor": "edge-caller-inferred",
@@ -3681,8 +3834,7 @@
       "edge_service_role_ops": [
         "DELETE",
         "INSERT",
-        "SELECT",
-        "UPDATE"
+        "SELECT"
       ],
       "edge_caller_ops": [],
       "edge_unknown_ops": [],
@@ -3775,7 +3927,7 @@
             "UPDATE",
             "SELECT"
           ],
-          "site": "apps/works/src/features/management/hooks.ts:374"
+          "site": "apps/works/src/features/management/hooks.ts:377"
         },
         {
           "actor": "client",
@@ -3823,7 +3975,7 @@
           "requires": [
             "SELECT"
           ],
-          "site": "supabase/functions/_shared/guestAccount.ts:556"
+          "site": "supabase/functions/_shared/guestAccount.ts:572"
         },
         {
           "actor": "edge-service_role-inferred",
@@ -3831,16 +3983,7 @@
           "requires": [
             "SELECT"
           ],
-          "site": "supabase/functions/_shared/guestAccount.ts:89"
-        },
-        {
-          "actor": "edge-service_role-inferred",
-          "op": "update",
-          "requires": [
-            "UPDATE",
-            "SELECT"
-          ],
-          "site": "supabase/functions/_shared/guestSession.ts:183"
+          "site": "supabase/functions/_shared/guestAccount.ts:93"
         },
         {
           "actor": "edge-service_role-inferred",
@@ -3848,7 +3991,7 @@
           "requires": [
             "SELECT"
           ],
-          "site": "supabase/functions/_shared/guestSession.ts:67"
+          "site": "supabase/functions/_shared/guestSession.ts:68"
         },
         {
           "actor": "edge-service_role",
@@ -3891,6 +4034,14 @@
             "SELECT"
           ],
           "site": "supabase/functions/employee-create/index.ts:67"
+        },
+        {
+          "actor": "edge-service_role-inferred",
+          "op": "select",
+          "requires": [
+            "SELECT"
+          ],
+          "site": "supabase/functions/file-collection-file/handler.ts:80"
         },
         {
           "actor": "edge-service_role",
@@ -4045,7 +4196,7 @@
       "requires": [
         "SELECT"
       ],
-      "site": "apps/works/src/features/approval/programLinkApi.ts:81"
+      "site": "apps/works/src/features/approval/programLinkApi.ts:85"
     },
     {
       "actor": "client",
@@ -4442,7 +4593,7 @@
         "UPDATE",
         "SELECT"
       ],
-      "site": "apps/works/src/features/program/hooks.ts:310"
+      "site": "apps/works/src/features/program/hooks.ts:313"
     },
     {
       "actor": "client",
@@ -4451,7 +4602,7 @@
       "requires": [
         "SELECT"
       ],
-      "site": "apps/works/src/features/program/hooks.ts:376"
+      "site": "apps/works/src/features/program/hooks.ts:379"
     },
     {
       "actor": "client",
@@ -4611,7 +4762,7 @@
       "requires": [
         "SELECT"
       ],
-      "site": "apps/works/src/features/program/participantHooks.ts:189"
+      "site": "apps/works/src/features/program/participantHooks.ts:188"
     },
     {
       "actor": "client",
@@ -4620,7 +4771,7 @@
       "requires": [
         "SELECT"
       ],
-      "site": "apps/works/src/features/program/participantHooks.ts:210"
+      "site": "apps/works/src/features/program/participantHooks.ts:223"
     },
     {
       "actor": "client",
@@ -4629,7 +4780,7 @@
       "requires": [
         "SELECT"
       ],
-      "site": "apps/works/src/features/program/participantHooks.ts:317"
+      "site": "apps/works/src/features/program/participantHooks.ts:314"
     },
     {
       "actor": "client",
@@ -4676,7 +4827,16 @@
       "requires": [
         "SELECT"
       ],
-      "site": "apps/works/src/features/program/rosterHooks.ts:103"
+      "site": "apps/works/src/features/program/rosterHooks.ts:106"
+    },
+    {
+      "actor": "client",
+      "arg": "SHARED_TABLES.participants",
+      "op": "select",
+      "requires": [
+        "SELECT"
+      ],
+      "site": "apps/works/src/features/program/rosterHooks.ts:115"
     },
     {
       "actor": "client",
@@ -4685,35 +4845,35 @@
       "requires": [
         "SELECT"
       ],
-      "site": "apps/works/src/features/program/rosterHooks.ts:154"
+      "site": "apps/works/src/features/program/rosterHooks.ts:178"
     },
     {
       "actor": "client",
       "arg": "ledger.table",
       "op": "select",
       "requires": [
-        "SELECT"
-      ],
-      "site": "apps/works/src/features/program/rosterHooks.ts:191"
-    },
-    {
-      "actor": "client",
-      "arg": "ledger.table",
-      "op": "update",
-      "requires": [
-        "UPDATE",
         "SELECT"
       ],
       "site": "apps/works/src/features/program/rosterHooks.ts:215"
     },
     {
       "actor": "client",
+      "arg": "ledger.table",
+      "op": "update",
+      "requires": [
+        "UPDATE",
+        "SELECT"
+      ],
+      "site": "apps/works/src/features/program/rosterHooks.ts:239"
+    },
+    {
+      "actor": "client",
       "arg": "SHARED_TABLES.participantEntries",
       "op": "insert",
       "requires": [
         "INSERT"
       ],
-      "site": "apps/works/src/features/program/rosterHooks.ts:250"
+      "site": "apps/works/src/features/program/rosterHooks.ts:274"
     },
     {
       "actor": "client",
@@ -4723,7 +4883,7 @@
         "INSERT",
         "SELECT"
       ],
-      "site": "apps/works/src/features/program/rosterHooks.ts:304"
+      "site": "apps/works/src/features/program/rosterHooks.ts:328"
     },
     {
       "actor": "client",
@@ -4732,7 +4892,7 @@
       "requires": [
         "INSERT"
       ],
-      "site": "apps/works/src/features/program/rosterHooks.ts:311"
+      "site": "apps/works/src/features/program/rosterHooks.ts:335"
     },
     {
       "actor": "client",
@@ -4742,7 +4902,7 @@
         "INSERT",
         "SELECT"
       ],
-      "site": "apps/works/src/features/program/rosterHooks.ts:357"
+      "site": "apps/works/src/features/program/rosterHooks.ts:381"
     },
     {
       "actor": "client",
@@ -4751,7 +4911,7 @@
       "requires": [
         "INSERT"
       ],
-      "site": "apps/works/src/features/program/rosterHooks.ts:365"
+      "site": "apps/works/src/features/program/rosterHooks.ts:389"
     },
     {
       "actor": "client",
@@ -4761,7 +4921,7 @@
         "UPDATE",
         "SELECT"
       ],
-      "site": "apps/works/src/features/program/rosterHooks.ts:396"
+      "site": "apps/works/src/features/program/rosterHooks.ts:420"
     },
     {
       "actor": "client",
@@ -4788,7 +4948,7 @@
       "requires": [
         "SELECT"
       ],
-      "site": "supabase/functions/_shared/guestAccount.ts:250"
+      "site": "supabase/functions/_shared/guestAccount.ts:261"
     },
     {
       "actor": "edge-service_role-inferred",
@@ -4797,7 +4957,7 @@
       "requires": [
         "SELECT"
       ],
-      "site": "supabase/functions/_shared/guestSession.ts:122"
+      "site": "supabase/functions/_shared/guestSession.ts:121"
     },
     {
       "actor": "edge-service_role-inferred",
@@ -4806,7 +4966,7 @@
       "requires": [
         "SELECT"
       ],
-      "site": "supabase/functions/_shared/programLedger.ts:141"
+      "site": "supabase/functions/_shared/programLedger.ts:154"
     },
     {
       "actor": "edge-service_role-inferred",
@@ -4815,7 +4975,7 @@
       "requires": [
         "SELECT"
       ],
-      "site": "supabase/functions/_shared/programLedger.ts:160"
+      "site": "supabase/functions/_shared/programLedger.ts:173"
     },
     {
       "actor": "edge-service_role-inferred",
@@ -4855,32 +5015,32 @@
     }
   ],
   "rpc": {
-    "admin_entities_delete_blockers": [
+    "admin_entities_delete_blocker_rows": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/master/inactiveLedgerHooks.ts:187"
+        "site": "apps/works/src/features/master/inactiveLedgerHooks.ts:192"
       }
     ],
     "admin_hard_delete_entities": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/master/inactiveLedgerHooks.ts:206"
+        "site": "apps/works/src/features/master/inactiveLedgerHooks.ts:211"
       }
     ],
     "admin_inactive_ledger_entities": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/master/inactiveLedgerHooks.ts:109"
+        "site": "apps/works/src/features/master/inactiveLedgerHooks.ts:110"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/master/inactiveLedgerHooks.ts:83"
+        "site": "apps/works/src/features/master/inactiveLedgerHooks.ts:84"
       }
     ],
     "admin_ledger_console_capabilities": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/master/inactiveLedgerHooks.ts:61"
+        "site": "apps/works/src/features/master/inactiveLedgerHooks.ts:62"
       }
     ],
     "admin_reset_guest_password": [
@@ -4898,13 +5058,19 @@
     "admin_update_guest_contact": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/admin/guestContactHooks.ts:259"
+        "site": "apps/works/src/features/admin/guestContactHooks.ts:253"
+      }
+    ],
+    "approval_budget_spend_items": [
+      {
+        "actor": "client",
+        "site": "apps/works/src/features/approval/workspaceBudgetApi.ts:132"
       }
     ],
     "approval_budget_status": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/approval/budgetApi.ts:135"
+        "site": "apps/works/src/features/approval/budgetApi.ts:142"
       }
     ],
     "attach_meeting_recording": [
@@ -4953,6 +5119,12 @@
         "site": "supabase/functions/guest-password-reset/handler.ts:68"
       }
     ],
+    "birthdays_in_range": [
+      {
+        "actor": "client",
+        "site": "apps/works/src/features/hub/hooks.ts:358"
+      }
+    ],
     "bump_module_public_link_view": [
       {
         "actor": "edge-service_role",
@@ -4996,7 +5168,7 @@
     "close_program_guest_access": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/program/participantAccessHooks.ts:136"
+        "site": "apps/works/src/features/program/participantAccessHooks.ts:107"
       }
     ],
     "complete_meeting_recording": [
@@ -5018,13 +5190,13 @@
     "create_guest_account": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/guest/guestAccountService.ts:20"
+        "site": "apps/works/src/features/guest/guestAccountService.ts:30"
       }
     ],
     "deactivate_entities": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/master/inactiveLedgerHooks.ts:166"
+        "site": "apps/works/src/features/master/inactiveLedgerHooks.ts:167"
       }
     ],
     "deactivate_entity": [
@@ -5052,11 +5224,11 @@
     "decide_approval_document": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/approval/approvalApi.ts:364"
+        "site": "apps/works/src/features/approval/approvalApi.ts:353"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/approval/approvalApi.ts:397"
+        "site": "apps/works/src/features/approval/approvalApi.ts:386"
       }
     ],
     "delete_approval_document": [
@@ -5068,7 +5240,79 @@
     "delete_program_module": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/program/hooks.ts:430"
+        "site": "apps/works/src/features/program/hooks.ts:433"
+      }
+    ],
+    "file_collection_add_comment": [
+      {
+        "actor": "client",
+        "site": "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:527"
+      }
+    ],
+    "file_collection_authorize_download": [
+      {
+        "actor": "edge-unknown",
+        "site": "supabase/functions/file-collection-file/handler.ts:203"
+      }
+    ],
+    "file_collection_commit_upload": [
+      {
+        "actor": "edge-unknown",
+        "site": "supabase/functions/file-collection-file/handler.ts:189"
+      }
+    ],
+    "file_collection_delete_node": [
+      {
+        "actor": "client",
+        "site": "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:468"
+      }
+    ],
+    "file_collection_publish": [
+      {
+        "actor": "client",
+        "site": "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:491"
+      }
+    ],
+    "file_collection_register_upload": [
+      {
+        "actor": "edge-unknown",
+        "site": "supabase/functions/file-collection-file/handler.ts:106"
+      }
+    ],
+    "file_collection_remove_file": [
+      {
+        "actor": "client",
+        "site": "apps/guest/src/features/fileCollectionService.ts:344"
+      }
+    ],
+    "file_collection_reorder_node": [
+      {
+        "actor": "client",
+        "site": "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:372"
+      }
+    ],
+    "file_collection_review": [
+      {
+        "actor": "client",
+        "site": "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:510"
+      }
+    ],
+    "file_collection_save_node": [
+      {
+        "actor": "client",
+        "site": "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:338"
+      }
+    ],
+    "file_collection_save_structure": [
+      {
+        "actor": "client",
+        "site": "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:425"
+      }
+    ],
+    "file_collection_upsert": [
+      {
+        "actor": "client",
+        "site": "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:307"
       }
     ],
     "finish_meeting_recording": [
@@ -5083,38 +5327,44 @@
         "site": "apps/works/src/features/fund/fundSummaryHooks.ts:52"
       }
     ],
+    "guest_account_ledger_candidates": [
+      {
+        "actor": "client",
+        "site": "apps/works/src/features/guest/guestLedgerCandidateService.ts:67"
+      }
+    ],
     "guest_accounts_list": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/admin/guestAccountHooks.ts:142"
+        "site": "apps/works/src/features/admin/guestAccountHooks.ts:80"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/program/participantHooks.ts:422"
+        "site": "apps/works/src/features/program/participantHooks.ts:401"
       }
     ],
     "guest_password_commit": [
       {
         "actor": "edge-service_role-inferred",
-        "site": "supabase/functions/_shared/guestAccount.ts:178"
+        "site": "supabase/functions/_shared/guestAccount.ts:182"
       }
     ],
     "guest_reset_token_consume": [
       {
         "actor": "edge-service_role-inferred",
-        "site": "supabase/functions/_shared/guestAccount.ts:524"
+        "site": "supabase/functions/_shared/guestAccount.ts:540"
       }
     ],
     "guest_reset_token_issue": [
       {
         "actor": "edge-service_role-inferred",
-        "site": "supabase/functions/_shared/guestAccount.ts:485"
+        "site": "supabase/functions/_shared/guestAccount.ts:501"
       }
     ],
     "hard_delete_guest_accounts": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/admin/guestAccountHooks.ts:250"
+        "site": "apps/works/src/features/admin/guestAccountHooks.ts:136"
       }
     ],
     "increment_board_post_view": [
@@ -5180,7 +5430,7 @@
     "open_program_guest_access": [
       {
         "actor": "edge-caller-inferred",
-        "site": "supabase/functions/guest-access-invite/index.ts:53"
+        "site": "supabase/functions/guest-access-invite/handler.ts:44"
       }
     ],
     "prepare_meeting_recording_segment": [
@@ -5192,13 +5442,13 @@
     "program_module_delete_blockers": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/program/hooks.ts:411"
+        "site": "apps/works/src/features/program/hooks.ts:414"
       }
     ],
     "program_participant_removal_preview": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/program/participantAccessHooks.ts:168"
+        "site": "apps/works/src/features/program/participantAccessHooks.ts:139"
       }
     ],
     "promote_to_invested": [
@@ -5216,7 +5466,7 @@
     "recall_approval_decision": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/approval/approvalApi.ts:426"
+        "site": "apps/works/src/features/approval/approvalApi.ts:415"
       }
     ],
     "register_trade_partner_quick": [
@@ -5228,19 +5478,19 @@
     "remove_program_participants": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/program/participantAccessHooks.ts:196"
+        "site": "apps/works/src/features/program/participantAccessHooks.ts:167"
       }
     ],
     "reopen_program_guest_access": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/program/participantAccessHooks.ts:118"
+        "site": "apps/works/src/features/program/participantAccessHooks.ts:89"
       }
     ],
     "restore_entities": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/master/inactiveLedgerHooks.ts:149"
+        "site": "apps/works/src/features/master/inactiveLedgerHooks.ts:150"
       }
     ],
     "resubmit_approval_document": [
@@ -5334,7 +5584,7 @@
     "set_guest_accounts_active": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/admin/guestAccountHooks.ts:219"
+        "site": "apps/works/src/features/admin/guestAccountHooks.ts:106"
       }
     ],
     "set_investment_purposes": [
@@ -5382,13 +5632,13 @@
     "set_program_guest_access_window": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/program/participantAccessHooks.ts:89"
+        "site": "apps/works/src/features/program/participantAccessHooks.ts:60"
       }
     ],
     "set_program_module": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/program/hooks.ts:342"
+        "site": "apps/works/src/features/program/hooks.ts:345"
       }
     ],
     "set_user_branches": [
@@ -5428,7 +5678,7 @@
     "today_birthdays": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/hub/hooks.ts:355"
+        "site": "apps/works/src/features/hub/hooks.ts:382"
       }
     ],
     "update_entity": [
@@ -5452,7 +5702,7 @@
     "update_my_profile": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/management/hooks.ts:351"
+        "site": "apps/works/src/features/management/hooks.ts:354"
       }
     ],
     "upload_enrich_entity": [
@@ -5532,6 +5782,18 @@
       },
       {
         "actor": "edge-unknown",
+        "site": "supabase/functions/file-collection-file/handler.ts:123"
+      },
+      {
+        "actor": "edge-unknown",
+        "site": "supabase/functions/file-collection-file/handler.ts:170"
+      },
+      {
+        "actor": "edge-unknown",
+        "site": "supabase/functions/file-collection-file/handler.ts:228"
+      },
+      {
+        "actor": "edge-unknown",
         "site": "supabase/functions/material-download/index.ts:122"
       },
       {
@@ -5566,6 +5828,12 @@
         "actor": "client",
         "site": "apps/works/src/features/program/recruitment/recruitmentHooks.ts:237"
       }
+    ],
+    "input.bucket": [
+      {
+        "actor": "client",
+        "site": "apps/guest/src/features/fileCollectionHooks.ts:192"
+      }
     ]
   },
   "literals": {
@@ -5585,6 +5853,10 @@
       {
         "actor": "edge",
         "site": "supabase/functions/ai-minute-draft/index.ts:126"
+      },
+      {
+        "actor": "edge",
+        "site": "supabase/functions/file-collection-file/handler.ts:217"
       },
       {
         "actor": "edge",
@@ -5640,7 +5912,7 @@
     "approval_budget_revisions": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/approval/budgetApi.ts:168"
+        "site": "apps/works/src/features/approval/budgetApi.ts:175"
       }
     ],
     "approval_document_links": [
@@ -5659,6 +5931,14 @@
       {
         "actor": "client",
         "site": "apps/works/src/features/approval/documentLinkApi.ts:62"
+      },
+      {
+        "actor": "client",
+        "site": "apps/works/src/features/approval/relatedApprovalsApi.ts:151"
+      },
+      {
+        "actor": "client",
+        "site": "apps/works/src/features/approval/relatedApprovalsApi.ts:31"
       }
     ],
     "approval_documents": [
@@ -5676,19 +5956,19 @@
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/approval/approvalApi.ts:295"
+        "site": "apps/works/src/features/approval/approvalApi.ts:310"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/approval/budgetApi.ts:46"
+        "site": "apps/works/src/features/approval/budgetApi.ts:100"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/approval/budgetApi.ts:93"
+        "site": "apps/works/src/features/approval/budgetApi.ts:53"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/approval/relatedApprovalsApi.ts:74"
+        "site": "apps/works/src/features/approval/relatedApprovalsApi.ts:134"
       },
       {
         "actor": "client",
@@ -5738,10 +6018,6 @@
     "approval_lines": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/approval/approvalApi.ts:320"
-      },
-      {
-        "actor": "client",
         "site": "apps/works/src/features/approval/approvalDraftApi.ts:25"
       },
       {
@@ -5756,36 +6032,36 @@
     "approval_program_links": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/approval/programLinkApi.ts:105"
+        "site": "apps/works/src/features/approval/programLinkApi.ts:109"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/approval/programLinkApi.ts:164"
+        "site": "apps/works/src/features/approval/programLinkApi.ts:168"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/approval/programLinkApi.ts:185"
+        "site": "apps/works/src/features/approval/programLinkApi.ts:189"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/approval/programLinkApi.ts:200"
+        "site": "apps/works/src/features/approval/programLinkApi.ts:204"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/approval/relatedApprovalsApi.ts:54"
+        "site": "apps/works/src/features/approval/relatedApprovalsApi.ts:115"
+      },
+      {
+        "actor": "client",
+        "site": "apps/works/src/features/approval/workspaceBudgetApi.ts:64"
       }
     ],
     "approval_reads": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/approval/approvalApi.ts:455"
+        "site": "apps/works/src/features/approval/approvalApi.ts:444"
       }
     ],
     "approval_recipients": [
-      {
-        "actor": "client",
-        "site": "apps/works/src/features/approval/approvalApi.ts:324"
-      },
       {
         "actor": "client",
         "site": "apps/works/src/features/approval/approvalDraftApi.ts:25"
@@ -5794,7 +6070,7 @@
     "assets": [
       {
         "actor": "client",
-        "site": "apps/works/src/config/navigation.ts:266"
+        "site": "apps/works/src/config/navigation.ts:305"
       },
       {
         "actor": "client",
@@ -5802,7 +6078,7 @@
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/management/ManagementPage.tsx:79"
+        "site": "apps/works/src/features/management/ManagementPage.tsx:80"
       },
       {
         "actor": "client",
@@ -5914,6 +6190,18 @@
       },
       {
         "actor": "client",
+        "site": "apps/guest/src/features/fileCollectionHooks.ts:311"
+      },
+      {
+        "actor": "client",
+        "site": "apps/guest/src/features/fileCollectionHooks.ts:325"
+      },
+      {
+        "actor": "client",
+        "site": "apps/guest/src/features/fileCollectionHooks.ts:347"
+      },
+      {
+        "actor": "client",
         "site": "apps/guest/src/features/moduleHooks.ts:134"
       },
       {
@@ -5962,11 +6250,11 @@
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/program/detail/ModuleDeleteModal.tsx:69"
+        "site": "apps/works/src/features/program/detail/ModuleDeleteModal.tsx:71"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/program/detail/ModuleDeleteModal.tsx:70"
+        "site": "apps/works/src/features/program/detail/ModuleDeleteModal.tsx:72"
       },
       {
         "actor": "client",
@@ -5975,6 +6263,22 @@
       {
         "actor": "client",
         "site": "apps/works/src/features/program/detail/attachmentCounts.ts:8"
+      },
+      {
+        "actor": "client",
+        "site": "apps/works/src/features/program/fileCollection/NodeAttachmentModal.tsx:16"
+      },
+      {
+        "actor": "client",
+        "site": "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:117"
+      },
+      {
+        "actor": "client",
+        "site": "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:133"
+      },
+      {
+        "actor": "client",
+        "site": "packages/master-data/src/fileCollection.ts:221"
       },
       {
         "actor": "edge",
@@ -6120,43 +6424,43 @@
     "boards": [
       {
         "actor": "client",
-        "site": "apps/works/src/app/WorksLayout.tsx:130"
+        "site": "apps/works/src/app/WorksLayout.tsx:136"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/app/WorksLayout.tsx:227"
+        "site": "apps/works/src/app/WorksLayout.tsx:239"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/app/WorksLayout.tsx:238"
+        "site": "apps/works/src/app/WorksLayout.tsx:250"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/config/navigation.ts:186"
+        "site": "apps/works/src/config/navigation.ts:220"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/config/navigation.ts:25"
+        "site": "apps/works/src/config/navigation.ts:278"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/config/navigation.ts:252"
+        "site": "apps/works/src/config/navigation.ts:278"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/config/navigation.ts:252"
+        "site": "apps/works/src/config/navigation.ts:29"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/config/navigation.ts:28"
+        "site": "apps/works/src/config/navigation.ts:32"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/admin/AdminPage.tsx:33"
+        "site": "apps/works/src/features/admin/AdminPage.tsx:34"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/admin/AdminPage.tsx:60"
+        "site": "apps/works/src/features/admin/AdminPage.tsx:71"
       },
       {
         "actor": "client",
@@ -6208,15 +6512,15 @@
     "branches": [
       {
         "actor": "client",
-        "site": "apps/works/src/config/navigation.ts:226"
+        "site": "apps/works/src/config/navigation.ts:258"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/config/navigation.ts:265"
+        "site": "apps/works/src/config/navigation.ts:304"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/management/ManagementPage.tsx:76"
+        "site": "apps/works/src/features/management/ManagementPage.tsx:77"
       },
       {
         "actor": "client",
@@ -6282,19 +6586,19 @@
     "category_tags": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/admin/tagConfig.ts:71"
+        "site": "apps/works/src/features/admin/tagConfig.ts:78"
       }
     ],
     "company_category_tags": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/admin/tagConfig.ts:102"
+        "site": "apps/works/src/features/admin/tagConfig.ts:113"
       }
     ],
     "company_status_tags": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/admin/tagConfig.ts:109"
+        "site": "apps/works/src/features/admin/tagConfig.ts:121"
       },
       {
         "actor": "client",
@@ -6312,7 +6616,7 @@
     "country_tags": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/admin/tagConfig.ts:85"
+        "site": "apps/works/src/features/admin/tagConfig.ts:94"
       },
       {
         "actor": "client",
@@ -6326,11 +6630,11 @@
     "departments": [
       {
         "actor": "client",
-        "site": "apps/works/src/config/navigation.ts:262"
+        "site": "apps/works/src/config/navigation.ts:291"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/management/ManagementPage.tsx:75"
+        "site": "apps/works/src/features/management/ManagementPage.tsx:76"
       },
       {
         "actor": "client",
@@ -6412,7 +6716,7 @@
     "dept_budgets": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/management/hooks.ts:421"
+        "site": "apps/works/src/features/management/hooks.ts:425"
       }
     ],
     "dept_members": [
@@ -6488,7 +6792,7 @@
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/admin/tagConfig.ts:64"
+        "site": "apps/works/src/features/admin/tagConfig.ts:70"
       },
       {
         "actor": "client",
@@ -6509,6 +6813,78 @@
       {
         "actor": "client",
         "site": "apps/works/src/features/networks/dashboardHooks.ts:121"
+      }
+    ],
+    "file_collection_assignments": [
+      {
+        "actor": "client",
+        "site": "apps/guest/src/features/fileCollectionHooks.ts:273"
+      },
+      {
+        "actor": "client",
+        "site": "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:172"
+      }
+    ],
+    "file_collection_comments": [
+      {
+        "actor": "client",
+        "site": "apps/guest/src/features/fileCollectionHooks.ts:408"
+      },
+      {
+        "actor": "client",
+        "site": "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:263"
+      }
+    ],
+    "file_collection_files": [
+      {
+        "actor": "client",
+        "site": "apps/guest/src/features/fileCollectionHooks.ts:310"
+      },
+      {
+        "actor": "client",
+        "site": "apps/guest/src/features/fileCollectionHooks.ts:387"
+      },
+      {
+        "actor": "client",
+        "site": "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:247"
+      },
+      {
+        "actor": "client",
+        "site": "packages/master-data/src/fileCollection.ts:33"
+      },
+      {
+        "actor": "edge",
+        "site": "supabase/functions/file-collection-file/handler.ts:153"
+      }
+    ],
+    "file_collection_nodes": [
+      {
+        "actor": "client",
+        "site": "apps/guest/src/features/fileCollectionHooks.ts:296"
+      },
+      {
+        "actor": "client",
+        "site": "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:100"
+      }
+    ],
+    "file_collection_responses": [
+      {
+        "actor": "client",
+        "site": "apps/guest/src/features/fileCollectionHooks.ts:368"
+      },
+      {
+        "actor": "client",
+        "site": "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:210"
+      }
+    ],
+    "file_collections": [
+      {
+        "actor": "client",
+        "site": "apps/guest/src/features/fileCollectionHooks.ts:255"
+      },
+      {
+        "actor": "client",
+        "site": "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:81"
       }
     ],
     "fund_lps": [
@@ -6556,11 +6932,11 @@
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/fund/FundListTab.tsx:103"
+        "site": "apps/works/src/features/fund/FundListTab.tsx:110"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/fund/FundListTab.tsx:114"
+        "site": "apps/works/src/features/fund/FundListTab.tsx:121"
       },
       {
         "actor": "client",
@@ -6666,57 +7042,39 @@
       },
       {
         "actor": "edge",
-        "site": "supabase/functions/_shared/guestAccount.ts:112"
+        "site": "supabase/functions/_shared/guestAccount.ts:116"
       },
       {
         "actor": "edge",
-        "site": "supabase/functions/_shared/guestAccount.ts:118"
+        "site": "supabase/functions/_shared/guestAccount.ts:122"
       },
       {
         "actor": "edge",
-        "site": "supabase/functions/_shared/guestAccount.ts:134"
+        "site": "supabase/functions/_shared/guestAccount.ts:138"
       },
       {
         "actor": "edge",
-        "site": "supabase/functions/_shared/guestAccount.ts:139"
-      }
-    ],
-    "guest_identities": [
-      {
-        "actor": "client",
-        "site": "apps/works/src/features/admin/guestAccountHooks.ts:189"
-      },
-      {
-        "actor": "client",
-        "site": "apps/works/src/features/program/participantHooks.ts:232"
-      },
-      {
-        "actor": "client",
-        "site": "apps/works/src/features/program/rosterHooks.ts:276"
+        "site": "supabase/functions/_shared/guestAccount.ts:143"
       }
     ],
     "guest_invitations": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/program/participantHooks.ts:252"
+        "site": "apps/works/src/features/program/participantHooks.ts:251"
       },
       {
         "actor": "edge",
-        "site": "supabase/functions/_shared/guestAccount.ts:339"
-      },
-      {
-        "actor": "edge",
-        "site": "supabase/functions/_shared/guestSession.ts:187"
+        "site": "supabase/functions/_shared/guestAccount.ts:356"
       }
     ],
     "hr_profiles": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/management/hooks.ts:303"
+        "site": "apps/works/src/features/management/hooks.ts:305"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/management/hooks.ts:318"
+        "site": "apps/works/src/features/management/hooks.ts:320"
       },
       {
         "actor": "edge",
@@ -6730,7 +7088,7 @@
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/admin/tagConfig.ts:55"
+        "site": "apps/works/src/features/admin/tagConfig.ts:60"
       },
       {
         "actor": "client",
@@ -6768,7 +7126,7 @@
     "investment_method_tags": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/admin/tagConfig.ts:137"
+        "site": "apps/works/src/features/admin/tagConfig.ts:152"
       },
       {
         "actor": "client",
@@ -6778,7 +7136,7 @@
     "investment_stage_tags": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/admin/tagConfig.ts:95"
+        "site": "apps/works/src/features/admin/tagConfig.ts:105"
       },
       {
         "actor": "client",
@@ -6812,7 +7170,7 @@
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/fund/guestHost.ts:34"
+        "site": "apps/works/src/features/fund/guestHost.ts:35"
       },
       {
         "actor": "client",
@@ -6898,7 +7256,7 @@
     "kpi_records": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/management/hooks.ts:443"
+        "site": "apps/works/src/features/management/hooks.ts:447"
       }
     ],
     "kpi_template_items": [
@@ -6954,11 +7312,11 @@
     "location_region_tags": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/admin/tagConfig.ts:119"
+        "site": "apps/works/src/features/admin/tagConfig.ts:132"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/admin/tagConfig.ts:132"
+        "site": "apps/works/src/features/admin/tagConfig.ts:147"
       },
       {
         "actor": "client",
@@ -6968,7 +7326,7 @@
     "location_tags": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/admin/tagConfig.ts:126"
+        "site": "apps/works/src/features/admin/tagConfig.ts:140"
       },
       {
         "actor": "client",
@@ -6990,14 +7348,6 @@
     "ma_buyers": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/admin/GuestAccountPanel.tsx:75"
-      },
-      {
-        "actor": "client",
-        "site": "apps/works/src/features/admin/guestAccountHooks.ts:104"
-      },
-      {
-        "actor": "client",
         "site": "apps/works/src/features/hub/dashboard/myDatabaseHooks.ts:110"
       },
       {
@@ -7010,7 +7360,7 @@
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/master/inactiveLedgerHooks.ts:133"
+        "site": "apps/works/src/features/master/inactiveLedgerHooks.ts:134"
       },
       {
         "actor": "client",
@@ -7118,18 +7468,6 @@
     "ma_sellers": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/admin/GuestAccountPanel.tsx:76"
-      },
-      {
-        "actor": "client",
-        "site": "apps/works/src/features/admin/guestAccountHooks.ts:104"
-      },
-      {
-        "actor": "client",
-        "site": "apps/works/src/features/admin/guestAccountHooks.ts:106"
-      },
-      {
-        "actor": "client",
         "site": "apps/works/src/features/hub/dashboard/myDatabaseHooks.ts:110"
       },
       {
@@ -7142,7 +7480,7 @@
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/master/inactiveLedgerHooks.ts:134"
+        "site": "apps/works/src/features/master/inactiveLedgerHooks.ts:135"
       },
       {
         "actor": "client",
@@ -7174,7 +7512,7 @@
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/program/participantHooks.ts:166"
+        "site": "apps/works/src/features/program/participantHooks.ts:165"
       },
       {
         "actor": "client",
@@ -7360,23 +7698,7 @@
     "networks": [
       {
         "actor": "client",
-        "site": "apps/guest/src/auth/guestStore.ts:32"
-      },
-      {
-        "actor": "client",
-        "site": "apps/guest/src/auth/guestStore.ts:40"
-      },
-      {
-        "actor": "client",
         "site": "apps/works/src/auth/types.ts:13"
-      },
-      {
-        "actor": "client",
-        "site": "apps/works/src/config/workspaces.ts:105"
-      },
-      {
-        "actor": "client",
-        "site": "apps/works/src/config/workspaces.ts:106"
       },
       {
         "actor": "client",
@@ -7384,7 +7706,11 @@
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/admin/GuestAccountPanel.tsx:74"
+        "site": "apps/works/src/config/workspaces.ts:121"
+      },
+      {
+        "actor": "client",
+        "site": "apps/works/src/config/workspaces.ts:140"
       },
       {
         "actor": "client",
@@ -7396,23 +7722,11 @@
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/admin/guestAccountHooks.ts:103"
-      },
-      {
-        "actor": "client",
         "site": "apps/works/src/features/admin/sensitiveContents.ts:111"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/guest/GuestAccountCreateModal.tsx:93"
-      },
-      {
-        "actor": "client",
-        "site": "apps/works/src/features/guest/LedgerCandidatePickerModal.tsx:32"
-      },
-      {
-        "actor": "client",
-        "site": "apps/works/src/features/guest/LedgerCandidatePickerModal.tsx:46"
+        "site": "apps/works/src/features/guest/GuestAccountCreateModal.tsx:111"
       },
       {
         "actor": "client",
@@ -7448,7 +7762,7 @@
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/master/inactiveLedgerHooks.ts:130"
+        "site": "apps/works/src/features/master/inactiveLedgerHooks.ts:131"
       },
       {
         "actor": "client",
@@ -7576,31 +7890,23 @@
       },
       {
         "actor": "client",
-        "site": "apps/works/src/router.tsx:101"
+        "site": "apps/works/src/router.tsx:104"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/router.tsx:110"
+        "site": "apps/works/src/router.tsx:113"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/router.tsx:121"
+        "site": "apps/works/src/router.tsx:124"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/router.tsx:90"
+        "site": "apps/works/src/router.tsx:93"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/router.tsx:92"
-      },
-      {
-        "actor": "edge",
-        "site": "supabase/functions/_shared/guestSession.ts:161"
-      },
-      {
-        "actor": "edge",
-        "site": "supabase/functions/_shared/guestSession.ts:163"
+        "site": "apps/works/src/router.tsx:95"
       }
     ],
     "notifications": [
@@ -7680,11 +7986,11 @@
     "partners": [
       {
         "actor": "client",
-        "site": "apps/works/src/config/navigation.ts:277"
+        "site": "apps/works/src/config/navigation.ts:300"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/management/ManagementPage.tsx:84"
+        "site": "apps/works/src/features/management/ManagementPage.tsx:85"
       },
       {
         "actor": "client",
@@ -7694,7 +8000,7 @@
     "pay_step_tags": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/admin/tagConfig.ts:175"
+        "site": "apps/works/src/features/admin/tagConfig.ts:193"
       },
       {
         "actor": "client",
@@ -7732,7 +8038,7 @@
     "position_tags": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/admin/tagConfig.ts:146"
+        "site": "apps/works/src/features/admin/tagConfig.ts:162"
       },
       {
         "actor": "client",
@@ -7860,7 +8166,7 @@
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/program/participantHooks.ts:305"
+        "site": "apps/works/src/features/program/participantHooks.ts:302"
       },
       {
         "actor": "client",
@@ -7870,11 +8176,11 @@
     "program_participants": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/program/participantHooks.ts:305"
+        "site": "apps/works/src/features/program/participantHooks.ts:302"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/program/participantHooks.ts:459"
+        "site": "apps/works/src/features/program/participantHooks.ts:429"
       },
       {
         "actor": "client",
@@ -7886,19 +8192,19 @@
       },
       {
         "actor": "edge",
-        "site": "supabase/functions/_shared/guestAccount.ts:217"
+        "site": "supabase/functions/_shared/guestAccount.ts:221"
       },
       {
         "actor": "edge",
-        "site": "supabase/functions/_shared/guestAccount.ts:329"
+        "site": "supabase/functions/_shared/guestAccount.ts:346"
       },
       {
         "actor": "edge",
-        "site": "supabase/functions/_shared/guestSession.ts:105"
+        "site": "supabase/functions/_shared/guestSession.ts:104"
       },
       {
         "actor": "edge",
-        "site": "supabase/functions/guest-access-invite/index.ts:69"
+        "site": "supabase/functions/guest-access-invite/handler.ts:58"
       }
     ],
     "program_posts": [
@@ -7938,7 +8244,7 @@
     "programs": [
       {
         "actor": "client",
-        "site": "apps/works/src/config/workspaces.ts:143"
+        "site": "apps/works/src/config/workspaces.ts:163"
       },
       {
         "actor": "client",
@@ -7946,7 +8252,7 @@
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/admin/guestAccountHooks.ts:88"
+        "site": "apps/works/src/features/admin/guestAccountHooks.ts:69"
       },
       {
         "actor": "client",
@@ -7978,7 +8284,7 @@
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/master/inactiveLedgerHooks.ts:125"
+        "site": "apps/works/src/features/master/inactiveLedgerHooks.ts:126"
       },
       {
         "actor": "client",
@@ -7998,7 +8304,7 @@
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/program/participantAccessHooks.ts:98"
+        "site": "apps/works/src/features/program/participantAccessHooks.ts:69"
       },
       {
         "actor": "client",
@@ -8032,7 +8338,7 @@
     "rank_tags": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/admin/tagConfig.ts:161"
+        "site": "apps/works/src/features/admin/tagConfig.ts:178"
       },
       {
         "actor": "client",
@@ -8050,11 +8356,11 @@
     "region_tags": [
       {
         "actor": "client",
-        "site": "apps/works/src/features/admin/tagConfig.ts:78"
+        "site": "apps/works/src/features/admin/tagConfig.ts:100"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/admin/tagConfig.ts:90"
+        "site": "apps/works/src/features/admin/tagConfig.ts:86"
       },
       {
         "actor": "client",
@@ -8090,35 +8396,15 @@
     "startups": [
       {
         "actor": "client",
-        "site": "apps/guest/src/auth/guestStore.ts:32"
+        "site": "apps/works/src/config/workspaces.ts:120"
       },
       {
         "actor": "client",
-        "site": "apps/guest/src/auth/guestStore.ts:40"
-      },
-      {
-        "actor": "client",
-        "site": "apps/works/src/config/workspaces.ts:105"
-      },
-      {
-        "actor": "client",
-        "site": "apps/works/src/config/workspaces.ts:106"
-      },
-      {
-        "actor": "client",
-        "site": "apps/works/src/features/admin/GuestAccountPanel.tsx:139"
-      },
-      {
-        "actor": "client",
-        "site": "apps/works/src/features/admin/GuestAccountPanel.tsx:73"
+        "site": "apps/works/src/config/workspaces.ts:121"
       },
       {
         "actor": "client",
         "site": "apps/works/src/features/admin/creatorTransfer.ts:26"
-      },
-      {
-        "actor": "client",
-        "site": "apps/works/src/features/admin/guestAccountHooks.ts:103"
       },
       {
         "actor": "client",
@@ -8150,11 +8436,11 @@
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/fund/guestHost.ts:31"
+        "site": "apps/works/src/features/fund/guestHost.ts:32"
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/fund/guestHost.ts:37"
+        "site": "apps/works/src/features/fund/guestHost.ts:38"
       },
       {
         "actor": "client",
@@ -8194,7 +8480,7 @@
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/master/inactiveLedgerHooks.ts:129"
+        "site": "apps/works/src/features/master/inactiveLedgerHooks.ts:130"
       },
       {
         "actor": "client",
@@ -8326,14 +8612,6 @@
       },
       {
         "actor": "edge",
-        "site": "supabase/functions/_shared/guestSession.ts:150"
-      },
-      {
-        "actor": "edge",
-        "site": "supabase/functions/_shared/guestSession.ts:152"
-      },
-      {
-        "actor": "edge",
         "site": "supabase/functions/ma-seller-quick-review/ledger.ts:242"
       },
       {
@@ -8352,7 +8630,7 @@
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/hub/BirthdayCard.tsx:16"
+        "site": "apps/works/src/features/hub/BirthdayCard.tsx:15"
       },
       {
         "actor": "client",
@@ -8372,7 +8650,7 @@
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/office/calendar/CompanyCalendarWorkspace.tsx:12"
+        "site": "apps/works/src/features/office/calendar/CompanyCalendarWorkspace.tsx:13"
       }
     ],
     "trade_partners": [
@@ -8444,15 +8722,7 @@
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/admin/guestAccountHooks.ts:179"
-      },
-      {
-        "actor": "client",
-        "site": "apps/works/src/features/admin/guestAccountHooks.ts:179"
-      },
-      {
-        "actor": "client",
-        "site": "apps/works/src/features/admin/guestContactHooks.ts:243"
+        "site": "apps/works/src/features/admin/guestContactHooks.ts:235"
       },
       {
         "actor": "client",
@@ -8500,7 +8770,7 @@
       },
       {
         "actor": "client",
-        "site": "apps/works/src/features/management/hooks.ts:374"
+        "site": "apps/works/src/features/management/hooks.ts:377"
       },
       {
         "actor": "client",
@@ -8528,19 +8798,15 @@
       },
       {
         "actor": "edge",
-        "site": "supabase/functions/_shared/guestAccount.ts:556"
+        "site": "supabase/functions/_shared/guestAccount.ts:572"
       },
       {
         "actor": "edge",
-        "site": "supabase/functions/_shared/guestAccount.ts:89"
+        "site": "supabase/functions/_shared/guestAccount.ts:93"
       },
       {
         "actor": "edge",
-        "site": "supabase/functions/_shared/guestSession.ts:183"
-      },
-      {
-        "actor": "edge",
-        "site": "supabase/functions/_shared/guestSession.ts:67"
+        "site": "supabase/functions/_shared/guestSession.ts:68"
       },
       {
         "actor": "edge",
@@ -8561,6 +8827,10 @@
       {
         "actor": "edge",
         "site": "supabase/functions/employee-create/index.ts:67"
+      },
+      {
+        "actor": "edge",
+        "site": "supabase/functions/file-collection-file/handler.ts:80"
       },
       {
         "actor": "edge",

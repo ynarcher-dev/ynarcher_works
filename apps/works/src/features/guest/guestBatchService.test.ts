@@ -20,9 +20,7 @@ const payload = (key: string): GuestBatchPayloadRow => ({
   key,
   name: '홍길동',
   email: 'hong@example.com',
-  phone: '010-1234-5678',
-  master_table: null,
-  master_id: null,
+  affiliation: '와이앤아처',
 })
 
 const answer = (rows: unknown[]) => ({
@@ -61,7 +59,7 @@ describe('createGuestAccountsBatch', () => {
     ])
   })
 
-  it('실패 사유의 칸 이름을 화면의 칸으로 옮긴다 — 원장 두 칸은 연결 칸 하나다', async () => {
+  it('실패 사유의 칸 이름을 화면의 칸으로 옮기고 계약 밖의 칸은 줄 사유로 접는다', async () => {
     mocks.rpc.mockResolvedValue(
       answer([
         {
@@ -71,6 +69,7 @@ describe('createGuestAccountsBatch', () => {
           user_id: null,
           errors: [
             { field: 'master_table', code: 'MASTER_FORBIDDEN', message: '권한이 없습니다.' },
+            { field: 'affiliation', code: 'AFFILIATION_REQUIRED', message: '소속이 필요합니다.' },
             { field: 'key', code: 'KEY_DUPLICATE_IN_BATCH', message: 'key가 겹칩니다.' },
             { field: '알수없는칸', code: 'X', message: '모르는 칸' },
           ],
@@ -78,7 +77,12 @@ describe('createGuestAccountsBatch', () => {
       ]),
     )
     const [outcome] = await createGuestAccountsBatch([payload('row-1')])
-    expect(outcome!.issues.map((i) => i.field)).toEqual(['ledger', 'row', 'row'])
+    expect(outcome!.issues.map((i) => i.field)).toEqual([
+      'row',
+      'affiliation',
+      'row',
+      'row',
+    ])
     // 사유 문구는 서버 것을 그대로 옮긴다(무엇과 겹쳤는지는 서버가 이미 감춘다).
     expect(outcome!.issues[0]!.message).toBe('권한이 없습니다.')
   })

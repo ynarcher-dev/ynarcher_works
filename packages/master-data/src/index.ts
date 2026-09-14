@@ -29,6 +29,7 @@ export {
   FILE_COLLECTION_STATUS_LABEL,
   FILE_COLLECTION_STATUS_TONE,
   FILE_COLLECTION_NODE_TYPE_LABEL,
+  FILE_COLLECTION_NODE_ATTACHMENT_TYPE,
   fileCollectionStatusLabel,
   fileCollectionStatusTone,
   canReviewResponse,

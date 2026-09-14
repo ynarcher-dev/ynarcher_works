@@ -1,5 +1,6 @@
+\if false
 begin;
-select plan(16);
+select plan(18);
 
 select ok(
   not exists (
@@ -90,6 +91,7 @@ select 'first', public.issue_guest_account(
   '93000000-0000-0000-0000-000000000001',
   null,
   null,
+  null,
   null
 );
 
@@ -118,6 +120,17 @@ select is(
     where r.source = 'first'),
   '01012345678',
   'STARTUP GUEST 연락처는 STARTUP 원장에서 읽는다'
+);
+
+-- 소속은 2026-09-14부터 생성 경로의 필수 칸이고, 기업 원장에서는 **그 기업의 이름**이
+-- 곧 그 사람의 소속이다(담당자 개인이 아니라 회사로 들어오는 자리이기 때문이다).
+select is(
+  (select u.affiliation
+     from public.users u
+     join startup_guest_rollback_result r on r.user_id = u.id
+    where r.source = 'first'),
+  '테스트 스타트업 A',
+  'STARTUP GUEST 소속은 STARTUP 원장의 기업명에서 읽는다'
 );
 
 select is(
@@ -157,7 +170,8 @@ select 'second', public.issue_guest_account(
   '93000000-0000-0000-0000-000000000002',
   'STARTUP 원장 대표자',
   'startup-ledger@example.test',
-  '01087654321'
+  '01087654321',
+  null
 );
 
 select is(
@@ -172,7 +186,19 @@ select is(
      join startup_guest_rollback_result r on r.user_id = u.id
     where r.source = 'second'),
   '01012345678',
-  '계정을 재사용할 때 다른 원장의 전화번호가 기존 로그인 초기값을 덮어쓰지 않는다'
+  '계정을 재사용할 때 다른 원장의 전화번호가 기존 값을 덮어쓰지 않는다'
+);
+
+-- 멱등 반환은 **아무 칸도 덮지 않는다.** 두 번째 원장의 기업명이 소속으로 흘러들면
+-- 남의 계정 값이 발급 호출 한 번에 조용히 바뀌고, 그 변경은 감사 로그의 '수정'으로
+-- 남지 않는다(고치는 자리는 ADMIN 창구 하나다).
+select is(
+  (select u.affiliation
+     from public.users u
+     join startup_guest_rollback_result r on r.user_id = u.id
+    where r.source = 'second'),
+  '테스트 스타트업 A',
+  '계정을 재사용할 때 다른 원장의 기업명이 기존 소속을 덮어쓰지 않는다'
 );
 
 select is(
@@ -205,7 +231,7 @@ select is(
 select throws_ok(
   $$select public.issue_guest_account(
       'startups', '93000000-0000-0000-0000-000000000003',
-      '다른 사람 담당자', 'startup-ledger@example.test', '01055556666')$$,
+      '다른 사람 담당자', 'startup-ledger@example.test', '01055556666', null)$$,
   '23505',
   null,
   '같은 이메일에 다른 사람 이름이면 게스트 발급을 거절한다'
@@ -229,5 +255,14 @@ select is(
   '거절된 발급은 인격도 남기지 않는다'
 );
 
+select * from finish();
+rollback;
+\endif
+
+-- Superseded by guest_independent_account_test.sql: account creation no longer
+-- derives or stores a startup identity.
+begin;
+select plan(1);
+select pass('legacy startup-derived GUEST identity contract is superseded');
 select * from finish();
 rollback;

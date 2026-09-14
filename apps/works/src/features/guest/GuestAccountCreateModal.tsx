@@ -8,7 +8,6 @@ import {
   MiniPager,
   Modal,
   PageHeader,
-  TextAction,
   cn,
   useToast,
 } from '@ynarcher/ui'
@@ -24,6 +23,7 @@ import {
   LedgerCandidatePickerModal,
   type LedgerCandidate,
 } from '@/features/guest/LedgerCandidatePickerModal'
+import { guestProfileFromLedgerCandidate } from '@/features/guest/guestLedgerCandidateService'
 import {
   applyBatchOutcomes,
   buildFailedRowsCsv,
@@ -40,11 +40,21 @@ import {
   type GuestDraftRow,
   type GuestRowIssue,
 } from '@/features/guest/guestBatch'
+import { GUEST_INITIAL_PASSWORD } from '@/features/guest/guestAccountService'
 import { createGuestAccountsBatch } from '@/features/guest/guestBatchService'
 import { readGuestSheet } from '@/features/guest/guestBatchFile'
 
-/** 줄 격자 — 번호·이름·이메일·연락처·NETWORKS 연결·삭제. 머리글과 각 줄이 같은 값을 쓴다. */
-const ROW_GRID = 'grid grid-cols-[1.5rem_minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1.2fr)_2rem] gap-2'
+/**
+ * 줄 격자 — 번호·이름·이메일·소속·원장에서 불러오기·삭제. 머리글과 각 줄이 같은 값을 쓴다.
+ *
+ * 계정 등록이 받는 값은 이름·이메일·소속 셋뿐이다. 불러오기 칸은 세 값을 채우는 도구이며
+ * 원장 id나 관계를 줄에 보관하지 않는다.
+ *
+ * 폭은 값의 길이에 맞춘다. 이메일이 가장 길고(1.5), 소속과 연결이 그다음(1.2), 이름은 1이다.
+ * 모두 `minmax(0,…)`이라 좁은 화면에서 칸이 밀려 넘치지 않고 함께 줄어든다.
+ */
+const ROW_GRID =
+  'grid grid-cols-[1.5rem_minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1.2fr)_minmax(0,1.2fr)_2rem] gap-2'
 
 /** 입력칸의 사유는 그 칸 바로 아래에 둔다. 행 아래에 한데 모으면 어느 값을 고칠지 다시 찾아야 한다. */
 function GuestFieldIssues({ id, issues }: { id: string; issues: readonly GuestRowIssue[] }) {
@@ -179,6 +189,7 @@ export function GuestAccountCreateModal({
   const pickCandidates = (candidates: LedgerCandidate[]) => {
     const first = candidates[0]
     if (!pickerRowId || !first) return
+    const firstProfile = guestProfileFromLedgerCandidate(first)
     const rest = candidates.slice(1)
     setRows((prev) =>
       [
@@ -186,29 +197,18 @@ export function GuestAccountCreateModal({
           row.rowId === pickerRowId
             ? {
                 ...row,
-                masterTable: first.masterTable,
-                masterId: first.id,
-                masterName: first.name,
                 // 현재 줄에 이미 적은 값은 덮지 않는다. NETWORKS 값이 옛것일 수 있고,
                 // 직접 고친 값을 선택 한 번으로 되돌리면 무엇이 최신인지 확인할 길이 없다.
-                name: row.name.trim() || (first.loginName ?? first.name),
-                email: row.email.trim() || (first.email ?? ''),
-                phone: row.phone.trim() || (first.phone ?? ''),
+                name: row.name.trim() || firstProfile.name,
+                email: row.email.trim() || firstProfile.email,
+                affiliation: row.affiliation.trim() || firstProfile.affiliation,
                 serverIssues: [],
               }
             : row,
         ),
-        // 두 번째 선택부터는 계정 입력 줄을 새로 만든다. 한 GUEST 계정에 여러 NETWORKS
-        // 인격을 붙이는 뜻이 아니라, 고른 사람마다 계정 생성 후보 한 줄을 넣는 동작이다.
+        // 두 번째 선택부터는 계정 입력 줄을 새로 만든다. 원장 관계를 만들지 않고 세 값만 복사한다.
         ...rest.map((candidate) =>
-          createGuestDraftRow({
-            name: candidate.loginName ?? candidate.name,
-            email: candidate.email ?? '',
-            phone: candidate.phone ?? '',
-            masterTable: candidate.masterTable,
-            masterId: candidate.id,
-            masterName: candidate.name,
-          }),
+          createGuestDraftRow(guestProfileFromLedgerCandidate(candidate)),
         ),
       ],
     )
@@ -238,7 +238,9 @@ export function GuestAccountCreateModal({
         presentation === 'bulk-page'
           ? parsed.rows
           : [
-              ...prev.filter((r) => r.name.trim() || r.email.trim() || r.phone.trim()),
+              ...prev.filter(
+                (r) => r.name.trim() || r.email.trim() || r.affiliation.trim(),
+              ),
               ...parsed.rows,
             ],
       )
@@ -302,7 +304,6 @@ export function GuestAccountCreateModal({
       // 담당자가 확인할 곳이 바로 그 목록이다.
       if (applied.summary.created > 0 || applied.summary.unknown > 0) {
         await qc.invalidateQueries({ queryKey: ['admin', 'guest-accounts'] })
-        await qc.invalidateQueries({ queryKey: ['admin', 'guest-ledger-accounts'] })
       }
 
       if (callError) {
@@ -330,8 +331,10 @@ export function GuestAccountCreateModal({
   const editor = (
     <div className="space-y-4">
           <Banner tone="info">
-            이메일은 로그인 ID, 연락처는 최초 비밀번호입니다. 이미 있는 계정과 겹치는지는 서버가
-            판정하므로, 겹친 줄은 생성되지 않고 사유가 붙어 남습니다.
+            이메일이 로그인 ID이고 최초 비밀번호는 <b>{GUEST_INITIAL_PASSWORD}</b>로 고정입니다 — 첫 로그인에서
+            본인이 새 비밀번호를 정해야 화면에 들어갑니다. 받는 값은 이름·이메일·소속 셋이며
+            연락처는 받지 않습니다. 이미 있는 계정과 겹치는지는 서버가 판정하므로, 겹친 줄은
+            생성되지 않고 사유가 붙어 남습니다.
           </Banner>
 
           {summary && (
@@ -397,12 +400,26 @@ export function GuestAccountCreateModal({
           )}
 
           {rows.length > 0 && <div className="space-y-2">
+            {/*
+              좁은 화면에서는 **격자를 접지 않고 가로로 스크롤한다.**
+
+              트랙이 여섯이라 375px에서는 칸 하나가 40px 안팎으로 눌린다 — 입력칸이 그 폭이면
+              적은 값이 한 글자도 보이지 않아, 담당자가 자기가 무엇을 적었는지 화면에서
+              확인할 수 없다. 세로로 쌓는 방법도 있지만 이 화면의 일은 **여러 줄을 나란히
+              놓고 견주는 것**이고, 쌓으면 그 견줌이 사라진다. 그래서 원장 표들과 같은 규약을
+              쓴다(파일받기 구성 표와 같은 자리): 최소 폭을 두고 그 안에서 가로로 스크롤한다.
+
+              최소 폭은 768px 화면에서 스크롤이 생기지 않는 값으로 잡았다 — 그 폭에서는 이미
+              모든 칸이 읽히므로, 거기서 스크롤바를 새로 만들 이유가 없다.
+            */}
+            <div className="overflow-x-auto">
+              <div className="min-w-[40rem] space-y-2">
             <div className={`${ROW_GRID} items-center text-caption text-gray-600`}>
-              <span className="text-center">No.</span>
+              <span className="text-center">순번</span>
               <span>이름</span>
               <span>이메일(로그인 ID)</span>
-              <span>연락처(최초 비밀번호)</span>
-              <span>NETWORKS 연결</span>
+              <span>소속</span>
+              <span>원장에서 불러오기</span>
               <span aria-hidden="true" />
             </div>
 
@@ -412,8 +429,7 @@ export function GuestAccountCreateModal({
                 rowIssues.filter((issue) => issue.field === field)
               const nameIssues = fieldIssues('name')
               const emailIssues = fieldIssues('email')
-              const phoneIssues = fieldIssues('phone')
-              const ledgerIssues = fieldIssues('ledger')
+              const affiliationIssues = fieldIssues('affiliation')
               const rowOnlyIssues = fieldIssues('row')
               return (
                 <div key={row.rowId} className="space-y-1">
@@ -444,58 +460,38 @@ export function GuestAccountCreateModal({
                     </div>
                     <div className="min-w-0 space-y-1">
                       <Input
-                        aria-label={`${index + 1}번째 줄 연락처`}
-                        aria-describedby={phoneIssues.length > 0 ? `${row.rowId}-phone-issues` : undefined}
-                        value={row.phone}
-                        invalid={phoneIssues.length > 0}
+                        aria-label={`${index + 1}번째 줄 소속`}
+                        aria-describedby={
+                          affiliationIssues.length > 0 ? `${row.rowId}-affiliation-issues` : undefined
+                        }
+                        value={row.affiliation}
+                        invalid={affiliationIssues.length > 0}
                         disabled={locked}
-                        onChange={(event) => updateRow(row.rowId, { phone: event.target.value })}
+                        onChange={(event) => updateRow(row.rowId, { affiliation: event.target.value })}
                       />
-                      <GuestFieldIssues id={`${row.rowId}-phone-issues`} issues={phoneIssues} />
+                      <GuestFieldIssues
+                        id={`${row.rowId}-affiliation-issues`}
+                        issues={affiliationIssues}
+                      />
                     </div>
                     <div className="min-w-0 space-y-1">
                       {!canReadNetworks ? (
                         <span className="inline-block pt-2 text-caption text-gray-500">
                           NETWORKS 조회 권한 없음
                         </span>
-                      ) : row.masterId && row.masterTable ? (
-                        <span className="flex min-w-0 items-center gap-2 pt-2">
-                          <span
-                            className="truncate text-body-sm"
-                            title={`NETWORKS · ${row.masterName ?? ''}`}
-                          >
-                            NETWORKS · {row.masterName ?? '연결됨'}
-                          </span>
-                          <TextAction
-                            disabled={locked}
-                            className={locked ? 'opacity-50' : undefined}
-                            onClick={() =>
-                              updateRow(row.rowId, {
-                                masterTable: null,
-                                masterId: null,
-                                masterName: null,
-                              })
-                            }
-                          >
-                            해제
-                          </TextAction>
-                        </span>
                       ) : (
                         <Input
                           readOnly
                           value=""
-                          placeholder="네트워크 원장에서 찾기 (선택)"
+                          placeholder="NETWORKS에서 찾기"
                           action={<Search className="size-4" />}
-                          actionLabel={`${index + 1}번째 줄 네트워크 원장에서 찾기`}
+                          actionLabel={`${index + 1}번째 줄 NETWORKS에서 불러오기`}
                           onActionClick={() => setPickerRowId(row.rowId)}
                           onClick={() => setPickerRowId(row.rowId)}
                           disabled={locked}
-                          invalid={ledgerIssues.length > 0}
-                          aria-describedby={ledgerIssues.length > 0 ? `${row.rowId}-ledger-issues` : undefined}
                           className="cursor-pointer"
                         />
                       )}
-                      <GuestFieldIssues id={`${row.rowId}-ledger-issues`} issues={ledgerIssues} />
                     </div>
                     <IconButton
                       icon={<Trash2 className="size-4" />}
@@ -516,6 +512,8 @@ export function GuestAccountCreateModal({
                 </div>
               )
             })}
+              </div>
+            </div>
 
             {previewPageCount > 1 && (
               <div className="flex items-center justify-between gap-3 pt-1">
@@ -563,7 +561,16 @@ export function GuestAccountCreateModal({
           <DetailTopBar
             back={<BackButton as={Link} to="/guest-accounts" state={location.state} />}
             actions={
-              <>
+              /*
+                조작부를 **좁은 화면에서 접어 내린다.**
+
+                `DetailTopBar`의 액션 자리는 `flex shrink-0`이라 자식이 한 줄을 고집하면 그
+                줄이 곧 화면 폭을 넘는다 — 여기 버튼이 넷까지 서므로 375px에서 페이지가 통째로
+                가로로 밀렸다. 공용 부품을 고치지 않고 **부르는 쪽에서** 폭 상한을 준다:
+                좁은 폭에서는 상한이 걸려 접히고, `sm` 위로는 상한을 풀어 종전처럼 한 줄로 선다.
+                버튼과 간격은 그대로이므로 조판 규격은 달라지지 않는다.
+              */
+              <div className="flex max-w-[14rem] flex-wrap items-center justify-end gap-2 sm:max-w-none">
                 <Button
                   variant="outline"
                   onClick={() => downloadCsv(TEMPLATE_NAME, buildGuestTemplateCsv())}
@@ -590,7 +597,7 @@ export function GuestAccountCreateModal({
                 >
                   {busy ? '업로드 중…' : loadingFile ? '파일 읽는 중…' : `${submittable.length}건 업로드`}
                 </Button>
-              </>
+              </div>
             }
           />
           <PageHeader
@@ -611,7 +618,7 @@ export function GuestAccountCreateModal({
         onClose={close}
         dismissible={false}
         title="GUEST 계정 생성"
-        help="줄마다 공통 GUEST 계정 하나를 만듭니다. NETWORKS 연결은 선택이며, 연결하면 그 인격도 함께 저장합니다. 되는 줄은 만들어지고 막힌 줄만 사유와 함께 남습니다."
+        help="줄마다 공통 GUEST 계정 하나를 만듭니다. NETWORKS에서 불러오면 이름·이메일·소속만 복사하며 원장 관계는 저장하지 않습니다. 되는 줄은 만들어지고 막힌 줄만 사유와 함께 남습니다."
         size="3xl"
         footer={
           <>

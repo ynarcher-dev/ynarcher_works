@@ -119,7 +119,6 @@ insert into _expected_auth values
     ('fund_purposes', 'SELECT,INSERT,DELETE'),
     ('funds', 'SELECT,INSERT,UPDATE'),
     ('guest_credentials', ''),
-    ('guest_identities', 'SELECT'),
     ('guest_invitations', 'SELECT,INSERT,UPDATE'),
     ('hr_assignments', ''),
     ('hr_profiles', 'SELECT,INSERT,UPDATE'),
@@ -287,7 +286,6 @@ insert into _expected_svc values
     ('fund_purposes', ''),
     ('funds', 'SELECT'),
     ('guest_credentials', 'SELECT,INSERT,UPDATE'),
-    ('guest_identities', 'SELECT'),
     ('guest_invitations', 'SELECT,UPDATE'),
     ('hr_assignments', ''),
     ('hr_profiles', 'INSERT'),
@@ -540,10 +538,10 @@ insert into public.users(id, user_type, name, session_version, company_id) value
   ('00000000-0000-0000-0000-0000000000f1', 'fund_manager',     'acl_fund_writer',   1, null),
   ('00000000-0000-0000-0000-0000000000f2', 'read_only',        'acl_fund_reader',   1, null),
   ('00000000-0000-0000-0000-0000000000f3', 'mna_manager',      'acl_other_ws',      1, null),
-  ('00000000-0000-0000-0000-0000000000f4', 'external_startup', 'acl_guest',         1, 'c0000000-0000-0000-0000-0000000000c1'),
+  ('00000000-0000-0000-0000-0000000000f4', 'external_startup', 'acl_guest',         1, null),
   ('00000000-0000-0000-0000-0000000000f5', 'management_support', 'acl_hr_writer',   1, null),
   ('00000000-0000-0000-0000-0000000000f6', 'ac_business',      'acl_program_writer', 1, null),
-  ('00000000-0000-0000-0000-0000000000f7', 'external_startup', 'acl_guest_selfscope', 1, 'c0000000-0000-0000-0000-0000000000c1');
+  ('00000000-0000-0000-0000-0000000000f7', 'external_startup', 'acl_guest_selfscope', 1, null);
 
 insert into public.workspace_permissions(user_id, workspace_key, permission_level, scope_type, expires_at) values
   ('00000000-0000-0000-0000-0000000000f1', 'fund',       'write', 'global', null),
@@ -552,7 +550,7 @@ insert into public.workspace_permissions(user_id, workspace_key, permission_leve
   ('00000000-0000-0000-0000-0000000000f4', 'guest',      'write', 'company', null),
   ('00000000-0000-0000-0000-0000000000f5', 'management', 'write', 'global', null),
   ('00000000-0000-0000-0000-0000000000f6', 'project',    'write', 'global', null),
-  -- f7은 issue_guest_account가 실제로 심는 값 그대로입니다(20260911221000:656).
+  -- f7은 create_guest_account가 실제로 심는 GUEST self 권한과 같습니다.
   -- 게스트 계정은 전부 guest 워크스페이스 'write'를 들고 있습니다 — 아래 C21이 그 사실의 결과를 봅니다.
   ('00000000-0000-0000-0000-0000000000f7', 'guest',      'write', 'self', null);
 
@@ -767,7 +765,7 @@ reset role;
 
 -- ── 게스트 계정으로 같은 두 문장 ────────────────────────────────────────
 --
--- f7은 issue_guest_account가 실제로 심는 권한을 그대로 든 게스트입니다. 즉
+-- f7은 create_guest_account가 실제로 심는 권한을 그대로 든 게스트입니다. 즉
 -- app.can_write_workspace('guest')가 **참**입니다. 20260912161500 이전에는 그것만으로
 -- guest_inv_insert의 with_check를 통과했고, 표 권한을 연 순간 외부 사용자가 초대 원장에
 -- 눈먼 쓰기를 할 수 있었습니다. 그 마이그레이션이 두 쓰기 정책에 app.is_internal_user()를

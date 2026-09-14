@@ -32,14 +32,20 @@ const DEAD_TOKEN = jwt(Date.now() - 60 * 1000)
 
 const SESSION_BODY = {
   accessToken: LIVE_TOKEN,
-  user: { id: 'u-1', name: '김참여', user_type: 'external_startup' },
+  user: {
+    id: 'u-1',
+    name: '김참여',
+    user_type: 'external_startup',
+    email: 'kim@example.com',
+    affiliation: '테스트 소속',
+  },
   context: {
     participant_id: 'pp-1',
     program_id: 'pg-1',
     entity_key: 'program',
     code: 'AC-2026',
     title: '2026 액셀러레이팅',
-    persona: 'startups',
+    access_ends_at: null,
   },
 }
 
@@ -104,12 +110,18 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-const USER = { id: 'u-1', name: '김참여', role: 'external_startup' }
+const USER = { id: 'u-1', name: '김참여', role: 'external_startup', affiliation: '테스트 소속' }
 
 /** guest-auth-refresh 응답 한 벌. 덮어써야 하는 칸만 인자로 받는다. */
 function meBody(over: Record<string, unknown> = {}) {
   return {
-    user: { id: 'u-1', name: '김참여', user_type: 'external_startup', email: null },
+    user: {
+      id: 'u-1',
+      name: '김참여',
+      user_type: 'external_startup',
+      email: null,
+      affiliation: '테스트 소속',
+    },
     program: {
       id: 'pg-1',
       title: '2026 액셀러레이팅',
@@ -119,12 +131,29 @@ function meBody(over: Record<string, unknown> = {}) {
       end_date: null,
       entity_key: 'program',
     },
-    participation: { persona: 'startups', joined_at: null },
-    company: null,
+    participation: { joined_at: null },
     currentParticipantId: 'pp-1',
     contexts: [
-      { participantId: 'pp-1', programId: 'pg-1', entityKey: 'program', code: null, title: 'A' },
-      { participantId: 'pp-2', programId: 'pg-2', entityKey: 'fund', code: null, title: 'B' },
+      {
+        participantId: 'pp-1',
+        programId: 'pg-1',
+        entityKey: 'program',
+        code: null,
+        title: 'A',
+        accessEndsAt: null,
+        startDate: null,
+        endDate: null,
+      },
+      {
+        participantId: 'pp-2',
+        programId: 'pg-2',
+        entityKey: 'fund',
+        code: null,
+        title: 'B',
+        accessEndsAt: null,
+        startDate: null,
+        endDate: null,
+      },
     ],
     ...over,
   }
@@ -143,7 +172,7 @@ describe('로그인 착지 — 비밀번호 설정 티켓은 세션이 아니다
   it('mustChangePassword 응답은 티켓만 돌려주고 아무것도 저장하지 않는다', async () => {
     reply({ mustChangePassword: true, changeTicket: 'ticket-abc', expiresInSec: 600 })
 
-    const result = await guestAuth.login({ email: 'kim@example.com', password: '01012345678' })
+    const result = await guestAuth.login({ email: 'kim@example.com', password: 'ynarcher' })
 
     expect(result).toEqual({ kind: 'password', changeTicket: 'ticket-abc' })
     expectNoSession()
@@ -153,7 +182,7 @@ describe('로그인 착지 — 비밀번호 설정 티켓은 세션이 아니다
     // 있어서는 안 되는 응답이지만, 그때 화면이 로그인 상태가 되는 것이 이 검사가 막는 사고다.
     reply({ ...SESSION_BODY, mustChangePassword: true, changeTicket: 'ticket-abc' })
 
-    const result = await guestAuth.login({ email: 'kim@example.com', password: '01012345678' })
+    const result = await guestAuth.login({ email: 'kim@example.com', password: 'ynarcher' })
 
     expect(result.kind).toBe('password')
     expectNoSession()
@@ -168,18 +197,27 @@ describe('로그인 착지 — 비밀번호 설정 티켓은 세션이 아니다
     const s = useGuestStore.getState()
     expect(s.status).toBe('authenticated')
     expect(s.accessToken).toBe(LIVE_TOKEN)
-    expect(s.user).toEqual({ id: 'u-1', name: '김참여', role: 'external_startup' })
+    expect(s.user).toEqual({
+      id: 'u-1',
+      name: '김참여',
+      role: 'external_startup',
+      affiliation: '테스트 소속',
+    })
     expect(s.program).toEqual({
       id: 'pg-1',
       title: '2026 액셀러레이팅',
       code: 'AC-2026',
       entityKey: 'program',
       participantId: 'pp-1',
-      persona: 'startups',
     })
     expect(JSON.parse(storage.getItem(GUEST_STORAGE_KEY) as string)).toEqual({
       accessToken: LIVE_TOKEN,
-      user: { id: 'u-1', name: '김참여', role: 'external_startup' },
+      user: {
+        id: 'u-1',
+        name: '김참여',
+        role: 'external_startup',
+        affiliation: '테스트 소속',
+      },
       program: s.program,
     })
   })
@@ -238,7 +276,7 @@ describe('요청 경계 — 나가는 곳과 실리는 것', () => {
   it('로그인은 guest-auth-login 하나만 부르고, 세션 헤더를 달지 않는다', async () => {
     reply({ mustChangePassword: true, changeTicket: 't' })
 
-    await guestAuth.login({ email: 'kim@example.com', password: '01012345678' })
+    await guestAuth.login({ email: 'kim@example.com', password: 'ynarcher' })
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     const { url, init } = lastCall()
@@ -248,7 +286,7 @@ describe('요청 경계 — 나가는 곳과 실리는 것', () => {
     expect(headersOf(init).Authorization).toBeUndefined()
     expect(JSON.parse(init.body as string)).toEqual({
       email: 'kim@example.com',
-      password: '01012345678',
+      password: 'ynarcher',
     })
   })
 
@@ -325,7 +363,7 @@ describe('맥락 진입 — 선택 티켓과 살아 있는 세션', () => {
   })
 
   it('세션이 있으면 그 토큰으로 갈아탄다', async () => {
-    useGuestStore.getState().setSession(LIVE_TOKEN, { id: 'u-1', name: '김참여', role: 'external_startup' }, null)
+    useGuestStore.getState().setSession(LIVE_TOKEN, USER, null)
     const next = jwt(Date.now() + 60 * 60 * 1000)
     reply({ ...SESSION_BODY, accessToken: next })
 
@@ -338,7 +376,7 @@ describe('맥락 진입 — 선택 티켓과 살아 있는 세션', () => {
   })
 
   it('거절되면 지금 세션을 그대로 두고 던진다 — 갈아타기 실패가 로그아웃이 되지 않는다', async () => {
-    useGuestStore.getState().setSession(LIVE_TOKEN, { id: 'u-1', name: '김참여', role: 'external_startup' }, null)
+    useGuestStore.getState().setSession(LIVE_TOKEN, USER, null)
     reply({ message: '그곳으로 들어갈 수 없습니다.' }, { status: 403 })
 
     await expect(guestAuth.enterContext('pp-9')).rejects.toThrow('그곳으로 들어갈 수 없습니다.')
@@ -355,7 +393,7 @@ describe('세션 갱신 — 닫힌 접근은 그 자리에서 로그아웃', () 
   })
 
   it('401이면 저장된 세션까지 지운다', async () => {
-    useGuestStore.getState().setSession(LIVE_TOKEN, { id: 'u-1', name: '김참여', role: 'external_startup' }, null)
+    useGuestStore.getState().setSession(LIVE_TOKEN, USER, null)
     reply({ message: 'session_expired' }, { status: 401 })
 
     expect(await guestAuth.refreshSession()).toBeNull()
@@ -364,13 +402,23 @@ describe('세션 갱신 — 닫힌 접근은 그 자리에서 로그아웃', () 
     expectNoSession()
   })
 
-  it('원장의 현재 이름·맥락 목록을 되받아 세션을 갈아 끼운다(목록은 저장하지 않는다)', async () => {
-    useGuestStore.getState().setSession(LIVE_TOKEN, { id: 'u-1', name: '옛이름', role: 'external_startup' }, null)
+  it('계정의 현재 프로필·맥락 목록을 되받아 세션을 갈아 끼운다(목록은 저장하지 않는다)', async () => {
+    useGuestStore.getState().setSession(
+      LIVE_TOKEN,
+      { id: 'u-1', name: '옛이름', role: 'external_startup', affiliation: '옛소속' },
+      null,
+    )
     const contexts = [
       { participantId: 'pp-1', programId: 'pg-1', entityKey: 'program', code: null, title: 'A' },
     ]
     reply({
-      user: { id: 'u-1', name: '새이름', user_type: 'external_startup', email: null },
+      user: {
+        id: 'u-1',
+        name: '새이름',
+        user_type: 'external_startup',
+        email: null,
+        affiliation: '새소속',
+      },
       program: {
         id: 'pg-1',
         title: '2026 액셀러레이팅',
@@ -380,8 +428,7 @@ describe('세션 갱신 — 닫힌 접근은 그 자리에서 로그아웃', () 
         end_date: null,
         entity_key: 'program',
       },
-      participation: { persona: 'startups', joined_at: null },
-      company: null,
+      participation: { joined_at: null },
       currentParticipantId: 'pp-1',
       contexts,
     })
@@ -401,7 +448,7 @@ describe('세션 갱신 — 닫힌 접근은 그 자리에서 로그아웃', () 
   })
 
   it('401이 아닌 실패는 세션을 지우지 않고 던진다', async () => {
-    useGuestStore.getState().setSession(LIVE_TOKEN, { id: 'u-1', name: '김참여', role: 'external_startup' }, null)
+    useGuestStore.getState().setSession(LIVE_TOKEN, USER, null)
     reply({ message: '세션 정보를 불러오지 못했습니다.' }, { status: 500 })
 
     await expect(guestAuth.refreshSession()).rejects.toThrow('세션 정보를 불러오지 못했습니다.')
@@ -415,13 +462,13 @@ describe('세션 복원과 종료', () => {
     expect(useGuestStore.getState().status).toBe('unauthenticated')
   })
 
-  it('살아 있는 토큰은 복원한다', () => {
+  it('살아 있는 구 토큰은 현재 프로필 계약으로 정규화해 복원한다', () => {
     storage.setItem(
       GUEST_STORAGE_KEY,
       JSON.stringify({
         accessToken: LIVE_TOKEN,
         user: { id: 'u-1', name: '김참여', role: 'external_startup' },
-        program: { id: 'pg-1', title: 'A', code: null },
+        program: { id: 'pg-1', title: 'A', code: null, persona: 'startups' },
       }),
     )
 
@@ -431,6 +478,11 @@ describe('세션 복원과 종료', () => {
     expect(s.status).toBe('authenticated')
     expect(s.accessToken).toBe(LIVE_TOKEN)
     expect(s.program?.id).toBe('pg-1')
+    expect(s.user?.affiliation).toBeNull()
+    expect(s.program).not.toHaveProperty('persona')
+    const saved = JSON.parse(storage.getItem(GUEST_STORAGE_KEY) as string)
+    expect(saved.user.affiliation).toBeNull()
+    expect(saved.program).not.toHaveProperty('persona')
   })
 
   it('만료된 토큰은 복원하지 않고 저장소에서 지운다', () => {
@@ -469,9 +521,18 @@ describe('세션 복원과 종료', () => {
   })
 
   it('로그아웃은 스토어와 저장소를 함께 비운다', () => {
-    useGuestStore.getState().setSession(LIVE_TOKEN, { id: 'u-1', name: '김참여', role: 'external_startup' }, null)
+    useGuestStore.getState().setSession(LIVE_TOKEN, USER, null)
     useGuestStore.getState().setContexts([
-      { participantId: 'pp-1', programId: 'pg-1', entityKey: 'program', code: null, title: 'A' },
+      {
+        participantId: 'pp-1',
+        programId: 'pg-1',
+        entityKey: 'program',
+        code: null,
+        title: 'A',
+        accessEndsAt: null,
+        startDate: null,
+        endDate: null,
+      },
     ])
 
     guestAuth.signOut()
@@ -482,40 +543,7 @@ describe('세션 복원과 종료', () => {
   })
 })
 
-describe('세션 갱신 — 자격과 목록은 갱신을 견뎌야 한다', () => {
-  it('참여 자격(persona)을 이어받는다 — 새로고침 한 번에 사라지지 않는다', async () => {
-    useGuestStore.getState().setSession(LIVE_TOKEN, USER, {
-      id: 'pg-1',
-      title: 'A',
-      code: null,
-      entityKey: 'program',
-      participantId: 'pp-1',
-      persona: 'startups',
-    })
-    reply(meBody({ participation: { persona: 'networks', joined_at: null } }))
-
-    await guestAuth.refreshSession()
-
-    // 사이드바의 자격 줄과 화면 구성이 이 값에 걸린다(3_9_1 §4).
-    expect(useGuestStore.getState().program?.persona).toBe('networks')
-    const saved = JSON.parse(storage.getItem(GUEST_STORAGE_KEY) as string)
-    expect(saved.program.persona).toBe('networks')
-  })
-
-  it('자격이 비어 오면 비운다 — 옛 값을 붙들어 틀린 자격을 보여 주지 않는다', async () => {
-    useGuestStore.getState().setSession(LIVE_TOKEN, USER, {
-      id: 'pg-1',
-      title: 'A',
-      code: null,
-      persona: 'startups',
-    })
-    reply(meBody({ participation: { persona: null, joined_at: null } }))
-
-    await guestAuth.refreshSession()
-
-    expect(useGuestStore.getState().program?.persona).toBeNull()
-  })
-
+describe('세션 갱신 — 맥락 목록은 갱신을 견뎌야 한다', () => {
   it('전환 목록을 응답에서 받아 채운다 — 방금 로그인한 세션도 갈아탈 수 있다', async () => {
     useGuestStore.getState().setSession(LIVE_TOKEN, USER, null)
     reply(meBody())
@@ -525,21 +553,6 @@ describe('세션 갱신 — 자격과 목록은 갱신을 견뎌야 한다', () 
     expect(useGuestStore.getState().contexts).toHaveLength(2)
   })
 
-  it('응답에 목록 칸이 없으면 가지고 있던 목록을 지우지 않는다(모른다 ≠ 없다)', async () => {
-    useGuestStore.getState().setSession(LIVE_TOKEN, USER, null)
-    const kept = [
-      { participantId: 'pp-1', programId: 'pg-1', entityKey: 'program', code: null, title: 'A' },
-      { participantId: 'pp-2', programId: 'pg-2', entityKey: 'fund', code: null, title: 'B' },
-    ]
-    useGuestStore.getState().setContexts(kept)
-    const body = meBody()
-    delete (body as { contexts?: unknown }).contexts
-    reply(body)
-
-    await guestAuth.refreshSession()
-
-    expect(useGuestStore.getState().contexts).toEqual(kept)
-  })
 })
 
 describe('늦게 온 응답 — 갈아탄 뒤에 도착한 것은 쓰지 않는다', () => {
@@ -569,7 +582,6 @@ describe('늦게 온 응답 — 갈아탄 뒤에 도착한 것은 쓰지 않는�
       code: null,
       entityKey: 'fund',
       participantId: 'pp-2',
-      persona: 'networks',
     })
   }
 
@@ -590,7 +602,6 @@ describe('늦게 온 응답 — 갈아탄 뒤에 도착한 것은 쓰지 않는�
     const s = useGuestStore.getState()
     expect(s.accessToken).toBe(NEXT_TOKEN)
     expect(s.program?.id).toBe('pg-2')
-    expect(s.program?.persona).toBe('networks')
     // 늦은 응답의 목록도 쓰지 않는다 — 그 시점의 사실이 아니다.
     expect(s.contexts).toEqual([])
   })
@@ -654,7 +665,7 @@ describe('비밀번호 변경(로그인 상태)과 재설정 링크', () => {
   })
 
   it('현재 비밀번호를 함께 보내고 세션 헤더를 단다', async () => {
-    useGuestStore.getState().setSession(LIVE_TOKEN, { id: 'u-1', name: '김참여', role: 'external_startup' }, null)
+    useGuestStore.getState().setSession(LIVE_TOKEN, USER, null)
     reply({ ok: true })
 
     await guestAuth.changePassword('old1234a', 'newPass2026')

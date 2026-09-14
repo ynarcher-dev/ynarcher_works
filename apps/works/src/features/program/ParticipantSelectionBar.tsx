@@ -11,13 +11,17 @@ import { useGuestHost } from '@/features/guest/host'
  *
  * 여기 서는 것은 **선택한 행에 걸리는 일**뿐이다. 사업 전체에 걸리는 '로그인 가능 기간'은
  * 선택과 무관하므로 툴바에 남는다 — 같은 줄에 섞으면 고른 행에만 걸린다고 읽힌다.
+ *
+ * **비밀번호 관련 버튼은 여기 서지 않는다.** 종전에는 `비밀번호 재설정 안내`가 이 줄에
+ * 있었는데, 그 값은 사업의 것이 아니라 **계정의 것**이다 — 계정 하나가 여러 사업의 문을 열기
+ * 때문에, 한 사업의 담당자가 누른 버튼이 그 게스트의 다른 팀 사업까지 함께 흔든다. 초기화는
+ * 통합 GUEST 계정 관리(`/guest-accounts` 계정 상세 → `비밀번호 초기화`) 한 곳이 소유하며,
+ * 초기값은 ADMIN이 중앙에서 정한 고정값이다.
  */
 export function ParticipantSelectionBar({
   count,
-  accountCount,
   blockedCount,
   onOpen,
-  onResetPassword,
   onBlock,
   onUnblock,
   onRemove,
@@ -26,12 +30,9 @@ export function ParticipantSelectionBar({
 }: {
   /** 고른 행 수. 0이면 이 줄 자체를 렌더하지 않는다. */
   count: number
-  /** 고른 것 중 계정이 있는 대상 수 — 재설정 안내가 걸리는 대상이다. */
-  accountCount: number
   /** 고른 것 중 차단된 행 수 — 해제가 걸리는 대상이다. */
   blockedCount: number
   onOpen: () => void
-  onResetPassword: () => void
   onBlock: () => void
   onUnblock: () => void
   onRemove: () => void
@@ -52,19 +53,15 @@ export function ParticipantSelectionBar({
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-radius-md border border-brand-200 bg-brand-50 px-3 py-2">
       <span className="text-body font-semibold text-gray-900">{count}건 선택</span>
       <div className="ml-auto flex flex-wrap items-center gap-2">
-        <Button variant="secondary" onClick={onOpen} disabled={busy}>
-          로그인 열기
-        </Button>
         {/*
-          계정이 없는 대상은 보낼 곳이 없다. 버튼을 지우지 않고 사유를 옆에 적는 이유는,
-          사라진 버튼은 "왜 없지"를 남기고 회색 버튼은 "무엇이 모자란지"를 답하기 때문이다.
+          `로그인 열기`가 아니라 **이 사업의 접근을 허용**하는 일이다(이름을 그렇게 고쳤다).
+          계정은 이미 있고 그 계정의 로그인은 이 버튼이 여는 것이 아니다 — 여기서 열리는 것은
+          이 {entityNoun} 하나뿐이며, 같은 계정의 다른 사업은 이 버튼과 무관하다.
+          동작은 그대로다: 접근을 허용하고 접속 안내를 보낸다.
         */}
-        <Button variant="outline" onClick={onResetPassword} disabled={busy || accountCount === 0}>
-          비밀번호 재설정 안내
+        <Button variant="secondary" onClick={onOpen} disabled={busy}>
+          {entityNoun} 접근 허용
         </Button>
-        {accountCount === 0 && (
-          <span className="text-caption text-gray-600">계정이 있는 대상이 없습니다</span>
-        )}
         {blockedCount > 0 && (
           <Button variant="outline" onClick={onUnblock} disabled={busy}>
             차단 해제{mixed ? ` (${blockedCount})` : ''}

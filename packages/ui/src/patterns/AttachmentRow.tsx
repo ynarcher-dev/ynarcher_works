@@ -43,7 +43,11 @@ export function AttachmentRow({
         {icon}
         {/* 이름은 이 행의 식별 값, 메타·용량은 곁값 — 크기는 하나로 두고 색으로만 가른다. */}
         <span className="min-w-0 flex-1">
-          <span className={`block truncate ${tableText.primary}`}>{name}</span>
+          {/* 좁은 칸에서 이름이 잘리면 무엇인지 확인할 길이 사라지므로 전체 이름을
+              제목 속성으로 함께 남긴다(잘리지 않았다면 아무 일도 하지 않는다). */}
+          <span title={name} className={`block truncate ${tableText.primary}`}>
+            {name}
+          </span>
           {(metaLines ?? [])
             .filter((line): line is string => Boolean(line))
             .map((line, i) => (

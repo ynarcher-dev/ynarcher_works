@@ -13,7 +13,6 @@ import {
   Modal,
   RefLinkList,
   Spinner,
-  Tabs,
   usePaged,
   TextArea,
   useToast,
@@ -22,6 +21,7 @@ import {
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ListActions } from '@/components/ListActions'
+import { GUEST_APP_URL, openGuestApp } from '@/config/guestApp'
 import {
   GUEST_PAGE_SIZE,
   useGuestAccounts,
@@ -29,7 +29,6 @@ import {
   useSetGuestAccountsActive,
   type GuestAccount,
   type GuestAccountProgram,
-  type GuestAccountFacet,
 } from '@/features/admin/guestAccountHooks'
 import {
   GUEST_PASSWORD_RESET_CONFIRM,
@@ -48,11 +47,10 @@ import {
   guestDoorInput,
   guestOpenProgramCount,
 } from '@/features/admin/guestParticipation'
-import type { GuestEntityKey } from '@/features/guest/host'
 import { guestDoorBadge } from '@/features/program/guestDoorBadge'
-import { PERSONA_LABEL, type MasterTable } from '@/features/program/participantPersona'
 import type { AuthUser } from '@/auth/types'
 import { GuestAccountCreateModal } from '@/features/guest/GuestAccountCreateModal'
+import { GUEST_INITIAL_PASSWORD } from '@/features/guest/guestAccountService'
 
 const DASH = <EmptyValue />
 
@@ -69,16 +67,6 @@ const PROGRAM_PATH: Record<GuestAccountProgram['entity_key'], string> = {
 /** 상세 모달의 참여 사업 표 한 장. 모달 안이라 화면 목록(30)보다 짧게 끊는다. */
 const PROGRAM_PAGE_SIZE = 5
 
-/** 목록의 여섯 분류. 첫 다섯 탭 어디에도 들지 않는 계정은 `미연결`에서 다시 찾는다. */
-const GUEST_ACCOUNT_TABS: { key: GuestAccountFacet; label: string }[] = [
-  { key: 'startups', label: PERSONA_LABEL.startups },
-  { key: 'networks', label: PERSONA_LABEL.networks },
-  { key: 'ma_buyers', label: PERSONA_LABEL.ma_buyers },
-  { key: 'ma_sellers', label: PERSONA_LABEL.ma_sellers },
-  { key: 'fund', label: 'FUND' },
-  { key: 'unlinked', label: '미연결' },
-]
-
 /** ISO → `YYYY-MM-DD`. 표의 날짜는 자릿수가 맞아야 세로로 견줘진다. */
 function day(v: string | null): string | null {
   return v ? String(v).slice(0, 10) : null
@@ -87,9 +75,7 @@ function day(v: string | null): string | null {
 /**
  * 게스트 계정 관리: 전사 게스트 계정 한 자리.
  *
- * 2026-09-12부터 워크스페이스별 복제 화면을 없애고 전사 `GUEST` 페이지 한 곳에서 쓴다.
- * `entityKey`·`masterTables`는 조회 범위를 좁힐 필요가 있는 임베드 화면을 위한 선택 인자이고,
- * 연락처와 M&A 정보의 노출 범위는 서버(`guest_accounts_list`)의 RLS가 정한다.
+ * 전사 `GUEST` 페이지 한 곳에서 독립 계정을 관리한다. 계정을 원장별로 분류하지 않는다.
  *
  * 축이 셋이다(3_9_1 §3).
  *   · **계정**은 사람 하나다. 생성·조회는 내부 사용자 전원, 정지·해제·하드 삭제는 ADMIN.
@@ -104,7 +90,7 @@ function day(v: string | null): string | null {
  * **비밀번호 재설정 안내는 여전히 두지 않는다**(2026-09-07). 안내는 사업별로 나가고, 계정
  * 목록은 어느 사업의 맥락도 갖지 않아 여기서 보내면 받는 사람이 무슨 건으로 온 안내인지
  * 모른다. 그것과 **초기화 자체는 다른 축이다** — 2026-09-13부터 계정 상세에서 ADMIN이
- * 로그인 아이디·연락처를 고치고 비밀번호를 초기화한다(사용자 확정). 두 창구 모두 값을
+ * 이름·로그인 아이디·소속을 고치고 비밀번호를 초기화한다. 두 창구 모두 값을
  * 화면에 세우지 않고 아무것도 발송하지 않는다 — 자격증명은 오프라인으로 전한다(3_9_1 §6.2).
  *
  * 정지는 사업별 상태를 건드리지 않는다 — 풀면 원래 열려 있던 사업이 그대로 열린다.
@@ -116,37 +102,20 @@ function day(v: string | null): string | null {
 export function GuestAccountPanel({
   canAdminister = false,
   user,
-  entityKey,
-  masterTables,
 }: {
   canAdminister?: boolean
   user: AuthUser | null
-  /**
-   * 참여 사업 칸이 볼 범위. 주지 않으면 전 워크스페이스다.
-   * 통합 화면에서는 주지 않아 전 워크스페이스를 함께 본다.
-   */
-  entityKey?: GuestEntityKey
-  /**
-   * 목록에 설 계정을 **인격의 출처 원장**으로 좁힌다(2026-09-08). 주지 않으면 전부(ADMIN).
-   *
-   * `entityKey`와 다른 축이다 — 저쪽은 참여 사업 칸이 무엇을 세는가이고 이쪽은 어느 계정이
-   * 서는가다. 창구마다 발급하는 원장이 다르므로, 남의 원장 인격이 여기 서면 참여 사업 칸이
-   * 비어 있어도 "그 사람 계정이 있다"가 드러난다.
-   */
-  masterTables?: readonly MasterTable[]
 }) {
   const toast = useToast()
   const location = useLocation()
   const navigate = useNavigate()
-  /** 목록 분류는 한 계정의 다중 소속을 허용한다. 같은 계정이 여러 탭에 각각 설 수 있다. */
-  const [facet, setFacet] = useState<GuestAccountFacet>('startups')
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(0)
   /**
    * 상세를 펼쳐 보는 계정. 어느 탭에서 열어도 그 계정의 참여 사업 전체를 보여 준다.
    *
    * 여기 담기는 것은 **누른 순간의 사본**이고, 아래에서 지금 목록의 같은 계정으로 다시
-   * 찾아 쓴다 — 상세를 열어 둔 채 연락처를 고치면 조회가 새로 돌아오는데, 사본을 그대로
+   * 찾아 쓴다 — 상세를 열어 둔 채 프로필을 고치면 조회가 새로 돌아오는데, 사본을 그대로
    * 그리면 방금 고친 값이 상세에는 옛 값으로 남아 담당자가 수정이 안 된 줄로 읽는다.
    * 사본을 버리지 않는 이유는 목록에서 사라진 계정(검색어 변경 등)까지 창을 닫히게 하지
    * 않기 위해서다.
@@ -157,10 +126,11 @@ export function GuestAccountPanel({
    * 영구히 옛 값으로 남는다.
   */
   const [detailSnapshot, setDetailSnapshot] = useState<GuestAccount | null>(null)
-  /** ADMIN 전용 두 창구 — 연락처 수정과 비밀번호 초기화. 상세 안에서만 연다. */
+  /** ADMIN 전용 두 창구 — 계정 정보 수정과 비밀번호 초기화. 상세 안에서만 연다. */
   const [editing, setEditing] = useState(false)
+  const [editName, setEditName] = useState('')
   const [editEmail, setEditEmail] = useState('')
-  const [editPhone, setEditPhone] = useState('')
+  const [editAffiliation, setEditAffiliation] = useState('')
   const [editReason, setEditReason] = useState('')
   /** 검증 문구는 한 번 보낸 뒤에 세운다 — 입력을 시작하기도 전에 붉은 줄부터 뜨지 않게. */
   const [editSubmitted, setEditSubmitted] = useState(false)
@@ -178,14 +148,7 @@ export function GuestAccountPanel({
   const [deleteReason, setDeleteReason] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState('')
 
-  const { data, isLoading, error } = useGuestAccounts(
-    keyword,
-    page,
-    entityKey,
-    masterTables,
-    false,
-    facet,
-  )
+  const { data, isLoading, error } = useGuestAccounts(keyword, page)
   const setActive = useSetGuestAccountsActive()
   const hardDelete = useHardDeleteGuestAccounts()
   const updateContact = useUpdateGuestContact()
@@ -196,7 +159,7 @@ export function GuestAccountPanel({
    * 사본으로 버틴다(위 `detailSnapshot` 주석).
    */
   const detail = resolveGuestDetail(detailSnapshot, rows)
-  /** ADMIN 창구 둘(연락처 수정·비밀번호 초기화)이 설 수 있는가. 판정은 한곳이 소유한다. */
+  /** ADMIN 창구 둘(계정 정보 수정·비밀번호 초기화)이 설 수 있는가. 판정은 한곳이 소유한다. */
   const adminActions = guestAdminActionState({
     canAdminister,
     account: detail,
@@ -213,7 +176,7 @@ export function GuestAccountPanel({
    * 모달이 세로로 길어져 아래쪽이 화면 밖으로 나간다 — 표가 자라도 모달 높이는 그대로여야 한다.
    * 서버를 다시 부르지 않는 이유는 목록이 이미 계정 행에 통째로 실려 와 있기 때문이다.
    */
-  const detailScope = guestDetailScope(detail, null)
+  const detailScope = guestDetailScope(detail)
   const detailPrograms = detailScope.programs
   const paged = usePaged(detailPrograms, PROGRAM_PAGE_SIZE)
   const setProgramPage = paged.setPage
@@ -227,7 +190,7 @@ export function GuestAccountPanel({
   useEffect(() => {
     setPage(0)
     setSelected([])
-  }, [keyword, facet])
+  }, [keyword])
 
   const submitSuspend = async () => {
     if (!suspending || activeIds.length === 0) return
@@ -293,17 +256,16 @@ export function GuestAccountPanel({
   }
 
   /**
-   * 연락처 수정 창을 연다. **두 칸 모두 현재 값으로 채운다** — 서버가 "빈 값 = 유지"를
+   * 계정 정보 수정 창을 연다. **세 칸 모두 현재 값으로 채운다** — 서버가 "빈 값 = 유지"를
    * 받지 않기 때문이고(지우려는 요청과 구분할 수 없다), 담당자가 바꿀 칸만 고치면 나머지는
    * 그대로 되돌아간다.
    *
-   * 원본 연락처가 오는 것은 ADMIN뿐이다(그 밖에는 서버가 마스킹해 내려준다). 이 창구도
-   * ADMIN에게만 서므로 마스킹된 값이 입력칸에 담길 자리가 없다.
    */
   const openEdit = () => {
     if (!detail) return
+    setEditName(detail.name)
     setEditEmail(detail.email ?? '')
-    setEditPhone(detail.phone ?? '')
+    setEditAffiliation(detail.affiliation ?? '')
     setEditReason('')
     setEditSubmitted(false)
     setEditError(null)
@@ -319,8 +281,9 @@ export function GuestAccountPanel({
   }
 
   const editErrors = validateGuestContact({
+    name: editName,
     email: editEmail,
-    phone: editPhone,
+    affiliation: editAffiliation,
     reason: editReason,
   })
 
@@ -332,8 +295,9 @@ export function GuestAccountPanel({
     try {
       const result = await updateContact.mutateAsync({
         userId: detail.user_id,
+        name: editName,
         email: editEmail,
-        phone: editPhone,
+        affiliation: editAffiliation,
         reason: editReason,
       })
       // 목록에서 사라져도(검색어가 옛 이메일에 걸려 있던 경우) 상세가 옛 값으로 남지 않게,
@@ -343,7 +307,13 @@ export function GuestAccountPanel({
       // 표기만 다른 재전송은 서버가 아무 일도 하지 않고 `changed: false`로 답한다. 그때
       // "수정했습니다"라고 적으면 세션이 끊겼다는 잘못된 사실까지 함께 전한다.
       if (result.changed) {
-        toast.show('연락처를 수정했습니다. 이 계정의 기존 세션은 모두 끊겼습니다.', 'success')
+        // 세션이 끊겼다는 말은 로그인 ID인 이메일이 실제로 바뀌었을 때만 한다.
+        toast.show(
+          result.email_changed
+            ? '계정 정보를 수정했습니다. 이 계정의 기존 세션은 모두 끊겼습니다.'
+            : '계정 정보를 수정했습니다.',
+          'success',
+        )
       } else {
         toast.show('바뀐 값이 없어 아무것도 수정하지 않았습니다.', 'info')
       }
@@ -353,7 +323,7 @@ export function GuestAccountPanel({
     } catch (error: unknown) {
       // 막힌 이유는 창을 닫지 않고 그 자리에 세운다 — 토스트로 흘려보내면 고쳐야 할 칸을
       // 보면서 읽을 수 없다(중복 이메일의 소유자 이름이 그 답이다).
-      setEditError(guestAdminErrorMessage(error, '연락처를 수정하지 못했습니다.'))
+      setEditError(guestAdminErrorMessage(error, '계정 정보를 수정하지 못했습니다.'))
     }
   }
 
@@ -376,7 +346,7 @@ export function GuestAccountPanel({
   const submitReset = async () => {
     if (!detail || resetPassword.isPending) return
     setResetSubmitted(true)
-    if (!resetReason.trim() || adminActions.resetBlocked) return
+    if (!resetReason.trim()) return
     setResetError(null)
     try {
       const result = await resetPassword.mutateAsync({
@@ -386,8 +356,8 @@ export function GuestAccountPanel({
       // 이미 목록에서 빠진 계정(앞선 이메일 수정 등)을 초기화한 경우에도 상세가 계속
       // "본인 설정 완료"로 답하지 않게, 확인된 결과를 사본에 적는다.
       setDetailSnapshot((prev) => applyGuestPasswordReset(prev, result))
-      // 초기 비밀번호 값을 적지 않는다 — 담당자는 그 계정의 연락처를 이미 보고 있고,
-      // 토스트에 자격증명을 세우면 화면 녹화·캡처에 그대로 남는다.
+      // 최초 비밀번호 값을 토스트에 적지 않는다 — 값은 상세와 안내 문구가 이미 답하고,
+      // 흘러가는 알림에 자격증명을 세우면 화면 녹화·캡처에 그대로 남는다.
       toast.show(
         '비밀번호를 초기화했습니다. 기존 세션이 끊겼고 다음 로그인에서 본인이 새 비밀번호를 정합니다.',
         'success',
@@ -400,22 +370,12 @@ export function GuestAccountPanel({
     }
   }
 
-  // 체크박스 다음 번호는 현재 페이지의 배열 순번이 아니라 전체 목록 기준으로 이어진다.
-  const rowNumbers = new Map(
-    rows.map((account, index) => [account.user_id, page * GUEST_PAGE_SIZE + index + 1]),
-  )
-
   const columns: Column<GuestAccount>[] = [
-    {
-      key: 'no',
-      header: 'No.',
-      type: 'count',
-      render: (r) => rowNumbers.get(r.user_id) ?? DASH,
-    },
     { key: 'name', header: '이름', type: 'name', render: (r) => r.name },
+    // 이름 바로 옆이다 — 동명이인을 가르는 값이라, 이메일 뒤로 밀면 누구인지 확인하는 데
+    // 눈이 표를 두 번 건너야 한다.
+    { key: 'affiliation', header: '소속', type: 'long', render: (r) => r.affiliation || DASH },
     { key: 'email', header: '이메일(로그인 ID)', type: 'long', render: (r) => r.email || DASH },
-    // 연락처는 서버가 내려준 값을 그대로 적는다 — ADMIN이 아니면 이미 마스킹되어 온다.
-    { key: 'phone', header: '연락처', type: 'phone', render: (r) => r.phone || DASH },
     {
       // 지금 실제로 들어올 수 있는 사업 수 / 걸려 있는 사업 수. 앞의 수는 개방 상태만이 아니라
       // 사업 상태·기간까지 함께 본 결론이라, 명부의 로그인 상태 열과 같은 답을 한다.
@@ -457,8 +417,7 @@ export function GuestAccountPanel({
             {
               key: p.program_id,
               label: p.title ?? '(삭제된 항목)',
-              // 워크스페이스가 하나로 좁혀진 자리에서는 되풀이하지 않는다.
-              kind: entityKey ? null : (WORKSPACE_LABEL[p.workspace] ?? p.workspace),
+              kind: WORKSPACE_LABEL[p.workspace] ?? p.workspace,
               to: p.title ? `${PROGRAM_PATH[p.entity_key]}/${p.program_id}` : null,
               title: p.title ? undefined : '원장에서 삭제되었거나 볼 권한이 없는 항목입니다.',
             },
@@ -467,12 +426,6 @@ export function GuestAccountPanel({
       ),
     },
     { key: 'code', header: '코드', type: 'code', render: (p) => p.code || DASH },
-    {
-      key: 'persona',
-      header: '자격',
-      type: 'text',
-      render: (p) => (p.master_table ? PERSONA_LABEL[p.master_table] : DASH),
-    },
     {
       key: 'door',
       header: '상태',
@@ -502,22 +455,28 @@ export function GuestAccountPanel({
 
   return (
     <div className="space-y-4">
-      <Tabs
-        items={GUEST_ACCOUNT_TABS}
-        value={facet}
-        onChange={(key) => setFacet(key as GuestAccountFacet)}
-      />
-
       <ListToolbar
         keyword={keyword}
         onKeywordChange={setKeyword}
-        searchPlaceholder="이름·이메일·연락처 검색"
+        searchPlaceholder="이름·이메일·소속 검색"
         actions={
-          <ListActions
-            onBulk={() => navigate('/guest-accounts/bulk', { state: location.state })}
-            createLabel="GUEST 계정 생성"
-            onCreate={() => setCreating(true)}
-          />
+          <div className="flex items-center gap-2">
+            {/*
+              게스트가 실제로 보는 화면으로 가는 문. 계정을 만들고 프로필을 고치는 자리에서
+              결과를 눈으로 확인하려면 GUEST 앱 주소를 따로 찾아 들어가야 했다. 주소가 설정되지
+              않은 환경에서는 서지 않는다 — 없는 화면을 여는 문은 두지 않는다.
+            */}
+            {GUEST_APP_URL && (
+              <Button variant="outline" density="page" onClick={openGuestApp}>
+                게스트 페이지 열기
+              </Button>
+            )}
+            <ListActions
+              onBulk={() => navigate('/guest-accounts/bulk', { state: location.state })}
+              createLabel="GUEST 계정 생성"
+              onCreate={() => setCreating(true)}
+            />
+          </div>
         }
       />
 
@@ -585,8 +544,8 @@ export function GuestAccountPanel({
         title={detail ? `${detail.name} — 계정 상세` : ''}
         help={
           canAdminister
-            ? '프로젝트/FUND별 로그인 개방과 기간은 해당 담당자가 참가자 명부에서 정합니다. 이 화면에서는 계정을 조회하고 연락처를 수정하거나 비밀번호를 초기화하며 정지·해제·삭제할 수 있습니다.'
-            : '프로젝트/FUND별 로그인 개방과 기간은 해당 담당자가 참가자 명부에서 정합니다. 이 화면에서는 계정을 생성하고 조회합니다. 연락처 수정과 비밀번호 초기화는 시스템 관리자만 할 수 있습니다.'
+            ? '프로젝트/FUND별 로그인 개방과 기간은 해당 담당자가 참가자 명부에서 정합니다. 이 화면에서는 계정을 조회하고 계정 정보를 수정하거나 비밀번호를 초기화하며 정지·해제·삭제할 수 있습니다.'
+            : '프로젝트/FUND별 로그인 개방과 기간은 해당 담당자가 참가자 명부에서 정합니다. 이 화면에서는 계정을 생성하고 조회합니다. 계정 정보 수정과 비밀번호 초기화는 시스템 관리자만 할 수 있습니다.'
         }
         size="xl"
         footer={
@@ -597,13 +556,12 @@ export function GuestAccountPanel({
                 onClick={openEdit}
                 disabled={!adminActions.canEditContact}
               >
-                연락처 수정
+                계정 정보 수정
               </Button>
               <Button
                 variant="outline-danger"
                 onClick={openReset}
                 disabled={!adminActions.canResetPassword}
-                title={adminActions.resetBlocked ?? undefined}
               >
                 비밀번호 초기화
               </Button>
@@ -619,8 +577,7 @@ export function GuestAccountPanel({
                 value={detail.email}
                 valueClassName="truncate"
               />
-              <InfoField label="연락처" value={detail.phone} valueClassName="truncate" />
-              <InfoField label="소속 기업" value={detail.company_name} valueClassName="truncate" />
+              <InfoField label="소속" value={detail.affiliation} valueClassName="truncate" />
               <InfoField
                 label="계정 상태"
                 value={
@@ -633,16 +590,14 @@ export function GuestAccountPanel({
               />
               <InfoField
                 label="비밀번호"
-                value={detail.has_password ? '본인 설정 완료' : '초기 비밀번호(연락처)'}
+                value={
+                  detail.has_password
+                    ? '본인 설정 완료'
+                    : `초기 비밀번호(${GUEST_INITIAL_PASSWORD})`
+                }
               />
               <InfoField label="최근 접속" value={day(detail.last_login_at)} meta />
             </InfoGrid>
-
-            {/* 막힌 이유는 접지 않는다 — 버튼이 왜 눌리지 않는지는 호버해야 보이는 문구로
-                답할 수 없다(Field.hintInline과 같은 기준). */}
-            {adminActions.resetBlocked && (
-              <Banner tone="warning">{adminActions.resetBlocked}</Banner>
-            )}
 
             <div className="space-y-2">
               <CardHeading
@@ -661,7 +616,7 @@ export function GuestAccountPanel({
               <DataTable
                 columns={programColumns}
                 rows={paged.pageItems}
-                rowKey={(p) => `${p.entity_key}:${p.program_id}:${p.master_table ?? '-'}`}
+                rowKey={(p) => `${p.entity_key}:${p.program_id}`}
                 standardColumns={false}
                 selectable={false}
                 numbered={false}
@@ -680,13 +635,13 @@ export function GuestAccountPanel({
         )}
       </Modal>
 
-      {/* 연락처 수정 — 상세 위에 겹쳐 선다. 쓰던 사유가 사라지지 않도록 바깥 클릭으로
+      {/* 계정 정보 수정 — 상세 위에 겹쳐 선다. 쓰던 사유가 사라지지 않도록 바깥 클릭으로
           닫지 않고, 도는 동안에는 닫는 길도 막는다(취소 버튼까지). */}
       <Modal
         open={editing && adminActions.visible}
         onClose={closeEdit}
-        title="GUEST 연락처 수정"
-        help="이메일은 로그인 ID이고 연락처는 개시 상태의 초기 비밀번호입니다. 둘 중 하나라도 바뀌면 이 계정의 기존 세션이 즉시 끊깁니다."
+        title="GUEST 계정 정보 수정"
+        help="GUEST 프로필은 이름·이메일·소속 세 값입니다. 이메일이 바뀌면 기존 세션이 즉시 끊기고, 이름이나 소속만 바뀌면 세션은 그대로 유지됩니다."
         dismissible={false}
         size="lg"
         footer={
@@ -703,14 +658,16 @@ export function GuestAccountPanel({
         <div className="space-y-3">
           {/* 파급 효과 고지는 접지 않는다(안내 문구 규칙의 예외). */}
           <Banner tone="warning">
-            <b>이메일이 로그인 ID입니다</b> — 바꾸면 그 계정은 새 이메일로만 들어옵니다.
-            원장(스타트업·네트워크·M&A)의 연락처는 그대로 두므로, 원장 값까지 고쳐야 하면 그
-            원장에서 따로 수정하십시오. 연락처만 바꾸는 경우 본인이 이미 정한 비밀번호는 그대로
-            유지됩니다. 어느 쪽이든 이 계정의 기존 세션은 즉시 끊깁니다. 정지 여부는 달라지지
-            않습니다.
+            <b>이메일이 로그인 ID입니다</b> — 바꾸면 그 계정은 새 이메일로만 들어오고 기존
+            세션과 살아 있던 재설정 링크가 즉시 끊깁니다. 이름과 소속은 표시 정보이며 원장의
+            값과 자동으로 동기화되지 않습니다. 원장 값은 그대로 두므로 원장까지 고쳐야 하면
+            해당 원장에서 따로 수정하십시오. 비밀번호와 정지 여부는 달라지지 않습니다.
           </Banner>
           {editError && <Banner tone="danger">{editError}</Banner>}
           <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="이름" required error={editSubmitted ? editErrors.name : undefined}>
+              <Input value={editName} onChange={(event) => setEditName(event.target.value)} />
+            </Field>
             <Field
               label="이메일(로그인 ID)"
               required
@@ -723,12 +680,14 @@ export function GuestAccountPanel({
               />
             </Field>
             <Field
-              label="연락처"
+              label="소속"
               required
-              hint="숫자 9~15자리. 개인 비밀번호를 정하기 전에는 이 값(숫자만)이 초기 비밀번호입니다."
-              error={editSubmitted ? editErrors.phone : undefined}
+              error={editSubmitted ? editErrors.affiliation : undefined}
             >
-              <Input value={editPhone} onChange={(event) => setEditPhone(event.target.value)} />
+              <Input
+                value={editAffiliation}
+                onChange={(event) => setEditAffiliation(event.target.value)}
+              />
             </Field>
           </div>
           <Field label="수정 사유" required error={editSubmitted ? editErrors.reason : undefined}>
@@ -756,7 +715,7 @@ export function GuestAccountPanel({
             <Button
               variant="danger"
               onClick={() => void submitReset()}
-              disabled={resetPassword.isPending || Boolean(adminActions.resetBlocked)}
+              disabled={resetPassword.isPending}
             >
               {resetPassword.isPending ? '초기화 중…' : '초기화'}
             </Button>
@@ -766,14 +725,10 @@ export function GuestAccountPanel({
         <div className="space-y-3">
           <Banner tone="warning">{GUEST_PASSWORD_RESET_CONFIRM}</Banner>
           <Banner tone="info">
-            다음 로그인에서 본인이 <b>개인 비밀번호를 정한 뒤에야</b> 화면에 들어갑니다.
             초기화하는 즉시 이 계정의 기존 세션과 살아 있던 재설정 링크가 모두 끊기며, 계정
-            정지 여부와 프로젝트/FUND별 로그인 개방은 달라지지 않습니다. 안내는 발송하지 않고 비밀번호도
-            화면에 표시하지 않으니, 담당자가 직접 전달하십시오.
+            정지 여부와 프로젝트/FUND별 로그인 개방은 달라지지 않습니다. 최초 비밀번호는 모든
+            계정이 같은 고정값이므로, 담당자가 대상에게 직접 전달하십시오.
           </Banner>
-          {adminActions.resetBlocked && (
-            <Banner tone="danger">{adminActions.resetBlocked}</Banner>
-          )}
           {resetError && <Banner tone="danger">{resetError}</Banner>}
           <Field
             label="초기화 사유"
@@ -860,8 +815,8 @@ export function GuestAccountPanel({
       >
         <div className="space-y-3">
           <Banner tone="danger">
-            선택한 <b>{selectedAccounts.length}건</b>의 계정과 로그인 자격·원장 인격 연결·프로젝트/FUND
-            접근 연결을 완전히 삭제합니다. 업무 기록은 보존하되 작성자 참조는 익명화되며 이
+            선택한 <b>{selectedAccounts.length}건</b>의 계정과 로그인 자격·프로젝트/FUND 접근
+            연결을 완전히 삭제합니다. 업무 기록은 보존하되 작성자 참조는 익명화되며 이
             작업은 되돌릴 수 없습니다. 한 건이라도 삭제할 수 없으면 전체 작업을 취소합니다.
           </Banner>
           <Field label="확인 문구" required hintInline hint={`아래 문구를 그대로 입력하세요: GUEST ${selectedAccounts.length}건 영구 삭제`}>

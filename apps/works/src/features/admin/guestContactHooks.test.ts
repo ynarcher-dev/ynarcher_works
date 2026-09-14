@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest'
+import { GUEST_INITIAL_PASSWORD } from '@/features/guest/guestAccountService'
 import {
   GUEST_PASSWORD_RESET_CONFIRM,
   applyGuestContactUpdate,
   applyGuestPasswordReset,
   guestAdminActionState,
   guestAdminErrorMessage,
-  guestPhoneDigits,
-  guestResetBlockReason,
   hasGuestContactError,
   resolveGuestDetail,
   validateGuestContact,
@@ -15,16 +14,21 @@ import {
 } from '@/features/admin/guestContactHooks'
 
 /**
- * ADMIN 연락처 수정·비밀번호 초기화의 판정 층.
+ * ADMIN 프로필 수정·비밀번호 초기화의 판정 층.
  *
  * 서버가 같은 결론을 다시 내리지만, 화면의 판정이 서버보다 느슨하면 담당자가 통과시킨 값이
  * 서버에서 막히고 더 엄하면 서버가 받는 값을 화면이 거절한다. 그 어긋남을 여기서 붙잡는다.
  */
 
-const ok = { email: 'guest@example.com', phone: '010-1234-5678', reason: '오타 수정' }
+const ok = {
+  name: '홍길동',
+  email: 'guest@example.com',
+  affiliation: '와이앤아처',
+  reason: '오타 수정',
+}
 
 describe('validateGuestContact', () => {
-  it('세 칸이 모두 채워지면 통과한다', () => {
+  it('프로필 세 칸과 사유가 채워지면 통과한다', () => {
     expect(validateGuestContact(ok)).toEqual({})
     expect(hasGuestContactError(validateGuestContact(ok))).toBe(false)
   })
@@ -33,9 +37,20 @@ describe('validateGuestContact', () => {
     expect(validateGuestContact({ ...ok, reason: '   ' }).reason).toBeTruthy()
   })
 
-  it('두 칸 중 하나가 비면 막는다(빈 값을 "유지"로 읽지 않는다)', () => {
+  it('이메일이 비면 막는다 — 로그인 ID라 지울 수 없다', () => {
     expect(validateGuestContact({ ...ok, email: '' }).email).toBeTruthy()
-    expect(validateGuestContact({ ...ok, phone: '' }).phone).toBeTruthy()
+  })
+
+  it('이름과 소속이 비면 막는다 — 계정 프로필의 필수 값이다', () => {
+    expect(validateGuestContact({ ...ok, name: '' }).name).toBeTruthy()
+    expect(validateGuestContact({ ...ok, affiliation: '' }).affiliation).toBeTruthy()
+  })
+
+  it('이름은 100자, 소속은 200자를 넘지 못한다', () => {
+    expect(validateGuestContact({ ...ok, name: '가'.repeat(100) }).name).toBeUndefined()
+    expect(validateGuestContact({ ...ok, name: '가'.repeat(101) }).name).toBeTruthy()
+    expect(validateGuestContact({ ...ok, affiliation: '가'.repeat(200) }).affiliation).toBeUndefined()
+    expect(validateGuestContact({ ...ok, affiliation: '가'.repeat(201) }).affiliation).toBeTruthy()
   })
 
   it.each(['guest', 'guest@', 'guest@example', 'a b@example.com', 'a@@example.com'])(
@@ -54,60 +69,17 @@ describe('validateGuestContact', () => {
     expect(validateGuestContact({ ...ok, email: long }).email).toBeTruthy()
   })
 
-  it('전화는 숫자 9~15자리만 통과한다', () => {
-    expect(validateGuestContact({ ...ok, phone: '02-123-4567' }).phone).toBeUndefined()
-    expect(validateGuestContact({ ...ok, phone: '+82 10-1234-5678' }).phone).toBeUndefined()
-    expect(validateGuestContact({ ...ok, phone: '02-12-345' }).phone).toBeTruthy()
-    expect(validateGuestContact({ ...ok, phone: '1234567890123456' }).phone).toBeTruthy()
-  })
-
-  it('숫자가 아닌 문자만 있으면 빈 값과 같이 막는다', () => {
-    expect(validateGuestContact({ ...ok, phone: '----' }).phone).toBeTruthy()
-  })
-})
-
-describe('guestPhoneDigits', () => {
-  it('숫자만 남긴다(서버 app.norm_phone과 같은 규칙)', () => {
-    expect(guestPhoneDigits('010-1234-5678')).toBe('01012345678')
-    expect(guestPhoneDigits('+82 (10) 1234 5678')).toBe('821012345678')
-    expect(guestPhoneDigits(null)).toBe('')
-  })
-})
-
-describe('guestResetBlockReason', () => {
-  it('연락처가 9자리 이상이면 막지 않는다', () => {
-    expect(guestResetBlockReason({ phone: '02-123-4567' })).toBeNull()
-  })
-
-  it('연락처가 없거나 짧으면 무엇을 먼저 할지 답한다', () => {
-    expect(guestResetBlockReason({ phone: null })).toContain('연락처')
-    expect(guestResetBlockReason({ phone: '1234' })).toContain('연락처')
-  })
-
-  it('대상이 없으면 판정하지 않는다', () => {
-    expect(guestResetBlockReason(null)).toBeNull()
-  })
 })
 
 describe('guestAdminActionState', () => {
-  const account = { phone: '010-1234-5678' }
+  const account = { user_id: 'u-1' }
 
   it('ADMIN이 아니면 두 창구가 서지 않는다', () => {
-    const state = guestAdminActionState({ canAdminister: false, account, pending: false })
-    expect(state).toEqual({
+    expect(guestAdminActionState({ canAdminister: false, account, pending: false })).toEqual({
       visible: false,
       canEditContact: false,
       canResetPassword: false,
-      resetBlocked: null,
     })
-  })
-
-  it('ADMIN이 아닌 사람에게는 막힌 이유조차 계산하지 않는다 — 마스킹된 연락처로는 자릿수를 셀 수 없다', () => {
-    const masked = { phone: '010-****-5678' }
-    expect(
-      guestAdminActionState({ canAdminister: false, account: masked, pending: false })
-        .resetBlocked,
-    ).toBeNull()
   })
 
   it('ADMIN이면 둘 다 선다', () => {
@@ -115,7 +87,6 @@ describe('guestAdminActionState', () => {
       visible: true,
       canEditContact: true,
       canResetPassword: true,
-      resetBlocked: null,
     })
   })
 
@@ -126,15 +97,9 @@ describe('guestAdminActionState', () => {
     expect(state.canResetPassword).toBe(false)
   })
 
-  it('연락처가 없으면 초기화만 막고 연락처 수정은 열어 둔다 — 그것이 다음에 할 일이다', () => {
-    const state = guestAdminActionState({
-      canAdminister: true,
-      account: { phone: null },
-      pending: false,
-    })
-    expect(state.canEditContact).toBe(true)
-    expect(state.canResetPassword).toBe(false)
-    expect(state.resetBlocked).toBeTruthy()
+  it('프로필 값과 무관하게 초기화할 수 있다 — 최초 비밀번호가 고정값이다', () => {
+    const state = guestAdminActionState({ canAdminister: true, account, pending: false })
+    expect(state.canResetPassword).toBe(true)
   })
 
   it('상세가 닫혀 있으면 서지 않는다', () => {
@@ -172,17 +137,18 @@ const ACCOUNT = {
   user_id: 'u-1',
   name: '홍길동',
   email: 'old@example.com',
-  phone: '010-1111-2222',
+  affiliation: '옛 소속',
   has_password: true,
 }
 
 const updated = (over: Partial<GuestContactUpdateResult> = {}): GuestContactUpdateResult => ({
   user_id: 'u-1',
   changed: true,
+  name_changed: true,
   email_changed: true,
-  phone_changed: false,
+  affiliation_changed: true,
   session_version: 2,
-  applied: { email: 'new@example.com', phone: '010-1111-2222' },
+  applied: { name: '김수정', email: 'new@example.com', affiliation: '와이앤아처' },
   ...over,
 })
 
@@ -212,7 +178,11 @@ describe('resolveGuestDetail', () => {
 describe('applyGuestContactUpdate', () => {
   it('서버가 저장한 값으로 사본을 올린다', () => {
     const next = applyGuestContactUpdate(ACCOUNT, updated())
-    expect(next).toMatchObject({ email: 'new@example.com', phone: '010-1111-2222' })
+    expect(next).toMatchObject({
+      name: '김수정',
+      email: 'new@example.com',
+      affiliation: '와이앤아처',
+    })
   })
 
   it('아무것도 쓰지 않은 재전송은 사본을 건드리지 않는다 — 저장되지 않은 입력을 세우지 않는다', () => {
@@ -267,10 +237,15 @@ describe('applyGuestPasswordReset', () => {
   })
 })
 
-describe('GUEST_PASSWORD_RESET_CONFIRM', () => {
-  it('사용자가 확정한 확인 문구 그대로다(2026-09-13)', () => {
-    expect(GUEST_PASSWORD_RESET_CONFIRM).toBe(
-      '비밀번호를 초기화하시겠습니까? 초기화되면 현재 전화번호(숫자만)가 초기 비밀번호가 됩니다.',
-    )
+describe('최초 비밀번호와 초기화 확인 문구', () => {
+  it('최초 비밀번호는 계정과 무관한 고정값이다(2026-09-14 사용자 확정)', () => {
+    expect(GUEST_INITIAL_PASSWORD).toBe('ynarcher')
+  })
+
+  it('확인 문구는 고정 최초 비밀번호를 말하고 연락처를 말하지 않는다', () => {
+    expect(GUEST_PASSWORD_RESET_CONFIRM).toContain(GUEST_INITIAL_PASSWORD)
+    expect(GUEST_PASSWORD_RESET_CONFIRM).toContain('안내는 발송하지 않습니다')
+    // 연락처가 초기 비밀번호이던 시절의 문구가 되살아나지 않게 못 박는다.
+    expect(GUEST_PASSWORD_RESET_CONFIRM).not.toContain('전화번호')
   })
 })

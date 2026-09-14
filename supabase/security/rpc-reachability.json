@@ -1,9 +1,9 @@
 {
   "provenance": {
     "generator": "scripts/security/rpc-reachability.mjs",
-    "project_id": "yna_acl_76e37730",
-    "source_cutoff": "20260913160000_guest_accounts_list_facets.sql",
-    "migrations_sha256": "ed458e9066f141ce951152cec2d30fa0973e50688be5d19fecd6aada26308d99",
+    "project_id": "yna_acl_13f8840a",
+    "source_cutoff": "20260914230000_guest_independent_account_cleanup.sql",
+    "migrations_sha256": "15b59f9fc945db26767b2e1a718bd98af14fca7929ad7b7df66c494bbd2ae288",
     "method": "pg_proc.prosrc 텍스트 대조 + INVOKER 전이 폐포. 함수 본문은 저장하지 않습니다.",
     "limits": [
       "execute format(...) 같은 동적 SQL의 대상은 잡히지 않습니다 — dynamic_sql_in으로 표시합니다.",
@@ -12,12 +12,12 @@
     ]
   },
   "counts": {
-    "routines_public_app": 291,
-    "rpc_called_by_source": 93,
+    "routines_public_app": 341,
+    "rpc_called_by_source": 108,
     "rpc_not_found_in_db": 0,
-    "rpc_definer": 48,
-    "rpc_invoker": 45,
-    "rpc_invoker_requiring_caller_table_ops": 32,
+    "rpc_definer": 61,
+    "rpc_invoker": 47,
+    "rpc_invoker_requiring_caller_table_ops": 33,
     "rpc_with_dynamic_sql": 11
   },
   "required_by_authenticated": {
@@ -146,14 +146,6 @@
         "set_fund_staffing"
       ]
     },
-    "guest_identities": {
-      "ops": [
-        "SELECT"
-      ],
-      "via_rpc": [
-        "guest_accounts_list"
-      ]
-    },
     "guest_invitations": {
       "ops": [
         "INSERT",
@@ -245,14 +237,6 @@
         "startup_pool_entities"
       ]
     },
-    "ma_buyers": {
-      "ops": [
-        "SELECT"
-      ],
-      "via_rpc": [
-        "guest_accounts_list"
-      ]
-    },
     "ma_programs": {
       "ops": [
         "SELECT"
@@ -267,8 +251,7 @@
         "SELECT"
       ],
       "via_rpc": [
-        "attachment_refs",
-        "guest_accounts_list"
+        "attachment_refs"
       ]
     },
     "module_templates": {
@@ -287,7 +270,7 @@
       ],
       "via_rpc": [
         "admin_inactive_ledger_entities",
-        "guest_accounts_list",
+        "guest_account_ledger_candidates",
         "restore_entities"
       ]
     },
@@ -354,7 +337,6 @@
       "via_rpc": [
         "admin_inactive_ledger_entities",
         "attachment_refs",
-        "guest_accounts_list",
         "restore_entities",
         "startup_facet_counts",
         "startup_pool_entities"
@@ -413,7 +395,7 @@
     }
   },
   "rpcs": {
-    "admin_entities_delete_blockers": {
+    "admin_entities_delete_blocker_rows": {
       "exists": true,
       "security": "DEFINER",
       "mixed_secdef": false,
@@ -421,11 +403,11 @@
         "client"
       ],
       "sites": [
-        "apps/works/src/features/master/inactiveLedgerHooks.ts:187"
+        "apps/works/src/features/master/inactiveLedgerHooks.ts:192"
       ],
       "caller_required_table_ops": {},
       "definer_boundary_at": [
-        "public.admin_entities_delete_blockers"
+        "public.admin_entities_delete_blocker_rows"
       ],
       "dynamic_sql_in": [],
       "invoker_chain_size": 1
@@ -438,7 +420,7 @@
         "client"
       ],
       "sites": [
-        "apps/works/src/features/master/inactiveLedgerHooks.ts:206"
+        "apps/works/src/features/master/inactiveLedgerHooks.ts:211"
       ],
       "caller_required_table_ops": {},
       "definer_boundary_at": [
@@ -455,8 +437,8 @@
         "client"
       ],
       "sites": [
-        "apps/works/src/features/master/inactiveLedgerHooks.ts:109",
-        "apps/works/src/features/master/inactiveLedgerHooks.ts:83"
+        "apps/works/src/features/master/inactiveLedgerHooks.ts:110",
+        "apps/works/src/features/master/inactiveLedgerHooks.ts:84"
       ],
       "caller_required_table_ops": {
         "entity_contributions": [
@@ -493,7 +475,7 @@
         "client"
       ],
       "sites": [
-        "apps/works/src/features/master/inactiveLedgerHooks.ts:61"
+        "apps/works/src/features/master/inactiveLedgerHooks.ts:62"
       ],
       "caller_required_table_ops": {},
       "definer_boundary_at": [
@@ -544,11 +526,28 @@
         "client"
       ],
       "sites": [
-        "apps/works/src/features/admin/guestContactHooks.ts:259"
+        "apps/works/src/features/admin/guestContactHooks.ts:253"
       ],
       "caller_required_table_ops": {},
       "definer_boundary_at": [
         "public.admin_update_guest_contact"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "approval_budget_spend_items": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/approval/workspaceBudgetApi.ts:132"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.approval_budget_spend_items"
       ],
       "dynamic_sql_in": [],
       "invoker_chain_size": 1
@@ -561,7 +560,7 @@
         "client"
       ],
       "sites": [
-        "apps/works/src/features/approval/budgetApi.ts:135"
+        "apps/works/src/features/approval/budgetApi.ts:142"
       ],
       "caller_required_table_ops": {},
       "definer_boundary_at": [
@@ -717,6 +716,23 @@
       "dynamic_sql_in": [],
       "invoker_chain_size": 2
     },
+    "birthdays_in_range": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/hub/hooks.ts:358"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "app.birthdays_in_range_impl"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
     "bump_module_public_link_view": {
       "exists": true,
       "security": "INVOKER",
@@ -832,7 +848,7 @@
         "client"
       ],
       "sites": [
-        "apps/works/src/features/program/participantAccessHooks.ts:136"
+        "apps/works/src/features/program/participantAccessHooks.ts:107"
       ],
       "caller_required_table_ops": {},
       "definer_boundary_at": [
@@ -879,12 +895,12 @@
     "create_guest_account": {
       "exists": true,
       "security": "DEFINER",
-      "mixed_secdef": false,
+      "mixed_secdef": true,
       "principals": [
         "client"
       ],
       "sites": [
-        "apps/works/src/features/guest/guestAccountService.ts:20"
+        "apps/works/src/features/guest/guestAccountService.ts:30"
       ],
       "caller_required_table_ops": {},
       "definer_boundary_at": [
@@ -901,7 +917,7 @@
         "client"
       ],
       "sites": [
-        "apps/works/src/features/master/inactiveLedgerHooks.ts:166"
+        "apps/works/src/features/master/inactiveLedgerHooks.ts:167"
       ],
       "caller_required_table_ops": {},
       "definer_boundary_at": [],
@@ -939,8 +955,8 @@
         "client"
       ],
       "sites": [
-        "apps/works/src/features/approval/approvalApi.ts:364",
-        "apps/works/src/features/approval/approvalApi.ts:397"
+        "apps/works/src/features/approval/approvalApi.ts:353",
+        "apps/works/src/features/approval/approvalApi.ts:386"
       ],
       "caller_required_table_ops": {},
       "definer_boundary_at": [
@@ -974,11 +990,215 @@
         "client"
       ],
       "sites": [
-        "apps/works/src/features/program/hooks.ts:430"
+        "apps/works/src/features/program/hooks.ts:433"
       ],
       "caller_required_table_ops": {},
       "definer_boundary_at": [
         "public.delete_program_module"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "file_collection_add_comment": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:527"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.file_collection_add_comment"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "file_collection_authorize_download": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "edge-unknown"
+      ],
+      "sites": [
+        "supabase/functions/file-collection-file/handler.ts:203"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.file_collection_authorize_download"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "file_collection_commit_upload": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "edge-unknown"
+      ],
+      "sites": [
+        "supabase/functions/file-collection-file/handler.ts:189"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.file_collection_commit_upload"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "file_collection_delete_node": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:468"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.file_collection_delete_node"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "file_collection_publish": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:491"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.file_collection_publish"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "file_collection_register_upload": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "edge-unknown"
+      ],
+      "sites": [
+        "supabase/functions/file-collection-file/handler.ts:106"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.file_collection_register_upload"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "file_collection_remove_file": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/guest/src/features/fileCollectionService.ts:344"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.file_collection_remove_file"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "file_collection_reorder_node": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:372"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.file_collection_reorder_node"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "file_collection_review": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:510"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.file_collection_review"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "file_collection_save_node": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:338"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.file_collection_save_node"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "file_collection_save_structure": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:425"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.file_collection_save_structure"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
+    "file_collection_upsert": {
+      "exists": true,
+      "security": "DEFINER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/program/fileCollection/fileCollectionHooks.ts:307"
+      ],
+      "caller_required_table_ops": {},
+      "definer_boundary_at": [
+        "public.file_collection_upsert"
       ],
       "dynamic_sql_in": [],
       "invoker_chain_size": 1
@@ -1025,6 +1245,28 @@
       "dynamic_sql_in": [],
       "invoker_chain_size": 1
     },
+    "guest_account_ledger_candidates": {
+      "exists": true,
+      "security": "INVOKER",
+      "mixed_secdef": false,
+      "principals": [
+        "client"
+      ],
+      "sites": [
+        "apps/works/src/features/guest/guestLedgerCandidateService.ts:67"
+      ],
+      "caller_required_table_ops": {
+        "networks": [
+          "SELECT"
+        ]
+      },
+      "definer_boundary_at": [
+        "app.current_app_user_id",
+        "app.is_guest"
+      ],
+      "dynamic_sql_in": [],
+      "invoker_chain_size": 1
+    },
     "guest_accounts_list": {
       "exists": true,
       "security": "INVOKER",
@@ -1033,29 +1275,17 @@
         "client"
       ],
       "sites": [
-        "apps/works/src/features/admin/guestAccountHooks.ts:142",
-        "apps/works/src/features/program/participantHooks.ts:422"
+        "apps/works/src/features/admin/guestAccountHooks.ts:80",
+        "apps/works/src/features/program/participantHooks.ts:401"
       ],
       "caller_required_table_ops": {
         "funds": [
           "SELECT"
         ],
-        "guest_identities": [
-          "SELECT"
-        ],
         "guest_invitations": [
           "SELECT"
         ],
-        "ma_buyers": [
-          "SELECT"
-        ],
         "ma_programs": [
-          "SELECT"
-        ],
-        "ma_sellers": [
-          "SELECT"
-        ],
-        "networks": [
           "SELECT"
         ],
         "program_participants": [
@@ -1064,24 +1294,19 @@
         "programs": [
           "SELECT"
         ],
-        "startups": [
-          "SELECT"
-        ],
         "users": [
           "SELECT"
         ]
       },
       "definer_boundary_at": [
-        "app.can_read_ma_party",
         "app.current_app_user_id",
         "app.guest_account_has_any_participation",
-        "app.guest_account_is_unlinked",
         "app.guest_has_password",
         "app.is_admin",
         "app.is_guest"
       ],
       "dynamic_sql_in": [],
-      "invoker_chain_size": 7
+      "invoker_chain_size": 5
     },
     "guest_password_commit": {
       "exists": true,
@@ -1091,7 +1316,7 @@
         "edge-service_role-inferred"
       ],
       "sites": [
-        "supabase/functions/_shared/guestAccount.ts:178"
+        "supabase/functions/_shared/guestAccount.ts:182"
       ],
       "caller_required_table_ops": {
         "guest_credentials": [
@@ -1116,7 +1341,7 @@
         "edge-service_role-inferred"
       ],
       "sites": [
-        "supabase/functions/_shared/guestAccount.ts:524"
+        "supabase/functions/_shared/guestAccount.ts:540"
       ],
       "caller_required_table_ops": {
         "guest_credentials": [
@@ -1139,7 +1364,7 @@
         "edge-service_role-inferred"
       ],
       "sites": [
-        "supabase/functions/_shared/guestAccount.ts:485"
+        "supabase/functions/_shared/guestAccount.ts:501"
       ],
       "caller_required_table_ops": {
         "guest_credentials": [
@@ -1161,7 +1386,7 @@
         "client"
       ],
       "sites": [
-        "apps/works/src/features/admin/guestAccountHooks.ts:250"
+        "apps/works/src/features/admin/guestAccountHooks.ts:136"
       ],
       "caller_required_table_ops": {},
       "definer_boundary_at": [
@@ -1383,7 +1608,7 @@
         "edge-caller-inferred"
       ],
       "sites": [
-        "supabase/functions/guest-access-invite/index.ts:53"
+        "supabase/functions/guest-access-invite/handler.ts:44"
       ],
       "caller_required_table_ops": {
         "guest_invitations": [
@@ -1437,7 +1662,7 @@
         "client"
       ],
       "sites": [
-        "apps/works/src/features/program/hooks.ts:411"
+        "apps/works/src/features/program/hooks.ts:414"
       ],
       "caller_required_table_ops": {},
       "definer_boundary_at": [
@@ -1454,7 +1679,7 @@
         "client"
       ],
       "sites": [
-        "apps/works/src/features/program/participantAccessHooks.ts:168"
+        "apps/works/src/features/program/participantAccessHooks.ts:139"
       ],
       "caller_required_table_ops": {},
       "definer_boundary_at": [
@@ -1505,7 +1730,7 @@
         "client"
       ],
       "sites": [
-        "apps/works/src/features/approval/approvalApi.ts:426"
+        "apps/works/src/features/approval/approvalApi.ts:415"
       ],
       "caller_required_table_ops": {},
       "definer_boundary_at": [
@@ -1539,7 +1764,7 @@
         "client"
       ],
       "sites": [
-        "apps/works/src/features/program/participantAccessHooks.ts:196"
+        "apps/works/src/features/program/participantAccessHooks.ts:167"
       ],
       "caller_required_table_ops": {},
       "definer_boundary_at": [
@@ -1556,7 +1781,7 @@
         "client"
       ],
       "sites": [
-        "apps/works/src/features/program/participantAccessHooks.ts:118"
+        "apps/works/src/features/program/participantAccessHooks.ts:89"
       ],
       "caller_required_table_ops": {},
       "definer_boundary_at": [
@@ -1573,7 +1798,7 @@
         "client"
       ],
       "sites": [
-        "apps/works/src/features/master/inactiveLedgerHooks.ts:149"
+        "apps/works/src/features/master/inactiveLedgerHooks.ts:150"
       ],
       "caller_required_table_ops": {
         "networks": [
@@ -1931,7 +2156,7 @@
         "client"
       ],
       "sites": [
-        "apps/works/src/features/admin/guestAccountHooks.ts:219"
+        "apps/works/src/features/admin/guestAccountHooks.ts:106"
       ],
       "caller_required_table_ops": {},
       "definer_boundary_at": [
@@ -2102,7 +2327,7 @@
         "client"
       ],
       "sites": [
-        "apps/works/src/features/program/participantAccessHooks.ts:89"
+        "apps/works/src/features/program/participantAccessHooks.ts:60"
       ],
       "caller_required_table_ops": {},
       "definer_boundary_at": [
@@ -2123,7 +2348,7 @@
         "client"
       ],
       "sites": [
-        "apps/works/src/features/program/hooks.ts:342"
+        "apps/works/src/features/program/hooks.ts:345"
       ],
       "caller_required_table_ops": {},
       "definer_boundary_at": [
@@ -2248,7 +2473,7 @@
         "client"
       ],
       "sites": [
-        "apps/works/src/features/hub/hooks.ts:355"
+        "apps/works/src/features/hub/hooks.ts:382"
       ],
       "caller_required_table_ops": {},
       "definer_boundary_at": [
@@ -2285,7 +2510,7 @@
         "client"
       ],
       "sites": [
-        "apps/works/src/features/management/hooks.ts:351"
+        "apps/works/src/features/management/hooks.ts:354"
       ],
       "caller_required_table_ops": {},
       "definer_boundary_at": [

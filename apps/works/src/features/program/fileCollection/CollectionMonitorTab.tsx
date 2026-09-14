@@ -7,9 +7,11 @@ import {
   Select,
   SegmentedToggle,
   Skeleton,
+  SummaryTile,
   cardText,
   type Column,
 } from '@ynarcher/ui'
+import { CircleCheckBig, CircleDashed, CircleDotDashed, Users } from 'lucide-react'
 import {
   assignmentProgressRows,
   collectionSummary,
@@ -37,9 +39,9 @@ type MonitorView = 'targets' | 'questions'
 const RESPONSE_ROW_LIMIT = 500
 
 /**
- * 제출 관제 탭 — 들어온 것과 **안 들어온 것**을 함께 본다.
+ * 제출 현황 탭 — 들어온 것과 **안 들어온 것**을 함께 본다.
  *
- * 미제출을 목록에서 빼지 않는 것이 이 화면의 핵심이다. 제출된 것만 세우면 관제 화면이 언제나
+ * 미제출을 목록에서 빼지 않는 것이 이 화면의 핵심이다. 제출된 것만 세우면 이 화면이 언제나
  * '할 일 없음'으로 보이고, 정작 독촉할 대상이 화면에 존재하지 않는다. 그래서 응답 행이 아직
  * 서지 않은 조합(배정 직후)까지 미제출 줄로 만들어 세운다.
  */
@@ -135,7 +137,7 @@ export function CollectionMonitorTab({
     },
     {
       key: 'state',
-      header: '배정',
+      header: '상태',
       type: 'badge',
       render: (row) =>
         row.assignment.revoked_at ? (
@@ -143,7 +145,7 @@ export function CollectionMonitorTab({
         ) : row.untouched ? (
           <Badge tone="warning">미착수</Badge>
         ) : (
-          <Badge tone="success">배정</Badge>
+          <Badge tone="success">착수</Badge>
         ),
     },
     {
@@ -235,22 +237,69 @@ export function CollectionMonitorTab({
     <div className="space-y-4">
       <Card
         title="요약"
-        help="검토 대기는 지금 내가 볼 차례인 문항 수이고, 작성 중은 게스트가 손은 댔지만 아직 내지 않은 문항 수입니다."
+        help="이 카드는 사람을 셉니다. 미제출은 한 문항도 내지 않은 사람, 진행 중은 일부만 낸 사람, 제출 완료는 모든 문항을 낸 사람이며 세 수의 합은 대상 수와 같습니다. 보완 요청을 받은 문항은 이미 낸 것으로 셈합니다."
       >
-        <dl className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
-          <Stat label="대상" value={`${summary.targets}명`} />
-          <Stat label="문항" value={`${summary.questions}개`} />
-          <Stat label="검토 대기" value={`${summary.pendingReview}건`} />
-          <Stat label="보완 요청" value={`${summary.rework}건`} />
-          <Stat label="완료" value={`${summary.approved}건`} />
-          {/* 작성 중과 미제출을 나란히 둔다 — 둘을 합치면 독촉할 대상과 기다릴 대상이 섞인다. */}
-          <Stat label="작성 중" value={`${summary.draft}건`} />
-          <Stat label="미제출" value={`${summary.notSubmitted}건`} />
-        </dl>
-        <p className={`mt-3 ${cardText.meta}`}>
-          필수 문항을 모두 마친 대상 {summary.completedTargets}명
-          {summary.revokedTargets > 0 && ` · 회수된 대상 ${summary.revokedTargets}명(자료 보존)`}
-        </p>
+        {/* **이 카드보드의 단위는 사람(명)이다**(2026-09-14 사용자 확정).
+            종전에는 `대상 …명`·`문항 …개`·`검토 대기 …건`이 한 줄에 같은 모양으로 서 있었는데,
+            뒤의 다섯 칸은 응답 칸(대상 × 문항)을 센 값이라 대상이 한 명일 때만 우연히 사람 수처럼
+            읽혔다. 이제 타일은 사람만 세고, 칸(건) 단위 숫자는 아래 메타줄과 진행 현황 표가 답한다.
+
+            가르는 기준은 **낸 적이 있는가** 하나다 — 검토 대기·보완 요청은 이미 낸 것이고,
+            작성 중은 아직 낸 것이 아니다. 표현은 게스트의 `내 진행 상태`와 같은 규격(SummaryTile)이라
+            두 화면이 같은 색으로 같은 말을 한다. */}
+        <section
+          aria-label="대상별 제출 요약"
+          className="grid grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-3"
+        >
+          {/* 머리말(eyebrow)은 장식이 아니라 **셈의 기준**이다 — '미제출·진행 중·제출 완료'라는
+              이름만으로는 무엇을 낸 것으로 치는지 갈리지 않아서, 각 칸이 자기 기준을 스스로 적는다. */}
+          <SummaryTile
+            title="대상"
+            eyebrow="제출해야 할 사람"
+            value={summary.targets}
+            unit="명"
+            tone="primary"
+            compact
+            icon={<Users aria-hidden className="size-[18px]" strokeWidth={1.8} />}
+          />
+          <SummaryTile
+            title="미제출"
+            eyebrow="한 번도 내지 않음"
+            value={summary.notStartedTargets}
+            unit="명"
+            tone="slate"
+            compact
+            icon={<CircleDashed aria-hidden className="size-[18px]" strokeWidth={1.8} />}
+          />
+          <SummaryTile
+            title="진행 중"
+            eyebrow="일부만 냄"
+            value={summary.inProgressTargets}
+            unit="명"
+            tone="amber"
+            compact
+            icon={<CircleDotDashed aria-hidden className="size-[18px]" strokeWidth={1.8} />}
+          />
+          <SummaryTile
+            title="제출 완료"
+            eyebrow="모든 문항을 냄"
+            value={summary.completedSubmissionTargets}
+            unit="명"
+            tone="mint"
+            compact
+            icon={<CircleCheckBig aria-hidden className="size-[18px]" strokeWidth={1.8} />}
+          />
+        </section>
+        {/* 문항 수·검토 대기 건수 같은 **칸(건) 단위 숫자는 여기 적지 않는다**(2026-09-14 사용자 결정).
+            이 카드는 사람만 세며, 칸 단위는 아래 진행 현황·제출 내역 표가 답한다 — 한 카드에 두
+            단위를 섞어 두면 방금 없앤 혼동이 메타줄로 되돌아온다.
+            회수된 대상만 예외로 남긴다: 대상 수에서 빠진 사람이 있다는 사실은 이 카드가 아니면
+            어디에도 적히지 않는다. */}
+        {summary.revokedTargets > 0 && (
+          <p className={`mt-3 ${cardText.meta}`}>
+            회수된 대상 {summary.revokedTargets}명(자료 보존) — 위 대상 수에서 빠져 있습니다.
+          </p>
+        )}
       </Card>
 
       <Card
@@ -274,7 +323,7 @@ export function CollectionMonitorTab({
             columns={targetColumns}
             rows={targetRows}
             rowKey={(row) => row.assignment.id}
-            emptyText="배정한 대상이 없습니다."
+            emptyText="받는 사람이 없습니다. 개요의 게스트 설정에서 명부에 게스트를 올리고 로그인을 열어 주세요."
             numbered={false}
             standardColumns={false}
             selectable={false}
@@ -399,16 +448,6 @@ export function CollectionMonitorTab({
           onClose={() => setOpenResponseId(null)}
         />
       )}
-    </div>
-  )
-}
-
-/** 요약 한 칸. 크기로 위계를 만들지 않고 라벨·값의 색 위계를 그대로 쓴다. */
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0 rounded-radius-md bg-gray-25 px-3 py-2">
-      <dt className={cardText.label}>{label}</dt>
-      <dd className={`${cardText.value} tabular-nums`}>{value}</dd>
     </div>
   )
 }

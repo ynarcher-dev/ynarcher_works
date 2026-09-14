@@ -5,24 +5,24 @@
       "supabase/security/acl-inventory.json",
       "supabase/security/data-access-scan.json"
     ],
-    "source_cutoff": "20260913160000_guest_accounts_list_facets.sql",
-    "migrations_sha256": "ed458e9066f141ce951152cec2d30fa0973e50688be5d19fecd6aada26308d99",
+    "source_cutoff": "20260914230000_guest_independent_account_cleanup.sql",
+    "migrations_sha256": "15b59f9fc945db26767b2e1a718bd98af14fca7929ad7b7df66c494bbd2ae288",
     "caveat": "기계적 결합입니다. 분류·결정은 supabase/security/acl-decisions.json이 갖습니다."
   },
   "counts": {
-    "tables": 159,
+    "tables": 164,
     "rls_disabled": 0,
-    "client_touched": 78,
-    "edge_service_role_touched": 20,
+    "client_touched": 82,
+    "edge_service_role_touched": 18,
     "edge_caller_touched": 8,
-    "edge_unknown_touched": 2,
+    "edge_unknown_touched": 3,
     "untouched_by_source": 53,
-    "with_policy_no_acl_gap": 66,
+    "with_policy_no_acl_gap": 70,
     "with_acl_no_policy_gap": 0,
     "anon_non_row_residue": 0,
     "authenticated_non_row_residue": 0,
-    "service_role_non_row_residue": 159,
-    "service_role_without_any_row_priv": 130
+    "service_role_non_row_residue": 158,
+    "service_role_without_any_row_priv": 136
   },
   "tables": [
     {
@@ -844,8 +844,8 @@
         "INSERT",
         "SELECT"
       ],
-      "direct_sites": 9,
-      "literal_sites": 9,
+      "direct_sites": 10,
+      "literal_sites": 10,
       "gap_policy_no_acl": [
         "INSERT"
       ],
@@ -1404,8 +1404,8 @@
       "edge_service_role_ops": [],
       "edge_caller_ops": [],
       "edge_unknown_ops": [],
-      "direct_sites": 4,
-      "literal_sites": 4,
+      "direct_sites": 5,
+      "literal_sites": 6,
       "gap_policy_no_acl": [],
       "gap_acl_no_policy": [],
       "non_row_residue": {
@@ -1454,7 +1454,7 @@
       "edge_service_role_ops": [],
       "edge_caller_ops": [],
       "edge_unknown_ops": [],
-      "direct_sites": 10,
+      "direct_sites": 11,
       "literal_sites": 11,
       "gap_policy_no_acl": [],
       "gap_acl_no_policy": [],
@@ -1895,8 +1895,8 @@
       "edge_service_role_ops": [],
       "edge_caller_ops": [],
       "edge_unknown_ops": [],
-      "direct_sites": 3,
-      "literal_sites": 4,
+      "direct_sites": 2,
+      "literal_sites": 3,
       "gap_policy_no_acl": [],
       "gap_acl_no_policy": [],
       "non_row_residue": {
@@ -1945,8 +1945,8 @@
       "edge_service_role_ops": [],
       "edge_caller_ops": [],
       "edge_unknown_ops": [],
-      "direct_sites": 5,
-      "literal_sites": 5,
+      "direct_sites": 6,
+      "literal_sites": 6,
       "gap_policy_no_acl": [],
       "gap_acl_no_policy": [],
       "non_row_residue": {
@@ -1977,6 +1977,7 @@
         "anon": [],
         "authenticated": [
           "INSERT",
+          "SELECT",
           "UPDATE"
         ],
         "service_role": [
@@ -1995,9 +1996,7 @@
       "edge_unknown_ops": [],
       "direct_sites": 1,
       "literal_sites": 1,
-      "gap_policy_no_acl": [
-        "SELECT"
-      ],
+      "gap_policy_no_acl": [],
       "gap_acl_no_policy": [],
       "non_row_residue": {
         "anon": [],
@@ -2025,7 +2024,8 @@
       "current": {
         "anon": [],
         "authenticated": [
-          "INSERT"
+          "INSERT",
+          "SELECT"
         ],
         "service_role": [
           "MAINTAIN",
@@ -2034,17 +2034,13 @@
           "TRUNCATE"
         ]
       },
-      "client_ops": [
-        "INSERT"
-      ],
+      "client_ops": [],
       "edge_service_role_ops": [],
       "edge_caller_ops": [],
       "edge_unknown_ops": [],
-      "direct_sites": 1,
-      "literal_sites": 2,
-      "gap_policy_no_acl": [
-        "SELECT"
-      ],
+      "direct_sites": 0,
+      "literal_sites": 1,
+      "gap_policy_no_acl": [],
       "gap_acl_no_policy": [],
       "non_row_residue": {
         "anon": [],
@@ -2164,7 +2160,7 @@
       "table": "attachments",
       "rls_enabled": true,
       "rls_forced": false,
-      "policy_count": 7,
+      "policy_count": 8,
       "policy_commands": [
         "INSERT",
         "SELECT",
@@ -2205,8 +2201,8 @@
       "edge_unknown_ops": [
         "SELECT"
       ],
-      "direct_sites": 20,
-      "literal_sites": 33,
+      "direct_sites": 23,
+      "literal_sites": 40,
       "gap_policy_no_acl": [],
       "gap_acl_no_policy": [],
       "non_row_residue": {
@@ -3363,6 +3359,242 @@
       }
     },
     {
+      "table": "file_collection_assignments",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policy_count": 4,
+      "policy_commands": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "policy_roles": [
+        "PUBLIC"
+      ],
+      "current": {
+        "anon": [],
+        "authenticated": [
+          "SELECT"
+        ],
+        "service_role": []
+      },
+      "client_ops": [
+        "SELECT"
+      ],
+      "edge_service_role_ops": [],
+      "edge_caller_ops": [],
+      "edge_unknown_ops": [],
+      "direct_sites": 2,
+      "literal_sites": 2,
+      "gap_policy_no_acl": [
+        "INSERT",
+        "UPDATE"
+      ],
+      "gap_acl_no_policy": [],
+      "non_row_residue": {
+        "anon": [],
+        "authenticated": [],
+        "service_role": []
+      }
+    },
+    {
+      "table": "file_collection_comments",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policy_count": 4,
+      "policy_commands": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "policy_roles": [
+        "PUBLIC"
+      ],
+      "current": {
+        "anon": [],
+        "authenticated": [
+          "SELECT"
+        ],
+        "service_role": []
+      },
+      "client_ops": [
+        "SELECT"
+      ],
+      "edge_service_role_ops": [],
+      "edge_caller_ops": [],
+      "edge_unknown_ops": [],
+      "direct_sites": 2,
+      "literal_sites": 2,
+      "gap_policy_no_acl": [
+        "INSERT",
+        "UPDATE"
+      ],
+      "gap_acl_no_policy": [],
+      "non_row_residue": {
+        "anon": [],
+        "authenticated": [],
+        "service_role": []
+      }
+    },
+    {
+      "table": "file_collection_files",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policy_count": 4,
+      "policy_commands": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "policy_roles": [
+        "PUBLIC"
+      ],
+      "current": {
+        "anon": [],
+        "authenticated": [
+          "SELECT"
+        ],
+        "service_role": []
+      },
+      "client_ops": [
+        "SELECT"
+      ],
+      "edge_service_role_ops": [],
+      "edge_caller_ops": [],
+      "edge_unknown_ops": [
+        "SELECT"
+      ],
+      "direct_sites": 3,
+      "literal_sites": 5,
+      "gap_policy_no_acl": [
+        "INSERT",
+        "UPDATE"
+      ],
+      "gap_acl_no_policy": [],
+      "non_row_residue": {
+        "anon": [],
+        "authenticated": [],
+        "service_role": []
+      }
+    },
+    {
+      "table": "file_collection_nodes",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policy_count": 4,
+      "policy_commands": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "policy_roles": [
+        "PUBLIC"
+      ],
+      "current": {
+        "anon": [],
+        "authenticated": [
+          "SELECT"
+        ],
+        "service_role": []
+      },
+      "client_ops": [
+        "SELECT"
+      ],
+      "edge_service_role_ops": [],
+      "edge_caller_ops": [],
+      "edge_unknown_ops": [],
+      "direct_sites": 2,
+      "literal_sites": 2,
+      "gap_policy_no_acl": [
+        "INSERT",
+        "UPDATE"
+      ],
+      "gap_acl_no_policy": [],
+      "non_row_residue": {
+        "anon": [],
+        "authenticated": [],
+        "service_role": []
+      }
+    },
+    {
+      "table": "file_collection_responses",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policy_count": 4,
+      "policy_commands": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "policy_roles": [
+        "PUBLIC"
+      ],
+      "current": {
+        "anon": [],
+        "authenticated": [
+          "SELECT"
+        ],
+        "service_role": []
+      },
+      "client_ops": [
+        "SELECT"
+      ],
+      "edge_service_role_ops": [],
+      "edge_caller_ops": [],
+      "edge_unknown_ops": [],
+      "direct_sites": 2,
+      "literal_sites": 2,
+      "gap_policy_no_acl": [
+        "INSERT",
+        "UPDATE"
+      ],
+      "gap_acl_no_policy": [],
+      "non_row_residue": {
+        "anon": [],
+        "authenticated": [],
+        "service_role": []
+      }
+    },
+    {
+      "table": "file_collections",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policy_count": 4,
+      "policy_commands": [
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "policy_roles": [
+        "PUBLIC"
+      ],
+      "current": {
+        "anon": [],
+        "authenticated": [
+          "SELECT"
+        ],
+        "service_role": []
+      },
+      "client_ops": [
+        "SELECT"
+      ],
+      "edge_service_role_ops": [],
+      "edge_caller_ops": [],
+      "edge_unknown_ops": [],
+      "direct_sites": 2,
+      "literal_sites": 2,
+      "gap_policy_no_acl": [
+        "INSERT",
+        "UPDATE"
+      ],
+      "gap_acl_no_policy": [],
+      "non_row_residue": {
+        "anon": [],
+        "authenticated": [],
+        "service_role": []
+      }
+    },
+    {
       "table": "fund_lps",
       "rls_enabled": true,
       "rls_forced": false,
@@ -3607,51 +3839,6 @@
       }
     },
     {
-      "table": "guest_identities",
-      "rls_enabled": true,
-      "rls_forced": false,
-      "policy_count": 1,
-      "policy_commands": [
-        "SELECT"
-      ],
-      "policy_roles": [
-        "PUBLIC"
-      ],
-      "current": {
-        "anon": [],
-        "authenticated": [
-          "SELECT"
-        ],
-        "service_role": [
-          "MAINTAIN",
-          "REFERENCES",
-          "SELECT",
-          "TRIGGER",
-          "TRUNCATE"
-        ]
-      },
-      "client_ops": [
-        "SELECT"
-      ],
-      "edge_service_role_ops": [],
-      "edge_caller_ops": [],
-      "edge_unknown_ops": [],
-      "direct_sites": 2,
-      "literal_sites": 3,
-      "gap_policy_no_acl": [],
-      "gap_acl_no_policy": [],
-      "non_row_residue": {
-        "anon": [],
-        "authenticated": [],
-        "service_role": [
-          "MAINTAIN",
-          "REFERENCES",
-          "TRIGGER",
-          "TRUNCATE"
-        ]
-      }
-    },
-    {
       "table": "guest_invitations",
       "rls_enabled": true,
       "rls_forced": false,
@@ -3689,8 +3876,8 @@
       ],
       "edge_caller_ops": [],
       "edge_unknown_ops": [],
-      "direct_sites": 3,
-      "literal_sites": 3,
+      "direct_sites": 2,
+      "literal_sites": 2,
       "gap_policy_no_acl": [],
       "gap_acl_no_policy": [],
       "non_row_residue": {
@@ -4643,7 +4830,7 @@
       "edge_caller_ops": [],
       "edge_unknown_ops": [],
       "direct_sites": 0,
-      "literal_sites": 13,
+      "literal_sites": 11,
       "gap_policy_no_acl": [],
       "gap_acl_no_policy": [],
       "non_row_residue": {
@@ -5100,7 +5287,7 @@
       ],
       "edge_unknown_ops": [],
       "direct_sites": 2,
-      "literal_sites": 19,
+      "literal_sites": 16,
       "gap_policy_no_acl": [],
       "gap_acl_no_policy": [],
       "non_row_residue": {
@@ -5624,13 +5811,11 @@
       "client_ops": [
         "SELECT"
       ],
-      "edge_service_role_ops": [
-        "SELECT"
-      ],
+      "edge_service_role_ops": [],
       "edge_caller_ops": [],
       "edge_unknown_ops": [],
-      "direct_sites": 3,
-      "literal_sites": 61,
+      "direct_sites": 2,
+      "literal_sites": 53,
       "gap_policy_no_acl": [],
       "gap_acl_no_policy": [],
       "non_row_residue": {
@@ -6269,7 +6454,9 @@
       ],
       "current": {
         "anon": [],
-        "authenticated": [],
+        "authenticated": [
+          "SELECT"
+        ],
         "service_role": [
           "MAINTAIN",
           "REFERENCES",
@@ -6286,7 +6473,6 @@
       "gap_policy_no_acl": [
         "DELETE",
         "INSERT",
-        "SELECT",
         "UPDATE"
       ],
       "gap_acl_no_policy": [],
@@ -7196,15 +7382,13 @@
       "client_ops": [
         "SELECT"
       ],
-      "edge_service_role_ops": [
-        "SELECT"
-      ],
+      "edge_service_role_ops": [],
       "edge_caller_ops": [
         "SELECT"
       ],
       "edge_unknown_ops": [],
-      "direct_sites": 10,
-      "literal_sites": 63,
+      "direct_sites": 9,
+      "literal_sites": 56,
       "gap_policy_no_acl": [],
       "gap_acl_no_policy": [],
       "non_row_residue": {
@@ -7494,13 +7678,12 @@
       "edge_service_role_ops": [
         "DELETE",
         "INSERT",
-        "SELECT",
-        "UPDATE"
+        "SELECT"
       ],
       "edge_caller_ops": [],
       "edge_unknown_ops": [],
       "direct_sites": 27,
-      "literal_sites": 33,
+      "literal_sites": 31,
       "gap_policy_no_acl": [
         "INSERT"
       ],

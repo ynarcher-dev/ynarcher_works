@@ -1,5 +1,4 @@
 import { cardText, cn } from '@ynarcher/ui'
-import { useAuthStore } from '@/auth/authStore'
 import { useTodayBirthdays } from '@/features/hub/hooks'
 
 /**
@@ -17,27 +16,26 @@ import { useTodayBirthdays } from '@/features/hub/hooks'
  * 인사 원장의 복제본이 캘린더에 생긴다.
  */
 export function BirthdayCard() {
-  const myId = useAuthStore((s) => s.user?.id)
   const { data } = useTodayBirthdays()
   const people = data ?? []
   if (people.length === 0) return null
 
-  const names = people.map((p) => p.user_name).join(' · ')
-  // 본인 혼자일 때만 둘째 줄을 바꾼다 — 자기 자신에게 축하를 전하라고 말할 수는 없다.
-  // 본인 외에 다른 생일자가 함께 있으면 전할 사람이 있으므로 문구를 그대로 둔다.
-  const onlyMe = people.length === 1 && people[0]?.user_id === myId
-
   return (
-    <section className="mb-3 shrink-0 rounded-radius-sm bg-summary-amber-surface px-3 py-2.5">
-      <p className={cn('flex items-start gap-1.5 font-semibold text-summary-amber-value', cardText.value)}>
-        <span aria-hidden>🎂</span>
-        <span>오늘은 {names}님의 생일입니다</span>
-      </p>
-      <p className={cn('mt-0.5 pl-[1.6rem] text-summary-amber-chip', cardText.meta)}>
-        {onlyMe
-          ? '생일 축하드립니다! 오늘 하루 행복하시길 바랍니다.'
-          : '따뜻한 축하 한마디 전해 주세요'}
-      </p>
-    </section>
+    <ul className="mb-3 shrink-0 space-y-2" aria-label="오늘의 생일자">
+      {people.map((person) => (
+        <li
+          key={person.user_id}
+          className="rounded-radius-sm border border-info-border bg-info-subtle/60 px-3 py-2.5"
+        >
+          <p className={cn('flex items-start gap-1.5 font-semibold text-info', cardText.value)}>
+            <span aria-hidden>🎂</span>
+            <span>오늘은 {person.user_name}님의 생일이에요!</span>
+          </p>
+          <p className={cn('mt-0.5 pl-[1.6rem] text-gray-700', cardText.meta)}>
+            함께 축하의 마음을 전해보세요 🎉
+          </p>
+        </li>
+      ))}
+    </ul>
   )
 }

@@ -12,7 +12,7 @@ import { RICH_BODY_CLASS, sanitizeRichText } from '@/lib/richText'
 /**
  * 소개 화면 — 로그인 직후 첫 화면. 세 덩어리를 위에서 아래로 세운다(2026-09-13 개편).
  *
- *   1. **지금 어디에 들어와 있는가**(요약) — 이름·종류·자격·상태·기간처럼 이미 세션과
+ *   1. **지금 어디에 들어와 있는가**(요약) — 이름·종류·상태·기간처럼 이미 세션과
  *      `guest-auth-refresh`가 답하고 있던 사실들. 종전에는 이 화면이 소개문만 그려서, 참여자가
  *      자기 맥락을 확인하려면 마이페이지까지 들어가야 했다.
  *   2. **소개문**과 3. **첨부 자료** — WORKS 상세의 개요 탭과 같은 2:1 분할이며 편집만 없다.
@@ -48,7 +48,7 @@ export function OverviewPage() {
  *
  * 값의 출처는 세션(스토어)과 `guest-auth-refresh` 둘이며 마이페이지와 **같은 질의**를 쓴다 —
  * 두 화면이 같은 사실을 각자 받으면 서로 다른 시점의 값을 그릴 수 있다. 응답이 아직 없거나
- * 실패해도 세션이 아는 것(이름·종류·자격)은 그대로 세운다: 화면이 통째로 비면 참여자는
+ * 실패해도 세션이 아는 것(이름·종류)은 그대로 세운다: 화면이 통째로 비면 참여자는
  * '내가 어디에 있는지'를 잃는다.
  */
 function ContextSummaryCard() {
@@ -56,8 +56,7 @@ function ContextSummaryCard() {
   const { data: me, isPending, isError } = useGuestMe()
   if (!program) return null
 
-  // 자격은 갱신 응답이 있으면 그쪽이 최신이다(전환 직후 스토어보다 먼저 도착할 수 있다).
-  const tags = contextTags(program.entityKey, me?.participation.persona ?? program.persona)
+  const tags = contextTags(program.entityKey)
   const status = me?.program.status
   const period =
     me && (me.program.start_date || me.program.end_date)
@@ -67,11 +66,11 @@ function ContextSummaryCard() {
   return (
     // 카드의 제목은 **지금 들어와 있는 곳의 이름**이다. 그 위에 '참여 중인 프로젝트' 같은 줄을
     // 한 단 더 세우면 카드 제목(16px)보다 큰 글자가 카드 안에 생겨 위계가 뒤집힌다 —
-    // 무엇에 대한 카드인지는 바로 아래 중립 태그(종류·자격)가 답한다.
+    // 무엇에 대한 카드인지는 바로 아래 중립 종류 태그가 답한다.
     <Card
       title={program.title}
       actions={
-        // 색이 붙는 칸은 여기 하나다 — 상태는 신호이고, 종류·자격은 분류라 중립으로 선다.
+        // 색이 붙는 칸은 여기 하나다 — 상태는 신호이고, 종류는 분류라 중립으로 선다.
         // 라벨 표에 있는 운영 상태만 그린다(내부 상태 코드를 원문으로 흘리지 않는다).
         status && PROGRAM_STATUS_LABEL[status] ? (
           <Badge tone={PROGRAM_STATUS_TONE[status] ?? 'neutral'}>
@@ -97,7 +96,7 @@ function ContextSummaryCard() {
             {me.program.host_organization !== undefined && (
               <InfoField label="주관기관" value={me.program.host_organization} />
             )}
-            {me.company && <InfoField label="소속 기업" value={me.company.name} />}
+            <InfoField label="소속" value={me.user.affiliation} />
             <InfoField
               label="참여 시작일"
               value={me.participation.joined_at ? formatDate(me.participation.joined_at) : null}

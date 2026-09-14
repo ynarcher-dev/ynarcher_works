@@ -1,7 +1,8 @@
-import { Button, CardShell, PageHeader, PanelCard, Spinner } from '@ynarcher/ui'
+import { Button, CardHeading, CardShell, PageHeader, Spinner } from '@ynarcher/ui'
 import dayjs from 'dayjs'
 import { Plus } from 'lucide-react'
 import { DateNav } from '@/components/DateNav'
+import { BirthdayCard } from '@/features/hub/BirthdayCard'
 import { DayAgenda } from '@/features/hub/DayAgenda'
 import { EventEditorModal } from '@/features/hub/EventEditorModal'
 import { WEEKDAYS } from '@/features/hub/calendarGrid'
@@ -70,14 +71,21 @@ export function CompanyCalendarWorkspace() {
               키우고**, 달력 칸은 뷰포트로 고정돼 있으니 카드 아래에 빈자리만 생기고 페이지에는
               스크롤이 붙는다. 띄워 두면 줄 높이는 언제나 좌측 카드가 정하고 이 칸은 거기에 맞춰
               잘린 뒤 안에서 스크롤한다 — '좌측과 같은 높이'가 규칙이 아니라 구조가 된다. */}
-          <PanelCard
-            className="absolute inset-0 flex flex-col"
-            bodyClassName="min-h-0 flex-1 overflow-y-auto"
-            title={`${selected.format('M월 D일')} (${WEEKDAYS[selected.day()]})`}
-            count={view.selectedEvents.length}
-          >
-            {view.isLoading ? <Spinner /> : <DayAgenda events={view.selectedEvents} onEdit={view.openEdit} />}
-          </PanelCard>
+          <CardShell className="absolute inset-0 flex flex-col">
+            <BirthdayCard />
+            <div className="mb-3 flex shrink-0 items-center justify-between gap-2">
+              <CardHeading count={view.selectedEvents.length}>
+                {selected.format('M월 D일')} ({WEEKDAYS[selected.day()]})
+              </CardHeading>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              {view.isLoading ? (
+                <Spinner />
+              ) : (
+                <DayAgenda events={view.selectedEvents} onEdit={view.openEdit} />
+              )}
+            </div>
+          </CardShell>
         </aside>
       </div>
 

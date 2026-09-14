@@ -4,15 +4,17 @@ import {
   useGuestStore,
   type GuestContextChoice,
   type GuestEntityKey,
-  type GuestPersona,
   type GuestProgram,
   type GuestUser,
 } from '@/auth/guestStore'
 
 export interface GuestCredentials {
-  /** ID = 원장에 등록된 이메일. */
+  /** ID = GUEST 계정에 등록된 이메일. */
   email: string
-  /** 비밀번호. 계정에 아직 없으면 원장의 연락처(숫자만)가 초기 비밀번호다. */
+  /**
+   * 비밀번호. 본인이 아직 정하지 않은 계정은 담당자가 전달한 **고정 개시 비밀번호**로
+   * 들어오며, 그때는 세션이 아니라 설정 티켓만 돌아온다(`kind: 'password'`).
+   */
   password: string
 }
 
@@ -30,14 +32,20 @@ function jwtExp(token: string): number {
 
 interface SessionResponse {
   accessToken: string
-  user: { id: string; name: string; user_type: string }
+  user: {
+    id: string
+    name: string
+    user_type: string
+    email: string | null
+    affiliation: string | null
+  }
   context?: {
     participant_id: string
     program_id: string
     entity_key: string
     code: string | null
     title: string
-    persona: string | null
+    access_ends_at: string | null
   } | null
 }
 
@@ -63,9 +71,15 @@ export type GuestLoginResult =
   | { kind: 'choose'; selectTicket: string; choices: GuestContextChoice[] }
   | { kind: 'none'; message: string }
 
-/** guest-auth-refresh가 돌려주는 원장 기준의 현재 값. 마이페이지의 데이터 원본이기도 하다. */
+/** guest-auth-refresh가 돌려주는 계정 프로필과 현재 참여. 마이페이지의 데이터 원본이기도 하다. */
 export interface GuestMe {
-  user: { id: string; name: string; user_type: string; email: string | null }
+  user: {
+    id: string
+    name: string
+    user_type: string
+    email: string | null
+    affiliation: string | null
+  }
   program: {
     id: string
     title: string
@@ -77,13 +91,11 @@ export interface GuestMe {
     /** 조합에는 주관 기관이 없다 — 그 원장에서는 이 칸 자체가 응답에 서지 않는다. */
     host_organization?: string | null
     /** 이 맥락이 무엇인가(사업/조합). 사이드바·화면 이름이 이 값으로 갈린다. */
-    entity_key?: GuestEntityKey | null
+    entity_key: GuestEntityKey
   }
-  /** 이 맥락의 자격 — startups(참여 기업) | networks(참여 전문가). 2026-09-05 역할 배열을 대체한다. */
-  participation: { persona: GuestPersona | null; joined_at: string | null }
-  company: { name: string } | null
-  currentParticipantId?: string | null
-  contexts?: GuestContextChoice[]
+  participation: { joined_at: string | null }
+  currentParticipantId: string
+  contexts: GuestContextChoice[]
 }
 
 function applySession(data: SessionResponse): void {
@@ -94,6 +106,7 @@ function applySession(data: SessionResponse): void {
       id: data.user.id,
       name: data.user.name,
       role: data.user.user_type,
+      affiliation: data.user.affiliation,
     },
     ctx
       ? {
@@ -102,7 +115,6 @@ function applySession(data: SessionResponse): void {
           code: ctx.code,
           entityKey: (ctx.entity_key as GuestEntityKey) ?? null,
           participantId: ctx.participant_id,
-          persona: (ctx.persona as GuestPersona | null) ?? null,
         }
       : null,
   )
@@ -170,14 +182,31 @@ export const guestAuth = {
     try {
       const { accessToken, user, program } = JSON.parse(raw) as {
         accessToken: string
-        user: GuestUser
-        program?: GuestProgram | null
+        user: GuestUser & { affiliation?: string | null }
+        program?: (GuestProgram & { persona?: unknown }) | null
       }
       if (jwtExp(accessToken) * 1000 < Date.now()) {
         useGuestStore.getState().reset()
         return
       }
-      useGuestStore.getState().setSession(accessToken, user, program ?? null)
+      // 저장된 JSON을 타입 단언만 하고 되넣으면 폐기된 persona 같은 필드가 계속 살아남는다.
+      // 현재 계약의 허용 필드만 골라 구 세션을 한 번에 정규화한다.
+      const restoredUser: GuestUser = {
+        id: user.id,
+        name: user.name,
+        role: user.role,
+        affiliation: user.affiliation ?? null,
+      }
+      const restoredProgram: GuestProgram | null = program
+        ? {
+            id: program.id,
+            title: program.title,
+            code: program.code,
+            entityKey: program.entityKey ?? null,
+            participantId: program.participantId ?? null,
+          }
+        : null
+      useGuestStore.getState().setSession(accessToken, restoredUser, restoredProgram)
     } catch {
       useGuestStore.getState().reset()
     }
@@ -239,10 +268,10 @@ export const guestAuth = {
   },
 
   /**
-   * 세션 새로고침 — 원장의 현재 값(이름·사업 정보)과 전환기 목록을 되받아 저장한다.
+   * 세션 새로고침 — 계정 프로필·현재 사업 정보와 전환기 목록을 되받아 저장한다.
    *
-   * 이름은 로그인 시점의 복사본이 localStorage에 남는 구조라, WORKS에서 원장을 고쳐도
-   * 이 호출 없이는 게스트 화면이 영영 옛 이름을 보여준다. 앱 구동과 전환기·마이페이지가
+   * 이름·소속은 로그인 시점의 복사본이 localStorage에 남는 구조라, WORKS에서 계정을 고쳐도
+   * 이 호출 없이는 게스트 화면이 옛 프로필을 보여준다. 앱 구동과 전환기·마이페이지가
    * 같은 질의 키(`['guest','me']`)로 부르므로 한 화면에 여러 번 떠도 왕복은 한 번이다.
    * 401은 '접근이 닫혔다'는 뜻이므로 그 자리에서 로그아웃한다(즉시 차단 규칙).
    *
@@ -268,22 +297,21 @@ export const guestAuth = {
     if (stale) return data
     useGuestStore.getState().setSession(
       token,
-      { id: data.user.id, name: data.user.name, role: data.user.user_type },
+      {
+        id: data.user.id,
+        name: data.user.name,
+        role: data.user.user_type,
+        affiliation: data.user.affiliation,
+      },
       {
         id: data.program.id,
         title: data.program.title,
         code: data.program.code,
         entityKey: data.program.entity_key ?? null,
         participantId: data.currentParticipantId ?? null,
-        // 자격(참여 기업/참여 전문가)은 세션에 실려 들어왔다가 이 갱신에서 조용히 지워지고
-        // 있었다 — 저장 값에 칸이 없으니 새로고침 한 번으로 사이드바의 자격 줄이 사라지고,
-        // 같은 사업에 두 자격으로 참여한 사람은 어느 쪽으로 들어와 있는지 알 수 없게 된다.
-        // 서버가 이 맥락의 자격을 함께 보내므로(participation) 그 값을 그대로 잇는다.
-        persona: data.participation?.persona ?? null,
       },
     )
-    // 목록이 응답에 없으면 '없다'가 아니라 '모른다'이므로 가지고 있던 목록을 지우지 않는다.
-    if (Array.isArray(data.contexts)) useGuestStore.getState().setContexts(data.contexts)
+    useGuestStore.getState().setContexts(data.contexts)
     return data
   },
 

@@ -78,15 +78,21 @@ const xlsxFile = (buf: ArrayBuffer, name = '계정.xlsx') =>
 describe('readGuestSheet — CSV', () => {
   it('헤더와 데이터 줄을 격자로 돌려준다', async () => {
     const read = await readGuestSheet(
-      csvFile('이름,이메일,연락처\n홍길동,hong@example.com,010-1234-5678'),
+      csvFile('이름,이메일,소속,연락처\n홍길동,hong@example.com,와이앤아처,010-1234-5678'),
     )
-    expect(read.grid[0]).toEqual(['이름', '이메일', '연락처'])
+    expect(read.grid[0]).toEqual(['이름', '이메일', '소속', '연락처'])
     expect(parseGuestGrid(read.grid).rows).toHaveLength(1)
   })
 
   it('쉼표가 든 값은 따옴표 안에서 한 칸으로 읽는다', async () => {
-    const read = await readGuestSheet(csvFile('이름,이메일,연락처\n"홍, 길동",a@x.com,01011112222'))
-    expect(parseGuestGrid(read.grid).rows[0]).toMatchObject({ name: '홍, 길동', email: 'a@x.com' })
+    const read = await readGuestSheet(
+      csvFile('이름,이메일,소속,연락처\n"홍, 길동",a@x.com,"와이앤아처, 서울",01011112222'),
+    )
+    expect(parseGuestGrid(read.grid).rows[0]).toMatchObject({
+      name: '홍, 길동',
+      email: 'a@x.com',
+      affiliation: '와이앤아처, 서울',
+    })
   })
 
   it('빈 파일은 읽을 내용이 없다고 던진다 — 0줄을 조용히 돌려주지 않는다', async () => {
@@ -100,12 +106,13 @@ describe('readGuestSheet — XLSX', () => {
   const rels =
     '<Relationships><Relationship Id="rId1" Target="worksheets/sheet1.xml"/></Relationships>'
   const shared =
-    '<sst><si><t>이름</t></si><si><t>이메일</t></si><si><t>연락처</t></si>' +
-    '<si><t>홍길동</t></si><si><t>hong@example.com</t></si><si><t>010-1234-5678</t></si></sst>'
+    '<sst><si><t>이름</t></si><si><t>이메일</t></si><si><t>소속</t></si><si><t>연락처</t></si>' +
+    '<si><t>홍길동</t></si><si><t>hong@example.com</t></si><si><t>와이앤아처</t></si>' +
+    '<si><t>010-1234-5678</t></si></sst>'
   const sheet1 =
     '<worksheet><sheetData>' +
-    '<row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c><c r="C1" t="s"><v>2</v></c></row>' +
-    '<row r="2"><c r="A2" t="s"><v>3</v></c><c r="B2" t="s"><v>4</v></c><c r="C2" t="s"><v>5</v></c></row>' +
+    '<row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c><c r="C1" t="s"><v>2</v></c><c r="D1" t="s"><v>3</v></c></row>' +
+    '<row r="2"><c r="A2" t="s"><v>4</v></c><c r="B2" t="s"><v>5</v></c><c r="C2" t="s"><v>6</v></c><c r="D2" t="s"><v>7</v></c></row>' +
     '</sheetData></worksheet>'
 
   const workbook = () =>
@@ -119,12 +126,15 @@ describe('readGuestSheet — XLSX', () => {
   it('첫 시트의 표를 격자로 읽고 시트 이름을 함께 돌려준다', async () => {
     const read = await readGuestSheet(xlsxFile(workbook()))
     expect(read.sheetName).toBe('명단')
-    expect(read.grid[0]).toEqual(['이름', '이메일', '연락처'])
+    expect(read.grid[0]).toEqual(['이름', '이메일', '소속', '연락처'])
+    // 격자에는 옛 템플릿의 연락처 열이 그대로 들어 있지만, 줄로 옮길 때 버려진다
+    // (계정 등록이 받는 칸은 이름·이메일·소속 셋이다).
     expect(parseGuestGrid(read.grid).rows[0]).toMatchObject({
       name: '홍길동',
       email: 'hong@example.com',
-      phone: '010-1234-5678',
+      affiliation: '와이앤아처',
     })
+    expect(parseGuestGrid(read.grid).rows[0]).not.toHaveProperty('phone')
   })
 
   it('확장자만 xlsx인 파일은 열지 못한다고 답한다', async () => {
@@ -162,11 +172,16 @@ describe('readGuestSheet — 자르지 않는다', () => {
     })
   }
 
-  /** 계정 N줄(헤더 포함). 이메일·연락처는 줄마다 다르게 만든다. */
+  /** 계정 N줄(헤더 포함). 이메일은 줄마다 다르게 만든다(중복 판정의 축이다). */
   function roster(count: number): string[][] {
-    const rows: string[][] = [['이름', '이메일', '연락처']]
+    const rows: string[][] = [['이름', '이메일', '소속', '연락처']]
     for (let i = 0; i < count; i++) {
-      rows.push([`사람${i}`, `p${i}@example.com`, `0101${String(i).padStart(7, '0')}`])
+      rows.push([
+        `사람${i}`,
+        `p${i}@example.com`,
+        '와이앤아처',
+        `0101${String(i).padStart(7, '0')}`,
+      ])
     }
     return rows
   }

@@ -161,4 +161,15 @@ describe('템플릿', () => {
     // 사업 코드는 로그인 요소가 아니므로 문안이 코드를 요구하지 않는다(3_9_1 §6).
     expect(TEMPLATES.GUEST_INVITE_NEW.body).not.toContain('{{code}}')
   })
+
+  it('접속 안내는 개시값을 말하지 않는다 — 연락처도, 고정값 자체도 싣지 않는다', () => {
+    // 2026-09-14에 개시값이 연락처에서 고정값으로 바뀌었다. 문구 검사를 남기는 이유는
+    // 이 문안이 **실제로 나가는 글**이라서다 — 정책이 바뀌어도 여기를 고치지 않으면
+    // 받는 사람은 통하지 않는 값을 안내받고, 그 사실을 아무 테스트도 알려 주지 않았다.
+    for (const code of ['GUEST_INVITE_NEW', 'GUEST_INVITE_ADD'] as const) {
+      expect(TEMPLATES[code].body).not.toContain('연락처')
+      // 값 자체를 안내에 싣지 않는다(자격증명의 오프라인 취급, 3_9_1 §6.1).
+      expect(TEMPLATES[code].body).not.toContain('ynarcher')
+    }
+  })
 })

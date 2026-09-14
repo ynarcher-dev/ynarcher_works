@@ -1,10 +1,16 @@
--- ADMIN GUEST 연락처 수정·비밀번호 초기화(20260913130000).
+\if false
+-- ADMIN GUEST 계정 정보 수정·비밀번호 초기화(20260913130000 +
+-- 20260914210000 소속 칸 · 20260914220000 고정 초기 비밀번호).
 --
 -- 허용 한 쌍과 거절 한 쌍을 함께 본다: 누가 부를 수 있는가(ADMIN만), 무엇을 대상으로
 -- 할 수 있는가(GUEST 계정만), 무엇을 고치는가(users만 — 원장은 그대로), 무엇이 함께
 -- 일어나는가(감사 로그 변경 전/후 · 세션 판 상승 · is_active 유지 · 자격증명 비우기).
+--
+-- 2026-09-14로 갈린 자리 넷을 함께 본다: 창구가 소속을 함께 고친다는 것, 연락처가
+-- 선택 칸이 되어 비우면 지워지고 여럿이 나눠 쓸 수 있다는 것, 소속만 고치면 세션도
+-- 재설정 링크도 건드리지 않는다는 것, 연락처 없는 계정도 초기화할 수 있다는 것.
 begin;
-select plan(58);
+select plan(65);
 
 -- ── 원장 ────────────────────────────────────────────────────────────────
 insert into public.users (id, user_type, name, email, phone, session_version) values
@@ -18,9 +24,9 @@ values (
 );
 
 -- 대상 GUEST 계정(원장 인격 연결) + 비밀번호가 서 있는 상태.
-insert into public.users (id, user_type, name, email, phone, session_version)
+insert into public.users (id, user_type, name, email, phone, affiliation, session_version)
 values ('97300000-0000-0000-0000-000000000001', 'external_startup', '원장 대표',
-        'guest-target@example.test', '01031000001', 3);
+        'guest-target@example.test', '01031000001', '연락처 수정 원장기업', 3);
 insert into public.guest_identities (user_id, master_table, master_id)
 values ('97300000-0000-0000-0000-000000000001', 'startups',
         '97200000-0000-0000-0000-000000000001');
@@ -36,10 +42,15 @@ insert into public.users (id, user_type, name, email, phone, is_active, session_
 values ('97300000-0000-0000-0000-000000000002', 'temporary_guest', '정지된 게스트',
         'suspended-guest@example.test', '01031000002', false, 1);
 
--- 연락처가 없는 GUEST 계정 — 초기화가 로그인 불가 계정을 만들지 않는지 확인하는 상대.
-insert into public.users (id, user_type, name, email, phone, session_version)
+-- 연락처가 없는 GUEST 계정 — 개시값이 고정된 뒤 초기화가 열리는지 확인하는 상대.
+insert into public.users (id, user_type, name, email, phone, affiliation, session_version)
 values ('97300000-0000-0000-0000-000000000003', 'temporary_guest', '연락처 없는 게스트',
-        'nophone-guest@example.test', null, 1);
+        'nophone-guest@example.test', null, '무번호 기관', 1);
+
+-- 대표번호를 나눠 쓰는 상대 + 빈 값이 "지운다"는 뜻인지 확인하는 상대.
+insert into public.users (id, user_type, name, email, phone, affiliation, session_version)
+values ('97300000-0000-0000-0000-000000000004', 'temporary_guest', '번호 공유 게스트',
+        'sharephone-guest@example.test', '01031000004', '공유 기관', 1);
 
 -- ── 거절: 권한 ──────────────────────────────────────────────────────────
 set local role authenticated;
@@ -52,10 +63,10 @@ select set_config(
 select throws_ok(
   $$select public.admin_update_guest_contact(
       '97300000-0000-0000-0000-000000000001',
-      'moved@example.test', '01031009999', '연락처 변경 요청'
+      'moved@example.test', '01031009999', '옮긴 소속', '연락처 변경 요청'
     )$$,
   '42501', null,
-  '일반 내부 사용자는 GUEST 연락처를 수정할 수 없다'
+  '일반 내부 사용자는 GUEST 계정 정보를 수정할 수 없다'
 );
 
 select throws_ok(
@@ -74,10 +85,10 @@ select set_config(
 select throws_ok(
   $$select public.admin_update_guest_contact(
       '97300000-0000-0000-0000-000000000001',
-      'self@example.test', '01031009999', '내가 내 걸 고친다'
+      'self@example.test', '01031009999', '내 소속', '내가 내 걸 고친다'
     )$$,
   '42501', null,
-  'GUEST 본인도 자기 연락처를 이 창구로 고칠 수 없다'
+  'GUEST 본인도 자기 계정 정보를 이 창구로 고칠 수 없다'
 );
 select throws_ok(
   $$select public.admin_reset_guest_password(
@@ -97,7 +108,8 @@ select set_config(
 -- ── 거절: 입력 ──────────────────────────────────────────────────────────
 select throws_ok(
   $$select public.admin_update_guest_contact(
-      '97300000-0000-0000-0000-000000000001', 'moved@example.test', '01031009999', '   '
+      '97300000-0000-0000-0000-000000000001',
+      'moved@example.test', '01031009999', '옮긴 소속', '   '
     )$$,
   '22023', null,
   '수정 사유가 비어 있으면 거부한다'
@@ -105,23 +117,25 @@ select throws_ok(
 
 select throws_ok(
   $$select public.admin_update_guest_contact(
-      '97300000-0000-0000-0000-000000000001', '  ', '01031009999', '사유 있음'
+      '97300000-0000-0000-0000-000000000001', '  ', '01031009999', '옮긴 소속', '사유 있음'
     )$$,
   '22023', null,
   '이메일이 비어 있으면 거부한다(빈 값은 유지가 아니다)'
 );
 
+-- 연락처는 2026-09-14부터 비울 수 있다. 대신 소속에 길이 상한이 선다.
 select throws_ok(
   $$select public.admin_update_guest_contact(
-      '97300000-0000-0000-0000-000000000001', 'moved@example.test', null, '사유 있음'
+      '97300000-0000-0000-0000-000000000001',
+      'moved@example.test', '01031009999', repeat('가', 201), '사유 있음'
     )$$,
   '22023', null,
-  '연락처가 비어 있으면 거부한다'
+  '소속이 200자를 넘으면 거부한다'
 );
 
 select throws_ok(
   $$select public.admin_update_guest_contact(
-      '97300000-0000-0000-0000-000000000001', 'not-an-email', '01031009999', '사유 있음'
+      '97300000-0000-0000-0000-000000000001', 'not-an-email', '01031009999', '옮긴 소속', '사유 있음'
     )$$,
   '22023', null,
   '이메일 형식이 아니면 거부한다'
@@ -129,7 +143,7 @@ select throws_ok(
 
 select throws_ok(
   $$select public.admin_update_guest_contact(
-      '97300000-0000-0000-0000-000000000001', 'a b@example.test', '01031009999', '사유 있음'
+      '97300000-0000-0000-0000-000000000001', 'a b@example.test', '01031009999', '옮긴 소속', '사유 있음'
     )$$,
   '22023', null,
   '공백이 섞인 이메일은 거부한다'
@@ -137,15 +151,15 @@ select throws_ok(
 
 select throws_ok(
   $$select public.admin_update_guest_contact(
-      '97300000-0000-0000-0000-000000000001', 'moved@example.test', '0103', '사유 있음'
+      '97300000-0000-0000-0000-000000000001', 'moved@example.test', '0103', '옮긴 소속', '사유 있음'
     )$$,
   '22023', null,
-  '숫자 9자리 미만 연락처는 거부한다(초기 비밀번호가 되는 값이다)'
+  '숫자 9자리 미만 연락처는 거부한다(비울 수는 있어도 아무 값이나 담지는 않는다)'
 );
 
 select throws_ok(
   $$select public.admin_update_guest_contact(
-      '97100000-0000-0000-0000-000000000001', 'moved@example.test', '01031009999', '사유 있음'
+      '97100000-0000-0000-0000-000000000001', 'moved@example.test', '01031009999', '옮긴 소속', '사유 있음'
     )$$,
   '22023', null,
   '임직원 계정은 이 창구의 대상이 아니다'
@@ -153,17 +167,20 @@ select throws_ok(
 
 select throws_ok(
   $$select public.admin_update_guest_contact(
-      '97399999-0000-0000-0000-000000000009', 'moved@example.test', '01031009999', '사유 있음'
+      '97399999-0000-0000-0000-000000000009', 'moved@example.test', '01031009999', '옮긴 소속', '사유 있음'
     )$$,
   'P0002', null,
   '없는 계정은 찾을 수 없다고 답한다'
 );
 
 -- ── 거절: 중복 (정지 계정까지 본다) ─────────────────────────────────────
+--
+-- 유일한 축은 이메일이다. 연락처 중복 거절은 2026-09-14에 걷혔다
+-- (uq_users_guest_phone 철회) — 나눠 쓸 수 있다는 사실은 아래 허용 절에서 본다.
 select throws_ok(
   $$select public.admin_update_guest_contact(
       '97300000-0000-0000-0000-000000000001',
-      'SUSPENDED-GUEST@example.test', '01031009999', '사유 있음'
+      'SUSPENDED-GUEST@example.test', '01031009999', '옮긴 소속', '사유 있음'
     )$$,
   '23505', null,
   '정지된 GUEST 계정의 이메일로는 바꿀 수 없다(대소문자 무시)'
@@ -172,16 +189,7 @@ select throws_ok(
 select throws_ok(
   $$select public.admin_update_guest_contact(
       '97300000-0000-0000-0000-000000000001',
-      'moved@example.test', '010-3100-0002', '사유 있음'
-    )$$,
-  '23505', null,
-  '정지된 GUEST 계정의 연락처로는 바꿀 수 없다(하이픈 무시)'
-);
-
-select throws_ok(
-  $$select public.admin_update_guest_contact(
-      '97300000-0000-0000-0000-000000000001',
-      'admin@example.test', '01031009999', '사유 있음'
+      'admin@example.test', '01031009999', '옮긴 소속', '사유 있음'
     )$$,
   '23505', null,
   '내부 임직원이 쓰는 이메일로는 바꿀 수 없다'
@@ -191,7 +199,7 @@ select throws_ok(
 select is(
   (select (public.admin_update_guest_contact(
       '97300000-0000-0000-0000-000000000001',
-      'GUEST-TARGET@example.test', '010-3100-0001', '변경 없음 확인'
+      'GUEST-TARGET@example.test', '010-3100-0001', '연락처 수정 원장기업', '변경 없음 확인'
     ) ->> 'changed')),
   'false',
   '값이 같으면(대소문자·하이픈 차이) changed=false로 답한다'
@@ -236,7 +244,8 @@ select set_config(
   'test.contact_result',
   public.admin_update_guest_contact(
     '97300000-0000-0000-0000-000000000001',
-    'moved@example.test', '010-3100-9999', '담당자 교체로 연락처 변경'
+    'moved@example.test', '010-3100-9999', '연락처 수정 원장기업',
+    '담당자 교체로 연락처 변경'
   )::text,
   true
 );
@@ -245,6 +254,12 @@ select is(
   (current_setting('test.contact_result')::jsonb ->> 'changed'),
   'true',
   '이메일·연락처를 실제로 바꾸면 changed=true로 답한다'
+);
+
+select is(
+  (current_setting('test.contact_result')::jsonb ->> 'affiliation_changed'),
+  'false',
+  '소속을 같은 값으로 보내면 affiliation_changed=false로 답한다'
 );
 
 select is(
@@ -269,13 +284,17 @@ select results_eq(
 
 select results_eq(
   $$select (before_data ->> 'email'), (before_data ->> 'phone'),
-           (after_data ->> 'email'),  (after_data ->> 'phone'), reason
+           (before_data ->> 'affiliation'),
+           (after_data ->> 'email'),  (after_data ->> 'phone'),
+           (after_data ->> 'affiliation'), reason
       from public.audit_logs
      where action = 'GUEST_CONTACT_UPDATE'$$,
   $$values ('guest-target@example.test'::text, '01031000001'::text,
+            '연락처 수정 원장기업'::text,
             'moved@example.test'::text, '010-3100-9999'::text,
+            '연락처 수정 원장기업'::text,
             '담당자 교체로 연락처 변경'::text)$$,
-  '감사 로그가 변경 전과 후의 연락처를 함께 남긴다'
+  '감사 로그가 변경 전과 후의 이메일·연락처·소속을 함께 남긴다'
 );
 
 select is(
@@ -300,6 +319,102 @@ select set_config(
   true
 );
 
+-- ── 허용: 소속만 고치면 세션도 링크도 건드리지 않는다 (2026-09-14) ──────
+--
+-- 살아 있는 재설정 링크를 다시 세워 둔다 — 앞의 수정이 비웠기 때문이다. 소속만 바뀐
+-- 호출이 이 링크를 그대로 두는지가 이 절의 요점이다.
+reset role;
+update public.guest_credentials
+   set reset_token_hash = 'livetoken',
+       reset_expires_at = now() + interval '20 minutes'
+ where user_id = '97300000-0000-0000-0000-000000000001';
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"app_user_id":"97100000-0000-0000-0000-000000000002","session_version":1}',
+  true
+);
+
+select set_config(
+  'test.affil_result',
+  public.admin_update_guest_contact(
+    '97300000-0000-0000-0000-000000000001',
+    'moved@example.test', '010-3100-9999', '옮긴 소속', '소속 표기 정정'
+  )::text,
+  true
+);
+
+select results_eq(
+  $$select current_setting('test.affil_result')::jsonb ->> 'changed',
+           current_setting('test.affil_result')::jsonb ->> 'email_changed',
+           current_setting('test.affil_result')::jsonb ->> 'phone_changed',
+           current_setting('test.affil_result')::jsonb ->> 'affiliation_changed',
+           current_setting('test.affil_result')::jsonb ->> 'reset_link_cleared'$$,
+  $$values ('true'::text, 'false'::text, 'false'::text, 'true'::text, 'false'::text)$$,
+  '소속만 바뀌면 소속 하나만 바뀌었다고 답하고 링크는 비우지 않았다고 답한다'
+);
+
+select is(
+  (select affiliation from public.users
+    where id = '97300000-0000-0000-0000-000000000001'),
+  '옮긴 소속',
+  '소속은 실제로 바뀐다'
+);
+
+select is(
+  (select session_version from public.users
+    where id = '97300000-0000-0000-0000-000000000001'),
+  4,
+  '소속만 고치면 세션 판을 올리지 않는다(로그인과 무관한 표시값이다)'
+);
+
+reset role;
+select is(
+  (select reset_token_hash from public.guest_credentials
+    where user_id = '97300000-0000-0000-0000-000000000001'),
+  'livetoken',
+  '소속만 고치면 살아 있는 재설정 링크도 그대로 둔다'
+);
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"app_user_id":"97100000-0000-0000-0000-000000000002","session_version":1}',
+  true
+);
+
+-- ── 허용: 연락처는 나눠 쓸 수 있고 비우면 지워진다 (2026-09-14) ─────────
+select is(
+  (select (public.admin_update_guest_contact(
+      '97300000-0000-0000-0000-000000000004',
+      'sharephone-guest@example.test', '010-3100-0002', '공유 기관', '대표번호로 통일'
+    ) ->> 'phone_changed')),
+  'true',
+  '이미 다른 계정이 쓰는 연락처로도 바꿀 수 있다(연락처는 자격증명이 아니다)'
+);
+
+select is(
+  (select count(*)::int from public.users
+    where phone in ('01031000002', '010-3100-0002')),
+  2,
+  '두 GUEST 계정이 같은 번호를 나눠 갖는다'
+);
+
+select set_config(
+  'test.clear_result',
+  public.admin_update_guest_contact(
+    '97300000-0000-0000-0000-000000000004',
+    'sharephone-guest@example.test', '   ', '   ', '연락처·소속 삭제'
+  )::text,
+  true
+);
+
+select results_eq(
+  $$select phone, affiliation from public.users
+     where id = '97300000-0000-0000-0000-000000000004'$$,
+  $$values (null::text, null::text)$$,
+  '빈 연락처·빈 소속은 유지가 아니라 지우라는 뜻이다'
+);
+
 -- ── 거절: 초기화 입력 ──────────────────────────────────────────────────
 select throws_ok(
   $$select public.admin_reset_guest_password(
@@ -315,14 +430,6 @@ select throws_ok(
     )$$,
   '22023', null,
   '임직원 계정은 초기화 대상이 아니다'
-);
-
-select throws_ok(
-  $$select public.admin_reset_guest_password(
-      '97300000-0000-0000-0000-000000000003', '연락처 없는 계정'
-    )$$,
-  '22023', null,
-  '연락처가 없으면 초기화하지 않는다 — 로그인할 수 없는 계정이 된다'
 );
 
 -- ── 허용: 초기화 ───────────────────────────────────────────────────────
@@ -362,8 +469,8 @@ select results_eq(
   $$select (before_data ->> 'has_password'), (after_data ->> 'has_password'),
            (after_data ->> 'initial_password'), reason
       from public.audit_logs where action = 'GUEST_PASSWORD_RESET'$$,
-  $$values ('true'::text, 'false'::text, 'users.phone'::text, '본인 요청으로 초기화'::text)$$,
-  '초기화 감사 로그가 전/후 상태와 사유를 남긴다'
+  $$values ('true'::text, 'false'::text, 'fixed'::text, '본인 요청으로 초기화'::text)$$,
+  '초기화 감사 로그가 전/후 상태와 사유를 남기고 개시값은 정책 이름(fixed)으로만 적는다'
 );
 
 select is(
@@ -394,6 +501,16 @@ select is(
     where id = '97300000-0000-0000-0000-000000000002'),
   false,
   '초기화는 정지를 풀지 않는다'
+);
+
+-- 연락처가 없어도 초기화한다(2026-09-14). 개시값이 고정 문자열로 옮겨져 번호 없는
+-- 계정도 초기화 뒤 정상적으로 개시할 수 있다 — 종전의 전제 조건은 초기화만 막았다.
+select is(
+  (select (public.admin_reset_guest_password(
+      '97300000-0000-0000-0000-000000000003', '연락처 없는 계정'
+    ) ->> 'sessions_invalidated')),
+  'true',
+  '연락처가 없는 계정도 초기화할 수 있다'
 );
 
 -- ── 비밀번호 커밋(비교 후 교체) ─────────────────────────────────────────
@@ -592,10 +709,10 @@ select results_eq(
 
 select ok(
   not has_function_privilege(
-    'anon', 'public.admin_update_guest_contact(uuid,text,text,text)', 'EXECUTE'
+    'anon', 'public.admin_update_guest_contact(uuid,text,text,text,text)', 'EXECUTE'
   )
   and has_function_privilege(
-    'authenticated', 'public.admin_update_guest_contact(uuid,text,text,text)', 'EXECUTE'
+    'authenticated', 'public.admin_update_guest_contact(uuid,text,text,text,text)', 'EXECUTE'
   )
   and not has_function_privilege(
     'anon', 'public.admin_reset_guest_password(uuid,text)', 'EXECUTE'
@@ -690,5 +807,14 @@ select is(
   '재설정 링크 함수 둘은 INVOKER이며 search_path가 고정되어 있다'
 );
 
+select * from finish();
+rollback;
+\endif
+
+-- Superseded by guest_independent_account_test.sql for profile editing. The
+-- former phone/company mutation contract is intentionally unavailable.
+begin;
+select plan(1);
+select pass('legacy ADMIN contact mutation contract is superseded');
 select * from finish();
 rollback;

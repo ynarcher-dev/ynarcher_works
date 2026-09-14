@@ -24,12 +24,10 @@ import {
   type ParticipantRow,
 } from '@/features/program/participantHooks'
 import {
-  countNotified,
   useCloseGuestAccess,
   useOpenGuestAccess,
   useRemoveParticipants,
   useReopenGuestAccess,
-  useSendPasswordReset,
 } from '@/features/program/participantAccessHooks'
 import { isGuestRosterRow } from '@/features/program/guestRoster'
 import { ProgramAccessWindowModal } from '@/features/program/ProgramAccessWindowModal'
@@ -89,12 +87,16 @@ function accessWindowLabel(iso: string | null): string {
  * 이미 있는 계정을 이 사업에 잇는 일이다(`ParticipantAddModal`).
  *
  * **버튼이 서는 자리는 걸리는 범위가 정한다**(2026-09-05 개편). 사업 전체에 걸리는
- * '로그인 가능 기간'은 선택과 무관하므로 툴바에 상시로 서고, 고른 행에 걸리는 것들(열기·재설정
- * 안내·차단·해제)은 고른 뒤에만 선택 줄로 뜬다. 종전에는 넷이 늘 회색으로 서 있었고 켜지는
- * 조건이 저마다 달라(1건만·계정 있는 행만·N건) 왜 못 누르는지를 화면이 답하지 못했다.
+ * '로그인 가능 기간'은 선택과 무관하므로 툴바에 상시로 서고, 고른 행에 걸리는 것들(접근
+ * 허용·차단·해제·빼기)은 고른 뒤에만 선택 줄로 뜬다. 종전에는 넷이 늘 회색으로 서 있었고
+ * 켜지는 조건이 저마다 달라(1건만·계정 있는 행만·N건) 왜 못 누르는지를 화면이 답하지 못했다.
+ *
+ * **비밀번호는 이 화면의 축이 아니다.** 종전 선택 줄에 있던 `비밀번호 재설정 안내`를 걷었다 —
+ * 그 값은 사업이 아니라 **계정**의 것이고, 초기화 창구는 통합 GUEST 계정 관리
+ * (`/guest-accounts` 계정 상세)가 소유한다.
  *
  * **차단과 해제는 두 버튼이지만 한 축이다.** 고른 것에 실제로 걸리는 쪽만 세우고, 섞어
- * 골랐으면 둘 다 서되 각자 자기 몫에만 걸린다. `로그인 열기`와 `차단 해제`는 둘 다 문을
+ * 골랐으면 둘 다 서되 각자 자기 몫에만 걸린다. `접근 허용`과 `차단 해제`는 둘 다 문을
  * 여는 일이지만 갈린다 — 전자는 **다시 초대하며 안내를 보내고**, 후자는 **조용히 되돌린다**
  * (막은 적 있다는 사실을 굳이 알리지 않는 길이 있어야 한다).
  *
@@ -120,7 +122,6 @@ export function ParticipantPool({ host }: { host: GuestHostEntity }) {
   const open = useOpenGuestAccess(host.id)
   const close = useCloseGuestAccess(host.id)
   const reopen = useReopenGuestAccess(host.id)
-  const resetPw = useSendPasswordReset()
   const remove = useRemoveParticipants(host.id)
 
   const rows = useMemo(() => data ?? [], [data])
@@ -155,12 +156,6 @@ export function ParticipantPool({ host }: { host: GuestHostEntity }) {
     [guestRows, selected],
   )
 
-  /** 고른 행 중 계정이 있는 대상의 계정 id — 재설정 안내는 줄이 아니라 계정이 대상이다. */
-  const selectedAccountIds = useMemo(
-    () => [...new Set(selectedRows.filter((r) => r.accountId).map((r) => r.accountId!))],
-    [selectedRows],
-  )
-
   // 차단과 해제는 서로 반대인 한 축이라 대상이 겹치지 않는다. 섞어 골랐을 때 각 버튼이
   // 자기 몫에만 걸리도록 여기서 갈라 둔다 — 고른 전부를 보내면 이미 차단된 행을 다시
   // 차단하고 열려 있는 행의 해제를 시도하게 되어, 결과 건수가 담당자가 고른 수와 어긋난다.
@@ -173,8 +168,7 @@ export function ParticipantPool({ host }: { host: GuestHostEntity }) {
     [selectedRows],
   )
 
-  const busy =
-    open.isPending || close.isPending || reopen.isPending || resetPw.isPending || remove.isPending
+  const busy = open.isPending || close.isPending || reopen.isPending || remove.isPending
 
   const runOpen = () => {
     open.mutate(selected, {
@@ -182,13 +176,22 @@ export function ParticipantPool({ host }: { host: GuestHostEntity }) {
         setSelected([])
         setConfirming(null)
         if (res.failed > 0) {
-          toast.show(`로그인 ${res.opened}건 개방 · 안내 발송 ${res.failed}건 실패`, 'warning')
+          toast.show(
+            `${config.entityNoun} 접근 ${res.opened}건 허용 · 안내 발송 ${res.failed}건 실패`,
+            'warning',
+          )
         } else {
-          toast.show(`로그인 ${res.opened}건을 열고 안내를 보냈습니다.`, 'success')
+          toast.show(
+            `${config.entityNoun} 접근 ${res.opened}건을 허용하고 안내를 보냈습니다.`,
+            'success',
+          )
         }
       },
       onError: (e: unknown) =>
-        toast.show(e instanceof Error ? e.message : '로그인 개방에 실패했습니다.', 'danger'),
+        toast.show(
+          e instanceof Error ? e.message : `${config.entityNoun} 접근 허용에 실패했습니다.`,
+          'danger',
+        ),
     })
   }
 
@@ -220,39 +223,17 @@ export function ParticipantPool({ host }: { host: GuestHostEntity }) {
     })
   }
 
-  /**
-   * 비밀번호 재설정 **안내 발송**. 담당자가 값을 되돌리는 경로는 없다 — 계정 하나가 여러
-   * 사업을 열게 되어, 값을 쥔 사람은 그 게스트의 다른 팀 사업까지 들어갈 수 있다.
-   */
-  const runResetPassword = () => {
-    void Promise.allSettled(selectedAccountIds.map((id) => resetPw.mutateAsync(id))).then(
-      (results) => {
-        setSelected([])
-        setConfirming(null)
-        // 호출이 성공한 것과 안내가 나간 것은 다르다(countNotified 주석 참조).
-        const { sent, failed } = countNotified(results)
-        if (failed > 0) {
-          toast.show(`재설정 안내 ${sent}건 발송 · ${failed}건 실패`, 'warning')
-        } else {
-          toast.show(`재설정 안내 ${sent}건을 본인 연락처로 보냈습니다.`, 'success')
-        }
-      },
-    )
-  }
-
   const confirmHandlers: Record<ParticipantAction, () => void> = {
     open: runOpen,
     block: runClose,
     unblock: runReopen,
-    reset: runResetPassword,
   }
 
-  /** 확인창이 말할 건수 — 액션마다 대상이 다르다(계정 / 차단된 행 / 나머지). */
+  /** 확인창이 말할 건수 — 액션마다 대상이 다르다(고른 행 / 차단된 행 / 나머지). */
   const confirmCount: Record<ParticipantAction, number> = {
     open: selected.length,
     block: openableIds.length,
     unblock: blockedIds.length,
-    reset: selectedAccountIds.length,
   }
 
   if (isLoading) return <Spinner />
@@ -290,10 +271,8 @@ export function ParticipantPool({ host }: { host: GuestHostEntity }) {
           {canOpenDoor && (
             <ParticipantSelectionBar
               count={selected.length}
-              accountCount={selectedAccountIds.length}
               blockedCount={blockedIds.length}
               onOpen={() => setConfirming('open')}
-              onResetPassword={() => setConfirming('reset')}
               onBlock={() => setConfirming('block')}
               onUnblock={() => setConfirming('unblock')}
               onRemove={() => setRemoving(true)}

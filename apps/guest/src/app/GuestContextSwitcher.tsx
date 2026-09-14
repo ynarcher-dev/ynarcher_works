@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Badge, Dropdown } from '@ynarcher/ui'
 import { ChevronDown, RotateCw } from 'lucide-react'
 import { guestAuth } from '@/auth/guestAuthService'
-import { accessEndLabel, contextTags, switcherState } from '@/auth/contextDisplay'
+import { contextTags, programPeriodLabel, switcherState } from '@/auth/contextDisplay'
 import { useGuestStore } from '@/auth/guestStore'
 import { GUEST_HOME_PATH } from '@/config/navigation'
 import { useGuestMe } from '@/features/meHooks'
@@ -74,7 +74,7 @@ export function GuestContextSwitcher() {
   if (!program) return null
 
   const state = switcherState({ count: contexts.length, loading: isPending, error: isError })
-  const tags = contextTags(program.entityKey, program.persona)
+  const tags = contextTags(program.entityKey)
   const kindAndPersona = tags.map((t) => t.label).join(' · ')
 
   const close = (focusTrigger = true) => {
@@ -230,8 +230,9 @@ export function GuestContextSwitcher() {
         <ul aria-label="참여 중인 프로젝트/FUND">
           {contexts.map((c, i) => {
             const current = c.participantId === program.participantId
-            const rowTags = contextTags(c.entityKey, c.persona)
-            const meta = [c.code, accessEndLabel(c.accessEndsAt)].filter(Boolean).join(' · ')
+            const rowTags = contextTags(c.entityKey)
+            // 줄이 답하는 것은 사업명·태그·기간 넷이다(2026-09-14 사용자 지정).
+            const meta = programPeriodLabel(c.startDate, c.endDate)
             return (
               <li key={c.participantId}>
                 <button

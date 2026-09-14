@@ -22,9 +22,13 @@ import {
   type FileCollectionDto,
   type FileCollectionNodeDto,
 } from '@ynarcher/master-data'
-import { Maximize2, Minimize2, Plus } from 'lucide-react'
+import { Maximize2, Minimize2, Paperclip, Plus } from 'lucide-react'
 import { useEffect, useMemo, useReducer, useState } from 'react'
-import { useSaveStructure } from '@/features/program/fileCollection/fileCollectionHooks'
+import {
+  useNodeFileCounts,
+  useSaveStructure,
+} from '@/features/program/fileCollection/fileCollectionHooks'
+import { NodeAttachmentModal } from '@/features/program/fileCollection/NodeAttachmentModal'
 import {
   addSiblingBranch,
   appendBulkBranches,
@@ -78,7 +82,6 @@ export function CollectionStructureTab({
   nodes,
   loading,
   canWrite,
-  targetCount,
   nodesTruncated = false,
   nodesFailed = false,
 }: {
@@ -87,7 +90,6 @@ export function CollectionStructureTab({
   nodes: FileCollectionNodeDto[]
   loading: boolean
   canWrite: boolean
-  targetCount: number
   /** 조회가 상한에 걸려 트리를 다 읽지 못한 상태. 그때는 저장을 막는다. */
   nodesTruncated?: boolean
   /** 트리 조회 자체가 실패한 상태. 없는 것과 못 읽은 것을 가른다. */
@@ -99,6 +101,14 @@ export function CollectionStructureTab({
   /** 표를 전체 화면으로 펼쳐 둔 상태(2:1 격자 안에서는 단계가 늘면 가로로 좁다). */
   const [expanded, setExpanded] = useState(false)
   const [bulkOpen, setBulkOpen] = useState(false)
+  /**
+   * 자료 창을 연 문항. **원장의 id로 들고 있는다** — 초안의 줄 번호로 들면 그 사이에 줄을
+   * 옮기거나 지웠을 때 창이 다른 문항의 자료를 보여 준다.
+   */
+  const [attachTarget, setAttachTarget] = useState<{ nodeId: string; title: string } | null>(null)
+
+  /** 문항별 담당자 자료 건수 — 표의 클립이 이 값을 본다(0이면 표식이 서지 않는다). */
+  const { data: fileCounts } = useNodeFileCounts(moduleId)
 
   const [state, dispatch] = useReducer(structureEditorReducer, undefined, initialStructureEditor)
 
@@ -137,6 +147,9 @@ export function CollectionStructureTab({
   const levelLabel = (level: number) => draft.levels[level] || `${level + 1}단계`
 
   const setDraft = (next: StructureDraft) => dispatch({ type: 'edit', draft: next })
+
+  /** 그 문항에 붙어 있는 자료 건수. 아직 세지 못했으면 0으로 읽는다(클립이 서지 않는다). */
+  const count = (nodeId: string | null) => (nodeId ? (fileCounts?.[nodeId] ?? 0) : 0)
 
   /** 지금 값이 온전하지 않아 어떤 쓰기도 열 수 없는 이유. 저장과 공개가 함께 읽는다. */
   const dataBlocked = !ready
@@ -210,6 +223,8 @@ export function CollectionStructureTab({
         { key: 'required', label: '필수', className: 'w-12 text-center' },
         // 안내 칸은 이름 칸에 자리를 내준다 — 여기서 다 못 읽으면 확대보기가 받는다.
         { key: 'guide', label: '문항 안내', className: 'w-56 min-w-[10rem]' },
+        // 담당자가 건네는 양식이 붙는 칸. 머리글 네 글자가 접히지 않을 만큼만 준다.
+        { key: 'files', label: '첨부파일', className: 'w-24 text-center' },
       ]}
       emptyContent={
         editing ? (
@@ -305,6 +320,40 @@ export function CollectionStructureTab({
                 />
               )}
             </td>
+            {/*
+              첨부파일 — "이 양식에 맞춰 내 주십시오"의 실물이 붙는 칸이다. 받는 쪽 화면에도
+              같은 자리(문항)에서 열린다.
+
+              **저장되지 않은 줄에는 붙일 수 없다.** 첨부는 마디 id에 매달리므로 id가 없는 줄에
+              올리면 어디에 속하는지 답할 수 없다. 그때는 버튼 대신 이유를 적어 둔다 — 눌러 본
+              뒤에 거절을 읽게 하지 않는다.
+
+              읽기 권한만 있어도 칸은 선다(창이 목록·내려받기만 세운다) — 무엇이 붙어 있는지는
+              고칠 수 없는 사람도 알아야 한다.
+            */}
+            <td className="whitespace-nowrap px-2 py-1 text-center">
+              {!isQuestion ? null : row.nodeId ? (
+                <Button
+                  variant="ghost"
+                  density="table"
+                  disabled={busy}
+                  aria-label={`${row.title || '이름 없는 문항'} 자료 ${count(row.nodeId)}건`}
+                  onClick={() =>
+                    setAttachTarget({
+                      nodeId: row.nodeId!,
+                      title: row.title || '이름 없는 문항',
+                    })
+                  }
+                >
+                  <Paperclip size={14} className={count(row.nodeId) > 0 ? '' : 'text-gray-400'} />
+                  {count(row.nodeId) > 0 && <span className="tabular-nums">{count(row.nodeId)}</span>}
+                </Button>
+              ) : (
+                <span className={tableText.meta} title="구성을 저장하면 자료를 붙일 수 있습니다.">
+                  저장 후
+                </span>
+              )}
+            </td>
           </>
         )
       }}
@@ -357,6 +406,22 @@ export function CollectionStructureTab({
         </Button>
       )}
     </>
+  )
+
+  /**
+   * 첨부파일 창 — 붙여 넣기 창과 같은 규칙으로 카드 안에서도 전체 화면에서도 같은 하나가 뜬다.
+   * 편집 상태와 무관하게 선다: 자료를 보는 일은 구성을 고치는 일과 다른 일이고, 읽기 권한만
+   * 있는 사람에게도 무엇이 붙어 있는지는 열려 있어야 한다.
+   */
+  const attachModal = attachTarget && (
+    <NodeAttachmentModal
+      open
+      moduleId={moduleId}
+      nodeId={attachTarget.nodeId}
+      nodeTitle={attachTarget.title}
+      canWrite={canWrite}
+      onClose={() => setAttachTarget(null)}
+    />
   )
 
   /** 붙여 넣기 창은 카드 안에서도 전체 화면에서도 같은 하나가 뜬다(모달이 전체 화면 위에 선다). */
@@ -445,6 +510,7 @@ export function CollectionStructureTab({
           {body}
         </FullscreenPanel>
         {bulkModal}
+        {attachModal}
       </>
     )
   }
@@ -457,13 +523,13 @@ export function CollectionStructureTab({
       <Card
         title="문항 구성"
         count={questions.length}
-        subtitle={`문항 ${questions.length}개 / 받는 사람 ${targetCount}명`}
         actions={actions}
         help="분류 단계를 정하면 각 단계가 열이 되고, 한 줄에 전체 경로와 문항을 함께 적습니다. 맨 오른쪽 칸이 파일을 받는 문항입니다. 칸 오른쪽 +는 그 단계에 형제 가지를 세우고, 줄을 지우면 자식을 모두 잃은 상위 분류가 함께 빠집니다. 무엇도 구성 저장 전에는 서버에 적히지 않으며, 게스트에게 보이는 시점은 모듈 공개 여부가 정합니다."
       >
         {body}
       </Card>
       {bulkModal}
+      {attachModal}
     </div>
   )
 }

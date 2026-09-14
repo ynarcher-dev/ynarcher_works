@@ -5,23 +5,13 @@ import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { employeeAuth } from '@/auth/employeeAuthService'
+import { GUEST_LOGIN_URL } from '@/config/guestApp'
 
 const schema = z.object({
   email: z.string().email('올바른 이메일 형식을 입력하세요.'),
   password: z.string().min(1, '비밀번호를 입력하세요.'),
 })
 type LoginForm = z.infer<typeof schema>
-
-/** GUEST 앱 로그인 주소. 신청 랜딩 주소(.../apply)와 같은 오리진을 쓴다. */
-const GUEST_LOGIN_URL = (() => {
-  const apply = (import.meta.env.VITE_APPLY_BASE_URL as string | undefined)?.replace(/\/+$/, '')
-  if (!apply) return null
-  try {
-    return `${new URL(apply).origin}/login`
-  } catch {
-    return null
-  }
-})()
 
 export function LoginPage() {
   const navigate = useNavigate()

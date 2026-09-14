@@ -1,14 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
-import { Banner, IconButton, SlideOver, useToast } from '@ynarcher/ui'
+import type { ReactNode } from 'react'
+import { Banner, SlideOver, useToast } from '@ynarcher/ui'
 import { X } from 'lucide-react'
 import { nodePath, type FileCollectionNodeDto, type FileCollectionResponseDto } from '@ynarcher/master-data'
 import { GuestButton } from '@/components/GuestButton'
+import { GuestIconButton } from '@/components/GuestIconButton'
 import {
   loadErrorMessage,
   useAddComment,
   useCommitPendingFile,
   useDownloadCollectionFile,
   useRemoveFile,
+  useNodeFiles,
   useResponseComments,
   useResponseFiles,
   useScopeGuard,
@@ -16,8 +19,14 @@ import {
   useUploadFiles,
   type FileCollectionScope,
 } from '@/features/fileCollectionHooks'
+import { useDownloadModuleFile } from '@/features/hooks'
+import type { GuestFile } from '@/features/moduleHooks'
 import { canRemoveFile, questionControls, type WriteState } from '@/features/fileCollectionView'
-import { QuestionPanel, type UploadNote } from '@/pages/modules/fileCollection/QuestionPanel'
+import {
+  QuestionPanel,
+  QuestionSubmitButton,
+  type UploadNote,
+} from '@/pages/modules/fileCollection/QuestionPanel'
 
 /**
  * 고른 문항 하나를 여는 **우측 패널**(2026-09-14 사용자 지정 — 가운데 모달에서 옮겼다).
@@ -54,35 +63,95 @@ export function QuestionDetailPanel({
   onBusyChange: (busy: boolean) => void
   onClose: () => void
 }) {
+  useCloseOnOutsidePress(node != null && !busy, onClose)
   return (
     <SlideOver open={node != null} onClose={onClose} label="자료 제출">
-      <header className="flex shrink-0 items-center justify-between border-b border-gray-100 px-4 py-3">
-        <h2 className="text-title-sm font-medium text-gray-900">자료 제출</h2>
-        {/* 닫기는 GUEST 터치 하한(48px)에 맞춘다 — GuestButton이 라벨 버튼에 하는 것과 같다. */}
-        <IconButton
-          variant="ghost"
-          label="패널 닫기"
-          className="min-h-12 min-w-12"
-          disabled={busy}
-          onClick={onClose}
-          icon={<X aria-hidden className="size-5" strokeWidth={1.8} />}
+      {/*
+        머리도 **알맹이가 그린다**(2026-09-14 사용자 지정 — 내는 버튼이 머리로 올라왔다). 낼 수
+        있는지는 이 문항의 파일·상태가 답하는데 그것을 아는 곳이 알맹이뿐이라, 상태를 위로
+        흘려보내는 대신 머리를 그릴 자리를 알맹이에 준다. 문항이 없을 때(닫히는 동안)에도 머리는
+        서야 하므로 그때는 껍데기가 버튼 없는 같은 머리를 세운다.
+      */}
+      {node ? (
+        <QuestionWork
+          key={node.id}
+          scope={scope}
+          nodes={nodes}
+          node={node}
+          response={response}
+          write={write}
+          onBusyChange={onBusyChange}
+          onClose={onClose}
         />
-      </header>
-      <div className="min-h-0 flex-1 overflow-y-auto p-4">
-        {node && (
-          <QuestionWork
-            key={node.id}
-            scope={scope}
-            nodes={nodes}
-            node={node}
-            response={response}
-            write={write}
-            onBusyChange={onBusyChange}
-          />
-        )}
-      </div>
+      ) : (
+        <>
+          <PanelHeader busy={busy} onClose={onClose} />
+          <div className="min-h-0 flex-1 overflow-y-auto bg-page p-4" />
+        </>
+      )}
     </SlideOver>
   )
+}
+
+/**
+ * 패널 머리 한 줄 — [제목] … [내기] │ [닫기].
+ *
+ * 내는 버튼과 닫기를 **가는 선으로 가른다**. 둘 다 오른쪽 끝에 서는데 하나는 되돌릴 수 없는
+ * 일(제출)이고 하나는 아무 일도 아니라서, 붙여 세우면 손가락 하나 차이로 낼 것을 닫고 닫을
+ * 것을 내게 된다. 선과 여백이 그 둘을 다른 무리로 읽히게 한다.
+ */
+function PanelHeader({
+  busy,
+  onClose,
+  action,
+}: {
+  busy: boolean
+  onClose: () => void
+  /** 내는 버튼. 문항이 열려 있을 때만 온다. */
+  action?: ReactNode
+}) {
+  return (
+    <header className="flex shrink-0 items-center gap-2 border-b border-gray-100 px-4 py-3">
+      <h2 className="min-w-0 flex-1 truncate text-title-sm font-medium text-gray-900">자료 제출</h2>
+      {action}
+      {action && <span aria-hidden className="h-6 w-px shrink-0 bg-gray-200" />}
+      {/* 닫기도 GUEST 터치 하한(48px)을 따른다 — 하한은 `GuestIconButton`이 소유한다. */}
+      <GuestIconButton
+        variant="ghost"
+        label="패널 닫기"
+        disabled={busy}
+        onClick={onClose}
+        icon={<X aria-hidden className="size-5" strokeWidth={1.8} />}
+      />
+    </header>
+  )
+}
+
+/**
+ * 패널 밖을 누르면 닫는다(2026-09-14 사용자 지정).
+ *
+ * 패널 자체는 뒤 화면을 막지 않는 부품(`SlideOver`)이라 바깥 누름을 받는 딤이 없다. 그래서
+ * 문서에서 직접 듣되 **두 자리는 빼 둔다**.
+ *
+ * * 패널 안(`role="dialog"`) — 제 안을 누른 것이다.
+ * * 문항 목록(`role="treegrid"`) — 옆 줄을 누르는 것은 '닫기'가 아니라 **다른 문항으로
+ *   갈아타기**다. 여기서 닫으면 방금 고른 문항이 열리자마자 닫혔다 다시 열린다.
+ *
+ * 누름(`pointerdown`)에서 판정한다 — 누른 채 패널 안으로 끌고 들어와 떼는 경우(글자 선택)에
+ * `click`은 바깥에서 났다고 읽혀 엉뚱하게 닫힌다. 작업이 도는 중(`busy`)에는 아예 듣지 않는다.
+ */
+function useCloseOnOutsidePress(active: boolean, onClose: () => void) {
+  useEffect(() => {
+    if (!active) return
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null
+      if (!target || !target.isConnected) return
+      if (target.closest('[role="dialog"]') || target.closest('[role="treegrid"]')) return
+      onClose()
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    return () => document.removeEventListener('pointerdown', onPointerDown)
+  }, [active, onClose])
 }
 
 /** 문항 하나의 조회·저장. 보이는 것은 `QuestionPanel`이 맡는다 — 그래야 화면 규칙(무엇이 잠기고
@@ -94,6 +163,7 @@ function QuestionWork({
   response,
   write,
   onBusyChange,
+  onClose,
 }: {
   scope: FileCollectionScope
   nodes: readonly FileCollectionNodeDto[]
@@ -101,10 +171,20 @@ function QuestionWork({
   response: FileCollectionResponseDto | null
   write: WriteState
   onBusyChange: (busy: boolean) => void
+  onClose: () => void
 }) {
   const toast = useToast()
   const files = useResponseFiles(scope, response?.id)
   const comments = useResponseComments(scope, response?.id)
+  /**
+   * 담당자가 이 문항에 붙여 둔 자료. 응답 칸이 아니라 **문항**에 매달린 것이라 배정이 없어도
+   * 조회는 성립한다(내 배정이 있는 파일받기인지는 RLS가 본다).
+   *
+   * 내려받기는 파일첨부 모듈과 **같은 통로**(material-download)를 탄다 — 내 제출물과 원장이
+   * 다르므로 그쪽 전용 Edge(file-collection-file)로 보내면 찾지 못한다.
+   */
+  const provided = useNodeFiles(scope, node.id)
+  const downloadProvided = useDownloadModuleFile()
 
   const upload = useUploadFiles(scope)
   const commit = useCommitPendingFile(scope)
@@ -213,6 +293,19 @@ function QuestionWork({
       }
     })
 
+  /**
+   * 담당자 자료 내려받기 — 내 제출물과 **같은 잠금**(`run`)을 쓴다. 올리는 중에 다른 통로로
+   * 요청이 나가면 두 작업이 같은 창에서 겹치고, 잠긴 이유를 화면이 설명하지 못한다.
+   */
+  const onDownloadProvided = (file: GuestFile) =>
+    run(null, async () => {
+      try {
+        await downloadProvided.mutateAsync({ id: file.id, file_name: file.file_name })
+      } catch {
+        notify('파일을 내려받지 못했습니다. 잠시 후 다시 시도해 주십시오.', 'danger')
+      }
+    })
+
   const onRemove = (fileId: string) =>
     run(fileId, async () => {
       try {
@@ -260,45 +353,75 @@ function QuestionWork({
     })
   }
 
+  /**
+   * 머리 — 제목과 내는 버튼, 닫기. **본문이 무엇이든 같은 하나가 선다**(불러오는 중·실패해도
+   * 창의 머리는 그대로다). 작업이 도는 동안에는 닫기가 잠긴다(`working`).
+   */
+  const header = (
+    <PanelHeader
+      busy={working}
+      onClose={onClose}
+      action={<QuestionSubmitButton controls={controls} busy={busy} onSubmit={onSubmit} />}
+    />
+  )
+
   if (loadError) {
     return (
-      <div className="space-y-3">
-        <Banner tone="danger">
-          {loadErrorMessage([files.error, comments.error], '이 문항의 자료를 불러오지 못했습니다.')}
-        </Banner>
-        <GuestButton
-          variant="secondary"
-          onClick={() => {
-            void files.refetch()
-            void comments.refetch()
-          }}
-        >
-          다시 시도
-        </GuestButton>
-      </div>
+      <>
+        {header}
+        <div className="min-h-0 flex-1 overflow-y-auto bg-page p-4">
+          <div className="space-y-3">
+            <Banner tone="danger">
+              {loadErrorMessage(
+                [files.error, comments.error],
+                '이 문항의 자료를 불러오지 못했습니다.',
+              )}
+            </Banner>
+            <GuestButton
+              variant="secondary"
+              onClick={() => {
+                void files.refetch()
+                void comments.refetch()
+              }}
+            >
+              다시 시도
+            </GuestButton>
+          </div>
+        </div>
+      </>
     )
   }
 
   return (
-    <QuestionPanel
-      path={nodePath(nodes, node.id)}
-      guide={node.guide}
-      isRequired={node.is_required}
-      controls={controls}
-      comments={comments.data ?? []}
-      canRemove={(file) => canRemoveFile({ file, response, write })}
-      loading={files.isLoading || comments.isLoading}
-      busy={busy}
-      notes={notes}
-      commentDraft={draft}
-      onCommentDraftChange={setDraft}
-      onPickFiles={onPickFiles}
-      onDownload={onDownload}
-      onRemove={onRemove}
-      onRetryPending={onRetryPending}
-      onAddComment={onAddComment}
-      onSubmit={onSubmit}
-    />
+    <>
+      {header}
+      {/* 카드가 흰 바탕 위에 서면 상자가 사라진다 — 본문 바닥을 페이지 색으로 깔아 카드 묶음이
+          works 화면과 같은 방식으로 갈리게 한다(2026-09-14). */}
+      <div className="min-h-0 flex-1 overflow-y-auto bg-page p-4">
+        <QuestionPanel
+          path={nodePath(nodes, node.id)}
+          guide={node.guide}
+          isRequired={node.is_required}
+          controls={controls}
+          comments={comments.data ?? []}
+          canRemove={(file) => canRemoveFile({ file, response, write })}
+          loading={files.isLoading || comments.isLoading}
+          busy={busy}
+          /* 첨부파일 조회가 실패해도 제출 칸은 그대로 연다 — 곁값이므로 없으면 그 카드만 서지
+             않는다(못 읽었다는 사실은 위 배너가 아니라 카드의 부재로만 남는다). */
+          providedFiles={provided.data ?? []}
+          onDownloadProvided={onDownloadProvided}
+          notes={notes}
+          commentDraft={draft}
+          onCommentDraftChange={setDraft}
+          onPickFiles={onPickFiles}
+          onDownload={onDownload}
+          onRemove={onRemove}
+          onRetryPending={onRetryPending}
+          onAddComment={onAddComment}
+        />
+      </div>
+    </>
   )
 }
 

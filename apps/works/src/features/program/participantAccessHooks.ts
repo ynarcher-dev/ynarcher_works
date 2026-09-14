@@ -3,12 +3,16 @@ import { supabase } from '@/lib/supabase'
 import { useGuestHost } from '@/features/guest/host'
 
 /**
- * 참가자 명부의 **문**(門) — 여닫고, 막고, 열쇠를 다시 보내고, 기간을 정한다.
+ * 참가자 명부의 **문**(門) — 여닫고, 막고, 기간을 정한다.
  *
  * 명부 조회·추가(`participantHooks`)와 갈라 둔 것은 줄 수 때문이 아니라 **축이 다르기**
  * 때문이다(3_9_1 §3). 저쪽은 "이 사업에 누가 있는가"를 답하고 이쪽은 "그 사람이 지금
  * 들어올 수 있는가"를 바꾼다 — 담는 일은 후보를 쌓는 일이라 아무 담당자나 하지만, 여는 일은
  * 그 사업의 PM·MEMBER만 하고 그 강제는 전부 서버(RPC·Edge Function)가 진다.
+ *
+ * **비밀번호는 이 축에 없다.** 초기화는 계정의 일이지 사업의 일이 아니므로 통합 GUEST 계정
+ * 관리(ADMIN)가 소유한다 — 계정 하나가 여러 사업의 문을 열기 때문에, 한 사업의 담당자가
+ * 그 값을 건드리면 자기 사업 밖까지 함께 바뀐다.
  */
 
 export interface OpenAccessResult {
@@ -37,39 +41,6 @@ export function useOpenGuestAccess(programId: string) {
       void qc.invalidateQueries({ queryKey: [config.key, 'participants', programId] })
     },
   })
-}
-
-/**
- * 비밀번호 **재설정 안내 발송**. 종전의 '초기화'를 대체한다(2026-09-05).
- *
- * 담당자가 값을 되돌리는 경로를 두지 않는 이유: 계정이 대상 단위가 되면서 한 계정이 여러
- * 사업을 열게 되었고, 값을 쥔 사람은 그 게스트가 참여 중인 **다른 팀 사업까지** 들어갈 수
- * 있다. 링크는 게스트 본인 연락처로만 나가고 호출자 화면에는 아무 값도 오지 않는다.
- */
-export function useSendPasswordReset() {
-  return useMutation({
-    mutationFn: async (userId: string): Promise<{ notified: boolean }> => {
-      const { data, error } = await supabase.functions.invoke<{
-        ok?: boolean
-        notified?: boolean
-        message?: string
-      }>('guest-password-reset', { body: { userId } })
-      if (error) throw new Error(data?.message ?? error.message)
-      return { notified: Boolean(data?.notified) }
-    },
-  })
-}
-
-/**
- * 재설정 안내 여러 건의 결과 집계. 호출 성공과 발송은 다르다 — 함수는 토큰을 저장한 뒤
- * 발송이 실패해도 200 `{ ok: true, notified: false }`로 답한다. `notified === true`만 발송이고
- * 거절·값 없음·false는 실패다.
- */
-export function countNotified(
-  results: PromiseSettledResult<{ notified?: boolean }>[],
-): { sent: number; failed: number } {
-  const sent = results.filter((r) => r.status === 'fulfilled' && r.value?.notified === true).length
-  return { sent, failed: results.length - sent }
 }
 
 /**

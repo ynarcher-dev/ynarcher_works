@@ -6,6 +6,7 @@ export interface GuestUser {
   id: string
   name: string
   role: string
+  affiliation: string | null
 }
 
 /**
@@ -22,22 +23,12 @@ export interface GuestProgram {
    * 이 맥락이 무엇인가 — 사업(`program`·`ma_program`) 또는 조합(`fund`).
    *
    * 2026-09-09에 FUND가 들어오면서 필요해졌다. **화면 구성을 가르는 축**이며(사업개요 대
-   * 조합 개요), 자격(`persona`)과는 다른 물음에 답한다 — 저쪽은 *누구로 들어왔는가*이고
-   * 이쪽은 *어디에 들어왔는가*다. 값이 없으면 사업으로 읽는다(구 세션 복원).
+   * 조합 개요)를 정한다. 값이 없으면 사업으로 읽는다(구 세션 복원).
    */
   entityKey?: GuestEntityKey | null
   /** 이 맥락을 만든 명부 행. 전환 요청의 대상 키다. */
   participantId?: string | null
-  /**
-   * 이 맥락의 자격 — 'startups'(참여 기업) | 'networks'(참여 전문가).
-   * **화면을 가르는 축은 계정이 아니라 이 값이다**: 같은 사람이 한 사업에 두 자격으로
-   * 참여하면 맥락이 둘이고 각각 다른 화면이 열린다(3_9_1 §4).
-   */
-  persona?: GuestPersona | null
 }
-
-/** 참여 자격. 명부의 두 탭(참여 기업 / 참여 전문가)과 같은 축이다. */
-export type GuestPersona = 'startups' | 'networks'
 
 /** 맥락의 종류. WORKS의 통합 원장 `entity_key`와 같은 값이며 서버가 실어 보낸다. */
 export type GuestEntityKey = 'program' | 'ma_program' | 'fund'
@@ -65,21 +56,17 @@ export function contextKindLabel(key: string | null | undefined): string | null 
   return key ? (CONTEXT_KIND_LABEL[key as GuestEntityKey] ?? null) : null
 }
 
-/** 자격 라벨 — 화면 어디서나 같은 말을 쓴다(명부 탭과 같은 어휘). */
-export const PERSONA_LABEL: Record<GuestPersona, string> = {
-  startups: '참여 기업',
-  networks: '참여 전문가',
-}
-
 /** 전환기 목록의 한 줄. 로그인 응답과 세션 갱신이 같은 모양으로 돌려준다. */
 export interface GuestContextChoice {
   participantId: string
   programId: string
-  entityKey: string
+  entityKey: GuestEntityKey
   code: string | null
   title: string
-  persona?: GuestPersona | null
-  accessEndsAt?: string | null
+  accessEndsAt: string | null
+  /** 사업(조합) 기간. 목록 줄이 세우는 값이며 모르는 칸은 null이다. */
+  startDate: string | null
+  endDate: string | null
 }
 
 interface GuestState {

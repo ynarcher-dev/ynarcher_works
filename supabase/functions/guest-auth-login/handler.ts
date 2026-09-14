@@ -11,10 +11,12 @@
 // 3요소 중 하나가 이미 공개였고, 빼도 잃는 방어선이 없다. 어느 사업으로 들어갈지는
 // 로그인 **이후에** 고른다 — 막는 지점(app.guest_program_ids)은 그대로다.
 //
-// 초기 비밀번호는 계정 생성 때 확정해 users.phone에 저장한 번호(숫자만)이며,
-// **계정에 비밀번호가 없을 때만** 통한다. 이후 원장 연락처 변경과는 독립적이다.
-// 그 상태로 들어오면 세션을 주지 않고 설정 티켓만 준다 — 초기 비밀번호로 얻은 토큰이
-// 데이터에 닿으면 비밀번호를 바꾸지 않은 채로 계속 쓸 수 있게 된다.
+// 초기 비밀번호는 **모든 계정이 같은 고정값**(`INITIAL_GUEST_PASSWORD`)이며, ADMIN이
+// 오프라인으로 전달한다. 통하는 조건은 하나뿐이다 — **계정에 비밀번호 해시가 없을 때**.
+// 원장의 연락처는 더 이상 자격증명이 아니며, 번호가 비어 있어도 이 문은 열린다.
+// 그 상태로 들어오면 세션을 주지 않고 설정 티켓만 준다 — 누구나 아는 값으로 얻은 토큰이
+// 데이터에 닿으면 비밀번호를 정하지 않은 채로 계속 쓸 수 있게 된다. 고정값을 쓸 수 있는
+// 이유가 바로 이것이므로, 이 자리에서 세션을 여는 변경은 정책 자체를 무너뜨린다.
 //
 // 실패 응답은 사유를 가리지 않는다(계정 열거 차단). 연속 5회 실패면 15분 잠근다.
 //
@@ -36,7 +38,7 @@ import {
   CHANGE_TTL_SEC,
   SELECT_TTL_SEC,
 } from '../_shared/guestAccount.ts'
-import { normalizePhone, verifyPassword } from '../_shared/password.ts'
+import { isInitialGuestPassword, verifyPassword } from '../_shared/password.ts'
 
 const DENIED = {
   error: 'auth_failed',
@@ -72,16 +74,12 @@ export function createLoginHandler(db: () => SupabaseClient) {
       const cred = await loadCredentials(client, account.id)
       if (isLocked(cred)) return jsonResponse(LOCKED, 429)
 
-      // 비밀번호를 정하기 전이면 계정을 만들 때 확정한 연락처가 초기 비밀번호다. 원장의 현재
-      // 연락처와 분리해야 이직·번호 변경이 로그인 자격증명을 조용히 바꾸지 않는다.
+      // 해시가 없으면 아직 개시 상태다 — 그때만 고정 개시 비밀번호가 통한다. 원장을
+      // 읽지 않으므로 연락처가 비어 있거나 바뀌어도 이 판정은 흔들리지 않는다.
       const initial = !cred.password_hash
-      let ok: boolean
-      if (initial) {
-        const given = normalizePhone(password)
-        ok = given.length > 0 && given === normalizePhone(account.phone)
-      } else {
-        ok = await verifyPassword(String(password), cred.password_hash)
-      }
+      const ok = initial
+        ? isInitialGuestPassword(password)
+        : await verifyPassword(String(password), cred.password_hash)
 
       if (!ok) {
         await recordFailure(client, cred)

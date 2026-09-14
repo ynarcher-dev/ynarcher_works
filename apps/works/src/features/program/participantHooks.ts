@@ -90,7 +90,7 @@ export interface ParticipantRow {
   /** 로그인 주체의 성명(기업=대표자, 전문가=본인). 원장이 없으면 null. */
   loginName: string | null
   email: string | null
-  /** 계정이 있으면 계정 생성 시 확정한 전화번호, 없으면 원장의 현재 연락처. */
+  /** 사업 원장의 현재 연락처. GUEST 계정 프로필 값은 사용하지 않는다. */
   phone: string | null
   /**
    * 원장이 이 대상을 무엇으로 분류하는가. 명부가 스스로 분류하지 않고 원장의 분류를 그대로
@@ -120,7 +120,6 @@ interface RawParticipant {
   user: {
     name: string | null
     email: string | null
-    phone: string | null
     user_type: string | null
   } | null
   creator: { name: string | null } | null
@@ -137,7 +136,7 @@ function participantCols(table: string): string {
   return (
     'id, master_table, master_id, user_id, login_status, ' +
     // 계정 유형을 함께 읽는다 — 원장 없는 게스트와 내부 임직원을 가르는 유일한 값이다.
-    `user:users!${table}_user_id_fkey(name, email, phone, user_type), ` +
+    `user:users!${table}_user_id_fkey(name, email, user_type), ` +
     `creator:users!${table}_created_by_fkey(name)`
   )
 }
@@ -245,30 +244,6 @@ export function useProgramParticipants(programId: string | undefined) {
 
       const facts = await loadLedgerFacts(rows)
 
-      // 계정 유무는 명부 행이 아니라 **원장 행**이 답한다(인격 매핑이 그것을 들고 있다).
-      // 그래서 아직 이 사업에 문을 열지 않은 대상도 "계정 있음"으로 뜬다 — 담당자가
-      // 신규인지 기존인지 구분할 필요 없이 `연결` 하나만 누르면 되는 근거가 여기다.
-      // 한 계정이 여러 인격을 가질 수 있으므로(참여 기업 + 참여 전문가) 계정이 아니라
-      // 매핑표를 읽는다.
-      const masterIds = rows.map((r) => r.master_id).filter(Boolean) as string[]
-      const accountsRes = masterIds.length
-        ? await supabase
-            .from('guest_identities')
-            .select('master_table, master_id, user_id')
-            .in('master_id', masterIds)
-        : { data: [] }
-      // **원장 행에 계정이 있는가**만 답하는 집합이다(2026-09-08). 종전에는
-      // `원장행 → 계정id` 지도였는데, 한 원장 행이 계정 여럿을 가질 수 있게 되면서
-      // (3_9_2 §5) 그 지도는 임의의 한 명을 답하게 됐다. "이 참여자의 계정"은 지도가
-      // 아니라 명부 행의 `user_id`가 답한다 — 문을 열 때 그 사람으로 박히기 때문이다.
-      const ledgerHasAccount = new Set(
-        ((accountsRes.data ?? []) as {
-          master_table: string
-          master_id: string
-          user_id: string
-        }[]).map((g) => `${g.master_table}:${g.master_id}`),
-      )
-
       const accountIds = [...new Set(rows.map((r) => r.user_id).filter(Boolean) as string[])]
       // 마지막 접속은 초대 레코드가 갖는다(사업마다 한 건). 계정 단위로 최댓값을 취한다.
       const usedRes = accountIds.length
@@ -291,9 +266,8 @@ export function useProgramParticipants(programId: string | undefined) {
         // 이 참여자의 계정은 명부 행이 답한다. 원장 행에 다른 사람의 계정이 있어도
         // 그것은 이 줄의 계정이 아니다(1:N 전환 이후 갈리는 자리다).
         const accountId = r.user_id ?? null
-        // 반면 "계정 있음" 표시는 원장 행 기준이다 — 아직 문을 열지 않은 대상도 그렇게
-        // 떠야 담당자가 신규인지 기존인지 구분하지 않고 `로그인 열기` 하나만 누르면 된다.
-        const hasAccount = Boolean(accountId) || Boolean(key && ledgerHasAccount.has(key))
+        // 계정은 원장과 매칭하지 않는다. 이 참여 줄의 user_id만 계정 유무를 답한다.
+        const hasAccount = Boolean(accountId)
         return {
           id: r.id,
           master_table: persona,
@@ -312,9 +286,8 @@ export function useProgramParticipants(programId: string | undefined) {
           subtitle: master?.subtitle ?? '',
           loginName: master?.loginName ?? null,
           email: master?.email ?? r.user?.email ?? null,
-          // 계정이 선 뒤에는 계정 생성 때 확정한 전화번호를 보여 준다. 원장 연락처가 바뀌어도
-          // 로그인 초기값은 바뀌지 않으며, 계정이 아직 없는 옛 명부 행만 원장값을 미리 본다.
-          phone: r.user?.phone ?? master?.phone ?? null,
+          // 연락처는 사업 명부가 가리키는 원장의 현재 값이다. GUEST 계정 프로필과 섞지 않는다.
+          phone: master?.phone ?? null,
           masterCategory: master?.category ?? null,
         }
       })
@@ -373,31 +346,21 @@ export async function fetchLedgerCandidates(
  */
 export const GUEST_CANDIDATE_PAGE_SIZE = 20
 
-/** 계정이 가진 인격 하나 — 어느 원장의 누구인가. */
-export interface GuestAccountIdentity {
-  masterTable: MasterTable
-  masterId: string
-  name: string | null
-}
-
 /** GUEST 명부에 이을 수 있는 **이미 있는 계정** 한 건. */
 export interface GuestAccountCandidate {
   userId: string
   name: string
-  /**
-   * 연락처. **서버가 정책대로 마스킹해 보낸 값**이라 화면에서 다시 가리지 않는다
-   * (ADMIN에게만 원본이 온다 — `guest_accounts_list`).
-   */
   email: string | null
-  phone: string | null
+  /**
+   * 소속(`users.affiliation`). **계정이 직접 든 값**이며 회사 원장(`company_id`)이 아니다 —
+   * 게스트는 우리 회사의 소속이 아니라 자기 회사·기관의 이름을 든다.
+   *
+   * 이 값을 세우는 이유는 동명이인 때문이다. 계정 목록에서 `김대표`가 셋이면 이름·이메일만으로는
+   * 누구를 담는지 고를 수 없고, 그때 담당자가 실제로 아는 값은 그 사람이 어디 사람인가다.
+   */
+  affiliation: string | null
   /** 계정 축의 정지 여부. 정지된 계정도 명부에는 이을 수 있고, 문은 따로 답한다. */
   isActive: boolean
-  /**
-   * 이 계정이 가진 인격 **전부**. 하나를 골라 대표로 적지 않는다 — 한 사람이 스타트업
-   * 대표이면서 전문가일 수 있고, 화면이 조용히 하나를 고르면 담당자가 본 자격과 실제로
-   * 이어지는 자격이 어긋난다. 인격이 없는 계정(원장 미연결)은 빈 배열이다.
-   */
-  identities: GuestAccountIdentity[]
 }
 
 export interface GuestAccountCandidatePage {
@@ -410,9 +373,8 @@ interface RawGuestAccountRow {
   user_id: string
   name: string | null
   email: string | null
-  phone: string | null
+  affiliation: string | null
   is_active: boolean
-  identities: { master_table: string; master_id: string; name: string | null }[] | null
   total_count: number | string
 }
 
@@ -422,19 +384,12 @@ interface RawGuestAccountRow {
  * 종전 이 자리는 *원장 후보*였다(`useMasterCandidates`, 2026-09-09~2026-09-13). 그때는 이
  * 창이 계정을 **세우는** 자리였으므로 "누구를 들일지 정한 목록에서만 고른다"가 옳았다.
  * 지금은 세우지 않는다 — 생성 창구는 `/guest-accounts` 하나뿐이고 이 창은 **이미 있는
- * 계정을 잇기만 한다.** 그래서 고르는 대상이 원장 행이 아니라 계정이 되었고, 원장 연결은
- * 계정의 선택적 속성이라 연결이 없는 계정도 후보에 선다.
+ * 계정을 잇기만 한다.** 그래서 고르는 대상은 원장 행이 아니라 독립 계정이다.
  *
  * **서버가 걸러 서버가 페이징한다.** 계정은 전사 규모라 한 번에 받아 화면에서 거르면 첫
  * 페이지 안에서만 검색이 걸린다 — '2쪽에는 있는데 1쪽에서 0건'이 되는 그 오작동이다.
  *
- * **보이지 않아야 할 계정은 애초에 오지 않는다.** `guest_accounts_list`는 SECURITY INVOKER로
- * 호출자가 실제로 읽을 수 있는 인격·참여만 세우므로, M&A 전용 계정은 그 원장을 읽을 수 없는
- * 담당자에게 **존재 자체가 보이지 않는다.** 화면에서 숨기는 것이 아니라 서버가 답하지 않는다.
- *
- * **자격으로 좁히지 않는다**(`p_master_tables`를 보내지 않는다). 그 인자는 "이 원장의 인격을
- * 가진 계정만"이라는 뜻이라, 보내는 순간 **원장 연결이 없는 계정이 전부 사라진다** — 이번
- * 개편이 세우려는 바로 그 계정들이다.
+ * 이름·이메일·소속 검색과 페이징만 서버가 담당한다. 원장 분류는 계정 후보 계약에 없다.
  */
 export function useGuestAccountCandidates(search: string, page: number) {
   const term = search.trim()
@@ -447,9 +402,6 @@ export function useGuestAccountCandidates(search: string, page: number) {
         p_search: term || null,
         p_limit: GUEST_CANDIDATE_PAGE_SIZE,
         p_offset: page * GUEST_CANDIDATE_PAGE_SIZE,
-        p_entity_key: null,
-        p_master_tables: null,
-        p_only_orphans: false,
       })
       // 조회 실패를 삼키지 않는다 — 삼키면 "권한이 없다"와 "계정이 없다"가 같은 빈 화면이 된다.
       if (error) throw error
@@ -460,15 +412,9 @@ export function useGuestAccountCandidates(search: string, page: number) {
           // 이름 없는 계정은 있을 수 없지만, 없다면 지어내지 않고 없다고 적는다.
           name: r.name?.trim() || '(이름 없음)',
           email: r.email,
-          phone: r.phone,
+          // 빈 문자열은 값이 아니라 공란이다 — 그대로 두면 표가 빈 칸 대신 폭만 먹는 셀을 세운다.
+          affiliation: r.affiliation?.trim() || null,
           isActive: r.is_active,
-          identities: (r.identities ?? [])
-            .filter((i) => isMasterTable(i.master_table))
-            .map((i) => ({
-              masterTable: i.master_table as MasterTable,
-              masterId: i.master_id,
-              name: i.name,
-            })),
         })),
         // 총 건수는 행마다 같은 값으로 실려 온다(윈도 카운트). 행이 없으면 0이다.
         total: rows[0] ? Number(rows[0].total_count) : 0,

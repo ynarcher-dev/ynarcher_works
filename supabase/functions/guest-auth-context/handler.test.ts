@@ -8,7 +8,7 @@ import { createContextHandler } from './handler.ts'
  * 맥락 선택·전환 회귀 테스트.
  *
  * 두 입구(선택 티켓 / 살아 있는 세션)가 같은 판정을 지나는지, 그리고 **계정의 세션 판이
- * 오른 뒤에는 둘 다 닫히는지**를 본다. 판을 올리는 것은 ADMIN의 연락처 수정·비밀번호
+ * 오른 뒤에는 둘 다 닫히는지**를 본다. 판을 올리는 것은 ADMIN의 이메일 수정·비밀번호
  * 초기화와 담당자의 접근 차단이며, 옛 선택 티켓이 남으면 초기화가 끊은 자리에서 세션이
  * 계속 나온다(수명 10분 × 발급 무제한).
  *
@@ -18,12 +18,10 @@ import { createContextHandler } from './handler.ts'
 const SECRET = 'test-guest-jwt-secret'
 const USER_ID = '22222222-2222-4222-8222-222222222222'
 
-const participant = (id: string, masterTable: string, masterId: string): Row => ({
+const participant = (id: string): Row => ({
   id,
   program_id: 'pg-1',
   entity_key: 'program',
-  master_table: masterTable,
-  master_id: masterId,
   user_id: USER_ID,
   login_status: 'INVITED',
   joined_at: null,
@@ -38,16 +36,15 @@ function seed() {
         user_type: 'external_startup',
         name: '박참여',
         email: 'park@example.com',
-        phone: '010-2222-3333',
-        company_id: null,
+        affiliation: '와이앤파트너스',
         session_version: 1,
         is_active: true,
         deleted_at: null,
       },
     ],
     program_participants: [
-      participant('pp-1', 'startups', 'st-1'),
-      participant('pp-2', 'networks', 'nw-1'),
+      participant('pp-1'),
+      participant('pp-2'),
     ],
     programs: [
       {
@@ -55,6 +52,8 @@ function seed() {
         code: 'AC-2026',
         title: '2026 액셀러레이팅',
         status: 'ACTIVE',
+        start_date: '2026-01-01',
+        end_date: '2026-12-31',
         deleted_at: null,
         guest_access_ends_at: null,
       },
@@ -85,9 +84,10 @@ afterEach(() => {
 
 interface ContextBody {
   accessToken?: string
-  choices?: { participantId: string }[]
+  choices?: { participantId: string; persona?: unknown }[]
   error?: string
-  user?: { id: string }
+  user?: { id: string; affiliation?: string | null; company_id?: unknown }
+  context?: { persona?: unknown }
 }
 
 async function call(db: Db, body: unknown, sessionToken?: string) {
@@ -152,6 +152,9 @@ describe('선택 티켓 — 고른 맥락 하나로 세션이 나온다', () => 
     })
 
     expect(status).toBe(200)
+    expect(body.user).toMatchObject({ id: USER_ID, affiliation: '와이앤파트너스' })
+    expect(body.user?.company_id).toBeUndefined()
+    expect(body.context?.persona).toBeUndefined()
     const claims = await verifyJwt(body.accessToken as string, SECRET, 'authenticated')
     expect(claims?.app_user_id).toBe(USER_ID)
     expect(claims?.context_id).toBe('pg-1')
@@ -178,12 +181,13 @@ describe('선택 티켓 — 고른 맥락 하나로 세션이 나온다', () => 
 
     expect(status).toBe(200)
     expect(body.choices?.length).toBe(2)
+    expect(body.choices?.[0]?.persona).toBeUndefined()
     expect(body.accessToken).toBeUndefined()
   })
 })
 
 describe('세션 판이 오르면 두 입구가 함께 닫힌다', () => {
-  it('옛 판의 선택 티켓으로는 세션이 나오지 않는다(초기화·연락처 수정 이후)', async () => {
+  it('옛 판의 선택 티켓으로는 세션이 나오지 않는다(초기화·이메일 수정 이후)', async () => {
     const db = seed()
     const ticket = await selectTicket(1)
     bumpSessionVersion(db)

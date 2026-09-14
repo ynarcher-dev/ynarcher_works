@@ -1,5 +1,3 @@
-import type { MasterTable } from '@/features/program/participantPersona'
-
 /**
  * GUEST 계정 여러 줄 생성의 **판정 층** — 파일·화면·서버 응답을 한 벌의 규칙으로 다룬다.
  *
@@ -9,10 +7,10 @@ import type { MasterTable } from '@/features/program/participantPersona'
  *
  * 이 층이 소유하는 판정은 넷이다.
  *
- *  · **칸 검증** — 이름·이메일·연락처가 서버와 같은 잣대를 통과하는가.
- *  · **목록 안 중복** — 이메일(소문자·앞뒤 공백 제거)과 연락처(숫자만)가 겹치는 줄. 겹친 줄은
- *    **전부** 실패로 세운다. 먼저 적은 줄을 살리면 두 줄 중 어느 쪽이 맞는지 아무도 확인하지
- *    않은 채 한쪽이 계정이 되고, 그 계정의 연락처가 곧 초기 비밀번호라 잘못 고른 대가가 크다.
+ *  · **칸 검증** — 이름·이메일·소속이 서버와 같은 잣대를 통과하는가. **이 셋이 전부다.**
+ *  · **목록 안 중복** — 이메일(소문자·앞뒤 공백 제거)이 겹치는 줄. 겹친 줄은 **전부** 실패로
+ *    세운다. 먼저 적은 줄을 살리면 두 줄 중 어느 쪽이 맞는지 아무도 확인하지 않은 채 한쪽이
+ *    로그인 ID의 주인이 된다.
  *  · **제출 결과 반영** — 성공한 줄은 표에서 빠지고 실패한 줄은 사유를 달고 남는다. 성공을 다시
  *    보내지 않는 것이 요점이다(재제출은 남은 줄만 간다).
  *  · **파일 안팎의 값 다루기** — 읽을 때는 제어문자를 걷고, 내보낼 때는 표 도구가 수식으로
@@ -21,7 +19,9 @@ import type { MasterTable } from '@/features/program/participantPersona'
  * **이미 있는 계정과의 중복은 여기서 판정하지 않는다.** 그것은 서버가 답한다 — 화면에서 미리
  * 훑으면 읽을 권한이 없는 원장(M&A)의 존재가 화면에 드러난다.
  *
- * 검증 규칙과 사유 코드는 `public.create_guest_accounts`(20260913140000)의 것을 그대로 쓴다.
+ * 연락처와 원장 연결은 이 층에 없다. 계정 등록이 묻고 저장하는 값은 이름·이메일·소속 셋뿐이다.
+ *
+ * 검증 규칙과 사유 코드는 `public.create_guest_accounts`의 것을 그대로 쓴다.
  * 화면이 제 나름의 잣대를 세우면 같은 값이 여기서는 통과하고 서버에서 막히는 왕복이 생기고,
  * 코드가 갈리면 같은 사유가 화면 검증과 서버 응답에서 두 줄로 선다.
  */
@@ -29,10 +29,8 @@ import type { MasterTable } from '@/features/program/participantPersona'
 /**
  * 계정 한 줄의 어느 칸이 문제인가. `row`는 칸을 특정할 수 없는 사유다.
  *
- * 서버는 원장 연결을 `master_table`·`master_id` 두 칸으로 나눠 답하지만 화면에는 연결 칸이
- * 하나뿐이라 `ledger` 하나로 받는다(어댑터가 옮긴다).
  */
-export type GuestBatchField = 'name' | 'email' | 'phone' | 'ledger' | 'row'
+export type GuestBatchField = 'name' | 'email' | 'affiliation' | 'row'
 
 /** 한 줄에 달리는 사유 하나. 화면 검증과 서버 응답이 같은 모양을 쓴다. */
 export interface GuestRowIssue {
@@ -47,12 +45,8 @@ export interface GuestDraftRow {
   rowId: string
   name: string
   email: string
-  phone: string
-  /** 원장 연결(선택). 고르지 않으면 계정만 만든다. */
-  masterTable: MasterTable | null
-  masterId: string | null
-  /** 화면에 보일 원장 대상 이름. 서버로 보내지 않는다. */
-  masterName: string | null
+  /** 소속(필수). 원장 FK가 아니라 계정에 저장하는 조직 이름 문자열이다. */
+  affiliation: string
   /** 직전 제출에서 서버가 이 줄에 돌려준 사유. 다시 제출할 때까지 남는다. */
   serverIssues: GuestRowIssue[]
 }
@@ -63,9 +57,7 @@ export interface GuestBatchPayloadRow {
   key: string
   name: string
   email: string
-  phone: string
-  master_table: MasterTable | null
-  master_id: string | null
+  affiliation: string
 }
 
 /** 서버가 줄마다 돌려주는 결과(어댑터가 정규화한 뒤의 모양). */
@@ -103,23 +95,28 @@ export interface GuestBatchSummary {
   unknown: number
 }
 
+/** 파일에서 읽어 오는 계정 프로필 칸. */
+type GuestSheetField = 'name' | 'email' | 'affiliation'
+
 /** 파일 열 이름 → 우리 칸. 키는 공백 제거·소문자 비교값이다. */
-const HEADER_ALIASES: Record<string, 'name' | 'email' | 'phone'> = {
+const HEADER_ALIASES: Record<string, GuestSheetField> = {
   이름: 'name', 성명: 'name', name: 'name',
   이메일: 'email', 이메일주소: 'email', 전자메일주소: 'email', 메일: 'email', 메일주소: 'email',
   email: 'email', 'e-mail': 'email', emailaddress: 'email',
-  연락처: 'phone', 휴대폰: 'phone', 휴대전화: 'phone', 핸드폰: 'phone', 전화: 'phone',
-  전화번호: 'phone', phone: 'phone', mobile: 'phone',
+  소속: 'affiliation', 소속기관: 'affiliation', 소속회사: 'affiliation', 회사: 'affiliation',
+  기업: 'affiliation', 기관: 'affiliation', affiliation: 'affiliation', company: 'affiliation',
+  organization: 'affiliation',
+  // 연락처 열은 알아보지 않는다 — 파일에 있어도 읽지 않고 버린다(계정 등록이 묻지 않는 값이다).
 }
 
-const FIELD_LABEL: Record<'name' | 'email' | 'phone', string> = {
+const FIELD_LABEL: Record<GuestSheetField, string> = {
   name: '이름',
   email: '이메일',
-  phone: '연락처',
+  affiliation: '소속',
 }
 
 /** 템플릿 헤더 — 내려받은 파일을 손대지 않고 그대로 올릴 수 있어야 한다. */
-export const GUEST_BATCH_HEADERS = ['이름', '이메일', '연락처'] as const
+export const GUEST_BATCH_HEADERS = ['이름', '이메일', '소속'] as const
 
 /**
  * 이메일 형식 — `create_guest_accounts`(20260913140000)가 쓰는 식을 그대로 옮긴 것(POSIX
@@ -131,8 +128,7 @@ const EMAIL_SHAPE = /^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$/
 /** 서버가 재는 상한·범위. 어긋나면 화면과 서버의 판정이 갈린다. */
 const NAME_MAX = 100
 const EMAIL_MAX = 254
-const PHONE_DIGITS_MIN = 9
-const PHONE_DIGITS_MAX = 15
+const AFFILIATION_MAX = 200
 
 /** 줄 식별자 발행기. 화면 안에서만 유효하면 되므로 세션 안 일련번호로 충분하다. */
 let rowSeq = 0
@@ -147,10 +143,7 @@ export function createGuestDraftRow(seed: Partial<Omit<GuestDraftRow, 'rowId'>> 
     rowId: nextGuestRowId(),
     name: seed.name ?? '',
     email: seed.email ?? '',
-    phone: seed.phone ?? '',
-    masterTable: seed.masterTable ?? null,
-    masterId: seed.masterId ?? null,
-    masterName: seed.masterName ?? null,
+    affiliation: seed.affiliation ?? '',
     serverIssues: seed.serverIssues ?? [],
   }
 }
@@ -158,11 +151,6 @@ export function createGuestDraftRow(seed: Partial<Omit<GuestDraftRow, 'rowId'>> 
 /** 비교용 이메일 — 앞뒤 공백을 걷고 소문자로 눕힌다. 로그인 ID가 될 값이라 표기 차이를 지운다. */
 export function normalizeGuestEmail(value: string): string {
   return value.trim().toLowerCase()
-}
-
-/** 비교용 연락처 — 숫자만 남긴다. `010-1111-2222`와 `01011112222`는 같은 번호다. */
-export function guestPhoneDigits(value: string): string {
-  return value.replace(/\D/g, '')
 }
 
 function normalizeHeader(raw: string): string {
@@ -238,7 +226,9 @@ export function parseGuestGrid(grid: readonly (readonly string[])[]): GuestGridP
   }
 
   const fieldAt = header.map((h) => HEADER_ALIASES[normalizeHeader(h)] ?? null)
-  const missing = (['name', 'email', 'phone'] as const).filter((f) => !fieldAt.includes(f))
+  // 읽는 칸은 셋뿐이다. 파일에 연락처 열이 있어도 **그 열은 매핑되지 않아 조용히 버려진다** —
+  // 종전 템플릿으로 만든 파일을 그대로 올려도 막히지 않게 하기 위해서다.
+  const missing = (['name', 'email', 'affiliation'] as const).filter((f) => !fieldAt.includes(f))
   if (missing.length > 0) {
     return {
       rows: [],
@@ -252,18 +242,18 @@ export function parseGuestGrid(grid: readonly (readonly string[])[]): GuestGridP
   const rows: GuestDraftRow[] = []
   let skipped = 0
   for (const cells of grid.slice(1)) {
-    const cellOf = (field: 'name' | 'email' | 'phone') => {
+    const cellOf = (field: GuestSheetField) => {
       const idx = fieldAt.indexOf(field)
       return readCell(idx >= 0 ? (cells[idx] ?? '') : '')
     }
     const name = cellOf('name')
     const email = cellOf('email')
-    const phone = cellOf('phone')
-    if (!name && !email && !phone) {
+    const affiliation = cellOf('affiliation')
+    if (!name && !email && !affiliation) {
       skipped += 1
       continue
     }
-    rows.push(createGuestDraftRow({ name, email, phone }))
+    rows.push(createGuestDraftRow({ name, email, affiliation }))
   }
   return { rows, fileIssues: [], skipped }
 }
@@ -275,11 +265,14 @@ function pushIssue(map: Map<string, GuestRowIssue[]>, rowId: string, issue: Gues
 }
 
 /**
- * 목록 안에서 같은 값을 쓴 줄들을 **모두** 실패로 세운다.
+ * 목록 안에서 같은 이메일을 쓴 줄들을 **모두** 실패로 세운다.
  *
  * 먼저 적은 줄을 살리지 않는 이유는, 같은 이메일이 두 줄인 파일에서 어느 줄이 맞는지 파일만
- * 보고는 알 수 없기 때문이다. 한쪽을 임의로 살리면 나머지 칸(이름·연락처)이 다른 사람 것일 수
- * 있고, 연락처는 그대로 초기 비밀번호가 된다.
+ * 보고는 알 수 없기 때문이다. 한쪽을 임의로 살리면 나머지 칸(이름·소속)이 다른 사람 것일 수
+ * 있는데, 이메일은 그대로 그 계정의 로그인 ID가 된다.
+ *
+ * **이메일만 본다.** 계정 등록이 받는 칸이 이름·이메일·소속 셋이고, 그중 유일해야 하는 것은
+ * 로그인 ID인 이메일 하나뿐이다(같은 소속에 여러 사람이 있는 것은 정상이다).
  *
  * **목록 전체를 한 번에 본다.** 묶어 보내기(`chunkGuestRows`)는 이 판정이 끝난 뒤의 일이라,
  * 1번 줄과 250번 줄이 겹쳐도 둘 다 걸린다 — 묶음마다 따로 보면 그 둘은 서로를 보지 못한다.
@@ -291,16 +284,13 @@ function pushIssue(map: Map<string, GuestRowIssue[]>, rowId: string, issue: Gues
  */
 const COLLISION_PEERS = 3
 
-function markCollisions(
+function markEmailCollisions(
   rows: readonly GuestDraftRow[],
-  field: 'email' | 'phone',
-  keyOf: (row: GuestDraftRow) => string,
-  label: string,
   into: Map<string, GuestRowIssue[]>,
 ): void {
   const seats = new Map<string, number[]>()
   rows.forEach((row, i) => {
-    const key = keyOf(row)
+    const key = normalizeGuestEmail(row.email)
     if (!key) return
     const arr = seats.get(key)
     if (arr) arr.push(i)
@@ -316,14 +306,14 @@ function markCollisions(
       const shown = peers.map((j) => j + 1).join('·')
       const rest = others - peers.length
       pushIssue(into, rows[i]!.rowId, {
-        field,
-        code: field === 'email' ? 'EMAIL_DUPLICATE_IN_BATCH' : 'PHONE_DUPLICATE_IN_BATCH',
+        field: 'email',
+        code: 'EMAIL_DUPLICATE_IN_BATCH',
         // 어느 줄과 겹치는지 밝힌다 — 서버는 "입력 안에 두 번 이상 있습니다"까지만 알고
         // 화면은 몇 번째 줄인지까지 안다. 그래야 무엇을 지울지가 정해진다.
         message:
           rest > 0
-            ? `같은 ${label}을(를) ${shown}번째 줄 외 ${rest.toLocaleString('ko-KR')}줄에 더 적었습니다. 겹친 줄은 모두 만들지 않습니다.`
-            : `같은 ${label}을(를) ${shown}번째 줄에도 적었습니다. 겹친 줄은 모두 만들지 않습니다.`,
+            ? `같은 이메일을 ${shown}번째 줄 외 ${rest.toLocaleString('ko-KR')}줄에 더 적었습니다. 겹친 줄은 모두 만들지 않습니다.`
+            : `같은 이메일을 ${shown}번째 줄에도 적었습니다. 겹친 줄은 모두 만들지 않습니다.`,
       })
     }
   }
@@ -367,30 +357,22 @@ export function validateGuestRows(rows: readonly GuestDraftRow[]): Map<string, G
         message: '이메일 형식이 올바르지 않습니다.',
       })
     }
-    const digits = guestPhoneDigits(row.phone)
-    if (!row.phone.trim()) {
+    const affiliation = row.affiliation.trim()
+    if (!affiliation) {
       pushIssue(out, row.rowId, {
-        field: 'phone',
-        code: 'PHONE_REQUIRED',
-        message: '연락처를 입력해야 합니다(연락처가 초기 비밀번호입니다).',
+        field: 'affiliation',
+        code: 'AFFILIATION_REQUIRED',
+        message: '소속을 입력해야 합니다.',
       })
-    } else if (digits.length < PHONE_DIGITS_MIN || digits.length > PHONE_DIGITS_MAX) {
+    } else if (affiliation.length > AFFILIATION_MAX) {
       pushIssue(out, row.rowId, {
-        field: 'phone',
-        code: 'PHONE_INVALID',
-        message: `연락처는 숫자 ${PHONE_DIGITS_MIN}~${PHONE_DIGITS_MAX}자리여야 합니다.`,
-      })
-    }
-    if (Boolean(row.masterId) !== Boolean(row.masterTable)) {
-      pushIssue(out, row.rowId, {
-        field: 'ledger',
-        code: 'MASTER_PAIR_REQUIRED',
-        message: '원장 연결이 온전하지 않습니다. 연결을 해제하고 다시 고르세요.',
+        field: 'affiliation',
+        code: 'AFFILIATION_TOO_LONG',
+        message: `소속은 ${AFFILIATION_MAX}자를 넘을 수 없습니다.`,
       })
     }
   }
-  markCollisions(rows, 'email', (r) => normalizeGuestEmail(r.email), '이메일', out)
-  markCollisions(rows, 'phone', (r) => guestPhoneDigits(r.phone), '연락처', out)
+  markEmailCollisions(rows, out)
   return out
 }
 
@@ -416,17 +398,17 @@ export function submittableGuestRows(rows: readonly GuestDraftRow[]): GuestDraft
 
 /**
  * 서버로 보낼 모양으로 접는다. **적힌 그대로 보낸다**(앞뒤 공백만 걷는다) — 이메일 소문자화도
- * 연락처 숫자 추리기도 하지 않는다. 저장 형태와 비교 규칙은 서버가 가진 값이고(`app.norm_email`·
- * `app.norm_phone`), 화면이 앞질러 바꾸면 한 줄 생성 경로와 저장값이 갈린다.
+ * 이메일 소문자화도 하지 않는다. 저장 형태와 비교 규칙은 서버가 가진 값이고(`app.norm_email`),
+ * 화면이 앞질러 바꾸면 한 줄 생성 경로와 저장값이 갈린다.
+ *
+ * 연락처와 원장 식별자는 계약에 없으므로 보내지 않는다.
  */
 export function toGuestBatchPayload(rows: readonly GuestDraftRow[]): GuestBatchPayloadRow[] {
   return rows.map((row) => ({
     key: row.rowId,
     name: row.name.trim(),
     email: row.email.trim(),
-    phone: row.phone.trim(),
-    master_table: row.masterTable,
-    master_id: row.masterId,
+    affiliation: row.affiliation.trim(),
   }))
 }
 
@@ -541,8 +523,8 @@ export function applyBatchOutcomes(
  *    파일을 연 사람의 표 도구가 그것을 **실행한다.** 사유 문구를 빼면 파일이 쓸모없어지므로
  *    빼는 대신 값으로 못 박는다. 앞뒤 공백은 먼저 걷고 첫 글자를 본다 — 표 도구도 공백을 걷고
  *    읽으므로 ` =cmd`를 그냥 두면 막은 것이 아니다.
- *  · **0으로 시작하는 숫자열도 같은 방식으로 못 박는다.** `01012345678`이 숫자로 읽히면 앞의
- *    0이 사라져 연락처가 아닌 값이 되고, 그 파일을 그대로 다시 올리면 전 줄이 PHONE_INVALID다.
+ *  · **0으로 시작하는 숫자열도 같은 방식으로 못 박는다.** `0012 재단`처럼 앞자리 0을 가진
+ *    이름·소속이 숫자로 읽히면 그 0이 사라진 채 되읽혀, 고쳐서 다시 올리는 왕복이 깨진다.
  *
  * `="..."` 꼴을 쓰지 않는 것은 그것이 바로 우리가 막으려는 수식이기 때문이다. 홑따옴표는
  * 되읽을 때 `readCell`이 **같은 조건으로만** 떼므로 고쳐서 다시 올리는 왕복이 성립한다.
@@ -557,7 +539,7 @@ function csvCell(value: string): string {
 export function buildGuestTemplateCsv(): string {
   return [
     GUEST_BATCH_HEADERS.join(','),
-    ['홍길동', 'hong@example.com', '010-1234-5678'].map(csvCell).join(','),
+    ['홍길동', 'hong@example.com', '와이앤아처'].map(csvCell).join(','),
   ].join('\n')
 }
 
@@ -572,7 +554,7 @@ export function buildFailedRowsCsv(
   const lines = [[...GUEST_BATCH_HEADERS, '사유'].join(',')]
   for (const row of rows) {
     const reason = (issues.get(row.rowId) ?? []).map((i) => i.message).join(' / ')
-    lines.push([row.name, row.email, row.phone, reason].map(csvCell).join(','))
+    lines.push([row.name, row.email, row.affiliation, reason].map(csvCell).join(','))
   }
   return lines.join('\n')
 }

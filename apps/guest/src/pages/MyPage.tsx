@@ -1,5 +1,5 @@
 import { Badge, Banner, Card, EmptyState, InfoField, InfoGrid, Spinner } from '@ynarcher/ui'
-import { contextKindLabel, PERSONA_LABEL } from '@/auth/guestStore'
+import { contextKindLabel } from '@/auth/guestStore'
 import { PasswordChangeCard } from '@/pages/PasswordChangeCard'
 import { useGuestMe } from '@/features/meHooks'
 import { PROGRAM_STATUS_LABEL, PROGRAM_STATUS_TONE } from '@/features/programMeta'
@@ -8,10 +8,9 @@ import { formatDate } from '@/lib/format'
 /**
  * 마이페이지 — 내 계정과 지금 참여 중인 사업.
  *
- * 데이터 원본은 guest-auth-refresh 한 번이다. 이 호출이 원장(NETWORKS 기업·전문가)의 현재
- * 이름을 세션에 되비추므로, 이 화면을 여는 것 자체가 이름 동기화이기도 하다. 게스트에게
- * 사업 원장(programs)의 RLS를 여는 대신 로그인과 같은 판정(세션 고정 사업 + 열린 명부)을
- * 거친 표시용 응답만 받는다.
+ * 데이터 원본은 guest-auth-refresh 한 번이다. 계정 프로필과 현재 사업 참여를 함께 읽되,
+ * 계정 이름·소속·이메일은 업무 원장과 동기화하지 않는다. 게스트에게 사업 원장(programs)의
+ * RLS를 여는 대신 로그인과 같은 판정(세션 고정 사업 + 열린 명부)을 거친 표시용 응답만 받는다.
  */
 export function MyPage() {
   // 질의 키는 개요 요약·사이드바 전환기와 같다(`useGuestMe`) — 세 자리가 같은 시점의 사실을 쓴다.
@@ -41,11 +40,7 @@ export function MyPage() {
         <InfoGrid columns={2}>
           <InfoField label="이름" value={me.user.name} />
           <InfoField label="이메일" value={me.user.email} />
-          <InfoField
-            label="참여 구분"
-            value={me.participation.persona ? PERSONA_LABEL[me.participation.persona] : '—'}
-          />
-          {me.company && <InfoField label="소속 기업" value={me.company.name} />}
+          <InfoField label="소속" value={me.user.affiliation} />
         </InfoGrid>
       </Card>
 

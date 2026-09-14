@@ -35,7 +35,7 @@ insert into public.workspace_permissions (user_id, workspace_key, permission_lev
 
 insert into public.users (id, user_type, name, email, phone, session_version, is_active) values
   ('b2000000-0000-0000-0000-000000000001', 'temporary_guest', '게스트', 'fcs-g1@example.test',
-   '01053000001', 1, true);
+   null, 1, true);
 
 insert into public.programs (id, title) values
   ('b3000000-0000-0000-0000-000000000001', '구성 저장 사업');

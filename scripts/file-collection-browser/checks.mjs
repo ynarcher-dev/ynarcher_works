@@ -37,11 +37,21 @@ function isContainingBlockFor(node, position) {
 
 function overflowAncestor(el, kinds) {
   if (!el) return null;
-  const position = getComputedStyle(el).position;
+  let position = getComputedStyle(el).position;
   if (position === 'fixed') return null;
   let node = el.parentElement;
   while (node && node !== document.documentElement) {
     if (isContainingBlockFor(node, position)) {
+      /*
+        **컨테이닝 블록을 지나면 그 위쪽은 보통의 조상이다.**
+
+        absolute인 요소는 컨테이닝 블록까지만 특별하고, 그 위로는 static 요소와 똑같이
+        잘리고 똑같이 스크롤된다. 여기서 absolute를 계속 들고 올라가면 위쪽의 static
+        스크롤 상자를 영영 만나지 못해, **스크롤로 닿는 요소를 '넘쳤다'고 오판한다** —
+        입력칸 안의 아이콘 버튼(position: absolute)이 가로 스크롤 상자 안에 있을 때가
+        바로 그 자리다.
+      */
+      if (position === 'absolute') position = 'static';
       const ox = getComputedStyle(node).overflowX;
       if (kinds.includes(ox)) return node;
       // 스크롤 상자를 만나면 그 위쪽의 잘림은 이 요소 이야기가 아니다(스크롤로 닿는다).
@@ -155,6 +165,13 @@ function bodyLeaks(root, limit) {
   const rootRect = root.getBoundingClientRect();
   const bad = [];
   for (const el of root.querySelectorAll('*')) {
+    /*
+      아이콘 **속**의 도형(path·circle)은 따로 묻지 않는다. 그 도형이 잘리고 안 잘리고는
+      자기를 담은 <svg>의 이야기이고(svg는 기본이 overflow:hidden이라 조상 탐색이 거기서
+      멈춘다), 정작 판정해야 할 것은 그 <svg>가 어디에 서 있는가다. 빼지 않으면 스크롤
+      상자 안의 아이콘 하나가 도형 수만큼 거짓 실패를 낸다.
+    */
+    if (el.ownerSVGElement) continue;
     const cs = getComputedStyle(el);
     if (cs.display === 'none' || cs.visibility === 'hidden') continue;
     const r = el.getBoundingClientRect();

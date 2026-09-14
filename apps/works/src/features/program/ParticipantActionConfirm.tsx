@@ -3,15 +3,14 @@ import type { ReactNode } from 'react'
 import { useGuestHost } from '@/features/guest/host'
 
 /** 확인이 필요한 명부 일괄 작업. null이면 창을 닫는다. */
-export type ParticipantAction = 'open' | 'block' | 'unblock' | 'reset'
+export type ParticipantAction = 'open' | 'block' | 'unblock'
 
 /**
  * 명부 일괄 작업 확인창.
  *
- * 셋 다 **밖으로 나가거나 즉시 끊는 일**이라 확인을 받는다 — 로그인 열기와 재설정 안내는
- * 게스트의 연락처로 메시지가 나가고(보낸 것은 되돌릴 수 없다), 차단은 접속 중인 세션까지
- * 그 자리에서 무효화한다. 저장 버튼 하나로 조용히 끝나면 담당자는 무엇이 나갔는지 사후에만
- * 안다.
+ * 셋 다 **밖으로 나가거나 즉시 끊는 일**이라 확인을 받는다 — 접근 허용은 게스트의 연락처로
+ * 접속 안내가 나가고(보낸 것은 되돌릴 수 없다), 차단은 접속 중인 세션까지 그 자리에서
+ * 무효화한다. 저장 버튼 하나로 조용히 끝나면 담당자는 무엇이 나갔는지 사후에만 안다.
  *
  * 따라쓰기까지 요구하지 않는 것은 되돌릴 수 있는 작업이기 때문이다(닫은 문은 다시 연다).
  * 되돌릴 수 없는 삭제에만 고정 문구를 치게 한다 — 모든 창이 타자를 요구하면 그 요구가
@@ -25,7 +24,7 @@ export function ParticipantActionConfirm({
   busy,
 }: {
   action: ParticipantAction | null
-  /** 대상 건수 — 로그인 열기·차단은 고른 행 수, 재설정 안내는 계정 수다. */
+  /** 대상 건수 — 셋 다 고른 명부 행 수다(차단·해제는 그중 자기 몫만 센다). */
   count: number
   onConfirm: () => void
   onClose: () => void
@@ -38,26 +37,22 @@ export function ParticipantActionConfirm({
     ParticipantAction,
     { title: string; body: ReactNode; confirm: string; danger: boolean }
   > = {
+    /*
+      비밀번호를 말하지 않는다. 초기값은 ADMIN이 중앙에서 정한 고정값이고 연락처가 아니며,
+      그 값을 바꾸는 자리도 여기가 아니라 통합 GUEST 계정 관리다 — 이 창이 비밀번호를 언급하는
+      순간 담당자는 그 값을 이 화면에서 확인·안내할 수 있다고 읽는다.
+      계정 생성도 말하지 않는다. 명부에는 **이미 있는 계정만** 서므로 여기서 계정이 생길 일이 없다.
+    */
     open: {
-      title: '로그인 열기',
+      title: `${entityNoun} 접근 허용`,
       body: (
         <>
-          <b>{count}건</b>의 로그인을 열고 접속 안내를 각자의 연락처로 보냅니다. 계정이 없는
-          대상은 이때 계정이 만들어집니다.
+          <b>{count}건</b>에 이 {entityNoun} 접근을 허용하고 접속 안내를 각자의 연락처로 보냅니다.
+          허용되는 것은 이 {entityNoun} 하나이며, 같은 계정이 참여 중인 <b>다른 프로젝트/FUND</b>는
+          이 동작과 무관합니다.
         </>
       ),
-      confirm: '열고 안내 보내기',
-      danger: false,
-    },
-    reset: {
-      title: '비밀번호 재설정 안내',
-      body: (
-        <>
-          계정 <b>{count}개</b>의 본인 연락처로 재설정 링크를 보냅니다. 비밀번호 값은 담당자
-          화면에 오지 않습니다 — 계정 하나가 여러 프로젝트/FUND를 열기 때문입니다.
-        </>
-      ),
-      confirm: '안내 보내기',
+      confirm: '허용하고 안내 보내기',
       danger: false,
     },
     unblock: {

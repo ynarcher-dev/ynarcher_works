@@ -8,9 +8,13 @@ import { createPasswordHandler } from '../guest-auth-password/handler.ts'
 /**
  * 게스트 로그인·비밀번호 설정 회귀 테스트.
  *
- * 두 함수를 한 파일에서 보는 이유는 정책이 둘에 걸쳐 하나이기 때문이다 — 초기 비밀번호로는
- * 설정 티켓만 나오고, 개인 비밀번호를 정한 뒤에야 세션이 열리며, 그 뒤로는 연락처가 통하지
- * 않는다. 가짜는 DB 클라이언트 하나뿐이고 판정·해시·서명은 실제 구현이 돈다.
+ * 두 함수를 한 파일에서 보는 이유는 정책이 둘에 걸쳐 하나이기 때문이다 — 개시 비밀번호로는
+ * 설정 티켓만 나오고, 개인 비밀번호를 정한 뒤에야 세션이 열리며, 그 뒤로는 개시 비밀번호가
+ * 통하지 않는다. 가짜는 DB 클라이언트 하나뿐이고 판정·해시·서명은 실제 구현이 돈다.
+ *
+ * 2026-09-14: 개시 비밀번호가 모든 계정의 고정값으로 바뀌었다. 그래서 이 파일이 보는 것은
+ * "해시가 없는 계정에만, 글자 그대로 같을 때만 열리는가"이다. 전화번호나 원장 관계는
+ * 계정 조회와 인증 판정에 참여하지 않는다.
  *
  * 근거: docs/docs_planning/3_9_1_guest_unified_account.md §6 / §6.1 (2026-09-12 사용자 확정)
  */
@@ -18,15 +22,15 @@ import { createPasswordHandler } from '../guest-auth-password/handler.ts'
 const SECRET = 'test-guest-jwt-secret'
 const USER_ID = '11111111-1111-4111-8111-111111111111'
 const EMAIL = 'kim@example.com'
-const LEDGER_PHONE = '010-1234-5678'
+/** 고정 개시 비밀번호. 서버 상수를 그대로 쓰지 않고 **값을 적어 둔다** — 상수를 import하면
+ *  구현이 바뀔 때 테스트가 함께 따라가 버려서, 계약이 바뀐 사실을 아무도 못 본다. */
+const INITIAL_PW = 'ynarcher'
 const PERSONAL_PW = 'newPass2026'
 
-const participant = (id: string, masterTable: string, masterId: string): Row => ({
+const participant = (id: string): Row => ({
   id,
   program_id: 'pg-1',
   entity_key: 'program',
-  master_table: masterTable,
-  master_id: masterId,
   user_id: USER_ID,
   login_status: 'INVITED',
   joined_at: null,
@@ -41,23 +45,22 @@ function seed(over: { credentials?: Row[]; participants?: Row[] } = {}) {
         user_type: 'external_startup',
         name: '김참여',
         email: EMAIL,
-        phone: LEDGER_PHONE,
-        company_id: null,
+        affiliation: '와이앤파트너스',
         session_version: 1,
         is_active: true,
         deleted_at: null,
       },
     ],
     guest_credentials: over.credentials ?? [],
-    guest_identities: [{ user_id: USER_ID, master_table: 'startups', master_id: 'st-1' }],
-    startups: [{ id: 'st-1', contact: { phone: LEDGER_PHONE } }],
-    program_participants: over.participants ?? [participant('pp-1', 'startups', 'st-1')],
+    program_participants: over.participants ?? [participant('pp-1')],
     programs: [
       {
         id: 'pg-1',
         code: 'AC-2026',
         title: '2026 액셀러레이팅',
         status: 'ACTIVE',
+        start_date: '2026-01-01',
+        end_date: '2026-12-31',
         deleted_at: null,
         guest_access_ends_at: null,
       },
@@ -96,11 +99,12 @@ interface Landing {
   mustChangePassword?: boolean
   changeTicket?: string
   selectTicket?: string
-  choices?: { participantId: string }[]
+  choices?: { participantId: string; startDate: string | null; endDate: string | null }[]
   accessible?: boolean
   error?: string
   message?: string
-  user?: unknown
+  user?: { id: string; name: string; user_type: string; email?: string | null; affiliation?: string | null }
+  context?: { persona?: unknown }
 }
 
 type Db = ReturnType<typeof seed>
@@ -185,10 +189,10 @@ async function settled(over: { participants?: Row[] } = {}) {
   })
 }
 
-describe('초기 비밀번호(계정 생성 때 확정한 전화번호) — 세션이 아니라 설정 티켓만 준다', () => {
-  it('연락처가 맞으면 mustChangePassword + 티켓이고, 세션은 열리지 않는다', async () => {
+describe('개시 비밀번호(모든 계정 공통 고정값) — 세션이 아니라 설정 티켓만 준다', () => {
+  it('고정값이면 mustChangePassword + 티켓이고, 세션은 열리지 않는다', async () => {
     const db = seed()
-    const { status, body } = await login(db, LEDGER_PHONE)
+    const { status, body } = await login(db, INITIAL_PW)
 
     expect(status).toBe(200)
     expect(body.mustChangePassword).toBe(true)
@@ -198,32 +202,49 @@ describe('초기 비밀번호(계정 생성 때 확정한 전화번호) — 세�
     expectNoSession(db, body)
   })
 
-  it('하이픈·공백 표기는 흡수하고, 숫자가 다르면 거절한다', async () => {
-    expect((await login(seed(), '01012345678')).body.mustChangePassword).toBe(true)
-    expect((await login(seed(), ' 010 1234 5678 ')).body.mustChangePassword).toBe(true)
+  it('전화번호가 없는 계정도 같은 값으로 들어온다 — 번호는 자격증명이 아니다', async () => {
+    const db = seed()
 
-    const wrong = await login(seed(), '01099998888')
-    expect(wrong.status).toBe(401)
-    expect(wrong.body.error).toBe('auth_failed')
+    const { status, body } = await login(db, INITIAL_PW)
+
+    expect(status).toBe(200)
+    expect(body.mustChangePassword).toBe(true)
+    expect(typeof body.changeTicket).toBe('string')
+    expectNoSession(db, body)
   })
 
-  it('숫자가 없는 값이나 빈 자리는 초기 비밀번호로 통하지 않는다', async () => {
+  it('전화번호 모양의 값으로는 들어올 수 없다', async () => {
+    expect((await login(seed(), '010-1234-5678')).status).toBe(401)
+    expect((await login(seed(), '01012345678')).status).toBe(401)
+  })
+
+  it('글자 그대로 같을 때만 통한다 — 대소문자·앞뒤 공백은 접지 않는다', async () => {
+    expect((await login(seed(), 'Ynarcher')).status).toBe(401)
+    expect((await login(seed(), 'YNARCHER')).status).toBe(401)
+    expect((await login(seed(), ' ynarcher ')).status).toBe(401)
+    expect((await login(seed(), 'ynarcher1')).status).toBe(401)
+  })
+
+  it('틀린 값은 같은 거절 응답을 받고 실패 카운터를 올린다', async () => {
+    const db = seed()
+
+    const wrong = await login(db, 'ynarcher!')
+
+    expect(wrong.status).toBe(401)
+    expect(wrong.body.error).toBe('auth_failed')
+    expect(wrong.body.changeTicket).toBeUndefined()
+    expect(db.tables.guest_credentials[0].login_attempts).toBe(1)
+  })
+
+  it('빈 자리는 판정 이전에 400으로 끊는다', async () => {
     expect((await login(seed(), '---')).status).toBe(401)
     const empty = await login(seed(), '')
     expect(empty.status).toBe(400)
     expect(empty.body.error).toBe('invalid_request')
   })
 
-  it('원장 연락처를 고쳐도 계정 생성 때 확정한 초기 비밀번호는 바뀌지 않는다', async () => {
-    const db = seed()
-    db.tables.startups[0].contact = { phone: '010-7777-0000' }
-
-    expect((await login(db, LEDGER_PHONE)).body.mustChangePassword).toBe(true)
-    expect((await login(db, '010-7777-0000')).status).toBe(401)
-  })
-
   it('설정 티켓에는 데이터 접근 권한이 없다 — aud가 다르고 세션 클레임이 없다', async () => {
-    const ticket = (await login(seed(), LEDGER_PHONE)).body.changeTicket as string
+    const ticket = (await login(seed(), INITIAL_PW)).body.changeTicket as string
 
     const asTicket = await verifyJwt(ticket, SECRET, 'guest-password-change')
     expect(asTicket?.sub).toBe(USER_ID)
@@ -237,31 +258,36 @@ describe('초기 비밀번호(계정 생성 때 확정한 전화번호) — 세�
   })
 
   it('모르는 이메일과 틀린 비밀번호는 같은 응답이다(계정 열거 차단)', async () => {
-    const unknown = await login(seed(), LEDGER_PHONE, 'nobody@example.com')
-    const wrongPw = await login(seed(), '01000000000')
+    // 고정값을 쓰면서 이 성질이 더 중요해졌다 — 비밀번호가 공개된 값이므로, 응답이 갈리는
+    // 순간 "그 이메일로 계정이 있는가"가 그대로 조회 창구가 된다.
+    const unknown = await login(seed(), INITIAL_PW, 'nobody@example.com')
+    const wrongPw = await login(seed(), 'notTheOne1')
 
     expect(unknown.status).toBe(wrongPw.status)
     expect(unknown.body).toEqual(wrongPw.body)
   })
 })
 
-describe('개인 비밀번호를 정한 뒤 — 연락처는 더 이상 통하지 않는다 (§2 파생 결함)', () => {
-  it('해시가 있으면 초기 전화번호 로그인은 거절된다', async () => {
+describe('개인 비밀번호를 정한 뒤 — 개시 비밀번호는 더 이상 통하지 않는다 (§2 파생 결함)', () => {
+  it('해시가 있으면 고정 개시 비밀번호는 거절된다', async () => {
     const db = await settled()
 
-    const res = await login(db, LEDGER_PHONE)
+    const res = await login(db, INITIAL_PW)
 
     expect(res.status).toBe(401)
+    expect(res.body.error).toBe('auth_failed')
+    // 설정 티켓도 나오지 않는다 — 나온다면 공개된 값 하나로 남의 비밀번호를 다시 세울 수 있다.
     expect(res.body.mustChangePassword).toBeUndefined()
+    expect(res.body.changeTicket).toBeUndefined()
     expectNoSession(db, res.body)
   })
 
-  it('새 사업이 추가돼도(참여 2건) 연락처는 통하지 않는다', async () => {
+  it('새 사업이 추가돼도(참여 2건) 개시 비밀번호는 통하지 않는다', async () => {
     const db = await settled({
-      participants: [participant('pp-1', 'startups', 'st-1'), participant('pp-2', 'networks', 'nw-1')],
+      participants: [participant('pp-1'), participant('pp-2')],
     })
 
-    expect((await login(db, LEDGER_PHONE)).status).toBe(401)
+    expect((await login(db, INITIAL_PW)).status).toBe(401)
   })
 
   it('개인 비밀번호는 통하고, 참여가 1건이면 그 자리에서 세션이 열린다', async () => {
@@ -271,6 +297,14 @@ describe('개인 비밀번호를 정한 뒤 — 연락처는 더 이상 통하�
 
     expect(status).toBe(200)
     expect(typeof body.accessToken).toBe('string')
+    expect(body.user).toMatchObject({
+      id: USER_ID,
+      name: '김참여',
+      email: EMAIL,
+      affiliation: '와이앤파트너스',
+    })
+    expect(body.user).not.toHaveProperty('company_id')
+    expect(body.context?.persona).toBeUndefined()
     const claims = await verifyJwt(body.accessToken as string, SECRET, 'authenticated')
     expect(claims?.app_user_id).toBe(USER_ID)
     expect(claims?.context_type).toBe('program')
@@ -282,12 +316,17 @@ describe('개인 비밀번호를 정한 뒤 — 연락처는 더 이상 통하�
 
   it('참여가 2건 이상이면 선택 티켓만 주고 세션은 열지 않는다', async () => {
     const db = await settled({
-      participants: [participant('pp-1', 'startups', 'st-1'), participant('pp-2', 'networks', 'nw-1')],
+      participants: [participant('pp-1'), participant('pp-2')],
     })
 
     const { body } = await login(db, PERSONAL_PW)
 
     expect(body.choices?.length).toBe(2)
+    expect(body.choices?.[0]).not.toHaveProperty('persona')
+    // 목록 줄은 사업 기간을 함께 받는다(2026-09-14 사용자 지정) — 고르는 자리에서 '언제부터
+    // 언제까지인가'를 답해야 하고, 그 값은 본체 원장이 갖는다.
+    expect(body.choices?.[0]?.startDate).toBe('2026-01-01')
+    expect(body.choices?.[0]?.endDate).toBe('2026-12-31')
     expect(
       await verifyJwt(body.selectTicket as string, SECRET, 'guest-context-select'),
     ).not.toBeNull()
@@ -330,12 +369,12 @@ describe('잠금 — 계정 단위로 5회 15분', () => {
     expectNoSession(db, locked.body)
   })
 
-  it('잠금은 비밀번호를 정하기 전 계정에도 걸린다(초기 상태의 연락처 추측)', async () => {
+  it('잠금은 비밀번호를 정하기 전 계정에도 걸린다(개시 상태의 추측)', async () => {
     const db = seed()
 
-    for (let i = 0; i < 5; i += 1) expect((await login(db, `0100000000${i}`)).status).toBe(401)
+    for (let i = 0; i < 5; i += 1) expect((await login(db, `guessPass${i}`)).status).toBe(401)
 
-    const locked = await login(db, LEDGER_PHONE)
+    const locked = await login(db, INITIAL_PW)
     expect(locked.status).toBe(429)
     expect(locked.body.changeTicket).toBeUndefined()
   })
@@ -360,7 +399,7 @@ describe('잠금 — 계정 단위로 5회 15분', () => {
 describe('비밀번호 설정 — 저장이 끝난 뒤에만 세션이 열린다', () => {
   it('티켓 + 정책 통과면 해시가 저장되고 그 다음에 세션이 나온다', async () => {
     const db = seed()
-    const ticket = (await login(db, LEDGER_PHONE)).body.changeTicket as string
+    const ticket = (await login(db, INITIAL_PW)).body.changeTicket as string
 
     const { status, body } = await setPassword(db, ticket, PERSONAL_PW)
 
@@ -378,7 +417,7 @@ describe('비밀번호 설정 — 저장이 끝난 뒤에만 세션이 열린다
 
   it('저장이 실패하면 500이고 세션은 열리지 않는다', async () => {
     const db = seed()
-    const ticket = (await login(db, LEDGER_PHONE)).body.changeTicket as string
+    const ticket = (await login(db, INITIAL_PW)).body.changeTicket as string
     // 저장은 조건부 쓰기 RPC 한 곳에서만 일어난다 — 그 호출이 실패하는 자리다.
     db.failRpc('guest_password_commit')
 
@@ -391,7 +430,7 @@ describe('비밀번호 설정 — 저장이 끝난 뒤에만 세션이 열린다
 
   it('설정 후 같은 티켓을 다시 쓰면 거절된다(해시가 이미 있다)', async () => {
     const db = seed()
-    const ticket = (await login(db, LEDGER_PHONE)).body.changeTicket as string
+    const ticket = (await login(db, INITIAL_PW)).body.changeTicket as string
     expect((await setPassword(db, ticket, PERSONAL_PW)).status).toBe(200)
 
     const again = await setPassword(db, ticket, 'anotherPass77')
@@ -451,7 +490,7 @@ describe('비밀번호 설정 — 저장이 끝난 뒤에만 세션이 열린다
 
   it('정지된 계정의 티켓은 살아 있어도 통하지 않는다', async () => {
     const db = seed()
-    const ticket = (await login(db, LEDGER_PHONE)).body.changeTicket as string
+    const ticket = (await login(db, INITIAL_PW)).body.changeTicket as string
     db.tables.users[0].is_active = false
 
     const res = await setPassword(db, ticket, PERSONAL_PW)
@@ -460,16 +499,23 @@ describe('비밀번호 설정 — 저장이 끝난 뒤에만 세션이 열린다
     expect(res.body.error).toBe('ticket_expired')
   })
 
-  it('정책 위반은 저장도 세션도 없이 400이다 — 연락처를 그대로 쓰는 것도 막는다', async () => {
+  it('정책 위반은 저장도 세션도 없이 400이다 — 개시 비밀번호를 그대로 쓰는 것도 막는다', async () => {
     const db = seed()
-    const ticket = (await login(db, LEDGER_PHONE)).body.changeTicket as string
+    const ticket = (await login(db, INITIAL_PW)).body.changeTicket as string
 
     const short = await setPassword(db, ticket, 'ab12')
     expect(short.status).toBe(400)
     expect(short.body.error).toBe('weak_password')
 
-    const samePhone = await setPassword(db, ticket, LEDGER_PHONE.replace(/\D/g, ''))
-    expect(samePhone.status).toBe(400)
+    // 금지는 대소문자를 접는다 — 여는 판정과 달리 넓게 잡는 쪽이 안전하다. 그리고 이유를
+    // 조합 규칙("영문과 숫자")이 아니라 **개시 비밀번호**로 답해야 사용자가 고칠 수 있다.
+    const sameInitial = await setPassword(db, ticket, INITIAL_PW)
+    expect(sameInitial.status).toBe(400)
+    expect(sameInitial.body.message).toContain('초기 비밀번호')
+
+    const sameInitialCased = await setPassword(db, ticket, 'YnArcher')
+    expect(sameInitialCased.status).toBe(400)
+    expect(sameInitialCased.body.message).toContain('초기 비밀번호')
 
     const lettersOnly = await setPassword(db, ticket, 'abcdefghij')
     expect(lettersOnly.status).toBe(400)
@@ -506,7 +552,7 @@ describe('비밀번호 설정 — 저장이 끝난 뒤에만 세션이 열린다
 
   it('설정 뒤 갈 곳이 없으면 비밀번호는 저장되고 안내만 돌려준다', async () => {
     const db = seed({ participants: [] })
-    const ticket = (await login(db, LEDGER_PHONE)).body.changeTicket as string
+    const ticket = (await login(db, INITIAL_PW)).body.changeTicket as string
 
     const { status, body } = await setPassword(db, ticket, PERSONAL_PW)
 
@@ -547,7 +593,7 @@ function bumpSessionVersion(db: Db) {
 describe('단명 티켓은 계정의 세션 판에 묶인다 — 옛 티켓은 초기화를 되돌리지 못한다', () => {
   it('설정 티켓에 발급 시점의 판이 실린다', async () => {
     const db = seed()
-    const ticket = (await login(db, LEDGER_PHONE)).body.changeTicket as string
+    const ticket = (await login(db, INITIAL_PW)).body.changeTicket as string
 
     const claims = await verifyJwt(ticket, SECRET, 'guest-password-change')
     expect(claims?.sv).toBe(1)
@@ -556,8 +602,8 @@ describe('단명 티켓은 계정의 세션 판에 묶인다 — 옛 티켓은 �
   it('선택 티켓에도 같은 판이 실린다', async () => {
     const db = await settled({
       participants: [
-        participant('pp-1', 'startups', 'st-1'),
-        participant('pp-2', 'networks', 'nw-1'),
+        participant('pp-1'),
+        participant('pp-2'),
       ],
     })
 
@@ -568,7 +614,7 @@ describe('단명 티켓은 계정의 세션 판에 묶인다 — 옛 티켓은 �
 
   it('티켓이 나간 뒤 판이 오르면(연락처 수정) 그 티켓으로 비밀번호를 세울 수 없다', async () => {
     const db = seed()
-    const ticket = (await login(db, LEDGER_PHONE)).body.changeTicket as string
+    const ticket = (await login(db, INITIAL_PW)).body.changeTicket as string
 
     bumpSessionVersion(db) // ADMIN이 이메일·연락처를 고쳤다
     const res = await setPassword(db, ticket, PERSONAL_PW)
@@ -600,9 +646,10 @@ describe('단명 티켓은 계정의 세션 판에 묶인다 — 옛 티켓은 �
     expect(res.status).toBe(401)
     expect(res.body.error).toBe('ticket_expired')
     expect(storedHash(db)).toBeNull()
-    // 공격자가 정한 값으로는 들어올 수 없다. 초기화된 계정이 연 문은 연락처 하나뿐이다.
+    // 공격자가 정한 값으로는 들어올 수 없다. 초기화된 계정이 연 문은 개시 비밀번호 하나뿐이고,
+    // 그 문 너머에도 설정 화면밖에 없다.
     expect((await login(db, 'attackerPass1')).status).toBe(401)
-    expect((await login(db, LEDGER_PHONE)).body.mustChangePassword).toBe(true)
+    expect((await login(db, INITIAL_PW)).body.mustChangePassword).toBe(true)
   })
 
   it('판 클레임이 없는 옛 티켓은 거절된다', async () => {
@@ -621,15 +668,15 @@ describe('단명 티켓은 계정의 세션 판에 묶인다 — 옛 티켓은 �
   })
 })
 
-describe('ADMIN 초기화 이후 — 현재 연락처로 들어오고, 정하기 전에는 세션이 없다', () => {
-  it('옛 개인 비밀번호는 죽고 연락처가 설정 티켓만 받는다', async () => {
+describe('ADMIN 초기화 이후 — 개시 비밀번호로 되돌아가고, 정하기 전에는 세션이 없다', () => {
+  it('옛 개인 비밀번호는 죽고 개시 비밀번호가 설정 티켓만 받는다', async () => {
     const db = await settled()
     expect((await login(db, PERSONAL_PW)).status).toBe(200)
 
     applyAdminReset(db)
 
     expect((await login(db, PERSONAL_PW)).status).toBe(401)
-    const reopened = await login(db, LEDGER_PHONE)
+    const reopened = await login(db, INITIAL_PW)
     expect(reopened.body.mustChangePassword).toBe(true)
     // 초기화 전의 로그인이 이미 명부를 ACTIVE로 올려 두었으므로, 여기서 보는 것은
     // "이번 요청이 세션을 주지 않았다"는 사실이다.
@@ -641,7 +688,7 @@ describe('ADMIN 초기화 이후 — 현재 연락처로 들어오고, 정하기
     const db = await settled()
     applyAdminReset(db)
 
-    const ticket = (await login(db, LEDGER_PHONE)).body.changeTicket as string
+    const ticket = (await login(db, INITIAL_PW)).body.changeTicket as string
     expect((await verifyJwt(ticket, SECRET, 'guest-password-change'))?.sv).toBe(2)
 
     const { status, body } = await setPassword(db, ticket, 'afterReset2026')
@@ -655,7 +702,7 @@ describe('ADMIN 초기화 이후 — 현재 연락처로 들어오고, 정하기
     expect((await setPassword(db, ticket, 'againAgain77')).status).toBe(401)
   })
 
-  it('초기화가 잠금을 풀어 준다 — 잠긴 계정도 연락처로 다시 시작한다', async () => {
+  it('초기화가 잠금을 풀어 준다 — 잠긴 계정도 개시 비밀번호로 다시 시작한다', async () => {
     const db = seed({
       credentials: [
         cred({
@@ -668,14 +715,14 @@ describe('ADMIN 초기화 이후 — 현재 연락처로 들어오고, 정하기
 
     applyAdminReset(db)
 
-    expect((await login(db, LEDGER_PHONE)).body.mustChangePassword).toBe(true)
+    expect((await login(db, INITIAL_PW)).body.mustChangePassword).toBe(true)
   })
 })
 
 describe('조건부 쓰기 — 읽은 뒤에 바뀐 자리에는 얹히지 않는다 (TOCTOU)', () => {
   it('해시를 만드는 동안 ADMIN이 초기화하면 옛 티켓의 값은 저장되지 않는다', async () => {
     const db = seed()
-    const ticket = (await login(db, LEDGER_PHONE)).body.changeTicket as string
+    const ticket = (await login(db, INITIAL_PW)).body.changeTicket as string
 
     // 핸들러가 계정·자격증명을 읽은 뒤, 커밋이 판정되기 직전에 초기화가 들어온다.
     db.beforeRpc('guest_password_commit', () => applyAdminReset(db))
@@ -778,7 +825,7 @@ describe('요청 경계', () => {
     const db = seed()
     delete env.GUEST_JWT_SECRET
 
-    const { status, body } = await login(db, LEDGER_PHONE)
+    const { status, body } = await login(db, INITIAL_PW)
 
     expect(status).toBe(500)
     expect(body.error).toBe('jwt_secret_missing')

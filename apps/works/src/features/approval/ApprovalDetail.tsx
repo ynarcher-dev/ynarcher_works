@@ -456,7 +456,7 @@ export function ApprovalDetail({
             </Card>
           )}
 
-          {/* 예산 현황(품의 금액·사용·결재 중·남음·이익률)과 예산 변경 이력.
+          {/* 예산 요약(품의 금액·사용·결재 중·남음·이익률)과 예산 변경 이력.
               예산표를 가진 문서, 곧 품의서에만 선다 — 지출결의서에는 자기 예산이 없다. */}
           {ownBudgetField && (
             <BudgetSummaryCard
@@ -465,7 +465,7 @@ export function ApprovalDetail({
               budgetTotal={ownBudgetTotal}
               usage={budgetUsage}
               nameOf={nameOf}
-              title={isRevise ? '변경 후 예산 현황(대상 품의 기준)' : undefined}
+              title={isRevise ? '변경 후 예산 요약(대상 품의 기준)' : undefined}
               help={
                 isRevise
                   ? '사용·결재 중 금액은 변경 대상 품의에 이미 걸린 지출입니다. 사용 가능액이 음수이면 변경 후 예산이 이미 나간 돈에 못 미친다는 뜻이며, 상신은 막지 않습니다.'

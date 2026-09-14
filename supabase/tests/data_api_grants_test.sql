@@ -31,7 +31,7 @@ insert into public.users(id, user_type, name, session_version, company_id) value
   ('d2000000-0000-0000-0000-000000000001', 'read_only',          'acl_무권한_사용자', 1, null),
   ('d2000000-0000-0000-0000-000000000002', 'read_only',          'acl_startup_읽기',  1, null),
   ('d2000000-0000-0000-0000-000000000003', 'external_startup',   'acl_외부_게스트',   1,
-   'd1000000-0000-0000-0000-000000000001'),
+   null),
   ('d2000000-0000-0000-0000-000000000004', 'management_support', 'acl_인사_담당자',   1, null),
   ('d2000000-0000-0000-0000-000000000005', 'super_admin',        'acl_관리자',        1, null),
   ('d2000000-0000-0000-0000-000000000006', 'read_only',          'acl_networks_쓰기', 1, null);
@@ -53,10 +53,6 @@ values
 insert into public.entity_contributions(id, entity_table, entity_id, action, source, note)
 values ('d4000000-0000-0000-0000-000000000001', 'networks',
         'd3000000-0000-0000-0000-000000000001', 'created', 'manual', 'ACL픽스처');
-
-insert into public.guest_identities(master_table, master_id, user_id)
-values ('startups', 'd1000000-0000-0000-0000-000000000001',
-        'd2000000-0000-0000-0000-000000000003');
 
 -- 감사 로그 한 줄. 적재는 서버 경로가 하므로 여기서도 슈퍼유저로 넣는다.
 insert into public.audit_logs(id, actor_user_id, action, reason)
@@ -131,8 +127,8 @@ select is(pg_temp.privs('authenticated', 'public.entity_contributions'), 'INSERT
   'entity_contributions: SELECT·INSERT만 가진다(UPDATE·DELETE 없음)');
 
 -- 게스트 연결은 읽기 전용. 자격증명은 별도 표이며 계속 잠겨 있다.
-select is(pg_temp.privs('authenticated', 'public.guest_identities'), 'SELECT',
-  'guest_identities: SELECT만 가진다(연결 생성은 ADMIN 경로)');
+select ok(to_regclass('public.guest_identities') is null,
+  'guest_identities is absent from the Data API');
 
 -- 감사 로그는 읽기만. 적재는 SECURITY DEFINER·service_role 경로이며 쓰기 정책이 없다.
 select is(pg_temp.privs('authenticated', 'public.audit_logs'), 'SELECT',
@@ -145,10 +141,10 @@ select is(
   (select string_agg(t || '=' || pg_temp.privs('anon', 'public.' || t), ' ' order by t)
      from unnest(array['startups','networks','users','programs',
                        'ma_programs','ma_buyers','ma_sellers','funds',
-                       'entity_contributions','guest_identities','audit_logs']) as t),
+                       'entity_contributions','audit_logs']) as t),
   'audit_logs=(없음) entity_contributions=(없음) funds=(없음) '
-  || 'guest_identities=(없음) ma_buyers=(없음) ma_programs=(없음) '
-  || 'ma_sellers=(없음) networks=(없음) programs=(없음) startups=(없음) users=(없음)',
+  || 'ma_buyers=(없음) ma_programs=(없음) ma_sellers=(없음) '
+  || 'networks=(없음) programs=(없음) startups=(없음) users=(없음)',
   'anon은 이 원장들에 아무 권한도 갖지 않는다(TRUNCATE·REFERENCES·TRIGGER 포함)'
 );
 
@@ -160,9 +156,9 @@ select is(
       and c.relkind = 'r'
       and c.relname in ('startups','networks','users','programs',
                         'ma_programs','ma_buyers','ma_sellers','funds',
-                        'entity_contributions','guest_identities','audit_logs')
+                        'entity_contributions','audit_logs')
       and c.relrowsecurity is true),
-  11,
+  10,
   '권한을 부여한 11개 원장 모두 RLS가 활성화되어 있다'
 );
 
@@ -341,22 +337,18 @@ reset role;
 set local role authenticated;
 select set_config('request.jwt.claims',
   '{"app_user_id":"d2000000-0000-0000-0000-000000000002","session_version":1}', true);
-select is(
-  (select count(*)::integer from public.guest_identities
-    where master_id = 'd1000000-0000-0000-0000-000000000001'),
-  1,
-  'startup 원장을 읽는 내부 사용자에게는 게스트 연결이 보인다'
-);
+select ok(to_regclass('public.guest_identities') is null,
+  '내부 사용자에게도 GUEST 원장 매핑 관계는 존재하지 않는다');
 reset role;
 
 set local role authenticated;
 select set_config('request.jwt.claims',
   '{"app_user_id":"d2000000-0000-0000-0000-000000000003","session_version":1}', true);
 select is(
-  (select count(*)::integer from public.guest_identities),
-  0,
-  '외부 게스트 본인에게는 게스트 연결 원장이 보이지 않는다'
-);
+  (select company_id from public.users
+    where id = 'd2000000-0000-0000-0000-000000000003'),
+  null::uuid,
+  '외부 GUEST 프로필에는 startup 관계가 남지 않는다');
 reset role;
 
 -- ── 33~35. 감사 로그: 권한은 열되 이력은 ADMIN에게만 보인다 ────────────────

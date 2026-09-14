@@ -24,6 +24,14 @@ interface Props {
   field: FormField
   value: BudgetTreeValue
   usage?: Map<string, BudgetUsage>
+  /**
+   * 카드 안처럼 폭이 모자란 자리에서 **글 칸을 접는다**(산출내역/비고 같은 자유기입 열).
+   *
+   * 숫자 열은 폭이 정해져 있지만 글 열은 얼마든 길어져, 열 자리를 내주고 나면 정작 금액·사용·
+   * 남음이 화면 밖으로 밀린다. 접힌 글 칸은 두 줄로 잘려 어차피 다 읽히지도 않았다 — 그래서
+   * 여기서는 아예 세우지 않고, 전부 읽는 일은 확대보기가 맡는다(compact 없이 부르면 다 선다).
+   */
+  compact?: boolean
 }
 
 function numericText(column: FormColumn, raw: string): string {
@@ -33,8 +41,11 @@ function numericText(column: FormColumn, raw: string): string {
 }
 
 /** 예산표 읽기. 입력 화면과 같은 가로형 분류 열을 유지해 경로를 다시 해석하지 않게 한다. */
-export function BudgetTreeView({ field, value, usage }: Props) {
-  const columns = field.columns ?? []
+export function BudgetTreeView({ field, value, usage, compact = false }: Props) {
+  const allColumns = field.columns ?? []
+  // 접는 대상은 자유기입(TEXT) 열뿐이다 — 날짜·선택·과세 유형은 폭이 예측되고, 숫자 열은
+  // 이 표가 답해야 할 물음 그 자체라 어느 폭에서도 선다.
+  const columns = compact ? allColumns.filter((column) => column.type !== 'TEXT') : allColumns
   const tree = asBudgetTree(value)
   const groups = budgetGridGroups(tree)
   const rows = groups.flatMap((group) => group.rows)
@@ -72,10 +83,10 @@ export function BudgetTreeView({ field, value, usage }: Props) {
       columns={[
         ...columns.map((column) => ({ key: column.key, label: column.label, className: isNumericColumn(column.type) ? 'w-32 text-right' : undefined })),
         ...(usage ? [
-          { key: 'usage:spent', label: '사용', className: 'w-32 text-right' },
-          { key: 'usage:pending', label: '결재 중', className: 'w-32 text-right' },
-          { key: 'usage:remaining', label: '남음', className: 'w-32 text-right' },
-          { key: 'usage:available', label: '사용 가능', className: 'w-32 text-right' },
+          { key: 'usage:spent', label: '사용금액', className: 'w-32 text-right' },
+          { key: 'usage:pending', label: '결재 대기', className: 'w-32 text-right' },
+          { key: 'usage:remaining', label: '잔액', className: 'w-32 text-right' },
+          { key: 'usage:available', label: '사용가능', className: 'w-32 text-right' },
         ] : []),
       ]}
       renderHierarchyCell={(cell) => (
@@ -172,7 +183,11 @@ export function BudgetTreeView({ field, value, usage }: Props) {
           : null
 
         return (
-          <tr className="border-b border-gray-200 bg-gray-25">
+          // 집계 줄은 **같은 계열의 두 단계**로 세운다(소계는 옅은 면, 합계는 한 단계 진한 면).
+          // 회색 하나로는 표 머리글·본문과 톤이 겹쳐 어디서 묶였는지가 눈에 걸리지 않았다.
+          // 파랑 계열을 고른 이유는 이 표의 유일한 색 신호가 초과(danger)의 빨강이기 때문이다 —
+          // 노란 계열(재무 범주)을 깔면 그 경고와 한 화면에서 섞여 읽힌다.
+          <tr className="border-b border-summary-blue-icon bg-summary-blue-surface">
             <td
               colSpan={levels.length}
               className={cn(
@@ -257,16 +272,16 @@ export function BudgetTreeView({ field, value, usage }: Props) {
         )
       }}
       footer={
-        <tr className="border-t border-gray-200 bg-gray-25">
+        <tr className="border-t border-summary-blue-icon bg-summary-blue-icon text-summary-blue-value">
           {levels.map((_, level) => (
-            <td key={level} className={cn('px-3 py-1.5 text-gray-600', tableText.body)}>
+            <td key={level} className={cn('px-3 py-1.5', tableText.body)}>
               {level === levels.length - 1 && summaryColumnIndex === 0 ? '합계' : ''}
             </td>
           ))}
           {summaryColumnIndex > 0 && (
             <td
               colSpan={summaryColumnIndex}
-              className={cn('px-3 py-1.5 text-right text-gray-700', tableText.head)}
+              className={cn('px-3 py-1.5 text-right', tableText.head)}
             >
               합계
             </td>
@@ -290,7 +305,7 @@ export function BudgetTreeView({ field, value, usage }: Props) {
               <td className={cn('px-3 py-1.5 text-right font-semibold tabular-nums', tableText.body)}>
                 {formatMoney(totalUsage.spent)}
               </td>
-              <td className={cn('px-3 py-1.5 text-right tabular-nums text-gray-500', tableText.body)}>
+              <td className={cn('px-3 py-1.5 text-right tabular-nums text-summary-blue-chip', tableText.body)}>
                 {formatMoney(totalUsage.pending)}
               </td>
               <td

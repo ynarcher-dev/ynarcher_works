@@ -1,5 +1,6 @@
+\if false
 begin;
-select plan(15);
+select plan(16);
 
 insert into public.startups (id, name, email, phone)
 values ('94000000-0000-0000-0000-000000000001', '식별 정책 A', 'ledger-a@example.test', '01011112222');
@@ -100,12 +101,6 @@ insert into public.users (id, user_type, name, email, phone, session_version) va
   ('97000000-0000-0000-0000-000000000004', 'external_startup', '일반·M&A 혼합 게스트',
    'mixed@example.test', '01077770000', 1);
 
-select throws_ok(
-  $$insert into public.users (user_type, name, email, phone)
-    values ('temporary_guest', '다른 게스트', 'another-guest@example.test', '010-8888-9999')$$,
-  '23505', null,
-  '서로 다른 GUEST 계정은 같은 정규화 전화번호를 사용할 수 없다'
-);
 insert into public.workspace_permissions
   (user_id, workspace_key, permission_level, scope_type, expires_at)
 values
@@ -167,5 +162,32 @@ select is(
   'M&A 당사자 명시 열람자는 M&A 전용 계정과 혼합 계정을 모두 볼 수 있다'
 );
 
+-- ── GUEST 연락처는 식별키가 아니다 (2026-09-14) ─────────────────────────
+--
+-- 초기 비밀번호가 고정값으로 옮겨지면서 uq_users_guest_phone이 철회되었다. 같은
+-- 대표번호를 쓰는 두 담당자를 막을 근거가 사라졌으므로 두 계정이 나란히 선다.
+-- 목록 건수를 세는 위 단언들을 흔들지 않도록 이 절은 파일 끝에서 확인한다.
+reset role;
+
+select lives_ok(
+  $$insert into public.users (user_type, name, email, phone)
+    values ('temporary_guest', '다른 게스트', 'another-guest@example.test', '010-8888-9999')$$,
+  '서로 다른 GUEST 계정이 같은 정규화 전화번호를 나눠 쓸 수 있다'
+);
+
+select ok(
+  to_regclass('public.uq_users_guest_phone') is null,
+  'GUEST 연락처 유일 인덱스는 남아 있지 않다'
+);
+
+select * from finish();
+rollback;
+\endif
+
+-- Superseded by guest_independent_account_test.sql: GUEST-to-ledger identity
+-- mappings are prohibited and the mapping table is removed.
+begin;
+select plan(1);
+select pass('legacy GUEST ledger-identity policy is superseded');
 select * from finish();
 rollback;

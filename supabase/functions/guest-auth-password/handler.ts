@@ -13,7 +13,11 @@
 //
 // 2026-09-05: 저장 위치가 초대 행(guest_invitations)에서 **계정**(guest_credentials)으로
 // 옮겨졌다. 종전에는 사업마다 초대 행이 있어 비밀번호가 여러 벌이었고, 새 사업에 초대되면
-// 그 행의 해시가 비어 전화번호로 다시 들어올 수 있었다. 이제 계정에 하나뿐이다.
+// 그 행의 해시가 비어 개시 비밀번호로 다시 들어올 수 있었다. 이제 계정에 하나뿐이다.
+//
+// 2026-09-14: 개시 비밀번호가 원장 연락처에서 고정값으로 바뀌었다. 정책 검사가 계정을
+// 보지 않게 되어(`passwordPolicyError`는 새 값 하나만 받는다) 연락처가 없는 계정도 같은
+// 경로로 비밀번호를 정한다. 금지되는 값은 고정 개시 비밀번호뿐이다.
 //
 // 2026-09-12: 판정 본체를 index.ts에서 분리해 배선과 갈랐다(로그인 함수와 같은 모양).
 // 이음매는 DB 클라이언트를 만드는 함수 하나뿐이다.
@@ -123,7 +127,7 @@ async function handleInitialSet(
   const isReset = claims.rst === true
   if (cred.password_hash && !isReset) return jsonResponse(EXPIRED, 401)
 
-  const policyError = passwordPolicyError(newPassword, account.phone ?? '')
+  const policyError = passwordPolicyError(newPassword)
   if (policyError) return jsonResponse({ error: 'weak_password', message: policyError }, 400)
 
   // 해시 계산은 수백 ms다. 그 사이에 초기화·연락처 수정이 들어올 수 있으므로, 쓰기는
@@ -165,7 +169,7 @@ async function handleChange(
     return jsonResponse(WRONG_CURRENT, 401)
   }
 
-  const policyError = passwordPolicyError(newPassword, account.phone ?? '')
+  const policyError = passwordPolicyError(newPassword)
   if (policyError) return jsonResponse({ error: 'weak_password', message: policyError }, 400)
   if (newPassword === currentPassword) {
     return jsonResponse(

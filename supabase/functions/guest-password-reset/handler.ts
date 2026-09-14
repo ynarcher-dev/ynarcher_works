@@ -2,7 +2,7 @@
 //
 // [발송] { userId } + Authorization: Bearer <내부 사용자 토큰>
 //   내부 사용자가 "재설정 안내 보내기"를 누른다. **호출자에게는 어떤 값도 돌려주지 않는다** —
-//   링크는 게스트 본인 연락처로만 나간다. 종전의 담당자 '비밀번호 초기화'를 대체한다:
+//   링크는 게스트 계정 이메일로만 나간다. 종전의 담당자 '비밀번호 초기화'를 대체한다:
 //   계정을 사업마다 갈라 두었을 때는 담당자가 값을 알아도 자기 사업만 열렸지만, 계정을
 //   합치면 그 게스트가 참여 중인 **다른 팀 사업까지 전부** 열린다.
 //
@@ -17,7 +17,7 @@
 //
 // 2026-09-13: 토큰의 **저장과 소진**을 조건부 RPC 둘로 내렸다(3_9_1 §6.2.3). 종전에는
 // 계정을 읽고 → 토큰을 만들고 → upsert하고 → 읽은 주소로 보내는 네 단계가 따로 밟혀서,
-// 그 사이에 들어온 연락처 수정이 비운 자리에 옛 스냅샷의 토큰이 다시 얹혔다. 소진도 조건
+// 그 사이에 들어온 이메일 수정이 비운 자리에 옛 스냅샷의 토큰이 다시 얹혔다. 소진도 조건
 // 없는 UPDATE라 같은 링크로 두 요청이 들어오면 둘 다 티켓을 받았다. 그와 함께 본체를
 // index.ts에서 분리했다 — 이음매는 클라이언트 둘과 발송기 하나뿐이다.
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -79,12 +79,12 @@ async function handleSend(
   const account = await loadAccount(db, userId)
   if (!account) return jsonResponse({ error: 'reset_failed' }, 400)
 
-  // 수신처가 없으면 쓸 수 없는 토큰도 만들지 않는다. 빈 문자열은 없는 값으로 보고,
-  // 이메일이 비어 있으면 전화번호로 안내한다.
-  const to = account.email?.trim() || account.phone?.trim() || ''
-  if (!to) return jsonResponse({ ok: false, notified: false, reason: 'no_contact' })
+  // GUEST의 유일한 온라인 수신처는 계정 이메일이다. 값이 없으면 쓸 수 없는 토큰도 만들지
+  // 않는다. 전화번호나 참여자 원장을 대체 수신처로 조회하지 않는다.
+  const email = account.email?.trim() ?? ''
+  if (!email) return jsonResponse({ ok: false, notified: false, reason: 'no_email' })
 
-  // 저장은 **이 계정을 읽은 그 판**에 묶는다. 판이 그 사이에 올랐다면 주소·번호가 바뀐
+  // 저장은 **이 계정을 읽은 그 판**에 묶는다. 판이 그 사이에 올랐다면 이메일이 바뀐
   // 것이므로 저장도 발송도 하지 않는다 — 아래 수신처는 위에서 읽은 스냅샷이고, 조건 없이
   // 저장하면 그 스냅샷(옛 주소)으로 살아 있는 링크를 보내게 된다.
   const raw = newToken()
@@ -104,8 +104,8 @@ async function handleSend(
   let notified = false
   try {
     const res = await deps.notify({
-      channel: to.includes('@') ? 'EMAIL' : 'ALIMTALK',
-      to,
+      channel: 'EMAIL',
+      to: email,
       templateCode: 'GUEST_PASSWORD_RESET',
       variables: { name: account.name, link: `${base}/reset?token=${raw}`, minutes: String(RESET_TTL_MIN) },
     })
@@ -114,7 +114,7 @@ async function handleSend(
     notified = false
   }
 
-  // 발송 결과만 알린다. 토큰도, 연락처 원본도 호출자에게 돌려주지 않는다.
+  // 발송 결과만 알린다. 토큰도, 이메일 원본도 호출자에게 돌려주지 않는다.
   return jsonResponse({ ok: true, notified })
 }
 

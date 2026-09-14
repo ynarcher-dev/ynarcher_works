@@ -490,12 +490,12 @@ export function MaPartyForm({ config, recordId, initial, onDone, onCancel, backT
                   })}
                 />
               </Field>
-              {/* 포털 계정을 세울 때 이메일이 ID, 연락처가 초기 비밀번호다. 형식을 강제하지
-                  않는 이유는 명함에 적힌 그대로 받는 자리여서다(내선·해외번호가 섞인다) —
-                  값을 쓰는 쪽(계정 발급)은 이 칸이 비었는지만 보고 사유와 함께 멈춘다. */}
+              {/* 포털 계정을 세울 때 이메일이 ID이고, 연락처는 계정 생성 화면의 기본값으로만
+                  쓰인다(자격증명이 아니다). 형식을 강제하지 않는 이유는 명함에 적힌 그대로 받는
+                  자리여서다 — 내선·해외번호가 섞인다. */}
               <Field
                 label="연락처"
-                hint="GUEST 계정의 초기 비밀번호가 됩니다."
+                hint="원장 연락처입니다. GUEST 계정을 만들 때 기본값으로 쓰입니다."
               >
                 <Input placeholder="예: 010-1234-5678" {...register('contactPhone')} />
               </Field>

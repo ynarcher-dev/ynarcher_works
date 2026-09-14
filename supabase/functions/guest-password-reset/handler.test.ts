@@ -7,7 +7,7 @@ import { createResetHandler, type ResetHandlerDeps } from './handler.ts'
  * 재설정 링크 발급·소진 회귀 테스트.
  *
  * 보는 것은 두 창 사이의 경합이다 — 계정을 읽은 뒤 토큰을 저장하기까지, 그리고 토큰을
- * 찾은 뒤 비우기까지. 그 사이에 ADMIN의 연락처 수정·초기화가 끼면 **옛 스냅샷의 링크가
+ * 찾은 뒤 비우기까지. 그 사이에 ADMIN의 이메일 수정·초기화가 끼면 **옛 스냅샷의 링크가
  * 옛 주소로 나가거나, 이미 끊긴 계정의 링크가 설정 티켓으로 바뀌는** 일이 생겼다.
  * 발송기는 주입된 대역이므로 이 테스트는 바깥으로 나가지 않는다.
  *
@@ -17,7 +17,6 @@ import { createResetHandler, type ResetHandlerDeps } from './handler.ts'
 const SECRET = 'test-guest-jwt-secret'
 const USER_ID = '33333333-3333-4333-8333-333333333333'
 const EMAIL = 'choi@example.com'
-const PHONE = '010-3333-4444'
 
 function seed(over: { credentials?: Row[] } = {}) {
   return fakeDb({
@@ -27,8 +26,7 @@ function seed(over: { credentials?: Row[] } = {}) {
         user_type: 'external_expert',
         name: '최전문가',
         email: EMAIL,
-        phone: PHONE,
-        company_id: null,
+        affiliation: '와이앤파트너스',
         session_version: 4,
         is_active: true,
         deleted_at: null,
@@ -151,7 +149,7 @@ function bumpSessionVersion(db: Db) {
   user.session_version = ((user.session_version as number) ?? 1) + 1
 }
 
-/** ADMIN 연락처 수정이 DB에서 하는 일 — 판을 올리고 살아 있는 링크를 비운다. */
+/** ADMIN 이메일 수정이 DB에서 하는 일 — 판을 올리고 살아 있는 링크를 비운다. */
 function applyContactEdit(db: Db, email: string) {
   db.tables.users[0].email = email
   bumpSessionVersion(db)
@@ -209,35 +207,35 @@ describe('발송 — 저장은 계정을 읽은 그 판에 묶인다', () => {
     expect(credOf(db).login_attempts).toBe(0)
   })
 
-  it('이메일이 비어 있으면 전화번호로 안내한다', async () => {
+  it('이메일이 비어 있으면 레거시 전화번호가 있어도 발송하지 않는다', async () => {
     const db = seed()
     db.tables.users[0].email = ''
+    db.tables.users[0].phone = '010-3333-4444'
     const notifier = recorder()
 
     const { status, body } = await send(db, { notify: notifier.notify })
 
     expect(status).toBe(200)
-    expect(body).toEqual({ ok: true, notified: true })
-    expect(notifier.calls[0]).toMatchObject({ to: PHONE, channel: 'ALIMTALK' })
-    expect(credOf(db).reset_token_hash).not.toBeNull()
+    expect(body).toEqual({ ok: false, notified: false, reason: 'no_email' })
+    expect(credOf(db).reset_token_hash).toBeNull()
+    expect(notifier.calls.length).toBe(0)
   })
 
-  it('수신처가 없으면 사용할 수 없는 토큰을 만들지 않는다', async () => {
+  it('이메일이 없으면 사용할 수 없는 토큰을 만들지 않는다', async () => {
     const db = seed()
     db.tables.users[0].email = null
-    db.tables.users[0].phone = null
     const notifier = recorder()
 
     const { status, body } = await send(db, { notify: notifier.notify })
 
     expect(status).toBe(200)
-    expect(body).toEqual({ ok: false, notified: false, reason: 'no_contact' })
+    expect(body).toEqual({ ok: false, notified: false, reason: 'no_email' })
     expect(db.writes.length).toBe(0)
     expect(credOf(db).reset_token_hash).toBeNull()
     expect(notifier.calls.length).toBe(0)
   })
 
-  it('읽은 뒤 연락처가 바뀌면 저장도 발송도 하지 않는다 — 옛 주소로 링크가 나가지 않는다', async () => {
+  it('읽은 뒤 이메일이 바뀌면 저장도 발송도 하지 않는다 — 옛 주소로 링크가 나가지 않는다', async () => {
     const db = seed()
     const notifier = recorder()
     // 계정(주소 스냅샷)을 읽은 뒤, 저장이 판정되기 직전에 ADMIN이 이메일을 고친다.

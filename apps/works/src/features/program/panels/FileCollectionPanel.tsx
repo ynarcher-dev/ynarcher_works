@@ -9,7 +9,6 @@ import { useMemo, useState } from 'react'
 import { hasWorkspaceWrite, useAuthStore } from '@/auth/authStore'
 import { CollectionMonitorTab } from '@/features/program/fileCollection/CollectionMonitorTab'
 import { CollectionStructureTab } from '@/features/program/fileCollection/CollectionStructureTab'
-import { CollectionTargetsTab } from '@/features/program/fileCollection/CollectionTargetsTab'
 import {
   useCollectionAssignments,
   useCollectionNodes,
@@ -20,7 +19,7 @@ import {
 import { useProgramWorkspace } from '@/features/program/workspace'
 import { failureText } from '@/lib/failureText'
 
-type PanelTab = 'structure' | 'targets' | 'monitor'
+type PanelTab = 'structure' | 'monitor'
 
 /** 빈 목록의 고정 신원. 조회가 아직 안 왔을 때 렌더마다 새 배열을 만들지 않기 위한 것이다. */
 const EMPTY_NODES: FileCollectionNodeDto[] = []
@@ -30,26 +29,24 @@ const EMPTY_RESPONSES: FileCollectionResponseDto[] = []
 /**
  * 파일받기 모듈(전체 화면, WORKS).
  *
- * 이 화면이 하는 일은 셋이고 그 셋이 탭이다 — **무엇을 받을지 짜고**(문항 구성), **누구에게
- * 받을지 정하고**(받는 사람), **들어온 것을 본다**(제출 관제). 한 화면에 세로로 쌓지 않는
- * 이유는 시기마다 주인이 바뀌기 때문이다: 처음에는 구성이 일이고 자료가 들어오기 시작하면
- * 관제가 일인데, 쌓아 두면 나중에도 구성 카드가 화면 위쪽을 계속 차지한다.
+ * 이 화면이 하는 일은 둘이고 그 둘이 탭이다 — **무엇을 받을지 짜고**(문항 구성), **들어온
+ * 것을 본다**(제출 현황). 한 화면에 세로로 쌓지 않는 이유는 시기마다 주인이 바뀌기
+ * 때문이다: 처음에는 구성이 일이고 자료가 들어오기 시작하면 현황이 일인데, 쌓아 두면
+ * 나중에도 구성 카드가 화면 위쪽을 계속 차지한다.
+ *
+ * **받는 사람을 고르는 탭은 없다**(2026-09-14 사용자 확정). 대상은 그 사업 명부에서 로그인이
+ * 열린 게스트 계정 전부이며, 서버가 명부를 보고 배정을 자동으로 세운다
+ * (`app.fc_sync_targets`). 누구를 넣고 뺄지는 개요의 게스트 설정(명부)에서만 다룬다.
  *
  * 폭은 다른 게스트 모듈과 같다 — 우측 NOTICE의 2:1 격자 안에 선다(2026-09-13 사용자 결정,
- * `ProgramDetailPage`가 감싼다). 좁아진 만큼 문항·명단·관제 표는 자기 칸 안에서 가로로
+ * `ProgramDetailPage`가 감싼다). 좁아진 만큼 문항·명단·현황 표는 자기 칸 안에서 가로로
  * 스크롤한다.
  *
  * 편집·배포·검토는 워크스페이스 쓰기 권한자만 할 수 있다. **화면에서 감추는 것은 인가가
  * 아니며**(서버가 RPC 첫머리에서 다시 판정한다) 여기서 끄는 것은 누를 수 없는 버튼을 보여
  * 주지 않기 위한 것이다.
  */
-export function FileCollectionPanel({
-  programId,
-  moduleId,
-}: {
-  programId: string
-  moduleId: string
-}) {
+export function FileCollectionPanel({ moduleId }: { moduleId: string }) {
   const config = useProgramWorkspace()
   const authUser = useAuthStore((s) => s.user)
   const canWrite = hasWorkspaceWrite(authUser, config.key)
@@ -71,11 +68,10 @@ export function FileCollectionPanel({
   const nodes = nodesQuery.data?.rows ?? EMPTY_NODES
   const assignments = assignmentsQuery.data?.rows ?? EMPTY_ASSIGNMENTS
   const responses = responsesQuery.data?.rows ?? EMPTY_RESPONSES
-  const liveAssignments = useMemo(() => assignments.filter((a) => !a.revoked_at), [assignments])
 
   /**
    * 고른 탭은 **모듈과 함께** 기억한다 — 모듈을 갈아타면 앞 모듈에서 보던 탭이 남지 않고,
-   * 새 모듈의 상태에 맞는 첫 화면(들어온 자료가 있으면 관제, 없으면 구성)에서 시작한다.
+   * 새 모듈의 상태에 맞는 첫 화면(들어온 자료가 있으면 현황, 없으면 구성)에서 시작한다.
    */
   const [picked, setPicked] = useState<{ moduleId: string; tab: PanelTab } | null>(null)
   const tab: PanelTab =
@@ -107,7 +103,7 @@ export function FileCollectionPanel({
     return (
       <Card
         title="파일받기"
-        help="받을 자료의 목록(폴더·문항)을 짜고, 명부의 게스트를 골라 배정합니다. 게스트에게 보이는 시점은 모듈 공개 여부가 정합니다."
+        help="받을 자료의 목록(폴더·문항)만 짜면 됩니다. 받는 사람은 이 사업 명부에서 로그인이 열린 게스트 전원이며, 게스트에게 보이는 시점은 모듈 공개 여부가 정합니다."
       >
         <div className="space-y-3">
           <p className="text-body text-gray-700">
@@ -185,8 +181,7 @@ export function FileCollectionPanel({
         onChange={(key) => setPicked({ moduleId, tab: key as PanelTab })}
         items={[
           { key: 'structure', label: '문항 구성', count: summary.questions },
-          { key: 'targets', label: '받는 사람', count: liveAssignments.length },
-          { key: 'monitor', label: '제출 관제', count: summary.pendingReview },
+          { key: 'monitor', label: '제출 현황', count: summary.pendingReview },
         ]}
       />
 
@@ -197,19 +192,8 @@ export function FileCollectionPanel({
           nodes={nodes}
           loading={nodesQuery.isLoading}
           canWrite={canWrite}
-          targetCount={liveAssignments.length}
           nodesTruncated={Boolean(nodesQuery.data?.truncated)}
           nodesFailed={nodesQuery.isError}
-        />
-      )}
-      {tab === 'targets' && (
-        <CollectionTargetsTab
-          programId={programId}
-          moduleId={moduleId}
-          collection={collection}
-          assignments={assignments}
-          loading={assignmentsQuery.isLoading}
-          canWrite={canWrite}
         />
       )}
       {tab === 'monitor' && (

@@ -7,7 +7,7 @@ import { ChevronRight } from 'lucide-react'
 import { z } from 'zod'
 import { GuestButton } from '@/components/GuestButton'
 import { guestAuth, type GuestCredentials, type GuestLoginResult } from '@/auth/guestAuthService'
-import { accessEndLabel, contextTags } from '@/auth/contextDisplay'
+import { contextTags, programPeriodLabel } from '@/auth/contextDisplay'
 import { type GuestContextChoice } from '@/auth/guestStore'
 import { passwordRuleOk } from '@/lib/passwordRule'
 
@@ -49,8 +49,10 @@ function ContextChoiceCard({
   disabled: boolean
   onSelect: () => void
 }) {
-  const tags = contextTags(choice.entityKey, choice.persona)
-  const meta = [choice.code, accessEndLabel(choice.accessEndsAt)].filter(Boolean).join(' · ')
+  const tags = contextTags(choice.entityKey)
+  // 줄이 답하는 것은 사업명·태그·기간 넷이다(2026-09-14 사용자 지정) — 코드와 접근 종료일은
+  // 세우지 않는다. 코드는 고를 때 쓰는 값이 아니고, 접근 종료일은 사업 기간과 헷갈린다.
+  const meta = programPeriodLabel(choice.startDate, choice.endDate)
   return (
     <CardShell className="p-0">
       <button
@@ -242,9 +244,14 @@ export function GuestLoginPage() {
           <GuestButton type="submit" className="w-full" disabled={busy}>
             {busy ? '확인 중…' : '로그인'}
           </GuestButton>
+          {/*
+            개시 비밀번호의 **값은 적지 않는다**(2026-09-14). 모든 계정이 같은 고정값을 쓰므로
+            로그인 화면에 적어 두면 이메일 하나만 알아도 남의 계정 설정 화면까지 걸어 들어갈
+            수 있다. 값을 건네는 일은 담당자의 몫이고, 이 문장은 그 값을 어디에 넣는지만 답한다.
+          */}
           <p className="text-caption text-gray-500">
-            처음 로그인하시나요? 비밀번호 칸에 등록된 연락처를 숫자만 입력하시면 새 비밀번호를
-            정하는 화면으로 넘어갑니다.
+            처음 로그인하실 때는 담당자가 전달한 최초 비밀번호를 입력하시면 새 비밀번호를 정하는
+            화면으로 넘어갑니다.
           </p>
         </form>
       )}
@@ -252,8 +259,12 @@ export function GuestLoginPage() {
       {step === 'password' && (
         <div className="mt-6 space-y-4">
           <div>
+            {/*
+              규칙을 라벨에 적는다 — 아래 버튼이 `passwordRuleOk`로 잠기므로, 규칙을 적지
+              않으면 최초 비밀번호를 그대로 다시 넣은 사람이 이유 없이 막힌 화면을 본다.
+            */}
             <label className={formText.label} htmlFor="newPassword">
-              새 비밀번호 (영문+숫자 조합, 8자 이상)
+              새 비밀번호 (영문+숫자 조합 8자 이상, 최초 비밀번호와 다른 값)
             </label>
             <input
               id="newPassword"

@@ -10,13 +10,11 @@ import {
   type Column,
 } from '@ynarcher/ui'
 import { useEffect, useMemo, useState } from 'react'
-import { useMaskPolicy } from '@/features/admin/sensitiveStore'
-import { CATEGORY_FILTER_OPTIONS } from '@/features/networks/config'
 import {
-  EMPTY_NETWORK_FILTERS,
-  searchPlaceholderFor,
-} from '@/features/networks/filters'
-import { useNetworkListPage, type NetworkRow } from '@/features/networks/hooks'
+  useGuestLedgerCandidates,
+  type GuestLedgerCandidate,
+} from '@/features/guest/guestLedgerCandidateService'
+import { CATEGORY_FILTER_OPTIONS } from '@/features/networks/config'
 
 /** 모달 안 표는 한 화면에 읽히는 높이로 끊고 공용 DataTable 페이저를 그대로 쓴다. */
 const PAGE_SIZE = 10
@@ -28,39 +26,19 @@ const NETWORK_TABS = [
   ...CATEGORY_FILTER_OPTIONS.map((item) => ({ key: item.value, label: item.label })),
 ]
 
-export interface LedgerCandidate {
-  masterTable: 'networks'
-  id: string
-  name: string
-  loginName: string | null
-  email: string | null
-  phone: string | null
-}
-
-function text(value: unknown): string | null {
-  return typeof value === 'string' && value.trim() ? value : null
-}
-
-function toCandidate(row: NetworkRow): LedgerCandidate {
-  return {
-    masterTable: 'networks',
-    id: row.id,
-    name: row.name,
-    loginName: row.name,
-    email: text(row.email),
-    phone: text(row.phone),
-  }
-}
+export type LedgerCandidate = GuestLedgerCandidate
 
 /**
- * GUEST 계정에 연결할 NETWORKS 행 하나를 고르는 창.
+ * GUEST 계정 입력에 복사할 NETWORKS 행을 고르는 창.
  *
- * 별도 후보 목록을 만들지 않고 NETWORKS 메인 목록의 서버 검색·구분 필터·페이지네이션 훅과
- * 공용 `Tabs`·`ListToolbar`·`DataTable`을 그대로 쓴다. 이 셋을 따로 흉내 내면 메인 원장의
- * 필터 기준이나 페이지 번호 규칙이 바뀌는 날 선택창만 옛 규칙으로 남는다.
+ * 전용 RPC가 이름·이메일·소속만 서버 검색·구분 필터·페이지네이션하고, 화면은 공용
+ * `Tabs`·`ListToolbar`·`DataTable`을 그대로 쓴다.
  *
- * 원장 연결은 계속 선택 사항이다. 이 창은 연결하기로 한 경우에만 NETWORKS에서 찾는 도구이며,
- * 닫아도 계정은 이름·이메일·연락처만으로 생성할 수 있다.
+ * **읽기 전용이다.** 여기서 원장 행을 만들거나 고치지 않는다 — 가져오는 것은 이름·이메일·소속
+ * 문자열뿐이고, 원장을 바꿔야 하면 NETWORKS 화면에서 따로 고친다. 전화번호 같은 다른 원장
+ * 열은 전용 RPC의 반환 계약부터 제외한다.
+ *
+ * 선택한 원장 id는 계정 요청에 보내지 않으며, 생성 뒤에도 원장 변경을 따라 동기화하지 않는다.
  */
 export function LedgerCandidatePickerModal({
   open,
@@ -79,26 +57,14 @@ export function LedgerCandidatePickerModal({
   /** 탭·검색·페이지를 옮겨도 체크를 보존하려고 id뿐 아니라 그때 읽은 행 사본을 함께 든다. */
   const [selected, setSelected] = useState<Map<string, LedgerCandidate>>(() => new Map())
 
-  // NETWORKS 메인 목록과 검색 범위를 맞춘다. 가린 연락처를 검색으로 되짚지 않는다.
-  const masked = useMaskPolicy('networks.all')
-  const searchScope = useMemo(
-    () => ({ email: !masked.email, phone: !masked.phone }),
-    [masked.email, masked.phone],
-  )
-  const filters = useMemo(
-    () => ({
-      ...EMPTY_NETWORK_FILTERS,
-      categories: tab === ALL_TAB ? [] : [tab],
-    }),
-    [tab],
-  )
-  const networks = useNetworkListPage(
-    'all',
-    keyword,
-    page,
-    PAGE_SIZE,
-    filters,
-    searchScope,
+  const candidates = useGuestLedgerCandidates(
+    {
+      search: keyword,
+      page,
+      pageSize: PAGE_SIZE,
+      category: tab === ALL_TAB ? null : tab,
+    },
+    open,
   )
 
   useEffect(() => {
@@ -109,7 +75,7 @@ export function LedgerCandidatePickerModal({
     setSelected(new Map())
   }, [initialKeyword, open])
 
-  const rows = networks.data?.rows ?? []
+  const rows = candidates.data?.rows ?? []
 
   /**
    * DataTable의 전체선택은 현재 페이지를 대상으로 한다. 다른 페이지에서 고른 id는 여기서
@@ -120,54 +86,36 @@ export function LedgerCandidatePickerModal({
     setSelected((current) => {
       const next = new Map(current)
       for (const row of rows) {
-        if (on.has(row.id)) next.set(row.id, toCandidate(row))
-        else next.delete(row.id)
+        if (on.has(row.sourceId)) next.set(row.sourceId, row)
+        else next.delete(row.sourceId)
       }
       return next
     })
   }
 
-  const toggleRow = (row: NetworkRow) => {
+  const toggleRow = (row: LedgerCandidate) => {
     setSelected((current) => {
       const next = new Map(current)
-      if (next.has(row.id)) next.delete(row.id)
-      else next.set(row.id, toCandidate(row))
+      if (next.has(row.sourceId)) next.delete(row.sourceId)
+      else next.set(row.sourceId, row)
       return next
     })
   }
 
-  const columns = useMemo<Column<NetworkRow>[]>(
+  const columns = useMemo<Column<LedgerCandidate>[]>(
     () => [
       { key: 'name', header: '이름', type: 'name', render: (row) => row.name },
       {
         key: 'affiliation',
         header: '소속',
         type: 'long',
-        render: (row) => text(row.affiliation) ?? <EmptyValue />,
-      },
-      {
-        key: 'position',
-        header: '직책/직급',
-        type: 'text',
-        render: (row) => text(row.profile?.position) ?? <EmptyValue />,
+        render: (row) => row.affiliation ?? <EmptyValue />,
       },
       {
         key: 'email',
         header: '이메일',
         type: 'long',
-        render: (row) => text(row.email) ?? <EmptyValue />,
-      },
-      {
-        key: 'phone',
-        header: '연락처',
-        type: 'phone',
-        render: (row) => text(row.phone) ?? <EmptyValue />,
-      },
-      {
-        key: 'category',
-        header: '구분',
-        type: 'code',
-        render: (row) => text(row.category_label) ?? '미지정',
+        render: (row) => row.email ?? <EmptyValue />,
       },
     ],
     [],
@@ -177,8 +125,8 @@ export function LedgerCandidatePickerModal({
     <Modal
       open={open}
       onClose={onClose}
-      title="네트워크 원장에서 찾기"
-      help="NETWORKS 구분 탭에서 대상을 찾아 여러 건을 체크할 수 있습니다. 선택한 행마다 GUEST 계정 입력 줄을 만들고 NETWORKS 연결을 함께 저장합니다. 연결하지 않아도 GUEST 계정은 만들 수 있습니다."
+      title="데이터베이스(NETWORKS)에서 불러오기"
+      help="선택한 행의 이름·이메일·소속만 계정 입력 줄에 복사합니다. 원장 id는 저장하지 않고 이후 원장 변경과도 동기화하지 않습니다. 비어 있는 필수 값은 입력 줄에서 직접 채우세요."
       size="3xl"
       footer={
         <>
@@ -192,7 +140,7 @@ export function LedgerCandidatePickerModal({
               onClose()
             }}
           >
-            선택한 {selected.size}건 넣기
+            선택한 {selected.size}건 불러오기
           </Button>
         </>
       }
@@ -213,21 +161,21 @@ export function LedgerCandidatePickerModal({
             setKeyword(value)
             setPage(0)
           }}
-          searchPlaceholder={searchPlaceholderFor(searchScope)}
+          searchPlaceholder="이름·소속·이메일 검색"
           dense
         />
 
-        {networks.isLoading ? (
+        {candidates.isLoading ? (
           <div className="flex items-center justify-center py-10">
             <Spinner />
           </div>
-        ) : networks.error ? (
+        ) : candidates.error ? (
           <Banner tone="danger">NETWORKS 목록을 불러오지 못했습니다.</Banner>
         ) : (
           <DataTable
             columns={columns}
             rows={rows}
-            rowKey={(row) => row.id}
+            rowKey={(row) => row.sourceId}
             standardColumns={false}
             selectable
             selectedKeys={[...selected.keys()]}
@@ -237,8 +185,7 @@ export function LedgerCandidatePickerModal({
             pagination={{
               page,
               pageSize: PAGE_SIZE,
-              total: networks.data?.total ?? 0,
-              totalAll: networks.data?.totalAll,
+              total: candidates.data?.total ?? 0,
               onChange: setPage,
             }}
             emptyText={
