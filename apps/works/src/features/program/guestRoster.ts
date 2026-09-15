@@ -1,6 +1,5 @@
 import { isGuestUserType } from '@/lib/userTypes'
 import type { GuestAccountCandidate, ParticipantRow } from '@/features/program/participantHooks'
-import type { MasterTable } from '@/features/program/participantPersona'
 
 /**
  * GUEST 계정 명부의 **순수 규칙** — 누가 이 명부에 서는가, 두 기둥에 무엇이 서는가.
@@ -10,7 +9,8 @@ import type { MasterTable } from '@/features/program/participantPersona'
  *
  * **이 명부의 축은 계정이다**(2026-09-13 사용자 확정). 종전에는 자격(원장)이 축이라
  * `startups`·`networks` 탭이 서고 원장 없는 줄은 어느 탭에도 서지 못했다. 지금은 한 명부에
- * 전부 서고, 원장 연결은 **선택적 표시값**이다.
+ * 전부 서고, **원장 식별 관계(`master_table`·`master_id`)는 아예 들지 않는다**
+ * (2026-09-14 독립 계정 정책, 3_9_3).
  */
 
 /**
@@ -31,20 +31,29 @@ export function isGuestRosterRow(row: ParticipantRow): boolean {
   return isGuestUserType(row.userType)
 }
 
-/** 명부·이관 창이 함께 쓰는 한 줄. 값은 전부 계정의 것이고 원장은 곁들이는 표시다. */
+/**
+ * 명부·이관 창이 함께 쓰는 한 줄. **원장 식별 관계는 들지 않는다.**
+ *
+ * 종전에는 연결된 원장 하나(`source` — 자격·원장 id·원장 이름)를 곁들여 들었다. 걷은 이유는
+ * GUEST 계정이 원장 ID를 들지 않기 때문이다(2026-09-14 독립 계정 정책, 3_9_3) — 계정을
+ * 사업에 잇는 창구가 `master_table`·`master_id`를 비운 채 줄을 만들고, 옛 줄의 값은
+ * 마이그레이션이 지웠다.
+ *
+ * 걷은 것은 **식별 관계뿐이다.** 표에 서는 값의 출처는 그대로이며, 어느 값이 어디서 오는지는
+ * 아래 각 칸이 답한다.
+ */
 export interface GuestRosterRow {
-  /** 표·선택·삭제가 쓰는 키. **명부 줄의 id**다 — 한 계정이 한 사업에 두 자격으로 설 수 있다. */
+  /** 표·선택·삭제가 쓰는 키. **명부 줄의 id**다 — 한 계정이 한 사업에 여러 줄로 설 수 있다. */
   participantId: string
   /** 이 줄로 문을 여는 계정. 아직 계정이 없는 옛 줄은 null이다. */
   userId: string | null
   accountName: string | null
   accountEmail: string | null
-  accountPhone: string | null
   /**
-   * 연결된 원장 하나 — **선택적 표시값**이다. 없으면 null이며, 그때 화면은 빈 칸을 세운다
-   * (`임직원`이라 적지 않는다).
+   * 이 줄의 연락처. **계정 프로필이 아니라 사업 원장의 현재 값**이다
+   * (`ParticipantRow.phone`) — 원장 식별 관계를 걷은 뒤에도 이 출처는 그대로다.
    */
-  source: { masterTable: MasterTable; masterId: string; name: string } | null
+  accountPhone: string | null
 }
 
 /** 명부 조회 결과를 이 명부의 줄로 옮긴다. 임직원 줄은 여기서 빠진다. */
@@ -55,10 +64,6 @@ export function toGuestRosterRows(participants: readonly ParticipantRow[]): Gues
     accountName: p.accountName,
     accountEmail: p.accountEmail,
     accountPhone: p.phone,
-    source:
-      p.master_table && p.master_id
-        ? { masterTable: p.master_table, masterId: p.master_id, name: p.targetName }
-        : null,
   }))
 }
 

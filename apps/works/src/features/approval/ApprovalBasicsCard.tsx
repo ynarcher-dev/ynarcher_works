@@ -75,7 +75,9 @@ export function ApprovalBasicsCard({
                   onChange={(e) => onFormChange(e.target.value)}
                   disabled={!category || locked}
                 >
-                  <option value="">양식 선택</option>
+                  {/* 분류를 고르면 그 분류의 첫 양식이 함께 정해진다 — 빈 선택지는 분류를
+                      아직 고르지 않아 이 칸이 잠겨 있는 동안만 자리를 지킨다. */}
+                  {!formId && <option value="" />}
                   {categoryForms.map((f) => (
                     <option key={f.id} value={f.id}>
                       {f.name}

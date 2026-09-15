@@ -5,7 +5,7 @@
  * 본인 출퇴근은 원장 UPDATE가 아니라 좁은 RPC 두 개로만 통한다(자기 상태를 고칠 수 없게).
  * 근거: supabase/migrations/20260803190000_attendance.sql
  */
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/auth/authStore'
 import { supabase } from '@/lib/supabase'
 import type {
@@ -62,10 +62,25 @@ export function useAttendanceBoard(dateKey: string) {
 }
 
 /** 한 사람의 기간 근태. 기록이 없는 날도 줄이 선다(결근·휴무를 화면이 그린다). */
-export function useAttendanceMonth(userId: string | undefined, from: string, to: string) {
+export function useAttendanceMonth(
+  userId: string | undefined,
+  from: string,
+  to: string,
+  options: {
+    /**
+     * 기간을 넘길 때 **이전 기간의 값을 든 채로** 새 기간을 받아 온다.
+     *
+     * 기간이 곧 조회 키라 앞뒤로 넘길 때마다 값이 한 번 비고, 그 사이 화면이 빈손을 그린다
+     * (스피너든 빈 표든 — 한 번 깜빡인다). 넘기는 조작이 잦은 자리에서는 옛 기간이 잠깐 더
+     * 서 있다가 새 기간으로 바뀌는 편이 낫다.
+     */
+    keepPrevious?: boolean
+  } = {},
+) {
   return useQuery({
     queryKey: [...ATTENDANCE_KEY, 'month', userId, from, to],
     enabled: Boolean(userId),
+    placeholderData: options.keepPrevious ? keepPreviousData : undefined,
     queryFn: async (): Promise<AttendanceMonthRow[]> => {
       const { data, error } = await supabase.rpc('attendance_month', {
         p_user_id: userId,

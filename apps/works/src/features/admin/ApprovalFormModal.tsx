@@ -165,20 +165,21 @@ export function ApprovalFormModal({
             <Field label="보안 등급">
               <Input value={grade} onChange={(e) => setGrade(e.target.value)} />
             </Field>
-            {/* 예산과의 관계는 한 축 네 값이다 — 두 칸으로 나누면 "근거 품의를 쓰지 않는데
+            {/* 예산과의 관계는 한 축 세 값이다. 두 칸으로 나누면 "근거 품의를 쓰지 않는데
                 필수"라는 조합이 생기고, 그걸 막으려면 다시 규칙이 하나 늘어난다.
+                '필수'는 두지 않는다 — 품의 없이 나가는 지출이 결재에 오를 길을 막으면
+                담당자가 상관없는 품의를 골라 통과시키고, 예산은 엉뚱한 줄에서 깎인다.
                 예산표를 가졌는지는 이 값이 아니라 아래 필드에 '예산표'가 있는지가 답한다. */}
             <Field
               label="예산 연동"
-              hint="근거 품의를 고르는 자리가 이 문서에 서는지, 그리고 필수인지를 정합니다. 예산 변경 품의는 최종 승인 시 대상 품의의 예산표를 갈아끼웁니다."
+              hint="근거 품의를 고르는 자리가 이 문서에 서는지를 정합니다. 고르는 것은 담당자의 판단이며 상신을 막지 않습니다. 예산 변경 품의는 최종 승인 시 대상 품의의 예산표를 갈아끼웁니다."
             >
               <Select
                 value={budgetLink}
                 onChange={(e) => setBudgetLink(e.target.value as BudgetLink)}
               >
                 <option value="NONE">사용 안 함</option>
-                <option value="SPEND_REQUIRED">근거 품의 필수 (프로젝트 지출결의서)</option>
-                <option value="SPEND_OPTIONAL">근거 품의 선택 (법인카드·인건비)</option>
+                <option value="SPEND_OPTIONAL">근거 품의 사용 (지출결의서)</option>
                 <option value="REVISE">예산 변경 품의</option>
               </Select>
             </Field>

@@ -9,10 +9,12 @@ import {
 import type { GuestAccountCandidate, ParticipantRow } from '@/features/program/participantHooks'
 
 /**
- * GUEST 계정 명부의 판정. 지키는 것은 넷이다.
+ * GUEST 계정 명부의 판정. 지키는 것은 다섯이다.
  *
  *  · 원장 없는 게스트 계정이 명부에 선다(종전에는 `임직원`으로 불리며 걸러졌다).
  *  · 실제 내부 임직원만 걸러진다.
+ *  · 명부 줄은 **원장 식별 관계(`source`)를 옮기지 않는다**(2026-09-14 독립 계정 정책, 3_9_3).
+ *    걷은 것은 식별 관계뿐이고, 연락처처럼 표에 서는 값의 출처는 그대로다.
  *  · '이미 담김'은 **계정 id**로 판정한다 — 원장 id로 보면 원장 없는 계정을 판정할 수 없다.
  *  · 이미 담긴 계정은 **목록에서 사라지지 않고** 표시만 달린다(사라지면 계정을 또 만들러 간다).
  */
@@ -60,7 +62,6 @@ function roster(over: Partial<GuestRosterRow>): GuestRosterRow {
     accountName: '김게스트',
     accountEmail: 'guest@example.com',
     accountPhone: '01000000000',
-    source: null,
     ...over,
   }
 }
@@ -70,7 +71,10 @@ describe('isGuestRosterRow', () => {
     expect(isGuestRosterRow(row({ master_table: null, userType: 'temporary_guest' }))).toBe(true)
   })
 
-  it('원장이 붙은 게스트 계정도 선다', () => {
+  it('원장 키가 남은 줄도 계정 유형으로 판정한다 — 정상 상태가 아니라 레거시 입력이다', () => {
+    // 3_9_3 이후 GUEST 참여 줄에 원장 키가 붙는 정상 경로는 없다 — 계정을 사업에 잇는 창구가
+    // 비운 채 만들고, 정리 마이그레이션이 옛 값을 지우며 재발을 막는다. 전환 중 남은 줄이나
+    // 비정상 입력을 방어하는 케이스이며, 판정 축이 `master_table`이 아니라 계정 유형임을 고정한다.
     expect(
       isGuestRosterRow(row({ master_table: 'startups', master_id: 's1', userType: 'external_startup' })),
     ).toBe(true)
@@ -103,15 +107,25 @@ describe('toGuestRosterRows', () => {
     expect(rows[0]!.accountEmail).toBe('guest@example.com')
   })
 
-  it('원장 없는 줄의 연결 원장은 null이다(임직원이라 적지 않는다)', () => {
-    expect(toGuestRosterRows([row({})])[0]!.source).toBeNull()
+  it('줄의 모양에 원장 식별 관계가 없다 — 표에 서는 값은 그대로다', () => {
+    // `accountPhone`은 계정 프로필이 아니라 사업 원장의 현재 연락처이며(`ParticipantRow.phone`),
+    // 이번에 걷은 것은 `source`(자격·원장 id·원장 이름)뿐이다.
+    expect(toGuestRosterRows([row({})])[0]).toEqual({
+      participantId: 'p1',
+      userId: 'u1',
+      accountName: '김게스트',
+      accountEmail: 'guest@example.com',
+      accountPhone: '01000000000',
+    })
   })
 
-  it('원장이 붙은 줄은 자격과 이름을 함께 든다', () => {
+  it('옛 줄에 원장 식별 관계가 남아 있어도 옮기지 않는다(3_9_3 독립 계정)', () => {
     const rows = toGuestRosterRows([
       row({ master_table: 'startups', master_id: 's1', targetName: '뉴런랩스' }),
     ])
-    expect(rows[0]!.source).toEqual({ masterTable: 'startups', masterId: 's1', name: '뉴런랩스' })
+    expect(rows[0]).not.toHaveProperty('source')
+    // 원장 이름(`targetName`)도 따라오지 않는다 — 식별 관계와 함께 걷혔다.
+    expect(Object.values(rows[0]!)).not.toContain('뉴런랩스')
   })
 })
 
@@ -142,7 +156,7 @@ describe('markAlreadyAdded', () => {
   })
 
   it('원장이 없는 명부 줄도 같은 키로 판정된다', () => {
-    const rows = markAlreadyAdded([candidate({ userId: 'u1' })], [roster({ userId: 'u1', source: null })])
+    const rows = markAlreadyAdded([candidate({ userId: 'u1' })], [roster({ userId: 'u1' })])
     expect(rows[0]!.alreadyAdded).toBe(true)
   })
 

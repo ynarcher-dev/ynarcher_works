@@ -2,6 +2,7 @@ import { Badge, Button, Card, SegmentedToggle, cardText, cn, useToast, type Badg
 import dayjs from 'dayjs'
 import { LogIn, LogOut } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   useCheckIn,
   useCheckOut,
@@ -97,8 +98,9 @@ function StampButton({
  * RPC 안의 now()다. 무엇이 가능한지(근무일·출근 가능 시각·외부근무 허용)도 내 근무 기준이
  * 답하므로 이 화면에 규칙을 두지 않는다.
  */
-export function WorkCheckCard() {
+export function WorkCheckCard({ onNavigate }: { onNavigate?: () => void }) {
   const toast = useToast()
+  const navigate = useNavigate()
   const now = useClock()
   const dateKey = now.format('YYYY-MM-DD')
 
@@ -234,10 +236,18 @@ export function WorkCheckCard() {
          헤더 우측은 '어디로 가는가'(근태현황) 하나만 남긴다. */
       title="근무체크"
       actions={
-        /* 내 근태 현황으로 가는 자리. 갈 곳(본인 월간 뷰)은 아직 없으므로 버튼만 세워 둔다 —
-           연결되기 전까지 눌러도 아무 일이 없다. 대시보드 우측 열에서 나란히 서는 다른 이동
+        /* 내 근태 현황으로 가는 자리(2026-09-15 연결). 이 카드가 답하는 것은 '오늘'뿐이고,
+           올해·이번 주·이번 달은 그 화면이 답한다. 대시보드 우측 열에서 나란히 서는 다른 이동
            버튼(환영 카드 '내 메뉴')과 같은 outline 규격을 쓴다. */
-        <Button variant="outline">근태현황</Button>
+        <Button
+          variant="outline"
+          onClick={() => {
+            navigate('/my-office?tab=attendance')
+            onNavigate?.()
+          }}
+        >
+          근태현황
+        </Button>
       }
     >
       <div className="grid grid-cols-5 items-stretch gap-2">

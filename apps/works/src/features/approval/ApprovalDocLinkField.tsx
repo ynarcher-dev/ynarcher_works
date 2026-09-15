@@ -46,7 +46,7 @@ export function ApprovalDocLinkField({ documentId, userId, value, onChange }: Pr
       {value.length === 0 ? (
         <p className={cn('py-4 text-center', approvalText.empty)}>연결된 문서가 없습니다.</p>
       ) : (
-        // 바로 위 '워크스페이스 연동'과 같은 한 줄 규격 — 배지·제목·식별자가 왼쪽부터 오른쪽
+        // 상세 화면의 '워크스페이스 연동' 패널과 같은 한 줄 규격 — 배지·제목·식별자가 왼쪽부터 오른쪽
         // 끝까지 자리를 나눠 갖는다. 문서 번호를 제목 **아래**로 내리면 두 패널이 나란히 선
         // 자리에서 행 높이와 눈이 훑는 경로가 갈리고, 사업코드와 문서 번호는 둘 다 "그래서
         // 어느 건인가"에 답하는 같은 성격의 값이라 같은 자리(오른쪽 끝)에 서야 한다.

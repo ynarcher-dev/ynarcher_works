@@ -295,6 +295,11 @@ export const WORKSPACE_SUBNAV: Partial<Record<WorkspaceKey, SubNavGroup[]>> = {
         // 근태 원장(정책·상태·일별 기록)의 소유 자리. OFFICE 대시보드 '근무체크'는
         // 본인 기록을 찍기만 하고, 판독·정정은 여기서만 한다.
         { label: '근태 관리', tab: 'attendance' },
+        // 휴가(연차 지급·소진) 원장의 자리. 근태 관리와 **축이 다르다** — 그 화면은 전 직원을
+        // 날짜로 자르고, 여기는 한 사람의 한 해를 발생·사용·잔여로 자른다. 한 화면에 얹으면
+        // 필터와 요약이 두 뜻을 갖는다. 연차 발생 규칙이 정해지기 전이라 줄만 세운다
+        // (2026-09-15 사용자 확정).
+        { label: '휴가 관리', glyphKey: 'leave', comingSoon: true },
         { label: '재무 관리', tab: 'finance', dividerBefore: '재무' },
         // 거래처 원장은 돈이 나가는 상대와 계좌·증빙을 다루므로 재무가 소유한다.
         { label: '거래처 정보', tab: 'partners' },

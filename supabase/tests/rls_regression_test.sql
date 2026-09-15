@@ -8,7 +8,7 @@
 --       해당 테이블 도입 시 케이스를 실제 테이블 접근으로 승격한다.
 -- =====================================================================
 begin;
-select plan(46);
+select plan(52);
 
 -- 픽스처: 테스트 계정 10종 + 데이터 (슈퍼유저로 삽입, 트랜잭션 종료 시 롤백) ----
 insert into public.startups(id, name) values
@@ -455,6 +455,71 @@ select is(
       )),
   0,
   '케이스15f: 거래처 증빙 Storage 접근 정책이 남아 있지 않다'
+);
+
+-- code_prefix가 제거된 현재 원장에도 즉석 등록 RPC가 실제로 한 행을 만들 수 있어야 한다.
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"app_user_id":"00000000-0000-0000-0000-0000000000e1","session_version":1}',
+  true
+);
+select lives_ok(
+  $$select public.register_trade_partner_quick(
+      '즉석 등록 테스트', 'CORPORATE', null, null, null, null
+    )$$,
+  '케이스15g: 즉석 거래처 등록 RPC가 현재 trade_partners 열 계약으로 실행된다'
+);
+reset role;
+select is(
+  (select count(*)::int from public.trade_partners where name = '즉석 등록 테스트'),
+  1,
+  '케이스15h: 즉석 등록 RPC가 거래처를 한 건 남긴다'
+);
+
+-- 케이스 16: 송금 요청 계좌 사본(20260915041112) ---------------------------
+-- 계좌번호 **전체**가 나가는 문을 하나 새로 연다. 가르는 축은 사람이 아니라 범위다 —
+-- 목록·검색은 지금까지대로 가려진 뷰가 답하고(케이스15d), 이 함수만 id 하나를 받아 한 행을
+-- 낸다. 문이 하나뿐이므로 그 문의 빗장 네 가지를 여기서 못 박는다.
+select ok(
+  (select count(*)::int from pg_proc p
+     join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname = 'trade_partner_payment_detail'
+      and p.prosecdef
+      and exists (
+        select 1 from unnest(coalesce(p.proconfig, '{}'::text[])) c
+         where c like 'search_path=%'
+      )) = 1,
+  '케이스16a: 계좌 사본 RPC는 SECURITY DEFINER이며 search_path가 함수에 고정되어 있다'
+);
+-- 허용 한 쌍: 지출결의서를 쓰는 사람은 경영지원만이 아니므로 내부 임직원에게 열려 있어야
+-- 한다(함수 본문이 app.is_internal_user()로 게스트를 다시 가른다).
+select ok(
+  has_function_privilege(
+    'authenticated', 'public.trade_partner_payment_detail(uuid)', 'EXECUTE'
+  ),
+  '케이스16b: 계좌 사본 RPC는 authenticated에 열려 있다'
+);
+-- 거절 한 쌍: 호출 표면을 authenticated 하나로 좁혀 둔다. anon이 닿으면 로그인 없이 계좌가
+-- 나가고, service_role이 열려 있으면 Edge의 실수 하나가 같은 문을 우회로 만든다.
+select ok(
+  not has_function_privilege('anon', 'public.trade_partner_payment_detail(uuid)', 'EXECUTE')
+  and not has_function_privilege(
+    'service_role', 'public.trade_partner_payment_detail(uuid)', 'EXECUTE'
+  ),
+  '케이스16c: 계좌 사본 RPC는 anon·service_role에 열려 있지 않다'
+);
+-- 넓힌 폭이 계좌에서 멈추는지 본다. 등록번호(법인 사업자번호·개인 생년월일)는 송금에 쓰이지
+-- 않으므로 이 문으로 나오지 않는다 — 나오면 개인정보가 계좌를 따라 함께 넓어진다.
+select is(
+  (select count(*)::int from pg_proc p
+     join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname = 'trade_partner_payment_detail'
+      and 'registration_no' = any(coalesce(p.proargnames, '{}'::text[]))),
+  0,
+  '케이스16d: 계좌 사본 RPC는 등록번호를 내지 않는다'
 );
 
 select * from finish();

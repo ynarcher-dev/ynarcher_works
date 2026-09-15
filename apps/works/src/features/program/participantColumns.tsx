@@ -1,9 +1,7 @@
 import { Badge, EmptyValue, type BadgeTone, type Column } from '@ynarcher/ui'
-import { Link } from 'react-router-dom'
 import { maskEmail, maskName, maskPhone } from '@/lib/mask'
 import type { SensitiveField } from '@/features/admin/sensitiveContents'
 import { guestDoorBadge } from '@/features/program/guestDoorBadge'
-import { PARTICIPANT_PERSONAS } from '@/features/program/participantPersona'
 import type { ParticipantRow } from '@/features/program/participantHooks'
 
 interface LoginBadge {
@@ -55,18 +53,20 @@ function formatLastLogin(iso: string): string {
 }
 
 /**
- * GUEST 계정 명부 표의 컬럼 — **계정이 첫 열이고 원장은 곁들이는 열이다**(2026-09-13 개편).
+ * GUEST 계정 명부 표의 컬럼 — **원장을 가리키는 열이 없다**(2026-09-14 독립 계정 정책).
  *
  * 종전 이 표의 축은 자격(원장)이었다. 첫 열이 기업명이고 머리글이 자격마다 갈렸으며
- * (`기업명`·`전문가명`), 원장이 없는 줄은 `임직원`이라 적혔다. 명부가 자격 탭을 걷고 한 벌로
- * 서면서 그 셋이 모두 성립하지 않는다.
+ * (`기업명`·`전문가명`), 2026-09-13에 그것이 한 열(`연결 원장`)로 내려왔다. 지금은 그 열도
+ * 서지 않는다.
  *
  *  · 머리글은 **자격을 부르지 않는다.** 한 표에 여러 자격이 함께 서므로 자격을 부르는 머리글은
  *    그중 하나를 골라 전체에 붙이는 일이 된다.
  *  · 첫 열은 **계정명**이다. 이 표가 답하는 물음이 "누가 이 사업에 들어오는가"이고, 그 답을
  *    가진 것은 원장의 기업명이 아니라 문을 여는 계정이다.
- *  · `연결 원장`은 **선택적 표시**다. 없으면 빈 칸이며 `임직원`이라 적지 않는다 — 임직원 줄은
- *    애초에 이 명부에 서지 않는다(`isGuestRosterRow`).
+ *  · `연결 원장` 열을 걷었다(3_9_3 GUEST 독립 계정·원장 불러오기 정책). GUEST 계정은 이름·
+ *    소속·이메일만 가지며 원장 ID를 들지 않고, 계정을 이 사업에 잇는 창구
+ *    (`add_program_guest_accounts`)도 `master_table`·`master_id`를 비운 채 줄을 만든다 —
+ *    늘 빈 칸일 열은 담당자에게 "아직 안 이어졌다"는 없는 사실을 말한다.
  *
  * 표기는 ADMIN '민감정보 관리'의 정책을 그대로 따른다.
  */
@@ -112,38 +112,6 @@ export function participantColumns(
       render: (r) => {
         if (!r.phone) return <EmptyValue />
         return masked.phone ? maskPhone(r.phone) : r.phone
-      },
-    },
-    {
-      key: 'source',
-      header: '연결 원장',
-      type: 'text',
-      /*
-        명부가 스스로 분류를 만들지 않는다 — 분류는 원장이 소유하고 자격 설정이 라벨·톤만
-        빌린다. 연결이 없으면 빈 칸이다(없는 사실을 채우지 않는다).
-      */
-      render: (r) => {
-        if (!r.master_table || !r.master_id) return <EmptyValue />
-        const spec = PARTICIPANT_PERSONAS[r.master_table]
-        const badge = spec.categoryBadge(r.masterCategory)
-        const to = spec.detailPath(r.master_id)
-        const name = to ? (
-          <Link
-            to={to}
-            onClick={(e) => e.stopPropagation()}
-            className="font-medium text-info underline underline-offset-2 transition-opacity duration-fast hover:opacity-80"
-          >
-            {r.targetName}
-          </Link>
-        ) : (
-          r.targetName
-        )
-        return (
-          <div className="flex min-w-0 items-center gap-1.5">
-            <Badge tone={badge.tone}>{badge.label}</Badge>
-            <span className="truncate">{name}</span>
-          </div>
-        )
       },
     },
     {

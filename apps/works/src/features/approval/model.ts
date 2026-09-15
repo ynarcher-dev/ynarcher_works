@@ -39,7 +39,7 @@ export interface ApprovalListRow {
   amount: number | null
   created_at: string
   completed_at: string | null
-  form: { name: string } | null
+  form: { name: string; abbrev?: string | null } | null
   /** 하이웍스 원본과 연결된 문서인지 목록에서도 이름 문자열에 기대지 않고 판별한다. */
   legacy: { source_system: string } | null
   approval_lines: ApprovalListLine[]
@@ -281,7 +281,10 @@ export interface ApprovalBulkTarget {
 }
 
 export function bulkTargetFor(row: ApprovalListRow, uid: string): ApprovalBulkTarget | null {
-  const line = actionableLineFor(row.approval_lines, uid)
+  // 결재선에 내 PENDING 자리가 남아 있어도 문서가 반려·보완·완료·기안 상태면 승인할 수
+  // 없다. 상세 화면과 서버 RPC도 PENDING·IN_REVIEW만 허용하므로 목록의 일괄 처리 역시
+  // 같은 문서 상태 경계를 먼저 적용한다.
+  const line = inProgress(row.status) ? actionableLineFor(row.approval_lines, uid) : undefined
   const needsConfirm = inBox(row, 'mine-confirm', uid, null)
   if (!line && !needsConfirm) return null
   return { documentId: row.id, approveLineId: line?.id ?? null, needsConfirm }

@@ -23,12 +23,21 @@ import { ApprovalLinkPanel } from '@/features/approval/ApprovalLinkPanel'
 import { LegacyApprovalLineTable } from '@/features/approval/LegacyApprovalLineTable'
 import { ApprovalProgramPanel } from '@/features/approval/ApprovalProgramPanel'
 import { ApprovalStampTable } from '@/features/approval/ApprovalStampTable'
+import { BudgetExpandCard } from '@/features/approval/BudgetExpandCard'
 import { BudgetSummaryCard } from '@/features/approval/BudgetSummaryCard'
 import { BudgetRefContext } from '@/features/approval/budgetRefContext'
 import { budgetTotal as sumBudget } from '@/features/approval/budget'
 import { useBudgetStatus } from '@/features/approval/budgetApi'
 import { useBudgetSourceState } from '@/features/approval/budgetSourceHooks'
 import { useApprovalDocument, useMarkApprovalRead } from '@/features/approval/approvalApi'
+import {
+  approvalBodyCardHeading,
+  expenseSectionTitle,
+  expenseTableSections,
+  expenseTotalsAgree,
+  splitExpenseSections,
+  usesSectionCards,
+} from '@/features/approval/expenseSections'
 import {
   APPROVAL_ATTACHMENT_TYPE,
   APPROVAL_FEEDBACK_TYPE,
@@ -184,6 +193,32 @@ export function ApprovalDetail({
         (field.type === 'MONEY' || field.type === 'NUMBER')
       ),
   )
+  /**
+   * 지출 내역·송금 요청 표를 가진 문서는 그 표가 각자 카드로 갈린다(기안 화면과 같은 판정·같은
+   * 순서). 양식을 가리지 않으므로 법인카드·인건비 지출결의서도 같은 배치로 읽힌다.
+   *
+   * 하이웍스 복원 문서는 제외한다 — 그 문서의 본문은 복원 당시 모양 그대로 읽혀야 한다.
+   * 문서는 **저장된 버전의 스키마**로 렌더되므로, 그 표가 없던 시절의 옛 문서는 카드가 서지
+   * 않고 지금까지와 같이 읽힌다.
+   */
+  const expenseSections =
+    !doc.legacy && usesSectionCards(doc.form) ? splitExpenseSections(bodyFields) : null
+  const mainFields = expenseSections ? expenseSections.body : bodyFields
+  const expenseTables = expenseSections ? expenseTableSections(expenseSections) : []
+  /**
+   * 지출 내역과 송금 요청의 합계액이 맞는가 — 결재자가 가장 먼저 견주는 두 숫자다.
+   * 어긋난 문서도 그대로 읽힌다(반려할지는 결재자가 정한다). 화면은 색으로 알리기만 한다.
+   */
+  const expenseTotalsMatch = expenseSections
+    ? expenseTotalsAgree(expenseSections, doc.field_values ?? {})
+    : null
+  // 카드가 갈린 문서만 첫 카드의 머리글이 서식의 절 이름이 되고, 문서 제목은 부제로 내려온다.
+  // 표가 없어 카드가 하나뿐이면 지금까지와 같이 문서 제목이 그 카드의 제목이다.
+  const bodyCard = approvalBodyCardHeading({
+    sectioned: expenseTables.length > 0,
+    formName: doc.form ? approvalFormDisplayName(doc.form.name) : null,
+    documentTitle: doc.title,
+  })
   const hasPayments = paymentFields.some(
     (field) => field.type === 'TABLE' && tableRows(doc.field_values ?? {}, field.key).length > 0,
   )
@@ -415,13 +450,13 @@ export function ApprovalDetail({
             />
           )}
 
-          <Card title={doc.title}>
+          <Card title={bodyCard.title} subtitle={bodyCard.subtitle}>
             {/* 지출 내역의 '예산 줄' 칸은 줄 id 하나를 저장하고 이름은 근거 품의가 갖는다.
                 이름을 지출 문서에 복사해 두지 않는 이유는 예산 변경으로 항목명이 바뀌는 날
                 그 지출만 옛 이름으로 남기 때문이다. */}
             <BudgetRefContext.Provider value={budgetRefSource}>
               <ApprovalFieldsView
-                fields={bodyFields}
+                fields={mainFields}
                 values={doc.field_values ?? {}}
                 hideEmpty={Boolean(doc.legacy)}
                 documentContext={{ title: doc.title, docNo: doc.doc_no }}
@@ -436,24 +471,46 @@ export function ApprovalDetail({
             )}
           </Card>
 
+          {/* 지출 내역·송금 요청 — 기안 화면과 같은 카드 경계. 카드 제목이 그 필드의 라벨을
+              대신하므로 안쪽 섹션 제목은 반복하지 않는다(hideSectionLabels). */}
+          {expenseTables.map((table) => (
+            <Card key={table.key} title={expenseSectionTitle(table)}>
+              <BudgetRefContext.Provider value={budgetRefSource}>
+                <ApprovalFieldsView
+                  fields={[table]}
+                  values={doc.field_values ?? {}}
+                  hideSectionLabels
+                  totalsMatch={expenseTotalsMatch}
+                  documentContext={{ title: doc.title, docNo: doc.doc_no }}
+                />
+              </BudgetRefContext.Provider>
+            </Card>
+          ))}
+
           {/* 예산표는 품의서 본문과 독립된 카드로 읽는다. 작성 화면과 같은 카드 경계라
-              단계별 분류·수량·금액이 일반 본문 필드에 딸린 표로 오해되지 않는다. */}
+              단계별 분류·수량·금액이 일반 본문 필드에 딸린 표로 오해되지 않는다.
+              사용·결재 대기·잔액까지 붙으면 본문 폭에 다 들어오지 않아 크게보기를 함께 둔다. */}
           {ownBudgetField && (
-            <Card title={ownBudgetField.label}>
-              {isRevise && sourceUsageError && (
-                // 0으로 채우지 않는다 — 모르는 것을 숫자로 적으면 초과가 숨는다.
-                <Banner tone="danger" className="mb-2">
-                  변경 대상 품의의 사용 현황을 읽지 못했습니다. 아래 표의 사용·남음 칸은 서지
-                  않습니다.
-                </Banner>
-              )}
+            <BudgetExpandCard
+              title={ownBudgetField.label}
+              documentTitle={doc.title}
+              banner={
+                isRevise && sourceUsageError ? (
+                  // 0으로 채우지 않는다 — 모르는 것을 숫자로 적으면 초과가 숨는다.
+                  <Banner tone="danger" className="mb-2">
+                    변경 대상 품의의 사용 현황을 읽지 못했습니다. 아래 표의 사용·남음 칸은 서지
+                    않습니다.
+                  </Banner>
+                ) : null
+              }
+            >
               <ApprovalFieldsView
                 fields={[ownBudgetField]}
                 values={doc.field_values ?? {}}
                 hideSectionLabels
                 budgetUsage={budgetUsage}
               />
-            </Card>
+            </BudgetExpandCard>
           )}
 
           {/* 예산 요약(품의 금액·사용·결재 중·남음·이익률)과 예산 변경 이력.

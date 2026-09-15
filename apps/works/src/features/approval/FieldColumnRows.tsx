@@ -88,6 +88,10 @@ export function FieldColumnRows({
                   type,
                   primaryAmount: numeric ? column.primaryAmount : false,
                   role: numeric ? column.role : undefined,
+                  // 글자 칸이 아니게 되면 파생 출처도 함께 내린다(`fields.parseColumn`이 읽을 때
+                  // 버리는 것과 같은 규칙). 남겨 두면 사람이 고칠 수 있게 된 칸이 출처를 단 채
+                  // 한 버전 저장되고, 그 사이 스키마 검사는 있지도 않은 짝을 계속 따진다.
+                  source: type === 'TEXT' ? column.source : undefined,
                 })
               }}
             >

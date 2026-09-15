@@ -1,4 +1,4 @@
-import { cn, tableText } from '@ynarcher/ui'
+import { EmptyValue, cn, tableGrid, tableText } from '@ynarcher/ui'
 import { RichTextViewer } from '@/components/RichTextEditor'
 import { BudgetTreeView, type BudgetUsage } from '@/features/approval/BudgetTreeView'
 import {
@@ -7,21 +7,27 @@ import {
 } from '@/features/approval/HtmlTemplateField'
 import { BudgetRefText, PartnerRefText } from '@/features/approval/RefCellText'
 import {
+  amountKeys,
   budgetValue,
   columnSum,
   displayValue,
   formatMoney,
+  hasColumnValue,
   hasRichTextContent,
   htmlTemplateValue,
   isEmptyPlan,
   planValue,
   isNumericColumn,
   scalarValue,
+  sourceColumnKeys,
   tableRows,
   toNumber,
+  visibleColumns,
   type FieldValues,
   type FormField,
+  type TableRow,
 } from '@/features/approval/fields'
+import { partnerSourceText } from '@/features/approval/partnerSnapshot'
 import { vatKindLabel } from '@/features/approval/vat'
 
 interface ApprovalFieldsViewProps {
@@ -38,28 +44,62 @@ interface ApprovalFieldsViewProps {
    */
   budgetUsage?: Map<string, BudgetUsage>
   documentContext?: HtmlTemplateContext
+  /**
+   * 짝이 되는 표와 합계액이 **맞는가**(지출 내역 ↔ 송금 요청). `null`이면 견주지 않는다.
+   *
+   * 표 하나만 받는 호출(상세 화면의 지출 카드)에서만 뜻이 있다. 판정은 이 화면이 아니라
+   * `expenseTotalsAgree`가 갖는다 — 쓰는 화면과 읽는 화면이 같은 문장으로 답해야 한다.
+   */
+  totalsMatch?: boolean | null
 }
 
 /** 표 필드 하나를 읽기 전용으로 편다. 금액·숫자 열에는 합계 행이 붙는다. */
-function TableView({ field, values }: { field: FormField; values: FieldValues }) {
-  const columns = field.columns ?? []
+function TableView({
+  field,
+  values,
+  /**
+   * 보이는 제목(`<h4>`)이 카드 제목으로 옮겨 갔는가. 그렇다면 표가 자기 이름을 들어야 한다 —
+   * 보이지 않는 `<caption>`이 그 자리를 받는다(입력 쪽 `FieldTableInput`의 `caption`과 짝).
+   */
+  captionOnly,
+  totalsMatch = null,
+}: {
+  field: FormField
+  values: FieldValues
+  captionOnly?: boolean
+  totalsMatch?: boolean | null
+}) {
+  const allColumns = field.columns ?? []
+  // 이름 사본은 열로 서지 않는다 — 그 값은 거래처 칸이 직접 든다(fields.visibleColumns).
+  const columns = visibleColumns(allColumns)
   const rows = tableRows(values, field.key)
   const hasNumeric = columns.some((c) => isNumericColumn(c.type))
+  // 색이 붙는 칸은 합계액 한 열이다(입력 쪽 `FieldTableInput`과 같은 규칙).
+  const grossKey = amountKeys(field)?.grossKey ?? null
+  /** 거래처 칸이 든 이름 사본. 사본 열이 없는 옛 양식에서는 빈 값이고, 그때는 원장이 답한다. */
+  const snapshotName = (refKey: string, row: TableRow) => {
+    const nameKey = sourceColumnKeys(allColumns, refKey).NAME
+    return nameKey ? (row[nameKey] ?? '') : ''
+  }
 
   if (rows.length === 0) {
     return <p className={cn('py-2', tableText.empty)}>입력된 내역이 없습니다.</p>
   }
 
   return (
-    <div className="relative min-w-0 max-w-full overflow-x-auto rounded-radius-md border border-gray-200">
+    // 밀도 맥락을 내려받지 못하는 수제 표라 격자를 `tableGrid`에서 가져온다 — 입력 쪽
+    // `FieldTableInput`과 같은 값을 써야 같은 문서의 편집 화면과 읽기 화면이 어긋나지 않는다.
+    <div className="relative min-w-0 max-w-full overflow-x-auto rounded-radius-md border border-gray-300">
       <table className="w-full border-collapse">
+        {captionOnly && field.label && <caption className="sr-only">{field.label}</caption>}
         <thead>
-          <tr className="border-b border-gray-200 bg-gray-25">
+          <tr className={cn(tableGrid.head, 'border-b border-gray-200 bg-gray-25')}>
             {columns.map((c) => (
               <th
                 key={c.key}
                 className={cn(
-                  'px-3 py-1.5 text-left',
+                  tableGrid.cellX,
+                  'text-left',
                   tableText.head,
                   isNumericColumn(c.type) && 'text-right',
                 )}
@@ -71,7 +111,7 @@ function TableView({ field, values }: { field: FormField; values: FieldValues })
         </thead>
         <tbody>
           {rows.map((row, i) => (
-            <tr key={i} className="border-b border-gray-100 last:border-b-0">
+            <tr key={i} className={cn(tableGrid.row, 'border-b border-gray-200 last:border-b-0')}>
               {columns.map((c) => {
                 const raw = row[c.key] ?? ''
                 const numeric = isNumericColumn(c.type)
@@ -80,18 +120,21 @@ function TableView({ field, values }: { field: FormField; values: FieldValues })
                   <td
                     key={c.key}
                     className={cn(
-                      'px-3 py-1.5',
+                      tableGrid.cellX,
                       tableText.body,
                       numeric && 'text-right tabular-nums',
                     )}
                   >
-                    {c.type === 'BUDGET_REF' ? (
+                    {c.source ? (
+                      // 값의 주인이 다른 칸인 열 — 저장된 사본을 그대로 편다(이름표만 붙인다).
+                      (partnerSourceText(c.source.field, raw) || <EmptyValue />)
+                    ) : c.type === 'BUDGET_REF' ? (
                       <BudgetRefText value={raw} />
                     ) : c.type === 'PARTNER_REF' ? (
-                      <PartnerRefText value={raw} />
+                      <PartnerRefText value={raw} snapshotName={snapshotName(c.key, row)} />
                     ) : c.type === 'VAT_KIND' ? (
                       // 저장된 값은 코드(TAXABLE)다. 모르는 값은 '과세'로 되돌리지 않고 '-'로 둔다.
-                      (vatKindLabel(raw) ?? '-')
+                      (vatKindLabel(raw) ?? <EmptyValue />)
                     ) : numeric && n !== null ? (
                       c.type === 'MONEY' ? (
                         formatMoney(n)
@@ -99,7 +142,7 @@ function TableView({ field, values }: { field: FormField; values: FieldValues })
                         n.toLocaleString('ko-KR')
                       )
                     ) : (
-                      raw || '-'
+                      raw || <EmptyValue />
                     )}
                   </td>
                 )
@@ -107,22 +150,35 @@ function TableView({ field, values }: { field: FormField; values: FieldValues })
             </tr>
           ))}
           {hasNumeric && (
-            <tr className="border-t border-gray-200 bg-gray-25">
+            <tr className={cn(tableGrid.row, 'border-t border-gray-200 bg-gray-25')}>
               {columns.map((c, i) => {
                 const numeric = isNumericColumn(c.type)
+                const compared = totalsMatch !== null && c.key === grossKey
                 return (
                   <td
                     key={c.key}
                     className={cn(
-                      'px-3 py-1.5',
+                      tableGrid.cellX,
                       tableText.body,
                       numeric ? 'text-right font-semibold tabular-nums' : 'text-gray-600',
+                      compared && (totalsMatch ? 'text-success' : 'text-danger'),
                     )}
+                    // 색만으로 말하지 않는다 — 색을 가리지 못하는 눈에도 같은 사실이 닿아야 한다.
+                    title={
+                      compared
+                        ? totalsMatch
+                          ? '지출 내역과 송금 요청의 합계가 같습니다.'
+                          : '지출 내역과 송금 요청의 합계가 다릅니다.'
+                        : undefined
+                    }
                   >
                     {numeric
-                      ? c.type === 'MONEY'
-                        ? formatMoney(columnSum(rows, c.key))
-                        : columnSum(rows, c.key).toLocaleString('ko-KR')
+                      ? // 입력 화면과 같이 빈 열은 값 없음(-), 명시적인 0은 실제 0으로 가른다.
+                        !hasColumnValue(rows, c.key)
+                        ? <EmptyValue />
+                        : c.type === 'MONEY'
+                          ? formatMoney(columnSum(rows, c.key))
+                          : columnSum(rows, c.key).toLocaleString('ko-KR')
                       : i === 0
                         ? '합계'
                         : ''}
@@ -151,6 +207,7 @@ export function ApprovalFieldsView({
   hideSectionLabels = false,
   budgetUsage,
   documentContext = { title: '', docNo: null },
+  totalsMatch = null,
 }: ApprovalFieldsViewProps) {
   if (fields.length === 0) {
     return <p className={cn('py-4', tableText.empty)}>표시할 내용이 없습니다.</p>
@@ -219,7 +276,12 @@ export function ApprovalFieldsView({
           return (
             <section key={field.key} className="space-y-1">
               {!hideSectionLabels && <h4 className={tableText.head}>{field.label}</h4>}
-              <TableView field={field} values={values} />
+              <TableView
+                field={field}
+                values={values}
+                captionOnly={hideSectionLabels}
+                totalsMatch={totalsMatch}
+              />
             </section>
           )
         }
@@ -228,7 +290,7 @@ export function ApprovalFieldsView({
         return (
           <div
             key={field.key}
-            className="grid grid-cols-[8rem_1fr] items-start gap-3 border-b border-gray-100 pb-2 last:border-b-0"
+            className="grid grid-cols-[8rem_1fr] items-start gap-3 border-b border-gray-200 pb-2 last:border-b-0"
           >
             <span className={tableText.head}>{field.label}</span>
             <span

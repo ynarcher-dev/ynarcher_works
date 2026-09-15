@@ -186,8 +186,8 @@ const PROTECTED = {
     why: '접근 로그. 적재는 서버(service_role·SECURITY DEFINER)가 하고 화면은 읽기만 합니다.',
   },
   approval_budget_revisions: {
-    client: [],
-    why: '서버가 쓰는 예산 감사 이력. 기존 결정(20260912025406)대로 DML을 주지 않습니다.',
+    client: ['SELECT'],
+    why: '승인 처리 함수만 쓰고, 원 품의 열람자는 approval_budget_revisions_select 정책을 거쳐 읽습니다.',
   },
   approval_doc_counters: {
     client: [],
@@ -446,6 +446,7 @@ const doc = {
       'supabase/migrations/20260912161000_acl_rpc_execute_narrowing.sql',
       'supabase/migrations/20260913011827_grant_program_module_assignees_read.sql',
       'supabase/migrations/20260913170000_restore_approval_embedded_read_grants.sql',
+      'supabase/migrations/20260915060001_fix_budget_revision_read_and_quick_partner.sql',
     ],
   },
   classes: {

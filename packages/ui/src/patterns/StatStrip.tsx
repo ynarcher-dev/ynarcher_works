@@ -61,6 +61,14 @@ export interface StatStripProps {
   tiles: StripTile[]
   /** 격자 클래스 오버라이드(칸 수는 화면마다 다르다). */
   className?: string
+  /**
+   * 지표의 읽기 순서.
+   *
+   * `value-led`는 큰 수치를 먼저 읽는 기본 대시보드형이다. `label-led`는 같은 급의 항목을
+   * 나란히 비교할 때 라벨을 먼저 세우고 값과 단위를 한 크기로 낮춘다. 이 변형의 고정 높이는
+   * 각 칸의 세로 구분선이 내용 길이에 따라 들쭉날쭉해지지 않게 하는 기준이기도 하다.
+   */
+  variant?: 'value-led' | 'label-led'
 }
 
 /**
@@ -85,7 +93,13 @@ export interface StatStripProps {
  *
  * 근거: docs_design/5_component_spec_rules.md §3.9 (지표 띠)
  */
-export function StatStrip({ tiles, className = DEFAULT_GRID }: StatStripProps) {
+export function StatStrip({
+  tiles,
+  className = DEFAULT_GRID,
+  variant = 'value-led',
+}: StatStripProps) {
+  const labelLed = variant === 'label-led'
+
   return (
     <div className={className}>
       {tiles.map((t) => {
@@ -98,17 +112,31 @@ export function StatStrip({ tiles, className = DEFAULT_GRID }: StatStripProps) {
               ? { type: 'button' as const, onClick: t.onClick, 'aria-pressed': t.selected }
               : {})}
             className={cn(
-              'min-w-0 rounded-radius-sm px-3 py-1.5 text-left transition-colors duration-fast',
+              'min-w-0 px-3 transition-colors duration-fast',
+              labelLed
+                ? 'flex min-h-16 flex-col justify-center gap-3 rounded-none py-1 text-center'
+                : 'rounded-radius-sm py-1.5 text-left',
               t.selected && 'bg-brand-25',
               clickable && !t.selected && 'hover:bg-gray-25',
               !clickable && 'cursor-default',
             )}
           >
-            <p className={cn('truncate text-caption', t.selected ? 'text-brand-700' : 'text-gray-600')}>
+            <p
+              className={cn(
+                'truncate',
+                labelLed ? 'text-body font-semibold' : 'text-caption',
+                t.selected ? 'text-brand-700' : labelLed ? 'text-gray-900' : 'text-gray-600',
+              )}
+            >
               {t.label}
             </p>
-            <p className="mt-0.5 flex items-baseline gap-1">
-              <span className="truncate text-title-sm font-bold tabular-nums text-gray-900">
+            <p className={cn('flex items-baseline gap-1', labelLed ? 'justify-center' : 'mt-0.5')}>
+              <span
+                className={cn(
+                  'truncate tabular-nums text-gray-900',
+                  labelLed ? 'text-body font-normal' : 'text-title-sm font-bold',
+                )}
+              >
                 {t.value}
               </span>
               {/*
@@ -116,7 +144,16 @@ export function StatStrip({ tiles, className = DEFAULT_GRID }: StatStripProps) {
                 뭉갠다"인데 단위는 14px이라 해당되지 않고, 반복되는 고정 문자열이므로 20px 숫자
                 옆에서 최대한 물러나야 한다.
               */}
-              {t.unit && <span className="shrink-0 text-body text-gray-500">{t.unit}</span>}
+              {t.unit && (
+                <span
+                  className={cn(
+                    'shrink-0 text-body',
+                    labelLed ? 'text-gray-900' : 'text-gray-500',
+                  )}
+                >
+                  {t.unit}
+                </span>
+              )}
             </p>
             {t.note !== undefined ? (
               <p className="mt-0.5 truncate text-caption tabular-nums text-gray-600">{t.note}</p>

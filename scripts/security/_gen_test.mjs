@@ -152,17 +152,17 @@ select is(
   'A7: authenticated의 물리 삭제 권한은 승인된 배정성 원장 네 개뿐이다'
 );
 
--- A8. 보호 표에는 authenticated의 어떤 행 권한도 없다.
---     (자격증명·채번·발송 로그·서버 감사 이력 — 정책이 없거나 서버 전용입니다.)
+-- A8. 클라이언트 경로가 없는 보호 표에는 authenticated의 어떤 행 권한도 없다.
+--     (자격증명·채번·발송 로그 — 정책이 없거나 서버 전용입니다.)
 select is(
   (select coalesce(string_agg(name, ',' order by name), '')
      from _actual
     where role_name = 'authenticated'
       and name in ('guest_credentials', 'approval_doc_counters', 'entity_codes',
-                   'notification_logs', 'approval_budget_revisions')
+                   'notification_logs')
       and privs <> ''),
   '',
-  'A8: 자격증명·채번·발송로그·예산감사 표에 authenticated 행 권한이 없다'
+  'A8: 자격증명·채번·발송로그 표에 authenticated 행 권한이 없다'
 );
 
 -- A9. 감사 로그는 읽기만 — 쓰기는 서버 경로가 갖습니다.

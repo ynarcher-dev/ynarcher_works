@@ -82,6 +82,11 @@ export { IconButton } from './components/IconButton'
 export type { IconButtonProps, IconButtonVariant } from './components/IconButton'
 export { ControlAction } from './components/ControlAction'
 export type { ControlActionProps } from './components/ControlAction'
+// 다른 원장에서 한 건을 골라 담는 칸 — 글자를 적는 자리가 아니라 창을 여는 자리다.
+// 외형은 `Input`·`Select`와 같은 토큰 한 벌을 쓰므로, 한 줄에 나란히 서도 높이·모서리·
+// 호버·초점 링이 갈리지 않는다(창 자체는 무엇을 고르느냐에 따라 호출부가 갖는다).
+export { PickerField } from './components/PickerField'
+export type { PickerFieldProps } from './components/PickerField'
 export { PhotoBox } from './components/PhotoBox'
 export type { PhotoBoxProps, PhotoBoxSize } from './components/PhotoBox'
 export { TextAction } from './components/TextAction'
@@ -161,6 +166,19 @@ export { MiniPager, usePaged } from './patterns/MiniPager'
 // 화면마다 갈리지 않도록 한곳에 모은다.
 export { PickList, PickRow, PickMark, PickLine } from './patterns/PickList'
 export type { PickListProps, PickRowProps, PickMarkProps, PickLineProps } from './patterns/PickList'
+// 많은 문서 중에서 한 건을 검색해 고르는 창(표를 품은 모달). 후보가 원장 전체라 '무엇이
+// 있는지 보러' 여는 자리이고, 그래서 드롭다운이 아니라 표다. 조회·검색·필터·페이지는 전부
+// 호출부가 갖고 이 패턴은 받은 것을 세운다 — 판정만 담은 짝(documentPickerState)이 따로 있다.
+export { DocumentPickerModal } from './patterns/DocumentPickerModal'
+// 그 창의 값 열 한 벌. 고른 뒤의 요약이 같은 칸으로 서야 해서 밖으로 낸다.
+export { documentPickerValueColumns } from './patterns/documentPickerColumns'
+export type {
+  DocumentPickerModalProps,
+  DocumentPickerFilter,
+  DocumentPickerSearch,
+} from './patterns/DocumentPickerModal'
+export { documentPickerView, resolvePickedItem } from './patterns/documentPickerState'
+export type { DocumentPickerItem, DocumentPickerView } from './patterns/documentPickerState'
 // 좌우 두 목록 사이로 줄을 옮기는 창(계정생성·명단 담기)의 골격.
 export { TransferPanes } from './patterns/TransferPanes'
 export type { TransferPanesProps, TransferSide, TransferMove } from './patterns/TransferPanes'

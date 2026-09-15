@@ -1,7 +1,9 @@
 import { Badge, Button, DensityProvider, Modal, cardText, cn, useToast } from '@ynarcher/ui'
+import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '@/auth/authStore'
 import { ReservationFormView } from '@/features/office/rooms/ReservationFormView'
+import { isPastDateKey } from '@/features/office/rooms/availability'
 import type { MeetingRoom } from '@/features/office/rooms/meetingRoomsApi'
 import {
   isOverlapError,
@@ -24,6 +26,12 @@ interface Props {
 /**
  * 회의실 예약 모달(레퍼런스 이미지3→2 흐름): 기본은 그날 예약 목록 + 취소,
  * '+ 예약하기'로 폼 뷰 전환. 취소는 본인·관리자만 노출한다.
+ *
+ * 지난 날짜는 **조회 전용**이다 — 목록은 그대로 보여주되 예약을 만들거나 취소하는 길을 닫는다.
+ * 이미 일어난 일의 기록은 여기서 손댈 것이 아니라는 UI 정책이다 — 서버는 이 규칙을 갖고
+ * 있지 않으므로(등록 트리거는 회의실·요일·운영시간·슬롯 정합만 본다) 지난 날짜를 막는 것은
+ * 화면 쪽 책임이다. 그래도 화면 자체는 열려야 한다 — 카드 전체를 눌러 들어오는 길이
+ * 생기면서 "그날 누가 썼나"를 보러 오는 것이 이 모달의 또 다른 쓰임이 됐다.
  */
 export function RoomReservationModal({ open, room, dateKey, reservations, onClose }: Props) {
   const toast = useToast()
@@ -34,6 +42,9 @@ export function RoomReservationModal({ open, room, dateKey, reservations, onClos
   const create = useCreateReservation()
   const cancel = useCancelReservation()
   const [mode, setMode] = useState<'list' | 'form'>('list')
+  const readOnly = isPastDateKey(dateKey, dayjs().format('YYYY-MM-DD'))
+  // 폼은 조회 전용에서 열리지 않는다 — 진입 버튼을 감추는 것과 별개로 상태로도 막는다.
+  const showForm = mode === 'form' && !readOnly
 
   // 열릴 때마다 목록 뷰로 초기화.
   useEffect(() => {
@@ -72,8 +83,13 @@ export function RoomReservationModal({ open, room, dateKey, reservations, onClos
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={`예약: ${room.name}`} size="md">
-      {mode === 'form' ? (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={showForm ? `예약하기: ${room.name}` : `예약 현황: ${room.name} (${dateKey})`}
+      size="md"
+    >
+      {showForm ? (
         <ReservationFormView
           room={room}
           initialDate={dateKey}
@@ -92,7 +108,7 @@ export function RoomReservationModal({ open, room, dateKey, reservations, onClos
             ) : (
               <ul className="space-y-2">
                 {reservations.map((r) => {
-                  const canCancel = isAdmin || r.createdBy === myId
+                  const canCancel = !readOnly && (isAdmin || r.createdBy === myId)
                   return (
                     <li
                       key={r.id}
@@ -123,9 +139,15 @@ export function RoomReservationModal({ open, room, dateKey, reservations, onClos
               </ul>
             )}
 
-            <Button className="w-full" onClick={() => setMode('form')}>
-              + 예약하기
-            </Button>
+            {readOnly ? (
+              <p className={cn('text-center', cardText.label)}>
+                지난 날짜는 조회만 할 수 있습니다.
+              </p>
+            ) : (
+              <Button className="w-full" onClick={() => setMode('form')}>
+                + 예약하기
+              </Button>
+            )}
           </div>
         </DensityProvider>
       )}

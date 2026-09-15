@@ -98,6 +98,64 @@ export function usePartnerOption(id: string | null | undefined) {
   })
 }
 
+/**
+ * 지급에 필요한 한 건 — **계좌번호가 전체로 온다.**
+ *
+ * 목록·검색은 지금까지와 같이 가려진 뷰를 읽고(뒤 4자리), 이 한 건만 전용 RPC
+ * (`trade_partner_payment_detail`)로 온다. 가르는 축은 사람이 아니라 **범위**다: 원장을 훑는
+ * 일에는 계좌 전체가 필요 없고, 송금 요청서 한 줄을 채우는 일에는 그 한 건의 계좌가 필요하다.
+ * 서버는 id 하나만 받고 한 행만 돌려주며, 그 조회는 `access_logs`에 남는다.
+ */
+export interface PartnerPaymentDetail {
+  id: string
+  code: string
+  name: string
+  partnerType: PartnerType
+  bankCode: string | null
+  /** 계좌번호 전체. 화면에서 이 값이 서는 자리는 송금 요청 표 한 곳뿐이다. */
+  accountNo: string | null
+  accountHolder: string | null
+  isActive: boolean
+  verifiedAt: string | null
+}
+
+interface PaymentDetailRow {
+  id: string
+  code: string
+  name: string
+  partner_type: PartnerType
+  bank_code: string | null
+  account_no: string | null
+  account_holder: string | null
+  is_active: boolean
+  verified_at: string | null
+}
+
+/**
+ * 고른 거래처 한 건의 지급 정보. 없는 id·열람 권한 없음은 **빈 결과**로 온다(행이 0개).
+ *
+ * 훅이 아니라 함수인 이유는 이 조회가 화면을 그리는 조회가 아니라 **고르는 순간 한 번 일어나는
+ * 일**이기 때문이다. 캐시에 남기지 않는 것도 같은 판단이다 — 계좌 전체를 브라우저 메모리에
+ * 쌓아 둘 이유가 없다(쓰고 나면 그 값은 문서의 사본으로 옮겨 간다).
+ */
+export async function fetchPartnerPaymentDetail(id: string): Promise<PartnerPaymentDetail | null> {
+  const { data, error } = await supabase.rpc('trade_partner_payment_detail', { p_partner_id: id })
+  if (error) throw error
+  const row = ((data ?? []) as unknown as PaymentDetailRow[])[0]
+  if (!row) return null
+  return {
+    id: row.id,
+    code: row.code,
+    name: row.name,
+    partnerType: row.partner_type,
+    bankCode: row.bank_code,
+    accountNo: row.account_no,
+    accountHolder: row.account_holder,
+    isActive: row.is_active,
+    verifiedAt: row.verified_at,
+  }
+}
+
 export interface QuickPartnerInput {
   name: string
   partnerType: PartnerType

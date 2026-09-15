@@ -18,7 +18,10 @@ import { toSpans, useDayReservations, type Reservation } from '@/features/office
  * 탭은 지사 원장(branches)이다 — 지사 정보·자산 반출대장과 같은 목록을 쓰며,
  * 회의실이 한 대도 없는 지사는 빈 탭이 되므로 탭에서 뺀다.
  * 지사 세팅은 MANAGEMENT '지사 관리', 회의실 세팅은 ADMIN '회의실 관리'가 소유하고,
- * 여기서는 예약(생성·취소)만 한다.
+ * 여기서는 예약(생성·취소)과 그날 예약 현황 조회만 한다.
+ *
+ * 카드를 누르면 날짜 바가 정한 `dateKey`와 그 날짜로 이미 받아온 예약을 그대로 넘겨
+ * 모달이 열린다 — 모달은 날짜를 따로 고르지 않는다(지난 날짜면 모달이 조회 전용으로 선다).
  */
 export function RoomReservationWorkspace() {
   const [branchId, setBranchId] = useState<string>()
@@ -108,7 +111,7 @@ export function RoomReservationWorkspace() {
                   room={room}
                   date={dateObj}
                   spans={toSpans(byRoom.get(room.id) ?? [])}
-                  onReserve={() => setModalRoom(room)}
+                  onOpen={() => setModalRoom(room)}
                 />
               ))}
             </div>

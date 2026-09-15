@@ -1,4 +1,4 @@
-import { Tabs } from '@ynarcher/ui'
+import { Banner, CardShell, Tabs } from '@ynarcher/ui'
 import { useState } from 'react'
 import type { Program, ProgramModule } from '@/features/program/hooks'
 import { MODULE_BOARD_LABEL } from '@/features/program/config'
@@ -15,10 +15,12 @@ import { ChangeHistoryPanel } from '@/features/networks/ChangeHistoryPanel'
 import { FeedbackPanel } from '@/features/networks/FeedbackPanel'
 import { MaterialPanel } from '@/features/networks/MaterialPanel'
 
+type DetailTab = 'workflow' | 'roster' | 'result' | 'budget' | 'approval'
+
 /**
  * 프로그램 상세 개요(NETWORKS·STARTUP 상세와 동일한 2/3 + 1/3 카드섹션 컴포지션).
  * 좌측 본문(2/3): 기본 데이터 카드 → `와이앤아처 GUEST 설정` 버튼 → 탭 줄(워크플로우 · 참가자 목록
- * · 예산/지출 · 전자결재).
+ * · 결과보고서 · 예산/지출 · 전자결재).
  *
  * **좌측 탭 줄은 2026-09-09 낮에 걷혔다가 같은 날 되섰다.** 걷은 이유는 게스트에게 나가는
  * 셋(개요·공지사항·Q&A)이 계정생성과 함께 GUEST 설정 모달로 들어가면서 남은 탭이 워크플로우
@@ -63,7 +65,7 @@ export function ProgramOverviewTab({
   // 이 워크스페이스가 쓰는 자격. 무엇이 서는지는 `guestMasterTables`가 답하고, 그 값은
   // 사이드바 창구의 하위 탭·참가자 목록의 자격 탭과 **같은 한 벌**이다.
   const personas = config.guestMasterTables ?? []
-  const [tab, setTab] = useState<'workflow' | 'roster' | 'budget' | 'approval'>('workflow')
+  const [tab, setTab] = useState<DetailTab>('workflow')
 
   return (
     <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
@@ -79,7 +81,11 @@ export function ProgramOverviewTab({
           items={[
             { key: 'workflow', label: MODULE_BOARD_LABEL },
             { key: 'roster', label: config.rosterLabel },
-            // 예산/지출이 셋째로 선 근거도 같다 — 이 사업 안에서 하는 일의 한 축(돈)이다.
+            // 참가자 목록 바로 오른쪽이 결과보고서다 — 무엇을 하는가(워크플로우) · 누가
+            // 참가하는가(명부) 다음에 오는 물음이 **그래서 무엇이 나왔는가**이고, 그 답은
+            // 돈(예산/지출·전자결재)보다 앞선 축이다.
+            { key: 'result', label: '결과보고서' },
+            // 예산/지출이 넷째로 선 근거도 같다 — 이 사업 안에서 하는 일의 한 축(돈)이다.
             { key: 'budget', label: '예산/지출' },
             // 전자결재가 그 바로 오른쪽에 선다(2026-09-14, 우측 패널에서 옮겨 옴). 예산과
             // 결재는 같은 원장을 앞뒤로 읽는다 — 배정 품의가 예산을 세우고 그 줄에서 지출이
@@ -87,7 +93,7 @@ export function ProgramOverviewTab({
             { key: 'approval', label: '전자결재' },
           ]}
           value={tab}
-          onChange={(key) => setTab(key as 'workflow' | 'roster' | 'budget' | 'approval')}
+          onChange={(key) => setTab(key as DetailTab)}
         />
         {/* 탭을 감추지 않고 갈아 끼운다 — 워크플로우 카드는 뷰 전환·펼침 같은 자기 상태를
             들고 있어, 숨겨 둔 채로 살려 두면 보이지 않는 화면이 조회를 계속 돌린다. */}
@@ -95,6 +101,12 @@ export function ProgramOverviewTab({
           <ModuleBoardCard program={program} onOpenModule={onOpenModule} />
         ) : tab === 'roster' ? (
           <ProgramRosterCard programId={program.id} personas={personas} />
+        ) : tab === 'result' ? (
+          // 아직 원장도 화면도 없다 — 탭 자리만 세워 둔 상태이며, 무엇을 담을지는 미정이다.
+          // 빈 카드 대신 그 사실을 적는다(FUND 상세 '보고서' 탭과 같은 처리).
+          <CardShell>
+            <Banner tone="info">결과보고서 화면은 준비 중입니다.</Banner>
+          </CardShell>
         ) : tab === 'budget' ? (
           <WorkspaceBudgetTab targetType={config.entityKey} targetId={program.id} />
         ) : (

@@ -46,6 +46,17 @@ export function normalizeTime(t: string): string {
   return t.slice(0, 5)
 }
 
+/**
+ * 지나간 날짜인가(둘 다 'YYYY-MM-DD').
+ *
+ * 같은 형식의 날짜 키는 사전순이 곧 날짜순이라 시각·시간대 계산 없이 문자열 비교로 가른다.
+ * 카드의 예약 버튼 비활성과 모달의 조회 전용 전환이 이 한 줄을 함께 본다 — 판정 규칙이
+ * 두 벌이 되지 않게 하고, 경계(달·해 넘김)를 테스트로 한 번만 고정하기 위해서다.
+ */
+export function isPastDateKey(dateKey: string, todayKey: string): boolean {
+  return dateKey < todayKey
+}
+
 /** 해당 날짜가 회의실 예약 가능 요일인지. */
 export function isOpenOn(schedule: RoomSchedule, date: Date): boolean {
   return schedule.weekdays.includes(date.getDay())

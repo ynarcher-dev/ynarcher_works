@@ -3,12 +3,16 @@ import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Trash2 } from 'lucide-re
 import { Fragment, useEffect, useState } from 'react'
 import { FieldExtraSettings } from '@/features/approval/FieldExtraSettings'
 import {
-  FIELD_TYPES,
-  FIELD_TYPE_LABEL,
+  FIELD_CHOICE_LABEL,
+  OTHER_FIELD_CHOICES,
+  PRIMARY_FIELD_CHOICES,
+  fieldChoiceOf,
+  withFieldChoice,
+  type FieldChoice,
+} from '@/features/approval/fieldPresets'
+import {
   canBePrimaryAmount,
   nextKey,
-  withFieldType,
-  type FieldType,
   type FormField,
 } from '@/features/approval/fields'
 
@@ -104,7 +108,7 @@ export function FieldSchemaEditor({ fields, onChange }: FieldSchemaEditorProps) 
                         {field.label.trim() || '이름 없는 필드'}
                       </span>
                       <span className={cn('block truncate', cardText.meta)}>
-                        {FIELD_TYPE_LABEL[field.type]}
+                        {FIELD_CHOICE_LABEL[fieldChoiceOf(field)]}
                         {field.required ? ' · 필수' : ''}
                         {amount ? ' · 문서 금액' : ''}
                       </span>
@@ -156,21 +160,32 @@ export function FieldSchemaEditor({ fields, onChange }: FieldSchemaEditorProps) 
                           }
                         />
                       </Field>
+                      {/* 앞의 세 값이 지출결의서 한 장이 본문 아래에 갖는 것 전부다. 나머지
+                          종류는 지우지 않고 아래 묶음으로 내린다 — 다른 양식이 계속 쓴다. */}
                       <Field label="입력 방식">
                         <Select
-                          value={field.type}
+                          value={fieldChoiceOf(field)}
                           onChange={(event) =>
                             setField(
                               index,
-                              withFieldType(field, event.target.value as FieldType),
+                              withFieldChoice(field, event.target.value as FieldChoice),
                             )
                           }
                         >
-                          {FIELD_TYPES.map((type) => (
-                            <option key={type} value={type}>
-                              {FIELD_TYPE_LABEL[type]}
-                            </option>
-                          ))}
+                          <optgroup label="본문 아래 블록">
+                            {PRIMARY_FIELD_CHOICES.map((choice) => (
+                              <option key={choice} value={choice}>
+                                {FIELD_CHOICE_LABEL[choice]}
+                              </option>
+                            ))}
+                          </optgroup>
+                          <optgroup label="그 밖의 입력 칸">
+                            {OTHER_FIELD_CHOICES.map((choice) => (
+                              <option key={choice} value={choice}>
+                                {FIELD_CHOICE_LABEL[choice]}
+                              </option>
+                            ))}
+                          </optgroup>
                         </Select>
                       </Field>
                     </div>

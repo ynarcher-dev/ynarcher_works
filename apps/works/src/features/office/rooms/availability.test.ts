@@ -3,6 +3,7 @@ import {
   buildSlots,
   conflictsWith,
   isOpenOn,
+  isPastDateKey,
   scheduleLabel,
   slotEndsAfter,
   slotStarts,
@@ -55,5 +56,21 @@ describe('예약 폼 후보·검증', () => {
     const existing = [{ start: '09:00', end: '09:30' }]
     expect(conflictsWith(existing, '09:00', '09:30')).toBe(true)
     expect(conflictsWith(existing, '09:30', '10:00')).toBe(false)
+  })
+})
+
+describe('지난 날짜 판정', () => {
+  const today = '2026-09-15'
+
+  it('어제까지가 지난 날짜이고 오늘·내일은 아니다', () => {
+    expect(isPastDateKey('2026-09-14', today)).toBe(true)
+    expect(isPastDateKey(today, today)).toBe(false)
+    expect(isPastDateKey('2026-09-16', today)).toBe(false)
+  })
+
+  it('달·해 경계도 사전순 비교로 갈린다', () => {
+    expect(isPastDateKey('2026-08-31', '2026-09-01')).toBe(true)
+    expect(isPastDateKey('2025-12-31', '2026-01-01')).toBe(true)
+    expect(isPastDateKey('2026-10-01', '2026-09-30')).toBe(false)
   })
 })

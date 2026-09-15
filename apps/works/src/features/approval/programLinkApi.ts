@@ -42,6 +42,20 @@ export function programLinkKind(key: string): MinuteLinkPickKind {
   return PROGRAM_LINK_PICK_KINDS.find((k) => k.key === key) ?? DEFAULT_PROGRAM_LINK_KIND
 }
 
+/**
+ * 기안 화면이 들고 있는 연동 1건. 저장에 필요한 것은 종류·id뿐이지만, 고른 뒤에도 무엇을
+ * 골랐는지 화면에 보여야 하므로 이름·코드를 함께 들고 있는다(저장 시 버려진다).
+ *
+ * 화면이 아니라 원장 모듈이 갖는 이유는 이 형태를 쓰는 화면이 하나가 아니고, 그중 하나가
+ * 사라져도 나머지가 지워진 화면을 계속 import하는 일이 없어야 하기 때문이다.
+ */
+export interface ProgramLinkDraft {
+  targetType: ProgramLinkType
+  targetId: string
+  label: string
+  code: string | null
+}
+
 /** 결재 문서에 걸린 사업 1건(표시용). */
 export interface ApprovalProgramLink {
   /** 링크 행 id — 해제할 때 쓴다. */

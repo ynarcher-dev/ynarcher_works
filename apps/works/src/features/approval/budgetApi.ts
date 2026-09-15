@@ -5,21 +5,41 @@
  * 반려·보완 재상신·승인 취소 때마다 되돌려 빼야 하고, 한 번이라도 놓치면 남은 예산이 조용히
  * 거짓을 말한다. 그래서 화면도 캐시를 오래 들고 있지 않는다.
  */
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { sanitizeOrValue, userIdsByName } from '@/features/master/ledgerPage'
+import {
+  budgetSourcePlan,
+  formIdsMatchingKeyword,
+  type BudgetSourceForm,
+} from '@/features/approval/budgetSourceQuery'
 import type { BudgetUsage } from '@/features/approval/BudgetTreeView'
 import { budgetField, parseFields, type FormField } from '@/features/approval/fields'
 import type { ApprovalForm } from '@/features/approval/approvalApi'
 import type { ApprovalStatus } from '@/features/management/config'
 
-/** 근거 품의로 고를 수 있는 문서 한 건(선택 목록의 한 줄). */
+/**
+ * 근거 품의로 고를 수 있는 문서 한 건(선택 목록의 한 줄).
+ *
+ * **금액을 담지 않는다.** 고르는 자리에서 품의 금액·사용 가능액을 보이면 담당자는 남은 돈이
+ * 많은 품의를 고르게 되는데, 이 창이 묻는 것은 "이 지출이 **어느 품의의 일**인가"다. 금액은
+ * 고른 뒤 예산표가 답한다.
+ */
 export interface BudgetSourceDoc {
   id: string
   title: string
   docNo: string | null
-  amount: number | null
+  /** 기안자 id. 이름은 이 표에 없으므로 화면이 임직원 원장에서 한 번에 풀어 붙인다. */
+  drafterId: string | null
   createdAt: string
   formName: string | null
+}
+
+/** 후보 한 페이지. */
+export interface BudgetSourcePage {
+  rows: BudgetSourceDoc[]
+  /** 검색·필터 반영 건수(`count: 'exact'`) — 페이지 수와 전체 건수 표기의 기준. */
+  total: number
 }
 
 /**
@@ -28,54 +48,94 @@ export interface BudgetSourceDoc {
  *
  * **예산 변경 양식(REVISE)은 뺀다.** 변경 품의도 예산표를 갖지만 그 금액은 원 품의에 이미
  * 반영되어 있어, 근거로 고를 수 있게 두면 같은 돈을 두 번 쓴다(서버도 같은 줄에서 막는다).
+ *
+ * id만이 아니라 이름을 함께 돌려주는 이유는 고르는 창이 문서 종류를 **보여주고 그것으로
+ * 걸러내기** 때문이다. 이름을 따로 받아 오면 후보의 울타리와 그 이름표가 두 벌이 된다.
  */
-export function budgetFormIds(forms: ApprovalForm[]): string[] {
+export function budgetSourceForms(forms: ApprovalForm[]): BudgetSourceForm[] {
   return forms
     .filter(
       (f) =>
         f.budget_link !== 'REVISE' &&
         budgetField(parseFields(f.current_version?.fields)) !== null,
     )
-    .map((f) => f.id)
+    .map((f) => ({ id: f.id, name: f.name }))
+}
+
+/** 후보 목록 조회 한 번의 조건(창이 들고 있는 상태 그대로). */
+export interface BudgetSourceQuery {
+  forms: BudgetSourceForm[]
+  keyword: string
+  /** '보기'로 고른 양식. 빈 문자열이면 전체. */
+  formFilterId: string
+  /** 0-base. */
+  page: number
+  pageSize: number
 }
 
 /**
  * 근거 품의 후보 — **승인이 끝난 품의만** 고를 수 있다. 흐르는 중인 품의의 예산은 아직
  * 확정된 돈이 아니라, 그 위에 지출을 걸면 결재 도중 예산이 바뀌어 차감의 근거가 흔들린다.
  * 보이는 범위는 서버 RLS가 가른다(열람할 수 없는 품의는 애초에 돌아오지 않는다).
+ *
+ * **한 페이지만 받아 온다.** 종전에는 앞에서 50건을 끊어 왔고, 그 뒤의 품의는 검색어로도
+ * 닿지 않는 한 존재하지 않는 것과 같았다 — 목록은 조용히 맞아 보이고 고를 수 없는 문서만
+ * 늘어난다. 전체 건수는 `count: 'exact'`로 함께 세어 페이저가 몇 장인지 답하게 한다.
  */
-export function useBudgetSourceDocuments(formIds: string[], keyword: string) {
+export function useBudgetSourceDocuments(params: BudgetSourceQuery, enabled = true) {
+  const { forms, keyword, formFilterId, page, pageSize } = params
+  const formIds = forms.map((f) => f.id)
   return useQuery({
-    queryKey: ['approval', 'budget-sources', formIds, keyword],
-    enabled: formIds.length > 0,
-    queryFn: async (): Promise<BudgetSourceDoc[]> => {
+    queryKey: ['approval', 'budget-sources', formIds, keyword, formFilterId, page, pageSize],
+    enabled: enabled && formIds.length > 0,
+    // 페이지를 넘기는 동안 직전 페이지를 세워 둔다 — 넘길 때마다 표가 통째로 비면 다음
+    // 버튼이 눌린 자리에서 사라진다.
+    placeholderData: keepPreviousData,
+    queryFn: async (): Promise<BudgetSourcePage> => {
+      const kw = sanitizeOrValue(keyword)
+      // 종류·기안자는 이 표에 이름이 없고 참조만 있다. 이름 → id는 검색어당 한 번만 풀어
+      // 오므로 줄마다 묻는 일(N+1)이 생기지 않는다.
+      const drafterIds = kw ? await userIdsByName(kw) : []
+      const plan = budgetSourcePlan({
+        formIds,
+        formFilterId,
+        keyword: kw,
+        keywordFormIds: formIdsMatchingKeyword(forms, kw),
+        drafterIds,
+        page,
+        pageSize,
+      })
       let q = supabase
         .from('approval_documents')
-        .select('id, title, doc_no, amount, created_at, form:form_id(name)')
-        .in('form_id', formIds)
+        .select('id, title, doc_no, created_at, drafter_id, form:form_id(name)', {
+          count: 'exact',
+        })
+        .in('form_id', plan.formIds)
         .eq('status', 'APPROVED')
         .is('deleted_at', null)
+      // `.or()`는 위 조건들과 AND로 묶인다 — 검색어가 후보 범위를 넓히지 못한다.
+      // 정렬·구간은 필터를 다 건 뒤에 붙인다(빌더가 그 뒤로는 필터를 받지 않는다).
+      if (plan.orExpr) q = q.or(plan.orExpr)
+      const { data, error, count } = await q
         .order('created_at', { ascending: false })
-        .limit(50)
-      const kw = keyword.trim().replace(/[(),]/g, ' ').trim()
-      if (kw) q = q.or(`title.ilike.%${kw}%,doc_no.ilike.%${kw}%`)
-      const { data, error } = await q
+        .range(plan.from, plan.to)
       if (error) throw error
-      return ((data ?? []) as unknown as {
+      const rows = ((data ?? []) as unknown as {
         id: string
         title: string
         doc_no: string | null
-        amount: number | null
         created_at: string
+        drafter_id: string | null
         form: { name: string } | null
       }[]).map((r) => ({
         id: r.id,
         title: r.title,
         docNo: r.doc_no,
-        amount: r.amount,
+        drafterId: r.drafter_id,
         createdAt: r.created_at,
         formName: r.form?.name ?? null,
       }))
+      return { rows, total: count ?? 0 }
     },
   })
 }
@@ -87,6 +147,10 @@ export interface BudgetSourceDetail {
   docNo: string | null
   status: ApprovalStatus
   amount: number | null
+  /** 기안자 id. 이름은 이 표에 없으므로 화면이 임직원 원장에서 푼다(고르는 창과 같은 규칙). */
+  drafterId: string | null
+  /** 양식 이름(문서 종류). 표시명 변환은 화면이 한다. */
+  formName: string | null
   fields: FormField[]
   fieldValues: Record<string, unknown>
 }
@@ -98,7 +162,10 @@ export function useBudgetSourceDetail(documentId: string | null | undefined) {
     queryFn: async (): Promise<BudgetSourceDetail | null> => {
       const { data, error } = await supabase
         .from('approval_documents')
-        .select('id, title, doc_no, status, amount, field_values, version:form_version_id(fields)')
+        .select(
+          'id, title, doc_no, status, amount, drafter_id, field_values, ' +
+            'form:form_id(name), version:form_version_id(fields)',
+        )
         .eq('id', documentId)
         .is('deleted_at', null)
         .maybeSingle()
@@ -110,7 +177,9 @@ export function useBudgetSourceDetail(documentId: string | null | undefined) {
         doc_no: string | null
         status: ApprovalStatus
         amount: number | null
+        drafter_id: string | null
         field_values: Record<string, unknown>
+        form: { name: string } | null
         version: { fields: unknown } | null
       }
       return {
@@ -119,6 +188,8 @@ export function useBudgetSourceDetail(documentId: string | null | undefined) {
         docNo: row.doc_no,
         status: row.status,
         amount: row.amount,
+        drafterId: row.drafter_id,
+        formName: row.form?.name ?? null,
         fields: parseFields(row.version?.fields),
         fieldValues: row.field_values ?? {},
       }

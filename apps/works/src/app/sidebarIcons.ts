@@ -21,6 +21,7 @@ import {
   Lightbulb,
   Link2,
   LockKeyhole,
+  Palmtree,
   ReceiptText,
   Rocket,
   Search,
@@ -155,6 +156,8 @@ export const sidebarIconByTab: Record<string, LucideIcon> = {
   minutes: FileText,
   hr: User,
   attendance: CalendarClock,
+  // 휴가는 근태(달력+시계)와 갈라져야 한다 — 같은 글리프를 쓰면 두 줄이 한 메뉴로 읽힌다.
+  leave: Palmtree,
   finance: WalletCards,
   assets: BriefcaseBusiness,
   departments: Network,

@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
+  amountKeys,
   budgetAmountFormula,
   columnSum,
+  isDerivedColumn,
+  visibleColumns,
   emptyValues,
   formatMoney,
+  hasColumnValue,
   htmlTemplateImageSources,
   htmlTemplateTokens,
   isEmptyPlan,
@@ -133,6 +137,11 @@ describe('toNumber / columnSum', () => {
     const rows = [{ amount: '1,000' }, { amount: '' }, { amount: '미정' }, { amount: '2500' }]
     expect(columnSum(rows, 'amount')).toBe(3500)
   })
+
+  it('빈 열과 0을 명시한 열을 가른다', () => {
+    expect(hasColumnValue([{ amount: '' }], 'amount')).toBe(false)
+    expect(hasColumnValue([{ amount: '0' }], 'amount')).toBe(true)
+  })
 })
 
 describe('primaryAmount', () => {
@@ -143,6 +152,11 @@ describe('primaryAmount', () => {
       purpose: '프로젝트 비용 지출',
     }
     expect(primaryAmount(EXPENSE, values)).toBe(13653800)
+  })
+
+  it('빈 표의 대표 금액은 없고, 명시적으로 적은 0원은 0이다', () => {
+    expect(primaryAmount(EXPENSE, { expense_items: [{ item: '', amount: '' }] })).toBe(null)
+    expect(primaryAmount(EXPENSE, { expense_items: [{ item: '무상', amount: '0' }] })).toBe(0)
   })
 
   it('스칼라 MONEY 필드에 표시가 붙으면 그 값이 문서 금액이다', () => {
@@ -371,5 +385,129 @@ describe('수지 계획(PROFIT_PLAN)', () => {
     expect(parseFields([{ key: 'plan', label: '수지 계획', type: 'PROFIT_PLAN' }])[0]?.type).toBe(
       'PROFIT_PLAN',
     )
+  })
+})
+
+describe('파생 열(source)', () => {
+  const REMITTANCES: FormField = {
+    key: 'remittances',
+    label: '송금 요청',
+    type: 'TABLE',
+    columns: [
+      { key: 'partner', label: '거래처명', type: 'PARTNER_REF' },
+      {
+        key: 'partnerName',
+        label: '거래처명',
+        type: 'TEXT',
+        source: { from: 'partner', field: 'NAME' },
+      },
+      { key: 'bankCode', label: '은행', type: 'TEXT', source: { from: 'partner', field: 'BANK' } },
+      { key: 'amount', label: '송금액', type: 'MONEY' },
+      { key: 'requestOn', label: '송금 요청일', type: 'DATE' },
+    ],
+  }
+
+  it('글자 칸의 출처는 살리고 모르는 조각·빈 참조는 버린다', () => {
+    const parsed = parseFields([
+      {
+        key: 't',
+        label: '표',
+        type: 'TABLE',
+        columns: [
+          { key: 'ref', label: '거래처', type: 'PARTNER_REF' },
+          // 조각 이름은 대문자로 정규화한다(시드가 소문자로 적혀도 같은 값으로 읽힌다).
+          { key: 'ok', label: '은행', type: 'TEXT', source: { from: 'ref', field: 'bank' } },
+          { key: 'bad', label: '???', type: 'TEXT', source: { from: 'ref', field: 'NOPE' } },
+          { key: 'noFrom', label: '???', type: 'TEXT', source: { from: '', field: 'BANK' } },
+          { key: 'notObj', label: '???', type: 'TEXT', source: 'ref.bank' },
+        ],
+      },
+    ])
+    const byKey = new Map((parsed[0]?.columns ?? []).map((c) => [c.key, c]))
+    expect(byKey.get('ok')?.source).toEqual({ from: 'ref', field: 'BANK' })
+    expect(byKey.get('bad')?.source).toBeUndefined()
+    expect(byKey.get('noFrom')?.source).toBeUndefined()
+    expect(byKey.get('notObj')?.source).toBeUndefined()
+  })
+
+  it('금액 칸에 붙은 출처는 버린다 — 사람이 못 고치는 값이 합계액 후보로 서면 안 된다', () => {
+    const parsed = parseFields([
+      {
+        key: 't',
+        label: '표',
+        type: 'TABLE',
+        columns: [
+          { key: 'ref', label: '거래처', type: 'PARTNER_REF' },
+          { key: 'money', label: '금액', type: 'MONEY', source: { from: 'ref', field: 'BANK' } },
+        ],
+      },
+    ])
+    expect(parsed[0]?.columns?.[1]?.source).toBeUndefined()
+  })
+
+  it('이름 사본만 화면에서 빠진다', () => {
+    expect(visibleColumns(REMITTANCES.columns ?? []).map((c) => c.key)).toEqual([
+      'partner',
+      'bankCode',
+      'amount',
+      'requestOn',
+    ])
+  })
+
+  it('출처가 없는 옛 양식은 열이 그대로 전부 선다', () => {
+    const legacy: FormColumn[] = [
+      { key: 'partner', label: '거래처', type: 'PARTNER_REF' },
+      { key: 'amount', label: '송금액', type: 'MONEY' },
+    ]
+    expect(visibleColumns(legacy)).toEqual(legacy)
+  })
+
+  it('파생 열은 금액 해석에 끼어들지 않는다(송금액이 그 표의 합계액이다)', () => {
+    expect(isDerivedColumn(REMITTANCES.columns![1]!)).toBe(true)
+    expect(isDerivedColumn(REMITTANCES.columns![3]!)).toBe(false)
+    expect(amountKeys(REMITTANCES)).toEqual({
+      grossKey: 'amount',
+      netKey: undefined,
+      vatKey: undefined,
+      kindKey: undefined,
+    })
+  })
+
+  it('가리키는 거래처 열이 없는 파생 열은 스키마 오류다', () => {
+    const broken: FormField = {
+      key: 't',
+      label: '표',
+      type: 'TABLE',
+      columns: [
+        { key: 'a', label: '항목', type: 'TEXT' },
+        { key: 'b', label: '은행', type: 'TEXT', source: { from: 'nope', field: 'BANK' } },
+        { key: 'c', label: '금액', type: 'MONEY' },
+      ],
+    }
+    expect(validateSchema([broken])).toContain('파생 열이 가리키는 거래처 열이 없습니다: 표 > 은행')
+  })
+
+  it('같은 값을 담는 파생 열이 둘이면 스키마 오류다', () => {
+    const doubled: FormField = {
+      key: 'remittances',
+      label: '송금 요청',
+      type: 'TABLE',
+      columns: [
+        ...(REMITTANCES.columns ?? []),
+        {
+          key: 'bank2',
+          label: '은행(중복)',
+          type: 'TEXT',
+          source: { from: 'partner', field: 'BANK' },
+        },
+      ],
+    }
+    expect(validateSchema([doubled])).toContain(
+      '같은 값을 담는 파생 열이 둘입니다: 송금 요청 > 은행(중복)',
+    )
+  })
+
+  it('확정된 송금 요청 양식은 스키마 검사를 통과한다', () => {
+    expect(validateSchema([REMITTANCES])).toEqual([])
   })
 })

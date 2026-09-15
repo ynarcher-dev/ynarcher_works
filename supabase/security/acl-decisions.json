@@ -11,7 +11,8 @@
       "supabase/migrations/20260912160500_acl_default_privileges.sql",
       "supabase/migrations/20260912161000_acl_rpc_execute_narrowing.sql",
       "supabase/migrations/20260913011827_grant_program_module_assignees_read.sql",
-      "supabase/migrations/20260913170000_restore_approval_embedded_read_grants.sql"
+      "supabase/migrations/20260913170000_restore_approval_embedded_read_grants.sql",
+      "supabase/migrations/20260915060001_fix_budget_revision_read_and_quick_partner.sql"
     ]
   },
   "classes": {
@@ -32,13 +33,17 @@
       "legacy-unused": 17,
       "unresolved": 32
     },
-    "authenticated_grant_changes": 0,
+    "authenticated_grant_changes": 1,
     "authenticated_review_candidates": 13,
     "service_role_grant_changes": 0,
     "non_row_revoke_tables": 0
   },
   "named_lists": {
-    "grant_authenticated": {},
+    "grant_authenticated": {
+      "SELECT": [
+        "approval_budget_revisions"
+      ]
+    },
     "review_authenticated_row": {
       "SELECT": [
         "approval_document_events",
@@ -1896,12 +1901,16 @@
         "policy_gap_blocked": null
       },
       "proposed": {
-        "authenticated": [],
+        "authenticated": [
+          "SELECT"
+        ],
         "service_role": [],
         "anon": []
       },
       "expected": {
-        "authenticated": [],
+        "authenticated": [
+          "SELECT"
+        ],
         "service_role": [],
         "anon": []
       },
@@ -1910,7 +1919,9 @@
         "service_role": []
       },
       "delta": {
-        "authenticated_grant": [],
+        "authenticated_grant": [
+          "SELECT"
+        ],
         "service_role_grant": [],
         "non_row_revoke": {
           "anon": [],
@@ -1919,7 +1930,7 @@
         "authenticated_unjustified_review": []
       },
       "notes": [
-        "서버가 쓰는 예산 감사 이력. 기존 결정(20260912025406)대로 DML을 주지 않습니다."
+        "승인 처리 함수만 쓰고, 원 품의 열람자는 approval_budget_revisions_select 정책을 거쳐 읽습니다."
       ]
     },
     {

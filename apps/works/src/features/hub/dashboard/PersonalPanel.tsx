@@ -16,7 +16,8 @@ export function PersonalPanel({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="space-y-4">
       <WelcomeCard onNavigate={onNavigate} />
-      <WorkCheckCard />
+      {/* 근무체크 카드도 '근태현황'으로 나가는 문을 가지므로 슬라이드오버를 닫을 손잡이를 넘긴다. */}
+      <WorkCheckCard onNavigate={onNavigate} />
       <ApprovalCard onNavigate={onNavigate} />
     </div>
   )

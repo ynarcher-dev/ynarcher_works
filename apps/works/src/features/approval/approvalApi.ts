@@ -8,7 +8,9 @@ import type { ApprovalListRow } from '@/features/approval/model'
 /** 문서함 목록 select — model.ApprovalListRow와 형태가 일치해야 한다. */
 const LIST_SELECT =
   'id, title, doc_no, form_type, status, drafter_id, department_id, amount, created_at, completed_at, ' +
-  'form:form_id(name), ' +
+  // 약칭을 함께 받는다 — 근태 신청(휴가·연장·휴일) 문서함은 관리자가 고칠 수 있는
+  // 양식 '이름'이 아니라 채번에 쓰이는 약칭으로 자기 문서를 가른다.
+  'form:form_id(name, abbrev), ' +
   'legacy:approval_legacy_documents(source_system), ' +
   // 자리 id는 목록에서 일괄 승인을 걸기 위해 함께 받는다(서버가 받는 것은 문서가 아니라 자리다).
   'approval_lines(id, approver_id, step_order, decision, kind, round), ' +
@@ -49,18 +51,38 @@ export interface ApprovalForm {
   /** 현재 버전의 필드 스키마(원본 jsonb — parseFields로 읽는다). */
   current_version: { id: string; version_no: number; fields: unknown } | null
   /**
-   * 이 양식이 예산과 맺는 관계. NONE / SPEND_REQUIRED(근거 품의 필수) /
-   * SPEND_OPTIONAL(선택) / REVISE(예산 변경 품의).
+   * 이 양식이 예산과 맺는 관계. NONE / SPEND_OPTIONAL(근거 품의를 고를 수 있다) /
+   * REVISE(예산 변경 품의).
    * 예산표를 가졌는지는 이 값이 아니라 필드에 BUDGET_TREE가 있는지가 답한다.
    */
   budget_link: BudgetLink
 }
 
-export type BudgetLink = 'NONE' | 'SPEND_REQUIRED' | 'SPEND_OPTIONAL' | 'REVISE'
+/**
+ * 양식과 예산의 관계.
+ *
+ * **'근거 품의 필수'는 두지 않는다**(2026-09-15 사용자 결정). 필수로 두면 품의 없이 나가는
+ * 지출이 결재에 오를 길 자체가 막히고, 담당자는 문을 통과하려고 상관없는 품의를 고른다. 그
+ * 순간 예산은 실제로 쓴 곳이 아닌 줄에서 깎인다. 고르지 않고 흘러간 지출은 어느 예산도 깎지
+ * 않은 채 눈에 남지만, 잘못 고른 지출은 남은 예산이 거짓을 말하게 만든다.
+ *
+ * 저장 값 이름은 `SPEND_OPTIONAL` 그대로다 — 값을 고치면 이미 쌓인 양식 행을 함께 옮겨야 하고,
+ * 그 이름이 뜻하는 바('고를 수 있으나 강제하지 않는다')는 지금도 맞다.
+ */
+export type BudgetLink = 'NONE' | 'SPEND_OPTIONAL' | 'REVISE'
 
 /** 근거 품의를 고르는 자리가 서는가. */
 export function usesBudgetSource(link: BudgetLink | undefined): boolean {
-  return link === 'SPEND_REQUIRED' || link === 'SPEND_OPTIONAL' || link === 'REVISE'
+  return link === 'SPEND_OPTIONAL' || link === 'REVISE'
+}
+
+/**
+ * 고르지 않고는 상신할 수 없는가 — **변경 품의만** 그렇다.
+ * 변경 품의는 바꿀 대상이 없으면 문서 자체가 뜻을 갖지 못하지만, 지출결의서는 근거 품의 없이도
+ * 성립하는 지출(법인카드·인건비·품의 밖 집행)을 담는다.
+ */
+export function requiresBudgetSource(link: BudgetLink | undefined): boolean {
+  return link === 'REVISE'
 }
 
 const FORM_SELECT =

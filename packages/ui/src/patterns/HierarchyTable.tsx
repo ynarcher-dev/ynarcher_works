@@ -47,10 +47,16 @@ export function HierarchyTable<T extends { id: string }>({
    * 표의 최소 폭은 **단계 수를 따라 늘어난다.** 고정 폭이면 단계를 늘릴 때마다 이름 칸이
    * 서로를 밀어내 글자 두어 개도 못 담는 칸이 되는데, 계층 표에서 먼저 읽어야 하는 것이
    * 이름이다. 남는 폭이 없으면 칸을 줄이는 대신 감싼 칸이 가로로 스크롤한다.
-   * 단계 몫 9rem은 `w-36`(이름 칸)과 같고, 나머지는 지금까지의 최소 폭(2단계 기준
-   * 편집 56rem·읽기 48rem)에서 그 몫을 뺀 값이다.
+   *
+   * 단계 몫은 `w-36`(9rem)이 아니라 **`min-w-[8rem]`(8rem)**이다(2026-09-15). 이 값은 하한이지
+   * 선호 폭이 아니다 — 9rem으로 세던 동안 3단계 예산표의 하한이 65rem(1040px)이 되어, 카드 안
+   * 폭이 그보다 몇십 px 모자란 것만으로 가로 스크롤이 섰다. 9rem은 이름 칸이 *받고 싶은* 폭이고
+   * (`w-36`이 그대로 들고 있다) 8rem은 *그 아래로는 줄지 않는* 폭이라, 하한 계산에는 뒤가 맞다.
+   * 남는 폭이 있으면 이름 칸은 지금까지처럼 9rem으로 선다.
+   *
+   * 나머지 상수는 지금까지의 최소 폭(2단계 기준 편집 56rem·읽기 48rem)에서 종전 몫을 뺀 값 그대로다.
    */
-  const minWidth = `${(editing ? 38 : 30) + names.length * 9 + (numbered ? 3 : 0)}rem`
+  const minWidth = `${(editing ? 38 : 30) + names.length * 8 + (numbered ? 3 : 0)}rem`
   return (
     <div className="relative min-w-0 max-w-full overflow-x-auto rounded-radius-md border border-gray-200">
       <table className="w-full border-collapse" style={{ minWidth }}>

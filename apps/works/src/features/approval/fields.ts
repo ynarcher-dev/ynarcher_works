@@ -61,6 +61,42 @@ export type ColumnType =
   | 'VAT_KIND'
 
 /**
+ * 파생 열이 참조에서 끌어오는 **조각 하나**.
+ *
+ * 값 자체가 아니라 "그 행의 어느 칸인가"만 적는다 — 이름표(은행 코드 → 은행 이름)는 화면이
+ * 붙이고 저장되는 것은 언제나 원장이 든 값 그대로다(`config.ts`가 이름의 주인이다).
+ */
+export type ColumnSourceField =
+  | 'NAME'
+  | 'PARTNER_TYPE'
+  | 'BANK'
+  | 'ACCOUNT_NO'
+  | 'ACCOUNT_HOLDER'
+
+const COLUMN_SOURCE_FIELDS: ColumnSourceField[] = [
+  'NAME',
+  'PARTNER_TYPE',
+  'BANK',
+  'ACCOUNT_NO',
+  'ACCOUNT_HOLDER',
+]
+
+/**
+ * 파생 열의 출처 — **같은 표의 참조 열이 값의 주인이다.**
+ *
+ * 이 한 칸이 "사람이 고치지 않는 열"을 뜻한다. 종류(`type`)로 가르지 않는 이유는 그러면 양식
+ * 관리의 열 종류 목록에 고를 수 없는 값이 서기 때문이다 — 담당자가 '은행'을 고르면 그 열이
+ * 무엇을 따라올지 아무도 답하지 못한다. 출처는 **양식 시드가 짝지어 두는 것**이고, 종류 목록은
+ * 지금까지와 같이 여덟 가지 그대로다.
+ */
+export interface ColumnSource {
+  /** 값을 끌어오는 같은 표의 참조 열 key(`PARTNER_REF`). */
+  from: string
+  /** 그 참조가 가리키는 행의 어느 칸인가. */
+  field: ColumnSourceField
+}
+
+/**
  * 금액 열이 세 값 중 무엇인가.
  *
  * 타입(MONEY)만으로는 가릴 수 없어 따로 둔다 — 한 표에 금액 열이 셋이면 "어느 것이 합계액인가"를
@@ -79,6 +115,11 @@ export interface FormColumn {
   primaryAmount?: boolean
   /** 공급가액·부가세·합계액 중 무엇인가(MONEY·NUMBER 한정). 없으면 옛 규칙을 따른다. */
   role?: AmountRole
+  /**
+   * 값의 주인이 같은 표의 참조 열이다(TEXT 한정). 붙어 있으면 **사람이 고치지 않는 칸**이며,
+   * 참조를 고르는 순간 한 벌로 채워지고 해제하는 순간 한 벌로 비워진다.
+   */
+  source?: ColumnSource
   /** 열 폭 힌트(표 안에서만 의미). */
   wide?: boolean
 }
@@ -314,6 +355,45 @@ export function amountColumns(field: FormField): {
   }
 }
 
+/** 값의 주인이 다른 칸인가 — 사람이 고치지 않는 열이다. */
+export function isDerivedColumn(column: FormColumn): boolean {
+  return column.source !== undefined
+}
+
+/**
+ * 화면에 세우는 열.
+ *
+ * **이름 조각(`NAME`)은 열로 서지 않는다.** 그 값은 참조 칸 자신이 들기 때문이다 — 거래처를
+ * 고르는 칸이 이미 이름을 보이고 있는데 바로 옆에 같은 이름의 열을 세우면, 한 줄에 같은 값이
+ * 두 번 서고 담당자는 둘 중 어느 것을 고쳐야 하는지 묻게 된다. 그러면서도 **저장은 한다** —
+ * 원장에서 상호가 바뀌어도 이미 준비된 요청서의 이름은 그날 그대로여야 하므로, 스키마는 그
+ * 조각을 담을 자리를 갖되 화면만 세우지 않는다.
+ *
+ * 출처가 없는 옛 양식은 열이 그대로 전부 선다(이 판정에 걸리는 열이 하나도 없다).
+ */
+export function visibleColumns(columns: FormColumn[]): FormColumn[] {
+  return columns.filter((c) => c.source?.field !== 'NAME')
+}
+
+/**
+ * 참조 열 하나가 거느린 파생 열들 — 조각 → 그 값이 저장되는 열 key.
+ *
+ * 같은 조각이 두 번 선언된 스키마(ADMIN 실수)에서는 **앞의 것만** 쓴다. 뒤엣것까지 채우면
+ * 같은 값이 두 칸에 남아 어느 쪽이 그 줄의 답인지 문서가 스스로 말하지 못한다.
+ */
+export function sourceColumnKeys(
+  columns: FormColumn[],
+  refKey: string,
+): Partial<Record<ColumnSourceField, string>> {
+  const out: Partial<Record<ColumnSourceField, string>> = {}
+  for (const c of columns) {
+    const source = c.source
+    if (!source || source.from !== refKey) continue
+    if (out[source.field] === undefined) out[source.field] = c.key
+  }
+  return out
+}
+
 /** 이 표가 부가세를 쪼개 적는가 — 공급가액·부가세 칸이 둘 다 있을 때만 그렇다. */
 export function hasVatColumns(field: FormField): boolean {
   const cols = amountColumns(field)
@@ -424,6 +504,18 @@ function parseHtmlAssets(raw: unknown): Record<string, string> | undefined {
   return entries.length > 0 ? Object.fromEntries(entries) : undefined
 }
 
+/**
+ * 파생 출처를 읽는다. 모르는 조각·빈 `from`은 **출처 없음**으로 떨어뜨린다 — 남겨 두면 사람이
+ * 고칠 수 없으면서 아무도 채우지 않는 칸이 되어, 그 열만 영영 비어 있게 된다.
+ */
+function parseSource(raw: unknown): ColumnSource | undefined {
+  if (!isRecord(raw)) return undefined
+  const from = str(raw.from)
+  const field = str(raw.field).toUpperCase() as ColumnSourceField
+  if (!from || !COLUMN_SOURCE_FIELDS.includes(field)) return undefined
+  return { from, field }
+}
+
 function parseColumn(raw: unknown): FormColumn | null {
   if (!isRecord(raw)) return null
   const key = str(raw.key)
@@ -442,6 +534,9 @@ function parseColumn(raw: unknown): FormColumn | null {
       isNumericColumn(type) && (role === 'NET' || role === 'VAT' || role === 'GROSS')
         ? role
         : undefined,
+    // 출처는 **글자 칸에만** 둔다. 금액 칸에 붙이면 사람이 고칠 수 없는 값이 합계액 후보로
+    // 서고, 그 자리에서 예산이 깎인다(역할을 숫자 칸에만 두는 것과 같은 이유다).
+    source: type === 'TEXT' ? parseSource(raw.source) : undefined,
     wide: raw.wide === true,
   }
 }
@@ -611,6 +706,17 @@ export function emptyRow(field: FormField): TableRow {
   return row
 }
 
+/**
+ * 이 열에 **숫자로 읽히는 값이 한 칸이라도 적혀 있는가.**
+ *
+ * 합계가 0이라는 사실만으로는 답할 수 없는 물음이다 — 아무도 적지 않은 표와 정말로 0원을 적은
+ * 표가 둘 다 0을 내놓는다. 둘은 다른 것이라, 합계를 적는 자리는 이 답을 보고 표기를 가른다
+ * (`-`는 아직 없는 것, `0원`은 영 원이라고 적은 것).
+ */
+export function hasColumnValue(rows: TableRow[], columnKey: string): boolean {
+  return rows.some((row) => toNumber(row[columnKey] ?? '') !== null)
+}
+
 /** 표의 한 열 합계. 숫자로 읽히지 않는 칸은 0으로 세지 않고 건너뛴다. */
 export function columnSum(rows: TableRow[], columnKey: string): number {
   let sum = 0
@@ -637,7 +743,12 @@ export function primaryAmount(fields: FormField[], values: FieldValues): number 
     }
     if (f.type === 'TABLE') {
       const col = (f.columns ?? []).find((c) => c.primaryAmount)
-      if (col) return columnSum(tableRows(values, f.key), col.key)
+      if (col) {
+        const rows = tableRows(values, f.key)
+        // PostgreSQL sum과 같은 의미를 유지한다. 값이 하나도 없으면 null, 담당자가 0을
+        // 명시적으로 적었으면 0이다 — 문서 머리의 금액도 '-'와 '0원'을 가를 수 있어야 한다.
+        return hasColumnValue(rows, col.key) ? columnSum(rows, col.key) : null
+      }
     }
   }
   return null
@@ -775,6 +886,23 @@ export function validateSchema(fields: FormField[]): string[] {
         if (!c.key.trim()) errors.push(`키가 비어 있는 열이 있습니다: ${f.label}`)
         else if (colKeys.has(c.key)) errors.push(`열 키가 중복됩니다: ${f.label} > ${c.key}`)
         colKeys.add(c.key)
+      }
+
+      // 파생 열의 짝 맞추기. 가리키는 참조 열이 없으면 그 칸은 아무도 채우지 않는데 사람도
+      // 고칠 수 없어, 양식이 영영 비어 있는 열 하나를 갖게 된다.
+      const refKeys = new Set(
+        (f.columns ?? []).filter((c) => c.type === 'PARTNER_REF').map((c) => c.key),
+      )
+      const seenSource = new Set<string>()
+      for (const c of f.columns ?? []) {
+        const source = c.source
+        if (!source) continue
+        if (!refKeys.has(source.from))
+          errors.push(`파생 열이 가리키는 거래처 열이 없습니다: ${f.label} > ${c.label || c.key}`)
+        const pair = `${source.from}:${source.field}`
+        if (seenSource.has(pair))
+          errors.push(`같은 값을 담는 파생 열이 둘입니다: ${f.label} > ${c.label || c.key}`)
+        seenSource.add(pair)
       }
     }
     // 예산표에는 금액을 담을 자리가 반드시 있어야 한다 — 없으면 차감도 이익률도 설 곳이 없다.

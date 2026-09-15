@@ -170,10 +170,10 @@ select is(pg_temp.privs('authenticated', 'public.meeting_recording_segments'), '
 select is(pg_temp.privs('authenticated', 'public.guest_credentials'), '(없음)',
   'guest_credentials: 어떤 권한도 없다(게스트 자격증명)');
 
--- 예산 변경 이력은 서버가 쓰는 감사 기록이다. DML은 주지 않으며, 상속으로 남아 있던
--- TRUNCATE(= RLS를 거치지 않는 전체 삭제)도 회수한다. rls_regression 케이스15b와 같은 경계다.
-select is(pg_temp.privs('authenticated', 'public.approval_budget_revisions'), '(없음)',
-  'approval_budget_revisions: DML도 TRUNCATE도 없다(서버 전용 감사 이력)');
+-- 예산 변경 이력은 서버만 쓰고, 원 품의를 읽을 수 있는 사용자는 SELECT 정책을 거쳐 읽는다.
+-- INSERT·UPDATE·DELETE·TRUNCATE는 계속 회수한다. rls_regression 케이스15b와 같은 경계다.
+select is(pg_temp.privs('authenticated', 'public.approval_budget_revisions'), 'SELECT',
+  'approval_budget_revisions: 읽기만 열려 있다(쓰기는 승인 처리 함수 전용)');
 
 -- ── 18. 권한이 있어도 RLS가 행을 막는다 ─────────────────────────────────────
 -- 42501이 아니라 0건이 나와야 한다. 오류가 났다면 권한이 없는 것이고,

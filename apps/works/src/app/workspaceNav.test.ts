@@ -189,7 +189,7 @@ describe('워크스페이스 메뉴 — 확정 명칭과 순서', () => {
     expect(unpinnedOf(buildNavGroups(user, itemOf('mna')))[0]?.group).toBe('딜 관리')
   })
 
-  it('경영실은 기능 열 개를 노출하고 경영요소 경계에 이름을 붙인다', () => {
+  it('경영실은 기능 열한 개를 노출하고 경영요소 경계에 이름을 붙인다', () => {
     const groups = unpinnedOf(
       buildNavGroups(userWith({ management: 'read' }), itemOf('management')),
     )
@@ -201,6 +201,7 @@ describe('워크스페이스 메뉴 — 확정 명칭과 순서', () => {
       '조직 관리',
       '인사 관리',
       '근태 관리',
+      '휴가 관리',
       '재무 관리',
       '거래처 정보',
       '결재 금액 집계',
@@ -211,6 +212,7 @@ describe('워크스페이스 메뉴 — 확정 명칭과 순서', () => {
       undefined,
       undefined,
       '조직·인사',
+      undefined,
       undefined,
       undefined,
       '재무',

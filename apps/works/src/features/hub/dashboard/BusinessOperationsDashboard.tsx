@@ -72,6 +72,20 @@ function KpiHeaderMeta({ scope }: { scope: KpiScope }) {
 }
 
 /**
+ * KPI 카드 본문 자리 — 지표·점수가 붙기 전까지의 준비중 표시.
+ *
+ * 빈 칸을 그대로 두면 화면이 고장난 것으로 읽힌다. 자리를 비워 둔 것이 의도임을 한 줄로
+ * 밝히고, 본문이 들어오면 이 컴포넌트째로 걷어낸다.
+ */
+function KpiPlaceholder() {
+  return (
+    <div className="flex h-full min-h-24 items-center justify-center">
+      <span className="text-body-sm text-danger">준비중입니다</span>
+    </div>
+  )
+}
+
+/**
  * 대시보드 좌측 상단 — 「나의 워크스페이스」(내가 맡은 운영 건수) + 「나의 데이터베이스」.
  *
  * 두 카드는 서로 다른 물음에 답한다. 위는 **사업**(지금 무엇을 굴리고 있나), 아래는
@@ -107,8 +121,8 @@ export function BusinessOperationsDashboard() {
   return (
     <div className="flex h-full flex-col gap-4">
       {/* KPI는 부서·개인 두 카드로 나란히 선다. 머리 우측의 부서·적용기간만 원장을 읽고
-          본문(지표·점수)은 후속 작업에서 채운다. 데스크톱에서는 두 카드가 남은 높이를 받아
-          좌측 열 최상단을 채우고, 작은 화면에서는 1열로 쌓인다. */}
+          본문(지표·점수)은 후속 작업에서 채우되 그때까지는 준비중임을 밝힌다. 데스크톱에서는
+          두 카드가 남은 높이를 받아 좌측 열 최상단을 채우고, 작은 화면에서는 1열로 쌓인다. */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:flex-1">
         <Card
           title="부서 KPI"
@@ -116,7 +130,7 @@ export function BusinessOperationsDashboard() {
           className="min-h-48 lg:flex lg:flex-col"
           bodyClassName="lg:flex-1"
         >
-          {null}
+          <KpiPlaceholder />
         </Card>
         <Card
           title="개인 KPI"
@@ -124,7 +138,7 @@ export function BusinessOperationsDashboard() {
           className="min-h-48 lg:flex lg:flex-col"
           bodyClassName="lg:flex-1"
         >
-          {null}
+          <KpiPlaceholder />
         </Card>
       </div>
       <Card title="누적 업무">

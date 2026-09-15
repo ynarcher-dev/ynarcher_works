@@ -8,5 +8,9 @@
     },
     "noEmit": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  // 테스트는 러너(vitest)가 apps/works에 설치되어 있어 이 패키지에서는 `vitest` 임포트를 풀
+  // 수 없다(빼지 않으면 TS2307). 러너 밖 트리가 테스트를 타입 점검 대상에서 빼는 것은
+  // tsconfig.functions.json도 같으며, 검사는 러너가 돌며 하고 여기서는 제품 코드만 본다.
+  "exclude": ["src/**/*.test.ts"]
 }

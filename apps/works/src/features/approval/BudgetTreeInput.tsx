@@ -191,7 +191,10 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
         renderGroupFooter={(group) => {
           const groupRows = group.rows.map((row) => row.row)
           return (
-            <tr className="border-b border-gray-200 bg-gray-25">
+            // 집계 줄의 색은 **읽는 화면과 같다**(BudgetTreeView) — 소계는 옅은 면, 합계는 한
+            // 단계 진한 면. 쓸 때만 회색이면 같은 표가 상신 전후로 다른 표처럼 보이고, 입력칸이
+            // 늘어선 화면에서는 회색 면이 칸의 테두리와 톤이 겹쳐 묶음 경계가 눈에 걸리지 않는다.
+            <tr className="border-b border-summary-blue-icon bg-summary-blue-surface">
               {levels.slice(0, levelCount).map((_, level) => {
                 return (
                   <td key={level} className="px-2 py-1">
@@ -238,19 +241,17 @@ export function BudgetTreeInput({ field, value, onChange }: Props) {
           )
         }}
         footer={
-          <tr className="border-t border-gray-200 bg-gray-25">
+          // 글자색은 줄이 통째로 갖는다 — 칸마다 회색을 다시 적으면 그 회색이 줄의 색을 덮는다.
+          <tr className="border-t border-summary-blue-icon bg-summary-blue-icon text-summary-blue-value">
             {levels.slice(0, levelCount).map((_, level) => (
-              <td
-                key={level}
-                className={cn('px-2 py-1.5 text-gray-600', tableText.body)}
-              >
+              <td key={level} className={cn('px-2 py-1.5', tableText.body)}>
                 {level === levelCount - 1 && summaryColumnIndex === 0 ? '합계' : ''}
               </td>
             ))}
             {summaryColumnIndex > 0 && (
               <td
                 colSpan={summaryColumnIndex}
-                className={cn('px-2 py-1.5 text-right text-gray-700', tableText.head)}
+                className={cn('px-2 py-1.5 text-right', tableText.head)}
               >
                 합계
               </td>

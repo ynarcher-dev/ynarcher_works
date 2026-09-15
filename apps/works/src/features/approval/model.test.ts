@@ -501,4 +501,15 @@ describe('bulkTargetFor', () => {
     )
     expect(target).toBeNull()
   })
+
+  it('반려 문서에 내 PENDING 자리가 남아 있어도 결재 대상이 아니다', () => {
+    const target = bulkTargetFor(
+      row({
+        status: 'REJECTED',
+        approval_lines: [{ approver_id: ME, step_order: 1, decision: 'PENDING' }],
+      }),
+      ME,
+    )
+    expect(target).toBeNull()
+  })
 })

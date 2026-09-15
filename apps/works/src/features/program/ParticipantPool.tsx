@@ -36,15 +36,17 @@ import { ProgramAccessWindowModal } from '@/features/program/ProgramAccessWindow
 const PAGE_SIZE = 10
 
 /**
- * 검색이 걸리는 축 — **계정의 값이 앞이고 원장 이름이 뒤다**.
+ * 검색이 걸리는 축 — **계정의 값으로만 건다**.
  *
  * 표가 세우는 값으로만 건다. 보이지 않는 값으로 걸러지면 방금 눈으로 본 줄이 사라진 이유를
- * 화면이 답하지 못한다. 원장 이름을 함께 두는 이유는 그것도 표에 서기 때문이다(연결 원장 열).
+ * 화면이 답하지 못한다. 원장 이름(`targetName`)을 걷은 이유가 그것이다 — `연결 원장` 열이
+ * 사라진 뒤로 그 값은 표에 서지 않으므로, 계속 걸어 두면 화면에 없는 값으로 줄이 사라진다.
+ * 자리 표시 문구는 여기 거는 값과 같아야 한다.
  */
 function matches(row: ParticipantRow, keyword: string): boolean {
   const kw = keyword.trim().toLowerCase()
   if (!kw) return true
-  return [row.accountName, row.accountEmail, row.phone, row.targetName]
+  return [row.accountName, row.accountEmail, row.phone]
     .filter(Boolean)
     .some((v) => String(v).toLowerCase().includes(kw))
 }
@@ -77,7 +79,8 @@ function accessWindowLabel(iso: string | null): string {
  * **자격 탭을 걷었다**(2026-09-13 사용자 확정). 종전에는 자격(원장)마다 하위 탭이 서고 이
  * 컴포넌트가 그중 하나만 담았는데, 그 구조에서는 **원장에 붙지 않은 게스트 계정이 어느 탭에도
  * 서지 못했다.** 원장 연결이 계정의 선택적 속성이 된 이상 자격은 명부를 가르는 축이 될 수
- * 없고, 표의 한 열(`연결 원장`)로 내려온다.
+ * 없어 표의 한 열로 내려왔고, **2026-09-14 독립 계정 정책에서 그 열마저 걷었다** — GUEST
+ * 계정은 원장 ID를 들지 않는다(3_9_3).
  *
  * **내부 임직원 줄은 서지 않는다.** 이 명부는 *밖에서 들어오는 사람*의 축이고 임직원은
  * WORKS로 들어온다. 가르는 값은 원장 유무가 아니라 계정 유형이다(`isGuestRosterRow`) —
@@ -247,14 +250,13 @@ export function ParticipantPool({ host }: { host: GuestHostEntity }) {
         건수도 제목 옆에 적지 않는다. 표 아래 페이저가 이미 '필터 반영 / 전체'로 말하고 있어,
         같은 수를 두 곳에서 각자 세면 검색으로 좁혔을 때 두 값이 어긋나 보인다.
 
-        자격은 위의 하위 탭이 답하고, 사업 코드는 사업 정보 카드가 소유하며, 기간은 그것을
-        바꾸는 버튼이 스스로 되읽는다.
+        사업 코드는 사업 정보 카드가 소유하며, 기간은 그것을 바꾸는 버튼이 스스로 되읽는다.
       */}
       <div className="space-y-3">
           <ListToolbar
             keyword={keyword}
             onKeywordChange={setKeyword}
-            searchPlaceholder="계정명 · 이메일 · 연락처 · 연결 원장 검색"
+            searchPlaceholder="계정명 · 이메일 · 연락처 검색"
             actions={
               <div className="flex items-center gap-2">
                 {canOpenDoor && (
